@@ -950,3 +950,7 @@
 .na_tr_vxrow [hidden] { display: none !important; }
 .na_tr_cfg + .na_set_list, .na_tr_test_row + .na_set_list { margin-top: 6px; }
 .na_tr_vxrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.na_whole_row { padding-top: 8px; }
+.na_whole_sums { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; font-size: 0.86em; }
+.na_whole_sum ul { margin: 2px 0 0; padding-left: 1.2em; max-height: 9em; overflow-y: auto; }
+.na_whole { background: color-mix(in srgb, var(--na-accent) 12%, transparent); }

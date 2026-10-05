@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.7.1';
+const VERSION = '2.8.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3479,6 +3479,41 @@ function checkAppend(m, add, last) {
     return { ranges, issues, soft: false };
 }
 
+// a paste that carries most of the archive's numbered sections is a whole new version, not new sections
+function looksWhole(archive, add) {
+    const [eBody] = splitTail(archive);
+    const eb = trimEnd(eBody).replace(/\n-{3,}\s*$/, '');
+    const n = parseSections(eb).filter(x => !x.group && RANGE_HEAD.test(x.title)).length;
+    if (n < 3) return false;
+    const pb = trimEnd(splitTail(add)[0]).replace(/\n-{3,}\s*$/, '');
+    return findRewrites(eb, pb).filter(f => f.kind !== 'divider').length >= Math.ceil(n * 0.8);
+}
+
+// shows what a whole-archive swap changes; true once confirmed
+async function confirmWhole(oldText, newText) {
+    const c = ctx();
+    const ch = sectionChanges(oldText, newText);
+    const rows = lineDiff(oldText, newText);
+    const add = rows.filter(r => r.t === '+').length, del = rows.filter(r => r.t === '-').length;
+    const list = (label, xs) => xs.length ? `<div class="na_whole_sum"><b>${label} ${xs.length}개</b><ul>${xs.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
+    const $v = $(`
+      <div class="na_popup">
+        <div class="na_diff_head">
+          <b>아카이브를 통째로 바꿔요</b>
+          <span class="na_chip na_chip_add">+${fmt(add)}줄</span><span class="na_chip na_chip_del">−${fmt(del)}줄</span>
+        </div>
+        <div class="na_whole_sums">
+          ${list('새 섹션', ch.added)}${list('내용이 바뀐 섹션', ch.changed)}${list('제목이 바뀐 섹션', ch.renamed)}${list('없어지는 섹션', ch.removed)}
+          ${ch.added.length + ch.changed.length + ch.renamed.length + ch.removed.length ? '' : '<div class="na_empty">섹션은 그대로예요.</div>'}
+        </div>
+        <small class="na_dim">지금 아카이브는 "통째로 바꾸기 전" 복구 지점으로 남아요.</small>
+        <div class="na_diff">${add || del ? renderDiff(rows) : '<div class="na_empty">내용이 똑같아요.</div>'}</div>
+      </div>`);
+    if (add || del) $v.find('.na_diff_head').append(translateButton($v.find('.na_diff')));
+    const r = await c.callGenericPopup($v, c.POPUP_TYPE.CONFIRM, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '통째로 바꾸기', cancelButton: '취소' });
+    return r === c.POPUP_RESULT.AFFIRMATIVE || r === true;
+}
+
 async function openAppend() {
     const c = ctx();
     const m = getMeta();
@@ -3496,6 +3531,10 @@ async function openAppend() {
         <textarea class="text_pole na_append_ta" spellcheck="false" placeholder="## Y2 #574–#600 — ..."></textarea>
         <div class="na_check na_numcheck" hidden></div>
         <div class="na_check na_check_warn na_cut" hidden></div>
+        <div class="na_check na_whole" hidden><i class="fa-solid fa-file-circle-check"></i><div>
+          <b>아카이브 전체본 같아요</b> — 이미 있는 섹션이 거의 다 들어 있어요. 새 섹션만 붙이려면 그대로 <b>추가</b>, 이 내용으로 아카이브를 바꾸려면:
+          <div class="na_whole_row"><button type="button" class="na_btn na_small na_whole_btn"><i class="fa-solid fa-right-left"></i> 통째로 바꾸기</button></div>
+        </div></div>
         <div class="na_check na_check_warn na_rw" hidden></div>
         <div class="na_check na_check_soft na_names" hidden></div>
         <div class="na_ai_row">
@@ -3551,6 +3590,8 @@ async function openAppend() {
     let rwReplace = false;
     const rwMode = () => rwReplace ? 'replace' : 'skip';
     $root.on('change', '.na_rw_replace', function () { rwReplace = this.checked; $ta.trigger('input'); });
+    let wantWhole = false;
+    $root.find('.na_whole_btn').on('click', () => { wantWhole = true; $root.closest('dialog').find('.popup-button-cancel').trigger('click'); });
     let endTouched = false;
     let lastCheck = { issues: [] };
     $end.on('input', () => { endTouched = true; $root.find('.na_end_hint').text(''); });
@@ -3583,6 +3624,7 @@ async function openAppend() {
             const cut = val.trim() ? cutSigns(m.text, val) : [];
             $root.find('.na_cut').prop('hidden', !cut.length).html(cut.length
                 ? `<i class="fa-solid fa-scissors"></i><div><b>답이 중간에 끊긴 것 같아요</b><ul>${cut.map(x => `<li>${esc(x)}</li>`).join('')}</ul><small>다른 모델로 압축했다면 그쪽 답 길이(최대 토큰)를 늘리고 다시 받아 보세요.</small></div>` : '');
+            $root.find('.na_whole').prop('hidden', !(val.trim() && looksWhole(m.text, val)));
             const rwN = plan.rewriteCount;
             $root.find('.na_rw').prop('hidden', !rwN).html(rwN ? `<i class="fa-solid fa-shield-halved"></i><div>
                 <b>이미 아카이브에 있는 섹션 ${rwN}개가 섞여 있어요</b> — 모델이 형식 참고용 섹션을 다시 쓴 것 같아요.
@@ -3612,6 +3654,16 @@ async function openAppend() {
     const result = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', {
         wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '추가', cancelButton: '취소',
     });
+    if (wantWhole) {
+        const whole = String($ta.val() || '').replace(/\r\n/g, '\n').trim();
+        const end = parseInt($end.val(), 10);
+        const cut = cutSigns(m.text, whole);
+        if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.join('\n')}\n\n그래도 바꿀까요?`)) return;
+        if (!await confirmWhole(m.text, whole)) return;
+        await commitText(whole, '통째로 바꾸기 전', Number.isFinite(end) && end >= 0 ? { boundary: end } : {});
+        if ($root.find('.na_do_hide').prop('checked')) await applyHide({ silent: true });
+        return toastr.success(Number.isFinite(end) && end >= 0 ? `아카이브를 통째로 바꿨어요 · 경계선 #${end}` : '아카이브를 통째로 바꿨어요');
+    }
     if (result !== c.POPUP_RESULT.AFFIRMATIVE && result !== true) return;
 
     const add = String($ta.val() || '').replace(/\r\n/g, '\n').trim();
