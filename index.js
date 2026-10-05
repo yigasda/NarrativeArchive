@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.0.4';
+const VERSION = '3.0.5';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1186,13 +1186,15 @@ function renderPanel() {
                 </div>
               </div>
               <details class="na_block na_details na_fold">
-                <summary>따로 하기 · 압축 설정</summary>
-                <div>
+                <summary>따로 하기</summary>
                 <div class="na_steps">
                   <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>경계선 이후 메시지 · 지시문 붙여 복사</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step" id="na_open_append"><b>2</b><span><strong>아카이브에 추가</strong><small>압축본 붙여넣기 · 번호 검사 · 경계선 자동</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
-                <div class="na_kw_label na_fold_sub">경계선</div>
+              </details>
+              <details class="na_block na_details na_fold">
+                <summary>경계선 설정</summary>
+                <div>
                   <p class="na_dim na_fold_desc">아카이브가 다루는 마지막 메시지 번호예요. 그 앞은 숨겨서 토큰을 아껴요.</p>
                 <div class="na_set_list">
                   <label class="na_set_row"><span><span>아카이브 따라가기</span><small id="na_track_info">제목의 마지막 #번호를 경계선으로</small></span><input type="checkbox" id="na_track" class="na_toggle"></label>
