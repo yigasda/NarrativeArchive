@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.1.0';
+const VERSION = '3.1.1';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -4870,11 +4870,14 @@ async function openExtract() {
           <span class="na_lastex_text"></span>
           <button type="button" class="na_linkbtn na_lastex_again">이 범위 다시</button>
         </div>
-        <div class="na_ex_quick">
-          <label class="checkbox_label"><input type="checkbox" class="na_opt_prompt"><span>지시문 붙이기</span></label>
-          <select class="text_pole na_psel_quick"></select>
+        <div class="na_block na_ex_card">
+          <div class="na_set_list">
+            <label class="na_set_row"><span><span>지시문 붙이기</span><small>다른 모델에 그대로 붙여넣기용</small></span><input type="checkbox" class="na_toggle na_opt_prompt"></label>
+            <div class="na_set_row na_ex_prow"><span>지시문</span><select class="text_pole na_psel_quick"></select></div>
+            <div class="na_set_row"><span><span>뽑기 옵션</span><small class="na_ex_optsum"></small></span>
+              <button type="button" class="na_btn na_small na_ex_toset"><i class="fa-solid fa-gear"></i> 설정</button></div>
+          </div>
         </div>
-        <div class="na_ex_optline na_dim"><span class="na_ex_optsum"></span> <button type="button" class="na_linkbtn na_ex_toset">설정에서 바꾸기</button></div>
         <div class="na_ex_info na_dim"></div>
         <div class="na_ex_actions">
           <button type="button" class="na_btn na_save_txt"><i class="fa-solid fa-download"></i> .txt 저장</button>
@@ -4886,9 +4889,11 @@ async function openExtract() {
     $root.find('.na_opt_prompt').prop('checked', g.usePrompt);
     const fillQuick = () => $root.find('.na_psel_quick')
         .html([...g.prompts].sort((a, b) => b.fav - a.fav).map(p => `<option value="${esc(p.id)}">${p.fav ? '★ ' : ''}${esc(p.name)}</option>`).join(''))
-        .val(activePrompt(g).id).prop('disabled', !g.usePrompt);
+        .val(activePrompt(g).id);
+    const showProw = () => $root.find('.na_ex_prow').toggle(!!g.usePrompt);
+    showProw();
     fillQuick();
-    $root.find('.na_ex_optsum').text(`옵션: ${[g.skipHidden ? '숨긴 메시지 뺌' : '숨긴 메시지 포함', g.stripTags ? '태그 지움' : '', { full: '[번호] 이름:', name: '이름:', number: '[번호]' }[g.nameStyle] || ''].filter(Boolean).join(' · ')}`);
+    $root.find('.na_ex_optsum').text(`${[g.skipHidden ? '숨긴 메시지 뺌' : '숨긴 메시지 포함', g.stripTags ? '태그 지움' : '', { full: '[번호] 이름:', name: '이름:', number: '[번호]' }[g.nameStyle] || ''].filter(Boolean).join(' · ')}`);
     $root.find('.na_ex_toset').on('click', () => { $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoCompressSettings(); });
 
     let current = '';
@@ -4919,7 +4924,7 @@ async function openExtract() {
     };
 
     $root.find('.na_from, .na_to').on('change', render);
-    $root.find('.na_opt_prompt').on('change', function () { g.usePrompt = this.checked; saveGlobal(); fillQuick(); render(); renderPromptSettings(); });
+    $root.find('.na_opt_prompt').on('change', function () { g.usePrompt = this.checked; saveGlobal(); fillQuick(); showProw(); render(); renderPromptSettings(); });
     $root.find('.na_psel_quick').on('change', function () { g.activePrompt = this.value; saveGlobal(); render(); renderPromptSettings(); });
     const showLast = () => {
         const x = getMeta().lastExport;

@@ -1201,8 +1201,7 @@
 .na_plib .na_pfav, .na_plib .na_prow { padding-left: 0; padding-right: 0; }
 .na_plib .na_prompt_ta { margin: 6px 0 0 !important; width: 100% !important; height: 24vh !important; }
 .na_plib .na_prompt_help { padding: 8px 0 0; }
-.na_ex_quick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.na_ex_quick .checkbox_label { margin: 0; }
-.na_ex_quick select { flex: 1; min-width: 140px; margin: 0 !important; }
-.na_ex_quick select:disabled { opacity: 0.5; }
-.na_ex_optline { font-size: 0.8em; }
+.na_ex_card { padding: 2px 14px; }
+.na_ex_card .na_set_row select { max-width: 62%; }
+.na_ex_card .na_ex_toset { flex-shrink: 0; }
+.na_ex_info { text-align: center; font-size: 0.82em; }
