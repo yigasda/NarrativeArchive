@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.1.0';
+const VERSION = '2.3.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -807,11 +807,8 @@ function mountSectionBrowser($host) {
             $card.find('.na_down').on('click', () => move(s, 1));
             $card.find('.na_ins').on('click', () => insertAfter(s));
             $card.find('.na_keys').on('click', async () => {
-                const cur = (links[sectionKey(s)] || []).join(', ');
-                const v = await ctx().Popup.show.input('키워드 연동',
-                    '이 섹션을 평소엔 빼 두고, 최근 메시지에 키워드가 나올 때만 넣어요. 쉼표로 나눠 적고, 비우면 연동을 풀어요. (한국어 키워드도 같이 넣어야 한국어 대화에서 켜져요)', cur);
-                if (typeof v !== 'string') return;
-                await setLinked(sectionKey(s), v.split(/[,，]/).map(x => x.trim()).filter(Boolean));
+                const keys = await openKeywords(s, body, links[sectionKey(s)] || []);
+                if (keys) await setLinked(sectionKey(s), keys);
             });
             $card.find('.na_towi').on('click', () => openSendToWI(s));
             $card.find('.na_del').on('click', () => remove(s));
@@ -861,6 +858,61 @@ function mountSectionBrowser($host) {
     $search.on('input', () => { clearTimeout(t); t = setTimeout(render, 200); });
     render();
     return { render, focus };
+}
+
+// Keyword-link editor: the keywords, candidates found in the section, and AI suggestions. Returns the list or null.
+async function openKeywords(s, body, current) {
+    const c = ctx();
+    const split = v => [...new Set(String(v).split(/[,，\n]/).map(x => x.trim().replace(/^["'“”‘’\-*\s]+|["'“”‘’.\s]+$/g, '')).filter(Boolean))];
+    const $root = $(`
+      <div class="na_popup">
+        <div class="na_block_head"><div>
+          <h4>키워드 연동</h4>
+          <p>이 섹션을 평소엔 빼 두고, 최근 메시지에 키워드가 나올 때만 넣어요. 쉼표로 나눠 적고, 비우면 연동을 풀어요. 한국어 키워드도 같이 넣어야 한국어 대화에서 켜져요.</p>
+        </div></div>
+        <div class="na_dim na_kw_title"></div>
+        <input type="text" class="text_pole na_kw_in" placeholder="Avalon, 아발론, Lighthouse, 등대">
+        <div class="na_kw_group">
+          <div class="na_kw_label">본문에서 찾은 후보 <span class="na_dim">· 누르면 넣거나 빼요</span></div>
+          <div class="na_kw_chips na_kw_found"></div>
+        </div>
+        <div class="na_kw_group">
+          <div class="na_ai_row">
+            <button type="button" class="na_btn na_small na_kw_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 제안</button>
+            <small class="na_dim">이름·장소·물건과 한국어 표기까지</small>
+          </div>
+          <div class="na_kw_chips na_kw_aiout"></div>
+        </div>
+      </div>`);
+    const $in = $root.find('.na_kw_in').val(current.join(', '));
+    $root.find('.na_kw_title').text(s.title);
+    const chips = words => words.map(w => `<button type="button" class="na_pchip" data-w="${esc(w)}">${esc(w)}</button>`).join('');
+    const mark = () => {
+        const have = new Set(split($in.val()).map(x => x.toLowerCase()));
+        $root.find('.na_kw_chips .na_pchip').each(function () { $(this).toggleClass('on', have.has(String($(this).data('w')).toLowerCase())); });
+    };
+    const found = keywordCandidates(s.title, body);
+    $root.find('.na_kw_found').html(found.length ? chips(found) : '<span class="na_dim">눈에 띄는 이름이 없어요.</span>');
+    $root.on('click', '.na_kw_chips .na_pchip', function () {
+        const w = String($(this).data('w'));
+        const list = split($in.val());
+        const i = list.findIndex(x => x.toLowerCase() === w.toLowerCase());
+        i >= 0 ? list.splice(i, 1) : list.push(w);
+        $in.val(list.join(', '));
+        mark();
+    });
+    $in.on('input', mark);
+    $root.find('.na_kw_ai').on('click', async function () {
+        const out = await withSpinner($(this), '고르는 중…', () => askAI(`[SECTION]\n${body.trim()}`, { system: AI_SYS_KEYWORDS, maxTokens: 300 }));
+        if (out === null) return;
+        const words = split(out.split('\n').filter(l => l.trim()).pop() || out).slice(0, 24);
+        $root.find('.na_kw_aiout').html(words.length ? chips(words) : '<span class="na_dim">제안이 없어요.</span>');
+        mark();
+    });
+    mark();
+    const r = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: false, okButton: '저장', cancelButton: '취소' });
+    if (r !== c.POPUP_RESULT.AFFIRMATIVE && r !== true) return null;
+    return split($in.val());
 }
 
 // ---------------------------------------------------------------- panel
@@ -924,6 +976,7 @@ function renderPanel() {
                   <button type="button" class="na_icon" id="na_ed_toc" title="목차"><i class="fa-solid fa-list-ul"></i></button>
                   <button type="button" class="na_icon" id="na_ed_find" title="찾기"><i class="fa-solid fa-magnifying-glass"></i></button>
                   <button type="button" class="na_icon" id="na_ed_copy" title="전체 복사"><i class="fa-regular fa-copy"></i></button>
+                  <button type="button" class="na_icon" id="na_ed_ask" title="아카이브에 질문 (AI)"><i class="fa-regular fa-comments"></i></button>
                   <button type="button" class="na_icon" id="na_ed_big" title="읽기 모드"><i class="fa-solid fa-book-open-reader"></i></button>
                 </div>
                 <div class="na_toc" id="na_toc" hidden></div>
@@ -1000,7 +1053,7 @@ function renderPanel() {
               <div class="na_block">
                 <div class="na_block_head"><div><h4>압축 루틴</h4><p>추가할 때 새 섹션 제목의 마지막 #번호를 읽어서 경계선을 맞춰요.</p></div></div>
                 <div class="na_steps">
-                  <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>경계선 이후 메시지 · 압축 지시문 붙여 복사</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                  <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>경계선 이후 메시지 · 지시문 붙여 복사 · AI로 바로 압축</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step" id="na_open_append"><b>2</b><span><strong>아카이브에 추가</strong><small>압축본 붙여넣기 · 번호 검사 · 경계선 자동</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step na_step_sub" id="na_apply_hide"><b><i class="fa-solid fa-eye-slash"></i></b><span><strong>숨기기 다시 적용</strong><small>경계선 앞만 숨기고 뒤는 다시 보이게</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step na_step_sub" id="na_unhide"><b><i class="fa-solid fa-eye"></i></b><span><strong>숨김 해제</strong><small id="na_hidden_n">숨긴 메시지 다시 보이게</small></span><i class="fa-solid fa-chevron-right"></i></button>
@@ -1080,6 +1133,13 @@ function renderPanel() {
                   <label class="na_set_row"><span><span>백업 알림</span><small>백업 뒤 이만큼 바뀌면 · 0은 끔</small></span><input type="number" id="na_backup_every" class="text_pole" min="0" max="999"></label>
                 </div>
               </div>
+              <div class="na_block">
+                <div class="na_block_head"><div><h4>AI 기능</h4><p>AI로 압축 · 아카이브에 질문 · 키워드 제안 · 충돌 검사에 쓰는 모델이에요. AI는 초안과 검사만 하고, 아카이브는 직접 확인하고 넣어요.</p></div></div>
+                <div class="na_set_list">
+                  <label class="na_set_row"><span><span>모델</span><small>연결 프로필을 고르면 RP 모델과 따로 쓸 수 있어요</small></span><select id="na_ai_profile" class="text_pole"></select></label>
+                  <label class="na_set_row"><span><span>답 최대 길이</span><small>토큰 · 압축 결과가 잘리면 늘려 주세요</small></span><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"></label>
+                </div>
+              </div>
             </section>
 
             <div class="na_nochat" id="na_nochat" hidden>채팅을 열면 이 채팅의 아카이브가 보여요.</div>
@@ -1089,6 +1149,15 @@ function renderPanel() {
     </div>`;
     $('#extensions_settings2').append(html);
     bindPanel();
+}
+
+function renderAiSettings() {
+    const g = globalSettings();
+    const profiles = aiProfiles();
+    const opts = [`<option value="">지금 연결된 모델</option>`, ...profiles.map(p => `<option value="${esc(p.id)}">프로필: ${esc(p.name)}</option>`)];
+    if (g.aiProfile && !profiles.some(p => p.id === g.aiProfile)) opts.push(`<option value="${esc(g.aiProfile)}">(없어진 프로필)</option>`);
+    $('#na_ai_profile').html(opts.join('')).val(g.aiProfile || '');
+    $('#na_ai_max').val(g.aiMaxTokens || 4096);
 }
 
 // Scroll the panel editor so [from, to) is visible and select it (wrapped lines measured with a mirror div).
@@ -1132,6 +1201,7 @@ function bindPanel() {
         $p.find('.na_nav_btn').removeClass('active');
         $(this).addClass('active');
         $p.find('.na_tab_pane').each(function () { $(this).prop('hidden', $(this).data('pane') !== tab); });
+        if (tab === 'config') renderAiSettings();
         if (tab === 'sections' && hasChat()) {
             if (!sectionPanel) sectionPanel = mountSectionBrowser($('#na_sec_host'));
             else sectionPanel.render();
@@ -1164,6 +1234,13 @@ function bindPanel() {
         ok ? toastr.success('복사됨') : toastr.warning('복사가 막혀 있어요.');
     });
     $('#na_ed_big').on('click', needChat(openReader));
+    $('#na_ed_ask').on('click', needChat(openAsk));
+    $('#na_ai_profile').on('change', function () { globalSettings().aiProfile = this.value; saveGlobal(); });
+    $('#na_ai_max').on('change', function () {
+        const v = Math.max(256, parseInt(this.value, 10) || 4096);
+        globalSettings().aiMaxTokens = v; this.value = v; saveGlobal();
+    });
+    renderAiSettings();
     $('#na_ed_preview').on('click', needChat(openPreview));
     $('#na_cfg_preview').on('click', needChat(openPreview));
 
@@ -2393,6 +2470,234 @@ async function openReader() {
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
+// ---------------------------------------------------------------- AI helpers
+// Everything AI here only drafts or checks: results land in a box or a form, never straight in the archive.
+
+// Connection Manager profiles that can send a request (empty if the extension is off)
+function aiProfiles() {
+    try { return ctx().ConnectionManagerRequestService?.getSupportedProfiles?.() || []; } catch { return []; }
+}
+
+const stripThink = t => String(t ?? '').replace(/<(think|thinking|reasoning)[^>]*>[\s\S]*?<\/\1>/gi, '').trim();
+
+// Sends one request: to the chosen Connection Manager profile, or to whatever is connected now.
+async function askAI(prompt, { system = '', maxTokens = 0 } = {}) {
+    const c = ctx();
+    const g = globalSettings();
+    const max = Math.max(64, Number(maxTokens) || Number(g.aiMaxTokens) || 4096);
+    let out;
+    if (g.aiProfile) {
+        const p = aiProfiles().find(x => x.id === g.aiProfile);
+        if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요. 설정 탭 → AI 기능에서 다시 골라 주세요.');
+        const msgs = [...(system ? [{ role: 'system', content: system }] : []), { role: 'user', content: prompt }];
+        const r = await c.ConnectionManagerRequestService.sendRequest(p.id, msgs, max, { stream: false, extractData: true, includePreset: true, includeInstruct: true });
+        out = typeof r === 'string' ? r : r?.content;
+    } else {
+        if (typeof c.generateRaw !== 'function') throw new Error('이 실리태번 버전에서는 AI 호출을 쓸 수 없어요');
+        out = await c.generateRaw({ prompt, systemPrompt: system, responseLength: max });
+    }
+    out = stripThink(out);
+    if (!out) throw new Error('모델이 빈 답을 돌려줬어요');
+    return out;
+}
+
+const aiLabel = () => {
+    const g = globalSettings();
+    const p = g.aiProfile && aiProfiles().find(x => x.id === g.aiProfile);
+    return p ? p.name : '지금 연결된 모델';
+};
+
+// Runs fn while the button shows a spinner; errors become a toast. Returns fn's result or null.
+async function withSpinner($btn, busyText, fn) {
+    const html = $btn.html();
+    $btn.prop('disabled', true).html(`<i class="fa-solid fa-spinner fa-spin"></i> ${esc(busyText)}`);
+    try { return await fn(); }
+    catch (e) { console.error('[NarrativeArchive] AI', e); toastr.error(String(e?.message || e), 'AI 요청 실패'); return null; }
+    finally { $btn.prop('disabled', false).html(html); }
+}
+
+// Plain text from the model → safe HTML with line breaks and **bold**
+const aiHtml = t => String(t).split('\n').map(mdInline).join('<br>');
+
+// ---- keyword candidates (no AI): capitalised words that keep coming back in a section
+
+const KW_STOP = new Set(('The A An And But Or Nor If When Then After Before While As At In On Of To For From With Without Into Onto Upon By '
+    + 'He She They It We I You His Her Hers Their Its Our My Your Him Them Us Me This That These Those There Here What Who Whom Whose Why How Where Which '
+    + 'Not No Yes So Yet Once Still Even Only Also Both Each Every All Some Any None One Two Three Four Five First Second Last Next '
+    + 'Day Night Morning Evening Afternoon Dawn Noon Midnight Today Tomorrow Yesterday Mr Mrs Ms Lord Lady Sir '
+    + 'Was Were Is Are Be Been Had Has Have Did Does Do Will Would Could Should Can May Might Must Just Now Never Always Again').split(/\s+/));
+
+const capWords = text => [...String(text).matchAll(/\b[A-Z][a-z][A-Za-z'’]*/g)].map(x => x[0].replace(/['’]s$/, '')).filter(w => w.length > 2 && !KW_STOP.has(w));
+
+function keywordCandidates(title, body) {
+    const counts = new Map();
+    capWords(body).forEach(w => counts.set(w, (counts.get(w) || 0) + 1));
+    const inTitle = new Set(capWords(title));
+    return [...new Set([...inTitle, ...counts.keys()])]
+        .filter(w => inTitle.has(w) || counts.get(w) >= 2)
+        .sort((a, b) => (inTitle.has(b) - inTitle.has(a)) || (counts.get(b) || 0) - (counts.get(a) || 0))
+        .slice(0, 18);
+}
+
+// ---- spelling near-misses (no AI): a name in the new text that is one or two letters off a name in the archive
+
+function editDistance(a, b, cap) {
+    if (Math.abs(a.length - b.length) > cap) return cap + 1;
+    let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+        const cur = [i];
+        let best = i;
+        for (let j = 1; j <= b.length; j++) {
+            cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+            if (cur[j] < best) best = cur[j];
+        }
+        if (best > cap) return cap + 1;
+        prev = cur;
+    }
+    return prev[b.length];
+}
+
+function nameNearMisses(archive, add) {
+    const old = new Set(capWords(archive).filter(w => w.length >= 4));
+    const byFirst = new Map();
+    old.forEach(w => { const k = w[0]; if (!byFirst.has(k)) byFirst.set(k, []); byFirst.get(k).push(w); });
+    const out = [];
+    for (const w of new Set(capWords(add).filter(x => x.length >= 4))) {
+        if (old.has(w)) continue;
+        const cap = w.length >= 7 ? 2 : 1;
+        let hit = null, hd = cap + 1;
+        for (const o of byFirst.get(w[0]) || []) {
+            const d = editDistance(w, o, cap);
+            if (d > 0 && d < hd) { hit = o; hd = d; }
+        }
+        if (hit) out.push({ word: w, like: hit });
+    }
+    return out;
+}
+
+// ---- prompts
+
+const AI_SYS_COMPRESS = 'You compress role-play chat logs into a story archive. Follow the instructions exactly and output only the requested text.';
+
+const AI_SYS_ASK = `You answer questions about an ongoing story using ONLY the archive the user gives you.
+- If the archive does not say, reply that it is not in the archive. Never invent.
+- After each claim, cite the section you used by copying its heading line exactly inside double brackets, e.g. [[## Y2 #48–#63 — The night ridge]].
+- Answer in the language of the question. Be concise.`;
+
+const AI_SYS_KEYWORDS = `You pick trigger keywords for a story archive section: character names, places, objects and unique terms that would appear in chat when this section matters.
+For every English or romanised term also give the spelling a Korean-language chat would use (e.g. Avalon, 아발론, Lighthouse, 등대).
+Output ONE line, comma-separated, at most 16 items, nothing else.`;
+
+const AI_SYS_CONFLICT = `You are a continuity checker for a role-play story archive. Compare the NEW text with the EXISTING archive and list contradictions only:
+- the same name spelled differently
+- dates or times of day going backwards
+- facts that contradict facts already established
+- threads the archive marks as resolved that the new text reopens, or the reverse
+- a character in two places at once
+The new text may replace the archive's STATE / OPEN blocks; an update there is not a contradiction unless it clashes with the new sections.
+Do not judge style and do not suggest additions.
+Answer in Korean, one bullet per issue: "- 무엇이 어긋나는지 — 근거 (기존 아카이브의 섹션 제목)". If there is nothing, answer exactly: 없음`;
+
+// "[[## Y2 #48–#63 — …]]" → the section it names (exact heading, then same range)
+function findCited(secs, raw) {
+    const n = raw.replace(/^#+\s*/, '').trim();
+    const rangeOf = t => (t.match(/(?:\b[A-Za-z]+\d*\s+)?#\d+\s*[–—~-]\s*#?\d+/) || [''])[0].replace(/\s*[–—~-]\s*#?/, '–#').replace(/\s+/g, ' ');
+    return secs.find(s => s.title === n)
+        || secs.find(s => s.title.startsWith(n) || n.startsWith(s.title))
+        || (rangeOf(n) && secs.find(s => rangeOf(s.title) === rangeOf(n)))
+        || null;
+}
+
+// ---------------------------------------------------------------- ask the archive
+
+const askLog = new Map(); // chat id → [{ q, a }], this session only
+
+// Answer HTML: the model's text, with [[heading]] citations turned into chips that open that section's text
+function renderAnswer(text, secs) {
+    const cited = [];
+    const html = aiHtml(text).replace(/\[\[([^\]]+?)\]\]/g, (all, raw) => {
+        const plain = $('<i>').html(raw).text();
+        const s = findCited(secs, plain);
+        if (!s) return `<span class="na_cite na_cite_miss" title="아카이브에서 못 찾은 제목">${raw}</span>`;
+        if (!cited.includes(s)) cited.push(s);
+        const short = (s.title.match(/^(?:\S+\s+)?#\d+\s*[–—~-]\s*#?\d+/) || [s.title.slice(0, 30)])[0];
+        return `<button type="button" class="na_cite" data-start="${s.start}" title="${esc(s.title)}"><i class="fa-solid fa-bookmark"></i> ${esc(short)}</button>`;
+    });
+    return { html, cited };
+}
+
+async function openAsk() {
+    const c = ctx();
+    const m = getMeta();
+    if (!m.text.trim()) return toastr.info('아카이브가 비어 있어요.');
+    const chatId = currentChatId();
+    if (!askLog.has(chatId)) askLog.set(chatId, []);
+    const log = askLog.get(chatId);
+    const $root = $(`
+      <div class="na_popup na_ask">
+        <div class="na_block_head"><div>
+          <h4>아카이브에 질문</h4>
+          <p>아카이브에 적힌 내용만 근거로 답해요. 답 속 <i class="fa-solid fa-bookmark"></i> 표시를 누르면 근거 섹션이 펼쳐져요.</p>
+        </div></div>
+        <div class="na_ask_log"></div>
+        <textarea class="text_pole na_ask_q" rows="2" placeholder="예: 둘이 처음 만난 곳이 어디였지?"></textarea>
+        <div class="na_ai_row">
+          <button type="button" class="na_btn na_primary na_ask_go"><i class="fa-regular fa-paper-plane"></i> 물어보기</button>
+          <small class="na_dim na_ask_info"></small>
+        </div>
+      </div>`);
+    const $log = $root.find('.na_ask_log');
+    const secs = parseSections(m.text);
+    const draw = () => {
+        $log.html(log.length ? log.map(x => {
+            const { html } = renderAnswer(x.a, secs);
+            return `<div class="na_ask_item"><div class="na_ask_qq">${esc(x.q)}</div><div class="na_ask_a">${html}</div></div>`;
+        }).join('') : '<div class="na_empty">물어본 게 아직 없어요.</div>');
+        $log.scrollTop($log[0].scrollHeight);
+    };
+    $log.on('click', '.na_cite[data-start]', function () {
+        const start = Number($(this).data('start'));
+        const $next = $(this).closest('.na_ask_a').next('.na_ask_src');
+        if ($next.length && $next.data('start') === start) return $next.remove();
+        $(this).closest('.na_ask_item').find('.na_ask_src').remove();
+        const sec = secs.find(x => x.start === start);
+        if (!sec) return;
+        const $src = $(`<div class="na_ask_src"><div class="na_ask_src_head"><b></b><button type="button" class="na_linkbtn">섹션 탭에서 보기</button></div><div class="na_ask_src_body"></div></div>`).data('start', start);
+        $src.find('b').text(sec.title);
+        $src.find('.na_ask_src_body').html(mdBlock(m.text.slice(sec.start, sec.end).replace(/^[^\n]*\n?/, '')));
+        $src.find('.na_linkbtn').on('click', () => {
+            $root.closest('dialog').find('.popup-button-ok').trigger('click');
+            gotoSection(start);
+        });
+        $(this).closest('.na_ask_a').after($src);
+    });
+    countTokens(m.text).then(n => $root.find('.na_ask_info').text(`질문할 때마다 아카이브 전체(약 ${fmt(n)} 토큰)를 ${aiLabel()}에 보내요`));
+    const $q = $root.find('.na_ask_q');
+    const go = async () => {
+        const q = $q.val().trim();
+        if (!q) return;
+        const a = await withSpinner($root.find('.na_ask_go'), '찾는 중…', () => askAI(`[ARCHIVE]\n${m.text}\n\n[QUESTION]\n${q}`, { system: AI_SYS_ASK, maxTokens: 1500 }));
+        if (a === null) return;
+        log.push({ q, a });
+        if (log.length > 20) log.shift();
+        $q.val('');
+        draw();
+    };
+    $root.find('.na_ask_go').on('click', go);
+    $q.on('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); go(); } });
+    draw();
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+}
+
+// Open the sections tab on one section
+function gotoSection(start) {
+    const $p = $('#na_settings');
+    const $drawer = $p.find('.inline-drawer-content');
+    if ($drawer.length && !$drawer.is(':visible')) $p.find('.inline-drawer-toggle').trigger('click');
+    $p.find('.na_nav_btn[data-tab="sections"]').trigger('click');
+    setTimeout(() => sectionPanel?.focus(start), 50);
+}
+
 // ---------------------------------------------------------------- extract popup
 
 const BASIC_PROMPT = `Compress the raw log below (#{{from}}–#{{to}}) so it can be appended to the existing archive. Output only the format below, with no commentary.
@@ -2458,7 +2763,7 @@ function globalSettings() {
     const es = ctx().extensionSettings;
     if (!es[MODULE] || typeof es[MODULE] !== 'object') es[MODULE] = {};
     const g = es[MODULE];
-    const defaults = { usePrompt: false, skipHidden: true, nameStyle: 'full', stripTags: false };
+    const defaults = { usePrompt: false, skipHidden: true, nameStyle: 'full', stripTags: false, aiProfile: '', aiMaxTokens: 4096 };
     for (const [k, v] of Object.entries(defaults)) if (!Object.hasOwn(g, k)) g[k] = v;
     // prompt library: [{ id, name, text, fav }], first entry is the built-in basic one
     if (!Array.isArray(g.prompts)) {
@@ -2583,6 +2888,10 @@ async function openExtract() {
           <button type="button" class="na_btn na_save_txt"><i class="fa-solid fa-download"></i> .txt 저장</button>
           <button type="button" class="na_btn na_copy na_primary"><i class="fa-solid fa-copy"></i> <span class="na_copy_label">전체 복사</span></button>
         </div>
+        <div class="na_ai_row">
+          <button type="button" class="na_btn na_ai_compress"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 바로 압축</button>
+          <small class="na_dim na_ai_compress_info"></small>
+        </div>
         <textarea class="na_ex_hidden" readonly></textarea>
       </div>`);
 
@@ -2593,6 +2902,8 @@ async function openExtract() {
 
     let current = '';
     let output = '';
+    let aiPrompt = '';
+    let aiJob = null;
     const range = () => {
         const from = parseInt($root.find('.na_from').val(), 10) || 0;
         const to = parseInt($root.find('.na_to').val(), 10);
@@ -2606,9 +2917,9 @@ async function openExtract() {
             .map(x => ({ ...x, text: cleanMessage(x.text, g) }))
             .filter(x => x.text);
         current = formatExtract(items, g);
-        output = g.usePrompt
-            ? fillPrompt(activePrompt(g).text, { raw: current, from: String(from), to: String(to), last_section: lastRangedSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text })
-            : current;
+        aiPrompt = fillPrompt(activePrompt(g).text, { raw: current, from: String(from), to: String(to), last_section: lastRangedSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text });
+        output = g.usePrompt ? aiPrompt : current;
+        $root.find('.na_ai_compress_info').text(items.length ? `지시문 "${activePrompt(g).name}"과 함께 ${aiLabel()}에 보내요 · 약 ${fmt(await countTokens(aiPrompt))} 토큰` : '');
         $root.find('.na_ex_hidden').val(output);
         $root.find('.na_prompt_state').text(g.usePrompt ? activePrompt(g).name : '안 붙임').toggleClass('na_chip_on', g.usePrompt);
         $root.find('.na_copy_label').text(g.usePrompt ? '지시문과 함께 복사' : '전체 복사');
@@ -2685,7 +2996,7 @@ async function openExtract() {
     const showLast = () => {
         const x = getMeta().lastExport;
         $root.find('.na_lastex').prop('hidden', !x);
-        if (x) $root.find('.na_lastex_text').html(`최근 내보냄 <b>#${x.from}–#${x.to}</b> · ${esc(timeLabel(x.at))} · ${x.how === 'txt' ? '.txt 저장' : '복사'}`
+        if (x) $root.find('.na_lastex_text').html(`최근 내보냄 <b>#${x.from}–#${x.to}</b> · ${esc(timeLabel(x.at))} · ${x.how === 'txt' ? '.txt 저장' : x.how === 'ai' ? 'AI 압축' : '복사'}`
             + (fromLast && x === le ? ' <span class="na_dim">→ 그 다음부터 채웠어요</span>' : ''));
     };
     const remember = async how => {
@@ -2715,8 +3026,28 @@ async function openExtract() {
         remember('txt');
     });
 
+    // AI compress: send prompt + raw, then hand the result to the append form (nothing is added without the user)
+    $root.find('.na_ai_compress').on('click', async function () {
+        if (aiJob || !current) return;
+        const { to } = range();
+        const prompt = aiPrompt;
+        aiJob = withSpinner($(this), '압축하는 중… 창을 닫아도 계속돼요', async () => {
+            const text = await askAI(prompt, { system: AI_SYS_COMPRESS });
+            getMeta().aiDraft = { text, to, at: Date.now() }; // kept until it is added, so closing the form loses nothing
+            await remember('ai');
+            return { text, to };
+        });
+        const r = await aiJob;
+        if (!r) { aiJob = null; return; }
+        $root.closest('dialog').find('.popup-button-ok').trigger('click');
+    });
+
     await render();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    if (aiJob) {
+        const r = await aiJob;
+        if (r) openAppend({ prefill: r.text, end: r.to, note: 'AI가 만든 압축 초안이에요. 번호·내용을 확인하고 추가하세요.' });
+    }
 }
 
 // ---------------------------------------------------------------- append popup
@@ -2827,7 +3158,8 @@ function checkAppend(m, add, last) {
     return { ranges, issues, soft: false };
 }
 
-async function openAppend() {
+async function openAppend(opts) {
+    const { prefill = '', end: presetEnd = null, note = '' } = opts && typeof opts.prefill === 'string' ? opts : {};
     const c = ctx();
     const m = getMeta();
     const last = (c.chat?.length || 0) - 1;
@@ -2835,14 +3167,23 @@ async function openAppend() {
     const $root = $(`
       <div class="na_popup">
         <div class="na_append_head">
-          <span class="na_dim">새로 압축한 섹션을 붙여넣거나 파일로 불러오세요.</span>
-          <button type="button" class="na_btn na_small na_append_file_btn"><i class="fa-solid fa-file-arrow-up"></i> .txt 불러오기</button>
+          <span class="na_dim">${note ? `<b class="na_ai_note"><i class="fa-solid fa-wand-magic-sparkles"></i> ${esc(note)}</b>` : '새로 압축한 섹션을 붙여넣거나 파일로 불러오세요.'}</span>
+          <span class="na_row_btns">
+            <button type="button" class="na_btn na_small na_ai_draft_btn" ${!prefill && m.aiDraft?.text ? '' : 'hidden'}><i class="fa-solid fa-wand-magic-sparkles"></i> AI 초안 불러오기</button>
+            <button type="button" class="na_btn na_small na_append_file_btn"><i class="fa-solid fa-file-arrow-up"></i> .txt 불러오기</button>
+          </span>
           <input type="file" class="na_append_file" accept=".txt,.md,text/plain" hidden>
         </div>
         <textarea class="text_pole na_append_ta" spellcheck="false" placeholder="## Y2 #574–#600 — ..."></textarea>
         <div class="na_check" hidden></div>
+        <div class="na_check na_check_soft na_names" hidden></div>
+        <div class="na_ai_row">
+          <button type="button" class="na_btn na_small na_ai_conflict"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 충돌 검사</button>
+          <small class="na_dim">기존 아카이브와 어긋나는 이름·날짜·사실을 찾아요</small>
+        </div>
+        <div class="na_ai_box na_conflict_out" hidden></div>
         <div class="na_row">
-          <label>이번에 압축한 끝 번호 # <input type="number" class="text_pole na_num na_end" min="0" max="${last}" value="${Math.max(0, last)}"></label>
+          <label>이번에 압축한 끝 번호 # <input type="number" class="text_pole na_num na_end" min="0" max="${last}" value="${Math.max(0, presetEnd ?? last)}"></label>
           <span class="na_end_hint na_dim"></span>
         </div>
         <label class="checkbox_label"><input type="checkbox" class="na_do_hide" checked><span>저장 후 숨기기 적용 (마지막 ${m.keep}개 남김)</span></label>
@@ -2857,7 +3198,13 @@ async function openAppend() {
 
     const $ta = $root.find('.na_append_ta');
     const $end = $root.find('.na_end');
+    let usedDraft = false;
     $root.find('.na_append_file_btn').on('click', () => $root.find('.na_append_file').val('').trigger('click'));
+    $root.find('.na_ai_draft_btn').attr('title', m.aiDraft ? `${timeLabel(m.aiDraft.at)}에 만든 초안` : '').on('click', async () => {
+        if ($ta.val().trim() && !await confirm('AI 초안', '붙여넣은 내용을 AI 초안으로 바꿀까요?')) return;
+        $ta.val(m.aiDraft.text).trigger('input');
+        usedDraft = true;
+    });
     $root.find('.na_append_file').on('change', async function () {
         const file = this.files?.[0];
         if (!file) return;
@@ -2866,7 +3213,7 @@ async function openAppend() {
         $ta.val(text).trigger('input');
         toastr.success(`불러옴: ${file.name}`);
     });
-    const $check = $root.find('.na_check');
+    const $check = $root.find('.na_check').not('.na_names');
     $root.find('.na_renum_row').hide();
     let lastPlan = null;
     const $pv = $root.find('.na_ap_preview');
@@ -2888,6 +3235,7 @@ async function openAppend() {
     $end.on('input', () => { endTouched = true; $root.find('.na_end_hint').text(''); });
     let t;
     $ta.on('input', () => {
+        $root.find('.na_conflict_out').addClass('na_stale'); // checked text changed since
         clearTimeout(t);
         t = setTimeout(async () => {
             const val = $ta.val();
@@ -2906,6 +3254,9 @@ async function openAppend() {
                 $check.prop('hidden', false).attr('class', `na_check ${lastCheck.soft ? 'na_check_soft' : 'na_check_warn'}`)
                     .html(`<i class="fa-solid fa-triangle-exclamation"></i><ul>${lastCheck.issues.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`);
             }
+            const near = val.trim() ? nameNearMisses(m.text, val) : [];
+            $root.find('.na_names').prop('hidden', !near.length)
+                .html(near.length ? `<i class="fa-solid fa-spell-check"></i><div>철자 확인 — 아카이브에 비슷한 이름이 있어요<ul>${near.map(x => `<li><b>${esc(x.word)}</b> ↔ 기존 <b>${esc(x.like)}</b></li>`).join('')}</ul></div>` : '');
             const plan = placeAppend(m.text, val, { renumber: $root.find('.na_do_renum').prop('checked') });
             renderPreview(plan);
             const notes = [];
@@ -2918,6 +3269,16 @@ async function openAppend() {
         }, 400);
     });
 
+    $root.find('.na_ai_conflict').on('click', async function () {
+        const add = $ta.val().trim();
+        if (!add) return toastr.info('먼저 추가할 내용을 붙여넣어 주세요.');
+        const out = await withSpinner($(this), '검사하는 중…', () => askAI(`[EXISTING ARCHIVE]\n${m.text}\n\n[NEW TEXT]\n${add}`, { system: AI_SYS_CONFLICT, maxTokens: 1500 }));
+        if (out === null) return;
+        const none = /^\s*(없음|none)\.?\s*$/i.test(out);
+        $root.find('.na_conflict_out').prop('hidden', false).removeClass('na_stale').toggleClass('na_ai_ok', none)
+            .html(none ? '<i class="fa-solid fa-circle-check"></i> AI가 찾은 충돌 없음' : `<div class="na_ai_box_head"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 충돌 검사 <span class="na_dim">· 참고용이에요</span></div>${aiHtml(out)}`);
+    });
+    if (prefill) { $ta.val(prefill).trigger('input'); usedDraft = true; }
     const result = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', {
         wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '추가', cancelButton: '취소',
     });
@@ -2935,6 +3296,7 @@ async function openAppend() {
     }
 
     const plan = placeAppend(m.text, add, { renumber: $root.find('.na_do_renum').prop('checked') && $root.find('.na_renum_row').is(':visible') });
+    if (usedDraft) delete m.aiDraft;
     await commitText(plan.text, '추가 전', { boundary: end });
     if ($root.find('.na_do_hide').prop('checked')) await applyHide({ silent: true });
     toastr.success(`아카이브에 추가됨 · 경계선 #${end}`);
@@ -2958,6 +3320,7 @@ function addWandMenu() {
         ['na_wand_extract', 'fa-scissors', '원문 뽑기', openExtract],
         ['na_wand_append', 'fa-file-circle-plus', '아카이브에 추가', openAppend],
         ['na_wand_preview', 'fa-eye', '주입 미리보기', openPreview],
+        ['na_wand_ask', 'fa-comments', '아카이브에 질문', openAsk],
     ];
     for (const [id, icon, label, fn] of items) {
         const $it = $(`<div id="${id}" class="list-group-item flex-container flexGap5 interactable na_wand_item" tabindex="0" title="서사 아카이브">
