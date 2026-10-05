@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.8.2';
+const VERSION = '3.8.3';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -39,6 +39,24 @@ const POSITIONS = { 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '
 const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
 
 const ctx = () => SillyTavern.getContext();
+
+// Switches: the real checkbox is hidden and a <span> next to it draws the switch, so no theme's
+// input[type=checkbox] rules (boxes, ticks, forced sizes) can reach the look.
+function skinToggles(root = document) {
+    const list = root.matches?.('input.na_toggle') ? [root] : root.querySelectorAll?.('input.na_toggle:not(.na_tgl)') || [];
+    for (const el of list) {
+        if (el.classList.contains('na_tgl')) continue;
+        el.classList.add('na_tgl');
+        const ui = document.createElement('span');
+        ui.className = 'na_tgl_ui';
+        ui.setAttribute('aria-hidden', 'true');
+        el.after(ui);
+        // outside a <label> the span would not toggle the box by itself
+        if (!el.closest('label')) ui.addEventListener('click', () => el.click());
+    }
+}
+new MutationObserver(muts => { for (const mu of muts) for (const n of mu.addedNodes) if (n.nodeType === 1) skinToggles(n); })
+    .observe(document.documentElement, { childList: true, subtree: true });
 
 // ---------------------------------------------------------------- state
 
@@ -4128,7 +4146,8 @@ async function openQuotes() {
         <div class="na_qb_excl">
           <span class="na_qb_excl_label"><i class="fa-solid fa-user-slash"></i> 뺄 인물</span>
           <span class="na_qb_excl_chips"></span>
-          <input type="text" class="text_pole na_qb_excl_in" placeholder="이름 넣고 Enter">
+          <input type="text" class="text_pole na_qb_excl_in" placeholder="이름" enterkeyhint="done">
+          <button type="button" class="na_btn na_small na_qb_excl_add"><i class="fa-solid fa-plus"></i> 추가</button>
         </div>
         <div class="na_qb_pickhost"></div>
         <input type="search" class="text_pole na_qb_q" placeholder="인물·대사로 찾기">
@@ -4208,12 +4227,18 @@ async function openQuotes() {
         await save();
         toastr.success(`${name}: 빼는 인물로 정했어요${before - m.quotes.length ? ` · 대사 ${before - m.quotes.length}개 지움` : ''}`);
     };
-    $root.find('.na_qb_excl_in').on('keydown', async function (e) {
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
-        const v = this.value; this.value = '';
+    // mobile keyboards often send no "Enter" key (IME composing / keyCode 229), so take the button, Enter and change
+    const addExcluded = async () => {
+        const $in = $root.find('.na_qb_excl_in');
+        const v = String($in.val() || '').trim();
+        if (!v) return;
+        $in.val('');
         for (const n of v.split(/[,，]/)) await exclude(n);
-    });
+    };
+    $root.find('.na_qb_excl_add').on('click', addExcluded);
+    $root.find('.na_qb_excl_in').on('keydown', function (e) {
+        if ((e.key === 'Enter' || e.keyCode === 13) && !e.isComposing) { e.preventDefault(); addExcluded(); }
+    }).on('change', addExcluded);
     $root.on('click', '.na_qb_unex', async function () {
         const n = String($(this).data('n'));
         m.quoteExclude = (m.quoteExclude || []).filter(x => x !== n);
