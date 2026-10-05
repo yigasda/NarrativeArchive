@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '1.5.3';
+const VERSION = '1.6.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -351,6 +351,47 @@ function insertAfterText(text, s) {
     return { text: `${before}\n\n${block}${after ? '\n' : ''}${after}`, start };
 }
 
+// ---- heading format check: "## [prefix ]#from–#to — title", continuous numbering per prefix
+
+const RANGE_HEAD = /^(?:(\S{1,12})\s)?#(\d+)\s*([–—~-])\s*#?(\d+)(.*)$/;
+
+function checkHeadings(text) {
+    const secs = parseSections(text).filter(s => !s.group && s.title !== '(머리말)' && s.title !== '(제목 없음)');
+    const ranged = secs.map(s => ({ s, mt: s.title.match(RANGE_HEAD) })).filter(x => x.mt);
+    const issues = [];
+    const dashes = ranged.map(x => x.mt[3]);
+    const mainDash = dashes.filter(d => d === '–').length >= dashes.length / 2 ? '–' : '-';
+    const lastBy = new Map();
+    const levelCount = {};
+    ranged.forEach(x => { levelCount[x.s.level] = (levelCount[x.s.level] || 0) + 1; });
+    const mainLevel = Number(Object.entries(levelCount).sort((a, b) => b[1] - a[1])[0]?.[0] || 2);
+    const span = (a, b) => a === b ? `#${a}` : `#${a}–#${b}`;
+    for (const { s, mt } of ranged) {
+        const prefix = (mt[1] || '').trim();
+        const from = parseInt(mt[2], 10), to = parseInt(mt[4], 10);
+        const rest = mt[5];
+        const where = { start: s.start, title: s.title };
+        if (from > to) issues.push({ ...where, msg: `시작 #${from}이 끝 #${to}보다 커요` });
+        if (!/^\s+[—–-]\s+\S/.test(rest)) issues.push({ ...where, msg: '번호 뒤에 " — 제목"이 없어요' });
+        if (mt[3] !== mainDash) issues.push({ ...where, msg: `번호 사이 대시가 "${mt[3]}"예요 (다른 제목은 "${mainDash}")` });
+        const prev = lastBy.get(prefix);
+        const lo = Math.min(from, to);
+        if (prev) {
+            if (lo > prev.to + 1) issues.push({ ...where, msg: `앞 섹션(#${prev.to}까지)과 사이 ${span(prev.to + 1, lo - 1)}가 빠졌어요` });
+            else if (lo <= prev.to) issues.push({ ...where, msg: `앞 섹션(#${prev.from}–#${prev.to})과 번호가 겹쳐요` });
+        }
+        if (s.level !== mainLevel) issues.push({ ...where, msg: `제목 단계가 달라요 (${'#'.repeat(s.level)} — 다른 섹션은 ${'#'.repeat(mainLevel)})` });
+        lastBy.set(prefix, { from: Math.min(from, to), to: Math.max(from, to) });
+    }
+    // duplicate titles break per-section switches and collapsing
+    const seen = new Map();
+    for (const s of secs) {
+        if (seen.has(s.title)) issues.push({ start: s.start, title: s.title, msg: '같은 제목이 또 있어요 (스위치·펼치기가 같이 움직여요)' });
+        else seen.set(s.title, true);
+    }
+    return { issues: issues.sort((a, b) => a.start - b.start), ranged: ranged.length };
+}
+
 // Section browser shared by the panel tab and the large popup.
 // Returns { render } — call render() after the archive changes.
 function mountSectionBrowser($host) {
@@ -486,7 +527,7 @@ function mountSectionBrowser($host) {
             shown++;
             const isOpen = !!q || openCards.has(s.title);
             const $card = $(`
-              <div class="na_card ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''}">
+              <div class="na_card ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''}" data-start="${s.start}">
                 <div class="na_card_head">
                   <span class="na_card_title">${highlight(s.title, q)}</span>
                   <span class="na_card_meta">${count ? `<span class="na_hit">${count}건</span>` : ''}<span class="na_tok">${fmt(body.length)}자</span></span>
@@ -540,10 +581,22 @@ function mountSectionBrowser($host) {
         if (editTarget) { pendingEdit = -1; editSection(...editTarget); editTarget[0][0].scrollIntoView({ block: 'center' }); }
     }
 
+    function focus(start) {
+        const s = parseSections(getMeta().text).find(x => x.start === start);
+        if (!s) return;
+        $search.val('');
+        openCards.add(s.title);
+        // open every group on the way so the card is visible
+        collapsed.clear();
+        render();
+        const el = $list.find(`.na_card[data-start="${start}"]`)[0];
+        if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('na_flash'); setTimeout(() => el.classList.remove('na_flash'), 1400); }
+    }
+
     let t;
     $search.on('input', () => { clearTimeout(t); t = setTimeout(render, 200); });
     render();
-    return { render };
+    return { render, focus };
 }
 
 // ---------------------------------------------------------------- panel
@@ -602,13 +655,24 @@ function renderPanel() {
                   <span class="na_chip" id="na_ed_tok">-</span>
                   <span class="na_dirty" id="na_ed_dirty" hidden>● 저장 안 됨</span>
                   <span class="na_spacer"></span>
-                  <button type="button" class="na_icon" id="na_ed_find" title="찾기"><i class="fa-solid fa-magnifying-glass"></i></button>
+                  <button type="button" class="na_icon" id="na_ed_toc" title="목차"><i class="fa-solid fa-list-ul"></i></button>
+                  <button type="button" class="na_icon" id="na_ed_find" title="찾아 바꾸기"><i class="fa-solid fa-magnifying-glass"></i></button>
                   <button type="button" class="na_icon" id="na_ed_copy" title="전체 복사"><i class="fa-regular fa-copy"></i></button>
                   <button type="button" class="na_icon" id="na_ed_big" title="크게 보기"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></button>
                 </div>
+                <div class="na_toc" id="na_toc" hidden></div>
                 <div class="na_findbar" id="na_findbar" hidden>
-                  <input type="search" class="text_pole" id="na_find_q" placeholder="본문에서 찾기 (Enter: 다음)">
-                  <span class="na_dim" id="na_find_info"></span>
+                  <div class="na_find_row">
+                    <input type="search" class="text_pole" id="na_find_q" placeholder="찾기 (Enter: 다음)">
+                    <span class="na_find_info" id="na_find_info"></span>
+                    <button type="button" class="na_icon na_icon_sm" id="na_find_next" title="다음"><i class="fa-solid fa-arrow-down"></i></button>
+                  </div>
+                  <div class="na_find_row">
+                    <input type="text" class="text_pole" id="na_rep_q" placeholder="바꿀 말">
+                    <button type="button" class="na_btn na_small" id="na_rep_one">바꾸기</button>
+                    <button type="button" class="na_btn na_small" id="na_rep_all" disabled>모두</button>
+                  </div>
+                  <label class="na_find_case"><input type="checkbox" id="na_find_case"> 대소문자 구분</label>
                 </div>
                 <textarea id="na_editor" class="text_pole na_editor" spellcheck="false" placeholder="# 제목&#10;&#10;# ── Y1 ──&#10;&#10;## #0–#47 — ..."></textarea>
                 <div class="na_editor_actions">
@@ -632,6 +696,10 @@ function renderPanel() {
                   </div>
                   <button type="button" class="na_btn na_small" id="na_sec_big"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> 크게</button>
                 </div>
+                <details class="na_hcheck" id="na_hcheck">
+                  <summary><i class="fa-solid fa-spell-check"></i> 제목 검사 <span class="na_chip" id="na_hcheck_n">-</span></summary>
+                  <div id="na_hcheck_list"></div>
+                </details>
                 <div id="na_sec_host"></div>
               </div>
             </section>
@@ -718,6 +786,29 @@ function renderPanel() {
     bindPanel();
 }
 
+// Scroll the panel editor so [from, to) is visible and select it (wrapped lines measured with a mirror div).
+function revealInEditor(from, to, { keepFocus = false } = {}) {
+    const el = document.getElementById('na_editor');
+    if (!el) return;
+    const cs = getComputedStyle(el);
+    const mirror = document.createElement('div');
+    for (const k of ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'paddingTop', 'paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth', 'boxSizing', 'tabSize']) mirror.style[k] = cs[k];
+    Object.assign(mirror.style, { position: 'absolute', visibility: 'hidden', whiteSpace: 'pre-wrap', wordWrap: 'break-word', overflowWrap: 'break-word', width: `${el.clientWidth}px`, top: '0', left: '-9999px' });
+    mirror.textContent = el.value.slice(0, from);
+    const mark = document.createElement('span');
+    mark.textContent = '​';
+    mirror.appendChild(mark);
+    document.body.appendChild(mirror);
+    const y = mark.offsetTop;
+    mirror.remove();
+    el.scrollTop = Math.max(0, y - el.clientHeight / 3);
+    const active = document.activeElement;
+    el.focus({ preventScroll: true });
+    el.setSelectionRange(from, to);
+    el.scrollTop = Math.max(0, y - el.clientHeight / 3);
+    if (keepFocus && active && active !== el) active.focus({ preventScroll: true });
+}
+
 const needChat = fn => (...a) => hasChat() ? fn(...a) : toastr.info('채팅을 먼저 여세요.');
 
 function bindPanel() {
@@ -761,32 +852,88 @@ function bindPanel() {
     });
     $('#na_ed_big').on('click', needChat(openViewer));
 
-    // in-textarea find
-    $('#na_ed_find').on('click', () => {
-        const $fb = $('#na_findbar');
-        $fb.prop('hidden', !$fb.prop('hidden'));
-        if (!$fb.prop('hidden')) $('#na_find_q').trigger('focus');
-    });
-    let findFrom = 0;
-    const doFind = advance => {
-        const q = $('#na_find_q').val();
-        const text = $ed.val();
-        if (!q) { $('#na_find_info').text(''); return; }
-        const lower = text.toLowerCase(), ql = q.toLowerCase();
-        const total = lower.split(ql).length - 1;
-        if (!total) { $('#na_find_info').text('없음'); return; }
-        let at = lower.indexOf(ql, advance ? findFrom : 0);
-        if (at < 0) at = lower.indexOf(ql);
-        findFrom = at + ql.length;
-        const nth = lower.slice(0, at).split(ql).length;
-        $('#na_find_info').text(`${nth}/${total}`);
-        const el = $ed[0];
-        el.setSelectionRange(at, at + q.length);
-        const lineH = parseFloat(getComputedStyle(el).lineHeight) || 18;
-        el.scrollTop = Math.max(0, (text.slice(0, at).split('\n').length - 3) * lineH);
+    // --- editor tools: table of contents, find & replace
+    const togglePanel = (id, focus) => {
+        const $el = $(id);
+        const show = $el.prop('hidden');
+        $('#na_findbar, #na_toc').prop('hidden', true);
+        $('#na_ed_find, #na_ed_toc').removeClass('active');
+        $el.prop('hidden', !show);
+        if (show) {
+            $(id === '#na_toc' ? '#na_ed_toc' : '#na_ed_find').addClass('active');
+            focus?.();
+        }
     };
+    $('#na_ed_find').on('click', () => togglePanel('#na_findbar', () => $('#na_find_q').trigger('focus').trigger('input')));
+    $('#na_ed_toc').on('click', () => togglePanel('#na_toc', renderToc));
+
+    function renderToc() {
+        const text = $ed.val();
+        const $toc = $('#na_toc').empty();
+        const secs = parseSections(text).filter(s => s.title !== '(머리말)' && s.title !== '(제목 없음)');
+        if (!secs.length) { $toc.html('<div class="na_empty">제목(#, ##)이 없어요.</div>'); return; }
+        secs.forEach(s => {
+            const $it = $(`<button type="button" class="na_toc_item na_toc_lv${s.level} ${s.group ? 'na_toc_group' : ''}">${esc(s.group ? groupLabel(s.title) : s.title)}</button>`);
+            $it.on('click', () => {
+                revealInEditor(s.start, s.start + (text.slice(s.start).indexOf('\n') + 1 || text.length - s.start) - 1);
+            });
+            $toc.append($it);
+        });
+    }
+
+    let findFrom = 0;
+    const findOpts = () => ({ q: $('#na_find_q').val(), cs: $('#na_find_case').prop('checked') });
+    const matchesOf = (text, q, cs) => {
+        if (!q) return [];
+        const hay = cs ? text : text.toLowerCase(), needle = cs ? q : q.toLowerCase();
+        const out = [];
+        for (let at = hay.indexOf(needle); at >= 0; at = hay.indexOf(needle, at + needle.length)) out.push(at);
+        return out;
+    };
+    const doFind = advance => {
+        const { q, cs } = findOpts();
+        const text = $ed.val();
+        const hits = matchesOf(text, q, cs);
+        $('#na_rep_all').prop('disabled', !hits.length);
+        if (!q) { $('#na_find_info').text(''); return; }
+        if (!hits.length) { $('#na_find_info').text('없음'); return; }
+        let idx = hits.findIndex(at => at >= (advance ? findFrom : 0));
+        if (idx < 0) idx = 0;
+        const at = hits[idx];
+        findFrom = at + q.length;
+        $('#na_find_info').text(`${idx + 1}/${hits.length}`);
+        revealInEditor(at, at + q.length, { keepFocus: true });
+    };
+    const replaceText = (text, from, len, rep) => text.slice(0, from) + rep + text.slice(from + len);
     $('#na_find_q').on('input', () => { findFrom = 0; doFind(false); });
+    $('#na_find_case').on('change', () => { findFrom = 0; doFind(false); });
     $('#na_find_q').on('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doFind(true); } });
+    $('#na_find_next').on('click', () => doFind(true));
+    $('#na_rep_one').on('click', () => {
+        const { q, cs } = findOpts();
+        if (!q) return;
+        const el = $ed[0];
+        const sel = el.value.slice(el.selectionStart, el.selectionEnd);
+        const same = cs ? sel === q : sel.toLowerCase() === q.toLowerCase();
+        if (same) {
+            const at = el.selectionStart;
+            $ed.val(replaceText(el.value, at, q.length, $('#na_rep_q').val())).trigger('input');
+            findFrom = at + $('#na_rep_q').val().length;
+        }
+        doFind(true);
+    });
+    $('#na_rep_all').on('click', async () => {
+        const { q, cs } = findOpts();
+        const rep = $('#na_rep_q').val();
+        const hits = matchesOf($ed.val(), q, cs);
+        if (!hits.length) return;
+        if (!await confirm('모두 바꾸기', `"${q}" ${hits.length}군데를 "${rep}"(으)로 바꿀까요? 편집칸에만 바뀌고, 저장해야 반영돼요.`)) return;
+        let text = $ed.val();
+        for (let i = hits.length - 1; i >= 0; i--) text = replaceText(text, hits[i], q.length, rep);
+        $ed.val(text).trigger('input');
+        doFind(false);
+        toastr.success(`${hits.length}군데 바꿈 · 저장을 눌러야 반영돼요`);
+    });
 
     // --- sections
     $('#na_sec_big').on('click', needChat(openViewer));
@@ -945,9 +1092,28 @@ function syncPanel() {
     }
     $('#na_keep').val(m.keep);
     sectionPanel?.render();
+    renderHeadingCheck();
     renderSnapshots();
     refreshInjectLog();
     refreshStatus();
+}
+
+function renderHeadingCheck() {
+    const $l = $('#na_hcheck_list');
+    if (!$l.length || !hasChat()) return;
+    const { issues, ranged } = checkHeadings(getMeta().text);
+    $('#na_hcheck_n').text(issues.length ? `${issues.length}곳` : (ranged ? '문제 없음' : '번호 제목 없음'))
+        .toggleClass('na_chip_warn', !!issues.length).toggleClass('na_chip_on', !issues.length && !!ranged);
+    $l.empty();
+    if (!issues.length) {
+        $l.html(`<div class="na_empty">${ranged ? `번호 제목 ${ranged}개 모두 형식·순서가 맞아요.` : '"## #시작–#끝 — 제목" 형식의 제목이 없어요.'}</div>`);
+        return;
+    }
+    issues.forEach(it => {
+        const $row = $(`<button type="button" class="na_hc_row"><span class="na_hc_title">${esc(it.title)}</span><span class="na_hc_msg">${esc(it.msg)}</span></button>`);
+        $row.on('click', () => sectionPanel?.focus(it.start));
+        $l.append($row);
+    });
 }
 
 function renderSnapshots() {
