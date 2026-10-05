@@ -1297,3 +1297,7 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_chip:empty { display: none; }
 
 .na_qb_excl_add { flex-shrink: 0; }
+.na_wz_draft { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; padding-top: 8px; border-top: 1px dashed var(--na-line); }
+.na_wz_draft .na_btn { align-self: flex-start; }
+.na_wz_draft small { font-size: 0.78em; }
+.na_dr_max_row[hidden] { display: none; }

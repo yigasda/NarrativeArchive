@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.8.4';
+const VERSION = '3.9.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1353,6 +1353,19 @@ function renderPanel() {
                 </div>
                 ${connCfgHtml('tr')}
                 <div class="na_set_list">
+                  <label class="na_set_row"><span><span>초안 모델</span><small>압축 초안처럼 아카이브에 들어갈 글을 써 주는 모델이에요 (예: Opus). 정하지 않으면 초안 버튼이 안 보여요</small></span>
+                    <select id="na_dr_mode" class="text_pole">
+                      <option value="same">쓰지 않음</option>
+                      <option value="custom">커스텀 API (OpenAI 호환)</option>
+                      <option value="vertex">Gemini · Vertex AI</option>
+                    </select>
+                  </label>
+                </div>
+                ${connCfgHtml('dr')}
+                <div class="na_set_list na_dr_max_row" id="na_dr_max_row" hidden>
+                  <label class="na_set_row"><span><span>초안 최대 길이</span><small>토큰 · 초안이 끊기면 늘려 주세요</small></span><input type="number" id="na_dr_max" class="text_pole" min="1024" step="1024"></label>
+                </div>
+                <div class="na_set_list">
                   <label class="na_set_row"><span><span>이탈 자동 감지</span><small>AI 답이 이만큼 쌓일 때마다 조용히 검사하고, 어긋나면 알려 줘요 · 그때마다 토큰이 들어가요</small></span>
                     <select id="na_drift_auto" class="text_pole"><option value="0">끄기</option><option value="5">답 5개마다</option><option value="10">답 10개마다</option><option value="20">답 20개마다</option></select></label>
                   <div class="na_set_row"><span><span>번역 용어집</span><small>이름·장소의 한국어 표기를 정해 두면 번역이 늘 그대로 써요 · 이 채팅 <b id="na_gloss_n">0</b>개</small></span><button type="button" class="na_btn na_small" id="na_gloss_edit"><i class="fa-solid fa-spell-check"></i> 편집</button></div>
@@ -1431,7 +1444,10 @@ function renderAiSettings() {
     $('#na_ai_profile').html(opts.join('')).val(a.mode === 'st' ? (g.aiProfile || '') : `__${a.mode}`);
     $('#na_ai_max').val(g.aiMaxTokens || 8192);
     $('#na_tr_mode').val(trSettings().mode);
-    const own = [renderConn('ai'), renderConn('tr')].some(Boolean);
+    $('#na_dr_mode').val(draftSettings().mode);
+    $('#na_dr_max_row').prop('hidden', !draftReady());
+    $('#na_dr_max').val(draftSettings().max || 16000);
+    const own = [renderConn('ai'), renderConn('tr'), renderConn('dr')].some(Boolean);
     $('#na_conn_note').prop('hidden', !own);
 }
 
@@ -1576,7 +1592,9 @@ function bindPanel() {
     $('#na_drift_auto').on('change', function () { globalSettings().driftAuto = Number(this.value) || 0; saveGlobal(); });
     $('#na_gloss_edit').on('click', needChat(async () => { await openGlossary(); renderAiSettings(); }));
     $('#na_tr_mode').on('change', function () { trSettings().mode = this.value; saveGlobal(); renderAiSettings(); });
-    for (const p of ['ai', 'tr']) {
+    $('#na_dr_mode').on('change', function () { draftSettings().mode = this.value; saveGlobal(); renderAiSettings(); });
+    $('#na_dr_max').on('change', function () { const v = Math.max(1024, parseInt(this.value, 10) || 16000); draftSettings().max = v; this.value = v; saveGlobal(); });
+    for (const p of ['ai', 'tr', 'dr']) {
         const field = (sel, key) => $(`#na_${p}_${sel}`).on('change', function () { connSettings(p)[key] = this.value.trim(); saveGlobal(); renderAiSettings(); });
         field('url', 'url'); field('key', 'key'); field('model', 'model'); field('vxloc', 'vxLocation'); field('vxmodel', 'vxModel');
         $(`#na_${p}_vxjson`).on('change', function () {
@@ -1589,6 +1607,10 @@ function bindPanel() {
     $('#na_ai_test').on('click', async function () {
         const out = await withSpinner($(this), '확인하는 중…', () => askAI('Reply with one short sentence: which model are you?', { maxTokens: 300 }));
         if (out) toastr.success(out.slice(0, 160), `${aiLabel()} 연결됨`);
+    });
+    $('#na_dr_test').on('click', async function () {
+        const out = await withSpinner($(this), '확인하는 중…', () => askDraft('Reply with one short sentence: which model are you?', { maxTokens: 300 }));
+        if (out) toastr.success(out.slice(0, 160), `${drLabel()} 연결됨`);
     });
     $('#na_tr_test').on('click', async function () {
         const out = await withSpinner($(this), '확인하는 중…', () => askTranslator('1: The three of them fell asleep together.', { system: AI_SYS_TRANSLATE, maxTokens: 200 }));
@@ -2471,10 +2493,10 @@ OUTPUT: nothing else, exactly like this
 
 function connSettings(which) {
     const g = globalSettings();
-    const k = which === 'tr' ? 'tr' : 'aiConn';
+    const k = which === 'tr' ? 'tr' : which === 'dr' ? 'draftConn' : 'aiConn';
     g[k] ||= {};
     const t = g[k];
-    t.mode ??= which === 'tr' ? 'same' : 'st';
+    t.mode ??= which === 'ai' ? 'st' : 'same';
     t.url ??= ''; t.key ??= ''; t.model ??= '';
     t.vxJson ??= ''; t.vxLocation ??= 'global'; t.vxModel ??= 'gemini-2.5-flash';
     // the old default was us-central1; move untouched settings to global once
@@ -2590,6 +2612,18 @@ async function askTranslator(prompt, { system = '', maxTokens = 0 } = {}) {
     if (!out) throw new Error('번역 모델이 빈 답을 돌려줬어요');
     return out;
 }
+
+// the draft model writes text that may go into the archive (compression drafts); 'same' = not set
+const draftSettings = () => connSettings('dr');
+const draftReady = () => ['custom', 'vertex'].includes(draftSettings().mode);
+async function askDraft(prompt, { system = '', maxTokens = 0 } = {}) {
+    const t = draftSettings();
+    if (!draftReady()) throw new Error('초안 모델이 없어요. ⚙ 설정 → AI · 번역 → 초안 모델에서 정해 주세요.');
+    const out = await callConn(t, system, prompt, Math.max(256, Number(maxTokens) || Number(t.max) || 16000));
+    if (!out) throw new Error('초안 모델이 빈 답을 돌려줬어요');
+    return out;
+}
+const drLabel = () => { const t = draftSettings(); return t.mode === 'custom' ? (t.model || '커스텀 API') : t.mode === 'vertex' ? (t.vxModel || 'Vertex') : '없음'; };
 
 const trLabel = () => {
     const t = trSettings();
@@ -4490,6 +4524,7 @@ async function openWizard() {
           <div class="na_wiz_title">복사 <span class="na_dim">· 압축할 모델에 붙여넣기</span></div>
           <div class="na_row"><select class="text_pole na_wz_prompt"></select></div>
           <div class="na_row_btns"><button type="button" class="na_btn na_small na_primary na_wz_copy"><i class="fa-solid fa-copy"></i> <span>복사</span></button><button type="button" class="na_btn na_small na_wz_save"><i class="fa-solid fa-download"></i> .txt 저장</button></div>
+          ${draftReady() ? `<div class="na_wz_draft"><button type="button" class="na_btn na_small na_wz_draftbtn"><i class="fa-solid fa-feather-pointed"></i> 초안 모델로 압축</button><small class="na_dim">${esc(drLabel())} · 지시문이 없으면 "${esc(activePrompt(g).name)}"을 붙여요 · 결과는 3단계에 채워져요</small></div>` : ''}
         </div></div>
         <div class="na_wiz_step"><b>3</b><div class="na_wiz_main">
           <div class="na_wiz_title na_wz_outhead">결과 붙여넣기
@@ -4542,6 +4577,22 @@ async function openWizard() {
         if (!raw) return toastr.info('범위에 메시지가 없어요.');
         const ok = await copyText(full, $root.find('.na_wz_out')[0]);
         if (ok) { await remember('copy'); toastr.success('복사됨 · 압축할 모델에 붙여넣으세요'); } else toastr.warning('복사가 막혀 있어요. .txt 저장을 써 주세요.');
+    });
+    $root.find('.na_wz_draftbtn').on('click', async function () {
+        await build();
+        if (!raw) return toastr.info('범위에 메시지가 없어요.');
+        const $out = $root.find('.na_wz_out');
+        if ($out.val().trim() && !await confirm('초안 모델로 압축', '3단계에 붙여넣은 내용을 새 초안으로 바꿀까요?')) return;
+        // the draft always carries an instruction: the chosen one, or the active one when "raw only" is picked
+        const { from, to } = range();
+        const pid = $root.find('.na_wz_prompt').val();
+        const p = g.prompts.find(x => x.id === pid) || activePrompt(g);
+        const prompt = fillPrompt(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text });
+        const out = await withSpinner($(this), '쓰는 중… 창을 닫지 마세요', () => askDraft(prompt));
+        if (out === null) return;
+        $out.val(out.replace(/^```[a-z]*\n?|```\s*$/g, '').trim()).trigger('input');
+        await remember('draft');
+        toastr.success('초안을 3단계에 채웠어요. 채점하거나 확인하고 추가하세요.');
     });
     $root.find('.na_wz_save').on('click', async () => { await build(); if (!raw) return; const { from, to } = range(); download(`원문_${chatLabel()}_${from}-${to}.txt`, full); remember('txt'); });
     $root.find('.na_wz_file_btn').on('click', () => $root.find('.na_wz_file').val('').trigger('click'));
@@ -5632,7 +5683,7 @@ async function openExtract() {
     const showLast = () => {
         const x = getMeta().lastExport;
         $root.find('.na_lastex').prop('hidden', !x);
-        if (x) $root.find('.na_lastex_text').html(`최근 내보냄 <b>#${x.from}–#${x.to}</b> · ${esc(timeLabel(x.at))} · ${x.how === 'txt' ? '.txt 저장' : '복사'}`
+        if (x) $root.find('.na_lastex_text').html(`최근 내보냄 <b>#${x.from}–#${x.to}</b> · ${esc(timeLabel(x.at))} · ${x.how === 'txt' ? '.txt 저장' : x.how === 'draft' ? 'AI 초안' : '복사'}`
             + (fromLast && x === le ? ' <span class="na_dim">→ 그 다음부터 채웠어요</span>' : ''));
     };
     const remember = async how => {
