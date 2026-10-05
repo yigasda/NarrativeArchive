@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.7.0';
+const VERSION = '2.7.1';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1175,7 +1175,7 @@ function connCfgHtml(p) {
                 <div class="na_tr_cfg" id="na_${p}_vertex" hidden>
                   <textarea class="text_pole" id="na_${p}_vxjson" rows="4" placeholder="서비스 계정 JSON (키 파일 내용을 통째로 붙여넣기)" spellcheck="false"></textarea>
                   <div class="na_tr_pair">
-                    <input type="text" class="text_pole" id="na_${p}_vxloc" placeholder="리전 (예: us-central1, global)" autocomplete="off" spellcheck="false">
+                    <input type="text" class="text_pole" id="na_${p}_vxloc" placeholder="리전 (예: global, us-central1)" autocomplete="off" spellcheck="false">
                     <input type="text" class="text_pole" id="na_${p}_vxmodel" placeholder="모델 (예: gemini-2.5-flash)" autocomplete="off" spellcheck="false">
                   </div>
                   <div class="na_tr_vxrow"><small class="na_dim" id="na_${p}_vxinfo"></small><button type="button" class="na_linkbtn na_danger" id="na_${p}_vxclear" hidden><i class="fa-solid fa-eraser"></i> JSON 지우기</button></div>
@@ -2000,7 +2000,9 @@ function connSettings(which) {
     const t = g[k];
     t.mode ??= which === 'tr' ? 'same' : 'st';
     t.url ??= ''; t.key ??= ''; t.model ??= '';
-    t.vxJson ??= ''; t.vxLocation ??= 'us-central1'; t.vxModel ??= 'gemini-2.5-flash';
+    t.vxJson ??= ''; t.vxLocation ??= 'global'; t.vxModel ??= 'gemini-2.5-flash';
+    // the old default was us-central1; move untouched settings to global once
+    if (!t.vxLocV2) { if (t.vxLocation === 'us-central1') t.vxLocation = 'global'; t.vxLocV2 = true; }
     return t;
 }
 const trSettings = () => connSettings('tr');
@@ -2077,7 +2079,7 @@ async function vertexToken(sa) {
 
 async function callVertex({ vxJson, vxLocation, vxModel }, system, prompt, maxTokens) {
     const sa = parseServiceAccount(vxJson);
-    const loc = String(vxLocation || 'us-central1').trim();
+    const loc = String(vxLocation || 'global').trim();
     const model = String(vxModel || '').trim();
     if (!model) throw new Error('Vertex 모델 이름을 넣어 주세요 (예: gemini-2.5-flash)');
     const host = loc === 'global' ? 'aiplatform.googleapis.com' : `${loc}-aiplatform.googleapis.com`;
