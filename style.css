@@ -1191,3 +1191,4 @@
 .na_kn_del:hover { opacity: 1; color: var(--na-warn); }
 .na_kn_clear, .na_qb_clear { margin-left: auto; }
 .na_kn_clear[hidden], .na_qb_clear[hidden] { display: none; }
+.na_wz_outhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }

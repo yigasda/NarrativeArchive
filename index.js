@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.0.2';
+const VERSION = '3.0.3';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3850,7 +3850,10 @@ async function openWizard() {
           <div class="na_row_btns"><button type="button" class="na_btn na_small na_primary na_wz_copy"><i class="fa-solid fa-copy"></i> <span>복사</span></button><button type="button" class="na_btn na_small na_wz_save"><i class="fa-solid fa-download"></i> .txt 저장</button></div>
         </div></div>
         <div class="na_wiz_step"><b>3</b><div class="na_wiz_main">
-          <div class="na_wiz_title">결과 붙여넣기</div>
+          <div class="na_wiz_title na_wz_outhead">결과 붙여넣기
+            <button type="button" class="na_btn na_small na_wz_file_btn"><i class="fa-solid fa-file-arrow-up"></i> 파일 불러오기</button>
+            <input type="file" class="na_wz_file" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden>
+          </div>
           <textarea class="text_pole na_wz_out" rows="7" spellcheck="false" placeholder="모델이 준 새 섹션을 여기에"></textarea>
           <small class="na_dim na_wz_outinfo"></small>
         </div></div>
@@ -3895,6 +3898,17 @@ async function openWizard() {
         if (ok) { await remember('copy'); toastr.success('복사됨 · 압축할 모델에 붙여넣으세요'); } else toastr.warning('복사가 막혀 있어요. .txt 저장을 써 주세요.');
     });
     $root.find('.na_wz_save').on('click', async () => { await build(); if (!raw) return; const { from, to } = range(); download(`원문_${chatLabel()}_${from}-${to}.txt`, full); remember('txt'); });
+    $root.find('.na_wz_file_btn').on('click', () => $root.find('.na_wz_file').val('').trigger('click'));
+    $root.find('.na_wz_file').on('change', async function () {
+        const file = this.files?.[0];
+        if (!file) return;
+        const text = (await file.text()).replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').trim();
+        if (!text) return toastr.warning('빈 파일이에요.');
+        const $out = $root.find('.na_wz_out');
+        if ($out.val().trim() && !await confirm('불러오기', '붙여넣은 내용을 이 파일 내용으로 바꿀까요?')) return;
+        $out.val(text).trigger('input');
+        toastr.success(`불러옴: ${file.name}`);
+    });
     $root.find('.na_wz_out').on('input', function () {
         const v = this.value.trim();
         const n = guessEndNumber(v);
