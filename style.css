@@ -1184,3 +1184,10 @@
 .na_cfg_head { display: flex; align-items: center; gap: 10px; }
 .na_cfg_head b { flex: 1; }
 .na_fold summary i { width: 1.2em; opacity: 0.7; }
+
+/* delete buttons: who knows / quote bank */
+.na_kn_row { position: relative; padding-right: 34px; }
+.na_kn_del { position: absolute; top: 4px; right: 4px; opacity: 0.55; }
+.na_kn_del:hover { opacity: 1; color: var(--na-warn); }
+.na_kn_clear, .na_qb_clear { margin-left: auto; }
+.na_kn_clear[hidden], .na_qb_clear[hidden] { display: none; }
