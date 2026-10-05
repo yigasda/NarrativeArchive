@@ -1205,8 +1205,10 @@
 .na_ex_card .na_set_row select { max-width: 62%; }
 .na_ex_card .na_ex_toset { flex-shrink: 0; }
 .na_ex_info { text-align: center; font-size: 0.82em; }
-.na_strip_row { border-bottom: 0; padding-bottom: 4px; }
-.na_strip_row small code { font-size: 0.95em; padding: 0 3px; border-radius: 4px; background: var(--na-soft); }
+.na_strip_box { border-top: 1px solid var(--na-line); padding-bottom: 8px; }
+.na_strip_box .na_set_row { border-top: 0; }
+.na_strip_box.na_off .na_strip_ta, .na_strip_box.na_off .na_strip_info { opacity: 0.4; }
+.na_strip_info code { font-size: 0.95em; padding: 0 3px; border-radius: 4px; background: var(--na-soft); }
 .na_strip_ta { width: 100% !important; margin: 0 0 4px !important; font-family: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.82em; resize: vertical; }
 .na_strip_info { display: block; font-size: 0.75em; opacity: 0.7; margin-bottom: 6px; }
 .na_strip_info.na_warn_txt { opacity: 1; }
