@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.5.1';
+const VERSION = '3.5.2';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3854,10 +3854,12 @@ function archiveQuotes(m) {
     return out.filter(q => !seen.has(q.text) && seen.add(q.text));
 }
 
+// ticked lines, up to N per speaker, only for people in the story now (an absent character's voice is wasted tokens)
 function pickedQuotes(m) {
     const max = Math.max(1, Number(m.quoteMax) || 3);
     const per = new Map();
-    return (m.quotes || []).filter(q => q.on && q.who && q.who !== '?').filter(q => { const n = (per.get(q.who) || 0) + 1; per.set(q.who, n); return n <= max; });
+    const cast = currentCast(m);
+    return (m.quotes || []).filter(q => q.on && q.who && q.who !== '?' && inCast(cast, q.who)).filter(q => { const n = (per.get(q.who) || 0) + 1; per.set(q.who, n); return n <= max; });
 }
 
 const AI_SYS_QUOTES = `You pick voice samples for a role-play from a story archive: the quoted lines that best show how each character talks (rhythm, word choice, attitude), not the most dramatic plot lines.
@@ -3903,9 +3905,10 @@ async function openQuotes() {
         const by = new Map();
         m.quotes.forEach((x, i) => { if (q && !`${x.who} ${x.text}`.toLowerCase().includes(q)) return; if (!by.has(x.who)) by.set(x.who, []); by.get(x.who).push({ x, i }); });
         const picked = new Set(pickedQuotes(m));
+        const cast = currentCast(m);
         $root.find('.na_qb_clear').prop('hidden', !m.quotes.length);
         $root.find('.na_qb_list').html(m.quotes.length ? [...by].sort((a, b) => (a[0] === '?') - (b[0] === '?') || b[1].length - a[1].length).map(([who, xs]) => `
-          <div class="na_qb_group"><div class="na_qb_who">${esc(who === '?' ? '말한 사람 모름' : who)} <span class="na_dim">${xs.length}개 · 고른 ${xs.filter(y => y.x.on).length}</span></div>
+          <div class="na_qb_group ${who !== '?' && !inCast(cast, who) ? 'na_qb_away' : ''}"><div class="na_qb_who">${esc(who === '?' ? '말한 사람 모름' : who)} <span class="na_dim">${xs.length}개 · 고른 ${xs.filter(y => y.x.on).length}</span>${who !== '?' && !inCast(cast, who) ? '<span class="na_qb_awaytag" title="STATE의 인물 제목과 최근 섹션 4개에 안 나와요. 다시 나오면 자동으로 주입돼요">지금 안 나와서 주입 안 함</span>' : ''}</div>
             ${xs.map(({ x, i }) => `<div class="na_qb_row ${x.on ? 'on' : ''} ${x.on && !picked.has(x) ? 'over' : ''}" data-i="${i}">
               <input type="checkbox" class="na_qb_on" ${x.on ? 'checked' : ''}>
               <div class="na_qb_text">“${esc(x.text)}”<div class="na_dim na_qb_src">${esc(String(x.src || '').slice(0, 50))}</div></div>
