@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '1.9.0';
+const VERSION = '1.9.1';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -2197,7 +2197,11 @@ async function openAppend() {
 
     const $root = $(`
       <div class="na_popup">
-        <div class="na_dim">새로 압축한 섹션을 붙여넣으세요. 아카이브 맨 끝에 덧붙습니다.</div>
+        <div class="na_append_head">
+          <span class="na_dim">새로 압축한 섹션을 붙여넣거나 파일로 불러오세요.</span>
+          <button type="button" class="na_btn na_small na_append_file_btn"><i class="fa-solid fa-file-arrow-up"></i> .txt 불러오기</button>
+          <input type="file" class="na_append_file" accept=".txt,.md,text/plain" hidden>
+        </div>
         <textarea class="text_pole na_append_ta" spellcheck="false" placeholder="## Y2 #574–#600 — ..."></textarea>
         <div class="na_check" hidden></div>
         <div class="na_row">
@@ -2212,6 +2216,15 @@ async function openAppend() {
 
     const $ta = $root.find('.na_append_ta');
     const $end = $root.find('.na_end');
+    $root.find('.na_append_file_btn').on('click', () => $root.find('.na_append_file').val('').trigger('click'));
+    $root.find('.na_append_file').on('change', async function () {
+        const file = this.files?.[0];
+        if (!file) return;
+        const text = (await file.text()).replace(/\r\n/g, '\n').trim();
+        if ($ta.val().trim() && !await confirm('불러오기', '붙여넣은 내용을 이 파일 내용으로 바꿀까요?')) return;
+        $ta.val(text).trigger('input');
+        toastr.success(`불러옴: ${file.name}`);
+    });
     const $check = $root.find('.na_check');
     $root.find('.na_renum_row').hide();
     let endTouched = false;
