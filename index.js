@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.14.0';
+const VERSION = '2.15.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -34,7 +34,7 @@ const DEFAULT_META = Object.freeze({
     lastExport: null, // { from, to, at, how } — the latest extract copied or saved
 });
 
-const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary'];
+const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks'];
 const POSITIONS = { 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
 const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
 
@@ -1028,6 +1028,11 @@ function renderPanel() {
         <div class="inline-drawer-content">
           <div class="na_body">
 
+            <div class="na_carry na_branch_card" id="na_branch_card" hidden>
+              <i class="fa-solid fa-code-branch"></i>
+              <div class="na_carry_text"><b>분기 전 내용이 섞였어요</b><span id="na_branch_desc"></span></div>
+              <div class="na_carry_btns"><button type="button" class="na_btn na_small na_primary" id="na_branch_fix">정리하기</button></div>
+            </div>
             <div class="na_carry" id="na_carry" hidden>
               <i class="fa-solid fa-route"></i>
               <div class="na_carry_text"><b>이어서 쓸까요?</b><span id="na_carry_desc"></span></div>
@@ -1047,6 +1052,7 @@ function renderPanel() {
               <div class="na_meter_tools">
                 <button type="button" class="na_linkbtn" id="na_health"><i class="fa-solid fa-stethoscope"></i> <span>건강 점검</span></button>
                 <button type="button" class="na_linkbtn" id="na_report"><i class="fa-solid fa-chart-column"></i> 토큰 리포트</button>
+                <button type="button" class="na_linkbtn" id="na_branches"><i class="fa-solid fa-code-branch"></i> <span>분기</span></button>
               </div>
             </div>
 
@@ -1543,6 +1549,7 @@ function bindPanel() {
     $('#na_open_extract').on('click', needChat(openExtract));
     $('#na_health').on('click', needChat(openHealth));
     $('#na_report').on('click', needChat(openTokenReport));
+    $('#na_branches, #na_branch_fix').on('click', needChat(openBranches));
     $('#na_open_append').on('click', needChat(openAppend));
     $('#na_apply_hide').on('click', needChat(() => applyHide()));
     $('#na_unhide').on('click', needChat(openUnhide));
@@ -1633,7 +1640,7 @@ function bindPanel() {
     $('#na_from_chat').on('click', needChat(openChatPicker));
     $('#na_all_archives').on('click', needChat(openAllArchives));
     $('#na_compare').on('click', needChat(openCompare));
-    $('#na_carry_go').on('click', needChat(async () => { if (carryOffer) await importArchive(carryOffer, '방금 있던 채팅'); }));
+    $('#na_carry_go').on('click', needChat(async () => { if (carryOffer) await importArchive(carryOffer, '방금 있던 채팅', carryOffer.chatId); }));
     $('#na_carry_x').on('click', () => { carryOffer = null; $('#na_carry').prop('hidden', true); });
     $('#na_cap').on('change', async function () {
         if (!hasChat()) return;
@@ -1779,6 +1786,10 @@ function syncPanel() {
     }
     $('#na_unmute_all').prop('disabled', !mutedCount(m));
     $('#na_carry').prop('hidden', !carryOffer);
+    const br = hasChat() ? branchState(getMeta()) : null;
+    $('#na_branch_card').prop('hidden', !br?.ahead.length);
+    if (br?.ahead.length) $('#na_branch_desc').text(`이 채팅은 #${br.last}까지인데 아카이브에 그 뒤(#${br.ahead[0].from}~) 섹션 ${br.ahead.length}개가 있어요. 분기하기 전 원본의 내용이에요.`);
+    $('#na_branches span').text(br?.parent ? '분기 · 원본 있음' : '분기');
     if (carryOffer) $('#na_carry_desc').text(`방금 있던 채팅의 아카이브 (${fmt(carryOffer.text.length)}자)를 이 채팅에 가져와요.`);
     rememberArchive();
     $('#na_boundary').val(m.boundary >= 0 ? m.boundary : '');
@@ -1934,10 +1945,15 @@ function rememberArchive() {
     if (m.text.trim()) lastSeen = { chatId: currentChatId(), text: m.text, settings: pickSettings(m) };
 }
 
-async function importArchive(src, label) {
+async function importArchive(src, label, fromChat = null) {
     const m = getMeta();
     if (m.text.trim() && !await confirm('아카이브 가져오기', `이 채팅의 아카이브를 "${label}"의 것으로 바꿀까요? 지금 내용은 복구 지점에 남아요.`)) return false;
     for (const k of SETTING_KEYS) if (src.settings && Object.hasOwn(src.settings, k)) m[k] = structuredClone(src.settings[k]);
+    // the numbers that chat's archive ended on live in that chat: "원문" on those sections opens it
+    if (fromChat) {
+        const r = headingRanges(src.text);
+        if (r.length) m.logLinks = { ...(m.logLinks || {}), [r[r.length - 1].prefix]: fromChat };
+    }
     editorDirty = false;
     carryOffer = null;
     // a new chat restarts numbering, so the boundary is cleared and tracking turned off
@@ -1980,6 +1996,57 @@ async function listOtherChats() {
         }));
 }
 
+// the whole file of another chat of this character / group: { meta, messages }
+const otherChatCache = new Map();
+async function fetchOtherChat(id) {
+    if (otherChatCache.has(id)) return otherChatCache.get(id);
+    const c = ctx();
+    let arr;
+    if (c.groupId) arr = await fetchJson('/api/chats/group/get', { id });
+    else {
+        const ch = c.characters?.[c.characterId];
+        if (!ch) throw new Error('캐릭터를 못 찾았어요');
+        arr = await fetchJson('/api/chats/get', { ch_name: ch.name, file_name: id, avatar_url: ch.avatar });
+    }
+    arr = Array.isArray(arr) ? arr : [];
+    const hasHeader = arr[0] && !('mes' in arr[0]);
+    const out = { meta: hasHeader ? (arr[0].chat_metadata || {}) : {}, messages: hasHeader ? arr.slice(1) : arr };
+    otherChatCache.set(id, out);
+    return out;
+}
+
+// pick one of this character's other chats; resolves to its id or null
+async function pickOtherChat(title, desc) {
+    const c = ctx();
+    let chosen = null;
+    const $root = $(`
+      <div class="na_popup">
+        <div class="na_block_head"><div><h4>${esc(title)}</h4><p>${desc}</p></div></div>
+        <input type="search" class="text_pole na_pc_q" placeholder="채팅 이름으로 찾기">
+        <div class="na_pick_list"><div class="na_empty">불러오는 중…</div></div>
+      </div>`);
+    const popup = c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    try {
+        const chats = await listOtherChats();
+        const render = () => {
+            const q = $root.find('.na_pc_q').val().trim().toLowerCase();
+            const list = chats.filter(x => !q || x.label.toLowerCase().includes(q));
+            $root.find('.na_pick_list').html(list.length ? list.map(x => `
+              <div class="na_pick">
+                <div class="na_pick_main"><span class="na_pick_name">${esc(x.label)}</span><span class="na_pick_meta">${x.when ? esc(String(x.when)) : ''}${x.count ? ` · 메시지 ${fmt(x.count)}개` : ''}</span></div>
+                <button type="button" class="na_btn na_small na_pc_go" data-id="${esc(x.id)}">고르기</button>
+              </div>`).join('') : '<div class="na_empty">다른 채팅이 없어요.</div>');
+        };
+        render();
+        $root.find('.na_pc_q').on('input', render);
+        $root.on('click', '.na_pc_go', function () { chosen = String(this.dataset.id); $root.closest('dialog').find('.popup-button-ok').trigger('click'); });
+    } catch (e) {
+        $root.find('.na_pick_list').html('<div class="na_empty">채팅 목록을 못 불러왔어요.</div>');
+    }
+    await popup;
+    return chosen;
+}
+
 async function openChatPicker() {
     const c = ctx();
     const $root = $(`
@@ -2019,7 +2086,7 @@ async function openChatPicker() {
                 const tok = await countTokens(meta.text);
                 $st.html(`<span class="na_chip">${fmt(tok)} 토큰</span><button type="button" class="na_btn na_small na_primary na_pick_go">가져오기</button>`);
                 $st.find('.na_pick_go').on('click', async () => {
-                    if (await importArchive({ text: meta.text, settings: meta }, chat.label)) $st.html('<span class="na_chip na_chip_on">가져옴</span>');
+                    if (await importArchive({ text: meta.text, settings: meta }, chat.label, chat.id)) $st.html('<span class="na_chip na_chip_on">가져옴</span>');
                 });
             } catch (e) {
                 console.warn('[narrative-archive] chat load', e);
@@ -3036,24 +3103,35 @@ function sourceRange(m, title) {
     const from = Math.min(+r[2], +r[4]), to = Math.max(+r[2], +r[4]);
     const ranges = headingRanges(m.text);
     const cur = ranges.length ? ranges[ranges.length - 1].prefix : '';
+    const label = `${prefix ? `${prefix} ` : ''}#${from}–#${to}`;
+    if (prefix !== cur) {
+        // an older log: open it from the chat it was linked to, or ask which chat that is
+        const chat = (m.logLinks || {})[prefix] || null;
+        return { prefix, from, to, ok: true, chat, needLink: !chat, why: '', label };
+    }
     const n = (ctx().chat || []).length;
-    const why = prefix !== cur ? `${prefix || '앞 번호'} 섹션은 이전 채팅 로그라 여기선 열 수 없어요`
-        : from >= n ? '이 채팅에 아직 없는 번호예요' : '';
-    return { prefix, from, to: Math.min(to, n - 1), ok: !why, why, label: `${prefix ? `${prefix} ` : ''}#${from}–#${to}` };
+    const why = from >= n ? '이 채팅에 아직 없는 번호예요' : '';
+    return { prefix, from, to: Math.min(to, n - 1), ok: !why, why, label };
 }
 
 // 'icon' for card toolbars, 'chip' for the reader and diffs; '' when the title has no range
 function srcButton(m, title, kind) {
     const r = sourceRange(m, title);
     if (!r) return '';
-    const data = `data-from="${r.from}" data-to="${r.to}" data-label="${esc(r.label)}"`;
-    if (kind === 'icon') return `<button type="button" class="na_btn na_small na_src_btn" ${data} ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? `원문 보기 ${r.label}` : r.why)}"><i class="fa-solid fa-arrow-up-right-from-square"></i> 원문</button>`;
-    return `<button type="button" class="na_src_chip na_src_btn" ${data} ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? '이 섹션의 원문 메시지 보기' : r.why)}"><i class="fa-solid fa-arrow-up-right-from-square"></i> 원문 ${esc(r.label)}</button>`;
+    const data = `data-from="${r.from}" data-to="${r.to}" data-label="${esc(r.label)}" data-prefix="${esc(r.prefix)}"${r.chat ? ` data-chat="${esc(r.chat)}"` : ''}${r.needLink ? ' data-link="1"' : ''}`;
+    const tip = !r.ok ? r.why : r.needLink ? '이전 채팅의 번호예요 · 누르면 어느 채팅인지 골라서 열어요' : r.chat ? `이전 채팅에서 열어요: ${r.chat}` : '이 섹션의 원문 메시지 보기';
+    const cls = r.needLink ? ' na_src_link' : '';
+    if (kind === 'icon') return `<button type="button" class="na_btn na_small na_src_btn${cls}" ${data} ${r.ok ? '' : 'disabled'} title="${esc(tip)}"><i class="fa-solid fa-arrow-up-right-from-square"></i> 원문</button>`;
+    return `<button type="button" class="na_src_chip na_src_btn${cls}" ${data} ${r.ok ? '' : 'disabled'} title="${esc(tip)}"><i class="fa-solid fa-arrow-up-right-from-square"></i> 원문 ${esc(r.label)}</button>`;
 }
 
-async function openSource(from, to, label) {
+async function openSource(from, to, label, otherChat = null, prefix = '') {
     const c = ctx();
-    const chat = c.chat || [];
+    let chat = c.chat || [];
+    if (otherChat) {
+        try { chat = (await fetchOtherChat(otherChat)).messages; }
+        catch (e) { toastr.error(`이전 채팅을 못 열었어요: ${e.message || e}`); return; }
+    }
     const items = [];
     for (let i = from; i <= to && i < chat.length; i++) {
         const x = chat[i];
@@ -3061,15 +3139,17 @@ async function openSource(from, to, label) {
         const text = cleanMessage(String(x.mes || ''), { stripTags: true });
         items.push(`<div class="na_src_msg ${x.is_user ? 'na_src_user' : ''}" data-id="${i}">
             <div class="na_src_head"><b>#${i}</b> <span>${esc(x.name || '')}</span>${x.is_system ? '<span class="na_chip">숨김</span>' : ''}
-              <button type="button" class="na_linkbtn na_src_goto">채팅에서 보기</button></div>
+              ${otherChat ? '' : '<button type="button" class="na_linkbtn na_src_goto">채팅에서 보기</button>'}</div>
             <div class="na_src_body">${mdBlock(text) || '<span class="na_dim">(비어 있음)</span>'}</div>
           </div>`);
     }
     const $v = $(`
       <div class="na_popup na_popup_fill">
         <div class="na_diff_head"><b>원문 ${esc(label)}</b><span class="na_dim">메시지 ${items.length}개</span></div>
-        <div class="na_src_list">${items.join('') || '<div class="na_empty">이 채팅에 그 번호의 메시지가 없어요.</div>'}</div>
+        ${otherChat ? `<div class="na_src_from na_dim"><i class="fa-solid fa-link"></i> ${esc(otherChat)} <button type="button" class="na_linkbtn na_src_relink">다른 채팅으로 바꾸기</button></div>` : ''}
+        <div class="na_src_list">${items.join('') || `<div class="na_empty">${otherChat ? '그 채팅에 이 번호의 메시지가 없어요. 다른 채팅을 골라 보세요.' : '이 채팅에 그 번호의 메시지가 없어요.'}</div>`}</div>
       </div>`);
+    $v.data('prefix', prefix).data('range', { from, to, label });
     $v.on('click', '.na_src_goto', function () {
         const id = $(this).closest('.na_src_msg').data('id');
         const $mes = $(`#chat .mes[mesid="${id}"]`);
@@ -3082,10 +3162,35 @@ async function openSource(from, to, label) {
     await c.callGenericPopup($v, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
-$(document).on('click', '.na_src_btn', function (e) {
+// which chat holds an older log's numbers; saved in the archive's settings so it follows the archive
+async function linkLog(prefix) {
+    const id = await pickOtherChat(`${prefix || '앞 번호'} 로그는 어느 채팅이에요?`,
+        `<b>${esc(prefix || '앞 번호(접두어 없음)')}</b> 섹션의 원문이 있는 채팅을 골라 주세요. 한 번 고르면 기억하고, 아카이브를 다음 채팅에 가져가도 따라가요.`);
+    if (!id) return null;
+    const m = getMeta();
+    m.logLinks = { ...(m.logLinks || {}), [prefix]: id };
+    await saveMeta();
+    sectionPanel?.render();
+    return id;
+}
+
+$(document).on('click', '.na_src_btn', async function (e) {
     e.stopPropagation();
     if (this.disabled || !hasChat()) return;
-    openSource(Number(this.dataset.from), Number(this.dataset.to), this.dataset.label || '');
+    const d = this.dataset;
+    let chat = d.chat || null;
+    if (d.link) { chat = await linkLog(d.prefix || ''); if (!chat) return; }
+    openSource(Number(d.from), Number(d.to), d.label || '', chat, d.prefix || '');
+});
+
+$(document).on('click', '.na_src_relink', async function () {
+    const $pop = $(this).closest('.na_popup');
+    const prefix = String($pop.data('prefix') ?? '');
+    const range = $pop.data('range');
+    const id = await linkLog(prefix);
+    if (!id || !range) return;
+    $pop.closest('dialog').find('.popup-button-ok').trigger('click');
+    openSource(range.from, range.to, range.label, id, prefix);
 });
 
 // ---------------------------------------------------------------- keyword test
@@ -3148,6 +3253,96 @@ async function openKeywordTest() {
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
+// ---------------------------------------------------------------- branches
+// SillyTavern copies the chat metadata (and so the archive) into a branch. If the branch starts before the
+// archive's last section, the copy carries sections of a future this branch no longer has.
+
+function branchState(m) {
+    const c = ctx();
+    const parent = c.chatMetadata?.main_chat || null;
+    const last = lastIndex();
+    const ranges = headingRanges(m.text);
+    const cur = ranges.length ? ranges[ranges.length - 1].prefix : '';
+    const secs = parseSections(m.text).filter(x => !x.group);
+    const ahead = !parent ? [] : secs.map(x => ({ s: x, r: x.title.match(RANGE_HEAD) }))
+        .filter(x => x.r && (x.r[1] || '').trim() === cur && Math.min(+x.r[2], +x.r[4]) > last)
+        .map(x => ({ s: x.s, from: Math.min(+x.r[2], +x.r[4]), to: Math.max(+x.r[2], +x.r[4]) }));
+    // the newest restore point whose numbers stop inside this branch
+    const fit = ahead.length ? (m.snapshots || []).find(sn => { const rr = headingRanges(sn.text).filter(x => x.prefix === cur); return rr.length && rr[rr.length - 1].to <= last; }) : null;
+    return { parent, last, cur, ahead, fit };
+}
+
+async function openBranches() {
+    const c = ctx();
+    const m = getMeta();
+    const here = currentChatId();
+    const $root = $(`<div class="na_popup"><div class="na_br_body"></div></div>`);
+    const render = () => {
+        const b = branchState(m);
+        $root.find('.na_br_body').html(`
+          <div class="na_block_head"><div><h4>분기</h4><p>실리태번에서 분기를 만들면 아카이브도 같이 복사돼요. 여기서 원본과 비교하고, 분기 지점 뒤의 섹션을 정리해요.</p></div></div>
+          ${b.parent ? `<div class="na_br_card"><div><b>원본 채팅</b><div class="na_dim">${esc(b.parent)}</div></div>
+              <div class="na_row_btns"><button type="button" class="na_btn na_small na_br_cmp_parent"><i class="fa-solid fa-code-compare"></i> 원본 아카이브와 비교</button></div></div>`
+            : '<div class="na_br_card na_dim">이 채팅은 분기가 아니에요 (원본 채팅 정보가 없어요).</div>'}
+          ${b.ahead.length ? `<div class="na_br_card na_br_warn">
+              <div><b>분기 지점 뒤의 섹션 ${b.ahead.length}개</b><div class="na_dim">이 채팅은 #${b.last}까지예요. 아래 섹션은 원본에서 그 뒤에 일어난 일이라 이 분기엔 없어요.</div>
+                <ul>${b.ahead.map(x => `<li>${esc(x.s.title)}</li>`).join('')}</ul>
+                <div class="na_dim">STATE·OPEN도 원본의 마지막 시점 기준일 수 있어요. 복구 지점이 있으면 그걸로 되돌리는 게 가장 깔끔해요.</div></div>
+              <div class="na_row_btns">
+                ${b.fit ? `<button type="button" class="na_btn na_small na_primary na_br_restore">복구 지점으로 (${esc(timeLabel(b.fit.at))} · ${esc(b.fit.reason)})</button>` : ''}
+                <button type="button" class="na_btn na_small na_br_cut">이 섹션들만 빼기</button>
+              </div></div>` : ''}
+          <div class="na_br_card"><div><b>이 채팅에서 갈라진 분기</b><div class="na_dim">같은 캐릭터의 채팅을 열어 원본이 이 채팅인 걸 찾아요.</div></div>
+            <div class="na_row_btns"><button type="button" class="na_btn na_small na_br_find"><i class="fa-solid fa-magnifying-glass"></i> 찾기</button></div>
+            <div class="na_br_kids"></div></div>`);
+    };
+    render();
+    const compareWith = async (id, label) => {
+        try {
+            const other = (await fetchOtherChat(id)).meta?.[MODULE];
+            if (!other?.text?.trim()) return toastr.info('그 채팅엔 아카이브가 없어요.');
+            await openDiff({ at: Date.now(), reason: label, text: other.text }, { text: m.text, label: '이 채팅' });
+        } catch (e) { toastr.error(`못 열었어요: ${e.message || e}`); }
+    };
+    $root.on('click', '.na_br_cmp_parent', () => compareWith(branchState(m).parent, '원본 채팅'));
+    $root.on('click', '.na_br_restore', async () => {
+        const b = branchState(m);
+        if (!b.fit || !await confirm('복구 지점으로', `${timeLabel(b.fit.at)} · ${esc(b.fit.reason)} 버전으로 되돌릴까요? 지금 내용은 복구 지점에 남아요.`)) return;
+        await commitText(b.fit.text, '분기 정리 전', { boundary: Math.min(b.fit.boundary ?? -1, b.last) });
+        toastr.success('되돌렸어요'); render();
+    });
+    $root.on('click', '.na_br_cut', async () => {
+        const b = branchState(m);
+        if (!await confirm('섹션 빼기', `분기 지점 뒤의 섹션 ${b.ahead.length}개를 뺄까요? 지금 내용은 복구 지점에 남아요.`)) return;
+        const drop = new Set(b.ahead.map(x => x.s.start));
+        const secs = parseSections(m.text);
+        const next = secs.filter(x => !drop.has(x.start)).map(x => m.text.slice(x.start, x.end)).join('');
+        const end = lastRangeEnd(next);
+        await commitText(next, '분기 정리 전', { boundary: m.boundary >= 0 ? Math.min(m.boundary, end ?? b.last, b.last) : m.boundary });
+        toastr.success(`${b.ahead.length}개 뺐어요. STATE·OPEN이 맞는지 확인해 주세요.`); render();
+    });
+    $root.on('click', '.na_br_find', async function () {
+        const $kids = $root.find('.na_br_kids').html('<div class="na_dim">찾는 중…</div>');
+        $(this).prop('disabled', true);
+        try {
+            const chats = await listOtherChats();
+            const kids = [];
+            for (const [i, x] of chats.entries()) {
+                $kids.html(`<div class="na_dim">찾는 중… ${i + 1}/${chats.length}</div>`);
+                try { const f = await fetchOtherChat(x.id); if (f.meta?.main_chat === here) kids.push({ ...x, arc: f.meta?.[MODULE], n: f.messages.length }); } catch { /* skip unreadable */ }
+            }
+            $kids.html(kids.length ? kids.map(k => `
+              <div class="na_pick"><div class="na_pick_main"><span class="na_pick_name">${esc(k.label)}</span>
+                <span class="na_pick_meta">메시지 ${fmt(k.n)}개${k.arc?.text?.trim() ? ` · 아카이브 #${lastRangeEnd(k.arc.text) ?? '?'}까지` : ' · 아카이브 없음'}</span></div>
+                ${k.arc?.text?.trim() ? `<button type="button" class="na_btn na_small na_br_cmp" data-id="${esc(k.id)}">비교</button>` : ''}</div>`).join('') : '<div class="na_dim">이 채팅에서 갈라진 분기가 없어요.</div>');
+        } catch (e) { $kids.html('<div class="na_dim">채팅 목록을 못 불러왔어요.</div>'); }
+        $(this).prop('disabled', false);
+    });
+    $root.on('click', '.na_br_cmp', function () { compareWith(String(this.dataset.id), '분기'); });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    syncPanel();
+}
+
 // ---------------------------------------------------------------- health check
 // Cheap, AI-free checks of the archive and its settings. Each item: { level: 'bad'|'warn'|'info'|'ok', title, detail?, fix? }
 
@@ -3206,6 +3401,9 @@ async function healthChecks(m, { build, afterTok, after } = {}) {
     if (lastR && m.boundary >= 0 && lastR.to <= last && m.boundary !== lastR.to) {
         add('warn', `경계선 #${m.boundary}이 마지막 섹션 끝 #${lastR.to}과 달라요`, '', { label: `경계선을 #${lastR.to}로`, run: async () => { m.boundary = lastR.to; await saveMeta(); syncPanel(); toastr.success(`경계선 #${lastR.to}`); } });
     }
+
+    const br = branchState(m);
+    if (br.ahead.length) add('bad', `분기 지점(#${br.last}) 뒤의 섹션 ${br.ahead.length}개가 섞여 있어요`, '원본 채팅에서 분기 뒤에 쓴 섹션이에요.', { label: '분기 정리', run: () => openBranches() });
 
     // compression due, hiding
     if (m.remindTok > 0 && afterTok >= m.remindTok) add('warn', `압축할 때예요 — 경계선 뒤 원문 ${fmt(afterTok)} 토큰`, `알림 기준 ${fmt(m.remindTok)}`, { label: '원문 뽑기', run: () => openExtract() });
