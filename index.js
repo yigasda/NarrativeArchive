@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.12.0';
+const VERSION = '3.13.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1302,6 +1302,7 @@ function renderPanel() {
               <div class="na_block">
                 <div class="na_kw_label">점검</div>
                 <button type="button" class="na_toolrow" id="na_tool_health"><i class="fa-solid fa-stethoscope"></i><span><b>건강 점검</b><small id="na_tool_health_sub">번호·숨기기·키워드·백업을 AI 없이 살펴봐요</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" class="na_toolrow" id="na_tool_xray"><i class="fa-solid fa-x-ray"></i><span><b>프롬프트 X-ray</b><small id="na_tool_xray_sub">마지막으로 보낸 프롬프트의 구성 · 겹치는 내용</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_report"><i class="fa-solid fa-chart-column"></i><span><b>토큰 리포트</b><small>주입 토큰이 어디에 쓰이는지 · 아낄 곳</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_branches"><i class="fa-solid fa-code-branch"></i><span><b>분기</b><small id="na_branches_sub">원본·갈라진 채팅과 비교, 분기 정리</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_compare"><i class="fa-solid fa-code-compare"></i><span><b>두 버전 비교</b><small>복구 지점·파일끼리</small></span><i class="fa-solid fa-chevron-right"></i></button>
@@ -1602,6 +1603,7 @@ function bindPanel() {
     $(document).on('click', e => { if (!$(e.target).closest('.na_more_wrap').length) $('#na_ed_menu').prop('hidden', true); });
     $('#na_import_menu').on('click', () => $('#na_import_opts').prop('hidden', !$('#na_import_opts').prop('hidden')));
     $('#na_tool_health').on('click', needChat(openHealth));
+    $('#na_tool_xray').on('click', needChat(openXray));
     $('#na_story_cal').on('click', needChat(openCalendar));
     $('#na_story_route').on('click', needChat(openRoute));
     $('#na_story_links').on('click', needChat(openLinks));
@@ -5174,6 +5176,221 @@ async function openLinks() {
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
+// ---------------------------------------------------------------- prompt x-ray
+// The last prompt actually sent (chat completion messages or the text-completion string), split into what we can recognize:
+// this archive, other extensions' injections, world info entries, character card, persona, chat messages. Kept in memory only.
+let xrayArmed = false;
+let xrayWI = [];
+let xrayLast = null;
+
+const XRAY_CATS = {
+    archive: { name: '서사 아카이브', color: 'var(--na-accent)' },
+    dup: { name: '압축했는데 원문도 들어간 대화', color: '#d0473a' },
+    chat: { name: '대화 기록', color: '#8a8f98' },
+    wi: { name: '월드인포', color: '#8b5cf6' },
+    ext: { name: '다른 확장', color: '#d946a8' },
+    card: { name: '캐릭터 카드', color: '#3b82f6' },
+    persona: { name: '페르소나', color: '#14a37f' },
+    other: { name: '그 외 (시스템 프롬프트·지시문 등)', color: 'color-mix(in srgb, var(--SmartThemeBodyColor, #888) 30%, transparent)' },
+};
+
+function xrayArm(type, _opts, dryRun) {
+    if (dryRun || type === 'quiet') return;
+    xrayArmed = true; xrayWI = [];
+}
+
+function xrayWorldInfo(entries) {
+    if (!xrayArmed) return;
+    const list = Array.isArray(entries) ? entries : Object.values(entries || {});
+    for (const e of list) {
+        const content = String(e?.content || '').trim();
+        if (content) xrayWI.push({ label: String(e.comment || (Array.isArray(e.key) ? e.key.join(', ') : e.key) || '항목'), text: content });
+    }
+}
+
+function xrayCapture(data) {
+    if (!xrayArmed || data?.dryRun) return;
+    let messages;
+    const flat = x => typeof x === 'string' ? x : Array.isArray(x) ? x.map(p => p?.text || '').join('\n') : '';
+    if (Array.isArray(data?.chat)) messages = data.chat.map(x => ({ role: String(x?.role || ''), name: x?.name || '', content: flat(x?.content) }));
+    else if (typeof data?.prompt === 'string') messages = [{ role: 'text', content: data.prompt }];
+    else return;
+    xrayArmed = false;
+    const c = ctx();
+    const m = getMeta();
+    const sub = s => { try { return c.substituteParams ? c.substituteParams(String(s || '')) : String(s || ''); } catch { return String(s || ''); } };
+    const ids = c.groupId ? (c.groups || []).find(g => g.id === c.groupId)?.members || [] : [];
+    const chars = c.groupId ? (c.characters || []).filter(ch => ids.includes(ch.avatar)) : [c.characters?.[c.characterId]].filter(Boolean);
+    const cards = [];
+    for (const ch of chars) {
+        for (const [f, label] of [['description', '설명'], ['personality', '성격'], ['scenario', '시나리오'], ['mes_example', '예시 대화']]) {
+            const t = sub(ch[f] ?? ch.data?.[f]).trim();
+            if (t) cards.push({ label: `${ch.name} ${label}`, text: t });
+        }
+        const sp = sub(ch.data?.system_prompt).trim(), ph = sub(ch.data?.post_history_instructions).trim();
+        if (sp) cards.push({ label: `${ch.name} 카드 시스템 프롬프트`, text: sp });
+        if (ph) cards.push({ label: `${ch.name} 카드 마지막 지시`, text: ph });
+    }
+    const ext = Object.entries(c.extensionPrompts || {}).filter(([k, v]) => k !== PROMPT_KEY && String(v?.value || '').trim()).map(([k, v]) => ({ label: k, text: String(v.value).trim() }));
+    xrayLast = {
+        at: Date.now(), chatId: currentChatId(), messages,
+        archive: m?.enabled && lastBuild.text ? lastBuild.text.trim() : '',
+        wi: xrayWI, ext, cards,
+        persona: sub(c.powerUserSettings?.persona_description).trim(),
+        chat: (c.chat || []).map((x, i) => ({ i, text: String(x?.mes || '').trim(), hidden: !!x?.is_system })),
+        boundary: m?.boundary ?? -1, keep: Math.max(0, Number(m?.keep) || 0),
+    };
+    $('#na_tool_xray_sub').text(`마지막: ${timeLabel(xrayLast.at)} · 메시지 ${messages.length}개`);
+}
+
+const xrayNorm = s => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
+// spans [{msg, a, b, cat, label}] for every recognized piece, then sentences that appear more than once
+function xrayAnalyze(x) {
+    const spans = [];
+    const free = (mi, a, b) => !spans.some(s => s.msg === mi && a < s.b && b > s.a);
+    const place = (part, from = { msg: 0, pos: 0 }) => {
+        const t = part.text;
+        if (t.length < 12) return null;
+        const head = t.length > 160 ? t.slice(0, 120) : t;
+        for (let mi = from.msg; mi < x.messages.length; mi++) {
+            const content = x.messages[mi].content;
+            let p = content.indexOf(t, mi === from.msg ? from.pos : 0), len = t.length;
+            if (p < 0 && head !== t) { p = content.indexOf(head, mi === from.msg ? from.pos : 0); len = Math.min(t.length, content.length - p); }
+            if (p >= 0 && free(mi, p, p + len)) { const s = { msg: mi, a: p, b: p + len, cat: part.cat, label: part.label, i: part.i }; spans.push(s); return s; }
+        }
+        return null;
+    };
+    if (x.archive) place({ cat: 'archive', label: '서사 아카이브', text: x.archive });
+    for (const p of x.ext) place({ cat: 'ext', label: `확장: ${p.label}`, text: p.text });
+    for (const p of x.wi) place({ cat: 'wi', label: `월드인포: ${p.label}`, text: p.text });
+    for (const p of x.cards) place({ cat: 'card', label: p.label, text: p.text });
+    if (x.persona) place({ cat: 'persona', label: '페르소나', text: x.persona });
+    // chat messages keep their order, so each search starts after the previous hit
+    let cur = { msg: 0, pos: 0 };
+    const dupEnd = x.boundary - x.keep;
+    for (const ch of x.chat) {
+        if (ch.hidden || !ch.text) continue;
+        const s = place({ cat: x.boundary >= 0 && ch.i <= dupEnd ? 'dup' : 'chat', label: `대화 #${ch.i}`, text: ch.text, i: ch.i }, cur);
+        if (s) cur = { msg: s.msg, pos: s.b };
+    }
+    spans.sort((p, q) => p.msg - q.msg || p.a - q.a);
+    // sentences seen in two or more places
+    const seen = new Map();
+    x.messages.forEach((msg, mi) => {
+        for (const mt of msg.content.matchAll(/[^\n.!?。]+[.!?。]?/g)) {
+            const raw = mt[0].trim();
+            const n = xrayNorm(raw);
+            if (n.length < 30 || n.split(' ').length < 5) continue;
+            const pos = mt.index;
+            const sp = spans.find(s => s.msg === mi && pos >= s.a && pos < s.b);
+            const where = sp ? sp.label : `메시지 ${mi + 1} (${XRAY_CATS.other.name.split(' ')[0]})`;
+            if (!seen.has(n)) seen.set(n, { text: raw, at: [] });
+            seen.get(n).at.push({ where, cat: sp ? sp.cat : 'other', msg: mi });
+        }
+    });
+    const groups = new Map();
+    for (const d of seen.values()) {
+        if (d.at.length < 2) continue;
+        const places = [...new Set(d.at.map(a => a.where.replace(/^대화 #\d+$/, '대화 기록')))];
+        if (places.length === 1 && places[0] === '대화 기록') continue; // the chat repeating itself is normal
+        const key = places.sort().join(' ↔ ');
+        if (!groups.has(key)) groups.set(key, { places, items: [], chars: 0 });
+        const g = groups.get(key);
+        g.items.push(d.text); g.chars += d.text.length * (d.at.length - 1);
+    }
+    return { spans, dups: [...groups.values()].sort((a, b) => b.chars - a.chars) };
+}
+
+async function openXray() {
+    const c = ctx();
+    const x = xrayLast && xrayLast.chatId === currentChatId() ? xrayLast : null;
+    const $root = $(`
+      <div class="na_popup na_xray">
+        <div class="na_block_head"><div><h4>프롬프트 X-ray</h4><p>마지막으로 보낸 프롬프트가 무엇으로 채워졌는지, 같은 내용이 두 번 들어간 곳은 없는지 보여 줘요. 실리태번을 새로 고치면 지워지고, 다음 응답부터 다시 기록돼요.</p></div></div>
+        <div class="na_xray_body">${x ? '<div class="na_empty">살펴보는 중…</div>' : '<div class="na_empty">아직 기록된 프롬프트가 없어요. 이 채팅에서 응답을 한 번 받으면 여기 보여요.</div>'}</div>
+      </div>`);
+    const popup = c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    if (!x) return popup;
+    const { spans, dups } = xrayAnalyze(x);
+    // tokens per category: recognized spans, and the rest of each message as "other"
+    const byCat = Object.fromEntries(Object.keys(XRAY_CATS).map(k => [k, []]));
+    x.messages.forEach((msg, mi) => {
+        let at = 0;
+        for (const s of spans.filter(s => s.msg === mi)) { if (s.a > at) byCat.other.push(msg.content.slice(at, s.a)); byCat[s.cat].push(msg.content.slice(s.a, s.b)); at = s.b; }
+        if (at < msg.content.length) byCat.other.push(msg.content.slice(at));
+    });
+    const tok = {};
+    for (const [k, list] of Object.entries(byCat)) tok[k] = list.join('').trim() ? await countTokens(list.join('\n')) : 0;
+    const total = Object.values(tok).reduce((a, b) => a + b, 0) || 1;
+    const msgTok = await Promise.all(x.messages.map(msg => countTokens(msg.content)));
+    const dupChats = spans.filter(s => s.cat === 'dup').map(s => s.i);
+    const order = ['archive', 'dup', 'chat', 'wi', 'ext', 'card', 'persona', 'other'].filter(k => tok[k]);
+    const ROLE = { system: '시스템', user: '사용자', assistant: '어시스턴트', text: '텍스트' };
+    const msgRow = mi => {
+        const msg = x.messages[mi], ss = spans.filter(s => s.msg === mi);
+        const labels = [...new Set(ss.map(s => s.cat === 'dup' ? `${s.label} (압축됨)` : s.label))];
+        return `
+          <details class="na_xray_msg" data-i="${mi}">
+            <summary><span class="na_xray_role">${esc(ROLE[msg.role] || msg.role)}</span><span class="na_xray_seg">${(ss.length ? [...new Set(ss.map(s => s.cat))] : ['other']).map(k => `<i style="background:${XRAY_CATS[k].color}"></i>`).join('')}</span><span class="na_xray_lbl">${esc(labels.slice(0, 3).join(' · ') || '그 외')}${labels.length > 3 ? ` +${labels.length - 3}` : ''}</span><small class="na_dim">${fmt(msgTok[mi])}</small></summary>
+            <pre class="na_xray_text"></pre>
+          </details>`;
+    };
+    // runs of plain chat messages fold into one "대화 #41–#59" row
+    const chatOnly = mi => { const ss = spans.filter(s => s.msg === mi); return ss.length && ss.every(s => s.cat === 'chat' || s.cat === 'dup') && ss.reduce((a, s) => a + s.b - s.a, 0) >= x.messages[mi].content.length * 0.8; };
+    const msgRows = () => {
+        let html = '';
+        for (let mi = 0; mi < x.messages.length;) {
+            let end = mi;
+            while (end < x.messages.length && chatOnly(end)) end++;
+            if (end - mi >= 3) {
+                const ss = spans.filter(s => s.msg >= mi && s.msg < end), nums = ss.map(s => s.i);
+                const cats = [...new Set(ss.map(s => s.cat))];
+                html += `
+                  <details class="na_xray_msg na_xray_run">
+                    <summary><span class="na_xray_role">대화</span><span class="na_xray_seg">${cats.map(k => `<i style="background:${XRAY_CATS[k].color}"></i>`).join('')}</span><span class="na_xray_lbl">#${Math.min(...nums)}–#${Math.max(...nums)} · ${end - mi}개${cats.includes('dup') ? ` · 압축된 대화 ${ss.filter(s => s.cat === 'dup').length}개` : ''}</span><small class="na_dim">${fmt(msgTok.slice(mi, end).reduce((a, b) => a + b, 0))}</small></summary>
+                    <div class="na_xray_runlist">${Array.from({ length: end - mi }, (_, k) => msgRow(mi + k)).join('')}</div>
+                  </details>`;
+                mi = end;
+            } else { html += msgRow(mi); mi++; }
+        }
+        return html;
+    };
+    $root.find('.na_xray_body').html(`
+      <div class="na_dim na_links_sum">${esc(timeLabel(x.at))} · 약 ${fmt(total)} 토큰 · 메시지 ${x.messages.length}개${x.wi.length ? ` · 월드인포 ${x.wi.length}개` : ''}</div>
+      <div class="na_xray_bar">${order.map(k => `<span style="width:${(tok[k] / total * 100).toFixed(2)}%;background:${XRAY_CATS[k].color}" title="${esc(XRAY_CATS[k].name)} ${fmt(tok[k])}"></span>`).join('')}</div>
+      <div class="na_xray_legend">${order.map(k => `<div><i style="background:${XRAY_CATS[k].color}"></i><span>${esc(XRAY_CATS[k].name)}</span><b>${fmt(tok[k])}</b><small class="na_dim">${Math.round(tok[k] / total * 100)}%</small></div>`).join('')}</div>
+      ${dupChats.length ? `<div class="na_check na_check_warn"><i class="fa-solid fa-triangle-exclamation"></i><div><b>압축한 대화 ${dupChats.length}개가 원문으로도 들어갔어요</b> (#${Math.min(...dupChats)}–#${Math.max(...dupChats)}, 약 ${fmt(tok.dup)} 토큰). 아카이브와 내용이 겹쳐요.<div class="na_tool_actions"><button type="button" class="na_btn na_small na_xray_hide"><i class="fa-solid fa-eye-slash"></i> 경계선까지 숨기기</button></div></div></div>` : ''}
+      <div class="na_kw_label">겹치는 문장 <span class="na_dim">${dups.length ? `${dups.length}묶음` : '없음'}</span></div>
+      ${dups.length ? dups.slice(0, 12).map(d => `
+        <details class="na_hcheck na_xray_dup">
+          <summary><span>${d.places.map(p => `<span class="na_chip">${esc(p)}</span>`).join('<i class="fa-solid fa-arrows-left-right na_dim"></i>')}</span><small class="na_dim">${d.items.length}문장 · ${fmt(d.chars)}자</small></summary>
+          <ul>${d.items.slice(0, 8).map(t => `<li>${esc(t.length > 220 ? t.slice(0, 220) + '…' : t)}</li>`).join('')}${d.items.length > 8 ? `<li class="na_dim">… ${d.items.length - 8}개 더</li>` : ''}</ul>
+        </details>`).join('') : '<div class="na_dim na_xray_none">두 군데 이상 들어간 문장이 없어요.</div>'}
+      <div class="na_kw_label">메시지 순서대로</div>
+      <div class="na_xray_msgs">${msgRows()}</div>`);
+    // message text is filled in when opened (a long chat history would be slow to paint all at once)
+    const fill = el => {
+        if (!el.open || el.dataset.i === undefined) return;
+        const mi = Number(el.dataset.i);
+        const content = x.messages[mi].content;
+        const $pre = $(el).find('.na_xray_text');
+        if ($pre.data('done')) return;
+        let at = 0, html = '';
+        for (const s of spans.filter(s => s.msg === mi)) {
+            if (s.a > at) html += esc(content.slice(at, s.a));
+            html += `<mark style="--c:${XRAY_CATS[s.cat].color}" title="${esc(s.label)}">${esc(content.slice(s.a, s.b))}</mark>`;
+            at = s.b;
+        }
+        html += esc(content.slice(at));
+        $pre.html(html).data('done', true);
+    };
+    // <details> toggle does not bubble, so listen in the capture phase
+    $root[0].addEventListener('toggle', e => { if (e.target.classList?.contains('na_xray_msg')) fill(e.target); }, true);
+    $root.on('click', '.na_xray_hide', async function () { await applyHide(); $(this).prop('disabled', true).text('숨겼어요 · 다음 응답부터 빠져요'); });
+    return popup;
+}
+
 async function openHealth() {
     const c = ctx();
     const m = getMeta();
@@ -6601,7 +6818,11 @@ function addWandMenu() {
 
     es.on(et.APP_READY, start);
     es.on(et.CHAT_CHANGED, onChatChanged);
+    if (et.GENERATION_STARTED) es.on(et.GENERATION_STARTED, xrayArm);
     if (et.GENERATION_STARTED) es.on(et.GENERATION_STARTED, onGenerationStarted);
+    if (et.WORLD_INFO_ACTIVATED) es.on(et.WORLD_INFO_ACTIVATED, xrayWorldInfo);
+    if (et.CHAT_COMPLETION_PROMPT_READY) es.on(et.CHAT_COMPLETION_PROMPT_READY, xrayCapture);
+    if (et.GENERATE_AFTER_COMBINE_PROMPTS) es.on(et.GENERATE_AFTER_COMBINE_PROMPTS, xrayCapture);
     if (et.MESSAGE_RECEIVED) es.on(et.MESSAGE_RECEIVED, driftTick);
     for (const ev of [et.MESSAGE_RECEIVED, et.MESSAGE_SENT, et.MESSAGE_DELETED, et.MESSAGE_UPDATED]) {
         if (ev) es.on(ev, refreshStatusSoon);
