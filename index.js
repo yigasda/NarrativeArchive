@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.9.1';
+const VERSION = '2.10.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -451,9 +451,8 @@ const mutedSet = m => new Set(Array.isArray(m.muted) ? m.muted : []);
 
 const linkedMap = m => (m.linked && typeof m.linked === 'object' && !Array.isArray(m.linked)) ? m.linked : {};
 
-function recentChatText(m) {
+function recentChatText(m, n = Math.max(1, Number(m.linkDepth) || 4)) {
     const chat = ctx().chat || [];
-    const n = Math.max(1, Number(m.linkDepth) || 4);
     const out = [];
     for (let i = chat.length - 1; i >= 0 && out.length < n; i--) {
         const x = chat[i];
@@ -463,12 +462,15 @@ function recentChatText(m) {
     return out.join('\n').toLowerCase();
 }
 
+// the keywords of `keys` that appear in `hay` (already lower-cased); plain substring match, any case
+const linkHits = (keys, hay) => keys.filter(w => w && hay.includes(String(w).toLowerCase()));
+
 // titles of linked sections whose keywords are not in the recent messages right now
 function linkWaiting(m) {
     const entries = Object.entries(linkedMap(m)).filter(([, k]) => Array.isArray(k) && k.length);
     if (!entries.length) return new Set();
     const hay = recentChatText(m);
-    return new Set(entries.filter(([, keys]) => !keys.some(w => w && hay.includes(String(w).toLowerCase()))).map(([t]) => t));
+    return new Set(entries.filter(([, keys]) => !linkHits(keys, hay).length).map(([t]) => t));
 }
 
 async function setLinked(title, keys) {
@@ -789,6 +791,7 @@ function mountSectionBrowser($host) {
                     <span class="na_act_sep"></span>
                     <button type="button" class="na_icon na_keys ${links[sectionKey(s)]?.length ? 'active' : ''}" title="키워드 연동"><i class="fa-solid fa-key"></i></button>
                     <button type="button" class="na_icon na_towi" title="월드인포로 보내기"><i class="fa-solid fa-book-atlas"></i></button>
+                    ${srcButton(m, s.title, 'icon')}
                     <button type="button" class="na_icon na_del na_danger" title="섹션 삭제"><i class="fa-solid fa-trash-can"></i></button>
                     <span class="na_spacer"></span>
                     <button type="button" class="na_btn na_small na_edit"><i class="fa-solid fa-pen"></i> 편집</button>
@@ -1119,6 +1122,7 @@ function renderPanel() {
                     <select id="na_capmode" class="text_pole"><option value="warn">경고만</option><option value="trim">오래된 섹션부터 빼기</option></select>
                   </label>
                   <label class="na_set_row"><span><span>키워드 연동 범위</span><small>최근 메시지 몇 개에서 찾을지 · 연동 <b id="na_linked_n">0</b>개</small></span><input type="number" id="na_link_depth" class="text_pole" min="1" max="50"></label>
+                  <div class="na_set_row"><span><span>키워드 테스트</span><small>문장을 넣어 보면 어떤 섹션이 불려 오는지 보여 줘요</small></span><button type="button" class="na_btn na_small" id="na_kw_test"><i class="fa-solid fa-vial"></i> 테스트</button></div>
                   <div class="na_set_row"><span><span>고정한 섹션 <b id="na_pinned_n">0</b>개</span></span><button type="button" class="na_btn na_small" id="na_unpin_all">모두 풀기</button></div>
                   <div class="na_set_row"><span><span>꺼 둔 섹션 <b id="na_muted_n">0</b>개</span></span><button type="button" class="na_btn na_small" id="na_unmute_all">모두 켜기</button></div>
                 </div>
@@ -1610,6 +1614,7 @@ function bindPanel() {
             m.wrap = this.value; await saveMeta(); applyInjection(); refreshStatus();
         }, 500);
     });
+    $('#na_kw_test').on('click', needChat(openKeywordTest));
     $('#na_link_depth').on('change', async function () {
         if (!hasChat()) return;
         const m = getMeta();
@@ -2019,11 +2024,23 @@ function renderDiff(rows, context = 2) {
         const mk = markedPair(rows[d].line, rows[a].line);
         if (mk) { marked.set(d, mk.old); marked.set(a, mk.new); }
     }
+    // the section each row sits in, for a "원문" chip at the start of each run of changes
+    const m = hasChat() ? getMeta() : null;
+    const isHead = l => /^#{1,3} /.test(l);
+    let headOld = '', headNew = '';
+    const heads = rows.map(r => {
+        if (isHead(r.line)) { if (r.t !== '+') headOld = r.line; if (r.t !== '-') headNew = r.line; }
+        return r.t === '-' ? headOld : headNew;
+    });
     let html = '', skipped = 0;
     const flush = () => { if (skipped) html += `<div class="na_diff_skip">··· 같은 줄 ${fmt(skipped)}개 ···</div>`; skipped = 0; };
     rows.forEach((r, i) => {
         if (!keep[i]) { skipped++; return; }
         flush();
+        if (m && r.t !== ' ' && (i === 0 || rows[i - 1].t === ' ')) {
+            const b = srcButton(m, heads[i], 'chip');
+            if (b) html += `<div class="na_diff_src">${b}</div>`;
+        }
         const cls = r.t === '+' ? 'na_diff_add' : r.t === '-' ? 'na_diff_del' : 'na_diff_same';
         html += `<div class="${cls}"><span>${r.t === ' ' ? '' : r.t}</span><div class="na_dl">${marked.get(i) ?? (esc(r.line) || '&nbsp;')}</div></div>`;
     });
@@ -2210,7 +2227,7 @@ function translateButton($diff) {
     $btn.on('click', async () => {
         if ($diff.find('.na_diff_tr').length) { $diff.find('.na_diff_tr').remove(); $btn.html(TR_LABEL); return; }
         const all = $diff.children().toArray();
-        const lineOf = el => el.textContent.replace(/^[+−-]/, '').trim();
+        const lineOf = el => (el.querySelector('.na_dl') || el).textContent.replace(/^[+−-]/, '').trim();
         const rows = all.filter(el => el.classList.contains('na_diff_add') || el.classList.contains('na_diff_del'))
             .map(el => ({ el, text: lineOf(el) }))
             .filter(r => /[\p{L}]{2,}/u.test(r.text));
@@ -2793,9 +2810,132 @@ function renderReading(m) {
         const id = `na_rd_${i}`;
         if (s.title !== '(머리말)' && s.title !== '(제목 없음)') toc.push({ id, level: s.level, title: s.group ? groupLabel(s.title) : s.title });
         const tag = dim ? '<span class="na_rd_tag">주입 안 함</span>' : wait ? '<span class="na_rd_tag">키워드 대기</span>' : cut ? '<span class="na_rd_tag na_rd_tag_cut">상한으로 빠짐</span>' : '';
-        return `<section id="${id}" class="na_rd_sec ${dim || wait ? 'na_rd_off' : ''} ${cut ? 'na_rd_cut' : ''}">${tag}${mdBlock(m.text.slice(s.start, s.end))}</section>`;
+        const src = !s.group ? srcButton(m, s.title, 'chip') : '';
+        return `<section id="${id}" class="na_rd_sec ${dim || wait ? 'na_rd_off' : ''} ${cut ? 'na_rd_cut' : ''}">${tag}${src ? `<div class="na_rd_src">${src}</div>` : ''}${mdBlock(m.text.slice(s.start, s.end))}</section>`;
     }).join('');
     return { html, toc };
+}
+
+// ---------------------------------------------------------------- source jump
+// A section titled "Y2 #564–#567 — ..." opens messages #564–#567 of this chat. Only the newest log's prefix
+// (the one the last numbered section uses) is this chat; older logs live in other chats.
+
+function sourceRange(m, title) {
+    const r = String(title || '').replace(/^#{1,3}\s+/, '').match(RANGE_HEAD); // "## " marks only, not "#0"
+    if (!r) return null;
+    const prefix = (r[1] || '').trim();
+    const from = Math.min(+r[2], +r[4]), to = Math.max(+r[2], +r[4]);
+    const ranges = headingRanges(m.text);
+    const cur = ranges.length ? ranges[ranges.length - 1].prefix : '';
+    const n = (ctx().chat || []).length;
+    const why = prefix !== cur ? `${prefix || '앞 번호'} 섹션은 이전 채팅 로그라 여기선 열 수 없어요`
+        : from >= n ? '이 채팅에 아직 없는 번호예요' : '';
+    return { prefix, from, to: Math.min(to, n - 1), ok: !why, why, label: `${prefix ? `${prefix} ` : ''}#${from}–#${to}` };
+}
+
+// 'icon' for card toolbars, 'chip' for the reader and diffs; '' when the title has no range
+function srcButton(m, title, kind) {
+    const r = sourceRange(m, title);
+    if (!r) return '';
+    const data = `data-from="${r.from}" data-to="${r.to}" data-label="${esc(r.label)}"`;
+    if (kind === 'icon') return `<button type="button" class="na_icon na_src_btn" ${data} ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? `원문 보기 ${r.label}` : r.why)}"><i class="fa-solid fa-comments"></i></button>`;
+    return `<button type="button" class="na_src_chip na_src_btn" ${data} ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? '이 섹션의 원문 메시지 보기' : r.why)}"><i class="fa-solid fa-comments"></i> 원문 ${esc(r.label)}</button>`;
+}
+
+async function openSource(from, to, label) {
+    const c = ctx();
+    const chat = c.chat || [];
+    const items = [];
+    for (let i = from; i <= to && i < chat.length; i++) {
+        const x = chat[i];
+        if (!x) continue;
+        const text = cleanMessage(String(x.mes || ''), { stripTags: true });
+        items.push(`<div class="na_src_msg ${x.is_user ? 'na_src_user' : ''}" data-id="${i}">
+            <div class="na_src_head"><b>#${i}</b> <span>${esc(x.name || '')}</span>${x.is_system ? '<span class="na_chip">숨김</span>' : ''}
+              <button type="button" class="na_linkbtn na_src_goto">채팅에서 보기</button></div>
+            <div class="na_src_body">${mdBlock(text) || '<span class="na_dim">(비어 있음)</span>'}</div>
+          </div>`);
+    }
+    const $v = $(`
+      <div class="na_popup na_popup_fill">
+        <div class="na_diff_head"><b>원문 ${esc(label)}</b><span class="na_dim">메시지 ${items.length}개</span></div>
+        <div class="na_src_list">${items.join('') || '<div class="na_empty">이 채팅에 그 번호의 메시지가 없어요.</div>'}</div>
+      </div>`);
+    $v.on('click', '.na_src_goto', function () {
+        const id = $(this).closest('.na_src_msg').data('id');
+        const $mes = $(`#chat .mes[mesid="${id}"]`);
+        if (!$mes.length) return toastr.info('채팅 화면에 아직 불러오지 않은 메시지예요. 위로 스크롤해 더 불러온 뒤 다시 눌러 주세요.');
+        // close this and any read-only popups under it (never one with a 취소 that would drop someone's input)
+        $('dialog').filter((i, d) => d.open && $(d).find('.na_popup').length && !$(d).find('.popup-button-cancel').filter(':visible').length)
+            .get().reverse().forEach(d => $(d).find('.popup-button-ok').first().trigger('click'));
+        setTimeout(() => $mes[0].scrollIntoView({ block: 'start', behavior: 'smooth' }), 150);
+    });
+    await c.callGenericPopup($v, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+}
+
+$(document).on('click', '.na_src_btn', function (e) {
+    e.stopPropagation();
+    if (this.disabled || !hasChat()) return;
+    openSource(Number(this.dataset.from), Number(this.dataset.to), this.dataset.label || '');
+});
+
+// ---------------------------------------------------------------- keyword test
+
+async function openKeywordTest() {
+    const c = ctx();
+    const m = getMeta();
+    const depth = Math.max(1, Number(m.linkDepth) || 4);
+    const $root = $(`
+      <div class="na_popup">
+        <div class="na_block_head"><div>
+          <h4>키워드 테스트</h4>
+          <p>문장을 넣으면 🔑 키워드 연동한 섹션 중 어떤 게 불려 오는지 보여 줘요. 실제 주입은 바뀌지 않아요.</p>
+        </div></div>
+        <textarea class="text_pole na_kwt_in" rows="3" placeholder="예: 그 지도 아직 갖고 있어?"></textarea>
+        <label class="checkbox_label"><input type="checkbox" class="na_kwt_recent"><span>최근 메시지 ${depth - 1}개도 같이 (이 문장을 다음 메시지로 보낸다고 치기)</span></label>
+        <div class="na_kwt_out"></div>
+      </div>`);
+    const linked = Object.entries(linkedMap(m)).filter(([, k]) => Array.isArray(k) && k.length);
+    const keys = new Set(parseSections(m.text).map(sectionKey));
+    const muted = mutedSet(m);
+    const render = () => {
+        if (!linked.length) return $root.find('.na_kwt_out').html('<div class="na_empty">키워드 연동한 섹션이 없어요. 섹션 탭에서 카드를 펼쳐 🔑를 눌러 키워드를 정하세요.</div>');
+        const text = $root.find('.na_kwt_in').val();
+        const withRecent = $root.find('.na_kwt_recent').prop('checked');
+        const hay = `${text}\n${withRecent && depth > 1 ? recentChatText(m, depth - 1) : ''}`.toLowerCase();
+        const rows = linked.map(([key, ks]) => {
+            const hits = text.trim() || withRecent ? linkHits(ks, hay) : [];
+            const off = muted.has(key), gone = !keys.has(key);
+            const state = gone ? 'gone' : off ? 'off' : hits.length ? 'on' : 'wait';
+            return { key, ks, hits, state };
+        }).sort((a, b) => ['on', 'wait', 'off', 'gone'].indexOf(a.state) - ['on', 'wait', 'off', 'gone'].indexOf(b.state));
+        const label = { on: '호출됨', wait: '호출 안 됨', off: '스위치 꺼짐', gone: '섹션 없음' };
+        const icon = { on: 'fa-circle-check', wait: 'fa-circle', off: 'fa-power-off', gone: 'fa-circle-question' };
+        // where each hit landed, so "Set" matching inside "settle" is easy to spot
+        const where = w => {
+            const i = hay.indexOf(String(w).toLowerCase());
+            if (i < 0) return '';
+            const src = `${text}\n${withRecent && depth > 1 ? recentChatText(m, depth - 1) : ''}`;
+            const a = Math.max(0, i - 14), b = Math.min(src.length, i + w.length + 14);
+            const inWord = /[A-Za-z]/.test(src[i - 1] || '') || /[A-Za-z]/.test(src[i + w.length] || '');
+            return `${a ? '…' : ''}${esc(src.slice(a, i))}<mark>${esc(src.slice(i, i + w.length))}</mark>${esc(src.slice(i + w.length, b))}${b < src.length ? '…' : ''}`
+                + (inWord ? ` <span class="na_kwt_warn"><i class="fa-solid fa-triangle-exclamation"></i> 다른 단어 속에서 걸렸어요</span>` : '');
+        };
+        $root.find('.na_kwt_out').html(rows.map(r => `
+            <div class="na_kwt_row na_kwt_${r.state}">
+              <i class="fa-solid ${icon[r.state]}"></i>
+              <div class="na_kwt_main">
+                <div><b>${label[r.state]}</b> · ${esc(keyLabel(r.key))}</div>
+                <div class="na_kwt_keys">${r.ks.map(w => `<span class="na_kwt_key ${r.hits.includes(w) ? 'hit' : ''}">${esc(w)}</span>`).join('')}</div>
+                ${r.state === 'on' ? `<div class="na_kwt_where">${r.hits.map(w => `<div>${where(w)}</div>`).join('')}</div>` : ''}
+              </div>
+            </div>`).join(''));
+    };
+    let t;
+    $root.find('.na_kwt_in').on('input', () => { clearTimeout(t); t = setTimeout(render, 150); });
+    $root.find('.na_kwt_recent').on('change', render);
+    render();
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
 // ---------------------------------------------------------------- viewer popup
