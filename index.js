@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.14.0';
+const VERSION = '3.15.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -34,7 +34,7 @@ const DEFAULT_META = Object.freeze({
     lastExport: null, // { from, to, at, how } — the latest extract copied or saved
 });
 
-const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'quoteInject', 'quoteMax', 'router', 'people'];
+const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'quoteInject', 'quoteMax', 'router', 'people', 'temps'];
 const POSITIONS = { 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
 const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
 
@@ -5278,6 +5278,101 @@ function peopleData(m) {
     return { names, people, pairs: [...pairs.values()], pairKey };
 }
 
+// ---- relationship temperature: the AI rates each section two people share from -5 (cold) to +5 (warm)
+// m.temps = { "A\u0001B": { sectionKey: { s, why, h } } }; h is the section text's hash, so an edited section is rated again
+const AI_SYS_TEMP = `GOAL
+Rate how WARM or COLD the relationship between two people is in each section of a story archive.
+
+YOU GET
+- PAIR: the two names.
+- SECTIONS: S1, S2, S3 … in story order. Each one is a summary of a part of the story.
+
+SCALE (one whole number from -5 to 5)
+ 5  devoted, tender, complete trust
+ 3  warm, close, affectionate
+ 1  friendly but careful
+ 0  neutral, or they barely deal with each other
+-1  tense, uneasy, cold politeness
+-3  open quarrel, bitterness, betrayal
+-5  hatred, violence, total break
+
+STEPS
+1. Take one section.
+2. Look ONLY at how the two people in the PAIR treat and feel about each other in that section. Ignore everyone else.
+3. If both are there but do not really deal with each other, the score is 0.
+4. If the mood changes inside the section, the END of the section counts more than the start.
+5. Pick the number from the SCALE.
+6. Write the reason in Korean, 12 words or fewer.
+7. Go to the next section. Do every section. Do not skip, do not merge.
+
+EXAMPLE
+PAIR: Ren & Mara
+S1: Ren pulls Mara out of the river. She thanks him and they talk until dawn.
+S2: Mara finds out Ren lied about the letter. She slaps him and leaves.
+S3: Ivo and Mara go to the market. Ren is mentioned once.
+S4: Ren apologizes. Mara does not forgive him yet but lets him walk her home.
+Answer:
+S1 | 4 | 렌이 마라를 구하고 밤새 이야기함
+S2 | -3 | 편지 거짓말이 드러나 마라가 떠남
+S3 | 0 | 둘이 거의 엮이지 않음
+S4 | 1 | 사과를 받고 조심스레 곁을 허락함
+
+OUTPUT
+One line per section, in order, exactly like this:
+S<number> | <score> | <reason>
+Nothing else. No title, no notes, no summary.`;
+
+async function rateTemps(m, pair, secs, onStep) {
+    const k = [pair.a, pair.b].sort().join('\u0001');
+    m.temps = m.temps && typeof m.temps === 'object' ? m.temps : {};
+    const store = m.temps[k] ||= {};
+    const parts = [];
+    let cur = [], tok = 0;
+    for (const s of secs) {
+        const t = estTok(m.text.slice(s.start, s.end));
+        if (cur.length && tok + t > PICK_CHUNK_TOK) { parts.push(cur); cur = []; tok = 0; }
+        cur.push(s); tok += t;
+    }
+    if (cur.length) parts.push(cur);
+    let got = 0;
+    for (const [pi, part] of parts.entries()) {
+        onStep?.(pi + 1, parts.length);
+        const body = part.map((s, i) => `S${i + 1}: ${s.title}\n${m.text.slice(s.start, s.end).replace(/^[^\n]*\n?/, '').trim()}`).join('\n\n');
+        const out = await askAI(`PAIR: ${pair.a} & ${pair.b}\n\nSECTIONS\n${body}`, { system: AI_SYS_TEMP, maxTokens: 3000 });
+        for (const mt of out.matchAll(/^\s*\**S(\d+)\**\s*[|:]\s*([+\-−–]?\s*\d+)\s*[|:]\s*(.+)$/gm)) {
+            const s = part[Number(mt[1]) - 1];
+            if (!s) continue;
+            const v = Math.max(-5, Math.min(5, parseInt(mt[2].replace(/[−–]/, '-').replace(/\s/g, ''), 10) || 0));
+            store[sectionKey(s)] = { s: v, why: mt[3].trim().slice(0, 80), h: textHash(m.text.slice(s.start, s.end)) };
+            got++;
+        }
+        await saveMeta();
+    }
+    return got;
+}
+
+function tempPoints(m, pair) {
+    const store = m.temps?.[[pair.a, pair.b].sort().join('\u0001')] || {};
+    return pair.secs.map(s => { const t = store[sectionKey(s)]; return { s, t: t || null, stale: !!t && t.h !== textHash(m.text.slice(s.start, s.end)) }; });
+}
+
+// line graph: x = shared sections in story order, y = -5…5
+function tempChart(pts, { h = 170, mini = false } = {}) {
+    const on = pts.filter(p => p.t);
+    if (!on.length) return '';
+    const n = pts.length, W = 100;
+    const x = i => n === 1 ? W / 2 : (mini ? 2 : 4) + i * (W - (mini ? 4 : 8)) / (n - 1);
+    const y = v => 50 - v * 9;
+    const line = pts.map((p, i) => p.t ? `${x(i).toFixed(2)},${y(p.t.s)}` : null).filter(Boolean).join(' ');
+    const col = v => v > 0 ? 'var(--na-warm, #e0663a)' : v < 0 ? 'var(--na-cold, #3b82f6)' : 'var(--na-mid, #8a8f98)';
+    return `<svg class="na_temp_svg ${mini ? 'mini' : ''}" viewBox="0 0 100 100" preserveAspectRatio="none" style="height:${h}px">
+      ${mini ? '' : [5, 3, 0, -3, -5].map(v => `<line x1="0" x2="100" y1="${y(v)}" y2="${y(v)}" class="${v ? 'grid' : 'zero'}" vector-effect="non-scaling-stroke"/>`).join('')}
+      ${mini ? `<line x1="0" x2="100" y1="50" y2="50" class="zero" vector-effect="non-scaling-stroke"/>` : ''}
+      <polyline points="${line}" vector-effect="non-scaling-stroke"/>
+      ${mini ? '' : pts.map((p, i) => p.t ? `<line class="dot" x1="${x(i)}" x2="${x(i)}" y1="${y(p.t.s)}" y2="${y(p.t.s)}" style="stroke:${col(p.t.s)}" data-i="${i}" vector-effect="non-scaling-stroke"><title>${esc(p.s.title)}\n${p.t.s > 0 ? '+' : ''}${p.t.s} · ${esc(p.t.why)}</title></line>` : '').join('')}
+    </svg>`;
+}
+
 async function openPeople() {
     const c = ctx();
     const m = getMeta();
@@ -5285,11 +5380,11 @@ async function openPeople() {
     g.faces = g.faces && typeof g.faces === 'object' ? g.faces : {};
     const short = s => (s.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [s.title.slice(0, 20)])[0];
     const chip = s => `<button type="button" class="na_ref_chip" data-start="${s.start}" title="${esc(s.title)}">${esc(short(s))}</button>`;
-    let view = 'book', sel = null, data = peopleData(m);
+    let view = 'book', sel = null, tpair = null, busy = false, data = peopleData(m);
     const $root = $(`
       <div class="na_popup na_people">
         <div class="na_block_head"><div><h4>인물 도감</h4><p>STATE의 인물과 직접 넣은 인물을 아카이브에서 찾아 모아요. 얼굴은 실리태번 아바타를 쓰거나 그림을 올리면 작게(96px) 줄여서 저장해요. 다음 채팅에서도 그대로예요.</p></div></div>
-        <div class="na_seg na_people_tabs"><button type="button" class="na_seg_btn active" data-v="book"><i class="fa-solid fa-address-book"></i> 도감</button><button type="button" class="na_seg_btn" data-v="map"><i class="fa-solid fa-circle-nodes"></i> 관계도</button></div>
+        <div class="na_seg na_people_tabs"><button type="button" class="na_seg_btn active" data-v="book"><i class="fa-solid fa-address-book"></i> 도감</button><button type="button" class="na_seg_btn" data-v="map"><i class="fa-solid fa-circle-nodes"></i> 관계도</button><button type="button" class="na_seg_btn" data-v="temp"><i class="fa-solid fa-temperature-half"></i> 온도</button></div>
         <div class="na_people_body"></div>
         <input type="file" accept="image/*" class="na_face_file" hidden>
       </div>`);
@@ -5340,14 +5435,58 @@ async function openPeople() {
             <div class="na_cal_loghead"><b>${esc(sel)}</b><span class="na_dim">선 굵기 = 같은 섹션에 함께 나온 횟수</span></div>
             ${mine.length ? mine.map(p => { const o = p.a === sel ? p.b : p.a; return `
               <div class="na_relrow">
-                <div class="na_relrow_head">${faceHtml(o, 28)}<b>${esc(o)}</b><small class="na_dim">함께 ${p.secs.length}섹션</small></div>
+                <div class="na_relrow_head">${faceHtml(o, 28)}<b>${esc(o)}</b>${(() => { const pts = tempPoints(m, p), last = [...pts].reverse().find(q => q.t); return last ? `<span class="na_temp_mini">${tempChart(pts, { h: 22, mini: true })}<b class="${last.t.s > 0 ? 'warm' : last.t.s < 0 ? 'cold' : ''}">${last.t.s > 0 ? '+' : ''}${last.t.s}</b></span>` : ''; })()}<small class="na_dim">함께 ${p.secs.length}섹션</small>${p.secs.length ? `<button type="button" class="na_icon na_icon_sm na_temp_go" data-k="${esc(data.pairKey(p.a, p.b))}" title="관계 온도"><i class="fa-solid fa-temperature-half"></i></button>` : ''}</div>
                 ${p.lines.length ? `<ul>${p.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
                 ${p.many.length ? `<details class="na_person_more"><summary>다른 인물과 같이 나오는 줄 <span class="na_dim">${p.many.length}</span></summary><ul>${p.many.map(l => `<li>${esc(l)}</li>`).join('')}</ul></details>` : ''}
                 ${p.secs.length ? `<div class="na_person_row"><span class="na_dim">최근 함께</span>${p.secs.slice(-3).reverse().map(chip).join('')}</div>` : ''}
               </div>`; }).join('') : '<div class="na_dim">다른 인물과 같이 나온 섹션이 없어요.</div>'}
           </div>`;
     };
-    const draw = () => { data = peopleData(m); $root.find('.na_people_tabs .na_seg_btn').each(function () { $(this).toggleClass('active', this.dataset.v === view); }); $root.find('.na_people_body').html(view === 'book' ? book() : map()); };
+    const temp = () => {
+        const pairs = data.pairs.filter(p => p.secs.length).sort((x, y) => y.secs.length - x.secs.length);
+        if (!pairs.length) return '<div class="na_empty">같은 섹션에 함께 나온 두 인물이 없어요.</div>';
+        const pair = pairs.find(p => data.pairKey(p.a, p.b) === tpair) || pairs.find(p => p.a === sel || p.b === sel) || pairs[0];
+        tpair = data.pairKey(pair.a, pair.b);
+        const pts = tempPoints(m, pair);
+        const todo = pts.filter(p => !p.t || p.stale).length, scored = pts.filter(p => p.t);
+        const avg = scored.length ? scored.reduce((a, p) => a + p.t.s, 0) / scored.length : 0;
+        const sign = v => `${v > 0 ? '+' : ''}${v}`;
+        return `
+          <div class="na_temp_pick">
+            <select class="text_pole na_temp_sel">${pairs.map(p => `<option value="${esc(data.pairKey(p.a, p.b))}" ${p === pair ? 'selected' : ''}>${esc(p.a)} · ${esc(p.b)} (${p.secs.length})</option>`).join('')}</select>
+          </div>
+          <div class="na_temp_who">${faceHtml(pair.a, 36)}<i class="fa-solid fa-arrows-left-right na_dim"></i>${faceHtml(pair.b, 36)}<span class="na_dim">${scored.length ? `잰 섹션 ${scored.length}/${pts.length} · 평균 ${sign(Math.round(avg * 10) / 10)}` : `함께 나온 섹션 ${pts.length}개 · 아직 안 쟀어요`}</span></div>
+          ${scored.length ? `<div class="na_temp_chart"><div class="na_temp_axis"><span>+5</span><span>0</span><span>−5</span></div>${tempChart(pts)}</div>` : ''}
+          <div class="na_temp_actions">
+            <small class="na_dim">AI 기능 모델(${esc(aiLabel())})이 섹션마다 −5(차가움)~+5(따뜻함)으로 매겨요${todo ? ` · 안 잰 섹션 ${todo}개` : ''}</small>
+            <span>
+              ${todo ? `<button type="button" class="na_btn na_small na_primary na_temp_run" data-all="0"><i class="fa-solid fa-temperature-half"></i> 안 잰 것 재기</button>` : ''}
+              ${scored.length ? `<button type="button" class="na_btn na_small na_temp_run" data-all="1"><i class="fa-solid fa-rotate"></i> 전부 다시</button>` : ''}
+            </span>
+          </div>
+          <div class="na_temp_list">${pts.map((p, i) => `
+            <div class="na_temp_row" data-i="${i}">
+              <b class="na_temp_val ${p.t ? (p.t.s > 0 ? 'warm' : p.t.s < 0 ? 'cold' : '') : 'none'}">${p.t ? sign(p.t.s) : '–'}</b>
+              <span class="na_temp_txt"><button type="button" class="na_ref_chip" data-start="${p.s.start}" title="${esc(p.s.title)}">${esc((p.s.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [p.s.title.slice(0, 20)])[0])}</button>${p.t ? `<span>${esc(p.t.why)}</span>` : '<span class="na_dim">안 잼</span>'}${p.stale ? '<small class="na_warn_txt">섹션이 바뀜</small>' : ''}</span>
+            </div>`).join('')}</div>`;
+    };
+    const draw = () => { data = peopleData(m); $root.find('.na_people_tabs .na_seg_btn').each(function () { $(this).toggleClass('active', this.dataset.v === view); }); $root.find('.na_people_body').html(view === 'book' ? book() : view === 'map' ? map() : temp()); };
+    $root.on('change', '.na_temp_sel', function () { tpair = this.value; draw(); });
+    $root.on('click', '.na_temp_go', function () { tpair = String($(this).data('k')); view = 'temp'; draw(); });
+    $root.on('click', '.na_temp_svg .dot', function () { const $r = $root.find(`.na_temp_row[data-i="${$(this).data('i')}"]`); $root.find('.na_temp_row').removeClass('hl'); $r.addClass('hl')[0]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
+    $root.on('click', '.na_temp_run', async function () {
+        if (busy) return;
+        const pair = data.pairs.find(p => data.pairKey(p.a, p.b) === tpair);
+        if (!pair) return;
+        const all = this.dataset.all === '1';
+        const secs = tempPoints(m, pair).filter(p => all || !p.t || p.stale).map(p => p.s);
+        if (all && !await confirm('전부 다시', `${pair.a} · ${pair.b}이 함께 나온 섹션 ${secs.length}개를 모두 다시 잴까요?`)) return;
+        busy = true;
+        const $b = $(this);
+        const got = await withSpinner($b, '재는 중…', () => rateTemps(m, pair, secs, (i, n) => n > 1 && $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> ${i}/${n}번째 읽는 중…`)));
+        busy = false;
+        if (got !== null) { if (got < secs.length) toastr.warning(`${secs.length}개 중 ${got}개만 점수가 왔어요. 남은 건 다시 눌러 주세요.`); draw(); }
+    });
     const save = async () => { saveGlobal(); draw(); };
     let target = null;
     $root.on('click', '.na_people_tabs .na_seg_btn', function () { view = this.dataset.v; draw(); });
