@@ -281,8 +281,8 @@ function mountSectionBrowser($host) {
         const $body = $card.children('.na_card_body').prop('hidden', false).empty();
         const $ta = $('<textarea class="text_pole na_sec_edit" spellcheck="false"></textarea>').val(original.replace(/\s+$/, ''));
         const $btns = $(`<div class="na_row na_right">
-            <div class="menu_button na_cancel">취소</div>
-            <div class="menu_button na_save na_primary"><i class="fa-solid fa-floppy-disk"></i> 섹션 저장</div></div>`);
+            <button type="button" class="na_btn na_cancel">취소</button>
+            <button type="button" class="na_btn na_save na_primary"><i class="fa-solid fa-floppy-disk"></i> 섹션 저장</button></div>`);
         $body.append($ta, $btns);
         $ta.trigger('focus');
         $btns.find('.na_cancel').on('click', render);
@@ -358,7 +358,7 @@ function mountSectionBrowser($host) {
                 <div class="na_card_body" ${q ? '' : 'hidden'}>
                   <div class="na_card_text">${highlight(body, q)}</div>
                   <div class="na_row na_right">
-                    <div class="menu_button na_edit"><i class="fa-solid fa-pen"></i> 이 섹션 편집</div>
+                    <button type="button" class="na_btn na_edit"><i class="fa-solid fa-pen"></i> 이 섹션 편집</button>
                   </div>
                 </div>
               </div>`);
@@ -445,13 +445,13 @@ function renderPanel() {
                 </div>
                 <textarea id="na_editor" class="text_pole na_editor" spellcheck="false" placeholder="# 제목&#10;&#10;# ── Y1 ──&#10;&#10;## #0–#47 — ..."></textarea>
                 <div class="na_editor_actions">
-                  <div class="menu_button" id="na_ed_revert"><i class="fa-solid fa-rotate-left"></i> 되돌리기</div>
-                  <div class="menu_button" id="na_ed_once"><i class="fa-solid fa-hourglass-start"></i> 이번만</div>
-                  <div class="menu_button na_primary" id="na_ed_save"><i class="fa-solid fa-floppy-disk"></i> 저장</div>
+                  <button type="button" class="na_btn" id="na_ed_revert"><i class="fa-solid fa-rotate-left"></i> 되돌리기</button>
+                  <button type="button" class="na_btn" id="na_ed_once"><i class="fa-solid fa-hourglass-start"></i> 이번만</button>
+                  <button type="button" class="na_btn na_primary" id="na_ed_save"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
                 </div>
               </div>
               <details class="na_block na_details">
-                <summary>마지막 주입 기록 · 실제로 뭐가 들어갔나요?</summary>
+                <summary>마지막 주입 기록</summary>
                 <div id="na_inject_log"></div>
               </details>
             </section>
@@ -464,7 +464,7 @@ function renderPanel() {
                     <h4>섹션</h4>
                     <p><code>#</code> 구분 제목은 접을 수 있는 묶음, <code>##</code> 제목은 카드로 나뉘어요.</p>
                   </div>
-                  <div class="menu_button na_small" id="na_sec_big"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> 크게</div>
+                  <button type="button" class="na_btn na_small" id="na_sec_big"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> 크게</button>
                 </div>
                 <div id="na_sec_host"></div>
               </div>
@@ -495,17 +495,17 @@ function renderPanel() {
               <div class="na_block">
                 <div class="na_block_head">
                   <div><h4>복구 지점</h4><p>저장·추가·불러오기·복원 직전 상태를 자동으로 남겨요. 최근 ${SNAPSHOT_MAX}개까지.</p></div>
-                  <div class="menu_button na_small" id="na_snap_now"><i class="fa-solid fa-bookmark"></i> 지금 보관</div>
+                  <button type="button" class="na_btn na_small" id="na_snap_now"><i class="fa-solid fa-bookmark"></i> 지금 보관</button>
                 </div>
                 <div id="na_snap_list" class="na_snap_list"></div>
               </div>
               <div class="na_block">
                 <div class="na_block_head"><div><h4>파일</h4><p><b>.txt</b>는 아카이브 본문만, <b>.json</b>은 경계선·설정·복구 지점까지 통째로 담아요.</p></div></div>
-                <div class="na_grid2">
-                  <div class="menu_button" id="na_import"><i class="fa-solid fa-file-import"></i> 불러오기</div>
-                  <div class="menu_button" id="na_export"><i class="fa-solid fa-file-lines"></i> .txt 내보내기</div>
-                  <div class="menu_button" id="na_export_json"><i class="fa-solid fa-box-archive"></i> .json 백업</div>
-                  <div class="menu_button" id="na_clear"><i class="fa-solid fa-eraser"></i> 비우기</div>
+                <div class="na_tiles">
+                  <button type="button" class="na_tile" id="na_import"><i class="fa-solid fa-file-arrow-up"></i><span>불러오기</span><small>.txt · .json</small></button>
+                  <button type="button" class="na_tile" id="na_export"><i class="fa-solid fa-file-lines"></i><span>내보내기</span><small>.txt 본문만</small></button>
+                  <button type="button" class="na_tile" id="na_export_json"><i class="fa-solid fa-box-archive"></i><span>백업</span><small>.json 통째로</small></button>
+                  <button type="button" class="na_tile na_tile_danger" id="na_clear"><i class="fa-solid fa-eraser"></i><span>비우기</span><small>복구 지점에 남김</small></button>
                 </div>
                 <input type="file" id="na_file" accept=".txt,.md,.json,text/plain,application/json" hidden>
               </div>
@@ -892,7 +892,7 @@ async function openViewer() {
           <textarea class="text_pole na_full" spellcheck="false"></textarea>
           <div class="na_row na_right">
             <span class="na_full_tok na_dim"></span>
-            <div class="menu_button na_full_save na_primary"><i class="fa-solid fa-floppy-disk"></i> 저장</div>
+            <button type="button" class="na_btn na_full_save na_primary"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
           </div>
         </div>
       </div>`);
@@ -938,12 +938,12 @@ async function openExtract() {
           <label># <input type="number" class="text_pole na_num na_from" min="0" max="${last}" value="${Math.max(0, defStart)}"></label>
           <span>~</span>
           <label># <input type="number" class="text_pole na_num na_to" min="0" max="${last}" value="${Math.max(0, last)}"></label>
-          <div class="menu_button na_reload"><i class="fa-solid fa-rotate"></i> 범위 적용</div>
+          <button type="button" class="na_btn na_reload"><i class="fa-solid fa-rotate"></i> 범위 적용</button>
         </div>
         <div class="na_ex_info na_dim"></div>
         <div class="na_row">
-          <div class="menu_button na_copy na_primary"><i class="fa-solid fa-copy"></i> 전체 복사</div>
-          <div class="menu_button na_save_txt"><i class="fa-solid fa-download"></i> .txt 저장</div>
+          <button type="button" class="na_btn na_copy na_primary"><i class="fa-solid fa-copy"></i> 전체 복사</button>
+          <button type="button" class="na_btn na_save_txt"><i class="fa-solid fa-download"></i> .txt 저장</button>
         </div>
         <div class="na_ex_list"></div>
         <textarea class="na_ex_hidden" readonly></textarea>
