@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.12.0';
+const VERSION = '2.13.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -34,7 +34,7 @@ const DEFAULT_META = Object.freeze({
     lastExport: null, // { from, to, at, how } — the latest extract copied or saved
 });
 
-const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth'];
+const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary'];
 const POSITIONS = { 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
 const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
 
@@ -1235,6 +1235,9 @@ function renderPanel() {
                   </label>
                 </div>
                 ${connCfgHtml('tr')}
+                <div class="na_set_list">
+                  <div class="na_set_row"><span><span>번역 용어집</span><small>이름·장소의 한국어 표기를 정해 두면 번역이 늘 그대로 써요 · 이 채팅 <b id="na_gloss_n">0</b>개</small></span><button type="button" class="na_btn na_small" id="na_gloss_edit"><i class="fa-solid fa-spell-check"></i> 편집</button></div>
+                </div>
                 <small class="na_dim na_conn_note" id="na_conn_note" hidden>키와 JSON은 이 기기의 실리태번 설정에만 저장돼요. 아카이브 백업에는 안 들어가요.</small>
               </div>
             </section>
@@ -1288,6 +1291,7 @@ function renderConn(p) {
 
 function renderAiSettings() {
     const g = globalSettings();
+    $('#na_gloss_n').text(hasChat() ? glossaryEntries(getMeta()).length : 0);
     const a = connSettings('ai');
     const profiles = aiProfiles();
     const opts = [`<option value="">지금 연결된 모델</option>`, ...profiles.map(p => `<option value="${esc(p.id)}">프로필: ${esc(p.name)}</option>`)];
@@ -1385,6 +1389,7 @@ function bindPanel() {
         const v = Math.max(256, parseInt(this.value, 10) || 4096);
         globalSettings().aiMaxTokens = v; globalSettings().aiMaxSet = true; this.value = v; saveGlobal();
     });
+    $('#na_gloss_edit').on('click', needChat(async () => { await openGlossary(); renderAiSettings(); }));
     $('#na_tr_mode').on('change', function () { trSettings().mode = this.value; saveGlobal(); renderAiSettings(); });
     for (const p of ['ai', 'tr']) {
         const field = (sel, key) => $(`#na_${p}_${sel}`).on('change', function () { connSettings(p)[key] = this.value.trim(); saveGlobal(); renderAiSettings(); });
@@ -2269,20 +2274,56 @@ const trLabel = () => {
 
 const trCache = new Map();
 
-// items: { text, mark?: 'OLD'|'NEW', key? } — an OLD/NEW pair goes out together so the wording stays the same
-async function translateLines(items) {
+// ---- glossary: Korean spellings the translator must keep ("Horus = 호루스", one per line, kept per chat)
+
+function glossaryEntries(m) {
+    return String(m?.glossary || '').split('\n')
+        .map(l => l.match(/^\s*([^=→]+?)\s*(?:=|→)\s*(.+?)\s*$/)).filter(Boolean)
+        .map(x => ({ src: x[1], ko: x[2] }));
+}
+const glossaryIn = (entries, text) => { const low = String(text).toLowerCase(); return entries.filter(e => low.includes(e.src.toLowerCase())); };
+const shortHash = s => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
+
+// translations survive a reload in the chat's metadata; oldest go first past the cap
+const TR_MEM_MAX = 4000;
+function trMem() {
+    const m = hasChat() ? getMeta() : null;
+    if (!m) return null;
+    if (!m.trMem || typeof m.trMem !== 'object' || Array.isArray(m.trMem)) m.trMem = {};
+    return m.trMem;
+}
+let trMemTimer;
+function trMemSave() {
+    const mem = trMem();
+    if (!mem) return;
+    const keys = Object.keys(mem);
+    for (let i = 0; i < keys.length - TR_MEM_MAX; i++) delete mem[keys[i]];
+    clearTimeout(trMemTimer);
+    trMemTimer = setTimeout(() => saveMeta(), 800);
+}
+const trGet = k => trCache.get(k) ?? trMem()?.[k];
+
+// items: { text, mark?: 'OLD'|'NEW', key? } — an OLD/NEW pair goes out together so the wording stays the same.
+// The glossary entries a line mentions are part of its cache key, so a changed spelling gets a new translation.
+async function translateLines(items, { fresh = false } = {}) {
+    const gloss = hasChat() ? glossaryEntries(getMeta()) : [];
     items = items.map(x => typeof x === 'string' ? { text: x } : x);
-    const keyOf = x => x.key ?? x.text;
+    const keyOf = x => {
+        const g = glossaryIn(gloss, x.mark ? (x.key ?? x.text) : x.text);
+        return `${g.length ? `${shortHash(g.map(e => `${e.src}=${e.ko}`).join('|'))}\u0002` : ''}${x.key ?? x.text}`;
+    };
     const seen = new Set();
-    const need = items.filter(x => !trCache.has(keyOf(x)) && !seen.has(keyOf(x)) && seen.add(keyOf(x)));
+    const need = items.filter(x => (fresh || trGet(keyOf(x)) === undefined) && !seen.has(keyOf(x)) && seen.add(keyOf(x)));
     for (let i = 0; i < need.length;) {
         // ~80 lines or ~12k characters a request, never splitting an OLD/NEW pair
         let j = i, size = 0;
         while (j < need.length && (j === i || (j - i < 80 && size + need[j].text.length < 12_000) || need[j].mark === 'NEW')) size += need[j++].text.length;
         const chunk = need.slice(i, j);
         i = j;
+        const g = glossaryIn(gloss, chunk.map(x => x.text).join('\n'));
+        const system = g.length ? `${AI_SYS_TRANSLATE}\n\nGlossary: always write these names and terms exactly this way:\n${g.map(e => `${e.src} = ${e.ko}`).join('\n')}` : AI_SYS_TRANSLATE;
         const out = await askTranslator(chunk.map((x, k) => `${k + 1}: ${x.mark ? `(${x.mark}) ` : ''}${x.text}`).join('\n'),
-            { system: AI_SYS_TRANSLATE, maxTokens: Math.min(16384, 1000 + size * 3) });
+            { system, maxTokens: Math.min(16384, 1000 + size * 3) });
         const got = new Map();
         let cur = null;
         for (const row of out.split('\n')) {
@@ -2292,10 +2333,75 @@ async function translateLines(items) {
         }
         for (const [k, v] of got) {
             const t = v.replace(/^\s*\((?:OLD|NEW)\)\s*/i, '').trim();
-            if (t) trCache.set(keyOf(chunk[k]), t);
+            if (t) { trCache.set(keyOf(chunk[k]), t); const mem = trMem(); if (mem) { delete mem[keyOf(chunk[k])]; mem[keyOf(chunk[k])] = t; } }
         }
+        trMemSave();
     }
-    return items.map(x => trCache.get(keyOf(x)) ?? null);
+    return items.map(x => trGet(keyOf(x)) ?? null);
+}
+
+// ---- glossary editor
+
+const AI_SYS_GLOSSARY = `You fix the Korean spelling of names and terms for a story archive, so every translation writes them the same way.
+You get English names or terms, each with a short context. Reply with one line per input, in the same order, as "English = 한국어", nothing else.
+- Use the established Korean spelling when one exists (mythology, history, places). Otherwise transliterate naturally.
+- Translate titles and ordinary nouns into natural Korean; keep coined words as a transliteration.`;
+
+async function openGlossary() {
+    const c = ctx();
+    const m = getMeta();
+    const $root = $(`
+      <div class="na_popup">
+        <div class="na_block_head"><div>
+          <h4>번역 용어집</h4>
+          <p>한 줄에 하나씩 <code>영어 = 한국어</code>로 적어요. 번역할 때 그 줄에 나오는 이름만 골라 모델에 같이 보내요. 이 채팅에만 저장되고, 다른 채팅에서 가져오기를 하면 같이 따라가요.</p>
+        </div></div>
+        <textarea class="text_pole na_gl_ta" rows="12" spellcheck="false" placeholder="Avalon = 아발론&#10;Lighthouse Keeper = 등대지기"></textarea>
+        <div class="na_row_btns na_gl_btns">
+          <button type="button" class="na_btn na_small na_gl_find"><i class="fa-solid fa-magnifying-glass"></i> 아카이브에서 이름 찾기</button>
+          <button type="button" class="na_btn na_small na_gl_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 한국어 채우기</button>
+        </div>
+        <small class="na_dim na_gl_info"></small>
+      </div>`);
+    const $ta = $root.find('.na_gl_ta').val(m.glossary || '');
+    const info = () => {
+        const lines = $ta.val().split('\n').filter(l => l.trim());
+        const empty = lines.filter(l => !/(=|→)\s*\S/.test(l)).length;
+        $root.find('.na_gl_info').text(`${lines.length - empty}개${empty ? ` · 한국어가 빈 줄 ${empty}개` : ''}`);
+    };
+    $ta.on('input', info);
+    info();
+    $root.find('.na_gl_find').on('click', () => {
+        const have = new Set(glossaryEntries({ glossary: $ta.val() }).map(e => e.src.toLowerCase())
+            .concat($ta.val().split('\n').map(l => l.split(/=|→/)[0].trim().toLowerCase())));
+        const counts = new Map();
+        capWords(m.text).forEach(w => counts.set(w, (counts.get(w) || 0) + 1));
+        const found = [...counts].filter(([w, n]) => n >= 3 && !have.has(w.toLowerCase())).sort((a, b) => b[1] - a[1]).slice(0, 40).map(([w]) => w);
+        if (!found.length) return toastr.info('새로 넣을 이름이 없어요.');
+        $ta.val(`${$ta.val().replace(/\s+$/, '')}${$ta.val().trim() ? '\n' : ''}${found.map(w => `${w} = `).join('\n')}`);
+        info();
+        toastr.success(`${found.length}개 넣었어요. 한국어는 직접 적거나 AI로 채우세요.`);
+    });
+    $root.find('.na_gl_ai').on('click', async function () {
+        const lines = $ta.val().split('\n');
+        const todo = lines.map((l, i) => ({ i, src: l.split(/=|→/)[0].trim(), empty: !/(=|→)\s*\S/.test(l) })).filter(x => x.src && x.empty);
+        if (!todo.length) return toastr.info('한국어가 빈 줄이 없어요. "이름 = "처럼 적어 두면 채워요.');
+        const ctxOf = w => { const i = m.text.indexOf(w); return i < 0 ? '' : m.text.slice(Math.max(0, i - 60), i + w.length + 60).replace(/\s+/g, ' '); };
+        const prompt = todo.map(x => `${x.src} — context: ${ctxOf(x.src)}`).join('\n');
+        const out = await withSpinner($(this), '채우는 중…', () => askTranslator(prompt, { system: AI_SYS_GLOSSARY, maxTokens: Math.min(8000, 400 + todo.length * 60) }));
+        if (out === null) return;
+        const got = new Map(out.split('\n').map(l => l.match(/^\s*(?:[-*]\s*)?([^=→]+?)\s*(?:=|→)\s*(.+?)\s*$/)).filter(Boolean).map(x => [x[1].toLowerCase(), x[2]]));
+        let n = 0;
+        for (const x of todo) { const ko = got.get(x.src.toLowerCase()); if (ko) { lines[x.i] = `${x.src} = ${ko}`; n++; } }
+        $ta.val(lines.join('\n'));
+        info();
+        toastr.success(`${n}개 채웠어요. 틀린 건 고쳐 주세요.`);
+    });
+    const r = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, allowVerticalScrolling: true, okButton: '저장', cancelButton: '취소' });
+    if (r !== c.POPUP_RESULT.AFFIRMATIVE && r !== true) return;
+    m.glossary = $ta.val().split('\n').map(l => l.trimEnd()).filter(l => l.trim()).join('\n');
+    await saveMeta();
+    toastr.success(`용어집 저장 · ${glossaryEntries(m).length}개`);
 }
 
 const TR_LABEL = '<i class="fa-solid fa-language"></i> 한국어로 보기';
@@ -2873,7 +2979,7 @@ function mdBlock(text) {
     return out.join('');
 }
 
-function renderReading(m) {
+function renderReading(m, { show } = {}) {
     const muted = mutedSet(m);
     const waiting = linkWaiting(m);
     const trimmed = new Set(m.capMode === 'trim' ? lastBuild.trimmed : []);
@@ -2891,7 +2997,8 @@ function renderReading(m) {
         if (s.title !== '(머리말)' && s.title !== '(제목 없음)') toc.push({ id, level: s.level, title: s.group ? groupLabel(s.title) : s.title });
         const tag = dim ? '<span class="na_rd_tag">주입 안 함</span>' : wait ? '<span class="na_rd_tag">키워드 대기</span>' : cut ? '<span class="na_rd_tag na_rd_tag_cut">상한으로 빠짐</span>' : '';
         const src = !s.group ? srcButton(m, s.title, 'chip') : '';
-        return `<section id="${id}" class="na_rd_sec ${dim || wait ? 'na_rd_off' : ''} ${cut ? 'na_rd_cut' : ''}">${tag}${src ? `<div class="na_rd_src">${src}</div>` : ''}${mdBlock(m.text.slice(s.start, s.end))}</section>`;
+        const raw = m.text.slice(s.start, s.end);
+        return `<section id="${id}" class="na_rd_sec ${dim || wait ? 'na_rd_off' : ''} ${cut ? 'na_rd_cut' : ''}">${tag}${src ? `<div class="na_rd_src">${src}</div>` : ''}${mdBlock(show ? show(raw) : raw)}</section>`;
     }).join('');
     return { html, toc };
 }
@@ -3030,6 +3137,11 @@ async function openReader() {
           <button type="button" class="na_icon na_rd_smaller" title="글자 작게"><i class="fa-solid fa-minus"></i></button>
           <button type="button" class="na_icon na_rd_bigger" title="글자 크게"><i class="fa-solid fa-plus"></i></button>
         </div>
+        <div class="na_rd_trbar">
+          <button type="button" class="na_btn na_small na_rd_tr"><i class="fa-solid fa-language"></i> 한국어로 읽기</button>
+          <button type="button" class="na_linkbtn na_rd_gloss"><i class="fa-solid fa-spell-check"></i> 용어집</button>
+          <small class="na_dim na_rd_trinfo"></small>
+        </div>
         <article class="na_reader"></article>
       </div>`);
     const g = globalSettings();
@@ -3044,6 +3156,69 @@ async function openReader() {
         if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
         this.value = '';
     });
+    // ---- whole-archive Korean: line by line, kept in the chat's translation memory
+    const m = getMeta();
+    const lineOk = l => /[\p{L}]{2,}/u.test(l) && !/^\s*-{3,}\s*$/.test(l);
+    let korean = false, busy = false;
+    const lineMap = new Map();
+    const show = raw => raw.split('\n').map(l => {
+        if (!lineOk(l)) return l;
+        const t = lineMap.get(l.trim());
+        if (!t) return l;
+        // keep the line's markdown lead ("## ", "- ") if the model dropped it
+        const lead = l.match(/^\s*(#{1,3} |[-*] )/)?.[1] || '';
+        return lead ? `${lead}${t.replace(/^\s*(?:#{1,3}|[-*])\s+/, '')}` : t;
+    }).join('\n');
+    const rerender = () => {
+        const top = $root.closest('.popup-content, dialog').scrollTop?.() ?? 0;
+        $root.find('.na_reader').html(renderReading(m, korean ? { show } : {}).html);
+        $root.closest('.popup-content, dialog').scrollTop?.(top);
+    };
+    const runTr = async (fresh = false) => {
+        if (busy) return;
+        busy = true;
+        const $b = $root.find('.na_rd_tr').prop('disabled', true);
+        const secs = parseSections(m.text);
+        const all = [...new Set(m.text.split('\n').filter(lineOk).map(l => l.trim()))];
+        // sections in groups of ~10k characters so the reader fills in as it goes
+        const groups = [];
+        let cur = [], size = 0;
+        for (const s of secs) {
+            const ls = m.text.slice(s.start, s.end).split('\n').filter(lineOk).map(l => l.trim());
+            cur.push(...ls); size += ls.join('').length;
+            if (size > 10_000) { groups.push(cur); cur = []; size = 0; }
+        }
+        if (cur.length) groups.push(cur);
+        let failed = 0;
+        try {
+            for (let i = 0; i < groups.length; i++) {
+                if (!$root.closest('body').length) return; // popup closed
+                $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> 번역하는 중… ${i + 1}/${groups.length}`);
+                const uniq = [...new Set(groups[i])];
+                const tr = await translateLines(uniq, { fresh });
+                uniq.forEach((l, k) => tr[k] ? lineMap.set(l, tr[k]) : failed++);
+                korean = true;
+                rerender();
+            }
+        } catch (e) {
+            toastr.error(String(e?.message || e), '번역 실패');
+        } finally {
+            busy = false;
+            $b.prop('disabled', false).html(korean ? '<i class="fa-solid fa-language"></i> 원문으로 보기' : '<i class="fa-solid fa-language"></i> 한국어로 읽기');
+            const done = all.filter(l => lineMap.has(l)).length;
+            $root.find('.na_rd_trinfo').html(korean ? `${done}/${all.length}줄 번역됨 · <button type="button" class="na_linkbtn na_rd_retr">다시 번역</button>` : '');
+            if (failed) toastr.info(`${failed}줄은 번역이 안 왔어요. 다시 누르면 그 줄만 보내요.`);
+        }
+    };
+    $root.find('.na_rd_tr').on('click', () => {
+        if (korean && !busy) { korean = false; rerender(); $root.find('.na_rd_tr').html('<i class="fa-solid fa-language"></i> 한국어로 읽기'); $root.find('.na_rd_trinfo').empty(); return; }
+        runTr(false);
+    });
+    $root.on('click', '.na_rd_retr', async () => {
+        if (!await confirm('다시 번역', '저장된 번역을 쓰지 않고 아카이브 전체를 새로 번역할까요? 토큰이 들어가요.')) return;
+        runTr(true);
+    });
+    $root.find('.na_rd_gloss').on('click', async () => { await openGlossary(); if (korean) runTr(false); });
     $root.find('.na_rd_smaller, .na_rd_bigger').on('click', function () {
         const d = $(this).hasClass('na_rd_bigger') ? 0.1 : -0.1;
         g.readSize = Math.min(1.6, Math.max(0.8, Math.round(((g.readSize || 1) + d) * 10) / 10));
