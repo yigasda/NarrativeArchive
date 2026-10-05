@@ -868,7 +868,6 @@
 .na_ai_row small { font-size: 0.78em; line-height: 1.4; flex: 1 1 160px; }
 .na_ai_row .na_btn i.fa-wand-magic-sparkles { color: var(--na-accent); opacity: 1; }
 .na_ai_row .na_btn:disabled { opacity: 0.7; cursor: progress; }
-.na_ai_note { font-weight: 600; color: var(--na-accent); }
 .na_row_btns { display: inline-flex; gap: 6px; flex-wrap: wrap; }
 .na_row_btns [hidden] { display: none; }
 .na_ai_box {

@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.3.3';
+const VERSION = '2.4.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -59,6 +59,7 @@ function getMeta() {
     if (!Array.isArray(md[MODULE].pinned)) md[MODULE].pinned = [];
     if (!Array.isArray(md[MODULE].history)) md[MODULE].history = [];
     delete md[MODULE].once; // removed in 1.4.0
+    delete md[MODULE].aiDraft; // AI compress removed in 2.4.0
     return md[MODULE];
 }
 
@@ -1053,7 +1054,7 @@ function renderPanel() {
               <div class="na_block">
                 <div class="na_block_head"><div><h4>압축 루틴</h4><p>추가할 때 새 섹션 제목의 마지막 #번호를 읽어서 경계선을 맞춰요.</p></div></div>
                 <div class="na_steps">
-                  <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>경계선 이후 메시지 · 지시문 붙여 복사 · AI로 바로 압축</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                  <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>경계선 이후 메시지 · 지시문 붙여 복사</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step" id="na_open_append"><b>2</b><span><strong>아카이브에 추가</strong><small>압축본 붙여넣기 · 번호 검사 · 경계선 자동</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step na_step_sub" id="na_apply_hide"><b><i class="fa-solid fa-eye-slash"></i></b><span><strong>숨기기 다시 적용</strong><small>경계선 앞만 숨기고 뒤는 다시 보이게</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step na_step_sub" id="na_unhide"><b><i class="fa-solid fa-eye"></i></b><span><strong>숨김 해제</strong><small id="na_hidden_n">숨긴 메시지 다시 보이게</small></span><i class="fa-solid fa-chevron-right"></i></button>
@@ -1134,7 +1135,7 @@ function renderPanel() {
                 </div>
               </div>
               <div class="na_block">
-                <div class="na_block_head"><div><h4>AI 기능</h4><p>AI로 압축 · 아카이브에 질문 · 키워드 제안 · 충돌 검사에 쓰는 모델이에요. AI는 초안과 검사만 하고, 아카이브는 직접 확인하고 넣어요.</p></div></div>
+                <div class="na_block_head"><div><h4>AI 기능</h4><p>아카이브에 질문 · 키워드 제안 · 충돌 검사에 쓰는 모델이에요. AI는 답하고 검사만 하고, 아카이브는 직접 고쳐요.</p></div></div>
                 <div class="na_set_list">
                   <label class="na_set_row"><span><span>모델</span><small>연결 프로필을 고르면 RP 모델과 따로 쓸 수 있어요</small></span><select id="na_ai_profile" class="text_pole"></select></label>
                   <label class="na_set_row"><span><span>답 최대 길이</span><small>토큰 · 압축 결과가 잘리면 늘려 주세요</small></span><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"></label>
@@ -2577,7 +2578,6 @@ function nameNearMisses(archive, add) {
 
 // ---- prompts
 
-const AI_SYS_COMPRESS = 'You compress role-play chat logs into a story archive. Follow the instructions exactly and output only the requested text. Never output, repeat or rewrite sections that are already in the archive — any archive section shown to you is a format sample only. Cover only the new log, and always finish with the full STATE and OPEN blocks if the archive has them.';
 
 const AI_SYS_ASK = `You answer questions about an ongoing story using ONLY the archive the user gives you.
 - If the archive does not say, reply that it is not in the archive. Never invent.
@@ -2897,10 +2897,6 @@ async function openExtract() {
           <button type="button" class="na_btn na_save_txt"><i class="fa-solid fa-download"></i> .txt 저장</button>
           <button type="button" class="na_btn na_copy na_primary"><i class="fa-solid fa-copy"></i> <span class="na_copy_label">전체 복사</span></button>
         </div>
-        <div class="na_ai_row">
-          <button type="button" class="na_btn na_ai_compress"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 바로 압축</button>
-          <small class="na_dim na_ai_compress_info"></small>
-        </div>
         <textarea class="na_ex_hidden" readonly></textarea>
       </div>`);
 
@@ -2911,8 +2907,7 @@ async function openExtract() {
 
     let current = '';
     let output = '';
-    let aiPrompt = '';
-    let aiJob = null;
+    let withPrompt = '';
     const range = () => {
         const from = parseInt($root.find('.na_from').val(), 10) || 0;
         const to = parseInt($root.find('.na_to').val(), 10);
@@ -2926,9 +2921,8 @@ async function openExtract() {
             .map(x => ({ ...x, text: cleanMessage(x.text, g) }))
             .filter(x => x.text);
         current = formatExtract(items, g);
-        aiPrompt = fillPrompt(activePrompt(g).text, { raw: current, from: String(from), to: String(to), last_section: referenceSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text });
-        output = g.usePrompt ? aiPrompt : current;
-        $root.find('.na_ai_compress_info').text(items.length ? `지시문 "${activePrompt(g).name}"과 함께 ${aiLabel()}에 보내요 · 약 ${fmt(await countTokens(aiPrompt))} 토큰` : '');
+        withPrompt = fillPrompt(activePrompt(g).text, { raw: current, from: String(from), to: String(to), last_section: referenceSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text });
+        output = g.usePrompt ? withPrompt : current;
         $root.find('.na_ex_hidden').val(output);
         $root.find('.na_prompt_state').text(g.usePrompt ? activePrompt(g).name : '안 붙임').toggleClass('na_chip_on', g.usePrompt);
         $root.find('.na_copy_label').text(g.usePrompt ? '지시문과 함께 복사' : '전체 복사');
@@ -3005,7 +2999,7 @@ async function openExtract() {
     const showLast = () => {
         const x = getMeta().lastExport;
         $root.find('.na_lastex').prop('hidden', !x);
-        if (x) $root.find('.na_lastex_text').html(`최근 내보냄 <b>#${x.from}–#${x.to}</b> · ${esc(timeLabel(x.at))} · ${x.how === 'txt' ? '.txt 저장' : x.how === 'ai' ? 'AI 압축' : '복사'}`
+        if (x) $root.find('.na_lastex_text').html(`최근 내보냄 <b>#${x.from}–#${x.to}</b> · ${esc(timeLabel(x.at))} · ${x.how === 'txt' ? '.txt 저장' : '복사'}`
             + (fromLast && x === le ? ' <span class="na_dim">→ 그 다음부터 채웠어요</span>' : ''));
     };
     const remember = async how => {
@@ -3035,28 +3029,8 @@ async function openExtract() {
         remember('txt');
     });
 
-    // AI compress: send prompt + raw, then hand the result to the append form (nothing is added without the user)
-    $root.find('.na_ai_compress').on('click', async function () {
-        if (aiJob || !current) return;
-        const { to } = range();
-        const prompt = aiPrompt;
-        aiJob = withSpinner($(this), '압축하는 중… 창을 닫아도 계속돼요', async () => {
-            const text = await askAI(prompt, { system: AI_SYS_COMPRESS });
-            getMeta().aiDraft = { text, to, at: Date.now() }; // kept until it is added, so closing the form loses nothing
-            await remember('ai');
-            return { text, to };
-        });
-        const r = await aiJob;
-        if (!r) { aiJob = null; return; }
-        $root.closest('dialog').find('.popup-button-ok').trigger('click');
-    });
-
     await render();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
-    if (aiJob) {
-        const r = await aiJob;
-        if (r) openAppend({ prefill: r.text, end: r.to, note: 'AI가 만든 압축 초안이에요. 번호·내용을 확인하고 추가하세요.' });
-    }
 }
 
 // ---------------------------------------------------------------- append popup
@@ -3235,8 +3209,7 @@ function checkAppend(m, add, last) {
     return { ranges, issues, soft: false };
 }
 
-async function openAppend(opts) {
-    const { prefill = '', end: presetEnd = null, note = '' } = opts && typeof opts.prefill === 'string' ? opts : {};
+async function openAppend() {
     const c = ctx();
     const m = getMeta();
     const last = (c.chat?.length || 0) - 1;
@@ -3244,9 +3217,8 @@ async function openAppend(opts) {
     const $root = $(`
       <div class="na_popup">
         <div class="na_append_head">
-          <span class="na_dim">${note ? `<b class="na_ai_note"><i class="fa-solid fa-wand-magic-sparkles"></i> ${esc(note)}</b>` : '새로 압축한 섹션을 붙여넣거나 파일로 불러오세요.'}</span>
+          <span class="na_dim">새로 압축한 섹션을 붙여넣거나 파일로 불러오세요.</span>
           <span class="na_row_btns">
-            <button type="button" class="na_btn na_small na_ai_draft_btn" ${!prefill && m.aiDraft?.text ? '' : 'hidden'}><i class="fa-solid fa-wand-magic-sparkles"></i> AI 초안 불러오기</button>
             <button type="button" class="na_btn na_small na_append_file_btn"><i class="fa-solid fa-file-arrow-up"></i> .txt 불러오기</button>
           </span>
           <input type="file" class="na_append_file" accept=".txt,.md,text/plain" hidden>
@@ -3262,7 +3234,7 @@ async function openAppend(opts) {
         </div>
         <div class="na_ai_box na_conflict_out" hidden></div>
         <div class="na_row">
-          <label>이번에 압축한 끝 번호 # <input type="number" class="text_pole na_num na_end" min="0" max="${last}" value="${Math.max(0, presetEnd ?? last)}"></label>
+          <label>이번에 압축한 끝 번호 # <input type="number" class="text_pole na_num na_end" min="0" max="${last}" value="${Math.max(0, last)}"></label>
           <span class="na_end_hint na_dim"></span>
         </div>
         <label class="checkbox_label"><input type="checkbox" class="na_do_hide" checked><span>저장 후 숨기기 적용 (마지막 ${m.keep}개 남김)</span></label>
@@ -3277,13 +3249,7 @@ async function openAppend(opts) {
 
     const $ta = $root.find('.na_append_ta');
     const $end = $root.find('.na_end');
-    let usedDraft = false;
     $root.find('.na_append_file_btn').on('click', () => $root.find('.na_append_file').val('').trigger('click'));
-    $root.find('.na_ai_draft_btn').attr('title', m.aiDraft ? `${timeLabel(m.aiDraft.at)}에 만든 초안` : '').on('click', async () => {
-        if ($ta.val().trim() && !await confirm('AI 초안', '붙여넣은 내용을 AI 초안으로 바꿀까요?')) return;
-        $ta.val(m.aiDraft.text).trigger('input');
-        usedDraft = true;
-    });
     $root.find('.na_append_file').on('change', async function () {
         const file = this.files?.[0];
         if (!file) return;
@@ -3343,7 +3309,7 @@ async function openAppend(opts) {
             renderPreview(plan);
             const cut = val.trim() ? cutSigns(m.text, val) : [];
             $root.find('.na_cut').prop('hidden', !cut.length).html(cut.length
-                ? `<i class="fa-solid fa-scissors"></i><div><b>답이 중간에 끊긴 것 같아요</b><ul>${cut.map(x => `<li>${esc(x)}</li>`).join('')}</ul><small>AI로 압축했다면 설정 → AI 기능의 답 최대 길이를 늘리고 다시 압축해 보세요.</small></div>` : '');
+                ? `<i class="fa-solid fa-scissors"></i><div><b>답이 중간에 끊긴 것 같아요</b><ul>${cut.map(x => `<li>${esc(x)}</li>`).join('')}</ul><small>다른 모델로 압축했다면 그쪽 답 길이(최대 토큰)를 늘리고 다시 받아 보세요.</small></div>` : '');
             const rwN = plan.rewriteCount;
             $root.find('.na_rw').prop('hidden', !rwN).html(rwN ? `<i class="fa-solid fa-shield-halved"></i><div>
                 <b>이미 아카이브에 있는 섹션 ${rwN}개가 섞여 있어요</b> — 모델이 형식 참고용 섹션을 다시 쓴 것 같아요.
@@ -3370,7 +3336,6 @@ async function openAppend(opts) {
         $root.find('.na_conflict_out').prop('hidden', false).removeClass('na_stale').toggleClass('na_ai_ok', none)
             .html(none ? '<i class="fa-solid fa-circle-check"></i> AI가 찾은 충돌 없음' : `<div class="na_ai_box_head"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 충돌 검사 <span class="na_dim">· 참고용이에요</span></div>${aiHtml(out)}`);
     });
-    if (prefill) { $ta.val(prefill).trigger('input'); usedDraft = true; }
     const result = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', {
         wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '추가', cancelButton: '취소',
     });
@@ -3391,7 +3356,6 @@ async function openAppend(opts) {
 
     const plan = placeAppend(m.text, add, { renumber: $root.find('.na_do_renum').prop('checked') && $root.find('.na_renum_row').is(':visible'), rewrites: rwMode() });
     if (!plan.text.trim() || plan.text === `${trimEnd(m.text)}\n`) return toastr.info('새로 추가할 섹션이 없어요.');
-    if (usedDraft) delete m.aiDraft;
     await commitText(plan.text, '추가 전', { boundary: end });
     if ($root.find('.na_do_hide').prop('checked')) await applyHide({ silent: true });
     toastr.success(`아카이브에 추가됨 · 경계선 #${end}`);
