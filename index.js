@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '1.9.1';
+const VERSION = '1.9.2';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1855,10 +1855,13 @@ const activePrompt = g => g.prompts.find(p => p.id === g.activePrompt) || g.prom
 
 
 // "## Y2 #574–#600 — ..." → { from: 574, to: 600 }
+// "## Y2 #574–#600 — ..." → { prefix: 'Y2', from: 574, to: 600 }. A title line like
+// "# Name — Archive (Y1 #0–#590 · Y2 #0–#573)" is not a section and is skipped.
 function headingRanges(text) {
     return (String(text).match(/^#{1,3} .*$/gm) || []).flatMap(line => {
-        const r = line.match(/#(\d+)\s*[–—~-]\s*#?(\d+)/);
-        return r ? [{ title: line.replace(/^#+\s*/, ''), from: parseInt(r[1], 10), to: parseInt(r[2], 10) }] : [];
+        const title = line.replace(/^#+\s*/, '');
+        const r = title.match(RANGE_HEAD);
+        return r ? [{ title, prefix: (r[1] || '').trim(), from: parseInt(r[2], 10), to: parseInt(r[4], 10) }] : [];
     });
 }
 
@@ -2171,22 +2174,29 @@ function checkAppend(m, add, last) {
     const ranges = headingRanges(add);
     const issues = [];
     if (!ranges.length) return { ranges, issues: ['제목에서 "#시작–#끝" 번호를 못 찾았어요. 번호 검사는 건너뛰어요.'], soft: true };
-    const prevEnd = m.boundary >= 0 ? m.boundary : guessEndNumber(m.text);
-    if (prevEnd !== null && prevEnd !== undefined) {
-        const want = prevEnd + 1;
-        const first = ranges[0].from;
-        if (first > want) issues.push(`첫 섹션이 #${first}부터예요. #${want}–#${first - 1} (${first - want}개)가 빠졌어요.`);
-        else if (first < want) issues.push(`첫 섹션 #${first}가 이미 압축된 #${prevEnd}까지와 겹쳐요.`);
+    const label = r => `${r.prefix ? `${r.prefix} ` : ''}#`;
+    // continues the archive: compare with the archive's last numbered section of the same prefix
+    const mine = headingRanges(m.text);
+    const lastA = mine[mine.length - 1];
+    if (lastA) {
+        const first = ranges.find(r => r.prefix === lastA.prefix);
+        const want = lastA.to + 1;
+        if (first && first.from > want) issues.push(`첫 섹션이 ${label(first)}${first.from}부터예요. ${label(first)}${want}${first.from - 1 > want ? `–#${first.from - 1}` : ''} (${first.from - want}개)가 빠졌어요.`);
+        else if (first && first.from < want) issues.push(`첫 섹션 ${label(first)}${first.from}가 아카이브에 이미 있는 ${label(lastA)}${lastA.to}까지와 겹쳐요.`);
     }
-    ranges.forEach((r, i) => {
+    // numbering restarts per prefix (Y1, Y2 …), so check continuity within each
+    const lastBy = new Map();
+    for (const r of ranges) {
         if (r.from > r.to) issues.push(`"${r.title}" — 시작 #${r.from}이 끝 #${r.to}보다 커요.`);
-        const prev = ranges[i - 1];
-        if (!prev) return;
-        if (r.from > prev.to + 1) issues.push(`#${prev.to}와 #${r.from} 사이 #${prev.to + 1}–#${r.from - 1}가 빠졌어요.`);
-        else if (r.from <= prev.to) issues.push(`"${r.title}"가 앞 섹션(#${prev.to}까지)과 겹쳐요.`);
-    });
-    const end = ranges[ranges.length - 1].to;
-    if (end > last) issues.push(`끝 #${end}가 채팅 마지막 #${last}보다 커요.`);
+        const prev = lastBy.get(r.prefix);
+        if (prev) {
+            if (r.from > prev.to + 1) issues.push(`${label(r)}${prev.to}와 #${r.from} 사이 #${prev.to + 1}${r.from - 1 > prev.to + 1 ? `–#${r.from - 1}` : ''}가 빠졌어요.`);
+            else if (r.from <= prev.to) issues.push(`"${r.title}"가 앞 섹션(${label(prev)}${prev.to}까지)과 겹쳐요.`);
+        }
+        lastBy.set(r.prefix, r);
+    }
+    const end = ranges[ranges.length - 1];
+    if (end.to > last) issues.push(`끝 ${label(end)}${end.to}가 채팅 마지막 #${last}보다 커요.`);
     return { ranges, issues, soft: false };
 }
 
