@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.7.2';
+const VERSION = '3.7.3';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3495,16 +3495,41 @@ function extraBlocks(m) {
 
 // ---------------------------------------------------------------- drift: does the recent chat contradict the archive?
 
-const AI_SYS_DRIFT = `You check an ongoing role-play for continuity drift against its archive. The archive is the established canon; the recent chat is what the role-play model has been writing.
-Report only clear problems in the RECENT CHAT:
-- facts that contradict the archive (names, relationships, injuries, objects, places, who did what)
-- threads the archive marks as resolved being reopened, or settled decisions being undone without cause
-- a character knowing or using something they cannot know yet (see WHO KNOWS WHAT if given)
-- timeline or time-of-day going backwards; a character in two places at once
-- a character acting or talking clearly against how the archive describes them
-Do not report style, pacing or things the archive simply does not cover. New events are not drift.
-Judge only the characters in the story now: those named under CURRENT CAST and anyone who actually appears in the recent chat. Ignore characters who are absent from the recent chat and not in the current cast — what they know or would do is not drift.
-Answer in Korean, one bullet per problem: "- #메시지번호 이름: 무엇이 어긋나는지 — 근거 [[아카이브 섹션 제목 그대로]]". If there is nothing, answer exactly: 없음`;
+const AI_SYS_DRIFT = `GOAL
+Find places where the role-play model broke the story's established facts. The ARCHIVE is the record of what already happened; the RECENT CHAT is what was written since.
+
+YOU GET
+- ARCHIVE: the story so far. Its END (the latest sections, STATE and OPEN) is what is true right now.
+- CURRENT CAST: the characters in the story right now.
+- WHO KNOWS WHAT (sometimes): secrets, and who does not know them.
+- RECENT CHAT: numbered messages. Messages marked USER are written by the user.
+
+WHO TO CHECK
+- Check only messages WITHOUT the USER mark. USER messages are the user's own choices: they may add new facts and are never mistakes.
+- Check only characters in the CURRENT CAST or who actually appear in the recent chat. Ignore everyone else.
+
+REPORT ONLY THESE (a clear clash with something the archive actually says)
+1. FACT: a name, relationship, injury, object, place, or who-did-what that contradicts the archive.
+    e.g. the archive says Ren's left arm is broken; the chat has her lifting a crate with her left arm.
+2. SECRET: a character says or uses something they do not know (see WHO KNOWS WHAT, or it is clear from the archive).
+    e.g. Mara does not know about Ivo's deal, but in the chat she mentions it.
+3. SETTLED: something the archive marks as decided or resolved is undone or reopened with no reason in the chat.
+    e.g. STATE says the two have stopped fighting over the house; the chat restarts that fight as if new.
+4. TIME/PLACE: time of day or the calendar goes backwards, or one character is in two places at once.
+5. CHARACTER: a character clearly acts or talks against what the archive says about them.
+    e.g. STATE says Ivo no longer gives Ren orders; in the chat he orders her around with no reason.
+
+DO NOT REPORT
+- New events, new places, new feelings: the story moving forward is not a mistake.
+- Things the archive simply does not mention.
+- Style, pacing, length, or "could be better".
+- Anything you are not sure about. If unsure, leave it out.
+
+OUTPUT: Korean, one bullet per problem, exactly like this
+- #<message number> <character>: <what clashes> — 근거 [[<archive section heading, copied exactly>]]
+Example:
+- #612 Ivo: 렌에게 명령조로 말함. 더는 명령하지 않기로 했음 — 근거 [[STATE AT #600 (…)]]
+If there is no problem, write exactly: 없음`;
 
 function recentForCheck(n) {
     const chat = ctx().chat || [];
@@ -3512,7 +3537,7 @@ function recentForCheck(n) {
     for (let i = chat.length - 1; i >= 0 && out.length < n; i--) {
         const x = chat[i];
         if (!x || (x.is_system && !x.is_user && !x.name)) continue;
-        out.unshift(`[#${i}] ${x.name || (x.is_user ? 'User' : 'Char')}: ${cleanMessage(String(x.mes || ''), { stripTags: true })}`);
+        out.unshift(`[#${i}${x.is_user ? ' · USER' : ''}] ${x.name || (x.is_user ? 'User' : 'Char')}: ${cleanMessage(String(x.mes || ''), { stripTags: true })}`);
     }
     return out;
 }
