@@ -664,6 +664,25 @@ function mountSectionBrowser($host) {
         render();
     };
 
+    const remove = async s => {
+        if (!await confirm('섹션 삭제', `<b>${esc(s.title)}</b><br>이 섹션을 지울까요? 지우기 전 상태는 보관 탭 복구 지점에 남아요.`)) return;
+        const cur = getMeta();
+        if (!parseSections(cur.text).some(x => x.start === s.start && x.end === s.end && sectionKey(x) === sectionKey(s))) {
+            toastr.warning('아카이브가 그사이 바뀌어서 지우지 않았어요. 다시 해 주세요.');
+            return render();
+        }
+        const key = sectionKey(s);
+        cur.muted = (cur.muted || []).filter(k => k !== key);
+        cur.pinned = (cur.pinned || []).filter(k => k !== key);
+        const lm = { ...linkedMap(cur) };
+        if (lm[key]) { delete lm[key]; cur.linked = lm; }
+        openCards.delete(key);
+        const before = cur.text.slice(0, s.start), after = cur.text.slice(s.end);
+        await commitText(after.trim() ? before + after : trimEnd(before) + (before.trim() ? '\n' : ''), `섹션 삭제 전: ${s.title.slice(0, 40)}`);
+        render();
+        toastr.success('섹션을 지웠어요');
+    };
+
     const insertAfter = async s => {
         const m = getMeta();
         const r = insertAfterText(m.text, s);
@@ -679,6 +698,7 @@ function mountSectionBrowser($host) {
         const m = getMeta();
         if (!m) return;
         const myId = ++renderId;
+        const keepScroll = $list[0].scrollTop;
         const q = $search.val().trim();
         const sections = parseSections(m.text);
         const muted = mutedSet(m);
@@ -765,6 +785,7 @@ function mountSectionBrowser($host) {
                     <span class="na_act_sep"></span>
                     <button type="button" class="na_icon na_keys ${links[sectionKey(s)]?.length ? 'active' : ''}" title="키워드 연동"><i class="fa-solid fa-key"></i></button>
                     <button type="button" class="na_icon na_towi" title="월드인포로 보내기"><i class="fa-solid fa-book-atlas"></i></button>
+                    <button type="button" class="na_icon na_del na_danger" title="섹션 삭제"><i class="fa-solid fa-trash-can"></i></button>
                     <span class="na_spacer"></span>
                     <button type="button" class="na_btn na_small na_edit"><i class="fa-solid fa-pen"></i> 편집</button>
                   </div>
@@ -790,6 +811,7 @@ function mountSectionBrowser($host) {
                 await setLinked(sectionKey(s), v.split(/[,，]/).map(x => x.trim()).filter(Boolean));
             });
             $card.find('.na_towi').on('click', () => openSendToWI(s));
+            $card.find('.na_del').on('click', () => remove(s));
             $parent.append($card);
             if (s.start === pendingEdit) editTarget = [$card, s];
             const job = cachedTokens(body).then(n => {
@@ -813,6 +835,7 @@ function mountSectionBrowser($host) {
             ? `"${esc(q)}" — 섹션 ${shown}개에서 ${hits}건`
             : `섹션 ${cardCount}개${offN ? ` · <span class="na_warn_txt">${offN}개 꺼짐</span>` : ''} · 스위치로 주입에서 뺄 수 있어요`);
         if (!sections.length) $list.html('<div class="na_empty">아카이브가 비어 있어요.<br>개요 탭에 붙여넣거나 보관 탭에서 불러오세요.</div>');
+        $list[0].scrollTop = keepScroll;
         if (editTarget) { pendingEdit = -1; editSection(...editTarget); editTarget[0][0].scrollIntoView({ block: 'center' }); }
     }
 
@@ -1172,8 +1195,16 @@ function bindPanel() {
     let hits = [], cur = -1;
     const syncMarkBox = () => {
         const el = $ed[0], cs = getComputedStyle(el), mk = $marks[0];
-        for (const k of ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
-            'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'boxSizing', 'tabSize']) mk.style[k] = cs[k];
+        for (const k of ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'fontStretch', 'fontVariant', 'fontKerning', 'fontFeatureSettings', 'fontVariationSettings',
+            'lineHeight', 'letterSpacing', 'wordSpacing', 'textIndent', 'textTransform', 'textRendering', 'wordBreak', 'overflowWrap', 'lineBreak', 'hyphens',
+            'paddingTop', 'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'tabSize']) mk.style[k] = cs[k];
+        // the textarea's scrollbar takes width from the text; give the layer the same room so lines wrap at the same place
+        const bar = el.offsetWidth - el.clientWidth - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth);
+        mk.style.paddingRight = `${parseFloat(cs.paddingRight) + Math.max(0, bar)}px`;
+        mk.style.boxSizing = 'border-box';
+        // sit exactly on the textarea (it can have margins)
+        mk.style.top = `${el.offsetTop}px`;
+        mk.style.left = `${el.offsetLeft}px`;
         mk.style.width = `${el.offsetWidth}px`;
         mk.style.height = `${el.offsetHeight}px`;
         mk.scrollTop = el.scrollTop;

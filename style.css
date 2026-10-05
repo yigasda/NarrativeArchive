@@ -471,7 +471,8 @@
     background: transparent !important;
 }
 .na_search_info { font-size: 0.8em; padding-left: 4px; opacity: 0.7; }
-.na_list { display: flex; flex-direction: column; gap: 6px; }
+.na_list { display: flex; flex-direction: column; gap: 6px; max-height: 60vh; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+.na_list > * { flex-shrink: 0; }
 
 .na_card {
     border-radius: 10px;
@@ -835,6 +836,8 @@
     border-radius: 10px;
     pointer-events: none;
     display: none;
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
 }
 .na_editor_wrap.na_marking .na_editor_marks { display: block; }
 .na_editor_marks mark { color: transparent; background: color-mix(in srgb, #f2c94c 55%, transparent); border-radius: 2px; }
