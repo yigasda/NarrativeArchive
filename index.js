@@ -210,7 +210,7 @@ async function buildInjection(m) {
             for (const s of secs) {
                 while (stack.length && stack[stack.length - 1].level >= s.level) stack.pop();
                 if (s.group) { stack.push(s); continue; }
-                const safe = pinned.has(s.title) || stack.some(g => pinned.has(g.title));
+                const safe = pinned.has(sectionKey(s)) || stack.some(g => pinned.has(sectionKey(g)));
                 if (!safe && RANGE_HEAD.test(s.title)) cands.push(s);
             }
             const drop = new Set();
@@ -218,7 +218,7 @@ async function buildInjection(m) {
                 if (total <= cap) break;
                 total -= await cachedTokens(body.slice(s.start, s.end));
                 drop.add(s.start);
-                trimmed.push(s.title);
+                trimmed.push(sectionKey(s));
             }
             text = secs.filter(s => !drop.has(s.start)).map(s => body.slice(s.start, s.end)).join('');
         }
@@ -368,7 +368,7 @@ function buildExtract(start, end) {
 
 // "## Y2 #574–#600 — ..." → 600 (largest #number in the last numbered heading)
 function guessEndNumber(text) {
-    const heads = String(text).match(/^#{1,3} .*$/gm) || [];
+    const heads = headingLines(text).map(h => h.title);
     for (let i = heads.length - 1; i >= 0; i--) {
         const nums = [...heads[i].matchAll(/#(\d+)/g)].map(x => parseInt(x[1], 10));
         if (nums.length) return Math.max(...nums);
@@ -380,11 +380,28 @@ const extractToText = items => items.map(x => `[${x.i}] ${x.name}:\n${x.text}`).
 
 // ---------------------------------------------------------------- sections
 
-function parseSections(text) {
-    const re = /^(#{1,3}) .*$/gm;
+// Section headings: "# " and "## " lines outside ``` / ~~~ code fences.
+// "### " and deeper stay inside their section as sub-headings.
+function headingLines(text) {
     const heads = [];
-    let m;
-    while ((m = re.exec(text)) !== null) heads.push({ start: m.index, title: m[0], level: m[1].length });
+    let pos = 0, fence = null;
+    for (const raw of String(text).split('\n')) {
+        const line = raw.replace(/\r$/, '');
+        const f = line.match(/^ {0,3}(`{3,}|~{3,})/);
+        if (fence) {
+            if (f && f[1][0] === fence[0] && f[1].length >= fence.length && !line.slice(f[0].length).trim()) fence = null;
+        } else if (f) fence = f[1];
+        else {
+            const m = line.match(/^(#{1,2}) .*$/);
+            if (m) heads.push({ start: pos, title: m[0], level: m[1].length });
+        }
+        pos += raw.length + 1;
+    }
+    return heads;
+}
+
+function parseSections(text) {
+    const heads = headingLines(text);
     const sections = [];
     if (!heads.length) {
         if (text.trim()) sections.push({ title: '(제목 없음)', start: 0, end: text.length, level: 1, group: false });
@@ -394,13 +411,27 @@ function parseSections(text) {
     heads.forEach((h, idx) => {
         const next = heads[idx + 1];
         const end = next ? next.start : text.length;
-        // A heading directly followed by deeper headings ("# ── Y1 ──" → "## #0–#47") is a group divider, not a card.
+        // A "# " heading directly followed by "## " ("# ── Y1 ──" → "## #0–#47") is a group divider, not a card.
         const group = !!next && next.level > h.level;
         const note = text.slice(h.start + h.title.length, end).replace(/^\s*-{3,}\s*$/gm, '').trim();
         sections.push({ title: h.title.replace(/^#+\s*/, ''), start: h.start, end, level: h.level, group, note });
     });
+    // key = title, plus "\u0001n" from the 2nd section with the same title on, so switches, pins and links
+    // stay on one section. The first one keeps the bare title, so settings saved before still match.
+    const seen = new Map();
+    for (const s of sections) {
+        const n = (seen.get(s.title) || 0) + 1;
+        seen.set(s.title, n);
+        s.key = n === 1 ? s.title : `${s.title}\u0001${n}`;
+    }
     return sections;
 }
+
+// "회상\u00012" → "회상 (2번째)"
+const keyLabel = k => { const [t, n] = String(k).split('\u0001'); return n ? `${t} (${n}번째)` : t; };
+
+// key of the section at (or right after) `start` in `text`
+const keyAt = (text, start) => { const x = parseSections(text).find(y => y.start >= start); return x ? sectionKey(x) : null; };
 
 const groupLabel = title => title.replace(/^[\s─━—–=-]+|[\s─━—–=-]+$/g, '') || title;
 
@@ -412,7 +443,7 @@ function highlight(text, query) {
 
 // ---- muted sections: kept in the text, left out of the injection
 
-const sectionKey = s => s.title;
+const sectionKey = s => s.key ?? s.title;
 const mutedSet = m => new Set(Array.isArray(m.muted) ? m.muted : []);
 
 // ---- keyword-linked sections: left out until one of their keywords shows up in recent messages
@@ -558,10 +589,10 @@ function checkHeadings(text) {
         if (s.level !== mainLevel) issues.push({ ...where, msg: `제목 단계가 달라요 (${'#'.repeat(s.level)} — 다른 섹션은 ${'#'.repeat(mainLevel)})` });
         lastBy.set(prefix, { from: Math.min(from, to), to: Math.max(from, to) });
     }
-    // duplicate titles break per-section switches and collapsing
+    // duplicate titles are hard to tell apart (settings follow their order, not their text)
     const seen = new Map();
     for (const s of secs) {
-        if (seen.has(s.title)) issues.push({ start: s.start, title: s.title, msg: '같은 제목이 또 있어요 (스위치·펼치기가 같이 움직여요)' });
+        if (seen.has(s.title)) issues.push({ start: s.start, title: s.title, msg: '같은 제목이 또 있어요' });
         else seen.set(s.title, true);
     }
     return { issues: issues.sort((a, b) => a.start - b.start), ranged: ranged.length };
@@ -611,18 +642,15 @@ function mountSectionBrowser($host) {
             }
             const trail = original.match(/\s*$/)[0] || '\n\n';
             const edited = trimEnd($ta.val());
-            const newTitle = (edited.match(/^#{1,3} (.*)$/m) || [])[1];
+            const newTitle = (edited.match(/^#{1,2} (.*)$/m) || [])[1];
+            const next = cur.text.slice(0, s.start) + edited + trail + cur.text.slice(s.end);
             // keep switches, pins and keyword links attached when the title is renamed
-            if (newTitle && newTitle.trim() !== s.title) {
-                const nt = newTitle.trim();
-                const ren = arr => (arr || []).map(k => k === s.title ? nt : k);
-                cur.muted = ren(cur.muted);
-                cur.pinned = ren(cur.pinned);
-                const lm = { ...linkedMap(cur) };
-                if (lm[s.title]) { lm[nt] = lm[s.title]; delete lm[s.title]; cur.linked = lm; }
+            const nk = newTitle && newTitle.trim() !== s.title ? keyAt(next, s.start) : null;
+            if (nk) {
+                renameKeys(cur, sectionKey(s), nk);
+                if (openCards.has(sectionKey(s))) openCards.add(nk);
             }
-            if (openCards.has(s.title) && newTitle) openCards.add(newTitle.trim());
-            await commitText(cur.text.slice(0, s.start) + edited + trail + cur.text.slice(s.end), `섹션 편집 전: ${s.title.slice(0, 40)}`);
+            await commitText(next, `섹션 편집 전: ${s.title.slice(0, 40)}`);
             render();
             toastr.success('섹션 저장됨');
         });
@@ -675,7 +703,7 @@ function mountSectionBrowser($host) {
                 hits += count;
             }
             if (s.group) {
-                const key = s.title;
+                const key = sectionKey(s);
                 const isOpen = q || !collapsed.has(key);
                 const $g = $(`
                   <div class="na_group na_lv${s.level} ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''}">
@@ -715,27 +743,27 @@ function mountSectionBrowser($host) {
             }
             if (q && !count) return;
             shown++;
-            const isOpen = !!q || openCards.has(s.title);
+            const isOpen = !!q || openCards.has(sectionKey(s));
             const $card = $(`
-              <div class="na_card ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''} ${waiting.has(s.title) && !off ? 'na_waiting' : ''} ${trimmedSet.has(s.title) && !off ? 'na_trimmed' : ''}" data-start="${s.start}">
+              <div class="na_card ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''} ${waiting.has(sectionKey(s)) && !off ? 'na_waiting' : ''} ${trimmedSet.has(sectionKey(s)) && !off ? 'na_trimmed' : ''}" data-start="${s.start}">
                 <div class="na_card_head">
                   <div class="na_head_main">
                   <span class="na_card_title">${highlight(s.title, q)}</span>
-                  <span class="na_card_meta">${links[s.title]?.length && !off ? `<span class="na_link_tag ${waiting.has(s.title) ? '' : 'on'}" title="키워드: ${esc(links[s.title].join(', '))}"><i class="fa-solid fa-key"></i> ${waiting.has(s.title) ? '대기' : '켜짐'}</span>` : ''}${trimmedSet.has(s.title) && !off ? '<span class="na_trim_tag">상한으로 빠짐</span>' : ''}${count ? `<span class="na_hit">${count}건</span>` : ''}<span class="na_tok">${fmt(body.length)}자</span></span>
+                  <span class="na_card_meta">${links[sectionKey(s)]?.length && !off ? `<span class="na_link_tag ${waiting.has(sectionKey(s)) ? '' : 'on'}" title="키워드: ${esc(links[sectionKey(s)].join(', '))}"><i class="fa-solid fa-key"></i> ${waiting.has(sectionKey(s)) ? '대기' : '켜짐'}</span>` : ''}${trimmedSet.has(sectionKey(s)) && !off ? '<span class="na_trim_tag">상한으로 빠짐</span>' : ''}${count ? `<span class="na_hit">${count}건</span>` : ''}<span class="na_tok">${fmt(body.length)}자</span></span>
                   </div>
                   <div class="na_head_ctrl">
-                  ${pinBtn(pinned.has(s.title), '이 섹션을')}
+                  ${pinBtn(pinned.has(sectionKey(s)), '이 섹션을')}
                   ${sw(!off, off ? '주입 켜기' : '이 섹션만 주입에서 빼기 (본문은 그대로)')}
                   </div>
                 </div>
                 <div class="na_card_body" ${isOpen ? '' : 'hidden'}>
-                  <div class="na_card_text">${highlight(body.replace(/^#{1,3} [^\n]*\n?/, '').trim(), q) || '<span class="na_dim">(비어 있음)</span>'}</div>
+                  <div class="na_card_text">${highlight(body.replace(/^#{1,2} [^\n]*\n?/, '').trim(), q) || '<span class="na_dim">(비어 있음)</span>'}</div>
                   <div class="na_card_actions">
                     <button type="button" class="na_icon na_up" title="위로"><i class="fa-solid fa-arrow-up"></i></button>
                     <button type="button" class="na_icon na_down" title="아래로"><i class="fa-solid fa-arrow-down"></i></button>
                     <button type="button" class="na_icon na_ins" title="아래에 새 섹션"><i class="fa-solid fa-plus"></i></button>
                     <span class="na_act_sep"></span>
-                    <button type="button" class="na_icon na_keys ${links[s.title]?.length ? 'active' : ''}" title="키워드 연동"><i class="fa-solid fa-key"></i></button>
+                    <button type="button" class="na_icon na_keys ${links[sectionKey(s)]?.length ? 'active' : ''}" title="키워드 연동"><i class="fa-solid fa-key"></i></button>
                     <button type="button" class="na_icon na_towi" title="월드인포로 보내기"><i class="fa-solid fa-book-atlas"></i></button>
                     <span class="na_spacer"></span>
                     <button type="button" class="na_btn na_small na_edit"><i class="fa-solid fa-pen"></i> 편집</button>
@@ -746,20 +774,20 @@ function mountSectionBrowser($host) {
                 const $b = $card.children('.na_card_body');
                 const willOpen = $b.prop('hidden');
                 $b.prop('hidden', !willOpen);
-                willOpen ? openCards.add(s.title) : openCards.delete(s.title);
+                willOpen ? openCards.add(sectionKey(s)) : openCards.delete(sectionKey(s));
             });
             $card.find('.na_card_head .na_sw').on('click', e => { e.stopPropagation(); setMuted(sectionKey(s), !off); });
-            $card.find('.na_card_head .na_pin').on('click', e => { e.stopPropagation(); setPinned(s.title, !pinned.has(s.title)); });
+            $card.find('.na_card_head .na_pin').on('click', e => { e.stopPropagation(); setPinned(sectionKey(s), !pinned.has(sectionKey(s))); });
             $card.find('.na_edit').on('click', e => { e.stopPropagation(); editSection($card, s); });
             $card.find('.na_up').on('click', () => move(s, -1));
             $card.find('.na_down').on('click', () => move(s, 1));
             $card.find('.na_ins').on('click', () => insertAfter(s));
             $card.find('.na_keys').on('click', async () => {
-                const cur = (links[s.title] || []).join(', ');
+                const cur = (links[sectionKey(s)] || []).join(', ');
                 const v = await ctx().Popup.show.input('키워드 연동',
                     '이 섹션을 평소엔 빼 두고, 최근 메시지에 키워드가 나올 때만 넣어요. 쉼표로 나눠 적고, 비우면 연동을 풀어요. (한국어 키워드도 같이 넣어야 한국어 대화에서 켜져요)', cur);
                 if (typeof v !== 'string') return;
-                await setLinked(s.title, v.split(/[,，]/).map(x => x.trim()).filter(Boolean));
+                await setLinked(sectionKey(s), v.split(/[,，]/).map(x => x.trim()).filter(Boolean));
             });
             $card.find('.na_towi').on('click', () => openSendToWI(s));
             $parent.append($card);
@@ -792,7 +820,7 @@ function mountSectionBrowser($host) {
         const s = parseSections(getMeta().text).find(x => x.start === start);
         if (!s) return;
         $search.val('');
-        openCards.add(s.title);
+        openCards.add(sectionKey(s));
         // open every group on the way so the card is visible
         collapsed.clear();
         render();
@@ -1425,7 +1453,10 @@ function syncPanel() {
     $('#na_remind').val(m.remindTok);
     $('#na_muted_n').text(mutedCount(m));
     $('#na_link_depth').val(m.linkDepth || 4);
-    $('#na_linked_n').text(Object.keys(linkedMap(m)).filter(t => m.text.includes(t)).length);
+    {
+        const keys = new Set(parseSections(m.text).map(sectionKey));
+        $('#na_linked_n').text(Object.keys(linkedMap(m)).filter(t => keys.has(t)).length);
+    }
     $('#na_backup_every').val(m.backupEvery ?? 10);
     {
         const due = m.backupEvery > 0 && m.sinceBackup >= m.backupEvery;
@@ -1440,7 +1471,7 @@ function syncPanel() {
     $('#na_capmode').val(m.capMode === 'trim' ? 'trim' : 'warn');
     $('#na_capmode_row').toggleClass('na_disabled', !(m.tokenCap > 0));
     {
-        const titles = new Set(parseSections(m.text).map(x => x.title));
+        const titles = new Set(parseSections(m.text).map(sectionKey));
         const n = [...pinnedSet(m)].filter(t => titles.has(t)).length;
         $('#na_pinned_n').text(n);
         $('#na_unpin_all').prop('disabled', !n);
@@ -1959,10 +1990,12 @@ async function openSendToWI(s) {
             return;
         }
         const anchor = trimEnd($anchor.val());
-        const newTitle = (anchor.match(/^#{1,3} (.*)$/m) || [])[1]?.trim();
-        if (newTitle && newTitle !== s.title) renameKeys(cur, s.title, newTitle);
+        const newTitle = (anchor.match(/^#{1,2} (.*)$/m) || [])[1]?.trim();
         const trail = raw.match(/\s*$/)[0] || '\n\n';
-        await commitText(cur.text.slice(0, s.start) + anchor + trail + cur.text.slice(s.end), `WI로 보내기 전: ${s.title.slice(0, 40)}`);
+        const next = cur.text.slice(0, s.start) + anchor + trail + cur.text.slice(s.end);
+        const nk = newTitle && newTitle !== s.title ? keyAt(next, s.start) : null;
+        if (nk) renameKeys(cur, sectionKey(s), nk);
+        await commitText(next, `WI로 보내기 전: ${s.title.slice(0, 40)}`);
     }
     toastr.success(`"${book}"에 "${comment}" 항목을 만들었어요`);
 }
@@ -2200,10 +2233,10 @@ async function openPreview() {
     const m = getMeta();
     const b = await currentInjection();
     const where = Number(m.position) === 1 ? `채팅 안 깊이 ${m.depth}` : POSITIONS[m.position];
-    const titles = new Set(parseSections(m.text).map(x => x.title));
+    const titles = new Set(parseSections(m.text).map(sectionKey));
     const muted = [...mutedSet(m)].filter(t => titles.has(t));
     const waiting = [...linkWaiting(m)].filter(t => titles.has(t) && !muted.includes(t));
-    const list = (arr, cls) => arr.map(t => `<li class="${cls}">${esc(t)}</li>`).join('');
+    const list = (arr, cls) => arr.map(t => `<li class="${cls}">${esc(keyLabel(t))}</li>`).join('');
     const $root = $(`
       <div class="na_popup">
         <div class="na_block_head"><div>
@@ -2277,11 +2310,11 @@ function renderReading(m) {
     let skipLevel = 0;
     const html = secs.map((s, i) => {
         if (skipLevel && s.level <= skipLevel) skipLevel = 0;
-        const off = muted.has(s.title);
+        const off = muted.has(sectionKey(s));
         if (off && s.group) skipLevel = s.level;
         const dim = off || skipLevel > 0;
-        const wait = !dim && waiting.has(s.title);
-        const cut = !dim && !wait && trimmed.has(s.title);
+        const wait = !dim && waiting.has(sectionKey(s));
+        const cut = !dim && !wait && trimmed.has(sectionKey(s));
         const id = `na_rd_${i}`;
         if (s.title !== '(머리말)' && s.title !== '(제목 없음)') toc.push({ id, level: s.level, title: s.group ? groupLabel(s.title) : s.title });
         const tag = dim ? '<span class="na_rd_tag">주입 안 함</span>' : wait ? '<span class="na_rd_tag">키워드 대기</span>' : cut ? '<span class="na_rd_tag na_rd_tag_cut">상한으로 빠짐</span>' : '';
@@ -2414,7 +2447,7 @@ const activePrompt = g => g.prompts.find(p => p.id === g.activePrompt) || g.prom
 // "## Y2 #574–#600 — ..." → { prefix: 'Y2', from: 574, to: 600 }. A title line like
 // "# Name — Archive (Y1 #0–#590 · Y2 #0–#573)" is not a section and is skipped.
 function headingRanges(text) {
-    return (String(text).match(/^#{1,3} .*$/gm) || []).flatMap(line => {
+    return headingLines(text).map(h => h.title).flatMap(line => {
         const title = line.replace(/^#+\s*/, '');
         const r = title.match(RANGE_HEAD);
         return r ? [{ title, prefix: (r[1] || '').trim(), from: parseInt(r[2], 10), to: parseInt(r[4], 10) }] : [];
