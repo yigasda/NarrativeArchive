@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.0.0';
+const VERSION = '3.0.1';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3549,6 +3549,7 @@ async function openKnowledge() {
           <button type="button" class="na_btn na_small na_kn_tr"><i class="fa-solid fa-language"></i> 한국어로 보기</button>
           <label class="checkbox_label na_kn_inject"><input type="checkbox"><span>주입하기</span></label>
           <small class="na_dim na_kn_tok"></small>
+          <button type="button" class="na_btn na_small na_danger na_kn_clear"><i class="fa-regular fa-trash-can"></i> 전체 삭제</button>
         </div>
         <div class="na_kn_list"></div>
         <div class="na_kn_editbox" hidden>
@@ -3562,11 +3563,13 @@ async function openKnowledge() {
     const render = () => {
         const rows = knowledgeRows(m);
         $root.find('.na_kn_ai span').text(rows.length ? 'AI로 다시 만들기' : 'AI로 만들기');
+        $root.find('.na_kn_clear').prop('hidden', !String(m.knowledge || '').trim());
         $root.find('.na_kn_inject input').prop('checked', !!m.knowInject);
         $root.find('.na_kn_list').html(rows.length ? rows.map((r, i) => {
             const s = r.src ? findCited(secs(), r.src) : null;
             const chips = (xs, cls) => xs.map(x => `<span class="na_kn_who ${cls}">${esc(x)}</span>`).join('');
-            return `<div class="na_kn_row">
+            return `<div class="na_kn_row" data-i="${i}">
+              <button type="button" class="na_icon na_icon_sm na_kn_del" title="이 줄 삭제"><i class="fa-solid fa-xmark"></i></button>
               <div class="na_kn_fact">${esc(r.fact)}${tr?.[i] ? `<div class="na_kn_tr">${esc(tr[i])}</div>` : ''}</div>
               <div class="na_kn_people">${chips(r.knows, 'k')}${chips(r.suspects, 's')}${chips(r.unaware, 'u')}</div>
               ${s ? `<button type="button" class="na_cite" data-start="${s.start}" title="${esc(s.title)}"><i class="fa-solid fa-bookmark"></i> ${esc((s.title.match(/^(?:\S+\s+)?#\d+\s*[–—~-]\s*#?\d+/) || [s.title.slice(0, 24)])[0])}</button>` : ''}
@@ -3601,6 +3604,24 @@ async function openKnowledge() {
         if (out) { tr = out; render(); }
     });
     $root.on('click', '.na_cite[data-start]', function () { const st = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); });
+    // delete one row: drop the line that produced the i-th row
+    $root.on('click', '.na_kn_del', async function () {
+        const i = Number($(this).closest('.na_kn_row').data('i'));
+        let n = -1;
+        const lines = String(m.knowledge || '').split('\n');
+        const at = lines.findIndex(l => knowledgeRows({ knowledge: l }).length && ++n === i);
+        if (at < 0) return;
+        lines.splice(at, 1);
+        m.knowledge = lines.join('\n').trim();
+        if (tr) tr.splice(i, 1);
+        await save();
+    });
+    $root.find('.na_kn_clear').on('click', async () => {
+        if (!await confirm('전체 삭제', '누가 아는가 표를 모두 지울까요? 되돌릴 수 없어요.')) return;
+        m.knowledge = ''; tr = null;
+        await save();
+        toastr.success('누가 아는가 표를 비웠어요');
+    });
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
@@ -3666,6 +3687,7 @@ async function openQuotes() {
           <label class="checkbox_label"><input type="checkbox" class="na_qb_inject"><span>주입하기</span></label>
           <label>인물마다 <input type="number" class="text_pole na_num na_qb_max" min="1" max="10"> 개</label>
           <small class="na_dim na_qb_tok"></small>
+          <button type="button" class="na_btn na_small na_danger na_qb_clear"><i class="fa-regular fa-trash-can"></i> 전체 삭제</button>
         </div>
         <input type="search" class="text_pole na_qb_q" placeholder="인물·대사로 찾기">
         <div class="na_qb_list"></div>
@@ -3677,6 +3699,7 @@ async function openQuotes() {
         const by = new Map();
         m.quotes.forEach((x, i) => { if (q && !`${x.who} ${x.text}`.toLowerCase().includes(q)) return; if (!by.has(x.who)) by.set(x.who, []); by.get(x.who).push({ x, i }); });
         const picked = new Set(pickedQuotes(m));
+        $root.find('.na_qb_clear').prop('hidden', !m.quotes.length);
         $root.find('.na_qb_list').html(m.quotes.length ? [...by].sort((a, b) => (a[0] === '?') - (b[0] === '?') || b[1].length - a[1].length).map(([who, xs]) => `
           <div class="na_qb_group"><div class="na_qb_who">${esc(who === '?' ? '말한 사람 모름' : who)} <span class="na_dim">${xs.length}개 · 고른 ${xs.filter(y => y.x.on).length}</span></div>
             ${xs.map(({ x, i }) => `<div class="na_qb_row ${x.on ? 'on' : ''} ${x.on && !picked.has(x) ? 'over' : ''}" data-i="${i}">
@@ -3696,6 +3719,12 @@ async function openQuotes() {
     $root.on('change', '.na_qb_on', async function () { m.quotes[Number($(this).closest('.na_qb_row').data('i'))].on = this.checked; await save(); });
     $root.on('change', '.na_qb_whoin', async function () { m.quotes[Number($(this).closest('.na_qb_row').data('i'))].who = this.value.trim() || '?'; await save(); });
     $root.on('click', '.na_qb_del', async function () { m.quotes.splice(Number($(this).closest('.na_qb_row').data('i')), 1); await save(); });
+    $root.find('.na_qb_clear').on('click', async () => {
+        if (!await confirm('전체 삭제', `모은 대사 ${m.quotes.length}개를 모두 지울까요? 되돌릴 수 없어요. (아카이브 본문은 그대로예요)`)) return;
+        m.quotes = [];
+        await save();
+        toastr.success('대사 은행을 비웠어요');
+    });
     $root.find('.na_qb_find').on('click', async () => {
         const have = new Set(m.quotes.map(q => q.text));
         const found = archiveQuotes(m).filter(q => !have.has(q.text));
