@@ -942,7 +942,11 @@
 .na_tr_cfg input, .na_tr_cfg textarea { width: 100% !important; margin: 0 !important; min-width: 0; box-sizing: border-box; }
 .na_tr_cfg textarea { font-family: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.78em; resize: vertical; }
 .na_tr_pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.na_tr_test_row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 6px; }
+.na_tr_test_row { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding-top: 6px; }
 .na_tr_test_row[hidden] { display: none; }
 .na_tr_test_row small { font-size: 0.76em; }
+.na_conn_note { display: block; font-size: 0.76em; padding-top: 6px; }
+.na_conn_note[hidden] { display: none; }
+.na_tr_vxrow [hidden] { display: none !important; }
+.na_tr_cfg + .na_set_list, .na_tr_test_row + .na_set_list { margin-top: 6px; }
 .na_tr_vxrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

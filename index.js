@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.6.0';
+const VERSION = '2.7.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1137,7 +1137,10 @@ function renderPanel() {
               <div class="na_block">
                 <div class="na_block_head"><div><h4>AI 기능</h4><p>아카이브에 질문 · 키워드 제안 · 충돌 검사에 쓰는 모델이에요. AI는 답하고 검사만 하고, 아카이브는 직접 고쳐요.</p></div></div>
                 <div class="na_set_list">
-                  <label class="na_set_row"><span><span>모델</span><small>연결 프로필을 고르면 RP 모델과 따로 쓸 수 있어요</small></span><select id="na_ai_profile" class="text_pole"></select></label>
+                  <label class="na_set_row"><span><span>모델</span><small>연결 프로필 · 커스텀 API · Vertex를 고르면 RP 모델과 따로 쓸 수 있어요</small></span><select id="na_ai_profile" class="text_pole"></select></label>
+                </div>
+                ${connCfgHtml('ai')}
+                <div class="na_set_list">
                   <label class="na_set_row"><span><span>답 최대 길이</span><small>토큰 · 답이 잘리면 늘려 주세요</small></span><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"></label>
                   <label class="na_set_row"><span><span>번역 모델</span><small>비교 화면의 "한국어로 보기"에 써요</small></span>
                     <select id="na_tr_mode" class="text_pole">
@@ -1147,23 +1150,8 @@ function renderPanel() {
                     </select>
                   </label>
                 </div>
-                <div class="na_tr_cfg" id="na_tr_custom" hidden>
-                  <input type="text" class="text_pole" id="na_tr_url" placeholder="URL (예: https://api.example.com/v1)" autocomplete="off" spellcheck="false">
-                  <input type="password" class="text_pole" id="na_tr_key" placeholder="API 키" autocomplete="off">
-                  <input type="text" class="text_pole" id="na_tr_model" placeholder="모델 이름 (예: gpt-4o-mini)" autocomplete="off" spellcheck="false">
-                </div>
-                <div class="na_tr_cfg" id="na_tr_vertex" hidden>
-                  <textarea class="text_pole" id="na_tr_vxjson" rows="4" placeholder="서비스 계정 JSON (키 파일 내용을 통째로 붙여넣기)" spellcheck="false"></textarea>
-                  <div class="na_tr_pair">
-                    <input type="text" class="text_pole" id="na_tr_vxloc" placeholder="리전 (예: us-central1, global)" autocomplete="off" spellcheck="false">
-                    <input type="text" class="text_pole" id="na_tr_vxmodel" placeholder="모델 (예: gemini-2.5-flash)" autocomplete="off" spellcheck="false">
-                  </div>
-                  <div class="na_tr_vxrow"><small class="na_dim" id="na_tr_vxinfo"></small><button type="button" class="na_linkbtn na_danger" id="na_tr_vxclear" hidden><i class="fa-solid fa-eraser"></i> JSON 지우기</button></div>
-                </div>
-                <div class="na_tr_test_row" id="na_tr_test_row" hidden>
-                  <small class="na_dim">키와 JSON은 이 기기의 실리태번 설정에만 저장돼요. 아카이브 백업에는 안 들어가요.</small>
-                  <button type="button" class="na_btn na_small" id="na_tr_test"><i class="fa-solid fa-plug"></i> 연결 테스트</button>
-                </div>
+                ${connCfgHtml('tr')}
+                <small class="na_dim na_conn_note" id="na_conn_note" hidden>키와 JSON은 이 기기의 실리태번 설정에만 저장돼요. 아카이브 백업에는 안 들어가요.</small>
               </div>
             </section>
 
@@ -1176,26 +1164,56 @@ function renderPanel() {
     bindPanel();
 }
 
+// custom-API / Vertex fields for one connection ('ai' = the AI 기능 model, 'tr' = the translation model)
+function connCfgHtml(p) {
+    return `
+                <div class="na_tr_cfg" id="na_${p}_custom" hidden>
+                  <input type="text" class="text_pole" id="na_${p}_url" placeholder="URL (예: https://api.example.com/v1)" autocomplete="off" spellcheck="false">
+                  <input type="password" class="text_pole" id="na_${p}_key" placeholder="API 키" autocomplete="off">
+                  <input type="text" class="text_pole" id="na_${p}_model" placeholder="모델 이름 (예: gpt-4o-mini)" autocomplete="off" spellcheck="false">
+                </div>
+                <div class="na_tr_cfg" id="na_${p}_vertex" hidden>
+                  <textarea class="text_pole" id="na_${p}_vxjson" rows="4" placeholder="서비스 계정 JSON (키 파일 내용을 통째로 붙여넣기)" spellcheck="false"></textarea>
+                  <div class="na_tr_pair">
+                    <input type="text" class="text_pole" id="na_${p}_vxloc" placeholder="리전 (예: us-central1, global)" autocomplete="off" spellcheck="false">
+                    <input type="text" class="text_pole" id="na_${p}_vxmodel" placeholder="모델 (예: gemini-2.5-flash)" autocomplete="off" spellcheck="false">
+                  </div>
+                  <div class="na_tr_vxrow"><small class="na_dim" id="na_${p}_vxinfo"></small><button type="button" class="na_linkbtn na_danger" id="na_${p}_vxclear" hidden><i class="fa-solid fa-eraser"></i> JSON 지우기</button></div>
+                </div>
+                <div class="na_tr_test_row" id="na_${p}_test_row" hidden>
+                  <button type="button" class="na_btn na_small" id="na_${p}_test"><i class="fa-solid fa-plug"></i> 연결 테스트</button>
+                </div>`;
+}
+
+function renderConn(p) {
+    const t = connSettings(p);
+    const own = t.mode === 'custom' || t.mode === 'vertex';
+    $(`#na_${p}_custom`).prop('hidden', t.mode !== 'custom');
+    $(`#na_${p}_vertex`).prop('hidden', t.mode !== 'vertex');
+    $(`#na_${p}_test_row`).prop('hidden', !own);
+    $(`#na_${p}_url`).val(t.url); $(`#na_${p}_key`).val(t.key); $(`#na_${p}_model`).val(t.model);
+    // a saved key is never shown again; the box only takes a replacement
+    $(`#na_${p}_vxjson`).val('').attr('placeholder', t.vxJson.trim() ? '저장됨 · 바꾸려면 새 JSON을 붙여넣기' : '서비스 계정 JSON (키 파일 내용을 통째로 붙여넣기)');
+    $(`#na_${p}_vxclear`).prop('hidden', !t.vxJson.trim());
+    $(`#na_${p}_vxloc`).val(t.vxLocation); $(`#na_${p}_vxmodel`).val(t.vxModel);
+    let info = '';
+    if (t.vxJson.trim()) { try { const sa = parseServiceAccount(t.vxJson); info = `프로젝트 ${sa.project_id} · ${sa.client_email}`; } catch (e) { info = e.message; } }
+    $(`#na_${p}_vxinfo`).text(info);
+    return own;
+}
+
 function renderAiSettings() {
     const g = globalSettings();
+    const a = connSettings('ai');
     const profiles = aiProfiles();
     const opts = [`<option value="">지금 연결된 모델</option>`, ...profiles.map(p => `<option value="${esc(p.id)}">프로필: ${esc(p.name)}</option>`)];
     if (g.aiProfile && !profiles.some(p => p.id === g.aiProfile)) opts.push(`<option value="${esc(g.aiProfile)}">(없어진 프로필)</option>`);
-    $('#na_ai_profile').html(opts.join('')).val(g.aiProfile || '');
+    opts.push('<option value="__custom">커스텀 API (OpenAI 호환)</option>', '<option value="__vertex">Gemini · Vertex AI</option>');
+    $('#na_ai_profile').html(opts.join('')).val(a.mode === 'st' ? (g.aiProfile || '') : `__${a.mode}`);
     $('#na_ai_max').val(g.aiMaxTokens || 8192);
-    const t = trSettings();
-    $('#na_tr_mode').val(t.mode);
-    $('#na_tr_custom').prop('hidden', t.mode !== 'custom');
-    $('#na_tr_vertex').prop('hidden', t.mode !== 'vertex');
-    $('#na_tr_test_row').prop('hidden', t.mode === 'same');
-    $('#na_tr_url').val(t.url); $('#na_tr_key').val(t.key); $('#na_tr_model').val(t.model);
-    // a saved key is never shown again; the box only takes a replacement
-    $('#na_tr_vxjson').val('').attr('placeholder', t.vxJson.trim() ? '저장됨 · 바꾸려면 새 JSON을 붙여넣기' : '서비스 계정 JSON (키 파일 내용을 통째로 붙여넣기)');
-    $('#na_tr_vxclear').prop('hidden', !t.vxJson.trim());
-    $('#na_tr_vxloc').val(t.vxLocation); $('#na_tr_vxmodel').val(t.vxModel);
-    let info = '';
-    if (t.vxJson.trim()) { try { const sa = parseServiceAccount(t.vxJson); info = `프로젝트 ${sa.project_id} · ${sa.client_email}`; } catch (e) { info = e.message; } }
-    $('#na_tr_vxinfo').text(info);
+    $('#na_tr_mode').val(trSettings().mode);
+    const own = [renderConn('ai'), renderConn('tr')].some(Boolean);
+    $('#na_conn_note').prop('hidden', !own);
 }
 
 // Scroll the panel editor so [from, to) is visible and select it (wrapped lines measured with a mirror div).
@@ -1273,21 +1291,31 @@ function bindPanel() {
     });
     $('#na_ed_big').on('click', needChat(openReader));
     $('#na_ed_ask').on('click', needChat(openAsk));
-    $('#na_ai_profile').on('change', function () { globalSettings().aiProfile = this.value; saveGlobal(); });
+    $('#na_ai_profile').on('change', function () {
+        const a = connSettings('ai');
+        if (this.value === '__custom' || this.value === '__vertex') a.mode = this.value.slice(2);
+        else { a.mode = 'st'; globalSettings().aiProfile = this.value; }
+        saveGlobal(); renderAiSettings();
+    });
     $('#na_ai_max').on('change', function () {
         const v = Math.max(256, parseInt(this.value, 10) || 4096);
         globalSettings().aiMaxTokens = v; globalSettings().aiMaxSet = true; this.value = v; saveGlobal();
     });
     $('#na_tr_mode').on('change', function () { trSettings().mode = this.value; saveGlobal(); renderAiSettings(); });
-    const trField = (sel, key, trim = true) => $(sel).on('change', function () { trSettings()[key] = trim ? this.value.trim() : this.value; saveGlobal(); renderAiSettings(); });
-    trField('#na_tr_url', 'url'); trField('#na_tr_key', 'key'); trField('#na_tr_model', 'model');
-    $('#na_tr_vxjson').on('change', function () {
-        if (!this.value.trim()) return;
-        try { parseServiceAccount(this.value); } catch (e) { toastr.warning(e.message); return; }
-        trSettings().vxJson = this.value.trim(); vxTokens.clear(); saveGlobal(); renderAiSettings();
+    for (const p of ['ai', 'tr']) {
+        const field = (sel, key) => $(`#na_${p}_${sel}`).on('change', function () { connSettings(p)[key] = this.value.trim(); saveGlobal(); renderAiSettings(); });
+        field('url', 'url'); field('key', 'key'); field('model', 'model'); field('vxloc', 'vxLocation'); field('vxmodel', 'vxModel');
+        $(`#na_${p}_vxjson`).on('change', function () {
+            if (!this.value.trim()) return;
+            try { parseServiceAccount(this.value); } catch (e) { toastr.warning(e.message); return; }
+            connSettings(p).vxJson = this.value.trim(); vxTokens.clear(); saveGlobal(); renderAiSettings();
+        });
+        $(`#na_${p}_vxclear`).on('click', () => { connSettings(p).vxJson = ''; vxTokens.clear(); saveGlobal(); renderAiSettings(); });
+    }
+    $('#na_ai_test').on('click', async function () {
+        const out = await withSpinner($(this), '확인하는 중…', () => askAI('Reply with one short sentence: which model are you?', { maxTokens: 300 }));
+        if (out) toastr.success(out.slice(0, 160), `${aiLabel()} 연결됨`);
     });
-    $('#na_tr_vxclear').on('click', () => { trSettings().vxJson = ''; vxTokens.clear(); saveGlobal(); renderAiSettings(); });
-    trField('#na_tr_vxloc', 'vxLocation'); trField('#na_tr_vxmodel', 'vxModel');
     $('#na_tr_test').on('click', async function () {
         const out = await withSpinner($(this), '확인하는 중…', () => askTranslator('1: The three of them fell asleep together.', { system: AI_SYS_TRANSLATE, maxTokens: 200 }));
         if (out) toastr.success(out.replace(/^\s*1\s*[:.)]\s*/, '').slice(0, 120), `${trLabel()} 연결됨`);
@@ -1962,16 +1990,23 @@ const AI_SYS_TRANSLATE = `You translate lines of a story archive into natural Ko
 - Lines may be fragments, headings or list items. Keep markdown marks (#, -, **, _), "#number" references and quotation marks as they are.
 - Write character and place names in Korean script. Keep words the archive deliberately leaves untranslated (coined terms, titles in another language) as they are.`;
 
-// ---- translation model: the AI 기능 model, or its own OpenAI-compatible URL, or Vertex AI with a service account
+// ---- own connections: an OpenAI-compatible URL, or Vertex AI with a service account.
+// 'ai' is the AI 기능 model (mode 'st' = SillyTavern's connection or a profile); 'tr' is the translation model (mode 'same' = follow 'ai').
 
-function trSettings() {
+function connSettings(which) {
     const g = globalSettings();
-    g.tr ||= {};
-    const t = g.tr;
-    t.mode ??= 'same'; // 'same' | 'custom' | 'vertex'
+    const k = which === 'tr' ? 'tr' : 'aiConn';
+    g[k] ||= {};
+    const t = g[k];
+    t.mode ??= which === 'tr' ? 'same' : 'st';
     t.url ??= ''; t.key ??= ''; t.model ??= '';
     t.vxJson ??= ''; t.vxLocation ??= 'us-central1'; t.vxModel ??= 'gemini-2.5-flash';
     return t;
+}
+const trSettings = () => connSettings('tr');
+
+async function callConn(t, system, prompt, maxTokens) {
+    return stripThink(t.mode === 'vertex' ? await callVertex(t, system, prompt, maxTokens) : await callOpenAICompat(t, system, prompt, maxTokens));
 }
 
 // accepts ".../v1" or a full ".../chat/completions"
@@ -1983,7 +2018,7 @@ function chatCompletionsUrl(raw) {
 
 async function callOpenAICompat({ url, key, model }, system, prompt, maxTokens) {
     const endpoint = chatCompletionsUrl(url);
-    if (!endpoint || !model) throw new Error('번역 모델의 URL과 모델 이름을 넣어 주세요 (설정 → AI 기능)');
+    if (!endpoint || !model) throw new Error('커스텀 API의 URL과 모델 이름을 넣어 주세요 (설정 → AI 기능)');
     const headers = { 'Content-Type': 'application/json' };
     if (key) headers.Authorization = `Bearer ${key}`;
     let r;
@@ -1996,8 +2031,8 @@ async function callOpenAICompat({ url, key, model }, system, prompt, maxTokens) 
         throw new Error(`주소에 연결하지 못했어요. 브라우저에서 바로 부를 수 없는(CORS) API일 수 있어요. (${e.message || e})`);
     }
     const body = await r.text();
-    if (!r.ok) throw new Error(`번역 API 오류 ${r.status}: ${body.slice(0, 200)}`);
-    let j; try { j = JSON.parse(body); } catch { throw new Error('번역 API 답을 읽지 못했어요'); }
+    if (!r.ok) throw new Error(`API 오류 ${r.status}: ${body.slice(0, 200)}`);
+    let j; try { j = JSON.parse(body); } catch { throw new Error('API 답을 읽지 못했어요'); }
     const msg = j?.choices?.[0]?.message;
     const out = typeof msg?.content === 'string' ? msg.content
         : Array.isArray(msg?.content) ? msg.content.map(p => p?.text || '').join('') : (j?.choices?.[0]?.text || '');
@@ -2073,7 +2108,7 @@ async function askTranslator(prompt, { system = '', maxTokens = 0 } = {}) {
     const t = trSettings();
     const max = Math.max(64, Number(maxTokens) || 4096);
     if (t.mode === 'same') return askAI(prompt, { system, maxTokens: max });
-    const out = stripThink(t.mode === 'vertex' ? await callVertex(t, system, prompt, max) : await callOpenAICompat(t, system, prompt, max));
+    const out = await callConn(t, system, prompt, max);
     if (!out) throw new Error('번역 모델이 빈 답을 돌려줬어요');
     return out;
 }
@@ -2714,7 +2749,10 @@ async function askAI(prompt, { system = '', maxTokens = 0 } = {}) {
     const g = globalSettings();
     const max = Math.max(64, Number(maxTokens) || Number(g.aiMaxTokens) || 8192);
     let out;
-    if (g.aiProfile) {
+    const a = connSettings('ai');
+    if (a.mode === 'custom' || a.mode === 'vertex') {
+        out = await callConn(a, system, prompt, max);
+    } else if (g.aiProfile) {
         const p = aiProfiles().find(x => x.id === g.aiProfile);
         if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요. 설정 탭 → AI 기능에서 다시 골라 주세요.');
         const msgs = [...(system ? [{ role: 'system', content: system }] : []), { role: 'user', content: prompt }];
@@ -2731,6 +2769,9 @@ async function askAI(prompt, { system = '', maxTokens = 0 } = {}) {
 
 const aiLabel = () => {
     const g = globalSettings();
+    const a = connSettings('ai');
+    if (a.mode === 'custom') return `커스텀 · ${a.model || '모델 없음'}`;
+    if (a.mode === 'vertex') return `Vertex · ${a.vxModel || '모델 없음'}`;
     const p = g.aiProfile && aiProfiles().find(x => x.id === g.aiProfile);
     return p ? p.name : '지금 연결된 모델';
 };
