@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -650,8 +650,8 @@ function renderPanel() {
               <div class="na_block">
                 <div class="na_block_head"><div><h4>압축 루틴</h4><p>추가할 때 새 섹션 제목의 마지막 #번호를 읽어서 경계선을 맞춰요.</p></div></div>
                 <div class="na_steps">
-                  <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>경계선 이후 메시지 복사·저장</small></span><i class="fa-solid fa-chevron-right"></i></button>
-                  <button type="button" class="na_step" id="na_open_append"><b>2</b><span><strong>아카이브에 추가</strong><small>압축본 붙여넣기 · 경계선 자동</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                  <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>경계선 이후 메시지 · 압축 지시문 붙여 복사</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                  <button type="button" class="na_step" id="na_open_append"><b>2</b><span><strong>아카이브에 추가</strong><small>압축본 붙여넣기 · 번호 검사 · 경계선 자동</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step na_step_sub" id="na_apply_hide"><b><i class="fa-solid fa-eye-slash"></i></b><span><strong>숨기기 다시 적용</strong><small>경계선 앞만 숨기고 뒤는 다시 보이게</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
               </div>
@@ -1298,36 +1298,139 @@ async function openViewer() {
 
 // ---------------------------------------------------------------- extract popup
 
+const DEFAULT_PROMPT = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
+- 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
+- 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
+- 원문에 없는 내용은 쓰지 않기
+
+[형식 참고 — 기존 아카이브의 마지막 섹션]
+{{last_section}}
+
+[원문]
+{{raw}}`;
+
+function globalSettings() {
+    const es = ctx().extensionSettings;
+    if (!es[MODULE] || typeof es[MODULE] !== 'object') es[MODULE] = {};
+    const g = es[MODULE];
+    const defaults = { prompt: DEFAULT_PROMPT, usePrompt: false, skipHidden: true, nameStyle: 'full', stripTags: false };
+    for (const [k, v] of Object.entries(defaults)) if (!Object.hasOwn(g, k)) g[k] = v;
+    return g;
+}
+const saveGlobal = () => ctx().saveSettingsDebounced?.();
+
+// "## Y2 #574–#600 — ..." → { from: 574, to: 600 }
+function headingRanges(text) {
+    return (String(text).match(/^#{1,3} .*$/gm) || []).flatMap(line => {
+        const r = line.match(/#(\d+)\s*[–—~-]\s*#?(\d+)/);
+        return r ? [{ title: line.replace(/^#+\s*/, ''), from: parseInt(r[1], 10), to: parseInt(r[2], 10) }] : [];
+    });
+}
+
+function lastRangedSection(text) {
+    const secs = parseSections(text).filter(s => !s.group && /#\d+\s*[–—~-]\s*#?\d+/.test(s.title));
+    const s = secs[secs.length - 1];
+    return s ? trimEnd(text.slice(s.start, s.end)) : '';
+}
+
+function cleanMessage(text, g) {
+    if (!g.stripTags) return text;
+    return text
+        .replace(/<(think|thinking|details)[^>]*>[\s\S]*?<\/\1>/gi, '')
+        .replace(/<[^>\n]+>/g, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+
+function formatExtract(items, g) {
+    return items.map(x => {
+        const head = g.nameStyle === 'name' ? `${x.name}:` : g.nameStyle === 'number' ? `[${x.i}]` : `[${x.i}] ${x.name}:`;
+        return `${head}\n${x.text}`;
+    }).join('\n\n');
+}
+
+function fillPrompt(tpl, vars) {
+    let out = tpl;
+    for (const [k, v] of Object.entries(vars)) out = out.split(`{{${k}}}`).join(v);
+    return tpl.includes('{{raw}}') ? out : `${out}\n\n${vars.raw}`;
+}
+
 async function openExtract() {
     const c = ctx();
     const m = getMeta();
+    const g = globalSettings();
     const last = (c.chat?.length || 0) - 1;
     const defStart = Math.min(m.boundary + 1, Math.max(0, last));
 
     const $root = $(`
       <div class="na_popup">
-        <div class="na_row">
+        <div class="na_ex_range">
           <label># <input type="number" class="text_pole na_num na_from" min="0" max="${last}" value="${Math.max(0, defStart)}"></label>
           <span>~</span>
           <label># <input type="number" class="text_pole na_num na_to" min="0" max="${last}" value="${Math.max(0, last)}"></label>
-          <button type="button" class="na_btn na_reload"><i class="fa-solid fa-rotate"></i> 범위 적용</button>
         </div>
+        <details class="na_block na_details na_ex_opts">
+          <summary>뽑기 옵션</summary>
+          <div class="na_set_list">
+            <label class="na_set_row"><span>숨긴 메시지 빼기</span><input type="checkbox" class="na_toggle na_opt_hidden"></label>
+            <label class="na_set_row"><span><span>태그 지우기</span><small>&lt;think&gt; 블록 통째로, 나머지 HTML 태그는 글자만 남김</small></span><input type="checkbox" class="na_toggle na_opt_tags"></label>
+            <label class="na_set_row"><span>머리글</span>
+              <select class="text_pole na_opt_name">
+                <option value="full">[번호] 이름:</option>
+                <option value="name">이름:</option>
+                <option value="number">[번호]</option>
+              </select>
+            </label>
+          </div>
+        </details>
+        <details class="na_block na_details na_ex_prompt">
+          <summary>압축 지시문 <span class="na_chip na_prompt_state"></span></summary>
+          <div class="na_set_list">
+            <label class="na_set_row"><span><span>복사할 때 지시문 붙이기</span><small>다른 모델에 그대로 붙여넣기용</small></span><input type="checkbox" class="na_toggle na_opt_prompt"></label>
+          </div>
+          <textarea class="text_pole na_prompt_ta" spellcheck="false" rows="9"></textarea>
+          <div class="na_prompt_help">
+            <code>{{raw}}</code> 원문 · <code>{{from}}</code> <code>{{to}}</code> 번호 · <code>{{last_section}}</code> 아카이브 마지막 섹션 · <code>{{archive}}</code> 아카이브 전체.
+            <code>{{raw}}</code>가 없으면 원문은 맨 끝에 붙어요.
+            <button type="button" class="na_linkbtn na_prompt_reset">기본값으로</button>
+          </div>
+        </details>
         <div class="na_ex_info na_dim"></div>
-        <div class="na_row">
-          <button type="button" class="na_btn na_copy na_primary"><i class="fa-solid fa-copy"></i> 전체 복사</button>
+        <div class="na_ex_actions">
           <button type="button" class="na_btn na_save_txt"><i class="fa-solid fa-download"></i> .txt 저장</button>
+          <button type="button" class="na_btn na_copy na_primary"><i class="fa-solid fa-copy"></i> <span class="na_copy_label">전체 복사</span></button>
         </div>
         <div class="na_ex_list"></div>
         <textarea class="na_ex_hidden" readonly></textarea>
       </div>`);
 
+    $root.find('.na_opt_hidden').prop('checked', g.skipHidden);
+    $root.find('.na_opt_tags').prop('checked', g.stripTags);
+    $root.find('.na_opt_name').val(g.nameStyle);
+    $root.find('.na_opt_prompt').prop('checked', g.usePrompt);
+    $root.find('.na_prompt_ta').val(g.prompt);
+
     let current = '';
-    const render = async () => {
+    let output = '';
+    const range = () => {
         const from = parseInt($root.find('.na_from').val(), 10) || 0;
         const to = parseInt($root.find('.na_to').val(), 10);
-        const items = buildExtract(from, Number.isFinite(to) ? to : last);
-        current = extractToText(items);
-        $root.find('.na_ex_hidden').val(current);
+        return { from, to: Number.isFinite(to) ? to : last };
+    };
+    const render = async () => {
+        const { from, to } = range();
+        const all = buildExtract(from, to);
+        const items = all
+            .filter(x => !(g.skipHidden && c.chat[x.i]?.is_system))
+            .map(x => ({ ...x, text: cleanMessage(x.text, g) }))
+            .filter(x => x.text);
+        current = formatExtract(items, g);
+        output = g.usePrompt
+            ? fillPrompt(g.prompt, { raw: current, from: String(from), to: String(to), last_section: lastRangedSection(m.text), archive: m.text })
+            : current;
+        $root.find('.na_ex_hidden').val(output);
+        $root.find('.na_prompt_state').text(g.usePrompt ? '붙임' : '안 붙임').toggleClass('na_chip_on', g.usePrompt);
+        $root.find('.na_copy_label').text(g.usePrompt ? '지시문과 함께 복사' : '전체 복사');
         const $list = $root.find('.na_ex_list').empty();
         items.forEach(x => {
             const $it = $(`
@@ -1338,22 +1441,30 @@ async function openExtract() {
             $it.find('.na_card_head').on('click', () => $it.find('.na_card_body').prop('hidden', (i, v) => !v));
             $list.append($it);
         });
+        const skipped = all.length - items.length;
         $root.find('.na_ex_info').text(items.length
-            ? `메시지 ${items.length}개 · ${fmt(current.length)}자 · 약 ${fmt(await countTokens(current))} 토큰 · 제목을 누르면 펼쳐져요`
+            ? `메시지 ${items.length}개${skipped ? ` (${skipped}개 뺌)` : ''} · 복사될 분량 약 ${fmt(await countTokens(output))} 토큰`
             : '이 범위에 메시지가 없습니다.');
     };
 
-    $root.find('.na_reload').on('click', render);
+    let t;
+    const later = () => { clearTimeout(t); t = setTimeout(render, 300); };
     $root.find('.na_from, .na_to').on('change', render);
+    $root.find('.na_opt_hidden').on('change', function () { g.skipHidden = this.checked; saveGlobal(); render(); });
+    $root.find('.na_opt_tags').on('change', function () { g.stripTags = this.checked; saveGlobal(); render(); });
+    $root.find('.na_opt_name').on('change', function () { g.nameStyle = this.value; saveGlobal(); render(); });
+    $root.find('.na_opt_prompt').on('change', function () { g.usePrompt = this.checked; saveGlobal(); render(); });
+    $root.find('.na_prompt_ta').on('input', function () { g.prompt = this.value; saveGlobal(); later(); });
+    $root.find('.na_prompt_reset').on('click', () => { g.prompt = DEFAULT_PROMPT; $root.find('.na_prompt_ta').val(g.prompt); saveGlobal(); render(); });
     $root.find('.na_copy').on('click', async () => {
         if (!current) return;
-        const ok = await copyText(current, $root.find('.na_ex_hidden')[0]);
+        const ok = await copyText(output, $root.find('.na_ex_hidden')[0]);
         ok ? toastr.success('복사됨') : toastr.warning('복사가 막혀 있어요. .txt 저장을 써 주세요.');
     });
     $root.find('.na_save_txt').on('click', () => {
         if (!current) return;
-        const from = $root.find('.na_from').val(), to = $root.find('.na_to').val();
-        download(`원문_${chatLabel()}_${from}-${to}.txt`, current);
+        const { from, to } = range();
+        download(`원문_${chatLabel()}_${from}-${to}.txt`, output);
     });
 
     await render();
@@ -1361,6 +1472,30 @@ async function openExtract() {
 }
 
 // ---------------------------------------------------------------- append popup
+
+// Problems with the numbering of pasted sections, as display strings.
+function checkAppend(m, add, last) {
+    const ranges = headingRanges(add);
+    const issues = [];
+    if (!ranges.length) return { ranges, issues: ['제목에서 "#시작–#끝" 번호를 못 찾았어요. 번호 검사는 건너뛰어요.'], soft: true };
+    const prevEnd = m.boundary >= 0 ? m.boundary : guessEndNumber(m.text);
+    if (prevEnd !== null && prevEnd !== undefined) {
+        const want = prevEnd + 1;
+        const first = ranges[0].from;
+        if (first > want) issues.push(`첫 섹션이 #${first}부터예요. #${want}–#${first - 1} (${first - want}개)가 빠졌어요.`);
+        else if (first < want) issues.push(`첫 섹션 #${first}가 이미 압축된 #${prevEnd}까지와 겹쳐요.`);
+    }
+    ranges.forEach((r, i) => {
+        if (r.from > r.to) issues.push(`"${r.title}" — 시작 #${r.from}이 끝 #${r.to}보다 커요.`);
+        const prev = ranges[i - 1];
+        if (!prev) return;
+        if (r.from > prev.to + 1) issues.push(`#${prev.to}와 #${r.from} 사이 #${prev.to + 1}–#${r.from - 1}가 빠졌어요.`);
+        else if (r.from <= prev.to) issues.push(`"${r.title}"가 앞 섹션(#${prev.to}까지)과 겹쳐요.`);
+    });
+    const end = ranges[ranges.length - 1].to;
+    if (end > last) issues.push(`끝 #${end}가 채팅 마지막 #${last}보다 커요.`);
+    return { ranges, issues, soft: false };
+}
 
 async function openAppend() {
     const c = ctx();
@@ -1371,6 +1506,7 @@ async function openAppend() {
       <div class="na_popup">
         <div class="na_dim">새로 압축한 섹션을 붙여넣으세요. 아카이브 맨 끝에 덧붙습니다.</div>
         <textarea class="text_pole na_append_ta" spellcheck="false" placeholder="## Y2 #574–#600 — ..."></textarea>
+        <div class="na_check" hidden></div>
         <div class="na_row">
           <label>이번에 압축한 끝 번호 # <input type="number" class="text_pole na_num na_end" min="0" max="${last}" value="${Math.max(0, last)}"></label>
           <span class="na_end_hint na_dim"></span>
@@ -1381,7 +1517,9 @@ async function openAppend() {
 
     const $ta = $root.find('.na_append_ta');
     const $end = $root.find('.na_end');
+    const $check = $root.find('.na_check');
     let endTouched = false;
+    let lastCheck = { issues: [] };
     $end.on('input', () => { endTouched = true; $root.find('.na_end_hint').text(''); });
     let t;
     $ta.on('input', () => {
@@ -1391,7 +1529,17 @@ async function openAppend() {
             const guess = guessEndNumber(val);
             if (guess !== null && !endTouched) {
                 $end.val(guess);
-                $root.find('.na_end_hint').html(`제목에서 <b>#${guess}</b>을 읽었어요${guess > last ? ` <span class="na_warn_txt">(현재 마지막 #${last}보다 커요)</span>` : ''}`);
+                $root.find('.na_end_hint').html(`제목에서 <b>#${guess}</b>을 읽었어요`);
+            }
+            lastCheck = val.trim() ? checkAppend(m, val, last) : { issues: [] };
+            if (!val.trim()) $check.prop('hidden', true);
+            else if (!lastCheck.issues.length) {
+                const r = lastCheck.ranges;
+                $check.prop('hidden', false).attr('class', 'na_check na_check_ok')
+                    .html(`<i class="fa-solid fa-circle-check"></i> 번호 이어짐 확인 · #${r[0].from}–#${r[r.length - 1].to}, 섹션 ${r.length}개`);
+            } else {
+                $check.prop('hidden', false).attr('class', `na_check ${lastCheck.soft ? 'na_check_soft' : 'na_check_warn'}`)
+                    .html(`<i class="fa-solid fa-triangle-exclamation"></i><ul>${lastCheck.issues.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`);
             }
             $root.find('.na_append_info').text(`약 ${fmt(await countTokens(val))} 토큰 · 섹션 ${parseSections(val).filter(x => !x.group).length}개`);
         }, 400);
@@ -1406,7 +1554,10 @@ async function openAppend() {
     if (!add) return toastr.info('붙여넣은 내용이 없어요.');
     const end = parseInt($root.find('.na_end').val(), 10);
     if (!Number.isFinite(end) || end < 0) return toastr.warning('끝 번호를 확인해 주세요.');
-    if (m.boundary >= 0 && end <= m.boundary) {
+    const check = checkAppend(m, add, last);
+    if (check.issues.length && !check.soft) {
+        if (!await confirm('번호 확인', `${check.issues.join('\n')}\n\n그래도 추가할까요?`)) return;
+    } else if (m.boundary >= 0 && end <= m.boundary) {
         if (!await confirm('경계선 확인', `끝 번호 #${end}가 기존 경계선 #${m.boundary}보다 앞이에요. 그래도 저장할까요?`)) return;
     }
 

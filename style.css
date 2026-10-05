@@ -9,6 +9,8 @@
     --na-warn: var(--warning, #d9822b);
 }
 .na_popup {
+    --na-raw: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 38%, transparent);
+    --na-warn: var(--warning, #d9822b);
     --na-accent: var(--SmartThemeQuoteColor, #c9814b);
     --na-line: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 15%, transparent);
     --na-soft: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 7%, transparent);
@@ -537,3 +539,38 @@
 .na_pick_name { font-size: 0.9em; font-weight: 600; word-break: break-all; }
 .na_pick_meta { font-size: 0.76em; opacity: 0.6; }
 .na_pick_state { display: flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 0.85em; }
+
+/* ---------- extract / append popups */
+.na_ex_range { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.na_ex_range label { display: flex; align-items: center; gap: 4px; margin: 0; }
+.na_ex_actions { display: grid; grid-template-columns: 1fr 1.6fr; gap: 6px; }
+.na_popup .na_details > div { padding: 0 12px 12px; }
+.na_popup .na_details > summary .na_chip { margin-left: 6px; font-weight: 400; }
+.na_prompt_ta {
+    margin: 4px 12px 0 !important;
+    width: calc(100% - 24px) !important;
+    height: 30vh !important;
+    max-height: none !important;
+    font-family: var(--monoFontFamily, ui-monospace, monospace);
+    font-size: 0.82em;
+    line-height: 1.55;
+    resize: vertical;
+}
+.na_prompt_help { padding: 8px 12px 12px; font-size: 0.78em; line-height: 1.7; opacity: 0.75; }
+.na_prompt_help code { font-size: 0.95em; padding: 0 4px; border-radius: 4px; background: var(--na-soft); }
+.na_check {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 0.85em;
+    line-height: 1.55;
+}
+.na_check[hidden] { display: none; }
+.na_check ul { margin: 0; padding-left: 1.1em; }
+.na_check > i { margin-top: 3px; }
+.na_check_ok { background: color-mix(in srgb, #3f9a5a 13%, transparent); color: #3f9a5a; }
+.na_check_warn { background: color-mix(in srgb, var(--na-warn) 15%, transparent); }
+.na_check_warn > i { color: var(--na-warn); }
+.na_check_soft { background: var(--na-softer); opacity: 0.85; }
