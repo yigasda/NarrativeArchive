@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.11.0';
+const VERSION = '2.11.1';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -791,10 +791,10 @@ function mountSectionBrowser($host) {
                     <span class="na_act_sep"></span>
                     <button type="button" class="na_icon na_keys ${links[sectionKey(s)]?.length ? 'active' : ''}" title="키워드 연동"><i class="fa-solid fa-key"></i></button>
                     <button type="button" class="na_icon na_towi" title="월드인포로 보내기"><i class="fa-solid fa-book-atlas"></i></button>
+                    <button type="button" class="na_icon na_edit" title="편집"><i class="fa-solid fa-pen"></i></button>
                     <button type="button" class="na_icon na_del na_danger" title="섹션 삭제"><i class="fa-solid fa-trash-can"></i></button>
                     <span class="na_spacer"></span>
                     ${srcButton(m, s.title, 'icon')}
-                    <button type="button" class="na_btn na_small na_edit"><i class="fa-solid fa-pen"></i> 편집</button>
                   </div>
                 </div>
               </div>`);
