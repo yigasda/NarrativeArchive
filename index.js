@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.5.0';
+const VERSION = '3.5.1';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3445,6 +3445,33 @@ function knowledgeRows(m) {
     }).filter(r => r.fact);
 }
 
+const knowLine = r => `${r.fact} | knows: ${r.knows.join(', ') || 'none'} | unaware: ${r.unaware.join(', ') || 'none'} | suspects: ${r.suspects.join(', ') || 'none'}${r.src ? ` | src: ${r.src}` : ''}`;
+
+// Who is in the story now: the STATE block's "## Name" headings and names in the last few numbered sections
+// (not STATE's prose, which mentions old characters in passing). Used to keep "unaware / suspects" to people
+// who could actually slip — not everyone who ever appeared.
+function currentCast(m, recent = 4) {
+    const text = String(m.text || '');
+    const state = tailBlocks(splitTail(text)[1]).filter(b => b.key === 'STATE').map(b => (b.text.match(/^## .*$/gm) || []).join('\n')).join('\n');
+    const secs = parseSections(text).filter(x => !x.group && RANGE_HEAD.test(x.title)).slice(-recent);
+    const cast = new Set(capWords(state + '\n' + secs.map(x => text.slice(x.start, x.end)).join('\n')));
+    return cast.size >= 2 ? cast : null; // too little to judge: don't filter
+}
+const inCast = (cast, name) => !cast || [...cast].some(w => name.split(/\s+/).includes(w));
+
+// names in unaware/suspects that are no longer in the story
+function staleUnaware(m, cast = currentCast(m)) {
+    if (!cast) return [];
+    const out = new Set();
+    for (const r of knowledgeRows(m)) for (const n of [...r.unaware, ...r.suspects]) if (!inCast(cast, n)) out.add(n);
+    return [...out];
+}
+
+function trimUnaware(text, cast) {
+    if (!cast) return text;
+    return knowledgeRows({ knowledge: text }).map(r => knowLine({ ...r, unaware: r.unaware.filter(n => inCast(cast, n)), suspects: r.suspects.filter(n => inCast(cast, n)) })).join('\n');
+}
+
 function extraBlocks(m) {
     let out = '';
     const kr = m.knowInject ? knowledgeRows(m) : [];
@@ -3671,6 +3698,7 @@ function mountSectionPicker($host, { m, title, doneKeys, doneLabel = '읽음', g
 const AI_SYS_KNOW = `You build a "who knows what" table for a role-play story archive, so the role-play model never lets a character know something they should not.
 List the facts whose knowledge differs between characters: secrets, hidden pasts, lies told, confessions, plans, things one character saw alone, misunderstandings. Skip facts every character knows.
 For each fact name who knows it, who does not, and who only suspects, using the archive's own character names. Use the latest state you can see (a secret later revealed is known).
+"unaware" and "suspects" are NOT a list of everyone who happens not to know. Name only characters who are still part of the story at its latest point AND from whom the fact is kept, or who would act differently if they knew. Leave out characters who left the story, died, or appeared only briefly or long ago. If nobody like that is unaware, write none.
 You may get only some sections of the archive, plus the CURRENT TABLE built from other sections. Return the whole table: keep every current row that these sections do not change, update rows these sections change (someone learns, suspects or is told), and add new facts from these sections. At most 50 facts, most plot-relevant first.
 One line per fact, nothing else, in this exact form (English):
 fact in one short sentence | knows: A, B | unaware: C | suspects: D | src: the archive heading where this is established, copied exactly
@@ -3691,6 +3719,7 @@ async function openKnowledge() {
           <button type="button" class="na_btn na_small na_danger na_kn_clear"><i class="fa-regular fa-trash-can"></i> 전체 삭제</button>
         </div>
         <div class="na_kn_pickhost"></div>
+        <div class="na_check na_check_soft na_kn_stale" hidden></div>
         <div class="na_kn_list"></div>
         <div class="na_kn_editbox" hidden>
           <small class="na_dim">한 줄에 하나: <code>사실 | knows: A, B | unaware: C | suspects: D | src: 섹션 제목</code></small>
@@ -3704,6 +3733,9 @@ async function openKnowledge() {
         const rows = knowledgeRows(m);
         $root.find('.na_kn_ai span').text(rows.length ? 'AI로 더하기·고치기' : 'AI로 만들기');
         $root.find('.na_kn_clear').prop('hidden', !String(m.knowledge || '').trim());
+        const stale = staleUnaware(m);
+        $root.find('.na_kn_stale').prop('hidden', !stale.length).html(stale.length
+            ? `<i class="fa-solid fa-user-slash"></i><div class="na_kn_stale_txt">지금 이야기에 안 나오는 인물이 '모름'·'짐작'에 있어요: <b>${stale.map(esc).join(', ')}</b><small class="na_dim">STATE의 인물 제목과 최근 섹션 4개에 나오는 인물만 남겨요</small></div><button type="button" class="na_btn na_small na_kn_trim">빼기</button>` : '');
         $root.find('.na_kn_inject input').prop('checked', !!m.knowInject);
         $root.find('.na_kn_list').html(rows.length ? rows.map((r, i) => {
             const s = r.src ? findCited(secs(), r.src) : null;
@@ -3741,7 +3773,7 @@ async function openKnowledge() {
                 const out = await askAI(`[ARCHIVE SECTIONS]\n${picker.text(part)}${old ? `\n\n[CURRENT TABLE]\n${old}` : ''}`, { system: AI_SYS_KNOW, maxTokens: 6000 });
                 const lines = out.split('\n').map(l => l.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim()).filter(l => l.includes('|') && /knows:/i.test(l));
                 if (!lines.length) throw new Error('AI 답을 표로 못 읽었어요');
-                m.knowledge = lines.join('\n'); tr = null;
+                m.knowledge = trimUnaware(lines.join('\n'), currentCast(m)); tr = null;
                 m.knowMined = [...new Set([...m.knowMined, ...part.map(sectionKey)])];
                 rowsNow = lines.length;
                 await save();
@@ -3751,6 +3783,7 @@ async function openKnowledge() {
         },
     });
     $root.find('.na_kn_ai').on('click', function () { $(this).toggleClass('active', picker.toggle()); });
+    $root.on('click', '.na_kn_trim', async () => { m.knowledge = trimUnaware(m.knowledge, currentCast(m)); tr = null; await save(); });
     $root.find('.na_kn_edit').on('click', () => { $root.find('.na_kn_ta').val(m.knowledge || ''); $root.find('.na_kn_editbox').prop('hidden', false); $root.find('.na_kn_list').prop('hidden', true); });
     $root.find('.na_kn_cancel').on('click', () => { $root.find('.na_kn_editbox').prop('hidden', true); $root.find('.na_kn_list').prop('hidden', false); });
     $root.find('.na_kn_save').on('click', async () => { m.knowledge = $root.find('.na_kn_ta').val().trim(); tr = null; $root.find('.na_kn_cancel').trigger('click'); await save(); });

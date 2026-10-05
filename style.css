@@ -1252,3 +1252,7 @@
 .na_sp_foot small { font-size: 0.78em; }
 .na_sp .na_kn_fresh { margin: 0; font-size: 0.82em; }
 .na_wz_opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 2px 0 0; padding: 6px 0; border-top: 1px solid var(--na-line); font-size: 0.88em; cursor: pointer; }
+.na_kn_stale { align-items: center; }
+.na_kn_stale_txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.na_kn_stale_txt small { font-size: 0.85em; }
+.na_kn_stale .na_btn { flex-shrink: 0; }
