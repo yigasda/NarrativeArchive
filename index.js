@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '1.7.0';
+const VERSION = '1.7.1';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -22,6 +22,7 @@ const DEFAULT_META = Object.freeze({
     snapshots: [],  // [{ at, reason, text, boundary }] newest first
     muted: [],      // section titles left out of the injection
     lastInject: null,
+    lastExport: null, // { from, to, at, how } — the latest extract copied or saved
 });
 
 const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track'];
@@ -1410,9 +1411,11 @@ async function refreshStatus() {
       ${mutedCount(m) ? `<span class="na_warn_txt"><i class="fa-solid fa-toggle-off"></i> 섹션 ${mutedCount(m)}개 꺼짐</span>` : ''}`);
     $('#na_head_badge').text(m.text.trim() ? fmt(archiveTok) : '');
 
-    $('#na_since').html(m.boundary >= 0
+    const lx = m.lastExport;
+    const lxNote = lx ? `<div class="na_dim">최근 내보냄 #${lx.from}–#${lx.to} · ${esc(timeLabel(lx.at))}</div>` : '';
+    $('#na_since').html(lxNote + (m.boundary >= 0
         ? `현재 마지막 <b>#${last}</b> · 압축 이후 메시지 <b>${after.length}</b>개 · 원문 <b>${fmt(afterTok)}</b> 토큰${over ? ` <span class="na_chip na_chip_warn">알림 기준 ${fmt(m.remindTok)} 넘음</span>` : ''}`
-        : '<span class="na_dim">경계선이 아직 없어요. 직접 적거나 "아카이브에 추가"를 쓰면 자동으로 정해져요.</span>');
+        : '<span class="na_dim">경계선이 아직 없어요. 직접 적거나 "아카이브에 추가"를 쓰면 자동으로 정해져요.</span>'));
 }
 
 // ---------------------------------------------------------------- viewer popup
@@ -1560,7 +1563,11 @@ async function openExtract() {
     const m = getMeta();
     const g = globalSettings();
     const last = (c.chat?.length || 0) - 1;
-    const defStart = Math.min(m.boundary + 1, Math.max(0, last));
+    // continue after whichever is further: the boundary or the last range exported
+    const le = m.lastExport;
+    const after = Math.max(m.boundary, le && le.to <= last ? le.to : -1);
+    const defStart = Math.min(after + 1, Math.max(0, last));
+    const fromLast = !!le && le.to <= last && le.to > m.boundary;
 
     const $root = $(`
       <div class="na_popup">
@@ -1568,6 +1575,11 @@ async function openExtract() {
           <label># <input type="number" class="text_pole na_num na_from" min="0" max="${last}" value="${Math.max(0, defStart)}"></label>
           <span>~</span>
           <label># <input type="number" class="text_pole na_num na_to" min="0" max="${last}" value="${Math.max(0, last)}"></label>
+        </div>
+        <div class="na_lastex" ${le ? '' : 'hidden'}>
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span class="na_lastex_text"></span>
+          <button type="button" class="na_linkbtn na_lastex_again">이 범위 다시</button>
         </div>
         <details class="na_block na_details na_ex_opts">
           <summary>뽑기 옵션</summary>
@@ -1708,15 +1720,37 @@ async function openExtract() {
         p.text = BASIC_PROMPT; $root.find('.na_prompt_ta').val(p.text); saveGlobal(); renderPrompts(); render();
     });
     renderPrompts();
+    const showLast = () => {
+        const x = getMeta().lastExport;
+        $root.find('.na_lastex').prop('hidden', !x);
+        if (x) $root.find('.na_lastex_text').html(`최근 내보냄 <b>#${x.from}–#${x.to}</b> · ${esc(timeLabel(x.at))} · ${x.how === 'txt' ? '.txt 저장' : '복사'}`
+            + (fromLast && x === le ? ' <span class="na_dim">→ 그 다음부터 채웠어요</span>' : ''));
+    };
+    const remember = async how => {
+        const { from, to } = range();
+        getMeta().lastExport = { from, to, at: Date.now(), how };
+        await saveMeta();
+        showLast();
+        refreshStatus();
+    };
+    showLast();
+    $root.find('.na_lastex_again').on('click', () => {
+        const x = getMeta().lastExport;
+        if (!x) return;
+        $root.find('.na_from').val(x.from); $root.find('.na_to').val(Math.min(x.to, last));
+        render();
+    });
     $root.find('.na_copy').on('click', async () => {
         if (!current) return;
         const ok = await copyText(output, $root.find('.na_ex_hidden')[0]);
+        if (ok) await remember('copy');
         ok ? toastr.success('복사됨') : toastr.warning('복사가 막혀 있어요. .txt 저장을 써 주세요.');
     });
     $root.find('.na_save_txt').on('click', () => {
         if (!current) return;
         const { from, to } = range();
         download(`원문_${chatLabel()}_${from}-${to}.txt`, output);
+        remember('txt');
     });
 
     await render();

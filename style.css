@@ -654,3 +654,8 @@
 .na_psel { flex: 1; min-width: 0; margin: 0 4px 0 0 !important; }
 .na_prow .na_icon:disabled { opacity: 0.25; pointer-events: none; }
 .na_pstar.active { color: #e0a526; background: transparent; }
+
+.na_lastex { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; border-radius: 10px; background: var(--na-accent-soft); font-size: 0.85em; }
+.na_lastex[hidden] { display: none; }
+.na_lastex > i { color: var(--na-accent); }
+.na_lastex_text { flex: 1; min-width: 0; }
