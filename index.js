@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.16.0';
+const VERSION = '2.17.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -34,7 +34,7 @@ const DEFAULT_META = Object.freeze({
     lastExport: null, // { from, to, at, how } — the latest extract copied or saved
 });
 
-const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'quoteInject', 'quoteMax'];
+const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'quoteInject', 'quoteMax', 'router'];
 const POSITIONS = { 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
 const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
 
@@ -260,7 +260,14 @@ const currentInjection = async () => { let p; do { p = injectReady; await p; } w
 async function onGenerationStarted(type, _opts, dryRun) {
     if (dryRun || type === 'quiet' || !hasChat()) return;
     const m = getMeta();
-    if (Object.keys(linkedMap(m)).length) applyInjection(); // keyword links look at the latest messages
+    if (routerCfg(m).mode !== 'off') {
+        try { await runRouter(m); }
+        catch (e) {
+            console.warn('[narrative-archive] router', e);
+            if (!routerWarned) { routerWarned = true; toastr.warning(`AI 라우터를 못 써서 키워드대로 넣었어요: ${e.message || e}`, '서사 아카이브'); }
+        }
+    }
+    if (Object.keys(linkedMap(m)).length || routerCfg(m).mode !== 'off') { applyInjection(); refreshStatusSoon(); } // keyword links look at the latest messages
     const b = await currentInjection();
     const text = m.enabled ? b.text : '';
     m.lastInject = {
@@ -478,11 +485,26 @@ function recentChatText(m, n = Math.max(1, Number(m.linkDepth) || 4)) {
 const linkHits = (keys, hay) => keys.filter(w => w && hay.includes(String(w).toLowerCase()));
 
 // titles of linked sections whose keywords are not in the recent messages right now
-function linkWaiting(m) {
+function keywordWaiting(m) {
     const entries = Object.entries(linkedMap(m)).filter(([, k]) => Array.isArray(k) && k.length);
     if (!entries.length) return new Set();
     const hay = recentChatText(m);
     return new Set(entries.filter(([, keys]) => !linkHits(keys, hay).length).map(([t]) => t));
+}
+
+// sections left out right now: keyword links that did not fire, and (with the AI router) the candidates it did not pick
+function linkWaiting(m) {
+    const out = keywordWaiting(m);
+    const cfg = routerCfg(m);
+    if (cfg.mode === 'off') return out;
+    const picks = routerState.get(currentChatId())?.picks || new Set();
+    const lm = linkedMap(m);
+    for (const s of routerCandidates(m)) {
+        const k = sectionKey(s);
+        if (picks.has(k)) out.delete(k);
+        else if (cfg.mode === 'old' && !(Array.isArray(lm[k]) && lm[k].length)) out.add(k);
+    }
+    return out;
 }
 
 async function setLinked(title, keys) {
@@ -1167,6 +1189,7 @@ function renderPanel() {
               <div class="na_block">
                 <div class="na_block_head"><div><h4>압축 루틴</h4><p>추가할 때 새 섹션 제목의 마지막 #번호를 읽어서 경계선을 맞춰요.</p></div></div>
                 <div class="na_steps">
+                  <button type="button" class="na_step na_step_wiz" id="na_open_wizard"><b><i class="fa-solid fa-wand-magic-sparkles"></i></b><span><strong>압축 마법사</strong><small>뽑기 → 복사 → 붙여넣기 → 채점 → 추가 · 한 화면에서</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>경계선 이후 메시지 · 지시문 붙여 복사</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step" id="na_open_append"><b>2</b><span><strong>아카이브에 추가</strong><small>압축본 붙여넣기 · 번호 검사 · 경계선 자동</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step na_step_sub" id="na_apply_hide"><b><i class="fa-solid fa-eye-slash"></i></b><span><strong>숨기기 다시 적용</strong><small>경계선 앞만 숨기고 뒤는 다시 보이게</small></span><i class="fa-solid fa-chevron-right"></i></button>
@@ -1232,6 +1255,13 @@ function renderPanel() {
                     <select id="na_capmode" class="text_pole"><option value="warn">경고만</option><option value="trim">오래된 섹션부터 빼기</option></select>
                   </label>
                   <label class="na_set_row"><span><span>키워드 연동 범위</span><small>최근 메시지 몇 개에서 찾을지 · 연동 <b id="na_linked_n">0</b>개</small></span><input type="number" id="na_link_depth" class="text_pole" min="1" max="50"></label>
+                  <label class="na_set_row"><span><span>AI 라우터</span><small>답하기 직전에 작은 모델이 "지금 대화에 필요한 섹션"을 골라 넣어요 · 따로 연결한 모델이 필요해요</small></span>
+                    <select id="na_router_mode" class="text_pole"><option value="off">끄기</option><option value="linked">키워드 섹션에 더해 AI도 고르기</option><option value="old">오래된 섹션 전부 AI가 고르기</option></select></label>
+                  <div class="na_router_opts" id="na_router_opts" hidden>
+                    <label class="na_set_row"><span><span>한 번에 최대</span><small>AI가 고를 섹션 수</small></span><input type="number" id="na_router_max" class="text_pole" min="1" max="20"></label>
+                    <label class="na_set_row" id="na_router_keep_row"><span><span>최근 섹션은 항상</span><small>마지막 몇 개 섹션은 AI가 안 고르고 늘 넣어요</small></span><input type="number" id="na_router_keep" class="text_pole" min="0" max="20"></label>
+                    <div class="na_set_row"><span><span>지금 해 보기</span><small id="na_router_info">최근 대화로 한 번 골라 봐요</small></span><button type="button" class="na_btn na_small" id="na_router_test"><i class="fa-solid fa-compass"></i> 해 보기</button></div>
+                  </div>
                   <div class="na_set_row"><span><span>키워드 테스트</span><small>문장을 넣어 보면 어떤 섹션이 불려 오는지 보여 줘요</small></span><button type="button" class="na_btn na_small" id="na_kw_test"><i class="fa-solid fa-vial"></i> 테스트</button></div>
                   <div class="na_set_row"><span><span>고정한 섹션 <b id="na_pinned_n">0</b>개</span></span><button type="button" class="na_btn na_small" id="na_unpin_all">모두 풀기</button></div>
                   <div class="na_set_row"><span><span>꺼 둔 섹션 <b id="na_muted_n">0</b>개</span></span><button type="button" class="na_btn na_small" id="na_unmute_all">모두 켜기</button></div>
@@ -1560,6 +1590,7 @@ function bindPanel() {
         await saveMeta(); refreshStatus();
     });
     $('#na_open_extract').on('click', needChat(openExtract));
+    $('#na_open_wizard').on('click', needChat(openWizard));
     $('#na_health').on('click', needChat(openHealth));
     $('#na_report').on('click', needChat(openTokenReport));
     $('#na_drift').on('click', needChat(openDrift));
@@ -1740,6 +1771,17 @@ function bindPanel() {
         }, 500);
     });
     $('#na_kw_test').on('click', needChat(openKeywordTest));
+    const setRouter = async patch => { const m = getMeta(); m.router = { ...routerCfg(m), ...patch }; routerState.delete(currentChatId()); await saveMeta(); applyInjection(); syncPanel(); };
+    $('#na_router_mode').on('change', needChat(e => setRouter({ mode: e.target.value })));
+    $('#na_router_max').on('change', needChat(e => setRouter({ max: Math.min(20, Math.max(1, parseInt(e.target.value, 10) || 4)) })));
+    $('#na_router_keep').on('change', needChat(e => setRouter({ keep: Math.min(20, Math.max(0, parseInt(e.target.value, 10) || 0)) })));
+    $('#na_router_test').on('click', needChat(async e => {
+        const m = getMeta();
+        const st = await withSpinner($(e.currentTarget), '고르는 중…', () => runRouter(m, { force: true }));
+        if (!st) return;
+        await applyInjection(); syncPanel();
+        toastr.info(st.titles.length ? st.titles.map(t => `• ${t.slice(0, 60)}`).join('<br>') : '고른 섹션이 없어요', `라우터 · ${st.titles.length}개 · ${(st.ms / 1000).toFixed(1)}초`, { escapeHtml: false, timeOut: 10000 });
+    }));
     $('#na_link_depth').on('change', async function () {
         if (!hasChat()) return;
         const m = getMeta();
@@ -1777,6 +1819,13 @@ function syncPanel() {
     $('#na_remind').val(m.remindTok);
     $('#na_muted_n').text(mutedCount(m));
     $('#na_link_depth').val(m.linkDepth || 4);
+    const rc = routerCfg(m);
+    $('#na_router_mode').val(rc.mode);
+    $('#na_router_opts').prop('hidden', rc.mode === 'off');
+    $('#na_router_keep_row').toggle(rc.mode === 'old');
+    $('#na_router_max').val(rc.max); $('#na_router_keep').val(rc.keep);
+    const rs = routerState.get(currentChatId());
+    $('#na_router_info').text(rs ? `마지막: ${rs.titles.length}개 · ${(rs.ms / 1000).toFixed(1)}초 · 후보 ${rs.cands}개` : `후보 ${routerCandidates(m).length}개 · 최근 대화로 한 번 골라 봐요`);
     {
         const keys = new Set(parseSections(m.text).map(sectionKey));
         $('#na_linked_n').text(Object.keys(linkedMap(m)).filter(t => keys.has(t)).length);
@@ -2626,7 +2675,8 @@ async function refreshStatus() {
       <span><i class="na_dot na_dot_arc"></i>아카이브 ${fmt(archiveTok)}</span>
       <span><i class="na_dot na_dot_raw"></i>${m.boundary >= 0 ? `#${m.boundary} 이후 원문 ${fmt(afterTok)} · ${after.length}개` : '경계선 없음'}</span>
       ${mutedCount(m) ? `<span class="na_warn_txt"><i class="fa-solid fa-toggle-off"></i> 섹션 ${mutedCount(m)}개 꺼짐</span>` : ''}
-      ${linkWaiting(m).size ? `<span class="na_dim"><i class="fa-solid fa-key"></i> 키워드 대기 ${linkWaiting(m).size}개</span>` : ''}
+      ${linkWaiting(m).size ? `<span class="na_dim"><i class="fa-solid fa-key"></i> 대기 ${linkWaiting(m).size}개</span>` : ''}
+      ${routerCfg(m).mode !== 'off' ? `<span class="na_dim"><i class="fa-solid fa-compass"></i> 라우터 ${routerState.get(currentChatId()) ? `${routerState.get(currentChatId()).titles.length}개 고름` : '답할 때 골라요'}</span>` : ''}
       ${build.trimmed.length ? `<span class="na_warn_txt"><i class="fa-solid fa-scissors"></i> 상한 ${fmt(build.cap)}에 맞춰 ${build.trimmed.length}개 뺌</span>` : ''}
       ${build.over ? `<span class="na_warn_txt"><i class="fa-solid fa-triangle-exclamation"></i> 상한 ${fmt(build.cap)} 넘음</span>` : ''}`);
     $('#na_head_badge').text(m.text.trim() ? fmt(archiveTok) : '');
@@ -3585,6 +3635,175 @@ async function openQuotes() {
         await save();
         toastr.success(`${n}개 골랐어요.`);
     });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+}
+
+// ---------------------------------------------------------------- AI router
+// Right before a reply, a small model reads the recent chat and picks the sections it needs.
+
+const AI_SYS_ROUTER = `You decide which archive sections a role-play model needs for its NEXT reply.
+You get the recent chat and a numbered list of archive sections (title and opening). Pick the sections whose people, events, places, promises or secrets the next reply is likely to touch, or must stay consistent with. Pick only what matters now; fewer is better.
+Answer with the numbers only, comma-separated, most relevant first. If none are needed, answer: none`;
+
+const routerState = new Map(); // chat id → { key, picks: Set, titles, at, ms, cands }
+let routerWarned = false;
+
+function routerCfg(m) {
+    const r = m?.router && typeof m.router === 'object' ? m.router : {};
+    return { mode: ['linked', 'old'].includes(r.mode) ? r.mode : 'off', max: Number(r.max) || 4, keep: Number.isFinite(Number(r.keep)) && r.keep !== undefined ? Number(r.keep) : 3 };
+}
+
+// sections the router may switch on: keyword-linked ones, and in 'old' mode every numbered section except the newest few and pinned ones
+function routerCandidates(m) {
+    const cfg = routerCfg(m);
+    if (cfg.mode === 'off') return [];
+    const secs = parseSections(m.text);
+    const muted = mutedSet(m), pinned = pinnedSet(m), lm = linkedMap(m);
+    const ranged = secs.filter(x => !x.group && RANGE_HEAD.test(x.title));
+    const recent = new Set(ranged.slice(ranged.length - cfg.keep).map(sectionKey));
+    const out = [], stack = [];
+    for (const s of secs) {
+        while (stack.length && stack[stack.length - 1].level >= s.level) stack.pop();
+        if (s.group) { stack.push(s); continue; }
+        const key = sectionKey(s);
+        if (muted.has(key) || stack.some(g => muted.has(sectionKey(g)))) continue;
+        const linked = Array.isArray(lm[key]) && lm[key].length;
+        const safe = pinned.has(key) || stack.some(g => pinned.has(sectionKey(g)));
+        if (linked || (cfg.mode === 'old' && RANGE_HEAD.test(s.title) && !recent.has(key) && !safe)) out.push(s);
+    }
+    return out;
+}
+
+function routerReady() {
+    const a = connSettings('ai');
+    return a.mode === 'custom' || a.mode === 'vertex' || !!globalSettings().aiProfile;
+}
+
+async function runRouter(m, { force = false } = {}) {
+    const cfg = routerCfg(m);
+    if (cfg.mode === 'off') return null;
+    if (!routerReady()) throw new Error('라우터는 RP와 따로 연결한 모델이 필요해요 (설정 → AI 기능 → 모델에서 프로필·커스텀 API·Vertex)');
+    const cands = routerCandidates(m);
+    const id = currentChatId();
+    const recent = recentForCheck(4).join('\n\n').slice(-6000);
+    const key = shortHash(`${recent}|${cands.map(sectionKey).join('|')}|${cfg.max}`);
+    const prev = routerState.get(id);
+    if (!force && prev?.key === key) return prev; // a swipe or regenerate on the same chat
+    if (!cands.length) { const st = { key, picks: new Set(), titles: [], at: Date.now(), ms: 0, cands: 0 }; routerState.set(id, st); return st; }
+    const list = cands.map((s, i) => {
+        const body = m.text.slice(s.start, s.end).replace(/^#{1,3} [^\n]*\n?/, '').replace(/\s+/g, ' ').trim();
+        return `${i + 1}. ${s.title} — ${body.slice(0, 240)}${body.length > 240 ? '…' : ''}`;
+    }).join('\n');
+    const t0 = Date.now();
+    const out = await Promise.race([
+        askAI(`[RECENT CHAT]\n${recent}\n\n[SECTIONS]\n${list}\n\nPick at most ${cfg.max}.`, { system: AI_SYS_ROUTER, maxTokens: 1024 }),
+        new Promise((_, no) => setTimeout(() => no(new Error('20초 안에 답이 없었어요')), 20_000)),
+    ]);
+    const nums = /^\s*none\b/i.test(out) ? [] : [...new Set((out.match(/\d+/g) || []).map(Number))].filter(n => n >= 1 && n <= cands.length).slice(0, cfg.max);
+    const picked = nums.map(n => cands[n - 1]);
+    const st = { key, picks: new Set(picked.map(sectionKey)), titles: picked.map(s => s.title), at: Date.now(), ms: Date.now() - t0, cands: cands.length };
+    routerState.set(id, st);
+    return st;
+}
+
+// ---------------------------------------------------------------- compression wizard
+// The whole routine in one place; the last step hands the pasted text to "아카이브에 추가" with its checks.
+
+const AI_SYS_GRADE = `You grade a summary of a role-play log against the raw log it was made from.
+List only real problems:
+- 지어냄: facts, lines or events in the summary that the log does not contain
+- 빠짐: important events, decisions, reveals or changes in relationships that the summary leaves out
+- 틀림: wrong speaker, wrong order, wrong numbers or ranges in headings
+Ignore wording and style. Answer in Korean, one bullet per problem, starting with the kind: "- 지어냄: … (#메시지번호)". Cite the raw message numbers you checked. If the summary is faithful, answer exactly: 문제 없음`;
+
+async function openWizard() {
+    const c = ctx();
+    const m = getMeta();
+    const g = globalSettings();
+    const last = (c.chat?.length || 0) - 1;
+    const le = m.lastExport;
+    const after = Math.max(m.boundary, le && le.to <= last ? le.to : -1);
+    const defFrom = Math.min(after + 1, Math.max(0, last));
+    const defTo = Math.max(defFrom, last - Math.max(0, Number(m.keep) || 0));
+    const $root = $(`
+      <div class="na_popup na_wiz">
+        <div class="na_block_head"><div><h4>압축 마법사</h4><p>위에서부터 차례로 하면 돼요. 마지막 단계에서 "아카이브에 추가" 창이 번호 검사·미리보기와 함께 열려요.</p></div></div>
+        <div class="na_wiz_step"><b>1</b><div class="na_wiz_main">
+          <div class="na_wiz_title">범위</div>
+          <div class="na_ex_range"><label># <input type="number" class="text_pole na_num na_wz_from" min="0" max="${last}" value="${defFrom}"></label><span>~</span><label># <input type="number" class="text_pole na_num na_wz_to" min="0" max="${last}" value="${defTo}"></label></div>
+          <small class="na_dim na_wz_info"></small>
+        </div></div>
+        <div class="na_wiz_step"><b>2</b><div class="na_wiz_main">
+          <div class="na_wiz_title">지시문과 함께 복사 <span class="na_dim">· 압축할 모델에 붙여넣기</span></div>
+          <div class="na_row"><select class="text_pole na_wz_prompt"></select></div>
+          <div class="na_row_btns"><button type="button" class="na_btn na_small na_primary na_wz_copy"><i class="fa-solid fa-copy"></i> 복사</button><button type="button" class="na_btn na_small na_wz_save"><i class="fa-solid fa-download"></i> .txt 저장</button></div>
+        </div></div>
+        <div class="na_wiz_step"><b>3</b><div class="na_wiz_main">
+          <div class="na_wiz_title">결과 붙여넣기</div>
+          <textarea class="text_pole na_wz_out" rows="7" spellcheck="false" placeholder="모델이 준 새 섹션을 여기에"></textarea>
+          <small class="na_dim na_wz_outinfo"></small>
+        </div></div>
+        <div class="na_wiz_step"><b>4</b><div class="na_wiz_main">
+          <div class="na_wiz_title">채점 <span class="na_dim">· 선택 · 원문과 대조해서 지어낸 것·빠진 것을 찾아요</span></div>
+          <div class="na_row_btns"><button type="button" class="na_btn na_small na_wz_grade"><i class="fa-solid fa-clipboard-check"></i> AI로 채점</button></div>
+          <div class="na_ai_box na_wz_gradeout" hidden></div>
+        </div></div>
+        <div class="na_wiz_step"><b>5</b><div class="na_wiz_main">
+          <div class="na_wiz_title">검사하고 추가</div>
+          <div class="na_row_btns"><button type="button" class="na_btn na_small na_primary na_wz_add"><i class="fa-solid fa-file-circle-plus"></i> 아카이브에 추가 창 열기</button></div>
+          <small class="na_dim">번호 검사·끊김·다시 쓴 섹션·미리보기를 거쳐 추가하고, 끝 번호까지 숨겨요.</small>
+        </div></div>
+      </div>`);
+    $root.find('.na_wz_prompt').html(g.prompts.map(p => `<option value="${esc(p.id)}">${esc(p.name)}${p.fav ? ' ★' : ''}</option>`).join('')).val(activePrompt(g).id);
+    const range = () => {
+        const from = Math.max(0, parseInt($root.find('.na_wz_from').val(), 10) || 0);
+        const to = Math.min(last, parseInt($root.find('.na_wz_to').val(), 10));
+        return { from, to: Number.isFinite(to) ? to : last };
+    };
+    let raw = '', full = '';
+    const build = async () => {
+        const { from, to } = range();
+        const items = buildExtract(from, to).filter(x => !(g.skipHidden && c.chat[x.i]?.is_system)).map(x => ({ ...x, text: cleanMessage(x.text, g) })).filter(x => x.text);
+        raw = formatExtract(items, g);
+        const p = g.prompts.find(x => x.id === $root.find('.na_wz_prompt').val()) || activePrompt(g);
+        full = fillPrompt(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text });
+        $root.find('.na_wz_info').text(items.length ? `메시지 ${items.length}개 · 원문 약 ${fmt(await countTokens(raw))} 토큰 · 지시문까지 약 ${fmt(await countTokens(full))} 토큰` : '이 범위에 메시지가 없어요.');
+    };
+    let t;
+    $root.find('.na_wz_from, .na_wz_to, .na_wz_prompt').on('input change', () => { clearTimeout(t); t = setTimeout(build, 250); });
+    const remember = async how => { const { from, to } = range(); m.lastExport = { from, to, at: Date.now(), how }; await saveMeta(); refreshStatus(); };
+    $root.find('.na_wz_copy').on('click', async () => {
+        await build();
+        if (!raw) return toastr.info('범위에 메시지가 없어요.');
+        const ok = await copyText(full, $root.find('.na_wz_out')[0]);
+        if (ok) { await remember('copy'); toastr.success('복사됨 · 압축할 모델에 붙여넣으세요'); } else toastr.warning('복사가 막혀 있어요. .txt 저장을 써 주세요.');
+    });
+    $root.find('.na_wz_save').on('click', async () => { await build(); if (!raw) return; const { from, to } = range(); download(`원문_${chatLabel()}_${from}-${to}.txt`, full); remember('txt'); });
+    $root.find('.na_wz_out').on('input', function () {
+        const v = this.value.trim();
+        const n = guessEndNumber(v);
+        $root.find('.na_wz_outinfo').text(v ? `섹션 ${parseSections(v).filter(x => !x.group).length}개${n !== null ? ` · 끝 번호 #${n}` : ''}` : '');
+        $root.find('.na_wz_gradeout').prop('hidden', true);
+    });
+    $root.find('.na_wz_grade').on('click', async function () {
+        const sum = $root.find('.na_wz_out').val().trim();
+        if (!sum) return toastr.info('먼저 3단계에 결과를 붙여넣어 주세요.');
+        await build();
+        const out = await withSpinner($(this), '채점하는 중…', () => askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${sum}`, { system: AI_SYS_GRADE, maxTokens: 2500 }));
+        if (out === null) return;
+        const ok = /^\s*문제 없음\.?\s*$/.test(out);
+        $root.find('.na_wz_gradeout').prop('hidden', false).toggleClass('na_ai_ok', ok)
+            .html(ok ? '<i class="fa-solid fa-circle-check"></i> 원문과 잘 맞아요' : `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 채점 <span class="na_dim">· 참고용</span></div>${driftHtml(out, m)}`);
+    });
+    $root.on('click', '.na_cite_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
+    $root.find('.na_wz_add').on('click', () => {
+        const text = $root.find('.na_wz_out').val().trim();
+        if (!text) return toastr.info('먼저 3단계에 결과를 붙여넣어 주세요.');
+        const n = guessEndNumber(text);
+        $root.closest('dialog').find('.popup-button-ok').trigger('click');
+        setTimeout(() => openAppend({ text, end: n ?? range().to }), 50);
+    });
+    await build();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
@@ -4887,10 +5106,11 @@ async function confirmWhole(oldText, newText) {
     return r === c.POPUP_RESULT.AFFIRMATIVE || r === true;
 }
 
-async function openAppend() {
+async function openAppend(prefill = {}) {
     const c = ctx();
     const m = getMeta();
     const last = (c.chat?.length || 0) - 1;
+    const pre = prefill && typeof prefill === 'object' && 'text' in prefill ? prefill : {};
 
     const $root = $(`
       <div class="na_popup">
@@ -5027,6 +5247,10 @@ async function openAppend() {
         $root.find('.na_conflict_out').prop('hidden', false).removeClass('na_stale').toggleClass('na_ai_ok', none)
             .html(none ? '<i class="fa-solid fa-circle-check"></i> AI가 찾은 충돌 없음' : `<div class="na_ai_box_head"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 충돌 검사 <span class="na_dim">· 참고용이에요</span></div>${aiHtml(out)}`);
     });
+    if (pre.text) {
+        if (Number.isFinite(pre.end)) { $end.val(pre.end); endTouched = true; }
+        $ta.val(pre.text).trigger('input');
+    }
     const result = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', {
         wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '추가', cancelButton: '취소',
     });
@@ -5079,6 +5303,7 @@ function addWandMenu() {
         ['na_wand_read', 'fa-book-open-reader', '아카이브 읽기', openReader],
         ['na_wand_extract', 'fa-scissors', '원문 뽑기', openExtract],
         ['na_wand_append', 'fa-file-circle-plus', '아카이브에 추가', openAppend],
+        ['na_wand_wizard', 'fa-wand-magic-sparkles', '압축 마법사', openWizard],
         ['na_wand_preview', 'fa-eye', '주입 미리보기', openPreview],
     ];
     for (const [id, icon, label, fn] of items) {
