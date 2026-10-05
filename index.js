@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.15.0';
+const VERSION = '2.16.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -34,7 +34,7 @@ const DEFAULT_META = Object.freeze({
     lastExport: null, // { from, to, at, how } — the latest extract copied or saved
 });
 
-const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks'];
+const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'quoteInject', 'quoteMax'];
 const POSITIONS = { 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
 const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
 
@@ -224,7 +224,8 @@ async function buildInjection(m) {
             text = secs.filter(s => !drop.has(s.start)).map(s => body.slice(s.start, s.end)).join('');
         }
     }
-    const final = text.trim() ? wrapText(m, text) : '';
+    const extra = text.trim() ? extraBlocks(m) : '';
+    const final = text.trim() ? wrapText(m, `${trimEnd(text)}${extra}`) : '';
     const tokens = await cachedTokens(final);
     return { text: final, tokens, trimmed, cap, over: !!cap && tokens > cap };
 }
@@ -1104,6 +1105,14 @@ function renderPanel() {
                   <button type="button" class="na_btn na_primary" id="na_ed_save"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
                 </div>
               </div>
+              <div class="na_block">
+                <div class="na_block_head"><div><h4>AI 도구</h4><p>아카이브를 바탕으로 대화를 점검하고, 이야기를 정리해 같이 주입할 수 있어요.</p></div></div>
+                <div class="na_tiles">
+                  <button type="button" class="na_tile" id="na_drift"><i class="fa-solid fa-route"></i><span>이탈 감지</span><small id="na_drift_sub">최근 대화가 아카이브와 어긋나는지</small></button>
+                  <button type="button" class="na_tile" id="na_know"><i class="fa-solid fa-user-secret"></i><span>누가 아는가</span><small id="na_know_sub">비밀마다 아는 사람·모르는 사람</small></button>
+                  <button type="button" class="na_tile" id="na_quotes"><i class="fa-solid fa-quote-left"></i><span>대사 은행</span><small id="na_quotes_sub">말투 샘플로 주입</small></button>
+                </div>
+              </div>
               <details class="na_block na_details">
                 <summary>마지막 주입 기록</summary>
                 <div id="na_inject_log"></div>
@@ -1257,6 +1266,8 @@ function renderPanel() {
                 </div>
                 ${connCfgHtml('tr')}
                 <div class="na_set_list">
+                  <label class="na_set_row"><span><span>이탈 자동 감지</span><small>AI 답이 이만큼 쌓일 때마다 조용히 검사하고, 어긋나면 알려 줘요 · 그때마다 토큰이 들어가요</small></span>
+                    <select id="na_drift_auto" class="text_pole"><option value="0">끄기</option><option value="5">답 5개마다</option><option value="10">답 10개마다</option><option value="20">답 20개마다</option></select></label>
                   <div class="na_set_row"><span><span>번역 용어집</span><small>이름·장소의 한국어 표기를 정해 두면 번역이 늘 그대로 써요 · 이 채팅 <b id="na_gloss_n">0</b>개</small></span><button type="button" class="na_btn na_small" id="na_gloss_edit"><i class="fa-solid fa-spell-check"></i> 편집</button></div>
                 </div>
                 <small class="na_dim na_conn_note" id="na_conn_note" hidden>키와 JSON은 이 기기의 실리태번 설정에만 저장돼요. 아카이브 백업에는 안 들어가요.</small>
@@ -1313,6 +1324,7 @@ function renderConn(p) {
 function renderAiSettings() {
     const g = globalSettings();
     $('#na_gloss_n').text(hasChat() ? glossaryEntries(getMeta()).length : 0);
+    $('#na_drift_auto').val(String(g.driftAuto || 0));
     const a = connSettings('ai');
     const profiles = aiProfiles();
     const opts = [`<option value="">지금 연결된 모델</option>`, ...profiles.map(p => `<option value="${esc(p.id)}">프로필: ${esc(p.name)}</option>`)];
@@ -1410,6 +1422,7 @@ function bindPanel() {
         const v = Math.max(256, parseInt(this.value, 10) || 4096);
         globalSettings().aiMaxTokens = v; globalSettings().aiMaxSet = true; this.value = v; saveGlobal();
     });
+    $('#na_drift_auto').on('change', function () { globalSettings().driftAuto = Number(this.value) || 0; saveGlobal(); });
     $('#na_gloss_edit').on('click', needChat(async () => { await openGlossary(); renderAiSettings(); }));
     $('#na_tr_mode').on('change', function () { trSettings().mode = this.value; saveGlobal(); renderAiSettings(); });
     for (const p of ['ai', 'tr']) {
@@ -1549,6 +1562,9 @@ function bindPanel() {
     $('#na_open_extract').on('click', needChat(openExtract));
     $('#na_health').on('click', needChat(openHealth));
     $('#na_report').on('click', needChat(openTokenReport));
+    $('#na_drift').on('click', needChat(openDrift));
+    $('#na_know').on('click', needChat(openKnowledge));
+    $('#na_quotes').on('click', needChat(openQuotes));
     $('#na_branches, #na_branch_fix').on('click', needChat(openBranches));
     $('#na_open_append').on('click', needChat(openAppend));
     $('#na_apply_hide').on('click', needChat(() => applyHide()));
@@ -1786,6 +1802,13 @@ function syncPanel() {
     }
     $('#na_unmute_all').prop('disabled', !mutedCount(m));
     $('#na_carry').prop('hidden', !carryOffer);
+    if (hasChat()) {
+        const mm = getMeta();
+        const kn = knowledgeRows(mm).length, qn = (mm.quotes || []).filter(q => q.on).length;
+        $('#na_know_sub').text(kn ? `${kn}개${mm.knowInject ? ' · 주입 중' : ''}` : '비밀마다 아는 사람·모르는 사람');
+        $('#na_quotes_sub').text((mm.quotes || []).length ? `${(mm.quotes || []).length}개 · 고른 ${qn}개${mm.quoteInject ? ' · 주입 중' : ''}` : '말투 샘플로 주입');
+        $('#na_drift_sub').text(mm.driftLast ? `${timeLabel(mm.driftLast.at)} · ${mm.driftLast.none ? '어긋남 없음' : `${mm.driftLast.n}개 찾음`}` : '최근 대화가 아카이브와 어긋나는지');
+    }
     const br = hasChat() ? branchState(getMeta()) : null;
     $('#na_branch_card').prop('hidden', !br?.ahead.length);
     if (br?.ahead.length) $('#na_branch_desc').text(`이 채팅은 #${br.last}까지인데 아카이브에 그 뒤(#${br.ahead[0].from}~) 섹션 ${br.ahead.length}개가 있어요. 분기하기 전 원본의 내용이에요.`);
@@ -3251,6 +3274,318 @@ async function openKeywordTest() {
     $root.find('.na_kwt_recent').on('change', render);
     render();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+}
+
+// ---------------------------------------------------------------- extra injected blocks
+
+function knowledgeRows(m) {
+    return String(m?.knowledge || '').split('\n').map(l => l.replace(/^\s*[-*]\s*/, '').trim()).filter(l => l.includes('|')).map(l => {
+        const parts = l.split('|').map(x => x.trim());
+        const field = name => { const p = parts.find(x => x.toLowerCase().startsWith(`${name}:`)); return p ? p.slice(name.length + 1).split(',').map(x => x.trim()).filter(x => x && !/^(none|-|없음)$/i.test(x)) : []; };
+        return { fact: parts[0], knows: field('knows'), unaware: field('unaware'), suspects: field('suspects'), src: (parts.find(x => x.toLowerCase().startsWith('src:')) || '').slice(4).trim() };
+    }).filter(r => r.fact);
+}
+
+function extraBlocks(m) {
+    let out = '';
+    const kr = m.knowInject ? knowledgeRows(m) : [];
+    if (kr.length) out += `\n\n# WHO KNOWS WHAT\n_Characters act only on what they know. Do not let anyone reveal or use a fact they do not know._\n${kr.map(r =>
+        `- ${r.fact} — knows: ${r.knows.join(', ') || 'no one'}${r.unaware.length ? `; does not know: ${r.unaware.join(', ')}` : ''}${r.suspects.length ? `; suspects: ${r.suspects.join(', ')}` : ''}`).join('\n')}`;
+    const qs = m.quoteInject ? pickedQuotes(m) : [];
+    if (qs.length) out += `\n\n# VOICE SAMPLES\n_How each character talks. Match the voice; do not repeat these lines verbatim._\n${qs.map(q => `${q.who}: "${q.text}"`).join('\n')}`;
+    return out;
+}
+
+// ---------------------------------------------------------------- drift: does the recent chat contradict the archive?
+
+const AI_SYS_DRIFT = `You check an ongoing role-play for continuity drift against its archive. The archive is the established canon; the recent chat is what the role-play model has been writing.
+Report only clear problems in the RECENT CHAT:
+- facts that contradict the archive (names, relationships, injuries, objects, places, who did what)
+- threads the archive marks as resolved being reopened, or settled decisions being undone without cause
+- a character knowing or using something they cannot know yet (see WHO KNOWS WHAT if given)
+- timeline or time-of-day going backwards; a character in two places at once
+- a character acting or talking clearly against how the archive describes them
+Do not report style, pacing or things the archive simply does not cover. New events are not drift.
+Answer in Korean, one bullet per problem: "- #메시지번호 이름: 무엇이 어긋나는지 — 근거 [[아카이브 섹션 제목 그대로]]". If there is nothing, answer exactly: 없음`;
+
+function recentForCheck(n) {
+    const chat = ctx().chat || [];
+    const out = [];
+    for (let i = chat.length - 1; i >= 0 && out.length < n; i--) {
+        const x = chat[i];
+        if (!x || (x.is_system && !x.is_user && !x.name)) continue;
+        out.unshift(`[#${i}] ${x.name || (x.is_user ? 'User' : 'Char')}: ${cleanMessage(String(x.mes || ''), { stripTags: true })}`);
+    }
+    return out;
+}
+
+async function runDrift(m, n) {
+    const recent = recentForCheck(n);
+    if (!recent.length) throw new Error('검사할 메시지가 없어요');
+    const kr = knowledgeRows(m);
+    const prompt = `[ARCHIVE]\n${m.text}${kr.length ? `\n\n[WHO KNOWS WHAT]\n${extraBlocks({ ...m, knowInject: true, quoteInject: false }).trim()}` : ''}\n\n[RECENT CHAT]\n${recent.join('\n\n')}`;
+    const out = await askAI(prompt, { system: AI_SYS_DRIFT, maxTokens: 2500 });
+    const none = /^\s*(없음|none)\.?\s*$/i.test(out);
+    m.driftLast = { at: Date.now(), n: none ? 0 : out.split('\n').filter(l => /^\s*[-*•]/.test(l)).length || 1, none, text: out, upto: lastIndex(), count: recent.length };
+    await saveMeta();
+    syncPanel();
+    return m.driftLast;
+}
+
+// "#123" in a drift answer opens that message; [[heading]] shows the section
+function driftHtml(text, m) {
+    const secs = parseSections(m.text);
+    // mark message numbers outside [[citations]] first, so headings inside citations stay intact
+    const marked = String(text).split(/(\[\[[^\]]+\]\])/).map((part, i) => i % 2 ? part : part.replace(/(^|[^\w&#])#(\d{1,6})\b/g, '$1\u0001$2\u0001')).join('');
+    const { html } = renderAnswer(marked, secs);
+    return html.replace(/\u0001(\d+)\u0001/g, (all, n) => `<button type="button" class="na_cite na_cite_msg" data-msg="${n}" title="메시지 #${n} 보기">#${n}</button>`);
+}
+
+async function openDrift() {
+    const c = ctx();
+    const m = getMeta();
+    const $root = $(`
+      <div class="na_popup">
+        <div class="na_block_head"><div><h4>이탈 감지</h4><p>최근 대화를 아카이브와 대조해서, RP 모델이 이미 정해진 사실과 어긋나게 쓴 곳을 찾아요. 참고용이고 아무것도 바꾸지 않아요.</p></div></div>
+        <div class="na_row">
+          <label>최근 메시지 <input type="number" class="text_pole na_num na_dr_n" min="2" max="60" value="12"> 개</label>
+          <button type="button" class="na_btn na_small na_primary na_dr_go"><i class="fa-solid fa-route"></i> 검사</button>
+        </div>
+        <small class="na_dim na_dr_info"></small>
+        <div class="na_ai_box na_dr_out" hidden></div>
+      </div>`);
+    const show = d => {
+        if (!d) return;
+        $root.find('.na_dr_out').prop('hidden', false).toggleClass('na_ai_ok', d.none)
+            .html(d.none ? '<i class="fa-solid fa-circle-check"></i> 어긋난 곳이 없어요' : `<div class="na_ai_box_head"><i class="fa-solid fa-route"></i> ${esc(timeLabel(d.at))} · #${d.upto}까지 ${d.count}개 검사 <span class="na_dim">· 참고용</span></div>${driftHtml(d.text, m)}`);
+    };
+    countTokens(m.text).then(t => $root.find('.na_dr_info').text(`검사할 때마다 아카이브 전체(약 ${fmt(t)} 토큰)와 최근 메시지를 ${aiLabel()}에 보내요`));
+    show(m.driftLast);
+    $root.find('.na_dr_go').on('click', async function () {
+        const n = Math.min(60, Math.max(2, parseInt($root.find('.na_dr_n').val(), 10) || 12));
+        const d = await withSpinner($(this), '검사하는 중…', () => runDrift(m, n));
+        if (d) show(d);
+    });
+    $root.on('click', '.na_cite_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
+    $root.on('click', '.na_cite[data-start]', function () {
+        const start = Number(this.dataset.start);
+        $root.closest('dialog').find('.popup-button-ok').trigger('click');
+        gotoSection(start);
+    });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+}
+
+// every N AI replies, check quietly; only speak up when something is off
+const driftCount = new Map();
+let driftBusy = false;
+async function driftTick() {
+    const every = Number(globalSettings().driftAuto) || 0;
+    if (!every || !hasChat() || driftBusy) return;
+    const m = getMeta();
+    if (!m.text.trim()) return;
+    const id = currentChatId();
+    const k = (driftCount.get(id) || 0) + 1;
+    driftCount.set(id, k);
+    if (k < every) return;
+    driftCount.set(id, 0);
+    driftBusy = true;
+    try {
+        const d = await runDrift(m, Math.min(60, every + 2));
+        if (!d.none) toastr.warning(`최근 대화에서 아카이브와 어긋난 곳 ${d.n}개 · 눌러서 보기`, '이탈 감지', { timeOut: 12000, onclick: () => openDrift() });
+    } catch (e) { console.warn('[narrative-archive] auto drift', e); }
+    finally { driftBusy = false; }
+}
+
+// ---------------------------------------------------------------- who knows what
+
+const AI_SYS_KNOW = `You build a "who knows what" table for a role-play story archive, so the role-play model never lets a character know something they should not.
+List the facts whose knowledge differs between characters: secrets, hidden pasts, lies told, confessions, plans, things one character saw alone, misunderstandings. Skip facts every character knows.
+For each fact name who knows it, who does not, and who only suspects, using the archive's own character names. Use the latest state in the archive (a secret later revealed is known).
+10 to 30 facts, most plot-relevant first. One line per fact, nothing else, in this exact form (English):
+fact in one short sentence | knows: A, B | unaware: C | suspects: D | src: the archive heading where this is established, copied exactly
+Write "none" for an empty field.`;
+
+async function openKnowledge() {
+    const c = ctx();
+    const m = getMeta();
+    const $root = $(`
+      <div class="na_popup">
+        <div class="na_block_head"><div><h4>누가 아는가</h4><p>비밀·사실마다 누가 알고 누가 모르는지 정리해요. 주입을 켜면 RP 모델이 모르는 걸 아는 척하지 않게 같이 보내요.</p></div></div>
+        <div class="na_row na_kn_bar">
+          <button type="button" class="na_btn na_small na_kn_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>AI로 만들기</span></button>
+          <button type="button" class="na_btn na_small na_kn_edit"><i class="fa-solid fa-pen"></i> 직접 고치기</button>
+          <button type="button" class="na_btn na_small na_kn_tr"><i class="fa-solid fa-language"></i> 한국어로 보기</button>
+          <label class="checkbox_label na_kn_inject"><input type="checkbox"><span>주입하기</span></label>
+          <small class="na_dim na_kn_tok"></small>
+        </div>
+        <div class="na_kn_list"></div>
+        <div class="na_kn_editbox" hidden>
+          <small class="na_dim">한 줄에 하나: <code>사실 | knows: A, B | unaware: C | suspects: D | src: 섹션 제목</code></small>
+          <textarea class="text_pole na_kn_ta" rows="12" spellcheck="false"></textarea>
+          <div class="na_row_btns"><button type="button" class="na_btn na_small na_primary na_kn_save">저장</button><button type="button" class="na_btn na_small na_kn_cancel">취소</button></div>
+        </div>
+      </div>`);
+    const secs = () => parseSections(m.text);
+    let tr = null;
+    const render = () => {
+        const rows = knowledgeRows(m);
+        $root.find('.na_kn_ai span').text(rows.length ? 'AI로 다시 만들기' : 'AI로 만들기');
+        $root.find('.na_kn_inject input').prop('checked', !!m.knowInject);
+        $root.find('.na_kn_list').html(rows.length ? rows.map((r, i) => {
+            const s = r.src ? findCited(secs(), r.src) : null;
+            const chips = (xs, cls) => xs.map(x => `<span class="na_kn_who ${cls}">${esc(x)}</span>`).join('');
+            return `<div class="na_kn_row">
+              <div class="na_kn_fact">${esc(r.fact)}${tr?.[i] ? `<div class="na_kn_tr">${esc(tr[i])}</div>` : ''}</div>
+              <div class="na_kn_people">${chips(r.knows, 'k')}${chips(r.suspects, 's')}${chips(r.unaware, 'u')}</div>
+              ${s ? `<button type="button" class="na_cite" data-start="${s.start}" title="${esc(s.title)}"><i class="fa-solid fa-bookmark"></i> ${esc((s.title.match(/^(?:\S+\s+)?#\d+\s*[–—~-]\s*#?\d+/) || [s.title.slice(0, 24)])[0])}</button>` : ''}
+            </div>`;
+        }).join('') + '<div class="na_kn_legend na_dim"><span class="na_kn_who k">앎</span><span class="na_kn_who s">짐작</span><span class="na_kn_who u">모름</span></div>'
+            : '<div class="na_empty">아직 없어요. AI로 만들거나 직접 적어 주세요.</div>');
+        const blk = extraBlocks({ ...m, knowInject: true, quoteInject: false });
+        if (blk) countTokens(blk).then(t => $root.find('.na_kn_tok').text(`약 ${fmt(t)} 토큰`)); else $root.find('.na_kn_tok').text('');
+    };
+    render();
+    const save = async () => { await saveMeta(); applyInjection(); syncPanel(); render(); };
+    $root.find('.na_kn_inject input').on('change', async function () { m.knowInject = this.checked; await save(); });
+    $root.find('.na_kn_ai').on('click', async function () {
+        if (knowledgeRows(m).length && !await confirm('다시 만들기', '지금 표를 AI가 새로 만든 걸로 바꿀까요?')) return;
+        const old = String(m.knowledge || '').trim();
+        const out = await withSpinner($(this), '정리하는 중…', () => askAI(`[ARCHIVE]\n${m.text}${old ? `\n\n[CURRENT TABLE — keep what is still right, fix what changed]\n${old}` : ''}`, { system: AI_SYS_KNOW, maxTokens: 4000 }));
+        if (out === null) return;
+        const lines = out.split('\n').map(l => l.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim()).filter(l => l.includes('|') && /knows:/i.test(l));
+        if (!lines.length) return toastr.warning('AI 답을 표로 못 읽었어요. 다시 해 보세요.');
+        m.knowledge = lines.join('\n'); tr = null;
+        await save();
+        toastr.success(`${lines.length}개 정리했어요. 틀린 건 직접 고쳐 주세요.`);
+    });
+    $root.find('.na_kn_edit').on('click', () => { $root.find('.na_kn_ta').val(m.knowledge || ''); $root.find('.na_kn_editbox').prop('hidden', false); $root.find('.na_kn_list').prop('hidden', true); });
+    $root.find('.na_kn_cancel').on('click', () => { $root.find('.na_kn_editbox').prop('hidden', true); $root.find('.na_kn_list').prop('hidden', false); });
+    $root.find('.na_kn_save').on('click', async () => { m.knowledge = $root.find('.na_kn_ta').val().trim(); tr = null; $root.find('.na_kn_cancel').trigger('click'); await save(); });
+    $root.find('.na_kn_tr').on('click', async function () {
+        if (tr) { tr = null; render(); return; }
+        const rows = knowledgeRows(m);
+        if (!rows.length) return;
+        const out = await withSpinner($(this), '번역하는 중…', () => translateLines(rows.map(r => r.fact)));
+        if (out) { tr = out; render(); }
+    });
+    $root.on('click', '.na_cite[data-start]', function () { const st = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+}
+
+// ---------------------------------------------------------------- quote bank
+
+// who says the quote that follows `before`: "Name:" → Name; "Name said/told …" → Name;
+// "He told Name" → the first name earlier on the line (not the one being spoken to); else the nearest name
+const SPEECH = 'said|says|told|tells|asked|asks|answered|replied|whispered|murmured|snapped|added|called|warned|admitted|insisted|thought|wrote';
+function guessSpeaker(before, names) {
+    const isName = w => names.has(w) && !KW_STOP.has(w);
+    const colon = before.match(/([A-Z][a-z][A-Za-z'’]*)['’]?s?\s*:\s*$/);
+    if (colon && isName(colon[1])) return colon[1];
+    const verbs = [...before.matchAll(new RegExp(`\\b([A-Z][a-z][A-Za-z'’]*)\\s+(?:\\w+ly\\s+)?(?:${SPEECH})\\b`, 'g'))];
+    const lastVerb = verbs[verbs.length - 1];
+    if (lastVerb && isName(lastVerb[1])) return lastVerb[1];
+    const all = [...before.matchAll(/\b([A-Z][a-z][A-Za-z'’]*)\b/g)].map(x => x[1].replace(/['’]s$/, '')).filter(isName);
+    if (lastVerb && /^(He|She|They|It)$/.test(lastVerb[1])) {
+        const head = before.slice(0, lastVerb.index);
+        const earlier = [...head.matchAll(/\b([A-Z][a-z][A-Za-z'’]*)\b/g)].map(x => x[1].replace(/['’]s$/, '')).filter(isName);
+        if (earlier.length) return earlier[earlier.length - 1];
+    }
+    return all.length ? all[all.length - 1] : '?';
+}
+
+// quoted lines in the archive with a guessed speaker
+function archiveQuotes(m) {
+    const names = new Set([...m.text.matchAll(/[a-z,;]\s+([A-Z][a-z][A-Za-z'’]*)/g)].map(x => x[1].replace(/['’]s$/, '')));
+    const out = [];
+    const secs = parseSections(m.text).filter(x => !x.group);
+    for (const s of secs) {
+        const body = m.text.slice(s.start, s.end);
+        for (const line of body.split('\n')) {
+            for (const mt of line.matchAll(/["“]([^"“”]{15,400})["”]/g)) {
+                out.push({ who: guessSpeaker(line.slice(0, mt.index), names), text: mt[1].trim(), src: s.title });
+            }
+        }
+    }
+    const seen = new Set();
+    return out.filter(q => !seen.has(q.text) && seen.add(q.text));
+}
+
+function pickedQuotes(m) {
+    const max = Math.max(1, Number(m.quoteMax) || 3);
+    const per = new Map();
+    return (m.quotes || []).filter(q => q.on && q.who && q.who !== '?').filter(q => { const n = (per.get(q.who) || 0) + 1; per.set(q.who, n); return n <= max; });
+}
+
+const AI_SYS_QUOTES = `You pick voice samples for a role-play: the lines that best show how each character talks (rhythm, word choice, attitude), not the most dramatic plot lines.
+You get numbered quotes from a story archive, each with a guessed speaker that may be wrong. Fix the speaker using the context when needed.
+For each main character pick up to 5 of their most characteristic lines. Skip lines that only make sense with heavy plot context.
+One line per pick, nothing else: number | speaker`;
+
+async function openQuotes() {
+    const c = ctx();
+    const m = getMeta();
+    m.quotes = Array.isArray(m.quotes) ? m.quotes : [];
+    const $root = $(`
+      <div class="na_popup">
+        <div class="na_block_head"><div><h4>대사 은행</h4><p>아카이브에 남은 대사를 인물별로 모아요. 고른 대사를 "말투 샘플"로 같이 주입하면 RP 모델이 캐릭터 말투를 덜 잃어요.</p></div></div>
+        <div class="na_row na_qb_bar">
+          <button type="button" class="na_btn na_small na_qb_find"><i class="fa-solid fa-magnifying-glass"></i> 아카이브에서 모으기</button>
+          <button type="button" class="na_btn na_small na_qb_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 고르기</button>
+          <label class="checkbox_label"><input type="checkbox" class="na_qb_inject"><span>주입하기</span></label>
+          <label>인물마다 <input type="number" class="text_pole na_num na_qb_max" min="1" max="10"> 개</label>
+          <small class="na_dim na_qb_tok"></small>
+        </div>
+        <input type="search" class="text_pole na_qb_q" placeholder="인물·대사로 찾기">
+        <div class="na_qb_list"></div>
+      </div>`);
+    $root.find('.na_qb_inject').prop('checked', !!m.quoteInject);
+    $root.find('.na_qb_max').val(m.quoteMax || 3);
+    const render = () => {
+        const q = $root.find('.na_qb_q').val().trim().toLowerCase();
+        const by = new Map();
+        m.quotes.forEach((x, i) => { if (q && !`${x.who} ${x.text}`.toLowerCase().includes(q)) return; if (!by.has(x.who)) by.set(x.who, []); by.get(x.who).push({ x, i }); });
+        const picked = new Set(pickedQuotes(m));
+        $root.find('.na_qb_list').html(m.quotes.length ? [...by].sort((a, b) => (a[0] === '?') - (b[0] === '?') || b[1].length - a[1].length).map(([who, xs]) => `
+          <div class="na_qb_group"><div class="na_qb_who">${esc(who === '?' ? '말한 사람 모름' : who)} <span class="na_dim">${xs.length}개 · 고른 ${xs.filter(y => y.x.on).length}</span></div>
+            ${xs.map(({ x, i }) => `<div class="na_qb_row ${x.on ? 'on' : ''} ${x.on && !picked.has(x) ? 'over' : ''}" data-i="${i}">
+              <input type="checkbox" class="na_qb_on" ${x.on ? 'checked' : ''}>
+              <div class="na_qb_text">“${esc(x.text)}”<div class="na_dim na_qb_src">${esc(String(x.src || '').slice(0, 50))}</div></div>
+              <input type="text" class="text_pole na_qb_whoin" value="${esc(x.who)}" title="말한 사람">
+              <button type="button" class="na_icon na_icon_sm na_qb_del" title="빼기"><i class="fa-solid fa-xmark"></i></button>
+            </div>`).join('')}</div>`).join('') : '<div class="na_empty">아직 없어요. "아카이브에서 모으기"를 눌러 보세요.</div>');
+        const blk = extraBlocks({ ...m, knowInject: false, quoteInject: true });
+        if (blk) countTokens(blk).then(t => $root.find('.na_qb_tok').text(`주입하면 약 ${fmt(t)} 토큰`)); else $root.find('.na_qb_tok').text('');
+    };
+    render();
+    const save = async () => { await saveMeta(); applyInjection(); syncPanel(); render(); };
+    $root.find('.na_qb_q').on('input', render);
+    $root.find('.na_qb_inject').on('change', async function () { m.quoteInject = this.checked; await save(); });
+    $root.find('.na_qb_max').on('change', async function () { m.quoteMax = Math.min(10, Math.max(1, parseInt(this.value, 10) || 3)); this.value = m.quoteMax; await save(); });
+    $root.on('change', '.na_qb_on', async function () { m.quotes[Number($(this).closest('.na_qb_row').data('i'))].on = this.checked; await save(); });
+    $root.on('change', '.na_qb_whoin', async function () { m.quotes[Number($(this).closest('.na_qb_row').data('i'))].who = this.value.trim() || '?'; await save(); });
+    $root.on('click', '.na_qb_del', async function () { m.quotes.splice(Number($(this).closest('.na_qb_row').data('i')), 1); await save(); });
+    $root.find('.na_qb_find').on('click', async () => {
+        const have = new Set(m.quotes.map(q => q.text));
+        const found = archiveQuotes(m).filter(q => !have.has(q.text));
+        if (!found.length) return toastr.info('새로 모을 대사가 없어요.');
+        m.quotes.push(...found.map(q => ({ ...q, on: false })));
+        await save();
+        toastr.success(`${found.length}개 모았어요. 고르거나 "AI로 고르기"를 눌러 보세요.`);
+    });
+    $root.find('.na_qb_ai').on('click', async function () {
+        if (!m.quotes.length) { $root.find('.na_qb_find').trigger('click'); if (!m.quotes.length) return; }
+        const list = m.quotes.map((q, i) => `${i + 1}. [${q.who}] "${q.text}" (${q.src})`).join('\n');
+        const out = await withSpinner($(this), '고르는 중…', () => askAI(list, { system: AI_SYS_QUOTES, maxTokens: 2000 }));
+        if (out === null) return;
+        const picks = out.split('\n').map(l => l.match(/^\s*(\d+)\s*[|:.)-]\s*(.+?)\s*$/)).filter(Boolean);
+        if (!picks.length) return toastr.warning('AI 답을 못 읽었어요. 다시 해 보세요.');
+        m.quotes.forEach(q => { q.on = false; });
+        let n = 0;
+        for (const [, num, who] of picks) { const q = m.quotes[Number(num) - 1]; if (q) { q.on = true; q.who = who.replace(/^\[|\]$/g, '').trim() || q.who; n++; } }
+        await save();
+        toastr.success(`${n}개 골랐어요.`);
+    });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
 // ---------------------------------------------------------------- branches
@@ -4768,6 +5103,7 @@ function addWandMenu() {
     es.on(et.APP_READY, start);
     es.on(et.CHAT_CHANGED, onChatChanged);
     if (et.GENERATION_STARTED) es.on(et.GENERATION_STARTED, onGenerationStarted);
+    if (et.MESSAGE_RECEIVED) es.on(et.MESSAGE_RECEIVED, driftTick);
     for (const ev of [et.MESSAGE_RECEIVED, et.MESSAGE_SENT, et.MESSAGE_DELETED, et.MESSAGE_UPDATED]) {
         if (ev) es.on(ev, refreshStatusSoon);
     }

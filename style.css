@@ -1089,3 +1089,30 @@
 .na_br_kids:empty { display: none; }
 .na_src_from { font-size: 0.8em; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .na_src_link { border-style: dashed !important; }
+
+/* ---------- knowledge, quotes, drift */
+.na_kn_bar, .na_qb_bar { flex-wrap: wrap; gap: 8px; align-items: center; }
+.na_kn_list { display: flex; flex-direction: column; gap: 6px; }
+.na_kn_row { display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; border-radius: 10px; background: var(--na-softer); font-size: 0.88em; }
+.na_kn_row .na_cite { align-self: flex-start; }
+.na_kn_tr { opacity: 0.75; margin-top: 2px; font-size: 0.95em; }
+.na_kn_people { display: flex; flex-wrap: wrap; gap: 4px; }
+.na_kn_who { font-size: 0.85em; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--na-line); }
+.na_kn_who.k { background: color-mix(in srgb, #3f9a5a 18%, transparent); border-color: transparent; }
+.na_kn_who.s { background: color-mix(in srgb, var(--na-warn) 18%, transparent); border-color: transparent; }
+.na_kn_who.u { opacity: 0.6; text-decoration: line-through; text-decoration-thickness: 1px; }
+.na_kn_legend { display: flex; gap: 6px; font-size: 0.85em; }
+.na_kn_editbox { display: flex; flex-direction: column; gap: 6px; }
+.na_kn_ta { width: 100% !important; box-sizing: border-box; font-family: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.8em; resize: vertical; }
+.na_qb_q { width: 100% !important; box-sizing: border-box; }
+.na_qb_list { display: flex; flex-direction: column; gap: 10px; }
+.na_qb_who { font-weight: 600; font-size: 0.9em; margin-bottom: 4px; }
+.na_qb_row { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border-radius: 8px; font-size: 0.86em; }
+.na_qb_row.on { background: color-mix(in srgb, var(--na-accent) 10%, transparent); }
+.na_qb_row.over { opacity: 0.6; }
+.na_qb_row > input[type=checkbox] { margin-top: 3px; }
+.na_qb_text { flex: 1; min-width: 0; }
+.na_qb_src { font-size: 0.85em; }
+.na_qb_whoin { width: 7em !important; min-width: 0; margin: 0 !important; font-size: 0.9em; padding: 2px 6px !important; }
+.na_cite_msg { font-variant-numeric: tabular-nums; }
+.na_kn_editbox[hidden], .na_kn_list[hidden] { display: none; }
