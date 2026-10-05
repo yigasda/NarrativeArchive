@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.17.0';
+const VERSION = '2.17.1';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3734,9 +3734,9 @@ async function openWizard() {
           <small class="na_dim na_wz_info"></small>
         </div></div>
         <div class="na_wiz_step"><b>2</b><div class="na_wiz_main">
-          <div class="na_wiz_title">지시문과 함께 복사 <span class="na_dim">· 압축할 모델에 붙여넣기</span></div>
+          <div class="na_wiz_title">복사 <span class="na_dim">· 압축할 모델에 붙여넣기</span></div>
           <div class="na_row"><select class="text_pole na_wz_prompt"></select></div>
-          <div class="na_row_btns"><button type="button" class="na_btn na_small na_primary na_wz_copy"><i class="fa-solid fa-copy"></i> 복사</button><button type="button" class="na_btn na_small na_wz_save"><i class="fa-solid fa-download"></i> .txt 저장</button></div>
+          <div class="na_row_btns"><button type="button" class="na_btn na_small na_primary na_wz_copy"><i class="fa-solid fa-copy"></i> <span>복사</span></button><button type="button" class="na_btn na_small na_wz_save"><i class="fa-solid fa-download"></i> .txt 저장</button></div>
         </div></div>
         <div class="na_wiz_step"><b>3</b><div class="na_wiz_main">
           <div class="na_wiz_title">결과 붙여넣기</div>
@@ -3754,7 +3754,10 @@ async function openWizard() {
           <small class="na_dim">번호 검사·끊김·다시 쓴 섹션·미리보기를 거쳐 추가하고, 끝 번호까지 숨겨요.</small>
         </div></div>
       </div>`);
-    $root.find('.na_wz_prompt').html(g.prompts.map(p => `<option value="${esc(p.id)}">${esc(p.name)}${p.fav ? ' ★' : ''}</option>`).join('')).val(activePrompt(g).id);
+    // last choice is remembered; "__none" copies the raw log only
+    $root.find('.na_wz_prompt').html(`<option value="__none">지시문 없이 (원문만)</option>${g.prompts.map(p => `<option value="${esc(p.id)}">지시문: ${esc(p.name)}${p.fav ? ' ★' : ''}</option>`).join('')}`)
+        .val(g.wizPrompt === '__none' || g.prompts.some(p => p.id === g.wizPrompt) ? g.wizPrompt : activePrompt(g).id);
+    $root.find('.na_wz_prompt').on('change', function () { g.wizPrompt = this.value; saveGlobal(); });
     const range = () => {
         const from = Math.max(0, parseInt($root.find('.na_wz_from').val(), 10) || 0);
         const to = Math.min(last, parseInt($root.find('.na_wz_to').val(), 10));
@@ -3765,9 +3768,11 @@ async function openWizard() {
         const { from, to } = range();
         const items = buildExtract(from, to).filter(x => !(g.skipHidden && c.chat[x.i]?.is_system)).map(x => ({ ...x, text: cleanMessage(x.text, g) })).filter(x => x.text);
         raw = formatExtract(items, g);
-        const p = g.prompts.find(x => x.id === $root.find('.na_wz_prompt').val()) || activePrompt(g);
-        full = fillPrompt(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text });
-        $root.find('.na_wz_info').text(items.length ? `메시지 ${items.length}개 · 원문 약 ${fmt(await countTokens(raw))} 토큰 · 지시문까지 약 ${fmt(await countTokens(full))} 토큰` : '이 범위에 메시지가 없어요.');
+        const pid = $root.find('.na_wz_prompt').val();
+        const p = pid === '__none' ? null : (g.prompts.find(x => x.id === pid) || activePrompt(g));
+        full = p ? fillPrompt(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text }) : raw;
+        $root.find('.na_wz_copy span').text(p ? '지시문과 함께 복사' : '원문만 복사');
+        $root.find('.na_wz_info').text(items.length ? `메시지 ${items.length}개 · 원문 약 ${fmt(await countTokens(raw))} 토큰${p ? ` · 지시문까지 약 ${fmt(await countTokens(full))} 토큰` : ''}` : '이 범위에 메시지가 없어요.');
     };
     let t;
     $root.find('.na_wz_from, .na_wz_to, .na_wz_prompt').on('input change', () => { clearTimeout(t); t = setTimeout(build, 250); });
