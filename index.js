@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.0.6';
+const VERSION = '3.0.7';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1186,9 +1186,9 @@ function renderPanel() {
                 </div>
               </div>
               <details class="na_block na_details na_fold">
-                <summary>따로 하기</summary>
+                <summary>따로 하기 · 압축 설정</summary>
                 <div class="na_steps">
-                  <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>경계선 이후 메시지 · 지시문 붙여 복사</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                  <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>뽑기 옵션 · 압축 지시문 관리 · 복사</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step" id="na_open_append"><b>2</b><span><strong>아카이브에 추가</strong><small>압축본 붙여넣기 · 번호 검사 · 경계선 자동</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
               </details>
