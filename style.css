@@ -1831,3 +1831,29 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_tab_pane[data-pane="config"] .na_set_row .na_btn { border-radius: 10px; }
 .na_cfg_head { padding: 2px 2px 4px; }
 .na_cfg_head b { font-size: 1.15em; }
+
+/* ============ extract v2 */
+.na_ex2_card { display: flex; flex-direction: column; gap: 10px; border-radius: 20px; padding: 14px; }
+.na_ex2_info { display: flex; justify-content: space-between; font-size: 0.84em; color: var(--na-dim); }
+.na_ex2_info b { color: var(--SmartThemeBodyColor, inherit); }
+.na_ex2_card .na_cp_bar { height: 8px; }
+.na_ex2_card .na_v2_chips:empty { display: none; }
+.na_ex2_card .na_lastex:empty, .na_ex2_card .na_lastex[hidden] { display: none; }
+.na_ex2 .na_ex_prow select { max-width: 60%; margin: 0; }
+.na_ex2_preview { margin: 0; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--na-line); background: var(--na-card); font-size: 0.78em; line-height: 1.6; color: var(--na-dim); white-space: pre-wrap; word-break: break-word; max-height: 8.5em; overflow: hidden; }
+.na_ex2_btns .na_save_txt { flex: 1; }
+.na_ex2_btns .na_copy { flex: 2; }
+
+/* ============ append v2 */
+.na_ap2 .na_append_ta { width: 100%; box-sizing: border-box; height: 32vh !important; margin: 0; border-radius: 18px; font-family: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.84em; }
+.na_ap2_label { display: block; font-size: 0.78em; font-weight: 700; color: var(--na-dim); padding: 10px 14px 4px; }
+.na_ap2_checks .na_check { margin: 0; border: 0; border-top: 1px solid var(--na-line); border-radius: 0; background: transparent; padding: 10px 14px; font-size: 0.88em; }
+.na_ap2_checks .na_check > i:first-child { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 0.75em; flex: none; background: color-mix(in srgb, #2e8b57 16%, transparent); color: #2e8b57; }
+.na_ap2_checks .na_check_warn > i:first-child { background: color-mix(in srgb, #d9822b 18%, transparent); color: #b06a10; }
+.na_ap2_checks .na_check_soft > i:first-child { background: var(--na-card2); color: var(--na-dim); }
+.na_ap2_checks .na_ai_conflict { border-top: 1px solid var(--na-line); }
+.na_ap2_checks .na_ai_conflict i.fa-wand-magic-sparkles { color: var(--na-accent); margin-right: 4px; }
+.na_ap2_checks .na_conflict_out { margin: 0 14px 12px; }
+.na_ap2_end { display: flex; align-items: center; gap: 2px; color: var(--na-dim); font-weight: 600; }
+.na_ap2_end input { width: 5.5em !important; margin: 0 !important; text-align: center; font-weight: 600; }
+.na_ap2 .na_place:empty, .na_ap2 .na_append_info:empty { display: none; }

@@ -6685,34 +6685,34 @@ async function openExtract() {
     const fromLast = !!le && le.to <= last && le.to > m.boundary;
 
     const $root = $(`
-      <div class="na_popup">
-        <div class="na_ex_range">
-          <span class="na_range_label">범위</span>
-          <label># <input type="number" class="text_pole na_num na_from" min="0" max="${last}" value="${Math.max(0, defStart)}"></label>
-          <span>~</span>
-          <label># <input type="number" class="text_pole na_num na_to" min="0" max="${last}" value="${Math.max(0, last)}"></label>
-        </div>
-        <div class="na_lastex" ${le ? '' : 'hidden'}>
-          <i class="fa-solid fa-clock-rotate-left"></i>
-          <span class="na_lastex_text"></span>
-          <button type="button" class="na_linkbtn na_lastex_again">이 범위 다시</button>
-        </div>
-        <div class="na_block na_ex_card">
-          <div class="na_set_list">
-            <label class="na_set_row"><span><span>지시문 붙이기</span><small>다른 모델에 그대로 붙여넣기용</small></span><input type="checkbox" class="na_toggle na_opt_prompt"></label>
-            <div class="na_set_row na_ex_prow"><span>지시문</span><select class="text_pole na_psel_quick"></select></div>
-            <div class="na_set_row"><span><span>뽑기 옵션</span><small class="na_ex_optsum"></small></span>
-              <button type="button" class="na_btn na_small na_ex_toset"><i class="fa-solid fa-gear"></i> 설정</button></div>
+      <div class="na_popup na_v2 na_ex2">
+        <div class="na_v2_title"><b>원문 뽑기</b><small>압축할 메시지를 골라 복사하거나 .txt로 저장해요</small></div>
+        <div class="na_v2_card na_ex2_card">
+          <div class="na_wz2_range">
+            <label><small>부터</small><span>#<input type="number" class="text_pole na_from" min="0" max="${last}" value="${Math.max(0, defStart)}"></span></label>
+            <i class="fa-solid fa-arrow-right"></i>
+            <label><small>까지</small><span>#<input type="number" class="text_pole na_to" min="0" max="${last}" value="${Math.max(0, last)}"></span></label>
           </div>
+          <div class="na_v2_chips">
+            ${m.boundary >= 0 ? `<button type="button" class="na_ex2_quick" data-a="${m.boundary + 1}" data-b="${last}">경계선 다음부터 끝까지</button>` : ''}
+            <button type="button" class="na_lastex_again" ${le ? '' : 'hidden'}></button>
+          </div>
+          <div class="na_cp_bar"><span class="hid na_ex2_b1"></span><span class="raw na_ex2_b2"></span><span class="hid na_ex2_b3"></span></div>
+          <div class="na_ex2_info na_ex_info"></div>
+          <small class="na_v2_note na_lastex"><span class="na_lastex_text"></span></small>
         </div>
-        <div class="na_ex_info na_dim"></div>
-        <div class="na_ex_actions">
-          <button type="button" class="na_btn na_save_txt"><i class="fa-solid fa-download"></i> .txt 저장</button>
-          <button type="button" class="na_btn na_copy na_primary"><i class="fa-solid fa-copy"></i> <span class="na_copy_label">전체 복사</span></button>
+        <div class="na_v2_card na_v2_list">
+          <label class="na_cp_row"><span class="na_cp_txt"><span>지시문 붙이기</span><small>다른 모델에 그대로 붙여넣기용</small></span><input type="checkbox" class="na_toggle na_opt_prompt"></label>
+          <div class="na_cp_row na_ex_prow"><span class="na_cp_txt"><span>지시문</span></span><select class="text_pole na_psel_quick"></select></div>
+          <button type="button" class="na_cp_row na_ex_toset"><span class="na_cp_txt"><span>뽑기 옵션</span><small class="na_ex_optsum"></small></span><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <pre class="na_ex2_preview"></pre>
+        <div class="na_v2_row2 na_ex2_btns">
+          <button type="button" class="na_v2_btn na_save_txt"><i class="fa-solid fa-download"></i> .txt 저장</button>
+          <button type="button" class="na_v2_btn primary na_copy"><i class="fa-solid fa-copy"></i> <span class="na_copy_label">전체 복사</span></button>
         </div>
         <textarea class="na_ex_hidden" readonly></textarea>
       </div>`);
-
     $root.find('.na_opt_prompt').prop('checked', g.usePrompt);
     const fillQuick = () => $root.find('.na_psel_quick')
         .html([...g.prompts].sort((a, b) => b.fav - a.fav).map(p => `<option value="${esc(p.id)}">${p.fav ? '★ ' : ''}${esc(p.name)}</option>`).join(''))
@@ -6745,9 +6745,13 @@ async function openExtract() {
         $root.find('.na_prompt_state').text(g.usePrompt ? activePrompt(g).name : '안 붙임').toggleClass('na_chip_on', g.usePrompt);
         $root.find('.na_copy_label').text(g.usePrompt ? '지시문과 함께 복사' : '전체 복사');
         const skipped = all.length - items.length;
-        $root.find('.na_ex_info').text(items.length
-            ? `메시지 ${items.length}개${skipped ? ` (${skipped}개 뺌)` : ''} · 복사될 분량 약 ${fmt(await countTokens(output))} 토큰`
-            : '이 범위에 메시지가 없습니다.');
+        const tk = items.length ? await countTokens(output) : 0;
+        $root.find('.na_ex_info').html(items.length
+            ? `<span>메시지 ${items.length}개${skipped ? ` · ${skipped}개 뺌` : ''}</span><b>약 ${fmt(tk)} 토큰</b>`
+            : '<span>이 범위에 메시지가 없어요</span>');
+        const tot = Math.max(1, last + 1), a0 = Math.max(0, Math.min(from, last)), b0 = Math.max(a0, Math.min(to, last));
+        $root.find('.na_ex2_b1').css('flex', a0).toggle(a0 > 0); $root.find('.na_ex2_b2').css('flex', b0 - a0 + 1); $root.find('.na_ex2_b3').css('flex', tot - b0 - 1).toggle(tot - b0 - 1 > 0);
+        $root.find('.na_ex2_preview').text(current ? current.split('\n').slice(0, 6).join('\n') + (current.split('\n').length > 6 ? '\n…' : '') : '').prop('hidden', !current);
     };
 
     $root.find('.na_from, .na_to').on('change', render);
@@ -6756,8 +6760,10 @@ async function openExtract() {
     const showLast = () => {
         const x = getMeta().lastExport;
         $root.find('.na_lastex').prop('hidden', !x);
-        if (x) $root.find('.na_lastex_text').html(`최근 내보냄 <b>#${x.from}–#${x.to}</b> · ${esc(timeLabel(x.at))} · ${x.how === 'txt' ? '.txt 저장' : x.how === 'draft' ? 'AI 초안' : '복사'}`
-            + (fromLast && x === le ? ' <span class="na_dim">→ 그 다음부터 채웠어요</span>' : ''));
+        if (x) {
+            $root.find('.na_lastex_text').html(`최근 내보냄 #${x.from}–#${x.to} · ${esc(timeLabel(x.at))} · ${x.how === 'txt' ? '.txt 저장' : x.how === 'draft' ? 'AI 초안' : '복사'}${fromLast && x === le ? ' → 그 다음부터 채웠어요' : ''}`);
+            $root.find('.na_lastex_again').prop('hidden', false).text(`지난번 범위 #${x.from}–#${x.to}`);
+        }
     };
     const remember = async how => {
         const { from, to } = range();
@@ -6767,6 +6773,7 @@ async function openExtract() {
         refreshStatus();
     };
     showLast();
+    $root.find('.na_ex2_quick').on('click', function () { $root.find('.na_from').val(this.dataset.a); $root.find('.na_to').val(this.dataset.b); render(); });
     $root.find('.na_lastex_again').on('click', () => {
         const x = getMeta().lastExport;
         if (!x) return;
@@ -7123,36 +7130,33 @@ async function openAppend(prefill = {}) {
     const pre = prefill && typeof prefill === 'object' && 'text' in prefill ? prefill : {};
 
     const $root = $(`
-      <div class="na_popup">
-        <div class="na_append_head">
-          <span class="na_dim">새로 압축한 섹션을 붙여넣거나 파일로 불러오세요.</span>
-          <span class="na_row_btns">
-            <button type="button" class="na_btn na_small na_append_file_btn"><i class="fa-solid fa-file-arrow-up"></i> .txt 불러오기</button>
-          </span>
+      <div class="na_popup na_v2 na_ap2">
+        <div class="na_v2_titlebar">
+          <div class="na_v2_title"><b>아카이브에 추가</b><small>STATE·OPEN 앞에 넣고, 새 STATE로 바꿔요</small></div>
+          <button type="button" class="na_v2_pillbtn na_append_file_btn"><i class="fa-solid fa-file-arrow-up"></i> 파일</button>
           <input type="file" class="na_append_file" accept=".txt,.md,text/plain" hidden>
         </div>
-        <textarea class="text_pole na_append_ta" spellcheck="false" placeholder="## Y2 #574–#600 — ..."></textarea>
-        <div class="na_check na_numcheck" hidden></div>
-        <div class="na_check na_check_warn na_cut" hidden></div>
-        <div class="na_check na_whole" hidden><i class="fa-solid fa-file-circle-check"></i><div>
-          <b>아카이브 전체본 같아요</b> — 이미 있는 섹션이 거의 다 들어 있어요. 새 섹션만 붙이려면 그대로 <b>추가</b>, 이 내용으로 아카이브를 바꾸려면:
-          <div class="na_whole_row"><button type="button" class="na_btn na_small na_whole_btn"><i class="fa-solid fa-right-left"></i> 통째로 바꾸기</button></div>
-        </div></div>
-        <div class="na_check na_check_warn na_rw" hidden></div>
-        <div class="na_check na_check_soft na_names" hidden></div>
-        <div class="na_ai_row">
-          <button type="button" class="na_btn na_small na_ai_conflict"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 충돌 검사</button>
-          <small class="na_dim">기존 아카이브와 어긋나는 이름·날짜·사실을 찾아요</small>
+        <textarea class="text_pole na_append_ta" spellcheck="false" placeholder="## Y2 #574–#600 — 제목 (날짜, 장소)&#10;PLOT:&#10;- …"></textarea>
+        <div class="na_v2_card na_v2_list na_ap2_checks">
+          <span class="na_ap2_label">붙여넣은 글 검사</span>
+          <div class="na_check na_numcheck" hidden></div>
+          <div class="na_check na_check_warn na_cut" hidden></div>
+          <div class="na_check na_whole" hidden><i class="fa-solid fa-file-circle-check"></i><div>
+            <b>아카이브 전체본 같아요</b> — 이미 있는 섹션이 거의 다 들어 있어요. 새 섹션만 붙이려면 그대로 <b>추가</b>, 이 내용으로 아카이브를 바꾸려면:
+            <div class="na_whole_row"><button type="button" class="na_btn na_small na_whole_btn"><i class="fa-solid fa-right-left"></i> 통째로 바꾸기</button></div>
+          </div></div>
+          <div class="na_check na_check_warn na_rw" hidden></div>
+          <div class="na_check na_check_soft na_names" hidden></div>
+          <button type="button" class="na_cp_row na_ai_conflict"><span class="na_cp_txt"><span><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 충돌 검사</span><small>기존 아카이브와 어긋나는 이름·날짜·사실·해결된 떡밥</small></span><i class="fa-solid fa-chevron-right"></i></button>
+          <div class="na_ai_box na_conflict_out" hidden></div>
         </div>
-        <div class="na_ai_box na_conflict_out" hidden></div>
-        <div class="na_row">
-          <label>이번에 압축한 끝 번호 # <input type="number" class="text_pole na_num na_end" min="0" max="${last}" value="${Math.max(0, last)}"></label>
-          <span class="na_end_hint na_dim"></span>
+        <div class="na_v2_card na_v2_list">
+          <label class="na_cp_row"><span class="na_cp_txt"><span>이번에 압축한 끝 번호</span><small class="na_end_hint"></small></span><span class="na_ap2_end">#<input type="number" class="text_pole na_end" min="0" max="${last}" value="${Math.max(0, last)}"></span></label>
+          <label class="na_cp_row"><span class="na_cp_txt"><span>추가한 뒤 숨기기</span><small>마지막 ${m.keep}개는 남겨요</small></span><input type="checkbox" class="na_toggle na_do_hide" checked></label>
+          <label class="na_cp_row na_renum_row"><span class="na_cp_txt"><span class="na_renum_label">제목·안내문의 끝 번호도 바꾸기</span></span><input type="checkbox" class="na_toggle na_do_renum" checked></label>
         </div>
-        <label class="checkbox_label"><input type="checkbox" class="na_do_hide" checked><span>저장 후 숨기기 적용 (마지막 ${m.keep}개 남김)</span></label>
-        <label class="checkbox_label na_renum_row"><input type="checkbox" class="na_do_renum" checked><span class="na_renum_label">제목·안내문의 끝 번호도 바꾸기</span></label>
-        <div class="na_place na_dim"></div>
-        <details class="na_block na_details na_ap_preview" hidden>
+        <small class="na_v2_note na_place"></small>
+        <details class="na_v2_card na_v2_more na_ap_preview" hidden>
           <summary>추가하면 바뀌는 부분 <span class="na_chip na_chip_add na_ap_add"></span><span class="na_chip na_chip_del na_ap_del"></span></summary>
           <div><div class="na_ap_tr_row"></div><div class="na_diff na_ap_diff"></div></div>
         </details>
