@@ -134,22 +134,28 @@ const extractToText = items => items.map(x => `[${x.i}] ${x.name}:\n${x.text}`).
 // ---------------------------------------------------------------- sections
 
 function parseSections(text) {
-    const re = /^#{1,3} .*$/gm;
+    const re = /^(#{1,3}) .*$/gm;
     const heads = [];
     let m;
-    while ((m = re.exec(text)) !== null) heads.push({ start: m.index, title: m[0] });
+    while ((m = re.exec(text)) !== null) heads.push({ start: m.index, title: m[0], level: m[1].length });
     const sections = [];
     if (!heads.length) {
-        if (text.trim()) sections.push({ title: '(제목 없음)', start: 0, end: text.length });
+        if (text.trim()) sections.push({ title: '(제목 없음)', start: 0, end: text.length, level: 1, group: false });
         return sections;
     }
-    if (text.slice(0, heads[0].start).trim()) sections.push({ title: '(머리말)', start: 0, end: heads[0].start });
+    if (text.slice(0, heads[0].start).trim()) sections.push({ title: '(머리말)', start: 0, end: heads[0].start, level: 1, group: false });
     heads.forEach((h, idx) => {
-        const end = idx + 1 < heads.length ? heads[idx + 1].start : text.length;
-        sections.push({ title: h.title.replace(/^#+\s*/, ''), start: h.start, end });
+        const next = heads[idx + 1];
+        const end = next ? next.start : text.length;
+        // A heading directly followed by deeper headings ("# ── Y1 ──" → "## #0–#47") is a group divider, not a card.
+        const group = !!next && next.level > h.level;
+        const note = text.slice(h.start + h.title.length, end).replace(/^\s*-{3,}\s*$/gm, '').trim();
+        sections.push({ title: h.title.replace(/^#+\s*/, ''), start: h.start, end, level: h.level, group, note });
     });
     return sections;
 }
+
+const groupLabel = title => title.replace(/^[\s─━—–=-]+|[\s─━—–=-]+$/g, '') || title;
 
 function highlight(text, query) {
     const safe = esc(text);
@@ -178,7 +184,7 @@ async function refreshStatus() {
     const archiveTok = await countTokens(m.text);
     const after = m.boundary >= 0 ? buildExtract(m.boundary + 1, last) : [];
     const afterTok = await countTokens(extractToText(after));
-    const sections = parseSections(m.text).length;
+    const sections = parseSections(m.text).filter(x => !x.group).length;
 
     const lines = [];
     lines.push(`<div><b>아카이브</b> ${fmt(archiveTok)} 토큰 · 섹션 ${sections}개 ${m.enabled ? '' : '<span class="na_warn">(주입 꺼짐)</span>'}</div>`);
@@ -332,21 +338,55 @@ async function openViewer() {
     const $info = $root.find('.na_search_info');
     const $full = $root.find('.na_full');
 
+    const collapsed = new Set();
     const renderList = () => {
         const q = $search.val().trim();
         const ql = q.toLowerCase();
         const sections = parseSections(m.text);
+        const cardCount = sections.filter(x => !x.group).length;
         let shown = 0, hits = 0;
         $list.empty();
+        const groupStack = [];
         sections.forEach((s, idx) => {
+            while (groupStack.length && groupStack[groupStack.length - 1].level >= s.level) groupStack.pop();
             const body = m.text.slice(s.start, s.end);
             let count = 0;
             if (q) {
                 const re = new RegExp(escRe(q), 'gi');
                 count = (body.match(re) || []).length;
-                if (!count) return;
                 hits += count;
             }
+            if (s.group) {
+                const key = s.title;
+                const isOpen = q || !collapsed.has(key);
+                const $g = $(`
+                  <div class="na_group na_lv${s.level}" data-idx="${idx}">
+                    <div class="na_group_head">
+                      <i class="fa-solid fa-chevron-${isOpen ? 'down' : 'right'} na_group_chev"></i>
+                      <span class="na_group_title">${highlight(groupLabel(s.title), q)}</span>
+                      <span class="na_group_line"></span>
+                      <span class="na_card_meta na_group_meta"></span>
+                      ${s.note ? '<i class="fa-solid fa-pen na_group_edit" title="머리글 편집"></i>' : ''}
+                    </div>
+                    ${s.note ? `<div class="na_group_note na_dim">${highlight(s.note, q)}</div>` : ''}
+                    <div class="na_card_body" hidden></div>
+                    <div class="na_group_items" ${isOpen ? '' : 'hidden'}></div>
+                  </div>`);
+                $g.find('.na_group_head').on('click', () => {
+                    if (q) return;
+                    collapsed.has(key) ? collapsed.delete(key) : collapsed.add(key);
+                    renderList();
+                });
+                $g.find('.na_group_edit').on('click', e => {
+                    e.stopPropagation();
+                    $g.find('.na_group_note').prop('hidden', true);
+                    editSection($g, s);
+                });
+                (groupStack.length ? groupStack[groupStack.length - 1].$items : $list).append($g);
+                groupStack.push({ level: s.level, $items: $g.children('.na_group_items') });
+                return;
+            }
+            if (q && !count) return;
             shown++;
             const $card = $(`
               <div class="na_card" data-idx="${idx}">
@@ -363,15 +403,22 @@ async function openViewer() {
               </div>`);
             $card.find('.na_card_head').on('click', () => $card.find('.na_card_body').prop('hidden', (i, v) => !v));
             $card.find('.na_edit').on('click', e => { e.stopPropagation(); editSection($card, s); });
-            $list.append($card);
+            (groupStack.length ? groupStack[groupStack.length - 1].$items : $list).append($card);
         });
-        $info.text(q ? `"${q}" — 섹션 ${shown}개에서 ${hits}건` : `섹션 ${sections.length}개 · 제목을 누르면 펼쳐져요`);
+        // group meta = number of cards inside; in search, hide groups with no hits
+        $list.find('.na_group').each(function () {
+            const $g = $(this);
+            const n = $g.find('.na_card').length;
+            $g.find('> .na_group_head .na_group_meta').text(`${n}개`);
+            if (q && !n && !$g.find('> .na_group_head mark, > .na_group_note mark').length) $g.remove();
+        });
+        $info.text(q ? `"${q}" — 섹션 ${shown}개에서 ${hits}건` : `섹션 ${cardCount}개 · 제목을 누르면 펼쳐져요`);
         if (!sections.length) $list.html('<div class="na_dim">아카이브가 비어 있습니다. "전체 편집"에 붙여넣거나 "불러오기"를 쓰세요.</div>');
     };
 
     const editSection = ($card, s) => {
         const original = m.text.slice(s.start, s.end);
-        const $body = $card.find('.na_card_body').prop('hidden', false).empty();
+        const $body = $card.children('.na_card_body').prop('hidden', false).empty();
         const $ta = $('<textarea class="text_pole na_sec_edit" spellcheck="false"></textarea>').val(original.replace(/\s+$/, ''));
         const $btns = $(`<div class="na_row na_right">
             <div class="menu_button na_cancel">취소</div>
