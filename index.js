@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.7.4';
+const VERSION = '3.7.5';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -4301,12 +4301,37 @@ async function runRouter(m, { force = false } = {}) {
 // ---------------------------------------------------------------- compression wizard
 // The whole routine in one place; the last step hands the pasted text to "아카이브에 추가" with its checks.
 
-const AI_SYS_GRADE = `You grade a summary of a role-play log against the raw log it was made from.
-List only real problems:
-- 지어냄: facts, lines or events in the summary that the log does not contain
-- 빠짐: important events, decisions, reveals or changes in relationships that the summary leaves out
-- 틀림: wrong speaker, wrong order, wrong numbers or ranges in headings
-Ignore wording and style. Answer in Korean, one bullet per problem, starting with the kind: "- 지어냄: … (#메시지번호)". Cite the raw message numbers you checked. If the summary is faithful, answer exactly: 문제 없음`;
+const AI_SYS_GRADE = `GOAL
+Check a SUMMARY of a role-play log against the RAW LOG it was made from, so nothing wrong goes into the story archive.
+
+YOU GET
+- RAW LOG: the original messages. Each starts with its number in brackets, like [512], and the speaker's name.
+- SUMMARY: section blocks ("## #from–#to — title" with bullet points). It may end with STATE and OPEN blocks.
+
+HOW TO WORK
+Step 1. Read the whole RAW LOG, to the last message.
+Step 2. Go through the SUMMARY one bullet at a time. For each bullet, find the messages it is based on.
+Step 3. Then go through the RAW LOG again and look for important things the SUMMARY never mentions.
+
+REPORT ONLY THESE
+1. 지어냄 (made up): a fact, event, line or detail in the SUMMARY that is not in the RAW LOG.
+    e.g. the summary says Ren cried; in the log she only went quiet.
+2. 틀림 (wrong): it is in the log but the summary gets it wrong: wrong person, wrong speaker of a quote, wrong order, wrong place or time, a quote with changed words, or a heading whose #from–#to does not match the messages.
+    e.g. the summary says Ivo said "…", but in the log Mara said it.
+3. 빠짐 (missing): an important event, decision, promise, confession, secret revealed, injury, or change in a relationship that the SUMMARY leaves out.
+    Small talk, repeated actions and atmosphere are NOT important.
+
+DO NOT REPORT
+- wording, style, length, or how something could be phrased better
+- the summary being shorter than the log: shortening is its job
+- STATE and OPEN facts that come from before this log (they carry over from the archive); only check what they say about events in this log
+- anything you are not sure about
+
+OUTPUT: Korean, one bullet per problem, most serious first, exactly like this
+- 지어냄: <what is wrong> (#<message number>)
+- 틀림: <what is wrong, and what the log really says> (#<message number>)
+- 빠짐: <what is missing> (#<message number>)
+Always give the message number(s) you checked. If the summary is faithful, write exactly: 문제 없음`;
 
 async function openWizard() {
     const c = ctx();
