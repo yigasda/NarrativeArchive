@@ -3403,37 +3403,81 @@ async function openPreview() {
     const c = ctx();
     const m = getMeta();
     const b = await currentInjection();
-    const where = Number(m.position) === 1 ? `채팅 안 깊이 ${m.depth}` : POSITIONS[m.position];
+    const where = Number(m.position) === 1 ? `채팅 안 · ${m.depth}` : POSITIONS[m.position];
     const titles = new Set(parseSections(m.text).map(sectionKey));
     const muted = [...mutedSet(m)].filter(t => titles.has(t));
     const waiting = [...linkWaiting(m)].filter(t => titles.has(t) && !muted.includes(t));
-    const list = (arr, cls) => arr.map(t => `<li class="${cls}">${esc(keyLabel(t))}</li>`).join('');
+    const pinned = pinnedSet(m);
+    const fadeN = { short: 0, line: 0 };
+    for (const v of (b.faded || new Map()).values()) fadeN[v]++;
+    const worldN = worldBooks().filter(w => String(w.text || '').trim() && worldIsOn(m, w)).length;
+    const outN = muted.length + waiting.length + b.trimmed.length;
+    const text = m.enabled ? b.text : '';
+    // the injected text, headings marked with how each section goes in
+    const tagOf = s => {
+        const k = sectionKey(s), f = b.faded?.get(k);
+        if (f) return `<span class="na_pv2_tag ${f}">${f === 'line' ? '한 줄' : '짧게'}</span>`;
+        return pinned.has(k) ? '<span class="na_pv2_tag pin">고정</span>' : '';
+    };
+    const code = headsOnly => {
+        if (!text.trim()) return `<span class="na_pv2_dimline">${m.enabled ? '들어갈 내용이 없어요.' : '주입이 꺼져 있어요. 켜면 여기 보이는 대로 들어가요.'}</span>`;
+        const heads = new Map(parseSections(text).filter(s => !/^\((?:머리말|제목 없음)\)$/.test(s.title)).map(s => [s.start, s]));
+        let pos = 0;
+        return text.split('\n').map(line => {
+            const s = heads.get(pos);
+            pos += line.length + 1;
+            if (s) return `<div class="na_pv2_h">${esc(line)} ${tagOf(s)}</div>`;
+            if (headsOnly) return '';
+            if (/^_.*_$/.test(line.trim())) return `<div class="na_pv2_dimline">${esc(line)}</div>`;
+            return `<div>${esc(line) || '&nbsp;'}</div>`;
+        }).join('');
+    };
+    const list = (arr, cls, why) => arr.map(t => `<div class="na_cp_row"><span class="na_pv2_dot ${cls}"></span><span class="na_cp_txt"><b>${esc(keyLabel(t))}</b></span><small class="na_v2_note">${why}</small></div>`).join('');
     const $root = $(`
-      <div class="na_popup">
-        <div class="na_block_head"><div>
-          <h4>주입 미리보기</h4>
-          <p>다음 응답 때 프롬프트에 실제로 들어가는 그대로예요. 꺼 둔 섹션, 키워드 연동, AI 라우터, 망각 곡선, 세계관이 다 반영돼 있어요.</p>
-        </div></div>
-        <div class="na_pv_stats">
-          <span class="na_chip ${m.enabled && b.text ? 'na_chip_on' : 'na_chip_off'}">${m.enabled ? (b.text ? '주입 중' : '비어 있음') : '주입 꺼짐'}</span>
-          <span class="na_chip">${fmt(b.tokens)} 토큰${b.cap ? ` / 상한 ${fmt(b.cap)}` : ''}</span>
-          <span class="na_chip">${esc(where)} · ${esc(ROLES[m.role] || '')}</span>
-          ${b.over ? '<span class="na_chip na_chip_warn">상한 넘음</span>' : ''}
+      <div class="na_popup na_v2 na_pv2">
+        <div class="na_v2_titlebar">
+          <div class="na_v2_title"><b>주입 미리보기</b><small>다음 응답 때 실제로 들어가는 그대로</small></div>
+          <button type="button" class="na_v2_btn primary na_pv_copy" ${text ? '' : 'disabled'}><i class="fa-regular fa-copy"></i> 복사</button>
         </div>
-        ${muted.length || waiting.length || b.trimmed.length ? `
-        <details class="na_block na_details">
-          <summary>빠진 섹션 ${muted.length + waiting.length + b.trimmed.length}개</summary>
-          <div><ul class="na_pv_out">${list(muted, 'na_pv_muted')}${list(waiting, 'na_pv_wait')}${list(b.trimmed, 'na_pv_trim')}</ul>
-          <div class="na_dim na_pv_legend"><span class="na_pv_muted">스위치로 끔</span> · <span class="na_pv_wait">키워드 대기</span> · <span class="na_pv_trim">상한으로 뺌</span></div></div>
-        </details>` : ''}
-        <textarea class="text_pole na_full na_pv_text" readonly spellcheck="false"></textarea>
-        <div class="na_row na_right">
-          <button type="button" class="na_btn na_pv_copy"><i class="fa-regular fa-copy"></i> 복사</button>
+        <div class="na_pv2_stats">
+          <div class="${b.over ? 'over' : ''}"><small>분량</small><b>${m.enabled ? fmt(b.tokens) : '꺼짐'}</b>${b.cap ? `<small>상한 ${fmt(b.cap)}</small>` : ''}</div>
+          <div><small>자리</small><b>${esc(where || '')}</b></div>
+          <div><small>역할</small><b>${esc(ROLES[m.role] || '')}</b></div>
         </div>
+        <div class="na_pv2_chips">
+          <span class="world">세계관 ${worldN}</span>
+          ${fadeCfg(m).on ? `<span class="fade">짧게 ${fadeN.short} · 한 줄 ${fadeN.line}</span>` : ''}
+          <span class="wait">키워드 대기 ${waiting.length}</span>
+          <span class="off">꺼 둠 ${muted.length}</span>
+        </div>
+        <div class="na_pv2_code"></div>
+        <div class="na_pv2_out" hidden>
+          <div class="na_v2_label">빠진 섹션</div>
+          <div class="na_v2_card na_v2_list">${list(muted, 'off', '스위치로 끔')}${list(waiting, 'wait', '키워드 대기')}${list(b.trimmed, 'trim', '상한으로 뺌')}</div>
+        </div>
+        <div class="na_v2_row2">
+          <button type="button" class="na_v2_btn na_pv2_showout" ${outN ? '' : 'disabled'}>${outN ? `빠진 섹션 ${outN}개 보기` : '빠진 섹션 없음'}</button>
+          <button type="button" class="na_v2_btn na_pv2_heads">제목만 보기</button>
+        </div>
+        <textarea class="na_pv2_copybuf" readonly tabindex="-1" aria-hidden="true"></textarea>
       </div>`);
-    $root.find('.na_pv_text').val(m.enabled ? b.text : '');
+    let headsOnly = false;
+    const draw = () => $root.find('.na_pv2_code').html(code(headsOnly));
+    draw();
+    $root.find('.na_pv2_copybuf').val(text);
+    $root.find('.na_pv2_heads').on('click', function () {
+        headsOnly = !headsOnly;
+        $(this).toggleClass('active', headsOnly).text(headsOnly ? '전체 보기' : '제목만 보기');
+        draw();
+    });
+    $root.find('.na_pv2_showout').on('click', function () {
+        const $o = $root.find('.na_pv2_out');
+        const show = $o.prop('hidden');
+        $o.prop('hidden', !show);
+        $(this).toggleClass('active', show).text(show ? '빠진 섹션 접기' : `빠진 섹션 ${outN}개 보기`);
+    });
     $root.find('.na_pv_copy').on('click', async () => {
-        const ok = await copyText(b.text, $root.find('.na_pv_text')[0]);
+        const ok = await copyText(b.text, $root.find('.na_pv2_copybuf')[0]);
         ok ? toastr.success('복사됨') : toastr.warning('복사가 막혀 있어요.');
     });
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
@@ -4949,26 +4993,57 @@ async function openBranches() {
     const c = ctx();
     const m = getMeta();
     const here = currentChatId();
-    const $root = $(`<div class="na_popup"><div class="na_br_body"></div></div>`);
+    const $root = $(`<div class="na_popup na_v2 na_bn2"><div class="na_v2_title"><b>분기</b><small>갈라질 때 아카이브도 같이 복사돼요. 분기 지점 뒤 섹션을 정리해요</small></div><div class="na_bn2_body"></div></div>`);
+    const icon = (cls, svg) => `<span class="na_bn2_icon ${cls}">${svg}</span>`;
+    const ICON_CHAT = '<i class="fa-regular fa-message"></i>';
+    const ICON_BRANCH = '<i class="fa-solid fa-code-branch"></i>';
     const render = () => {
         const b = branchState(m);
-        $root.find('.na_br_body').html(`
-          <div class="na_block_head"><div><h4>분기</h4><p>실리태번에서 분기를 만들면 아카이브도 같이 복사돼요. 여기서 원본과 비교하고, 분기 지점 뒤의 섹션을 정리해요.</p></div></div>
-          ${b.parent ? `<div class="na_br_card"><div><b>원본 채팅</b><div class="na_dim">${esc(b.parent)}</div></div>
-              <div class="na_row_btns"><button type="button" class="na_btn na_small na_br_cmp_parent"><i class="fa-solid fa-code-compare"></i> 원본 아카이브와 비교</button></div></div>`
-            : '<div class="na_br_card na_dim">이 채팅은 분기가 아니에요 (원본 채팅 정보가 없어요).</div>'}
-          ${b.ahead.length ? `<div class="na_br_card na_br_warn">
-              <div><b>분기 지점 뒤의 섹션 ${b.ahead.length}개</b><div class="na_dim">이 채팅은 #${b.last}까지예요. 아래 섹션은 원본에서 그 뒤에 일어난 일이라 이 분기엔 없어요.</div>
-                <ul>${b.ahead.map(x => `<li>${esc(x.s.title)}</li>`).join('')}</ul>
-                <div class="na_dim">STATE·OPEN도 원본의 마지막 시점 기준일 수 있어요. 복구 지점이 있으면 그걸로 되돌리는 게 가장 깔끔해요.</div></div>
-              <div class="na_row_btns">
-                ${b.fit ? `<button type="button" class="na_btn na_small na_primary na_br_restore">복구 지점으로 (${esc(timeLabel(b.fit.at))} · ${esc(b.fit.reason)})</button>` : ''}
-                <button type="button" class="na_btn na_small na_br_cut">이 섹션들만 빼기</button>
-              </div></div>` : ''}
-          <div class="na_br_card"><div><b>이 채팅에서 갈라진 분기</b><div class="na_dim">같은 캐릭터의 채팅을 열어 원본이 이 채팅인 걸 찾아요.</div></div>
-            <div class="na_row_btns"><button type="button" class="na_btn na_small na_br_find"><i class="fa-solid fa-magnifying-glass"></i> 찾기</button></div>
-            <div class="na_br_kids"></div></div>`);
+        const parentName = b.parent ? esc(String(b.parent).replace(/\s*-\s*\d{4}-\d{1,2}-\d{1,2}.*$/, '') || b.parent) : '';
+        const rng = x => `${b.cur ? `${esc(b.cur)} ` : ''}#${x.from}–#${x.to}`;
+        const name = x => esc(x.s.title.replace(RANGE_HEAD, '$5').replace(/^\s*[—–-]\s*/, '').trim() || x.s.title);
+        $root.find('.na_bn2_body').html(`
+          ${b.parent ? `
+          <div class="na_v2_card na_bn2_map">
+            <div class="na_bn2_flow">
+              <div class="na_bn2_node">${icon('', ICON_CHAT)}<b>원본</b><small title="${esc(b.parent)}">${esc(b.parent)}</small></div>
+              <div class="na_bn2_link"><b>#${b.last}에서 갈라짐</b><span></span></div>
+              <div class="na_bn2_node">${icon('here', ICON_BRANCH)}<b>이 채팅</b><small>메시지 ${fmt(b.last + 1)}개</small></div>
+            </div>
+            ${b.ahead.length ? `<div class="na_bn2_warn"><i class="fa-solid fa-triangle-exclamation"></i><span>분기 지점 뒤 이야기가 섹션 ${b.ahead.length}개에 섞여 있어요. 이 채팅에선 일어나지 않은 일이에요.</span></div>`
+              : '<div class="na_bn2_ok"><i class="fa-solid fa-check"></i><span>분기 지점 뒤에 쓴 섹션이 없어요.</span></div>'}
+            <button type="button" class="na_v2_btn na_br_cmp_parent"><i class="fa-solid fa-code-compare"></i> 원본(${parentName}) 아카이브와 비교</button>
+          </div>` : '<div class="na_v2_card na_v2_note">이 채팅은 분기가 아니에요 (원본 채팅 정보가 없어요).</div>'}
+          ${b.ahead.length ? `
+          <div class="na_v2_label">#${b.last} 뒤에 쓴 섹션</div>
+          <div class="na_v2_card na_v2_list">${b.ahead.map((x, i) => `
+            <div class="na_cp_row"><span class="na_cp_txt"><small>${rng(x)}</small><b>${name(x)}</b></span>
+              <button type="button" class="na_v2_pillbtn danger na_bn2_drop" data-i="${i}">빼기</button></div>`).join('')}
+          </div>
+          <div class="na_bn2_acts">
+            <button type="button" class="na_v2_btn primary na_br_cut">${b.ahead.length === 1 ? '이 섹션' : `섹션 ${b.ahead.length}개`} 빼고 #${b.last}까지로 맞추기</button>
+            ${b.fit ? `<button type="button" class="na_v2_btn na_br_restore">복구 지점으로 되돌리기 <small>(${esc(timeLabel(b.fit.at))} · ${esc(b.fit.reason)})</small></button>` : ''}
+          </div>
+          <div class="na_v2_note">STATE·OPEN도 원본의 마지막 시점 기준일 수 있어요. 맞추고 나서 확인해 주세요.</div>` : ''}
+          <div class="na_bn2_find">
+            <div class="na_bn2_findrow"><span class="na_cp_txt"><b>이 채팅에서 갈라진 분기</b><small>같은 캐릭터 채팅을 열어 찾아요</small></span>
+              <button type="button" class="na_v2_btn na_br_find"><i class="fa-solid fa-magnifying-glass"></i> 찾기</button></div>
+            <div class="na_br_kids"></div>
+          </div>`);
     };
+    const cutSections = async (drop, n) => {
+        const b = branchState(m);
+        const secs = parseSections(m.text);
+        const next = secs.filter(x => !drop.has(x.start)).map(x => m.text.slice(x.start, x.end)).join('');
+        const end = lastRangeEnd(next);
+        await commitText(next, '분기 정리 전', { boundary: m.boundary >= 0 ? Math.min(m.boundary, end ?? b.last, b.last) : m.boundary });
+        toastr.success(`${n}개 뺐어요. STATE·OPEN이 맞는지 확인해 주세요.`); render();
+    };
+    $root.on('click', '.na_bn2_drop', async function () {
+        const x = branchState(m).ahead[Number(this.dataset.i)];
+        if (!x || !await confirm('섹션 빼기', `"${esc(x.s.title)}"을 뺄까요? 지금 내용은 복구 지점에 남아요.`)) return;
+        await cutSections(new Set([x.s.start]), 1);
+    });
     render();
     const compareWith = async (id, label) => {
         try {
@@ -4987,12 +5062,7 @@ async function openBranches() {
     $root.on('click', '.na_br_cut', async () => {
         const b = branchState(m);
         if (!await confirm('섹션 빼기', `분기 지점 뒤의 섹션 ${b.ahead.length}개를 뺄까요? 지금 내용은 복구 지점에 남아요.`)) return;
-        const drop = new Set(b.ahead.map(x => x.s.start));
-        const secs = parseSections(m.text);
-        const next = secs.filter(x => !drop.has(x.start)).map(x => m.text.slice(x.start, x.end)).join('');
-        const end = lastRangeEnd(next);
-        await commitText(next, '분기 정리 전', { boundary: m.boundary >= 0 ? Math.min(m.boundary, end ?? b.last, b.last) : m.boundary });
-        toastr.success(`${b.ahead.length}개 뺐어요. STATE·OPEN이 맞는지 확인해 주세요.`); render();
+        await cutSections(new Set(b.ahead.map(x => x.s.start)), b.ahead.length);
     });
     $root.on('click', '.na_br_find', async function () {
         const $kids = $root.find('.na_br_kids').html('<div class="na_dim">찾는 중…</div>');
@@ -5004,10 +5074,10 @@ async function openBranches() {
                 $kids.html(`<div class="na_dim">찾는 중… ${i + 1}/${chats.length}</div>`);
                 try { const f = await fetchOtherChat(x.id); if (f.meta?.main_chat === here) kids.push({ ...x, arc: f.meta?.[MODULE], n: f.messages.length }); } catch { /* skip unreadable */ }
             }
-            $kids.html(kids.length ? kids.map(k => `
-              <div class="na_pick"><div class="na_pick_main"><span class="na_pick_name">${esc(k.label)}</span>
-                <span class="na_pick_meta">메시지 ${fmt(k.n)}개${k.arc?.text?.trim() ? ` · 아카이브 #${lastRangeEnd(k.arc.text) ?? '?'}까지` : ' · 아카이브 없음'}</span></div>
-                ${k.arc?.text?.trim() ? `<button type="button" class="na_btn na_small na_br_cmp" data-id="${esc(k.id)}">비교</button>` : ''}</div>`).join('') : '<div class="na_dim">이 채팅에서 갈라진 분기가 없어요.</div>');
+            $kids.html(kids.length ? `<div class="na_v2_list">${kids.map(k => `
+              <div class="na_cp_row"><span class="na_cp_txt"><b>${esc(k.label)}</b>
+                <small>메시지 ${fmt(k.n)}개${k.arc?.text?.trim() ? ` · 아카이브 #${lastRangeEnd(k.arc.text) ?? '?'}까지` : ' · 아카이브 없음'}</small></span>
+                ${k.arc?.text?.trim() ? `<button type="button" class="na_v2_pillbtn na_br_cmp" data-id="${esc(k.id)}">비교</button>` : ''}</div>`).join('')}</div>` : '<div class="na_v2_note">이 채팅에서 갈라진 분기가 없어요.</div>');
         } catch (e) { $kids.html('<div class="na_dim">채팅 목록을 못 불러왔어요.</div>'); }
         $(this).prop('disabled', false);
     });
