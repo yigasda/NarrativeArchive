@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.1.2';
+const VERSION = '3.2.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1200,6 +1200,9 @@ function renderPanel() {
                   <div class="na_set_list">
                     <label class="na_set_row"><span>숨긴 메시지 빼기</span><input type="checkbox" class="na_toggle" id="na_opt_hidden"></label>
                     <label class="na_set_row"><span><span>태그 지우기</span><small>&lt;think&gt; 블록 통째로, 나머지 HTML 태그는 글자만 남김</small></span><input type="checkbox" class="na_toggle" id="na_opt_tags"></label>
+                    <div class="na_set_row na_strip_row"><span><span>더 지울 것</span><small>한 줄에 하나 · 태그 이름(<code>scene_plan</code>)은 그 블록을 통째로, <code>/정규식/</code>은 맞는 부분을, 그 밖의 글자는 그대로 지워요. 태그 지우기를 꺼도 적용돼요</small></span></div>
+                    <textarea class="text_pole na_strip_ta" id="na_strip_custom" rows="3" spellcheck="false" placeholder="scene_plan&#10;/\[OOC:[^\]]*\]/"></textarea>
+                    <small class="na_strip_info" id="na_strip_info"></small>
                     <label class="na_set_row"><span>머리글</span>
                       <select class="text_pole" id="na_opt_name">
                         <option value="full">[번호] 이름:</option>
@@ -4815,7 +4818,34 @@ function lastRangedSection(text) {
     return s ? trimEnd(text.slice(s.start, s.end)) : '';
 }
 
+// "지울 것" lines → RegExps. A bare tag name (scene_plan or <scene_plan>) removes that whole block,
+// /…/flags is a regular expression, anything else is removed as plain text.
+function stripPatterns(src) {
+    const out = [], bad = [];
+    for (const raw of String(src || '').split('\n')) {
+        const line = raw.trim();
+        if (!line) continue;
+        const rx = line.match(/^\/(.+)\/([a-z]*)$/s);
+        try {
+            if (rx) out.push(new RegExp(rx[1], rx[2].includes('g') ? rx[2] : `${rx[2]}g`));
+            else {
+                const tag = line.match(/^<?\/?([A-Za-z][\w:.-]*)\/?>?$/);
+                if (tag) {
+                    const n = escRe(tag[1]);
+                    out.push(new RegExp(`<${n}\\b[^>]*>[\\s\\S]*?<\\/${n}\\s*>|<${n}\\b[^>]*\\/>`, 'gi'));
+                } else out.push(new RegExp(escRe(line), 'g'));
+            }
+        } catch { bad.push(line); }
+    }
+    return { list: out, bad };
+}
+
 function cleanMessage(text, g) {
+    const pats = stripPatterns(globalSettings().stripCustom).list;
+    if (pats.length) {
+        for (const re of pats) text = text.replace(re, '');
+        if (!g.stripTags) return text.replace(/\n{3,}/g, '\n\n').trim();
+    }
     if (!g.stripTags) return text;
     return text
         .replace(/<(think|thinking|details)[^>]*>[\s\S]*?<\/\1>/gi, '')
@@ -4892,7 +4922,7 @@ async function openExtract() {
     const showProw = () => $root.find('.na_ex_prow').toggle(!!g.usePrompt);
     showProw();
     fillQuick();
-    $root.find('.na_ex_optsum').text(`${[g.skipHidden ? '숨긴 메시지 뺌' : '숨긴 메시지 포함', g.stripTags ? '태그 지움' : '', { full: '[번호] 이름:', name: '이름:', number: '[번호]' }[g.nameStyle] || ''].filter(Boolean).join(' · ')}`);
+    $root.find('.na_ex_optsum').text(`${[g.skipHidden ? '숨긴 메시지 뺌' : '숨긴 메시지 포함', g.stripTags ? '태그 지움' : '', stripPatterns(g.stripCustom).list.length ? `더 지울 것 ${stripPatterns(g.stripCustom).list.length}개` : '', { full: '[번호] 이름:', name: '이름:', number: '[번호]' }[g.nameStyle] || ''].filter(Boolean).join(' · ')}`);
     $root.find('.na_ex_toset').on('click', () => { $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoCompressSettings(); });
 
     let current = '';
@@ -4968,6 +4998,8 @@ function renderPromptSettings() {
     const g = globalSettings();
     $('#na_opt_hidden').prop('checked', !!g.skipHidden);
     $('#na_opt_tags').prop('checked', !!g.stripTags);
+    if (document.activeElement?.id !== 'na_strip_custom') $('#na_strip_custom').val(g.stripCustom || '');
+    showStripInfo();
     $('#na_opt_name').val(g.nameStyle);
     const $h = $('#na_plib');
     if (!$h.length) return;
@@ -5004,6 +5036,7 @@ function bindPromptSettings() {
         </div>`);
     $('#na_opt_hidden').on('change', function () { g().skipHidden = this.checked; saveGlobal(); });
     $('#na_opt_tags').on('change', function () { g().stripTags = this.checked; saveGlobal(); });
+    $('#na_strip_custom').on('input', function () { g().stripCustom = this.value; saveGlobal(); showStripInfo(); });
     $('#na_opt_name').on('change', function () { g().nameStyle = this.value; saveGlobal(); });
     const pick = id => { g().activePrompt = id; saveGlobal(); renderPromptSettings(); };
     const askName = async (title, value) => {
@@ -5048,6 +5081,12 @@ function bindPromptSettings() {
     });
     $('#na_cmp_settings').on('toggle', function () { if (this.open) renderPromptSettings(); });
     renderPromptSettings();
+}
+
+function showStripInfo() {
+    const { list, bad } = stripPatterns(globalSettings().stripCustom);
+    $('#na_strip_info').toggleClass('na_warn_txt', !!bad.length)
+        .text(bad.length ? `정규식이 잘못된 줄: ${bad.join(' / ')}` : list.length ? `${list.length}개 적용 중` : '');
 }
 
 // Open the compress tab with its settings fold open
