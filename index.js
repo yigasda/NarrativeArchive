@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.4.0';
+const VERSION = '2.5.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1904,6 +1904,56 @@ function renderDiff(rows, context = 2) {
     return html;
 }
 
+// ---- "한국어로 보기" for any diff box: translates only the changed (+/−) lines, shown under each line
+
+const AI_SYS_TRANSLATE = `You translate lines of a story archive into natural Korean.
+- You get numbered lines. Reply with exactly one line per input line, as "N: translation", same numbers, same order, nothing else.
+- Lines may be fragments, headings or list items. Keep markdown marks (#, -, **, _), "#number" references and quotation marks as they are.
+- Write character and place names in Korean script. Keep words the archive deliberately leaves untranslated (coined terms, titles in another language) as they are.`;
+
+const trCache = new Map();
+
+async function translateLines(lines) {
+    const need = [...new Set(lines.filter(l => !trCache.has(l)))];
+    for (let i = 0; i < need.length; i += 80) {
+        const chunk = need.slice(i, i + 80);
+        const out = await askAI(chunk.map((l, k) => `${k + 1}: ${l}`).join('\n'), { system: AI_SYS_TRANSLATE, maxTokens: Math.min(8192, 400 + chunk.join('').length * 2) });
+        for (const row of out.split('\n')) {
+            const mt = row.match(/^\s*(\d+)\s*[:.)]\s?(.*)$/);
+            if (mt && chunk[Number(mt[1]) - 1] !== undefined) trCache.set(chunk[Number(mt[1]) - 1], mt[2].trim());
+        }
+    }
+    return lines.map(l => trCache.get(l) ?? null);
+}
+
+const TR_LABEL = '<i class="fa-solid fa-language"></i> 한국어로 보기';
+const TR_HIDE = '<i class="fa-solid fa-language"></i> 번역 숨기기';
+
+// button that toggles Korean under the changed lines of $diff (any element holding renderDiff output)
+function translateButton($diff) {
+    const $btn = $(`<button type="button" class="na_btn na_small na_tr_btn">${TR_LABEL}</button>`);
+    $btn.on('click', async () => {
+        if ($diff.find('.na_diff_tr').length) { $diff.find('.na_diff_tr').remove(); $btn.html(TR_LABEL); return; }
+        const rows = $diff.find('.na_diff_add, .na_diff_del').toArray()
+            .map(el => ({ el, text: el.textContent.replace(/^[+−-]/, '').trim() }))
+            .filter(r => /[\p{L}]{2,}/u.test(r.text));
+        if (!rows.length) return toastr.info('번역할 바뀐 줄이 없어요.');
+        const tr = await withSpinner($btn, `번역하는 중… (${rows.length}줄)`, () => translateLines(rows.map(r => r.text)));
+        if (!tr) { $btn.html(TR_LABEL); return; }
+        rows.forEach((r, i) => {
+            if (!tr[i]) return;
+            const kind = r.el.classList.contains('na_diff_add') ? 'na_diff_tr_add' : 'na_diff_tr_del';
+            $(r.el).after(`<div class="na_diff_tr ${kind}"><span></span>${esc(tr[i])}</div>`);
+        });
+        $btn.html(TR_HIDE);
+        const miss = tr.filter(x => !x).length;
+        if (miss) toastr.info(`${miss}줄은 번역이 안 왔어요. 다시 누르면 그 줄만 다시 보내요.`);
+    });
+    // a re-render replaces the rows, so the button goes back to "show"
+    $btn.reset = () => $btn.html(TR_LABEL);
+    return $btn;
+}
+
 async function openDiff(snap, after = { text: getMeta().text, label: '지금' }) {
     const c = ctx();
     const rows = lineDiff(snap.text, after.text);
@@ -1916,6 +1966,7 @@ async function openDiff(snap, after = { text: getMeta().text, label: '지금' })
         </div>
         <div class="na_diff">${add || del ? renderDiff(rows) : '<div class="na_empty">내용이 똑같아요.</div>'}</div>
       </div>`);
+    if (add || del) $v.find('.na_diff_head').append(translateButton($v.find('.na_diff')));
     await c.callGenericPopup($v, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
@@ -2291,6 +2342,7 @@ async function openCompare() {
       </div>`);
     const files = { a: null, b: null };
     let pickingFor = null;
+    const cmpTr = translateButton($root.find('.na_cmp_diff'));
     const textOf = side => {
         const id = $root.find(`.na_cmp_${side}`).val();
         if (id === 'file') return files[side]?.text ?? null;
@@ -2308,18 +2360,21 @@ async function openCompare() {
     const render = () => {
         const marker = $root.find('.na_cmp_marker').val().trim();
         const a0 = textOf('a'), b0 = textOf('b');
-        if (a0 === null || b0 === null) { $root.find('.na_cmp_head').empty(); $root.find('.na_cmp_diff').html('<div class="na_empty">파일을 골라 주세요.</div>'); return; }
+        if (a0 === null || b0 === null) { cmpTr.detach(); $root.find('.na_cmp_head').empty(); $root.find('.na_cmp_diff').html('<div class="na_empty">파일을 골라 주세요.</div>'); return; }
         const a = cut(a0, marker), b = cut(b0, marker);
         if (a === null || b === null) {
-            $root.find('.na_cmp_head').empty();
+            cmpTr.detach(); $root.find('.na_cmp_head').empty();
             $root.find('.na_cmp_diff').html(`<div class="na_empty">"${esc(marker)}" 줄이 ${a === null && b === null ? '둘 다' : a === null ? 'A에' : 'B에'} 없어요.</div>`);
             return;
         }
         const rows = lineDiff(a, b);
         const add = rows.filter(r => r.t === '+').length, del = rows.filter(r => r.t === '-').length;
+        cmpTr.reset();
+        cmpTr.detach(); // keep its click handler; .html() below would drop it
         $root.find('.na_cmp_head').html(`<b>A</b> ${esc(labelOf('a'))} → <b>B</b> ${esc(labelOf('b'))}
             ${add || del ? `<span class="na_chip na_chip_add">+${fmt(add)}줄</span><span class="na_chip na_chip_del">−${fmt(del)}줄</span>` : '<span class="na_chip na_chip_on">똑같아요</span>'}`);
         $root.find('.na_cmp_diff').html(add || del ? renderDiff(rows) : `<div class="na_empty">${marker ? `"${esc(marker)}"부터 ` : ''}내용이 똑같아요.</div>`);
+        if (add || del) $root.find('.na_cmp_head').append(cmpTr);
     };
     $root.find('.na_cmp_a, .na_cmp_b').on('change', function () {
         const side = $(this).hasClass('na_cmp_a') ? 'a' : 'b';
@@ -3242,7 +3297,7 @@ async function openAppend() {
         <div class="na_place na_dim"></div>
         <details class="na_block na_details na_ap_preview" hidden>
           <summary>추가하면 바뀌는 부분 <span class="na_chip na_chip_add na_ap_add"></span><span class="na_chip na_chip_del na_ap_del"></span></summary>
-          <div><div class="na_diff na_ap_diff"></div></div>
+          <div><div class="na_ap_tr_row"></div><div class="na_diff na_ap_diff"></div></div>
         </details>
         <div class="na_append_info na_dim"></div>
       </div>`);
@@ -3262,6 +3317,8 @@ async function openAppend() {
     $root.find('.na_renum_row').hide();
     let lastPlan = null;
     const $pv = $root.find('.na_ap_preview');
+    const apTr = translateButton($root.find('.na_ap_diff'));
+    $root.find('.na_ap_tr_row').append(apTr);
     function renderPreview(plan) {
         lastPlan = plan;
         if (!plan || !$ta.val().trim()) { $pv.prop('hidden', true); return; }
@@ -3270,6 +3327,7 @@ async function openAppend() {
         $pv.prop('hidden', false);
         $root.find('.na_ap_add').text(`+${fmt(add)}줄`);
         $root.find('.na_ap_del').text(`−${fmt(del)}줄`).toggle(!!del);
+        apTr.reset();
         if ($pv.prop('open')) $root.find('.na_ap_diff').html(add || del ? renderDiff(rows) : '<div class="na_empty">바뀌는 게 없어요.</div>');
         else $root.find('.na_ap_diff').empty();
     }
