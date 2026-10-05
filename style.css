@@ -1446,3 +1446,21 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_ly_full { white-space: pre-wrap; font-size: 0.85em; max-height: 30vh; overflow: auto; padding: 6px 2px; }
 .na_layers textarea { width: 100%; box-sizing: border-box; resize: vertical; font-size: 0.9em; }
 .na_layers .na_tool_actions { align-items: center; margin-top: 8px; }
+
+/* shared world */
+.na_wd_list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.na_wd { border: 1px solid var(--na-line); border-radius: 12px; padding: 6px 8px; }
+.na_wd.on { border-color: color-mix(in srgb, var(--na-accent) 50%, transparent); }
+.na_wd_head { display: flex; align-items: center; gap: 6px; }
+.na_wd_name { flex: 1; min-width: 0; margin: 0; font-weight: 600; }
+.na_wd_ttok { flex: none; }
+.na_wd_body { margin-top: 6px; }
+.na_wd_text { width: 100%; box-sizing: border-box; resize: vertical; font-size: 0.88em; margin: 0; }
+.na_wd_foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 6px; font-size: 0.9em; }
+.na_wd_import { border: 1px dashed var(--na-line); border-radius: 10px; padding: 8px; margin-top: 8px; }
+.na_wd_secs { display: flex; flex-direction: column; max-height: 40vh; overflow: auto; gap: 1px; }
+.na_wd_sec { display: flex; align-items: center; gap: 6px; font-size: 0.85em; padding: 2px 4px; cursor: pointer; }
+.na_wd_sec.grp { font-weight: 700; margin-top: 4px; }
+.na_wd_sec > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.na_wd_impfoot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.na_wd_impfoot select { flex: 1; min-width: 140px; margin: 0; }
