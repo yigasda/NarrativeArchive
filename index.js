@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -20,9 +20,11 @@ const DEFAULT_META = Object.freeze({
     remindTok: 0,   // nudge when raw text after the boundary passes this many tokens (0 = off)
     once: '',       // one-shot override for the next generation only
     snapshots: [],  // [{ at, reason, text, boundary }] newest first
+    muted: [],      // section titles left out of the injection
     lastInject: null,
 });
 
+const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted'];
 const POSITIONS = { 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
 const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
 
@@ -43,6 +45,7 @@ function getMeta() {
         if (!Object.hasOwn(md[MODULE], k)) md[MODULE][k] = structuredClone(DEFAULT_META[k]);
     }
     if (!Array.isArray(md[MODULE].snapshots)) md[MODULE].snapshots = [];
+    if (!Array.isArray(md[MODULE].muted)) md[MODULE].muted = [];
     return md[MODULE];
 }
 
@@ -145,7 +148,7 @@ function wrapText(m, text) {
 }
 
 function injectedText(m) {
-    const body = m.once ? m.once : m.text;
+    const body = filterMuted(m, m.once ? m.once : m.text);
     return body.trim() ? wrapText(m, body) : '';
 }
 
@@ -173,7 +176,8 @@ async function onGenerationStarted(type, _opts, dryRun) {
         tokens: await countTokens(text),
         chars: text.length,
         position: m.position, depth: m.depth, role: m.role,
-        sections: parseSections(m.once || m.text).filter(x => !x.group).length,
+        sections: parseSections(filterMuted(m, m.once || m.text)).filter(x => !x.group).length,
+        muted: mutedCount(m),
         head: text.slice(0, 160),
         tail: text.slice(-160),
     };
@@ -223,6 +227,16 @@ function buildExtract(start, end) {
     return out;
 }
 
+// "## Y2 #574–#600 — ..." → 600 (largest #number in the last numbered heading)
+function guessEndNumber(text) {
+    const heads = String(text).match(/^#{1,3} .*$/gm) || [];
+    for (let i = heads.length - 1; i >= 0; i--) {
+        const nums = [...heads[i].matchAll(/#(\d+)/g)].map(x => parseInt(x[1], 10));
+        if (nums.length) return Math.max(...nums);
+    }
+    return null;
+}
+
 const extractToText = items => items.map(x => `[${x.i}] ${x.name}:\n${x.text}`).join('\n\n');
 
 // ---------------------------------------------------------------- sections
@@ -257,6 +271,78 @@ function highlight(text, query) {
     return safe.replace(new RegExp(escRe(esc(query)), 'gi'), s => `<mark>${s}</mark>`);
 }
 
+// ---- muted sections: kept in the text, left out of the injection
+
+const sectionKey = s => s.title;
+const mutedSet = m => new Set(Array.isArray(m.muted) ? m.muted : []);
+
+function filterMuted(m, text) {
+    const muted = mutedSet(m);
+    if (!muted.size) return text;
+    let out = '';
+    let skipLevel = 0;
+    for (const s of parseSections(text)) {
+        if (skipLevel && s.level > skipLevel) continue;
+        skipLevel = 0;
+        if (muted.has(sectionKey(s))) {
+            if (s.group) skipLevel = s.level;
+            continue;
+        }
+        out += text.slice(s.start, s.end);
+    }
+    return out;
+}
+
+function mutedCount(m) {
+    const muted = mutedSet(m);
+    if (!muted.size) return 0;
+    return parseSections(m.text).filter(s => muted.has(sectionKey(s))).length;
+}
+
+async function setMuted(key, on) {
+    const m = getMeta();
+    const set = mutedSet(m);
+    on ? set.add(key) : set.delete(key);
+    m.muted = [...set];
+    await saveMeta();
+    applyInjection();
+    syncPanel();
+}
+
+const tokCache = new Map();
+async function cachedTokens(text) {
+    if (tokCache.has(text)) return tokCache.get(text);
+    const n = await countTokens(text);
+    if (tokCache.size > 400) tokCache.clear();
+    tokCache.set(text, n);
+    return n;
+}
+const shortNum = n => n >= 10000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : fmt(n);
+
+// ---- reorder / insert
+
+const trimEnd = t => t.replace(/\s+$/, '');
+
+function moveSectionText(text, s, dir) {
+    const secs = parseSections(text);
+    const i = secs.findIndex(x => x.start === s.start);
+    const o = secs[i + dir];
+    if (i < 0 || !o || o.group || s.group || o.level !== s.level || o.title === '(머리말)' || s.title === '(머리말)') return null;
+    const [A, B] = dir > 0 ? [secs[i], o] : [o, secs[i]];
+    const tail = text.slice(B.start, B.end).match(/\s*$/)[0] || '\n\n';
+    const moved = trimEnd(text.slice(B.start, B.end)) + '\n\n' + trimEnd(text.slice(A.start, A.end)) + tail;
+    return { text: text.slice(0, A.start) + moved + text.slice(B.end), start: dir > 0 ? A.start + trimEnd(text.slice(B.start, B.end)).length + 2 : A.start };
+}
+
+function insertAfterText(text, s) {
+    const head = `${'#'.repeat(Math.max(1, s.level === 1 && !s.group ? 1 : s.level))} 새 섹션`;
+    const before = trimEnd(text.slice(0, s.end));
+    const after = text.slice(s.end);
+    const block = `${head}\n\n- \n`;
+    const start = before.length + 2;
+    return { text: `${before}\n\n${block}${after ? '\n' : ''}${after}`, start };
+}
+
 // Section browser shared by the panel tab and the large popup.
 // Returns { render } — call render() after the archive changes.
 function mountSectionBrowser($host) {
@@ -266,7 +352,7 @@ function mountSectionBrowser($host) {
           <i class="fa-solid fa-magnifying-glass"></i>
           <input type="search" class="text_pole na_search" placeholder="이름, 장소, 대사로 찾기">
         </div>
-        <div class="na_search_info na_dim"></div>
+        <div class="na_search_info"></div>
         <div class="na_list"></div>
       </div>`);
     $host.empty().append($root);
@@ -274,17 +360,24 @@ function mountSectionBrowser($host) {
     const $search = $root.find('.na_search');
     const $info = $root.find('.na_search_info');
     const collapsed = new Set();
+    const openCards = new Set();
+    let pendingEdit = -1;
+    let renderId = 0;
 
     const editSection = ($card, s) => {
         const m = getMeta();
         const original = m.text.slice(s.start, s.end);
         const $body = $card.children('.na_card_body').prop('hidden', false).empty();
-        const $ta = $('<textarea class="text_pole na_sec_edit" spellcheck="false"></textarea>').val(original.replace(/\s+$/, ''));
-        const $btns = $(`<div class="na_row na_right">
-            <button type="button" class="na_btn na_cancel">취소</button>
-            <button type="button" class="na_btn na_save na_primary"><i class="fa-solid fa-floppy-disk"></i> 섹션 저장</button></div>`);
+        const $ta = $('<textarea class="text_pole na_sec_edit" spellcheck="false"></textarea>').val(trimEnd(original));
+        const $btns = $(`<div class="na_card_actions">
+            <span class="na_spacer"></span>
+            <button type="button" class="na_btn na_small na_cancel">취소</button>
+            <button type="button" class="na_btn na_small na_save na_primary"><i class="fa-solid fa-check"></i> 섹션 저장</button></div>`);
         $body.append($ta, $btns);
         $ta.trigger('focus');
+        $ta.on('keydown', e => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); $btns.find('.na_save').trigger('click'); }
+        });
         $btns.find('.na_cancel').on('click', render);
         $btns.find('.na_save').on('click', async () => {
             const cur = getMeta();
@@ -293,24 +386,54 @@ function mountSectionBrowser($host) {
                 return;
             }
             const trail = original.match(/\s*$/)[0] || '\n\n';
-            await commitText(cur.text.slice(0, s.start) + $ta.val().replace(/\s+$/, '') + trail + cur.text.slice(s.end), `섹션 편집 전: ${s.title.slice(0, 40)}`);
+            const edited = trimEnd($ta.val());
+            const newTitle = (edited.match(/^#{1,3} (.*)$/m) || [])[1];
+            // keep the mute switch attached when the title is renamed
+            if (newTitle && newTitle !== s.title && mutedSet(cur).has(s.title)) {
+                cur.muted = [...mutedSet(cur)].map(k => k === s.title ? newTitle.trim() : k);
+            }
+            if (openCards.has(s.title) && newTitle) openCards.add(newTitle.trim());
+            await commitText(cur.text.slice(0, s.start) + edited + trail + cur.text.slice(s.end), `섹션 편집 전: ${s.title.slice(0, 40)}`);
             render();
             toastr.success('섹션 저장됨');
         });
     };
 
+    const move = async (s, dir) => {
+        const m = getMeta();
+        const r = moveSectionText(m.text, s, dir);
+        if (!r) return toastr.info(dir < 0 ? '맨 위예요 (같은 묶음 안에서만 옮겨요)' : '맨 아래예요 (같은 묶음 안에서만 옮겨요)');
+        await commitText(r.text, `순서 이동 전: ${s.title.slice(0, 40)}`);
+        render();
+    };
+
+    const insertAfter = async s => {
+        const m = getMeta();
+        const r = insertAfterText(m.text, s);
+        await commitText(r.text, '새 섹션 추가 전');
+        pendingEdit = r.start; // set after commit so only this final render opens the editor
+        render();
+    };
+
+    const sw = (on, title) => `<button type="button" class="na_sw ${on ? 'on' : ''}" title="${title}" aria-pressed="${on}"><span></span></button>`;
+
     function render() {
         const m = getMeta();
         if (!m) return;
+        const myId = ++renderId;
         const q = $search.val().trim();
         const sections = parseSections(m.text);
+        const muted = mutedSet(m);
         const cardCount = sections.filter(x => !x.group).length;
-        let shown = 0, hits = 0;
+        let shown = 0, hits = 0, editTarget = null;
+        const allGroups = [];
         $list.empty();
         const groupStack = [];
         sections.forEach((s, idx) => {
             while (groupStack.length && groupStack[groupStack.length - 1].level >= s.level) groupStack.pop();
             const $parent = groupStack.length ? groupStack[groupStack.length - 1].$items : $list;
+            const parentOff = groupStack.some(g => g.off);
+            const off = muted.has(sectionKey(s));
             const body = m.text.slice(s.start, s.end);
             let count = 0;
             if (q) {
@@ -321,59 +444,92 @@ function mountSectionBrowser($host) {
                 const key = s.title;
                 const isOpen = q || !collapsed.has(key);
                 const $g = $(`
-                  <div class="na_group na_lv${s.level}" data-idx="${idx}">
+                  <div class="na_group na_lv${s.level} ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''}">
                     <div class="na_group_head">
-                      <i class="fa-solid fa-caret-${isOpen ? 'down' : 'right'} na_group_chev"></i>
+                      <i class="fa-solid fa-chevron-${isOpen ? 'down' : 'right'} na_group_chev"></i>
                       <span class="na_group_title">${highlight(groupLabel(s.title), q)}</span>
                       <span class="na_group_line"></span>
                       <span class="na_group_meta"></span>
-                      ${s.note ? '<i class="fa-solid fa-pen na_group_edit" title="머리글 편집"></i>' : ''}
+                      ${s.note ? '<button type="button" class="na_icon na_icon_sm na_group_edit" title="머리글 편집"><i class="fa-solid fa-pen"></i></button>' : ''}
+                      ${sw(!off, off ? '이 묶음 주입 켜기' : '이 묶음 통째로 주입에서 빼기')}
                     </div>
-                    ${s.note ? `<div class="na_group_note na_dim">${highlight(s.note, q)}</div>` : ''}
+                    ${s.note ? `<div class="na_group_note">${highlight(s.note, q)}</div>` : ''}
                     <div class="na_card_body" hidden></div>
                     <div class="na_group_items" ${isOpen ? '' : 'hidden'}></div>
                   </div>`);
-                $g.find('.na_group_head').on('click', () => {
+                $g.find('> .na_group_head').on('click', () => {
                     if (q) return;
                     collapsed.has(key) ? collapsed.delete(key) : collapsed.add(key);
                     render();
                 });
-                $g.find('.na_group_edit').on('click', e => {
+                $g.find('> .na_group_head .na_sw').on('click', e => { e.stopPropagation(); setMuted(key, !off); });
+                $g.find('> .na_group_head .na_group_edit').on('click', e => {
                     e.stopPropagation();
-                    $g.find('.na_group_note').prop('hidden', true);
+                    $g.find('> .na_group_note').prop('hidden', true);
                     editSection($g, s);
                 });
                 $parent.append($g);
-                groupStack.push({ level: s.level, $items: $g.children('.na_group_items') });
+                const g = { level: s.level, $items: $g.children('.na_group_items'), $el: $g, off: off || parentOff, tok: [] };
+                groupStack.push(g);
+                allGroups.push(g);
                 return;
             }
             if (q && !count) return;
             shown++;
+            const isOpen = !!q || openCards.has(s.title);
             const $card = $(`
-              <div class="na_card" data-idx="${idx}">
+              <div class="na_card ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''}">
                 <div class="na_card_head">
                   <span class="na_card_title">${highlight(s.title, q)}</span>
-                  <span class="na_card_meta">${count ? `<span class="na_hit">${count}건</span>` : ''}${fmt(body.length)}자</span>
+                  <span class="na_card_meta">${count ? `<span class="na_hit">${count}건</span>` : ''}<span class="na_tok">${fmt(body.length)}자</span></span>
+                  ${sw(!off, off ? '주입 켜기' : '이 섹션만 주입에서 빼기 (본문은 그대로)')}
                 </div>
-                <div class="na_card_body" ${q ? '' : 'hidden'}>
+                <div class="na_card_body" ${isOpen ? '' : 'hidden'}>
                   <div class="na_card_text">${highlight(body, q)}</div>
-                  <div class="na_row na_right">
-                    <button type="button" class="na_btn na_edit"><i class="fa-solid fa-pen"></i> 이 섹션 편집</button>
+                  <div class="na_card_actions">
+                    <button type="button" class="na_icon na_up" title="위로"><i class="fa-solid fa-arrow-up"></i></button>
+                    <button type="button" class="na_icon na_down" title="아래로"><i class="fa-solid fa-arrow-down"></i></button>
+                    <button type="button" class="na_icon na_ins" title="아래에 새 섹션"><i class="fa-solid fa-plus"></i></button>
+                    <span class="na_spacer"></span>
+                    <button type="button" class="na_btn na_small na_edit"><i class="fa-solid fa-pen"></i> 편집</button>
                   </div>
                 </div>
               </div>`);
-            $card.find('.na_card_head').on('click', () => $card.find('.na_card_body').prop('hidden', (i, v) => !v));
+            $card.find('.na_card_head').on('click', () => {
+                const $b = $card.children('.na_card_body');
+                const willOpen = $b.prop('hidden');
+                $b.prop('hidden', !willOpen);
+                willOpen ? openCards.add(s.title) : openCards.delete(s.title);
+            });
+            $card.find('.na_card_head .na_sw').on('click', e => { e.stopPropagation(); setMuted(sectionKey(s), !off); });
             $card.find('.na_edit').on('click', e => { e.stopPropagation(); editSection($card, s); });
+            $card.find('.na_up').on('click', () => move(s, -1));
+            $card.find('.na_down').on('click', () => move(s, 1));
+            $card.find('.na_ins').on('click', () => insertAfter(s));
             $parent.append($card);
+            if (s.start === pendingEdit) editTarget = [$card, s];
+            const job = cachedTokens(body).then(n => {
+                if (myId !== renderId) return;
+                $card.find('.na_tok').text(`${shortNum(n)} 토큰`).attr('title', `${fmt(body.length)}자`);
+                return n;
+            });
+            groupStack.forEach(g => g.tok.push(job));
         });
-        $list.find('.na_group').each(function () {
-            const $g = $(this);
-            const n = $g.find('.na_card').length;
-            $g.find('> .na_group_head .na_group_meta').text(`${n}`);
-            if (q && !n && !$g.find('> .na_group_head mark, > .na_group_note mark').length) $g.remove();
+        // group badges: card count, then card count · token sum
+        allGroups.forEach(g => {
+            const n = g.$el.find('.na_card').length;
+            const $meta = g.$el.find('> .na_group_head .na_group_meta').text(`${n}`);
+            if (q && !n && !g.$el.find('> .na_group_head mark, > .na_group_note mark').length) { g.$el.remove(); return; }
+            Promise.all(g.tok).then(ns => {
+                if (myId === renderId) $meta.text(`${n} · ${shortNum(ns.reduce((x, y) => x + (y || 0), 0))}`);
+            });
         });
-        $info.text(q ? `"${q}" — 섹션 ${shown}개에서 ${hits}건` : `섹션 ${cardCount}개 · 제목을 누르면 펼쳐져요`);
+        const offN = mutedCount(m);
+        $info.html(q
+            ? `"${esc(q)}" — 섹션 ${shown}개에서 ${hits}건`
+            : `섹션 ${cardCount}개${offN ? ` · <span class="na_warn_txt">${offN}개 꺼짐</span>` : ''} · 스위치로 주입에서 뺄 수 있어요`);
         if (!sections.length) $list.html('<div class="na_empty">아카이브가 비어 있어요.<br>개요 탭에 붙여넣거나 보관 탭에서 불러오세요.</div>');
+        if (editTarget) { pendingEdit = -1; editSection(...editTarget); editTarget[0][0].scrollIntoView({ block: 'center' }); }
     }
 
     let t;
@@ -399,6 +555,15 @@ function renderPanel() {
         <div class="inline-drawer-content">
           <div class="na_body">
 
+            <div class="na_carry" id="na_carry" hidden>
+              <i class="fa-solid fa-route"></i>
+              <div class="na_carry_text"><b>이어서 쓸까요?</b><span id="na_carry_desc"></span></div>
+              <div class="na_carry_btns">
+                <button type="button" class="na_btn na_small na_primary" id="na_carry_go">가져오기</button>
+                <button type="button" class="na_icon na_icon_sm" id="na_carry_x" title="닫기"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+
             <div class="na_meter" id="na_meter">
               <div class="na_meter_top">
                 <span class="na_meter_total" id="na_meter_total">-</span>
@@ -422,8 +587,7 @@ function renderPanel() {
                 <div class="na_block_head">
                   <div>
                     <h4>주입 본문</h4>
-                    <p>매 턴 프롬프트에 들어가는 아카이브 전체예요. 여기서 바로 고치고 <b>저장</b>하면 다음 턴부터 반영돼요.
-                       <b>이번만</b>은 저장하지 않고 다음 응답 한 번에만 이 내용으로 보냅니다.</p>
+                    <p>여기서 고치고 <b>저장</b>하면 다음 턴부터 반영돼요. <b>이번만</b>은 저장 없이 다음 응답 한 번만 이 내용으로 보내요.</p>
                   </div>
                 </div>
                 <div class="na_editor_bar">
@@ -462,7 +626,7 @@ function renderPanel() {
                 <div class="na_block_head">
                   <div>
                     <h4>섹션</h4>
-                    <p><code>#</code> 구분 제목은 접을 수 있는 묶음, <code>##</code> 제목은 카드로 나뉘어요.</p>
+                    <p>스위치를 끄면 본문은 두고 주입에서만 빠져요. 카드를 펼치면 순서 이동·새 섹션 추가·편집.</p>
                   </div>
                   <button type="button" class="na_btn na_small" id="na_sec_big"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> 크게</button>
                 </div>
@@ -473,19 +637,19 @@ function renderPanel() {
             <!-- 압축 -->
             <section class="na_tab_pane" data-pane="compress" hidden>
               <div class="na_block">
-                <div class="na_block_head"><div><h4>경계선</h4><p>아카이브가 어디까지 다루는지예요. 그 앞 메시지는 숨겨서 토큰을 아낍니다.</p></div></div>
-                <div class="na_fields">
-                  <label class="na_field"><span>아카이브는 #</span><input type="number" id="na_boundary" class="text_pole" min="0" placeholder="-"><span>까지</span></label>
-                  <label class="na_field"><span>숨길 때 남길 메시지</span><input type="number" id="na_keep" class="text_pole" min="0" max="50"><span>개</span></label>
+                <div class="na_block_head"><div><h4>경계선</h4><p>아카이브가 다루는 마지막 메시지 번호예요. 그 앞은 숨겨서 토큰을 아껴요.</p></div></div>
+                <div class="na_set_list">
+                  <label class="na_set_row"><span>아카이브는 #… 까지</span><input type="number" id="na_boundary" class="text_pole" min="0" placeholder="-"></label>
+                  <label class="na_set_row"><span>숨길 때 남길 메시지</span><input type="number" id="na_keep" class="text_pole" min="0" max="50"></label>
                 </div>
                 <div class="na_since" id="na_since"></div>
               </div>
               <div class="na_block">
-                <div class="na_block_head"><div><h4>압축 루틴</h4><p>뽑기 → 다른 모델이나 직접 압축 → 추가. 추가하면 경계선 이동과 숨기기가 자동이에요.</p></div></div>
+                <div class="na_block_head"><div><h4>압축 루틴</h4><p>추가할 때 새 섹션 제목의 마지막 #번호를 읽어서 경계선을 맞춰요.</p></div></div>
                 <div class="na_steps">
-                  <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>경계선 이후 메시지 복사·저장</small></span></button>
-                  <button type="button" class="na_step" id="na_open_append"><b>2</b><span><strong>아카이브에 추가</strong><small>압축본 붙여넣기 · 경계선 이동</small></span></button>
-                  <button type="button" class="na_step" id="na_apply_hide"><b><i class="fa-solid fa-eye-slash"></i></b><span><strong>숨기기 다시 적용</strong><small>경계선 기준으로 /hide</small></span></button>
+                  <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>경계선 이후 메시지 복사·저장</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                  <button type="button" class="na_step" id="na_open_append"><b>2</b><span><strong>아카이브에 추가</strong><small>압축본 붙여넣기 · 경계선 자동</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                  <button type="button" class="na_step na_step_sub" id="na_apply_hide"><b><i class="fa-solid fa-eye-slash"></i></b><span><strong>숨기기 다시 적용</strong><small>경계선 기준 /hide</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
               </div>
             </section>
@@ -494,19 +658,23 @@ function renderPanel() {
             <section class="na_tab_pane" data-pane="vault" hidden>
               <div class="na_block">
                 <div class="na_block_head">
-                  <div><h4>복구 지점</h4><p>저장·추가·불러오기·복원 직전 상태를 자동으로 남겨요. 최근 ${SNAPSHOT_MAX}개까지.</p></div>
+                  <div><h4>복구 지점</h4><p>바꾸기 직전 상태를 자동으로 남겨요 (최근 ${SNAPSHOT_MAX}개).</p></div>
                   <button type="button" class="na_btn na_small" id="na_snap_now"><i class="fa-solid fa-bookmark"></i> 지금 보관</button>
                 </div>
                 <div id="na_snap_list" class="na_snap_list"></div>
               </div>
               <div class="na_block">
-                <div class="na_block_head"><div><h4>파일</h4><p><b>.txt</b>는 아카이브 본문만, <b>.json</b>은 경계선·설정·복구 지점까지 통째로 담아요.</p></div></div>
+                <div class="na_block_head"><div><h4>가져오기</h4></div></div>
                 <div class="na_tiles">
-                  <button type="button" class="na_tile" id="na_import"><i class="fa-solid fa-file-arrow-up"></i><span>불러오기</span><small>.txt · .json</small></button>
-                  <button type="button" class="na_tile" id="na_export"><i class="fa-solid fa-file-lines"></i><span>내보내기</span><small>.txt 본문만</small></button>
-                  <button type="button" class="na_tile" id="na_export_json"><i class="fa-solid fa-box-archive"></i><span>백업</span><small>.json 통째로</small></button>
-                  <button type="button" class="na_tile na_tile_danger" id="na_clear"><i class="fa-solid fa-eraser"></i><span>비우기</span><small>복구 지점에 남김</small></button>
+                  <button type="button" class="na_tile" id="na_import"><i class="fa-solid fa-file-arrow-up"></i><span>파일에서</span><small>.txt · .json</small></button>
+                  <button type="button" class="na_tile" id="na_from_chat"><i class="fa-solid fa-comments"></i><span>다른 채팅에서</span><small>같은 캐릭터</small></button>
                 </div>
+                <div class="na_block_head na_block_head_gap"><div><h4>내보내기</h4></div></div>
+                <div class="na_tiles">
+                  <button type="button" class="na_tile" id="na_export"><i class="fa-solid fa-file-lines"></i><span>.txt</span><small>본문만</small></button>
+                  <button type="button" class="na_tile" id="na_export_json"><i class="fa-solid fa-box-archive"></i><span>.json 백업</span><small>설정·복구 지점까지</small></button>
+                </div>
+                <div class="na_row na_right"><button type="button" class="na_linkbtn na_danger" id="na_clear"><i class="fa-solid fa-eraser"></i> 아카이브 비우기</button></div>
                 <input type="file" id="na_file" accept=".txt,.md,.json,text/plain,application/json" hidden>
               </div>
             </section>
@@ -514,24 +682,27 @@ function renderPanel() {
             <!-- 설정 -->
             <section class="na_tab_pane" data-pane="config" hidden>
               <div class="na_block">
-                <label class="checkbox_label na_switch"><input type="checkbox" id="na_enabled"><span>아카이브 주입 사용</span></label>
-                <div class="na_fields">
-                  <label class="na_field"><span>위치</span>
+                <div class="na_block_head"><div><h4>주입</h4></div></div>
+                <div class="na_set_list">
+                  <label class="na_set_row"><span>아카이브 주입</span><input type="checkbox" id="na_enabled" class="na_toggle"></label>
+                  <label class="na_set_row"><span>위치</span>
                     <select id="na_position" class="text_pole">${Object.entries(POSITIONS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
                   </label>
-                  <label class="na_field" id="na_depth_field"><span>깊이</span><input type="number" id="na_depth" class="text_pole" min="0" max="999"></label>
-                  <label class="na_field"><span>역할</span>
+                  <label class="na_set_row" id="na_depth_field"><span>깊이</span><input type="number" id="na_depth" class="text_pole" min="0" max="999"></label>
+                  <label class="na_set_row"><span>역할</span>
                     <select id="na_role" class="text_pole">${Object.entries(ROLES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
                   </label>
+                  <div class="na_set_row"><span><span>꺼 둔 섹션 <b id="na_muted_n">0</b>개</span><small>섹션 탭의 스위치로 끈 것</small></span><button type="button" class="na_btn na_small" id="na_unmute_all">모두 켜기</button></div>
                 </div>
               </div>
               <div class="na_block">
-                <div class="na_block_head"><div><h4>감싸기</h4><p>아카이브 앞뒤에 붙일 문구예요. <code>{{archive}}</code> 자리에 본문이 들어가요. 비워 두면 본문만 보냅니다.</p></div></div>
-                <textarea id="na_wrap" class="text_pole na_wrap" rows="4" spellcheck="false" placeholder="<story_archive>&#10;{{archive}}&#10;</story_archive>"></textarea>
+                <div class="na_block_head"><div><h4>감싸기</h4><p><code>{{archive}}</code> 자리에 본문이 들어가요. 비워 두면 본문만.</p></div></div>
+                <textarea id="na_wrap" class="text_pole na_wrap" rows="3" spellcheck="false" placeholder="<story_archive>&#10;{{archive}}&#10;</story_archive>"></textarea>
               </div>
               <div class="na_block">
-                <div class="na_block_head"><div><h4>압축 알림</h4><p>경계선 이후 원문이 이 토큰을 넘으면 계기판에 표시해요. 0이면 끔.</p></div></div>
-                <div class="na_fields"><label class="na_field"><input type="number" id="na_remind" class="text_pole" min="0" step="1000"><span>토큰</span></label></div>
+                <div class="na_set_list">
+                  <label class="na_set_row"><span>압축 알림 <small>원문이 이 토큰을 넘으면 표시 · 0은 끔</small></span><input type="number" id="na_remind" class="text_pole" min="0" step="1000"></label>
+                </div>
               </div>
             </section>
 
@@ -675,6 +846,12 @@ function bindPanel() {
         toastr.success('비웠어요');
     }));
     $('#na_import').on('click', needChat(() => $('#na_file').val('').trigger('click')));
+    $('#na_from_chat').on('click', needChat(openChatPicker));
+    $('#na_carry_go').on('click', needChat(async () => { if (carryOffer) await importArchive(carryOffer, '방금 있던 채팅'); }));
+    $('#na_carry_x').on('click', () => { carryOffer = null; $('#na_carry').prop('hidden', true); });
+    $('#na_unmute_all').on('click', needChat(async () => {
+        const m = getMeta(); m.muted = []; await saveMeta(); applyInjection(); syncPanel();
+    }));
     $('#na_file').on('change', async function () {
         const file = this.files?.[0];
         if (!file || !hasChat()) return;
@@ -689,7 +866,7 @@ function bindPanel() {
         editorDirty = false;
         if (json) {
             const d = json.data;
-            for (const k of ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok']) if (Object.hasOwn(d, k)) m[k] = d[k];
+            for (const k of SETTING_KEYS) if (Object.hasOwn(d, k)) m[k] = d[k];
             if (Array.isArray(d.snapshots)) {
                 const seen = new Set(m.snapshots.map(s => s.at));
                 m.snapshots = [...m.snapshots, ...d.snapshots.filter(s => s && typeof s.text === 'string' && !seen.has(s.at))]
@@ -746,7 +923,7 @@ function syncPanel() {
     const on = hasChat();
     $('#na_settings .na_tab_pane, #na_settings .na_nav, #na_meter').toggleClass('na_disabled', !on);
     $('#na_nochat').prop('hidden', on);
-    if (!on) { refreshStatus(); return; }
+    if (!on) { $('#na_carry').prop('hidden', true); refreshStatus(); return; }
     const m = getMeta();
     if (!editorDirty) $('#na_editor').val(m.text).trigger('input');
     $('#na_once_banner').prop('hidden', !m.once);
@@ -757,6 +934,11 @@ function syncPanel() {
     $('#na_role').val(String(m.role));
     if (document.activeElement?.id !== 'na_wrap') $('#na_wrap').val(m.wrap);
     $('#na_remind').val(m.remindTok);
+    $('#na_muted_n').text(mutedCount(m));
+    $('#na_unmute_all').prop('disabled', !mutedCount(m));
+    $('#na_carry').prop('hidden', !carryOffer);
+    if (carryOffer) $('#na_carry_desc').text(`방금 있던 채팅의 아카이브 (${fmt(carryOffer.text.length)}자)를 이 채팅에 가져와요.`);
+    rememberArchive();
     $('#na_boundary').val(m.boundary >= 0 ? m.boundary : '');
     $('#na_keep').val(m.keep);
     sectionPanel?.render();
@@ -784,11 +966,13 @@ function renderSnapshots() {
               <span class="na_snap_meta">${fmt(s.text.length)}자 · 지금보다 ${diff === 0 ? '같음' : `${diff > 0 ? '+' : '−'}${fmt(Math.abs(diff))}자`}${s.boundary >= 0 ? ` · #${s.boundary}까지` : ''}</span>
             </div>
             <div class="na_snap_btns">
+              <button type="button" class="na_icon na_snap_diff" title="지금과 비교"><i class="fa-solid fa-code-compare"></i></button>
               <button type="button" class="na_icon na_snap_view" title="내용 보기"><i class="fa-regular fa-eye"></i></button>
               <button type="button" class="na_icon na_snap_restore" title="이 지점으로 복원"><i class="fa-solid fa-clock-rotate-left"></i></button>
               <button type="button" class="na_icon na_snap_del" title="삭제"><i class="fa-regular fa-trash-can"></i></button>
             </div>
           </div>`);
+        $row.find('.na_snap_diff').on('click', () => openDiff(s));
         $row.find('.na_snap_view').on('click', () => {
             const c = ctx();
             const $v = $('<div class="na_popup"><textarea class="text_pole na_full" readonly spellcheck="false"></textarea></div>');
@@ -824,11 +1008,195 @@ function refreshInjectLog() {
     $l.html(`
       <div class="na_log">
         <div class="na_log_row"><span>시각</span><b>${esc(timeLabel(li.at))}</b>${li.once ? '<span class="na_chip na_chip_warn">이번만 본문</span>' : ''}</div>
-        <div class="na_log_row"><span>분량</span><b>${fmt(li.tokens)} 토큰</b><span class="na_dim">${fmt(li.chars)}자 · 섹션 ${li.sections}개</span></div>
+        <div class="na_log_row"><span>분량</span><b>${fmt(li.tokens)} 토큰</b><span class="na_dim">${fmt(li.chars)}자 · 섹션 ${li.sections}개${li.muted ? ` · ${li.muted}개 꺼짐` : ''}</span></div>
         <div class="na_log_row"><span>자리</span><b>${esc(where)}</b><span class="na_dim">${esc(ROLES[li.role] || '')} 역할</span></div>
         <div class="na_log_clip"><span>시작</span><pre>${esc(li.head)}${li.chars > 160 ? '…' : ''}</pre></div>
         <div class="na_log_clip"><span>끝</span><pre>${li.chars > 160 ? '…' : ''}${esc(li.tail)}</pre></div>
       </div>`);
+}
+
+// ---------------------------------------------------------------- carry over
+
+let lastSeen = null;   // the most recent chat that had an archive, kept in memory
+let carryOffer = null; // shown when we land in an empty chat right after one with an archive
+
+const currentChatId = () => String(ctx().getCurrentChatId?.() || ctx().chatId || '');
+const pickSettings = m => Object.fromEntries(SETTING_KEYS.map(k => [k, structuredClone(m[k])]));
+
+function rememberArchive() {
+    if (!hasChat()) return;
+    const m = getMeta();
+    if (m.text.trim()) lastSeen = { chatId: currentChatId(), text: m.text, settings: pickSettings(m) };
+}
+
+async function importArchive(src, label) {
+    const m = getMeta();
+    if (m.text.trim() && !await confirm('아카이브 가져오기', `이 채팅의 아카이브를 "${label}"의 것으로 바꿀까요? 지금 내용은 복구 지점에 남아요.`)) return false;
+    for (const k of SETTING_KEYS) if (src.settings && Object.hasOwn(src.settings, k)) m[k] = structuredClone(src.settings[k]);
+    editorDirty = false;
+    carryOffer = null;
+    // a new chat restarts numbering, so the boundary is cleared
+    await commitText(src.text, '가져오기 전', { boundary: -1 });
+    toastr.success(`가져옴: ${label}`);
+    return true;
+}
+
+async function fetchJson(url, body) {
+    const c = ctx();
+    const headers = c.getRequestHeaders ? c.getRequestHeaders() : { 'Content-Type': 'application/json' };
+    const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+    if (!r.ok) throw new Error(`${url} ${r.status}`);
+    return r.json();
+}
+
+// Other chats of the current character / group, newest first: [{ id, label, when, load() }]
+async function listOtherChats() {
+    const c = ctx();
+    const here = currentChatId();
+    if (c.groupId) {
+        const g = (c.groups || []).find(x => x.id === c.groupId);
+        return (g?.chats || []).filter(id => id !== here).reverse().map(id => ({
+            id, label: id, when: '',
+            load: async () => (await fetchJson('/api/chats/group/get', { id }))?.[0]?.chat_metadata?.[MODULE],
+        }));
+    }
+    const ch = c.characters?.[c.characterId];
+    if (!ch) return [];
+    const data = await fetchJson('/api/characters/chats', { avatar_url: ch.avatar });
+    const arr = (Array.isArray(data) ? data : Object.values(data || {})).filter(x => x?.file_name);
+    return arr
+        .map(x => ({ id: String(x.file_name).replace(/\.jsonl$/, ''), when: x.last_mes || '', count: x.chat_items }))
+        .filter(x => x.id !== here)
+        .sort((a, b) => (Date.parse(b.when) || 0) - (Date.parse(a.when) || 0))
+        .map(x => ({
+            ...x, label: x.id,
+            load: async () => (await fetchJson('/api/chats/get', { ch_name: ch.name, file_name: x.id, avatar_url: ch.avatar }))?.[0]?.chat_metadata?.[MODULE],
+        }));
+}
+
+async function openChatPicker() {
+    const c = ctx();
+    const $root = $(`
+      <div class="na_popup">
+        <div class="na_block_head"><div>
+          <h4>다른 채팅에서 가져오기</h4>
+          <p>같은 캐릭터(또는 그룹)의 다른 채팅이에요. <b>확인</b>을 누르면 그 채팅에 아카이브가 있는지 열어 봐요. 가져오면 경계선은 비워져요.</p>
+        </div></div>
+        <div class="na_row"><button type="button" class="na_btn na_small na_check_all"><i class="fa-solid fa-magnifying-glass"></i> 최근 10개 모두 확인</button></div>
+        <div class="na_pick_list"><div class="na_empty">불러오는 중…</div></div>
+      </div>`);
+    const popup = c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+
+    let chats = [];
+    try { chats = await listOtherChats(); }
+    catch (e) {
+        console.warn('[narrative-archive] chat list', e);
+        $root.find('.na_pick_list').html('<div class="na_empty">채팅 목록을 못 불러왔어요. 이전 채팅에서 .json 백업 → 여기서 불러오기를 써 주세요.</div>');
+        return popup;
+    }
+    const $list = $root.find('.na_pick_list').empty();
+    if (!chats.length) $list.html('<div class="na_empty">다른 채팅이 없어요.</div>');
+    const checkers = chats.map(chat => {
+        const $row = $(`
+          <div class="na_pick">
+            <div class="na_pick_main">
+              <span class="na_pick_name">${esc(chat.label)}</span>
+              <span class="na_pick_meta">${chat.when ? esc(String(chat.when)) : ''}${chat.count ? ` · 메시지 ${fmt(chat.count)}개` : ''}</span>
+            </div>
+            <div class="na_pick_state"><button type="button" class="na_btn na_small na_pick_check">확인</button></div>
+          </div>`);
+        const check = async () => {
+            const $st = $row.find('.na_pick_state').html('<span class="na_dim">여는 중…</span>');
+            try {
+                const meta = await chat.load();
+                if (!meta?.text?.trim()) { $st.html('<span class="na_dim">아카이브 없음</span>'); return; }
+                const tok = await countTokens(meta.text);
+                $st.html(`<span class="na_chip">${fmt(tok)} 토큰</span><button type="button" class="na_btn na_small na_primary na_pick_go">가져오기</button>`);
+                $st.find('.na_pick_go').on('click', async () => {
+                    if (await importArchive({ text: meta.text, settings: meta }, chat.label)) $st.html('<span class="na_chip na_chip_on">가져옴</span>');
+                });
+            } catch (e) {
+                console.warn('[narrative-archive] chat load', e);
+                $st.html('<span class="na_warn_txt">못 열었어요</span>');
+            }
+        };
+        $row.find('.na_pick_check').on('click', check);
+        $list.append($row);
+        return check;
+    });
+    $root.find('.na_check_all').on('click', async () => {
+        for (const check of checkers.slice(0, 10)) await check();
+    });
+    return popup;
+}
+
+// ---------------------------------------------------------------- diff
+
+// Line diff (LCS after trimming the shared head/tail). Returns [{ t: ' '|'+'|'-', line }].
+function lineDiff(oldText, newText) {
+    const a = oldText.split('\n'), b = newText.split('\n');
+    let pre = 0;
+    while (pre < a.length && pre < b.length && a[pre] === b[pre]) pre++;
+    let suf = 0;
+    while (suf < a.length - pre && suf < b.length - pre && a[a.length - 1 - suf] === b[b.length - 1 - suf]) suf++;
+    const A = a.slice(pre, a.length - suf), B = b.slice(pre, b.length - suf);
+    const out = a.slice(0, pre).map(line => ({ t: ' ', line }));
+    const n = A.length, m = B.length;
+    if (n * m > 6_000_000) {
+        A.forEach(line => out.push({ t: '-', line }));
+        B.forEach(line => out.push({ t: '+', line }));
+    } else {
+        const w = m + 1;
+        const L = new Uint32Array((n + 1) * w);
+        for (let i = n - 1; i >= 0; i--) {
+            for (let j = m - 1; j >= 0; j--) {
+                L[i * w + j] = A[i] === B[j] ? L[(i + 1) * w + j + 1] + 1 : Math.max(L[(i + 1) * w + j], L[i * w + j + 1]);
+            }
+        }
+        let i = 0, j = 0;
+        while (i < n && j < m) {
+            if (A[i] === B[j]) { out.push({ t: ' ', line: A[i] }); i++; j++; }
+            else if (L[(i + 1) * w + j] >= L[i * w + j + 1]) out.push({ t: '-', line: A[i++] });
+            else out.push({ t: '+', line: B[j++] });
+        }
+        while (i < n) out.push({ t: '-', line: A[i++] });
+        while (j < m) out.push({ t: '+', line: B[j++] });
+    }
+    a.slice(a.length - suf).forEach(line => out.push({ t: ' ', line }));
+    return out;
+}
+
+function renderDiff(rows, context = 2) {
+    const keep = new Array(rows.length).fill(false);
+    rows.forEach((r, i) => {
+        if (r.t === ' ') return;
+        for (let k = Math.max(0, i - context); k <= Math.min(rows.length - 1, i + context); k++) keep[k] = true;
+    });
+    let html = '', skipped = 0;
+    const flush = () => { if (skipped) html += `<div class="na_diff_skip">··· 같은 줄 ${fmt(skipped)}개 ···</div>`; skipped = 0; };
+    rows.forEach((r, i) => {
+        if (!keep[i]) { skipped++; return; }
+        flush();
+        const cls = r.t === '+' ? 'na_diff_add' : r.t === '-' ? 'na_diff_del' : 'na_diff_same';
+        html += `<div class="${cls}"><span>${r.t === ' ' ? '' : r.t}</span>${esc(r.line) || '&nbsp;'}</div>`;
+    });
+    flush();
+    return html;
+}
+
+async function openDiff(snap) {
+    const c = ctx();
+    const rows = lineDiff(snap.text, getMeta().text);
+    const add = rows.filter(r => r.t === '+').length, del = rows.filter(r => r.t === '-').length;
+    const $v = $(`
+      <div class="na_popup">
+        <div class="na_diff_head">
+          <b>${esc(timeLabel(snap.at))} · ${esc(snap.reason)}</b> → <b>지금</b>
+          <span class="na_chip na_chip_add">+${fmt(add)}줄</span><span class="na_chip na_chip_del">−${fmt(del)}줄</span>
+        </div>
+        <div class="na_diff">${add || del ? renderDiff(rows) : '<div class="na_empty">내용이 똑같아요.</div>'}</div>
+      </div>`);
+    await c.callGenericPopup($v, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
 // ---------------------------------------------------------------- status
@@ -869,7 +1237,8 @@ async function refreshStatus() {
     $('#na_meter .na_seg_raw').css('width', `${total ? 100 - pct : 0}%`).toggleClass('na_over', over);
     $('#na_meter_legend').html(`
       <span><i class="na_dot na_dot_arc"></i>아카이브 ${fmt(archiveTok)}</span>
-      <span><i class="na_dot na_dot_raw"></i>${m.boundary >= 0 ? `#${m.boundary} 이후 원문 ${fmt(afterTok)} · ${after.length}개` : '경계선 없음'}</span>`);
+      <span><i class="na_dot na_dot_raw"></i>${m.boundary >= 0 ? `#${m.boundary} 이후 원문 ${fmt(afterTok)} · ${after.length}개` : '경계선 없음'}</span>
+      ${mutedCount(m) ? `<span class="na_warn_txt"><i class="fa-solid fa-toggle-off"></i> 섹션 ${mutedCount(m)}개 꺼짐</span>` : ''}`);
     $('#na_head_badge').text(m.text.trim() ? fmt(archiveTok) : '');
 
     $('#na_since').html(m.boundary >= 0
@@ -1001,16 +1370,28 @@ async function openAppend() {
         <textarea class="text_pole na_append_ta" spellcheck="false" placeholder="## Y2 #574–#600 — ..."></textarea>
         <div class="na_row">
           <label>이번에 압축한 끝 번호 # <input type="number" class="text_pole na_num na_end" min="0" max="${last}" value="${Math.max(0, last)}"></label>
+          <span class="na_end_hint na_dim"></span>
         </div>
         <label class="checkbox_label"><input type="checkbox" class="na_do_hide" checked><span>저장 후 숨기기 적용 (마지막 ${m.keep}개 남김)</span></label>
         <div class="na_append_info na_dim"></div>
       </div>`);
 
     const $ta = $root.find('.na_append_ta');
+    const $end = $root.find('.na_end');
+    let endTouched = false;
+    $end.on('input', () => { endTouched = true; $root.find('.na_end_hint').text(''); });
     let t;
     $ta.on('input', () => {
         clearTimeout(t);
-        t = setTimeout(async () => $root.find('.na_append_info').text(`약 ${fmt(await countTokens($ta.val()))} 토큰`), 500);
+        t = setTimeout(async () => {
+            const val = $ta.val();
+            const guess = guessEndNumber(val);
+            if (guess !== null && !endTouched) {
+                $end.val(guess);
+                $root.find('.na_end_hint').html(`제목에서 <b>#${guess}</b>을 읽었어요${guess > last ? ` <span class="na_warn_txt">(현재 마지막 #${last}보다 커요)</span>` : ''}`);
+            }
+            $root.find('.na_append_info').text(`약 ${fmt(await countTokens(val))} 토큰 · 섹션 ${parseSections(val).filter(x => !x.group).length}개`);
+        }, 400);
     });
 
     const result = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', {
@@ -1036,6 +1417,7 @@ async function openAppend() {
 function onChatChanged() {
     onceInFlight = false;
     editorDirty = false;
+    carryOffer = hasChat() && lastSeen && lastSeen.chatId !== currentChatId() && !getMeta().text.trim() ? lastSeen : null;
     applyInjection();
     syncPanel();
 }
