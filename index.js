@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.7.3';
+const VERSION = '3.7.4';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -4192,9 +4192,35 @@ async function openQuotes() {
 // ---------------------------------------------------------------- AI router
 // Right before a reply, a small model reads the recent chat and picks the sections it needs.
 
-const AI_SYS_ROUTER = `You decide which archive sections a role-play model needs for its NEXT reply.
-You get the recent chat and a numbered list of archive sections (title and opening). Pick the sections whose people, events, places, promises or secrets the next reply is likely to touch, or must stay consistent with. Pick only what matters now; fewer is better.
-Answer with the numbers only, comma-separated, most relevant first. If none are needed, answer: none`;
+const AI_SYS_ROUTER = `GOAL
+A role-play model is about to write its NEXT reply. It cannot see the whole story archive, only the sections you pick.
+Pick the sections it needs so it does not forget or contradict something.
+
+YOU GET
+- MAIN CAST: characters who are in almost every section. Their names alone are NOT a reason to pick a section.
+- RECENT CHAT: the last messages. The one marked LATEST is what the next reply answers.
+- SECTIONS: numbered. Each has a title, the other names in it (people, places, things), its keywords, and how it begins.
+
+PICK A SECTION IF ANY OF THESE IS TRUE
+1. Something from it is named or clearly meant in the recent chat: a person who is not main cast, a place, an object, an event.
+   Watch for hints, not only exact names: "that night", "the cliff", "what you promised me", "your old life", a nickname.
+2. The chat is about a promise, secret, wound, fight, rule or wish that started or changed in that section.
+3. The next reply has to stay consistent with it: the chat goes back to a place, a habit, or a relationship moment described there.
+
+DO NOT PICK
+- A section just because a main cast character is in it.
+- Sections that are only loosely related.
+- More than the limit you are given.
+
+HOW TO WORK
+Step 1. Read the LATEST message first, then the others. List for yourself the people, places, objects, past events and promises they mention or hint at.
+Step 2. Go through the sections one by one and match them against that list.
+Step 3. Put the most important first. Fewer is better than wrong.
+
+OUTPUT: exactly one line, nothing else
+PICK: 3, 12, 7
+If no section is needed:
+PICK: none`;
 
 const routerState = new Map(); // chat id → { key, picks: Set, titles, at, ms, cands }
 let routerWarned = false;
@@ -4241,16 +4267,31 @@ async function runRouter(m, { force = false } = {}) {
     const prev = routerState.get(id);
     if (!force && prev?.key === key) return prev; // a swipe or regenerate on the same chat
     if (!cands.length) { const st = { key, picks: new Set(), titles: [], at: Date.now(), ms: 0, cands: 0 }; routerState.set(id, st); return st; }
+    // each candidate: title, the names in it other than the main cast, its keywords, and how it begins
+    const main = castNames(m);
+    const mainSet = new Set(main.flatMap(n => n.split(/\s+/)));
+    const lm = linkedMap(m);
     const list = cands.map((s, i) => {
-        const body = m.text.slice(s.start, s.end).replace(/^#{1,3} [^\n]*\n?/, '').replace(/\s+/g, ' ').trim();
-        return `${i + 1}. ${s.title} — ${body.slice(0, 240)}${body.length > 240 ? '…' : ''}`;
+        const body = m.text.slice(s.start, s.end).replace(/^#{1,3} [^\n]*\n?/, '');
+        const counts = new Map();
+        // capitalised words in mid-sentence only, so sentence openers ("Inside", "Asked") don't pass as names
+        [...body.matchAll(/[a-z0-9,;:]\s+([A-Z][a-z][A-Za-z'’]*)/g)].map(x => x[1].replace(/['’]s$/, ''))
+            .filter(w => w.length > 2 && !KW_STOP.has(w) && !mainSet.has(w)).forEach(w => counts.set(w, (counts.get(w) || 0) + 1));
+        const names = [...counts].sort((a, b) => b[1] - a[1]).slice(0, 10).map(x => x[0]);
+        const keys = Array.isArray(lm[sectionKey(s)]) ? lm[sectionKey(s)] : [];
+        const flat = body.replace(/\s+/g, ' ').trim();
+        return `${i + 1}. ${s.title}${names.length ? `\n   names: ${names.join(', ')}` : ''}${keys.length ? `\n   keywords: ${keys.join(', ')}` : ''}\n   begins: ${flat.slice(0, 220)}${flat.length > 220 ? '…' : ''}`;
     }).join('\n');
+    const recentLines = recent.split('\n\n');
+    if (recentLines.length) recentLines[recentLines.length - 1] = recentLines[recentLines.length - 1].replace(/^\[#(\d+)/, '[#$1 · LATEST');
     const t0 = Date.now();
     const out = await Promise.race([
-        askAI(`[RECENT CHAT]\n${recent}\n\n[SECTIONS]\n${list}\n\nPick at most ${cfg.max}.`, { system: AI_SYS_ROUTER, maxTokens: 1024 }),
+        askAI(`${main.length ? `[MAIN CAST]\n${main.join(', ')}\n\n` : ''}[RECENT CHAT]\n${recentLines.join('\n\n')}\n\n[SECTIONS]\n${list}\n\nPick at most ${cfg.max}.`, { system: AI_SYS_ROUTER, maxTokens: 1024 }),
         new Promise((_, no) => setTimeout(() => no(new Error('20초 안에 답이 없었어요')), 20_000)),
     ]);
-    const nums = /^\s*none\b/i.test(out) ? [] : [...new Set((out.match(/\d+/g) || []).map(Number))].filter(n => n >= 1 && n <= cands.length).slice(0, cfg.max);
+    // read the "PICK:" line if there is one (so numbers in any reasoning are ignored), else the whole answer
+    const pickLine = (out.match(/PICK\s*:\s*(.*)$/im) || [null, out])[1];
+    const nums = /^\s*none\b/i.test(pickLine) ? [] : [...new Set((pickLine.match(/\d+/g) || []).map(Number))].filter(n => n >= 1 && n <= cands.length).slice(0, cfg.max);
     const picked = nums.map(n => cands[n - 1]);
     const st = { key, picks: new Set(picked.map(sectionKey)), titles: picked.map(s => s.title), at: Date.now(), ms: Date.now() - t0, cands: cands.length };
     routerState.set(id, st);
