@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.15.0';
+const VERSION = '3.16.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -34,7 +34,7 @@ const DEFAULT_META = Object.freeze({
     lastExport: null, // { from, to, at, how } — the latest extract copied or saved
 });
 
-const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'quoteInject', 'quoteMax', 'router', 'people', 'temps'];
+const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'quoteInject', 'quoteMax', 'router', 'people', 'temps', 'voice', 'voiceInject'];
 const POSITIONS = { 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
 const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
 
@@ -2057,7 +2057,8 @@ function syncPanel() {
         const mm = getMeta();
         const kn = knowledgeRows(mm).length, qn = (mm.quotes || []).filter(q => q.on).length;
         $('#na_know_sub').text(kn ? `${kn}개${mm.knowInject ? ' · 주입 중' : ''}` : '비밀마다 아는 사람·모르는 사람');
-        $('#na_quotes_sub').text((mm.quotes || []).length ? `${(mm.quotes || []).length}개 · 고른 ${qn}개${mm.quoteInject ? ' · 주입 중' : ''}` : '말투 샘플로 주입');
+        const vn = Object.keys(mm.voice || {}).length;
+        $('#na_quotes_sub').text((mm.quotes || []).length ? `${(mm.quotes || []).length}개 · 고른 ${qn}개${mm.quoteInject ? ' · 주입 중' : ''}${vn ? ` · 지문 ${vn}${mm.voiceInject ? ' 주입 중' : ''}` : ''}` : '말투 샘플로 주입');
         $('#na_drift_sub').text(mm.driftLast ? `${timeLabel(mm.driftLast.at)} · ${mm.driftLast.none ? '어긋남 없음' : `${mm.driftLast.n}개 찾음`}` : '최근 대화가 아카이브와 어긋나는지');
     }
     const br = hasChat() ? branchState(getMeta()) : null;
@@ -3655,6 +3656,8 @@ function extraBlocks(m) {
     const kr = (m.knowInject ? knowledgeRows(m) : []).map(r => ({ ...r, unaware: r.unaware.filter(n => inCast(castNow, n)), suspects: r.suspects.filter(n => inCast(castNow, n)) }));
     if (kr.length) out += `\n\n# WHO KNOWS WHAT\n_Characters act only on what they know. Do not let anyone reveal or use a fact they do not know._\n${kr.map(r =>
         `- ${r.fact} — knows: ${r.knows.join(', ') || 'no one'}${r.unaware.length ? `; does not know: ${r.unaware.join(', ')}` : ''}${r.suspects.length ? `; suspects: ${r.suspects.join(', ')}` : ''}`).join('\n')}`;
+    const vs = m.voiceInject && m.voice ? Object.entries(m.voice).filter(([who, v]) => String(v?.text || '').trim() && inCast(castNow, who) && !isExcluded(m, who)) : [];
+    if (vs.length) out += `\n\n# VOICE NOTES\n_Writing notes for dialogue only. Follow them silently: never mention, quote or refer to these notes in the story._\n${vs.map(([who, v]) => `## ${who}\n${String(v.text).trim()}`).join('\n')}`;
     const qs = m.quoteInject ? pickedQuotes(m) : [];
     if (qs.length) out += `\n\n# VOICE SAMPLES\n_How each character talks. Match the voice; do not repeat these lines verbatim._\n${qs.map(q => `${q.who}: "${q.text}"`).join('\n')}`;
     return out;
@@ -4253,20 +4256,71 @@ Use the archive's own spelling of names. If there are no good lines, write exact
 // normalise a quote for matching against the archive
 const quoteKey = t => String(t).replace(/[“”„"]/g, '"').replace(/[‘’]/g, "'").replace(/\s+/g, ' ').trim().toLowerCase();
 
+// ---- voice fingerprint: a few speech rules per character, drawn from that character's lines in the quote bank
+const AI_SYS_VOICE = `GOAL
+Describe HOW one character talks, as short rules a writer can follow. Use only the LINES you are given.
+
+YOU GET
+- NAME: the character.
+- LINES: things this character said in the story, one per line.
+
+STEPS
+1. Read all the LINES.
+2. Find patterns that repeat in 2 or more lines:
+   sentence length · how they address people (names, titles, pet names) · questions or orders · formal or casual ·
+   favorite words or images · humor or none · what they avoid saying · how feelings come out (or don't).
+3. Write each pattern as one rule that starts with a verb. Add a tiny example in quotes ONLY if it is copied exactly from the LINES.
+4. Keep only rules that make this voice different from other people. Drop generic ones like "speaks naturally" or "is emotional".
+5. Write 4 to 7 rules.
+
+DO NOT
+- Do not describe personality, looks, or story events. Only how they speak.
+- Do not invent catchphrases that are not in the LINES.
+
+EXAMPLE
+NAME: Ivo
+LINES:
+Sit. Eat. We talk after.
+You think I'd let you walk there alone? Funny.
+Mara. Look at me. Breathe.
+I said I'd come back. I came back.
+Answer:
+- Uses very short sentences, often two or three words ("Sit. Eat.").
+- Gives orders instead of asking.
+- Says the other person's name alone before an important line ("Mara. Look at me.").
+- Hides worry behind dry one-word sarcasm ("Funny.").
+- Repeats his own words back to make a point ("I said I'd come back. I came back.").
+- Never names his feelings out loud.
+
+OUTPUT
+Only the rules, one per line, each starting with "- ". In English. Nothing else.`;
+
+async function makeVoice(m, who) {
+    const lines = [...new Set((m.quotes || []).filter(q => q.who === who).map(q => q.text))].slice(0, 150);
+    if (lines.length < 3) throw new Error(`${who}: 대사가 3개는 있어야 말투를 볼 수 있어요`);
+    const out = await askAI(`NAME: ${who}\n\nLINES:\n${lines.join('\n')}`, { system: AI_SYS_VOICE, maxTokens: 1500 });
+    const rules = out.split('\n').map(l => l.trim()).filter(l => /^[-*•]\s+\S/.test(l)).map(l => `- ${l.replace(/^[-*•]\s+/, '')}`);
+    if (!rules.length) throw new Error(`${who}: 모델 답에서 규칙을 못 찾았어요`);
+    m.voice = m.voice && typeof m.voice === 'object' ? m.voice : {};
+    m.voice[who] = { text: rules.slice(0, 8).join('\n'), n: lines.length, at: Date.now() };
+}
+
 async function openQuotes() {
     const c = ctx();
     const m = getMeta();
     m.quotes = Array.isArray(m.quotes) ? m.quotes : [];
     const $root = $(`
       <div class="na_popup">
-        <div class="na_block_head"><div><h4>대사 은행</h4><p>아카이브에 남은 대사를 인물별로 모아요. 고른 대사를 "말투 샘플"로 같이 주입하면 RP 모델이 캐릭터 말투를 덜 잃어요.</p></div></div>
+        <div class="na_block_head"><div><h4>대사 은행</h4><p>아카이브에 남은 대사를 인물별로 모아요. 고른 대사는 "말투 샘플"로, 대사에서 AI가 뽑은 말버릇 규칙(말투 지문)은 "조용히 따를 것"으로 같이 주입하면 RP 모델이 캐릭터 말투를 덜 잃어요.</p></div></div>
         <div class="na_tool_actions">
           <button type="button" class="na_btn na_small na_qb_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 모으기</button>
           <button type="button" class="na_btn na_small na_qb_find"><i class="fa-solid fa-magnifying-glass"></i> 아카이브에서 모으기</button>
+          <button type="button" class="na_btn na_small na_qb_vall" title="대사가 3개 이상인 인물마다 AI가 말버릇 규칙을 뽑아요"><i class="fa-solid fa-fingerprint"></i> 말투 지문 만들기</button>
           <button type="button" class="na_linkbtn na_danger na_qb_clear"><i class="fa-regular fa-trash-can"></i> 전체 삭제</button>
         </div>
         <div class="na_inject_strip">
-          <label class="na_strip_item"><input type="checkbox" class="na_toggle na_qb_inject"><span>주입하기</span></label>
+          <label class="na_strip_item"><input type="checkbox" class="na_toggle na_qb_inject"><span>대사 주입</span></label>
+          <label class="na_strip_item" title="말투 지문을 '조용히 따를 것'으로 주입해요"><input type="checkbox" class="na_toggle na_qb_vinject"><span>지문 주입</span></label>
           <label class="na_strip_item">인물마다 <input type="number" class="text_pole na_num na_qb_max" min="1" max="10"> 개</label>
           <small class="na_dim na_qb_tok"></small>
         </div>
@@ -4281,22 +4335,30 @@ async function openQuotes() {
         <div class="na_qb_list"></div>
       </div>`);
     $root.find('.na_qb_inject').prop('checked', !!m.quoteInject);
+    $root.find('.na_qb_vinject').prop('checked', !!m.voiceInject);
     $root.find('.na_qb_max').val(m.quoteMax || 3);
     const render = () => {
         const q = $root.find('.na_qb_q').val().trim().toLowerCase();
         const by = new Map();
         m.quotes.forEach((x, i) => { if (q && !`${x.who} ${x.text}`.toLowerCase().includes(q)) return; if (!by.has(x.who)) by.set(x.who, []); by.get(x.who).push({ x, i }); });
+        const voice = m.voice && typeof m.voice === 'object' ? m.voice : {};
+        if (!q) for (const who of Object.keys(voice)) if (!by.has(who)) by.set(who, []);
         const picked = new Set(pickedQuotes(m));
         const cast = currentCast(m);
         $root.find('.na_qb_clear').prop('hidden', !m.quotes.length);
         const ex = Array.isArray(m.quoteExclude) ? m.quoteExclude : [];
         $root.find('.na_qb_excl_chips').html(ex.length ? ex.map(n => `<span class="na_pchip na_qb_exchip">${esc(n)}<button type="button" class="na_qb_unex" data-n="${esc(n)}" title="다시 모으기">×</button></span>`).join('') : '<small class="na_dim">없음</small>');
-        $root.find('.na_qb_list').html(m.quotes.length ? [...by].sort((a, b) => (a[0] === '?') - (b[0] === '?') || b[1].length - a[1].length).map(([who, xs]) => `
+        $root.find('.na_qb_list').html(by.size ? [...by].sort((a, b) => (a[0] === '?') - (b[0] === '?') || b[1].length - a[1].length).map(([who, xs]) => `
           <div class="na_qb_group ${who !== '?' && !inCast(cast, who) ? 'na_qb_away' : ''}"><div class="na_qb_who">${esc(who === '?' ? '말한 사람 모름' : who)} <span class="na_dim">${xs.length}개 · 고른 ${xs.filter(y => y.x.on).length}</span>${who !== '?' && !inCast(cast, who) ? '<span class="na_qb_awaytag" title="STATE의 인물 제목과 최근 섹션 4개에 안 나와요. 다시 나오면 자동으로 주입돼요">지금 안 나와서 주입 안 함</span>' : ''}
             <span class="na_qb_gbtns" data-who="${esc(who)}">
               ${who !== '?' ? '<button type="button" class="na_icon na_icon_sm na_qb_gexcl" title="이 인물 빼기 (대사 지우고 앞으로도 안 모음)"><i class="fa-solid fa-user-slash"></i></button>' : ''}
-              <button type="button" class="na_icon na_icon_sm na_qb_gdel" title="이 인물 대사 모두 지우기"><i class="fa-regular fa-trash-can"></i></button>
+              ${who !== '?' && xs.length >= 3 ? `<button type="button" class="na_icon na_icon_sm na_qb_gvoice" title="${voice[who] ? '말투 지문 다시 만들기' : '말투 지문 만들기'}"><i class="fa-solid fa-fingerprint"></i></button>` : ''}
+              ${xs.length ? '<button type="button" class="na_icon na_icon_sm na_qb_gdel" title="이 인물 대사 모두 지우기"><i class="fa-regular fa-trash-can"></i></button>' : ''}
             </span></div>
+            ${voice[who] ? `<div class="na_qb_voice" data-who="${esc(who)}">
+              <div class="na_qb_vhead"><i class="fa-solid fa-fingerprint"></i><b>말투 지문</b><small class="na_dim">대사 ${voice[who].n || '?'}개로${voice[who].n && voice[who].n !== xs.length ? ` · 지금 ${xs.length}개` : ''} · 고쳐 써도 돼요</small><button type="button" class="na_icon na_icon_sm na_qb_vdel" title="지문 지우기"><i class="fa-solid fa-xmark"></i></button></div>
+              <textarea class="text_pole na_qb_vtext" rows="${Math.min(8, String(voice[who].text).split('\n').length + 1)}" spellcheck="false">${esc(voice[who].text)}</textarea>
+            </div>` : ''}
             ${xs.map(({ x, i }) => `<div class="na_qb_row ${x.on ? 'on' : ''} ${x.on && !picked.has(x) ? 'over' : ''}" data-i="${i}">
               <input type="checkbox" class="na_qb_on" ${x.on ? 'checked' : ''}>
               <div class="na_qb_text">“${esc(x.text)}”<div class="na_dim na_qb_src">${esc(String(x.src || '').slice(0, 50))}</div></div>
@@ -4309,6 +4371,34 @@ async function openQuotes() {
     render();
     const save = async () => { await saveMeta(); applyInjection(); syncPanel(); render(); };
     $root.find('.na_qb_q').on('input', render);
+    $root.find('.na_qb_vinject').on('change', async function () { m.voiceInject = this.checked; await save(); });
+    $root.on('change', '.na_qb_vtext', async function () {
+        const who = String($(this).closest('.na_qb_voice').data('who'));
+        const v = this.value.trim();
+        if (v) m.voice[who] = { ...m.voice[who], text: v }; else delete m.voice[who];
+        await save();
+    });
+    $root.on('click', '.na_qb_vdel', async function () { delete m.voice[String($(this).closest('.na_qb_voice').data('who'))]; await save(); });
+    $root.on('click', '.na_qb_gvoice', async function () {
+        const who = String($(this).closest('.na_qb_gbtns').data('who'));
+        const ok = await withSpinner($(this), '', async () => { await makeVoice(m, who); return true; });
+        if (ok) { await save(); toastr.success(`${who}: 말투 지문을 만들었어요${m.voiceInject ? '' : '. "지문 주입"을 켜면 RP 모델에 들어가요'}`); }
+    });
+    $root.find('.na_qb_vall').on('click', async function () {
+        const counts = new Map();
+        for (const x of m.quotes) if (x.who && x.who !== '?' && !isExcluded(m, x.who)) counts.set(x.who, (counts.get(x.who) || 0) + 1);
+        const voice = m.voice || {};
+        // only the missing ones, and the ones whose lines changed since
+        const todo = [...counts].filter(([who, n]) => n >= 3 && (!voice[who] || voice[who].n !== Math.min(150, n))).map(([who]) => who);
+        if (!todo.length) return toastr.info(counts.size ? '새로 만들 지문이 없어요. 인물 옆 지문 버튼으로 하나씩 다시 만들 수 있어요.' : '대사가 3개 이상인 인물이 없어요.');
+        const $b = $(this);
+        let done = 0;
+        await withSpinner($b, '만드는 중…', async () => {
+            for (const who of todo) { $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> ${esc(who)} (${done + 1}/${todo.length})`); await makeVoice(m, who); done++; await saveMeta(); }
+        });
+        await save();
+        if (done) toastr.success(`말투 지문 ${done}개를 만들었어요${m.voiceInject ? '' : '. "지문 주입"을 켜면 RP 모델에 들어가요'}`);
+    });
     $root.find('.na_qb_inject').on('change', async function () { m.quoteInject = this.checked; await save(); });
     $root.find('.na_qb_max').on('change', async function () { m.quoteMax = Math.min(10, Math.max(1, parseInt(this.value, 10) || 3)); this.value = m.quoteMax; await save(); });
     $root.on('change', '.na_qb_on', async function () { m.quotes[Number($(this).closest('.na_qb_row').data('i'))].on = this.checked; await save(); });
@@ -4351,6 +4441,7 @@ async function openQuotes() {
         m.quoteExclude = [...new Set([...(m.quoteExclude || []), name])];
         const before = m.quotes.length;
         m.quotes = m.quotes.filter(q => !isExcluded(m, q.who));
+        if (m.voice) for (const who of Object.keys(m.voice)) if (isExcluded(m, who)) delete m.voice[who];
         await save();
         toastr.success(`${name}: 빼는 인물로 정했어요${before - m.quotes.length ? ` · 대사 ${before - m.quotes.length}개 지움` : ''}`);
     };

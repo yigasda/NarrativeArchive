@@ -1433,3 +1433,10 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_temp_val.none { opacity: 0.5; }
 .na_temp_txt { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
 .na_temp_mini { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85em; }
+
+/* voice fingerprint */
+.na_qb_voice { margin: 4px 0 6px; border: 1px dashed color-mix(in srgb, var(--na-accent) 45%, transparent); border-radius: 10px; padding: 6px 8px; background: var(--na-accent-soft); }
+.na_qb_vhead { display: flex; align-items: center; gap: 6px; font-size: 0.85em; }
+.na_qb_vhead > i { color: var(--na-accent); }
+.na_qb_vhead small { flex: 1; min-width: 0; }
+.na_qb_vtext { width: 100%; margin: 4px 0 0; font-size: 0.85em; resize: vertical; box-sizing: border-box; }
