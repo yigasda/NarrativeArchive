@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.7.1';
+const VERSION = '3.7.2';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -4013,19 +4013,44 @@ function pickedQuotes(m) {
     return (m.quotes || []).filter(q => q.on && q.who && q.who !== '?' && inCast(cast, q.who)).filter(q => { const n = (per.get(q.who) || 0) + 1; per.set(q.who, n); return n <= max; });
 }
 
-const AI_SYS_QUOTES = `You pick voice samples for a role-play from a story archive: the quoted lines that best show how each character talks (rhythm, word choice, attitude), not the most dramatic plot lines.
+const AI_SYS_QUOTES = `GOAL
+Collect VOICE SAMPLES for a role-play: lines in quotation marks that show HOW a character talks (their rhythm, word choice, attitude).
+The user will pick from your list, so list every good one. Do not cut the list short.
 
-You get some sections of the archive. Read them all, to the last section, and work out who actually SAYS each quoted line. The archive is written in third person, so be careful:
-- The speaker is the one doing the speaking verb (said, told, asked, answered, whispered, swore, warned, called it…), not the person spoken to. "Set told Somang, \"…\"" → Set. "She asked him, \"…\"" → resolve she/he from the surrounding sentences.
-- A line after a colon belongs to the name before it: "Somang: \"…\"" → Somang.
-- A bullet that names one character at the start may quote someone else later in the same bullet; attribute each quote separately.
-- Quotes that a character repeats, reads, or remembers from someone else belong to the original speaker only if the archive says so; if unclear, skip.
-- Written words (letters, inscriptions, oaths on tablets) count only if a character wrote them as their own words.
+YOU GET
+SECTIONS of a story archive, written in the third person. Lines people said are inside quotation marks.
+
+STEP 1. Read every section, all the way to the last one. Do not stop early.
+
+STEP 2. For each quoted line, find who SAID it. Be careful, the archive is third person:
+- The speaker is the one doing the speaking verb (said, told, asked, answered, whispered, swore, warned, thought…), NOT the person spoken to.
+    "Ivo told Ren, \"…\"" → Ivo
+    "Ren asked him, \"…\"" → Ren
+- "she" / "he" / "they": look at the sentences around it to find who that is.
+    "Mara turned to Ivo. She said, \"…\"" → Mara
+- A name followed by a colon owns the line after it.
+    "Ren: \"…\"" → Ren
+- One bullet can quote two different people. Decide for each quote separately.
+    "Ivo refused, \"…\"; Ren laughed, \"…\"" → first Ivo, second Ren
+- A line someone repeats, reads out, or remembers from another person belongs to the person who first said it, and only if the archive makes that clear.
 - If you cannot tell who said it, skip it. Never guess.
 
-List every line that is a good voice sample, for every character who really speaks; the user will choose from your list, so do not cut it short. Skip one- or two-word lines, pure plot exposition, and lines that make no sense without heavy context.
-Copy each line EXACTLY as it appears in the archive, without the quotation marks. Never write new lines.
-Output one pick per line, nothing else: Speaker | line`;
+STEP 3. Keep only lines that are good voice samples.
+KEEP: lines that sound like that person and still make sense on their own.
+SKIP:
+- one- or two-word lines ("Yes." "Go.")
+- lines that only explain the plot
+- lines that make no sense without the scene around them
+- labels, titles, names of places or things in quotation marks (those are not speech)
+
+STEP 4. Copy each kept line EXACTLY as written in the archive: same words, same punctuation. Leave out the quotation marks. Never write new lines or fix the wording.
+
+OUTPUT: nothing else, one line each, exactly like this
+<speaker> | <the line>
+Example:
+Ivo | You can hate me tomorrow. Tonight you eat.
+Ren | I'm not afraid of you, I'm afraid of the quiet.
+Use the archive's own spelling of names. If there are no good lines, write exactly: none`;
 
 // normalise a quote for matching against the archive
 const quoteKey = t => String(t).replace(/[“”„"]/g, '"').replace(/[‘’]/g, "'").replace(/\s+/g, ' ').trim().toLowerCase();
