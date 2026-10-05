@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.0.2';
+const VERSION = '2.1.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -809,6 +809,7 @@ function mountSectionBrowser($host) {
 // ---------------------------------------------------------------- panel
 
 let sectionPanel = null;
+let refreshReplace = () => {};
 let editorDirty = false;
 
 function renderPanel() {
@@ -864,25 +865,25 @@ function renderPanel() {
                   <span class="na_spacer"></span>
                   <button type="button" class="na_icon" id="na_ed_preview" title="주입 미리보기"><i class="fa-regular fa-eye"></i></button>
                   <button type="button" class="na_icon" id="na_ed_toc" title="목차"><i class="fa-solid fa-list-ul"></i></button>
-                  <button type="button" class="na_icon" id="na_ed_find" title="찾아 바꾸기"><i class="fa-solid fa-magnifying-glass"></i></button>
+                  <button type="button" class="na_icon" id="na_ed_find" title="찾기"><i class="fa-solid fa-magnifying-glass"></i></button>
                   <button type="button" class="na_icon" id="na_ed_copy" title="전체 복사"><i class="fa-regular fa-copy"></i></button>
-                  <button type="button" class="na_icon" id="na_ed_big" title="크게 보기"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></button>
+                  <button type="button" class="na_icon" id="na_ed_big" title="읽기 모드"><i class="fa-solid fa-book-open-reader"></i></button>
                 </div>
                 <div class="na_toc" id="na_toc" hidden></div>
                 <div class="na_findbar" id="na_findbar" hidden>
-                  <div class="na_find_row">
-                    <input type="search" class="text_pole" id="na_find_q" placeholder="찾기 (Enter: 다음)">
+                  <div class="na_find_field">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="search" class="text_pole" id="na_find_q" placeholder="본문에서 찾기">
                     <span class="na_find_info" id="na_find_info"></span>
-                    <button type="button" class="na_icon na_icon_sm" id="na_find_next" title="다음"><i class="fa-solid fa-arrow-down"></i></button>
                   </div>
-                  <div class="na_find_row">
-                    <input type="text" class="text_pole" id="na_rep_q" placeholder="바꿀 말">
-                    <button type="button" class="na_btn na_small" id="na_rep_one">바꾸기</button>
-                    <button type="button" class="na_btn na_small" id="na_rep_all" disabled>모두</button>
-                  </div>
-                  <label class="na_find_case"><input type="checkbox" id="na_find_case"> 대소문자 구분</label>
+                  <button type="button" class="na_icon" id="na_find_prev" title="이전 (Shift+Enter)"><i class="fa-solid fa-chevron-up"></i></button>
+                  <button type="button" class="na_icon" id="na_find_next" title="다음 (Enter)"><i class="fa-solid fa-chevron-down"></i></button>
+                  <button type="button" class="na_icon" id="na_find_close" title="닫기"><i class="fa-solid fa-xmark"></i></button>
                 </div>
+                <div class="na_editor_wrap">
+                  <div class="na_editor_marks" aria-hidden="true"></div>
                 <textarea id="na_editor" class="text_pole na_editor" spellcheck="false" placeholder="# 제목&#10;&#10;# ── Y1 ──&#10;&#10;## #0–#47 — ..."></textarea>
+                </div>
                 <div class="na_editor_actions">
                   <button type="button" class="na_btn" id="na_ed_revert"><i class="fa-solid fa-rotate-left"></i> 되돌리기</button>
                   <button type="button" class="na_btn na_primary" id="na_ed_save"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
@@ -902,8 +903,24 @@ function renderPanel() {
                     <h4>섹션</h4>
                     <p>스위치를 끄면 본문은 두고 주입에서만 빠져요. 카드를 펼치면 순서 이동·새 섹션 추가·편집.</p>
                   </div>
-                  <button type="button" class="na_btn na_small" id="na_sec_big"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> 크게</button>
                 </div>
+                <details class="na_hcheck" id="na_replace">
+                  <summary><i class="fa-solid fa-right-left"></i> 찾아 바꾸기 <span class="na_chip" id="na_rp_n"></span></summary>
+                  <div class="na_rp_body">
+                    <div class="na_rp_grid">
+                      <input type="text" class="text_pole" id="na_rp_find" placeholder="찾을 말">
+                      <input type="text" class="text_pole" id="na_rp_to" placeholder="바꿀 말 (비우면 지우기)">
+                    </div>
+                    <div class="na_rp_opts">
+                      <label class="checkbox_label"><input type="checkbox" id="na_rp_case"><span>대소문자 구분</span></label>
+                      <label class="checkbox_label"><input type="checkbox" id="na_rp_word"><span>낱말 단위</span></label>
+                    </div>
+                    <div class="na_rp_list" id="na_rp_list"></div>
+                    <div class="na_row na_right">
+                      <button type="button" class="na_btn na_primary na_small" id="na_rp_go" disabled><i class="fa-solid fa-right-left"></i> 모두 바꾸기</button>
+                    </div>
+                  </div>
+                </details>
                 <details class="na_hcheck" id="na_hcheck">
                   <summary><i class="fa-solid fa-spell-check"></i> 제목 검사 <span class="na_chip" id="na_hcheck_n">-</span></summary>
                   <div id="na_hcheck_list"></div>
@@ -1089,7 +1106,7 @@ function bindPanel() {
         const ok = await copyText($ed.val(), $ed[0]);
         ok ? toastr.success('복사됨') : toastr.warning('복사가 막혀 있어요.');
     });
-    $('#na_ed_big').on('click', needChat(openViewer));
+    $('#na_ed_big').on('click', needChat(openReader));
     $('#na_ed_preview').on('click', needChat(openPreview));
     $('#na_cfg_preview').on('click', needChat(openPreview));
 
@@ -1105,8 +1122,8 @@ function bindPanel() {
             focus?.();
         }
     };
-    $('#na_ed_find').on('click', () => togglePanel('#na_findbar', () => $('#na_find_q').trigger('focus').trigger('input')));
-    $('#na_ed_toc').on('click', () => togglePanel('#na_toc', renderToc));
+    $('#na_ed_find').on('click', () => { togglePanel('#na_findbar', () => $('#na_find_q').trigger('focus').trigger('input')); paintMarks(); });
+    $('#na_ed_toc').on('click', () => { togglePanel('#na_toc', renderToc); paintMarks(); });
 
     function renderToc() {
         const text = $ed.val();
@@ -1122,62 +1139,66 @@ function bindPanel() {
         });
     }
 
-    let findFrom = 0;
-    const findOpts = () => ({ q: $('#na_find_q').val(), cs: $('#na_find_case').prop('checked') });
-    const matchesOf = (text, q, cs) => {
-        if (!q) return [];
-        const hay = cs ? text : text.toLowerCase(), needle = cs ? q : q.toLowerCase();
-        const out = [];
-        for (let at = hay.indexOf(needle); at >= 0; at = hay.indexOf(needle, at + needle.length)) out.push(at);
-        return out;
+    // find only: highlight every match in a layer behind the (transparent) textarea
+    const $marks = $('.na_editor_marks');
+    let hits = [], cur = -1;
+    const syncMarkBox = () => {
+        const el = $ed[0], cs = getComputedStyle(el), mk = $marks[0];
+        for (const k of ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+            'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'boxSizing', 'tabSize']) mk.style[k] = cs[k];
+        mk.style.width = `${el.offsetWidth}px`;
+        mk.style.height = `${el.offsetHeight}px`;
+        mk.scrollTop = el.scrollTop;
     };
-    const doFind = advance => {
-        const { q, cs } = findOpts();
+    const paintMarks = () => {
+        const q = $('#na_find_q').val();
+        const on = !$('#na_findbar').prop('hidden') && !!q && hits.length;
+        $('.na_editor_wrap').toggleClass('na_marking', !!on);
+        if (!on) { $marks.empty(); return; }
         const text = $ed.val();
-        const hits = matchesOf(text, q, cs);
-        $('#na_rep_all').prop('disabled', !hits.length);
-        if (!q) { $('#na_find_info').text(''); return; }
-        if (!hits.length) { $('#na_find_info').text('없음'); return; }
-        let idx = hits.findIndex(at => at >= (advance ? findFrom : 0));
-        if (idx < 0) idx = 0;
-        const at = hits[idx];
-        findFrom = at + q.length;
-        $('#na_find_info').text(`${idx + 1}/${hits.length}`);
-        revealInEditor(at, at + q.length, { keepFocus: true });
+        let html = '', last = 0;
+        hits.forEach((at, i) => {
+            html += esc(text.slice(last, at)) + `<mark class="${i === cur ? 'na_cur' : ''}">${esc(text.slice(at, at + q.length))}</mark>`;
+            last = at + q.length;
+        });
+        html += esc(text.slice(last)) + '\n';
+        $marks.html(html);
+        syncMarkBox();
     };
-    const replaceText = (text, from, len, rep) => text.slice(0, from) + rep + text.slice(from + len);
-    $('#na_find_q').on('input', () => { findFrom = 0; doFind(false); });
-    $('#na_find_case').on('change', () => { findFrom = 0; doFind(false); });
-    $('#na_find_q').on('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doFind(true); } });
-    $('#na_find_next').on('click', () => doFind(true));
-    $('#na_rep_one').on('click', () => {
-        const { q, cs } = findOpts();
-        if (!q) return;
-        const el = $ed[0];
-        const sel = el.value.slice(el.selectionStart, el.selectionEnd);
-        const same = cs ? sel === q : sel.toLowerCase() === q.toLowerCase();
-        if (same) {
-            const at = el.selectionStart;
-            $ed.val(replaceText(el.value, at, q.length, $('#na_rep_q').val())).trigger('input');
-            findFrom = at + $('#na_rep_q').val().length;
+    const findAll = () => {
+        const q = $('#na_find_q').val();
+        hits = [];
+        if (q) {
+            const hay = $ed.val().toLowerCase(), needle = q.toLowerCase();
+            for (let at = hay.indexOf(needle); at >= 0; at = hay.indexOf(needle, at + needle.length)) hits.push(at);
         }
-        doFind(true);
+        if (cur >= hits.length) cur = hits.length - 1;
+    };
+    const showInfo = () => {
+        const q = $('#na_find_q').val();
+        $('#na_find_info').text(!q ? '' : hits.length ? `${cur + 1}/${hits.length}` : '0/0').toggleClass('na_find_none', !!q && !hits.length);
+        $('#na_find_prev, #na_find_next').prop('disabled', hits.length < 2 && !(hits.length === 1 && cur < 0));
+    };
+    const go = step => {
+        if (!hits.length) { showInfo(); paintMarks(); return; }
+        cur = cur < 0 ? (step < 0 ? hits.length - 1 : 0) : (cur + step + hits.length) % hits.length;
+        const q = $('#na_find_q').val();
+        revealInEditor(hits[cur], hits[cur] + q.length, { keepFocus: true });
+        showInfo(); paintMarks();
+    };
+    $('#na_find_q').on('input', () => { cur = -1; findAll(); go(1); });
+    $('#na_find_q').on('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); go(e.shiftKey ? -1 : 1); }
+        if (e.key === 'Escape') { e.preventDefault(); $('#na_find_close').trigger('click'); }
     });
-    $('#na_rep_all').on('click', async () => {
-        const { q, cs } = findOpts();
-        const rep = $('#na_rep_q').val();
-        const hits = matchesOf($ed.val(), q, cs);
-        if (!hits.length) return;
-        if (!await confirm('모두 바꾸기', `"${q}" ${hits.length}군데를 "${rep}"(으)로 바꿀까요? 편집칸에만 바뀌고, 저장해야 반영돼요.`)) return;
-        let text = $ed.val();
-        for (let i = hits.length - 1; i >= 0; i--) text = replaceText(text, hits[i], q.length, rep);
-        $ed.val(text).trigger('input');
-        doFind(false);
-        toastr.success(`${hits.length}군데 바꿈 · 저장을 눌러야 반영돼요`);
-    });
+    $('#na_find_next').on('click', () => go(1));
+    $('#na_find_prev').on('click', () => go(-1));
+    $('#na_find_close').on('click', () => { $('#na_findbar').prop('hidden', true); $('#na_ed_find').removeClass('active'); paintMarks(); });
+    $ed.on('scroll', () => { $marks[0].scrollTop = $ed[0].scrollTop; });
+    $ed.on('input', () => { if (!$('#na_findbar').prop('hidden') && $('#na_find_q').val()) { findAll(); showInfo(); paintMarks(); } });
+    if (window.ResizeObserver) new ResizeObserver(() => { if ($('.na_editor_wrap').hasClass('na_marking')) syncMarkBox(); }).observe($ed[0]);
 
     // --- sections
-    $('#na_sec_big').on('click', needChat(openViewer));
 
     // --- compress
     $('#na_boundary').on('change', async function () {
@@ -1197,6 +1218,53 @@ function bindPanel() {
     $('#na_open_append').on('click', needChat(openAppend));
     $('#na_apply_hide').on('click', needChat(() => applyHide()));
     $('#na_unhide').on('click', needChat(openUnhide));
+
+    // --- find & replace on the saved archive (sections tab)
+    const rpRegex = () => {
+        const q = $('#na_rp_find').val();
+        if (!q) return null;
+        const body = escRe(q);
+        return new RegExp($('#na_rp_word').prop('checked') ? `(?<![\\p{L}\\p{N}_])${body}(?![\\p{L}\\p{N}_])` : body, `g${$('#na_rp_case').prop('checked') ? '' : 'i'}u`);
+    };
+    const renderReplace = () => {
+        const $l = $('#na_rp_list').empty();
+        if (!hasChat()) return;
+        const re = rpRegex();
+        const text = getMeta().text;
+        const to = $('#na_rp_to').val();
+        if (!re) { $('#na_rp_n').text(''); $('#na_rp_go').prop('disabled', true); return; }
+        const found = [...text.matchAll(re)];
+        $('#na_rp_n').text(`${found.length}군데`).toggleClass('na_chip_warn', !!found.length);
+        $('#na_rp_go').prop('disabled', !found.length);
+        if (!found.length) { $l.html('<div class="na_empty">찾는 말이 없어요.</div>'); return; }
+        const secs = parseSections(text);
+        found.slice(0, 40).forEach(mt => {
+            const at = mt.index, len = mt[0].length;
+            const sec = [...secs].reverse().find(x => x.start <= at);
+            const a = Math.max(0, at - 30), b = Math.min(text.length, at + len + 30);
+            const before = text.slice(a, at).replace(/\n/g, ' '), after = text.slice(at + len, b).replace(/\n/g, ' ');
+            $l.append(`<div class="na_rp_hit"><span class="na_rp_sec">${esc(sec ? (sec.group ? groupLabel(sec.title) : sec.title) : '')}</span>
+                <span class="na_rp_ctx">${a > 0 ? '…' : ''}${esc(before)}<del>${esc(mt[0])}</del><ins>${esc(to)}</ins>${esc(after)}${b < text.length ? '…' : ''}</span></div>`);
+        });
+        if (found.length > 40) $l.append(`<div class="na_dim na_rp_more">그 밖에 ${found.length - 40}군데 더</div>`);
+    };
+    refreshReplace = renderReplace;
+    let rpTimer;
+    $('#na_rp_find, #na_rp_to').on('input', () => { clearTimeout(rpTimer); rpTimer = setTimeout(renderReplace, 250); });
+    $('#na_rp_case, #na_rp_word').on('change', renderReplace);
+    $('#na_rp_go').on('click', needChat(async () => {
+        const re = rpRegex();
+        if (!re) return;
+        if (editorDirty) return toastr.warning('개요 탭 편집칸에 저장 안 한 내용이 있어요. 먼저 저장하거나 되돌려 주세요.');
+        const m = getMeta();
+        const n = [...m.text.matchAll(re)].length;
+        if (!n) return;
+        const to = $('#na_rp_to').val();
+        if (!await confirm('모두 바꾸기', `"${$('#na_rp_find').val()}" ${n}군데를 ${to ? `"${to}"(으)로 바꿀까요` : '지울까요'}? 지금 상태는 복구 지점에 남아요.`)) return;
+        await commitText(m.text.replace(re, () => to), `찾아 바꾸기 전: ${$('#na_rp_find').val().slice(0, 30)}`);
+        renderReplace();
+        toastr.success(`${n}군데 바꿨어요`);
+    }));
     $('#na_track').on('change', async function () {
         if (!hasChat()) return;
         const m = getMeta();
@@ -1392,6 +1460,7 @@ function syncPanel() {
     $('#na_keep').val(m.keep);
     sectionPanel?.render();
     renderHeadingCheck();
+    if ($('#na_replace').prop('open')) refreshReplace();
     renderSnapshots();
     refreshInjectLog();
     refreshStatus();
@@ -2223,56 +2292,24 @@ function renderReading(m) {
 
 // ---------------------------------------------------------------- viewer popup
 
-async function openViewer(startTab = 'sections') {
+async function openReader() {
     const c = ctx();
     const $root = $(`
       <div class="na_popup">
-        <div class="na_nav">
-          <button type="button" class="na_nav_btn active" data-tab="sections">섹션</button>
-          <button type="button" class="na_nav_btn" data-tab="read">읽기</button>
-          <button type="button" class="na_nav_btn" data-tab="full">전체 편집</button>
+        <div class="na_rd_bar">
+          <select class="text_pole na_rd_toc"></select>
+          <button type="button" class="na_icon na_rd_smaller" title="글자 작게"><i class="fa-solid fa-minus"></i></button>
+          <button type="button" class="na_icon na_rd_bigger" title="글자 크게"><i class="fa-solid fa-plus"></i></button>
         </div>
-        <div class="na_pane" data-pane="sections"></div>
-        <div class="na_pane" data-pane="read" hidden>
-          <div class="na_rd_bar">
-            <select class="text_pole na_rd_toc"></select>
-            <button type="button" class="na_icon na_rd_smaller" title="글자 작게"><i class="fa-solid fa-minus"></i></button>
-            <button type="button" class="na_icon na_rd_bigger" title="글자 크게"><i class="fa-solid fa-plus"></i></button>
-          </div>
-          <article class="na_reader"></article>
-        </div>
-        <div class="na_pane" data-pane="full" hidden>
-          <textarea class="text_pole na_full" spellcheck="false"></textarea>
-          <div class="na_row na_right">
-            <span class="na_full_tok na_dim"></span>
-            <button type="button" class="na_btn na_full_save na_primary"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
-          </div>
-        </div>
+        <article class="na_reader"></article>
       </div>`);
-
-    const browser = mountSectionBrowser($root.find('[data-pane="sections"]'));
-    const $full = $root.find('.na_full');
-    const updateFullTok = async () => $root.find('.na_full_tok').text(`${fmt(await countTokens($full.val()))} 토큰`);
-
-    $root.find('.na_nav_btn').on('click', function () {
-        const tab = $(this).data('tab');
-        $root.find('.na_nav_btn').removeClass('active');
-        $(this).addClass('active');
-        $root.find('.na_pane').each(function () { $(this).prop('hidden', $(this).data('pane') !== tab); });
-        if (tab === 'full') { $full.val(getMeta().text); updateFullTok(); }
-        else if (tab === 'read') renderRead();
-        else browser.render();
-    });
-
     const g = globalSettings();
     const applyFont = () => $root.find('.na_reader').css('font-size', `${g.readSize || 1}em`);
-    function renderRead() {
-        const { html, toc } = renderReading(getMeta());
-        $root.find('.na_reader').html(html || '<div class="na_empty">아카이브가 비어 있어요.</div>');
-        $root.find('.na_rd_toc').html('<option value="">목차로 이동…</option>' + toc.map(t =>
-            `<option value="${t.id}">${'\u00a0\u00a0'.repeat(Math.max(0, t.level - 1))}${esc(t.title)}</option>`).join(''));
-        applyFont();
-    }
+    const { html, toc } = renderReading(getMeta());
+    $root.find('.na_reader').html(html || '<div class="na_empty">아카이브가 비어 있어요.</div>');
+    $root.find('.na_rd_toc').html('<option value="">목차로 이동…</option>' + toc.map(t =>
+        `<option value="${t.id}">${'\u00a0\u00a0'.repeat(Math.max(0, t.level - 1))}${esc(t.title)}</option>`).join(''));
+    applyFont();
     $root.find('.na_rd_toc').on('change', function () {
         const el = this.value && $root.find(`#${this.value}`)[0];
         if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -2283,19 +2320,6 @@ async function openViewer(startTab = 'sections') {
         g.readSize = Math.min(1.6, Math.max(0.8, Math.round(((g.readSize || 1) + d) * 10) / 10));
         saveGlobal(); applyFont();
     });
-    if (startTab !== 'sections') setTimeout(() => $root.find(`.na_nav_btn[data-tab="${startTab}"]`).trigger('click'), 0);
-
-    let t;
-    $full.on('input', () => { clearTimeout(t); t = setTimeout(updateFullTok, 600); });
-    $full.on('keydown', e => {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); $root.find('.na_full_save').trigger('click'); }
-    });
-    $root.find('.na_full_save').on('click', async () => {
-        editorDirty = false;
-        const changed = await commitText($full.val(), '전체 편집 저장 전');
-        toastr.success(changed ? '아카이브 저장됨' : '바뀐 내용이 없어요');
-    });
-
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
@@ -2860,7 +2884,7 @@ function addWandMenu() {
     const $menu = $('#extensionsMenu');
     if (!$menu.length || $('#na_wand_read').length) return;
     const items = [
-        ['na_wand_read', 'fa-book-open-reader', '아카이브 읽기', () => openViewer('read')],
+        ['na_wand_read', 'fa-book-open-reader', '아카이브 읽기', openReader],
         ['na_wand_extract', 'fa-scissors', '원문 뽑기', openExtract],
         ['na_wand_append', 'fa-file-circle-plus', '아카이브에 추가', openAppend],
         ['na_wand_preview', 'fa-eye', '주입 미리보기', openPreview],

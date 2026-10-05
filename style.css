@@ -168,12 +168,29 @@
 .na_linkbtn:hover { opacity: 1; }
 .na_danger:hover { color: var(--na-warn); }
 .na_btn:disabled { opacity: 0.4; pointer-events: none; }
-.na_findbar { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 10px; background: var(--na-softer); }
+.na_findbar { display: flex; align-items: center; gap: 2px; }
 .na_findbar[hidden] { display: none; }
-.na_find_row { display: flex; align-items: center; gap: 6px; }
-.na_find_row input { flex: 1; min-width: 0; margin: 0 !important; }
-.na_find_info { font-size: 0.78em; opacity: 0.7; min-width: 2.6em; text-align: right; font-variant-numeric: tabular-nums; }
-.na_find_case { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.8em; opacity: 0.75; }
+.na_find_field {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border: 1px solid var(--na-line);
+    border-radius: 999px;
+    background: var(--na-softer);
+    margin-right: 4px;
+}
+.na_find_field:focus-within { border-color: var(--na-accent); }
+.na_find_field > i { opacity: 0.45; font-size: 0.85em; flex-shrink: 0; }
+.na_find_field input#na_find_q, .na_find_field input#na_find_q:focus {
+    flex: 1; min-width: 0; width: auto !important; margin: 0 !important; padding: 7px 0 !important;
+    border: 0 !important; outline: 0 !important; box-shadow: none !important; background: transparent !important;
+}
+.na_find_info { font-size: 0.78em; opacity: 0.7; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.na_find_info.na_find_none { color: var(--na-warn); opacity: 1; }
+.na_findbar .na_icon:disabled { opacity: 0.25; pointer-events: none; }
 .na_icon.active { opacity: 1; background: var(--na-accent-soft); color: var(--na-accent); }
 .na_toc {
     display: flex;
@@ -800,3 +817,45 @@
 .na_group > .na_group_note { padding: 6px 4px 2px 1.6em; }
 .na_list > .na_group:not(:first-child), .na_group_items > .na_group { margin-top: 12px; }
 .na_group_items { padding-top: 2px; }
+
+/* ---------- highlight layer behind the editor */
+.na_editor_wrap { position: relative; }
+.na_editor_marks {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    color: transparent;
+    border-style: solid;
+    border-color: transparent;
+    border-radius: 10px;
+    pointer-events: none;
+    display: none;
+}
+.na_editor_wrap.na_marking .na_editor_marks { display: block; }
+.na_editor_marks mark { color: transparent; background: color-mix(in srgb, #f2c94c 55%, transparent); border-radius: 2px; }
+.na_editor_marks mark.na_cur { background: color-mix(in srgb, var(--na-accent) 65%, transparent); }
+.na_editor_wrap .na_editor { position: relative; z-index: 1; }
+.na_editor_wrap.na_marking .na_editor { background: transparent !important; }
+.na_editor_wrap.na_marking { background: var(--na-softer); border-radius: 10px; }
+
+/* ---------- find & replace (sections tab) */
+.na_rp_body { padding: 0 12px 10px; display: flex; flex-direction: column; gap: 8px; }
+.na_rp_grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.na_rp_grid input { width: 100% !important; margin: 0 !important; min-width: 0; }
+.na_rp_opts { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.82em; }
+.na_rp_opts .checkbox_label { margin: 0; }
+.na_rp_list { display: flex; flex-direction: column; max-height: 32vh; overflow-y: auto; }
+.na_rp_hit { display: flex; flex-direction: column; gap: 1px; padding: 6px 2px; border-top: 1px solid var(--na-line); font-size: 0.8em; }
+.na_rp_hit:first-child { border-top: 0; }
+.na_rp_sec { font-weight: 600; opacity: 0.6; font-size: 0.92em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.na_rp_ctx { line-height: 1.5; word-break: break-word; }
+.na_rp_ctx del { color: #c4513f; background: color-mix(in srgb, #c4513f 14%, transparent); text-decoration: line-through; }
+.na_rp_ctx ins { color: #3f9a5a; background: color-mix(in srgb, #3f9a5a 14%, transparent); text-decoration: none; }
+.na_rp_ctx ins:empty { display: none; }
+.na_rp_more { font-size: 0.78em; padding-top: 4px; }
+.na_hcheck + .na_hcheck { margin-top: 6px; }
