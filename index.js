@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -18,13 +18,14 @@ const DEFAULT_META = Object.freeze({
     role: 0,        // 0 system, 1 user, 2 assistant
     wrap: '',       // optional template, {{archive}} is replaced by the archive text
     remindTok: 0,   // nudge when raw text after the boundary passes this many tokens (0 = off)
+    track: false,   // boundary follows the last #number in the archive's headings
     once: '',       // one-shot override for the next generation only
     snapshots: [],  // [{ at, reason, text, boundary }] newest first
     muted: [],      // section titles left out of the injection
     lastInject: null,
 });
 
-const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted'];
+const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track'];
 const POSITIONS = { 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
 const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
 
@@ -72,6 +73,7 @@ async function commitText(text, reason, { boundary } = {}) {
     pushSnapshot(m, reason);
     m.text = next;
     if (boundary !== undefined) m.boundary = boundary;
+    else syncTrackedBoundary(m);
     await saveMeta();
     applyInjection();
     syncPanel();
@@ -197,19 +199,39 @@ async function onGenerationDone() {
 
 // ---------------------------------------------------------------- hiding
 
+const lastIndex = () => (ctx().chat?.length || 0) - 1;
+
+// When tracking, pull the boundary to the archive's last heading number. Returns a reason string if it can't.
+function syncTrackedBoundary(m) {
+    if (!m.track) return null;
+    const n = guessEndNumber(m.text);
+    if (n === null) return '아카이브 제목에서 #번호를 못 찾았어요';
+    if (n > lastIndex()) return `아카이브 마지막 번호 #${n}가 채팅 마지막 #${lastIndex()}보다 커요 (다른 채팅 번호일 수 있어요)`;
+    m.boundary = n;
+    return null;
+}
+
 async function applyHide({ silent = false } = {}) {
     const m = getMeta();
-    if (!m || m.boundary < 0) {
+    if (!m) return;
+    const problem = syncTrackedBoundary(m);
+    if (problem) {
+        if (!silent) toastr.warning(`${problem}. 숨기지 않았어요.`);
+        return;
+    }
+    if (m.boundary < 0) {
         if (!silent) toastr.info('먼저 경계선(아카이브가 몇 번까지 다루는지)을 정해 주세요.');
         return;
     }
+    await saveMeta();
     const hideEnd = m.boundary - Math.max(0, Number(m.keep) || 0);
-    if (hideEnd < 0) {
-        if (!silent) toastr.info('숨길 메시지가 없습니다.');
-        return;
-    }
-    await ctx().executeSlashCommandsWithOptions(`/hide 0-${hideEnd}`, { handleParserErrors: true, handleExecutionErrors: true });
-    if (!silent) toastr.success(`#0 ~ #${hideEnd} 숨김 (마지막 ${m.keep}개는 남김)`);
+    const last = lastIndex();
+    const run = cmd => ctx().executeSlashCommandsWithOptions(cmd, { handleParserErrors: true, handleExecutionErrors: true });
+    // only up to the boundary: everything after it is shown again
+    if (hideEnd >= 0) await run(`/hide 0-${hideEnd}`);
+    if (hideEnd + 1 <= last) await run(`/unhide ${Math.max(0, hideEnd + 1)}-${last}`);
+    syncPanel();
+    if (!silent) toastr.success(hideEnd >= 0 ? `#0 ~ #${hideEnd} 숨김 · #${hideEnd + 1}부터 보임 (마지막 ${m.keep}개 남김)` : '숨길 메시지가 없어서 모두 보이게 했어요');
 }
 
 // ---------------------------------------------------------------- extraction
@@ -639,7 +661,8 @@ function renderPanel() {
               <div class="na_block">
                 <div class="na_block_head"><div><h4>경계선</h4><p>아카이브가 다루는 마지막 메시지 번호예요. 그 앞은 숨겨서 토큰을 아껴요.</p></div></div>
                 <div class="na_set_list">
-                  <label class="na_set_row"><span>아카이브는 #… 까지</span><input type="number" id="na_boundary" class="text_pole" min="0" placeholder="-"></label>
+                  <label class="na_set_row"><span><span>아카이브 따라가기</span><small id="na_track_info">제목의 마지막 #번호를 경계선으로</small></span><input type="checkbox" id="na_track" class="na_toggle"></label>
+                  <label class="na_set_row" id="na_boundary_row"><span>아카이브는 #… 까지</span><input type="number" id="na_boundary" class="text_pole" min="0" placeholder="-"></label>
                   <label class="na_set_row"><span>숨길 때 남길 메시지</span><input type="number" id="na_keep" class="text_pole" min="0" max="50"></label>
                 </div>
                 <div class="na_since" id="na_since"></div>
@@ -649,7 +672,7 @@ function renderPanel() {
                 <div class="na_steps">
                   <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>경계선 이후 메시지 복사·저장</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step" id="na_open_append"><b>2</b><span><strong>아카이브에 추가</strong><small>압축본 붙여넣기 · 경계선 자동</small></span><i class="fa-solid fa-chevron-right"></i></button>
-                  <button type="button" class="na_step na_step_sub" id="na_apply_hide"><b><i class="fa-solid fa-eye-slash"></i></b><span><strong>숨기기 다시 적용</strong><small>경계선 기준 /hide</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                  <button type="button" class="na_step na_step_sub" id="na_apply_hide"><b><i class="fa-solid fa-eye-slash"></i></b><span><strong>숨기기 다시 적용</strong><small>경계선 앞만 숨기고 뒤는 다시 보이게</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
               </div>
             </section>
@@ -820,6 +843,15 @@ function bindPanel() {
     $('#na_open_extract').on('click', needChat(openExtract));
     $('#na_open_append').on('click', needChat(openAppend));
     $('#na_apply_hide').on('click', needChat(() => applyHide()));
+    $('#na_track').on('change', async function () {
+        if (!hasChat()) return;
+        const m = getMeta();
+        m.track = this.checked;
+        const problem = syncTrackedBoundary(m);
+        await saveMeta(); syncPanel();
+        if (problem) toastr.warning(problem);
+        else if (m.track) toastr.success(`경계선을 #${m.boundary}로 맞췄어요`);
+    });
 
     // --- vault
     $('#na_snap_now').on('click', needChat(async () => {
@@ -940,6 +972,13 @@ function syncPanel() {
     if (carryOffer) $('#na_carry_desc').text(`방금 있던 채팅의 아카이브 (${fmt(carryOffer.text.length)}자)를 이 채팅에 가져와요.`);
     rememberArchive();
     $('#na_boundary').val(m.boundary >= 0 ? m.boundary : '');
+    $('#na_track').prop('checked', !!m.track);
+    $('#na_boundary_row').toggleClass('na_disabled', !!m.track);
+    {
+        const n = guessEndNumber(m.text);
+        $('#na_track_info').html(n === null ? '제목에 #번호가 없어요'
+            : `아카이브 마지막 번호 <b>#${n}</b>${n > lastIndex() ? ' <span class="na_warn_txt">· 채팅보다 커요</span>' : ''}`);
+    }
     $('#na_keep').val(m.keep);
     sectionPanel?.render();
     renderSnapshots();
@@ -1035,7 +1074,8 @@ async function importArchive(src, label) {
     for (const k of SETTING_KEYS) if (src.settings && Object.hasOwn(src.settings, k)) m[k] = structuredClone(src.settings[k]);
     editorDirty = false;
     carryOffer = null;
-    // a new chat restarts numbering, so the boundary is cleared
+    // a new chat restarts numbering, so the boundary is cleared and tracking turned off
+    m.track = false;
     await commitText(src.text, '가져오기 전', { boundary: -1 });
     toastr.success(`가져옴: ${label}`);
     return true;
