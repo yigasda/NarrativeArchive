@@ -635,3 +635,22 @@
 .na_hc_title { font-size: 0.84em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .na_hc_msg { font-size: 0.78em; color: var(--na-warn); }
 .na_card.na_flash { box-shadow: 0 0 0 2px var(--na-accent); transition: box-shadow 0.3s; }
+
+/* ---------- prompt library */
+.na_pfav { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 0; }
+.na_pfav:empty { display: none; }
+.na_pchip {
+    border: 1px solid var(--na-line);
+    background: var(--na-softer);
+    color: inherit;
+    font: inherit;
+    font-size: 0.8em;
+    padding: 4px 11px;
+    border-radius: 999px;
+    cursor: pointer;
+}
+.na_pchip.on { background: var(--na-accent); border-color: transparent; color: #fff; font-weight: 600; }
+.na_prow { display: flex; align-items: center; gap: 2px; padding: 8px 12px 0; }
+.na_psel { flex: 1; min-width: 0; margin: 0 4px 0 0 !important; }
+.na_prow .na_icon:disabled { opacity: 0.25; pointer-events: none; }
+.na_pstar.active { color: #e0a526; background: transparent; }

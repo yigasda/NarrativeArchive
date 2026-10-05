@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '1.6.0';
+const VERSION = '1.7.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1464,19 +1464,7 @@ async function openViewer() {
 
 // ---------------------------------------------------------------- extract popup
 
-// earlier default, replaced on load if never edited
-const OLD_DEFAULT_PROMPT = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
-- 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
-- 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
-- 원문에 없는 내용은 쓰지 않기
-
-[형식 참고 — 기존 아카이브의 마지막 섹션]
-{{last_section}}
-
-[원문]
-{{raw}}`;
-
-const DEFAULT_PROMPT = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
+const BASIC_PROMPT = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
 - 원문에 없는 내용은 쓰지 않기
@@ -1491,16 +1479,45 @@ const DEFAULT_PROMPT = `아래 원문(#{{from}}–#{{to}})을 기존 아카이�
 [원문]
 {{raw}}`;
 
+// Defaults shipped by earlier versions, recognised by hash so their text isn't carried here.
+const textHash = t => { let x = 5381; for (let i = 0; i < t.length; i++) x = ((x * 33) ^ t.charCodeAt(i)) >>> 0; return x.toString(36); };
+const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
+const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
+- 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
+- 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
+- 원문에 없는 내용은 쓰지 않기
+
+[형식 참고 — 기존 아카이브의 마지막 섹션]
+{{last_section}}
+
+[원문]
+{{raw}}`;
+
+const newId = () => `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
 function globalSettings() {
     const es = ctx().extensionSettings;
     if (!es[MODULE] || typeof es[MODULE] !== 'object') es[MODULE] = {};
     const g = es[MODULE];
-    const defaults = { prompt: DEFAULT_PROMPT, usePrompt: false, skipHidden: true, nameStyle: 'full', stripTags: false };
+    const defaults = { usePrompt: false, skipHidden: true, nameStyle: 'full', stripTags: false };
     for (const [k, v] of Object.entries(defaults)) if (!Object.hasOwn(g, k)) g[k] = v;
-    if (g.prompt === OLD_DEFAULT_PROMPT) g.prompt = DEFAULT_PROMPT;
+    // prompt library: [{ id, name, text, fav }], first entry is the built-in basic one
+    if (!Array.isArray(g.prompts)) {
+        g.prompts = [{ id: 'basic', name: '기본', text: BASIC_PROMPT, fav: true }];
+        const old = typeof g.prompt === 'string' ? g.prompt : '';
+        if (old.trim() && old !== OLD_BASIC && old !== BASIC_PROMPT && !OLD_DEFAULTS.has(textHash(old))) {
+            g.prompts.push({ id: newId(), name: '내 지시문', text: old, fav: true });
+        }
+        g.activePrompt = g.prompts[g.prompts.length - 1].id;
+        delete g.prompt;
+    }
+    if (!g.prompts.some(p => p.id === 'basic')) g.prompts.unshift({ id: 'basic', name: '기본', text: BASIC_PROMPT, fav: true });
+    if (!g.prompts.some(p => p.id === g.activePrompt)) g.activePrompt = g.prompts[0].id;
     return g;
 }
 const saveGlobal = () => ctx().saveSettingsDebounced?.();
+const activePrompt = g => g.prompts.find(p => p.id === g.activePrompt) || g.prompts[0];
+
 
 // "## Y2 #574–#600 — ..." → { from: 574, to: 600 }
 function headingRanges(text) {
@@ -1571,11 +1588,20 @@ async function openExtract() {
           <div class="na_set_list">
             <label class="na_set_row"><span><span>복사할 때 지시문 붙이기</span><small>다른 모델에 그대로 붙여넣기용</small></span><input type="checkbox" class="na_toggle na_opt_prompt"></label>
           </div>
+          <div class="na_pfav"></div>
+          <div class="na_prow">
+            <select class="text_pole na_psel"></select>
+            <button type="button" class="na_icon na_pstar" title="즐겨찾기"><i class="fa-regular fa-star"></i></button>
+            <button type="button" class="na_icon na_pnew" title="새 지시문"><i class="fa-solid fa-plus"></i></button>
+            <button type="button" class="na_icon na_pdup" title="복제"><i class="fa-regular fa-clone"></i></button>
+            <button type="button" class="na_icon na_pren" title="이름 바꾸기"><i class="fa-solid fa-i-cursor"></i></button>
+            <button type="button" class="na_icon na_pdel" title="삭제"><i class="fa-regular fa-trash-can"></i></button>
+          </div>
           <textarea class="text_pole na_prompt_ta" spellcheck="false" rows="9"></textarea>
           <div class="na_prompt_help">
-            <code>{{raw}}</code> 원문 · <code>{{from}}</code> <code>{{to}}</code> 번호 · <code>{{last_section}}</code> 마지막 PLOT 섹션 · <code>{{state}}</code> 지금의 STATE·OPEN · <code>{{archive}}</code> 아카이브 전체.
-            <code>{{raw}}</code>가 없으면 원문은 맨 끝에 붙어요.
-            <button type="button" class="na_linkbtn na_prompt_reset">기본값으로</button>
+            <code>{{raw}}</code> 원문 · <code>{{from}}</code> <code>{{to}}</code> 번호 · <code>{{last_section}}</code> 마지막 섹션 · <code>{{state}}</code> 지금의 STATE·OPEN · <code>{{archive}}</code> 아카이브 전체.
+            <code>{{raw}}</code>가 없으면 원문은 맨 끝에 붙어요. 지시문은 이 기기의 실리태번 설정에만 저장돼요.
+            <button type="button" class="na_linkbtn na_prompt_reset">기본 지시문 되돌리기</button>
           </div>
         </details>
         <div class="na_ex_info na_dim"></div>
@@ -1590,7 +1616,6 @@ async function openExtract() {
     $root.find('.na_opt_tags').prop('checked', g.stripTags);
     $root.find('.na_opt_name').val(g.nameStyle);
     $root.find('.na_opt_prompt').prop('checked', g.usePrompt);
-    $root.find('.na_prompt_ta').val(g.prompt);
 
     let current = '';
     let output = '';
@@ -1608,10 +1633,10 @@ async function openExtract() {
             .filter(x => x.text);
         current = formatExtract(items, g);
         output = g.usePrompt
-            ? fillPrompt(g.prompt, { raw: current, from: String(from), to: String(to), last_section: lastRangedSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text })
+            ? fillPrompt(activePrompt(g).text, { raw: current, from: String(from), to: String(to), last_section: lastRangedSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text })
             : current;
         $root.find('.na_ex_hidden').val(output);
-        $root.find('.na_prompt_state').text(g.usePrompt ? '붙임' : '안 붙임').toggleClass('na_chip_on', g.usePrompt);
+        $root.find('.na_prompt_state').text(g.usePrompt ? activePrompt(g).name : '안 붙임').toggleClass('na_chip_on', g.usePrompt);
         $root.find('.na_copy_label').text(g.usePrompt ? '지시문과 함께 복사' : '전체 복사');
         const skipped = all.length - items.length;
         $root.find('.na_ex_info').text(items.length
@@ -1626,8 +1651,63 @@ async function openExtract() {
     $root.find('.na_opt_tags').on('change', function () { g.stripTags = this.checked; saveGlobal(); render(); });
     $root.find('.na_opt_name').on('change', function () { g.nameStyle = this.value; saveGlobal(); render(); });
     $root.find('.na_opt_prompt').on('change', function () { g.usePrompt = this.checked; saveGlobal(); render(); });
-    $root.find('.na_prompt_ta').on('input', function () { g.prompt = this.value; saveGlobal(); later(); });
-    $root.find('.na_prompt_reset').on('click', () => { g.prompt = DEFAULT_PROMPT; $root.find('.na_prompt_ta').val(g.prompt); saveGlobal(); render(); });
+    // --- prompt library
+    const renderPrompts = () => {
+        const cur = activePrompt(g);
+        const sorted = [...g.prompts].sort((a, b) => (b.fav - a.fav));
+        $root.find('.na_psel').html(sorted.map(p => `<option value="${esc(p.id)}">${p.fav ? '★ ' : ''}${esc(p.name)}</option>`).join('')).val(cur.id);
+        $root.find('.na_pfav').html(g.prompts.filter(p => p.fav).map(p =>
+            `<button type="button" class="na_pchip ${p.id === cur.id ? 'on' : ''}" data-id="${esc(p.id)}">${esc(p.name)}</button>`).join(''));
+        $root.find('.na_pstar i').attr('class', cur.fav ? 'fa-solid fa-star' : 'fa-regular fa-star');
+        $root.find('.na_pstar').toggleClass('active', !!cur.fav);
+        $root.find('.na_pdel, .na_pren').prop('disabled', cur.id === 'basic');
+        $root.find('.na_prompt_reset').toggle(cur.id === 'basic' && cur.text !== BASIC_PROMPT);
+        const $ta = $root.find('.na_prompt_ta');
+        if ($ta.data('pid') !== cur.id) $ta.val(cur.text).data('pid', cur.id);
+    };
+    const pick = id => { g.activePrompt = id; saveGlobal(); renderPrompts(); render(); };
+    const askName = async (title, value) => {
+        const c2 = ctx();
+        const v = await c2.Popup.show.input(title, '', value);
+        return typeof v === 'string' ? v.trim() : '';
+    };
+    $root.find('.na_psel').on('change', function () { pick(this.value); });
+    $root.on('click', '.na_pchip', function () { pick($(this).data('id')); });
+    $root.find('.na_pstar').on('click', () => { const p = activePrompt(g); p.fav = !p.fav; saveGlobal(); renderPrompts(); });
+    $root.find('.na_pnew').on('click', async () => {
+        const name = await askName('새 지시문 이름', `지시문 ${g.prompts.length + 1}`);
+        if (!name) return;
+        const p = { id: newId(), name, text: '', fav: false };
+        g.prompts.push(p); pick(p.id);
+        $root.find('.na_prompt_ta').trigger('focus');
+    });
+    $root.find('.na_pdup').on('click', async () => {
+        const src = activePrompt(g);
+        const name = await askName('복제한 지시문 이름', `${src.name} 사본`);
+        if (!name) return;
+        const p = { id: newId(), name, text: src.text, fav: false };
+        g.prompts.push(p); pick(p.id);
+    });
+    $root.find('.na_pren').on('click', async () => {
+        const p = activePrompt(g);
+        if (p.id === 'basic') return;
+        const name = await askName('이름 바꾸기', p.name);
+        if (!name) return;
+        p.name = name; saveGlobal(); renderPrompts(); render();
+    });
+    $root.find('.na_pdel').on('click', async () => {
+        const p = activePrompt(g);
+        if (p.id === 'basic') return;
+        if (!await confirm('지시문 삭제', `"${p.name}"을(를) 지울까요? 되돌릴 수 없어요.`)) return;
+        g.prompts = g.prompts.filter(x => x.id !== p.id);
+        pick(g.prompts[0].id);
+    });
+    $root.find('.na_prompt_ta').on('input', function () { activePrompt(g).text = this.value; saveGlobal(); renderPrompts(); later(); });
+    $root.find('.na_prompt_reset').on('click', () => {
+        const p = g.prompts.find(x => x.id === 'basic');
+        p.text = BASIC_PROMPT; $root.find('.na_prompt_ta').val(p.text); saveGlobal(); renderPrompts(); render();
+    });
+    renderPrompts();
     $root.find('.na_copy').on('click', async () => {
         if (!current) return;
         const ok = await copyText(output, $root.find('.na_ex_hidden')[0]);
