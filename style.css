@@ -954,3 +954,4 @@
 .na_whole_sums { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; font-size: 0.86em; }
 .na_whole_sum ul { margin: 2px 0 0; padding-left: 1.2em; max-height: 9em; overflow-y: auto; }
 .na_whole { background: color-mix(in srgb, var(--na-accent) 12%, transparent); }
+.na_rw_list summary { cursor: pointer; font-size: 0.9em; opacity: 0.8; padding-top: 4px; }

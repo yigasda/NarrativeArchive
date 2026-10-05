@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.8.0';
+const VERSION = '2.8.1';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3624,12 +3624,15 @@ async function openAppend() {
             const cut = val.trim() ? cutSigns(m.text, val) : [];
             $root.find('.na_cut').prop('hidden', !cut.length).html(cut.length
                 ? `<i class="fa-solid fa-scissors"></i><div><b>답이 중간에 끊긴 것 같아요</b><ul>${cut.map(x => `<li>${esc(x)}</li>`).join('')}</ul><small>다른 모델로 압축했다면 그쪽 답 길이(최대 토큰)를 늘리고 다시 받아 보세요.</small></div>` : '');
-            $root.find('.na_whole').prop('hidden', !(val.trim() && looksWhole(m.text, val)));
+            const whole = !!val.trim() && looksWhole(m.text, val);
+            $root.find('.na_whole').prop('hidden', !whole);
             const rwN = plan.rewriteCount;
-            $root.find('.na_rw').prop('hidden', !rwN).html(rwN ? `<i class="fa-solid fa-shield-halved"></i><div>
-                <b>이미 아카이브에 있는 섹션 ${rwN}개가 섞여 있어요</b> — 모델이 형식 참고용 섹션을 다시 쓴 것 같아요.
-                ${plan.skipped.length ? `<ul>${plan.skipped.map(x => `<li>${esc(x)} <span class="na_dim">→ 빼고 추가</span></li>`).join('')}</ul>` : ''}
-                ${plan.swapped.length ? `<ul>${plan.swapped.map(x => `<li>${esc(x)} <span class="na_dim">→ 기존 섹션을 이걸로 바꿈</span></li>`).join('')}</ul>` : ''}
+            const items = [...plan.skipped.map(x => `<li>${esc(x)} <span class="na_dim">→ 빼고 추가</span></li>`), ...plan.swapped.map(x => `<li>${esc(x)} <span class="na_dim">→ 기존 섹션을 이걸로 바꿈</span></li>`)];
+            const rwOpen = $root.find('.na_rw details').prop('open');
+            $root.find('.na_rw').attr('class', `na_check ${whole ? 'na_check_soft' : 'na_check_warn'} na_rw`).prop('hidden', !rwN).html(rwN ? `<i class="fa-solid fa-shield-halved"></i><div>
+                ${whole ? `그대로 <b>추가</b>하면 이미 있는 섹션 ${rwN}개는 빼고 새 섹션만 붙여요.`
+                    : `<b>이미 아카이브에 있는 섹션 ${rwN}개가 섞여 있어요</b> — 모델이 형식 참고용 섹션을 다시 쓴 것 같아요. 그건 빼고 추가해요.`}
+                ${items.length > 3 ? `<details class="na_rw_list"${rwOpen ? ' open' : ''}><summary>섹션 ${items.length}개 보기</summary><ul>${items.join('')}</ul></details>` : items.length ? `<ul>${items.join('')}</ul>` : ''}
                 ${plan.exactCount ? `<label class="checkbox_label na_rw_opt"><input type="checkbox" class="na_rw_replace" ${rwMode() === 'replace' ? 'checked' : ''}><span>번호가 똑같은 섹션은 기존 걸 붙여넣은 걸로 바꾸기 (일부러 고쳐 쓴 경우만)</span></label>` : ''}
             </div>` : '');
             const notes = [];
