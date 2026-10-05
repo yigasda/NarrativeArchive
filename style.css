@@ -1340,3 +1340,14 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_route_dhead { font-size: 0.85em; padding: 2px 6px 4px; }
 .na_route_detail .na_cal_row::before { display: none; }
 .na_route .na_route_log + .na_route_log { margin-top: 10px; }
+
+/* section links on cards */
+.na_card_refs { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: 0.78em; }
+.na_ref_grp { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.na_ref_grp > i { opacity: 0.5; font-size: 0.9em; }
+.na_ref_chip { border: 1px solid color-mix(in srgb, var(--na-accent) 40%, transparent); background: var(--na-accent-soft); color: inherit; font: inherit; padding: 0 7px; border-radius: 999px; cursor: pointer; line-height: 1.7; }
+.na_ref_chip:hover { background: var(--na-accent); color: #fff; }
+.na_links_sum { font-size: 0.85em; margin: 0 2px 8px; }
+.na_links_row { padding-bottom: 6px; border-bottom: 1px solid var(--na-line, rgba(127,127,127,0.18)); margin-bottom: 4px; }
+.na_links_row .na_card_refs { margin: 2px 0 0 8px; }
+.na_links .na_cal_row::before { display: none; }

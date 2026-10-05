@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.11.0';
+const VERSION = '3.12.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -510,12 +510,45 @@ function keywordWaiting(m) {
     return new Set(entries.filter(([, keys]) => !linkHits(keys, hay).length).map(([t]) => t));
 }
 
+// ---- section links: "#217–#236", "(Y1 #346)", "since Y2 #506" inside a section's text point at the section holding that number.
+// Unprefixed numbers belong to the unprefixed log if there is one (Y1 in "Y1 unprefixed" archives), else to the section's own log.
+let linkCache = { text: null, links: null };
+function sectionLinks(m) {
+    const text = String(m?.text || '');
+    if (linkCache.text === text) return linkCache.links;
+    const secs = parseSections(text).filter(s => !s.group);
+    const ranged = secs.map(s => { const r = s.title.match(RANGE_HEAD); return r ? { s, prefix: (r[1] || '').trim(), from: Math.min(+r[2], +r[4]), to: Math.max(+r[2], +r[4]) } : null; }).filter(Boolean);
+    const hasBare = ranged.some(x => !x.prefix);
+    const find = (prefix, n) => ranged.find(x => x.prefix === prefix && n >= x.from && n <= x.to)?.s;
+    const out = new Map(), inn = new Map();
+    for (const s of secs) {
+        const own = (s.title.match(RANGE_HEAD)?.[1] || '').trim();
+        const body = text.slice(s.start, s.end).replace(/^[^\n]*\n?/, '');
+        const targets = new Set();
+        // numbers the section's own heading already names ("STATE AT Y2 #604", "(Y1 #0–#590 · …)") are labels, not references
+        const ownNums = new Set((s.title.match(/#\d+/g) || []).map(x => +x.slice(1)));
+        for (const mt of body.matchAll(/(?:\b([A-Z]\w{0,10})\s+)?#(\d+)(?:\s*[–—~-]\s*#?(\d+))?/g)) {
+            if (!RANGE_HEAD.test(s.title) && ownNums.has(+mt[2])) continue;
+            const pre = mt[1] && ranged.some(x => x.prefix === mt[1]) ? mt[1] : (hasBare ? '' : own);
+            const t = find(pre, +mt[2]);
+            if (t && t !== s) targets.add(sectionKey(t));
+        }
+        if (targets.size) out.set(sectionKey(s), [...targets]);
+        for (const t of targets) { if (!inn.has(t)) inn.set(t, []); inn.get(t).push(sectionKey(s)); }
+    }
+    const byKey = new Map(secs.map(s => [sectionKey(s), s]));
+    linkCache = { text, links: { out, in: inn, byKey } };
+    return linkCache.links;
+}
+
 // sections left out right now: keyword links that did not fire, and (with the AI router) the candidates it did not pick
 function linkWaiting(m) {
     const out = keywordWaiting(m);
     const cfg = routerCfg(m);
     if (cfg.mode === 'off') return out;
-    const picks = routerState.get(currentChatId())?.picks || new Set();
+    const picks = new Set(routerState.get(currentChatId())?.picks || []);
+    // a picked section brings the sections it points at (its "see #217" background), unless switched off
+    if (cfg.follow !== false) { const { out: lk } = sectionLinks(m); for (const k of [...picks]) for (const t of lk.get(k) || []) picks.add(t); }
     const lm = linkedMap(m);
     for (const s of routerCandidates(m)) {
         const k = sectionKey(s);
@@ -751,6 +784,16 @@ function mountSectionBrowser($host) {
     const sw = (on, title) => `<button type="button" class="na_sw ${on ? 'on' : ''}" title="${title}" aria-pressed="${on}"><span></span></button>`;
     const pinBtn = (on, what) => `<button type="button" class="na_icon na_icon_sm na_pin ${on ? 'on' : ''}" title="${on ? '고정 풀기' : `${what} 토큰 상한에 걸려도 안 빠지게 고정`}"><i class="fa-solid fa-thumbtack"></i></button>`;
 
+    // "→ #217–#236 · ← Y2 #424" chips under a card: sections it points at, and sections that point at it
+    const refChips = key => {
+        const lk = sectionLinks(getMeta());
+        const chip = k => { const t = lk.byKey.get(k); if (!t) return ''; const r = (t.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [t.title.slice(0, 24)])[0]; return `<button type="button" class="na_ref_chip" data-start="${t.start}" title="${esc(t.title)}">${esc(r)}</button>`; };
+        const o = (lk.out.get(key) || []).map(chip).join(''), i = (lk.in.get(key) || []).map(chip).join('');
+        if (!o && !i) return '';
+        return `<div class="na_card_refs">${o ? `<span class="na_ref_grp" title="이 섹션이 가리키는 섹션"><i class="fa-solid fa-arrow-right"></i>${o}</span>` : ''}${i ? `<span class="na_ref_grp" title="이 섹션을 가리키는 섹션"><i class="fa-solid fa-arrow-left"></i>${i}</span>` : ''}</div>`;
+    };
+    $list.on('click', '.na_ref_chip', function (e) { e.stopPropagation(); focus(Number(this.dataset.start)); });
+
     function render() {
         const m = getMeta();
         if (!m) return;
@@ -840,6 +883,7 @@ function mountSectionBrowser($host) {
                 </div>
                 <div class="na_card_body" ${isOpen ? '' : 'hidden'}>
                   <div class="na_card_text">${highlight(body.replace(/^#{1,2} [^\n]*\n?/, '').trim(), q) || '<span class="na_dim">(비어 있음)</span>'}</div>
+                  ${refChips(sectionKey(s))}
                   <div class="na_card_actions">
                     <button type="button" class="na_icon na_up" title="위로"><i class="fa-solid fa-arrow-up"></i></button>
                     <button type="button" class="na_icon na_down" title="아래로"><i class="fa-solid fa-arrow-down"></i></button>
@@ -1253,6 +1297,7 @@ function renderPanel() {
                 <div class="na_kw_label">이야기</div>
                 <button type="button" class="na_toolrow" id="na_story_cal"><i class="fa-solid fa-calendar-days"></i><span><b>이야기 달력</b><small>섹션을 날짜 순서로 · 거꾸로 가는 날짜 찾기</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_story_route"><i class="fa-solid fa-route"></i><span><b>이동 경로</b><small>이야기가 머문 곳을 차례로 · 그곳의 섹션들</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" class="na_toolrow" id="na_story_links"><i class="fa-solid fa-diagram-project"></i><span><b>섹션 연결망</b><small>본문의 "#217–#236"으로 이어진 섹션들 · 많이 불리는 순</small></span><i class="fa-solid fa-chevron-right"></i></button>
               </div>
               <div class="na_block">
                 <div class="na_kw_label">점검</div>
@@ -1329,6 +1374,7 @@ function renderPanel() {
                     <select id="na_router_mode" class="text_pole"><option value="off">끄기</option><option value="linked">키워드 섹션에 더해 AI도 고르기</option><option value="old">오래된 섹션 전부 AI가 고르기</option></select></label>
                   <div class="na_router_opts" id="na_router_opts" hidden>
                     <label class="na_set_row"><span><span>한 번에 최대</span><small>AI가 고를 섹션 수</small></span><input type="number" id="na_router_max" class="text_pole" min="1" max="20"></label>
+                    <label class="na_set_row"><span><span>가리키는 섹션도 같이</span><small>고른 섹션 본문에 "#217–#236"처럼 적힌 섹션도 같이 넣어요</small></span><input type="checkbox" id="na_router_follow" class="na_toggle"></label>
                     <label class="na_set_row" id="na_router_keep_row"><span><span>최근 섹션은 항상</span><small>마지막 몇 개 섹션은 AI가 안 고르고 늘 넣어요</small></span><input type="number" id="na_router_keep" class="text_pole" min="0" max="20"></label>
                     <div class="na_set_row"><span><span>지금 해 보기</span><small id="na_router_info">최근 대화로 한 번 골라 봐요</small></span><button type="button" class="na_btn na_small" id="na_router_test"><i class="fa-solid fa-compass"></i> 해 보기</button></div>
                   </div>
@@ -1558,6 +1604,7 @@ function bindPanel() {
     $('#na_tool_health').on('click', needChat(openHealth));
     $('#na_story_cal').on('click', needChat(openCalendar));
     $('#na_story_route').on('click', needChat(openRoute));
+    $('#na_story_links').on('click', needChat(openLinks));
 
     // --- editor
     const $ed = $('#na_editor');
@@ -1925,6 +1972,7 @@ function bindPanel() {
     $('#na_router_mode').on('change', needChat(e => setRouter({ mode: e.target.value })));
     $('#na_router_max').on('change', needChat(e => setRouter({ max: Math.min(20, Math.max(1, parseInt(e.target.value, 10) || 4)) })));
     $('#na_router_keep').on('change', needChat(e => setRouter({ keep: Math.min(20, Math.max(0, parseInt(e.target.value, 10) || 0)) })));
+    $('#na_router_follow').on('change', needChat(e => setRouter({ follow: e.target.checked })));
     $('#na_router_test').on('click', needChat(async e => {
         const m = getMeta();
         const st = await withSpinner($(e.currentTarget), '고르는 중…', () => runRouter(m, { force: true }));
@@ -1973,7 +2021,7 @@ function syncPanel() {
     $('#na_router_mode').val(rc.mode);
     $('#na_router_opts').prop('hidden', rc.mode === 'off');
     $('#na_router_keep_row').toggle(rc.mode === 'old');
-    $('#na_router_max').val(rc.max); $('#na_router_keep').val(rc.keep);
+    $('#na_router_max').val(rc.max); $('#na_router_keep').val(rc.keep); $('#na_router_follow').prop('checked', rc.follow);
     const rs = routerState.get(currentChatId());
     $('#na_router_info').text(rs ? `마지막: ${rs.titles.length}개 · ${(rs.ms / 1000).toFixed(1)}초 · 후보 ${rs.cands}개` : `후보 ${routerCandidates(m).length}개 · 최근 대화로 한 번 골라 봐요`);
     {
@@ -4403,7 +4451,7 @@ let routerWarned = false;
 
 function routerCfg(m) {
     const r = m?.router && typeof m.router === 'object' ? m.router : {};
-    return { mode: ['linked', 'old'].includes(r.mode) ? r.mode : 'off', max: Number(r.max) || 4, keep: Number.isFinite(Number(r.keep)) && r.keep !== undefined ? Number(r.keep) : 3 };
+    return { mode: ['linked', 'old'].includes(r.mode) ? r.mode : 'off', max: Number(r.max) || 4, keep: Number.isFinite(Number(r.keep)) && r.keep !== undefined ? Number(r.keep) : 3, follow: r.follow !== false };
 }
 
 // sections the router may switch on: keyword-linked ones, and in 'old' mode every numbered section except the newest few and pinned ones
@@ -5094,6 +5142,35 @@ async function openRoute() {
           </button>`).join(''));
     });
     $root.on('click', '.na_route_detail .na_cal_row', function () { const s0 = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(s0); });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+}
+
+async function openLinks() {
+    const c = ctx();
+    const m = getMeta();
+    const lk = sectionLinks(m);
+    const short = t => (t.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [t.title.slice(0, 24)])[0];
+    const name = t => t.title.replace(/\s*\([^()]*\)\s*(\[[^\]]*\])?\s*$/, '').replace(RANGE_HEAD, (all, p, a, d, b, rest) => rest.replace(/^\s*[—–-]\s*/, '')) || t.title;
+    const chips = keys => keys.map(k => lk.byKey.get(k)).filter(Boolean).map(t => `<button type="button" class="na_ref_chip" data-start="${t.start}" title="${esc(t.title)}">${esc(short(t))}</button>`).join('');
+    const keys = [...new Set([...lk.in.keys(), ...lk.out.keys()])].filter(k => lk.byKey.has(k))
+        .sort((a, b) => (lk.in.get(b)?.length || 0) - (lk.in.get(a)?.length || 0) || lk.byKey.get(a).start - lk.byKey.get(b).start);
+    const links = [...lk.out.values()].reduce((a, v) => a + v.length, 0);
+    const rc = routerCfg(m);
+    const $root = $(`
+      <div class="na_popup na_links">
+        <div class="na_block_head"><div><h4>섹션 연결망</h4><p>섹션 본문에 "#217–#236", "(Y1 #346)"처럼 적힌 번호를 그 번호가 든 섹션과 이어요. 많이 불리는 섹션이 위에 와요. 칩을 누르면 그 섹션으로 가요.</p></div></div>
+        ${keys.length ? `
+          <div class="na_dim na_links_sum">연결 ${links}개 · 섹션 ${keys.length}개${rc.mode !== 'off' ? ` · AI 라우터가 고른 섹션이 가리키는 섹션도 ${rc.follow ? '같이 넣어요' : '안 넣어요'}` : ''}</div>
+          <div class="na_links_list">${keys.map(k => { const t = lk.byKey.get(k), i = lk.in.get(k) || [], o = lk.out.get(k) || []; return `
+            <div class="na_links_row">
+              <button type="button" class="na_cal_row" data-start="${t.start}">
+                <span class="na_cal_when"><b>${esc(short(t))}</b><small>${i.length ? `${i.length}곳이 가리킴` : ''}</small></span>
+                <span class="na_cal_what"><span>${esc(name(t))}</span></span>
+              </button>
+              <div class="na_card_refs">${o.length ? `<span class="na_ref_grp" title="이 섹션이 가리키는 섹션"><i class="fa-solid fa-arrow-right"></i>${chips(o)}</span>` : ''}${i.length ? `<span class="na_ref_grp" title="이 섹션을 가리키는 섹션"><i class="fa-solid fa-arrow-left"></i>${chips(i)}</span>` : ''}</div>
+            </div>`; }).join('')}</div>` : '<div class="na_empty">섹션 본문에 다른 섹션 번호(#217–#236 같은)를 적은 곳이 없어요.</div>'}
+      </div>`);
+    $root.on('click', '.na_cal_row, .na_ref_chip', function () { const st = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); });
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
