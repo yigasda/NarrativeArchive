@@ -1857,3 +1857,60 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_ap2_end { display: flex; align-items: center; gap: 2px; color: var(--na-dim); font-weight: 600; }
 .na_ap2_end input { width: 5.5em !important; margin: 0 !important; text-align: center; font-weight: 600; }
 .na_ap2 .na_place:empty, .na_ap2 .na_append_info:empty { display: none; }
+
+/* ============ health v2 */
+.na_hl2_top { display: flex; align-items: center; gap: 16px; border-radius: 22px; padding: 16px; }
+.na_hl2_ring { position: relative; width: 92px; height: 92px; flex: none; }
+.na_hl2_ring circle { fill: none; stroke-width: 9; stroke-linecap: round; }
+.na_hl2_ring .bg { stroke: var(--na-card2); }
+.na_hl2_ring.good .fg { stroke: #2e8b57; }
+.na_hl2_ring.mid .fg { stroke: #d9822b; }
+.na_hl2_ring.low .fg { stroke: #c4362a; }
+.na_hl2_ring > span { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.na_hl2_ring b { font-size: 1.75em; }
+.na_hl2_ring.good b { color: #2e8b57; }
+.na_hl2_ring small { font-size: 0.72em; color: var(--na-dim); margin-top: 2px; }
+.na_hl2_sum { display: flex; flex-direction: column; gap: 4px; }
+.na_hl2_sum b { font-size: 1.1em; }
+.na_hl2_sum small { color: var(--na-dim); line-height: 1.45; }
+.na_hl2_item { display: flex; padding: 0; overflow: hidden; }
+.na_hl2_bar { width: 5px; flex: none; background: #d9822b; }
+.na_hl2_item.bad .na_hl2_bar { background: #c4362a; }
+.na_hl2_item.info .na_hl2_bar { background: #3d6fb6; }
+.na_hl2_main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 11px 14px; align-items: flex-start; }
+.na_hl2_main b { font-size: 0.93em; }
+.na_hl2_main small { color: var(--na-dim); line-height: 1.45; }
+.na_hl2_main .na_v2_btn { margin-top: 4px; padding: 6px 12px; font-size: 0.85em; }
+.na_hl2_ok > summary i { color: #2e8b57; margin-right: 4px; }
+
+/* ============ drift v2 */
+.na_dr2_ctl { display: flex; flex-direction: column; gap: 10px; border-radius: 20px; }
+.na_dr2_row { display: flex; align-items: center; gap: 10px; }
+.na_dr2_row > span:first-child { flex: 1; }
+.na_dr2_ctl .na_v2_note { text-align: center; }
+.na_dr2_out { display: flex; flex-direction: column; gap: 10px; }
+.na_dr2_out:empty { display: none; }
+.na_dr2_item { display: flex; flex-direction: column; gap: 8px; border-radius: 18px; }
+.na_dr2_head { display: flex; align-items: center; gap: 8px; }
+.na_dr2_msg { background: var(--SmartThemeBodyColor, #222) !important; color: var(--SmartThemeBlurTintColor, #fff) !important; border-radius: 8px !important; font-weight: 600; padding: 1px 9px !important; }
+.na_dr2_text { font-size: 0.93em; line-height: 1.55; }
+.na_dr2_ev { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 12px; background: var(--na-card2); font-size: 0.85em; }
+.na_dr2_ev > i { color: var(--na-dim); margin-top: 3px; }
+.na_dr2_ok { color: #2e8b57; display: flex; gap: 8px; align-items: center; }
+
+/* ============ quote bank v2 (대사 탭) */
+.na_qb2 { gap: 10px; }
+.na_qb2_search { border-radius: 14px; background: var(--na-card); }
+.na_qb2 .na_qb_excl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.85em; }
+.na_qb2 .na_qb_excl_label { color: var(--na-dim); }
+.na_qb2 .na_qb_excl_in { width: 7em; margin: 0; border-radius: 999px; }
+.na_qb2 .na_qb_who { display: flex; align-items: center; gap: 8px; padding: 0 2px 6px; }
+.na_qb2 .na_qb_who .na_qb_gbtns { margin-left: auto; }
+.na_qb_fp { font-size: 0.72em; padding: 1px 8px; border-radius: 999px; background: var(--na-accent-soft); color: var(--na-accent); }
+.na_qb_qmark { width: 26px; height: 26px; border-radius: 50%; border: 1.5px dashed var(--na-line); display: grid; place-items: center; color: var(--na-dim); }
+.na_qb2 .na_qb_rows { background: var(--na-card); border: 1px solid var(--na-line); border-radius: 16px; overflow: hidden; }
+.na_qb2 .na_qb_row { border-top: 1px solid var(--na-line); border-radius: 0; padding: 10px 12px; }
+.na_qb2 .na_qb_row:first-child { border-top: 0; }
+.na_qb2 .na_qb_whoin { width: 5.5em; margin: 0; font-size: 0.85em; }
+.na_qb2 .na_qb_group:not(.na_qb_unknown) .na_qb_whoin { display: none; }
+.na_qb2 .na_qb_clear { align-self: center; }
