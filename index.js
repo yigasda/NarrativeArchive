@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.8.0';
+const VERSION = '3.8.1';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -4055,12 +4055,16 @@ function archiveQuotes(m) {
     return out.filter(q => !seen.has(q.text) && seen.add(q.text));
 }
 
+// characters the user never wants in the bank (e.g. their own persona)
+const quoteExcluded = m => new Set((Array.isArray(m.quoteExclude) ? m.quoteExclude : []).map(x => String(x).toLowerCase()));
+const isExcluded = (m, who) => quoteExcluded(m).has(String(who).toLowerCase());
+
 // ticked lines, up to N per speaker, only for people in the story now (an absent character's voice is wasted tokens)
 function pickedQuotes(m) {
     const max = Math.max(1, Number(m.quoteMax) || 3);
     const per = new Map();
     const cast = currentCast(m);
-    return (m.quotes || []).filter(q => q.on && q.who && q.who !== '?' && inCast(cast, q.who)).filter(q => { const n = (per.get(q.who) || 0) + 1; per.set(q.who, n); return n <= max; });
+    return (m.quotes || []).filter(q => q.on && q.who && q.who !== '?' && inCast(cast, q.who) && !isExcluded(m, q.who)).filter(q => { const n = (per.get(q.who) || 0) + 1; per.set(q.who, n); return n <= max; });
 }
 
 const AI_SYS_QUOTES = `GOAL
@@ -4085,7 +4089,7 @@ STEP 2. For each quoted line, find who SAID it. Be careful, the archive is third
 - A line someone repeats, reads out, or remembers from another person belongs to the person who first said it, and only if the archive makes that clear.
 - If you cannot tell who said it, skip it. Never guess.
 
-STEP 3. Keep only lines that are good voice samples.
+STEP 3. Keep only lines that are good voice samples. If SKIP THESE SPEAKERS is given, leave out every line by those speakers.
 KEEP: lines that sound like that person and still make sense on their own.
 SKIP:
 - one- or two-word lines ("Yes." "Go.")
@@ -4120,6 +4124,11 @@ async function openQuotes() {
           <small class="na_dim na_qb_tok"></small>
           <button type="button" class="na_btn na_small na_danger na_qb_clear"><i class="fa-regular fa-trash-can"></i> 전체 삭제</button>
         </div>
+        <div class="na_qb_excl">
+          <span class="na_qb_excl_label"><i class="fa-solid fa-user-slash"></i> 뺄 인물</span>
+          <span class="na_qb_excl_chips"></span>
+          <input type="text" class="text_pole na_qb_excl_in" placeholder="이름 넣고 Enter">
+        </div>
         <div class="na_qb_pickhost"></div>
         <input type="search" class="text_pole na_qb_q" placeholder="인물·대사로 찾기">
         <div class="na_qb_list"></div>
@@ -4133,8 +4142,14 @@ async function openQuotes() {
         const picked = new Set(pickedQuotes(m));
         const cast = currentCast(m);
         $root.find('.na_qb_clear').prop('hidden', !m.quotes.length);
+        const ex = Array.isArray(m.quoteExclude) ? m.quoteExclude : [];
+        $root.find('.na_qb_excl_chips').html(ex.length ? ex.map(n => `<span class="na_pchip na_qb_exchip">${esc(n)}<button type="button" class="na_qb_unex" data-n="${esc(n)}" title="다시 모으기">×</button></span>`).join('') : '<small class="na_dim">없음</small>');
         $root.find('.na_qb_list').html(m.quotes.length ? [...by].sort((a, b) => (a[0] === '?') - (b[0] === '?') || b[1].length - a[1].length).map(([who, xs]) => `
-          <div class="na_qb_group ${who !== '?' && !inCast(cast, who) ? 'na_qb_away' : ''}"><div class="na_qb_who">${esc(who === '?' ? '말한 사람 모름' : who)} <span class="na_dim">${xs.length}개 · 고른 ${xs.filter(y => y.x.on).length}</span>${who !== '?' && !inCast(cast, who) ? '<span class="na_qb_awaytag" title="STATE의 인물 제목과 최근 섹션 4개에 안 나와요. 다시 나오면 자동으로 주입돼요">지금 안 나와서 주입 안 함</span>' : ''}</div>
+          <div class="na_qb_group ${who !== '?' && !inCast(cast, who) ? 'na_qb_away' : ''}"><div class="na_qb_who">${esc(who === '?' ? '말한 사람 모름' : who)} <span class="na_dim">${xs.length}개 · 고른 ${xs.filter(y => y.x.on).length}</span>${who !== '?' && !inCast(cast, who) ? '<span class="na_qb_awaytag" title="STATE의 인물 제목과 최근 섹션 4개에 안 나와요. 다시 나오면 자동으로 주입돼요">지금 안 나와서 주입 안 함</span>' : ''}
+            <span class="na_qb_gbtns" data-who="${esc(who)}">
+              ${who !== '?' ? '<button type="button" class="na_icon na_icon_sm na_qb_gexcl" title="이 인물 빼기 (대사 지우고 앞으로도 안 모음)"><i class="fa-solid fa-user-slash"></i></button>' : ''}
+              <button type="button" class="na_icon na_icon_sm na_qb_gdel" title="이 인물 대사 모두 지우기"><i class="fa-regular fa-trash-can"></i></button>
+            </span></div>
             ${xs.map(({ x, i }) => `<div class="na_qb_row ${x.on ? 'on' : ''} ${x.on && !picked.has(x) ? 'over' : ''}" data-i="${i}">
               <input type="checkbox" class="na_qb_on" ${x.on ? 'checked' : ''}>
               <div class="na_qb_text">“${esc(x.text)}”<div class="na_dim na_qb_src">${esc(String(x.src || '').slice(0, 50))}</div></div>
@@ -4160,7 +4175,7 @@ async function openQuotes() {
     });
     $root.find('.na_qb_find').on('click', async () => {
         const have = new Set(m.quotes.map(q => q.text));
-        const found = archiveQuotes(m).filter(q => !have.has(q.text));
+        const found = archiveQuotes(m).filter(q => !have.has(q.text) && !isExcluded(m, q.who));
         if (!found.length) return toastr.info('새로 모을 대사가 없어요.');
         m.quotes.push(...found.map(q => ({ ...q, on: false })));
         await save();
@@ -4182,6 +4197,40 @@ async function openQuotes() {
         }
         return { picks, made };
     };
+    // excluded characters: their lines are removed and never gathered or injected
+    const exclude = async name => {
+        name = String(name).trim();
+        if (!name || name === '?') return;
+        m.quoteExclude = [...new Set([...(m.quoteExclude || []), name])];
+        const before = m.quotes.length;
+        m.quotes = m.quotes.filter(q => !isExcluded(m, q.who));
+        await save();
+        toastr.success(`${name}: 빼는 인물로 정했어요${before - m.quotes.length ? ` · 대사 ${before - m.quotes.length}개 지움` : ''}`);
+    };
+    $root.find('.na_qb_excl_in').on('keydown', async function (e) {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const v = this.value; this.value = '';
+        for (const n of v.split(/[,，]/)) await exclude(n);
+    });
+    $root.on('click', '.na_qb_unex', async function () {
+        const n = String($(this).data('n'));
+        m.quoteExclude = (m.quoteExclude || []).filter(x => x !== n);
+        await save();
+    });
+    $root.on('click', '.na_qb_gexcl', async function () {
+        const who = String($(this).closest('.na_qb_gbtns').data('who'));
+        if (!await confirm('인물 빼기', `${who}의 대사를 모두 지우고, 앞으로 모으거나 주입하지 않을까요? (위 "뺄 인물"에서 되돌릴 수 있어요)`)) return;
+        await exclude(who);
+    });
+    $root.on('click', '.na_qb_gdel', async function () {
+        const who = String($(this).closest('.na_qb_gbtns').data('who'));
+        const n = m.quotes.filter(q => q.who === who).length;
+        if (!await confirm('대사 지우기', `${who === '?' ? '말한 사람 모름' : who} 대사 ${n}개를 모두 지울까요? 되돌릴 수 없어요.`)) return;
+        m.quotes = m.quotes.filter(q => q.who !== who);
+        await save();
+    });
+
     // AI gather: chosen sections a few at a time (a whole archive in one go makes models stop early)
     m.quoteMined = Array.isArray(m.quoteMined) ? m.quoteMined : [];
     const picker = mountSectionPicker($root.find('.na_qb_pickhost'), {
@@ -4192,11 +4241,12 @@ async function openQuotes() {
             try {
                 for (const [i, part] of parts.entries()) {
                     await step(part, i);
-                    const out = await askAI(`[ARCHIVE SECTIONS]\n${picker.text(part)}`, { system: AI_SYS_QUOTES, maxTokens: 6000 });
+                    const ex = Array.isArray(m.quoteExclude) ? m.quoteExclude : [];
+                    const out = await askAI(`${ex.length ? `[SKIP THESE SPEAKERS]\n${ex.join(', ')}\n\n` : ''}[ARCHIVE SECTIONS]\n${picker.text(part)}`, { system: AI_SYS_QUOTES, maxTokens: 6000 });
                     const r = readPicks(out, part);
                     made += r.made.length; found += r.picks.length;
                     // candidates only: nothing gets ticked; lines already here just get the AI's speaker
-                    for (const p of r.picks) {
+                    for (const p of r.picks.filter(x => !isExcluded(m, x.who))) {
                         const q = m.quotes.find(x => quoteKey(x.text) === quoteKey(p.text));
                         if (q) { if (q.who !== p.who) { q.who = p.who; fixed++; } }
                         else { m.quotes.push({ ...p, on: false }); added++; }

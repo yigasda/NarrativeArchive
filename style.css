@@ -1258,3 +1258,17 @@
 .na_kn_stale .na_btn { flex-shrink: 0; }
 .na_qb_away .na_qb_row { opacity: 0.5; }
 .na_qb_awaytag { margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: var(--na-soft); font-size: 0.78em; font-weight: 400; opacity: 0.8; }
+
+/* quote bank: excluded characters, per-character buttons */
+.na_qb_excl { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.85em; }
+.na_qb_excl_label { opacity: 0.75; flex-shrink: 0; }
+.na_qb_excl_label i { margin-right: 3px; }
+.na_qb_excl_chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.na_qb_exchip { display: inline-flex; align-items: center; gap: 4px; cursor: default; }
+.na_qb_unex { border: 0; background: transparent; color: inherit; padding: 0 2px; cursor: pointer; opacity: 0.6; font: inherit; }
+.na_qb_unex:hover { opacity: 1; }
+.na_qb_excl_in { flex: 1; min-width: 120px; margin: 0 !important; padding: 3px 8px !important; font-size: 0.95em; }
+.na_qb_who { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.na_qb_gbtns { margin-left: auto; display: inline-flex; gap: 2px; }
+.na_qb_gbtns .na_icon { opacity: 0.55; }
+.na_qb_gbtns .na_icon:hover { opacity: 1; color: var(--na-warn); }
