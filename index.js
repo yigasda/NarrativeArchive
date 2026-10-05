@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.8.1';
+const VERSION = '3.8.2';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -780,7 +780,7 @@ function mountSectionBrowser($host) {
                         ${sw(!off, off ? '이 묶음 주입 켜기' : '이 묶음 통째로 주입에서 빼기')}
                       </div>
                     </div>
-                    ${s.note ? `<div class="na_group_note">${highlight(s.note, q)}</div>` : ''}
+                    ${s.note ? `<div class="na_group_note">${q ? highlight(s.note, q) : s.note.split('\n').map(mdInline).join('<br>')}</div>` : ''}
                     <div class="na_card_body" hidden></div>
                     <div class="na_group_items" ${isOpen ? '' : 'hidden'}></div>
                   </div>`);
@@ -1350,9 +1350,6 @@ function renderPanel() {
                   <label class="na_set_row"><span><span>백업 알림</span><small>백업 뒤 이만큼 바뀌면 · 0은 끔</small></span><input type="number" id="na_backup_every" class="text_pole" min="0" max="999"></label>
                 </div>
               </div>
-              <div class="na_block">
-                <div class="na_block_head"><div><h4>AI 기능</h4>                </div>
-                </div>
               </details>
             </section>
 
@@ -3874,14 +3871,16 @@ async function openKnowledge() {
     const $root = $(`
       <div class="na_popup">
         <div class="na_block_head"><div><h4>누가 아는가</h4><p>비밀·사실마다 누가 알고 누가 모르는지 정리해요. 주입을 켜면 RP 모델이 모르는 걸 아는 척하지 않게 같이 보내요.</p></div></div>
-        <div class="na_row na_kn_bar">
+        <div class="na_tool_actions">
           <button type="button" class="na_btn na_small na_kn_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>AI로 만들기</span></button>
-          <button type="button" class="na_btn na_small na_kn_edit"><i class="fa-solid fa-pen"></i> 직접 고치기</button>
           <button type="button" class="na_btn na_small na_kn_tidy" title="겹치는 줄 합치기 · 끝 시점 기준으로 고치기 · 필요 없는 줄 빼기"><i class="fa-solid fa-broom"></i> AI로 다듬기</button>
+          <button type="button" class="na_btn na_small na_kn_edit"><i class="fa-solid fa-pen"></i> 직접 고치기</button>
           <button type="button" class="na_btn na_small na_kn_tr"><i class="fa-solid fa-language"></i> 한국어로 보기</button>
-          <label class="checkbox_label na_kn_inject"><input type="checkbox"><span>주입하기</span></label>
+          <button type="button" class="na_linkbtn na_danger na_kn_clear"><i class="fa-regular fa-trash-can"></i> 전체 삭제</button>
+        </div>
+        <div class="na_inject_strip">
+          <label class="na_strip_item na_kn_inject"><input type="checkbox" class="na_toggle"><span>주입하기</span></label>
           <small class="na_dim na_kn_tok"></small>
-          <button type="button" class="na_btn na_small na_danger na_kn_clear"><i class="fa-regular fa-trash-can"></i> 전체 삭제</button>
         </div>
         <div class="na_kn_pickhost"></div>
         <div class="na_check na_check_soft na_kn_stale" hidden></div>
@@ -4116,13 +4115,15 @@ async function openQuotes() {
     const $root = $(`
       <div class="na_popup">
         <div class="na_block_head"><div><h4>대사 은행</h4><p>아카이브에 남은 대사를 인물별로 모아요. 고른 대사를 "말투 샘플"로 같이 주입하면 RP 모델이 캐릭터 말투를 덜 잃어요.</p></div></div>
-        <div class="na_row na_qb_bar">
-          <button type="button" class="na_btn na_small na_qb_find"><i class="fa-solid fa-magnifying-glass"></i> 아카이브에서 모으기</button>
+        <div class="na_tool_actions">
           <button type="button" class="na_btn na_small na_qb_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 모으기</button>
-          <label class="checkbox_label"><input type="checkbox" class="na_qb_inject"><span>주입하기</span></label>
-          <label>인물마다 <input type="number" class="text_pole na_num na_qb_max" min="1" max="10"> 개</label>
+          <button type="button" class="na_btn na_small na_qb_find"><i class="fa-solid fa-magnifying-glass"></i> 아카이브에서 모으기</button>
+          <button type="button" class="na_linkbtn na_danger na_qb_clear"><i class="fa-regular fa-trash-can"></i> 전체 삭제</button>
+        </div>
+        <div class="na_inject_strip">
+          <label class="na_strip_item"><input type="checkbox" class="na_toggle na_qb_inject"><span>주입하기</span></label>
+          <label class="na_strip_item">인물마다 <input type="number" class="text_pole na_num na_qb_max" min="1" max="10"> 개</label>
           <small class="na_dim na_qb_tok"></small>
-          <button type="button" class="na_btn na_small na_danger na_qb_clear"><i class="fa-regular fa-trash-can"></i> 전체 삭제</button>
         </div>
         <div class="na_qb_excl">
           <span class="na_qb_excl_label"><i class="fa-solid fa-user-slash"></i> 뺄 인물</span>
@@ -4157,7 +4158,7 @@ async function openQuotes() {
               <button type="button" class="na_icon na_icon_sm na_qb_del" title="빼기"><i class="fa-solid fa-xmark"></i></button>
             </div>`).join('')}</div>`).join('') : '<div class="na_empty">아직 없어요. "아카이브에서 모으기"를 눌러 보세요.</div>');
         const blk = extraBlocks({ ...m, knowInject: false, quoteInject: true });
-        if (blk) countTokens(blk).then(t => $root.find('.na_qb_tok').text(`주입하면 약 ${fmt(t)} 토큰`)); else $root.find('.na_qb_tok').text('');
+        if (blk) countTokens(blk).then(t => $root.find('.na_qb_tok').text(`약 ${fmt(t)} 토큰`)); else $root.find('.na_qb_tok').text('');
     };
     render();
     const save = async () => { await saveMeta(); applyInjection(); syncPanel(); render(); };
