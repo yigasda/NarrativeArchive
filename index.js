@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.5.2';
+const VERSION = '3.5.3';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3457,6 +3457,13 @@ function currentCast(m, recent = 4) {
     const cast = new Set(capWords(state + '\n' + secs.map(x => text.slice(x.start, x.end)).join('\n')));
     return cast.size >= 2 ? cast : null; // too little to judge: don't filter
 }
+// STATE's "## Name" headings that look like people (for telling the model who is in the story now)
+function castNames(m) {
+    const state = tailBlocks(splitTail(String(m.text || ''))[1]).filter(b => b.key === 'STATE').map(b => b.text).join('\n');
+    return (state.match(/^## (.+)$/gm) || []).map(h => h.slice(3).trim())
+        .filter(h => h.split(/\s+/).length <= 3 && !/^(relationships?|current|household|world|setting|places?|open|notes?|misc|other|status|state)\b/i.test(h));
+}
+
 const inCast = (cast, name) => !cast || [...cast].some(w => name.split(/\s+/).includes(w));
 
 // names in unaware/suspects that are no longer in the story
@@ -3474,7 +3481,8 @@ function trimUnaware(text, cast) {
 
 function extraBlocks(m) {
     let out = '';
-    const kr = m.knowInject ? knowledgeRows(m) : [];
+    const castNow = currentCast(m);
+    const kr = (m.knowInject ? knowledgeRows(m) : []).map(r => ({ ...r, unaware: r.unaware.filter(n => inCast(castNow, n)), suspects: r.suspects.filter(n => inCast(castNow, n)) }));
     if (kr.length) out += `\n\n# WHO KNOWS WHAT\n_Characters act only on what they know. Do not let anyone reveal or use a fact they do not know._\n${kr.map(r =>
         `- ${r.fact} — knows: ${r.knows.join(', ') || 'no one'}${r.unaware.length ? `; does not know: ${r.unaware.join(', ')}` : ''}${r.suspects.length ? `; suspects: ${r.suspects.join(', ')}` : ''}`).join('\n')}`;
     const qs = m.quoteInject ? pickedQuotes(m) : [];
@@ -3492,6 +3500,7 @@ Report only clear problems in the RECENT CHAT:
 - timeline or time-of-day going backwards; a character in two places at once
 - a character acting or talking clearly against how the archive describes them
 Do not report style, pacing or things the archive simply does not cover. New events are not drift.
+Judge only the characters in the story now: those named under CURRENT CAST and anyone who actually appears in the recent chat. Ignore characters who are absent from the recent chat and not in the current cast — what they know or would do is not drift.
 Answer in Korean, one bullet per problem: "- #메시지번호 이름: 무엇이 어긋나는지 — 근거 [[아카이브 섹션 제목 그대로]]". If there is nothing, answer exactly: 없음`;
 
 function recentForCheck(n) {
@@ -3509,7 +3518,8 @@ async function runDrift(m, n) {
     const recent = recentForCheck(n);
     if (!recent.length) throw new Error('검사할 메시지가 없어요');
     const kr = knowledgeRows(m);
-    const prompt = `[ARCHIVE]\n${m.text}${kr.length ? `\n\n[WHO KNOWS WHAT]\n${extraBlocks({ ...m, knowInject: true, quoteInject: false }).trim()}` : ''}\n\n[RECENT CHAT]\n${recent.join('\n\n')}`;
+    const cast = castNames(m);
+    const prompt = `[ARCHIVE]\n${m.text}${cast.length ? `\n\n[CURRENT CAST]\n${cast.join(', ')}` : ''}${kr.length ? `\n\n[WHO KNOWS WHAT]\n${extraBlocks({ ...m, knowInject: true, quoteInject: false }).trim()}` : ''}\n\n[RECENT CHAT]\n${recent.join('\n\n')}`;
     const out = await askAI(prompt, { system: AI_SYS_DRIFT, maxTokens: 2500 });
     const none = /^\s*(없음|none)\.?\s*$/i.test(out);
     m.driftLast = { at: Date.now(), n: none ? 0 : out.split('\n').filter(l => /^\s*[-*•]/.test(l)).length || 1, none, text: out, upto: lastIndex(), count: recent.length };
