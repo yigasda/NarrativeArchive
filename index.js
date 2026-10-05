@@ -2561,7 +2561,7 @@ function renderSnapshots() {
               <button type="button" class="na_icon na_snap_del" title="삭제"><i class="fa-regular fa-trash-can"></i></button>
             </div>
           </div>`);
-        $row.find('.na_snap_diff').on('click', () => openDiff(s));
+        $row.find('.na_snap_diff').on('click', () => openDiff(s, undefined, { restore: () => $row.find('.na_snap_restore').trigger('click') }));
         $row.find('.na_snap_then').on('click', () => openDiff(s, after));
         $row.find('.na_snap_view').on('click', () => {
             const c = ctx();
@@ -2868,7 +2868,7 @@ function diffPairs(rows) {
     return pairs;
 }
 
-function renderDiff(rows, context = 2) {
+function renderDiff(rows, context = 2, { src = true } = {}) {
     const keep = new Array(rows.length).fill(false);
     rows.forEach((r, i) => {
         if (r.t === ' ') return;
@@ -2880,7 +2880,7 @@ function renderDiff(rows, context = 2) {
         if (mk) { marked.set(d, mk.old); marked.set(a, mk.new); }
     }
     // the section each row sits in, for a "원문" chip at the start of each run of changes
-    const m = hasChat() ? getMeta() : null;
+    const m = src && hasChat() ? getMeta() : null;
     const isHead = l => /^#{1,3} /.test(l);
     let headOld = '', headNew = '';
     const heads = rows.map(r => {
@@ -3269,19 +3269,89 @@ function translateButton($diff) {
     return $btn;
 }
 
-async function openDiff(snap, after = { text: getMeta().text, label: '지금' }) {
+// Section-by-section diff: each changed section gets a card (added / changed / removed) with its −/+ lines.
+// Sections are matched by title, so a renamed section shows as one removed and one added.
+function sectionChanges(aText, bText) {
+    const body = (t, s) => t.slice(s.start, s.end).replace(/^[^\n]*\n?/, '').replace(/^(?:[ \t]*\n)+/, '').trimEnd();
+    const A = parseSections(aText), B = parseSections(bText);
+    const mapA = new Map(A.map(s => [sectionKey(s), s])), mapB = new Map(B.map(s => [sectionKey(s), s]));
+    const out = B.map(s => {
+        const k = sectionKey(s), a = mapA.get(k);
+        if (!a) return { kind: 'add', s, a: '', b: body(bText, s) };
+        const ab = body(aText, a), bb = body(bText, s);
+        return { kind: ab.trim() === bb.trim() ? 'same' : 'mod', s, a: ab, b: bb };
+    });
+    // a removed section goes right after the section that came before it in A
+    let prev = null; // the entry in `out` for the A section seen last
+    for (const s of A) {
+        const k = sectionKey(s);
+        if (mapB.has(k)) { prev = out.find(x => x.kind !== 'del' && sectionKey(x.s) === k); continue; }
+        const entry = { kind: 'del', s, a: body(aText, s), b: '' };
+        out.splice(prev ? out.indexOf(prev) + 1 : 0, 0, entry);
+        prev = entry;
+    }
+    return out;
+}
+
+const DIFF_KIND = { add: '추가', mod: '수정', del: '삭제', same: '같음' };
+
+// fills $host with the count chips, the section cards and the "바뀐 섹션만" toggle
+function renderSectionDiff($host, aText, bText, { tr } = {}) {
+    const m = hasChat() ? getMeta() : null;
+    const list = sectionChanges(aText, bText);
+    const n = { add: 0, mod: 0, del: 0, same: 0 };
+    list.forEach(x => n[x.kind]++);
+    const changed = n.add + n.mod + n.del;
+    let onlyChanged = true;
+    const card = x => {
+        const title = x.s.group ? groupLabel(x.s.title) : x.s.title;
+        if (x.kind === 'same') return `<div class="na_df2_same"><span class="na_df2_badge same">같음</span><span>${esc(title)}</span></div>`;
+        const rows = lineDiff(x.a, x.b);
+        const src = x.kind !== 'del' && m && !x.s.group ? srcButton(m, x.s.title, 'chip') : '';
+        return `
+          <div class="na_df2_card ${x.kind}">
+            <div class="na_df2_head"><span class="na_df2_badge ${x.kind}">${DIFF_KIND[x.kind]}</span><b title="${esc(title)}">${esc(title)}</b>${src}</div>
+            ${x.a.trim() || x.b.trim() ? `<div class="na_diff na_df2_lines">${renderDiff(rows, 2, { src: false })}</div>` : '<div class="na_df2_empty">제목만 있어요</div>'}
+          </div>`;
+    };
+    const draw = () => {
+        const shown = onlyChanged ? list.filter(x => x.kind !== 'same') : list;
+        $host.find('.na_df2_cards').html(changed || !onlyChanged ? shown.map(card).join('') : '<div class="na_empty">내용이 똑같아요.</div>');
+        $host.find('.na_df2_only').toggleClass('active', onlyChanged).text(onlyChanged ? `같은 섹션 ${n.same}개도 보기` : '바뀐 섹션만');
+        tr?.reset();
+    };
+    $host.html(`
+      <div class="na_df2_counts">
+        <span class="add">추가 ${n.add}</span><span class="mod">수정 ${n.mod}</span><span class="del">삭제 ${n.del}</span>
+        <span class="na_spacer"></span><span class="na_df2_tr"></span>
+      </div>
+      <div class="na_df2_cards"></div>
+      ${n.same ? '<button type="button" class="na_v2_btn na_df2_only"></button>' : ''}`);
+    if (tr && changed) { tr.detach(); $host.find('.na_df2_tr').append(tr); }
+    $host.find('.na_df2_only').on('click', () => { onlyChanged = !onlyChanged; draw(); });
+    draw();
+    return n;
+}
+
+const diffSide = (cls, tag, name, sub) => `<div class="na_df2_side ${cls}"><small>${tag}</small><b title="${esc(name)}">${esc(name)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>`;
+
+async function openDiff(snap, after = { text: getMeta().text, label: '지금' }, { restore } = {}) {
     const c = ctx();
-    const rows = lineDiff(snap.text, after.text);
-    const add = rows.filter(r => r.t === '+').length, del = rows.filter(r => r.t === '-').length;
     const $v = $(`
-      <div class="na_popup na_popup_fill">
-        <div class="na_diff_head">
-          <b>${esc(timeLabel(snap.at))} · ${esc(snap.reason)}</b> → <b>${esc(after.label)}</b>
-          <span class="na_chip na_chip_add">+${fmt(add)}줄</span><span class="na_chip na_chip_del">−${fmt(del)}줄</span>
+      <div class="na_popup na_v2 na_df2">
+        <div class="na_v2_title"><b>두 버전 비교</b></div>
+        <div class="na_df2_sides">
+          ${diffSide('old', '이전', snap.reason || '복구 지점', snap.at ? timeLabel(snap.at) : '')}
+          <i class="fa-solid fa-arrow-right"></i>
+          ${diffSide('new', '이후', after.label, `${fmt(after.text.length)}자`)}
         </div>
-        <div class="na_diff">${add || del ? renderDiff(rows) : '<div class="na_empty">내용이 똑같아요.</div>'}</div>
+        <div class="na_df2_body"></div>
+        ${restore ? '<button type="button" class="na_v2_btn primary wide na_df2_restore"><i class="fa-solid fa-clock-rotate-left"></i> 이전으로 복원</button>' : ''}
       </div>`);
-    if (add || del) $v.find('.na_diff_head').append(translateButton($v.find('.na_diff')));
+    const $host = $v.find('.na_df2_body');
+    const tr = translateButton($host);
+    renderSectionDiff($host, snap.text, after.text, { tr });
+    $v.find('.na_df2_restore').on('click', () => { $v.closest('dialog').find('.popup-button-ok').trigger('click'); setTimeout(restore, 50); });
     await c.callGenericPopup($v, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
@@ -3395,21 +3465,19 @@ async function openCompare() {
     ];
     const opts = sel => sources.map(x => `<option value="${x.id}" ${x.id === sel ? 'selected' : ''}>${esc(x.label)}</option>`).join('');
     const $root = $(`
-      <div class="na_popup na_popup_fill">
-        <div class="na_block_head"><div>
-          <h4>두 버전 비교</h4>
-          <p>A에서 B로 바뀐 줄만 보여줘요. 파일끼리도 비교할 수 있어요.</p>
-        </div></div>
-        <div class="na_cmp_pick">
-          <label><span class="na_cmp_tag">A</span><select class="text_pole na_cmp_a">${opts(m.snapshots.length ? 's0' : 'file')}</select></label>
-          <label><span class="na_cmp_tag">B</span><select class="text_pole na_cmp_b">${opts('now')}</select></label>
+      <div class="na_popup na_v2 na_df2">
+        <div class="na_v2_title"><b>두 버전 비교</b><small>A에서 B로 바뀐 섹션만 보여줘요. 파일끼리도 비교할 수 있어요</small></div>
+        <div class="na_df2_sides">
+          <label class="na_df2_side old"><small>이전 · A</small><select class="text_pole na_cmp_a">${opts(m.snapshots.length ? 's0' : 'file')}</select></label>
+          <i class="fa-solid fa-arrow-right"></i>
+          <label class="na_df2_side new"><small>이후 · B</small><select class="text_pole na_cmp_b">${opts('now')}</select></label>
           <input type="file" class="na_cmp_file" accept=".txt,.md,.json,text/plain,application/json" hidden>
         </div>
-        <div class="na_cmp_from">
+        <details class="na_v2_more">
+          <summary>일부만 비교</summary>
           <input type="text" class="text_pole na_cmp_marker" placeholder="이 줄부터만 비교 (예: # ── Y2) — 비우면 전체">
-        </div>
-        <div class="na_diff_head na_cmp_head"></div>
-        <div class="na_diff na_cmp_diff"><div class="na_empty">A와 B를 고르세요.</div></div>
+        </details>
+        <div class="na_df2_body na_cmp_diff"><div class="na_empty">A와 B를 고르세요.</div></div>
       </div>`);
     const files = { a: null, b: null };
     let pickingFor = null;
@@ -3419,10 +3487,6 @@ async function openCompare() {
         if (id === 'file') return files[side]?.text ?? null;
         return sources.find(x => x.id === id)?.text ?? null;
     };
-    const labelOf = side => {
-        const id = $root.find(`.na_cmp_${side}`).val();
-        return id === 'file' ? (files[side]?.name || '파일') : sources.find(x => x.id === id)?.label;
-    };
     const cut = (t, marker) => {
         if (!marker) return t;
         const at = t.indexOf(marker);
@@ -3431,21 +3495,14 @@ async function openCompare() {
     const render = () => {
         const marker = $root.find('.na_cmp_marker').val().trim();
         const a0 = textOf('a'), b0 = textOf('b');
-        if (a0 === null || b0 === null) { cmpTr.detach(); $root.find('.na_cmp_head').empty(); $root.find('.na_cmp_diff').html('<div class="na_empty">파일을 골라 주세요.</div>'); return; }
+        cmpTr.detach(); // keep its click handler; .html() below would drop it
+        if (a0 === null || b0 === null) { $root.find('.na_cmp_diff').html('<div class="na_empty">파일을 골라 주세요.</div>'); return; }
         const a = cut(a0, marker), b = cut(b0, marker);
         if (a === null || b === null) {
-            cmpTr.detach(); $root.find('.na_cmp_head').empty();
             $root.find('.na_cmp_diff').html(`<div class="na_empty">"${esc(marker)}" 줄이 ${a === null && b === null ? '둘 다' : a === null ? 'A에' : 'B에'} 없어요.</div>`);
             return;
         }
-        const rows = lineDiff(a, b);
-        const add = rows.filter(r => r.t === '+').length, del = rows.filter(r => r.t === '-').length;
-        cmpTr.reset();
-        cmpTr.detach(); // keep its click handler; .html() below would drop it
-        $root.find('.na_cmp_head').html(`<b>A</b> ${esc(labelOf('a'))} → <b>B</b> ${esc(labelOf('b'))}
-            ${add || del ? `<span class="na_chip na_chip_add">+${fmt(add)}줄</span><span class="na_chip na_chip_del">−${fmt(del)}줄</span>` : '<span class="na_chip na_chip_on">똑같아요</span>'}`);
-        $root.find('.na_cmp_diff').html(add || del ? renderDiff(rows) : `<div class="na_empty">${marker ? `"${esc(marker)}"부터 ` : ''}내용이 똑같아요.</div>`);
-        if (add || del) $root.find('.na_cmp_head').append(cmpTr);
+        renderSectionDiff($root.find('.na_cmp_diff'), a, b, { tr: cmpTr });
     };
     $root.find('.na_cmp_a, .na_cmp_b').on('change', function () {
         const side = $(this).hasClass('na_cmp_a') ? 'a' : 'b';
