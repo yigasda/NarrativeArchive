@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.1.1';
+const VERSION = '3.1.2';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1207,7 +1207,6 @@ function renderPanel() {
                         <option value="number">[번호]</option>
                       </select>
                     </label>
-                    <label class="na_set_row"><span><span>원문 뽑기에서 지시문 붙이기</span><small>다른 모델에 그대로 붙여넣기용</small></span><input type="checkbox" class="na_toggle" id="na_opt_prompt"></label>
                   </div>
                   <div class="na_kw_label na_plib_label">압축 지시문</div>
                   <div class="na_plib" id="na_plib"></div>
@@ -4970,7 +4969,6 @@ function renderPromptSettings() {
     $('#na_opt_hidden').prop('checked', !!g.skipHidden);
     $('#na_opt_tags').prop('checked', !!g.stripTags);
     $('#na_opt_name').val(g.nameStyle);
-    $('#na_opt_prompt').prop('checked', !!g.usePrompt);
     const $h = $('#na_plib');
     if (!$h.length) return;
     const cur = activePrompt(g);
@@ -5007,7 +5005,6 @@ function bindPromptSettings() {
     $('#na_opt_hidden').on('change', function () { g().skipHidden = this.checked; saveGlobal(); });
     $('#na_opt_tags').on('change', function () { g().stripTags = this.checked; saveGlobal(); });
     $('#na_opt_name').on('change', function () { g().nameStyle = this.value; saveGlobal(); });
-    $('#na_opt_prompt').on('change', function () { g().usePrompt = this.checked; saveGlobal(); });
     const pick = id => { g().activePrompt = id; saveGlobal(); renderPromptSettings(); };
     const askName = async (title, value) => {
         const v = await ctx().Popup.show.input(title, '', value);
