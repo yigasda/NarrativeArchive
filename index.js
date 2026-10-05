@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.16.0';
+const VERSION = '3.17.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -34,7 +34,7 @@ const DEFAULT_META = Object.freeze({
     lastExport: null, // { from, to, at, how } — the latest extract copied or saved
 });
 
-const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'quoteInject', 'quoteMax', 'router', 'people', 'temps', 'voice', 'voiceInject'];
+const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'quoteInject', 'quoteMax', 'router', 'people', 'temps', 'voice', 'voiceInject', 'layers', 'fade'];
 const POSITIONS = { 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
 const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
 
@@ -216,7 +216,7 @@ const pinnedSet = m => new Set(Array.isArray(m.pinned) ? m.pinned : []);
 // the oldest numbered sections dropped until it fits. Pinned sections — or anything
 // inside a pinned group — are never dropped.
 async function buildInjection(m) {
-    const body = filterMuted(m, m.text);
+    const { text: body, faded } = applyFade(m, filterMuted(m, m.text));
     const cap = Math.max(0, Number(m.tokenCap) || 0);
     let text = body;
     const trimmed = [];
@@ -245,10 +245,211 @@ async function buildInjection(m) {
     const extra = text.trim() ? extraBlocks(m) : '';
     const final = text.trim() ? wrapText(m, `${trimEnd(text)}${extra}`) : '';
     const tokens = await cachedTokens(final);
-    return { text: final, tokens, trimmed, cap, over: !!cap && tokens > cap };
+    return { text: final, tokens, trimmed, cap, over: !!cap && tokens > cap, faded };
 }
 
-let lastBuild = { text: '', tokens: 0, trimmed: [], cap: 0, over: false };
+// ---------------------------------------------------------------- forgetting curve
+// Each numbered section can keep a short version and a one-line version next to its full text (m.layers, keyed by section).
+// With the curve on, the newest sections go in whole, older ones as their short version, the oldest as one line.
+// Pinned sections, and sections a keyword or the AI router just called in, always go in whole.
+const fadeCfg = m => { const f = m?.fade && typeof m.fade === 'object' ? m.fade : {}; return { on: !!f.on, full: Number.isFinite(+f.full) && f.full !== undefined ? Math.max(0, +f.full) : 8, short: Number.isFinite(+f.short) && f.short !== undefined ? Math.max(0, +f.short) : 20 }; };
+const layersOf = m => (m.layers && typeof m.layers === 'object' ? m.layers : {});
+const layerHash = (text, s) => textHash(text.slice(s.start, s.end).replace(/^[^\n]*\n?/, '').trim());
+
+// what each numbered section should be: 'long' | 'short' | 'line' (before checking which versions exist)
+function fadeWants(m, text = m.text) {
+    const cfg = fadeCfg(m);
+    const secs = parseSections(text);
+    const pinned = pinnedSet(m);
+    const stack = [], nums = [];
+    for (const s of secs) {
+        while (stack.length && stack[stack.length - 1].level >= s.level) stack.pop();
+        if (s.group) { stack.push(s); continue; }
+        if (RANGE_HEAD.test(s.title)) nums.push({ s, safe: pinned.has(sectionKey(s)) || stack.some(g => pinned.has(sectionKey(g))) });
+    }
+    // called in right now: keyword links that fired, the router's picks (and what they point at)
+    const lm = linkedMap(m), waiting = keywordWaiting(m);
+    const called = new Set(Object.keys(lm).filter(k => !waiting.has(k)));
+    const rc = routerCfg(m);
+    if (rc.mode !== 'off') {
+        const picks = routerState.get(currentChatId())?.picks || [];
+        for (const k of picks) { called.add(k); if (rc.follow) for (const t of sectionLinks(m).out.get(k) || []) called.add(t); }
+    }
+    const out = new Map();
+    nums.forEach(({ s, safe }, i) => {
+        const age = nums.length - 1 - i;
+        const k = sectionKey(s);
+        out.set(k, { s, want: safe || called.has(k) || age < cfg.full ? 'long' : age < cfg.full + cfg.short ? 'short' : 'line', why: safe ? 'pin' : called.has(k) ? 'called' : '' });
+    });
+    return out;
+}
+
+// the version that actually goes in: a missing or outdated version falls back to the longer one
+function fadeUse(m, text, s, want) {
+    const L = layersOf(m)[sectionKey(s)];
+    if (want === 'long' || !L) return 'long';
+    if (L.h && L.h !== layerHash(m.text, s)) return 'long'; // the full text changed since the versions were made
+    if (want === 'line' && String(L.line || '').trim()) return 'line';
+    if (String(L.short || '').trim()) return 'short';
+    return 'long';
+}
+
+function applyFade(m, text) {
+    const faded = new Map();
+    if (!fadeCfg(m).on) return { text, faded };
+    const plan = fadeWants(m, text);
+    let out = '';
+    for (const s of parseSections(text)) {
+        const p = plan.get(sectionKey(s));
+        const chunk = text.slice(s.start, s.end);
+        const use = p ? fadeUse(m, text, s, p.want) : 'long';
+        if (use === 'long') { out += chunk; continue; }
+        faded.set(sectionKey(s), use);
+        const L = layersOf(m)[sectionKey(s)];
+        out += `${chunk.match(/^[^\n]*/)[0]}\n${String(use === 'line' ? L.line : L.short).trim()}\n\n`;
+    }
+    return { text: out, faded };
+}
+
+const AI_SYS_LAYERS = `GOAL
+Make two shorter versions of ONE section of a story archive. The full section stays saved. Your versions are used when the section is old.
+
+YOU GET
+SECTION: its title line and its full text.
+
+STEPS
+1. Read the section. Mark what MUST survive:
+   who did what · decisions · promises · secrets that came out · injuries · how a relationship changed ·
+   facts later parts may depend on (names, places, objects, numbers like #346).
+2. SHORT: rewrite the section in about one third of its length.
+   Same form as the original (bullets stay bullets). Keep every fact from step 1.
+   Cut mood, repeated feelings and exact dialogue. Keep a quote only if it is a line the story keeps coming back to.
+3. LINE: one sentence, 30 words or fewer: the single most important thing that happened or changed.
+4. Same language as the section. Add nothing that is not in the section. No comments.
+
+EXAMPLE
+SECTION:
+## #12–#15 — The bridge (Spring 3, Varo)
+- Ren and Mara cross the old bridge at dusk. Mara is afraid of heights; Ren holds her sleeve and talks about his sister to distract her.
+- Halfway, a plank breaks. Ren falls to one knee and cuts his leg; Mara pulls him up. She says, "Now you owe me."
+- On the far side Ivo waits with the horses. He tells them the duke has closed the south road, so they must go through Varo's market.
+- That night Ren admits his sister is dead. Mara doesn't answer but sleeps next to him.
+Answer:
+SHORT:
+- Crossing the old bridge at dusk, a plank broke; Ren cut his leg and Mara, afraid of heights, pulled him up: "Now you owe me."
+- Ivo: the duke closed the south road, so they go through Varo's market.
+- That night Ren admitted his sister is dead; Mara slept beside him without answering.
+LINE:
+Ren was hurt on the bridge and saved by Mara; that night he told her his sister is dead.
+
+OUTPUT
+Exactly this, nothing else:
+SHORT:
+<short version>
+LINE:
+<one sentence>`;
+
+async function draftLayers(m, s) {
+    const out = await askDraft(`SECTION:\n${m.text.slice(s.start, s.end).trim()}`, { system: AI_SYS_LAYERS, maxTokens: 4000 });
+    const mt = stripThink(out).match(/SHORT:\s*\n?([\s\S]*?)\n\s*\**LINE:?\**\s*\n?([\s\S]+)$/i);
+    if (!mt) throw new Error(`${s.title.slice(0, 30)}: 답 형식이 달라요 (SHORT:/LINE: 없음)`);
+    return { short: mt[1].replace(/^\**\s*/, '').trim(), line: mt[2].trim().split('\n')[0].trim() };
+}
+
+async function saveLayers(m, s, short, line) {
+    m.layers = layersOf(m);
+    short = String(short || '').trim(); line = String(line || '').trim();
+    if (!short && !line) delete m.layers[sectionKey(s)];
+    else m.layers[sectionKey(s)] = { short, line, h: layerHash(m.text, s) };
+    await saveMeta();
+    applyInjection().then(() => sectionPanel?.render());
+    syncPanel();
+}
+
+async function openLayers(s) {
+    const c = ctx();
+    const m = getMeta();
+    const L = layersOf(m)[sectionKey(s)] || {};
+    const full = m.text.slice(s.start, s.end).replace(/^[^\n]*\n?/, '').trim();
+    const stale = L.h && L.h !== layerHash(m.text, s);
+    const plan = fadeCfg(m).on ? fadeWants(m).get(sectionKey(s)) : null;
+    const use = plan ? fadeUse(m, m.text, s, plan.want) : null;
+    const name = { long: '원문', short: '짧은 버전', line: '한 줄' };
+    const $root = $(`
+      <div class="na_popup na_layers">
+        <div class="na_block_head"><div><h4>섹션 버전</h4><p>${esc(s.title)}</p></div></div>
+        ${plan ? `<div class="na_check na_check_soft"><i class="fa-solid fa-layer-group"></i><div>망각 곡선: 지금 <b>${name[use]}</b>으로 들어가요${plan.why === 'pin' ? ' (📌 고정)' : plan.why === 'called' ? ' (지금 불려 온 섹션)' : use !== plan.want ? ` (원래는 ${name[plan.want]}인데 ${stale ? '원문이 바뀌어서' : '그 버전이 없어서'})` : ''}</div></div>` : ''}
+        ${stale ? '<div class="na_check na_check_warn"><i class="fa-solid fa-triangle-exclamation"></i><div>버전을 만든 뒤에 원문이 바뀌었어요. 고칠 때까지 원문으로 들어가요. 저장하면 지금 원문 기준이 돼요.</div></div>' : ''}
+        <details class="na_hcheck"><summary>원문 <span class="na_dim na_ly_tok_full"></span></summary><div class="na_ly_full">${esc(full)}</div></details>
+        <div class="na_kw_label">짧은 버전 <span class="na_dim na_ly_tok_short"></span></div>
+        <textarea class="text_pole na_ly_short" rows="6" spellcheck="false" placeholder="원문을 1/3쯤으로 줄인 것. 직접 붙여넣거나 초안 모델로 만들어요."></textarea>
+        <div class="na_kw_label">한 줄 <span class="na_dim na_ly_tok_line"></span></div>
+        <textarea class="text_pole na_ly_line" rows="2" spellcheck="false" placeholder="가장 중요한 일 한 문장"></textarea>
+        <div class="na_tool_actions">
+          ${draftReady() ? `<button type="button" class="na_btn na_small na_ly_draft"><i class="fa-solid fa-feather-pointed"></i> 초안 모델로 만들기</button><small class="na_dim">${esc(drLabel())} · 결과는 칸에 채워지고, 저장해야 들어가요</small>` : '<small class="na_dim">⚙ 설정 → AI · 번역 → 초안 모델을 정하면 여기서 바로 만들 수 있어요</small>'}
+        </div>
+      </div>`);
+    $root.find('.na_ly_short').val(L.short || '');
+    $root.find('.na_ly_line').val(L.line || '');
+    const tok = async () => {
+        const [a, b, d] = await Promise.all([countTokens(full), countTokens($root.find('.na_ly_short').val()), countTokens($root.find('.na_ly_line').val())]);
+        $root.find('.na_ly_tok_full').text(`${fmt(a)} 토큰`);
+        $root.find('.na_ly_tok_short').text(b ? `${fmt(b)} 토큰 · 원문의 ${Math.round(b / Math.max(1, a) * 100)}%` : '');
+        $root.find('.na_ly_tok_line').text(d ? `${fmt(d)} 토큰` : '');
+    };
+    tok();
+    $root.find('textarea').on('input', tok);
+    $root.find('.na_ly_draft').on('click', async function () {
+        const r = await withSpinner($(this), '만드는 중…', () => draftLayers(m, s));
+        if (r) { $root.find('.na_ly_short').val(r.short); $root.find('.na_ly_line').val(r.line); tok(); }
+    });
+    const res = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '저장', cancelButton: '닫기' });
+    if (res !== c.POPUP_RESULT.AFFIRMATIVE && res !== true) return;
+    await saveLayers(m, s, $root.find('.na_ly_short').val(), $root.find('.na_ly_line').val());
+    toastr.success('섹션 버전을 저장했어요');
+}
+
+// sections that will want a shorter version and don't have one (or it is outdated)
+function fadeMissing(m) {
+    const out = [];
+    for (const { s, want } of fadeWants(m).values()) {
+        if (want === 'long') continue;
+        const L = layersOf(m)[sectionKey(s)];
+        const stale = L?.h && L.h !== layerHash(m.text, s);
+        if (!L || stale || !String(L.short || '').trim() || (want === 'line' && !String(L.line || '').trim())) out.push(s);
+    }
+    return out;
+}
+
+let fadeFilling = null;
+async function fillFade($btn) {
+    if (fadeFilling) { fadeFilling.stop = true; $btn.prop('disabled', true); return; }
+    const m = getMeta();
+    const todo = fadeMissing(m);
+    if (!todo.length) return toastr.info('채울 섹션이 없어요.');
+    if (!await confirm('초안 모델로 채우기', `버전이 필요한 섹션 ${todo.length}개를 초안 모델(${drLabel()})로 하나씩 만들까요? 섹션마다 요청이 한 번씩 가요. 도중에 멈출 수 있어요.`)) return;
+    fadeFilling = { stop: false };
+    const html = $btn.html();
+    let done = 0, failed = 0;
+    try {
+        for (const s of todo) {
+            if (fadeFilling.stop) break;
+            $btn.html(`<i class="fa-solid fa-stop"></i> 멈추기 (${done + failed + 1}/${todo.length})`);
+            const cur = parseSections(m.text).find(x => sectionKey(x) === sectionKey(s));
+            if (!cur) continue;
+            try { const r = await draftLayers(m, cur); m.layers = layersOf(m); m.layers[sectionKey(cur)] = { ...r, h: layerHash(m.text, cur) }; done++; await saveMeta(); }
+            catch (e) { failed++; console.warn('[narrative-archive] layers', e); if (failed >= 3 && !done) { toastr.error(String(e?.message || e), '초안 모델'); break; } }
+        }
+    } finally {
+        fadeFilling = null;
+        $btn.prop('disabled', false).html(html);
+        applyInjection().then(() => sectionPanel?.render());
+        syncPanel();
+        if (done || failed) toastr[failed ? 'warning' : 'success'](`버전 ${done}개 만들었어요${failed ? ` · ${failed}개 실패 (다시 누르면 남은 것만 해요)` : ''}`);
+    }
+}
+
+let lastBuild = { text: '', tokens: 0, trimmed: [], cap: 0, over: false, faded: new Map() };
 let injectSeq = 0;
 let injectReady = Promise.resolve(lastBuild);
 
@@ -257,9 +458,10 @@ function applyInjection() {
     const m = hasChat() ? getMeta() : null;
     const seq = ++injectSeq;
     injectReady = (async () => {
-        const b = m ? await buildInjection(m) : { text: '', tokens: 0, trimmed: [], cap: 0, over: false };
+        const b = m ? await buildInjection(m) : { text: '', tokens: 0, trimmed: [], cap: 0, over: false, faded: new Map() };
         if (seq !== injectSeq) return lastBuild;
-        const trimChanged = b.trimmed.join('\n') !== lastBuild.trimmed.join('\n');
+        const fadeSig = f => [...(f || [])].map(e => e.join('=')).join('\n');
+        const trimChanged = b.trimmed.join('\n') !== lastBuild.trimmed.join('\n') || fadeSig(b.faded) !== fadeSig(lastBuild.faded);
         lastBuild = b;
         if (trimChanged) sectionPanel?.render();
         if (!m || !m.enabled || !b.text) c.setExtensionPrompt(PROMPT_KEY, '', 1, 1);
@@ -874,7 +1076,7 @@ function mountSectionBrowser($host) {
                 <div class="na_card_head">
                   <div class="na_head_main">
                   <span class="na_card_title">${highlight(s.title, q)}</span>
-                  <span class="na_card_meta">${links[sectionKey(s)]?.length && !off ? `<span class="na_link_tag ${waiting.has(sectionKey(s)) ? '' : 'on'}" title="키워드: ${esc(links[sectionKey(s)].join(', '))}"><i class="fa-solid fa-key"></i> ${waiting.has(sectionKey(s)) ? '대기' : '켜짐'}</span>` : ''}${trimmedSet.has(sectionKey(s)) && !off ? '<span class="na_trim_tag">상한으로 빠짐</span>' : ''}${count ? `<span class="na_hit">${count}건</span>` : ''}<span class="na_tok">${fmt(body.length)}자</span></span>
+                  <span class="na_card_meta">${links[sectionKey(s)]?.length && !off ? `<span class="na_link_tag ${waiting.has(sectionKey(s)) ? '' : 'on'}" title="키워드: ${esc(links[sectionKey(s)].join(', '))}"><i class="fa-solid fa-key"></i> ${waiting.has(sectionKey(s)) ? '대기' : '켜짐'}</span>` : ''}${trimmedSet.has(sectionKey(s)) && !off ? '<span class="na_trim_tag">상한으로 빠짐</span>' : ''}${lastBuild.faded?.get(sectionKey(s)) && !off ? `<span class="na_fade_tag" title="망각 곡선: ${lastBuild.faded.get(sectionKey(s)) === 'line' ? '한 줄' : '짧은 버전'}으로 들어가요"><i class="fa-solid fa-layer-group"></i> ${lastBuild.faded.get(sectionKey(s)) === 'line' ? '한 줄' : '짧게'}</span>` : ''}${count ? `<span class="na_hit">${count}건</span>` : ''}<span class="na_tok">${fmt(body.length)}자</span></span>
                   </div>
                   <div class="na_head_ctrl">
                   ${pinBtn(pinned.has(sectionKey(s)), '이 섹션을')}
@@ -890,6 +1092,7 @@ function mountSectionBrowser($host) {
                     <button type="button" class="na_icon na_ins" title="아래에 새 섹션"><i class="fa-solid fa-plus"></i></button>
                     <span class="na_act_sep"></span>
                     <button type="button" class="na_icon na_keys ${links[sectionKey(s)]?.length ? 'active' : ''}" title="키워드 연동"><i class="fa-solid fa-key"></i></button>
+                    ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_icon na_layers_btn ${layersOf(m)[sectionKey(s)] ? 'active' : ''}" title="짧은 버전 · 한 줄 (망각 곡선)"><i class="fa-solid fa-layer-group"></i></button>` : ''}
                     <button type="button" class="na_icon na_towi" title="월드인포로 보내기"><i class="fa-solid fa-book-atlas"></i></button>
                     <button type="button" class="na_icon na_edit" title="편집"><i class="fa-solid fa-pen"></i></button>
                     <button type="button" class="na_icon na_del na_danger" title="섹션 삭제"><i class="fa-solid fa-trash-can"></i></button>
@@ -915,6 +1118,7 @@ function mountSectionBrowser($host) {
                 if (keys) await setLinked(sectionKey(s), keys);
             });
             $card.find('.na_towi').on('click', () => openSendToWI(s));
+            $card.find('.na_layers_btn').on('click', () => openLayers(s));
             $card.find('.na_del').on('click', () => remove(s));
             $parent.append($card);
             if (s.start === pendingEdit) editTarget = [$card, s];
@@ -1371,6 +1575,12 @@ function renderPanel() {
                   <label class="na_set_row" id="na_capmode_row"><span><span>상한을 넘으면</span><small>📌 고정한 섹션은 안 빠져요</small></span>
                     <select id="na_capmode" class="text_pole"><option value="warn">경고만</option><option value="trim">오래된 섹션부터 빼기</option></select>
                   </label>
+                  <label class="na_set_row"><span><span>망각 곡선</span><small>오래된 섹션은 짧은 버전·한 줄로 넣어요. 버전이 없으면 원문 그대로 · 📌 고정과 지금 불려 온 섹션은 늘 원문</small></span><input type="checkbox" id="na_fade" class="na_toggle"></label>
+                  <div id="na_fade_opts" hidden>
+                    <label class="na_set_row"><span><span>원문 그대로</span><small>최근 섹션 몇 개</small></span><input type="number" id="na_fade_full" class="text_pole" min="0" max="200"></label>
+                    <label class="na_set_row"><span><span>짧은 버전</span><small>그다음 몇 개 · 더 오래된 건 한 줄</small></span><input type="number" id="na_fade_short" class="text_pole" min="0" max="500"></label>
+                    <div class="na_set_row"><span><span>버전 채우기</span><small id="na_fade_info">-</small></span><button type="button" class="na_btn na_small" id="na_fade_fill"><i class="fa-solid fa-feather-pointed"></i> 초안 모델로</button></div>
+                  </div>
                   <label class="na_set_row"><span><span>키워드 연동 범위</span><small>최근 메시지 몇 개에서 찾을지 · 연동 <b id="na_linked_n">0</b>개</small></span><input type="number" id="na_link_depth" class="text_pole" min="1" max="50"></label>
                   <label class="na_set_row"><span><span>AI 라우터</span><small>답하기 직전에 작은 모델이 "지금 대화에 필요한 섹션"을 골라 넣어요 · 따로 연결한 모델이 필요해요</small></span>
                     <select id="na_router_mode" class="text_pole"><option value="off">끄기</option><option value="linked">키워드 섹션에 더해 AI도 고르기</option><option value="old">오래된 섹션 전부 AI가 고르기</option></select></label>
@@ -1977,6 +2187,11 @@ function bindPanel() {
     $('#na_router_max').on('change', needChat(e => setRouter({ max: Math.min(20, Math.max(1, parseInt(e.target.value, 10) || 4)) })));
     $('#na_router_keep').on('change', needChat(e => setRouter({ keep: Math.min(20, Math.max(0, parseInt(e.target.value, 10) || 0)) })));
     $('#na_router_follow').on('change', needChat(e => setRouter({ follow: e.target.checked })));
+    const setFade = async patch => { const m = getMeta(); m.fade = { ...fadeCfg(m), ...patch }; await saveMeta(); applyInjection().then(() => { sectionPanel?.render(); syncPanel(); }); syncPanel(); };
+    $('#na_fade').on('change', needChat(e => setFade({ on: e.target.checked })));
+    $('#na_fade_full').on('change', needChat(e => setFade({ full: Math.max(0, parseInt(e.target.value, 10) || 0) })));
+    $('#na_fade_short').on('change', needChat(e => setFade({ short: Math.max(0, parseInt(e.target.value, 10) || 0) })));
+    $('#na_fade_fill').on('click', needChat(e => { if (!draftReady() && !fadeFilling) return toastr.info('⚙ 설정 → AI · 번역 → 초안 모델을 먼저 정해 주세요. 섹션 카드의 버전 버튼에서 직접 붙여넣을 수도 있어요.'); fillFade($(e.currentTarget)); }));
     $('#na_router_test').on('click', needChat(async e => {
         const m = getMeta();
         const st = await withSpinner($(e.currentTarget), '고르는 중…', () => runRouter(m, { force: true }));
@@ -2026,6 +2241,16 @@ function syncPanel() {
     $('#na_router_opts').prop('hidden', rc.mode === 'off');
     $('#na_router_keep_row').toggle(rc.mode === 'old');
     $('#na_router_max').val(rc.max); $('#na_router_keep').val(rc.keep); $('#na_router_follow').prop('checked', rc.follow);
+    {
+        const fc = fadeCfg(m);
+        $('#na_fade').prop('checked', fc.on); $('#na_fade_opts').prop('hidden', !fc.on);
+        $('#na_fade_full').val(fc.full); $('#na_fade_short').val(fc.short);
+        if (fc.on && !fadeFilling) {
+            const miss = fadeMissing(m).length, f = lastBuild.faded || new Map();
+            const sh = [...f.values()].filter(v => v === 'short').length, ln = f.size - sh;
+            $('#na_fade_info').text(`지금 짧게 ${sh}개 · 한 줄 ${ln}개${miss ? ` · 버전 없는 섹션 ${miss}개` : ' · 다 채워졌어요'}`);
+        }
+    }
     const rs = routerState.get(currentChatId());
     $('#na_router_info').text(rs ? `마지막: ${rs.titles.length}개 · ${(rs.ms / 1000).toFixed(1)}초 · 후보 ${rs.cands}개` : `후보 ${routerCandidates(m).length}개 · 최근 대화로 한 번 골라 봐요`);
     {

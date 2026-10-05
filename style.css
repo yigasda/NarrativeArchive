@@ -1440,3 +1440,9 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_qb_vhead > i { color: var(--na-accent); }
 .na_qb_vhead small { flex: 1; min-width: 0; }
 .na_qb_vtext { width: 100%; margin: 4px 0 0; font-size: 0.85em; resize: vertical; box-sizing: border-box; }
+
+/* forgetting curve */
+.na_fade_tag { color: var(--na-accent); font-weight: 600; }
+.na_ly_full { white-space: pre-wrap; font-size: 0.85em; max-height: 30vh; overflow: auto; padding: 6px 2px; }
+.na_layers textarea { width: 100%; box-sizing: border-box; resize: vertical; font-size: 0.9em; }
+.na_layers .na_tool_actions { align-items: center; margin-top: 8px; }
