@@ -1116,3 +1116,14 @@
 .na_qb_whoin { width: 7em !important; min-width: 0; margin: 0 !important; font-size: 0.9em; padding: 2px 6px !important; }
 .na_cite_msg { font-variant-numeric: tabular-nums; }
 .na_kn_editbox[hidden], .na_kn_list[hidden] { display: none; }
+
+/* ---------- router, wizard */
+.na_router_opts[hidden] { display: none; }
+.na_step_wiz { border-color: color-mix(in srgb, var(--na-accent) 45%, transparent) !important; }
+.na_wiz { gap: 10px; }
+.na_wiz_step { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--na-softer); }
+.na_wiz_step > b { flex-shrink: 0; width: 1.8em; height: 1.8em; border-radius: 50%; display: grid; place-items: center; background: var(--na-accent); color: #fff; font-size: 0.85em; }
+.na_wiz_main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.na_wiz_title { font-weight: 600; font-size: 0.92em; }
+.na_wz_out { width: 100% !important; box-sizing: border-box; resize: vertical; font-size: 0.85em; }
+.na_wz_info, .na_wz_outinfo { font-size: 0.78em; }
