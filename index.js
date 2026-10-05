@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.0.5';
+const VERSION = '3.0.6';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1193,7 +1193,7 @@ function renderPanel() {
                 </div>
               </details>
               <details class="na_block na_details na_fold">
-                <summary>경계선 설정</summary>
+                <summary>숨기기 설정</summary>
                 <div>
                   <p class="na_dim na_fold_desc">아카이브가 다루는 마지막 메시지 번호예요. 그 앞은 숨겨서 토큰을 아껴요.</p>
                 <div class="na_set_list">
