@@ -935,3 +935,14 @@
 .na_tr_btn { margin-left: auto; }
 .na_ap_tr_row { display: flex; justify-content: flex-end; margin-bottom: 6px; }
 .na_ap_tr_row:empty { display: none; }
+
+/* ---------- translation model settings */
+.na_tr_cfg { display: flex; flex-direction: column; gap: 6px; padding: 4px 0 2px; }
+.na_tr_cfg[hidden] { display: none; }
+.na_tr_cfg input, .na_tr_cfg textarea { width: 100% !important; margin: 0 !important; min-width: 0; box-sizing: border-box; }
+.na_tr_cfg textarea { font-family: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.78em; resize: vertical; }
+.na_tr_pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.na_tr_test_row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 6px; }
+.na_tr_test_row[hidden] { display: none; }
+.na_tr_test_row small { font-size: 0.76em; }
+.na_tr_vxrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
