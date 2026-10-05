@@ -1351,3 +1351,26 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_links_row { padding-bottom: 6px; border-bottom: 1px solid var(--na-line, rgba(127,127,127,0.18)); margin-bottom: 4px; }
 .na_links_row .na_card_refs { margin: 2px 0 0 8px; }
 .na_links .na_cal_row::before { display: none; }
+
+/* prompt x-ray */
+.na_xray_bar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; margin: 4px 0 10px; background: var(--na-line); }
+.na_xray_bar > span { display: block; min-width: 2px; }
+.na_xray_legend { display: grid; gap: 4px; margin-bottom: 12px; font-size: 0.88em; }
+.na_xray_legend > div { display: grid; grid-template-columns: 12px 1fr auto 3.2em; gap: 8px; align-items: center; }
+.na_xray_legend i, .na_xray_seg i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.na_xray_legend small { text-align: right; }
+.na_xray_dup summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.na_xray_dup summary > span { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.na_xray_dup ul { margin: 6px 0 2px 18px; padding: 0; font-size: 0.88em; }
+.na_xray_dup li { margin: 3px 0; }
+.na_xray_none { font-size: 0.88em; margin: 0 2px 10px; }
+.na_xray_msgs { display: flex; flex-direction: column; gap: 3px; }
+.na_xray_msg { border: 1px solid var(--na-line); border-radius: 8px; }
+.na_xray_msg > summary { display: flex; align-items: center; gap: 8px; padding: 5px 8px; cursor: pointer; font-size: 0.88em; list-style: none; }
+.na_xray_msg > summary::-webkit-details-marker { display: none; }
+.na_xray_role { flex: none; min-width: 4.6em; font-weight: 600; }
+.na_xray_seg { flex: none; display: inline-flex; gap: 2px; }
+.na_xray_lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.na_xray_text { margin: 0; padding: 8px; max-height: 50vh; overflow: auto; white-space: pre-wrap; word-break: break-word; font-size: 0.82em; border-top: 1px solid var(--na-line); }
+.na_xray_text mark { background: color-mix(in srgb, var(--c) 22%, transparent); color: inherit; border-radius: 3px; box-shadow: inset 2px 0 0 var(--c); }
+.na_xray_runlist { display: flex; flex-direction: column; gap: 3px; padding: 4px 6px 6px; border-top: 1px solid var(--na-line); }
