@@ -1193,3 +1193,16 @@
 .na_kn_clear[hidden], .na_qb_clear[hidden] { display: none; }
 .na_wz_outhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .na_step_wiz + .na_steps { margin-top: 6px; }
+
+/* compress settings fold */
+.na_set_sub { font-size: 0.78em; font-weight: 700; letter-spacing: 0.04em; color: var(--na-accent); margin: 4px 0 4px; }
+.na_set_sub:not(:first-child) { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--na-line); }
+.na_plib_label { margin: 12px 0 0; }
+.na_plib .na_pfav, .na_plib .na_prow { padding-left: 0; padding-right: 0; }
+.na_plib .na_prompt_ta { margin: 6px 0 0 !important; width: 100% !important; height: 24vh !important; }
+.na_plib .na_prompt_help { padding: 8px 0 0; }
+.na_ex_quick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.na_ex_quick .checkbox_label { margin: 0; }
+.na_ex_quick select { flex: 1; min-width: 140px; margin: 0 !important; }
+.na_ex_quick select:disabled { opacity: 0.5; }
+.na_ex_optline { font-size: 0.8em; }
