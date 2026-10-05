@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.17.1';
+const VERSION = '3.0.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -112,7 +112,7 @@ async function commitText(text, reason, { boundary } = {}) {
         m.history.unshift({ at: Date.now(), reason: reason.replace(/ 전(?=$|:)/, ''), ...ch, delta: next.length - m.text.length, snapAt: snapped ? m.snapshots[0].at : null });
         m.history.length = Math.min(m.history.length, HISTORY_MAX);
         m.sinceBackup = (Number(m.sinceBackup) || 0) + 1;
-        if (m.backupEvery > 0 && m.sinceBackup === m.backupEvery) toastr.info(`백업 뒤로 ${m.sinceBackup}번 바뀌었어요. 보관 탭에서 .json 백업을 받아 두세요.`, '서사 아카이브');
+        if (m.backupEvery > 0 && m.sinceBackup === m.backupEvery) toastr.info(`백업 뒤로 ${m.sinceBackup}번 바뀌었어요. 도구 탭에서 .json 백업을 받아 두세요.`, '서사 아카이브');
     }
     m.text = next;
     if (boundary !== undefined) m.boundary = boundary;
@@ -704,7 +704,7 @@ function mountSectionBrowser($host) {
     };
 
     const remove = async s => {
-        if (!await confirm('섹션 삭제', `<b>${esc(s.title)}</b><br>이 섹션을 지울까요? 지우기 전 상태는 보관 탭 복구 지점에 남아요.`)) return;
+        if (!await confirm('섹션 삭제', `<b>${esc(s.title)}</b><br>이 섹션을 지울까요? 지우기 전 상태는 도구 탭 복구 지점에 남아요.`)) return;
         const cur = getMeta();
         if (!parseSections(cur.text).some(x => x.start === s.start && x.end === s.end && sectionKey(x) === sectionKey(s))) {
             toastr.warning('아카이브가 그사이 바뀌어서 지우지 않았어요. 다시 해 주세요.');
@@ -876,7 +876,7 @@ function mountSectionBrowser($host) {
         $info.html(q
             ? `"${esc(q)}" — 섹션 ${shown}개에서 ${hits}건`
             : `섹션 ${cardCount}개${offN ? ` · <span class="na_warn_txt">${offN}개 꺼짐</span>` : ''} · 스위치로 주입에서 뺄 수 있어요`);
-        if (!sections.length) $list.html('<div class="na_empty">아카이브가 비어 있어요.<br>개요 탭에 붙여넣거나 보관 탭에서 불러오세요.</div>');
+        if (!sections.length) $list.html('<div class="na_empty">아카이브가 비어 있어요.<br>원문 편집에 붙여넣거나 도구 탭에서 불러오세요.</div>');
         $list.find('.na_group').each((_, el) => {
             const box = el.querySelector(':scope > .na_group_items');
             if (box && keepScroll.has(el.dataset.key)) box.scrollTop = keepScroll.get(el.dataset.key);
@@ -1069,71 +1069,35 @@ function renderPanel() {
               <div class="na_meter_top">
                 <span class="na_meter_total" id="na_meter_total">-</span>
                 <span class="na_meter_state" id="na_meter_state"></span>
+                <span class="na_spacer"></span>
+                <button type="button" class="na_hchip" id="na_health" title="건강 점검"><i class="fa-solid fa-stethoscope"></i> <span>-</span></button>
+                <button type="button" class="na_icon" id="na_gear" title="설정"><i class="fa-solid fa-gear"></i></button>
               </div>
               <div class="na_meter_bar"><span class="na_seg_arc"></span><span class="na_seg_raw"></span></div>
               <div class="na_meter_legend" id="na_meter_legend"></div>
-              <div class="na_meter_tools">
-                <button type="button" class="na_linkbtn" id="na_health"><i class="fa-solid fa-stethoscope"></i> <span>건강 점검</span></button>
-                <button type="button" class="na_linkbtn" id="na_report"><i class="fa-solid fa-chart-column"></i> 토큰 리포트</button>
-                <button type="button" class="na_linkbtn" id="na_branches"><i class="fa-solid fa-code-branch"></i> <span>분기</span></button>
-              </div>
             </div>
 
             <nav class="na_nav" role="tablist">
-              <button type="button" class="na_nav_btn active" data-tab="overview">개요</button>
-              <button type="button" class="na_nav_btn" data-tab="sections">섹션</button>
+              <button type="button" class="na_nav_btn active" data-tab="home">홈</button>
+              <button type="button" class="na_nav_btn" data-tab="archive">아카이브</button>
               <button type="button" class="na_nav_btn" data-tab="compress">압축</button>
-              <button type="button" class="na_nav_btn" data-tab="vault">보관</button>
-              <button type="button" class="na_nav_btn" data-tab="config">설정</button>
+              <button type="button" class="na_nav_btn" data-tab="tools">도구</button>
             </nav>
 
-            <!-- 개요 -->
-            <section class="na_tab_pane" data-pane="overview">
-              <div class="na_block">
-                <div class="na_block_head">
-                  <div>
-                    <h4>주입 본문</h4>
-                    <p>여기서 고치고 <b>저장</b>하면 다음 턴부터 반영돼요.</p>
-                  </div>
-                </div>
-                <div class="na_editor_bar">
-                  <span class="na_chip" id="na_ed_tok">-</span>
-                  <span class="na_dirty" id="na_ed_dirty" hidden>● 저장 안 됨</span>
-                  <span class="na_spacer"></span>
-                  <button type="button" class="na_icon" id="na_ed_preview" title="주입 미리보기"><i class="fa-regular fa-eye"></i></button>
-                  <button type="button" class="na_icon" id="na_ed_toc" title="목차"><i class="fa-solid fa-list-ul"></i></button>
-                  <button type="button" class="na_icon" id="na_ed_find" title="찾기"><i class="fa-solid fa-magnifying-glass"></i></button>
-                  <button type="button" class="na_icon" id="na_ed_copy" title="전체 복사"><i class="fa-regular fa-copy"></i></button>
-                  <button type="button" class="na_icon" id="na_ed_ask" title="아카이브에 질문 (AI)"><i class="fa-regular fa-comments"></i></button>
-                  <button type="button" class="na_icon" id="na_ed_big" title="읽기 모드"><i class="fa-solid fa-book-open-reader"></i></button>
-                </div>
-                <div class="na_toc" id="na_toc" hidden></div>
-                <div class="na_findbar" id="na_findbar" hidden>
-                  <div class="na_find_field">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="search" class="text_pole" id="na_find_q" placeholder="본문에서 찾기">
-                    <span class="na_find_info" id="na_find_info"></span>
-                  </div>
-                  <button type="button" class="na_icon" id="na_find_prev" title="이전 (Shift+Enter)"><i class="fa-solid fa-chevron-up"></i></button>
-                  <button type="button" class="na_icon" id="na_find_next" title="다음 (Enter)"><i class="fa-solid fa-chevron-down"></i></button>
-                  <button type="button" class="na_icon" id="na_find_close" title="닫기"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-                <div class="na_editor_wrap">
-                  <div class="na_editor_marks" aria-hidden="true"></div>
-                <textarea id="na_editor" class="text_pole na_editor" spellcheck="false" placeholder="# 제목&#10;&#10;# ── Y1 ──&#10;&#10;## #0–#47 — ..."></textarea>
-                </div>
-                <div class="na_editor_actions">
-                  <button type="button" class="na_btn" id="na_ed_revert"><i class="fa-solid fa-rotate-left"></i> 되돌리기</button>
-                  <button type="button" class="na_btn na_primary" id="na_ed_save"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
-                </div>
+            <!-- 홈 -->
+            <section class="na_tab_pane" data-pane="home">
+              <div class="na_next" id="na_next"></div>
+              <div class="na_quick">
+                <button type="button" class="na_qbtn" id="na_q_read"><i class="fa-solid fa-book-open-reader"></i><span>읽기</span></button>
+                <button type="button" class="na_qbtn" id="na_q_ask"><i class="fa-regular fa-comments"></i><span>질문</span></button>
+                <button type="button" class="na_qbtn" id="na_q_wizard"><i class="fa-solid fa-wand-magic-sparkles"></i><span>압축</span></button>
+                <button type="button" class="na_qbtn" id="na_q_preview"><i class="fa-regular fa-eye"></i><span>미리보기</span></button>
               </div>
-              <div class="na_block">
-                <div class="na_block_head"><div><h4>AI 도구</h4><p>아카이브를 바탕으로 대화를 점검하고, 이야기를 정리해 같이 주입할 수 있어요.</p></div></div>
-                <div class="na_tiles">
-                  <button type="button" class="na_tile" id="na_drift"><i class="fa-solid fa-route"></i><span>이탈 감지</span><small id="na_drift_sub">최근 대화가 아카이브와 어긋나는지</small></button>
-                  <button type="button" class="na_tile" id="na_know"><i class="fa-solid fa-user-secret"></i><span>누가 아는가</span><small id="na_know_sub">비밀마다 아는 사람·모르는 사람</small></button>
-                  <button type="button" class="na_tile" id="na_quotes"><i class="fa-solid fa-quote-left"></i><span>대사 은행</span><small id="na_quotes_sub">말투 샘플로 주입</small></button>
-                </div>
+              <div class="na_block na_ai_row3">
+                <div class="na_kw_label">AI 도구</div>
+                <button type="button" class="na_toolrow" id="na_drift"><i class="fa-solid fa-route"></i><span><b>이탈 감지</b><small id="na_drift_sub">최근 대화가 아카이브와 어긋나는지</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" class="na_toolrow" id="na_know"><i class="fa-solid fa-user-secret"></i><span><b>누가 아는가</b><small id="na_know_sub">비밀마다 아는 사람·모르는 사람</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" class="na_toolrow" id="na_quotes"><i class="fa-solid fa-quote-left"></i><span><b>대사 은행</b><small id="na_quotes_sub">말투 샘플로 주입</small></span><i class="fa-solid fa-chevron-right"></i></button>
               </div>
               <details class="na_block na_details">
                 <summary>마지막 주입 기록</summary>
@@ -1141,15 +1105,14 @@ function renderPanel() {
               </details>
             </section>
 
-            <!-- 섹션 -->
-            <section class="na_tab_pane" data-pane="sections" hidden>
-              <div class="na_block">
-                <div class="na_block_head">
-                  <div>
-                    <h4>섹션</h4>
-                    <p>스위치를 끄면 본문은 두고 주입에서만 빠져요. 카드를 펼치면 순서 이동·새 섹션 추가·편집.</p>
-                  </div>
-                </div>
+            <!-- 아카이브 -->
+            <section class="na_tab_pane" data-pane="archive" hidden>
+              <div class="na_seg">
+                <button type="button" class="na_seg_btn active" data-view="cards"><i class="fa-solid fa-layer-group"></i> 섹션 카드</button>
+                <button type="button" class="na_seg_btn" data-view="editor"><i class="fa-solid fa-pen-to-square"></i> 원문 편집</button>
+              </div>
+              <div class="na_block" id="na_view_cards">
+                <p class="na_dim na_tip">스위치를 끄면 본문은 두고 주입에서만 빠져요. 카드를 펼치면 원문·키워드·편집.</p>
                 <details class="na_hcheck" id="na_replace">
                   <summary><i class="fa-solid fa-right-left"></i> 찾아 바꾸기 <span class="na_chip" id="na_rp_n"></span></summary>
                   <div class="na_rp_body">
@@ -1173,47 +1136,98 @@ function renderPanel() {
                 </details>
                 <div id="na_sec_host"></div>
               </div>
+              <div class="na_block" id="na_view_editor" hidden>
+                <div class="na_editor_bar">
+                  <span class="na_chip" id="na_ed_tok">-</span>
+                  <span class="na_dirty" id="na_ed_dirty" hidden>● 저장 안 됨</span>
+                  <span class="na_spacer"></span>
+                  <button type="button" class="na_icon" id="na_ed_find" title="찾기"><i class="fa-solid fa-magnifying-glass"></i></button>
+                  <button type="button" class="na_icon" id="na_ed_toc" title="목차"><i class="fa-solid fa-list-ul"></i></button>
+                  <span class="na_more_wrap">
+                    <button type="button" class="na_icon" id="na_ed_more" title="더 보기"><i class="fa-solid fa-ellipsis"></i></button>
+                    <span class="na_more_menu" id="na_ed_menu" hidden>
+                      <button type="button" id="na_ed_preview"><i class="fa-regular fa-eye"></i> 주입 미리보기</button>
+                      <button type="button" id="na_ed_copy"><i class="fa-regular fa-copy"></i> 전체 복사</button>
+                      <button type="button" id="na_ed_ask"><i class="fa-regular fa-comments"></i> 아카이브에 질문</button>
+                      <button type="button" id="na_ed_big"><i class="fa-solid fa-book-open-reader"></i> 읽기 모드</button>
+                    </span>
+                  </span>
+                </div>
+                <div class="na_toc" id="na_toc" hidden></div>
+                <div class="na_findbar" id="na_findbar" hidden>
+                  <div class="na_find_field">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="search" class="text_pole" id="na_find_q" placeholder="본문에서 찾기">
+                    <span class="na_find_info" id="na_find_info"></span>
+                  </div>
+                  <button type="button" class="na_icon" id="na_find_prev" title="이전 (Shift+Enter)"><i class="fa-solid fa-chevron-up"></i></button>
+                  <button type="button" class="na_icon" id="na_find_next" title="다음 (Enter)"><i class="fa-solid fa-chevron-down"></i></button>
+                  <button type="button" class="na_icon" id="na_find_close" title="닫기"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="na_editor_wrap">
+                  <div class="na_editor_marks" aria-hidden="true"></div>
+                <textarea id="na_editor" class="text_pole na_editor" spellcheck="false" placeholder="# 제목&#10;&#10;# ── Y1 ──&#10;&#10;## #0–#47 — ..."></textarea>
+                </div>
+                <div class="na_editor_actions">
+                  <button type="button" class="na_btn" id="na_ed_revert"><i class="fa-solid fa-rotate-left"></i> 되돌리기</button>
+                  <button type="button" class="na_btn na_primary" id="na_ed_save"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
+                </div>
+              </div>
             </section>
 
             <!-- 압축 -->
             <section class="na_tab_pane" data-pane="compress" hidden>
               <div class="na_block">
-                <div class="na_block_head"><div><h4>경계선</h4><p>아카이브가 다루는 마지막 메시지 번호예요. 그 앞은 숨겨서 토큰을 아껴요.</p></div></div>
-                <div class="na_set_list">
-                  <label class="na_set_row"><span><span>아카이브 따라가기</span><small id="na_track_info">제목의 마지막 #번호를 경계선으로</small></span><input type="checkbox" id="na_track" class="na_toggle"></label>
-                  <label class="na_set_row" id="na_boundary_row"><span><span>경계선 번호</span><small>여기까지 아카이브에 담겼어요</small></span><input type="number" id="na_boundary" class="text_pole" min="0" placeholder="-"></label>
-                  <label class="na_set_row"><span>숨길 때 남길 메시지</span><input type="number" id="na_keep" class="text_pole" min="0" max="50"></label>
-                </div>
                 <div class="na_since" id="na_since"></div>
+                <button type="button" class="na_step na_step_wiz" id="na_open_wizard"><b><i class="fa-solid fa-wand-magic-sparkles"></i></b><span><strong>압축 마법사</strong><small>뽑기 → 복사 → 붙여넣기 → 채점 → 추가 · 한 화면에서</small></span><i class="fa-solid fa-chevron-right"></i></button>
               </div>
-              <div class="na_block">
-                <div class="na_block_head"><div><h4>압축 루틴</h4><p>추가할 때 새 섹션 제목의 마지막 #번호를 읽어서 경계선을 맞춰요.</p></div></div>
+              <details class="na_block na_details na_fold">
+                <summary>따로 하기</summary>
                 <div class="na_steps">
-                  <button type="button" class="na_step na_step_wiz" id="na_open_wizard"><b><i class="fa-solid fa-wand-magic-sparkles"></i></b><span><strong>압축 마법사</strong><small>뽑기 → 복사 → 붙여넣기 → 채점 → 추가 · 한 화면에서</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>경계선 이후 메시지 · 지시문 붙여 복사</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step" id="na_open_append"><b>2</b><span><strong>아카이브에 추가</strong><small>압축본 붙여넣기 · 번호 검사 · 경계선 자동</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step na_step_sub" id="na_apply_hide"><b><i class="fa-solid fa-eye-slash"></i></b><span><strong>숨기기 다시 적용</strong><small>경계선 앞만 숨기고 뒤는 다시 보이게</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step na_step_sub" id="na_unhide"><b><i class="fa-solid fa-eye"></i></b><span><strong>숨김 해제</strong><small id="na_hidden_n">숨긴 메시지 다시 보이게</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
-              </div>
+              </details>
+              <details class="na_block na_details na_fold">
+                <summary>경계선 설정</summary>
+                <div>
+                  <p class="na_dim na_fold_desc">아카이브가 다루는 마지막 메시지 번호예요. 그 앞은 숨겨서 토큰을 아껴요.</p>
+                <div class="na_set_list">
+                  <label class="na_set_row"><span><span>아카이브 따라가기</span><small id="na_track_info">제목의 마지막 #번호를 경계선으로</small></span><input type="checkbox" id="na_track" class="na_toggle"></label>
+                  <label class="na_set_row" id="na_boundary_row"><span><span>경계선 번호</span><small>여기까지 아카이브에 담겼어요</small></span><input type="number" id="na_boundary" class="text_pole" min="0" placeholder="-"></label>
+                  <label class="na_set_row"><span>숨길 때 남길 메시지</span><input type="number" id="na_keep" class="text_pole" min="0" max="50"></label>
+                </div>
+                </div>
+              </details>
             </section>
 
-            <!-- 보관 -->
-            <section class="na_tab_pane" data-pane="vault" hidden>
+            <!-- 도구 -->
+            <section class="na_tab_pane" data-pane="tools" hidden>
               <div class="na_block">
-                <div class="na_block_head"><div><h4>백업 · 가져오기</h4><p id="na_backup_info"></p></div></div>
-                <div class="na_tiles">
+                <div class="na_kw_label">점검</div>
+                <button type="button" class="na_toolrow" id="na_tool_health"><i class="fa-solid fa-stethoscope"></i><span><b>건강 점검</b><small id="na_tool_health_sub">번호·숨기기·키워드·백업을 AI 없이 살펴봐요</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" class="na_toolrow" id="na_report"><i class="fa-solid fa-chart-column"></i><span><b>토큰 리포트</b><small>주입 토큰이 어디에 쓰이는지 · 아낄 곳</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" class="na_toolrow" id="na_branches"><i class="fa-solid fa-code-branch"></i><span><b>분기</b><small id="na_branches_sub">원본·갈라진 채팅과 비교, 분기 정리</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" class="na_toolrow" id="na_compare"><i class="fa-solid fa-code-compare"></i><span><b>두 버전 비교</b><small>복구 지점·파일끼리</small></span><i class="fa-solid fa-chevron-right"></i></button>
+              </div>
+              <div class="na_block">
+                <div class="na_kw_label">백업 · 가져오기 <span class="na_dim" id="na_backup_info"></span></div>
+                <div class="na_tiles na_tiles4">
                   <button type="button" class="na_tile" id="na_export_json"><i class="fa-solid fa-box-archive"></i><span>.json 백업</span><small>설정·복구 지점까지</small></button>
                   <button type="button" class="na_tile" id="na_export"><i class="fa-solid fa-file-lines"></i><span>.txt 내보내기</span><small>본문만</small></button>
-                  <button type="button" class="na_tile" id="na_import"><i class="fa-solid fa-file-arrow-up"></i><span>파일에서</span><small>.txt · .json</small></button>
-                  <button type="button" class="na_tile" id="na_from_chat"><i class="fa-solid fa-comments"></i><span>다른 채팅에서</span><small>같은 캐릭터</small></button>
+                  <button type="button" class="na_tile" id="na_import_menu"><i class="fa-solid fa-file-import"></i><span>가져오기</span><small>파일 · 다른 채팅</small></button>
                   <button type="button" class="na_tile" id="na_all_archives"><i class="fa-solid fa-layer-group"></i><span>전체 아카이브</span><small>모든 채팅 모아 보기</small></button>
-                  <button type="button" class="na_tile" id="na_compare"><i class="fa-solid fa-code-compare"></i><span>두 버전 비교</span><small>복구 지점·파일</small></button>
+                </div>
+                <div class="na_import_opts" id="na_import_opts" hidden>
+                  <button type="button" class="na_btn na_small" id="na_import"><i class="fa-solid fa-file-arrow-up"></i> 파일에서 (.txt · .json)</button>
+                  <button type="button" class="na_btn na_small" id="na_from_chat"><i class="fa-solid fa-comments"></i> 다른 채팅에서</button>
                 </div>
                 <div class="na_row na_right"><button type="button" class="na_linkbtn na_danger" id="na_clear"><i class="fa-solid fa-eraser"></i> 아카이브 비우기</button></div>
                 <input type="file" id="na_file" accept=".txt,.md,.json,text/plain,application/json" hidden>
               </div>
-              <details class="na_block na_details na_fold" open>
+              <details class="na_block na_details na_fold">
                 <summary>복구 지점 <span class="na_chip" id="na_snap_n">0</span></summary>
                 <div>
                   <div class="na_fold_head">
@@ -1232,10 +1246,12 @@ function renderPanel() {
               </details>
             </section>
 
-            <!-- 설정 -->
+            <!-- 설정 (⚙) -->
             <section class="na_tab_pane" data-pane="config" hidden>
-              <div class="na_block">
-                <div class="na_block_head"><div><h4>주입</h4></div><button type="button" class="na_btn na_small" id="na_cfg_preview"><i class="fa-regular fa-eye"></i> 미리보기</button></div>
+              <div class="na_cfg_head"><button type="button" class="na_linkbtn" id="na_cfg_back"><i class="fa-solid fa-arrow-left"></i> 돌아가기</button><b>설정</b><button type="button" class="na_btn na_small" id="na_cfg_preview"><i class="fa-regular fa-eye"></i> 주입 미리보기</button></div>
+              <details class="na_block na_details na_fold" open>
+                <summary><i class="fa-solid fa-syringe"></i> 주입</summary>
+                <div>
                 <div class="na_set_list">
                   <label class="na_set_row"><span>아카이브 주입</span><input type="checkbox" id="na_enabled" class="na_toggle"></label>
                   <label class="na_set_row"><span>위치</span>
@@ -1246,9 +1262,14 @@ function renderPanel() {
                     <select id="na_role" class="text_pole">${Object.entries(ROLES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
                   </label>
                 </div>
-              </div>
-              <div class="na_block">
-                <div class="na_block_head"><div><h4>분량 조절</h4><p>섹션 탭의 스위치 · 📌 · 🔑로 섹션마다 정하고, 여기선 한꺼번에 관리해요.</p></div></div>
+                  <div class="na_kw_label">감싸기 <span class="na_dim">· <code>{{archive}}</code> 자리에 본문이 들어가요. 비워 두면 본문만.</span></div>
+                <textarea id="na_wrap" class="text_pole na_wrap" rows="3" spellcheck="false" placeholder="<story_archive>&#10;{{archive}}&#10;</story_archive>"></textarea>
+                </div>
+              </details>
+              <details class="na_block na_details na_fold">
+                <summary><i class="fa-solid fa-scale-balanced"></i> 분량 · 키워드 · 라우터</summary>
+                <div>
+                  <p class="na_dim na_fold_desc">섹션 카드의 스위치 · 📌 · 🔑로 섹션마다 정하고, 여기선 한꺼번에 관리해요.</p>
                 <div class="na_set_list">
                   <label class="na_set_row"><span><span>토큰 상한</span><small>0이면 없음</small></span><input type="number" id="na_cap" class="text_pole" min="0" step="1000"></label>
                   <label class="na_set_row" id="na_capmode_row"><span><span>상한을 넘으면</span><small>📌 고정한 섹션은 안 빠져요</small></span>
@@ -1266,20 +1287,12 @@ function renderPanel() {
                   <div class="na_set_row"><span><span>고정한 섹션 <b id="na_pinned_n">0</b>개</span></span><button type="button" class="na_btn na_small" id="na_unpin_all">모두 풀기</button></div>
                   <div class="na_set_row"><span><span>꺼 둔 섹션 <b id="na_muted_n">0</b>개</span></span><button type="button" class="na_btn na_small" id="na_unmute_all">모두 켜기</button></div>
                 </div>
-              </div>
-              <div class="na_block">
-                <div class="na_block_head"><div><h4>감싸기</h4><p><code>{{archive}}</code> 자리에 본문이 들어가요. 비워 두면 본문만.</p></div></div>
-                <textarea id="na_wrap" class="text_pole na_wrap" rows="3" spellcheck="false" placeholder="<story_archive>&#10;{{archive}}&#10;</story_archive>"></textarea>
-              </div>
-              <div class="na_block">
-                <div class="na_block_head"><div><h4>알림</h4></div></div>
-                <div class="na_set_list">
-                  <label class="na_set_row"><span><span>압축 알림</span><small>경계선 뒤 원문이 이 토큰을 넘으면 · 0은 끔</small></span><input type="number" id="na_remind" class="text_pole" min="0" step="1000"></label>
-                  <label class="na_set_row"><span><span>백업 알림</span><small>백업 뒤 이만큼 바뀌면 · 0은 끔</small></span><input type="number" id="na_backup_every" class="text_pole" min="0" max="999"></label>
                 </div>
-              </div>
-              <div class="na_block">
-                <div class="na_block_head"><div><h4>AI 기능</h4><p>아카이브에 질문 · 키워드 제안 · 충돌 검사에 쓰는 모델이에요. AI는 답하고 검사만 하고, 아카이브는 직접 고쳐요.</p></div></div>
+              </details>
+              <details class="na_block na_details na_fold">
+                <summary><i class="fa-solid fa-robot"></i> AI · 번역</summary>
+                <div>
+                  <p class="na_dim na_fold_desc">질문 · 키워드 제안 · 점검 · 라우터에 쓰는 모델이에요. AI는 답하고 검사만 하고, 아카이브는 직접 고쳐요.</p>
                 <div class="na_set_list">
                   <label class="na_set_row"><span><span>모델</span><small>연결 프로필 · 커스텀 API · Vertex를 고르면 RP 모델과 따로 쓸 수 있어요</small></span><select id="na_ai_profile" class="text_pole"></select></label>
                 </div>
@@ -1301,7 +1314,20 @@ function renderPanel() {
                   <div class="na_set_row"><span><span>번역 용어집</span><small>이름·장소의 한국어 표기를 정해 두면 번역이 늘 그대로 써요 · 이 채팅 <b id="na_gloss_n">0</b>개</small></span><button type="button" class="na_btn na_small" id="na_gloss_edit"><i class="fa-solid fa-spell-check"></i> 편집</button></div>
                 </div>
                 <small class="na_dim na_conn_note" id="na_conn_note" hidden>키와 JSON은 이 기기의 실리태번 설정에만 저장돼요. 아카이브 백업에는 안 들어가요.</small>
+                </div>
+              </details>
+              <details class="na_block na_details na_fold">
+                <summary><i class="fa-solid fa-bell"></i> 알림</summary>
+                <div>
+                <div class="na_set_list">
+                  <label class="na_set_row"><span><span>압축 알림</span><small>경계선 뒤 원문이 이 토큰을 넘으면 · 0은 끔</small></span><input type="number" id="na_remind" class="text_pole" min="0" step="1000"></label>
+                  <label class="na_set_row"><span><span>백업 알림</span><small>백업 뒤 이만큼 바뀌면 · 0은 끔</small></span><input type="number" id="na_backup_every" class="text_pole" min="0" max="999"></label>
+                </div>
               </div>
+              <div class="na_block">
+                <div class="na_block_head"><div><h4>AI 기능</h4>                </div>
+                </div>
+              </details>
             </section>
 
             <div class="na_nochat" id="na_nochat" hidden>채팅을 열면 이 채팅의 아카이브가 보여요.</div>
@@ -1311,6 +1337,7 @@ function renderPanel() {
     </div>`;
     $('#extensions_settings2').append(html);
     bindPanel();
+    showTab(globalSettings().lastTab || 'home');
 }
 
 // custom-API / Vertex fields for one connection ('ai' = the AI 기능 model, 'tr' = the translation model)
@@ -1400,20 +1427,72 @@ async function markBackup(how) {
 
 const needChat = fn => (...a) => hasChat() ? fn(...a) : toastr.info('채팅을 먼저 여세요.');
 
+// tabs: home / archive / compress / tools, and the ⚙ settings page
+function showTab(tab) {
+    const $p = $('#na_settings');
+    const g = globalSettings();
+    if (!$p.find(`[data-pane="${tab}"]`).length) tab = 'home';
+    $p.find('.na_nav_btn').each(function () { $(this).toggleClass('active', $(this).data('tab') === tab); });
+    $p.find('.na_tab_pane').each(function () { $(this).prop('hidden', $(this).data('pane') !== tab); });
+    $('#na_gear').toggleClass('active', tab === 'config');
+    if (tab !== 'config' && g.lastTab !== tab) { g.lastTab = tab; saveGlobal(); }
+    if (tab === 'config') renderAiSettings();
+    if (tab === 'archive') showArchiveView(g.archView || 'cards');
+}
+
+function showArchiveView(view) {
+    const g = globalSettings();
+    if (g.archView !== view) { g.archView = view; saveGlobal(); }
+    $('#na_settings .na_seg_btn').each(function () { $(this).toggleClass('active', $(this).data('view') === view); });
+    $('#na_view_cards').prop('hidden', view !== 'cards');
+    $('#na_view_editor').prop('hidden', view !== 'editor');
+    if (view === 'cards' && hasChat()) {
+        if (!sectionPanel) sectionPanel = mountSectionBrowser($('#na_sec_host'));
+        else sectionPanel.render();
+    }
+}
+
+// the one thing worth doing next, on the home tab
+function renderNext(m, { over, afterTok, health }) {
+    let html;
+    const card = (icon, title, desc, btns, tone = '') => `<div class="na_next_card ${tone}"><i class="fa-solid ${icon}"></i><div class="na_next_main"><b>${title}</b>${desc ? `<span>${desc}</span>` : ''}</div><div class="na_next_btns">${btns}</div></div>`;
+    const btn = (act, label, primary = true) => `<button type="button" class="na_btn na_small ${primary ? 'na_primary' : ''}" data-act="${act}">${label}</button>`;
+    const issues = health ? health.items.filter(x => x.level === 'bad' || x.level === 'warn') : [];
+    if (!m.text.trim()) html = card('fa-seedling', '아카이브가 비어 있어요', '압축 마법사로 첫 섹션을 만들거나, 다른 채팅·파일에서 가져와요.', btn('wizard', '압축 마법사') + btn('import', '가져오기', false));
+    else if (!m.enabled) html = card('fa-power-off', '주입이 꺼져 있어요', '아카이브가 RP 모델에 안 들어가고 있어요.', btn('enable', '켜기'), 'warn');
+    else if (over) html = card('fa-compress', '압축할 때예요', `경계선 뒤 원문이 ${fmt(afterTok)} 토큰 쌓였어요.`, btn('wizard', '압축 마법사'), 'warn');
+    else if (issues.length) html = card('fa-stethoscope', `확인할 것 ${issues.length}개`, esc(issues[0].title), btn('health', '건강 점검'), issues.some(x => x.level === 'bad') ? 'bad' : 'warn');
+    else html = card('fa-circle-check', '할 일 없어요', m.boundary >= 0 ? `경계선 #${m.boundary} 뒤 원문 ${fmt(afterTok)} 토큰` : '', '', 'ok');
+    $('#na_next').html(html);
+}
+
+function nextAction(act) {
+    if (!hasChat()) return;
+    if (act === 'wizard') openWizard();
+    else if (act === 'health') openHealth();
+    else if (act === 'import') { showTab('tools'); $('#na_import_opts').prop('hidden', false); }
+    else if (act === 'enable') $('#na_enabled').prop('checked', true).trigger('change');
+}
+
 function bindPanel() {
     const $p = $('#na_settings');
 
-    $p.find('.na_nav_btn').on('click', function () {
-        const tab = $(this).data('tab');
-        $p.find('.na_nav_btn').removeClass('active');
-        $(this).addClass('active');
-        $p.find('.na_tab_pane').each(function () { $(this).prop('hidden', $(this).data('pane') !== tab); });
-        if (tab === 'config') renderAiSettings();
-        if (tab === 'sections' && hasChat()) {
-            if (!sectionPanel) sectionPanel = mountSectionBrowser($('#na_sec_host'));
-            else sectionPanel.render();
-        }
-    });
+    $p.find('.na_nav_btn').on('click', function () { showTab($(this).data('tab')); });
+    $('#na_gear').on('click', () => showTab($('[data-pane="config"]').prop('hidden') ? 'config' : (globalSettings().lastTab || 'home')));
+    $('#na_cfg_back').on('click', () => showTab(globalSettings().lastTab || 'home'));
+    $p.find('.na_seg_btn').on('click', function () { showArchiveView($(this).data('view')); });
+    // home quick actions
+    $('#na_q_read').on('click', needChat(openReader));
+    $('#na_q_ask').on('click', needChat(openAsk));
+    $('#na_q_wizard').on('click', needChat(openWizard));
+    $('#na_q_preview').on('click', needChat(openPreview));
+    $('#na_next').on('click', '[data-act]', function () { nextAction(this.dataset.act); });
+    // small menus
+    $('#na_ed_more').on('click', e => { e.stopPropagation(); $('#na_ed_menu').prop('hidden', !$('#na_ed_menu').prop('hidden')); });
+    $('#na_ed_menu').on('click', 'button', () => $('#na_ed_menu').prop('hidden', true));
+    $(document).on('click', e => { if (!$(e.target).closest('.na_more_wrap').length) $('#na_ed_menu').prop('hidden', true); });
+    $('#na_import_menu').on('click', () => $('#na_import_opts').prop('hidden', !$('#na_import_opts').prop('hidden')));
+    $('#na_tool_health').on('click', needChat(openHealth));
 
     // --- editor
     const $ed = $('#na_editor');
@@ -1637,7 +1716,7 @@ function bindPanel() {
     $('#na_rp_go').on('click', needChat(async () => {
         const re = rpRegex();
         if (!re) return;
-        if (editorDirty) return toastr.warning('개요 탭 편집칸에 저장 안 한 내용이 있어요. 먼저 저장하거나 되돌려 주세요.');
+        if (editorDirty) return toastr.warning('원문 편집칸에 저장 안 한 내용이 있어요. 먼저 저장하거나 되돌려 주세요.');
         const m = getMeta();
         const n = [...m.text.matchAll(re)].length;
         if (!n) return;
@@ -1861,7 +1940,7 @@ function syncPanel() {
     const br = hasChat() ? branchState(getMeta()) : null;
     $('#na_branch_card').prop('hidden', !br?.ahead.length);
     if (br?.ahead.length) $('#na_branch_desc').text(`이 채팅은 #${br.last}까지인데 아카이브에 그 뒤(#${br.ahead[0].from}~) 섹션 ${br.ahead.length}개가 있어요. 분기하기 전 원본의 내용이에요.`);
-    $('#na_branches span').text(br?.parent ? '분기 · 원본 있음' : '분기');
+    $('#na_branches_sub').text(br?.parent ? `이 채팅은 분기예요 · 원본: ${br.parent}` : '원본·갈라진 채팅과 비교, 분기 정리');
     if (carryOffer) $('#na_carry_desc').text(`방금 있던 채팅의 아카이브 (${fmt(carryOffer.text.length)}자)를 이 채팅에 가져와요.`);
     rememberArchive();
     $('#na_boundary').val(m.boundary >= 0 ? m.boundary : '');
@@ -2328,7 +2407,7 @@ function chatCompletionsUrl(raw) {
 
 async function callOpenAICompat({ url, key, model }, system, prompt, maxTokens) {
     const endpoint = chatCompletionsUrl(url);
-    if (!endpoint || !model) throw new Error('커스텀 API의 URL과 모델 이름을 넣어 주세요 (설정 → AI 기능)');
+    if (!endpoint || !model) throw new Error('커스텀 API의 URL과 모델 이름을 넣어 주세요 (⚙ 설정 → AI · 번역)');
     const headers = { 'Content-Type': 'application/json' };
     if (key) headers.Authorization = `Bearer ${key}`;
     let r;
@@ -2680,11 +2759,14 @@ async function refreshStatus() {
       ${build.trimmed.length ? `<span class="na_warn_txt"><i class="fa-solid fa-scissors"></i> 상한 ${fmt(build.cap)}에 맞춰 ${build.trimmed.length}개 뺌</span>` : ''}
       ${build.over ? `<span class="na_warn_txt"><i class="fa-solid fa-triangle-exclamation"></i> 상한 ${fmt(build.cap)} 넘음</span>` : ''}`);
     $('#na_head_badge').text(m.text.trim() ? fmt(archiveTok) : '');
+    let h = null;
     if (m.text.trim()) {
-        const h = await healthChecks(m, { build, afterTok, after });
-        const n = h.items.filter(x => x.level !== 'ok').length;
-        $('#na_health').toggleClass('na_health_warn', h.score < 80).find('span').text(`건강 ${h.score}점${n ? ` · 확인할 것 ${n}개` : ''}`);
-    } else $('#na_health span').text('건강 점검');
+        h = await healthChecks(m, { build, afterTok, after });
+        const n = h.items.filter(x => x.level === 'bad' || x.level === 'warn').length;
+        $('#na_health').toggleClass('na_health_warn', h.score < 80).attr('title', `건강 ${h.score}점${n ? ` · 확인할 것 ${n}개` : ''}`).find('span').text(h.score);
+        $('#na_tool_health_sub').text(`${h.score}점${n ? ` · 확인할 것 ${n}개` : ' · 괜찮아요'}`);
+    } else { $('#na_health span').text('-'); $('#na_tool_health_sub').text('번호·숨기기·키워드·백업을 AI 없이 살펴봐요'); }
+    renderNext(m, { over, afterTok, health: h });
 
     const lx = m.lastExport;
     const lxNote = lx ? `<div class="na_dim">최근 내보냄 #${lx.from}–#${lx.to} · ${esc(timeLabel(lx.at))}</div>` : '';
@@ -3296,7 +3378,7 @@ async function openKeywordTest() {
     const keys = new Set(parseSections(m.text).map(sectionKey));
     const muted = mutedSet(m);
     const render = () => {
-        if (!linked.length) return $root.find('.na_kwt_out').html('<div class="na_empty">키워드 연동한 섹션이 없어요. 섹션 탭에서 카드를 펼쳐 🔑를 눌러 키워드를 정하세요.</div>');
+        if (!linked.length) return $root.find('.na_kwt_out').html('<div class="na_empty">키워드 연동한 섹션이 없어요. 아카이브 탭의 섹션 카드에서 카드를 펼쳐 🔑를 눌러 키워드를 정하세요.</div>');
         const text = $root.find('.na_kwt_in').val();
         const withRecent = $root.find('.na_kwt_recent').prop('checked');
         const hay = `${text}\n${withRecent && depth > 1 ? recentChatText(m, depth - 1) : ''}`.toLowerCase();
@@ -3682,7 +3764,7 @@ function routerReady() {
 async function runRouter(m, { force = false } = {}) {
     const cfg = routerCfg(m);
     if (cfg.mode === 'off') return null;
-    if (!routerReady()) throw new Error('라우터는 RP와 따로 연결한 모델이 필요해요 (설정 → AI 기능 → 모델에서 프로필·커스텀 API·Vertex)');
+    if (!routerReady()) throw new Error('라우터는 RP와 따로 연결한 모델이 필요해요 (⚙ 설정 → AI · 번역 → 모델에서 프로필·커스텀 API·Vertex)');
     const cands = routerCandidates(m);
     const id = currentChatId();
     const recent = recentForCheck(4).join('\n\n').slice(-6000);
@@ -3948,7 +4030,7 @@ async function healthChecks(m, { build, afterTok, after } = {}) {
 
     // numbering
     const hc = checkHeadings(m.text);
-    if (hc.issues.length) add('warn', `제목 번호 문제 ${hc.issues.length}개`, hc.issues.slice(0, 5).map(x => `${x.title.slice(0, 40)} — ${x.msg}`).join('\n'), { label: '개요에서 보기', run: () => { $('.na_nav_btn[data-tab=overview]').trigger('click'); } });
+    if (hc.issues.length) add('warn', `제목 번호 문제 ${hc.issues.length}개`, hc.issues.slice(0, 5).map(x => `${x.title.slice(0, 40)} — ${x.msg}`).join('\n'), { label: '제목 검사 보기', run: () => { $('dialog .popup-button-ok').last().trigger('click'); showTab('archive'); showArchiveView('cards'); $('#na_hcheck').prop('open', true)[0]?.scrollIntoView({ block: 'center' }); } });
     else if (hc.ranged) add('ok', '제목 번호가 빈틈 없이 이어져요');
 
     // STATE / boundary agree with the last section
@@ -4246,7 +4328,7 @@ async function askAI(prompt, { system = '', maxTokens = 0 } = {}) {
         out = await callConn(a, system, prompt, max);
     } else if (g.aiProfile) {
         const p = aiProfiles().find(x => x.id === g.aiProfile);
-        if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요. 설정 탭 → AI 기능에서 다시 골라 주세요.');
+        if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요. ⚙ 설정 → AI · 번역에서 다시 골라 주세요.');
         const msgs = [...(system ? [{ role: 'system', content: system }] : []), { role: 'user', content: prompt }];
         const r = await c.ConnectionManagerRequestService.sendRequest(p.id, msgs, max, { stream: false, extractData: true, includePreset: true, includeInstruct: true });
         out = typeof r === 'string' ? r : r?.content;
@@ -4529,7 +4611,7 @@ async function openAsk() {
         $(this).closest('.na_ask_item').find('.na_ask_src').remove();
         const sec = secs.find(x => x.start === start);
         if (!sec) return;
-        const $src = $(`<div class="na_ask_src"><div class="na_ask_src_head"><b></b><button type="button" class="na_linkbtn">섹션 탭에서 보기</button></div><div class="na_ask_src_body"></div></div>`).data('start', start);
+        const $src = $(`<div class="na_ask_src"><div class="na_ask_src_head"><b></b><button type="button" class="na_linkbtn">섹션 카드에서 보기</button></div><div class="na_ask_src_body"></div></div>`).data('start', start);
         $src.find('b').text(sec.title);
         $src.find('.na_ask_src_body').html(mdBlock(m.text.slice(sec.start, sec.end).replace(/^[^\n]*\n?/, '')));
         $src.find('.na_linkbtn').on('click', () => {
@@ -4561,7 +4643,8 @@ function gotoSection(start) {
     const $p = $('#na_settings');
     const $drawer = $p.find('.inline-drawer-content');
     if ($drawer.length && !$drawer.is(':visible')) $p.find('.inline-drawer-toggle').trigger('click');
-    $p.find('.na_nav_btn[data-tab="sections"]').trigger('click');
+    showTab('archive');
+    showArchiveView('cards');
     setTimeout(() => sectionPanel?.focus(start), 50);
 }
 

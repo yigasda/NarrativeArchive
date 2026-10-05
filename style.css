@@ -1127,3 +1127,60 @@
 .na_wiz_title { font-weight: 600; font-size: 0.92em; }
 .na_wz_out { width: 100% !important; box-sizing: border-box; resize: vertical; font-size: 0.85em; }
 .na_wz_info, .na_wz_outinfo { font-size: 0.78em; }
+
+/* ---------- 3.0 layout */
+.na_meter_top .na_spacer { flex: 1; }
+.na_hchip {
+    display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--na-line); background: var(--na-softer);
+    color: inherit; font: inherit; font-size: 0.8em; padding: 3px 10px; border-radius: 999px; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.na_hchip.na_health_warn { color: var(--na-warn); border-color: color-mix(in srgb, var(--na-warn) 50%, transparent); }
+#na_gear.active { color: var(--na-accent); }
+.na_next_card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--na-line); background: var(--na-softer); }
+.na_next_card > i { font-size: 1.2em; color: var(--na-accent); flex-shrink: 0; }
+.na_next_card.warn { background: color-mix(in srgb, var(--na-warn) 10%, transparent); border-color: color-mix(in srgb, var(--na-warn) 35%, transparent); }
+.na_next_card.warn > i { color: var(--na-warn); }
+.na_next_card.bad { background: color-mix(in srgb, #c4513f 10%, transparent); border-color: color-mix(in srgb, #c4513f 35%, transparent); }
+.na_next_card.bad > i { color: #c4513f; }
+.na_next_card.ok { opacity: 0.8; }
+.na_next_card.ok > i { color: #3f9a5a; }
+.na_next_main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.na_next_main span { font-size: 0.82em; opacity: 0.75; }
+.na_next_btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.na_quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.na_qbtn {
+    display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 4px 10px; border-radius: 12px;
+    border: 1px solid var(--na-line); background: var(--na-softer); color: inherit; font: inherit; font-size: 0.82em; cursor: pointer;
+}
+.na_qbtn i { font-size: 1.25em; color: var(--na-accent); }
+.na_qbtn:hover { border-color: var(--na-accent); background: var(--na-soft); }
+.na_ai_row3 { gap: 6px; }
+.na_toolrow {
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 9px 10px; border-radius: 10px;
+    border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
+.na_toolrow:hover { background: var(--na-soft); }
+.na_toolrow > i:first-child { width: 1.4em; text-align: center; color: var(--na-accent); }
+.na_toolrow > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.na_toolrow small { font-size: 0.78em; opacity: 0.65; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.na_toolrow > i:last-child { opacity: 0.35; font-size: 0.8em; }
+.na_seg { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--na-soft); }
+.na_seg_btn { flex: 1; border: 0; background: transparent; color: inherit; font: inherit; font-size: 0.86em; padding: 6px 8px; border-radius: 8px; cursor: pointer; opacity: 0.65; }
+.na_seg_btn.active { opacity: 1; font-weight: 600; background: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.2)); color: var(--na-accent); }
+#na_view_cards[hidden], #na_view_editor[hidden] { display: none; }
+.na_tip { font-size: 0.8em; margin: 0; }
+.na_more_wrap { position: relative; display: inline-flex; }
+.na_more_menu {
+    position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; display: flex; flex-direction: column; min-width: 11em; padding: 4px;
+    border-radius: 10px; border: 1px solid var(--na-line); background: var(--SmartThemeBlurTintColor, #222); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+.na_more_menu[hidden] { display: none; }
+.na_more_menu button { display: flex; gap: 8px; align-items: center; border: 0; background: transparent; color: inherit; font: inherit; font-size: 0.86em; padding: 7px 10px; border-radius: 7px; cursor: pointer; text-align: left; white-space: nowrap; }
+.na_more_menu button:hover { background: var(--na-soft); }
+.na_more_menu i { width: 1.2em; opacity: 0.8; }
+.na_tiles4 { grid-template-columns: repeat(2, 1fr) !important; }
+.na_import_opts { display: flex; gap: 6px; flex-wrap: wrap; }
+.na_import_opts[hidden] { display: none; }
+.na_cfg_head { display: flex; align-items: center; gap: 10px; }
+.na_cfg_head b { flex: 1; }
+.na_fold summary i { width: 1.2em; opacity: 0.7; }
