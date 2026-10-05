@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.3.0';
+const VERSION = '3.3.1';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3706,7 +3706,7 @@ Read the whole archive and work out who actually SAYS each quoted line. The arch
 - Written words (letters, inscriptions, oaths on tablets) count only if a character wrote them as their own words.
 - If you cannot tell who said it, skip it. Never guess.
 
-Pick up to 6 lines per character, only for characters who really speak. Prefer lines that sound like the person and still make sense alone.
+List every line that is a good voice sample, for every character who really speaks; the user will choose from your list, so do not cut it short. Skip one- or two-word lines, pure plot exposition, and lines that make no sense without heavy context.
 Copy each line EXACTLY as it appears in the archive, without the quotation marks. Never write new lines.
 Output one pick per line, nothing else: Speaker | line`;
 
@@ -3722,7 +3722,7 @@ async function openQuotes() {
         <div class="na_block_head"><div><h4>대사 은행</h4><p>아카이브에 남은 대사를 인물별로 모아요. 고른 대사를 "말투 샘플"로 같이 주입하면 RP 모델이 캐릭터 말투를 덜 잃어요.</p></div></div>
         <div class="na_row na_qb_bar">
           <button type="button" class="na_btn na_small na_qb_find"><i class="fa-solid fa-magnifying-glass"></i> 아카이브에서 모으기</button>
-          <button type="button" class="na_btn na_small na_qb_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 고르기</button>
+          <button type="button" class="na_btn na_small na_qb_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 모으기</button>
           <label class="checkbox_label"><input type="checkbox" class="na_qb_inject"><span>주입하기</span></label>
           <label>인물마다 <input type="number" class="text_pole na_num na_qb_max" min="1" max="10"> 개</label>
           <small class="na_dim na_qb_tok"></small>
@@ -3770,12 +3770,11 @@ async function openQuotes() {
         if (!found.length) return toastr.info('새로 모을 대사가 없어요.');
         m.quotes.push(...found.map(q => ({ ...q, on: false })));
         await save();
-        toastr.success(`${found.length}개 모았어요. 말한 사람은 짐작이라 틀릴 수 있어요. 고치거나 "AI로 고르기"를 써 보세요.`);
+        toastr.success(`${found.length}개 모았어요. 말한 사람은 짐작이라 틀릴 수 있어요. 고치거나 "AI로 모으기"를 써 보세요.`);
     });
     // AI reads the archive itself, picks lines and names the speaker; only lines found verbatim in the archive are kept
     $root.find('.na_qb_ai').on('click', async function () {
-        if (m.quotes.some(q => q.on) && !await confirm('AI로 고르기', 'AI가 아카이브를 읽고 대사를 새로 골라요. 지금 고른 표시는 AI가 고른 걸로 바뀌어요 (모아 둔 대사는 남아요).')) return;
-        const out = await withSpinner($(this), '아카이브 읽는 중…', () => askAI(`[ARCHIVE]\n${m.text}`, { system: AI_SYS_QUOTES, maxTokens: 3000 }));
+        const out = await withSpinner($(this), '아카이브 읽는 중…', () => askAI(`[ARCHIVE]\n${m.text}`, { system: AI_SYS_QUOTES, maxTokens: 8000 }));
         if (out === null) return;
         const secs = parseSections(m.text).filter(x => !x.group);
         const bodies = secs.map(x => quoteKey(m.text.slice(x.start, x.end)));
@@ -3791,15 +3790,15 @@ async function openQuotes() {
             picks.push({ who, text, src: secs[at].title });
         }
         if (!picks.length) return toastr.warning(made.length ? 'AI가 고른 대사를 아카이브에서 찾지 못했어요. 다시 해 보세요.' : 'AI 답을 못 읽었어요. 다시 해 보세요.');
-        m.quotes.forEach(q => { q.on = false; });
-        let added = 0;
+        // candidates only: nothing gets ticked, the user picks; lines already here just get the AI's speaker
+        let added = 0, fixed = 0;
         for (const p of picks) {
             const q = m.quotes.find(x => quoteKey(x.text) === quoteKey(p.text));
-            if (q) { q.on = true; q.who = p.who; }
-            else { m.quotes.push({ ...p, on: true }); added++; }
+            if (q) { if (q.who !== p.who) { q.who = p.who; fixed++; } }
+            else { m.quotes.push({ ...p, on: false }); added++; }
         }
         await save();
-        toastr.success(`${picks.length}개 골랐어요${added ? ` (새로 ${added}개)` : ''}${made.length ? ` · 아카이브에 없는 ${made.length}개는 뺐어요` : ''}`);
+        toastr.success(`후보 ${picks.length}개 · 새로 ${added}개${fixed ? ` · 말한 사람 ${fixed}개 고침` : ''}${made.length ? ` · 아카이브에 없는 ${made.length}개는 뺐어요` : ''}. 체크해서 골라 주세요.`);
     });
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
