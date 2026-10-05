@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.10.0';
+const VERSION = '3.11.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1252,6 +1252,7 @@ function renderPanel() {
               <div class="na_block">
                 <div class="na_kw_label">이야기</div>
                 <button type="button" class="na_toolrow" id="na_story_cal"><i class="fa-solid fa-calendar-days"></i><span><b>이야기 달력</b><small>섹션을 날짜 순서로 · 거꾸로 가는 날짜 찾기</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" class="na_toolrow" id="na_story_route"><i class="fa-solid fa-route"></i><span><b>이동 경로</b><small>이야기가 머문 곳을 차례로 · 그곳의 섹션들</small></span><i class="fa-solid fa-chevron-right"></i></button>
               </div>
               <div class="na_block">
                 <div class="na_kw_label">점검</div>
@@ -1556,6 +1557,7 @@ function bindPanel() {
     $('#na_import_menu').on('click', () => $('#na_import_opts').prop('hidden', !$('#na_import_opts').prop('hidden')));
     $('#na_tool_health').on('click', needChat(openHealth));
     $('#na_story_cal').on('click', needChat(openCalendar));
+    $('#na_story_route').on('click', needChat(openRoute));
 
     // --- editor
     const $ed = $('#na_editor');
@@ -4996,6 +4998,102 @@ async function openCalendar() {
     };
     $root.on('click', '.na_cal_row', function () { const st = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); });
     draw();
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+}
+
+// ---------------------------------------------------------------- travel route
+// Places from heading parentheses ("(Phamenoth 9, Thebes palace, after midnight)", "(Ombos → Thebes)").
+// Capitalised places are the big stops (cities, lands); lowercase ones are rooms inside the current stop. No AI.
+
+const PLACE_SKIP = /^(?:the\s+)?(?:same|next|following|later|that|this|one|a|an|some|several|\d+)\b.*\b(?:day|days|night|week|weeks|month|months|year|years|later|on|in)\b|season\b|^(?:dawn|morning|noon|midday|afternoon|dusk|sunset|evening|night|midnight|before dawn|pre-?dawn|daybreak|into the night|later that day)$/i;
+
+function headingPlaces(title, cals) {
+    const paren = (title.match(/\(([^()]*)\)\s*(?:\[[^\]]*\])?\s*$/) || [, ''])[1];
+    const d = headingDate(title, cals);
+    let text = paren;
+    if (d.date) text = text.replace(d.date.label, '');
+    const parts = text.split(/,|;/).map(x => x.trim()).filter(Boolean)
+        .filter(x => !PLACE_SKIP.test(x) && !TIME_WORDS.some(([re]) => re.test(x) && x.split(/\s+/).length <= 3))
+        .filter(x => !/^(?:month of|after|before|until|during|into)\b/i.test(x));
+    // "A → B" is a move inside one section
+    return parts.flatMap(x => x.split(/\s*(?:→|->|⇒)\s*/)).map(x => x.replace(/^(?:the|a|an)\s+/i, '').trim()).filter(Boolean);
+}
+
+function storyRoute(m) {
+    const cals = calendars();
+    const secs = parseSections(m.text).filter(s => !s.group && RANGE_HEAD.test(s.title));
+    const per = secs.map(s => ({ s, places: headingPlaces(s.title, cals) }));
+    // big places: capitalised words seen in any heading's places (Ombos, Thebes, Britain…); adjectives fold in by stem (Theban → Thebes)
+    const majors = [];
+    for (const { places } of per) for (const p of places) for (const w of p.match(/\b[A-Z][a-z]{2,}\b/g) || []) if (!majors.includes(w) && !KW_STOP.has(w)) majors.push(w);
+    const stem = w => w.toLowerCase().slice(0, 4);
+    // a name that stands alone as a place ("Britain") beats an adjective of it ("British port")
+    const standalone = new Set(per.flatMap(x => x.places).filter(p => /^[A-Z][a-z]{2,}$/.test(p)));
+    const canon = w => {
+        const same = majors.filter(x => stem(x) === stem(w));
+        return same.find(x => standalone.has(x)) || same.sort((a, b) => a.length - b.length)[0] || w;
+    };
+    const majorOf = p => { const w = (p.match(/\b[A-Z][a-z]{2,}\b/g) || []).filter(x => !KW_STOP.has(x)); return w.length ? canon(w[w.length - 1]) : null; };
+    const logs = [];
+    let curLog = null, cur = null;
+    for (const r of per) {
+        const prefix = (r.s.title.match(RANGE_HEAD)[1] || '').trim() || '—';
+        if (!curLog || curLog.prefix !== prefix) { curLog = { prefix, stops: [] }; logs.push(curLog); cur = null; }
+        // headings without places: a big place named in the title itself ("Ombos, half a year in")
+        let places = r.places;
+        if (!places.length) { const t = r.s.title.replace(/\([^()]*\)\s*$/, ''); const w = (t.match(/\b[A-Z][a-z]{2,}\b/g) || []).map(canon).filter(x => majors.includes(x)); if (w.length) places = [w[0]]; }
+        if (!places.length) { if (cur) cur.secs.push({ s: r.s, rooms: [] }); else { cur = { place: '?', secs: [{ s: r.s, rooms: [] }] }; curLog.stops.push(cur); } continue; }
+        for (const [i, p] of places.entries()) {
+            const big = majorOf(p);
+            if (big && (!cur || cur.place !== big)) { cur = { place: big, secs: [] }; curLog.stops.push(cur); }
+            else if (!cur) { cur = { place: '?', secs: [] }; curLog.stops.push(cur); }
+            // the room is what is left once the big place's own words are taken out ("Thebes palace" → "palace")
+            const room = (big ? p.split(/\s+/).filter(w => stem(w.replace(/[^A-Za-z]/g, '')) !== stem(big)).join(' ') : p).trim();
+            const last = cur.secs[cur.secs.length - 1];
+            if (last && last.s === r.s) { if (room) last.rooms.push(room); }
+            else cur.secs.push({ s: r.s, rooms: room ? [room] : [] });
+            if (i === places.length - 1) break;
+        }
+    }
+    // sections before the first named place in a log were already there: fold them into that first stop
+    for (const l of logs) {
+        const i = l.stops.findIndex(x => x.place !== '?');
+        if (l.stops[0]?.place === '?' && i > 0) { l.stops[i].secs.unshift(...l.stops[0].secs); l.stops.splice(0, 1); }
+        // and merge stops that became neighbours with the same place
+        for (let k = l.stops.length - 1; k > 0; k--) if (l.stops[k].place === l.stops[k - 1].place) { l.stops[k - 1].secs.push(...l.stops[k].secs); l.stops.splice(k, 1); }
+    }
+    return logs;
+}
+
+async function openRoute() {
+    const c = ctx();
+    const m = getMeta();
+    const logs = storyRoute(m);
+    const range = st => { const a = st.secs[0].s.title.match(RANGE_HEAD), b = st.secs[st.secs.length - 1].s.title.match(RANGE_HEAD); return `#${a[2]}–#${b[4]}`; };
+    const $root = $(`
+      <div class="na_popup na_route">
+        <div class="na_block_head"><div><h4>이동 경로</h4><p>제목 괄호 속 장소를 따라 이야기가 어디서 어디로 옮겨 갔는지 보여 줘요. 장소를 누르면 그곳에서 있었던 섹션이 펼쳐져요.</p></div></div>
+        ${logs.length ? logs.map(l => `
+          <div class="na_route_log">
+            <div class="na_cal_loghead"><b>${esc(l.prefix === '—' ? '로그' : l.prefix)}</b><span class="na_dim">${l.stops.filter(x => x.place !== '?').length}곳 머묾</span></div>
+            <div class="na_route_chain">${l.stops.map((st, i) => `${i ? '<i class="fa-solid fa-arrow-right-long na_route_arrow"></i>' : ''}<button type="button" class="na_route_stop ${st.place === '?' ? 'na_route_unknown' : ''}" data-log="${esc(l.prefix)}" data-i="${i}"><b>${esc(st.place === '?' ? '장소 없음' : st.place)}</b><small>${esc(range(st))} · ${st.secs.length}</small></button>`).join('')}</div>
+            <div class="na_route_detail" hidden></div>
+          </div>`).join('') : '<div class="na_empty">"## #시작–#끝 — 제목 (날짜, 장소)" 형식의 섹션이 없어요.</div>'}
+      </div>`);
+    $root.on('click', '.na_route_stop', function () {
+        const l = logs.find(x => x.prefix === String($(this).data('log')));
+        const st = l.stops[Number($(this).data('i'))];
+        const $d = $(this).closest('.na_route_log').find('.na_route_detail');
+        const same = $d.data('i') === Number($(this).data('i')) && !$d.prop('hidden');
+        $(this).closest('.na_route_chain').find('.na_route_stop').removeClass('active');
+        if (same) { $d.prop('hidden', true); return; }
+        $(this).addClass('active');
+        $d.data('i', Number($(this).data('i'))).prop('hidden', false).html(`<div class="na_route_dhead"><b>${esc(st.place === '?' ? '장소 없음' : st.place)}</b></div>` + st.secs.map(x => `
+          <button type="button" class="na_cal_row" data-start="${x.s.start}">
+            <span class="na_cal_what"><span>${esc(x.s.title.replace(/\s*\([^()]*\)\s*(\[[^\]]*\])?\s*$/, ''))}</span>${x.rooms.length ? `<small class="na_dim"><i class="fa-solid fa-location-dot"></i> ${esc(x.rooms.join(' → '))}</small>` : ''}</span>
+          </button>`).join(''));
+    });
+    $root.on('click', '.na_route_detail .na_cal_row', function () { const s0 = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(s0); });
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 

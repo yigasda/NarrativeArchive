@@ -1325,3 +1325,18 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_cal_gap span { padding: 1px 8px; border-radius: 999px; background: var(--na-soft); }
 .na_cal_cfg_body { display: flex; flex-direction: column; gap: 6px; padding: 0 12px 12px; }
 .na_cal_ta { width: 100% !important; margin: 0 !important; font-family: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.78em; }
+
+/* travel route */
+.na_route_log { display: flex; flex-direction: column; gap: 8px; }
+.na_route_chain { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.na_route_arrow { opacity: 0.45; font-size: 0.8em; }
+.na_route_stop { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 5px 11px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--na-accent) 40%, transparent); background: var(--na-accent-soft); color: inherit; font: inherit; cursor: pointer; }
+.na_route_stop b { font-size: 0.86em; }
+.na_route_stop small { font-size: 0.72em; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.na_route_stop.active { background: var(--na-accent); color: #fff; border-color: transparent; }
+.na_route_stop.na_route_unknown { background: var(--na-softer); border-style: dashed; border-color: var(--na-line); }
+.na_route_detail { display: flex; flex-direction: column; padding: 6px 8px; border-radius: 10px; background: var(--na-softer); border: 1px solid var(--na-line); }
+.na_route_detail[hidden] { display: none; }
+.na_route_dhead { font-size: 0.85em; padding: 2px 6px 4px; }
+.na_route_detail .na_cal_row::before { display: none; }
+.na_route .na_route_log + .na_route_log { margin-top: 10px; }
