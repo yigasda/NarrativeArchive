@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.2.3';
+const VERSION = '3.3.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3696,10 +3696,22 @@ function pickedQuotes(m) {
     return (m.quotes || []).filter(q => q.on && q.who && q.who !== '?').filter(q => { const n = (per.get(q.who) || 0) + 1; per.set(q.who, n); return n <= max; });
 }
 
-const AI_SYS_QUOTES = `You pick voice samples for a role-play: the lines that best show how each character talks (rhythm, word choice, attitude), not the most dramatic plot lines.
-You get numbered quotes from a story archive, each with a guessed speaker that may be wrong. Fix the speaker using the context when needed.
-For each main character pick up to 5 of their most characteristic lines. Skip lines that only make sense with heavy plot context.
-One line per pick, nothing else: number | speaker`;
+const AI_SYS_QUOTES = `You pick voice samples for a role-play from a story archive: the quoted lines that best show how each character talks (rhythm, word choice, attitude), not the most dramatic plot lines.
+
+Read the whole archive and work out who actually SAYS each quoted line. The archive is written in third person, so be careful:
+- The speaker is the one doing the speaking verb (said, told, asked, answered, whispered, swore, warned, called it…), not the person spoken to. "Set told Somang, \"…\"" → Set. "She asked him, \"…\"" → resolve she/he from the surrounding sentences.
+- A line after a colon belongs to the name before it: "Somang: \"…\"" → Somang.
+- A bullet that names one character at the start may quote someone else later in the same bullet; attribute each quote separately.
+- Quotes that a character repeats, reads, or remembers from someone else belong to the original speaker only if the archive says so; if unclear, skip.
+- Written words (letters, inscriptions, oaths on tablets) count only if a character wrote them as their own words.
+- If you cannot tell who said it, skip it. Never guess.
+
+Pick up to 6 lines per character, only for characters who really speak. Prefer lines that sound like the person and still make sense alone.
+Copy each line EXACTLY as it appears in the archive, without the quotation marks. Never write new lines.
+Output one pick per line, nothing else: Speaker | line`;
+
+// normalise a quote for matching against the archive
+const quoteKey = t => String(t).replace(/[“”„"]/g, '"').replace(/[‘’]/g, "'").replace(/\s+/g, ' ').trim().toLowerCase();
 
 async function openQuotes() {
     const c = ctx();
@@ -3758,20 +3770,36 @@ async function openQuotes() {
         if (!found.length) return toastr.info('새로 모을 대사가 없어요.');
         m.quotes.push(...found.map(q => ({ ...q, on: false })));
         await save();
-        toastr.success(`${found.length}개 모았어요. 고르거나 "AI로 고르기"를 눌러 보세요.`);
+        toastr.success(`${found.length}개 모았어요. 말한 사람은 짐작이라 틀릴 수 있어요. 고치거나 "AI로 고르기"를 써 보세요.`);
     });
+    // AI reads the archive itself, picks lines and names the speaker; only lines found verbatim in the archive are kept
     $root.find('.na_qb_ai').on('click', async function () {
-        if (!m.quotes.length) { $root.find('.na_qb_find').trigger('click'); if (!m.quotes.length) return; }
-        const list = m.quotes.map((q, i) => `${i + 1}. [${q.who}] "${q.text}" (${q.src})`).join('\n');
-        const out = await withSpinner($(this), '고르는 중…', () => askAI(list, { system: AI_SYS_QUOTES, maxTokens: 2000 }));
+        if (m.quotes.some(q => q.on) && !await confirm('AI로 고르기', 'AI가 아카이브를 읽고 대사를 새로 골라요. 지금 고른 표시는 AI가 고른 걸로 바뀌어요 (모아 둔 대사는 남아요).')) return;
+        const out = await withSpinner($(this), '아카이브 읽는 중…', () => askAI(`[ARCHIVE]\n${m.text}`, { system: AI_SYS_QUOTES, maxTokens: 3000 }));
         if (out === null) return;
-        const picks = out.split('\n').map(l => l.match(/^\s*(\d+)\s*[|:.)-]\s*(.+?)\s*$/)).filter(Boolean);
-        if (!picks.length) return toastr.warning('AI 답을 못 읽었어요. 다시 해 보세요.');
+        const secs = parseSections(m.text).filter(x => !x.group);
+        const bodies = secs.map(x => quoteKey(m.text.slice(x.start, x.end)));
+        const picks = [], made = [];
+        for (const line of out.split('\n')) {
+            const mt = line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').match(/^\[?([^|\]]{1,40}?)\]?\s*\|\s*(.+)$/);
+            if (!mt) continue;
+            const who = mt[1].trim(), text = mt[2].trim().replace(/^["“”'‘’]+|["“”'‘’]+$/g, '').trim();
+            const k = quoteKey(text);
+            if (!who || k.length < 4) continue;
+            const at = bodies.findIndex(b => b.includes(k));
+            if (at < 0) { made.push(text); continue; } // not in the archive: the model made it up or changed it
+            picks.push({ who, text, src: secs[at].title });
+        }
+        if (!picks.length) return toastr.warning(made.length ? 'AI가 고른 대사를 아카이브에서 찾지 못했어요. 다시 해 보세요.' : 'AI 답을 못 읽었어요. 다시 해 보세요.');
         m.quotes.forEach(q => { q.on = false; });
-        let n = 0;
-        for (const [, num, who] of picks) { const q = m.quotes[Number(num) - 1]; if (q) { q.on = true; q.who = who.replace(/^\[|\]$/g, '').trim() || q.who; n++; } }
+        let added = 0;
+        for (const p of picks) {
+            const q = m.quotes.find(x => quoteKey(x.text) === quoteKey(p.text));
+            if (q) { q.on = true; q.who = p.who; }
+            else { m.quotes.push({ ...p, on: true }); added++; }
+        }
         await save();
-        toastr.success(`${n}개 골랐어요.`);
+        toastr.success(`${picks.length}개 골랐어요${added ? ` (새로 ${added}개)` : ''}${made.length ? ` · 아카이브에 없는 ${made.length}개는 뺐어요` : ''}`);
     });
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
