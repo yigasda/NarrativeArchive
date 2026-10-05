@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.3.0';
+const VERSION = '2.3.1';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -2582,7 +2582,7 @@ const AI_SYS_COMPRESS = 'You compress role-play chat logs into a story archive. 
 const AI_SYS_ASK = `You answer questions about an ongoing story using ONLY the archive the user gives you.
 - If the archive does not say, reply that it is not in the archive. Never invent.
 - After each claim, cite the section you used by copying its heading line exactly inside double brackets, e.g. [[## Y2 #48–#63 — The night ridge]].
-- Answer in the language of the question. Be concise.`;
+- Always answer in Korean, whatever language the archive or the question is in. Keep names as the archive spells them. Be concise.`;
 
 const AI_SYS_KEYWORDS = `You pick trigger keywords for a story archive section: character names, places, objects and unique terms that would appear in chat when this section matters.
 For every English or romanised term also give the spelling a Korean-language chat would use (e.g. Avalon, 아발론, Lighthouse, 등대).
