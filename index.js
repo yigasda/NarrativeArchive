@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '1.5.0';
+const VERSION = '1.5.2';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1298,7 +1298,8 @@ async function openViewer() {
 
 // ---------------------------------------------------------------- extract popup
 
-const DEFAULT_PROMPT = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
+// earlier default, replaced on load if never edited
+const OLD_DEFAULT_PROMPT = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
 - 원문에 없는 내용은 쓰지 않기
@@ -1309,12 +1310,28 @@ const DEFAULT_PROMPT = `아래 원문(#{{from}}–#{{to}})을 기존 아카이�
 [원문]
 {{raw}}`;
 
+const DEFAULT_PROMPT = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
+- 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
+- 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
+- 원문에 없는 내용은 쓰지 않기
+- 아카이브에 STATE·OPEN이 있으면 새 내용을 반영해 고친 전체도 함께
+
+[형식 참고 — 기존 아카이브의 마지막 섹션]
+{{last_section}}
+
+[지금의 STATE · OPEN]
+{{state}}
+
+[원문]
+{{raw}}`;
+
 function globalSettings() {
     const es = ctx().extensionSettings;
     if (!es[MODULE] || typeof es[MODULE] !== 'object') es[MODULE] = {};
     const g = es[MODULE];
     const defaults = { prompt: DEFAULT_PROMPT, usePrompt: false, skipHidden: true, nameStyle: 'full', stripTags: false };
     for (const [k, v] of Object.entries(defaults)) if (!Object.hasOwn(g, k)) g[k] = v;
+    if (g.prompt === OLD_DEFAULT_PROMPT) g.prompt = DEFAULT_PROMPT;
     return g;
 }
 const saveGlobal = () => ctx().saveSettingsDebounced?.();
@@ -1390,7 +1407,7 @@ async function openExtract() {
           </div>
           <textarea class="text_pole na_prompt_ta" spellcheck="false" rows="9"></textarea>
           <div class="na_prompt_help">
-            <code>{{raw}}</code> 원문 · <code>{{from}}</code> <code>{{to}}</code> 번호 · <code>{{last_section}}</code> 아카이브 마지막 섹션 · <code>{{archive}}</code> 아카이브 전체.
+            <code>{{raw}}</code> 원문 · <code>{{from}}</code> <code>{{to}}</code> 번호 · <code>{{last_section}}</code> 마지막 PLOT 섹션 · <code>{{state}}</code> 지금의 STATE·OPEN · <code>{{archive}}</code> 아카이브 전체.
             <code>{{raw}}</code>가 없으면 원문은 맨 끝에 붙어요.
             <button type="button" class="na_linkbtn na_prompt_reset">기본값으로</button>
           </div>
@@ -1426,7 +1443,7 @@ async function openExtract() {
             .filter(x => x.text);
         current = formatExtract(items, g);
         output = g.usePrompt
-            ? fillPrompt(g.prompt, { raw: current, from: String(from), to: String(to), last_section: lastRangedSection(m.text), archive: m.text })
+            ? fillPrompt(g.prompt, { raw: current, from: String(from), to: String(to), last_section: lastRangedSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text })
             : current;
         $root.find('.na_ex_hidden').val(output);
         $root.find('.na_prompt_state').text(g.usePrompt ? '붙임' : '안 붙임').toggleClass('na_chip_on', g.usePrompt);
@@ -1473,6 +1490,81 @@ async function openExtract() {
 
 // ---------------------------------------------------------------- append popup
 
+// ---- placing appended text: new sections go before "# STATE AT", pasted STATE/OPEN replace the old ones
+
+const TAIL_RE = /^# (STATE|OPEN)\b.*$/m;
+
+// [body, tail] where tail starts at the first "# STATE…" / "# OPEN…" heading
+function splitTail(text) {
+    const mt = TAIL_RE.exec(text);
+    return mt ? [text.slice(0, mt.index), text.slice(mt.index)] : [text, ''];
+}
+
+// level-1 blocks of the tail, keyed by their first word (STATE / OPEN / other title)
+function tailBlocks(tail) {
+    const out = [];
+    const re = /^# .*$/gm;
+    const heads = [];
+    let mt;
+    while ((mt = re.exec(tail)) !== null) heads.push({ at: mt.index, line: mt[0] });
+    heads.forEach((h, i) => {
+        const key = (h.line.match(/^# (STATE|OPEN)\b/) || [, h.line])[1];
+        out.push({ key, text: trimEnd(tail.slice(h.at, heads[i + 1]?.at ?? tail.length)) });
+    });
+    return out;
+}
+
+function lastRangeEnd(text) {
+    const r = headingRanges(text);
+    return r.length ? r[r.length - 1].to : null;
+}
+
+// Returns { text, placed, replaced: [keys], renumbered }
+function placeAppend(archive, add, { renumber } = {}) {
+    const [eBody, eTail] = splitTail(archive);
+    const [pBody, pTail] = splitTail(add);
+    const sep = /\n-{3,}\s*$/.test(trimEnd(eBody));
+    let body = trimEnd(eBody).replace(/\n-{3,}\s*$/, '');
+    const pClean = trimEnd(pBody).replace(/\n-{3,}\s*$/, '');
+    if (pClean.trim()) body = `${trimEnd(body)}${body.trim() ? '\n\n' : ''}${pClean}`;
+
+    const eBlocks = tailBlocks(eTail), pBlocks = tailBlocks(pTail);
+    const replaced = [];
+    const blocks = eBlocks.map(b => {
+        const nb = pBlocks.find(x => x.key === b.key);
+        if (nb) replaced.push(b.key);
+        return nb || b;
+    });
+    pBlocks.filter(x => !eBlocks.some(b => b.key === x.key)).forEach(x => blocks.push(x));
+
+    let renumbered = null;
+    const oldEnd = lastRangeEnd(eBody), newEnd = lastRangeEnd(pBody);
+    if (renumber && oldEnd !== null && newEnd !== null && newEnd > oldEnd) {
+        const swap = line => line.replace(new RegExp(`#${oldEnd}(?!\\d)`, 'g'), `#${newEnd}`);
+        // a top "# " title line and the intro lines under it, up to the next heading
+        const lines = body.split('\n');
+        if (/^# /.test(lines[0] || '')) {
+            for (let i = 0; i < lines.length; i++) {
+                if (i > 0 && /^#{1,3} /.test(lines[i])) break;
+                lines[i] = swap(lines[i]);
+            }
+        }
+        body = lines.join('\n');
+        // STATE/OPEN headings + their first note line, unless just replaced
+        blocks.forEach((b, i) => {
+            if (replaced.includes(b.key) || pBlocks.includes(b)) return;
+            const ls = b.text.split('\n');
+            for (let k = 0; k < Math.min(ls.length, 4); k++) if (k === 0 || /^_.*_$/.test(ls[k].trim())) ls[k] = swap(ls[k]);
+            blocks[i] = { ...b, text: ls.join('\n') };
+        });
+        renumbered = { from: oldEnd, to: newEnd };
+    }
+
+    let text = trimEnd(body);
+    if (blocks.length) text += `${sep || eTail ? '\n\n---\n\n' : '\n\n'}${blocks.map(b => b.text).join('\n\n')}`;
+    return { text: `${text}\n`, placed: !!eTail && !!pBody.trim(), replaced, renumbered };
+}
+
 // Problems with the numbering of pasted sections, as display strings.
 function checkAppend(m, add, last) {
     const ranges = headingRanges(add);
@@ -1512,12 +1604,15 @@ async function openAppend() {
           <span class="na_end_hint na_dim"></span>
         </div>
         <label class="checkbox_label"><input type="checkbox" class="na_do_hide" checked><span>저장 후 숨기기 적용 (마지막 ${m.keep}개 남김)</span></label>
+        <label class="checkbox_label na_renum_row"><input type="checkbox" class="na_do_renum" checked><span class="na_renum_label">제목·안내문의 끝 번호도 바꾸기</span></label>
+        <div class="na_place na_dim"></div>
         <div class="na_append_info na_dim"></div>
       </div>`);
 
     const $ta = $root.find('.na_append_ta');
     const $end = $root.find('.na_end');
     const $check = $root.find('.na_check');
+    $root.find('.na_renum_row').hide();
     let endTouched = false;
     let lastCheck = { issues: [] };
     $end.on('input', () => { endTouched = true; $root.find('.na_end_hint').text(''); });
@@ -1541,6 +1636,13 @@ async function openAppend() {
                 $check.prop('hidden', false).attr('class', `na_check ${lastCheck.soft ? 'na_check_soft' : 'na_check_warn'}`)
                     .html(`<i class="fa-solid fa-triangle-exclamation"></i><ul>${lastCheck.issues.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`);
             }
+            const plan = placeAppend(m.text, val, { renumber: true });
+            const notes = [];
+            if (plan.placed) notes.push('새 섹션은 <b>STATE 앞</b>에 들어가요');
+            if (plan.replaced.length) notes.push(`<b>${plan.replaced.join('·')}</b> 블록은 붙여넣은 걸로 바뀌어요`);
+            $root.find('.na_place').html(notes.join(' · '));
+            $root.find('.na_renum_row').toggle(!!plan.renumbered);
+            if (plan.renumbered) $root.find('.na_renum_label').html(`제목·안내문의 끝 번호도 바꾸기 (<b>#${plan.renumbered.from} → #${plan.renumbered.to}</b>)`);
             $root.find('.na_append_info').text(`약 ${fmt(await countTokens(val))} 토큰 · 섹션 ${parseSections(val).filter(x => !x.group).length}개`);
         }, 400);
     });
@@ -1561,7 +1663,8 @@ async function openAppend() {
         if (!await confirm('경계선 확인', `끝 번호 #${end}가 기존 경계선 #${m.boundary}보다 앞이에요. 그래도 저장할까요?`)) return;
     }
 
-    await commitText(m.text.replace(/\s+$/, '') + (m.text.trim() ? '\n\n' : '') + add + '\n', '추가 전', { boundary: end });
+    const plan = placeAppend(m.text, add, { renumber: $root.find('.na_do_renum').prop('checked') && $root.find('.na_renum_row').is(':visible') });
+    await commitText(plan.text, '추가 전', { boundary: end });
     if ($root.find('.na_do_hide').prop('checked')) await applyHide({ silent: true });
     toastr.success(`아카이브에 추가됨 · 경계선 #${end}`);
 }
