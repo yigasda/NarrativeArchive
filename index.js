@@ -6485,25 +6485,29 @@ async function openAsk() {
     if (!askLog.has(chatId)) askLog.set(chatId, []);
     const log = askLog.get(chatId);
     const $root = $(`
-      <div class="na_popup na_ask">
-        <div class="na_block_head"><div>
-          <h4>아카이브에 질문</h4>
-          <p>아카이브에 적힌 내용만 근거로 답해요. 답 속 <i class="fa-solid fa-bookmark"></i> 표시를 누르면 근거 섹션이 펼쳐져요.</p>
-        </div></div>
+      <div class="na_popup na_v2 na_ask na_ask2">
+        <div class="na_v2_title"><b>아카이브에 질문</b><small>아카이브에 적힌 것만 근거로 답해요 · 책갈피 칩을 누르면 근거 섹션이 펼쳐져요</small></div>
         <div class="na_ask_log"></div>
-        <textarea class="text_pole na_ask_q" rows="2" placeholder="예: 둘이 처음 만난 곳이 어디였지?"></textarea>
-        <div class="na_ai_row">
-          <button type="button" class="na_btn na_primary na_ask_go"><i class="fa-regular fa-paper-plane"></i> 물어보기</button>
-          <small class="na_dim na_ask_info"></small>
+        <div class="na_v2_chips na_ask2_sugg">
+          <button type="button">둘이 처음 만난 곳이 어디야?</button>
+          <button type="button">아직 안 풀린 떡밥은?</button>
+          <button type="button">지금 다들 어디에 있어?</button>
         </div>
+        <div class="na_ask2_input">
+          <textarea class="text_pole na_ask_q" rows="1" placeholder="질문을 적어 주세요"></textarea>
+          <button type="button" class="na_ask_go" aria-label="물어보기" title="물어보기 (Ctrl+Enter)"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+        <small class="na_v2_foot na_ask_info"></small>
       </div>`);
     const $log = $root.find('.na_ask_log');
     const secs = parseSections(m.text);
+    let pending = '';
     const draw = () => {
         $log.html(log.length ? log.map(x => {
             const { html } = renderAnswer(x.a, secs);
             return `<div class="na_ask_item"><div class="na_ask_qq">${esc(x.q)}</div><div class="na_ask_a">${html}</div></div>`;
-        }).join('') : '<div class="na_empty">물어본 게 아직 없어요.</div>');
+        }).join('') + (pending ? `<div class="na_ask_item"><div class="na_ask_qq">${esc(pending)}</div><div class="na_ask_a na_ask2_wait"><i></i><i></i><i></i> 아카이브를 읽는 중</div></div>` : '') : (pending ? `<div class="na_ask_item"><div class="na_ask_qq">${esc(pending)}</div><div class="na_ask_a na_ask2_wait"><i></i><i></i><i></i> 아카이브를 읽는 중</div></div>` : '<div class="na_empty">물어본 게 아직 없어요.</div>'));
+        $root.find('.na_ask2_sugg').prop('hidden', log.length > 0 || !!pending);
         $log.scrollTop($log[0].scrollHeight);
     };
     $log.on('click', '.na_cite[data-start]', function () {
@@ -6526,15 +6530,18 @@ async function openAsk() {
     const $q = $root.find('.na_ask_q');
     const go = async () => {
         const q = $q.val().trim();
-        if (!q) return;
-        const a = await withSpinner($root.find('.na_ask_go'), '찾는 중…', () => askAI(`[ARCHIVE]\n${m.text}\n\n[QUESTION]\n${q}`, { system: AI_SYS_ASK, maxTokens: 1500 }));
-        if (a === null) return;
+        if (!q || pending) return;
+        pending = q; $q.val(''); draw();
+        const a = await withSpinner($root.find('.na_ask_go'), '', () => askAI(`[ARCHIVE]\n${m.text}\n\n[QUESTION]\n${q}`, { system: AI_SYS_ASK, maxTokens: 1500 }));
+        pending = '';
+        if (a === null) { $q.val(q); draw(); return; }
         log.push({ q, a });
         if (log.length > 20) log.shift();
         $q.val('');
         draw();
     };
     $root.find('.na_ask_go').on('click', go);
+    $root.on('click', '.na_ask2_sugg button', function () { $q.val(this.textContent); go(); });
     $q.on('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); go(); } });
     draw();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
