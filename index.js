@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.17.0';
+const VERSION = '3.18.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -34,7 +34,7 @@ const DEFAULT_META = Object.freeze({
     lastExport: null, // { from, to, at, how } — the latest extract copied or saved
 });
 
-const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'quoteInject', 'quoteMax', 'router', 'people', 'temps', 'voice', 'voiceInject', 'layers', 'fade'];
+const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'quoteInject', 'quoteMax', 'router', 'people', 'temps', 'voice', 'voiceInject', 'layers', 'fade', 'worldOn'];
 const POSITIONS = { 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
 const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
 
@@ -243,9 +243,140 @@ async function buildInjection(m) {
         }
     }
     const extra = text.trim() ? extraBlocks(m) : '';
-    const final = text.trim() ? wrapText(m, `${trimEnd(text)}${extra}`) : '';
+    const world = worldText(m);
+    const core = text.trim() ? `${trimEnd(text)}${extra}` : '';
+    const final = world || core ? wrapText(m, [world, core].filter(Boolean).join('\n\n')) : '';
     const tokens = await cachedTokens(final);
     return { text: final, tokens, trimmed, cap, over: !!cap && tokens > cap, faded };
+}
+
+// ---------------------------------------------------------------- shared world
+// World-setting text (places, myths, rules) kept once in the global settings and switched on per chat.
+// g.worlds = [{ id, name, text, chars: [avatar] }]; m.worldOn = { id: true|false } — unset means "on if bound to this character"
+const worldBooks = () => { const g = globalSettings(); if (!Array.isArray(g.worlds)) g.worlds = []; return g.worlds; };
+const charKey = () => { const c = ctx(); return c.groupId ? `group:${c.groupId}` : String(c.characters?.[c.characterId]?.avatar || ''); };
+const charName = () => { const c = ctx(); return c.groupId ? ((c.groups || []).find(x => x.id === c.groupId)?.name || '그룹') : (c.characters?.[c.characterId]?.name || ''); };
+
+function worldIsOn(m, w) {
+    const v = m?.worldOn?.[w.id];
+    if (v === true || v === false) return v;
+    const k = charKey();
+    return !!k && Array.isArray(w.chars) && w.chars.includes(k);
+}
+
+function worldText(m) {
+    return worldBooks().filter(w => String(w.text || '').trim() && worldIsOn(m, w))
+        .map(w => `# WORLD — ${w.name || '세계관'}\n_Shared setting reference: true in every story in this world._\n\n${String(w.text).trim()}`).join('\n\n');
+}
+
+async function openWorlds() {
+    const c = ctx();
+    const m = getMeta();
+    const g = globalSettings();
+    const open = new Set();
+    let importing = false;
+    const $root = $(`
+      <div class="na_popup na_worlds">
+        <div class="na_block_head"><div><h4>세계관 공유</h4><p>여러 채팅이 같이 쓰는 설정(장소·신화·규칙 등)을 한 곳에 두고, 채팅마다 켜서 아카이브 앞에 같이 넣어요. 여기서 고치면 그 세계관을 켠 모든 채팅에 바로 반영돼요. 캐릭터에 묶어 두면 그 캐릭터의 새 채팅에서 저절로 켜져요.</p></div></div>
+        <div class="na_tool_actions">
+          <button type="button" class="na_btn na_small na_primary na_wd_new"><i class="fa-solid fa-plus"></i> 새 세계관</button>
+          <button type="button" class="na_btn na_small na_wd_imp"><i class="fa-solid fa-file-import"></i> 아카이브 섹션에서 가져오기</button>
+          <small class="na_dim na_wd_tok"></small>
+        </div>
+        <div class="na_wd_import" hidden></div>
+        <div class="na_wd_list"></div>
+      </div>`);
+    const save = async () => { saveGlobal(); await saveMeta(); applyInjection(); syncPanel(); };
+    const draw = () => {
+        const books = worldBooks(), ck = charKey(), cn = charName();
+        $root.find('.na_wd_list').html(books.length ? books.map(w => {
+            const on = worldIsOn(m, w), bound = Array.isArray(w.chars) && w.chars.includes(ck);
+            return `
+            <div class="na_wd ${on ? 'on' : ''}" data-id="${esc(w.id)}">
+              <div class="na_wd_head">
+                <button type="button" class="na_icon na_icon_sm na_wd_fold" title="펼치기"><i class="fa-solid fa-chevron-${open.has(w.id) ? 'down' : 'right'}"></i></button>
+                <input type="text" class="text_pole na_wd_name" value="${esc(w.name || '')}" placeholder="이름">
+                <small class="na_dim na_wd_ttok" data-id="${esc(w.id)}"></small>
+                <label class="na_strip_item" title="이 채팅에 넣기"><input type="checkbox" class="na_toggle na_wd_on" ${on ? 'checked' : ''}><span>이 채팅</span></label>
+              </div>
+              <div class="na_wd_body" ${open.has(w.id) ? '' : 'hidden'}>
+                <textarea class="text_pole na_wd_text" rows="12" spellcheck="false" placeholder="## 장소 이름&#10;- 설정…">${esc(w.text || '')}</textarea>
+                <div class="na_wd_foot">
+                  ${ck ? `<label class="na_strip_item"><input type="checkbox" class="na_toggle na_wd_bind" ${bound ? 'checked' : ''}><span>${esc(cn)} 채팅에서 저절로 켜기</span></label>` : ''}
+                  <span class="na_dim na_wd_bound">${(w.chars || []).length > (bound ? 1 : 0) ? `다른 캐릭터 ${(w.chars || []).length - (bound ? 1 : 0)}명에도 묶임` : ''}</span>
+                  <span class="na_spacer"></span>
+                  <button type="button" class="na_linkbtn na_danger na_wd_del"><i class="fa-regular fa-trash-can"></i> 지우기</button>
+                </div>
+              </div>
+            </div>`; }).join('') : '<div class="na_empty">아직 없어요. "새 세계관"을 만들거나 아카이브의 설정 섹션을 가져오세요.</div>');
+        Promise.all(books.map(w => countTokens(String(w.text || '')))).then(ts => {
+            books.forEach((w, i) => $root.find(`.na_wd_ttok[data-id="${w.id}"]`).text(`${fmt(ts[i])} 토큰`));
+            const t = books.reduce((a, w, i) => a + (worldIsOn(m, w) ? ts[i] : 0), 0);
+            $root.find('.na_wd_tok').text(t ? `이 채팅에 약 ${fmt(t)} 토큰` : '');
+        });
+    };
+    const book = el => worldBooks().find(w => w.id === String($(el).closest('.na_wd').data('id')));
+    $root.on('click', '.na_wd_fold', function () { const w = book(this); open.has(w.id) ? open.delete(w.id) : open.add(w.id); draw(); });
+    $root.on('change', '.na_wd_name', async function () { book(this).name = this.value.trim() || '세계관'; await save(); });
+    $root.on('change', '.na_wd_text', async function () { book(this).text = this.value.replace(/\r\n/g, '\n'); await save(); draw(); });
+    $root.on('change', '.na_wd_on', async function () { m.worldOn = { ...(m.worldOn || {}), [book(this).id]: this.checked }; await save(); draw(); });
+    $root.on('change', '.na_wd_bind', async function () {
+        const w = book(this), k = charKey();
+        w.chars = Array.isArray(w.chars) ? w.chars.filter(x => x !== k) : [];
+        if (this.checked) w.chars.push(k);
+        await save(); draw();
+    });
+    $root.on('click', '.na_wd_del', async function () {
+        const w = book(this);
+        if (!await confirm('세계관 지우기', `"${w.name}"을 지울까요? 이 세계관을 켠 모든 채팅에서 빠져요. 되돌릴 수 없어요.`)) return;
+        g.worlds = worldBooks().filter(x => x !== w);
+        await save(); draw();
+    });
+    $root.find('.na_wd_new').on('click', async () => {
+        const w = { id: newId(), name: `세계관 ${worldBooks().length + 1}`, text: '', chars: charKey() ? [charKey()] : [] };
+        worldBooks().push(w);
+        m.worldOn = { ...(m.worldOn || {}), [w.id]: true };
+        open.add(w.id);
+        await save(); draw();
+        $root.find(`.na_wd[data-id="${w.id}"] .na_wd_text`).trigger('focus');
+    });
+    // copy or move archive sections (e.g. "## Ombos temple", "# WORLD") into a book
+    $root.find('.na_wd_imp').on('click', function () {
+        importing = !importing;
+        $(this).toggleClass('active', importing);
+        const $i = $root.find('.na_wd_import').prop('hidden', !importing);
+        if (!importing) return;
+        const secs = parseSections(m.text).filter(s => s.title !== '(머리말)');
+        $i.html(`
+          <div class="na_wd_secs">${secs.map((s, i) => `<label class="na_wd_sec ${s.group ? 'grp' : ''}"><input type="checkbox" data-i="${i}"><span>${esc(s.title)}</span><small class="na_dim">${fmt(s.end - s.start)}자</small></label>`).join('')}</div>
+          <div class="na_wd_impfoot">
+            <select class="text_pole na_wd_target"><option value="">새 세계관으로</option>${worldBooks().map(w => `<option value="${esc(w.id)}">${esc(w.name)}에 붙이기</option>`).join('')}</select>
+            <label class="na_strip_item"><input type="checkbox" class="na_toggle na_wd_move"><span>아카이브에서 빼기</span></label>
+            <button type="button" class="na_btn na_small na_primary na_wd_go"><i class="fa-solid fa-check"></i> 가져오기</button>
+          </div>`);
+        $i.find('.na_wd_go').on('click', async () => {
+            const picked = $i.find('.na_wd_secs input:checked').map((_, el) => secs[Number(el.dataset.i)]).get();
+            if (!picked.length) return toastr.info('섹션을 골라 주세요.');
+            // a "#" heading becomes "##" inside the book so the book's own "# WORLD" stays the top level
+            const text = picked.map(s => m.text.slice(s.start, s.end).replace(/^# /, '## ').trim()).join('\n\n');
+            const tid = String($i.find('.na_wd_target').val() || '');
+            let w = worldBooks().find(x => x.id === tid);
+            if (!w) { w = { id: newId(), name: picked[0].title.replace(/^#+\s*/, '').slice(0, 30) || '세계관', text: '', chars: charKey() ? [charKey()] : [] }; worldBooks().push(w); }
+            w.text = [String(w.text || '').trim(), text].filter(Boolean).join('\n\n');
+            m.worldOn = { ...(m.worldOn || {}), [w.id]: true };
+            if ($i.find('.na_wd_move').prop('checked')) {
+                const drop = new Set(picked.map(s => s.start));
+                await commitText(parseSections(m.text).filter(s => !drop.has(s.start)).map(s => m.text.slice(s.start, s.end)).join(''), '세계관으로 옮기기 전');
+            }
+            open.add(w.id);
+            importing = false; $root.find('.na_wd_imp').removeClass('active'); $i.prop('hidden', true).empty();
+            await save(); draw();
+            sectionPanel?.render();
+            toastr.success(`섹션 ${picked.length}개를 "${w.name}"에 넣었어요`);
+        });
+    });
+    draw();
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
 // ---------------------------------------------------------------- forgetting curve
@@ -1499,6 +1630,7 @@ function renderPanel() {
             <section class="na_tab_pane" data-pane="tools" hidden>
               <div class="na_block">
                 <div class="na_kw_label">이야기</div>
+                <button type="button" class="na_toolrow" id="na_worlds"><i class="fa-solid fa-earth-asia"></i><span><b>세계관 공유</b><small id="na_worlds_sub">여러 채팅이 같이 쓰는 설정 · 고치면 모든 채팅에 반영</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_people"><i class="fa-solid fa-address-book"></i><span><b>인물 도감 · 관계도</b><small>인물마다 얼굴·상태·관계 · 함께 나온 섹션으로 잇는 관계도</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_story_cal"><i class="fa-solid fa-calendar-days"></i><span><b>이야기 달력</b><small>섹션을 날짜 순서로 · 거꾸로 가는 날짜 찾기</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_story_route"><i class="fa-solid fa-route"></i><span><b>이동 경로</b><small>이야기가 머문 곳을 차례로 · 그곳의 섹션들</small></span><i class="fa-solid fa-chevron-right"></i></button>
@@ -1819,6 +1951,7 @@ function bindPanel() {
     $('#na_story_route').on('click', needChat(openRoute));
     $('#na_story_links').on('click', needChat(openLinks));
     $('#na_people').on('click', needChat(openPeople));
+    $('#na_worlds').on('click', needChat(openWorlds));
 
     // --- editor
     const $ed = $('#na_editor');
@@ -2283,6 +2416,7 @@ function syncPanel() {
         const kn = knowledgeRows(mm).length, qn = (mm.quotes || []).filter(q => q.on).length;
         $('#na_know_sub').text(kn ? `${kn}개${mm.knowInject ? ' · 주입 중' : ''}` : '비밀마다 아는 사람·모르는 사람');
         const vn = Object.keys(mm.voice || {}).length;
+        { const wb = worldBooks(), on = wb.filter(w => worldIsOn(mm, w)); $('#na_worlds_sub').text(wb.length ? `${wb.length}개 · 이 채팅에 ${on.length ? on.map(w => w.name).join(', ') : '없음'}` : '여러 채팅이 같이 쓰는 설정 · 고치면 모든 채팅에 반영'); }
         $('#na_quotes_sub').text((mm.quotes || []).length ? `${(mm.quotes || []).length}개 · 고른 ${qn}개${mm.quoteInject ? ' · 주입 중' : ''}${vn ? ` · 지문 ${vn}${mm.voiceInject ? ' 주입 중' : ''}` : ''}` : '말투 샘플로 주입');
         $('#na_drift_sub').text(mm.driftLast ? `${timeLabel(mm.driftLast.at)} · ${mm.driftLast.none ? '어긋남 없음' : `${mm.driftLast.n}개 찾음`}` : '최근 대화가 아카이브와 어긋나는지');
     }
