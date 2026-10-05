@@ -1008,3 +1008,20 @@
 .na_kwt_where { margin-top: 4px; font-size: 0.85em; opacity: 0.8; }
 .na_kwt_where mark { background: color-mix(in srgb, #3f9a5a 25%, transparent); color: inherit; border-radius: 3px; }
 .na_kwt_warn { color: var(--na-warn); font-size: 0.92em; white-space: nowrap; }
+
+/* ---------- keyword popup */
+.na_pchip small { opacity: 0.6; font-size: 0.85em; margin-left: 3px; }
+.na_pchip.on small { opacity: 0.85; }
+.na_pchip_broad { opacity: 0.6; text-decoration: line-through; text-decoration-thickness: 1px; }
+.na_pchip_broad.on { opacity: 1; text-decoration: none; }
+.na_pchip_risk:not(.on) { border-color: color-mix(in srgb, var(--na-warn) 60%, transparent); }
+.na_kw_check { display: flex; flex-direction: column; gap: 4px; font-size: 0.8em; }
+.na_kw_check:empty { display: none; }
+.na_kw_sum { opacity: 0.8; }
+.na_kw_sum.warn, .na_kw_warn { color: var(--na-warn); opacity: 1; }
+.na_kw_aiout { display: flex; flex-direction: column; gap: 8px; }
+.na_kw_aiout:empty { display: none; }
+.na_kw_concept { display: flex; flex-direction: column; gap: 3px; padding: 6px 8px; border-radius: 10px; background: var(--na-softer); }
+.na_kw_concept small { font-size: 0.78em; }
+.na_kw_addall { font-size: 0.78em; }
+.na_src_btn.na_btn[disabled] { opacity: 0.35; }

@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.10.0';
+const VERSION = '2.11.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -791,9 +791,9 @@ function mountSectionBrowser($host) {
                     <span class="na_act_sep"></span>
                     <button type="button" class="na_icon na_keys ${links[sectionKey(s)]?.length ? 'active' : ''}" title="키워드 연동"><i class="fa-solid fa-key"></i></button>
                     <button type="button" class="na_icon na_towi" title="월드인포로 보내기"><i class="fa-solid fa-book-atlas"></i></button>
-                    ${srcButton(m, s.title, 'icon')}
                     <button type="button" class="na_icon na_del na_danger" title="섹션 삭제"><i class="fa-solid fa-trash-can"></i></button>
                     <span class="na_spacer"></span>
+                    ${srcButton(m, s.title, 'icon')}
                     <button type="button" class="na_btn na_small na_edit"><i class="fa-solid fa-pen"></i> 편집</button>
                   </div>
                 </div>
@@ -867,37 +867,58 @@ function mountSectionBrowser($host) {
 // Keyword-link editor: the keywords, candidates found in the section, and AI suggestions. Returns the list or null.
 async function openKeywords(s, body, current) {
     const c = ctx();
+    const m = getMeta();
     const split = v => [...new Set(String(v).split(/[,，\n]/).map(x => x.trim().replace(/^["'“”‘’\-*\s]+|["'“”‘’.\s]+$/g, '')).filter(Boolean))];
     const $root = $(`
       <div class="na_popup">
         <div class="na_block_head"><div>
           <h4>키워드 연동</h4>
-          <p>이 섹션을 평소엔 빼 두고, 최근 메시지에 키워드가 나올 때만 넣어요. 쉼표로 나눠 적고, 비우면 연동을 풀어요. 한국어 키워드도 같이 넣어야 한국어 대화에서 켜져요.</p>
+          <p>이 섹션을 평소엔 빼 두고, 최근 메시지에 키워드가 나올 때만 넣어요. 쉼표로 나눠 적고, 비우면 연동을 풀어요. 대화가 한국어면 한국어 키워드도 같이 넣어야 켜져요.</p>
         </div></div>
         <div class="na_dim na_kw_title"></div>
-        <input type="text" class="text_pole na_kw_in" placeholder="Avalon, 아발론, Lighthouse, 등대">
+        <input type="text" class="text_pole na_kw_in" placeholder="map, 지도, treasur, 보물">
+        <div class="na_kw_check"></div>
         <div class="na_kw_group">
-          <div class="na_kw_label">본문에서 찾은 후보 <span class="na_dim">· 누르면 넣거나 빼요</span></div>
+          <div class="na_kw_label">이 섹션에서 두드러지는 말 <span class="na_dim">· 다른 섹션엔 드물고 여기 자주 나와요</span></div>
           <div class="na_kw_chips na_kw_found"></div>
+        </div>
+        <div class="na_kw_group na_kw_broad_group">
+          <div class="na_kw_label">너무 넓은 말 <span class="na_dim">· 넣으면 거의 항상 켜져요</span></div>
+          <div class="na_kw_chips na_kw_broad"></div>
         </div>
         <div class="na_kw_group">
           <div class="na_ai_row">
             <button type="button" class="na_btn na_small na_kw_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 제안</button>
-            <small class="na_dim">이름·장소·물건과 한국어 표기까지</small>
+            <small class="na_dim">주제·사건 중심으로, 한국어 표현까지</small>
           </div>
-          <div class="na_kw_chips na_kw_aiout"></div>
+          <div class="na_kw_aiout"></div>
         </div>
       </div>`);
     const $in = $root.find('.na_kw_in').val(current.join(', '));
     $root.find('.na_kw_title').text(s.title);
-    const chips = words => words.map(w => `<button type="button" class="na_pchip" data-w="${esc(w)}">${esc(w)}</button>`).join('');
+    const an = keywordAnalysis(m, s, body);
+    const stat = an.stat;
+    const chipStat = w => {
+        const ch = stat.chatPct(w), sc = stat.secCount(w);
+        return `섹션 ${sc} · 채팅 ${pct(ch)}`;
+    };
+    const chip = (w, extra = '') => `<button type="button" class="na_pchip ${extra}" data-w="${esc(w)}" title="섹션 ${stat.secs}개 중 ${stat.secCount(w)}개, 채팅 메시지 ${stat.msgs}개 중 ${pct(stat.chatPct(w))}에 나와요">${esc(w)} <small>${chipStat(w)}</small></button>`;
     const mark = () => {
         const have = new Set(split($in.val()).map(x => x.toLowerCase()));
-        $root.find('.na_kw_chips .na_pchip').each(function () { $(this).toggleClass('on', have.has(String($(this).data('w')).toLowerCase())); });
+        $root.find('.na_pchip[data-w]').each(function () { $(this).toggleClass('on', have.has(String($(this).data('w')).toLowerCase())); });
+        // what the chosen keywords would do
+        const list = split($in.val());
+        const lines = list.map(w => ({ w, warn: keywordWarn(w, stat) })).filter(x => x.warn.length);
+        const any = list.some(w => stat.chatPct(w) > 0);
+        const fire = stat.fireRate(list);
+        $root.find('.na_kw_check').html(!list.length ? '' : `
+            <div class="na_kw_sum ${fire > 0.3 ? 'warn' : ''}"><i class="fa-solid fa-chart-simple"></i> 지금 키워드면 지금까지 메시지의 <b>${pct(fire)}</b>에서 켜졌을 거예요${!any && stat.msgs ? ' · 이 채팅엔 아직 안 나온 말이에요' : ''}</div>
+            ${lines.map(x => `<div class="na_kw_warn"><i class="fa-solid fa-triangle-exclamation"></i> <b>${esc(x.w)}</b> — ${x.warn.map(esc).join(' · ')}</div>`).join('')}`);
     };
-    const found = keywordCandidates(s.title, body);
-    $root.find('.na_kw_found').html(found.length ? chips(found) : '<span class="na_dim">눈에 띄는 이름이 없어요.</span>');
-    $root.on('click', '.na_kw_chips .na_pchip', function () {
+    $root.find('.na_kw_found').html(an.distinct.length ? an.distinct.map(r => chip(r.show)).join('') : '<span class="na_dim">두드러지는 말이 없어요. AI로 제안을 눌러 보세요.</span>');
+    if (an.broad.length) $root.find('.na_kw_broad').html(an.broad.map(r => chip(r.show, 'na_pchip_broad')).join(''));
+    else $root.find('.na_kw_broad_group').hide();
+    $root.on('click', '.na_pchip[data-w]', function () {
         const w = String($(this).data('w'));
         const list = split($in.val());
         const i = list.findIndex(x => x.toLowerCase() === w.toLowerCase());
@@ -905,16 +926,36 @@ async function openKeywords(s, body, current) {
         $in.val(list.join(', '));
         mark();
     });
+    $root.on('click', '.na_kw_addall', function () {
+        const words = $(this).closest('.na_kw_concept').find('.na_pchip[data-w]').map((i, e) => String($(e).data('w'))).get();
+        const list = split($in.val());
+        for (const w of words) if (!list.some(x => x.toLowerCase() === w.toLowerCase())) list.push(w);
+        $in.val(list.join(', '));
+        mark();
+    });
     $in.on('input', mark);
     $root.find('.na_kw_ai').on('click', async function () {
-        const out = await withSpinner($(this), '고르는 중…', () => askAI(`[SECTION]\n${body.trim()}`, { system: AI_SYS_KEYWORDS, maxTokens: 300 }));
+        const others = parseSections(m.text).filter(x => !x.group && x.start !== s.start && x.title !== '(머리말)').map(x => `- ${x.title}`).slice(-80).join('\n');
+        const broad = [...new Set([...an.broad.map(r => r.show), ...an.distinct.filter(r => r.chat > 0.15).map(r => r.show)])].join(', ') || '(none)';
+        const prompt = `[SECTION TITLE]\n${s.title}\n\n[SECTION]\n${body.trim()}\n\n[BROAD TERMS — appear in most sections or most chat messages; do not use]\n${broad}\n\n[OTHER SECTIONS — for contrast; prefer words that set this one apart]\n${others}`;
+        const out = await withSpinner($(this), '고르는 중…', () => askAI(prompt, { system: AI_SYS_KEYWORDS, maxTokens: 2000 }));
         if (out === null) return;
-        const words = split(out.split('\n').filter(l => l.trim()).pop() || out).slice(0, 24);
-        $root.find('.na_kw_aiout').html(words.length ? chips(words) : '<span class="na_dim">제안이 없어요.</span>');
+        const concepts = out.split('\n').map(l => l.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim()).filter(l => l.includes('|')).map(l => {
+            const [en, ko, why] = l.split('|').map(x => x.trim());
+            return { words: [...split(en), ...split(ko || '')], why: why || '' };
+        }).filter(x => x.words.length);
+        // a model that ignored the format: take one comma line
+        if (!concepts.length) { const w = split(out.split('\n').filter(l => l.trim()).pop() || out).slice(0, 16); if (w.length) concepts.push({ words: w, why: '' }); }
+        $root.find('.na_kw_aiout').html(concepts.length ? concepts.map(x => `
+            <div class="na_kw_concept">
+              <div class="na_kw_chips">${x.words.map(w => chip(w, keywordWarn(w, stat).length ? 'na_pchip_risk' : '')).join('')}
+                <button type="button" class="na_linkbtn na_kw_addall" title="이 줄 모두 넣기"><i class="fa-solid fa-plus"></i> 모두</button></div>
+              ${x.why ? `<small class="na_dim">${esc(x.why)}</small>` : ''}
+            </div>`).join('') : '<span class="na_dim">제안이 없어요.</span>');
         mark();
     });
     mark();
-    const r = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: false, okButton: '저장', cancelButton: '취소' });
+    const r = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, allowVerticalScrolling: true, okButton: '저장', cancelButton: '취소' });
     if (r !== c.POPUP_RESULT.AFFIRMATIVE && r !== true) return null;
     return split($in.val());
 }
@@ -2838,8 +2879,8 @@ function srcButton(m, title, kind) {
     const r = sourceRange(m, title);
     if (!r) return '';
     const data = `data-from="${r.from}" data-to="${r.to}" data-label="${esc(r.label)}"`;
-    if (kind === 'icon') return `<button type="button" class="na_icon na_src_btn" ${data} ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? `원문 보기 ${r.label}` : r.why)}"><i class="fa-solid fa-comments"></i></button>`;
-    return `<button type="button" class="na_src_chip na_src_btn" ${data} ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? '이 섹션의 원문 메시지 보기' : r.why)}"><i class="fa-solid fa-comments"></i> 원문 ${esc(r.label)}</button>`;
+    if (kind === 'icon') return `<button type="button" class="na_btn na_small na_src_btn" ${data} ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? `원문 보기 ${r.label}` : r.why)}"><i class="fa-solid fa-arrow-up-right-from-square"></i> 원문</button>`;
+    return `<button type="button" class="na_src_chip na_src_btn" ${data} ${r.ok ? '' : 'disabled'} title="${esc(r.ok ? '이 섹션의 원문 메시지 보기' : r.why)}"><i class="fa-solid fa-arrow-up-right-from-square"></i> 원문 ${esc(r.label)}</button>`;
 }
 
 async function openSource(from, to, label) {
@@ -3036,14 +3077,116 @@ const KW_STOP = new Set(('The A An And But Or Nor If When Then After Before Whil
 
 const capWords = text => [...String(text).matchAll(/\b[A-Z][a-z][A-Za-z'’]*/g)].map(x => x[0].replace(/['’]s$/, '')).filter(w => w.length > 2 && !KW_STOP.has(w));
 
-function keywordCandidates(title, body) {
-    const counts = new Map();
-    capWords(body).forEach(w => counts.set(w, (counts.get(w) || 0) + 1));
-    const inTitle = new Set(capWords(title));
-    return [...new Set([...inTitle, ...counts.keys()])]
-        .filter(w => inTitle.has(w) || counts.get(w) >= 2)
-        .sort((a, b) => (inTitle.has(b) - inTitle.has(a)) || (counts.get(b) || 0) - (counts.get(a) || 0))
-        .slice(0, 18);
+// Ranks words of one section by how much they belong to it: frequent here, rare in the other sections,
+// and not in most chat messages (a keyword that is everywhere keeps the section always on).
+const KW_STOP_LOW = new Set([...KW_STOP].map(w => w.toLowerCase()).concat(('about above across against along among around away back because being below beside '
+    + 'between beyond could down during else ever every from further give gave given going gone have having into itself just keep kept know knew '
+    + 'last left less like made make more most much must near need never only other others over own rather same said says seem seemed shall since '
+    + 'some something still such than that their them then there these they thing things think thought those though through till under until upon '
+    + 'very want wanted were what when where which while whom will with within without would your yours herself himself themselves '
+    + 'asked told took take come came went look looked felt feel turned turn tell telling let used once both each even also only again '
+    + 'plot state open note true never ever already '
+    // everyday scene words: in almost any chat, so they would keep a section on
+    + 'inside outside whole part bring brought held hold mind voice eyes face hand hands body head room night morning '
+    + 'bed kiss kissed smile smiled laugh laughed looked moment time times today away side front behind word words '
+    + 'answer answered someone anyone everyone nothing anything everything people place thing others while').split(/\s+/)));
+
+const KW_DET = /^(?:a|an|the|his|her|their|my|your|our|its|this|that|these|those|no|any|some|one|two|three|four|five|first|second|every|each)$/;
+
+function kwTerms(text) {
+    const out = [];
+    for (const chunk of String(text).split(/[.,;:!?()\[\]{}"“”—–→←·|\n]+/)) {
+        const raw = chunk.match(/[A-Za-z][A-Za-z'’-]*/g) || [];
+        let prev = null, before = '';
+        for (const r0 of raw) {
+            const w = r0.replace(/['’]s$/i, '');
+            const low = w.toLowerCase();
+            const cap = /^[A-Z]/.test(w);
+            const ok = !KW_STOP_LOW.has(low) && (low.length >= 4 || (cap && low.length >= 3));
+            // after "a / the / her / god's / three ..." it is most likely a noun: a thing that gets talked about
+            const noun = KW_DET.test(before) || /['’]s$/i.test(before);
+            if (ok) out.push({ t: low, show: w, noun });
+            before = r0.toLowerCase();
+            if (ok && prev) out.push({ t: `${prev.t} ${low}`, show: `${prev.show} ${w}`, bi: true });
+            prev = ok ? { t: low, show: w } : null;
+        }
+    }
+    return out;
+}
+
+function keywordAnalysis(m, s, body) {
+    const secs = parseSections(m.text).filter(x => !x.group && x.title !== '(머리말)' && x.title !== '(제목 없음)');
+    const N = Math.max(1, secs.length);
+    const df = new Map();
+    for (const x of secs) for (const t of new Set(kwTerms(m.text.slice(x.start, x.end)).map(y => y.t))) df.set(t, (df.get(t) || 0) + 1);
+    const tf = new Map(), shown = new Map(), nouns = new Set();
+    for (const y of kwTerms(body)) {
+        tf.set(y.t, (tf.get(y.t) || 0) + 1);
+        if (y.noun) nouns.add(y.t);
+        const sv = shown.get(y.t) || new Map();
+        sv.set(y.show, (sv.get(y.show) || 0) + 1);
+        shown.set(y.t, sv);
+    }
+    // the title's subject ("I want a child") counts; its range and the "(date, place)" note do not
+    const subject = s.title.replace(RANGE_HEAD, '$5').replace(/^\s*[—–-]\s*/, '').replace(/\([^)]*\)/g, ' ');
+    const inTitle = new Set(kwTerms(subject).map(y => y.t));
+    const inNote = new Set(kwTerms((s.title.match(/\(([^)]*)\)/g) || []).join(' ')).map(y => y.t));
+    const stat = keywordStats(m);
+    const rows = [...tf.keys()].map(t => {
+        const d = df.get(t) || 1;
+        const chat = stat.chatPct(t);
+        const bi = t.includes(' ');
+        let score = tf.get(t) * Math.log((N + 1) / (d + 0.5)) * (inTitle.has(t) ? 2.5 : 1) * (bi ? 0.8 : 1);
+        if (bi && tf.get(t) < 2 && !inTitle.has(t)) score *= 0.3;
+        if (inNote.has(t) && !inTitle.has(t)) score *= 0.4; // a place or date from the title's note
+        if (!bi && /(?:ed|ing)$/.test(t) && !inTitle.has(t)) score *= 0.35; // verbs make poor triggers
+        if (!bi && /ly$/.test(t)) score *= 0.3;
+        if (nouns.has(t)) score *= 1.8;
+        const show = [...shown.get(t)].sort((x, y) => y[1] - x[1])[0][0];
+        const broad = (N >= 4 && d / N > 0.3) || chat > 0.2;
+        return { t, show, tf: tf.get(t), df: d, chat, score, broad, title: inTitle.has(t), noun: nouns.has(t) };
+    });
+    // "child" covers "children": keep the shorter stem when both are candidates
+    const keep = rows.filter(r => !rows.some(o => o !== r && !o.t.includes(' ') && o.t.length >= 4 && r.t.startsWith(o.t) && r.t !== o.t && !r.t.includes(' ')));
+    const distinct = keep.filter(r => !r.broad && (r.tf >= 2 || r.title || r.noun) && !(r.t.includes(' ') && r.tf < 2 && !r.title)).sort((a, b) => b.score - a.score).slice(0, 12);
+    const broad = keep.filter(r => r.broad && !r.t.includes(' ')).sort((a, b) => b.tf - a.tf).slice(0, 8);
+    return { distinct, broad, N, stat };
+}
+
+// how often a keyword would fire: share of chat messages containing it, sections mentioning it
+function keywordStats(m) {
+    const msgs = (ctx().chat || []).filter(Boolean).map(x => String(x.mes || '').toLowerCase());
+    const secs = parseSections(m.text).filter(x => !x.group);
+    const secTexts = secs.map(x => m.text.slice(x.start, x.end).toLowerCase());
+    const cache = new Map();
+    const chatPct = w => {
+        const k = String(w).toLowerCase();
+        if (!k || !msgs.length) return 0;
+        if (!cache.has(k)) cache.set(k, msgs.filter(x => x.includes(k)).length / msgs.length);
+        return cache.get(k);
+    };
+    const secCount = w => { const k = String(w).toLowerCase(); return secTexts.filter(x => x.includes(k)).length; };
+    // share of messages where any of `list` shows up
+    const fireRate = list => {
+        const ks = list.map(w => String(w).toLowerCase()).filter(Boolean);
+        return msgs.length && ks.length ? msgs.filter(x => ks.some(k => x.includes(k))).length / msgs.length : 0;
+    };
+    return { chatPct, secCount, fireRate, msgs: msgs.length, secs: secs.length };
+}
+
+const pct = x => x >= 0.995 ? '100%' : x > 0 && x < 0.01 ? '<1%' : `${Math.round(x * 100)}%`;
+
+// warnings for one keyword as the matcher sees it
+function keywordWarn(w, stat) {
+    const k = String(w).trim();
+    const out = [];
+    const chat = stat.chatPct(k);
+    if (chat > 0.3) out.push(`채팅 메시지 ${pct(chat)}에 나와요 — 거의 항상 켜져요`);
+    else if (chat > 0.15) out.push(`채팅 메시지 ${pct(chat)}에 나와요 — 자주 켜져요`);
+    if (/^[A-Za-z]{1,3}$/.test(k)) out.push('짧은 영어 단어라 다른 단어 속에서도 걸려요 (Set → settle)');
+    if (/^[가-힣]$/.test(k)) out.push('한 글자라 다른 말 속에서도 걸려요');
+    if (stat.secs >= 4 && stat.secCount(k) / stat.secs > 0.5) out.push(`섹션 ${stat.secs}개 중 ${stat.secCount(k)}개에 나오는 말이에요`);
+    return out;
 }
 
 // ---- spelling near-misses (no AI): a name in the new text that is one or two letters off a name in the archive
@@ -3090,9 +3233,14 @@ const AI_SYS_ASK = `You answer questions about an ongoing story using ONLY the a
 - After each claim, cite the section you used by copying its heading line exactly inside double brackets, e.g. [[## Y2 #48–#63 — The night ridge]].
 - Always answer in Korean, whatever language the archive or the question is in. Keep names as the archive spells them. Be concise.`;
 
-const AI_SYS_KEYWORDS = `You pick trigger keywords for a story archive section: character names, places, objects and unique terms that would appear in chat when this section matters.
-For every English or romanised term also give the spelling a Korean-language chat would use (e.g. Avalon, 아발론, Lighthouse, 등대).
-Output ONE line, comma-separated, at most 16 items, nothing else.`;
+const AI_SYS_KEYWORDS = `You choose trigger keywords for ONE section of a role-play story archive. The section stays out of the prompt until one of its keywords appears in the recent chat, so a keyword must show up in chat exactly when this section's events become relevant again, and rarely otherwise.
+Good keywords are the section's own subject matter: the topic, event, object, place, promise, wound or secret it records (for a section about a lost map: map, treasure, island). Think about the words a character would actually say when this comes up again.
+Bad keywords: main cast names; anything under BROAD TERMS; everyday words found in most scenes (bed, night, kiss, room, love, eat); very short English words that hide inside other words ("Set" fires on "settle").
+Matching is a plain case-insensitive substring search over raw chat text, which may be English or Korean. So:
+- English: the shortest stem that is still specific (map also matches maps; treasur matches treasure and treasury; betray matches betrayal and betrayed).
+- Korean: the forms a Korean chat would really use, as stems without particles (지도, 보물, 배신), with common synonyms. No one-syllable Korean stems.
+Give 4 to 8 concepts, most important first. One line per concept, nothing else, in this exact form:
+english stem | korean form, korean form | why it fits, in Korean, under 25 characters`;
 
 const AI_SYS_CONFLICT = `You are a continuity checker for a role-play story archive. Compare the NEW text with the EXISTING archive and list contradictions only:
 - the same name spelled differently
