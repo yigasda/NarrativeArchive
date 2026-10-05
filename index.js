@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '1.9.2';
+const VERSION = '1.9.3';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -285,6 +285,44 @@ function syncTrackedBoundary(m) {
     if (n > lastIndex()) return `아카이브 마지막 번호 #${n}가 채팅 마지막 #${lastIndex()}보다 커요 (다른 채팅 번호일 수 있어요)`;
     m.boundary = n;
     return null;
+}
+
+const hiddenIndexes = () => (ctx().chat || []).flatMap((x, i) => x?.is_system ? [i] : []);
+
+async function openUnhide() {
+    const c = ctx();
+    const last = lastIndex();
+    const hidden = hiddenIndexes();
+    if (!hidden.length) return toastr.info('숨긴 메시지가 없어요.');
+    const $root = $(`
+      <div class="na_popup">
+        <div class="na_block_head"><div>
+          <h4>숨김 해제</h4>
+          <p>숨긴 메시지 <b>${hidden.length}</b>개 (#${hidden[0]} ~ #${hidden[hidden.length - 1]}). 다시 보이게 할 범위를 고르세요.
+          해제한 메시지는 다시 프롬프트에 들어가요.</p>
+        </div></div>
+        <div class="na_ex_range">
+          <label># <input type="number" class="text_pole na_num na_uh_from" min="0" max="${last}" value="${hidden[0]}"></label>
+          <span>~</span>
+          <label># <input type="number" class="text_pole na_num na_uh_to" min="0" max="${last}" value="${hidden[hidden.length - 1]}"></label>
+        </div>
+        <div class="na_uh_info na_dim"></div>
+      </div>`);
+    const count = () => {
+        const a = parseInt($root.find('.na_uh_from').val(), 10) || 0, b = parseInt($root.find('.na_uh_to').val(), 10);
+        const n = hidden.filter(i => i >= a && i <= (Number.isFinite(b) ? b : last)).length;
+        $root.find('.na_uh_info').text(`이 범위에서 ${n}개가 다시 보여요.`);
+        return [a, Number.isFinite(b) ? b : last, n];
+    };
+    $root.find('input').on('input change', count);
+    count();
+    const r = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: false, okButton: '해제', cancelButton: '취소' });
+    if (r !== c.POPUP_RESULT.AFFIRMATIVE && r !== true) return;
+    const [a, b, n] = count();
+    if (!n) return toastr.info('이 범위엔 숨긴 메시지가 없어요.');
+    await c.executeSlashCommandsWithOptions(`/unhide ${Math.min(a, b)}-${Math.max(a, b)}`, { handleParserErrors: true, handleExecutionErrors: true });
+    toastr.success(`#${Math.min(a, b)} ~ #${Math.max(a, b)} 숨김 해제 (${n}개)`);
+    refreshStatus();
 }
 
 async function applyHide({ silent = false } = {}) {
@@ -829,6 +867,7 @@ function renderPanel() {
                   <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>경계선 이후 메시지 · 압축 지시문 붙여 복사</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step" id="na_open_append"><b>2</b><span><strong>아카이브에 추가</strong><small>압축본 붙여넣기 · 번호 검사 · 경계선 자동</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step na_step_sub" id="na_apply_hide"><b><i class="fa-solid fa-eye-slash"></i></b><span><strong>숨기기 다시 적용</strong><small>경계선 앞만 숨기고 뒤는 다시 보이게</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                  <button type="button" class="na_step na_step_sub" id="na_unhide"><b><i class="fa-solid fa-eye"></i></b><span><strong>숨김 해제</strong><small id="na_hidden_n">숨긴 메시지 다시 보이게</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
               </div>
             </section>
@@ -1083,6 +1122,7 @@ function bindPanel() {
     $('#na_open_extract').on('click', needChat(openExtract));
     $('#na_open_append').on('click', needChat(openAppend));
     $('#na_apply_hide').on('click', needChat(() => applyHide()));
+    $('#na_unhide').on('click', needChat(openUnhide));
     $('#na_track').on('change', async function () {
         if (!hasChat()) return;
         const m = getMeta();
@@ -1620,6 +1660,8 @@ async function refreshStatus() {
 
     const lx = m.lastExport;
     const lxNote = lx ? `<div class="na_dim">최근 내보냄 #${lx.from}–#${lx.to} · ${esc(timeLabel(lx.at))}</div>` : '';
+    const hn = hiddenIndexes().length;
+    $('#na_hidden_n').text(hn ? `지금 숨긴 메시지 ${hn}개 · 범위 골라 다시 보이게` : '숨긴 메시지 없음');
     $('#na_since').html(lxNote + (m.boundary >= 0
         ? `현재 마지막 <b>#${last}</b> · 압축 이후 메시지 <b>${after.length}</b>개 · 원문 <b>${fmt(afterTok)}</b> 토큰${over ? ` <span class="na_chip na_chip_warn">알림 기준 ${fmt(m.remindTok)} 넘음</span>` : ''}`
         : '<span class="na_dim">경계선이 아직 없어요. 직접 적거나 "아카이브에 추가"를 쓰면 자동으로 정해져요.</span>'));
@@ -2334,7 +2376,7 @@ function addWandMenu() {
     es.on(et.APP_READY, start);
     es.on(et.CHAT_CHANGED, onChatChanged);
     if (et.GENERATION_STARTED) es.on(et.GENERATION_STARTED, onGenerationStarted);
-    for (const ev of [et.MESSAGE_RECEIVED, et.MESSAGE_SENT, et.MESSAGE_DELETED]) {
+    for (const ev of [et.MESSAGE_RECEIVED, et.MESSAGE_SENT, et.MESSAGE_DELETED, et.MESSAGE_UPDATED]) {
         if (ev) es.on(ev, refreshStatusSoon);
     }
     if (document.getElementById('extensions_settings2')) start();
