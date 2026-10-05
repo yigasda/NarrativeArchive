@@ -2036,3 +2036,38 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_kw2 .na_kw_title { white-space: normal; overflow: visible; }
 .na_kw2 .na_pchip_broad, .na_kw2 .na_pchip_broad small { text-decoration: none; }
 .na_kw2 .na_kw2_fire b { font-size: 0.95em; }
+
+/* ============ diff / compare v2 */
+.na_df2_sides { display: flex; align-items: stretch; gap: 6px; }
+.na_df2_sides > i { align-self: center; color: var(--na-dim); }
+.na_df2_side { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; padding: 8px 12px; border-radius: 14px; background: var(--na-card); border: 1px solid var(--na-line); margin: 0; }
+.na_df2_side small { font-size: 0.75em; font-weight: 600; text-align: left; }
+.na_df2_side.old small { color: var(--na-bad); }
+.na_df2_side.new small { color: #2f8a55; }
+.na_df2_side b { font-size: 0.92em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.na_df2_side span { color: var(--na-dim); font-size: 0.78em; }
+.na_df2_side select { margin: 2px 0 0; padding: 4px 6px; font-size: 0.88em; border-radius: 8px; width: 100%; }
+.na_df2_body { display: flex; flex-direction: column; gap: 10px; }
+.na_df2_counts { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.82em; }
+.na_df2_counts > span:not(.na_spacer):not(.na_df2_tr) { padding: 2px 10px; border-radius: 999px; }
+.na_df2_counts .add, .na_df2_badge.add { background: color-mix(in srgb, #2f8a55 15%, transparent); color: color-mix(in srgb, #2f8a55 85%, var(--SmartThemeBodyColor, #222)); }
+.na_df2_counts .mod, .na_df2_badge.mod { background: color-mix(in srgb, #d49a1f 18%, transparent); color: color-mix(in srgb, #8a5a00 75%, var(--SmartThemeBodyColor, #222)); }
+.na_df2_counts .del, .na_df2_badge.del { background: var(--na-bad-soft); color: var(--na-bad); }
+.na_df2_badge.same { background: var(--na-card2); color: var(--na-dim); }
+.na_df2 .na_spacer { flex: 1; }
+.na_df2 .na_tr_btn { border-radius: 999px; font-size: 1em; padding: 3px 11px; }
+.na_df2_cards { display: flex; flex-direction: column; gap: 10px; }
+.na_df2_card { background: var(--na-card); border: 1px solid var(--na-line); border-radius: 18px; overflow: hidden; }
+.na_df2_head { display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: var(--na-card2); border-bottom: 1px solid var(--na-line); }
+.na_df2_head b { flex: 1; min-width: 0; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.na_df2_badge { flex: none; font-size: 0.72em; padding: 1px 8px; border-radius: 999px; }
+.na_df2_head .na_src_chip { flex: none; }
+.na_df2 .na_df2_lines { border: 0; border-radius: 0; font-family: inherit; font-size: 0.84em; line-height: 1.6; }
+.na_df2 .na_df2_lines > div { padding: 4px 12px 4px 0; }
+.na_df2 .na_df2_lines > div > span { font-weight: 700; opacity: 1; }
+.na_df2 .na_df2_lines .na_diff_add > span { color: #2f8a55; }
+.na_df2 .na_df2_lines .na_diff_del > span { color: var(--na-bad); }
+.na_df2 .na_df2_lines .na_diff_skip { font-size: 0.85em; color: var(--na-dim); opacity: 1; background: transparent; justify-content: flex-start; padding-left: 12px; }
+.na_df2_empty { padding: 8px 12px; color: var(--na-dim); font-size: 0.82em; }
+.na_df2_same { display: flex; align-items: center; gap: 8px; padding: 4px 12px; font-size: 0.85em; color: var(--na-dim); }
+.na_df2_same span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
