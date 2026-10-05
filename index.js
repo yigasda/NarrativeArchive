@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.18.0';
+const VERSION = '3.19.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -276,13 +276,13 @@ async function openWorlds() {
     const open = new Set();
     let importing = false;
     const $root = $(`
-      <div class="na_popup na_worlds">
-        <div class="na_block_head"><div><h4>세계관 공유</h4><p>여러 채팅이 같이 쓰는 설정(장소·신화·규칙 등)을 한 곳에 두고, 채팅마다 켜서 아카이브 앞에 같이 넣어요. 여기서 고치면 그 세계관을 켠 모든 채팅에 바로 반영돼요. 캐릭터에 묶어 두면 그 캐릭터의 새 채팅에서 저절로 켜져요.</p></div></div>
-        <div class="na_tool_actions">
-          <button type="button" class="na_btn na_small na_primary na_wd_new"><i class="fa-solid fa-plus"></i> 새 세계관</button>
-          <button type="button" class="na_btn na_small na_wd_imp"><i class="fa-solid fa-file-import"></i> 아카이브 섹션에서 가져오기</button>
-          <small class="na_dim na_wd_tok"></small>
+      <div class="na_popup na_v2 na_worlds">
+        <div class="na_v2_title"><b>세계관 공유</b><small>여러 채팅이 같이 쓰는 설정 · 고치면 켠 채팅 모두에 반영돼요. 캐릭터에 묶으면 그 캐릭터의 새 채팅에서 저절로 켜져요</small></div>
+        <div class="na_v2_row2">
+          <button type="button" class="na_v2_btn primary na_wd_new"><i class="fa-solid fa-plus"></i> 새 세계관</button>
+          <button type="button" class="na_v2_btn na_wd_imp">아카이브에서 가져오기</button>
         </div>
+        <div class="na_wd_sum"><span class="na_wd_on_n"></span><b class="na_wd_tok"></b></div>
         <div class="na_wd_import" hidden></div>
         <div class="na_wd_list"></div>
       </div>`);
@@ -290,34 +290,40 @@ async function openWorlds() {
     const draw = () => {
         const books = worldBooks(), ck = charKey(), cn = charName();
         $root.find('.na_wd_list').html(books.length ? books.map(w => {
-            const on = worldIsOn(m, w), bound = Array.isArray(w.chars) && w.chars.includes(ck);
+            const on = worldIsOn(m, w), bound = Array.isArray(w.chars) && w.chars.includes(ck), others = (w.chars || []).length - (bound ? 1 : 0);
+            const how = !on ? '꺼짐' : m.worldOn?.[w.id] === true ? '직접 켬' : `${esc(cn)} 채팅에 묶임`;
             return `
-            <div class="na_wd ${on ? 'on' : ''}" data-id="${esc(w.id)}">
+            <div class="na_v2_card na_wd ${on ? 'on' : ''} ${open.has(w.id) ? 'open' : ''}" data-id="${esc(w.id)}">
               <div class="na_wd_head">
-                <button type="button" class="na_icon na_icon_sm na_wd_fold" title="펼치기"><i class="fa-solid fa-chevron-${open.has(w.id) ? 'down' : 'right'}"></i></button>
-                <input type="text" class="text_pole na_wd_name" value="${esc(w.name || '')}" placeholder="이름">
-                <small class="na_dim na_wd_ttok" data-id="${esc(w.id)}"></small>
-                <label class="na_strip_item" title="이 채팅에 넣기"><input type="checkbox" class="na_toggle na_wd_on" ${on ? 'checked' : ''}><span>이 채팅</span></label>
+                <button type="button" class="na_wd_fold" aria-expanded="${open.has(w.id)}">
+                  <span class="na_wd_icon"><i class="fa-solid fa-earth-asia"></i></span>
+                  <span class="na_wd_name"><b>${esc(w.name || '세계관')}</b><small><span class="na_wd_ttok" data-id="${esc(w.id)}"></span> · ${how}</small></span>
+                </button>
+                <input type="checkbox" class="na_toggle na_wd_on" ${on ? 'checked' : ''} aria-label="이 채팅에 넣기" title="이 채팅에 넣기">
               </div>
-              <div class="na_wd_body" ${open.has(w.id) ? '' : 'hidden'}>
-                <textarea class="text_pole na_wd_text" rows="12" spellcheck="false" placeholder="## 장소 이름&#10;- 설정…">${esc(w.text || '')}</textarea>
+              ${open.has(w.id) ? `
+              <div class="na_wd_body">
+                <input type="text" class="text_pole na_wd_rename" value="${esc(w.name || '')}" placeholder="이름">
+                <textarea class="text_pole na_wd_text" rows="10" spellcheck="false" placeholder="## 장소 이름&#10;- 설정…">${esc(w.text || '')}</textarea>
                 <div class="na_wd_foot">
-                  ${ck ? `<label class="na_strip_item"><input type="checkbox" class="na_toggle na_wd_bind" ${bound ? 'checked' : ''}><span>${esc(cn)} 채팅에서 저절로 켜기</span></label>` : ''}
-                  <span class="na_dim na_wd_bound">${(w.chars || []).length > (bound ? 1 : 0) ? `다른 캐릭터 ${(w.chars || []).length - (bound ? 1 : 0)}명에도 묶임` : ''}</span>
+                  ${ck ? `<label class="na_wd_bindchip ${bound ? 'on' : ''}"><input type="checkbox" class="na_wd_bind" ${bound ? 'checked' : ''}>${faceHtml(cn, 20)}<span>${esc(cn)} 채팅에서 저절로 켜기</span></label>` : ''}
+                  ${others > 0 ? `<small class="na_v2_note">다른 캐릭터 ${others}명에도 묶임</small>` : ''}
                   <span class="na_spacer"></span>
-                  <button type="button" class="na_linkbtn na_danger na_wd_del"><i class="fa-regular fa-trash-can"></i> 지우기</button>
+                  <button type="button" class="na_linkbtn na_danger na_wd_del">지우기</button>
                 </div>
-              </div>
+              </div>` : ''}
             </div>`; }).join('') : '<div class="na_empty">아직 없어요. "새 세계관"을 만들거나 아카이브의 설정 섹션을 가져오세요.</div>');
         Promise.all(books.map(w => countTokens(String(w.text || '')))).then(ts => {
             books.forEach((w, i) => $root.find(`.na_wd_ttok[data-id="${w.id}"]`).text(`${fmt(ts[i])} 토큰`));
+            const onB = books.filter(w => worldIsOn(m, w));
             const t = books.reduce((a, w, i) => a + (worldIsOn(m, w) ? ts[i] : 0), 0);
-            $root.find('.na_wd_tok').text(t ? `이 채팅에 약 ${fmt(t)} 토큰` : '');
+            $root.find('.na_wd_on_n').text(books.length ? `이 채팅에 켜진 세계관 ${onB.length}개` : '');
+            $root.find('.na_wd_tok').text(t ? `약 ${fmt(t)} 토큰` : '');
         });
     };
     const book = el => worldBooks().find(w => w.id === String($(el).closest('.na_wd').data('id')));
     $root.on('click', '.na_wd_fold', function () { const w = book(this); open.has(w.id) ? open.delete(w.id) : open.add(w.id); draw(); });
-    $root.on('change', '.na_wd_name', async function () { book(this).name = this.value.trim() || '세계관'; await save(); });
+    $root.on('change', '.na_wd_rename', async function () { book(this).name = this.value.trim() || '세계관'; await save(); draw(); });
     $root.on('change', '.na_wd_text', async function () { book(this).text = this.value.replace(/\r\n/g, '\n'); await save(); draw(); });
     $root.on('change', '.na_wd_on', async function () { m.worldOn = { ...(m.worldOn || {}), [book(this).id]: this.checked }; await save(); draw(); });
     $root.on('change', '.na_wd_bind', async function () {
@@ -505,34 +511,41 @@ async function openLayers(s) {
     const stale = L.h && L.h !== layerHash(m.text, s);
     const plan = fadeCfg(m).on ? fadeWants(m).get(sectionKey(s)) : null;
     const use = plan ? fadeUse(m, m.text, s, plan.want) : null;
-    const name = { long: '원문', short: '짧은 버전', line: '한 줄' };
+    const name = { long: '원문', short: '짧게', line: '한 줄' };
+    let tab = use && use !== 'long' ? use : (L.short ? 'short' : 'long');
     const $root = $(`
-      <div class="na_popup na_layers">
-        <div class="na_block_head"><div><h4>섹션 버전</h4><p>${esc(s.title)}</p></div></div>
-        ${plan ? `<div class="na_check na_check_soft"><i class="fa-solid fa-layer-group"></i><div>망각 곡선: 지금 <b>${name[use]}</b>으로 들어가요${plan.why === 'pin' ? ' (📌 고정)' : plan.why === 'called' ? ' (지금 불려 온 섹션)' : use !== plan.want ? ` (원래는 ${name[plan.want]}인데 ${stale ? '원문이 바뀌어서' : '그 버전이 없어서'})` : ''}</div></div>` : ''}
-        ${stale ? '<div class="na_check na_check_warn"><i class="fa-solid fa-triangle-exclamation"></i><div>버전을 만든 뒤에 원문이 바뀌었어요. 고칠 때까지 원문으로 들어가요. 저장하면 지금 원문 기준이 돼요.</div></div>' : ''}
-        <details class="na_hcheck"><summary>원문 <span class="na_dim na_ly_tok_full"></span></summary><div class="na_ly_full">${esc(full)}</div></details>
-        <div class="na_kw_label">짧은 버전 <span class="na_dim na_ly_tok_short"></span></div>
-        <textarea class="text_pole na_ly_short" rows="6" spellcheck="false" placeholder="원문을 1/3쯤으로 줄인 것. 직접 붙여넣거나 초안 모델로 만들어요."></textarea>
-        <div class="na_kw_label">한 줄 <span class="na_dim na_ly_tok_line"></span></div>
-        <textarea class="text_pole na_ly_line" rows="2" spellcheck="false" placeholder="가장 중요한 일 한 문장"></textarea>
-        <div class="na_tool_actions">
-          ${draftReady() ? `<button type="button" class="na_btn na_small na_ly_draft"><i class="fa-solid fa-feather-pointed"></i> 초안 모델로 만들기</button><small class="na_dim">${esc(drLabel())} · 결과는 칸에 채워지고, 저장해야 들어가요</small>` : '<small class="na_dim">⚙ 설정 → AI · 번역 → 초안 모델을 정하면 여기서 바로 만들 수 있어요</small>'}
+      <div class="na_popup na_v2 na_layers">
+        <div class="na_v2_title"><small>섹션 버전</small><b>${esc(s.title)}</b></div>
+        ${plan ? `<div class="na_v2_card na_v2_note">망각 곡선: 지금 <b>${name[use]}</b>으로 들어가요${plan.why === 'pin' ? ' (📌 고정)' : plan.why === 'called' ? ' (지금 불려 온 섹션)' : use !== plan.want ? ` · 원래는 ${name[plan.want]}인데 ${stale ? '원문이 바뀌어서' : '그 버전이 없어서'}` : ''}</div>` : ''}
+        ${stale ? '<div class="na_xr_warn slim"><i class="fa-solid fa-triangle-exclamation"></i><div>버전을 만든 뒤에 원문이 바뀌었어요. 저장할 때까지 원문으로 들어가요.</div></div>' : ''}
+        <div class="na_v2_seg na_ly_tabs">
+          <button type="button" data-t="long"><span>원문</span><small class="na_ly_tok_long"></small></button>
+          <button type="button" data-t="short"><span>짧게${use === 'short' ? ' · 지금' : ''}</span><small class="na_ly_tok_short"></small></button>
+          <button type="button" data-t="line"><span>한 줄${use === 'line' ? ' · 지금' : ''}</span><small class="na_ly_tok_line"></small></button>
         </div>
+        <div class="na_ly_pane" data-t="long"><div class="na_v2_card na_ly_full">${esc(full)}</div></div>
+        <div class="na_ly_pane" data-t="short"><textarea class="text_pole na_ly_short" rows="8" spellcheck="false" placeholder="원문을 1/3쯤으로 줄인 것. 직접 붙여넣거나 초안 모델로 만들어요."></textarea></div>
+        <div class="na_ly_pane" data-t="line"><textarea class="text_pole na_ly_line" rows="3" spellcheck="false" placeholder="가장 중요한 일 한 문장"></textarea></div>
+        ${draftReady() ? `<div class="na_v2_row2"><button type="button" class="na_v2_btn na_ly_draft"><i class="fa-solid fa-feather-pointed"></i> 초안 모델로 ${L.short || L.line ? '다시' : '만들기'}</button></div><small class="na_v2_foot">${esc(drLabel())} · 짧게·한 줄을 같이 채워요. 저장해야 들어가요</small>` : '<small class="na_v2_foot">⚙ 설정 → AI · 번역 → 초안 모델을 정하면 여기서 바로 만들 수 있어요</small>'}
       </div>`);
     $root.find('.na_ly_short').val(L.short || '');
     $root.find('.na_ly_line').val(L.line || '');
+    const show = () => {
+        $root.find('.na_ly_tabs button').each(function () { $(this).toggleClass('on', this.dataset.t === tab); });
+        $root.find('.na_ly_pane').each(function () { this.hidden = this.dataset.t !== tab; });
+    };
     const tok = async () => {
         const [a, b, d] = await Promise.all([countTokens(full), countTokens($root.find('.na_ly_short').val()), countTokens($root.find('.na_ly_line').val())]);
-        $root.find('.na_ly_tok_full').text(`${fmt(a)} 토큰`);
-        $root.find('.na_ly_tok_short').text(b ? `${fmt(b)} 토큰 · 원문의 ${Math.round(b / Math.max(1, a) * 100)}%` : '');
-        $root.find('.na_ly_tok_line').text(d ? `${fmt(d)} 토큰` : '');
+        $root.find('.na_ly_tok_long').text(fmt(a));
+        $root.find('.na_ly_tok_short').text(b ? `${fmt(b)} · ${Math.round(b / Math.max(1, a) * 100)}%` : '없음');
+        $root.find('.na_ly_tok_line').text(d ? fmt(d) : '없음');
     };
-    tok();
+    show(); tok();
+    $root.on('click', '.na_ly_tabs button', function () { tab = this.dataset.t; show(); });
     $root.find('textarea').on('input', tok);
     $root.find('.na_ly_draft').on('click', async function () {
         const r = await withSpinner($(this), '만드는 중…', () => draftLayers(m, s));
-        if (r) { $root.find('.na_ly_short').val(r.short); $root.find('.na_ly_line').val(r.line); tok(); }
+        if (r) { $root.find('.na_ly_short').val(r.short); $root.find('.na_ly_line').val(r.line); tab = 'short'; show(); tok(); }
     });
     const res = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '저장', cancelButton: '닫기' });
     if (res !== c.POPUP_RESULT.AFFIRMATIVE && res !== true) return;
@@ -1708,10 +1721,14 @@ function renderPanel() {
                     <select id="na_capmode" class="text_pole"><option value="warn">경고만</option><option value="trim">오래된 섹션부터 빼기</option></select>
                   </label>
                   <label class="na_set_row"><span><span>망각 곡선</span><small>오래된 섹션은 짧은 버전·한 줄로 넣어요. 버전이 없으면 원문 그대로 · 📌 고정과 지금 불려 온 섹션은 늘 원문</small></span><input type="checkbox" id="na_fade" class="na_toggle"></label>
-                  <div id="na_fade_opts" hidden>
-                    <label class="na_set_row"><span><span>원문 그대로</span><small>최근 섹션 몇 개</small></span><input type="number" id="na_fade_full" class="text_pole" min="0" max="200"></label>
-                    <label class="na_set_row"><span><span>짧은 버전</span><small>그다음 몇 개 · 더 오래된 건 한 줄</small></span><input type="number" id="na_fade_short" class="text_pole" min="0" max="500"></label>
-                    <div class="na_set_row"><span><span>버전 채우기</span><small id="na_fade_info">-</small></span><button type="button" class="na_btn na_small" id="na_fade_fill"><i class="fa-solid fa-feather-pointed"></i> 초안 모델로</button></div>
+                  <div id="na_fade_opts" class="na_v2 na_fd" hidden>
+                    <div class="na_fd_save"><span><b id="na_fade_now">-</b><small>토큰</small><s id="na_fade_was"></s></span><span class="na_fd_pct" id="na_fade_pct"></span></div>
+                    <div class="na_fd_strip" id="na_fade_strip" aria-hidden="true"></div>
+                    <div class="na_fd_ends"><span>오래됨</span><span>최근</span></div>
+                    <div class="na_fd_level"><i class="long"></i><span><span>원문 그대로</span><small>최근 섹션</small></span><span class="na_fd_step"><button type="button" class="na_fd_btn" data-f="full" data-d="-1" aria-label="줄이기">−</button><input type="number" id="na_fade_full" class="text_pole" min="0" max="200"><button type="button" class="na_fd_btn" data-f="full" data-d="1" aria-label="늘리기">+</button></span></div>
+                    <div class="na_fd_level"><i class="short"></i><span><span>짧은 버전</span><small>그다음 섹션</small></span><span class="na_fd_step"><button type="button" class="na_fd_btn" data-f="short" data-d="-1" aria-label="줄이기">−</button><input type="number" id="na_fade_short" class="text_pole" min="0" max="500"><button type="button" class="na_fd_btn" data-f="short" data-d="1" aria-label="늘리기">+</button></span></div>
+                    <div class="na_fd_level"><i class="line"></i><span><span>한 줄</span><small>더 오래된 섹션 전부</small></span><b id="na_fade_lines">-</b></div>
+                    <div class="na_fd_fill"><span id="na_fade_info">-</span><button type="button" class="na_v2_btn primary" id="na_fade_fill"><i class="fa-solid fa-feather-pointed"></i> 초안 모델로 채우기</button></div>
                   </div>
                   <label class="na_set_row"><span><span>키워드 연동 범위</span><small>최근 메시지 몇 개에서 찾을지 · 연동 <b id="na_linked_n">0</b>개</small></span><input type="number" id="na_link_depth" class="text_pole" min="1" max="50"></label>
                   <label class="na_set_row"><span><span>AI 라우터</span><small>답하기 직전에 작은 모델이 "지금 대화에 필요한 섹션"을 골라 넣어요 · 따로 연결한 모델이 필요해요</small></span>
@@ -2324,6 +2341,7 @@ function bindPanel() {
     $('#na_fade').on('change', needChat(e => setFade({ on: e.target.checked })));
     $('#na_fade_full').on('change', needChat(e => setFade({ full: Math.max(0, parseInt(e.target.value, 10) || 0) })));
     $('#na_fade_short').on('change', needChat(e => setFade({ short: Math.max(0, parseInt(e.target.value, 10) || 0) })));
+    $('#na_fade_opts').on('click', '.na_fd_btn', needChat(e => { const f = e.currentTarget.dataset.f; const cur = fadeCfg(getMeta())[f]; setFade({ [f]: Math.max(0, cur + Number(e.currentTarget.dataset.d)) }); }));
     $('#na_fade_fill').on('click', needChat(e => { if (!draftReady() && !fadeFilling) return toastr.info('⚙ 설정 → AI · 번역 → 초안 모델을 먼저 정해 주세요. 섹션 카드의 버전 버튼에서 직접 붙여넣을 수도 있어요.'); fillFade($(e.currentTarget)); }));
     $('#na_router_test').on('click', needChat(async e => {
         const m = getMeta();
@@ -2378,10 +2396,20 @@ function syncPanel() {
         const fc = fadeCfg(m);
         $('#na_fade').prop('checked', fc.on); $('#na_fade_opts').prop('hidden', !fc.on);
         $('#na_fade_full').val(fc.full); $('#na_fade_short').val(fc.short);
-        if (fc.on && !fadeFilling) {
-            const miss = fadeMissing(m).length, f = lastBuild.faded || new Map();
-            const sh = [...f.values()].filter(v => v === 'short').length, ln = f.size - sh;
-            $('#na_fade_info').text(`지금 짧게 ${sh}개 · 한 줄 ${ln}개${miss ? ` · 버전 없는 섹션 ${miss}개` : ' · 다 채워졌어요'}`);
+        if (fc.on) {
+            const plan = [...fadeWants(m).values()];
+            const miss = fadeMissing(m).length;
+            if (!fadeFilling) $('#na_fade_info').html(miss ? `버전 없는 섹션 <b>${miss}</b>개 · 지금은 원문으로 들어가요` : '필요한 버전이 다 있어요');
+            $('#na_fade_lines').text(`${plan.filter(p => p.want === 'line').length}개`);
+            // one bar per numbered section, oldest first: tall = whole, mid = short, low = one line
+            $('#na_fade_strip').html(plan.map(p => { const use = fadeUse(m, m.text, p.s, p.want); const k = p.why === 'pin' ? 'pin' : use !== p.want && p.want !== 'long' ? 'miss' : use; return `<span class="${k}" title="${esc(p.s.title)}"></span>`; }).join(''));
+            const was = filterMuted(m, m.text);
+            cachedTokens(wrapText(m, was)).then(t => {
+                const now = lastBuild.tokens || 0;
+                $('#na_fade_now').text(fmt(now));
+                $('#na_fade_was').text(t > now ? fmt(t) : '');
+                $('#na_fade_pct').text(t > now ? `−${Math.round((1 - now / t) * 100)}%` : '').prop('hidden', !(t > now));
+            });
         }
     }
     const rs = routerState.get(currentChatId());
@@ -4016,7 +4044,7 @@ function extraBlocks(m) {
     if (kr.length) out += `\n\n# WHO KNOWS WHAT\n_Characters act only on what they know. Do not let anyone reveal or use a fact they do not know._\n${kr.map(r =>
         `- ${r.fact} — knows: ${r.knows.join(', ') || 'no one'}${r.unaware.length ? `; does not know: ${r.unaware.join(', ')}` : ''}${r.suspects.length ? `; suspects: ${r.suspects.join(', ')}` : ''}`).join('\n')}`;
     const vs = m.voiceInject && m.voice ? Object.entries(m.voice).filter(([who, v]) => String(v?.text || '').trim() && inCast(castNow, who) && !isExcluded(m, who)) : [];
-    if (vs.length) out += `\n\n# VOICE NOTES\n_Writing notes for dialogue only. Follow them silently: never mention, quote or refer to these notes in the story._\n${vs.map(([who, v]) => `## ${who}\n${String(v.text).trim()}`).join('\n')}`;
+    if (vs.length) out += `\n\n# VOICE NOTES\n_Writing notes for dialogue only. Follow them silently: never mention, quote or refer to these notes in the story._\n${vs.map(([who, v]) => `## ${who}\n${String(v.text).trim().replace(/^-\s*\[[^\]\n]{1,10}\]\s*/gm, '- ')}`).join('\n')}`;
     const qs = m.quoteInject ? pickedQuotes(m) : [];
     if (qs.length) out += `\n\n# VOICE SAMPLES\n_How each character talks. Match the voice; do not repeat these lines verbatim._\n${qs.map(q => `${q.who}: "${q.text}"`).join('\n')}`;
     return out;
@@ -4629,6 +4657,8 @@ STEPS
    sentence length · how they address people (names, titles, pet names) · questions or orders · formal or casual ·
    favorite words or images · humor or none · what they avoid saying · how feelings come out (or don't).
 3. Write each pattern as one rule that starts with a verb. Add a tiny example in quotes ONLY if it is copied exactly from the LINES.
+   Put a TAG in square brackets before the rule: ONE short Korean word for the kind of pattern
+   (길이 · 명령 · 질문 · 호칭 · 존댓말 · 반말 · 감정 · 유머 · 반복 · 말버릇 · 비유 · 금기 · 침묵).
 4. Keep only rules that make this voice different from other people. Drop generic ones like "speaks naturally" or "is emotional".
 5. Write 4 to 7 rules.
 
@@ -4644,15 +4674,15 @@ You think I'd let you walk there alone? Funny.
 Mara. Look at me. Breathe.
 I said I'd come back. I came back.
 Answer:
-- Uses very short sentences, often two or three words ("Sit. Eat.").
-- Gives orders instead of asking.
-- Says the other person's name alone before an important line ("Mara. Look at me.").
-- Hides worry behind dry one-word sarcasm ("Funny.").
-- Repeats his own words back to make a point ("I said I'd come back. I came back.").
-- Never names his feelings out loud.
+- [길이] Uses very short sentences, often two or three words ("Sit. Eat.").
+- [명령] Gives orders instead of asking.
+- [호칭] Says the other person's name alone before an important line ("Mara. Look at me.").
+- [유머] Hides worry behind dry one-word sarcasm ("Funny.").
+- [반복] Repeats his own words back to make a point ("I said I'd come back. I came back.").
+- [감정] Never names his feelings out loud.
 
 OUTPUT
-Only the rules, one per line, each starting with "- ". In English. Nothing else.`;
+Only the rules, one per line, each like: - [TAG] rule. The rule in English, the TAG in Korean. Nothing else.`;
 
 async function makeVoice(m, who) {
     const lines = [...new Set((m.quotes || []).filter(q => q.who === who).map(q => q.text))].slice(0, 150);
@@ -4669,17 +4699,18 @@ async function openQuotes() {
     const m = getMeta();
     m.quotes = Array.isArray(m.quotes) ? m.quotes : [];
     const $root = $(`
-      <div class="na_popup">
+      <div class="na_popup na_qb_root">
         <div class="na_block_head"><div><h4>대사 은행</h4><p>아카이브에 남은 대사를 인물별로 모아요. 고른 대사는 "말투 샘플"로, 대사에서 AI가 뽑은 말버릇 규칙(말투 지문)은 "조용히 따를 것"으로 같이 주입하면 RP 모델이 캐릭터 말투를 덜 잃어요.</p></div></div>
+        <div class="na_v2_tabs na_qb_tabs" role="tablist"><button type="button" data-p="quotes" class="on">대사 <span class="na_qb_nq"></span></button><button type="button" data-p="voice">말투 지문 <span class="na_qb_nv"></span></button></div>
+        <div class="na_qb_pane" data-pane="voice" hidden><div class="na_v2 na_vc_body"></div></div>
+        <div class="na_qb_pane" data-pane="quotes">
         <div class="na_tool_actions">
           <button type="button" class="na_btn na_small na_qb_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 모으기</button>
           <button type="button" class="na_btn na_small na_qb_find"><i class="fa-solid fa-magnifying-glass"></i> 아카이브에서 모으기</button>
-          <button type="button" class="na_btn na_small na_qb_vall" title="대사가 3개 이상인 인물마다 AI가 말버릇 규칙을 뽑아요"><i class="fa-solid fa-fingerprint"></i> 말투 지문 만들기</button>
           <button type="button" class="na_linkbtn na_danger na_qb_clear"><i class="fa-regular fa-trash-can"></i> 전체 삭제</button>
         </div>
         <div class="na_inject_strip">
           <label class="na_strip_item"><input type="checkbox" class="na_toggle na_qb_inject"><span>대사 주입</span></label>
-          <label class="na_strip_item" title="말투 지문을 '조용히 따를 것'으로 주입해요"><input type="checkbox" class="na_toggle na_qb_vinject"><span>지문 주입</span></label>
           <label class="na_strip_item">인물마다 <input type="number" class="text_pole na_num na_qb_max" min="1" max="10"> 개</label>
           <small class="na_dim na_qb_tok"></small>
         </div>
@@ -4692,71 +4723,115 @@ async function openQuotes() {
         <div class="na_qb_pickhost"></div>
         <input type="search" class="text_pole na_qb_q" placeholder="인물·대사로 찾기">
         <div class="na_qb_list"></div>
+        </div>
       </div>`);
     $root.find('.na_qb_inject').prop('checked', !!m.quoteInject);
-    $root.find('.na_qb_vinject').prop('checked', !!m.voiceInject);
     $root.find('.na_qb_max').val(m.quoteMax || 3);
+    // ---- 말투 지문 pane: one open card, the rest as rows; characters with enough lines but no fingerprint as dashed rows
+    let vOpen = null, vEdit = null;
+    const parseRule = l => {
+        let t = l.replace(/^[-*•]\s*/, '').trim();
+        const tag = (t.match(/^\[([^\]\n]{1,10})\]\s*/) || [, ''])[1];
+        t = t.replace(/^\[[^\]\n]{1,10}\]\s*/, '');
+        const ex = t.match(/\s*\(\s*((?:["“][^"”]+["”][\s.,…]*)+)\)\s*\.?\s*$/);
+        return { tag, rule: ex ? t.slice(0, ex.index).replace(/[\s,]+$/, '') + '.' : t, ex: ex ? ex[1].trim() : '' };
+    };
+    const renderVoice = () => {
+        const voice = m.voice && typeof m.voice === 'object' ? m.voice : {};
+        const counts = new Map();
+        for (const x of m.quotes) if (x.who && x.who !== '?' && !isExcluded(m, x.who)) counts.set(x.who, (counts.get(x.who) || 0) + 1);
+        const whos = Object.keys(voice).sort((a, b) => (counts.get(b) || 0) - (counts.get(a) || 0));
+        const missing = [...counts].filter(([who, n]) => n >= 3 && !voice[who]).map(([who]) => who);
+        vOpen = whos.includes(vOpen) ? vOpen : whos[0] || null;
+        const $b = $root.find('.na_vc_body');
+        $b.html(`
+          <label class="na_v2_card na_v2_switchrow"><span class="na_vc_sw"><b>조용히 주입</b><small>“본문에서 언급하지 말 것”을 붙여 보내요<span class="na_vc_tok"></span></small></span><input type="checkbox" class="na_toggle na_vc_inject" ${m.voiceInject ? 'checked' : ''}></label>
+          ${whos.map(who => { const v = voice[who], n = counts.get(who) || 0, rules = String(v.text || '').split('\n').map(l => l.trim()).filter(Boolean);
+            if (who !== vOpen) return `<button type="button" class="na_v2_card na_vc_row" data-who="${esc(who)}">${faceHtml(who, 32)}<span class="na_vc_who"><b>${esc(who)}</b><small>규칙 ${rules.length}개</small></span><i class="fa-solid fa-chevron-right"></i></button>`;
+            return `
+            <div class="na_v2_card na_vc_card" data-who="${esc(who)}">
+              <div class="na_vc_head">${faceHtml(who, 40)}<span class="na_vc_who"><b>${esc(who)}</b><small>대사 ${v.n || '?'}개로 만듦${v.n && v.n !== Math.min(150, n) ? ` · 지금 ${n}개` : ''}</small></span><button type="button" class="na_v2_pillbtn na_vc_make" ${n >= 3 ? '' : 'disabled'}><i class="fa-solid fa-rotate"></i> 다시</button></div>
+              ${vEdit === who
+                ? `<textarea class="text_pole na_vc_text" rows="${Math.min(10, rules.length + 2)}" spellcheck="false">${esc(v.text)}</textarea><small class="na_v2_note">한 줄에 규칙 하나 · 앞의 [태그]는 화면에만 보이고 주입할 땐 빠져요</small>`
+                : `<div class="na_vc_rules">${rules.map(l => { const r = parseRule(l); return `<div class="na_vc_rule">${r.tag ? `<span class="na_vc_tag">${esc(r.tag)}</span>` : ''}<span><span>${esc(r.rule)}</span>${r.ex ? `<i>${esc(r.ex)}</i>` : ''}</span></div>`; }).join('')}</div>`}
+              <div class="na_vc_foot"><button type="button" class="na_linkbtn na_vc_edit">${vEdit === who ? '그만 고치기' : '직접 고치기'}</button><button type="button" class="na_linkbtn na_danger na_vc_del">지우기</button></div>
+            </div>`; }).join('')}
+          ${missing.map(who => `<div class="na_v2_card na_vc_row dashed" data-who="${esc(who)}">${faceHtml(who, 32)}<span class="na_vc_who"><b>${esc(who)}</b><small>아직 없음 · 대사 ${counts.get(who)}개</small></span><button type="button" class="na_linkbtn na_vc_make">만들기</button></div>`).join('')}
+          ${!whos.length && !missing.length ? '<div class="na_empty">대사가 3개 이상인 인물이 없어요. "대사" 탭에서 먼저 대사를 모아 주세요.</div>' : ''}
+          ${missing.length > 1 ? `<button type="button" class="na_v2_btn primary wide na_vc_all"><i class="fa-solid fa-fingerprint"></i> 없는 지문 ${missing.length}개 한꺼번에 만들기</button>` : ''}
+          <small class="na_v2_foot">AI 기능 모델(${esc(aiLabel())})이 그 인물 대사만 읽고 말버릇 규칙을 뽑아요</small>`);
+        const blk = extraBlocks({ ...m, knowInject: false, quoteInject: false, voiceInject: true });
+        if (blk) countTokens(blk).then(t => $b.find('.na_vc_tok').text(` · 약 ${fmt(t)} 토큰`));
+    };
     const render = () => {
         const q = $root.find('.na_qb_q').val().trim().toLowerCase();
         const by = new Map();
         m.quotes.forEach((x, i) => { if (q && !`${x.who} ${x.text}`.toLowerCase().includes(q)) return; if (!by.has(x.who)) by.set(x.who, []); by.get(x.who).push({ x, i }); });
-        const voice = m.voice && typeof m.voice === 'object' ? m.voice : {};
-        if (!q) for (const who of Object.keys(voice)) if (!by.has(who)) by.set(who, []);
         const picked = new Set(pickedQuotes(m));
         const cast = currentCast(m);
         $root.find('.na_qb_clear').prop('hidden', !m.quotes.length);
         const ex = Array.isArray(m.quoteExclude) ? m.quoteExclude : [];
         $root.find('.na_qb_excl_chips').html(ex.length ? ex.map(n => `<span class="na_pchip na_qb_exchip">${esc(n)}<button type="button" class="na_qb_unex" data-n="${esc(n)}" title="다시 모으기">×</button></span>`).join('') : '<small class="na_dim">없음</small>');
+        $root.find('.na_qb_nq').text(m.quotes.length || '');
+        $root.find('.na_qb_nv').text(Object.keys(m.voice || {}).length || '');
+        renderVoice();
         $root.find('.na_qb_list').html(by.size ? [...by].sort((a, b) => (a[0] === '?') - (b[0] === '?') || b[1].length - a[1].length).map(([who, xs]) => `
           <div class="na_qb_group ${who !== '?' && !inCast(cast, who) ? 'na_qb_away' : ''}"><div class="na_qb_who">${esc(who === '?' ? '말한 사람 모름' : who)} <span class="na_dim">${xs.length}개 · 고른 ${xs.filter(y => y.x.on).length}</span>${who !== '?' && !inCast(cast, who) ? '<span class="na_qb_awaytag" title="STATE의 인물 제목과 최근 섹션 4개에 안 나와요. 다시 나오면 자동으로 주입돼요">지금 안 나와서 주입 안 함</span>' : ''}
             <span class="na_qb_gbtns" data-who="${esc(who)}">
               ${who !== '?' ? '<button type="button" class="na_icon na_icon_sm na_qb_gexcl" title="이 인물 빼기 (대사 지우고 앞으로도 안 모음)"><i class="fa-solid fa-user-slash"></i></button>' : ''}
-              ${who !== '?' && xs.length >= 3 ? `<button type="button" class="na_icon na_icon_sm na_qb_gvoice" title="${voice[who] ? '말투 지문 다시 만들기' : '말투 지문 만들기'}"><i class="fa-solid fa-fingerprint"></i></button>` : ''}
               ${xs.length ? '<button type="button" class="na_icon na_icon_sm na_qb_gdel" title="이 인물 대사 모두 지우기"><i class="fa-regular fa-trash-can"></i></button>' : ''}
             </span></div>
-            ${voice[who] ? `<div class="na_qb_voice" data-who="${esc(who)}">
-              <div class="na_qb_vhead"><i class="fa-solid fa-fingerprint"></i><b>말투 지문</b><small class="na_dim">대사 ${voice[who].n || '?'}개로${voice[who].n && voice[who].n !== xs.length ? ` · 지금 ${xs.length}개` : ''} · 고쳐 써도 돼요</small><button type="button" class="na_icon na_icon_sm na_qb_vdel" title="지문 지우기"><i class="fa-solid fa-xmark"></i></button></div>
-              <textarea class="text_pole na_qb_vtext" rows="${Math.min(8, String(voice[who].text).split('\n').length + 1)}" spellcheck="false">${esc(voice[who].text)}</textarea>
-            </div>` : ''}
             ${xs.map(({ x, i }) => `<div class="na_qb_row ${x.on ? 'on' : ''} ${x.on && !picked.has(x) ? 'over' : ''}" data-i="${i}">
               <input type="checkbox" class="na_qb_on" ${x.on ? 'checked' : ''}>
               <div class="na_qb_text">“${esc(x.text)}”<div class="na_dim na_qb_src">${esc(String(x.src || '').slice(0, 50))}</div></div>
               <input type="text" class="text_pole na_qb_whoin" value="${esc(x.who)}" title="말한 사람">
               <button type="button" class="na_icon na_icon_sm na_qb_del" title="빼기"><i class="fa-solid fa-xmark"></i></button>
             </div>`).join('')}</div>`).join('') : '<div class="na_empty">아직 없어요. "아카이브에서 모으기"를 눌러 보세요.</div>');
-        const blk = extraBlocks({ ...m, knowInject: false, quoteInject: true });
+        const blk = extraBlocks({ ...m, knowInject: false, quoteInject: true, voiceInject: false });
         if (blk) countTokens(blk).then(t => $root.find('.na_qb_tok').text(`약 ${fmt(t)} 토큰`)); else $root.find('.na_qb_tok').text('');
     };
     render();
     const save = async () => { await saveMeta(); applyInjection(); syncPanel(); render(); };
     $root.find('.na_qb_q').on('input', render);
-    $root.find('.na_qb_vinject').on('change', async function () { m.voiceInject = this.checked; await save(); });
-    $root.on('change', '.na_qb_vtext', async function () {
-        const who = String($(this).closest('.na_qb_voice').data('who'));
+    $root.on('click', '.na_qb_tabs button', function () {
+        const p = this.dataset.p;
+        $root.find('.na_qb_tabs button').each(function () { $(this).toggleClass('on', this.dataset.p === p); });
+        $root.find('.na_qb_pane').each(function () { this.hidden = this.dataset.pane !== p; });
+    });
+    $root.on('change', '.na_vc_inject', async function () { m.voiceInject = this.checked; await save(); });
+    $root.on('click', '.na_vc_row', function () { vOpen = String($(this).data('who')); vEdit = null; renderVoice(); });
+    $root.on('click', '.na_vc_edit', function () { const who = String($(this).closest('.na_vc_card').data('who')); vEdit = vEdit === who ? null : who; renderVoice(); });
+    $root.on('change', '.na_vc_text', async function () {
+        const who = String($(this).closest('.na_vc_card').data('who'));
         const v = this.value.trim();
         if (v) m.voice[who] = { ...m.voice[who], text: v }; else delete m.voice[who];
+        vEdit = null;
         await save();
     });
-    $root.on('click', '.na_qb_vdel', async function () { delete m.voice[String($(this).closest('.na_qb_voice').data('who'))]; await save(); });
-    $root.on('click', '.na_qb_gvoice', async function () {
-        const who = String($(this).closest('.na_qb_gbtns').data('who'));
-        const ok = await withSpinner($(this), '', async () => { await makeVoice(m, who); return true; });
-        if (ok) { await save(); toastr.success(`${who}: 말투 지문을 만들었어요${m.voiceInject ? '' : '. "지문 주입"을 켜면 RP 모델에 들어가요'}`); }
+    $root.on('click', '.na_vc_del', async function () {
+        const who = String($(this).closest('.na_vc_card').data('who'));
+        if (!await confirm('말투 지문 지우기', `${who}의 말투 지문을 지울까요?`)) return;
+        delete m.voice[who]; await save();
     });
-    $root.find('.na_qb_vall').on('click', async function () {
+    $root.on('click', '.na_vc_make', async function () {
+        const who = String($(this).closest('[data-who]').data('who'));
+        const ok = await withSpinner($(this), '만드는 중…', async () => { await makeVoice(m, who); return true; });
+        if (ok) { vOpen = who; await save(); toastr.success(`${who}: 말투 지문을 만들었어요${m.voiceInject ? '' : '. "조용히 주입"을 켜면 RP 모델에 들어가요'}`); }
+    });
+    $root.on('click', '.na_vc_all', async function () {
         const counts = new Map();
         for (const x of m.quotes) if (x.who && x.who !== '?' && !isExcluded(m, x.who)) counts.set(x.who, (counts.get(x.who) || 0) + 1);
         const voice = m.voice || {};
         // only the missing ones, and the ones whose lines changed since
         const todo = [...counts].filter(([who, n]) => n >= 3 && (!voice[who] || voice[who].n !== Math.min(150, n))).map(([who]) => who);
-        if (!todo.length) return toastr.info(counts.size ? '새로 만들 지문이 없어요. 인물 옆 지문 버튼으로 하나씩 다시 만들 수 있어요.' : '대사가 3개 이상인 인물이 없어요.');
+        if (!todo.length) return toastr.info(counts.size ? '새로 만들 지문이 없어요. 인물 카드의 "다시"로 하나씩 다시 만들 수 있어요.' : '대사가 3개 이상인 인물이 없어요.');
         const $b = $(this);
         let done = 0;
         await withSpinner($b, '만드는 중…', async () => {
             for (const who of todo) { $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> ${esc(who)} (${done + 1}/${todo.length})`); await makeVoice(m, who); done++; await saveMeta(); }
         });
         await save();
-        if (done) toastr.success(`말투 지문 ${done}개를 만들었어요${m.voiceInject ? '' : '. "지문 주입"을 켜면 RP 모델에 들어가요'}`);
+        if (done) toastr.success(`말투 지문 ${done}개를 만들었어요${m.voiceInject ? '' : '. "조용히 주입"을 켜면 RP 모델에 들어가요'}`);
     });
     $root.find('.na_qb_inject').on('change', async function () { m.quoteInject = this.checked; await save(); });
     $root.find('.na_qb_max').on('change', async function () { m.quoteMax = Math.min(10, Math.max(1, parseInt(this.value, 10) || 3)); this.value = m.quoteMax; await save(); });
@@ -5452,16 +5527,15 @@ function storyTimeline(m) {
 async function openCalendar() {
     const c = ctx();
     const m = getMeta();
+    let logSel = null;
     const $root = $(`
-      <div class="na_popup na_cal">
-        <div class="na_block_head"><div><h4>이야기 달력</h4><p>제목 괄호 속 날짜를 읽어서 섹션을 시간 순서로 늘어놓아요. 날짜가 거꾸로 가는 곳은 빨갛게 표시해요. 누르면 그 섹션으로 가요.</p></div></div>
+      <div class="na_popup na_v2 na_cal">
+        <div class="na_v2_titlebar"><div class="na_v2_title"><b>이야기 달력</b><small class="na_cal_sum"></small></div><div class="na_v2_seg na_cal_logs"></div></div>
         <div class="na_cal_body"></div>
-        <details class="na_hcheck na_cal_cfg">
-          <summary><i class="fa-solid fa-calendar-days"></i> 달 이름 <span class="na_chip na_dim">한 줄에 한 달력</span></summary>
-          <div class="na_cal_cfg_body">
-            <small class="na_dim">한 줄에 달력 하나, 달은 순서대로 쉼표로, 다른 표기는 / 로 (예: Mekhir/Mechir). 비우면 기본값(이집트·영어·한국어 달).</small>
-            <textarea class="text_pole na_cal_ta" rows="4" spellcheck="false"></textarea>
-          </div>
+        <details class="na_v2_card na_v2_more na_cal_cfg">
+          <summary><i class="fa-solid fa-calendar-days"></i> 달 이름 바꾸기</summary>
+          <small class="na_v2_note">한 줄에 달력 하나, 달은 순서대로 쉼표로, 다른 표기는 / 로 (예: Mekhir/Mechir). 비우면 기본값(이집트·영어·한국어 달).</small>
+          <textarea class="text_pole na_cal_ta" rows="4" spellcheck="false"></textarea>
         </details>
       </div>`);
     const g = globalSettings();
@@ -5470,35 +5544,45 @@ async function openCalendar() {
         g.calendars = v && v !== CAL_DEFAULT ? v : '';
         saveGlobal(); draw();
     });
+    const strip = t => t.replace(/\s*\([^()]*\)\s*(\[[^\]]*\])?\s*$/, '').replace(RANGE_HEAD, (all, p, a, dash, b, rest) => rest.replace(/^\s*[—–-]\s*/, '')) || t;
     const draw = () => {
         const tl = storyTimeline(m);
         const cals = calendars();
-        const dated = tl.reduce((a, l) => a + l.rows.filter(r => r.date).length, 0);
         if (!tl.length) { $root.find('.na_cal_body').html('<div class="na_empty">"## #시작–#끝 — 제목 (날짜…)" 형식의 섹션이 없어요.</div>'); return; }
-        const monthName = (r) => r.date ? (r.date.d ? r.date.label : `${cals[r.date.cal][r.date.m][0]} (날짜 없음)`) : '';
+        const l = tl.find(x => x.prefix === logSel) || tl[tl.length - 1];
+        logSel = l.prefix;
+        const name = p => p === '—' ? '로그' : p;
+        $root.find('.na_cal_logs').html(tl.length > 1 ? tl.map(x => `<button type="button" data-p="${esc(x.prefix)}" class="${x === l ? 'on' : ''}">${esc(name(x.prefix))}</button>`).join('') : '');
+        const dated = l.rows.filter(r => r.date).length;
+        $root.find('.na_cal_sum').text(`${tl.length > 1 ? `${name(l.prefix)} · ` : ''}섹션 ${l.rows.length}개 · 날짜 ${dated}개`);
+        // month groups: a dated row opens a new group when its month changes; undated rows stay in the current one
+        const groups = [];
+        for (const r of l.rows) {
+            const key = r.date ? `${r.date.cal}:${r.date.m}:${r.year}` : null;
+            const cur = groups[groups.length - 1];
+            if (!cur || (key && key !== cur.key)) groups.push({ key, name: r.date ? cals[r.date.cal][r.date.m][0] : '날짜 없음', year: r.year, gap: r.skip || '', rows: [r] });
+            else cur.rows.push(r);
+            if (!cur && !key) groups[0].key = null;
+        }
+        const day = r => r.date?.d ? (r.date.m2 !== r.date.m ? `${r.date.d}–` : r.date.d2 && r.date.d2 !== r.date.d ? `${r.date.d}–${r.date.d2}` : `${r.date.d}`) : (r.date ? '·' : '?');
+        const sub = r => r.date?.d && r.date.m2 !== r.date.m ? `~${cals[r.date.cal][r.date.m2][0]} ${r.date.d2 || ''}`.trim() : (r.time || (r.date ? '' : r.rel || ''));
+        const place = r => headingPlaces(r.s.title, cals).join(' → ');
         $root.find('.na_cal_body').html(`
-          ${dated ? '' : '<div class="na_check na_check_soft"><i class="fa-solid fa-circle-info"></i><div>제목에서 날짜를 못 찾았어요. 아래 "달 이름"에 이야기 속 달력을 적어 주세요.</div></div>'}
-          ${tl.map(l => `
-            <div class="na_cal_log">
-              <div class="na_cal_loghead"><b>${esc(l.prefix === '—' ? '로그' : l.prefix)}</b><span class="na_dim">섹션 ${l.rows.length}개 · 날짜 ${l.rows.filter(r => r.date).length}개${l.warnings ? ` · <span class="na_warn_txt">거꾸로 ${l.warnings}곳</span>` : ''}</span></div>
-              <div class="na_cal_line">
-                ${l.rows.map(r => `
-                  ${r.skip ? `<div class="na_cal_gap"><span>${esc(r.skip)}</span></div>` : ''}
-                  <button type="button" class="na_cal_row ${r.warn ? 'na_cal_warn' : ''} ${r.date ? '' : 'na_cal_nodate'}" data-start="${r.s.start}">
-                    <span class="na_cal_when">
-                      <b>${esc(monthName(r) || r.rel || '?')}</b>
-                      <small>${esc([r.date && r.rel ? r.rel : '', r.time].filter(Boolean).join(' · '))}${r.year > 1 && r.date ? ` · ${r.year}년째` : ''}</small>
-                    </span>
-                    <span class="na_cal_what">
-                      <span>${esc(r.s.title.replace(/\s*\([^()]*\)\s*(\[[^\]]*\])?\s*$/, '').replace(RANGE_HEAD, (all, p, a, dash, b, rest) => rest.replace(/^\s*[—–-]\s*/, '')) || r.s.title)}</span>
-                      <small class="na_dim">${esc((r.s.title.match(/#\d+\s*[–—~-]\s*#?\d+/) || [''])[0])}${r.note ? ` · ${esc(r.note)}` : ''}</small>
-                      ${r.warn ? `<small class="na_warn_txt">${esc(r.warn)}</small>` : ''}
-                    </span>
-                  </button>`).join('')}
-              </div>
+          ${dated ? '' : '<div class="na_v2_card na_v2_note">제목에서 날짜를 못 찾았어요. 아래 "달 이름 바꾸기"에 이야기 속 달력을 적어 주세요.</div>'}
+          ${l.warnings ? `<div class="na_xr_warn slim"><i class="fa-solid fa-triangle-exclamation"></i><div><b>날짜가 거꾸로 가는 곳 ${l.warnings}개</b></div><button type="button" class="na_linkbtn na_cal_jump">보기</button></div>` : ''}
+          ${groups.map(gr => `
+            ${gr.gap ? `<div class="na_cal_gap2"><span>${esc(/개월$/.test(gr.gap) ? `${gr.gap} 지남` : gr.gap)}</span></div>` : ''}
+            <div class="na_cal_month"><b>${esc(gr.name)}</b><small>섹션 ${gr.rows.length}${gr.year > 1 ? ` · ${gr.year}년째` : ''}</small></div>
+            <div class="na_v2_card na_v2_list">${gr.rows.map(r => `
+              <button type="button" class="na_cal_item ${r.warn ? 'warn' : ''}" data-start="${r.s.start}">
+                <span class="na_cal_day"><b>${esc(day(r))}</b><small>${esc(sub(r))}</small></span>
+                <span class="na_cal_txt"><span>${esc(strip(r.s.title))}</span><small>${esc(r.warn || [(r.s.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [''])[0], place(r), r.note].filter(Boolean).join(' · '))}</small></span>
+              </button>`).join('')}
             </div>`).join('')}`);
     };
-    $root.on('click', '.na_cal_row', function () { const st = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); });
+    $root.on('click', '.na_cal_logs button', function () { logSel = String($(this).data('p')); draw(); });
+    $root.on('click', '.na_cal_jump', () => $root.find('.na_cal_item.warn')[0]?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+    $root.on('click', '.na_cal_item', function () { const st = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); });
     draw();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
@@ -5571,31 +5655,48 @@ async function openRoute() {
     const c = ctx();
     const m = getMeta();
     const logs = storyRoute(m);
-    const range = st => { const a = st.secs[0].s.title.match(RANGE_HEAD), b = st.secs[st.secs.length - 1].s.title.match(RANGE_HEAD); return `#${a[2]}–#${b[4]}`; };
+    const cals = calendars();
+    let logSel = null, open = null;
+    const name = p => p === '—' ? '로그' : p;
+    const range = st => { const a = st.secs[0].s.title.match(RANGE_HEAD), b = st.secs[st.secs.length - 1].s.title.match(RANGE_HEAD); return `${a[1] ? `${a[1]} ` : ''}#${a[2]} – #${b[4]}`; };
+    const when = st => { const d = st.secs.map(x => headingDate(x.s.title, cals).date).filter(Boolean); if (!d.length) return ''; const a = d[0].label, b = d[d.length - 1].label; return a === b ? a : `${a} – ${b}`; };
+    const strip = t => t.replace(/\s*\([^()]*\)\s*(\[[^\]]*\])?\s*$/, '').replace(RANGE_HEAD, (all, p, a, d, b, rest) => rest.replace(/^\s*[—–-]\s*/, '')) || t;
     const $root = $(`
-      <div class="na_popup na_route">
-        <div class="na_block_head"><div><h4>이동 경로</h4><p>제목 괄호 속 장소를 따라 이야기가 어디서 어디로 옮겨 갔는지 보여 줘요. 장소를 누르면 그곳에서 있었던 섹션이 펼쳐져요.</p></div></div>
-        ${logs.length ? logs.map(l => `
-          <div class="na_route_log">
-            <div class="na_cal_loghead"><b>${esc(l.prefix === '—' ? '로그' : l.prefix)}</b><span class="na_dim">${l.stops.filter(x => x.place !== '?').length}곳 머묾</span></div>
-            <div class="na_route_chain">${l.stops.map((st, i) => `${i ? '<i class="fa-solid fa-arrow-right-long na_route_arrow"></i>' : ''}<button type="button" class="na_route_stop ${st.place === '?' ? 'na_route_unknown' : ''}" data-log="${esc(l.prefix)}" data-i="${i}"><b>${esc(st.place === '?' ? '장소 없음' : st.place)}</b><small>${esc(range(st))} · ${st.secs.length}</small></button>`).join('')}</div>
-            <div class="na_route_detail" hidden></div>
-          </div>`).join('') : '<div class="na_empty">"## #시작–#끝 — 제목 (날짜, 장소)" 형식의 섹션이 없어요.</div>'}
+      <div class="na_popup na_v2 na_route">
+        <div class="na_v2_titlebar"><div class="na_v2_title"><b>이동 경로</b><small class="na_rt_sum"></small></div><div class="na_v2_seg na_rt_logs"></div></div>
+        <div class="na_rt_body"></div>
       </div>`);
-    $root.on('click', '.na_route_stop', function () {
-        const l = logs.find(x => x.prefix === String($(this).data('log')));
-        const st = l.stops[Number($(this).data('i'))];
-        const $d = $(this).closest('.na_route_log').find('.na_route_detail');
-        const same = $d.data('i') === Number($(this).data('i')) && !$d.prop('hidden');
-        $(this).closest('.na_route_chain').find('.na_route_stop').removeClass('active');
-        if (same) { $d.prop('hidden', true); return; }
-        $(this).addClass('active');
-        $d.data('i', Number($(this).data('i'))).prop('hidden', false).html(`<div class="na_route_dhead"><b>${esc(st.place === '?' ? '장소 없음' : st.place)}</b></div>` + st.secs.map(x => `
-          <button type="button" class="na_cal_row" data-start="${x.s.start}">
-            <span class="na_cal_what"><span>${esc(x.s.title.replace(/\s*\([^()]*\)\s*(\[[^\]]*\])?\s*$/, ''))}</span>${x.rooms.length ? `<small class="na_dim"><i class="fa-solid fa-location-dot"></i> ${esc(x.rooms.join(' → '))}</small>` : ''}</span>
-          </button>`).join(''));
-    });
-    $root.on('click', '.na_route_detail .na_cal_row', function () { const s0 = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(s0); });
+    const draw = () => {
+        if (!logs.length) { $root.find('.na_rt_body').html('<div class="na_empty">"## #시작–#끝 — 제목 (날짜, 장소)" 형식의 섹션이 없어요.</div>'); return; }
+        const l = logs.find(x => x.prefix === logSel) || logs[logs.length - 1];
+        logSel = l.prefix;
+        $root.find('.na_rt_logs').html(logs.length > 1 ? logs.map(x => `<button type="button" data-p="${esc(x.prefix)}" class="${x === l ? 'on' : ''}">${esc(name(x.prefix))}</button>`).join('') : '');
+        const stops = l.stops;
+        const known = stops.filter(x => x.place !== '?');
+        const lastI = stops.length - 1;
+        if (open === null) open = lastI;
+        $root.find('.na_rt_sum').text(`${logs.length > 1 ? `${name(l.prefix)} · ` : ''}${new Set(known.map(x => x.place)).size}곳${known.length ? ` · 지금은 ${known[known.length - 1].place}` : ''}`);
+        $root.find('.na_rt_body').html(`
+          <div class="na_rt_chain">${stops.map((st, i) => `${i ? '<i class="fa-solid fa-arrow-right"></i>' : ''}<button type="button" class="na_rt_chip ${i === lastI ? 'now' : ''}" data-i="${i}">${esc(st.place === '?' ? '장소 없음' : st.place)}</button>`).join('')}</div>
+          <div class="na_rt_steps">${stops.map((st, i) => { const rooms = [...new Set(st.secs.flatMap(x => x.rooms))]; return `
+            <div class="na_rt_step ${i === lastI ? 'now' : ''}">
+              <span class="na_rt_rail"><i></i></span>
+              <div class="na_rt_card ${i === open ? 'open' : ''}">
+                <button type="button" class="na_rt_head" data-i="${i}">
+                  <span class="na_rt_top"><b>${esc(st.place === '?' ? '장소 없음' : st.place)}</b><small>${esc(when(st))}</small><span class="na_temp_pill none">섹션 ${st.secs.length}</span></span>
+                  <small class="na_rt_range">${esc(range(st))}</small>
+                </button>
+                ${i === open ? `
+                  ${rooms.length ? `<div class="na_rt_rooms">${rooms.map(r => `<span>${esc(r)}</span>`).join('')}</div>` : ''}
+                  <div class="na_v2_list">${st.secs.map(x => `<button type="button" class="na_cal_item" data-start="${x.s.start}"><span class="na_cal_txt"><span>${esc(strip(x.s.title))}</span><small>${esc((x.s.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [''])[0])}${x.rooms.length ? ` · ${esc(x.rooms.join(' → '))}` : ''}</small></span></button>`).join('')}</div>` : ''}
+              </div>
+            </div>`; }).join('')}
+          </div>`);
+    };
+    $root.on('click', '.na_rt_logs button', function () { logSel = String($(this).data('p')); open = null; draw(); });
+    $root.on('click', '.na_rt_head, .na_rt_chip', function () { const i = Number(this.dataset.i); open = open === i && $(this).hasClass('na_rt_head') ? -1 : i; draw(); $root.find('.na_rt_card.open')[0]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
+    $root.on('click', '.na_cal_item', function () { const s0 = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(s0); });
+    draw();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
@@ -5603,28 +5704,44 @@ async function openLinks() {
     const c = ctx();
     const m = getMeta();
     const lk = sectionLinks(m);
+    let more = false;
     const short = t => (t.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [t.title.slice(0, 24)])[0];
     const name = t => t.title.replace(/\s*\([^()]*\)\s*(\[[^\]]*\])?\s*$/, '').replace(RANGE_HEAD, (all, p, a, d, b, rest) => rest.replace(/^\s*[—–-]\s*/, '')) || t.title;
     const chips = keys => keys.map(k => lk.byKey.get(k)).filter(Boolean).map(t => `<button type="button" class="na_ref_chip" data-start="${t.start}" title="${esc(t.title)}">${esc(short(t))}</button>`).join('');
-    const keys = [...new Set([...lk.in.keys(), ...lk.out.keys()])].filter(k => lk.byKey.has(k))
-        .sort((a, b) => (lk.in.get(b)?.length || 0) - (lk.in.get(a)?.length || 0) || lk.byKey.get(a).start - lk.byKey.get(b).start);
     const links = [...lk.out.values()].reduce((a, v) => a + v.length, 0);
-    const rc = routerCfg(m);
     const $root = $(`
-      <div class="na_popup na_links">
-        <div class="na_block_head"><div><h4>섹션 연결망</h4><p>섹션 본문에 "#217–#236", "(Y1 #346)"처럼 적힌 번호를 그 번호가 든 섹션과 이어요. 많이 불리는 섹션이 위에 와요. 칩을 누르면 그 섹션으로 가요.</p></div></div>
-        ${keys.length ? `
-          <div class="na_dim na_links_sum">연결 ${links}개 · 섹션 ${keys.length}개${rc.mode !== 'off' ? ` · AI 라우터가 고른 섹션이 가리키는 섹션도 ${rc.follow ? '같이 넣어요' : '안 넣어요'}` : ''}</div>
-          <div class="na_links_list">${keys.map(k => { const t = lk.byKey.get(k), i = lk.in.get(k) || [], o = lk.out.get(k) || []; return `
-            <div class="na_links_row">
-              <button type="button" class="na_cal_row" data-start="${t.start}">
-                <span class="na_cal_when"><b>${esc(short(t))}</b><small>${i.length ? `${i.length}곳이 가리킴` : ''}</small></span>
-                <span class="na_cal_what"><span>${esc(name(t))}</span></span>
-              </button>
-              <div class="na_card_refs">${o.length ? `<span class="na_ref_grp" title="이 섹션이 가리키는 섹션"><i class="fa-solid fa-arrow-right"></i>${chips(o)}</span>` : ''}${i.length ? `<span class="na_ref_grp" title="이 섹션을 가리키는 섹션"><i class="fa-solid fa-arrow-left"></i>${chips(i)}</span>` : ''}</div>
-            </div>`; }).join('')}</div>` : '<div class="na_empty">섹션 본문에 다른 섹션 번호(#217–#236 같은)를 적은 곳이 없어요.</div>'}
+      <div class="na_popup na_v2 na_links">
+        <div class="na_v2_title"><b>섹션 연결망</b><small>본문에 적힌 “#217–#236” 같은 번호로 이어진 섹션 · 연결 ${links}개</small></div>
+        <div class="na_lk_body"></div>
       </div>`);
-    $root.on('click', '.na_cal_row, .na_ref_chip', function () { const st = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); });
+    const card = k => {
+        const t = lk.byKey.get(k), i = lk.in.get(k) || [], o = lk.out.get(k) || [];
+        return `
+          <div class="na_v2_card na_lk_card">
+            <button type="button" class="na_lk_head" data-start="${t.start}">
+              <span class="na_lk_count ${i.length >= 3 ? 'hot' : ''}"><b>${i.length}</b><small>곳</small></span>
+              <span class="na_lk_name"><b>${esc(name(t))}</b><small>${esc(short(t))}</small></span>
+            </button>
+            ${i.length ? `<div class="na_lk_refs"><small>여기서 불러요</small>${chips(i)}</div>` : ''}
+            ${o.length ? `<div class="na_lk_refs out"><small>여기가 불러요</small>${chips(o)}</div>` : ''}
+          </div>`;
+    };
+    const draw = () => {
+        const rc = routerCfg(m);
+        const hubs = [...lk.in.keys()].filter(k => lk.byKey.has(k)).sort((a, b) => lk.in.get(b).length - lk.in.get(a).length || lk.byKey.get(a).start - lk.byKey.get(b).start);
+        const top = hubs.filter(k => lk.in.get(k).length >= 2), rest = hubs.filter(k => lk.in.get(k).length < 2);
+        const onlyOut = [...lk.out.keys()].filter(k => lk.byKey.has(k) && !lk.in.has(k));
+        $root.find('.na_lk_body').html(!links ? '<div class="na_empty">섹션 본문에 다른 섹션 번호(#217–#236 같은)를 적은 곳이 없어요.</div>' : `
+          ${rc.mode !== 'off' ? `<label class="na_v2_card na_v2_switchrow"><i class="fa-regular fa-compass"></i><span>AI 라우터가 고른 섹션이 가리키는 섹션도 같이 넣어요</span><input type="checkbox" class="na_toggle na_lk_follow" ${rc.follow ? 'checked' : ''}></label>` : ''}
+          ${top.length ? `<div class="na_v2_label">많이 불리는 섹션</div>${top.map(card).join('')}` : ''}
+          ${rest.length || onlyOut.length ? (more || !top.length
+              ? `${rest.length ? `<div class="na_v2_label">한 곳에서 불리는 섹션</div>${rest.map(card).join('')}` : ''}${onlyOut.length ? `<div class="na_v2_label">가리키기만 하는 섹션</div>${onlyOut.map(card).join('')}` : ''}`
+              : `<button type="button" class="na_v2_btn wide na_lk_more">나머지 섹션 ${rest.length + onlyOut.length}개 보기</button>`) : ''}`);
+    };
+    $root.on('click', '.na_lk_more', () => { more = true; draw(); });
+    $root.on('change', '.na_lk_follow', async function () { m.router = { ...routerCfg(m), follow: this.checked }; routerState.delete(currentChatId()); await saveMeta(); applyInjection(); syncPanel(); });
+    $root.on('click', '.na_lk_head, .na_ref_chip', function () { const st = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); });
+    draw();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
@@ -5665,6 +5782,9 @@ function faceHtml(name, size = 40) {
     let h = 0; for (const ch of nameKey(name)) h = (h * 31 + ch.codePointAt(0)) % 360;
     return `<span class="na_face" style="--s:${size}px;--h:${h}" title="${esc(name)}">${url ? `<img src="${esc(url)}" alt="" loading="lazy">` : esc([...String(name).trim()][0] || '?')}</span>`;
 }
+
+// an avatar that fails to load (renamed card, deleted persona) falls back to the letter, wherever a face is drawn
+document.addEventListener('error', e => { const img = e.target; if (img?.tagName === 'IMG' && img.parentElement?.classList.contains('na_face')) img.replaceWith(img.parentElement.title.trim()[0] || '?'); }, true);
 
 async function shrinkFace(file) {
     const bmp = await createImageBitmap(file);
@@ -5806,22 +5926,45 @@ function tempPoints(m, pair) {
     return pair.secs.map(s => { const t = store[sectionKey(s)]; return { s, t: t || null, stale: !!t && t.h !== textHash(m.text.slice(s.start, s.end)) }; });
 }
 
-// line graph: x = shared sections in story order, y = -5…5
-function tempChart(pts, { h = 170, mini = false } = {}) {
-    const on = pts.filter(p => p.t);
+// smooth line graph, fixed 320×150 box scaled to the width: x = shared sections in story order, y = −5…5
+const TEMP_W = 320, TEMP_H = 150, TEMP_Z = 75, TEMP_K = 13;
+function tempChart(pts) {
+    const on = pts.map((p, i) => ({ p, i })).filter(x => x.p.t);
     if (!on.length) return '';
-    const n = pts.length, W = 100;
-    const x = i => n === 1 ? W / 2 : (mini ? 2 : 4) + i * (W - (mini ? 4 : 8)) / (n - 1);
-    const y = v => 50 - v * 9;
-    const line = pts.map((p, i) => p.t ? `${x(i).toFixed(2)},${y(p.t.s)}` : null).filter(Boolean).join(' ');
-    const col = v => v > 0 ? 'var(--na-warm, #e0663a)' : v < 0 ? 'var(--na-cold, #3b82f6)' : 'var(--na-mid, #8a8f98)';
-    return `<svg class="na_temp_svg ${mini ? 'mini' : ''}" viewBox="0 0 100 100" preserveAspectRatio="none" style="height:${h}px">
-      ${mini ? '' : [5, 3, 0, -3, -5].map(v => `<line x1="0" x2="100" y1="${y(v)}" y2="${y(v)}" class="${v ? 'grid' : 'zero'}" vector-effect="non-scaling-stroke"/>`).join('')}
-      ${mini ? `<line x1="0" x2="100" y1="50" y2="50" class="zero" vector-effect="non-scaling-stroke"/>` : ''}
-      <polyline points="${line}" vector-effect="non-scaling-stroke"/>
-      ${mini ? '' : pts.map((p, i) => p.t ? `<line class="dot" x1="${x(i)}" x2="${x(i)}" y1="${y(p.t.s)}" y2="${y(p.t.s)}" style="stroke:${col(p.t.s)}" data-i="${i}" vector-effect="non-scaling-stroke"><title>${esc(p.s.title)}\n${p.t.s > 0 ? '+' : ''}${p.t.s} · ${esc(p.t.why)}</title></line>` : '').join('')}
-    </svg>`;
+    const n = pts.length;
+    const X = i => n === 1 ? TEMP_W / 2 : 6 + i * (TEMP_W - 12) / (n - 1);
+    const P = on.map(({ p, i }) => [X(i), TEMP_Z - p.t.s * TEMP_K]);
+    let d = `M${P[0][0].toFixed(1)},${P[0][1].toFixed(1)}`;
+    for (let i = 0; i < P.length - 1; i++) {
+        const p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || p2;
+        d += ` C${(p1[0] + (p2[0] - p0[0]) / 6).toFixed(1)},${(p1[1] + (p2[1] - p0[1]) / 6).toFixed(1)} ${(p2[0] - (p3[0] - p1[0]) / 6).toFixed(1)},${(p2[1] - (p3[1] - p1[1]) / 6).toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    }
+    const last = P[P.length - 1];
+    const area = `${d} L${last[0].toFixed(1)},${TEMP_Z} L${P[0][0].toFixed(1)},${TEMP_Z} Z`;
+    // log bands (Y1 / Y2 …): alternate ones get a faint background
+    const logOf = s => (s.title.match(RANGE_HEAD)?.[1] || '').trim();
+    const bands = [];
+    pts.forEach((p, i) => { const l = logOf(p.s); if (!bands.length || bands[bands.length - 1].l !== l) bands.push({ l, a: i, b: i }); else bands[bands.length - 1].b = i; });
+    const edge = i => i <= 0 ? 0 : i >= n ? TEMP_W : (X(i - 1) + X(i)) / 2;
+    const minI = on.reduce((a, x) => x.p.t.s < a.p.t.s ? x : a, on[0]);
+    const uid = `t${Math.random().toString(36).slice(2, 7)}`;
+    return {
+        svg: `<svg class="na_temp_svg" viewBox="0 0 ${TEMP_W} ${TEMP_H}" role="img" aria-label="관계 온도 그래프">
+          <defs><clipPath id="${uid}w"><rect x="-6" y="-12" width="${TEMP_W + 12}" height="${TEMP_Z + 12}"/></clipPath><clipPath id="${uid}c"><rect x="-6" y="${TEMP_Z}" width="${TEMP_W + 12}" height="${TEMP_H}"/></clipPath></defs>
+          ${bands.map((b, k) => k % 2 ? `<rect class="band" x="${edge(b.a)}" y="0" width="${edge(b.b + 1) - edge(b.a)}" height="${TEMP_H}"/>` : '').join('')}
+          <line class="zero" x1="0" x2="${TEMP_W}" y1="${TEMP_Z}" y2="${TEMP_Z}"/>
+          <path class="area warm" d="${area}" clip-path="url(#${uid}w)"/><path class="area cold" d="${area}" clip-path="url(#${uid}c)"/>
+          <path class="line warm" d="${d}" clip-path="url(#${uid}w)"/><path class="line cold" d="${d}" clip-path="url(#${uid}c)"/>
+          ${minI.p.t.s < 0 ? `<circle class="pt cold" cx="${X(minI.i)}" cy="${TEMP_Z - minI.p.t.s * TEMP_K}" r="4"/>` : ''}
+          <circle class="halo" cx="${last[0]}" cy="${last[1]}" r="9"/><circle class="pt now" cx="${last[0]}" cy="${last[1]}" r="4.5"/>
+        </svg>`,
+        bands: `<div class="na_temp_bands">${bands.map(b => `<span style="flex:${b.b - b.a + 1}">${esc(b.l || (bands.length > 1 ? `#${pts[b.a].s.title.match(RANGE_HEAD)[2]}–` : ''))}</span>`).join('')}</div>`,
+    };
 }
+
+const tempWord = v => v >= 3 ? '따뜻함' : v >= 1 ? '조금 따뜻함' : v === 0 ? '보통' : v >= -2 ? '조금 차가움' : '차가움';
+const tempCls = v => v > 0 ? 'warm' : v < 0 ? 'cold' : 'mid';
+const tempSign = v => v > 0 ? `+${v}` : v < 0 ? `−${-v}` : '0';
 
 async function openPeople() {
     const c = ctx();
@@ -5829,69 +5972,122 @@ async function openPeople() {
     const g = globalSettings();
     g.faces = g.faces && typeof g.faces === 'object' ? g.faces : {};
     const short = s => (s.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [s.title.slice(0, 20)])[0];
+    const label = s => s.title.replace(/\s*\([^()]*\)\s*(\[[^\]]*\])?\s*$/, '').replace(RANGE_HEAD, (all, p, a, d, b, rest) => rest.replace(/^\s*[—–-]\s*/, '')) || s.title;
     const chip = s => `<button type="button" class="na_ref_chip" data-start="${s.start}" title="${esc(s.title)}">${esc(short(s))}</button>`;
-    let view = 'book', sel = null, tpair = null, busy = false, data = peopleData(m);
+    const hue = n => { let h = 0; for (const ch of nameKey(n)) h = (h * 31 + ch.codePointAt(0)) % 360; return h; };
+    let view = 'book', sel = null, tab = 'state', center = null, other = null, tpair = null, busy = false, adding = false, showAll = false, data = peopleData(m);
     const $root = $(`
-      <div class="na_popup na_people">
-        <div class="na_block_head"><div><h4>인물 도감</h4><p>STATE의 인물과 직접 넣은 인물을 아카이브에서 찾아 모아요. 얼굴은 실리태번 아바타를 쓰거나 그림을 올리면 작게(96px) 줄여서 저장해요. 다음 채팅에서도 그대로예요.</p></div></div>
-        <div class="na_seg na_people_tabs"><button type="button" class="na_seg_btn active" data-v="book"><i class="fa-solid fa-address-book"></i> 도감</button><button type="button" class="na_seg_btn" data-v="map"><i class="fa-solid fa-circle-nodes"></i> 관계도</button><button type="button" class="na_seg_btn" data-v="temp"><i class="fa-solid fa-temperature-half"></i> 온도</button></div>
+      <div class="na_popup na_v2 na_people">
+        <div class="na_v2_tabs na_people_tabs" role="tablist">
+          <button type="button" data-v="book">도감</button><button type="button" data-v="map">관계도</button><button type="button" data-v="temp">온도</button>
+        </div>
         <div class="na_people_body"></div>
         <input type="file" accept="image/*" class="na_face_file" hidden>
       </div>`);
-    const book = () => `
-      <div class="na_people_grid">${data.names.map(n => {
-          const p = data.people.get(n), extra = (m.people || []).some(x => nameKey(x) === nameKey(n)) && !castNames(m).some(x => nameKey(x) === nameKey(n));
-          const st = g.faces[nameKey(n)], hasSt = !!stFace(n);
-          return `
-          <div class="na_person" data-n="${esc(n)}">
-            <div class="na_person_top">
-              <button type="button" class="na_face_btn" title="그림 올리기">${faceHtml(n, 64)}<i class="fa-solid fa-camera"></i></button>
-              <div class="na_person_name">
-                <b>${esc(n)}</b>
-                <small class="na_dim">섹션 ${p.secs.length}개${p.quotes.length ? ` · 대사 ${p.quotes.length}개` : ''}${extra ? ' · 직접 넣음' : ''}</small>
-                <span class="na_person_faceacts">
-                  ${hasSt && st ? '<button type="button" class="na_linkbtn na_face_st">실리태번 아바타로</button>' : ''}
-                  ${st !== 'none' && faceOf(n) ? '<button type="button" class="na_linkbtn na_face_none">얼굴 빼기</button>' : ''}
-                  ${extra ? '<button type="button" class="na_linkbtn na_person_del">목록에서 빼기</button>' : ''}
-                </span>
+    const pairOf = (a, b) => data.pairs.find(p => (p.a === a && p.b === b) || (p.a === b && p.b === a));
+    const lastTemp = p => { if (!p) return null; const q = [...tempPoints(m, p)].reverse().find(x => x.t); return q ? q.t.s : null; };
+
+    // ---- 도감: a strip of faces, the chosen one's profile
+    const book = () => {
+        const names = data.names;
+        sel = names.includes(sel) ? sel : names[0] || null;
+        const strip = `
+          <div class="na_pb_strip">
+            ${names.map(n => `<button type="button" class="na_pb_pick ${n === sel ? 'on' : ''}" data-n="${esc(n)}">${faceHtml(n, 52)}<span>${esc(n)}</span></button>`).join('')}
+            <button type="button" class="na_pb_addbtn" aria-label="인물 넣기" title="인물 넣기"><i class="fa-solid fa-plus"></i></button>
+          </div>
+          <div class="na_people_add" ${adding ? '' : 'hidden'}><input type="text" class="text_pole na_people_name" placeholder="인물 이름 (예: Nephthys)" enterkeyhint="done"><button type="button" class="na_btn na_small na_people_addbtn">추가</button></div>`;
+        if (!sel) return `${strip}<div class="na_empty">STATE에 "## 이름" 인물이 없어요. + 로 인물을 넣어 주세요.</div>`;
+        const p = data.people.get(sel);
+        const extra = (m.people || []).some(x => nameKey(x) === nameKey(sel)) && !castNames(m).some(x => nameKey(x) === nameKey(sel));
+        const st = g.faces[nameKey(sel)];
+        // the partner they share the most sections with, for the third tile
+        const best = data.pairs.filter(q => (q.a === sel || q.b === sel) && q.secs.length).sort((x, y) => y.secs.length - x.secs.length)[0];
+        const bestT = lastTemp(best), bestName = best ? (best.a === sel ? best.b : best.a) : '';
+        const partners = data.pairs.filter(q => (q.a === sel || q.b === sel) && (q.secs.length || q.lines.length)).sort((x, y) => y.secs.length - x.secs.length);
+        const body = tab === 'state'
+            ? (p.state.length ? `<ol class="na_pb_list">${p.state.map(l => `<li>${esc(l)}</li>`).join('')}</ol>` : '<div class="na_empty">STATE에 이 인물의 상태가 없어요.</div>')
+            : tab === 'rel'
+                ? (partners.length ? partners.map(q => { const o = q.a === sel ? q.b : q.a, t = lastTemp(q); return `
+                    <div class="na_v2_card na_pb_rel">
+                      <div class="na_pb_relhead">${faceHtml(o, 30)}<b>${esc(o)}</b><small>함께 ${q.secs.length}섹션</small>${t !== null ? `<span class="na_temp_pill ${tempCls(t)}">${tempSign(t)}</span>` : ''}</div>
+                      ${q.lines.length ? `<ul>${q.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
+                      ${q.many.length ? `<details class="na_v2_more"><summary>다른 인물과 같이 나오는 줄 ${q.many.length}</summary><ul>${q.many.map(l => `<li>${esc(l)}</li>`).join('')}</ul></details>` : ''}
+                    </div>`; }).join('') : '<div class="na_empty">다른 인물과 이어진 곳이 없어요.</div>')
+                : (p.secs.length ? `<div class="na_pb_secs">${(showAll ? p.secs : p.secs.slice(-12)).slice().reverse().map(chip).join('')}</div>${p.secs.length > 12 && !showAll ? `<button type="button" class="na_linkbtn na_pb_more">${p.secs.length - 12}개 더 보기</button>` : ''}` : '<div class="na_empty">아카이브 섹션에 이름이 안 나와요.</div>');
+        return `${strip}
+          <div class="na_pb_card" data-n="${esc(sel)}">
+            <div class="na_pb_cover" style="--h:${hue(sel)}"></div>
+            <div class="na_pb_id">
+              <button type="button" class="na_face_btn" aria-label="얼굴 바꾸기" title="그림 올리기">${faceHtml(sel, 88)}<i class="fa-solid fa-camera"></i></button>
+              <b class="na_pb_name">${esc(sel)}</b>
+              ${p.quotes.length ? `<span class="na_pb_quote">“${esc(p.quotes[0].text)}”</span>` : ''}
+              <span class="na_pb_faceacts">
+                ${stFace(sel) && st ? '<button type="button" class="na_linkbtn na_face_st">실리태번 아바타로</button>' : ''}
+                ${st !== 'none' && faceOf(sel) ? '<button type="button" class="na_linkbtn na_face_none">얼굴 빼기</button>' : ''}
+                ${extra ? '<button type="button" class="na_linkbtn na_person_del">목록에서 빼기</button>' : ''}
+              </span>
+              <div class="na_pb_stats">
+                <div><b>${p.secs.length}</b><span>섹션</span></div>
+                <div><b>${p.quotes.length}</b><span>대사</span></div>
+                <div>${bestT !== null ? `<b class="${tempCls(bestT)}">${tempSign(bestT)}</b><span>${esc(bestName)}과</span>` : `<b>${partners.length}</b><span>이어진 사람</span>`}</div>
               </div>
             </div>
-            ${p.secs.length ? `<div class="na_person_row"><span class="na_dim">처음</span>${chip(p.secs[0])}${p.secs.length > 1 ? `<span class="na_dim">최근</span>${chip(p.secs[p.secs.length - 1])}` : ''}</div>` : '<div class="na_person_row na_dim">아카이브 섹션에 이름이 안 나와요</div>'}
-            ${p.state.length ? `<details class="na_person_more"><summary>지금 상태 <span class="na_dim">${p.state.length}</span></summary><ul>${p.state.map(l => `<li>${esc(l)}</li>`).join('')}</ul></details>` : ''}
-            ${p.rels.length ? `<details class="na_person_more"><summary>관계 <span class="na_dim">${p.rels.length}</span></summary><ul>${p.rels.map(l => `<li>${esc(l)}</li>`).join('')}</ul></details>` : ''}
-            ${p.quotes.length ? `<div class="na_person_quote">“${esc(p.quotes[0].text)}”</div>` : ''}
-          </div>`; }).join('')}
-      </div>
-      <div class="na_people_add"><input type="text" class="text_pole na_people_name" placeholder="인물 더 넣기 (예: Nephthys)"><button type="button" class="na_btn na_small na_people_addbtn"><i class="fa-solid fa-plus"></i> 추가</button></div>`;
+          </div>
+          <div class="na_v2_under" role="tablist">
+            <button type="button" data-t="state" class="${tab === 'state' ? 'on' : ''}">지금 상태</button>
+            <button type="button" data-t="rel" class="${tab === 'rel' ? 'on' : ''}">관계 ${partners.length}</button>
+            <button type="button" data-t="secs" class="${tab === 'secs' ? 'on' : ''}">나온 섹션</button>
+          </div>
+          <div class="na_pb_body">${body}</div>
+          ${p.secs.length ? `<div class="na_v2_row2"><button type="button" class="na_v2_btn" data-start="${p.secs[0].start}">처음 ${esc(short(p.secs[0]))}</button><button type="button" class="na_v2_btn" data-start="${p.secs[p.secs.length - 1].start}">최근 ${esc(short(p.secs[p.secs.length - 1]))}</button></div>` : ''}`;
+    };
+
+    // ---- 관계도: one person in the middle, the others closer the warmer they are
     const map = () => {
         const names = data.names;
         if (!names.length) return '<div class="na_empty">인물이 없어요. 도감에서 인물을 넣어 주세요.</div>';
-        sel = names.includes(sel) ? sel : names[0];
-        const pos = new Map(names.map((n, i) => {
-            if (names.length === 1) return [n, [50, 50]];
-            const a = -Math.PI / 2 + i * 2 * Math.PI / names.length;
-            return [n, [50 + 38 * Math.cos(a), 50 + 38 * Math.sin(a)]];
-        }));
-        const max = Math.max(1, ...data.pairs.map(p => p.secs.length));
-        const edges = data.pairs.filter(p => p.secs.length || p.lines.length || p.many.length);
-        const mine = edges.filter(p => p.a === sel || p.b === sel).sort((x, y) => y.secs.length - x.secs.length);
+        center = names.includes(center) ? center : (names.includes(sel) ? sel : names[0]);
+        const rows = names.filter(n => n !== center).map(n => { const q = pairOf(center, n); return { n, q, t: lastTemp(q), k: q ? q.secs.length : 0 }; })
+            .filter(r => r.q && (r.k || r.q.lines.length || r.q.many.length));
+        const away = names.filter(n => n !== center && !rows.some(r => r.n === n));
+        const max = Math.max(1, ...rows.map(r => r.k));
+        rows.sort((a, b) => (b.t ?? -9) - (a.t ?? -9) || b.k - a.k);
+        other = rows.some(r => r.n === other) ? other : rows[0]?.n || null;
+        const placed = rows.map((r, i) => {
+            const rad = r.t === null ? 0.36 : 0.2 + (5 - r.t) / 10 * 0.27;
+            const a = -Math.PI / 2 + Math.PI / 5 + i * 2 * Math.PI / Math.max(rows.length, 3);
+            return { ...r, x: 50 + rad * 100 * Math.cos(a), y: 50 + rad * 100 * Math.sin(a), size: Math.round(30 + 20 * r.k / max) };
+        });
+        const o = rows.find(r => r.n === other);
         return `
-          <div class="na_relmap">
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none">${edges.map(p => { const [x1, y1] = pos.get(p.a), [x2, y2] = pos.get(p.b); const on = p.a === sel || p.b === sel;
-                return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${on ? 'on' : ''}" style="stroke-width:${(0.4 + 2.2 * p.secs.length / max).toFixed(2)}" vector-effect="non-scaling-stroke"><title>${esc(p.a)} – ${esc(p.b)}: 함께 나온 섹션 ${p.secs.length}개</title></line>`; }).join('')}</svg>
-            ${names.map(n => { const [x, y] = pos.get(n); return `<button type="button" class="na_relnode ${n === sel ? 'on' : ''}" data-n="${esc(n)}" style="left:${x}%;top:${y}%">${faceHtml(n, names.length > 8 ? 44 : 56)}<span>${esc(n)}</span></button>`; }).join('')}
+          <div class="na_v2_title"><b>${esc(center)}의 거리</b><small>가까울수록 최근 온도가 따뜻해요 · 크기 = 함께 나온 섹션</small></div>
+          <div class="na_ego">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <circle class="ring warm" cx="50" cy="50" r="20"/><circle class="ring" cx="50" cy="50" r="34"/><circle class="ring cold" cx="50" cy="50" r="48"/>
+              ${placed.map(r => `<line class="${r.t === null ? 'mid' : tempCls(r.t)} ${r.n === other ? 'on' : ''}" x1="50" y1="50" x2="${r.x.toFixed(1)}" y2="${r.y.toFixed(1)}" style="stroke-width:${(0.3 + 0.9 * r.k / max).toFixed(2)}"/>`).join('')}
+            </svg>
+            <span class="na_ego_lbl warm" style="top:${50 - 20 - 4}%">따뜻</span><span class="na_ego_lbl" style="top:${50 - 34 - 4}%">보통</span><span class="na_ego_lbl cold" style="top:${50 - 48 - 3}%">차가움</span>
+            <span class="na_ego_me" style="left:50%;top:50%">${faceHtml(center, 68)}</span>
+            ${placed.map(r => `<button type="button" class="na_ego_node ${r.n === other ? 'on' : ''}" data-n="${esc(r.n)}" style="left:${r.x.toFixed(1)}%;top:${r.y.toFixed(1)}%">${faceHtml(r.n, r.size)}<span>${esc(r.n)}${r.t !== null ? ` <b class="${tempCls(r.t)}">${tempSign(r.t)}</b>` : ''}</span></button>`).join('')}
           </div>
-          <div class="na_reldetail">
-            <div class="na_cal_loghead"><b>${esc(sel)}</b><span class="na_dim">선 굵기 = 같은 섹션에 함께 나온 횟수</span></div>
-            ${mine.length ? mine.map(p => { const o = p.a === sel ? p.b : p.a; return `
-              <div class="na_relrow">
-                <div class="na_relrow_head">${faceHtml(o, 28)}<b>${esc(o)}</b>${(() => { const pts = tempPoints(m, p), last = [...pts].reverse().find(q => q.t); return last ? `<span class="na_temp_mini">${tempChart(pts, { h: 22, mini: true })}<b class="${last.t.s > 0 ? 'warm' : last.t.s < 0 ? 'cold' : ''}">${last.t.s > 0 ? '+' : ''}${last.t.s}</b></span>` : ''; })()}<small class="na_dim">함께 ${p.secs.length}섹션</small>${p.secs.length ? `<button type="button" class="na_icon na_icon_sm na_temp_go" data-k="${esc(data.pairKey(p.a, p.b))}" title="관계 온도"><i class="fa-solid fa-temperature-half"></i></button>` : ''}</div>
-                ${p.lines.length ? `<ul>${p.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
-                ${p.many.length ? `<details class="na_person_more"><summary>다른 인물과 같이 나오는 줄 <span class="na_dim">${p.many.length}</span></summary><ul>${p.many.map(l => `<li>${esc(l)}</li>`).join('')}</ul></details>` : ''}
-                ${p.secs.length ? `<div class="na_person_row"><span class="na_dim">최근 함께</span>${p.secs.slice(-3).reverse().map(chip).join('')}</div>` : ''}
-              </div>`; }).join('') : '<div class="na_dim">다른 인물과 같이 나온 섹션이 없어요.</div>'}
-          </div>`;
+          ${away.length ? `<small class="na_v2_note">같이 나온 적 없음: ${away.map(esc).join(', ')}</small>` : ''}
+          <div class="na_v2_label">가운데 사람 바꾸기</div>
+          <div class="na_v2_chips">${names.map(n => `<button type="button" class="na_ego_center ${n === center ? 'on' : ''}" data-n="${esc(n)}">${esc(n)}</button>`).join('')}</div>
+          ${o ? `
+          <div class="na_v2_card na_ego_detail">
+            <div class="na_pb_relhead">${faceHtml(o.n, 32)}<b>${esc(o.n)}</b><small>함께 ${o.k}섹션</small>${o.t !== null ? `<span class="na_temp_pill ${tempCls(o.t)}">${tempSign(o.t)}</span>` : ''}</div>
+            ${o.q.lines.length ? `<ul>${o.q.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : '<small class="na_v2_note">STATE에 둘만 나오는 관계 줄이 없어요.</small>'}
+            ${o.q.many.length ? `<details class="na_v2_more"><summary>다른 인물과 같이 나오는 줄 ${o.q.many.length}</summary><ul>${o.q.many.map(l => `<li>${esc(l)}</li>`).join('')}</ul></details>` : ''}
+            <div class="na_v2_row2">
+              ${o.k ? `<button type="button" class="na_v2_btn primary na_temp_go" data-k="${esc(data.pairKey(center, o.n))}">온도 그래프</button>` : ''}
+              ${o.k ? `<button type="button" class="na_v2_btn na_ego_secs">함께 나온 섹션</button>` : ''}
+            </div>
+            <div class="na_pb_secs na_ego_seclist" hidden>${o.q.secs.slice().reverse().map(chip).join('')}</div>
+          </div>` : '<div class="na_empty">다른 인물과 같이 나온 섹션이 없어요.</div>'}`;
     };
+
+    // ---- 온도: current temperature, the curve, the extremes, the big turns
     const temp = () => {
         const pairs = data.pairs.filter(p => p.secs.length).sort((x, y) => y.secs.length - x.secs.length);
         if (!pairs.length) return '<div class="na_empty">같은 섹션에 함께 나온 두 인물이 없어요.</div>';
@@ -5899,31 +6095,84 @@ async function openPeople() {
         tpair = data.pairKey(pair.a, pair.b);
         const pts = tempPoints(m, pair);
         const todo = pts.filter(p => !p.t || p.stale).length, scored = pts.filter(p => p.t);
-        const avg = scored.length ? scored.reduce((a, p) => a + p.t.s, 0) / scored.length : 0;
-        const sign = v => `${v > 0 ? '+' : ''}${v}`;
-        return `
-          <div class="na_temp_pick">
-            <select class="text_pole na_temp_sel">${pairs.map(p => `<option value="${esc(data.pairKey(p.a, p.b))}" ${p === pair ? 'selected' : ''}>${esc(p.a)} · ${esc(p.b)} (${p.secs.length})</option>`).join('')}</select>
+        const picker = `
+          <label class="na_tp_pick">
+            <span class="na_tp_faces">${faceHtml(pair.a, 38)}${faceHtml(pair.b, 38)}</span>
+            <span class="na_tp_pickname"><b>${esc(pair.a)} · ${esc(pair.b)}</b><small>함께 나온 섹션 ${pts.length}개</small></span>
+            <i class="fa-solid fa-chevron-down"></i>
+            <select class="na_temp_sel" aria-label="짝 고르기">${pairs.map(p => `<option value="${esc(data.pairKey(p.a, p.b))}" ${p === pair ? 'selected' : ''}>${esc(p.a)} · ${esc(p.b)} (${p.secs.length})</option>`).join('')}</select>
+          </label>`;
+        const runBtns = `
+          <div class="na_v2_row2">
+            ${scored.length ? `<button type="button" class="na_v2_btn na_tp_listbtn">섹션별 점수 ${pts.length}개</button>` : ''}
+            ${todo ? `<button type="button" class="na_v2_btn primary na_temp_run" data-all="0">${scored.length ? `안 잰 섹션 ${todo}개 재기` : `섹션 ${todo}개 재기`}</button>` : `<button type="button" class="na_v2_btn na_temp_run" data-all="1">전부 다시 재기</button>`}
           </div>
-          <div class="na_temp_who">${faceHtml(pair.a, 36)}<i class="fa-solid fa-arrows-left-right na_dim"></i>${faceHtml(pair.b, 36)}<span class="na_dim">${scored.length ? `잰 섹션 ${scored.length}/${pts.length} · 평균 ${sign(Math.round(avg * 10) / 10)}` : `함께 나온 섹션 ${pts.length}개 · 아직 안 쟀어요`}</span></div>
-          ${scored.length ? `<div class="na_temp_chart"><div class="na_temp_axis"><span>+5</span><span>0</span><span>−5</span></div>${tempChart(pts)}</div>` : ''}
-          <div class="na_temp_actions">
-            <small class="na_dim">AI 기능 모델(${esc(aiLabel())})이 섹션마다 −5(차가움)~+5(따뜻함)으로 매겨요${todo ? ` · 안 잰 섹션 ${todo}개` : ''}</small>
-            <span>
-              ${todo ? `<button type="button" class="na_btn na_small na_primary na_temp_run" data-all="0"><i class="fa-solid fa-temperature-half"></i> 안 잰 것 재기</button>` : ''}
-              ${scored.length ? `<button type="button" class="na_btn na_small na_temp_run" data-all="1"><i class="fa-solid fa-rotate"></i> 전부 다시</button>` : ''}
-            </span>
+          <small class="na_v2_foot">AI 기능 모델(${esc(aiLabel())})이 섹션마다 −5(차가움) ~ +5(따뜻함)으로 매겨요</small>`;
+        if (!scored.length) return `${picker}<div class="na_v2_card na_tp_empty"><i class="fa-solid fa-temperature-half"></i><b>아직 안 쟀어요</b><small>두 사람이 함께 나온 섹션 ${pts.length}개를 AI가 읽고 온도를 매겨요</small></div>${runBtns}`;
+        const now = [...scored].pop().t.s;
+        const vals = scored.map(p => p.t.s);
+        const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 10) / 10;
+        const hi = scored.reduce((a, p) => p.t.s > a.t.s ? p : a, scored[0]), lo = scored.reduce((a, p) => p.t.s < a.t.s ? p : a, scored[0]);
+        const ch = tempChart(pts);
+        // the biggest jumps between one scored section and the next
+        const turns = scored.slice(1).map((p, i) => ({ p, from: scored[i].t.s, d: p.t.s - scored[i].t.s })).filter(x => Math.abs(x.d) >= 3)
+            .sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 3);
+        const tile = (p, kind, word) => `
+          <button type="button" class="na_tp_tile ${kind}" data-start="${p.s.start}">
+            <span class="na_tp_tlabel"><i></i>${word}</span>
+            <b>${esc(short(p.s))}</b>
+            <span class="na_tp_tval">${tempSign(p.t.s)} · ${esc(p.t.why)}</span>
+          </button>`;
+        return `${picker}
+          <div class="na_v2_card na_tp_card">
+            <div class="na_tp_head">
+              <span class="na_tp_icon ${tempCls(now)}"><i class="fa-solid fa-temperature-${now >= 3 ? 'three-quarters' : now > 0 ? 'half' : now === 0 ? 'quarter' : 'empty'}"></i></span>
+              <span class="na_tp_now"><small>지금 온도 · ${esc(short(scored[scored.length - 1].s))}</small><span class="${tempCls(now)}"><b>${tempSign(now)}</b>${tempWord(now)}</span></span>
+              <span class="na_tp_stats">
+                <span><small>평균</small><b>${avg > 0 ? '+' : avg < 0 ? '−' : ''}${Math.abs(avg)}</b></span>
+                <span><small>최고</small><b class="warm">${tempSign(hi.t.s)}</b></span>
+                <span><small>최저</small><b class="cold">${tempSign(lo.t.s)}</b></span>
+              </span>
+            </div>
+            <div class="na_tp_chart">${ch.svg}${ch.bands}</div>
+            ${todo ? `<small class="na_v2_note">안 잰 섹션 ${todo}개는 빼고 그렸어요</small>` : ''}
           </div>
-          <div class="na_temp_list">${pts.map((p, i) => `
-            <div class="na_temp_row" data-i="${i}">
-              <b class="na_temp_val ${p.t ? (p.t.s > 0 ? 'warm' : p.t.s < 0 ? 'cold' : '') : 'none'}">${p.t ? sign(p.t.s) : '–'}</b>
-              <span class="na_temp_txt"><button type="button" class="na_ref_chip" data-start="${p.s.start}" title="${esc(p.s.title)}">${esc((p.s.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [p.s.title.slice(0, 20)])[0])}</button>${p.t ? `<span>${esc(p.t.why)}</span>` : '<span class="na_dim">안 잼</span>'}${p.stale ? '<small class="na_warn_txt">섹션이 바뀜</small>' : ''}</span>
-            </div>`).join('')}</div>`;
+          <div class="na_tp_tiles">${tile(hi, 'warm', '가장 따뜻했던 때')}${tile(lo, 'cold', '가장 차가웠던 때')}</div>
+          ${turns.length ? `<div class="na_v2_label">크게 바뀐 순간</div>
+          ${turns.map(x => `
+            <button type="button" class="na_tp_turn" data-start="${x.p.s.start}">
+              <span class="na_tp_jump ${x.d > 0 ? 'warm' : 'cold'}">${tempSign(x.from)} → ${tempSign(x.p.t.s)}</span>
+              <span class="na_tp_turntxt"><b>${esc(x.p.t.why)}</b><small>${esc(short(x.p.s))} · ${esc(label(x.p.s))}</small></span>
+            </button>`).join('')}` : ''}
+          ${runBtns}
+          <div class="na_tp_list" hidden>${pts.map(p => `
+            <button type="button" class="na_tp_row" data-start="${p.s.start}">
+              <b class="na_temp_pill ${p.t ? tempCls(p.t.s) : 'none'}">${p.t ? tempSign(p.t.s) : '–'}</b>
+              <span class="na_tp_turntxt"><span>${p.t ? esc(p.t.why) : '안 잼'}${p.stale ? ' <small class="na_warn_txt">섹션이 바뀜</small>' : ''}</span><small>${esc(short(p.s))} · ${esc(label(p.s))}</small></span>
+            </button>`).join('')}</div>`;
     };
-    const draw = () => { data = peopleData(m); $root.find('.na_people_tabs .na_seg_btn').each(function () { $(this).toggleClass('active', this.dataset.v === view); }); $root.find('.na_people_body').html(view === 'book' ? book() : view === 'map' ? map() : temp()); };
+
+    const draw = () => {
+        data = peopleData(m);
+        $root.find('.na_people_tabs button').each(function () { $(this).toggleClass('on', this.dataset.v === view).attr('aria-selected', this.dataset.v === view); });
+        $root.find('.na_people_body').html(view === 'book' ? book() : view === 'map' ? map() : temp());
+    };
+    const go = st => { $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); };
+    $root.on('click', '.na_people_tabs button', function () { view = this.dataset.v; draw(); });
+    // 도감
+    $root.on('click', '.na_pb_pick', function () { sel = String($(this).data('n')); draw(); });
+    $root.on('click', '.na_v2_under button', function () { tab = this.dataset.t; draw(); });
+    $root.on('click', '.na_pb_more', () => { showAll = true; draw(); });
+    $root.on('click', '.na_pb_addbtn', () => { adding = !adding; draw(); if (adding) $root.find('.na_people_name').trigger('focus'); });
+    // 관계도
+    $root.on('click', '.na_ego_node', function () { other = String($(this).data('n')); draw(); });
+    $root.on('click', '.na_ego_center', function () { center = String($(this).data('n')); other = null; draw(); });
+    $root.on('click', '.na_ego_secs', () => $root.find('.na_ego_seclist').prop('hidden', (i, h) => !h));
+    // 온도
     $root.on('change', '.na_temp_sel', function () { tpair = this.value; draw(); });
     $root.on('click', '.na_temp_go', function () { tpair = String($(this).data('k')); view = 'temp'; draw(); });
-    $root.on('click', '.na_temp_svg .dot', function () { const $r = $root.find(`.na_temp_row[data-i="${$(this).data('i')}"]`); $root.find('.na_temp_row').removeClass('hl'); $r.addClass('hl')[0]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
+    $root.on('click', '.na_tp_listbtn', () => $root.find('.na_tp_list').prop('hidden', (i, h) => !h));
+    $root.on('click', '.na_tp_tile, .na_tp_turn, .na_tp_row, .na_v2_btn[data-start], .na_ref_chip', function () { go(Number(this.dataset.start)); });
     $root.on('click', '.na_temp_run', async function () {
         if (busy) return;
         const pair = data.pairs.find(p => data.pairKey(p.a, p.b) === tpair);
@@ -5937,22 +6186,22 @@ async function openPeople() {
         busy = false;
         if (got !== null) { if (got < secs.length) toastr.warning(`${secs.length}개 중 ${got}개만 점수가 왔어요. 남은 건 다시 눌러 주세요.`); draw(); }
     });
+    // faces and the roster
     const save = async () => { saveGlobal(); draw(); };
     let target = null;
-    $root.on('click', '.na_people_tabs .na_seg_btn', function () { view = this.dataset.v; draw(); });
-    $root.on('click', '.na_relnode', function () { sel = String($(this).data('n')); draw(); });
-    $root.on('click', '.na_face_btn', function () { target = String($(this).closest('.na_person').data('n')); $root.find('.na_face_file').val('').trigger('click'); });
+    $root.on('click', '.na_face_btn', function () { target = String($(this).closest('.na_pb_card').data('n')); $root.find('.na_face_file').val('').trigger('click'); });
     $root.find('.na_face_file').on('change', async function () {
         const f = this.files?.[0];
         if (!f || !target) return;
         try { g.faces[nameKey(target)] = await shrinkFace(f); await save(); }
         catch (e) { toastr.error(`그림을 못 읽었어요: ${e.message || e}`); }
     });
-    $root.on('click', '.na_face_st', async function () { delete g.faces[nameKey($(this).closest('.na_person').data('n'))]; await save(); });
-    $root.on('click', '.na_face_none', async function () { g.faces[nameKey($(this).closest('.na_person').data('n'))] = 'none'; await save(); });
-    $root.on('click', '.na_person_del', async function () {
-        const k = nameKey($(this).closest('.na_person').data('n'));
+    $root.on('click', '.na_face_st', async () => { delete g.faces[nameKey(sel)]; await save(); });
+    $root.on('click', '.na_face_none', async () => { g.faces[nameKey(sel)] = 'none'; await save(); });
+    $root.on('click', '.na_person_del', async () => {
+        const k = nameKey(sel);
         m.people = (m.people || []).filter(x => nameKey(x) !== k);
+        sel = null;
         await saveMeta(); draw();
     });
     const add = async () => {
@@ -5960,14 +6209,11 @@ async function openPeople() {
         if (!v) return;
         if (data.names.some(n => nameKey(n) === nameKey(v))) return toastr.info('이미 있는 인물이에요.');
         m.people = [...(Array.isArray(m.people) ? m.people : []), v];
+        sel = v; adding = false;
         await saveMeta(); draw();
-        $root.find('.na_people_name').trigger('focus');
     };
     $root.on('click', '.na_people_addbtn', add);
     $root.on('keydown', '.na_people_name', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); add(); } });
-    $root.on('click', '.na_ref_chip', function () { const st = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); });
-    // an avatar that fails to load (renamed card, deleted persona) falls back to the letter
-    $root[0].addEventListener('error', e => { const img = e.target; if (img.tagName === 'IMG' && img.parentElement?.classList.contains('na_face')) img.replaceWith(img.parentElement.title.trim()[0] || '?'); }, true);
     draw();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
@@ -5981,13 +6227,13 @@ let xrayLast = null;
 
 const XRAY_CATS = {
     archive: { name: '서사 아카이브', color: 'var(--na-accent)' },
-    dup: { name: '압축했는데 원문도 들어간 대화', color: '#d0473a' },
-    chat: { name: '대화 기록', color: '#8a8f98' },
-    wi: { name: '월드인포', color: '#8b5cf6' },
-    ext: { name: '다른 확장', color: '#d946a8' },
-    card: { name: '캐릭터 카드', color: '#3b82f6' },
-    persona: { name: '페르소나', color: '#14a37f' },
-    other: { name: '그 외 (시스템 프롬프트·지시문 등)', color: 'color-mix(in srgb, var(--SmartThemeBodyColor, #888) 30%, transparent)' },
+    chat: { name: '대화 기록', color: '#a99c92' },
+    dup: { name: '압축됐는데 원문도 들어간 대화', color: '#d23b2c' },
+    wi: { name: '월드인포', color: '#7b5bc4' },
+    card: { name: '캐릭터 카드', color: '#3d6fb6' },
+    ext: { name: '다른 확장', color: '#c99a1e' },
+    other: { name: '그 외 (시스템 프롬프트 등)', color: '#c9bcb1' },
+    persona: { name: '페르소나', color: '#2e9a7a' },
 };
 
 function xrayArm(type, _opts, dryRun) {
@@ -6080,7 +6326,7 @@ function xrayAnalyze(x) {
             if (n.length < 30 || n.split(' ').length < 5) continue;
             const pos = mt.index;
             const sp = spans.find(s => s.msg === mi && pos >= s.a && pos < s.b);
-            const where = sp ? sp.label : `메시지 ${mi + 1} (${XRAY_CATS.other.name.split(' ')[0]})`;
+            const where = sp ? sp.label : `메시지 ${mi + 1} (그 외)`;
             if (!seen.has(n)) seen.set(n, { text: raw, at: [] });
             seen.get(n).at.push({ where, cat: sp ? sp.cat : 'other', msg: mi });
         }
@@ -6102,9 +6348,9 @@ async function openXray() {
     const c = ctx();
     const x = xrayLast && xrayLast.chatId === currentChatId() ? xrayLast : null;
     const $root = $(`
-      <div class="na_popup na_xray">
-        <div class="na_block_head"><div><h4>프롬프트 X-ray</h4><p>마지막으로 보낸 프롬프트가 무엇으로 채워졌는지, 같은 내용이 두 번 들어간 곳은 없는지 보여 줘요. 실리태번을 새로 고치면 지워지고, 다음 응답부터 다시 기록돼요.</p></div></div>
-        <div class="na_xray_body">${x ? '<div class="na_empty">살펴보는 중…</div>' : '<div class="na_empty">아직 기록된 프롬프트가 없어요. 이 채팅에서 응답을 한 번 받으면 여기 보여요.</div>'}</div>
+      <div class="na_popup na_v2 na_xray">
+        <div class="na_v2_title"><b>프롬프트 X-ray</b><small>${x ? `마지막으로 보낸 프롬프트 · ${esc(timeLabel(x.at))}` : '마지막으로 보낸 프롬프트'}</small></div>
+        <div class="na_xray_body">${x ? '<div class="na_empty">살펴보는 중…</div>' : '<div class="na_empty">아직 기록된 프롬프트가 없어요. 이 채팅에서 응답을 한 번 받으면 여기 보여요. (실리태번을 새로 고치면 기록이 지워져요)</div>'}</div>
       </div>`);
     const popup = c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
     if (!x) return popup;
@@ -6119,70 +6365,33 @@ async function openXray() {
     const tok = {};
     for (const [k, list] of Object.entries(byCat)) tok[k] = list.join('').trim() ? await countTokens(list.join('\n')) : 0;
     const total = Object.values(tok).reduce((a, b) => a + b, 0) || 1;
-    const msgTok = await Promise.all(x.messages.map(msg => countTokens(msg.content)));
     const dupChats = spans.filter(s => s.cat === 'dup').map(s => s.i);
-    const order = ['archive', 'dup', 'chat', 'wi', 'ext', 'card', 'persona', 'other'].filter(k => tok[k]);
-    const ROLE = { system: '시스템', user: '사용자', assistant: '어시스턴트', text: '텍스트' };
-    const msgRow = mi => {
-        const msg = x.messages[mi], ss = spans.filter(s => s.msg === mi);
-        const labels = [...new Set(ss.map(s => s.cat === 'dup' ? `${s.label} (압축됨)` : s.label))];
-        return `
-          <details class="na_xray_msg" data-i="${mi}">
-            <summary><span class="na_xray_role">${esc(ROLE[msg.role] || msg.role)}</span><span class="na_xray_seg">${(ss.length ? [...new Set(ss.map(s => s.cat))] : ['other']).map(k => `<i style="background:${XRAY_CATS[k].color}"></i>`).join('')}</span><span class="na_xray_lbl">${esc(labels.slice(0, 3).join(' · ') || '그 외')}${labels.length > 3 ? ` +${labels.length - 3}` : ''}</span><small class="na_dim">${fmt(msgTok[mi])}</small></summary>
-            <pre class="na_xray_text"></pre>
-          </details>`;
-    };
-    // runs of plain chat messages fold into one "대화 #41–#59" row
-    const chatOnly = mi => { const ss = spans.filter(s => s.msg === mi); return ss.length && ss.every(s => s.cat === 'chat' || s.cat === 'dup') && ss.reduce((a, s) => a + s.b - s.a, 0) >= x.messages[mi].content.length * 0.8; };
-    const msgRows = () => {
-        let html = '';
-        for (let mi = 0; mi < x.messages.length;) {
-            let end = mi;
-            while (end < x.messages.length && chatOnly(end)) end++;
-            if (end - mi >= 3) {
-                const ss = spans.filter(s => s.msg >= mi && s.msg < end), nums = ss.map(s => s.i);
-                const cats = [...new Set(ss.map(s => s.cat))];
-                html += `
-                  <details class="na_xray_msg na_xray_run">
-                    <summary><span class="na_xray_role">대화</span><span class="na_xray_seg">${cats.map(k => `<i style="background:${XRAY_CATS[k].color}"></i>`).join('')}</span><span class="na_xray_lbl">#${Math.min(...nums)}–#${Math.max(...nums)} · ${end - mi}개${cats.includes('dup') ? ` · 압축된 대화 ${ss.filter(s => s.cat === 'dup').length}개` : ''}</span><small class="na_dim">${fmt(msgTok.slice(mi, end).reduce((a, b) => a + b, 0))}</small></summary>
-                    <div class="na_xray_runlist">${Array.from({ length: end - mi }, (_, k) => msgRow(mi + k)).join('')}</div>
-                  </details>`;
-                mi = end;
-            } else { html += msgRow(mi); mi++; }
-        }
-        return html;
-    };
+    const order = Object.keys(XRAY_CATS).filter(k => tok[k]).sort((a, b) => tok[b] - tok[a]);
+    const pct = k => Math.max(1, Math.round(tok[k] / total * 100));
     $root.find('.na_xray_body').html(`
-      <div class="na_dim na_links_sum">${esc(timeLabel(x.at))} · 약 ${fmt(total)} 토큰 · 메시지 ${x.messages.length}개${x.wi.length ? ` · 월드인포 ${x.wi.length}개` : ''}</div>
-      <div class="na_xray_bar">${order.map(k => `<span style="width:${(tok[k] / total * 100).toFixed(2)}%;background:${XRAY_CATS[k].color}" title="${esc(XRAY_CATS[k].name)} ${fmt(tok[k])}"></span>`).join('')}</div>
-      <div class="na_xray_legend">${order.map(k => `<div><i style="background:${XRAY_CATS[k].color}"></i><span>${esc(XRAY_CATS[k].name)}</span><b>${fmt(tok[k])}</b><small class="na_dim">${Math.round(tok[k] / total * 100)}%</small></div>`).join('')}</div>
-      ${dupChats.length ? `<div class="na_check na_check_warn"><i class="fa-solid fa-triangle-exclamation"></i><div><b>압축한 대화 ${dupChats.length}개가 원문으로도 들어갔어요</b> (#${Math.min(...dupChats)}–#${Math.max(...dupChats)}, 약 ${fmt(tok.dup)} 토큰). 아카이브와 내용이 겹쳐요.<div class="na_tool_actions"><button type="button" class="na_btn na_small na_xray_hide"><i class="fa-solid fa-eye-slash"></i> 경계선까지 숨기기</button></div></div></div>` : ''}
-      <div class="na_kw_label">겹치는 문장 <span class="na_dim">${dups.length ? `${dups.length}묶음` : '없음'}</span></div>
+      <div class="na_v2_card na_xr_card">
+        <div class="na_xr_total"><span><b>${fmt(total)}</b>토큰</span><small>메시지 ${x.messages.length}${x.wi.length ? ` · 월드인포 ${x.wi.length}` : ''}</small></div>
+        <div class="na_xr_bar">${order.map(k => `<span style="flex:${tok[k]} 1 0;background:${XRAY_CATS[k].color}" title="${esc(XRAY_CATS[k].name)} ${fmt(tok[k])}"></span>`).join('')}</div>
+        <div class="na_xr_rows">${order.map(k => `
+          <div class="na_xr_row ${k === 'dup' ? 'bad' : ''}"><i style="background:${XRAY_CATS[k].color}"></i><span>${esc(XRAY_CATS[k].name)}</span><b>${fmt(tok[k])}</b><small>${pct(k)}%</small></div>`).join('')}
+        </div>
+      </div>
+      ${dupChats.length ? `
+      <div class="na_xr_warn">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div>
+          <b>압축한 대화 ${dupChats.length}개가 원문으로도 들어갔어요</b>
+          <span>#${Math.min(...dupChats)}–#${Math.max(...dupChats)} · 약 ${fmt(tok.dup)} 토큰이 아카이브와 겹쳐요</span>
+          <button type="button" class="na_v2_btn danger na_xray_hide"><i class="fa-solid fa-eye-slash"></i> 경계선까지 숨기기</button>
+        </div>
+      </div>` : ''}
+      <div class="na_v2_label">겹치는 문장 <small>${dups.length ? `${dups.length}묶음 · ${fmt(dups.reduce((a, d) => a + d.chars, 0))}자` : '없음'}</small></div>
       ${dups.length ? dups.slice(0, 12).map(d => `
-        <details class="na_hcheck na_xray_dup">
-          <summary><span>${d.places.map(p => `<span class="na_chip">${esc(p)}</span>`).join('<i class="fa-solid fa-arrows-left-right na_dim"></i>')}</span><small class="na_dim">${d.items.length}문장 · ${fmt(d.chars)}자</small></summary>
-          <ul>${d.items.slice(0, 8).map(t => `<li>${esc(t.length > 220 ? t.slice(0, 220) + '…' : t)}</li>`).join('')}${d.items.length > 8 ? `<li class="na_dim">… ${d.items.length - 8}개 더</li>` : ''}</ul>
-        </details>`).join('') : '<div class="na_dim na_xray_none">두 군데 이상 들어간 문장이 없어요.</div>'}
-      <div class="na_kw_label">메시지 순서대로</div>
-      <div class="na_xray_msgs">${msgRows()}</div>`);
-    // message text is filled in when opened (a long chat history would be slow to paint all at once)
-    const fill = el => {
-        if (!el.open || el.dataset.i === undefined) return;
-        const mi = Number(el.dataset.i);
-        const content = x.messages[mi].content;
-        const $pre = $(el).find('.na_xray_text');
-        if ($pre.data('done')) return;
-        let at = 0, html = '';
-        for (const s of spans.filter(s => s.msg === mi)) {
-            if (s.a > at) html += esc(content.slice(at, s.a));
-            html += `<mark style="--c:${XRAY_CATS[s.cat].color}" title="${esc(s.label)}">${esc(content.slice(s.a, s.b))}</mark>`;
-            at = s.b;
-        }
-        html += esc(content.slice(at));
-        $pre.html(html).data('done', true);
-    };
-    // <details> toggle does not bubble, so listen in the capture phase
-    $root[0].addEventListener('toggle', e => { if (e.target.classList?.contains('na_xray_msg')) fill(e.target); }, true);
+        <div class="na_v2_card na_xr_dup">
+          <div class="na_xr_places">${d.places.map(p => `<span class="na_xr_place ${/^월드인포/.test(p) ? 'wi' : /^서사 아카이브/.test(p) ? 'arc' : ''}">${esc(p)}</span>`).join('<i class="fa-solid fa-arrows-left-right"></i>')}</div>
+          ${d.items.slice(0, 2).map(t => `<q>${esc(t.length > 220 ? t.slice(0, 220) + '…' : t)}</q>`).join('')}
+          ${d.items.length > 2 ? `<details class="na_v2_more"><summary>${d.items.length - 2}문장 더</summary>${d.items.slice(2, 12).map(t => `<q>${esc(t.length > 220 ? t.slice(0, 220) + '…' : t)}</q>`).join('')}</details>` : ''}
+        </div>`).join('') : '<small class="na_v2_note">두 군데 이상 들어간 문장이 없어요.</small>'}`);
     $root.on('click', '.na_xray_hide', async function () { await applyHide(); $(this).prop('disabled', true).text('숨겼어요 · 다음 응답부터 빠져요'); });
     return popup;
 }
