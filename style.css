@@ -1660,3 +1660,4 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_xr_kwbar { flex: none; width: 64px; height: 6px; border-radius: 3px; background: var(--na-card2); overflow: hidden; }
 .na_xr_kwbar i { display: block; height: 100%; background: var(--na-accent); border-radius: 3px; }
 .na_xr_kwrow > b { flex: none; width: 3em; text-align: right; font-size: 0.9em; }
+.na_v2[hidden], #na_settings [hidden] { display: none !important; }
