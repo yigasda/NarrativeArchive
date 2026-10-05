@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.13.0';
+const VERSION = '2.14.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -274,6 +274,17 @@ async function onGenerationStarted(type, _opts, dryRun) {
         head: text.slice(0, 160),
         tail: text.slice(-160),
     };
+    // how often each keyword-linked section actually went in, for the token report
+    const links = Object.keys(linkedMap(m));
+    if (m.enabled && links.length) {
+        const st = (m.linkStats && typeof m.linkStats === 'object') ? m.linkStats : { gens: 0, on: {}, last: {} };
+        st.gens = (st.gens || 0) + 1;
+        st.on ||= {}; st.last ||= {};
+        const waiting = linkWaiting(m);
+        const muted = mutedSet(m);
+        for (const k of links) if (!waiting.has(k) && !muted.has(k)) { st.on[k] = (st.on[k] || 0) + 1; st.last[k] = lastIndex(); }
+        m.linkStats = st;
+    }
     refreshInjectLog();
 }
 
@@ -1033,6 +1044,10 @@ function renderPanel() {
               </div>
               <div class="na_meter_bar"><span class="na_seg_arc"></span><span class="na_seg_raw"></span></div>
               <div class="na_meter_legend" id="na_meter_legend"></div>
+              <div class="na_meter_tools">
+                <button type="button" class="na_linkbtn" id="na_health"><i class="fa-solid fa-stethoscope"></i> <span>건강 점검</span></button>
+                <button type="button" class="na_linkbtn" id="na_report"><i class="fa-solid fa-chart-column"></i> 토큰 리포트</button>
+              </div>
             </div>
 
             <nav class="na_nav" role="tablist">
@@ -1526,6 +1541,8 @@ function bindPanel() {
         await saveMeta(); refreshStatus();
     });
     $('#na_open_extract').on('click', needChat(openExtract));
+    $('#na_health').on('click', needChat(openHealth));
+    $('#na_report').on('click', needChat(openTokenReport));
     $('#na_open_append').on('click', needChat(openAppend));
     $('#na_apply_hide').on('click', needChat(() => applyHide()));
     $('#na_unhide').on('click', needChat(openUnhide));
@@ -2523,6 +2540,11 @@ async function refreshStatus() {
       ${build.trimmed.length ? `<span class="na_warn_txt"><i class="fa-solid fa-scissors"></i> 상한 ${fmt(build.cap)}에 맞춰 ${build.trimmed.length}개 뺌</span>` : ''}
       ${build.over ? `<span class="na_warn_txt"><i class="fa-solid fa-triangle-exclamation"></i> 상한 ${fmt(build.cap)} 넘음</span>` : ''}`);
     $('#na_head_badge').text(m.text.trim() ? fmt(archiveTok) : '');
+    if (m.text.trim()) {
+        const h = await healthChecks(m, { build, afterTok, after });
+        const n = h.items.filter(x => x.level !== 'ok').length;
+        $('#na_health').toggleClass('na_health_warn', h.score < 80).find('span').text(`건강 ${h.score}점${n ? ` · 확인할 것 ${n}개` : ''}`);
+    } else $('#na_health span').text('건강 점검');
 
     const lx = m.lastExport;
     const lxNote = lx ? `<div class="na_dim">최근 내보냄 #${lx.from}–#${lx.to} · ${esc(timeLabel(lx.at))}</div>` : '';
@@ -3124,6 +3146,225 @@ async function openKeywordTest() {
     $root.find('.na_kwt_recent').on('change', render);
     render();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+}
+
+// ---------------------------------------------------------------- health check
+// Cheap, AI-free checks of the archive and its settings. Each item: { level: 'bad'|'warn'|'info'|'ok', title, detail?, fix? }
+
+let nearMemo = { text: null, out: [] };
+function selfNearMisses(text) {
+    if (nearMemo.text === text) return nearMemo.out;
+    const out = selfNearMissesRaw(text);
+    nearMemo = { text, out };
+    return out;
+}
+
+function selfNearMissesRaw(text) {
+    const counts = new Map();
+    // names only: a word that also shows up in lower case ("Sending" / "sending") is an ordinary word
+    // and it must be capitalised mid-sentence at least once, so a sentence-opening "Seeing" does not count
+    const lower = new Set((text.match(/\b[a-z][a-z'’]+\b/g) || []));
+    const mid = new Set([...text.matchAll(/[a-z,;]\s+([A-Z][a-z][A-Za-z'’]*)/g)].map(x => x[1].replace(/['’]s$/, '')));
+    capWords(text).filter(w => w.length >= 4 && mid.has(w) && !lower.has(w.toLowerCase())).forEach(w => counts.set(w, (counts.get(w) || 0) + 1));
+    const words = [...counts.keys()];
+    const out = [];
+    for (const w of words) {
+        const cap = w.length >= 7 ? 2 : 1;
+        for (const o of words) {
+            if (o === w || o[0] !== w[0] || counts.get(o) <= counts.get(w)) continue;
+            // a plural or possessive is not a misspelling
+            if (o + 's' === w || w + 's' === o || o.startsWith(w) || w.startsWith(o)) continue;
+            const d = editDistance(w, o, cap);
+            if (d > 0 && d <= cap) { out.push({ word: w, like: o, n: counts.get(w), m: counts.get(o) }); break; }
+        }
+    }
+    return out.slice(0, 8);
+}
+
+async function healthChecks(m, { build, afterTok, after } = {}) {
+    build ||= await currentInjection();
+    const chat = ctx().chat || [];
+    const last = chat.length - 1;
+    if (afterTok === undefined) { after = m.boundary >= 0 ? buildExtract(m.boundary + 1, last) : []; afterTok = await countTokens(extractToText(after)); }
+    const items = [];
+    const add = (level, title, detail = '', fix = null) => items.push({ level, title, detail, fix });
+    const secs = parseSections(m.text);
+    const cards = secs.filter(x => !x.group && x.title !== '(머리말)' && x.title !== '(제목 없음)');
+    const keys = new Set(secs.map(sectionKey));
+
+    // numbering
+    const hc = checkHeadings(m.text);
+    if (hc.issues.length) add('warn', `제목 번호 문제 ${hc.issues.length}개`, hc.issues.slice(0, 5).map(x => `${x.title.slice(0, 40)} — ${x.msg}`).join('\n'), { label: '개요에서 보기', run: () => { $('.na_nav_btn[data-tab=overview]').trigger('click'); } });
+    else if (hc.ranged) add('ok', '제목 번호가 빈틈 없이 이어져요');
+
+    // STATE / boundary agree with the last section
+    const ranges = headingRanges(m.text);
+    const lastR = ranges.length ? ranges[ranges.length - 1] : null;
+    const [, tail] = splitTail(m.text);
+    const stateN = (tail.match(/^# STATE\b[^\n]*#(\d+)/m) || [])[1];
+    if (lastR && stateN !== undefined && Number(stateN) !== lastR.to) add('warn', `STATE 번호(#${stateN})가 마지막 섹션 끝(#${lastR.to})과 달라요`, '압축 결과에서 STATE를 새로 안 받았을 수 있어요.');
+    if (lastR && m.boundary >= 0 && lastR.to <= last && m.boundary !== lastR.to) {
+        add('warn', `경계선 #${m.boundary}이 마지막 섹션 끝 #${lastR.to}과 달라요`, '', { label: `경계선을 #${lastR.to}로`, run: async () => { m.boundary = lastR.to; await saveMeta(); syncPanel(); toastr.success(`경계선 #${lastR.to}`); } });
+    }
+
+    // compression due, hiding
+    if (m.remindTok > 0 && afterTok >= m.remindTok) add('warn', `압축할 때예요 — 경계선 뒤 원문 ${fmt(afterTok)} 토큰`, `알림 기준 ${fmt(m.remindTok)}`, { label: '원문 뽑기', run: () => openExtract() });
+    if (m.boundary >= 0) {
+        const hideEnd = m.boundary - Math.max(0, Number(m.keep) || 0);
+        const shown = chat.slice(0, Math.max(0, hideEnd + 1)).filter(x => x && !x.is_system).length;
+        if (shown) add('warn', `압축한 메시지 중 ${shown}개가 아직 안 숨겨졌어요`, '아카이브와 원문이 같이 들어가 토큰이 두 번 쓰여요.', { label: '숨기기 적용', run: () => applyHide() });
+        else add('ok', '압축한 메시지는 다 숨겨져 있어요');
+    }
+
+    // token cap
+    if (build.over) add('bad', `토큰 상한 ${fmt(build.cap)}을 넘었어요 (${fmt(build.tokens)})`, m.capMode === 'trim' ? '고정한 섹션이 너무 많아 다 못 뺐어요.' : '"오래된 섹션부터 빼기"를 켜거나 섹션을 꺼 주세요.');
+    else if (build.trimmed.length) add('info', `상한에 맞추느라 섹션 ${build.trimmed.length}개를 뺐어요`);
+
+    // keyword links
+    const lm = linkedMap(m);
+    const stat = Object.keys(lm).length ? keywordStats(m) : null;
+    for (const [k, ws] of Object.entries(lm)) {
+        if (!keys.has(k)) { add('warn', `키워드 연동한 섹션이 없어졌어요: ${keyLabel(k).slice(0, 40)}`, '', { label: '연동 지우기', run: async () => { await setLinked(k, []); } }); continue; }
+        const bad = (ws || []).map(w => ({ w, warn: keywordWarn(w, stat) })).filter(x => x.warn.length);
+        if (bad.length) {
+            const s = secs.find(x => sectionKey(x) === k);
+            add('warn', `키워드 확인: ${keyLabel(k).slice(0, 40)}`, bad.map(x => `${x.w} — ${x.warn[0]}`).join('\n'),
+                s ? { label: '키워드 고치기', run: async () => { const ks = await openKeywords(s, m.text.slice(s.start, s.end), lm[k] || []); if (ks) await setLinked(k, ks); } } : null);
+        }
+    }
+    const dangling = [...mutedSet(m), ...pinnedSet(m)].filter(k => !keys.has(k));
+    if (dangling.length) add('info', `없어진 섹션의 스위치·고정 설정 ${dangling.length}개가 남아 있어요`, '', { label: '정리', run: async () => { m.muted = m.muted.filter(k => keys.has(k)); m.pinned = m.pinned.filter(k => keys.has(k)); await saveMeta(); applyInjection(); syncPanel(); } });
+
+    // sections
+    const empty = cards.filter(x => !m.text.slice(x.start, x.end).replace(/^#{1,2} [^\n]*\n?/, '').trim());
+    if (empty.length) add('warn', `빈 섹션 ${empty.length}개`, empty.slice(0, 5).map(x => x.title.slice(0, 50)).join('\n'));
+    const big = [];
+    for (const x of cards) { const t = await cachedTokens(m.text.slice(x.start, x.end)); if (t > 2500) big.push(`${x.title.slice(0, 40)} — ${fmt(t)} 토큰`); }
+    if (big.length) add('info', `아주 큰 섹션 ${big.length}개`, `${big.slice(0, 5).join('\n')}\n나눠 쓰거나 다시 압축하면 키워드 연동·상한이 잘 맞아요.`);
+
+    // spelling drift inside the archive
+    const nm = selfNearMisses(m.text);
+    if (nm.length) add('warn', `비슷한 이름 ${nm.length}쌍 — 철자가 흔들렸을 수 있어요`, nm.map(x => `${x.word} (${x.n}번) ↔ ${x.like} (${x.m}번)`).join('\n'));
+
+    // backup
+    if (!m.backup) add('warn', '아직 백업한 적이 없어요', '', { label: '.json 백업', run: () => $('#na_export_json').trigger('click') });
+    else if (m.backupEvery > 0 && m.sinceBackup >= m.backupEvery) add('warn', `백업 뒤로 ${m.sinceBackup}번 바뀌었어요`, `마지막 백업 ${timeLabel(m.backup.at)}`, { label: '.json 백업', run: () => $('#na_export_json').trigger('click') });
+    else add('ok', `백업 ${timeLabel(m.backup.at)}`);
+
+    if (!glossaryEntries(m).length && Object.keys(m.trMem || {}).length) add('info', '번역 용어집이 비어 있어요', '이름 표기가 번역마다 달라질 수 있어요.', { label: '용어집 열기', run: () => openGlossary() });
+
+    const pen = { bad: 15, warn: 6, info: 1, ok: 0 };
+    const score = Math.max(0, 100 - items.reduce((a, x) => a + pen[x.level], 0));
+    const order = { bad: 0, warn: 1, info: 2, ok: 3 };
+    items.sort((a, b) => order[a.level] - order[b.level]);
+    return { score, items };
+}
+
+async function openHealth() {
+    const c = ctx();
+    const m = getMeta();
+    const $root = $(`<div class="na_popup"><div class="na_health_body"><div class="na_empty">점검하는 중…</div></div></div>`);
+    const render = async () => {
+        const h = await healthChecks(m);
+        const icon = { bad: 'fa-circle-xmark', warn: 'fa-triangle-exclamation', info: 'fa-circle-info', ok: 'fa-circle-check' };
+        $root.find('.na_health_body').html(`
+          <div class="na_health_top">
+            <div class="na_health_score ${h.score >= 90 ? 'good' : h.score >= 70 ? 'mid' : 'low'}">${h.score}<small>점</small></div>
+            <div><b>아카이브 건강 점검</b><div class="na_dim">AI 없이 번호·숨기기·키워드·백업 등을 살펴봐요. 고칠 수 있는 건 버튼으로 바로 고쳐요.</div></div>
+          </div>
+          <div class="na_health_list">${h.items.map((x, i) => `
+            <div class="na_health_item na_h_${x.level}">
+              <i class="fa-solid ${icon[x.level]}"></i>
+              <div class="na_health_main"><div>${esc(x.title)}</div>${x.detail ? `<div class="na_health_detail">${esc(x.detail).replace(/\n/g, '<br>')}</div>` : ''}</div>
+              ${x.fix ? `<button type="button" class="na_btn na_small na_health_fix" data-i="${i}">${esc(x.fix.label)}</button>` : ''}
+            </div>`).join('')}</div>`);
+        $root.find('.na_health_fix').on('click', async function () {
+            const it = h.items[Number(this.dataset.i)];
+            $(this).prop('disabled', true);
+            try { await it.fix.run(); } finally { setTimeout(render, 300); }
+        });
+    };
+    render();
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    refreshStatusSoon();
+}
+
+// ---------------------------------------------------------------- token report
+// Where the injected tokens go, and which sections could cost less.
+
+async function openTokenReport() {
+    const c = ctx();
+    const m = getMeta();
+    const $root = $(`<div class="na_popup"><div class="na_rep_body"><div class="na_empty">계산하는 중…</div></div></div>`);
+    const render = async () => {
+        const build = await currentInjection();
+        const secs = parseSections(m.text);
+        const muted = mutedSet(m), pinned = pinnedSet(m), lm = linkedMap(m);
+        const waiting = linkWaiting(m);
+        const trimmed = new Set(build.trimmed);
+        const st = m.linkStats || { gens: 0, on: {} };
+        const kstat = keywordStats(m);
+        const ranged = secs.filter(x => !x.group && RANGE_HEAD.test(x.title));
+        const recent = new Set(ranged.slice(-3).map(sectionKey));
+        const rows = [];
+        const stack = [];
+        for (const s of secs) {
+            while (stack.length && stack[stack.length - 1].level >= s.level) stack.pop();
+            if (s.group) { stack.push(s); continue; }
+            const key = sectionKey(s);
+            const groupOff = stack.some(g => muted.has(sectionKey(g)));
+            const tok = await cachedTokens(m.text.slice(s.start, s.end));
+            const linked = Array.isArray(lm[key]) && lm[key].length;
+            // share of generations it was in: measured when we have enough, else estimated from the chat so far
+            const measured = linked && st.gens >= 10 ? (st.on?.[key] || 0) / st.gens : null;
+            const rate = linked ? (measured ?? kstat.fireRate(lm[key])) : 1;
+            const state = muted.has(key) || groupOff ? 'off' : trimmed.has(key) ? 'trim' : linked ? 'key' : 'on';
+            rows.push({ s, key, tok, linked, rate, measured: measured !== null, state, pinned: pinned.has(key), group: stack[0] ? groupLabel(stack[0].title) : '', recent: recent.has(key) });
+        }
+        const sum = f => rows.filter(f).reduce((a, r) => a + r.tok, 0);
+        const alwaysTok = sum(r => r.state === 'on');
+        const keyAvg = rows.filter(r => r.state === 'key').reduce((a, r) => a + r.tok * r.rate, 0);
+        const offTok = sum(r => r.state === 'off' || r.state === 'trim');
+        const maxTok = Math.max(1, ...rows.map(r => r.tok));
+        // suggestions
+        const tips = [];
+        for (const r of rows) {
+            if (r.state === 'on' && !r.pinned && !r.recent && r.tok >= 600 && RANGE_HEAD.test(r.s.title)) tips.push({ r, kind: 'link', text: `항상 켜져 ${fmt(r.tok)} 토큰 — 키워드 연동하면 평소엔 아껴요` });
+            if (r.state === 'key' && r.rate >= 0.6) tips.push({ r, kind: 'key', text: `키워드 연동인데 ${pct(r.rate)} 켜져요 — 키워드가 너무 넓어요` });
+            if (r.state === 'key' && r.measured && st.gens >= 30 && r.rate === 0) tips.push({ r, kind: 'key', text: `생성 ${st.gens}번 동안 한 번도 안 켜졌어요 — 키워드가 맞는지 봐 주세요` });
+            if (r.tok > 2500) tips.push({ r, kind: 'big', text: `${fmt(r.tok)} 토큰 — 아주 커요. 다시 압축하거나 나누면 좋아요` });
+        }
+        tips.sort((a, b) => b.r.tok - a.r.tok);
+        const groups = new Map();
+        for (const r of rows) { const g = r.group || '(묶음 밖)'; const o = groups.get(g) || { tok: 0, live: 0 }; o.tok += r.tok; if (r.state === 'on') o.live += r.tok; else if (r.state === 'key') o.live += r.tok * r.rate; groups.set(g, o); }
+        const label = { on: '항상', key: '키워드', off: '꺼짐', trim: '상한으로 빠짐' };
+        $root.find('.na_rep_body').html(`
+          <div class="na_block_head"><div><h4>토큰 리포트</h4><p>지금 주입 <b>${fmt(build.tokens)}</b> 토큰 · 항상 켜진 섹션 ${fmt(alwaysTok)} · 키워드 섹션은 평균 ${fmt(Math.round(keyAvg))} · 꺼졌거나 빠진 ${fmt(offTok)}${st.gens ? ` · 생성 ${fmt(st.gens)}번 기록` : ''}</p></div></div>
+          <div class="na_rep_groups">${[...groups].map(([g, o]) => `<div class="na_rep_group"><b>${esc(g)}</b><span>${fmt(o.tok)} 토큰</span><small class="na_dim">평소 약 ${fmt(Math.round(o.live))}</small></div>`).join('')}</div>
+          ${tips.length ? `<div class="na_kw_label">아낄 수 있는 곳 ${tips.length}개</div><div class="na_rep_tips">${tips.slice(0, 12).map((t, i) => `
+            <div class="na_rep_tip"><div class="na_rep_tip_main"><b>${esc(t.r.s.title.slice(0, 60))}</b><div class="na_dim">${esc(t.text)}</div></div>
+              <button type="button" class="na_btn na_small na_rep_act" data-i="${i}">${t.kind === 'big' ? '섹션 보기' : '🔑 키워드'}</button></div>`).join('')}</div>` : '<div class="na_empty">크게 아낄 곳은 없어요 👍</div>'}
+          <div class="na_kw_label">섹션별 <span class="na_dim">· 큰 것부터 · 누르면 섹션으로 가요</span></div>
+          <div class="na_rep_rows">${[...rows].sort((a, b) => b.tok - a.tok).map(r => `
+            <div class="na_rep_row na_rep_${r.state}" data-start="${r.s.start}">
+              <div class="na_rep_line"><span class="na_rep_title">${esc(r.s.title)}</span><span class="na_rep_tok">${fmt(r.tok)}</span></div>
+              <div class="na_rep_bar"><span style="width:${Math.max(2, Math.round(r.tok / maxTok * 100))}%"></span></div>
+              <div class="na_rep_meta">${label[r.state]}${r.state === 'key' ? ` · ${r.measured ? '' : '추정 '}${pct(r.rate)} 켜짐${waiting.has(r.key) ? ' · 지금 대기' : ' · 지금 켜짐'}` : ''}${r.pinned ? ' · 📌' : ''}${r.group ? ` · ${esc(r.group)}` : ''}</div>
+            </div>`).join('')}</div>`);
+        const list = tips.slice(0, 12);
+        $root.find('.na_rep_act').on('click', async function () {
+            const t = list[Number(this.dataset.i)];
+            if (t.kind === 'big') { $root.closest('dialog').find('.popup-button-ok').trigger('click'); return gotoSection(t.r.s.start); }
+            const ks = await openKeywords(t.r.s, m.text.slice(t.r.s.start, t.r.s.end), lm[t.r.key] || []);
+            if (ks) { await setLinked(t.r.key, ks); await currentInjection(); render(); }
+        });
+        $root.find('.na_rep_row').on('click', function () {
+            $root.closest('dialog').find('.popup-button-ok').trigger('click');
+            gotoSection(Number(this.dataset.start));
+        });
+    };
+    render();
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
 // ---------------------------------------------------------------- viewer popup
