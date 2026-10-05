@@ -1374,3 +1374,36 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_xray_text { margin: 0; padding: 8px; max-height: 50vh; overflow: auto; white-space: pre-wrap; word-break: break-word; font-size: 0.82em; border-top: 1px solid var(--na-line); }
 .na_xray_text mark { background: color-mix(in srgb, var(--c) 22%, transparent); color: inherit; border-radius: 3px; box-shadow: inset 2px 0 0 var(--c); }
 .na_xray_runlist { display: flex; flex-direction: column; gap: 3px; padding: 4px 6px 6px; border-top: 1px solid var(--na-line); }
+
+/* people: faces, who's who, relationship map */
+.na_face { flex: none; display: inline-grid; place-items: center; width: var(--s); height: var(--s); border-radius: 50%; overflow: hidden; background: hsl(var(--h) 45% 55%); color: #fff; font-weight: 700; font-size: calc(var(--s) * 0.42); line-height: 1; box-shadow: 0 0 0 2px var(--na-card, transparent); }
+.na_face img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.na_people_tabs { margin: 0 0 10px; }
+.na_people_grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
+.na_person { border: 1px solid var(--na-line); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.na_person_top { display: flex; gap: 10px; align-items: center; }
+.na_face_btn { position: relative; border: 0; padding: 0; background: none; cursor: pointer; border-radius: 50%; }
+.na_face_btn > i { position: absolute; right: -2px; bottom: -2px; font-size: 0.7em; padding: 4px; border-radius: 50%; background: var(--na-accent); color: #fff; }
+.na_person_name { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.na_person_name b { font-size: 1.05em; }
+.na_person_name small { font-size: 0.8em; }
+.na_person_faceacts { display: flex; flex-wrap: wrap; gap: 0 10px; font-size: 0.8em; }
+.na_person_row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 0.8em; }
+.na_person_more > summary { cursor: pointer; font-size: 0.85em; }
+.na_person_more ul, .na_relrow ul { margin: 4px 0 0 16px; padding: 0; font-size: 0.85em; }
+.na_person_more li, .na_relrow li { margin: 2px 0; }
+.na_person_quote { font-size: 0.85em; font-style: italic; opacity: 0.8; border-left: 2px solid var(--na-accent); padding-left: 8px; }
+.na_people_add { display: flex; gap: 6px; margin-top: 10px; }
+.na_people_add input { flex: 1; min-width: 0; margin: 0; }
+.na_relmap { position: relative; width: 100%; max-width: 440px; aspect-ratio: 1; margin: 0 auto; }
+.na_relmap svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.na_relmap line { stroke: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 30%, transparent); stroke-linecap: round; }
+.na_relmap line.on { stroke: var(--na-accent); }
+.na_relnode { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 3px; border: 0; background: none; color: inherit; font: inherit; font-size: 0.8em; cursor: pointer; padding: 0; max-width: 90px; }
+.na_relnode > span:last-child { background: var(--na-card, var(--SmartThemeBlurTintColor, transparent)); padding: 0 6px; border-radius: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.na_relnode.on .na_face { box-shadow: 0 0 0 3px var(--na-accent); }
+.na_relnode.on > span:last-child { font-weight: 700; }
+.na_reldetail { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.na_relrow { border: 1px solid var(--na-line); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+.na_relrow_head { display: flex; align-items: center; gap: 8px; }
+.na_relrow_head small { margin-left: auto; }

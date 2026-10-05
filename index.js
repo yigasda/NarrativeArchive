@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.13.0';
+const VERSION = '3.14.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -34,7 +34,7 @@ const DEFAULT_META = Object.freeze({
     lastExport: null, // { from, to, at, how } — the latest extract copied or saved
 });
 
-const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'quoteInject', 'quoteMax', 'router'];
+const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'quoteInject', 'quoteMax', 'router', 'people'];
 const POSITIONS = { 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
 const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
 
@@ -1295,6 +1295,7 @@ function renderPanel() {
             <section class="na_tab_pane" data-pane="tools" hidden>
               <div class="na_block">
                 <div class="na_kw_label">이야기</div>
+                <button type="button" class="na_toolrow" id="na_people"><i class="fa-solid fa-address-book"></i><span><b>인물 도감 · 관계도</b><small>인물마다 얼굴·상태·관계 · 함께 나온 섹션으로 잇는 관계도</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_story_cal"><i class="fa-solid fa-calendar-days"></i><span><b>이야기 달력</b><small>섹션을 날짜 순서로 · 거꾸로 가는 날짜 찾기</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_story_route"><i class="fa-solid fa-route"></i><span><b>이동 경로</b><small>이야기가 머문 곳을 차례로 · 그곳의 섹션들</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_story_links"><i class="fa-solid fa-diagram-project"></i><span><b>섹션 연결망</b><small>본문의 "#217–#236"으로 이어진 섹션들 · 많이 불리는 순</small></span><i class="fa-solid fa-chevron-right"></i></button>
@@ -1607,6 +1608,7 @@ function bindPanel() {
     $('#na_story_cal').on('click', needChat(openCalendar));
     $('#na_story_route').on('click', needChat(openRoute));
     $('#na_story_links').on('click', needChat(openLinks));
+    $('#na_people').on('click', needChat(openPeople));
 
     // --- editor
     const $ed = $('#na_editor');
@@ -5173,6 +5175,211 @@ async function openLinks() {
             </div>`; }).join('')}</div>` : '<div class="na_empty">섹션 본문에 다른 섹션 번호(#217–#236 같은)를 적은 곳이 없어요.</div>'}
       </div>`);
     $root.on('click', '.na_cal_row, .na_ref_chip', function () { const st = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+}
+
+// ---------------------------------------------------------------- people: who's who, faces, and the relationship map
+// The roster is the STATE character headings plus names added by hand (m.people). Faces are kept in the global settings by name,
+// so they follow the story into the next chat: an uploaded picture shrunk to 96px, or the SillyTavern character/persona avatar.
+const FACE_PX = 96;
+const nameKey = n => String(n || '').trim().toLowerCase();
+// case-sensitive on purpose: "Set" the god, not "set" the verb
+const nameRe = n => new RegExp(`(?<![\\p{L}\\p{N}])${escRe(n)}(?![\\p{L}\\p{N}])`, 'u');
+
+function peopleList(m) {
+    const out = [], seen = new Set();
+    for (const n of [...castNames(m), ...(Array.isArray(m.people) ? m.people : [])]) {
+        const k = nameKey(n);
+        if (k && !seen.has(k)) { seen.add(k); out.push(String(n).trim()); }
+    }
+    return out;
+}
+
+function stFace(name) {
+    const c = ctx(), k = nameKey(name);
+    const ch = (c.characters || []).find(x => nameKey(x?.name) === k);
+    if (ch?.avatar && ch.avatar !== 'none') return `/thumbnail?type=avatar&file=${encodeURIComponent(ch.avatar)}`;
+    const per = c.powerUserSettings?.personas || {};
+    const f = Object.keys(per).find(f => nameKey(per[f]) === k);
+    return f ? `/thumbnail?type=persona&file=${encodeURIComponent(f)}` : '';
+}
+
+// stored: a data URL, or 'none' for "letter only"; nothing stored means "the SillyTavern avatar if there is one"
+function faceOf(name) {
+    const f = globalSettings().faces?.[nameKey(name)];
+    return f === 'none' ? '' : f || stFace(name);
+}
+
+function faceHtml(name, size = 40) {
+    const url = faceOf(name);
+    let h = 0; for (const ch of nameKey(name)) h = (h * 31 + ch.codePointAt(0)) % 360;
+    return `<span class="na_face" style="--s:${size}px;--h:${h}" title="${esc(name)}">${url ? `<img src="${esc(url)}" alt="" loading="lazy">` : esc([...String(name).trim()][0] || '?')}</span>`;
+}
+
+async function shrinkFace(file) {
+    const bmp = await createImageBitmap(file);
+    const s = Math.min(bmp.width, bmp.height);
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = FACE_PX;
+    const g = cv.getContext('2d');
+    g.imageSmoothingQuality = 'high';
+    // portraits keep the face in the upper part, so a tall picture is cropped nearer the top
+    g.drawImage(bmp, (bmp.width - s) / 2, (bmp.height - s) * 0.25, s, s, 0, 0, FACE_PX, FACE_PX);
+    bmp.close?.();
+    const webp = cv.toDataURL('image/webp', 0.86);
+    return webp.startsWith('data:image/webp') ? webp : cv.toDataURL('image/jpeg', 0.86);
+}
+
+// STATE blocks: "## Name" bullets for each person, and the bullets of the other STATE headings (Relationships, household…)
+function stateParts(m) {
+    const state = tailBlocks(splitTail(String(m.text || ''))[1]).filter(b => b.key === 'STATE').map(b => b.text).join('\n');
+    const per = new Map(), shared = [];
+    for (const part of state.split(/^(?=## )/m)) {
+        const head = part.match(/^## (.+)$/m)?.[1]?.trim();
+        const lines = part.split('\n').slice(head ? 1 : 0).map(l => l.trim()).filter(l => /^[-*]\s/.test(l)).map(l => l.replace(/^[-*]\s+/, ''));
+        if (head && castNames({ text: `# STATE\n## ${head}\n` }).length) per.set(nameKey(head), lines);
+        else shared.push(...lines);
+    }
+    return { per, shared };
+}
+
+function peopleData(m) {
+    const names = peopleList(m);
+    const res = names.map(n => ({ n, re: nameRe(n), first: n.split(/\s+/)[0] }));
+    const text = String(m.text || '');
+    const secs = parseSections(text).filter(s => !s.group && RANGE_HEAD.test(s.title));
+    const { per, shared } = stateParts(m);
+    const people = new Map(names.map(n => [n, { name: n, secs: [], state: per.get(nameKey(n)) || [], rels: [], quotes: (m.quotes || []).filter(q => nameKey(q.who) === nameKey(n)) }]));
+    const pairs = new Map();
+    const pairKey = (a, b) => [a, b].sort().join('\u0001');
+    for (const s of secs) {
+        const body = text.slice(s.start, s.end);
+        const here = res.filter(r => r.re.test(body)).map(r => r.n);
+        for (const n of here) people.get(n).secs.push(s);
+        for (let i = 0; i < here.length; i++) for (let j = i + 1; j < here.length; j++) {
+            const k = pairKey(here[i], here[j]);
+            if (!pairs.has(k)) pairs.set(k, { a: here[i], b: here[j], secs: [], lines: [], many: [] });
+            pairs.get(k).secs.push(s);
+        }
+    }
+    // relationship lines: shared STATE bullets, and a person's own bullets that name someone else
+    const lines = [...shared.map(l => ({ l })), ...[...per].flatMap(([k, ls]) => ls.map(l => ({ l, owner: names.find(n => nameKey(n) === k) })))];
+    for (const { l, owner } of lines) {
+        const who = res.filter(r => r.re.test(l)).map(r => r.n);
+        if (owner && !who.includes(owner)) who.push(owner);
+        if (!owner) for (const n of who) people.get(n).rels.push(l);
+        for (let i = 0; i < who.length; i++) for (let j = i + 1; j < who.length; j++) {
+            const k = pairKey(who[i], who[j]);
+            if (!pairs.has(k)) pairs.set(k, { a: who[i], b: who[j], secs: [], lines: [], many: [] });
+            // a line about just these two describes them; one naming three or more is kept apart
+            pairs.get(k)[who.length === 2 ? 'lines' : 'many'].push(l);
+        }
+    }
+    return { names, people, pairs: [...pairs.values()], pairKey };
+}
+
+async function openPeople() {
+    const c = ctx();
+    const m = getMeta();
+    const g = globalSettings();
+    g.faces = g.faces && typeof g.faces === 'object' ? g.faces : {};
+    const short = s => (s.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [s.title.slice(0, 20)])[0];
+    const chip = s => `<button type="button" class="na_ref_chip" data-start="${s.start}" title="${esc(s.title)}">${esc(short(s))}</button>`;
+    let view = 'book', sel = null, data = peopleData(m);
+    const $root = $(`
+      <div class="na_popup na_people">
+        <div class="na_block_head"><div><h4>인물 도감</h4><p>STATE의 인물과 직접 넣은 인물을 아카이브에서 찾아 모아요. 얼굴은 실리태번 아바타를 쓰거나 그림을 올리면 작게(96px) 줄여서 저장해요. 다음 채팅에서도 그대로예요.</p></div></div>
+        <div class="na_seg na_people_tabs"><button type="button" class="na_seg_btn active" data-v="book"><i class="fa-solid fa-address-book"></i> 도감</button><button type="button" class="na_seg_btn" data-v="map"><i class="fa-solid fa-circle-nodes"></i> 관계도</button></div>
+        <div class="na_people_body"></div>
+        <input type="file" accept="image/*" class="na_face_file" hidden>
+      </div>`);
+    const book = () => `
+      <div class="na_people_grid">${data.names.map(n => {
+          const p = data.people.get(n), extra = (m.people || []).some(x => nameKey(x) === nameKey(n)) && !castNames(m).some(x => nameKey(x) === nameKey(n));
+          const st = g.faces[nameKey(n)], hasSt = !!stFace(n);
+          return `
+          <div class="na_person" data-n="${esc(n)}">
+            <div class="na_person_top">
+              <button type="button" class="na_face_btn" title="그림 올리기">${faceHtml(n, 64)}<i class="fa-solid fa-camera"></i></button>
+              <div class="na_person_name">
+                <b>${esc(n)}</b>
+                <small class="na_dim">섹션 ${p.secs.length}개${p.quotes.length ? ` · 대사 ${p.quotes.length}개` : ''}${extra ? ' · 직접 넣음' : ''}</small>
+                <span class="na_person_faceacts">
+                  ${hasSt && st ? '<button type="button" class="na_linkbtn na_face_st">실리태번 아바타로</button>' : ''}
+                  ${st !== 'none' && faceOf(n) ? '<button type="button" class="na_linkbtn na_face_none">얼굴 빼기</button>' : ''}
+                  ${extra ? '<button type="button" class="na_linkbtn na_person_del">목록에서 빼기</button>' : ''}
+                </span>
+              </div>
+            </div>
+            ${p.secs.length ? `<div class="na_person_row"><span class="na_dim">처음</span>${chip(p.secs[0])}${p.secs.length > 1 ? `<span class="na_dim">최근</span>${chip(p.secs[p.secs.length - 1])}` : ''}</div>` : '<div class="na_person_row na_dim">아카이브 섹션에 이름이 안 나와요</div>'}
+            ${p.state.length ? `<details class="na_person_more"><summary>지금 상태 <span class="na_dim">${p.state.length}</span></summary><ul>${p.state.map(l => `<li>${esc(l)}</li>`).join('')}</ul></details>` : ''}
+            ${p.rels.length ? `<details class="na_person_more"><summary>관계 <span class="na_dim">${p.rels.length}</span></summary><ul>${p.rels.map(l => `<li>${esc(l)}</li>`).join('')}</ul></details>` : ''}
+            ${p.quotes.length ? `<div class="na_person_quote">“${esc(p.quotes[0].text)}”</div>` : ''}
+          </div>`; }).join('')}
+      </div>
+      <div class="na_people_add"><input type="text" class="text_pole na_people_name" placeholder="인물 더 넣기 (예: Nephthys)"><button type="button" class="na_btn na_small na_people_addbtn"><i class="fa-solid fa-plus"></i> 추가</button></div>`;
+    const map = () => {
+        const names = data.names;
+        if (!names.length) return '<div class="na_empty">인물이 없어요. 도감에서 인물을 넣어 주세요.</div>';
+        sel = names.includes(sel) ? sel : names[0];
+        const pos = new Map(names.map((n, i) => {
+            if (names.length === 1) return [n, [50, 50]];
+            const a = -Math.PI / 2 + i * 2 * Math.PI / names.length;
+            return [n, [50 + 38 * Math.cos(a), 50 + 38 * Math.sin(a)]];
+        }));
+        const max = Math.max(1, ...data.pairs.map(p => p.secs.length));
+        const edges = data.pairs.filter(p => p.secs.length || p.lines.length || p.many.length);
+        const mine = edges.filter(p => p.a === sel || p.b === sel).sort((x, y) => y.secs.length - x.secs.length);
+        return `
+          <div class="na_relmap">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none">${edges.map(p => { const [x1, y1] = pos.get(p.a), [x2, y2] = pos.get(p.b); const on = p.a === sel || p.b === sel;
+                return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${on ? 'on' : ''}" style="stroke-width:${(0.4 + 2.2 * p.secs.length / max).toFixed(2)}" vector-effect="non-scaling-stroke"><title>${esc(p.a)} – ${esc(p.b)}: 함께 나온 섹션 ${p.secs.length}개</title></line>`; }).join('')}</svg>
+            ${names.map(n => { const [x, y] = pos.get(n); return `<button type="button" class="na_relnode ${n === sel ? 'on' : ''}" data-n="${esc(n)}" style="left:${x}%;top:${y}%">${faceHtml(n, names.length > 8 ? 44 : 56)}<span>${esc(n)}</span></button>`; }).join('')}
+          </div>
+          <div class="na_reldetail">
+            <div class="na_cal_loghead"><b>${esc(sel)}</b><span class="na_dim">선 굵기 = 같은 섹션에 함께 나온 횟수</span></div>
+            ${mine.length ? mine.map(p => { const o = p.a === sel ? p.b : p.a; return `
+              <div class="na_relrow">
+                <div class="na_relrow_head">${faceHtml(o, 28)}<b>${esc(o)}</b><small class="na_dim">함께 ${p.secs.length}섹션</small></div>
+                ${p.lines.length ? `<ul>${p.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
+                ${p.many.length ? `<details class="na_person_more"><summary>다른 인물과 같이 나오는 줄 <span class="na_dim">${p.many.length}</span></summary><ul>${p.many.map(l => `<li>${esc(l)}</li>`).join('')}</ul></details>` : ''}
+                ${p.secs.length ? `<div class="na_person_row"><span class="na_dim">최근 함께</span>${p.secs.slice(-3).reverse().map(chip).join('')}</div>` : ''}
+              </div>`; }).join('') : '<div class="na_dim">다른 인물과 같이 나온 섹션이 없어요.</div>'}
+          </div>`;
+    };
+    const draw = () => { data = peopleData(m); $root.find('.na_people_tabs .na_seg_btn').each(function () { $(this).toggleClass('active', this.dataset.v === view); }); $root.find('.na_people_body').html(view === 'book' ? book() : map()); };
+    const save = async () => { saveGlobal(); draw(); };
+    let target = null;
+    $root.on('click', '.na_people_tabs .na_seg_btn', function () { view = this.dataset.v; draw(); });
+    $root.on('click', '.na_relnode', function () { sel = String($(this).data('n')); draw(); });
+    $root.on('click', '.na_face_btn', function () { target = String($(this).closest('.na_person').data('n')); $root.find('.na_face_file').val('').trigger('click'); });
+    $root.find('.na_face_file').on('change', async function () {
+        const f = this.files?.[0];
+        if (!f || !target) return;
+        try { g.faces[nameKey(target)] = await shrinkFace(f); await save(); }
+        catch (e) { toastr.error(`그림을 못 읽었어요: ${e.message || e}`); }
+    });
+    $root.on('click', '.na_face_st', async function () { delete g.faces[nameKey($(this).closest('.na_person').data('n'))]; await save(); });
+    $root.on('click', '.na_face_none', async function () { g.faces[nameKey($(this).closest('.na_person').data('n'))] = 'none'; await save(); });
+    $root.on('click', '.na_person_del', async function () {
+        const k = nameKey($(this).closest('.na_person').data('n'));
+        m.people = (m.people || []).filter(x => nameKey(x) !== k);
+        await saveMeta(); draw();
+    });
+    const add = async () => {
+        const v = String($root.find('.na_people_name').val() || '').trim();
+        if (!v) return;
+        if (data.names.some(n => nameKey(n) === nameKey(v))) return toastr.info('이미 있는 인물이에요.');
+        m.people = [...(Array.isArray(m.people) ? m.people : []), v];
+        await saveMeta(); draw();
+        $root.find('.na_people_name').trigger('focus');
+    };
+    $root.on('click', '.na_people_addbtn', add);
+    $root.on('keydown', '.na_people_name', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); add(); } });
+    $root.on('click', '.na_ref_chip', function () { const st = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); });
+    // an avatar that fails to load (renamed card, deleted persona) falls back to the letter
+    $root[0].addEventListener('error', e => { const img = e.target; if (img.tagName === 'IMG' && img.parentElement?.classList.contains('na_face')) img.replaceWith(img.parentElement.title.trim()[0] || '?'); }, true);
+    draw();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
