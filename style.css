@@ -307,20 +307,30 @@
 .na_set_row input[type="number"] { width: 6.5em; margin: 0 !important; text-align: right; }
 .na_set_row select { width: auto; max-width: 60%; margin: 0 !important; }
 .na_set_row.na_disabled { opacity: 0.4; pointer-events: none; }
-.na_toggle {
-    appearance: none;
-    -webkit-appearance: none;
+/* switches: beat SillyTavern's input[type='checkbox'] rules (box, tick, overflow, filter) */
+input.na_toggle[type="checkbox"] {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    display: block !important;
     flex-shrink: 0;
     width: 42px !important;
     height: 24px !important;
     margin: 0 !important;
-    border-radius: 999px;
-    background: var(--na-raw);
+    padding: 0 !important;
+    border: 0 !important;
+    outline: 0 !important;
+    border-radius: 999px !important;
+    background: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 22%, transparent) !important;
+    box-shadow: none !important;
+    filter: none !important;
+    transform: none !important;
+    overflow: visible !important;
     position: relative;
     cursor: pointer;
     transition: background 0.2s;
 }
-.na_toggle::after {
+input.na_toggle[type="checkbox"]::before { content: none !important; display: none !important; }
+input.na_toggle[type="checkbox"]::after {
     content: '';
     position: absolute;
     top: 3px;
@@ -329,11 +339,12 @@
     height: 18px;
     border-radius: 50%;
     background: #fff;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     transition: transform 0.2s;
 }
-.na_toggle:checked { background: var(--na-accent); }
-.na_toggle:checked::after { transform: translateX(18px); }
+input.na_toggle[type="checkbox"]:checked { background: var(--na-accent) !important; }
+input.na_toggle[type="checkbox"]:checked::after { transform: translateX(18px); }
+input.na_toggle[type="checkbox"]:focus-visible { outline: 2px solid var(--na-accent) !important; outline-offset: 2px; }
 .na_wrap { width: 100%; margin: 0 !important; font-family: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.84em; resize: vertical; }
 .na_since { font-size: 0.85em; line-height: 1.6; padding: 8px 10px; border-radius: 10px; background: var(--na-softer); }
 .na_warn_txt { color: var(--na-warn); }
@@ -1272,3 +1283,13 @@
 .na_qb_gbtns { margin-left: auto; display: inline-flex; gap: 2px; }
 .na_qb_gbtns .na_icon { opacity: 0.55; }
 .na_qb_gbtns .na_icon:hover { opacity: 1; color: var(--na-warn); }
+
+/* tool popups: action buttons, then one strip for "inject" settings */
+.na_tool_actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.na_inject_strip { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; padding: 7px 12px; border-radius: 10px; background: var(--na-softer); border: 1px solid var(--na-line); font-size: 0.88em; }
+.na_strip_item { display: inline-flex; align-items: center; gap: 8px; margin: 0; cursor: pointer; }
+.na_strip_item .na_num { width: 3.6em !important; margin: 0 !important; padding: 2px 6px !important; text-align: center; }
+.na_inject_strip .na_dim { font-size: 0.9em; }
+.na_tool_actions .na_kn_clear, .na_tool_actions .na_qb_clear { margin-left: auto; font-size: 0.85em; }
+.na_qb_pickhost, .na_kn_pickhost { display: contents; }
+.na_chip:empty { display: none; }
