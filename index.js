@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.7.0';
+const VERSION = '3.7.1';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3708,28 +3708,74 @@ function mountSectionPicker($host, { m, title, doneKeys, doneLabel = '읽음', g
     };
 }
 
-const AI_SYS_KNOW = `You keep a "who knows what" table for a role-play story archive, so the role-play model never lets a character know something they should not.
-You get a few SECTIONS of the archive (in story order), the CURRENT TABLE built from earlier sections (numbered), and the CURRENT CAST (who is in the story at its latest point).
-Report ONLY what these sections add or change. Never repeat rows that these sections do not touch.
-- Every fact in these sections whose knowledge differs between characters: secrets, hidden pasts, lies told, confessions, plans, things one character saw or heard alone, misunderstandings. Skip facts every character knows. Do not stop early: go through every section you were given, to the last one.
-- If these sections change who knows a fact already in the table (someone is told, finds out, starts to suspect, a secret comes out), update that row.
-"unaware" and "suspects" are NOT everyone who happens not to know. Name only characters in the CURRENT CAST from whom the fact is kept, or who would act differently if they knew. If nobody like that, write none.
-Use the archive's own character names. One line per change, nothing else, in exactly these forms (English):
-NEW | fact in one short sentence | knows: A, B | unaware: C | suspects: D | src: the section heading where this is established, copied exactly
-UPDATE 3 | knows: A, B, C | unaware: none | suspects: D
-(UPDATE gives the row number and the full new lists.) Write "none" for an empty field. If these sections add or change nothing, answer exactly: none`;
+const AI_SYS_KNOW = `GOAL
+You help a role-play model avoid one mistake: a character saying or acting on something they could not know.
+To do that you write down SECRETS: facts that some CURRENT CAST characters know and other CURRENT CAST characters do not.
 
-const AI_SYS_KNOW_TIDY = `You tidy a "who knows what" table for a role-play story archive. You get the whole ARCHIVE, the CURRENT CAST, and the TABLE (numbered).
-Judge every row as of the END of the archive (STATE and the latest sections are the truth now):
-- Merge rows that are the same fact or the same recurring pattern (e.g. several "X overheard Y" rows become one "X has repeatedly overheard Y" row).
-- Fix who knows: if the archive later shows a character was told, found out, or it came out openly, move them to knows (or suspects).
-- Drop rows that no longer matter: nobody in the CURRENT CAST is still kept from it, it is trivial, or it is not really a secret.
-"unaware" and "suspects" name only CURRENT CAST characters from whom the fact is kept.
-Answer only with changes, one per line, in exactly these forms (English):
-KEEP 3 | knows: A, B | unaware: C | suspects: none
-MERGE 4, 7, 9 | merged fact in one short sentence | knows: A | unaware: B | suspects: none | src: section heading copied exactly
-DROP 5
-Rows you do not mention stay as they are. If nothing needs changing, answer exactly: none`;
+YOU GET
+- CURRENT CAST: the characters in the story right now.
+- CURRENT TABLE: secrets already found in earlier sections, numbered.
+- SECTIONS: the next part of the story archive, in order.
+
+A ROW IS ALLOWED ONLY IF ALL THREE ARE TRUE
+1. It comes from the SECTIONS you were given.
+2. At least one CURRENT CAST character knows it, AND at least one CURRENT CAST character does not know it (or only suspects it).
+3. If a character who does not know it mentioned it or acted on it, that would be a mistake.
+
+GOOD ROWS
+- Ivo listens to private talks through the wind | knows: Ivo | unaware: Ren
+- Ren told only Ivo about her old life | knows: Ivo, Ren | unaware: Mara
+- Mara lied to Ren about where she was that night | knows: Mara | unaware: Ren | suspects: Ivo
+
+DO NOT WRITE
+- Things every CURRENT CAST character saw, did together, or was told. Nobody to hide it from.
+- Events, feelings, or scenes that are not secrets ("they ate together", "she cried", "he was angry").
+- Anyone outside the CURRENT CAST in unaware or suspects. People who left the story do not count.
+- The same secret again in other words. Something that happens many times is ONE row ("Ivo has often listened through the wind"), not one row per time.
+
+HOW TO WORK
+Step 1. Read every section you were given, all the way to the last one. Do not stop early.
+Step 2. For each secret you find, look at the CURRENT TABLE:
+  - It is already there and nobody new learns it here: write nothing.
+  - It is already there but here someone is told, finds out, overhears, or starts to suspect: write UPDATE with that row number.
+  - It is not there yet: write NEW.
+Step 3. Write only those lines.
+
+OUTPUT: nothing else, English, one line each, exactly like this
+NEW | <the secret in one short sentence> | knows: <names> | unaware: <names> | suspects: <names> | src: <the section heading, copied exactly>
+UPDATE <row number> | knows: <names> | unaware: <names> | suspects: <names>
+Write "none" for an empty list. Use the archive's own spelling of names.
+If you have nothing to add or change, write exactly: none`;
+
+const AI_SYS_KNOW_TIDY = `GOAL
+You clean up a table of SECRETS for a role-play: facts that some CURRENT CAST characters know and others do not. The table helps the role-play model avoid a character saying something they could not know.
+The table was built section by section, so it has repeats and some rows are out of date.
+
+YOU GET
+- ARCHIVE: the whole story. The END of it (the latest sections, STATE and OPEN) is what is true now.
+- CURRENT CAST: the characters in the story right now.
+- TABLE: the secrets, numbered.
+
+CHECK EVERY ROW, ONE BY ONE
+1. Is it the same secret as another row, or the same thing happening again? → MERGE those rows into one.
+2. By the END of the archive, did someone from "unaware" or "suspects" find out, get told, or see it come out openly? → KEEP the row with the corrected lists.
+3. Is nobody in the CURRENT CAST still kept from it, or is it not really a secret (just an event or a feeling)? → DROP it.
+4. Otherwise it is fine → write nothing for it.
+
+EXAMPLES
+- Rows 4, 7 and 9 are all "Ivo listened through the wind to Ren" → MERGE 4, 7, 9 | Ivo has often listened through the wind to Ren's private talks | knows: Ivo | unaware: Ren | suspects: none | src: <heading of the first one>
+- Row 3 says Ren does not know, but near the end Ren is told → KEEP 3 | knows: Ivo, Ren | unaware: Mara | suspects: none
+- Row 5: everyone in the CURRENT CAST knows it now → DROP 5
+
+RULES
+- unaware and suspects may only name CURRENT CAST characters.
+- Rows you do not mention stay exactly as they are, so you only need to write the changes.
+
+OUTPUT: nothing else, English, one line each, exactly like this
+KEEP <number> | knows: <names> | unaware: <names> | suspects: <names>
+MERGE <number>, <number>, ... | <the merged secret in one short sentence> | knows: <names> | unaware: <names> | suspects: <names> | src: <section heading, copied exactly>
+DROP <number>
+Write "none" for an empty list. If nothing needs changing, write exactly: none`;
 
 // One pass over the finished table against the whole archive: merge repeats, update to the end state, drop dead rows.
 async function tidyKnowledge(m) {
