@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.0.1';
+const VERSION = '3.0.2';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3867,7 +3867,7 @@ async function openWizard() {
       </div>`);
     // last choice is remembered; "__none" copies the raw log only
     $root.find('.na_wz_prompt').html(`<option value="__none">지시문 없이 (원문만)</option>${g.prompts.map(p => `<option value="${esc(p.id)}">지시문: ${esc(p.name)}${p.fav ? ' ★' : ''}</option>`).join('')}`)
-        .val(g.wizPrompt === '__none' || g.prompts.some(p => p.id === g.wizPrompt) ? g.wizPrompt : activePrompt(g).id);
+        .val(g.prompts.some(p => p.id === g.wizPrompt) ? g.wizPrompt : '__none'); // default: raw only
     $root.find('.na_wz_prompt').on('change', function () { g.wizPrompt = this.value; saveGlobal(); });
     const range = () => {
         const from = Math.max(0, parseInt($root.find('.na_wz_from').val(), 10) || 0);
