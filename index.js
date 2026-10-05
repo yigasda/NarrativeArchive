@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.8.3';
+const VERSION = '3.8.4';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -2329,6 +2329,40 @@ function lineDiff(oldText, newText) {
         while (j < m) out.push({ t: '+', line: B[j++] });
     }
     a.slice(a.length - suf).forEach(line => out.push({ t: ' ', line }));
+    return interleaveChanges(out);
+}
+
+// Inside each run of changed lines, put every old line right above the new line it became
+// (paired by shared words, in order), instead of all removed lines followed by all added ones.
+function interleaveChanges(rows) {
+    const toks = l => new Set((l.toLowerCase().match(/[\p{L}\p{N}]+/gu) || []));
+    const sim = (x, y) => { if (!x.size || !y.size) return 0; let n = 0; for (const t of x) if (y.has(t)) n++; return n / Math.max(x.size, y.size); };
+    const out = [];
+    for (let i = 0; i < rows.length;) {
+        if (rows[i].t === ' ') { out.push(rows[i++]); continue; }
+        let e = i; while (e < rows.length && rows[e].t !== ' ') e++;
+        const run = rows.slice(i, e);
+        i = e;
+        const D = run.filter(r => r.t === '-'), A = run.filter(r => r.t === '+');
+        if (!D.length || !A.length || D.length * A.length > 40_000) { out.push(...run); continue; }
+        // best in-order pairing (alignment that maximises total similarity; pairs below 0.25 don't count)
+        const td = D.map(r => toks(r.line)), ta = A.map(r => toks(r.line));
+        const n = D.length, m = A.length, w = m + 1;
+        const S = new Float64Array((n + 1) * w);
+        for (let x = n - 1; x >= 0; x--) for (let y = m - 1; y >= 0; y--) {
+            const s0 = sim(td[x], ta[y]);
+            S[x * w + y] = Math.max(S[(x + 1) * w + y], S[x * w + y + 1], s0 >= 0.25 ? s0 + S[(x + 1) * w + y + 1] : 0);
+        }
+        let x = 0, y = 0;
+        while (x < n && y < m) {
+            const s0 = sim(td[x], ta[y]);
+            if (s0 >= 0.25 && Math.abs(S[x * w + y] - (s0 + S[(x + 1) * w + y + 1])) < 1e-9) { out.push(D[x++], A[y++]); }
+            else if (S[(x + 1) * w + y] >= S[x * w + y + 1]) out.push(D[x++]);
+            else out.push(A[y++]);
+        }
+        while (x < n) out.push(D[x++]);
+        while (y < m) out.push(A[y++]);
+    }
     return out;
 }
 
