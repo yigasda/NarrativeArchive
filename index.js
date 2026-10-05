@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.0.7';
+const VERSION = '3.1.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1186,15 +1186,32 @@ function renderPanel() {
                 </div>
               </div>
               <details class="na_block na_details na_fold">
-                <summary>따로 하기 · 압축 설정</summary>
+                <summary>따로 하기</summary>
                 <div class="na_steps">
-                  <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>뽑기 옵션 · 압축 지시문 관리 · 복사</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                  <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>경계선 이후 메시지 · 지시문 붙여 복사</small></span><i class="fa-solid fa-chevron-right"></i></button>
                   <button type="button" class="na_step" id="na_open_append"><b>2</b><span><strong>아카이브에 추가</strong><small>압축본 붙여넣기 · 번호 검사 · 경계선 자동</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
               </details>
-              <details class="na_block na_details na_fold">
-                <summary>숨기기 설정</summary>
+              <details class="na_block na_details na_fold" id="na_cmp_settings">
+                <summary>설정</summary>
                 <div>
+                  <div class="na_set_sub">압축</div>
+                  <p class="na_dim na_fold_desc">원문 뽑기와 압축 마법사에 같이 쓰여요. 지시문은 이 기기의 실리태번 설정에만 저장돼요.</p>
+                  <div class="na_set_list">
+                    <label class="na_set_row"><span>숨긴 메시지 빼기</span><input type="checkbox" class="na_toggle" id="na_opt_hidden"></label>
+                    <label class="na_set_row"><span><span>태그 지우기</span><small>&lt;think&gt; 블록 통째로, 나머지 HTML 태그는 글자만 남김</small></span><input type="checkbox" class="na_toggle" id="na_opt_tags"></label>
+                    <label class="na_set_row"><span>머리글</span>
+                      <select class="text_pole" id="na_opt_name">
+                        <option value="full">[번호] 이름:</option>
+                        <option value="name">이름:</option>
+                        <option value="number">[번호]</option>
+                      </select>
+                    </label>
+                    <label class="na_set_row"><span><span>원문 뽑기에서 지시문 붙이기</span><small>다른 모델에 그대로 붙여넣기용</small></span><input type="checkbox" class="na_toggle" id="na_opt_prompt"></label>
+                  </div>
+                  <div class="na_kw_label na_plib_label">압축 지시문</div>
+                  <div class="na_plib" id="na_plib"></div>
+                  <div class="na_set_sub">숨기기</div>
                   <p class="na_dim na_fold_desc">아카이브가 다루는 마지막 메시지 번호예요. 그 앞은 숨겨서 토큰을 아껴요.</p>
                 <div class="na_set_list">
                   <label class="na_set_row"><span><span>아카이브 따라가기</span><small id="na_track_info">제목의 마지막 #번호를 경계선으로</small></span><input type="checkbox" id="na_track" class="na_toggle"></label>
@@ -1480,6 +1497,7 @@ function bindPanel() {
     const $p = $('#na_settings');
 
     $p.find('.na_nav_btn').on('click', function () { showTab($(this).data('tab')); });
+    bindPromptSettings();
     $('#na_gear').on('click', () => showTab($('[data-pane="config"]').prop('hidden') ? 'config' : (globalSettings().lastTab || 'home')));
     $('#na_cfg_back').on('click', () => showTab(globalSettings().lastTab || 'home'));
     $p.find('.na_seg_btn').on('click', function () { showArchiveView($(this).data('view')); });
@@ -4852,41 +4870,11 @@ async function openExtract() {
           <span class="na_lastex_text"></span>
           <button type="button" class="na_linkbtn na_lastex_again">이 범위 다시</button>
         </div>
-        <details class="na_block na_details na_ex_opts">
-          <summary>뽑기 옵션</summary>
-          <div class="na_set_list">
-            <label class="na_set_row"><span>숨긴 메시지 빼기</span><input type="checkbox" class="na_toggle na_opt_hidden"></label>
-            <label class="na_set_row"><span><span>태그 지우기</span><small>&lt;think&gt; 블록 통째로, 나머지 HTML 태그는 글자만 남김</small></span><input type="checkbox" class="na_toggle na_opt_tags"></label>
-            <label class="na_set_row"><span>머리글</span>
-              <select class="text_pole na_opt_name">
-                <option value="full">[번호] 이름:</option>
-                <option value="name">이름:</option>
-                <option value="number">[번호]</option>
-              </select>
-            </label>
-          </div>
-        </details>
-        <details class="na_block na_details na_ex_prompt">
-          <summary>압축 지시문 <span class="na_chip na_prompt_state"></span></summary>
-          <div class="na_set_list">
-            <label class="na_set_row"><span><span>복사할 때 지시문 붙이기</span><small>다른 모델에 그대로 붙여넣기용</small></span><input type="checkbox" class="na_toggle na_opt_prompt"></label>
-          </div>
-          <div class="na_pfav"></div>
-          <div class="na_prow">
-            <select class="text_pole na_psel"></select>
-            <button type="button" class="na_icon na_pstar" title="즐겨찾기"><i class="fa-regular fa-star"></i></button>
-            <button type="button" class="na_icon na_pnew" title="새 지시문"><i class="fa-solid fa-plus"></i></button>
-            <button type="button" class="na_icon na_pdup" title="복제"><i class="fa-regular fa-clone"></i></button>
-            <button type="button" class="na_icon na_pren" title="이름 바꾸기"><i class="fa-solid fa-i-cursor"></i></button>
-            <button type="button" class="na_icon na_pdel" title="삭제"><i class="fa-regular fa-trash-can"></i></button>
-          </div>
-          <textarea class="text_pole na_prompt_ta" spellcheck="false" rows="9"></textarea>
-          <div class="na_prompt_help">
-            <code>{{raw}}</code> 원문 · <code>{{from}}</code> <code>{{to}}</code> 번호 · <code>{{last_section}}</code> 마지막 섹션 · <code>{{state}}</code> 지금의 STATE·OPEN · <code>{{archive}}</code> 아카이브 전체.
-            <code>{{raw}}</code>가 없으면 원문은 맨 끝에 붙어요. 지시문은 이 기기의 실리태번 설정에만 저장돼요.
-            <button type="button" class="na_linkbtn na_prompt_reset">기본 지시문 되돌리기</button>
-          </div>
-        </details>
+        <div class="na_ex_quick">
+          <label class="checkbox_label"><input type="checkbox" class="na_opt_prompt"><span>지시문 붙이기</span></label>
+          <select class="text_pole na_psel_quick"></select>
+        </div>
+        <div class="na_ex_optline na_dim"><span class="na_ex_optsum"></span> <button type="button" class="na_linkbtn na_ex_toset">설정에서 바꾸기</button></div>
         <div class="na_ex_info na_dim"></div>
         <div class="na_ex_actions">
           <button type="button" class="na_btn na_save_txt"><i class="fa-solid fa-download"></i> .txt 저장</button>
@@ -4895,10 +4883,13 @@ async function openExtract() {
         <textarea class="na_ex_hidden" readonly></textarea>
       </div>`);
 
-    $root.find('.na_opt_hidden').prop('checked', g.skipHidden);
-    $root.find('.na_opt_tags').prop('checked', g.stripTags);
-    $root.find('.na_opt_name').val(g.nameStyle);
     $root.find('.na_opt_prompt').prop('checked', g.usePrompt);
+    const fillQuick = () => $root.find('.na_psel_quick')
+        .html([...g.prompts].sort((a, b) => b.fav - a.fav).map(p => `<option value="${esc(p.id)}">${p.fav ? '★ ' : ''}${esc(p.name)}</option>`).join(''))
+        .val(activePrompt(g).id).prop('disabled', !g.usePrompt);
+    fillQuick();
+    $root.find('.na_ex_optsum').text(`옵션: ${[g.skipHidden ? '숨긴 메시지 뺌' : '숨긴 메시지 포함', g.stripTags ? '태그 지움' : '', { full: '[번호] 이름:', name: '이름:', number: '[번호]' }[g.nameStyle] || ''].filter(Boolean).join(' · ')}`);
+    $root.find('.na_ex_toset').on('click', () => { $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoCompressSettings(); });
 
     let current = '';
     let output = '';
@@ -4927,70 +4918,9 @@ async function openExtract() {
             : '이 범위에 메시지가 없습니다.');
     };
 
-    let t;
-    const later = () => { clearTimeout(t); t = setTimeout(render, 300); };
     $root.find('.na_from, .na_to').on('change', render);
-    $root.find('.na_opt_hidden').on('change', function () { g.skipHidden = this.checked; saveGlobal(); render(); });
-    $root.find('.na_opt_tags').on('change', function () { g.stripTags = this.checked; saveGlobal(); render(); });
-    $root.find('.na_opt_name').on('change', function () { g.nameStyle = this.value; saveGlobal(); render(); });
-    $root.find('.na_opt_prompt').on('change', function () { g.usePrompt = this.checked; saveGlobal(); render(); });
-    // --- prompt library
-    const renderPrompts = () => {
-        const cur = activePrompt(g);
-        const sorted = [...g.prompts].sort((a, b) => (b.fav - a.fav));
-        $root.find('.na_psel').html(sorted.map(p => `<option value="${esc(p.id)}">${p.fav ? '★ ' : ''}${esc(p.name)}</option>`).join('')).val(cur.id);
-        $root.find('.na_pfav').html(g.prompts.filter(p => p.fav).map(p =>
-            `<button type="button" class="na_pchip ${p.id === cur.id ? 'on' : ''}" data-id="${esc(p.id)}">${esc(p.name)}</button>`).join(''));
-        $root.find('.na_pstar i').attr('class', cur.fav ? 'fa-solid fa-star' : 'fa-regular fa-star');
-        $root.find('.na_pstar').toggleClass('active', !!cur.fav);
-        $root.find('.na_pdel, .na_pren').prop('disabled', cur.id === 'basic');
-        $root.find('.na_prompt_reset').toggle(cur.id === 'basic' && cur.text !== BASIC_PROMPT);
-        const $ta = $root.find('.na_prompt_ta');
-        if ($ta.data('pid') !== cur.id) $ta.val(cur.text).data('pid', cur.id);
-    };
-    const pick = id => { g.activePrompt = id; saveGlobal(); renderPrompts(); render(); };
-    const askName = async (title, value) => {
-        const c2 = ctx();
-        const v = await c2.Popup.show.input(title, '', value);
-        return typeof v === 'string' ? v.trim() : '';
-    };
-    $root.find('.na_psel').on('change', function () { pick(this.value); });
-    $root.on('click', '.na_pchip', function () { pick($(this).data('id')); });
-    $root.find('.na_pstar').on('click', () => { const p = activePrompt(g); p.fav = !p.fav; saveGlobal(); renderPrompts(); });
-    $root.find('.na_pnew').on('click', async () => {
-        const name = await askName('새 지시문 이름', `지시문 ${g.prompts.length + 1}`);
-        if (!name) return;
-        const p = { id: newId(), name, text: '', fav: false };
-        g.prompts.push(p); pick(p.id);
-        $root.find('.na_prompt_ta').trigger('focus');
-    });
-    $root.find('.na_pdup').on('click', async () => {
-        const src = activePrompt(g);
-        const name = await askName('복제한 지시문 이름', `${src.name} 사본`);
-        if (!name) return;
-        const p = { id: newId(), name, text: src.text, fav: false };
-        g.prompts.push(p); pick(p.id);
-    });
-    $root.find('.na_pren').on('click', async () => {
-        const p = activePrompt(g);
-        if (p.id === 'basic') return;
-        const name = await askName('이름 바꾸기', p.name);
-        if (!name) return;
-        p.name = name; saveGlobal(); renderPrompts(); render();
-    });
-    $root.find('.na_pdel').on('click', async () => {
-        const p = activePrompt(g);
-        if (p.id === 'basic') return;
-        if (!await confirm('지시문 삭제', `"${p.name}"을(를) 지울까요? 되돌릴 수 없어요.`)) return;
-        g.prompts = g.prompts.filter(x => x.id !== p.id);
-        pick(g.prompts[0].id);
-    });
-    $root.find('.na_prompt_ta').on('input', function () { activePrompt(g).text = this.value; saveGlobal(); renderPrompts(); later(); });
-    $root.find('.na_prompt_reset').on('click', () => {
-        const p = g.prompts.find(x => x.id === 'basic');
-        p.text = BASIC_PROMPT; $root.find('.na_prompt_ta').val(p.text); saveGlobal(); renderPrompts(); render();
-    });
-    renderPrompts();
+    $root.find('.na_opt_prompt').on('change', function () { g.usePrompt = this.checked; saveGlobal(); fillQuick(); render(); renderPromptSettings(); });
+    $root.find('.na_psel_quick').on('change', function () { g.activePrompt = this.value; saveGlobal(); render(); renderPromptSettings(); });
     const showLast = () => {
         const x = getMeta().lastExport;
         $root.find('.na_lastex').prop('hidden', !x);
@@ -5026,6 +4956,107 @@ async function openExtract() {
 
     await render();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+}
+
+// ---- compress settings in the panel: extract options + prompt library
+
+function renderPromptSettings() {
+    const g = globalSettings();
+    $('#na_opt_hidden').prop('checked', !!g.skipHidden);
+    $('#na_opt_tags').prop('checked', !!g.stripTags);
+    $('#na_opt_name').val(g.nameStyle);
+    $('#na_opt_prompt').prop('checked', !!g.usePrompt);
+    const $h = $('#na_plib');
+    if (!$h.length) return;
+    const cur = activePrompt(g);
+    const sorted = [...g.prompts].sort((a, b) => (b.fav - a.fav));
+    $h.find('.na_psel').html(sorted.map(p => `<option value="${esc(p.id)}">${p.fav ? '★ ' : ''}${esc(p.name)}</option>`).join('')).val(cur.id);
+    $h.find('.na_pfav').html(g.prompts.filter(p => p.fav).map(p =>
+        `<button type="button" class="na_pchip ${p.id === cur.id ? 'on' : ''}" data-id="${esc(p.id)}">${esc(p.name)}</button>`).join(''));
+    $h.find('.na_pstar i').attr('class', cur.fav ? 'fa-solid fa-star' : 'fa-regular fa-star');
+    $h.find('.na_pstar').toggleClass('active', !!cur.fav);
+    $h.find('.na_pdel, .na_pren').prop('disabled', cur.id === 'basic');
+    $h.find('.na_prompt_reset').toggle(cur.id === 'basic' && cur.text !== BASIC_PROMPT);
+    const $ta = $h.find('.na_prompt_ta');
+    if ($ta.data('pid') !== cur.id) $ta.val(cur.text).data('pid', cur.id);
+}
+
+function bindPromptSettings() {
+    const g = () => globalSettings();
+    const $h = $('#na_plib').html(`
+        <div class="na_pfav"></div>
+        <div class="na_prow">
+          <select class="text_pole na_psel"></select>
+          <button type="button" class="na_icon na_pstar" title="즐겨찾기"><i class="fa-regular fa-star"></i></button>
+          <button type="button" class="na_icon na_pnew" title="새 지시문"><i class="fa-solid fa-plus"></i></button>
+          <button type="button" class="na_icon na_pdup" title="복제"><i class="fa-regular fa-clone"></i></button>
+          <button type="button" class="na_icon na_pren" title="이름 바꾸기"><i class="fa-solid fa-i-cursor"></i></button>
+          <button type="button" class="na_icon na_pdel" title="삭제"><i class="fa-regular fa-trash-can"></i></button>
+        </div>
+        <textarea class="text_pole na_prompt_ta" spellcheck="false" rows="9"></textarea>
+        <div class="na_prompt_help">
+          <code>{{raw}}</code> 원문 · <code>{{from}}</code> <code>{{to}}</code> 번호 · <code>{{last_section}}</code> 마지막 섹션 · <code>{{state}}</code> 지금의 STATE·OPEN · <code>{{archive}}</code> 아카이브 전체.
+          <code>{{raw}}</code>가 없으면 원문은 맨 끝에 붙어요.
+          <button type="button" class="na_linkbtn na_prompt_reset">기본 지시문 되돌리기</button>
+        </div>`);
+    $('#na_opt_hidden').on('change', function () { g().skipHidden = this.checked; saveGlobal(); });
+    $('#na_opt_tags').on('change', function () { g().stripTags = this.checked; saveGlobal(); });
+    $('#na_opt_name').on('change', function () { g().nameStyle = this.value; saveGlobal(); });
+    $('#na_opt_prompt').on('change', function () { g().usePrompt = this.checked; saveGlobal(); });
+    const pick = id => { g().activePrompt = id; saveGlobal(); renderPromptSettings(); };
+    const askName = async (title, value) => {
+        const v = await ctx().Popup.show.input(title, '', value);
+        return typeof v === 'string' ? v.trim() : '';
+    };
+    $h.find('.na_psel').on('change', function () { pick(this.value); });
+    $h.on('click', '.na_pchip', function () { pick($(this).data('id')); });
+    $h.find('.na_pstar').on('click', () => { const p = activePrompt(g()); p.fav = !p.fav; saveGlobal(); renderPromptSettings(); });
+    $h.find('.na_pnew').on('click', async () => {
+        const name = await askName('새 지시문 이름', `지시문 ${g().prompts.length + 1}`);
+        if (!name) return;
+        const p = { id: newId(), name, text: '', fav: false };
+        g().prompts.push(p); pick(p.id);
+        $h.find('.na_prompt_ta').trigger('focus');
+    });
+    $h.find('.na_pdup').on('click', async () => {
+        const src = activePrompt(g());
+        const name = await askName('복제한 지시문 이름', `${src.name} 사본`);
+        if (!name) return;
+        const p = { id: newId(), name, text: src.text, fav: false };
+        g().prompts.push(p); pick(p.id);
+    });
+    $h.find('.na_pren').on('click', async () => {
+        const p = activePrompt(g());
+        if (p.id === 'basic') return;
+        const name = await askName('이름 바꾸기', p.name);
+        if (!name) return;
+        p.name = name; saveGlobal(); renderPromptSettings();
+    });
+    $h.find('.na_pdel').on('click', async () => {
+        const p = activePrompt(g());
+        if (p.id === 'basic') return;
+        if (!await confirm('지시문 삭제', `"${p.name}"을(를) 지울까요? 되돌릴 수 없어요.`)) return;
+        g().prompts = g().prompts.filter(x => x.id !== p.id);
+        pick(g().prompts[0].id);
+    });
+    $h.find('.na_prompt_ta').on('input', function () { activePrompt(g()).text = this.value; saveGlobal(); });
+    $h.find('.na_prompt_reset').on('click', () => {
+        const p = g().prompts.find(x => x.id === 'basic');
+        p.text = BASIC_PROMPT; $h.find('.na_prompt_ta').val(p.text).data('pid', null); saveGlobal(); renderPromptSettings();
+    });
+    $('#na_cmp_settings').on('toggle', function () { if (this.open) renderPromptSettings(); });
+    renderPromptSettings();
+}
+
+// Open the compress tab with its settings fold open
+function gotoCompressSettings() {
+    const $p = $('#na_settings');
+    $p.find('.na_nav_btn[data-tab="compress"]').trigger('click');
+    const d = document.getElementById('na_cmp_settings');
+    if (!d) return;
+    d.open = true;
+    renderPromptSettings();
+    setTimeout(() => d.scrollIntoView({ block: 'start', behavior: 'smooth' }), 50);
 }
 
 // ---------------------------------------------------------------- append popup
