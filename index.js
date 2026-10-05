@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.3.2';
+const VERSION = '2.3.3';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1157,7 +1157,7 @@ function renderAiSettings() {
     const opts = [`<option value="">지금 연결된 모델</option>`, ...profiles.map(p => `<option value="${esc(p.id)}">프로필: ${esc(p.name)}</option>`)];
     if (g.aiProfile && !profiles.some(p => p.id === g.aiProfile)) opts.push(`<option value="${esc(g.aiProfile)}">(없어진 프로필)</option>`);
     $('#na_ai_profile').html(opts.join('')).val(g.aiProfile || '');
-    $('#na_ai_max').val(g.aiMaxTokens || 4096);
+    $('#na_ai_max').val(g.aiMaxTokens || 8192);
 }
 
 // Scroll the panel editor so [from, to) is visible and select it (wrapped lines measured with a mirror div).
@@ -1238,7 +1238,7 @@ function bindPanel() {
     $('#na_ai_profile').on('change', function () { globalSettings().aiProfile = this.value; saveGlobal(); });
     $('#na_ai_max').on('change', function () {
         const v = Math.max(256, parseInt(this.value, 10) || 4096);
-        globalSettings().aiMaxTokens = v; this.value = v; saveGlobal();
+        globalSettings().aiMaxTokens = v; globalSettings().aiMaxSet = true; this.value = v; saveGlobal();
     });
     renderAiSettings();
     $('#na_ed_preview').on('click', needChat(openPreview));
@@ -2484,7 +2484,7 @@ const stripThink = t => String(t ?? '').replace(/<(think|thinking|reasoning)[^>]
 async function askAI(prompt, { system = '', maxTokens = 0 } = {}) {
     const c = ctx();
     const g = globalSettings();
-    const max = Math.max(64, Number(maxTokens) || Number(g.aiMaxTokens) || 4096);
+    const max = Math.max(64, Number(maxTokens) || Number(g.aiMaxTokens) || 8192);
     let out;
     if (g.aiProfile) {
         const p = aiProfiles().find(x => x.id === g.aiProfile);
@@ -2577,7 +2577,7 @@ function nameNearMisses(archive, add) {
 
 // ---- prompts
 
-const AI_SYS_COMPRESS = 'You compress role-play chat logs into a story archive. Follow the instructions exactly and output only the requested text.';
+const AI_SYS_COMPRESS = 'You compress role-play chat logs into a story archive. Follow the instructions exactly and output only the requested text. Never output, repeat or rewrite sections that are already in the archive — any archive section shown to you is a format sample only. Cover only the new log, and always finish with the full STATE and OPEN blocks if the archive has them.';
 
 const AI_SYS_ASK = `You answer questions about an ongoing story using ONLY the archive the user gives you.
 - If the archive does not say, reply that it is not in the archive. Never invent.
@@ -2763,9 +2763,10 @@ function globalSettings() {
     const es = ctx().extensionSettings;
     if (!es[MODULE] || typeof es[MODULE] !== 'object') es[MODULE] = {};
     const g = es[MODULE];
-    const defaults = { usePrompt: false, skipHidden: true, nameStyle: 'full', stripTags: false, aiProfile: '', aiMaxTokens: 4096 };
+    const defaults = { usePrompt: false, skipHidden: true, nameStyle: 'full', stripTags: false, aiProfile: '', aiMaxTokens: 8192 };
     for (const [k, v] of Object.entries(defaults)) if (!Object.hasOwn(g, k)) g[k] = v;
     // prompt library: [{ id, name, text, fav }], first entry is the built-in basic one
+    if (g.aiMaxTokens === 4096 && !g.aiMaxSet) g.aiMaxTokens = 8192; // the old default, never changed by hand
     if (!Array.isArray(g.prompts)) {
         g.prompts = [{ id: 'basic', name: '기본', text: BASIC_PROMPT, fav: true }];
         const old = typeof g.prompt === 'string' ? g.prompt : '';
@@ -2816,6 +2817,14 @@ function formatExtract(items, g) {
         const head = g.nameStyle === 'name' ? `${x.name}:` : g.nameStyle === 'number' ? `[${x.i}]` : `[${x.i}] ${x.name}:`;
         return `${head}\n${x.text}`;
     }).join('\n\n');
+}
+
+// {{last_section}} is only a style sample. Models sometimes rewrite it as part of their answer,
+// so it always goes in with a do-not-repeat label.
+function referenceSection(text) {
+    const sec = lastRangedSection(text);
+    if (!sec) return '(없음)';
+    return `(Format sample only. This section is ALREADY in the archive — do not output, repeat or rewrite it. Start from the new log.)\n${sec}`;
 }
 
 function fillPrompt(tpl, vars) {
@@ -2917,7 +2926,7 @@ async function openExtract() {
             .map(x => ({ ...x, text: cleanMessage(x.text, g) }))
             .filter(x => x.text);
         current = formatExtract(items, g);
-        aiPrompt = fillPrompt(activePrompt(g).text, { raw: current, from: String(from), to: String(to), last_section: lastRangedSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text });
+        aiPrompt = fillPrompt(activePrompt(g).text, { raw: current, from: String(from), to: String(to), last_section: referenceSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text });
         output = g.usePrompt ? aiPrompt : current;
         $root.find('.na_ai_compress_info').text(items.length ? `지시문 "${activePrompt(g).name}"과 함께 ${aiLabel()}에 보내요 · 약 ${fmt(await countTokens(aiPrompt))} 토큰` : '');
         $root.find('.na_ex_hidden').val(output);
@@ -3082,12 +3091,66 @@ function lastRangeEnd(text) {
 }
 
 // Returns { text, placed, replaced: [keys], renumbered }
-function placeAppend(archive, add, { renumber } = {}) {
+// Pasted sections whose numbers the archive already covers (a model rewriting the format sample, say).
+// 'skip' leaves them out; 'replace' swaps an exact match (same prefix and range) in place of the old one.
+function findRewrites(eBody, pBody) {
+    const existing = parseSections(eBody).filter(x => !x.group).map(x => ({ s: x, r: x.title.match(RANGE_HEAD) })).filter(x => x.r);
+    const covered = new Map(); // prefix → highest number in the archive
+    for (const { r } of existing) {
+        const pre = (r[1] || '').trim(), to = Math.max(parseInt(r[2], 10), parseInt(r[4], 10));
+        covered.set(pre, Math.max(covered.get(pre) ?? -1, to));
+    }
+    const groupTitles = new Set(parseSections(eBody).filter(x => x.group || x.level === 1).map(x => x.title.trim()));
+    const out = [];
+    for (const sec of parseSections(pBody)) {
+        if (sec.title === '(머리말)' || sec.title === '(제목 없음)') continue;
+        const r = sec.title.match(RANGE_HEAD);
+        if (!r) {
+            // a "# ── Y2 ──" divider (or the archive title) that the archive already has
+            if (sec.level === 1 && groupTitles.has(sec.title.trim()) && !sec.note) out.push({ sec, kind: 'divider' });
+            continue;
+        }
+        const pre = (r[1] || '').trim(), from = parseInt(r[2], 10), to = parseInt(r[4], 10);
+        if (!covered.has(pre) || Math.min(from, to) > covered.get(pre)) continue;
+        const same = existing.find(x => (x.r[1] || '').trim() === pre && parseInt(x.r[2], 10) === from && parseInt(x.r[4], 10) === to);
+        out.push({ sec, kind: same ? 'exact' : 'overlap', old: same?.s });
+    }
+    return out;
+}
+
+// the pasted text minus sections the archive already has (what the number check should look at)
+function stripRewrites(archive, add) {
+    const [eBody] = splitTail(archive);
+    const [pBody, pTail] = splitTail(add);
+    const p = trimEnd(pBody).replace(/\n-{3,}\s*$/, '');
+    const drop = new Set(findRewrites(trimEnd(eBody).replace(/\n-{3,}\s*$/, ''), p).map(f => f.sec.start));
+    if (!drop.size) return add;
+    return `${trimEnd(parseSections(p).filter(x => !drop.has(x.start)).map(x => p.slice(x.start, x.end)).join(''))}${pTail ? `\n\n${pTail}` : ''}`;
+}
+
+function placeAppend(archive, add, { renumber, rewrites = 'skip' } = {}) {
     const [eBody, eTail] = splitTail(archive);
     const [pBody, pTail] = splitTail(add);
     const sep = /\n-{3,}\s*$/.test(trimEnd(eBody));
     let body = trimEnd(eBody).replace(/\n-{3,}\s*$/, '');
-    const pClean = trimEnd(pBody).replace(/\n-{3,}\s*$/, '');
+    let pClean = trimEnd(pBody).replace(/\n-{3,}\s*$/, '');
+    const found = findRewrites(body, pClean);
+    const skipped = [], swapped = [];
+    if (found.length) {
+        const drop = new Set(found.map(f => f.sec.start));
+        // replace exact matches in place (from the end so earlier offsets stay valid)
+        if (rewrites === 'replace') {
+            const exact = found.filter(f => f.kind === 'exact').sort((x, y) => y.old.start - x.old.start);
+            for (const f of exact) {
+                const oldTrail = body.slice(f.old.start, f.old.end).match(/\s*$/)[0] || '\n\n';
+                body = body.slice(0, f.old.start) + trimEnd(pClean.slice(f.sec.start, f.sec.end)) + oldTrail + body.slice(f.old.end);
+                swapped.push(f.sec.title);
+            }
+        }
+        found.filter(f => !(rewrites === 'replace' && f.kind === 'exact') && f.kind !== 'divider').forEach(f => skipped.push(f.sec.title));
+        pClean = trimEnd(parseSections(pClean).filter(x => !drop.has(x.start)).map(x => pClean.slice(x.start, x.end)).join(''));
+        body = trimEnd(body);
+    }
     if (pClean.trim()) body = `${trimEnd(body)}${body.trim() ? '\n\n' : ''}${pClean}`;
 
     const eBlocks = tailBlocks(eTail), pBlocks = tailBlocks(pTail);
@@ -3124,7 +3187,21 @@ function placeAppend(archive, add, { renumber } = {}) {
 
     let text = trimEnd(body);
     if (blocks.length) text += `${sep || eTail ? '\n\n---\n\n' : '\n\n'}${blocks.map(b => b.text).join('\n\n')}`;
-    return { text: `${text}\n`, placed: !!eTail && !!pBody.trim(), replaced, renumbered };
+    return { text: `${text}\n`, placed: !!eTail && !!pClean.trim(), replaced, renumbered, skipped, swapped, rewriteCount: found.filter(f => f.kind !== 'divider').length, exactCount: found.filter(f => f.kind === 'exact').length };
+}
+
+// Signs that a pasted (AI) answer stopped early. Display strings, empty if it looks complete.
+function cutSigns(archive, add) {
+    const out = [];
+    const [, eTail] = splitTail(archive);
+    const [, pTail] = splitTail(add);
+    const hasBlocks = k => new RegExp(`^# ${k}\\b`, 'm');
+    const missing = ['STATE', 'OPEN'].filter(k => hasBlocks(k).test(eTail) && !hasBlocks(k).test(pTail));
+    if (missing.length) out.push(`${missing.join('·')} 블록이 없어요. 이대로 추가하면 예전 ${missing.join('·')} 블록이 그대로 남아요.`);
+    const lastLine = (add.trim().split('\n').filter(l => l.trim()).pop() || '').trim();
+    const ends = /[.!?。…"'”’)\]_*~」』>]$|[다요음함임됨짐]$|^#{1,3} |^-{3,}$/;
+    if (lastLine && !ends.test(lastLine)) out.push(`마지막 줄이 문장 중간에서 끝나요: "…${lastLine.slice(-40)}"`);
+    return out;
 }
 
 // Problems with the numbering of pasted sections, as display strings.
@@ -3175,7 +3252,9 @@ async function openAppend(opts) {
           <input type="file" class="na_append_file" accept=".txt,.md,text/plain" hidden>
         </div>
         <textarea class="text_pole na_append_ta" spellcheck="false" placeholder="## Y2 #574–#600 — ..."></textarea>
-        <div class="na_check" hidden></div>
+        <div class="na_check na_numcheck" hidden></div>
+        <div class="na_check na_check_warn na_cut" hidden></div>
+        <div class="na_check na_check_warn na_rw" hidden></div>
         <div class="na_check na_check_soft na_names" hidden></div>
         <div class="na_ai_row">
           <button type="button" class="na_btn na_small na_ai_conflict"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 충돌 검사</button>
@@ -3213,7 +3292,7 @@ async function openAppend(opts) {
         $ta.val(text).trigger('input');
         toastr.success(`불러옴: ${file.name}`);
     });
-    const $check = $root.find('.na_check').not('.na_names');
+    const $check = $root.find('.na_numcheck');
     $root.find('.na_renum_row').hide();
     let lastPlan = null;
     const $pv = $root.find('.na_ap_preview');
@@ -3230,6 +3309,9 @@ async function openAppend(opts) {
     }
     $pv.on('toggle', () => renderPreview(lastPlan));
     $root.find('.na_do_renum').on('change', () => $ta.trigger('input'));
+    let rwReplace = false;
+    const rwMode = () => rwReplace ? 'replace' : 'skip';
+    $root.on('change', '.na_rw_replace', function () { rwReplace = this.checked; $ta.trigger('input'); });
     let endTouched = false;
     let lastCheck = { issues: [] };
     $end.on('input', () => { endTouched = true; $root.find('.na_end_hint').text(''); });
@@ -3244,21 +3326,31 @@ async function openAppend(opts) {
                 $end.val(guess);
                 $root.find('.na_end_hint').html(`제목에서 <b>#${guess}</b>을 읽었어요`);
             }
-            lastCheck = val.trim() ? checkAppend(m, val, last) : { issues: [] };
+            lastCheck = val.trim() ? checkAppend(m, stripRewrites(m.text, val), last) : { issues: [] };
             if (!val.trim()) $check.prop('hidden', true);
             else if (!lastCheck.issues.length) {
                 const r = lastCheck.ranges;
-                $check.prop('hidden', false).attr('class', 'na_check na_check_ok')
+                $check.prop('hidden', false).attr('class', 'na_check na_numcheck na_check_ok')
                     .html(`<i class="fa-solid fa-circle-check"></i> 번호 이어짐 확인 · #${r[0].from}–#${r[r.length - 1].to}, 섹션 ${r.length}개`);
             } else {
-                $check.prop('hidden', false).attr('class', `na_check ${lastCheck.soft ? 'na_check_soft' : 'na_check_warn'}`)
+                $check.prop('hidden', false).attr('class', `na_check na_numcheck ${lastCheck.soft ? 'na_check_soft' : 'na_check_warn'}`)
                     .html(`<i class="fa-solid fa-triangle-exclamation"></i><ul>${lastCheck.issues.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`);
             }
             const near = val.trim() ? nameNearMisses(m.text, val) : [];
             $root.find('.na_names').prop('hidden', !near.length)
                 .html(near.length ? `<i class="fa-solid fa-spell-check"></i><div>철자 확인 — 아카이브에 비슷한 이름이 있어요<ul>${near.map(x => `<li><b>${esc(x.word)}</b> ↔ 기존 <b>${esc(x.like)}</b></li>`).join('')}</ul></div>` : '');
-            const plan = placeAppend(m.text, val, { renumber: $root.find('.na_do_renum').prop('checked') });
+            const plan = placeAppend(m.text, val, { renumber: $root.find('.na_do_renum').prop('checked'), rewrites: rwMode() });
             renderPreview(plan);
+            const cut = val.trim() ? cutSigns(m.text, val) : [];
+            $root.find('.na_cut').prop('hidden', !cut.length).html(cut.length
+                ? `<i class="fa-solid fa-scissors"></i><div><b>답이 중간에 끊긴 것 같아요</b><ul>${cut.map(x => `<li>${esc(x)}</li>`).join('')}</ul><small>AI로 압축했다면 설정 → AI 기능의 답 최대 길이를 늘리고 다시 압축해 보세요.</small></div>` : '');
+            const rwN = plan.rewriteCount;
+            $root.find('.na_rw').prop('hidden', !rwN).html(rwN ? `<i class="fa-solid fa-shield-halved"></i><div>
+                <b>이미 아카이브에 있는 섹션 ${rwN}개가 섞여 있어요</b> — 모델이 형식 참고용 섹션을 다시 쓴 것 같아요.
+                ${plan.skipped.length ? `<ul>${plan.skipped.map(x => `<li>${esc(x)} <span class="na_dim">→ 빼고 추가</span></li>`).join('')}</ul>` : ''}
+                ${plan.swapped.length ? `<ul>${plan.swapped.map(x => `<li>${esc(x)} <span class="na_dim">→ 기존 섹션을 이걸로 바꿈</span></li>`).join('')}</ul>` : ''}
+                ${plan.exactCount ? `<label class="checkbox_label na_rw_opt"><input type="checkbox" class="na_rw_replace" ${rwMode() === 'replace' ? 'checked' : ''}><span>번호가 똑같은 섹션은 기존 걸 붙여넣은 걸로 바꾸기 (일부러 고쳐 쓴 경우만)</span></label>` : ''}
+            </div>` : '');
             const notes = [];
             if (plan.placed) notes.push('새 섹션은 <b>STATE 앞</b>에 들어가요');
             if (plan.replaced.length) notes.push(`<b>${plan.replaced.join('·')}</b> 블록은 붙여넣은 걸로 바뀌어요`);
@@ -3288,14 +3380,17 @@ async function openAppend(opts) {
     if (!add) return toastr.info('붙여넣은 내용이 없어요.');
     const end = parseInt($root.find('.na_end').val(), 10);
     if (!Number.isFinite(end) || end < 0) return toastr.warning('끝 번호를 확인해 주세요.');
-    const check = checkAppend(m, add, last);
+    const cut = cutSigns(m.text, add);
+    if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.join('\n')}\n\n그래도 추가할까요?`)) return;
+    const check = checkAppend(m, stripRewrites(m.text, add), last);
     if (check.issues.length && !check.soft) {
         if (!await confirm('번호 확인', `${check.issues.join('\n')}\n\n그래도 추가할까요?`)) return;
     } else if (m.boundary >= 0 && end <= m.boundary) {
         if (!await confirm('경계선 확인', `끝 번호 #${end}가 기존 경계선 #${m.boundary}보다 앞이에요. 그래도 저장할까요?`)) return;
     }
 
-    const plan = placeAppend(m.text, add, { renumber: $root.find('.na_do_renum').prop('checked') && $root.find('.na_renum_row').is(':visible') });
+    const plan = placeAppend(m.text, add, { renumber: $root.find('.na_do_renum').prop('checked') && $root.find('.na_renum_row').is(':visible'), rewrites: rwMode() });
+    if (!plan.text.trim() || plan.text === `${trimEnd(m.text)}\n`) return toastr.info('새로 추가할 섹션이 없어요.');
     if (usedDraft) delete m.aiDraft;
     await commitText(plan.text, '추가 전', { boundary: end });
     if ($root.find('.na_do_hide').prop('checked')) await applyHide({ silent: true });
