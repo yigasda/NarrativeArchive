@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.3.1';
+const VERSION = '2.3.2';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3320,7 +3320,6 @@ function addWandMenu() {
         ['na_wand_extract', 'fa-scissors', '원문 뽑기', openExtract],
         ['na_wand_append', 'fa-file-circle-plus', '아카이브에 추가', openAppend],
         ['na_wand_preview', 'fa-eye', '주입 미리보기', openPreview],
-        ['na_wand_ask', 'fa-comments', '아카이브에 질문', openAsk],
     ];
     for (const [id, icon, label, fn] of items) {
         const $it = $(`<div id="${id}" class="list-group-item flex-container flexGap5 interactable na_wand_item" tabindex="0" title="서사 아카이브">
