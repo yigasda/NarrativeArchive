@@ -393,7 +393,7 @@ function fadeWants(m, text = m.text) {
 function fadeUse(m, text, s, want) {
     const L = layersOf(m)[sectionKey(s)];
     if (want === 'long' || !L) return 'long';
-    if (L.h && L.h !== layerHash(m.text, s)) return 'long'; // the full text changed since the versions were made
+    if (L.h && L.h !== layerHash(text, s)) return 'long'; // the full text changed since the versions were made
     if (want === 'line' && String(L.line || '').trim()) return 'line';
     if (String(L.short || '').trim()) return 'short';
     return 'long';
@@ -989,16 +989,38 @@ function checkHeadings(text) {
 // Section browser shared by the panel tab and the large popup.
 // Returns { render } — call render() after the archive changes.
 function mountSectionBrowser($host) {
+    const g0 = globalSettings();
     const $root = $(`
-      <div class="na_browser">
-        <div class="na_search_wrap">
-          <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="search" class="text_pole na_search" placeholder="이름, 장소, 대사로 찾기">
+      <div class="na_browser ${g0.archLayout === 'tl' ? 'na_tl' : ''}">
+        <div class="na_br_top">
+          <div class="na_search_wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" class="text_pole na_search" placeholder="이름, 장소, 대사로 찾기">
+          </div>
+          <div class="na_br_view" role="group" aria-label="보기">
+            <button type="button" data-v="list" title="카드 목록" aria-label="카드 목록"><i class="fa-solid fa-list-ul"></i></button>
+            <button type="button" data-v="tl" title="타임라인" aria-label="타임라인"><i class="fa-solid fa-timeline"></i></button>
+          </div>
         </div>
+        <div class="na_arch_tools"></div>
+        <div class="na_br_filters"></div>
+        <div class="na_tl_legend" aria-hidden="true"><span><i class="st-long"></i>원문</span><span><i class="st-short"></i>짧게</span><span><i class="st-line"></i>한 줄</span><span><i class="st-pin"></i>고정</span><span><i class="st-key"></i>키워드 대기</span><span><i class="st-off"></i>꺼짐</span></div>
         <div class="na_search_info"></div>
         <div class="na_list"></div>
       </div>`);
     $host.empty().append($root);
+    // find & replace and the heading check sit as two pills under the search
+    $root.find('.na_arch_tools').append($('#na_replace'), $('#na_hcheck'));
+    const syncView = () => $root.find('.na_br_view button').each(function () { $(this).toggleClass('on', (this.dataset.v === 'tl') === $root.hasClass('na_tl')); });
+    syncView();
+    $root.on('click', '.na_br_view button', function () {
+        const tl = this.dataset.v === 'tl';
+        $root.toggleClass('na_tl', tl);
+        const g = globalSettings(); g.archLayout = tl ? 'tl' : 'list'; saveGlobal();
+        syncView();
+    });
+    let filter = 'all';
+    $root.on('click', '.na_br_filters button', function () { filter = filter === this.dataset.f ? 'all' : this.dataset.f; render(); });
     const $list = $root.find('.na_list');
     const $search = $root.find('.na_search');
     const $info = $root.find('.na_search_info');
@@ -1012,7 +1034,7 @@ function mountSectionBrowser($host) {
     const editSection = ($card, s) => {
         const m = getMeta();
         const original = m.text.slice(s.start, s.end);
-        const $body = $card.children('.na_card_body').prop('hidden', false).empty();
+        const $body = $card.find('.na_card_body').first().prop('hidden', false).empty();
         const $ta = $('<textarea class="text_pole na_sec_edit" spellcheck="false"></textarea>').val(trimEnd(original));
         const $btns = $(`<div class="na_card_actions">
             <span class="na_spacer"></span>
@@ -1110,6 +1132,15 @@ function mountSectionBrowser($host) {
         const waiting = linkWaiting(m);
         const cardCount = sections.filter(x => !x.group).length;
         let shown = 0, hits = 0, editTarget = null;
+        // filter chips: off / keyword / pinned / shortened, counted over cards
+        const stateOf = s => {
+            const k = sectionKey(s);
+            return { off: muted.has(k), key: !!links[k]?.length, pin: pinned.has(k), fade: !!lastBuild.faded?.get(k) };
+        };
+        const cnt = { off: 0, key: 0, pin: 0, fade: 0 };
+        for (const x of sections) if (!x.group) { const st = stateOf(x); for (const f in cnt) if (st[f]) cnt[f]++; }
+        const fname = { off: '꺼짐', key: '키워드', pin: '고정', fade: '짧게 들어감' };
+        $root.find('.na_br_filters').html(`<button type="button" data-f="all" class="${filter === 'all' ? 'on' : ''}">전체 ${cardCount}</button>${Object.keys(cnt).filter(f => cnt[f] || filter === f).map(f => `<button type="button" data-f="${f}" class="${filter === f ? 'on' : ''}">${fname[f]} ${cnt[f]}</button>`).join('')}`);
         const allGroups = [];
         $list.empty();
         const groupStack = [];
@@ -1167,32 +1198,50 @@ function mountSectionBrowser($host) {
                 return;
             }
             if (q && !count) return;
+            if (filter !== 'all' && !stateOf(s)[filter]) return;
             shown++;
             const isOpen = !!q || openCards.has(sectionKey(s));
+            const key = sectionKey(s);
+            const rm = s.title.match(RANGE_HEAD);
+            const rangeTxt = rm ? (s.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [''])[0] : '';
+            const rest = rm ? rm[5].replace(/^\s*[—–-]\s*/, '') : s.title;
+            const paren = (rest.match(/\(([^()]*)\)\s*(?:\[[^\]]*\])?\s*$/) || [])[1] || '';
+            const name = rest.replace(/\s*\([^()]*\)\s*(\[[^\]]*\])?\s*$/, '').replace(/\s*\[WI:[^\]]*\]\s*$/, '').trim() || rest;
+            const fade = lastBuild.faded?.get(key);
+            const isWait = waiting.has(key), isPin = pinned.has(key), hasKeys = !!links[key]?.length;
+            const dot = off || parentOff ? 'off' : isPin ? 'pin' : hasKeys && isWait ? 'key' : fade || 'long';
+            const tags = [
+                fade && !off ? `<span class="na_tag fade" title="망각 곡선">${fade === 'line' ? '한 줄' : '짧게'}</span>` : '',
+                hasKeys && !off ? `<span class="na_tag key" title="키워드: ${esc(links[key].join(', '))}">${isWait ? '키워드 대기' : '키워드 켜짐'}</span>` : '',
+                isPin ? '<span class="na_tag pin">고정</span>' : '',
+                count ? `<span class="na_tag hit">${count}건</span>` : '',
+            ].join('');
             const $card = $(`
-              <div class="na_card ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''} ${waiting.has(sectionKey(s)) && !off ? 'na_waiting' : ''} ${trimmedSet.has(sectionKey(s)) && !off ? 'na_trimmed' : ''}" data-start="${s.start}">
+              <div class="na_card ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''} ${isWait && !off ? 'na_waiting' : ''}" data-start="${s.start}">
+                <div class="na_rail" aria-hidden="true">${rm ? `<span>${esc(rm[1] ? `${rm[1]} ` : '')}#${rm[2]}</span><span>#${rm[4]}</span>` : ''}</div>
+                <i class="na_dot st-${dot}" aria-hidden="true"></i>
                 <div class="na_card_head">
                   <div class="na_head_main">
-                  <span class="na_card_title">${highlight(s.title, q)}</span>
-                  <span class="na_card_meta">${links[sectionKey(s)]?.length && !off ? `<span class="na_link_tag ${waiting.has(sectionKey(s)) ? '' : 'on'}" title="키워드: ${esc(links[sectionKey(s)].join(', '))}"><i class="fa-solid fa-key"></i> ${waiting.has(sectionKey(s)) ? '대기' : '켜짐'}</span>` : ''}${trimmedSet.has(sectionKey(s)) && !off ? '<span class="na_trim_tag">상한으로 빠짐</span>' : ''}${lastBuild.faded?.get(sectionKey(s)) && !off ? `<span class="na_fade_tag" title="망각 곡선: ${lastBuild.faded.get(sectionKey(s)) === 'line' ? '한 줄' : '짧은 버전'}으로 들어가요"><i class="fa-solid fa-layer-group"></i> ${lastBuild.faded.get(sectionKey(s)) === 'line' ? '한 줄' : '짧게'}</span>` : ''}${count ? `<span class="na_hit">${count}건</span>` : ''}<span class="na_tok">${fmt(body.length)}자</span></span>
+                    ${rangeTxt || paren ? `<span class="na_card_range">${rangeTxt ? `<span class="na_cr_range">${esc(rangeTxt)}</span>` : ''}${paren ? `<span class="na_cr_paren">${esc(paren)}</span>` : ''}</span>` : ''}
+                    <span class="na_card_title" title="${esc(s.title)}">${highlight(name, q)}</span>
                   </div>
-                  <div class="na_head_ctrl">
-                  ${pinBtn(pinned.has(sectionKey(s)), '이 섹션을')}
+                  <span class="na_card_tags">${tags}</span>
+                  <span class="na_tok">${fmt(body.length)}자</span>
                   ${sw(!off, off ? '주입 켜기' : '이 섹션만 주입에서 빼기 (본문은 그대로)')}
-                  </div>
                 </div>
                 <div class="na_card_body" ${isOpen ? '' : 'hidden'}>
                   <div class="na_card_text">${highlight(body.replace(/^#{1,2} [^\n]*\n?/, '').trim(), q) || '<span class="na_dim">(비어 있음)</span>'}</div>
-                  ${refChips(sectionKey(s))}
+                  ${refChips(key)}
                   <div class="na_card_actions">
-                    <button type="button" class="na_icon na_up" title="위로"><i class="fa-solid fa-arrow-up"></i></button>
-                    <button type="button" class="na_icon na_down" title="아래로"><i class="fa-solid fa-arrow-down"></i></button>
-                    <button type="button" class="na_icon na_ins" title="아래에 새 섹션"><i class="fa-solid fa-plus"></i></button>
+                    <button type="button" class="na_icon na_up" title="위로" aria-label="위로"><i class="fa-solid fa-arrow-up"></i></button>
+                    <button type="button" class="na_icon na_down" title="아래로" aria-label="아래로"><i class="fa-solid fa-arrow-down"></i></button>
+                    <button type="button" class="na_icon na_ins" title="아래에 새 섹션" aria-label="아래에 새 섹션"><i class="fa-solid fa-plus"></i></button>
                     <span class="na_act_sep"></span>
-                    <button type="button" class="na_icon na_keys ${links[sectionKey(s)]?.length ? 'active' : ''}" title="키워드 연동"><i class="fa-solid fa-key"></i></button>
-                    ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_icon na_layers_btn ${layersOf(m)[sectionKey(s)] ? 'active' : ''}" title="짧은 버전 · 한 줄 (망각 곡선)"><i class="fa-solid fa-layer-group"></i></button>` : ''}
-                    <button type="button" class="na_icon na_edit" title="편집"><i class="fa-solid fa-pen"></i></button>
-                    <button type="button" class="na_icon na_del na_danger" title="섹션 삭제"><i class="fa-solid fa-trash-can"></i></button>
+                    <button type="button" class="na_icon na_keys ${hasKeys ? 'active' : ''}" title="키워드 연동" aria-label="키워드 연동"><i class="fa-solid fa-key"></i></button>
+                    ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_icon na_layers_btn ${layersOf(m)[key] ? 'active' : ''}" title="짧은 버전 · 한 줄 (망각 곡선)" aria-label="짧은 버전"><i class="fa-solid fa-layer-group"></i></button>` : ''}
+                    <button type="button" class="na_icon na_pin_t ${isPin ? 'active' : ''}" title="${isPin ? '고정 풀기' : '망각 곡선에서도 늘 원문으로 고정'}" aria-label="고정"><i class="fa-solid fa-thumbtack"></i></button>
+                    <button type="button" class="na_icon na_edit" title="편집" aria-label="편집"><i class="fa-solid fa-pen"></i></button>
+                    <button type="button" class="na_icon na_del na_danger" title="섹션 삭제" aria-label="섹션 삭제"><i class="fa-solid fa-trash-can"></i></button>
                     <span class="na_spacer"></span>
                     ${srcButton(m, s.title, 'icon')}
                   </div>
@@ -1200,12 +1249,14 @@ function mountSectionBrowser($host) {
               </div>`);
             $card.find('.na_card_head').on('click', () => {
                 const $b = $card.children('.na_card_body');
+                $card.toggleClass('open', !!$b.prop('hidden'));
                 const willOpen = $b.prop('hidden');
                 $b.prop('hidden', !willOpen);
                 willOpen ? openCards.add(sectionKey(s)) : openCards.delete(sectionKey(s));
             });
             $card.find('.na_card_head .na_sw').on('click', e => { e.stopPropagation(); setMuted(sectionKey(s), !off); });
-            $card.find('.na_card_head .na_pin').on('click', e => { e.stopPropagation(); setPinned(sectionKey(s), !pinned.has(sectionKey(s))); });
+            $card.find('.na_pin_t').on('click', () => setPinned(key, !pinned.has(key)));
+            if (isOpen) $card.addClass('open');
             $card.find('.na_edit').on('click', e => { e.stopPropagation(); editSection($card, s); });
             $card.find('.na_up').on('click', () => move(s, -1));
             $card.find('.na_down').on('click', () => move(s, 1));
@@ -1229,15 +1280,14 @@ function mountSectionBrowser($host) {
         allGroups.forEach(g => {
             const n = g.$el.find('.na_card').length;
             const $meta = g.$el.find('> .na_group_head .na_group_meta').text(`섹션 ${n}개`);
-            if (q && !n && !g.$el.find('> .na_group_head mark, > .na_group_note mark').length) { g.$el.remove(); return; }
+            if ((q || filter !== 'all') && !n && !(q && g.$el.find('> .na_group_head mark, > .na_group_note mark').length)) { g.$el.remove(); return; }
             Promise.all(g.tok).then(ns => {
                 if (myId === renderId) $meta.text(`섹션 ${n}개 · ${shortNum(ns.reduce((x, y) => x + (y || 0), 0))} 토큰`);
             });
         });
-        const offN = mutedCount(m);
         $info.html(q
             ? `"${esc(q)}" — 섹션 ${shown}개에서 ${hits}건`
-            : `섹션 ${cardCount}개${offN ? ` · <span class="na_warn_txt">${offN}개 꺼짐</span>` : ''} · 스위치로 주입에서 뺄 수 있어요`);
+            : filter !== 'all' ? `${fname[filter]} 섹션 ${shown}개` : '');
         if (!sections.length) $list.html('<div class="na_empty">아카이브가 비어 있어요.<br>원문 편집에 붙여넣거나 도구 탭에서 불러오세요.</div>');
         $list.find('.na_group').each((_, el) => {
             const box = el.querySelector(':scope > .na_group_items');
@@ -1470,7 +1520,6 @@ function renderPanel() {
                 <button type="button" class="na_seg_btn" data-view="editor"><i class="fa-solid fa-pen-to-square"></i> 원문 편집</button>
               </div>
               <div class="na_block" id="na_view_cards">
-                <p class="na_dim na_tip">스위치를 끄면 본문은 두고 주입에서만 빠져요. 카드를 펼치면 원문·키워드·편집.</p>
                 <details class="na_hcheck" id="na_replace">
                   <summary><i class="fa-solid fa-right-left"></i> 찾아 바꾸기 <span class="na_chip" id="na_rp_n"></span></summary>
                   <div class="na_rp_body">
@@ -4697,40 +4746,80 @@ async function openWizard() {
     const after = Math.max(m.boundary, le && le.to <= last ? le.to : -1);
     const defFrom = Math.min(after + 1, Math.max(0, last));
     const defTo = Math.max(defFrom, last - Math.max(0, Number(m.keep) || 0));
+    const STEPS = [
+        { name: '범위', title: '어디부터 어디까지<br>압축할까요?', sub: '경계선 다음부터 자동으로 채웠어요' },
+        { name: '복사', title: '압축할 모델에<br>넘겨 주세요', sub: '지시문과 함께 복사하거나 .txt로 저장해요' },
+        { name: '붙여넣기', title: '모델이 준 섹션을<br>붙여넣어 주세요', sub: '파일(.txt · .md)도 돼요' },
+        { name: '채점', title: '원문과 맞는지<br>볼까요?', sub: '선택 · 지어낸 것·빠진 것·틀린 것을 찾아요' },
+        { name: '추가', title: '검사하고<br>아카이브에 넣어요', sub: '번호 검사 · 미리보기를 거쳐 추가하고 끝 번호까지 숨겨요' },
+    ];
+    let step = 0;
     const $root = $(`
-      <div class="na_popup na_wiz">
-        <div class="na_block_head"><div><h4>압축 마법사</h4><p>위에서부터 차례로 하면 돼요. 마지막 단계에서 "아카이브에 추가" 창이 번호 검사·미리보기와 함께 열려요.</p></div></div>
-        <div class="na_wiz_step"><b>1</b><div class="na_wiz_main">
-          <div class="na_wiz_title">범위</div>
-          <div class="na_ex_range"><label># <input type="number" class="text_pole na_num na_wz_from" min="0" max="${last}" value="${defFrom}"></label><span>~</span><label># <input type="number" class="text_pole na_num na_wz_to" min="0" max="${last}" value="${defTo}"></label></div>
-          <label class="na_wz_opt"><span>숨긴 메시지 빼기</span><input type="checkbox" class="na_toggle na_wz_hidden"></label>
-          <small class="na_dim na_wz_info"></small>
-        </div></div>
-        <div class="na_wiz_step"><b>2</b><div class="na_wiz_main">
-          <div class="na_wiz_title">복사 <span class="na_dim">· 압축할 모델에 붙여넣기</span></div>
-          <div class="na_row"><select class="text_pole na_wz_prompt"></select></div>
-          <div class="na_row_btns"><button type="button" class="na_btn na_small na_primary na_wz_copy"><i class="fa-solid fa-copy"></i> <span>복사</span></button><button type="button" class="na_btn na_small na_wz_save"><i class="fa-solid fa-download"></i> .txt 저장</button></div>
-          ${draftReady() ? `<div class="na_wz_draft"><button type="button" class="na_btn na_small na_wz_draftbtn"><i class="fa-solid fa-feather-pointed"></i> 초안 모델로 압축</button><small class="na_dim">${esc(drLabel())} · 지시문이 없으면 "${esc(activePrompt(g).name)}"을 붙여요 · 결과는 3단계에 채워져요</small></div>` : ''}
-        </div></div>
-        <div class="na_wiz_step"><b>3</b><div class="na_wiz_main">
-          <div class="na_wiz_title na_wz_outhead">결과 붙여넣기
-            <button type="button" class="na_btn na_small na_wz_file_btn"><i class="fa-solid fa-file-arrow-up"></i> 파일 불러오기</button>
-            <input type="file" class="na_wz_file" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden>
+      <div class="na_popup na_v2 na_wiz2">
+        <div class="na_wz2_top"><b>압축 마법사</b><span class="na_wz2_count"></span></div>
+        <div class="na_wz2_progress">${STEPS.map((x, i) => `<button type="button" data-s="${i}"><i></i><span>${x.name}</span></button>`).join('')}</div>
+        <div class="na_wz2_head"><b class="na_wz2_title"></b><small class="na_wz2_sub"></small></div>
+        <div class="na_wz2_pane" data-s="0">
+          <div class="na_wz2_range">
+            <label><small>부터</small><span>#<input type="number" class="text_pole na_wz_from" min="0" max="${last}" value="${defFrom}"></span></label>
+            <i class="fa-solid fa-arrow-right"></i>
+            <label><small>까지</small><span>#<input type="number" class="text_pole na_wz_to" min="0" max="${last}" value="${defTo}"></span></label>
           </div>
-          <textarea class="text_pole na_wz_out" rows="7" spellcheck="false" placeholder="모델이 준 새 섹션을 여기에"></textarea>
-          <small class="na_dim na_wz_outinfo"></small>
-        </div></div>
-        <div class="na_wiz_step"><b>4</b><div class="na_wiz_main">
-          <div class="na_wiz_title">채점 <span class="na_dim">· 선택 · 원문과 대조해서 지어낸 것·빠진 것을 찾아요</span></div>
-          <div class="na_row_btns"><button type="button" class="na_btn na_small na_wz_grade"><i class="fa-solid fa-clipboard-check"></i> AI로 채점</button></div>
+          <label class="na_v2_card na_v2_switchrow"><span>숨긴 메시지 빼기</span><input type="checkbox" class="na_toggle na_wz_hidden"></label>
+          <small class="na_v2_note na_wz_info"></small>
+        </div>
+        <div class="na_wz2_pane" data-s="1">
+          <select class="text_pole na_wz_prompt"></select>
+          <div class="na_v2_row2"><button type="button" class="na_v2_btn na_wz_save"><i class="fa-solid fa-download"></i> .txt 저장</button><button type="button" class="na_v2_btn primary na_wz_copy"><i class="fa-solid fa-copy"></i> <span>복사</span></button></div>
+          <small class="na_v2_note na_wz_copied"></small>
+        </div>
+        <div class="na_wz2_pane" data-s="2">
+          <textarea class="text_pole na_wz_out" rows="10" spellcheck="false" placeholder="## #시작–#끝 — 제목 (날짜, 장소)&#10;PLOT:&#10;- …"></textarea>
+          <div class="na_wz2_chips na_wz_outinfo"></div>
+          <div class="na_v2_row2">
+            <button type="button" class="na_v2_btn na_wz_file_btn"><i class="fa-solid fa-file-arrow-up"></i> 파일 불러오기</button>
+            ${draftReady() ? `<button type="button" class="na_v2_btn na_wz_draftbtn" title="${esc(drLabel())}"><i class="fa-solid fa-feather-pointed"></i> 초안 모델로 받기</button>` : ''}
+          </div>
+          <input type="file" class="na_wz_file" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden>
+        </div>
+        <div class="na_wz2_pane" data-s="3">
+          <button type="button" class="na_v2_btn wide na_wz_grade"><i class="fa-solid fa-clipboard-check"></i> AI로 채점</button>
           <div class="na_ai_box na_wz_gradeout" hidden></div>
-        </div></div>
-        <div class="na_wiz_step"><b>5</b><div class="na_wiz_main">
-          <div class="na_wiz_title">검사하고 추가</div>
-          <div class="na_row_btns"><button type="button" class="na_btn na_small na_primary na_wz_add"><i class="fa-solid fa-file-circle-plus"></i> 아카이브에 추가 창 열기</button></div>
-          <small class="na_dim">번호 검사·끊김·다시 쓴 섹션·미리보기를 거쳐 추가하고, 끝 번호까지 숨겨요.</small>
-        </div></div>
+        </div>
+        <div class="na_wz2_pane" data-s="4">
+          <div class="na_v2_card na_wz2_sum"></div>
+        </div>
+        <span class="na_wz2_fill"></span>
+        <div class="na_wz2_nav">
+          <button type="button" class="na_v2_btn na_wz2_prev">이전</button>
+          <button type="button" class="na_v2_btn primary na_wz2_next"></button>
+        </div>
+        <button type="button" class="na_linkbtn na_wz2_skip">채점 건너뛰고 바로 추가</button>
       </div>`);
+    const nextLabel = ['다음 · 복사', '다음 · 붙여넣기', '다음 · 채점', '다음 · 추가', '아카이브에 추가 창 열기'];
+    const show = () => {
+        $root.find('.na_wz2_count').text(`${step + 1} / ${STEPS.length}`);
+        $root.find('.na_wz2_progress button').each(function () { const i = Number(this.dataset.s); $(this).toggleClass('done', i < step).toggleClass('on', i === step); });
+        $root.find('.na_wz2_title').html(STEPS[step].title);
+        $root.find('.na_wz2_sub').text(STEPS[step].sub);
+        $root.find('.na_wz2_pane').each(function () { this.hidden = Number(this.dataset.s) !== step; });
+        $root.find('.na_wz2_prev').prop('hidden', step === 0);
+        $root.find('.na_wz2_next').text(nextLabel[step]);
+        $root.find('.na_wz2_skip').prop('hidden', step !== 2 && step !== 3);
+        if (step === 4) {
+            const v = $root.find('.na_wz_out').val().trim(), n = guessEndNumber(v), r = range();
+            $root.find('.na_wz2_sum').html(`<div class="na_wz2_sumrow"><span>범위</span><b>#${r.from} – #${r.to}</b></div><div class="na_wz2_sumrow"><span>새 섹션</span><b>${parseSections(v).filter(x => !x.group && !/^(?:STATE|OPEN)\b/.test(x.title)).length}개</b></div><div class="na_wz2_sumrow"><span>끝 번호</span><b>${n !== null ? `#${n}` : '추가 창에서 정해요'}</b></div>`);
+        }
+    };
+    const go = to => {
+        if (to > 2 && !$root.find('.na_wz_out').val().trim()) { step = 2; show(); return toastr.info('먼저 모델이 준 결과를 붙여넣어 주세요.'); }
+        step = Math.max(0, Math.min(STEPS.length - 1, to)); show();
+    };
+    $root.on('click', '.na_wz2_progress button', function () { go(Number(this.dataset.s)); });
+    $root.find('.na_wz2_prev').on('click', () => go(step - 1));
+    $root.find('.na_wz2_next').on('click', () => { if (step === STEPS.length - 1) $root.find('.na_wz_add').trigger('click'); else go(step + 1); });
+    $root.find('.na_wz2_skip').on('click', () => go(4));
+    $root.append('<button type="button" class="na_wz_add" hidden></button>');
     // last choice is remembered; "__none" copies the raw log only
     $root.find('.na_wz_prompt').html(`<option value="__none">지시문 없이 (원문만)</option>${g.prompts.map(p => `<option value="${esc(p.id)}">지시문: ${esc(p.name)}${p.fav ? ' ★' : ''}</option>`).join('')}`)
         .val(g.prompts.some(p => p.id === g.wizPrompt) ? g.wizPrompt : '__none'); // default: raw only
@@ -4762,13 +4851,13 @@ async function openWizard() {
         await build();
         if (!raw) return toastr.info('범위에 메시지가 없어요.');
         const ok = await copyText(full, $root.find('.na_wz_out')[0]);
-        if (ok) { await remember('copy'); toastr.success('복사됨 · 압축할 모델에 붙여넣으세요'); } else toastr.warning('복사가 막혀 있어요. .txt 저장을 써 주세요.');
+        if (ok) { await remember('copy'); $root.find('.na_wz_copied').text(`복사했어요 · ${timeLabel(Date.now())}`); toastr.success('복사됨 · 압축할 모델에 붙여넣으세요'); } else toastr.warning('복사가 막혀 있어요. .txt 저장을 써 주세요.');
     });
     $root.find('.na_wz_draftbtn').on('click', async function () {
         await build();
         if (!raw) return toastr.info('범위에 메시지가 없어요.');
         const $out = $root.find('.na_wz_out');
-        if ($out.val().trim() && !await confirm('초안 모델로 압축', '3단계에 붙여넣은 내용을 새 초안으로 바꿀까요?')) return;
+        if ($out.val().trim() && !await confirm('초안 모델로 받기', '붙여넣은 내용을 새 초안으로 바꿀까요?')) return;
         // the draft always carries an instruction: the chosen one, or the active one when "raw only" is picked
         const { from, to } = range();
         const pid = $root.find('.na_wz_prompt').val();
@@ -4778,7 +4867,7 @@ async function openWizard() {
         if (out === null) return;
         $out.val(out.replace(/^```[a-z]*\n?|```\s*$/g, '').trim()).trigger('input');
         await remember('draft');
-        toastr.success('초안을 3단계에 채웠어요. 채점하거나 확인하고 추가하세요.');
+        toastr.success('초안을 채웠어요. 확인하고 다음으로 넘어가세요.');
     });
     $root.find('.na_wz_save').on('click', async () => { await build(); if (!raw) return; const { from, to } = range(); download(`원문_${chatLabel()}_${from}-${to}.txt`, full); remember('txt'); });
     $root.find('.na_wz_file_btn').on('click', () => $root.find('.na_wz_file').val('').trigger('click'));
@@ -4795,12 +4884,13 @@ async function openWizard() {
     $root.find('.na_wz_out').on('input', function () {
         const v = this.value.trim();
         const n = guessEndNumber(v);
-        $root.find('.na_wz_outinfo').text(v ? `섹션 ${parseSections(v).filter(x => !x.group).length}개${n !== null ? ` · 끝 번호 #${n}` : ''}` : '');
+        const secsN = parseSections(v).filter(x => !x.group && !/^(?:STATE|OPEN)\b/.test(x.title)).length, hasState = /^# STATE\b/m.test(v);
+        countTokens(v).then(tk => $root.find('.na_wz_outinfo').html(v ? `<span class="${secsN ? 'ok' : ''}">${secsN ? '<i class="fa-solid fa-check"></i> ' : ''}섹션 ${secsN}개${n !== null ? ` · 끝 #${n}` : ''}</span>${hasState ? '<span class="ok"><i class="fa-solid fa-check"></i> STATE·OPEN</span>' : ''}<span>${fmt(tk)} 토큰</span>` : ''));
         $root.find('.na_wz_gradeout').prop('hidden', true);
     });
     $root.find('.na_wz_grade').on('click', async function () {
         const sum = $root.find('.na_wz_out').val().trim();
-        if (!sum) return toastr.info('먼저 3단계에 결과를 붙여넣어 주세요.');
+        if (!sum) return toastr.info('먼저 결과를 붙여넣어 주세요.');
         await build();
         const out = await withSpinner($(this), '채점하는 중…', () => askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${sum}`, { system: AI_SYS_GRADE, maxTokens: 2500 }));
         if (out === null) return;
@@ -4811,11 +4901,12 @@ async function openWizard() {
     $root.on('click', '.na_cite_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
     $root.find('.na_wz_add').on('click', () => {
         const text = $root.find('.na_wz_out').val().trim();
-        if (!text) return toastr.info('먼저 3단계에 결과를 붙여넣어 주세요.');
+        if (!text) { go(2); return toastr.info('먼저 결과를 붙여넣어 주세요.'); }
         const n = guessEndNumber(text);
         $root.closest('dialog').find('.popup-button-ok').trigger('click');
         setTimeout(() => openAppend({ text, end: n ?? range().to }), 50);
     });
+    show();
     await build();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
