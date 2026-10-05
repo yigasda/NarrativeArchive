@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '1.8.0';
+const VERSION = '1.9.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -25,10 +25,14 @@ const DEFAULT_META = Object.freeze({
     tokenCap: 0,    // 0 = no cap
     capMode: 'warn', // 'warn' | 'trim' (drop oldest numbered sections)
     pinned: [],     // section/group titles never dropped by the cap
+    history: [],    // [{ at, reason, added, removed, changed, delta, snapAt }] newest first
+    backup: null,   // { at, how } — last .txt/.json export
+    sinceBackup: 0, // changes since that export
+    backupEvery: 10, // remind after this many changes (0 = off)
     lastExport: null, // { from, to, at, how } — the latest extract copied or saved
 });
 
-const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned'];
+const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'wrap', 'remindTok', 'muted', 'track', 'tokenCap', 'capMode', 'pinned', 'backupEvery'];
 const POSITIONS = { 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
 const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
 
@@ -51,12 +55,36 @@ function getMeta() {
     if (!Array.isArray(md[MODULE].snapshots)) md[MODULE].snapshots = [];
     if (!Array.isArray(md[MODULE].muted)) md[MODULE].muted = [];
     if (!Array.isArray(md[MODULE].pinned)) md[MODULE].pinned = [];
+    if (!Array.isArray(md[MODULE].history)) md[MODULE].history = [];
     delete md[MODULE].once; // removed in 1.4.0
     return md[MODULE];
 }
 
 async function saveMeta() {
     await ctx().saveMetadata();
+}
+
+const HISTORY_MAX = 30;
+
+// Which "##" sections were added, removed or edited between two archive texts.
+function sectionChanges(a, b) {
+    const map = t => {
+        const o = new Map();
+        for (const s of parseSections(t)) if (!s.group) o.set(s.title, t.slice(s.start, s.end).trim());
+        return o;
+    };
+    const A = map(a), B = map(b);
+    let added = [...B.keys()].filter(k => !A.has(k));
+    let removed = [...A.keys()].filter(k => !B.has(k));
+    // same "#from–#to" on both sides = the title was edited, not a new section
+    const rangeOf = t => (t.match(/#\d+\s*[–—~-]\s*#?\d+/) || [])[0];
+    const renamed = [];
+    for (const r of [...removed]) {
+        const key = rangeOf(r);
+        const hit = key && added.find(x => rangeOf(x) === key);
+        if (hit) { renamed.push(`${r} → ${hit}`); removed = removed.filter(x => x !== r); added = added.filter(x => x !== hit); }
+    }
+    return { added, removed, renamed, changed: [...B.keys()].filter(k => A.has(k) && A.get(k) !== B.get(k)) };
 }
 
 function pushSnapshot(m, reason) {
@@ -75,7 +103,14 @@ async function commitText(text, reason, { boundary } = {}) {
     const m = getMeta();
     const next = String(text).replace(/\r\n/g, '\n');
     if (next === m.text && (boundary === undefined || boundary === m.boundary)) return false;
-    pushSnapshot(m, reason);
+    const snapped = pushSnapshot(m, reason);
+    if (next !== m.text) {
+        const ch = sectionChanges(m.text, next);
+        m.history.unshift({ at: Date.now(), reason: reason.replace(/ 전(?=$|:)/, ''), ...ch, delta: next.length - m.text.length, snapAt: snapped ? m.snapshots[0].at : null });
+        m.history.length = Math.min(m.history.length, HISTORY_MAX);
+        m.sinceBackup = (Number(m.sinceBackup) || 0) + 1;
+        if (m.backupEvery > 0 && m.sinceBackup === m.backupEvery) toastr.info(`백업 뒤로 ${m.sinceBackup}번 바뀌었어요. 보관 탭에서 .json 백업을 받아 두세요.`, '서사 아카이브');
+    }
     m.text = next;
     if (boundary !== undefined) m.boundary = boundary;
     else syncTrackedBoundary(m);
@@ -808,12 +843,16 @@ function renderPanel() {
                 <div id="na_snap_list" class="na_snap_list"></div>
               </div>
               <div class="na_block">
+                <div class="na_block_head"><div><h4>변경 내역</h4><p>언제 어떤 섹션이 바뀌었는지 최근 ${HISTORY_MAX}번까지. 복구 지점이 남아 있으면 그때 바뀐 내용을 볼 수 있어요.</p></div></div>
+                <div id="na_hist_list" class="na_hist_list"></div>
+              </div>
+              <div class="na_block">
                 <div class="na_block_head"><div><h4>가져오기</h4></div></div>
                 <div class="na_tiles">
                   <button type="button" class="na_tile" id="na_import"><i class="fa-solid fa-file-arrow-up"></i><span>파일에서</span><small>.txt · .json</small></button>
                   <button type="button" class="na_tile" id="na_from_chat"><i class="fa-solid fa-comments"></i><span>다른 채팅에서</span><small>같은 캐릭터</small></button>
                 </div>
-                <div class="na_block_head na_block_head_gap"><div><h4>내보내기</h4></div></div>
+                <div class="na_block_head na_block_head_gap"><div><h4>내보내기</h4><p id="na_backup_info"></p></div></div>
                 <div class="na_tiles">
                   <button type="button" class="na_tile" id="na_export"><i class="fa-solid fa-file-lines"></i><span>.txt</span><small>본문만</small></button>
                   <button type="button" class="na_tile" id="na_export_json"><i class="fa-solid fa-box-archive"></i><span>.json 백업</span><small>설정·복구 지점까지</small></button>
@@ -851,6 +890,7 @@ function renderPanel() {
               <div class="na_block">
                 <div class="na_set_list">
                   <label class="na_set_row"><span>압축 알림 <small>원문이 이 토큰을 넘으면 표시 · 0은 끔</small></span><input type="number" id="na_remind" class="text_pole" min="0" step="1000"></label>
+                  <label class="na_set_row"><span>백업 알림 <small>백업 뒤 이만큼 바뀌면 알려줘요 · 0은 끔</small></span><input type="number" id="na_backup_every" class="text_pole" min="0" max="999"></label>
                 </div>
               </div>
             </section>
@@ -885,6 +925,14 @@ function revealInEditor(from, to, { keepFocus = false } = {}) {
     el.setSelectionRange(from, to);
     el.scrollTop = Math.max(0, y - el.clientHeight / 3);
     if (keepFocus && active && active !== el) active.focus({ preventScroll: true });
+}
+
+async function markBackup(how) {
+    const m = getMeta();
+    m.backup = { at: Date.now(), how };
+    m.sinceBackup = 0;
+    await saveMeta();
+    syncPanel();
 }
 
 const needChat = fn => (...a) => hasChat() ? fn(...a) : toastr.info('채팅을 먼저 여세요.');
@@ -1056,10 +1104,12 @@ function bindPanel() {
         const m = getMeta();
         if (!m.text.trim()) return toastr.info('아카이브가 비어 있습니다.');
         download(`아카이브_${chatLabel()}_${nowStamp()}.txt`, m.text);
+        markBackup('txt');
     }));
     $('#na_export_json').on('click', needChat(() => {
         const { lastInject, ...rest } = getMeta();
         download(`아카이브_${chatLabel()}_${nowStamp()}.json`, JSON.stringify({ format: 'narrative-archive', version: VERSION, data: rest }, null, 2), 'application/json');
+        markBackup('json');
     }));
     $('#na_clear').on('click', needChat(async () => {
         const m = getMeta();
@@ -1149,6 +1199,12 @@ function bindPanel() {
             m.wrap = this.value; await saveMeta(); applyInjection(); refreshStatus();
         }, 500);
     });
+    $('#na_backup_every').on('change', async function () {
+        if (!hasChat()) return;
+        const m = getMeta();
+        m.backupEvery = Math.max(0, parseInt(this.value, 10) || 0); this.value = m.backupEvery;
+        await saveMeta(); syncPanel();
+    });
     $('#na_remind').on('change', async function () {
         if (!hasChat()) return;
         const m = getMeta();
@@ -1173,6 +1229,14 @@ function syncPanel() {
     if (document.activeElement?.id !== 'na_wrap') $('#na_wrap').val(m.wrap);
     $('#na_remind').val(m.remindTok);
     $('#na_muted_n').text(mutedCount(m));
+    $('#na_backup_every').val(m.backupEvery ?? 10);
+    {
+        const due = m.backupEvery > 0 && m.sinceBackup >= m.backupEvery;
+        $('#na_backup_info').html(m.backup
+            ? `마지막 백업 ${esc(timeLabel(m.backup.at))} (${m.backup.how === 'json' ? '.json' : '.txt'}) · 그 뒤 <b class="${due ? 'na_warn_txt' : ''}">${m.sinceBackup || 0}번</b> 바뀜`
+            : `아직 백업한 적 없어요${m.sinceBackup ? ` · <b class="${due ? 'na_warn_txt' : ''}">${m.sinceBackup}번</b> 바뀜` : ''}`);
+    }
+    renderHistory();
     $('#na_cap').val(m.tokenCap || 0);
     $('#na_capmode').val(m.capMode === 'trim' ? 'trim' : 'warn');
     $('#na_capmode_row').toggleClass('na_disabled', !(m.tokenCap > 0));
@@ -1216,6 +1280,42 @@ function renderHeadingCheck() {
     issues.forEach(it => {
         const $row = $(`<button type="button" class="na_hc_row"><span class="na_hc_title">${esc(it.title)}</span><span class="na_hc_msg">${esc(it.msg)}</span></button>`);
         $row.on('click', () => sectionPanel?.focus(it.start));
+        $l.append($row);
+    });
+}
+
+function renderHistory() {
+    const $l = $('#na_hist_list');
+    if (!$l.length || !hasChat()) return;
+    const m = getMeta();
+    $l.empty();
+    if (!m.history.length) { $l.html('<div class="na_empty">아직 바뀐 기록이 없어요.</div>'); return; }
+    const names = arr => arr.map(t => `<span class="na_hist_sec">${esc(t)}</span>`).join('');
+    m.history.forEach((h, i) => {
+        const si = h.snapAt ? m.snapshots.findIndex(x => x.at === h.snapAt) : -1;
+        // state right after this change = state right before the next one (or now)
+        const nextH = m.history[i - 1];
+        const afterSnap = nextH ? m.snapshots.find(x => x.at === nextH.snapAt) : null;
+        const canDiff = si >= 0 && (i === 0 || !!afterSnap);
+        const parts = [];
+        if (h.added.length) parts.push(`<div><span class="na_hist_k na_hist_add">추가</span>${names(h.added)}</div>`);
+        if (h.changed.length) parts.push(`<div><span class="na_hist_k">수정</span>${names(h.changed)}</div>`);
+        if (h.renamed?.length) parts.push(`<div><span class="na_hist_k">제목</span>${names(h.renamed)}</div>`);
+        if (h.removed.length) parts.push(`<div><span class="na_hist_k na_hist_del">삭제</span>${names(h.removed)}</div>`);
+        if (!parts.length) parts.push('<div class="na_dim">섹션 밖 글자만 바뀜</div>');
+        const $row = $(`
+          <div class="na_hist">
+            <div class="na_hist_top">
+              <span class="na_snap_time">${esc(timeLabel(h.at))}</span>
+              <span class="na_snap_reason">${esc(h.reason)}</span>
+              <span class="na_hist_delta ${h.delta >= 0 ? 'na_hist_add' : 'na_hist_del'}">${h.delta >= 0 ? '+' : '−'}${fmt(Math.abs(h.delta))}자</span>
+              ${canDiff ? '<button type="button" class="na_icon na_icon_sm na_hist_diff" title="그때 바뀐 내용"><i class="fa-solid fa-code-compare"></i></button>' : ''}
+            </div>
+            <div class="na_hist_body">${parts.join('')}</div>
+          </div>`);
+        $row.find('.na_hist_diff').on('click', () => {
+            openDiff(m.snapshots[si], afterSnap ? { text: afterSnap.text, label: '바뀐 뒤' } : { text: m.text, label: '바뀐 뒤 (지금)' });
+        });
         $l.append($row);
     });
 }
@@ -1458,14 +1558,14 @@ function renderDiff(rows, context = 2) {
     return html;
 }
 
-async function openDiff(snap) {
+async function openDiff(snap, after = { text: getMeta().text, label: '지금' }) {
     const c = ctx();
-    const rows = lineDiff(snap.text, getMeta().text);
+    const rows = lineDiff(snap.text, after.text);
     const add = rows.filter(r => r.t === '+').length, del = rows.filter(r => r.t === '-').length;
     const $v = $(`
       <div class="na_popup">
         <div class="na_diff_head">
-          <b>${esc(timeLabel(snap.at))} · ${esc(snap.reason)}</b> → <b>지금</b>
+          <b>${esc(timeLabel(snap.at))} · ${esc(snap.reason)}</b> → <b>${esc(after.label)}</b>
           <span class="na_chip na_chip_add">+${fmt(add)}줄</span><span class="na_chip na_chip_del">−${fmt(del)}줄</span>
         </div>
         <div class="na_diff">${add || del ? renderDiff(rows) : '<div class="na_empty">내용이 똑같아요.</div>'}</div>
@@ -1503,6 +1603,7 @@ async function refreshStatus() {
     let state = '';
     if (!m.enabled) state = '<span class="na_chip na_chip_off">주입 꺼짐</span>';
     else if (over) state = '<span class="na_chip na_chip_warn">압축할 때예요</span>';
+    else if (m.backupEvery > 0 && m.sinceBackup >= m.backupEvery) state = '<span class="na_chip na_chip_warn">백업할 때예요</span>';
     else if (m.text.trim()) state = '<span class="na_chip na_chip_on">주입 중</span>';
     $('#na_meter_state').html(state);
 
@@ -1565,17 +1666,79 @@ async function openPreview() {
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
+// ---------------------------------------------------------------- reading mode
+
+// Small markdown renderer for the archive's own format (headings, bullets, rules, emphasis). Escapes first.
+function mdInline(t) {
+    return esc(t)
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/(^|[^\w*])\*(?!\s)(.+?)\*(?!\w)/g, '$1<em>$2</em>')
+        .replace(/(^|[^\w])_(?!\s)(.+?)_(?!\w)/g, '$1<em>$2</em>');
+}
+
+function mdBlock(text) {
+    const out = [];
+    let list = null, para = [];
+    const flushPara = () => { if (para.length) out.push(`<p>${para.map(mdInline).join('<br>')}</p>`); para = []; };
+    const flushList = () => { if (list) out.push(`<ul>${list.map(x => `<li>${mdInline(x)}</li>`).join('')}</ul>`); list = null; };
+    for (const line of text.split('\n')) {
+        const t = line.trimEnd();
+        let mt;
+        if (!t.trim()) { flushPara(); flushList(); continue; }
+        if ((mt = t.match(/^(#{1,3}) (.*)$/))) {
+            flushPara(); flushList();
+            const lv = mt[1].length;
+            out.push(`<h${lv + 1} class="na_rd_h${lv}">${mdInline(lv === 1 ? groupLabel(mt[2]) : mt[2])}</h${lv + 1}>`);
+        } else if (/^-{3,}$/.test(t.trim())) { flushPara(); flushList(); out.push('<hr>'); }
+        else if ((mt = t.match(/^\s*[-*] (.*)$/))) { flushPara(); (list ||= []).push(mt[1]); }
+        else if (list && /^\s{2,}\S/.test(t)) list[list.length - 1] += ` ${t.trim()}`;
+        else { flushList(); para.push(t); }
+    }
+    flushPara(); flushList();
+    return out.join('');
+}
+
+function renderReading(m) {
+    const muted = mutedSet(m);
+    const trimmed = new Set(m.capMode === 'trim' ? lastBuild.trimmed : []);
+    const secs = parseSections(m.text);
+    const toc = [];
+    let skipLevel = 0;
+    const html = secs.map((s, i) => {
+        if (skipLevel && s.level <= skipLevel) skipLevel = 0;
+        const off = muted.has(s.title);
+        if (off && s.group) skipLevel = s.level;
+        const dim = off || skipLevel > 0;
+        const cut = !dim && trimmed.has(s.title);
+        const id = `na_rd_${i}`;
+        if (s.title !== '(머리말)' && s.title !== '(제목 없음)') toc.push({ id, level: s.level, title: s.group ? groupLabel(s.title) : s.title });
+        const tag = dim ? '<span class="na_rd_tag">주입 안 함</span>' : cut ? '<span class="na_rd_tag na_rd_tag_cut">상한으로 빠짐</span>' : '';
+        return `<section id="${id}" class="na_rd_sec ${dim ? 'na_rd_off' : ''} ${cut ? 'na_rd_cut' : ''}">${tag}${mdBlock(m.text.slice(s.start, s.end))}</section>`;
+    }).join('');
+    return { html, toc };
+}
+
 // ---------------------------------------------------------------- viewer popup
 
-async function openViewer() {
+async function openViewer(startTab = 'sections') {
     const c = ctx();
     const $root = $(`
       <div class="na_popup">
         <div class="na_nav">
           <button type="button" class="na_nav_btn active" data-tab="sections">섹션</button>
+          <button type="button" class="na_nav_btn" data-tab="read">읽기</button>
           <button type="button" class="na_nav_btn" data-tab="full">전체 편집</button>
         </div>
         <div class="na_pane" data-pane="sections"></div>
+        <div class="na_pane" data-pane="read" hidden>
+          <div class="na_rd_bar">
+            <select class="text_pole na_rd_toc"></select>
+            <button type="button" class="na_icon na_rd_smaller" title="글자 작게"><i class="fa-solid fa-minus"></i></button>
+            <button type="button" class="na_icon na_rd_bigger" title="글자 크게"><i class="fa-solid fa-plus"></i></button>
+          </div>
+          <article class="na_reader"></article>
+        </div>
         <div class="na_pane" data-pane="full" hidden>
           <textarea class="text_pole na_full" spellcheck="false"></textarea>
           <div class="na_row na_right">
@@ -1595,8 +1758,30 @@ async function openViewer() {
         $(this).addClass('active');
         $root.find('.na_pane').each(function () { $(this).prop('hidden', $(this).data('pane') !== tab); });
         if (tab === 'full') { $full.val(getMeta().text); updateFullTok(); }
+        else if (tab === 'read') renderRead();
         else browser.render();
     });
+
+    const g = globalSettings();
+    const applyFont = () => $root.find('.na_reader').css('font-size', `${g.readSize || 1}em`);
+    function renderRead() {
+        const { html, toc } = renderReading(getMeta());
+        $root.find('.na_reader').html(html || '<div class="na_empty">아카이브가 비어 있어요.</div>');
+        $root.find('.na_rd_toc').html('<option value="">목차로 이동…</option>' + toc.map(t =>
+            `<option value="${t.id}">${'\u00a0\u00a0'.repeat(Math.max(0, t.level - 1))}${esc(t.title)}</option>`).join(''));
+        applyFont();
+    }
+    $root.find('.na_rd_toc').on('change', function () {
+        const el = this.value && $root.find(`#${this.value}`)[0];
+        if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        this.value = '';
+    });
+    $root.find('.na_rd_smaller, .na_rd_bigger').on('click', function () {
+        const d = $(this).hasClass('na_rd_bigger') ? 0.1 : -0.1;
+        g.readSize = Math.min(1.6, Math.max(0.8, Math.round(((g.readSize || 1) + d) * 10) / 10));
+        saveGlobal(); applyFont();
+    });
+    if (startTab !== 'sections') setTimeout(() => $root.find(`.na_nav_btn[data-tab="${startTab}"]`).trigger('click'), 0);
 
     let t;
     $full.on('input', () => { clearTimeout(t); t = setTimeout(updateFullTok, 600); });
@@ -2094,6 +2279,24 @@ function onChatChanged() {
     syncPanel();
 }
 
+// magic-wand (extensions) menu entries
+function addWandMenu() {
+    const $menu = $('#extensionsMenu');
+    if (!$menu.length || $('#na_wand_read').length) return;
+    const items = [
+        ['na_wand_read', 'fa-book-open-reader', '아카이브 읽기', () => openViewer('read')],
+        ['na_wand_extract', 'fa-scissors', '원문 뽑기', openExtract],
+        ['na_wand_append', 'fa-file-circle-plus', '아카이브에 추가', openAppend],
+        ['na_wand_preview', 'fa-eye', '주입 미리보기', openPreview],
+    ];
+    for (const [id, icon, label, fn] of items) {
+        const $it = $(`<div id="${id}" class="list-group-item flex-container flexGap5 interactable na_wand_item" tabindex="0" title="서사 아카이브">
+            <div class="fa-solid ${icon} extensionsMenuExtensionButton"></div><span>${label}</span></div>`);
+        $it.on('click', needChat(fn));
+        $menu.append($it);
+    }
+}
+
 (function init() {
     const c = ctx();
     const es = c.eventSource;
@@ -2101,6 +2304,7 @@ function onChatChanged() {
 
     const start = () => {
         if (!$('#na_settings').length) renderPanel();
+        addWandMenu();
         onChatChanged();
     };
 
