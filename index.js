@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.7.5';
+const VERSION = '3.8.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -2397,12 +2397,25 @@ function renderDiff(rows, context = 2) {
 
 // ---- "한국어로 보기" for any diff box: translates only the changed (+/−) lines, shown under each line
 
-const AI_SYS_TRANSLATE = `You translate lines of a story archive into natural Korean.
-- You get numbered lines. Reply with exactly one line per input line, as "N: translation", same numbers, same order, nothing else.
-- Lines may be fragments, headings or list items. Keep markdown marks (#, -, **, _), "#number" references and quotation marks as they are.
-- Write character and place names in Korean script. Keep words the archive deliberately leaves untranslated (coined terms, titles in another language) as they are.
-- A line marked (OLD) followed by one marked (NEW) are two versions of the same line. Translate both, and in NEW reuse OLD's Korean word for word wherever the English is the same; change only the parts whose English differs. Do not repeat the (OLD)/(NEW) marks.
-- Translate every line in full, never shortened, and keep each translation on one line.`;
+const AI_SYS_TRANSLATE = `GOAL
+Translate numbered lines of a story archive into natural Korean.
+
+YOU GET
+Numbered lines, like "1: …", "2: …". They may be headings, list items, or half sentences.
+Some lines are marked (OLD) and the next one (NEW): two versions of the same line.
+
+RULES
+1. One output line for each input line. Same numbers, same order. Never skip a number, never merge two lines.
+2. Translate every line in full. Do not shorten or summarise.
+3. Keep these exactly as they are: markdown marks (#, -, **, _), "#number" references like #512, quotation marks.
+4. Names of people and places: write them in Korean script (Glossary spellings win if given).
+   Words the archive leaves untranslated on purpose (made-up words, titles in another language): keep as they are.
+5. (OLD) and (NEW): translate both. In NEW, copy OLD's Korean word for word wherever the English is the same, and change only the parts whose English changed. Do not write the (OLD)/(NEW) marks in your answer.
+6. Each translation stays on ONE line.
+
+OUTPUT: nothing else, exactly like this
+1: <Korean>
+2: <Korean>`;
 
 // ---- own connections: an OpenAI-compatible URL, or Vertex AI with a service account.
 // 'ai' is the AI 기능 model (mode 'st' = SillyTavern's connection or a profile); 'tr' is the translation model (mode 'same' = follow 'ai').
@@ -2604,10 +2617,22 @@ async function translateLines(items, { fresh = false } = {}) {
 
 // ---- glossary editor
 
-const AI_SYS_GLOSSARY = `You fix the Korean spelling of names and terms for a story archive, so every translation writes them the same way.
-You get English names or terms, each with a short context. Reply with one line per input, in the same order, as "English = 한국어", nothing else.
-- Use the established Korean spelling when one exists (mythology, history, places). Otherwise transliterate naturally.
-- Translate titles and ordinary nouns into natural Korean; keep coined words as a transliteration.`;
+const AI_SYS_GLOSSARY = `GOAL
+Decide one fixed Korean spelling for each name or term, so every translation of the story writes it the same way.
+
+YOU GET
+One English name or term per line, each with a short piece of context showing how it is used.
+
+RULES
+1. Real names with a usual Korean spelling (mythology, history, real places): use that spelling.
+2. Other names: transliterate naturally, the way a Korean reader would say it.
+3. Titles and ordinary nouns (e.g. "the Queen", "the well"): translate into natural Korean.
+4. Made-up words: transliterate, do not translate.
+5. Look at the context to tell a name from an ordinary word.
+
+OUTPUT: one line per input, same order, nothing else, exactly like this
+Avalon = 아발론
+Lighthouse = 등대`;
 
 async function openGlossary() {
     const c = ctx();
@@ -5077,29 +5102,83 @@ function nameNearMisses(archive, add) {
 // ---- prompts
 
 
-const AI_SYS_ASK = `You answer questions about an ongoing story using ONLY the archive the user gives you.
-- If the archive does not say, reply that it is not in the archive. Never invent.
-- After each claim, cite the section you used by copying its heading line exactly inside double brackets, e.g. [[## Y2 #48–#63 — The night ridge]].
-- Always answer in Korean, whatever language the archive or the question is in. Keep names as the archive spells them. Be concise.`;
+const AI_SYS_ASK = `GOAL
+Answer the user's question about their story using ONLY the ARCHIVE.
 
-const AI_SYS_KEYWORDS = `You choose trigger keywords for ONE section of a role-play story archive. The section stays out of the prompt until one of its keywords appears in the recent chat, so a keyword must show up in chat exactly when this section's events become relevant again, and rarely otherwise.
-Good keywords are the section's own subject matter: the topic, event, object, place, promise, wound or secret it records (for a section about a lost map: map, treasure, island). Think about the words a character would actually say when this comes up again.
-Bad keywords: main cast names; anything under BROAD TERMS; everyday words found in most scenes (bed, night, kiss, room, love, eat); very short English words that hide inside other words ("Set" fires on "settle").
-Matching is a plain case-insensitive substring search over raw chat text, which may be English or Korean. So:
-- English: the shortest stem that is still specific (map also matches maps; treasur matches treasure and treasury; betray matches betrayal and betrayed).
-- Korean: the forms a Korean chat would really use, as stems without particles (지도, 보물, 배신), with common synonyms. No one-syllable Korean stems.
-Give 4 to 8 concepts, most important first. One line per concept, nothing else, in this exact form:
-english stem | korean form, korean form | why it fits, in Korean, under 25 characters`;
+YOU GET
+- ARCHIVE: the story so far, in sections. Each section starts with a heading line like "## Y2 #48–#63 — The night ridge". The END of the archive (latest sections, STATE, OPEN) is what is true now.
+- QUESTION: what the user wants to know.
 
-const AI_SYS_CONFLICT = `You are a continuity checker for a role-play story archive. Compare the NEW text with the EXISTING archive and list contradictions only:
-- the same name spelled differently
-- dates or times of day going backwards
-- facts that contradict facts already established
-- threads the archive marks as resolved that the new text reopens, or the reverse
-- a character in two places at once
-The new text may replace the archive's STATE / OPEN blocks; an update there is not a contradiction unless it clashes with the new sections.
-Do not judge style and do not suggest additions.
-Answer in Korean, one bullet per issue: "- 무엇이 어긋나는지 — 근거 (기존 아카이브의 섹션 제목)". If there is nothing, answer exactly: 없음`;
+HOW TO WORK
+Step 1. Find every section that is about the question. Read them fully.
+Step 2. If something changed over time, give the latest state and say briefly how it got there.
+Step 3. Write the answer.
+
+RULES
+- Use only what the ARCHIVE says. If it does not say, answer that it is not in the archive. Never guess or invent.
+- After each claim, cite the section you used: copy its heading line exactly, inside double brackets.
+    e.g. 둘은 그날 밤 약속을 했어요 [[## Y2 #48–#63 — The night ridge]]
+- Always answer in Korean, whatever language the archive or the question is in.
+- Write names the way the archive spells them.
+- Be short and direct. No introduction.`;
+
+const AI_SYS_KEYWORDS = `GOAL
+Choose trigger keywords for ONE section of a role-play story archive.
+This section stays out of the prompt until one of its keywords appears in the recent chat. So a good keyword shows up in chat exactly when this section's events matter again, and rarely at other times.
+
+YOU GET
+- SECTION TITLE and SECTION: the section to pick keywords for.
+- BROAD TERMS: words that appear almost everywhere. Never use them.
+- OTHER SECTIONS: titles of the rest of the archive. Prefer words that set THIS section apart from them.
+
+GOOD KEYWORDS
+The section's own subject: the topic, event, object, place, promise, wound or secret it records.
+Think: what words would a character actually say when this comes up again?
+    e.g. a section about a lost map → map, treasure, island
+
+BAD KEYWORDS (never use)
+- main cast names, and anything under BROAD TERMS
+- everyday words that are in most scenes: bed, night, kiss, room, love, eat, hand, look
+- very short English words that hide inside other words ("Set" also fires on "settle", "sunset")
+- one-syllable Korean stems
+
+HOW MATCHING WORKS
+A plain, case-insensitive "contains" search over the raw chat text, which may be English or Korean.
+- English: give the shortest stem that is still specific. "map" also matches "maps"; "treasur" matches "treasure" and "treasury"; "betray" matches "betrayal" and "betrayed".
+- Korean: give the forms a Korean chat would really use, as stems without particles (지도, 보물, 배신), plus common synonyms.
+
+OUTPUT: 4 to 8 lines, most important first, nothing else, exactly like this
+<english stem> | <korean form>, <korean form> | <why it fits, in Korean, under 25 characters>
+Example:
+treasur | 보물, 금화 | 잃어버린 보물이 이 섹션의 중심`;
+
+const AI_SYS_CONFLICT = `GOAL
+Before NEW TEXT is added to the story archive, find places where it contradicts the EXISTING ARCHIVE.
+
+YOU GET
+- EXISTING ARCHIVE: the story so far. Its end (latest sections, STATE, OPEN) is what is true now.
+- NEW TEXT: new section blocks to add. It may end with new STATE and OPEN blocks that will REPLACE the old ones.
+
+HOW TO WORK
+Step 1. Read the NEW TEXT one bullet at a time.
+Step 2. For each bullet, check the EXISTING ARCHIVE for anything it clashes with.
+
+REPORT ONLY THESE (each must clash with something the archive actually says)
+1. NAME: the same person, place or thing spelled differently. e.g. "Mirabel" in the archive, "Mirabelle" in the new text.
+2. TIME: dates or time of day going backwards compared with where the archive ended.
+3. FACT: a fact that contradicts one already established (who did what, injuries, objects, relationships, places).
+4. SETTLED: something the archive marks as resolved is reopened, or something open is treated as already resolved, with no reason given.
+5. PLACE: a character in two places at once.
+
+DO NOT REPORT
+- New events, new people, new places: the story moving on is not a contradiction.
+- The new STATE / OPEN being different from the old ones: they are meant to replace them. Only report it if they clash with the NEW sections themselves.
+- Style, length, or anything that could be "added".
+- Anything you are not sure about.
+
+OUTPUT: Korean, one bullet per problem, exactly like this
+- <무엇이 어긋나는지> — 근거 (<기존 아카이브의 섹션 제목>)
+If there is no problem, write exactly: 없음`;
 
 // "[[## Y2 #48–#63 — …]]" → the section it names (exact heading, then same range)
 function findCited(secs, raw) {
