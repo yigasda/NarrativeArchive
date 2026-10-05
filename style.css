@@ -1301,3 +1301,27 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_wz_draft .na_btn { align-self: flex-start; }
 .na_wz_draft small { font-size: 0.78em; }
 .na_dr_max_row[hidden] { display: none; }
+
+/* story calendar */
+.na_cal_body { display: flex; flex-direction: column; gap: 14px; }
+.na_cal_log { display: flex; flex-direction: column; gap: 6px; }
+.na_cal_loghead { display: flex; align-items: baseline; gap: 8px; font-size: 0.9em; }
+.na_cal_loghead .na_dim { font-size: 0.85em; }
+.na_cal_line { display: flex; flex-direction: column; border-left: 2px solid color-mix(in srgb, var(--na-accent) 45%, transparent); margin-left: 6px; padding-left: 10px; }
+.na_cal_row { position: relative; display: flex; gap: 10px; align-items: flex-start; text-align: left; border: 0; background: transparent; color: inherit; font: inherit; padding: 6px 6px; border-radius: 8px; cursor: pointer; }
+.na_cal_row::before { content: ''; position: absolute; left: -16px; top: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--na-accent); box-shadow: 0 0 0 3px var(--SmartThemeBlurTintColor, #fff); }
+.na_cal_row.na_cal_nodate::before { background: var(--na-line); }
+.na_cal_row.na_cal_warn::before { background: var(--na-warn); }
+.na_cal_row:hover { background: var(--na-soft); }
+.na_cal_when { flex: 0 0 8.5em; display: flex; flex-direction: column; gap: 1px; font-size: 0.82em; }
+.na_cal_when b { font-variant-numeric: tabular-nums; }
+.na_cal_when small { opacity: 0.65; font-size: 0.9em; }
+.na_cal_nodate .na_cal_when b { opacity: 0.6; font-weight: 400; }
+.na_cal_what { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font-size: 0.86em; }
+.na_cal_what small { font-size: 0.82em; }
+.na_cal_warn { background: color-mix(in srgb, var(--na-warn) 10%, transparent); }
+.na_cal_gap { margin: 2px 0 2px -17px; display: flex; align-items: center; gap: 6px; font-size: 0.75em; opacity: 0.75; }
+.na_cal_gap::before { content: '⋮'; width: 12px; text-align: center; color: var(--na-accent); }
+.na_cal_gap span { padding: 1px 8px; border-radius: 999px; background: var(--na-soft); }
+.na_cal_cfg_body { display: flex; flex-direction: column; gap: 6px; padding: 0 12px 12px; }
+.na_cal_ta { width: 100% !important; margin: 0 !important; font-family: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.78em; }
