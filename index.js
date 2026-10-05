@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.5.3';
+const VERSION = '3.6.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3705,14 +3705,16 @@ function mountSectionPicker($host, { m, title, doneKeys, doneLabel = '읽음', g
     };
 }
 
-const AI_SYS_KNOW = `You build a "who knows what" table for a role-play story archive, so the role-play model never lets a character know something they should not.
-List the facts whose knowledge differs between characters: secrets, hidden pasts, lies told, confessions, plans, things one character saw alone, misunderstandings. Skip facts every character knows.
-For each fact name who knows it, who does not, and who only suspects, using the archive's own character names. Use the latest state you can see (a secret later revealed is known).
-"unaware" and "suspects" are NOT a list of everyone who happens not to know. Name only characters who are still part of the story at its latest point AND from whom the fact is kept, or who would act differently if they knew. Leave out characters who left the story, died, or appeared only briefly or long ago. If nobody like that is unaware, write none.
-You may get only some sections of the archive, plus the CURRENT TABLE built from other sections. Return the whole table: keep every current row that these sections do not change, update rows these sections change (someone learns, suspects or is told), and add new facts from these sections. At most 50 facts, most plot-relevant first.
-One line per fact, nothing else, in this exact form (English):
-fact in one short sentence | knows: A, B | unaware: C | suspects: D | src: the archive heading where this is established, copied exactly
-Write "none" for an empty field.`;
+const AI_SYS_KNOW = `You keep a "who knows what" table for a role-play story archive, so the role-play model never lets a character know something they should not.
+You get a few SECTIONS of the archive (in story order), the CURRENT TABLE built from earlier sections (numbered), and the CURRENT CAST (who is in the story at its latest point).
+Report ONLY what these sections add or change. Never repeat rows that these sections do not touch.
+- Every fact in these sections whose knowledge differs between characters: secrets, hidden pasts, lies told, confessions, plans, things one character saw or heard alone, misunderstandings. Skip facts every character knows. Do not stop early: go through every section you were given, to the last one.
+- If these sections change who knows a fact already in the table (someone is told, finds out, starts to suspect, a secret comes out), update that row.
+"unaware" and "suspects" are NOT everyone who happens not to know. Name only characters in the CURRENT CAST from whom the fact is kept, or who would act differently if they knew. If nobody like that, write none.
+Use the archive's own character names. One line per change, nothing else, in exactly these forms (English):
+NEW | fact in one short sentence | knows: A, B | unaware: C | suspects: D | src: the section heading where this is established, copied exactly
+UPDATE 3 | knows: A, B, C | unaware: none | suspects: D
+(UPDATE gives the row number and the full new lists.) Write "none" for an empty field. If these sections add or change nothing, answer exactly: none`;
 
 async function openKnowledge() {
     const c = ctx();
@@ -3776,20 +3778,47 @@ async function openKnowledge() {
                 m.knowledge = ''; m.knowMined = []; tr = null;
                 $root.find('.na_kn_fresh input').prop('checked', false);
             }
-            let rowsNow = 0;
+            // each part answers only with NEW rows and UPDATEs to numbered rows; the table is merged here
+            const cast = castNames(m);
+            const factKey = t => String(t).toLowerCase().replace(/[^a-z0-9가-힣]+/g, ' ').trim();
+            let added = 0, updated = 0;
             for (const [i, part] of parts.entries()) {
                 await step(part, i);
-                const old = String(m.knowledge || '').trim();
-                const out = await askAI(`[ARCHIVE SECTIONS]\n${picker.text(part)}${old ? `\n\n[CURRENT TABLE]\n${old}` : ''}`, { system: AI_SYS_KNOW, maxTokens: 6000 });
-                const lines = out.split('\n').map(l => l.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim()).filter(l => l.includes('|') && /knows:/i.test(l));
-                if (!lines.length) throw new Error('AI 답을 표로 못 읽었어요');
-                m.knowledge = trimUnaware(lines.join('\n'), currentCast(m)); tr = null;
+                const rows = knowledgeRows(m);
+                const table = rows.map((r, k) => `${k + 1}. ${knowLine(r)}`).join('\n');
+                const out = await askAI(`${cast.length ? `[CURRENT CAST]\n${cast.join(', ')}\n\n` : ''}[CURRENT TABLE]\n${table || '(empty)'}\n\n[SECTIONS]\n${picker.text(part)}`, { system: AI_SYS_KNOW, maxTokens: 4000 });
+                const seen = new Set(rows.map(r => factKey(r.fact)));
+                let understood = /^\s*none\.?\s*$/i.test(out);
+                for (const raw of out.split('\n')) {
+                    const line = raw.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim();
+                    const up = line.match(/^UPDATE\s*#?(\d+)\s*\|(.*)$/i);
+                    if (up) {
+                        const r = rows[Number(up[1]) - 1];
+                        if (!r) continue;
+                        const f = knowledgeRows({ knowledge: `x |${up[2]}` })[0];
+                        if (!f) continue;
+                        if (/knows:/i.test(up[2])) r.knows = f.knows;
+                        if (/unaware:/i.test(up[2])) r.unaware = f.unaware;
+                        if (/suspects:/i.test(up[2])) r.suspects = f.suspects;
+                        updated++; understood = true;
+                        continue;
+                    }
+                    const body = line.replace(/^NEW\s*\|\s*/i, '');
+                    if (!body.includes('|') || !/knows:/i.test(body)) continue;
+                    const r = knowledgeRows({ knowledge: body })[0];
+                    if (!r) continue;
+                    understood = true;
+                    if (seen.has(factKey(r.fact))) continue;
+                    seen.add(factKey(r.fact));
+                    rows.push(r); added++;
+                }
+                if (!understood) throw new Error('AI 답을 표로 못 읽었어요');
+                m.knowledge = trimUnaware(rows.map(knowLine).join('\n'), currentCast(m)); tr = null;
                 m.knowMined = [...new Set([...m.knowMined, ...part.map(sectionKey)])];
-                rowsNow = lines.length;
                 await save();
                 stepDone();
             }
-            toastr.success(`${rowsNow}개로 정리했어요. 틀린 건 직접 고쳐 주세요.`);
+            toastr.success(`새로 ${added}개${updated ? ` · 고친 줄 ${updated}개` : ''} · 지금 표 ${knowledgeRows(m).length}개. 틀린 건 직접 고쳐 주세요.`);
         },
     });
     $root.find('.na_kn_ai').on('click', function () { $(this).toggleClass('active', picker.toggle()); });
