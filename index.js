@@ -1584,49 +1584,39 @@ function renderPanel() {
 
             <!-- 압축 -->
             <section class="na_tab_pane" data-pane="compress" hidden>
-              <div class="na_block">
-                <div class="na_since" id="na_since"></div>
-                <button type="button" class="na_step na_step_wiz" id="na_open_wizard"><b><i class="fa-solid fa-wand-magic-sparkles"></i></b><span><strong>압축 마법사</strong><small>뽑기 → 복사 → 붙여넣기 → 채점 → 추가 · 한 화면에서</small></span><i class="fa-solid fa-chevron-right"></i></button>
-                <div class="na_steps">
-                  <button type="button" class="na_step na_step_sub" id="na_apply_hide"><b><i class="fa-solid fa-eye-slash"></i></b><span><strong>숨기기 다시 적용</strong><small>경계선 앞만 숨기고 뒤는 다시 보이게</small></span><i class="fa-solid fa-chevron-right"></i></button>
-                  <button type="button" class="na_step na_step_sub" id="na_unhide"><b><i class="fa-solid fa-eye"></i></b><span><strong>숨김 해제</strong><small id="na_hidden_n">숨긴 메시지 다시 보이게</small></span><i class="fa-solid fa-chevron-right"></i></button>
+              <div class="na_v2 na_cp">
+                <div class="na_v2_card na_cp_hero">
+                  <div id="na_since"></div>
+                  <button type="button" class="na_cp_wiz" id="na_open_wizard"><i class="fa-solid fa-wand-magic-sparkles"></i><span><b>압축 마법사</b><small>범위 → 복사 → 붙여넣기 → 채점 → 추가</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+                <div class="na_cp_tiles">
+                  <button type="button" class="na_cp_tile" id="na_apply_hide"><i class="fa-solid fa-eye-slash"></i><b>숨기기 다시 적용</b><small>경계선 앞만 숨기고 뒤는 보이게</small></button>
+                  <button type="button" class="na_cp_tile" id="na_unhide"><i class="fa-solid fa-eye"></i><b>숨김 해제</b><small id="na_hidden_n">숨긴 메시지 다시 보이게</small></button>
+                </div>
+                <div class="na_v2_label">따로 하기</div>
+                <div class="na_v2_card na_v2_list">
+                  <button type="button" class="na_cp_row" id="na_open_extract"><span class="na_cp_num">1</span><span class="na_cp_txt"><b>원문 뽑기</b><small>경계선 이후 메시지 · 지시문 붙여 복사</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                  <button type="button" class="na_cp_row" id="na_open_append"><span class="na_cp_num">2</span><span class="na_cp_txt"><b>아카이브에 추가</b><small>압축본 붙여넣기 · 번호 검사 · 경계선 자동</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+                <div class="na_v2_label">설정</div>
+                <div class="na_v2_card na_v2_list na_cp_set">
+                  <label class="na_cp_row"><span class="na_cp_txt"><span>숨긴 메시지 빼고 뽑기</span></span><input type="checkbox" class="na_toggle" id="na_opt_hidden"></label>
+                  <div class="na_strip_box">
+                    <label class="na_cp_row"><span class="na_cp_txt"><span>태그 지우기</span><small>&lt;think&gt; 블록 통째로 · HTML 태그는 글자만</small></span><input type="checkbox" class="na_toggle" id="na_opt_tags"></label>
+                    <div class="na_cp_sub">
+                      <textarea class="text_pole na_strip_ta" id="na_strip_custom" rows="2" spellcheck="false" placeholder="통째로 지울 태그나 /정규식/, 한 줄에 하나&#10;scene_plan"></textarea>
+                      <small class="na_strip_info" id="na_strip_info"></small>
+                    </div>
+                  </div>
+                  <details class="na_cp_fold" id="na_cmp_settings">
+                    <summary class="na_cp_row"><span class="na_cp_txt"><span>압축 지시문</span><small id="na_plib_sum">이 기기의 실리태번 설정에만 저장돼요</small></span><i class="fa-solid fa-chevron-down"></i></summary>
+                    <div class="na_cp_sub"><div class="na_plib" id="na_plib"></div></div>
+                  </details>
+                  <label class="na_cp_row"><span class="na_cp_txt"><span>아카이브 따라가기</span><small id="na_track_info">제목의 마지막 #번호를 경계선으로</small></span><input type="checkbox" id="na_track" class="na_toggle"></label>
+                  <label class="na_cp_row" id="na_boundary_row"><span class="na_cp_txt"><span>경계선 번호</span><small>여기까지 아카이브에 담겼어요</small></span><input type="number" id="na_boundary" class="text_pole na_cp_num_in" min="0" placeholder="-"></label>
+                  <label class="na_cp_row"><span class="na_cp_txt"><span>숨길 때 남길 메시지</span><small>경계선 바로 앞 몇 개는 보이게</small></span><input type="number" id="na_keep" class="text_pole na_cp_num_in" min="0" max="50"></label>
                 </div>
               </div>
-              <details class="na_block na_details na_fold">
-                <summary>따로 하기</summary>
-                <div class="na_steps">
-                  <button type="button" class="na_step" id="na_open_extract"><b>1</b><span><strong>원문 뽑기</strong><small>경계선 이후 메시지 · 지시문 붙여 복사</small></span><i class="fa-solid fa-chevron-right"></i></button>
-                  <button type="button" class="na_step" id="na_open_append"><b>2</b><span><strong>아카이브에 추가</strong><small>압축본 붙여넣기 · 번호 검사 · 경계선 자동</small></span><i class="fa-solid fa-chevron-right"></i></button>
-                </div>
-              </details>
-              <details class="na_block na_details na_fold" id="na_cmp_settings">
-                <summary>설정</summary>
-                <div class="na_cs">
-                  <section class="na_cs_card">
-                    <header class="na_cs_head"><b>원문 뽑기</b><small>원문 뽑기 · 압축 마법사에 같이 쓰여요</small></header>
-                    <div class="na_set_list">
-                      <label class="na_set_row"><span>숨긴 메시지 빼기</span><input type="checkbox" class="na_toggle" id="na_opt_hidden"></label>
-                      <div class="na_strip_box">
-                        <label class="na_set_row"><span><span>태그 지우기</span><small>&lt;think&gt; 블록 통째로 · HTML 태그는 글자만</small></span><input type="checkbox" class="na_toggle" id="na_opt_tags"></label>
-                        <textarea class="text_pole na_strip_ta" id="na_strip_custom" rows="2" spellcheck="false" placeholder="통째로 지울 태그나 /정규식/, 한 줄에 하나&#10;scene_plan"></textarea>
-                        <small class="na_strip_info" id="na_strip_info"></small>
-                      </div>
-                    </div>
-                  </section>
-                  <section class="na_cs_card">
-                    <header class="na_cs_head"><b>압축 지시문</b><small>이 기기의 실리태번 설정에만 저장돼요</small></header>
-                    <div class="na_plib" id="na_plib"></div>
-                  </section>
-                  <section class="na_cs_card">
-                    <header class="na_cs_head"><b>숨기기</b><small>경계선 앞 메시지를 숨겨서 토큰을 아껴요</small></header>
-                    <div class="na_set_list">
-                      <label class="na_set_row"><span><span>아카이브 따라가기</span><small id="na_track_info">제목의 마지막 #번호를 경계선으로</small></span><input type="checkbox" id="na_track" class="na_toggle"></label>
-                      <label class="na_set_row" id="na_boundary_row"><span><span>경계선 번호</span><small>여기까지 아카이브에 담겼어요</small></span><input type="number" id="na_boundary" class="text_pole" min="0" placeholder="-"></label>
-                      <label class="na_set_row"><span>숨길 때 남길 메시지</span><input type="number" id="na_keep" class="text_pole" min="0" max="50"></label>
-                    </div>
-                  </section>
-                </div>
-              </details>
             </section>
 
             <!-- 도구 -->
@@ -3279,12 +3269,16 @@ async function refreshStatus() {
     renderNext(m, { afterTok, health: h });
 
     const lx = m.lastExport;
-    const lxNote = lx ? `<div class="na_dim">최근 내보냄 #${lx.from}–#${lx.to} · ${esc(timeLabel(lx.at))}</div>` : '';
+    const lxNote = lx ? `<small class="na_v2_note">최근 내보냄 #${lx.from}–#${lx.to} · ${esc(timeLabel(lx.at))}</small>` : '';
     const hn = hiddenIndexes().length;
-    $('#na_hidden_n').text(hn ? `지금 숨긴 메시지 ${hn}개 · 범위 골라 다시 보이게` : '숨긴 메시지 없음');
-    $('#na_since').html(lxNote + (m.boundary >= 0
-        ? `현재 마지막 <b>#${last}</b> · 압축 이후 메시지 <b>${after.length}</b>개 · 원문 <b>${fmt(afterTok)}</b> 토큰`
-        : '<span class="na_dim">경계선이 아직 없어요. 직접 적거나 "아카이브에 추가"를 쓰면 자동으로 정해져요.</span>'));
+    $('#na_hidden_n').text(hn ? `지금 숨긴 메시지 ${hn}개` : '숨긴 메시지 없음');
+    { const gs = globalSettings(), ap = activePrompt(gs); $('#na_plib_sum').text(`${gs.prompts.length}개 · 지금 "${ap.name}"`); }
+    $('#na_since').html(m.boundary >= 0 ? `
+      <div class="na_cp_hhead"><span>경계선 #${m.boundary} 뒤에 쌓인 원문</span><span>마지막 #${last}</span></div>
+      <div class="na_cp_big"><b>${fmt(afterTok)}</b><span>토큰 · 메시지 ${after.length}개</span></div>
+      <div class="na_cp_bar"><span class="hid" style="flex:${Math.max(1, m.boundary + 1)}"></span><span class="raw" style="flex:${Math.max(1, last - m.boundary)}"></span></div>
+      <div class="na_cp_hhead"><small>#0 – #${m.boundary} 압축됨</small><small>${last > m.boundary ? `#${m.boundary + 1} – #${last} 원문` : '원문 없음'}</small></div>
+      ${lxNote}` : '<div class="na_cp_hhead"><span>경계선이 아직 없어요</span></div><small class="na_v2_note">직접 적거나 "아카이브에 추가"를 쓰면 자동으로 정해져요.</small>');
 }
 
 // muted / pinned / keyword links follow a renamed section
