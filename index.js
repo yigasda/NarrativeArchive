@@ -3787,24 +3787,45 @@ function driftHtml(text, m) {
     return html.replace(/\u0001(\d+)\u0001/g, (all, n) => `<button type="button" class="na_cite na_cite_msg" data-msg="${n}" title="메시지 #${n} 보기">#${n}</button>`);
 }
 
+// one card per "- #57 Set: … — 근거 [[…]]" line; anything else falls back to the plain rendering
+function driftCards(text, m) {
+    const secs = parseSections(m.text);
+    const lines = String(text).split('\n').map(l => l.trim()).filter(l => /^[-*•]/.test(l));
+    if (!lines.length) return `<div class="na_v2_card">${driftHtml(text, m)}</div>`;
+    return lines.map(l => {
+        const mt = l.match(/^[-*•]\s*#(\d+)\s+([^:：]{1,40})[:：]\s*(.+?)(?:\s*[—–-]\s*근거\s*((?:\[\[[^\]]+\]\][\s,]*)+))?\s*$/);
+        if (!mt) return `<div class="na_v2_card na_dr2_item">${driftHtml(l, m)}</div>`;
+        const ev = mt[4] ? renderAnswer(mt[4], secs).html : '';
+        return `
+          <div class="na_v2_card na_dr2_item">
+            <div class="na_dr2_head"><button type="button" class="na_cite na_cite_msg na_dr2_msg" data-msg="${mt[1]}" title="메시지 #${mt[1]} 보기">#${mt[1]}</button><b>${esc(mt[2].trim())}</b></div>
+            <div class="na_dr2_text">${esc(mt[3])}</div>
+            ${ev ? `<div class="na_dr2_ev"><i class="fa-solid fa-bookmark"></i><div>${ev}</div></div>` : ''}
+          </div>`;
+    }).join('');
+}
+
 async function openDrift() {
     const c = ctx();
     const m = getMeta();
     const $root = $(`
-      <div class="na_popup">
-        <div class="na_block_head"><div><h4>이탈 감지</h4><p>최근 대화를 아카이브와 대조해서, RP 모델이 이미 정해진 사실과 어긋나게 쓴 곳을 찾아요. 참고용이고 아무것도 바꾸지 않아요.</p></div></div>
-        <div class="na_row">
-          <label>최근 메시지 <input type="number" class="text_pole na_num na_dr_n" min="2" max="60" value="12"> 개</label>
-          <button type="button" class="na_btn na_small na_primary na_dr_go"><i class="fa-solid fa-route"></i> 검사</button>
+      <div class="na_popup na_v2 na_dr2">
+        <div class="na_v2_title"><b>이탈 감지</b><small>RP 모델이 정해진 사실과 어긋나게 쓴 곳 · 참고용이고 아무것도 바꾸지 않아요</small></div>
+        <div class="na_v2_card na_dr2_ctl">
+          <div class="na_dr2_row"><span>최근 메시지</span><span class="na_fd_step"><button type="button" class="na_fd_btn na_dr2_dec" aria-label="줄이기">−</button><input type="number" class="text_pole na_dr_n" min="2" max="60" value="12"><button type="button" class="na_fd_btn na_dr2_inc" aria-label="늘리기">+</button></span><span>개</span></div>
+          <button type="button" class="na_v2_btn primary wide na_dr_go"><i class="fa-solid fa-route"></i> 검사하기</button>
+          <small class="na_v2_note na_dr_info"></small>
         </div>
-        <small class="na_dim na_dr_info"></small>
-        <div class="na_ai_box na_dr_out" hidden></div>
+        <div class="na_dr_out na_dr2_out"></div>
       </div>`);
     const show = d => {
         if (!d) return;
-        $root.find('.na_dr_out').prop('hidden', false).toggleClass('na_ai_ok', d.none)
-            .html(d.none ? '<i class="fa-solid fa-circle-check"></i> 어긋난 곳이 없어요' : `<div class="na_ai_box_head"><i class="fa-solid fa-route"></i> ${esc(timeLabel(d.at))} · #${d.upto}까지 ${d.count}개 검사 <span class="na_dim">· 참고용</span></div>${driftHtml(d.text, m)}`);
+        const n = d.none ? 0 : String(d.text).split('\n').filter(l => /^\s*[-*•]/.test(l)).length;
+        $root.find('.na_dr_out').html(d.none
+            ? `<div class="na_v2_label"><span>검사 결과</span><small>${esc(timeLabel(d.at))} · #${d.upto}까지 ${d.count}개</small></div><div class="na_v2_card na_dr2_ok"><i class="fa-solid fa-circle-check"></i> 어긋난 곳이 없어요</div>`
+            : `<div class="na_v2_label"><span>어긋난 곳${n ? ` ${n}개` : ''}</span><small>${esc(timeLabel(d.at))} · #${d.upto}까지 ${d.count}개</small></div>${driftCards(d.text, m)}`);
     };
+    $root.find('.na_dr2_dec, .na_dr2_inc').on('click', function () { const $n = $root.find('.na_dr_n'); $n.val(Math.min(60, Math.max(2, (parseInt($n.val(), 10) || 12) + ($(this).hasClass('na_dr2_inc') ? 2 : -2)))); });
     countTokens(m.text).then(t => $root.find('.na_dr_info').text(`검사할 때마다 아카이브 전체(약 ${fmt(t)} 토큰)와 최근 메시지를 ${aiLabel()}에 보내요`));
     show(m.driftLast);
     $root.find('.na_dr_go').on('click', async function () {
@@ -4359,24 +4380,24 @@ async function openQuotes() {
     m.quotes = Array.isArray(m.quotes) ? m.quotes : [];
     const $root = $(`
       <div class="na_popup na_qb_root">
-        <div class="na_block_head"><div><h4>대사 은행</h4><p>아카이브에 남은 대사를 인물별로 모아요. 모은 대사로 AI가 인물마다 말버릇 규칙(말투 지문)을 뽑고, 그 규칙을 "조용히 따를 것"으로 주입하면 RP 모델이 캐릭터 말투를 덜 잃어요.</p></div></div>
+        <div class="na_v2_title"><b>대사 은행</b><small>모은 대사로 인물마다 말버릇 규칙(말투 지문)을 뽑아 조용히 주입해요</small></div>
         <div class="na_v2_tabs na_qb_tabs" role="tablist"><button type="button" data-p="quotes" class="on">대사 <span class="na_qb_nq"></span></button><button type="button" data-p="voice">말투 지문 <span class="na_qb_nv"></span></button></div>
         <div class="na_qb_pane" data-pane="voice" hidden><div class="na_v2 na_vc_body"></div></div>
-        <div class="na_qb_pane" data-pane="quotes">
-        <div class="na_tool_actions">
-          <button type="button" class="na_btn na_small na_qb_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 모으기</button>
-          <button type="button" class="na_btn na_small na_qb_find"><i class="fa-solid fa-magnifying-glass"></i> 아카이브에서 모으기</button>
-          <button type="button" class="na_linkbtn na_danger na_qb_clear"><i class="fa-regular fa-trash-can"></i> 전체 삭제</button>
-        </div>
-        <div class="na_qb_excl">
-          <span class="na_qb_excl_label"><i class="fa-solid fa-user-slash"></i> 뺄 인물</span>
-          <span class="na_qb_excl_chips"></span>
-          <input type="text" class="text_pole na_qb_excl_in" placeholder="이름" enterkeyhint="done">
-          <button type="button" class="na_btn na_small na_qb_excl_add"><i class="fa-solid fa-plus"></i> 추가</button>
+        <div class="na_qb_pane na_v2 na_qb2" data-pane="quotes">
+        <div class="na_v2_row2">
+          <button type="button" class="na_v2_btn primary na_qb_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 모으기</button>
+          <button type="button" class="na_v2_btn na_qb_find"><i class="fa-solid fa-magnifying-glass"></i> 아카이브에서 모으기</button>
         </div>
         <div class="na_qb_pickhost"></div>
-        <input type="search" class="text_pole na_qb_q" placeholder="인물·대사로 찾기">
+        <div class="na_search_wrap na_qb2_search"><i class="fa-solid fa-magnifying-glass"></i><input type="search" class="text_pole na_search na_qb_q" placeholder="인물 · 대사로 찾기"></div>
+        <div class="na_qb_excl">
+          <span class="na_qb_excl_label">빼는 인물</span>
+          <span class="na_qb_excl_chips"></span>
+          <input type="text" class="text_pole na_qb_excl_in" placeholder="+ 이름" enterkeyhint="done">
+          <button type="button" class="na_v2_pillbtn na_qb_excl_add">추가</button>
+        </div>
         <div class="na_qb_list"></div>
+        <button type="button" class="na_linkbtn na_danger na_qb_clear"><i class="fa-regular fa-trash-can"></i> 모은 대사 전체 삭제</button>
         </div>
       </div>`);
     // ---- 말투 지문 pane: one open card, the rest as rows; characters with enough lines but no fingerprint as dashed rows
@@ -4427,16 +4448,16 @@ async function openQuotes() {
         $root.find('.na_qb_nv').text(Object.keys(m.voice || {}).length || '');
         renderVoice();
         $root.find('.na_qb_list').html(by.size ? [...by].sort((a, b) => (a[0] === '?') - (b[0] === '?') || b[1].length - a[1].length).map(([who, xs]) => `
-          <div class="na_qb_group ${who !== '?' && !inCast(cast, who) ? 'na_qb_away' : ''}"><div class="na_qb_who">${esc(who === '?' ? '말한 사람 모름' : who)} <span class="na_dim">${xs.length}개</span>${who !== '?' && !inCast(cast, who) ? '<span class="na_qb_awaytag" title="STATE의 인물 제목과 최근 섹션 4개에 안 나와요. 다시 나오면 말투 지문이 자동으로 들어가요">지금 안 나와서 지문 주입 안 함</span>' : ''}
+          <div class="na_qb_group ${who !== '?' && !inCast(cast, who) ? 'na_qb_away' : ''} ${who === '?' ? 'na_qb_unknown' : ''}"><div class="na_qb_who">${who === '?' ? '<span class="na_qb_qmark">?</span>' : faceHtml(who, 26)}<b>${esc(who === '?' ? '말한 사람 모름' : who)}</b><span class="na_dim">${xs.length}개</span>${m.voice?.[who] ? '<span class="na_qb_fp">지문 있음</span>' : ''}${who !== '?' && !inCast(cast, who) ? '<span class="na_qb_awaytag" title="STATE의 인물 제목과 최근 섹션 4개에 안 나와요. 다시 나오면 말투 지문이 자동으로 들어가요">지금 안 나옴</span>' : ''}
             <span class="na_qb_gbtns" data-who="${esc(who)}">
               ${who !== '?' ? '<button type="button" class="na_icon na_icon_sm na_qb_gexcl" title="이 인물 빼기 (대사 지우고 앞으로도 안 모음)"><i class="fa-solid fa-user-slash"></i></button>' : ''}
               ${xs.length ? '<button type="button" class="na_icon na_icon_sm na_qb_gdel" title="이 인물 대사 모두 지우기"><i class="fa-regular fa-trash-can"></i></button>' : ''}
             </span></div>
-            ${xs.map(({ x, i }) => `<div class="na_qb_row" data-i="${i}">
+            <div class="na_qb_rows">${xs.map(({ x, i }) => `<div class="na_qb_row" data-i="${i}">
               <div class="na_qb_text">“${esc(x.text)}”<div class="na_dim na_qb_src">${esc(String(x.src || '').slice(0, 50))}</div></div>
-              <input type="text" class="text_pole na_qb_whoin" value="${esc(x.who)}" title="말한 사람">
-              <button type="button" class="na_icon na_icon_sm na_qb_del" title="빼기"><i class="fa-solid fa-xmark"></i></button>
-            </div>`).join('')}</div>`).join('') : '<div class="na_empty">아직 없어요. "아카이브에서 모으기"를 눌러 보세요.</div>');
+              <input type="text" class="text_pole na_qb_whoin" value="${esc(x.who === '?' ? '' : x.who)}" placeholder="누구?" title="말한 사람">
+              <button type="button" class="na_icon na_icon_sm na_qb_del" title="빼기" aria-label="빼기"><i class="fa-solid fa-xmark"></i></button>
+            </div>`).join('')}</div></div>`).join('') : '<div class="na_empty">아직 없어요. "아카이브에서 모으기"를 눌러 보세요.</div>');
     };
     render();
     const save = async () => { await saveMeta(); applyInjection(); syncPanel(); render(); };
@@ -5992,21 +6013,35 @@ async function openXray() {
 async function openHealth() {
     const c = ctx();
     const m = getMeta();
-    const $root = $(`<div class="na_popup"><div class="na_health_body"><div class="na_empty">점검하는 중…</div></div></div>`);
+    const $root = $(`<div class="na_popup na_v2 na_hl2"><div class="na_health_body na_v2"><div class="na_empty">점검하는 중…</div></div></div>`);
     const render = async () => {
         const h = await healthChecks(m);
-        const icon = { bad: 'fa-circle-xmark', warn: 'fa-triangle-exclamation', info: 'fa-circle-info', ok: 'fa-circle-check' };
+        const fix = h.items.map((x, i) => ({ x, i })).filter(({ x }) => x.level === 'bad' || x.level === 'warn');
+        const info = h.items.map((x, i) => ({ x, i })).filter(({ x }) => x.level === 'info');
+        const ok = h.items.filter(x => x.level === 'ok');
+        const tone = h.score >= 90 ? 'good' : h.score >= 70 ? 'mid' : 'low';
+        const word = h.score >= 90 ? '건강해요' : h.score >= 70 ? '거의 괜찮아요' : '손볼 곳이 있어요';
+        const R = 38, C = 2 * Math.PI * R;
+        const item = ({ x, i }) => `
+          <div class="na_v2_card na_hl2_item ${x.level}">
+            <span class="na_hl2_bar"></span>
+            <div class="na_hl2_main">
+              <b>${esc(x.title)}</b>
+              ${x.detail ? `<small>${esc(x.detail).replace(/\n/g, '<br>')}</small>` : ''}
+              ${x.fix ? `<button type="button" class="na_v2_btn ${x.level === 'bad' ? 'danger' : 'primary'} na_health_fix" data-i="${i}">${esc(x.fix.label)}</button>` : ''}
+            </div>
+          </div>`;
         $root.find('.na_health_body').html(`
-          <div class="na_health_top">
-            <div class="na_health_score ${h.score >= 90 ? 'good' : h.score >= 70 ? 'mid' : 'low'}">${h.score}<small>점</small></div>
-            <div><b>아카이브 건강 점검</b><div class="na_dim">AI 없이 번호·숨기기·키워드·백업 등을 살펴봐요. 고칠 수 있는 건 버튼으로 바로 고쳐요.</div></div>
+          <div class="na_v2_card na_hl2_top">
+            <div class="na_hl2_ring ${tone}">
+              <svg viewBox="0 0 92 92" width="92" height="92"><circle cx="46" cy="46" r="${R}" class="bg"/><circle cx="46" cy="46" r="${R}" class="fg" stroke-dasharray="${(C * h.score / 100).toFixed(1)} 999" transform="rotate(-90 46 46)"/></svg>
+              <span><b>${h.score}</b><small>점</small></span>
+            </div>
+            <div class="na_hl2_sum"><b>${word}</b><small>AI 없이 번호·숨기기·키워드·백업을 훑어봤어요.${fix.length ? ` 고칠 것 ${fix.length}개` : ''}${info.length ? `, 참고 ${info.length}개` : ''}</small></div>
           </div>
-          <div class="na_health_list">${h.items.map((x, i) => `
-            <div class="na_health_item na_h_${x.level}">
-              <i class="fa-solid ${icon[x.level]}"></i>
-              <div class="na_health_main"><div>${esc(x.title)}</div>${x.detail ? `<div class="na_health_detail">${esc(x.detail).replace(/\n/g, '<br>')}</div>` : ''}</div>
-              ${x.fix ? `<button type="button" class="na_btn na_small na_health_fix" data-i="${i}">${esc(x.fix.label)}</button>` : ''}
-            </div>`).join('')}</div>`);
+          ${fix.length ? `<div class="na_v2_label">고칠 것</div>${fix.map(item).join('')}` : ''}
+          ${info.length ? `<div class="na_v2_label">참고</div>${info.map(item).join('')}` : ''}
+          ${ok.length ? `<details class="na_v2_card na_v2_more na_hl2_ok"><summary><i class="fa-solid fa-check"></i> 괜찮은 것 <b>${ok.length}</b>개</summary><ul>${ok.map(x => `<li>${esc(x.title)}</li>`).join('')}</ul></details>` : ''}`);
         $root.find('.na_health_fix').on('click', async function () {
             const it = h.items[Number(this.dataset.i)];
             $(this).prop('disabled', true);
