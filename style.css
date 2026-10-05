@@ -182,18 +182,6 @@
     border-radius: 10px !important;
     padding: 10px 12px !important;
 }
-.na_once_banner {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.84em;
-    padding: 8px 10px;
-    border-radius: 10px;
-    background: color-mix(in srgb, var(--na-warn) 14%, transparent);
-}
-.na_once_banner[hidden] { display: none; }
-.na_once_banner span { flex: 1; }
-.na_once_banner a { color: inherit; text-decoration: underline; }
 
 /* ---------- buttons (own, so theme menu_button rules don't leak in) */
 .na_btn {
@@ -226,7 +214,7 @@
 .na_btn.na_primary:hover { filter: brightness(1.08); }
 .na_btn.na_small { min-height: 30px; padding: 4px 11px; font-size: 0.82em; flex-shrink: 0; }
 
-.na_editor_actions { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 6px; }
+.na_editor_actions { display: grid; grid-template-columns: 1fr 1.6fr; gap: 6px; }
 
 /* ---------- inject log */
 .na_log { display: flex; flex-direction: column; gap: 6px; font-size: 0.86em; }

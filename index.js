@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -19,7 +19,6 @@ const DEFAULT_META = Object.freeze({
     wrap: '',       // optional template, {{archive}} is replaced by the archive text
     remindTok: 0,   // nudge when raw text after the boundary passes this many tokens (0 = off)
     track: false,   // boundary follows the last #number in the archive's headings
-    once: '',       // one-shot override for the next generation only
     snapshots: [],  // [{ at, reason, text, boundary }] newest first
     muted: [],      // section titles left out of the injection
     lastInject: null,
@@ -47,6 +46,7 @@ function getMeta() {
     }
     if (!Array.isArray(md[MODULE].snapshots)) md[MODULE].snapshots = [];
     if (!Array.isArray(md[MODULE].muted)) md[MODULE].muted = [];
+    delete md[MODULE].once; // removed in 1.4.0
     return md[MODULE];
 }
 
@@ -150,7 +150,7 @@ function wrapText(m, text) {
 }
 
 function injectedText(m) {
-    const body = filterMuted(m, m.once ? m.once : m.text);
+    const body = filterMuted(m, m.text);
     return body.trim() ? wrapText(m, body) : '';
 }
 
@@ -165,36 +165,22 @@ function applyInjection() {
     c.setExtensionPrompt(PROMPT_KEY, injectedText(m), pos, Math.max(0, Number(m.depth) || 0), false, Number(m.role) || 0);
 }
 
-let onceInFlight = false;
-
 async function onGenerationStarted(type, _opts, dryRun) {
     if (dryRun || type === 'quiet' || !hasChat()) return;
     const m = getMeta();
     const text = m.enabled ? injectedText(m) : '';
     m.lastInject = {
         at: Date.now(),
-        once: !!m.once,
         enabled: !!m.enabled,
         tokens: await countTokens(text),
         chars: text.length,
         position: m.position, depth: m.depth, role: m.role,
-        sections: parseSections(filterMuted(m, m.once || m.text)).filter(x => !x.group).length,
+        sections: parseSections(filterMuted(m, m.text)).filter(x => !x.group).length,
         muted: mutedCount(m),
         head: text.slice(0, 160),
         tail: text.slice(-160),
     };
-    if (m.once) onceInFlight = true;
     refreshInjectLog();
-}
-
-async function onGenerationDone() {
-    if (!onceInFlight || !hasChat()) return;
-    onceInFlight = false;
-    const m = getMeta();
-    m.once = '';
-    await saveMeta();
-    applyInjection();
-    syncPanel();
 }
 
 // ---------------------------------------------------------------- hiding
@@ -609,7 +595,7 @@ function renderPanel() {
                 <div class="na_block_head">
                   <div>
                     <h4>주입 본문</h4>
-                    <p>여기서 고치고 <b>저장</b>하면 다음 턴부터 반영돼요. <b>이번만</b>은 저장 없이 다음 응답 한 번만 이 내용으로 보내요.</p>
+                    <p>여기서 고치고 <b>저장</b>하면 다음 턴부터 반영돼요.</p>
                   </div>
                 </div>
                 <div class="na_editor_bar">
@@ -624,15 +610,9 @@ function renderPanel() {
                   <input type="search" class="text_pole" id="na_find_q" placeholder="본문에서 찾기 (Enter: 다음)">
                   <span class="na_dim" id="na_find_info"></span>
                 </div>
-                <div class="na_once_banner" id="na_once_banner" hidden>
-                  <i class="fa-solid fa-hourglass-half"></i>
-                  <span>다음 응답 1회는 <b>임시 본문</b>으로 보내요. 저장된 아카이브는 그대로예요.</span>
-                  <a href="#" id="na_once_cancel">취소</a>
-                </div>
                 <textarea id="na_editor" class="text_pole na_editor" spellcheck="false" placeholder="# 제목&#10;&#10;# ── Y1 ──&#10;&#10;## #0–#47 — ..."></textarea>
                 <div class="na_editor_actions">
                   <button type="button" class="na_btn" id="na_ed_revert"><i class="fa-solid fa-rotate-left"></i> 되돌리기</button>
-                  <button type="button" class="na_btn" id="na_ed_once"><i class="fa-solid fa-hourglass-start"></i> 이번만</button>
                   <button type="button" class="na_btn na_primary" id="na_ed_save"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
                 </div>
               </div>
@@ -775,21 +755,6 @@ function bindPanel() {
     $('#na_ed_revert').on('click', needChat(() => {
         $ed.val(getMeta().text); setDirty(false); updateEdTok();
     }));
-    $('#na_ed_once').on('click', needChat(async () => {
-        const m = getMeta();
-        const v = $ed.val().replace(/\r\n/g, '\n');
-        if (!v.trim()) return toastr.info('본문이 비어 있어요.');
-        if (v === m.text) return toastr.info('저장된 아카이브와 같아요. 고친 뒤 눌러 주세요.');
-        m.once = v;
-        await saveMeta(); applyInjection(); syncPanel();
-        toastr.success('다음 응답 1회에 이 내용을 보내요');
-    }));
-    $('#na_once_cancel').on('click', async e => {
-        e.preventDefault();
-        if (!hasChat()) return;
-        const m = getMeta();
-        m.once = ''; await saveMeta(); applyInjection(); syncPanel();
-    });
     $('#na_ed_copy').on('click', async () => {
         const ok = await copyText($ed.val(), $ed[0]);
         ok ? toastr.success('복사됨') : toastr.warning('복사가 막혀 있어요.');
@@ -866,7 +831,7 @@ function bindPanel() {
         download(`아카이브_${chatLabel()}_${nowStamp()}.txt`, m.text);
     }));
     $('#na_export_json').on('click', needChat(() => {
-        const { once, lastInject, ...rest } = getMeta();
+        const { lastInject, ...rest } = getMeta();
         download(`아카이브_${chatLabel()}_${nowStamp()}.json`, JSON.stringify({ format: 'narrative-archive', version: VERSION, data: rest }, null, 2), 'application/json');
     }));
     $('#na_clear').on('click', needChat(async () => {
@@ -958,7 +923,6 @@ function syncPanel() {
     if (!on) { $('#na_carry').prop('hidden', true); refreshStatus(); return; }
     const m = getMeta();
     if (!editorDirty) $('#na_editor').val(m.text).trigger('input');
-    $('#na_once_banner').prop('hidden', !m.once);
     $('#na_enabled').prop('checked', !!m.enabled);
     $('#na_position').val(String(m.position));
     $('#na_depth').val(m.depth);
@@ -1046,7 +1010,7 @@ function refreshInjectLog() {
     const where = Number(li.position) === 1 ? `채팅 안 깊이 ${li.depth}` : POSITIONS[li.position];
     $l.html(`
       <div class="na_log">
-        <div class="na_log_row"><span>시각</span><b>${esc(timeLabel(li.at))}</b>${li.once ? '<span class="na_chip na_chip_warn">이번만 본문</span>' : ''}</div>
+        <div class="na_log_row"><span>시각</span><b>${esc(timeLabel(li.at))}</b></div>
         <div class="na_log_row"><span>분량</span><b>${fmt(li.tokens)} 토큰</b><span class="na_dim">${fmt(li.chars)}자 · 섹션 ${li.sections}개${li.muted ? ` · ${li.muted}개 꺼짐` : ''}</span></div>
         <div class="na_log_row"><span>자리</span><b>${esc(where)}</b><span class="na_dim">${esc(ROLES[li.role] || '')} 역할</span></div>
         <div class="na_log_clip"><span>시작</span><pre>${esc(li.head)}${li.chars > 160 ? '…' : ''}</pre></div>
@@ -1267,7 +1231,6 @@ async function refreshStatus() {
     $('#na_meter_total').html(`${fmt(total)}<small> 토큰 주입</small>`);
     let state = '';
     if (!m.enabled) state = '<span class="na_chip na_chip_off">주입 꺼짐</span>';
-    else if (m.once) state = '<span class="na_chip na_chip_warn">다음 1회 임시 본문</span>';
     else if (over) state = '<span class="na_chip na_chip_warn">압축할 때예요</span>';
     else if (m.text.trim()) state = '<span class="na_chip na_chip_on">주입 중</span>';
     $('#na_meter_state').html(state);
@@ -1455,7 +1418,6 @@ async function openAppend() {
 // ---------------------------------------------------------------- boot
 
 function onChatChanged() {
-    onceInFlight = false;
     editorDirty = false;
     carryOffer = hasChat() && lastSeen && lastSeen.chatId !== currentChatId() && !getMeta().text.trim() ? lastSeen : null;
     applyInjection();
@@ -1475,9 +1437,6 @@ function onChatChanged() {
     es.on(et.APP_READY, start);
     es.on(et.CHAT_CHANGED, onChatChanged);
     if (et.GENERATION_STARTED) es.on(et.GENERATION_STARTED, onGenerationStarted);
-    for (const ev of [et.MESSAGE_RECEIVED, et.GENERATION_STOPPED]) {
-        if (ev) es.on(ev, onGenerationDone);
-    }
     for (const ev of [et.MESSAGE_RECEIVED, et.MESSAGE_SENT, et.MESSAGE_DELETED]) {
         if (ev) es.on(ev, refreshStatusSoon);
     }
