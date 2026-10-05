@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '1.5.2';
+const VERSION = '1.5.3';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1417,7 +1417,6 @@ async function openExtract() {
           <button type="button" class="na_btn na_save_txt"><i class="fa-solid fa-download"></i> .txt 저장</button>
           <button type="button" class="na_btn na_copy na_primary"><i class="fa-solid fa-copy"></i> <span class="na_copy_label">전체 복사</span></button>
         </div>
-        <div class="na_ex_list"></div>
         <textarea class="na_ex_hidden" readonly></textarea>
       </div>`);
 
@@ -1448,16 +1447,6 @@ async function openExtract() {
         $root.find('.na_ex_hidden').val(output);
         $root.find('.na_prompt_state').text(g.usePrompt ? '붙임' : '안 붙임').toggleClass('na_chip_on', g.usePrompt);
         $root.find('.na_copy_label').text(g.usePrompt ? '지시문과 함께 복사' : '전체 복사');
-        const $list = $root.find('.na_ex_list').empty();
-        items.forEach(x => {
-            const $it = $(`
-              <div class="na_card">
-                <div class="na_card_head"><span class="na_card_title">[${x.i}] ${esc(x.name)}</span><span class="na_card_meta">${fmt(x.text.length)}자</span></div>
-                <div class="na_card_body" hidden><div class="na_card_text">${esc(x.text)}</div></div>
-              </div>`);
-            $it.find('.na_card_head').on('click', () => $it.find('.na_card_body').prop('hidden', (i, v) => !v));
-            $list.append($it);
-        });
         const skipped = all.length - items.length;
         $root.find('.na_ex_info').text(items.length
             ? `메시지 ${items.length}개${skipped ? ` (${skipped}개 뺌)` : ''} · 복사될 분량 약 ${fmt(await countTokens(output))} 토큰`

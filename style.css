@@ -398,7 +398,7 @@
 .na_search_wrap > i { position: absolute; left: 12px; opacity: 0.45; font-size: 0.85em; pointer-events: none; }
 .na_search { width: 100%; margin: 0 !important; padding-left: 32px !important; border-radius: 999px !important; }
 .na_search_info { font-size: 0.8em; padding-left: 4px; opacity: 0.7; }
-.na_list, .na_ex_list { display: flex; flex-direction: column; gap: 6px; }
+.na_list { display: flex; flex-direction: column; gap: 6px; }
 
 .na_card {
     border-radius: 10px;
