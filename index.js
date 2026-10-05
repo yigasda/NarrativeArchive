@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.11.1';
+const VERSION = '2.11.2';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -617,7 +617,9 @@ function mountSectionBrowser($host) {
     const $list = $root.find('.na_list');
     const $search = $root.find('.na_search');
     const $info = $root.find('.na_search_info');
-    const collapsed = new Set();
+    // folded groups are kept per chat, so they stay folded after a reload
+    const collapsedSet = () => new Set(Array.isArray(getMeta()?.collapsed) ? getMeta().collapsed : []);
+    const setCollapsed = set => { const m = getMeta(); if (!m) return; m.collapsed = [...set]; saveMeta(); };
     const openCards = new Set();
     let pendingEdit = -1;
     let renderId = 0;
@@ -729,7 +731,7 @@ function mountSectionBrowser($host) {
             }
             if (s.group) {
                 const key = sectionKey(s);
-                const isOpen = q || !collapsed.has(key);
+                const isOpen = q || !collapsedSet().has(key);
                 const $g = $(`
                   <div class="na_group na_lv${s.level} ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''}">
                     <div class="na_group_head">
@@ -750,7 +752,9 @@ function mountSectionBrowser($host) {
                   </div>`);
                 $g.find('> .na_group_head').on('click', () => {
                     if (q) return;
-                    collapsed.has(key) ? collapsed.delete(key) : collapsed.add(key);
+                    const set = collapsedSet();
+                    set.has(key) ? set.delete(key) : set.add(key);
+                    setCollapsed(set);
                     render();
                 });
                 $g.find('> .na_group_head .na_sw').on('click', e => { e.stopPropagation(); setMuted(key, !off); });
@@ -851,8 +855,15 @@ function mountSectionBrowser($host) {
         if (!s) return;
         $search.val('');
         openCards.add(sectionKey(s));
-        // open every group on the way so the card is visible
-        collapsed.clear();
+        // open the groups on the way so the card is visible; other folded groups stay folded
+        const set = collapsedSet();
+        const stack = [];
+        for (const x of parseSections(getMeta().text)) {
+            if (x.start > start) break;
+            while (stack.length && stack[stack.length - 1].level >= x.level) stack.pop();
+            if (x.group) stack.push(x);
+        }
+        if (stack.some(g => set.delete(sectionKey(g)))) setCollapsed(set);
         render();
         const el = $list.find(`.na_card[data-start="${start}"]`)[0];
         if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('na_flash'); setTimeout(() => el.classList.remove('na_flash'), 1400); }
