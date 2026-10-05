@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.3.1';
+const VERSION = '3.4.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3698,7 +3698,7 @@ function pickedQuotes(m) {
 
 const AI_SYS_QUOTES = `You pick voice samples for a role-play from a story archive: the quoted lines that best show how each character talks (rhythm, word choice, attitude), not the most dramatic plot lines.
 
-Read the whole archive and work out who actually SAYS each quoted line. The archive is written in third person, so be careful:
+You get some sections of the archive. Read them all, to the last section, and work out who actually SAYS each quoted line. The archive is written in third person, so be careful:
 - The speaker is the one doing the speaking verb (said, told, asked, answered, whispered, swore, warned, called it…), not the person spoken to. "Set told Somang, \"…\"" → Set. "She asked him, \"…\"" → resolve she/he from the surrounding sentences.
 - A line after a colon belongs to the name before it: "Somang: \"…\"" → Somang.
 - A bullet that names one character at the start may quote someone else later in the same bullet; attribute each quote separately.
@@ -3727,6 +3727,21 @@ async function openQuotes() {
           <label>인물마다 <input type="number" class="text_pole na_num na_qb_max" min="1" max="10"> 개</label>
           <small class="na_dim na_qb_tok"></small>
           <button type="button" class="na_btn na_small na_danger na_qb_clear"><i class="fa-regular fa-trash-can"></i> 전체 삭제</button>
+        </div>
+        <div class="na_qb_pick" hidden>
+          <div class="na_qb_pick_head">
+            <b>AI가 읽을 섹션</b>
+            <span class="na_qb_quick">
+              <button type="button" class="na_pchip" data-sel="new">안 모은 것</button>
+              <button type="button" class="na_pchip" data-sel="all">전체</button>
+              <button type="button" class="na_pchip" data-sel="none">비우기</button>
+            </span>
+          </div>
+          <div class="na_qb_secs"></div>
+          <div class="na_qb_pick_foot">
+            <small class="na_dim na_qb_pick_info"></small>
+            <button type="button" class="na_btn na_small na_primary na_qb_go"><i class="fa-solid fa-wand-magic-sparkles"></i> 모으기 시작</button>
+          </div>
         </div>
         <input type="search" class="text_pole na_qb_q" placeholder="인물·대사로 찾기">
         <div class="na_qb_list"></div>
@@ -3772,11 +3787,78 @@ async function openQuotes() {
         await save();
         toastr.success(`${found.length}개 모았어요. 말한 사람은 짐작이라 틀릴 수 있어요. 고치거나 "AI로 모으기"를 써 보세요.`);
     });
-    // AI reads the archive itself, picks lines and names the speaker; only lines found verbatim in the archive are kept
-    $root.find('.na_qb_ai').on('click', async function () {
-        const out = await withSpinner($(this), '아카이브 읽는 중…', () => askAI(`[ARCHIVE]\n${m.text}`, { system: AI_SYS_QUOTES, maxTokens: 8000 }));
-        if (out === null) return;
-        const secs = parseSections(m.text).filter(x => !x.group);
+    // ---- AI gather: pick sections, send them a few at a time (a whole archive in one go makes models stop early)
+    const CHUNK_TOK = 6000;
+    const estTok = t => Math.ceil(t.length / 3.6);
+    m.quoteMined = Array.isArray(m.quoteMined) ? m.quoteMined : [];
+    const allSecs = () => parseSections(m.text).filter(x => !x.group && x.title !== '(머리말)');
+    let chosen = null; // Set of section keys
+    const $pick = $root.find('.na_qb_pick');
+    const pickInfo = () => {
+        const secs = allSecs().filter(x => chosen.has(sectionKey(x)));
+        const tok = secs.reduce((a, x) => a + estTok(m.text.slice(x.start, x.end)), 0);
+        const parts = chunkSecs(secs).length;
+        $root.find('.na_qb_pick_info').text(secs.length ? `섹션 ${secs.length}개 · 약 ${fmt(tok)} 토큰${parts > 1 ? ` · ${parts}번에 나눠 읽어요` : ''}` : '섹션을 골라 주세요');
+        $root.find('.na_qb_go').prop('disabled', !secs.length);
+        $root.find('.na_qb_g input').each(function () {
+            const keys = String($(this).data('keys')).split('\u0002');
+            const n = keys.filter(k => chosen.has(k)).length;
+            this.checked = n === keys.length; this.indeterminate = n > 0 && n < keys.length;
+        });
+    };
+    function chunkSecs(secs) {
+        const out = [];
+        let cur = [], tok = 0;
+        for (const x of secs) {
+            const t = estTok(m.text.slice(x.start, x.end));
+            if (cur.length && tok + t > CHUNK_TOK) { out.push(cur); cur = []; tok = 0; }
+            cur.push(x); tok += t;
+        }
+        if (cur.length) out.push(cur);
+        return out;
+    }
+    const drawPick = () => {
+        const mined = new Set(m.quoteMined);
+        // "# ── Y1 ──" groups with their cards; top-level cards (title, STATE, OPEN) go in unlabeled runs
+        const rows = [];
+        let grp = { label: '', items: [] };
+        const flush = () => { if (grp.items.length) rows.push(grp); };
+        for (const x of parseSections(m.text)) {
+            if (x.title === '(머리말)') continue;
+            if (x.group) { flush(); grp = { label: groupLabel(x.title), items: [] }; continue; }
+            if (x.level === 1 && grp.label) { flush(); grp = { label: '', items: [] }; }
+            grp.items.push(x);
+        }
+        flush();
+        $root.find('.na_qb_secs').html(rows.map(g => `
+          <div class="na_qb_sg">
+            ${g.label ? `<label class="na_qb_g"><input type="checkbox" data-keys="${esc(g.items.map(sectionKey).join('\u0002'))}"><b>${esc(g.label)}</b><small class="na_dim">${g.items.length}개</small></label>` : ''}
+            ${g.items.map(x => `<label class="na_qb_s ${g.label ? '' : 'na_qb_s_top'}"><input type="checkbox" data-k="${esc(sectionKey(x))}" ${chosen.has(sectionKey(x)) ? 'checked' : ''}>
+              <span>${esc(x.title)}</span>${mined.has(sectionKey(x)) ? '<small class="na_qb_done" title="이미 AI로 모은 섹션"><i class="fa-solid fa-check"></i> 모음</small>' : ''}</label>`).join('')}
+          </div>`).join(''));
+        pickInfo();
+    };
+    const select = how => {
+        const mined = new Set(m.quoteMined);
+        chosen = new Set(allSecs().map(sectionKey).filter(k => how === 'all' || (how === 'new' && !mined.has(k))));
+        drawPick();
+    };
+    $root.find('.na_qb_ai').on('click', () => {
+        const open = $pick.prop('hidden');
+        $pick.prop('hidden', !open);
+        $root.find('.na_qb_ai').toggleClass('active', open);
+        if (open) { if (!chosen) select(m.quoteMined.length ? 'new' : 'all'); else drawPick(); }
+    });
+    $root.on('click', '.na_qb_quick .na_pchip', function () { select($(this).data('sel')); });
+    $root.on('change', '.na_qb_s input', function () { const k = String($(this).data('k')); this.checked ? chosen.add(k) : chosen.delete(k); pickInfo(); });
+    $root.on('change', '.na_qb_g input', function () {
+        String($(this).data('keys')).split('\u0002').forEach(k => this.checked ? chosen.add(k) : chosen.delete(k));
+        $(this).closest('.na_qb_sg').find('.na_qb_s input').prop('checked', this.checked);
+        pickInfo();
+    });
+
+    // lines the model returned → verified candidates (must appear verbatim in one of the sections it read)
+    const readPicks = (out, secs) => {
         const bodies = secs.map(x => quoteKey(m.text.slice(x.start, x.end)));
         const picks = [], made = [];
         for (const line of out.split('\n')) {
@@ -3786,19 +3868,41 @@ async function openQuotes() {
             const k = quoteKey(text);
             if (!who || k.length < 4) continue;
             const at = bodies.findIndex(b => b.includes(k));
-            if (at < 0) { made.push(text); continue; } // not in the archive: the model made it up or changed it
+            if (at < 0) { made.push(text); continue; } // not in what it read: made up or changed
             picks.push({ who, text, src: secs[at].title });
         }
-        if (!picks.length) return toastr.warning(made.length ? 'AI가 고른 대사를 아카이브에서 찾지 못했어요. 다시 해 보세요.' : 'AI 답을 못 읽었어요. 다시 해 보세요.');
-        // candidates only: nothing gets ticked, the user picks; lines already here just get the AI's speaker
-        let added = 0, fixed = 0;
-        for (const p of picks) {
-            const q = m.quotes.find(x => quoteKey(x.text) === quoteKey(p.text));
-            if (q) { if (q.who !== p.who) { q.who = p.who; fixed++; } }
-            else { m.quotes.push({ ...p, on: false }); added++; }
-        }
-        await save();
-        toastr.success(`후보 ${picks.length}개 · 새로 ${added}개${fixed ? ` · 말한 사람 ${fixed}개 고침` : ''}${made.length ? ` · 아카이브에 없는 ${made.length}개는 뺐어요` : ''}. 체크해서 골라 주세요.`);
+        return { picks, made };
+    };
+    $root.find('.na_qb_go').on('click', async function () {
+        const secs = allSecs().filter(x => chosen.has(sectionKey(x)));
+        if (!secs.length) return;
+        const parts = chunkSecs(secs);
+        const $b = $(this), html = $b.html();
+        $b.prop('disabled', true);
+        let added = 0, fixed = 0, made = 0, found = 0, done = 0;
+        try {
+            for (const part of parts) {
+                $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> 읽는 중… ${done + 1}/${parts.length}`);
+                const text = part.map(x => trimEnd(m.text.slice(x.start, x.end))).join('\n\n');
+                const out = await askAI(`[ARCHIVE SECTIONS]\n${text}`, { system: AI_SYS_QUOTES, maxTokens: 6000 });
+                const r = readPicks(out, part);
+                made += r.made.length; found += r.picks.length;
+                // candidates only: nothing gets ticked; lines already here just get the AI's speaker
+                for (const p of r.picks) {
+                    const q = m.quotes.find(x => quoteKey(x.text) === quoteKey(p.text));
+                    if (q) { if (q.who !== p.who) { q.who = p.who; fixed++; } }
+                    else { m.quotes.push({ ...p, on: false }); added++; }
+                }
+                m.quoteMined = [...new Set([...m.quoteMined, ...part.map(sectionKey)])];
+                done++;
+                await save();
+                drawPick();
+            }
+        } catch (e) {
+            console.error('[NarrativeArchive] AI', e);
+            toastr.error(`${done}/${parts.length}까지 하고 멈췄어요: ${String(e?.message || e)}`, 'AI 요청 실패');
+        } finally { $b.prop('disabled', false).html(html); pickInfo(); }
+        if (done) toastr.success(`후보 ${found}개 · 새로 ${added}개${fixed ? ` · 말한 사람 ${fixed}개 고침` : ''}${made ? ` · 아카이브에 없는 ${made}개는 뺐어요` : ''}. 체크해서 골라 주세요.`);
     });
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
