@@ -632,38 +632,78 @@ const hiddenIndexes = () => (ctx().chat || []).flatMap((x, i) => x?.is_system ? 
 
 async function openUnhide() {
     const c = ctx();
+    const m = getMeta();
     const last = lastIndex();
     const hidden = hiddenIndexes();
     if (!hidden.length) return toastr.info('숨긴 메시지가 없어요.');
+    const total = last + 1;
+    const pct = i => `${(i / total * 100).toFixed(2)}%`;
+    // runs of hidden messages for the bar
+    const runs = [];
+    for (const i of hidden) { const r = runs[runs.length - 1]; r && r[1] === i - 1 ? r[1] = i : runs.push([i, i]); }
+    const bnd = m?.boundary >= 0 ? m.boundary : -1;
+    const quick = [10, 20, 50].filter(n => n < hidden.length);
     const $root = $(`
-      <div class="na_popup">
-        <div class="na_block_head"><div>
-          <h4>숨김 해제</h4>
-          <p>숨긴 메시지 <b>${hidden.length}</b>개 (#${hidden[0]} ~ #${hidden[hidden.length - 1]}). 다시 보이게 할 범위를 고르세요.
-          해제한 메시지는 다시 프롬프트에 들어가요.</p>
-        </div></div>
-        <div class="na_ex_range">
-          <label># <input type="number" class="text_pole na_num na_uh_from" min="0" max="${last}" value="${hidden[0]}"></label>
-          <span>~</span>
-          <label># <input type="number" class="text_pole na_num na_uh_to" min="0" max="${last}" value="${hidden[hidden.length - 1]}"></label>
+      <div class="na_popup na_v2 na_uh2">
+        <div class="na_v2_title"><b>숨김 해제</b><small>숨긴 메시지를 골라 다시 RP 모델이 보게 해요</small></div>
+        <div class="na_v2_card na_uh2_map">
+          <div class="na_uh2_count"><b>${fmt(hidden.length)}</b><span>개 숨김 · 전체 ${fmt(total)}개</span></div>
+          <div class="na_uh2_bar">
+            <div class="na_uh2_track">${runs.map(([a, b]) => `<span style="left:${pct(a)};width:${pct(b - a + 1)}"></span>`).join('')}</div>
+            <div class="na_uh2_sel"></div>
+          </div>
+          <div class="na_uh2_axis"><span>#0</span>${bnd >= 0 && bnd < last ? `<span>경계선 #${bnd}</span>` : ''}<span>#${last}</span></div>
         </div>
-        <div class="na_uh_info na_dim"></div>
+        <div class="na_uh2_range">
+          <label><small>부터</small><span><i>#</i><input type="number" class="text_pole na_uh_from" min="0" max="${last}" value="${hidden[0]}"></span></label>
+          <i class="fa-solid fa-arrow-right"></i>
+          <label><small>까지</small><span><i>#</i><input type="number" class="text_pole na_uh_to" min="0" max="${last}" value="${hidden[hidden.length - 1]}"></span></label>
+        </div>
+        <div class="na_v2_chips na_uh2_quick">
+          ${quick.map(n => `<button type="button" class="na_v2_pillbtn" data-n="${n}">마지막 ${n}개</button>`).join('')}
+          <button type="button" class="na_v2_pillbtn" data-n="all">전부</button>
+        </div>
+        <div class="na_uh2_warn" hidden><i class="fa-solid fa-circle-info"></i><span></span></div>
+        <button type="button" class="na_v2_btn primary wide na_uh2_go"></button>
       </div>`);
     const count = () => {
-        const a = parseInt($root.find('.na_uh_from').val(), 10) || 0, b = parseInt($root.find('.na_uh_to').val(), 10);
-        const n = hidden.filter(i => i >= a && i <= (Number.isFinite(b) ? b : last)).length;
-        $root.find('.na_uh_info').text(`이 범위에서 ${n}개가 다시 보여요.`);
-        return [a, Number.isFinite(b) ? b : last, n];
+        let a = parseInt($root.find('.na_uh_from').val(), 10), b = parseInt($root.find('.na_uh_to').val(), 10);
+        a = Number.isFinite(a) ? a : 0; b = Number.isFinite(b) ? b : last;
+        if (a > b) [a, b] = [b, a];
+        const n = hidden.filter(i => i >= a && i <= b).length;
+        return [a, b, n];
     };
-    $root.find('input').on('input change', count);
-    count();
-    const r = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: false, okButton: '해제', cancelButton: '취소' });
-    if (r !== c.POPUP_RESULT.AFFIRMATIVE && r !== true) return;
-    const [a, b, n] = count();
-    if (!n) return toastr.info('이 범위엔 숨긴 메시지가 없어요.');
-    await c.executeSlashCommandsWithOptions(`/unhide ${Math.min(a, b)}-${Math.max(a, b)}`, { handleParserErrors: true, handleExecutionErrors: true });
-    toastr.success(`#${Math.min(a, b)} ~ #${Math.max(a, b)} 숨김 해제 (${n}개)`);
-    refreshStatus();
+    let tick = 0;
+    const draw = () => {
+        const [a, b, n] = count();
+        $root.find('.na_uh2_sel').css({ left: pct(Math.max(0, a)), width: pct(Math.max(1, Math.min(b, last) - Math.max(0, a) + 1)) });
+        $root.find('.na_uh2_go').prop('disabled', !n).text(n ? `#${a} – #${b} · ${fmt(n)}개 보이게` : '이 범위엔 숨긴 메시지가 없어요');
+        // inside the compressed part: the archive already covers it, so the raw text would go in twice
+        const dup = bnd >= 0 ? hidden.filter(i => i >= a && i <= Math.min(b, bnd)) : [];
+        const $w = $root.find('.na_uh2_warn').prop('hidden', !dup.length);
+        if (!dup.length) return;
+        const my = ++tick;
+        $w.find('span').text('이미 압축된 범위예요. 풀면 아카이브와 원문이 같이 들어가요.');
+        const items = buildExtract(dup[0], dup[dup.length - 1]).filter(x => dup.includes(x.i));
+        countTokens(extractToText(items)).then(t => { if (my === tick) $w.find('span').text(`이미 압축된 범위예요. 풀면 아카이브와 원문이 같이 들어가 토큰이 약 ${fmt(t)} 늘어요.`); });
+    };
+    $root.find('input').on('input change', draw);
+    $root.find('.na_uh2_quick').on('click', 'button', function () {
+        const n = this.dataset.n === 'all' ? hidden.length : Number(this.dataset.n);
+        $root.find('.na_uh_from').val(hidden[hidden.length - n]);
+        $root.find('.na_uh_to').val(hidden[hidden.length - 1]);
+        draw();
+    });
+    $root.find('.na_uh2_go').on('click', async () => {
+        const [a, b, n] = count();
+        if (!n) return;
+        await c.executeSlashCommandsWithOptions(`/unhide ${a}-${b}`, { handleParserErrors: true, handleExecutionErrors: true });
+        toastr.success(`#${a} ~ #${b} 숨김 해제 (${n}개)`);
+        refreshStatus();
+        $root.closest('dialog').find('.popup-button-ok').trigger('click');
+    });
+    draw();
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: false, okButton: '닫기' });
 }
 
 async function applyHide({ silent = false } = {}) {
@@ -1326,45 +1366,44 @@ async function openKeywords(s, body, current) {
     const c = ctx();
     const m = getMeta();
     const split = v => [...new Set(String(v).split(/[,，\n]/).map(x => x.trim().replace(/^["'“”‘’\-*\s]+|["'“”‘’.\s]+$/g, '')).filter(Boolean))];
+    const depthN = Math.max(1, Number(m.linkDepth) || 4);
     const $root = $(`
-      <div class="na_popup">
-        <div class="na_block_head"><div>
-          <h4>키워드 연동</h4>
-          <p>이 섹션을 평소엔 빼 두고, 최근 메시지에 키워드가 나올 때만 넣어요. 쉼표로 나눠 적고, 비우면 연동을 풀어요. 대화가 한국어면 한국어 키워드도 같이 넣어야 켜져요.</p>
-        </div></div>
-        <div class="na_dim na_kw_title"></div>
-        <input type="text" class="text_pole na_kw_in" placeholder="map, 지도, treasur, 보물">
-        <div class="na_kw_check"></div>
-        <div class="na_kw_group na_kw_testbox">
-          <div class="na_kw_label">키워드 테스트 <span class="na_dim">· 문장을 넣으면 위 키워드로 이 섹션이 불려 오는지 보여 줘요</span></div>
-          <textarea class="text_pole na_kw_tin" rows="2" placeholder="예: 그 지도 아직 갖고 있어?"></textarea>
-          <label class="checkbox_label na_kw_trecent"><input type="checkbox"><span>최근 메시지 ${Math.max(0, (Number(m.linkDepth) || 4) - 1)}개도 같이 (다음 메시지로 보낸다고 치기)</span></label>
-          <div class="na_kw_tout"></div>
+      <div class="na_popup na_v2 na_kw2">
+        <div class="na_kw2_head"><small>키워드 연동 · 평소엔 빼 두고, 최근 ${depthN}개 메시지에 나올 때만 넣어요</small><b class="na_kw_title"></b></div>
+        <div class="na_v2_card na_kw2_box">
+          <div class="na_kw2_keys"><input type="text" class="na_kw2_add" placeholder="키워드 입력 후 Enter (쉼표로 여러 개)"></div>
+          <input type="hidden" class="na_kw_in">
+          <div class="na_kw_check"></div>
         </div>
+        <div class="na_v2_note">대화가 한국어면 한국어 키워드도 같이 넣어야 켜져요.</div>
         <div class="na_kw_group">
-          <div class="na_kw_label">이 섹션에서 두드러지는 말 <span class="na_dim">· 다른 섹션엔 드물고 여기 자주 나와요</span></div>
+          <div class="na_v2_label">이 섹션에서 두드러지는 말<small>섹션 수 · 메시지 %</small></div>
           <div class="na_kw_chips na_kw_found"></div>
         </div>
         <div class="na_kw_group na_kw_broad_group">
-          <div class="na_kw_label">너무 넓은 말 <span class="na_dim">· 넣으면 거의 항상 켜져요</span></div>
+          <div class="na_v2_note">너무 넓은 말 · 넣으면 거의 늘 켜져요</div>
           <div class="na_kw_chips na_kw_broad"></div>
         </div>
-        <div class="na_kw_group">
-          <div class="na_ai_row">
-            <button type="button" class="na_btn na_small na_kw_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 제안</button>
-            <small class="na_dim">주제·사건 중심으로, 한국어 표현까지</small>
-          </div>
+        <div class="na_v2_card na_kw2_ai">
+          <div class="na_kw2_aihead"><b>AI 제안</b><small class="na_v2_note">사건·주제별, 한국어 표현까지</small>
+            <button type="button" class="na_v2_pillbtn na_kw_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> 받기</button></div>
           <div class="na_kw_aiout"></div>
         </div>
+        <details class="na_v2_more na_kw2_test">
+          <summary>키워드 테스트 <small>문장을 넣으면 이 섹션이 불려 오는지 보여 줘요</small></summary>
+          <div class="na_kw_testbox">
+            <textarea class="text_pole na_kw_tin" rows="2" placeholder="예: 그 지도 아직 갖고 있어?"></textarea>
+            <label class="checkbox_label na_kw_trecent"><input type="checkbox"><span>최근 메시지 ${Math.max(0, depthN - 1)}개도 같이 (다음 메시지로 보낸다고 치기)</span></label>
+            <div class="na_kw_tout"></div>
+          </div>
+        </details>
+        ${current.length ? '<button type="button" class="na_v2_btn na_kw2_unlink">연동 풀기</button>' : ''}
       </div>`);
     const $in = $root.find('.na_kw_in').val(current.join(', '));
     $root.find('.na_kw_title').text(s.title);
     const an = keywordAnalysis(m, s, body);
     const stat = an.stat;
-    const chipStat = w => {
-        const ch = stat.chatPct(w), sc = stat.secCount(w);
-        return `섹션 ${sc} · 채팅 ${pct(ch)}`;
-    };
+    const chipStat = w => `${stat.secCount(w)} · ${pct(stat.chatPct(w))}`;
     const chip = (w, extra = '') => `<button type="button" class="na_pchip ${extra}" data-w="${esc(w)}" title="섹션 ${stat.secs}개 중 ${stat.secCount(w)}개, 채팅 메시지 ${stat.msgs}개 중 ${pct(stat.chatPct(w))}에 나와요">${esc(w)} <small>${chipStat(w)}</small></button>`;
     const mark = () => {
         const have = new Set(split($in.val()).map(x => x.toLowerCase()));
@@ -1374,11 +1413,16 @@ async function openKeywords(s, body, current) {
         const lines = list.map(w => ({ w, warn: keywordWarn(w, stat) })).filter(x => x.warn.length);
         const any = list.some(w => stat.chatPct(w) > 0);
         const fire = stat.fireRate(list);
-        $root.find('.na_kw_check').html(!list.length ? '' : `
-            <div class="na_kw_sum ${fire > 0.3 ? 'warn' : ''}"><i class="fa-solid fa-chart-simple"></i> 지금 키워드면 지금까지 메시지의 <b>${pct(fire)}</b>에서 켜졌을 거예요${!any && stat.msgs ? ' · 이 채팅엔 아직 안 나온 말이에요' : ''}</div>
+        $root.find('.na_kw2_keys .na_kw2_key').remove();
+        $root.find('.na_kw2_add').before(list.map(w => `<span class="na_kw2_key">${esc(w)}<button type="button" class="na_kw2_x" data-w="${esc(w)}" aria-label="빼기">×</button></span>`).join(''));
+        $root.find('.na_kw_check').html(!list.length ? '<div class="na_v2_note">키워드가 없으면 연동이 풀려요.</div>' : `
+            <div class="na_kw2_fire ${fire > 0.3 ? 'warn' : ''}">
+              <span class="na_cp_txt"><small>지금까지 메시지 기준</small><b>${stat.msgs ? `약 ${pct(fire)}에서 켜졌을 거예요` : '아직 메시지가 없어요'}</b>${!any && stat.msgs ? '<small>이 채팅엔 아직 안 나온 말이에요</small>' : ''}</span>
+              <span class="na_kw2_meter"><span style="width:${Math.min(100, Math.max(fire > 0 ? 2 : 0, fire * 100)).toFixed(1)}%"></span></span>
+            </div>
             ${lines.map(x => `<div class="na_kw_warn"><i class="fa-solid fa-triangle-exclamation"></i> <b>${esc(x.w)}</b> — ${x.warn.map(esc).join(' · ')}</div>`).join('')}`);
     };
-    $root.find('.na_kw_found').html(an.distinct.length ? an.distinct.map(r => chip(r.show)).join('') : '<span class="na_dim">두드러지는 말이 없어요. AI로 제안을 눌러 보세요.</span>');
+    $root.find('.na_kw_found').html(an.distinct.length ? an.distinct.map(r => chip(r.show)).join('') : '<span class="na_v2_note">두드러지는 말이 없어요. AI 제안의 받기를 눌러 보세요.</span>');
     if (an.broad.length) $root.find('.na_kw_broad').html(an.broad.map(r => chip(r.show, 'na_pchip_broad')).join(''));
     else $root.find('.na_kw_broad_group').hide();
     $root.on('click', '.na_pchip[data-w]', function () {
@@ -1397,6 +1441,31 @@ async function openKeywords(s, body, current) {
         mark();
     });
     const depth = Math.max(1, Number(m.linkDepth) || 4);
+    const addTyped = () => {
+        const $a = $root.find('.na_kw2_add');
+        const words = split($a.val());
+        $a.val('');
+        if (!words.length) return;
+        const list = split($in.val());
+        for (const w of words) if (!list.some(x => x.toLowerCase() === w.toLowerCase())) list.push(w);
+        $in.val(list.join(', '));
+        mark(); runTest();
+    };
+    $root.find('.na_kw2_add').on('keydown', e => {
+        if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); e.stopPropagation(); addTyped(); }
+        else if (e.key === 'Backspace' && !e.target.value) { const list = split($in.val()); list.pop(); $in.val(list.join(', ')); mark(); runTest(); }
+    }).on('blur', addTyped);
+    $root.find('.na_kw2_keys').on('click', e => { if (e.target === e.currentTarget) $root.find('.na_kw2_add').trigger('focus'); });
+    $root.on('click', '.na_kw2_x', function () {
+        const w = String($(this).data('w')).toLowerCase();
+        $in.val(split($in.val()).filter(x => x.toLowerCase() !== w).join(', '));
+        mark(); runTest();
+    });
+    $root.find('.na_kw2_unlink').on('click', function () {
+        $in.val('');
+        $root.find('.na_kw2_add').val('');
+        $(this).closest('dialog').find('.popup-button-ok').trigger('click');
+    });
     const runTest = () => {
         const text = $root.find('.na_kw_tin').val();
         const withRecent = $root.find('.na_kw_trecent input').prop('checked');
@@ -1434,14 +1503,15 @@ async function openKeywords(s, body, current) {
         $root.find('.na_kw_aiout').html(concepts.length ? concepts.map(x => `
             <div class="na_kw_concept">
               <div class="na_kw_chips">${x.words.map(w => chip(w, keywordWarn(w, stat).length ? 'na_pchip_risk' : '')).join('')}
-                <button type="button" class="na_linkbtn na_kw_addall" title="이 줄 모두 넣기"><i class="fa-solid fa-plus"></i> 모두</button></div>
+                <button type="button" class="na_v2_pillbtn na_kw_addall" title="이 줄 모두 넣기">모두</button></div>
               ${x.why ? `<small class="na_dim">${esc(x.why)}</small>` : ''}
-            </div>`).join('') : '<span class="na_dim">제안이 없어요.</span>');
+            </div>`).join('') : '<span class="na_v2_note">제안이 없어요.</span>');
         mark();
     });
     mark();
     const r = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, allowVerticalScrolling: true, okButton: '저장', cancelButton: '취소' });
     if (r !== c.POPUP_RESULT.AFFIRMATIVE && r !== true) return null;
+    addTyped();
     return split($in.val());
 }
 
