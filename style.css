@@ -1029,3 +1029,10 @@
 .na_kw_trecent { font-size: 0.8em; }
 .na_kw_tout:empty { display: none; }
 .na_kw_testbox { padding: 8px 10px; border-radius: 10px; border: 1px dashed var(--na-line); }
+
+/* ---------- reader translation, glossary */
+.na_rd_trbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.na_rd_trinfo { font-size: 0.78em; }
+.na_gl_ta { width: 100% !important; box-sizing: border-box; font-family: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.85em; resize: vertical; }
+.na_gl_btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.na_gl_info { font-size: 0.78em; }
