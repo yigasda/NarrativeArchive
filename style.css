@@ -307,30 +307,31 @@
 .na_set_row input[type="number"] { width: 6.5em; margin: 0 !important; text-align: right; }
 .na_set_row select { width: auto; max-width: 60%; margin: 0 !important; }
 .na_set_row.na_disabled { opacity: 0.4; pointer-events: none; }
-/* switches: beat SillyTavern's input[type='checkbox'] rules (box, tick, overflow, filter) */
+/* switches: the checkbox is hidden (skinToggles) and .na_tgl_ui draws the switch, so theme checkbox CSS can't break it */
 input.na_toggle[type="checkbox"] {
-    appearance: none !important;
-    -webkit-appearance: none !important;
-    display: block !important;
-    flex-shrink: 0;
-    width: 42px !important;
-    height: 24px !important;
+    position: absolute !important;
+    opacity: 0 !important;
+    width: 1px !important;
+    height: 1px !important;
+    min-width: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
     border: 0 !important;
-    outline: 0 !important;
-    border-radius: 999px !important;
-    background: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 22%, transparent) !important;
-    box-shadow: none !important;
-    filter: none !important;
-    transform: none !important;
-    overflow: visible !important;
+    pointer-events: none !important;
+}
+.na_tgl_ui {
+    display: inline-block;
+    flex-shrink: 0;
     position: relative;
+    width: 42px;
+    height: 24px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 22%, transparent);
     cursor: pointer;
     transition: background 0.2s;
+    vertical-align: middle;
 }
-input.na_toggle[type="checkbox"]::before { content: none !important; display: none !important; }
-input.na_toggle[type="checkbox"]::after {
+.na_tgl_ui::after {
     content: '';
     position: absolute;
     top: 3px;
@@ -342,9 +343,10 @@ input.na_toggle[type="checkbox"]::after {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     transition: transform 0.2s;
 }
-input.na_toggle[type="checkbox"]:checked { background: var(--na-accent) !important; }
-input.na_toggle[type="checkbox"]:checked::after { transform: translateX(18px); }
-input.na_toggle[type="checkbox"]:focus-visible { outline: 2px solid var(--na-accent) !important; outline-offset: 2px; }
+input.na_toggle:checked + .na_tgl_ui { background: var(--na-accent); }
+input.na_toggle:checked + .na_tgl_ui::after { transform: translateX(18px); }
+input.na_toggle:focus-visible + .na_tgl_ui { outline: 2px solid var(--na-accent); outline-offset: 2px; }
+input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_wrap { width: 100%; margin: 0 !important; font-family: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.84em; resize: vertical; }
 .na_since { font-size: 0.85em; line-height: 1.6; padding: 8px 10px; border-radius: 10px; background: var(--na-softer); }
 .na_warn_txt { color: var(--na-warn); }
@@ -1278,7 +1280,7 @@ input.na_toggle[type="checkbox"]:focus-visible { outline: 2px solid var(--na-acc
 .na_qb_exchip { display: inline-flex; align-items: center; gap: 4px; cursor: default; }
 .na_qb_unex { border: 0; background: transparent; color: inherit; padding: 0 2px; cursor: pointer; opacity: 0.6; font: inherit; }
 .na_qb_unex:hover { opacity: 1; }
-.na_qb_excl_in { flex: 1; min-width: 120px; margin: 0 !important; padding: 3px 8px !important; font-size: 0.95em; }
+.na_qb_excl_in { flex: 1; min-width: 80px; margin: 0 !important; padding: 3px 8px !important; font-size: 0.95em; }
 .na_qb_who { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
 .na_qb_gbtns { margin-left: auto; display: inline-flex; gap: 2px; }
 .na_qb_gbtns .na_icon { opacity: 0.55; }
@@ -1293,3 +1295,5 @@ input.na_toggle[type="checkbox"]:focus-visible { outline: 2px solid var(--na-acc
 .na_tool_actions .na_kn_clear, .na_tool_actions .na_qb_clear { margin-left: auto; font-size: 0.85em; }
 .na_qb_pickhost, .na_kn_pickhost { display: contents; }
 .na_chip:empty { display: none; }
+
+.na_qb_excl_add { flex-shrink: 0; }
