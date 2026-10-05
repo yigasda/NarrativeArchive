@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.8.2';
+const VERSION = '2.9.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1965,19 +1965,67 @@ function lineDiff(oldText, newText) {
     return out;
 }
 
+// word-level diff of two lines: [{t:' '|'-'|'+', s}] (null when too long to bother)
+function wordDiff(a, b) {
+    const tok = x => x.match(/[\p{L}\p{N}]+|\s+|[^\p{L}\p{N}\s]/gu) || [];
+    const A = tok(a), B = tok(b), n = A.length, m = B.length;
+    if (!n || !m || n * m > 400_000) return null;
+    const w = m + 1, L = new Uint32Array((n + 1) * w);
+    for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i * w + j] = A[i] === B[j] ? L[(i + 1) * w + j + 1] + 1 : Math.max(L[(i + 1) * w + j], L[i * w + j + 1]);
+    const out = [];
+    let i = 0, j = 0;
+    while (i < n && j < m) {
+        if (A[i] === B[j]) { out.push({ t: ' ', s: A[i] }); i++; j++; }
+        else if (L[(i + 1) * w + j] >= L[i * w + j + 1]) out.push({ t: '-', s: A[i++] });
+        else out.push({ t: '+', s: B[j++] });
+    }
+    while (i < n) out.push({ t: '-', s: A[i++] });
+    while (j < m) out.push({ t: '+', s: B[j++] });
+    return out;
+}
+
+// html for one side of a changed pair, the differing words marked; null when the lines barely share anything
+function markedPair(a, b) {
+    const d = wordDiff(a, b);
+    if (!d) return null;
+    const same = d.filter(x => x.t === ' ' && /\S/.test(x.s)).length, all = d.filter(x => /\S/.test(x.s)).length;
+    if (same < all * 0.3) return null;
+    const side = t => d.filter(x => x.t === ' ' || x.t === t).map(x => x.t === ' ' ? esc(x.s) : `<mark class="na_diff_hl">${esc(x.s)}</mark>`).join('')
+        .replace(/<\/mark>(\s*)<mark class="na_diff_hl">/g, '$1');
+    return { old: side('-'), new: side('+') };
+}
+
+// pairs each run of '-' rows with the '+' run right after it, line by line
+function diffPairs(rows) {
+    const pairs = new Map(); // index of '-' row → index of its '+' row
+    for (let i = 0; i < rows.length;) {
+        if (rows[i].t !== '-') { i++; continue; }
+        let d = i; while (d < rows.length && rows[d].t === '-') d++;
+        let a = d; while (a < rows.length && rows[a].t === '+') a++;
+        for (let k = 0; k < Math.min(d - i, a - d); k++) pairs.set(i + k, d + k);
+        i = a > d ? a : d;
+    }
+    return pairs;
+}
+
 function renderDiff(rows, context = 2) {
     const keep = new Array(rows.length).fill(false);
     rows.forEach((r, i) => {
         if (r.t === ' ') return;
         for (let k = Math.max(0, i - context); k <= Math.min(rows.length - 1, i + context); k++) keep[k] = true;
     });
+    const marked = new Map(); // row index → html with changed words marked
+    for (const [d, a] of diffPairs(rows)) {
+        const mk = markedPair(rows[d].line, rows[a].line);
+        if (mk) { marked.set(d, mk.old); marked.set(a, mk.new); }
+    }
     let html = '', skipped = 0;
     const flush = () => { if (skipped) html += `<div class="na_diff_skip">··· 같은 줄 ${fmt(skipped)}개 ···</div>`; skipped = 0; };
     rows.forEach((r, i) => {
         if (!keep[i]) { skipped++; return; }
         flush();
         const cls = r.t === '+' ? 'na_diff_add' : r.t === '-' ? 'na_diff_del' : 'na_diff_same';
-        html += `<div class="${cls}"><span>${r.t === ' ' ? '' : r.t}</span>${esc(r.line) || '&nbsp;'}</div>`;
+        html += `<div class="${cls}"><span>${r.t === ' ' ? '' : r.t}</span><div class="na_dl">${marked.get(i) ?? (esc(r.line) || '&nbsp;')}</div></div>`;
     });
     flush();
     return html;
@@ -1988,7 +2036,9 @@ function renderDiff(rows, context = 2) {
 const AI_SYS_TRANSLATE = `You translate lines of a story archive into natural Korean.
 - You get numbered lines. Reply with exactly one line per input line, as "N: translation", same numbers, same order, nothing else.
 - Lines may be fragments, headings or list items. Keep markdown marks (#, -, **, _), "#number" references and quotation marks as they are.
-- Write character and place names in Korean script. Keep words the archive deliberately leaves untranslated (coined terms, titles in another language) as they are.`;
+- Write character and place names in Korean script. Keep words the archive deliberately leaves untranslated (coined terms, titles in another language) as they are.
+- A line marked (OLD) followed by one marked (NEW) are two versions of the same line. Translate both, and in NEW reuse OLD's Korean word for word wherever the English is the same; change only the parts whose English differs. Do not repeat the (OLD)/(NEW) marks.
+- Translate every line in full, never shortened, and keep each translation on one line.`;
 
 // ---- own connections: an OpenAI-compatible URL, or Vertex AI with a service account.
 // 'ai' is the AI 기능 model (mode 'st' = SillyTavern's connection or a profile); 'tr' is the translation model (mode 'same' = follow 'ai').
@@ -2122,17 +2172,33 @@ const trLabel = () => {
 
 const trCache = new Map();
 
-async function translateLines(lines) {
-    const need = [...new Set(lines.filter(l => !trCache.has(l)))];
-    for (let i = 0; i < need.length; i += 80) {
-        const chunk = need.slice(i, i + 80);
-        const out = await askTranslator(chunk.map((l, k) => `${k + 1}: ${l}`).join('\n'), { system: AI_SYS_TRANSLATE, maxTokens: Math.min(8192, 400 + chunk.join('').length * 2) });
+// items: { text, mark?: 'OLD'|'NEW', key? } — an OLD/NEW pair goes out together so the wording stays the same
+async function translateLines(items) {
+    items = items.map(x => typeof x === 'string' ? { text: x } : x);
+    const keyOf = x => x.key ?? x.text;
+    const seen = new Set();
+    const need = items.filter(x => !trCache.has(keyOf(x)) && !seen.has(keyOf(x)) && seen.add(keyOf(x)));
+    for (let i = 0; i < need.length;) {
+        // ~80 lines or ~12k characters a request, never splitting an OLD/NEW pair
+        let j = i, size = 0;
+        while (j < need.length && (j === i || (j - i < 80 && size + need[j].text.length < 12_000) || need[j].mark === 'NEW')) size += need[j++].text.length;
+        const chunk = need.slice(i, j);
+        i = j;
+        const out = await askTranslator(chunk.map((x, k) => `${k + 1}: ${x.mark ? `(${x.mark}) ` : ''}${x.text}`).join('\n'),
+            { system: AI_SYS_TRANSLATE, maxTokens: Math.min(16384, 1000 + size * 3) });
+        const got = new Map();
+        let cur = null;
         for (const row of out.split('\n')) {
             const mt = row.match(/^\s*(\d+)\s*[:.)]\s?(.*)$/);
-            if (mt && chunk[Number(mt[1]) - 1] !== undefined) trCache.set(chunk[Number(mt[1]) - 1], mt[2].trim());
+            if (mt && chunk[Number(mt[1]) - 1] !== undefined) { cur = Number(mt[1]) - 1; got.set(cur, mt[2]); }
+            else if (cur !== null && row.trim()) got.set(cur, `${got.get(cur)} ${row.trim()}`); // a translation the model broke onto two lines
+        }
+        for (const [k, v] of got) {
+            const t = v.replace(/^\s*\((?:OLD|NEW)\)\s*/i, '').trim();
+            if (t) trCache.set(keyOf(chunk[k]), t);
         }
     }
-    return lines.map(l => trCache.get(l) ?? null);
+    return items.map(x => trCache.get(keyOf(x)) ?? null);
 }
 
 const TR_LABEL = '<i class="fa-solid fa-language"></i> 한국어로 보기';
@@ -2143,19 +2209,49 @@ function translateButton($diff) {
     const $btn = $(`<button type="button" class="na_btn na_small na_tr_btn">${TR_LABEL}</button>`);
     $btn.on('click', async () => {
         if ($diff.find('.na_diff_tr').length) { $diff.find('.na_diff_tr').remove(); $btn.html(TR_LABEL); return; }
-        const rows = $diff.find('.na_diff_add, .na_diff_del').toArray()
-            .map(el => ({ el, text: el.textContent.replace(/^[+−-]/, '').trim() }))
+        const all = $diff.children().toArray();
+        const lineOf = el => el.textContent.replace(/^[+−-]/, '').trim();
+        const rows = all.filter(el => el.classList.contains('na_diff_add') || el.classList.contains('na_diff_del'))
+            .map(el => ({ el, text: lineOf(el) }))
             .filter(r => /[\p{L}]{2,}/u.test(r.text));
         if (!rows.length) return toastr.info('번역할 바뀐 줄이 없어요.');
-        const tr = await withSpinner($btn, `번역하는 중… (${rows.length}줄)`, () => translateLines(rows.map(r => r.text)));
+        // the same pairing renderDiff used: each '-' run against the '+' run right after it
+        const shape = all.map(el => ({ t: el.classList.contains('na_diff_del') ? '-' : el.classList.contains('na_diff_add') ? '+' : ' ' }));
+        const partner = new Map();
+        for (const [d, a] of diffPairs(shape)) { partner.set(all[d], all[a]); partner.set(all[a], all[d]); }
+        const items = rows.map(r => {
+            const p = partner.get(r.el);
+            if (!p || !/[\p{L}]{2,}/u.test(lineOf(p))) return { text: r.text };
+            const del = r.el.classList.contains('na_diff_del');
+            const [o, n] = del ? [r.text, lineOf(p)] : [lineOf(p), r.text];
+            return { text: r.text, mark: del ? 'OLD' : 'NEW', key: `${del ? 'O' : 'N'}\u0000${o}\u0000${n}`, pairKey: `${o}\u0000${n}` };
+        });
+        // a pair must sit next to each other, OLD first
+        const order = [];
+        const placed = new Set();
+        items.forEach((x, i) => {
+            if (placed.has(i)) return;
+            if (x.mark) {
+                const j = items.findIndex((y, k) => k !== i && y.pairKey === x.pairKey && y.mark !== x.mark);
+                if (j >= 0) { const [o, n] = x.mark === 'OLD' ? [i, j] : [j, i]; order.push(o, n); placed.add(o).add(n); return; }
+                items[i] = { text: x.text };
+            }
+            order.push(i); placed.add(i);
+        });
+        const tr = await withSpinner($btn, `번역하는 중… (${rows.length}줄)`, () => translateLines(order.map(i => items[i])));
         if (!tr) { $btn.html(TR_LABEL); return; }
-        rows.forEach((r, i) => {
-            if (!tr[i]) return;
-            const kind = r.el.classList.contains('na_diff_add') ? 'na_diff_tr_add' : 'na_diff_tr_del';
-            $(r.el).after(`<div class="na_diff_tr ${kind}"><span></span>${esc(tr[i])}</div>`);
+        const trOf = new Map(order.map((idx, k) => [rows[idx].el, tr[k]]));
+        rows.forEach(r => {
+            const t = trOf.get(r.el);
+            if (!t) return;
+            const del = r.el.classList.contains('na_diff_del');
+            const p = partner.get(r.el), pt = p && trOf.get(p);
+            const mk = pt ? markedPair(del ? t : pt, del ? pt : t) : null;
+            const kind = del ? 'na_diff_tr_del' : 'na_diff_tr_add';
+            $(r.el).after(`<div class="na_diff_tr ${kind}"><span></span><div class="na_dl">${mk ? (del ? mk.old : mk.new) : esc(t)}</div></div>`);
         });
         $btn.html(TR_HIDE);
-        const miss = tr.filter(x => !x).length;
+        const miss = rows.filter(r => !trOf.get(r.el)).length;
         if (miss) toastr.info(`${miss}줄은 번역이 안 왔어요. 다시 누르면 그 줄만 다시 보내요.`);
     });
     // a re-render replaces the rows, so the button goes back to "show"

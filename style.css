@@ -971,3 +971,7 @@
     touch-action: pan-y;
     font-size: 0.88em;
 }
+.na_diff_hl { background: transparent; color: inherit; font-weight: 700; border-radius: 3px; padding: 0 1px; }
+.na_diff_add .na_diff_hl, .na_diff_tr_add .na_diff_hl { background: color-mix(in srgb, #3f9a5a 32%, transparent); }
+.na_diff_del .na_diff_hl, .na_diff_tr_del .na_diff_hl { background: color-mix(in srgb, #c4513f 30%, transparent); text-decoration: line-through; text-decoration-thickness: 1px; }
+.na_diff .na_dl { flex: 1; min-width: 0; }
