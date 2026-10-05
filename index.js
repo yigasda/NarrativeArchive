@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.2.2';
+const VERSION = '3.2.3';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1194,33 +1194,37 @@ function renderPanel() {
               </details>
               <details class="na_block na_details na_fold" id="na_cmp_settings">
                 <summary>설정</summary>
-                <div>
-                  <div class="na_set_sub">압축</div>
-                  <p class="na_dim na_fold_desc">원문 뽑기와 압축 마법사에 같이 쓰여요. 지시문은 이 기기의 실리태번 설정에만 저장돼요.</p>
-                  <div class="na_set_list">
-                    <label class="na_set_row"><span>숨긴 메시지 빼기</span><input type="checkbox" class="na_toggle" id="na_opt_hidden"></label>
-                    <div class="na_strip_box">
-                      <label class="na_set_row"><span><span>태그 지우기</span><small>&lt;think&gt; 블록 통째로, 나머지 HTML 태그는 글자만 남김</small></span><input type="checkbox" class="na_toggle" id="na_opt_tags"></label>
-                      <textarea class="text_pole na_strip_ta" id="na_strip_custom" rows="2" spellcheck="false" placeholder="통째로 지울 태그나 /정규식/, 한 줄에 하나&#10;scene_plan"></textarea>
-                      <small class="na_strip_info" id="na_strip_info"></small>
+                <div class="na_cs">
+                  <section class="na_cs_card">
+                    <header class="na_cs_head"><b>원문 뽑기</b><small>원문 뽑기 · 압축 마법사에 같이 쓰여요</small></header>
+                    <div class="na_set_list">
+                      <label class="na_set_row"><span>숨긴 메시지 빼기</span><input type="checkbox" class="na_toggle" id="na_opt_hidden"></label>
+                      <div class="na_strip_box">
+                        <label class="na_set_row"><span><span>태그 지우기</span><small>&lt;think&gt; 블록 통째로 · HTML 태그는 글자만</small></span><input type="checkbox" class="na_toggle" id="na_opt_tags"></label>
+                        <textarea class="text_pole na_strip_ta" id="na_strip_custom" rows="2" spellcheck="false" placeholder="통째로 지울 태그나 /정규식/, 한 줄에 하나&#10;scene_plan"></textarea>
+                        <small class="na_strip_info" id="na_strip_info"></small>
+                      </div>
+                      <label class="na_set_row"><span>머리글</span>
+                        <select class="text_pole" id="na_opt_name">
+                          <option value="full">[번호] 이름:</option>
+                          <option value="name">이름:</option>
+                          <option value="number">[번호]</option>
+                        </select>
+                      </label>
                     </div>
-                    <label class="na_set_row"><span>머리글</span>
-                      <select class="text_pole" id="na_opt_name">
-                        <option value="full">[번호] 이름:</option>
-                        <option value="name">이름:</option>
-                        <option value="number">[번호]</option>
-                      </select>
-                    </label>
-                  </div>
-                  <div class="na_kw_label na_plib_label">압축 지시문</div>
-                  <div class="na_plib" id="na_plib"></div>
-                  <div class="na_set_sub">숨기기</div>
-                  <p class="na_dim na_fold_desc">아카이브가 다루는 마지막 메시지 번호예요. 그 앞은 숨겨서 토큰을 아껴요.</p>
-                <div class="na_set_list">
-                  <label class="na_set_row"><span><span>아카이브 따라가기</span><small id="na_track_info">제목의 마지막 #번호를 경계선으로</small></span><input type="checkbox" id="na_track" class="na_toggle"></label>
-                  <label class="na_set_row" id="na_boundary_row"><span><span>경계선 번호</span><small>여기까지 아카이브에 담겼어요</small></span><input type="number" id="na_boundary" class="text_pole" min="0" placeholder="-"></label>
-                  <label class="na_set_row"><span>숨길 때 남길 메시지</span><input type="number" id="na_keep" class="text_pole" min="0" max="50"></label>
-                </div>
+                  </section>
+                  <section class="na_cs_card">
+                    <header class="na_cs_head"><b>압축 지시문</b><small>이 기기의 실리태번 설정에만 저장돼요</small></header>
+                    <div class="na_plib" id="na_plib"></div>
+                  </section>
+                  <section class="na_cs_card">
+                    <header class="na_cs_head"><b>숨기기</b><small>경계선 앞 메시지를 숨겨서 토큰을 아껴요</small></header>
+                    <div class="na_set_list">
+                      <label class="na_set_row"><span><span>아카이브 따라가기</span><small id="na_track_info">제목의 마지막 #번호를 경계선으로</small></span><input type="checkbox" id="na_track" class="na_toggle"></label>
+                      <label class="na_set_row" id="na_boundary_row"><span><span>경계선 번호</span><small>여기까지 아카이브에 담겼어요</small></span><input type="number" id="na_boundary" class="text_pole" min="0" placeholder="-"></label>
+                      <label class="na_set_row"><span>숨길 때 남길 메시지</span><input type="number" id="na_keep" class="text_pole" min="0" max="50"></label>
+                    </div>
+                  </section>
                 </div>
               </details>
             </section>
@@ -5026,9 +5030,17 @@ function bindPromptSettings() {
           <button type="button" class="na_icon na_pdel" title="삭제"><i class="fa-regular fa-trash-can"></i></button>
         </div>
         <textarea class="text_pole na_prompt_ta" spellcheck="false" rows="9"></textarea>
-        <div class="na_prompt_help">
-          <code>{{raw}}</code> 원문 · <code>{{from}}</code> <code>{{to}}</code> 번호 · <code>{{last_section}}</code> 마지막 섹션 · <code>{{state}}</code> 지금의 STATE·OPEN · <code>{{archive}}</code> 아카이브 전체.
-          <code>{{raw}}</code>가 없으면 원문은 맨 끝에 붙어요.
+        <div class="na_pfoot">
+          <details class="na_phelp">
+            <summary>쓸 수 있는 자리표시</summary>
+            <dl>
+              <dt>{{raw}}</dt><dd>원문 (안 쓰면 맨 끝에 붙어요)</dd>
+              <dt>{{from}} {{to}}</dt><dd>번호 범위</dd>
+              <dt>{{last_section}}</dt><dd>아카이브 마지막 섹션</dd>
+              <dt>{{state}}</dt><dd>지금의 STATE · OPEN</dd>
+              <dt>{{archive}}</dt><dd>아카이브 전체</dd>
+            </dl>
+          </details>
           <button type="button" class="na_linkbtn na_prompt_reset">기본 지시문 되돌리기</button>
         </div>`);
     $('#na_opt_hidden').on('change', function () { g().skipHidden = this.checked; saveGlobal(); });

@@ -1195,12 +1195,7 @@
 .na_step_wiz + .na_steps { margin-top: 6px; }
 
 /* compress settings fold */
-.na_set_sub { font-size: 0.78em; font-weight: 700; letter-spacing: 0.04em; color: var(--na-accent); margin: 4px 0 4px; }
-.na_set_sub:not(:first-child) { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--na-line); }
-.na_plib_label { margin: 12px 0 0; }
 .na_plib .na_pfav, .na_plib .na_prow { padding-left: 0; padding-right: 0; }
-.na_plib .na_prompt_ta { margin: 6px 0 0 !important; width: 100% !important; height: 24vh !important; }
-.na_plib .na_prompt_help { padding: 8px 0 0; }
 .na_ex_card { padding: 2px 14px; }
 .na_ex_card .na_set_row select { max-width: 62%; }
 .na_ex_card .na_ex_toset { flex-shrink: 0; }
@@ -1213,3 +1208,23 @@
 .na_strip_info:empty { display: none; }
 .na_strip_info { display: block; font-size: 0.75em; opacity: 0.7; margin-bottom: 6px; }
 .na_strip_info.na_warn_txt { opacity: 1; }
+
+/* compress settings fold: three cards */
+.na_cs { display: flex; flex-direction: column; gap: 10px; }
+.na_cs_card { display: flex; flex-direction: column; padding: 10px 14px 6px; border-radius: 12px; background: var(--na-softer); }
+.na_cs_head { display: flex; flex-direction: column; gap: 2px; padding-bottom: 6px; }
+.na_cs_head b { font-size: 0.9em; }
+.na_cs_head small { font-size: 0.76em; opacity: 0.6; }
+.na_cs .na_set_row { font-size: 0.9em; }
+.na_cs .na_set_row > span small { font-size: 0.82em; }
+.na_cs .na_plib { display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; }
+.na_cs .na_plib .na_pfav { padding-top: 0; }
+.na_cs .na_plib .na_prow { padding-top: 0; }
+.na_cs .na_plib .na_prompt_ta { margin: 0 !important; width: 100% !important; height: 20vh !important; font-size: 0.8em; }
+.na_pfoot { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; font-size: 0.78em; }
+.na_pfoot .na_prompt_reset { flex-shrink: 0; }
+.na_phelp > summary { cursor: pointer; opacity: 0.7; }
+.na_phelp dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 6px 0 0; }
+.na_phelp dt { font-family: var(--monoFontFamily, ui-monospace, monospace); opacity: 0.85; }
+.na_phelp dd { margin: 0; opacity: 0.7; }
+.na_strip_ta { font-size: 0.8em !important; min-height: 3.8em; line-height: 1.5; }
