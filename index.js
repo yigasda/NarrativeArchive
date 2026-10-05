@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '1.9.4';
+const VERSION = '1.9.5';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1841,32 +1841,31 @@ async function openViewer(startTab = 'sections') {
 
 // ---------------------------------------------------------------- extract popup
 
-const BASIC_PROMPT = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브에 이어 붙일 수 있게 압축해 주세요. 설명 없이 아래 형식대로만 출력합니다.
+const BASIC_PROMPT = `Compress the raw log below (#{{from}}–#{{to}}) so it can be appended to the existing archive. Output only the format below, with no commentary.
 
-# 아카이브 구조
-- 맨 위: \`# 제목 (Y1 #0–#끝 · Y2 #0–#끝)\`과 기록 범위를 알리는 한 줄 안내
-- 로그(챕터)마다 \`# ── Y1 ──\` 같은 구분 제목을 두고, 그 아래에 구간 블록을 씁니다. 로그가 바뀌면 번호는 #0부터 다시 셉니다.
-- 구간 블록:
-  \`## <접두어> #시작–#끝 — 제목 (날짜, 장소)\`
+# Archive structure
+- Section blocks:
+  \`## #start–#end — Title (date, place)\`
   PLOT:
-  - 한 불릿에 한 사건
-- 구간 블록들이 끝나면 \`---\` 다음에 STATE와 OPEN이 옵니다.
-- \`# STATE AT <접두어> #끝 (날짜, 시간대, 장소)\` — 첫 줄에 \`_True at <접두어> #끝._\` 안내, 그 아래 인물별(\`## 이름\`)·관계·생활 상태
-- \`# OPEN AT <접두어> #끝\` — 첫 줄에 \`_Unresolved at <접두어> #끝._\` 안내, 그 아래 아직 풀리지 않은 실을 짧은 불릿으로
+  - one event per bullet
+- After the section blocks: \`---\`, then STATE and OPEN.
+- \`# STATE AT #end (date, time of day, place)\` — first line \`_True at #end._\`, then the current state per character (\`## Name\`), relationships, and household.
+- \`# OPEN AT #end\` — first line \`_Unresolved at #end._\`, then unresolved threads as short bullets.
+- Only if the archive spans several chat logs (e.g. year 1 / year 2): each log gets a divider heading such as \`# ── Y1 ──\`, section numbers restart at #0 per log and carry its prefix (\`## Y2 #start–#end — …\`, \`# STATE AT Y2 #end\`), and the archive title lists each range (\`(Y1 #0–#end · Y2 #0–#end)\`). A single chat uses none of this.
 
-# 출력
-1. 새 구간 블록들 (#{{from}}부터 #{{to}}까지 번호가 빠짐·겹침 없이 이어지게)
+# Output
+1. New section blocks, numbered from #{{from}} to #{{to}} with no gaps or overlaps
 2. \`---\`
-3. 새 내용을 반영해 고친 STATE 전체, OPEN 전체 (아카이브에 없으면 생략)
-접두어·날짜 표기·언어는 기존 아카이브를 따릅니다.
+3. The full STATE and full OPEN, updated with the new events (omit if the archive has none)
+Follow the existing archive for prefixes, date style and language.
 
-[형식 참고 — 기존 아카이브의 마지막 섹션]
+[Format reference — last section of the archive]
 {{last_section}}
 
-[지금의 STATE · OPEN]
+[Current STATE · OPEN]
 {{state}}
 
-[원문]
+[Raw log]
 {{raw}}`;
 // earlier basic text, upgraded when untouched
 const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
@@ -1887,6 +1886,7 @@ const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와
 // Defaults shipped by earlier versions, recognised by hash so their text isn't carried here.
 const textHash = t => { let x = 5381; for (let i = 0; i < t.length; i++) x = ((x * 33) ^ t.charCodeAt(i)) >>> 0; return x.toString(36); };
 const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
+const OLD_BASIC_HASHES = new Set(['5uaca5']); // earlier built-in basics, upgraded when untouched
 const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -1918,7 +1918,7 @@ function globalSettings() {
     }
     if (!g.prompts.some(p => p.id === 'basic')) g.prompts.unshift({ id: 'basic', name: '기본', text: BASIC_PROMPT, fav: true });
     const basic = g.prompts.find(p => p.id === 'basic');
-    if (basic.text === PREV_BASIC || basic.text === OLD_BASIC) basic.text = BASIC_PROMPT;
+    if (basic.text === PREV_BASIC || basic.text === OLD_BASIC || OLD_BASIC_HASHES.has(textHash(basic.text))) basic.text = BASIC_PROMPT;
     if (!g.prompts.some(p => p.id === g.activePrompt)) g.activePrompt = g.prompts[0].id;
     return g;
 }
