@@ -1,0 +1,13 @@
+{
+    "display_name": "서사 아카이브",
+    "loading_order": 100,
+    "requires": [],
+    "optional": [],
+    "dependencies": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "Somnag",
+    "version": "1.0.0",
+    "homePage": "https://github.com/yigasda/NarrativeArchive",
+    "auto_update": true
+}
