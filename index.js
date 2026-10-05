@@ -698,7 +698,9 @@ function mountSectionBrowser($host) {
         const m = getMeta();
         if (!m) return;
         const myId = ++renderId;
-        const keepScroll = $list[0].scrollTop;
+        // each group's card box scrolls on its own; keep where it was across re-renders
+        const keepScroll = new Map();
+        $list.find('.na_group').each((_, el) => keepScroll.set(el.dataset.key, el.querySelector(':scope > .na_group_items')?.scrollTop || 0));
         const q = $search.val().trim();
         const sections = parseSections(m.text);
         const muted = mutedSet(m);
@@ -755,6 +757,7 @@ function mountSectionBrowser($host) {
                     $g.find('> .na_group_note').prop('hidden', true);
                     editSection($g, s);
                 });
+                $g[0].dataset.key = key;
                 $parent.append($g);
                 const g = { level: s.level, $items: $g.children('.na_group_items'), $el: $g, off: off || parentOff, tok: [] };
                 groupStack.push(g);
@@ -835,7 +838,10 @@ function mountSectionBrowser($host) {
             ? `"${esc(q)}" — 섹션 ${shown}개에서 ${hits}건`
             : `섹션 ${cardCount}개${offN ? ` · <span class="na_warn_txt">${offN}개 꺼짐</span>` : ''} · 스위치로 주입에서 뺄 수 있어요`);
         if (!sections.length) $list.html('<div class="na_empty">아카이브가 비어 있어요.<br>개요 탭에 붙여넣거나 보관 탭에서 불러오세요.</div>');
-        $list[0].scrollTop = keepScroll;
+        $list.find('.na_group').each((_, el) => {
+            const box = el.querySelector(':scope > .na_group_items');
+            if (box && keepScroll.has(el.dataset.key)) box.scrollTop = keepScroll.get(el.dataset.key);
+        });
         if (editTarget) { pendingEdit = -1; editSection(...editTarget); editTarget[0][0].scrollIntoView({ block: 'center' }); }
     }
 
