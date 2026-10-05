@@ -1256,3 +1256,5 @@
 .na_kn_stale_txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .na_kn_stale_txt small { font-size: 0.85em; }
 .na_kn_stale .na_btn { flex-shrink: 0; }
+.na_qb_away .na_qb_row { opacity: 0.5; }
+.na_qb_awaytag { margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: var(--na-soft); font-size: 0.78em; font-weight: 400; opacity: 0.8; }
