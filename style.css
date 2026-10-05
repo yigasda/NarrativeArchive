@@ -951,7 +951,23 @@
 .na_tr_cfg + .na_set_list, .na_tr_test_row + .na_set_list { margin-top: 6px; }
 .na_tr_vxrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .na_whole_row { padding-top: 8px; }
-.na_whole_sums { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; font-size: 0.86em; }
+.na_whole_sums { font-size: 0.86em; }
+.na_whole_sums > summary { cursor: pointer; font-weight: 600; padding: 2px 0; }
+.na_whole_sums[open] { max-height: 32vh; overflow-y: auto; }
+.na_whole_sum { margin-top: 6px; }
 .na_whole_sum ul { margin: 2px 0 0; padding-left: 1.2em; max-height: 9em; overflow-y: auto; }
 .na_whole { background: color-mix(in srgb, var(--na-accent) 12%, transparent); }
 .na_rw_list summary { cursor: pointer; font-size: 0.9em; opacity: 0.8; padding-top: 4px; }
+
+/* diff popups: the diff box fills what is left of the popup and scrolls by itself */
+.na_popup_fill { display: flex; flex-direction: column; gap: 8px; height: 100%; min-height: 0; box-sizing: border-box; }
+.na_popup_fill > * { flex-shrink: 0; }
+.na_popup_fill > .na_diff {
+    flex: 1 1 auto;
+    min-height: 16em;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    font-size: 0.88em;
+}

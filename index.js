@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.8.1';
+const VERSION = '2.8.2';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -2168,7 +2168,7 @@ async function openDiff(snap, after = { text: getMeta().text, label: '지금' })
     const rows = lineDiff(snap.text, after.text);
     const add = rows.filter(r => r.t === '+').length, del = rows.filter(r => r.t === '-').length;
     const $v = $(`
-      <div class="na_popup">
+      <div class="na_popup na_popup_fill">
         <div class="na_diff_head">
           <b>${esc(timeLabel(snap.at))} · ${esc(snap.reason)}</b> → <b>${esc(after.label)}</b>
           <span class="na_chip na_chip_add">+${fmt(add)}줄</span><span class="na_chip na_chip_del">−${fmt(del)}줄</span>
@@ -2533,7 +2533,7 @@ async function openCompare() {
     ];
     const opts = sel => sources.map(x => `<option value="${x.id}" ${x.id === sel ? 'selected' : ''}>${esc(x.label)}</option>`).join('');
     const $root = $(`
-      <div class="na_popup">
+      <div class="na_popup na_popup_fill">
         <div class="na_block_head"><div>
           <h4>두 버전 비교</h4>
           <p>A에서 B로 바뀐 줄만 보여줘요. 파일끼리도 비교할 수 있어요.</p>
@@ -3496,16 +3496,16 @@ async function confirmWhole(oldText, newText) {
     const rows = lineDiff(oldText, newText);
     const add = rows.filter(r => r.t === '+').length, del = rows.filter(r => r.t === '-').length;
     const list = (label, xs) => xs.length ? `<div class="na_whole_sum"><b>${label} ${xs.length}개</b><ul>${xs.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
+    const counts = [['새', ch.added], ['바뀜', ch.changed], ['제목', ch.renamed], ['없어짐', ch.removed]].filter(([, xs]) => xs.length).map(([k, xs]) => `${k} ${xs.length}`);
     const $v = $(`
-      <div class="na_popup">
+      <div class="na_popup na_popup_fill">
         <div class="na_diff_head">
           <b>아카이브를 통째로 바꿔요</b>
           <span class="na_chip na_chip_add">+${fmt(add)}줄</span><span class="na_chip na_chip_del">−${fmt(del)}줄</span>
         </div>
-        <div class="na_whole_sums">
+        ${counts.length ? `<details class="na_whole_sums"><summary>섹션 변화 · ${counts.join(' · ')}</summary>
           ${list('새 섹션', ch.added)}${list('내용이 바뀐 섹션', ch.changed)}${list('제목이 바뀐 섹션', ch.renamed)}${list('없어지는 섹션', ch.removed)}
-          ${ch.added.length + ch.changed.length + ch.renamed.length + ch.removed.length ? '' : '<div class="na_empty">섹션은 그대로예요.</div>'}
-        </div>
+        </details>` : '<div class="na_empty">섹션은 그대로예요.</div>'}
         <small class="na_dim">지금 아카이브는 "통째로 바꾸기 전" 복구 지점으로 남아요.</small>
         <div class="na_diff">${add || del ? renderDiff(rows) : '<div class="na_empty">내용이 똑같아요.</div>'}</div>
       </div>`);
