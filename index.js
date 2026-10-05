@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '1.9.3';
+const VERSION = '1.9.4';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1841,7 +1841,35 @@ async function openViewer(startTab = 'sections') {
 
 // ---------------------------------------------------------------- extract popup
 
-const BASIC_PROMPT = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
+const BASIC_PROMPT = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브에 이어 붙일 수 있게 압축해 주세요. 설명 없이 아래 형식대로만 출력합니다.
+
+# 아카이브 구조
+- 맨 위: \`# 제목 (Y1 #0–#끝 · Y2 #0–#끝)\`과 기록 범위를 알리는 한 줄 안내
+- 로그(챕터)마다 \`# ── Y1 ──\` 같은 구분 제목을 두고, 그 아래에 구간 블록을 씁니다. 로그가 바뀌면 번호는 #0부터 다시 셉니다.
+- 구간 블록:
+  \`## <접두어> #시작–#끝 — 제목 (날짜, 장소)\`
+  PLOT:
+  - 한 불릿에 한 사건
+- 구간 블록들이 끝나면 \`---\` 다음에 STATE와 OPEN이 옵니다.
+- \`# STATE AT <접두어> #끝 (날짜, 시간대, 장소)\` — 첫 줄에 \`_True at <접두어> #끝._\` 안내, 그 아래 인물별(\`## 이름\`)·관계·생활 상태
+- \`# OPEN AT <접두어> #끝\` — 첫 줄에 \`_Unresolved at <접두어> #끝._\` 안내, 그 아래 아직 풀리지 않은 실을 짧은 불릿으로
+
+# 출력
+1. 새 구간 블록들 (#{{from}}부터 #{{to}}까지 번호가 빠짐·겹침 없이 이어지게)
+2. \`---\`
+3. 새 내용을 반영해 고친 STATE 전체, OPEN 전체 (아카이브에 없으면 생략)
+접두어·날짜 표기·언어는 기존 아카이브를 따릅니다.
+
+[형식 참고 — 기존 아카이브의 마지막 섹션]
+{{last_section}}
+
+[지금의 STATE · OPEN]
+{{state}}
+
+[원문]
+{{raw}}`;
+// earlier basic text, upgraded when untouched
+const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
 - 원문에 없는 내용은 쓰지 않기
@@ -1889,6 +1917,8 @@ function globalSettings() {
         delete g.prompt;
     }
     if (!g.prompts.some(p => p.id === 'basic')) g.prompts.unshift({ id: 'basic', name: '기본', text: BASIC_PROMPT, fav: true });
+    const basic = g.prompts.find(p => p.id === 'basic');
+    if (basic.text === PREV_BASIC || basic.text === OLD_BASIC) basic.text = BASIC_PROMPT;
     if (!g.prompts.some(p => p.id === g.activePrompt)) g.activePrompt = g.prompts[0].id;
     return g;
 }
