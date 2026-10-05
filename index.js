@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.6.0';
+const VERSION = '3.7.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3474,9 +3474,12 @@ function staleUnaware(m, cast = currentCast(m)) {
     return [...out];
 }
 
-function trimUnaware(text, cast) {
-    if (!cast) return text;
-    return knowledgeRows({ knowledge: text }).map(r => knowLine({ ...r, unaware: r.unaware.filter(n => inCast(cast, n)), suspects: r.suspects.filter(n => inCast(cast, n)) })).join('\n');
+// dropEmpty (AI output only): a row nobody in the story is kept from has nothing to protect
+function trimUnaware(text, cast, { dropEmpty = false } = {}) {
+    return knowledgeRows({ knowledge: text })
+        .map(r => cast ? { ...r, unaware: r.unaware.filter(n => inCast(cast, n)), suspects: r.suspects.filter(n => inCast(cast, n)) } : r)
+        .filter(r => !dropEmpty || r.unaware.length || r.suspects.length)
+        .map(knowLine).join('\n');
 }
 
 function extraBlocks(m) {
@@ -3688,7 +3691,7 @@ function mountSectionPicker($host, { m, title, doneKeys, doneLabel = '읽음', g
         busy = true; $b.prop('disabled', true);
         let done = 0;
         try {
-            await onGo(parts, async (part, i) => { $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> 읽는 중… ${i + 1}/${parts.length}`); }, () => { done++; draw(); });
+            await onGo(parts, async (part, i, label) => { $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> ${esc(label || `읽는 중… ${i + 1}/${parts.length}`)}`); }, () => { done++; draw(); });
         } catch (e) {
             console.error('[NarrativeArchive] AI', e);
             toastr.error(`${done}/${parts.length}까지 하고 멈췄어요: ${String(e?.message || e)}`, 'AI 요청 실패');
@@ -3716,6 +3719,59 @@ NEW | fact in one short sentence | knows: A, B | unaware: C | suspects: D | src:
 UPDATE 3 | knows: A, B, C | unaware: none | suspects: D
 (UPDATE gives the row number and the full new lists.) Write "none" for an empty field. If these sections add or change nothing, answer exactly: none`;
 
+const AI_SYS_KNOW_TIDY = `You tidy a "who knows what" table for a role-play story archive. You get the whole ARCHIVE, the CURRENT CAST, and the TABLE (numbered).
+Judge every row as of the END of the archive (STATE and the latest sections are the truth now):
+- Merge rows that are the same fact or the same recurring pattern (e.g. several "X overheard Y" rows become one "X has repeatedly overheard Y" row).
+- Fix who knows: if the archive later shows a character was told, found out, or it came out openly, move them to knows (or suspects).
+- Drop rows that no longer matter: nobody in the CURRENT CAST is still kept from it, it is trivial, or it is not really a secret.
+"unaware" and "suspects" name only CURRENT CAST characters from whom the fact is kept.
+Answer only with changes, one per line, in exactly these forms (English):
+KEEP 3 | knows: A, B | unaware: C | suspects: none
+MERGE 4, 7, 9 | merged fact in one short sentence | knows: A | unaware: B | suspects: none | src: section heading copied exactly
+DROP 5
+Rows you do not mention stay as they are. If nothing needs changing, answer exactly: none`;
+
+// One pass over the finished table against the whole archive: merge repeats, update to the end state, drop dead rows.
+async function tidyKnowledge(m) {
+    const rows = knowledgeRows(m);
+    if (!rows.length) return { merged: 0, dropped: 0, fixed: 0 };
+    const cast = castNames(m);
+    const table = rows.map((r, k) => `${k + 1}. ${knowLine(r)}`).join('\n');
+    const out = await askAI(`[ARCHIVE]\n${m.text}\n\n${cast.length ? `[CURRENT CAST]\n${cast.join(', ')}\n\n` : ''}[TABLE]\n${table}`, { system: AI_SYS_KNOW_TIDY, maxTokens: 4000 });
+    const gone = new Set(), extra = [];
+    let merged = 0, dropped = 0, fixed = 0;
+    const fieldsOf = t => knowledgeRows({ knowledge: `x |${t}` })[0];
+    for (const raw of out.split('\n')) {
+        const line = raw.replace(/^\s*(?:[-*•])\s*/, '').trim();
+        let mt;
+        if ((mt = line.match(/^DROP\s*#?(\d+)/i))) { const i = Number(mt[1]) - 1; if (rows[i] && !gone.has(i)) { gone.add(i); dropped++; } continue; }
+        if ((mt = line.match(/^KEEP\s*#?(\d+)\s*\|(.*)$/i))) {
+            const r = rows[Number(mt[1]) - 1], f = fieldsOf(mt[2]);
+            if (!r || !f) continue;
+            if (/knows:/i.test(mt[2])) r.knows = f.knows;
+            if (/unaware:/i.test(mt[2])) r.unaware = f.unaware;
+            if (/suspects:/i.test(mt[2])) r.suspects = f.suspects;
+            fixed++; continue;
+        }
+        if ((mt = line.match(/^MERGE\s*([\d,#\s]+)\|(.*)$/i))) {
+            const ids = mt[1].split(/[,\s#]+/).map(Number).filter(n => rows[n - 1]).map(n => n - 1);
+            const r = knowledgeRows({ knowledge: mt[2] })[0];
+            if (ids.length < 2 || !r) continue;
+            ids.forEach(i => gone.add(i));
+            if (!r.src) r.src = rows[ids[0]].src;
+            extra.push({ at: Math.min(...ids), r });
+            merged += ids.length - 1;
+        }
+    }
+    const next = [];
+    rows.forEach((r, i) => {
+        extra.filter(x => x.at === i).forEach(x => next.push(x.r));
+        if (!gone.has(i)) next.push(r);
+    });
+    m.knowledge = trimUnaware(next.map(knowLine).join('\n'), currentCast(m), { dropEmpty: true });
+    return { merged, dropped, fixed, before: rows.length, after: knowledgeRows(m).length };
+}
+
 async function openKnowledge() {
     const c = ctx();
     const m = getMeta();
@@ -3725,6 +3781,7 @@ async function openKnowledge() {
         <div class="na_row na_kn_bar">
           <button type="button" class="na_btn na_small na_kn_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>AI로 만들기</span></button>
           <button type="button" class="na_btn na_small na_kn_edit"><i class="fa-solid fa-pen"></i> 직접 고치기</button>
+          <button type="button" class="na_btn na_small na_kn_tidy" title="겹치는 줄 합치기 · 끝 시점 기준으로 고치기 · 필요 없는 줄 빼기"><i class="fa-solid fa-broom"></i> AI로 다듬기</button>
           <button type="button" class="na_btn na_small na_kn_tr"><i class="fa-solid fa-language"></i> 한국어로 보기</button>
           <label class="checkbox_label na_kn_inject"><input type="checkbox"><span>주입하기</span></label>
           <small class="na_dim na_kn_tok"></small>
@@ -3744,7 +3801,7 @@ async function openKnowledge() {
     const render = () => {
         const rows = knowledgeRows(m);
         $root.find('.na_kn_ai span').text(rows.length ? 'AI로 더하기·고치기' : 'AI로 만들기');
-        $root.find('.na_kn_clear').prop('hidden', !String(m.knowledge || '').trim());
+        $root.find('.na_kn_clear, .na_kn_tidy').prop('hidden', !String(m.knowledge || '').trim());
         const stale = staleUnaware(m);
         $root.find('.na_kn_stale').prop('hidden', !stale.length).html(stale.length
             ? `<i class="fa-solid fa-user-slash"></i><div class="na_kn_stale_txt">지금 이야기에 안 나오는 인물이 '모름'·'짐작'에 있어요: <b>${stale.map(esc).join(', ')}</b><small class="na_dim">STATE의 인물 제목과 최근 섹션 4개에 나오는 인물만 남겨요</small></div><button type="button" class="na_btn na_small na_kn_trim">빼기</button>` : '');
@@ -3813,15 +3870,24 @@ async function openKnowledge() {
                     rows.push(r); added++;
                 }
                 if (!understood) throw new Error('AI 답을 표로 못 읽었어요');
-                m.knowledge = trimUnaware(rows.map(knowLine).join('\n'), currentCast(m)); tr = null;
+                m.knowledge = trimUnaware(rows.map(knowLine).join('\n'), currentCast(m), { dropEmpty: true }); tr = null;
                 m.knowMined = [...new Set([...m.knowMined, ...part.map(sectionKey)])];
                 await save();
                 stepDone();
             }
-            toastr.success(`새로 ${added}개${updated ? ` · 고친 줄 ${updated}개` : ''} · 지금 표 ${knowledgeRows(m).length}개. 틀린 건 직접 고쳐 주세요.`);
+            await step(null, parts.length - 1, '표 다듬는 중…');
+            const t = await tidyKnowledge(m); tr = null;
+            await save();
+            toastr.success(`새로 ${added}개${updated ? ` · 고친 줄 ${updated}개` : ''} · 다듬기: 합침 ${t.merged} · 뺌 ${t.dropped} → 지금 표 ${knowledgeRows(m).length}개. 틀린 건 직접 고쳐 주세요.`);
         },
     });
     $root.find('.na_kn_ai').on('click', function () { $(this).toggleClass('active', picker.toggle()); });
+    $root.find('.na_kn_tidy').on('click', async function () {
+        const t = await withSpinner($(this), '다듬는 중…', () => tidyKnowledge(m));
+        if (!t) return;
+        tr = null; await save();
+        toastr.success(`합침 ${t.merged} · 뺌 ${t.dropped} · 고침 ${t.fixed} → ${t.before}개에서 ${t.after}개로`);
+    });
     $root.on('click', '.na_kn_trim', async () => { m.knowledge = trimUnaware(m.knowledge, currentCast(m)); tr = null; await save(); });
     $root.find('.na_kn_edit').on('click', () => { $root.find('.na_kn_ta').val(m.knowledge || ''); $root.find('.na_kn_editbox').prop('hidden', false); $root.find('.na_kn_list').prop('hidden', true); });
     $root.find('.na_kn_cancel').on('click', () => { $root.find('.na_kn_editbox').prop('hidden', true); $root.find('.na_kn_list').prop('hidden', false); });
