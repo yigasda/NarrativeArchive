@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.0.0';
+const VERSION = '2.0.1';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -681,12 +681,15 @@ function mountSectionBrowser($host) {
                   <div class="na_group na_lv${s.level} ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''}">
                     <div class="na_group_head">
                       <i class="fa-solid fa-chevron-${isOpen ? 'down' : 'right'} na_group_chev"></i>
-                      <span class="na_group_title">${highlight(groupLabel(s.title), q)}</span>
-                      <span class="na_group_line"></span>
-                      <span class="na_group_meta"></span>
-                      ${s.note ? '<button type="button" class="na_icon na_icon_sm na_group_edit" title="머리글 편집"><i class="fa-solid fa-pen"></i></button>' : ''}
-                      ${pinBtn(pinned.has(key), '이 묶음을')}
-                      ${sw(!off, off ? '이 묶음 주입 켜기' : '이 묶음 통째로 주입에서 빼기')}
+                      <div class="na_head_main">
+                        <span class="na_group_title">${highlight(groupLabel(s.title), q)}</span>
+                        <span class="na_group_meta"></span>
+                      </div>
+                      <div class="na_head_ctrl">
+                        ${s.note ? '<button type="button" class="na_icon na_icon_sm na_group_edit" title="머리글 편집"><i class="fa-solid fa-pen"></i></button>' : ''}
+                        ${pinBtn(pinned.has(key), '이 묶음을')}
+                        ${sw(!off, off ? '이 묶음 주입 켜기' : '이 묶음 통째로 주입에서 빼기')}
+                      </div>
                     </div>
                     ${s.note ? `<div class="na_group_note">${highlight(s.note, q)}</div>` : ''}
                     <div class="na_card_body" hidden></div>
@@ -716,13 +719,17 @@ function mountSectionBrowser($host) {
             const $card = $(`
               <div class="na_card ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''} ${waiting.has(s.title) && !off ? 'na_waiting' : ''} ${trimmedSet.has(s.title) && !off ? 'na_trimmed' : ''}" data-start="${s.start}">
                 <div class="na_card_head">
+                  <div class="na_head_main">
                   <span class="na_card_title">${highlight(s.title, q)}</span>
                   <span class="na_card_meta">${links[s.title]?.length && !off ? `<span class="na_link_tag ${waiting.has(s.title) ? '' : 'on'}" title="키워드: ${esc(links[s.title].join(', '))}"><i class="fa-solid fa-key"></i> ${waiting.has(s.title) ? '대기' : '켜짐'}</span>` : ''}${trimmedSet.has(s.title) && !off ? '<span class="na_trim_tag">상한으로 빠짐</span>' : ''}${count ? `<span class="na_hit">${count}건</span>` : ''}<span class="na_tok">${fmt(body.length)}자</span></span>
+                  </div>
+                  <div class="na_head_ctrl">
                   ${pinBtn(pinned.has(s.title), '이 섹션을')}
                   ${sw(!off, off ? '주입 켜기' : '이 섹션만 주입에서 빼기 (본문은 그대로)')}
+                  </div>
                 </div>
                 <div class="na_card_body" ${isOpen ? '' : 'hidden'}>
-                  <div class="na_card_text">${highlight(body, q)}</div>
+                  <div class="na_card_text">${highlight(body.replace(/^#{1,3} [^\n]*\n?/, '').trim(), q) || '<span class="na_dim">(비어 있음)</span>'}</div>
                   <div class="na_card_actions">
                     <button type="button" class="na_icon na_up" title="위로"><i class="fa-solid fa-arrow-up"></i></button>
                     <button type="button" class="na_icon na_down" title="아래로"><i class="fa-solid fa-arrow-down"></i></button>
@@ -767,10 +774,10 @@ function mountSectionBrowser($host) {
         // group badges: card count, then card count · token sum
         allGroups.forEach(g => {
             const n = g.$el.find('.na_card').length;
-            const $meta = g.$el.find('> .na_group_head .na_group_meta').text(`${n}`);
+            const $meta = g.$el.find('> .na_group_head .na_group_meta').text(`섹션 ${n}개`);
             if (q && !n && !g.$el.find('> .na_group_head mark, > .na_group_note mark').length) { g.$el.remove(); return; }
             Promise.all(g.tok).then(ns => {
-                if (myId === renderId) $meta.text(`${n} · ${shortNum(ns.reduce((x, y) => x + (y || 0), 0))}`);
+                if (myId === renderId) $meta.text(`섹션 ${n}개 · ${shortNum(ns.reduce((x, y) => x + (y || 0), 0))} 토큰`);
             });
         });
         const offN = mutedCount(m);
@@ -911,7 +918,7 @@ function renderPanel() {
                 <div class="na_block_head"><div><h4>경계선</h4><p>아카이브가 다루는 마지막 메시지 번호예요. 그 앞은 숨겨서 토큰을 아껴요.</p></div></div>
                 <div class="na_set_list">
                   <label class="na_set_row"><span><span>아카이브 따라가기</span><small id="na_track_info">제목의 마지막 #번호를 경계선으로</small></span><input type="checkbox" id="na_track" class="na_toggle"></label>
-                  <label class="na_set_row" id="na_boundary_row"><span>아카이브는 #… 까지</span><input type="number" id="na_boundary" class="text_pole" min="0" placeholder="-"></label>
+                  <label class="na_set_row" id="na_boundary_row"><span><span>경계선 번호</span><small>여기까지 아카이브에 담겼어요</small></span><input type="number" id="na_boundary" class="text_pole" min="0" placeholder="-"></label>
                   <label class="na_set_row"><span>숨길 때 남길 메시지</span><input type="number" id="na_keep" class="text_pole" min="0" max="50"></label>
                 </div>
                 <div class="na_since" id="na_since"></div>
@@ -2432,6 +2439,7 @@ async function openExtract() {
     const $root = $(`
       <div class="na_popup">
         <div class="na_ex_range">
+          <span class="na_range_label">범위</span>
           <label># <input type="number" class="text_pole na_num na_from" min="0" max="${last}" value="${Math.max(0, defStart)}"></label>
           <span>~</span>
           <label># <input type="number" class="text_pole na_num na_to" min="0" max="${last}" value="${Math.max(0, last)}"></label>
