@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.2.1';
+const VERSION = '3.2.2';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1201,8 +1201,7 @@ function renderPanel() {
                     <label class="na_set_row"><span>숨긴 메시지 빼기</span><input type="checkbox" class="na_toggle" id="na_opt_hidden"></label>
                     <div class="na_strip_box">
                       <label class="na_set_row"><span><span>태그 지우기</span><small>&lt;think&gt; 블록 통째로, 나머지 HTML 태그는 글자만 남김</small></span><input type="checkbox" class="na_toggle" id="na_opt_tags"></label>
-                      <textarea class="text_pole na_strip_ta" id="na_strip_custom" rows="3" spellcheck="false" placeholder="통째로 지울 태그·정규식 (한 줄에 하나)&#10;scene_plan&#10;/\[OOC:[^\]]*\]/"></textarea>
-                      <small class="na_strip_info" id="na_strip_help">한 줄에 하나 · 태그 이름(<code>scene_plan</code>)은 그 블록을 통째로, <code>/정규식/</code>은 맞는 부분을 지워요</small>
+                      <textarea class="text_pole na_strip_ta" id="na_strip_custom" rows="2" spellcheck="false" placeholder="통째로 지울 태그나 /정규식/, 한 줄에 하나&#10;scene_plan"></textarea>
                       <small class="na_strip_info" id="na_strip_info"></small>
                     </div>
                     <label class="na_set_row"><span>머리글</span>
