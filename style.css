@@ -1025,3 +1025,7 @@
 .na_kw_concept small { font-size: 0.78em; }
 .na_kw_addall { font-size: 0.78em; }
 .na_src_btn.na_btn[disabled] { opacity: 0.35; }
+.na_kw_tin { width: 100% !important; margin: 0 !important; box-sizing: border-box; resize: vertical; }
+.na_kw_trecent { font-size: 0.8em; }
+.na_kw_tout:empty { display: none; }
+.na_kw_testbox { padding: 8px 10px; border-radius: 10px; border: 1px dashed var(--na-line); }

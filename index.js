@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '2.11.2';
+const VERSION = '2.12.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -889,6 +889,12 @@ async function openKeywords(s, body, current) {
         <div class="na_dim na_kw_title"></div>
         <input type="text" class="text_pole na_kw_in" placeholder="map, 지도, treasur, 보물">
         <div class="na_kw_check"></div>
+        <div class="na_kw_group na_kw_testbox">
+          <div class="na_kw_label">키워드 테스트 <span class="na_dim">· 문장을 넣으면 위 키워드로 이 섹션이 불려 오는지 보여 줘요</span></div>
+          <textarea class="text_pole na_kw_tin" rows="2" placeholder="예: 그 지도 아직 갖고 있어?"></textarea>
+          <label class="checkbox_label na_kw_trecent"><input type="checkbox"><span>최근 메시지 ${Math.max(0, (Number(m.linkDepth) || 4) - 1)}개도 같이 (다음 메시지로 보낸다고 치기)</span></label>
+          <div class="na_kw_tout"></div>
+        </div>
         <div class="na_kw_group">
           <div class="na_kw_label">이 섹션에서 두드러지는 말 <span class="na_dim">· 다른 섹션엔 드물고 여기 자주 나와요</span></div>
           <div class="na_kw_chips na_kw_found"></div>
@@ -944,7 +950,29 @@ async function openKeywords(s, body, current) {
         $in.val(list.join(', '));
         mark();
     });
+    const depth = Math.max(1, Number(m.linkDepth) || 4);
+    const runTest = () => {
+        const text = $root.find('.na_kw_tin').val();
+        const withRecent = $root.find('.na_kw_trecent input').prop('checked');
+        const $out = $root.find('.na_kw_tout');
+        if (!text.trim() && !withRecent) return $out.empty();
+        const list = split($in.val());
+        if (!list.length) return $out.html('<div class="na_kwt_row na_kwt_wait"><i class="fa-solid fa-circle"></i><div class="na_kwt_main">위에 키워드를 먼저 넣어 주세요.</div></div>');
+        const src = `${text}\n${withRecent && depth > 1 ? recentChatText(m, depth - 1) : ''}`;
+        const hits = linkHits(list, src.toLowerCase());
+        $out.html(`<div class="na_kwt_row ${hits.length ? 'na_kwt_on' : 'na_kwt_wait'}">
+            <i class="fa-solid ${hits.length ? 'fa-circle-check' : 'fa-circle'}"></i>
+            <div class="na_kwt_main">
+              <div><b>${hits.length ? '호출됨' : '호출 안 됨'}</b>${hits.length ? ` · ${hits.map(esc).join(', ')}` : ' · 넣은 키워드가 문장에 없어요'}</div>
+              ${hits.length ? `<div class="na_kwt_where">${hits.map(w => `<div>${kwSnippet(src, w)}</div>`).join('')}</div>` : ''}
+            </div></div>`);
+    };
+    let tt;
+    $root.find('.na_kw_tin').on('input', () => { clearTimeout(tt); tt = setTimeout(runTest, 150); });
+    $root.find('.na_kw_trecent input').on('change', runTest);
     $in.on('input', mark);
+    $in.on('input', runTest);
+    $root.on('click', '.na_pchip[data-w], .na_kw_addall', () => setTimeout(runTest));
     $root.find('.na_kw_ai').on('click', async function () {
         const others = parseSections(m.text).filter(x => !x.group && x.start !== s.start && x.title !== '(머리말)').map(x => `- ${x.title}`).slice(-80).join('\n');
         const broad = [...new Set([...an.broad.map(r => r.show), ...an.distinct.filter(r => r.chat > 0.15).map(r => r.show)])].join(', ') || '(none)';
@@ -2933,6 +2961,16 @@ $(document).on('click', '.na_src_btn', function (e) {
 
 // ---------------------------------------------------------------- keyword test
 
+// where a keyword hit in `src`, so "Set" matching inside "settle" is easy to spot
+function kwSnippet(src, w) {
+    const i = src.toLowerCase().indexOf(String(w).toLowerCase());
+    if (i < 0) return '';
+    const a = Math.max(0, i - 14), b = Math.min(src.length, i + w.length + 14);
+    const inWord = /[A-Za-z]/.test(src[i - 1] || '') || /[A-Za-z]/.test(src[i + w.length] || '');
+    return `${a ? '…' : ''}${esc(src.slice(a, i))}<mark>${esc(src.slice(i, i + w.length))}</mark>${esc(src.slice(i + w.length, b))}${b < src.length ? '…' : ''}`
+        + (inWord ? ` <span class="na_kwt_warn"><i class="fa-solid fa-triangle-exclamation"></i> 다른 단어 속에서 걸렸어요</span>` : '');
+}
+
 async function openKeywordTest() {
     const c = ctx();
     const m = getMeta();
@@ -2963,16 +3001,7 @@ async function openKeywordTest() {
         }).sort((a, b) => ['on', 'wait', 'off', 'gone'].indexOf(a.state) - ['on', 'wait', 'off', 'gone'].indexOf(b.state));
         const label = { on: '호출됨', wait: '호출 안 됨', off: '스위치 꺼짐', gone: '섹션 없음' };
         const icon = { on: 'fa-circle-check', wait: 'fa-circle', off: 'fa-power-off', gone: 'fa-circle-question' };
-        // where each hit landed, so "Set" matching inside "settle" is easy to spot
-        const where = w => {
-            const i = hay.indexOf(String(w).toLowerCase());
-            if (i < 0) return '';
-            const src = `${text}\n${withRecent && depth > 1 ? recentChatText(m, depth - 1) : ''}`;
-            const a = Math.max(0, i - 14), b = Math.min(src.length, i + w.length + 14);
-            const inWord = /[A-Za-z]/.test(src[i - 1] || '') || /[A-Za-z]/.test(src[i + w.length] || '');
-            return `${a ? '…' : ''}${esc(src.slice(a, i))}<mark>${esc(src.slice(i, i + w.length))}</mark>${esc(src.slice(i + w.length, b))}${b < src.length ? '…' : ''}`
-                + (inWord ? ` <span class="na_kwt_warn"><i class="fa-solid fa-triangle-exclamation"></i> 다른 단어 속에서 걸렸어요</span>` : '');
-        };
+        const where = w => kwSnippet(`${text}\n${withRecent && depth > 1 ? recentChatText(m, depth - 1) : ''}`, w);
         $root.find('.na_kwt_out').html(rows.map(r => `
             <div class="na_kwt_row na_kwt_${r.state}">
               <i class="fa-solid ${icon[r.state]}"></i>
