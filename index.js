@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.4.0';
+const VERSION = '3.5.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3557,10 +3557,122 @@ async function driftTick() {
 
 // ---------------------------------------------------------------- who knows what
 
+// ---------------------------------------------------------------- section picker for AI tools
+// A checklist of the archive's sections (groups with tri-state boxes, quick picks, ✓ for ones already read)
+// that sends the chosen ones to onGo a few thousand tokens at a time, so the model reads every part.
+
+const PICK_CHUNK_TOK = 6000;
+const estTok = t => Math.ceil(String(t).length / 3.6);
+
+function mountSectionPicker($host, { m, title, doneKeys, doneLabel = '읽음', goLabel, extraFoot = '', onGo }) {
+    const $p = $(`
+      <div class="na_sp" hidden>
+        <div class="na_sp_head">
+          <b>${esc(title)}</b>
+          <span class="na_sp_quick">
+            <button type="button" class="na_pchip" data-sel="new">안 읽은 것</button>
+            <button type="button" class="na_pchip" data-sel="all">전체</button>
+            <button type="button" class="na_pchip" data-sel="none">비우기</button>
+          </span>
+        </div>
+        <div class="na_sp_secs"></div>
+        ${extraFoot}
+        <div class="na_sp_foot">
+          <small class="na_dim na_sp_info"></small>
+          <button type="button" class="na_btn na_small na_primary na_sp_go"><i class="fa-solid fa-wand-magic-sparkles"></i> ${esc(goLabel)}</button>
+        </div>
+      </div>`);
+    $host.append($p);
+    const allSecs = () => parseSections(m.text).filter(x => !x.group && x.title !== '(머리말)');
+    let chosen = null;
+    const chunk = secs => {
+        const out = [];
+        let cur = [], tok = 0;
+        for (const x of secs) {
+            const t = estTok(m.text.slice(x.start, x.end));
+            if (cur.length && tok + t > PICK_CHUNK_TOK) { out.push(cur); cur = []; tok = 0; }
+            cur.push(x); tok += t;
+        }
+        if (cur.length) out.push(cur);
+        return out;
+    };
+    const selected = () => allSecs().filter(x => chosen.has(sectionKey(x)));
+    const info = () => {
+        const secs = selected();
+        const tok = secs.reduce((a, x) => a + estTok(m.text.slice(x.start, x.end)), 0);
+        const parts = chunk(secs).length;
+        $p.find('.na_sp_info').text(secs.length ? `섹션 ${secs.length}개 · 약 ${fmt(tok)} 토큰${parts > 1 ? ` · ${parts}번에 나눠 읽어요` : ''}` : '섹션을 골라 주세요');
+        $p.find('.na_sp_go').prop('disabled', !secs.length || busy);
+        $p.find('.na_sp_g input').each(function () {
+            const keys = String($(this).data('keys')).split('\u0002');
+            const n = keys.filter(k => chosen.has(k)).length;
+            this.checked = n === keys.length; this.indeterminate = n > 0 && n < keys.length;
+        });
+    };
+    const draw = () => {
+        const done = doneKeys();
+        // "# ── Y1 ──" groups with their cards; top-level cards (title, STATE, OPEN) go in unlabeled runs
+        const rows = [];
+        let grp = { label: '', items: [] };
+        const flush = () => { if (grp.items.length) rows.push(grp); };
+        for (const x of parseSections(m.text)) {
+            if (x.title === '(머리말)') continue;
+            if (x.group) { flush(); grp = { label: groupLabel(x.title), items: [] }; continue; }
+            if (x.level === 1 && grp.label) { flush(); grp = { label: '', items: [] }; }
+            grp.items.push(x);
+        }
+        flush();
+        $p.find('.na_sp_secs').html(rows.map(g => `
+          <div class="na_sp_sg">
+            ${g.label ? `<label class="na_sp_g"><input type="checkbox" data-keys="${esc(g.items.map(sectionKey).join('\u0002'))}"><b>${esc(g.label)}</b><small class="na_dim">${g.items.length}개</small></label>` : ''}
+            ${g.items.map(x => `<label class="na_sp_s ${g.label ? '' : 'na_sp_s_top'}"><input type="checkbox" data-k="${esc(sectionKey(x))}" ${chosen.has(sectionKey(x)) ? 'checked' : ''}>
+              <span>${esc(x.title)}</span>${done.has(sectionKey(x)) ? `<small class="na_sp_done"><i class="fa-solid fa-check"></i> ${esc(doneLabel)}</small>` : ''}</label>`).join('')}
+          </div>`).join(''));
+        info();
+    };
+    const select = how => {
+        const done = doneKeys();
+        chosen = new Set(allSecs().map(sectionKey).filter(k => how === 'all' || (how === 'new' && !done.has(k))));
+        draw();
+    };
+    $p.on('click', '.na_sp_quick .na_pchip', function () { select($(this).data('sel')); });
+    $p.on('change', '.na_sp_s input', function () { const k = String($(this).data('k')); this.checked ? chosen.add(k) : chosen.delete(k); info(); });
+    $p.on('change', '.na_sp_g input', function () {
+        String($(this).data('keys')).split('\u0002').forEach(k => this.checked ? chosen.add(k) : chosen.delete(k));
+        $(this).closest('.na_sp_sg').find('.na_sp_s input').prop('checked', this.checked);
+        info();
+    });
+    let busy = false;
+    $p.find('.na_sp_go').on('click', async function () {
+        const secs = selected();
+        if (!secs.length || busy) return;
+        const parts = chunk(secs);
+        const $b = $(this), html = $b.html();
+        busy = true; $b.prop('disabled', true);
+        let done = 0;
+        try {
+            await onGo(parts, async (part, i) => { $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> 읽는 중… ${i + 1}/${parts.length}`); }, () => { done++; draw(); });
+        } catch (e) {
+            console.error('[NarrativeArchive] AI', e);
+            toastr.error(`${done}/${parts.length}까지 하고 멈췄어요: ${String(e?.message || e)}`, 'AI 요청 실패');
+        } finally { busy = false; $b.html(html); info(); }
+    });
+    return {
+        $el: $p,
+        toggle(open = $p.prop('hidden')) {
+            $p.prop('hidden', !open);
+            if (open) { if (!chosen) select(doneKeys().size ? 'new' : 'all'); else draw(); }
+            return open;
+        },
+        text: part => part.map(x => trimEnd(m.text.slice(x.start, x.end))).join('\n\n'),
+    };
+}
+
 const AI_SYS_KNOW = `You build a "who knows what" table for a role-play story archive, so the role-play model never lets a character know something they should not.
 List the facts whose knowledge differs between characters: secrets, hidden pasts, lies told, confessions, plans, things one character saw alone, misunderstandings. Skip facts every character knows.
-For each fact name who knows it, who does not, and who only suspects, using the archive's own character names. Use the latest state in the archive (a secret later revealed is known).
-10 to 30 facts, most plot-relevant first. One line per fact, nothing else, in this exact form (English):
+For each fact name who knows it, who does not, and who only suspects, using the archive's own character names. Use the latest state you can see (a secret later revealed is known).
+You may get only some sections of the archive, plus the CURRENT TABLE built from other sections. Return the whole table: keep every current row that these sections do not change, update rows these sections change (someone learns, suspects or is told), and add new facts from these sections. At most 50 facts, most plot-relevant first.
+One line per fact, nothing else, in this exact form (English):
 fact in one short sentence | knows: A, B | unaware: C | suspects: D | src: the archive heading where this is established, copied exactly
 Write "none" for an empty field.`;
 
@@ -3578,6 +3690,7 @@ async function openKnowledge() {
           <small class="na_dim na_kn_tok"></small>
           <button type="button" class="na_btn na_small na_danger na_kn_clear"><i class="fa-regular fa-trash-can"></i> 전체 삭제</button>
         </div>
+        <div class="na_kn_pickhost"></div>
         <div class="na_kn_list"></div>
         <div class="na_kn_editbox" hidden>
           <small class="na_dim">한 줄에 하나: <code>사실 | knows: A, B | unaware: C | suspects: D | src: 섹션 제목</code></small>
@@ -3589,7 +3702,7 @@ async function openKnowledge() {
     let tr = null;
     const render = () => {
         const rows = knowledgeRows(m);
-        $root.find('.na_kn_ai span').text(rows.length ? 'AI로 다시 만들기' : 'AI로 만들기');
+        $root.find('.na_kn_ai span').text(rows.length ? 'AI로 더하기·고치기' : 'AI로 만들기');
         $root.find('.na_kn_clear').prop('hidden', !String(m.knowledge || '').trim());
         $root.find('.na_kn_inject input').prop('checked', !!m.knowInject);
         $root.find('.na_kn_list').html(rows.length ? rows.map((r, i) => {
@@ -3609,17 +3722,35 @@ async function openKnowledge() {
     render();
     const save = async () => { await saveMeta(); applyInjection(); syncPanel(); render(); };
     $root.find('.na_kn_inject input').on('change', async function () { m.knowInject = this.checked; await save(); });
-    $root.find('.na_kn_ai').on('click', async function () {
-        if (knowledgeRows(m).length && !await confirm('다시 만들기', '지금 표를 AI가 새로 만든 걸로 바꿀까요?')) return;
-        const old = String(m.knowledge || '').trim();
-        const out = await withSpinner($(this), '정리하는 중…', () => askAI(`[ARCHIVE]\n${m.text}${old ? `\n\n[CURRENT TABLE — keep what is still right, fix what changed]\n${old}` : ''}`, { system: AI_SYS_KNOW, maxTokens: 4000 }));
-        if (out === null) return;
-        const lines = out.split('\n').map(l => l.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim()).filter(l => l.includes('|') && /knows:/i.test(l));
-        if (!lines.length) return toastr.warning('AI 답을 표로 못 읽었어요. 다시 해 보세요.');
-        m.knowledge = lines.join('\n'); tr = null;
-        await save();
-        toastr.success(`${lines.length}개 정리했어요. 틀린 건 직접 고쳐 주세요.`);
+    // AI: chosen sections a few at a time; each part updates the table built so far
+    m.knowMined = Array.isArray(m.knowMined) ? m.knowMined : [];
+    const picker = mountSectionPicker($root.find('.na_kn_pickhost'), {
+        m, title: 'AI가 읽을 섹션', goLabel: '읽고 정리하기', doneLabel: '읽음',
+        doneKeys: () => new Set(m.knowMined),
+        extraFoot: '<label class="checkbox_label na_kn_fresh"><input type="checkbox"><span>지금 표는 버리고 처음부터 만들기</span></label>',
+        onGo: async (parts, step, stepDone) => {
+            if ($root.find('.na_kn_fresh input').prop('checked')) {
+                if (knowledgeRows(m).length && !await confirm('처음부터 만들기', '지금 표를 지우고 고른 섹션으로 새로 만들까요?')) return;
+                m.knowledge = ''; m.knowMined = []; tr = null;
+                $root.find('.na_kn_fresh input').prop('checked', false);
+            }
+            let rowsNow = 0;
+            for (const [i, part] of parts.entries()) {
+                await step(part, i);
+                const old = String(m.knowledge || '').trim();
+                const out = await askAI(`[ARCHIVE SECTIONS]\n${picker.text(part)}${old ? `\n\n[CURRENT TABLE]\n${old}` : ''}`, { system: AI_SYS_KNOW, maxTokens: 6000 });
+                const lines = out.split('\n').map(l => l.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim()).filter(l => l.includes('|') && /knows:/i.test(l));
+                if (!lines.length) throw new Error('AI 답을 표로 못 읽었어요');
+                m.knowledge = lines.join('\n'); tr = null;
+                m.knowMined = [...new Set([...m.knowMined, ...part.map(sectionKey)])];
+                rowsNow = lines.length;
+                await save();
+                stepDone();
+            }
+            toastr.success(`${rowsNow}개로 정리했어요. 틀린 건 직접 고쳐 주세요.`);
+        },
     });
+    $root.find('.na_kn_ai').on('click', function () { $(this).toggleClass('active', picker.toggle()); });
     $root.find('.na_kn_edit').on('click', () => { $root.find('.na_kn_ta').val(m.knowledge || ''); $root.find('.na_kn_editbox').prop('hidden', false); $root.find('.na_kn_list').prop('hidden', true); });
     $root.find('.na_kn_cancel').on('click', () => { $root.find('.na_kn_editbox').prop('hidden', true); $root.find('.na_kn_list').prop('hidden', false); });
     $root.find('.na_kn_save').on('click', async () => { m.knowledge = $root.find('.na_kn_ta').val().trim(); tr = null; $root.find('.na_kn_cancel').trigger('click'); await save(); });
@@ -3645,7 +3776,7 @@ async function openKnowledge() {
     });
     $root.find('.na_kn_clear').on('click', async () => {
         if (!await confirm('전체 삭제', '누가 아는가 표를 모두 지울까요? 되돌릴 수 없어요.')) return;
-        m.knowledge = ''; tr = null;
+        m.knowledge = ''; m.knowMined = []; tr = null;
         await save();
         toastr.success('누가 아는가 표를 비웠어요');
     });
@@ -3728,21 +3859,7 @@ async function openQuotes() {
           <small class="na_dim na_qb_tok"></small>
           <button type="button" class="na_btn na_small na_danger na_qb_clear"><i class="fa-regular fa-trash-can"></i> 전체 삭제</button>
         </div>
-        <div class="na_qb_pick" hidden>
-          <div class="na_qb_pick_head">
-            <b>AI가 읽을 섹션</b>
-            <span class="na_qb_quick">
-              <button type="button" class="na_pchip" data-sel="new">안 모은 것</button>
-              <button type="button" class="na_pchip" data-sel="all">전체</button>
-              <button type="button" class="na_pchip" data-sel="none">비우기</button>
-            </span>
-          </div>
-          <div class="na_qb_secs"></div>
-          <div class="na_qb_pick_foot">
-            <small class="na_dim na_qb_pick_info"></small>
-            <button type="button" class="na_btn na_small na_primary na_qb_go"><i class="fa-solid fa-wand-magic-sparkles"></i> 모으기 시작</button>
-          </div>
-        </div>
+        <div class="na_qb_pickhost"></div>
         <input type="search" class="text_pole na_qb_q" placeholder="인물·대사로 찾기">
         <div class="na_qb_list"></div>
       </div>`);
@@ -3775,7 +3892,7 @@ async function openQuotes() {
     $root.on('click', '.na_qb_del', async function () { m.quotes.splice(Number($(this).closest('.na_qb_row').data('i')), 1); await save(); });
     $root.find('.na_qb_clear').on('click', async () => {
         if (!await confirm('전체 삭제', `모은 대사 ${m.quotes.length}개를 모두 지울까요? 되돌릴 수 없어요. (아카이브 본문은 그대로예요)`)) return;
-        m.quotes = [];
+        m.quotes = []; m.quoteMined = [];
         await save();
         toastr.success('대사 은행을 비웠어요');
     });
@@ -3787,76 +3904,6 @@ async function openQuotes() {
         await save();
         toastr.success(`${found.length}개 모았어요. 말한 사람은 짐작이라 틀릴 수 있어요. 고치거나 "AI로 모으기"를 써 보세요.`);
     });
-    // ---- AI gather: pick sections, send them a few at a time (a whole archive in one go makes models stop early)
-    const CHUNK_TOK = 6000;
-    const estTok = t => Math.ceil(t.length / 3.6);
-    m.quoteMined = Array.isArray(m.quoteMined) ? m.quoteMined : [];
-    const allSecs = () => parseSections(m.text).filter(x => !x.group && x.title !== '(머리말)');
-    let chosen = null; // Set of section keys
-    const $pick = $root.find('.na_qb_pick');
-    const pickInfo = () => {
-        const secs = allSecs().filter(x => chosen.has(sectionKey(x)));
-        const tok = secs.reduce((a, x) => a + estTok(m.text.slice(x.start, x.end)), 0);
-        const parts = chunkSecs(secs).length;
-        $root.find('.na_qb_pick_info').text(secs.length ? `섹션 ${secs.length}개 · 약 ${fmt(tok)} 토큰${parts > 1 ? ` · ${parts}번에 나눠 읽어요` : ''}` : '섹션을 골라 주세요');
-        $root.find('.na_qb_go').prop('disabled', !secs.length);
-        $root.find('.na_qb_g input').each(function () {
-            const keys = String($(this).data('keys')).split('\u0002');
-            const n = keys.filter(k => chosen.has(k)).length;
-            this.checked = n === keys.length; this.indeterminate = n > 0 && n < keys.length;
-        });
-    };
-    function chunkSecs(secs) {
-        const out = [];
-        let cur = [], tok = 0;
-        for (const x of secs) {
-            const t = estTok(m.text.slice(x.start, x.end));
-            if (cur.length && tok + t > CHUNK_TOK) { out.push(cur); cur = []; tok = 0; }
-            cur.push(x); tok += t;
-        }
-        if (cur.length) out.push(cur);
-        return out;
-    }
-    const drawPick = () => {
-        const mined = new Set(m.quoteMined);
-        // "# ── Y1 ──" groups with their cards; top-level cards (title, STATE, OPEN) go in unlabeled runs
-        const rows = [];
-        let grp = { label: '', items: [] };
-        const flush = () => { if (grp.items.length) rows.push(grp); };
-        for (const x of parseSections(m.text)) {
-            if (x.title === '(머리말)') continue;
-            if (x.group) { flush(); grp = { label: groupLabel(x.title), items: [] }; continue; }
-            if (x.level === 1 && grp.label) { flush(); grp = { label: '', items: [] }; }
-            grp.items.push(x);
-        }
-        flush();
-        $root.find('.na_qb_secs').html(rows.map(g => `
-          <div class="na_qb_sg">
-            ${g.label ? `<label class="na_qb_g"><input type="checkbox" data-keys="${esc(g.items.map(sectionKey).join('\u0002'))}"><b>${esc(g.label)}</b><small class="na_dim">${g.items.length}개</small></label>` : ''}
-            ${g.items.map(x => `<label class="na_qb_s ${g.label ? '' : 'na_qb_s_top'}"><input type="checkbox" data-k="${esc(sectionKey(x))}" ${chosen.has(sectionKey(x)) ? 'checked' : ''}>
-              <span>${esc(x.title)}</span>${mined.has(sectionKey(x)) ? '<small class="na_qb_done" title="이미 AI로 모은 섹션"><i class="fa-solid fa-check"></i> 모음</small>' : ''}</label>`).join('')}
-          </div>`).join(''));
-        pickInfo();
-    };
-    const select = how => {
-        const mined = new Set(m.quoteMined);
-        chosen = new Set(allSecs().map(sectionKey).filter(k => how === 'all' || (how === 'new' && !mined.has(k))));
-        drawPick();
-    };
-    $root.find('.na_qb_ai').on('click', () => {
-        const open = $pick.prop('hidden');
-        $pick.prop('hidden', !open);
-        $root.find('.na_qb_ai').toggleClass('active', open);
-        if (open) { if (!chosen) select(m.quoteMined.length ? 'new' : 'all'); else drawPick(); }
-    });
-    $root.on('click', '.na_qb_quick .na_pchip', function () { select($(this).data('sel')); });
-    $root.on('change', '.na_qb_s input', function () { const k = String($(this).data('k')); this.checked ? chosen.add(k) : chosen.delete(k); pickInfo(); });
-    $root.on('change', '.na_qb_g input', function () {
-        String($(this).data('keys')).split('\u0002').forEach(k => this.checked ? chosen.add(k) : chosen.delete(k));
-        $(this).closest('.na_qb_sg').find('.na_qb_s input').prop('checked', this.checked);
-        pickInfo();
-    });
-
     // lines the model returned → verified candidates (must appear verbatim in one of the sections it read)
     const readPicks = (out, secs) => {
         const bodies = secs.map(x => quoteKey(m.text.slice(x.start, x.end)));
@@ -3873,37 +3920,35 @@ async function openQuotes() {
         }
         return { picks, made };
     };
-    $root.find('.na_qb_go').on('click', async function () {
-        const secs = allSecs().filter(x => chosen.has(sectionKey(x)));
-        if (!secs.length) return;
-        const parts = chunkSecs(secs);
-        const $b = $(this), html = $b.html();
-        $b.prop('disabled', true);
-        let added = 0, fixed = 0, made = 0, found = 0, done = 0;
-        try {
-            for (const part of parts) {
-                $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> 읽는 중… ${done + 1}/${parts.length}`);
-                const text = part.map(x => trimEnd(m.text.slice(x.start, x.end))).join('\n\n');
-                const out = await askAI(`[ARCHIVE SECTIONS]\n${text}`, { system: AI_SYS_QUOTES, maxTokens: 6000 });
-                const r = readPicks(out, part);
-                made += r.made.length; found += r.picks.length;
-                // candidates only: nothing gets ticked; lines already here just get the AI's speaker
-                for (const p of r.picks) {
-                    const q = m.quotes.find(x => quoteKey(x.text) === quoteKey(p.text));
-                    if (q) { if (q.who !== p.who) { q.who = p.who; fixed++; } }
-                    else { m.quotes.push({ ...p, on: false }); added++; }
+    // AI gather: chosen sections a few at a time (a whole archive in one go makes models stop early)
+    m.quoteMined = Array.isArray(m.quoteMined) ? m.quoteMined : [];
+    const picker = mountSectionPicker($root.find('.na_qb_pickhost'), {
+        m, title: 'AI가 읽을 섹션', goLabel: '모으기 시작', doneLabel: '모음',
+        doneKeys: () => new Set(m.quoteMined),
+        onGo: async (parts, step, stepDone) => {
+            let added = 0, fixed = 0, made = 0, found = 0;
+            try {
+                for (const [i, part] of parts.entries()) {
+                    await step(part, i);
+                    const out = await askAI(`[ARCHIVE SECTIONS]\n${picker.text(part)}`, { system: AI_SYS_QUOTES, maxTokens: 6000 });
+                    const r = readPicks(out, part);
+                    made += r.made.length; found += r.picks.length;
+                    // candidates only: nothing gets ticked; lines already here just get the AI's speaker
+                    for (const p of r.picks) {
+                        const q = m.quotes.find(x => quoteKey(x.text) === quoteKey(p.text));
+                        if (q) { if (q.who !== p.who) { q.who = p.who; fixed++; } }
+                        else { m.quotes.push({ ...p, on: false }); added++; }
+                    }
+                    m.quoteMined = [...new Set([...m.quoteMined, ...part.map(sectionKey)])];
+                    await save();
+                    stepDone();
                 }
-                m.quoteMined = [...new Set([...m.quoteMined, ...part.map(sectionKey)])];
-                done++;
-                await save();
-                drawPick();
+            } finally {
+                if (found || made) toastr.success(`후보 ${found}개 · 새로 ${added}개${fixed ? ` · 말한 사람 ${fixed}개 고침` : ''}${made ? ` · 아카이브에 없는 ${made}개는 뺐어요` : ''}. 체크해서 골라 주세요.`);
             }
-        } catch (e) {
-            console.error('[NarrativeArchive] AI', e);
-            toastr.error(`${done}/${parts.length}까지 하고 멈췄어요: ${String(e?.message || e)}`, 'AI 요청 실패');
-        } finally { $b.prop('disabled', false).html(html); pickInfo(); }
-        if (done) toastr.success(`후보 ${found}개 · 새로 ${added}개${fixed ? ` · 말한 사람 ${fixed}개 고침` : ''}${made ? ` · 아카이브에 없는 ${made}개는 뺐어요` : ''}. 체크해서 골라 주세요.`);
+        },
     });
+    $root.find('.na_qb_ai').on('click', function () { $(this).toggleClass('active', picker.toggle()); });
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
@@ -4000,6 +4045,7 @@ async function openWizard() {
         <div class="na_wiz_step"><b>1</b><div class="na_wiz_main">
           <div class="na_wiz_title">범위</div>
           <div class="na_ex_range"><label># <input type="number" class="text_pole na_num na_wz_from" min="0" max="${last}" value="${defFrom}"></label><span>~</span><label># <input type="number" class="text_pole na_num na_wz_to" min="0" max="${last}" value="${defTo}"></label></div>
+          <label class="na_wz_opt"><span>숨긴 메시지 빼기</span><input type="checkbox" class="na_toggle na_wz_hidden"></label>
           <small class="na_dim na_wz_info"></small>
         </div></div>
         <div class="na_wiz_step"><b>2</b><div class="na_wiz_main">
@@ -4030,6 +4076,8 @@ async function openWizard() {
     $root.find('.na_wz_prompt').html(`<option value="__none">지시문 없이 (원문만)</option>${g.prompts.map(p => `<option value="${esc(p.id)}">지시문: ${esc(p.name)}${p.fav ? ' ★' : ''}</option>`).join('')}`)
         .val(g.prompts.some(p => p.id === g.wizPrompt) ? g.wizPrompt : '__none'); // default: raw only
     $root.find('.na_wz_prompt').on('change', function () { g.wizPrompt = this.value; saveGlobal(); });
+    // shared with 압축 → 설정 → 원문 뽑기
+    $root.find('.na_wz_hidden').prop('checked', !!g.skipHidden).on('change', function () { g.skipHidden = this.checked; saveGlobal(); renderPromptSettings(); build(); });
     const range = () => {
         const from = Math.max(0, parseInt($root.find('.na_wz_from').val(), 10) || 0);
         const to = Math.min(last, parseInt($root.find('.na_wz_to').val(), 10));
@@ -4038,13 +4086,15 @@ async function openWizard() {
     let raw = '', full = '';
     const build = async () => {
         const { from, to } = range();
-        const items = buildExtract(from, to).filter(x => !(g.skipHidden && c.chat[x.i]?.is_system)).map(x => ({ ...x, text: cleanMessage(x.text, g) })).filter(x => x.text);
+        const all = buildExtract(from, to);
+        const hiddenOut = g.skipHidden ? all.filter(x => c.chat[x.i]?.is_system).length : 0;
+        const items = all.filter(x => !(g.skipHidden && c.chat[x.i]?.is_system)).map(x => ({ ...x, text: cleanMessage(x.text, g) })).filter(x => x.text);
         raw = formatExtract(items, g);
         const pid = $root.find('.na_wz_prompt').val();
         const p = pid === '__none' ? null : (g.prompts.find(x => x.id === pid) || activePrompt(g));
         full = p ? fillPrompt(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text }) : raw;
         $root.find('.na_wz_copy span').text(p ? '지시문과 함께 복사' : '원문만 복사');
-        $root.find('.na_wz_info').text(items.length ? `메시지 ${items.length}개 · 원문 약 ${fmt(await countTokens(raw))} 토큰${p ? ` · 지시문까지 약 ${fmt(await countTokens(full))} 토큰` : ''}` : '이 범위에 메시지가 없어요.');
+        $root.find('.na_wz_info').text(items.length ? `메시지 ${items.length}개${hiddenOut ? ` (숨긴 ${hiddenOut}개 뺌)` : ''} · 원문 약 ${fmt(await countTokens(raw))} 토큰${p ? ` · 지시문까지 약 ${fmt(await countTokens(full))} 토큰` : ''}` : '이 범위에 메시지가 없어요.');
     };
     let t;
     $root.find('.na_wz_from, .na_wz_to, .na_wz_prompt').on('input change', () => { clearTimeout(t); t = setTimeout(build, 250); });
