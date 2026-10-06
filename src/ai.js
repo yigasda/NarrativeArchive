@@ -14,6 +14,8 @@ export function connSettings(which) {
     const t = g[k];
     t.mode ??= which === 'ai' ? 'st' : 'same';
     t.url ??= ''; t.key ??= ''; t.model ??= '';
+    t.fmt ??= '';    // custom API wire format: '' = guess from the address, 'openai', 'anthropic'
+    t.effort ??= ''; // thinking effort the user fixed for this connection: '' = whatever the job asks for
     t.vxJson ??= ''; t.vxLocation ??= 'global'; t.vxModel ??= 'gemini-2.5-flash';
     // the old default was us-central1; move untouched settings to global once
     if (!t.vxLocV2) { if (t.vxLocation === 'us-central1') t.vxLocation = 'global'; t.vxLocV2 = true; }
@@ -21,9 +23,60 @@ export function connSettings(which) {
 }
 export const trSettings = () => connSettings('tr');
 
-// effort: 'low' | 'medium' | 'high' — how hard a thinking model may think (sent as reasoning_effort; custom API only)
+// a custom API speaks OpenAI's chat/completions unless it is Anthropic's own Messages API
+export const apiFormat = t => t.fmt === 'anthropic' || t.fmt === 'openai' ? t.fmt : /anthropic\.com/i.test(String(t.url || '')) ? 'anthropic' : 'openai';
+
+// effort: 'low' | 'medium' | 'high' — how hard a thinking model may think. The connection's own setting wins over the job's.
+// Sent as output_config.effort (Anthropic format) or reasoning_effort (OpenAI format); Vertex ignores it.
 export async function callConn(t, system, prompt, maxTokens, effort = '') {
-    return stripThink(t.mode === 'vertex' ? await callVertex(t, system, prompt, maxTokens) : await callOpenAICompat(t, system, prompt, maxTokens, effort));
+    const e = t.effort || effort;
+    if (t.mode === 'vertex') return stripThink(await callVertex(t, system, prompt, maxTokens));
+    return stripThink(apiFormat(t) === 'anthropic' ? await callAnthropic(t, system, prompt, maxTokens, e) : await callOpenAICompat(t, system, prompt, maxTokens, e));
+}
+
+// --- Anthropic Messages API, straight from the browser. Thinking on Claude Opus 5.5 can't be switched off;
+// effort is the only lever, and thinking tokens are billed as output, so a low effort is what keeps a draft cheap.
+export function anthropicBase(raw) {
+    const u = String(raw || '').trim().replace(/\/+$/, '').replace(/\/messages$/, '').replace(/\/v1$/, '');
+    return u || 'https://api.anthropic.com';
+}
+function anthropicHeaders(t) {
+    const h = { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' };
+    if (t.key) {
+        h['x-api-key'] = t.key;
+        // a relay in front of the API may want the key as a bearer token; Anthropic itself takes x-api-key only
+        if (!/(^|\.)anthropic\.com$/i.test(new URL(anthropicBase(t.url)).hostname)) h.Authorization = `Bearer ${t.key}`;
+    }
+    return h;
+}
+
+export async function callAnthropic(t, system, prompt, maxTokens, effort = '') {
+    if (!t.model) throw new Error('모델 이름을 넣어 주세요 (⚙ 설정 → AI · 번역)');
+    const endpoint = `${anthropicBase(t.url)}/v1/messages`;
+    const send = withEffort => fetch(endpoint, { method: 'POST', headers: anthropicHeaders(t), body: JSON.stringify({
+        model: t.model, max_tokens: maxTokens,
+        ...(system ? { system } : {}),
+        messages: [{ role: 'user', content: prompt }],
+        ...(withEffort ? { output_config: { effort } } : {}),
+    }) });
+    let r;
+    try {
+        const tryEffort = !!effort && !t.noEffort;
+        r = await send(tryEffort);
+        // an older model without effort gets the plain request, and is remembered
+        if (tryEffort && r.status === 400 && /effort|output_config/i.test(await r.clone().text())) { t.noEffort = true; saveGlobal(); r = await send(false); }
+    } catch (e) {
+        throw new Error(`주소에 연결하지 못했어요. 주소가 맞는지 확인해 주세요. (${e.message || e})`);
+    }
+    const body = await r.text();
+    if (r.status === 401 || r.status === 403) throw new Error(`키가 맞지 않거나 권한이 없어요 (${r.status})`);
+    if (!r.ok) throw new Error(`API 오류 ${r.status}: ${body.slice(0, 200)}`);
+    let j; try { j = JSON.parse(body); } catch { throw new Error('API 답을 읽지 못했어요'); }
+    const out = (Array.isArray(j?.content) ? j.content : []).filter(b => b?.type === 'text').map(b => b.text || '').join('');
+    if (j?.stop_reason === 'refusal') throw new Error('모델이 이 요청을 거절했어요 (refusal)');
+    if (!out.trim() && j?.stop_reason === 'max_tokens') throw new Error(`답 길이 한도(${maxTokens} 토큰)를 생각하는 데 다 써서 빈 답이 왔어요 — 생각 강도를 낮추거나 최대 길이를 늘려 주세요`);
+    if (j?.usage) console.info('[narrative-archive] tokens', t.model, `in ${j.usage.input_tokens} · out ${j.usage.output_tokens}`, effort ? `· effort ${effort}` : '');
+    return out;
 }
 
 // accepts ".../v1" or a full ".../chat/completions"
@@ -40,7 +93,19 @@ export function modelsUrl(raw) {
 }
 
 // asks an OpenAI-compatible API which models it has (GET /models): sorted ids
-export async function listModels({ url, key }) {
+export async function listModels(t) {
+    const { url, key } = t;
+    if (apiFormat(t) === 'anthropic') {
+        let r;
+        try { r = await fetch(`${anthropicBase(url)}/v1/models?limit=100`, { headers: anthropicHeaders(t) }); }
+        catch (e) { throw new Error(`주소에 연결하지 못했어요. (${e.message || e})`); }
+        const body = await r.text();
+        if (r.status === 401 || r.status === 403) throw new Error(`키가 맞지 않거나 권한이 없어요 (${r.status})`);
+        if (!r.ok) throw new Error(`API 오류 ${r.status}: ${body.slice(0, 200)}`);
+        const ids = [...new Set((JSON.parse(body)?.data || []).map(x => x?.id).filter(Boolean))].sort();
+        if (!ids.length) throw new Error('모델 목록이 비어 있어요');
+        return ids;
+    }
     const endpoint = modelsUrl(url);
     if (!endpoint) throw new Error('주소를 먼저 넣어 주세요');
     const headers = {};
