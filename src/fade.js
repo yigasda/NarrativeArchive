@@ -91,7 +91,7 @@ STEPS
 1. Read the section. Mark what MUST survive:
    who did what · decisions · promises · secrets that came out · injuries · how a relationship changed ·
    facts later parts may depend on (names, places, objects, numbers like #346).
-2. SHORT: rewrite the section in about one third of its length, never more than three quarters
+2. SHORT: rewrite the section in about one third of its length, never more than 85% of it
    (a section that is already short may stay near that limit, but must still be shorter).
    Same form as the original: bullets stay bullets, and every label line of the section (PLOT:, NOTES:, any line
    that ends with a colon) stays, in the same order, with its own shortened bullets under it. Keep every fact from step 1.
