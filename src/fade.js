@@ -150,13 +150,26 @@ export function changedQuotes(src, out) {
     });
 }
 
+// SHORT / LINE out of a model answer, or null if it isn't in that shape
+const parseLayers = out => out.match(/SHORT:\s*\n?([\s\S]*?)\n\s*\**LINE:?\**\s*\n?([\s\S]+)$/i);
+
 export async function draftLayers(m, s) {
     const section = m.text.slice(s.start, s.end).trim();
-    let out = stripThink(await askDraft(`SECTION:\n${section}`, { system: AI_SYS_LAYERS, maxTokens: 4000 }));
-    // a quote must stay whole: one more try naming the ones that were cut or reworded
+    // no small cap on the answer: models that think first can spend a few thousand tokens before writing anything
+    // (the draft model's own "초안 최대 길이" applies)
+    let out = stripThink(await askDraft(`SECTION:\n${section}`, { system: AI_SYS_LAYERS }));
+    // a quote must stay whole: one more try naming the ones that were cut or reworded. If that try fails or comes back
+    // worse, the first answer is kept (it was paid for) and the changed quotes are pointed out instead
     const bad = changedQuotes(section, out);
-    if (bad.length) out = stripThink(await askDraft(`SECTION:\n${section}\n\nYour last answer changed these quotes. Copy each one exactly from the section, or drop its quotation marks and say it in your own words:\n${bad.map(q => `- "${q}"`).join('\n')}`, { system: AI_SYS_LAYERS, maxTokens: 4000 }));
-    const mt = out.match(/SHORT:\s*\n?([\s\S]*?)\n\s*\**LINE:?\**\s*\n?([\s\S]+)$/i);
+    if (bad.length && parseLayers(out)) {
+        try {
+            const again = stripThink(await askDraft(`SECTION:\n${section}\n\nYour last answer changed these quotes. Copy each one exactly from the section, or drop its quotation marks and say it in your own words:\n${bad.map(q => `- "${q}"`).join('\n')}`, { system: AI_SYS_LAYERS }));
+            if (parseLayers(again) && changedQuotes(section, again).length < bad.length) out = again;
+        } catch (e) { console.warn('[narrative-archive] layers retry', e); }
+        const left = changedQuotes(section, out).length;
+        if (left) toastr.warning(`${s.title.slice(0, 30)}: 원문과 다른 대사 ${left}개가 남았어요. 버전 창에서 확인해 주세요`);
+    }
+    const mt = parseLayers(out);
     if (!mt) throw new Error(`${s.title.slice(0, 30)}: 답 형식이 달라요 (SHORT:/LINE: 없음)`);
     const short = withTopLabel(m.text.slice(s.start, s.end), mt[1].replace(/^\**\s*/, ''));
     return { short, line: mt[2].trim().split('\n')[0].trim() };

@@ -77,6 +77,10 @@ export async function callOpenAICompat({ url, key, model }, system, prompt, maxT
     const msg = j?.choices?.[0]?.message;
     const out = typeof msg?.content === 'string' ? msg.content
         : Array.isArray(msg?.content) ? msg.content.map(p => p?.text || '').join('') : (j?.choices?.[0]?.text || '');
+    // say why an answer is empty: a length cut usually means the model spent the limit thinking
+    const why = j?.choices?.[0]?.finish_reason;
+    if (!String(out).trim() && why === 'length') throw new Error(`답 길이 한도(${maxTokens} 토큰)에 걸려 빈 답이 왔어요. 생각하는 데 다 쓴 것 같아요 — ⚙ 설정 → AI · 번역에서 최대 길이를 늘려 주세요`);
+    if (!String(out).trim() && why && why !== 'stop') throw new Error(`모델이 빈 답을 돌려줬어요 (멈춘 이유: ${why})`);
     return out;
 }
 
