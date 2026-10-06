@@ -1980,7 +1980,7 @@ body:not(.na_darkui) #na_settings, body:not(.na_darkui) .na_popup, body:not(.na_
     --na-amber: #8A5A00; --na-amber-soft: #FFF1D6;
     --na-purple: #5B3FA0; --na-purple-soft: #EAE3F5;
     --na-ink: #463428;
-    --na-fill: #5C4B41;
+    --na-fill: #6E5D52;
     --na-paper: #F7EEE7;
     --na-sub: #7A6A60;
     --na-warm: #C4521C; --na-warm-ink: #C4471A; --na-warm-soft: #FBE4D8;
@@ -2021,7 +2021,7 @@ body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg butt
 body:not(.na_darkui) .na_v2_tabs button, body:not(.na_darkui) .na_v2_seg button { color: var(--na-mute); }
 body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on { color: var(--na-accent-ink); }
 /* text inputs inside the redesigned screens */
-body:not(.na_darkui) :is(.na_v2, #na_settings) .text_pole { background: #FAF4EF; border: 1px solid var(--na-line); color: var(--na-ink); border-radius: 12px; }
+body:not(.na_darkui) :is(.na_v2, #na_settings) .text_pole { background: #F2E9E2; border: 1px solid var(--na-line); color: var(--na-ink); border-radius: 12px; }
 body:not(.na_darkui) :is(.na_v2, #na_settings) textarea.text_pole { padding: 10px 12px; }
 body:not(.na_darkui) :is(.na_v2, #na_settings) .text_pole::placeholder { color: #A99C92; opacity: 1; }
 
@@ -2256,7 +2256,7 @@ body:not(.na_darkui) .na_wz2_pane textarea.na_wz_out { color: #4A3D35; }
 .na_wz2_range label { gap: 3px; }
 .na_wz2_range label small, .na_v2 .na_wz2_range label small { font-size: 0.821em; color: var(--na-dim); }
 .na_wz2_range label > span { padding: 8px 12px; border-radius: 12px; font-size: 1.214em; line-height: 1.5; color: var(--na-dim); }
-body:not(.na_darkui) .na_wz2_range label > span { background: #FAF4EF; color: #B8A99E; }
+body:not(.na_darkui) .na_wz2_range label > span { background: #F2E9E2; color: #B8A99E; }
 .na_wz2_range label > span:focus-within { border-color: var(--na-accent); }
 .na_v2 .na_wz2_range input, body:not(.na_darkui) .na_v2 .na_wz2_range input { padding: 0 !important; height: auto; min-height: 0; line-height: 1.5; border: 0 !important; background: transparent !important; color: var(--na-ink, var(--SmartThemeBodyColor, inherit)); font-size: 1em; }
 .na_wz2_arr { flex: none; display: grid; place-items: center; margin-top: 18px; color: var(--na-dim); }
@@ -2286,7 +2286,7 @@ body:not(.na_darkui) .na_ex2_card .na_cp_bar .raw { background: #B8541F; }
 .na_ex2 .na_ex_prow select { max-width: 100%; width: 100%; margin: 0; }
 .na_ex_toset > .na_svg { color: var(--na-dim); }
 .na_ex2_preview { height: 96px; max-height: none; box-sizing: border-box; padding: 10px 12px; border-radius: 16px; font-size: 0.821em; line-height: 1.6; color: var(--na-mute, var(--na-dim)); }
-body:not(.na_darkui) .na_ex2_preview { background: #FAF4EF; }
+body:not(.na_darkui) .na_ex2_preview { background: #F2E9E2; }
 .na_ex2_btns .na_v2_btn { padding: 12px 0; border-radius: 14px; font-size: 0.964em; line-height: 1.5; }
 /* settings: the group icons, and boxes toned toward the theme instead of paper white */
 .na_cfg_label i { margin-right: 4px; opacity: 0.8; }
@@ -2309,7 +2309,7 @@ body:not(.na_darkui) .na_tab_pane[data-pane="config"] .na_cfg_box .na_cfg_sub, b
 .na_ap2 .na_v2_card { border-radius: 18px; }
 .na_ap2 .na_append_file_btn { padding: 6px 11px; font-size: 12px; line-height: 1.5; background: var(--na-card); }
 .na_ap2 .na_append_ta { height: 230px !important; min-height: 120px; padding: 12px 14px !important; border-radius: 18px !important; font-family: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; line-height: 1.65; resize: vertical; }
-body:not(.na_darkui) .na_ap2 .na_append_ta { background: #FAF4EF !important; border: 1px solid var(--na-line) !important; color: #4A3D35 !important; }
+body:not(.na_darkui) .na_ap2 .na_append_ta { background: #F2E9E2 !important; border: 1px solid var(--na-line) !important; color: #4A3D35 !important; }
 .na_ap2 .na_ap2_label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 600; color: var(--na-dim); padding: 10px 14px 4px; }
 .na_ap2 .na_ap2_label .na_append_info { font-size: 11.5px; font-weight: 400; color: var(--na-dim); }
 .na_ap2_checks .na_check { align-items: center; gap: 10px; padding: 9px 14px; border-top-color: var(--na-line2, var(--na-line)); color: inherit; background: transparent; opacity: 1; font-size: 1em; line-height: 1.3; }
@@ -2903,7 +2903,7 @@ body:not(.na_darkui) .na_people .na_pb_list li::before { color: #8A3A12; }
 
 /* 관계도 */
 .na_people .na_ego { margin: 0 auto; max-width: 350px; border-radius: 50%; background: var(--na-card); }
-body:not(.na_darkui) .na_people .na_ego { background: #FBF2EA; }
+body:not(.na_darkui) .na_people .na_ego { background: #F2E7DF; }
 .na_people .na_ego .ring { vector-effect: non-scaling-stroke; stroke-width: 1px; stroke-dasharray: 3 4; }
 .na_people .na_ego line { vector-effect: non-scaling-stroke; stroke-width: 1.5px; }
 .na_people .na_ego line.hot { stroke-width: 2.5px; }
@@ -3043,3 +3043,10 @@ body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inlin
 }
 body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header:hover { filter: none; background: #F2E7DF; }
 body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header .inline-drawer-icon { color: #8A7A70; }
+/* dark themes: "filled" chips and blocks were the theme's text colour (a bright slab on a dark panel);
+   a soft tint of it reads as filled without glaring */
+body.na_darkui :is(.na_v2_chips button.on, .na_br_filters button.on, .na_tl .na_g_open > .na_group_head, .na_dr2_msg, .na_ask2 .na_ask_qq,
+    .na_kw2_key, .na_ly_btns > .na_ly_save, .na_face_cam, .na_face_btn > i, .na_ego_center.on) {
+    background: color-mix(in srgb, var(--SmartThemeBodyColor, #ddd) 22%, transparent) !important;
+    color: var(--SmartThemeBodyColor, #ddd) !important;
+}
