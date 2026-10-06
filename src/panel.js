@@ -66,8 +66,8 @@ export function renderPanel() {
 
             <div class="na_meter" id="na_meter">
               <div class="na_meter_top">
-                <span class="na_meter_total" id="na_meter_total">-</span>
-                <span class="na_meter_state" id="na_meter_state"></span>
+                <div class="na_meter_total" id="na_meter_total">-</div>
+                <div class="na_meter_state" id="na_meter_state"></div>
                 <span class="na_spacer"></span>
                 <button type="button" class="na_hchip" id="na_health" title="건강 점검"><i class="fa-solid fa-stethoscope"></i> <span>-</span></button>
                 <button type="button" class="na_icon" id="na_gear" title="설정"><i class="fa-solid fa-gear"></i></button>
