@@ -1182,20 +1182,75 @@ export function renderSnapshots() {
 }
 
 // magic-wand (extensions) menu entries
+// the wand menu: one "서사 아카이브" entry that opens a small launcher with every tool.
+// SillyTavern builds #extensionsMenu asynchronously, so wait for it if it isn't there yet.
 export function addWandMenu() {
-    const $menu = $('#extensionsMenu');
-    if (!$menu.length || $('#na_wand_read').length) return;
-    const items = [
-        ['na_wand_read', 'fa-book-open-reader', '아카이브 읽기', openReader],
-        ['na_wand_extract', 'fa-scissors', '원문 뽑기', openExtract],
-        ['na_wand_append', 'fa-file-circle-plus', '아카이브에 추가', openAppend],
-        ['na_wand_wizard', 'fa-wand-magic-sparkles', '압축 마법사', openWizard],
-        ['na_wand_preview', 'fa-eye', '주입 미리보기', openPreview],
+    const put = () => {
+        const $menu = $('#extensionsMenu');
+        if (!$menu.length) return false;
+        if ($('#na_wand_container').length) return true;
+        const $box = $('<div id="na_wand_container" class="extension_container"></div>');
+        const $it = $(`<div id="na_wand_open" class="list-group-item flex-container flexGap5 interactable" tabindex="0" title="서사 아카이브 도구 모음">
+            <div class="fa-solid fa-feather-pointed extensionsMenuExtensionButton"></div><span>서사 아카이브</span></div>`);
+        $it.on('click', () => openLauncher());
+        $it.on('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLauncher(); } });
+        $menu.append($box.append($it));
+        return true;
+    };
+    if (put()) return;
+    const mo = new MutationObserver(() => { if (put()) mo.disconnect(); });
+    mo.observe(document.body, { childList: true });
+}
+
+// opens SillyTavern's extensions panel with this extension unfolded, scrolled into view
+export function revealPanel() {
+    const $drawer = $('#extensions-settings-button .drawer-content');
+    if ($drawer.length && !$drawer.hasClass('openDrawer')) $('#extensions-settings-button .drawer-toggle').trigger('click');
+    const $icon = $('#na_settings > .inline-drawer > .inline-drawer-header .inline-drawer-icon');
+    if ($icon.hasClass('down')) $('#na_settings > .inline-drawer > .inline-drawer-header').trigger('click');
+    setTimeout(() => document.getElementById('na_settings')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 350);
+}
+
+export async function openLauncher() {
+    const c = ctx();
+    const groups = [
+        ['아카이브', [
+            ['read', ICO_A.book, '읽기', openReader, true],
+            ['ask', ICO_A.chat, '질문', openAsk, true],
+            ['preview', ICO_A.eye, '주입 미리보기', openPreview, true],
+        ]],
+        ['압축', [
+            ['wizard', ICO_A.wand, '압축 마법사', openWizard, true],
+            ['extract', ICO_A.scissors, '원문 뽑기', openExtract, true],
+            ['append', ICO_A.fileplus, '아카이브에 추가', openAppend, true],
+        ]],
+        ['이야기', [
+            ['people', ICO_A.users, '인물 도감', openPeople, true],
+            ['calendar', ICO_A.calendar, '이야기 달력', openCalendar, true],
+            ['worlds', ICO_A.globe, '세계관 공유', openWorlds, false],
+        ]],
+        ['AI 도구 · 점검', [
+            ['quotes', ICO_A.quote, '대사 은행', openQuotes, true],
+            ['know', ICO_A.users, '누가 아는가', openKnowledge, true],
+            ['drift', ICO_A.route, '이탈 감지', openDrift, true],
+            ['health', ICO_A.steth, '건강 점검', openHealth, true],
+        ]],
     ];
-    for (const [id, icon, label, fn] of items) {
-        const $it = $(`<div id="${id}" class="list-group-item flex-container flexGap5 interactable na_wand_item" tabindex="0" title="서사 아카이브">
-            <div class="fa-solid ${icon} extensionsMenuExtensionButton"></div><span>${label}</span></div>`);
-        $it.on('click', needChat(fn));
-        $menu.append($it);
-    }
+    const fns = { panel: revealPanel };
+    const $root = $(`
+      <div class="na_popup na_v2 na_launch">
+        <div class="na_v2_titlebar"><div class="na_v2_title"><b>서사 아카이브</b><small>${hasChat() ? '열 도구를 골라요' : '채팅을 열면 모든 도구를 쓸 수 있어요'}</small></div><button type="button" class="na_v2_pillbtn na_launch_btn na_launch_panel" data-id="panel">${svgA(ICO_A.panel, 14)}패널 열기</button></div>
+        ${groups.map(([title, items]) => `
+        <div class="na_launch_grp">
+          <span class="na_launch_lbl">${title}</span>
+          <div class="na_launch_grid" style="--n:${items.length}">${items.map(([id, ico, label, fn, chat]) => { fns[id] = chat ? needChat(fn) : fn; return `<button type="button" class="na_launch_btn" data-id="${id}" ${chat && !hasChat() ? 'disabled' : ''}><span class="na_launch_ic">${svgA(ico, 18)}</span><span>${label}</span></button>`; }).join('')}</div>
+        </div>`).join('')}
+      </div>`);
+    let pick = null;
+    $root.on('click', '.na_launch_btn', function () {
+        pick = fns[this.dataset.id];
+        $root.closest('dialog').find('.popup-button-ok').trigger('click');
+    });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: false, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    if (pick) setTimeout(() => pick(), 0);
 }
