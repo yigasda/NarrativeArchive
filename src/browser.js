@@ -31,11 +31,11 @@ export function mountSectionBrowser($host) {
             <button type="button" data-v="list" title="카드 목록" aria-label="카드 목록">${svgA(ICO_A.list, 16)}</button>
             <button type="button" data-v="tl" title="타임라인으로 보기" aria-label="타임라인">${svgA(ICO_A.tl, 16)}</button>
           </div>
+          <button type="button" class="na_tlb_sq na_tlb_list" title="목록으로 보기" aria-label="목록으로 보기">${svgA(ICO_A.list, 18)}</button>
           <button type="button" class="na_tlb_sq na_tlb_raw" title="원문 편집" aria-label="원문 편집"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>
           <button type="button" class="na_tlb_sq na_tlb_more" title="더 보기" aria-label="더 보기"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
         </div>
         <div class="na_tlb_menu">
-          <button type="button" class="na_v2_pillbtn na_tlb_list">${svgA(ICO_A.list, 14)}목록으로 보기</button>
           <button type="button" class="na_v2_pillbtn na_rp_open" title="아카이브 전체에서 찾아 바꾸기">찾아 바꾸기</button>
           <span class="na_tlb_hc"></span>
         </div>
