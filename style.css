@@ -3582,3 +3582,16 @@ body.na_darkui .na_launch_tabs { background: #3A2F28; }
 .na_crop_zoom { display: flex; align-items: center; gap: 10px; width: min(100%, 280px); margin: 0; }
 .na_crop .na_crop_zoom span { flex: none; font-size: 0.78em !important; color: var(--na-dim); }
 .na_crop_range { flex: 1; accent-color: var(--na-accent); }
+
+/* section versions: each tab reads as text; "직접 고치기" swaps in the editor, "한국어로" shows it translated */
+.na_ly_tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.na_ly_tools .na_v2_pillbtn { gap: 5px; }
+.na_ly_tools .na_v2_pillbtn.on { border-color: var(--na-accent); color: var(--na-accent-ink, var(--na-accent)); background: var(--na-accent-soft); }
+.na_ly_tools .na_v2_pillbtn:disabled { opacity: 0.45; cursor: not-allowed; }
+.na_ly_tools .na_ly_trinfo { margin-left: auto; font-size: 0.76em; color: var(--na-dim); }
+.na_ly_view { box-sizing: border-box; max-height: 50vh; overflow-y: auto; padding: 10px 12px; border: 1px solid var(--na-line); border-radius: 12px; font-size: 0.9em; line-height: 1.6; }
+.na_ly_view[hidden] { display: none; }
+.na_ly_view p, .na_ly_view ul { margin: 0 0 6px; }
+.na_ly_view ul { padding-left: 1.1em; }
+.na_ly_empty { color: var(--na-dim); font-size: 0.92em; }
+.na_ly_pane textarea[hidden] { display: none !important; }
