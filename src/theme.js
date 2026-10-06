@@ -10,7 +10,7 @@ export function darkUI() {
     return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55;
 }
 
-// body.na_darkui on dark themes: light themes get the mockup's own colors (style.css), dark themes the theme's
+// body.na_darkui on dark themes: light themes get the mockup's cream palette (style.css), dark themes its warm dark twin
 export let themeTimer = null;
 export function watchTheme() {
     const sync = () => document.body.classList.toggle('na_darkui', darkUI());
