@@ -2541,6 +2541,10 @@ body:not(.na_darkui) .na_ex2_card .na_cp_bar .raw { background: #B8541F; }
 .na_ex2_preview { height: 96px; max-height: none; box-sizing: border-box; padding: 10px 12px; border-radius: 16px; font-size: 0.821em; line-height: 1.6; color: var(--na-mute, var(--na-dim)); }
 body:not(.na_darkui) .na_ex2_preview { background: #FFFCF9; }
 .na_ex2_btns .na_v2_btn { padding: 12px 0; border-radius: 14px; font-size: 0.964em; line-height: 1.5; }
+/* settings: the group icons, and boxes toned toward the theme instead of paper white */
+.na_cfg_label i { margin-right: 4px; opacity: 0.8; }
+body:not(.na_darkui) .na_cfg_box, body:not(.na_darkui) .na_cfg_back, body:not(.na_darkui) .na_cfg_pill { background: #F7EEE7; border-color: #E6D6CA; }
+body:not(.na_darkui) .na_tab_pane[data-pane="config"] .na_cfg_box .na_cfg_sub, body:not(.na_darkui) .na_cfg_box .na_router_opts { background: #F2E7DF; }
 /* --- end audit A --- */
 
 /* --- audit B: append, health, drift, quotes, voice --- */
