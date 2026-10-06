@@ -1,6 +1,6 @@
 // AI connections: the AI model, the draft model and the translation model (profile, custom OpenAI-compatible API, Vertex).
 
-import { ctx, globalSettings } from './core.js';
+import { ctx, globalSettings, saveGlobal } from './core.js';
 import { mdInline } from './reader.js';
 import { esc } from './util.js';
 
@@ -21,8 +21,9 @@ export function connSettings(which) {
 }
 export const trSettings = () => connSettings('tr');
 
-export async function callConn(t, system, prompt, maxTokens) {
-    return stripThink(t.mode === 'vertex' ? await callVertex(t, system, prompt, maxTokens) : await callOpenAICompat(t, system, prompt, maxTokens));
+// effort: 'low' | 'medium' | 'high' — how hard a thinking model may think (sent as reasoning_effort; custom API only)
+export async function callConn(t, system, prompt, maxTokens, effort = '') {
+    return stripThink(t.mode === 'vertex' ? await callVertex(t, system, prompt, maxTokens) : await callOpenAICompat(t, system, prompt, maxTokens, effort));
 }
 
 // accepts ".../v1" or a full ".../chat/completions"
@@ -57,17 +58,27 @@ export async function listModels({ url, key }) {
     return ids;
 }
 
-export async function callOpenAICompat({ url, key, model }, system, prompt, maxTokens) {
+export async function callOpenAICompat(t, system, prompt, maxTokens, effort = '') {
+    const { url, key, model } = t;
     const endpoint = chatCompletionsUrl(url);
     if (!endpoint || !model) throw new Error('커스텀 API의 URL과 모델 이름을 넣어 주세요 (⚙ 설정 → AI · 번역)');
     const headers = { 'Content-Type': 'application/json' };
     if (key) headers.Authorization = `Bearer ${key}`;
     let r;
     try {
-        r = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify({
+        const send = withEffort => fetch(endpoint, { method: 'POST', headers, body: JSON.stringify({
             model, max_tokens: maxTokens, temperature: 0.3, stream: false,
+            ...(withEffort ? { reasoning_effort: effort } : {}),
             messages: [...(system ? [{ role: 'system', content: system }] : []), { role: 'user', content: prompt }],
         }) });
+        // thinking models (Opus 5.5 can't switch thinking off) spend the answer limit thinking; a lower effort keeps short jobs short.
+        // An API that doesn't take reasoning_effort (or this temperature with it) gets the plain request, and is remembered
+        const tryEffort = !!effort && !t.noEffort;
+        r = await send(tryEffort);
+        if (tryEffort && r.status === 400) {
+            const msg = await r.clone().text();
+            if (/reasoning|effort|temperature|unknown|unrecognized|not supported|extra/i.test(msg)) { t.noEffort = true; saveGlobal(); r = await send(false); }
+        }
     } catch (e) {
         throw new Error(`주소에 연결하지 못했어요. 브라우저에서 바로 부를 수 없는(CORS) API일 수 있어요. (${e.message || e})`);
     }
@@ -152,10 +163,10 @@ export async function callVertex({ vxJson, vxLocation, vxModel }, system, prompt
 // the draft model writes text that may go into the archive (compression drafts); 'same' = not set
 export const draftSettings = () => connSettings('dr');
 export const draftReady = () => ['custom', 'vertex'].includes(draftSettings().mode);
-export async function askDraft(prompt, { system = '', maxTokens = 0 } = {}) {
+export async function askDraft(prompt, { system = '', maxTokens = 0, effort = '' } = {}) {
     const t = draftSettings();
     if (!draftReady()) throw new Error('초안 모델이 없어요. ⚙ 설정 → AI · 번역 → 초안 모델에서 정해 주세요.');
-    const out = await callConn(t, system, prompt, Math.max(256, Number(maxTokens) || Number(t.max) || 16000));
+    const out = await callConn(t, system, prompt, Math.max(256, Number(maxTokens) || Number(t.max) || 16000), effort);
     if (!out) throw new Error('초안 모델이 빈 답을 돌려줬어요');
     return out;
 }
