@@ -35,7 +35,7 @@ export async function refreshStatus() {
     const afterTok = await countTokens(extractToText(after));
     const total = archiveTok + afterTok;
 
-    $('#na_meter_total').html(`${fmt(total)}<small> 토큰 주입</small>`);
+    $('#na_meter_total').html(`${fmt(total)}<small>토큰 주입</small>`);
     let state = '';
     if (!m.enabled) state = '<span class="na_chip na_chip_off">주입 꺼짐</span>';
     else if (m.backupEvery > 0 && m.sinceBackup >= m.backupEvery) state = '<span class="na_chip na_chip_warn">백업할 때예요</span>';
