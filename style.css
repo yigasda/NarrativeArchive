@@ -1188,7 +1188,7 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_people_add { display: flex; gap: 6px; }
 .na_people_add input { flex: 1; min-width: 0; margin: 0; }
 .na_pb_card { border-radius: 22px; overflow: hidden; background: var(--na-card); border: 1px solid var(--na-line); }
-.na_pb_cover { height: 64px; background: hsl(var(--h) 38% 40%); }
+.na_pb_cover { position: relative; height: 64px; background: var(--cover, hsl(var(--h) 38% 40%)); }
 .na_pb_id { display: flex; flex-direction: column; align-items: center; gap: 3px; margin-top: -46px; padding: 0 14px 14px; text-align: center; }
 .na_face_btn { position: relative; border: 0; padding: 0; background: none; cursor: pointer; border-radius: 50%; }
 .na_pb_id .na_face { box-shadow: 0 0 0 4px var(--SmartThemeBlurTintColor, #fff); }
@@ -3058,7 +3058,7 @@ body:not(.na_darkui) .na_people .na_pb_addbtn { border-color: #CDBBAE; }
 body.na_darkui .na_people .na_pb_addbtn { border-color: #7A6A5E; }
 /* 도감: profile card */
 .na_people .na_pb_card { border-radius: 24px; }
-.na_people .na_pb_cover { height: 76px; background: hsl(var(--h) 36% 36%); }
+.na_people .na_pb_cover { height: 76px; background: var(--cover, hsl(var(--h) 36% 36%)); }
 .na_people .na_pb_id { gap: 4px; margin-top: -48px; padding: 0 16px 16px; }
 .na_people .na_pb_id .na_face { font-size: 38px; box-shadow: 0 0 0 4px var(--na-paper, var(--SmartThemeBlurTintColor, #fff)); margin: 4px; }
 .na_face_cam { position: absolute; right: 0; bottom: 4px; box-sizing: border-box; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: var(--na-fill, var(--SmartThemeBodyColor, #222)); color: var(--SmartThemeBlurTintColor, #fff); border: 2px solid var(--na-paper, var(--SmartThemeBlurTintColor, #fff)); }
@@ -3318,4 +3318,24 @@ body:not(.na_darkui) .na_popup :where(.text_pole) { background: #F2E9E2; border:
 .na_theme_opt:has(input:checked) .na_theme_sw { box-shadow: 0 0 0 2px var(--na-card2), 0 0 0 4px var(--na-accent); }
 .na_theme_opt:has(input:checked) .na_theme_txt b { color: var(--na-accent-ink, var(--na-accent)); }
 .na_theme_opt:has(input:focus-visible) { outline: 2px solid var(--na-accent); outline-offset: 2px; }
+
+/* 도감: cover colour picker and the editable one-line quote */
+.na_pb_coverbtn { position: absolute; top: 10px; right: 10px; z-index: 1; width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.22); color: #fff; cursor: pointer; }
+.na_pb_coverbtn:hover, .na_pb_coverbtn.on { background: rgba(0, 0, 0, 0.4); }
+.na_pb_covers { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin: 8px 0 4px; }
+.na_pb_sw { position: relative; flex: none; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15); cursor: pointer; }
+.na_pb_sw.on { box-shadow: 0 0 0 2px var(--na-card), 0 0 0 4px var(--na-accent); }
+.na_pb_swpick { background: radial-gradient(circle, var(--c) 0 38%, transparent 41%), conic-gradient(#d9534f, #e8a33d, #d8c84a, #5ea35a, #4a8bc4, #7a5ab8, #d9534f); }
+.na_pb_swpick input { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; opacity: 0; cursor: pointer; }
+button.na_pb_quote { max-width: 100%; padding: 2px 8px; border: 0; border-radius: 8px; background: none; font: inherit; color: var(--na-dim); cursor: pointer; }
+.na_people button.na_pb_quote { font-size: 0.893em; }
+button.na_pb_quote:hover { background: var(--na-card2); }
+.na_pb_quote_add { font-size: 0.82em; }
+.na_pb_lineedit { align-self: stretch; display: flex; flex-direction: column; gap: 6px; margin: 4px 0 2px; text-align: left; }
+.na_pb_lineedit small { color: var(--na-dim); font-size: 0.8em; }
+.na_pb_lineedit .text_pole { margin: 0; }
+.na_pb_linepick { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow: auto; }
+.na_pb_linepick button { padding: 7px 10px; border: 1px solid var(--na-line); border-radius: 10px; background: var(--na-card2); font: inherit; font-size: 0.88em; color: inherit; text-align: left; cursor: pointer; }
+.na_pb_linepick button.on { border-color: var(--na-accent); color: var(--na-accent-ink, var(--na-accent)); }
+.na_pb_linebtns { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 
