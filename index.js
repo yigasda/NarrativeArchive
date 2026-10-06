@@ -5882,7 +5882,7 @@ async function openPeople() {
         const strip = `
           <div class="na_pb_strip">
             ${names.map(n => `<button type="button" class="na_pb_pick ${n === sel ? 'on' : ''}" data-n="${esc(n)}">${faceHtml(n, 52)}<span>${esc(n)}</span></button>`).join('')}
-            <button type="button" class="na_pb_addbtn" aria-label="인물 넣기" title="인물 넣기"><i class="fa-solid fa-plus"></i></button>
+            <button type="button" class="na_pb_addbtn" aria-label="인물 넣기" title="인물 넣기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           </div>
           <div class="na_people_add" ${adding ? '' : 'hidden'}><input type="text" class="text_pole na_people_name" placeholder="인물 이름 (예: Nephthys)" enterkeyhint="done"><button type="button" class="na_btn na_small na_people_addbtn">추가</button></div>`;
         if (!sel) return `${strip}<div class="na_empty">STATE에 "## 이름" 인물이 없어요. + 로 인물을 넣어 주세요.</div>`;
@@ -5907,7 +5907,7 @@ async function openPeople() {
           <div class="na_pb_card" data-n="${esc(sel)}">
             <div class="na_pb_cover" style="--h:${hue(sel)}"></div>
             <div class="na_pb_id">
-              <button type="button" class="na_face_btn" aria-label="얼굴 바꾸기" title="그림 올리기">${faceHtml(sel, 88)}<i class="fa-solid fa-camera"></i></button>
+              <button type="button" class="na_face_btn" aria-label="얼굴 바꾸기" title="그림 올리기">${faceHtml(sel, 96)}<span class="na_face_cam"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></button>
               <b class="na_pb_name">${esc(sel)}</b>
               ${p.quotes.length ? `<span class="na_pb_quote">“${esc(p.quotes[0].text)}”</span>` : ''}
               <span class="na_pb_faceacts">
@@ -5953,18 +5953,20 @@ async function openPeople() {
           <div class="na_ego">
             <svg viewBox="0 0 100 100" aria-hidden="true">
               <circle class="ring warm" cx="50" cy="50" r="20"/><circle class="ring" cx="50" cy="50" r="34"/><circle class="ring cold" cx="50" cy="50" r="48"/>
-              ${placed.map(r => `<line class="${r.t === null ? 'mid' : tempCls(r.t)} ${r.n === other ? 'on' : ''}" x1="50" y1="50" x2="${r.x.toFixed(1)}" y2="${r.y.toFixed(1)}" style="stroke-width:${(0.3 + 0.9 * r.k / max).toFixed(2)}"/>`).join('')}
+              ${placed.map(r => `<line class="${r.t === null ? 'mid' : tempCls(r.t)}${r.t !== null && Math.abs(r.t) >= 3 ? ' hot' : ''} ${r.n === other ? 'on' : ''}" x1="50" y1="50" x2="${r.x.toFixed(1)}" y2="${r.y.toFixed(1)}"/>`).join('')}
             </svg>
-            <span class="na_ego_lbl warm" style="top:${50 - 20 - 4}%">따뜻</span><span class="na_ego_lbl" style="top:${50 - 34 - 4}%">보통</span><span class="na_ego_lbl cold" style="top:${50 - 48 - 3}%">차가움</span>
-            <span class="na_ego_me" style="left:50%;top:50%">${faceHtml(center, 68)}</span>
+            <span class="na_ego_lbl warm" style="top:${50 - 20}%">따뜻</span><span class="na_ego_lbl" style="top:${50 - 34}%">보통</span><span class="na_ego_lbl cold" style="top:${50 - 48}%">차가움</span>
+            <span class="na_ego_me" style="left:50%;top:50%">${faceHtml(center, 72)}</span>
             ${placed.map(r => `<button type="button" class="na_ego_node ${r.n === other ? 'on' : ''}" data-n="${esc(r.n)}" style="left:${r.x.toFixed(1)}%;top:${r.y.toFixed(1)}%">${faceHtml(r.n, r.size)}<span>${esc(r.n)}${r.t !== null ? ` <b class="${tempCls(r.t)}">${tempSign(r.t)}</b>` : ''}</span></button>`).join('')}
           </div>
           ${away.length ? `<small class="na_v2_note">같이 나온 적 없음: ${away.map(esc).join(', ')}</small>` : ''}
-          <div class="na_v2_label">가운데 사람 바꾸기</div>
-          <div class="na_v2_chips">${names.map(n => `<button type="button" class="na_ego_center ${n === center ? 'on' : ''}" data-n="${esc(n)}">${esc(n)}</button>`).join('')}</div>
+          <div class="na_ego_pick">
+            <span class="na_ego_picklbl">가운데 사람 바꾸기</span>
+            <div class="na_v2_chips">${names.map(n => `<button type="button" class="na_ego_center ${n === center ? 'on' : ''}" data-n="${esc(n)}">${esc(n)}</button>`).join('')}</div>
+          </div>
           ${o ? `
           <div class="na_v2_card na_ego_detail">
-            <div class="na_pb_relhead">${faceHtml(o.n, 32)}<b>${esc(o.n)}</b><small>함께 ${o.k}섹션</small>${o.t !== null ? `<span class="na_temp_pill ${tempCls(o.t)}">${tempSign(o.t)}</span>` : ''}</div>
+            <div class="na_pb_relhead">${faceHtml(o.n, 32)}<b>${esc(o.n)}</b><small>함께 ${o.k}섹션</small></div>
             ${o.q.lines.length ? `<ul>${o.q.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : '<small class="na_v2_note">STATE에 둘만 나오는 관계 줄이 없어요.</small>'}
             ${o.q.many.length ? `<details class="na_v2_more"><summary>다른 인물과 같이 나오는 줄 ${o.q.many.length}</summary><ul>${o.q.many.map(l => `<li>${esc(l)}</li>`).join('')}</ul></details>` : ''}
             <div class="na_v2_row2">
@@ -5987,7 +5989,7 @@ async function openPeople() {
           <label class="na_tp_pick">
             <span class="na_tp_faces">${faceHtml(pair.a, 38)}${faceHtml(pair.b, 38)}</span>
             <span class="na_tp_pickname"><b>${esc(pair.a)} · ${esc(pair.b)}</b><small>함께 나온 섹션 ${pts.length}개</small></span>
-            <i class="fa-solid fa-chevron-down"></i>
+            <svg class="na_tp_chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
             <select class="na_temp_sel" aria-label="짝 고르기">${pairs.map(p => `<option value="${esc(data.pairKey(p.a, p.b))}" ${p === pair ? 'selected' : ''}>${esc(p.a)} · ${esc(p.b)} (${p.secs.length})</option>`).join('')}</select>
           </label>`;
         const runBtns = `
@@ -6014,8 +6016,8 @@ async function openPeople() {
         return `${picker}
           <div class="na_v2_card na_tp_card">
             <div class="na_tp_head">
-              <span class="na_tp_icon ${tempCls(now)}"><i class="fa-solid fa-temperature-${now >= 3 ? 'three-quarters' : now > 0 ? 'half' : now === 0 ? 'quarter' : 'empty'}"></i></span>
-              <span class="na_tp_now"><small>지금 온도 · ${esc(short(scored[scored.length - 1].s))}</small><span class="${tempCls(now)}"><b>${tempSign(now)}</b>${tempWord(now)}</span></span>
+              <span class="na_tp_icon ${tempCls(now)}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/><path d="M12 ${now >= 3 ? 9 : now > 0 ? 11 : now === 0 ? 13 : 15}v${now >= 3 ? 7 : now > 0 ? 5 : now === 0 ? 3 : 1}"/></svg></span>
+              <span class="na_tp_now" title="지금 온도 · ${esc(short(scored[scored.length - 1].s))}"><small>지금 온도</small><span class="${tempCls(now)}"><b>${tempSign(now)}</b>${tempWord(now)}</span></span>
               <span class="na_tp_stats">
                 <span><small>평균</small><b>${avg > 0 ? '+' : avg < 0 ? '−' : ''}${Math.abs(avg)}</b></span>
                 <span><small>최고</small><b class="warm">${tempSign(hi.t.s)}</b></span>
@@ -6043,7 +6045,7 @@ async function openPeople() {
     const draw = () => {
         data = peopleData(m);
         $root.find('.na_people_tabs button').each(function () { $(this).toggleClass('on', this.dataset.v === view).attr('aria-selected', this.dataset.v === view); });
-        $root.find('.na_people_body').html(view === 'book' ? book() : view === 'map' ? map() : temp());
+        $root.find('.na_people_body').attr('data-view', view).html(view === 'book' ? book() : view === 'map' ? map() : temp());
     };
     const go = st => { $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); };
     $root.on('click', '.na_people_tabs button', function () { view = this.dataset.v; draw(); });
@@ -6120,7 +6122,7 @@ const XRAY_CATS = {
     wi: { name: '월드인포', color: '#7b5bc4' },
     card: { name: '캐릭터 카드', color: '#3d6fb6' },
     ext: { name: '다른 확장', color: '#c99a1e' },
-    other: { name: '그 외 (시스템 프롬프트 등)', color: '#c9bcb1' },
+    other: { name: '그 외 (시스템 프롬프트 등)', color: '#d8ccc2' },
     persona: { name: '페르소나', color: '#2e9a7a' },
 };
 
@@ -6192,8 +6194,8 @@ function xrayAnalyze(x) {
         return null;
     };
     if (x.archive) place({ cat: 'archive', label: '서사 아카이브', text: x.archive });
-    for (const p of x.ext) place({ cat: 'ext', label: `확장: ${p.label}`, text: p.text });
-    for (const p of x.wi) place({ cat: 'wi', label: `월드인포: ${p.label}`, text: p.text });
+    for (const p of x.ext) place({ cat: 'ext', label: `확장 · ${p.label}`, text: p.text });
+    for (const p of x.wi) place({ cat: 'wi', label: `월드인포 · ${p.label}`, text: p.text });
     for (const p of x.cards) place({ cat: 'card', label: p.label, text: p.text });
     if (x.persona) place({ cat: 'persona', label: '페르소나', text: x.persona });
     // chat messages keep their order, so each search starts after the previous hit
@@ -6310,18 +6312,17 @@ async function openXray() {
         </div>
       </div>
       ${dupChats.length ? `
-      <div class="na_xr_warn">
-        <i class="fa-solid fa-triangle-exclamation"></i>
+      <div class="na_xr_warn na_xr_dupwarn">
+        <svg class="na_xr_warnico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
         <div>
-          <b>압축한 대화 ${dupChats.length}개가 원문으로도 들어갔어요</b>
-          <span>#${Math.min(...dupChats)}–#${Math.max(...dupChats)} · 약 ${fmt(tok.dup)} 토큰이 아카이브와 겹쳐요</span>
-          <button type="button" class="na_v2_btn danger na_xray_hide"><i class="fa-solid fa-eye-slash"></i> 경계선까지 숨기기</button>
+          <span class="na_xr_warntxt"><b>압축한 대화 ${dupChats.length}개가 원문으로도 들어갔어요</b><br><span>#${Math.min(...dupChats)}–#${Math.max(...dupChats)} · 약 ${fmt(tok.dup)} 토큰이 아카이브와 겹쳐요</span></span>
+          <button type="button" class="na_v2_btn danger na_xray_hide"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.9 17.9A10 10 0 0 1 12 20c-7 0-10-8-10-8a18 18 0 0 1 5.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 10 8 10 8a18 18 0 0 1-2.2 3.2M1 1l22 22"/></svg> 경계선까지 숨기기</button>
         </div>
       </div>` : ''}
       <div class="na_v2_label">겹치는 문장 <small>${dups.length ? `${dups.length}묶음 · ${fmt(dups.reduce((a, d) => a + d.chars, 0))}자` : '없음'}</small></div>
       ${dups.length ? dups.slice(0, 12).map(d => `
         <div class="na_v2_card na_xr_dup">
-          <div class="na_xr_places">${d.places.map(p => `<span class="na_xr_place ${/^월드인포/.test(p) ? 'wi' : /^서사 아카이브/.test(p) ? 'arc' : ''}">${esc(p)}</span>`).join('<i class="fa-solid fa-arrows-left-right"></i>')}</div>
+          <div class="na_xr_places">${d.places.map(p => `<span class="na_xr_place ${/^월드인포/.test(p) ? 'wi' : /^서사 아카이브/.test(p) ? 'arc' : ''}">${esc(p)}</span>`).join('<svg class="na_xr_sep" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h13l-4-4M17 17H4l4 4"/></svg>')}</div>
           ${d.items.slice(0, 2).map(t => `<q>${esc(t.length > 220 ? t.slice(0, 220) + '…' : t)}</q>`).join('')}
           ${d.items.length > 2 ? `<details class="na_v2_more"><summary>${d.items.length - 2}문장 더</summary>${d.items.slice(2, 12).map(t => `<q>${esc(t.length > 220 ? t.slice(0, 220) + '…' : t)}</q>`).join('')}</details>` : ''}
         </div>`).join('') : '<small class="na_v2_note">두 군데 이상 들어간 문장이 없어요.</small>'}`);
