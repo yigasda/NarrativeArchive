@@ -40,20 +40,36 @@ export function anthropicBase(raw) {
     const u = String(raw || '').trim().replace(/\/+$/, '').replace(/\/messages$/, '').replace(/\/v1$/, '');
     return u || 'https://api.anthropic.com';
 }
-function anthropicHeaders(t) {
-    const h = { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' };
+const isAnthropicHost = t => { try { return /(^|\.)anthropic\.com$/i.test(new URL(anthropicBase(t.url)).hostname); } catch { return false; } };
+
+// Anthropic itself needs x-api-key and the browser-access header. A relay (new-api / one-api style) usually takes the key
+// as a bearer token too; 'lean' drops the extra headers for a relay whose CORS check only lets the common ones through
+function anthropicHeaders(t, lean = false) {
+    const h = { 'Content-Type': 'application/json' };
+    if (isAnthropicHost(t)) h['anthropic-dangerous-direct-browser-access'] = 'true';
+    if (!lean) h['anthropic-version'] = '2023-06-01';
     if (t.key) {
-        h['x-api-key'] = t.key;
-        // a relay in front of the API may want the key as a bearer token; Anthropic itself takes x-api-key only
-        if (!/(^|\.)anthropic\.com$/i.test(new URL(anthropicBase(t.url)).hostname)) h.Authorization = `Bearer ${t.key}`;
+        if (!lean || isAnthropicHost(t)) h['x-api-key'] = t.key;
+        if (!isAnthropicHost(t)) h.Authorization = `Bearer ${t.key}`;
     }
     return h;
+}
+
+// a fetch that a relay's CORS check refused is tried once more with the lean headers, and that is remembered
+async function anthropicFetch(t, url, init = {}) {
+    if (!t.leanHeaders) {
+        try { return await fetch(url, { ...init, headers: anthropicHeaders(t) }); }
+        catch (e) { if (isAnthropicHost(t)) throw e; }
+    }
+    const r = await fetch(url, { ...init, headers: anthropicHeaders(t, true) });
+    if (!t.leanHeaders) { t.leanHeaders = true; saveGlobal(); }
+    return r;
 }
 
 export async function callAnthropic(t, system, prompt, maxTokens, effort = '') {
     if (!t.model) throw new Error('모델 이름을 넣어 주세요 (⚙ 설정 → AI · 번역)');
     const endpoint = `${anthropicBase(t.url)}/v1/messages`;
-    const send = withEffort => fetch(endpoint, { method: 'POST', headers: anthropicHeaders(t), body: JSON.stringify({
+    const send = withEffort => anthropicFetch(t, endpoint, { method: 'POST', body: JSON.stringify({
         model: t.model, max_tokens: maxTokens,
         ...(system ? { system } : {}),
         messages: [{ role: 'user', content: prompt }],
@@ -66,12 +82,13 @@ export async function callAnthropic(t, system, prompt, maxTokens, effort = '') {
         // an older model without effort gets the plain request, and is remembered
         if (tryEffort && r.status === 400 && /effort|output_config/i.test(await r.clone().text())) { t.noEffort = true; saveGlobal(); r = await send(false); }
     } catch (e) {
-        throw new Error(`주소에 연결하지 못했어요. 주소가 맞는지 확인해 주세요. (${e.message || e})`);
+        throw new Error(`주소에 연결하지 못했어요. 주소가 맞는지, 이 주소가 Anthropic 형식(/v1/messages)을 받는지 확인해 주세요. (${e.message || e})`);
     }
     const body = await r.text();
     if (r.status === 401 || r.status === 403) throw new Error(`키가 맞지 않거나 권한이 없어요 (${r.status})`);
+    if (r.status === 404 || r.status === 405) throw new Error(`이 주소는 Anthropic 형식(/v1/messages)을 안 받는 것 같아요 (${r.status}). 형식을 OpenAI 호환으로 바꿔 주세요.`);
     if (!r.ok) throw new Error(`API 오류 ${r.status}: ${body.slice(0, 200)}`);
-    let j; try { j = JSON.parse(body); } catch { throw new Error('API 답을 읽지 못했어요'); }
+    let j; try { j = JSON.parse(body); } catch { throw new Error('API 답을 읽지 못했어요 — 이 주소가 Anthropic 형식을 받는지 확인해 주세요'); }
     const out = (Array.isArray(j?.content) ? j.content : []).filter(b => b?.type === 'text').map(b => b.text || '').join('');
     if (j?.stop_reason === 'refusal') throw new Error('모델이 이 요청을 거절했어요 (refusal)');
     if (!out.trim() && j?.stop_reason === 'max_tokens') throw new Error(`답 길이 한도(${maxTokens} 토큰)를 생각하는 데 다 써서 빈 답이 왔어요 — 생각 강도를 낮추거나 최대 길이를 늘려 주세요`);
@@ -97,7 +114,7 @@ export async function listModels(t) {
     const { url, key } = t;
     if (apiFormat(t) === 'anthropic') {
         let r;
-        try { r = await fetch(`${anthropicBase(url)}/v1/models?limit=100`, { headers: anthropicHeaders(t) }); }
+        try { r = await anthropicFetch(t, `${anthropicBase(url)}/v1/models?limit=100`); }
         catch (e) { throw new Error(`주소에 연결하지 못했어요. (${e.message || e})`); }
         const body = await r.text();
         if (r.status === 401 || r.status === 403) throw new Error(`키가 맞지 않거나 권한이 없어요 (${r.status})`);
