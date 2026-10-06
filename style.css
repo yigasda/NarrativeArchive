@@ -3396,3 +3396,11 @@ body.na_darkui #na_settings #na_meter .na_seg_arc, body.na_darkui #na_settings #
 body.na_darkui #na_settings #na_meter .na_seg_raw:not(.na_over), body.na_darkui #na_settings #na_meter .na_dot_raw { background: #6E5D51; }
 body.na_darkui #na_settings #na_meter .na_hchip:not(.na_health_warn) { background: transparent; border-color: #54463D; color: #CABBAE; }
 body.na_darkui #na_settings #na_meter #na_gear { color: #B3A396; }
+
+/* tab bar under the meter: the same family as the meter card (light: beige track, cream active tab; dark: dark track, brown active tab) */
+body:not(.na_darkui) #na_settings .na_body > .na_nav { background: #EBDDD2; }
+body:not(.na_darkui) #na_settings .na_body > .na_nav .na_nav_btn { color: #6B5A50; opacity: 1; }
+body:not(.na_darkui) #na_settings .na_body > .na_nav .na_nav_btn.active { background: #F7EEE7; color: #A84A17; box-shadow: 0 1px 3px rgba(120, 60, 20, 0.12); }
+body.na_darkui #na_settings .na_body > .na_nav { background: #2E2621; }
+body.na_darkui #na_settings .na_body > .na_nav .na_nav_btn { color: #CABBAE; opacity: 1; }
+body.na_darkui #na_settings .na_body > .na_nav .na_nav_btn.active { background: #46392F; color: #EE9A66; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
