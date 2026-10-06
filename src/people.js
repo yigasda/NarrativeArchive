@@ -77,11 +77,13 @@ document.addEventListener('error', e => {
     img.replaceWith(img.parentElement.title.trim()[0] || '?');
 }, true);
 
-export async function shrinkFace(file) {
+// crop: { sx, sy, ss } — the square to keep, in the picture's own pixels (from cropFace); none = a centred square
+export async function shrinkFace(file, crop = null) {
     const bmp = await createImageBitmap(file);
     const s = Math.min(bmp.width, bmp.height);
     // portraits keep the face in the upper part, so a tall picture is cropped nearer the top
     let src = bmp, sx = (bmp.width - s) / 2, sy = (bmp.height - s) * 0.25, ss = s;
+    if (crop) ({ sx, sy, ss } = crop);
     // a big photo is halved step by step first: one big jump to 288px drops detail and looks smeared
     while (ss > FACE_PX * 2) {
         const half = Math.round(ss / 2);
@@ -100,6 +102,58 @@ export async function shrinkFace(file) {
     bmp.close?.();
     const webp = cv.toDataURL('image/webp', 0.9);
     return webp.startsWith('data:image/webp') ? webp : cv.toDataURL('image/jpeg', 0.9);
+}
+
+// choose the square of a picture to use as a face: drag to move, slider / pinch / wheel to zoom, a round frame shows the result.
+// Resolves to { sx, sy, ss } in the picture's pixels, or null if cancelled.
+export async function cropFace(file) {
+    const c = ctx();
+    const bmp = await createImageBitmap(file);
+    const W = bmp.width, H = bmp.height;
+    bmp.close?.();
+    const url = URL.createObjectURL(file);
+    const V = 280; // the frame on screen
+    const min = V / Math.min(W, H);
+    let scale = min, tx = (V - W * scale) / 2, ty = (V - H * scale) * 0.25;
+    const $root = $(`
+      <div class="na_popup na_v2 na_crop">
+        <div class="na_v2_title"><b>얼굴 자리 고르기</b><small>끌어서 옮기고, 아래 막대나 두 손가락으로 크기를 바꿔요</small></div>
+        <div class="na_crop_stage" style="--v:${V}px"><img class="na_crop_img" src="${url}" alt="" draggable="false"><div class="na_crop_ring"></div></div>
+        <label class="na_crop_zoom"><span>작게</span><input type="range" class="na_crop_range" min="1" max="5" step="0.01" value="1" aria-label="크기"><span>크게</span></label>
+      </div>`);
+    const $img = $root.find('.na_crop_img'), $range = $root.find('.na_crop_range'), stage = $root.find('.na_crop_stage')[0];
+    const clamp = () => { tx = Math.min(0, Math.max(V - W * scale, tx)); ty = Math.min(0, Math.max(V - H * scale, ty)); };
+    const draw = () => { clamp(); $img.css({ width: `${W * scale}px`, height: `${H * scale}px`, transform: `translate(${tx}px, ${ty}px)` }); $range.val(scale / min); };
+    // zoom keeping the point (px, py) of the frame still
+    const zoomTo = (next, px = V / 2, py = V / 2) => {
+        next = Math.min(min * 5, Math.max(min, next));
+        tx = px - (px - tx) * next / scale; ty = py - (py - ty) * next / scale; scale = next; draw();
+    };
+    $range.on('input', function () { zoomTo(min * Number(this.value)); });
+    stage.addEventListener('wheel', e => { e.preventDefault(); const r = stage.getBoundingClientRect(); zoomTo(scale * (e.deltaY < 0 ? 1.08 : 1 / 1.08), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+    const pts = new Map();
+    let pinch = null;
+    stage.addEventListener('pointerdown', e => { stage.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); pinch = null; });
+    stage.addEventListener('pointermove', e => {
+        if (!pts.has(e.pointerId)) return;
+        const prev = pts.get(e.pointerId);
+        pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pts.size === 1) { tx += e.clientX - prev.x; ty += e.clientY - prev.y; draw(); return; }
+        const [a, b] = [...pts.values()];
+        const d = Math.hypot(a.x - b.x, a.y - b.y), r = stage.getBoundingClientRect();
+        const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
+        if (pinch) zoomTo(scale * d / pinch, mx, my);
+        pinch = d;
+    });
+    const up = e => { pts.delete(e.pointerId); pinch = null; };
+    stage.addEventListener('pointerup', up);
+    stage.addEventListener('pointercancel', up);
+    draw();
+    try {
+        const res = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { okButton: '이대로 쓰기', cancelButton: '취소', leftAlign: true });
+        if (res !== c.POPUP_RESULT.AFFIRMATIVE && res !== true) return null;
+        return { sx: -tx / scale, sy: -ty / scale, ss: V / scale };
+    } finally { URL.revokeObjectURL(url); }
 }
 
 // STATE blocks: "## Name" bullets for each person, and the bullets of the other STATE headings (Relationships, household…)
@@ -540,7 +594,11 @@ export async function openPeople() {
     $root.find('.na_face_file').on('change', async function () {
         const f = this.files?.[0];
         if (!f || !target) return;
-        try { g.faces[nameKey(target)] = await shrinkFace(f); await save(); }
+        try {
+            const crop = await cropFace(f);
+            if (!crop) return;
+            g.faces[nameKey(target)] = await shrinkFace(f, crop); await save();
+        }
         catch (e) { toastr.error(`그림을 못 읽었어요: ${e.message || e}`); }
     });
     $root.on('click', '.na_face_st', async () => { delete g.faces[nameKey(sel)]; await save(); });

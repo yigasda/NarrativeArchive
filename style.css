@@ -3571,3 +3571,14 @@ body.na_darkui .na_launch_tabs { background: #3A2F28; }
 .na_peek_foot .na_peek_go { margin-left: auto; color: var(--na-dim); }
 .na_peek_info { font-size: 0.76em; color: var(--na-dim); }
 .na_people :is(.na_tp_tile, .na_tp_turn, .na_tp_row).on { outline: 2px solid var(--na-accent); outline-offset: -2px; }
+
+/* face crop: a square frame, the picture moves and zooms under a round window */
+.na_crop { align-items: center; gap: 14px; }
+.na_crop .na_v2_title { align-self: stretch; }
+.na_crop_stage { position: relative; width: var(--v); height: var(--v); max-width: 100%; overflow: hidden; border-radius: 16px; background: #222; touch-action: none; cursor: grab; user-select: none; }
+.na_crop_stage:active { cursor: grabbing; }
+.na_crop_img { position: absolute; left: 0; top: 0; max-width: none !important; transform-origin: 0 0; pointer-events: none; }
+.na_crop_ring { position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.5); outline: 2px solid rgba(255, 255, 255, 0.85); outline-offset: -2px; pointer-events: none; }
+.na_crop_zoom { display: flex; align-items: center; gap: 10px; width: min(100%, 280px); margin: 0; }
+.na_crop .na_crop_zoom span { flex: none; font-size: 0.78em !important; color: var(--na-dim); }
+.na_crop_range { flex: 1; accent-color: var(--na-accent); }
