@@ -6735,26 +6735,33 @@ YOU GET
 - BROAD TERMS: words that appear almost everywhere. Never use them.
 - OTHER SECTIONS: titles of the rest of the archive. Prefer words that set THIS section apart from them.
 
-GOOD KEYWORDS
-The section's own subject: the topic, event, object, place, promise, wound or secret it records.
-Think: what words would a character actually say when this comes up again?
-    e.g. a section about a lost map → map, treasure, island
+STEPS
+1. List the 2–5 events or topics this section records: an event, object, place, promise, wound or secret. Most important first.
+2. For each topic, think: what words would a character actually say when this comes up again?
+3. Drop bad keywords:
+   - main cast names, and anything under BROAD TERMS
+   - everyday words that are in most scenes: bed, night, kiss, room, love, eat, hand, look
+   - very short English words that hide inside other words ("Set" also fires on "settle", "sunset")
+   - one-syllable Korean stems
+4. Shape them for matching. Matching is a plain, case-insensitive "contains" search over the raw chat text, which may be English or Korean.
+   - English: the shortest stem that is still specific. "map" also matches "maps"; "treasur" matches "treasure" and "treasury"; "betray" matches "betrayal" and "betrayed".
+   - Korean: the forms a Korean chat would really use, as stems without particles (지도, 보물, 배신), plus common synonyms.
+5. Give each topic a short Korean name and a short Korean reason.
 
-BAD KEYWORDS (never use)
-- main cast names, and anything under BROAD TERMS
-- everyday words that are in most scenes: bed, night, kiss, room, love, eat, hand, look
-- very short English words that hide inside other words ("Set" also fires on "settle", "sunset")
-- one-syllable Korean stems
+EXAMPLE
+SECTION TITLE: #12–#15 — The bridge (Spring 3, Varo)
+SECTION:
+- Ren and Mara cross the old bridge at dusk. A plank breaks; Ren cuts his leg and Mara pulls him up: "Now you owe me."
+- Ivo waits with the horses: the duke has closed the south road, so they go through Varo's market.
+BROAD TERMS: Ren, Mara, Ivo, night
+Answer:
+무너진 다리 | bridge, plank | 다리, 널빤지 | 다리에서 다친 사건
+진 빚 | owe, debt | 빚, 갚 | "Now you owe me" 약속
+막힌 남쪽 길 | south road, duke | 남쪽 길, 공작 | 길이 막혀 돌아간 이유
 
-HOW MATCHING WORKS
-A plain, case-insensitive "contains" search over the raw chat text, which may be English or Korean.
-- English: give the shortest stem that is still specific. "map" also matches "maps"; "treasur" matches "treasure" and "treasury"; "betray" matches "betrayal" and "betrayed".
-- Korean: give the forms a Korean chat would really use, as stems without particles (지도, 보물, 배신), plus common synonyms.
-
-OUTPUT: 2 to 5 lines, one per event or topic of the section, most important first, nothing else, exactly like this
-<topic name, in Korean, under 12 characters> | <english stem>, <english stem> | <korean form>, <korean form> | <why it fits, in Korean, under 25 characters>
-Example:
-잃어버린 보물 | treasur, map | 보물, 금화, 지도 | 잃어버린 보물이 이 섹션의 중심`;
+OUTPUT
+2 to 5 lines, one per topic, most important first, nothing else, exactly like this:
+<topic name, in Korean, under 12 characters> | <english stem>, <english stem> | <korean form>, <korean form> | <why it fits, in Korean, under 25 characters>`;
 
 const AI_SYS_CONFLICT = `GOAL
 Before NEW TEXT is added to the story archive, find places where it contradicts the EXISTING ARCHIVE.
