@@ -3277,8 +3277,10 @@ body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inlin
 body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header:hover { filter: none; background: #332A24; border-color: #332A24; }
 body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header .inline-drawer-icon { color: #8A7A70; }
 body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header .inline-drawer-icon { color: #B3A396; }
-/* open: the bar's lower corners meet the panel below */
-#na_settings > .inline-drawer:has(> .inline-drawer-content[style*="block"]) > .inline-drawer-toggle.inline-drawer-header { border-radius: 14px 14px 0 0; }
+/* open (SillyTavern flips the icon to .up): the bar sits flush on the panel, no 5px gap, square lower corners,
+   and the panel's top corners square too, so there are no notches at either end */
+#na_settings > .inline-drawer:has(> .inline-drawer-header .inline-drawer-icon.up) > .inline-drawer-toggle.inline-drawer-header { margin-bottom: 0; border-radius: 14px 14px 0 0; }
+#na_settings > .inline-drawer:has(> .inline-drawer-header .inline-drawer-icon.up) > .inline-drawer-content { margin-top: 0; border-radius: 0 0 14px 14px; }
 
 /* ============ dark themes: the light mockup palette, darkened. Every light-only rule above has a body.na_darkui twin
    right after it with the colours mapped (cream → warm dark brown, brown ink → cream, accents brighter).
