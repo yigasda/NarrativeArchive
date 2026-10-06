@@ -3496,8 +3496,6 @@ body.na_darkui dialog.popup:has(#na_settings) { background: #2A221D !important; 
 .na_launch .na_launch_btn:hover:not(:disabled) { border-color: var(--na-accent); }
 .na_launch .na_launch_btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .na_launch .na_launch_ic { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; background: var(--na-accent-soft); color: var(--na-accent); }
-.na_launch .na_launch_panel { flex: none; align-self: center; }
-.na_launch .na_launch_panel .na_svg { color: var(--na-accent); }
 .na_launch_tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 16px; background: var(--na-softer, var(--na-card2)); }
 .na_launch .na_launch_tab { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 7px 0 5px; border: 0; border-radius: 12px; background: none; color: var(--na-mute, inherit); font: inherit; font-size: 0.78em !important; line-height: 1.2; cursor: pointer; }
 .na_launch .na_launch_tab > span { font-size: 1em !important; }
