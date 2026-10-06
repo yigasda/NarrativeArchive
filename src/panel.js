@@ -1,6 +1,6 @@
 // The side panel: markup, event wiring (bindPanel) and refresh (syncPanel).
 
-import { aiLabel, aiProfiles, askAI, askDraft, connSettings, drLabel, draftReady, draftSettings, listModels, parseServiceAccount, trLabel, trSettings, vxTokens, withSpinner } from './ai.js';
+import { aiLabel, aiProfiles, apiFormat, askAI, askDraft, connSettings, drLabel, draftReady, draftSettings, listModels, parseServiceAccount, trLabel, trSettings, vxTokens, withSpinner } from './ai.js';
 import { openAppend } from './append.js';
 import { openAsk } from './ask.js';
 import { branchState, openBranches } from './branches.js';
@@ -376,9 +376,12 @@ export function connCfgHtml(p) {
                   <div class="na_cc_box">
                     <label class="na_cc_row"><span class="na_cc_lbl">주소</span><input type="text" class="text_pole" id="na_${p}_url" placeholder="https://api.example.com/v1" autocomplete="off" spellcheck="false" inputmode="url"></label>
                     <label class="na_cc_row"><span class="na_cc_lbl">API 키</span><input type="password" class="text_pole" id="na_${p}_key" placeholder="sk-…" autocomplete="off" spellcheck="false"><button type="button" class="na_cc_eye" aria-label="키 보기" title="키 보기">${svgA(ICO_A.eye, 17)}</button></label>
+                    <label class="na_cc_row"><span class="na_cc_lbl">형식</span><select class="text_pole na_cc_sel" id="na_${p}_fmt"><option value="">주소 보고 자동</option><option value="openai">OpenAI 호환 (chat/completions)</option><option value="anthropic">Anthropic (Claude Messages API)</option></select></label>
+                    <label class="na_cc_row"><span class="na_cc_lbl">생각</span><select class="text_pole na_cc_sel" id="na_${p}_effort"><option value="">작업마다 알아서</option><option value="low">낮게 (low) · 가장 싸요</option><option value="medium">보통 (medium)</option><option value="high">높게 (high)</option></select></label>
                     <div class="na_cc_row"><span class="na_cc_lbl">모델</span><input type="text" class="text_pole na_cc_model" id="na_${p}_model" placeholder="불러와서 고르거나 직접 입력" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="na_${p}_models"><button type="button" class="na_cc_load" id="na_${p}_load" title="주소와 키로 모델 목록 불러오기">${svgA(ICO_A.redo, 15)}<span>불러오기</span></button></div>
                   </div>
                   <div class="na_cc_models" id="na_${p}_models" role="listbox" hidden></div>
+                  <small class="na_cc_hint" id="na_${p}_cchint" hidden></small>
                 </div>
                 <div class="na_tr_cfg" id="na_${p}_vertex" hidden>
                   <textarea class="text_pole" id="na_${p}_vxjson" rows="4" placeholder="서비스 계정 JSON (키 파일 내용을 통째로 붙여넣기)" spellcheck="false"></textarea>
@@ -400,6 +403,14 @@ export function renderConn(p) {
     $(`#na_${p}_vertex`).prop('hidden', t.mode !== 'vertex');
     $(`#na_${p}_test_row`).prop('hidden', !own);
     $(`#na_${p}_url`).val(t.url); $(`#na_${p}_key`).val(t.key); $(`#na_${p}_model`).val(t.model);
+    $(`#na_${p}_fmt`).val(t.fmt || ''); $(`#na_${p}_effort`).val(t.effort || '');
+    $(`#na_${p}_url`).attr('placeholder', apiFormat(t) === 'anthropic' ? 'https://api.anthropic.com (비우면 이 주소)' : 'https://api.example.com/v1');
+    // Claude thinks on every request (Opus 5.5 can't turn it off); effort only sticks through its own API format
+    const claude = /claude|opus|sonnet|haiku/i.test(t.model || '');
+    const hint = claude && apiFormat(t) !== 'anthropic' ? 'Claude 모델이에요. OpenAI 호환 주소는 생각 강도를 무시할 수 있어요 — 형식을 Anthropic으로 두면 생각 강도가 확실히 적용돼요.'
+        : claude && !t.effort ? 'Claude는 생각을 끌 수 없어요(Opus 5.5). 생각 토큰도 출력 요금이라, 비용을 줄이려면 생각을 "낮게"로 두세요.'
+        : t.noEffort && t.effort ? '이 주소는 생각 강도를 받지 않아서 빼고 보내고 있어요.' : '';
+    $(`#na_${p}_cchint`).text(hint).prop('hidden', !hint);
     // a saved key is never shown again; the box only takes a replacement
     $(`#na_${p}_vxjson`).val('').attr('placeholder', t.vxJson.trim() ? '저장됨 · 바꾸려면 새 JSON을 붙여넣기' : '서비스 계정 JSON (키 파일 내용을 통째로 붙여넣기)');
     $(`#na_${p}_vxclear`).prop('hidden', !t.vxJson.trim());
@@ -598,7 +609,8 @@ export function bindPanel() {
     $('#na_dr_max').on('change', function () { const v = Math.max(1024, parseInt(this.value, 10) || 16000); draftSettings().max = v; this.value = v; saveGlobal(); });
     for (const p of ['ai', 'tr', 'dr']) {
         const field = (sel, key) => $(`#na_${p}_${sel}`).on('change', function () { connSettings(p)[key] = this.value.trim(); saveGlobal(); renderAiSettings(); });
-        field('key', 'key'); field('model', 'model'); field('vxloc', 'vxLocation'); field('vxmodel', 'vxModel');
+        field('key', 'key'); field('model', 'model'); field('vxloc', 'vxLocation'); field('vxmodel', 'vxModel'); field('effort', 'effort');
+        $(`#na_${p}_fmt`).on('change', function () { const t = connSettings(p); t.fmt = this.value; delete t.models; delete t.noEffort; saveGlobal(); renderAiSettings(); });
         // another address has other models: the loaded list goes with the old one
         $(`#na_${p}_url`).on('change', function () { const t = connSettings(p), v = this.value.trim(); if (v !== t.url) { delete t.models; delete t.noEffort; } t.url = v; saveGlobal(); renderAiSettings(); });
         $(`#na_${p}_custom .na_cc_eye`).on('click', function () {
