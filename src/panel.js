@@ -1221,8 +1221,8 @@ export async function openPanelPopup(tab = '') {
     }
 }
 
-// the wand menu's tool launcher: every tool in four small groups; "패널 열기" and the tab row at the bottom
-// open the extension panel itself (at that tab) in a popup. Whatever opens sits on top of the launcher.
+// the wand menu's tool launcher: "패널 열기" and a tab row at the top (they open the extension panel itself, at that
+// tab, in a popup), then every tool in four small groups. Whatever opens sits on top of the launcher.
 export async function openLauncher() {
     const c = ctx();
     const groups = [
@@ -1254,15 +1254,15 @@ export async function openLauncher() {
     const $root = $(`
       <div class="na_popup na_v2 na_launch">
         <div class="na_v2_titlebar"><div class="na_v2_title"><b>서사 아카이브</b><small>${hasChat() ? '열 도구를 골라요' : '채팅을 열면 모든 도구를 쓸 수 있어요'}</small></div><button type="button" class="na_v2_pillbtn na_launch_go na_launch_panel" data-id="panel">${svgA(ICO_A.panel, 14)}패널 열기</button></div>
+        <div class="na_launch_grp">
+          <span class="na_launch_lbl">패널로 가기</span>
+          <div class="na_launch_tabs">${tabs.map(([t, ico, label]) => `<button type="button" class="na_launch_go na_launch_tab" data-id="tab_${t}">${svgA(ico, 17)}<span>${label}</span></button>`).join('')}</div>
+        </div>
         ${groups.map(([title, items]) => `
         <div class="na_launch_grp">
           <span class="na_launch_lbl">${title}</span>
           <div class="na_launch_grid" style="--n:${items.length}">${items.map(([id, ico, label, fn, chat]) => { fns[id] = chat ? needChat(fn) : fn; return `<button type="button" class="na_launch_go na_launch_btn" data-id="${id}" ${chat && !hasChat() ? 'disabled' : ''}><span class="na_launch_ic">${svgA(ico, 18)}</span><span>${label}</span></button>`; }).join('')}</div>
         </div>`).join('')}
-        <div class="na_launch_grp">
-          <span class="na_launch_lbl">패널로 가기</span>
-          <div class="na_launch_tabs">${tabs.map(([t, ico, label]) => `<button type="button" class="na_launch_go na_launch_tab" data-id="tab_${t}">${svgA(ico, 17)}<span>${label}</span></button>`).join('')}</div>
-        </div>
       </div>`);
     // the tool opens on top; closing it comes back here
     $root.on('click', '.na_launch_go', function () { fns[this.dataset.id]?.(); });
