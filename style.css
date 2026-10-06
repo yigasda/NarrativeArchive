@@ -2235,5 +2235,65 @@ body:not(.na_darkui) #na_settings, body:not(.na_darkui) .na_popup, body:not(.na_
     --na-amber: #8A5A00; --na-amber-soft: #FFF1D6;
     --na-purple: #5B3FA0; --na-purple-soft: #EAE3F5;
     --na-ink: #2A211C;
+    --na-paper: #FFFAF6;
+    --na-sub: #7A6A60;
+    --na-warm: #C4521C; --na-warm-ink: #C4471A; --na-warm-soft: #FBE4D8;
+    --na-cold: #3D6FB6; --na-cold-ink: #2F5F9E; --na-cold-soft: #E3ECF8;
 }
 body:not(.na_darkui) .na_v2, body:not(.na_darkui) #na_settings .na_tab_pane { color: #2A211C; }
+
+/* ============ shared fixes from the mockup audit (all screens) */
+/* SillyTavern's small { opacity: .7; color: body } leaks in: captions keep our own colours, fully opaque */
+.na_v2 small, #na_settings .na_tab_pane small { opacity: 1; }
+.na_v2 small:not([class]), #na_settings .na_tab_pane small:not([class]) { color: var(--na-dim); }
+.na_v2_label small { color: var(--na-dim); font-weight: 400; }
+/* mockups are drawn at 14px */
+.na_popup.na_v2, #na_settings .na_tab_pane { font-size: 0.9333em; }
+.na_v2_title { gap: 2px; }
+.na_v2_title b { font-size: 1.4286em; font-weight: 700; letter-spacing: -0.01em; }
+.na_v2_title small { font-size: 0.893em; color: var(--na-sub, var(--na-dim)); }
+.na_v2_label { font-size: 0.929em; font-weight: 600; color: var(--na-mute, var(--na-dim)); margin: 2px 2px -6px; }
+/* switches: 40×24, 18px knob, no shadow */
+.na_sw { width: 40px; height: 24px; }
+.na_sw span { top: 3px; left: 3px; width: 18px; height: 18px; }
+.na_sw.on span { transform: translateX(16px); }
+.na_tgl_ui { width: 40px; background: var(--na-raw); }
+.na_tgl_ui::after { box-shadow: none; }
+input.na_toggle:checked + .na_tgl_ui::after { transform: translateX(16px); }
+/* list rows */
+.na_cp_row { padding: 12px 14px; border-top-color: var(--na-line2, var(--na-line)); }
+.na_set_row, .na_wz2_sumrow { border-color: var(--na-line2, var(--na-line)); }
+.na_browser .na_card_actions { border-top-color: var(--na-line2, var(--na-line)); }
+.na_cp_txt > :first-child { font-size: 0.964em; }
+.na_cp_txt small { font-size: 0.82em; }
+.na_v2_list, .na_v2_card.na_v2_list { border-radius: 18px; }
+/* "on" pills and selected tabs */
+body:not(.na_darkui) .na_br_filters button.on, body:not(.na_darkui) .na_v2_chips button.on { background: var(--na-ink); color: var(--na-paper); border-color: transparent; }
+body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on { background: var(--na-paper); }
+body:not(.na_darkui) .na_v2_tabs button, body:not(.na_darkui) .na_v2_seg button { color: var(--na-mute); }
+body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on { color: var(--na-accent-ink); }
+/* text inputs inside the redesigned screens */
+body:not(.na_darkui) :is(.na_v2, #na_settings) .text_pole { background: #FFFCF9; border: 1px solid var(--na-line); color: var(--na-ink); border-radius: 12px; }
+body:not(.na_darkui) :is(.na_v2, #na_settings) textarea.text_pole { padding: 10px 12px; }
+body:not(.na_darkui) :is(.na_v2, #na_settings) .text_pole::placeholder { color: #A99C92; opacity: 1; }
+
+/* ============ per-screen fixes from the mockup audit. Each group keeps to its own block. */
+/* --- audit A: archive list, compress tab, settings tab, wizard, extract --- */
+
+/* --- end audit A --- */
+
+/* --- audit B: append, health, drift, quotes, voice --- */
+
+/* --- end audit B --- */
+
+/* --- audit C: ask, preview, branches, unhide, keywords --- */
+
+/* --- end audit C --- */
+
+/* --- audit D: diff, who knows, worlds, versions, calendar --- */
+
+/* --- end audit D --- */
+
+/* --- audit E: x-ray, people, map, temperature --- */
+
+/* --- end audit E --- */
