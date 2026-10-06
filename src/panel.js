@@ -1222,7 +1222,7 @@ export async function openPanelPopup(tab = '') {
 }
 
 // the wand menu's tool launcher: every tool in four small groups; "패널 열기" and the tab row at the bottom
-// open the extension panel itself (at that tab) in a popup
+// open the extension panel itself (at that tab) in a popup. Whatever opens sits on top of the launcher.
 export async function openLauncher() {
     const c = ctx();
     const groups = [
@@ -1264,12 +1264,8 @@ export async function openLauncher() {
           <div class="na_launch_tabs">${tabs.map(([t, ico, label]) => `<button type="button" class="na_launch_go na_launch_tab" data-id="tab_${t}">${svgA(ico, 17)}<span>${label}</span></button>`).join('')}</div>
         </div>
       </div>`);
-    let pick = null;
-    $root.on('click', '.na_launch_go', function () {
-        pick = fns[this.dataset.id];
-        $root.closest('dialog').find('.popup-button-ok').trigger('click');
-    });
+    // the tool opens on top; closing it comes back here
+    $root.on('click', '.na_launch_go', function () { fns[this.dataset.id]?.(); });
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: false, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
-    if (pick) setTimeout(() => pick(), 0);
 }
 
