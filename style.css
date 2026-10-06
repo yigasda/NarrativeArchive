@@ -2514,6 +2514,7 @@ body:not(.na_darkui) .na_wz2_range label > span { background: #FFFCF9; color: #B
 .na_wz2_arr { flex: none; display: grid; place-items: center; margin-top: 18px; color: var(--na-dim); }
 body:not(.na_darkui) .na_wz2_arr { color: #B8A99E; }
 .na_v2_btn > .na_svg { flex: none; }
+.na_wz2_pane select.na_wz_prompt, body:not(.na_darkui) .na_wz2_pane select.na_wz_prompt { font: inherit; font-size: 0.964em; line-height: 1.5; height: auto; min-height: 0; padding: 9px 12px; border-radius: 14px; }
 
 /* ---- Extract */
 .na_ex2 { gap: 14px; }
