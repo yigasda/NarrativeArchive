@@ -42,7 +42,7 @@ export async function refreshStatus() {
     if (!m.enabled) state = '<b class="off">주입 꺼짐</b>';
     else if (m.backupEvery > 0 && m.sinceBackup >= m.backupEvery) state = '<b class="warn">백업할 때예요</b>';
     else if (m.text.trim()) state = '<b class="on">주입 중</b>';
-    $('#na_meter_state').html(`<span>토큰</span>${state}`);
+    $('#na_meter_state').html(`<div>토큰</div>${state}`);
     const waitN = linkWaiting(m).size;
     $('#na_meter_stats').html(`
       <div><span>아카이브</span><b>${fmt(archiveTok)}</b></div>
