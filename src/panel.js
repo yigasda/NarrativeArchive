@@ -377,7 +377,6 @@ export function connCfgHtml(p) {
                     <div class="na_cc_row"><span class="na_cc_lbl">모델</span><input type="text" class="text_pole na_cc_model" id="na_${p}_model" placeholder="불러와서 고르거나 직접 입력" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="na_${p}_models"><button type="button" class="na_cc_load" id="na_${p}_load" title="주소와 키로 모델 목록 불러오기">${svgA(ICO_A.redo, 15)}<span>불러오기</span></button></div>
                   </div>
                   <div class="na_cc_models" id="na_${p}_models" role="listbox" hidden></div>
-                  <small class="na_cc_hint" id="na_${p}_mhint"></small>
                 </div>
                 <div class="na_tr_cfg" id="na_${p}_vertex" hidden>
                   <textarea class="text_pole" id="na_${p}_vxjson" rows="4" placeholder="서비스 계정 JSON (키 파일 내용을 통째로 붙여넣기)" spellcheck="false"></textarea>
@@ -399,8 +398,6 @@ export function renderConn(p) {
     $(`#na_${p}_vertex`).prop('hidden', t.mode !== 'vertex');
     $(`#na_${p}_test_row`).prop('hidden', !own);
     $(`#na_${p}_url`).val(t.url); $(`#na_${p}_key`).val(t.key); $(`#na_${p}_model`).val(t.model);
-    const n = Array.isArray(t.models) ? t.models.length : 0;
-    $(`#na_${p}_mhint`).text(n ? `모델 ${n}개 불러옴 · 모델 칸을 누르면 목록이 열려요` : '주소와 키를 넣고 불러오기를 누르면 모델을 골라 쓸 수 있어요');
     // a saved key is never shown again; the box only takes a replacement
     $(`#na_${p}_vxjson`).val('').attr('placeholder', t.vxJson.trim() ? '저장됨 · 바꾸려면 새 JSON을 붙여넣기' : '서비스 계정 JSON (키 파일 내용을 통째로 붙여넣기)');
     $(`#na_${p}_vxclear`).prop('hidden', !t.vxJson.trim());
