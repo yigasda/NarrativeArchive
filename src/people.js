@@ -59,7 +59,8 @@ export function faceOf(name, big = false) {
 }
 
 export function faceHtml(name, size = 40) {
-    const big = size >= 64;
+    // SillyTavern's thumbnails are about 96px wide: past that on screen (phones draw 2–3 device pixels per px) use the full picture
+    const big = size * (window.devicePixelRatio || 1) > 96;
     const url = faceOf(name, big);
     // a large SillyTavern avatar uses the full picture, with the thumbnail as the fallback
     const fb = big && url && !url.startsWith('data:') ? stFace(name) : '';
@@ -385,7 +386,7 @@ export async function openPeople() {
         const placed = rows.map((r, i) => {
             const rad = r.t === null ? 0.36 : 0.2 + (5 - r.t) / 10 * 0.27;
             const a = -Math.PI / 2 + Math.PI / 5 + i * 2 * Math.PI / Math.max(rows.length, 3);
-            return { ...r, x: 50 + rad * 100 * Math.cos(a), y: 50 + rad * 100 * Math.sin(a), size: Math.round(30 + 20 * r.k / max) };
+            return { ...r, x: 50 + rad * 100 * Math.cos(a), y: 50 + rad * 100 * Math.sin(a), size: 2 * Math.round(15 + 10 * r.k / max) };
         });
         const o = rows.find(r => r.n === other);
         return `

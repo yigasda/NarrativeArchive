@@ -952,8 +952,8 @@ export function syncPanel() {
         $('#na_fade_full').val(fc.full); $('#na_fade_short').val(fc.short);
         if (fc.on) {
             const plan = [...fadePlan(m).values()];
-            const miss = fadeMissing(m).length;
-            if (!fadeFilling) $('#na_fade_info').html(miss ? `버전 없는 섹션 <b>${miss}</b>개 · 지금은 원문으로 들어가요` : '필요한 버전이 다 있어요');
+            const miss = fadeMissing(m).length, more = fadeMissing(m, true).length - miss;
+            if (!fadeFilling) $('#na_fade_info').html(miss ? `버전 없는 섹션 <b>${miss}</b>개 · 지금은 원문으로 들어가요` : more ? `필요한 버전은 다 있어요 · 나머지 <b>${more}</b>개도 채울 수 있어요` : '모든 섹션에 버전이 있어요');
             $('#na_fade_lines').text(`${plan.filter(p => p.want === 'line').length}개`);
             // one bar per numbered section, oldest first: tall = whole, mid = short, low = one line
             $('#na_fade_strip').html(plan.map(p => { const use = fadeUse(m, m.text, p.s, p.want); const k = p.why === 'pin' ? 'pin' : use !== p.want && p.want !== 'long' ? 'miss' : use; return `<span class="${k}" title="${esc(p.s.title)}"></span>`; }).join(''));

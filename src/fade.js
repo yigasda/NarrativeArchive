@@ -191,25 +191,27 @@ export function fadePlan(m) {
     return out;
 }
 
-// sections that will want a shorter version and don't have one (or it is outdated)
-export function fadeMissing(m) {
-    const out = [];
+// sections whose short / one-line version is missing or outdated. Default: only the ones the curve needs now
+// (they'd go in as the full text); all = every section in the curve, the needed ones first
+export function fadeMissing(m, all = false) {
+    const need = [], rest = [];
     for (const { s, want } of fadePlan(m).values()) {
-        if (want === 'long') continue;
         const L = layersOf(m)[sectionKey(s)];
-        const stale = L?.h && L.h !== layerHash(m.text, s);
-        if (!L || stale || !String(L.short || '').trim() || (want === 'line' && !String(L.line || '').trim())) out.push(s);
+        const stale = !!(L?.h && L.h !== layerHash(m.text, s));
+        const noShort = !String(L?.short || '').trim(), noLine = !String(L?.line || '').trim();
+        if (want !== 'long' && (!L || stale || noShort || (want === 'line' && noLine))) need.push(s);
+        else if (all && (!L || stale || noShort || noLine)) rest.push(s);
     }
-    return out;
+    return all ? [...need, ...rest] : need;
 }
 
 export let fadeFilling = null;
 export async function fillFade($btn) {
     if (fadeFilling) { fadeFilling.stop = true; $btn.prop('disabled', true); return; }
     const m = getMeta();
-    const todo = fadeMissing(m);
-    if (!todo.length) return toastr.info('채울 섹션이 없어요.');
-    if (!await confirm('초안 모델로 채우기', `버전이 필요한 섹션 ${todo.length}개를 초안 모델(${drLabel()})로 하나씩 만들까요? 섹션마다 요청이 한 번씩 가요. 도중에 멈출 수 있어요.`)) return;
+    const todo = fadeMissing(m, true), need = fadeMissing(m).length;
+    if (!todo.length) return toastr.info('모든 섹션에 짧게 · 한 줄 버전이 있어요.');
+    if (!await confirm('초안 모델로 채우기', `짧게 · 한 줄 버전이 없는 섹션 ${todo.length}개를 초안 모델(${drLabel()})로 하나씩 만들까요?${need ? ` 지금 곡선에 필요한 ${need}개부터 해요.` : ''} 섹션마다 요청이 한 번씩 가요. 도중에 멈출 수 있어요.`)) return;
     fadeFilling = { stop: false };
     const html = $btn.html();
     let done = 0, failed = 0;

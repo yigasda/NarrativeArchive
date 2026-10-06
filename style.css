@@ -1224,7 +1224,8 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_ego line.mid { stroke: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 35%, transparent); }
 .na_ego_lbl { position: absolute; left: 50%; transform: translateX(-50%); font-size: 0.7em; color: var(--na-dim); }
 .na_ego_lbl.warm { color: var(--na-warm-ink); }
-.na_ego_me, .na_ego_node { position: absolute; transform: translate(-50%, -50%); }
+/* centred on their point by a zero-size box instead of translate(-50%, -50%): a half-pixel transform blurs the faces */
+.na_ego_me, .na_ego_node { position: absolute; width: 0; height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .na_ego_me .na_face { box-shadow: 0 0 0 4px var(--SmartThemeBlurTintColor, #fff), 0 4px 14px rgba(0, 0, 0, 0.25); }
 .na_ego_node { display: flex; flex-direction: column; align-items: center; gap: 2px; border: 0; background: transparent; color: inherit; font: inherit; padding: 0; cursor: pointer; }
 .na_ego_node .na_face { box-shadow: 0 0 0 3px var(--SmartThemeBlurTintColor, #fff); }
