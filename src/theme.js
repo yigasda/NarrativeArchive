@@ -1,24 +1,33 @@
-// Light/dark theme detection and the outline SVG icon helpers.
+// The extension's light/dark look and the outline SVG icon helpers.
+import { globalSettings, saveGlobal } from './core.js';
 
-// Section browser shared by the panel tab and the large popup.
-// Returns { render } — call render() after the archive changes.
-// the theme's text is light → a dark theme (the timeline keeps the mockup's cream colors only on light themes)
-export function darkUI() {
+// SillyTavern's own theme: its text is light → a dark theme. Only used once, to pick the starting look.
+export function stIsDark() {
     const m = getComputedStyle(document.body).color.match(/\d+(\.\d+)?/g);
     if (!m) return false;
     const [r, g, b] = m.map(Number);
     return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55;
 }
 
-// body.na_darkui on dark themes: light themes get the mockup's cream palette (style.css), dark themes its warm dark twin
-export let themeTimer = null;
-export function watchTheme() {
-    const sync = () => document.body.classList.toggle('na_darkui', darkUI());
-    sync();
-    const mo = new MutationObserver(() => { clearTimeout(themeTimer); themeTimer = setTimeout(sync, 300); });
-    for (const el of [document.documentElement, document.body]) mo.observe(el, { attributes: true, attributeFilter: ['style', 'class'] });
-    // theme presets also swap a <style> in <head>
-    mo.observe(document.head, { childList: true, subtree: true, characterData: true });
+// the extension's own look, chosen in 설정 › 테마 ('light' | 'dark'), not tied to SillyTavern's theme
+export function uiTheme() {
+    const g = globalSettings();
+    if (g.uiTheme !== 'light' && g.uiTheme !== 'dark') { g.uiTheme = stIsDark() ? 'dark' : 'light'; saveGlobal(); }
+    return g.uiTheme;
+}
+export const darkUI = () => uiTheme() === 'dark';
+
+// body.na_darkui → the warm dark palette (style.css), otherwise the cream mockup palette
+export function applyTheme() {
+    const dark = darkUI();
+    document.body.classList.toggle('na_darkui', dark);
+    document.querySelectorAll('.na_browser').forEach(el => el.classList.toggle('na_darkui', dark));
+    document.querySelectorAll('input[name="na_ui_theme"]').forEach(el => { el.checked = el.value === uiTheme(); });
+}
+export function setUiTheme(mode) {
+    globalSettings().uiTheme = mode === 'dark' ? 'dark' : 'light';
+    saveGlobal();
+    applyTheme();
 }
 
 // outline icons drawn like the mockups (group A screens): a path string, or raw <path>/<circle> markup

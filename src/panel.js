@@ -25,7 +25,7 @@ import { openReader } from './reader.js';
 import { routerCandidates, routerCfg, routerState, runRouter } from './router.js';
 import { cachedTokens, checkHeadings, filterMuted, groupLabel, linkedMap, mutedCount, parseSections, pinnedSet, sectionKey } from './sections.js';
 import { refreshStatus } from './status.js';
-import { ICO_A, svgA } from './theme.js';
+import { ICO_A, setUiTheme, svgA, uiTheme } from './theme.js';
 import { AI_SYS_TRANSLATE, askTranslator, glossaryEntries, openGlossary } from './translate.js';
 import { chatLabel, confirm, copyText, countTokens, download, esc, escRe, fmt, nowStamp, timeLabel } from './util.js';
 import { openWizard } from './wizard.js';
@@ -254,6 +254,13 @@ export function renderPanel() {
             <!-- 설정 (⚙) -->
             <section class="na_tab_pane" data-pane="config" hidden>
               <div class="na_cfg_head"><button type="button" class="na_cfg_back" id="na_cfg_back" title="돌아가기" aria-label="돌아가기">${svgA(ICO_A.left, 18, 2.2)}</button><b>설정</b><button type="button" class="na_cfg_pill" id="na_cfg_preview">주입 미리보기</button></div>
+              <div class="na_cfg_grp">
+                <div class="na_cfg_label"><i class="fa-solid fa-palette"></i> 테마</div>
+                <div class="na_cfg_box na_theme_pick" role="radiogroup" aria-label="테마">
+                  <label class="na_theme_opt" title="실리태번 테마와 상관없이 크림색 배색"><input type="radio" name="na_ui_theme" value="light"><span class="na_theme_sw light" aria-hidden="true"></span><span class="na_theme_txt"><b>라이트</b><small>크림 · 갈색 글씨</small></span></label>
+                  <label class="na_theme_opt" title="실리태번 테마와 상관없이 짙은 밤색 배색"><input type="radio" name="na_ui_theme" value="dark"><span class="na_theme_sw dark" aria-hidden="true"></span><span class="na_theme_txt"><b>다크</b><small>밤색 · 크림 글씨</small></span></label>
+                </div>
+              </div>
               <div class="na_cfg_grp">
                 <div class="na_cfg_label"><i class="fa-solid fa-syringe"></i> 주입</div>
                 <div class="na_cfg_box">
@@ -503,6 +510,8 @@ export function bindPanel() {
     bindPromptSettings();
     $('#na_gear').on('click', () => showTab($('[data-pane="config"]').prop('hidden') ? 'config' : (globalSettings().lastTab || 'home')));
     $('#na_cfg_back').on('click', () => showTab(globalSettings().lastTab || 'home'));
+    $('input[name="na_ui_theme"]').prop('checked', function () { return this.value === uiTheme(); })
+        .on('change', function () { if (this.checked) setUiTheme(this.value); });
     $p.find('.na_seg_btn').on('click', function () { showArchiveView($(this).data('view')); });
     // home quick actions
     $('#na_q_read').on('click', needChat(openReader));
