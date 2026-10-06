@@ -2250,7 +2250,9 @@ body:not(.na_darkui) .na_v2, body:not(.na_darkui) #na_settings .na_tab_pane { co
 .na_popup.na_v2, #na_settings .na_tab_pane { font-size: 0.9333em; }
 .na_v2_title { gap: 2px; }
 .na_v2_title b { font-size: 1.4286em; font-weight: 700; letter-spacing: -0.01em; }
-.na_v2_title small { font-size: 0.893em; color: var(--na-sub, var(--na-dim)); }
+.na_v2_title small, .na_v2 .na_v2_title small:not([class]) { font-size: 0.893em; color: var(--na-sub, var(--na-dim)); }
+/* buttons take line-height: normal through font: inherit and come out a few px short of the mockups */
+.na_v2 button, #na_settings .na_tab_pane button { line-height: 1.5; }
 .na_v2_label { font-size: 0.929em; font-weight: 600; color: var(--na-mute, var(--na-dim)); margin: 2px 2px -6px; }
 /* switches: 40×24, 18px knob, no shadow */
 .na_sw { width: 40px; height: 24px; }
