@@ -27,7 +27,8 @@ export function headingPlaces(title, cals) {
 
 // The roster is the STATE character headings plus names added by hand (m.people). Faces are kept in the global settings by name,
 // so they follow the story into the next chat: an uploaded picture shrunk to 96px, or the SillyTavern character/persona avatar.
-export const FACE_PX = 96;
+// stored faces are drawn up to 96px; three times that stays sharp on phone screens
+export const FACE_PX = 288;
 export const nameKey = n => String(n || '').trim().toLowerCase();
 // case-sensitive on purpose: "Set" the god, not "set" the verb
 export const nameRe = n => new RegExp(`(?<![\\p{L}\\p{N}])${escRe(n)}(?![\\p{L}\\p{N}])`, 'u');
@@ -41,42 +42,62 @@ export function peopleList(m) {
     return out;
 }
 
-export function stFace(name) {
+// SillyTavern's avatar: the small thumbnail, or (big) the full picture so a large face isn't blown up from a thumbnail
+export function stFace(name, big = false) {
     const c = ctx(), k = nameKey(name);
     const ch = (c.characters || []).find(x => nameKey(x?.name) === k);
-    if (ch?.avatar && ch.avatar !== 'none') return `/thumbnail?type=avatar&file=${encodeURIComponent(ch.avatar)}`;
+    if (ch?.avatar && ch.avatar !== 'none') return big ? `/characters/${encodeURIComponent(ch.avatar)}` : `/thumbnail?type=avatar&file=${encodeURIComponent(ch.avatar)}`;
     const per = c.powerUserSettings?.personas || {};
     const f = Object.keys(per).find(f => nameKey(per[f]) === k);
-    return f ? `/thumbnail?type=persona&file=${encodeURIComponent(f)}` : '';
+    return f ? (big ? `/User%20Avatars/${encodeURIComponent(f)}` : `/thumbnail?type=persona&file=${encodeURIComponent(f)}`) : '';
 }
 
 // stored: a data URL, or 'none' for "letter only"; nothing stored means "the SillyTavern avatar if there is one"
-export function faceOf(name) {
+export function faceOf(name, big = false) {
     const f = globalSettings().faces?.[nameKey(name)];
-    return f === 'none' ? '' : f || stFace(name);
+    return f === 'none' ? '' : f || stFace(name, big);
 }
 
 export function faceHtml(name, size = 40) {
-    const url = faceOf(name);
+    const big = size >= 64;
+    const url = faceOf(name, big);
+    // a large SillyTavern avatar uses the full picture, with the thumbnail as the fallback
+    const fb = big && url && !url.startsWith('data:') ? stFace(name) : '';
     let h = 0; for (const ch of nameKey(name)) h = (h * 31 + ch.codePointAt(0)) % 360;
-    return `<span class="na_face" style="--s:${size}px;--h:${h}" title="${esc(name)}">${url ? `<img src="${esc(url)}" alt="" loading="lazy">` : esc([...String(name).trim()][0] || '?')}</span>`;
+    return `<span class="na_face" style="--s:${size}px;--h:${h}" title="${esc(name)}">${url ? `<img src="${esc(url)}"${fb && fb !== url ? ` data-fb="${esc(fb)}"` : ''} alt="" loading="lazy" decoding="async">` : esc([...String(name).trim()][0] || '?')}</span>`;
 }
 
-// an avatar that fails to load (renamed card, deleted persona) falls back to the letter, wherever a face is drawn
-document.addEventListener('error', e => { const img = e.target; if (img?.tagName === 'IMG' && img.parentElement?.classList.contains('na_face')) img.replaceWith(img.parentElement.title.trim()[0] || '?'); }, true);
+// an avatar that fails to load (renamed card, deleted persona) tries its thumbnail, then falls back to the letter
+document.addEventListener('error', e => {
+    const img = e.target;
+    if (img?.tagName !== 'IMG' || !img.parentElement?.classList.contains('na_face')) return;
+    if (img.dataset.fb) { const fb = img.dataset.fb; delete img.dataset.fb; img.src = fb; return; }
+    img.replaceWith(img.parentElement.title.trim()[0] || '?');
+}, true);
 
 export async function shrinkFace(file) {
     const bmp = await createImageBitmap(file);
     const s = Math.min(bmp.width, bmp.height);
+    // portraits keep the face in the upper part, so a tall picture is cropped nearer the top
+    let src = bmp, sx = (bmp.width - s) / 2, sy = (bmp.height - s) * 0.25, ss = s;
+    // a big photo is halved step by step first: one big jump to 288px drops detail and looks smeared
+    while (ss > FACE_PX * 2) {
+        const half = Math.round(ss / 2);
+        const step = document.createElement('canvas');
+        step.width = step.height = half;
+        const sg = step.getContext('2d');
+        sg.imageSmoothingQuality = 'high';
+        sg.drawImage(src, sx, sy, ss, ss, 0, 0, half, half);
+        src = step; sx = sy = 0; ss = half;
+    }
     const cv = document.createElement('canvas');
     cv.width = cv.height = FACE_PX;
     const g = cv.getContext('2d');
     g.imageSmoothingQuality = 'high';
-    // portraits keep the face in the upper part, so a tall picture is cropped nearer the top
-    g.drawImage(bmp, (bmp.width - s) / 2, (bmp.height - s) * 0.25, s, s, 0, 0, FACE_PX, FACE_PX);
+    g.drawImage(src, sx, sy, ss, ss, 0, 0, FACE_PX, FACE_PX);
     bmp.close?.();
-    const webp = cv.toDataURL('image/webp', 0.86);
-    return webp.startsWith('data:image/webp') ? webp : cv.toDataURL('image/jpeg', 0.86);
+    const webp = cv.toDataURL('image/webp', 0.9);
+    return webp.startsWith('data:image/webp') ? webp : cv.toDataURL('image/jpeg', 0.9);
 }
 
 // STATE blocks: "## Name" bullets for each person, and the bullets of the other STATE headings (Relationships, household…)
@@ -242,6 +263,15 @@ export function tempChart(pts) {
 }
 
 export const tempWord = v => v >= 3 ? '따뜻함' : v >= 1 ? '조금 따뜻함' : v === 0 ? '보통' : v >= -2 ? '조금 차가움' : '차가움';
+// the line under a person's name in 도감: the one set for this chat ('' = none), else their first quote in the bank
+export function personLine(m, name) {
+    const set = m.personLines?.[nameKey(name)];
+    if (typeof set === 'string') return set;
+    return (m.quotes || []).find(q => nameKey(q.who) === nameKey(name))?.text || '';
+}
+// cover colours offered in 도감, picked to sit with both palettes
+export const COVERS = ['#7E3B3B', '#B8541F', '#A0694B', '#C9A27E', '#6F7A4A', '#5E7D6E', '#4F6178', '#6E4A6B', '#4A3D35'];
+
 export const tempCls = v => v > 0 ? 'warm' : v < 0 ? 'cold' : 'mid';
 export const tempSign = v => v > 0 ? `+${v}` : v < 0 ? `−${-v}` : '0';
 
@@ -254,7 +284,8 @@ export async function openPeople() {
     const label = s => s.title.replace(/\s*\([^()]*\)\s*(\[[^\]]*\])?\s*$/, '').replace(RANGE_HEAD, (all, p, a, d, b, rest) => rest.replace(/^\s*[—–-]\s*/, '')) || s.title;
     const chip = s => `<button type="button" class="na_ref_chip" data-start="${s.start}" title="${esc(s.title)}">${esc(short(s))}</button>`;
     const hue = n => { let h = 0; for (const ch of nameKey(n)) h = (h * 31 + ch.codePointAt(0)) % 360; return h; };
-    let view = 'book', sel = null, tab = 'state', center = null, other = null, tpair = null, busy = false, adding = false, showAll = false, data = peopleData(m);
+    let view = 'book', sel = null, tab = 'state', center = null, other = null, tpair = null, busy = false, adding = false, showAll = false, coverOpen = false, lineEdit = false, data = peopleData(m);
+    g.covers = g.covers && typeof g.covers === 'object' ? g.covers : {};
     const $root = $(`
       <div class="na_popup na_v2 na_people">
         <div class="na_v2_tabs na_people_tabs" role="tablist">
@@ -280,6 +311,9 @@ export async function openPeople() {
         const p = data.people.get(sel);
         const extra = (m.people || []).some(x => nameKey(x) === nameKey(sel)) && !castNames(m).some(x => nameKey(x) === nameKey(sel));
         const st = g.faces[nameKey(sel)];
+        const cover = g.covers[nameKey(sel)] || '';
+        const line = personLine(m, sel);
+        const bank = [...new Set(p.quotes.map(q => q.text))];
         // the partner they share the most sections with, for the third tile
         const best = data.pairs.filter(q => (q.a === sel || q.b === sel) && q.secs.length).sort((x, y) => y.secs.length - x.secs.length)[0];
         const bestT = lastTemp(best), bestName = best ? (best.a === sel ? best.b : best.a) : '';
@@ -296,16 +330,31 @@ export async function openPeople() {
                 : (p.secs.length ? `<div class="na_pb_secs">${(showAll ? p.secs : p.secs.slice(-12)).slice().reverse().map(chip).join('')}</div>${p.secs.length > 12 && !showAll ? `<button type="button" class="na_linkbtn na_pb_more">${p.secs.length - 12}개 더 보기</button>` : ''}` : '<div class="na_empty">아카이브 섹션에 이름이 안 나와요.</div>');
         return `${strip}
           <div class="na_pb_card" data-n="${esc(sel)}">
-            <div class="na_pb_cover" style="--h:${hue(sel)}"></div>
+            <div class="na_pb_cover" style="--h:${hue(sel)}${cover ? `;--cover:${esc(cover)}` : ''}">
+              <button type="button" class="na_pb_coverbtn ${coverOpen ? 'on' : ''}" aria-label="배경색 바꾸기" title="배경색 바꾸기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a10 10 0 1 1 10-10c0 2.8-2.2 4-4 4h-2.2a1.8 1.8 0 0 0-1.3 3.1A1.7 1.7 0 0 1 12 22z"/><circle cx="7.5" cy="10.5" r="1.2"/><circle cx="12" cy="7" r="1.2"/><circle cx="16.5" cy="10.5" r="1.2"/></svg></button>
+            </div>
             <div class="na_pb_id">
               <button type="button" class="na_face_btn" aria-label="얼굴 바꾸기" title="그림 올리기">${faceHtml(sel, 96)}<span class="na_face_cam"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></button>
               <b class="na_pb_name">${esc(sel)}</b>
-              ${p.quotes.length ? `<span class="na_pb_quote">“${esc(p.quotes[0].text)}”</span>` : ''}
+              ${lineEdit ? `
+              <div class="na_pb_lineedit">
+                <input type="text" class="text_pole na_pb_linein" value="${esc(line)}" placeholder="한 줄 대사" enterkeyhint="done">
+                ${bank.length ? `<small>대사 은행에서 고르기</small><div class="na_pb_linepick">${bank.map((t, i) => `<button type="button" data-i="${i}" class="${t === line ? 'on' : ''}">“${esc(t)}”</button>`).join('')}</div>` : '<small>대사 은행에 이 인물 대사가 아직 없어요</small>'}
+                <div class="na_pb_linebtns"><button type="button" class="na_v2_pillbtn na_pb_lineok">저장</button>${Object.hasOwn(m.personLines || {}, nameKey(sel)) ? '<button type="button" class="na_v2_pillbtn na_pb_lineauto">처음 대사로 되돌리기</button>' : ''}<button type="button" class="na_v2_pillbtn na_pb_linecancel">취소</button></div>
+              </div>`
+                : line ? `<button type="button" class="na_pb_quote" title="한 줄 대사 바꾸기">“${esc(line)}”</button>`
+                : '<button type="button" class="na_linkbtn na_pb_quote_add">+ 한 줄 대사</button>'}
               <span class="na_pb_faceacts">
                 ${stFace(sel) && st ? '<button type="button" class="na_linkbtn na_face_st">실리태번 아바타로</button>' : ''}
                 ${st !== 'none' && faceOf(sel) ? '<button type="button" class="na_linkbtn na_face_none">얼굴 빼기</button>' : ''}
                 ${extra ? '<button type="button" class="na_linkbtn na_person_del">목록에서 빼기</button>' : ''}
               </span>
+              ${coverOpen ? `
+              <div class="na_pb_covers" role="group" aria-label="배경색">
+                ${COVERS.map(c => `<button type="button" class="na_pb_sw ${c === cover ? 'on' : ''}" data-c="${c}" style="--c:${c}" aria-label="${c}"></button>`).join('')}
+                <label class="na_pb_sw na_pb_swpick ${cover && !COVERS.includes(cover) ? 'on' : ''}" title="직접 고르기" style="--c:${esc(cover || '#B8541F')}"><input type="color" class="na_pb_color" value="${esc(/^#[0-9a-f]{6}$/i.test(cover) ? cover : '#b8541f')}"></label>
+                ${cover ? '<button type="button" class="na_linkbtn na_pb_coverauto">원래 색</button>' : ''}
+              </div>` : ''}
               <div class="na_pb_stats">
                 <div><b>${p.secs.length}</b><span>섹션</span></div>
                 <div><b>${p.quotes.length}</b><span>대사</span></div>
@@ -441,7 +490,7 @@ export async function openPeople() {
     const go = st => { $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); };
     $root.on('click', '.na_people_tabs button', function () { view = this.dataset.v; draw(); });
     // 도감
-    $root.on('click', '.na_pb_pick', function () { sel = String($(this).data('n')); draw(); });
+    $root.on('click', '.na_pb_pick', function () { sel = String($(this).data('n')); lineEdit = false; draw(); });
     $root.on('click', '.na_v2_under button', function () { tab = this.dataset.t; draw(); });
     $root.on('click', '.na_pb_more', () => { showAll = true; draw(); });
     $root.on('click', '.na_pb_addbtn', () => { adding = !adding; draw(); if (adding) $root.find('.na_people_name').trigger('focus'); });
@@ -479,6 +528,29 @@ export async function openPeople() {
     });
     $root.on('click', '.na_face_st', async () => { delete g.faces[nameKey(sel)]; await save(); });
     $root.on('click', '.na_face_none', async () => { g.faces[nameKey(sel)] = 'none'; await save(); });
+    // the cover colour (kept with the faces, for every chat)
+    const setCover = c => { if (c) g.covers[nameKey(sel)] = c; else delete g.covers[nameKey(sel)]; save(); };
+    $root.on('click', '.na_pb_coverbtn', () => { coverOpen = !coverOpen; draw(); });
+    $root.on('click', '.na_pb_sw[data-c]', function () { setCover(this.dataset.c); });
+    $root.on('input', '.na_pb_color', function () { $root.find('.na_pb_cover').css('--cover', this.value); });
+    $root.on('change', '.na_pb_color', function () { setCover(this.value); });
+    $root.on('click', '.na_pb_coverauto', () => setCover(''));
+    // the one-line quote under the name (this chat): typed, or picked from the quote bank
+    const setLine = async v => {
+        m.personLines = m.personLines && typeof m.personLines === 'object' ? m.personLines : {};
+        if (v === null) delete m.personLines[nameKey(sel)]; else m.personLines[nameKey(sel)] = v;
+        lineEdit = false;
+        await saveMeta(); draw();
+    };
+    $root.on('click', '.na_pb_quote, .na_pb_quote_add', () => { lineEdit = true; draw(); $root.find('.na_pb_linein').trigger('focus'); });
+    $root.on('click', '.na_pb_linepick button', function () { setLine([...new Set(data.people.get(sel).quotes.map(q => q.text))][+this.dataset.i]); });
+    $root.on('click', '.na_pb_lineok', () => setLine(String($root.find('.na_pb_linein').val() || '').trim()));
+    $root.on('click', '.na_pb_lineauto', () => setLine(null));
+    $root.on('click', '.na_pb_linecancel', () => { lineEdit = false; draw(); });
+    $root.on('keydown', '.na_pb_linein', e => {
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); lineEdit = false; draw(); }
+        else if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); setLine(String(e.target.value || '').trim()); }
+    });
     $root.on('click', '.na_person_del', async () => {
         const k = nameKey(sel);
         m.people = (m.people || []).filter(x => nameKey(x) !== k);
