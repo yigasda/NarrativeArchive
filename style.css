@@ -3547,3 +3547,27 @@ body.na_darkui .na_launch_tabs { background: #3A2F28; }
 .na_ly_force { display: flex; align-items: center; gap: 10px; }
 .na_ly_force > span { flex: none; font-size: 0.82em; color: var(--na-dim); }
 .na_ly_force .na_v2_seg { flex: 1; }
+
+/* 온도: the number never breaks ("+2", not "+" over "2"); the three-number box stays compact */
+.na_people .na_tp_now b { white-space: nowrap; }
+.na_people .na_tp_now > span { flex-wrap: wrap; column-gap: 6px; font-size: 1em !important; }
+.na_people .na_tp_now small { font-size: 0.857em !important; }
+.na_people .na_tp_stats { flex: none; }
+.na_people .na_tp_stats > span { padding: 4px 8px; font-size: 0.86em !important; }
+.na_people .na_tp_stats small { font-size: 0.75em !important; white-space: nowrap; }
+.na_people .na_tp_stats b { font-size: 1.05em !important; white-space: nowrap; }
+
+/* a section shown in place */
+.na_peek { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--na-accent-soft); border-radius: 16px; background: var(--na-card); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06); }
+.na_peek_head { display: flex; align-items: flex-start; gap: 8px; }
+.na_peek_head b { flex: 1; min-width: 0; font-size: 0.9em; line-height: 1.4; }
+.na_peek_x { flex: none; width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--na-dim); font-size: 0.85em; cursor: pointer; }
+.na_peek_x:hover { background: var(--na-card2); }
+.na_peek_body { max-height: 42vh; overflow-y: auto; overscroll-behavior: contain; font-size: 0.88em; line-height: 1.6; }
+.na_peek_body p, .na_peek_body ul { margin: 0 0 6px; }
+.na_peek_body ul { padding-left: 1.1em; }
+.na_peek_foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.na_peek_foot .na_linkbtn { font-size: 0.82em; color: var(--na-accent-ink, var(--na-accent)); }
+.na_peek_foot .na_peek_go { margin-left: auto; color: var(--na-dim); }
+.na_peek_info { font-size: 0.76em; color: var(--na-dim); }
+.na_people :is(.na_tp_tile, .na_tp_turn, .na_tp_row).on { outline: 2px solid var(--na-accent); outline-offset: -2px; }

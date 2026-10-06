@@ -6,6 +6,7 @@ import { TIME_WORDS, headingDate } from './calendar.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta, textHash } from './core.js';
 import { castNames } from './knowledge.js';
 import { PICK_CHUNK_TOK, estTok } from './picker.js';
+import { sectionPeek } from './peek.js';
 import { RANGE_HEAD, parseSections, sectionKey, splitTail, tailBlocks } from './sections.js';
 import { confirm, esc, escRe } from './util.js';
 
@@ -503,7 +504,22 @@ export async function openPeople() {
     $root.on('change', '.na_temp_sel', function () { tpair = this.value; draw(); });
     $root.on('click', '.na_temp_go', function () { tpair = String($(this).data('k')); view = 'temp'; draw(); });
     $root.on('click', '.na_tp_listbtn', () => $root.find('.na_tp_list').prop('hidden', (i, h) => !h));
-    $root.on('click', '.na_tp_tile, .na_tp_turn, .na_tp_row, .na_v2_btn[data-start], .na_ref_chip', function () { go(Number(this.dataset.start)); });
+    $root.on('click', '.na_v2_btn[data-start], .na_ref_chip', function () { go(Number(this.dataset.start)); });
+    // 온도: a section opens right here (tap again or ✕ to close); the card is one link further
+    $root.on('click', '.na_tp_tile, .na_tp_turn, .na_tp_row', function () {
+        const start = Number(this.dataset.start);
+        // the two tiles sit side by side: their section opens under the pair
+        const $at = $(this).hasClass('na_tp_tile') ? $(this).parent() : $(this);
+        const $open = $root.find('.na_peek');
+        const same = $open.length && Number($open.data('start')) === start;
+        $open.remove();
+        $root.find('.na_tp_tile, .na_tp_turn, .na_tp_row').removeClass('on');
+        if (same) return;
+        const sec = parseSections(getMeta().text).find(x => x.start === start);
+        if (!sec) return;
+        $(this).addClass('on');
+        $at.after(sectionPeek(sec, { onGoto: go }));
+    });
     $root.on('click', '.na_temp_run', async function () {
         if (busy) return;
         const pair = data.pairs.find(p => data.pairKey(p.a, p.b) === tpair);
