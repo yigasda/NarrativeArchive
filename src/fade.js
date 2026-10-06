@@ -97,8 +97,10 @@ STEPS
    that ends with a colon) stays, in the same order, with its own shortened bullets under it. Keep every fact from step 1.
    Cut mood and repeated feelings.
    Dialogue: a line you keep in quotation marks is copied exactly from the section — every word, same order,
-   nothing trimmed, merged or reworded. If it is too long to keep whole, drop the quotation marks and say in your
-   own words what was said. Never shorten a quote.
+   nothing trimmed, merged or reworded. Never shorten a quote.
+   Keep WHOLE, however long, a line that turns the scene: one the section itself calls out ("the line that changed …"),
+   or a confession, promise, vow, declaration, refusal or accusation that the rest of the section reacts to.
+   Only minor lines may lose their quotation marks and be said in your own words.
 3. LINE: one sentence, 30 words or fewer: the single most important thing that happened or changed.
 4. Same language as the section. Add nothing that is not in the section. No comments.
 
@@ -149,6 +151,50 @@ export function changedQuotes(src, out) {
         return !hay.includes(q) && !hay.includes(bare(q)); // not in the section as written
     });
 }
+
+export const AI_SYS_LAYERS_REVISE = `GOAL
+Change the short version (and the one line) of a story-archive section the way the user asks — and nothing else.
+
+YOU GET
+SECTION: the full section. It is the only source of facts and quotes.
+CURRENT SHORT and CURRENT LINE: the versions saved now.
+REQUEST: what the user wants changed (it may be in Korean).
+
+STEPS
+1. Do what REQUEST asks.
+2. Leave every other part of CURRENT SHORT exactly as it is, word for word.
+3. Anything you add comes from SECTION. A line in quotation marks is copied whole from SECTION — every word, same order.
+4. Keep the form of CURRENT SHORT: its label lines (PLOT: …) and bullets. Same language as SECTION.
+5. Change LINE only if REQUEST asks for it, or if your change makes LINE wrong.
+
+EXAMPLE
+SECTION:
+## #12–#15 — The bridge
+PLOT:
+- Halfway, a plank breaks. Ren cuts his leg; Mara pulls him up. She says, "Now you owe me, and I always collect."
+- Ivo tells them the south road is closed.
+CURRENT SHORT:
+PLOT:
+- A plank broke; Ren cut his leg and Mara pulled him up, telling him he owed her.
+- Ivo: the south road is closed.
+CURRENT LINE:
+Mara saved Ren on the bridge.
+REQUEST:
+마라 대사는 원문 그대로 넣어줘
+Answer:
+SHORT:
+PLOT:
+- A plank broke; Ren cut his leg and Mara pulled him up: "Now you owe me, and I always collect."
+- Ivo: the south road is closed.
+LINE:
+Mara saved Ren on the bridge.
+
+OUTPUT
+Exactly this, nothing else:
+SHORT:
+<short version>
+LINE:
+<one sentence>`;
 
 // SHORT / LINE out of a model answer, or null if it isn't in that shape
 const parseLayers = out => out.match(/SHORT:\s*\n?([\s\S]*?)\n\s*\**LINE:?\**\s*\n?([\s\S]+)$/i);
@@ -220,6 +266,7 @@ export async function openLayers(s) {
         <div class="na_ly_pane" data-t="long"><div class="na_ly_view na_ly_full"></div></div>
         <div class="na_ly_pane" data-t="short"><div class="na_ly_view"></div><textarea class="text_pole na_ly_short" rows="8" spellcheck="false" hidden placeholder="원문을 1/3쯤으로 줄인 것. 직접 쓰거나 초안 모델로 만들어요."></textarea></div>
         <div class="na_ly_pane" data-t="line"><div class="na_ly_view"></div><textarea class="text_pole na_ly_line" rows="3" spellcheck="false" hidden placeholder="가장 중요한 일 한 문장"></textarea></div>
+        ${draftReady() ? `<div class="na_ly_ask"><input type="text" class="na_ly_askq" placeholder="고쳐 달라고 하기 (예: 소망 대사는 원문 그대로)" aria-label="고쳐 달라고 하기" enterkeyhint="send"><button type="button" class="na_ly_askgo" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>` : ''}
         <div class="na_v2_row2 na_ly_btns">${draftReady() ? `<button type="button" class="na_v2_btn na_ly_draft">초안 모델로 ${L.short || L.line ? '다시' : '만들기'}</button>` : ''}<button type="button" class="na_v2_btn na_ly_save">저장</button></div>
         ${draftReady() ? `<small class="na_v2_foot">${esc(drLabel())} · 짧게·한 줄을 같이 채워요. 저장해야 들어가요</small>` : '<small class="na_v2_foot">⚙ 설정 → AI · 번역 → 초안 모델을 정하면 여기서 바로 만들 수 있어요</small>'}
       </div>`);
@@ -283,6 +330,20 @@ export async function openLayers(s) {
         const r = await withSpinner($(this), '만드는 중…', () => draftLayers(m, s));
         if (r) { $root.find('.na_ly_short').val(r.short); $root.find('.na_ly_line').val(r.line); tab = 'short'; editing = false; korean = false; show(); tok(); }
     });
+    // "고쳐 달라고 하기": the draft model changes the short version / one line as asked; save still decides
+    const askRevise = async () => {
+        const req = String($root.find('.na_ly_askq').val() || '').trim();
+        if (!req) return $root.find('.na_ly_askq').trigger('focus');
+        const $go = $root.find('.na_ly_askgo');
+        const r = await withSpinner($go, '', () => reviseLayers(m, s, text('short'), text('line'), req));
+        if (!r) return;
+        $root.find('.na_ly_short').val(r.short); $root.find('.na_ly_line').val(r.line);
+        $root.find('.na_ly_askq').val('');
+        tab = 'short'; editing = false; korean = false; show(); tok();
+        toastr[r.changed.length ? 'warning' : 'success'](r.changed.length ? `고쳤어요 · 원문과 다른 대사 ${r.changed.length}개가 있어요` : '고쳤어요 · 마음에 들면 저장을 눌러 주세요');
+    };
+    $root.on('click', '.na_ly_askgo', askRevise);
+    $root.on('keydown', '.na_ly_askq', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); askRevise(); } });
     const res = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '저장', cancelButton: '닫기' });
     if (res !== c.POPUP_RESULT.AFFIRMATIVE && res !== true) {
         // closed with changes not saved: ask instead of dropping them
@@ -345,6 +406,16 @@ export async function fillFade($btn, only = null) {
 }
 
 // hand-picked versions for many sections at once: v = 'auto' (back to the curve) | 'long' | 'short' | 'line'
+// the user's own change request for a section's versions ("소망 대사는 원문 그대로"): returns { short, line, changed }
+export async function reviseLayers(m, s, short, line, req) {
+    const section = m.text.slice(s.start, s.end).trim();
+    const out = stripThink(await askDraft(`SECTION:\n${section}\n\nCURRENT SHORT:\n${String(short || '').trim() || '(none)'}\n\nCURRENT LINE:\n${String(line || '').trim() || '(none)'}\n\nREQUEST:\n${req}`, { system: AI_SYS_LAYERS_REVISE }));
+    const mt = parseLayers(out);
+    if (!mt) throw new Error('답 형식이 달라요 (SHORT:/LINE: 없음). 다시 보내 주세요');
+    const next = withTopLabel(section, mt[1].replace(/^\**\s*/, ''));
+    return { short: next, line: mt[2].trim().split('\n')[0].trim(), changed: changedQuotes(section, next) };
+}
+
 export async function setFadeForce(keys, v) {
     const m = getMeta();
     m.fadeForce = { ...fadeForce(m) };
