@@ -3362,3 +3362,37 @@ button.na_pb_quote:hover { background: var(--na-card2); }
 .na_cc_opt:hover { background: var(--na-card2); }
 .na_cc_opt.on { background: var(--na-accent-soft); color: var(--na-accent-ink, var(--na-accent)); font-weight: 600; }
 .na_cc_none { padding: 10px; font-size: 0.82em; color: var(--na-dim); }
+
+/* ============ top meter: the token total leads, everything else steps back. Two ids so a theme's
+   blanket `span { font-size }` can't flatten the sizes; solid card colours instead of a see-through tint */
+#na_settings #na_meter { gap: 10px; padding: 14px 16px 12px; border-radius: 16px; }
+#na_settings #na_meter .na_meter_top { align-items: center; flex-wrap: nowrap; gap: 8px; }
+#na_settings #na_meter .na_meter_total { display: inline-flex; align-items: baseline; gap: 5px; min-width: 0; font-size: 1.9em; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; white-space: nowrap; }
+#na_settings #na_meter .na_meter_total small { margin: 0; font-size: 0.42em; font-weight: 500; letter-spacing: 0; opacity: 1; }
+#na_settings #na_meter .na_meter_state { display: inline-flex; align-items: center; font-size: 1em; }
+#na_settings #na_meter .na_meter_state .na_chip { font-size: 0.72em; font-weight: 600; line-height: 1.5; padding: 1px 8px; border: 0; }
+#na_settings #na_meter .na_hchip { font-size: 0.8em; padding: 3px 10px; gap: 4px; }
+#na_settings #na_meter .na_hchip > span { font-size: 1em; }
+#na_settings #na_meter #na_gear { width: 32px; height: 32px; opacity: 1; }
+#na_settings #na_meter .na_meter_bar { height: 6px; }
+#na_settings #na_meter .na_meter_legend { gap: 4px 14px; font-size: 0.8em; line-height: 1.5; opacity: 1; }
+#na_settings #na_meter .na_meter_legend > span { font-size: 1em; }
+#na_settings #na_meter .na_meter_legend .na_dot { width: 7px; height: 7px; }
+
+body:not(.na_darkui) #na_settings #na_meter { background: #F7EEE7; border: 1px solid #E5D5C9; color: #463428; }
+body:not(.na_darkui) #na_settings #na_meter .na_meter_total small, body:not(.na_darkui) #na_settings #na_meter .na_meter_legend { color: #8A7A70; }
+body:not(.na_darkui) #na_settings #na_meter .na_meter_state .na_chip_on { background: #F6E1D3; color: #A84A17; }
+body:not(.na_darkui) #na_settings #na_meter .na_meter_bar { background: #EBDDD2; }
+body:not(.na_darkui) #na_settings #na_meter .na_seg_arc, body:not(.na_darkui) #na_settings #na_meter .na_dot_arc { background: #B8541F; }
+body:not(.na_darkui) #na_settings #na_meter .na_seg_raw:not(.na_over), body:not(.na_darkui) #na_settings #na_meter .na_dot_raw { background: #D3C1B4; }
+body:not(.na_darkui) #na_settings #na_meter .na_hchip:not(.na_health_warn) { background: transparent; border-color: #E5D5C9; color: #6B5A50; }
+body:not(.na_darkui) #na_settings #na_meter #na_gear { color: #8A7A70; }
+
+body.na_darkui #na_settings #na_meter { background: #3A2F28; border: 1px solid #54463D; color: #EFE3D8; }
+body.na_darkui #na_settings #na_meter .na_meter_total small, body.na_darkui #na_settings #na_meter .na_meter_legend { color: #B3A396; }
+body.na_darkui #na_settings #na_meter .na_meter_state .na_chip_on { background: #543627; color: #EE9A66; }
+body.na_darkui #na_settings #na_meter .na_meter_bar { background: #2E2621; }
+body.na_darkui #na_settings #na_meter .na_seg_arc, body.na_darkui #na_settings #na_meter .na_dot_arc { background: #D9733A; }
+body.na_darkui #na_settings #na_meter .na_seg_raw:not(.na_over), body.na_darkui #na_settings #na_meter .na_dot_raw { background: #6E5D51; }
+body.na_darkui #na_settings #na_meter .na_hchip:not(.na_health_warn) { background: transparent; border-color: #54463D; color: #CABBAE; }
+body.na_darkui #na_settings #na_meter #na_gear { color: #B3A396; }
