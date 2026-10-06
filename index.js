@@ -1041,24 +1041,37 @@ function mountSectionBrowser($host) {
             <button type="button" data-v="list" title="카드 목록" aria-label="카드 목록"><i class="fa-solid fa-list-ul"></i></button>
             <button type="button" data-v="tl" title="타임라인" aria-label="타임라인"><i class="fa-solid fa-timeline"></i></button>
           </div>
+          <button type="button" class="na_tlb_sq na_tlb_raw" title="원문 편집" aria-label="원문 편집"><i class="fa-solid fa-pen"></i></button>
+          <button type="button" class="na_tlb_sq na_tlb_more" title="더 보기" aria-label="더 보기"><i class="fa-solid fa-ellipsis"></i></button>
         </div>
+        <div class="na_tlb_menu"><button type="button" class="na_v2_pillbtn na_tlb_list"><i class="fa-solid fa-list-ul"></i> 목록으로 보기</button></div>
         <div class="na_arch_tools"></div>
         <div class="na_br_filters"></div>
-        <div class="na_tl_legend" aria-hidden="true"><span><i class="st-long"></i>원문</span><span><i class="st-short"></i>짧게</span><span><i class="st-line"></i>한 줄</span><span><i class="st-pin"></i>고정</span><span><i class="st-key"></i>키워드 대기</span><span><i class="st-off"></i>꺼짐</span></div>
+        <div class="na_tl_legend" aria-hidden="true"><span><i class="st-long"></i>원문</span><span><i class="st-short"></i>짧게</span><span><i class="st-line"></i>한 줄</span><span><i class="st-key"></i>키워드 대기</span><span><i class="st-off"></i>꺼짐</span></div>
         <div class="na_search_info"></div>
         <div class="na_list"></div>
       </div>`);
     $host.empty().append($root);
     // find & replace and the heading check sit as two pills under the search
     $root.find('.na_arch_tools').append($('#na_replace'), $('#na_hcheck'));
-    const syncView = () => $root.find('.na_br_view button').each(function () { $(this).toggleClass('on', (this.dataset.v === 'tl') === $root.hasClass('na_tl')); });
+    const syncView = () => {
+        const tl = $root.hasClass('na_tl');
+        $root.find('.na_br_view button').each(function () { $(this).toggleClass('on', (this.dataset.v === 'tl') === tl); });
+        $root.find('.na_search').attr('placeholder', tl ? '찾기' : '이름, 장소, 대사로 찾기');
+        // the timeline has its own pencil button, so the "섹션 카드 / 원문 편집" tabs step aside
+        $root.closest('.na_tab_pane').toggleClass('na_tl_on', tl);
+    };
     syncView();
-    $root.on('click', '.na_br_view button', function () {
-        const tl = this.dataset.v === 'tl';
-        $root.toggleClass('na_tl', tl);
+    const setLayout = tl => {
+        $root.toggleClass('na_tl', tl).removeClass('na_tlb_open');
         const g = globalSettings(); g.archLayout = tl ? 'tl' : 'list'; saveGlobal();
         syncView();
-    });
+        render();
+    };
+    $root.on('click', '.na_br_view button', function () { setLayout(this.dataset.v === 'tl'); });
+    $root.on('click', '.na_tlb_list', () => setLayout(false));
+    $root.on('click', '.na_tlb_raw', () => showArchiveView('editor'));
+    $root.on('click', '.na_tlb_more', function () { $root.toggleClass('na_tlb_open'); $(this).toggleClass('on', $root.hasClass('na_tlb_open')); });
     let filter = 'all';
     $root.on('click', '.na_br_filters button', function () { filter = filter === this.dataset.f ? 'all' : this.dataset.f; render(); });
     const $list = $root.find('.na_list');
@@ -1184,8 +1197,13 @@ function mountSectionBrowser($host) {
         const allGroups = [];
         $list.empty();
         const groupStack = [];
+        const tl = $root.hasClass('na_tl');
+        const hasOpen = sections.some(x => !x.group && /^OPEN\b/.test(x.title));
         sections.forEach((s, idx) => {
-            while (groupStack.length && groupStack[groupStack.length - 1].level >= s.level) groupStack.pop();
+            // on the timeline, "# OPEN AT …" sits inside the STATE group ("STATE · OPEN")
+            const joinState = tl && !s.group && /^OPEN\b/.test(s.title) && groupStack.length && /^STATE\b/.test(groupStack[0].title);
+            while (!joinState && groupStack.length && groupStack[groupStack.length - 1].level >= s.level) groupStack.pop();
+            while (joinState && groupStack.length > 1) groupStack.pop();
             const $parent = groupStack.length ? groupStack[groupStack.length - 1].$items : $list;
             const parentOff = groupStack.some(g => g.off);
             const off = muted.has(sectionKey(s));
@@ -1198,7 +1216,20 @@ function mountSectionBrowser($host) {
             if (s.group) {
                 const key = sectionKey(s);
                 const isOpen = q || !collapsedSet().has(key);
-                const $g = $(`
+                const isState = /^STATE\b/.test(s.title);
+                const gTitle = tl && isState ? (hasOpen ? 'STATE · OPEN' : 'STATE') : groupLabel(s.title);
+                const $g = $(tl ? `
+                  <div class="na_group na_lv${s.level} ${isOpen ? 'na_g_open' : ''} ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''}">
+                    <div class="na_group_head">
+                      <div class="na_head_main">
+                        <span class="na_group_title">${highlight(gTitle, q)}</span>
+                        <span class="na_group_meta"></span>
+                      </div>
+                      <i class="fa-solid fa-chevron-${isOpen ? 'down' : 'right'} na_group_chev"></i>
+                    </div>
+                    <div class="na_card_body" hidden></div>
+                    <div class="na_group_items" ${isOpen ? '' : 'hidden'}></div>
+                  </div>` : `
                   <div class="na_group na_lv${s.level} ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''}">
                     <div class="na_group_head">
                       <i class="fa-solid fa-chevron-${isOpen ? 'down' : 'right'} na_group_chev"></i>
@@ -1232,7 +1263,7 @@ function mountSectionBrowser($host) {
                 });
                 $g[0].dataset.key = key;
                 $parent.append($g);
-                const g = { level: s.level, $items: $g.children('.na_group_items'), $el: $g, off: off || parentOff, tok: [] };
+                const g = { level: s.level, title: s.title, state: isState, $items: $g.children('.na_group_items'), $el: $g, off: off || parentOff, tok: [] };
                 groupStack.push(g);
                 allGroups.push(g);
                 return;
@@ -1256,7 +1287,47 @@ function mountSectionBrowser($host) {
                 isPin ? '<span class="na_tag pin">고정</span>' : '',
                 count ? `<span class="na_tag hit">${count}건</span>` : '',
             ].join('');
-            const $card = $(`
+            const status = off || parentOff ? '꺼 둠' : isPin ? '고정' : hasKeys ? (isWait ? `키워드 대기 (${esc(links[key][0])})` : '키워드 켜짐') : fade === 'line' ? '한 줄' : fade === 'short' ? '짧게' : '원문';
+            const $card = $(tl ? `
+              <div class="na_card ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''} ${isWait && !off ? 'na_waiting' : ''}" data-start="${s.start}" ${rm ? `data-a="${Math.min(+rm[2], +rm[4])}" data-b="${Math.max(+rm[2], +rm[4])}" data-p="${esc(rm[1] || '')}"` : ''}>
+                <div class="na_rail" aria-hidden="true">${rm ? `<span>#${rm[2]}</span><span>#${rm[4]}</span>` : ''}</div>
+                <i class="na_dot st-${dot}" aria-hidden="true"></i>
+                <div class="na_tlb_box">
+                  <div class="na_card_head">
+                    <div class="na_head_main">
+                      <span class="na_card_title" title="${esc(s.title)}">${highlight(name, q)}</span>
+                      <span class="na_tlb_meta"><span class="na_tok">${fmt(body.length)}자</span> · ${status}${count ? ` · ${count}건` : ''}</span>
+                    </div>
+                    ${sw(!off, off ? '주입 켜기' : '이 섹션만 주입에서 빼기 (본문은 그대로)')}
+                  </div>
+                  <div class="na_card_body" ${isOpen ? '' : 'hidden'}>
+                    <div class="na_tlb_chips">
+                      <span class="na_tlb_chip"><span class="na_tok">${fmt(body.length)}자</span></span>
+                      ${fade && !off ? `<span class="na_tlb_chip fade">${fade === 'line' ? '한 줄로' : '짧게'} 들어감</span>` : ''}
+                      ${hasKeys && !off ? `<span class="na_tlb_chip key" title="${esc(links[key].join(', '))}">${isWait ? '키워드 대기' : '키워드 켜짐'}</span>` : ''}
+                      ${isPin ? '<span class="na_tlb_chip pin">고정</span>' : ''}
+                      ${paren ? `<span class="na_tlb_chip">${esc(paren)}</span>` : ''}
+                      ${refChips(key)}
+                    </div>
+                    <div class="na_card_text na_tlb_text">${highlight(body.replace(/^#{1,2} [^\n]*\n?/, '').trim(), q) || '<span class="na_dim">(비어 있음)</span>'}</div>
+                    <div class="na_tlb_tools">
+                      <button type="button" class="na_edit"><i class="fa-solid fa-pen"></i>편집</button>
+                      <button type="button" class="na_keys ${hasKeys ? 'active' : ''}"><i class="fa-solid fa-key"></i>키워드</button>
+                      ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_layers_btn ${layersOf(m)[key] ? 'active' : ''}"><i class="fa-solid fa-layer-group"></i>버전</button>` : ''}
+                      <button type="button" class="na_tlb_more2"><i class="fa-solid fa-ellipsis"></i>더 보기</button>
+                    </div>
+                    <div class="na_card_actions na_tlb_extra" hidden>
+                      <button type="button" class="na_icon na_up" title="위로" aria-label="위로"><i class="fa-solid fa-arrow-up"></i></button>
+                      <button type="button" class="na_icon na_down" title="아래로" aria-label="아래로"><i class="fa-solid fa-arrow-down"></i></button>
+                      <button type="button" class="na_icon na_ins" title="아래에 새 섹션" aria-label="아래에 새 섹션"><i class="fa-solid fa-plus"></i></button>
+                      <button type="button" class="na_icon na_pin_t ${isPin ? 'active' : ''}" title="${isPin ? '고정 풀기' : '망각 곡선에서도 늘 원문으로 고정'}" aria-label="고정"><i class="fa-solid fa-thumbtack"></i></button>
+                      <button type="button" class="na_icon na_del na_danger" title="섹션 삭제" aria-label="섹션 삭제"><i class="fa-solid fa-trash-can"></i></button>
+                      <span class="na_spacer"></span>
+                      ${srcButton(m, s.title, 'icon')}
+                    </div>
+                  </div>
+                </div>
+              </div>` : `
               <div class="na_card ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''} ${isWait && !off ? 'na_waiting' : ''}" data-start="${s.start}">
                 <div class="na_rail" aria-hidden="true">${rm ? `<span>${esc(rm[1] ? `${rm[1]} ` : '')}#${rm[2]}</span><span>#${rm[4]}</span>` : ''}</div>
                 <i class="na_dot st-${dot}" aria-hidden="true"></i>
@@ -1288,7 +1359,7 @@ function mountSectionBrowser($host) {
                 </div>
               </div>`);
             $card.find('.na_card_head').on('click', () => {
-                const $b = $card.children('.na_card_body');
+                const $b = $card.find('.na_card_body').first();
                 $card.toggleClass('open', !!$b.prop('hidden'));
                 const willOpen = $b.prop('hidden');
                 $b.prop('hidden', !willOpen);
@@ -1298,6 +1369,8 @@ function mountSectionBrowser($host) {
             $card.find('.na_pin_t').on('click', () => setPinned(key, !pinned.has(key)));
             if (isOpen) $card.addClass('open');
             $card.find('.na_edit').on('click', e => { e.stopPropagation(); editSection($card, s); });
+            $card.find('.na_tlb_more2').on('click', function () { const $x = $card.find('.na_tlb_extra'); $x.prop('hidden', !$x.prop('hidden')); $(this).toggleClass('active', !$x.prop('hidden')); });
+            $card.find('.na_tlb_text').on('click', function () { $(this).toggleClass('full'); });
             $card.find('.na_up').on('click', () => move(s, -1));
             $card.find('.na_down').on('click', () => move(s, 1));
             $card.find('.na_ins').on('click', () => insertAfter(s));
@@ -1319,10 +1392,20 @@ function mountSectionBrowser($host) {
         // group badges: card count, then card count · token sum
         allGroups.forEach(g => {
             const n = g.$el.find('.na_card').length;
-            const $meta = g.$el.find('> .na_group_head .na_group_meta').text(`섹션 ${n}개`);
+            // timeline: "#0 – #590 · 섹션 24 · 9,340 토큰", STATE: "Y2 #604 기준 · 섹션 6 · …"
+            let lead = '';
+            if (tl) {
+                const rs = g.$el.find('.na_card[data-a]').toArray();
+                const sm = g.state && g.title.match(/((?:\S{1,12}\s)?#\d+)/);
+                if (sm) lead = `${sm[1]} 기준 · `;
+                else if (rs.length) lead = `#${Math.min(...rs.map(e => +e.dataset.a))} – #${Math.max(...rs.map(e => +e.dataset.b))} · `;
+            }
+            const unit = tl ? '' : '개';
+            const $meta = g.$el.find('> .na_group_head .na_group_meta').text(`${lead}섹션 ${n}${unit}`);
             if ((q || filter !== 'all') && !n && !(q && g.$el.find('> .na_group_head mark, > .na_group_note mark').length)) { g.$el.remove(); return; }
             Promise.all(g.tok).then(ns => {
-                if (myId === renderId) $meta.text(`섹션 ${n}개 · ${shortNum(ns.reduce((x, y) => x + (y || 0), 0))} 토큰`);
+                const sum = ns.reduce((x, y) => x + (y || 0), 0);
+                if (myId === renderId) $meta.text(`${lead}섹션 ${n}${unit} · ${tl && sum < 10000 ? fmt(sum) : shortNum(sum)} 토큰`);
             });
         });
         $info.html(q
