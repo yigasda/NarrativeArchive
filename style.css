@@ -2621,6 +2621,8 @@ body:not(.na_darkui) .na_cal_item.warn { background: #FDF1EE; }
 .na_cal_txt small { font-size: 0.821em; }
 .na_cal_cfg > summary svg { vertical-align: -2px; color: var(--na-dim); }
 
+/* the in-content 저장 stands in for the dialog's own */
+dialog:has(.na_ly_save) .popup-button-ok { display: none; }
 /* --- end audit D --- */
 
 /* --- audit E: x-ray, people, map, temperature --- */
