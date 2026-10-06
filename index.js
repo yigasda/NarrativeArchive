@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.23.0';
+const VERSION = '3.23.1';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -1911,7 +1911,7 @@ function renderPanel() {
             <section class="na_tab_pane" data-pane="config" hidden>
               <div class="na_cfg_head"><button type="button" class="na_cfg_back" id="na_cfg_back" title="돌아가기" aria-label="돌아가기">${svgA(ICO_A.left, 18, 2.2)}</button><b>설정</b><button type="button" class="na_cfg_pill" id="na_cfg_preview">주입 미리보기</button></div>
               <div class="na_cfg_grp">
-                <div class="na_cfg_label">주입</div>
+                <div class="na_cfg_label"><i class="fa-solid fa-syringe"></i> 주입</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
                   <label class="na_set_row"><span>아카이브 주입</span><input type="checkbox" id="na_enabled" class="na_toggle"></label>
@@ -1925,7 +1925,7 @@ function renderPanel() {
                 </div>
               </div>
               <div class="na_cfg_grp" title="섹션 카드의 스위치 · 고정 · 키워드로 섹션마다 정하고, 여기선 한꺼번에 관리해요.">
-                <div class="na_cfg_label">분량 · 라우터</div>
+                <div class="na_cfg_label"><i class="fa-solid fa-scale-balanced"></i> 분량 · 라우터</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
                   <label class="na_set_row"><span><span>토큰 상한</span><small>넘으면 알려 줘요</small></span><span class="na_cfg_val"><input type="number" id="na_cap" class="text_pole" min="0" step="1000" placeholder="없음" title="0이나 빈칸이면 상한 없음"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
@@ -1958,7 +1958,7 @@ function renderPanel() {
                 </div>
               </div>
               <div class="na_cfg_grp" title="질문 · 키워드 제안 · 점검 · 라우터에 쓰는 모델이에요. AI는 답하고 검사만 하고, 아카이브는 직접 고쳐요.">
-                <div class="na_cfg_label">AI · 번역</div>
+                <div class="na_cfg_label"><i class="fa-solid fa-robot"></i> AI · 번역</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
                   <label class="na_set_row" title="연결 프로필 · 커스텀 API · Vertex를 고르면 RP 모델과 따로 쓸 수 있어요"><span><span>AI 기능 모델</span><small>질문 · 점검 · 라우터 · 온도 · 지문</small></span><span class="na_cfg_val"><select id="na_ai_profile" class="text_pole"></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
@@ -1997,7 +1997,7 @@ function renderPanel() {
                 </div>
               </div>
               <div class="na_cfg_grp">
-                <div class="na_cfg_label">알림</div>
+                <div class="na_cfg_label"><i class="fa-solid fa-bell"></i> 알림</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
                   <label class="na_set_row" title="0이나 빈칸이면 알리지 않아요"><span><span>백업 알림</span><small>백업 뒤 이만큼 바뀌면</small></span><span class="na_cfg_val"><input type="number" id="na_backup_every" class="text_pole" min="0" max="999" placeholder="끔"><span class="na_cfg_unit">번</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
