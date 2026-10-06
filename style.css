@@ -3027,4 +3027,9 @@ body:not(.na_darkui) .na_tlb_menu .na_hc_status.ok { color: #2E7D4F; }
 .na_tlb_hc { display: contents; }
 .na_tl:not(.na_darkui) .na_tlb_menu .na_v2_pillbtn, .na_tl:not(.na_darkui) .na_tlb_menu .na_hc_status { background: var(--tl-bg); border-color: var(--tl-line); }
 /* the search field's own input never draws a box of its own (theme text_pole styles) */
-.na_search_wrap input.na_search, .na_search_wrap input.na_search:focus { background: transparent !important; border: 0 !important; box-shadow: none !important; outline: none; }
+/* theme extensions paint inputs too: the field is the wrap, the input itself stays see-through */
+#na_settings .na_search_wrap input.na_search, #na_settings .na_search_wrap input.na_search:focus, #na_settings .na_search_wrap input.na_search:hover {
+    background: transparent !important; background-color: transparent !important; background-image: none !important;
+    border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: none !important; -webkit-appearance: none; appearance: none;
+}
+#na_settings .na_search_wrap input.na_search::-webkit-search-decoration { -webkit-appearance: none; }
