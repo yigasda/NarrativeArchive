@@ -3034,3 +3034,12 @@ body:not(.na_darkui) .na_tlb_menu .na_hc_status.ok { color: #2E7D4F; }
     border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: none !important; -webkit-appearance: none; appearance: none;
 }
 #na_settings .na_search_wrap input.na_search::-webkit-search-decoration { -webkit-appearance: none; }
+
+/* ============ the extension's own header bar in SillyTavern's extension list (light themes):
+   a cream card like the rest of the panel instead of the stock dark gradient */
+body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header {
+    background: #F7EEE7; background-image: none; border: 1px solid #E5D5C9; border-radius: 14px;
+    padding: 6px 12px; box-shadow: none; color: #463428;
+}
+body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header:hover { filter: none; background: #F2E7DF; }
+body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header .inline-drawer-icon { color: #8A7A70; }
