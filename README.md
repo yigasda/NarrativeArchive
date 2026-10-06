@@ -128,3 +128,18 @@ https://github.com/yigasda/NarrativeArchive
 - ``` 코드 블록 안의 `#` 줄은 제목으로 보지 않아요
 - 제목이 같은 섹션이 여럿 있어도 스위치·📌 고정·🔑 키워드 연동은 섹션마다 따로 움직여요 (같은 제목끼리 순서를 바꾸면 설정도 자리를 따라 바뀌어요)
 - 제목에 구간 번호를 넣어 두면 찾기 편합니다 (예: `## Y2 #574–#600 — 제목`)
+
+## 코드 구조
+
+`index.js`는 시작점이에요. 기능별 코드는 `src/`에 나뉘어 있어요 (ES 모듈).
+
+| 파일 | 하는 일 |
+|---|---|
+| `core.js` | 상수, 채팅별 아카이브 기록·전역 설정, 모든 변경이 지나가는 `commitText` |
+| `sections.js` | 제목 파싱, 섹션 키·스위치·고정·키워드 연결, 번호 검사, STATE/OPEN 꼬리 |
+| `inject.js` · `fade.js` · `world.js` · `knowledge.js` | 주입 블록 만들기, 망각 곡선, 세계관, 누가 아는가 |
+| `router.js` | 답 직전 준비: AI 라우터, 방금 보낸 메시지로 키워드 다시 보기 |
+| `panel.js` · `browser.js` · `status.js` | 사이드 패널, 아카이브 탭 카드(목록·타임라인), 계기판 |
+| `extract.js` · `append.js` · `wizard.js` · `prompts.js` · `hide.js` | 원문 뽑기, 아카이브에 추가, 압축 마법사, 압축 지시문, 숨기기 |
+| `ai.js` · `translate.js` | AI 연결(프로필·커스텀 API·Vertex), 번역·용어집 |
+| 나머지 | 화면 하나씩: `ask` `drift` `quotes` `health` `xray` `people` `calendar` `branches` `diff` `preview` `reader` `source` `keywords` `picker` `chats` `theme` `util` |
