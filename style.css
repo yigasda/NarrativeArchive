@@ -1478,7 +1478,7 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_browser .na_card { border-radius: 16px; background: var(--na-card); border: 1px solid var(--na-line); border-left-width: 1px; }
 .na_browser .na_card:has(> .na_card_body:not([hidden])) { border-color: color-mix(in srgb, var(--na-accent) 55%, transparent); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06); }
 .na_browser .na_off.na_card, .na_browser .na_off_parent.na_card { background: var(--na-softer); }
-.na_rail, .na_dot { display: none; }
+.na_browser .na_rail, .na_browser .na_dot { display: none; }
 .na_browser .na_card_head { padding: 10px 12px 10px 14px; gap: 8px; }
 .na_card_range { font-size: 0.72em; color: var(--na-dim); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .na_browser .na_card_title { font-size: 0.93em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1985,20 +1985,20 @@ body:not(.na_darkui) #na_settings, body:not(.na_darkui) .na_popup, body:not(.na_
     --na-warm: #C4521C; --na-warm-ink: #C4471A; --na-warm-soft: #FBE4D8;
     --na-cold: #3D6FB6; --na-cold-ink: #2F5F9E; --na-cold-soft: #E3ECF8;
 }
-body:not(.na_darkui) .na_v2, body:not(.na_darkui) #na_settings .na_tab_pane { color: #2A211C; }
+body:not(.na_darkui) .na_v2, body:not(.na_darkui) #na_settings .na_tab_pane:where(:not([data-pane="home"])) { color: #2A211C; }
 
 /* ============ shared fixes from the mockup audit (all screens) */
 /* SillyTavern's small { opacity: .7; color: body } leaks in: captions keep our own colours, fully opaque */
-.na_v2 small, #na_settings .na_tab_pane small { opacity: 1; }
-.na_v2 small:not([class]), #na_settings .na_tab_pane small:not([class]) { color: var(--na-dim); }
+.na_v2 small, #na_settings .na_tab_pane:where(:not([data-pane="home"])) small { opacity: 1; }
+.na_v2 small:not([class]), #na_settings .na_tab_pane:where(:not([data-pane="home"])) small:not([class]) { color: var(--na-dim); }
 .na_v2_label small { color: var(--na-dim); font-weight: 400; }
 /* mockups are drawn at 14px */
-.na_popup.na_v2, #na_settings .na_tab_pane { font-size: 0.9333em; }
+.na_popup.na_v2, #na_settings .na_tab_pane:where(:not([data-pane="home"])) { font-size: 0.9333em; }
 .na_v2_title { gap: 2px; }
 .na_v2_title b { font-size: 1.4286em; font-weight: 700; letter-spacing: -0.01em; }
 .na_v2_title small, .na_v2 .na_v2_title small:not([class]) { font-size: 0.893em; color: var(--na-sub, var(--na-dim)); }
 /* buttons take line-height: normal through font: inherit and come out a few px short of the mockups */
-.na_v2 button, #na_settings .na_tab_pane button { line-height: 1.5; }
+.na_v2 button, #na_settings .na_tab_pane:where(:not([data-pane="home"])) button { line-height: 1.5; }
 .na_v2_label { font-size: 0.929em; font-weight: 600; color: var(--na-mute, var(--na-dim)); margin: 2px 2px -6px; }
 /* switches: 40×24, 18px knob, no shadow */
 .na_sw { width: 40px; height: 24px; }
@@ -2995,3 +2995,24 @@ body:not(.na_darkui) .na_people .na_tp_jump.cold { color: #2F6DB5; }
 .na_people .na_v2_foot { font-size: 0.8214em; margin-top: -6px; }
 body:not(.na_darkui) .na_people .na_v2_foot { color: #9A8B80; }
 /* --- end audit E --- */
+
+/* ============ home tab: keeps the original theme-based look (it was not part of the mockup redesign).
+   The light-theme mockup palette is undone here; the shared fixes above skip the home pane with :where(). */
+body:not(.na_darkui) #na_settings :is(.inline-drawer-header, #na_meter, .na_nav, .na_tab_pane[data-pane="home"]) {
+    --na-accent: var(--SmartThemeQuoteColor, #c9814b);
+    --na-line: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 15%, transparent);
+    --na-soft: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 7%, transparent);
+    --na-softer: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 4%, transparent);
+    --na-accent-soft: color-mix(in srgb, var(--na-accent) 16%, transparent);
+    --na-raw: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 38%, transparent);
+    --na-warn: var(--warning, #d9822b);
+    --na-card: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 5%, transparent);
+    --na-card2: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 9%, transparent);
+    --na-dim: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 64%, transparent);
+    --na-bad: #c4362a; --na-bad-soft: color-mix(in srgb, #c4362a 13%, transparent);
+    --na-accent-ink: initial; --na-line2: initial; --na-mute: initial; --na-sub: initial; --na-ink: initial; --na-paper: initial;
+    --na-ok: initial; --na-ok-soft: initial; --na-amber: initial; --na-amber-soft: initial; --na-purple: initial; --na-purple-soft: initial;
+}
+body:not(.na_darkui) #na_settings :is(.inline-drawer-header, #na_meter, .na_nav, .na_tab_pane[data-pane="home"]) .na_v2 {
+    --na-line: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 14%, transparent);
+}
