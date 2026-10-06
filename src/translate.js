@@ -70,13 +70,34 @@ export const trGet = k => trCache.get(k) ?? trMem()?.[k];
 
 // items: { text, mark?: 'OLD'|'NEW', key? } — an OLD/NEW pair goes out together so the wording stays the same.
 // The glossary entries a line mentions are part of its cache key, so a changed spelling gets a new translation.
+export const trKeyOf = (gloss, x) => {
+    const g = glossaryIn(gloss, x.mark ? (x.key ?? x.text) : x.text);
+    return `${g.length ? `${shortHash(g.map(e => `${e.src}=${e.ko}`).join('|'))}\u0002` : ''}${x.key ?? x.text}`;
+};
+
+// what is already translated (by the reader or anywhere else), without asking the model: text → translation or null
+export function trCachedLines(lines) {
+    const gloss = hasChat() ? glossaryEntries(getMeta()) : [];
+    return lines.map(l => trGet(trKeyOf(gloss, { text: l })) ?? null);
+}
+
+// line-by-line Korean for archive text: which lines are worth translating, and putting translations back in place
+export const trLineOk = l => /[\p{L}]{2,}/u.test(l) && !/^\s*-{3,}\s*$/.test(l);
+export function withLineTr(raw, map) {
+    return raw.split('\n').map(l => {
+        if (!trLineOk(l)) return l;
+        const t = map.get(l.trim());
+        if (!t) return l;
+        // keep the line's markdown lead ("## ", "- ") if the model dropped it
+        const lead = l.match(/^\s*(#{1,3} |[-*] )/)?.[1] || '';
+        return lead ? `${lead}${t.replace(/^\s*(?:#{1,3}|[-*])\s+/, '')}` : t;
+    }).join('\n');
+}
+
 export async function translateLines(items, { fresh = false } = {}) {
     const gloss = hasChat() ? glossaryEntries(getMeta()) : [];
     items = items.map(x => typeof x === 'string' ? { text: x } : x);
-    const keyOf = x => {
-        const g = glossaryIn(gloss, x.mark ? (x.key ?? x.text) : x.text);
-        return `${g.length ? `${shortHash(g.map(e => `${e.src}=${e.ko}`).join('|'))}\u0002` : ''}${x.key ?? x.text}`;
-    };
+    const keyOf = x => trKeyOf(gloss, x);
     const seen = new Set();
     const need = items.filter(x => (fresh || trGet(keyOf(x)) === undefined) && !seen.has(keyOf(x)) && seen.add(keyOf(x)));
     for (let i = 0; i < need.length;) {

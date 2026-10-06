@@ -142,4 +142,4 @@ https://github.com/yigasda/NarrativeArchive
 | `panel.js` · `browser.js` · `status.js` | 사이드 패널, 아카이브 탭 카드(목록·타임라인), 계기판 |
 | `extract.js` · `append.js` · `wizard.js` · `prompts.js` · `hide.js` | 원문 뽑기, 아카이브에 추가, 압축 마법사, 압축 지시문, 숨기기 |
 | `ai.js` · `translate.js` | AI 연결(프로필·커스텀 API·Vertex), 번역·용어집 |
-| 나머지 | 화면 하나씩: `ask` `drift` `quotes` `health` `xray` `people` `calendar` `branches` `diff` `preview` `reader` `source` `keywords` `picker` `chats` `theme` `util` |
+| 나머지 | 화면 하나씩: `ask` `drift` `quotes` `health` `xray` `people` `calendar` `branches` `diff` `preview` `reader` `peek` `source` `keywords` `picker` `chats` `theme` `util` |

@@ -3,7 +3,7 @@
 import { ctx, getMeta, globalSettings, saveGlobal } from './core.js';
 import { groupLabel, linkWaiting, mutedSet, parseSections, sectionKey } from './sections.js';
 import { srcButton } from './source.js';
-import { openGlossary, translateLines } from './translate.js';
+import { openGlossary, translateLines, trLineOk, withLineTr } from './translate.js';
 import { confirm, esc } from './util.js';
 
 // Small markdown renderer for the archive's own format (headings, bullets, rules, emphasis). Escapes first.
@@ -91,17 +91,10 @@ export async function openReader() {
     });
     // ---- whole-archive Korean: line by line, kept in the chat's translation memory
     const m = getMeta();
-    const lineOk = l => /[\p{L}]{2,}/u.test(l) && !/^\s*-{3,}\s*$/.test(l);
+    const lineOk = trLineOk;
     let korean = false, busy = false;
     const lineMap = new Map();
-    const show = raw => raw.split('\n').map(l => {
-        if (!lineOk(l)) return l;
-        const t = lineMap.get(l.trim());
-        if (!t) return l;
-        // keep the line's markdown lead ("## ", "- ") if the model dropped it
-        const lead = l.match(/^\s*(#{1,3} |[-*] )/)?.[1] || '';
-        return lead ? `${lead}${t.replace(/^\s*(?:#{1,3}|[-*])\s+/, '')}` : t;
-    }).join('\n');
+    const show = raw => withLineTr(raw, lineMap);
     const rerender = () => {
         const top = $root.closest('.popup-content, dialog').scrollTop?.() ?? 0;
         $root.find('.na_reader').html(renderReading(m, korean ? { show } : {}).html);
