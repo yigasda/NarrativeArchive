@@ -34,7 +34,11 @@ export function mountSectionBrowser($host) {
           <button type="button" class="na_tlb_sq na_tlb_raw" title="원문 편집" aria-label="원문 편집"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>
           <button type="button" class="na_tlb_sq na_tlb_more" title="더 보기" aria-label="더 보기"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
         </div>
-        <div class="na_tlb_menu"><button type="button" class="na_v2_pillbtn na_tlb_list"><i class="fa-solid fa-list-ul"></i> 목록으로 보기</button></div>
+        <div class="na_tlb_menu">
+          <button type="button" class="na_v2_pillbtn na_tlb_list">${svgA(ICO_A.list, 14)}목록으로 보기</button>
+          <button type="button" class="na_v2_pillbtn na_rp_open" title="아카이브 전체에서 찾아 바꾸기">찾아 바꾸기</button>
+          <span class="na_tlb_hc"></span>
+        </div>
         <div class="na_arch_tools"></div>
         <div class="na_br_filters"></div>
         <div class="na_tl_legend" aria-hidden="true"><span><i class="st-long"></i>원문</span><span><i class="st-short"></i>짧게</span><span><i class="st-line"></i>한 줄</span><span><i class="st-key"></i>키워드 대기</span><span><i class="st-off"></i>꺼짐</span></div>
@@ -206,13 +210,15 @@ export function mountSectionBrowser($host) {
         const tl = $root.hasClass('na_tl');
         // list mode: off / keyword / pinned always show (even at 0); "짧게 들어감" only when there is any
         const showF = f => cnt[f] || filter === f || (!tl && f !== 'fade');
-        // list mode: the heading check reads as one line at the end of the chips (opens the check list)
+        // the heading check reads as one line: at the end of the chips (list), or in the ⋯ menu (timeline)
         let hc = '';
-        if (!tl) {
+        {
             const { issues, ranged } = checkHeadings(m.text);
             if (issues.length) hc = `<button type="button" class="na_hc_status bad" title="제목 검사 열기">제목 문제 ${issues.length}곳</button>`;
             else if (ranged) hc = `<button type="button" class="na_hc_status ok" title="번호 제목 ${ranged}개 모두 형식·순서가 맞아요">${svgA(ICO_A.check, 14, 2.4)}제목 문제 없음</button>`;
         }
+        $root.find('.na_tlb_hc').html(tl ? hc : '');
+        if (tl) hc = '';
         $root.find('.na_br_filters').html(`<button type="button" data-f="all" class="${filter === 'all' ? 'on' : ''}">전체 ${cardCount}</button>${Object.keys(cnt).filter(showF).map(f => `<button type="button" data-f="${f}" class="${filter === f ? 'on' : ''}">${fname[f]} ${cnt[f]}</button>`).join('')}${hc ? `<span class="na_spacer"></span>${hc}` : ''}`);
         const allGroups = [];
         const allJobs = [];

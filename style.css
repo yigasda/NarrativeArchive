@@ -2052,7 +2052,7 @@ body:not(.na_darkui) #na_settings .na_seg_btn.active { background: #F7EEE7; colo
 .na_browser:not(.na_tl) .na_search_wrap input.na_search { padding: 0 !important; height: auto; min-height: 0; font-size: 0.964em; line-height: 1.5; }
 body:not(.na_darkui) .na_browser:not(.na_tl) .na_search_wrap input.na_search::placeholder { color: #A99C92; opacity: 1; }
 .na_browser:not(.na_tl) .na_rp_open { display: inline-block; flex: none; border: 0; background: var(--na-card2); color: var(--na-mute, inherit); font: inherit; font-size: 0.857em; line-height: 1.5; padding: 3px 10px; border-radius: 999px; cursor: pointer; }
-.na_browser:not(.na_tl) .na_arch_tools > details:not([open]), .na_browser:not(.na_tl) .na_arch_tools:not(:has(> details[open])) { display: none; }
+.na_browser .na_arch_tools > details:not([open]), .na_browser .na_arch_tools:not(:has(> details[open])) { display: none; }
 /* filter chips + heading check at the end */
 .na_browser:not(.na_tl) .na_br_filters { align-items: center; }
 .na_browser:not(.na_tl) .na_br_filters button[data-f] { font-size: 0.893em; line-height: 1.5; padding: 4px 12px; }
@@ -3016,3 +3016,15 @@ body:not(.na_darkui) #na_settings :is(.inline-drawer-header, #na_meter, .na_nav,
 body:not(.na_darkui) #na_settings :is(.inline-drawer-header, #na_meter, .na_nav, .na_tab_pane[data-pane="home"]) .na_v2 {
     --na-line: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 14%, transparent);
 }
+
+/* ============ timeline ⋯ menu: one row of equal pills (list view · find & replace · heading check), chips below */
+.na_tl.na_tlb_open .na_tlb_menu { flex-wrap: wrap; align-items: center; gap: 6px; }
+.na_tlb_menu .na_v2_pillbtn, .na_tlb_menu .na_hc_status { display: inline-flex; align-items: center; gap: 5px; height: 30px; box-sizing: border-box; padding: 0 12px; border-radius: 999px; border: 1px solid var(--na-line); background: var(--na-card); color: inherit; font: inherit; font-size: 0.82em; line-height: 1; cursor: pointer; white-space: nowrap; }
+.na_tlb_menu .na_hc_status.ok { color: color-mix(in srgb, #2e8b57 80%, var(--SmartThemeBodyColor, #222)); }
+body:not(.na_darkui) .na_tlb_menu .na_hc_status.ok { color: #2E7D4F; }
+.na_tlb_menu .na_hc_status.bad { color: var(--na-warn); border-color: color-mix(in srgb, var(--na-warn) 40%, transparent); font-weight: 600; }
+.na_tlb_hc:empty { display: none; }
+.na_tlb_hc { display: contents; }
+.na_tl:not(.na_darkui) .na_tlb_menu .na_v2_pillbtn, .na_tl:not(.na_darkui) .na_tlb_menu .na_hc_status { background: var(--tl-bg); border-color: var(--tl-line); }
+/* the search field's own input never draws a box of its own (theme text_pole styles) */
+.na_search_wrap input.na_search, .na_search_wrap input.na_search:focus { background: transparent !important; border: 0 !important; box-shadow: none !important; outline: none; }
