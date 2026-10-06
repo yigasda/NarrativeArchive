@@ -91,11 +91,10 @@ STEPS
 1. Read the section. Mark what MUST survive:
    who did what · decisions · promises · secrets that came out · injuries · how a relationship changed ·
    facts later parts may depend on (names, places, objects, numbers like #346).
-2. SHORT: rewrite the section in about one third of its length, never more than 85% of it
-   (a section that is already short may stay near that limit, but must still be shorter).
+2. SHORT: a light trim, not a summary — about 85% of the section's length (never longer than the section).
+   Keep the sentences and their detail; take out only what adds nothing: repeated feelings, filler, things said twice.
    Same form as the original: bullets stay bullets, and every label line of the section (PLOT:, NOTES:, any line
    that ends with a colon) stays, in the same order, with its own shortened bullets under it. Keep every fact from step 1.
-   Cut mood and repeated feelings.
    Dialogue: a line you keep in quotation marks is copied exactly from the section — every word, same order,
    nothing trimmed, merged or reworded. Never shorten a quote.
    Keep WHOLE, however long, a line that turns the scene: one the section itself calls out ("the line that changed …"),
@@ -117,9 +116,10 @@ NOTES:
 Answer:
 SHORT:
 PLOT:
-- Crossing the old bridge at dusk, a plank broke; Ren cut his leg and Mara, afraid of heights, pulled him up: "Now you owe me."
-- Ivo: the duke closed the south road, so they go through Varo's market.
-- That night Ren admitted his sister is dead; Mara slept beside him without answering.
+- Ren and Mara crossed the old bridge at dusk; Mara is afraid of heights, so Ren held her sleeve and talked about his sister.
+- Halfway a plank broke. Ren fell to one knee and cut his leg; Mara pulled him up. She said, "Now you owe me."
+- Across the bridge Ivo waited with the horses: the duke has closed the south road, so they must go through Varo's market.
+- That night Ren admitted his sister is dead. Mara didn't answer but slept next to him.
 NOTES:
 - Ren's leg wound is untreated.
 LINE:
@@ -268,7 +268,7 @@ export async function openLayers(s) {
           <small class="na_ly_trinfo"></small>
         </div>
         <div class="na_ly_pane" data-t="long"><div class="na_ly_view na_ly_full"></div></div>
-        <div class="na_ly_pane" data-t="short"><div class="na_ly_view"></div><textarea class="text_pole na_ly_short" rows="8" spellcheck="false" hidden placeholder="원문을 1/3쯤으로 줄인 것. 직접 쓰거나 초안 모델로 만들어요."></textarea></div>
+        <div class="na_ly_pane" data-t="short"><div class="na_ly_view"></div><textarea class="text_pole na_ly_short" rows="8" spellcheck="false" hidden placeholder="원문을 85%쯤으로 살짝 다듬은 것. 직접 쓰거나 초안 모델로 만들어요."></textarea></div>
         <div class="na_ly_pane" data-t="line"><div class="na_ly_view"></div><textarea class="text_pole na_ly_line" rows="3" spellcheck="false" hidden placeholder="가장 중요한 일 한 문장"></textarea></div>
         ${draftReady() ? `<div class="na_ly_ask"><input type="text" class="na_ly_askq" placeholder="고쳐 달라고 하기 (예: 소망 대사는 원문 그대로)" aria-label="고쳐 달라고 하기" enterkeyhint="send"><button type="button" class="na_ly_askgo" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>` : ''}
         <div class="na_v2_row2 na_ly_btns">${draftReady() ? `<button type="button" class="na_v2_btn na_ly_draft">초안 모델로 ${L.short || L.line ? '다시' : '만들기'}</button>` : ''}<button type="button" class="na_v2_btn na_ly_save">저장</button></div>
