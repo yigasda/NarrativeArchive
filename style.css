@@ -3286,27 +3286,27 @@ body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-draw
    right after it with the colours mapped (cream → warm dark brown, brown ink → cream, accents brighter).
    The panel and popups sit on a warm dark base so the cards read as one family with the light look. */
 /* the theme's own page and text colours, warmed, for the rules that borrow them (active tabs, face rings, sticky bars) */
-body.na_darkui :is(#na_settings, dialog.popup:has(.na_popup)) {
+body.na_darkui :is(#na_settings, dialog.popup:has(.na_popup, #na_settings)) {
     --SmartThemeBodyColor: #EAE0D6; --SmartThemeEmColor: #B3A396; --SmartThemeQuoteColor: #D9733A;
     --SmartThemeBlurTintColor: #2A221D; --SmartThemeChatTintColor: #2E2621; --SmartThemeBorderColor: rgba(239, 227, 216, 0.18);
     --SmartThemeShadowColor: rgba(0, 0, 0, 0.4); color: var(--SmartThemeBodyColor);
 }
 body.na_darkui #na_settings > .inline-drawer > .inline-drawer-content { background: #2A221D; border-radius: 0 0 14px 14px; }
-body.na_darkui dialog.popup:has(.na_popup) { background: #2A221D; color: #EFE3D8; }
+body.na_darkui dialog.popup:has(.na_popup, #na_settings) { background: #2A221D; color: #EFE3D8; }
 body.na_darkui .na_face_btn > i { background: var(--na-fill); color: var(--na-onfill); }
-body.na_darkui dialog.popup:has(.na_popup) .popup-controls .menu_button { background: #3A2F28; border: 1px solid #54463D; color: #EFE3D8; }
+body.na_darkui dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #3A2F28; border: 1px solid #54463D; color: #EFE3D8; }
 body.na_darkui .na_popup :where(.text_pole) { background: #2E2621; border: 1px solid #54463D; color: #EFE3D8; }
 
 /* ============ the extension's own theme (설정 › 테마), whatever SillyTavern's theme is. Inside the panel and its popups
    the theme colours SillyTavern's rules read are swapped for the chosen palette's, and both sit on their own base. */
-body:not(.na_darkui) :is(#na_settings, dialog.popup:has(.na_popup)) {
+body:not(.na_darkui) :is(#na_settings, dialog.popup:has(.na_popup, #na_settings)) {
     --SmartThemeBodyColor: #463428; --SmartThemeEmColor: #786455; --SmartThemeQuoteColor: #B85C1E;
     --SmartThemeBlurTintColor: #F0E4DB; --SmartThemeChatTintColor: #ECE0D6; --SmartThemeBorderColor: rgba(120, 90, 60, 0.25);
     --SmartThemeShadowColor: rgba(0, 0, 0, 0.1); color: var(--SmartThemeBodyColor);
 }
 body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-content { background: #F0E4DB; border-radius: 0 0 14px 14px; }
-body:not(.na_darkui) dialog.popup:has(.na_popup) { background: #F0E4DB; color: #463428; }
-body:not(.na_darkui) dialog.popup:has(.na_popup) .popup-controls .menu_button { background: #F7EEE7; border: 1px solid #E5D5C9; color: #463428; }
+body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) { background: #F0E4DB; color: #463428; }
+body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #F7EEE7; border: 1px solid #E5D5C9; color: #463428; }
 body:not(.na_darkui) .na_popup :where(.text_pole) { background: #F2E9E2; border: 1px solid #E5D5C9; color: #463428; }
 
 /* 설정 › 테마: two round swatches */
@@ -3462,14 +3462,8 @@ body.na_darkui #na_settings #na_next .na_next_card.warn .na_btn.na_primary { bac
 body.na_darkui #na_settings #na_next .na_next_card.bad .na_btn.na_primary { background: var(--hm-bad-soft); color: #F29A90; }
 body.na_darkui #na_settings #na_next .na_next_card .na_btn.na_primary:hover { filter: brightness(1.15); }
 
-/* wand menu launcher: every tool in three small groups */
-.na_launch { gap: 14px; }
-.na_launch_grp { display: flex; flex-direction: column; gap: 6px; }
-.na_launch_lbl { padding: 0 2px; font-size: 0.8em; font-weight: 600; color: var(--na-dim); }
-.na_launch_grid { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 8px; }
-.na_launch_grid .na_launch_btn { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; padding: 12px 6px 10px; border: 1px solid var(--na-line); border-radius: 16px; background: var(--na-card); color: inherit; font: inherit; font-size: 0.86em; line-height: 1.25; text-align: center; cursor: pointer; }
-.na_launch_btn:hover:not(:disabled) { border-color: var(--na-accent); }
-.na_launch_btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.na_launch_ic { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; background: var(--na-accent-soft); color: var(--na-accent); }
-.na_launch .na_launch_panel { flex: none; align-self: center; }
-.na_launch .na_launch_panel .na_svg { color: var(--na-accent); }
+/* the panel shown from the wand menu: no fold-out header, always open */
+#na_settings.na_in_popup > .inline-drawer > .inline-drawer-header { display: none; }
+#na_settings.na_in_popup > .inline-drawer > .inline-drawer-content { display: block !important; height: auto !important; border-radius: 14px; }
+.na_panelpop { text-align: left; }
+
