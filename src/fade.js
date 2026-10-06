@@ -66,7 +66,7 @@ export function applyFade(m, text) {
         if (use === 'long') { out += chunk; continue; }
         faded.set(sectionKey(s), use);
         const L = layersOf(m)[sectionKey(s)];
-        out += `${chunk.match(/^[^\n]*/)[0]}\n${String(use === 'line' ? L.line : L.short).trim()}\n\n`;
+        out += `${chunk.match(/^[^\n]*/)[0]}\n${use === 'line' ? String(L.line).trim() : withTopLabel(chunk, L.short)}\n\n`;
     }
     return { text: out, faded };
 }
@@ -81,8 +81,9 @@ STEPS
 1. Read the section. Mark what MUST survive:
    who did what · decisions · promises · secrets that came out · injuries · how a relationship changed ·
    facts later parts may depend on (names, places, objects, numbers like #346).
-2. SHORT: rewrite the section in about one third of its length.
-   Same form as the original (bullets stay bullets). Keep every fact from step 1.
+2. SHORT: rewrite the section in about one third of its length, never more than half.
+   Same form as the original: bullets stay bullets, and every label line of the section (PLOT:, NOTES:, any line
+   that ends with a colon) stays, in the same order, with its own shortened bullets under it. Keep every fact from step 1.
    Cut mood, repeated feelings and exact dialogue. Keep a quote only if it is a line the story keeps coming back to.
 3. LINE: one sentence, 30 words or fewer: the single most important thing that happened or changed.
 4. Same language as the section. Add nothing that is not in the section. No comments.
@@ -90,15 +91,21 @@ STEPS
 EXAMPLE
 SECTION:
 ## #12–#15 — The bridge (Spring 3, Varo)
+PLOT:
 - Ren and Mara cross the old bridge at dusk. Mara is afraid of heights; Ren holds her sleeve and talks about his sister to distract her.
 - Halfway, a plank breaks. Ren falls to one knee and cuts his leg; Mara pulls him up. She says, "Now you owe me."
 - On the far side Ivo waits with the horses. He tells them the duke has closed the south road, so they must go through Varo's market.
 - That night Ren admits his sister is dead. Mara doesn't answer but sleeps next to him.
+NOTES:
+- Ren's leg wound is not treated yet.
 Answer:
 SHORT:
+PLOT:
 - Crossing the old bridge at dusk, a plank broke; Ren cut his leg and Mara, afraid of heights, pulled him up: "Now you owe me."
 - Ivo: the duke closed the south road, so they go through Varo's market.
 - That night Ren admitted his sister is dead; Mara slept beside him without answering.
+NOTES:
+- Ren's leg wound is untreated.
 LINE:
 Ren was hurt on the bridge and saved by Mara; that night he told her his sister is dead.
 
@@ -109,11 +116,19 @@ SHORT:
 LINE:
 <one sentence>`;
 
+// a section that opens with a label line (PLOT: …) keeps it in its short version: put it back if it was dropped
+export function withTopLabel(chunk, short) {
+    short = String(short || '').trim();
+    const first = String(chunk).replace(/^[^\n]*\n?/, '').trimStart().match(/^([A-Z][A-Z0-9 /&'-]{1,30}:)[ \t]*(\n|$)/);
+    return first && short && !short.startsWith(first[1]) ? `${first[1]}\n${short}` : short;
+}
+
 export async function draftLayers(m, s) {
     const out = await askDraft(`SECTION:\n${m.text.slice(s.start, s.end).trim()}`, { system: AI_SYS_LAYERS, maxTokens: 4000 });
     const mt = stripThink(out).match(/SHORT:\s*\n?([\s\S]*?)\n\s*\**LINE:?\**\s*\n?([\s\S]+)$/i);
     if (!mt) throw new Error(`${s.title.slice(0, 30)}: 답 형식이 달라요 (SHORT:/LINE: 없음)`);
-    return { short: mt[1].replace(/^\**\s*/, '').trim(), line: mt[2].trim().split('\n')[0].trim() };
+    const short = withTopLabel(m.text.slice(s.start, s.end), mt[1].replace(/^\**\s*/, ''));
+    return { short, line: mt[2].trim().split('\n')[0].trim() };
 }
 
 export async function saveLayers(m, s, short, line) {
@@ -156,7 +171,7 @@ export async function openLayers(s) {
         <div class="na_v2_row2 na_ly_btns">${draftReady() ? `<button type="button" class="na_v2_btn na_ly_draft">초안 모델로 ${L.short || L.line ? '다시' : '만들기'}</button>` : ''}<button type="button" class="na_v2_btn na_ly_save">저장</button></div>
         ${draftReady() ? `<small class="na_v2_foot">${esc(drLabel())} · 짧게·한 줄을 같이 채워요. 저장해야 들어가요</small>` : '<small class="na_v2_foot">⚙ 설정 → AI · 번역 → 초안 모델을 정하면 여기서 바로 만들 수 있어요</small>'}
       </div>`);
-    $root.find('.na_ly_short').val(L.short || '');
+    $root.find('.na_ly_short').val(L.short ? withTopLabel(m.text.slice(s.start, s.end), L.short) : '');
     $root.find('.na_ly_line').val(L.line || '');
     const show = () => {
         $root.find('.na_ly_tabs button').each(function () { $(this).toggleClass('on', this.dataset.t === tab); });
