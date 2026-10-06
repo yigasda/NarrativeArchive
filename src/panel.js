@@ -1,6 +1,6 @@
 // The side panel: markup, event wiring (bindPanel) and refresh (syncPanel).
 
-import { aiLabel, aiProfiles, askAI, askDraft, connSettings, drLabel, draftReady, draftSettings, parseServiceAccount, trLabel, trSettings, vxTokens, withSpinner } from './ai.js';
+import { aiLabel, aiProfiles, askAI, askDraft, connSettings, drLabel, draftReady, draftSettings, listModels, parseServiceAccount, trLabel, trSettings, vxTokens, withSpinner } from './ai.js';
 import { openAppend } from './append.js';
 import { openAsk } from './ask.js';
 import { branchState, openBranches } from './branches.js';
@@ -370,10 +370,14 @@ export function renderPanel() {
 // custom-API / Vertex fields for one connection ('ai' = the AI 기능 model, 'tr' = the translation model)
 export function connCfgHtml(p) {
     return `
-                <div class="na_tr_cfg" id="na_${p}_custom" hidden>
-                  <input type="text" class="text_pole" id="na_${p}_url" placeholder="URL (예: https://api.example.com/v1)" autocomplete="off" spellcheck="false">
-                  <input type="password" class="text_pole" id="na_${p}_key" placeholder="API 키" autocomplete="off">
-                  <input type="text" class="text_pole" id="na_${p}_model" placeholder="모델 이름 (예: gpt-4o-mini)" autocomplete="off" spellcheck="false">
+                <div class="na_tr_cfg na_cc" id="na_${p}_custom" data-p="${p}" hidden>
+                  <div class="na_cc_box">
+                    <label class="na_cc_row"><span class="na_cc_lbl">주소</span><input type="text" class="text_pole" id="na_${p}_url" placeholder="https://api.example.com/v1" autocomplete="off" spellcheck="false" inputmode="url"></label>
+                    <label class="na_cc_row"><span class="na_cc_lbl">API 키</span><input type="password" class="text_pole" id="na_${p}_key" placeholder="sk-…" autocomplete="off" spellcheck="false"><button type="button" class="na_cc_eye" aria-label="키 보기" title="키 보기">${svgA(ICO_A.eye, 17)}</button></label>
+                    <div class="na_cc_row"><span class="na_cc_lbl">모델</span><input type="text" class="text_pole na_cc_model" id="na_${p}_model" placeholder="불러와서 고르거나 직접 입력" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="na_${p}_models"><button type="button" class="na_cc_load" id="na_${p}_load" title="주소와 키로 모델 목록 불러오기">${svgA(ICO_A.redo, 15)}<span>불러오기</span></button></div>
+                  </div>
+                  <div class="na_cc_models" id="na_${p}_models" role="listbox" hidden></div>
+                  <small class="na_cc_hint" id="na_${p}_mhint"></small>
                 </div>
                 <div class="na_tr_cfg" id="na_${p}_vertex" hidden>
                   <textarea class="text_pole" id="na_${p}_vxjson" rows="4" placeholder="서비스 계정 JSON (키 파일 내용을 통째로 붙여넣기)" spellcheck="false"></textarea>
@@ -395,6 +399,8 @@ export function renderConn(p) {
     $(`#na_${p}_vertex`).prop('hidden', t.mode !== 'vertex');
     $(`#na_${p}_test_row`).prop('hidden', !own);
     $(`#na_${p}_url`).val(t.url); $(`#na_${p}_key`).val(t.key); $(`#na_${p}_model`).val(t.model);
+    const n = Array.isArray(t.models) ? t.models.length : 0;
+    $(`#na_${p}_mhint`).text(n ? `모델 ${n}개 불러옴 · 모델 칸을 누르면 목록이 열려요` : '주소와 키를 넣고 불러오기를 누르면 모델을 골라 쓸 수 있어요');
     // a saved key is never shown again; the box only takes a replacement
     $(`#na_${p}_vxjson`).val('').attr('placeholder', t.vxJson.trim() ? '저장됨 · 바꾸려면 새 JSON을 붙여넣기' : '서비스 계정 JSON (키 파일 내용을 통째로 붙여넣기)');
     $(`#na_${p}_vxclear`).prop('hidden', !t.vxJson.trim());
@@ -403,6 +409,21 @@ export function renderConn(p) {
     if (t.vxJson.trim()) { try { const sa = parseServiceAccount(t.vxJson); info = `프로젝트 ${sa.project_id} · ${sa.client_email}`; } catch (e) { info = e.message; } }
     $(`#na_${p}_vxinfo`).text(info);
     return own;
+}
+
+// the model list under a custom API's model box: everything, or what matches the typed text
+export function drawModels(p, open) {
+    const t = connSettings(p), $l = $(`#na_${p}_models`), $in = $(`#na_${p}_model`);
+    const ids = Array.isArray(t.models) ? t.models : [];
+    if (!open || !ids.length) { $l.prop('hidden', true); $in.attr('aria-expanded', 'false'); return; }
+    const q = String($in.val() || '').trim().toLowerCase(), cur = t.model;
+    const list = q && q !== cur.toLowerCase() ? ids.filter(x => x.toLowerCase().includes(q)) : ids;
+    $l.html(list.length
+        ? list.slice(0, 400).map(x => `<button type="button" role="option" class="na_cc_opt ${x === cur ? 'on' : ''}" data-id="${esc(x)}" aria-selected="${x === cur}"><span>${esc(x)}</span>${x === cur ? svgA(ICO_A.check, 15, 2.4) : ''}</button>`).join('')
+        : '<div class="na_cc_none">맞는 모델이 없어요 · 그대로 두면 입력한 이름으로 써요</div>').prop('hidden', false);
+    $in.attr('aria-expanded', 'true');
+    const on = $l.find('.na_cc_opt.on')[0];
+    if (on) $l.scrollTop(on.offsetTop - $l.height() / 2 + on.offsetHeight / 2);
 }
 
 export function renderAiSettings() {
@@ -576,7 +597,35 @@ export function bindPanel() {
     $('#na_dr_max').on('change', function () { const v = Math.max(1024, parseInt(this.value, 10) || 16000); draftSettings().max = v; this.value = v; saveGlobal(); });
     for (const p of ['ai', 'tr', 'dr']) {
         const field = (sel, key) => $(`#na_${p}_${sel}`).on('change', function () { connSettings(p)[key] = this.value.trim(); saveGlobal(); renderAiSettings(); });
-        field('url', 'url'); field('key', 'key'); field('model', 'model'); field('vxloc', 'vxLocation'); field('vxmodel', 'vxModel');
+        field('key', 'key'); field('model', 'model'); field('vxloc', 'vxLocation'); field('vxmodel', 'vxModel');
+        // another address has other models: the loaded list goes with the old one
+        $(`#na_${p}_url`).on('change', function () { const t = connSettings(p), v = this.value.trim(); if (v !== t.url) delete t.models; t.url = v; saveGlobal(); renderAiSettings(); });
+        $(`#na_${p}_custom .na_cc_eye`).on('click', function () {
+            const $k = $(`#na_${p}_key`), show = $k.attr('type') === 'password';
+            $k.attr('type', show ? 'text' : 'password');
+            $(this).html(svgA(show ? ICO_A.eyeoff : ICO_A.eye, 17)).attr({ 'aria-label': show ? '키 가리기' : '키 보기', title: show ? '키 가리기' : '키 보기' });
+        });
+        $(`#na_${p}_load`).on('click', async function () {
+            const t = connSettings(p);
+            t.url = String($(`#na_${p}_url`).val() || '').trim();
+            t.key = String($(`#na_${p}_key`).val() || '').trim();
+            saveGlobal();
+            const ids = await withSpinner($(this), '불러오는 중', () => listModels(t));
+            if (!ids) return;
+            t.models = ids;
+            if (!t.model && ids.length === 1) t.model = ids[0];
+            saveGlobal(); renderAiSettings();
+            toastr.success(`모델 ${ids.length}개를 불러왔어요`);
+            drawModels(p, true);
+        });
+        $(`#na_${p}_model`).on('focus click', () => drawModels(p, true))
+            .on('input', () => drawModels(p, true))
+            .on('blur', () => setTimeout(() => { if (!$(`#na_${p}_models`).is(':hover')) drawModels(p, false); }, 150))
+            .on('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); drawModels(p, false); } });
+        $(`#na_${p}_models`).on('mousedown', e => e.preventDefault()).on('click', '.na_cc_opt', function () {
+            connSettings(p).model = this.dataset.id; saveGlobal();
+            drawModels(p, false); renderAiSettings();
+        });
         $(`#na_${p}_vxjson`).on('change', function () {
             if (!this.value.trim()) return;
             try { parseServiceAccount(this.value); } catch (e) { toastr.warning(e.message); return; }

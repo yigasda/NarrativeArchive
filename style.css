@@ -3340,3 +3340,24 @@ button.na_pb_quote:hover { background: var(--na-card2); }
 .na_pb_linepick button.on { border-color: var(--na-accent); color: var(--na-accent-ink, var(--na-accent)); }
 .na_pb_linebtns { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 
+
+/* custom API: one grouped box (주소 · API 키 · 모델), the loaded model list drops below it */
+.na_cc { gap: 8px; }
+.na_cc_box { border: 1px solid var(--na-line); border-radius: 14px; background: var(--na-card2); overflow: hidden; }
+.na_cc_row { display: flex; align-items: center; gap: 8px; min-height: 44px; margin: 0; padding: 0 6px 0 12px; cursor: text; }
+.na_cc_row + .na_cc_row { border-top: 1px solid var(--na-line2, var(--na-line)); }
+.na_cc_row:focus-within { background: color-mix(in srgb, var(--na-accent) 6%, transparent); }
+.na_cc_lbl { flex: none; width: 4.2em; font-size: 0.86em; color: var(--na-dim); }
+#na_settings .na_cc_row input.text_pole { flex: 1; width: auto !important; min-width: 0; height: 40px; min-height: 0; margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; outline: none; font-size: 0.92em; color: inherit; }
+.na_cc_eye { flex: none; width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--na-dim); cursor: pointer; }
+.na_cc_eye:hover { color: inherit; background: var(--na-card); }
+.na_cc_load { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 11px; border: 0; border-radius: 999px; background: var(--na-accent); color: #fff; font: inherit; font-size: 0.8em; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.na_cc_load:disabled { opacity: 0.75; cursor: wait; }
+.na_cc_models { max-height: 240px; overflow-y: auto; padding: 4px; border: 1px solid var(--na-line); border-radius: 14px; background: var(--na-card); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
+.na_cc_models[hidden] { display: none; }
+.na_cc_opt { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 9px 10px; border: 0; border-radius: 10px; background: none; color: inherit; font: inherit; font-size: 0.88em; text-align: left; cursor: pointer; }
+.na_cc_opt span { min-width: 0; overflow-wrap: anywhere; font-family: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.95em; }
+.na_cc_opt:hover { background: var(--na-card2); }
+.na_cc_opt.on { background: var(--na-accent-soft); color: var(--na-accent-ink, var(--na-accent)); font-weight: 600; }
+.na_cc_none { padding: 10px; font-size: 0.82em; color: var(--na-dim); }
+.na_cc_hint { padding: 0 4px; font-size: 0.78em; color: var(--na-dim); }
