@@ -3449,3 +3449,13 @@ body.na_darkui #na_settings {
 #na_settings #na_next .na_next_main b { font-size: 1.07em; }
 #na_settings #na_next .na_next_main span { font-size: 0.82em; opacity: 1; color: var(--hm-dim); }
 
+/* dark: the next-step card stays a brown card like the tool rows; the tone shows in a thin edge, the icon disc and a soft button */
+body.na_darkui #na_settings #na_next .na_next_card.warn, body.na_darkui #na_settings #na_next .na_next_card.bad { background: var(--hm-card); }
+body.na_darkui #na_settings #na_next .na_next_card.warn { border-color: rgba(232, 180, 90, 0.3); }
+body.na_darkui #na_settings #na_next .na_next_card.bad { border-color: rgba(236, 116, 104, 0.3); }
+body.na_darkui #na_settings #na_next .na_next_card.warn > i { background: var(--hm-warn-soft); color: var(--hm-warn); }
+body.na_darkui #na_settings #na_next .na_next_card.bad > i { background: var(--hm-bad-soft); color: var(--hm-bad); }
+body.na_darkui #na_settings #na_next .na_next_card .na_btn.na_primary { height: 34px; padding: 0 14px; border: 0; border-radius: 12px; font-weight: 600; box-shadow: none; }
+body.na_darkui #na_settings #na_next .na_next_card.warn .na_btn.na_primary { background: var(--hm-warn-soft); color: #F0CC80; }
+body.na_darkui #na_settings #na_next .na_next_card.bad .na_btn.na_primary { background: var(--hm-bad-soft); color: #F29A90; }
+body.na_darkui #na_settings #na_next .na_next_card .na_btn.na_primary:hover { filter: brightness(1.15); }
