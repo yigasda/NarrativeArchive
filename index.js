@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.23.1';
+const VERSION = '3.23.2';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -3459,7 +3459,7 @@ function translateButton($diff) {
 
 // Section-by-section diff: each changed section gets a card (added / changed / removed) with its −/+ lines.
 // Sections are matched by title, so a renamed section shows as one removed and one added.
-function sectionChanges(aText, bText) {
+function sectionDiffList(aText, bText) {
     const body = (t, s) => t.slice(s.start, s.end).replace(/^[^\n]*\n?/, '').replace(/^(?:[ \t]*\n)+/, '').trimEnd();
     const A = parseSections(aText), B = parseSections(bText);
     const mapA = new Map(A.map(s => [sectionKey(s), s])), mapB = new Map(B.map(s => [sectionKey(s), s]));
@@ -3486,7 +3486,7 @@ const DIFF_KIND = { add: '추가', mod: '수정', del: '삭제', same: '같음' 
 // fills $host with the count chips, the section cards and the "바뀐 섹션만" toggle
 function renderSectionDiff($host, aText, bText, { tr } = {}) {
     const m = hasChat() ? getMeta() : null;
-    const list = sectionChanges(aText, bText);
+    const list = sectionDiffList(aText, bText);
     const n = { add: 0, mod: 0, del: 0, same: 0 };
     list.forEach(x => n[x.kind]++);
     const changed = n.add + n.mod + n.del;
