@@ -3263,20 +3263,22 @@ body.na_darkui .na_tlb_menu .na_hc_status.ok { color: #74C292; }
 }
 :is(#na_settings, .na_popup) :is(.na_search_wrap, .na_find_field) input::-webkit-search-decoration { -webkit-appearance: none; }
 
-/* ============ the extension's own header bar in SillyTavern's extension list (light themes):
-   a cream card like the rest of the panel instead of the stock dark gradient */
+/* ============ the extension's own header bar in SillyTavern's extension list: the panel's base colour
+   (the same as under the tool boxes) instead of the stock gradient, so bar and panel read as one piece */
 body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header {
-    background: #F7EEE7; background-image: none; border: 1px solid #E5D5C9; border-radius: 14px;
+    background: #F0E4DB; background-image: none; border: 1px solid #F0E4DB; border-radius: 14px;
     padding: 6px 12px; box-shadow: none; color: #463428;
 }
 body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header {
-    background: #3A2F28; background-image: none; border: 1px solid #54463D; border-radius: 14px;
+    background: #2A221D; background-image: none; border: 1px solid #2A221D; border-radius: 14px;
     padding: 6px 12px; box-shadow: none; color: #EFE3D8;
 }
-body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header:hover { filter: none; background: #F2E7DF; }
-body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header:hover { filter: none; background: #41352D; }
+body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header:hover { filter: none; background: #EADCD1; border-color: #EADCD1; }
+body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header:hover { filter: none; background: #332A24; border-color: #332A24; }
 body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header .inline-drawer-icon { color: #8A7A70; }
 body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header .inline-drawer-icon { color: #B3A396; }
+/* open: the bar's lower corners meet the panel below */
+#na_settings > .inline-drawer:has(> .inline-drawer-content[style*="block"]) > .inline-drawer-toggle.inline-drawer-header { border-radius: 14px 14px 0 0; }
 
 /* ============ dark themes: the light mockup palette, darkened. Every light-only rule above has a body.na_darkui twin
    right after it with the colours mapped (cream → warm dark brown, brown ink → cream, accents brighter).
