@@ -1036,6 +1036,17 @@ function darkUI() {
     return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55;
 }
 
+// body.na_darkui on dark themes: light themes get the mockup's own colors (style.css), dark themes the theme's
+let themeTimer = null;
+function watchTheme() {
+    const sync = () => document.body.classList.toggle('na_darkui', darkUI());
+    sync();
+    const mo = new MutationObserver(() => { clearTimeout(themeTimer); themeTimer = setTimeout(sync, 300); });
+    for (const el of [document.documentElement, document.body]) mo.observe(el, { attributes: true, attributeFilter: ['style', 'class'] });
+    // theme presets also swap a <style> in <head>
+    mo.observe(document.head, { childList: true, subtree: true, characterData: true });
+}
+
 // a timeline card's three-line preview: prose, without "PLOT:" style labels and bullet marks
 const tlPreview = body => body.replace(/^#{1,2} [^\n]*\n?/, '').split('\n')
     .map(l => l.trim()).filter(l => l && !/^[A-Z][A-Z /&'’-]{1,30}:$/.test(l) && !/^-{3,}$/.test(l))
@@ -7684,6 +7695,7 @@ function addWandMenu() {
     const et = c.eventTypes || c.event_types;
 
     const start = () => {
+        watchTheme();
         if (!$('#na_settings').length) renderPanel();
         addWandMenu();
         onChatChanged();
