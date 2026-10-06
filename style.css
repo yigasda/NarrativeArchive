@@ -3461,3 +3461,15 @@ body.na_darkui #na_settings #na_next .na_next_card .na_btn.na_primary { height: 
 body.na_darkui #na_settings #na_next .na_next_card.warn .na_btn.na_primary { background: var(--hm-warn-soft); color: #F0CC80; }
 body.na_darkui #na_settings #na_next .na_next_card.bad .na_btn.na_primary { background: var(--hm-bad-soft); color: #F29A90; }
 body.na_darkui #na_settings #na_next .na_next_card .na_btn.na_primary:hover { filter: brightness(1.15); }
+
+/* wand menu launcher: every tool in three small groups */
+.na_launch { gap: 14px; }
+.na_launch_grp { display: flex; flex-direction: column; gap: 6px; }
+.na_launch_lbl { padding: 0 2px; font-size: 0.8em; font-weight: 600; color: var(--na-dim); }
+.na_launch_grid { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 8px; }
+.na_launch_grid .na_launch_btn { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; padding: 12px 6px 10px; border: 1px solid var(--na-line); border-radius: 16px; background: var(--na-card); color: inherit; font: inherit; font-size: 0.86em; line-height: 1.25; text-align: center; cursor: pointer; }
+.na_launch_btn:hover:not(:disabled) { border-color: var(--na-accent); }
+.na_launch_btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.na_launch_ic { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; background: var(--na-accent-soft); color: var(--na-accent); }
+.na_launch .na_launch_panel { flex: none; align-self: center; }
+.na_launch .na_launch_panel .na_svg { color: var(--na-accent); }
