@@ -3360,4 +3360,3 @@ button.na_pb_quote:hover { background: var(--na-card2); }
 .na_cc_opt:hover { background: var(--na-card2); }
 .na_cc_opt.on { background: var(--na-accent-soft); color: var(--na-accent-ink, var(--na-accent)); font-weight: 600; }
 .na_cc_none { padding: 10px; font-size: 0.82em; color: var(--na-dim); }
-.na_cc_hint { padding: 0 4px; font-size: 0.78em; color: var(--na-dim); }
