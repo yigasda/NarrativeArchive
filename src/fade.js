@@ -5,8 +5,11 @@ import { currentChatId } from './chats.js';
 import { ctx, getMeta, saveMeta, textHash } from './core.js';
 import { applyInjection } from './inject.js';
 import { sectionPanel, syncPanel } from './panel.js';
+import { mdBlock } from './reader.js';
 import { routerCfg, routerState } from './router.js';
 import { RANGE_HEAD, filterMuted, keywordWaiting, linkedMap, parseSections, pinnedSet, sectionKey, sectionLinks } from './sections.js';
+import { ICO_A, svgA } from './theme.js';
+import { trCachedLines, trLineOk, translateLines, withLineTr } from './translate.js';
 import { confirm, countTokens, esc, fmt } from './util.js';
 
 // Each numbered section can keep a short version and a one-line version next to its full text (m.layers, keyed by section).
@@ -176,17 +179,41 @@ export async function openLayers(s) {
           <button type="button" data-t="short"><span>짧게${now('short')}</span><small class="na_ly_tok_short"></small></button>
           <button type="button" data-t="line"><span>한 줄${now('line')}</span><small class="na_ly_tok_line"></small></button>
         </div>
-        <div class="na_ly_pane" data-t="long"><div class="na_ly_full">${esc(full)}</div></div>
-        <div class="na_ly_pane" data-t="short"><textarea class="text_pole na_ly_short" rows="8" spellcheck="false" placeholder="원문을 1/3쯤으로 줄인 것. 직접 붙여넣거나 초안 모델로 만들어요."></textarea></div>
-        <div class="na_ly_pane" data-t="line"><textarea class="text_pole na_ly_line" rows="3" spellcheck="false" placeholder="가장 중요한 일 한 문장"></textarea></div>
+        <div class="na_ly_tools">
+          <button type="button" class="na_v2_pillbtn na_ly_edit">${svgA(ICO_A.pen, 13)}<span>직접 고치기</span></button>
+          <button type="button" class="na_v2_pillbtn na_ly_tr"><i class="fa-solid fa-language"></i><span>한국어로</span></button>
+          <small class="na_ly_trinfo"></small>
+        </div>
+        <div class="na_ly_pane" data-t="long"><div class="na_ly_view na_ly_full"></div></div>
+        <div class="na_ly_pane" data-t="short"><div class="na_ly_view"></div><textarea class="text_pole na_ly_short" rows="8" spellcheck="false" hidden placeholder="원문을 1/3쯤으로 줄인 것. 직접 쓰거나 초안 모델로 만들어요."></textarea></div>
+        <div class="na_ly_pane" data-t="line"><div class="na_ly_view"></div><textarea class="text_pole na_ly_line" rows="3" spellcheck="false" hidden placeholder="가장 중요한 일 한 문장"></textarea></div>
         <div class="na_v2_row2 na_ly_btns">${draftReady() ? `<button type="button" class="na_v2_btn na_ly_draft">초안 모델로 ${L.short || L.line ? '다시' : '만들기'}</button>` : ''}<button type="button" class="na_v2_btn na_ly_save">저장</button></div>
         ${draftReady() ? `<small class="na_v2_foot">${esc(drLabel())} · 짧게·한 줄을 같이 채워요. 저장해야 들어가요</small>` : '<small class="na_v2_foot">⚙ 설정 → AI · 번역 → 초안 모델을 정하면 여기서 바로 만들 수 있어요</small>'}
       </div>`);
-    $root.find('.na_ly_short').val(L.short ? withTopLabel(m.text.slice(s.start, s.end), L.short) : '');
-    $root.find('.na_ly_line').val(L.line || '');
+    const startShort = L.short ? withTopLabel(m.text.slice(s.start, s.end), L.short) : '', startLine = L.line || '';
+    $root.find('.na_ly_short').val(startShort);
+    $root.find('.na_ly_line').val(startLine);
+    const text = t => t === 'long' ? full : String($root.find(t === 'short' ? '.na_ly_short' : '.na_ly_line').val() || '');
+    const dirty = () => text('short').trim() !== startShort.trim() || text('line').trim() !== startLine.trim();
+    // each tab is read as text; "직접 고치기" turns short / one line into an editor, "한국어로" shows it translated
+    let editing = false, korean = false, trBusy = false;
+    const trMap = new Map();
+    const trLines = t => [...new Set(text(t).split('\n').filter(trLineOk).map(l => l.trim()))];
+    const fillTr = t => { const ls = trLines(t); trCachedLines(ls).forEach((x, i) => { if (x) trMap.set(ls[i], x); }); return ls; };
     const show = () => {
         $root.find('.na_ly_tabs button').each(function () { $(this).toggleClass('on', this.dataset.t === tab); });
         $root.find('.na_ly_pane').each(function () { this.hidden = this.dataset.t !== tab; });
+        const $pane = $root.find(`.na_ly_pane[data-t="${tab}"]`);
+        const raw = text(tab);
+        $pane.find('textarea').prop('hidden', !editing);
+        $pane.find('.na_ly_view').prop('hidden', editing)
+            .html(raw.trim() ? mdBlock(korean ? withLineTr(raw, trMap) : raw) : `<span class="na_ly_empty">${tab === 'line' ? '한 줄이 아직 없어요' : '짧은 버전이 아직 없어요'} · 직접 고치기로 쓰거나 초안 모델로 만들어요</span>`);
+        $root.find('.na_ly_edit').prop('hidden', tab === 'long').find('span').text(editing ? '다 고쳤어요' : '직접 고치기');
+        $root.find('.na_ly_edit').toggleClass('on', editing);
+        $root.find('.na_ly_tr').prop('disabled', editing || !raw.trim()).toggleClass('on', korean).find('span').text(korean ? '원문으로' : '한국어로');
+        const ls = fillTr(tab), n = ls.filter(l => trMap.has(l)).length;
+        $root.find('.na_ly_trinfo').text(editing ? '고친 뒤 아래 저장을 눌러야 들어가요' : korean && n < ls.length ? `${n}/${ls.length}줄 번역됨` : !korean && n ? `번역 ${n === ls.length ? '있음' : `${n}/${ls.length}줄 있음`}` : '');
+        if (editing) $pane.find('textarea').trigger('focus');
     };
     const tok = async () => {
         const [a, b, d] = await Promise.all([countTokens(full), countTokens($root.find('.na_ly_short').val()), countTokens($root.find('.na_ly_line').val())]);
@@ -195,7 +222,22 @@ export async function openLayers(s) {
         $root.find('.na_ly_tok_line').text(d ? fmt(d) : '없음');
     };
     show(); tok();
-    $root.on('click', '.na_ly_tabs button', function () { tab = this.dataset.t; show(); });
+    $root.on('click', '.na_ly_tabs button', function () { tab = this.dataset.t; if (tab === 'long') editing = false; show(); });
+    $root.on('click', '.na_ly_edit', () => { editing = !editing; if (editing) korean = false; show(); });
+    $root.on('click', '.na_ly_tr', async function () {
+        if (trBusy) return;
+        if (korean) { korean = false; return show(); }
+        const missing = fillTr(tab).filter(l => !trMap.has(l));
+        if (missing.length) {
+            trBusy = true;
+            $(this).prop('disabled', true).find('span').text('번역하는 중…');
+            try { const tr = await translateLines(missing); missing.forEach((l, i) => { if (tr[i]) trMap.set(l, tr[i]); }); }
+            catch (e) { toastr.error(String(e?.message || e), '번역 실패'); }
+            trBusy = false;
+        }
+        korean = fillTr(tab).some(l => trMap.has(l));
+        show();
+    });
     $root.on('click', '.na_ly_forceseg button', async function () {
         await setFadeForce([sectionKey(s)], this.dataset.v);
         $root.find('.na_ly_forceseg button').each(function () { $(this).toggleClass('on', this.dataset.v === forced()); });
@@ -206,10 +248,13 @@ export async function openLayers(s) {
     $root.find('.na_ly_save').on('click', () => $root.closest('dialog').find('.popup-button-ok').trigger('click'));
     $root.find('.na_ly_draft').on('click', async function () {
         const r = await withSpinner($(this), '만드는 중…', () => draftLayers(m, s));
-        if (r) { $root.find('.na_ly_short').val(r.short); $root.find('.na_ly_line').val(r.line); tab = 'short'; show(); tok(); }
+        if (r) { $root.find('.na_ly_short').val(r.short); $root.find('.na_ly_line').val(r.line); tab = 'short'; editing = false; korean = false; show(); tok(); }
     });
     const res = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '저장', cancelButton: '닫기' });
-    if (res !== c.POPUP_RESULT.AFFIRMATIVE && res !== true) return;
+    if (res !== c.POPUP_RESULT.AFFIRMATIVE && res !== true) {
+        // closed with changes not saved: ask instead of dropping them
+        if (!dirty() || !await confirm('저장 안 한 고침', '짧은 버전 · 한 줄을 고친 게 있어요. 저장할까요?')) return;
+    }
     await saveLayers(m, s, $root.find('.na_ly_short').val(), $root.find('.na_ly_line').val());
     toastr.success('섹션 버전을 저장했어요');
 }
