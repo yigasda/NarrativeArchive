@@ -404,7 +404,7 @@ export function renderConn(p) {
     $(`#na_${p}_test_row`).prop('hidden', !own);
     $(`#na_${p}_url`).val(t.url); $(`#na_${p}_key`).val(t.key); $(`#na_${p}_model`).val(t.model);
     $(`#na_${p}_fmt`).val(t.fmt || ''); $(`#na_${p}_effort`).val(t.effort || '');
-    $(`#na_${p}_url`).attr('placeholder', apiFormat(t) === 'anthropic' ? 'https://api.anthropic.com (비우면 이 주소)' : 'https://api.example.com/v1');
+    $(`#na_${p}_url`).attr('placeholder', apiFormat(t) === 'anthropic' ? '비우면 api.anthropic.com · 중계 주소도 돼요' : 'https://api.example.com/v1');
     // Claude thinks on every request (Opus 5.5 can't turn it off); effort only sticks through its own API format
     const claude = /claude|opus|sonnet|haiku/i.test(t.model || '');
     const hint = claude && apiFormat(t) !== 'anthropic' ? 'Claude 모델이에요. OpenAI 호환 주소는 생각 강도를 무시할 수 있어요 — 형식을 Anthropic으로 두면 생각 강도가 확실히 적용돼요.'
@@ -610,9 +610,9 @@ export function bindPanel() {
     for (const p of ['ai', 'tr', 'dr']) {
         const field = (sel, key) => $(`#na_${p}_${sel}`).on('change', function () { connSettings(p)[key] = this.value.trim(); saveGlobal(); renderAiSettings(); });
         field('key', 'key'); field('model', 'model'); field('vxloc', 'vxLocation'); field('vxmodel', 'vxModel'); field('effort', 'effort');
-        $(`#na_${p}_fmt`).on('change', function () { const t = connSettings(p); t.fmt = this.value; delete t.models; delete t.noEffort; saveGlobal(); renderAiSettings(); });
+        $(`#na_${p}_fmt`).on('change', function () { const t = connSettings(p); t.fmt = this.value; delete t.models; delete t.noEffort; delete t.leanHeaders; saveGlobal(); renderAiSettings(); });
         // another address has other models: the loaded list goes with the old one
-        $(`#na_${p}_url`).on('change', function () { const t = connSettings(p), v = this.value.trim(); if (v !== t.url) { delete t.models; delete t.noEffort; } t.url = v; saveGlobal(); renderAiSettings(); });
+        $(`#na_${p}_url`).on('change', function () { const t = connSettings(p), v = this.value.trim(); if (v !== t.url) { delete t.models; delete t.noEffort; delete t.leanHeaders; } t.url = v; saveGlobal(); renderAiSettings(); });
         $(`#na_${p}_custom .na_cc_eye`).on('click', function () {
             const $k = $(`#na_${p}_key`), show = $k.attr('type') === 'password';
             $k.attr('type', show ? 'text' : 'password');
