@@ -1047,6 +1047,17 @@ function watchTheme() {
     mo.observe(document.head, { childList: true, subtree: true, characterData: true });
 }
 
+// outline icons drawn like the mockups (group A screens): a path string, or raw <path>/<circle> markup
+const svgA = (d, size = 16, sw = 2) => `<svg class="na_svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d.startsWith('<') ? d : `<path d="${d}"/>`}</svg>`;
+const ICO_A = {
+    right: 'M9 6l6 6-6 6', down: 'M6 9l6 6 6-6', left: 'M15 6l-6 6 6 6', check: 'M20 6L9 17l-5-5',
+    up: 'M12 19V5M5 12l7-7 7 7', dn: 'M12 5v14M19 12l-7 7-7-7', plus: 'M12 5v14M5 12h14',
+    key: 'M15 7a4 4 0 1 1-3.9 5H3v4M7 12v3', layers: 'M12 2l9 5-9 5-9-5zM3 12l9 5 9-5M3 17l9 5 9-5',
+    pen: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
+    pin: 'M12 17v5M5 17h14l-2-4V4H7v9z', list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
+    tl: '<path d="M6 3v18"/><circle cx="6" cy="7" r="2"/><circle cx="6" cy="17" r="2"/><path d="M11 7h9M11 17h9"/>',
+};
+
 // a timeline card's three-line preview: prose, without "PLOT:" style labels and bullet marks
 const tlPreview = body => body.replace(/^#{1,2} [^\n]*\n?/, '').split('\n')
     .map(l => l.trim()).filter(l => l && !/^[A-Z][A-Z /&'’-]{1,30}:$/.test(l) && !/^-{3,}$/.test(l))
@@ -1061,10 +1072,11 @@ function mountSectionBrowser($host) {
             <i class="fa-solid fa-magnifying-glass"></i>
             <svg class="na_tlb_mag" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
             <input type="search" class="text_pole na_search" placeholder="이름, 장소, 대사로 찾기">
+            <button type="button" class="na_rp_open" title="아카이브 전체에서 찾아 바꾸기">찾아 바꾸기</button>
           </div>
           <div class="na_br_view" role="group" aria-label="보기">
-            <button type="button" data-v="list" title="카드 목록" aria-label="카드 목록"><i class="fa-solid fa-list-ul"></i></button>
-            <button type="button" data-v="tl" title="타임라인" aria-label="타임라인"><i class="fa-solid fa-timeline"></i></button>
+            <button type="button" data-v="list" title="카드 목록" aria-label="카드 목록">${svgA(ICO_A.list, 16)}</button>
+            <button type="button" data-v="tl" title="타임라인으로 보기" aria-label="타임라인">${svgA(ICO_A.tl, 16)}</button>
           </div>
           <button type="button" class="na_tlb_sq na_tlb_raw" title="원문 편집" aria-label="원문 편집"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>
           <button type="button" class="na_tlb_sq na_tlb_more" title="더 보기" aria-label="더 보기"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
@@ -1079,9 +1091,22 @@ function mountSectionBrowser($host) {
     $host.empty().append($root);
     // find & replace and the heading check sit as two pills under the search
     $root.find('.na_arch_tools').append($('#na_replace'), $('#na_hcheck'));
+    // list ↔ timeline switch: a small icon at the end of the "섹션 카드 / 원문 편집" tabs (the list mockup has no room for it)
+    const $view = $root.find('.na_br_view');
+    $view.find('button').on('click', function () { setLayout(this.dataset.v === 'tl'); });
+    const $seg = $host.closest('.na_tab_pane').find('.na_seg');
+    if ($seg.length) $seg.append($view);
+    // list mode: "찾아 바꾸기" sits inside the search field and opens its panel under it
+    $root.on('click', '.na_rp_open', () => {
+        const d = document.getElementById('na_replace');
+        if (!d) return;
+        d.open = !d.open;
+        if (d.open) $('#na_rp_find').trigger('focus');
+    });
+    $root.on('click', '.na_hc_status', () => { const d = document.getElementById('na_hcheck'); if (d) d.open = !d.open; });
     const syncView = () => {
         const tl = $root.hasClass('na_tl');
-        $root.find('.na_br_view button').each(function () { $(this).toggleClass('on', (this.dataset.v === 'tl') === tl); });
+        $view.find('button').each(function () { $(this).toggleClass('on', (this.dataset.v === 'tl') === tl); });
         $root.find('.na_search').attr('placeholder', tl ? '찾기' : '이름, 장소, 대사로 찾기');
         // the timeline has its own pencil button, so the "섹션 카드 / 원문 편집" tabs step aside
         $root.closest('.na_tab_pane').toggleClass('na_tl_on', tl);
@@ -1093,12 +1118,11 @@ function mountSectionBrowser($host) {
         syncView();
         render();
     };
-    $root.on('click', '.na_br_view button', function () { setLayout(this.dataset.v === 'tl'); });
     $root.on('click', '.na_tlb_list', () => setLayout(false));
     $root.on('click', '.na_tlb_raw', () => showArchiveView('editor'));
     $root.on('click', '.na_tlb_more', function () { $root.toggleClass('na_tlb_open'); $(this).toggleClass('on', $root.hasClass('na_tlb_open')); });
     let filter = 'all';
-    $root.on('click', '.na_br_filters button', function () { filter = filter === this.dataset.f ? 'all' : this.dataset.f; render(); });
+    $root.on('click', '.na_br_filters button[data-f]', function () { filter = filter === this.dataset.f ? 'all' : this.dataset.f; render(); });
     const $list = $root.find('.na_list');
     const $search = $root.find('.na_search');
     const $info = $root.find('.na_search_info');
@@ -1182,7 +1206,7 @@ function mountSectionBrowser($host) {
     };
 
     const sw = (on, title) => `<button type="button" class="na_sw ${on ? 'on' : ''}" title="${title}" aria-pressed="${on}"><span></span></button>`;
-    const pinBtn = (on, what) => `<button type="button" class="na_icon na_icon_sm na_pin ${on ? 'on' : ''}" title="${on ? '고정 풀기' : `${what} 망각 곡선에서도 늘 원문으로 고정`}"><i class="fa-solid fa-thumbtack"></i></button>`;
+    const pinBtn = (on, what) => `<button type="button" class="na_icon na_icon_sm na_pin ${on ? 'on' : ''}" title="${on ? '고정 풀기' : `${what} 망각 곡선에서도 늘 원문으로 고정`}">${svgA(ICO_A.pin, 16)}</button>`;
 
     // "→ #217–#236 · ← Y2 #424" chips under a card: sections it points at, and sections that point at it
     const refChips = (key, short = false) => {
@@ -1190,7 +1214,7 @@ function mountSectionBrowser($host) {
         const chip = k => { const t = lk.byKey.get(k); if (!t) return ''; let r = (t.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [t.title.slice(0, 24)])[0]; if (short) r = r.replace(/\s*[–—~-]\s*#?\d+$/, ''); return `<button type="button" class="na_ref_chip" data-start="${t.start}" title="${esc(t.title)}">${esc(r)}</button>`; };
         const o = (lk.out.get(key) || []).map(chip).join(''), i = (lk.in.get(key) || []).map(chip).join('');
         if (!o && !i) return '';
-        return `<div class="na_card_refs">${o ? `<span class="na_ref_grp" title="이 섹션이 가리키는 섹션"><i class="fa-solid fa-arrow-right"></i>${o}</span>` : ''}${i ? `<span class="na_ref_grp" title="이 섹션을 가리키는 섹션"><i class="fa-solid fa-arrow-left"></i>${i}</span>` : ''}</div>`;
+        return `<div class="na_card_refs">${o ? `<span class="na_ref_grp" title="이 섹션이 가리키는 섹션"><span class="na_ref_arr">→</span>${o}</span>` : ''}${i ? `<span class="na_ref_grp" title="이 섹션을 가리키는 섹션"><span class="na_ref_arr">←</span>${i}</span>` : ''}</div>`;
     };
     $list.on('click', '.na_ref_chip', function (e) { e.stopPropagation(); focus(Number(this.dataset.start)); });
 
@@ -1218,11 +1242,21 @@ function mountSectionBrowser($host) {
         const cnt = { off: 0, key: 0, pin: 0, fade: 0 };
         for (const x of sections) if (!x.group) { const st = stateOf(x); for (const f in cnt) if (st[f]) cnt[f]++; }
         const fname = { off: '꺼짐', key: '키워드', pin: '고정', fade: '짧게 들어감' };
-        $root.find('.na_br_filters').html(`<button type="button" data-f="all" class="${filter === 'all' ? 'on' : ''}">전체 ${cardCount}</button>${Object.keys(cnt).filter(f => cnt[f] || filter === f).map(f => `<button type="button" data-f="${f}" class="${filter === f ? 'on' : ''}">${fname[f]} ${cnt[f]}</button>`).join('')}`);
+        const tl = $root.hasClass('na_tl');
+        // list mode: off / keyword / pinned always show (even at 0); "짧게 들어감" only when there is any
+        const showF = f => cnt[f] || filter === f || (!tl && f !== 'fade');
+        // list mode: the heading check reads as one line at the end of the chips (opens the check list)
+        let hc = '';
+        if (!tl) {
+            const { issues, ranged } = checkHeadings(m.text);
+            if (issues.length) hc = `<button type="button" class="na_hc_status bad" title="제목 검사 열기">제목 문제 ${issues.length}곳</button>`;
+            else if (ranged) hc = `<button type="button" class="na_hc_status ok" title="번호 제목 ${ranged}개 모두 형식·순서가 맞아요">${svgA(ICO_A.check, 14, 2.4)}제목 문제 없음</button>`;
+        }
+        $root.find('.na_br_filters').html(`<button type="button" data-f="all" class="${filter === 'all' ? 'on' : ''}">전체 ${cardCount}</button>${Object.keys(cnt).filter(showF).map(f => `<button type="button" data-f="${f}" class="${filter === f ? 'on' : ''}">${fname[f]} ${cnt[f]}</button>`).join('')}${hc ? `<span class="na_spacer"></span>${hc}` : ''}`);
         const allGroups = [];
+        const allJobs = [];
         $list.empty();
         const groupStack = [];
-        const tl = $root.hasClass('na_tl');
         $root.toggleClass('na_darkui', darkUI());
         const hasOpen = sections.some(x => !x.group && /^OPEN\b/.test(x.title));
         sections.forEach((s, idx) => {
@@ -1256,19 +1290,20 @@ function mountSectionBrowser($host) {
                     <div class="na_card_body" hidden></div>
                     <div class="na_group_items" ${isOpen ? '' : 'hidden'}></div>
                   </div>` : `
-                  <div class="na_group na_lv${s.level} ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''}">
+                  <div class="na_group na_lv${s.level} ${isOpen ? 'na_g_open' : ''} ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''}">
                     <div class="na_group_head">
-                      <i class="fa-solid fa-chevron-${isOpen ? 'down' : 'right'} na_group_chev"></i>
+                      <span class="na_group_chev">${svgA(isOpen ? ICO_A.down : ICO_A.right, 14, 2.4)}</span>
                       <div class="na_head_main">
                         <span class="na_group_title">${highlight(groupLabel(s.title), q)}</span>
                         <span class="na_group_meta"></span>
                       </div>
                       <div class="na_head_ctrl">
-                        ${s.note ? '<button type="button" class="na_icon na_icon_sm na_group_edit" title="머리글 편집"><i class="fa-solid fa-pen"></i></button>' : ''}
+                        ${s.note ? `<button type="button" class="na_icon na_icon_sm na_group_edit" title="머리글 편집">${svgA(ICO_A.pen, 14)}</button>` : ''}
                         ${pinBtn(pinned.has(key), '이 묶음을')}
                         ${sw(!off, off ? '이 묶음 주입 켜기' : '이 묶음 통째로 주입에서 빼기')}
                       </div>
                     </div>
+                    <div class="na_group_bar"><i></i></div>
                     ${s.note ? `<div class="na_group_note">${q ? highlight(s.note, q) : s.note.split('\n').map(mdInline).join('<br>')}</div>` : ''}
                     <div class="na_card_body" hidden></div>
                     <div class="na_group_items" ${isOpen ? '' : 'hidden'}></div>
@@ -1309,10 +1344,12 @@ function mountSectionBrowser($host) {
             const dot = off || parentOff ? 'off' : isPin ? 'pin' : hasKeys && isWait ? 'key' : fade || 'long';
             const tags = [
                 fade && !off ? `<span class="na_tag fade" title="망각 곡선">${fade === 'line' ? '한 줄' : '짧게'}</span>` : '',
-                hasKeys && !off ? `<span class="na_tag key" title="키워드: ${esc(links[key].join(', '))}">${isWait ? '키워드 대기' : '키워드 켜짐'}</span>` : '',
+                hasKeys && !off ? `<span class="na_tag key" title="${isWait ? '키워드 대기' : '키워드 켜짐'}: ${esc(links[key].join(', '))}">키워드</span>` : '',
                 isPin ? '<span class="na_tag pin">고정</span>' : '',
                 count ? `<span class="na_tag hit">${count}건</span>` : '',
             ].join('');
+            // list card: the section label ("PLOT:") on the first line is drawn as a small caption over the preview
+            const lcLabel = tl ? '' : ((body.replace(/^#{1,2} [^\n]*\n?/, '').trim().split('\n')[0] || '').trim().match(/^([A-Z][A-Z /&'’-]{1,30}):$/) || [])[1] || '';
             const status = off || parentOff ? '꺼 둠' : isPin ? '고정' : hasKeys ? (isWait ? `키워드 대기 (${esc(links[key][0])})` : '키워드 켜짐') : fade === 'line' ? '한 줄' : fade === 'short' ? '짧게' : '원문';
             const $card = $(tl ? `
               <div class="na_card ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''} ${isWait && !off ? 'na_waiting' : ''}" data-start="${s.start}" ${rm ? `data-a="${Math.min(+rm[2], +rm[4])}" data-b="${Math.max(+rm[2], +rm[4])}" data-p="${esc(rm[1] || '')}"` : ''}>
@@ -1355,32 +1392,33 @@ function mountSectionBrowser($host) {
                   </div>
                 </div>
               </div>` : `
-              <div class="na_card ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''} ${isWait && !off ? 'na_waiting' : ''}" data-start="${s.start}">
+              <div class="na_card ${rm ? '' : 'na_norange'} ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''} ${isWait && !off ? 'na_waiting' : ''}" data-start="${s.start}">
                 <div class="na_rail" aria-hidden="true">${rm ? `<span>${esc(rm[1] ? `${rm[1]} ` : '')}#${rm[2]}</span><span>#${rm[4]}</span>` : ''}</div>
                 <i class="na_dot st-${dot}" aria-hidden="true"></i>
                 <div class="na_card_head">
                   <div class="na_head_main">
-                    ${rangeTxt || paren ? `<span class="na_card_range">${rangeTxt ? `<span class="na_cr_range">${esc(rangeTxt)}</span>` : ''}${paren ? `<span class="na_cr_paren">${esc(paren)}</span>` : ''}</span>` : ''}
+                    ${rm ? `<span class="na_card_range">${rangeTxt ? `<span class="na_cr_range">${esc(rangeTxt)}</span>` : ''}${paren ? `<span class="na_cr_paren">${esc(paren)}</span>` : ''}<span class="na_cr_tok"> · <span class="na_tokm"></span></span></span>` : ''}
                     <span class="na_card_title" title="${esc(s.title)}">${highlight(name, q)}</span>
+                    ${rm ? '' : `<span class="na_card_sub">${groupStack.length ? (paren ? `${esc(paren)} · ` : '') : '머리말 · '}<span class="na_tokm"></span></span>`}
                   </div>
                   <span class="na_card_tags">${tags}</span>
-                  <span class="na_tok">${fmt(body.length)}자</span>
+                  <span class="na_tok"></span>
                   ${sw(!off, off ? '주입 켜기' : '이 섹션만 주입에서 빼기 (본문은 그대로)')}
                 </div>
                 <div class="na_card_body" ${isOpen ? '' : 'hidden'}>
-                  <div class="na_card_text">${highlight(body.replace(/^#{1,2} [^\n]*\n?/, '').trim(), q) || '<span class="na_dim">(비어 있음)</span>'}</div>
+                  <div class="na_card_text na_lc_prev" title="눌러서 전체 보기" ${q ? 'hidden' : ''}>${lcLabel ? `<span class="na_lbl">${esc(lcLabel)}</span>` : ''}<span class="na_lc_txt">${tlPreview(body) ? highlight(tlPreview(body), q) : '<span class="na_dim">(비어 있음)</span>'}</span></div>
+                  <div class="na_card_text na_lc_full" ${q ? '' : 'hidden'}>${highlight(body.replace(/^#{1,2} [^\n]*\n?/, '').trim(), q) || '<span class="na_dim">(비어 있음)</span>'}</div>
                   ${refChips(key)}
                   <div class="na_card_actions">
-                    <button type="button" class="na_icon na_up" title="위로" aria-label="위로"><i class="fa-solid fa-arrow-up"></i></button>
-                    <button type="button" class="na_icon na_down" title="아래로" aria-label="아래로"><i class="fa-solid fa-arrow-down"></i></button>
-                    <button type="button" class="na_icon na_ins" title="아래에 새 섹션" aria-label="아래에 새 섹션"><i class="fa-solid fa-plus"></i></button>
-                    <span class="na_act_sep"></span>
-                    <button type="button" class="na_icon na_keys ${hasKeys ? 'active' : ''}" title="키워드 연동" aria-label="키워드 연동"><i class="fa-solid fa-key"></i></button>
-                    ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_icon na_layers_btn ${layersOf(m)[key] ? 'active' : ''}" title="짧은 버전 · 한 줄 (망각 곡선)" aria-label="짧은 버전"><i class="fa-solid fa-layer-group"></i></button>` : ''}
-                    <button type="button" class="na_icon na_pin_t ${isPin ? 'active' : ''}" title="${isPin ? '고정 풀기' : '망각 곡선에서도 늘 원문으로 고정'}" aria-label="고정"><i class="fa-solid fa-thumbtack"></i></button>
-                    <button type="button" class="na_icon na_edit" title="편집" aria-label="편집"><i class="fa-solid fa-pen"></i></button>
-                    <button type="button" class="na_icon na_del na_danger" title="섹션 삭제" aria-label="섹션 삭제"><i class="fa-solid fa-trash-can"></i></button>
+                    <button type="button" class="na_icon na_up" title="위로" aria-label="위로">${svgA(ICO_A.up, 17)}</button>
+                    <button type="button" class="na_icon na_down" title="아래로" aria-label="아래로">${svgA(ICO_A.dn, 17)}</button>
+                    <button type="button" class="na_icon na_ins" title="아래에 새 섹션" aria-label="아래에 새 섹션">${svgA(ICO_A.plus, 17)}</button>
+                    <button type="button" class="na_icon na_keys ${hasKeys ? 'active' : ''}" title="키워드 연동" aria-label="키워드 연동">${svgA(ICO_A.key, 17)}</button>
+                    ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_icon na_layers_btn ${layersOf(m)[key] ? 'active' : ''}" title="짧은 버전 · 한 줄 (망각 곡선)" aria-label="짧은 버전">${svgA(ICO_A.layers, 17)}</button>` : ''}
+                    <button type="button" class="na_icon na_edit" title="편집" aria-label="편집">${svgA(ICO_A.pen, 17)}</button>
+                    <button type="button" class="na_icon na_del na_danger" title="섹션 삭제" aria-label="섹션 삭제">${svgA(ICO_A.trash, 17)}</button>
                     <span class="na_spacer"></span>
+                    <button type="button" class="na_icon na_pin_t ${isPin ? 'active' : ''}" title="${isPin ? '고정 풀기' : '망각 곡선에서도 늘 원문으로 고정'}" aria-label="고정">${svgA(ICO_A.pin, 17)}</button>
                     ${srcButton(m, s.title, 'icon')}
                   </div>
                 </div>
@@ -1397,6 +1435,7 @@ function mountSectionBrowser($host) {
             if (isOpen) $card.addClass('open');
             $card.find('.na_edit').on('click', e => { e.stopPropagation(); editSection($card, s); });
             $card.find('.na_tlb_more2').on('click', function () { const $x = $card.find('.na_tlb_extra'); $x.prop('hidden', !$x.prop('hidden')); $(this).toggleClass('active', !$x.prop('hidden')); });
+            $card.find('.na_lc_prev, .na_lc_full').on('click', () => { if (getSelection()?.toString()) return; const $p = $card.find('.na_lc_prev'), $f = $card.find('.na_lc_full'); const full = $f.prop('hidden'); $f.prop('hidden', !full); $p.prop('hidden', full); });
             $card.find('.na_tlb_text, .na_tlb_full').on('click', () => { const $p = $card.find('.na_tlb_text'), $f = $card.find('.na_tlb_full'); const full = $f.prop('hidden'); $f.prop('hidden', !full); $p.prop('hidden', full); });
             $card.find('.na_up').on('click', () => move(s, -1));
             $card.find('.na_down').on('click', () => move(s, 1));
@@ -1411,10 +1450,12 @@ function mountSectionBrowser($host) {
             if (s.start === pendingEdit) editTarget = [$card, s];
             const job = cachedTokens(body).then(n => {
                 if (myId !== renderId) return;
-                $card.find('.na_tok').text(`${shortNum(n)} 토큰`).attr('title', `${fmt(body.length)}자`);
+                $card.find('.na_tok').text(tl ? `${shortNum(n)} 토큰` : shortNum(n)).attr('title', tl ? `${fmt(body.length)}자` : `${fmt(n)} 토큰 · ${fmt(body.length)}자`);
+                $card.find('.na_tokm').text(`${shortNum(n)} 토큰`);
                 return n;
             });
             groupStack.forEach(g => g.tok.push(job));
+            allJobs.push(job);
         });
         // group badges: card count, then card count · token sum
         allGroups.forEach(g => {
@@ -1427,12 +1468,19 @@ function mountSectionBrowser($host) {
                 if (sm) lead = `${sm[1]} 기준 · `;
                 else if (rs.length) lead = `#${Math.min(...rs.map(e => +e.dataset.a))} – #${Math.max(...rs.map(e => +e.dataset.b))} · `;
             }
-            const unit = tl ? '' : '개';
+            const unit = '';
             const $meta = g.$el.find('> .na_group_head .na_group_meta').text(`${lead}섹션 ${n}${unit}`);
             if ((q || filter !== 'all') && !n && !(q && g.$el.find('> .na_group_head mark, > .na_group_note mark').length)) { g.$el.remove(); return; }
             Promise.all(g.tok).then(ns => {
                 const sum = ns.reduce((x, y) => x + (y || 0), 0);
                 if (myId === renderId) $meta.text(`${lead}섹션 ${n}${unit} · ${tl && sum < 10000 ? fmt(sum) : shortNum(sum)} 토큰`);
+                // list mode: a thin bar under the group head, its share of all tokens
+                if (!tl) Promise.all(allJobs).then(all => {
+                    const total = all.reduce((x, y) => x + (y || 0), 0);
+                    if (myId !== renderId || !total) return;
+                    const pct = Math.round(sum / total * 100);
+                    g.$el.find('> .na_group_bar').attr('title', `전체 토큰의 ${pct}%`).children('i').css('width', `${pct}%`);
+                });
             });
         });
         $info.html(q
@@ -1696,8 +1744,8 @@ function renderPanel() {
             <!-- 아카이브 -->
             <section class="na_tab_pane" data-pane="archive" hidden>
               <div class="na_seg">
-                <button type="button" class="na_seg_btn active" data-view="cards"><i class="fa-solid fa-layer-group"></i> 섹션 카드</button>
-                <button type="button" class="na_seg_btn" data-view="editor"><i class="fa-solid fa-pen-to-square"></i> 원문 편집</button>
+                <button type="button" class="na_seg_btn active" data-view="cards">섹션 카드</button>
+                <button type="button" class="na_seg_btn" data-view="editor">원문 편집</button>
               </div>
               <div class="na_block" id="na_view_cards">
                 <details class="na_hcheck" id="na_replace">
@@ -1767,34 +1815,34 @@ function renderPanel() {
               <div class="na_v2 na_cp">
                 <div class="na_v2_card na_cp_hero">
                   <div id="na_since"></div>
-                  <button type="button" class="na_cp_wiz" id="na_open_wizard"><i class="fa-solid fa-wand-magic-sparkles"></i><span><b>압축 마법사</b><small>범위 → 복사 → 붙여넣기 → 채점 → 추가</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                  <button type="button" class="na_cp_wiz" id="na_open_wizard">${svgA('M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M15 9h0M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5', 22)}<span><b>압축 마법사</b><small>뽑기 → 복사 → 붙여넣기 → 채점 → 추가</small></span>${svgA(ICO_A.right, 18, 2.2)}</button>
                 </div>
                 <div class="na_cp_tiles">
-                  <button type="button" class="na_cp_tile" id="na_apply_hide"><i class="fa-solid fa-eye-slash"></i><b>숨기기 다시 적용</b><small>경계선 앞만 숨기고 뒤는 보이게</small></button>
-                  <button type="button" class="na_cp_tile" id="na_unhide"><i class="fa-solid fa-eye"></i><b>숨김 해제</b><small id="na_hidden_n">숨긴 메시지 다시 보이게</small></button>
+                  <button type="button" class="na_cp_tile" id="na_apply_hide"><span class="na_cp_ico">${svgA('M17.9 17.9A10 10 0 0 1 12 20c-7 0-10-8-10-8a18 18 0 0 1 5.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 10 8 10 8a18 18 0 0 1-2.2 3.2M1 1l22 22', 17)}</span><b>숨기기 다시 적용</b><small>경계선 앞만 숨기고 뒤는 보이게</small></button>
+                  <button type="button" class="na_cp_tile" id="na_unhide"><span class="na_cp_ico">${svgA('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>', 17)}</span><b>숨김 해제</b><small id="na_hidden_n">숨긴 메시지 다시 보이게</small></button>
                 </div>
                 <div class="na_v2_label">따로 하기</div>
                 <div class="na_v2_card na_v2_list">
-                  <button type="button" class="na_cp_row" id="na_open_extract"><span class="na_cp_num">1</span><span class="na_cp_txt"><b>원문 뽑기</b><small>경계선 이후 메시지 · 지시문 붙여 복사</small></span><i class="fa-solid fa-chevron-right"></i></button>
-                  <button type="button" class="na_cp_row" id="na_open_append"><span class="na_cp_num">2</span><span class="na_cp_txt"><b>아카이브에 추가</b><small>압축본 붙여넣기 · 번호 검사 · 경계선 자동</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                  <button type="button" class="na_cp_row" id="na_open_extract"><span class="na_cp_num">1</span><span class="na_cp_txt"><b>원문 뽑기</b><small>경계선 이후 메시지 · 지시문 붙여 복사</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
+                  <button type="button" class="na_cp_row" id="na_open_append"><span class="na_cp_num">2</span><span class="na_cp_txt"><b>아카이브에 추가</b><small>압축본 붙여넣기 · 번호 검사 · 경계선 자동</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                 </div>
                 <div class="na_v2_label">설정</div>
                 <div class="na_v2_card na_v2_list na_cp_set">
                   <label class="na_cp_row"><span class="na_cp_txt"><span>숨긴 메시지 빼고 뽑기</span></span><input type="checkbox" class="na_toggle" id="na_opt_hidden"></label>
                   <div class="na_strip_box">
-                    <label class="na_cp_row"><span class="na_cp_txt"><span>태그 지우기</span><small>&lt;think&gt; 블록 통째로 · HTML 태그는 글자만</small></span><input type="checkbox" class="na_toggle" id="na_opt_tags"></label>
+                    <label class="na_cp_row"><span class="na_cp_txt"><span>태그 지우기</span><small id="na_strip_sub">&lt;think&gt; 통째로 · 나머지 태그는 글자만</small></span><input type="checkbox" class="na_toggle" id="na_opt_tags"></label>
                     <div class="na_cp_sub">
                       <textarea class="text_pole na_strip_ta" id="na_strip_custom" rows="2" spellcheck="false" placeholder="통째로 지울 태그나 /정규식/, 한 줄에 하나&#10;scene_plan"></textarea>
                       <small class="na_strip_info" id="na_strip_info"></small>
                     </div>
                   </div>
                   <details class="na_cp_fold" id="na_cmp_settings">
-                    <summary class="na_cp_row"><span class="na_cp_txt"><span>압축 지시문</span><small id="na_plib_sum">이 기기의 실리태번 설정에만 저장돼요</small></span><i class="fa-solid fa-chevron-down"></i></summary>
+                    <summary class="na_cp_row"><span class="na_cp_txt"><span>압축 지시문</span><small id="na_plib_sum">이 기기의 실리태번 설정에만 저장돼요</small></span><span class="na_cp_more">편집</span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
                     <div class="na_cp_sub"><div class="na_plib" id="na_plib"></div></div>
                   </details>
-                  <label class="na_cp_row"><span class="na_cp_txt"><span>아카이브 따라가기</span><small id="na_track_info">제목의 마지막 #번호를 경계선으로</small></span><input type="checkbox" id="na_track" class="na_toggle"></label>
-                  <label class="na_cp_row" id="na_boundary_row"><span class="na_cp_txt"><span>경계선 번호</span><small>여기까지 아카이브에 담겼어요</small></span><input type="number" id="na_boundary" class="text_pole na_cp_num_in" min="0" placeholder="-"></label>
-                  <label class="na_cp_row"><span class="na_cp_txt"><span>숨길 때 남길 메시지</span><small>경계선 바로 앞 몇 개는 보이게</small></span><input type="number" id="na_keep" class="text_pole na_cp_num_in" min="0" max="50"></label>
+                  <label class="na_cp_row"><span class="na_cp_txt"><span>아카이브 따라가기</span><small id="na_track_info">마지막 제목 번호가 곧 경계선</small></span><input type="checkbox" id="na_track" class="na_toggle"></label>
+                  <label class="na_cp_row" id="na_boundary_row" title="여기까지 아카이브에 담겼어요"><span class="na_cp_txt"><span>경계선 번호</span></span><span class="na_cp_hash"><span>#</span><input type="number" id="na_boundary" class="text_pole na_cp_num_in" min="0" placeholder="-"></span></label>
+                  <div class="na_cp_row na_cp_keep_row"><span class="na_cp_txt"><span>숨길 때 남길 메시지</span><small>경계선 바로 앞 몇 개는 보이게</small></span><span class="na_fd_step na_cp_step"><button type="button" class="na_fd_btn na_keep_btn" data-d="-1" aria-label="줄이기">−</button><input type="number" id="na_keep" class="text_pole" min="0" max="50"><button type="button" class="na_fd_btn na_keep_btn" data-d="1" aria-label="늘리기">+</button></span></div>
                 </div>
               </div>
             </section>
@@ -1846,29 +1894,27 @@ function renderPanel() {
 
             <!-- 설정 (⚙) -->
             <section class="na_tab_pane" data-pane="config" hidden>
-              <div class="na_cfg_head"><button type="button" class="na_linkbtn" id="na_cfg_back"><i class="fa-solid fa-arrow-left"></i> 돌아가기</button><b>설정</b><button type="button" class="na_btn na_small" id="na_cfg_preview"><i class="fa-regular fa-eye"></i> 주입 미리보기</button></div>
-              <details class="na_block na_details na_fold" open>
-                <summary><i class="fa-solid fa-syringe"></i> 주입</summary>
-                <div>
+              <div class="na_cfg_head"><button type="button" class="na_cfg_back" id="na_cfg_back" title="돌아가기" aria-label="돌아가기">${svgA(ICO_A.left, 18, 2.2)}</button><b>설정</b><button type="button" class="na_cfg_pill" id="na_cfg_preview">주입 미리보기</button></div>
+              <div class="na_cfg_grp">
+                <div class="na_cfg_label">주입</div>
+                <div class="na_cfg_box">
                 <div class="na_set_list">
                   <label class="na_set_row"><span>아카이브 주입</span><input type="checkbox" id="na_enabled" class="na_toggle"></label>
                   <label class="na_set_row"><span>위치</span>
-                    <select id="na_position" class="text_pole">${Object.entries(POSITIONS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+                    <span class="na_cfg_val"><select id="na_position" class="text_pole">${Object.entries(POSITIONS).map(([v, l]) => `<option value="${v}">${l.replace(/\s*\(깊이\)$/, '')}</option>`).join('')}</select><span class="na_cfg_depth" id="na_depth_field">&nbsp;· 깊이&nbsp;<input type="number" id="na_depth" class="text_pole" min="0" max="999" title="채팅 끝에서 몇 번째 메시지 위에 넣을지"></span>${svgA(ICO_A.right, 15, 2.2)}</span>
                   </label>
-                  <label class="na_set_row" id="na_depth_field"><span>깊이</span><input type="number" id="na_depth" class="text_pole" min="0" max="999"></label>
                   <label class="na_set_row"><span>역할</span>
-                    <select id="na_role" class="text_pole">${Object.entries(ROLES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+                    <span class="na_cfg_val"><select id="na_role" class="text_pole">${Object.entries(ROLES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span>
                   </label>
                 </div>
                 </div>
-              </details>
-              <details class="na_block na_details na_fold">
-                <summary><i class="fa-solid fa-scale-balanced"></i> 분량 · 키워드 · 라우터</summary>
-                <div>
-                  <p class="na_dim na_fold_desc">섹션 카드의 스위치 · 📌 · 🔑로 섹션마다 정하고, 여기선 한꺼번에 관리해요.</p>
+              </div>
+              <div class="na_cfg_grp" title="섹션 카드의 스위치 · 고정 · 키워드로 섹션마다 정하고, 여기선 한꺼번에 관리해요.">
+                <div class="na_cfg_label">분량 · 라우터</div>
+                <div class="na_cfg_box">
                 <div class="na_set_list">
-                  <label class="na_set_row"><span><span>토큰 상한</span><small>넘으면 알려 줘요 · 0이면 없음</small></span><input type="number" id="na_cap" class="text_pole" min="0" step="1000"></label>
-                  <label class="na_set_row"><span><span>망각 곡선</span><small>오래된 섹션은 짧은 버전·한 줄로 넣어요. 버전이 없으면 원문 그대로 · 📌 고정과 지금 불려 온 섹션은 늘 원문</small></span><input type="checkbox" id="na_fade" class="na_toggle"></label>
+                  <label class="na_set_row"><span><span>토큰 상한</span><small>넘으면 알려 줘요</small></span><span class="na_cfg_val"><input type="number" id="na_cap" class="text_pole" min="0" step="1000" placeholder="없음" title="0이나 빈칸이면 상한 없음"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" title="오래된 섹션은 짧은 버전·한 줄로 넣어요. 버전이 없으면 원문 그대로 · 고정한 섹션과 지금 불려 온 섹션은 늘 원문"><span><span>망각 곡선</span><small id="na_fade_sub">오래된 섹션은 짧은 버전·한 줄로</small></span><button type="button" class="na_fd_more" id="na_fade_more" title="자세히" aria-label="자세히" hidden>${svgA(ICO_A.down, 15, 2.2)}</button><input type="checkbox" id="na_fade" class="na_toggle"></label>
                   <div id="na_fade_opts" class="na_v2 na_fd" hidden>
                     <div class="na_fd_save"><span><b id="na_fade_now">-</b><small>토큰</small><s id="na_fade_was"></s></span><span class="na_fd_pct" id="na_fade_pct"></span></div>
                     <div class="na_fd_strip" id="na_fade_strip" aria-hidden="true"></div>
@@ -1878,69 +1924,71 @@ function renderPanel() {
                     <div class="na_fd_level"><i class="line"></i><span><span>한 줄</span><small>더 오래된 섹션 전부</small></span><b id="na_fade_lines">-</b></div>
                     <div class="na_fd_fill"><span id="na_fade_info">-</span><button type="button" class="na_v2_btn primary" id="na_fade_fill"><i class="fa-solid fa-feather-pointed"></i> 초안 모델로 채우기</button></div>
                   </div>
-                  <label class="na_set_row"><span><span>키워드 연동 범위</span><small>최근 메시지 몇 개에서 찾을지 · 연동 <b id="na_linked_n">0</b>개</small></span><input type="number" id="na_link_depth" class="text_pole" min="1" max="50"></label>
-                  <label class="na_set_row"><span><span>AI 라우터</span><small>답하기 직전에 작은 모델이 "지금 대화에 필요한 섹션"을 골라 넣어요 · 따로 연결한 모델이 필요해요</small></span>
-                    <select id="na_router_mode" class="text_pole"><option value="off">끄기</option><option value="linked">키워드 섹션에 더해 AI도 고르기</option><option value="old">오래된 섹션 전부 AI가 고르기</option></select></label>
+                  <label class="na_set_row" title="답하기 직전에 작은 모델이 지금 대화에 필요한 섹션을 골라 넣어요 · 따로 연결한 모델이 필요해요"><span><span>AI 라우터</span><small>답하기 직전에 필요한 섹션을 골라요</small></span>
+                    <span class="na_cfg_val"><select id="na_router_mode" class="text_pole"><option value="off">끄기</option><option value="linked">키워드에 더해 AI도</option><option value="old">오래된 섹션 전부</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <div class="na_router_opts" id="na_router_opts" hidden>
-                    <label class="na_set_row"><span><span>한 번에 최대</span><small>AI가 고를 섹션 수</small></span><input type="number" id="na_router_max" class="text_pole" min="1" max="20"></label>
-                    <label class="na_set_row"><span><span>가리키는 섹션도 같이</span><small>고른 섹션 본문에 "#217–#236"처럼 적힌 섹션도 같이 넣어요</small></span><input type="checkbox" id="na_router_follow" class="na_toggle"></label>
-                    <label class="na_set_row" id="na_router_keep_row"><span><span>최근 섹션은 항상</span><small>마지막 몇 개 섹션은 AI가 안 고르고 늘 넣어요</small></span><input type="number" id="na_router_keep" class="text_pole" min="0" max="20"></label>
-                    <div class="na_set_row"><span><span>지금 해 보기</span><small id="na_router_info">최근 대화로 한 번 골라 봐요</small></span><button type="button" class="na_btn na_small" id="na_router_test"><i class="fa-solid fa-compass"></i> 해 보기</button></div>
+                    <label class="na_set_row" title="고른 섹션 본문에 &quot;#217–#236&quot;처럼 적힌 섹션도 같이 넣어요"><span><span>가리키는 섹션도 같이</span><small>고른 섹션에 적힌 #번호의 섹션</small></span><input type="checkbox" id="na_router_follow" class="na_toggle"></label>
+                    <label class="na_set_row"><span><span>한 번에 최대</span><small>AI가 고를 섹션 수</small></span><span class="na_cfg_val"><input type="number" id="na_router_max" class="text_pole" min="1" max="20"><span class="na_cfg_unit">개</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                    <label class="na_set_row" id="na_router_keep_row"><span><span>최근 섹션은 항상</span><small>마지막 몇 개는 AI가 안 고르고 늘 넣어요</small></span><span class="na_cfg_val"><input type="number" id="na_router_keep" class="text_pole" min="0" max="20"><span class="na_cfg_unit">개</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                    <button type="button" class="na_set_row na_cfg_go" id="na_router_test"><span><span>지금 해 보기</span><small id="na_router_info">최근 대화로 한 번 골라 봐요</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   </div>
-                  <div class="na_set_row"><span><span>키워드 테스트</span><small>문장을 넣어 보면 어떤 섹션이 불려 오는지 보여 줘요</small></span><button type="button" class="na_btn na_small" id="na_kw_test"><i class="fa-solid fa-vial"></i> 테스트</button></div>
-                  <div class="na_set_row"><span><span>고정한 섹션 <b id="na_pinned_n">0</b>개</span></span><button type="button" class="na_btn na_small" id="na_unpin_all">모두 풀기</button></div>
-                  <div class="na_set_row"><span><span>꺼 둔 섹션 <b id="na_muted_n">0</b>개</span></span><button type="button" class="na_btn na_small" id="na_unmute_all">모두 켜기</button></div>
+                  <label class="na_set_row"><span><span>키워드 연동</span><small>최근 메시지에서 찾을 범위 · 연동 <span id="na_linked_n">0</span>개</small></span><span class="na_cfg_val"><span>최근&nbsp;</span><input type="number" id="na_link_depth" class="text_pole" min="1" max="50"><span>개</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <button type="button" class="na_set_row na_cfg_go" id="na_kw_test"><span><span>키워드 테스트</span><small>문장을 넣어 어떤 섹션이 불려 오는지</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
+                  <details class="na_cfg_fold" id="na_pm_fold">
+                    <summary class="na_set_row"><span>고정 · 꺼 둔 섹션</span><span class="na_cfg_val"><span>고정 <span id="na_pinned_n">0</span> · 꺼짐 <span id="na_muted_n">0</span></span><span class="na_cfg_chev">${svgA(ICO_A.right, 15, 2.2)}</span></span></summary>
+                    <div class="na_set_row na_cfg_sub"><span><span>고정 풀기</span><small>망각 곡선에서 늘 원문으로 둔 섹션</small></span><button type="button" class="na_btn na_small" id="na_unpin_all">모두 풀기</button></div>
+                    <div class="na_set_row na_cfg_sub"><span><span>꺼 둔 섹션 켜기</span><small>주입에서 뺀 섹션</small></span><button type="button" class="na_btn na_small" id="na_unmute_all">모두 켜기</button></div>
+                  </details>
                 </div>
                 </div>
-              </details>
-              <details class="na_block na_details na_fold">
-                <summary><i class="fa-solid fa-robot"></i> AI · 번역</summary>
-                <div>
-                  <p class="na_dim na_fold_desc">질문 · 키워드 제안 · 점검 · 라우터에 쓰는 모델이에요. AI는 답하고 검사만 하고, 아카이브는 직접 고쳐요.</p>
+              </div>
+              <div class="na_cfg_grp" title="질문 · 키워드 제안 · 점검 · 라우터에 쓰는 모델이에요. AI는 답하고 검사만 하고, 아카이브는 직접 고쳐요.">
+                <div class="na_cfg_label">AI · 번역</div>
+                <div class="na_cfg_box">
                 <div class="na_set_list">
-                  <label class="na_set_row"><span><span>모델</span><small>연결 프로필 · 커스텀 API · Vertex를 고르면 RP 모델과 따로 쓸 수 있어요</small></span><select id="na_ai_profile" class="text_pole"></select></label>
+                  <label class="na_set_row" title="연결 프로필 · 커스텀 API · Vertex를 고르면 RP 모델과 따로 쓸 수 있어요"><span><span>AI 기능 모델</span><small>질문 · 점검 · 라우터 · 온도 · 지문</small></span><span class="na_cfg_val"><select id="na_ai_profile" class="text_pole"></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                 </div>
                 ${connCfgHtml('ai')}
                 <div class="na_set_list">
-                  <label class="na_set_row"><span><span>답 최대 길이</span><small>토큰 · 답이 잘리면 늘려 주세요</small></span><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"></label>
-                  <label class="na_set_row"><span><span>번역 모델</span><small>비교 화면의 "한국어로 보기"에 써요</small></span>
-                    <select id="na_tr_mode" class="text_pole">
-                      <option value="same">위 모델 그대로</option>
-                      <option value="custom">커스텀 API (OpenAI 호환)</option>
-                      <option value="vertex">Gemini · Vertex AI</option>
-                    </select>
-                  </label>
-                </div>
-                ${connCfgHtml('tr')}
-                <div class="na_set_list">
-                  <label class="na_set_row"><span><span>초안 모델</span><small>압축 초안처럼 아카이브에 들어갈 글을 써 주는 모델이에요 (예: Opus). 정하지 않으면 초안 버튼이 안 보여요</small></span>
-                    <select id="na_dr_mode" class="text_pole">
+                  <label class="na_set_row" title="압축 초안처럼 아카이브에 들어갈 글을 써 주는 모델이에요 (예: Opus). 정하지 않으면 초안 버튼이 안 보여요"><span><span>초안 모델</span><small>압축 초안 · 섹션 짧은 버전</small></span>
+                    <span class="na_cfg_val"><select id="na_dr_mode" class="text_pole">
                       <option value="same">쓰지 않음</option>
-                      <option value="custom">커스텀 API (OpenAI 호환)</option>
+                      <option value="custom">커스텀 API</option>
                       <option value="vertex">Gemini · Vertex AI</option>
-                    </select>
+                    </select>${svgA(ICO_A.right, 15, 2.2)}</span>
                   </label>
                 </div>
                 ${connCfgHtml('dr')}
                 <div class="na_set_list na_dr_max_row" id="na_dr_max_row" hidden>
-                  <label class="na_set_row"><span><span>초안 최대 길이</span><small>토큰 · 초안이 끊기면 늘려 주세요</small></span><input type="number" id="na_dr_max" class="text_pole" min="1024" step="1024"></label>
+                  <label class="na_set_row"><span><span>초안 최대 길이</span><small>초안이 끊기면 늘려 주세요</small></span><span class="na_cfg_val"><input type="number" id="na_dr_max" class="text_pole" min="1024" step="1024"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                 </div>
                 <div class="na_set_list">
-                  <label class="na_set_row"><span><span>이탈 자동 감지</span><small>AI 답이 이만큼 쌓일 때마다 조용히 검사하고, 어긋나면 알려 줘요 · 그때마다 토큰이 들어가요</small></span>
-                    <select id="na_drift_auto" class="text_pole"><option value="0">끄기</option><option value="5">답 5개마다</option><option value="10">답 10개마다</option><option value="20">답 20개마다</option></select></label>
-                  <div class="na_set_row"><span><span>번역 용어집</span><small>이름·장소의 한국어 표기를 정해 두면 번역이 늘 그대로 써요 · 이 채팅 <b id="na_gloss_n">0</b>개</small></span><button type="button" class="na_btn na_small" id="na_gloss_edit"><i class="fa-solid fa-spell-check"></i> 편집</button></div>
+                  <label class="na_set_row" title="비교 화면의 &quot;한국어로 보기&quot;에 써요"><span>번역 모델</span>
+                    <span class="na_cfg_val"><select id="na_tr_mode" class="text_pole">
+                      <option value="same">AI 기능 모델과 같이</option>
+                      <option value="custom">커스텀 API</option>
+                      <option value="vertex">Gemini · Vertex AI</option>
+                    </select>${svgA(ICO_A.right, 15, 2.2)}</span>
+                  </label>
+                </div>
+                ${connCfgHtml('tr')}
+                <div class="na_set_list">
+                  <label class="na_set_row" title="답이 잘리면 늘려 주세요"><span>답 최대 길이</span><span class="na_cfg_val"><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" title="AI 답이 이만큼 쌓일 때마다 조용히 검사하고, 어긋나면 알려 줘요 · 그때마다 토큰이 들어가요"><span><span>이탈 자동 감지</span><small>AI 답이 쌓이면 조용히 검사</small></span>
+                    <span class="na_cfg_val"><select id="na_drift_auto" class="text_pole"><option value="0">끄기</option><option value="5">답 5개마다</option><option value="10">답 10개마다</option><option value="20">답 20개마다</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <button type="button" class="na_set_row na_cfg_go" id="na_gloss_edit" title="이름·장소의 한국어 표기를 정해 두면 번역이 늘 그대로 써요"><span><span>번역 용어집</span><small>이름·장소 한국어 표기</small></span><span class="na_cfg_val"><span><span id="na_gloss_n">0</span>개</span>${svgA(ICO_A.right, 15, 2.2)}</span></button>
                 </div>
                 <small class="na_dim na_conn_note" id="na_conn_note" hidden>키와 JSON은 이 기기의 실리태번 설정에만 저장돼요. 아카이브 백업에는 안 들어가요.</small>
                 </div>
-              </details>
-              <details class="na_block na_details na_fold">
-                <summary><i class="fa-solid fa-bell"></i> 알림</summary>
-                <div>
+              </div>
+              <div class="na_cfg_grp">
+                <div class="na_cfg_label">알림</div>
+                <div class="na_cfg_box">
                 <div class="na_set_list">
-                  <label class="na_set_row"><span><span>백업 알림</span><small>백업 뒤 이만큼 바뀌면 · 0은 끔</small></span><input type="number" id="na_backup_every" class="text_pole" min="0" max="999"></label>
+                  <label class="na_set_row" title="0이나 빈칸이면 알리지 않아요"><span><span>백업 알림</span><small>백업 뒤 이만큼 바뀌면</small></span><span class="na_cfg_val"><input type="number" id="na_backup_every" class="text_pole" min="0" max="999" placeholder="끔"><span class="na_cfg_unit">번</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                </div>
                 </div>
               </div>
-              </details>
             </section>
 
             <div class="na_nochat" id="na_nochat" hidden>채팅을 열면 이 채팅의 아카이브가 보여요.</div>
@@ -2291,8 +2339,13 @@ function bindPanel() {
     $('#na_keep').on('change', async function () {
         if (!hasChat()) return;
         const m = getMeta();
-        m.keep = Math.max(0, parseInt(this.value, 10) || 0); this.value = m.keep;
+        m.keep = Math.min(50, Math.max(0, parseInt(this.value, 10) || 0)); this.value = m.keep;
         await saveMeta(); refreshStatus();
+    });
+    $('.na_keep_btn').on('click', function () {
+        if (!hasChat()) return;
+        const $k = $('#na_keep');
+        $k.val(Math.min(50, Math.max(0, (parseInt($k.val(), 10) || 0) + Number(this.dataset.d)))).trigger('change');
     });
     $('#na_open_extract').on('click', needChat(openExtract));
     $('#na_open_wizard').on('click', needChat(openWizard));
@@ -2466,6 +2519,8 @@ function bindPanel() {
     $('#na_router_follow').on('change', needChat(e => setRouter({ follow: e.target.checked })));
     const setFade = async patch => { const m = getMeta(); m.fade = { ...fadeCfg(m), ...patch }; await saveMeta(); applyInjection().then(() => { sectionPanel?.render(); syncPanel(); }); syncPanel(); };
     $('#na_fade').on('change', needChat(e => setFade({ on: e.target.checked })));
+    // the fade details stay folded under the row until asked for
+    $('#na_fade_more').on('click', e => { e.preventDefault(); e.stopPropagation(); cfgFadeOpen = !cfgFadeOpen; syncPanel(); });
     $('#na_fade_full').on('change', needChat(e => setFade({ full: Math.max(0, parseInt(e.target.value, 10) || 0) })));
     $('#na_fade_short').on('change', needChat(e => setFade({ short: Math.max(0, parseInt(e.target.value, 10) || 0) })));
     $('#na_fade_opts').on('click', '.na_fd_btn', needChat(e => { const f = e.currentTarget.dataset.f; const cur = fadeCfg(getMeta())[f]; setFade({ [f]: Math.max(0, cur + Number(e.currentTarget.dataset.d)) }); }));
@@ -2491,6 +2546,7 @@ function bindPanel() {
     });
 }
 
+let cfgFadeOpen = false;
 function syncPanel() {
     if (!$('#na_settings').length) return;
     const on = hasChat();
@@ -2502,7 +2558,7 @@ function syncPanel() {
     $('#na_enabled').prop('checked', !!m.enabled);
     $('#na_position').val(String(m.position));
     $('#na_depth').val(m.depth);
-    $('#na_depth_field').toggleClass('na_disabled', Number(m.position) !== 1);
+    $('#na_depth_field').prop('hidden', Number(m.position) !== 1);
     $('#na_role').val(String(m.role));
     $('#na_muted_n').text(mutedCount(m));
     $('#na_link_depth').val(m.linkDepth || 4);
@@ -2513,7 +2569,10 @@ function syncPanel() {
     $('#na_router_max').val(rc.max); $('#na_router_keep').val(rc.keep); $('#na_router_follow').prop('checked', rc.follow);
     {
         const fc = fadeCfg(m);
-        $('#na_fade').prop('checked', fc.on); $('#na_fade_opts').prop('hidden', !fc.on);
+        $('#na_fade').prop('checked', fc.on); $('#na_fade_opts').prop('hidden', !fc.on || !cfgFadeOpen);
+        $('#na_fade_more').prop('hidden', !fc.on).toggleClass('on', cfgFadeOpen);
+        const fadeSub = pct => fc.on ? `원문 ${fc.full} · 짧게 ${fc.short} · 나머지 한 줄${pct ? ` · 지금 −${pct}%` : ''}` : '오래된 섹션은 짧은 버전·한 줄로';
+        $('#na_fade_sub').text(fadeSub(0));
         $('#na_fade_full').val(fc.full); $('#na_fade_short').val(fc.short);
         if (fc.on) {
             const plan = [...fadeWants(m).values()];
@@ -2528,6 +2587,7 @@ function syncPanel() {
                 $('#na_fade_now').text(fmt(now));
                 $('#na_fade_was').text(t > now ? fmt(t) : '');
                 $('#na_fade_pct').text(t > now ? `−${Math.round((1 - now / t) * 100)}%` : '').prop('hidden', !(t > now));
+                if (fadeCfg(getMeta()).on) $('#na_fade_sub').text(fadeSub(t > now ? Math.round((1 - now / t) * 100) : 0));
             });
         }
     }
@@ -2537,7 +2597,7 @@ function syncPanel() {
         const keys = new Set(parseSections(m.text).map(sectionKey));
         $('#na_linked_n').text(Object.keys(linkedMap(m)).filter(t => keys.has(t)).length);
     }
-    $('#na_backup_every').val(m.backupEvery ?? 10);
+    $('#na_backup_every').val(m.backupEvery === 0 ? '' : (m.backupEvery ?? 10));
     {
         const due = m.backupEvery > 0 && m.sinceBackup >= m.backupEvery;
         $('#na_backup_info').html(m.backup
@@ -2546,7 +2606,7 @@ function syncPanel() {
     }
     renderHistory();
     $('#na_snap_n').text(m.snapshots.length);
-    $('#na_cap').val(m.tokenCap || 0);
+    $('#na_cap').val(m.tokenCap || '');
     {
         const titles = new Set(parseSections(m.text).map(sectionKey));
         const n = [...pinnedSet(m)].filter(t => titles.has(t)).length;
@@ -2576,7 +2636,7 @@ function syncPanel() {
     {
         const n = guessEndNumber(m.text);
         $('#na_track_info').html(n === null ? '제목에 #번호가 없어요'
-            : `아카이브 마지막 번호 <b>#${n}</b>${n > lastIndex() ? ' <span class="na_warn_txt">· 채팅보다 커요</span>' : ''}`);
+            : `마지막 제목 번호가 곧 경계선${n > lastIndex() ? ` <span class="na_warn_txt">· 아카이브 #${n}이 채팅보다 커요</span>` : ''}`).attr('title', n === null ? '' : `아카이브 마지막 번호 #${n}`);
     }
     $('#na_keep').val(m.keep);
     sectionPanel?.render();
@@ -3522,12 +3582,12 @@ async function refreshStatus() {
     const lxNote = lx ? `<small class="na_v2_note">최근 내보냄 #${lx.from}–#${lx.to} · ${esc(timeLabel(lx.at))}</small>` : '';
     const hn = hiddenIndexes().length;
     $('#na_hidden_n').text(hn ? `지금 숨긴 메시지 ${hn}개` : '숨긴 메시지 없음');
-    { const gs = globalSettings(), ap = activePrompt(gs); $('#na_plib_sum').text(`${gs.prompts.length}개 · 지금 "${ap.name}"`); }
+    { const gs = globalSettings(), ap = activePrompt(gs); $('#na_plib_sum').text(`${gs.prompts.length}개 · ${ap.fav ? '즐겨찾기 ★' : '지금'} ${ap.name}`); }
     $('#na_since').html(m.boundary >= 0 ? `
       <div class="na_cp_hhead"><span>경계선 #${m.boundary} 뒤에 쌓인 원문</span><span>마지막 #${last}</span></div>
       <div class="na_cp_big"><b>${fmt(afterTok)}</b><span>토큰 · 메시지 ${after.length}개</span></div>
       <div class="na_cp_bar"><span class="hid" style="flex:${Math.max(1, m.boundary + 1)}"></span><span class="raw" style="flex:${Math.max(1, last - m.boundary)}"></span></div>
-      <div class="na_cp_hhead"><small>#0 – #${m.boundary} 압축됨</small><small>${last > m.boundary ? `#${m.boundary + 1} – #${last} 원문` : '원문 없음'}</small></div>
+      <div class="na_cp_hhead"><small>#0 – #${m.boundary} 숨김 (압축됨)</small><small>${last > m.boundary ? `#${m.boundary + 1} – #${last} 원문` : '원문 없음'}</small></div>
       ${lxNote}` : '<div class="na_cp_hhead"><span>경계선이 아직 없어요</span></div><small class="na_v2_note">직접 적거나 "아카이브에 추가"를 쓰면 자동으로 정해져요.</small>');
 }
 
@@ -5045,6 +5105,9 @@ OUTPUT: Korean, one bullet per problem, most serious first, exactly like this
 - 빠짐: <what is missing> (#<message number>)
 Always give the message number(s) you checked. If the summary is faithful, write exactly: 문제 없음`;
 
+// 을/를 after a number read in Korean (…3을, …4를)
+const josaA = n => ('2459'.includes(String(n).slice(-1)) ? '를' : '을');
+
 async function openWizard() {
     const c = ctx();
     const m = getMeta();
@@ -5057,7 +5120,7 @@ async function openWizard() {
     const STEPS = [
         { name: '범위', title: '어디부터 어디까지<br>압축할까요?', sub: '경계선 다음부터 자동으로 채웠어요' },
         { name: '복사', title: '압축할 모델에<br>넘겨 주세요', sub: '지시문과 함께 복사하거나 .txt로 저장해요' },
-        { name: '붙여넣기', title: '모델이 준 섹션을<br>붙여넣어 주세요', sub: '파일(.txt · .md)도 돼요' },
+        { name: '붙여넣기', title: '모델이 준 섹션을<br>붙여넣어 주세요', sub: '파일(.txt·.md)도 돼요' },
         { name: '채점', title: '원문과 맞는지<br>볼까요?', sub: '선택 · 지어낸 것·빠진 것·틀린 것을 찾아요' },
         { name: '추가', title: '검사하고<br>아카이브에 넣어요', sub: '번호 검사 · 미리보기를 거쳐 추가하고 끝 번호까지 숨겨요' },
     ];
@@ -5070,7 +5133,7 @@ async function openWizard() {
         <div class="na_wz2_pane" data-s="0">
           <div class="na_wz2_range">
             <label><small>부터</small><span>#<input type="number" class="text_pole na_wz_from" min="0" max="${last}" value="${defFrom}"></span></label>
-            <i class="fa-solid fa-arrow-right"></i>
+            <span class="na_wz2_arr">${svgA('M5 12h14M13 6l6 6-6 6', 18)}</span>
             <label><small>까지</small><span>#<input type="number" class="text_pole na_wz_to" min="0" max="${last}" value="${defTo}"></span></label>
           </div>
           <label class="na_v2_card na_v2_switchrow"><span>숨긴 메시지 빼기</span><input type="checkbox" class="na_toggle na_wz_hidden"></label>
@@ -5078,20 +5141,20 @@ async function openWizard() {
         </div>
         <div class="na_wz2_pane" data-s="1">
           <select class="text_pole na_wz_prompt"></select>
-          <div class="na_v2_row2"><button type="button" class="na_v2_btn na_wz_save"><i class="fa-solid fa-download"></i> .txt 저장</button><button type="button" class="na_v2_btn primary na_wz_copy"><i class="fa-solid fa-copy"></i> <span>복사</span></button></div>
+          <div class="na_v2_row2"><button type="button" class="na_v2_btn na_wz_save">.txt 저장</button><button type="button" class="na_v2_btn primary na_wz_copy">${svgA('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', 16)}<span>복사</span></button></div>
           <small class="na_v2_note na_wz_copied"></small>
         </div>
         <div class="na_wz2_pane" data-s="2">
           <textarea class="text_pole na_wz_out" rows="10" spellcheck="false" placeholder="## #시작–#끝 — 제목 (날짜, 장소)&#10;PLOT:&#10;- …"></textarea>
           <div class="na_wz2_chips na_wz_outinfo"></div>
           <div class="na_v2_row2">
-            <button type="button" class="na_v2_btn na_wz_file_btn"><i class="fa-solid fa-file-arrow-up"></i> 파일 불러오기</button>
-            ${draftReady() ? `<button type="button" class="na_v2_btn na_wz_draftbtn" title="${esc(drLabel())}"><i class="fa-solid fa-feather-pointed"></i> 초안 모델로 받기</button>` : ''}
+            <button type="button" class="na_v2_btn na_wz_file_btn">${svgA('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>', 15)}파일 불러오기</button>
+            ${draftReady() ? `<button type="button" class="na_v2_btn na_wz_draftbtn" title="${esc(drLabel())}">${svgA('M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z', 15)}초안 모델로 받기</button>` : ''}
           </div>
           <input type="file" class="na_wz_file" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden>
         </div>
         <div class="na_wz2_pane" data-s="3">
-          <button type="button" class="na_v2_btn wide na_wz_grade"><i class="fa-solid fa-clipboard-check"></i> AI로 채점</button>
+          <button type="button" class="na_v2_btn wide na_wz_grade">${svgA('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14l2 2 4-4"/>', 16)}AI로 채점</button>
           <div class="na_ai_box na_wz_gradeout" hidden></div>
         </div>
         <div class="na_wz2_pane" data-s="4">
@@ -5109,7 +5172,9 @@ async function openWizard() {
         $root.find('.na_wz2_count').text(`${step + 1} / ${STEPS.length}`);
         $root.find('.na_wz2_progress button').each(function () { const i = Number(this.dataset.s); $(this).toggleClass('done', i < step).toggleClass('on', i === step); });
         $root.find('.na_wz2_title').html(STEPS[step].title);
-        $root.find('.na_wz2_sub').text(STEPS[step].sub);
+        // the paste step names the range it is for: "#35–#58을 압축한 결과 · …"
+        const r0 = range();
+        $root.find('.na_wz2_sub').text(step === 2 ? `#${r0.from}–#${r0.to}${josaA(r0.to)} 압축한 결과 · ${STEPS[step].sub}` : STEPS[step].sub);
         $root.find('.na_wz2_pane').each(function () { this.hidden = Number(this.dataset.s) !== step; });
         $root.find('.na_wz2_prev').prop('hidden', step === 0);
         $root.find('.na_wz2_next').text(nextLabel[step]);
@@ -5193,7 +5258,13 @@ async function openWizard() {
         const v = this.value.trim();
         const n = guessEndNumber(v);
         const secsN = parseSections(v).filter(x => !x.group && !/^(?:STATE|OPEN)\b/.test(x.title)).length, hasState = /^# STATE\b/m.test(v);
-        countTokens(v).then(tk => $root.find('.na_wz_outinfo').html(v ? `<span class="${secsN ? 'ok' : ''}">${secsN ? '<i class="fa-solid fa-check"></i> ' : ''}섹션 ${secsN}개${n !== null ? ` · 끝 #${n}` : ''}</span>${hasState ? '<span class="ok"><i class="fa-solid fa-check"></i> STATE·OPEN</span>' : ''}<span>${fmt(tk)} 토큰</span>` : ''));
+        // "섹션 2개 · #35–#58 이어짐": the numbered headings' span, and whether they follow on without a gap
+        const rs = headingRanges(v).map(x => ({ a: Math.min(x.from, x.to), b: Math.max(x.from, x.to) })).sort((x, y) => x.a - y.a);
+        const joined = rs.length && rs.every((x, i) => !i || x.a === rs[i - 1].b + 1);
+        const span = rs.length ? ` · #${rs[0].a}–#${Math.max(...rs.map(x => x.b))}${joined ? ' 이어짐' : ' · 사이가 빔'}` : n !== null ? ` · 끝 #${n}` : '';
+        const ok = secsN && (!rs.length || joined);
+        const chk = svgA(ICO_A.check, 12, 3);
+        countTokens(v).then(tk => $root.find('.na_wz_outinfo').html(v ? `<span class="${ok ? 'ok' : secsN ? 'warn' : ''}">${ok ? chk : ''}섹션 ${secsN}개${span}</span>${hasState ? `<span class="ok">${chk}STATE·OPEN</span>` : ''}<span>${fmt(tk)} 토큰</span>` : ''));
         $root.find('.na_wz_gradeout').prop('hidden', true);
     });
     $root.find('.na_wz_grade').on('click', async function () {
@@ -7051,7 +7122,7 @@ async function openExtract() {
         <div class="na_v2_card na_ex2_card">
           <div class="na_wz2_range">
             <label><small>부터</small><span>#<input type="number" class="text_pole na_from" min="0" max="${last}" value="${Math.max(0, defStart)}"></span></label>
-            <i class="fa-solid fa-arrow-right"></i>
+            <span class="na_wz2_arr">${svgA('M5 12h14M13 6l6 6-6 6', 18)}</span>
             <label><small>까지</small><span>#<input type="number" class="text_pole na_to" min="0" max="${last}" value="${Math.max(0, last)}"></span></label>
           </div>
           <div class="na_v2_chips">
@@ -7064,24 +7135,34 @@ async function openExtract() {
         </div>
         <div class="na_v2_card na_v2_list">
           <label class="na_cp_row"><span class="na_cp_txt"><span>지시문 붙이기</span><small>다른 모델에 그대로 붙여넣기용</small></span><input type="checkbox" class="na_toggle na_opt_prompt"></label>
-          <div class="na_cp_row na_ex_prow"><span class="na_cp_txt"><span>지시문</span></span><select class="text_pole na_psel_quick"></select></div>
-          <button type="button" class="na_cp_row na_ex_toset"><span class="na_cp_txt"><span>뽑기 옵션</span><small class="na_ex_optsum"></small></span><i class="fa-solid fa-chevron-right"></i></button>
+          <div class="na_ex_prow"><span class="na_ex_pchips"></span><select class="text_pole na_psel_quick" hidden></select></div>
+          <button type="button" class="na_cp_row na_ex_toset"><span class="na_cp_txt"><span>뽑기 옵션</span><small class="na_ex_optsum"></small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
         </div>
         <pre class="na_ex2_preview"></pre>
         <div class="na_v2_row2 na_ex2_btns">
-          <button type="button" class="na_v2_btn na_save_txt"><i class="fa-solid fa-download"></i> .txt 저장</button>
-          <button type="button" class="na_v2_btn primary na_copy"><i class="fa-solid fa-copy"></i> <span class="na_copy_label">전체 복사</span></button>
+          <button type="button" class="na_v2_btn na_save_txt">.txt 저장</button>
+          <button type="button" class="na_v2_btn primary na_copy">${svgA('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', 16)}<span class="na_copy_label">전체 복사</span></button>
         </div>
         <textarea class="na_ex_hidden" readonly></textarea>
       </div>`);
     $root.find('.na_opt_prompt').prop('checked', g.usePrompt);
-    const fillQuick = () => $root.find('.na_psel_quick')
-        .html([...g.prompts].sort((a, b) => b.fav - a.fav).map(p => `<option value="${esc(p.id)}">${p.fav ? '★ ' : ''}${esc(p.name)}</option>`).join(''))
-        .val(activePrompt(g).id);
+    // instruction picker: chips for the starred ones (and the one in use), the rest behind "다른 지시문…"
+    const fillQuick = () => {
+        const cur = activePrompt(g);
+        const shown = g.prompts.filter(p => p.fav || p.id === cur.id).sort((a, b) => b.fav - a.fav);
+        const rest = g.prompts.length > shown.length;
+        $root.find('.na_ex_pchips').html(shown.map(p => `<button type="button" class="na_ex_pchip ${p.id === cur.id ? 'on' : ''}" data-id="${esc(p.id)}">${p.fav ? '★ ' : ''}${esc(p.name)}</button>`).join('')
+            + (rest ? '<button type="button" class="na_ex_pchip na_ex_pmore">다른 지시문…</button>' : ''));
+        $root.find('.na_psel_quick')
+            .html([...g.prompts].sort((a, b) => b.fav - a.fav).map(p => `<option value="${esc(p.id)}">${p.fav ? '★ ' : ''}${esc(p.name)}</option>`).join(''))
+            .val(cur.id);
+    };
+    $root.on('click', '.na_ex_pchip[data-id]', function () { $root.find('.na_psel_quick').val(this.dataset.id).trigger('change'); });
+    $root.on('click', '.na_ex_pmore', function () { const $s = $root.find('.na_psel_quick'); $s.prop('hidden', !$s.prop('hidden')); $(this).toggleClass('open', !$s.prop('hidden')); if (!$s.prop('hidden')) $s.trigger('focus'); });
     const showProw = () => $root.find('.na_ex_prow').toggle(!!g.usePrompt);
     showProw();
     fillQuick();
-    $root.find('.na_ex_optsum').text(`${[g.skipHidden ? '숨긴 메시지 뺌' : '숨긴 메시지 포함', g.stripTags ? `태그 지움${stripPatterns(g.stripCustom).list.length ? ` (+${stripPatterns(g.stripCustom).list.length})` : ''}` : ''].filter(Boolean).join(' · ')}`);
+    $root.find('.na_ex_optsum').text(`${[g.skipHidden ? '숨긴 메시지 뺌' : '숨긴 메시지 포함', g.stripTags ? `태그 지움${stripPatterns(g.stripCustom).list.length ? ` (+${stripPatterns(g.stripCustom).list.length})` : ''}` : '', '[번호] 이름:'].filter(Boolean).join(' · ')}`);
     $root.find('.na_ex_toset').on('click', () => { $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoCompressSettings(); });
 
     let current = '';
@@ -7105,11 +7186,16 @@ async function openExtract() {
         $root.find('.na_ex_hidden').val(output);
         $root.find('.na_prompt_state').text(g.usePrompt ? activePrompt(g).name : '안 붙임').toggleClass('na_chip_on', g.usePrompt);
         $root.find('.na_copy_label').text(g.usePrompt ? '지시문과 함께 복사' : '전체 복사');
-        const skipped = all.length - items.length;
+        const hiddenOut = g.skipHidden ? all.filter(x => c.chat[x.i]?.is_system).length : 0;
+        const emptyOut = all.length - items.length - hiddenOut;
         const tk = items.length ? await countTokens(output) : 0;
         $root.find('.na_ex_info').html(items.length
-            ? `<span>메시지 ${items.length}개${skipped ? ` · ${skipped}개 뺌` : ''}</span><b>약 ${fmt(tk)} 토큰</b>`
+            ? `<span>메시지 ${items.length}개 · ${g.skipHidden ? `숨긴 것 ${hiddenOut}개` : '숨긴 것 포함'}${emptyOut > 0 ? ` · 빈 것 ${emptyOut}개 뺌` : ''}</span><b>약 ${fmt(tk)} 토큰</b>`
             : '<span>이 범위에 메시지가 없어요</span>');
+        // the quick chip that matches the range reads as selected
+        const lx = getMeta().lastExport;
+        $root.find('.na_ex2_quick').each(function () { $(this).toggleClass('on', from === +this.dataset.a && to === +this.dataset.b); });
+        $root.find('.na_lastex_again').toggleClass('on', !!lx && from === lx.from && to === Math.min(lx.to, last));
         const tot = Math.max(1, last + 1), a0 = Math.max(0, Math.min(from, last)), b0 = Math.max(a0, Math.min(to, last));
         $root.find('.na_ex2_b1').css('flex', a0).toggle(a0 > 0); $root.find('.na_ex2_b2').css('flex', b0 - a0 + 1); $root.find('.na_ex2_b3').css('flex', tot - b0 - 1).toggle(tot - b0 - 1 > 0);
         $root.find('.na_ex2_preview').text(current ? current.split('\n').slice(0, 6).join('\n') + (current.split('\n').length > 6 ? '\n…' : '') : '').prop('hidden', !current);
@@ -7117,13 +7203,13 @@ async function openExtract() {
 
     $root.find('.na_from, .na_to').on('change', render);
     $root.find('.na_opt_prompt').on('change', function () { g.usePrompt = this.checked; saveGlobal(); fillQuick(); showProw(); render(); renderPromptSettings(); });
-    $root.find('.na_psel_quick').on('change', function () { g.activePrompt = this.value; saveGlobal(); render(); renderPromptSettings(); });
+    $root.find('.na_psel_quick').on('change', function () { g.activePrompt = this.value; saveGlobal(); $(this).prop('hidden', true); fillQuick(); render(); renderPromptSettings(); });
     const showLast = () => {
         const x = getMeta().lastExport;
         $root.find('.na_lastex').prop('hidden', !x);
         if (x) {
             $root.find('.na_lastex_text').html(`최근 내보냄 #${x.from}–#${x.to} · ${esc(timeLabel(x.at))} · ${x.how === 'txt' ? '.txt 저장' : x.how === 'draft' ? 'AI 초안' : '복사'}${fromLast && x === le ? ' → 그 다음부터 채웠어요' : ''}`);
-            $root.find('.na_lastex_again').prop('hidden', false).text(`지난번 범위 #${x.from}–#${x.to}`);
+            $root.find('.na_lastex_again').prop('hidden', false).text(`지난번 범위 #${x.from}–#${x.to}`).attr('title', `${timeLabel(x.at)} · ${x.how === 'txt' ? '.txt 저장' : x.how === 'draft' ? 'AI 초안' : '복사'}`);
         }
     };
     const remember = async how => {
@@ -7259,7 +7345,9 @@ function showStripInfo() {
     const { list, bad } = stripPatterns(globalSettings().stripCustom);
     $('.na_strip_box').toggleClass('na_off', !globalSettings().stripTags);
     $('#na_strip_info').toggleClass('na_warn_txt', !!bad.length)
-        .text(bad.length ? `정규식이 잘못된 줄: ${bad.join(' / ')}` : list.length ? `${list.length}개 추가로 지워요` : '');
+        .text(bad.length ? `정규식이 잘못된 줄: ${bad.join(' / ')}` : '');
+    // the count of hand-added tags reads in the row's caption
+    $('#na_strip_sub').text(`<think> 통째로 · 나머지 태그는 글자만${list.length ? ` · 직접 추가 ${list.length}개` : ''}`);
 }
 
 // Open the compress tab with its settings fold open
