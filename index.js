@@ -245,9 +245,9 @@ async function openWorlds() {
     let importing = false;
     const $root = $(`
       <div class="na_popup na_v2 na_worlds">
-        <div class="na_v2_title"><b>세계관 공유</b><small>여러 채팅이 같이 쓰는 설정 · 고치면 켠 채팅 모두에 반영돼요. 캐릭터에 묶으면 그 캐릭터의 새 채팅에서 저절로 켜져요</small></div>
+        <div class="na_v2_title"><b>세계관 공유</b><small title="캐릭터에 묶으면 그 캐릭터의 새 채팅에서 저절로 켜져요">여러 채팅이 같이 쓰는 설정 · 고치면 켠 채팅 모두에 반영돼요</small></div>
         <div class="na_v2_row2">
-          <button type="button" class="na_v2_btn primary na_wd_new"><i class="fa-solid fa-plus"></i> 새 세계관</button>
+          <button type="button" class="na_v2_btn primary na_wd_new"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>새 세계관</button>
           <button type="button" class="na_v2_btn na_wd_imp">아카이브에서 가져오기</button>
         </div>
         <div class="na_wd_sum"><span class="na_wd_on_n"></span><b class="na_wd_tok"></b></div>
@@ -264,17 +264,17 @@ async function openWorlds() {
             <div class="na_v2_card na_wd ${on ? 'on' : ''} ${open.has(w.id) ? 'open' : ''}" data-id="${esc(w.id)}">
               <div class="na_wd_head">
                 <button type="button" class="na_wd_fold" aria-expanded="${open.has(w.id)}">
-                  <span class="na_wd_icon"><i class="fa-solid fa-earth-asia"></i></span>
+                  <span class="na_wd_icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></span>
                   <span class="na_wd_name"><b>${esc(w.name || '세계관')}</b><small><span class="na_wd_ttok" data-id="${esc(w.id)}"></span> · ${how}</small></span>
                 </button>
                 <input type="checkbox" class="na_toggle na_wd_on" ${on ? 'checked' : ''} aria-label="이 채팅에 넣기" title="이 채팅에 넣기">
               </div>
               ${open.has(w.id) ? `
               <div class="na_wd_body">
-                <input type="text" class="text_pole na_wd_rename" value="${esc(w.name || '')}" placeholder="이름">
-                <textarea class="text_pole na_wd_text" rows="10" spellcheck="false" placeholder="## 장소 이름&#10;- 설정…">${esc(w.text || '')}</textarea>
+                <input type="text" class="text_pole na_wd_rename" value="${esc(w.name || '')}" placeholder="이름" title="이름 고치기" aria-label="이름">
+                <textarea class="text_pole na_wd_text" rows="6" spellcheck="false" placeholder="## 장소 이름&#10;- 설정…">${esc(w.text || '')}</textarea>
                 <div class="na_wd_foot">
-                  ${ck ? `<label class="na_wd_bindchip ${bound ? 'on' : ''}"><input type="checkbox" class="na_wd_bind" ${bound ? 'checked' : ''}>${faceHtml(cn, 20)}<span>${esc(cn)} 채팅에서 저절로 켜기</span></label>` : ''}
+                  ${ck ? `<label class="na_wd_bindchip ${bound ? 'on' : ''}"><input type="checkbox" class="na_wd_bind" ${bound ? 'checked' : ''}>${faceHtml(cn, 20)}<span>${esc(cn)} 채팅에서 저절로 ${bound ? '켜짐' : '켜기'}</span></label>` : ''}
                   ${others > 0 ? `<small class="na_v2_note">다른 캐릭터 ${others}명에도 묶임</small>` : ''}
                   <span class="na_spacer"></span>
                   <button type="button" class="na_linkbtn na_danger na_wd_del">지우기</button>
@@ -471,6 +471,8 @@ async function saveLayers(m, s, short, line) {
     syncPanel();
 }
 
+const WARN_SVG = '<svg class="na_warn_svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
+
 async function openLayers(s) {
     const c = ctx();
     const m = getMeta();
@@ -480,21 +482,24 @@ async function openLayers(s) {
     const plan = fadeCfg(m).on ? fadeWants(m).get(sectionKey(s)) : null;
     const use = plan ? fadeUse(m, m.text, s, plan.want) : null;
     const name = { long: '원문', short: '짧게', line: '한 줄' };
+    const into = { long: '원문으로', short: '짧은 버전으로', line: '한 줄로' };
+    const now = t => use === t ? ' · 지금 들어감' : '';
     let tab = use && use !== 'long' ? use : (L.short ? 'short' : 'long');
     const $root = $(`
       <div class="na_popup na_v2 na_layers">
         <div class="na_v2_title"><small>섹션 버전</small><b>${esc(s.title)}</b></div>
-        ${plan ? `<div class="na_v2_card na_v2_note">망각 곡선: 지금 <b>${name[use]}</b>으로 들어가요${plan.why === 'pin' ? ' (📌 고정)' : plan.why === 'called' ? ' (지금 불려 온 섹션)' : use !== plan.want ? ` · 원래는 ${name[plan.want]}인데 ${stale ? '원문이 바뀌어서' : '그 버전이 없어서'}` : ''}</div>` : ''}
-        ${stale ? '<div class="na_xr_warn slim"><i class="fa-solid fa-triangle-exclamation"></i><div>버전을 만든 뒤에 원문이 바뀌었어요. 저장할 때까지 원문으로 들어가요.</div></div>' : ''}
+        ${plan ? `<div class="na_v2_note na_ly_note">망각 곡선: 지금 <b>${into[use]}</b> 들어가요${plan.why === 'pin' ? ' (📌 고정)' : plan.why === 'called' ? ' (지금 불려 온 섹션)' : use !== plan.want ? ` · 원래는 ${name[plan.want]}인데 ${stale ? '원문이 바뀌어서' : '그 버전이 없어서'}` : ''}</div>` : ''}
+        ${stale ? '<div class="na_xr_warn slim">' + WARN_SVG + '<div>버전을 만든 뒤에 원문이 바뀌었어요. 저장할 때까지 원문으로 들어가요.</div></div>' : ''}
         <div class="na_v2_seg na_ly_tabs">
-          <button type="button" data-t="long"><span>원문</span><small class="na_ly_tok_long"></small></button>
-          <button type="button" data-t="short"><span>짧게${use === 'short' ? ' · 지금' : ''}</span><small class="na_ly_tok_short"></small></button>
-          <button type="button" data-t="line"><span>한 줄${use === 'line' ? ' · 지금' : ''}</span><small class="na_ly_tok_line"></small></button>
+          <button type="button" data-t="long"><span>원문${now('long')}</span><small class="na_ly_tok_long"></small></button>
+          <button type="button" data-t="short"><span>짧게${now('short')}</span><small class="na_ly_tok_short"></small></button>
+          <button type="button" data-t="line"><span>한 줄${now('line')}</span><small class="na_ly_tok_line"></small></button>
         </div>
-        <div class="na_ly_pane" data-t="long"><div class="na_v2_card na_ly_full">${esc(full)}</div></div>
+        <div class="na_ly_pane" data-t="long"><div class="na_ly_full">${esc(full)}</div></div>
         <div class="na_ly_pane" data-t="short"><textarea class="text_pole na_ly_short" rows="8" spellcheck="false" placeholder="원문을 1/3쯤으로 줄인 것. 직접 붙여넣거나 초안 모델로 만들어요."></textarea></div>
         <div class="na_ly_pane" data-t="line"><textarea class="text_pole na_ly_line" rows="3" spellcheck="false" placeholder="가장 중요한 일 한 문장"></textarea></div>
-        ${draftReady() ? `<div class="na_v2_row2"><button type="button" class="na_v2_btn na_ly_draft"><i class="fa-solid fa-feather-pointed"></i> 초안 모델로 ${L.short || L.line ? '다시' : '만들기'}</button></div><small class="na_v2_foot">${esc(drLabel())} · 짧게·한 줄을 같이 채워요. 저장해야 들어가요</small>` : '<small class="na_v2_foot">⚙ 설정 → AI · 번역 → 초안 모델을 정하면 여기서 바로 만들 수 있어요</small>'}
+        <div class="na_v2_row2 na_ly_btns">${draftReady() ? `<button type="button" class="na_v2_btn na_ly_draft">초안 모델로 ${L.short || L.line ? '다시' : '만들기'}</button>` : ''}<button type="button" class="na_v2_btn na_ly_save">저장</button></div>
+        ${draftReady() ? `<small class="na_v2_foot">${esc(drLabel())} · 짧게·한 줄을 같이 채워요. 저장해야 들어가요</small>` : '<small class="na_v2_foot">⚙ 설정 → AI · 번역 → 초안 모델을 정하면 여기서 바로 만들 수 있어요</small>'}
       </div>`);
     $root.find('.na_ly_short').val(L.short || '');
     $root.find('.na_ly_line').val(L.line || '');
@@ -511,6 +516,7 @@ async function openLayers(s) {
     show(); tok();
     $root.on('click', '.na_ly_tabs button', function () { tab = this.dataset.t; show(); });
     $root.find('textarea').on('input', tok);
+    $root.find('.na_ly_save').on('click', () => $root.closest('dialog').find('.popup-button-ok').trigger('click'));
     $root.find('.na_ly_draft').on('click', async function () {
         const r = await withSpinner($(this), '만드는 중…', () => draftLayers(m, s));
         if (r) { $root.find('.na_ly_short').val(r.short); $root.find('.na_ly_line').val(r.line); tab = 'short'; show(); tok(); }
@@ -3338,7 +3344,10 @@ function translateButton($diff) {
     const $btn = $(`<button type="button" class="na_btn na_small na_tr_btn">${TR_LABEL}</button>`);
     $btn.on('click', async () => {
         if ($diff.find('.na_diff_tr').length) { $diff.find('.na_diff_tr').remove(); $btn.html(TR_LABEL); return; }
-        const all = $diff.children().toArray();
+        // $diff is one diff box, or (section diffs) a host holding one .na_diff box per card: a blank
+        // spacer between boxes keeps a − run at the end of one card from pairing with the next card's + run
+        const boxes = $diff.is('.na_diff') || !$diff.find('.na_diff').length ? [$diff[0]] : $diff.find('.na_diff').toArray();
+        const all = boxes.flatMap((box, i) => [...(i ? [document.createElement('div')] : []), ...box.children]);
         const lineOf = el => (el.querySelector('.na_dl') || el).textContent.replace(/^[+−-]/, '').trim();
         const rows = all.filter(el => el.classList.contains('na_diff_add') || el.classList.contains('na_diff_del'))
             .map(el => ({ el, text: lineOf(el) }))
@@ -3425,19 +3434,30 @@ function renderSectionDiff($host, aText, bText, { tr } = {}) {
     const card = x => {
         const title = x.s.group ? groupLabel(x.s.title) : x.s.title;
         if (x.kind === 'same') return `<div class="na_df2_same"><span class="na_df2_badge same">같음</span><span>${esc(title)}</span></div>`;
-        const rows = lineDiff(x.a, x.b);
-        const src = x.kind !== 'del' && m && !x.s.group ? srcButton(m, x.s.title, 'chip') : '';
+        // an added / removed section has no other side: lineDiff('', text) would add one empty −/+ row
+        const rows = lineDiff(x.a, x.b).filter(r => !(x.kind === 'add' && r.t === '-') && !(x.kind === 'del' && r.t === '+'));
+        // header chip: just "원문" (the message range goes into its tooltip)
+        const src = (x.kind !== 'del' && m && !x.s.group ? srcButton(m, x.s.title, 'chip') : '')
+            .replace(/ title="([^"]*)"/, (_, t) => ` title="${esc(sourceRange(m, x.s.title)?.label || '')} · ${t}"`)
+            .replace(/>[^]*<\/button>$/, '>원문</button>');
+        // only the −/+ lines, a "… 같은 줄 N개" row between runs; "−" (not "-") as the minus sign
+        const lines = renderDiff(rows, 0, { src: false })
+            .replace(/··· 같은 줄 ([\d,]+)개 ···/g, '… 같은 줄 $1개')
+            .replace(/<div class="na_diff_del"><span>-<\/span>/g, '<div class="na_diff_del"><span>−</span>');
         return `
           <div class="na_df2_card ${x.kind}">
             <div class="na_df2_head"><span class="na_df2_badge ${x.kind}">${DIFF_KIND[x.kind]}</span><b title="${esc(title)}">${esc(title)}</b>${src}</div>
-            ${x.a.trim() || x.b.trim() ? `<div class="na_diff na_df2_lines">${renderDiff(rows, 2, { src: false })}</div>` : '<div class="na_df2_empty">제목만 있어요</div>'}
+            ${x.a.trim() || x.b.trim() ? `<div class="na_diff na_df2_lines">${lines}</div>` : '<div class="na_df2_empty">제목만 있어요</div>'}
           </div>`;
     };
     const draw = () => {
         const shown = onlyChanged ? list.filter(x => x.kind !== 'same') : list;
         $host.find('.na_df2_cards').html(changed || !onlyChanged ? shown.map(card).join('') : '<div class="na_empty">내용이 똑같아요.</div>');
-        $host.find('.na_df2_only').toggleClass('active', onlyChanged).text(onlyChanged ? `같은 섹션 ${n.same}개도 보기` : '바뀐 섹션만');
+        $host.find('.na_df2_only').toggleClass('active', onlyChanged).attr('aria-pressed', String(onlyChanged))
+            .text(onlyChanged ? '바뀐 섹션만' : '모든 섹션')
+            .attr('title', onlyChanged ? `같은 섹션 ${n.same}개는 숨겼어요 · 누르면 모두 보여요` : '누르면 바뀐 섹션만 보여요');
         tr?.reset();
+        syncTr();
     };
     $host.html(`
       <div class="na_df2_counts">
@@ -3445,13 +3465,31 @@ function renderSectionDiff($host, aText, bText, { tr } = {}) {
         <span class="na_spacer"></span><span class="na_df2_tr"></span>
       </div>
       <div class="na_df2_cards"></div>
-      ${n.same ? '<button type="button" class="na_v2_btn na_df2_only"></button>' : ''}`);
-    if (tr && changed) { tr.detach(); $host.find('.na_df2_tr').append(tr); }
+      <div class="na_df2_foot">${n.same ? '<button type="button" class="na_v2_btn na_df2_only"></button>' : ''}</div>`);
+    // "한국어로" + a switch; the switch drives the shared translate button, which stays hidden next to it
+    const syncTr = () => {
+        if (!tr) return;
+        const $w = $host.find('.na_df2_tr');
+        const busy = tr.prop('disabled');
+        $w.toggleClass('busy', busy).find('.na_df2_trlbl').text(busy ? '번역하는 중…' : '한국어로');
+        $w.find('input').prop('checked', busy || $host.find('.na_diff_tr').length > 0).prop('disabled', busy);
+    };
+    if (tr && changed) {
+        tr.detach();
+        const $w = $host.find('.na_df2_tr');
+        $w.append('<label class="na_df2_trsw"><span class="na_df2_trlbl">한국어로</span><input type="checkbox" class="na_toggle"></label>').append(tr);
+        $w.find('input').on('change', () => { tr.trigger('click'); syncTr(); });
+        tr.data('naTrObs')?.disconnect();
+        const obs = new MutationObserver(syncTr);
+        obs.observe(tr[0], { attributes: true, attributeFilter: ['disabled'], childList: true, subtree: true });
+        tr.data('naTrObs', obs);
+    }
     $host.find('.na_df2_only').on('click', () => { onlyChanged = !onlyChanged; draw(); });
     draw();
     return n;
 }
 
+const DF2_ARROW = '<span class="na_df2_arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>';
 const diffSide = (cls, tag, name, sub) => `<div class="na_df2_side ${cls}"><small>${tag}</small><b title="${esc(name)}">${esc(name)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>`;
 
 async function openDiff(snap, after = { text: getMeta().text, label: '지금' }, { restore } = {}) {
@@ -3460,16 +3498,16 @@ async function openDiff(snap, after = { text: getMeta().text, label: '지금' },
       <div class="na_popup na_v2 na_df2">
         <div class="na_v2_title"><b>두 버전 비교</b></div>
         <div class="na_df2_sides">
-          ${diffSide('old', '이전', snap.reason || '복구 지점', snap.at ? timeLabel(snap.at) : '')}
-          <i class="fa-solid fa-arrow-right"></i>
+          ${diffSide('old', '이전', '복구 지점', [snap.at ? timeLabel(snap.at) : '', snap.reason].filter(Boolean).join(' · '))}
+          ${DF2_ARROW}
           ${diffSide('new', '이후', after.label, `${fmt(after.text.length)}자`)}
         </div>
         <div class="na_df2_body"></div>
-        ${restore ? '<button type="button" class="na_v2_btn primary wide na_df2_restore"><i class="fa-solid fa-clock-rotate-left"></i> 이전으로 복원</button>' : ''}
       </div>`);
     const $host = $v.find('.na_df2_body');
     const tr = translateButton($host);
     renderSectionDiff($host, snap.text, after.text, { tr });
+    if (restore) $host.find('.na_df2_foot').append('<button type="button" class="na_v2_btn primary na_df2_restore">이전으로 복원</button>');
     $v.find('.na_df2_restore').on('click', () => { $v.closest('dialog').find('.popup-button-ok').trigger('click'); setTimeout(restore, 50); });
     await c.callGenericPopup($v, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
@@ -3588,7 +3626,7 @@ async function openCompare() {
         <div class="na_v2_title"><b>두 버전 비교</b><small>A에서 B로 바뀐 섹션만 보여줘요. 파일끼리도 비교할 수 있어요</small></div>
         <div class="na_df2_sides">
           <label class="na_df2_side old"><small>이전 · A</small><select class="text_pole na_cmp_a">${opts(m.snapshots.length ? 's0' : 'file')}</select></label>
-          <i class="fa-solid fa-arrow-right"></i>
+          ${DF2_ARROW}
           <label class="na_df2_side new"><small>이후 · B</small><select class="text_pole na_cmp_b">${opts('now')}</select></label>
           <input type="file" class="na_cmp_file" accept=".txt,.md,.json,text/plain,application/json" hidden>
         </div>
@@ -4390,14 +4428,14 @@ async function openKnowledge() {
           <span class="na_cp_txt"><b>주입하기</b><small>모르는 걸 아는 척하지 않게<span class="na_kn_tok"></span></small></span>
           <input type="checkbox" class="na_toggle">
         </label>
-        <div class="na_v2_chips na_kn2_more">
-          <button type="button" class="na_v2_pillbtn na_kn_edit"><i class="fa-solid fa-pen"></i> 직접 고치기</button>
-          <button type="button" class="na_v2_pillbtn na_kn_trbtn"><i class="fa-solid fa-language"></i> 한국어로 보기</button>
-          <button type="button" class="na_v2_pillbtn danger na_kn_clear"><i class="fa-regular fa-trash-can"></i> 전체 삭제</button>
-        </div>
         <div class="na_kn_pickhost"></div>
         <div class="na_check na_check_soft na_kn_stale" hidden></div>
         <div class="na_kn_list"></div>
+        <div class="na_kn2_more">
+          <button type="button" class="na_linkbtn na_kn_edit">직접 고치기</button>
+          <button type="button" class="na_linkbtn na_kn_trbtn">한국어로 보기</button>
+          <button type="button" class="na_linkbtn danger na_kn_clear">전체 삭제</button>
+        </div>
         <div class="na_kn_editbox" hidden>
           <small class="na_dim">한 줄에 하나: <code>사실 | knows: A, B | unaware: C | suspects: D | src: 섹션 제목</code></small>
           <textarea class="text_pole na_kn_ta" rows="12" spellcheck="false"></textarea>
@@ -4425,12 +4463,12 @@ async function openKnowledge() {
             const u = r.unaware.map(x => `<span class="na_kn2_u">${esc(x)}</span>`).join('');
             const secret = r.unaware.length > 0;
             return `<div class="na_kn_row na_kn2_card ${secret ? 'secret' : ''}" data-i="${i}">
-              <button type="button" class="na_icon na_icon_sm na_kn_del" title="이 줄 삭제"><i class="fa-solid fa-xmark"></i></button>
               <div class="na_kn_fact">${esc(r.fact)}${tr?.[i] ? `<div class="na_kn_tr">${esc(tr[i])}</div>` : ''}</div>
               <div class="na_kn_people">${k}${su}${u}${!k && !su && !u ? '<span class="na_v2_note">아직 아무도</span>' : ''}</div>
               <div class="na_kn2_foot">
                 ${s ? `<button type="button" class="na_cite" data-start="${s.start}" title="${esc(s.title)}">${esc((s.title.match(/^(?:\S+\s+)?#\d+\s*[–—~-]\s*#?\d+/) || [s.title.slice(0, 24)])[0])}</button>` : '<span></span>'}
                 <small>${secret ? `${r.unaware.map(esc).join(', ')}에겐 비밀` : r.knows.length ? '모두 알아요' : ''}</small>
+                <button type="button" class="na_kn_del" title="이 줄 삭제" aria-label="이 줄 삭제"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
               </div>
             </div>`;
         }).join('')
@@ -5574,7 +5612,7 @@ async function openCalendar() {
         <div class="na_v2_titlebar"><div class="na_v2_title"><b>이야기 달력</b><small class="na_cal_sum"></small></div><div class="na_v2_seg na_cal_logs"></div></div>
         <div class="na_cal_body"></div>
         <details class="na_v2_card na_v2_more na_cal_cfg">
-          <summary><i class="fa-solid fa-calendar-days"></i> 달 이름 바꾸기</summary>
+          <summary><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> 달 이름 바꾸기</summary>
           <small class="na_v2_note">한 줄에 달력 하나, 달은 순서대로 쉼표로, 다른 표기는 / 로 (예: Mekhir/Mechir). 비우면 기본값(이집트·영어·한국어 달).</small>
           <textarea class="text_pole na_cal_ta" rows="4" spellcheck="false"></textarea>
         </details>
@@ -5610,7 +5648,7 @@ async function openCalendar() {
         const place = r => headingPlaces(r.s.title, cals).join(' → ');
         $root.find('.na_cal_body').html(`
           ${dated ? '' : '<div class="na_v2_card na_v2_note">제목에서 날짜를 못 찾았어요. 아래 "달 이름 바꾸기"에 이야기 속 달력을 적어 주세요.</div>'}
-          ${l.warnings ? `<div class="na_xr_warn slim"><i class="fa-solid fa-triangle-exclamation"></i><div><b>날짜가 거꾸로 가는 곳 ${l.warnings}개</b></div><button type="button" class="na_linkbtn na_cal_jump">보기</button></div>` : ''}
+          ${l.warnings ? `<div class="na_xr_warn slim">${WARN_SVG}<div class="na_cal_warntxt">날짜가 거꾸로 가는 곳 ${l.warnings}개</div><button type="button" class="na_linkbtn na_cal_jump">보기</button></div>` : ''}
           ${groups.map(gr => `
             ${gr.gap ? `<div class="na_cal_gap2"><span>${esc(/개월$/.test(gr.gap) ? `${gr.gap} 지남` : gr.gap)}</span></div>` : ''}
             <div class="na_cal_month"><b>${esc(gr.name)}</b><small>섹션 ${gr.rows.length}${gr.year > 1 ? ` · ${gr.year}년째` : ''}</small></div>
