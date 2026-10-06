@@ -2213,3 +2213,27 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_tl:not(.na_darkui) .na_sw.on { background: var(--tl-acc); }
 .na_tl:not(.na_darkui) .na_br_filters button { background: var(--tl-bg); border-color: var(--tl-line); }
 .na_tl:not(.na_darkui) .na_br_filters button.on { background: #2A211C; color: #FFF6EF; }
+
+/* ============ mockup palette (light themes). The mockups' cream / brown / orange, used as is.
+   Dark themes (body.na_darkui) keep the theme-derived values defined above. */
+body:not(.na_darkui) #na_settings, body:not(.na_darkui) .na_popup, body:not(.na_darkui) .na_v2 {
+    --na-accent: #B8541F;
+    --na-accent-ink: #A84A17;
+    --na-accent-soft: #F6E1D3;
+    --na-line: #E5D5C9;
+    --na-line2: #F1E6DD;
+    --na-card: #FFFAF6;
+    --na-card2: #F1E6DD;
+    --na-soft: #F1E6DD;
+    --na-softer: #FBF4EE;
+    --na-dim: #8A7A70;
+    --na-mute: #6B5A50;
+    --na-raw: #D9C8BC;
+    --na-warn: #C98A2E;
+    --na-bad: #B3261E; --na-bad-soft: #FBE7E2;
+    --na-ok: #1F6A40; --na-ok-soft: #E3F2E8;
+    --na-amber: #8A5A00; --na-amber-soft: #FFF1D6;
+    --na-purple: #5B3FA0; --na-purple-soft: #EAE3F5;
+    --na-ink: #2A211C;
+}
+body:not(.na_darkui) .na_v2, body:not(.na_darkui) #na_settings .na_tab_pane { color: #2A211C; }
