@@ -3505,3 +3505,19 @@ body.na_darkui dialog.popup:has(#na_settings) { background: #2A221D !important; 
 
 body:not(.na_darkui) .na_launch_tabs { background: #E6D6CA; }
 body.na_darkui .na_launch_tabs { background: #3A2F28; }
+
+/* 아카이브에 질문, as drawn: the conversation fills the window, suggestions and the input sit at the bottom,
+   the input is one pill (no box of its own inside, whatever a theme does to textareas) */
+.na_popup.na_ask2 { min-height: min(72vh, 720px); }
+.na_popup.na_ask2 .na_ask_log { flex: 1 1 auto; min-height: 0; }
+.na_popup.na_ask2 .na_ask2_input textarea.na_ask_q,
+.na_popup.na_ask2 .na_ask2_input textarea.na_ask_q:is(:focus, :hover) {
+    flex: 1; min-width: 0; margin: 0 !important; padding: 8px 0 !important; border: 0 !important; border-radius: 0 !important; outline: none !important;
+    background: transparent !important; background-color: transparent !important; background-image: none !important; box-shadow: none !important;
+    color: inherit !important; font: inherit; font-size: 14px !important; line-height: 1.5 !important; -webkit-appearance: none; appearance: none;
+}
+.na_popup.na_ask2 .na_ask2_input textarea.na_ask_q::placeholder { color: var(--na-dim) !important; opacity: 1 !important; }
+.na_popup.na_ask2 .na_ask2_input { align-items: center; }
+.na_popup.na_ask2 .na_ask_go { width: 40px; height: 40px; }
+/* captions keep the palette's colour even when a theme recolours <small> */
+.na_popup.na_v2 .na_v2_title small, .na_popup.na_v2 small.na_v2_foot { color: var(--na-sub, var(--na-dim)) !important; }

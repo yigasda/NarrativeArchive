@@ -88,7 +88,7 @@ export async function openAsk() {
           <button type="button">아직 안 풀린 떡밥?</button>
         </div>
         <div class="na_ask2_input">
-          <textarea class="text_pole na_ask_q" rows="1" placeholder="질문을 적어 주세요"></textarea>
+          <textarea class="na_ask_q" rows="1" placeholder="질문을 적어 주세요" aria-label="질문"></textarea>
           <button type="button" class="na_ask_go" aria-label="물어보기" title="물어보기 (Ctrl+Enter)">${ASK_SVG_SEND}</button>
         </div>
         <small class="na_v2_foot na_ask_info"></small>
