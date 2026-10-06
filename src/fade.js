@@ -1,6 +1,6 @@
 // Forgetting curve: short and one-line versions of old sections.
 
-import { askDraft, drLabel, draftReady, stripThink, withSpinner } from './ai.js';
+import { askDraft, drLabel, draftReady, draftSettings, stripThink, withSpinner } from './ai.js';
 import { currentChatId } from './chats.js';
 import { ctx, getMeta, saveMeta, textHash } from './core.js';
 import { applyInjection } from './inject.js';
@@ -196,6 +196,10 @@ SHORT:
 LINE:
 <one sentence>`;
 
+// short rewrites: low thinking effort and an 8,000-token ceiling (thinking counts against it), so a model that can't
+// switch thinking off doesn't spend the whole draft budget on one section
+const LAYER_ASK = { system: AI_SYS_LAYERS, effort: 'low', get maxTokens() { return Math.min(8000, Number(draftSettings().max) || 16000); } };
+
 // SHORT / LINE out of a model answer, or null if it isn't in that shape
 const parseLayers = out => out.match(/SHORT:\s*\n?([\s\S]*?)\n\s*\**LINE:?\**\s*\n?([\s\S]+)$/i);
 
@@ -203,13 +207,13 @@ export async function draftLayers(m, s) {
     const section = m.text.slice(s.start, s.end).trim();
     // no small cap on the answer: models that think first can spend a few thousand tokens before writing anything
     // (the draft model's own "초안 최대 길이" applies)
-    let out = stripThink(await askDraft(`SECTION:\n${section}`, { system: AI_SYS_LAYERS }));
+    let out = stripThink(await askDraft(`SECTION:\n${section}`, LAYER_ASK));
     // a quote must stay whole: one more try naming the ones that were cut or reworded. If that try fails or comes back
     // worse, the first answer is kept (it was paid for) and the changed quotes are pointed out instead
     const bad = changedQuotes(section, out);
     if (bad.length && parseLayers(out)) {
         try {
-            const again = stripThink(await askDraft(`SECTION:\n${section}\n\nYour last answer changed these quotes. Copy each one exactly from the section, or drop its quotation marks and say it in your own words:\n${bad.map(q => `- "${q}"`).join('\n')}`, { system: AI_SYS_LAYERS }));
+            const again = stripThink(await askDraft(`SECTION:\n${section}\n\nYour last answer changed these quotes. Copy each one exactly from the section, or drop its quotation marks and say it in your own words:\n${bad.map(q => `- "${q}"`).join('\n')}`, LAYER_ASK));
             if (parseLayers(again) && changedQuotes(section, again).length < bad.length) out = again;
         } catch (e) { console.warn('[narrative-archive] layers retry', e); }
         const left = changedQuotes(section, out).length;
@@ -409,7 +413,7 @@ export async function fillFade($btn, only = null) {
 // the user's own change request for a section's versions ("소망 대사는 원문 그대로"): returns { short, line, changed }
 export async function reviseLayers(m, s, short, line, req) {
     const section = m.text.slice(s.start, s.end).trim();
-    const out = stripThink(await askDraft(`SECTION:\n${section}\n\nCURRENT SHORT:\n${String(short || '').trim() || '(none)'}\n\nCURRENT LINE:\n${String(line || '').trim() || '(none)'}\n\nREQUEST:\n${req}`, { system: AI_SYS_LAYERS_REVISE }));
+    const out = stripThink(await askDraft(`SECTION:\n${section}\n\nCURRENT SHORT:\n${String(short || '').trim() || '(none)'}\n\nCURRENT LINE:\n${String(line || '').trim() || '(none)'}\n\nREQUEST:\n${req}`, { ...LAYER_ASK, system: AI_SYS_LAYERS_REVISE }));
     const mt = parseLayers(out);
     if (!mt) throw new Error('답 형식이 달라요 (SHORT:/LINE: 없음). 다시 보내 주세요');
     const next = withTopLabel(section, mt[1].replace(/^\**\s*/, ''));

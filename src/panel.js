@@ -600,7 +600,7 @@ export function bindPanel() {
         const field = (sel, key) => $(`#na_${p}_${sel}`).on('change', function () { connSettings(p)[key] = this.value.trim(); saveGlobal(); renderAiSettings(); });
         field('key', 'key'); field('model', 'model'); field('vxloc', 'vxLocation'); field('vxmodel', 'vxModel');
         // another address has other models: the loaded list goes with the old one
-        $(`#na_${p}_url`).on('change', function () { const t = connSettings(p), v = this.value.trim(); if (v !== t.url) delete t.models; t.url = v; saveGlobal(); renderAiSettings(); });
+        $(`#na_${p}_url`).on('change', function () { const t = connSettings(p), v = this.value.trim(); if (v !== t.url) { delete t.models; delete t.noEffort; } t.url = v; saveGlobal(); renderAiSettings(); });
         $(`#na_${p}_custom .na_cc_eye`).on('click', function () {
             const $k = $(`#na_${p}_key`), show = $k.attr('type') === 'password';
             $k.attr('type', show ? 'text' : 'password');
