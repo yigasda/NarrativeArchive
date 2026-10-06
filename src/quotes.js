@@ -98,26 +98,29 @@ export const quoteKey = t => String(t).replace(/[“”„"]/g, '"').replace(/[�
 
 // ---- voice fingerprint: a few speech rules per character, drawn from that character's lines in the quote bank
 export const AI_SYS_VOICE = `GOAL
-Describe HOW one character talks, as short rules a writer can follow. Use only the LINES you are given.
+Write a speech guide for one character: 4 to 7 rules that let another writer make NEW lines sound like this character.
+Use only the LINES you are given.
 
 YOU GET
 - NAME: the character.
 - LINES: things this character said in the story, one per line.
 
 STEPS
-1. Read all the LINES.
-2. Find patterns that repeat in 2 or more lines:
-   sentence length · how they address people (names, titles, pet names) · questions or orders · formal or casual ·
-   favorite words or images · humor or none · what they avoid saying · how feelings come out (or don't).
-3. Write each pattern as one rule that starts with a verb. Add a tiny example in quotes ONLY if it is copied exactly from the LINES.
-   Put a TAG in square brackets before the rule: ONE short Korean word for the kind of pattern
-   (길이 · 명령 · 질문 · 호칭 · 존댓말 · 반말 · 감정 · 유머 · 반복 · 말버릇 · 비유 · 금기 · 침묵).
-4. Keep only rules that make this voice different from other people. Drop generic ones like "speaks naturally" or "is emotional".
-5. Write 4 to 7 rules.
+1. Read all the LINES. Look for habits that show up in at least 2 lines. Check:
+   sentence length and rhythm · how they address others (names, titles, pet names) · orders, questions or statements ·
+   formal or casual · words, images or topics they come back to · humor · what they never say · how feelings leak out.
+2. For each habit write ONE rule: a full English sentence saying what the character does when they talk.
+   Concrete enough to imitate ("Answers questions with a question"), not a label ("Questions").
+3. After the rule, add one short example copied word for word from the LINES, in parentheses and quotes.
+   Leave the example out if no line fits.
+4. Before the rule put one Korean tag in square brackets:
+   길이 · 명령 · 질문 · 호칭 · 존댓말 · 반말 · 감정 · 유머 · 반복 · 말버릇 · 비유 · 조건 · 금기 · 침묵.
+5. Drop rules any character could have ("speaks naturally", "shows emotion"). Keep the 4 to 7 strongest.
 
 DO NOT
-- Do not describe personality, looks, or story events. Only how they speak.
-- Do not invent catchphrases that are not in the LINES.
+- No headings, numbering, bold, or labels such as "Pattern:", "Rule:", "Verb start:".
+- No personality, looks or plot. Only how they speak.
+- No catchphrases that are not in the LINES.
 
 EXAMPLE
 NAME: Ivo
@@ -126,23 +129,38 @@ Sit. Eat. We talk after.
 You think I'd let you walk there alone? Funny.
 Mara. Look at me. Breathe.
 I said I'd come back. I came back.
+If you fall, I catch you. That's the deal.
 Answer:
-- [길이] Uses very short sentences, often two or three words ("Sit. Eat.").
-- [명령] Gives orders instead of asking.
-- [호칭] Says the other person's name alone before an important line ("Mara. Look at me.").
-- [유머] Hides worry behind dry one-word sarcasm ("Funny.").
-- [반복] Repeats his own words back to make a point ("I said I'd come back. I came back.").
-- [감정] Never names his feelings out loud.
+- [길이] Speaks in very short sentences, often two or three words. ("Sit. Eat.")
+- [명령] Gives orders instead of asking. ("Mara. Look at me. Breathe.")
+- [호칭] Says the other person's name alone before an important line. ("Mara. Look at me.")
+- [유머] Hides worry behind dry one-word sarcasm. ("Funny.")
+- [반복] Repeats his own words back to make a point. ("I said I'd come back. I came back.")
+- [조건] States promises as plain if-then terms. ("If you fall, I catch you.")
 
 OUTPUT
-Only the rules, one per line, each like: - [TAG] rule. The rule in English, the TAG in Korean. Nothing else.`;
+4 to 7 lines and nothing before or after them. Every line exactly like:
+- [태그] Rule sentence. ("example")`;
+
+// keeps the "- [태그] rule" lines; tolerates numbering, bold and "Pattern:"-style labels, drops a rule cut off mid-sentence
+export function voiceRules(out) {
+    const rules = String(out || '').split('\n').map(l => l.trim())
+        .filter(l => /^([-*•]|\d+[.)])\s+\S/.test(l))
+        .map(l => l.replace(/^([-*•]|\d+[.)])\s+/, '').replace(/\*\*/g, '').replace(/^(\[[^\]]{1,8}\]\s*)?(pattern|rule|habit|verb start|example)\s*:\s*/i, '$1').trim())
+        .filter(l => l.replace(/^\[[^\]]*\]\s*/, '').length >= 12);
+    const cut = l => { const q = (l.match(/["“”]/g) || []).length, open = (l.match(/\(/g) || []).length - (l.match(/\)/g) || []).length; return q % 2 === 1 || open > 0 || !/[.!?)"”'’。]$/.test(l); };
+    if (rules.length && cut(rules[rules.length - 1])) rules.pop();
+    return rules.map(l => `- ${l}`);
+}
 
 export async function makeVoice(m, who) {
     const lines = [...new Set((m.quotes || []).filter(q => q.who === who).map(q => q.text))].slice(0, 150);
     if (lines.length < 3) throw new Error(`${who}: 대사가 3개는 있어야 말투를 볼 수 있어요`);
-    const out = await askAI(`NAME: ${who}\n\nLINES:\n${lines.join('\n')}`, { system: AI_SYS_VOICE, maxTokens: 1500 });
-    const rules = out.split('\n').map(l => l.trim()).filter(l => /^[-*•]\s+\S/.test(l)).map(l => `- ${l.replace(/^[-*•]\s+/, '')}`);
-    if (!rules.length) throw new Error(`${who}: 모델 답에서 규칙을 못 찾았어요`);
+    // room for models that think before answering (their thinking counts against the limit and cut the rules short)
+    const ask = extra => askAI(`NAME: ${who}\n\nLINES:\n${lines.join('\n')}${extra}`, { system: AI_SYS_VOICE, maxTokens: 8000 });
+    let rules = voiceRules(await ask(''));
+    if (rules.length < 3) rules = voiceRules(await ask('\n\nYour last answer was cut off or not in the format. Answer again: 4 to 7 lines, each exactly "- [태그] Rule sentence. (\"example\")", nothing else.'));
+    if (!rules.length) throw new Error(`${who}: 모델 답에서 규칙을 못 찾았어요. 다시 눌러 주세요`);
     m.voice = m.voice && typeof m.voice === 'object' ? m.voice : {};
     m.voice[who] = { text: rules.slice(0, 8).join('\n'), n: lines.length, at: Date.now() };
 }
