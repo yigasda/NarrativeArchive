@@ -3485,3 +3485,23 @@ body.na_darkui dialog.popup:has(#na_settings) { background: #2A221D !important; 
 #na_settings .na_tab_pane[data-pane="config"] .na_set_row > span:not(.na_cfg_val):not(:first-child) { font-size: 1em !important; }
 #na_settings .na_theme_txt, #na_settings .na_theme_txt b { font-size: 1em !important; }
 #na_settings .na_theme_txt small { font-size: 0.8em !important; }
+
+/* wand menu launcher: every tool in four small groups, then a row that jumps to a panel tab */
+.na_launch { gap: 14px; }
+.na_launch_grp { display: flex; flex-direction: column; gap: 6px; }
+.na_launch .na_launch_lbl { padding: 0 2px; font-size: 0.8em !important; font-weight: 600; color: var(--na-dim); }
+.na_launch_grid { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 8px; }
+.na_launch .na_launch_btn { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; padding: 12px 6px 10px; border: 1px solid var(--na-line); border-radius: 16px; background: var(--na-card); color: inherit; font: inherit; font-size: 0.86em !important; line-height: 1.25; text-align: center; cursor: pointer; }
+.na_launch .na_launch_btn > span:last-child { font-size: 1em !important; }
+.na_launch .na_launch_btn:hover:not(:disabled) { border-color: var(--na-accent); }
+.na_launch .na_launch_btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.na_launch .na_launch_ic { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; background: var(--na-accent-soft); color: var(--na-accent); }
+.na_launch .na_launch_panel { flex: none; align-self: center; }
+.na_launch .na_launch_panel .na_svg { color: var(--na-accent); }
+.na_launch_tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 16px; background: var(--na-softer, var(--na-card2)); }
+.na_launch .na_launch_tab { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 7px 0 5px; border: 0; border-radius: 12px; background: none; color: var(--na-mute, inherit); font: inherit; font-size: 0.78em !important; line-height: 1.2; cursor: pointer; }
+.na_launch .na_launch_tab > span { font-size: 1em !important; }
+.na_launch .na_launch_tab:hover { background: var(--na-card); color: var(--na-accent-ink, var(--na-accent)); }
+
+body:not(.na_darkui) .na_launch_tabs { background: #E6D6CA; }
+body.na_darkui .na_launch_tabs { background: #3A2F28; }
