@@ -95,7 +95,10 @@ STEPS
    (a section that is already short may stay near that limit, but must still be shorter).
    Same form as the original: bullets stay bullets, and every label line of the section (PLOT:, NOTES:, any line
    that ends with a colon) stays, in the same order, with its own shortened bullets under it. Keep every fact from step 1.
-   Cut mood, repeated feelings and exact dialogue. Keep a quote only if it is a line the story keeps coming back to.
+   Cut mood and repeated feelings.
+   Dialogue: a line you keep in quotation marks is copied exactly from the section — every word, same order,
+   nothing trimmed, merged or reworded. If it is too long to keep whole, drop the quotation marks and say in your
+   own words what was said. Never shorten a quote.
 3. LINE: one sentence, 30 words or fewer: the single most important thing that happened or changed.
 4. Same language as the section. Add nothing that is not in the section. No comments.
 
@@ -134,9 +137,26 @@ export function withTopLabel(chunk, short) {
     return first && short && !short.startsWith(first[1]) ? `${first[1]}\n${short}` : short;
 }
 
+// quoted lines in `out` that are not a whole quoted line of `src` word for word (shortened, cut or reworded)
+export function changedQuotes(src, out) {
+    const norm = t => String(t).replace(/[“”«»„]/g, '"').replace(/[‘’]/g, "'").replace(/\s+/g, ' ').trim();
+    const hay = norm(src), bare = q => q.replace(/[\s.,!?…~—–-]+$/u, '');
+    const quotes = t => [...t.matchAll(/"([^"]{6,})"/g)].map(x => x[1].trim());
+    const whole = quotes(hay);
+    return quotes(norm(out)).filter(q => {
+        if (whole.some(w => w === q || bare(w) === bare(q))) return false; // a whole quoted line
+        if (whole.some(w => w.includes(bare(q)))) return true; // only part of a quoted line: shortened
+        return !hay.includes(q) && !hay.includes(bare(q)); // not in the section as written
+    });
+}
+
 export async function draftLayers(m, s) {
-    const out = await askDraft(`SECTION:\n${m.text.slice(s.start, s.end).trim()}`, { system: AI_SYS_LAYERS, maxTokens: 4000 });
-    const mt = stripThink(out).match(/SHORT:\s*\n?([\s\S]*?)\n\s*\**LINE:?\**\s*\n?([\s\S]+)$/i);
+    const section = m.text.slice(s.start, s.end).trim();
+    let out = stripThink(await askDraft(`SECTION:\n${section}`, { system: AI_SYS_LAYERS, maxTokens: 4000 }));
+    // a quote must stay whole: one more try naming the ones that were cut or reworded
+    const bad = changedQuotes(section, out);
+    if (bad.length) out = stripThink(await askDraft(`SECTION:\n${section}\n\nYour last answer changed these quotes. Copy each one exactly from the section, or drop its quotation marks and say it in your own words:\n${bad.map(q => `- "${q}"`).join('\n')}`, { system: AI_SYS_LAYERS, maxTokens: 4000 }));
+    const mt = out.match(/SHORT:\s*\n?([\s\S]*?)\n\s*\**LINE:?\**\s*\n?([\s\S]+)$/i);
     if (!mt) throw new Error(`${s.title.slice(0, 30)}: 답 형식이 달라요 (SHORT:/LINE: 없음)`);
     const short = withTopLabel(m.text.slice(s.start, s.end), mt[1].replace(/^\**\s*/, ''));
     return { short, line: mt[2].trim().split('\n')[0].trim() };
