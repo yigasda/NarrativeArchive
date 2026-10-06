@@ -10,7 +10,7 @@ import { addWandMenu, renderPanel, sectionPanel } from './src/panel.js';
 import { onGenerationStarted, onMessageSent } from './src/router.js';
 import { linkedMap } from './src/sections.js';
 import { refreshStatusSoon } from './src/status.js';
-import { watchTheme } from './src/theme.js';
+import { applyTheme } from './src/theme.js';
 import { xrayArm, xrayCapture, xrayWorldInfo } from './src/xray.js';
 
 (function init() {
@@ -22,8 +22,8 @@ import { xrayArm, xrayCapture, xrayWorldInfo } from './src/xray.js';
     const start = () => {
         if (started) return;
         started = true;
-        watchTheme();
         if (!$('#na_settings').length) renderPanel();
+        applyTheme();
         addWandMenu();
         onChatChanged();
     };

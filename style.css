@@ -3281,9 +3281,41 @@ body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-draw
    right after it with the colours mapped (cream → warm dark brown, brown ink → cream, accents brighter).
    The panel and popups sit on a warm dark base so the cards read as one family with the light look. */
 /* the theme's own page and text colours, warmed, for the rules that borrow them (active tabs, face rings, sticky bars) */
-body.na_darkui :is(#na_settings, dialog.popup:has(.na_popup)) { --SmartThemeBlurTintColor: #2A221D; --SmartThemeBodyColor: #EAE0D6; --SmartThemeQuoteColor: #D9733A; }
+body.na_darkui :is(#na_settings, dialog.popup:has(.na_popup)) {
+    --SmartThemeBodyColor: #EAE0D6; --SmartThemeEmColor: #B3A396; --SmartThemeQuoteColor: #D9733A;
+    --SmartThemeBlurTintColor: #2A221D; --SmartThemeChatTintColor: #2E2621; --SmartThemeBorderColor: rgba(239, 227, 216, 0.18);
+    --SmartThemeShadowColor: rgba(0, 0, 0, 0.4); color: var(--SmartThemeBodyColor);
+}
 body.na_darkui #na_settings > .inline-drawer > .inline-drawer-content { background: #2A221D; border-radius: 0 0 14px 14px; }
 body.na_darkui dialog.popup:has(.na_popup) { background: #2A221D; color: #EFE3D8; }
 body.na_darkui .na_face_btn > i { background: var(--na-fill); color: var(--na-onfill); }
 body.na_darkui dialog.popup:has(.na_popup) .popup-controls .menu_button { background: #3A2F28; border: 1px solid #54463D; color: #EFE3D8; }
 body.na_darkui .na_popup :where(.text_pole) { background: #2E2621; border: 1px solid #54463D; color: #EFE3D8; }
+
+/* ============ the extension's own theme (설정 › 테마), whatever SillyTavern's theme is. Inside the panel and its popups
+   the theme colours SillyTavern's rules read are swapped for the chosen palette's, and both sit on their own base. */
+body:not(.na_darkui) :is(#na_settings, dialog.popup:has(.na_popup)) {
+    --SmartThemeBodyColor: #463428; --SmartThemeEmColor: #786455; --SmartThemeQuoteColor: #B85C1E;
+    --SmartThemeBlurTintColor: #F0E4DB; --SmartThemeChatTintColor: #ECE0D6; --SmartThemeBorderColor: rgba(120, 90, 60, 0.25);
+    --SmartThemeShadowColor: rgba(0, 0, 0, 0.1); color: var(--SmartThemeBodyColor);
+}
+body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-content { background: #F0E4DB; border-radius: 0 0 14px 14px; }
+body:not(.na_darkui) dialog.popup:has(.na_popup) { background: #F0E4DB; color: #463428; }
+body:not(.na_darkui) dialog.popup:has(.na_popup) .popup-controls .menu_button { background: #F7EEE7; border: 1px solid #E5D5C9; color: #463428; }
+body:not(.na_darkui) .na_popup :where(.text_pole) { background: #F2E9E2; border: 1px solid #E5D5C9; color: #463428; }
+
+/* 설정 › 테마: two round swatches */
+.na_theme_pick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; }
+.na_theme_opt { position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 12px; border-radius: 14px; border: 1.5px solid var(--na-line); background: var(--na-card2); cursor: pointer; }
+.na_theme_opt input { position: absolute; opacity: 0; pointer-events: none; }
+.na_theme_sw { flex: none; width: 30px; height: 30px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12); }
+.na_theme_sw.light { background: linear-gradient(135deg, #F7EEE7 0 50%, #B8541F 50% 100%); }
+.na_theme_sw.dark { background: linear-gradient(135deg, #3A2F28 0 50%, #D9733A 50% 100%); }
+.na_theme_txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.na_theme_txt b { font-weight: 600; }
+.na_theme_txt small { color: var(--na-dim); font-size: 0.8em; }
+.na_theme_opt:has(input:checked) { border-color: var(--na-accent); }
+.na_theme_opt:has(input:checked) .na_theme_sw { box-shadow: 0 0 0 2px var(--na-card2), 0 0 0 4px var(--na-accent); }
+.na_theme_opt:has(input:checked) .na_theme_txt b { color: var(--na-accent-ink, var(--na-accent)); }
+.na_theme_opt:has(input:focus-visible) { outline: 2px solid var(--na-accent); outline-offset: 2px; }
+
