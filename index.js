@@ -4,7 +4,7 @@
 
 const MODULE = 'narrative_archive';
 const PROMPT_KEY = 'narrative_archive_injection';
-const VERSION = '3.23.2';
+const VERSION = '3.24.0';
 const SNAPSHOT_MAX = 5;
 const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -31,7 +31,7 @@ const DEFAULT_META = Object.freeze({
     lastExport: null, // { from, to, at, how } — the latest extract copied or saved
 });
 
-const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'muted', 'track', 'tokenCap', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'router', 'people', 'temps', 'voice', 'voiceInject', 'layers', 'fade', 'worldOn'];
+const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'muted', 'track', 'tokenCap', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'router', 'people', 'temps', 'voice', 'voiceInject', 'layers', 'fade', 'worldOn', 'quoteExclude', 'quoteMined', 'knowMined'];
 const POSITIONS = { 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
 const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
 
@@ -302,7 +302,7 @@ async function openWorlds() {
     });
     $root.on('click', '.na_wd_del', async function () {
         const w = book(this);
-        if (!await confirm('세계관 지우기', `"${w.name}"을 지울까요? 이 세계관을 켠 모든 채팅에서 빠져요. 되돌릴 수 없어요.`)) return;
+        if (!await confirm('세계관 지우기', `"${esc(w.name)}"을 지울까요? 이 세계관을 켠 모든 채팅에서 빠져요. 되돌릴 수 없어요.`)) return;
         g.worlds = worldBooks().filter(x => x !== w);
         await save(); draw();
     });
@@ -331,16 +331,21 @@ async function openWorlds() {
         $i.find('.na_wd_go').on('click', async () => {
             const picked = $i.find('.na_wd_secs input:checked').map((_, el) => secs[Number(el.dataset.i)]).get();
             if (!picked.length) return toastr.info('섹션을 골라 주세요.');
-            // a "#" heading becomes "##" inside the book so the book's own "# WORLD" stays the top level
-            const text = picked.map(s => m.text.slice(s.start, s.end).replace(/^# /, '## ').trim()).join('\n\n');
+            // a picked group ("# WORLD" over "## Ombos", "## Thebes") brings the sections under it
+            const all = parseSections(m.text);
+            const spanEnd = s => !s.group ? s.end : (all.find(x => x.start > s.start && x.level <= s.level)?.start ?? m.text.length);
+            const spans = picked.map(s => [s.start, spanEnd(s)]).sort((a, b) => a[0] - b[0])
+                .reduce((out, sp) => { const l = out[out.length - 1]; if (l && sp[0] < l[1]) l[1] = Math.max(l[1], sp[1]); else out.push([...sp]); return out; }, []);
+            // headings go one level down so the book's own "# WORLD — name" stays the top level
+            const text = spans.map(([a, b]) => m.text.slice(a, b).replace(/^(#{1,5}) /gm, '#$1 ').trim()).join('\n\n');
             const tid = String($i.find('.na_wd_target').val() || '');
             let w = worldBooks().find(x => x.id === tid);
             if (!w) { w = { id: newId(), name: picked[0].title.replace(/^#+\s*/, '').slice(0, 30) || '세계관', text: '', chars: charKey() ? [charKey()] : [] }; worldBooks().push(w); }
             w.text = [String(w.text || '').trim(), text].filter(Boolean).join('\n\n');
             m.worldOn = { ...(m.worldOn || {}), [w.id]: true };
             if ($i.find('.na_wd_move').prop('checked')) {
-                const drop = new Set(picked.map(s => s.start));
-                await commitText(parseSections(m.text).filter(s => !drop.has(s.start)).map(s => m.text.slice(s.start, s.end)).join(''), '세계관으로 옮기기 전');
+                const inSpan = s => spans.some(([a, b]) => s.start >= a && s.start < b);
+                await commitText(all.filter(s => !inSpan(s)).map(s => m.text.slice(s.start, s.end)).join(''), '세계관으로 옮기기 전');
             }
             open.add(w.id);
             importing = false; $root.find('.na_wd_imp').removeClass('active'); $i.prop('hidden', true).empty();
@@ -479,7 +484,7 @@ async function openLayers(s) {
     const L = layersOf(m)[sectionKey(s)] || {};
     const full = m.text.slice(s.start, s.end).replace(/^[^\n]*\n?/, '').trim();
     const stale = L.h && L.h !== layerHash(m.text, s);
-    const plan = fadeCfg(m).on ? fadeWants(m).get(sectionKey(s)) : null;
+    const plan = fadeCfg(m).on ? fadePlan(m).get(sectionKey(s)) : null;
     const use = plan ? fadeUse(m, m.text, s, plan.want) : null;
     const name = { long: '원문', short: '짧게', line: '한 줄' };
     const into = { long: '원문으로', short: '짧은 버전으로', line: '한 줄로' };
@@ -527,10 +532,19 @@ async function openLayers(s) {
     toastr.success('섹션 버전을 저장했어요');
 }
 
+// fadeWants as the injection really sees it (muted and keyword-waiting sections don't count toward age),
+// with each entry's section taken from the full archive text so offsets and version hashes line up
+function fadePlan(m) {
+    const full = new Map(parseSections(m.text).map(x => [sectionKey(x), x]));
+    const out = new Map();
+    for (const [k, p] of fadeWants(m, filterMuted(m, m.text))) if (full.has(k)) out.set(k, { ...p, s: full.get(k) });
+    return out;
+}
+
 // sections that will want a shorter version and don't have one (or it is outdated)
 function fadeMissing(m) {
     const out = [];
-    for (const { s, want } of fadeWants(m).values()) {
+    for (const { s, want } of fadePlan(m).values()) {
         if (want === 'long') continue;
         const L = layersOf(m)[sectionKey(s)];
         const stale = L?.h && L.h !== layerHash(m.text, s);
@@ -551,11 +565,11 @@ async function fillFade($btn) {
     let done = 0, failed = 0;
     try {
         for (const s of todo) {
-            if (fadeFilling.stop) break;
+            if (fadeFilling.stop || getMeta() !== m) break;
             $btn.html(`<i class="fa-solid fa-stop"></i> 멈추기 (${done + failed + 1}/${todo.length})`);
             const cur = parseSections(m.text).find(x => sectionKey(x) === sectionKey(s));
             if (!cur) continue;
-            try { const r = await draftLayers(m, cur); m.layers = layersOf(m); m.layers[sectionKey(cur)] = { ...r, h: layerHash(m.text, cur) }; done++; await saveMeta(); }
+            try { const r = await draftLayers(m, cur); if (getMeta() !== m) break; m.layers = layersOf(m); m.layers[sectionKey(cur)] = { ...r, h: layerHash(m.text, cur) }; done++; await saveMeta(); }
             catch (e) { failed++; console.warn('[narrative-archive] layers', e); if (failed >= 3 && !done) { toastr.error(String(e?.message || e), '초안 모델'); break; } }
         }
     } finally {
@@ -595,8 +609,30 @@ function applyInjection() {
 // latest build, waiting for one in flight
 const currentInjection = async () => { let p; do { p = injectReady; await p; } while (p !== injectReady); return lastBuild; };
 
-async function onGenerationStarted(type, _opts, dryRun) {
+// SillyTavern emits GENERATION_STARTED before it adds the typed message to the chat, and MESSAGE_SENT
+// (awaited) right after. So on a normal send the router and keyword links wait for MESSAGE_SENT,
+// otherwise they would never see the message being answered.
+let genPending = null;
+async function onGenerationStarted(type, opts, dryRun) {
     if (dryRun || type === 'quiet' || !hasChat()) return;
+    const typed = String($('#send_textarea').val() || '').trim();
+    if (typed && [undefined, 'normal'].includes(type) && !opts?.automatic_trigger) {
+        // fallback in case no MESSAGE_SENT follows (e.g. a bias-only message sent as a system note)
+        genPending = setTimeout(() => { genPending = null; prepareGeneration(); }, 3000);
+        return;
+    }
+    await prepareGeneration();
+}
+
+async function onMessageSent() {
+    if (!genPending) return;
+    clearTimeout(genPending);
+    genPending = null;
+    await prepareGeneration();
+}
+
+async function prepareGeneration() {
+    if (!hasChat()) return;
     const m = getMeta();
     if (routerCfg(m).mode !== 'off') {
         try { await runRouter(m); }
@@ -676,6 +712,7 @@ async function openUnhide() {
         let a = parseInt($root.find('.na_uh_from').val(), 10), b = parseInt($root.find('.na_uh_to').val(), 10);
         a = Number.isFinite(a) ? a : 0; b = Number.isFinite(b) ? b : last;
         if (a > b) [a, b] = [b, a];
+        a = Math.max(0, Math.min(a, last)); b = Math.max(0, Math.min(b, last));
         const n = hidden.filter(i => i >= a && i <= b).length;
         return [a, b, n];
     };
@@ -729,7 +766,7 @@ async function applyHide({ silent = false } = {}) {
     const last = lastIndex();
     const run = cmd => ctx().executeSlashCommandsWithOptions(cmd, { handleParserErrors: true, handleExecutionErrors: true });
     // only up to the boundary: everything after it is shown again
-    if (hideEnd >= 0) await run(`/hide 0-${hideEnd}`);
+    if (hideEnd >= 0) await run(`/hide 0-${Math.min(hideEnd, last)}`);
     if (hideEnd + 1 <= last) await run(`/unhide ${Math.max(0, hideEnd + 1)}-${last}`);
     syncPanel();
     if (!silent) toastr.success(hideEnd >= 0 ? `#0 ~ #${hideEnd} 숨김 · #${hideEnd + 1}부터 보임 (마지막 ${m.keep}개 남김)` : '숨길 메시지가 없어서 모두 보이게 했어요');
@@ -820,9 +857,9 @@ const keyAt = (text, start) => { const x = parseSections(text).find(y => y.start
 const groupLabel = title => title.replace(/^[\s─━—–=-]+|[\s─━—–=-]+$/g, '') || title;
 
 function highlight(text, query) {
-    const safe = esc(text);
-    if (!query) return safe;
-    return safe.replace(new RegExp(escRe(esc(query)), 'gi'), s => `<mark>${s}</mark>`);
+    if (!query) return esc(text);
+    // split the raw text first, so a search for "amp" or "39" can't land inside &amp; or &#39;
+    return String(text).split(new RegExp(`(${escRe(query)})`, 'gi')).map((part, i) => (i % 2 ? `<mark>${esc(part)}</mark>` : esc(part))).join('');
 }
 
 // ---- muted sections: kept in the text, left out of the injection
@@ -983,7 +1020,10 @@ function moveSectionText(text, s, dir) {
 }
 
 function insertAfterText(text, s) {
-    const head = `${'#'.repeat(Math.max(1, s.level === 1 && !s.group ? 1 : s.level))} 새 섹션`;
+    // the preamble has no heading of its own: take the next heading's level, so "#" doesn't turn into a group
+    const untitled = s.title === '(머리말)' || s.title === '(제목 없음)';
+    const level = untitled ? (parseSections(text).find(x => x.start >= s.end)?.level || 2) : s.level;
+    const head = `${'#'.repeat(Math.max(1, level))} 새 섹션`;
     const before = trimEnd(text.slice(0, s.end));
     const after = text.slice(s.end);
     const block = `${head}\n\n- \n`;
@@ -1153,7 +1193,7 @@ function mountSectionBrowser($host) {
         $ta.on('keydown', e => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); $btns.find('.na_save').trigger('click'); }
         });
-        $btns.find('.na_cancel').on('click', render);
+        $btns.find('.na_cancel').on('click', () => render(true));
         $btns.find('.na_save').on('click', async () => {
             const cur = getMeta();
             if (cur.text.slice(s.start, s.end) !== original) {
@@ -1171,16 +1211,22 @@ function mountSectionBrowser($host) {
                 if (openCards.has(sectionKey(s))) openCards.add(nk);
             }
             await commitText(next, `섹션 편집 전: ${s.title.slice(0, 40)}`);
-            render();
+            render(true);
             toastr.success('섹션 저장됨');
         });
     };
 
-    const move = async (s, dir) => {
+    let moving = false;
+    const move = async (s0, dir) => {
+        if (moving) return;
         const m = getMeta();
+        // the card may be stale: look the section up again by key
+        const s = parseSections(m.text).find(x => sectionKey(x) === sectionKey(s0));
+        if (!s) return render();
         const r = moveSectionText(m.text, s, dir);
         if (!r) return toastr.info(dir < 0 ? '맨 위예요 (같은 묶음 안에서만 옮겨요)' : '맨 아래예요 (같은 묶음 안에서만 옮겨요)');
-        await commitText(r.text, `순서 이동 전: ${s.title.slice(0, 40)}`);
+        moving = true;
+        try { await commitText(r.text, `순서 이동 전: ${s.title.slice(0, 40)}`); } finally { moving = false; }
         render();
     };
 
@@ -1224,9 +1270,12 @@ function mountSectionBrowser($host) {
     };
     $list.on('click', '.na_ref_chip', function (e) { e.stopPropagation(); focus(Number(this.dataset.start)); });
 
-    function render() {
+    // force: from the editor's own save/cancel. Anything else (a reply arriving, keyword links, the router)
+    // waits while a section editor is open, so unsaved typing isn't thrown away.
+    function render(force = false) {
         const m = getMeta();
         if (!m) return;
+        if (force !== true && $list.find('.na_sec_edit').length) return;
         const myId = ++renderId;
         // each group's card box scrolls on its own; keep where it was across re-renders
         const keepScroll = new Map();
@@ -1504,6 +1553,7 @@ function mountSectionBrowser($host) {
         const s = parseSections(getMeta().text).find(x => x.start === start);
         if (!s) return;
         $search.val('');
+        filter = 'all';
         openCards.add(sectionKey(s));
         // open the groups on the way so the card is visible; other folded groups stay folded
         const set = collapsedSet();
@@ -1693,6 +1743,7 @@ async function openKeywords(s, body, current) {
 let sectionPanel = null;
 let refreshReplace = () => {};
 let editorDirty = false;
+let editorBase = null; // the archive text the editor was last loaded from
 
 function renderPanel() {
     const html = `
@@ -1929,7 +1980,7 @@ function renderPanel() {
                 <div class="na_cfg_box">
                 <div class="na_set_list">
                   <label class="na_set_row"><span><span>토큰 상한</span><small>넘으면 알려 줘요</small></span><span class="na_cfg_val"><input type="number" id="na_cap" class="text_pole" min="0" step="1000" placeholder="없음" title="0이나 빈칸이면 상한 없음"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" title="오래된 섹션은 짧은 버전·한 줄로 넣어요. 버전이 없으면 원문 그대로 · 고정한 섹션과 지금 불려 온 섹션은 늘 원문"><span><span>망각 곡선</span><small id="na_fade_sub">오래된 섹션은 짧은 버전·한 줄로</small></span><button type="button" class="na_fd_more" id="na_fade_more" title="자세히" aria-label="자세히" hidden>${svgA(ICO_A.down, 15, 2.2)}</button><input type="checkbox" id="na_fade" class="na_toggle"></label>
+                  <label class="na_set_row" for="na_fade" title="오래된 섹션은 짧은 버전·한 줄로 넣어요. 버전이 없으면 원문 그대로 · 고정한 섹션과 지금 불려 온 섹션은 늘 원문"><span><span>망각 곡선</span><small id="na_fade_sub">오래된 섹션은 짧은 버전·한 줄로</small></span><button type="button" class="na_fd_more" id="na_fade_more" title="자세히" aria-label="자세히" hidden>${svgA(ICO_A.down, 15, 2.2)}</button><input type="checkbox" id="na_fade" class="na_toggle"></label>
                   <div id="na_fade_opts" class="na_v2 na_fd" hidden>
                     <div class="na_fd_save"><span><b id="na_fade_now">-</b><small>토큰</small><s id="na_fade_was"></s></span><span class="na_fd_pct" id="na_fade_pct"></span></div>
                     <div class="na_fd_strip" id="na_fade_strip" aria-hidden="true"></div>
@@ -2190,13 +2241,15 @@ function bindPanel() {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); $('#na_ed_save').trigger('click'); }
     });
     $('#na_ed_save').on('click', needChat(async () => {
+        if (editorBase !== null && getMeta().text !== editorBase && !await confirm('다른 곳에서 바뀌었어요', '편집칸을 연 뒤에 아카이브가 다른 곳(추가·섹션 카드 편집·마법사 등)에서 바뀌었어요. 지금 편집칸 내용으로 저장하면 그 변경이 사라져요. 그래도 저장할까요? 지금 내용은 복구 지점에 남아요.')) return;
         editorDirty = false;
         const changed = await commitText($ed.val(), '본문 저장 전');
+        editorBase = getMeta().text;
         setDirty(false);
         toastr.success(changed ? '아카이브 저장됨' : '바뀐 내용이 없어요');
     }));
     $('#na_ed_revert').on('click', needChat(() => {
-        $ed.val(getMeta().text); setDirty(false); updateEdTok();
+        editorBase = getMeta().text; $ed.val(editorBase); setDirty(false); updateEdTok();
     }));
     $('#na_ed_copy').on('click', async () => {
         const ok = await copyText($ed.val(), $ed[0]);
@@ -2265,10 +2318,14 @@ function bindPanel() {
         const $toc = $('#na_toc').empty();
         const secs = parseSections(text).filter(s => s.title !== '(머리말)' && s.title !== '(제목 없음)');
         if (!secs.length) { $toc.html('<div class="na_empty">제목(#, ##)이 없어요.</div>'); return; }
-        secs.forEach(s => {
-            const $it = $(`<button type="button" class="na_toc_item na_toc_lv${s.level} ${s.group ? 'na_toc_group' : ''}">${esc(s.group ? groupLabel(s.title) : s.title)}</button>`);
+        const listOf = t => parseSections(t).filter(s => s.title !== '(머리말)' && s.title !== '(제목 없음)');
+        secs.forEach((s0, i) => {
+            const $it = $(`<button type="button" class="na_toc_item na_toc_lv${s0.level} ${s0.group ? 'na_toc_group' : ''}">${esc(s0.group ? groupLabel(s0.title) : s0.title)}</button>`);
             $it.on('click', () => {
-                revealInEditor(s.start, s.start + (text.slice(s.start).indexOf('\n') + 1 || text.length - s.start) - 1);
+                const now = $ed.val(), list = listOf(now);
+                const s = list[i]?.title === s0.title ? list[i] : list.find(x => sectionKey(x) === sectionKey(s0)) || list[i];
+                if (!s) return;
+                revealInEditor(s.start, s.start + (now.slice(s.start).indexOf('\n') + 1 || now.length - s.start) - 1);
             });
             $toc.append($it);
         });
@@ -2414,7 +2471,7 @@ function bindPanel() {
         const n = [...m.text.matchAll(re)].length;
         if (!n) return;
         const to = $('#na_rp_to').val();
-        if (!await confirm('모두 바꾸기', `"${$('#na_rp_find').val()}" ${n}군데를 ${to ? `"${to}"(으)로 바꿀까요` : '지울까요'}? 지금 상태는 복구 지점에 남아요.`)) return;
+        if (!await confirm('모두 바꾸기', `"${esc($('#na_rp_find').val())}" ${n}군데를 ${to ? `"${esc(to)}"(으)로 바꿀까요` : '지울까요'}? 지금 상태는 복구 지점에 남아요.`)) return;
         await commitText(m.text.replace(re, () => to), `찾아 바꾸기 전: ${$('#na_rp_find').val().slice(0, 30)}`);
         renderReplace();
         toastr.success(`${n}군데 바꿨어요`);
@@ -2497,7 +2554,8 @@ function bindPanel() {
                 m.snapshots = [...m.snapshots, ...d.snapshots.filter(s => s && typeof s.text === 'string' && !seen.has(s.at))]
                     .sort((a, b) => b.at - a.at).slice(0, SNAPSHOT_MAX);
             }
-            await commitText(d.text, '불러오기 전', { boundary: Number.isFinite(d.boundary) ? d.boundary : -1 });
+            // same text as now: commitText does nothing, but the settings and restore points above still need saving
+            if (!await commitText(d.text, '불러오기 전', { boundary: Number.isFinite(d.boundary) ? d.boundary : -1 })) { await saveMeta(); applyInjection(); syncPanel(); }
         } else {
             await commitText(raw, '불러오기 전');
         }
@@ -2545,7 +2603,7 @@ function bindPanel() {
         const st = await withSpinner($(e.currentTarget), '고르는 중…', () => runRouter(m, { force: true }));
         if (!st) return;
         await applyInjection(); syncPanel();
-        toastr.info(st.titles.length ? st.titles.map(t => `• ${t.slice(0, 60)}`).join('<br>') : '고른 섹션이 없어요', `라우터 · ${st.titles.length}개 · ${(st.ms / 1000).toFixed(1)}초`, { escapeHtml: false, timeOut: 10000 });
+        toastr.info(st.titles.length ? st.titles.map(t => `• ${esc(t.slice(0, 60))}`).join('<br>') : '고른 섹션이 없어요', `라우터 · ${st.titles.length}개 · ${(st.ms / 1000).toFixed(1)}초`, { escapeHtml: false, timeOut: 10000 });
     }));
     $('#na_link_depth').on('change', async function () {
         if (!hasChat()) return;
@@ -2569,7 +2627,8 @@ function syncPanel() {
     $('#na_nochat').prop('hidden', on);
     if (!on) { $('#na_carry').prop('hidden', true); refreshStatus(); return; }
     const m = getMeta();
-    if (!editorDirty) $('#na_editor').val(m.text).trigger('input');
+    if (!sectionPanel && $('#na_view_cards').length && !$('#na_view_cards').prop('hidden')) sectionPanel = mountSectionBrowser($('#na_sec_host'));
+    if (!editorDirty) { editorBase = m.text; $('#na_editor').val(m.text).trigger('input'); }
     $('#na_enabled').prop('checked', !!m.enabled);
     $('#na_position').val(String(m.position));
     $('#na_depth').val(m.depth);
@@ -2590,7 +2649,7 @@ function syncPanel() {
         $('#na_fade_sub').text(fadeSub(0));
         $('#na_fade_full').val(fc.full); $('#na_fade_short').val(fc.short);
         if (fc.on) {
-            const plan = [...fadeWants(m).values()];
+            const plan = [...fadePlan(m).values()];
             const miss = fadeMissing(m).length;
             if (!fadeFilling) $('#na_fade_info').html(miss ? `버전 없는 섹션 <b>${miss}</b>개 · 지금은 원문으로 들어가요` : '필요한 버전이 다 있어요');
             $('#na_fade_lines').text(`${plan.filter(p => p.want === 'line').length}개`);
@@ -2755,13 +2814,13 @@ function renderSnapshots() {
             c.callGenericPopup($v, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, okButton: '닫기' });
         });
         $row.find('.na_snap_restore').on('click', async () => {
-            if (!await confirm('복원', `${timeLabel(s.at)} (${s.reason}) 상태로 되돌릴까요? 지금 내용도 복구 지점에 남아요.`)) return;
+            if (!await confirm('복원', `${timeLabel(s.at)} (${esc(s.reason)}) 상태로 되돌릴까요? 지금 내용도 복구 지점에 남아요.`)) return;
             editorDirty = false;
             await commitText(s.text, '복원 전', { boundary: s.boundary });
             toastr.success('복원됨');
         });
         $row.find('.na_snap_del').on('click', async () => {
-            m.snapshots.splice(i, 1); await saveMeta(); renderSnapshots();
+            m.snapshots = m.snapshots.filter(x => x !== s); await saveMeta(); renderSnapshots();
         });
         $l.append($row);
     });
@@ -2784,7 +2843,7 @@ function rememberArchive() {
 
 async function importArchive(src, label, fromChat = null) {
     const m = getMeta();
-    if (m.text.trim() && !await confirm('아카이브 가져오기', `이 채팅의 아카이브를 "${label}"의 것으로 바꿀까요? 지금 내용은 복구 지점에 남아요.`)) return false;
+    if (m.text.trim() && !await confirm('아카이브 가져오기', `이 채팅의 아카이브를 "${esc(label)}"의 것으로 바꿀까요? 지금 내용은 복구 지점에 남아요.`)) return false;
     for (const k of SETTING_KEYS) if (src.settings && Object.hasOwn(src.settings, k)) m[k] = structuredClone(src.settings[k]);
     // the numbers that chat's archive ended on live in that chat: "원문" on those sections opens it
     if (fromChat) {
@@ -2795,7 +2854,7 @@ async function importArchive(src, label, fromChat = null) {
     carryOffer = null;
     // a new chat restarts numbering, so the boundary is cleared and tracking turned off
     m.track = false;
-    await commitText(src.text, '가져오기 전', { boundary: -1 });
+    if (!await commitText(src.text, '가져오기 전', { boundary: -1 })) { await saveMeta(); applyInjection(); syncPanel(); }
     toastr.success(`가져옴: ${label}`);
     return true;
 }
@@ -3408,7 +3467,7 @@ function translateButton($diff) {
         // spacer between boxes keeps a − run at the end of one card from pairing with the next card's + run
         const boxes = $diff.is('.na_diff') || !$diff.find('.na_diff').length ? [$diff[0]] : $diff.find('.na_diff').toArray();
         const all = boxes.flatMap((box, i) => [...(i ? [document.createElement('div')] : []), ...box.children]);
-        const lineOf = el => (el.querySelector('.na_dl') || el).textContent.replace(/^[+−-]/, '').trim();
+        const lineOf = el => { const dl = el.querySelector('.na_dl'); return dl ? dl.textContent.trim() : el.textContent.replace(/^[+−-]/, '').trim(); };
         const rows = all.filter(el => el.classList.contains('na_diff_add') || el.classList.contains('na_diff_del'))
             .map(el => ({ el, text: lineOf(el) }))
             .filter(r => /[\p{L}]{2,}/u.test(r.text));
@@ -3645,6 +3704,8 @@ function renameKeys(m, from, to) {
     m.pinned = ren(m.pinned);
     const lm = { ...linkedMap(m) };
     if (lm[from]) { lm[to] = lm[from]; delete lm[from]; m.linked = lm; }
+    if (m.layers?.[from]) { m.layers[to] = m.layers[from]; delete m.layers[from]; }
+    if (Array.isArray(m.collapsed)) m.collapsed = ren(m.collapsed);
 }
 
 // ---------------------------------------------------------------- every chat's archive
@@ -3713,7 +3774,7 @@ async function openCompare() {
         const marker = $root.find('.na_cmp_marker').val().trim();
         const a0 = textOf('a'), b0 = textOf('b');
         cmpTr.detach(); // keep its click handler; .html() below would drop it
-        if (a0 === null || b0 === null) { $root.find('.na_cmp_diff').html('<div class="na_empty">파일을 골라 주세요.</div>'); return; }
+        if (a0 === null || b0 === null) { $root.find('.na_cmp_diff').html(`<div class="na_empty">파일을 골라 주세요.<br><button type="button" class="na_v2_pillbtn na_cmp_pickfile" data-side="${a0 === null ? 'a' : 'b'}">파일 고르기</button></div>`); return; }
         const a = cut(a0, marker), b = cut(b0, marker);
         if (a === null || b === null) {
             $root.find('.na_cmp_diff').html(`<div class="na_empty">"${esc(marker)}" 줄이 ${a === null && b === null ? '둘 다' : a === null ? 'A에' : 'B에'} 없어요.</div>`);
@@ -3734,6 +3795,7 @@ async function openCompare() {
         files[pickingFor] = { name: f.name, text };
         render();
     });
+    $root.on('click', '.na_cmp_pickfile', function () { pickingFor = this.dataset.side; $root.find('.na_cmp_file').val('').trigger('click'); });
     let t;
     $root.find('.na_cmp_marker').on('input', () => { clearTimeout(t); t = setTimeout(render, 300); });
     render();
@@ -3896,9 +3958,12 @@ function sourceRange(m, title) {
     const ranges = headingRanges(m.text);
     const cur = ranges.length ? ranges[ranges.length - 1].prefix : '';
     const label = `${prefix ? `${prefix} ` : ''}#${from}–#${to}`;
+    const linked = (m.logLinks || {})[prefix] || null;
+    // carried over from another chat: even the newest log's numbers live in that chat
+    if (prefix === cur && linked && linked !== currentChatId()) return { prefix, from, to, ok: true, chat: linked, needLink: false, why: '', label };
     if (prefix !== cur) {
         // an older log: open it from the chat it was linked to, or ask which chat that is
-        const chat = (m.logLinks || {})[prefix] || null;
+        const chat = linked;
         return { prefix, from, to, ok: true, chat, needLink: !chat, why: '', label };
     }
     const n = (ctx().chat || []).length;
@@ -4158,7 +4223,7 @@ async function runDrift(m, n) {
     if (!recent.length) throw new Error('검사할 메시지가 없어요');
     const kr = knowledgeRows(m);
     const cast = castNames(m);
-    const prompt = `[ARCHIVE]\n${m.text}${cast.length ? `\n\n[CURRENT CAST]\n${cast.join(', ')}` : ''}${kr.length ? `\n\n[WHO KNOWS WHAT]\n${extraBlocks({ ...m, knowInject: true }).trim()}` : ''}\n\n[RECENT CHAT]\n${recent.join('\n\n')}`;
+    const prompt = `[ARCHIVE]\n${m.text}${cast.length ? `\n\n[CURRENT CAST]\n${cast.join(', ')}` : ''}${kr.length ? `\n\n[WHO KNOWS WHAT]\n${extraBlocks({ ...m, knowInject: true, voiceInject: false }).trim()}` : ''}\n\n[RECENT CHAT]\n${recent.join('\n\n')}`;
     const out = await askAI(prompt, { system: AI_SYS_DRIFT, maxTokens: 2500 });
     const none = /^\s*(없음|none)\.?\s*$/i.test(out);
     const from = Number((recent[0].match(/^\[#(\d+)/) || [])[1]);
@@ -4172,7 +4237,7 @@ async function runDrift(m, n) {
 function driftHtml(text, m) {
     const secs = parseSections(m.text);
     // mark message numbers outside [[citations]] first, so headings inside citations stay intact
-    const marked = String(text).split(/(\[\[[^\]]+\]\])/).map((part, i) => i % 2 ? part : part.replace(/(^|[^\w&#])#(\d{1,6})\b/g, '$1\u0001$2\u0001')).join('');
+    const marked = String(text).split(/(\[\[.+?\]\](?!\]))/).map((part, i) => i % 2 ? part : part.replace(/(^|[^\w&#])#(\d{1,6})\b/g, '$1\u0001$2\u0001')).join('');
     const { html } = renderAnswer(marked, secs);
     return html.replace(/\u0001(\d+)\u0001/g, (all, n) => `<button type="button" class="na_cite na_cite_msg" data-msg="${n}" title="메시지 #${n} 보기">#${n}</button>`);
 }
@@ -4208,7 +4273,7 @@ function driftCards(text, m) {
         if (!mt) return `<div class="na_v2_card na_dr2_item">${driftHtml(l, m)}</div>`;
         const kind = driftKind(mt[3]);
         const fact = (mt[5] || '').trim();
-        const links = mt[6] ? [...mt[6].matchAll(/\[\[([^\]]+?)\]\]/g)].map(x => {
+        const links = mt[6] ? [...mt[6].matchAll(/\[\[(.+?)\]\](?!\])/g)].map(x => {
             const s = findCited(secs, x[1]);
             return s ? `<button type="button" class="na_cite na_dr2_sec" data-start="${s.start}" title="${esc(s.title)}">${esc(driftSecLabel(s.title))}</button>`
                 : `<span class="na_dr2_sec na_dr2_miss" title="아카이브에서 못 찾은 제목">${esc(x[1])}</span>`;
@@ -4548,7 +4613,7 @@ async function openKnowledge() {
         $root.find('.na_kn_ai span').text(rows.length ? 'AI로 더하기 · 고치기' : 'AI로 만들기');
         $root.find('.na_kn_clear, .na_kn_tidy').prop('hidden', !String(m.knowledge || '').trim());
         $root.find('.na_kn2_main').toggleClass('one', !String(m.knowledge || '').trim());
-        const castN = currentCast(m).length;
+        const castN = currentCast(m)?.size || 0;
         $root.find('.na_kn2_sub').text(`비밀 ${rows.length}개${castN ? ` · 지금 인물 ${castN}명 기준` : ''}`);
         const stale = staleUnaware(m);
         $root.find('.na_kn_stale').prop('hidden', !stale.length).html(stale.length
@@ -4572,7 +4637,7 @@ async function openKnowledge() {
             </div>`;
         }).join('')
             : '<div class="na_empty">아직 없어요. AI로 만들거나 직접 적어 주세요.</div>');
-        const blk = extraBlocks({ ...m, knowInject: true });
+        const blk = extraBlocks({ ...m, knowInject: true, voiceInject: false });
         if (blk) countTokens(blk).then(t => $root.find('.na_kn_tok').text(` · 약 ${fmt(t)} 토큰`)); else $root.find('.na_kn_tok').text('');
     };
     render();
@@ -4930,12 +4995,12 @@ async function openQuotes() {
         const who = String($(this).closest('.na_vc_card').data('who'));
         const v = this.value.trim();
         if (v) m.voice[who] = { ...m.voice[who], text: v }; else delete m.voice[who];
-        vEdit = null;
+        // the editor stays open: "그만 고치기" right after typing must close it, not reopen it
         await save();
     });
     $root.on('click', '.na_vc_del', async function () {
         const who = String($(this).closest('.na_vc_card').data('who'));
-        if (!await confirm('말투 지문 지우기', `${who}의 말투 지문을 지울까요?`)) return;
+        if (!await confirm('말투 지문 지우기', `${esc(who)}의 말투 지문을 지울까요?`)) return;
         delete m.voice[who]; await save();
     });
     $root.on('click', '.na_vc_make', async function () {
@@ -5025,13 +5090,13 @@ async function openQuotes() {
     });
     $root.on('click', '.na_qb_gexcl', async function () {
         const who = String($(this).closest('.na_qb_gbtns').data('who'));
-        if (!await confirm('인물 빼기', `${who}의 대사를 모두 지우고, 앞으로 모으거나 주입하지 않을까요? (위 "뺄 인물"에서 되돌릴 수 있어요)`)) return;
+        if (!await confirm('인물 빼기', `${esc(who)}의 대사를 모두 지우고, 앞으로 모으거나 주입하지 않을까요? (위 "뺄 인물"에서 되돌릴 수 있어요)`)) return;
         await exclude(who);
     });
     $root.on('click', '.na_qb_gdel', async function () {
         const who = String($(this).closest('.na_qb_gbtns').data('who'));
         const n = m.quotes.filter(q => q.who === who).length;
-        if (!await confirm('대사 지우기', `${who === '?' ? '말한 사람 모름' : who} 대사 ${n}개를 모두 지울까요? 되돌릴 수 없어요.`)) return;
+        if (!await confirm('대사 지우기', `${who === '?' ? '말한 사람 모름' : esc(who)} 대사 ${n}개를 모두 지울까요? 되돌릴 수 없어요.`)) return;
         m.quotes = m.quotes.filter(q => q.who !== who);
         await save();
     });
@@ -5117,7 +5182,7 @@ function routerCandidates(m) {
     const secs = parseSections(m.text);
     const muted = mutedSet(m), pinned = pinnedSet(m), lm = linkedMap(m);
     const ranged = secs.filter(x => !x.group && RANGE_HEAD.test(x.title));
-    const recent = new Set(ranged.slice(ranged.length - cfg.keep).map(sectionKey));
+    const recent = new Set(ranged.slice(Math.max(0, ranged.length - cfg.keep)).map(sectionKey));
     const out = [], stack = [];
     for (const s of secs) {
         while (stack.length && stack[stack.length - 1].level >= s.level) stack.pop();
@@ -5142,7 +5207,9 @@ async function runRouter(m, { force = false } = {}) {
     if (!routerReady()) throw new Error('라우터는 RP와 따로 연결한 모델이 필요해요 (⚙ 설정 → AI · 번역 → 모델에서 프로필·커스텀 API·Vertex)');
     const cands = routerCandidates(m);
     const id = currentChatId();
-    const recent = recentForCheck(4).join('\n\n').slice(-6000);
+    const msgs = recentForCheck(4);
+    if (msgs.length) msgs[msgs.length - 1] = msgs[msgs.length - 1].replace(/^\[#(\d+)/, '[#$1 · LATEST');
+    const recent = msgs.join('\n\n').slice(-6000);
     const key = shortHash(`${recent}|${cands.map(sectionKey).join('|')}|${cfg.max}`);
     const prev = routerState.get(id);
     if (!force && prev?.key === key) return prev; // a swipe or regenerate on the same chat
@@ -5162,11 +5229,9 @@ async function runRouter(m, { force = false } = {}) {
         const flat = body.replace(/\s+/g, ' ').trim();
         return `${i + 1}. ${s.title}${names.length ? `\n   names: ${names.join(', ')}` : ''}${keys.length ? `\n   keywords: ${keys.join(', ')}` : ''}\n   begins: ${flat.slice(0, 220)}${flat.length > 220 ? '…' : ''}`;
     }).join('\n');
-    const recentLines = recent.split('\n\n');
-    if (recentLines.length) recentLines[recentLines.length - 1] = recentLines[recentLines.length - 1].replace(/^\[#(\d+)/, '[#$1 · LATEST');
     const t0 = Date.now();
     const out = await Promise.race([
-        askAI(`${main.length ? `[MAIN CAST]\n${main.join(', ')}\n\n` : ''}[RECENT CHAT]\n${recentLines.join('\n\n')}\n\n[SECTIONS]\n${list}\n\nPick at most ${cfg.max}.`, { system: AI_SYS_ROUTER, maxTokens: 1024 }),
+        askAI(`${main.length ? `[MAIN CAST]\n${main.join(', ')}\n\n` : ''}[RECENT CHAT]\n${recent}\n\n[SECTIONS]\n${list}\n\nPick at most ${cfg.max}.`, { system: AI_SYS_ROUTER, maxTokens: 1024 }),
         new Promise((_, no) => setTimeout(() => no(new Error('20초 안에 답이 없었어요')), 20_000)),
     ]);
     // read the "PICK:" line if there is one (so numbers in any reasoning are ignored), else the whole answer
@@ -5680,7 +5745,7 @@ function headingDate(title, cals = calendars()) {
     if (!date) {
         // a month alone: "(month of Tybi)"
         for (const [ci, months] of cals.entries()) {
-            const mi = months.findIndex(names => names.some(n => new RegExp(`\\b${escRe(n)}\\b`, 'i').test(text)));
+            const mi = months.findIndex(names => names.some(n => new RegExp(`(?<![\\p{L}\\p{N}])${escRe(n)}(?![\\p{L}\\p{N}])`, 'iu').test(text)));
             if (mi >= 0) { date = { cal: ci, m: mi, d: 0, m2: mi, d2: 0, label: months[mi][0] }; break; }
         }
     }
@@ -6255,7 +6320,7 @@ async function openPeople() {
         if (!pair) return;
         const all = this.dataset.all === '1';
         const secs = tempPoints(m, pair).filter(p => all || !p.t || p.stale).map(p => p.s);
-        if (all && !await confirm('전부 다시', `${pair.a} · ${pair.b}이 함께 나온 섹션 ${secs.length}개를 모두 다시 잴까요?`)) return;
+        if (all && !await confirm('전부 다시', `${esc(pair.a)} · ${esc(pair.b)}이 함께 나온 섹션 ${secs.length}개를 모두 다시 잴까요?`)) return;
         busy = true;
         const $b = $(this);
         const got = await withSpinner($b, '재는 중…', () => rateTemps(m, pair, secs, (i, n) => n > 1 && $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> ${i}/${n}번째 읽는 중…`)));
@@ -6990,7 +7055,7 @@ const askLog = new Map(); // chat id → [{ q, a }], this session only
 // Answer HTML: the model's text, with [[heading]] citations turned into chips that open that section's text
 function renderAnswer(text, secs) {
     const cited = [];
-    const html = aiHtml(text).replace(/\[\[([^\]]+?)\]\]/g, (all, raw) => {
+    const html = aiHtml(text).replace(/\[\[(.+?)\]\](?!\])/g, (all, raw) => {
         const plain = $('<i>').html(raw).text();
         const s = findCited(secs, plain);
         if (!s) return `<span class="na_cite na_cite_miss" title="아카이브에서 못 찾은 제목">${raw}</span>`;
@@ -7493,7 +7558,7 @@ function bindPromptSettings() {
     $h.find('.na_pdel').on('click', async () => {
         const p = activePrompt(g());
         if (p.id === 'basic') return;
-        if (!await confirm('지시문 삭제', `"${p.name}"을(를) 지울까요? 되돌릴 수 없어요.`)) return;
+        if (!await confirm('지시문 삭제', `"${esc(p.name)}"을(를) 지울까요? 되돌릴 수 없어요.`)) return;
         g().prompts = g().prompts.filter(x => x.id !== p.id);
         pick(g().prompts[0].id);
     });
@@ -7923,8 +7988,10 @@ async function openAppend(prefill = {}) {
                 ${items.length > 3 ? `<details class="na_rw_list"${rwOpen ? ' open' : ''}><summary>섹션 ${items.length}개 보기</summary><ul>${items.join('')}</ul></details>` : items.length ? `<ul>${items.join('')}</ul>` : ''}
                 ${plan.exactCount ? `<label class="checkbox_label na_rw_opt"><input type="checkbox" class="na_rw_replace" ${rwMode() === 'replace' ? 'checked' : ''}><span>번호가 똑같은 섹션은 기존 걸 붙여넣은 걸로 바꾸기 (일부러 고쳐 쓴 경우만)</span></label>` : ''}
             </div>` : '');
-            $root.find('.na_renum_row').toggle(!!plan.renumbered);
-            if (plan.renumbered) $root.find('.na_renum_label').html(`제목·안내문의 끝 번호도 바꾸기 (<b>#${plan.renumbered.from} → #${plan.renumbered.to}</b>)`);
+            // whether renumbering applies at all, independent of the checkbox (unchecking must not hide its own row)
+            const renum = plan.renumbered || placeAppend(m.text, val, { renumber: true, rewrites: rwMode() }).renumbered;
+            $root.find('.na_renum_row').toggle(!!renum);
+            if (renum) $root.find('.na_renum_label').html(`제목·안내문의 끝 번호도 바꾸기 (<b>#${renum.from} → #${renum.to}</b>)`);
             $root.find('.na_append_info').text(has ? `약 ${fmt(await countTokens(val))} 토큰 · 섹션 ${parseSections(val).filter(x => !x.group).length}개` : '');
         }, 400);
     });
@@ -7952,7 +8019,7 @@ async function openAppend(prefill = {}) {
         const whole = String($ta.val() || '').replace(/\r\n/g, '\n').trim();
         const end = parseInt($end.val(), 10);
         const cut = cutSigns(m.text, whole);
-        if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.join('\n')}\n\n그래도 바꿀까요?`)) return;
+        if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.map(esc).join('<br>')}<br><br>그래도 바꿀까요?`)) return;
         if (!await confirmWhole(m.text, whole)) return;
         await commitText(whole, '통째로 바꾸기 전', Number.isFinite(end) && end >= 0 ? { boundary: end } : {});
         if ($root.find('.na_do_hide').prop('checked')) await applyHide({ silent: true });
@@ -7965,15 +8032,15 @@ async function openAppend(prefill = {}) {
     const end = parseInt($root.find('.na_end').val(), 10);
     if (!Number.isFinite(end) || end < 0) return toastr.warning('끝 번호를 확인해 주세요.');
     const cut = cutSigns(m.text, add);
-    if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.join('\n')}\n\n그래도 추가할까요?`)) return;
+    if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.map(esc).join('<br>')}<br><br>그래도 추가할까요?`)) return;
     const check = checkAppend(m, stripRewrites(m.text, add), last);
     if (check.issues.length && !check.soft) {
-        if (!await confirm('번호 확인', `${check.issues.join('\n')}\n\n그래도 추가할까요?`)) return;
+        if (!await confirm('번호 확인', `${check.issues.map(esc).join('<br>')}<br><br>그래도 추가할까요?`)) return;
     } else if (m.boundary >= 0 && end <= m.boundary) {
         if (!await confirm('경계선 확인', `끝 번호 #${end}가 기존 경계선 #${m.boundary}보다 앞이에요. 그래도 저장할까요?`)) return;
     }
 
-    const plan = placeAppend(m.text, add, { renumber: $root.find('.na_do_renum').prop('checked') && $root.find('.na_renum_row').is(':visible'), rewrites: rwMode() });
+    const plan = placeAppend(m.text, add, { renumber: $root.find('.na_do_renum').prop('checked'), rewrites: rwMode() });
     if (!plan.text.trim() || plan.text === `${trimEnd(m.text)}\n`) return toastr.info('새로 추가할 섹션이 없어요.');
     await commitText(plan.text, '추가 전', { boundary: end });
     if ($root.find('.na_do_hide').prop('checked')) await applyHide({ silent: true });
@@ -8013,7 +8080,10 @@ function addWandMenu() {
     const es = c.eventSource;
     const et = c.eventTypes || c.event_types;
 
+    let started = false;
     const start = () => {
+        if (started) return;
+        started = true;
         watchTheme();
         if (!$('#na_settings').length) renderPanel();
         addWandMenu();
@@ -8024,6 +8094,7 @@ function addWandMenu() {
     es.on(et.CHAT_CHANGED, onChatChanged);
     if (et.GENERATION_STARTED) es.on(et.GENERATION_STARTED, xrayArm);
     if (et.GENERATION_STARTED) es.on(et.GENERATION_STARTED, onGenerationStarted);
+    if (et.MESSAGE_SENT) es.on(et.MESSAGE_SENT, onMessageSent);
     if (et.WORLD_INFO_ACTIVATED) es.on(et.WORLD_INFO_ACTIVATED, xrayWorldInfo);
     if (et.CHAT_COMPLETION_PROMPT_READY) es.on(et.CHAT_COMPLETION_PROMPT_READY, xrayCapture);
     if (et.GENERATE_AFTER_COMBINE_PROMPTS) es.on(et.GENERATE_AFTER_COMBINE_PROMPTS, xrayCapture);
