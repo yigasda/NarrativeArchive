@@ -9,6 +9,7 @@ import { currentInjection } from './inject.js';
 import { renderNext } from './panel.js';
 import { activePrompt } from './prompts.js';
 import { routerCfg, routerState } from './router.js';
+import { ICO_A, svgA } from './theme.js';
 import { linkWaiting, mutedCount } from './sections.js';
 import { countTokens, esc, fmt, timeLabel } from './util.js';
 
@@ -22,7 +23,7 @@ export async function refreshStatus() {
     if (!$('#na_meter').length) return;
     if (!hasChat()) {
         $('#na_meter_total').text('채팅 없음');
-        $('#na_meter_state, #na_meter_legend, #na_since, #na_head_badge').text('');
+        $('#na_meter_state, #na_meter_stats, #na_meter_legend, #na_since, #na_head_badge').text('');
         $('#na_meter .na_seg_arc, #na_meter .na_seg_raw').css('width', 0);
         return;
     }
@@ -35,22 +36,26 @@ export async function refreshStatus() {
     const afterTok = await countTokens(extractToText(after));
     const total = archiveTok + afterTok;
 
-    $('#na_meter_total').html(`${fmt(total)}<small>토큰 주입</small>`);
+    $('#na_meter_total').text(fmt(total));
+    // "토큰" over the state word, next to the number
     let state = '';
-    if (!m.enabled) state = '<span class="na_chip na_chip_off">주입 꺼짐</span>';
-    else if (m.backupEvery > 0 && m.sinceBackup >= m.backupEvery) state = '<span class="na_chip na_chip_warn">백업할 때예요</span>';
-    else if (m.text.trim()) state = '<span class="na_chip na_chip_on">주입 중</span>';
-    $('#na_meter_state').html(state);
+    if (!m.enabled) state = '<b class="off">주입 꺼짐</b>';
+    else if (m.backupEvery > 0 && m.sinceBackup >= m.backupEvery) state = '<b class="warn">백업할 때예요</b>';
+    else if (m.text.trim()) state = '<b class="on">주입 중</b>';
+    $('#na_meter_state').html(`<span>토큰</span>${state}`);
+    const waitN = linkWaiting(m).size;
+    $('#na_meter_stats').html(`
+      <div><span>아카이브</span><b>${fmt(archiveTok)}</b></div>
+      <div title="${after.length ? `메시지 ${after.length}개` : ''}"><span>${m.boundary >= 0 ? `원문 #${m.boundary + 1}~` : '경계선 없음'}</span><b>${fmt(afterTok)}</b></div>
+      <div><span>키워드 대기</span><b>${waitN}</b></div>`);
 
     const pct = total ? Math.round(archiveTok / total * 100) : 0;
     $('#na_meter .na_seg_arc').css('width', `${pct}%`);
     $('#na_meter .na_seg_raw').css('width', `${total ? 100 - pct : 0}%`).removeClass('na_over');
+    // small line under the tiles: the router, and anything that cuts what goes in
     $('#na_meter_legend').html(`
-      <span><i class="na_dot na_dot_arc"></i>아카이브 ${fmt(archiveTok)}</span>
-      <span><i class="na_dot na_dot_raw"></i>${m.boundary >= 0 ? `#${m.boundary} 이후 원문 ${fmt(afterTok)} · ${after.length}개` : '경계선 없음'}</span>
+      ${routerCfg(m).mode !== 'off' ? `<span class="na_router_st">${svgA(ICO_A.compass, 13)} 라우터 · ${routerState.get(currentChatId()) ? `${routerState.get(currentChatId()).titles.length}개 고름` : '답할 때 골라요'}</span>` : ''}
       ${mutedCount(m) ? `<span class="na_warn_txt"><i class="fa-solid fa-toggle-off"></i> 섹션 ${mutedCount(m)}개 꺼짐</span>` : ''}
-      ${linkWaiting(m).size ? `<span class="na_dim"><i class="fa-solid fa-key"></i> 대기 ${linkWaiting(m).size}개</span>` : ''}
-      ${routerCfg(m).mode !== 'off' ? `<span class="na_dim"><i class="fa-solid fa-compass"></i> 라우터 ${routerState.get(currentChatId()) ? `${routerState.get(currentChatId()).titles.length}개 고름` : '답할 때 골라요'}</span>` : ''}
       ${build.trimmed.length ? `<span class="na_warn_txt"><i class="fa-solid fa-scissors"></i> 상한 ${fmt(build.cap)}에 맞춰 ${build.trimmed.length}개 뺌</span>` : ''}
       ${build.over ? `<span class="na_warn_txt"><i class="fa-solid fa-triangle-exclamation"></i> 상한 ${fmt(build.cap)} 넘음</span>` : ''}`);
     $('#na_head_badge').text(m.text.trim() ? fmt(archiveTok) : '');

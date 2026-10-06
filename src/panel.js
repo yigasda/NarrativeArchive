@@ -73,30 +73,31 @@ export function renderPanel() {
                 <button type="button" class="na_icon" id="na_gear" title="설정"><i class="fa-solid fa-gear"></i></button>
               </div>
               <div class="na_meter_bar"><span class="na_seg_arc"></span><span class="na_seg_raw"></span></div>
+              <div class="na_meter_stats" id="na_meter_stats"></div>
               <div class="na_meter_legend" id="na_meter_legend"></div>
             </div>
 
             <nav class="na_nav" role="tablist">
-              <button type="button" class="na_nav_btn active" data-tab="home">홈</button>
-              <button type="button" class="na_nav_btn" data-tab="archive">아카이브</button>
-              <button type="button" class="na_nav_btn" data-tab="compress">압축</button>
-              <button type="button" class="na_nav_btn" data-tab="tools">도구</button>
+              <button type="button" class="na_nav_btn active" data-tab="home">${svgA(ICO_A.home, 19)}<span>홈</span></button>
+              <button type="button" class="na_nav_btn" data-tab="archive">${svgA(ICO_A.archive, 19)}<span>아카이브</span></button>
+              <button type="button" class="na_nav_btn" data-tab="compress">${svgA(ICO_A.compress, 19)}<span>압축</span></button>
+              <button type="button" class="na_nav_btn" data-tab="tools">${svgA(ICO_A.grid, 19)}<span>도구</span></button>
             </nav>
 
             <!-- 홈 -->
             <section class="na_tab_pane" data-pane="home">
               <div class="na_next" id="na_next"></div>
               <div class="na_quick">
-                <button type="button" class="na_qbtn" id="na_q_read"><i class="fa-solid fa-book-open-reader"></i><span>읽기</span></button>
-                <button type="button" class="na_qbtn" id="na_q_ask"><i class="fa-regular fa-comments"></i><span>질문</span></button>
-                <button type="button" class="na_qbtn" id="na_q_wizard"><i class="fa-solid fa-wand-magic-sparkles"></i><span>압축</span></button>
-                <button type="button" class="na_qbtn" id="na_q_preview"><i class="fa-regular fa-eye"></i><span>미리보기</span></button>
+                <button type="button" class="na_qbtn" id="na_q_read">${svgA(ICO_A.book, 16)}<span>읽기</span></button>
+                <button type="button" class="na_qbtn" id="na_q_ask">${svgA(ICO_A.chat, 16)}<span>질문</span></button>
+                <button type="button" class="na_qbtn" id="na_q_wizard">${svgA(ICO_A.wand, 16)}<span>압축</span></button>
+                <button type="button" class="na_qbtn" id="na_q_preview">${svgA(ICO_A.eye, 16)}<span>미리보기</span></button>
               </div>
-              <div class="na_block na_ai_row3">
-                <div class="na_kw_label">AI 도구</div>
-                <button type="button" class="na_toolrow" id="na_drift"><i class="fa-solid fa-route"></i><span><b>이탈 감지</b><small id="na_drift_sub">최근 대화가 아카이브와 어긋나는지</small></span><i class="fa-solid fa-chevron-right"></i></button>
-                <button type="button" class="na_toolrow" id="na_know"><i class="fa-solid fa-user-secret"></i><span><b>누가 아는가</b><small id="na_know_sub">비밀마다 아는 사람·모르는 사람</small></span><i class="fa-solid fa-chevron-right"></i></button>
-                <button type="button" class="na_toolrow" id="na_quotes"><i class="fa-solid fa-quote-left"></i><span><b>대사 은행</b><small id="na_quotes_sub">대사를 모아 말투 지문으로</small></span><i class="fa-solid fa-chevron-right"></i></button>
+              <div class="na_ai_row3">
+                <div class="na_ai_head"><b>AI 도구</b><span class="na_ai_status" id="na_ai_status"></span></div>
+                <button type="button" class="na_hrow" id="na_drift"><span class="na_hrow_ic drift">${svgA(ICO_A.route, 19)}</span><span class="na_hrow_txt"><b>이탈 감지</b><small id="na_drift_sub">최근 대화가 아카이브와 어긋나는지</small></span><span class="na_hrow_badge drift" id="na_drift_badge" hidden></span></button>
+                <button type="button" class="na_hrow" id="na_know"><span class="na_hrow_ic know">${svgA(ICO_A.users, 19)}</span><span class="na_hrow_txt"><b>누가 아는가</b><small id="na_know_sub">비밀마다 아는 사람·모르는 사람</small></span><span class="na_hrow_badge know" id="na_know_badge" hidden></span></button>
+                <button type="button" class="na_hrow" id="na_quotes"><span class="na_hrow_ic quote">${svgA(ICO_A.quote, 19)}</span><span class="na_hrow_txt"><b>대사 은행</b><small id="na_quotes_sub">대사를 모아 말투 지문으로</small></span><span class="na_hrow_badge quote" id="na_quotes_badge" hidden></span></button>
               </div>
             </section>
 
@@ -509,8 +510,10 @@ export function renderNext(m, { afterTok, health }) {
     if (!m.text.trim()) html = card('fa-seedling', '아카이브가 비어 있어요', '압축 마법사로 첫 섹션을 만들거나, 다른 채팅·파일에서 가져와요.', btn('wizard', '압축 마법사') + btn('import', '가져오기', false));
     else if (!m.enabled) html = card('fa-power-off', '주입이 꺼져 있어요', '아카이브가 RP 모델에 안 들어가고 있어요.', btn('enable', '켜기'), 'warn');
     else if (issues.length) html = card('fa-stethoscope', `확인할 것 ${issues.length}개`, esc(issues[0].title), btn('health', '건강 점검'), issues.some(x => x.level === 'bad') ? 'bad' : 'warn');
-    else html = card('fa-circle-check', '할 일 없어요', m.boundary >= 0 ? `경계선 #${m.boundary} 뒤 원문 ${fmt(afterTok)} 토큰` : '', '', 'ok');
-    $('#na_next').html(html);
+    // nothing to do: no card, just a quiet line next to the AI 도구 heading
+    const ok = !html;
+    $('#na_next').html(html || '');
+    $('#na_ai_status').html(ok ? '<i></i>할 일 없어요' : '').attr('title', ok && m.boundary >= 0 ? `경계선 #${m.boundary} 뒤 원문 ${fmt(afterTok)} 토큰` : '');
 }
 
 export function nextAction(act) {
@@ -1040,11 +1043,16 @@ export function syncPanel() {
     if (hasChat()) {
         const mm = getMeta();
         const kn = knowledgeRows(mm).length;
-        $('#na_know_sub').text(kn ? `${kn}개${mm.knowInject ? ' · 주입 중' : ''}` : '비밀마다 아는 사람·모르는 사람');
+        $('#na_know_sub').text(kn ? `비밀마다 아는 사람${mm.knowInject ? ' · 주입 중' : ''}` : '비밀마다 아는 사람·모르는 사람');
+        $('#na_know_badge').text(kn ? `${kn}개` : '').prop('hidden', !kn);
         const vn = Object.keys(mm.voice || {}).length;
         { const wb = worldBooks(), on = wb.filter(w => worldIsOn(mm, w)); $('#na_worlds_sub').text(wb.length ? `${wb.length}개 · 이 채팅에 ${on.length ? on.map(w => w.name).join(', ') : '없음'}` : '여러 채팅이 같이 쓰는 설정 · 고치면 모든 채팅에 반영'); }
-        $('#na_quotes_sub').text((mm.quotes || []).length ? `대사 ${(mm.quotes || []).length}개${vn ? ` · 지문 ${vn}${mm.voiceInject ? ' 주입 중' : ''}` : ''}` : '대사를 모아 말투 지문으로');
-        $('#na_drift_sub').text(mm.driftLast ? `${timeLabel(mm.driftLast.at)} · ${mm.driftLast.none ? '어긋남 없음' : `${mm.driftLast.n}개 찾음`}` : '최근 대화가 아카이브와 어긋나는지');
+        const qn = (mm.quotes || []).length;
+        $('#na_quotes_sub').text(vn ? `말투 지문 ${vn}개${mm.voiceInject ? ' · 주입 중' : ''}` : qn ? '말투 지문은 아직 없어요' : '대사를 모아 말투 지문으로');
+        $('#na_quotes_badge').text(qn ? `대사 ${qn}` : '').prop('hidden', !qn);
+        const dl = mm.driftLast;
+        $('#na_drift_sub').text(dl ? `${timeLabel(dl.at)}에 살펴봄` : '최근 대화가 아카이브와 어긋나는지');
+        $('#na_drift_badge').text(dl ? (dl.none ? '어긋남 없음' : `${dl.n}개 어긋남`) : '').toggleClass('warn', !!dl && !dl.none).prop('hidden', !dl);
     }
     const br = hasChat() ? branchState(getMeta()) : null;
     $('#na_branch_card').prop('hidden', !br?.ahead.length);

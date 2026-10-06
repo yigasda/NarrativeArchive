@@ -3363,44 +3363,89 @@ button.na_pb_quote:hover { background: var(--na-card2); }
 .na_cc_opt.on { background: var(--na-accent-soft); color: var(--na-accent-ink, var(--na-accent)); font-weight: 600; }
 .na_cc_none { padding: 10px; font-size: 0.82em; color: var(--na-dim); }
 
-/* ============ top meter: the token total leads, everything else steps back. Two ids so a theme's
-   blanket `span { font-size }` can't flatten the sizes; solid card colours instead of a see-through tint */
-#na_settings #na_meter { gap: 10px; padding: 14px 16px 12px; border-radius: 16px; }
-#na_settings #na_meter .na_meter_top { align-items: center; flex-wrap: nowrap; gap: 8px; }
-#na_settings #na_meter .na_meter_total { display: inline-flex; align-items: baseline; gap: 5px; min-width: 0; font-size: 1.9em; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; white-space: nowrap; }
-#na_settings #na_meter .na_meter_total small { margin: 0; font-size: 0.42em; font-weight: 500; letter-spacing: 0; opacity: 1; }
-#na_settings #na_meter .na_meter_state { display: inline-flex; align-items: center; font-size: 1em; }
-#na_settings #na_meter .na_meter_state .na_chip { font-size: 0.72em; font-weight: 600; line-height: 1.5; padding: 1px 8px; border: 0; }
-#na_settings #na_meter .na_hchip { font-size: 0.8em; padding: 3px 10px; gap: 4px; }
+/* ============ home (mockup 홈 7): meter card with three number tiles, icon tabs, a row of quick buttons,
+   AI tools as cards with a status badge. Two ids on the size rules so a theme's blanket `span { font-size }`
+   can't flatten them. Colours: --hm-* below, light and dark. */
+body:not(.na_darkui) #na_settings {
+    --hm-card: #F7EEE7; --hm-line: #E5D5C9; --hm-tile: #F2E7DF; --hm-track: #E6D6CA; --hm-ink: #463428; --hm-dim: #8A7A70; --hm-mute: #6B5A50;
+    --hm-acc: #B8541F; --hm-acc-ink: #A84A17; --hm-acc-soft: #F6E1D3; --hm-ok: #1F6A40; --hm-ok-soft: #E3F2E8;
+    --hm-warn: #8A5A00; --hm-warn-soft: #FFF1D6; --hm-bad: #B3261E; --hm-bad-soft: #FBE7E2;
+    --hm-pur: #5B3FA0; --hm-pur-soft: #EAE3F5; --hm-amb: #8A5A00; --hm-amb-soft: #FFF1D6; --hm-shadow: rgba(120, 60, 20, 0.12);
+}
+body.na_darkui #na_settings {
+    --hm-card: #3A2F28; --hm-line: #54463D; --hm-tile: #41352D; --hm-track: #2E2621; --hm-ink: #EFE3D8; --hm-dim: #B3A396; --hm-mute: #CABBAE;
+    --hm-acc: #D9733A; --hm-acc-ink: #EE9A66; --hm-acc-soft: #543627; --hm-ok: #7CCB9A; --hm-ok-soft: #2D4134;
+    --hm-warn: #E8B45A; --hm-warn-soft: #4A3B1F; --hm-bad: #EC7468; --hm-bad-soft: #4B2925;
+    --hm-pur: #BBA6EE; --hm-pur-soft: #3C3350; --hm-amb: #E8B45A; --hm-amb-soft: #4A3B1F; --hm-shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* meter */
+#na_settings #na_meter { gap: 10px; padding: 14px 16px; border-radius: 18px; background: var(--hm-card); border: 1px solid var(--hm-line); color: var(--hm-ink); }
+#na_settings #na_meter .na_meter_top { flex-wrap: nowrap; align-items: center; gap: 8px; }
+#na_settings #na_meter .na_meter_total { font-size: 2.1em; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; white-space: nowrap; }
+#na_settings #na_meter .na_meter_state { display: flex; flex-direction: column; font-size: 0.8em; line-height: 1.25; color: var(--hm-dim); white-space: nowrap; }
+#na_settings #na_meter .na_meter_state > * { font-size: 1em; }
+#na_settings #na_meter .na_meter_state b { font-weight: 600; }
+#na_settings #na_meter .na_meter_state b.on { color: var(--hm-acc-ink); }
+#na_settings #na_meter .na_meter_state b.warn { color: var(--hm-warn); }
+#na_settings #na_meter .na_meter_state b.off { color: var(--hm-dim); }
+#na_settings #na_meter .na_hchip { height: 30px; padding: 0 11px; gap: 4px; border: 0; border-radius: 999px; font-size: 0.86em; font-weight: 600; background: var(--hm-ok-soft); color: var(--hm-ok); }
 #na_settings #na_meter .na_hchip > span { font-size: 1em; }
-#na_settings #na_meter #na_gear { width: 32px; height: 32px; opacity: 1; }
-#na_settings #na_meter .na_meter_bar { height: 6px; }
-#na_settings #na_meter .na_meter_legend { gap: 4px 14px; font-size: 0.8em; line-height: 1.5; opacity: 1; }
+#na_settings #na_meter .na_hchip.na_health_warn { background: var(--hm-warn-soft); color: var(--hm-warn); }
+#na_settings #na_meter #na_gear { width: 30px; height: 30px; opacity: 1; color: var(--hm-dim); }
+#na_settings #na_meter .na_meter_bar { display: none; }
+#na_settings #na_meter .na_meter_stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+#na_settings #na_meter .na_meter_stats:empty { display: none; }
+#na_settings #na_meter .na_meter_stats > div { display: flex; flex-direction: column; min-width: 0; padding: 8px 10px; border-radius: 12px; background: var(--hm-tile); line-height: 1.25; }
+#na_settings #na_meter .na_meter_stats span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.76em; color: var(--hm-dim); }
+#na_settings #na_meter .na_meter_stats b { font-size: 1em; font-weight: 700; font-variant-numeric: tabular-nums; }
+#na_settings #na_meter .na_meter_legend { gap: 2px 12px; font-size: 0.78em; line-height: 1.5; opacity: 1; color: var(--hm-dim); }
+#na_settings #na_meter .na_meter_legend:not(:has(span)) { display: none; }
 #na_settings #na_meter .na_meter_legend > span { font-size: 1em; }
-#na_settings #na_meter .na_meter_legend .na_dot { width: 7px; height: 7px; }
+#na_settings #na_meter .na_router_st { display: inline-flex; align-items: center; gap: 5px; }
+#na_settings #na_meter .na_router_st .na_svg { flex: none; }
 
-body:not(.na_darkui) #na_settings #na_meter { background: #F7EEE7; border: 1px solid #E5D5C9; color: #463428; }
-body:not(.na_darkui) #na_settings #na_meter .na_meter_total small, body:not(.na_darkui) #na_settings #na_meter .na_meter_legend { color: #8A7A70; }
-body:not(.na_darkui) #na_settings #na_meter .na_meter_state .na_chip_on { background: #F6E1D3; color: #A84A17; }
-body:not(.na_darkui) #na_settings #na_meter .na_meter_bar { background: #EBDDD2; }
-body:not(.na_darkui) #na_settings #na_meter .na_seg_arc, body:not(.na_darkui) #na_settings #na_meter .na_dot_arc { background: #B8541F; }
-body:not(.na_darkui) #na_settings #na_meter .na_seg_raw:not(.na_over), body:not(.na_darkui) #na_settings #na_meter .na_dot_raw { background: #D3C1B4; }
-body:not(.na_darkui) #na_settings #na_meter .na_hchip:not(.na_health_warn) { background: transparent; border-color: #E5D5C9; color: #6B5A50; }
-body:not(.na_darkui) #na_settings #na_meter #na_gear { color: #8A7A70; }
+/* icon tabs */
+#na_settings .na_body > .na_nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; border-radius: 18px; background: var(--hm-track); }
+#na_settings .na_body > .na_nav .na_nav_btn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 7px 0 5px; border-radius: 14px; font-size: 0.8em; line-height: 1.2; opacity: 1; color: var(--hm-mute); }
+#na_settings .na_body > .na_nav .na_nav_btn > span { font-size: 1em; }
+#na_settings .na_body > .na_nav .na_nav_btn.active { background: var(--hm-card); color: var(--hm-acc-ink); font-weight: 600; box-shadow: 0 1px 3px var(--hm-shadow); }
 
-body.na_darkui #na_settings #na_meter { background: #3A2F28; border: 1px solid #54463D; color: #EFE3D8; }
-body.na_darkui #na_settings #na_meter .na_meter_total small, body.na_darkui #na_settings #na_meter .na_meter_legend { color: #B3A396; }
-body.na_darkui #na_settings #na_meter .na_meter_state .na_chip_on { background: #543627; color: #EE9A66; }
-body.na_darkui #na_settings #na_meter .na_meter_bar { background: #2E2621; }
-body.na_darkui #na_settings #na_meter .na_seg_arc, body.na_darkui #na_settings #na_meter .na_dot_arc { background: #D9733A; }
-body.na_darkui #na_settings #na_meter .na_seg_raw:not(.na_over), body.na_darkui #na_settings #na_meter .na_dot_raw { background: #6E5D51; }
-body.na_darkui #na_settings #na_meter .na_hchip:not(.na_health_warn) { background: transparent; border-color: #54463D; color: #CABBAE; }
-body.na_darkui #na_settings #na_meter #na_gear { color: #B3A396; }
+/* home pane */
+#na_settings .na_tab_pane[data-pane="home"] { gap: 12px; color: var(--hm-ink); }
+#na_settings #na_next:empty { display: none; }
+#na_settings .na_tab_pane[data-pane="home"] .na_quick { display: flex; gap: 8px; }
+#na_settings .na_tab_pane[data-pane="home"] .na_qbtn { flex: 1; min-width: 0; display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; height: 42px; padding: 0 6px; border: 1px solid var(--hm-line); border-radius: 14px; background: var(--hm-card); color: var(--hm-ink); font-size: 0.86em; }
+#na_settings .na_tab_pane[data-pane="home"] .na_qbtn > span { font-size: 1em; white-space: nowrap; }
+#na_settings .na_tab_pane[data-pane="home"] .na_qbtn .na_svg { flex: none; color: var(--hm-acc); }
+#na_settings .na_tab_pane[data-pane="home"] .na_qbtn:hover { border-color: var(--hm-acc); }
+#na_settings .na_ai_row3 { display: flex; flex-direction: column; gap: 8px; }
+#na_settings .na_ai_head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 6px 0; }
+#na_settings .na_ai_head > b { font-size: 1.07em; font-weight: 700; }
+#na_settings .na_ai_status { display: inline-flex; align-items: center; gap: 5px; font-size: 0.82em; color: var(--hm-ok); }
+#na_settings .na_ai_status > i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+#na_settings .na_hrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px 14px; border: 0; border-radius: 16px; background: var(--hm-card); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+#na_settings .na_hrow:hover { box-shadow: inset 0 0 0 1px var(--hm-line); }
+#na_settings .na_hrow_ic { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; }
+#na_settings .na_hrow_ic.drift { background: var(--hm-acc-soft); color: var(--hm-acc); }
+#na_settings .na_hrow_ic.know { background: var(--hm-pur-soft); color: var(--hm-pur); }
+#na_settings .na_hrow_ic.quote { background: var(--hm-amb-soft); color: var(--hm-amb); }
+#na_settings .na_hrow_txt { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35; }
+#na_settings .na_hrow_txt b { font-size: 1.07em; font-weight: 700; }
+#na_settings .na_hrow_txt small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.82em; opacity: 1; color: var(--hm-dim); }
+#na_settings .na_hrow_badge { flex: none; padding: 2px 9px; border-radius: 999px; font-size: 0.8em; font-weight: 600; white-space: nowrap; }
+#na_settings .na_hrow_badge[hidden] { display: none; }
+#na_settings .na_hrow_badge.drift { background: var(--hm-ok-soft); color: var(--hm-ok); }
+#na_settings .na_hrow_badge.drift.warn { background: var(--hm-warn-soft); color: var(--hm-warn); }
+#na_settings .na_hrow_badge.know { background: var(--hm-pur-soft); color: var(--hm-pur); }
+#na_settings .na_hrow_badge.quote { background: var(--hm-amb-soft); color: var(--hm-amb); }
+/* the next-step card, when there is one */
+#na_settings #na_next .na_next_card { padding: 13px 14px; border-radius: 16px; border: 1px solid var(--hm-line); background: var(--hm-card); opacity: 1; }
+#na_settings #na_next .na_next_card > i { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; font-size: 1.05em; background: var(--hm-acc-soft); color: var(--hm-acc); }
+#na_settings #na_next .na_next_card.warn { background: var(--hm-warn-soft); border-color: transparent; }
+#na_settings #na_next .na_next_card.warn > i { background: var(--hm-card); color: var(--hm-warn); }
+#na_settings #na_next .na_next_card.bad { background: var(--hm-bad-soft); border-color: transparent; }
+#na_settings #na_next .na_next_card.bad > i { background: var(--hm-card); color: var(--hm-bad); }
+#na_settings #na_next .na_next_main b { font-size: 1.07em; }
+#na_settings #na_next .na_next_main span { font-size: 0.82em; opacity: 1; color: var(--hm-dim); }
 
-/* tab bar under the meter: the same family as the meter card (light: beige track, cream active tab; dark: dark track, brown active tab) */
-body:not(.na_darkui) #na_settings .na_body > .na_nav { background: #EBDDD2; }
-body:not(.na_darkui) #na_settings .na_body > .na_nav .na_nav_btn { color: #6B5A50; opacity: 1; }
-body:not(.na_darkui) #na_settings .na_body > .na_nav .na_nav_btn.active { background: #F7EEE7; color: #A84A17; box-shadow: 0 1px 3px rgba(120, 60, 20, 0.12); }
-body.na_darkui #na_settings .na_body > .na_nav { background: #2E2621; }
-body.na_darkui #na_settings .na_body > .na_nav .na_nav_btn { color: #CABBAE; opacity: 1; }
-body.na_darkui #na_settings .na_body > .na_nav .na_nav_btn.active { background: #46392F; color: #EE9A66; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
