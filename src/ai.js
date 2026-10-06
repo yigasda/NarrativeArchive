@@ -32,6 +32,31 @@ export function chatCompletionsUrl(raw) {
     return /\/chat\/completions$/.test(u) ? u : `${u}/chat/completions`;
 }
 
+// the model list next to it: ".../v1" or ".../chat/completions" → ".../v1/models"
+export function modelsUrl(raw) {
+    const u = String(raw || '').trim().replace(/\/+$/, '').replace(/\/chat\/completions$/, '');
+    return u ? `${u}/models` : '';
+}
+
+// asks an OpenAI-compatible API which models it has (GET /models): sorted ids
+export async function listModels({ url, key }) {
+    const endpoint = modelsUrl(url);
+    if (!endpoint) throw new Error('주소를 먼저 넣어 주세요');
+    const headers = {};
+    if (key) headers.Authorization = `Bearer ${key}`;
+    let r;
+    try { r = await fetch(endpoint, { headers }); }
+    catch (e) { throw new Error(`주소에 연결하지 못했어요. 주소가 맞는지, 브라우저에서 바로 부를 수 있는(CORS) API인지 확인해 주세요. (${e.message || e})`); }
+    const body = await r.text();
+    if (r.status === 401 || r.status === 403) throw new Error(`키가 맞지 않거나 권한이 없어요 (${r.status})`);
+    if (!r.ok) throw new Error(`API 오류 ${r.status}: ${body.slice(0, 200)}`);
+    let j; try { j = JSON.parse(body); } catch { throw new Error('모델 목록을 읽지 못했어요. 주소가 .../v1 까지인지 확인해 주세요.'); }
+    const arr = Array.isArray(j) ? j : Array.isArray(j?.data) ? j.data : Array.isArray(j?.models) ? j.models : [];
+    const ids = [...new Set(arr.map(x => typeof x === 'string' ? x : x?.id || x?.name).filter(Boolean).map(String))].sort((a, b) => a.localeCompare(b));
+    if (!ids.length) throw new Error('모델 목록이 비어 있어요');
+    return ids;
+}
+
 export async function callOpenAICompat({ url, key, model }, system, prompt, maxTokens) {
     const endpoint = chatCompletionsUrl(url);
     if (!endpoint || !model) throw new Error('커스텀 API의 URL과 모델 이름을 넣어 주세요 (⚙ 설정 → AI · 번역)');
