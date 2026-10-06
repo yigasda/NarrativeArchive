@@ -4029,9 +4029,10 @@ DO NOT REPORT
 - Anything you are not sure about. If unsure, leave it out.
 
 OUTPUT: Korean, one bullet per problem, exactly like this
-- #<message number> <character>: <what clashes> — 근거 [[<archive section heading, copied exactly>]]
+- #<message number> <character> [<TYPE>]: <what clashes> — 근거: <the archive fact it clashes with, short> [[<archive section heading, copied exactly>]]
+<TYPE> is one of FACT, SECRET, SETTLED, TIME, CHARACTER (the numbered list above; TIME covers place too).
 Example:
-- #612 Ivo: 렌에게 명령조로 말함. 더는 명령하지 않기로 했음 — 근거 [[STATE AT #600 (…)]]
+- #612 Ivo [CHARACTER]: 렌에게 명령조로 말함 — 근거: 더는 렌에게 명령하지 않기로 했음 [[STATE AT #600 (…)]]
 If there is no problem, write exactly: 없음`;
 
 function recentForCheck(n) {
@@ -4053,7 +4054,8 @@ async function runDrift(m, n) {
     const prompt = `[ARCHIVE]\n${m.text}${cast.length ? `\n\n[CURRENT CAST]\n${cast.join(', ')}` : ''}${kr.length ? `\n\n[WHO KNOWS WHAT]\n${extraBlocks({ ...m, knowInject: true }).trim()}` : ''}\n\n[RECENT CHAT]\n${recent.join('\n\n')}`;
     const out = await askAI(prompt, { system: AI_SYS_DRIFT, maxTokens: 2500 });
     const none = /^\s*(없음|none)\.?\s*$/i.test(out);
-    m.driftLast = { at: Date.now(), n: none ? 0 : out.split('\n').filter(l => /^\s*[-*•]/.test(l)).length || 1, none, text: out, upto: lastIndex(), count: recent.length };
+    const from = Number((recent[0].match(/^\[#(\d+)/) || [])[1]);
+    m.driftLast = { at: Date.now(), n: none ? 0 : out.split('\n').filter(l => /^\s*[-*•]/.test(l)).length || 1, none, text: out, upto: lastIndex(), count: recent.length, ...(Number.isFinite(from) ? { from } : {}) };
     await saveMeta();
     syncPanel();
     return m.driftLast;
@@ -4068,20 +4070,47 @@ function driftHtml(text, m) {
     return html.replace(/\u0001(\d+)\u0001/g, (all, n) => `<button type="button" class="na_cite na_cite_msg" data-msg="${n}" title="메시지 #${n} 보기">#${n}</button>`);
 }
 
-// one card per "- #57 Set: … — 근거 [[…]]" line; anything else falls back to the plain rendering
+// kinds the drift prompt reports: [TYPE] → chip label + colour class
+const DRIFT_KINDS = {
+    FACT: ['사실 다름', 'bad'], SECRET: ['모르는 걸 앎', 'bad'], SETTLED: ['해결된 떡밥', 'amber'],
+    TIME: ['시간·장소', 'purple'], PLACE: ['시간·장소', 'purple'], 'TIME/PLACE': ['시간·장소', 'purple'], CHARACTER: ['성격 어긋남', 'bad'],
+};
+const driftKind = raw => {
+    const k = String(raw || '').trim().toUpperCase().replace(/\s+/g, '');
+    if (DRIFT_KINDS[k]) return DRIFT_KINDS[k];
+    const ko = Object.values(DRIFT_KINDS).find(([label]) => label === String(raw || '').trim());
+    return ko || null;
+};
+// "Y2 #48–#63 — The night ridge (Mekhir 18)" → "#48–#63 · The night ridge"
+function driftSecLabel(title) {
+    const t = String(title).replace(/^#+\s+/, '');
+    const range = (t.match(/#\d+\s*[–—~-]\s*#?\d+/) || [])[0];
+    const name = t.split(/\s[—–-]\s/).slice(1).join(' — ').replace(/\s*\([^)]*\)\s*$/, '').trim();
+    if (range) return name ? `${range} · ${name}` : range;
+    return t.replace(/\s*\([^)]*\)\s*$/, '').trim() || t;
+}
+// parses one "- #57 Set [SECRET]: … — 근거: fact [[…]]" line (older answers have no [TYPE] / fact)
+const DRIFT_LINE = /^[-*•]\s*#(\d+)\s+([^:：[\]]{1,40}?)\s*(?:\[([^\]]{1,20})\])?\s*[:：]\s*(.+?)(?:\s*[—–-]\s*근거\s*[:：]?\s*(.*?)\s*((?:\[\[[^\]]+\]\][\s,]*)+))?\s*$/;
+// one card per drift line; anything else falls back to the plain rendering
 function driftCards(text, m) {
     const secs = parseSections(m.text);
     const lines = String(text).split('\n').map(l => l.trim()).filter(l => /^[-*•]/.test(l));
     if (!lines.length) return `<div class="na_v2_card">${driftHtml(text, m)}</div>`;
     return lines.map(l => {
-        const mt = l.match(/^[-*•]\s*#(\d+)\s+([^:：]{1,40})[:：]\s*(.+?)(?:\s*[—–-]\s*근거\s*((?:\[\[[^\]]+\]\][\s,]*)+))?\s*$/);
+        const mt = l.match(DRIFT_LINE);
         if (!mt) return `<div class="na_v2_card na_dr2_item">${driftHtml(l, m)}</div>`;
-        const ev = mt[4] ? renderAnswer(mt[4], secs).html : '';
+        const kind = driftKind(mt[3]);
+        const fact = (mt[5] || '').trim();
+        const links = mt[6] ? [...mt[6].matchAll(/\[\[([^\]]+?)\]\]/g)].map(x => {
+            const s = findCited(secs, x[1]);
+            return s ? `<button type="button" class="na_cite na_dr2_sec" data-start="${s.start}" title="${esc(s.title)}">${esc(driftSecLabel(s.title))}</button>`
+                : `<span class="na_dr2_sec na_dr2_miss" title="아카이브에서 못 찾은 제목">${esc(x[1])}</span>`;
+        }).join('') : '';
         return `
           <div class="na_v2_card na_dr2_item">
-            <div class="na_dr2_head"><button type="button" class="na_cite na_cite_msg na_dr2_msg" data-msg="${mt[1]}" title="메시지 #${mt[1]} 보기">#${mt[1]}</button><b>${esc(mt[2].trim())}</b></div>
-            <div class="na_dr2_text">${esc(mt[3])}</div>
-            ${ev ? `<div class="na_dr2_ev"><i class="fa-solid fa-bookmark"></i><div>${ev}</div></div>` : ''}
+            <div class="na_dr2_head"><button type="button" class="na_cite na_cite_msg na_dr2_msg" data-msg="${mt[1]}" title="메시지 #${mt[1]} 보기">#${mt[1]}</button><b>${esc(mt[2].trim())}</b>${kind ? `<span class="na_dr2_kind ${kind[1]}">${esc(kind[0])}</span>` : ''}</div>
+            <div class="na_dr2_text">${esc(mt[4])}</div>
+            ${fact || links ? `<div class="na_dr2_ev">${svgB(SVG_B.bookmark, 14)}<span>${fact ? `<span class="na_dr2_fact">${esc(fact)}</span>` : ''}${links}</span></div>` : ''}
           </div>`;
     }).join('');
 }
@@ -4091,23 +4120,33 @@ async function openDrift() {
     const m = getMeta();
     const $root = $(`
       <div class="na_popup na_v2 na_dr2">
-        <div class="na_v2_title"><b>이탈 감지</b><small>RP 모델이 정해진 사실과 어긋나게 쓴 곳 · 참고용이고 아무것도 바꾸지 않아요</small></div>
+        <div class="na_v2_title"><b>이탈 감지</b><small title="참고용이고 아무것도 바꾸지 않아요">RP 모델이 정해진 사실과 어긋나게 쓴 곳 · 참고용</small></div>
         <div class="na_v2_card na_dr2_ctl">
           <div class="na_dr2_row"><span>최근 메시지</span><span class="na_fd_step"><button type="button" class="na_fd_btn na_dr2_dec" aria-label="줄이기">−</button><input type="number" class="text_pole na_dr_n" min="2" max="60" value="12"><button type="button" class="na_fd_btn na_dr2_inc" aria-label="늘리기">+</button></span><span>개</span></div>
-          <button type="button" class="na_v2_btn primary wide na_dr_go"><i class="fa-solid fa-route"></i> 검사하기</button>
+          <button type="button" class="na_v2_btn primary wide na_dr_go">검사하기</button>
           <small class="na_v2_note na_dr_info"></small>
         </div>
         <div class="na_dr_out na_dr2_out"></div>
       </div>`);
     const show = d => {
         if (!d) return;
-        const n = d.none ? 0 : String(d.text).split('\n').filter(l => /^\s*[-*•]/.test(l)).length;
+        const lines = d.none ? [] : String(d.text).split('\n').filter(l => /^\s*[-*•]/.test(l));
+        const n = lines.length;
+        const from = Number.isFinite(d.from) ? d.from : d.upto - d.count + 1;
+        const meta = `${esc(timeLabel(d.at))} · ${from < d.upto ? `#${from}–#${d.upto}` : `#${d.upto}`} · ${d.count}개 검사`;
+        const flagged = new Set(lines.map(l => (l.trim().match(DRIFT_LINE) || [])[1]).filter(Boolean)).size;
+        const rest = d.count - flagged;
+        const okBar = text => `<div class="na_dr2_ok">${svgB(SVG_B.check, 15, 2.6)}<span>${text}</span></div>`;
         $root.find('.na_dr_out').html(d.none
-            ? `<div class="na_v2_label"><span>검사 결과</span><small>${esc(timeLabel(d.at))} · #${d.upto}까지 ${d.count}개</small></div><div class="na_v2_card na_dr2_ok"><i class="fa-solid fa-circle-check"></i> 어긋난 곳이 없어요</div>`
-            : `<div class="na_v2_label"><span>어긋난 곳${n ? ` ${n}개` : ''}</span><small>${esc(timeLabel(d.at))} · #${d.upto}까지 ${d.count}개</small></div>${driftCards(d.text, m)}`);
+            ? `<div class="na_v2_label"><span>검사 결과</span><small>${meta}</small></div>${okBar(`검사한 ${d.count}개 메시지 모두 아카이브와 맞아요`)}`
+            : `<div class="na_v2_label"><span>어긋난 곳${n ? ` ${n}개` : ''}</span><small>${meta}</small></div>${driftCards(d.text, m)}${flagged && rest > 0 ? okBar(`나머지 ${rest}개 메시지는 아카이브와 맞아요`) : ''}`);
     };
     $root.find('.na_dr2_dec, .na_dr2_inc').on('click', function () { const $n = $root.find('.na_dr_n'); $n.val(Math.min(60, Math.max(2, (parseInt($n.val(), 10) || 12) + ($(this).hasClass('na_dr2_inc') ? 2 : -2)))); });
-    countTokens(m.text).then(t => $root.find('.na_dr_info').text(`검사할 때마다 아카이브 전체(약 ${fmt(t)} 토큰)와 최근 메시지를 ${aiLabel()}에 보내요`));
+    countTokens(m.text).then(t => {
+        const auto = Number(globalSettings().driftAuto) || 0;
+        $root.find('.na_dr_info').text(`아카이브 약 ${fmt(t)} 토큰 + 최근 대화를 ${aiLabel()}에 보내요 · ${auto ? `답 ${auto}개마다 자동 감지` : '자동 감지 꺼짐'}`);
+    });
+
     show(m.driftLast);
     $root.find('.na_dr_go').on('click', async function () {
         const n = Math.min(60, Math.max(2, parseInt($root.find('.na_dr_n').val(), 10) || 12));
@@ -4672,25 +4711,25 @@ async function openQuotes() {
     const m = getMeta();
     m.quotes = Array.isArray(m.quotes) ? m.quotes : [];
     const $root = $(`
-      <div class="na_popup na_qb_root">
-        <div class="na_v2_title"><b>대사 은행</b><small>모은 대사로 인물마다 말버릇 규칙(말투 지문)을 뽑아 조용히 주입해요</small></div>
+      <div class="na_popup na_v2 na_qb_root" aria-label="대사 은행">
         <div class="na_v2_tabs na_qb_tabs" role="tablist"><button type="button" data-p="quotes" class="on">대사 <span class="na_qb_nq"></span></button><button type="button" data-p="voice">말투 지문 <span class="na_qb_nv"></span></button></div>
         <div class="na_qb_pane" data-pane="voice" hidden><div class="na_v2 na_vc_body"></div></div>
         <div class="na_qb_pane na_v2 na_qb2" data-pane="quotes">
         <div class="na_v2_row2">
-          <button type="button" class="na_v2_btn primary na_qb_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 모으기</button>
-          <button type="button" class="na_v2_btn na_qb_find"><i class="fa-solid fa-magnifying-glass"></i> 아카이브에서 모으기</button>
+          <button type="button" class="na_v2_btn primary na_qb_ai" title="AI가 고른 섹션을 읽고 인물별 대사를 모아요">AI로 모으기</button>
+          <button type="button" class="na_v2_btn na_qb_find" title="아카이브의 따옴표 대사를 AI 없이 모아요">아카이브에서 모으기</button>
         </div>
         <div class="na_qb_pickhost"></div>
-        <div class="na_search_wrap na_qb2_search"><i class="fa-solid fa-magnifying-glass"></i><input type="search" class="text_pole na_search na_qb_q" placeholder="인물 · 대사로 찾기"></div>
+        <div class="na_search_wrap na_qb2_search">${svgB(SVG_B.mag, 16)}<input type="search" class="text_pole na_search na_qb_q" placeholder="인물 · 대사로 찾기"></div>
         <div class="na_qb_excl">
           <span class="na_qb_excl_label">빼는 인물</span>
           <span class="na_qb_excl_chips"></span>
-          <input type="text" class="text_pole na_qb_excl_in" placeholder="+ 이름" enterkeyhint="done">
-          <button type="button" class="na_v2_pillbtn na_qb_excl_add">추가</button>
+          <button type="button" class="na_qb_excl_plus" title="대사를 모으거나 주입하지 않을 인물">+ 추가</button>
+          <input type="text" class="text_pole na_qb_excl_in" placeholder="이름" enterkeyhint="done" hidden>
+          <button type="button" class="na_v2_pillbtn na_qb_excl_add" hidden>추가</button>
         </div>
         <div class="na_qb_list"></div>
-        <button type="button" class="na_linkbtn na_danger na_qb_clear"><i class="fa-regular fa-trash-can"></i> 모은 대사 전체 삭제</button>
+        <button type="button" class="na_linkbtn na_danger na_qb_clear">${svgB(SVG_B.trash, 13)} 모은 대사 전체 삭제</button>
         </div>
       </div>`);
     // ---- 말투 지문 pane: one open card, the rest as rows; characters with enough lines but no fingerprint as dashed rows
@@ -4700,7 +4739,7 @@ async function openQuotes() {
         const tag = (t.match(/^\[([^\]\n]{1,10})\]\s*/) || [, ''])[1];
         t = t.replace(/^\[[^\]\n]{1,10}\]\s*/, '');
         const ex = t.match(/\s*\(\s*((?:["“][^"”]+["”][\s.,…]*)+)\)\s*\.?\s*$/);
-        return { tag, rule: ex ? t.slice(0, ex.index).replace(/[\s,]+$/, '') + '.' : t, ex: ex ? ex[1].trim() : '' };
+        return { tag, rule: ex ? t.slice(0, ex.index).replace(/[\s,.]+$/, '') + '.' : t, ex: ex ? ex[1].trim() : '' };
     };
     const renderVoice = () => {
         const voice = m.voice && typeof m.voice === 'object' ? m.voice : {};
@@ -4710,22 +4749,27 @@ async function openQuotes() {
         const missing = [...counts].filter(([who, n]) => n >= 3 && !voice[who]).map(([who]) => who);
         vOpen = whos.includes(vOpen) ? vOpen : whos[0] || null;
         const $b = $root.find('.na_vc_body');
-        $b.html(`
-          <label class="na_v2_card na_v2_switchrow"><span class="na_vc_sw"><b>조용히 주입</b><small>“본문에서 언급하지 말 것”을 붙여 보내요<span class="na_vc_tok"></span></small></span><input type="checkbox" class="na_toggle na_vc_inject" ${m.voiceInject ? 'checked' : ''}></label>
-          ${whos.map(who => { const v = voice[who], n = counts.get(who) || 0, rules = String(v.text || '').split('\n').map(l => l.trim()).filter(Boolean);
-            if (who !== vOpen) return `<button type="button" class="na_v2_card na_vc_row" data-who="${esc(who)}">${faceHtml(who, 32)}<span class="na_vc_who"><b>${esc(who)}</b><small>규칙 ${rules.length}개</small></span><i class="fa-solid fa-chevron-right"></i></button>`;
-            return `
+        // collapsed rows sit together in gap-6 groups, around the open card
+        const rowsHtml = list => (list.length ? `<div class="na_vc_rows">${list.join('')}</div>` : '');
+        const before = [], after = [];
+        let card = '';
+        whos.forEach(who => { const v = voice[who], n = counts.get(who) || 0, rules = String(v.text || '').split('\n').map(l => l.trim()).filter(Boolean);
+            if (who !== vOpen) { (card ? after : before).push(`<button type="button" class="na_v2_card na_vc_row" data-who="${esc(who)}">${faceHtml(who, 32)}<span class="na_vc_who1">${esc(who)} <small>· 규칙 ${rules.length}개</small></span>${svgB(SVG_B.right, 16)}</button>`); return; }
+            card = `
             <div class="na_v2_card na_vc_card" data-who="${esc(who)}">
-              <div class="na_vc_head">${faceHtml(who, 40)}<span class="na_vc_who"><b>${esc(who)}</b><small>대사 ${v.n || '?'}개로 만듦${v.n && v.n !== Math.min(150, n) ? ` · 지금 ${n}개` : ''}</small></span><button type="button" class="na_v2_pillbtn na_vc_make" ${n >= 3 ? '' : 'disabled'}><i class="fa-solid fa-rotate"></i> 다시</button></div>
+              <div class="na_vc_head">${faceHtml(who, 40)}<span class="na_vc_who"><b>${esc(who)}</b><small>대사 ${v.n || '?'}개로 만듦${v.n && v.n !== Math.min(150, n) ? ` · 지금 ${n}개` : ''}</small></span><button type="button" class="na_v2_pillbtn na_vc_make" ${n >= 3 ? '' : 'disabled'}>${svgB(SVG_B.redo, 13)}다시</button></div>
               ${vEdit === who
                 ? `<textarea class="text_pole na_vc_text" rows="${Math.min(10, rules.length + 2)}" spellcheck="false">${esc(v.text)}</textarea><small class="na_v2_note">한 줄에 규칙 하나 · 앞의 [태그]는 화면에만 보이고 주입할 땐 빠져요</small>`
                 : `<div class="na_vc_rules">${rules.map(l => { const r = parseRule(l); return `<div class="na_vc_rule">${r.tag ? `<span class="na_vc_tag">${esc(r.tag)}</span>` : ''}<span><span>${esc(r.rule)}</span>${r.ex ? `<i>${esc(r.ex)}</i>` : ''}</span></div>`; }).join('')}</div>`}
               <div class="na_vc_foot"><button type="button" class="na_linkbtn na_vc_edit">${vEdit === who ? '그만 고치기' : '직접 고치기'}</button><button type="button" class="na_linkbtn na_danger na_vc_del">지우기</button></div>
-            </div>`; }).join('')}
-          ${missing.map(who => `<div class="na_v2_card na_vc_row dashed" data-who="${esc(who)}">${faceHtml(who, 32)}<span class="na_vc_who"><b>${esc(who)}</b><small>아직 없음 · 대사 ${counts.get(who)}개</small></span><button type="button" class="na_linkbtn na_vc_make">만들기</button></div>`).join('')}
+            </div>`; });
+        after.push(...missing.map(who => `<div class="na_v2_card na_vc_row dashed" data-who="${esc(who)}" title="대사 ${counts.get(who)}개">${faceHtml(who, 32)}<span class="na_vc_who1">${esc(who)} <small>· 아직 없음</small></span><button type="button" class="na_vc_make na_vc_mk">만들기</button></div>`));
+        $b.html(`
+          <label class="na_v2_card na_v2_switchrow"><span class="na_vc_sw"><b>조용히 주입</b><small>“본문에서 언급하지 말 것”을 붙여 보내요<span class="na_vc_tok"></span></small></span><input type="checkbox" class="na_toggle na_vc_inject" ${m.voiceInject ? 'checked' : ''}></label>
+          ${rowsHtml(before)}${card}${rowsHtml(after)}
           ${!whos.length && !missing.length ? '<div class="na_empty">대사가 3개 이상인 인물이 없어요. "대사" 탭에서 먼저 대사를 모아 주세요.</div>' : ''}
           ${missing.length > 1 ? `<button type="button" class="na_v2_btn primary wide na_vc_all"><i class="fa-solid fa-fingerprint"></i> 없는 지문 ${missing.length}개 한꺼번에 만들기</button>` : ''}
-          <small class="na_v2_foot">AI 기능 모델(${esc(aiLabel())})이 그 인물 대사만 읽고 말버릇 규칙을 뽑아요</small>`);
+          <small class="na_v2_foot">모은 대사로 인물마다 말버릇 규칙을 뽑아 조용히 주입해요 · AI 기능 모델(${esc(aiLabel())})이 그 인물 대사만 읽어요</small>`);
         const blk = extraBlocks({ ...m, knowInject: false, voiceInject: true });
         if (blk) countTokens(blk).then(t => $b.find('.na_vc_tok').text(` · 약 ${fmt(t)} 토큰`));
     };
@@ -4736,22 +4780,33 @@ async function openQuotes() {
         const cast = currentCast(m);
         $root.find('.na_qb_clear').prop('hidden', !m.quotes.length);
         const ex = Array.isArray(m.quoteExclude) ? m.quoteExclude : [];
-        $root.find('.na_qb_excl_chips').html(ex.length ? ex.map(n => `<span class="na_pchip na_qb_exchip">${esc(n)}<button type="button" class="na_qb_unex" data-n="${esc(n)}" title="다시 모으기">×</button></span>`).join('') : '<small class="na_dim">없음</small>');
+        $root.find('.na_qb_excl_chips').html(ex.map(n => `<span class="na_pchip na_qb_exchip">${esc(n)}<button type="button" class="na_qb_unex" data-n="${esc(n)}" title="다시 모으기" aria-label="다시 넣기">×</button></span>`).join(''));
         $root.find('.na_qb_nq').text(m.quotes.length || '');
         $root.find('.na_qb_nv').text(Object.keys(m.voice || {}).length || '');
         renderVoice();
-        $root.find('.na_qb_list').html(by.size ? [...by].sort((a, b) => (a[0] === '?') - (b[0] === '?') || b[1].length - a[1].length).map(([who, xs]) => `
-          <div class="na_qb_group ${who !== '?' && !inCast(cast, who) ? 'na_qb_away' : ''} ${who === '?' ? 'na_qb_unknown' : ''}"><div class="na_qb_who">${who === '?' ? '<span class="na_qb_qmark">?</span>' : faceHtml(who, 26)}<b>${esc(who === '?' ? '말한 사람 모름' : who)}</b><span class="na_dim">${xs.length}개</span>${m.voice?.[who] ? '<span class="na_qb_fp">지문 있음</span>' : ''}${who !== '?' && !inCast(cast, who) ? '<span class="na_qb_awaytag" title="STATE의 인물 제목과 최근 섹션 4개에 안 나와요. 다시 나오면 말투 지문이 자동으로 들어가요">지금 안 나옴</span>' : ''}
-            <span class="na_qb_gbtns" data-who="${esc(who)}">
-              ${who !== '?' ? '<button type="button" class="na_icon na_icon_sm na_qb_gexcl" title="이 인물 빼기 (대사 지우고 앞으로도 안 모음)"><i class="fa-solid fa-user-slash"></i></button>' : ''}
-              ${xs.length ? '<button type="button" class="na_icon na_icon_sm na_qb_gdel" title="이 인물 대사 모두 지우기"><i class="fa-regular fa-trash-can"></i></button>' : ''}
-            </span></div>
-            <div class="na_qb_rows">${xs.map(({ x, i }) => `<div class="na_qb_row" data-i="${i}">
-              <div class="na_qb_text">“${esc(x.text)}”<div class="na_dim na_qb_src">${esc(String(x.src || '').slice(0, 50))}</div></div>
+        const gbtns = (who, xs) => `<span class="na_qb_gbtns" data-who="${esc(who)}">
+              ${who !== '?' ? `<button type="button" class="na_icon na_icon_sm na_qb_gexcl" title="이 인물 빼기 (대사 지우고 앞으로도 안 모음)" aria-label="이 인물 빼기">${svgB(SVG_B.userx, 15)}</button>` : ''}
+              ${xs.length ? `<button type="button" class="na_icon na_icon_sm na_qb_gdel" title="이 인물 대사 모두 지우기" aria-label="이 인물 대사 모두 지우기">${svgB(SVG_B.trash, 15)}</button>` : ''}
+            </span>`;
+        const rows = xs => `<div class="na_qb_rows">${xs.map(({ x, i }) => `<div class="na_qb_row" data-i="${i}">
+              <div class="na_qb_text"><span>“${esc(x.text)}”</span><div class="na_qb_src">${esc(String(x.src || '').slice(0, 50).replace(/\s+[—–]\s+/, ' · '))}</div></div>
               <input type="text" class="text_pole na_qb_whoin" value="${esc(x.who === '?' ? '' : x.who)}" placeholder="누구?" title="말한 사람">
-              <button type="button" class="na_icon na_icon_sm na_qb_del" title="빼기" aria-label="빼기"><i class="fa-solid fa-xmark"></i></button>
-            </div>`).join('')}</div></div>`).join('') : '<div class="na_empty">아직 없어요. "아카이브에서 모으기"를 눌러 보세요.</div>');
+              <button type="button" class="na_icon na_icon_sm na_qb_del" title="빼기" aria-label="빼기">${svgB(SVG_B.x, 13, 2.2)}</button>
+            </div>`).join('')}</div>`;
+        // unknown speaker: one dashed row; opens into the editable lines
+        const unkOpen = qbUnkOpen || !!q;
+        const group = ([who, xs]) => (who === '?' ? `
+          <div class="na_qb_group na_qb_unknown${unkOpen ? ' open' : ''}">
+            <div class="na_qb_unkrow" role="button" tabindex="0" aria-expanded="${unkOpen}"><span>말한 사람 모름 <b>${xs.length}</b>개 · ${unkOpen ? '누구인지 적어 주세요' : '눌러서 고쳐 주세요'}</span>${unkOpen ? gbtns(who, xs) : ''}${svgB(SVG_B.right, 15, 2.2, 'na_qb_unkchev')}</div>
+            ${unkOpen ? rows(xs) : ''}</div>` : `
+          <div class="na_qb_group ${!inCast(cast, who) ? 'na_qb_away' : ''}"><div class="na_qb_who">${faceHtml(who, 26)}<b>${esc(who)}</b><span class="na_qb_n">대사 ${xs.length}개</span>${!inCast(cast, who) ? '<span class="na_qb_awaytag" title="STATE의 인물 제목과 최근 섹션 4개에 안 나와요. 다시 나오면 말투 지문이 자동으로 들어가요">지금 안 나옴</span>' : ''}${m.voice?.[who] ? '<span class="na_qb_fp">지문 있음</span>' : ''}
+            ${gbtns(who, xs)}</div>
+            ${rows(xs)}</div>`);
+        $root.find('.na_qb_list').html(by.size ? [...by].sort((a, b) => (a[0] === '?') - (b[0] === '?') || b[1].length - a[1].length).map(group).join('') : '<div class="na_empty">아직 없어요. "아카이브에서 모으기"를 눌러 보세요.</div>');
     };
+    let qbUnkOpen = false;
+    $root.on('click', '.na_qb_unkrow', function (e) { if ($(e.target).closest('.na_qb_gbtns').length) return; qbUnkOpen = !$(this).closest('.na_qb_group').hasClass('open'); render(); });
+    $root.on('keydown', '.na_qb_unkrow', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $(this).trigger('click'); } });
     render();
     const save = async () => { await saveMeta(); applyInjection(); syncPanel(); render(); };
     $root.find('.na_qb_q').on('input', render);
@@ -4761,7 +4816,8 @@ async function openQuotes() {
         $root.find('.na_qb_pane').each(function () { this.hidden = this.dataset.pane !== p; });
     });
     $root.on('change', '.na_vc_inject', async function () { m.voiceInject = this.checked; await save(); });
-    $root.on('click', '.na_vc_row', function () { vOpen = String($(this).data('who')); vEdit = null; renderVoice(); });
+    $root.on('click', '.na_vc_row:not(.dashed)', function () { vOpen = String($(this).data('who')); vEdit = null; renderVoice(); });
+    $root.on('click', '.na_vc_row.dashed', function (e) { if (!$(e.target).closest('.na_vc_make').length) $(this).find('.na_vc_make').trigger('click'); });
     $root.on('click', '.na_vc_edit', function () { const who = String($(this).closest('.na_vc_card').data('who')); vEdit = vEdit === who ? null : who; renderVoice(); });
     $root.on('change', '.na_vc_text', async function () {
         const who = String($(this).closest('.na_vc_card').data('who'));
@@ -4847,6 +4903,11 @@ async function openQuotes() {
         for (const n of v.split(/[,，]/)) await exclude(n);
     };
     $root.find('.na_qb_excl_add').on('click', addExcluded);
+    // "+ 추가" pill → the name field (and its 추가 button for keyboards without Enter)
+    const exclEdit = on => { $root.find('.na_qb_excl_in, .na_qb_excl_add').prop('hidden', !on); $root.find('.na_qb_excl_plus').prop('hidden', on); };
+    $root.find('.na_qb_excl_plus').on('click', () => { exclEdit(true); $root.find('.na_qb_excl_in').trigger('focus'); });
+    $root.find('.na_qb_excl_in').on('blur', function () { setTimeout(() => { if (!String(this.value || '').trim() && !$root.find('.na_qb_excl_add').is(':focus')) exclEdit(false); }, 150); });
+
     $root.find('.na_qb_excl_in').on('keydown', function (e) {
         if ((e.key === 'Enter' || e.keyCode === 13) && !e.isComposing) { e.preventDefault(); addExcluded(); }
     }).on('change', addExcluded);
@@ -5374,7 +5435,7 @@ async function healthChecks(m, { build, afterTok, after } = {}) {
     const last = chat.length - 1;
     if (afterTok === undefined) { after = m.boundary >= 0 ? buildExtract(m.boundary + 1, last) : []; afterTok = await countTokens(extractToText(after)); }
     const items = [];
-    const add = (level, title, detail = '', fix = null) => items.push({ level, title, detail, fix });
+    const add = (level, title, detail = '', fix = null, short = '') => items.push({ level, title, detail, fix, short });
     const secs = parseSections(m.text);
     const cards = secs.filter(x => !x.group && x.title !== '(머리말)' && x.title !== '(제목 없음)');
     const keys = new Set(secs.map(sectionKey));
@@ -5382,7 +5443,7 @@ async function healthChecks(m, { build, afterTok, after } = {}) {
     // numbering
     const hc = checkHeadings(m.text);
     if (hc.issues.length) add('warn', `제목 번호 문제 ${hc.issues.length}개`, hc.issues.slice(0, 5).map(x => `${x.title.slice(0, 40)} — ${x.msg}`).join('\n'), { label: '제목 검사 보기', run: () => { $('dialog .popup-button-ok').last().trigger('click'); showTab('archive'); showArchiveView('cards'); $('#na_hcheck').prop('open', true)[0]?.scrollIntoView({ block: 'center' }); } });
-    else if (hc.ranged) add('ok', '제목 번호가 빈틈 없이 이어져요');
+    else if (hc.ranged) add('ok', '제목 번호가 빈틈 없이 이어져요', '', null, '번호 이어짐');
 
     // STATE / boundary agree with the last section
     const ranges = headingRanges(m.text);
@@ -5400,9 +5461,10 @@ async function healthChecks(m, { build, afterTok, after } = {}) {
     // compression due, hiding
     if (m.boundary >= 0) {
         const hideEnd = m.boundary - Math.max(0, Number(m.keep) || 0);
-        const shown = chat.slice(0, Math.max(0, hideEnd + 1)).filter(x => x && !x.is_system).length;
-        if (shown) add('warn', `압축한 메시지 중 ${shown}개가 아직 안 숨겨졌어요`, '아카이브와 원문이 같이 들어가 토큰이 두 번 쓰여요.', { label: '숨기기 적용', run: () => applyHide() });
-        else add('ok', '압축한 메시지는 다 숨겨져 있어요');
+        const open = chat.slice(0, Math.max(0, hideEnd + 1)).map((x, i) => (x && !x.is_system ? i : -1)).filter(i => i >= 0);
+        const shown = open.length;
+        if (shown) add('warn', `압축한 메시지 ${shown}개가 안 숨겨져 있어요`, `${shown > 1 ? `#${open[0]} – #${open[shown - 1]}` : `#${open[0]}`} · 아카이브와 같이 들어가요`, { label: '숨기기 적용', danger: true, run: () => applyHide() });
+        else add('ok', '압축한 메시지는 다 숨겨져 있어요', '', null, '숨김');
     }
 
     // token cap
@@ -5428,8 +5490,8 @@ async function healthChecks(m, { build, afterTok, after } = {}) {
     const empty = cards.filter(x => !m.text.slice(x.start, x.end).replace(/^#{1,2} [^\n]*\n?/, '').trim());
     if (empty.length) add('warn', `빈 섹션 ${empty.length}개`, empty.slice(0, 5).map(x => x.title.slice(0, 50)).join('\n'));
     const big = [];
-    for (const x of cards) { const t = await cachedTokens(m.text.slice(x.start, x.end)); if (t > 2500) big.push(`${x.title.slice(0, 40)} — ${fmt(t)} 토큰`); }
-    if (big.length) add('info', `아주 큰 섹션 ${big.length}개`, `${big.slice(0, 5).join('\n')}\n나눠 쓰거나 다시 압축하면 키워드 연동·상한이 잘 맞아요.`);
+    for (const x of cards) { const t = await cachedTokens(m.text.slice(x.start, x.end)); if (t > 2500) big.push(`${(x.title.match(/(?:\S+ )?#\d+\s*[–-]\s*#\d+/) || [x.title.slice(0, 40)])[0]} · ${fmt(t)} 토큰`); }
+    if (big.length) add('info', `아주 큰 섹션 ${big.length}개`, `${big.slice(0, 5).join('\n')} — 다시 압축하거나 나누면 좋아요`);
 
     // spelling drift inside the archive
     const nm = selfNearMisses(m.text);
@@ -5437,8 +5499,8 @@ async function healthChecks(m, { build, afterTok, after } = {}) {
 
     // backup
     if (!m.backup) add('warn', '아직 백업한 적이 없어요', '', { label: '.json 백업', run: () => $('#na_export_json').trigger('click') });
-    else if (m.backupEvery > 0 && m.sinceBackup >= m.backupEvery) add('warn', `백업 뒤로 ${m.sinceBackup}번 바뀌었어요`, `마지막 백업 ${timeLabel(m.backup.at)}`, { label: '.json 백업', run: () => $('#na_export_json').trigger('click') });
-    else add('ok', `백업 ${timeLabel(m.backup.at)}`);
+    else if (m.backupEvery > 0 && m.sinceBackup >= m.backupEvery) add('warn', '백업한 지 오래됐어요', `마지막 .json 백업 뒤 ${m.sinceBackup}번 바뀜 · ${timeLabel(m.backup.at)}`, { label: '.json 백업', run: () => $('#na_export_json').trigger('click') });
+    else add('ok', `백업 ${timeLabel(m.backup.at)}`, '', null, '백업');
 
     if (!glossaryEntries(m).length && Object.keys(m.trMem || {}).length) add('info', '번역 용어집이 비어 있어요', '이름 표기가 번역마다 달라질 수 있어요.', { label: '용어집 열기', run: () => openGlossary() });
 
@@ -6338,29 +6400,40 @@ async function openHealth() {
         const fix = h.items.map((x, i) => ({ x, i })).filter(({ x }) => x.level === 'bad' || x.level === 'warn');
         const info = h.items.map((x, i) => ({ x, i })).filter(({ x }) => x.level === 'info');
         const ok = h.items.filter(x => x.level === 'ok');
-        const tone = h.score >= 90 ? 'good' : h.score >= 70 ? 'mid' : 'low';
+        const tone = h.score >= 80 ? 'good' : h.score >= 60 ? 'mid' : 'low';
         const word = h.score >= 90 ? '건강해요' : h.score >= 70 ? '거의 괜찮아요' : '손볼 곳이 있어요';
         const R = 38, C = 2 * Math.PI * R;
-        const item = ({ x, i }) => `
-          <div class="na_v2_card na_hl2_item ${x.level}">
+        const txt = x => `<span class="na_hl2_txt"><b>${esc(x.title)}</b>${x.detail ? `<small>${esc(x.detail).replace(/\n/g, '<br>')}</small>` : ''}</span>`;
+        const item = ({ x, i }) => {
+            const red = x.level === 'bad' || x.fix?.danger;
+            return `
+          <div class="na_v2_card na_hl2_item ${x.level}${red ? ' red' : ''}">
             <span class="na_hl2_bar"></span>
             <div class="na_hl2_main">
-              <b>${esc(x.title)}</b>
-              ${x.detail ? `<small>${esc(x.detail).replace(/\n/g, '<br>')}</small>` : ''}
-              ${x.fix ? `<button type="button" class="na_v2_btn ${x.level === 'bad' ? 'danger' : 'primary'} na_health_fix" data-i="${i}">${esc(x.fix.label)}</button>` : ''}
+              ${txt(x)}
+              ${x.fix ? `<button type="button" class="na_v2_btn ${red ? 'danger' : 'primary'} na_health_fix" data-i="${i}">${esc(x.fix.label)}</button>` : ''}
             </div>
           </div>`;
+        };
+        // 참고: no colour bar, a blue (i) at the left, a quiet pill if it can be fixed
+        const infoItem = ({ x, i }) => `
+          <div class="na_v2_card na_hl2_info">
+            ${svgB(SVG_B.info, 18, 2, 'na_hl2_infoic')}
+            <div class="na_hl2_infomain">${txt(x)}${x.fix ? `<button type="button" class="na_v2_pillbtn na_health_fix" data-i="${i}">${esc(x.fix.label)}</button>` : ''}</div>
+          </div>`;
+        const counts = [fix.length ? `고칠 것 ${fix.length}개` : '', info.length ? `참고 ${info.length}개` : ''].filter(Boolean).join(', ');
         $root.find('.na_health_body').html(`
           <div class="na_v2_card na_hl2_top">
             <div class="na_hl2_ring ${tone}">
               <svg viewBox="0 0 92 92" width="92" height="92"><circle cx="46" cy="46" r="${R}" class="bg"/><circle cx="46" cy="46" r="${R}" class="fg" stroke-dasharray="${(C * h.score / 100).toFixed(1)} 999" transform="rotate(-90 46 46)"/></svg>
               <span><b>${h.score}</b><small>점</small></span>
             </div>
-            <div class="na_hl2_sum"><b>${word}</b><small>AI 없이 번호·숨기기·키워드·백업을 훑어봤어요.${fix.length ? ` 고칠 것 ${fix.length}개` : ''}${info.length ? `, 참고 ${info.length}개` : ''}</small></div>
+            <div class="na_hl2_sum"><b>${word}</b><small>AI 없이 번호·숨기기·키워드·백업을 훑어봤어요.${counts ? ` ${counts}.` : ''}</small></div>
           </div>
           ${fix.length ? `<div class="na_v2_label">고칠 것</div>${fix.map(item).join('')}` : ''}
-          ${info.length ? `<div class="na_v2_label">참고</div>${info.map(item).join('')}` : ''}
-          ${ok.length ? `<details class="na_v2_card na_v2_more na_hl2_ok"><summary><i class="fa-solid fa-check"></i> 괜찮은 것 <b>${ok.length}</b>개</summary><ul>${ok.map(x => `<li>${esc(x.title)}</li>`).join('')}</ul></details>` : ''}`);
+          ${info.length ? `<div class="na_v2_label">참고</div>${info.map(infoItem).join('')}` : ''}
+          ${ok.length ? `<details class="na_v2_card na_hl2_ok"><summary><span class="na_ck_ic">${svgB(SVG_B.check, 12, 3)}</span><span class="na_hl2_okn">괜찮은 것 <b>${ok.length}</b>개</span><span class="na_hl2_oks">${esc(ok.map(x => x.short || x.title).join(' · '))}</span>${svgB(SVG_B.down, 15, 2.2, 'na_hl2_chev')}</summary><ul>${ok.map(x => `<li>${esc(x.title)}</li>`).join('')}</ul></details>` : ''}`);
+
         $root.find('.na_health_fix').on('click', async function () {
             const it = h.items[Number(this.dataset.i)];
             $(this).prop('disabled', true);
@@ -7484,6 +7557,24 @@ async function confirmWhole(oldText, newText) {
     return r === c.POPUP_RESULT.AFFIRMATIVE || r === true;
 }
 
+// thin outline icon (mockup style) for the append / health / drift / quote screens
+function svgB(inner, size = 16, sw = 2, cls = '') {
+    return `<svg${cls ? ` class="${cls}"` : ''} width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+}
+const SVG_B = {
+    check: '<path d="M20 6L9 17l-5-5"/>',
+    star: '<path d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6l-5 3.6 1.9-5.8L4 8.8h6.1z"/>',
+    info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+    down: '<path d="M6 9l6 6 6-6"/>',
+    right: '<path d="M9 6l6 6-6 6"/>',
+    bookmark: '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
+    trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+    x: '<path d="M6 6l12 12M18 6L6 18"/>',
+    mag: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+    userx: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M17 8l5 5M22 8l-5 5"/>',
+    redo: '<path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/>',
+};
+
 async function openAppend(prefill = {}) {
     const c = ctx();
     const m = getMeta();
@@ -7494,34 +7585,37 @@ async function openAppend(prefill = {}) {
       <div class="na_popup na_v2 na_ap2">
         <div class="na_v2_titlebar">
           <div class="na_v2_title"><b>아카이브에 추가</b><small>STATE·OPEN 앞에 넣고, 새 STATE로 바꿔요</small></div>
-          <button type="button" class="na_v2_pillbtn na_append_file_btn"><i class="fa-solid fa-file-arrow-up"></i> 파일</button>
+          <button type="button" class="na_v2_pillbtn na_append_file_btn" title="파일에서 불러오기">.txt</button>
           <input type="file" class="na_append_file" accept=".txt,.md,text/plain" hidden>
         </div>
         <textarea class="text_pole na_append_ta" spellcheck="false" placeholder="## Y2 #574–#600 — 제목 (날짜, 장소)&#10;PLOT:&#10;- …"></textarea>
         <div class="na_v2_card na_v2_list na_ap2_checks">
-          <span class="na_ap2_label">붙여넣은 글 검사</span>
+          <div class="na_ap2_label"><span>붙여넣은 글 검사</span><small class="na_append_info"></small></div>
           <div class="na_check na_numcheck" hidden></div>
-          <div class="na_check na_check_warn na_cut" hidden></div>
-          <div class="na_check na_whole" hidden><i class="fa-solid fa-file-circle-check"></i><div>
+          <div class="na_check na_statecheck" hidden></div>
+          <div class="na_check na_check_warn na_whole" hidden><span class="na_ck_ic">!</span><div>
             <b>아카이브 전체본 같아요</b> — 이미 있는 섹션이 거의 다 들어 있어요. 새 섹션만 붙이려면 그대로 <b>추가</b>, 이 내용으로 아카이브를 바꾸려면:
             <div class="na_whole_row"><button type="button" class="na_btn na_small na_whole_btn"><i class="fa-solid fa-right-left"></i> 통째로 바꾸기</button></div>
           </div></div>
           <div class="na_check na_check_warn na_rw" hidden></div>
-          <div class="na_check na_check_soft na_names" hidden></div>
-          <button type="button" class="na_cp_row na_ai_conflict"><span class="na_cp_txt"><span><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 충돌 검사</span><small>기존 아카이브와 어긋나는 이름·날짜·사실·해결된 떡밥</small></span><i class="fa-solid fa-chevron-right"></i></button>
+          <div class="na_check na_check_warn na_names" hidden></div>
+          <div class="na_check na_cut" hidden></div>
+          <button type="button" class="na_cp_row na_ai_conflict" title="기존 아카이브와 어긋나는 이름·날짜·사실·해결된 떡밥을 AI가 찾아요">${svgB(SVG_B.star, 14)} AI로 충돌 검사 · 날짜·사실·해결된 떡밥</button>
           <div class="na_ai_box na_conflict_out" hidden></div>
         </div>
         <div class="na_v2_card na_v2_list">
-          <label class="na_cp_row"><span class="na_cp_txt"><span>이번에 압축한 끝 번호</span><small class="na_end_hint"></small></span><span class="na_ap2_end">#<input type="number" class="text_pole na_end" min="0" max="${last}" value="${Math.max(0, last)}"></span></label>
-          <label class="na_cp_row"><span class="na_cp_txt"><span>추가한 뒤 숨기기</span><small>마지막 ${m.keep}개는 남겨요</small></span><input type="checkbox" class="na_toggle na_do_hide" checked></label>
+          <label class="na_cp_row"><span class="na_cp_txt"><span>이번에 압축한 끝 번호</span><small class="na_end_hint"></small></span><span class="na_ap2_end">#<input type="number" class="na_end" min="0" max="${last}" value="${Math.max(0, last)}"></span></label>
+          <label class="na_cp_row"><span class="na_cp_txt"><span>추가한 뒤 숨기기</span><small class="na_hide_hint">마지막 ${m.keep}개는 남겨요</small></span><input type="checkbox" class="na_toggle na_do_hide" checked></label>
           <label class="na_cp_row na_renum_row"><span class="na_cp_txt"><span class="na_renum_label">제목·안내문의 끝 번호도 바꾸기</span></span><input type="checkbox" class="na_toggle na_do_renum" checked></label>
         </div>
-        <small class="na_v2_note na_place"></small>
         <details class="na_v2_card na_v2_more na_ap_preview" hidden>
           <summary>추가하면 바뀌는 부분 <span class="na_chip na_chip_add na_ap_add"></span><span class="na_chip na_chip_del na_ap_del"></span></summary>
           <div><div class="na_ap_tr_row"></div><div class="na_diff na_ap_diff"></div></div>
         </details>
-        <div class="na_append_info na_dim"></div>
+        <div class="na_ap2_btns">
+          <button type="button" class="na_ap2_pv">미리보기</button>
+          <button type="button" class="na_ap2_go">추가하기</button>
+        </div>
       </div>`);
 
     const $ta = $root.find('.na_append_ta');
@@ -7541,9 +7635,10 @@ async function openAppend(prefill = {}) {
     const $pv = $root.find('.na_ap_preview');
     const apTr = translateButton($root.find('.na_ap_diff'));
     $root.find('.na_ap_tr_row').append(apTr);
+    let pvWanted = false; // the preview card shows once 미리보기 is pressed
     function renderPreview(plan) {
         lastPlan = plan;
-        if (!plan || !$ta.val().trim()) { $pv.prop('hidden', true); return; }
+        if (!plan || !$ta.val().trim() || !pvWanted) { $pv.prop('hidden', true); return; }
         const rows = lineDiff(m.text, plan.text);
         const add = rows.filter(r => r.t === '+').length, del = rows.filter(r => r.t === '-').length;
         $pv.prop('hidden', false);
@@ -7554,6 +7649,31 @@ async function openAppend(prefill = {}) {
         else $root.find('.na_ap_diff').empty();
     }
     $pv.on('toggle', () => renderPreview(lastPlan));
+    $root.find('.na_ap2_pv').on('click', () => {
+        if (!$ta.val().trim()) return toastr.info('먼저 추가할 내용을 붙여넣어 주세요.');
+        pvWanted = true;
+        $pv.prop('open', true);
+        renderPreview(lastPlan || placeAppend(m.text, $ta.val(), { renumber: $root.find('.na_do_renum').prop('checked'), rewrites: rwMode() }));
+        $pv[0].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+    $root.find('.na_ap2_go').on('click', () => $root.closest('dialog').find('.popup-button-ok').trigger('click'));
+    // one check row: round ✓ / ! mark, title, sub line, optional button
+    const ckRow = ($el, tone, title, sub = '', btn = '') => $el.prop('hidden', false)
+        .attr('class', `${$el.attr('class').replace(/\bna_check_(ok|warn|soft)\b/g, '').replace(/\s+/g, ' ').trim()} na_check_${tone}`)
+        .html(`<span class="na_ck_ic">${tone === 'ok' ? '✓' : '!'}</span><span class="na_cp_txt"><span>${title}</span>${sub ? `<small>${sub}</small>` : ''}</span>${btn}`);
+    const hideHint = () => {
+        const end = parseInt($end.val(), 10), keep = Math.max(0, Number(m.keep) || 0);
+        const to = end - keep;
+        $root.find('.na_hide_hint').text(Number.isFinite(end) && to >= 0 ? `#0 – #${to} 숨김 · 마지막 ${keep}개 남김` : `마지막 ${keep}개는 남겨요`);
+    };
+    $end.on('input change', hideHint);
+    let nearMiss = [];
+    $root.on('click', '.na_names_fix', () => {
+        let v = $ta.val();
+        nearMiss.forEach(x => { v = v.replace(new RegExp(`\\b${x.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g'), x.like); });
+        $ta.val(v).trigger('input');
+        toastr.success(nearMiss.map(x => `${x.word} → ${x.like}`).join(', '));
+    });
     $root.find('.na_do_renum').on('change', () => $ta.trigger('input'));
     let rwReplace = false;
     const rwMode = () => rwReplace ? 'replace' : 'skip';
@@ -7563,6 +7683,7 @@ async function openAppend(prefill = {}) {
     let endTouched = false;
     let lastCheck = { issues: [] };
     $end.on('input', () => { endTouched = true; $root.find('.na_end_hint').text(''); });
+    hideHint();
     let t;
     $ta.on('input', () => {
         $root.find('.na_conflict_out').addClass('na_stale'); // checked text changed since
@@ -7572,44 +7693,59 @@ async function openAppend(prefill = {}) {
             const guess = guessEndNumber(val);
             if (guess !== null && !endTouched) {
                 $end.val(guess);
-                $root.find('.na_end_hint').html(`제목에서 <b>#${guess}</b>을 읽었어요`);
-            }
-            lastCheck = val.trim() ? checkAppend(m, stripRewrites(m.text, val), last) : { issues: [] };
-            if (!val.trim()) $check.prop('hidden', true);
+                $root.find('.na_end_hint').text('붙여넣은 마지막 제목에서 읽었어요');
+            } else if (guess !== null && guess === parseInt($end.val(), 10)) $root.find('.na_end_hint').text('붙여넣은 마지막 제목에서 읽었어요');
+            hideHint();
+            const has = !!val.trim();
+            lastCheck = has ? checkAppend(m, stripRewrites(m.text, val), last) : { issues: [] };
+            if (!has) $check.prop('hidden', true);
             else if (!lastCheck.issues.length) {
                 const r = lastCheck.ranges;
-                $check.prop('hidden', false).attr('class', 'na_check na_numcheck na_check_ok')
-                    .html(`<i class="fa-solid fa-circle-check"></i> 번호 이어짐 확인 · #${r[0].from}–#${r[r.length - 1].to}, 섹션 ${r.length}개`);
+                ckRow($check, 'ok', '번호가 이어져요', `${m.boundary >= 0 ? `경계선 #${m.boundary} 다음 ` : ''}#${r[0].from}부터 #${r[r.length - 1].to}까지 빈틈 없음`);
             } else {
-                $check.prop('hidden', false).attr('class', `na_check na_numcheck ${lastCheck.soft ? 'na_check_soft' : 'na_check_warn'}`)
-                    .html(`<i class="fa-solid fa-triangle-exclamation"></i><ul>${lastCheck.issues.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`);
+                ckRow($check, lastCheck.soft ? 'soft' : 'warn', lastCheck.soft ? '번호 검사를 건너뛰어요' : `번호를 확인해 주세요 · ${lastCheck.issues.length}개`, lastCheck.issues.map(esc).join('<br>'));
             }
-            const near = val.trim() ? nameNearMisses(m.text, val) : [];
-            $root.find('.na_names').prop('hidden', !near.length)
-                .html(near.length ? `<i class="fa-solid fa-spell-check"></i><div>철자 확인 — 아카이브에 비슷한 이름이 있어요<ul>${near.map(x => `<li><b>${esc(x.word)}</b> ↔ 기존 <b>${esc(x.like)}</b></li>`).join('')}</ul></div>` : '');
+            const near = has ? nameNearMisses(m.text, val) : [];
+            nearMiss = near;
+            if (near.length) ckRow($root.find('.na_names'), 'warn', `철자가 비슷한 이름 ${near.length}개`, near.map(x => `${esc(x.word)} ↔ ${esc(x.like)}`).join(', '), '<button type="button" class="na_ck_btn na_names_fix" title="붙여넣은 글의 이름을 아카이브 철자로 바꿔요">고치기</button>');
+            else $root.find('.na_names').prop('hidden', true).empty();
             const plan = placeAppend(m.text, val, { renumber: $root.find('.na_do_renum').prop('checked'), rewrites: rwMode() });
             renderPreview(plan);
-            const cut = val.trim() ? cutSigns(m.text, val) : [];
-            $root.find('.na_cut').prop('hidden', !cut.length).html(cut.length
-                ? `<i class="fa-solid fa-scissors"></i><div><b>답이 중간에 끊긴 것 같아요</b><ul>${cut.map(x => `<li>${esc(x)}</li>`).join('')}</ul><small>다른 모델로 압축했다면 그쪽 답 길이(최대 토큰)를 늘리고 다시 받아 보세요.</small></div>` : '');
+            const cut = has ? cutSigns(m.text, val) : [];
+            // a missing STATE/OPEN block is reported on the STATE row, the rest on the "cut" row
+            const cutBlocks = cut.filter(x => /블록이 없어요/.test(x)), cutLine = cut.filter(x => !cutBlocks.includes(x));
+            const eTail = splitTail(m.text)[1], pTail = splitTail(val)[1];
+            const pKeys = tailBlocks(pTail).map(b => b.key).filter(k => k === 'STATE' || k === 'OPEN');
+            const $st = $root.find('.na_statecheck');
+            const josa = (w, a, b) => (/OPEN$/.test(w) ? a : b);
+            if (!has || (!pKeys.length && !cutBlocks.length && !plan.placed)) $st.prop('hidden', true).empty();
+            else if (cutBlocks.length) {
+                const miss = cutBlocks[0].split(' 블록')[0];
+                ckRow($st, 'warn', `${miss.replace('·', ' · ')}${josa(miss, '이', '가')} 없어요`, `이대로 추가하면 예전 ${esc(miss)} 블록이 그대로 남아요`);
+            } else if (!pKeys.length) ckRow($st, 'ok', '새 섹션은 STATE 앞에 들어가요');
+            else {
+                const at = (eTail.match(/^# STATE AT\b[^\n]*?(#\d+)/m) || [])[1];
+                const olds = plan.replaced.map(k => (k === 'STATE' && at ? `STATE AT ${at}` : k)).join('·');
+                const sub = plan.replaced.length ? `기존 ${esc(olds)}${josa(olds, '을', '를')} 바꿔요` : `${pKeys.join('·')} 블록을 새로 붙여요`;
+                ckRow($st, 'ok', `${pKeys.join(' · ')}${josa(pKeys.join(''), '이', '가')} 있어요`, sub);
+            }
+            if (!has) $root.find('.na_cut').prop('hidden', true).empty();
+            else if (cutLine.length) ckRow($root.find('.na_cut'), 'warn', '답이 중간에 끊긴 것 같아요', `${cutLine.map(esc).join('<br>')}<br>다른 모델로 압축했다면 그쪽 답 길이(최대 토큰)를 늘리고 다시 받아 보세요.`);
+            else ckRow($root.find('.na_cut'), 'ok', '마지막 줄이 끊기지 않았어요');
             const whole = !!val.trim() && looksWhole(m.text, val);
             $root.find('.na_whole').prop('hidden', !whole);
             const rwN = plan.rewriteCount;
             const items = [...plan.skipped.map(x => `<li>${esc(x)} <span class="na_dim">→ 빼고 추가</span></li>`), ...plan.swapped.map(x => `<li>${esc(x)} <span class="na_dim">→ 기존 섹션을 이걸로 바꿈</span></li>`)];
             const rwOpen = $root.find('.na_rw details').prop('open');
-            $root.find('.na_rw').attr('class', `na_check ${whole ? 'na_check_soft' : 'na_check_warn'} na_rw`).prop('hidden', !rwN).html(rwN ? `<i class="fa-solid fa-shield-halved"></i><div>
+            $root.find('.na_rw').attr('class', `na_check ${whole ? 'na_check_soft' : 'na_check_warn'} na_rw`).prop('hidden', !rwN).html(rwN ? `<span class="na_ck_ic">!</span><div>
                 ${whole ? `그대로 <b>추가</b>하면 이미 있는 섹션 ${rwN}개는 빼고 새 섹션만 붙여요.`
                     : `<b>이미 아카이브에 있는 섹션 ${rwN}개가 섞여 있어요</b> — 모델이 형식 참고용 섹션을 다시 쓴 것 같아요. 그건 빼고 추가해요.`}
                 ${items.length > 3 ? `<details class="na_rw_list"${rwOpen ? ' open' : ''}><summary>섹션 ${items.length}개 보기</summary><ul>${items.join('')}</ul></details>` : items.length ? `<ul>${items.join('')}</ul>` : ''}
                 ${plan.exactCount ? `<label class="checkbox_label na_rw_opt"><input type="checkbox" class="na_rw_replace" ${rwMode() === 'replace' ? 'checked' : ''}><span>번호가 똑같은 섹션은 기존 걸 붙여넣은 걸로 바꾸기 (일부러 고쳐 쓴 경우만)</span></label>` : ''}
             </div>` : '');
-            const notes = [];
-            if (plan.placed) notes.push('새 섹션은 <b>STATE 앞</b>에 들어가요');
-            if (plan.replaced.length) notes.push(`<b>${plan.replaced.join('·')}</b> 블록은 붙여넣은 걸로 바뀌어요`);
-            $root.find('.na_place').html(notes.join(' · '));
             $root.find('.na_renum_row').toggle(!!plan.renumbered);
             if (plan.renumbered) $root.find('.na_renum_label').html(`제목·안내문의 끝 번호도 바꾸기 (<b>#${plan.renumbered.from} → #${plan.renumbered.to}</b>)`);
-            $root.find('.na_append_info').text(`약 ${fmt(await countTokens(val))} 토큰 · 섹션 ${parseSections(val).filter(x => !x.group).length}개`);
+            $root.find('.na_append_info').text(has ? `약 ${fmt(await countTokens(val))} 토큰 · 섹션 ${parseSections(val).filter(x => !x.group).length}개` : '');
         }, 400);
     });
 
@@ -7623,12 +7759,15 @@ async function openAppend(prefill = {}) {
             .html(none ? '<i class="fa-solid fa-circle-check"></i> AI가 찾은 충돌 없음' : `<div class="na_ai_box_head"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 충돌 검사 <span class="na_dim">· 참고용이에요</span></div>${aiHtml(out)}`);
     });
     if (pre.text) {
-        if (Number.isFinite(pre.end)) { $end.val(pre.end); endTouched = true; }
+        if (Number.isFinite(pre.end)) { $end.val(pre.end); endTouched = true; hideHint(); }
         $ta.val(pre.text).trigger('input');
     }
+    // 추가하기 sits in the page (mockup); the popup's own OK button would repeat it
+    setTimeout(() => $root.closest('dialog').find('.popup-button-ok').addClass('na_ap2_okhide'), 0);
     const result = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', {
-        wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '추가', cancelButton: '취소',
+        wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '추가하기', cancelButton: '취소',
     });
+
     if (wantWhole) {
         const whole = String($ta.val() || '').replace(/\r\n/g, '\n').trim();
         const end = parseInt($end.val(), 10);
