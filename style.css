@@ -3595,3 +3595,14 @@ body.na_darkui .na_launch_tabs { background: #3A2F28; }
 .na_ly_view ul { padding-left: 1.1em; }
 .na_ly_empty { color: var(--na-dim); font-size: 0.92em; }
 .na_ly_pane textarea[hidden] { display: none !important; }
+
+/* section versions: "고쳐 달라고 하기" — one pill, the input never draws its own box */
+.na_ly_ask { display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 14px; border: 1px solid var(--na-line); border-radius: 18px; background: var(--na-card); }
+.na_ly_ask:focus-within { border-color: var(--na-accent); }
+.na_popup .na_ly_ask input.na_ly_askq, .na_popup .na_ly_ask input.na_ly_askq:is(:focus, :hover) {
+    flex: 1; min-width: 0; height: 36px; margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; outline: none !important;
+    background: transparent !important; background-image: none !important; box-shadow: none !important; color: inherit !important; font: inherit; font-size: 14px !important;
+}
+.na_popup .na_ly_ask input.na_ly_askq::placeholder { color: var(--na-dim) !important; opacity: 1 !important; }
+.na_ly_askgo { flex: none; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 13px; background: var(--na-accent); color: #fff; cursor: pointer; }
+.na_ly_askgo:disabled { opacity: 0.7; cursor: wait; }
