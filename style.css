@@ -3289,7 +3289,7 @@ body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-draw
 body.na_darkui :is(#na_settings, dialog.popup:has(.na_popup, #na_settings)) {
     --SmartThemeBodyColor: #EAE0D6; --SmartThemeEmColor: #B3A396; --SmartThemeQuoteColor: #D9733A;
     --SmartThemeBlurTintColor: #2A221D; --SmartThemeChatTintColor: #2E2621; --SmartThemeBorderColor: rgba(239, 227, 216, 0.18);
-    --SmartThemeShadowColor: rgba(0, 0, 0, 0.4); color: var(--SmartThemeBodyColor);
+    --SmartThemeShadowColor: rgba(0, 0, 0, 0.4); --SmartThemeCheckboxTickColor: #2A221D; color: var(--SmartThemeBodyColor);
 }
 body.na_darkui #na_settings > .inline-drawer > .inline-drawer-content { background: #2A221D; border-radius: 0 0 14px 14px; }
 body.na_darkui dialog.popup:has(.na_popup, #na_settings) { background: #2A221D; color: #EFE3D8; }
@@ -3302,7 +3302,7 @@ body.na_darkui .na_popup :where(.text_pole) { background: #2E2621; border: 1px s
 body:not(.na_darkui) :is(#na_settings, dialog.popup:has(.na_popup, #na_settings)) {
     --SmartThemeBodyColor: #463428; --SmartThemeEmColor: #786455; --SmartThemeQuoteColor: #B85C1E;
     --SmartThemeBlurTintColor: #F0E4DB; --SmartThemeChatTintColor: #ECE0D6; --SmartThemeBorderColor: rgba(120, 90, 60, 0.25);
-    --SmartThemeShadowColor: rgba(0, 0, 0, 0.1); color: var(--SmartThemeBodyColor);
+    --SmartThemeShadowColor: rgba(0, 0, 0, 0.1); --SmartThemeCheckboxTickColor: #F7EEE7; color: var(--SmartThemeBodyColor);
 }
 body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-content { background: #F0E4DB; border-radius: 0 0 14px 14px; }
 body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) { background: #F0E4DB; color: #463428; }
@@ -3519,3 +3519,31 @@ body.na_darkui .na_launch_tabs { background: #3A2F28; }
 .na_popup.na_ask2 .na_ask_go { width: 40px; height: 40px; }
 /* captions keep the palette's colour even when a theme recolours <small> */
 .na_popup.na_v2 .na_v2_title small, .na_popup.na_v2 small.na_v2_foot { color: var(--na-sub, var(--na-dim)) !important; }
+
+/* 섹션별 버전: pick sections, then set 자동 · 원문 · 짧게 · 한 줄 for all of them */
+.na_fp { gap: 12px; }
+.na_fp_list { display: flex; flex-direction: column; gap: 4px; max-height: 52vh; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+.na_fp_group { padding: 8px 4px 2px; font-size: 0.8em; font-weight: 700; color: var(--na-dim); }
+.na_fp_row { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px 10px; border: 1px solid var(--na-line); border-radius: 12px; background: var(--na-card); cursor: pointer; }
+.na_fp_row.on { border-color: var(--na-accent); background: var(--na-accent-soft); }
+.na_fp_row input { flex: none; margin: 0; accent-color: var(--na-accent); }
+.na_fp .na_fp_title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.88em !important; }
+.na_fp_has { flex: none; display: inline-flex; gap: 3px; }
+.na_fp .na_fp_has i { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 6px; font-style: normal; font-size: 0.68em !important; color: var(--na-dim); background: var(--na-card2); opacity: 0.55; }
+.na_fp .na_fp_has i.y { opacity: 1; color: var(--na-ok, #2E7D4F); background: var(--na-ok-soft, var(--na-card2)); }
+.na_fp .na_fp_why { flex: none; padding: 1px 6px; border-radius: 999px; font-size: 0.7em !important; color: var(--na-accent-ink, var(--na-accent)); background: var(--na-accent-soft); }
+.na_fp .na_fp_use { flex: none; min-width: 3.4em; padding: 2px 8px; border-radius: 999px; text-align: center; font-size: 0.74em !important; font-weight: 600; background: var(--na-card2); color: var(--na-mute, inherit); }
+.na_fp .na_fp_use.short { background: var(--na-purple-soft, var(--na-card2)); color: var(--na-purple, inherit); }
+.na_fp .na_fp_use.line { background: var(--na-amber-soft, var(--na-card2)); color: var(--na-amber, inherit); }
+.na_fp .na_fp_use.off { opacity: 0.6; }
+.na_fp_bar { position: sticky; bottom: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--na-line); border-radius: 16px; background: var(--na-card); }
+.na_fp_barhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.na_fp_all { display: inline-flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; }
+.na_fp_all input { margin: 0; accent-color: var(--na-accent); }
+.na_fp .na_fp_n { font-size: 0.86em !important; font-weight: 600; }
+.na_fp_make { font-size: 0.82em; color: var(--na-accent-ink, var(--na-accent)); }
+.na_fp_set button:disabled { opacity: 0.45; cursor: not-allowed; }
+/* one section's version window: which version goes in */
+.na_ly_force { display: flex; align-items: center; gap: 10px; }
+.na_ly_force > span { flex: none; font-size: 0.82em; color: var(--na-dim); }
+.na_ly_force .na_v2_seg { flex: 1; }

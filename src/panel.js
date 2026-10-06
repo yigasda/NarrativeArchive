@@ -11,7 +11,7 @@ import { POSITIONS, ROLES, SETTING_KEYS, SNAPSHOT_MAX, VERSION, commitText, ctx,
 import { openCompare, openDiff } from './diff.js';
 import { openDrift } from './drift.js';
 import { guessEndNumber, openExtract } from './extract.js';
-import { fadeCfg, fadeFilling, fadeMissing, fadePlan, fadeUse, fillFade } from './fade.js';
+import { fadeCfg, fadeFilling, fadeForce, fadeMissing, fadePlan, fadeUse, fillFade, openFadePicker } from './fade.js';
 import { openHealth } from './health.js';
 import { applyHide, lastIndex, openUnhide, syncTrackedBoundary } from './hide.js';
 import { applyInjection, lastBuild } from './inject.js';
@@ -291,6 +291,7 @@ export function renderPanel() {
                     <div class="na_fd_level"><i class="line"></i><span><span>한 줄</span><small>더 오래된 섹션 전부</small></span><b id="na_fade_lines">-</b></div>
                     <div class="na_fd_fill"><span id="na_fade_info">-</span><button type="button" class="na_v2_btn primary" id="na_fade_fill"><i class="fa-solid fa-feather-pointed"></i> 초안 모델로 채우기</button></div>
                   </div>
+                  <button type="button" class="na_set_row na_cfg_go" id="na_fade_pick"><span><span>섹션별 버전 고르기</span><small id="na_fade_pick_sub">여러 섹션을 골라 원문 · 짧게 · 한 줄로</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   <label class="na_set_row" title="답하기 직전에 작은 모델이 지금 대화에 필요한 섹션을 골라 넣어요 · 따로 연결한 모델이 필요해요"><span><span>AI 라우터</span><small>답하기 직전에 필요한 섹션을 골라요</small></span>
                     <span class="na_cfg_val"><select id="na_router_mode" class="text_pole"><option value="off">끄기</option><option value="linked">키워드에 더해 AI도</option><option value="old">오래된 섹션 전부</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <div class="na_router_opts" id="na_router_opts" hidden>
@@ -948,6 +949,7 @@ export function bindPanel() {
     $('#na_fade_full').on('change', needChat(e => setFade({ full: Math.max(0, parseInt(e.target.value, 10) || 0) })));
     $('#na_fade_short').on('change', needChat(e => setFade({ short: Math.max(0, parseInt(e.target.value, 10) || 0) })));
     $('#na_fade_opts').on('click', '.na_fd_btn', needChat(e => { const f = e.currentTarget.dataset.f; const cur = fadeCfg(getMeta())[f]; setFade({ [f]: Math.max(0, cur + Number(e.currentTarget.dataset.d)) }); }));
+    $('#na_fade_pick').on('click', needChat(async () => { await openFadePicker(); syncPanel(); }));
     $('#na_fade_fill').on('click', needChat(e => { if (!draftReady() && !fadeFilling) return toastr.info('⚙ 설정 → AI · 번역 → 초안 모델을 먼저 정해 주세요. 섹션 카드의 버전 버튼에서 직접 붙여넣을 수도 있어요.'); fillFade($(e.currentTarget)); }));
     $('#na_router_test').on('click', needChat(async e => {
         const m = getMeta();
@@ -999,6 +1001,7 @@ export function syncPanel() {
         const fadeSub = pct => fc.on ? `원문 ${fc.full} · 짧게 ${fc.short} · 나머지 한 줄${pct ? ` · 지금 −${pct}%` : ''}` : '오래된 섹션은 짧은 버전·한 줄로';
         $('#na_fade_sub').text(fadeSub(0));
         $('#na_fade_full').val(fc.full); $('#na_fade_short').val(fc.short);
+        { const fn = Object.keys(fadeForce(m)).length; $('#na_fade_pick_sub').text(fn ? `직접 고른 섹션 ${fn}개 · 망각 곡선보다 먼저` : '여러 섹션을 골라 원문 · 짧게 · 한 줄로'); }
         if (fc.on) {
             const plan = [...fadePlan(m).values()];
             const miss = fadeMissing(m).length, more = fadeMissing(m, true).length - miss;
