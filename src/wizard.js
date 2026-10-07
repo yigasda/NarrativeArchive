@@ -241,7 +241,6 @@ export async function openWizard() {
             <label><small>까지</small><span>#<input type="number" class="text_pole na_wz_to" min="0" max="${last}" value="${defTo}"></span></label>
           </div>
           <label class="na_v2_card na_v2_switchrow"><span>숨긴 메시지 빼기</span><input type="checkbox" class="na_toggle na_wz_hidden"></label>
-          <textarea class="text_pole na_wz_memo" rows="2" placeholder="이번 압축 메모 (선택) · 지시문 맨 끝에 가장 우선하는 지시로 붙어요"></textarea>
           <small class="na_v2_note na_wz_info"></small>
           ${auOf(m).on ? `<small class="na_v2_note na_wz_austate">${svgA(ICO_A.check, 12, 3)} <b>AU 채팅</b> · 요약이 본편 뒤 <b>${esc(auOf(m).name)}</b> 묶음으로 이어져요 (도구 → AU 채팅)</small>` : ''}
         </div>
@@ -320,12 +319,12 @@ export async function openWizard() {
         raw = formatExtract(items, g);
         const pid = $root.find('.na_wz_prompt').val();
         const p = pid === '__none' ? null : (g.prompts.find(x => x.id === pid) || activePrompt(g));
-        full = p ? compressPrompt(p.text, vars(), m, $root.find('.na_wz_memo').val()) : raw;
+        full = p ? compressPrompt(p.text, vars(), m) : raw;
         $root.find('.na_wz_copy span').text(p ? '지시문과 함께 복사' : '원문만 복사');
         $root.find('.na_wz_info').text(items.length ? `메시지 ${items.length}개${hiddenOut ? ` (숨긴 ${hiddenOut}개 뺌)` : ''} · 원문 약 ${fmt(await countTokens(raw))} 토큰${p ? ` · 지시문까지 약 ${fmt(await countTokens(full))} 토큰` : ''}` : '이 범위에 메시지가 없어요.');
     };
     let t;
-    $root.find('.na_wz_from, .na_wz_to, .na_wz_prompt, .na_wz_memo').on('input change', () => { clearTimeout(t); t = setTimeout(build, 250); });
+    $root.find('.na_wz_from, .na_wz_to, .na_wz_prompt').on('input change', () => { clearTimeout(t); t = setTimeout(build, 250); });
     const remember = async how => { const { from, to } = range(); m.lastExport = { from, to, at: Date.now(), how }; await saveMeta(); refreshStatus(); };
     $root.find('.na_wz_copy').on('click', async () => {
         await build();
@@ -342,7 +341,7 @@ export async function openWizard() {
         const pid = $root.find('.na_wz_prompt').val();
         const p = g.prompts.find(x => x.id === pid) || activePrompt(g);
         const $b = $(this);
-        const r = await withSpinner($b, '쓰는 중… 창을 닫지 마세요', () => draftCompress({ m, g, p, items, memo: $root.find('.na_wz_memo').val(),
+        const r = await withSpinner($b, '쓰는 중… 창을 닫지 마세요', () => draftCompress({ m, g, p, items,
             onStep: (k, total) => { if (total > 1) $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> 쓰는 중… ${k + 1}/${total}`); } }));
         if (!r) return;
         if (r.error) toastr.error(String(r.error?.message || r.error), r.doneTo === null ? '초안 모델 실패' : `${r.done}/${r.parts}까지 하고 멈췄어요 · #${r.doneTo}까지만 채웠어요`);
