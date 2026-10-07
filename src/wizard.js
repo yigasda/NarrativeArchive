@@ -50,7 +50,7 @@ const cleanDraft = out => String(out || '').replace(/^```[a-z]*\n?|```\s*$/g, ''
 
 // Turning AU on in a chat whose main-story sections sit under no divider: offer "# ── 본편 ──" above them,
 // so the reader and the timeline show the main story and the AU as two parts
-export async function offerMainDivider(m) {
+async function offerMainDivider(m) {
     const a = auOf(m);
     const [body] = splitTail(m.text);
     if (/^#\s*──.*──\s*$/m.test(body) || hasAuDivider(m.text, a.name)) return;
@@ -60,6 +60,33 @@ export async function offerMainDivider(m) {
     await commitText(`${m.text.slice(0, first.start)}# ── 본편 ──\n\n${m.text.slice(first.start)}`, '본편 구분선 넣기 전');
     refreshStatus();
     toastr.success('본편 구분선을 넣었어요');
+}
+
+// 도구 → AU 채팅: on/off, the log's name and a one-line premise. Saved as it changes.
+export async function openAuSettings() {
+    const c = ctx(), m = getMeta(), a = auOf(m);
+    const $root = $(`
+      <div class="na_popup na_v2 na_au_pop">
+        <div class="na_v2_title"><b>AU 채팅</b><small>본편 아카이브를 들고 새 채팅에서 AU를 할 때 켜요</small></div>
+        <div class="na_v2_card na_au_box">
+          <label class="na_au_on"><span class="na_cp_txt"><span>이 채팅은 AU</span><small>요약이 본편 뒤에 AU 묶음으로 이어져요</small></span><input type="checkbox" class="na_toggle na_au_tg"></label>
+          <label><small>묶음 이름</small><input type="text" class="text_pole na_au_name" maxlength="12" placeholder="AU" spellcheck="false"></label>
+          <label><small>AU 설정 · 뭐가 다르고 뭘 기억하는지</small><textarea class="text_pole na_au_note" rows="3" placeholder="예: 현대 AU, 둘 다 대학생. 본편 기억은 그대로"></textarea></label>
+        </div>
+        <small class="na_v2_note">켜 두면 압축할 때(한 번에 압축 · 마법사 · 원문 뽑기) 지시문 맨 위에 AU 안내가 붙어요. STATE·OPEN은 AU 기준으로 다시 쓰고, 모델이 AU 표시를 빼먹으면 아카이브에 추가할 때 붙여요. 다음 채팅으로 이어가면 이 설정도 같이 가요.</small>
+      </div>`);
+    $root.find('.na_au_tg').prop('checked', a.on);
+    $root.find('.na_au_name').val(m.au?.name || '');
+    $root.find('.na_au_note').val(a.note);
+    const save = async () => {
+        m.au = { on: $root.find('.na_au_tg').prop('checked'), name: String($root.find('.na_au_name').val() || '').trim().replace(/\s+/g, ''), note: String($root.find('.na_au_note').val() || '').trim() };
+        await saveMeta();
+    };
+    $root.find('.na_au_tg').on('change', async function () { await save(); if (this.checked) await offerMainDivider(m); });
+    $root.find('.na_au_name, .na_au_note').on('change', save);
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: false, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await save();
+    refreshStatus();
 }
 
 // 을/를 after a number read in Korean (…3을, …4를)
@@ -94,7 +121,7 @@ export async function quickCompress() {
     const p = g.prompts.find(x => x.id === g.wizPrompt) || activePrompt(g);
     const prompt = compressPrompt(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text }, m);
     const au = auOf(m);
-    if (!await confirm('한 번에 압축', `<b>#${from} – #${to}</b> · 메시지 ${items.length}개 · 약 ${fmt(await countTokens(prompt))} 토큰<br>초안 모델(${esc(drLabel())})이 요약하면 <b>아카이브에 추가</b> 창이 떠요.<br><small>지시문: ${esc(p.name)}${au.on ? ` · AU 채팅(${esc(au.name)})` : ''}</small>`)) return;
+    if (!await confirm('한 번에 압축', `<b>#${from} – #${to}</b> · 메시지 ${items.length}개 · 약 ${fmt(await countTokens(prompt))} 토큰<br>초안 모델(${esc(drLabel())})이 요약하면 <b>아카이브에 추가</b> 창이 떠요.<br><small>지시문: ${esc(p.name)}</small>${au.on ? `<br><small>AU 켜짐 · 요약이 본편 뒤 <b>${esc(au.name)}</b> 묶음으로 이어져요</small>` : ''}`)) return;
     quickBusy = true;
     const toast = toastr.info(`#${from}–#${to} 요약하는 중… 창을 닫아도 돼요`, '한 번에 압축', { timeOut: 0, extendedTimeOut: 0, tapToDismiss: false });
     let out = null;
@@ -137,7 +164,7 @@ export async function openWizard() {
           </div>
           <label class="na_v2_card na_v2_switchrow"><span>숨긴 메시지 빼기</span><input type="checkbox" class="na_toggle na_wz_hidden"></label>
           <small class="na_v2_note na_wz_info"></small>
-          ${auOf(m).on ? `<small class="na_v2_note na_wz_austate">${svgA(ICO_A.check, 12, 3)} <b>AU 채팅</b> · 요약이 본편 뒤 <b>${esc(auOf(m).name)}</b> 묶음으로 이어져요 (압축 → 설정에서 바꿔요)</small>` : ''}
+          ${auOf(m).on ? `<small class="na_v2_note na_wz_austate">${svgA(ICO_A.check, 12, 3)} <b>AU 채팅</b> · 요약이 본편 뒤 <b>${esc(auOf(m).name)}</b> 묶음으로 이어져요 (도구 → AU 채팅)</small>` : ''}
         </div>
         <div class="na_wz2_pane" data-s="1">
           <select class="text_pole na_wz_prompt"></select>
