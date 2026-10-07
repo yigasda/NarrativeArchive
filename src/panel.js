@@ -19,7 +19,7 @@ import { openKeywordTest } from './keywords.js';
 import { knowledgeRows, openKnowledge } from './knowledge.js';
 import { openPeople } from './people.js';
 import { openPreview } from './preview.js';
-import { bindPromptSettings } from './prompts.js';
+import { auOf, bindPromptSettings } from './prompts.js';
 import { openQuotes } from './quotes.js';
 import { openReader } from './reader.js';
 import { routerCandidates, routerCfg, routerState, runRouter } from './router.js';
@@ -28,7 +28,7 @@ import { refreshStatus } from './status.js';
 import { ICO_A, setUiTheme, svgA, uiTheme } from './theme.js';
 import { AI_SYS_TRANSLATE, askTranslator, glossaryEntries, openGlossary } from './translate.js';
 import { chatLabel, confirm, copyText, countTokens, download, esc, escRe, fmt, nowStamp, timeLabel } from './util.js';
-import { openWizard } from './wizard.js';
+import { offerMainDivider, openWizard, quickCompress } from './wizard.js';
 import { openWorlds, worldBooks, worldIsOn } from './world.js';
 import { openXray } from './xray.js';
 
@@ -91,6 +91,7 @@ export function renderPanel() {
                 <button type="button" class="na_qbtn" id="na_q_read">${svgA(ICO_A.book, 16)}<span>읽기</span></button>
                 <button type="button" class="na_qbtn" id="na_q_ask">${svgA(ICO_A.chat, 16)}<span>질문</span></button>
                 <button type="button" class="na_qbtn" id="na_q_wizard">${svgA(ICO_A.wand, 16)}<span>압축</span></button>
+                <button type="button" class="na_qbtn" id="na_q_quick" title="초안 모델로 요약 → 아카이브에 추가">${svgA(ICO_A.bolt, 16)}<span>한 번에</span></button>
                 <button type="button" class="na_qbtn" id="na_q_preview">${svgA(ICO_A.eye, 16)}<span>미리보기</span></button>
               </div>
               <div class="na_ai_row3">
@@ -176,6 +177,7 @@ export function renderPanel() {
                 <div class="na_v2_card na_cp_hero">
                   <div id="na_since"></div>
                   <button type="button" class="na_cp_wiz" id="na_open_wizard">${svgA('M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M15 9h0M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5', 22)}<span><b>압축 마법사</b><small>뽑기 → 복사 → 붙여넣기 → 채점 → 추가</small></span>${svgA(ICO_A.right, 18, 2.2)}</button>
+                  <button type="button" class="na_cp_wiz na_cp_quick" id="na_quick_compress">${svgA(ICO_A.bolt, 22)}<span><b>한 번에 압축</b><small id="na_quick_sub">초안 모델로 요약 → 확인하고 추가</small></span>${svgA(ICO_A.right, 18, 2.2)}</button>
                 </div>
                 <div class="na_cp_tiles">
                   <button type="button" class="na_cp_tile" id="na_apply_hide"><span class="na_cp_ico">${svgA('M17.9 17.9A10 10 0 0 1 12 20c-7 0-10-8-10-8a18 18 0 0 1 5.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 10 8 10 8a18 18 0 0 1-2.2 3.2M1 1l22 22', 17)}</span><b>숨기기 다시 적용</b><small>경계선 앞만 숨기고 뒤는 보이게</small></button>
@@ -196,6 +198,14 @@ export function renderPanel() {
                       <small class="na_strip_info" id="na_strip_info"></small>
                     </div>
                   </div>
+                  <details class="na_cp_fold" id="na_au_fold">
+                    <summary class="na_cp_row"><span class="na_cp_txt"><span>AU 채팅</span><small id="na_au_sum">본편 기억을 들고 온 채팅이면 켜요</small></span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
+                    <div class="na_cp_sub na_au_box">
+                      <label class="na_au_on"><span class="na_cp_txt"><span>이 채팅은 AU</span><small>요약이 본편 뒤에 AU 묶음으로 이어져요. 압축 지시문 맨 위에 AU 안내가 붙어요</small></span><input type="checkbox" class="na_toggle" id="na_au_on"></label>
+                      <label><small>묶음 이름</small><input type="text" class="text_pole" id="na_au_name" maxlength="12" placeholder="AU" spellcheck="false"></label>
+                      <label><small>AU 설정 · 뭐가 다르고 뭘 기억하는지</small><textarea class="text_pole" id="na_au_note" rows="2" placeholder="예: 현대 AU, 둘 다 대학생. 본편 기억은 그대로"></textarea></label>
+                    </div>
+                  </details>
                   <details class="na_cp_fold" id="na_cmp_settings">
                     <summary class="na_cp_row"><span class="na_cp_txt"><span>압축 지시문</span><small id="na_plib_sum">이 기기의 실리태번 설정에만 저장돼요</small></span><span class="na_cp_more">편집</span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
                     <div class="na_cp_sub"><div class="na_plib" id="na_plib"></div></div>
@@ -550,6 +560,7 @@ export function bindPanel() {
     $('#na_q_read').on('click', needChat(openReader));
     $('#na_q_ask').on('click', needChat(openAsk));
     $('#na_q_wizard').on('click', needChat(openWizard));
+    $('#na_q_quick').on('click', needChat(quickCompress));
     $('#na_q_preview').on('click', needChat(openPreview));
     $('#na_next').on('click', '[data-act]', function () { nextAction(this.dataset.act); });
     // small menus
@@ -785,6 +796,7 @@ export function bindPanel() {
     });
     $('#na_open_extract').on('click', needChat(openExtract));
     $('#na_open_wizard').on('click', needChat(openWizard));
+    $('#na_quick_compress').on('click', needChat(quickCompress));
     $('#na_health').on('click', needChat(openHealth));
     $('#na_drift').on('click', needChat(openDrift));
     $('#na_know').on('click', needChat(openKnowledge));
@@ -840,6 +852,19 @@ export function bindPanel() {
         renderReplace();
         toastr.success(`${n}군데 바꿨어요`);
     }));
+    // AU chat: kept per chat, carried on with the archive
+    const auSave = async () => {
+        if (!hasChat()) return;
+        const m = getMeta();
+        m.au = { on: $('#na_au_on').prop('checked'), name: String($('#na_au_name').val() || '').trim().replace(/\s+/g, ''), note: String($('#na_au_note').val() || '').trim() };
+        await saveMeta(); syncPanel();
+    };
+    $('#na_au_on').on('change', async function () {
+        if (!hasChat()) { this.checked = false; return toastr.info('채팅을 먼저 여세요.'); }
+        await auSave();
+        if (this.checked) await offerMainDivider(getMeta());
+    });
+    $('#na_au_name, #na_au_note').on('change', auSave);
     $('#na_track').on('change', async function () {
         if (!hasChat()) return;
         const m = getMeta();
@@ -1077,6 +1102,14 @@ export function syncPanel() {
     rememberArchive();
     $('#na_boundary').val(m.boundary >= 0 ? m.boundary : '');
     $('#na_track').prop('checked', !!m.track);
+    {
+        const au = auOf(m);
+        $('#na_au_on').prop('checked', au.on);
+        if (!$('#na_au_name').is(':focus')) $('#na_au_name').val(m.au?.name || '');
+        if (!$('#na_au_note').is(':focus')) $('#na_au_note').val(au.note);
+        $('#na_au_sum').html(au.on ? `켜짐 · 본편 뒤 <b>${esc(au.name)}</b> 묶음으로 이어져요` : '본편 기억을 들고 온 채팅이면 켜요');
+        $('#na_quick_sub').text(draftReady() ? `초안 모델(${drLabel()})로 요약 → 확인하고 추가${au.on ? ` · ${au.name}` : ''}` : '⚙ 설정 → AI · 번역 → 초안 모델을 정하면 쓸 수 있어요');
+    }
     $('#na_boundary_row').toggleClass('na_disabled', !!m.track);
     {
         const n = guessEndNumber(m.text);
@@ -1248,6 +1281,7 @@ export async function openLauncher() {
         ]],
         ['압축', [
             ['wizard', ICO_A.wand, '압축 마법사', openWizard, true],
+            ['quick', ICO_A.bolt, '한 번에 압축', quickCompress, true],
             ['extract', ICO_A.scissors, '원문 뽑기', openExtract, true],
             ['append', ICO_A.fileplus, '아카이브에 추가', openAppend, true],
         ]],
