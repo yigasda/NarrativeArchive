@@ -11,7 +11,8 @@ export const BASIC_PROMPT = `You continue the long-term-memory summary (the arch
 Output exactly the following, in this order, with no greeting, explanation or commentary. Use the same language and format as the existing archive.
 1. The new stretch blocks
    - Header: \`## #start–#end — Title (date, place)\`, then \`PLOT:\`, then \`- \` bullets. If the existing archive puts a prefix before the numbers, follow it.
-   - Split blocks by scene or event.
+   - A section is a chapter, not a beat. Cut only where something turns: a relationship shifts, the situation changes, a secret comes out, a decision is made. Fold routine stretches and small beats into the section they belong to.
+   - Length follows weight: a turning point may get a short section of its own; a stretch where little changes shares one section. As a rough guide, one section covers 20–60 messages.
    - Titles read like a book's table of contents: short (two to six words), concrete and evocative — the scene's key object, place or act, or a defining line in quotation marks (copied exactly). A title names the scene; it does not summarize it. No semicolons, no "X does this; Y does that."
      ✓ The west room · The broken plank · "Now you owe me" · The oath, and the knife
      ✗ Ren crosses the bridge; Mara pulls him up · Confrontation over Ren's injury
@@ -100,7 +101,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
