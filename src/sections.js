@@ -289,6 +289,7 @@ export function renameKeys(m, from, to) {
     if (lm[from]) { lm[to] = lm[from]; delete lm[from]; m.linked = lm; }
     if (m.layers?.[from]) { m.layers[to] = m.layers[from]; delete m.layers[from]; }
     if (Array.isArray(m.collapsed)) m.collapsed = ren(m.collapsed);
+    if (Array.isArray(m.digests)) m.digests.forEach(d => { d.keys = ren(d.keys); });
 }
 
 // "[[## Y2 #48–#63 — …]]" → the section it names (exact heading, then same range)
