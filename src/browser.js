@@ -1,10 +1,10 @@
 // The archive tab: section cards (list and timeline).
 
 import { commitText, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
-import { layersOf, openLayers } from './fade.js';
 import { digestedKeys, openDigest } from './digest.js';
+import { fillFade, layersOf, openLayers, setFadeForce } from './fade.js';
 import { openMerge, openRetitle, openSectionFix } from './retitle.js';
-import { lastBuild } from './inject.js';
+import { applyInjection, lastBuild } from './inject.js';
 import { openKeywords } from './keywords.js';
 import { showArchiveView } from './panel.js';
 import { mdInline } from './reader.js';
@@ -32,9 +32,11 @@ export function mountSectionBrowser($host) {
           <div class="na_br_view" role="group" aria-label="보기">
             <button type="button" data-v="list" title="카드 목록" aria-label="카드 목록">${svgA(ICO_A.list, 16)}</button>
             <button type="button" data-v="tl" title="타임라인으로 보기" aria-label="타임라인">${svgA(ICO_A.tl, 16)}</button>
+            <button type="button" data-v="sel" class="na_sel_toggle" title="여러 섹션 고르기" aria-label="여러 섹션 고르기">${svgA('<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12l3 3 5-6"/>', 16)}</button>
           </div>
           <button type="button" class="na_tlb_sq na_tlb_list" title="목록으로 보기" aria-label="목록으로 보기">${svgA(ICO_A.list, 18)}</button>
           <button type="button" class="na_tlb_sq na_tlb_raw" title="원문 편집" aria-label="원문 편집"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>
+          <button type="button" class="na_tlb_sq na_sel_toggle" title="여러 섹션 고르기" aria-label="여러 섹션 고르기">${svgA('<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12l3 3 5-6"/>', 18)}</button>
           <button type="button" class="na_tlb_sq na_tlb_more" title="더 보기" aria-label="더 보기"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
         </div>
         <div class="na_tlb_menu">
@@ -49,13 +51,28 @@ export function mountSectionBrowser($host) {
         <div class="na_tl_legend" aria-hidden="true"><span><i class="st-long"></i>원문</span><span><i class="st-short"></i>짧게</span><span><i class="st-line"></i>한 줄</span><span><i class="st-key"></i>키워드 대기</span><span><i class="st-off"></i>꺼짐</span></div>
         <div class="na_search_info"></div>
         <div class="na_list"></div>
+        <div class="na_selbar" hidden>
+          <div class="na_selbar_top"><b class="na_sel_n"></b><button type="button" class="na_linkbtn na_sel_all">모두</button><button type="button" class="na_linkbtn na_sel_none">비우기</button><span class="na_spacer"></span><button type="button" class="na_linkbtn na_sel_close">닫기</button></div>
+          <div class="na_selbar_acts">
+            <select class="text_pole na_sel_ver" title="넣을 버전"><option value="">넣을 버전…</option><option value="long">원문으로</option><option value="short">짧게</option><option value="line">한 줄</option><option value="auto">자동 (망각 곡선)</option></select>
+            <button type="button" class="na_v2_pillbtn" data-act="fill">짧게·한 줄 만들기</button>
+            <button type="button" class="na_v2_pillbtn" data-act="digest">다이제스트</button>
+            <button type="button" class="na_v2_pillbtn" data-act="merge">합치기</button>
+            <button type="button" class="na_v2_pillbtn" data-act="retitle">제목 다시 짓기</button>
+            <button type="button" class="na_v2_pillbtn" data-act="mute">주입 끄기</button>
+            <button type="button" class="na_v2_pillbtn" data-act="unmute">주입 켜기</button>
+            <button type="button" class="na_v2_pillbtn" data-act="pin">고정</button>
+            <button type="button" class="na_v2_pillbtn" data-act="unpin">고정 풀기</button>
+            <button type="button" class="na_v2_pillbtn na_danger" data-act="delete">삭제</button>
+          </div>
+        </div>
       </div>`);
     $host.empty().append($root);
     // find & replace and the heading check sit as two pills under the search
     $root.find('.na_arch_tools').append($('#na_replace'), $('#na_hcheck'));
     // list ↔ timeline switch: a small icon at the end of the "섹션 카드 / 원문 편집" tabs (the list mockup has no room for it)
     const $view = $root.find('.na_br_view');
-    $view.find('button').on('click', function () { setLayout(this.dataset.v === 'tl'); });
+    $view.find('button').not('.na_sel_toggle').on('click', function () { setLayout(this.dataset.v === 'tl'); });
     const $seg = $host.closest('.na_tab_pane').find('.na_seg');
     if ($seg.length) $seg.append($view);
     // list mode: "찾아 바꾸기" sits inside the search field and opens its panel under it
@@ -71,7 +88,7 @@ export function mountSectionBrowser($host) {
     $root.on('click', '.na_hc_status', () => { const d = document.getElementById('na_hcheck'); if (d) d.open = !d.open; });
     const syncView = () => {
         const tl = $root.hasClass('na_tl');
-        $view.find('button').each(function () { $(this).toggleClass('on', (this.dataset.v === 'tl') === tl); });
+        $view.find('button').not('.na_sel_toggle').each(function () { $(this).toggleClass('on', (this.dataset.v === 'tl') === tl); });
         $root.find('.na_search').attr('placeholder', tl ? '찾기' : '이름, 장소, 대사로 찾기');
         // the timeline has its own pencil button, so the "섹션 카드 / 원문 편집" tabs step aside
         $root.closest('.na_tab_pane').toggleClass('na_tl_on', tl);
@@ -95,6 +112,65 @@ export function mountSectionBrowser($host) {
     const collapsedSet = () => new Set(Array.isArray(getMeta()?.collapsed) ? getMeta().collapsed : []);
     const setCollapsed = set => { const m = getMeta(); if (!m) return; m.collapsed = [...set]; saveMeta(); };
     const openCards = new Set();
+    // 여러 섹션 고르기: cards get a box, a bar at the bottom acts on every picked section at once
+    let selecting = false;
+    const selected = new Set();
+    const pickedSecs = () => parseSections(getMeta().text).filter(x => !x.group && selected.has(sectionKey(x)));
+    const syncSel = () => {
+        const n = pickedSecs().length;
+        $root.find('.na_selbar').prop('hidden', !selecting);
+        $root.find('.na_sel_n').text(n ? `${n}개 골랐어요` : '섹션을 눌러 고르세요');
+        $root.find('.na_selbar_acts button, .na_sel_ver').prop('disabled', !n);
+        $root.find('.na_sel_toggle').add($view.find('.na_sel_toggle')).toggleClass('na_sel_active', selecting);
+    };
+    const setSelecting = on => { selecting = on; selected.clear(); $root.toggleClass('na_selecting', on); render(true); syncSel(); };
+    // the list's toggle lives in the tab row (moved out of $root), the timeline's in its toolbar
+    $root.on('click', '.na_sel_toggle', () => setSelecting(!selecting));
+    $view.on('click', '.na_sel_toggle', () => setSelecting(!selecting));
+    $root.on('click', '.na_sel_close', () => setSelecting(false));
+    $root.on('click', '.na_sel_all', () => { parseSections(getMeta().text).forEach(x => { if (!x.group && x.title !== '(머리말)') selected.add(sectionKey(x)); }); render(true); syncSel(); });
+    $root.on('click', '.na_sel_none', () => { selected.clear(); render(true); syncSel(); });
+    $root.on('change', '.na_sel_ver', async function () {
+        const v = this.value; this.value = '';
+        const keys = pickedSecs().map(sectionKey);
+        if (!v || !keys.length) return;
+        await setFadeForce(keys, v);
+        toastr.success(`${keys.length}개를 ${{ long: '원문으로', short: '짧게', line: '한 줄로', auto: '자동으로' }[v]} 넣어요${v === 'short' || v === 'line' ? ' · 버전이 없는 섹션은 만들 때까지 원문이에요' : ''}`);
+    });
+    $root.on('click', '.na_selbar_acts button', async function () {
+        const act = this.dataset.act, secs = pickedSecs(), keys = secs.map(sectionKey);
+        if (!secs.length) return;
+        const m = getMeta();
+        if (act === 'fill') return fillFade($(this), keys);
+        if (act === 'digest') { await openDigest(null, keys); return render(true); }
+        if (act === 'merge') { await openMerge(null, keys); return render(true); }
+        if (act === 'retitle') { await openRetitle(null, keys); return render(true); }
+        if (act === 'mute' || act === 'unmute') {
+            const set = mutedSet(m); keys.forEach(k => (act === 'mute' ? set.add(k) : set.delete(k))); m.muted = [...set];
+        } else if (act === 'pin' || act === 'unpin') {
+            const set = pinnedSet(m); keys.forEach(k => (act === 'pin' ? set.add(k) : set.delete(k))); m.pinned = [...set];
+        } else if (act === 'delete') {
+            if (!await confirm('섹션 삭제', `고른 섹션 ${secs.length}개를 지울까요?<br><small>${secs.slice(0, 6).map(x => esc(x.title)).join('<br>')}${secs.length > 6 ? `<br>… 외 ${secs.length - 6}개` : ''}</small><br>지우기 전 상태는 도구 탭 복구 지점에 남아요.`)) return;
+            let next = m.text;
+            for (const x of [...secs].sort((a, b) => b.start - a.start)) {
+                const before = next.slice(0, x.start), after = next.slice(x.end);
+                // a "---" rule that closed the last one stays (it belongs before STATE)
+                const rule = (next.slice(x.start, x.end).match(/\n-{3,}[ \t]*\s*$/) || [''])[0];
+                next = after.trim() ? before + rule.replace(/^\n/, '') + after : trimEnd(before) + (before.trim() ? '\n' : '');
+            }
+            const drop = new Set(keys);
+            m.muted = (m.muted || []).filter(k => !drop.has(k));
+            m.pinned = (m.pinned || []).filter(k => !drop.has(k));
+            const lm = { ...linkedMap(m) }; keys.forEach(k => delete lm[k]); m.linked = lm;
+            if (m.layers) keys.forEach(k => delete m.layers[k]);
+            selected.clear();
+            await commitText(next, `섹션 ${secs.length}개 삭제 전`);
+            toastr.success(`섹션 ${secs.length}개를 지웠어요`);
+            render(true); return syncSel();
+        }
+        await saveMeta(); applyInjection(); render(true); syncSel();
+        toastr.success(`${keys.length}개에 적용했어요`);
+    });
     let pendingEdit = -1;
     let renderId = 0;
 
@@ -285,7 +361,17 @@ export function mountSectionBrowser($host) {
                     <div class="na_card_body" hidden></div>
                     <div class="na_group_items" ${isOpen ? '' : 'hidden'}></div>
                   </div>`);
-                $g.find('> .na_group_head').on('click', () => {
+                if (selecting) $g.find('> .na_group_head').prepend('<input type="checkbox" class="na_sel_cb na_sel_gcb" tabindex="-1" aria-label="이 묶음 모두 고르기">');
+                $g.find('> .na_group_head').on('click', e => {
+                    if (selecting) {
+                        if ($(e.target).closest('.na_sw, .na_icon').length) return;
+                        // every card under this heading, down to the next heading of the same level
+                        const kids = [];
+                        for (let j = idx + 1; j < sections.length && sections[j].level > s.level; j++) if (!sections[j].group) kids.push(sectionKey(sections[j]));
+                        const all = kids.length && kids.every(k => selected.has(k));
+                        kids.forEach(k => (all ? selected.delete(k) : selected.add(k)));
+                        render(true); return syncSel();
+                    }
                     if (q) return;
                     const set = collapsedSet();
                     set.has(key) ? set.delete(key) : set.add(key);
@@ -406,7 +492,17 @@ export function mountSectionBrowser($host) {
                   </div>
                 </div>
               </div>`);
-            $card.find('.na_card_head').on('click', () => {
+            if (selecting) {
+                $card.addClass('na_selcard').toggleClass('na_sel_on', selected.has(key));
+                $card.find('.na_card_head').first().prepend(`<input type="checkbox" class="na_sel_cb" tabindex="-1" ${selected.has(key) ? 'checked' : ''} aria-label="고르기">`);
+            }
+            $card.find('.na_card_head').on('click', e => {
+                if (selecting) {
+                    if ($(e.target).closest('.na_sw').length) return;
+                    selected.has(key) ? selected.delete(key) : selected.add(key);
+                    $card.toggleClass('na_sel_on', selected.has(key)).find('.na_sel_cb').first().prop('checked', selected.has(key));
+                    return syncSel();
+                }
                 const $b = $card.find('.na_card_body').first();
                 $card.toggleClass('open', !!$b.prop('hidden'));
                 const willOpen = $b.prop('hidden');

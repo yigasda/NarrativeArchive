@@ -95,7 +95,7 @@ const spanLabel = (text, d) => {
 };
 
 // 다이제스트: the list (switch, view, edit, remake, delete) and making a new one from picked sections
-export async function openDigest(group = null) {
+export async function openDigest(group = null, keys = null) {
     const c = ctx(), m = getMeta();
     m.digests = digestsOf(m);
     // groups that hold numbered sections
@@ -128,8 +128,13 @@ export async function openDigest(group = null) {
           <button type="button" class="na_v2_btn primary wide na_dg_save">저장하고 켜기</button>
         </div>
       </div>`);
-    $root.find('.na_dg_group').val(String(gi));
+    // picked in the archive tab: open on their group with them ticked
     let picked = new Set(), draft = null; // draft: { keys, text }
+    if (keys?.length) {
+        const g = gs.findIndex(x => x.secs.some(y => sectionKey(y) === keys[0]));
+        if (g >= 0) { gi = g; picked = new Set(gs[g].secs.map((y, i) => (keys.includes(sectionKey(y)) ? i : -1)).filter(i => i >= 0)); }
+    }
+    $root.find('.na_dg_group').val(String(gi));
     const secsNow = () => gs[gi]?.secs || [];
     const tokOf = x => Math.ceil(m.text.slice(x.start, x.end).length / 3.6);
     const contiguous = () => { const a = [...picked].sort((x, y) => x - y); return a.every((v, i) => !i || v === a[i - 1] + 1); };

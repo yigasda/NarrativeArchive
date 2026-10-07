@@ -3706,3 +3706,17 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 .na_apf_foot { display: flex; align-items: center; gap: 10px; font-size: 0.86em; }
 .na_apf_foot label { flex: 1; min-width: 0; margin: 0; }
 .na_apf_foot small { color: var(--na-dim); }
+
+/* 여러 섹션 고르기 */
+.na_sel_toggle.na_sel_active, #na_settings .na_seg .na_br_view button.na_sel_toggle.na_sel_active { color: var(--na-accent) !important; background: var(--na-accent-soft, var(--na-soft)) !important; }
+.na_sel_cb { flex: none; width: 18px; height: 18px; margin: 0 10px 0 0 !important; pointer-events: none; accent-color: var(--na-accent); }
+.na_selecting .na_card_head, .na_selecting .na_group_head { cursor: pointer; }
+.na_selecting .na_card.na_sel_on { box-shadow: inset 3px 0 0 var(--na-accent); background: var(--na-accent-soft, var(--na-soft)); }
+.na_selbar { position: sticky; bottom: 0; z-index: 5; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--na-line); border-radius: 16px; background: var(--na-card); box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.12); }
+.na_selbar_top { display: flex; align-items: center; gap: 12px; font-size: 0.9em; }
+.na_selbar_acts { display: flex; gap: 6px; overflow-x: auto; overscroll-behavior: contain; padding-bottom: 2px; scrollbar-width: none; }
+.na_selbar_acts::-webkit-scrollbar { display: none; }
+.na_selbar_acts > * { flex: none; white-space: nowrap; }
+.na_selbar_acts .na_sel_ver { width: auto; margin: 0; height: 32px; padding: 0 8px; font-size: 0.86em; border-radius: 999px; }
+.na_selbar_acts button:disabled, .na_selbar_acts select:disabled { opacity: 0.45; }
+.na_selbar_acts .na_danger { color: var(--na-danger, #b3261e); }
