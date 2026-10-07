@@ -9,13 +9,14 @@ import { esc, fmt } from './util.js';
 export const PICK_CHUNK_TOK = 6000;
 export const estTok = t => Math.ceil(String(t).length / 3.6);
 
-export function mountSectionPicker($host, { m, title, doneKeys, doneLabel = '읽음', goLabel, extraFoot = '', onGo }) {
+// filter: which sections can be picked · initial: what is ticked when it first opens · newLabel: the "not done yet" chip
+export function mountSectionPicker($host, { m, title, doneKeys, doneLabel = '읽음', goLabel, extraFoot = '', onGo, filter = null, initial = null, newLabel = '안 읽은 것' }) {
     const $p = $(`
       <div class="na_sp" hidden>
         <div class="na_sp_head">
           <b>${esc(title)}</b>
           <span class="na_sp_quick">
-            <button type="button" class="na_pchip" data-sel="new">안 읽은 것</button>
+            <button type="button" class="na_pchip" data-sel="new">${esc(newLabel)}</button>
             <button type="button" class="na_pchip" data-sel="all">전체</button>
             <button type="button" class="na_pchip" data-sel="none">비우기</button>
           </span>
@@ -28,7 +29,7 @@ export function mountSectionPicker($host, { m, title, doneKeys, doneLabel = '읽
         </div>
       </div>`);
     $host.append($p);
-    const allSecs = () => parseSections(m.text).filter(x => !x.group && x.title !== '(머리말)');
+    const allSecs = () => parseSections(m.text).filter(x => !x.group && x.title !== '(머리말)' && (!filter || filter(x)));
     let chosen = null;
     const chunk = secs => {
         const out = [];
@@ -64,6 +65,7 @@ export function mountSectionPicker($host, { m, title, doneKeys, doneLabel = '읽
             if (x.title === '(머리말)') continue;
             if (x.group) { flush(); grp = { label: groupLabel(x.title), items: [] }; continue; }
             if (x.level === 1 && grp.label) { flush(); grp = { label: '', items: [] }; }
+            if (filter && !filter(x)) continue;
             grp.items.push(x);
         }
         flush();
@@ -106,7 +108,7 @@ export function mountSectionPicker($host, { m, title, doneKeys, doneLabel = '읽
         $el: $p,
         toggle(open = $p.prop('hidden')) {
             $p.prop('hidden', !open);
-            if (open) { if (!chosen) select(doneKeys().size ? 'new' : 'all'); else draw(); }
+            if (open) { if (!chosen && initial) { chosen = new Set(initial()); draw(); } else if (!chosen) select(doneKeys().size ? 'new' : 'all'); else draw(); }
             return open;
         },
         text: part => part.map(x => trimEnd(m.text.slice(x.start, x.end))).join('\n\n'),
