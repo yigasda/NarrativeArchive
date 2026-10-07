@@ -215,7 +215,7 @@ export async function openRetitle(group = null) {
 
 // ---- 고쳐 달라고 하기: one section, a request, the raw messages when we can find them, a diff to apply
 
-async function rawFor(m, s) {
+export async function rawFor(m, s) {
     const r = sourceRange(m, s.title);
     if (!r) return { raw: '', why: '제목에 번호 범위가 없어요' };
     if (!r.ok) return { raw: '', why: r.why };
