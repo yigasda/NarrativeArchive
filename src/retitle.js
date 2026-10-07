@@ -1,7 +1,7 @@
 // Asking the draft model to rework archive sections: new titles for many sections at once,
 // and one section rewritten the way the user asks (with its raw messages when they can be found).
 
-import { askDraft, drLabel, draftReady, draftSettings, stripThink } from './ai.js';
+import { askCompress, askDraft, drLabel, draftReady, draftSettings, stripThink } from './ai.js';
 import { fetchOtherChat } from './chats.js';
 import { commitText, ctx, getMeta, globalSettings, saveMeta } from './core.js';
 import { lineDiff, renderDiff } from './diff.js';
@@ -434,8 +434,8 @@ export async function openMerge(group = null) {
         const ok = picked.size >= need && contiguous() && tok <= MERGE_MAX_TOK && (!rw || !!rawSrc?.raw);
         $root.find('.na_mg_rawinfo').text(!rw ? '순서나 번호가 틀렸을 때 · 고른 범위의 원문으로 처음부터 다시 써요'
             : !picked.size ? '다시 쓸 섹션을 골라 주세요' : !rawSrc ? '원문 찾는 중…'
-            : rawSrc.raw ? `원문 ${rawSrc.label} · ${rawSrc.from} · 메시지 ${rawSrc.n}개 · 약 ${fmt(rawSrc.tok)} 토큰` : `원문을 못 찾았어요 · ${rawSrc.why}`);
-        $root.find('.na_mg_rawrow').toggleClass('warn', rw && !!rawSrc && !rawSrc.raw);
+            : rawSrc.raw ? `원문 ${rawSrc.label} · ${rawSrc.from} · 메시지 ${rawSrc.n}개 · 약 ${fmt(rawSrc.tok)} 토큰${rawSrc.tok > 30000 ? ' · 길어요: 섹션을 나눠 골라 여러 번 하면 더 정확해요' : ''}` : `원문을 못 찾았어요 · ${rawSrc.why}`);
+        $root.find('.na_mg_rawrow').toggleClass('warn', rw && !!rawSrc && (!rawSrc.raw || rawSrc.tok > 30000));
         $root.find('.na_mg_rawview').prop('hidden', !(rw && rawSrc?.raw));
         $root.find('.na_mg_go').attr('title', rw ? '초안 모델로 원문 보고 다시 쓰기' : '초안 모델로 합치기');
         if (rw && picked.size && contiguous()) loadRaw();
@@ -507,7 +507,7 @@ Output only the section blocks. No "---", no STATE, no OPEN.
                 const body = fillPrompt(activePrompt(g).text, { raw: rawSrc.raw, from: String(r.from), to: String(r.to), last_section: prev ? `(Format sample only. Already in the archive — do not output it.)\n${sectionBody(m.text.slice(prev.start, prev.end))}` : '(없음)', state: '(Not needed here — do not output STATE or OPEN.)', archive: m.text });
                 // the user's correction goes last, where it is read as the final word
                 const tail = req ? `\n\n[USER'S CORRECTION — the user knows this story; this overrides any reading of the raw log that disagrees]\n${req}` : '';
-                out = await askDraft(head + body + tail, { maxTokens: Math.min(cap, Math.max(8000, est * 2 + 4000)) });
+                out = await askCompress(head + body + tail);
             } else out = await askDraft(`SECTIONS:\n${src}${req ? `\n\nREQUEST:\n${req}` : ''}`, { system: AI_SYS_MERGE, maxTokens: Math.min(cap, Math.max(4000, Math.ceil(est * 1.5) + 2000)), effort: 'low' });
             out = stripThink(out).replace(/^```[a-z]*\n?|```\s*$/g, '').trim().split(/\n-{3,}\s*\n/)[0].replace(/\n# (STATE|OPEN)\b[\s\S]*$/, '').trim();
             const parts = parseSections(out).filter(x => !x.group && RANGE_HEAD.test(x.title));

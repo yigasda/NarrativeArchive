@@ -28,8 +28,9 @@ export const apiFormat = t => t.fmt === 'anthropic' || t.fmt === 'openai' ? t.fm
 
 // effort: 'low' | 'medium' | 'high' — how hard a thinking model may think. The connection's own setting wins over the job's.
 // Sent as output_config.effort (Anthropic format) or reasoning_effort (OpenAI format); Vertex ignores it.
-export async function callConn(t, system, prompt, maxTokens, effort = '') {
-    const e = t.effort || effort;
+// force: the job's effort wins over the connection's (compression asks for its own level)
+export async function callConn(t, system, prompt, maxTokens, effort = '', force = false) {
+    const e = force && effort ? effort : (t.effort || effort);
     if (t.mode === 'vertex') return stripThink(await callVertex(t, system, prompt, maxTokens));
     return stripThink(apiFormat(t) === 'anthropic' ? await callAnthropic(t, system, prompt, maxTokens, e) : await callOpenAICompat(t, system, prompt, maxTokens, e));
 }
@@ -245,13 +246,20 @@ export async function callVertex({ vxJson, vxLocation, vxModel }, system, prompt
 // the draft model writes text that may go into the archive (compression drafts); 'same' = not set
 export const draftSettings = () => connSettings('dr');
 export const draftReady = () => ['custom', 'vertex'].includes(draftSettings().mode);
-export async function askDraft(prompt, { system = '', maxTokens = 0, effort = '' } = {}) {
+export async function askDraft(prompt, { system = '', maxTokens = 0, effort = '', force = false } = {}) {
     const t = draftSettings();
     if (!draftReady()) throw new Error('초안 모델이 없어요. ⚙ 설정 → AI · 번역 → 초안 모델에서 정해 주세요.');
-    const out = await callConn(t, system, prompt, Math.max(256, Number(maxTokens) || Number(t.max) || 16000), effort);
+    const out = await callConn(t, system, prompt, Math.max(256, Number(maxTokens) || Number(t.max) || 16000), effort, force);
     if (!out) throw new Error('초안 모델이 빈 답을 돌려줬어요');
     return out;
 }
+// Compression reads a long raw log and ties causes together: it gets its own thinking level (default high) and
+// room for that thinking (32,000 tokens, or the draft limit if that is larger). 'conn' = the connection's own setting.
+export const compressEffort = () => { const v = draftSettings().cEffort; return v === undefined || v === null || v === '' ? 'high' : v; };
+export const askCompress = (prompt, { system = '' } = {}) => {
+    const e = compressEffort(), t = draftSettings();
+    return askDraft(prompt, { system, maxTokens: Math.max(32000, Number(t.max) || 0), effort: e === 'conn' ? '' : e, force: e !== 'conn' });
+};
 export const drLabel = () => { const t = draftSettings(); return t.mode === 'custom' ? (t.model || '커스텀 API') : t.mode === 'vertex' ? (t.vxModel || 'Vertex') : '없음'; };
 
 export const trLabel = () => {
