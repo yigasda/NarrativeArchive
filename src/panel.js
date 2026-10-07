@@ -91,7 +91,6 @@ export function renderPanel() {
                 <button type="button" class="na_qbtn" id="na_q_read">${svgA(ICO_A.book, 16)}<span>읽기</span></button>
                 <button type="button" class="na_qbtn" id="na_q_ask">${svgA(ICO_A.chat, 16)}<span>질문</span></button>
                 <button type="button" class="na_qbtn" id="na_q_wizard">${svgA(ICO_A.wand, 16)}<span>압축</span></button>
-                <button type="button" class="na_qbtn" id="na_q_quick" title="초안 모델로 요약 → 아카이브에 추가">${svgA(ICO_A.bolt, 16)}<span>한 번에</span></button>
                 <button type="button" class="na_qbtn" id="na_q_preview">${svgA(ICO_A.eye, 16)}<span>미리보기</span></button>
               </div>
               <div class="na_ai_row3">
@@ -552,8 +551,8 @@ export function bindPanel() {
     // home quick actions
     $('#na_q_read').on('click', needChat(openReader));
     $('#na_q_ask').on('click', needChat(openAsk));
-    $('#na_q_wizard').on('click', needChat(openWizard));
-    $('#na_q_quick').on('click', needChat(quickCompress));
+    // 홈의 압축: 초안 모델이 있으면 한 번에 압축, 없으면 압축 마법사
+    $('#na_q_wizard').on('click', needChat(() => draftReady() ? quickCompress() : openWizard()));
     $('#na_q_preview').on('click', needChat(openPreview));
     $('#na_next').on('click', '[data-act]', function () { nextAction(this.dataset.act); });
     // small menus
