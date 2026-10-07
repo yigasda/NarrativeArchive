@@ -28,7 +28,7 @@ import { refreshStatus } from './status.js';
 import { ICO_A, setUiTheme, svgA, uiTheme } from './theme.js';
 import { AI_SYS_TRANSLATE, askTranslator, glossaryEntries, openGlossary } from './translate.js';
 import { chatLabel, confirm, copyText, countTokens, download, esc, escRe, fmt, nowStamp, timeLabel } from './util.js';
-import { offerMainDivider, openWizard, quickCompress } from './wizard.js';
+import { openAuSettings, openWizard, quickCompress } from './wizard.js';
 import { openWorlds, worldBooks, worldIsOn } from './world.js';
 import { openXray } from './xray.js';
 
@@ -198,14 +198,6 @@ export function renderPanel() {
                       <small class="na_strip_info" id="na_strip_info"></small>
                     </div>
                   </div>
-                  <details class="na_cp_fold" id="na_au_fold">
-                    <summary class="na_cp_row"><span class="na_cp_txt"><span>AU 채팅</span><small id="na_au_sum">본편 기억을 들고 온 채팅이면 켜요</small></span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
-                    <div class="na_cp_sub na_au_box">
-                      <label class="na_au_on"><span class="na_cp_txt"><span>이 채팅은 AU</span><small>요약이 본편 뒤에 AU 묶음으로 이어져요. 압축 지시문 맨 위에 AU 안내가 붙어요</small></span><input type="checkbox" class="na_toggle" id="na_au_on"></label>
-                      <label><small>묶음 이름</small><input type="text" class="text_pole" id="na_au_name" maxlength="12" placeholder="AU" spellcheck="false"></label>
-                      <label><small>AU 설정 · 뭐가 다르고 뭘 기억하는지</small><textarea class="text_pole" id="na_au_note" rows="2" placeholder="예: 현대 AU, 둘 다 대학생. 본편 기억은 그대로"></textarea></label>
-                    </div>
-                  </details>
                   <details class="na_cp_fold" id="na_cmp_settings">
                     <summary class="na_cp_row"><span class="na_cp_txt"><span>압축 지시문</span><small id="na_plib_sum">이 기기의 실리태번 설정에만 저장돼요</small></span><span class="na_cp_more">편집</span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
                     <div class="na_cp_sub"><div class="na_plib" id="na_plib"></div></div>
@@ -222,6 +214,7 @@ export function renderPanel() {
               <div class="na_block">
                 <div class="na_kw_label">이야기</div>
                 <button type="button" class="na_toolrow" id="na_worlds"><i class="fa-solid fa-earth-asia"></i><span><b>세계관 공유</b><small id="na_worlds_sub">여러 채팅이 같이 쓰는 설정 · 고치면 모든 채팅에 반영</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" class="na_toolrow" id="na_au"><i class="fa-solid fa-shuffle"></i><span><b>AU 채팅</b><small id="na_au_sub">본편 기억을 들고 온 채팅이면 켜요</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_people"><i class="fa-solid fa-address-book"></i><span><b>인물 도감 · 관계도</b><small>인물마다 얼굴·상태·관계 · 함께 나온 섹션으로 잇는 관계도</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_story_cal"><i class="fa-solid fa-calendar-days"></i><span><b>이야기 달력</b><small>섹션을 날짜 순서로 · 거꾸로 가는 날짜 찾기</small></span><i class="fa-solid fa-chevron-right"></i></button>
               </div>
@@ -573,6 +566,7 @@ export function bindPanel() {
     $('#na_story_cal').on('click', needChat(openCalendar));
     $('#na_people').on('click', needChat(openPeople));
     $('#na_worlds').on('click', needChat(openWorlds));
+    $('#na_au').on('click', needChat(async () => { await openAuSettings(); syncPanel(); }));
 
     // --- editor
     const $ed = $('#na_editor');
@@ -852,19 +846,6 @@ export function bindPanel() {
         renderReplace();
         toastr.success(`${n}군데 바꿨어요`);
     }));
-    // AU chat: kept per chat, carried on with the archive
-    const auSave = async () => {
-        if (!hasChat()) return;
-        const m = getMeta();
-        m.au = { on: $('#na_au_on').prop('checked'), name: String($('#na_au_name').val() || '').trim().replace(/\s+/g, ''), note: String($('#na_au_note').val() || '').trim() };
-        await saveMeta(); syncPanel();
-    };
-    $('#na_au_on').on('change', async function () {
-        if (!hasChat()) { this.checked = false; return toastr.info('채팅을 먼저 여세요.'); }
-        await auSave();
-        if (this.checked) await offerMainDivider(getMeta());
-    });
-    $('#na_au_name, #na_au_note').on('change', auSave);
     $('#na_track').on('change', async function () {
         if (!hasChat()) return;
         const m = getMeta();
@@ -1104,10 +1085,7 @@ export function syncPanel() {
     $('#na_track').prop('checked', !!m.track);
     {
         const au = auOf(m);
-        $('#na_au_on').prop('checked', au.on);
-        if (!$('#na_au_name').is(':focus')) $('#na_au_name').val(m.au?.name || '');
-        if (!$('#na_au_note').is(':focus')) $('#na_au_note').val(au.note);
-        $('#na_au_sum').html(au.on ? `켜짐 · 본편 뒤 <b>${esc(au.name)}</b> 묶음으로 이어져요` : '본편 기억을 들고 온 채팅이면 켜요');
+        $('#na_au_sub').text(au.on ? `켜짐 · 요약이 본편 뒤 ${au.name} 묶음으로 이어져요` : '본편 기억을 들고 온 채팅이면 켜요');
         $('#na_quick_sub').text(draftReady() ? `초안 모델(${drLabel()})로 요약 → 확인하고 추가${au.on ? ` · ${au.name}` : ''}` : '⚙ 설정 → AI · 번역 → 초안 모델을 정하면 쓸 수 있어요');
     }
     $('#na_boundary_row').toggleClass('na_disabled', !!m.track);
