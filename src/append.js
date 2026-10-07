@@ -5,9 +5,11 @@ import { commitText, ctx, getMeta, sectionChanges } from './core.js';
 import { lineDiff, renderDiff } from './diff.js';
 import { guessEndNumber } from './extract.js';
 import { applyHide } from './hide.js';
+import { driftHtml } from './drift.js';
 import { nameNearMisses } from './keywords.js';
 import { auDivider, auFix, auOf } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, tailBlocks, trimEnd } from './sections.js';
+import { openSource } from './source.js';
 import { SVG_B, svgB } from './theme.js';
 import { translateButton } from './translate.js';
 import { confirm, countTokens, esc, fmt } from './util.js';
@@ -248,6 +250,7 @@ export async function openAppend(prefill = {}) {
           <div class="na_check na_check_warn na_rw" hidden></div>
           <div class="na_check na_check_warn na_names" hidden></div>
           <div class="na_check na_cut" hidden></div>
+          <div class="na_ai_box na_grade_out" hidden></div>
           <button type="button" class="na_cp_row na_ai_conflict" title="기존 아카이브와 어긋나는 이름·날짜·사실·해결된 떡밥을 AI가 찾아요">${svgB(SVG_B.star, 14)} AI로 충돌 검사 · 날짜·사실·해결된 떡밥</button>
           <div class="na_ai_box na_conflict_out" hidden></div>
         </div>
@@ -414,6 +417,15 @@ export async function openAppend(prefill = {}) {
         $root.find('.na_conflict_out').prop('hidden', false).removeClass('na_stale').toggleClass('na_ai_ok', none)
             .html(none ? '<i class="fa-solid fa-circle-check"></i> AI가 찾은 충돌 없음' : `<div class="na_ai_box_head"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 충돌 검사 <span class="na_dim">· 참고용이에요</span></div>${aiHtml(out)}`);
     });
+    // 한 번에 압축 with 채점: the grader's verdict on the summary, message numbers open the raw log
+    if (pre.grade) {
+        const ok = /^\s*문제 없음\.?\s*$/.test(pre.grade);
+        $root.find('.na_grade_out').prop('hidden', false).toggleClass('na_ai_ok', ok)
+            .html(pre.gradeError ? `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 채점 못 했어요</div>${esc(pre.grade)}`
+                : ok ? '<i class="fa-solid fa-circle-check"></i> 채점: 원문과 잘 맞아요'
+                : `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 채점 <span class="na_dim">· 참고용 · 고치려면 위 글을 직접 고치세요</span></div>${driftHtml(pre.grade, m)}`);
+        $root.on('click', '.na_grade_out .na_cite_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
+    }
     if (pre.text) {
         if (Number.isFinite(pre.end)) { $end.val(pre.end); endTouched = true; hideHint(); }
         $ta.val(pre.text).trigger('input');

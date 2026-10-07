@@ -3,11 +3,12 @@
 
 import { askDraft, drLabel, draftReady, draftSettings, stripThink } from './ai.js';
 import { fetchOtherChat } from './chats.js';
-import { commitText, ctx, getMeta, saveMeta } from './core.js';
+import { commitText, ctx, getMeta, globalSettings, saveMeta } from './core.js';
 import { lineDiff, renderDiff } from './diff.js';
 import { cleanMessage, extractToText } from './extract.js';
 import { changedQuotes } from './fade.js';
 import { mountSectionPicker } from './picker.js';
+import { activePrompt, fillPrompt } from './prompts.js';
 import { RANGE_HEAD, groupLabel, keyAt, linkedMap, parseSections, renameKeys, sectionKey, trimEnd } from './sections.js';
 import { sourceRange } from './source.js';
 import { ICO_A, svgA } from './theme.js';
@@ -96,6 +97,9 @@ export function splitTitle(line) {
 }
 
 const headLine = (text, s) => text.slice(s.start).split('\n')[0];
+// a section's text without the "---" rule that may close it (the rule before STATE belongs to the archive, not the section)
+const ruleTail = /(?:\s*\n-{3,}[ \t]*)?\s*$/;
+const sectionBody = t => String(t).replace(ruleTail, '');
 
 // ---- 제목 다시 짓기: picked sections, a few thousand tokens at a time, then a before → after list to tick
 
@@ -227,7 +231,7 @@ async function rawFor(m, s) {
 export async function openSectionFix(s) {
     const c = ctx(), m = getMeta();
     if (!draftReady()) return toastr.info('⚙ 설정 → AI · 번역 → 초안 모델을 먼저 정해 주세요.', '고쳐 달라고 하기');
-    const original = trimEnd(m.text.slice(s.start, s.end));
+    const original = sectionBody(m.text.slice(s.start, s.end));
     let draft = original;
     const asked = [];
     const src = await rawFor(m, s);
@@ -280,7 +284,7 @@ export async function openSectionFix(s) {
     let applied = false;
     const apply = async () => {
         const cur = getMeta();
-        if (trimEnd(cur.text.slice(s.start, s.end)) !== original) { toastr.warning('아카이브가 그사이 바뀌어서 적용하지 않았어요. 다시 열어 주세요.'); return false; }
+        if (sectionBody(cur.text.slice(s.start, s.end)) !== original) { toastr.warning('아카이브가 그사이 바뀌어서 적용하지 않았어요. 다시 열어 주세요.'); return false; }
         const trail = cur.text.slice(s.start, s.end).slice(original.length) || '\n\n';
         const next = cur.text.slice(0, s.start) + draft + trail + cur.text.slice(s.end);
         const nk = keyAt(next, s.start);
@@ -368,6 +372,7 @@ export async function openMerge(group = null) {
         <div class="na_mg_pickhead"><small class="na_dim">두 섹션을 누르면 그 사이가 모두 골라져요</small><span class="na_rt_quick"><button type="button" class="na_pchip" data-all="1">전체</button><button type="button" class="na_pchip" data-all="0">비우기</button></span></div>
         <div class="na_mg_list"></div>
         <small class="na_v2_note na_mg_info"></small>
+        <label class="na_v2_card na_v2_switchrow na_mg_rawrow"><span class="na_cp_txt"><span>원문 보고 다시 쓰기</span><small class="na_mg_rawinfo">순서나 번호가 틀렸을 때 · 고른 범위의 원문으로 처음부터 다시 써요</small></span><input type="checkbox" class="na_toggle na_mg_raw"></label>
         <div class="na_ly_ask na_mg_ask"><input type="text" class="na_ly_askq na_mg_q" placeholder="요청 (선택 · 예: 3개 정도로, 장면 단위로)" aria-label="요청" enterkeyhint="go"><button type="button" class="na_ly_askgo na_mg_go" aria-label="합치기" title="초안 모델로 합치기">${svgA(ICO_A.check, 17, 2.4)}</button></div>
         <div class="na_mg_res" hidden>
           <div class="na_rt_head"><b class="na_mg_restitle"></b></div>
@@ -381,6 +386,25 @@ export async function openMerge(group = null) {
     let result = null;      // { text, secs: [{ range, title, body, members }], first, last, issues }
     const secsNow = () => gs[gi].secs;
     const tokOf = x => Math.ceil(m.text.slice(x.start, x.end).length / 3.6);
+    const rewrite = () => $root.find('.na_mg_raw').prop('checked');
+    let rawSrc = null, rawFor_ = ''; // { raw, why, n, label, from } for the picked range
+    const pickedRange = () => {
+        const idx = [...picked].sort((a, b) => a - b);
+        if (!idx.length) return null;
+        const a = rangeOf(secsNow()[idx[0]].title), b = rangeOf(secsNow()[idx[idx.length - 1]].title);
+        return { prefix: a.prefix, from: a.from, to: b.to, label: `${a.prefix ? `${a.prefix} ` : ''}#${a.from}–#${b.to}` };
+    };
+    const loadRaw = async () => {
+        const r = pickedRange();
+        const tag = r ? r.label : '';
+        if (!rewrite() || !r || rawFor_ === tag) return;
+        rawFor_ = tag; rawSrc = null;
+        $root.find('.na_mg_rawinfo').text('원문 찾는 중…');
+        const got = await rawFor(m, { title: `${r.prefix ? `${r.prefix} ` : ''}#${r.from}–#${r.to} — range` });
+        if (rawFor_ !== tag) return;
+        rawSrc = got.raw ? { ...got, tok: await countTokens(got.raw) } : got;
+        drawList();
+    };
     const contiguous = () => { const a = [...picked].sort((x, y) => x - y); return a.every((v, i) => !i || v === a[i - 1] + 1); };
     const drawList = () => {
         $root.find('.na_mg_list').html(secsNow().map((x, i) => {
@@ -390,11 +414,19 @@ export async function openMerge(group = null) {
         }).join(''));
         const sel = [...picked].map(i => secsNow()[i]);
         const tok = sel.reduce((a, x) => a + tokOf(x), 0);
-        const ok = picked.size >= 2 && contiguous() && tok <= MERGE_MAX_TOK;
-        $root.find('.na_mg_info').text(picked.size < 2 ? '이어진 섹션을 두 개 이상 골라 주세요'
+        const rw = rewrite();
+        const need = rw ? 1 : 2;
+        const ok = picked.size >= need && contiguous() && tok <= MERGE_MAX_TOK && (!rw || !!rawSrc?.raw);
+        $root.find('.na_mg_rawinfo').text(!rw ? '순서나 번호가 틀렸을 때 · 고른 범위의 원문으로 처음부터 다시 써요'
+            : !picked.size ? '다시 쓸 섹션을 골라 주세요' : !rawSrc ? '원문 찾는 중…'
+            : rawSrc.raw ? `원문 ${rawSrc.label} · ${rawSrc.from} · 메시지 ${rawSrc.n}개 · 약 ${fmt(rawSrc.tok)} 토큰` : `원문을 못 찾았어요 · ${rawSrc.why}`);
+        $root.find('.na_mg_rawrow').toggleClass('warn', rw && !!rawSrc && !rawSrc.raw);
+        $root.find('.na_mg_go').attr('title', rw ? '초안 모델로 원문 보고 다시 쓰기' : '초안 모델로 합치기');
+        if (rw && picked.size && contiguous()) loadRaw();
+        $root.find('.na_mg_info').text(picked.size < need ? (rw ? '다시 쓸 섹션을 골라 주세요' : '이어진 섹션을 두 개 이상 골라 주세요')
             : !contiguous() ? '골라진 섹션 사이에 빠진 섹션이 있어요 · 이어진 섹션만 합칠 수 있어요'
             : tok > MERGE_MAX_TOK ? `너무 많아요 (약 ${fmt(tok)} 토큰) · 약 ${fmt(MERGE_MAX_TOK)} 토큰까지 한 번에 합쳐요`
-            : `섹션 ${picked.size}개 · 약 ${fmt(tok)} 토큰 · ${esc(drLabel())}`).toggleClass('warn', picked.size >= 2 && !ok);
+            : `섹션 ${picked.size}개 · 약 ${fmt(tok)} 토큰 · ${esc(drLabel())}`).toggleClass('warn', picked.size >= need && !ok && !(rw && !rawSrc));
         $root.find('.na_mg_go').prop('disabled', !ok);
     };
     $root.on('change', '.na_mg_row input', function () {
@@ -412,18 +444,20 @@ export async function openMerge(group = null) {
         drawList();
     });
     $root.on('click', '.na_mg_pickhead .na_pchip', function () { picked = this.dataset.all === '1' ? new Set(secsNow().map((x, i) => i)) : new Set(); result = null; $root.find('.na_mg_res').prop('hidden', true); drawList(); });
+    $root.find('.na_mg_raw').on('change', () => { result = null; $root.find('.na_mg_res').prop('hidden', true); $root.find('.na_mg_q').attr('placeholder', rewrite() ? '요청 (선택 · 예: 세트가 들어온 건 끝난 뒤야)' : '요청 (선택 · 예: 3개 정도로, 장면 단위로)'); drawList(); });
     $root.find('.na_mg_group').on('change', function () { gi = Number(this.value); picked = new Set(); result = null; $root.find('.na_mg_res').prop('hidden', true); drawList(); });
     const drawResult = () => {
         const $r = $root.find('.na_mg_res').prop('hidden', !result);
         if (!result) return;
-        $root.find('.na_mg_restitle').text(`섹션 ${result.n}개 → ${result.secs.length}개`);
+        $root.find('.na_mg_restitle').text(`${result.rw ? '원문으로 다시 씀 · ' : ''}섹션 ${result.n}개 → ${result.secs.length}개`);
         $root.find('.na_mg_warn').prop('hidden', !result.issues.length).html(result.issues.map(x => `<div>! ${esc(x)}</div>`).join(''));
         $root.find('.na_mg_out').html(result.secs.map(x => `
           <details class="na_mg_card">
             <summary><span class="na_rt_txt"><small>${esc(x.range)}${x.paren ? ` · ${esc(x.paren)}` : ''}</small><b>${esc(x.name)}</b><small class="na_mg_members">${x.members.map(esc).join(' + ') || '들어간 섹션을 못 찾았어요'}</small></span></summary>
             <div class="na_mg_body">${esc(x.body.split('\n').slice(1).join('\n').trim())}</div>
           </details>`).join(''));
-        $root.find('.na_mg_apply').text(result.issues.length ? '확인했어요 · 이대로 합치기' : '이대로 합치기');
+        const verb = result.rw ? '바꾸기' : '합치기';
+        $root.find('.na_mg_apply').text(result.issues.length ? `확인했어요 · 이대로 ${verb}` : `이대로 ${verb}`);
         $r[0].scrollIntoView({ block: 'nearest' });
     };
     let busy = false;
@@ -431,14 +465,31 @@ export async function openMerge(group = null) {
         if (busy || $root.find('.na_mg_go').prop('disabled')) return;
         const idx = [...picked].sort((a, b) => a - b), sel = idx.map(i => secsNow()[i]);
         const req = String($root.find('.na_mg_q').val() || '').trim();
-        const src = sel.map(x => trimEnd(m.text.slice(x.start, x.end))).join('\n\n');
+        const src = sel.map(x => sectionBody(m.text.slice(x.start, x.end))).join('\n\n');
         busy = true;
         const $b = $root.find('.na_mg_go').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
         try {
             const est = Math.ceil(src.length / 3.6);
             const cap = Number(draftSettings().max) || 16000;
-            const out = stripThink(await askDraft(`SECTIONS:\n${src}${req ? `\n\nREQUEST:\n${req}` : ''}`, { system: AI_SYS_MERGE, maxTokens: Math.min(cap, Math.max(4000, Math.ceil(est * 1.5) + 2000)), effort: 'low' }))
-                .replace(/^```[a-z]*\n?|```\s*$/g, '').trim();
+            const rw = rewrite() && rawSrc?.raw;
+            let out;
+            if (rw) {
+                // the user's own compress instruction, told to redo this stretch from the raw log (no STATE / OPEN)
+                const g = globalSettings(), r = pickedRange();
+                const prev = secsNow()[idx[0] - 1];
+                const head = `[REWRITE — read this first]
+The archive already has sections for ${r.label}, but they are wrong: events out of order, numbers on the wrong events, or split too finely. They are under [CURRENT SECTIONS] for reference only — do not trust their order or numbers.
+Rewrite this stretch from the raw log: new section blocks that cover #${r.from}–#${r.to} exactly, numbered by message, in the raw log's order${r.prefix ? `, each heading with the prefix "${r.prefix}" ("## ${r.prefix} #from–#to — …")` : ''}.
+Output only the section blocks. No "---", no STATE, no OPEN.${req ? `\n\n[REQUEST]\n${req}` : ''}
+
+[CURRENT SECTIONS]
+${src}
+
+`;
+                const body = fillPrompt(activePrompt(g).text, { raw: rawSrc.raw, from: String(r.from), to: String(r.to), last_section: prev ? `(Format sample only. Already in the archive — do not output it.)\n${trimEnd(m.text.slice(prev.start, prev.end))}` : '(없음)', state: '(Not needed here — do not output STATE or OPEN.)', archive: m.text });
+                out = await askDraft(head + body, { maxTokens: Math.min(cap, Math.max(8000, est * 2 + 4000)) });
+            } else out = await askDraft(`SECTIONS:\n${src}${req ? `\n\nREQUEST:\n${req}` : ''}`, { system: AI_SYS_MERGE, maxTokens: Math.min(cap, Math.max(4000, Math.ceil(est * 1.5) + 2000)), effort: 'low' });
+            out = stripThink(out).replace(/^```[a-z]*\n?|```\s*$/g, '').trim().split(/\n-{3,}\s*\n/)[0].replace(/\n# (STATE|OPEN)\b[\s\S]*$/, '').trim();
             const parts = parseSections(out).filter(x => !x.group && RANGE_HEAD.test(x.title));
             if (!parts.length) throw new Error('초안 모델이 섹션 형태로 답하지 않았어요');
             const olds = sel.map(x => ({ x, r: rangeOf(x.title) }));
@@ -446,7 +497,7 @@ export async function openMerge(group = null) {
             const bounds = new Set(olds.map(o => o.r.from));
             const secs = parts.map(p => {
                 const r = rangeOf(p.title), sp = splitTitle(`## ${p.title}`);
-                const members = olds.filter(o => o.r.from >= r.from && o.r.to <= r.to).map(o => `#${o.r.from}–#${o.r.to}`);
+                const members = olds.filter(o => rw ? o.r.from <= r.to && o.r.to >= r.from : o.r.from >= r.from && o.r.to <= r.to).map(o => `#${o.r.from}–#${o.r.to}`);
                 return { r, range: `${r.prefix ? `${r.prefix} ` : ''}#${r.from}–#${r.to}`, name: sp?.name || p.title, paren: (sp?.tail || '').trim().replace(/^\(|\)$/g, ''), body: trimEnd(out.slice(p.start, p.end)), members };
             });
             // checks: same prefix, exact cover, cuts on old boundaries, quotes copied from the sections
@@ -454,13 +505,13 @@ export async function openMerge(group = null) {
             if (secs.some(s => s.r.prefix !== first.prefix)) issues.push(`번호 앞글자가 바뀐 섹션이 있어요 (원래 "${first.prefix || '없음'}")`);
             if (secs[0].r.from !== first.from || secs[secs.length - 1].r.to !== last.to) issues.push(`합친 범위가 #${first.from}–#${last.to}와 달라요 (#${secs[0].r.from}–#${secs[secs.length - 1].r.to})`);
             secs.forEach((s, i) => { if (i && s.r.from !== secs[i - 1].r.to + 1) issues.push(`#${secs[i - 1].r.to}와 #${s.r.from} 사이가 ${s.r.from > secs[i - 1].r.to + 1 ? '비었어요' : '겹쳐요'}`); });
-            secs.forEach(s => { if (!bounds.has(s.r.from)) issues.push(`${s.range}가 원래 섹션 중간에서 시작해요`); });
-            if (secs.length >= sel.length) issues.push('섹션 수가 줄지 않았어요');
-            const bad = changedQuotes(src, out);
+            if (!rw) secs.forEach(s => { if (!bounds.has(s.r.from)) issues.push(`${s.range}가 원래 섹션 중간에서 시작해요`); });
+            if (!rw && secs.length >= sel.length) issues.push('섹션 수가 줄지 않았어요');
+            const bad = changedQuotes(rw ? `${src}\n${rawSrc.raw}` : src, out);
             if (bad.length) issues.push(`원래 섹션에 없거나 바뀐 대사 ${bad.length}개: ${bad.slice(0, 3).map(q => `"${q.slice(0, 40)}"`).join(', ')}`);
             const origTok = Math.ceil(src.length / 3.6), newTok = Math.ceil(secs.reduce((a, s) => a + s.body.length, 0) / 3.6);
-            if (newTok < origTok * 0.7) issues.push(`내용이 꽤 줄었어요 (약 ${fmt(origTok)} → ${fmt(newTok)} 토큰) · 빠진 게 없는지 봐 주세요`);
-            result = { secs, sel, n: sel.length, issues };
+            if (!rw && newTok < origTok * 0.7) issues.push(`내용이 꽤 줄었어요 (약 ${fmt(origTok)} → ${fmt(newTok)} 토큰) · 빠진 게 없는지 봐 주세요`);
+            result = { secs, sel, n: sel.length, issues, rw: !!rw };
             drawResult();
         } catch (e) {
             console.error('[NarrativeArchive] merge', e);
@@ -477,7 +528,7 @@ export async function openMerge(group = null) {
         const now = new Map(parseSections(cur.text).map(x => [sectionKey(x), x.start]));
         if (sel.some(x => now.get(sectionKey(x)) !== x.start)) return toastr.warning('아카이브가 그사이 바뀌었어요. 창을 닫고 다시 해 주세요.', '섹션 합치기');
         const a = sel[0].start, b = sel[sel.length - 1].end;
-        const trail = cur.text.slice(a, b).match(/\s*$/)[0] || '\n\n';
+        const trail = cur.text.slice(a, b).match(ruleTail)[0] || '\n\n';
         const block = secs.map(s => s.body).join('\n\n');
         const next = cur.text.slice(0, a) + block + trail + cur.text.slice(b);
         // settings follow: pinned if any part was, muted if every part was, keywords pooled; short versions are dropped
@@ -485,7 +536,7 @@ export async function openMerge(group = null) {
         const muted = new Set(cur.muted || []), pinned = new Set(cur.pinned || []), linked = { ...linkedMap(cur) };
         fresh.forEach((f, i) => {
             const r = secs[i]?.r;
-            const parts = r ? sel.filter(x => { const o = rangeOf(x.title); return o.from >= r.from && o.to <= r.to; }) : [];
+            const parts = r ? sel.filter(x => { const o = rangeOf(x.title); return result.rw ? o.from <= r.to && o.to >= r.from : o.from >= r.from && o.to <= r.to; }) : [];
             const keys = parts.map(sectionKey), nk = sectionKey(f);
             if (keys.length && keys.every(k => muted.has(k))) muted.add(nk);
             if (keys.some(k => pinned.has(k))) pinned.add(nk);
@@ -500,8 +551,9 @@ export async function openMerge(group = null) {
         }
         cur.muted = [...muted]; cur.pinned = [...pinned]; cur.linked = linked;
         cur.retitled = [...new Set([...(cur.retitled || []), ...fresh.map(sectionKey)])];
-        await commitText(next, `섹션 합치기 전 (${sel.length}개 → ${secs.length}개)`);
-        toastr.success(`섹션 ${sel.length}개를 ${secs.length}개로 합쳤어요 · 이전 상태는 복구 지점에 있어요`, '섹션 합치기');
+        await commitText(next, `${result.rw ? '원문으로 다시 쓰기' : '섹션 합치기'} 전 (${sel.length}개 → ${secs.length}개)`);
+        toastr.success(`섹션 ${sel.length}개를 ${secs.length}개로 ${result.rw ? '다시 썼어요' : '합쳤어요'} · 이전 상태는 복구 지점에 있어요`, '섹션 합치기');
+        rawFor_ = ''; rawSrc = null;
         gs = groups(); gi = Math.min(gi, gs.length - 1); picked = new Set(); result = null;
         $root.find('.na_mg_group').html(gs.map((g, i) => `<option value="${i}">${esc(g.label)} · 섹션 ${g.secs.length}개</option>`).join('')).val(String(gi));
         drawResult(); drawList();
