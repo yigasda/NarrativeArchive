@@ -2,11 +2,11 @@
 
 import { askAI, askDraft, drLabel, draftReady, withSpinner } from './ai.js';
 import { openAppend } from './append.js';
-import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
+import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { driftHtml } from './drift.js';
 import { buildExtract, cleanMessage, formatExtract, guessEndNumber } from './extract.js';
-import { activePrompt, fillPrompt, referenceSection, renderPromptSettings } from './prompts.js';
-import { headingRanges, parseSections, splitTail } from './sections.js';
+import { activePrompt, auFix, auOf, compressPrompt, hasAuDivider, referenceSection, renderPromptSettings } from './prompts.js';
+import { RANGE_HEAD, headingRanges, parseSections, splitTail } from './sections.js';
 import { openSource } from './source.js';
 import { refreshStatus } from './status.js';
 import { ICO_A, svgA } from './theme.js';
@@ -46,6 +46,22 @@ OUTPUT: Korean, one bullet per problem, most serious first, exactly like this
 - 빠짐: <what is missing> (#<message number>)
 Always give the message number(s) you checked. If the summary is faithful, write exactly: 문제 없음`;
 
+const cleanDraft = out => String(out || '').replace(/^```[a-z]*\n?|```\s*$/g, '').trim();
+
+// Turning AU on in a chat whose main-story sections sit under no divider: offer "# ── 본편 ──" above them,
+// so the reader and the timeline show the main story and the AU as two parts
+async function offerMainDivider(m) {
+    const a = auOf(m);
+    const [body] = splitTail(m.text);
+    if (/^#\s*──.*──\s*$/m.test(body) || hasAuDivider(m.text, a.name)) return;
+    const first = parseSections(body).find(x => !x.group && RANGE_HEAD.test(x.title));
+    if (!first) return;
+    if (!await confirm('본편 구분선', '아카이브의 본편 섹션 위에 <code># ── 본편 ──</code> 구분선을 넣을까요?<br><small>읽기·타임라인에서 본편과 AU가 두 묶음으로 나뉘어 보여요. 안 넣어도 AU 요약은 이어져요.</small>')) return;
+    await commitText(`${m.text.slice(0, first.start)}# ── 본편 ──\n\n${m.text.slice(first.start)}`, '본편 구분선 넣기 전');
+    refreshStatus();
+    toastr.success('본편 구분선을 넣었어요');
+}
+
 // 을/를 after a number read in Korean (…3을, …4를)
 export const josaA = n => ('2459'.includes(String(n).slice(-1)) ? '를' : '을');
 
@@ -78,7 +94,18 @@ export async function openWizard() {
             <label><small>까지</small><span>#<input type="number" class="text_pole na_wz_to" min="0" max="${last}" value="${defTo}"></span></label>
           </div>
           <label class="na_v2_card na_v2_switchrow"><span>숨긴 메시지 빼기</span><input type="checkbox" class="na_toggle na_wz_hidden"></label>
+          <div class="na_v2_card na_wz_au">
+            <label class="na_v2_switchrow"><span class="na_cp_txt"><span>이 채팅은 AU</span><small>본편 기억을 들고 온 채팅이면 켜요. 요약이 본편 뒤에 AU 묶음으로 이어져요</small></span><input type="checkbox" class="na_toggle na_wz_auon"></label>
+            <div class="na_wz_aubody" hidden>
+              <label><small>묶음 이름</small><input type="text" class="text_pole na_wz_auname" maxlength="12" placeholder="AU" spellcheck="false"></label>
+              <label><small>AU 설정 <span class="na_dim">· 뭐가 다르고 뭘 기억하는지</span></small><textarea class="text_pole na_wz_aunote" rows="2" placeholder="예: 현대 AU, 둘 다 대학생. 본편 기억은 그대로"></textarea></label>
+            </div>
+          </div>
           <small class="na_v2_note na_wz_info"></small>
+          ${draftReady()
+            ? `<button type="button" class="na_v2_btn primary wide na_wz_oneshot" title="${esc(drLabel())}">${svgA('M15 4V2M15 10V8M11 6h2M17 6h2M4 20L14 10M19 13v2M18 14h2', 16)}초안 모델로 한 번에 압축</button>
+          <small class="na_v2_note">요약을 받아서 바로 <b>아카이브에 추가</b> 창까지 가요. 거기서 확인하고 추가하면 끝이에요 (숨기기 포함)</small>`
+            : '<small class="na_v2_note">⚙ 설정 → AI · 번역 → <b>초안 모델</b>을 정해 두면 여기서 한 번에 압축할 수 있어요</small>'}
         </div>
         <div class="na_wz2_pane" data-s="1">
           <select class="text_pole na_wz_prompt"></select>
@@ -146,6 +173,7 @@ export async function openWizard() {
         return { from, to: Number.isFinite(to) ? to : last };
     };
     let raw = '', full = '';
+    const vars = () => { const { from, to } = range(); return { raw, from: String(from), to: String(to), last_section: referenceSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text }; };
     const build = async () => {
         const { from, to } = range();
         const all = buildExtract(from, to);
@@ -154,9 +182,14 @@ export async function openWizard() {
         raw = formatExtract(items, g);
         const pid = $root.find('.na_wz_prompt').val();
         const p = pid === '__none' ? null : (g.prompts.find(x => x.id === pid) || activePrompt(g));
-        full = p ? fillPrompt(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text }) : raw;
+        full = p ? compressPrompt(p.text, vars(), m) : raw;
         $root.find('.na_wz_copy span').text(p ? '지시문과 함께 복사' : '원문만 복사');
         $root.find('.na_wz_info').text(items.length ? `메시지 ${items.length}개${hiddenOut ? ` (숨긴 ${hiddenOut}개 뺌)` : ''} · 원문 약 ${fmt(await countTokens(raw))} 토큰${p ? ` · 지시문까지 약 ${fmt(await countTokens(full))} 토큰` : ''}` : '이 범위에 메시지가 없어요.');
+    };
+    // the draft always carries an instruction: the chosen one, or the active one when "raw only" is picked
+    const draftPrompt = () => {
+        const pid = $root.find('.na_wz_prompt').val();
+        return compressPrompt((g.prompts.find(x => x.id === pid) || activePrompt(g)).text, vars(), m);
     };
     let t;
     $root.find('.na_wz_from, .na_wz_to, .na_wz_prompt').on('input change', () => { clearTimeout(t); t = setTimeout(build, 250); });
@@ -172,16 +205,25 @@ export async function openWizard() {
         if (!raw) return toastr.info('범위에 메시지가 없어요.');
         const $out = $root.find('.na_wz_out');
         if ($out.val().trim() && !await confirm('초안 모델로 받기', '붙여넣은 내용을 새 초안으로 바꿀까요?')) return;
-        // the draft always carries an instruction: the chosen one, or the active one when "raw only" is picked
-        const { from, to } = range();
-        const pid = $root.find('.na_wz_prompt').val();
-        const p = g.prompts.find(x => x.id === pid) || activePrompt(g);
-        const prompt = fillPrompt(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text });
-        const out = await withSpinner($(this), '쓰는 중… 창을 닫지 마세요', () => askDraft(prompt));
+        const out = await withSpinner($(this), '쓰는 중… 창을 닫지 마세요', () => askDraft(draftPrompt()));
         if (out === null) return;
-        $out.val(out.replace(/^```[a-z]*\n?|```\s*$/g, '').trim()).trigger('input');
+        $out.val(cleanDraft(out)).trigger('input');
         await remember('draft');
         toastr.success('초안을 채웠어요. 확인하고 다음으로 넘어가세요.');
+    });
+    // one button: summary from the draft model → straight to 아카이브에 추가 (its checks and the hide step stay)
+    $root.find('.na_wz_oneshot').on('click', async function () {
+        await build();
+        if (!raw) return toastr.info('범위에 메시지가 없어요.');
+        const { to } = range();
+        const out = await withSpinner($(this), '요약하는 중… 창을 닫지 마세요', () => askDraft(draftPrompt()));
+        if (out === null) return;
+        const text = auFix(cleanDraft(out), m);
+        if (!text) return toastr.warning('초안 모델이 빈 답을 줬어요.');
+        $root.find('.na_wz_out').val(text).trigger('input');
+        await remember('draft');
+        $root.closest('dialog').find('.popup-button-ok').trigger('click');
+        setTimeout(() => openAppend({ text, end: guessEndNumber(text) ?? to }), 50);
     });
     $root.find('.na_wz_save').on('click', async () => { await build(); if (!raw) return; const { from, to } = range(); download(`원문_${chatLabel()}_${from}-${to}.txt`, full); remember('txt'); });
     $root.find('.na_wz_file_btn').on('click', () => $root.find('.na_wz_file').val('').trigger('click'));
@@ -226,6 +268,26 @@ export async function openWizard() {
         $root.closest('dialog').find('.popup-button-ok').trigger('click');
         setTimeout(() => openAppend({ text, end: n ?? range().to }), 50);
     });
+    // AU: this chat carries the main story into an alternate universe; its summaries become their own log
+    const auUi = () => {
+        const a = auOf(m);
+        $root.find('.na_wz_auon').prop('checked', a.on);
+        $root.find('.na_wz_aubody').prop('hidden', !a.on);
+        $root.find('.na_wz_auname').val(m.au?.name || '');
+        $root.find('.na_wz_aunote').val(a.note);
+    };
+    const auSave = async () => {
+        m.au = { on: $root.find('.na_wz_auon').prop('checked'), name: $root.find('.na_wz_auname').val().trim().replace(/\s+/g, ''), note: $root.find('.na_wz_aunote').val().trim() };
+        await saveMeta();
+        build();
+    };
+    $root.find('.na_wz_auon').on('change', async function () {
+        await auSave();
+        auUi();
+        if (this.checked) await offerMainDivider(m);
+    });
+    $root.find('.na_wz_auname, .na_wz_aunote').on('change', auSave);
+    auUi();
     show();
     await build();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
