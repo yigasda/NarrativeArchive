@@ -2,7 +2,7 @@
 
 import { commitText, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { layersOf, openLayers } from './fade.js';
-import { openRetitle, openSectionFix } from './retitle.js';
+import { openMerge, openRetitle, openSectionFix } from './retitle.js';
 import { lastBuild } from './inject.js';
 import { openKeywords } from './keywords.js';
 import { showArchiveView } from './panel.js';
@@ -39,6 +39,7 @@ export function mountSectionBrowser($host) {
         <div class="na_tlb_menu">
           <button type="button" class="na_v2_pillbtn na_rp_open" title="아카이브 전체에서 찾아 바꾸기">찾아 바꾸기</button>
           <button type="button" class="na_v2_pillbtn na_retitle_open" title="초안 모델로 섹션 제목을 책 목차처럼 다시 지어요">제목 다시 짓기</button>
+          <button type="button" class="na_v2_pillbtn na_merge_open" title="이어진 섹션을 초안 모델로 합쳐요">섹션 합치기</button>
           <span class="na_tlb_hc"></span>
         </div>
         <div class="na_arch_tools"></div>
@@ -63,6 +64,7 @@ export function mountSectionBrowser($host) {
         if (d.open) $('#na_rp_find').trigger('focus');
     });
     $root.on('click', '.na_retitle_open', () => openRetitle());
+    $root.on('click', '.na_merge_open', () => openMerge());
     $root.on('click', '.na_hc_status', () => { const d = document.getElementById('na_hcheck'); if (d) d.open = !d.open; });
     const syncView = () => {
         const tl = $root.hasClass('na_tl');
@@ -269,7 +271,7 @@ export function mountSectionBrowser($host) {
                       </div>
                       <div class="na_head_ctrl">
                         ${s.note ? `<button type="button" class="na_icon na_icon_sm na_group_edit" title="머리글 편집">${svgA(ICO_A.pen, 14)}</button>` : ''}
-                        ${isState ? '' : `<button type="button" class="na_icon na_icon_sm na_group_retitle" title="이 묶음 제목 다시 짓기" aria-label="이 묶음 제목 다시 짓기">${svgA('M6 4v16M18 4v16M6 12h12', 14)}</button>`}
+                        ${isState ? '' : `<button type="button" class="na_icon na_icon_sm na_group_merge" title="이 묶음에서 섹션 합치기" aria-label="이 묶음에서 섹션 합치기">${svgA('M12 3v6M9 6l3 3 3-3M12 21v-6M9 18l3-3 3 3M5 12h14', 14)}</button><button type="button" class="na_icon na_icon_sm na_group_retitle" title="이 묶음 제목 다시 짓기" aria-label="이 묶음 제목 다시 짓기">${svgA('M6 4v16M18 4v16M6 12h12', 14)}</button>`}
                         ${pinBtn(pinned.has(key), '이 묶음을')}
                         ${sw(!off, off ? '이 묶음 주입 켜기' : '이 묶음 통째로 주입에서 빼기')}
                       </div>
@@ -288,6 +290,7 @@ export function mountSectionBrowser($host) {
                 });
                 $g.find('> .na_group_head .na_sw').on('click', e => { e.stopPropagation(); setMuted(key, !off); });
                 $g.find('> .na_group_head .na_group_retitle').on('click', e => { e.stopPropagation(); openRetitle(s); });
+                $g.find('> .na_group_head .na_group_merge').on('click', e => { e.stopPropagation(); openMerge(s); });
                 $g.find('> .na_group_head .na_pin').on('click', e => { e.stopPropagation(); setPinned(key, !pinned.has(key)); });
                 $g.find('> .na_group_head .na_group_edit').on('click', e => {
                     e.stopPropagation();

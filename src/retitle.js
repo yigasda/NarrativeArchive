@@ -1,13 +1,14 @@
 // Asking the draft model to rework archive sections: new titles for many sections at once,
 // and one section rewritten the way the user asks (with its raw messages when they can be found).
 
-import { askDraft, drLabel, draftReady, stripThink } from './ai.js';
+import { askDraft, drLabel, draftReady, draftSettings, stripThink } from './ai.js';
 import { fetchOtherChat } from './chats.js';
 import { commitText, ctx, getMeta, saveMeta } from './core.js';
 import { lineDiff, renderDiff } from './diff.js';
 import { cleanMessage, extractToText } from './extract.js';
+import { changedQuotes } from './fade.js';
 import { mountSectionPicker } from './picker.js';
-import { RANGE_HEAD, keyAt, parseSections, renameKeys, sectionKey, trimEnd } from './sections.js';
+import { RANGE_HEAD, groupLabel, keyAt, linkedMap, parseSections, renameKeys, sectionKey, trimEnd } from './sections.js';
 import { sourceRange } from './source.js';
 import { ICO_A, svgA } from './theme.js';
 import { confirm, countTokens, esc, fmt } from './util.js';
@@ -296,3 +297,215 @@ export async function openSectionFix(s) {
     if (!applied && draft !== original && await confirm('적용 안 한 수정', '고친 내용을 아직 적용하지 않았어요. 적용할까요?')) await apply();
 }
 
+
+// ---- 섹션 합치기: a run of consecutive sections in one group; the model decides where the new sections start
+
+export const AI_SYS_MERGE = `GOAL
+Merge a run of consecutive sections of a story archive into fewer, larger sections. Combine them — do not summarize.
+
+YOU GET
+- SECTIONS: the sections in order, each with its heading line and its text.
+- REQUEST (sometimes): how the user wants them merged. It may be in Korean.
+
+STEPS
+1. Decide where the new sections start. One new section = one scene or one continuous episode: the same place and stretch of time, or one event together with its cause and its result. Follow REQUEST if there is one. Make fewer sections than you were given.
+2. Never split a given section: every new section is made of whole given sections, in order.
+3. Numbers: each new section covers one continuous range, and together they cover the given sections' first to last number with no gaps and no overlaps. Keep the prefix the headings use (for example "AU").
+4. Heading: "## <prefix> #from–#to — Title (date, place)". Take the date and place from the merged headings; if they differ, give the first and the last ("Hathyr 8, late morning → night").
+5. Title: two to six words, like a book's table of contents — the scene's key object, place or act, or a defining line in quotation marks copied exactly. A title names the scene; it does not summarize it. No semicolons.
+6. Text: keep the form (labels such as PLOT:, then "- " bullets). Put the merged sections' bullets together in their order. Merge two bullets only when they say the same thing. Keep every fact. Keep every quotation word for word. Do not shorten, explain or add anything.
+
+EXAMPLE
+SECTIONS:
+## #12–#13 — Ren and Mara reach the bridge (Spring 3, dusk, Varo)
+PLOT:
+- Ren and Mara reached the old bridge at dusk. Mara is afraid of heights.
+## #14–#15 — A plank breaks; Ren is hurt (Spring 3, dusk, Varo)
+PLOT:
+- Halfway across, a plank broke and Ren cut his leg. Mara pulled him up: "Now you owe me."
+## #16–#18 — Ivo and the closed road (Spring 3, night, Varo)
+PLOT:
+- Ivo told them the duke had closed the south road, so they had to go through Varo's market.
+
+Answer:
+## #12–#15 — "Now you owe me" (Spring 3, dusk, Varo)
+PLOT:
+- Ren and Mara reached the old bridge at dusk. Mara is afraid of heights.
+- Halfway across, a plank broke and Ren cut his leg. Mara pulled him up: "Now you owe me."
+## #16–#18 — The closed road (Spring 3, night, Varo)
+PLOT:
+- Ivo told them the duke had closed the south road, so they had to go through Varo's market.
+
+OUTPUT
+Only the new sections, in order, heading line first. No fences, no comments.`;
+
+const MERGE_MAX_TOK = 12000;
+const rangeOf = title => { const r = String(title).match(RANGE_HEAD); return r ? { prefix: (r[1] || '').trim(), from: Math.min(+r[2], +r[4]), to: Math.max(+r[2], +r[4]) } : null; };
+
+// group: a "# ── AU ──" section to open on; without one, the newest log's group
+export async function openMerge(group = null) {
+    const c = ctx(), m = getMeta();
+    if (!draftReady()) return toastr.info('⚙ 설정 → AI · 번역 → 초안 모델을 먼저 정해 주세요.', '섹션 합치기');
+    // the archive's groups that hold numbered sections: [{ start, label, secs }]
+    const groups = () => {
+        const secs = parseSections(m.text), out = [];
+        let cur = { start: -1, label: '(묶음 밖)', level: 0, secs: [] };
+        for (const x of secs) {
+            if (x.group) { if (cur.secs.length) out.push(cur); cur = { start: x.start, label: groupLabel(x.title), level: x.level, secs: [] }; continue; }
+            if (x.level === 1 && cur.start >= 0) { if (cur.secs.length) out.push(cur); cur = { start: -1, label: '(묶음 밖)', level: 0, secs: [] }; }
+            if (RANGE_HEAD.test(x.title)) cur.secs.push(x);
+        }
+        if (cur.secs.length) out.push(cur);
+        return out;
+    };
+    let gs = groups();
+    if (!gs.length) return toastr.info('번호가 있는 섹션이 없어요.', '섹션 합치기');
+    let gi = group ? Math.max(0, gs.findIndex(g => g.start === group.start)) : gs.length - 1;
+    const $root = $(`
+      <div class="na_popup na_v2 na_mg">
+        <div class="na_v2_title"><b>섹션 합치기</b><small>이어진 섹션을 고르면 초안 모델이 어디서 끊을지 정해서 합쳐요 · 요약이 아니라 합치기</small></div>
+        <select class="text_pole na_mg_group">${gs.map((g, i) => `<option value="${i}">${esc(g.label)} · 섹션 ${g.secs.length}개</option>`).join('')}</select>
+        <div class="na_mg_pickhead"><small class="na_dim">두 섹션을 누르면 그 사이가 모두 골라져요</small><span class="na_rt_quick"><button type="button" class="na_pchip" data-all="1">전체</button><button type="button" class="na_pchip" data-all="0">비우기</button></span></div>
+        <div class="na_mg_list"></div>
+        <small class="na_v2_note na_mg_info"></small>
+        <div class="na_ly_ask na_mg_ask"><input type="text" class="na_ly_askq na_mg_q" placeholder="요청 (선택 · 예: 3개 정도로, 장면 단위로)" aria-label="요청" enterkeyhint="go"><button type="button" class="na_ly_askgo na_mg_go" aria-label="합치기" title="초안 모델로 합치기">${svgA(ICO_A.check, 17, 2.4)}</button></div>
+        <div class="na_mg_res" hidden>
+          <div class="na_rt_head"><b class="na_mg_restitle"></b></div>
+          <div class="na_mg_warn" hidden></div>
+          <div class="na_mg_out"></div>
+          <button type="button" class="na_v2_btn primary wide na_mg_apply">이대로 합치기</button>
+        </div>
+      </div>`);
+    $root.find('.na_mg_group').val(String(gi));
+    let picked = new Set(); // indexes into gs[gi].secs
+    let result = null;      // { text, secs: [{ range, title, body, members }], first, last, issues }
+    const secsNow = () => gs[gi].secs;
+    const tokOf = x => Math.ceil(m.text.slice(x.start, x.end).length / 3.6);
+    const contiguous = () => { const a = [...picked].sort((x, y) => x - y); return a.every((v, i) => !i || v === a[i - 1] + 1); };
+    const drawList = () => {
+        $root.find('.na_mg_list').html(secsNow().map((x, i) => {
+            const r = rangeOf(x.title), sp = splitTitle(headLine(m.text, x));
+            return `<label class="na_mg_row ${picked.has(i) ? 'on' : ''}"><input type="checkbox" data-i="${i}" ${picked.has(i) ? 'checked' : ''}>
+              <span class="na_rt_txt"><small>${esc(`${r.prefix ? `${r.prefix} ` : ''}#${r.from}–#${r.to}`)}${sp?.tail ? ` · ${esc(sp.tail.trim().replace(/^\(|\)$/g, ''))}` : ''}</small><span>${esc(sp?.name || x.title)}</span></span></label>`;
+        }).join(''));
+        const sel = [...picked].map(i => secsNow()[i]);
+        const tok = sel.reduce((a, x) => a + tokOf(x), 0);
+        const ok = picked.size >= 2 && contiguous() && tok <= MERGE_MAX_TOK;
+        $root.find('.na_mg_info').text(picked.size < 2 ? '이어진 섹션을 두 개 이상 골라 주세요'
+            : !contiguous() ? '골라진 섹션 사이에 빠진 섹션이 있어요 · 이어진 섹션만 합칠 수 있어요'
+            : tok > MERGE_MAX_TOK ? `너무 많아요 (약 ${fmt(tok)} 토큰) · 약 ${fmt(MERGE_MAX_TOK)} 토큰까지 한 번에 합쳐요`
+            : `섹션 ${picked.size}개 · 약 ${fmt(tok)} 토큰 · ${esc(drLabel())}`).toggleClass('warn', picked.size >= 2 && !ok);
+        $root.find('.na_mg_go').prop('disabled', !ok);
+    };
+    $root.on('change', '.na_mg_row input', function () {
+        const i = Number(this.dataset.i);
+        if (this.checked) {
+            // a second tap fills the gap to the nearest picked section
+            const others = [...picked];
+            picked.add(i);
+            if (others.length && !others.some(o => Math.abs(o - i) === 1)) {
+                const near = others.reduce((a, o) => (Math.abs(o - i) < Math.abs(a - i) ? o : a), others[0]);
+                for (let k = Math.min(near, i); k <= Math.max(near, i); k++) picked.add(k);
+            }
+        } else picked.delete(i);
+        result = null; $root.find('.na_mg_res').prop('hidden', true);
+        drawList();
+    });
+    $root.on('click', '.na_mg_pickhead .na_pchip', function () { picked = this.dataset.all === '1' ? new Set(secsNow().map((x, i) => i)) : new Set(); result = null; $root.find('.na_mg_res').prop('hidden', true); drawList(); });
+    $root.find('.na_mg_group').on('change', function () { gi = Number(this.value); picked = new Set(); result = null; $root.find('.na_mg_res').prop('hidden', true); drawList(); });
+    const drawResult = () => {
+        const $r = $root.find('.na_mg_res').prop('hidden', !result);
+        if (!result) return;
+        $root.find('.na_mg_restitle').text(`섹션 ${result.n}개 → ${result.secs.length}개`);
+        $root.find('.na_mg_warn').prop('hidden', !result.issues.length).html(result.issues.map(x => `<div>! ${esc(x)}</div>`).join(''));
+        $root.find('.na_mg_out').html(result.secs.map(x => `
+          <details class="na_mg_card">
+            <summary><span class="na_rt_txt"><small>${esc(x.range)}${x.paren ? ` · ${esc(x.paren)}` : ''}</small><b>${esc(x.name)}</b><small class="na_mg_members">${x.members.map(esc).join(' + ') || '들어간 섹션을 못 찾았어요'}</small></span></summary>
+            <div class="na_mg_body">${esc(x.body.split('\n').slice(1).join('\n').trim())}</div>
+          </details>`).join(''));
+        $root.find('.na_mg_apply').text(result.issues.length ? '확인했어요 · 이대로 합치기' : '이대로 합치기');
+        $r[0].scrollIntoView({ block: 'nearest' });
+    };
+    let busy = false;
+    const go = async () => {
+        if (busy || $root.find('.na_mg_go').prop('disabled')) return;
+        const idx = [...picked].sort((a, b) => a - b), sel = idx.map(i => secsNow()[i]);
+        const req = String($root.find('.na_mg_q').val() || '').trim();
+        const src = sel.map(x => trimEnd(m.text.slice(x.start, x.end))).join('\n\n');
+        busy = true;
+        const $b = $root.find('.na_mg_go').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
+        try {
+            const est = Math.ceil(src.length / 3.6);
+            const cap = Number(draftSettings().max) || 16000;
+            const out = stripThink(await askDraft(`SECTIONS:\n${src}${req ? `\n\nREQUEST:\n${req}` : ''}`, { system: AI_SYS_MERGE, maxTokens: Math.min(cap, Math.max(4000, Math.ceil(est * 1.5) + 2000)), effort: 'low' }))
+                .replace(/^```[a-z]*\n?|```\s*$/g, '').trim();
+            const parts = parseSections(out).filter(x => !x.group && RANGE_HEAD.test(x.title));
+            if (!parts.length) throw new Error('초안 모델이 섹션 형태로 답하지 않았어요');
+            const olds = sel.map(x => ({ x, r: rangeOf(x.title) }));
+            const first = olds[0].r, last = olds[olds.length - 1].r;
+            const bounds = new Set(olds.map(o => o.r.from));
+            const secs = parts.map(p => {
+                const r = rangeOf(p.title), sp = splitTitle(`## ${p.title}`);
+                const members = olds.filter(o => o.r.from >= r.from && o.r.to <= r.to).map(o => `#${o.r.from}–#${o.r.to}`);
+                return { r, range: `${r.prefix ? `${r.prefix} ` : ''}#${r.from}–#${r.to}`, name: sp?.name || p.title, paren: (sp?.tail || '').trim().replace(/^\(|\)$/g, ''), body: trimEnd(out.slice(p.start, p.end)), members };
+            });
+            // checks: same prefix, exact cover, cuts on old boundaries, quotes copied from the sections
+            const issues = [];
+            if (secs.some(s => s.r.prefix !== first.prefix)) issues.push(`번호 앞글자가 바뀐 섹션이 있어요 (원래 "${first.prefix || '없음'}")`);
+            if (secs[0].r.from !== first.from || secs[secs.length - 1].r.to !== last.to) issues.push(`합친 범위가 #${first.from}–#${last.to}와 달라요 (#${secs[0].r.from}–#${secs[secs.length - 1].r.to})`);
+            secs.forEach((s, i) => { if (i && s.r.from !== secs[i - 1].r.to + 1) issues.push(`#${secs[i - 1].r.to}와 #${s.r.from} 사이가 ${s.r.from > secs[i - 1].r.to + 1 ? '비었어요' : '겹쳐요'}`); });
+            secs.forEach(s => { if (!bounds.has(s.r.from)) issues.push(`${s.range}가 원래 섹션 중간에서 시작해요`); });
+            if (secs.length >= sel.length) issues.push('섹션 수가 줄지 않았어요');
+            const bad = changedQuotes(src, out);
+            if (bad.length) issues.push(`원래 섹션에 없거나 바뀐 대사 ${bad.length}개: ${bad.slice(0, 3).map(q => `"${q.slice(0, 40)}"`).join(', ')}`);
+            const origTok = Math.ceil(src.length / 3.6), newTok = Math.ceil(secs.reduce((a, s) => a + s.body.length, 0) / 3.6);
+            if (newTok < origTok * 0.7) issues.push(`내용이 꽤 줄었어요 (약 ${fmt(origTok)} → ${fmt(newTok)} 토큰) · 빠진 게 없는지 봐 주세요`);
+            result = { secs, sel, n: sel.length, issues };
+            drawResult();
+        } catch (e) {
+            console.error('[NarrativeArchive] merge', e);
+            toastr.error(String(e?.message || e), '섹션 합치기');
+        } finally { busy = false; $b.html(svgA(ICO_A.check, 17, 2.4)); drawList(); }
+    };
+    $root.find('.na_mg_go').on('click', go);
+    $root.find('.na_mg_q').on('keydown', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); go(); } });
+    $root.find('.na_mg_apply').on('click', async () => {
+        if (!result) return;
+        const cur = getMeta();
+        const { sel, secs } = result;
+        // still where they were read?
+        const now = new Map(parseSections(cur.text).map(x => [sectionKey(x), x.start]));
+        if (sel.some(x => now.get(sectionKey(x)) !== x.start)) return toastr.warning('아카이브가 그사이 바뀌었어요. 창을 닫고 다시 해 주세요.', '섹션 합치기');
+        const a = sel[0].start, b = sel[sel.length - 1].end;
+        const trail = cur.text.slice(a, b).match(/\s*$/)[0] || '\n\n';
+        const block = secs.map(s => s.body).join('\n\n');
+        const next = cur.text.slice(0, a) + block + trail + cur.text.slice(b);
+        // settings follow: pinned if any part was, muted if every part was, keywords pooled; short versions are dropped
+        const fresh = parseSections(next).filter(x => !x.group && x.start >= a && x.start < a + block.length);
+        const muted = new Set(cur.muted || []), pinned = new Set(cur.pinned || []), linked = { ...linkedMap(cur) };
+        fresh.forEach((f, i) => {
+            const r = secs[i]?.r;
+            const parts = r ? sel.filter(x => { const o = rangeOf(x.title); return o.from >= r.from && o.to <= r.to; }) : [];
+            const keys = parts.map(sectionKey), nk = sectionKey(f);
+            if (keys.length && keys.every(k => muted.has(k))) muted.add(nk);
+            if (keys.some(k => pinned.has(k))) pinned.add(nk);
+            const kw = [...new Set(keys.flatMap(k => linked[k] || []))];
+            if (kw.length) linked[nk] = kw;
+        });
+        for (const x of sel) {
+            const k = sectionKey(x);
+            if (fresh.some(f => sectionKey(f) === k)) continue;
+            muted.delete(k); pinned.delete(k); delete linked[k];
+            if (cur.layers) delete cur.layers[k];
+        }
+        cur.muted = [...muted]; cur.pinned = [...pinned]; cur.linked = linked;
+        cur.retitled = [...new Set([...(cur.retitled || []), ...fresh.map(sectionKey)])];
+        await commitText(next, `섹션 합치기 전 (${sel.length}개 → ${secs.length}개)`);
+        toastr.success(`섹션 ${sel.length}개를 ${secs.length}개로 합쳤어요 · 이전 상태는 복구 지점에 있어요`, '섹션 합치기');
+        gs = groups(); gi = Math.min(gi, gs.length - 1); picked = new Set(); result = null;
+        $root.find('.na_mg_group').html(gs.map((g, i) => `<option value="${i}">${esc(g.label)} · 섹션 ${g.secs.length}개</option>`).join('')).val(String(gi));
+        drawResult(); drawList();
+    });
+    drawList();
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+}
