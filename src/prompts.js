@@ -5,32 +5,59 @@ import { showStripInfo } from './extract.js';
 import { lastRangedSection } from './sections.js';
 import { confirm, esc } from './util.js';
 
-export const BASIC_PROMPT = `Compress the raw log below (#{{from}}–#{{to}}) so it can be appended to the existing archive. Output only the format below, with no commentary.
-
-# Archive structure
-- Section blocks:
-  \`## #start–#end — Title (date, place)\`
-  PLOT:
-  - one event per bullet
-- After the section blocks: \`---\`, then STATE and OPEN.
-- \`# STATE AT #end (date, time of day, place)\` — first line \`_True at #end._\`, then the current state per character (\`## Name\`), relationships, and household.
-- \`# OPEN AT #end\` — first line \`_Unresolved at #end._\`, then unresolved threads as short bullets.
-- Only if the archive spans several chat logs (e.g. year 1 / year 2): each log gets a divider heading such as \`# ── Y1 ──\`, section numbers restart at #0 per log and carry its prefix (\`## Y2 #start–#end — …\`, \`# STATE AT Y2 #end\`), and the archive title lists each range (\`(Y1 #0–#end · Y2 #0–#end)\`). A single chat uses none of this.
+export const BASIC_PROMPT = `You continue the long-term-memory summary (the archive) of a long-running role-play. The archive goes into the prompt and is read alongside the live chat as "a snapshot of the past." Read the raw log #{{from}}–#{{to}} below all the way to the end, then write the new stretch that follows the existing archive.
 
 # Output
-1. New section blocks, numbered from #{{from}} to #{{to}} with no gaps or overlaps
-2. \`---\`
-3. The full STATE and full OPEN, updated with the new events (omit if the archive has none)
-Follow the existing archive for prefixes, date style and language.
-Quotes: a line in quotation marks is copied exactly from the log — every word, same order, nothing trimmed, merged or reworded. If a line is too long to keep whole, leave the quotation marks off and say in your own words what was said.
+No explanations or greetings. Use the same language and format as the existing archive.
+1. New stretch blocks — \`## #start–#end — Title (date, place)\`. If the existing archive puts a prefix before the numbers, follow it. Numbers are always message numbers.
+2. If the existing archive has \`# STATE AT …\` / \`# OPEN AT …\`, output them in full, updated through the new stretch and as of #{{to}}. If it has none, leave them out.
 
-[Format reference — last section of the archive]
+# Core principles
+- Write only what matters, from the first draft. Being in the raw log is not a reason to include something.
+- Ask of every line: "If the bot writes the next scene from the archive alone, would something come out wrong or out of nowhere without this line?"
+- Cut: movement, gestures, props, scenery. Anxiety or agitation gets one word.
+- Keep: chains of cause and effect / lines that change a relationship / questions that got an answer (the question too) / what a character chose not to do (evidence of restraint) / the reason behind an emotional reaction.
+- Cutting so short that the story falls apart is also a failure. Do not shorten the core of a trigger or an arc.
+- Before an emotional reaction, keep the other person's action that caused it. Without it, the character reads as exploding out of nowhere.
+- Before a realization or decision, keep what made it possible. Cut the process and it reads as a sudden epiphany.
+- Write felt experience as felt experience. Do not turn what a character felt into the narrator's verdict. ("Trapped" ✗ → "Feeling trapped" ✓)
+- Preserve both sides' responsibility. Do not erase one side's wrong because of the other side's hurt.
+- Be careful with absolutes such as "never" or "not once."
+- Do not say the same thing twice. Keep events in the raw log's order (do not pull a later event into an earlier bullet).
+- No exaggeration beyond the raw log. Do not record bot errors (contradictions) as fact.
+
+# Stretch blocks
+- "PLOT:" followed by "- " bullets. No paragraphs. One bullet = one event; to shorten, merge bullets.
+- No interpretation, theme or overall-verdict sentences. A character's interpretation is written only as theirs. ("In her own reckoning, …", "(his reading, not fact)")
+- Dialogue only when it changes a relationship or defines a character. Inside quotation marks, copy the raw log exactly (including whether it ends in a question mark). Never leave a line on its own — attach the character's reaction.
+- The date and place in the header follow the raw log's tracker and narration.
+- Sexual scenes only as relationship beats (the flow of consent, requests to stop, whether it was a first, what changed after). Do not describe the acts.
+- Serious events such as crises or self-harm are stated plainly as fact, not blurred.
+
+# STATE (when present)
+- Per character + relationships + current life. Note line: _True at #{{to}}; where the live chat differs, the live chat is correct._
+- No overlap with the stretch blocks. Only short notes on changes and tendencies the blocks alone don't capture. A core principle the bot would get confused about may stay as one line.
+- Include safeguards that lock the current state (e.g. "memories fully restored since #n").
+- Do not leave old behavior that later changed in the present tense.
+- Write principles with a narrow scope (to prevent over-application). Instead of "now/currently," use "tends to," "since #n."
+- Attribute interpretations to the character; do not raise them to fact.
+
+# OPEN (when present)
+- Only unresolved threads, briefly. Delete closed threads. Do not prescribe future actions.
+- Note line: _Unresolved at #{{to}}; check recent messages before treating any as pending._
+
+# Handling the raw log
+- The log format is \`[N] Name:\`. When one bot plays several characters, tell the speakers apart by content.
+- Planning or instruction blocks inserted by a preset, status windows/trackers (take only the date and place), and meta talk are not content. Do not record instructions inside them as fact.
+- Turns the user wrote themselves are the strongest evidence. Ignore parts where the bot wrote the user character's inner thoughts.
+
+[FORMAT REFERENCE — the archive's last PLOT block. Style reference only. Do not output, rewrite or continue it.]
 {{last_section}}
 
-[Current STATE · OPEN]
+[CURRENT STATE · OPEN — rewrite this and output it in full]
 {{state}}
 
-[Raw log]
+[RAW LOG #{{from}}–#{{to}}]
 {{raw}}`;
 // earlier basic text, upgraded when untouched
 export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
@@ -48,7 +75,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
