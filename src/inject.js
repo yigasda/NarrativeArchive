@@ -1,6 +1,7 @@
 // What gets injected: building the prompt block (muted, faded, world, extra blocks) and keeping it current.
 
 import { PROMPT_KEY, ctx, getMeta, hasChat } from './core.js';
+import { applyDigests } from './digest.js';
 import { applyFade } from './fade.js';
 import { currentCast, inCast, knowledgeRows } from './knowledge.js';
 import { sectionPanel } from './panel.js';
@@ -8,10 +9,11 @@ import { isExcluded } from './quotes.js';
 import { cachedTokens, filterMuted, trimEnd } from './sections.js';
 import { worldText } from './world.js';
 
-// What actually gets injected: muted sections removed, older sections shortened by the forgetting curve,
+// What actually gets injected: digests in place of their sections, muted sections removed, older sections shortened by the forgetting curve,
 // the shared world first. The token cap only warns.
 export async function buildInjection(m) {
-    const { text, faded } = applyFade(m, filterMuted(m, m.text));
+    // digests stand in for their sections first, then muted sections drop out, then the forgetting curve
+    const { text, faded } = applyFade(m, filterMuted(m, applyDigests(m, m.text)));
     const cap = Math.max(0, Number(m.tokenCap) || 0);
     const trimmed = [];
     const extra = text.trim() ? extraBlocks(m) : '';

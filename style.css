@@ -3679,3 +3679,23 @@ body.na_darkui .na_launch_tabs { background: #3A2F28; }
 .na_qc_gradebox small { color: var(--na-dim, inherit); opacity: 0.85; }
 .na_mg_rawview { align-self: flex-start; margin-top: -4px; font-size: 0.86em; }
 .na_mg_rawpre { white-space: pre-wrap; word-break: break-word; font-size: 0.82em; line-height: 1.5; margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--na-softer); border: 1px solid var(--na-line); }
+
+/* 다이제스트 */
+.na_tag.dig { cursor: pointer; }
+body:not(.na_darkui) .na_tag.dig { background: #E4EEDF; color: #3D6B35; }
+body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
+.na_dg { display: flex; flex-direction: column; gap: 10px; }
+.na_dg_have:empty { display: none; }
+.na_dg_have { display: flex; flex-direction: column; gap: 6px; }
+.na_dg_item { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; }
+.na_dg_item + .na_dg_item { border-top: 1px solid var(--na-line); }
+.na_dg_item.stale { opacity: 0.65; }
+.na_dg_ihead { display: flex; align-items: center; gap: 10px; }
+.na_dg_ihead .na_rt_txt b { font-size: 0.95em; line-height: 1.4; }
+.na_dg_iact { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.86em; }
+.na_popup .na_dg_edit, .na_popup .na_dg_out { margin: 0; width: 100%; box-sizing: border-box; font-size: 0.88em; line-height: 1.55; resize: vertical; }
+.na_dg_target .na_cp_txt { display: flex; flex-direction: column; gap: 2px; }
+.na_dg_target .na_cp_txt small { color: var(--na-dim); font-size: 0.857em; }
+.na_dg_tok { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.na_popup .na_dg_tokin { width: 84px; margin: 0; text-align: right; }
+.na_dg_res { display: flex; flex-direction: column; gap: 8px; }

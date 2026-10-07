@@ -2,6 +2,7 @@
 
 import { commitText, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { layersOf, openLayers } from './fade.js';
+import { digestedKeys, openDigest } from './digest.js';
 import { openMerge, openRetitle, openSectionFix } from './retitle.js';
 import { lastBuild } from './inject.js';
 import { openKeywords } from './keywords.js';
@@ -40,6 +41,7 @@ export function mountSectionBrowser($host) {
           <button type="button" class="na_v2_pillbtn na_rp_open" title="아카이브 전체에서 찾아 바꾸기">찾아 바꾸기</button>
           <button type="button" class="na_v2_pillbtn na_retitle_open" title="초안 모델로 섹션 제목을 책 목차처럼 다시 지어요">제목 다시 짓기</button>
           <button type="button" class="na_v2_pillbtn na_merge_open" title="이어진 섹션을 초안 모델로 합쳐요">섹션 합치기</button>
+          <button type="button" class="na_v2_pillbtn na_digest_open" title="이어진 섹션을 짧은 다이제스트 하나로 (원본은 그대로)">다이제스트</button>
           <span class="na_tlb_hc"></span>
         </div>
         <div class="na_arch_tools"></div>
@@ -65,6 +67,7 @@ export function mountSectionBrowser($host) {
     });
     $root.on('click', '.na_retitle_open', () => openRetitle());
     $root.on('click', '.na_merge_open', () => openMerge());
+    $root.on('click', '.na_digest_open', async () => { await openDigest(); render(true); });
     $root.on('click', '.na_hc_status', () => { const d = document.getElementById('na_hcheck'); if (d) d.open = !d.open; });
     const syncView = () => {
         const tl = $root.hasClass('na_tl');
@@ -202,6 +205,7 @@ export function mountSectionBrowser($host) {
         const pinned = pinnedSet(m);
         const links = linkedMap(m);
         const waiting = linkWaiting(m);
+        const digested = digestedKeys(m);
         const cardCount = sections.filter(x => !x.group).length;
         let shown = 0, hits = 0, editTarget = null;
         // filter chips: off / keyword / pinned / shortened, counted over cards
@@ -271,7 +275,7 @@ export function mountSectionBrowser($host) {
                       </div>
                       <div class="na_head_ctrl">
                         ${s.note ? `<button type="button" class="na_icon na_icon_sm na_group_edit" title="머리글 편집">${svgA(ICO_A.pen, 14)}</button>` : ''}
-                        ${isState ? '' : `<button type="button" class="na_icon na_icon_sm na_group_merge" title="이 묶음에서 섹션 합치기" aria-label="이 묶음에서 섹션 합치기">${svgA('M12 3v6M9 6l3 3 3-3M12 21v-6M9 18l3-3 3 3M5 12h14', 14)}</button><button type="button" class="na_icon na_icon_sm na_group_retitle" title="이 묶음 제목 다시 짓기" aria-label="이 묶음 제목 다시 짓기">${svgA('M6 4v16M18 4v16M6 12h12', 14)}</button>`}
+                        ${isState ? '' : `<button type="button" class="na_icon na_icon_sm na_group_merge" title="이 묶음에서 섹션 합치기" aria-label="이 묶음에서 섹션 합치기">${svgA('M12 3v6M9 6l3 3 3-3M12 21v-6M9 18l3-3 3 3M5 12h14', 14)}</button><button type="button" class="na_icon na_icon_sm na_group_digest" title="이 묶음에서 다이제스트 만들기" aria-label="다이제스트">${svgA(ICO_A.compress, 14)}</button><button type="button" class="na_icon na_icon_sm na_group_retitle" title="이 묶음 제목 다시 짓기" aria-label="이 묶음 제목 다시 짓기">${svgA('M6 4v16M18 4v16M6 12h12', 14)}</button>`}
                         ${pinBtn(pinned.has(key), '이 묶음을')}
                         ${sw(!off, off ? '이 묶음 주입 켜기' : '이 묶음 통째로 주입에서 빼기')}
                       </div>
@@ -291,6 +295,7 @@ export function mountSectionBrowser($host) {
                 $g.find('> .na_group_head .na_sw').on('click', e => { e.stopPropagation(); setMuted(key, !off); });
                 $g.find('> .na_group_head .na_group_retitle').on('click', e => { e.stopPropagation(); openRetitle(s); });
                 $g.find('> .na_group_head .na_group_merge').on('click', e => { e.stopPropagation(); openMerge(s); });
+                $g.find('> .na_group_head .na_group_digest').on('click', async e => { e.stopPropagation(); await openDigest(s); render(true); });
                 $g.find('> .na_group_head .na_pin').on('click', e => { e.stopPropagation(); setPinned(key, !pinned.has(key)); });
                 $g.find('> .na_group_head .na_group_edit').on('click', e => {
                     e.stopPropagation();
@@ -321,11 +326,12 @@ export function mountSectionBrowser($host) {
                 fade && !off ? `<span class="na_tag fade" title="망각 곡선">${fade === 'line' ? '한 줄' : '짧게'}</span>` : '',
                 hasKeys && !off ? `<span class="na_tag key" title="${isWait ? '키워드 대기' : '키워드 켜짐'}: ${esc(links[key].join(', '))}">키워드</span>` : '',
                 isPin ? '<span class="na_tag pin">고정</span>' : '',
+                digested.has(key) && !off ? '<span class="na_tag dig" role="button" title="다이제스트로 들어가요 · 눌러서 보기">다이제스트</span>' : '',
                 count ? `<span class="na_tag hit">${count}건</span>` : '',
             ].join('');
             // list card: the section label ("PLOT:") on the first line is drawn as a small caption over the preview
             const lcLabel = tl ? '' : ((body.replace(/^#{1,2} [^\n]*\n?/, '').trim().split('\n')[0] || '').trim().match(/^([A-Z][A-Z /&'’-]{1,30}):$/) || [])[1] || '';
-            const status = off || parentOff ? '꺼 둠' : isPin ? '고정' : hasKeys ? (isWait ? `키워드 대기 (${esc(links[key][0])})` : '키워드 켜짐') : fade === 'line' ? '한 줄' : fade === 'short' ? '짧게' : '원문';
+            const status = off || parentOff ? '꺼 둠' : digested.has(key) ? '다이제스트로 들어감' : isPin ? '고정' : hasKeys ? (isWait ? `키워드 대기 (${esc(links[key][0])})` : '키워드 켜짐') : fade === 'line' ? '한 줄' : fade === 'short' ? '짧게' : '원문';
             const $card = $(tl ? `
               <div class="na_card ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''} ${isWait && !off ? 'na_waiting' : ''}" data-start="${s.start}" ${rm ? `data-a="${Math.min(+rm[2], +rm[4])}" data-b="${Math.max(+rm[2], +rm[4])}" data-p="${esc(rm[1] || '')}"` : ''}>
                 <div class="na_rail" aria-hidden="true">${rm ? `<span>#${rm[2]}</span><span>#${rm[4]}</span>` : ''}</div>
@@ -423,6 +429,7 @@ export function mountSectionBrowser($host) {
             });
             $card.find('.na_layers_btn').on('click', () => openLayers(s));
             $card.find('.na_fix_btn').on('click', e => { e.stopPropagation(); openSectionFix(s); });
+            $card.find('.na_tag.dig').on('click', async e => { e.stopPropagation(); await openDigest(); render(true); });
             $card.find('.na_del').on('click', () => remove(s));
             $parent.append($card);
             if (s.start === pendingEdit) editTarget = [$card, s];
