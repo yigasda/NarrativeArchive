@@ -29,17 +29,16 @@ Output exactly the following, in this order, with no greeting, explanation or co
 - Quotes must be lines that actually appear in the raw log. Never invent or paraphrase a line and present it as a quote.
 
 # Core principles
-- Write only what matters, from the first draft. Being in the raw log is not a reason to include something.
-- Ask of every line: "If the bot read only the archive and then wrote the next scene, would something go wrong or feel unmotivated without this line?"
+- Being in the raw log is not a reason to include something. Ask of every line: "If the bot read only the archive and then wrote the next scene, would something go wrong or feel unmotivated without this line?"
+- A character's interpretation is written only as theirs, never as fact: "In her own reckoning, …", "(his reading, not fact)".
 - Cut: movement and positioning, gestures, props, scenery. Anxiety or agitation gets one word.
 - Keep:
   - chains of cause and effect
   - lines that change a relationship
   - questions together with the answers they got (an answer alone reads as unmotivated)
   - what a character chose NOT to do (evidence of restraint)
-  - the reason behind each emotional reaction
   - the concrete action that shows a standing trait at work
-- Cutting so hard that the story breaks is also a failure. Do not shrink the core of a trigger or an arc. The goal is not to erase the story but to absorb it into cause and effect. Do not list dialogue.
+- Cutting so hard that the story breaks is also a failure. Do not shrink the core of a trigger or an arc. The goal is not to erase the story but to absorb it into cause and effect.
 
 # Protecting causality
 - Before every emotional reaction, keep the other person's action that caused it. Without it, the character appears to erupt on their own or seems childish.
@@ -53,7 +52,7 @@ Output exactly the following, in this order, with no greeting, explanation or co
 
 # Stretch blocks
 - Bullets only, no paragraphs. One bullet = one event; to shorten, merge bullets.
-- No interpretation, theme or summary-verdict sentences. A character's interpretation appears only when attributed to them: "In her own reckoning, …", "(his reading, not fact)".
+- No interpretation, theme or summary-verdict sentences.
 - Dialogue only when it changes a relationship or defines a character. Inside quotation marks, stay faithful to the raw log, including whether it is a question; if the original is a statement, do not add a question mark.
 - Never leave a quote standing alone. Attach the character's reaction to it.
 - Dates and places in headers come from the tracker and narration. A tracker date that does not fit (a season that does not match the month, a date that goes backward) is a model error; ignore it. If a large time skip happens without a record, note it in the header (e.g. "some five months later").
@@ -63,12 +62,11 @@ Output exactly the following, in this order, with no greeting, explanation or co
 
 # STATE (when present)
 - Per character + relationships + current life. Notice line: \`_True at #{{to}}; where the live chat differs, the live chat is correct. A character's reading marked as such is not canon._\`
-- No overlap with the stretch blocks. Do not restate events already in PLOT; record only changes and tendencies that PLOT alone does not capture, briefly. One line for a core principle the bot is likely to confuse is allowed.
+- Do not restate events already in the stretch blocks; record only changes and tendencies that PLOT alone does not capture, briefly. One line for a core principle the bot is likely to confuse is allowed.
 - Keep safety lines that lock the current state (e.g. "memories fully restored since #n" — it stops the bot from mistaking an old arc for the present).
 - Do not leave an old behavior in present tense if a later arc changed it. If something changed in this stretch, edit the existing line.
 - Scope principles narrowly to prevent over-application. ("no commands" ✗, which could change even how he talks → "no longer dictates her choices or movements" ✓)
-- Attribute interpretations to characters; do not promote them to fact. Use "tends to" or "since #n" instead of "now" or "currently."
-- Do not describe a character's present psychology by an earlier arc's standards.
+- Use "tends to" or "since #n" instead of "now" or "currently."
 - Lines this stretch does not affect stay exactly as they are.
 
 # OPEN (when present)
@@ -99,7 +97,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
