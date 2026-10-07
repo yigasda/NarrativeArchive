@@ -92,10 +92,11 @@ export async function openAuSettings() {
 // 을/를 after a number read in Korean (…3을, …4를)
 export const josaA = n => ('2459'.includes(String(n).slice(-1)) ? '를' : '을');
 
-// what to compress next: after the boundary (or the last extract), up to the messages that stay visible
-export function nextRange(c = ctx(), m = getMeta()) {
+// what to compress next: after the boundary, up to the messages that stay visible.
+// The wizard also skips past the last copied extract (it may be with another model); 한 번에 압축 goes by the boundary only.
+export function nextRange(c = ctx(), m = getMeta(), { afterExport = true } = {}) {
     const last = (c.chat?.length || 0) - 1;
-    const le = m.lastExport;
+    const le = afterExport ? m.lastExport : null;
     const after = Math.max(m.boundary, le && le.to <= last ? le.to : -1);
     const from = Math.min(after + 1, Math.max(0, last));
     return { from, to: Math.max(from, last - Math.max(0, Number(m.keep) || 0)), last, after };
@@ -114,8 +115,8 @@ export async function quickCompress() {
     if (quickBusy) return toastr.info('요약을 받는 중이에요.');
     const c = ctx(), m = getMeta(), g = globalSettings();
     if (!draftReady()) return toastr.info('⚙ 설정 → AI · 번역 → 초안 모델을 먼저 정해 주세요.', '한 번에 압축');
-    const { from, to, last, after } = nextRange(c, m);
-    if (after >= last || to < from || after + 1 > last - Math.max(0, Number(m.keep) || 0)) return toastr.info(`경계선 #${m.boundary} 뒤에 압축할 메시지가 없어요 (마지막 ${m.keep}개는 남겨요).`, '한 번에 압축');
+    const { from, to, last, after } = nextRange(c, m, { afterExport: false });
+    if (after >= last || to < from || after + 1 > last - Math.max(0, Number(m.keep) || 0)) return toastr.info(`${m.boundary >= 0 ? `경계선 #${m.boundary} 뒤에` : '이 채팅에'} 압축할 메시지가 없어요 (메시지 ${last + 1}개 · 마지막 ${m.keep}개는 남겨요).`, '한 번에 압축');
     const { items, raw } = rangeRaw(c, g, from, to);
     if (!raw) return toastr.info('이 범위에 메시지가 없어요.', '한 번에 압축');
     const p = g.prompts.find(x => x.id === g.wizPrompt) || activePrompt(g);
