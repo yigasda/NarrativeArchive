@@ -8,7 +8,7 @@ import { confirm, esc } from './util.js';
 export const BASIC_PROMPT = `You continue the long-term-memory summary (the archive) of a long-running role-play. The archive goes into the prompt and is read alongside the live chat as "a snapshot of the past." Read the raw log #{{from}}–#{{to}} below in full, from the first message to the last, then write the new stretch that follows the existing archive.
 
 # Output
-Output exactly the following, in this order, with no greeting, explanation or commentary. Use the same language and format as the existing archive.
+Output exactly the following, in this order, with no greeting, explanation or commentary. Use the existing archive's language and format — even when the raw log is in another language. Translate dialogue into the archive's language; keep a word or line in its original language only where the archive already does.
 1. The new stretch blocks
    - Header: \`## #start–#end — Title (date, place)\`, then \`PLOT:\`, then \`- \` bullets. If the existing archive puts a prefix before the numbers, follow it.
    - A section is a chapter, not a beat. Cut only where something turns: a relationship shifts, the situation changes, a secret comes out, a decision is made. Fold routine stretches and small beats into the section they belong to.
@@ -36,7 +36,7 @@ Output exactly the following, in this order, with no greeting, explanation or co
 - A private-thought tag holds that character's thoughts, not spoken lines.
 - Turns the user wrote themselves are the strongest canon. Ignore any part where the bot writes the user character's inner thoughts.
 - Bot errors (contradictions with earlier messages) do not become canon. Before stating that something exists or does not exist, confirm it in the raw log.
-- Quotes must be lines that actually appear in the raw log. Never invent or paraphrase a line and present it as a quote.
+- Quotes must be lines that actually appear in the raw log (translated when the log is in another language). Never invent or paraphrase a line and present it as a quote.
 
 # Core principles
 - Being in the raw log is not a reason to include something. Ask of every line: "If the bot read only the archive and then wrote the next scene, would something go wrong or feel unmotivated without this line?"
@@ -48,7 +48,7 @@ Output exactly the following, in this order, with no greeting, explanation or co
   - questions together with the answers they got (an answer alone reads as unmotivated)
   - what a character chose NOT to do (evidence of restraint)
   - the concrete action that shows a standing trait at work
-- Cutting so hard that the story breaks is also a failure. Do not shrink the core of a trigger or an arc. The goal is not to erase the story but to absorb it into cause and effect.
+- Cutting so hard that the story breaks is also a failure. Do not shrink the core of a trigger or an arc. The goal is not to erase the story but to absorb it into cause and effect. Do not list dialogue.
 
 # Protecting causality
 - Before every emotional reaction, keep the other person's action that caused it. Without it, the character appears to erupt on their own or seems childish.
@@ -63,7 +63,7 @@ Output exactly the following, in this order, with no greeting, explanation or co
 # Stretch blocks
 - Bullets only, no paragraphs. One bullet = one event; to shorten, merge bullets.
 - No interpretation, theme or summary-verdict sentences.
-- Dialogue only when it changes a relationship or defines a character. Inside quotation marks, stay faithful to the raw log, including whether it is a question; if the original is a statement, do not add a question mark.
+- Dialogue only when it changes a relationship or defines a character — usually one line in a bullet, at most two; tell the rest in your own words. Inside quotation marks, stay faithful to the raw log, including whether it is a question; if the original is a statement, do not add a question mark.
 - Never leave a quote standing alone. Attach the character's reaction to it.
 - Dates and places in headers come from the tracker and narration. A tracker date that does not fit (a season that does not match the month, a date that goes backward) is a model error; ignore it. If a large time skip happens without a record, note it in the header (e.g. "some five months later").
 - Sex is recorded only as relationship beats: how consent moved, requests to stop, whether it was a first, and what changed afterward. No description of acts or anatomy, even if the user's own turn describes them.
@@ -107,7 +107,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로

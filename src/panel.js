@@ -1,6 +1,6 @@
 // The side panel: markup, event wiring (bindPanel) and refresh (syncPanel).
 
-import { aiLabel, aiProfiles, apiFormat, askAI, askDraft, connSettings, drLabel, draftReady, draftSettings, listModels, parseServiceAccount, trLabel, trSettings, vxTokens, withSpinner } from './ai.js';
+import { aiLabel, aiProfiles, apiFormat, askAI, askDraft, compressEffort, connSettings, drLabel, draftReady, draftSettings, listModels, parseServiceAccount, trLabel, trSettings, vxTokens, withSpinner } from './ai.js';
 import { openAppend } from './append.js';
 import { openAsk } from './ask.js';
 import { branchState, openBranches } from './branches.js';
@@ -330,6 +330,7 @@ export function renderPanel() {
                 </div>
                 ${connCfgHtml('dr')}
                 <div class="na_set_list na_dr_max_row" id="na_dr_max_row" hidden>
+                  <label class="na_set_row"><span><span>압축할 때 생각</span><small>압축 · 원문 보고 다시 쓰기만 · 답 한도 32,000</small></span><span class="na_cfg_val"><select class="text_pole na_cc_sel" id="na_dr_ceffort"><option value="high">높게 (high)</option><option value="medium">보통 (medium)</option><option value="low">낮게 (low)</option><option value="conn">위 연결의 생각 그대로</option></select></span></label>
                   <label class="na_set_row"><span><span>초안 최대 길이</span><small>초안이 끊기면 늘려 주세요</small></span><span class="na_cfg_val"><input type="number" id="na_dr_max" class="text_pole" min="1024" step="1024"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                 </div>
                 <div class="na_set_list">
@@ -452,6 +453,7 @@ export function renderAiSettings() {
     $('#na_tr_mode').val(trSettings().mode);
     $('#na_dr_mode').val(draftSettings().mode);
     $('#na_dr_max_row').prop('hidden', !draftReady());
+    $('#na_dr_ceffort').val(compressEffort());
     $('#na_dr_max').val(draftSettings().max || 16000);
     const own = [renderConn('ai'), renderConn('tr'), renderConn('dr')].some(Boolean);
     $('#na_conn_note').prop('hidden', !own);
@@ -610,6 +612,7 @@ export function bindPanel() {
     $('#na_gloss_edit').on('click', needChat(async () => { await openGlossary(); renderAiSettings(); }));
     $('#na_tr_mode').on('change', function () { trSettings().mode = this.value; saveGlobal(); renderAiSettings(); });
     $('#na_dr_mode').on('change', function () { draftSettings().mode = this.value; saveGlobal(); renderAiSettings(); });
+    $('#na_dr_ceffort').on('change', function () { draftSettings().cEffort = this.value; saveGlobal(); });
     $('#na_dr_max').on('change', function () { const v = Math.max(1024, parseInt(this.value, 10) || 16000); draftSettings().max = v; this.value = v; saveGlobal(); });
     for (const p of ['ai', 'tr', 'dr']) {
         const field = (sel, key) => $(`#na_${p}_${sel}`).on('change', function () { connSettings(p)[key] = this.value.trim(); saveGlobal(); renderAiSettings(); });
