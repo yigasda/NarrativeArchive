@@ -1,6 +1,6 @@
 // Compression wizard.
 
-import { askAI, askDraft, drLabel, draftReady, withSpinner } from './ai.js';
+import { aiLabel, askAI, askDraft, drLabel, draftReady, withSpinner } from './ai.js';
 import { openAppend } from './append.js';
 import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { driftHtml } from './drift.js';
@@ -110,7 +110,7 @@ function rangeRaw(c, g, from, to) {
 
 // One button: the next range → the draft model (with the wizard's instruction, and the AU block in an AU chat)
 // → 아카이브에 추가 with the summary filled in. Its checks, the boundary and the hide step stay.
-let quickBusy = false;
+let quickBusy = false, quickBound = false;
 export async function quickCompress() {
     if (quickBusy) return toastr.info('요약을 받는 중이에요.');
     const c = ctx(), m = getMeta(), g = globalSettings();
@@ -122,7 +122,10 @@ export async function quickCompress() {
     const p = g.prompts.find(x => x.id === g.wizPrompt) || activePrompt(g);
     const prompt = compressPrompt(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text }, m);
     const au = auOf(m);
-    if (!await confirm('한 번에 압축', `<b>#${from} – #${to}</b> · 메시지 ${items.length}개 · 약 ${fmt(await countTokens(prompt))} 토큰<br>초안 모델(${esc(drLabel())})이 요약하면 <b>아카이브에 추가</b> 창이 떠요.<br><small>지시문: ${esc(p.name)}</small>${au.on ? `<br><small>AU 켜짐 · 요약이 본편 뒤 <b>${esc(au.name)}</b> 묶음으로 이어져요</small>` : ''}`)) return;
+    // the 채점 box lives in the confirm dialog; its state is remembered as soon as it changes
+    if (!quickBound) { quickBound = true; $(document).on('change', '.na_qc_grade', function () { const gg = globalSettings(); gg.quickGrade = this.checked; saveGlobal(); }); }
+    if (!await confirm('한 번에 압축', `<b>#${from} – #${to}</b> · 메시지 ${items.length}개 · 약 ${fmt(await countTokens(prompt))} 토큰<br>초안 모델(${esc(drLabel())})이 요약하면 <b>아카이브에 추가</b> 창이 떠요.<br><small>지시문: ${esc(p.name)}</small>${au.on ? `<br><small>AU 켜짐 · 요약이 본편 뒤 <b>${esc(au.name)}</b> 묶음으로 이어져요</small>` : ''}
+        <label class="checkbox_label na_qc_gradebox"><input type="checkbox" class="na_qc_grade" ${g.quickGrade ? 'checked' : ''}><span>채점도 같이 <small>· AI 기능 모델(${esc(aiLabel())})이 원문과 대조해 지어낸 것·빠진 것·틀린 번호를 찾아요 (비용 추가)</small></span></label>`)) return;
     quickBusy = true;
     const toast = toastr.info(`#${from}–#${to} 요약하는 중… 창을 닫아도 돼요`, '한 번에 압축', { timeOut: 0, extendedTimeOut: 0, tapToDismiss: false });
     let out = null;
@@ -135,7 +138,15 @@ export async function quickCompress() {
     m.lastExport = { from, to, at: Date.now(), how: 'draft' };
     await saveMeta();
     refreshStatus();
-    openAppend({ text, end: guessEndNumber(text) ?? to });
+    // 채점도 같이: the same check as the wizard's step 4, shown in the append window
+    let grade = '', gradeError = false;
+    if (globalSettings().quickGrade) {
+        const t2 = toastr.info('원문과 대조해 채점하는 중…', '한 번에 압축', { timeOut: 0, extendedTimeOut: 0, tapToDismiss: false });
+        try { grade = String(await askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${text}`, { system: AI_SYS_GRADE, maxTokens: 2500 }) || '').trim(); }
+        catch (e) { console.error('[NarrativeArchive] quick grade', e); grade = String(e?.message || e); gradeError = true; }
+        finally { toastr.clear(t2); }
+    }
+    openAppend({ text, end: guessEndNumber(text) ?? to, grade, gradeError });
 }
 
 export async function openWizard() {
