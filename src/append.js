@@ -342,7 +342,7 @@ export async function openAppend(prefill = {}) {
             const au = auOf(m);
             if (au.on && val.trim()) {
                 const added = [val !== $ta.val() && `${au.name} #번호`, val.includes(auDivider(au.name)) && !$ta.val().includes(auDivider(au.name)) && auDivider(au.name)].filter(Boolean);
-                ckRow($root.find('.na_aucheck'), 'ok', `${esc(au.name)} 묶음으로 넣어요`, added.length ? `빠진 ${added.map(x => `<code>${esc(x)}</code>`).join(' · ')}는 추가할 때 붙여요` : '');
+                ckRow($root.find('.na_aucheck'), 'ok', `${esc(au.name)} 묶음으로 넣어요`, added.length ? `빠진 ${added.map(x => `<b>${esc(x)}</b>`).join(' · ')}는 추가할 때 붙여요` : '');
             } else $root.find('.na_aucheck').prop('hidden', true);
             const guess = guessEndNumber(val);
             if (guess !== null && !endTouched) {
