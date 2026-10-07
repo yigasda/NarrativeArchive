@@ -22,8 +22,15 @@ SECTIONS: numbered sections. Each shows its current title, then its text.
 
 STEPS
 1. Read each section.
-2. Write its title: two to six words, concrete and evocative — the scene's key object, place or act, or a defining line in quotation marks copied exactly from the section.
-3. A title names the scene; it does not summarize it. No semicolons, no "X does this; Y does that."
+2. Write its title: short and concrete. A title names the scene; it does not summarize it. No semicolons, no "X does this; Y does that."
+3. Vary the shape; do not start every title with "The":
+   - a place or object: The broken plank · Varo's market
+   - two things joined: The bridge, the debt · Bread, and the oath he broke
+   - one short plain sentence: Mara keeps the knife · The road closes
+   - a "what" clause: What Ren didn't say
+   - a number or pairing: One cloak · The two of them · The second night
+   - a list: Ivo, the duke, and the toll
+   - a line in quotation marks, copied exactly from the section: "Now you owe me"
 4. Same language as the section. Titles in one batch should not repeat each other.
 5. A current title that already follows these rules may stay as it is.
 
@@ -41,8 +48,8 @@ PLOT:
 
 Answer:
 1 | "Now you owe me"
-2 | The closed road
-3 | The confession
+2 | The road closes
+3 | What Ren didn't say
 
 OUTPUT
 One line per section: its number | the new title. Only the title — no range, date or place. Nothing else.`;
@@ -316,7 +323,14 @@ STEPS
 2. Never split a given section: every new section is made of whole given sections, in order.
 3. Numbers: each new section covers one continuous range, and together they cover the given sections' first to last number with no gaps and no overlaps. Keep the prefix the headings use (for example "AU").
 4. Heading: "## <prefix> #from–#to — Title (date, place)". Take the date and place from the merged headings; if they differ, give the first and the last ("Hathyr 8, late morning → night").
-5. Title: two to six words, like a book's table of contents — the scene's key object, place or act, or a defining line in quotation marks copied exactly. A title names the scene; it does not summarize it. No semicolons.
+5. Title: like a book's table of contents — short and concrete; it names the scene, it does not summarize it. No semicolons. Vary the shape; do not start every title with "The":
+   - a place or object: The broken plank · Varo's market
+   - two things joined: The bridge, the debt · Bread, and the oath he broke
+   - one short plain sentence: Mara keeps the knife · The road closes
+   - a "what" clause: What Ren didn't say
+   - a number or pairing: One cloak · The two of them · The second night
+   - a list: Ivo, the duke, and the toll
+   - a line in quotation marks, copied exactly from the section: "Now you owe me"
 6. Text: keep the form (labels such as PLOT:, then "- " bullets). Put the merged sections' bullets together in their order. Merge two bullets only when they say the same thing. Keep every fact. Keep every quotation word for word. Do not shorten, explain or add anything.
 
 EXAMPLE
@@ -336,7 +350,7 @@ Answer:
 PLOT:
 - Ren and Mara reached the old bridge at dusk. Mara is afraid of heights.
 - Halfway across, a plank broke and Ren cut his leg. Mara pulled him up: "Now you owe me."
-## #16–#18 — The closed road (Spring 3, night, Varo)
+## #16–#18 — The road closes (Spring 3, night, Varo)
 PLOT:
 - Ivo told them the duke had closed the south road, so they had to go through Varo's market.
 
@@ -373,6 +387,7 @@ export async function openMerge(group = null) {
         <div class="na_mg_list"></div>
         <small class="na_v2_note na_mg_info"></small>
         <label class="na_v2_card na_v2_switchrow na_mg_rawrow"><span class="na_cp_txt"><span>원문 보고 다시 쓰기</span><small class="na_mg_rawinfo">순서나 번호가 틀렸을 때 · 고른 범위의 원문으로 처음부터 다시 써요</small></span><input type="checkbox" class="na_toggle na_mg_raw"></label>
+        <button type="button" class="na_linkbtn na_mg_rawview" hidden>보낼 원문 보기 · 모델이 읽는 그대로</button>
         <div class="na_ly_ask na_mg_ask"><input type="text" class="na_ly_askq na_mg_q" placeholder="요청 (선택 · 예: 3개 정도로, 장면 단위로)" aria-label="요청" enterkeyhint="go"><button type="button" class="na_ly_askgo na_mg_go" aria-label="합치기" title="초안 모델로 합치기">${svgA(ICO_A.check, 17, 2.4)}</button></div>
         <div class="na_mg_res" hidden>
           <div class="na_rt_head"><b class="na_mg_restitle"></b></div>
@@ -421,6 +436,7 @@ export async function openMerge(group = null) {
             : !picked.size ? '다시 쓸 섹션을 골라 주세요' : !rawSrc ? '원문 찾는 중…'
             : rawSrc.raw ? `원문 ${rawSrc.label} · ${rawSrc.from} · 메시지 ${rawSrc.n}개 · 약 ${fmt(rawSrc.tok)} 토큰` : `원문을 못 찾았어요 · ${rawSrc.why}`);
         $root.find('.na_mg_rawrow').toggleClass('warn', rw && !!rawSrc && !rawSrc.raw);
+        $root.find('.na_mg_rawview').prop('hidden', !(rw && rawSrc?.raw));
         $root.find('.na_mg_go').attr('title', rw ? '초안 모델로 원문 보고 다시 쓰기' : '초안 모델로 합치기');
         if (rw && picked.size && contiguous()) loadRaw();
         $root.find('.na_mg_info').text(picked.size < need ? (rw ? '다시 쓸 섹션을 골라 주세요' : '이어진 섹션을 두 개 이상 골라 주세요')
@@ -444,6 +460,11 @@ export async function openMerge(group = null) {
         drawList();
     });
     $root.on('click', '.na_mg_pickhead .na_pchip', function () { picked = this.dataset.all === '1' ? new Set(secsNow().map((x, i) => i)) : new Set(); result = null; $root.find('.na_mg_res').prop('hidden', true); drawList(); });
+    // the raw log as it will be sent (tags stripped by 압축 → 설정), to see what the model reads
+    $root.find('.na_mg_rawview').on('click', () => {
+        if (!rawSrc?.raw) return;
+        c.callGenericPopup($(`<div class="na_popup na_v2"><div class="na_v2_title"><b>보낼 원문</b><small>${esc(rawSrc.label)} · 메시지 ${rawSrc.n}개 · 태그는 지우고, 압축 → 설정의 지울 태그 목록(scene_plan 등)을 따라요</small></div><pre class="na_mg_rawpre">${esc(rawSrc.raw)}</pre></div>`), c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    });
     $root.find('.na_mg_raw').on('change', () => { result = null; $root.find('.na_mg_res').prop('hidden', true); $root.find('.na_mg_q').attr('placeholder', rewrite() ? '요청 (선택 · 예: 세트가 들어온 건 끝난 뒤야)' : '요청 (선택 · 예: 3개 정도로, 장면 단위로)'); drawList(); });
     $root.find('.na_mg_group').on('change', function () { gi = Number(this.value); picked = new Set(); result = null; $root.find('.na_mg_res').prop('hidden', true); drawList(); });
     const drawResult = () => {
@@ -478,16 +499,15 @@ export async function openMerge(group = null) {
                 const g = globalSettings(), r = pickedRange();
                 const prev = secsNow()[idx[0] - 1];
                 const head = `[REWRITE — read this first]
-The archive already has sections for ${r.label}, but they are wrong: events out of order, numbers on the wrong events, or split too finely. They are under [CURRENT SECTIONS] for reference only — do not trust their order or numbers.
-Rewrite this stretch from the raw log: new section blocks that cover #${r.from}–#${r.to} exactly, numbered by message, in the raw log's order${r.prefix ? `, each heading with the prefix "${r.prefix}" ("## ${r.prefix} #from–#to — …")` : ''}.
-Output only the section blocks. No "---", no STATE, no OPEN.${req ? `\n\n[REQUEST]\n${req}` : ''}
-
-[CURRENT SECTIONS]
-${src}
+The archive's sections for ${r.label} were wrong (events out of order, numbers on the wrong events, or split too finely) and are being replaced. Write this stretch again from the raw log alone: new section blocks that cover #${r.from}–#${r.to} exactly, numbered by message, in the raw log's order${r.prefix ? `, each heading with the prefix "${r.prefix}" ("## ${r.prefix} #from–#to — …")` : ''}.
+Every message the bot writes carries the same name tag, even when another character is the one speaking or acting. Decide who is present and who does what from the content, message by message.
+Output only the section blocks. No "---", no STATE, no OPEN.
 
 `;
-                const body = fillPrompt(activePrompt(g).text, { raw: rawSrc.raw, from: String(r.from), to: String(r.to), last_section: prev ? `(Format sample only. Already in the archive — do not output it.)\n${trimEnd(m.text.slice(prev.start, prev.end))}` : '(없음)', state: '(Not needed here — do not output STATE or OPEN.)', archive: m.text });
-                out = await askDraft(head + body, { maxTokens: Math.min(cap, Math.max(8000, est * 2 + 4000)) });
+                const body = fillPrompt(activePrompt(g).text, { raw: rawSrc.raw, from: String(r.from), to: String(r.to), last_section: prev ? `(Format sample only. Already in the archive — do not output it.)\n${sectionBody(m.text.slice(prev.start, prev.end))}` : '(없음)', state: '(Not needed here — do not output STATE or OPEN.)', archive: m.text });
+                // the user's correction goes last, where it is read as the final word
+                const tail = req ? `\n\n[USER'S CORRECTION — the user knows this story; this overrides any reading of the raw log that disagrees]\n${req}` : '';
+                out = await askDraft(head + body + tail, { maxTokens: Math.min(cap, Math.max(8000, est * 2 + 4000)) });
             } else out = await askDraft(`SECTIONS:\n${src}${req ? `\n\nREQUEST:\n${req}` : ''}`, { system: AI_SYS_MERGE, maxTokens: Math.min(cap, Math.max(4000, Math.ceil(est * 1.5) + 2000)), effort: 'low' });
             out = stripThink(out).replace(/^```[a-z]*\n?|```\s*$/g, '').trim().split(/\n-{3,}\s*\n/)[0].replace(/\n# (STATE|OPEN)\b[\s\S]*$/, '').trim();
             const parts = parseSections(out).filter(x => !x.group && RANGE_HEAD.test(x.title));
