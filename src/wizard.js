@@ -131,7 +131,7 @@ export function chunkItems(items) {
 // The draft model compresses items part by part. Each part sees the archive plus what the parts before it wrote
 // (their last section as the format sample, their STATE · OPEN as the current one). Returns the joined answer;
 // on a failure partway, what was done so far and where it stopped.
-export async function draftCompress({ m, g, p, items, onStep = () => {}, grade = false }) {
+export async function draftCompress({ m, g, p, items, onStep = () => {}, grade = false, memo = '' }) {
     const parts = chunkItems(items);
     const acc = [];
     let tail = '', doneTo = null, error = null;
@@ -142,7 +142,7 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
         const raw = formatExtract(part, g);
         const shadow = acc.length ? `${m.text}\n\n${acc.join('\n\n')}` : m.text;
         const state = tail || splitTail(m.text)[1].trim() || '(없음)';
-        const prompt = compressPrompt(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(shadow), state, archive: shadow }, { ...m, text: shadow });
+        const prompt = compressPrompt(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(shadow), state, archive: shadow }, { ...m, text: shadow }, memo);
         let out;
         try { out = cleanDraft(await askCompress(prompt)); }
         catch (e) { error = e; break; }
@@ -171,7 +171,7 @@ const joinGrades = gs => {
 
 // One button: the next range → the draft model (with the wizard's instruction, and the AU block in an AU chat)
 // → 아카이브에 추가 with the summary filled in. Its checks, the boundary and the hide step stay.
-let quickBusy = false, quickBound = false;
+let quickBusy = false, quickBound = false, quickMemo = '';
 export async function quickCompress() {
     if (quickBusy) return toastr.info('요약을 받는 중이에요.');
     const c = ctx(), m = getMeta(), g = globalSettings();
@@ -185,14 +185,20 @@ export async function quickCompress() {
     const n = chunkItems(items).length;
     const ce = compressEffort();
     // the 채점 box lives in the confirm dialog; its state is remembered as soon as it changes
-    if (!quickBound) { quickBound = true; $(document).on('change', '.na_qc_grade', function () { const gg = globalSettings(); gg.quickGrade = this.checked; saveGlobal(); }); }
+    if (!quickBound) {
+        quickBound = true;
+        $(document).on('change', '.na_qc_grade', function () { const gg = globalSettings(); gg.quickGrade = this.checked; saveGlobal(); });
+        $(document).on('input', '.na_qc_memo', function () { quickMemo = this.value; });
+    }
+    quickMemo = '';
     if (!await confirm('한 번에 압축', `<b>#${from} – #${to}</b> · 메시지 ${items.length}개 · 원문 약 ${fmt(estTok(raw))} 토큰${n > 1 ? `<br><b>${n}번에 나눠</b> 보내요 · 한 번에 약 ${fmt(CHUNK_TOK)} 토큰씩, 앞 조각에 이어서` : ''}<br>초안 모델(${esc(drLabel())})이 요약하면 <b>아카이브에 추가</b> 창이 떠요.<br><small>지시문: ${esc(p.name)} · 생각: ${ce === 'conn' ? '연결 설정' : { high: '높게', medium: '보통', low: '낮게' }[ce] || ce}</small>${au.on ? `<br><small>AU 켜짐 · 요약이 본편 뒤 <b>${esc(au.name)}</b> 묶음으로 이어져요</small>` : ''}
+        <textarea class="text_pole na_qc_memo" rows="2" placeholder="이번 압축 메모 (선택) · 예: #40–#140은 정사 파트, 관계 변화만 한두 줄로. 세트는 끝난 뒤에 들어왔어"></textarea>
         <label class="checkbox_label na_qc_gradebox"><input type="checkbox" class="na_qc_grade" ${g.quickGrade ? 'checked' : ''}><span>채점도 같이 <small>· AI 기능 모델(${esc(aiLabel())})이 원문과 대조해 지어낸 것·빠진 것·틀린 번호를 찾아요 (비용 추가)</small></span></label>`)) return;
     quickBusy = true;
     const toast = toastr.info(`#${from}–#${to} 요약하는 중… 창을 닫아도 돼요`, '한 번에 압축', { timeOut: 0, extendedTimeOut: 0, tapToDismiss: false });
     let r;
     try {
-        r = await draftCompress({ m, g, p, items, grade: !!globalSettings().quickGrade,
+        r = await draftCompress({ m, g, p, items, grade: !!globalSettings().quickGrade, memo: quickMemo,
             onStep: (k, total, a, b) => { if (total > 1) $(toast).find('.toast-message').text(`#${a}–#${b} 요약하는 중… (${k + 1}/${total}) 창을 닫아도 돼요`); } });
     } finally { quickBusy = false; toastr.clear(toast); }
     if (r.error) {
@@ -235,6 +241,7 @@ export async function openWizard() {
             <label><small>까지</small><span>#<input type="number" class="text_pole na_wz_to" min="0" max="${last}" value="${defTo}"></span></label>
           </div>
           <label class="na_v2_card na_v2_switchrow"><span>숨긴 메시지 빼기</span><input type="checkbox" class="na_toggle na_wz_hidden"></label>
+          <textarea class="text_pole na_wz_memo" rows="2" placeholder="이번 압축 메모 (선택) · 지시문 맨 끝에 가장 우선하는 지시로 붙어요"></textarea>
           <small class="na_v2_note na_wz_info"></small>
           ${auOf(m).on ? `<small class="na_v2_note na_wz_austate">${svgA(ICO_A.check, 12, 3)} <b>AU 채팅</b> · 요약이 본편 뒤 <b>${esc(auOf(m).name)}</b> 묶음으로 이어져요 (도구 → AU 채팅)</small>` : ''}
         </div>
@@ -313,12 +320,12 @@ export async function openWizard() {
         raw = formatExtract(items, g);
         const pid = $root.find('.na_wz_prompt').val();
         const p = pid === '__none' ? null : (g.prompts.find(x => x.id === pid) || activePrompt(g));
-        full = p ? compressPrompt(p.text, vars(), m) : raw;
+        full = p ? compressPrompt(p.text, vars(), m, $root.find('.na_wz_memo').val()) : raw;
         $root.find('.na_wz_copy span').text(p ? '지시문과 함께 복사' : '원문만 복사');
         $root.find('.na_wz_info').text(items.length ? `메시지 ${items.length}개${hiddenOut ? ` (숨긴 ${hiddenOut}개 뺌)` : ''} · 원문 약 ${fmt(await countTokens(raw))} 토큰${p ? ` · 지시문까지 약 ${fmt(await countTokens(full))} 토큰` : ''}` : '이 범위에 메시지가 없어요.');
     };
     let t;
-    $root.find('.na_wz_from, .na_wz_to, .na_wz_prompt').on('input change', () => { clearTimeout(t); t = setTimeout(build, 250); });
+    $root.find('.na_wz_from, .na_wz_to, .na_wz_prompt, .na_wz_memo').on('input change', () => { clearTimeout(t); t = setTimeout(build, 250); });
     const remember = async how => { const { from, to } = range(); m.lastExport = { from, to, at: Date.now(), how }; await saveMeta(); refreshStatus(); };
     $root.find('.na_wz_copy').on('click', async () => {
         await build();
@@ -335,7 +342,7 @@ export async function openWizard() {
         const pid = $root.find('.na_wz_prompt').val();
         const p = g.prompts.find(x => x.id === pid) || activePrompt(g);
         const $b = $(this);
-        const r = await withSpinner($b, '쓰는 중… 창을 닫지 마세요', () => draftCompress({ m, g, p, items,
+        const r = await withSpinner($b, '쓰는 중… 창을 닫지 마세요', () => draftCompress({ m, g, p, items, memo: $root.find('.na_wz_memo').val(),
             onStep: (k, total) => { if (total > 1) $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> 쓰는 중… ${k + 1}/${total}`); } }));
         if (!r) return;
         if (r.error) toastr.error(String(r.error?.message || r.error), r.doneTo === null ? '초안 모델 실패' : `${r.done}/${r.parts}까지 하고 멈췄어요 · #${r.doneTo}까지만 채웠어요`);

@@ -1,6 +1,6 @@
 // Adding new sections to the archive: checks, preview and the append popup.
 
-import { aiHtml, askAI, withSpinner } from './ai.js';
+import { aiHtml, askAI, askCompress, draftReady, stripThink, withSpinner } from './ai.js';
 import { commitText, ctx, getMeta, sectionChanges } from './core.js';
 import { lineDiff, renderDiff } from './diff.js';
 import { guessEndNumber } from './extract.js';
@@ -9,8 +9,9 @@ import { driftHtml } from './drift.js';
 import { nameNearMisses } from './keywords.js';
 import { auDivider, auFix, auOf } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, tailBlocks, trimEnd } from './sections.js';
+import { rawFor } from './retitle.js';
 import { openSource } from './source.js';
-import { SVG_B, svgB } from './theme.js';
+import { ICO_A, SVG_B, svgA, svgB } from './theme.js';
 import { translateButton } from './translate.js';
 import { confirm, countTokens, esc, fmt } from './util.js';
 
@@ -41,6 +42,38 @@ DO NOT REPORT
 OUTPUT: Korean, one bullet per problem, exactly like this
 - <무엇이 어긋나는지> — 근거 (<기존 아카이브의 섹션 제목>)
 If there is no problem, write exactly: 없음`;
+
+export const AI_SYS_DRAFTFIX = `GOAL
+Revise a DRAFT of new story-archive sections (and its STATE / OPEN) the way the user asks — and nothing else.
+
+YOU GET
+- DRAFT: new section blocks ("## #from–#to — Title (date, place)", then bullets), maybe followed by "---" and STATE / OPEN.
+- RAW LOG (sometimes): the messages the draft was made from, each starting with [number] and the speaker. It is the only source of new facts and quotes. Every message the bot writes carries the same name tag, even when another character speaks or acts; tell who does what from the content.
+- EARLIER REQUESTS (sometimes): what the user already asked for. They are done; keep them done.
+- REQUEST: what the user wants changed now. It may be in Korean. The user knows this story: where REQUEST and your reading of the raw log disagree, REQUEST wins.
+
+STEPS
+1. Do what REQUEST asks. Leave everything else word for word: the other sections and bullets, the headings' ranges, dates and places (unless asked), and STATE / OPEN (unless the change means they must say something different).
+2. The sections must still cover the same message range with no gaps or overlaps. If you merge or split sections, renumber their headings from the RAW LOG.
+3. New facts and quotes come only from DRAFT or RAW LOG. Never invent or paraphrase a line and present it as a quote.
+4. Keep the archive's rules: one bullet = one event; the action that caused a reaction comes before it; a character's interpretation only as theirs; no commentary; same language as the DRAFT.
+5. If part of the request cannot be done, do the rest and say what was not done on a last line that starts with "NOTE:", in Korean.
+
+EXAMPLE
+DRAFT:
+## #12–#18 — The bridge (Spring 3, Varo)
+PLOT:
+- Ivo arrived while Ren was still hurt; Mara pulled Ren up from the broken plank.
+REQUEST:
+순서 틀렸어. 마라가 먼저 끌어올리고 그 다음에 이보가 왔어
+
+Answer:
+## #12–#18 — The bridge (Spring 3, Varo)
+PLOT:
+- Mara pulled Ren up from the broken plank; Ivo arrived afterward, while Ren was still hurt.
+
+OUTPUT
+The whole revised draft, then an optional NOTE line. No fences, no comments.`;
 
 // Returns { text, placed, replaced: [keys], renumbered }
 // Pasted sections whose numbers the archive already covers (a model rewriting the format sample, say).
@@ -238,6 +271,12 @@ export async function openAppend(prefill = {}) {
           <input type="file" class="na_append_file" accept=".txt,.md,text/plain" hidden>
         </div>
         <textarea class="text_pole na_append_ta" spellcheck="false" placeholder="## Y2 #574–#600 — 제목 (날짜, 장소)&#10;PLOT:&#10;- …"></textarea>
+        ${draftReady() ? `<div class="na_apf">
+          <div class="na_sf_log na_apf_log"></div>
+          <div class="na_sf_note na_apf_note" hidden></div>
+          <div class="na_ly_ask"><input type="text" class="na_ly_askq na_apf_q" placeholder="초안 고쳐 달라고 하기 (예: #60 이후 더 줄여줘)" aria-label="초안 고쳐 달라고 하기" enterkeyhint="send"><button type="button" class="na_ly_askgo na_apf_go" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>
+          <div class="na_apf_foot"><label class="checkbox_label"><input type="checkbox" class="na_apf_raw" checked><span>원문 같이 보내기 <small class="na_apf_rawinfo"></small></span></label><button type="button" class="na_linkbtn na_apf_undo" hidden>처음으로</button></div>
+        </div>` : ''}
         <div class="na_v2_card na_v2_list na_ap2_checks">
           <div class="na_ap2_label"><span>붙여넣은 글 검사</span><small class="na_append_info"></small></div>
           <div class="na_check na_aucheck" hidden></div>
@@ -416,6 +455,61 @@ export async function openAppend(prefill = {}) {
         const none = /^\s*(없음|none)\.?\s*$/i.test(out);
         $root.find('.na_conflict_out').prop('hidden', false).removeClass('na_stale').toggleClass('na_ai_ok', none)
             .html(none ? '<i class="fa-solid fa-circle-check"></i> AI가 찾은 충돌 없음' : `<div class="na_ai_box_head"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 충돌 검사 <span class="na_dim">· 참고용이에요</span></div>${aiHtml(out)}`);
+    });
+    // 이어서 고치기: the whole draft revised by the draft model, with the raw log of its range when it can be found
+    const apf = { original: null, asked: [], rawKey: '', raw: null, busy: false };
+    const draftRange = () => {
+        const rs = headingRanges(auFix(String($ta.val() || ''), m));
+        if (!rs.length) return null;
+        const from = Math.min(...rs.map(r => Math.min(r.from, r.to))), to = Math.max(...rs.map(r => Math.max(r.from, r.to)));
+        return { prefix: rs[0].prefix, from, to, key: `${rs[0].prefix}|${from}|${to}` };
+    };
+    const loadApfRaw = async () => {
+        const r = draftRange();
+        if (!r) { $root.find('.na_apf_rawinfo').text('· 제목에 #번호가 없어요'); apf.raw = null; apf.rawKey = ''; return null; }
+        if (apf.rawKey === r.key && apf.raw) return apf.raw;
+        apf.rawKey = r.key;
+        $root.find('.na_apf_rawinfo').text('· 원문 찾는 중…');
+        const got = await rawFor(m, { title: `${r.prefix ? `${r.prefix} ` : ''}#${r.from}–#${r.to} — draft` });
+        apf.raw = got.raw ? { ...got, tok: await countTokens(got.raw) } : got;
+        $root.find('.na_apf_rawinfo').text(apf.raw.raw ? `· ${apf.raw.label} · 메시지 ${apf.raw.n}개 · 약 ${fmt(apf.raw.tok)} 토큰` : `· ${apf.raw.why}`);
+        return apf.raw;
+    };
+    $root.find('.na_apf_q').one('focus', () => { loadApfRaw(); });
+    const apfSend = async () => {
+        const q = String($root.find('.na_apf_q').val() || '').trim();
+        const draft = String($ta.val() || '').trim();
+        if (!q || apf.busy) return;
+        if (!draft) return toastr.info('먼저 고칠 초안이 있어야 해요.');
+        apf.busy = true;
+        const $b = $root.find('.na_apf_go').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
+        try {
+            const src = $root.find('.na_apf_raw').prop('checked') ? await loadApfRaw() : null;
+            const prompt = `DRAFT:\n${draft}\n\n${src?.raw ? `RAW LOG:\n${src.raw}\n\n` : ''}${apf.asked.length ? `EARLIER REQUESTS:\n${apf.asked.map(x => `- ${x}`).join('\n')}\n\n` : ''}REQUEST:\n${q}`;
+            const out = stripThink(await askCompress(prompt, { system: AI_SYS_DRAFTFIX })).replace(/^```[a-z]*\n?|```\s*$/g, '').trim();
+            const note = (out.match(/^NOTE:\s*(.+)$/m) || [])[1] || '';
+            const body = out.replace(/^NOTE:.*$/m, '').trim();
+            if (!/^#{1,3}\s/m.test(body)) throw new Error('초안 모델이 초안 형태로 답하지 않았어요');
+            if (apf.original === null) apf.original = draft;
+            apf.asked.push(q);
+            $ta.val(body).trigger('input');
+            $root.find('.na_apf_q').val('');
+            $root.find('.na_apf_log').html(apf.asked.map(x => `<div class="na_sf_bubble">${esc(x)}</div>`).join(''));
+            $root.find('.na_apf_note').prop('hidden', !note).text(note ? `못 한 것: ${note}` : '');
+            $root.find('.na_apf_undo').prop('hidden', false);
+            toastr.success('초안을 고쳤어요 · 아래 검사를 다시 봐 주세요', '이어서 고치기');
+        } catch (e) {
+            console.error('[NarrativeArchive] draft fix', e);
+            toastr.error(String(e?.message || e), '이어서 고치기');
+        } finally { apf.busy = false; $b.prop('disabled', false).html(svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)); }
+    };
+    $root.find('.na_apf_go').on('click', apfSend);
+    $root.find('.na_apf_q').on('keydown', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); apfSend(); } });
+    $root.find('.na_apf_undo').on('click', () => {
+        if (apf.original === null) return;
+        $ta.val(apf.original).trigger('input');
+        apf.original = null; apf.asked = [];
+        $root.find('.na_apf_log').empty(); $root.find('.na_apf_note').prop('hidden', true); $root.find('.na_apf_undo').prop('hidden', true);
     });
     // 한 번에 압축 with 채점: the grader's verdict on the summary, message numbers open the raw log
     if (pre.grade) {

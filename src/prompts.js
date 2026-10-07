@@ -155,8 +155,10 @@ AU premise: ${a.note || '(not given — take it from the raw log)'}
 `;
 }
 
-// the compress instruction with its blanks filled, and the AU block on top when the chat is an AU
-export const compressPrompt = (tpl, vars, m) => auBlock(m) + fillPrompt(tpl, vars);
+// the compress instruction with its blanks filled, and the AU block on top when the chat is an AU.
+// memo: the user's note for this one compression — last, where it is read as the final word
+export const memoBlock = memo => (String(memo || '').trim() ? `\n\n[USER'S NOTE FOR THIS STRETCH — highest priority. The user knows this story; follow this note even where the instructions above say otherwise.]\n${String(memo).trim()}` : '');
+export const compressPrompt = (tpl, vars, m, memo = '') => auBlock(m) + fillPrompt(tpl, vars) + memoBlock(memo);
 
 // An AU answer that forgot its prefix or divider gets them: "## #12–#30" → "## AU #12–#30",
 // "# STATE AT #30" → "# STATE AT AU #30", and "# ── AU ──" above the first new section.
