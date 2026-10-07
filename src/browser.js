@@ -2,6 +2,7 @@
 
 import { commitText, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { layersOf, openLayers } from './fade.js';
+import { openRetitle, openSectionFix } from './retitle.js';
 import { lastBuild } from './inject.js';
 import { openKeywords } from './keywords.js';
 import { showArchiveView } from './panel.js';
@@ -37,6 +38,7 @@ export function mountSectionBrowser($host) {
         </div>
         <div class="na_tlb_menu">
           <button type="button" class="na_v2_pillbtn na_rp_open" title="아카이브 전체에서 찾아 바꾸기">찾아 바꾸기</button>
+          <button type="button" class="na_v2_pillbtn na_retitle_open" title="초안 모델로 섹션 제목을 책 목차처럼 다시 지어요">제목 다시 짓기</button>
           <span class="na_tlb_hc"></span>
         </div>
         <div class="na_arch_tools"></div>
@@ -60,6 +62,7 @@ export function mountSectionBrowser($host) {
         d.open = !d.open;
         if (d.open) $('#na_rp_find').trigger('focus');
     });
+    $root.on('click', '.na_retitle_open', () => openRetitle());
     $root.on('click', '.na_hc_status', () => { const d = document.getElementById('na_hcheck'); if (d) d.open = !d.open; });
     const syncView = () => {
         const tl = $root.hasClass('na_tl');
@@ -266,6 +269,7 @@ export function mountSectionBrowser($host) {
                       </div>
                       <div class="na_head_ctrl">
                         ${s.note ? `<button type="button" class="na_icon na_icon_sm na_group_edit" title="머리글 편집">${svgA(ICO_A.pen, 14)}</button>` : ''}
+                        ${isState ? '' : `<button type="button" class="na_icon na_icon_sm na_group_retitle" title="이 묶음 제목 다시 짓기" aria-label="이 묶음 제목 다시 짓기">${svgA('M6 4v16M18 4v16M6 12h12', 14)}</button>`}
                         ${pinBtn(pinned.has(key), '이 묶음을')}
                         ${sw(!off, off ? '이 묶음 주입 켜기' : '이 묶음 통째로 주입에서 빼기')}
                       </div>
@@ -283,6 +287,7 @@ export function mountSectionBrowser($host) {
                     render();
                 });
                 $g.find('> .na_group_head .na_sw').on('click', e => { e.stopPropagation(); setMuted(key, !off); });
+                $g.find('> .na_group_head .na_group_retitle').on('click', e => { e.stopPropagation(); openRetitle(s); });
                 $g.find('> .na_group_head .na_pin').on('click', e => { e.stopPropagation(); setPinned(key, !pinned.has(key)); });
                 $g.find('> .na_group_head .na_group_edit').on('click', e => {
                     e.stopPropagation();
@@ -345,6 +350,7 @@ export function mountSectionBrowser($host) {
                       <button type="button" class="na_edit"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>편집</button>
                       <button type="button" class="na_keys ${hasKeys ? 'active' : ''}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7a4 4 0 1 1-3.9 5H3v4M7 12v3"/></svg>키워드</button>
                       ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_layers_btn ${layersOf(m)[key] ? 'active' : ''}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 5-9 5-9-5zM3 12l9 5 9-5"/></svg>버전</button>` : ''}
+                      ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_fix_btn">${svgA(ICO_A.chat, 16)}고치기</button>` : ''}
                       <button type="button" class="na_tlb_more2"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>더 보기</button>
                     </div>
                     <div class="na_card_actions na_tlb_extra" hidden>
@@ -383,6 +389,7 @@ export function mountSectionBrowser($host) {
                     <button type="button" class="na_icon na_keys ${hasKeys ? 'active' : ''}" title="키워드 연동" aria-label="키워드 연동">${svgA(ICO_A.key, 17)}</button>
                     ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_icon na_layers_btn ${layersOf(m)[key] ? 'active' : ''}" title="짧은 버전 · 한 줄 (망각 곡선)" aria-label="짧은 버전">${svgA(ICO_A.layers, 17)}</button>` : ''}
                     <button type="button" class="na_icon na_edit" title="편집" aria-label="편집">${svgA(ICO_A.pen, 17)}</button>
+                    ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_icon na_fix_btn" title="초안 모델에게 고쳐 달라고 하기" aria-label="고쳐 달라고 하기">${svgA(ICO_A.chat, 17)}</button>` : ''}
                     <button type="button" class="na_icon na_del na_danger" title="섹션 삭제" aria-label="섹션 삭제">${svgA(ICO_A.trash, 17)}</button>
                     <span class="na_spacer"></span>
                     <button type="button" class="na_icon na_pin_t ${isPin ? 'active' : ''}" title="${isPin ? '고정 풀기' : '망각 곡선에서도 늘 원문으로 고정'}" aria-label="고정">${svgA(ICO_A.pin, 17)}</button>
@@ -412,6 +419,7 @@ export function mountSectionBrowser($host) {
                 if (keys) await setLinked(sectionKey(s), keys);
             });
             $card.find('.na_layers_btn').on('click', () => openLayers(s));
+            $card.find('.na_fix_btn').on('click', e => { e.stopPropagation(); openSectionFix(s); });
             $card.find('.na_del').on('click', () => remove(s));
             $parent.append($card);
             if (s.start === pendingEdit) editTarget = [$card, s];
