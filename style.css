@@ -3677,3 +3677,5 @@ body.na_darkui .na_launch_tabs { background: #3A2F28; }
 .na_mg_rawrow.warn .na_cp_txt small { color: var(--na-accent); }
 .na_qc_gradebox { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; text-align: left; line-height: 1.45; }
 .na_qc_gradebox small { color: var(--na-dim, inherit); opacity: 0.85; }
+.na_mg_rawview { align-self: flex-start; margin-top: -4px; font-size: 0.86em; }
+.na_mg_rawpre { white-space: pre-wrap; word-break: break-word; font-size: 0.82em; line-height: 1.5; margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--na-softer); border: 1px solid var(--na-line); }
