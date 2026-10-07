@@ -1,7 +1,7 @@
 // Raw message extraction ("[number] name:" format) and the extract popup.
 
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
-import { activePrompt, fillPrompt, referenceSection, renderPromptSettings } from './prompts.js';
+import { activePrompt, compressPrompt, referenceSection, renderPromptSettings } from './prompts.js';
 import { headingLines, splitTail } from './sections.js';
 import { refreshStatus } from './status.js';
 import { ICO_A, svgA } from './theme.js';
@@ -147,7 +147,7 @@ export async function openExtract() {
             .map(x => ({ ...x, text: cleanMessage(x.text, g) }))
             .filter(x => x.text);
         current = formatExtract(items, g);
-        withPrompt = fillPrompt(activePrompt(g).text, { raw: current, from: String(from), to: String(to), last_section: referenceSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text });
+        withPrompt = compressPrompt(activePrompt(g).text, { raw: current, from: String(from), to: String(to), last_section: referenceSection(m.text), state: splitTail(m.text)[1].trim() || '(없음)', archive: m.text }, m);
         output = g.usePrompt ? withPrompt : current;
         $root.find('.na_ex_hidden').val(output);
         $root.find('.na_prompt_state').text(g.usePrompt ? activePrompt(g).name : '안 붙임').toggleClass('na_chip_on', g.usePrompt);

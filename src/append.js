@@ -6,6 +6,7 @@ import { lineDiff, renderDiff } from './diff.js';
 import { guessEndNumber } from './extract.js';
 import { applyHide } from './hide.js';
 import { nameNearMisses } from './keywords.js';
+import { auDivider, auFix, auOf } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, tailBlocks, trimEnd } from './sections.js';
 import { SVG_B, svgB } from './theme.js';
 import { translateButton } from './translate.js';
@@ -113,7 +114,9 @@ export function placeAppend(archive, add, { renumber, rewrites = 'skip' } = {}) 
 
     let renumbered = null;
     const oldEnd = lastRangeEnd(eBody), newEnd = lastRangeEnd(pBody);
-    if (renumber && oldEnd !== null && newEnd !== null && newEnd > oldEnd) {
+    // only within one log: an AU's #40 says nothing about the main story's #604 in the title
+    const samePrefix = (headingRanges(eBody).pop()?.prefix ?? '') === (headingRanges(pBody).pop()?.prefix ?? '');
+    if (renumber && samePrefix && oldEnd !== null && newEnd !== null && newEnd > oldEnd) {
         const swap = line => line.replace(new RegExp(`#${oldEnd}(?!\\d)`, 'g'), `#${newEnd}`);
         // a top "# " title line and the intro lines under it, up to the next heading
         const lines = body.split('\n');
@@ -235,6 +238,7 @@ export async function openAppend(prefill = {}) {
         <textarea class="text_pole na_append_ta" spellcheck="false" placeholder="## Y2 #574–#600 — 제목 (날짜, 장소)&#10;PLOT:&#10;- …"></textarea>
         <div class="na_v2_card na_v2_list na_ap2_checks">
           <div class="na_ap2_label"><span>붙여넣은 글 검사</span><small class="na_append_info"></small></div>
+          <div class="na_check na_aucheck" hidden></div>
           <div class="na_check na_numcheck" hidden></div>
           <div class="na_check na_statecheck" hidden></div>
           <div class="na_check na_check_warn na_whole" hidden><span class="na_ck_ic">!</span><div>
@@ -297,7 +301,7 @@ export async function openAppend(prefill = {}) {
         if (!$ta.val().trim()) return toastr.info('먼저 추가할 내용을 붙여넣어 주세요.');
         pvWanted = true;
         $pv.prop('open', true);
-        renderPreview(lastPlan || placeAppend(m.text, $ta.val(), { renumber: $root.find('.na_do_renum').prop('checked'), rewrites: rwMode() }));
+        renderPreview(lastPlan || placeAppend(m.text, auFix($ta.val(), m), { renumber: $root.find('.na_do_renum').prop('checked'), rewrites: rwMode() }));
         $pv[0].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     });
     $root.find('.na_ap2_go').on('click', () => $root.closest('dialog').find('.popup-button-ok').trigger('click'));
@@ -333,7 +337,13 @@ export async function openAppend(prefill = {}) {
         $root.find('.na_conflict_out').addClass('na_stale'); // checked text changed since
         clearTimeout(t);
         t = setTimeout(async () => {
-            const val = $ta.val();
+            const val = auFix($ta.val(), m);
+            // an AU chat's sections go in as their own log; say so, and what the paste was missing
+            const au = auOf(m);
+            if (au.on && val.trim()) {
+                const added = [val !== $ta.val() && `${au.name} #번호`, val.includes(auDivider(au.name)) && !$ta.val().includes(auDivider(au.name)) && auDivider(au.name)].filter(Boolean);
+                ckRow($root.find('.na_aucheck'), 'ok', `${esc(au.name)} 묶음으로 넣어요`, added.length ? `빠진 ${added.map(x => `<code>${esc(x)}</code>`).join(' · ')}는 추가할 때 붙여요` : '');
+            } else $root.find('.na_aucheck').prop('hidden', true);
             const guess = guessEndNumber(val);
             if (guess !== null && !endTouched) {
                 $end.val(guess);
@@ -426,7 +436,7 @@ export async function openAppend(prefill = {}) {
     }
     if (result !== c.POPUP_RESULT.AFFIRMATIVE && result !== true) return;
 
-    const add = String($ta.val() || '').replace(/\r\n/g, '\n').trim();
+    const add = auFix(String($ta.val() || '').replace(/\r\n/g, '\n').trim(), m);
     if (!add) return toastr.info('붙여넣은 내용이 없어요.');
     const end = parseInt($root.find('.na_end').val(), 10);
     if (!Number.isFinite(end) || end < 0) return toastr.warning('끝 번호를 확인해 주세요.');

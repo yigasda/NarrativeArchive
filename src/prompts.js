@@ -69,6 +69,52 @@ export function referenceSection(text) {
     return `(Format sample only. This section is ALREADY in the archive — do not output, repeat or rewrite it. Start from the new log.)\n${sec}`;
 }
 
+// ---- AU: a chat that carries the main story's archive into an alternate universe.
+// Its sections become their own log ("# ── AU ──", "## AU #0–#35 — …") after the main story's.
+
+export const auOf = m => {
+    const a = m?.au && typeof m.au === 'object' ? m.au : {};
+    return { on: !!a.on, name: String(a.name || '').trim().replace(/\s+/g, '') || 'AU', note: String(a.note || '').trim() };
+};
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export const auDivider = name => `# ── ${name} ──`;
+export const hasAuDivider = (text, name) => new RegExp(`^#\\s*──\\s*${reEsc(name)}\\s*──\\s*$`, 'm').test(String(text || ''));
+
+// the block that goes on top of the compress instruction while the chat is an AU
+export function auBlock(m) {
+    const a = auOf(m);
+    if (!a.on) return '';
+    const first = !hasAuDivider(m.text, a.name);
+    return `[AU — read this first]
+This chat is an alternate universe (AU) of the story in the archive. The characters remember the main story and carry it into the AU.
+AU premise: ${a.note || '(not given — take it from the raw log)'}
+- The raw log below is the AU. Summarize only it; do not retell the main story.
+- The AU is its own log in the archive: number its sections "## ${a.name} #from–#to — title" (prefix "${a.name}", this chat's message numbers).${first ? `
+- This is the AU's first summary: put the line "${auDivider(a.name)}" above your first new section.` : ''}
+- STATE and OPEN are for the AU now: "# STATE AT ${a.name} #to", "# OPEN AT ${a.name} #to". Keep from the main story only what still matters in the AU (memories, feelings, promises, secrets), one short line each.
+
+`;
+}
+
+// the compress instruction with its blanks filled, and the AU block on top when the chat is an AU
+export const compressPrompt = (tpl, vars, m) => auBlock(m) + fillPrompt(tpl, vars);
+
+// An AU answer that forgot its prefix or divider gets them: "## #12–#30" → "## AU #12–#30",
+// "# STATE AT #30" → "# STATE AT AU #30", and "# ── AU ──" above the first new section.
+export function auFix(text, m) {
+    const a = auOf(m);
+    if (!a.on) return text;
+    let out = String(text || '')
+        .replace(/^(##\s+)#(\d+\s*[–—~-]\s*#?\d+)/gm, `$1${a.name} #$2`)
+        .replace(/^(#\s+(?:STATE|OPEN)\s+AT\s+)#(\d+)/gm, `$1${a.name} #$2`)
+        .replace(/^(_(?:True|Unresolved) at )#(\d+)/gm, `$1${a.name} #$2`);
+    if (!hasAuDivider(m.text, a.name) && !hasAuDivider(out, a.name)) {
+        const mt = /^##\s/m.exec(out);
+        if (mt) out = `${out.slice(0, mt.index)}${auDivider(a.name)}\n\n${out.slice(mt.index)}`;
+    }
+    return out;
+}
+
 export function fillPrompt(tpl, vars) {
     let out = tpl;
     for (const [k, v] of Object.entries(vars)) out = out.split(`{{${k}}}`).join(v);

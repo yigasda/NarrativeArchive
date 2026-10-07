@@ -3609,3 +3609,14 @@ body.na_darkui .na_launch_tabs { background: #3A2F28; }
 .na_popup .na_ly_ask input.na_ly_askq::placeholder { color: var(--na-dim) !important; opacity: 1 !important; }
 .na_ly_askgo { flex: none; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 13px; background: var(--na-accent); color: #fff; cursor: pointer; }
 .na_ly_askgo:disabled { opacity: 0.7; cursor: wait; }
+
+/* compress wizard: AU card */
+.na_wz_au { padding: 0; }
+.na_wz_au .na_cp_txt { display: flex; flex-direction: column; gap: 2px; }
+.na_wz_au .na_cp_txt small { color: var(--na-dim); font-size: 0.857em; line-height: 1.45; }
+.na_wz_aubody { display: flex; flex-direction: column; gap: 8px; padding: 0 12px 12px; }
+.na_wz_aubody label { display: flex; flex-direction: column; gap: 3px; }
+.na_wz_aubody label small { color: var(--na-dim); font-size: 0.857em; }
+.na_wz_aubody .text_pole { margin: 0; width: 100%; box-sizing: border-box; }
+.na_wz_aubody textarea { resize: vertical; min-height: 3.2em; }
+.na_wz_oneshot { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
