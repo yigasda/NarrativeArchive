@@ -111,7 +111,7 @@ const sectionBody = t => String(t).replace(ruleTail, '');
 // ---- 제목 다시 짓기: picked sections, a few thousand tokens at a time, then a before → after list to tick
 
 // group: a "# ── AU ──" section to start with ticked; without one, the newest log is
-export async function openRetitle(group = null) {
+export async function openRetitle(group = null, keys = null) {
     const c = ctx(), m = getMeta();
     if (!draftReady()) return toastr.info('⚙ 설정 → AI · 번역 → 초안 모델을 먼저 정해 주세요.', '제목 다시 짓기');
     m.retitled = Array.isArray(m.retitled) ? m.retitled : [];
@@ -154,7 +154,7 @@ export async function openRetitle(group = null) {
     $root.on('click', '.na_rt_quick .na_pchip', function () { const on = this.dataset.all === '1'; results.forEach(x => { if (!x.same) x.on = on; }); drawResults(); });
     const picker = mountSectionPicker($root.find('.na_rt_pick'), {
         m, title: '다시 지을 섹션', goLabel: `초안 모델로 짓기`, doneLabel: '다시 지음', newLabel: '안 한 것',
-        filter: ranged, initial: startKeys,
+        filter: ranged, initial: keys ? () => keys : startKeys,
         doneKeys: () => new Set(m.retitled),
         onGo: async (parts, step) => {
             results = [];
@@ -361,7 +361,7 @@ const MERGE_MAX_TOK = 12000;
 const rangeOf = title => { const r = String(title).match(RANGE_HEAD); return r ? { prefix: (r[1] || '').trim(), from: Math.min(+r[2], +r[4]), to: Math.max(+r[2], +r[4]) } : null; };
 
 // group: a "# ── AU ──" section to open on; without one, the newest log's group
-export async function openMerge(group = null) {
+export async function openMerge(group = null, keys = null) {
     const c = ctx(), m = getMeta();
     if (!draftReady()) return toastr.info('⚙ 설정 → AI · 번역 → 초안 모델을 먼저 정해 주세요.', '섹션 합치기');
     // the archive's groups that hold numbered sections: [{ start, label, secs }]
@@ -396,8 +396,18 @@ export async function openMerge(group = null) {
           <button type="button" class="na_v2_btn primary wide na_mg_apply">이대로 합치기</button>
         </div>
       </div>`);
+    // picked in the archive tab: open on their group with them ticked
+    const fromKeys = () => {
+        if (!keys?.length) return new Set();
+        const g = gs.findIndex(x => x.secs.some(y => sectionKey(y) === keys[0]));
+        if (g < 0) return new Set();
+        gi = g;
+        const idx = gs[g].secs.map((y, i) => (keys.includes(sectionKey(y)) ? i : -1)).filter(i => i >= 0);
+        if (idx.length < keys.filter(k => gs.some(x => x.secs.some(y => sectionKey(y) === k))).length) toastr.info('고른 섹션이 여러 묶음에 걸쳐 있어서 첫 묶음 것만 골랐어요.', '섹션 합치기');
+        return new Set(idx);
+    };
+    let picked = fromKeys(); // indexes into gs[gi].secs
     $root.find('.na_mg_group').val(String(gi));
-    let picked = new Set(); // indexes into gs[gi].secs
     let result = null;      // { text, secs: [{ range, title, body, members }], first, last, issues }
     const secsNow = () => gs[gi].secs;
     const tokOf = x => Math.ceil(m.text.slice(x.start, x.end).length / 3.6);
