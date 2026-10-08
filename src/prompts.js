@@ -224,7 +224,8 @@ YOU GET
 - KNOWN NAMES: the characters of this story.
 - EARLIER LINES: your entries for the messages just before these. Context only; do not repeat them.
 - MESSAGES: each starts with [number] and the speaker. The bot plays every non-user character under one name tag; tell who speaks or acts from the content. A private-thought tag holds thoughts, not speech. Status windows, trackers, planning blocks and OOC talk are not events; take only the date and place from them.
-- Turns the user wrote are the strongest canon; record their actions and lines faithfully. Ignore any part where the bot writes the user character's thoughts.
+- Turns the user wrote are the strongest canon: their character's words, choices and own actions stand as written. When that character acts on someone else, the outcome is whatever the next reply shows; if the reply has it miss, fail or get turned aside, write it that way (Ren swung at Ivo; Ivo caught his arm). Ignore any part where the bot writes the user character's thoughts.
+- Some user turns steer the story instead of playing it: a line opening with 전개:, 지시: or OOC, or text in brackets addressed to the bot. That is a request, not part of the story. Leave it out and write only what the bot's reply then put on the page.
 
 STEPS
 1. For each message ask: what happens here that has not happened before? An action, a decision, a reveal, a line that changes something, a move in place or time.
@@ -234,13 +235,14 @@ STEPS
    Set (thinks): …
    Horus took it as …
 5. Holding back counts as an event when the message makes it visible: a refusal, a stopped hand, a chosen silence, a promise kept under pressure. Write what was not done.
-6. If the message re-tells, re-describes or reacts to a moment already recorded (a reply re-telling the user's action from the other side, a recap at the start of a message), write "= #N" with the number where it was first recorded, then "; " and only what is new, if anything.
-7. If nothing happens (small talk, scenery, waiting), write "—".
-8. In a sex scene, record only new steps in plain words: consent asked or given, a request to stop, a first, climax, the end. No description. A climax re-told in the next message is "= #N".
-9. Quotes: at most one spoken line per message, only one that changes a relationship or defines a character, copied exactly in its original language, on its own line starting with two spaces and a quotation mark. Never compose or paraphrase a quote.
-10. When the date or place changes, start the line with "@ date, place —".
-11. Start a line with ★ when it turns something: a relationship shifts, a secret comes out, a decision is made, a promise is given or broken. Use ★ sparingly; most lines have none.
-12. Keep each line under about 30 words.
+6. Words are not facts. When someone tells, claims, suspects or lies, keep it theirs: "Ivo told Ren the bridge was safe", "Mara suspects Ivo" — never "the bridge was safe". If a later message proves or breaks it, write that when it happens.
+7. If the message re-tells, re-describes or reacts to a moment already recorded (a reply re-telling the user's action from the other side, a recap at the start of a message), write "= #N" with the number where it was first recorded, then "; " and only what is new, if anything.
+8. If nothing happens (small talk, scenery, waiting), write "—".
+9. In a sex scene, record only new steps in plain words: consent asked or given, a request to stop, a first, climax, the end. No description. A climax re-told in the next message is "= #N".
+10. Quotes: at most one spoken line per message, only one that changes a relationship or defines a character, copied exactly in its original language, on its own line starting with two spaces and a quotation mark. Never compose or paraphrase a quote.
+11. When the date or place changes, start the line with "@ date, place —".
+12. Start a line with ★ when it turns something: a relationship shifts, a secret comes out, a decision is made, a promise is given or broken. Use ★ sparingly; most lines have none.
+13. Keep each line under about 30 words.
 
 EXAMPLE
 KNOWN NAMES: Mara, Ren, Ivo
