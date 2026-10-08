@@ -78,7 +78,7 @@ Titles
   · a "what" clause: What Ren didn't say
   · a number or pairing: One cloak · The two of them · The second night
   · a list: Ivo, the duke, and the toll
-  · a line in quotation marks, in the archive's language (translate it like any quote): "Now you owe me"
+  · rarely, a line in quotation marks, in the archive's language (translate it like any quote): "Now you owe me". At most one quoted title in a stretch, and only for the line the whole scene turns on.
   ✗ Ren crosses the bridge; Mara pulls him up · Confrontation over Ren's injury
 
 # 6. Example
@@ -144,7 +144,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8', 'k678s0']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8', 'k678s0', 'lbvxyj']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
