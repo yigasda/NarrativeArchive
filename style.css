@@ -3730,3 +3730,4 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 .na_sl_row small { display: block; color: var(--na-dim); font-size: 0.82em; }
 .na_statelost .na_cp_txt { min-width: 0; }
 .na_statelost .na_sl_fix { margin-top: 6px; }
+.na_cp_row .na_cp_sel { flex: none; width: auto; max-width: 52%; margin: 0; }
