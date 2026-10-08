@@ -40,13 +40,13 @@ You are writing a memory, not a transcript. The bot that reads the archive needs
 
 # 5. Writing the sections
 Sections
-- A section is a chapter, not a beat. Cut only where something turns: a relationship shifts, the situation changes, a secret comes out, a decision is made. Fold routine stretches and small beats into the section they belong to. A turning point may get a short section of its own; as a rough guide, one section covers 40–60 messages.
+- A section is a chapter, not a beat. Cut only where something turns: a relationship shifts, the situation changes, a secret comes out, a decision is made. Fold routine stretches and small beats into the section they belong to. Most sections cover 10–20 messages; a single long event may run longer, and a sharp turn may get a short section of its own.
 - Header: \`## #start–#end — Title (date, place)\`, then \`PLOT:\`, then \`- \` bullets. If STATE's heading puts a prefix before the numbers (e.g. \`# STATE AT Y2 #143\`), put it in your headings too.
 - The date and place come from the tracker and narration. A tracker date that does not fit (a season that does not match the month, a date that goes backward) is a model error; ignore it. If a large time skip happens without a record, note it in the header (e.g. "some five months later").
 
 Bullets
 - Bullets only, no paragraphs. One bullet = one turn of the scene: what happened, what caused it, and what it changed. A bullet may cover many messages; never one bullet per message, and never a conversation reported turn by turn ("He asked… She replied… He added…"). Collapse an exchange into what it revealed, decided or broke.
-- 3–6 bullets per section, whatever its message count, never more than 6; rarely more than about 250 words. A stretch that truly needs more is two chapters: split it where it turns.
+- 2–6 bullets per section, never more than 6; rarely more than about 250 words. A stretch that truly needs more is two chapters: split it where it turns.
 - Every sentence in a bullet ends with the number of the message it comes from, in parentheses: (#88), or (#88, #91) when it draws on two. Only numbers inside the section's own range, and for a reason or motive only messages up to the moment it explains. A sentence you cannot point to a message for (a motive, a fear, a meaning the log does not state) does not go in. The extension checks these numbers and removes them when it saves.
 - Do not say the same thing twice. When you add a sentence, check the bullets before and after it for the same content.
 - Em dashes sparingly: at most one in a section's bullets. Otherwise use a comma, a colon or a new sentence.
@@ -81,8 +81,15 @@ Titles
 - Ren told her the north road was closed.
 - Mara said, "Then I'll wait."
 
-✓ Memory:
-- Mara came back the same night she had sworn to leave, unable to say why (#57, #59). Ren let her in without pressing and told her the north road was closed (#60, #62). "Then I'll wait," she said, and stayed (#63).
+✓ Memory, in the archive's own style:
+## #57–#69 — The north road (Spring 3, night, Varo)
+PLOT:
+- Mara came back the same night she had sworn to leave, unable to say why (#57, #59). Ren let her in without pressing and told her the north road was closed; she took it as an excuse handed to her rather than a fact, and stayed anyway: "Then I'll wait." (#60, #63)
+- Over supper Ivo let slip that he had paid her passage toll in secret (#65). Ren did not cover for him; in his own account he had known for days and kept quiet because the debt was not his to name (#66, #68). Mara heard it as two men deciding her road between them and set the toll-mark on the table: "Neither of you asked." (#69)
+
+## #70–#73 — The toll-mark (Spring 4, dawn)
+PLOT:
+- Ivo offered to take the mark back; Mara refused, since returning it would only let him decide a second time (#70, #71). She asked Ren to walk her to the gate instead, and he went without a word, which she read as the first thing either of them had let her choose (#72, #73).
 
 # 7. Before you output
 Draft the stretch, then revise it once and output only the revised version:
@@ -131,7 +138,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -292,10 +299,11 @@ LIST:
 // How big the answer should be, as numbers: sections for this many messages, and, when a long stretch goes in parts,
 // that every length target (the user's note included) is for the whole stretch, so each part takes its share
 export function sizeBlock({ k = 0, n = 1, count, total = count, from, to, partFrom = from, partTo = to }) {
-    const lo = Math.max(1, Math.ceil(count / 60)), hi = Math.max(lo, Math.ceil(count / 40));
+    // the archive's own sections: most cover 10–20 messages (about 15–22 on average once long events are counted)
+    const lo = Math.max(1, Math.ceil(count / 22)), hi = Math.max(lo, Math.ceil(count / 15));
     const span = lo === hi ? `about ${lo} section${lo > 1 ? 's' : ''}` : `${lo}–${hi} sections`;
-    if (n <= 1) return `\n\n[SIZE] #${from}–#${to} is ${count} messages: write ${span} for it, not more.`;
-    return `\n\n[PART ${k + 1} OF ${n}] The stretch #${from}–#${to} (${total} messages) is too long for one request, so it is sent in ${n} parts, in order. This request is part ${k + 1}: #${partFrom}–#${partTo} (${count} messages). Every length target — the section guide above and any number in the user's note — is for the whole stretch, not for this part: this part gets about 1/${n} of it. For these ${count} messages write ${span}, not more.`;
+    if (n <= 1) return `\n\n[SIZE] #${from}–#${to} is ${count} messages: write roughly ${span} for it, cutting where the story turns.`;
+    return `\n\n[PART ${k + 1} OF ${n}] The stretch #${from}–#${to} (${total} messages) is too long for one request, so it is sent in ${n} parts, in order. This request is part ${k + 1}: #${partFrom}–#${partTo} (${count} messages). Every length target — the section guide above and any number in the user's note — is for the whole stretch, not for this part: this part gets about 1/${n} of it. For these ${count} messages write roughly ${span}, cutting where the story turns.`;
 }
 export const compressPrompt = (tpl, vars, m, memo = '', size = '') => auBlock(m) + fillPrompt(tpl, { recent: recentSections(vars.archive ?? m.text), ...vars }) + memoBlock(memo) + size + langBlock(m.text);
 
