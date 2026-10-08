@@ -5,7 +5,7 @@ import { openAppend } from './append.js';
 import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { driftHtml } from './drift.js';
 import { buildExtract, cleanMessage, formatExtract, guessEndNumber } from './extract.js';
-import { activePrompt, auFix, auOf, compressPrompt, hasAuDivider, referenceSection, renderPromptSettings } from './prompts.js';
+import { activePrompt, auFix, auOf, compressPrompt, dropReproduced, hasAuDivider, referenceSection, renderPromptSettings } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, trimEnd } from './sections.js';
 import { openSource } from './source.js';
 import { refreshStatus } from './status.js';
@@ -138,7 +138,7 @@ export function chunkItems(items) {
 export async function draftCompress({ m, g, p, items, onStep = () => {}, grade = false, memo = '' }) {
     const parts = chunkItems(items);
     const acc = [];
-    let tail = '', doneTo = null, error = null;
+    let tail = '', doneTo = null, error = null, dropped = 0;
     const grades = [];
     for (const [k, part] of parts.entries()) {
         const from = part[0].i, to = part[part.length - 1].i;
@@ -151,7 +151,10 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
         try { out = cleanDraft(await askCompress(prompt)); }
         catch (e) { error = e; break; }
         if (!out) { error = new Error('초안 모델이 빈 답을 줬어요'); break; }
-        const [body, t] = splitTail(out);
+        const [body0, t] = splitTail(out);
+        // sections copied out of the archive (it is in the prompt as context) are not this stretch
+        const { text: body, dropped: dr } = dropReproduced(body0, shadow, from);
+        dropped += dr;
         const b = trimEnd(body).replace(/\n-{3,}\s*$/, '').trim();
         if (b) acc.push(b);
         if (t.trim()) tail = t.trim();
@@ -162,7 +165,7 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
         }
     }
     const text = acc.length ? `${acc.join('\n\n')}${tail ? `\n\n---\n${tail}` : ''}` : '';
-    return { text, parts: parts.length, done: error ? parts.findIndex(x => x[x.length - 1].i === doneTo) + 1 : parts.length, doneTo, error, grades };
+    return { text, dropped, parts: parts.length, done: error ? parts.findIndex(x => x[x.length - 1].i === doneTo) + 1 : parts.length, doneTo, error, grades };
 }
 
 // several parts' grades in one box: "#0–#40" headings above each part's lines
@@ -220,6 +223,7 @@ export async function quickCompress() {
         if (r.doneTo === null) return;
     }
     const text = auFix(r.text, m);
+    if (r.dropped) toastr.info(`모델이 아카이브에 이미 있는 섹션 ${r.dropped}개를 다시 써 와서 뺐어요.`, '한 번에 압축');
     if (!text) return toastr.warning('초안 모델이 빈 답을 줬어요.', '한 번에 압축');
     const upto = r.error ? r.doneTo : to;
     m.lastExport = { from, to: upto, at: Date.now(), how: 'draft' };
@@ -359,6 +363,7 @@ export async function openWizard() {
         if (!r) return;
         if (r.error) toastr.error(String(r.error?.message || r.error), r.doneTo === null ? '초안 모델 실패' : `${r.done}/${r.parts}까지 하고 멈췄어요 · #${r.doneTo}까지만 채웠어요`);
         if (!r.text) return;
+        if (r.dropped) toastr.info(`모델이 아카이브에 이미 있는 섹션 ${r.dropped}개를 다시 써 와서 뺐어요.`);
         $out.val(auFix(r.text, m)).trigger('input');
         await remember('draft');
         toastr.success(r.parts > 1 ? `${r.parts}번에 나눠 받은 초안을 채웠어요. 확인하고 다음으로 넘어가세요.` : '초안을 채웠어요. 확인하고 다음으로 넘어가세요.');

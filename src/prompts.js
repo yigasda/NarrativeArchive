@@ -2,10 +2,15 @@
 
 import { ctx, globalSettings, newId, saveGlobal } from './core.js';
 import { showStripInfo } from './extract.js';
-import { lastRangedSection } from './sections.js';
+import { RANGE_HEAD, lastRangedSection, parseSections } from './sections.js';
 import { confirm, esc } from './util.js';
 
-export const BASIC_PROMPT = `You continue the long-term-memory summary (the archive) of a long-running role-play. The archive goes into the prompt and is read alongside the live chat as "a snapshot of the past." Read the raw log #{{from}}–#{{to}} below in full, from the first message to the last, then write the new stretch that follows the existing archive.
+export const BASIC_PROMPT = `<archive_so_far>
+Context only: the archive as it stands, for judging what matters and what is already established. Do not output, rewrite, recap or continue any of it.
+{{archive}}
+</archive_so_far>
+
+You continue the long-term-memory summary (the archive) of a long-running role-play. The archive goes into the prompt and is read alongside the live chat as "a snapshot of the past." Read the raw log #{{from}}–#{{to}} below in full, from the first message to the last, then write the new stretch that follows the existing archive.
 
 # Output
 Output exactly the following, in this order, with no greeting, explanation or commentary. Use the existing archive's language and format — even when the raw log is in another language. Translate dialogue into the archive's language; keep a word or line in its original language only where the archive already does.
@@ -28,7 +33,7 @@ Output exactly the following, in this order, with no greeting, explanation or co
 3. If the existing archive has \`# STATE AT …\` / \`# OPEN AT …\`: both, complete, rewritten from [CURRENT STATE · OPEN] below so they hold as of #{{to}}. If it has none, leave this part out.
 
 ## Hard limits on output
-- Output ONLY new material. Never reproduce, rewrite, shorten, "improve" or continue any existing section of the archive. The [FORMAT REFERENCE] block below is shown only so you can match its style; it is already in the archive and must not appear in your output in any form.
+- Output ONLY new material. Never reproduce, rewrite, shorten, "improve" or continue any existing section of the archive. Your first heading starts at #{{from}}; nothing before #{{from}} belongs in your output, not even as a recap. The [FORMAT REFERENCE] block below is shown only so you can match its style; it is already in the archive and must not appear in your output in any form.
 - Every output must be complete. All parts must be present, and the final bullet of every block must end in a full sentence. If you are running long, merge bullets or cut lower-priority detail. Never stop mid-sentence, and never drop STATE or OPEN to make room.
 
 # Handling the raw log
@@ -51,7 +56,7 @@ Output exactly the following, in this order, with no greeting, explanation or co
   - what a character chose NOT to do (evidence of restraint)
   - the concrete action that shows a standing trait at work
 - Cutting so hard that the story breaks is also a failure. Do not shrink the core of a trigger or an arc. The goal is not to erase the story but to absorb it into cause and effect. Do not list dialogue.
-- Use [ARCHIVE SO FAR] to judge weight. A beat that repeats an established pattern gets a clause at most. A beat that breaks or turns a pattern gets the space.
+- Use <archive_so_far> to judge weight. A beat that repeats an established pattern gets a clause at most. A beat that breaks or turns a pattern gets the space.
 
 # Protecting causality
 - Before every emotional reaction, keep the other person's action that caused it. Without it, the character appears to erupt on their own or seems childish.
@@ -110,9 +115,6 @@ Output only the revised version.
 - Keep it short. Remove only the threads this stretch closes; every other thread stays word for word, under its group. Add newly opened ones. Do not prescribe future actions.
 - Notice line: \`_Unresolved at #{{to}}; check recent messages before treating any as pending._\`
 
-[ARCHIVE SO FAR — context only, for judging what matters and what is already established. Do not output, rewrite or continue any of it.]
-{{archive}}
-
 [FORMAT REFERENCE — the archive's last PLOT block. Style reference only. Do not output, rewrite or continue it.]
 {{last_section}}
 
@@ -137,7 +139,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -192,11 +194,38 @@ export const compressPrompt = (tpl, vars, m, memo = '') => auBlock(m) + fillProm
 
 // An AU answer that forgot its prefix or divider gets them: "## #12–#30" → "## AU #12–#30",
 // "# STATE AT #30" → "# STATE AT AU #30", and "# ── AU ──" above the first new section.
+// a section title without its "Y2 #1–#9 — " lead, for telling one section from another
+export const bareTitle = t => String(t).replace(/^#+\s*/, '').replace(RANGE_HEAD, '$5').replace(/^\s*[—–-]\s*/, '').trim().toLowerCase();
+
+// Sections a model copied out of the archive instead of writing new ones: a title the archive already has,
+// most of its lines already in the archive, or a range that ends before the stretch it was asked for.
+export function dropReproduced(body, archive, from) {
+    const secs = parseSections(body);
+    const known = parseSections(archive).filter(x => !x.group && RANGE_HEAD.test(x.title));
+    const titles = new Set(known.map(x => bareTitle(x.title)));
+    const lines = new Set(String(archive).split('\n').map(l => l.trim()).filter(l => l.length > 30));
+    let out = '', dropped = 0, at = 0;
+    for (const x of secs) {
+        const r = x.group ? null : String(x.title).match(RANGE_HEAD);
+        if (!r) continue;
+        const own = body.slice(x.start, x.end).split('\n').slice(1).map(l => l.trim()).filter(l => l.length > 30);
+        const copied = own.length && own.filter(l => lines.has(l)).length / own.length >= 0.6;
+        if (Math.max(+r[2], +r[4]) < from || titles.has(bareTitle(x.title)) || copied) {
+            out += body.slice(at, x.start); at = x.end; dropped++;
+        }
+    }
+    out += body.slice(at);
+    return { text: dropped ? out.replace(/\n{3,}/g, '\n\n').trim() : body, dropped };
+}
+
 export function auFix(text, m) {
     const a = auOf(m);
     if (!a.on) return text;
+    // a heading the archive already has (a section the model copied) keeps its own numbering, so the
+    // append window can still see it as already there
+    const have = new Set(parseSections(m.text).filter(x => !x.group && RANGE_HEAD.test(x.title)).map(x => bareTitle(x.title)));
     let out = String(text || '')
-        .replace(/^(##\s+)#(\d+\s*[–—~-]\s*#?\d+)/gm, `$1${a.name} #$2`)
+        .replace(/^(##\s+)#(\d+\s*[–—~-]\s*#?\d+)(.*)$/gm, (all, h, r, rest) => (have.has(bareTitle(`#${r}${rest}`)) ? all : `${h}${a.name} #${r}${rest}`))
         .replace(/^(#\s+(?:STATE|OPEN)\s+AT\s+)#(\d+)/gm, `$1${a.name} #$2`)
         .replace(/^(_(?:True|Unresolved) at )#(\d+)/gm, `$1${a.name} #$2`);
     if (!hasAuDivider(m.text, a.name) && !hasAuDivider(out, a.name)) {
