@@ -13,7 +13,7 @@ import { rawFor } from './retitle.js';
 import { openSource } from './source.js';
 import { ICO_A, SVG_B, svgA, svgB } from './theme.js';
 import { translateButton } from './translate.js';
-import { confirm, countTokens, esc, fmt } from './util.js';
+import { confirm, countTokens, esc, escRe, fmt } from './util.js';
 
 export const AI_SYS_CONFLICT = `GOAL
 Before NEW TEXT is added to the story archive, find places where it contradicts the EXISTING ARCHIVE.
@@ -207,6 +207,73 @@ export function fixTailNumber(text, gap) {
     return body + tail.replace(re, `$1${gap.end}`);
 }
 
+// ---- STATE lines a rewrite dropped: compare the archive's STATE with the pasted one, put lines back
+
+// STATE as headed parts: [{ head, lines }] (the notice line and blank lines left out)
+function stateParts(text) {
+    const blk = tailBlocks(splitTail(text)[1]).find(b => b.key === 'STATE');
+    if (!blk) return null;
+    const parts = [];
+    let cur = { head: '', lines: [] };
+    for (const l of blk.text.split('\n').slice(1)) {
+        const h = l.match(/^##\s+(.+?)\s*$/);
+        if (h) { parts.push(cur); cur = { head: h[1].trim(), lines: [] }; continue; }
+        if (!l.trim() || /^_.*_$/.test(l.trim())) continue;
+        cur.lines.push(l.trimEnd());
+    }
+    parts.push(cur);
+    return parts.filter(p => p.head || p.lines.length);
+}
+const normLine = l => String(l).toLowerCase().replace(/^\s*(?:#+|[-*•])\s*/, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+const wordSet = l => new Set(normLine(l).split(' ').filter(w => w.length > 2));
+// most of the shorter line's words in the other: an edit of the same line, not a lost one
+const sameLine = (a, b) => { const A = wordSet(a), B = wordSet(b); if (!A.size || !B.size) return false; let n = 0; for (const w of A) if (B.has(w)) n++; return n / Math.min(A.size, B.size) >= 0.6; };
+
+export function stateLoss(oldText, newText) {
+    const o = stateParts(oldText), n = stateParts(newText);
+    if (!o || !n) return null;
+    const nh = new Set(n.map(p => normLine(p.head))), oh = new Set(o.map(p => normLine(p.head)));
+    const gone = o.filter(p => p.head && !nh.has(normLine(p.head))).map(p => p.head);
+    const added = n.filter(p => p.head && !oh.has(normLine(p.head))).map(p => p.head);
+    // as many headings gone as new ones: read them as renamed, in order
+    const renames = gone.length && gone.length === added.length ? gone.map((h, i) => ({ from: added[i], to: h })) : [];
+    const fresh = n.flatMap(p => p.lines);
+    const freshSet = new Set(fresh.map(normLine));
+    const missing = [];
+    for (const p of o) for (const line of p.lines) {
+        if (freshSet.has(normLine(line)) || fresh.some(x => sameLine(line, x))) continue;
+        missing.push({ head: p.head, line });
+    }
+    return renames.length || missing.length ? { renames, missing } : null;
+}
+
+// the pasted text with headings renamed back and the picked lines under their old headings again
+export function restoreState(text, loss, pick) {
+    const [body, tail] = splitTail(text);
+    const blocks = tailBlocks(tail);
+    const i = blocks.findIndex(b => b.key === 'STATE');
+    if (i < 0) return text;
+    let st = blocks[i].text;
+    for (const r of loss.renames) st = st.replace(new RegExp(`^##\\s+${escRe(r.from)}\\s*$`, 'm'), `## ${r.to}`);
+    const lines = st.split('\n');
+    const endOf = h => { let e = h + 1; while (e < lines.length && !/^#{1,2}\s/.test(lines[e])) e++; while (e > h + 1 && !lines[e - 1].trim()) e--; return e; };
+    loss.missing.forEach((x, k) => {
+        if (!pick.has(k)) return;
+        if (!x.head) {
+            const h = lines.findIndex((l, j) => j > 0 && /^##\s/.test(l));
+            let at = h < 0 ? lines.length : h;
+            while (at > 1 && !lines[at - 1].trim()) at--;
+            lines.splice(at, 0, x.line);
+            return;
+        }
+        const h = lines.findIndex(l => /^##\s/.test(l) && normLine(l) === normLine(x.head));
+        if (h < 0) { lines.push('', `## ${x.head}`, x.line); return; }
+        lines.splice(endOf(h), 0, x.line);
+    });
+    blocks[i] = { ...blocks[i], text: lines.join('\n') };
+    return `${body}${blocks.map(b => b.text).join('\n\n')}\n`;
+}
+
 // Problems with the numbering of pasted sections, as display strings.
 export function checkAppend(m, add, last) {
     const ranges = headingRanges(add);
@@ -298,6 +365,7 @@ export async function openAppend(prefill = {}) {
           <div class="na_check na_aucheck" hidden></div>
           <div class="na_check na_numcheck" hidden></div>
           <div class="na_check na_statecheck" hidden></div>
+          <div class="na_check na_check_warn na_statelost" hidden></div>
           <div class="na_check na_check_warn na_whole" hidden><span class="na_ck_ic">!</span><div>
             <b>아카이브 전체본 같아요</b> — 이미 있는 섹션이 거의 다 들어 있어요. 새 섹션만 붙이려면 그대로 <b>추가</b>, 이 내용으로 아카이브를 바꾸려면:
             <div class="na_whole_row"><button type="button" class="na_btn na_small na_whole_btn"><i class="fa-solid fa-right-left"></i> 통째로 바꾸기</button></div>
@@ -381,6 +449,13 @@ export async function openAppend(prefill = {}) {
     };
     $end.on('input change', hideHint);
     let nearMiss = [];
+    let lossNow = null;
+    $root.on('click', '.na_sl_fix', () => {
+        if (!lossNow) return;
+        const pick = new Set($root.find('.na_sl_row input:checked').map((i, el) => Number(el.dataset.k)).get());
+        $ta.val(restoreState(auFix(String($ta.val() || ''), m), lossNow, pick)).trigger('input');
+        toastr.success(`STATE를 되살렸어요${pick.size ? ` · 줄 ${pick.size}개` : ''}${lossNow.renames.length ? ' · 제목' : ''}`);
+    });
     $root.on('click', '.na_tailfix', () => {
         const v = $ta.val(), gap = tailNumberGap(auFix(v, m));
         if (!gap) return;
@@ -456,6 +531,17 @@ export async function openAppend(prefill = {}) {
                 const gap = tailNumberGap(val);
                 if (gap) ckRow($st, 'warn', `STATE 번호가 #${gap.at}인데 섹션은 #${gap.end}까지예요`, `${sub} · 섹션 끝에 맞추면 #${gap.end} 기준이 돼요`, `<button type="button" class="na_ck_btn na_tailfix" title="STATE·OPEN 제목과 안내문의 번호를 섹션 끝 번호로 바꿔요">#${gap.end}로 맞추기</button>`);
                 else ckRow($st, 'ok', `${pKeys.join(' · ')}${josa(pKeys.join(''), '이', '가')} 있어요`, sub);
+            }
+            // lines of the archive's STATE the new one dropped, and headings it renamed
+            lossNow = has ? stateLoss(m.text, val) : null;
+            const $sl = $root.find('.na_statelost');
+            if (!lossNow) $sl.prop('hidden', true).empty();
+            else {
+                const ren = lossNow.renames.map(r => `<b>${esc(r.from)}</b> → 원래 <b>${esc(r.to)}</b>`).join(', ');
+                ckRow($sl, 'warn', `기존 STATE에서 ${lossNow.missing.length ? `사라진 줄 ${lossNow.missing.length}개` : ''}${lossNow.missing.length && ren ? ' · ' : ''}${ren ? '바뀐 제목' : ''}`,
+                    `${ren ? `제목: ${ren}<br>` : ''}${lossNow.missing.length ? '이번 구간이 바꾼 게 아니면 되살리세요 (고쳐 쓴 줄은 여기 안 나와요)' : ''}`);
+                $sl.find('.na_cp_txt').append(`<div class="na_sl_list">${lossNow.missing.map((x, k) => `<label class="na_sl_row"><input type="checkbox" data-k="${k}" checked><span>${x.head ? `<small>${esc(x.head)}</small>` : ''}${esc(x.line.replace(/^\s*[-*]\s*/, ''))}</span></label>`).join('')}</div>
+                    <button type="button" class="na_ck_btn na_sl_fix">${lossNow.missing.length ? '고른 줄 되살리기' : ''}${lossNow.missing.length && ren ? ' · ' : ''}${ren ? '제목 되돌리기' : ''}</button>`);
             }
             if (!has) $root.find('.na_cut').prop('hidden', true).empty();
             else if (cutLine.length) ckRow($root.find('.na_cut'), 'warn', '답이 중간에 끊긴 것 같아요', `${cutLine.map(esc).join('<br>')}<br>다른 모델로 압축했다면 그쪽 답 길이(최대 토큰)를 늘리고 다시 받아 보세요.`);

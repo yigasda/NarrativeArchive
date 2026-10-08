@@ -3722,3 +3722,11 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 .na_selbar_acts .na_danger { color: var(--na-danger, #b3261e); }
 .na_dg_kotext { white-space: pre-wrap; padding: 10px 12px; border-radius: 12px; background: var(--na-softer); border: 1px solid var(--na-line); font-size: 0.88em; line-height: 1.6; }
 .na_dg_res .na_rt_head .na_dg_resko { flex: none; font-size: 0.86em; }
+
+/* 추가 창: STATE에서 사라진 줄 */
+.na_sl_list { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 2px; max-height: 32vh; overflow-y: auto; overscroll-behavior: contain; }
+.na_sl_row { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 0.92em; line-height: 1.45; cursor: pointer; }
+.na_sl_row > input { margin-top: 3px; flex: none; }
+.na_sl_row small { display: block; color: var(--na-dim); font-size: 0.82em; }
+.na_statelost .na_cp_txt { min-width: 0; }
+.na_statelost .na_sl_fix { margin-top: 6px; }
