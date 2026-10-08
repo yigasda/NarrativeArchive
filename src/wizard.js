@@ -191,8 +191,7 @@ export const compressMode = () => (globalSettings().compressMode === 'raw' ? 'ra
 export const EVENTS_MODELS = { ai: 'AI 기능 모델', dr: '초안 모델' };
 export const eventsModel = () => (globalSettings().eventsModel === 'dr' ? 'dr' : 'ai');
 export const evLabel = () => (eventsModel() === 'dr' ? drLabel() : aiLabel());
-// step 1 copies down what happened: little to think about, so low thinking keeps each batch quick
-const askEvents = (prompt, system) => (eventsModel() === 'dr' ? askDraft(prompt, { system, maxTokens: 8000, effort: 'low' }) : askAI(prompt, { system, maxTokens: 8000, effort: 'low' }));
+const askEvents = (prompt, system) => (eventsModel() === 'dr' ? askDraft(prompt, { system, maxTokens: 8000 }) : askAI(prompt, { system, maxTokens: 8000 }));
 // a few messages per request, so each one gets read
 export function eventBatches(items, n = 15, cap = 12000) {
     const out = [];
