@@ -32,6 +32,12 @@ export const apiFormat = t => t.fmt === 'anthropic' || t.fmt === 'openai' ? t.fm
 export async function callConn(t, system, prompt, maxTokens, effort = '', force = false) {
     const e = force && effort ? effort : (t.effort || effort);
     if (t.mode === 'vertex') return stripThink(await callVertex(t, system, prompt, maxTokens));
+    // the instructions go at the top of the first message instead of the system part: some relays drop the system part
+    // without a word, and the model then answers the bare request (a digest taken for "write the next section")
+    if (system) {
+        const turns = turnsOf(prompt);
+        if (turns.length) { turns[0] = { ...turns[0], content: `[INSTRUCTIONS]\n${system}\n[/INSTRUCTIONS]\n\n${turns[0].content}` }; prompt = turns; system = ''; }
+    }
     return stripThink(apiFormat(t) === 'anthropic' ? await callAnthropic(t, system, prompt, maxTokens, e) : await callOpenAICompat(t, system, prompt, maxTokens, e));
 }
 
