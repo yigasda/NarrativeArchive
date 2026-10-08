@@ -248,7 +248,11 @@ async function send(turn, { onDone } = {}) {
     await saveMeta();
     busy = true; live?.();
     let out = null, err = null;
-    try { out = stripThink(await askCompress(turnsFor(st), { system: systemFor(m, st) })); }
+    // the instructions ride at the top of the first message, not in the system part: some relays drop that part
+    // (a model that switched in mid-run then asks for <current_state> it never got)
+    const msgs = turnsFor(st);
+    if (msgs.length) msgs[0] = { ...msgs[0], content: `${systemFor(m, st)}\n\n[CONVERSATION STARTS]\n${msgs[0].content}` };
+    try { out = stripThink(await askCompress(msgs)); }
     catch (e) { err = e; }
     finally { busy = false; }
     if (chatKey() !== key) { toastr.warning('그사이 채팅이 바뀌어서 답을 버렸어요.', '압축 작업실'); return false; }
