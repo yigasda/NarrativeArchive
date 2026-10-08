@@ -599,7 +599,7 @@ export async function openAppend(prefill = {}) {
         if (apf.rawKey === r.key && apf.raw) return apf.raw;
         apf.rawKey = r.key;
         $root.find('.na_apf_rawinfo').text('· 원문 찾는 중…');
-        const got = await rawFor(m, { title: `${r.prefix ? `${r.prefix} ` : ''}#${r.from}–#${r.to} — draft` });
+        const got = await rawFor(m, { title: `${r.prefix ? `${r.prefix} ` : ''}#${r.from}–#${r.to} — draft` }, { here: true });
         apf.raw = got.raw ? { ...got, tok: await countTokens(got.raw) } : got;
         $root.find('.na_apf_rawinfo').text(apf.raw.raw ? `· ${apf.raw.label} · 메시지 ${apf.raw.n}개 · 약 ${fmt(apf.raw.tok)} 토큰` : `· ${apf.raw.why}`);
         return apf.raw;
