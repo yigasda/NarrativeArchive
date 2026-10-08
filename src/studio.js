@@ -210,9 +210,9 @@ function checkBlocks(blocks, { scene = null, st, archLang }) {
             const tv = bl.toLowerCase().match(TALK) || [];
             if (tv.length >= 3) { out.push(`${name ? `${name} · ` : ''}턴 나열? ${[...new Set(tv)].slice(0, 4).join('·')}`); break; }
         }
-        // the same word again and again (names and small words aside)
+        // the same long word again and again (names and everyday words aside: "asked", "leave" and "loving" three times are fine)
         const freq = new Map();
-        for (const w of body.replace(/"[^"\n]*"|“[^”\n]*”/g, ' ').match(/\b[a-z][a-z'’]{4,}\b/g) || []) if (!STOP.has(w)) freq.set(w, (freq.get(w) || 0) + 1);
+        for (const w of body.replace(/"[^"\n]*"|“[^”\n]*”/g, ' ').match(/\b[a-z][a-z'’]{6,}\b/g) || []) if (!STOP.has(w)) freq.set(w, (freq.get(w) || 0) + 1);
         const rep = [...freq].filter(([, k]) => k >= 3).sort((a2, b2) => b2[1] - a2[1]).slice(0, 2);
         for (const [w, k] of rep) out.push(`${name ? `${name} · ` : ''}반복 "${w}" ${k}번`);
         if (x.bullets.length > 6) out.push(`${name ? `${name} · ` : ''}불릿 ${x.bullets.length}개`);
