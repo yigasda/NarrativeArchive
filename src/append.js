@@ -75,6 +75,39 @@ PLOT:
 OUTPUT
 The whole revised draft, then an optional NOTE line. No fences, no comments.`;
 
+// 빠진 구간 받기: only the gap's messages and the section before it go to the draft model
+export const AI_SYS_GAPFILL = `GOAL
+A draft of story-archive sections skipped some messages: the section before the gap ends early and the next one starts late. Write those messages into the draft so the numbering runs on with no gap — and change nothing else.
+
+YOU GET
+- SECTION BEFORE THE GAP: the section that should have covered the gap, or reached up to it.
+- SECTION AFTER THE GAP: its heading only, for context. Never output it.
+- GAP: the missing message range.
+- RAW LOG: the gap's messages, each starting with [number] and the speaker. It is the only source of new facts and quotes. Every message the bot writes carries the same name tag, even when another character speaks or acts; tell who does what from the content.
+
+STEPS
+1. Read the RAW LOG. If it continues the scene of the section before the gap, fold it into that section: change the heading's end number to the gap's last number and add or extend bullets. If something turns there (a relationship shifts, a secret comes out, a decision is made), keep the section as it is and write one new section for the gap after it instead.
+2. Keep every existing bullet of the section before the gap word for word unless the gap changes what it says.
+3. Follow the archive's rules: memory, not transcript — what happened, what caused it, what it changed; the action that caused a reaction comes before it; a character's interpretation only as theirs; at most 6 bullets per section; quotes only verbatim from the RAW LOG; no commentary; same language and format as the section before the gap.
+4. When two messages describe the same moment (a turn and the reply re-telling it, or a recap at the start of the next message), it happened once.
+
+EXAMPLE
+SECTION BEFORE THE GAP:
+## #12–#18 — The bridge (Spring 3, Varo)
+PLOT:
+- Mara pulled Ren up from the broken plank; Ivo arrived afterward, while Ren was still hurt.
+GAP: #19–#22
+RAW LOG: Ivo bound Ren's leg and offered to carry him; Ren refused and limped on alone.
+
+Answer:
+## #12–#22 — The bridge (Spring 3, Varo)
+PLOT:
+- Mara pulled Ren up from the broken plank; Ivo arrived afterward, while Ren was still hurt.
+- Ivo bound Ren's leg and offered to carry him; Ren refused and limped on alone.
+
+OUTPUT
+The section before the gap (changed or not), then the new section if you wrote one. Its numbers must run from the section's first number to the gap's last number with no gap. No fences, no comments.`;
+
 // Returns { text, placed, replaced: [keys], renumbered }
 // Pasted sections whose numbers the archive already covers (a model rewriting the format sample, say).
 // 'skip' leaves them out; 'replace' swaps an exact match (same prefix and range) in place of the old one.
@@ -291,18 +324,22 @@ export function checkAppend(m, add, last) {
     }
     // numbering restarts per prefix (Y1, Y2 …), so check continuity within each
     const lastBy = new Map();
+    const gaps = []; // between two pasted sections, for the fix buttons
     for (const r of ranges) {
         if (r.from > r.to) issues.push(`"${r.title}" — 시작 #${r.from}이 끝 #${r.to}보다 커요.`);
         const prev = lastBy.get(r.prefix);
         if (prev) {
-            if (r.from > prev.to + 1) issues.push(`${label(r)}${prev.to}와 #${r.from} 사이 #${prev.to + 1}${r.from - 1 > prev.to + 1 ? `–#${r.from - 1}` : ''}가 빠졌어요.`);
+            if (r.from > prev.to + 1) {
+                issues.push(`${label(r)}${prev.to}와 #${r.from} 사이 #${prev.to + 1}${r.from - 1 > prev.to + 1 ? `–#${r.from - 1}` : ''}가 빠졌어요.`);
+                gaps.push({ prefix: r.prefix, from: prev.to + 1, to: r.from - 1, before: prev, after: r });
+            }
             else if (r.from <= prev.to) issues.push(`"${r.title}"가 앞 섹션(${label(prev)}${prev.to}까지)과 겹쳐요.`);
         }
         lastBy.set(r.prefix, r);
     }
     const end = ranges[ranges.length - 1];
     if (end.to > last) issues.push(`끝 ${label(end)}${end.to}가 채팅 마지막 #${last}보다 커요.`);
-    return { ranges, issues, soft: false };
+    return { ranges, issues, gaps, soft: false };
 }
 
 // a paste that carries most of the archive's numbered sections is a whole new version, not new sections
@@ -464,6 +501,47 @@ export async function openAppend(prefill = {}) {
         $ta.val(fixTailNumber(auFix(v, m), gap)).trigger('input');
         toastr.success(`STATE·OPEN 번호를 #${gap.end}로 맞췄어요`);
     });
+    // a gap between two pasted sections: stretch the section before it, or have the gap's messages written in
+    const headWithEnd = (title, to) => title.replace(RANGE_HEAD, (all, pre, a, dash, b, rest) => `${pre ? `${pre} ` : ''}#${a}${dash}#${to}${rest}`);
+    const sectionOf = (v, title) => parseSections(v).find(x => !x.group && x.title === title);
+    $root.on('click', '.na_gap_join', () => {
+        const v = auFix(String($ta.val() || ''), m), gp = checkAppend(m, stripRewrites(m.text, v), last).gaps?.[0];
+        const s = gp && sectionOf(v, gp.before.title);
+        if (!s) return;
+        const nl = v.indexOf('\n', s.start);
+        const head = v.slice(s.start, nl < 0 ? v.length : nl);
+        $ta.val(v.slice(0, s.start) + head.replace(gp.before.title, headWithEnd(gp.before.title, gp.to)) + v.slice(s.start + head.length)).trigger('input');
+        toastr.success(`앞 섹션을 #${gp.to}까지로 늘렸어요`);
+    });
+    let gapBusy = false;
+    $root.on('click', '.na_gap_fill', async function () {
+        if (gapBusy) return;
+        const v = auFix(String($ta.val() || ''), m), gp = checkAppend(m, stripRewrites(m.text, v), last).gaps?.[0];
+        const s = gp && sectionOf(v, gp.before.title);
+        if (!s) return;
+        const label = `${gp.prefix ? `${gp.prefix} ` : ''}#${gp.from}–#${gp.to}`;
+        const src = await rawFor(m, { title: `${label} — gap` }, { here: true });
+        if (!src.raw) return toastr.warning(src.why || '원문을 못 찾았어요', '빠진 구간');
+        gapBusy = true;
+        const $b = $(this).prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
+        try {
+            const before = trimEnd(v.slice(s.start, s.end)).replace(/\n-{3,}\s*$/, '');
+            const prompt = `SECTION BEFORE THE GAP:\n${before}\n\nSECTION AFTER THE GAP (heading only — do not output it):\n## ${gp.after.title}\n\nGAP: ${label}\n\nRAW LOG ${label}:\n${src.raw}${langBlock(m.text)}`;
+            const out = auFix(stripThink(await askCompress(prompt, { system: AI_SYS_GAPFILL })).replace(/^```[a-z]*\n?|```\s*$/g, '').trim(), m);
+            const rs = headingRanges(out);
+            if (!rs.length) throw new Error('초안 모델이 섹션 형태로 답하지 않았어요');
+            if (rs[0].from !== gp.before.from || rs[rs.length - 1].to !== gp.to) throw new Error(`받은 섹션이 #${rs[0].from}–#${rs[rs.length - 1].to}라서 넣지 않았어요 (#${gp.before.from}–#${gp.to}여야 해요)`);
+            if (apf.original === null) apf.original = String($ta.val() || '');
+            $root.find('.na_apf_undo').prop('hidden', false);
+            const rest = v.slice(s.start + before.length);
+            $ta.val(`${v.slice(0, s.start)}${out}${/^\s*\n/.test(rest) ? '' : '\n\n'}${rest}`).trigger('input');
+            toastr.success(`${label}를 넣었어요 · 섹션 ${rs.length === 1 ? '앞 섹션에 합침' : `${rs.length - 1}개 새로`}`, '빠진 구간');
+        } catch (e) {
+            console.error('[NarrativeArchive] gap fill', e);
+            toastr.error(String(e?.message || e), '빠진 구간');
+            $b.prop('disabled', false).text('다시 받기');
+        } finally { gapBusy = false; }
+    });
     $root.on('click', '.na_names_fix', () => {
         let v = $ta.val();
         nearMiss.forEach(x => { v = v.replace(new RegExp(`\\b${x.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g'), x.like); });
@@ -506,7 +584,9 @@ export async function openAppend(prefill = {}) {
                 const r = lastCheck.ranges;
                 ckRow($check, 'ok', '번호가 이어져요', `${m.boundary >= 0 ? `경계선 #${m.boundary} 다음 ` : ''}#${r[0].from}부터 #${r[r.length - 1].to}까지 빈틈 없음`);
             } else {
-                ckRow($check, lastCheck.soft ? 'soft' : 'warn', lastCheck.soft ? '번호 검사를 건너뛰어요' : `번호를 확인해 주세요 · ${lastCheck.issues.length}개`, lastCheck.issues.map(esc).join('<br>'));
+                const gp = lastCheck.gaps?.[0], gl = gp && `#${gp.from}${gp.to > gp.from ? `–#${gp.to}` : ''}`;
+                ckRow($check, lastCheck.soft ? 'soft' : 'warn', lastCheck.soft ? '번호 검사를 건너뛰어요' : `번호를 확인해 주세요 · ${lastCheck.issues.length}개`, lastCheck.issues.map(esc).join('<br>'),
+                    gp ? `<span class="na_ck_btns">${draftReady() ? `<button type="button" class="na_ck_btn na_gap_fill" title="${esc(gl)} 원문만 초안 모델에 보내서 앞 섹션에 넣거나 새 섹션으로 받아요">${esc(gl)} 요약 받기</button>` : ''}<button type="button" class="na_ck_btn na_gap_join" title="앞 섹션 끝 번호를 #${gp.to}로 늘려요 · 그 메시지 내용이 앞 섹션에 이미 들어가 있을 때">번호만 잇기</button></span>` : '');
             }
             const near = has ? nameNearMisses(m.text, val) : [];
             nearMiss = near;
