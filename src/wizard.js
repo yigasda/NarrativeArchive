@@ -341,10 +341,26 @@ export async function quickCompress() {
         $(document).on('change', '.na_qc_reuse', function () { quickReuse = this.checked; });
     }
     quickMemo = ''; quickReuse = !!saved;
-    if (!await confirm('한 번에 압축', `<b>#${from} – #${to}</b> · 메시지 ${items.length}개 · 원문 약 ${fmt(estTok(raw))} 토큰${to < last ? `<br><small>마지막 ${last - to}개(#${to + 1}–#${last})는 지금 장면이라 남겨요 · 압축 → 설정 → 숨길 때 남길 메시지</small>` : ''}${two ? `<br><b>1단계</b> 정리: ${esc(evLabel())}가 메시지 15개씩 ${n}번 · 메시지마다 한 줄, 되짚기는 빼요<br><b>2단계</b> 요약: 초안 모델(${esc(drLabel())})이 정리한 목록으로 한 번에 써요` : `${n > 1 ? `<br><b>${n}번에 나눠</b> 보내요 · 한 번에 약 ${fmt(chunkTok())} 토큰씩, 앞 조각에 이어서` : `<br>한 번에 보내요${estTok(raw) > 60000 ? ' · 원문이 길어서 중간을 훑을 수 있어요 (압축 → 설정 → 나눠 보내기)' : ''}`}<br>초안 모델(${esc(drLabel())})이 요약해요`}<br>끝나면 <b>아카이브에 추가</b> 창이 떠요.<br><small>지시문: ${esc(p.name)} · 생각: ${ce === 'conn' ? '연결 설정' : { high: '높게', medium: '보통', low: '낮게' }[ce] || ce}</small>${au.on ? `<br><small>AU 켜짐 · 요약이 본편 뒤 <b>${esc(au.name)}</b> 묶음으로 이어져요</small>` : ''}
-        <textarea class="text_pole na_qc_memo" rows="2" placeholder="이번 압축 메모 (선택) · 예: #40–#140은 정사 파트, 관계 변화만 한두 줄로. 세트는 끝난 뒤에 들어왔어"></textarea>
-        ${saved ? `<label class="checkbox_label na_qc_gradebox"><input type="checkbox" class="na_qc_reuse" checked><span>저장된 1단계 목록 쓰기 <small>· 이 범위를 ${esc(timeLabel(saved.at))}에 정리해 둔 게 있어요 (메시지 그대로) · 2단계만 다시 해요</small></span></label>` : ''}
-        <label class="checkbox_label na_qc_gradebox"><input type="checkbox" class="na_qc_grade" ${g.quickGrade ? 'checked' : ''}><span>채점도 같이 <small>· AI 기능 모델(${esc(aiLabel())})이 원문과 대조해 지어낸 것·빠진 것·틀린 번호를 찾아요 (비용 추가)</small></span></label>`)) return;
+    const short = l => String(l).replace(/^(커스텀|Vertex) · /, '');
+    const effort = ce === 'conn' ? '연결 설정' : { high: '높게', medium: '보통', low: '낮게' }[ce] || ce;
+    const row = (k, v, sub = '') => `<div class="na_qc_row"><span>${k}</span><b>${v}${sub ? `<small>${sub}</small>` : ''}</b></div>`;
+    const rows = [
+        ...(two ? [
+            saved && quickReuse ? row('1단계 정리', '저장된 목록', esc(timeLabel(saved.at))) : row('1단계 정리', esc(short(evLabel())), `15개씩 ${n}번`),
+            row('2단계 요약', esc(short(drLabel())), '한 번'),
+        ] : [row('요약', esc(short(drLabel())), n > 1 ? `${n}번에 나눠 · 약 ${fmt(chunkTok())} 토큰씩` : '한 번에')]),
+        row('지시문', esc(p.name), `생각 ${effort}`),
+        ...(au.on ? [row('AU', esc(au.name), '본편 뒤에 이어서')] : []),
+    ];
+    if (!await confirm('한 번에 압축', `<div class="na_qc">
+        <div class="na_qc_head"><b>#${from} – #${to}</b><small>메시지 ${items.length}개 · 원문 약 ${fmt(estTok(raw))} 토큰</small></div>
+        <div class="na_qc_rows">${rows.join('')}</div>
+        ${to < last ? `<small class="na_qc_note">마지막 ${last - to}개(${last === to + 1 ? `#${last}` : `#${to + 1}–#${last}`})는 지금 장면이라 남겨요</small>` : ''}
+        ${!two && n <= 1 && estTok(raw) > 60000 ? '<small class="na_qc_note">원문이 길어서 중간을 훑을 수 있어요 · 압축 → 설정 → 나눠 보내기</small>' : ''}
+        <textarea class="text_pole na_qc_memo" rows="2" placeholder="이번 압축 메모 (선택) · 예: #40–#140은 정사 파트, 관계 변화만 한두 줄로"></textarea>
+        ${saved ? `<label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_reuse" checked><span>저장된 1단계 목록 쓰기<small>메시지가 그대로라 2단계만 다시 해요</small></span></label>` : ''}
+        <label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_grade" ${g.quickGrade ? 'checked' : ''}><span>채점도 같이<small>${esc(short(aiLabel()))}가 원문과 대조 · 비용 추가</small></span></label>
+      </div>`)) return;
     quickBusy = true;
     const runMemo = quickMemo;
     const toast = toastr.info(`#${from}–#${to} 요약하는 중… 창을 닫아도 돼요`, '한 번에 압축', { timeOut: 0, extendedTimeOut: 0, tapToDismiss: false });
