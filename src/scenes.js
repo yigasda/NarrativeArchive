@@ -271,51 +271,74 @@ export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = 
 // the work note's parts; a line added from the 압축 작업실 goes under one of them
 export const NOTE_PARTS = ['Canon 요지', '살린 줄', '실수 목록', '문체'];
 export function noteInsert(note, part, line) {
-    const text = String(note || '').trimEnd(), L = text ? text.split('\n') : [];
-    const isHead = l => /^#{1,3}\s/.test(l);
-    const h = L.findIndex(l => isHead(l) && l.replace(/^#+\s*/, '').trim().toLowerCase() === part.toLowerCase());
-    if (h < 0) return `${text}${text ? '\n\n' : ''}# ${part}\n${line}`;
-    let e = h + 1;
-    while (e < L.length && !isHead(L[e])) e++;
-    while (e > h + 1 && !L[e - 1].trim()) e--;
-    L.splice(e, 0, line);
-    return L.join('\n');
+    const n = noteParts(note);
+    n.parts[part] = n.parts[part] ? `${n.parts[part]}\n${line}` : line;
+    return noteJoin(n);
 }
-const notePartsMissing = note => NOTE_PARTS.filter(x => !new RegExp(`^#{1,3}\\s*${x}\\s*$`, 'im').test(String(note || '')));
 
 // 작업 노트: the user's handover for this story (canon, lines to keep, past mistakes), sent with every scene.
 // Kept with the chat and carried into the next one.
+// the note as its four parts (plus whatever sits outside them); headings that are not a part stay inside the part they are in
+export function noteParts(note) {
+    const acc = Object.fromEntries(NOTE_PARTS.map(x => [x, []])), other = [];
+    let cur = null;
+    for (const l of String(note || '').split('\n')) {
+        const h = l.match(/^#{1,3}\s*(.+?)\s*$/);
+        const k = h && NOTE_PARTS.find(x => x.toLowerCase() === h[1].toLowerCase());
+        if (k) { cur = k; continue; }
+        (cur ? acc[cur] : other).push(l);
+    }
+    const trim = arr => arr.join('\n').replace(/^\s+|\s+$/g, '');
+    return { parts: Object.fromEntries(NOTE_PARTS.map(x => [x, trim(acc[x])])), other: trim(other) };
+}
+export const noteJoin = ({ parts, other }) => [...(other ? [other] : []), ...NOTE_PARTS.filter(x => parts[x]).map(x => `# ${x}\n${parts[x]}`)].join('\n\n');
+const NOTE_HINT = {
+    'Canon 요지': '- 이 이야기에서 절대 틀리면 안 되는 사실을 한 줄씩\n- 예: Ren은 Mara보다 열 살 많다',
+    '살린 줄': '- 원문 그대로 남길 대사\n- 예: #63 Mara "Then I\'ll wait."',
+    '실수 목록': '- 요약이 틀렸던 것과 바른 쪽\n- 예: 맞은 사람을 바꿔 씀 → 맞은 건 Ren',
+    '문체': '- 섹션 길이, 대사 길이, 제목 모양\n- 예: 대사는 섹션당 한두 개, 짧게',
+    '기타': '- 네 칸 밖에 있던 내용',
+};
+
+// 작업 노트: the user's handover for this story, in four parts picked from the row on top. Sent with every scene;
+// kept with the chat and carried into the next one.
 export async function openWorkNote() {
     const c = ctx(), m = getMeta();
+    const note = noteParts(m.workNote);
+    const tabs = () => [...NOTE_PARTS, ...(note.other ? ['기타'] : [])];
+    let cur = NOTE_PARTS[0];
     const $root = $(`
       <div class="na_popup na_v2 na_wn">
-        <div class="na_v2_title"><b>작업 노트</b><small>장면별 압축에서 장면마다 같이 보내요 · 이 채팅에 저장되고 다음 채팅으로 이어져요</small></div>
-        <small class="na_v2_note">이 이야기의 canon 요지, 꼭 살릴 줄, 이전 실수 목록처럼 요약할 때 알아야 할 것만. 리뷰 방식 같은 요약과 상관없는 건 빼는 게 좋아요.</small>
-        <textarea class="text_pole na_wn_ta" spellcheck="false" placeholder="# Canon 요지&#10;- 절대 틀리면 안 되는 사실&#10;# 살린 줄&#10;- 원문 그대로 남길 대사&#10;# 실수 목록&#10;- 예: 맞은 걸 소망이 한 걸로 썼다&#10;# 문체&#10;- 섹션 길이, 대사 길이, 제목 스타일"></textarea>
-        <div class="na_v2_row2"><button type="button" class="na_v2_btn na_wn_parts">칸 나누기</button><button type="button" class="na_v2_btn na_wn_file_btn">.md · .txt 불러오기</button><button type="button" class="na_v2_btn na_wn_clear">지우기</button></div>
+        <div class="na_v2_title"><b>작업 노트</b><small>장면별 압축 · 작업실에서 장면마다 같이 보내요 · 이 채팅에 저장되고 다음 채팅으로 이어져요</small></div>
+        <div class="na_v2_seg na_wn_seg"></div>
+        <textarea class="text_pole na_wn_ta" spellcheck="false"></textarea>
+        <div class="na_v2_row2"><button type="button" class="na_v2_btn na_wn_file_btn">.md · .txt 불러오기</button><button type="button" class="na_v2_btn na_wn_clear">이 칸 비우기</button></div>
         <input type="file" class="na_wn_file" accept=".md,.txt,text/plain,text/markdown" hidden>
         <small class="na_v2_note na_wn_info"></small>
       </div>`);
-    const $ta = $root.find('.na_wn_ta').val(String(m.workNote || ''));
-    const info = () => { const v = String($ta.val() || ''); $root.find('.na_wn_info').text(v.trim() ? `약 ${v.length.toLocaleString()}자` : '비어 있어요'); };
-    $ta.on('input', info); info();
+    const $ta = $root.find('.na_wn_ta');
+    const get = k => (k === '기타' ? note.other : note.parts[k]);
+    const set = (k, v) => { if (k === '기타') note.other = v; else note.parts[k] = v; };
+    const lines = v => String(v || '').split('\n').filter(l => l.trim()).length;
+    const drawTabs = () => $root.find('.na_wn_seg').html(tabs().map(k => `<button type="button" data-k="${k}" class="${k === cur ? 'on' : ''}">${k}${lines(get(k)) ? `<small>${lines(get(k))}</small>` : ''}</button>`).join(''));
+    const info = () => { const v = noteJoin(note); $root.find('.na_wn_info').text(v.trim() ? `전체 약 ${v.length.toLocaleString()}자` : '비어 있어요'); };
+    const show = k => { cur = k; $ta.val(get(k)).attr('placeholder', NOTE_HINT[k] || ''); drawTabs(); };
+    $ta.on('input', () => { set(cur, String($ta.val() || '').replace(/\s+$/, '')); drawTabs(); info(); });
+    $root.on('click', '.na_wn_seg button', function () { show(this.dataset.k); $ta.trigger('focus'); });
     $root.find('.na_wn_file_btn').on('click', () => $root.find('.na_wn_file').val('').trigger('click'));
     $root.find('.na_wn_file').on('change', async function () {
         const f = this.files?.[0];
         if (!f) return;
-        $ta.val((await f.text()).replace(/\r\n/g, '\n').trim()); info();
+        // a whole note: its "# Canon 요지" … headings fill the parts, the rest goes to 기타
+        const got = noteParts((await f.text()).replace(/\r\n/g, '\n'));
+        Object.assign(note.parts, got.parts); note.other = got.other;
+        show(tabs().includes(cur) ? cur : NOTE_PARTS[0]); info();
     });
-    $root.find('.na_wn_clear').on('click', () => { $ta.val(''); info(); });
-    // the four parts as headings, the ones not there yet added at the end
-    $root.find('.na_wn_parts').on('click', () => {
-        const miss = notePartsMissing($ta.val());
-        if (!miss.length) return toastr.info('네 칸이 다 있어요.', '작업 노트');
-        const cur = String($ta.val() || '').trimEnd();
-        $ta.val(`${cur}${cur ? '\n\n' : ''}${miss.map(x => `# ${x}\n`).join('\n')}`); info();
-    });
+    $root.find('.na_wn_clear').on('click', () => { set(cur, ''); show(cur); info(); });
+    show(cur); info();
     const r = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, large: true, allowVerticalScrolling: true, okButton: '저장', cancelButton: '취소' });
     if (!(r === c.POPUP_RESULT.AFFIRMATIVE || r === true)) return;
-    const v = String($ta.val() || '').trim();
+    const v = noteJoin(note).trim();
     getMeta().workNote = v;
     await saveMeta();
     $('#na_worknote_sub').text(v ? `있음 · 약 ${v.length.toLocaleString()}자 · 장면마다 같이 보내요` : '이 이야기의 인수인계 · canon · 살린 줄 · 이전 실수 · 장면마다 같이 보내요');
