@@ -10,24 +10,27 @@ import { ICO_A, svgA } from './theme.js';
 import { translateLines, trLineOk, withLineTr } from './translate.js';
 import { confirm, countTokens, esc, fmt } from './util.js';
 
-export const DIGEST_DEFAULT_TOK = 1000;
+export const DIGEST_DEFAULT_TOK = 1200;
 
 export const AI_SYS_DIGEST = `GOAL
 Condense a run of story-archive sections into ONE short section that stands in for them in the prompt. The sections stay saved; only your digest is read in their place, so a later scene must still make sense from it.
 
 YOU GET
 - SECTIONS: the sections in order, each with its heading line and its text.
-- TARGET: the most tokens the digest may use (a token is about three quarters of an English word). It is a ceiling, not a goal.
+- TARGET: the most tokens the digest may use. A token is about three quarters of an English word, so TARGET 1200 is about 900 words. It is a ceiling, not a goal.
 - NOTE (sometimes): what the user wants kept or cut. It may be in Korean. It overrides the steps below.
 
 STEPS
 1. Read every section. Keep what later scenes depend on: how relationships changed, decisions, promises, secrets that came out, injuries, firsts, the reasons behind big reactions, and where things stand at the end.
-2. Cut what only repeats or colours the mood: individual acts, positions, gestures, back-and-forth that changes nothing. A sex scene, however long, becomes one bullet of relationship beats — how consent moved, a request to stop, whether it was a first, what changed afterward — and nothing about the acts, bodies or sensations.
+2. Cut what only repeats or colours the mood: individual acts, positions, gestures, back-and-forth that changes nothing. A sex scene, however long, becomes one bullet of relationship beats (how consent moved, a request to stop, whether it was a first, what changed afterward) and nothing about the acts, bodies or sensations.
 3. Length: only what step 1 needs, and never more than TARGET. Do not fill the budget: a stretch that is mostly one sex scene may need a tenth of it.
-4. Form: one heading line "## <prefix> #first–#last — Title (date, place)" covering the whole run (keep the prefix the headings use; if dates or places differ, give the first and the last: "Hathyr 8, noon → night"), then "PLOT:", then "- " bullets in the order things happened.
-5. Title: like a book's table of contents — short and concrete; it names the stretch, it does not summarize it. No semicolons.
-6. Quotes: at most two or three lines that define the stretch, copied exactly from the sections. Tell the rest in your own words.
-7. Same language as the sections. Add nothing that is not in them. No commentary.
+4. Form: one heading line "## <prefix> #first–#last — Title (date, place)" covering the whole run (keep the prefix the headings use; if dates or places differ, give the first and the last: "Hathyr 8, noon → night"), then "PLOT:", then "- " bullets.
+5. Order: bullets follow the order things happened. Never mention an event before the bullet that tells it ("after a later fight, …" ✗).
+6. Bullets: one bullet is one turn of the story: what happened, why, and what it changed. Never report a conversation turn by turn ("He asked… She replied… He added…"); fold the exchange into what it revealed, decided or broke.
+7. Title: like a book's table of contents, short and concrete; it names the stretch, it does not summarize it. No semicolons.
+8. Quotes: at most three in the whole digest, only lines that define the stretch, copied exactly from the sections. Keep each short: if a line runs long, keep the one sentence that matters, never reword it. Tell the rest in your own words.
+9. Em dashes: at most one in the bullets. Use commas, semicolons or full stops.
+10. Same language as the sections. Add nothing that is not in them: no reading, theme or verdict of your own. A character's reading stays theirs ("in his reckoning, …").
 
 EXAMPLE
 SECTIONS:
@@ -48,6 +51,7 @@ PLOT:
 - Their first night together: when she asked him to slow down he stopped and waited for her. Afterward he told her, "I'm not going anywhere."
 
 OUTPUT
+Before you output, check: under TARGET (if not, shorten quotes first, then merge bullets), bullets in order, no turn-by-turn bullet, at most three quotes, at most one em dash.
 Only the digest section, heading line first. No fences, no comments.`;
 
 export const digestsOf = m => (Array.isArray(m?.digests) ? m.digests : []);
