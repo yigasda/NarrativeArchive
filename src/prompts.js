@@ -155,13 +155,13 @@ READ
 WRITE
 Cutting so hard that the story breaks is also a failure: never shrink the core of a trigger or an arc.
 1. A section is a chapter: cut where the story turns (a relationship shifts, a decision, a secret, a change of place or time). Most sections cover 10–20 messages.
-2. One bullet is one turn: what happened, what caused it, what it changed. Never report a conversation turn by turn ("He asked… She replied…"); fold it into what it revealed, decided or broke.
+2. One bullet is one turn: what happened, what caused it, what it changed. Never report a conversation turn by turn ("He asked… She replied…"); fold it into what it revealed, decided or broke. An argument is one bullet: each side's point once, then where it ended. Verbs like asked, explained, argued, countered, admitted in a row mean you are reporting turns.
 3. Keep the cause before every reaction and the trigger before every decision. Keep what a character chose not to do. Keep both sides' responsibility: one side's hurt never erases the other's fault.
 4. Follow the raw log's order. Never mention an event before the bullet that tells it.
-5. Plain facts. A feeling or reading belongs to the character who has it ("in her own reckoning", "as he took it"), never to you. No verdicts, labels or themes of your own, such as "childish", "cold" or "cowardly", unless a character says them.
+5. Plain facts. A feeling or reading belongs to the character who has it ("in her own reckoning", "as he took it"), never to you. No verdicts, labels or themes of your own, such as "childish", "cold" or "cowardly", unless a character says them. Keep the raw log's intensity: no stronger word than it shows, such as "shattered" or "devastated", unless the text says so.
 6. A reaction that draws on a past event names the event briefly, as in "remembering the shipwreck", not what it means.
 7. Say each thing once. Do not lean on one verb ("explaining", "insisting") line after line.
-8. Cut staging: movement, gestures, how a line was said, scenery.
+8. Cut staging: movement, gestures, how a line was said, scenery. A gesture stays only when it is the event itself, such as a slap, a kiss or a door locked against someone.
 9. Every sentence ends with the number of the message it comes from: (#88), or (#88, #91). A sentence you cannot point to a message for does not go in.
 10. Quotes: the lines that decide, confess, refuse, promise, accuse or say what someone is to someone, faithful to the raw log (translated when needed). One sentence, under about 20 words; at most two in a bullet. Never invent or paraphrase a quote.
 11. Sex: only relationship beats: who, how consent moved, a request to stop, a first, what was said that would still matter at a table, what changed after. No acts, bodies or sensations, even if the user's own turn describes them; never quote a line about the act itself. Crises and self-harm: plainly.
@@ -170,13 +170,15 @@ Cutting so hard that the story breaks is also a failure: never shrink the core o
 
 EXAMPLE
 ✗ Mara knocked and stood in the doorway. Ren asked why she had come back. Mara said she didn't know. Ren told her the road was closed. Mara said, "Then I'll wait."
+✗ Ivo asked why she stayed. Mara explained the road was closed. Ivo argued she could take the river. Mara countered that the river was his idea.
 ✓
 ## #57–#69 — The north road (Spring 3, night, Varo)
 PLOT:
 - Mara came back the same night she had sworn to leave, unable to say why (#57, #59). Ren let her in without pressing and told her the north road was closed, and she stayed: "Then I'll wait." (#60, #63)
+- Ivo pressed her to take the river road; Mara refused it because it was his idea, and the question was left there (#71, #74).
 
 Before you output, check each section once: order, anything said twice, verdicts of your own, quote length, em dashes, bullet count.`;
-export const OLD_SHORT_HASHES = new Set(['lwei5t']); // earlier built-in short ones, upgraded when untouched
+export const OLD_SHORT_HASHES = new Set(['lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
 export const BUILTIN_PROMPTS = new Set(['basic', 'short']);
 
 export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
