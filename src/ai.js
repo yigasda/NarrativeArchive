@@ -274,7 +274,8 @@ export function aiProfiles() {
     try { return ctx().ConnectionManagerRequestService?.getSupportedProfiles?.() || []; } catch { return []; }
 }
 
-export const stripThink = t => String(t ?? '').replace(/<(think|thinking|reasoning)[^>]*>[\s\S]*?<\/\1>/gi, '').trim();
+// thinking a model writes out, and the <scenes> list the compress instruction asks for before the sections
+export const stripThink = t => String(t ?? '').replace(/<(think|thinking|reasoning|scenes)[^>]*>[\s\S]*?<\/\1>/gi, '').trim();
 
 // Sends one request: to the chosen Connection Manager profile, or to whatever is connected now.
 export async function askAI(prompt, { system = '', maxTokens = 0, effort = '' } = {}) {

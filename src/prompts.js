@@ -17,6 +17,7 @@ You continue the long-term-memory summary (the archive) of a long-running role-p
 
 # 1. Output
 Output exactly these parts, in this order, with no greeting, explanation or commentary:
+0. The <scenes> block described in 9.
 1. The new section blocks, covering #{{from}}–#{{to}} continuously: no gaps, no overlaps, the first heading starting at #{{from}} and the last block ending at #{{to}}. Numbers are always message numbers.
 2. A line containing only \`---\`
 3. If the archive has \`# STATE AT …\` / \`# OPEN AT …\`: two change lists, \`# STATE CHANGES\` and \`# OPEN CHANGES\` (rules in 8). Never write the blocks out. If the archive has none, leave this part out.
@@ -126,7 +127,7 @@ DROP ## Group :: - a thread this stretch closed, copied exactly
 - OPEN: drop only threads this stretch closed. Keep new threads short; do not prescribe future actions.
 
 # 9. Before you write
-In your thinking, first list the scene boundaries of #{{from}}–#{{to}} by message number (where time, place or the situation turns) and check that every message from #{{from}} to #{{to}} falls inside one of them. Then write the sections on those boundaries. Do not output STATE or OPEN in full; <current_state> is for reading only.`;
+First write the scene boundaries of #{{from}}–#{{to}} by message number (where time, place or the situation turns) inside <scenes>…</scenes>, one line per scene, and check there that every message from #{{from}} to #{{to}} falls inside one of them. The extension removes this block. Then write the sections on those boundaries. Do not output STATE or OPEN in full; <current_state> is for reading only.`;
 // earlier basic text, upgraded when untouched
 export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
@@ -143,7 +144,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8', 'k678s0']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -316,7 +317,10 @@ export const compressPrompt = (tpl, vars, m, memo = '', size = '') => {
     const body = fillPrompt(tpl, { recent: recentSections(vars.archive ?? m.text), ...vars });
     const au = auBlock(m), cut = body.indexOf('</current_state>');
     const withAu = !au ? body : cut >= 0 ? `${body.slice(0, cut + 16)}\n\n${au.trim()}${body.slice(cut + 16)}` : au + body;
-    return withAu + memoBlock(memo) + size + langBlock(m.text);
+    // the note, the size and the language go before a closing "Before you write" step, so that step is read last
+    const extra = memoBlock(memo) + size + langBlock(m.text);
+    const last = withAu.lastIndexOf('\n# 9. Before you write');
+    return last >= 0 ? `${withAu.slice(0, last).replace(/\s+$/, '')}${extra}\n\n${withAu.slice(last + 1)}` : withAu + extra;
 };
 
 // An AU answer that forgot its prefix or divider gets them: "## #12–#30" → "## AU #12–#30",
