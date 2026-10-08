@@ -121,6 +121,7 @@ const SCENE_ASK = (from, to, prefix) => `[THIS REQUEST]
 Write the section for #${from}–#${to}, the raw log in <raw_log>, following <rules> (ignore what they say about output parts, change lists, scene lists and section counts: here you write the section for this scene and nothing else).
 - Usually ONE section. Write TWO only when the story clearly turns inside this scene; then the first covers #${from} up to the turn and the second from the turn to #${to}, with no gap.
 - <previous_section> is already written and ends right before #${from}: do not repeat its events; carry on from where it stops.
+- Title: a quoted-line title only if no title in <previous_section> is one; otherwise pick another shape.
 - <recent_archive> and <current_state> are context and style only: nothing in them goes into this section unless <raw_log> shows it happening.
 - <work_note>, when present, is the user's own notes on this story (canon, lines to keep, past mistakes). Follow it.
 Output only, for each section:
