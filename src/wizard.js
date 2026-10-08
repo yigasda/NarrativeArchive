@@ -254,11 +254,16 @@ export async function eventList({ m, g, items, onStep = () => {} }) {
     const batches = eventBatches(items);
     const system = eventsSystem(LANG_NAME[archiveLang(m.text)]);
     const names = knownNames(m, items);
-    const all = [];
-    let earlier = '', badQ = 0;
-    const missing = [];
     const linesOf = es => es.flatMap(e => e.lines.map(l => `[${e.n}] ${l.text}`));
+    // a run cut off partway (the tab went to sleep, the connection dropped) picks up after its last finished batch
+    const key = evKey(items, g), from = items[0].i, to = items[items.length - 1].i;
+    const prog = m.evProgress?.hash === key && m.evProgress.from === from && m.evProgress.to === to ? m.evProgress : null;
+    const all = prog ? prog.all : [];
+    let badQ = prog ? prog.badQ : 0;
+    const missing = prog ? prog.missing : [];
+    let earlier = linesOf(all).slice(-15).join('\n');
     for (const [k, b] of batches.entries()) {
+        if (prog && k < prog.done) continue;
         onStep(k, batches.length, b[0].i, b[b.length - 1].i);
         const ask = async (part, before) => parseEvents(await askEvents(`KNOWN NAMES: ${names}\n\nEARLIER LINES:\n${before || '(none — this is the start)'}\n\nMESSAGES:\n${formatExtract(part, g)}`, system), part);
         const got = await ask(b, earlier);
@@ -275,7 +280,10 @@ export async function eventList({ m, g, items, onStep = () => {} }) {
             all.push({ n: x.i, lines: [{ text: `(not condensed) ${x.name}: ${x.text}`, quotes: [] }], badQ: 0 });
         }
         earlier = linesOf(all).slice(-15).join('\n');
+        m.evProgress = { hash: key, from, to, done: k + 1, all, badQ, missing };
+        await saveMeta();
     }
+    delete m.evProgress;
     const { text, recaps, empty } = eventLines(all);
     return { text, recaps, empty, badQ, missing, n: items.length, batches: batches.length };
 }
@@ -332,6 +340,15 @@ export async function quickCompress() {
         }
     }
     if (after >= last || to < from || after + 1 > last - Math.max(0, Number(m.keep) || 0)) return toastr.info(`${m.boundary >= 0 ? `경계선 #${m.boundary} 뒤에` : '이 채팅에'} 압축할 메시지가 없어요 (메시지 ${last + 1}개 · 마지막 ${m.keep}개는 남겨요).`, '한 번에 압축');
+    // a summary that came back but never went in (the tab slept, the window was closed): offer it before paying again
+    const pend = m.pendingDraft;
+    if (pend?.text && pend.from === from) {
+        if (await confirm('받아 둔 요약', `<b>#${pend.from}–#${pend.to}</b> 요약을 ${esc(timeLabel(pend.at))}에 받아 놓고 아직 안 넣었어요.<br><b>이걸로 아카이브에 추가 창을 열까요?</b><br><small>아니요를 누르면 새로 받아요 (초안 모델 1번)</small>`)) {
+            await openAppend({ text: pend.text, end: guessEndNumber(pend.text) ?? pend.to, expectTo: pend.to, events: pend.events });
+            if ((getMeta().boundary ?? -1) >= pend.to) { delete getMeta().pendingDraft; await saveMeta(); }
+            return;
+        }
+    }
     const { items, raw } = rangeRaw(c, g, from, to, gapTo);
     if (!raw) return toastr.info('이 범위에 메시지가 없어요.', '한 번에 압축');
     const p = g.prompts.find(x => x.id === g.wizPrompt) || activePrompt(g);
@@ -370,14 +387,16 @@ export async function quickCompress() {
       </div>`)) return;
     quickBusy = true;
     const runMemo = quickMemo;
-    const toast = toastr.info(`#${from}–#${to} 요약하는 중… 창을 닫아도 돼요`, '한 번에 압축', { timeOut: 0, extendedTimeOut: 0, tapToDismiss: false });
+    const toast = toastr.info(`#${from}–#${to} 요약하는 중… 이 탭에 있어야 끝까지 받아요`, '한 번에 압축', { timeOut: 0, extendedTimeOut: 0, tapToDismiss: false });
     let r;
     try {
-        r = await compressDraft({ m, g, p, items, grade: !!globalSettings().quickGrade, memo: runMemo,
+        // a held Web Lock keeps Chrome from freezing the tab while it waits (it can still be discarded)
+        const held = fn => (navigator.locks?.request ? navigator.locks.request('na-compress', fn) : fn());
+        r = await held(() => compressDraft({ m, g, p, items, grade: !!globalSettings().quickGrade, memo: runMemo,
             onStep: (k, total, a, b, stage) => {
                 const msg = stage === 'events' ? `1단계 정리 #${a}–#${b} (${k + 1}/${total})` : stage === 'sections' ? `2단계 섹션 쓰는 중 #${a}–#${b}` : total > 1 ? `#${a}–#${b} 요약하는 중… (${k + 1}/${total})` : '';
-                if (msg) $(toast).find('.toast-message').text(`${msg} · 창을 닫아도 돼요`);
-            } }, { reuse: quickReuse });
+                if (msg) $(toast).find('.toast-message').text(`${msg} · 이 탭에 있어야 끝까지 받아요 (다른 탭·앱으로 가면 끊길 수 있어요)`);
+            } }, { reuse: quickReuse }));
     } finally { quickBusy = false; toastr.clear(toast); }
     if (r.error) {
         console.error('[NarrativeArchive] quick compress', r.error);
@@ -389,6 +408,8 @@ export async function quickCompress() {
     if (!text) return toastr.warning('초안 모델이 빈 답을 줬어요.', '한 번에 압축');
     const upto = r.error ? r.doneTo : to;
     m.lastExport = { from, to: upto, at: Date.now(), how: 'draft' };
+    // kept until it goes in, so a lost tab does not cost another request
+    m.pendingDraft = { text, from, to: upto, at: Date.now(), events: r.events || null };
     await saveMeta();
     refreshStatus();
     // 2단계만 다시: the same list, prompt and note, a new answer from the draft model
@@ -397,7 +418,8 @@ export async function quickCompress() {
         if (r2.error) throw r2.error;
         return auFix(r2.text, getMeta());
     } : null;
-    openAppend({ text, end: guessEndNumber(text) ?? upto, expectTo: upto, events: r.events, rerun, ...joinGrades(r.grades) });
+    await openAppend({ text, end: guessEndNumber(text) ?? upto, expectTo: upto, events: r.events, rerun, ...joinGrades(r.grades) });
+    if ((getMeta().boundary ?? -1) >= upto) { delete getMeta().pendingDraft; await saveMeta(); }
 }
 
 export async function openWizard() {
