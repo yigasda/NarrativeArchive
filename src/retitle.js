@@ -8,7 +8,7 @@ import { lineDiff, renderDiff } from './diff.js';
 import { cleanMessage, extractToText } from './extract.js';
 import { changedQuotes } from './fade.js';
 import { mountSectionPicker } from './picker.js';
-import { activePrompt, fillPrompt, langBlock } from './prompts.js';
+import { activePrompt, fillPrompt, langBlock, recentSections } from './prompts.js';
 import { RANGE_HEAD, groupLabel, keyAt, linkedMap, parseSections, renameKeys, sectionKey, trimEnd } from './sections.js';
 import { sourceRange } from './source.js';
 import { ICO_A, svgA } from './theme.js';
@@ -516,7 +516,7 @@ Output only the section blocks. No "---", no STATE, no OPEN.
 `;
                 // the archive for context, minus the wrong sections being replaced (they would pull the model back to them)
                 const withoutSel = m.text.slice(0, sel[0].start) + m.text.slice(sel[sel.length - 1].end);
-                const body = fillPrompt(activePrompt(g).text, { raw: rawSrc.raw, from: String(r.from), to: String(r.to), last_section: prev ? `(Format sample only. Already in the archive — do not output it.)\n${sectionBody(m.text.slice(prev.start, prev.end))}` : '(없음)', state: '(Not needed here — do not output STATE or OPEN.)', archive: withoutSel });
+                const body = fillPrompt(activePrompt(g).text, { raw: rawSrc.raw, from: String(r.from), to: String(r.to), last_section: prev ? `(Format sample only. Already in the archive — do not output it.)\n${sectionBody(m.text.slice(prev.start, prev.end))}` : '(없음)', state: '(Not needed here — do not output STATE or OPEN.)', archive: withoutSel, recent: recentSections(m.text.slice(0, sel[0].start)) });
                 // the user's correction goes last, where it is read as the final word
                 const tail = req ? `\n\n[USER'S CORRECTION — the user knows this story; this overrides any reading of the raw log that disagrees]\n${req}` : '';
                 out = await askCompress(head + body + tail + langBlock(m.text));
