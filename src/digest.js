@@ -24,7 +24,7 @@ STEPS
 1. Read every section. Keep what later scenes depend on: how relationships changed, decisions, promises, secrets that came out, injuries, firsts, the reasons behind big reactions, and where things stand at the end.
 2. Cut what only repeats or colours the mood: individual acts, positions, gestures, back-and-forth that changes nothing. A sex scene, however long, becomes one bullet of relationship beats (how consent moved, a request to stop, whether it was a first, what changed afterward) and nothing about the acts, bodies or sensations.
 3. Length: only what step 1 needs, and never more than TARGET. Do not fill the budget: a stretch that is mostly one sex scene may need a tenth of it.
-4. Form: one heading line "## <prefix> #first–#last — Title (date, place)" covering the whole run (keep the prefix the headings use; if dates or places differ, give the first and the last: "Hathyr 8, noon → night"), then "PLOT:", then "- " bullets.
+4. Form: one heading line "## <prefix> #first–#last — Title (date, place)" covering the whole run (keep the prefix the headings use; if dates or places differ, give the first and the last: "Hathyr 8, noon → night"; no clock times, "5:29 PM" ✗), then "PLOT:", then "- " bullets.
 5. Order: bullets follow the order things happened. Never mention an event before the bullet that tells it ("after a later fight, …" ✗).
 6. Bullets: one bullet is one turn of the story: what happened, why, and what it changed. Never report a conversation turn by turn ("He asked… She replied… He added…"); fold the exchange into what it revealed, decided or broke.
 7. Title: like a book's table of contents, short and concrete; it names the stretch, it does not summarize it. No semicolons.
