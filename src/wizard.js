@@ -107,7 +107,7 @@ export function nextRange(c = ctx(), m = getMeta(), { afterExport = true } = {})
 
 // the raw log of a range, as the wizard and 원문 뽑기 build it
 // keepUpTo: messages up to here stay even when hidden (they were hidden by the boundary, not by hand)
-function rangeRaw(c, g, from, to, keepUpTo = -1) {
+export function rangeRaw(c, g, from, to, keepUpTo = -1) {
     const items = buildExtract(from, to).filter(x => !(g.skipHidden && c.chat[x.i]?.is_system && x.i > keepUpTo)).map(x => ({ ...x, text: cleanMessage(x.text, g) })).filter(x => x.text);
     return { items, raw: formatExtract(items, g) };
 }

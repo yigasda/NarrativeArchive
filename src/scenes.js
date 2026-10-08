@@ -79,7 +79,7 @@ export function sceneChunks(items, { size = sceneSize(), re = trackerRe(), chat 
 }
 
 // the archive's last few numbered sections, whole (style and continuity; marked as already written)
-function lastSections(text, n) {
+export function lastSections(text, n) {
     const t = splitTail(String(text || ''))[0];
     const secs = parseSections(t).filter(x => !x.group && RANGE_HEAD.test(x.title)).slice(-n);
     return secs.map(x => trimEnd(t.slice(x.start, x.end)).replace(/\n-{3,}\s*$/, '').trim());
@@ -88,6 +88,18 @@ function lastSections(text, n) {
 // a scene's answer → one or two sections; their numbers are checked against the scene: the first starts at its first
 // message, the last ends at its last, no gap or overlap between. A split the model numbered wrong is put back to one section.
 export function parseSceneAnswer(out, from, to) {
+    const secs = answerBlocks(out).slice(0, 2);
+    if (!secs.length) return [];
+    if (secs.length === 2) {
+        const cut = secs[1].a;
+        // the split must fall inside the scene; anything else goes back to one section
+        if (Number.isFinite(cut) && cut > from && cut <= to) return [{ ...secs[0], a: from, b: cut - 1 }, { ...secs[1], a: cut, b: to }];
+        return [{ title: secs[0].title, a: from, b: to, bullets: [...secs[0].bullets, ...secs[1].bullets].slice(0, 6) }];
+    }
+    return [{ ...secs[0], a: from, b: to }];
+}
+// an answer's section blocks: [{ title, a, b, bullets }] (a / b null when the heading has no numbers); blocks without bullets are left out
+export function answerBlocks(out) {
     const t = String(out || '').replace(/^```[a-z]*\n?|```\s*$/g, '').trim();
     const blocks = [];
     let cur = null;
@@ -106,15 +118,7 @@ export function parseSceneAnswer(out, from, to) {
             cur.bullets.push(`- ${line.replace(/^\s*[-*•]\s*/, '').trim()}`);
         }
     }
-    const secs = blocks.filter(x => x.bullets.length).slice(0, 2);
-    if (!secs.length) return [];
-    if (secs.length === 2) {
-        const cut = secs[1].a;
-        // the split must fall inside the scene; anything else goes back to one section
-        if (Number.isFinite(cut) && cut > from && cut <= to) return [{ ...secs[0], a: from, b: cut - 1 }, { ...secs[1], a: cut, b: to }];
-        return [{ title: secs[0].title, a: from, b: to, bullets: [...secs[0].bullets, ...secs[1].bullets].slice(0, 6) }];
-    }
-    return [{ ...secs[0], a: from, b: to }];
+    return blocks.filter(x => x.bullets.length);
 }
 
 const SCENE_ASK = (from, to, prefix) => `[THIS REQUEST]
@@ -192,7 +196,7 @@ export function chunksFromStarts(items, starts, { size = sceneSize(), exact = fa
 export const scenesText = (chunks, notes = new Map()) => chunks.map(c => `#${c[0].i}–#${c[c.length - 1].i}  ${notes.get(c[0].i) || ''}`.trimEnd()).join('\n');
 export const startsFromText = text => String(text || '').split('\n').map(l => l.match(/^\s*#?(\d+)/)).filter(Boolean).map(mt => ({ start: Number(mt[1]) }));
 
-const STATE_SYS = `GOAL
+export const STATE_SYS = `GOAL
 Update the archive's STATE and OPEN for the new sections, as two change lists. You do not rewrite them: the extension applies your lists, and every line you do not list stays exactly as it is.
 
 YOU GET
@@ -218,6 +222,10 @@ ADD ## Group :: - a new thread
 DROP ## Group :: - a closed thread
 A list with nothing in it is (none). Nothing else.`;
 
+// the compress instruction as <rules>: the raw log and STATE are sent apart from it
+export const rulesText = (p, from, to) => fillPrompt(p.text, { raw: '(given above in <raw_log>)', state: '(given above in <current_state>)', from: String(from), to: String(to), last_section: '', archive: '', recent: '' })
+    .replace(/<raw_log[^>]*>\s*\(given above in <raw_log>\)\s*<\/raw_log>\s*/, '').replace(/<current_state>\s*\(given above in <current_state>\)\s*<\/current_state>\s*/, '');
+
 // the whole run: sections scene by scene, then the change lists. Same shape as draftCompress's answer.
 export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = '', chunks: given = null }) {
     const chunks = given?.length ? given : sceneChunks(items);
@@ -228,8 +236,7 @@ export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = 
     // the archive's last sections for style; the very last one is also the first scene's <previous_section>
     const recentAll = lastSections(m.text, 4);
     const recentFor = k => (k === 0 ? recentAll.slice(0, -1) : recentAll.slice(-3)).join('\n\n');
-    const rulesFor = (from, to) => fillPrompt(p.text, { raw: '(given above in <raw_log>)', state: '(given above in <current_state>)', from: String(from), to: String(to), last_section: '', archive: '', recent: '' })
-        .replace(/<raw_log[^>]*>\s*\(given above in <raw_log>\)\s*<\/raw_log>\s*/, '').replace(/<current_state>\s*\(given above in <current_state>\)\s*<\/current_state>\s*/, '');
+    const rulesFor = (from, to) => rulesText(p, from, to);
     const secs = [];
     let prev = recentAll[recentAll.length - 1] || '', doneTo = null, error = null;
     for (const [k, part] of chunks.entries()) {

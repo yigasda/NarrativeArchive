@@ -35,6 +35,21 @@ export async function callConn(t, system, prompt, maxTokens, effort = '', force 
     return stripThink(apiFormat(t) === 'anthropic' ? await callAnthropic(t, system, prompt, maxTokens, e) : await callOpenAICompat(t, system, prompt, maxTokens, e));
 }
 
+// prompt: one user message, or a whole conversation [{ role: 'user' | 'assistant', content }] (압축 작업실).
+// Two turns of the same role in a row (a request that failed and was sent again) are joined, since the APIs want them to alternate.
+export function turnsOf(prompt) {
+    if (!Array.isArray(prompt)) return [{ role: 'user', content: String(prompt ?? '') }];
+    const out = [];
+    for (const t of prompt) {
+        const role = t.role === 'assistant' ? 'assistant' : 'user', content = String(t.content ?? '');
+        if (!content.trim()) continue;
+        if (out.length && out[out.length - 1].role === role) out[out.length - 1].content += `\n\n${content}`;
+        else out.push({ role, content });
+    }
+    while (out.length && out[0].role !== 'user') out.shift();
+    return out;
+}
+
 // --- Anthropic Messages API, straight from the browser. Thinking on Claude Opus 5.5 can't be switched off;
 // effort is the only lever, and thinking tokens are billed as output, so a low effort is what keeps a draft cheap.
 export function anthropicBase(raw) {
@@ -73,7 +88,7 @@ export async function callAnthropic(t, system, prompt, maxTokens, effort = '') {
     const send = withEffort => anthropicFetch(t, endpoint, { method: 'POST', body: JSON.stringify({
         model: t.model, max_tokens: maxTokens,
         ...(system ? { system } : {}),
-        messages: [{ role: 'user', content: prompt }],
+        messages: turnsOf(prompt),
         ...(withEffort ? { output_config: { effort } } : {}),
     }) });
     let r;
@@ -152,7 +167,7 @@ export async function callOpenAICompat(t, system, prompt, maxTokens, effort = ''
         const send = withEffort => fetch(endpoint, { method: 'POST', headers, body: JSON.stringify({
             model, max_tokens: maxTokens, temperature: 0.3, stream: false,
             ...(withEffort ? { reasoning_effort: effort } : {}),
-            messages: [...(system ? [{ role: 'system', content: system }] : []), { role: 'user', content: prompt }],
+            messages: [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt)],
         }) });
         // thinking models (Opus 5.5 can't switch thinking off) spend the answer limit thinking; a lower effort keeps short jobs short.
         // An API that doesn't take reasoning_effort (or this temperature with it) gets the plain request, and is remembered
@@ -227,7 +242,7 @@ export async function callVertex({ vxJson, vxLocation, vxModel }, system, prompt
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            contents: turnsOf(prompt).map(x => ({ role: x.role === 'assistant' ? 'model' : 'user', parts: [{ text: x.content }] })),
             ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
             generationConfig: { maxOutputTokens: maxTokens, temperature: 0.3 },
             safetySettings: cats.map(category => ({ category, threshold: 'BLOCK_NONE' })),

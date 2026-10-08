@@ -3785,3 +3785,31 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 .na_qc_sclabel { display: flex; flex-direction: column; gap: 2px; font-size: 0.92em; font-weight: 600; margin: 0; }
 .na_qc_sclabel small { font-weight: 400; color: var(--na-dim); font-size: 0.85em; }
 .na_qc .na_qc_scenes { width: 100%; box-sizing: border-box; margin: 0; font-family: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; line-height: 1.6; resize: vertical; text-align: left; }
+
+/* 압축 작업실 */
+.na_st { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+.na_st_bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.na_st_chip { display: inline-flex; align-items: baseline; gap: 4px; padding: 3px 9px; border: 1px solid var(--na-line); border-radius: 999px; font-size: 0.8em; color: var(--na-dim); }
+.na_st_chip small { font-size: 0.9em; opacity: 0.8; }
+.na_st_chip.done { background: var(--na-accent-soft); color: var(--na-ink); border-color: transparent; }
+.na_st_chip.on { border-color: var(--na-accent); color: var(--na-accent); }
+.na_st_gap { font-size: 0.8em; color: var(--na-warn); }
+.na_st_log { display: flex; flex-direction: column; gap: 8px; min-height: 30vh; max-height: 55vh; overflow-y: auto; padding: 4px 2px; }
+.na_st_u, .na_st_a { max-width: 92%; padding: 8px 12px; border-radius: 14px; font-size: 0.9em; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.na_st_u { align-self: flex-end; background: var(--na-soft); border-radius: 14px 14px 4px 14px; }
+.na_st_usc { white-space: normal; color: var(--na-dim); background: transparent; border: 1px dashed var(--na-line); }
+.na_st_usc b { color: var(--na-ink); margin-right: 4px; }
+.na_st_u .na_st_tonote { display: block; margin: 4px 0 0 auto; font-size: 0.8em; white-space: nowrap; }
+.na_st_a { align-self: flex-start; background: var(--na-card); border: 1px solid var(--na-line); border-radius: 14px 14px 14px 4px; }
+.na_st_asec { font-size: 0.86em; }
+.na_st_warn { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--na-line); white-space: normal; color: var(--na-warn); font-size: 0.85em; }
+.na_st_ok { margin-top: 6px; color: var(--na-dim); font-size: 0.8em; white-space: normal; }
+.na_st_wait { color: var(--na-dim); white-space: normal; }
+.na_st_in { display: flex; flex-direction: column; gap: 6px; }
+.na_st .na_st_q { width: 100%; box-sizing: border-box; margin: 0; min-height: 3.2em; resize: vertical; font-size: 0.9em; }
+.na_st_btns { display: flex; align-items: center; gap: 8px; }
+.na_st_auto { display: flex; align-items: center; gap: 6px; margin: 0 auto 0 0; font-size: 0.88em; cursor: pointer; }
+.na_st_auto span { display: flex; flex-direction: column; line-height: 1.2; }
+.na_st_auto small { color: var(--na-dim); font-size: 0.85em; }
+.na_st_foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.na_st_foot .na_st_done { margin-left: auto; }
