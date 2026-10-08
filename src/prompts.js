@@ -218,7 +218,15 @@ export function recentSections(text, n = 3) {
     const secs = parseSections(t).filter(x => !x.group && RANGE_HEAD.test(x.title)).slice(-n);
     return secs.length ? secs.map(x => t.slice(x.start, x.end).replace(/(?:\s*\n-{3,}[ \t]*)?\s*$/, '')).join('\n\n') : '(없음)';
 }
-export const compressPrompt = (tpl, vars, m, memo = '') => auBlock(m) + fillPrompt(tpl, { recent: recentSections(vars.archive ?? m.text), ...vars }) + memoBlock(memo) + langBlock(m.text);
+// How big the answer should be, as numbers: sections for this many messages, and, when a long stretch goes in parts,
+// that every length target (the user's note included) is for the whole stretch, so each part takes its share
+export function sizeBlock({ k = 0, n = 1, count, total = count, from, to, partFrom = from, partTo = to }) {
+    const lo = Math.max(1, Math.ceil(count / 60)), hi = Math.max(lo, Math.ceil(count / 25));
+    const span = lo === hi ? `about ${lo} section${lo > 1 ? 's' : ''}` : `${lo}–${hi} sections`;
+    if (n <= 1) return `\n\n[SIZE] #${from}–#${to} is ${count} messages: write ${span} for it, not more.`;
+    return `\n\n[PART ${k + 1} OF ${n}] The stretch #${from}–#${to} (${total} messages) is too long for one request, so it is sent in ${n} parts, in order. This request is part ${k + 1}: #${partFrom}–#${partTo} (${count} messages). Every length target — the section guide above and any number in the user's note — is for the whole stretch, not for this part: this part gets about 1/${n} of it. For these ${count} messages write ${span}, not more.`;
+}
+export const compressPrompt = (tpl, vars, m, memo = '', size = '') => auBlock(m) + fillPrompt(tpl, { recent: recentSections(vars.archive ?? m.text), ...vars }) + memoBlock(memo) + size + langBlock(m.text);
 
 // An AU answer that forgot its prefix or divider gets them: "## #12–#30" → "## AU #12–#30",
 // "# STATE AT #30" → "# STATE AT AU #30", and "# ── AU ──" above the first new section.
