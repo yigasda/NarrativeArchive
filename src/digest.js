@@ -255,7 +255,7 @@ export async function openDigest(group = null, keys = null) {
         busy = true;
         const $b = $root.find('.na_dg_go').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
         try {
-            let out = stripThink(await askCompress(`SECTIONS:\n${src}\n\nTARGET: ${target}${note ? `\n\nNOTE:\n${note}` : ''}${langBlock(m.text, { tail: false })}`, { system: AI_SYS_DIGEST }))
+            let out = stripThink(await askCompress(`SECTIONS:\n${src}\n\nTARGET: ${target}${note ? `\n\nNOTE:\n${note}` : ''}${langBlock(m.text, { tail: false, src: '' })}`, { system: AI_SYS_DIGEST }))
                 .replace(/\r\n?|[\u2028\u2029]/g, '\n').replace(/^```[a-z]*\n?|```\s*$/gm, '').trim();
             // a line before the heading ("Here is the digest:") or a bolded heading: start at the heading
             out = out.replace(/^\*\*(#{1,3}\s[^\n]*?)\*\*\s*$/m, '$1');
