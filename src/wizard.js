@@ -250,43 +250,57 @@ const knownNames = (m, items) => {
     const names = castNames(m);
     return names.length ? names.join(', ') : [...new Set(items.map(x => x.name).filter(Boolean))].join(', ') || '(take them from the messages)';
 };
+// batches go out a few at a time; each sees the last messages before it as raw context instead of the
+// previous batch's lines, so they don't have to wait for each other
+const EV_PARALLEL = 3, EV_CONTEXT = 3;
 export async function eventList({ m, g, items, onStep = () => {} }) {
     const batches = eventBatches(items);
     const system = eventsSystem(LANG_NAME[archiveLang(m.text)]);
     const names = knownNames(m, items);
     const linesOf = es => es.flatMap(e => e.lines.map(l => `[${e.n}] ${l.text}`));
-    // a run cut off partway (the tab went to sleep, the connection dropped) picks up after its last finished batch
+    // a run cut off partway (the tab went to sleep, the connection dropped) keeps the batches it finished
     const key = evKey(items, g), from = items[0].i, to = items[items.length - 1].i;
     // kept in this browser, not the chat: saving the chat file after every batch made step 1 several times slower
     const progKey = `na_evprog_${ctx().getCurrentChatId?.() || ctx().chatId || 'chat'}`;
     let saved0 = null;
     try { saved0 = JSON.parse(localStorage.getItem(progKey) || 'null'); } catch { /* no storage */ }
-    const prog = saved0?.hash === key && saved0.from === from && saved0.to === to ? saved0 : null;
-    const all = prog ? prog.all : [];
-    let badQ = prog ? prog.badQ : 0;
-    const missing = prog ? prog.missing : [];
-    let earlier = linesOf(all).slice(-15).join('\n');
-    for (const [k, b] of batches.entries()) {
-        if (prog && k < prog.done) continue;
-        onStep(k, batches.length, b[0].i, b[b.length - 1].i);
-        const ask = async (part, before) => parseEvents(await askEvents(`KNOWN NAMES: ${names}\n\nEARLIER LINES:\n${before || '(none — this is the start)'}\n\nMESSAGES:\n${formatExtract(part, g)}`, system), part);
-        const got = await ask(b, earlier);
-        // a message the model skipped: asked for once more on its own (with what this batch has so far), then passed on as it is
+    const res = saved0?.hash === key && saved0.from === from && saved0.to === to && saved0.res ? saved0.res : {};
+    const keep = () => { try { localStorage.setItem(progKey, JSON.stringify({ hash: key, from, to, res })); } catch { /* full or blocked: no resume */ } };
+    const before = first => { const at = items.findIndex(x => x.i === first.i); return items.slice(Math.max(0, at - EV_CONTEXT), at); };
+    const ask = async (part, extra = '') => {
+        const ctxMsgs = before(part[0]);
+        const prompt = `KNOWN NAMES: ${names}\n\nEARLIER MESSAGES:\n${ctxMsgs.length ? formatExtract(ctxMsgs, g) : '(none — this is the start)'}${extra}\n\nMESSAGES:\n${formatExtract(part, g)}`;
+        // one more try after a short wait: a busy or rate-limited API often answers the second time
+        try { return parseEvents(await askEvents(prompt, system), part); }
+        catch { await new Promise(r => setTimeout(r, 2500)); return parseEvents(await askEvents(prompt, system), part); }
+    };
+    const runBatch = async k => {
+        const b = batches[k];
+        const got = await ask(b);
+        // a message the model skipped: asked for once more on its own (with this batch's lines so far), then passed on as it is
         const skip = b.filter(x => !got.has(x.i));
         if (skip.length) {
-            const so = [earlier, ...linesOf([...got.values()].sort((x, y) => x.n - y.n))].filter(Boolean).join('\n');
-            try { for (const [n, e] of await ask(skip, so)) got.set(n, e); } catch { /* keep what we have */ }
+            const so = linesOf([...got.values()].sort((x, y) => x.n - y.n)).join('\n');
+            try { for (const [n, e] of await ask(skip, so ? `\n\nYOUR LINES FOR THIS BATCH SO FAR:\n${so}` : '')) got.set(n, e); } catch { /* keep what we have */ }
         }
-        for (const x of b) {
-            const e = got.get(x.i);
-            if (e) { all.push(e); badQ += e.badQ; continue; }
-            missing.push(x.i);
-            all.push({ n: x.i, lines: [{ text: `(not condensed) ${x.name}: ${x.text}`, quotes: [] }], badQ: 0 });
+        res[k] = b.map(x => got.get(x.i) || { n: x.i, lines: [{ text: `(not condensed) ${x.name}: ${x.text}`, quotes: [] }], badQ: 0, missing: true });
+        keep();
+    };
+    const todo = batches.map((_, k) => k).filter(k => !res[k]);
+    let done = batches.length - todo.length;
+    const workers = Array.from({ length: Math.min(EV_PARALLEL, todo.length) }, async () => {
+        while (todo.length) {
+            const k = todo.shift();
+            await runBatch(k);
+            done++;
+            onStep(done - 1, batches.length, batches[k][0].i, batches[k][batches[k].length - 1].i);
         }
-        earlier = linesOf(all).slice(-15).join('\n');
-        try { localStorage.setItem(progKey, JSON.stringify({ hash: key, from, to, done: k + 1, all, badQ, missing })); } catch { /* full or blocked: no resume */ }
-    }
+    });
+    await Promise.all(workers);
     try { localStorage.removeItem(progKey); } catch { /* ignore */ }
+    const all = batches.flatMap((_, k) => res[k]);
+    const missing = all.filter(e => e.missing).map(e => e.n);
+    const badQ = all.reduce((t, e) => t + (e.badQ || 0), 0);
     const { text, recaps, empty } = eventLines(all);
     return { text, recaps, empty, badQ, missing, n: items.length, batches: batches.length };
 }
