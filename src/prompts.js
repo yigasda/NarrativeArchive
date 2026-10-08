@@ -13,6 +13,7 @@ Output exactly the following, in this order, with no greeting, explanation or co
    - Header: \`## #start–#end — Title (date, place)\`, then \`PLOT:\`, then \`- \` bullets. If the existing archive puts a prefix before the numbers, follow it.
    - A section is a chapter, not a beat. Cut only where something turns: a relationship shifts, the situation changes, a secret comes out, a decision is made. Fold routine stretches and small beats into the section they belong to.
    - Length follows weight: a turning point may get a short section of its own; a stretch where little changes shares one section. As a rough guide, one section covers 20–60 messages.
+   - A section usually has 3–6 bullets, whatever its message count. A section rarely needs more than about 250 words.
    - Titles read like a book's table of contents: short and concrete — they name the scene, they do not summarize it. No semicolons, no "X does this; Y does that." Vary the shape; do not start every title with "The":
      · a place or object: The broken plank · Varo's market
      · two things joined: The bridge, the debt · Bread, and the oath he broke
@@ -39,6 +40,7 @@ Output exactly the following, in this order, with no greeting, explanation or co
 - Quotes must be lines that actually appear in the raw log (translated when the log is in another language). Never invent or paraphrase a line and present it as a quote.
 
 # Core principles
+- You are writing a memory, not a transcript. The bot that reads the archive needs to know what happened, why, and what it changed. It does not need to know who said what in which order.
 - Being in the raw log is not a reason to include something. Ask of every line: "If the bot read only the archive and then wrote the next scene, would something go wrong or feel unmotivated without this line?"
 - A character's interpretation is written only as theirs, never as fact: "In her own reckoning, …", "(his reading, not fact)".
 - Cut: movement and positioning, gestures, props, scenery. Anxiety or agitation gets one word.
@@ -49,6 +51,7 @@ Output exactly the following, in this order, with no greeting, explanation or co
   - what a character chose NOT to do (evidence of restraint)
   - the concrete action that shows a standing trait at work
 - Cutting so hard that the story breaks is also a failure. Do not shrink the core of a trigger or an arc. The goal is not to erase the story but to absorb it into cause and effect. Do not list dialogue.
+- Use [ARCHIVE SO FAR] to judge weight. A beat that repeats an established pattern gets a clause at most. A beat that breaks or turns a pattern gets the space.
 
 # Protecting causality
 - Before every emotional reaction, keep the other person's action that caused it. Without it, the character appears to erupt on their own or seems childish.
@@ -61,7 +64,9 @@ Output exactly the following, in this order, with no greeting, explanation or co
 - No exaggeration beyond the raw log.
 
 # Stretch blocks
-- Bullets only, no paragraphs. One bullet = one event; to shorten, merge bullets.
+- Bullets only, no paragraphs.
+- One bullet = one turn of the scene: what happened, what caused it, and what it changed. A bullet may cover many messages. Never write one bullet per message.
+- Do not report a conversation turn by turn ("He asked… She replied… He added…"). Collapse an exchange into what it revealed, decided or broke. Keep a question and its answer together only when the answer matters later.
 - No interpretation, theme or summary-verdict sentences.
 - Dialogue only when it changes a relationship or defines a character — usually one line in a bullet, at most two; tell the rest in your own words. Inside quotation marks, stay faithful to the raw log, including whether it is a question; if the original is a statement, do not add a question mark.
 - Never leave a quote standing alone. Attach the character's reaction to it.
@@ -69,6 +74,28 @@ Output exactly the following, in this order, with no greeting, explanation or co
 - Sex is recorded only as relationship beats: how consent moved, requests to stop, whether it was a first, and what changed afterward. No description of acts, positions, anatomy or sensations, even if the user's own turn describes them. However many messages a sex scene runs, it takes one bullet — at most two when the relationship turns in it — and never a section of its own unless something outside the act happens there too.
 - Crises, suicide attempts and self-harm are recorded plainly and factually, without blurring.
 - When one of this RP's recurring devices returns (a phrase, an object, a song, a name, a ritual), do not miss it: keep the event and the line in which it was used. Do not explain the device.
+
+## Example of the difference
+
+✗ Turn-by-turn (what to avoid):
+- Mara knocked on Ren's door and stood silently in the doorway.
+- Ren asked why she had come back if she had said she was leaving.
+- Mara said she didn't know.
+- Ren let her in and made tea.
+- Ren told her the north road was closed.
+- Mara said she would wait.
+
+✓ Memory (what to write):
+- Mara came back the same night she had sworn to leave, unable to say why. Ren let her in without pressing and told her the north road was closed; she said she would wait, and stayed.
+
+## Before you output
+
+Draft the stretch, then revise it once:
+1. Delete every bullet whose loss would not make the next scene go wrong or feel unmotivated.
+2. Merge bullets that share one cause or one outcome.
+3. Cut gestures, positions, props, temperatures and staging that survived the draft.
+4. Check that every quote is a line from the raw log and that each one earns its place.
+Output only the revised version.
 
 # STATE (when present)
 - Edit [CURRENT STATE · OPEN]; never write STATE from scratch. Every existing line stays word for word unless this stretch changes it — then edit that line where it stands. Never drop a line to save space, never merge lines, never rename, reorder or remove a "##" heading. New facts go in as new lines under the heading they belong to. What a character realized or resolved not to do stays until the story itself overturns it.
@@ -82,6 +109,9 @@ Output exactly the following, in this order, with no greeting, explanation or co
 # OPEN (when present)
 - Keep it short. Remove only the threads this stretch closes; every other thread stays word for word, under its group. Add newly opened ones. Do not prescribe future actions.
 - Notice line: \`_Unresolved at #{{to}}; check recent messages before treating any as pending._\`
+
+[ARCHIVE SO FAR — context only, for judging what matters and what is already established. Do not output, rewrite or continue any of it.]
+{{archive}}
 
 [FORMAT REFERENCE — the archive's last PLOT block. Style reference only. Do not output, rewrite or continue it.]
 {{last_section}}
@@ -107,7 +137,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
