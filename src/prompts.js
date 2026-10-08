@@ -71,16 +71,16 @@ Output exactly the following, in this order, with no greeting, explanation or co
 - When one of this RP's recurring devices returns (a phrase, an object, a song, a name, a ritual), do not miss it: keep the event and the line in which it was used. Do not explain the device.
 
 # STATE (when present)
+- Edit [CURRENT STATE · OPEN]; never write STATE from scratch. Every existing line stays word for word unless this stretch changes it — then edit that line where it stands. Never drop a line to save space, never merge lines, never rename, reorder or remove a "##" heading. New facts go in as new lines under the heading they belong to. What a character realized or resolved not to do stays until the story itself overturns it.
 - Per character + relationships + current life. Notice line: \`_True at #{{to}}; where the live chat differs, the live chat is correct. A character's reading marked as such is not canon._\`
 - Do not restate events already in the stretch blocks; record only changes and tendencies that PLOT alone does not capture, briefly. One line for a core principle the bot is likely to confuse is allowed.
 - Keep safety lines that lock the current state (e.g. "memories fully restored since #n" — it stops the bot from mistaking an old arc for the present).
 - Do not leave an old behavior in present tense if a later arc changed it. If something changed in this stretch, edit the existing line.
 - Scope principles narrowly to prevent over-application. ("no commands" ✗, which could change even how he talks → "no longer dictates her choices or movements" ✓)
 - Use "tends to" or "since #n" instead of "now" or "currently."
-- Lines this stretch does not affect stay exactly as they are.
 
 # OPEN (when present)
-- Keep it short. Remove threads closed in this stretch and add only newly opened ones. Do not prescribe future actions.
+- Keep it short. Remove only the threads this stretch closes; every other thread stays word for word, under its group. Add newly opened ones. Do not prescribe future actions.
 - Notice line: \`_Unresolved at #{{to}}; check recent messages before treating any as pending._\`
 
 [FORMAT REFERENCE — the archive's last PLOT block. Style reference only. Do not output, rewrite or continue it.]
@@ -107,7 +107,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -150,7 +150,7 @@ AU premise: ${a.note || '(not given — take it from the raw log)'}
 - The raw log below is the AU. Summarize only it; do not retell the main story.
 - The AU is its own log in the archive: number its sections "## ${a.name} #from–#to — title" (prefix "${a.name}", this chat's message numbers).${first ? `
 - This is the AU's first summary: put the line "${auDivider(a.name)}" above your first new section.` : ''}
-- STATE and OPEN are for the AU now: "# STATE AT ${a.name} #to", "# OPEN AT ${a.name} #to". Keep from the main story only what still matters in the AU (memories, feelings, promises, secrets), one short line each.
+- STATE and OPEN headings use the AU's numbers: "# STATE AT ${a.name} #to", "# OPEN AT ${a.name} #to".${first ? ` This first time, turn the main story's STATE into the AU's: keep every line that still holds in the AU word for word (memories, feelings, promises, secrets, what a character realized or resolved not to do), and change or drop only what the AU premise makes untrue.` : ` Edit the current STATE and OPEN as the instruction says; they are already the AU's.`}
 
 `;
 }
