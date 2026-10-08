@@ -58,7 +58,8 @@ STEPS
 2. The sections must still cover the same message range with no gaps or overlaps. If you merge or split sections, renumber their headings from the RAW LOG.
 3. New facts and quotes come only from DRAFT or RAW LOG. Never invent or paraphrase a line and present it as a quote.
 4. Keep the archive's rules: one bullet = one event; the action that caused a reaction comes before it; a character's interpretation only as theirs; no commentary; same language as the DRAFT.
-5. If part of the request cannot be done, do the rest and say what was not done on a last line that starts with "NOTE:", in Korean.
+5. Time runs one way. A reason, motive or detail you add to a moment comes only from messages up to that moment in the RAW LOG. Never explain a moment with something that happens later, and never move a later action into an earlier bullet; if the reason only comes out later, say so where it comes out ("which he only admitted at #120").
+6. If part of the request cannot be done, do the rest and say what was not done on a last line that starts with "NOTE:", in Korean.
 
 EXAMPLE
 DRAFT:
