@@ -30,7 +30,7 @@ import { AI_SYS_TRANSLATE, askTranslator, glossaryEntries, openGlossary } from '
 import { chatLabel, confirm, copyText, countTokens, download, esc, escRe, fmt, nowStamp, timeLabel } from './util.js';
 import { CHUNK_CHOICES, COMPRESS_MODES, EVENTS_MODELS, chunkTok, compressMode, eventsModel, openAuSettings, openWizard, quickCompress } from './wizard.js';
 import { openStudio, studioLabel } from './studio.js';
-import { DEFAULT_TRACKER_RE, SCENE_MODELS, SCENE_SIZES, openWorkNote, sceneModel, sceneSize, stateModel, trackerRe } from './scenes.js';
+import { DEFAULT_TRACKER_RE, SCENE_MODELS, SCENE_SIZES, openStyleSamples, openWorkNote, styleLabel, sceneModel, sceneSize, stateModel, trackerRe } from './scenes.js';
 import { openWorlds, worldBooks, worldIsOn } from './world.js';
 import { openXray } from './xray.js';
 
@@ -199,6 +199,7 @@ export function renderPanel() {
                   <label class="na_cp_row na_cmode_sc"><span class="na_cp_txt"><span>장면별 · 섹션 모델</span><small>장면 수만큼 불러요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_scmodel">${Object.entries(SCENE_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                   <label class="na_cp_row na_cmode_sc"><span class="na_cp_txt"><span>장면별 · STATE 모델</span><small>마지막에 한 번 · 바뀌는 것만 받아요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_stmodel">${Object.entries(SCENE_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                   <div class="na_cp_row na_cmode_sc na_trk_row"><span class="na_cp_txt"><span>장면별 · 트래커 정규식</span><small>날짜·장소·시간이 바뀌는 곳에서 끊어요 (그룹 이름 date · place · time) · 비우면 메시지 수로만</small><textarea class="text_pole na_trk_re" id="na_trkre" rows="2" spellcheck="false"></textarea><span class="na_trk_btns"><button type="button" class="na_linkbtn" id="na_trkre_reset">기본값</button><small id="na_trkre_info"></small></span></span></div>
+                  <button type="button" class="na_cp_row na_cmode_sc" id="na_stylesample"><span class="na_cp_txt"><span>문체 견본</span><small id="na_style_sub"></small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                   <button type="button" class="na_cp_row na_cmode_sc" id="na_worknote"><span class="na_cp_txt"><span>작업 노트</span><small id="na_worknote_sub">이 이야기의 인수인계 · canon · 살린 줄 · 이전 실수 · 장면마다 같이 보내요</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                   <label class="na_cp_row na_cmode_raw"><span class="na_cp_txt"><span>원문 그대로 · 나눠 보내기</span><small>긴 원문을 몇 조각으로 보낼지 · 조각마다 앞 조각에 이어 써요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_chunk">${Object.entries(CHUNK_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                   <div class="na_strip_box">
@@ -869,6 +870,7 @@ export function bindPanel() {
     $('#na_trkre').on('input', function () { globalSettings().trackerRe = this.value; saveGlobal(); trkInfo(); });
     $('#na_trkre_reset').on('click', () => { globalSettings().trackerRe = DEFAULT_TRACKER_RE; saveGlobal(); $('#na_trkre').val(DEFAULT_TRACKER_RE); trkInfo(); });
     $('#na_worknote').on('click', needChat(() => openWorkNote()));
+    $('#na_stylesample').on('click', needChat(() => openStyleSamples()));
     $('#na_cmode').on('change', function () { globalSettings().compressMode = this.value; saveGlobal(); cmodeRows(); });
     $('#na_evmodel').on('change', function () { globalSettings().eventsModel = this.value; saveGlobal(); });
     $('#na_track').on('change', async function () {
@@ -1111,6 +1113,7 @@ export function syncPanel() {
     $('#na_chunk').val(String(chunkTok()));
     { const md = compressMode(); $('#na_cmode').val(md); $('#na_evmodel').val(eventsModel()); $('.na_cmode_ev').toggle(md === 'events'); $('.na_cmode_raw').toggle(md === 'raw'); $('.na_cmode_sc').toggle(md === 'scenes'); }
     $('#na_scsize').val(String(sceneSize())); $('#na_scmodel').val(sceneModel()); $('#na_stmodel').val(stateModel()); $('#na_trkre').val(trackerRe());
+    $('#na_style_sub').text(styleLabel(getMeta()));
     { const wn = String(getMeta().workNote || '').trim(); $('#na_worknote_sub').text(wn ? `있음 · 약 ${wn.length.toLocaleString()}자 · 장면마다 같이 보내요` : '이 이야기의 인수인계 · canon · 살린 줄 · 이전 실수 · 장면마다 같이 보내요'); }
     {
         const au = auOf(m);

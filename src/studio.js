@@ -7,7 +7,7 @@ import { aiLabel, askCompress, drLabel, draftReady, stripThink } from './ai.js';
 import { openAppend } from './append.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { activePrompt, archiveLang, auBlock, auFix, auOf, langBlock } from './prompts.js';
-import { NOTE_PARTS, STATE_SYS, answerBlocks, noteInsert, chunksFromStarts, detectScenes, lastSections, openWorkNote, parseSceneAnswer, rulesText, sceneChunks, scenesText, startsFromText } from './scenes.js';
+import { NOTE_PARTS, STATE_SYS, answerBlocks, noteInsert, openStyleSamples, styleBlock, styleSamples, chunksFromStarts, detectScenes, lastSections, openWorkNote, parseSceneAnswer, rulesText, sceneChunks, scenesText, startsFromText } from './scenes.js';
 import { CITE_RE, headingRanges, lastRangeEnd, splitTail } from './sections.js';
 import { openSource } from './source.js';
 import { refreshStatus } from './status.js';
@@ -22,7 +22,8 @@ Write the long-term-memory archive of a role-play together with its user, one sc
 YOU GET
 - <rules>: how sections are written. Follow them, except what they say about output parts, scene lists, change lists and section counts: those come from this conversation.
 - <work_note> (sometimes): the user's own notes on this story: canon, lines to keep, past mistakes. Follow it.
-- <recent_archive>: the archive's last sections, already written, ending right before the first scene. Style and continuity only; never repeat them.
+- <recent_archive>: the archive's last sections, already written, ending right before the first scene. Continuity only; never repeat them.
+- <style_sample> (sometimes): sections the user picked as the voice to write in: how long the sentences run, how they quote, how they name feelings. Take the voice, never the events. Without it, follow the voice of <recent_archive>.
 - <current_state>: the archive's STATE and OPEN now. Context only: nothing in it goes into a section unless a raw log shows it happening.
 - Scene requests: the scene's messages in <raw_log>, with its range. Only the newest scene keeps its raw log in the conversation; for earlier scenes you have the sections you wrote.
 - Everything else the user writes: corrections and questions, often in Korean and casual.
@@ -144,7 +145,7 @@ function systemFor(m, st) {
     const note = String(m.workNote || '').trim();
     const recent = lastSections(m.text, 3).join('\n\n');
     const au = auOf(m);
-    return `${STUDIO_SYS}\n\n<rules>\n${rulesText(p, st.from, st.to).trim()}\n</rules>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}\n\n<recent_archive>\n${recent || '(none: this is the start of the archive)'}\n</recent_archive>\n\n<current_state>\n${tail || '(none)'}\n</current_state>${au.on ? `\n\n${auBlock(m).trim()}` : ''}${langBlock(m.text)}`;
+    return `${STUDIO_SYS}\n\n<rules>\n${rulesText(p, st.from, st.to).trim()}\n</rules>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}\n\n<recent_archive>\n${recent || '(none: this is the start of the archive)'}\n</recent_archive>${styleBlock(m)}\n\n<current_state>\n${tail || '(none)'}\n</current_state>${au.on ? `\n\n${auBlock(m).trim()}` : ''}${langBlock(m.text)}`;
 }
 const rawOf = (st, a, b) => { const c = ctx(), g = globalSettings(); return rangeRaw(c, g, a, b, st.keepUpTo ?? -1).raw; };
 function turnsFor(st) {
@@ -366,6 +367,7 @@ export async function openStudio() {
             <label class="na_st_mi"><span><b>자동 진행</b><small>남은 장면을 끝까지 쭉 · 마지막에 STATE 쪽지</small></span><input type="checkbox" class="na_toggle na_st_autotg"></label>
             <label class="na_st_mi"><span><b>개요 먼저</b><small>흐름을 먼저 보고 본문 · 장면마다 1번 더</small></span><input type="checkbox" class="na_toggle na_st_outtg"></label>
             <label class="na_st_mi"><span><b>지시문</b><small>다음 턴부터 이걸로 · 짧은 기본은 핵심만</small></span><select class="text_pole na_st_psel"></select></label>
+            <button type="button" class="na_st_mi na_st_style"><span><b>문체 견본</b><small class="na_st_stylesub"></small></span></button>
             <button type="button" class="na_st_mi na_st_note"><span><b>작업 노트</b><small>매 턴 같이 가요</small></span></button>
             <button type="button" class="na_st_mi na_st_state"><span><b>STATE 쪽지 받기</b><small>지금까지 쓴 섹션으로</small></span></button>
             <button type="button" class="na_st_mi na_st_reset"><span><b>새로 시작</b><small>이 대화와 받은 섹션을 지워요</small></span></button>
@@ -429,6 +431,7 @@ export async function openStudio() {
         $root.find('.na_st_qk').prop('disabled', busy || !s.turns.some(t => t.role === 'assistant'));
         $root.find('.na_st_autotg').prop('checked', !!s.auto);
         $root.find('.na_st_outtg').prop('checked', !!s.outline);
+        $root.find('.na_st_stylesub').text(styleSamples(m2).length ? `${styleSamples(m2).length}개 · 이 목소리로 써요` : '안 골랐어요 · 고르면 문체가 안 떠내려가요');
         { const gg = globalSettings(), $sel = $root.find('.na_st_psel'); if (!$sel.children().length) $sel.html(gg.prompts.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')); $sel.val(studioPrompt(gg).id); }
         $root.find('.na_st_plus i').prop('hidden', !s.auto && !s.outline);
         $root.find('.na_st_state').prop('hidden', !hasTail).prop('disabled', busy).find('b').text(s.changes ? 'STATE 쪽지 다시 받기' : 'STATE 쪽지 받기');
@@ -485,6 +488,7 @@ export async function openStudio() {
         await addToNote(t.text);
     });
     $root.find('.na_st_note').on('click', () => { $menu.prop('hidden', true); openWorkNote(); });
+    $root.find('.na_st_style').on('click', async () => { $menu.prop('hidden', true); await openStyleSamples(); draw(); });
     $root.on('click', '.na_st_ko', async function () {
         const i = Number(this.dataset.i), t = sessionOf(getMeta())?.turns[i];
         if (!t || koBusy.has(i)) return;

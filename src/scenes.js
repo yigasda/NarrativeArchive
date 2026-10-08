@@ -9,6 +9,7 @@ import { ctx, getMeta, globalSettings, saveMeta } from './core.js';
 import { formatExtract } from './extract.js';
 import { activePrompt, auBlock, auOf, fillPrompt, langBlock, memoBlock } from './prompts.js';
 import { RANGE_HEAD, headingRanges, parseSections, splitTail, trimEnd } from './sections.js';
+import { esc } from './util.js';
 
 export const SCENE_SIZES = { 20: '작게 · 약 20개씩', 30: '보통 · 약 30개씩', 40: '크게 · 약 40개씩' };
 export const sceneSize = () => { const v = Number(globalSettings().sceneSize); return v in SCENE_SIZES ? v : 30; };
@@ -126,7 +127,9 @@ Write the section for #${from}–#${to}, the raw log in <raw_log>, following <ru
 - Usually ONE section. Write TWO only when the story clearly turns inside this scene; then the first covers #${from} up to the turn and the second from the turn to #${to}, with no gap.
 - <previous_section> is already written and ends right before #${from}: do not repeat its events; carry on from where it stops.
 - Title: a quoted-line title only if no title in <previous_section> is one; otherwise pick another shape.
-- <recent_archive> and <current_state> are context and style only: nothing in them goes into this section unless <raw_log> shows it happening.
+- <recent_archive> and <current_state> are context only: nothing in them goes into this section unless <raw_log> shows it happening.
+- <style_sample>, when present, is the voice to write in: how long its sentences run, how it quotes, how it names feelings. Take its voice, never its events. Without it, follow the voice of <recent_archive>.
+- The line that turns a scene is quoted, not referred to. Vary sentence shape: a short sentence after a long one, no chain of "-ing" clauses.
 - <work_note>, when present, is the user's own notes on this story (canon, lines to keep, past mistakes). Follow it.
 Output only, for each section:
 ## #<first>–#<last> — <title> (<date>, <place>)
@@ -242,7 +245,7 @@ export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = 
     for (const [k, part] of chunks.entries()) {
         const from = part[0].i, to = part[part.length - 1].i;
         onStep(k, chunks.length, from, to, 'scenes');
-        const prompt = `<raw_log range="#${from}–#${to}">\n${formatExtract(part, g)}\n</raw_log>\n\n<previous_section>\n${prev || '(none: this is the start of the archive)'}\n</previous_section>\n\n<recent_archive>\n${recentFor(k) || '(none)'}\n</recent_archive>\n\n<current_state>\n${tail || '(none)'}\n</current_state>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}\n\n<rules>\n${rulesFor(from, to).trim()}\n</rules>${au.on ? `\n\n${auBlock(m).trim()}` : ''}${memoBlock(memo)}${langBlock(m.text)}\n\n${SCENE_ASK(from, to, prefix)}`;
+        const prompt = `<raw_log range="#${from}–#${to}">\n${formatExtract(part, g)}\n</raw_log>\n\n<previous_section>\n${prev || '(none: this is the start of the archive)'}\n</previous_section>\n\n<recent_archive>\n${recentFor(k) || '(none)'}\n</recent_archive>${styleBlock(m)}\n\n<current_state>\n${tail || '(none)'}\n</current_state>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}\n\n<rules>\n${rulesFor(from, to).trim()}\n</rules>${au.on ? `\n\n${auBlock(m).trim()}` : ''}${memoBlock(memo)}${langBlock(m.text)}\n\n${SCENE_ASK(from, to, prefix)}`;
         let got;
         try { got = parseSceneAnswer(await ask(sceneModel(), prompt), from, to); }
         catch (e) { error = e; break; }
@@ -267,6 +270,53 @@ export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = 
     const text = `${secs.join('\n\n')}${changes ? `\n\n---\n${changes}` : ''}`;
     return { text, dropped: 0, parts: chunks.length, done: secs.length, doneTo, error, grades: [], scenes: chunks.map(c => [c[0].i, c[c.length - 1].i]) };
 }
+
+// 문체 견본: one or two sections the user picked as the voice to write in. Kept as text, so they stay put
+// however the archive grows; sent with every scene, after <recent_archive>
+export const STYLE_MAX = 2;
+export const styleSamples = m => (Array.isArray(m?.styleSamples) ? m.styleSamples.filter(x => x?.text) : []);
+export const styleBlock = m => { const xs = styleSamples(m); return xs.length ? `\n\n<style_sample>\n${xs.map(x => x.text).join('\n\n')}\n</style_sample>` : ''; };
+export async function openStyleSamples() {
+    const c = ctx(), m = getMeta();
+    const t = splitTail(String(m.text || ''))[0];
+    const secs = parseSections(t).filter(x => !x.group && RANGE_HEAD.test(x.title)).reverse();
+    const textOf = x => trimEnd(t.slice(x.start, x.end)).replace(/\n-{3,}\s*$/, '').trim();
+    const picked = new Set(styleSamples(m).map(x => x.title));
+    const $root = $(`
+      <div class="na_popup na_v2 na_ss">
+        <div class="na_v2_title"><b>문체 견본</b><small>마음에 드는 섹션을 ${STYLE_MAX}개까지 · 압축할 때마다 "이 목소리로" 같이 보내요 · 새 요약이 쌓여도 안 바뀌어요</small></div>
+        <input type="search" class="text_pole na_ss_find" placeholder="제목으로 찾기">
+        <div class="na_ss_list"></div>
+        <small class="na_v2_note na_ss_info"></small>
+      </div>`);
+    const draw = () => {
+        const q = String($root.find('.na_ss_find').val() || '').trim().toLowerCase();
+        $root.find('.na_ss_list').html(secs.filter(x => !q || x.title.toLowerCase().includes(q)).map(x => {
+            const first = (textOf(x).split('\n').find(l => /^\s*-\s/.test(l)) || '').replace(/^\s*-\s*/, '');
+            return `<label class="na_ss_row${picked.has(x.title) ? ' on' : ''}"><input type="checkbox" data-t="${esc(x.title)}" ${picked.has(x.title) ? 'checked' : ''}><span><b>${esc(x.title)}</b><small>${esc(first.slice(0, 120))}</small></span></label>`;
+        }).join('') || '<small class="na_v2_note">섹션이 없어요</small>');
+        $root.find('.na_ss_info').text(picked.size ? `${picked.size}개 골랐어요` : '안 골랐어요 · 그동안은 최근 섹션 문체를 따라가요');
+    };
+    $root.on('input', '.na_ss_find', draw);
+    $root.on('change', '.na_ss_row input', function () {
+        const k = this.dataset.t;
+        if (this.checked) {
+            if (picked.size >= STYLE_MAX) { this.checked = false; return toastr.info(`${STYLE_MAX}개까지예요. 하나를 먼저 빼 주세요.`, '문체 견본'); }
+            picked.add(k);
+        } else picked.delete(k);
+        draw();
+    });
+    draw();
+    const r = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, large: true, allowVerticalScrolling: true, okButton: '저장', cancelButton: '취소' });
+    if (!(r === c.POPUP_RESULT.AFFIRMATIVE || r === true)) return;
+    // the old sample's text stays when its section is no longer in the archive
+    const old = new Map(styleSamples(m).map(x => [x.title, x.text]));
+    getMeta().styleSamples = [...picked].map(k => { const x = secs.find(y => y.title === k); return { title: k, text: x ? textOf(x) : old.get(k) || '' }; }).filter(x => x.text);
+    await saveMeta();
+    $('#na_style_sub').text(styleLabel(getMeta()));
+    toastr.success(picked.size ? '문체 견본을 저장했어요' : '문체 견본을 비웠어요', '문체 견본');
+}
+export const styleLabel = m => { const xs = styleSamples(m); return xs.length ? xs.map(x => x.title.replace(RANGE_HEAD, '$5').replace(/^\s*[—–-]\s*/, '').replace(/\s*\([^()]*\)\s*$/, '')).join(' · ') : '마음에 드는 섹션 1–2개 · 새 요약이 쌓여도 문체가 안 떠내려가요'; };
 
 // the work note's parts; a line added from the 압축 작업실 goes under one of them
 export const NOTE_PARTS = ['Canon', '살린 줄', '실수 목록', '문체'];
