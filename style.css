@@ -3826,6 +3826,8 @@ body.na_darkui dialog.popup:has(.na_st) { background: #241C18 !important; }
 .na_st_lks { margin-left: auto; display: flex; gap: 6px; }
 .na_st_lk { display: inline-flex; align-items: center; gap: 5px; border: 0; border-radius: 999px; padding: 4px 10px; background: var(--st-w); color: var(--st-dim) !important; font-size: 0.8em !important; font-weight: 700 !important; cursor: pointer; }
 .na_st_lk.on { background: var(--st-ok); color: #fff !important; }
+.na_st_ko { border: 0; border-radius: 999px; padding: 4px 10px; background: var(--st-w); color: var(--st-dim) !important; font-size: 0.8em !important; font-weight: 700 !important; cursor: pointer; }
+.na_st_ko.on { color: var(--st-acc) !important; }
 body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_st_me { align-self: flex-end; max-width: 80%; margin-top: 6px; padding: 9px 15px; border-radius: 20px 20px 7px 20px; background: linear-gradient(135deg, var(--st-acc2), var(--st-acc)); color: #fff; white-space: pre-wrap; word-break: break-word; line-height: 1.45; }
 .na_st_tonote { align-self: flex-end; border: 0; background: none; padding: 0 4px; font-size: 0.75em !important; color: var(--st-dim) !important; cursor: pointer; margin-bottom: 4px; }
