@@ -3776,3 +3776,9 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 .na_chg_drop { background: #b5523b; }
 .na_chg_txt s { color: var(--na-dim); }
 .na_qc_warn { color: #b06a10; }
+/* 장면별 압축: tracker pattern and the work note */
+.na_trk_row .na_cp_txt { width: 100%; }
+.na_trk_re { width: 100%; box-sizing: border-box; margin-top: 6px; font-family: ui-monospace, var(--monoFontFamily, monospace); font-size: 11.5px; min-height: 3.2em; resize: vertical; }
+.na_trk_btns { display: flex; gap: 10px; align-items: baseline; margin-top: 4px; }
+.na_wn { gap: 10px; }
+.na_wn_ta { width: 100%; box-sizing: border-box; min-height: 45vh; font-family: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; line-height: 1.6; resize: vertical; }
