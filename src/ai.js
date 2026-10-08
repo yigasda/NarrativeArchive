@@ -300,6 +300,10 @@ export async function askAI(prompt, { system = '', maxTokens = 0 } = {}) {
     return out;
 }
 
+// 고치기 (이어서 고치기 · 고쳐 달라고 하기 · 빠진 구간 · 제목 · 합치기): the AI 기능 모델 — editing is a smaller job than
+// writing a stretch, and it is asked for again and again
+export const askFix = (prompt, { system = '', maxTokens = 16000 } = {}) => askAI(prompt, { system, maxTokens });
+
 export const aiLabel = () => {
     const g = globalSettings();
     const a = connSettings('ai');
