@@ -286,15 +286,21 @@ function finalText(m, st) {
 function fitStudio(el) {
     if (!el?.isConnected) return;
     el.style.height = '';
-    const vh = window.visualViewport?.height || window.innerHeight;
-    const r = el.getBoundingClientRect();
-    let limit = vh - 10;
-    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
-        const cs = getComputedStyle(p);
-        if (/hidden|auto|scroll|clip/.test(cs.overflowY)) limit = Math.min(limit, p.getBoundingClientRect().bottom - (parseFloat(cs.paddingBottom) || 0) - (parseFloat(cs.borderBottomWidth) || 0));
-        if (p.tagName === 'DIALOG') break;
+    const limitNow = () => {
+        let limit = (window.visualViewport?.height || window.innerHeight) - 10;
+        for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+            const cs = getComputedStyle(p);
+            if (/hidden|auto|scroll|clip/.test(cs.overflowY)) limit = Math.min(limit, p.getBoundingClientRect().bottom - (parseFloat(cs.paddingBottom) || 0) - (parseFloat(cs.borderBottomWidth) || 0));
+            if (p.tagName === 'DIALOG') break;
+        }
+        return limit;
+    };
+    // a centred dialog moves up as it shrinks, so measure again until it fits
+    for (let i = 0; i < 6; i++) {
+        const r = el.getBoundingClientRect(), over = r.bottom - limitNow();
+        if (over <= 1 || r.height <= 300) break;
+        el.style.height = `${Math.max(300, Math.floor(r.height - over - 2))}px`;
     }
-    if (r.bottom > limit) el.style.height = `${Math.max(300, Math.floor(limit - r.top - 2))}px`;
 }
 export async function openStudio() {
     const c = ctx();
