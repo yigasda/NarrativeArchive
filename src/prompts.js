@@ -5,12 +5,7 @@ import { showStripInfo } from './extract.js';
 import { RANGE_HEAD, lastRangedSection, parseSections } from './sections.js';
 import { confirm, esc } from './util.js';
 
-export const BASIC_PROMPT = `<archive_so_far>
-Context only: the archive as it stands, for judging what matters and what is already established. Do not output, rewrite, recap or continue any of it.
-{{archive}}
-</archive_so_far>
-
-You continue the long-term-memory summary (the archive) of a long-running role-play. The archive goes into the prompt and is read alongside the live chat as "a snapshot of the past." Read the raw log #{{from}}–#{{to}} below in full, from the first message to the last, then write the new stretch that follows the existing archive.
+export const BASIC_PROMPT = `You continue the long-term-memory summary (the archive) of a long-running role-play. The archive goes into the prompt and is read alongside the live chat as "a snapshot of the past." Read the raw log #{{from}}–#{{to}} below in full, from the first message to the last, then write the new stretch that follows the existing archive.
 
 # Output
 Output exactly the following, in this order, with no greeting, explanation or commentary. Use the existing archive's language and format — even when the raw log is in another language. Translate dialogue into the archive's language; keep a word or line in its original language only where the archive already does.
@@ -26,14 +21,14 @@ Output exactly the following, in this order, with no greeting, explanation or co
      · a "what" clause: What Ren didn't say
      · a number or pairing: One cloak · The two of them · The second night
      · a list: Ivo, the duke, and the toll
-     · a line in quotation marks, copied exactly: "Now you owe me"
+     · a line in quotation marks, in the archive's language (translate it like any quote): "Now you owe me"
      ✗ Ren crosses the bridge; Mara pulls him up · Confrontation over Ren's injury
    - Numbers are always message numbers. The blocks must run continuously from #{{from}} to #{{to}}, with no gaps and no overlaps. The last block must end at #{{to}}.
 2. A line containing only \`---\`
 3. If the existing archive has \`# STATE AT …\` / \`# OPEN AT …\`: both, complete, rewritten from [CURRENT STATE · OPEN] below so they hold as of #{{to}}. If it has none, leave this part out.
 
 ## Hard limits on output
-- Output ONLY new material. Never reproduce, rewrite, shorten, "improve" or continue any existing section of the archive. Your first heading starts at #{{from}}; nothing before #{{from}} belongs in your output, not even as a recap. The [FORMAT REFERENCE] block below is shown only so you can match its style; it is already in the archive and must not appear in your output in any form.
+- Output ONLY new material. Never reproduce, rewrite, shorten, "improve" or continue any existing section of the archive. Your first heading starts at #{{from}}; nothing before #{{from}} belongs in your output, not even as a recap. The [RECENT SECTIONS] block below is shown only for context and style; it is already in the archive and must not appear in your output in any form — no event, line or detail from it, unless the raw log shows it happening again.
 - Every output must be complete. All parts must be present, and the final bullet of every block must end in a full sentence. If you are running long, merge bullets or cut lower-priority detail. Never stop mid-sentence, and never drop STATE or OPEN to make room.
 
 # Handling the raw log
@@ -56,7 +51,7 @@ Output exactly the following, in this order, with no greeting, explanation or co
   - what a character chose NOT to do (evidence of restraint)
   - the concrete action that shows a standing trait at work
 - Cutting so hard that the story breaks is also a failure. Do not shrink the core of a trigger or an arc. The goal is not to erase the story but to absorb it into cause and effect. Do not list dialogue.
-- Use <archive_so_far> to judge weight. A beat that repeats an established pattern gets a clause at most. A beat that breaks or turns a pattern gets the space.
+- Use [RECENT SECTIONS] and STATE to judge weight. A beat that repeats an established pattern gets a clause at most. A beat that breaks or turns a pattern gets the space. Everything you write comes from the raw log; the context only tells you what is already known.
 
 # Protecting causality
 - Before every emotional reaction, keep the other person's action that caused it. Without it, the character appears to erupt on their own or seems childish.
@@ -116,8 +111,8 @@ Output only the revised version.
 - Keep it short. Remove only the threads this stretch closes; every other thread stays word for word, under its group. Add newly opened ones. Do not prescribe future actions.
 - Notice line: \`_Unresolved at #{{to}}; check recent messages before treating any as pending._\`
 
-[FORMAT REFERENCE — the archive's last PLOT block. Style reference only. Do not output, rewrite or continue it.]
-{{last_section}}
+[RECENT SECTIONS — the archive's last sections before this stretch, for context and style only. Already in the archive: do not output, rewrite, recap or continue them.]
+{{recent}}
 
 [CURRENT STATE · OPEN — rewrite this and output it in full]
 {{state}}
@@ -140,7 +135,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -210,7 +205,13 @@ const textLang = (t, min) => {
     return hangul + latin < min ? '' : hangul / (hangul + latin) > 0.3 ? 'ko' : 'en';
 };
 export const answerLangOk = (archive, answer) => { const want = archiveLang(archive), got = textLang(answer, 40); return !want || !got || want === got; };
-export const compressPrompt = (tpl, vars, m, memo = '') => auBlock(m) + fillPrompt(tpl, vars) + memoBlock(memo) + langBlock(m.text);
+// {{recent}}: the archive's last few numbered sections, for context without the whole archive (which models copy from)
+export function recentSections(text, n = 3) {
+    const t = String(text || '');
+    const secs = parseSections(t).filter(x => !x.group && RANGE_HEAD.test(x.title)).slice(-n);
+    return secs.length ? secs.map(x => t.slice(x.start, x.end).replace(/(?:\s*\n-{3,}[ \t]*)?\s*$/, '')).join('\n\n') : '(없음)';
+}
+export const compressPrompt = (tpl, vars, m, memo = '') => auBlock(m) + fillPrompt(tpl, { recent: recentSections(vars.archive ?? m.text), ...vars }) + memoBlock(memo) + langBlock(m.text);
 
 // An AU answer that forgot its prefix or divider gets them: "## #12–#30" → "## AU #12–#30",
 // "# STATE AT #30" → "# STATE AT AU #30", and "# ── AU ──" above the first new section.
