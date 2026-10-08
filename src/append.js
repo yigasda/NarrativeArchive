@@ -75,7 +75,26 @@ PLOT:
 - Mara pulled Ren up from the broken plank; Ivo arrived afterward, while Ren was still hurt (#13, #15).
 
 OUTPUT
-The whole revised draft, then an optional NOTE line. No fences, no comments.`;
+Only the section blocks you changed, each one whole (heading, PLOT:, every bullet), in order; leave out every section you did not change. If you merged or split sections, give the new blocks: they replace every old section whose range they overlap. If STATE or OPEN must change, write that whole block after a line with only ---. Then an optional NOTE line. No fences, no comments.`;
+
+// 이어서 고치기 answers with only the sections it changed: they replace the draft sections whose range they
+// overlap, everything else stays as it was (faster to write, and nothing else can be touched)
+export function spliceChanged(draft, answer) {
+    const [dBody, dTail] = splitTail(String(draft || ''));
+    const [aBody, aTail] = splitTail(String(answer || ''));
+    const secs = t => parseSections(t).filter(x => !x.group && RANGE_HEAD.test(x.title)).map(x => {
+        const r = x.title.match(RANGE_HEAD);
+        return { pre: (r[1] || '').trim(), from: Math.min(+r[2], +r[4]), to: Math.max(+r[2], +r[4]), start: x.start, text: trimEnd(t.slice(x.start, x.end)).replace(/\n-{3,}\s*$/, '').trim() };
+    });
+    const ds = secs(dBody), as = secs(aBody);
+    if (!as.length) return null;
+    const hit = d => as.some(a => a.pre === d.pre && a.from <= d.to && a.to >= d.from);
+    const all = [...ds.filter(d => !hit(d)), ...as].sort((x, y) => x.from - y.from);
+    const lead = ds.length ? dBody.slice(0, ds[0].start) : '';
+    const given = tailBlocks(aTail).filter(b => b.key === 'STATE' || b.key === 'OPEN');
+    const tail = tailBlocks(dTail).map(b => given.find(g => g.key === b.key)?.text || b.text).join('\n\n');
+    return `${lead}${all.map(x => x.text).join('\n\n')}${tail.trim() ? `\n\n---\n${tail.trim()}` : ''}`;
+}
 
 // 빠진 구간 받기: only the gap's messages and the section before it go to the draft model
 export const AI_SYS_GAPFILL = `GOAL
@@ -771,7 +790,7 @@ export async function openAppend(prefill = {}) {
             if (!/^#{1,3}\s/m.test(body)) throw new Error('모델이 초안 형태로 답하지 않았어요');
             if (apf.original === null) apf.original = draft;
             apf.asked.push(q);
-            $ta.val(body).trigger('input');
+            $ta.val(spliceChanged(draft, body) ?? body).trigger('input');
             $root.find('.na_apf_q').val('');
             $root.find('.na_apf_log').html(apf.asked.map(x => `<div class="na_sf_bubble">${esc(x)}</div>`).join(''));
             $root.find('.na_apf_note').prop('hidden', !note).text(note ? `못 한 것: ${note}` : '');
