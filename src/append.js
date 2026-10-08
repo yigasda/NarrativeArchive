@@ -89,6 +89,9 @@ export function spliceChanged(draft, answer) {
     const ds = secs(dBody), as = secs(aBody);
     if (!as.length) return null;
     const hit = d => as.some(a => a.pre === d.pre && a.from <= d.to && a.to >= d.from);
+    // an answer that would swallow many sections (one wide range over the whole draft) is not an edit: refuse it
+    const gone = ds.filter(hit).length;
+    if (gone > as.length + 1) return { refused: `모델 답이 섹션 ${gone}개를 ${as.length}개로 덮어쓰려고 해서 안 넣었어요` };
     const all = [...ds.filter(d => !hit(d)), ...as].sort((x, y) => x.from - y.from);
     const lead = ds.length ? dBody.slice(0, ds[0].start) : '';
     const given = tailBlocks(aTail).filter(b => b.key === 'STATE' || b.key === 'OPEN');
@@ -417,7 +420,7 @@ export async function openAppend(prefill = {}) {
           <div class="na_sf_log na_apf_log"></div>
           <div class="na_sf_note na_apf_note" hidden></div>
           <div class="na_ly_ask"><input type="text" class="na_ly_askq na_apf_q" placeholder="초안 고쳐 달라고 하기 (예: #60 이후 더 줄여줘)" aria-label="초안 고쳐 달라고 하기" enterkeyhint="send"><button type="button" class="na_ly_askgo na_apf_go" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>
-          <div class="na_apf_foot"><label class="checkbox_label"><input type="checkbox" class="na_apf_raw" checked><span>원문 같이 보내기 <small class="na_apf_rawinfo"></small></span></label><button type="button" class="na_linkbtn na_apf_undo" hidden>처음으로</button></div>
+          <div class="na_apf_foot"><label class="checkbox_label"><input type="checkbox" class="na_apf_raw" checked><span>원문 같이 보내기 <small class="na_apf_rawinfo"></small></span></label><button type="button" class="na_linkbtn na_apf_undo" hidden>되돌리기</button></div>
         </div>` : ''}
         <div class="na_v2_card na_v2_list na_ap2_checks">
           <div class="na_ap2_label"><span>붙여넣은 글 검사</span><small class="na_append_info"></small></div>
@@ -561,6 +564,7 @@ export async function openAppend(prefill = {}) {
             if (!rs.length) throw new Error('모델이 섹션 형태로 답하지 않았어요');
             if (rs[0].from !== gp.before.from || rs[rs.length - 1].to !== gp.to) throw new Error(`받은 섹션이 #${rs[0].from}–#${rs[rs.length - 1].to}라서 넣지 않았어요 (#${gp.before.from}–#${gp.to}여야 해요)`);
             if (apf.original === null) apf.original = String($ta.val() || '');
+            apf.steps.push(String($ta.val() || ''));
             $root.find('.na_apf_undo').prop('hidden', false);
             const rest = v.slice(s.start + before.length);
             $ta.val(`${v.slice(0, s.start)}${out}${/^\s*\n/.test(rest) ? '' : '\n\n'}${rest}`).trigger('input');
@@ -578,6 +582,7 @@ export async function openAppend(prefill = {}) {
             const out = await pre.rerun();
             if (!out?.trim()) throw new Error('초안 모델이 빈 답을 줬어요');
             if (apf.original === null) apf.original = String($ta.val() || '');
+            apf.steps.push(String($ta.val() || ''));
             $root.find('.na_apf_undo').prop('hidden', false);
             $ta.val(out).trigger('input');
             toastr.success('2단계를 다시 받았어요 · 처음으로를 누르면 앞 결과로 돌아가요', '2단계만 다시');
@@ -755,7 +760,7 @@ export async function openAppend(prefill = {}) {
             .html(none ? '<i class="fa-solid fa-circle-check"></i> AI가 찾은 충돌 없음' : `<div class="na_ai_box_head"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 충돌 검사 <span class="na_dim">· 참고용이에요</span></div>${aiHtml(out)}`);
     });
     // 이어서 고치기: the whole draft revised by the draft model, with the raw log of its range when it can be found
-    const apf = { original: null, asked: [], rawKey: '', raw: null, busy: false };
+    const apf = { original: null, asked: [], steps: [], rawKey: '', raw: null, busy: false };
     const draftRange = () => {
         const rs = headingRanges(auFix(String($ta.val() || ''), m));
         if (!rs.length) return null;
@@ -788,9 +793,14 @@ export async function openAppend(prefill = {}) {
             const note = (out.match(/^NOTE:\s*(.+)$/m) || [])[1] || '';
             const body = out.replace(/^NOTE:.*$/m, '').trim();
             if (!/^#{1,3}\s/m.test(body)) throw new Error('모델이 초안 형태로 답하지 않았어요');
+            const next = spliceChanged(draft, body);
+            // nothing usable, or an answer that would wipe the draft: the draft stays exactly as it was
+            if (!next) throw new Error('모델 답에서 고친 섹션을 못 찾았어요 · 초안은 그대로예요');
+            if (next.refused) throw new Error(`${next.refused} · 초안은 그대로예요`);
             if (apf.original === null) apf.original = draft;
+            apf.steps.push(draft);
             apf.asked.push(q);
-            $ta.val(spliceChanged(draft, body) ?? body).trigger('input');
+            $ta.val(next).trigger('input');
             $root.find('.na_apf_q').val('');
             $root.find('.na_apf_log').html(apf.asked.map(x => `<div class="na_sf_bubble">${esc(x)}</div>`).join(''));
             $root.find('.na_apf_note').prop('hidden', !note).text(note ? `못 한 것: ${note}` : '');
@@ -805,8 +815,11 @@ export async function openAppend(prefill = {}) {
     $root.find('.na_apf_q').on('keydown', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); apfSend(); } });
     $root.find('.na_apf_undo').on('click', () => {
         if (apf.original === null) return;
+        // one step back each press; the first press after one change is the original
+        const back = apf.steps.pop();
+        if (back !== undefined && apf.steps.length) { $ta.val(back).trigger('input'); apf.asked.pop(); $root.find('.na_apf_log').html(apf.asked.map(x => `<div class="na_sf_bubble">${esc(x)}</div>`).join('')); toastr.info('한 단계 되돌렸어요'); return; }
         $ta.val(apf.original).trigger('input');
-        apf.original = null; apf.asked = [];
+        apf.original = null; apf.asked = []; apf.steps = [];
         $root.find('.na_apf_log').empty(); $root.find('.na_apf_note').prop('hidden', true); $root.find('.na_apf_undo').prop('hidden', true);
     });
     // 한 번에 압축 with 채점: the grader's verdict on the summary, message numbers open the raw log
