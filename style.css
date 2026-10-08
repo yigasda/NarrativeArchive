@@ -3742,3 +3742,19 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 .na_ap_events summary small { color: var(--na-dim); font-weight: 400; margin-left: 4px; }
 .na_ap_events_text { margin: 8px 0 0; padding: 10px 12px; max-height: none; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, var(--monoFontFamily, monospace); font-size: 11.5px; line-height: 1.6; background: var(--na-soft); border-radius: 12px; }
 .na_ap_rerun { margin-top: 8px; }
+/* 한 번에 압축 confirm: range on top, then what runs where, as label · value rows */
+.na_qc { --na-line: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 14%, transparent); --na-dim: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 62%, transparent); --na-card: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 5%, transparent); text-align: left; display: flex; flex-direction: column; gap: 10px; }
+.na_qc_head { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.na_qc_head b { font-size: 1.25em; letter-spacing: 0.01em; }
+.na_qc_head small, .na_qc_note { color: var(--na-dim); font-size: 0.85em; }
+.na_qc_note { text-align: center; }
+.na_qc_rows { border: 1px solid var(--na-line); border-radius: 14px; background: var(--na-card); overflow: hidden; }
+.na_qc_row { display: flex; align-items: baseline; gap: 12px; padding: 8px 12px; font-size: 0.92em; }
+.na_qc_row + .na_qc_row { border-top: 1px solid var(--na-line); }
+.na_qc_row > span { flex: none; width: 5.2em; color: var(--na-dim); }
+.na_qc_row > b { flex: 1; min-width: 0; font-weight: 600; word-break: break-all; }
+.na_qc_row > b small { margin-left: 6px; font-weight: 400; color: var(--na-dim); word-break: keep-all; }
+.na_qc .na_qc_memo { margin: 0; }
+.na_qc_check { display: flex; align-items: flex-start; gap: 8px; margin: 0; line-height: 1.4; }
+.na_qc_check span { display: flex; flex-direction: column; }
+.na_qc_check small { color: var(--na-dim); font-size: 0.85em; }
