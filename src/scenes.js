@@ -268,6 +268,21 @@ export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = 
     return { text, dropped: 0, parts: chunks.length, done: secs.length, doneTo, error, grades: [], scenes: chunks.map(c => [c[0].i, c[c.length - 1].i]) };
 }
 
+// the work note's parts; a line added from the 압축 작업실 goes under one of them
+export const NOTE_PARTS = ['Canon 요지', '살린 줄', '실수 목록', '문체'];
+export function noteInsert(note, part, line) {
+    const text = String(note || '').trimEnd(), L = text ? text.split('\n') : [];
+    const isHead = l => /^#{1,3}\s/.test(l);
+    const h = L.findIndex(l => isHead(l) && l.replace(/^#+\s*/, '').trim().toLowerCase() === part.toLowerCase());
+    if (h < 0) return `${text}${text ? '\n\n' : ''}# ${part}\n${line}`;
+    let e = h + 1;
+    while (e < L.length && !isHead(L[e])) e++;
+    while (e > h + 1 && !L[e - 1].trim()) e--;
+    L.splice(e, 0, line);
+    return L.join('\n');
+}
+const notePartsMissing = note => NOTE_PARTS.filter(x => !new RegExp(`^#{1,3}\\s*${x}\\s*$`, 'im').test(String(note || '')));
+
 // 작업 노트: the user's handover for this story (canon, lines to keep, past mistakes), sent with every scene.
 // Kept with the chat and carried into the next one.
 export async function openWorkNote() {
@@ -276,8 +291,8 @@ export async function openWorkNote() {
       <div class="na_popup na_v2 na_wn">
         <div class="na_v2_title"><b>작업 노트</b><small>장면별 압축에서 장면마다 같이 보내요 · 이 채팅에 저장되고 다음 채팅으로 이어져요</small></div>
         <small class="na_v2_note">이 이야기의 canon 요지, 꼭 살릴 줄, 이전 실수 목록처럼 요약할 때 알아야 할 것만. 리뷰 방식 같은 요약과 상관없는 건 빼는 게 좋아요.</small>
-        <textarea class="text_pole na_wn_ta" spellcheck="false" placeholder="# canon 요지&#10;- …&#10;# 살린 줄&#10;- …&#10;# 이전 실수&#10;- …"></textarea>
-        <div class="na_v2_row2"><button type="button" class="na_v2_btn na_wn_file_btn">.md · .txt 불러오기</button><button type="button" class="na_v2_btn na_wn_clear">지우기</button></div>
+        <textarea class="text_pole na_wn_ta" spellcheck="false" placeholder="# Canon 요지&#10;- 절대 틀리면 안 되는 사실&#10;# 살린 줄&#10;- 원문 그대로 남길 대사&#10;# 실수 목록&#10;- 예: 맞은 걸 소망이 한 걸로 썼다&#10;# 문체&#10;- 섹션 길이, 대사 길이, 제목 스타일"></textarea>
+        <div class="na_v2_row2"><button type="button" class="na_v2_btn na_wn_parts">칸 나누기</button><button type="button" class="na_v2_btn na_wn_file_btn">.md · .txt 불러오기</button><button type="button" class="na_v2_btn na_wn_clear">지우기</button></div>
         <input type="file" class="na_wn_file" accept=".md,.txt,text/plain,text/markdown" hidden>
         <small class="na_v2_note na_wn_info"></small>
       </div>`);
@@ -291,6 +306,13 @@ export async function openWorkNote() {
         $ta.val((await f.text()).replace(/\r\n/g, '\n').trim()); info();
     });
     $root.find('.na_wn_clear').on('click', () => { $ta.val(''); info(); });
+    // the four parts as headings, the ones not there yet added at the end
+    $root.find('.na_wn_parts').on('click', () => {
+        const miss = notePartsMissing($ta.val());
+        if (!miss.length) return toastr.info('네 칸이 다 있어요.', '작업 노트');
+        const cur = String($ta.val() || '').trimEnd();
+        $ta.val(`${cur}${cur ? '\n\n' : ''}${miss.map(x => `# ${x}\n`).join('\n')}`); info();
+    });
     const r = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, large: true, allowVerticalScrolling: true, okButton: '저장', cancelButton: '취소' });
     if (!(r === c.POPUP_RESULT.AFFIRMATIVE || r === true)) return;
     const v = String($ta.val() || '').trim();

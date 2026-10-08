@@ -3806,10 +3806,21 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 .na_st_ok { margin-top: 6px; color: var(--na-dim); font-size: 0.8em; white-space: normal; }
 .na_st_wait { color: var(--na-dim); white-space: normal; }
 .na_st_in { display: flex; flex-direction: column; gap: 6px; }
-.na_st .na_st_q { width: 100%; box-sizing: border-box; margin: 0; min-height: 3.2em; resize: vertical; font-size: 0.9em; }
-.na_st_btns { display: flex; align-items: center; gap: 8px; }
-.na_st_auto { display: flex; align-items: center; gap: 6px; margin: 0 auto 0 0; font-size: 0.88em; cursor: pointer; }
+.na_st_inrow { display: flex; align-items: flex-end; gap: 8px; }
+.na_st .na_st_q { flex: 1; min-width: 0; box-sizing: border-box; margin: 0; min-height: 3.2em; resize: vertical; font-size: 0.9em; }
+.na_st_btns { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.na_st_auto { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.88em; cursor: pointer; }
+.na_st_btns .na_st_out { margin-right: auto; }
 .na_st_auto span { display: flex; flex-direction: column; line-height: 1.2; }
 .na_st_auto small { color: var(--na-dim); font-size: 0.85em; }
 .na_st_foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .na_st_foot .na_st_done { margin-left: auto; }
+.na_st_quick { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.na_st_quick::-webkit-scrollbar { display: none; }
+.na_st_qk { flex: none; padding: 5px 10px; border: 1px solid var(--na-line); border-radius: 999px; background: var(--na-card); color: inherit; font: inherit; font-size: 0.8em; cursor: pointer; white-space: nowrap; }
+.na_st_qk:disabled { opacity: 0.5; cursor: default; }
+.na_st_chip.lock { background: var(--na-ok-soft); color: var(--na-ok); }
+.na_st_lockrow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 6px; white-space: normal; font-size: 0.85em; }
+.na_st_locked { color: var(--na-ok); font-weight: 600; }
+.na_st_nt { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+.na_st_nt .na_st_ntta { width: 100%; box-sizing: border-box; margin: 0; resize: vertical; }
