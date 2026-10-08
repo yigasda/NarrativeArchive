@@ -57,7 +57,7 @@ const chatKey = () => String(ctx().getCurrentChatId?.() || ctx().chatId || '');
 const short = l => String(l).replace(/^(커스텀|Vertex) · /, '');
 const ICO = {
     book: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5zM8 7h8M8 11h6',
-    up: 'M12 19V5M5 12l7-7 7 7', down: 'M12 5v14M6 13l6 6 6-6', plus: 'M12 5v14M5 12h14',
+    up: 'M12 19V5M5 12l7-7 7 7', down: 'M12 5v14M6 13l6 6 6-6', plus: 'M12 5v14M5 12h14', x: 'M6 6l12 12M18 6L6 18',
     lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
 };
 // a section as a card: range, title, (date, place) under it, bullets with quotes marked and source numbers small
@@ -109,7 +109,8 @@ function mergeSecs(secs, got) {
 }
 // messages of the answered scenes that no section covers: [[a, b], …]
 function gapsOf(st) {
-    const sent = st.turns.filter(t => t.role === 'user' && t.kind === 'scene').map(t => t.scene);
+    // only scenes that have their answer: one still being written is not a gap yet
+    const sent = st.turns.filter(t => t.role === 'assistant' && t.scene !== undefined).map(t => t.scene);
     if (!sent.length) return [];
     const top = st.scenes[Math.max(...sent)].b, out = [];
     let at = st.from;
@@ -281,6 +282,20 @@ function finalText(m, st) {
 }
 
 // ---- the window
+// the popup's own box may clip it, and on a phone the visible screen is shorter than the page: shrink to whichever ends first
+function fitStudio(el) {
+    if (!el?.isConnected) return;
+    el.style.height = '';
+    const vh = window.visualViewport?.height || window.innerHeight;
+    const r = el.getBoundingClientRect();
+    let limit = vh - 10;
+    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+        const cs = getComputedStyle(p);
+        if (/hidden|auto|scroll|clip/.test(cs.overflowY)) limit = Math.min(limit, p.getBoundingClientRect().bottom - (parseFloat(cs.paddingBottom) || 0) - (parseFloat(cs.borderBottomWidth) || 0));
+        if (p.tagName === 'DIALOG') break;
+    }
+    if (r.bottom > limit) el.style.height = `${Math.max(300, Math.floor(limit - r.top - 2))}px`;
+}
 export async function openStudio() {
     const c = ctx();
     if (!draftReady()) return toastr.info('⚙ 설정 → AI · 번역 → 초안 모델을 먼저 정해 주세요.', '압축 작업실');
@@ -297,6 +312,7 @@ export async function openStudio() {
             <span class="na_st_av">${svgA(ICO.book, 20)}</span>
             <div class="na_st_ht"><b>압축 작업실</b><small class="na_st_sub"></small></div>
             <button type="button" class="na_st_add"></button>
+            <button type="button" class="na_st_x" aria-label="닫기" title="닫기">${svgA(ICO.x, 18, 2.4)}</button>
           </div>
           <div class="na_st_seg"></div>
           <div class="na_st_gap" hidden></div>
@@ -458,6 +474,7 @@ export async function openStudio() {
         $root.closest('dialog').find('.popup-button-ok').trigger('click');
         setTimeout(openStudio, 50);
     });
+    $root.find('.na_st_x').on('click', () => $root.closest('dialog').find('.popup-button-ok').trigger('click'));
     $root.find('.na_st_add').on('click', () => { toAppend = true; $root.closest('dialog').find('.popup-button-ok').trigger('click'); });
     draw();
     // a fresh run starts on its own
@@ -466,8 +483,14 @@ export async function openStudio() {
     else if (st?.auto && !busy) runAuto();
     const shown = c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: false, leftAlign: true, okButton: '닫기' });
     // the conversation opens at its end
-    setTimeout(() => { const el = $root.find('.na_st_log')[0]; if (el) el.scrollTop = el.scrollHeight; }, 30);
+    // the window fits the screen it is on (phones: the browser bar and the keyboard), then opens at the end of the conversation
+    const fit = () => fitStudio($root[0]);
+    setTimeout(() => { fit(); const el = $root.find('.na_st_log')[0]; if (el) el.scrollTop = el.scrollHeight; }, 30);
+    window.visualViewport?.addEventListener('resize', fit);
+    window.addEventListener('resize', fit);
     await shown;
+    window.visualViewport?.removeEventListener('resize', fit);
+    window.removeEventListener('resize', fit);
     if (live === draw) live = null;
     if (!toAppend) return;
     m = getMeta(); st = sessionOf(m);

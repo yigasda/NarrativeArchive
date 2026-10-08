@@ -3778,7 +3778,7 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 .na_st {
     --st-bg: #FCF8F5; --st-bub: #F2EAE3; --st-w: #FFFFFF; --st-ink: #2E241E; --st-dim: #9C8B80; --st-line: #F0E6DE; --st-seg: #F3EBE4;
     --st-acc: #B8541F; --st-acc2: #CF6430; --st-accsoft: #FBE2D3; --st-ok: #2F6B47; --st-oksoft: #E2F1E7; --st-warn: #A86A12; --st-warnline: #F1DDBB; --st-q: #9A4416;
-    display: flex; flex-direction: column; height: min(80dvh, 820px); margin: -4px; color: var(--st-ink); text-align: left; font-size: 14px;
+    display: flex; flex-direction: column; height: min(86dvh, 860px); margin: -4px; color: var(--st-ink); text-align: left; font-size: 14px;
 }
 body.na_darkui .na_st {
     --st-bg: #241C18; --st-bub: #31271F; --st-w: #3A2F28; --st-ink: #EDE1D6; --st-dim: #A8978A; --st-line: #3A2F29; --st-seg: #31271F;
@@ -3795,6 +3795,9 @@ body.na_darkui dialog.popup:has(.na_st) { background: #241C18 !important; }
 .na_st_ht small { font-size: 0.85em; color: var(--st-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .na_st_add { flex: none; border: 0; border-radius: 999px; padding: 8px 14px; background: var(--st-accsoft); color: var(--st-acc) !important; font-weight: 700 !important; font-size: 0.93em !important; cursor: pointer; }
 .na_st_add:disabled { opacity: 0.45; cursor: default; }
+.na_st_x { flex: none; width: 34px; height: 34px; margin-right: -4px; border: 0; border-radius: 50%; background: none; color: var(--st-dim) !important; display: grid; place-items: center; cursor: pointer; }
+/* the header's × closes it; the popup's own button row would only take room from the conversation */
+dialog.popup:has(.na_st) .popup-controls { display: none !important; }
 .na_st_seg { display: flex; gap: 4px; margin-top: 12px; overflow-x: auto; scrollbar-width: none; }
 .na_st_seg::-webkit-scrollbar { display: none; }
 .na_st_seg span { flex: 1 0 30px; text-align: center; font-size: 0.78em; font-weight: 700; padding: 5px 0; border-radius: 8px; background: var(--st-seg); color: var(--st-dim); }
@@ -3850,8 +3853,12 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_st_plus i[hidden] { display: none; }
 .na_st_field { flex: 1; min-width: 0; display: flex; align-items: flex-end; gap: 6px; min-height: 40px; padding: 5px 5px 5px 15px; border-radius: 20px; background: var(--st-w); box-shadow: inset 0 0 0 1px var(--st-line); }
 .na_st_field:focus-within { box-shadow: inset 0 0 0 1.5px var(--st-acc); }
-.na_popup .na_st_q, .na_popup .na_st_q:is(:focus, :hover) { flex: 1; min-width: 0; height: 30px; max-height: 120px; margin: 0; padding: 5px 0; border: 0 !important; outline: 0; background: transparent !important; box-shadow: none !important; color: var(--st-ink); font: inherit; font-size: 0.95em; line-height: 1.4; resize: none; }
-.na_popup .na_st_q::placeholder { color: var(--st-dim); opacity: 1; }
+.na_st .na_st_field textarea.na_st_q, .na_st .na_st_field textarea.na_st_q:is(:focus, :hover, :focus-visible, :disabled) {
+    flex: 1; min-width: 0; height: 30px; min-height: 0; max-height: 120px; margin: 0; padding: 5px 0; border: 0 !important; border-radius: 0 !important; outline: 0 !important;
+    background: transparent !important; background-color: transparent !important; background-image: none !important; box-shadow: none !important; -webkit-appearance: none; appearance: none;
+    color: var(--st-ink) !important; font: inherit; font-size: 0.95em; line-height: 1.4; resize: none; overflow-y: auto; scrollbar-width: none; }
+.na_st .na_st_field textarea.na_st_q::-webkit-scrollbar { display: none; }
+.na_st .na_st_field textarea.na_st_q::placeholder { color: var(--st-dim) !important; opacity: 1; }
 .na_st_send { flex: none; width: 30px; height: 30px; border: 0; border-radius: 50%; background: var(--st-acc); color: #fff !important; display: grid; place-items: center; cursor: pointer; }
 .na_st_send:disabled { opacity: 0.5; cursor: wait; }
 .na_st_menu { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 5; width: min(300px, 100%); padding: 6px; border-radius: 16px; background: var(--st-w); box-shadow: 0 12px 32px rgba(46, 36, 30, 0.22), inset 0 0 0 1px var(--st-line); display: flex; flex-direction: column; }
