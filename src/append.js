@@ -558,7 +558,7 @@ export async function openAppend(prefill = {}) {
         const $b = $(this).prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
         try {
             const before = trimEnd(v.slice(s.start, s.end)).replace(/\n-{3,}\s*$/, '');
-            const prompt = `SECTION BEFORE THE GAP:\n${before}\n\nSECTION AFTER THE GAP (heading only — do not output it):\n## ${gp.after.title}\n\nGAP: ${label}\n\nRAW LOG ${label}:\n${src.raw}${langBlock(m.text)}`;
+            const prompt = `SECTION BEFORE THE GAP:\n${before}\n\nSECTION AFTER THE GAP (heading only — do not output it):\n## ${gp.after.title}\n\nGAP: ${label}\n\nRAW LOG ${label}:\n${src.raw}${langBlock(m.text, { tail: false })}`;
             const out = auFix(stripThink(await askFix(prompt, { system: AI_SYS_GAPFILL })).replace(/^```[a-z]*\n?|```\s*$/g, '').trim(), m);
             const rs = headingRanges(out);
             if (!rs.length) throw new Error('모델이 섹션 형태로 답하지 않았어요');

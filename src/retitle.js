@@ -274,7 +274,7 @@ export async function openSectionFix(s) {
         const $b = $root.find('.na_sf_go').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
         try {
             const useRaw = src.raw && $root.find('.na_sf_rawon').prop('checked');
-            const prompt = `SECTION:\n${draft}\n\n${useRaw ? `RAW LOG:\n${src.raw}\n\n` : ''}${asked.length ? `EARLIER REQUESTS:\n${asked.map(x => `- ${x}`).join('\n')}\n\n` : ''}REQUEST:\n${q}${langBlock(m.text)}`;
+            const prompt = `SECTION:\n${draft}\n\n${useRaw ? `RAW LOG:\n${src.raw}\n\n` : ''}${asked.length ? `EARLIER REQUESTS:\n${asked.map(x => `- ${x}`).join('\n')}\n\n` : ''}REQUEST:\n${q}${langBlock(m.text, { tail: false })}`;
             const out = stripThink(await askFix(prompt, { system: AI_SYS_SECFIX, maxTokens: 8000 })).replace(/^```[a-z]*\n?|```\s*$/g, '').trim();
             const note = (out.match(/^NOTE:\s*(.+)$/m) || [])[1] || '';
             const body = trimEnd(out.replace(/^NOTE:.*$/m, '').trim());
@@ -522,7 +522,7 @@ Output only the section blocks. No "---", no STATE, no OPEN.
                 const body = fillPrompt(activePrompt(g).text, { raw: rawSrc.raw, from: String(r.from), to: String(r.to), last_section: prev ? `(Format sample only. Already in the archive — do not output it.)\n${sectionBody(m.text.slice(prev.start, prev.end))}` : '(없음)', state: '(Not needed here — do not output STATE or OPEN.)', archive: withoutSel, recent: recentSections(m.text.slice(0, sel[0].start)) });
                 // the user's correction goes last, where it is read as the final word
                 const tail = req ? `\n\n[USER'S CORRECTION — the user knows this story; this overrides any reading of the raw log that disagrees]\n${req}` : '';
-                out = await askFix(head + body + tail + langBlock(m.text));
+                out = await askFix(head + body + tail + langBlock(m.text, { tail: false }));
             } else out = await askFix(`SECTIONS:\n${src}${req ? `\n\nREQUEST:\n${req}` : ''}`, { system: AI_SYS_MERGE, maxTokens: Math.min(cap, Math.max(4000, Math.ceil(est * 1.5) + 2000)), effort: 'low' });
             out = stripThink(out).replace(/^```[a-z]*\n?|```\s*$/g, '').trim().split(/\n-{3,}\s*\n/)[0].replace(/\n# (STATE|OPEN)\b[\s\S]*$/, '').trim();
             const parts = parseSections(out).filter(x => !x.group && RANGE_HEAD.test(x.title));

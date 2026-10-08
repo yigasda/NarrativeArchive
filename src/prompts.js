@@ -256,9 +256,10 @@ export function archiveLang(text) {
 }
 export const LANG_NAME = { en: 'English', ko: 'Korean' };
 // the last thing the model reads: the answer's language, whatever language the raw log and the note are in
-export const langBlock = text => {
+// tail: false for jobs that write sections only, so the line does not invite STATE / OPEN blocks
+export const langBlock = (text, { tail = true } = {}) => {
     const l = archiveLang(text);
-    return l ? `\n\n[ANSWER LANGUAGE — ${LANG_NAME[l]}. Write every heading, bullet and STATE / OPEN line in ${LANG_NAME[l]}, like the archive, even though the raw log${l === 'en' ? ' and the user\'s note are' : ' is'} in another language. Translate quoted lines into ${LANG_NAME[l]}.]` : '';
+    return l ? `\n\n[ANSWER LANGUAGE — ${LANG_NAME[l]}. Write every heading${tail ? ', bullet and STATE / OPEN line' : ' and bullet'} in ${LANG_NAME[l]}, like the archive, even though the raw log${l === 'en' ? ' and the user\'s note are' : ' is'} in another language. Translate quoted lines into ${LANG_NAME[l]}.]` : '';
 };
 // does an answer come back in the language the archive is written in? ('' when it cannot tell)
 const textLang = (t, min) => {

@@ -52,7 +52,7 @@ PLOT:
 
 OUTPUT
 Before you output, check: under TARGET (if not, shorten quotes first, then merge bullets), bullets in order, no turn-by-turn bullet, at most three quotes, at most one em dash.
-Only the digest section, heading line first. No fences, no comments.`;
+Only the digest section, heading line first. No STATE, OPEN or change lists, no fences, no comments.`;
 
 export const digestsOf = m => (Array.isArray(m?.digests) ? m.digests : []);
 
@@ -255,13 +255,14 @@ export async function openDigest(group = null, keys = null) {
         busy = true;
         const $b = $root.find('.na_dg_go').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
         try {
-            let out = stripThink(await askCompress(`SECTIONS:\n${src}\n\nTARGET: ${target}${note ? `\n\nNOTE:\n${note}` : ''}${langBlock(m.text)}`, { system: AI_SYS_DIGEST }))
+            let out = stripThink(await askCompress(`SECTIONS:\n${src}\n\nTARGET: ${target}${note ? `\n\nNOTE:\n${note}` : ''}${langBlock(m.text, { tail: false })}`, { system: AI_SYS_DIGEST }))
                 .replace(/\r\n?|[\u2028\u2029]/g, '\n').replace(/^```[a-z]*\n?|```\s*$/gm, '').trim();
             // a line before the heading ("Here is the digest:") or a bolded heading: start at the heading
             out = out.replace(/^\*\*(#{1,3}\s[^\n]*?)\*\*\s*$/m, '$1');
             const at = out.search(/^#{1,3}\s/m);
             if (at > 0) out = out.slice(at);
-            out = out.split(/\n-{3,}\s*\n/)[0].trim();
+            // only the digest: anything from a "---" rule or a STATE / OPEN heading on is dropped
+            out = out.split(/\n-{3,}\s*\n/)[0].split(/\n#{1,3}\s*(?:STATE|OPEN)\b/)[0].trim();
             if (!out) throw new Error('초안 모델이 빈 답을 줬어요');
             // still no heading: the answer is kept (it was paid for) with the run's own heading on top, to fix by hand
             if (!/^#{1,3}\s/.test(out)) {
