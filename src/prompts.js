@@ -42,7 +42,8 @@ You are writing a memory, not a transcript. The bot that reads the archive needs
 
 # 4. Protecting causality
 - Before every emotional reaction, keep the other person's action that caused it; without it, the character appears to erupt on their own or seems childish. Before every realization or decision, keep the trigger that made it possible; cut the process and the character "suddenly understands."
-- Write felt experience as felt experience, not as the narrator's verdict. ("Trapped" ✗ → "Feeling trapped" ✓) A character's interpretation is written only as theirs, never as fact: "In her own reckoning, …", "(his reading, not fact)". No interpretation, theme or summary-verdict sentences of your own.
+- Write felt experience as felt experience, not as the narrator's verdict. ("Trapped" ✗ → "Feeling trapped" ✓) A character's interpretation is written only as theirs, never as fact: "In her own reckoning, …", "as he took it, …". No interpretation, theme or summary-verdict sentences of your own.
+- When a reaction draws on a past event, name the event plainly and briefly, as in "remembering the shipwreck", never a summary of what it means, such as "refusing any echo of past self-destruction".
 - Preserve both sides' responsibility. Do not erase one side's fault because of the other side's hurt, in either direction.
 - Be careful with absolutes such as "never" and "not once." They make a character read as cold or indifferent.
 - Keep the raw log's order. Do not pull a later event (when someone remembered or noticed something) into an earlier bullet. No exaggeration beyond the raw log.
@@ -145,7 +146,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8', 'k678s0', 'lbvxyj', '1cw54yj', '936ejv']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8', 'k678s0', 'lbvxyj', '1cw54yj', '936ejv', '1aww7hu']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
