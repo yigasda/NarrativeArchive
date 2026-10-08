@@ -277,7 +277,7 @@ OUTPUT
 One entry per message, in order, no number skipped. Every entry line starts with [number]. Quote lines start with two spaces and a quotation mark. Nothing else: no headers, no commentary.
 Write in ${lang || 'the language most of the messages are in'}; quotes stay in their original language.`;
 // step 2: the list stands where the raw log was; this note goes on top of it
-export const eventsNote = () => `The raw log has been turned into an event list, one entry per message. Lines marked (thinks) are private thoughts or readings; write them as that character's, never as fact. Lines marked ★ are turning points; give them room and consider starting a section there. Lines starting with "= #N;" add only what is new to an earlier moment. Treat this list as the raw log.\n\n`;
+export const eventsNote = () => `The raw log has been turned into an event list, one entry per message. Lines marked (thinks) are private thoughts or readings; write them as that character's, never as fact. Lines marked ★ are turning points; give them room and consider starting a section there. Lines starting with "= #N;" add only what is new to an earlier moment. Treat this list as the raw log. The list was made without your rules. It can carry sex acts and lines said inside them, and more quotes than a section needs; your rules still decide what stays. A sex scene comes down to its relationship beats, with no quote from inside the act.\n\n`;
 // How big the answer should be, as numbers: sections for this many messages, and, when a long stretch goes in parts,
 // that every length target (the user's note included) is for the whole stretch, so each part takes its share
 export function sizeBlock({ k = 0, n = 1, count, total = count, from, to, partFrom = from, partTo = to }) {
