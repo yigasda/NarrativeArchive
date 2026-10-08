@@ -415,6 +415,10 @@ export async function openAppend(prefill = {}) {
           <button type="button" class="na_cp_row na_ai_conflict" title="기존 아카이브와 어긋나는 이름·날짜·사실·해결된 떡밥을 AI가 찾아요">${svgB(SVG_B.star, 14)} AI로 충돌 검사 · 날짜·사실·해결된 떡밥</button>
           <div class="na_ai_box na_conflict_out" hidden></div>
         </div>
+        ${pre.events?.text ? `<details class="na_v2_card na_v2_more na_ap_events">
+          <summary>1단계 정리 목록 <small>메시지 ${pre.events.n}개${pre.events.recaps || pre.events.empty ? ` · ${[pre.events.recaps && `되짚기 ${pre.events.recaps}개`, pre.events.empty && `빈 메시지 ${pre.events.empty}개`].filter(Boolean).join(' · ')} 뺌` : ''}${pre.events.badQ ? ` · 원문에 없는 대사 ${pre.events.badQ}개 버림` : ''}${pre.events.missing?.length ? ` · 정리 못 한 메시지 ${pre.events.missing.length}개는 원문 그대로` : ''}</small></summary>
+          <pre class="na_ap_events_text">${esc(pre.events.text)}</pre>
+        </details>` : ''}
         <div class="na_v2_card na_v2_list">
           <label class="na_cp_row"><span class="na_cp_txt"><span>이번에 압축한 끝 번호</span><small class="na_end_hint"></small></span><span class="na_ap2_end">#<input type="number" class="na_end" min="0" max="${last}" value="${Math.max(0, last)}"></span></label>
           <label class="na_cp_row"><span class="na_cp_txt"><span>추가한 뒤 숨기기</span><small class="na_hide_hint">마지막 ${m.keep}개는 남겨요</small></span><input type="checkbox" class="na_toggle na_do_hide" checked></label>

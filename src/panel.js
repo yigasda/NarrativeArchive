@@ -28,7 +28,7 @@ import { refreshStatus } from './status.js';
 import { ICO_A, setUiTheme, svgA, uiTheme } from './theme.js';
 import { AI_SYS_TRANSLATE, askTranslator, glossaryEntries, openGlossary } from './translate.js';
 import { chatLabel, confirm, copyText, countTokens, download, esc, escRe, fmt, nowStamp, timeLabel } from './util.js';
-import { CHUNK_CHOICES, chunkTok, openAuSettings, openWizard, quickCompress } from './wizard.js';
+import { CHUNK_CHOICES, COMPRESS_MODES, EVENTS_MODELS, chunkTok, compressMode, eventsModel, openAuSettings, openWizard, quickCompress } from './wizard.js';
 import { openWorlds, worldBooks, worldIsOn } from './world.js';
 import { openXray } from './xray.js';
 
@@ -190,7 +190,9 @@ export function renderPanel() {
                 <div class="na_v2_label">설정</div>
                 <div class="na_v2_card na_v2_list na_cp_set">
                   <label class="na_cp_row"><span class="na_cp_txt"><span>숨긴 메시지 빼고 뽑기</span></span><input type="checkbox" class="na_toggle" id="na_opt_hidden"></label>
-                  <label class="na_cp_row"><span class="na_cp_txt"><span>한 번에 압축 · 나눠 보내기</span><small>긴 원문을 몇 조각으로 보낼지 · 조각마다 앞 조각에 이어 써요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_chunk">${Object.entries(CHUNK_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <label class="na_cp_row"><span class="na_cp_txt"><span>한 번에 압축 · 방식</span><small>2단계: 정리 모델이 메시지마다 한 줄로 정리(되짚기는 빼고) → 초안 모델이 그 목록으로 섹션을 써요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_cmode">${Object.entries(COMPRESS_MODES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <label class="na_cp_row na_cmode_ev"><span class="na_cp_txt"><span>2단계 · 정리 모델</span><small>메시지 15개씩 여러 번 불러요 · 싼 모델 추천</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_evmodel">${Object.entries(EVENTS_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <label class="na_cp_row na_cmode_raw"><span class="na_cp_txt"><span>원문 그대로 · 나눠 보내기</span><small>긴 원문을 몇 조각으로 보낼지 · 조각마다 앞 조각에 이어 써요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_chunk">${Object.entries(CHUNK_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                   <div class="na_strip_box">
                     <label class="na_cp_row"><span class="na_cp_txt"><span>태그 지우기</span><small id="na_strip_sub">&lt;think&gt; 통째로 · 나머지 태그는 글자만</small></span><input type="checkbox" class="na_toggle" id="na_opt_tags"></label>
                     <div class="na_cp_sub">
@@ -850,6 +852,9 @@ export function bindPanel() {
         toastr.success(`${n}군데 바꿨어요`);
     }));
     $('#na_chunk').on('change', function () { globalSettings().chunkTok = Number(this.value); saveGlobal(); });
+    const cmodeRows = () => { const ev = compressMode() === 'events'; $('.na_cmode_ev').toggle(ev); $('.na_cmode_raw').toggle(!ev); };
+    $('#na_cmode').on('change', function () { globalSettings().compressMode = this.value; saveGlobal(); cmodeRows(); });
+    $('#na_evmodel').on('change', function () { globalSettings().eventsModel = this.value; saveGlobal(); });
     $('#na_track').on('change', async function () {
         if (!hasChat()) return;
         const m = getMeta();
@@ -1088,6 +1093,7 @@ export function syncPanel() {
     $('#na_boundary').val(m.boundary >= 0 ? m.boundary : '');
     $('#na_track').prop('checked', !!m.track);
     $('#na_chunk').val(String(chunkTok()));
+    $('#na_cmode').val(compressMode()); $('#na_evmodel').val(eventsModel()); $('.na_cmode_ev').toggle(compressMode() === 'events'); $('.na_cmode_raw').toggle(compressMode() !== 'events');
     {
         const au = auOf(m);
         $('#na_au_sub').text(au.on ? `켜짐 · 요약이 본편 뒤 ${au.name} 묶음으로 이어져요` : '본편 기억을 들고 온 채팅이면 켜요');
