@@ -9,7 +9,7 @@ import { cleanMessage, extractToText } from './extract.js';
 import { changedQuotes } from './fade.js';
 import { mountSectionPicker } from './picker.js';
 import { activePrompt, fillPrompt, langBlock, recentSections } from './prompts.js';
-import { RANGE_HEAD, groupLabel, keyAt, linkedMap, parseSections, renameKeys, sectionKey, trimEnd } from './sections.js';
+import { RANGE_HEAD, groupLabel, stripCites, keyAt, linkedMap, parseSections, renameKeys, sectionKey, trimEnd } from './sections.js';
 import { sourceRange } from './source.js';
 import { ICO_A, svgA } from './theme.js';
 import { confirm, countTokens, esc, fmt } from './util.js';
@@ -68,7 +68,7 @@ STEPS
 2. New facts and quotes come only from SECTION or RAW LOG. A line in quotation marks is copied exactly from RAW LOG — every word, same order. Never invent or paraphrase a line and present it as a quote.
 3. Keep the archive's rules: one bullet = one event; keep the action that caused a reaction before the reaction; a character's interpretation only as theirs ("In her own reckoning, …"); no commentary or verdicts.
 4. Same language as the section.
-5. Time runs one way. A reason, motive or detail you add to a moment comes only from messages up to that moment in the RAW LOG. Never explain a moment with something that happens later, and never move a later action into an earlier bullet; if the reason only comes out later, say so where it comes out ("which he only admitted at #120").
+5. Every sentence in a bullet carries the number of the message it comes from: (#88), or (#88, #91). Keep the numbers already there; a new sentence needs its own. Only messages inside that section's range, and for a reason or motive only messages up to the moment it explains. A sentence you cannot point to a message for (a motive, a fear, a meaning the log does not state) does not go in; if the request needs one, say so on the NOTE line.
 6. If part of the request cannot be done (it needs something that is in neither SECTION nor RAW LOG), do the rest and say what was not done on a last line that starts with "NOTE:", in Korean.
 
 EXAMPLE
@@ -299,7 +299,7 @@ export async function openSectionFix(s) {
         const cur = getMeta();
         if (sectionBody(cur.text.slice(s.start, s.end)) !== original) { toastr.warning('아카이브가 그사이 바뀌어서 적용하지 않았어요. 다시 열어 주세요.'); return false; }
         const trail = cur.text.slice(s.start, s.end).slice(original.length) || '\n\n';
-        const next = cur.text.slice(0, s.start) + draft + trail + cur.text.slice(s.end);
+        const next = cur.text.slice(0, s.start) + stripCites(draft) + trail + cur.text.slice(s.end);
         const nk = keyAt(next, s.start);
         if (nk && nk !== sectionKey(s)) renameKeys(cur, sectionKey(s), nk);
         await commitText(next, `고쳐 달라고 하기 전: ${s.title.slice(0, 40)}`);
@@ -568,7 +568,7 @@ Output only the section blocks. No "---", no STATE, no OPEN.
         const a = sel[0].start, b = sel[sel.length - 1].end;
         const trail = cur.text.slice(a, b).match(ruleTail)[0] || '\n\n';
         const block = secs.map(s => s.body).join('\n\n');
-        const next = cur.text.slice(0, a) + block + trail + cur.text.slice(b);
+        const next = cur.text.slice(0, a) + stripCites(block) + trail + cur.text.slice(b);
         // settings follow: pinned if any part was, muted if every part was, keywords pooled; short versions are dropped
         const fresh = parseSections(next).filter(x => !x.group && x.start >= a && x.start < a + block.length);
         const muted = new Set(cur.muted || []), pinned = new Set(cur.pinned || []), linked = { ...linkedMap(cur) };

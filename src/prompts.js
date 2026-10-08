@@ -47,6 +47,7 @@ Sections
 Bullets
 - Bullets only, no paragraphs. One bullet = one turn of the scene: what happened, what caused it, and what it changed. A bullet may cover many messages; never one bullet per message, and never a conversation reported turn by turn ("He asked… She replied… He added…"). Collapse an exchange into what it revealed, decided or broke.
 - 3–6 bullets per section, whatever its message count, never more than 6; rarely more than about 250 words. A stretch that truly needs more is two chapters: split it where it turns.
+- Every sentence in a bullet ends with the number of the message it comes from, in parentheses: (#88), or (#88, #91) when it draws on two. Only numbers inside the section's own range, and for a reason or motive only messages up to the moment it explains. A sentence you cannot point to a message for (a motive, a fear, a meaning the log does not state) does not go in. The extension checks these numbers and removes them when it saves.
 - Do not say the same thing twice. When you add a sentence, check the bullets before and after it for the same content.
 - Em dashes sparingly: at most one in a section's bullets. Otherwise use a comma, a colon or a new sentence.
 
@@ -56,7 +57,7 @@ Dialogue
 
 Special content
 - Sex is recorded only as relationship beats: who, how consent moved, any request to stop and what happened, whether it was a first, what was said that would still matter outside the bed, and what changed afterward. No description of acts, positions, anatomy or sensations, even if the user's own turn describes them. A line said in bed is quoted only if it would still matter said fully clothed at a table (a confession, a promise, a wish, a refusal); never a line about the act itself. Length follows what changed, not how long the scene ran: a long scene in which little turns gets a bullet or two; one in which trust, a boundary or a confession shifts keeps each of those beats.
-  ✓ Mara and Ren slept together for the first time; she asked him to slow down once and he did. Afterward she told him, "I'm not leaving," and he stayed until morning.
+  ✓ Mara and Ren slept together for the first time; she asked him to slow down once and he did (#120). Afterward she told him, "I'm not leaving," and he stayed until morning (#124).
 - Crises, suicide attempts and self-harm are recorded plainly and factually, without blurring.
 - When one of this RP's recurring devices returns (a phrase, an object, a song, a name, a ritual), keep the event and the line in which it was used. Do not explain the device.
 
@@ -81,14 +82,14 @@ Titles
 - Mara said, "Then I'll wait."
 
 ✓ Memory:
-- Mara came back the same night she had sworn to leave, unable to say why. Ren let her in without pressing and told her the north road was closed. "Then I'll wait," she said, and stayed.
+- Mara came back the same night she had sworn to leave, unable to say why (#57, #59). Ren let her in without pressing and told her the north road was closed (#60, #62). "Then I'll wait," she said, and stayed (#63).
 
 # 7. Before you output
 Draft the stretch, then revise it once and output only the revised version:
 1. Delete every bullet that fails the test in 3.
 2. Merge bullets that share one cause or one outcome.
 3. Cut staging that survived the draft (see 3).
-4. Check that every quote is a line from the raw log and earns its place.
+4. Check that every quote is a line from the raw log and earns its place, and that every sentence has its message number.
 5. Count each section's bullets; more than 6 means merge or split.
 6. Check every bullet that touches sex against the sex rule; cut what it does not allow.
 
@@ -130,7 +131,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -282,8 +283,8 @@ LIST:
 ✗ Mara asked Ren if he had paid the debt. Ren admitted it: "그래. 내가 했어." Mara accused him of being like the duke: "결국 당신도 공작이랑 똑같네요. 돈으로 사람을 사고." Ren said she owed him nothing: "넌 나한테 빚진 거 없어." Mara tore up the receipt.
 
 ✓
-- When Ivo let slip that Ren had secretly paid her debt, Mara confronted him in the yard and he admitted it. She took it as being bought: "You're no different from the duke."
-- Ren was sure any explanation would sound like an excuse and said only, "You owe me nothing." She tore up the receipt and left.
+- When Ivo let slip that Ren had secretly paid her debt, Mara confronted him in the yard and he admitted it (#40, #42). She took it as being bought: "You're no different from the duke." (#43)
+- Ren was sure any explanation would sound like an excuse and said only, "You owe me nothing." (#44) She tore up the receipt and left (#45).
 
 (End of the example. The real list follows.)
 

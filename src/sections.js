@@ -347,3 +347,33 @@ export function lastRangeEnd(text) {
     const r = headingRanges(text);
     return r.length ? r[r.length - 1].to : null;
 }
+
+// ---- source marks: the model ends each sentence of a new section with "(#88)" / "(#88, #91)" so its claims can be
+// checked against the raw log; they are taken out before anything is saved. Only bare numbers: "(Y2 #506)" is a reference, kept.
+export const CITE_RE = /[ \t]*\(#\d+(?:\s*(?:[,–—~-]|and)\s*#?\d+)*\)/g;
+const stripMarks = t => String(t || '').replace(CITE_RE, '').replace(/[ \t]+([.,;:!?])/g, '$1');
+// sections only: STATE / OPEN lines keep whatever they say
+export function stripCites(text) {
+    const [body, tail] = splitTail(String(text || ''));
+    return /\(#\d/.test(body) ? stripMarks(body) + tail : String(text || '');
+}
+// marks that point outside their own section's range, and bullets with none
+export function citeIssues(text) {
+    const body = splitTail(String(text || ''))[0];
+    const secs = parseSections(body).filter(x => !x.group && RANGE_HEAD.test(x.title));
+    const out = { marks: 0, outside: [], bare: [] };
+    for (const s of secs) {
+        const r = s.title.match(RANGE_HEAD), from = Math.min(+r[2], +r[4]), to = Math.max(+r[2], +r[4]);
+        const lines = body.slice(s.start, s.end).split('\n').filter(l => /^\s*[-*•]\s/.test(l));
+        for (const l of lines) {
+            const ms = [...l.matchAll(new RegExp(CITE_RE.source, 'g'))];
+            if (!ms.length) { out.bare.push({ title: s.title, line: l.trim() }); continue; }
+            out.marks += ms.length;
+            for (const mk of ms) {
+                const ns = [...mk[0].matchAll(/#?(\d+)/g)].map(x => Number(x[1]));
+                for (const n of ns) if (n < from || n > to) out.outside.push({ title: s.title, n, from, to, line: l.trim() });
+            }
+        }
+    }
+    return out;
+}
