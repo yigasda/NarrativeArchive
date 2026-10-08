@@ -269,7 +269,9 @@ export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = 
 }
 
 // the work note's parts; a line added from the 압축 작업실 goes under one of them
-export const NOTE_PARTS = ['Canon 요지', '살린 줄', '실수 목록', '문체'];
+export const NOTE_PARTS = ['Canon', '살린 줄', '실수 목록', '문체'];
+// older names a heading may still carry
+const NOTE_ALIAS = { 'canon 요지': 'Canon' };
 export function noteInsert(note, part, line) {
     const n = noteParts(note);
     n.parts[part] = n.parts[part] ? `${n.parts[part]}\n${line}` : line;
@@ -284,7 +286,7 @@ export function noteParts(note) {
     let cur = null;
     for (const l of String(note || '').split('\n')) {
         const h = l.match(/^#{1,3}\s*(.+?)\s*$/);
-        const k = h && NOTE_PARTS.find(x => x.toLowerCase() === h[1].toLowerCase());
+        const k = h && (NOTE_PARTS.find(x => x.toLowerCase() === h[1].toLowerCase()) || NOTE_ALIAS[h[1].toLowerCase()]);
         if (k) { cur = k; continue; }
         (cur ? acc[cur] : other).push(l);
     }
@@ -293,9 +295,9 @@ export function noteParts(note) {
 }
 export const noteJoin = ({ parts, other }) => [...(other ? [other] : []), ...NOTE_PARTS.filter(x => parts[x]).map(x => `# ${x}\n${parts[x]}`)].join('\n\n');
 const NOTE_HINT = {
-    'Canon 요지': '- 이 이야기에서 절대 틀리면 안 되는 사실을 한 줄씩\n- 예: Ren은 Mara보다 열 살 많다',
+    'Canon': '- 이 이야기에서 절대 틀리면 안 되는 사실을 한 줄씩\n- 예: Ren은 Mara보다 열 살 많다',
     '살린 줄': '- 원문 그대로 남길 대사\n- 예: #63 Mara "Then I\'ll wait."',
-    '실수 목록': '- 요약이 틀렸던 것과 바른 쪽\n- 예: 맞은 사람을 바꿔 씀 → 맞은 건 Ren',
+    '실수 목록': '- 요약이 틀렸던 것과 바른 쪽',
     '문체': '- 섹션 길이, 대사 길이, 제목 모양\n- 예: 대사는 섹션당 한두 개, 짧게',
     '기타': '- 네 칸 밖에 있던 내용',
 };
@@ -329,7 +331,7 @@ export async function openWorkNote() {
     $root.find('.na_wn_file').on('change', async function () {
         const f = this.files?.[0];
         if (!f) return;
-        // a whole note: its "# Canon 요지" … headings fill the parts, the rest goes to 기타
+        // a whole note: its "# Canon" … headings fill the parts, the rest goes to 기타
         const got = noteParts((await f.text()).replace(/\r\n/g, '\n'));
         Object.assign(note.parts, got.parts); note.other = got.other;
         show(tabs().includes(cur) ? cur : NOTE_PARTS[0]); info();
