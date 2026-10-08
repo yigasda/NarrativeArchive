@@ -11,6 +11,7 @@ import { NOTE_PARTS, STATE_SYS, answerBlocks, noteInsert, chunksFromStarts, dete
 import { CITE_RE, headingRanges, lastRangeEnd, splitTail } from './sections.js';
 import { openSource } from './source.js';
 import { refreshStatus } from './status.js';
+import { translateLines, trLineOk } from './translate.js';
 import { svgA } from './theme.js';
 import { confirm, esc, timeLabel } from './util.js';
 import { nextRange, rangeRaw } from './wizard.js';
@@ -65,10 +66,22 @@ function bulletHtml(b) {
         .replace(/\s*\((#\d+(?:\s*(?:[,–—~-]|and)\s*#?\d+)*)\)/g, (_, inner) => ` <span class="na_st_cite">${[...inner.matchAll(/\d+/g)].map(n => `<button type="button" class="na_st_msg" data-msg="${n[0]}">${n[0]}</button>`).join('·')}</span>`)
         .replace(/(&quot;|“)(.*?)(&quot;|”)/g, '<span class="na_st_qt">$1$2$3</span>');
 }
-function cardHtml(x) {
+// a card's pieces: title, (date, place), and each bullet split from its source numbers (what 한국어로 translates)
+function cardParts(x) {
     const mt = String(x.title || '').match(/^(.*?)\s*\(([^()]*)\)\s*$/);
-    const name = (mt ? mt[1] : x.title) || 'Untitled', where = mt ? mt[2] : '';
-    return `<div class="na_st_card"><div class="na_st_ctop">${x.a !== null ? `<span class="na_st_rg">#${x.a}–#${x.b}</span>` : ''}<b>${esc(name)}</b></div>${where ? `<div class="na_st_where">${esc(where)}</div>` : ''}<ul>${x.bullets.map(b => `<li>${bulletHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}</ul></div>`;
+    const bullets = x.bullets.map(b => {
+        const t = b.replace(/^-\s*/, '');
+        const nums = [...t.matchAll(new RegExp(CITE_RE.source, 'g'))].flatMap(mk => [...mk[0].matchAll(/\d+/g)].map(n => n[0]));
+        return { raw: t, core: t.replace(new RegExp(CITE_RE.source, 'g'), '').trim(), nums };
+    });
+    return { name: (mt ? mt[1] : x.title) || 'Untitled', where: mt ? mt[2] : '', bullets };
+}
+// tr: English → Korean; the numbers then go at the end of each bullet
+function cardHtml(x, tr = null) {
+    const { name, where, bullets } = cardParts(x);
+    const ko = t => tr?.get(t) || t;
+    const li = b => (tr ? `${bulletHtml(ko(b.core))}${b.nums.length ? ` <span class="na_st_cite">${b.nums.map(n => `<button type="button" class="na_st_msg" data-msg="${n}">${n}</button>`).join('·')}</span>` : ''}` : bulletHtml(b.raw));
+    return `<div class="na_st_card"><div class="na_st_ctop">${x.a !== null ? `<span class="na_st_rg">#${x.a}–#${x.b}</span>` : ''}<b>${esc(ko(name))}</b></div>${where ? `<div class="na_st_where">${esc(ko(where))}</div>` : ''}<ul>${bullets.map(b => `<li>${li(b)}</li>`).join('')}</ul></div>`;
 }
 // #141 in an answer opens that message (not the &#39; that esc writes)
 const linkNums = h => h.replace(/(?<!&)#(\d+)(?!\d|;)/g, (_, n) => `<button type="button" class="na_st_msg" data-msg="${n}">#${n}</button>`);
@@ -311,6 +324,8 @@ export async function openStudio() {
         </div>
       </div>`);
     const archLang = archiveLang(getMeta().text);
+    // 한국어로: answers shown in Korean (this window only; the archive gets the English)
+    const koOn = new Set(), koBusy = new Set(), koMap = new Map();
     const draw = ({ restore } = {}) => {
         const m2 = getMeta(), s = sessionOf(m2);
         if (!s) return;
@@ -347,7 +362,9 @@ export async function openStudio() {
                 ...(t.kept?.length ? [`<span class="na_st_tag">확정한 ${esc(t.kept.join(', '))}는 안 바꿈</span>`] : []),
             ].join('');
             const locks = mine.map(sk => `<button type="button" class="na_st_lk${locked.has(sk) ? ' on' : ''}" data-k="${sk}">${svgA(ICO.lock, 11, 2.6)}${mine.length > 1 ? `장면 ${sk + 1} ` : ''}${locked.has(sk) ? '확정됨' : '확정'}</button>`).join('');
-            return `<div class="na_st_bub">${blocks.map(cardHtml).join('<hr>')}<div class="na_st_tags">${tags}<span class="na_st_lks">${locks}</span></div></div>`;
+            const ko = koOn.has(i);
+            const koBtn = `<button type="button" class="na_st_ko${ko ? ' on' : ''}" data-i="${i}">${koBusy.has(i) ? '번역하는 중…' : ko ? '영어로' : '한국어로'}</button>`;
+            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st_tags">${tags}<span class="na_st_lks">${koBtn}${locks}</span></div></div>`;
         }).join('') + (busy ? '<div class="na_st_bub na_st_typing"><i></i><i></i><i></i><small>쓰는 중 · 이 탭에 있어야 받아요</small></div>' : '');
         const $log = $root.find('.na_st_log');
         const atEnd = $log[0] ? $log[0].scrollHeight - $log[0].scrollTop - $log[0].clientHeight < 80 : true;
@@ -417,6 +434,21 @@ export async function openStudio() {
         await addToNote(t.text);
     });
     $root.find('.na_st_note').on('click', () => { $menu.prop('hidden', true); openWorkNote(); });
+    $root.on('click', '.na_st_ko', async function () {
+        const i = Number(this.dataset.i), t = sessionOf(getMeta())?.turns[i];
+        if (!t || koBusy.has(i)) return;
+        if (koOn.has(i)) { koOn.delete(i); return draw(); }
+        const lines = [...new Set(answerBlocks(t.text).flatMap(x => { const p = cardParts(x); return [p.name, p.where, ...p.bullets.map(b => b.core)]; }).map(l => l.trim()).filter(trLineOk))];
+        koBusy.add(i); draw();
+        try {
+            const ko = await translateLines(lines);
+            lines.forEach((l, k) => { if (ko[k]) koMap.set(l, ko[k]); });
+            koOn.add(i);
+        } catch (e) {
+            console.error('[NarrativeArchive] studio translate', e);
+            toastr.error(String(e?.message || e), '번역');
+        } finally { koBusy.delete(i); draw(); }
+    });
     $root.on('click', '.na_st_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
     $root.find('.na_st_reset').on('click', async () => {
         $menu.prop('hidden', true);
