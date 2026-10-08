@@ -5,7 +5,7 @@ import { openAppend } from './append.js';
 import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { driftHtml } from './drift.js';
 import { buildExtract, cleanMessage, formatExtract, guessEndNumber } from './extract.js';
-import { LANG_NAME, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressPrompt, dropReproduced, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
+import { LANG_NAME, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressPrompt, dropReproduced, eventsNote, eventsSystem, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, trimEnd } from './sections.js';
 import { openSource } from './source.js';
 import { refreshStatus } from './status.js';
@@ -135,15 +135,15 @@ export function chunkItems(items) {
 // The draft model compresses items part by part. Each part sees the archive plus what the parts before it wrote
 // (their last section as the format sample, their STATE · OPEN as the current one). Returns the joined answer;
 // on a failure partway, what was done so far and where it stopped.
-export async function draftCompress({ m, g, p, items, onStep = () => {}, grade = false, memo = '' }) {
-    const parts = chunkItems(items);
+export async function draftCompress({ m, g, p, items, onStep = () => {}, grade = false, memo = '', events = '' }) {
+    const parts = events ? [items] : chunkItems(items);
     const acc = [];
     let tail = '', doneTo = null, error = null, dropped = 0;
     const grades = [];
     for (const [k, part] of parts.entries()) {
         const from = part[0].i, to = part[part.length - 1].i;
         onStep(k, parts.length, from, to);
-        const raw = formatExtract(part, g);
+        const raw = events || formatExtract(part, g);
         const shadow = acc.length ? `${m.text}\n\n${acc.join('\n\n')}` : m.text;
         const state = tail || splitTail(m.text)[1].trim() || '(없음)';
         const prompt = compressPrompt(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(shadow), state, archive: shadow }, { ...m, text: shadow }, memo,
@@ -169,12 +169,103 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
         if (t.trim()) tail = t.trim();
         doneTo = to;
         if (grade) {
-            try { grades.push({ from, to, text: String(await askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${out}`, { system: AI_SYS_GRADE, maxTokens: 2500 }) || '').trim() }); }
+            try { grades.push({ from, to, text: String(await askAI(`[RAW LOG]\n${events ? formatExtract(part, g) : raw}\n\n[SUMMARY]\n${out}`, { system: AI_SYS_GRADE, maxTokens: 2500 }) || '').trim() }); }
             catch (e) { grades.push({ from, to, text: String(e?.message || e), error: true }); }
         }
     }
     const text = acc.length ? `${acc.join('\n\n')}${tail ? `\n\n---\n${tail}` : ''}` : '';
     return { text, dropped, parts: parts.length, done: error ? parts.findIndex(x => x[x.length - 1].i === doneTo) + 1 : parts.length, doneTo, error, grades };
+}
+
+// 2단계 압축: step 1 (정리 모델) writes one line per message, a few messages at a time, marking re-tellings;
+// step 2 (초안 모델) writes the sections from that list in one request. 'raw' = the old way, the raw log itself.
+export const COMPRESS_MODES = { events: '2단계', raw: '원문 그대로' };
+export const compressMode = () => (globalSettings().compressMode === 'raw' ? 'raw' : 'events');
+export const EVENTS_MODELS = { ai: 'AI 기능 모델', dr: '초안 모델' };
+export const eventsModel = () => (globalSettings().eventsModel === 'dr' ? 'dr' : 'ai');
+export const evLabel = () => (eventsModel() === 'dr' ? drLabel() : aiLabel());
+const askEvents = (prompt, system) => (eventsModel() === 'dr' ? askDraft(prompt, { system, maxTokens: 8000 }) : askAI(prompt, { system, maxTokens: 8000 }));
+// a few messages per request, so each one gets read
+export function eventBatches(items, n = 15, cap = 12000) {
+    const out = [];
+    let cur = [], tok = 0;
+    for (const x of items) {
+        const t = estTok(x.text) + 8;
+        if (cur.length && (cur.length >= n || tok + t > cap)) { out.push(cur); cur = []; tok = 0; }
+        cur.push(x); tok += t;
+    }
+    if (cur.length) out.push(cur);
+    return out;
+}
+const normQ = s => String(s).replace(/[“”„«»「」『』"]/g, '').replace(/\s+/g, ' ').trim();
+// "[58] = #57; Mara …" + '  "Then give me a reason."' → entries by number; quotes kept only when the message has them
+export function parseEvents(out, batch) {
+    const want = new Map(batch.map(x => [x.i, x]));
+    const got = new Map();
+    let cur = null;
+    for (const line of String(out || '').split('\n')) {
+        const h = line.match(/^\s*\[#?(\d+)\]\s*(.*)$/);
+        if (h) { const n = Number(h[1]); cur = want.has(n) ? { n, text: h[2].trim(), quotes: [], badQ: 0 } : null; if (cur) got.set(n, cur); continue; }
+        const q = line.match(/^\s+["“「『](.*)["”」』]\s*$/);
+        if (q && cur) {
+            if (normQ(q[1]) && normQ(want.get(cur.n).text).includes(normQ(q[1]))) cur.quotes.push(q[1].trim());
+            else cur.badQ++;
+        }
+    }
+    return got;
+}
+// entries → the list step 2 reads: re-tellings and empty messages left out (a re-telling's new part and quotes stay)
+export function eventLines(entries) {
+    const lines = [];
+    let recaps = 0, empty = 0;
+    for (const e of entries) {
+        let text = e.text;
+        if (/^[—–-]?\s*$/.test(text) || /^[—–-]+$/.test(text)) { if (!e.quotes.length) { empty++; continue; } text = ''; }
+        const rc = text.match(/^=\s*#?(\d+)\s*(?:[;,:]\s*(.*))?$/);
+        if (rc) {
+            if (!rc[2]?.trim() && !e.quotes.length) { recaps++; continue; }
+            text = rc[2]?.trim() || `(same moment as #${rc[1]})`;
+        }
+        lines.push(`[${e.n}] ${text || '(no new event)'}`, ...e.quotes.map(q => `  "${q}"`));
+    }
+    return { text: lines.join('\n'), recaps, empty };
+}
+export async function eventList({ m, g, items, onStep = () => {} }) {
+    const batches = eventBatches(items);
+    const system = eventsSystem(LANG_NAME[archiveLang(m.text)]);
+    const all = [];
+    let earlier = '', badQ = 0, missing = [];
+    for (const [k, b] of batches.entries()) {
+        onStep(k, batches.length, b[0].i, b[b.length - 1].i);
+        const ask = async (part, before) => parseEvents(await askEvents(`EARLIER LINES:\n${before || '(none — this is the start)'}\n\nMESSAGES:\n${formatExtract(part, g)}`, system), part);
+        const got = await ask(b, earlier);
+        // a message the model skipped: asked for once more on its own (with what this batch has so far), then passed on as it is
+        const skip = b.filter(x => !got.has(x.i));
+        if (skip.length) {
+            const so = [earlier, ...[...got.values()].sort((x, y) => x.n - y.n).map(e => `[${e.n}] ${e.text}`)].filter(Boolean).join('\n');
+            try { for (const [n, e] of await ask(skip, so)) got.set(n, e); } catch { /* keep what we have */ }
+        }
+        for (const x of b) {
+            const e = got.get(x.i);
+            if (e) { all.push(e); badQ += e.badQ; continue; }
+            missing.push(x.i);
+            all.push({ n: x.i, text: `(not condensed) ${x.name}: ${x.text}`, quotes: [], badQ: 0 });
+        }
+        earlier = all.slice(-15).map(e => `[${e.n}] ${e.text}`).join('\n');
+    }
+    const { text, recaps, empty } = eventLines(all);
+    return { text, recaps, empty, badQ, missing, n: items.length, batches: batches.length };
+}
+// the one entry for both buttons: 2단계 by default, the raw log when 압축 → 설정 says so
+export async function compressDraft(args) {
+    if (compressMode() === 'raw') return draftCompress(args);
+    const { m, g, items, onStep = () => {} } = args;
+    let ev;
+    try { ev = await eventList({ m, g, items, onStep: (k, total, a, b) => onStep(k, total, a, b, 'events') }); }
+    catch (e) { return { text: '', dropped: 0, parts: 1, done: 0, doneTo: null, error: e, grades: [] }; }
+    onStep(0, 1, items[0].i, items[items.length - 1].i, 'sections');
+    const r = await draftCompress({ ...args, onStep: () => {}, events: eventsNote(items[0].i, items[items.length - 1].i) + ev.text });
+    return { ...r, events: ev };
 }
 
 // several parts' grades in one box: "#0–#40" headings above each part's lines
@@ -207,7 +298,8 @@ export async function quickCompress() {
     if (!raw) return toastr.info('이 범위에 메시지가 없어요.', '한 번에 압축');
     const p = g.prompts.find(x => x.id === g.wizPrompt) || activePrompt(g);
     const au = auOf(m);
-    const n = chunkItems(items).length;
+    const two = compressMode() === 'events';
+    const n = two ? eventBatches(items).length : chunkItems(items).length;
     const ce = compressEffort();
     // the 채점 box lives in the confirm dialog; its state is remembered as soon as it changes
     if (!quickBound) {
@@ -216,15 +308,18 @@ export async function quickCompress() {
         $(document).on('input', '.na_qc_memo', function () { quickMemo = this.value; });
     }
     quickMemo = '';
-    if (!await confirm('한 번에 압축', `<b>#${from} – #${to}</b> · 메시지 ${items.length}개 · 원문 약 ${fmt(estTok(raw))} 토큰${to < last ? `<br><small>마지막 ${last - to}개(#${to + 1}–#${last})는 지금 장면이라 남겨요 · 압축 → 설정 → 숨길 때 남길 메시지</small>` : ''}${n > 1 ? `<br><b>${n}번에 나눠</b> 보내요 · 한 번에 약 ${fmt(chunkTok())} 토큰씩, 앞 조각에 이어서` : `<br>한 번에 보내요${estTok(raw) > 60000 ? ' · 원문이 길어서 중간을 훑을 수 있어요 (압축 → 설정 → 나눠 보내기)' : ''}`}<br>초안 모델(${esc(drLabel())})이 요약하면 <b>아카이브에 추가</b> 창이 떠요.<br><small>지시문: ${esc(p.name)} · 생각: ${ce === 'conn' ? '연결 설정' : { high: '높게', medium: '보통', low: '낮게' }[ce] || ce}</small>${au.on ? `<br><small>AU 켜짐 · 요약이 본편 뒤 <b>${esc(au.name)}</b> 묶음으로 이어져요</small>` : ''}
+    if (!await confirm('한 번에 압축', `<b>#${from} – #${to}</b> · 메시지 ${items.length}개 · 원문 약 ${fmt(estTok(raw))} 토큰${to < last ? `<br><small>마지막 ${last - to}개(#${to + 1}–#${last})는 지금 장면이라 남겨요 · 압축 → 설정 → 숨길 때 남길 메시지</small>` : ''}${two ? `<br><b>1단계</b> 정리: ${esc(evLabel())}가 메시지 15개씩 ${n}번 · 메시지마다 한 줄, 되짚기는 빼요<br><b>2단계</b> 요약: 초안 모델(${esc(drLabel())})이 정리한 목록으로 한 번에 써요` : `${n > 1 ? `<br><b>${n}번에 나눠</b> 보내요 · 한 번에 약 ${fmt(chunkTok())} 토큰씩, 앞 조각에 이어서` : `<br>한 번에 보내요${estTok(raw) > 60000 ? ' · 원문이 길어서 중간을 훑을 수 있어요 (압축 → 설정 → 나눠 보내기)' : ''}`}<br>초안 모델(${esc(drLabel())})이 요약해요`}<br>끝나면 <b>아카이브에 추가</b> 창이 떠요.<br><small>지시문: ${esc(p.name)} · 생각: ${ce === 'conn' ? '연결 설정' : { high: '높게', medium: '보통', low: '낮게' }[ce] || ce}</small>${au.on ? `<br><small>AU 켜짐 · 요약이 본편 뒤 <b>${esc(au.name)}</b> 묶음으로 이어져요</small>` : ''}
         <textarea class="text_pole na_qc_memo" rows="2" placeholder="이번 압축 메모 (선택) · 예: #40–#140은 정사 파트, 관계 변화만 한두 줄로. 세트는 끝난 뒤에 들어왔어"></textarea>
         <label class="checkbox_label na_qc_gradebox"><input type="checkbox" class="na_qc_grade" ${g.quickGrade ? 'checked' : ''}><span>채점도 같이 <small>· AI 기능 모델(${esc(aiLabel())})이 원문과 대조해 지어낸 것·빠진 것·틀린 번호를 찾아요 (비용 추가)</small></span></label>`)) return;
     quickBusy = true;
     const toast = toastr.info(`#${from}–#${to} 요약하는 중… 창을 닫아도 돼요`, '한 번에 압축', { timeOut: 0, extendedTimeOut: 0, tapToDismiss: false });
     let r;
     try {
-        r = await draftCompress({ m, g, p, items, grade: !!globalSettings().quickGrade, memo: quickMemo,
-            onStep: (k, total, a, b) => { if (total > 1) $(toast).find('.toast-message').text(`#${a}–#${b} 요약하는 중… (${k + 1}/${total}) 창을 닫아도 돼요`); } });
+        r = await compressDraft({ m, g, p, items, grade: !!globalSettings().quickGrade, memo: quickMemo,
+            onStep: (k, total, a, b, stage) => {
+                const msg = stage === 'events' ? `1단계 정리 #${a}–#${b} (${k + 1}/${total})` : stage === 'sections' ? `2단계 섹션 쓰는 중 #${a}–#${b}` : total > 1 ? `#${a}–#${b} 요약하는 중… (${k + 1}/${total})` : '';
+                if (msg) $(toast).find('.toast-message').text(`${msg} · 창을 닫아도 돼요`);
+            } });
     } finally { quickBusy = false; toastr.clear(toast); }
     if (r.error) {
         console.error('[NarrativeArchive] quick compress', r.error);
@@ -238,7 +333,7 @@ export async function quickCompress() {
     m.lastExport = { from, to: upto, at: Date.now(), how: 'draft' };
     await saveMeta();
     refreshStatus();
-    openAppend({ text, end: guessEndNumber(text) ?? upto, expectTo: upto, ...joinGrades(r.grades) });
+    openAppend({ text, end: guessEndNumber(text) ?? upto, expectTo: upto, events: r.events, ...joinGrades(r.grades) });
 }
 
 export async function openWizard() {
@@ -367,8 +462,11 @@ export async function openWizard() {
         const pid = $root.find('.na_wz_prompt').val();
         const p = g.prompts.find(x => x.id === pid) || activePrompt(g);
         const $b = $(this);
-        const r = await withSpinner($b, '쓰는 중… 창을 닫지 마세요', () => draftCompress({ m, g, p, items,
-            onStep: (k, total) => { if (total > 1) $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> 쓰는 중… ${k + 1}/${total}`); } }));
+        const r = await withSpinner($b, '쓰는 중… 창을 닫지 마세요', () => compressDraft({ m, g, p, items,
+            onStep: (k, total, a, b, stage) => {
+                const msg = stage === 'events' ? `1단계 정리 ${k + 1}/${total}` : stage === 'sections' ? '2단계 섹션 쓰는 중' : total > 1 ? `쓰는 중… ${k + 1}/${total}` : '';
+                if (msg) $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> ${msg}`);
+            } }));
         if (!r) return;
         if (r.error) toastr.error(String(r.error?.message || r.error), r.doneTo === null ? '초안 모델 실패' : `${r.done}/${r.parts}까지 하고 멈췄어요 · #${r.doneTo}까지만 채웠어요`);
         if (!r.text) return;

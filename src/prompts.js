@@ -216,6 +216,42 @@ export function recentSections(text, n = 3) {
     const secs = parseSections(t).filter(x => !x.group && RANGE_HEAD.test(x.title)).slice(-n);
     return secs.length ? secs.map(x => `## ${x.title.replace(/^#+\s*/, '')}`).join('\n') : '(없음)';
 }
+// 2단계 압축, step 1: the raw log → one line per message, re-tellings marked, so step 2 never meets a moment twice
+export const eventsSystem = lang => `GOAL
+Turn a stretch of role-play messages into an event list, one entry per message, so a later writer can summarize the stretch without reading it. Record only what is new in each message; mark a message that only re-tells a moment already recorded.
+
+YOU GET
+- EARLIER LINES: your entries for the messages just before these. Context only; do not repeat them.
+- MESSAGES: each starts with [number] and the speaker. The bot plays every non-user character under one name tag; tell who speaks or acts from the content. A private-thought tag holds thoughts, not speech. Status windows, trackers, planning blocks and OOC talk are not events; take only the date and place from them.
+
+STEPS
+1. For each message ask: what happens here that has not happened before — an action, a decision, a reveal, a line that changes something, a move in place or time?
+2. Write it as one short line: who did what to whom, and the visible result. Name people. No description; a feeling only when the feeling is the event (a confession, a refusal).
+3. If the message re-tells, re-describes or reacts to a moment already recorded (a reply re-telling the user's action from the other side, a recap at the start of a message), write "= #N" with the number where it was first recorded, then "; " and only what is new, if anything.
+4. If nothing happens (small talk, scenery, waiting), write "—".
+5. In a sex scene, record only new steps in plain words (consent asked or given, a request to stop, a first, climax, the end); no description. A climax re-told in the next message is "= #N".
+6. Quotes: at most one spoken line per message, only one that changes a relationship or defines a character, copied exactly in its original language, on its own line starting with two spaces and a quotation mark. Never compose or paraphrase a quote.
+7. When the date or place changes, start the line with "@ date, place —".
+
+EXAMPLE
+MESSAGES:
+[57] Ren: Ren grabs Mara's wrist before she reaches the door. "Don't."
+[58] Bot: Mara freezes as Ren's hand closes around her wrist… She doesn't pull away. "Then give me a reason."
+[59] Ren: Ren says nothing for a long time.
+[60] Bot: Ivo knocks: the north road is closed.
+
+Answer:
+[57] Ren stopped Mara at the door by grabbing her wrist.
+  "Don't."
+[58] = #57; Mara did not pull away and asked for a reason to stay.
+  "Then give me a reason."
+[59] —
+[60] Ivo brought word that the north road was closed.
+
+OUTPUT
+One entry per message, in order, no number skipped. Write in ${lang || 'the language most of the messages are in'}; quotes stay in their original language. No commentary.`;
+// step 2: the list stands where the raw log was; this note goes on top of it
+export const eventsNote = (from, to) => `(The raw log #${from}–#${to} was condensed into an event list before it reached you: one entry per message number, in order. Messages that only re-told an earlier moment, or where nothing happened, are left out. A line in quotation marks under an entry is that message's words, verbatim. Treat this list as the raw log.)\n\n`;
 // How big the answer should be, as numbers: sections for this many messages, and, when a long stretch goes in parts,
 // that every length target (the user's note included) is for the whole stretch, so each part takes its share
 export function sizeBlock({ k = 0, n = 1, count, total = count, from, to, partFrom = from, partTo = to }) {
