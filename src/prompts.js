@@ -63,6 +63,7 @@ Bullets
 Dialogue
 - Quotes are part of the memory, not decoration. Most bullets carry one: the line from the raw log the next scene would most need word for word: a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. At most two in a bullet; tell the rest in your own words.
 - A quote is a line that actually appears in the raw log (translated when the log is in another language), faithful to the original, including whether it is a question: if the original is a statement, do not add a question mark. Never invent or paraphrase a line and present it as a quote. Never leave a quote standing alone; attach the character's reaction to it.
+- Keep a quote short: one sentence, under about 20 words. If the line runs longer, quote the part that matters; never reword it.
 
 Special content
 - Sex is recorded only as relationship beats: who, how consent moved, any request to stop and what happened, whether it was a first, what was said that would still matter outside the bed, and what changed afterward. No description of acts, positions, anatomy or sensations, even if the user's own turn describes them. A line said in bed is quoted only if it would still matter said fully clothed at a table (a confession, a promise, a wish, a refusal); never a line about the act itself. Length follows what changed, not how long the scene ran: a long scene in which little turns gets a bullet or two; one in which trust, a boundary or a confession shifts keeps each of those beats.
@@ -104,9 +105,9 @@ PLOT:
 Draft the stretch, then revise it once and output only the revised version:
 1. Delete every bullet that fails the test in 3.
 2. Merge bullets that share one cause or one outcome.
-3. Cut staging that survived the draft (see 3).
+3. Cut staging that survived the draft: how a line was said (a voice, hands, a laugh), where someone stood, and what someone "knew" or "meant" unless it is written as their reading.
 4. Check that every quote is a line from the raw log and earns its place, and that every sentence has its message number.
-5. Count each section's bullets; more than 6 means merge or split.
+5. Count each section's bullets (more than 6 means merge or split), its words (over about 250 means cut) and its em dashes (more than one means rewrite).
 6. Check every bullet that touches sex against the sex rule; cut what it does not allow.
 
 # 8. STATE and OPEN changes
@@ -144,7 +145,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8', 'k678s0', 'lbvxyj', '1cw54yj']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8', 'k678s0', 'lbvxyj', '1cw54yj', '936ejv']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
