@@ -162,7 +162,8 @@ function turnsFor(st) {
             return { role: 'user', content: `<raw_log range="#${sc.a}–#${sc.b}">\n${raw}\n</raw_log>\n\n${ask}${t.note ? `\n\nThe user's note for this scene: ${t.note}` : ''}` };
         }
         if (t.kind === 'write') { const sc = st.scenes[t.scene]; return { role: 'user', content: `Write the section for #${sc.a}–#${sc.b} now, following the outline as the user corrected it.${t.note ? `\n\nThe user's note: ${t.note}` : ''}` }; }
-        if (t.kind === 'state') return { role: 'user', content: `${STATE_ASK}${t.note ? `\n\nThe user's note: ${t.note}` : ''}` };
+        // the blocks go with the request itself: the copy in the system part is far back by now, and some relays drop it
+        if (t.kind === 'state') return { role: 'user', content: `<current_state>\n${splitTail(getMeta().text)[1].trim() || '(none)'}\n</current_state>\n\n${STATE_ASK}${t.note ? `\n\nThe user's note: ${t.note}` : ''}` };
         return { role: 'user', content: t.text };
     });
     // approved sections: said on the newest request, so it is never far back
