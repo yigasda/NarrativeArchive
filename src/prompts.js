@@ -15,7 +15,7 @@ Output exactly these parts, in this order, with no greeting, explanation or comm
 
 - Language: write everything in the archive's language and format, even when the raw log is in another language. Translate dialogue too; keep a word or line in its original language only where the archive already does.
 - Only new material, only from the raw log. Never reproduce, rewrite, shorten, "improve", recap or continue anything already in the archive; nothing before #{{from}} belongs in your output. STATE only tells you what is already known: no event, line or detail from it goes into a section unless the raw log shows it happening again.
-- Every part must be present and complete, and the last bullet of every block ends in a full sentence. If you run long, merge bullets or cut lower-priority detail — never stop mid-sentence, and never drop the change lists to make room.
+- Every part must be present and complete, and the last bullet of every block ends in a full sentence. If you run long, merge bullets or cut lower-priority detail; never stop mid-sentence, and never drop the change lists to make room.
 
 # 2. Reading the raw log
 - The format is \`[N] Name:\`. When one bot plays several characters (NPCs included), they all carry its tag; tell the speaker from the content. A private-thought tag holds that character's thoughts, not spoken lines.
@@ -24,7 +24,7 @@ Output exactly these parts, in this order, with no greeting, explanation or comm
 - Bot errors (contradictions with earlier messages) are not canon. Before stating that something exists or does not exist, confirm it in the raw log.
 
 # 3. What to keep
-You are writing a memory, not a transcript. The bot that reads the archive needs to know what happened, why, and what it changed — not who said what in which order.
+You are writing a memory, not a transcript. The bot that reads the archive needs to know what happened, why, and what it changed, not who said what in which order.
 - The test for every line: "If the bot read only the archive and then wrote the next scene, would something go wrong or feel unmotivated without this line?" Being in the raw log is not a reason to include something.
 - Keep: chains of cause and effect · lines that change a relationship · what a character chose NOT to do (evidence of restraint) · the concrete action that shows a standing trait at work · a question together with its answer, when the answer matters later (an answer alone reads as unmotivated).
 - Cut: movement and positioning, gestures, props, scenery, temperatures and staging. Anxiety or agitation gets one word.
@@ -45,12 +45,13 @@ Sections
 - The date and place come from the tracker and narration. A tracker date that does not fit (a season that does not match the month, a date that goes backward) is a model error; ignore it. If a large time skip happens without a record, note it in the header (e.g. "some five months later").
 
 Bullets
-- Bullets only, no paragraphs. One bullet = one turn of the scene: what happened, what caused it, and what it changed. A bullet may cover many messages; never one bullet per message, and never a conversation reported turn by turn ("He asked… She replied… He added…") — collapse an exchange into what it revealed, decided or broke.
-- 3–6 bullets per section, whatever its message count — never more than 6; rarely more than about 250 words. A stretch that truly needs more is two chapters: split it where it turns.
+- Bullets only, no paragraphs. One bullet = one turn of the scene: what happened, what caused it, and what it changed. A bullet may cover many messages; never one bullet per message, and never a conversation reported turn by turn ("He asked… She replied… He added…"). Collapse an exchange into what it revealed, decided or broke.
+- 3–6 bullets per section, whatever its message count, never more than 6; rarely more than about 250 words. A stretch that truly needs more is two chapters: split it where it turns.
 - Do not say the same thing twice. When you add a sentence, check the bullets before and after it for the same content.
+- Em dashes sparingly: at most one in a section's bullets. Otherwise use a comma, a colon or a new sentence.
 
 Dialogue
-- Quotes are part of the memory, not decoration. Most bullets carry one: the line from the raw log the next scene would most need word for word — a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. At most two in a bullet; tell the rest in your own words.
+- Quotes are part of the memory, not decoration. Most bullets carry one: the line from the raw log the next scene would most need word for word: a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. At most two in a bullet; tell the rest in your own words.
 - A quote is a line that actually appears in the raw log (translated when the log is in another language), faithful to the original, including whether it is a question: if the original is a statement, do not add a question mark. Never invent or paraphrase a line and present it as a quote. Never leave a quote standing alone; attach the character's reaction to it.
 
 Special content
@@ -60,7 +61,7 @@ Special content
 - When one of this RP's recurring devices returns (a phrase, an object, a song, a name, a ritual), keep the event and the line in which it was used. Do not explain the device.
 
 Titles
-- Like a book's table of contents: short and concrete — they name the scene, they do not summarize it. No semicolons, no "X does this; Y does that." Vary the shape; do not start every title with "The":
+- Like a book's table of contents: short and concrete. They name the scene; they do not summarize it. No semicolons, no "X does this; Y does that." Vary the shape; do not start every title with "The":
   · a place or object: The broken plank · Varo's market
   · two things joined: The bridge, the debt · Bread, and the oath he broke
   · one short plain sentence: Mara keeps the knife · The road closes
@@ -104,11 +105,11 @@ DROP ## Group :: - a thread this stretch closed, copied exactly
 \`\`\`
 - \`## Heading\` / \`## Group\` is the one the line sits under, spelled exactly as in [CURRENT STATE · OPEN]; leave out \`## Group ::\` when OPEN has no groups. Do not invent headings; a new fact goes under the heading it belongs to. A list with nothing in it is \`(none)\`.
 - EDIT a STATE line only when this stretch makes it untrue or outdated, so an old behavior a later arc changed does not stay in the present tense. Change only what changed and keep the rest of the line word for word; never shorten a line to save space, never merge lines.
-- DROP a STATE line only when the story itself has overturned it. What a character realized or resolved not to do stays until the story overturns it. Keep safety lines that lock the current state (e.g. "memories fully restored since #n" — it stops the bot from mistaking an old arc for the present).
-- New and edited STATE lines: per character + relationships + current life — only the changes and tendencies that PLOT alone does not capture, briefly; do not restate events already in the sections. One line for a core principle the bot is likely to confuse is allowed. Scope principles narrowly to prevent over-application ("no commands" ✗, which could change even how he talks → "no longer dictates her choices or movements" ✓); use "tends to" or "since #n" instead of "now" or "currently."
+- DROP a STATE line only when the story itself has overturned it. What a character realized or resolved not to do stays until the story overturns it. Keep safety lines that lock the current state (e.g. "memories fully restored since #n": it stops the bot from mistaking an old arc for the present).
+- New and edited STATE lines: per character + relationships + current life. Only the changes and tendencies that PLOT alone does not capture, briefly; do not restate events already in the sections. One line for a core principle the bot is likely to confuse is allowed. Scope principles narrowly to prevent over-application ("no commands" ✗, which could change even how he talks → "no longer dictates her choices or movements" ✓); use "tends to" or "since #n" instead of "now" or "currently."
 - OPEN: drop only threads this stretch closed. Keep new threads short; do not prescribe future actions.
 
-[CURRENT STATE · OPEN — read it, list your changes to it (8); do not output it]
+[CURRENT STATE · OPEN: read it, list your changes to it (8); do not output it]
 {{state}}
 
 [RAW LOG #{{from}}–#{{to}}]
@@ -129,7 +130,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -230,11 +231,11 @@ What counts as an event
    Set (thinks): …
    Horus took it as …
 7. Holding back, when the message makes it visible: a refusal, a stopped hand, a chosen silence, a promise kept under pressure. Write what was not done.
-8. Words are not facts. When someone tells, claims, suspects or lies, keep it theirs: "Ivo told Ren the bridge was safe", "Mara suspects Ivo" — never "the bridge was safe". If a later message proves or breaks it, write that when it happens.
-9. A sex scene: only its steps, one plain line each — consent asked or given, a request to stop, a first, climax, the end. No acts, positions, bodies or sensations. A climax re-told in the next message is "= #N".
+8. Words are not facts. When someone tells, claims, suspects or lies, keep it theirs: "Ivo told Ren the bridge was safe", "Mara suspects Ivo", never "the bridge was safe". If a later message proves or breaks it, write that when it happens.
+9. A sex scene: only its steps, one plain line each: consent asked or given, a request to stop, a first, climax, the end. No acts, positions, bodies or sensations. A climax re-told in the next message is "= #N".
 
 Quotes
-10. Copy the spoken lines a later writer would most want word for word — a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. At most two per message, exactly as written, in the original language, each on its own line starting with two spaces and a quotation mark. Never compose or paraphrase a quote. If a message has no such line, give none.
+10. Copy the spoken lines a later writer would most want word for word: a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. At most two per message, exactly as written, in the original language, each on its own line starting with two spaces and a quotation mark. Never compose or paraphrase a quote. If a message has no such line, give none.
 11. Inside a sex scene, quote a line only if it would still matter said fully clothed at a table (a confession, a promise, a wish, a refusal, a line that defines the relationship); never a line about the act itself (moans, directions, words about bodies).
 
 Marks
@@ -262,7 +263,31 @@ OUTPUT
 One entry per message, in order, no number skipped. Every entry line starts with [number]. Quote lines start with two spaces and a quotation mark. Nothing else: no headers, no commentary.
 Write in ${lang || 'the language most of the messages are in'}; quotes stay in their original language.`;
 // step 2: the list stands where the raw log was; this note goes on top of it
-export const eventsNote = () => `The raw log has been turned into an event list, one entry per message. Lines marked (thinks) are private thoughts or readings; write them as that character's, never as fact. Lines marked ★ are turning points; give them room and consider starting a section there. Lines starting with "= #N;" add only what is new to an earlier moment. Treat this list as the raw log. The list was made without your rules. It can carry sex acts and lines said inside them, and more quotes than a section needs; your rules still decide what stays. A sex scene comes down to its relationship beats; a line said in bed stays only if it would still matter said fully clothed at a table.\n\n`;
+export const eventsNote = () => `The raw log has been turned into an event list, one entry per message. Lines marked (thinks) are private thoughts or readings; write them as that character's, never as fact. Lines marked ★ are turning points; give them room and consider starting a section there. Lines starting with "= #N;" add only what is new to an earlier moment. Treat this list as the raw log. The list was made without your rules. It can carry sex acts and lines said inside them, and more quotes than a section needs; your rules still decide what stays. A sex scene comes down to its relationship beats; a line said in bed stays only if it would still matter said fully clothed at a table.
+
+The list has one entry per message; that is its shape, not yours. Collapse runs of entries into what they revealed, decided or broke. Never one sentence per entry, never "he said… she said…". Quotes under the entries are candidates in their original language: pick at most two per bullet, keep only the part that carries the turn, and translate it into the archive's language like any quote.
+
+LIST:
+[40] Ivo told Mara that Ren had paid her debt in secret.
+[41] Mara confronted Ren in the yard and asked if it was true.
+  "빚 갚은 거, 당신이에요?"
+[42] = #41; Ren went still, then admitted it.
+  "그래. 내가 했어."
+[43] Mara accused him of buying her the way the duke had tried to.
+  "결국 당신도 공작이랑 똑같네요. 돈으로 사람을 사고."
+[44] Ren (thinks): if he explains, she will hear an excuse; he said only that she owed him nothing.
+  "넌 나한테 빚진 거 없어."
+[45] ★ Mara tore up the receipt and walked out.
+
+✗ Mara asked Ren if he had paid the debt. Ren admitted it: "그래. 내가 했어." Mara accused him of being like the duke: "결국 당신도 공작이랑 똑같네요. 돈으로 사람을 사고." Ren said she owed him nothing: "넌 나한테 빚진 거 없어." Mara tore up the receipt.
+
+✓
+- When Ivo let slip that Ren had secretly paid her debt, Mara confronted him in the yard and he admitted it. She took it as being bought: "You're no different from the duke."
+- Ren was sure any explanation would sound like an excuse and said only, "You owe me nothing." She tore up the receipt and left.
+
+(End of the example. The real list follows.)
+
+`;
 // How big the answer should be, as numbers: sections for this many messages, and, when a long stretch goes in parts,
 // that every length target (the user's note included) is for the whole stretch, so each part takes its share
 export function sizeBlock({ k = 0, n = 1, count, total = count, from, to, partFrom = from, partTo = to }) {
