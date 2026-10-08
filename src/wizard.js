@@ -6,6 +6,7 @@ import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta, textHas
 import { driftHtml } from './drift.js';
 import { castNames } from './knowledge.js';
 import { hasChanges, resolveChanges } from './statechg.js';
+import { sceneChunks, sceneCompress, sceneModel, sceneModelLabel, sceneSize, stateModel } from './scenes.js';
 import { buildExtract, cleanMessage, formatExtract, guessEndNumber } from './extract.js';
 import { BASIC_PROMPT, LANG_NAME, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressPrompt, dropReproduced, eventsNote, eventsSystem, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, trimEnd } from './sections.js';
@@ -186,8 +187,8 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
 
 // 2단계 압축: step 1 (정리 모델) writes one line per message, a few messages at a time, marking re-tellings;
 // step 2 (초안 모델) writes the sections from that list in one request. 'raw' = the old way, the raw log itself.
-export const COMPRESS_MODES = { events: '2단계', raw: '원문 그대로' };
-export const compressMode = () => (globalSettings().compressMode === 'raw' ? 'raw' : 'events');
+export const COMPRESS_MODES = { scenes: '장면별', events: '2단계', raw: '원문 그대로' };
+export const compressMode = () => { const v = globalSettings().compressMode; return v === 'raw' || v === 'events' ? v : v === 'scenes' ? 'scenes' : 'events'; };
 export const EVENTS_MODELS = { ai: 'AI 기능 모델', dr: '초안 모델' };
 export const eventsModel = () => (globalSettings().eventsModel === 'dr' ? 'dr' : 'ai');
 export const evLabel = () => (eventsModel() === 'dr' ? drLabel() : aiLabel());
@@ -324,6 +325,7 @@ export function sectionsFromEvents(args, ev) {
 // reuse: a saved step-1 list for this exact range (same messages) is used instead of making a new one
 export async function compressDraft(args, { reuse = false } = {}) {
     if (compressMode() === 'raw') return draftCompress(args);
+    if (compressMode() === 'scenes') return sceneCompress(args);
     const { m, g, items, onStep = () => {} } = args;
     let ev = reuse ? savedEvents(m, items, g) : null;
     if (!ev) {
@@ -377,9 +379,9 @@ export async function quickCompress() {
     const p = g.prompts.find(x => x.id === g.wizPrompt) || activePrompt(g);
     const au = auOf(m);
     if (m.evProgress) { delete m.evProgress; await saveMeta(); } // left in the chat file by an older version
-    const two = compressMode() === 'events';
+    const mode = compressMode(), two = mode === 'events', scenes = mode === 'scenes';
     const saved = two ? savedEvents(m, items, g) : null;
-    const n = two ? eventBatches(items).length : chunkItems(items).length;
+    const n = two ? eventBatches(items).length : scenes ? sceneChunks(items).length : chunkItems(items).length;
     const ce = compressEffort();
     // the 채점 box lives in the confirm dialog; its state is remembered as soon as it changes
     if (!quickBound) {
@@ -396,6 +398,11 @@ export async function quickCompress() {
         ...(two ? [
             saved && quickReuse ? row('1단계 정리', '저장된 목록', esc(timeLabel(saved.at))) : row('1단계 정리', esc(short(evLabel())), `15개씩 ${n}번`),
             row('2단계 요약', esc(short(drLabel())), '한 번'),
+        ] : scenes ? [
+            row('장면', `${n}개`, `약 ${sceneSize()}개씩 · 장면 경계에서`),
+            row('섹션', esc(short(sceneModelLabel(sceneModel()))), `장면마다 · ${n}번`),
+            row('STATE', esc(short(sceneModelLabel(stateModel()))), '마지막에 한 번'),
+            ...(String(m.workNote || '').trim() ? [row('작업 노트', '있음', `약 ${fmt(estTok(m.workNote))} 토큰`)] : []),
         ] : [row('요약', esc(short(drLabel())), n > 1 ? `${n}번에 나눠 · 약 ${fmt(chunkTok())} 토큰씩` : '한 번에')]),
         row('지시문', esc(p.name), `생각 ${effort}${p.id === 'basic' && p.text !== BASIC_PROMPT ? ' · <span class="na_qc_warn">고친 버전이라 최신 기본 규칙이 안 들어가 있어요</span>' : ''}`),
         ...(au.on ? [row('AU', esc(au.name), '본편 뒤에 이어서')] : []),
@@ -407,7 +414,7 @@ export async function quickCompress() {
         ${!two && n <= 1 && estTok(raw) > 60000 ? '<small class="na_qc_note">원문이 길어서 중간을 훑을 수 있어요 · 압축 → 설정 → 나눠 보내기</small>' : ''}
         <textarea class="text_pole na_qc_memo" rows="2" placeholder="이번 압축 메모 (선택) · 예: #40–#140은 정사 파트, 관계 변화만 한두 줄로"></textarea>
         ${saved ? `<label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_reuse" checked><span>저장된 1단계 목록 쓰기<small>메시지가 그대로라 2단계만 다시 해요</small></span></label>` : ''}
-        <label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_grade" ${g.quickGrade ? 'checked' : ''}><span>채점도 같이<small>${esc(short(aiLabel()))}가 원문과 대조 · 비용 추가</small></span></label>
+        ${scenes ? '' : `<label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_grade" ${g.quickGrade ? 'checked' : ''}><span>채점도 같이<small>${esc(short(aiLabel()))}가 원문과 대조 · 비용 추가</small></span></label>`}
       </div>`)) return;
     quickBusy = true;
     const runMemo = quickMemo;
@@ -416,7 +423,8 @@ export async function quickCompress() {
     try {
         r = await (() => compressDraft({ m, g, p, items, grade: !!globalSettings().quickGrade, memo: runMemo,
             onStep: (k, total, a, b, stage) => {
-                const msg = stage === 'events' ? `1단계 정리 #${a}–#${b} (${k + 1}/${total})` : stage === 'sections' ? `2단계 섹션 쓰는 중 #${a}–#${b}` : total > 1 ? `#${a}–#${b} 요약하는 중… (${k + 1}/${total})` : '';
+                const msg = stage === 'events' ? `1단계 정리 #${a}–#${b} (${k + 1}/${total})` : stage === 'sections' ? `2단계 섹션 쓰는 중 #${a}–#${b}`
+                    : stage === 'scenes' ? `장면 ${k + 1}/${total} · #${a}–#${b} 쓰는 중` : stage === 'state' ? 'STATE·OPEN 바뀌는 것 정리 중' : total > 1 ? `#${a}–#${b} 요약하는 중… (${k + 1}/${total})` : '';
                 if (msg) $(toast).find('.toast-message').text(`${msg} · 이 탭에 있어야 끝까지 받아요 (다른 탭·앱으로 가면 끊길 수 있어요)`);
             } }, { reuse: quickReuse }))();
     } finally { quickBusy = false; toastr.clear(toast); }
