@@ -29,6 +29,7 @@ import { ICO_A, setUiTheme, svgA, uiTheme } from './theme.js';
 import { AI_SYS_TRANSLATE, askTranslator, glossaryEntries, openGlossary } from './translate.js';
 import { chatLabel, confirm, copyText, countTokens, download, esc, escRe, fmt, nowStamp, timeLabel } from './util.js';
 import { CHUNK_CHOICES, COMPRESS_MODES, EVENTS_MODELS, chunkTok, compressMode, eventsModel, openAuSettings, openWizard, quickCompress } from './wizard.js';
+import { openStudio, studioLabel } from './studio.js';
 import { DEFAULT_TRACKER_RE, SCENE_MODELS, SCENE_SIZES, openWorkNote, sceneModel, sceneSize, stateModel, trackerRe } from './scenes.js';
 import { openWorlds, worldBooks, worldIsOn } from './world.js';
 import { openXray } from './xray.js';
@@ -178,6 +179,7 @@ export function renderPanel() {
                   <div id="na_since"></div>
                   <button type="button" class="na_cp_wiz" id="na_open_wizard">${svgA('M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M15 9h0M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5', 22)}<span><b>압축 마법사</b><small>뽑기 → 복사 → 붙여넣기 → 채점 → 추가</small></span>${svgA(ICO_A.right, 18, 2.2)}</button>
                   <button type="button" class="na_cp_wiz na_cp_quick" id="na_quick_compress">${svgA(ICO_A.bolt, 22)}<span><b>한 번에 압축</b><small id="na_quick_sub">초안 모델로 요약 → 확인하고 추가</small></span>${svgA(ICO_A.right, 18, 2.2)}</button>
+                  <button type="button" class="na_cp_wiz na_cp_studio" id="na_open_studio">${svgA(ICO_A.chat, 22)}<span><b>압축 작업실</b><small id="na_studio_sub">장면마다 초안 모델과 대화하며 쓰기</small></span>${svgA(ICO_A.right, 18, 2.2)}</button>
                 </div>
                 <div class="na_cp_tiles">
                   <button type="button" class="na_cp_tile" id="na_apply_hide"><span class="na_cp_ico">${svgA('M17.9 17.9A10 10 0 0 1 12 20c-7 0-10-8-10-8a18 18 0 0 1 5.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 10 8 10 8a18 18 0 0 1-2.2 3.2M1 1l22 22', 17)}</span><b>숨기기 다시 적용</b><small>경계선 앞만 숨기고 뒤는 보이게</small></button>
@@ -802,6 +804,7 @@ export function bindPanel() {
     $('#na_open_extract').on('click', needChat(openExtract));
     $('#na_open_wizard').on('click', needChat(openWizard));
     $('#na_quick_compress').on('click', needChat(quickCompress));
+    $('#na_open_studio').on('click', needChat(() => openStudio()));
     $('#na_health').on('click', needChat(openHealth));
     $('#na_drift').on('click', needChat(openDrift));
     $('#na_know').on('click', needChat(openKnowledge));
@@ -1113,6 +1116,7 @@ export function syncPanel() {
         const au = auOf(m);
         $('#na_au_sub').text(au.on ? `켜짐 · 요약이 본편 뒤 ${au.name} 묶음으로 이어져요` : '본편 기억을 들고 온 채팅이면 켜요');
         $('#na_quick_sub').text(draftReady() ? `초안 모델(${drLabel()})로 요약 → 확인하고 추가${au.on ? ` · ${au.name}` : ''}` : '⚙ 설정 → AI · 번역 → 초안 모델을 정하면 쓸 수 있어요');
+        $('#na_studio_sub').text(draftReady() ? studioLabel() : '⚙ 설정 → AI · 번역 → 초안 모델을 정하면 쓸 수 있어요');
     }
     $('#na_boundary_row').toggleClass('na_disabled', !!m.track);
     {
