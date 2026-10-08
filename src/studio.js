@@ -289,6 +289,23 @@ async function send(turn, { onDone } = {}) {
     return true;
 }
 
+// every answer's sections in order, the way send() takes them in
+function rebuildSecs(st) {
+    let secs = [];
+    st.turns.forEach((t, i) => {
+        if (t.role !== 'assistant') return;
+        const u = st.turns[i - 1] || {};
+        if (t.scene !== undefined && st.scenes[t.scene]) {
+            const got = parseSceneAnswer(t.text, st.scenes[t.scene].a, st.scenes[t.scene].b);
+            if (got.length) secs = mergeSecs(secs, got);
+        } else if (u.kind !== 'scene') {
+            const got = answerBlocks(t.text).filter(x => x.a !== null && x.a >= st.from && x.b <= st.to && !t.kept?.includes(`#${x.a}–#${x.b}`));
+            if (got.length) secs = mergeSecs(secs, got);
+        }
+    });
+    return secs;
+}
+
 // 자동 진행: the next scene after each answer, then the change lists, until it is switched off or a request fails
 async function runAuto() {
     for (;;) {
@@ -342,6 +359,9 @@ export async function openStudio() {
     // a run that already went in is over
     if (st && (m.boundary ?? -1) >= st.to) { delete m.studio; await saveMeta(); st = null; }
     if (!st && !await setup()) return;
+    // sections read again from the answers, so a reading fix reaches answers that came in before it
+    st = sessionOf(getMeta());
+    if (st?.turns.length) { const re = rebuildSecs(st); if (JSON.stringify(re) !== JSON.stringify(st.secs)) { st.secs = re; await saveMeta(); } }
     let toAppend = false;
     const $root = $(`
       <div class="na_popup na_st">
