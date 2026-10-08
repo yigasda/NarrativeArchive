@@ -54,7 +54,22 @@ const STATE_ASK = `All scenes are written. Now list what they change in <current
 
 const chatKey = () => String(ctx().getCurrentChatId?.() || ctx().chatId || '');
 const short = l => String(l).replace(/^(커스텀|Vertex) · /, '');
-const SEND = 'M22 2L11 13M22 2l-7 20-4-9-9-4z';
+const ICO = {
+    book: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5zM8 7h8M8 11h6',
+    up: 'M12 19V5M5 12l7-7 7 7', down: 'M12 5v14M6 13l6 6 6-6', plus: 'M12 5v14M5 12h14',
+    lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+};
+// a section as a card: range, title, (date, place) under it, bullets with quotes marked and source numbers small
+function bulletHtml(b) {
+    return esc(b)
+        .replace(/\s*\((#\d+(?:\s*(?:[,–—~-]|and)\s*#?\d+)*)\)/g, (_, inner) => ` <span class="na_st_cite">${[...inner.matchAll(/\d+/g)].map(n => `<button type="button" class="na_st_msg" data-msg="${n[0]}">${n[0]}</button>`).join('·')}</span>`)
+        .replace(/(&quot;|“)(.*?)(&quot;|”)/g, '<span class="na_st_qt">$1$2$3</span>');
+}
+function cardHtml(x) {
+    const mt = String(x.title || '').match(/^(.*?)\s*\(([^()]*)\)\s*$/);
+    const name = (mt ? mt[1] : x.title) || 'Untitled', where = mt ? mt[2] : '';
+    return `<div class="na_st_card"><div class="na_st_ctop">${x.a !== null ? `<span class="na_st_rg">#${x.a}–#${x.b}</span>` : ''}<b>${esc(name)}</b></div>${where ? `<div class="na_st_where">${esc(where)}</div>` : ''}<ul>${x.bullets.map(b => `<li>${bulletHtml(b.replace(/^-\s*/, ''))}</li>`).join('')}</ul></div>`;
+}
 // #141 in an answer opens that message (not the &#39; that esc writes)
 const linkNums = h => h.replace(/(?<!&)#(\d+)(?!\d|;)/g, (_, n) => `<button type="button" class="na_st_msg" data-msg="${n}">#${n}</button>`);
 // corrections that come up again and again: one tap sends them
@@ -151,30 +166,31 @@ function checkBlocks(blocks, { scene = null, st, archLang }) {
         if (a !== scene.a || b !== scene.b) out.push(`번호를 장면에 맞췄어요 (답은 #${a}–#${b})`);
     }
     for (const x of blocks) {
-        const name = x.a !== null ? `#${x.a}–#${x.b}` : (x.title || '섹션');
+        // one section: its card already says which, so the tags go without the name
+        const name = blocks.length === 1 ? '' : x.a !== null ? `#${x.a}–#${x.b}` : (x.title || '섹션');
         const body = x.bullets.join('\n').replace(CITE_RE, '');
         const n = words(body.replace(/^- /gm, ''));
-        if (n > 250) out.push(`${name} · ${n}단어`);
+        if (n > 250) out.push(`${name ? `${name} · ` : ''}${n}단어`);
         const dash = (body.match(/—/g) || []).length;
-        if (dash > 1) out.push(`${name} · em대쉬 ${dash}개`);
-        if (x.bullets.length > 6) out.push(`${name} · 불릿 ${x.bullets.length}개`);
+        if (dash > 1) out.push(`${name ? `${name} · ` : ''}em대쉬 ${dash}개`);
+        if (x.bullets.length > 6) out.push(`${name ? `${name} · ` : ''}불릿 ${x.bullets.length}개`);
         if (x.a !== null) {
             const outside = [...new Set([...x.bullets.join('\n').matchAll(new RegExp(CITE_RE.source, 'g'))].flatMap(mk => [...mk[0].matchAll(/#?(\d+)/g)].map(y => Number(y[1]))).filter(k => k < x.a || k > x.b))];
-            if (outside.length) out.push(`${name} · 범위 밖 번호 ${outside.slice(0, 4).map(k => `#${k}`).join(', ')}`);
+            if (outside.length) out.push(`${name ? `${name} · ` : ''}범위 밖 번호 ${outside.slice(0, 4).map(k => `#${k}`).join(', ')}`);
         }
         let raw = null;
         for (const mt of body.matchAll(/"([^"\n]{2,})"|“([^”\n]{2,})”/g)) {
             const q = (mt[1] || mt[2]).trim();
             const head = q.split(/\s+/).slice(0, 5).join(' ');
             const qn = words(q);
-            if (qn > 20) out.push(`${name} · 긴 인용 ${qn}단어 "${head}…"`);
-            if (archLang === 'en' && HANGUL.test(q)) { out.push(`${name} · 한국어 대사 "${head}…"`); continue; }
+            if (qn > 20) out.push(`${name ? `${name} · ` : ''}긴 인용 ${qn}단어 "${head}…"`);
+            if (archLang === 'en' && HANGUL.test(q)) { out.push(`${name ? `${name} · ` : ''}한국어 대사 "${head}…"`); continue; }
             // copied lines can be checked only when the archive and the raw log share a language (a translated line can't)
             if (x.a === null || !st) continue;
             raw ??= rawOf(st, x.a, x.b);
             if (!archLang || langOf(raw) !== archLang || langOf(q) !== archLang) continue;
             const pieces = q.split(/…|\.\.\./).map(squash).filter(s => s.length >= 6);
-            if (pieces.length && pieces.some(s => !squash(raw).includes(s))) out.push(`${name} · 원문에서 못 찾은 인용 "${head}…"`);
+            if (pieces.length && pieces.some(s => !squash(raw).includes(s))) out.push(`${name ? `${name} · ` : ''}원문에서 못 찾은 인용 "${head}…"`);
         }
     }
     return out;
@@ -262,96 +278,131 @@ export async function openStudio() {
     if (!st && !await setup()) return;
     let toAppend = false;
     const $root = $(`
-      <div class="na_popup na_v2 na_st">
-        <div class="na_v2_title"><b>압축 작업실</b><small class="na_st_sub"></small></div>
-        <div class="na_st_bar"></div>
-        <div class="na_st_log"></div>
-        <div class="na_st_in">
+      <div class="na_popup na_st">
+        <div class="na_st_hd">
+          <div class="na_st_hrow">
+            <span class="na_st_av">${svgA(ICO.book, 20)}</span>
+            <div class="na_st_ht"><b>압축 작업실</b><small class="na_st_sub"></small></div>
+            <button type="button" class="na_st_add"></button>
+          </div>
+          <div class="na_st_seg"></div>
+          <div class="na_st_gap" hidden></div>
+        </div>
+        <div class="na_st_logwrap">
+          <div class="na_st_log"></div>
+          <button type="button" class="na_st_float" hidden></button>
+        </div>
+        <div class="na_st_dock">
           <div class="na_st_quick">${QUICK.map(q => `<button type="button" class="na_st_qk">${esc(q)}</button>`).join('')}</div>
           <div class="na_st_inrow">
-            <textarea class="text_pole na_st_q" rows="2" spellcheck="false" placeholder="고칠 점이나 질문 · 비워 두고 '다음 장면'을 누르면 다음 장면을 보내요 (적어 두면 그 장면에 같이 가요)"></textarea>
-            <button type="button" class="na_ly_askgo na_st_send" aria-label="보내기" title="보내기">${svgA(SEND, 17)}</button>
+            <button type="button" class="na_st_plus" aria-label="더 보기">${svgA(ICO.plus, 18, 2.2)}<i hidden></i></button>
+            <div class="na_st_field">
+              <textarea class="na_st_q" rows="1" spellcheck="false" placeholder="고칠 점이나 질문"></textarea>
+              <button type="button" class="na_st_send" aria-label="보내기" title="보내기">${svgA(ICO.up, 15, 2.6)}</button>
+            </div>
           </div>
-          <div class="na_st_btns">
-            <label class="na_st_auto na_st_au"><input type="checkbox" class="na_toggle na_st_autotg"><span>자동 진행<small>끝까지 쭉</small></span></label>
-            <label class="na_st_auto na_st_out"><input type="checkbox" class="na_toggle na_st_outtg"><span>개요 먼저<small>장면마다 1번 더</small></span></label>
-            <button type="button" class="na_v2_btn na_st_next"></button>
+          <div class="na_st_menu" hidden>
+            <label class="na_st_mi"><span><b>자동 진행</b><small>남은 장면을 끝까지 쭉 · 마지막에 STATE 쪽지</small></span><input type="checkbox" class="na_toggle na_st_autotg"></label>
+            <label class="na_st_mi"><span><b>개요 먼저</b><small>흐름을 먼저 보고 본문 · 장면마다 1번 더</small></span><input type="checkbox" class="na_toggle na_st_outtg"></label>
+            <button type="button" class="na_st_mi na_st_note"><span><b>작업 노트</b><small>매 턴 같이 가요</small></span></button>
+            <button type="button" class="na_st_mi na_st_state"><span><b>STATE 쪽지 받기</b><small>지금까지 쓴 섹션으로</small></span></button>
+            <button type="button" class="na_st_mi na_st_reset"><span><b>새로 시작</b><small>이 대화와 받은 섹션을 지워요</small></span></button>
           </div>
-        </div>
-        <div class="na_st_foot">
-          <button type="button" class="na_linkbtn na_st_note">작업 노트</button>
-          <button type="button" class="na_linkbtn na_st_state">STATE 쪽지 받기</button>
-          <button type="button" class="na_linkbtn na_st_reset">새로 시작</button>
-          <button type="button" class="na_v2_btn primary na_st_done">추가 창으로</button>
         </div>
       </div>`);
     const archLang = archiveLang(getMeta().text);
     const draw = ({ restore } = {}) => {
         const m2 = getMeta(), s = sessionOf(m2);
         if (!s) return;
-        const k = nextScene(s), gaps = gapsOf(s);
-        const doneN = new Set(s.turns.filter(t => t.role === 'assistant' && t.scene !== undefined).map(t => t.scene)).size;
-        $root.find('.na_st_sub').text(`#${s.from}–#${s.to} · 장면 ${s.scenes.length}개 · ${short(drLabel())} ${s.calls || 0}번`);
-        const locked = new Set(lockedOf(s)), pw = pendingWrite(s);
-        // the newest answer for each scene carries its ✓
+        const k = nextScene(s), gaps = gapsOf(s), pw = pendingWrite(s);
+        const locked = new Set(lockedOf(s));
+        const hasTail = !!splitTail(m2.text)[1].trim();
+        const answered = new Set(s.turns.filter(t => t.role === 'assistant' && t.scene !== undefined).map(t => t.scene));
+        $root.find('.na_st_sub').text(`#${s.from}–#${s.to} · ${short(drLabel())} ${s.calls || 0}번`);
+        $root.find('.na_st_add').text(k >= 0 && s.secs.length ? `여기까지 추가` : '추가하기').prop('disabled', busy || !s.secs.length);
+        // the scene being written now, or the next one to go
+        const cur = busy ? (s.turns[s.turns.length - 1]?.scene ?? -1) : pw >= 0 ? pw : k;
+        $root.find('.na_st_seg').html(s.scenes.map((sc, i) => `<span class="${locked.has(i) ? 'l' : i === cur ? 'on' : answered.has(i) ? 'd' : ''}" title="#${sc.a}–#${sc.b}${sc.note ? ` · ${esc(sc.note)}` : ''}">${locked.has(i) ? '✓ ' : ''}${i + 1}</span>`).join(''));
+        $root.find('.na_st_gap').prop('hidden', !gaps.length).text(gaps.length ? `빈 곳 ${gaps.map(([a, b]) => (a === b ? `#${a}` : `#${a}–#${b}`)).join(', ')}` : '');
+        // the newest answer for each scene carries its 확정
         const latest = new Map();
         s.turns.forEach((t, i) => { if (t.role !== 'assistant') return; const bl = answerBlocks(t.text).filter(x => !t.kept?.includes(`#${x.a}–#${x.b}`)); if (!bl.length) return; for (const sk of scenesOfBlocks(s, bl, t.scene)) latest.set(sk, i); });
-        const sentSet = new Set(s.turns.filter(t => t.role === 'user' && t.kind === 'scene').map(t => t.scene));
-        $root.find('.na_st_bar').html(`${s.scenes.map((sc, i) => `<span class="na_st_chip${sentSet.has(i) ? ' done' : ''}${i === k ? ' on' : ''}${locked.has(i) ? ' lock' : ''}" title="${esc(sc.note || '')}">${locked.has(i) ? '✓' : ''}${i + 1}<small>#${sc.a}–#${sc.b}</small></span>`).join('')}
-            ${gaps.length ? `<span class="na_st_gap">빈 곳 ${gaps.map(([a, b]) => (a === b ? `#${a}` : `#${a}–#${b}`)).join(', ')}</span>` : ''}`);
         const html = s.turns.map((t, i) => {
             if (t.role === 'user') {
-                if (t.kind === 'scene') { const sc = s.scenes[t.scene]; return `<div class="na_st_u na_st_usc"><b>장면 ${t.scene + 1}/${s.scenes.length}${t.outline ? ' · 개요' : ''}</b> #${sc.a}–#${sc.b}${sc.note ? ` · ${esc(sc.note)}` : ''}${t.note ? `<div>${esc(t.note)}</div>` : ''}</div>`; }
-                if (t.kind === 'write') return `<div class="na_st_u na_st_usc"><b>본문 쓰기</b> 장면 ${t.scene + 1}${t.note ? `<div>${esc(t.note)}</div>` : ''}</div>`;
-                if (t.kind === 'state') return `<div class="na_st_u na_st_usc"><b>STATE 쪽지</b>${t.note ? `<div>${esc(t.note)}</div>` : ''}</div>`;
-                return `<div class="na_st_u">${esc(t.text)}<button type="button" class="na_linkbtn na_st_tonote" data-i="${i}">노트에 추가</button></div>`;
+                const note = t.note ? `<div class="na_st_me">${esc(t.note)}</div>` : '';
+                if (t.kind === 'scene') { const sc = s.scenes[t.scene]; return `<div class="na_st_mark"><b>장면 ${t.scene + 1}${t.outline ? ' · 개요' : ''}</b> · #${sc.a}–#${sc.b}${sc.note ? ` · ${esc(sc.note)}` : ''}</div>${note}`; }
+                if (t.kind === 'write') return `<div class="na_st_mark"><b>장면 ${t.scene + 1} 본문</b></div>${note}`;
+                if (t.kind === 'state') return `<div class="na_st_mark"><b>STATE 쪽지</b></div>${note}`;
+                return `<div class="na_st_me">${esc(t.text)}</div><button type="button" class="na_st_tonote" data-i="${i}">노트에 추가</button>`;
             }
             const blocks = answerBlocks(t.text);
+            const ch = t.text.search(/^# (STATE|OPEN) CHANGES/m);
+            if (!blocks.length) return `<div class="na_st_bub${ch >= 0 ? ' na_st_pre' : ''}">${linkNums(esc(ch >= 0 ? t.text.slice(ch) : t.text))}</div>`;
             const scene = t.scene !== undefined ? s.scenes[t.scene] : null;
-            const issues = blocks.length ? checkBlocks(blocks, { scene, st: s, archLang }) : [];
-            const ch = t.text.search(/^# (STATE|OPEN) CHANGES/m) >= 0;
-            const ok = blocks.length && !issues.length ? '<div class="na_st_ok">검사 통과</div>' : '';
+            const issues = checkBlocks(blocks, { scene, st: s, archLang });
             const mine = [...latest].filter(([, at]) => at === i).map(([sk]) => sk);
-            const lockRow = mine.length ? `<div class="na_st_lockrow">${mine.map(sk => (locked.has(sk) ? `<span class="na_st_locked">✓ 장면 ${sk + 1} 확정</span><button type="button" class="na_linkbtn na_st_lock" data-k="${sk}">풀기</button>` : `<button type="button" class="na_linkbtn na_st_lock" data-k="${sk}">✓ 장면 ${sk + 1} 확정</button>`)).join('')}</div>` : '';
-            const kept = t.kept?.length ? `<div class="na_st_warn"><span>확정한 ${esc(t.kept.join(', '))}는 안 바꿨어요</span></div>` : '';
-            return `<div class="na_st_a${blocks.length || ch ? ' na_st_asec' : ''}">${linkNums(esc(t.text))}${issues.length ? `<div class="na_st_warn">${issues.map(x => `<span>! ${esc(x)}</span>`).join('')}</div>` : ok}${kept}${lockRow}</div>`;
-        }).join('') + (busy ? `<div class="na_st_a na_st_wait"><i class="fa-solid fa-spinner fa-spin"></i> 쓰는 중… 이 탭에 있어야 받아요</div>` : '');
+            const tags = [
+                ...issues.map(x => `<span class="na_st_tag">${esc(x)}</span>`),
+                ...(issues.length ? [] : ['<span class="na_st_tag ok">검사 통과</span>']),
+                ...(t.kept?.length ? [`<span class="na_st_tag">확정한 ${esc(t.kept.join(', '))}는 안 바꿈</span>`] : []),
+            ].join('');
+            const locks = mine.map(sk => `<button type="button" class="na_st_lk${locked.has(sk) ? ' on' : ''}" data-k="${sk}">${svgA(ICO.lock, 11, 2.6)}${mine.length > 1 ? `장면 ${sk + 1} ` : ''}${locked.has(sk) ? '확정됨' : '확정'}</button>`).join('');
+            return `<div class="na_st_bub">${blocks.map(cardHtml).join('<hr>')}<div class="na_st_tags">${tags}<span class="na_st_lks">${locks}</span></div></div>`;
+        }).join('') + (busy ? '<div class="na_st_bub na_st_typing"><i></i><i></i><i></i><small>쓰는 중 · 이 탭에 있어야 받아요</small></div>' : '');
         const $log = $root.find('.na_st_log');
         const atEnd = $log[0] ? $log[0].scrollHeight - $log[0].scrollTop - $log[0].clientHeight < 80 : true;
-        $log.html(html || '<small class="na_v2_note">아직 보낸 장면이 없어요.</small>');
+        $log.html(html || '<div class="na_st_mark">아직 보낸 장면이 없어요</div>');
         if (atEnd && $log[0]) $log[0].scrollTop = $log[0].scrollHeight;
-        $root.find('.na_st_next').text(pw >= 0 ? `장면 ${pw + 1} 본문 쓰기` : k >= 0 ? `다음 장면 ${k + 1}/${s.scenes.length}` : '장면 끝').prop('disabled', busy || (k < 0 && pw < 0));
+        // the one thing to press next floats over the conversation
+        const nx = k >= 0 ? s.scenes[k] : null;
+        const fl = busy ? '' : pw >= 0 ? `장면 ${pw + 1} 본문 쓰기 ${svgA(ICO.down, 14, 2.6)}`
+            : nx ? `다음 장면 ${k + 1}/${s.scenes.length}${s.outline ? ' 개요' : ''} <small>#${nx.a}–#${nx.b}</small>${svgA(ICO.down, 14, 2.6)}`
+                : hasTail && !s.changes && s.secs.length ? `STATE 쪽지 받기 ${svgA(ICO.down, 14, 2.6)}` : '';
+        $root.find('.na_st_float').prop('hidden', !fl).html(fl);
         $root.find('.na_st_send').prop('disabled', busy);
         $root.find('.na_st_qk').prop('disabled', busy || !s.turns.some(t => t.role === 'assistant'));
         $root.find('.na_st_autotg').prop('checked', !!s.auto);
         $root.find('.na_st_outtg').prop('checked', !!s.outline);
-        const hasTail = !!splitTail(m2.text)[1].trim();
-        $root.find('.na_st_state').prop('hidden', !hasTail || k >= 0).text(s.changes ? 'STATE 쪽지 다시 받기' : 'STATE 쪽지 받기').prop('disabled', busy);
-        $root.find('.na_st_done').prop('disabled', busy || !s.secs.length).text(k >= 0 && s.secs.length ? `여기까지 추가 창으로 (${doneN}/${s.scenes.length})` : '추가 창으로');
-        if (restore) $root.find('.na_st_q').val(restore);
+        $root.find('.na_st_plus i').prop('hidden', !s.auto && !s.outline);
+        $root.find('.na_st_state').prop('hidden', !hasTail).prop('disabled', busy).find('b').text(s.changes ? 'STATE 쪽지 다시 받기' : 'STATE 쪽지 받기');
+        if (restore) $root.find('.na_st_q').val(restore).trigger('input');
     };
     live = draw;
-    const typed = () => String($root.find('.na_st_q').val() || '').trim();
+    const $q = $root.find('.na_st_q');
+    const typed = () => String($q.val() || '').trim();
+    const clearQ = () => $q.val('').trigger('input');
+    // the box grows with what is typed, up to five lines
+    $q.on('input', function () { this.style.height = 'auto'; this.style.height = `${Math.min(this.scrollHeight, 120)}px`; });
     const sendTalk = async () => {
         const q = typed();
-        if (!q) return $root.find('.na_st_q').trigger('focus');
-        $root.find('.na_st_q').val('');
+        if (!q) return $q.trigger('focus');
+        clearQ();
         await send({ kind: 'talk', text: q });
     };
     $root.find('.na_st_send').on('click', sendTalk);
-    $root.find('.na_st_q').on('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendTalk(); } });
-    $root.find('.na_st_next').on('click', async () => {
+    $q.on('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendTalk(); } });
+    // the floating button: the next scene (a typed line goes with it), the section after an outline, or the change lists
+    $root.find('.na_st_float').on('click', async () => {
         const s = sessionOf(getMeta());
-        if (!s) return;
-        const pw = pendingWrite(s), k = nextScene(s);
-        if (pw < 0 && k < 0) return;
-        const note = typed();
-        $root.find('.na_st_q').val('');
-        await send(pw >= 0 ? { kind: 'write', scene: pw, note } : { kind: 'scene', scene: k, note, outline: !!s.outline });
+        if (!s || busy) return;
+        const pw = pendingWrite(s), k = nextScene(s), note = typed();
+        clearQ();
+        if (pw >= 0) return send({ kind: 'write', scene: pw, note });
+        if (k >= 0) return send({ kind: 'scene', scene: k, note, outline: !!s.outline });
+        return send({ kind: 'state', note });
     });
     $root.on('click', '.na_st_qk', function () { send({ kind: 'talk', text: $(this).text() }); });
-    $root.find('.na_st_outtg').on('change', async function () { const s = sessionOf(getMeta()); if (!s) return; s.outline = this.checked; await saveMeta(); });
-    $root.on('click', '.na_st_lock', async function () {
+    const $menu = $root.find('.na_st_menu');
+    $root.find('.na_st_plus').on('click', e => { e.stopPropagation(); $menu.prop('hidden', !$menu.prop('hidden')); });
+    $root.on('click', e => { if (!$(e.target).closest('.na_st_menu, .na_st_plus').length) $menu.prop('hidden', true); });
+    $root.find('.na_st_outtg').on('change', async function () { const s = sessionOf(getMeta()); if (!s) return; s.outline = this.checked; await saveMeta(); draw(); });
+    $root.find('.na_st_autotg').on('change', async function () {
+        const s = sessionOf(getMeta());
+        if (!s) return;
+        s.auto = this.checked; await saveMeta(); draw();
+        if (s.auto) { $menu.prop('hidden', true); runAuto(); }
+    });
+    $root.on('click', '.na_st_lk', async function () {
         const s = sessionOf(getMeta()), sk = Number(this.dataset.k);
         if (!s) return;
         const set = new Set(lockedOf(s));
@@ -359,34 +410,32 @@ export async function openStudio() {
         s.locked = [...set].sort((x, y) => x - y);
         await saveMeta(); draw();
     });
-    $root.find('.na_st_autotg').on('change', async function () {
-        const s = sessionOf(getMeta());
-        if (!s) return;
-        s.auto = this.checked; await saveMeta();
-        if (s.auto) runAuto();
-    });
-    $root.find('.na_st_state').on('click', async () => { const note = typed(); $root.find('.na_st_q').val(''); await send({ kind: 'state', note }); });
+    $root.find('.na_st_state').on('click', async () => { $menu.prop('hidden', true); const note = typed(); clearQ(); await send({ kind: 'state', note }); });
     $root.on('click', '.na_st_tonote', async function () {
         const s = sessionOf(getMeta()), t = s?.turns[Number(this.dataset.i)];
         if (!t) return;
         await addToNote(t.text);
     });
-    $root.find('.na_st_note').on('click', () => openWorkNote());
+    $root.find('.na_st_note').on('click', () => { $menu.prop('hidden', true); openWorkNote(); });
     $root.on('click', '.na_st_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
     $root.find('.na_st_reset').on('click', async () => {
+        $menu.prop('hidden', true);
         if (busy) return toastr.info('답을 기다리는 중이에요.', '압축 작업실');
         if (!await confirm('새로 시작', '이 작업실 대화와 받은 섹션을 지우고 처음부터 할까요?<br><small>아카이브에 이미 넣은 건 그대로예요.</small>')) return;
         delete getMeta().studio; await saveMeta();
         $root.closest('dialog').find('.popup-button-ok').trigger('click');
         setTimeout(openStudio, 50);
     });
-    $root.find('.na_st_done').on('click', () => { toAppend = true; $root.closest('dialog').find('.popup-button-ok').trigger('click'); });
+    $root.find('.na_st_add').on('click', () => { toAppend = true; $root.closest('dialog').find('.popup-button-ok').trigger('click'); });
     draw();
     // a fresh run starts on its own
     st = sessionOf(getMeta());
     if (st && !st.turns.length) { if (st.auto) runAuto(); else send({ kind: 'scene', scene: 0, outline: !!st.outline }); }
     else if (st?.auto && !busy) runAuto();
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    const shown = c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: false, leftAlign: true, okButton: '닫기' });
+    // the conversation opens at its end
+    setTimeout(() => { const el = $root.find('.na_st_log')[0]; if (el) el.scrollTop = el.scrollHeight; }, 30);
+    await shown;
     if (live === draw) live = null;
     if (!toAppend) return;
     m = getMeta(); st = sessionOf(m);
