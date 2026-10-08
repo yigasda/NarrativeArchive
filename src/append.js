@@ -366,6 +366,7 @@ export async function openAppend(prefill = {}) {
           <div class="na_check na_numcheck" hidden></div>
           <div class="na_check na_statecheck" hidden></div>
           <div class="na_check na_check_warn na_statelost" hidden></div>
+          <div class="na_check na_check_warn na_bullets" hidden></div>
           <div class="na_check na_check_warn na_whole" hidden><span class="na_ck_ic">!</span><div>
             <b>아카이브 전체본 같아요</b> — 이미 있는 섹션이 거의 다 들어 있어요. 새 섹션만 붙이려면 그대로 <b>추가</b>, 이 내용으로 아카이브를 바꾸려면:
             <div class="na_whole_row"><button type="button" class="na_btn na_small na_whole_btn"><i class="fa-solid fa-right-left"></i> 통째로 바꾸기</button></div>
@@ -450,6 +451,7 @@ export async function openAppend(prefill = {}) {
     $end.on('input change', hideHint);
     let nearMiss = [];
     let lossNow = null;
+    $root.on('click', '.na_bullets_fix', function () { $root.find('.na_apf_q').val(this.dataset.ask); $root.find('.na_apf_go').trigger('click'); });
     $root.on('click', '.na_sl_fix', () => {
         if (!lossNow) return;
         const pick = new Set($root.find('.na_sl_row input:checked').map((i, el) => Number(el.dataset.k)).get());
@@ -543,6 +545,13 @@ export async function openAppend(prefill = {}) {
                 $sl.find('.na_cp_txt').append(`<div class="na_sl_list">${lossNow.missing.map((x, k) => `<label class="na_sl_row"><input type="checkbox" data-k="${k}" checked><span>${x.head ? `<small>${esc(x.head)}</small>` : ''}${esc(x.line.replace(/^\s*[-*]\s*/, ''))}</span></label>`).join('')}</div>
                     <button type="button" class="na_ck_btn na_sl_fix">${lossNow.missing.length ? '고른 줄 되살리기' : ''}${lossNow.missing.length && ren ? ' · ' : ''}${ren ? '제목 되돌리기' : ''}</button>`);
             }
+            // sections that grew past 6 bullets (the instruction's ceiling)
+            const longs = has ? parseSections(splitTail(val)[0]).filter(x => !x.group && RANGE_HEAD.test(x.title))
+                .map(x => ({ x, n: (val.slice(x.start, x.end).match(/^\s*[-*•]\s/gm) || []).length })).filter(y => y.n > 6) : [];
+            const $bl = $root.find('.na_bullets');
+            if (!longs.length) $bl.prop('hidden', true).empty();
+            else ckRow($bl, 'warn', `불릿이 많은 섹션 ${longs.length}개`, longs.map(y => `${esc(y.x.title.split(' — ')[0])} · 불릿 ${y.n}개`).join('<br>'),
+                $root.find('.na_apf').length ? `<button type="button" class="na_ck_btn na_bullets_fix" data-ask="${esc(`${longs.map(y => `${y.x.title.split(' — ')[0]}(불릿 ${y.n}개)`).join(', ')}: 섹션마다 불릿 6개 이하로. 원인이나 결과가 같은 불릿은 합치고, 안 바뀌어도 되는 장면 묘사는 빼줘. 내용이 정말 많으면 전환점에서 섹션을 나눠줘.`)}">6개 이하로 줄여 달라고 하기</button>` : '');
             if (!has) $root.find('.na_cut').prop('hidden', true).empty();
             else if (cutLine.length) ckRow($root.find('.na_cut'), 'warn', '답이 중간에 끊긴 것 같아요', `${cutLine.map(esc).join('<br>')}<br>다른 모델로 압축했다면 그쪽 답 길이(최대 토큰)를 늘리고 다시 받아 보세요.`);
             else ckRow($root.find('.na_cut'), 'ok', '마지막 줄이 끊기지 않았어요');
