@@ -63,7 +63,7 @@ Bullets
 - Do not say the same thing twice. When you add a sentence, check the bullets before and after it for the same content.
 
 Dialogue
-- Quotes are part of the memory, not decoration. Most bullets carry one: the line from the raw log the next scene would most need word for word — a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. At most two in a bullet; tell the rest in your own words. Never quote a line from inside a sex act.
+- Quotes are part of the memory, not decoration. Most bullets carry one: the line from the raw log the next scene would most need word for word — a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. At most two in a bullet; tell the rest in your own words. Never quote a line about the sex act itself.
 - A quote is a line that actually appears in the raw log (translated when the log is in another language), faithful to the original, including whether it is a question: if the original is a statement, do not add a question mark. Never invent or paraphrase a line and present it as a quote.
 - Never leave a quote standing alone. Attach the character's reaction to it.
 
@@ -71,7 +71,7 @@ Interpretation
 - No interpretation, theme or summary-verdict sentences. A character's interpretation is written only as theirs, never as fact: "In her own reckoning, …", "(his reading, not fact)".
 
 Special content
-- Sex is recorded only as relationship beats: how consent moved, requests to stop, whether it was a first, and what changed afterward. No description of acts, positions, anatomy or sensations, even if the user's own turn describes them. Length follows what changed, not how long the scene ran: a long scene in which little turns gets a bullet or two; one in which trust, a boundary or a confession shifts keeps each of those beats.
+- Sex is recorded only as relationship beats: how consent moved, requests to stop, whether it was a first, and what changed afterward. No description of acts, positions, anatomy or sensations, even if the user's own turn describes them. Length follows what changed, not how long the scene ran: a long scene in which little turns gets a bullet or two; one in which trust, a boundary or a confession shifts keeps each of those beats. A line said in bed is quoted only if it would still matter said fully clothed at a table (a confession, a promise, a wish, a refusal); never a line about the act itself. ✓ Mara and Ren slept together for the first time; she asked him to slow down once and he did. Afterward she told him, "I'm not leaving," and he stayed until morning.
 - Crises, suicide attempts and self-harm are recorded plainly and factually, without blurring.
 - When one of this RP's recurring devices returns (a phrase, an object, a song, a name, a ritual), do not miss it: keep the event and the line in which it was used. Do not explain the device.
 
@@ -105,6 +105,7 @@ Draft the stretch, then revise it once:
 3. Cut gestures, positions, props, temperatures and staging that survived the draft.
 4. Check that every quote is a line from the raw log and that each one earns its place.
 5. Count each section's bullets. More than 6: merge the ones that share a cause or outcome, or split the section where it turns.
+6. Find every bullet that touches sex. It may say only: who, consent asked or given, any request to stop and what happened, whether it was a first, what was said that would still matter outside the bed, and what changed between them afterward. Cut the rest.
 Output only the revised version.
 
 # 8. STATE changes (when STATE is present)
@@ -151,7 +152,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -250,8 +251,8 @@ STEPS
 6. Words are not facts. When someone tells, claims, suspects or lies, keep it theirs: "Ivo told Ren the bridge was safe", "Mara suspects Ivo" — never "the bridge was safe". If a later message proves or breaks it, write that when it happens.
 7. If the message re-tells, re-describes or reacts to a moment already recorded (a reply re-telling the user's action from the other side, a recap at the start of a message), write "= #N" with the number where it was first recorded, then "; " and only what is new, if anything.
 8. If nothing happens (small talk, scenery, waiting), write "—".
-9. In a sex scene, write only its steps, one plain line each: consent asked or given, a request to stop, a first, climax, the end. Nothing else from inside the act — no other acts, positions, bodies or sensations, not even in plain words — and no quotes from it. A line said during the scene goes in only when it stands outside the act: a confession, a refusal, a request to stop, a promise. A climax re-told in the next message is "= #N"; messages that only continue the act are "—".
-10. Quotes: copy the spoken lines a later writer would most want word for word — a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. At most two per message, exactly as written, in the original language, each on its own line starting with two spaces and a quotation mark. Never a line from inside a sex act (moans, directions, words about bodies). Never compose or paraphrase a quote. If a message has no such line, give none.
+9. In a sex scene, write only its steps, one plain line each: consent asked or given, a request to stop, a first, climax, the end. No acts, positions, bodies or sensations. Take a quote from inside the scene only if it would still matter said fully clothed at a table: a confession, a promise, a wish, a refusal, a line that defines the relationship. Never quote a line about the act itself. A climax re-told in the next message is "= #N".
+10. Quotes: copy the spoken lines a later writer would most want word for word — a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. At most two per message, exactly as written, in the original language, each on its own line starting with two spaces and a quotation mark. Never a line about the sex act itself (moans, directions, words about bodies). Never compose or paraphrase a quote. If a message has no such line, give none.
 11. When the date or place changes, start the line with "@ date, place —".
 12. Start a line with ★ when it turns something: a relationship shifts, a secret comes out, a decision is made, a promise is given or broken. Use ★ sparingly; most lines have none.
 13. Keep each line under about 30 words.
@@ -277,7 +278,7 @@ OUTPUT
 One entry per message, in order, no number skipped. Every entry line starts with [number]. Quote lines start with two spaces and a quotation mark. Nothing else: no headers, no commentary.
 Write in ${lang || 'the language most of the messages are in'}; quotes stay in their original language.`;
 // step 2: the list stands where the raw log was; this note goes on top of it
-export const eventsNote = () => `The raw log has been turned into an event list, one entry per message. Lines marked (thinks) are private thoughts or readings; write them as that character's, never as fact. Lines marked ★ are turning points; give them room and consider starting a section there. Lines starting with "= #N;" add only what is new to an earlier moment. Treat this list as the raw log. The list was made without your rules. It can carry sex acts and lines said inside them, and more quotes than a section needs; your rules still decide what stays. A sex scene comes down to its relationship beats, with no quote from inside the act.\n\n`;
+export const eventsNote = () => `The raw log has been turned into an event list, one entry per message. Lines marked (thinks) are private thoughts or readings; write them as that character's, never as fact. Lines marked ★ are turning points; give them room and consider starting a section there. Lines starting with "= #N;" add only what is new to an earlier moment. Treat this list as the raw log. The list was made without your rules. It can carry sex acts and lines said inside them, and more quotes than a section needs; your rules still decide what stays. A sex scene comes down to its relationship beats; a line said in bed stays only if it would still matter said fully clothed at a table.\n\n`;
 // How big the answer should be, as numbers: sections for this many messages, and, when a long stretch goes in parts,
 // that every length target (the user's note included) is for the whole stretch, so each part takes its share
 export function sizeBlock({ k = 0, n = 1, count, total = count, from, to, partFrom = from, partTo = to }) {
