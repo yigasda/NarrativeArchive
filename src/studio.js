@@ -176,6 +176,7 @@ const HANGUL = /[가-힯]/;
 const langOf = t => { const h = (String(t).match(/[가-힯]/g) || []).length, l = (String(t).match(/[A-Za-z]/g) || []).length; return h + l < 20 ? '' : h / (h + l) > 0.3 ? 'ko' : 'en'; };
 const squash = t => String(t).toLowerCase().replace(/[\s"'“”‘’.,!?…~—–\-:;()[\]*]/g, '');
 const words = t => (String(t).match(/\S+/g) || []).length;
+const TALK = /\b(?:asked|explained|argued|countered|admitted|replied|insisted|retorted|protested|answered|responded|objected|conceded|demanded|added)\b/g;
 const STOP = new Set(['about', 'after', 'again', 'against', 'before', 'being', 'their', 'there', 'these', 'those', 'which', 'while', 'where', 'would', 'could', 'should', 'other', 'still', 'until', 'under', 'every', 'never', 'because', 'through', 'without', 'himself', 'herself', 'themselves', 'whether', 'rather', 'since', 'though', 'first', 'only', 'what', 'when']);
 function checkBlocks(blocks, { scene = null, st, archLang }) {
     const out = [];
@@ -201,6 +202,11 @@ function checkBlocks(blocks, { scene = null, st, archLang }) {
                 top = Math.max(top, ...ns);
             }
             if (slip) out.push(`${name ? `${name} · ` : ''}순서 확인 #${slip[0]} 뒤에 #${slip[1]}`);
+        }
+        // a bullet stepping through who said what: three or more talk verbs
+        for (const bl of x.bullets) {
+            const tv = bl.toLowerCase().match(TALK) || [];
+            if (tv.length >= 3) { out.push(`${name ? `${name} · ` : ''}턴 나열? ${[...new Set(tv)].slice(0, 4).join('·')}`); break; }
         }
         // the same word again and again (names and small words aside)
         const freq = new Map();
