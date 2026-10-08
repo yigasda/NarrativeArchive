@@ -16,7 +16,7 @@ Output exactly these parts, in this order, with no greeting, explanation or comm
 Language: write everything in the archive's language and format, even when the raw log is in another language. Translate dialogue too; keep a word or line in its original language only where the archive already does.
 
 Hard limits:
-- Output only new material. Never reproduce, rewrite, shorten, "improve", recap or continue anything already in the archive; nothing before #{{from}} belongs in your output. [RECENT SECTIONS] below is context and style only: no event, line or detail from it may appear in your output unless the raw log shows it happening again.
+- Output only new material. Never reproduce, rewrite, shorten, "improve", recap or continue anything already in the archive; nothing before #{{from}} belongs in your output. [RECENT SECTIONS] and STATE below are context only: no event, line or detail from them may appear in a section unless the raw log shows it happening again.
 - Every part must be present and complete, and the last bullet of every block ends in a full sentence. If you run long, merge bullets or cut lower-priority detail — never stop mid-sentence, and never drop STATE or OPEN to make room.
 
 # 2. Reading the raw log
@@ -118,7 +118,7 @@ Output only the revised version.
 - Keep it short. Remove only the threads this stretch closes; every other thread stays word for word, under its group. Add newly opened ones. Do not prescribe future actions.
 - Notice line: \`_Unresolved at #{{to}}; check recent messages before treating any as pending._\`
 
-[RECENT SECTIONS — the archive's last sections before this stretch, for context and style only. Already in the archive: do not output, rewrite, recap or continue them.]
+[RECENT SECTIONS — the headings of the archive's last sections before this stretch, so you know where the story stands. Already in the archive: do not output, rewrite, recap or continue them.]
 {{recent}}
 
 [CURRENT STATE · OPEN — edit this and output it in full]
@@ -142,7 +142,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -212,11 +212,12 @@ const textLang = (t, min) => {
     return hangul + latin < min ? '' : hangul / (hangul + latin) > 0.3 ? 'ko' : 'en';
 };
 export const answerLangOk = (archive, answer) => { const want = archiveLang(archive), got = textLang(answer, 40); return !want || !got || want === got; };
-// {{recent}}: the archive's last few numbered sections, for context without the whole archive (which models copy from)
+// {{recent}}: the headings of the archive's last few numbered sections — where the story stands, with no bullets
+// for the model to blend into the new stretch (it did, even with only three sections' bodies)
 export function recentSections(text, n = 3) {
     const t = String(text || '');
     const secs = parseSections(t).filter(x => !x.group && RANGE_HEAD.test(x.title)).slice(-n);
-    return secs.length ? secs.map(x => t.slice(x.start, x.end).replace(/(?:\s*\n-{3,}[ \t]*)?\s*$/, '')).join('\n\n') : '(없음)';
+    return secs.length ? secs.map(x => `## ${x.title.replace(/^#+\s*/, '')}`).join('\n') : '(없음)';
 }
 // How big the answer should be, as numbers: sections for this many messages, and, when a long stretch goes in parts,
 // that every length target (the user's note included) is for the whole stretch, so each part takes its share
