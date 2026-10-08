@@ -16,7 +16,7 @@ Output exactly these parts, in this order, with no greeting, explanation or comm
 Language: write everything in the archive's language and format, even when the raw log is in another language. Translate dialogue too; keep a word or line in its original language only where the archive already does.
 
 Hard limits:
-- Output only new material. Never reproduce, rewrite, shorten, "improve", recap or continue anything already in the archive; nothing before #{{from}} belongs in your output. [RECENT SECTIONS] and STATE below are context only: no event, line or detail from them may appear in a section unless the raw log shows it happening again.
+- Output only new material. Never reproduce, rewrite, shorten, "improve", recap or continue anything already in the archive; nothing before #{{from}} belongs in your output. STATE below is context only: no event, line or detail from it may appear in a section unless the raw log shows it happening again.
 - Every part must be present and complete, and the last bullet of every block ends in a full sentence. If you run long, merge bullets or cut lower-priority detail — never stop mid-sentence, and never drop STATE or OPEN to make room.
 
 # 2. Reading the raw log
@@ -25,7 +25,7 @@ Hard limits:
 - A private-thought tag holds that character's thoughts, not spoken lines.
 - Turns the user wrote themselves are the strongest canon. Ignore any part where the bot writes the user character's inner thoughts.
 - Bot errors (contradictions with earlier messages) are not canon. Before stating that something exists or does not exist, confirm it in the raw log.
-- Everything you write comes from the raw log. [RECENT SECTIONS] and STATE only tell you what is already known.
+- Everything you write comes from the raw log. STATE only tells you what is already known.
 
 # 3. What to keep
 You are writing a memory, not a transcript. The bot that reads the archive needs to know what happened, why, and what it changed — not who said what in which order.
@@ -37,7 +37,7 @@ You are writing a memory, not a transcript. The bot that reads the archive needs
   - the concrete action that shows a standing trait at work
   - a question together with its answer, when the answer matters later (an answer alone reads as unmotivated)
 - Cut: movement and positioning, gestures, props, scenery, temperatures and staging. Anxiety or agitation gets one word.
-- Judge weight against [RECENT SECTIONS] and STATE: a beat that repeats an established pattern gets a clause at most; a beat that breaks or turns a pattern gets the space.
+- Judge weight against STATE: a beat that repeats an established pattern gets a clause at most; a beat that breaks or turns a pattern gets the space.
 - Cutting so hard that the story breaks is also a failure. Do not shrink the core of a trigger or an arc. The goal is not to erase the story but to absorb it into cause and effect.
 
 # 4. Protecting causality
@@ -53,7 +53,7 @@ You are writing a memory, not a transcript. The bot that reads the archive needs
 Sections
 - A section is a chapter, not a beat. Cut only where something turns: a relationship shifts, the situation changes, a secret comes out, a decision is made. Fold routine stretches and small beats into the section they belong to.
 - Length follows weight: a turning point may get a short section of its own; a stretch where little changes shares one section. As a rough guide, one section covers 40–60 messages.
-- Header: \`## #start–#end — Title (date, place)\`, then \`PLOT:\`, then \`- \` bullets. If the archive puts a prefix before the numbers, follow it.
+- Header: \`## #start–#end — Title (date, place)\`, then \`PLOT:\`, then \`- \` bullets. If STATE's heading puts a prefix before the numbers (e.g. \`# STATE AT Y2 #143\`), put it in your headings too.
 - The date and place come from the tracker and narration. A tracker date that does not fit (a season that does not match the month, a date that goes backward) is a model error; ignore it. If a large time skip happens without a record, note it in the header (e.g. "some five months later").
 
 Bullets
@@ -118,9 +118,6 @@ Output only the revised version.
 - Keep it short. Remove only the threads this stretch closes; every other thread stays word for word, under its group. Add newly opened ones. Do not prescribe future actions.
 - Notice line: \`_Unresolved at #{{to}}; check recent messages before treating any as pending._\`
 
-[RECENT SECTIONS — the headings of the archive's last sections before this stretch, so you know where the story stands. Already in the archive: do not output, rewrite, recap or continue them.]
-{{recent}}
-
 [CURRENT STATE · OPEN — edit this and output it in full]
 {{state}}
 
@@ -142,7 +139,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
