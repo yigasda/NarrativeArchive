@@ -570,7 +570,9 @@ export async function openAppend(prefill = {}) {
             const renum = plan.renumbered || placeAppend(m.text, val, { renumber: true, rewrites: rwMode() }).renumbered;
             $root.find('.na_renum_row').toggle(!!renum);
             if (renum) $root.find('.na_renum_label').html(`제목·안내문의 끝 번호도 바꾸기 (<b>#${renum.from} → #${renum.to}</b>)`);
-            $root.find('.na_append_info').text(has ? `약 ${fmt(await countTokens(val))} 토큰 · 섹션 ${parseSections(val).filter(x => !x.group).length}개` : '');
+            // sections and STATE · OPEN apart: the tail is rewritten in full each time, so the total alone overstates the new summary
+            const [body, tl] = splitTail(val), all = has ? await countTokens(val) : 0, tt = tl.trim() ? await countTokens(tl) : 0;
+            $root.find('.na_append_info').text(has ? `약 ${fmt(all)} 토큰${tt ? ` (섹션 ${fmt(all - tt)} · STATE·OPEN ${fmt(tt)})` : ''} · 섹션 ${parseSections(body).filter(x => !x.group).length}개` : '');
         }, 400);
     });
 
