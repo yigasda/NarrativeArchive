@@ -3824,3 +3824,4 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 .na_st_locked { color: var(--na-ok); font-weight: 600; }
 .na_st_nt { display: flex; flex-direction: column; gap: 10px; text-align: left; }
 .na_st_nt .na_st_ntta { width: 100%; box-sizing: border-box; margin: 0; resize: vertical; }
+.na_st_msg { display: inline; padding: 0; border: 0; background: none; color: var(--na-accent); font: inherit; text-decoration: underline dotted; text-underline-offset: 2px; cursor: pointer; }

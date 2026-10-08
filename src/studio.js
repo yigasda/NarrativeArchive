@@ -9,6 +9,7 @@ import { ctx, getMeta, globalSettings, saveMeta } from './core.js';
 import { activePrompt, archiveLang, auBlock, auFix, auOf, langBlock } from './prompts.js';
 import { NOTE_PARTS, STATE_SYS, answerBlocks, noteInsert, chunksFromStarts, detectScenes, lastSections, openWorkNote, parseSceneAnswer, rulesText, sceneChunks, scenesText, startsFromText } from './scenes.js';
 import { CITE_RE, headingRanges, lastRangeEnd, splitTail } from './sections.js';
+import { openSource } from './source.js';
 import { refreshStatus } from './status.js';
 import { svgA } from './theme.js';
 import { confirm, esc, timeLabel } from './util.js';
@@ -54,6 +55,8 @@ const STATE_ASK = `All scenes are written. Now list what they change in <current
 const chatKey = () => String(ctx().getCurrentChatId?.() || ctx().chatId || '');
 const short = l => String(l).replace(/^(커스텀|Vertex) · /, '');
 const SEND = 'M22 2L11 13M22 2l-7 20-4-9-9-4z';
+// #141 in an answer opens that message (not the &#39; that esc writes)
+const linkNums = h => h.replace(/(?<!&)#(\d+)(?!\d|;)/g, (_, n) => `<button type="button" class="na_st_msg" data-msg="${n}">#${n}</button>`);
 // corrections that come up again and again: one tap sends them
 const QUICK = ['대사 줄여', '무대 묘사 빼', '속마음은 인물 해석으로', '원문 다시 읽고 순서 확인', '더 짧게'];
 
@@ -311,7 +314,7 @@ export async function openStudio() {
             const mine = [...latest].filter(([, at]) => at === i).map(([sk]) => sk);
             const lockRow = mine.length ? `<div class="na_st_lockrow">${mine.map(sk => (locked.has(sk) ? `<span class="na_st_locked">✓ 장면 ${sk + 1} 확정</span><button type="button" class="na_linkbtn na_st_lock" data-k="${sk}">풀기</button>` : `<button type="button" class="na_linkbtn na_st_lock" data-k="${sk}">✓ 장면 ${sk + 1} 확정</button>`)).join('')}</div>` : '';
             const kept = t.kept?.length ? `<div class="na_st_warn"><span>확정한 ${esc(t.kept.join(', '))}는 안 바꿨어요</span></div>` : '';
-            return `<div class="na_st_a${blocks.length || ch ? ' na_st_asec' : ''}">${esc(t.text)}${issues.length ? `<div class="na_st_warn">${issues.map(x => `<span>! ${esc(x)}</span>`).join('')}</div>` : ok}${kept}${lockRow}</div>`;
+            return `<div class="na_st_a${blocks.length || ch ? ' na_st_asec' : ''}">${linkNums(esc(t.text))}${issues.length ? `<div class="na_st_warn">${issues.map(x => `<span>! ${esc(x)}</span>`).join('')}</div>` : ok}${kept}${lockRow}</div>`;
         }).join('') + (busy ? `<div class="na_st_a na_st_wait"><i class="fa-solid fa-spinner fa-spin"></i> 쓰는 중… 이 탭에 있어야 받아요</div>` : '');
         const $log = $root.find('.na_st_log');
         const atEnd = $log[0] ? $log[0].scrollHeight - $log[0].scrollTop - $log[0].clientHeight < 80 : true;
@@ -369,6 +372,7 @@ export async function openStudio() {
         await addToNote(t.text);
     });
     $root.find('.na_st_note').on('click', () => openWorkNote());
+    $root.on('click', '.na_st_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
     $root.find('.na_st_reset').on('click', async () => {
         if (busy) return toastr.info('답을 기다리는 중이에요.', '압축 작업실');
         if (!await confirm('새로 시작', '이 작업실 대화와 받은 섹션을 지우고 처음부터 할까요?<br><small>아카이브에 이미 넣은 건 그대로예요.</small>')) return;
