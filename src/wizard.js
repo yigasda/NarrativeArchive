@@ -7,7 +7,7 @@ import { driftHtml } from './drift.js';
 import { castNames } from './knowledge.js';
 import { hasChanges, resolveChanges } from './statechg.js';
 import { buildExtract, cleanMessage, formatExtract, guessEndNumber } from './extract.js';
-import { LANG_NAME, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressPrompt, dropReproduced, eventsNote, eventsSystem, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
+import { BASIC_PROMPT, LANG_NAME, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressPrompt, dropReproduced, eventsNote, eventsSystem, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, trimEnd } from './sections.js';
 import { openSource } from './source.js';
 import { refreshStatus } from './status.js';
@@ -204,7 +204,8 @@ export function eventBatches(items, n = 15, cap = 12000) {
     if (cur.length) out.push(cur);
     return out;
 }
-const normQ = s => String(s).replace(/[“”„«»「」『』"]/g, '').replace(/\s+/g, ' ').trim();
+// letters and digits only: a quote still counts when the model wrote "..." for "……" or dropped a space or a comma
+const normQ = s => String(s).normalize('NFC').replace(/[^\p{L}\p{N}]+/gu, '').toLowerCase();
 // "[58] = #57; Mara …" + '  "Then give me a reason."' → lines by message number (a message may get two);
 // a quote is kept only when that message really has it
 export function parseEvents(out, batch) {
@@ -221,7 +222,7 @@ export function parseEvents(out, batch) {
             got.get(n).lines.push(cur);
             continue;
         }
-        const q = line.match(/^\s+["“「『](.*)["”」』]\s*$/);
+        const q = line.match(/^\s+["“「『](.*?)["”」』]?\s*[.,;]?\s*$/);
         if (q && cur) {
             const n = [...got.values()].find(e => e.lines.includes(cur)).n;
             if (normQ(q[1]) && normQ(want.get(n).text).includes(normQ(q[1]))) cur.quotes.push(q[1].trim());
@@ -355,7 +356,7 @@ export async function quickCompress() {
             saved && quickReuse ? row('1단계 정리', '저장된 목록', esc(timeLabel(saved.at))) : row('1단계 정리', esc(short(evLabel())), `15개씩 ${n}번`),
             row('2단계 요약', esc(short(drLabel())), '한 번'),
         ] : [row('요약', esc(short(drLabel())), n > 1 ? `${n}번에 나눠 · 약 ${fmt(chunkTok())} 토큰씩` : '한 번에')]),
-        row('지시문', esc(p.name), `생각 ${effort}`),
+        row('지시문', esc(p.name), `생각 ${effort}${p.id === 'basic' && p.text !== BASIC_PROMPT ? ' · <span class="na_qc_warn">고친 버전이라 최신 기본 규칙이 안 들어가 있어요</span>' : ''}`),
         ...(au.on ? [row('AU', esc(au.name), '본편 뒤에 이어서')] : []),
     ];
     if (!await confirm('한 번에 압축', `<div class="na_qc">

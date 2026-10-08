@@ -3775,3 +3775,4 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 .na_chg_edit { background: #c9814b; }
 .na_chg_drop { background: #b5523b; }
 .na_chg_txt s { color: var(--na-dim); }
+.na_qc_warn { color: #b06a10; }
