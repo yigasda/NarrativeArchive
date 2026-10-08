@@ -8,7 +8,7 @@ import { applyHide } from './hide.js';
 import { driftHtml } from './drift.js';
 import { nameNearMisses } from './keywords.js';
 import { auDivider, auFix, auOf, langBlock } from './prompts.js';
-import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, tailBlocks, trimEnd } from './sections.js';
+import { RANGE_HEAD, citeIssues, headingRanges, lastRangeEnd, parseSections, splitTail, stripCites, tailBlocks, trimEnd } from './sections.js';
 import { rawFor } from './retitle.js';
 import { hasChanges, resolveChanges } from './statechg.js';
 import { openSource } from './source.js';
@@ -58,21 +58,21 @@ STEPS
 2. The sections must still cover the same message range with no gaps or overlaps. If you merge or split sections, renumber their headings from the RAW LOG.
 3. New facts and quotes come only from DRAFT or RAW LOG. Never invent or paraphrase a line and present it as a quote.
 4. Keep the archive's rules: one bullet = one event; the action that caused a reaction comes before it; a character's interpretation only as theirs; no commentary; same language as the DRAFT.
-5. Time runs one way. A reason, motive or detail you add to a moment comes only from messages up to that moment in the RAW LOG. Never explain a moment with something that happens later, and never move a later action into an earlier bullet; if the reason only comes out later, say so where it comes out ("which he only admitted at #120").
+5. Every sentence in a bullet carries the number of the message it comes from: (#88), or (#88, #91). Keep the numbers already there; a new sentence needs its own. Only messages inside that section's range, and for a reason or motive only messages up to the moment it explains. A sentence you cannot point to a message for (a motive, a fear, a meaning the log does not state) does not go in; if the request needs one, say so on the NOTE line.
 6. If part of the request cannot be done, do the rest and say what was not done on a last line that starts with "NOTE:", in Korean.
 
 EXAMPLE
 DRAFT:
 ## #12–#18 — The bridge (Spring 3, Varo)
 PLOT:
-- Ivo arrived while Ren was still hurt; Mara pulled Ren up from the broken plank.
+- Ivo arrived while Ren was still hurt; Mara pulled Ren up from the broken plank (#13, #15).
 REQUEST:
 순서 틀렸어. 마라가 먼저 끌어올리고 그 다음에 이보가 왔어
 
 Answer:
 ## #12–#18 — The bridge (Spring 3, Varo)
 PLOT:
-- Mara pulled Ren up from the broken plank; Ivo arrived afterward, while Ren was still hurt.
+- Mara pulled Ren up from the broken plank; Ivo arrived afterward, while Ren was still hurt (#13, #15).
 
 OUTPUT
 The whole revised draft, then an optional NOTE line. No fences, no comments.`;
@@ -91,7 +91,8 @@ STEPS
 1. Read the RAW LOG. If it continues the scene of the section before the gap, fold it into that section: change the heading's end number to the gap's last number and add or extend bullets. If something turns there (a relationship shifts, a secret comes out, a decision is made), keep the section as it is and write one new section for the gap after it instead.
 2. Keep every existing bullet of the section before the gap word for word unless the gap changes what it says.
 3. Follow the archive's rules: memory, not transcript — what happened, what caused it, what it changed; the action that caused a reaction comes before it; a character's interpretation only as theirs; at most 6 bullets per section; quotes only verbatim from the RAW LOG; no commentary; same language and format as the section before the gap.
-4. When two messages describe the same moment (a turn and the reply re-telling it, or a recap at the start of the next message), it happened once.
+4. Every sentence in a bullet you write carries the number of the message it comes from: (#88). A sentence you cannot point to a message for does not go in.
+5. When two messages describe the same moment (a turn and the reply re-telling it, or a recap at the start of the next message), it happened once.
 
 EXAMPLE
 SECTION BEFORE THE GAP:
@@ -105,7 +106,7 @@ Answer:
 ## #12–#22 — The bridge (Spring 3, Varo)
 PLOT:
 - Mara pulled Ren up from the broken plank; Ivo arrived afterward, while Ren was still hurt.
-- Ivo bound Ren's leg and offered to carry him; Ren refused and limped on alone.
+- Ivo bound Ren's leg and offered to carry him; Ren refused and limped on alone (#19, #21).
 
 OUTPUT
 The section before the gap (changed or not), then the new section if you wrote one. Its numbers must run from the section's first number to the gap's last number with no gap. No fences, no comments.`;
@@ -406,6 +407,7 @@ export async function openAppend(prefill = {}) {
           <div class="na_check na_statecheck" hidden></div>
           <div class="na_check na_check_warn na_statelost" hidden></div>
           <div class="na_stchg" hidden></div>
+          <div class="na_check na_cites" hidden></div>
           <div class="na_check na_check_warn na_bullets" hidden></div>
           <div class="na_check na_check_warn na_whole" hidden><span class="na_ck_ic">!</span><div>
             <b>아카이브 전체본 같아요</b> — 이미 있는 섹션이 거의 다 들어 있어요. 새 섹션만 붙이려면 그대로 <b>추가</b>, 이 내용으로 아카이브를 바꾸려면:
@@ -480,7 +482,7 @@ export async function openAppend(prefill = {}) {
         if (!$ta.val().trim()) return toastr.info('먼저 추가할 내용을 붙여넣어 주세요.');
         pvWanted = true;
         $pv.prop('open', true);
-        renderPreview(lastPlan || placeAppend(m.text, auFix($ta.val(), m), { renumber: $root.find('.na_do_renum').prop('checked'), rewrites: rwMode() }));
+        renderPreview(lastPlan || placeAppend(m.text, stripCites(auFix($ta.val(), m)), { renumber: $root.find('.na_do_renum').prop('checked'), rewrites: rwMode() }));
         $pv[0].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     });
     $root.find('.na_ap2_go').on('click', () => $root.closest('dialog').find('.popup-button-ok').trigger('click'));
@@ -586,6 +588,18 @@ export async function openAppend(prefill = {}) {
         chg.plan = r.plan;
         $ta.val(r.text).trigger('input');
     });
+    // source marks: kept in the box so they can be checked, taken out when it is saved
+    function renderCites(v) {
+        const $c = $root.find('.na_cites');
+        const ci = citeIssues(v);
+        if (!ci.marks) { $c.prop('hidden', true).empty(); return; }
+        const chip = n => `<button type="button" class="na_cite_msg" data-msg="${n}">#${n}</button>`;
+        const cut = l => esc(l.replace(/^\s*[-*•]\s*/, '').slice(0, 90)) + (l.length > 92 ? '…' : '');
+        const warn = ci.outside.length || ci.bare.length;
+        ckRow($c, warn ? 'warn' : 'ok', warn ? `출처 번호 확인 · ${[ci.outside.length && `섹션 범위 밖 ${ci.outside.length}개`, ci.bare.length && `번호 없는 불릿 ${ci.bare.length}개`].filter(Boolean).join(' · ')}` : `출처 번호 ${ci.marks}개 · 모두 섹션 범위 안`,
+            `${ci.outside.map(x => `${chip(x.n)} <b>${esc(x.title.split(' — ')[0])}</b> 범위 밖 · ${cut(x.line)}`).join('<br>')}${ci.outside.length && ci.bare.length ? '<br>' : ''}${ci.bare.map(x => `번호 없음 · ${cut(x.line)}`).join('<br>')}${warn ? '<br>' : ''}번호를 누르면 원문이 떠요 · 번호는 추가할 때 지워져요`);
+    }
+    $root.on('click', '.na_cites .na_cite_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
     $root.on('click', '.na_names_fix', () => {
         let v = $ta.val();
         nearMiss.forEach(x => { v = v.replace(new RegExp(`\\b${x.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g'), x.like); });
@@ -617,7 +631,8 @@ export async function openAppend(prefill = {}) {
                 $ta.val(r.text);
             } else if (!rawNow.trim()) chg = null;
             renderChg();
-            const val = auFix($ta.val(), m);
+            const withCites = auFix($ta.val(), m), val = stripCites(withCites);
+            renderCites(withCites);
             // an AU chat's sections go in as their own log; say so, and what the paste was missing
             const au = auOf(m);
             if (au.on && val.trim()) {
@@ -795,7 +810,7 @@ export async function openAppend(prefill = {}) {
     });
 
     if (wantWhole) {
-        const whole = String($ta.val() || '').replace(/\r\n/g, '\n').trim();
+        const whole = stripCites(String($ta.val() || '').replace(/\r\n/g, '\n').trim());
         const end = parseInt($end.val(), 10);
         const cut = cutSigns(m.text, whole);
         if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.map(esc).join('<br>')}<br><br>그래도 바꿀까요?`)) return;
@@ -806,7 +821,7 @@ export async function openAppend(prefill = {}) {
     }
     if (result !== c.POPUP_RESULT.AFFIRMATIVE && result !== true) return;
 
-    const add = auFix(String($ta.val() || '').replace(/\r\n/g, '\n').trim(), m);
+    const add = stripCites(auFix(String($ta.val() || '').replace(/\r\n/g, '\n').trim(), m));
     if (!add) return toastr.info('붙여넣은 내용이 없어요.');
     const end = parseInt($root.find('.na_end').val(), 10);
     if (!Number.isFinite(end) || end < 0) return toastr.warning('끝 번호를 확인해 주세요.');
