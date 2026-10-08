@@ -376,6 +376,7 @@ export async function quickCompress() {
     if (!raw) return toastr.info('이 범위에 메시지가 없어요.', '한 번에 압축');
     const p = g.prompts.find(x => x.id === g.wizPrompt) || activePrompt(g);
     const au = auOf(m);
+    if (m.evProgress) { delete m.evProgress; await saveMeta(); } // left in the chat file by an older version
     const two = compressMode() === 'events';
     const saved = two ? savedEvents(m, items, g) : null;
     const n = two ? eventBatches(items).length : chunkItems(items).length;
@@ -413,13 +414,11 @@ export async function quickCompress() {
     const toast = toastr.info(`#${from}–#${to} 요약하는 중… 이 탭에 있어야 끝까지 받아요`, '한 번에 압축', { timeOut: 0, extendedTimeOut: 0, tapToDismiss: false });
     let r;
     try {
-        // a held Web Lock keeps Chrome from freezing the tab while it waits (it can still be discarded)
-        const held = fn => (navigator.locks?.request ? navigator.locks.request('na-compress', fn) : fn());
-        r = await held(() => compressDraft({ m, g, p, items, grade: !!globalSettings().quickGrade, memo: runMemo,
+        r = await (() => compressDraft({ m, g, p, items, grade: !!globalSettings().quickGrade, memo: runMemo,
             onStep: (k, total, a, b, stage) => {
                 const msg = stage === 'events' ? `1단계 정리 #${a}–#${b} (${k + 1}/${total})` : stage === 'sections' ? `2단계 섹션 쓰는 중 #${a}–#${b}` : total > 1 ? `#${a}–#${b} 요약하는 중… (${k + 1}/${total})` : '';
                 if (msg) $(toast).find('.toast-message').text(`${msg} · 이 탭에 있어야 끝까지 받아요 (다른 탭·앱으로 가면 끊길 수 있어요)`);
-            } }, { reuse: quickReuse }));
+            } }, { reuse: quickReuse }))();
     } finally { quickBusy = false; toastr.clear(toast); }
     if (r.error) {
         console.error('[NarrativeArchive] quick compress', r.error);
