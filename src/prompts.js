@@ -18,7 +18,7 @@ Output exactly the following, in this order, with no greeting, explanation or co
    - Header: \`## #start–#end — Title (date, place)\`, then \`PLOT:\`, then \`- \` bullets. If the existing archive puts a prefix before the numbers, follow it.
    - A section is a chapter, not a beat. Cut only where something turns: a relationship shifts, the situation changes, a secret comes out, a decision is made. Fold routine stretches and small beats into the section they belong to.
    - Length follows weight: a turning point may get a short section of its own; a stretch where little changes shares one section. As a rough guide, one section covers 20–60 messages.
-   - A section usually has 3–6 bullets, whatever its message count. A section rarely needs more than about 250 words.
+   - A section has 3–6 bullets, whatever its message count — never more than 6. It rarely needs more than about 250 words. If a stretch truly needs more, it is two chapters: split it where it turns.
    - Titles read like a book's table of contents: short and concrete — they name the scene, they do not summarize it. No semicolons, no "X does this; Y does that." Vary the shape; do not start every title with "The":
      · a place or object: The broken plank · Varo's market
      · two things joined: The bridge, the debt · Bread, and the oath he broke
@@ -100,6 +100,7 @@ Draft the stretch, then revise it once:
 2. Merge bullets that share one cause or one outcome.
 3. Cut gestures, positions, props, temperatures and staging that survived the draft.
 4. Check that every quote is a line from the raw log and that each one earns its place.
+5. Count each section's bullets. More than 6: merge the ones that share a cause or outcome, or split the section where it turns.
 Output only the revised version.
 
 # STATE (when present)
@@ -139,7 +140,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
