@@ -101,7 +101,10 @@ export function parseSceneAnswer(out, from, to) {
 }
 // an answer's section blocks: [{ title, a, b, bullets }] (a / b null when the heading has no numbers); blocks without bullets are left out
 export function answerBlocks(out) {
-    const t = String(out || '').replace(/^```[a-z]*\n?|```\s*$/g, '').trim();
+    // line breaks some relays send as \r or U+2028, and a heading glued to the end of the bullet before it
+    const t = String(out || '').replace(/\r\n?|[\u2028\u2029]/g, '\n')
+        .replace(/([^\n])[ \t]*(#{2,3}[ \t]+(?:\S{1,12}[ \t])?#\d+[ \t]*[–—~-][ \t]*#?\d+)/g, '$1\n$2')
+        .replace(/^```[a-z]*\n?|```\s*$/g, '').trim();
     const blocks = [];
     let cur = null;
     for (const line of t.split('\n')) {
