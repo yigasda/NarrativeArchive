@@ -3878,3 +3878,11 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_st_nt { display: flex; flex-direction: column; gap: 10px; text-align: left; }
 .na_st_nt .na_st_ntta { width: 100%; box-sizing: border-box; margin: 0; resize: vertical; }
 .na_st .na_st_psel { width: auto; max-width: 140px; margin: 0; padding: 4px 6px; font-size: 0.85em; }
+.na_ss { gap: 10px; }
+.na_ss_list { display: flex; flex-direction: column; gap: 6px; max-height: 55vh; overflow-y: auto; }
+.na_ss_row { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 9px 11px; border: 1px solid var(--na-line); border-radius: 12px; background: var(--na-card); cursor: pointer; }
+.na_ss_row.on { border-color: var(--na-accent); background: var(--na-accent-soft); }
+.na_ss_row input { margin-top: 3px; flex: none; }
+.na_ss_row span { display: flex; flex-direction: column; gap: 2px; min-width: 0; line-height: 1.35; }
+.na_ss_row b { font-size: 0.9em; }
+.na_ss_row small { font-size: 0.8em; color: var(--na-dim); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
