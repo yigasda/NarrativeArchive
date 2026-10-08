@@ -3782,3 +3782,6 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 .na_trk_btns { display: flex; gap: 10px; align-items: baseline; margin-top: 4px; }
 .na_wn { gap: 10px; }
 .na_wn_ta { width: 100%; box-sizing: border-box; min-height: 45vh; font-family: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; line-height: 1.6; resize: vertical; }
+.na_qc_sclabel { display: flex; flex-direction: column; gap: 2px; font-size: 0.92em; font-weight: 600; margin: 0; }
+.na_qc_sclabel small { font-weight: 400; color: var(--na-dim); font-size: 0.85em; }
+.na_qc .na_qc_scenes { width: 100%; box-sizing: border-box; margin: 0; font-family: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; line-height: 1.6; resize: vertical; text-align: left; }

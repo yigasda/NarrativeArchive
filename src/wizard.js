@@ -6,7 +6,7 @@ import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta, textHas
 import { driftHtml } from './drift.js';
 import { castNames } from './knowledge.js';
 import { hasChanges, resolveChanges } from './statechg.js';
-import { sceneChunks, sceneCompress, sceneModel, sceneModelLabel, sceneSize, stateModel } from './scenes.js';
+import { chunksFromStarts, detectScenes, sceneChunks, sceneCompress, sceneModel, sceneModelLabel, sceneSize, scenesText, startsFromText, stateModel } from './scenes.js';
 import { buildExtract, cleanMessage, formatExtract, guessEndNumber } from './extract.js';
 import { BASIC_PROMPT, LANG_NAME, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressPrompt, dropReproduced, eventsNote, eventsSystem, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, trimEnd } from './sections.js';
@@ -349,7 +349,7 @@ const joinGrades = gs => {
 
 // One button: the next range → the draft model (with the wizard's instruction, and the AU block in an AU chat)
 // → 아카이브에 추가 with the summary filled in. Its checks, the boundary and the hide step stay.
-let quickBusy = false, quickBound = false, quickMemo = '', quickReuse = false;
+let quickBusy = false, quickBound = false, quickMemo = '', quickReuse = false, quickScenes = null;
 export async function quickCompress() {
     if (quickBusy) return toastr.info('요약을 받는 중이에요.');
     const c = ctx(), m = getMeta(), g = globalSettings();
@@ -381,7 +381,19 @@ export async function quickCompress() {
     if (m.evProgress) { delete m.evProgress; await saveMeta(); } // left in the chat file by an older version
     const mode = compressMode(), two = mode === 'events', scenes = mode === 'scenes';
     const saved = two ? savedEvents(m, items, g) : null;
-    const n = two ? eventBatches(items).length : scenes ? sceneChunks(items).length : chunkItems(items).length;
+    // 장면별: the AI 기능 모델 names the scenes first (the tracker cutter if that fails); the list can be edited below
+    let sceneList = null, sceneBy = '', sceneNotes = new Map();
+    if (scenes) {
+        const t0 = toastr.info(`#${from}–#${to} 장면 나누는 중… (${String(aiLabel()).replace(/^(커스텀|Vertex) · /, '')})`, '한 번에 압축', { timeOut: 0, extendedTimeOut: 0 });
+        try {
+            const found = await detectScenes(items, g);
+            if (found) { sceneNotes = new Map(found.map(x => [x.start, x.note])); sceneList = chunksFromStarts(items, found); sceneBy = 'ai'; }
+        } catch (e) { console.warn('[NarrativeArchive] scene detection', e); }
+        finally { toastr.clear(t0); }
+        if (!sceneList) { sceneList = sceneChunks(items); sceneBy = 'tracker'; }
+    }
+    const sceneLines = scenes ? scenesText(sceneList, { get: k => sceneNotes.get(k) || sceneNotes.get(k + 1) || '' }) : '';
+    const n = two ? eventBatches(items).length : scenes ? sceneList.length : chunkItems(items).length;
     const ce = compressEffort();
     // the 채점 box lives in the confirm dialog; its state is remembered as soon as it changes
     if (!quickBound) {
@@ -389,8 +401,9 @@ export async function quickCompress() {
         $(document).on('change', '.na_qc_grade', function () { const gg = globalSettings(); gg.quickGrade = this.checked; saveGlobal(); });
         $(document).on('input', '.na_qc_memo', function () { quickMemo = this.value; });
         $(document).on('change', '.na_qc_reuse', function () { quickReuse = this.checked; });
+        $(document).on('input', '.na_qc_scenes', function () { quickScenes = this.value; });
     }
-    quickMemo = ''; quickReuse = !!saved;
+    quickMemo = ''; quickReuse = !!saved; quickScenes = null;
     const short = l => String(l).replace(/^(커스텀|Vertex) · /, '');
     const effort = ce === 'conn' ? '연결 설정' : { high: '높게', medium: '보통', low: '낮게' }[ce] || ce;
     const row = (k, v, sub = '') => `<div class="na_qc_row"><span>${k}</span><b>${v}${sub ? `<small>${sub}</small>` : ''}</b></div>`;
@@ -399,7 +412,7 @@ export async function quickCompress() {
             saved && quickReuse ? row('1단계 정리', '저장된 목록', esc(timeLabel(saved.at))) : row('1단계 정리', esc(short(evLabel())), `15개씩 ${n}번`),
             row('2단계 요약', esc(short(drLabel())), '한 번'),
         ] : scenes ? [
-            row('장면', `${n}개`, `약 ${sceneSize()}개씩 · 장면 경계에서`),
+            row('장면', `${n}개`, sceneBy === 'ai' ? `${esc(short(aiLabel()))}가 나눔 · 아래에서 고쳐도 돼요` : '트래커·메시지 수로 나눔 · 아래에서 고쳐도 돼요'),
             row('섹션', esc(short(sceneModelLabel(sceneModel()))), `장면마다 · ${n}번`),
             row('STATE', esc(short(sceneModelLabel(stateModel()))), '마지막에 한 번'),
             ...(String(m.workNote || '').trim() ? [row('작업 노트', '있음', `약 ${fmt(estTok(m.workNote))} 토큰`)] : []),
@@ -412,16 +425,23 @@ export async function quickCompress() {
         <div class="na_qc_rows">${rows.join('')}</div>
         ${to < last ? `<small class="na_qc_note">마지막 ${last - to}개(${last === to + 1 ? `#${last}` : `#${to + 1}–#${last}`})는 지금 장면이라 남겨요</small>` : ''}
         ${!two && n <= 1 && estTok(raw) > 60000 ? '<small class="na_qc_note">원문이 길어서 중간을 훑을 수 있어요 · 압축 → 설정 → 나눠 보내기</small>' : ''}
+        ${scenes ? `<label class="na_qc_sclabel">장면 나누기 <small>한 줄에 장면 하나 · 앞 번호(시작)만 봐요 · 줄을 추가하면 나누고, 지우면 앞 장면에 합쳐요</small></label>
+        <textarea class="text_pole na_qc_scenes" rows="${Math.min(10, Math.max(3, n))}" spellcheck="false">${esc(sceneLines)}</textarea>` : ''}
         <textarea class="text_pole na_qc_memo" rows="2" placeholder="이번 압축 메모 (선택) · 예: #40–#140은 정사 파트, 관계 변화만 한두 줄로"></textarea>
         ${saved ? `<label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_reuse" checked><span>저장된 1단계 목록 쓰기<small>메시지가 그대로라 2단계만 다시 해요</small></span></label>` : ''}
         ${scenes ? '' : `<label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_grade" ${g.quickGrade ? 'checked' : ''}><span>채점도 같이<small>${esc(short(aiLabel()))}가 원문과 대조 · 비용 추가</small></span></label>`}
       </div>`)) return;
+    // the scene list as the user left it: their starts, taken as given
+    if (scenes && quickScenes !== null && quickScenes.trim() !== sceneLines.trim()) {
+        const edited = chunksFromStarts(items, startsFromText(quickScenes), { exact: true });
+        if (edited.length) sceneList = edited;
+    }
     quickBusy = true;
     const runMemo = quickMemo;
     const toast = toastr.info(`#${from}–#${to} 요약하는 중… 이 탭에 있어야 끝까지 받아요`, '한 번에 압축', { timeOut: 0, extendedTimeOut: 0, tapToDismiss: false });
     let r;
     try {
-        r = await (() => compressDraft({ m, g, p, items, grade: !!globalSettings().quickGrade, memo: runMemo,
+        r = await (() => compressDraft({ m, g, p, items, grade: !!globalSettings().quickGrade, memo: runMemo, chunks: sceneList,
             onStep: (k, total, a, b, stage) => {
                 const msg = stage === 'events' ? `1단계 정리 #${a}–#${b} (${k + 1}/${total})` : stage === 'sections' ? `2단계 섹션 쓰는 중 #${a}–#${b}`
                     : stage === 'scenes' ? `장면 ${k + 1}/${total} · #${a}–#${b} 쓰는 중` : stage === 'state' ? 'STATE·OPEN 바뀌는 것 정리 중' : total > 1 ? `#${a}–#${b} 요약하는 중… (${k + 1}/${total})` : '';
