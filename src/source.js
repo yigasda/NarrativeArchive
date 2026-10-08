@@ -20,9 +20,12 @@ export function sourceRange(m, title) {
     const cur = ranges.length ? ranges[ranges.length - 1].prefix : '';
     const label = `${prefix ? `${prefix} ` : ''}#${from}–#${to}`;
     const linked = (m.logLinks || {})[prefix] || null;
+    // in an AU chat the AU's numbers are this chat's, whatever the archive's last log or a carried-over link says
+    const au = m?.au?.on ? String(m.au.name || '').trim().replace(/\s+/g, '') || 'AU' : null;
+    const here = au !== null && prefix === au;
     // carried over from another chat: even the newest log's numbers live in that chat
-    if (prefix === cur && linked && linked !== currentChatId()) return { prefix, from, to, ok: true, chat: linked, needLink: false, why: '', label };
-    if (prefix !== cur) {
+    if (!here && prefix === cur && linked && linked !== currentChatId()) return { prefix, from, to, ok: true, chat: linked, needLink: false, why: '', label };
+    if (!here && prefix !== cur) {
         // an older log: open it from the chat it was linked to, or ask which chat that is
         const chat = linked;
         return { prefix, from, to, ok: true, chat, needLink: !chat, why: '', label };

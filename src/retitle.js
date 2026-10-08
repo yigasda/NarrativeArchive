@@ -215,9 +215,14 @@ export async function openRetitle(group = null, keys = null) {
 
 // ---- 고쳐 달라고 하기: one section, a request, the raw messages when we can find them, a diff to apply
 
-export async function rawFor(m, s) {
-    const r = sourceRange(m, s.title);
+// here: the numbers are this chat's for sure (a draft about to be added), so no link or older-log lookup
+export async function rawFor(m, s, { here = false } = {}) {
+    let r = sourceRange(m, s.title);
     if (!r) return { raw: '', why: '제목에 번호 범위가 없어요' };
+    if (here) {
+        const n = (ctx().chat || []).length;
+        r = { ...r, chat: null, needLink: false, ok: r.from < n, why: r.from < n ? '' : '이 채팅에 아직 없는 번호예요', to: Math.min(r.to, n - 1) };
+    }
     if (!r.ok) return { raw: '', why: r.why };
     if (r.needLink) return { raw: '', why: `${r.label} 원문이 있는 채팅이 연결돼 있지 않아요 (섹션의 원문 버튼으로 한 번 연결하면 돼요)` };
     let chat = ctx().chat || [];
