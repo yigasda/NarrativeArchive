@@ -191,7 +191,8 @@ export const compressMode = () => (globalSettings().compressMode === 'raw' ? 'ra
 export const EVENTS_MODELS = { ai: 'AI 기능 모델', dr: '초안 모델' };
 export const eventsModel = () => (globalSettings().eventsModel === 'dr' ? 'dr' : 'ai');
 export const evLabel = () => (eventsModel() === 'dr' ? drLabel() : aiLabel());
-const askEvents = (prompt, system) => (eventsModel() === 'dr' ? askDraft(prompt, { system, maxTokens: 8000 }) : askAI(prompt, { system, maxTokens: 8000 }));
+// step 1 copies down what happened: little to think about, so low thinking keeps each batch quick
+const askEvents = (prompt, system) => (eventsModel() === 'dr' ? askDraft(prompt, { system, maxTokens: 8000, effort: 'low' }) : askAI(prompt, { system, maxTokens: 8000, effort: 'low' }));
 // a few messages per request, so each one gets read
 export function eventBatches(items, n = 15, cap = 12000) {
     const out = [];
@@ -267,12 +268,15 @@ export async function eventList({ m, g, items, onStep = () => {} }) {
     const res = saved0?.hash === key && saved0.from === from && saved0.to === to && saved0.res ? saved0.res : {};
     const keep = () => { try { localStorage.setItem(progKey, JSON.stringify({ hash: key, from, to, res })); } catch { /* full or blocked: no resume */ } };
     const before = first => { const at = items.findIndex(x => x.i === first.i); return items.slice(Math.max(0, at - EV_CONTEXT), at); };
+    const stat = { t0: Date.now(), slow: 0, retries: 0, reasks: 0 };
     const ask = async (part, extra = '') => {
         const ctxMsgs = before(part[0]);
         const prompt = `KNOWN NAMES: ${names}\n\nEARLIER MESSAGES:\n${ctxMsgs.length ? formatExtract(ctxMsgs, g) : '(none — this is the start)'}${extra}\n\nMESSAGES:\n${formatExtract(part, g)}`;
         // one more try after a short wait: a busy or rate-limited API often answers the second time
+        const t = Date.now();
         try { return parseEvents(await askEvents(prompt, system), part); }
-        catch { await new Promise(r => setTimeout(r, 2500)); return parseEvents(await askEvents(prompt, system), part); }
+        catch (e) { stat.retries++; console.warn('[NarrativeArchive] step 1 batch failed, retrying', e); await new Promise(r => setTimeout(r, 2500)); return parseEvents(await askEvents(prompt, system), part); }
+        finally { stat.slow = Math.max(stat.slow, Date.now() - t); }
     };
     const runBatch = async k => {
         const b = batches[k];
@@ -280,6 +284,7 @@ export async function eventList({ m, g, items, onStep = () => {} }) {
         // a message the model skipped: asked for once more on its own (with this batch's lines so far), then passed on as it is
         const skip = b.filter(x => !got.has(x.i));
         if (skip.length) {
+            stat.reasks++;
             const so = linesOf([...got.values()].sort((x, y) => x.n - y.n)).join('\n');
             try { for (const [n, e] of await ask(skip, so ? `\n\nYOUR LINES FOR THIS BATCH SO FAR:\n${so}` : '')) got.set(n, e); } catch { /* keep what we have */ }
         }
@@ -302,7 +307,9 @@ export async function eventList({ m, g, items, onStep = () => {} }) {
     const missing = all.filter(e => e.missing).map(e => e.n);
     const badQ = all.reduce((t, e) => t + (e.badQ || 0), 0);
     const { text, recaps, empty } = eventLines(all);
-    return { text, recaps, empty, badQ, missing, n: items.length, batches: batches.length };
+    const secs = Math.round((Date.now() - stat.t0) / 1000);
+    console.info(`[NarrativeArchive] step 1: ${batches.length} batches in ${secs}s (slowest ${Math.round(stat.slow / 1000)}s), ${stat.retries} retried after an error, ${stat.reasks} re-asked for skipped messages`);
+    return { text, recaps, empty, badQ, missing, n: items.length, batches: batches.length, secs, slowest: Math.round(stat.slow / 1000), retries: stat.retries, reasks: stat.reasks };
 }
 // step 1's list is kept with the chat for its range, so step 2 can run again without paying for step 1
 const evKey = (items, g) => textHash(formatExtract(items, g));
