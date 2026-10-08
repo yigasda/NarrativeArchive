@@ -26,13 +26,14 @@ YOU GET
 - <current_state>: the archive's STATE and OPEN now. Context only: nothing in it goes into a section unless a raw log shows it happening.
 - Scene requests: the scene's messages in <raw_log>, with its range. Only the newest scene keeps its raw log in the conversation; for earlier scenes you have the sections you wrote.
 - Everything else the user writes: corrections and questions, often in Korean and casual.
+When the user's correction conflicts with <rules> or <work_note>, the correction wins.
 
 STEPS
 1. A scene request: write that scene's section. Usually one; two only when the story clearly turns inside the scene, together covering its range with no gap. Do not repeat what your earlier sections already hold; carry on from where they stop.
-2. A correction: rewrite only the section(s) it is about, in full, with the same heading numbers. Change what was asked and keep the rest. Then apply the correction to every later scene.
+2. A correction: rewrite only the section(s) it is about, in full, with the same heading numbers. Change what was asked and keep the rest. Then apply the correction to every later scene. Apply a correction forward only: never rewrite an earlier section unless the user asks for it.
 3. A question, or a correction you cannot carry out from what you have (the raw log of an earlier scene is gone): answer in Korean, briefly, with no section. Never guess at a raw log you no longer have.
 4. A request for the change lists: give them as asked.
-5. An outline request: only the numbered outline, no section. When the user then asks for the section, follow the outline as they corrected it.
+5. An outline request: only the numbered outline, no section. Outline format: numbered lines, each "what happened → what it changed (#N)". When the user then asks for the section, follow the outline as they corrected it.
 6. Sections the user approved are named at the end of a request. They are final: never rewrite them, even when a correction seems to reach them.
 
 EXAMPLE
@@ -40,7 +41,7 @@ User: <raw_log range="#57–#69">…</raw_log> Scene 1/3: write the section for 
 You:
 ## #57–#69 — The north road (Spring 3, night, Varo)
 PLOT:
-- Mara came back the same night she had sworn to leave, unable to say why (#57, #59). Ren let her in without pressing and told her the north road was closed: "Then I'll wait. I'll wait as long as the road stays shut, and longer if I have to." She took it as an excuse handed to her. (#60, #63)
+- Mara came back the same night she had sworn to leave, unable to say why (#57, #59). Ren let her in without pressing and told her the north road was closed: "Then I'll wait. I'll wait as long as the road stays shut, and longer if I have to, and you can stop asking me why." She took it as an excuse handed to her. (#60, #63)
 User: 대사 너무 길어. 그리고 핑계로 받아들였다는 건 원문에 없잖아
 You:
 ## #57–#69 — The north road (Spring 3, night, Varo)
@@ -153,7 +154,7 @@ function turnsFor(st) {
             const sc = st.scenes[t.scene];
             const raw = i === lastScene ? rawOf(st, sc.a, sc.b) : '(removed to save room; your section for this scene follows)';
             const ask = t.outline
-                ? `Scene ${t.scene + 1}/${st.scenes.length}, #${sc.a}–#${sc.b}: first give only its outline, no section yet: 3–5 numbered lines, what happens in order and what causes what, each with its message numbers. The user checks it before you write.`
+                ? `Scene ${t.scene + 1}/${st.scenes.length}, #${sc.a}–#${sc.b}: first give only its outline, no section yet: 3–5 numbered lines in order, each "what happened → what it changed (#N)". The user checks it before you write.`
                 : `Scene ${t.scene + 1}/${st.scenes.length}: write the section for #${sc.a}–#${sc.b}.`;
             return { role: 'user', content: `<raw_log range="#${sc.a}–#${sc.b}">\n${raw}\n</raw_log>\n\n${ask}${t.note ? `\n\nThe user's note for this scene: ${t.note}` : ''}` };
         }
