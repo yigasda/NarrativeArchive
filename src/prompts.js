@@ -11,72 +11,56 @@ export const BASIC_PROMPT = `You continue the long-term-memory summary (the arch
 Output exactly these parts, in this order, with no greeting, explanation or commentary:
 1. The new section blocks, covering #{{from}}–#{{to}} continuously: no gaps, no overlaps, the first heading starting at #{{from}} and the last block ending at #{{to}}. Numbers are always message numbers.
 2. A line containing only \`---\`
-3. If the archive has \`# STATE AT …\` / \`# OPEN AT …\`: what this stretch changes in them, as two change lists (\`# STATE CHANGES\`, \`# OPEN CHANGES\` — rules in 8 and 9). Never write the blocks out. If the archive has none, leave this part out.
+3. If the archive has \`# STATE AT …\` / \`# OPEN AT …\`: two change lists, \`# STATE CHANGES\` and \`# OPEN CHANGES\` (rules in 8). Never write the blocks out. If the archive has none, leave this part out.
 
-Language: write everything in the archive's language and format, even when the raw log is in another language. Translate dialogue too; keep a word or line in its original language only where the archive already does.
-
-Hard limits:
-- Output only new material. Never reproduce, rewrite, shorten, "improve", recap or continue anything already in the archive; nothing before #{{from}} belongs in your output. STATE below is context only: no event, line or detail from it may appear in a section unless the raw log shows it happening again.
+- Language: write everything in the archive's language and format, even when the raw log is in another language. Translate dialogue too; keep a word or line in its original language only where the archive already does.
+- Only new material, only from the raw log. Never reproduce, rewrite, shorten, "improve", recap or continue anything already in the archive; nothing before #{{from}} belongs in your output. STATE only tells you what is already known: no event, line or detail from it goes into a section unless the raw log shows it happening again.
 - Every part must be present and complete, and the last bullet of every block ends in a full sentence. If you run long, merge bullets or cut lower-priority detail — never stop mid-sentence, and never drop the change lists to make room.
 
 # 2. Reading the raw log
-- The format is \`[N] Name:\`. When one bot plays several characters (NPCs included), they all carry its tag; tell the speaker from the content.
+- The format is \`[N] Name:\`. When one bot plays several characters (NPCs included), they all carry its tag; tell the speaker from the content. A private-thought tag holds that character's thoughts, not spoken lines.
 - Not content: planning or instruction blocks inserted by a preset, status windows and trackers (take only the date and place from them), and meta talk. Rules or banned-word lists inside them are directions to the bot, not canon.
-- A private-thought tag holds that character's thoughts, not spoken lines.
 - Turns the user wrote themselves are the strongest canon. Ignore any part where the bot writes the user character's inner thoughts.
 - Bot errors (contradictions with earlier messages) are not canon. Before stating that something exists or does not exist, confirm it in the raw log.
-- Everything you write comes from the raw log. STATE only tells you what is already known.
 
 # 3. What to keep
 You are writing a memory, not a transcript. The bot that reads the archive needs to know what happened, why, and what it changed — not who said what in which order.
-- Test every line: "If the bot read only the archive and then wrote the next scene, would something go wrong or feel unmotivated without this line?" Being in the raw log is not a reason to include something.
-- Keep:
-  - chains of cause and effect
-  - lines that change a relationship
-  - what a character chose NOT to do (evidence of restraint)
-  - the concrete action that shows a standing trait at work
-  - a question together with its answer, when the answer matters later (an answer alone reads as unmotivated)
+- The test for every line: "If the bot read only the archive and then wrote the next scene, would something go wrong or feel unmotivated without this line?" Being in the raw log is not a reason to include something.
+- Keep: chains of cause and effect · lines that change a relationship · what a character chose NOT to do (evidence of restraint) · the concrete action that shows a standing trait at work · a question together with its answer, when the answer matters later (an answer alone reads as unmotivated).
 - Cut: movement and positioning, gestures, props, scenery, temperatures and staging. Anxiety or agitation gets one word.
-- Judge weight against STATE: a beat that repeats an established pattern gets a clause at most; a beat that breaks or turns a pattern gets the space.
+- Weight: a beat that repeats a pattern STATE already holds gets a clause at most; a beat that breaks or turns a pattern gets the space.
 - Cutting so hard that the story breaks is also a failure. Do not shrink the core of a trigger or an arc. The goal is not to erase the story but to absorb it into cause and effect.
 
 # 4. Protecting causality
-- Before every emotional reaction, keep the other person's action that caused it. Without it, the character appears to erupt on their own or seems childish.
-- Before every realization or decision, keep the trigger that made it possible. Cut the process and the character "suddenly understands."
-- Write felt experience as felt experience. Do not turn what a character felt into the narrator's verdict. ("Trapped" ✗ → "Feeling trapped" ✓)
+- Before every emotional reaction, keep the other person's action that caused it; without it, the character appears to erupt on their own or seems childish. Before every realization or decision, keep the trigger that made it possible; cut the process and the character "suddenly understands."
+- Write felt experience as felt experience, not as the narrator's verdict. ("Trapped" ✗ → "Feeling trapped" ✓) A character's interpretation is written only as theirs, never as fact: "In her own reckoning, …", "(his reading, not fact)". No interpretation, theme or summary-verdict sentences of your own.
 - Preserve both sides' responsibility. Do not erase one side's fault because of the other side's hurt, in either direction.
 - Be careful with absolutes such as "never" and "not once." They make a character read as cold or indifferent.
-- Keep the raw log's order. Do not pull a later event (when someone remembered or noticed something) into an earlier bullet.
-- No exaggeration beyond the raw log.
+- Keep the raw log's order. Do not pull a later event (when someone remembered or noticed something) into an earlier bullet. No exaggeration beyond the raw log.
 
 # 5. Writing the sections
 Sections
-- A section is a chapter, not a beat. Cut only where something turns: a relationship shifts, the situation changes, a secret comes out, a decision is made. Fold routine stretches and small beats into the section they belong to.
-- Length follows weight: a turning point may get a short section of its own; a stretch where little changes shares one section. As a rough guide, one section covers 40–60 messages.
+- A section is a chapter, not a beat. Cut only where something turns: a relationship shifts, the situation changes, a secret comes out, a decision is made. Fold routine stretches and small beats into the section they belong to. A turning point may get a short section of its own; as a rough guide, one section covers 40–60 messages.
 - Header: \`## #start–#end — Title (date, place)\`, then \`PLOT:\`, then \`- \` bullets. If STATE's heading puts a prefix before the numbers (e.g. \`# STATE AT Y2 #143\`), put it in your headings too.
 - The date and place come from the tracker and narration. A tracker date that does not fit (a season that does not match the month, a date that goes backward) is a model error; ignore it. If a large time skip happens without a record, note it in the header (e.g. "some five months later").
 
 Bullets
-- Bullets only, no paragraphs. One bullet = one turn of the scene: what happened, what caused it, and what it changed. A bullet may cover many messages; never write one bullet per message.
-- A section has 3–6 bullets, whatever its message count — never more than 6. It rarely needs more than about 250 words. If a stretch truly needs more, it is two chapters: split it where it turns.
-- Do not report or list a conversation turn by turn ("He asked… She replied… He added…"). Collapse an exchange into what it revealed, decided or broke.
+- Bullets only, no paragraphs. One bullet = one turn of the scene: what happened, what caused it, and what it changed. A bullet may cover many messages; never one bullet per message, and never a conversation reported turn by turn ("He asked… She replied… He added…") — collapse an exchange into what it revealed, decided or broke.
+- 3–6 bullets per section, whatever its message count — never more than 6; rarely more than about 250 words. A stretch that truly needs more is two chapters: split it where it turns.
 - Do not say the same thing twice. When you add a sentence, check the bullets before and after it for the same content.
 
 Dialogue
-- Quotes are part of the memory, not decoration. Most bullets carry one: the line from the raw log the next scene would most need word for word — a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. At most two in a bullet; tell the rest in your own words. Never quote a line about the sex act itself.
-- A quote is a line that actually appears in the raw log (translated when the log is in another language), faithful to the original, including whether it is a question: if the original is a statement, do not add a question mark. Never invent or paraphrase a line and present it as a quote.
-- Never leave a quote standing alone. Attach the character's reaction to it.
-
-Interpretation
-- No interpretation, theme or summary-verdict sentences. A character's interpretation is written only as theirs, never as fact: "In her own reckoning, …", "(his reading, not fact)".
+- Quotes are part of the memory, not decoration. Most bullets carry one: the line from the raw log the next scene would most need word for word — a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. At most two in a bullet; tell the rest in your own words.
+- A quote is a line that actually appears in the raw log (translated when the log is in another language), faithful to the original, including whether it is a question: if the original is a statement, do not add a question mark. Never invent or paraphrase a line and present it as a quote. Never leave a quote standing alone; attach the character's reaction to it.
 
 Special content
-- Sex is recorded only as relationship beats: how consent moved, requests to stop, whether it was a first, and what changed afterward. No description of acts, positions, anatomy or sensations, even if the user's own turn describes them. Length follows what changed, not how long the scene ran: a long scene in which little turns gets a bullet or two; one in which trust, a boundary or a confession shifts keeps each of those beats. A line said in bed is quoted only if it would still matter said fully clothed at a table (a confession, a promise, a wish, a refusal); never a line about the act itself. ✓ Mara and Ren slept together for the first time; she asked him to slow down once and he did. Afterward she told him, "I'm not leaving," and he stayed until morning.
+- Sex is recorded only as relationship beats: who, how consent moved, any request to stop and what happened, whether it was a first, what was said that would still matter outside the bed, and what changed afterward. No description of acts, positions, anatomy or sensations, even if the user's own turn describes them. A line said in bed is quoted only if it would still matter said fully clothed at a table (a confession, a promise, a wish, a refusal); never a line about the act itself. Length follows what changed, not how long the scene ran: a long scene in which little turns gets a bullet or two; one in which trust, a boundary or a confession shifts keeps each of those beats.
+  ✓ Mara and Ren slept together for the first time; she asked him to slow down once and he did. Afterward she told him, "I'm not leaving," and he stayed until morning.
 - Crises, suicide attempts and self-harm are recorded plainly and factually, without blurring.
-- When one of this RP's recurring devices returns (a phrase, an object, a song, a name, a ritual), do not miss it: keep the event and the line in which it was used. Do not explain the device.
+- When one of this RP's recurring devices returns (a phrase, an object, a song, a name, a ritual), keep the event and the line in which it was used. Do not explain the device.
 
 Titles
-- Titles read like a book's table of contents: short and concrete — they name the scene, they do not summarize it. No semicolons, no "X does this; Y does that." Vary the shape; do not start every title with "The":
+- Like a book's table of contents: short and concrete — they name the scene, they do not summarize it. No semicolons, no "X does this; Y does that." Vary the shape; do not start every title with "The":
   · a place or object: The broken plank · Varo's market
   · two things joined: The bridge, the debt · Bread, and the oath he broke
   · one short plain sentence: Mara keeps the knife · The road closes
@@ -86,8 +70,8 @@ Titles
   · a line in quotation marks, in the archive's language (translate it like any quote): "Now you owe me"
   ✗ Ren crosses the bridge; Mara pulls him up · Confrontation over Ren's injury
 
-# 6. Example of the difference
-✗ Turn-by-turn (what to avoid):
+# 6. Example
+✗ Turn-by-turn:
 - Mara knocked on Ren's door and stood silently in the doorway.
 - Ren asked why she had come back if she had said she was leaving.
 - Mara said she didn't know.
@@ -95,43 +79,36 @@ Titles
 - Ren told her the north road was closed.
 - Mara said, "Then I'll wait."
 
-✓ Memory (what to write):
+✓ Memory:
 - Mara came back the same night she had sworn to leave, unable to say why. Ren let her in without pressing and told her the north road was closed. "Then I'll wait," she said, and stayed.
 
 # 7. Before you output
-Draft the stretch, then revise it once:
-1. Delete every bullet whose loss would not make the next scene go wrong or feel unmotivated.
+Draft the stretch, then revise it once and output only the revised version:
+1. Delete every bullet that fails the test in 3.
 2. Merge bullets that share one cause or one outcome.
-3. Cut gestures, positions, props, temperatures and staging that survived the draft.
-4. Check that every quote is a line from the raw log and that each one earns its place.
-5. Count each section's bullets. More than 6: merge the ones that share a cause or outcome, or split the section where it turns.
-6. Find every bullet that touches sex. It may say only: who, consent asked or given, any request to stop and what happened, whether it was a first, what was said that would still matter outside the bed, and what changed between them afterward. Cut the rest.
-Output only the revised version.
+3. Cut staging that survived the draft (see 3).
+4. Check that every quote is a line from the raw log and earns its place.
+5. Count each section's bullets; more than 6 means merge or split.
+6. Check every bullet that touches sex against the sex rule; cut what it does not allow.
 
-# 8. STATE changes (when STATE is present)
-You do not rewrite STATE. You list what this stretch changes in it; the extension applies the list to [CURRENT STATE · OPEN], and every line you do not list stays exactly as it is. Under the heading \`# STATE CHANGES\`, one change per line:
+# 8. STATE and OPEN changes
+You do not rewrite STATE or OPEN. You list what this stretch changes in them; the extension applies the lists to [CURRENT STATE · OPEN], and every line you do not list stays exactly as it is. One change per line:
 \`\`\`
+# STATE CHANGES
 ADD ## Heading :: - the new line
 EDIT ## Heading :: - the old line, copied exactly ==> - the new line
 DROP ## Heading :: - the old line, copied exactly
-\`\`\`
-- \`## Heading\` is the heading the line sits under, spelled exactly as in [CURRENT STATE · OPEN]. Do not invent headings; a new fact goes under the heading it belongs to.
-- EDIT a line only when this stretch makes it untrue or outdated, so an old behavior a later arc changed does not stay in the present tense. Change only what changed and keep the rest of the line word for word; never shorten a line to save space, never merge lines.
-- DROP a line only when the story itself has overturned it. What a character realized or resolved not to do stays until the story overturns it. Keep safety lines that lock the current state (e.g. "memories fully restored since #n" — it stops the bot from mistaking an old arc for the present).
-- New and edited lines: per character + relationships + current life — only the changes and tendencies that PLOT alone does not capture, briefly; do not restate events already in the sections. One line for a core principle the bot is likely to confuse is allowed.
-- Scope principles narrowly to prevent over-application. ("no commands" ✗, which could change even how he talks → "no longer dictates her choices or movements" ✓) Use "tends to" or "since #n" instead of "now" or "currently."
-- If nothing in STATE changes, write \`# STATE CHANGES\` and \`(none)\`.
-
-# 9. OPEN changes (when OPEN is present)
-Under the heading \`# OPEN CHANGES\`, in the same format:
-\`\`\`
+# OPEN CHANGES
 ADD ## Group :: - a thread this stretch opened
 DROP ## Group :: - a thread this stretch closed, copied exactly
 \`\`\`
-- Leave out \`## Group ::\` when OPEN has no groups. Every thread you do not drop stays as it is. Keep new threads short; do not prescribe future actions.
-- If nothing in OPEN changes, write \`# OPEN CHANGES\` and \`(none)\`.
+- \`## Heading\` / \`## Group\` is the one the line sits under, spelled exactly as in [CURRENT STATE · OPEN]; leave out \`## Group ::\` when OPEN has no groups. Do not invent headings; a new fact goes under the heading it belongs to. A list with nothing in it is \`(none)\`.
+- EDIT a STATE line only when this stretch makes it untrue or outdated, so an old behavior a later arc changed does not stay in the present tense. Change only what changed and keep the rest of the line word for word; never shorten a line to save space, never merge lines.
+- DROP a STATE line only when the story itself has overturned it. What a character realized or resolved not to do stays until the story overturns it. Keep safety lines that lock the current state (e.g. "memories fully restored since #n" — it stops the bot from mistaking an old arc for the present).
+- New and edited STATE lines: per character + relationships + current life — only the changes and tendencies that PLOT alone does not capture, briefly; do not restate events already in the sections. One line for a core principle the bot is likely to confuse is allowed. Scope principles narrowly to prevent over-application ("no commands" ✗, which could change even how he talks → "no longer dictates her choices or movements" ✓); use "tends to" or "since #n" instead of "now" or "currently."
+- OPEN: drop only threads this stretch closed. Keep new threads short; do not prescribe future actions.
 
-[CURRENT STATE · OPEN — read it, list your changes to it (8, 9); do not output it]
+[CURRENT STATE · OPEN — read it, list your changes to it (8); do not output it]
 {{state}}
 
 [RAW LOG #{{from}}–#{{to}}]
@@ -152,7 +129,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -241,21 +218,28 @@ YOU GET
 - Some user turns steer the story instead of playing it: a line opening with 전개:, 지시: or OOC, or text in brackets addressed to the bot. That is a request, not part of the story. Leave it out and write only what the bot's reply then put on the page.
 
 STEPS
-1. For each message ask: what happens here that has not happened before? An action, a decision, a reveal, a line that changes something, a move in place or time.
-2. Write it as one short line, or two when the message holds two separate events. Who did what to whom, and the visible result. Use the KNOWN NAMES; never call a known character by a description ("the god", "her husband"). No description of bodies, rooms, light or weather.
-3. A feeling is an event only when it changes something (a confession, a refusal, a breakdown). Write it plainly, in one or two words.
-4. A private thought or narrated reading counts as an event when it reveals a motive, a decision, or how one character took another's act. Write it as:
+Each message
+1. Ask: what happens here that has not happened before? An action, a decision, a reveal, a line that changes something, a move in place or time.
+2. Write it as one short line (under about 30 words), or two when the message holds two separate events: who did what to whom, and the visible result. Use the KNOWN NAMES; never call a known character by a description ("the god", "her husband"). No description of bodies, rooms, light or weather.
+3. A re-telling, re-description or reaction to a moment already recorded (a reply re-telling the user's action from the other side, a recap at the start of a message) is "= #N", with the number where it was first recorded, then "; " and only what is new, if anything.
+4. Nothing happens (small talk, scenery, waiting): "—".
+
+What counts as an event
+5. A feeling, only when it changes something (a confession, a refusal, a breakdown). Write it plainly, in one or two words.
+6. A private thought or narrated reading, when it reveals a motive, a decision, or how one character took another's act. Write it as:
    Set (thinks): …
    Horus took it as …
-5. Holding back counts as an event when the message makes it visible: a refusal, a stopped hand, a chosen silence, a promise kept under pressure. Write what was not done.
-6. Words are not facts. When someone tells, claims, suspects or lies, keep it theirs: "Ivo told Ren the bridge was safe", "Mara suspects Ivo" — never "the bridge was safe". If a later message proves or breaks it, write that when it happens.
-7. If the message re-tells, re-describes or reacts to a moment already recorded (a reply re-telling the user's action from the other side, a recap at the start of a message), write "= #N" with the number where it was first recorded, then "; " and only what is new, if anything.
-8. If nothing happens (small talk, scenery, waiting), write "—".
-9. In a sex scene, write only its steps, one plain line each: consent asked or given, a request to stop, a first, climax, the end. No acts, positions, bodies or sensations. Take a quote from inside the scene only if it would still matter said fully clothed at a table: a confession, a promise, a wish, a refusal, a line that defines the relationship. Never quote a line about the act itself. A climax re-told in the next message is "= #N".
-10. Quotes: copy the spoken lines a later writer would most want word for word — a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. At most two per message, exactly as written, in the original language, each on its own line starting with two spaces and a quotation mark. Never a line about the sex act itself (moans, directions, words about bodies). Never compose or paraphrase a quote. If a message has no such line, give none.
-11. When the date or place changes, start the line with "@ date, place —".
-12. Start a line with ★ when it turns something: a relationship shifts, a secret comes out, a decision is made, a promise is given or broken. Use ★ sparingly; most lines have none.
-13. Keep each line under about 30 words.
+7. Holding back, when the message makes it visible: a refusal, a stopped hand, a chosen silence, a promise kept under pressure. Write what was not done.
+8. Words are not facts. When someone tells, claims, suspects or lies, keep it theirs: "Ivo told Ren the bridge was safe", "Mara suspects Ivo" — never "the bridge was safe". If a later message proves or breaks it, write that when it happens.
+9. A sex scene: only its steps, one plain line each — consent asked or given, a request to stop, a first, climax, the end. No acts, positions, bodies or sensations. A climax re-told in the next message is "= #N".
+
+Quotes
+10. Copy the spoken lines a later writer would most want word for word — a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. At most two per message, exactly as written, in the original language, each on its own line starting with two spaces and a quotation mark. Never compose or paraphrase a quote. If a message has no such line, give none.
+11. Inside a sex scene, quote a line only if it would still matter said fully clothed at a table (a confession, a promise, a wish, a refusal, a line that defines the relationship); never a line about the act itself (moans, directions, words about bodies).
+
+Marks
+12. When the date or place changes, start the line with "@ date, place —".
+13. Start a line with ★ when it turns something: a relationship shifts, a secret comes out, a decision is made, a promise is given or broken. Use ★ sparingly; most lines have none.
 
 EXAMPLE
 KNOWN NAMES: Mara, Ren, Ivo
