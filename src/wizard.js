@@ -5,7 +5,7 @@ import { openAppend } from './append.js';
 import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { driftHtml } from './drift.js';
 import { buildExtract, cleanMessage, formatExtract, guessEndNumber } from './extract.js';
-import { activePrompt, auFix, auOf, compressPrompt, dropReproduced, hasAuDivider, referenceSection, renderPromptSettings } from './prompts.js';
+import { LANG_NAME, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressPrompt, dropReproduced, hasAuDivider, referenceSection, renderPromptSettings } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, trimEnd } from './sections.js';
 import { openSource } from './source.js';
 import { refreshStatus } from './status.js';
@@ -151,6 +151,14 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
         try { out = cleanDraft(await askCompress(prompt)); }
         catch (e) { error = e; break; }
         if (!out) { error = new Error('초안 모델이 빈 답을 줬어요'); break; }
+        // answered in the wrong language (Korean for an English archive): ask before paying for another try
+        if (!answerLangOk(shadow, out)) {
+            const want = LANG_NAME[archiveLang(shadow)];
+            if (await confirm('답 언어가 달라요', `#${from}–#${to} 요약을 모델이 아카이브(${want})와 다른 언어로 썼어요.<br><b>${want}로 다시 받을까요?</b> (요청 1번 더)<br><small>아니요를 누르면 이 답 그대로 써요.</small>`)) {
+                try { out = cleanDraft(await askCompress(`[Your previous answer to this request was not in ${want}. Answer in ${want} only.]\n\n${prompt}`)) || out; }
+                catch (e) { error = e; break; }
+            }
+        }
         const [body0, t] = splitTail(out);
         // sections copied out of the archive (it is in the prompt as context) are not this stretch
         const { text: body, dropped: dr } = dropReproduced(body0, shadow, from);

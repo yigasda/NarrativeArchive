@@ -4,6 +4,7 @@
 import { askCompress, drLabel, draftReady, stripThink } from './ai.js';
 import { ctx, getMeta, newId, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
+import { langBlock } from './prompts.js';
 import { RANGE_HEAD, groupLabel, parseSections, sectionKey, trimEnd } from './sections.js';
 import { ICO_A, svgA } from './theme.js';
 import { translateLines, trLineOk, withLineTr } from './translate.js';
@@ -250,7 +251,7 @@ export async function openDigest(group = null, keys = null) {
         busy = true;
         const $b = $root.find('.na_dg_go').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
         try {
-            const out = stripThink(await askCompress(`SECTIONS:\n${src}\n\nTARGET: ${target}${note ? `\n\nNOTE:\n${note}` : ''}`, { system: AI_SYS_DIGEST }))
+            const out = stripThink(await askCompress(`SECTIONS:\n${src}\n\nTARGET: ${target}${note ? `\n\nNOTE:\n${note}` : ''}${langBlock(m.text)}`, { system: AI_SYS_DIGEST }))
                 .replace(/^```[a-z]*\n?|```\s*$/g, '').trim().split(/\n-{3,}\s*\n/)[0].trim();
             if (!/^#{1,3}\s/.test(out)) throw new Error('초안 모델이 섹션 형태로 답하지 않았어요');
             const [tok, srcTok] = await Promise.all([countTokens(out), countTokens(src)]);
