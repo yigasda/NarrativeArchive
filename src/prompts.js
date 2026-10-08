@@ -52,7 +52,7 @@ You are writing a memory, not a transcript. The bot that reads the archive needs
 # 5. Writing the sections
 Sections
 - A section is a chapter, not a beat. Cut only where something turns: a relationship shifts, the situation changes, a secret comes out, a decision is made. Fold routine stretches and small beats into the section they belong to.
-- Length follows weight: a turning point may get a short section of its own; a stretch where little changes shares one section. As a rough guide, one section covers 20–60 messages.
+- Length follows weight: a turning point may get a short section of its own; a stretch where little changes shares one section. As a rough guide, one section covers 40–60 messages.
 - Header: \`## #start–#end — Title (date, place)\`, then \`PLOT:\`, then \`- \` bullets. If the archive puts a prefix before the numbers, follow it.
 - The date and place come from the tracker and narration. A tracker date that does not fit (a season that does not match the month, a date that goes backward) is a model error; ignore it. If a large time skip happens without a record, note it in the header (e.g. "some five months later").
 
@@ -142,7 +142,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -221,7 +221,7 @@ export function recentSections(text, n = 3) {
 // How big the answer should be, as numbers: sections for this many messages, and, when a long stretch goes in parts,
 // that every length target (the user's note included) is for the whole stretch, so each part takes its share
 export function sizeBlock({ k = 0, n = 1, count, total = count, from, to, partFrom = from, partTo = to }) {
-    const lo = Math.max(1, Math.ceil(count / 60)), hi = Math.max(lo, Math.ceil(count / 25));
+    const lo = Math.max(1, Math.ceil(count / 60)), hi = Math.max(lo, Math.ceil(count / 40));
     const span = lo === hi ? `about ${lo} section${lo > 1 ? 's' : ''}` : `${lo}–${hi} sections`;
     if (n <= 1) return `\n\n[SIZE] #${from}–#${to} is ${count} messages: write ${span} for it, not more.`;
     return `\n\n[PART ${k + 1} OF ${n}] The stretch #${from}–#${to} (${total} messages) is too long for one request, so it is sent in ${n} parts, in order. This request is part ${k + 1}: #${partFrom}–#${partTo} (${count} messages). Every length target — the section guide above and any number in the user's note — is for the whole stretch, not for this part: this part gets about 1/${n} of it. For these ${count} messages write ${span}, not more.`;
