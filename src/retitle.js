@@ -326,7 +326,7 @@ STEPS
 1. Decide where the new sections start. A section is a chapter, not a beat: start a new one only where something turns (a relationship shifts, the situation changes, a secret comes out, a decision is made). Keep an event together with its cause and its result. A turning point may stay short; stretches where little changes go together. Follow REQUEST if there is one. Make fewer sections than you were given.
 2. Never split a given section: every new section is made of whole given sections, in order.
 3. Numbers: each new section covers one continuous range, and together they cover the given sections' first to last number with no gaps and no overlaps. Keep the prefix the headings use (for example "AU").
-4. Heading: "## <prefix> #from–#to — Title (date, place)". Take the date and place from the merged headings; if they differ, give the first and the last ("Hathyr 8, late morning → night").
+4. Heading: "## <prefix> #from–#to — Title (date, place)". Take the date and place from the merged headings; if they differ, give the first and the last ("Hathyr 8, late morning → night"). No clock times ("5:29 PM" ✗).
 5. Title: like a book's table of contents — short and concrete; it names the scene, it does not summarize it. No semicolons. Vary the shape; do not start every title with "The":
    - a place or object: The broken plank · Varo's market
    - two things joined: The bridge, the debt · Bread, and the oath he broke
