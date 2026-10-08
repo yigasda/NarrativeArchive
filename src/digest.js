@@ -16,13 +16,13 @@ Condense a run of story-archive sections into ONE short section that stands in f
 
 YOU GET
 - SECTIONS: the sections in order, each with its heading line and its text.
-- TARGET: about how many tokens the digest may use (a token is about three quarters of an English word).
+- TARGET: the most tokens the digest may use (a token is about three quarters of an English word). It is a ceiling, not a goal.
 - NOTE (sometimes): what the user wants kept or cut. It may be in Korean. It overrides the steps below.
 
 STEPS
 1. Read every section. Keep what later scenes depend on: how relationships changed, decisions, promises, secrets that came out, injuries, firsts, the reasons behind big reactions, and where things stand at the end.
-2. Cut what only repeats or colours the mood: individual acts, positions, gestures, back-and-forth that changes nothing. A sex scene keeps only its relationship beats — how consent moved, a request to stop, whether it was a first, what changed afterward.
-3. Length: about TARGET tokens. Shorter is fine; longer is not.
+2. Cut what only repeats or colours the mood: individual acts, positions, gestures, back-and-forth that changes nothing. A sex scene, however long, becomes one bullet of relationship beats — how consent moved, a request to stop, whether it was a first, what changed afterward — and nothing about the acts, bodies or sensations.
+3. Length: only what step 1 needs, and never more than TARGET. Do not fill the budget: a stretch that is mostly one sex scene may need a tenth of it.
 4. Form: one heading line "## <prefix> #first–#last — Title (date, place)" covering the whole run (keep the prefix the headings use; if dates or places differ, give the first and the last: "Hathyr 8, noon → night"), then "PLOT:", then "- " bullets in the order things happened.
 5. Title: like a book's table of contents — short and concrete; it names the stretch, it does not summarize it. No semicolons.
 6. Quotes: at most two or three lines that define the stretch, copied exactly from the sections. Tell the rest in your own words.
@@ -121,7 +121,7 @@ export async function openDigest(group = null, keys = null) {
         ${gs.length ? `<select class="text_pole na_mg_group na_dg_group">${gs.map((g, i) => `<option value="${i}">${esc(g.label)} · 섹션 ${g.secs.length}개</option>`).join('')}</select>` : '<small class="na_v2_note">번호가 있는 섹션이 없어요</small>'}
         <div class="na_mg_pickhead"><small class="na_dim">두 섹션을 누르면 그 사이가 모두 골라져요</small><span class="na_rt_quick"><button type="button" class="na_pchip" data-all="1">전체</button><button type="button" class="na_pchip" data-all="0">비우기</button></span></div>
         <div class="na_mg_list na_dg_list"></div>
-        <label class="na_v2_card na_v2_switchrow na_dg_target"><span class="na_cp_txt"><span>목표 길이</span><small class="na_dg_tinfo"></small></span><span class="na_dg_tok"><input type="number" class="text_pole na_dg_tokin" min="100" step="100" value="${DIGEST_DEFAULT_TOK}"><span>토큰</span></span></label>
+        <label class="na_v2_card na_v2_switchrow na_dg_target"><span class="na_cp_txt"><span>최대 길이</span><small class="na_dg_tinfo"></small></span><span class="na_dg_tok"><input type="number" class="text_pole na_dg_tokin" min="100" step="100" value="${DIGEST_DEFAULT_TOK}"><span>토큰</span></span></label>
         <div class="na_ly_ask"><input type="text" class="na_ly_askq na_dg_note" placeholder="메모 (선택 · 예: 정사 파트라 관계 변화만 남겨줘)" aria-label="메모" enterkeyhint="go"><button type="button" class="na_ly_askgo na_dg_go" aria-label="만들기" title="초안 모델로 다이제스트 만들기">${svgA(ICO_A.check, 17, 2.4)}</button></div>
         <div class="na_dg_res" hidden>
           <div class="na_rt_head"><b class="na_dg_restitle"></b><button type="button" class="na_linkbtn na_dg_ko na_dg_resko">한국어로</button></div>

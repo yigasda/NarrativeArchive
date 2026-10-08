@@ -66,7 +66,7 @@ Output exactly the following, in this order, with no greeting, explanation or co
 - Dialogue only when it changes a relationship or defines a character — usually one line in a bullet, at most two; tell the rest in your own words. Inside quotation marks, stay faithful to the raw log, including whether it is a question; if the original is a statement, do not add a question mark.
 - Never leave a quote standing alone. Attach the character's reaction to it.
 - Dates and places in headers come from the tracker and narration. A tracker date that does not fit (a season that does not match the month, a date that goes backward) is a model error; ignore it. If a large time skip happens without a record, note it in the header (e.g. "some five months later").
-- Sex is recorded only as relationship beats: how consent moved, requests to stop, whether it was a first, and what changed afterward. No description of acts or anatomy, even if the user's own turn describes them.
+- Sex is recorded only as relationship beats: how consent moved, requests to stop, whether it was a first, and what changed afterward. No description of acts, positions, anatomy or sensations, even if the user's own turn describes them. However many messages a sex scene runs, it takes one bullet — at most two when the relationship turns in it — and never a section of its own unless something outside the act happens there too.
 - Crises, suicide attempts and self-harm are recorded plainly and factually, without blurring.
 - When one of this RP's recurring devices returns (a phrase, an object, a song, a name, a ritual), do not miss it: keep the event and the line in which it was used. Do not explain the device.
 
@@ -107,7 +107,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로

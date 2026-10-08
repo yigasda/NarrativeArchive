@@ -95,7 +95,7 @@ STEPS
    (a section that is already short may stay near that limit, but must still be shorter).
    Same form as the original: bullets stay bullets, and every label line of the section (PLOT:, NOTES:, any line
    that ends with a colon) stays, in the same order, with its own shortened bullets under it. Keep every fact from step 1.
-   Cut mood and repeated feelings.
+   Cut mood and repeated feelings. A sex scene shrinks to one bullet of relationship beats (consent, a request to stop, a first, what changed) — nothing about acts or bodies.
    Dialogue: a line you keep in quotation marks is copied exactly from the section — every word, same order,
    nothing trimmed, merged or reworded. Never shorten a quote.
    Keep WHOLE, however long, a line that turns the scene: one the section itself calls out ("the line that changed …"),
