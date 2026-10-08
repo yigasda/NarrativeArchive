@@ -6,6 +6,7 @@ import { ctx, getMeta, newId, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { RANGE_HEAD, groupLabel, parseSections, sectionKey, trimEnd } from './sections.js';
 import { ICO_A, svgA } from './theme.js';
+import { translateLines, trLineOk, withLineTr } from './translate.js';
 import { confirm, countTokens, esc, fmt } from './util.js';
 
 export const DIGEST_DEFAULT_TOK = 1000;
@@ -123,7 +124,8 @@ export async function openDigest(group = null, keys = null) {
         <label class="na_v2_card na_v2_switchrow na_dg_target"><span class="na_cp_txt"><span>목표 길이</span><small class="na_dg_tinfo"></small></span><span class="na_dg_tok"><input type="number" class="text_pole na_dg_tokin" min="100" step="100" value="${DIGEST_DEFAULT_TOK}"><span>토큰</span></span></label>
         <div class="na_ly_ask"><input type="text" class="na_ly_askq na_dg_note" placeholder="메모 (선택 · 예: 정사 파트라 관계 변화만 남겨줘)" aria-label="메모" enterkeyhint="go"><button type="button" class="na_ly_askgo na_dg_go" aria-label="만들기" title="초안 모델로 다이제스트 만들기">${svgA(ICO_A.check, 17, 2.4)}</button></div>
         <div class="na_dg_res" hidden>
-          <div class="na_rt_head"><b class="na_dg_restitle"></b></div>
+          <div class="na_rt_head"><b class="na_dg_restitle"></b><button type="button" class="na_linkbtn na_dg_ko na_dg_resko">한국어로</button></div>
+          <div class="na_dg_kotext na_dg_reskotext" hidden></div>
           <textarea class="text_pole na_dg_out" rows="10" spellcheck="false"></textarea>
           <button type="button" class="na_v2_btn primary wide na_dg_save">저장하고 켜기</button>
         </div>
@@ -147,7 +149,8 @@ export async function openDigest(group = null, keys = null) {
             return `<div class="na_dg_item ${ok ? '' : 'stale'}" data-i="${i}">
               <div class="na_dg_ihead"><span class="na_rt_txt"><small>${esc(spanLabel(m.text, d))} · 약 ${fmt(d.tok || 0)} 토큰${d.srcTok ? ` (원본 ${fmt(d.srcTok)})` : ''}</small><b>${esc(head)}</b></span>
                 <input type="checkbox" class="na_toggle na_dg_on" ${d.on && ok ? 'checked' : ''} ${ok ? '' : 'disabled'} title="${ok ? '켜면 주입에 이 다이제스트가 원본 대신 들어가요' : '가리키던 섹션이 지워졌거나 순서가 바뀌었어요'}"></div>
-              <div class="na_dg_iact"><button type="button" class="na_linkbtn na_dg_view">보기 · 고치기</button>${ok ? '<button type="button" class="na_linkbtn na_dg_redo">다시 만들기</button>' : ''}<button type="button" class="na_linkbtn na_danger na_dg_del">지우기</button></div>
+              <div class="na_dg_iact"><button type="button" class="na_linkbtn na_dg_ko">한국어로</button><button type="button" class="na_linkbtn na_dg_view">보기 · 고치기</button>${ok ? '<button type="button" class="na_linkbtn na_dg_redo">다시 만들기</button>' : ''}<button type="button" class="na_linkbtn na_danger na_dg_del">지우기</button></div>
+              <div class="na_dg_kotext" hidden></div>
               <textarea class="text_pole na_dg_edit" rows="8" spellcheck="false" hidden>${esc(d.text)}</textarea>
             </div>`;
         }).join('')}</div>` : '');
@@ -188,6 +191,25 @@ export async function openDigest(group = null, keys = null) {
         if (this.checked) m.digests.forEach(o => { if (o !== d && o.on && o.keys.some(k => d.keys.includes(k))) o.on = false; });
         d.on = this.checked;
         await saveAndInject(); drawHave(); drawList();
+    });
+    // 한국어로: line by line through the translation model, cached like the reader's translations
+    $root.on('click', '.na_dg_ko', async function () {
+        const res = $(this).hasClass('na_dg_resko');
+        const $box = res ? $root.find('.na_dg_reskotext') : $(this).closest('.na_dg_item').find('.na_dg_kotext');
+        if (!$box.prop('hidden')) { $box.prop('hidden', true); return $(this).text('한국어로'); }
+        const text = res ? String($root.find('.na_dg_out').val() || '') : String(m.digests[Number($(this).closest('.na_dg_item').data('i'))]?.text || '');
+        const lines = [...new Set(text.split('\n').map(l => l.trim()).filter(trLineOk))];
+        const $b = $(this).prop('disabled', true).text('번역하는 중…');
+        try {
+            const ko = await translateLines(lines);
+            const map = new Map(lines.map((l, k) => [l, ko[k]]).filter(([, v]) => v));
+            $box.text(withLineTr(text, map)).prop('hidden', false);
+            $b.text('원문으로');
+        } catch (e) {
+            console.error('[NarrativeArchive] digest translate', e);
+            toastr.error(String(e?.message || e), '번역');
+            $b.text('한국어로');
+        } finally { $b.prop('disabled', false); }
     });
     $root.on('click', '.na_dg_view', function () {
         const $it = $(this).closest('.na_dg_item'), $ta = $it.find('.na_dg_edit');
@@ -236,6 +258,7 @@ export async function openDigest(group = null, keys = null) {
             $root.find('.na_dg_res').prop('hidden', false);
             $root.find('.na_dg_restitle').text(`섹션 ${sel.length}개 · 약 ${fmt(srcTok)} → ${fmt(tok)} 토큰${tok > target * 1.3 ? ' · 목표보다 길어요' : ''}`);
             $root.find('.na_dg_out').val(out);
+            $root.find('.na_dg_reskotext').prop('hidden', true).empty(); $root.find('.na_dg_resko').text('한국어로');
             $root.find('.na_dg_res')[0].scrollIntoView({ block: 'nearest' });
         } catch (e) {
             console.error('[NarrativeArchive] digest', e);

@@ -6,7 +6,7 @@ import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta } from '
 import { driftHtml } from './drift.js';
 import { buildExtract, cleanMessage, formatExtract, guessEndNumber } from './extract.js';
 import { activePrompt, auFix, auOf, compressPrompt, hasAuDivider, referenceSection, renderPromptSettings } from './prompts.js';
-import { RANGE_HEAD, headingRanges, parseSections, splitTail, trimEnd } from './sections.js';
+import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, trimEnd } from './sections.js';
 import { openSource } from './source.js';
 import { refreshStatus } from './status.js';
 import { ICO_A, svgA } from './theme.js';
@@ -103,8 +103,9 @@ export function nextRange(c = ctx(), m = getMeta(), { afterExport = true } = {})
 }
 
 // the raw log of a range, as the wizard and 원문 뽑기 build it
-function rangeRaw(c, g, from, to) {
-    const items = buildExtract(from, to).filter(x => !(g.skipHidden && c.chat[x.i]?.is_system)).map(x => ({ ...x, text: cleanMessage(x.text, g) })).filter(x => x.text);
+// keepUpTo: messages up to here stay even when hidden (they were hidden by the boundary, not by hand)
+function rangeRaw(c, g, from, to, keepUpTo = -1) {
+    const items = buildExtract(from, to).filter(x => !(g.skipHidden && c.chat[x.i]?.is_system && x.i > keepUpTo)).map(x => ({ ...x, text: cleanMessage(x.text, g) })).filter(x => x.text);
     return { items, raw: formatExtract(items, g) };
 }
 
@@ -176,9 +177,18 @@ export async function quickCompress() {
     if (quickBusy) return toastr.info('요약을 받는 중이에요.');
     const c = ctx(), m = getMeta(), g = globalSettings();
     if (!draftReady()) return toastr.info('⚙ 설정 → AI · 번역 → 초안 모델을 먼저 정해 주세요.', '한 번에 압축');
-    const { from, to, last, after } = nextRange(c, m, { afterExport: false });
+    let { from, to, last, after } = nextRange(c, m, { afterExport: false });
+    // the archive's sections stop before the boundary (a summary that fell short): offer to pick up the gap
+    const covered = lastRangeEnd(m.text);
+    let gapTo = -1;
+    if (covered !== null && covered < m.boundary && covered + 1 <= last) {
+        if (await confirm('빠진 구간', `경계선은 <b>#${m.boundary}</b>인데 아카이브 섹션은 <b>#${covered}</b>까지예요. <b>#${covered + 1}–#${m.boundary}</b>가 요약에 없어요.<br>#${covered + 1}부터 압축할까요? (숨긴 메시지도 이 구간은 넣어요)<br><small>아니요를 누르면 경계선 다음(#${m.boundary + 1})부터 해요.</small>`)) {
+            from = covered + 1; after = covered; gapTo = m.boundary;
+            to = Math.max(to, from);
+        }
+    }
     if (after >= last || to < from || after + 1 > last - Math.max(0, Number(m.keep) || 0)) return toastr.info(`${m.boundary >= 0 ? `경계선 #${m.boundary} 뒤에` : '이 채팅에'} 압축할 메시지가 없어요 (메시지 ${last + 1}개 · 마지막 ${m.keep}개는 남겨요).`, '한 번에 압축');
-    const { items, raw } = rangeRaw(c, g, from, to);
+    const { items, raw } = rangeRaw(c, g, from, to, gapTo);
     if (!raw) return toastr.info('이 범위에 메시지가 없어요.', '한 번에 압축');
     const p = g.prompts.find(x => x.id === g.wizPrompt) || activePrompt(g);
     const au = auOf(m);
@@ -212,7 +222,7 @@ export async function quickCompress() {
     m.lastExport = { from, to: upto, at: Date.now(), how: 'draft' };
     await saveMeta();
     refreshStatus();
-    openAppend({ text, end: guessEndNumber(text) ?? upto, ...joinGrades(r.grades) });
+    openAppend({ text, end: guessEndNumber(text) ?? upto, expectTo: upto, ...joinGrades(r.grades) });
 }
 
 export async function openWizard() {

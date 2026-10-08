@@ -191,6 +191,22 @@ export function cutSigns(archive, add) {
     return out;
 }
 
+// "# STATE AT AU #145" over sections that end at #143: the number the STATE / OPEN headings carry vs the sections' end
+export function tailNumberGap(text) {
+    const rs = headingRanges(splitTail(text)[0]);
+    const end = rs.length ? Math.max(rs[rs.length - 1].from, rs[rs.length - 1].to) : null;
+    const mt = splitTail(text)[1].match(/^# (?:STATE|OPEN) AT\s+(?:(\S{1,12})\s+)?#(\d+)/m);
+    if (end === null || !mt) return null;
+    const at = Number(mt[2]);
+    return at === end ? null : { at, end, prefix: rs[rs.length - 1].prefix };
+}
+// STATE / OPEN headings and their "_True at #n_" lines moved to the sections' end
+export function fixTailNumber(text, gap) {
+    const [body, tail] = splitTail(text);
+    const re = new RegExp(`((?:STATE|OPEN) AT\\s+(?:\\S{1,12}\\s+)?#|(?:True|Unresolved) at\\s+(?:\\S{1,12}\\s+)?#)${gap.at}(?!\\d)`, 'g');
+    return body + tail.replace(re, `$1${gap.end}`);
+}
+
 // Problems with the numbering of pasted sections, as display strings.
 export function checkAppend(m, add, last) {
     const ranges = headingRanges(add);
@@ -309,6 +325,13 @@ export async function openAppend(prefill = {}) {
       </div>`);
 
     const $ta = $root.find('.na_append_ta');
+    // 한 번에 압축 asked for #from–#to: say so when the sections stop short of it
+    const shortOf = v => {
+        if (!Number.isFinite(pre.expectTo)) return [];
+        const rs = headingRanges(splitTail(v)[0]);
+        const end = rs.length ? Math.max(rs[rs.length - 1].from, rs[rs.length - 1].to) : null;
+        return end !== null && end < pre.expectTo ? [`압축한 범위는 #${pre.expectTo}까지인데 섹션은 #${end}까지예요 · #${end + 1}–#${pre.expectTo}가 빠졌어요 (추가하면 경계선은 #${end}, 빠진 건 다음 압축에서 이어져요)`] : [];
+    };
     const $end = $root.find('.na_end');
     $root.find('.na_append_file_btn').on('click', () => $root.find('.na_append_file').val('').trigger('click'));
     $root.find('.na_append_file').on('change', async function () {
@@ -358,6 +381,12 @@ export async function openAppend(prefill = {}) {
     };
     $end.on('input change', hideHint);
     let nearMiss = [];
+    $root.on('click', '.na_tailfix', () => {
+        const v = $ta.val(), gap = tailNumberGap(auFix(v, m));
+        if (!gap) return;
+        $ta.val(fixTailNumber(auFix(v, m), gap)).trigger('input');
+        toastr.success(`STATE·OPEN 번호를 #${gap.end}로 맞췄어요`);
+    });
     $root.on('click', '.na_names_fix', () => {
         let v = $ta.val();
         nearMiss.forEach(x => { v = v.replace(new RegExp(`\\b${x.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g'), x.like); });
@@ -394,6 +423,7 @@ export async function openAppend(prefill = {}) {
             hideHint();
             const has = !!val.trim();
             lastCheck = has ? checkAppend(m, stripRewrites(m.text, val), last) : { issues: [] };
+            if (has) lastCheck.issues.push(...shortOf(val));
             if (!has) $check.prop('hidden', true);
             else if (!lastCheck.issues.length) {
                 const r = lastCheck.ranges;
@@ -423,7 +453,9 @@ export async function openAppend(prefill = {}) {
                 const at = (eTail.match(/^# STATE AT\b[^\n]*?(#\d+)/m) || [])[1];
                 const olds = plan.replaced.map(k => (k === 'STATE' && at ? `STATE AT ${at}` : k)).join('·');
                 const sub = plan.replaced.length ? `기존 ${esc(olds)}${josa(olds, '을', '를')} 바꿔요` : `${pKeys.join('·')} 블록을 새로 붙여요`;
-                ckRow($st, 'ok', `${pKeys.join(' · ')}${josa(pKeys.join(''), '이', '가')} 있어요`, sub);
+                const gap = tailNumberGap(val);
+                if (gap) ckRow($st, 'warn', `STATE 번호가 #${gap.at}인데 섹션은 #${gap.end}까지예요`, `${sub} · 섹션 끝에 맞추면 #${gap.end} 기준이 돼요`, `<button type="button" class="na_ck_btn na_tailfix" title="STATE·OPEN 제목과 안내문의 번호를 섹션 끝 번호로 바꿔요">#${gap.end}로 맞추기</button>`);
+                else ckRow($st, 'ok', `${pKeys.join(' · ')}${josa(pKeys.join(''), '이', '가')} 있어요`, sub);
             }
             if (!has) $root.find('.na_cut').prop('hidden', true).empty();
             else if (cutLine.length) ckRow($root.find('.na_cut'), 'warn', '답이 중간에 끊긴 것 같아요', `${cutLine.map(esc).join('<br>')}<br>다른 모델로 압축했다면 그쪽 답 길이(최대 토큰)를 늘리고 다시 받아 보세요.`);
@@ -549,6 +581,7 @@ export async function openAppend(prefill = {}) {
     const cut = cutSigns(m.text, add);
     if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.map(esc).join('<br>')}<br><br>그래도 추가할까요?`)) return;
     const check = checkAppend(m, stripRewrites(m.text, add), last);
+    check.issues.push(...shortOf(add));
     if (check.issues.length && !check.soft) {
         if (!await confirm('번호 확인', `${check.issues.map(esc).join('<br>')}<br><br>그래도 추가할까요?`)) return;
     } else if (m.boundary >= 0 && end <= m.boundary) {

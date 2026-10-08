@@ -3720,3 +3720,5 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 .na_selbar_acts .na_sel_ver { width: auto; margin: 0; height: 32px; padding: 0 8px; font-size: 0.86em; border-radius: 999px; }
 .na_selbar_acts button:disabled, .na_selbar_acts select:disabled { opacity: 0.45; }
 .na_selbar_acts .na_danger { color: var(--na-danger, #b3261e); }
+.na_dg_kotext { white-space: pre-wrap; padding: 10px 12px; border-radius: 12px; background: var(--na-softer); border: 1px solid var(--na-line); font-size: 0.88em; line-height: 1.6; }
+.na_dg_res .na_rt_head .na_dg_resko { flex: none; font-size: 0.86em; }
