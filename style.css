@@ -3731,3 +3731,7 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 .na_statelost .na_cp_txt { min-width: 0; }
 .na_statelost .na_sl_fix { margin-top: 6px; }
 .na_cp_row .na_cp_sel { flex: none; width: auto; max-width: 52%; margin: 0; }
+
+/* 아카이브에 추가: the window itself is the one scroller; a list that holds the swipe (overscroll contain) stalls it on phones */
+.na_ap2 .na_sl_list { max-height: none; overflow: visible; overscroll-behavior: auto; }
+.na_ap2 .na_append_ta { overscroll-behavior: auto; }
