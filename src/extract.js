@@ -2,7 +2,7 @@
 
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { activePrompt, compressPrompt, referenceSection, renderPromptSettings } from './prompts.js';
-import { headingLines, splitTail } from './sections.js';
+import { headingLines, headingRanges, splitTail } from './sections.js';
 import { refreshStatus } from './status.js';
 import { ICO_A, svgA } from './theme.js';
 import { chatLabel, copyText, countTokens, download, esc, escRe, fmt, timeLabel } from './util.js';
@@ -21,7 +21,11 @@ export function buildExtract(start, end) {
 }
 
 // "## Y2 #574–#600 — ..." → 600 (largest #number in the last numbered heading)
+// the last message the text covers: the end of its last numbered section ("## #120–#143" → 143), not a
+// "# STATE AT #145" a model numbered on its own; headings without a range only when there is no section
 export function guessEndNumber(text) {
+    const rs = headingRanges(text);
+    if (rs.length) { const r = rs[rs.length - 1]; return Math.max(r.from, r.to); }
     const heads = headingLines(text).map(h => h.title);
     for (let i = heads.length - 1; i >= 0; i--) {
         const nums = [...heads[i].matchAll(/#(\d+)/g)].map(x => parseInt(x[1], 10));
