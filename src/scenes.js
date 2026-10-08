@@ -85,32 +85,111 @@ function lastSections(text, n) {
     return secs.map(x => trimEnd(t.slice(x.start, x.end)).replace(/\n-{3,}\s*$/, '').trim());
 }
 
-// one scene → "Title (date, place)" + bullets, whatever wrapping the model put around them
-export function parseSceneAnswer(out) {
+// a scene's answer → one or two sections; their numbers are checked against the scene: the first starts at its first
+// message, the last ends at its last, no gap or overlap between. A split the model numbered wrong is put back to one section.
+export function parseSceneAnswer(out, from, to) {
     const t = String(out || '').replace(/^```[a-z]*\n?|```\s*$/g, '').trim();
-    const lines = t.split('\n');
-    let title = '';
-    const ti = lines.findIndex(l => /^\s*(?:TITLE\s*:|#{1,3}\s)/i.test(l));
-    if (ti >= 0) {
-        title = lines[ti].replace(/^\s*TITLE\s*:\s*/i, '').replace(/^#{1,3}\s*/, '').trim();
-        const r = title.match(RANGE_HEAD);
-        if (r) title = r[5].replace(/^\s*[—–-]\s*/, '').trim();
+    const blocks = [];
+    let cur = null;
+    for (const line of t.split('\n')) {
+        const h = line.match(/^\s*(?:TITLE\s*:|#{1,3})\s*(.*)$/i);
+        if (h && !/^\s*[-*•]\s/.test(line)) {
+            let title = h[1].trim(), a = null, b = null;
+            const r = title.match(RANGE_HEAD);
+            if (r) { a = Math.min(+r[2], +r[4]); b = Math.max(+r[2], +r[4]); title = r[5].replace(/^\s*[—–-]\s*/, '').trim(); }
+            cur = { title, a, b, bullets: [] };
+            blocks.push(cur);
+            continue;
+        }
+        if (/^\s*[-*•]\s/.test(line)) {
+            if (!cur) { cur = { title: '', a: null, b: null, bullets: [] }; blocks.push(cur); }
+            cur.bullets.push(`- ${line.replace(/^\s*[-*•]\s*/, '').trim()}`);
+        }
     }
-    const bullets = lines.filter(l => /^\s*[-*•]\s/.test(l)).map(l => `- ${l.replace(/^\s*[-*•]\s*/, '').trim()}`);
-    return { title, bullets };
+    const secs = blocks.filter(x => x.bullets.length).slice(0, 2);
+    if (!secs.length) return [];
+    if (secs.length === 2) {
+        const cut = secs[1].a;
+        // the split must fall inside the scene; anything else goes back to one section
+        if (Number.isFinite(cut) && cut > from && cut <= to) return [{ ...secs[0], a: from, b: cut - 1 }, { ...secs[1], a: cut, b: to }];
+        return [{ title: secs[0].title, a: from, b: to, bullets: [...secs[0].bullets, ...secs[1].bullets].slice(0, 6) }];
+    }
+    return [{ ...secs[0], a: from, b: to }];
 }
 
 const SCENE_ASK = (from, to, prefix) => `[THIS REQUEST]
-Write exactly ONE section for #${from}–#${to}, the raw log in <raw_log>, following <rules> (ignore what they say about output parts, change lists, scene lists and section counts: here you write one section and nothing else).
+Write the section for #${from}–#${to}, the raw log in <raw_log>, following <rules> (ignore what they say about output parts, change lists, scene lists and section counts: here you write the section for this scene and nothing else).
+- Usually ONE section. Write TWO only when the story clearly turns inside this scene; then the first covers #${from} up to the turn and the second from the turn to #${to}, with no gap.
 - <previous_section> is already written and ends right before #${from}: do not repeat its events; carry on from where it stops.
 - <recent_archive> and <current_state> are context and style only: nothing in them goes into this section unless <raw_log> shows it happening.
 - <work_note>, when present, is the user's own notes on this story (canon, lines to keep, past mistakes). Follow it.
-- Do not write the heading numbers; the extension adds "## ${prefix ? `${prefix} ` : ''}#${from}–#${to} —".
-Output only:
-TITLE: <title> (<date>, <place>)
+Output only, for each section:
+## #<first>–#<last> — <title> (<date>, <place>)
 PLOT:
 - <bullet>
-- <bullet>`;
+- <bullet>
+(The extension adds the log prefix${prefix ? ` "${prefix}"` : ''} and checks that the sections cover #${from}–#${to} exactly.)`;
+
+// 장면 나누기: the AI 기능 모델 reads the whole stretch once and names where the story turns
+const SCENES_SYS = `GOAL
+Find where the story turns in a stretch of role-play, so it can be summarized scene by scene.
+
+YOU GET
+MESSAGES: each starts with [number] and the speaker. The bot plays every non-user character under one name tag.
+
+STEPS
+1. Read to the end.
+2. A new scene starts where the story turns: time or place changes, the mood flips, a conflict breaks out or settles, someone arrives or leaves, a decision is made, a secret comes out. Not every exchange: a scene usually runs 10–40 messages, but a sharp turn can be 3–5.
+3. When a change begins with a user's message, the scene starts at that message.
+
+OUTPUT
+One line per scene, in order: "#<its first message> <what the scene is, under 10 words>". The first line starts at the first message. Nothing else.`;
+
+// "#23 Set leaves Ombos" lines → [{ start, note }] inside the range, first at its start
+export function parseScenes(out, from, to) {
+    const seen = new Map();
+    for (const line of String(out || '').split('\n')) {
+        const mt = line.match(/^\s*[-*•]?\s*#?(\d+)(?:\s*[–—~-]\s*#?\d+)?\s*[:.)·|-]?\s*(.*)$/);
+        if (!mt) continue;
+        const n = Number(mt[1]);
+        if (n < from || n > to || seen.has(n)) continue;
+        seen.set(n, mt[2].trim());
+    }
+    if (!seen.has(from)) seen.set(from, '');
+    return [...seen.entries()].sort((x, y) => x[0] - y[0]).map(([start, note]) => ({ start, note }));
+}
+export async function detectScenes(items, g) {
+    const from = items[0].i, to = items[items.length - 1].i;
+    const out = await askAI(`MESSAGES #${from}–#${to}:\n${formatExtract(items, g)}`, { system: SCENES_SYS, maxTokens: 4000 });
+    const list = parseScenes(out, from, to);
+    return list.length > 1 || items.length <= sceneSize() * 1.5 ? list : null;
+}
+// scene starts → item groups: a start on a bot reply moves back to the user turn it answers, a scrap of a few messages
+// joins the scene before it (the section writer can still split it off), a scene far over the size is cut at a user turn
+export function chunksFromStarts(items, starts, { size = sceneSize(), exact = false, chat = ctx().chat || [] } = {}) {
+    const idx = new Map(items.map((x, k) => [x.i, k]));
+    let ks = [...new Set(starts.map(s => idx.get(s.start ?? s)).filter(k => k !== undefined))].sort((a, b) => a - b);
+    if (!exact) ks = ks.map(k => (k > 0 && !chat[items[k].i]?.is_user && chat[items[k - 1].i]?.is_user ? k - 1 : k));
+    ks = [...new Set([0, ...ks])].sort((a, b) => a - b);
+    let groups = ks.map((k, j) => items.slice(k, ks[j + 1] ?? items.length)).filter(x => x.length);
+    if (exact) return groups;
+    const max = Math.round(size * 1.5);
+    const merged = [];
+    for (const gr of groups) {
+        if (merged.length && gr.length < 5 && merged[merged.length - 1].length + gr.length <= max) merged[merged.length - 1] = merged[merged.length - 1].concat(gr);
+        else merged.push(gr);
+    }
+    const out = [];
+    for (const gr of merged) {
+        if (gr.length <= max) { out.push(gr); continue; }
+        // over the cap: the same size cutter, inside this scene
+        out.push(...sceneChunks(gr, { size, re: '', chat }));
+    }
+    return out;
+}
+// the editable list in the confirm dialog: "#4–#22  Somang locks the door"
+export const scenesText = (chunks, notes = new Map()) => chunks.map(c => `#${c[0].i}–#${c[c.length - 1].i}  ${notes.get(c[0].i) || ''}`.trimEnd()).join('\n');
+export const startsFromText = text => String(text || '').split('\n').map(l => l.match(/^\s*#?(\d+)/)).filter(Boolean).map(mt => ({ start: Number(mt[1]) }));
 
 const STATE_SYS = `GOAL
 Update the archive's STATE and OPEN for the new sections, as two change lists. You do not rewrite them: the extension applies your lists, and every line you do not list stays exactly as it is.
@@ -139,8 +218,8 @@ DROP ## Group :: - a closed thread
 A list with nothing in it is (none). Nothing else.`;
 
 // the whole run: sections scene by scene, then the change lists. Same shape as draftCompress's answer.
-export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = '' }) {
-    const chunks = sceneChunks(items);
+export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = '', chunks: given = null }) {
+    const chunks = given?.length ? given : sceneChunks(items);
     const au = auOf(m);
     const prefix = au.on ? au.name : (headingRanges(splitTail(m.text)[0]).pop()?.prefix || '');
     const tail = splitTail(m.text)[1].trim();
@@ -157,12 +236,12 @@ export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = 
         onStep(k, chunks.length, from, to, 'scenes');
         const prompt = `<raw_log range="#${from}–#${to}">\n${formatExtract(part, g)}\n</raw_log>\n\n<previous_section>\n${prev || '(none: this is the start of the archive)'}\n</previous_section>\n\n<recent_archive>\n${recentFor(k) || '(none)'}\n</recent_archive>\n\n<current_state>\n${tail || '(none)'}\n</current_state>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}\n\n<rules>\n${rulesFor(from, to).trim()}\n</rules>${au.on ? `\n\n${auBlock(m).trim()}` : ''}${memoBlock(memo)}${langBlock(m.text)}\n\n${SCENE_ASK(from, to, prefix)}`;
         let got;
-        try { got = parseSceneAnswer(await ask(sceneModel(), prompt)); }
+        try { got = parseSceneAnswer(await ask(sceneModel(), prompt), from, to); }
         catch (e) { error = e; break; }
-        if (!got.bullets.length) { error = new Error(`#${from}–#${to} 답에 불릿이 없어요`); break; }
-        const block = `## ${prefix ? `${prefix} ` : ''}#${from}–#${to} — ${got.title || 'Untitled'}\nPLOT:\n${got.bullets.join('\n')}`;
-        secs.push(block);
-        prev = block;
+        if (!got.length) { error = new Error(`#${from}–#${to} 답에 불릿이 없어요`); break; }
+        const blocks = got.map(x => `## ${prefix ? `${prefix} ` : ''}#${x.a}–#${x.b} — ${x.title || 'Untitled'}\nPLOT:\n${x.bullets.join('\n')}`);
+        secs.push(...blocks);
+        prev = blocks.join('\n\n');
         doneTo = to;
     }
     if (!secs.length) return { text: '', dropped: 0, parts: chunks.length, done: 0, doneTo: null, error, grades: [] };
