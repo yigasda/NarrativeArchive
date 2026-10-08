@@ -5,7 +5,15 @@ import { showStripInfo } from './extract.js';
 import { RANGE_HEAD, lastRangedSection, parseSections } from './sections.js';
 import { confirm, esc } from './util.js';
 
-export const BASIC_PROMPT = `You continue the long-term-memory summary (the archive) of a long-running role-play. The archive is injected into the prompt and read alongside the live chat as "a snapshot of the past." Read the raw log #{{from}}–#{{to}} below in full, from the first message to the last, then write the new stretch that follows the archive.
+export const BASIC_PROMPT = `<raw_log range="#{{from}}–#{{to}}">
+{{raw}}
+</raw_log>
+
+<current_state>
+{{state}}
+</current_state>
+
+You continue the long-term-memory summary (the archive) of a long-running role-play. The archive is injected into the prompt and read alongside the live chat as "a snapshot of the past." The raw log #{{from}}–#{{to}} is above in <raw_log>, and the archive's current STATE and OPEN in <current_state>. Read the raw log in full, from the first message to the last, then write the new stretch that follows the archive.
 
 # 1. Output
 Output exactly these parts, in this order, with no greeting, explanation or commentary:
@@ -101,7 +109,7 @@ Draft the stretch, then revise it once and output only the revised version:
 6. Check every bullet that touches sex against the sex rule; cut what it does not allow.
 
 # 8. STATE and OPEN changes
-You do not rewrite STATE or OPEN. You list what this stretch changes in them; the extension applies the lists to [CURRENT STATE · OPEN], and every line you do not list stays exactly as it is. One change per line:
+You do not rewrite STATE or OPEN. You list what this stretch changes in them; the extension applies the lists to <current_state>, and every line you do not list stays exactly as it is. One change per line:
 \`\`\`
 # STATE CHANGES
 ADD ## Heading :: - the new line
@@ -111,17 +119,14 @@ DROP ## Heading :: - the old line, copied exactly
 ADD ## Group :: - a thread this stretch opened
 DROP ## Group :: - a thread this stretch closed, copied exactly
 \`\`\`
-- \`## Heading\` / \`## Group\` is the one the line sits under, spelled exactly as in [CURRENT STATE · OPEN]; leave out \`## Group ::\` when OPEN has no groups. Do not invent headings; a new fact goes under the heading it belongs to. A list with nothing in it is \`(none)\`.
+- \`## Heading\` / \`## Group\` is the one the line sits under, spelled exactly as in <current_state>; leave out \`## Group ::\` when OPEN has no groups. Do not invent headings; a new fact goes under the heading it belongs to. A list with nothing in it is \`(none)\`.
 - EDIT a STATE line only when this stretch makes it untrue or outdated, so an old behavior a later arc changed does not stay in the present tense. Change only what changed and keep the rest of the line word for word; never shorten a line to save space, never merge lines.
 - DROP a STATE line only when the story itself has overturned it. What a character realized or resolved not to do stays until the story overturns it. Keep safety lines that lock the current state (e.g. "memories fully restored since #n": it stops the bot from mistaking an old arc for the present).
 - New and edited STATE lines: per character + relationships + current life. Only the changes and tendencies that PLOT alone does not capture, briefly; do not restate events already in the sections. One line for a core principle the bot is likely to confuse is allowed. Scope principles narrowly to prevent over-application ("no commands" ✗, which could change even how he talks → "no longer dictates her choices or movements" ✓); use "tends to" or "since #n" instead of "now" or "currently."
 - OPEN: drop only threads this stretch closed. Keep new threads short; do not prescribe future actions.
 
-[CURRENT STATE · OPEN: read it, list your changes to it (8); do not output it]
-{{state}}
-
-[RAW LOG #{{from}}–#{{to}}]
-{{raw}}`;
+# 9. Before you write
+In your thinking, first list the scene boundaries of #{{from}}–#{{to}} by message number (where time, place or the situation turns) and check that every message from #{{from}} to #{{to}} falls inside one of them. Then write the sections on those boundaries. Do not output STATE or OPEN in full; <current_state> is for reading only.`;
 // earlier basic text, upgraded when untouched
 export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
@@ -138,7 +143,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -178,7 +183,7 @@ export function auBlock(m) {
     return `[AU — read this first]
 This chat is an alternate universe (AU) of the story in the archive. The characters remember the main story and carry it into the AU.
 AU premise: ${a.note || '(not given — take it from the raw log)'}
-- The raw log below is the AU. Summarize only it; do not retell the main story.
+- The raw log is the AU. Summarize only it; do not retell the main story.
 - The AU is its own log in the archive: number its sections "## ${a.name} #from–#to — title" (prefix "${a.name}", this chat's message numbers).${first ? `
 - This is the AU's first summary: put the line "${auDivider(a.name)}" above your first new section.` : ''}
 - STATE and OPEN: list changes only, as the instruction says; the extension renumbers them to the AU.${first ? ` This first time the main story's STATE carries into the AU: every line that still holds in the AU (memories, feelings, promises, secrets, what a character realized or resolved not to do) carries over untouched, so leave it out of your list. EDIT or DROP only what the AU premise makes untrue; do not add an AU heading or restate the AU's events in STATE.` : ` They are already the AU's.`}
@@ -301,11 +306,18 @@ LIST:
 export function sizeBlock({ k = 0, n = 1, count, total = count, from, to, partFrom = from, partTo = to }) {
     // the archive's own sections: most cover 10–20 messages (about 15–22 on average once long events are counted)
     const lo = Math.max(1, Math.ceil(count / 22)), hi = Math.max(lo, Math.ceil(count / 15));
-    const span = lo === hi ? `about ${lo} section${lo > 1 ? 's' : ''}` : `${lo}–${hi} sections`;
+    const span = lo === hi ? `${lo} section${lo > 1 ? 's' : ''}` : `${lo}–${hi} sections`;
     if (n <= 1) return `\n\n[SIZE] #${from}–#${to} is ${count} messages: write roughly ${span} for it, cutting where the story turns.`;
     return `\n\n[PART ${k + 1} OF ${n}] The stretch #${from}–#${to} (${total} messages) is too long for one request, so it is sent in ${n} parts, in order. This request is part ${k + 1}: #${partFrom}–#${partTo} (${count} messages). Every length target — the section guide above and any number in the user's note — is for the whole stretch, not for this part: this part gets about 1/${n} of it. For these ${count} messages write roughly ${span}, cutting where the story turns.`;
 }
-export const compressPrompt = (tpl, vars, m, memo = '', size = '') => auBlock(m) + fillPrompt(tpl, { recent: recentSections(vars.archive ?? m.text), ...vars }) + memoBlock(memo) + size + langBlock(m.text);
+// the long raw log goes first (a template that puts it on top in <raw_log> / <current_state>), so the AU block
+// sits right after those, with the instructions; older templates keep it on top
+export const compressPrompt = (tpl, vars, m, memo = '', size = '') => {
+    const body = fillPrompt(tpl, { recent: recentSections(vars.archive ?? m.text), ...vars });
+    const au = auBlock(m), cut = body.indexOf('</current_state>');
+    const withAu = !au ? body : cut >= 0 ? `${body.slice(0, cut + 16)}\n\n${au.trim()}${body.slice(cut + 16)}` : au + body;
+    return withAu + memoBlock(memo) + size + langBlock(m.text);
+};
 
 // An AU answer that forgot its prefix or divider gets them: "## #12–#30" → "## AU #12–#30",
 // "# STATE AT #30" → "# STATE AT AU #30", and "# ── AU ──" above the first new section.
