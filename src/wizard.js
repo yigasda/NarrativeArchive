@@ -5,6 +5,7 @@ import { openAppend } from './append.js';
 import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta, textHash } from './core.js';
 import { driftHtml } from './drift.js';
 import { castNames } from './knowledge.js';
+import { hasChanges, resolveChanges } from './statechg.js';
 import { buildExtract, cleanMessage, formatExtract, guessEndNumber } from './extract.js';
 import { LANG_NAME, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressPrompt, dropReproduced, eventsNote, eventsSystem, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, trimEnd } from './sections.js';
@@ -139,7 +140,7 @@ export function chunkItems(items) {
 export async function draftCompress({ m, g, p, items, onStep = () => {}, grade = false, memo = '', events = '' }) {
     const parts = events ? [items] : chunkItems(items);
     const acc = [];
-    let tail = '', doneTo = null, error = null, dropped = 0;
+    let tail = '', lastChg = '', doneTo = null, error = null, dropped = 0;
     const grades = [];
     for (const [k, part] of parts.entries()) {
         const from = part[0].i, to = part[part.length - 1].i;
@@ -167,14 +168,19 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
         dropped += dr;
         const b = trimEnd(body).replace(/\n-{3,}\s*$/, '').trim();
         if (b) acc.push(b);
-        if (t.trim()) tail = t.trim();
+        if (t.trim() && hasChanges(t)) {
+            // a list of changes: the next part reads STATE with the safe ones in; one part keeps the list for the append window
+            lastChg = t.trim();
+            tail = splitTail(resolveChanges(tail || splitTail(m.text)[1], `${b}\n\n---\n${t}`).text)[1].trim();
+        } else if (t.trim()) { tail = t.trim(); lastChg = ''; }
         doneTo = to;
         if (grade) {
             try { grades.push({ from, to, text: String(await askAI(`[RAW LOG]\n${events ? formatExtract(part, g) : raw}\n\n[SUMMARY]\n${out}`, { system: AI_SYS_GRADE, maxTokens: 2500 }) || '').trim() }); }
             catch (e) { grades.push({ from, to, text: String(e?.message || e), error: true }); }
         }
     }
-    const text = acc.length ? `${acc.join('\n\n')}${tail ? `\n\n---\n${tail}` : ''}` : '';
+    const outTail = parts.length === 1 && lastChg ? lastChg : tail;
+    const text = acc.length ? `${acc.join('\n\n')}${outTail ? `\n\n---\n${outTail}` : ''}` : '';
     return { text, dropped, parts: parts.length, done: error ? parts.findIndex(x => x[x.length - 1].i === doneTo) + 1 : parts.length, doneTo, error, grades };
 }
 

@@ -3758,3 +3758,20 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 .na_qc_check { display: flex; align-items: flex-start; gap: 8px; margin: 0; line-height: 1.4; }
 .na_qc_check span { display: flex; flex-direction: column; }
 .na_qc_check small { color: var(--na-dim); font-size: 0.85em; }
+/* STATE · OPEN changes the model listed, to tick */
+.na_stchg { border-top: 1px solid var(--na-line); padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 6px; }
+.na_stchg[hidden] { display: none; }
+.na_chg_head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 2px; }
+.na_chg_head b { font-size: 13px; }
+.na_chg_head small { color: var(--na-dim); font-size: 11.5px; line-height: 1.4; }
+.na_chg_row { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 7px 9px; border-radius: 10px; background: var(--na-soft); font-size: 12.5px; line-height: 1.45; cursor: pointer; }
+.na_chg_row.off { opacity: 0.72; }
+.na_chg_row input { margin-top: 3px; flex: none; }
+.na_chg_txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; word-break: break-word; }
+.na_chg_meta { font-size: 11.5px; color: var(--na-dim); }
+.na_chg_meta i { font-style: normal; color: #b06a10; }
+.na_chg_op { display: inline-block; margin-right: 4px; padding: 0 6px; border-radius: 6px; font-size: 11px; color: #fff; }
+.na_chg_add { background: #3f9a5a; }
+.na_chg_edit { background: #c9814b; }
+.na_chg_drop { background: #b5523b; }
+.na_chg_txt s { color: var(--na-dim); }

@@ -11,13 +11,13 @@ export const BASIC_PROMPT = `You continue the long-term-memory summary (the arch
 Output exactly these parts, in this order, with no greeting, explanation or commentary:
 1. The new section blocks, covering #{{from}}–#{{to}} continuously: no gaps, no overlaps, the first heading starting at #{{from}} and the last block ending at #{{to}}. Numbers are always message numbers.
 2. A line containing only \`---\`
-3. If the archive has \`# STATE AT …\` / \`# OPEN AT …\`: both, complete, edited from [CURRENT STATE · OPEN] so they hold as of #{{to}} (rules in 8 and 9). If it has none, leave this part out.
+3. If the archive has \`# STATE AT …\` / \`# OPEN AT …\`: what this stretch changes in them, as two change lists (\`# STATE CHANGES\`, \`# OPEN CHANGES\` — rules in 8 and 9). Never write the blocks out. If the archive has none, leave this part out.
 
 Language: write everything in the archive's language and format, even when the raw log is in another language. Translate dialogue too; keep a word or line in its original language only where the archive already does.
 
 Hard limits:
 - Output only new material. Never reproduce, rewrite, shorten, "improve", recap or continue anything already in the archive; nothing before #{{from}} belongs in your output. STATE below is context only: no event, line or detail from it may appear in a section unless the raw log shows it happening again.
-- Every part must be present and complete, and the last bullet of every block ends in a full sentence. If you run long, merge bullets or cut lower-priority detail — never stop mid-sentence, and never drop STATE or OPEN to make room.
+- Every part must be present and complete, and the last bullet of every block ends in a full sentence. If you run long, merge bullets or cut lower-priority detail — never stop mid-sentence, and never drop the change lists to make room.
 
 # 2. Reading the raw log
 - The format is \`[N] Name:\`. When one bot plays several characters (NPCs included), they all carry its tag; tell the speaker from the content.
@@ -107,18 +107,30 @@ Draft the stretch, then revise it once:
 5. Count each section's bullets. More than 6: merge the ones that share a cause or outcome, or split the section where it turns.
 Output only the revised version.
 
-# 8. STATE (when present)
-- Edit [CURRENT STATE · OPEN]; never write STATE from scratch. Every existing line stays word for word unless this stretch changes it — then edit that line where it stands, so an old behavior a later arc changed does not stay in the present tense. Never drop a line to save space, never merge lines, never rename, reorder or remove a "##" heading. New facts go in as new lines under the heading they belong to.
-- What a character realized or resolved not to do stays until the story itself overturns it. Keep safety lines that lock the current state (e.g. "memories fully restored since #n" — it stops the bot from mistaking an old arc for the present).
-- Content: per character + relationships + current life — only the changes and tendencies that PLOT alone does not capture, briefly; do not restate events already in the sections. One line for a core principle the bot is likely to confuse is allowed.
+# 8. STATE changes (when STATE is present)
+You do not rewrite STATE. You list what this stretch changes in it; the extension applies the list to [CURRENT STATE · OPEN], and every line you do not list stays exactly as it is. Under the heading \`# STATE CHANGES\`, one change per line:
+\`\`\`
+ADD ## Heading :: - the new line
+EDIT ## Heading :: - the old line, copied exactly ==> - the new line
+DROP ## Heading :: - the old line, copied exactly
+\`\`\`
+- \`## Heading\` is the heading the line sits under, spelled exactly as in [CURRENT STATE · OPEN]. Do not invent headings; a new fact goes under the heading it belongs to.
+- EDIT a line only when this stretch makes it untrue or outdated, so an old behavior a later arc changed does not stay in the present tense. Change only what changed and keep the rest of the line word for word; never shorten a line to save space, never merge lines.
+- DROP a line only when the story itself has overturned it. What a character realized or resolved not to do stays until the story overturns it. Keep safety lines that lock the current state (e.g. "memories fully restored since #n" — it stops the bot from mistaking an old arc for the present).
+- New and edited lines: per character + relationships + current life — only the changes and tendencies that PLOT alone does not capture, briefly; do not restate events already in the sections. One line for a core principle the bot is likely to confuse is allowed.
 - Scope principles narrowly to prevent over-application. ("no commands" ✗, which could change even how he talks → "no longer dictates her choices or movements" ✓) Use "tends to" or "since #n" instead of "now" or "currently."
-- Notice line: \`_True at #{{to}}; where the live chat differs, the live chat is correct. A character's reading marked as such is not canon._\`
+- If nothing in STATE changes, write \`# STATE CHANGES\` and \`(none)\`.
 
-# 9. OPEN (when present)
-- Keep it short. Remove only the threads this stretch closes; every other thread stays word for word, under its group. Add newly opened ones. Do not prescribe future actions.
-- Notice line: \`_Unresolved at #{{to}}; check recent messages before treating any as pending._\`
+# 9. OPEN changes (when OPEN is present)
+Under the heading \`# OPEN CHANGES\`, in the same format:
+\`\`\`
+ADD ## Group :: - a thread this stretch opened
+DROP ## Group :: - a thread this stretch closed, copied exactly
+\`\`\`
+- Leave out \`## Group ::\` when OPEN has no groups. Every thread you do not drop stays as it is. Keep new threads short; do not prescribe future actions.
+- If nothing in OPEN changes, write \`# OPEN CHANGES\` and \`(none)\`.
 
-[CURRENT STATE · OPEN — edit this and output it in full]
+[CURRENT STATE · OPEN — read it, list your changes to it (8, 9); do not output it]
 {{state}}
 
 [RAW LOG #{{from}}–#{{to}}]
@@ -139,7 +151,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -182,7 +194,7 @@ AU premise: ${a.note || '(not given — take it from the raw log)'}
 - The raw log below is the AU. Summarize only it; do not retell the main story.
 - The AU is its own log in the archive: number its sections "## ${a.name} #from–#to — title" (prefix "${a.name}", this chat's message numbers).${first ? `
 - This is the AU's first summary: put the line "${auDivider(a.name)}" above your first new section.` : ''}
-- STATE and OPEN headings use the AU's numbers: "# STATE AT ${a.name} #to", "# OPEN AT ${a.name} #to".${first ? ` This first time, turn the main story's STATE into the AU's: keep every line that still holds in the AU word for word (memories, feelings, promises, secrets, what a character realized or resolved not to do), and change or drop only what the AU premise makes untrue.` : ` Edit the current STATE and OPEN as the instruction says; they are already the AU's.`}
+- STATE and OPEN: list changes only, as the instruction says; the extension renumbers them to the AU.${first ? ` This first time the main story's STATE carries into the AU: every line that still holds in the AU (memories, feelings, promises, secrets, what a character realized or resolved not to do) carries over untouched, so leave it out of your list. EDIT or DROP only what the AU premise makes untrue; do not add an AU heading or restate the AU's events in STATE.` : ` They are already the AU's.`}
 
 `;
 }

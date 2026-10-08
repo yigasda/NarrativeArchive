@@ -10,6 +10,7 @@ import { nameNearMisses } from './keywords.js';
 import { auDivider, auFix, auOf, langBlock } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, tailBlocks, trimEnd } from './sections.js';
 import { rawFor } from './retitle.js';
+import { hasChanges, resolveChanges } from './statechg.js';
 import { openSource } from './source.js';
 import { ICO_A, SVG_B, svgA, svgB } from './theme.js';
 import { translateButton } from './translate.js';
@@ -403,6 +404,7 @@ export async function openAppend(prefill = {}) {
           <div class="na_check na_numcheck" hidden></div>
           <div class="na_check na_statecheck" hidden></div>
           <div class="na_check na_check_warn na_statelost" hidden></div>
+          <div class="na_stchg" hidden></div>
           <div class="na_check na_check_warn na_bullets" hidden></div>
           <div class="na_check na_check_warn na_whole" hidden><span class="na_ck_ic">!</span><div>
             <b>아카이브 전체본 같아요</b> — 이미 있는 섹션이 거의 다 들어 있어요. 새 섹션만 붙이려면 그대로 <b>추가</b>, 이 내용으로 아카이브를 바꾸려면:
@@ -562,6 +564,27 @@ export async function openAppend(prefill = {}) {
             toastr.error(String(e?.message || e), '2단계만 다시');
         } finally { $b.prop('disabled', false).text('이 목록으로 2단계만 다시 받기'); }
     });
+    // STATE · OPEN changes the model listed: risky ones start unticked; ticking rebuilds the tail from the archive's own
+    let chg = null;
+    const OPK = { ADD: '추가', EDIT: '수정', DROP: '삭제' };
+    function renderChg() {
+        const $c = $root.find('.na_stchg');
+        if (!chg?.plan?.length) { $c.prop('hidden', true).empty(); return; }
+        const off = chg.plan.filter(c => !c.on).length;
+        $c.prop('hidden', false).html(`<div class="na_chg_head"><b>STATE · OPEN 바뀌는 것 · ${chg.plan.length}개</b><small>${off ? `${off}개는 꺼 뒀어요 (STATE 줄 삭제 · 크게 줄임 · 새 제목 · 못 찾음) · 켜야 들어가요` : '모두 들어가요'} · 목록에 없는 줄은 그대로예요</small></div>
+            ${chg.plan.map((c, k) => `<label class="na_chg_row${c.on ? '' : ' off'}"><input type="checkbox" data-k="${k}" ${c.on ? 'checked' : ''} ${c.op === 'DROP' && !c.found ? 'disabled' : ''}>
+              <span class="na_chg_txt"><span class="na_chg_meta"><b class="na_chg_op na_chg_${c.op.toLowerCase()}">${OPK[c.op]}</b>${[c.kind === 'OPEN' ? 'OPEN' : '', c.head ? esc(c.head) : ''].filter(Boolean).join(' · ')}${c.why ? ` <i>${esc(c.why)}</i>` : ''}</span>
+              ${c.op === 'EDIT' ? `<s>${esc(bareLine(c.found || c.old))}</s><span>${esc(bareLine(c.neu))}</span>` : c.op === 'DROP' ? `<s>${esc(bareLine(c.found || c.old))}</s>` : `<span>${esc(bareLine(c.neu))}</span>`}</span></label>`).join('')}`);
+    }
+    const bareLine = l => String(l || '').replace(/^\s*[-*•]\s*/, '');
+    $root.on('change', '.na_chg_row input', function () {
+        if (!chg) return;
+        chg.pick[Number(this.dataset.k)] = this.checked;
+        const body = splitTail(auFix(String($ta.val() || ''), m))[0];
+        const r = resolveChanges(m.text, `${trimEnd(body).replace(/\n-{3,}\s*$/, '')}\n\n---\n${chg.tail}`, chg.pick);
+        chg.plan = r.plan;
+        $ta.val(r.text).trigger('input');
+    });
     $root.on('click', '.na_names_fix', () => {
         let v = $ta.val();
         nearMiss.forEach(x => { v = v.replace(new RegExp(`\\b${x.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g'), x.like); });
@@ -583,6 +606,16 @@ export async function openAppend(prefill = {}) {
         $root.find('.na_conflict_out').addClass('na_stale'); // checked text changed since
         clearTimeout(t);
         t = setTimeout(async () => {
+            // an answer that lists STATE · OPEN changes: written out in full against the archive's own, and listed to tick
+            const rawNow = String($ta.val() || '');
+            if (hasChanges(rawNow)) {
+                const fixed = auFix(rawNow, m);
+                chg = { tail: splitTail(fixed)[1], pick: {} };
+                const r = resolveChanges(m.text, fixed);
+                chg.plan = r.plan;
+                $ta.val(r.text);
+            } else if (!rawNow.trim()) chg = null;
+            renderChg();
             const val = auFix($ta.val(), m);
             // an AU chat's sections go in as their own log; say so, and what the paste was missing
             const au = auOf(m);
@@ -635,7 +668,8 @@ export async function openAppend(prefill = {}) {
                 else ckRow($st, 'ok', `${pKeys.join(' · ')}${josa(pKeys.join(''), '이', '가')} 있어요`, sub);
             }
             // lines of the archive's STATE the new one dropped, and headings it renamed
-            lossNow = has ? stateLoss(m.text, val) : null;
+            // with a change list, a missing line is one the user ticked to drop, not one the model lost
+            lossNow = has && !chg?.plan?.length ? stateLoss(m.text, val) : null;
             const $sl = $root.find('.na_statelost');
             if (!lossNow) $sl.prop('hidden', true).empty();
             else {
