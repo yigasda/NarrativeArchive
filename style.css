@@ -3877,3 +3877,4 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_st_reset b { color: var(--na-bad, #B3261E); }
 .na_st_nt { display: flex; flex-direction: column; gap: 10px; text-align: left; }
 .na_st_nt .na_st_ntta { width: 100%; box-sizing: border-box; margin: 0; resize: vertical; }
+.na_st .na_st_psel { width: auto; max-width: 140px; margin: 0; padding: 4px 6px; font-size: 0.85em; }

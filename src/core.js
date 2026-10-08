@@ -3,7 +3,7 @@
 import { syncTrackedBoundary } from './hide.js';
 import { applyInjection } from './inject.js';
 import { syncPanel } from './panel.js';
-import { BASIC_PROMPT, OLD_BASIC, OLD_BASIC_HASHES, OLD_DEFAULTS, PREV_BASIC } from './prompts.js';
+import { BASIC_PROMPT, OLD_BASIC, OLD_BASIC_HASHES, OLD_DEFAULTS, OLD_SHORT_HASHES, PREV_BASIC, SHORT_PROMPT } from './prompts.js';
 import { parseSections } from './sections.js';
 
 // 서사 아카이브 (Narrative Archive)
@@ -12,7 +12,7 @@ import { parseSections } from './sections.js';
 
 export const MODULE = 'narrative_archive';
 export const PROMPT_KEY = 'narrative_archive_injection';
-export const VERSION = '3.65.1';
+export const VERSION = '3.66.0';
 export const SNAPSHOT_MAX = 5;
 export const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -169,6 +169,10 @@ export function globalSettings() {
     if (!g.prompts.some(p => p.id === 'basic')) g.prompts.unshift({ id: 'basic', name: '기본', text: BASIC_PROMPT, fav: true });
     const basic = g.prompts.find(p => p.id === 'basic');
     if (basic.text === PREV_BASIC || basic.text === OLD_BASIC || OLD_BASIC_HASHES.has(textHash(basic.text))) basic.text = BASIC_PROMPT;
+    // the short one sits right after it
+    if (!g.prompts.some(p => p.id === 'short')) g.prompts.splice(g.prompts.indexOf(basic) + 1, 0, { id: 'short', name: '짧은 기본', text: SHORT_PROMPT, fav: true });
+    const short = g.prompts.find(p => p.id === 'short');
+    if (OLD_SHORT_HASHES.has(textHash(short.text))) short.text = SHORT_PROMPT;
     if (!g.prompts.some(p => p.id === g.activePrompt)) g.activePrompt = g.prompts[0].id;
     return g;
 }

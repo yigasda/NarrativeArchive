@@ -5,7 +5,7 @@
 
 import { aiLabel, askCompress, drLabel, draftReady, stripThink } from './ai.js';
 import { openAppend } from './append.js';
-import { ctx, getMeta, globalSettings, saveMeta } from './core.js';
+import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { activePrompt, archiveLang, auBlock, auFix, auOf, langBlock } from './prompts.js';
 import { NOTE_PARTS, STATE_SYS, answerBlocks, noteInsert, chunksFromStarts, detectScenes, lastSections, openWorkNote, parseSceneAnswer, rulesText, sceneChunks, scenesText, startsFromText } from './scenes.js';
 import { CITE_RE, headingRanges, lastRangeEnd, splitTail } from './sections.js';
@@ -135,9 +135,11 @@ const scenesOfBlocks = (st, blocks, scene) => (scene !== undefined ? [scene] : s
 const nextScene = st => { const sent = new Set(st.turns.filter(t => t.role === 'user' && t.kind === 'scene').map(t => t.scene)); return st.scenes.findIndex((_, k) => !sent.has(k)); };
 
 // ---- what the model gets
+// the instruction the conversation runs on: picked in the + menu, else the wizard's, else the active one
+const studioPrompt = g => g.prompts.find(x => x.id === g.studioPrompt) || g.prompts.find(x => x.id === g.wizPrompt) || activePrompt(g);
 function systemFor(m, st) {
     const g = globalSettings();
-    const p = g.prompts.find(x => x.id === g.wizPrompt) || activePrompt(g);
+    const p = studioPrompt(g);
     const tail = splitTail(m.text)[1].trim();
     const note = String(m.workNote || '').trim();
     const recent = lastSections(m.text, 3).join('\n\n');
@@ -174,6 +176,7 @@ const HANGUL = /[가-힯]/;
 const langOf = t => { const h = (String(t).match(/[가-힯]/g) || []).length, l = (String(t).match(/[A-Za-z]/g) || []).length; return h + l < 20 ? '' : h / (h + l) > 0.3 ? 'ko' : 'en'; };
 const squash = t => String(t).toLowerCase().replace(/[\s"'“”‘’.,!?…~—–\-:;()[\]*]/g, '');
 const words = t => (String(t).match(/\S+/g) || []).length;
+const STOP = new Set(['about', 'after', 'again', 'against', 'before', 'being', 'their', 'there', 'these', 'those', 'which', 'while', 'where', 'would', 'could', 'should', 'other', 'still', 'until', 'under', 'every', 'never', 'because', 'through', 'without', 'himself', 'herself', 'themselves', 'whether', 'rather', 'since', 'though', 'first', 'only', 'what', 'when']);
 function checkBlocks(blocks, { scene = null, st, archLang }) {
     const out = [];
     if (scene && blocks.length && blocks[0].a !== null) {
@@ -188,6 +191,22 @@ function checkBlocks(blocks, { scene = null, st, archLang }) {
         if (n > 250) out.push(`${name ? `${name} · ` : ''}${n}단어`);
         const dash = (body.match(/—/g) || []).length;
         if (dash > 1) out.push(`${name ? `${name} · ` : ''}em대쉬 ${dash}개`);
+        // a later sentence pointing only to earlier messages than one before it: the order may have slipped
+        if (x.a !== null) {
+            let top = 0, slip = null;
+            for (const mk of x.bullets.join('\n').matchAll(new RegExp(CITE_RE.source, 'g'))) {
+                const ns = [...mk[0].matchAll(/\d+/g)].map(y => Number(y[0]));
+                if (!ns.length) continue;
+                if (!slip && Math.max(...ns) < top) slip = [top, Math.max(...ns)];
+                top = Math.max(top, ...ns);
+            }
+            if (slip) out.push(`${name ? `${name} · ` : ''}순서 확인 #${slip[0]} 뒤에 #${slip[1]}`);
+        }
+        // the same word again and again (names and small words aside)
+        const freq = new Map();
+        for (const w of body.replace(/"[^"\n]*"|“[^”\n]*”/g, ' ').match(/\b[a-z][a-z'’]{4,}\b/g) || []) if (!STOP.has(w)) freq.set(w, (freq.get(w) || 0) + 1);
+        const rep = [...freq].filter(([, k]) => k >= 3).sort((a2, b2) => b2[1] - a2[1]).slice(0, 2);
+        for (const [w, k] of rep) out.push(`${name ? `${name} · ` : ''}반복 "${w}" ${k}번`);
         if (x.bullets.length > 6) out.push(`${name ? `${name} · ` : ''}불릿 ${x.bullets.length}개`);
         if (x.a !== null) {
             const outside = [...new Set([...x.bullets.join('\n').matchAll(new RegExp(CITE_RE.source, 'g'))].flatMap(mk => [...mk[0].matchAll(/#?(\d+)/g)].map(y => Number(y[1]))).filter(k => k < x.a || k > x.b))];
@@ -340,6 +359,7 @@ export async function openStudio() {
           <div class="na_st_menu" hidden>
             <label class="na_st_mi"><span><b>자동 진행</b><small>남은 장면을 끝까지 쭉 · 마지막에 STATE 쪽지</small></span><input type="checkbox" class="na_toggle na_st_autotg"></label>
             <label class="na_st_mi"><span><b>개요 먼저</b><small>흐름을 먼저 보고 본문 · 장면마다 1번 더</small></span><input type="checkbox" class="na_toggle na_st_outtg"></label>
+            <label class="na_st_mi"><span><b>지시문</b><small>다음 턴부터 이걸로 · 짧은 기본은 핵심만</small></span><select class="text_pole na_st_psel"></select></label>
             <button type="button" class="na_st_mi na_st_note"><span><b>작업 노트</b><small>매 턴 같이 가요</small></span></button>
             <button type="button" class="na_st_mi na_st_state"><span><b>STATE 쪽지 받기</b><small>지금까지 쓴 섹션으로</small></span></button>
             <button type="button" class="na_st_mi na_st_reset"><span><b>새로 시작</b><small>이 대화와 받은 섹션을 지워요</small></span></button>
@@ -403,6 +423,7 @@ export async function openStudio() {
         $root.find('.na_st_qk').prop('disabled', busy || !s.turns.some(t => t.role === 'assistant'));
         $root.find('.na_st_autotg').prop('checked', !!s.auto);
         $root.find('.na_st_outtg').prop('checked', !!s.outline);
+        { const gg = globalSettings(), $sel = $root.find('.na_st_psel'); if (!$sel.children().length) $sel.html(gg.prompts.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')); $sel.val(studioPrompt(gg).id); }
         $root.find('.na_st_plus i').prop('hidden', !s.auto && !s.outline);
         $root.find('.na_st_state').prop('hidden', !hasTail).prop('disabled', busy).find('b').text(s.changes ? 'STATE 쪽지 다시 받기' : 'STATE 쪽지 받기');
         if (restore) $root.find('.na_st_q').val(restore).trigger('input');
@@ -435,6 +456,7 @@ export async function openStudio() {
     const $menu = $root.find('.na_st_menu');
     $root.find('.na_st_plus').on('click', e => { e.stopPropagation(); $menu.prop('hidden', !$menu.prop('hidden')); });
     $root.on('click', e => { if (!$(e.target).closest('.na_st_menu, .na_st_plus').length) $menu.prop('hidden', true); });
+    $root.find('.na_st_psel').on('change', function () { const gg = globalSettings(); gg.studioPrompt = this.value; saveGlobal(); });
     $root.find('.na_st_outtg').on('change', async function () { const s = sessionOf(getMeta()); if (!s) return; s.outline = this.checked; await saveMeta(); draw(); });
     $root.find('.na_st_autotg').on('change', async function () {
         const s = sessionOf(getMeta());

@@ -131,6 +131,52 @@ DROP ## Group :: - a thread this stretch closed, copied exactly
 # 9. Before you write
 First write the scene boundaries of #{{from}}–#{{to}} by message number (where time, place or the situation turns) inside <scenes>…</scenes>, one line per scene, and check there that every message from #{{from}} to #{{to}} falls inside one of them. The extension removes this block. Then write the sections on those boundaries. Do not output STATE or OPEN in full; <current_state> is for reading only.`;
 // earlier basic text, upgraded when untouched
+// 짧은 기본: the same rules cut to their core, for a lighter model or when the long one is not being followed
+export const SHORT_PROMPT = `<raw_log range="#{{from}}–#{{to}}">
+{{raw}}
+</raw_log>
+
+<current_state>
+{{state}}
+</current_state>
+
+You write the next stretch of a role-play's long-term memory (the archive): #{{from}}–#{{to}} of the raw log above. The bot reads the archive as a snapshot of the past. Write a memory, not a transcript: what happened, why, and what it changed.
+
+OUTPUT
+- Sections covering #{{from}}–#{{to}} with no gap or overlap. Each is "## #start–#end — Title (date, place)", then "PLOT:", then 2–6 "- " bullets, about 250 words at most. If the STATE heading puts a prefix before its number (# STATE AT Y2 #143), put it in your headings too.
+- Then a line "---" and, if <current_state> has STATE / OPEN blocks, only what this stretch changes in them, one change per line under "# STATE CHANGES" and "# OPEN CHANGES": ADD ## Heading :: - new line, EDIT ## Heading :: - old line copied exactly ==> - new line, DROP ## Heading :: - old line copied exactly. An empty list is (none). Never write the blocks out.
+- Write in the archive's language, dialogue included.
+
+READ
+- One bot plays every non-user character under one name tag; tell the speaker from the content. Turns the user wrote are the strongest canon. Trackers, status windows and planning blocks are not events; take only the date and place from them. A bot error that contradicts earlier messages is not canon.
+- Only the raw log is new. Nothing from <current_state> goes into a section unless the raw log shows it happening.
+
+WRITE
+1. A section is a chapter: cut where the story turns (a relationship shifts, a decision, a secret, a change of place or time). Most sections cover 10–20 messages.
+2. One bullet is one turn: what happened, what caused it, what it changed. Never report a conversation turn by turn ("He asked… She replied…"); fold it into what it revealed, decided or broke.
+3. Keep the cause before every reaction and the trigger before every decision. Keep what a character chose not to do.
+4. Follow the raw log's order. Never mention an event before the bullet that tells it.
+5. Plain facts. A feeling or reading belongs to the character who has it ("in her own reckoning", "as he took it"), never to you. No verdicts, labels or themes of your own, such as "childish", "cold" or "cowardly", unless a character says them.
+6. A reaction that draws on a past event names the event briefly, as in "remembering the shipwreck", not what it means.
+7. Say each thing once. Do not lean on one verb ("explaining", "insisting") line after line.
+8. Cut staging: movement, gestures, how a line was said, scenery.
+9. Every sentence ends with the number of the message it comes from: (#88), or (#88, #91). A sentence you cannot point to a message for does not go in.
+10. Quotes: the lines that decide, confess, refuse, promise, accuse or say what someone is to someone, faithful to the raw log (translated when needed). One sentence, under about 20 words; at most two in a bullet. Never invent or paraphrase a quote.
+11. Sex: only relationship beats: who, how consent moved, a request to stop, a first, what was said that would still matter at a table, what changed after. No acts, bodies or sensations. Crises and self-harm: plainly.
+12. At most one em dash in a section.
+13. Titles: like a book's table of contents, short and concrete; they name the scene, they do not summarize it. Vary the shape: a place or object, two things joined, one short plain sentence, a "what" clause; rarely a quoted line, at most one in a stretch. No semicolons.
+
+EXAMPLE
+✗ Mara knocked and stood in the doorway. Ren asked why she had come back. Mara said she didn't know. Ren told her the road was closed. Mara said, "Then I'll wait."
+✓
+## #57–#69 — The north road (Spring 3, night, Varo)
+PLOT:
+- Mara came back the same night she had sworn to leave, unable to say why (#57, #59). Ren let her in without pressing and told her the north road was closed, and she stayed: "Then I'll wait." (#60, #63)
+
+Before you output, check each section once: order, anything said twice, verdicts of your own, quote length, em dashes, bullet count.`;
+export const OLD_SHORT_HASHES = new Set([]); // earlier built-in short ones, upgraded when untouched
+export const BUILTIN_PROMPTS = new Set(['basic', 'short']);
+
 export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -391,8 +437,8 @@ export function renderPromptSettings() {
         `<button type="button" class="na_pchip ${p.id === cur.id ? 'on' : ''}" data-id="${esc(p.id)}">${esc(p.name)}</button>`).join(''));
     $h.find('.na_pstar i').attr('class', cur.fav ? 'fa-solid fa-star' : 'fa-regular fa-star');
     $h.find('.na_pstar').toggleClass('active', !!cur.fav);
-    $h.find('.na_pdel, .na_pren').prop('disabled', cur.id === 'basic');
-    $h.find('.na_prompt_reset').toggle(cur.id === 'basic' && cur.text !== BASIC_PROMPT);
+    $h.find('.na_pdel, .na_pren').prop('disabled', BUILTIN_PROMPTS.has(cur.id));
+    $h.find('.na_prompt_reset').toggle((cur.id === 'basic' && cur.text !== BASIC_PROMPT) || (cur.id === 'short' && cur.text !== SHORT_PROMPT));
     const $ta = $h.find('.na_prompt_ta');
     if ($ta.data('pid') !== cur.id) $ta.val(cur.text).data('pid', cur.id);
 }
@@ -421,7 +467,7 @@ export function bindPromptSettings() {
               <dt>{{archive}}</dt><dd>아카이브 전체</dd>
             </dl>
           </details>
-          <button type="button" class="na_linkbtn na_prompt_reset">기본 지시문 되돌리기</button>
+          <button type="button" class="na_linkbtn na_prompt_reset">처음 모양으로 되돌리기</button>
         </div>`);
     $('#na_opt_hidden').on('change', function () { g().skipHidden = this.checked; saveGlobal(); });
     $('#na_opt_tags').on('change', function () { g().stripTags = this.checked; saveGlobal(); showStripInfo(); });
@@ -450,22 +496,23 @@ export function bindPromptSettings() {
     });
     $h.find('.na_pren').on('click', async () => {
         const p = activePrompt(g());
-        if (p.id === 'basic') return;
+        if (BUILTIN_PROMPTS.has(p.id)) return;
         const name = await askName('이름 바꾸기', p.name);
         if (!name) return;
         p.name = name; saveGlobal(); renderPromptSettings();
     });
     $h.find('.na_pdel').on('click', async () => {
         const p = activePrompt(g());
-        if (p.id === 'basic') return;
+        if (BUILTIN_PROMPTS.has(p.id)) return;
         if (!await confirm('지시문 삭제', `"${esc(p.name)}"을(를) 지울까요? 되돌릴 수 없어요.`)) return;
         g().prompts = g().prompts.filter(x => x.id !== p.id);
         pick(g().prompts[0].id);
     });
     $h.find('.na_prompt_ta').on('input', function () { activePrompt(g()).text = this.value; saveGlobal(); });
     $h.find('.na_prompt_reset').on('click', () => {
-        const p = g().prompts.find(x => x.id === 'basic');
-        p.text = BASIC_PROMPT; $h.find('.na_prompt_ta').val(p.text).data('pid', null); saveGlobal(); renderPromptSettings();
+        const p = activePrompt(g());
+        if (!BUILTIN_PROMPTS.has(p.id)) return;
+        p.text = p.id === 'short' ? SHORT_PROMPT : BASIC_PROMPT; $h.find('.na_prompt_ta').val(p.text).data('pid', null); saveGlobal(); renderPromptSettings();
     });
     $('#na_cmp_settings').on('toggle', function () { if (this.open) renderPromptSettings(); });
     renderPromptSettings();
