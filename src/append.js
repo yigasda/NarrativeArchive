@@ -1,6 +1,6 @@
 // Adding new sections to the archive: checks, preview and the append popup.
 
-import { aiHtml, askAI, askCompress, draftReady, stripThink, withSpinner } from './ai.js';
+import { aiHtml, askAI, askCompress, askFix, draftReady, stripThink, withSpinner } from './ai.js';
 import { commitText, ctx, getMeta, sectionChanges } from './core.js';
 import { lineDiff, renderDiff } from './diff.js';
 import { guessEndNumber } from './extract.js';
@@ -394,7 +394,7 @@ export async function openAppend(prefill = {}) {
           <input type="file" class="na_append_file" accept=".txt,.md,text/plain" hidden>
         </div>
         <textarea class="text_pole na_append_ta" spellcheck="false" placeholder="## Y2 #574–#600 — 제목 (날짜, 장소)&#10;PLOT:&#10;- …"></textarea>
-        ${draftReady() ? `<div class="na_apf">
+        ${true ? `<div class="na_apf">
           <div class="na_sf_log na_apf_log"></div>
           <div class="na_sf_note na_apf_note" hidden></div>
           <div class="na_ly_ask"><input type="text" class="na_ly_askq na_apf_q" placeholder="초안 고쳐 달라고 하기 (예: #60 이후 더 줄여줘)" aria-label="초안 고쳐 달라고 하기" enterkeyhint="send"><button type="button" class="na_ly_askgo na_apf_go" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>
@@ -537,9 +537,9 @@ export async function openAppend(prefill = {}) {
         try {
             const before = trimEnd(v.slice(s.start, s.end)).replace(/\n-{3,}\s*$/, '');
             const prompt = `SECTION BEFORE THE GAP:\n${before}\n\nSECTION AFTER THE GAP (heading only — do not output it):\n## ${gp.after.title}\n\nGAP: ${label}\n\nRAW LOG ${label}:\n${src.raw}${langBlock(m.text)}`;
-            const out = auFix(stripThink(await askCompress(prompt, { system: AI_SYS_GAPFILL })).replace(/^```[a-z]*\n?|```\s*$/g, '').trim(), m);
+            const out = auFix(stripThink(await askFix(prompt, { system: AI_SYS_GAPFILL })).replace(/^```[a-z]*\n?|```\s*$/g, '').trim(), m);
             const rs = headingRanges(out);
-            if (!rs.length) throw new Error('초안 모델이 섹션 형태로 답하지 않았어요');
+            if (!rs.length) throw new Error('모델이 섹션 형태로 답하지 않았어요');
             if (rs[0].from !== gp.before.from || rs[rs.length - 1].to !== gp.to) throw new Error(`받은 섹션이 #${rs[0].from}–#${rs[rs.length - 1].to}라서 넣지 않았어요 (#${gp.before.from}–#${gp.to}여야 해요)`);
             if (apf.original === null) apf.original = String($ta.val() || '');
             $root.find('.na_apf_undo').prop('hidden', false);
@@ -655,7 +655,7 @@ export async function openAppend(prefill = {}) {
             } else {
                 const gp = lastCheck.gaps?.[0], gl = gp && `#${gp.from}${gp.to > gp.from ? `–#${gp.to}` : ''}`;
                 ckRow($check, lastCheck.soft ? 'soft' : 'warn', lastCheck.soft ? '번호 검사를 건너뛰어요' : `번호를 확인해 주세요 · ${lastCheck.issues.length}개`, lastCheck.issues.map(esc).join('<br>'),
-                    gp ? `<span class="na_ck_btns">${draftReady() ? `<button type="button" class="na_ck_btn na_gap_fill" title="${esc(gl)} 원문만 초안 모델에 보내서 앞 섹션에 넣거나 새 섹션으로 받아요">${esc(gl)} 요약 받기</button>` : ''}<button type="button" class="na_ck_btn na_gap_join" title="앞 섹션 끝 번호를 #${gp.to}로 늘려요 · 그 메시지 내용이 앞 섹션에 이미 들어가 있을 때">번호만 잇기</button></span>` : '');
+                    gp ? `<span class="na_ck_btns">${true ? `<button type="button" class="na_ck_btn na_gap_fill" title="${esc(gl)} 원문만 AI 기능 모델에 보내서 앞 섹션에 넣거나 새 섹션으로 받아요">${esc(gl)} 요약 받기</button>` : ''}<button type="button" class="na_ck_btn na_gap_join" title="앞 섹션 끝 번호를 #${gp.to}로 늘려요 · 그 메시지 내용이 앞 섹션에 이미 들어가 있을 때">번호만 잇기</button></span>` : '');
             }
             const near = has ? nameNearMisses(m.text, val) : [];
             nearMiss = near;
@@ -765,10 +765,10 @@ export async function openAppend(prefill = {}) {
         try {
             const src = $root.find('.na_apf_raw').prop('checked') ? await loadApfRaw() : null;
             const prompt = `DRAFT:\n${draft}\n\n${src?.raw ? `RAW LOG:\n${src.raw}\n\n` : ''}${apf.asked.length ? `EARLIER REQUESTS:\n${apf.asked.map(x => `- ${x}`).join('\n')}\n\n` : ''}REQUEST:\n${q}${langBlock(m.text)}`;
-            const out = stripThink(await askCompress(prompt, { system: AI_SYS_DRAFTFIX })).replace(/^```[a-z]*\n?|```\s*$/g, '').trim();
+            const out = stripThink(await askFix(prompt, { system: AI_SYS_DRAFTFIX })).replace(/^```[a-z]*\n?|```\s*$/g, '').trim();
             const note = (out.match(/^NOTE:\s*(.+)$/m) || [])[1] || '';
             const body = out.replace(/^NOTE:.*$/m, '').trim();
-            if (!/^#{1,3}\s/m.test(body)) throw new Error('초안 모델이 초안 형태로 답하지 않았어요');
+            if (!/^#{1,3}\s/m.test(body)) throw new Error('모델이 초안 형태로 답하지 않았어요');
             if (apf.original === null) apf.original = draft;
             apf.asked.push(q);
             $ta.val(body).trigger('input');
