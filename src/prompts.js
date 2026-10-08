@@ -63,7 +63,7 @@ Bullets
 - Do not say the same thing twice. When you add a sentence, check the bullets before and after it for the same content.
 
 Dialogue
-- Quote a line only when it changes a relationship or defines a character — usually one in a bullet, at most two; tell the rest in your own words.
+- Quotes are part of the memory, not decoration. Most bullets carry one: the line from the raw log the next scene would most need word for word — a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. At most two in a bullet; tell the rest in your own words. Never quote a line from inside a sex act.
 - A quote is a line that actually appears in the raw log (translated when the log is in another language), faithful to the original, including whether it is a question: if the original is a statement, do not add a question mark. Never invent or paraphrase a line and present it as a quote.
 - Never leave a quote standing alone. Attach the character's reaction to it.
 
@@ -93,10 +93,10 @@ Titles
 - Mara said she didn't know.
 - Ren let her in and made tea.
 - Ren told her the north road was closed.
-- Mara said she would wait.
+- Mara said, "Then I'll wait."
 
 ✓ Memory (what to write):
-- Mara came back the same night she had sworn to leave, unable to say why. Ren let her in without pressing and told her the north road was closed; she said she would wait, and stayed.
+- Mara came back the same night she had sworn to leave, unable to say why. Ren let her in without pressing and told her the north road was closed. "Then I'll wait," she said, and stayed.
 
 # 7. Before you output
 Draft the stretch, then revise it once:
@@ -151,7 +151,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -251,7 +251,7 @@ STEPS
 7. If the message re-tells, re-describes or reacts to a moment already recorded (a reply re-telling the user's action from the other side, a recap at the start of a message), write "= #N" with the number where it was first recorded, then "; " and only what is new, if anything.
 8. If nothing happens (small talk, scenery, waiting), write "—".
 9. In a sex scene, record only new steps in plain words: consent asked or given, a request to stop, a first, climax, the end. No description. A climax re-told in the next message is "= #N".
-10. Quotes: at most one spoken line per message, only one that changes a relationship or defines a character, copied exactly in its original language, on its own line starting with two spaces and a quotation mark. Never compose or paraphrase a quote.
+10. Quotes: copy the spoken lines a later writer would most want word for word — a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. At most two per message, exactly as written, in the original language, each on its own line starting with two spaces and a quotation mark. Never a line from inside a sex act (moans, directions, words about bodies). Never compose or paraphrase a quote. If a message has no such line, give none.
 11. When the date or place changes, start the line with "@ date, place —".
 12. Start a line with ★ when it turns something: a relationship shifts, a secret comes out, a decision is made, a promise is given or broken. Use ★ sparingly; most lines have none.
 13. Keep each line under about 30 words.
