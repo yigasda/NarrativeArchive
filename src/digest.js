@@ -255,9 +255,21 @@ export async function openDigest(group = null, keys = null) {
         busy = true;
         const $b = $root.find('.na_dg_go').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
         try {
-            const out = stripThink(await askCompress(`SECTIONS:\n${src}\n\nTARGET: ${target}${note ? `\n\nNOTE:\n${note}` : ''}${langBlock(m.text)}`, { system: AI_SYS_DIGEST }))
-                .replace(/^```[a-z]*\n?|```\s*$/g, '').trim().split(/\n-{3,}\s*\n/)[0].trim();
-            if (!/^#{1,3}\s/.test(out)) throw new Error('초안 모델이 섹션 형태로 답하지 않았어요');
+            let out = stripThink(await askCompress(`SECTIONS:\n${src}\n\nTARGET: ${target}${note ? `\n\nNOTE:\n${note}` : ''}${langBlock(m.text)}`, { system: AI_SYS_DIGEST }))
+                .replace(/\r\n?|[\u2028\u2029]/g, '\n').replace(/^```[a-z]*\n?|```\s*$/gm, '').trim();
+            // a line before the heading ("Here is the digest:") or a bolded heading: start at the heading
+            out = out.replace(/^\*\*(#{1,3}\s[^\n]*?)\*\*\s*$/m, '$1');
+            const at = out.search(/^#{1,3}\s/m);
+            if (at > 0) out = out.slice(at);
+            out = out.split(/\n-{3,}\s*\n/)[0].trim();
+            if (!out) throw new Error('초안 모델이 빈 답을 줬어요');
+            // still no heading: the answer is kept (it was paid for) with the run's own heading on top, to fix by hand
+            if (!/^#{1,3}\s/.test(out)) {
+                const r0 = sel[0].title.match(RANGE_HEAD), r1 = sel[sel.length - 1].title.match(RANGE_HEAD);
+                const head = r0 && r1 ? `## ${r0[1] ? `${r0[1]} ` : ''}#${Math.min(+r0[2], +r0[4])}–#${Math.max(+r1[2], +r1[4])} — 제목` : '## #?–#? — 제목';
+                out = `${head}\nPLOT:\n${out}`;
+                toastr.warning('답에 섹션 제목이 없어서 범위 제목을 붙였어요. 제목과 불릿 모양을 확인하고 저장해 주세요.', '다이제스트');
+            }
             const [tok, srcTok] = await Promise.all([countTokens(out), countTokens(src)]);
             draft = { keys: sel.map(sectionKey), text: out, target, note, srcTok };
             $root.find('.na_dg_res').prop('hidden', false);
