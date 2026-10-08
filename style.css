@@ -3741,3 +3741,4 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 /* 2단계 압축: step 1's list, folded, in the append window */
 .na_ap_events summary small { color: var(--na-dim); font-weight: 400; margin-left: 4px; }
 .na_ap_events_text { margin: 8px 0 0; padding: 10px 12px; max-height: none; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, var(--monoFontFamily, monospace); font-size: 11.5px; line-height: 1.6; background: var(--na-soft); border-radius: 12px; }
+.na_ap_rerun { margin-top: 8px; }
