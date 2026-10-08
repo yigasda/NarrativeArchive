@@ -248,7 +248,7 @@ export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = 
     for (const [k, part] of chunks.entries()) {
         const from = part[0].i, to = part[part.length - 1].i;
         onStep(k, chunks.length, from, to, 'scenes');
-        const prompt = `<raw_log range="#${from}–#${to}">\n${formatExtract(part, g)}\n</raw_log>\n\n<previous_section>\n${prev || '(none: this is the start of the archive)'}\n</previous_section>\n\n<recent_archive>\n${recentFor(k) || '(none)'}\n</recent_archive>${styleBlock(m)}\n\n<current_state>\n${tail || '(none)'}\n</current_state>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}\n\n<rules>\n${rulesFor(from, to).trim()}\n</rules>${au.on ? `\n\n${auBlock(m).trim()}` : ''}${memoBlock(memo)}${langBlock(m.text)}\n\n${SCENE_ASK(from, to, prefix)}`;
+        const prompt = `<raw_log range="#${from}–#${to}">\n${formatExtract(part, g)}\n</raw_log>\n\n<previous_section>\n${prev || '(none: this is the start of the archive)'}\n</previous_section>\n\n<recent_archive>\n${recentFor(k) || '(none)'}\n</recent_archive>${styleBlock(m)}\n\n<current_state>\n${tail || '(none)'}\n</current_state>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}\n\n<rules>\n${rulesFor(from, to).trim()}\n</rules>${au.on ? `\n\n${auBlock(m).trim()}` : ''}${memoBlock(memo)}${langBlock(m.text, { tail: false })}\n\n${SCENE_ASK(from, to, prefix)}`;
         let got;
         try { got = parseSceneAnswer(await ask(sceneModel(), prompt), from, to); }
         catch (e) { error = e; break; }
