@@ -3735,3 +3735,6 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 /* 아카이브에 추가: the window itself is the one scroller; a list that holds the swipe (overscroll contain) stalls it on phones */
 .na_ap2 .na_sl_list { max-height: none; overflow: visible; overscroll-behavior: auto; }
 .na_ap2 .na_append_ta { overscroll-behavior: auto; }
+/* two fix buttons under the numbering warning, not squeezed beside it */
+.na_ap2_checks .na_check:has(.na_ck_btns) { flex-wrap: wrap; }
+.na_ck_btns { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; padding-left: 32px; box-sizing: border-box; }
