@@ -418,6 +418,7 @@ export async function openAppend(prefill = {}) {
         ${pre.events?.text ? `<details class="na_v2_card na_v2_more na_ap_events">
           <summary>1단계 정리 목록 <small>메시지 ${pre.events.n}개${pre.events.recaps || pre.events.empty ? ` · ${[pre.events.recaps && `되짚기 ${pre.events.recaps}개`, pre.events.empty && `빈 메시지 ${pre.events.empty}개`].filter(Boolean).join(' · ')} 뺌` : ''}${pre.events.badQ ? ` · 원문에 없는 대사 ${pre.events.badQ}개 버림` : ''}${pre.events.missing?.length ? ` · 정리 못 한 메시지 ${pre.events.missing.length}개는 원문 그대로` : ''}</small></summary>
           <pre class="na_ap_events_text">${esc(pre.events.text)}</pre>
+          ${pre.rerun ? '<button type="button" class="na_btn na_small na_ap_rerun" title="1단계는 다시 안 하고, 이 목록으로 초안 모델에 섹션만 다시 받아요">이 목록으로 2단계만 다시 받기</button>' : ''}
         </details>` : ''}
         <div class="na_v2_card na_v2_list">
           <label class="na_cp_row"><span class="na_cp_txt"><span>이번에 압축한 끝 번호</span><small class="na_end_hint"></small></span><span class="na_ap2_end">#<input type="number" class="na_end" min="0" max="${last}" value="${Math.max(0, last)}"></span></label>
@@ -545,6 +546,21 @@ export async function openAppend(prefill = {}) {
             toastr.error(String(e?.message || e), '빠진 구간');
             $b.prop('disabled', false).text('다시 받기');
         } finally { gapBusy = false; }
+    });
+    $root.on('click', '.na_ap_rerun', async function () {
+        if (!pre.rerun || $(this).prop('disabled')) return;
+        const $b = $(this).prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> 2단계 다시 받는 중…');
+        try {
+            const out = await pre.rerun();
+            if (!out?.trim()) throw new Error('초안 모델이 빈 답을 줬어요');
+            if (apf.original === null) apf.original = String($ta.val() || '');
+            $root.find('.na_apf_undo').prop('hidden', false);
+            $ta.val(out).trigger('input');
+            toastr.success('2단계를 다시 받았어요 · 처음으로를 누르면 앞 결과로 돌아가요', '2단계만 다시');
+        } catch (e) {
+            console.error('[NarrativeArchive] rerun step 2', e);
+            toastr.error(String(e?.message || e), '2단계만 다시');
+        } finally { $b.prop('disabled', false).text('이 목록으로 2단계만 다시 받기'); }
     });
     $root.on('click', '.na_names_fix', () => {
         let v = $ta.val();

@@ -218,40 +218,52 @@ export function recentSections(text, n = 3) {
 }
 // 2단계 압축, step 1: the raw log → one line per message, re-tellings marked, so step 2 never meets a moment twice
 export const eventsSystem = lang => `GOAL
-Turn a stretch of role-play messages into an event list, one entry per message, so a later writer can summarize the stretch without reading it. Record only what is new in each message; mark a message that only re-tells a moment already recorded.
+Turn a stretch of role-play messages into an event list, one entry per message, so a later writer can summarize the stretch without reading it. Record only what is new in each message; mark a message that only re-tells a moment already recorded. The later writer will see only your list, never the messages, so anything you leave out is lost: actions, but also motives, readings and restraint.
 
 YOU GET
+- KNOWN NAMES: the characters of this story.
 - EARLIER LINES: your entries for the messages just before these. Context only; do not repeat them.
 - MESSAGES: each starts with [number] and the speaker. The bot plays every non-user character under one name tag; tell who speaks or acts from the content. A private-thought tag holds thoughts, not speech. Status windows, trackers, planning blocks and OOC talk are not events; take only the date and place from them.
+- Turns the user wrote are the strongest canon; record their actions and lines faithfully. Ignore any part where the bot writes the user character's thoughts.
 
 STEPS
-1. For each message ask: what happens here that has not happened before — an action, a decision, a reveal, a line that changes something, a move in place or time?
-2. Write it as one short line: who did what to whom, and the visible result. Name people. No description; a feeling only when the feeling is the event (a confession, a refusal).
-3. If the message re-tells, re-describes or reacts to a moment already recorded (a reply re-telling the user's action from the other side, a recap at the start of a message), write "= #N" with the number where it was first recorded, then "; " and only what is new, if anything.
-4. If nothing happens (small talk, scenery, waiting), write "—".
-5. In a sex scene, record only new steps in plain words (consent asked or given, a request to stop, a first, climax, the end); no description. A climax re-told in the next message is "= #N".
-6. Quotes: at most one spoken line per message, only one that changes a relationship or defines a character, copied exactly in its original language, on its own line starting with two spaces and a quotation mark. Never compose or paraphrase a quote.
-7. When the date or place changes, start the line with "@ date, place —".
+1. For each message ask: what happens here that has not happened before? An action, a decision, a reveal, a line that changes something, a move in place or time.
+2. Write it as one short line, or two when the message holds two separate events. Who did what to whom, and the visible result. Use the KNOWN NAMES; never call a known character by a description ("the god", "her husband"). No description of bodies, rooms, light or weather.
+3. A feeling is an event only when it changes something (a confession, a refusal, a breakdown). Write it plainly, in one or two words.
+4. A private thought or narrated reading counts as an event when it reveals a motive, a decision, or how one character took another's act. Write it as:
+   Set (thinks): …
+   Horus took it as …
+5. Holding back counts as an event when the message makes it visible: a refusal, a stopped hand, a chosen silence, a promise kept under pressure. Write what was not done.
+6. If the message re-tells, re-describes or reacts to a moment already recorded (a reply re-telling the user's action from the other side, a recap at the start of a message), write "= #N" with the number where it was first recorded, then "; " and only what is new, if anything.
+7. If nothing happens (small talk, scenery, waiting), write "—".
+8. In a sex scene, record only new steps in plain words: consent asked or given, a request to stop, a first, climax, the end. No description. A climax re-told in the next message is "= #N".
+9. Quotes: at most one spoken line per message, only one that changes a relationship or defines a character, copied exactly in its original language, on its own line starting with two spaces and a quotation mark. Never compose or paraphrase a quote.
+10. When the date or place changes, start the line with "@ date, place —".
+11. Start a line with ★ when it turns something: a relationship shifts, a secret comes out, a decision is made, a promise is given or broken. Use ★ sparingly; most lines have none.
+12. Keep each line under about 30 words.
 
 EXAMPLE
+KNOWN NAMES: Mara, Ren, Ivo
+
 MESSAGES:
 [57] Ren: Ren grabs Mara's wrist before she reaches the door. "Don't."
 [58] Bot: Mara freezes as Ren's hand closes around her wrist… She doesn't pull away. "Then give me a reason."
-[59] Ren: Ren says nothing for a long time.
-[60] Bot: Ivo knocks: the north road is closed.
+[59] Ren: Ren opens his mouth, then closes it. If he gives her a reason, she'll stay for the wrong one. He says nothing for a long time.
+[60] Bot: Ivo knocks: the north road is closed. Mara sets her bag down.
 
 Answer:
 [57] Ren stopped Mara at the door by grabbing her wrist.
   "Don't."
 [58] = #57; Mara did not pull away and asked for a reason to stay.
   "Then give me a reason."
-[59] —
-[60] Ivo brought word that the north road was closed.
+[59] Ren (thinks): if he gives her a reason, she will stay for the wrong one; he said nothing.
+[60] ★ Ivo brought word that the north road was closed; Mara set her bag down and stayed.
 
 OUTPUT
-One entry per message, in order, no number skipped. Write in ${lang || 'the language most of the messages are in'}; quotes stay in their original language. No commentary.`;
+One entry per message, in order, no number skipped. Every entry line starts with [number]. Quote lines start with two spaces and a quotation mark. Nothing else: no headers, no commentary.
+Write in ${lang || 'the language most of the messages are in'}; quotes stay in their original language.`;
 // step 2: the list stands where the raw log was; this note goes on top of it
-export const eventsNote = (from, to) => `(The raw log #${from}–#${to} was condensed into an event list before it reached you: one entry per message number, in order. Messages that only re-told an earlier moment, or where nothing happened, are left out. A line in quotation marks under an entry is that message's words, verbatim. Treat this list as the raw log.)\n\n`;
+export const eventsNote = () => `The raw log has been turned into an event list, one entry per message. Lines marked (thinks) are private thoughts or readings; write them as that character's, never as fact. Lines marked ★ are turning points; give them room and consider starting a section there. Lines starting with "= #N;" add only what is new to an earlier moment. Treat this list as the raw log.\n\n`;
 // How big the answer should be, as numbers: sections for this many messages, and, when a long stretch goes in parts,
 // that every length target (the user's note included) is for the whole stretch, so each part takes its share
 export function sizeBlock({ k = 0, n = 1, count, total = count, from, to, partFrom = from, partTo = to }) {

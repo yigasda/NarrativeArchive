@@ -2,8 +2,9 @@
 
 import { aiLabel, askAI, askCompress, askDraft, compressEffort, drLabel, draftReady, withSpinner } from './ai.js';
 import { openAppend } from './append.js';
-import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
+import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta, textHash } from './core.js';
 import { driftHtml } from './drift.js';
+import { castNames } from './knowledge.js';
 import { buildExtract, cleanMessage, formatExtract, guessEndNumber } from './extract.js';
 import { LANG_NAME, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressPrompt, dropReproduced, eventsNote, eventsSystem, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, trimEnd } from './sections.js';
@@ -198,73 +199,103 @@ export function eventBatches(items, n = 15, cap = 12000) {
     return out;
 }
 const normQ = s => String(s).replace(/[“”„«»「」『』"]/g, '').replace(/\s+/g, ' ').trim();
-// "[58] = #57; Mara …" + '  "Then give me a reason."' → entries by number; quotes kept only when the message has them
+// "[58] = #57; Mara …" + '  "Then give me a reason."' → lines by message number (a message may get two);
+// a quote is kept only when that message really has it
 export function parseEvents(out, batch) {
     const want = new Map(batch.map(x => [x.i, x]));
     const got = new Map();
     let cur = null;
     for (const line of String(out || '').split('\n')) {
         const h = line.match(/^\s*\[#?(\d+)\]\s*(.*)$/);
-        if (h) { const n = Number(h[1]); cur = want.has(n) ? { n, text: h[2].trim(), quotes: [], badQ: 0 } : null; if (cur) got.set(n, cur); continue; }
+        if (h) {
+            const n = Number(h[1]);
+            if (!want.has(n)) { cur = null; continue; }
+            if (!got.has(n)) got.set(n, { n, lines: [], badQ: 0 });
+            cur = { text: h[2].trim(), quotes: [] };
+            got.get(n).lines.push(cur);
+            continue;
+        }
         const q = line.match(/^\s+["“「『](.*)["”」』]\s*$/);
         if (q && cur) {
-            if (normQ(q[1]) && normQ(want.get(cur.n).text).includes(normQ(q[1]))) cur.quotes.push(q[1].trim());
-            else cur.badQ++;
+            const n = [...got.values()].find(e => e.lines.includes(cur)).n;
+            if (normQ(q[1]) && normQ(want.get(n).text).includes(normQ(q[1]))) cur.quotes.push(q[1].trim());
+            else got.get(n).badQ++;
         }
     }
     return got;
 }
-// entries → the list step 2 reads: re-tellings and empty messages left out (a re-telling's new part and quotes stay)
+// entries → the list step 2 reads. Out: "—" lines and bare "= #N" lines (a re-telling with nothing new) unless they
+// carry a quote; "= #N; what is new" stays as it is, so step 2 sees which moment it adds to
 export function eventLines(entries) {
-    const lines = [];
+    const out = [];
     let recaps = 0, empty = 0;
     for (const e of entries) {
-        let text = e.text;
-        if (/^[—–-]?\s*$/.test(text) || /^[—–-]+$/.test(text)) { if (!e.quotes.length) { empty++; continue; } text = ''; }
-        const rc = text.match(/^=\s*#?(\d+)\s*(?:[;,:]\s*(.*))?$/);
-        if (rc) {
-            if (!rc[2]?.trim() && !e.quotes.length) { recaps++; continue; }
-            text = rc[2]?.trim() || `(same moment as #${rc[1]})`;
+        for (const l of e.lines) {
+            const blank = /^[—–-]*\s*$/.test(l.text), bare = /^=\s*#?\d+\s*[;,:]?\s*$/.test(l.text);
+            if ((blank || bare) && !l.quotes.length) { if (bare) recaps++; else empty++; continue; }
+            out.push(`[${e.n}] ${blank ? '(no new event)' : l.text}`, ...l.quotes.map(q => `  "${q}"`));
         }
-        lines.push(`[${e.n}] ${text || '(no new event)'}`, ...e.quotes.map(q => `  "${q}"`));
     }
-    return { text: lines.join('\n'), recaps, empty };
+    return { text: out.join('\n'), recaps, empty };
 }
+// who the story's characters are, so step 1 names them instead of "the god"
+const knownNames = (m, items) => {
+    const names = castNames(m);
+    return names.length ? names.join(', ') : [...new Set(items.map(x => x.name).filter(Boolean))].join(', ') || '(take them from the messages)';
+};
 export async function eventList({ m, g, items, onStep = () => {} }) {
     const batches = eventBatches(items);
     const system = eventsSystem(LANG_NAME[archiveLang(m.text)]);
+    const names = knownNames(m, items);
     const all = [];
-    let earlier = '', badQ = 0, missing = [];
+    let earlier = '', badQ = 0;
+    const missing = [];
+    const linesOf = es => es.flatMap(e => e.lines.map(l => `[${e.n}] ${l.text}`));
     for (const [k, b] of batches.entries()) {
         onStep(k, batches.length, b[0].i, b[b.length - 1].i);
-        const ask = async (part, before) => parseEvents(await askEvents(`EARLIER LINES:\n${before || '(none — this is the start)'}\n\nMESSAGES:\n${formatExtract(part, g)}`, system), part);
+        const ask = async (part, before) => parseEvents(await askEvents(`KNOWN NAMES: ${names}\n\nEARLIER LINES:\n${before || '(none — this is the start)'}\n\nMESSAGES:\n${formatExtract(part, g)}`, system), part);
         const got = await ask(b, earlier);
         // a message the model skipped: asked for once more on its own (with what this batch has so far), then passed on as it is
         const skip = b.filter(x => !got.has(x.i));
         if (skip.length) {
-            const so = [earlier, ...[...got.values()].sort((x, y) => x.n - y.n).map(e => `[${e.n}] ${e.text}`)].filter(Boolean).join('\n');
+            const so = [earlier, ...linesOf([...got.values()].sort((x, y) => x.n - y.n))].filter(Boolean).join('\n');
             try { for (const [n, e] of await ask(skip, so)) got.set(n, e); } catch { /* keep what we have */ }
         }
         for (const x of b) {
             const e = got.get(x.i);
             if (e) { all.push(e); badQ += e.badQ; continue; }
             missing.push(x.i);
-            all.push({ n: x.i, text: `(not condensed) ${x.name}: ${x.text}`, quotes: [], badQ: 0 });
+            all.push({ n: x.i, lines: [{ text: `(not condensed) ${x.name}: ${x.text}`, quotes: [] }], badQ: 0 });
         }
-        earlier = all.slice(-15).map(e => `[${e.n}] ${e.text}`).join('\n');
+        earlier = linesOf(all).slice(-15).join('\n');
     }
     const { text, recaps, empty } = eventLines(all);
     return { text, recaps, empty, badQ, missing, n: items.length, batches: batches.length };
 }
-// the one entry for both buttons: 2단계 by default, the raw log when 압축 → 설정 says so
-export async function compressDraft(args) {
+// step 1's list is kept with the chat for its range, so step 2 can run again without paying for step 1
+const evKey = (items, g) => textHash(formatExtract(items, g));
+export function savedEvents(m, items, g) {
+    const e = m.lastEvents;
+    return e && items.length && e.from === items[0].i && e.to === items[items.length - 1].i && e.hash === evKey(items, g) && e.text ? e : null;
+}
+// step 2 alone: the sections from a list
+export function sectionsFromEvents(args, ev) {
+    return draftCompress({ ...args, onStep: () => {}, events: eventsNote() + ev.text });
+}
+// the one entry for both buttons: 2단계 by default, the raw log when 압축 → 설정 says so.
+// reuse: a saved step-1 list for this exact range (same messages) is used instead of making a new one
+export async function compressDraft(args, { reuse = false } = {}) {
     if (compressMode() === 'raw') return draftCompress(args);
     const { m, g, items, onStep = () => {} } = args;
-    let ev;
-    try { ev = await eventList({ m, g, items, onStep: (k, total, a, b) => onStep(k, total, a, b, 'events') }); }
-    catch (e) { return { text: '', dropped: 0, parts: 1, done: 0, doneTo: null, error: e, grades: [] }; }
+    let ev = reuse ? savedEvents(m, items, g) : null;
+    if (!ev) {
+        try { ev = await eventList({ m, g, items, onStep: (k, total, a, b) => onStep(k, total, a, b, 'events') }); }
+        catch (e) { return { text: '', dropped: 0, parts: 1, done: 0, doneTo: null, error: e, grades: [] }; }
+        m.lastEvents = { ...ev, from: items[0].i, to: items[items.length - 1].i, hash: evKey(items, g), at: Date.now() };
+        await saveMeta();
+    }
     onStep(0, 1, items[0].i, items[items.length - 1].i, 'sections');
-    const r = await draftCompress({ ...args, onStep: () => {}, events: eventsNote(items[0].i, items[items.length - 1].i) + ev.text });
+    const r = await sectionsFromEvents(args, ev);
     return { ...r, events: ev };
 }
 
@@ -278,7 +309,7 @@ const joinGrades = gs => {
 
 // One button: the next range → the draft model (with the wizard's instruction, and the AU block in an AU chat)
 // → 아카이브에 추가 with the summary filled in. Its checks, the boundary and the hide step stay.
-let quickBusy = false, quickBound = false, quickMemo = '';
+let quickBusy = false, quickBound = false, quickMemo = '', quickReuse = false;
 export async function quickCompress() {
     if (quickBusy) return toastr.info('요약을 받는 중이에요.');
     const c = ctx(), m = getMeta(), g = globalSettings();
@@ -299,6 +330,7 @@ export async function quickCompress() {
     const p = g.prompts.find(x => x.id === g.wizPrompt) || activePrompt(g);
     const au = auOf(m);
     const two = compressMode() === 'events';
+    const saved = two ? savedEvents(m, items, g) : null;
     const n = two ? eventBatches(items).length : chunkItems(items).length;
     const ce = compressEffort();
     // the 채점 box lives in the confirm dialog; its state is remembered as soon as it changes
@@ -306,20 +338,23 @@ export async function quickCompress() {
         quickBound = true;
         $(document).on('change', '.na_qc_grade', function () { const gg = globalSettings(); gg.quickGrade = this.checked; saveGlobal(); });
         $(document).on('input', '.na_qc_memo', function () { quickMemo = this.value; });
+        $(document).on('change', '.na_qc_reuse', function () { quickReuse = this.checked; });
     }
-    quickMemo = '';
+    quickMemo = ''; quickReuse = !!saved;
     if (!await confirm('한 번에 압축', `<b>#${from} – #${to}</b> · 메시지 ${items.length}개 · 원문 약 ${fmt(estTok(raw))} 토큰${to < last ? `<br><small>마지막 ${last - to}개(#${to + 1}–#${last})는 지금 장면이라 남겨요 · 압축 → 설정 → 숨길 때 남길 메시지</small>` : ''}${two ? `<br><b>1단계</b> 정리: ${esc(evLabel())}가 메시지 15개씩 ${n}번 · 메시지마다 한 줄, 되짚기는 빼요<br><b>2단계</b> 요약: 초안 모델(${esc(drLabel())})이 정리한 목록으로 한 번에 써요` : `${n > 1 ? `<br><b>${n}번에 나눠</b> 보내요 · 한 번에 약 ${fmt(chunkTok())} 토큰씩, 앞 조각에 이어서` : `<br>한 번에 보내요${estTok(raw) > 60000 ? ' · 원문이 길어서 중간을 훑을 수 있어요 (압축 → 설정 → 나눠 보내기)' : ''}`}<br>초안 모델(${esc(drLabel())})이 요약해요`}<br>끝나면 <b>아카이브에 추가</b> 창이 떠요.<br><small>지시문: ${esc(p.name)} · 생각: ${ce === 'conn' ? '연결 설정' : { high: '높게', medium: '보통', low: '낮게' }[ce] || ce}</small>${au.on ? `<br><small>AU 켜짐 · 요약이 본편 뒤 <b>${esc(au.name)}</b> 묶음으로 이어져요</small>` : ''}
         <textarea class="text_pole na_qc_memo" rows="2" placeholder="이번 압축 메모 (선택) · 예: #40–#140은 정사 파트, 관계 변화만 한두 줄로. 세트는 끝난 뒤에 들어왔어"></textarea>
+        ${saved ? `<label class="checkbox_label na_qc_gradebox"><input type="checkbox" class="na_qc_reuse" checked><span>저장된 1단계 목록 쓰기 <small>· 이 범위를 ${esc(timeLabel(saved.at))}에 정리해 둔 게 있어요 (메시지 그대로) · 2단계만 다시 해요</small></span></label>` : ''}
         <label class="checkbox_label na_qc_gradebox"><input type="checkbox" class="na_qc_grade" ${g.quickGrade ? 'checked' : ''}><span>채점도 같이 <small>· AI 기능 모델(${esc(aiLabel())})이 원문과 대조해 지어낸 것·빠진 것·틀린 번호를 찾아요 (비용 추가)</small></span></label>`)) return;
     quickBusy = true;
+    const runMemo = quickMemo;
     const toast = toastr.info(`#${from}–#${to} 요약하는 중… 창을 닫아도 돼요`, '한 번에 압축', { timeOut: 0, extendedTimeOut: 0, tapToDismiss: false });
     let r;
     try {
-        r = await compressDraft({ m, g, p, items, grade: !!globalSettings().quickGrade, memo: quickMemo,
+        r = await compressDraft({ m, g, p, items, grade: !!globalSettings().quickGrade, memo: runMemo,
             onStep: (k, total, a, b, stage) => {
                 const msg = stage === 'events' ? `1단계 정리 #${a}–#${b} (${k + 1}/${total})` : stage === 'sections' ? `2단계 섹션 쓰는 중 #${a}–#${b}` : total > 1 ? `#${a}–#${b} 요약하는 중… (${k + 1}/${total})` : '';
                 if (msg) $(toast).find('.toast-message').text(`${msg} · 창을 닫아도 돼요`);
-            } });
+            } }, { reuse: quickReuse });
     } finally { quickBusy = false; toastr.clear(toast); }
     if (r.error) {
         console.error('[NarrativeArchive] quick compress', r.error);
@@ -333,7 +368,13 @@ export async function quickCompress() {
     m.lastExport = { from, to: upto, at: Date.now(), how: 'draft' };
     await saveMeta();
     refreshStatus();
-    openAppend({ text, end: guessEndNumber(text) ?? upto, expectTo: upto, events: r.events, ...joinGrades(r.grades) });
+    // 2단계만 다시: the same list, prompt and note, a new answer from the draft model
+    const rerun = r.events && !r.error ? async () => {
+        const r2 = await sectionsFromEvents({ m: getMeta(), g, p, items, memo: runMemo }, r.events);
+        if (r2.error) throw r2.error;
+        return auFix(r2.text, getMeta());
+    } : null;
+    openAppend({ text, end: guessEndNumber(text) ?? upto, expectTo: upto, events: r.events, rerun, ...joinGrades(r.grades) });
 }
 
 export async function openWizard() {
