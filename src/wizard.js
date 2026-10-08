@@ -111,13 +111,16 @@ function rangeRaw(c, g, from, to, keepUpTo = -1) {
 
 // Long ranges go to the model in parts of about this many tokens: one 145-message log in one request comes back
 // as a skim (quotes picked off the surface, events out of order). Each part continues from the one before it.
-export const CHUNK_TOK = 20000;
+// 압축 → 설정 → 나눠 보내기: 0 = one request for the whole range
+export const CHUNK_CHOICES = { 0: '안 나눔', 40000: '크게 · 약 4만 토큰씩', 20000: '작게 · 약 2만 토큰씩' };
+export const chunkTok = () => { const v = globalSettings().chunkTok; return v === undefined || v === null || !(String(v) in CHUNK_CHOICES) ? 40000 : Number(v); };
 const estTok = t => { const s = String(t), h = (s.match(/[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]/g) || []).length; return Math.ceil(h + (s.length - h) / 3.6); };
 // parts of even size (no lone message left at the end): as many parts as the size needs, then equal shares
 export function chunkItems(items) {
     const sizes = items.map(x => estTok(x.text) + 8);
     const total = sizes.reduce((a, t) => a + t, 0);
-    const n = Math.max(1, Math.ceil(total / CHUNK_TOK));
+    const size = chunkTok();
+    const n = size ? Math.max(1, Math.ceil(total / size)) : 1;
     const target = total / n;
     const out = [];
     let cur = [], tok = 0;
@@ -201,7 +204,7 @@ export async function quickCompress() {
         $(document).on('input', '.na_qc_memo', function () { quickMemo = this.value; });
     }
     quickMemo = '';
-    if (!await confirm('한 번에 압축', `<b>#${from} – #${to}</b> · 메시지 ${items.length}개 · 원문 약 ${fmt(estTok(raw))} 토큰${n > 1 ? `<br><b>${n}번에 나눠</b> 보내요 · 한 번에 약 ${fmt(CHUNK_TOK)} 토큰씩, 앞 조각에 이어서` : ''}<br>초안 모델(${esc(drLabel())})이 요약하면 <b>아카이브에 추가</b> 창이 떠요.<br><small>지시문: ${esc(p.name)} · 생각: ${ce === 'conn' ? '연결 설정' : { high: '높게', medium: '보통', low: '낮게' }[ce] || ce}</small>${au.on ? `<br><small>AU 켜짐 · 요약이 본편 뒤 <b>${esc(au.name)}</b> 묶음으로 이어져요</small>` : ''}
+    if (!await confirm('한 번에 압축', `<b>#${from} – #${to}</b> · 메시지 ${items.length}개 · 원문 약 ${fmt(estTok(raw))} 토큰${n > 1 ? `<br><b>${n}번에 나눠</b> 보내요 · 한 번에 약 ${fmt(chunkTok())} 토큰씩, 앞 조각에 이어서` : `<br>한 번에 보내요${estTok(raw) > 60000 ? ' · 원문이 길어서 중간을 훑을 수 있어요 (압축 → 설정 → 나눠 보내기)' : ''}`}<br>초안 모델(${esc(drLabel())})이 요약하면 <b>아카이브에 추가</b> 창이 떠요.<br><small>지시문: ${esc(p.name)} · 생각: ${ce === 'conn' ? '연결 설정' : { high: '높게', medium: '보통', low: '낮게' }[ce] || ce}</small>${au.on ? `<br><small>AU 켜짐 · 요약이 본편 뒤 <b>${esc(au.name)}</b> 묶음으로 이어져요</small>` : ''}
         <textarea class="text_pole na_qc_memo" rows="2" placeholder="이번 압축 메모 (선택) · 예: #40–#140은 정사 파트, 관계 변화만 한두 줄로. 세트는 끝난 뒤에 들어왔어"></textarea>
         <label class="checkbox_label na_qc_gradebox"><input type="checkbox" class="na_qc_grade" ${g.quickGrade ? 'checked' : ''}><span>채점도 같이 <small>· AI 기능 모델(${esc(aiLabel())})이 원문과 대조해 지어낸 것·빠진 것·틀린 번호를 찾아요 (비용 추가)</small></span></label>`)) return;
     quickBusy = true;
