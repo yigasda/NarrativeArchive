@@ -214,7 +214,7 @@ Turn a stretch of role-play messages into an event list, one entry per message, 
 
 YOU GET
 - KNOWN NAMES: the characters of this story.
-- EARLIER LINES: your entries for the messages just before these. Context only; do not repeat them.
+- EARLIER MESSAGES: the last few messages before these, for context only. Write no entries for them; a message of yours that re-tells one of them is "= #N".
 - MESSAGES: each starts with [number] and the speaker. The bot plays every non-user character under one name tag; tell who speaks or acts from the content. A private-thought tag holds thoughts, not speech. Status windows, trackers, planning blocks and OOC talk are not events; take only the date and place from them.
 - Turns the user wrote are the strongest canon: their character's words, choices and own actions stand as written. When that character acts on someone else, the outcome is whatever the next reply shows; if the reply has it miss, fail or get turned aside, write it that way (Ren swung at Ivo; Ivo caught his arm). Ignore any part where the bot writes the user character's thoughts.
 - Some user turns steer the story instead of playing it: a line opening with 전개:, 지시: or OOC, or text in brackets addressed to the bot. That is a request, not part of the story. Leave it out and write only what the bot's reply then put on the page.
@@ -223,7 +223,7 @@ STEPS
 Each message
 1. Ask: what happens here that has not happened before? An action, a decision, a reveal, a line that changes something, a move in place or time.
 2. Write it as one short line (under about 30 words), or two when the message holds two separate events: who did what to whom, and the visible result. Use the KNOWN NAMES; never call a known character by a description ("the god", "her husband"). No description of bodies, rooms, light or weather.
-3. A re-telling, re-description or reaction to a moment already recorded (a reply re-telling the user's action from the other side, a recap at the start of a message) is "= #N", with the number where it was first recorded, then "; " and only what is new, if anything.
+3. A re-telling, re-description or reaction to a moment from an earlier message (above in this batch or in EARLIER MESSAGES; a reply re-telling the user's action from the other side, a recap at the start of a message) is "= #N", with the number of the message where it happened, then "; " and only what is new, if anything.
 4. Nothing happens (small talk, scenery, waiting): "—".
 
 What counts as an event
