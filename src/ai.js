@@ -277,14 +277,14 @@ export function aiProfiles() {
 export const stripThink = t => String(t ?? '').replace(/<(think|thinking|reasoning)[^>]*>[\s\S]*?<\/\1>/gi, '').trim();
 
 // Sends one request: to the chosen Connection Manager profile, or to whatever is connected now.
-export async function askAI(prompt, { system = '', maxTokens = 0 } = {}) {
+export async function askAI(prompt, { system = '', maxTokens = 0, effort = '' } = {}) {
     const c = ctx();
     const g = globalSettings();
     const max = Math.max(64, Number(maxTokens) || Number(g.aiMaxTokens) || 8192);
     let out;
     const a = connSettings('ai');
     if (a.mode === 'custom' || a.mode === 'vertex') {
-        out = await callConn(a, system, prompt, max);
+        out = await callConn(a, system, prompt, max, effort);
     } else if (g.aiProfile) {
         const p = aiProfiles().find(x => x.id === g.aiProfile);
         if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요. ⚙ 설정 → AI · 번역에서 다시 골라 주세요.');

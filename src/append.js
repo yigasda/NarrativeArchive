@@ -440,7 +440,7 @@ export async function openAppend(prefill = {}) {
           <div class="na_ai_box na_conflict_out" hidden></div>
         </div>
         ${pre.events?.text ? `<details class="na_v2_card na_v2_more na_ap_events">
-          <summary>1단계 정리 목록 <small>메시지 ${pre.events.n}개${pre.events.recaps || pre.events.empty ? ` · ${[pre.events.recaps && `되짚기 ${pre.events.recaps}개`, pre.events.empty && `빈 메시지 ${pre.events.empty}개`].filter(Boolean).join(' · ')} 뺌` : ''}${pre.events.badQ ? ` · 원문에 없는 대사 ${pre.events.badQ}개 버림` : ''}${pre.events.missing?.length ? ` · 정리 못 한 메시지 ${pre.events.missing.length}개는 원문 그대로` : ''}</small></summary>
+          <summary>1단계 정리 목록 <small>메시지 ${pre.events.n}개${pre.events.recaps || pre.events.empty ? ` · ${[pre.events.recaps && `되짚기 ${pre.events.recaps}개`, pre.events.empty && `빈 메시지 ${pre.events.empty}개`].filter(Boolean).join(' · ')} 뺌` : ''}${pre.events.badQ ? ` · 원문에 없는 대사 ${pre.events.badQ}개 버림` : ''}${pre.events.missing?.length ? ` · 정리 못 한 메시지 ${pre.events.missing.length}개는 원문 그대로` : ''}${Number.isFinite(pre.events.secs) ? `<br>${pre.events.batches}묶음 · ${pre.events.secs}초 걸림 (제일 느린 묶음 ${pre.events.slowest}초)${pre.events.retries ? ` · 오류로 다시 보낸 것 ${pre.events.retries}번` : ''}${pre.events.reasks ? ` · 빠뜨려서 다시 물은 것 ${pre.events.reasks}번` : ''}` : ''}</small></summary>
           <pre class="na_ap_events_text">${esc(pre.events.text)}</pre>
           ${pre.rerun ? '<button type="button" class="na_btn na_small na_ap_rerun" title="1단계는 다시 안 하고, 이 목록으로 초안 모델에 섹션만 다시 받아요">이 목록으로 2단계만 다시 받기</button>' : ''}
         </details>` : ''}
