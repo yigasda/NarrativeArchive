@@ -190,7 +190,26 @@ AU premise: ${a.note || '(not given — take it from the raw log)'}
 // the compress instruction with its blanks filled, and the AU block on top when the chat is an AU.
 // memo: the user's note for this one compression — last, where it is read as the final word
 export const memoBlock = memo => (String(memo || '').trim() ? `\n\n[USER'S NOTE FOR THIS STRETCH — highest priority. The user knows this story; follow this note even where the instructions above say otherwise.]\n${String(memo).trim()}` : '');
-export const compressPrompt = (tpl, vars, m, memo = '') => auBlock(m) + fillPrompt(tpl, vars) + memoBlock(memo);
+// The archive's language, read from its sections (not STATE titles or the raw log): 'en', 'ko' or '' when unclear
+export function archiveLang(text) {
+    const body = parseSections(String(text || '')).filter(x => !x.group && RANGE_HEAD.test(x.title)).slice(-8).map(x => String(text).slice(x.start, x.end)).join('\n');
+    const hangul = (body.match(/[\uac00-\ud7af]/g) || []).length, latin = (body.match(/[A-Za-z]/g) || []).length;
+    if (hangul + latin < 200) return '';
+    return hangul / (hangul + latin) > 0.3 ? 'ko' : 'en';
+}
+export const LANG_NAME = { en: 'English', ko: 'Korean' };
+// the last thing the model reads: the answer's language, whatever language the raw log and the note are in
+export const langBlock = text => {
+    const l = archiveLang(text);
+    return l ? `\n\n[ANSWER LANGUAGE — ${LANG_NAME[l]}. Write every heading, bullet and STATE / OPEN line in ${LANG_NAME[l]}, like the archive, even though the raw log${l === 'en' ? ' and the user\'s note are' : ' is'} in another language. Translate quoted lines into ${LANG_NAME[l]}.]` : '';
+};
+// does an answer come back in the language the archive is written in? ('' when it cannot tell)
+const textLang = (t, min) => {
+    const hangul = (String(t).match(/[\uac00-\ud7af]/g) || []).length, latin = (String(t).match(/[A-Za-z]/g) || []).length;
+    return hangul + latin < min ? '' : hangul / (hangul + latin) > 0.3 ? 'ko' : 'en';
+};
+export const answerLangOk = (archive, answer) => { const want = archiveLang(archive), got = textLang(answer, 40); return !want || !got || want === got; };
+export const compressPrompt = (tpl, vars, m, memo = '') => auBlock(m) + fillPrompt(tpl, vars) + memoBlock(memo) + langBlock(m.text);
 
 // An AU answer that forgot its prefix or divider gets them: "## #12–#30" → "## AU #12–#30",
 // "# STATE AT #30" → "# STATE AT AU #30", and "# ── AU ──" above the first new section.

@@ -7,7 +7,7 @@ import { guessEndNumber } from './extract.js';
 import { applyHide } from './hide.js';
 import { driftHtml } from './drift.js';
 import { nameNearMisses } from './keywords.js';
-import { auDivider, auFix, auOf } from './prompts.js';
+import { auDivider, auFix, auOf, langBlock } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, tailBlocks, trimEnd } from './sections.js';
 import { rawFor } from './retitle.js';
 import { openSource } from './source.js';
@@ -603,7 +603,7 @@ export async function openAppend(prefill = {}) {
         const $b = $root.find('.na_apf_go').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
         try {
             const src = $root.find('.na_apf_raw').prop('checked') ? await loadApfRaw() : null;
-            const prompt = `DRAFT:\n${draft}\n\n${src?.raw ? `RAW LOG:\n${src.raw}\n\n` : ''}${apf.asked.length ? `EARLIER REQUESTS:\n${apf.asked.map(x => `- ${x}`).join('\n')}\n\n` : ''}REQUEST:\n${q}`;
+            const prompt = `DRAFT:\n${draft}\n\n${src?.raw ? `RAW LOG:\n${src.raw}\n\n` : ''}${apf.asked.length ? `EARLIER REQUESTS:\n${apf.asked.map(x => `- ${x}`).join('\n')}\n\n` : ''}REQUEST:\n${q}${langBlock(m.text)}`;
             const out = stripThink(await askCompress(prompt, { system: AI_SYS_DRAFTFIX })).replace(/^```[a-z]*\n?|```\s*$/g, '').trim();
             const note = (out.match(/^NOTE:\s*(.+)$/m) || [])[1] || '';
             const body = out.replace(/^NOTE:.*$/m, '').trim();
