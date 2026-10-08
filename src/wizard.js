@@ -257,7 +257,11 @@ export async function eventList({ m, g, items, onStep = () => {} }) {
     const linesOf = es => es.flatMap(e => e.lines.map(l => `[${e.n}] ${l.text}`));
     // a run cut off partway (the tab went to sleep, the connection dropped) picks up after its last finished batch
     const key = evKey(items, g), from = items[0].i, to = items[items.length - 1].i;
-    const prog = m.evProgress?.hash === key && m.evProgress.from === from && m.evProgress.to === to ? m.evProgress : null;
+    // kept in this browser, not the chat: saving the chat file after every batch made step 1 several times slower
+    const progKey = `na_evprog_${ctx().getCurrentChatId?.() || ctx().chatId || 'chat'}`;
+    let saved0 = null;
+    try { saved0 = JSON.parse(localStorage.getItem(progKey) || 'null'); } catch { /* no storage */ }
+    const prog = saved0?.hash === key && saved0.from === from && saved0.to === to ? saved0 : null;
     const all = prog ? prog.all : [];
     let badQ = prog ? prog.badQ : 0;
     const missing = prog ? prog.missing : [];
@@ -280,10 +284,9 @@ export async function eventList({ m, g, items, onStep = () => {} }) {
             all.push({ n: x.i, lines: [{ text: `(not condensed) ${x.name}: ${x.text}`, quotes: [] }], badQ: 0 });
         }
         earlier = linesOf(all).slice(-15).join('\n');
-        m.evProgress = { hash: key, from, to, done: k + 1, all, badQ, missing };
-        await saveMeta();
+        try { localStorage.setItem(progKey, JSON.stringify({ hash: key, from, to, done: k + 1, all, badQ, missing })); } catch { /* full or blocked: no resume */ }
     }
-    delete m.evProgress;
+    try { localStorage.removeItem(progKey); } catch { /* ignore */ }
     const { text, recaps, empty } = eventLines(all);
     return { text, recaps, empty, badQ, missing, n: items.length, batches: batches.length };
 }
