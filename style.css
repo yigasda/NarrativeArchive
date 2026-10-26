@@ -3886,3 +3886,24 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_ss_row span { display: flex; flex-direction: column; gap: 2px; min-width: 0; line-height: 1.35; }
 .na_ss_row b { font-size: 0.9em; }
 .na_ss_row small { font-size: 0.8em; color: var(--na-dim); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+/* ---- 3.69: 회상 · 지금 상태 · 번외편, 설정 찾기, ★ 중요 장면, 캐해 시트, 원문 대조 */
+#na_settings .na_cfg_hide { display: none !important; }
+.na_cfg_search { margin: 4px 0 10px; }
+#na_recall_opts { display: flex; flex-direction: column; }
+#na_recall_opts[hidden] { display: none; }
+#na_recall_opts .na_set_row { padding-left: 22px; }
+.na_cfg_val .na_cfg_depth + .na_toggle, .na_cfg_val .na_cfg_depth { margin-right: 6px; }
+.mes .na_mes_star.fa-solid { color: #d9a640; }
+.mes .na_star_badge { color: #d9a640; font-size: 0.8em; margin-left: 6px; cursor: pointer; }
+.na_vc_sub { display: block; font-size: 0.75em; font-weight: 700; color: var(--na-dim); margin: 8px 0 4px; letter-spacing: 0.02em; }
+.na_vc_core_view { display: flex; flex-direction: column; gap: 4px; }
+.na_vc_core_view .na_vc_sub { margin-top: 0; }
+.na_vc_coreline { padding: 6px 10px; border-radius: 10px; background: var(--na-card2); font-size: 0.88em; line-height: 1.45; }
+.na_vc_samples { display: flex; flex-direction: column; gap: 4px; }
+.na_vc_samples i { font-size: 0.88em; color: var(--na-dim); padding: 0 4px; line-height: 1.45; }
+.na_vc_card textarea.na_vc_core { margin-bottom: 6px; }
+.na_ask2_whole { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.na_ask2_whole input { margin: 0; }
+.na_diff_head .na_src_check { margin-left: auto; }
+.na_src_checkout { margin: 8px 0; }

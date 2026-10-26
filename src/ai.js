@@ -235,9 +235,27 @@ export async function vertexToken(sa) {
     return j.access_token;
 }
 
-export async function callVertex({ vxJson, vxLocation, vxModel }, system, prompt, maxTokens) {
+// a model that a region does not carry answers 404 "Publisher model … not found": try the other usual regions once,
+// and keep the one that worked
+export async function callVertex(t, system, prompt, maxTokens) {
+    const first = String(t.vxLocation || 'global').trim();
+    const others = ['global', 'us-central1', 'us-east5', 'europe-west4'].filter(x => x !== first);
+    try { return await callVertexAt(t, first, system, prompt, maxTokens); }
+    catch (e) {
+        if (!/Vertex 오류 404/.test(String(e?.message))) throw e;
+        for (const loc of others) {
+            try {
+                const out = await callVertexAt(t, loc, system, prompt, maxTokens);
+                t.vxLocation = loc; saveGlobal();
+                toastr.info(`Vertex 지역 ${first}에 이 모델이 없어서 ${loc}로 바꿨어요`, '서사 아카이브');
+                return out;
+            } catch (e2) { if (!/Vertex 오류 404/.test(String(e2?.message))) throw e2; }
+        }
+        throw e;
+    }
+}
+async function callVertexAt({ vxJson, vxModel }, loc, system, prompt, maxTokens) {
     const sa = parseServiceAccount(vxJson);
-    const loc = String(vxLocation || 'global').trim();
     const model = String(vxModel || '').trim();
     if (!model) throw new Error('Vertex 모델 이름을 넣어 주세요 (예: gemini-2.5-flash)');
     const host = loc === 'global' ? 'aiplatform.googleapis.com' : `${loc}-aiplatform.googleapis.com`;
@@ -264,22 +282,48 @@ export async function callVertex({ vxJson, vxLocation, vxModel }, system, prompt
     return out;
 }
 
+// ---- refusals and blocks: a refusal is never saved as a section; a blocked request goes to the stand-in model
+
+export const BLOCK_RE = /prompt was blocked|block_?reason|prohibited_content|blocklist|content.?filter|content_policy|moderation|flagged|refus|\bSAFETY\b|PROHIBITED|SPII|막았어요/i;
+const REFUSAL_RE = /^(?:\s*[*_"'“]*)?(?:i'?m sorry|i am sorry|sorry,|i can(?:'|no)t|i cannot|i won'?t|i'?m unable|i am unable|i'?m not able|i am not able|as an ai|i must decline|i'?m not comfortable|죄송(?:합니다|하지만|해요)|요청하신 내용은|도와드릴 수 없|申し訳|できません|抱歉|我无法|我不能)/i;
+// guard: what a real answer has (a section heading); a short apology without it is a refusal
+export const looksRefused = (out, guard) => { const t = String(out || '').trim(); return !!guard && t.length < 1200 && REFUSAL_RE.test(t) && !guard.test(t); };
+export const isBlocked = e => !!e?.refused || BLOCK_RE.test(String(e?.message || e || ''));
+const refusedError = who => Object.assign(new Error(`${who}이 요청을 거절했어요. 거절한 답은 넣지 않았어요`), { refused: true });
+
+// the stand-in for a refused or blocked request: '' none, 'ai' the AI 기능 모델, 'dr' the draft model
+export const fallbackOf = () => { const v = globalSettings().fallback; return v === 'ai' || v === 'dr' ? v : ''; };
+async function viaFallback(e, from, prompt, opts) {
+    const fb = fallbackOf();
+    if (!isBlocked(e) || !fb || fb === from || opts.noFallback) throw e;
+    if (fb === 'dr' && !draftReady()) throw e;
+    console.warn(`[narrative-archive] ${from} refused or blocked, asking the ${fb} model`, e);
+    toastr.info(`${from === 'dr' ? '초안 모델' : 'AI 기능 모델'}이 거절해서 ${fb === 'dr' ? '초안 모델' : 'AI 기능 모델'}로 다시 보내요`, '서사 아카이브', { timeOut: 4000 });
+    const o = { ...opts, noFallback: true };
+    return fb === 'dr' ? askDraft(prompt, o) : askAI(prompt, o);
+}
+
 // the draft model writes text that may go into the archive (compression drafts); 'same' = not set
 export const draftSettings = () => connSettings('dr');
 export const draftReady = () => ['custom', 'vertex'].includes(draftSettings().mode);
-export async function askDraft(prompt, { system = '', maxTokens = 0, effort = '', force = false } = {}) {
+export async function askDraft(prompt, opts = {}) {
+    const { system = '', maxTokens = 0, effort = '', force = false, guard = null } = opts;
     const t = draftSettings();
     if (!draftReady()) throw new Error('초안 모델이 없어요. ⚙ 설정 → AI · 번역 → 초안 모델에서 정해 주세요.');
-    const out = await callConn(t, system, prompt, Math.max(256, Number(maxTokens) || Number(t.max) || 16000), effort, force);
-    if (!out) throw new Error('초안 모델이 빈 답을 돌려줬어요');
-    return out;
+    try {
+        const out = await callConn(t, system, prompt, Math.max(256, Number(maxTokens) || Number(t.max) || 16000), effort, force);
+        if (!out) throw new Error('초안 모델이 빈 답을 돌려줬어요');
+        if (looksRefused(out, guard)) throw refusedError('초안 모델');
+        return out;
+    } catch (e) { return viaFallback(e, 'dr', prompt, opts); }
 }
 // Compression reads a long raw log and ties causes together: it gets its own thinking level (default high) and
 // room for that thinking (32,000 tokens, or the draft limit if that is larger). 'conn' = the connection's own setting.
 export const compressEffort = () => { const v = draftSettings().cEffort; return v === undefined || v === null || v === '' ? 'high' : v; };
-export const askCompress = (prompt, { system = '' } = {}) => {
+export const SECTION_GUARD = /^#{1,3} |^\s*[-*•] |PLOT:/m;
+export const askCompress = (prompt, { system = '', guard = null } = {}) => {
     const e = compressEffort(), t = draftSettings();
-    return askDraft(prompt, { system, maxTokens: Math.max(32000, Number(t.max) || 0), effort: e === 'conn' ? '' : e, force: e !== 'conn' });
+    return askDraft(prompt, { system, guard, maxTokens: Math.max(32000, Number(t.max) || 0), effort: e === 'conn' ? '' : e, force: e !== 'conn' });
 };
 export const drLabel = () => { const t = draftSettings(); return t.mode === 'custom' ? (t.model || '커스텀 API') : t.mode === 'vertex' ? (t.vxModel || 'Vertex') : '없음'; };
 
@@ -299,7 +343,11 @@ export function aiProfiles() {
 export const stripThink = t => String(t ?? '').replace(/<(think|thinking|reasoning|scenes)[^>]*>[\s\S]*?<\/\1>/gi, '').trim();
 
 // Sends one request: to the chosen Connection Manager profile, or to whatever is connected now.
-export async function askAI(prompt, { system = '', maxTokens = 0, effort = '' } = {}) {
+export async function askAI(prompt, opts = {}) {
+    try { return await askAIOnce(prompt, opts); }
+    catch (e) { return viaFallback(e, 'ai', prompt, opts); }
+}
+async function askAIOnce(prompt, { system = '', maxTokens = 0, effort = '', guard = null } = {}) {
     const c = ctx();
     const g = globalSettings();
     const max = Math.max(64, Number(maxTokens) || Number(g.aiMaxTokens) || 8192);
@@ -310,15 +358,16 @@ export async function askAI(prompt, { system = '', maxTokens = 0, effort = '' } 
     } else if (g.aiProfile) {
         const p = aiProfiles().find(x => x.id === g.aiProfile);
         if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요. ⚙ 설정 → AI · 번역에서 다시 골라 주세요.');
-        const msgs = [...(system ? [{ role: 'system', content: system }] : []), { role: 'user', content: prompt }];
+        const msgs = [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt)];
         const r = await c.ConnectionManagerRequestService.sendRequest(p.id, msgs, max, { stream: false, extractData: true, includePreset: true, includeInstruct: true });
         out = typeof r === 'string' ? r : r?.content;
     } else {
         if (typeof c.generateRaw !== 'function') throw new Error('이 실리태번 버전에서는 AI 호출을 쓸 수 없어요');
-        out = await c.generateRaw({ prompt, systemPrompt: system, responseLength: max });
+        out = await c.generateRaw({ prompt: Array.isArray(prompt) ? turnsOf(prompt).map(x => x.content).join('\n\n') : prompt, systemPrompt: system, responseLength: max });
     }
     out = stripThink(out);
     if (!out) throw new Error('모델이 빈 답을 돌려줬어요');
+    if (looksRefused(out, guard)) throw refusedError('AI 기능 모델');
     return out;
 }
 

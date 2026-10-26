@@ -1,12 +1,13 @@
 // Compression wizard.
 
-import { aiLabel, askAI, askCompress, askDraft, compressEffort, drLabel, draftReady, withSpinner } from './ai.js';
+import { offstageSet } from './recall.js';
+import { SECTION_GUARD, aiLabel, askAI, askCompress, askDraft, compressEffort, drLabel, draftReady, isBlocked, withSpinner } from './ai.js';
 import { openAppend } from './append.js';
 import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta, textHash } from './core.js';
 import { driftHtml } from './drift.js';
 import { castNames } from './knowledge.js';
 import { hasChanges, resolveChanges } from './statechg.js';
-import { chunksFromStarts, detectScenes, sceneChunks, sceneCompress, sceneModel, sceneModelLabel, sceneSize, scenesText, startsFromText, stateModel } from './scenes.js';
+import { lastSections, chunksFromStarts, detectScenes, sceneChunks, sceneCompress, sceneModel, sceneModelLabel, sceneSize, scenesText, startsFromText, stateModel } from './scenes.js';
 import { buildExtract, cleanMessage, formatExtract, guessEndNumber } from './extract.js';
 import { BASIC_PROMPT, LANG_NAME, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressPrompt, dropReproduced, eventsNote, eventsSystem, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, trimEnd } from './sections.js';
@@ -36,6 +37,9 @@ REPORT ONLY THESE
     e.g. the summary says Ivo said "…", but in the log Mara said it.
 3. 빠짐 (missing): an important event, decision, promise, confession, secret revealed, injury, or change in a relationship that the SUMMARY leaves out.
     Small talk, repeated actions and atmosphere are NOT important.
+    A message the RAW LOG's last line marks as an important scene counts as missing when the SUMMARY leaves it out or blurs it into a vague line.
+4. 해석 (interpretation): a feeling, motive or judgment the SUMMARY states as fact when the RAW LOG only shows actions and words.
+    e.g. the summary says Ren was jealous; in the log she only changed the subject.
 
 DO NOT REPORT
 - wording, style, length, or how something could be phrased better
@@ -47,6 +51,7 @@ OUTPUT: Korean, one bullet per problem, most serious first, exactly like this
 - 지어냄: <what is wrong> (#<message number>)
 - 틀림: <what is wrong, and what the log really says> (#<message number>)
 - 빠짐: <what is missing> (#<message number>)
+- 해석: <the judgment, and what the log really shows> (#<message number>)
 Always give the message number(s) you checked. If the summary is faithful, write exactly: 문제 없음`;
 
 const cleanDraft = out => String(out || '').replace(/^```[a-z]*\n?|```\s*$/g, '').trim();
@@ -107,8 +112,10 @@ export function nextRange(c = ctx(), m = getMeta(), { afterExport = true } = {})
 
 // the raw log of a range, as the wizard and 원문 뽑기 build it
 // keepUpTo: messages up to here stay even when hidden (they were hidden by the boundary, not by hand)
+// off-story messages (/comment, OOC, QR side pieces) never go in
 export function rangeRaw(c, g, from, to, keepUpTo = -1) {
-    const items = buildExtract(from, to).filter(x => !(g.skipHidden && c.chat[x.i]?.is_system && x.i > keepUpTo)).map(x => ({ ...x, text: cleanMessage(x.text, g) })).filter(x => x.text);
+    const off = offstageSet(c.chat);
+    const items = buildExtract(from, to).filter(x => !off.has(x.i) && !(g.skipHidden && c.chat[x.i]?.is_system && x.i > keepUpTo)).map(x => ({ ...x, text: cleanMessage(x.text, g) })).filter(x => x.text);
     return { items, raw: formatExtract(items, g) };
 }
 
@@ -143,7 +150,8 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
     const acc = [];
     let tail = '', lastChg = '', doneTo = null, error = null, dropped = 0;
     const grades = [];
-    for (const [k, part] of parts.entries()) {
+    for (let k = 0; k < parts.length; k++) {
+        const part = parts[k];
         const from = part[0].i, to = part[part.length - 1].i;
         onStep(k, parts.length, from, to);
         const raw = events || formatExtract(part, g);
@@ -152,14 +160,24 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
         const prompt = compressPrompt(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(shadow), state, archive: shadow }, { ...m, text: shadow }, memo,
             sizeBlock({ k, n: parts.length, count: part.length, total: items.length, from: items[0].i, to: items[items.length - 1].i, partFrom: from, partTo: to }));
         let out;
-        try { out = cleanDraft(await askCompress(prompt)); }
-        catch (e) { error = e; break; }
+        try { out = cleanDraft(await askCompress(prompt, { guard: SECTION_GUARD })); }
+        catch (e) {
+            // refused or blocked: the part goes again as two halves, so one hard scene does not stop the whole range
+            if (isBlocked(e) && !events && part.length >= 4) {
+                const h = Math.ceil(part.length / 2);
+                parts.splice(k, 1, part.slice(0, h), part.slice(h));
+                toastr.info(`#${from}–#${to}가 막혀서 반으로 나눠 다시 보내요`, '한 번에 압축', { timeOut: 4000 });
+                k--;
+                continue;
+            }
+            error = e; break;
+        }
         if (!out) { error = new Error('초안 모델이 빈 답을 줬어요'); break; }
         // answered in the wrong language (Korean for an English archive): ask before paying for another try
         if (!answerLangOk(shadow, out)) {
             const want = LANG_NAME[archiveLang(shadow)];
             if (await confirm('답 언어가 달라요', `#${from}–#${to} 요약을 모델이 아카이브(${want})와 다른 언어로 썼어요.<br><b>${want}로 다시 받을까요?</b> (요청 1번 더)<br><small>아니요를 누르면 이 답 그대로 써요.</small>`)) {
-                try { out = cleanDraft(await askCompress(`[Your previous answer to this request was not in ${want}. Answer in ${want} only.]\n\n${prompt}`)) || out; }
+                try { out = cleanDraft(await askCompress(`[Your previous answer to this request was not in ${want}. Answer in ${want} only.]\n\n${prompt}`, { guard: SECTION_GUARD })) || out; }
                 catch (e) { error = e; break; }
             }
         }
@@ -192,7 +210,8 @@ export const compressMode = () => { const v = globalSettings().compressMode; ret
 export const EVENTS_MODELS = { ai: 'AI 기능 모델', dr: '초안 모델' };
 export const eventsModel = () => (globalSettings().eventsModel === 'dr' ? 'dr' : 'ai');
 export const evLabel = () => (eventsModel() === 'dr' ? drLabel() : aiLabel());
-const askEvents = (prompt, system) => (eventsModel() === 'dr' ? askDraft(prompt, { system, maxTokens: 8000 }) : askAI(prompt, { system, maxTokens: 8000 }));
+const EVENTS_GUARD = /^\s*\[?#?\d+/m;
+const askEvents = (prompt, system) => (eventsModel() === 'dr' ? askDraft(prompt, { system, maxTokens: 8000, guard: EVENTS_GUARD }) : askAI(prompt, { system, maxTokens: 8000, guard: EVENTS_GUARD }));
 // a few messages per request, so each one gets read
 export function eventBatches(items, n = 15, cap = 12000) {
     const out = [];
@@ -274,8 +293,19 @@ export async function eventList({ m, g, items, onStep = () => {} }) {
         const prompt = `KNOWN NAMES: ${names}\n\nEARLIER MESSAGES:\n${ctxMsgs.length ? formatExtract(ctxMsgs, g) : '(none — this is the start)'}${extra}\n\nMESSAGES:\n${formatExtract(part, g)}`;
         // one more try after a short wait: a busy or rate-limited API often answers the second time
         const t = Date.now();
+        // a refused or blocked batch goes again as two halves; a single message that stays blocked is passed on as it is
+        const halves = async () => {
+            if (part.length < 2) return new Map();
+            const h = Math.ceil(part.length / 2);
+            return new Map([...await ask(part.slice(0, h), extra), ...await ask(part.slice(h), extra)]);
+        };
         try { return parseEvents(await askEvents(prompt, system), part); }
-        catch (e) { stat.retries++; console.warn('[NarrativeArchive] step 1 batch failed, retrying', e); await new Promise(r => setTimeout(r, 2500)); return parseEvents(await askEvents(prompt, system), part); }
+        catch (e) {
+            if (isBlocked(e)) return halves();
+            stat.retries++; console.warn('[NarrativeArchive] step 1 batch failed, retrying', e); await new Promise(r => setTimeout(r, 2500));
+            try { return parseEvents(await askEvents(prompt, system), part); }
+            catch (e2) { if (isBlocked(e2)) return halves(); throw e2; }
+        }
         finally { stat.slow = Math.max(stat.slow, Date.now() - t); }
     };
     const runBatch = async k => {
@@ -395,6 +425,12 @@ export async function quickCompress() {
     const sceneLines = scenes ? scenesText(sceneList, { get: k => sceneNotes.get(k) || sceneNotes.get(k + 1) || '' }) : '';
     const n = two ? eventBatches(items).length : scenes ? sceneList.length : chunkItems(items).length;
     const ce = compressEffort();
+    // what goes out, roughly: the raw log once, plus what each request carries besides it
+    const rawTok = estTok(raw), archTok = estTok(m.text), promptTok = estTok(p.text), stateTok = estTok(splitTail(m.text)[1]);
+    const sendEst = two ? { req: n + 1, tok: (saved ? 0 : rawTok * 1.2 + n * 1800) + archTok + promptTok + rawTok * 0.5 }
+        : scenes ? { req: n + 2, tok: rawTok * 2 + n * (estTok(lastSections(m.text, 4).join('\n\n')) + stateTok + promptTok + estTok(m.workNote || '')) + stateTok }
+        : { req: n, tok: rawTok + n * (archTok + promptTok) };
+    sendEst.tok = Math.round(sendEst.tok);
     // the 채점 box lives in the confirm dialog; its state is remembered as soon as it changes
     if (!quickBound) {
         quickBound = true;
@@ -417,6 +453,7 @@ export async function quickCompress() {
             row('STATE', esc(short(sceneModelLabel(stateModel()))), '마지막에 한 번'),
             ...(String(m.workNote || '').trim() ? [row('작업 노트', '있음', `약 ${fmt(estTok(m.workNote))} 토큰`)] : []),
         ] : [row('요약', esc(short(drLabel())), n > 1 ? `${n}번에 나눠 · 약 ${fmt(chunkTok())} 토큰씩` : '한 번에')]),
+        row('보낼 양', `약 ${fmt(sendEst.tok)} 토큰`, `요청 ${sendEst.req}번 · 생각과 답은 빼고 · 어림값`),
         row('지시문', esc(p.name), `생각 ${effort}${p.id === 'basic' && p.text !== BASIC_PROMPT ? ' · <span class="na_qc_warn">고친 버전이라 최신 기본 규칙이 안 들어가 있어요</span>' : ''}`),
         ...(au.on ? [row('AU', esc(au.name), '본편 뒤에 이어서')] : []),
     ];
@@ -429,7 +466,7 @@ export async function quickCompress() {
         <textarea class="text_pole na_qc_scenes" rows="${Math.min(10, Math.max(3, n))}" spellcheck="false">${esc(sceneLines)}</textarea>` : ''}
         <textarea class="text_pole na_qc_memo" rows="2" placeholder="이번 압축 메모 (선택) · 예: #40–#140은 정사 파트, 관계 변화만 한두 줄로"></textarea>
         ${saved ? `<label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_reuse" checked><span>저장된 1단계 목록 쓰기<small>메시지가 그대로라 2단계만 다시 해요</small></span></label>` : ''}
-        ${scenes ? '' : `<label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_grade" ${g.quickGrade ? 'checked' : ''}><span>채점도 같이<small>${esc(short(aiLabel()))}가 원문과 대조 · 비용 추가</small></span></label>`}
+        <label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_grade" ${g.quickGrade ? 'checked' : ''}><span>원문 대조도 같이<small>${esc(short(aiLabel()))}가 원문과 맞춰 봐요 · 지어냄, 틀림, 빠짐, 해석 · 비용 추가</small></span></label>
       </div>`)) return;
     // the scene list as the user left it: their starts, taken as given
     if (scenes && quickScenes !== null && quickScenes.trim() !== sceneLines.trim()) {
@@ -447,6 +484,12 @@ export async function quickCompress() {
                     : stage === 'scenes' ? `장면 ${k + 1}/${total} · #${a}–#${b} 쓰는 중` : stage === 'state' ? 'STATE·OPEN 바뀌는 것 정리 중' : total > 1 ? `#${a}–#${b} 요약하는 중… (${k + 1}/${total})` : '';
                 if (msg) $(toast).find('.toast-message').text(`${msg} · 이 탭에 있어야 끝까지 받아요 (다른 탭·앱으로 가면 끊길 수 있어요)`);
             } }, { reuse: quickReuse }))();
+        // 장면별 writes scene by scene; its sections are checked against the whole range once at the end
+        if (scenes && globalSettings().quickGrade && r.text && !r.error) {
+            $(toast).find('.toast-message').text('원문과 대조하는 중 · 이 탭에 있어야 끝까지 받아요');
+            try { r.grades = [{ from, to, text: String(await askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${r.text}`, { system: AI_SYS_GRADE, maxTokens: 3000 }) || '').trim() }]; }
+            catch (e) { r.grades = [{ from, to, text: String(e?.message || e), error: true }]; }
+        }
     } finally { quickBusy = false; toastr.clear(toast); }
     if (r.error) {
         console.error('[NarrativeArchive] quick compress', r.error);

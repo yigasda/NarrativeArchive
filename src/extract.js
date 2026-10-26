@@ -4,6 +4,7 @@ import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { activePrompt, compressPrompt, referenceSection, renderPromptSettings } from './prompts.js';
 import { headingLines, headingRanges, splitTail } from './sections.js';
 import { refreshStatus } from './status.js';
+import { offstageSet, starNote } from './recall.js';
 import { ICO_A, svgA } from './theme.js';
 import { chatLabel, copyText, countTokens, download, esc, escRe, fmt, timeLabel } from './util.js';
 
@@ -68,11 +69,14 @@ export function cleanMessage(text, g) {
         .trim();
 }
 
+// ★ messages in the range get a line after the log, so every compress path keeps them in detail
 export function formatExtract(items, g) {
-    return items.map(x => {
+    const log = items.map(x => {
         const head = `[${x.i}] ${x.name}:`;
         return `${head}\n${x.text}`;
     }).join('\n\n');
+    const note = items.length ? starNote(items[0].i, items[items.length - 1].i) : '';
+    return note ? `${log}\n\n[${note}]` : log;
 }
 
 export async function openExtract() {
@@ -145,7 +149,8 @@ export async function openExtract() {
     };
     const render = async () => {
         const { from, to } = range();
-        const all = buildExtract(from, to);
+        const off = offstageSet(c.chat);
+        const all = buildExtract(from, to).filter(x => !off.has(x.i));
         const items = all
             .filter(x => !(g.skipHidden && c.chat[x.i]?.is_system))
             .map(x => ({ ...x, text: cleanMessage(x.text, g) }))

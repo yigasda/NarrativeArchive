@@ -1,6 +1,6 @@
 // The side panel: markup, event wiring (bindPanel) and refresh (syncPanel).
 
-import { aiLabel, aiProfiles, apiFormat, askAI, askDraft, compressEffort, connSettings, drLabel, draftReady, draftSettings, listModels, parseServiceAccount, trLabel, trSettings, vxTokens, withSpinner } from './ai.js';
+import { fallbackOf, aiLabel, aiProfiles, apiFormat, askAI, askDraft, compressEffort, connSettings, drLabel, draftReady, draftSettings, listModels, parseServiceAccount, trLabel, trSettings, vxTokens, withSpinner } from './ai.js';
 import { openAppend } from './append.js';
 import { openAsk } from './ask.js';
 import { branchState, openBranches } from './branches.js';
@@ -14,7 +14,8 @@ import { guessEndNumber, openExtract } from './extract.js';
 import { fadeCfg, fadeFilling, fadeForce, fadeMissing, fadePlan, fadeUse, fillFade, openFadePicker } from './fade.js';
 import { openHealth } from './health.js';
 import { applyHide, lastIndex, openUnhide, syncTrackedBoundary } from './hide.js';
-import { applyInjection, lastBuild } from './inject.js';
+import { applyInjection, lastBuild, stateCfg } from './inject.js';
+import { lastRecall, offstageMode, recallCfg, runRecall, setRecall } from './recall.js';
 import { openKeywordTest } from './keywords.js';
 import { knowledgeRows, openKnowledge } from './knowledge.js';
 import { openPeople } from './people.js';
@@ -269,6 +270,8 @@ export function renderPanel() {
             <!-- 설정 (⚙) -->
             <section class="na_tab_pane" data-pane="config" hidden>
               <div class="na_cfg_head"><button type="button" class="na_cfg_back" id="na_cfg_back" title="돌아가기" aria-label="돌아가기">${svgA(ICO_A.left, 18, 2.2)}</button><b>설정</b><button type="button" class="na_cfg_pill" id="na_cfg_preview">주입 미리보기</button></div>
+              <div class="na_search_wrap na_cfg_search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" class="text_pole na_search" id="na_cfg_q" placeholder="설정 찾기 · 예: 회상, 깊이, 거절" aria-label="설정 찾기"></div>
+              <div class="na_empty" id="na_cfg_none" hidden>맞는 설정이 없어요.</div>
               <div class="na_cfg_grp">
                 <div class="na_cfg_label"><i class="fa-solid fa-palette"></i> 테마</div>
                 <div class="na_cfg_box na_theme_pick" role="radiogroup" aria-label="테마">
@@ -324,6 +327,25 @@ export function renderPanel() {
                 </div>
                 </div>
               </div>
+              <div class="na_cfg_grp">
+                <div class="na_cfg_label"><i class="fa-solid fa-clock-rotate-left"></i> 회상 · 지금 상태 · 번외편</div>
+                <div class="na_cfg_box">
+                <div class="na_set_list">
+                  <label class="na_set_row" title="답하기 직전에 숨긴 원문과 지금 안 들어가는 섹션에서 최근 대화와 맞는 줄을 찾아 넣어요 · AI를 안 써서 비용이 없어요 · 이 채팅에만"><span><span>회상</span><small id="na_recall_sub">숨긴 원문에서 지금 대화와 맞는 줄을 찾아 넣어요</small></span><input type="checkbox" id="na_recall" class="na_toggle"></label>
+                  <div id="na_recall_opts" hidden>
+                    <label class="na_set_row"><span><span>한 번에 최대</span><small>넣을 줄 수</small></span><span class="na_cfg_val"><input type="number" id="na_recall_k" class="text_pole" min="1" max="12"><span class="na_cfg_unit">줄</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                    <label class="na_set_row"><span><span>토큰 한도</span><small>회상 블록 전체</small></span><span class="na_cfg_val"><input type="number" id="na_recall_budget" class="text_pole" min="100" max="4000" step="100"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                    <label class="na_set_row"><span><span>넣는 깊이</span><small>채팅 끝에서 몇 번째 메시지 위</small></span><span class="na_cfg_val"><input type="number" id="na_recall_depth" class="text_pole" min="0" max="20">${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                    <label class="na_set_row"><span><span>볼 메시지</span><small>최근 몇 개로 찾을지</small></span><span class="na_cfg_val"><input type="number" id="na_recall_scan" class="text_pole" min="1" max="10"><span class="na_cfg_unit">개</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                    <label class="na_set_row" title="망각 곡선으로 줄었거나 키워드를 기다리는 섹션의 줄도 찾아요"><span><span>섹션에서도 찾기</span><small>지금 통째로 안 들어가는 섹션</small></span><input type="checkbox" id="na_recall_secs" class="na_toggle"></label>
+                    <button type="button" class="na_set_row na_cfg_go" id="na_recall_test"><span><span>지금 해 보기</span><small>최근 대화로 무엇이 불려 오는지</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
+                  </div>
+                  <label class="na_set_row" title="STATE 블록을 아카이브 블록에서 빼서 최근 대화 가까이에 따로 넣어요 · 토큰은 그대로 · 이 채팅에만"><span><span>지금 상태 리마인더</span><small>STATE를 최근 대화 가까이 따로</small></span><span class="na_cfg_val"><span class="na_cfg_depth" id="na_state_depth_field">깊이&nbsp;<input type="number" id="na_state_depth" class="text_pole" min="0" max="20"></span><input type="checkbox" id="na_state_on" class="na_toggle"></span></label>
+                  <label class="na_set_row" title="압축 · 원문 뽑기 · 이탈 감지 · 회상 · 말투에서 빼요"><span><span>번외편 빼기</span><small>코멘트 · OOC · QR 번외편</small></span>
+                    <span class="na_cfg_val"><select id="na_offstage" class="text_pole"><option value="aside">코멘트 · OOC · 번외편 빼기</option><option value="all">/sys 내레이션까지 빼기</option><option value="keep">빼지 않기</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                </div>
+                </div>
+              </div>
               <div class="na_cfg_grp" title="질문 · 키워드 제안 · 점검 · 라우터에 쓰는 모델이에요. AI는 답하고 검사만 하고, 아카이브는 직접 고쳐요.">
                 <div class="na_cfg_label"><i class="fa-solid fa-robot"></i> AI · 번역</div>
                 <div class="na_cfg_box">
@@ -356,6 +378,8 @@ export function renderPanel() {
                 </div>
                 ${connCfgHtml('tr')}
                 <div class="na_set_list">
+                  <label class="na_set_row" title="모델이 거절하거나 안전 필터에 막히면 다른 모델로 한 번 더 보내요 · 거절한 답은 아카이브에 안 넣어요 · 압축은 막힌 구간을 반으로 나눠 다시 보내요"><span><span>거절될 때</span><small>다른 모델로 다시 보내기</small></span>
+                    <span class="na_cfg_val"><select id="na_fallback" class="text_pole"><option value="">다시 안 보냄</option><option value="ai">AI 기능 모델로</option><option value="dr">초안 모델로</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="답이 잘리면 늘려 주세요"><span>답 최대 길이</span><span class="na_cfg_val"><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="AI 답이 이만큼 쌓일 때마다 조용히 검사하고, 어긋나면 알려 줘요 · 그때마다 토큰이 들어가요"><span><span>이탈 자동 감지</span><small>AI 답이 쌓이면 조용히 검사</small></span>
                     <span class="na_cfg_val"><select id="na_drift_auto" class="text_pole"><option value="0">끄기</option><option value="5">답 5개마다</option><option value="10">답 10개마다</option><option value="20">답 20개마다</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
@@ -1003,6 +1027,52 @@ export function bindPanel() {
         await applyInjection(); syncPanel();
         toastr.info(st.titles.length ? st.titles.map(t => `• ${esc(t.slice(0, 60))}`).join('<br>') : '고른 섹션이 없어요', `라우터 · ${st.titles.length}개 · ${(st.ms / 1000).toFixed(1)}초`, { escapeHtml: false, timeOut: 10000 });
     }));
+    // 회상 · 지금 상태 · 번외편
+    $('#na_recall').on('change', needChat(async e => { await setRecall({ on: e.target.checked }); syncPanel(); }));
+    for (const [id, k] of [['k', 'k'], ['budget', 'budget'], ['depth', 'depth'], ['scan', 'scan']]) {
+        $(`#na_recall_${id}`).on('change', needChat(async e => { await setRecall({ [k]: Number(e.target.value) }); syncPanel(); }));
+    }
+    $('#na_recall_secs').on('change', needChat(async e => { await setRecall({ secs: e.target.checked }); }));
+    $('#na_recall_test').on('click', needChat(async () => {
+        const m = getMeta();
+        const was = m.recall?.on;
+        m.recall = { ...(m.recall || {}), on: true };
+        const st = await runRecall();
+        m.recall.on = was;
+        if (!was) await runRecall();
+        const lines = st?.lines || [];
+        toastr.info(lines.length ? lines.map(l => esc(l.length > 160 ? `${l.slice(0, 160)}…` : l)).join('<br>') : '맞는 줄이 없어요. 숨긴 원문이 없거나 최근 대화와 겹치는 말이 적어요.', `회상 · ${lines.length}줄${st ? ` · 약 ${fmt(st.tokens)} 토큰` : ''}`, { escapeHtml: false, timeOut: 15000 });
+    }));
+    $('#na_state_on').on('change', needChat(async e => { const m = getMeta(); m.stateRemind = { ...stateCfg(m), on: e.target.checked }; await saveMeta(); applyInjection(); syncPanel(); }));
+    $('#na_state_depth').on('change', needChat(async e => { const m = getMeta(); m.stateRemind = { ...stateCfg(m), depth: Math.min(20, Math.max(0, parseInt(e.target.value, 10) || 0)) }; await saveMeta(); applyInjection(); syncPanel(); }));
+    $('#na_offstage').on('change', function () { globalSettings().offstage = this.value; saveGlobal(); refreshStatus(); });
+    $('#na_fallback').on('change', function () { globalSettings().fallback = this.value; saveGlobal(); });
+    // settings search: rows whose words match stay, the rest of each group folds away
+    $('#na_cfg_q').on('input', function () {
+        const q = this.value.trim().toLowerCase();
+        const $pane = $('#na_settings .na_tab_pane[data-pane="config"]');
+        let any = false;
+        $pane.find('.na_cfg_grp').each(function () {
+            const $g = $(this);
+            const label = $g.find('.na_cfg_label').text().toLowerCase();
+            let hit = false;
+            $g.find('.na_set_row').each(function () {
+                const show = !q || label.includes(q) || `${this.textContent} ${this.title || ''}`.toLowerCase().includes(q);
+                $(this).toggleClass('na_cfg_hide', !show);
+                if (show) hit = true;
+            });
+            if (q && label.includes(q)) hit = true;
+            $g.toggleClass('na_cfg_hide', !!q && !hit);
+            // connection boxes and notes stay only next to a row that matched, or when the group's own name did
+            $g.find('.na_cfg_box').children().each(function () {
+                const rows = $(this).find('.na_set_row').addBack('.na_set_row');
+                const keep = !q || label.includes(q) || (rows.length ? rows.filter(':not(.na_cfg_hide)').length > 0 : false);
+                $(this).toggleClass('na_cfg_hide', !keep);
+            });
+            if (hit) any = true;
+        });
+        $('#na_cfg_none').prop('hidden', !q || any);
+    });
     $('#na_link_depth').on('change', async function () {
         if (!hasChat()) return;
         const m = getMeta();
@@ -1034,6 +1104,16 @@ export function syncPanel() {
     $('#na_role').val(String(m.role));
     $('#na_muted_n').text(mutedCount(m));
     $('#na_link_depth').val(m.linkDepth || 4);
+    {
+        const r = recallCfg(m);
+        $('#na_recall').prop('checked', r.on); $('#na_recall_opts').prop('hidden', !r.on);
+        $('#na_recall_k').val(r.k); $('#na_recall_budget').val(r.budget); $('#na_recall_depth').val(r.depth); $('#na_recall_scan').val(r.scan); $('#na_recall_secs').prop('checked', r.secs);
+        const last = lastRecall.get(currentChatId());
+        $('#na_recall_sub').text(r.on ? `최대 ${r.k}줄 · ${fmt(r.budget)} 토큰 · 깊이 ${r.depth}${last ? ` · 지난 답에 ${last.lines.length}줄` : ''}` : '숨긴 원문에서 지금 대화와 맞는 줄을 찾아 넣어요');
+        const sc = stateCfg(m);
+        $('#na_state_on').prop('checked', sc.on); $('#na_state_depth').val(sc.depth); $('#na_state_depth_field').prop('hidden', !sc.on);
+        $('#na_offstage').val(offstageMode()); $('#na_fallback').val(fallbackOf());
+    }
     const rc = routerCfg(m);
     $('#na_router_mode').val(rc.mode);
     $('#na_router_opts').prop('hidden', rc.mode === 'off');
@@ -1053,7 +1133,7 @@ export function syncPanel() {
             if (!fadeFilling) $('#na_fade_info').html(miss ? `버전 없는 섹션 <b>${miss}</b>개 · 지금은 원문으로 들어가요` : more ? `필요한 버전은 다 있어요 · 나머지 <b>${more}</b>개도 채울 수 있어요` : '모든 섹션에 버전이 있어요');
             $('#na_fade_lines').text(`${plan.filter(p => p.want === 'line').length}개`);
             // one bar per numbered section, oldest first: tall = whole, mid = short, low = one line
-            $('#na_fade_strip').html(plan.map(p => { const use = fadeUse(m, m.text, p.s, p.want); const k = p.why === 'pin' ? 'pin' : use !== p.want && p.want !== 'long' ? 'miss' : use; return `<span class="${k}" title="${esc(p.s.title)}"></span>`; }).join(''));
+            $('#na_fade_strip').html(plan.map(p => { const use = fadeUse(m, m.text, p.s, p.want); const k = p.why === 'pin' || p.why === 'star' ? 'pin' : use !== p.want && p.want !== 'long' ? 'miss' : use; return `<span class="${k}" title="${esc(p.s.title)}"></span>`; }).join(''));
             const was = filterMuted(m, m.text);
             cachedTokens(was).then(t => {
                 const now = lastBuild.tokens || 0;

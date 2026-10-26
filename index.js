@@ -7,6 +7,7 @@ import { ctx, getMeta, hasChat } from './src/core.js';
 import { driftTick } from './src/drift.js';
 import { applyInjection } from './src/inject.js';
 import { addWandMenu, renderPanel, sectionPanel } from './src/panel.js';
+import { RECALL_KEY, decorateAll, decorateMessage } from './src/recall.js';
 import { onGenerationStarted, onMessageSent } from './src/router.js';
 import { linkedMap } from './src/sections.js';
 import { refreshStatusSoon } from './src/status.js';
@@ -26,10 +27,15 @@ import { xrayArm, xrayCapture, xrayWorldInfo } from './src/xray.js';
         applyTheme();
         addWandMenu();
         onChatChanged();
+        setTimeout(decorateAll, 300);
     };
 
     es.on(et.APP_READY, start);
     es.on(et.CHAT_CHANGED, onChatChanged);
+    // ★ buttons on messages; a recall made for another chat never carries over
+    es.on(et.CHAT_CHANGED, () => { c.setExtensionPrompt(RECALL_KEY, '', 1, 0); setTimeout(decorateAll, 300); });
+    for (const ev of [et.CHARACTER_MESSAGE_RENDERED, et.USER_MESSAGE_RENDERED]) if (ev) es.on(ev, id => decorateMessage(Number(id)));
+    if (et.MORE_MESSAGES_LOADED) es.on(et.MORE_MESSAGES_LOADED, () => setTimeout(decorateAll, 100));
     if (et.GENERATION_STARTED) es.on(et.GENERATION_STARTED, xrayArm);
     if (et.GENERATION_STARTED) es.on(et.GENERATION_STARTED, onGenerationStarted);
     if (et.MESSAGE_SENT) es.on(et.MESSAGE_SENT, onMessageSent);

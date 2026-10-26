@@ -9,6 +9,7 @@ import { lastIndex } from './hide.js';
 import { extraBlocks } from './inject.js';
 import { castNames, knowledgeRows } from './knowledge.js';
 import { syncPanel } from './panel.js';
+import { isOffstage, offstageSet } from './recall.js';
 import { findCited, parseSections } from './sections.js';
 import { openSource } from './source.js';
 import { SVG_B, svgB } from './theme.js';
@@ -21,6 +22,7 @@ YOU GET
 - ARCHIVE: the story so far. Its END (the latest sections, STATE and OPEN) is what is true right now.
 - CURRENT CAST: the characters in the story right now.
 - WHO KNOWS WHAT (sometimes): secrets, and who does not know them.
+- CHARACTER NOTES (sometimes): each character's constant core and how they talk.
 - RECENT CHAT: numbered messages. Messages marked USER are written by the user.
 
 WHO TO CHECK
@@ -35,8 +37,9 @@ REPORT ONLY THESE (a clear clash with something the archive actually says)
 3. SETTLED: something the archive marks as decided or resolved is undone or reopened with no reason in the chat.
     e.g. STATE says the two have stopped fighting over the house; the chat restarts that fight as if new.
 4. TIME/PLACE: time of day or the calendar goes backwards, or one character is in two places at once.
-5. CHARACTER: a character clearly acts or talks against what the archive says about them.
+5. CHARACTER: a character clearly acts or talks against what the archive or the CHARACTER NOTES say about them: the wrong speech level, first-person word or way of addressing someone, a tone that does not fit them, or behaviour against their core, with no story reason.
     e.g. STATE says Ivo no longer gives Ren orders; in the chat he orders her around with no reason.
+    Gradual change the archive supports, and a mood with a clear cause, are not mistakes.
 
 DO NOT REPORT
 - New events, new places, new feelings: the story moving forward is not a mistake.
@@ -53,10 +56,11 @@ If there is no problem, write exactly: 없음`;
 
 export function recentForCheck(n) {
     const chat = ctx().chat || [];
+    const off = offstageSet(chat);
     const out = [];
     for (let i = chat.length - 1; i >= 0 && out.length < n; i--) {
         const x = chat[i];
-        if (!x || (x.is_system && !x.is_user && !x.name)) continue;
+        if (!x || (x.is_system && !x.is_user && !x.name) || off.has(i)) continue;
         out.unshift(`[#${i}${x.is_user ? ' · USER' : ''}] ${x.name || (x.is_user ? 'User' : 'Char')}: ${cleanMessage(String(x.mes || ''), { stripTags: true })}`);
     }
     return out;
@@ -67,7 +71,8 @@ export async function runDrift(m, n) {
     if (!recent.length) throw new Error('검사할 메시지가 없어요');
     const kr = knowledgeRows(m);
     const cast = castNames(m);
-    const prompt = `[ARCHIVE]\n${m.text}${cast.length ? `\n\n[CURRENT CAST]\n${cast.join(', ')}` : ''}${kr.length ? `\n\n[WHO KNOWS WHAT]\n${extraBlocks({ ...m, knowInject: true, voiceInject: false }).trim()}` : ''}\n\n[RECENT CHAT]\n${recent.join('\n\n')}`;
+    const vn = m.voice && Object.keys(m.voice).length ? extraBlocks({ ...m, knowInject: false, voiceInject: true }).trim() : '';
+    const prompt = `[ARCHIVE]\n${m.text}${cast.length ? `\n\n[CURRENT CAST]\n${cast.join(', ')}` : ''}${kr.length ? `\n\n[WHO KNOWS WHAT]\n${extraBlocks({ ...m, knowInject: true, voiceInject: false }).trim()}` : ''}${vn ? `\n\n[CHARACTER NOTES]\n${vn.replace(/^# CHARACTER NOTES\n_[^\n]*_\n/, '')}` : ''}\n\n[RECENT CHAT]\n${recent.join('\n\n')}`;
     const out = await askAI(prompt, { system: AI_SYS_DRIFT, maxTokens: 2500 });
     const none = /^\s*(없음|none)\.?\s*$/i.test(out);
     const from = Number((recent[0].match(/^\[#(\d+)/) || [])[1]);
@@ -181,9 +186,12 @@ export async function openDrift() {
 // every N AI replies, check quietly; only speak up when something is off
 export const driftCount = new Map();
 export let driftBusy = false;
-export async function driftTick() {
+export async function driftTick(msgId) {
     const every = Number(globalSettings().driftAuto) || 0;
     if (!every || !hasChat() || driftBusy) return;
+    const chat = ctx().chat || [];
+    const at = Number.isFinite(Number(msgId)) ? Number(msgId) : chat.length - 1;
+    if (isOffstage(chat[at], chat[at - 1])) return; // a side piece is not the story going on
     const m = getMeta();
     if (!m.text.trim()) return;
     const id = currentChatId();

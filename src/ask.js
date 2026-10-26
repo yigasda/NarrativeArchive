@@ -2,33 +2,82 @@
 
 import { aiHtml, aiLabel, askAI, withSpinner } from './ai.js';
 import { currentChatId } from './chats.js';
-import { ctx, getMeta } from './core.js';
+import { ctx, getMeta, globalSettings, saveGlobal } from './core.js';
+import { archiveLang } from './prompts.js';
+import { bm25, estTok, pick, rawItems, recallLine, sectionItems } from './recall.js';
+import { openSource } from './source.js';
 import { sectionPanel, showArchiveView, showTab } from './panel.js';
 import { mdBlock } from './reader.js';
-import { findCited, parseSections } from './sections.js';
+import { findCited, parseSections, splitTail } from './sections.js';
 import { countTokens, esc, fmt } from './util.js';
 
 // ---- prompts
 
 export const AI_SYS_ASK = `GOAL
-Answer the user's question about their story using ONLY the ARCHIVE.
+Answer the user's question about their story using ONLY what you are given.
 
 YOU GET
-- ARCHIVE: the story so far, in sections. Each section starts with a heading line like "## Y2 #48–#63 — The night ridge". The END of the archive (latest sections, STATE, OPEN) is what is true now.
+- HEADINGS (sometimes): every section heading of the story archive, in story order. An outline: what happened when.
+- SECTIONS: the archive sections found for this question, in full, plus the archive's end (STATE, OPEN) when there is one. Each section starts with a heading line like "## Y2 #48–#63 — The night ridge". The END of the archive is what is true now.
+- ORIGINAL LINES (sometimes): passages from the original chat messages found for this question, each starting with its message number, like [#512 Ivo].
 - QUESTION: what the user wants to know.
+You may not see the whole archive: only the parts that were found for this question.
 
 HOW TO WORK
-Step 1. Find every section that is about the question. Read them fully.
+Step 1. Find everything in what you got that is about the question. Read it fully.
 Step 2. If something changed over time, give the latest state and say briefly how it got there.
 Step 3. Write the answer.
 
 RULES
-- Use only what the ARCHIVE says. If it does not say, answer that it is not in the archive. Never guess or invent.
-- After each claim, cite the section you used: copy its heading line exactly, inside double brackets.
-    e.g. 둘은 그날 밤 약속을 했어요 [[## Y2 #48–#63 — The night ridge]]
+- Use only what you were given. If it is not there, say that you could not find it. Never guess or invent.
+- After each claim, cite where it came from:
+    a section: copy its heading line exactly, inside double brackets.  e.g. 둘은 그날 밤 약속을 했어요 [[## Y2 #48–#63 — The night ridge]]
+    an original line: its message number.  e.g. 처음 한 말은 "돌아와"였어요 #512
 - Always answer in Korean, whatever language the archive or the question is in.
 - Write names the way the archive spells them.
 - Be short and direct. No introduction.`;
+
+// When the question and the archive are in different languages (or nothing matched), the AI picks sections from the headings first
+export const AI_SYS_ASK_PICK = `GOAL
+A user asks a question about their story. Pick the archive sections that can answer it, and give search words for the original chat.
+
+YOU GET
+- HEADINGS: numbered section headings of the story archive, in story order.
+- QUESTION.
+
+OUTPUT: exactly two lines, nothing else
+PICK: up to 6 heading numbers, most useful first, e.g. 12, 3, 40
+WORDS: 3 to 8 search words for the original chat: names, places, objects, key nouns, in the archive's language AND in Korean
+If no heading fits, write PICK: none`;
+
+// what goes to the model for one question: found sections and original lines, or the whole archive
+export async function askContext(m, q, { whole = false } = {}) {
+    if (whole) return { prompt: `[SECTIONS]\n${m.text}\n\n[QUESTION]\n${q}`, secs: [], raws: [], picked: false };
+    const items = sectionItems(m);
+    const [, tail] = splitTail(m.text);
+    let secHits = pick(bm25(items, q), { k: 6, budget: 9000, minHits: 1 }).map(r => r.item);
+    let words = '';
+    const hangulQ = /[\uac00-\ud7af]/.test(q), lang = archiveLang(m.text);
+    let picked = false;
+    if (items.length > 6 && (!secHits.length || (hangulQ && lang === 'en'))) {
+        const heads = items.map((x, i) => `${i + 1}. ${x.title}`).join('\n');
+        try {
+            const out = await askAI(`[HEADINGS]\n${heads}\n\n[QUESTION]\n${q}`, { system: AI_SYS_ASK_PICK, maxTokens: 1024 });
+            const line = (out.match(/PICK\s*:\s*(.*)$/im) || [, ''])[1];
+            const nums = /^\s*none\b/i.test(line) ? [] : [...new Set((line.match(/\d+/g) || []).map(Number))].filter(n => n >= 1 && n <= items.length);
+            words = (out.match(/WORDS\s*:\s*(.*)$/im) || [, ''])[1];
+            const chosen = nums.slice(0, 6).map(n => items[n - 1]);
+            secHits = [...new Set([...chosen, ...secHits])].slice(0, 7);
+            picked = true;
+        } catch (e) { console.warn('[narrative-archive] ask pick', e); }
+    }
+    const rawHits = pick(bm25(rawItems(), `${q}\n${words}`), { k: 6, budget: 2500, minHits: 1 }).map(r => r);
+    const order = new Map(items.map((x, i) => [x, i]));
+    secHits.sort((a, b) => order.get(a) - order.get(b));
+    const heads = items.length > secHits.length ? items.map(x => `## ${x.title}`).join('\n') : '';
+    const prompt = `${heads ? `[HEADINGS]\n${heads}\n\n` : ''}[SECTIONS]\n${secHits.map(x => x.text.trim()).join('\n\n') || '(none found)'}${tail.trim() ? `\n\n${tail.trim()}` : ''}${rawHits.length ? `\n\n[ORIGINAL LINES]\n${rawHits.sort((a, b) => a.item.i - b.item.i).map(recallLine).join('\n')}` : ''}\n\n[QUESTION]\n${q}`;
+    return { prompt, secs: secHits, raws: rawHits, picked };
+}
 
 export const askLog = new Map(); // chat id → [{ q, a }], this session only
 
@@ -68,7 +117,9 @@ export function askAnswerHtml(text, secs) {
         $c.remove();
     });
     $a.find('p, li').filter(function () { return !$(this).text().trim() && !$(this).children().length; }).remove();
-    const body = $a.html().replace(/\s+([.,!?。、])/g, '$1').replace(/\(\s*\)/g, '').replace(/(\s*<br>\s*)+$/, '');
+    let body = $a.html().replace(/\s+([.,!?。、])/g, '$1').replace(/\(\s*\)/g, '').replace(/(\s*<br>\s*)+$/, '');
+    // "#512" outside tags: opens that original message
+    body = body.split(/(<[^>]+>)/).map(part => (part.startsWith('<') ? part : part.replace(/(^|[^\w&#])#(\d{1,6})\b/g, '$1<button type="button" class="na_cite na_cite_msg" data-msg="$2" title="원문 메시지 #$2 보기">#$2</button>'))).join('');
     return `<div class="na_ask2_ans"><div class="na_ask_a">${body}</div>${chips.length ? `<div class="na_ask2_cites">${chips.join('')}</div>` : ''}</div>`;
 }
 
@@ -81,7 +132,7 @@ export async function openAsk() {
     const log = askLog.get(chatId);
     const $root = $(`
       <div class="na_popup na_v2 na_ask na_ask2">
-        <div class="na_v2_title"><b>아카이브에 질문</b><small>아카이브에 적힌 것만 근거로 답해요</small></div>
+        <div class="na_v2_title"><b>아카이브에 질문</b><small>아카이브와 원문에서 찾은 것만 근거로 답해요</small></div>
         <div class="na_ask_log"></div>
         <div class="na_v2_chips na_ask2_sugg">
           <button type="button">둘이 처음 만난 곳?</button>
@@ -126,13 +177,25 @@ export async function openAsk() {
         $(this).addClass('on');
         $ans.append($src);
     });
-    countTokens(m.text).then(n => $root.find('.na_ask_info').text(`질문마다 아카이브 전체(약 ${fmt(n)} 토큰)를 AI 기능 모델에 보내요`).attr('title', `지금 연결: ${aiLabel()}`));
+    const g = globalSettings();
+    const info = async last => {
+        const whole = !!g.askWhole;
+        const n = whole ? await countTokens(m.text) : last;
+        $root.find('.na_ask_info').html(`${whole ? `질문마다 아카이브 전체, 약 ${fmt(n)} 토큰을 보내요` : `질문에 맞는 섹션과 원문만 찾아 보내요${last ? ` · 지난번 약 ${fmt(last)} 토큰` : ''}`} · <label class="na_ask2_whole"><input type="checkbox" ${whole ? 'checked' : ''}> 전체 보내기</label>`).attr('title', `지금 연결: ${aiLabel()}`);
+    };
+    info(0);
+    $root.on('change', '.na_ask2_whole input', function () { g.askWhole = this.checked; saveGlobal(); info(0); });
+    $log.on('click', '.na_cite_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
     const $q = $root.find('.na_ask_q');
     const go = async () => {
         const q = $q.val().trim();
         if (!q || pending) return;
         pending = q; $q.val(''); draw();
-        const a = await withSpinner($root.find('.na_ask_go'), '', () => askAI(`[ARCHIVE]\n${m.text}\n\n[QUESTION]\n${q}`, { system: AI_SYS_ASK, maxTokens: 1500 }));
+        const a = await withSpinner($root.find('.na_ask_go'), '', async () => {
+            const cx = await askContext(m, q, { whole: !!g.askWhole });
+            if (!g.askWhole) info(estTok(cx.prompt) + estTok(AI_SYS_ASK));
+            return askAI(cx.prompt, { system: AI_SYS_ASK, maxTokens: 1500 });
+        });
         pending = '';
         if (a === null) { $q.val(q); draw(); return; }
         log.push({ q, a });

@@ -9,6 +9,7 @@ import { applyInjection, currentInjection } from './inject.js';
 import { KW_STOP } from './keywords.js';
 import { castNames } from './knowledge.js';
 import { RANGE_HEAD, linkWaiting, linkedMap, mutedSet, parseSections, pinnedSet, sectionKey } from './sections.js';
+import { runRecall } from './recall.js';
 import { refreshStatusSoon } from './status.js';
 import { shortHash } from './translate.js';
 
@@ -46,6 +47,7 @@ export async function prepareGeneration() {
     }
     if (Object.keys(linkedMap(m)).length || routerCfg(m).mode !== 'off') { applyInjection(); refreshStatusSoon(); } // keyword links look at the latest messages
     await currentInjection();
+    try { await runRecall(); } catch (e) { console.warn('[narrative-archive] recall', e); }
     // how often each keyword-linked section actually went in, for the X-ray
     const links = Object.keys(linkedMap(m));
     if (m.enabled && links.length) {
