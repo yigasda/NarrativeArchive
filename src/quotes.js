@@ -4,9 +4,11 @@ import { aiLabel, askAI, withSpinner } from './ai.js';
 import { ctx, getMeta, saveMeta } from './core.js';
 import { applyInjection, extraBlocks } from './inject.js';
 import { KW_STOP } from './keywords.js';
-import { currentCast, inCast } from './knowledge.js';
+import { castNames, currentCast, inCast } from './knowledge.js';
 import { syncPanel } from './panel.js';
-import { faceHtml } from './people.js';
+import { cleanMessage } from './extract.js';
+import { faceHtml, nameKey, peopleList } from './people.js';
+import { offstageSet } from './recall.js';
 import { mountSectionPicker } from './picker.js';
 import { parseSections, sectionKey } from './sections.js';
 import { SVG_B, svgB } from './theme.js';
@@ -153,16 +155,125 @@ export function voiceRules(out) {
     return rules.map(l => `- ${l}`);
 }
 
+// ---- voice sheet: a constant core, speech rules and real lines, from the character card and the chat itself
+// (hidden messages too, spread over the whole story) as well as the quote bank. The samples must be in the chat word for word.
+export const AI_SYS_VOICE2 = `GOAL
+Write a character sheet that lets another writer keep one character of a long role-play consistent, in personality and in voice, across thousands of messages.
+
+YOU GET
+- NAME: the character.
+- CARD (sometimes): the character card written by the user. It wins when it and the chat disagree on who the character is.
+- CHAT LINES: what this character said or did in the story, taken from the whole chat from start to end, each with its message number.
+- ARCHIVE LINES (sometimes): quotes of this character from the story archive.
+
+STEPS
+1. CORE: 4 to 6 lines about who the character is: temperament, values and motives, flaws, emotional range, how they treat others and the user's character, and what they would never do. Behaviour, not labels: "Teases when worried instead of saying so", not "Caring". Only what the CARD or at least two CHAT LINES show. No plot, no events, no looks.
+2. SPEECH: 4 to 7 rules for how they talk. Check: sentence length and rhythm · speech level, formal or casual · first-person word · how they address each person (names, titles, pet names) · orders, questions or statements · words and images they come back to · humor · how feelings leak out · what they never say.
+   Each rule: one Korean tag in square brackets, then one full English sentence saying what they do, then one short example copied word for word from the lines, in parentheses and quotes. Leave the example out if no line fits.
+   Tags: 길이 · 명령 · 질문 · 호칭 · 존댓말 · 반말 · 1인칭 · 감정 · 유머 · 반복 · 말버릇 · 비유 · 조건 · 금기 · 침묵.
+3. SAMPLES: up to 6 short lines of this character's own dialogue, copied exactly, character for character, in the original language. Pick lines that show temperament, humor, affection or irritation, and lines said to other characters. No plot exposition. Each under 120 characters.
+
+DO NOT
+- No rules any character could have ("speaks naturally", "shows emotion").
+- No catchphrases or samples that are not in the lines.
+- No headings other than the three below, no bold, no numbering.
+
+OUTPUT: exactly this, nothing before or after
+CORE:
+- <line>
+SPEECH:
+- [태그] Rule sentence. ("example")
+SAMPLES:
+- "<line copied exactly>"`;
+
+const normQ = s => String(s).normalize('NFC').replace(/[^\p{L}\p{N}]+/gu, '').toLowerCase();
+const sameName = (a, b) => { const x = nameKey(a), y = nameKey(b); return !!x && !!y && (x === y || x.split(/\s+/)[0] === y.split(/\s+/)[0]); };
+
+// what the character said in the chat: each quote goes to the name mentioned last before it (the message's speaker
+// when no name is near); a message of theirs with no quotes counts whole. Up to max, spread evenly from first to last
+export function chatSamples(m, who, max = 30) {
+    const c = ctx();
+    const chat = c.chat || [];
+    const off = offstageSet(chat);
+    const names = [...new Set([...castNames(m), ...peopleList(m).map(p => p.name), c.name1, who].filter(Boolean))];
+    const out = [];
+    chat.forEach((x, i) => {
+        if (!x || x.is_user || off.has(i)) return;
+        const text = cleanMessage(String(x.mes || ''), { stripTags: true });
+        if (text.length < 8) return;
+        const own = sameName(x.name, who);
+        const quotes = [...text.matchAll(/["“「『]([^"“”」』\n]{4,300})["”」』]/g)];
+        if (!quotes.length) { if (own) out.push({ i, text: text.slice(0, 600) }); return; }
+        if (!own && !text.includes(who.split(/\s+/)[0])) return;
+        const got = [];
+        for (const mt of quotes) {
+            const before = text.slice(Math.max(0, mt.index - 160), mt.index);
+            let best = null, at = -1;
+            for (const n of names) { const k = before.lastIndexOf(n); if (k > at) { at = k; best = n; } }
+            if (best ? sameName(best, who) : own) got.push(mt[0]);
+        }
+        if (got.length) out.push({ i, text: got.join(' ').slice(0, 600) });
+    });
+    if (out.length <= max) return { items: out, total: out.length };
+    const step = out.length / max;
+    return { items: Array.from({ length: max }, (_, k) => out[Math.floor(k * step)]), total: out.length };
+}
+
+// the card of the character this chat is with, when the name matches
+function cardOf(who) {
+    const c = ctx();
+    const ch = c.characters?.[c.characterId];
+    if (!ch || !sameName(ch.name, who)) return '';
+    const part = (label, t) => (String(t || '').trim() ? `${label}:\n${String(t).trim().slice(0, 2500)}` : '');
+    return [part('Description', ch.description), part('Personality', ch.personality), part('Example dialogue', ch.mes_example)].filter(Boolean).join('\n\n');
+}
+
+export function parseSheet(out) {
+    const parts = { CORE: [], SPEECH: [], SAMPLES: [] };
+    let cur = null;
+    for (const raw of String(out || '').split('\n')) {
+        const l = raw.trim().replace(/\*\*/g, '');
+        const h = l.match(/^#*\s*(CORE|SPEECH|SAMPLES)\s*:?\s*$/i);
+        if (h) { cur = h[1].toUpperCase(); continue; }
+        if (cur) parts[cur].push(l);
+    }
+    const bullets = ls => ls.filter(l => /^[-*•]\s+\S/.test(l)).map(l => l.replace(/^[-*•]\s+/, '').trim());
+    return {
+        core: bullets(parts.CORE).filter(l => l.length >= 10).slice(0, 8),
+        rules: voiceRules((parts.SPEECH.length ? parts.SPEECH : String(out || '').split('\n')).join('\n')),
+        samples: bullets(parts.SAMPLES).map(l => l.replace(/^["“「『]+|["”」』]+$/g, '').trim()).filter(Boolean),
+    };
+}
+
 export async function makeVoice(m, who) {
-    const lines = [...new Set((m.quotes || []).filter(q => q.who === who).map(q => q.text))].slice(0, 150);
-    if (lines.length < 3) throw new Error(`${who}: 대사가 3개는 있어야 말투를 볼 수 있어요`);
+    const bank = [...new Set((m.quotes || []).filter(q => q.who === who).map(q => q.text))].slice(0, 80);
+    const { items, total } = chatSamples(m, who);
+    const card = cardOf(who);
+    if (items.length + bank.length < 3) throw new Error(`${who}: 채팅이나 대사 은행에 대사가 3개는 있어야 말투를 볼 수 있어요`);
+    const prompt = `NAME: ${who}${card ? `\n\nCARD:\n${card}` : ''}\n\nCHAT LINES${total > items.length ? ` (${items.length} of ${total}, spread across the whole story)` : ''}:\n${items.map(x => `[#${x.i}] ${x.text}`).join('\n\n') || '(none)'}${bank.length ? `\n\nARCHIVE LINES:\n${bank.join('\n')}` : ''}`;
     // room for models that think before answering (their thinking counts against the limit and cut the rules short)
-    const ask = extra => askAI(`NAME: ${who}\n\nLINES:\n${lines.join('\n')}${extra}`, { system: AI_SYS_VOICE, maxTokens: 8000 });
-    let rules = voiceRules(await ask(''));
-    if (rules.length < 3) rules = voiceRules(await ask('\n\nYour last answer was cut off or not in the format. Answer again: 4 to 7 lines, each exactly "- [태그] Rule sentence. (\"example\")", nothing else.'));
-    if (!rules.length) throw new Error(`${who}: 모델 답에서 규칙을 못 찾았어요. 다시 눌러 주세요`);
+    const ask = extra => askAI(`${prompt}${extra}`, { system: AI_SYS_VOICE2, maxTokens: 8000 });
+    let sh = parseSheet(await ask(''));
+    if (sh.rules.length < 3) sh = parseSheet(await ask('\n\nYour last answer was cut off or not in the format. Answer again with the three parts CORE:, SPEECH:, SAMPLES: exactly as asked, nothing else.'));
+    if (!sh.rules.length) throw new Error(`${who}: 모델 답에서 규칙을 못 찾았어요. 다시 눌러 주세요`);
+    // a sample is kept only when the chat or the bank really has it
+    const src = [...items.map(x => x.text), ...bank].map(normQ);
+    const samples = [...new Set(sh.samples)].filter(q => normQ(q).length >= 4 && q.length <= 240 && src.some(x => x.includes(normQ(q)))).slice(0, 6);
     m.voice = m.voice && typeof m.voice === 'object' ? m.voice : {};
-    m.voice[who] = { text: rules.slice(0, 8).join('\n'), n: lines.length, at: Date.now() };
+    m.voice[who] = { text: sh.rules.slice(0, 8).join('\n'), core: sh.core.map(l => `- ${l}`).join('\n'), samples, n: bank.length, chat: items.length, card: !!card, at: Date.now() };
+}
+
+// how many lines a character has to make a sheet from: the quote bank, and their own messages in the chat
+export function voiceSources(m) {
+    const counts = new Map();
+    for (const x of m.quotes || []) if (x.who && x.who !== '?' && !isExcluded(m, x.who)) counts.set(x.who, (counts.get(x.who) || 0) + 1);
+    const c = ctx(), off = offstageSet(c.chat || []);
+    (c.chat || []).forEach((x, i) => {
+        if (!x || x.is_user || off.has(i) || !x.name || isExcluded(m, x.name)) return;
+        const k = [...counts.keys()].find(w => sameName(w, x.name)) || x.name;
+        counts.set(k, (counts.get(k) || 0) + 1);
+    });
+    return counts;
 }
 
 export async function openQuotes() {
@@ -202,8 +313,7 @@ export async function openQuotes() {
     };
     const renderVoice = () => {
         const voice = m.voice && typeof m.voice === 'object' ? m.voice : {};
-        const counts = new Map();
-        for (const x of m.quotes) if (x.who && x.who !== '?' && !isExcluded(m, x.who)) counts.set(x.who, (counts.get(x.who) || 0) + 1);
+        const counts = voiceSources(m);
         const whos = Object.keys(voice).sort((a, b) => (counts.get(b) || 0) - (counts.get(a) || 0));
         const missing = [...counts].filter(([who, n]) => n >= 3 && !voice[who]).map(([who]) => who);
         vOpen = whos.includes(vOpen) ? vOpen : whos[0] || null;
@@ -216,19 +326,19 @@ export async function openQuotes() {
             if (who !== vOpen) { (card ? after : before).push(`<button type="button" class="na_v2_card na_vc_row" data-who="${esc(who)}">${faceHtml(who, 32)}<span class="na_vc_who1">${esc(who)} <small>· 규칙 ${rules.length}개</small></span>${svgB(SVG_B.right, 16)}</button>`); return; }
             card = `
             <div class="na_v2_card na_vc_card" data-who="${esc(who)}">
-              <div class="na_vc_head">${faceHtml(who, 40)}<span class="na_vc_who"><b>${esc(who)}</b><small>대사 ${v.n || '?'}개로 만듦${v.n && v.n !== Math.min(150, n) ? ` · 지금 ${n}개` : ''}</small></span><button type="button" class="na_v2_pillbtn na_vc_make" ${n >= 3 ? '' : 'disabled'}>${svgB(SVG_B.redo, 13)}다시</button></div>
+              <div class="na_vc_head">${faceHtml(who, 40)}<span class="na_vc_who"><b>${esc(who)}</b><small>${v.chat !== undefined ? `${v.card ? '캐릭터 카드, ' : ''}채팅 ${v.chat}곳${v.n ? `, 대사 은행 ${v.n}줄` : ''}로 만듦` : `대사 ${v.n || '?'}개로 만듦 · 다시 만들면 성격과 실제 대사도 넣어요`}</small></span><button type="button" class="na_v2_pillbtn na_vc_make" ${n >= 3 ? '' : 'disabled'}>${svgB(SVG_B.redo, 13)}다시</button></div>
               ${vEdit === who
-                ? `<textarea class="text_pole na_vc_text" rows="${Math.min(10, rules.length + 2)}" spellcheck="false">${esc(v.text)}</textarea><small class="na_v2_note">한 줄에 규칙 하나 · 앞의 [태그]는 화면에만 보이고 주입할 땐 빠져요</small>`
-                : `<div class="na_vc_rules">${rules.map(l => { const r = parseRule(l); return `<div class="na_vc_rule">${r.tag ? `<span class="na_vc_tag">${esc(r.tag)}</span>` : ''}<span><span>${esc(r.rule)}</span>${r.ex ? `<i>${esc(r.ex)}</i>` : ''}</span></div>`; }).join('')}</div>`}
+                ? `<small class="na_v2_note">성격 · 한 줄에 하나</small><textarea class="text_pole na_vc_core" rows="${Math.min(8, String(v.core || '').split('\n').length + 1)}" spellcheck="false">${esc(v.core || '')}</textarea><small class="na_v2_note">말투 · 한 줄에 규칙 하나 · 앞의 [태그]는 화면에만 보이고 주입할 땐 빠져요</small><textarea class="text_pole na_vc_text" rows="${Math.min(10, rules.length + 2)}" spellcheck="false">${esc(v.text)}</textarea>`
+                : `${String(v.core || '').trim() ? `<div class="na_vc_core_view"><span class="na_vc_sub">성격</span>${String(v.core).split('\n').map(l => l.replace(/^[-*•]\s*/, '').trim()).filter(Boolean).map(l => `<div class="na_vc_coreline">${esc(l)}</div>`).join('')}</div><span class="na_vc_sub">말투</span>` : ''}<div class="na_vc_rules">${rules.map(l => { const r = parseRule(l); return `<div class="na_vc_rule">${r.tag ? `<span class="na_vc_tag">${esc(r.tag)}</span>` : ''}<span><span>${esc(r.rule)}</span>${r.ex ? `<i>${esc(r.ex)}</i>` : ''}</span></div>`; }).join('')}</div>${v.samples?.length ? `<span class="na_vc_sub">실제 대사</span><div class="na_vc_samples">${v.samples.map(q => `<i>“${esc(q)}”</i>`).join('')}</div>` : ''}`}
               <div class="na_vc_foot"><button type="button" class="na_linkbtn na_vc_edit">${vEdit === who ? '그만 고치기' : '직접 고치기'}</button><button type="button" class="na_linkbtn na_danger na_vc_del">지우기</button></div>
             </div>`; });
         after.push(...missing.map(who => `<div class="na_v2_card na_vc_row dashed" data-who="${esc(who)}" title="대사 ${counts.get(who)}개">${faceHtml(who, 32)}<span class="na_vc_who1">${esc(who)} <small>· 아직 없음</small></span><button type="button" class="na_vc_make na_vc_mk">만들기</button></div>`));
         $b.html(`
           <label class="na_v2_card na_v2_switchrow"><span class="na_vc_sw"><b>조용히 주입</b><small>“본문에서 언급하지 말 것”을 붙여 보내요<span class="na_vc_tok"></span></small></span><input type="checkbox" class="na_toggle na_vc_inject" ${m.voiceInject ? 'checked' : ''}></label>
           ${rowsHtml(before)}${card}${rowsHtml(after)}
-          ${!whos.length && !missing.length ? '<div class="na_empty">대사가 3개 이상인 인물이 없어요. "대사" 탭에서 먼저 대사를 모아 주세요.</div>' : ''}
+          ${!whos.length && !missing.length ? '<div class="na_empty">대사가 3개 이상인 인물이 없어요. "대사" 탭에서 대사를 모으거나, 채팅이 더 쌓이면 만들 수 있어요.</div>' : ''}
           ${missing.length > 1 ? `<button type="button" class="na_v2_btn primary wide na_vc_all"><i class="fa-solid fa-fingerprint"></i> 없는 지문 ${missing.length}개 한꺼번에 만들기</button>` : ''}
-          <small class="na_v2_foot">모은 대사로 인물마다 말버릇 규칙을 뽑아 조용히 주입해요 · AI 기능 모델(${esc(aiLabel())})이 그 인물 대사만 읽어요</small>`);
+          <small class="na_v2_foot">캐릭터 카드, 숨긴 것까지 채팅 처음부터 끝까지 고르게 뽑은 대사, 대사 은행을 읽고 성격, 말투, 실제 대사를 정리해 조용히 주입해요 · 실제 대사는 채팅에 글자 그대로 있는 것만 남겨요 · AI 기능 모델 ${esc(aiLabel())}</small>`);
         const blk = extraBlocks({ ...m, knowInject: false, voiceInject: true });
         if (blk) countTokens(blk).then(t => $b.find('.na_vc_tok').text(` · 약 ${fmt(t)} 토큰`));
     };
@@ -285,6 +395,12 @@ export async function openQuotes() {
         // the editor stays open: "그만 고치기" right after typing must close it, not reopen it
         await save();
     });
+    $root.on('change', '.na_vc_core', async function () {
+        const who = String($(this).closest('.na_vc_card').data('who'));
+        if (!m.voice[who]) return;
+        m.voice[who] = { ...m.voice[who], core: this.value.split('\n').map(l => l.trim()).filter(Boolean).map(l => (/^[-*•]\s/.test(l) ? l : `- ${l}`)).join('\n') };
+        await save();
+    });
     $root.on('click', '.na_vc_del', async function () {
         const who = String($(this).closest('.na_vc_card').data('who'));
         if (!await confirm('말투 지문 지우기', `${esc(who)}의 말투 지문을 지울까요?`)) return;
@@ -296,11 +412,10 @@ export async function openQuotes() {
         if (ok) { vOpen = who; await save(); toastr.success(`${who}: 말투 지문을 만들었어요${m.voiceInject ? '' : '. "조용히 주입"을 켜면 RP 모델에 들어가요'}`); }
     });
     $root.on('click', '.na_vc_all', async function () {
-        const counts = new Map();
-        for (const x of m.quotes) if (x.who && x.who !== '?' && !isExcluded(m, x.who)) counts.set(x.who, (counts.get(x.who) || 0) + 1);
+        const counts = voiceSources(m);
         const voice = m.voice || {};
-        // only the missing ones, and the ones whose lines changed since
-        const todo = [...counts].filter(([who, n]) => n >= 3 && (!voice[who] || voice[who].n !== Math.min(150, n))).map(([who]) => who);
+        // only the missing ones
+        const todo = [...counts].filter(([who, n]) => n >= 3 && !voice[who]).map(([who]) => who);
         if (!todo.length) return toastr.info(counts.size ? '새로 만들 지문이 없어요. 인물 카드의 "다시"로 하나씩 다시 만들 수 있어요.' : '대사가 3개 이상인 인물이 없어요.');
         const $b = $(this);
         let done = 0;

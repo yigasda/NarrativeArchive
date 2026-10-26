@@ -4,7 +4,7 @@
 // it (so the same moment is not counted twice), the archive's last sections for style, STATE, and the work note.
 // STATE · OPEN are updated once at the end, from the new sections, as change lists.
 
-import { aiLabel, askAI, askCompress, drLabel } from './ai.js';
+import { SECTION_GUARD, aiLabel, askAI, askCompress, drLabel } from './ai.js';
 import { ctx, getMeta, globalSettings, saveMeta } from './core.js';
 import { formatExtract } from './extract.js';
 import { activePrompt, auBlock, auOf, fillPrompt, langBlock, memoBlock } from './prompts.js';
@@ -17,7 +17,7 @@ export const SCENE_MODELS = { dr: '초안 모델', ai: 'AI 기능 모델' };
 export const sceneModel = () => (globalSettings().sceneModel === 'ai' ? 'ai' : 'dr');
 export const stateModel = () => (globalSettings().stateModel === 'ai' ? 'ai' : 'dr');
 export const sceneModelLabel = k => (k === 'ai' ? aiLabel() : drLabel());
-const ask = (which, prompt, system = '') => (which === 'ai' ? askAI(prompt, { system, maxTokens: 12000 }) : askCompress(prompt, { system }));
+const ask = (which, prompt, system = '', guard = null) => (which === 'ai' ? askAI(prompt, { system, maxTokens: 12000, guard }) : askCompress(prompt, { system, guard }));
 
 // "<tracker> 🌇 05:48 오후 | 하티르 여드렛날, 2년 | 옴보스 → 서쪽 별채 | ☀️ 맑음 </tracker>": time | date | place.
 // Named groups time / date / place; an empty setting means no tracker (cut by message count only).
@@ -250,7 +250,7 @@ export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = 
         onStep(k, chunks.length, from, to, 'scenes');
         const prompt = `<raw_log range="#${from}–#${to}">\n${formatExtract(part, g)}\n</raw_log>\n\n<previous_section>\n${prev || '(none: this is the start of the archive)'}\n</previous_section>\n\n<recent_archive>\n${recentFor(k) || '(none)'}\n</recent_archive>${styleBlock(m)}\n\n<current_state>\n${tail || '(none)'}\n</current_state>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}\n\n<rules>\n${rulesFor(from, to).trim()}\n</rules>${au.on ? `\n\n${auBlock(m).trim()}` : ''}${memoBlock(memo)}${langBlock(m.text, { tail: false })}\n\n${SCENE_ASK(from, to, prefix)}`;
         let got;
-        try { got = parseSceneAnswer(await ask(sceneModel(), prompt), from, to); }
+        try { got = parseSceneAnswer(await ask(sceneModel(), prompt, '', SECTION_GUARD), from, to); }
         catch (e) { error = e; break; }
         if (!got.length) { error = new Error(`#${from}–#${to} 답에 불릿이 없어요`); break; }
         const blocks = got.map(x => `## ${prefix ? `${prefix} ` : ''}#${x.a}–#${x.b} — ${x.title || 'Untitled'}\nPLOT:\n${x.bullets.join('\n')}`);
