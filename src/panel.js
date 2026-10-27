@@ -1520,7 +1520,7 @@ export function syncPanel() {
     $('#na_track').prop('checked', !!m.track);
     $('#na_chunk').val(String(chunkTok()));
     $('#na_count_check').prop('checked', globalSettings().countCheck !== false);
-    $('#na_rules_sys').prop('checked', !!globalSettings().rulesInSystem);
+    $('#na_rules_sys').prop('checked', globalSettings().rulesInSystem !== false);
     $('#na_cmode').val(compressMode()); $('#na_evmodel').val(eventsModel()); layoutCp();
     $('#na_scsize').val(String(sceneSize())); $('#na_scmodel').val(sceneModel()); $('#na_stmodel').val(stateModel()); $('#na_trkre').val(trackerRe());
     $('#na_style_sub').text(styleLabel(getMeta()));
