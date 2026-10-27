@@ -62,6 +62,8 @@ const ICO = {
     book: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5zM8 7h8M8 11h6',
     up: 'M12 19V5M5 12l7-7 7 7', down: 'M12 5v14M6 13l6 6 6-6', plus: 'M12 5v14M5 12h14', x: 'M6 6l12 12M18 6L6 18',
     lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+    copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/>',
+    back: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
 };
 // a section as a card: range, title, (date, place) under it, bullets with quotes marked and source numbers small
 function bulletHtml(b) {
@@ -440,15 +442,15 @@ export async function openStudio() {
             ].join('');
             const locks = mine.map(sk => `<button type="button" class="na_st_lk${locked.has(sk) ? ' on' : ''}" data-k="${sk}">${svgA(ICO.lock, 11, 2.6)}${mine.length > 1 ? `장면 ${sk + 1} ` : ''}${locked.has(sk) ? '확정됨' : '확정'}</button>`).join('');
             const ko = koOn.has(i);
-            const koBtn = `<button type="button" class="na_st_ko${ko ? ' on' : ''}" data-i="${i}">${koBusy.has(i) ? '번역하는 중…' : ko ? '영어로' : '한국어로'}</button>`;
+            const koBtn = `<button type="button" class="na_st_ko${ko ? ' on' : ''}" data-i="${i}" title="${ko ? '영어로 보기' : '한국어로 보기'}">${koBusy.has(i) ? '번역 중…' : ko ? '영어' : '한국어'}</button>`;
             // 고쳐 받기: the counted rules this answer breaks (words, em dashes, bullets), its approved scenes aside
             const countable = issues.some(x => /\d+단어$|em대쉬 \d+개$|불릿 \d+개$/.test(x)) && !(t.scene !== undefined && locked.has(t.scene));
-            const fixBtn = fixBusy.has(i) ? '<button type="button" class="na_st_fix" disabled>고치는 중…</button>'
-                : countable ? `<button type="button" class="na_st_fix" data-i="${i}" title="단어 · 엠대시 · 불릿 수가 넘친 섹션만 초안 모델에 다시 고쳐 받아요 · 출처 번호와 제목은 그대로">고쳐 받기</button>` : '';
+            const fixBtn = fixBusy.has(i) ? '<button type="button" class="na_st_fix" disabled>…</button>'
+                : countable ? `<button type="button" class="na_st_fix" data-i="${i}" title="고쳐 받기 · 단어 · 엠대시 · 불릿 수가 넘친 섹션만 초안 모델에 다시 고쳐 받아요 · 출처 번호와 제목은 그대로">고치기</button>` : '';
             const free = !(t.scene !== undefined && locked.has(t.scene)) && blocks.some(x => x.a !== null);
-            const styleBtn = free && !fixBusy.has(i) ? `<button type="button" class="na_st_fix na_st_polish" data-i="${i}" title="문장 결만 아카이브처럼 · 내용 · 출처 번호 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 · AI 기능 모델">문체 다듬기</button>` : '';
-            const backBtn = t.before && !fixBusy.has(i) ? `<button type="button" class="na_st_unfix" data-i="${i}" title="고치기 전 답으로">고치기 전으로</button>` : '';
-            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st_tags">${tags}<span class="na_st_lks">${fixBtn}${styleBtn}${backBtn}<button type="button" class="na_st_copy" data-i="${i}" title="이 답의 섹션을 아카이브 모양으로 복사 (출처 번호는 빼고)">복사</button>${koBtn}${locks}</span></div></div>`;
+            const styleBtn = free && !fixBusy.has(i) ? `<button type="button" class="na_st_fix na_st_polish" data-i="${i}" title="문체 다듬기 · 문장 결만 아카이브처럼 · 내용 · 출처 번호 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 · AI 기능 모델">다듬기</button>` : '';
+            const backBtn = t.before && !fixBusy.has(i) ? `<button type="button" class="na_st_unfix na_st_ib" data-i="${i}" title="고치기 전 답으로" aria-label="고치기 전으로">${svgA(ICO.back, 13, 2.4)}</button>` : '';
+            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st_tags">${tags}<span class="na_st_lks">${fixBtn}${styleBtn}${backBtn}<button type="button" class="na_st_copy na_st_ib" data-i="${i}" title="이 답의 섹션을 아카이브 모양으로 복사 (출처 번호는 빼고)" aria-label="복사">${svgA(ICO.copy, 13, 2.2)}</button>${koBtn}${locks}</span></div></div>`;
         }).join('') + (busy ? '<div class="na_st_bub na_st_typing"><i></i><i></i><i></i><small>쓰는 중 · 이 탭에 있어야 받아요</small></div>' : '');
         const $log = $root.find('.na_st_log');
         const atEnd = $log[0] ? $log[0].scrollHeight - $log[0].scrollTop - $log[0].clientHeight < 80 : true;
