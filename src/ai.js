@@ -89,7 +89,7 @@ async function anthropicFetch(t, url, init = {}) {
 }
 
 export async function callAnthropic(t, system, prompt, maxTokens, effort = '') {
-    if (!t.model) throw new Error('모델 이름을 넣어 주세요 (⚙ 설정 → AI · 번역)');
+    if (!t.model) throw new Error('모델 이름을 넣어 주세요 (⚙ 설정 → AI 모델)');
     const endpoint = `${anthropicBase(t.url)}/v1/messages`;
     const send = withEffort => anthropicFetch(t, endpoint, { method: 'POST', body: JSON.stringify({
         model: t.model, max_tokens: maxTokens,
@@ -165,7 +165,7 @@ export async function listModels(t) {
 export async function callOpenAICompat(t, system, prompt, maxTokens, effort = '') {
     const { url, key, model } = t;
     const endpoint = chatCompletionsUrl(url);
-    if (!endpoint || !model) throw new Error('커스텀 API의 URL과 모델 이름을 넣어 주세요 (⚙ 설정 → AI · 번역)');
+    if (!endpoint || !model) throw new Error('커스텀 API의 URL과 모델 이름을 넣어 주세요 (⚙ 설정 → AI 모델)');
     const headers = { 'Content-Type': 'application/json' };
     if (key) headers.Authorization = `Bearer ${key}`;
     let r;
@@ -194,7 +194,7 @@ export async function callOpenAICompat(t, system, prompt, maxTokens, effort = ''
         : Array.isArray(msg?.content) ? msg.content.map(p => p?.text || '').join('') : (j?.choices?.[0]?.text || '');
     // say why an answer is empty: a length cut usually means the model spent the limit thinking
     const why = j?.choices?.[0]?.finish_reason;
-    if (!String(out).trim() && why === 'length') throw new Error(`답 길이 한도(${maxTokens} 토큰)에 걸려 빈 답이 왔어요. 생각하는 데 다 쓴 것 같아요 — ⚙ 설정 → AI · 번역에서 최대 길이를 늘려 주세요`);
+    if (!String(out).trim() && why === 'length') throw new Error(`답 길이 한도(${maxTokens} 토큰)에 걸려 빈 답이 왔어요. 생각하는 데 다 쓴 것 같아요 — ⚙ 설정 → AI 모델에서 최대 길이를 늘려 주세요`);
     if (!String(out).trim() && why && why !== 'stop') throw new Error(`모델이 빈 답을 돌려줬어요 (멈춘 이유: ${why})`);
     return out;
 }
@@ -330,7 +330,7 @@ export const draftReady = () => ['custom', 'vertex'].includes(draftSettings().mo
 export async function askDraft(prompt, opts = {}) {
     const { system = '', maxTokens = 0, effort = '', force = false, guard = null } = opts;
     const t = draftSettings();
-    if (!draftReady()) throw new Error('초안 모델이 없어요. ⚙ 설정 → AI · 번역 → 초안 모델에서 정해 주세요.');
+    if (!draftReady()) throw new Error('초안 모델이 없어요. ⚙ 설정 → AI 모델 → 초안 모델에서 정해 주세요.');
     try {
         const out = await callConn(t, system, prompt, Math.max(256, Number(maxTokens) || Number(t.max) || 16000), effort, force);
         if (!out) throw new Error('초안 모델이 빈 답을 돌려줬어요');
@@ -378,7 +378,7 @@ async function askAIOnce(prompt, { system = '', maxTokens = 0, effort = '', guar
         out = await callConn(a, system, prompt, max, effort);
     } else if (g.aiProfile) {
         const p = aiProfiles().find(x => x.id === g.aiProfile);
-        if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요. ⚙ 설정 → AI · 번역에서 다시 골라 주세요.');
+        if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요. ⚙ 설정 → AI 모델에서 다시 골라 주세요.');
         const msgs = [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt)];
         const r = await c.ConnectionManagerRequestService.sendRequest(p.id, msgs, max, { stream: false, extractData: true, includePreset: true, includeInstruct: true });
         out = typeof r === 'string' ? r : r?.content;

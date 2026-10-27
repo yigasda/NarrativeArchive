@@ -385,7 +385,7 @@ let quickBusy = false, quickBound = false, quickMemo = '', quickReuse = false, q
 export async function quickCompress() {
     if (quickBusy) return toastr.info('요약을 받는 중이에요.');
     const c = ctx(), m = getMeta(), g = globalSettings();
-    if (!draftReady()) return toastr.info('⚙ 설정 → AI · 번역 → 초안 모델을 먼저 정해 주세요.', '한 번에 압축');
+    if (!draftReady()) return toastr.info('⚙ 설정 → AI 모델 → 초안 모델을 먼저 정해 주세요.', '한 번에 압축');
     let { from, to, last, after } = nextRange(c, m, { afterExport: false });
     // the archive's sections stop before the boundary (a summary that fell short): offer to pick up the gap
     const covered = lastRangeEnd(m.text);

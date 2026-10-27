@@ -180,9 +180,17 @@ export function renderPanel() {
               <div class="na_v2 na_cp">
                 <div class="na_v2_card na_cp_hero">
                   <div id="na_since"></div>
-                  <button type="button" class="na_cp_wiz" id="na_open_wizard">${svgA('M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M15 9h0M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5', 22)}<span><b>압축 마법사</b><small>뽑기 → 복사 → 붙여넣기 → 채점 → 추가</small></span>${svgA(ICO_A.right, 18, 2.2)}</button>
-                  <button type="button" class="na_cp_wiz na_cp_quick" id="na_quick_compress">${svgA(ICO_A.bolt, 22)}<span><b>한 번에 압축</b><small id="na_quick_sub">초안 모델로 요약 → 확인하고 추가</small></span>${svgA(ICO_A.right, 18, 2.2)}</button>
-                  <button type="button" class="na_cp_wiz na_cp_studio" id="na_open_studio">${svgA(ICO_A.chat, 22)}<span><b>압축 작업실</b><small id="na_studio_sub">장면마다 초안 모델과 대화하며 쓰기</small></span>${svgA(ICO_A.right, 18, 2.2)}</button>
+                  <div class="na_cp_meth" role="radiogroup" aria-label="압축 방법">
+                    <button type="button" class="na_cp_mbtn" data-m="quick" role="radio">한 번에</button>
+                    <button type="button" class="na_cp_mbtn" data-m="studio" role="radio">작업실</button>
+                    <button type="button" class="na_cp_mbtn" data-m="wizard" role="radio">마법사</button>
+                  </div>
+                  <div class="na_cp_desc"><span data-m="quick" id="na_quick_sub">초안 모델로 요약 → 확인하고 추가</span><span data-m="studio" id="na_studio_sub">장면마다 초안 모델과 대화하며 쓰기</span><span data-m="wizard">원문 뽑기 → 복사 → 붙여넣기 → 채점 → 추가</span></div>
+                  <button type="button" class="na_cp_wiz na_cp_go" id="na_cp_go"><span><b id="na_cp_go_t">압축하기</b></span>${svgA(ICO_A.right, 18, 2.2)}</button>
+                  <div class="na_cp_flags" data-m="quick">
+                    <button type="button" class="na_cp_flag" id="na_flag_auto" aria-pressed="false" title="검사가 다 통과하면 추가 창 없이 넣고 숨겨요 · 알림에서 되돌리기 · 걸리는 게 있으면 추가 창">바로 넣기 <b></b></button>
+                    <button type="button" class="na_cp_flag" id="na_flag_grade" aria-pressed="false" title="AI 기능 모델이 원문과 맞춰 봐요 · 비용 추가 · 확인 창에서도 바꿀 수 있어요">원문 대조 <b></b></button>
+                  </div>
                 </div>
                 <div class="na_cp_tiles">
                   <button type="button" class="na_cp_tile" id="na_apply_hide"><span class="na_cp_ico">${svgA('M17.9 17.9A10 10 0 0 1 12 20c-7 0-10-8-10-8a18 18 0 0 1 5.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 10 8 10 8a18 18 0 0 1-2.2 3.2M1 1l22 22', 17)}</span><b>숨기기 다시 적용</b><small>경계선 앞만 숨기고 뒤는 보이게</small></button>
@@ -194,20 +202,24 @@ export function renderPanel() {
                   <button type="button" class="na_cp_row" id="na_open_append"><span class="na_cp_num">2</span><span class="na_cp_txt"><b>아카이브에 추가</b><small>압축본 붙여넣기 · 번호 검사 · 경계선 자동</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                   <button type="button" class="na_cp_row" id="na_open_keeps"><span class="na_cp_num">3</span><span class="na_cp_txt"><b>꼭 남길 장면</b><small id="na_keeps_sub">압축할 때 자세히 남길 구간과 그 이유</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                 </div>
-                <div class="na_v2_label">설정</div>
+                <div class="na_v2_label"><span>설정 <span class="na_cp_for" id="na_cp_for"></span></span></div>
                 <div class="na_v2_card na_v2_list na_cp_set">
-                  <label class="na_cp_row"><span class="na_cp_txt"><span>숨긴 메시지 빼고 뽑기</span></span><input type="checkbox" class="na_toggle" id="na_opt_hidden"></label>
-                  <label class="na_cp_row"><span class="na_cp_txt"><span>한 번에 압축 · 바로 넣기</span><small>검사가 다 통과하면 추가 창 없이 넣고 숨겨요 · 알림에서 되돌리기 · 걸리는 게 있으면 추가 창</small></span><input type="checkbox" class="na_toggle" id="na_quick_auto"></label>
+                  <label class="na_cp_row" hidden><span class="na_cp_txt"><span>한 번에 압축 · 바로 넣기</span><small>검사가 다 통과하면 추가 창 없이 넣고 숨겨요 · 알림에서 되돌리기 · 걸리는 게 있으면 추가 창</small></span><input type="checkbox" class="na_toggle" id="na_quick_auto"></label>
+                  <label class="na_cp_row" data-m="quick"><span class="na_cp_txt"><span>압축 방식</span><small>2단계: 정리 모델이 메시지마다 한 줄로 정리(되짚기는 빼고) → 초안 모델이 그 목록으로 섹션을 써요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_cmode">${Object.entries(COMPRESS_MODES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <label class="na_cp_row na_cmode_ev" data-m="quick"><span class="na_cp_txt"><span>2단계 · 정리 모델</span><small>메시지 15개씩 여러 번 불러요 · 싼 모델 추천</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_evmodel">${Object.entries(EVENTS_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <label class="na_cp_row na_cmode_sc" data-m="quick studio"><span class="na_cp_txt"><span>장면 크기</span><small>장면마다 섹션 하나씩 따로 받아요 · 클수록 싸고, 작을수록 꼼꼼해요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_scsize">${Object.entries(SCENE_SIZES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <label class="na_cp_row na_cmode_sc" data-m="quick"><span class="na_cp_txt"><span>장면별 · 섹션 모델</span><small>장면 수만큼 불러요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_scmodel">${Object.entries(SCENE_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <label class="na_cp_row na_cmode_sc" data-m="quick"><span class="na_cp_txt"><span>장면별 · STATE 모델</span><small>마지막에 한 번 · 바뀌는 것만 받아요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_stmodel">${Object.entries(SCENE_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <div class="na_cp_row na_cmode_sc na_trk_row" data-m="quick studio"><span class="na_cp_txt"><span>장면 · 트래커 정규식</span><small>날짜·장소·시간이 바뀌는 곳에서 끊어요 (그룹 이름 date · place · time) · 비우면 메시지 수로만</small><textarea class="text_pole na_trk_re" id="na_trkre" rows="2" spellcheck="false"></textarea><span class="na_trk_btns"><button type="button" class="na_linkbtn" id="na_trkre_reset">기본값</button><small id="na_trkre_info"></small></span></span></div>
+                  <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_stylesample"><span class="na_cp_txt"><span>문체 견본</span><small id="na_style_sub"></small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
+                  <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_worknote"><span class="na_cp_txt"><span>작업 노트</span><small id="na_worknote_sub">이 이야기의 인수인계 · canon · 살린 줄 · 이전 실수 · 장면마다 같이 보내요</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
+                  <label class="na_cp_row na_cmode_raw" data-m="quick"><span class="na_cp_txt"><span>원문 그대로 · 나눠 보내기</span><small>긴 원문을 몇 조각으로 보낼지 · 조각마다 앞 조각에 이어 써요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_chunk">${Object.entries(CHUNK_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                   <label class="na_cp_row"><span class="na_cp_txt"><span>쌓이면 알려 주기</span><small>압축할 메시지가 이만큼 쌓이면 알림 · 누르면 압축</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_nudge">${Object.entries(NUDGE_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <label class="na_cp_row"><span class="na_cp_txt"><span>한 번에 압축 · 방식</span><small>2단계: 정리 모델이 메시지마다 한 줄로 정리(되짚기는 빼고) → 초안 모델이 그 목록으로 섹션을 써요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_cmode">${Object.entries(COMPRESS_MODES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <label class="na_cp_row na_cmode_ev"><span class="na_cp_txt"><span>2단계 · 정리 모델</span><small>메시지 15개씩 여러 번 불러요 · 싼 모델 추천</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_evmodel">${Object.entries(EVENTS_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <label class="na_cp_row na_cmode_sc"><span class="na_cp_txt"><span>장면별 · 장면 크기</span><small>장면마다 섹션 하나씩 따로 받아요 · 클수록 싸고, 작을수록 꼼꼼해요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_scsize">${Object.entries(SCENE_SIZES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <label class="na_cp_row na_cmode_sc"><span class="na_cp_txt"><span>장면별 · 섹션 모델</span><small>장면 수만큼 불러요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_scmodel">${Object.entries(SCENE_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <label class="na_cp_row na_cmode_sc"><span class="na_cp_txt"><span>장면별 · STATE 모델</span><small>마지막에 한 번 · 바뀌는 것만 받아요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_stmodel">${Object.entries(SCENE_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <div class="na_cp_row na_cmode_sc na_trk_row"><span class="na_cp_txt"><span>장면별 · 트래커 정규식</span><small>날짜·장소·시간이 바뀌는 곳에서 끊어요 (그룹 이름 date · place · time) · 비우면 메시지 수로만</small><textarea class="text_pole na_trk_re" id="na_trkre" rows="2" spellcheck="false"></textarea><span class="na_trk_btns"><button type="button" class="na_linkbtn" id="na_trkre_reset">기본값</button><small id="na_trkre_info"></small></span></span></div>
-                  <button type="button" class="na_cp_row na_cmode_sc" id="na_stylesample"><span class="na_cp_txt"><span>문체 견본</span><small id="na_style_sub"></small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
-                  <button type="button" class="na_cp_row na_cmode_sc" id="na_worknote"><span class="na_cp_txt"><span>작업 노트</span><small id="na_worknote_sub">이 이야기의 인수인계 · canon · 살린 줄 · 이전 실수 · 장면마다 같이 보내요</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
-                  <label class="na_cp_row na_cmode_raw"><span class="na_cp_txt"><span>원문 그대로 · 나눠 보내기</span><small>긴 원문을 몇 조각으로 보낼지 · 조각마다 앞 조각에 이어 써요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_chunk">${Object.entries(CHUNK_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                </div>
+                <div class="na_v2_card na_v2_list na_cp_set">
+                  <details class="na_cp_fold na_cp_more_fold" id="na_cp_more">
+                    <summary class="na_cp_row"><span class="na_cp_txt"><span>원문 손질 · 지시문 · 경계선</span><small id="na_cp_more_sub">태그 지우기 · 압축 지시문 · 아카이브 따라가기</small></span><span class="na_cp_more">더 보기</span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
+                  <label class="na_cp_row"><span class="na_cp_txt"><span>숨긴 메시지 빼고 뽑기</span></span><input type="checkbox" class="na_toggle" id="na_opt_hidden"></label>
                   <div class="na_strip_box">
                     <label class="na_cp_row"><span class="na_cp_txt"><span>태그 지우기</span><small id="na_strip_sub">&lt;think&gt; 통째로 · 나머지 태그는 글자만</small></span><input type="checkbox" class="na_toggle" id="na_opt_tags"></label>
                     <div class="na_cp_sub">
@@ -222,6 +234,7 @@ export function renderPanel() {
                   <label class="na_cp_row"><span class="na_cp_txt"><span>아카이브 따라가기</span><small id="na_track_info">마지막 제목 번호가 곧 경계선</small></span><input type="checkbox" id="na_track" class="na_toggle"></label>
                   <label class="na_cp_row" id="na_boundary_row" title="여기까지 아카이브에 담겼어요"><span class="na_cp_txt"><span>경계선 번호</span></span><span class="na_cp_hash"><span>#</span><input type="number" id="na_boundary" class="text_pole na_cp_num_in" min="0" placeholder="-"></span></label>
                   <div class="na_cp_row na_cp_keep_row"><span class="na_cp_txt"><span>숨길 때 남길 메시지</span><small>경계선 바로 앞 몇 개는 보이게</small></span><span class="na_fd_step na_cp_step"><button type="button" class="na_fd_btn na_keep_btn" data-d="-1" aria-label="줄이기">−</button><input type="number" id="na_keep" class="text_pole" min="0" max="50"><button type="button" class="na_fd_btn na_keep_btn" data-d="1" aria-label="늘리기">+</button></span></div>
+                  </details>
                 </div>
               </div>
             </section>
@@ -274,18 +287,12 @@ export function renderPanel() {
 
             <!-- 설정 (⚙) -->
             <section class="na_tab_pane" data-pane="config" hidden>
-              <div class="na_cfg_head"><button type="button" class="na_cfg_back" id="na_cfg_back" title="돌아가기" aria-label="돌아가기">${svgA(ICO_A.left, 18, 2.2)}</button><b>설정</b><button type="button" class="na_cfg_pill" id="na_cfg_preview">주입 미리보기</button></div>
+              <div class="na_cfg_head"><button type="button" class="na_cfg_back" id="na_cfg_back" title="돌아가기" aria-label="돌아가기">${svgA(ICO_A.left, 18, 2.2)}</button><b id="na_cfg_title">설정</b><button type="button" class="na_cfg_pill" id="na_cfg_preview">주입 미리보기</button></div>
               <div class="na_search_wrap na_cfg_search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" class="text_pole na_search" id="na_cfg_q" placeholder="설정 찾기 · 예: 회상, 깊이, 로어북" aria-label="설정 찾기"></div>
               <div class="na_empty" id="na_cfg_none" hidden>맞는 설정이 없어요.</div>
-              <div class="na_cfg_grp">
-                <div class="na_cfg_label"><i class="fa-solid fa-palette"></i> 테마</div>
-                <div class="na_cfg_box na_theme_pick" role="radiogroup" aria-label="테마">
-                  <label class="na_theme_opt" title="실리태번 테마와 상관없이 크림색 배색"><input type="radio" name="na_ui_theme" value="light"><span class="na_theme_sw light" aria-hidden="true"></span><span class="na_theme_txt"><b>라이트</b><small>크림 · 갈색 글씨</small></span></label>
-                  <label class="na_theme_opt" title="실리태번 테마와 상관없이 짙은 밤색 배색"><input type="radio" name="na_ui_theme" value="dark"><span class="na_theme_sw dark" aria-hidden="true"></span><span class="na_theme_txt"><b>다크</b><small>밤색 · 크림 글씨</small></span></label>
-                </div>
-              </div>
-              <div class="na_cfg_grp">
-                <div class="na_cfg_label"><i class="fa-solid fa-syringe"></i> 주입</div>
+              <div class="na_cfg_index" id="na_cfg_index">${CFG_GROUPS.map(([k, name, ico]) => `<button type="button" class="na_cfg_card" data-g="${k}"><span class="na_cfg_ico">${svgA(ico, 18)}</span><b>${name}</b><small id="na_cfg_sum_${k}"></small></button>`).join('')}</div>
+              <div class="na_cfg_grp na_cfg_keeplab" data-g="inject">
+                <div class="na_cfg_label"><i class="fa-solid fa-syringe"></i> 넣는 자리</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
                   <label class="na_set_row" title="아래 위치 · 깊이 · 역할, STATE 가까이 넣기, 회상 깊이를 한 번에 맞춰요 · 고른 뒤에도 칸마다 직접 바꿀 수 있어요 · 이 채팅에만"><span><span>자리 묶음</span><small id="na_place_sub">넣는 자리를 한 번에</small></span>
@@ -300,7 +307,7 @@ export function renderPanel() {
                 </div>
                 </div>
               </div>
-              <div class="na_cfg_grp" title="섹션 카드의 스위치 · 고정 · 키워드로 섹션마다 정하고, 여기선 한꺼번에 관리해요.">
+              <div class="na_cfg_grp na_cfg_keeplab" data-g="inject" title="섹션 카드의 스위치 · 고정 · 키워드로 섹션마다 정하고, 여기선 한꺼번에 관리해요.">
                 <div class="na_cfg_label"><i class="fa-solid fa-scale-balanced"></i> 분량 · 라우터</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
@@ -334,7 +341,7 @@ export function renderPanel() {
                 </div>
                 </div>
               </div>
-              <div class="na_cfg_grp">
+              <div class="na_cfg_grp" data-g="recall">
                 <div class="na_cfg_label"><i class="fa-solid fa-clock-rotate-left"></i> 회상 · STATE · OOC</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
@@ -353,8 +360,8 @@ export function renderPanel() {
                 </div>
                 </div>
               </div>
-              <div class="na_cfg_grp" title="질문 · 키워드 제안 · 점검 · 라우터에 쓰는 모델이에요. AI는 답하고 검사만 하고, 아카이브는 직접 고쳐요.">
-                <div class="na_cfg_label"><i class="fa-solid fa-robot"></i> AI · 번역</div>
+              <div class="na_cfg_grp" data-g="aimodel" title="질문 · 키워드 제안 · 점검 · 라우터에 쓰는 모델이에요. AI는 답하고 검사만 하고, 아카이브는 직접 고쳐요.">
+                <div class="na_cfg_label"><i class="fa-solid fa-robot"></i> AI 모델</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
                   <label class="na_set_row" title="연결 프로필 · 커스텀 API · Vertex를 고르면 RP 모델과 따로 쓸 수 있어요"><span><span>AI 기능 모델</span><small>질문 · 점검 · 라우터 · 온도 · 지문</small></span><span class="na_cfg_val"><select id="na_ai_profile" class="text_pole"></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
@@ -385,20 +392,34 @@ export function renderPanel() {
                 </div>
                 ${connCfgHtml('tr')}
                 <div class="na_set_list">
+                  <label class="na_set_row" title="답이 잘리면 늘려 주세요"><span>답 최대 길이</span><span class="na_cfg_val"><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                </div>
+                <small class="na_dim na_conn_note" id="na_conn_note" hidden>키와 JSON은 이 기기의 실리태번 설정에만 저장돼요. 아카이브 백업에는 안 들어가요.</small>
+                </div>
+              </div>
+              <div class="na_cfg_grp" data-g="aitask" title="AI 기능 모델이 하는 일 · 막혔을 때 · 로어북 · 이탈 감지">
+                <div class="na_cfg_label"><i class="fa-solid fa-wand-magic-sparkles"></i> AI가 하는 일</div>
+                <div class="na_cfg_box">
+                <div class="na_set_list">
                   <label class="na_set_row" title="모델이 거절하거나 안전 필터에 막히면 다른 모델로 한 번 더 보내요 · 거절한 답은 아카이브에 안 넣어요 · 압축은 막힌 구간을 반으로 나눠 다시 보내요"><span><span>막혔을 때</span><small>거절이나 차단이면 다른 모델로</small></span>
                     <span class="na_cfg_val"><select id="na_fallback" class="text_pole"><option value="">다시 안 보냄</option><option value="ai">AI 기능 모델로</option><option value="dr">초안 모델로</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="이 채팅이 쓰는 로어북에서 키워드가 맞는 항목을 압축 · 이탈 감지 · 질문 · 말투 지문에 같이 보내요 · 그만큼 보낼 양이 늘어요"><span><span>로어북 곁들이기</span><small id="na_lore_sub">이름 · 장소 · 설정이 로어북과 맞게</small></span><input type="checkbox" id="na_lore" class="na_toggle"></label>
                   <label class="na_set_row" id="na_lore_budget_row"><span><span>로어북 한도</span><small>한 번에 보낼 항목 양</small></span><span class="na_cfg_val"><input type="number" id="na_lore_budget" class="text_pole" min="300" max="12000" step="500"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" title="답이 잘리면 늘려 주세요"><span>답 최대 길이</span><span class="na_cfg_val"><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="AI 답이 이만큼 쌓일 때마다 조용히 검사하고, 어긋나면 알려 줘요 · 그때마다 토큰이 들어가요"><span><span>이탈 자동 감지</span><small>AI 답이 쌓이면 조용히 검사</small></span>
                     <span class="na_cfg_val"><select id="na_drift_auto" class="text_pole"><option value="0">끄기</option><option value="5">답 5개마다</option><option value="10">답 10개마다</option><option value="20">답 20개마다</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="근거 글을 아카이브에서 못 찾은 경고만 AI 기능 모델에 한 번 더 물어봐요 · 그럴 때만 비용이 들어요"><span><span>못 찾은 근거 다시 묻기</span><small>이탈 감지 · 헛경고와 놓친 경고 줄이기</small></span><input type="checkbox" id="na_drift_recheck" class="na_toggle"></label>
                   <button type="button" class="na_set_row na_cfg_go" id="na_gloss_edit" title="이름·장소의 한국어 표기를 정해 두면 번역이 늘 그대로 써요"><span><span>번역 용어집</span><small>이름·장소 한국어 표기</small></span><span class="na_cfg_val"><span><span id="na_gloss_n">0</span>개</span>${svgA(ICO_A.right, 15, 2.2)}</span></button>
                 </div>
-                <small class="na_dim na_conn_note" id="na_conn_note" hidden>키와 JSON은 이 기기의 실리태번 설정에만 저장돼요. 아카이브 백업에는 안 들어가요.</small>
                 </div>
               </div>
-              <div class="na_cfg_grp">
+              <div class="na_cfg_grp" data-g="theme">
+                <div class="na_cfg_label"><i class="fa-solid fa-palette"></i> 테마</div>
+                <div class="na_cfg_box na_theme_pick" role="radiogroup" aria-label="테마">
+                  <label class="na_theme_opt" title="실리태번 테마와 상관없이 크림색 배색"><input type="radio" name="na_ui_theme" value="light"><span class="na_theme_sw light" aria-hidden="true"></span><span class="na_theme_txt"><b>라이트</b><small>크림 · 갈색 글씨</small></span></label>
+                  <label class="na_theme_opt" title="실리태번 테마와 상관없이 짙은 밤색 배색"><input type="radio" name="na_ui_theme" value="dark"><span class="na_theme_sw dark" aria-hidden="true"></span><span class="na_theme_txt"><b>다크</b><small>밤색 · 크림 글씨</small></span></label>
+                </div>
+              </div>
+              <div class="na_cfg_grp" data-g="alert">
                 <div class="na_cfg_label"><i class="fa-solid fa-bell"></i> 알림</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
@@ -537,6 +558,63 @@ export async function markBackup(how) {
     syncPanel();
 }
 
+// ⚙ 설정: a card per group up top; tapping one shows that group alone
+const CFG_GROUPS = [
+    ['inject', '주입', 'M12 3v12M7 10l5 5 5-5M5 21h14'],
+    ['recall', '회상 · STATE · OOC', 'M3 12a9 9 0 1 0 3-6.7M3 4v5h5M12 7v5l3 2'],
+    ['aimodel', 'AI 모델', '<rect x="4" y="6" width="16" height="12" rx="3"/><path d="M9 11h.01M15 11h.01M9 15h6"/>'],
+    ['aitask', 'AI가 하는 일', 'M12 3l2.5 5 5.5.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.5-.8z'],
+    ['theme', '테마', '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/>'],
+    ['alert', '알림', 'M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0'],
+];
+let cfgView = '';
+const clip = (t, n) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
+const optText = id => $(`#${id} option:selected`).text().trim();
+function cfgSummaries() {
+    const on = id => $(`#${id}`).prop('checked');
+    const pos = optText('na_position'), inChat = !$('#na_depth_field').prop('hidden');
+    const sum = {
+        inject: [on('na_enabled') ? optText('na_place_preset') || '직접 정함' : '주입 끔', inChat ? `깊이 ${$('#na_depth').val()}` : pos, `망각 곡선 ${on('na_fade') ? '켬' : '끔'}`],
+        recall: [`회상 ${on('na_recall') ? '켬' : '끔'}`, on('na_state_on') ? `STATE 깊이 ${$('#na_state_depth').val()}` : 'STATE 같이', `OOC ${$('#na_off_fold .na_off_chip[aria-pressed="true"]').length}가지`],
+        aimodel: [clip(aiLabel() || '-', 18), `초안 ${draftReady() ? clip(drLabel(), 16) : '없음'}`],
+        aitask: [`막혔을 때 ${optText('na_fallback')}`, `로어북 ${on('na_lore') ? '켬' : '끔'}`, `이탈 감지 ${optText('na_drift_auto')}`],
+        theme: [$('input[name="na_ui_theme"]:checked').closest('label').find('b').text() || '-'],
+        alert: [Number($('#na_backup_every').val()) > 0 ? `백업 ${$('#na_backup_every').val()}번마다` : '백업 알림 끔'],
+    };
+    for (const [k, parts] of Object.entries(sum)) $(`#na_cfg_sum_${k}`).text(parts.filter(Boolean).join(' · '));
+}
+function layoutCfg() {
+    const $pane = $('#na_settings .na_tab_pane[data-pane="config"]');
+    const q = String($('#na_cfg_q').val() || '').trim();
+    $('#na_cfg_index').prop('hidden', !!q || !!cfgView);
+    $pane.find('.na_cfg_grp').each(function () { $(this).toggleClass('na_cfg_off', !q && this.dataset.g !== cfgView); });
+    $pane.toggleClass('na_cfg_one', !q && !!cfgView);
+    $('#na_cfg_title').text(!q && cfgView ? CFG_GROUPS.find(x => x[0] === cfgView)[1] : '설정');
+    $('#na_cfg_back').attr({ title: cfgView ? '설정 목차로' : '돌아가기', 'aria-label': cfgView ? '설정 목차로' : '돌아가기' });
+    if (!cfgView || q) cfgSummaries();
+}
+
+// 압축 탭: picked method, and only the rows that method uses
+const CP_METHODS = { quick: '한 번에', studio: '작업실', wizard: '마법사' };
+const cpMethod = () => (globalSettings().cpMethod in CP_METHODS ? globalSettings().cpMethod : 'quick');
+function layoutCp() {
+    const md = cpMethod(), cm = compressMode(), g = globalSettings();
+    const $cp = $('#na_settings .na_cp');
+    $cp.find('.na_cp_mbtn').each(function () { const on = this.dataset.m === md; $(this).toggleClass('on', on).attr('aria-checked', String(on)); });
+    $cp.find('.na_cp_desc > [data-m], .na_cp_flags').each(function () { this.hidden = this.dataset.m !== md; });
+    $cp.find('.na_cp_set [data-m]').each(function () {
+        const $r = $(this);
+        let show = this.dataset.m.split(' ').includes(md);
+        // in 한 번에 the scene rows follow 압축 방식; 작업실 always cuts scenes
+        if (show && md === 'quick') show = !($r.hasClass('na_cmode_ev') && cm !== 'events') && !($r.hasClass('na_cmode_raw') && cm !== 'raw') && !($r.hasClass('na_cmode_sc') && cm !== 'scenes');
+        $r.toggle(show);
+    });
+    $('#na_cp_for').text(`· ${CP_METHODS[md]}`);
+    const flag = (id, on) => $(id).attr('aria-pressed', String(on)).toggleClass('on', on).find('b').text(on ? '켬' : '끔');
+    flag('#na_flag_auto', !!g.quickAuto);
+    flag('#na_flag_grade', !!g.quickGrade);
+}
+
 export const needChat = fn => (...a) => hasChat() ? fn(...a) : toastr.info('채팅을 먼저 여세요.');
 
 // tabs: home / archive / compress / tools, and the ⚙ settings page
@@ -548,7 +626,7 @@ export function showTab(tab) {
     $p.find('.na_tab_pane').each(function () { $(this).prop('hidden', $(this).data('pane') !== tab); });
     $('#na_gear').toggleClass('active', tab === 'config');
     if (tab !== 'config' && g.lastTab !== tab) { g.lastTab = tab; saveGlobal(); }
-    if (tab === 'config') renderAiSettings();
+    if (tab === 'config') { cfgView = ''; renderAiSettings(); layoutCfg(); }
     if (tab === 'archive') showArchiveView(g.archView || 'cards');
 }
 
@@ -593,7 +671,8 @@ export function bindPanel() {
     $p.find('.na_nav_btn').on('click', function () { showTab($(this).data('tab')); });
     bindPromptSettings();
     $('#na_gear').on('click', () => showTab($('[data-pane="config"]').prop('hidden') ? 'config' : (globalSettings().lastTab || 'home')));
-    $('#na_cfg_back').on('click', () => showTab(globalSettings().lastTab || 'home'));
+    $('#na_cfg_back').on('click', () => { if (cfgView && !$('#na_cfg_q').val()) { cfgView = ''; layoutCfg(); } else showTab(globalSettings().lastTab || 'home'); });
+    $('#na_cfg_index').on('click', '.na_cfg_card', function () { cfgView = this.dataset.g; layoutCfg(); $('#na_settings .na_tab_pane[data-pane="config"]').scrollTop(0); });
     $('input[name="na_ui_theme"]').prop('checked', function () { return this.value === uiTheme(); })
         .on('change', function () { if (this.checked) setUiTheme(this.value); });
     $p.find('.na_seg_btn').on('click', function () { showArchiveView($(this).data('view')); });
@@ -839,9 +918,12 @@ export function bindPanel() {
         $k.val(Math.min(50, Math.max(0, (parseInt($k.val(), 10) || 0) + Number(this.dataset.d)))).trigger('change');
     });
     $('#na_open_extract').on('click', needChat(openExtract));
-    $('#na_open_wizard').on('click', needChat(openWizard));
-    $('#na_quick_compress').on('click', needChat(quickCompress));
-    $('#na_open_studio').on('click', needChat(() => openStudio()));
+    // one 압축하기 button runs whichever method is picked above it
+    $('#na_settings .na_cp_mbtn').on('click', function () { globalSettings().cpMethod = this.dataset.m; saveGlobal(); layoutCp(); });
+    $('#na_cp_go').on('click', needChat(() => { const md = cpMethod(); return md === 'wizard' ? openWizard() : md === 'studio' ? openStudio() : quickCompress(); }));
+    $('#na_flag_auto').on('click', () => $('#na_quick_auto').prop('checked', !$('#na_quick_auto').prop('checked')).trigger('change') && layoutCp());
+    $(document).on('change', '.na_qc_auto, .na_qc_grade', () => setTimeout(() => { $('#na_quick_auto').prop('checked', !!globalSettings().quickAuto); layoutCp(); }));
+    $('#na_flag_grade').on('click', () => { const g = globalSettings(); g.quickGrade = !g.quickGrade; saveGlobal(); layoutCp(); });
     $('#na_health').on('click', needChat(openHealth));
     $('#na_drift').on('click', needChat(openDrift));
     $('#na_know').on('click', needChat(openKnowledge));
@@ -899,7 +981,6 @@ export function bindPanel() {
         toastr.success(`${n}군데 바꿨어요`);
     }));
     $('#na_chunk').on('change', function () { globalSettings().chunkTok = Number(this.value); saveGlobal(); });
-    const cmodeRows = () => { const md = compressMode(); $('.na_cmode_ev').toggle(md === 'events'); $('.na_cmode_raw').toggle(md === 'raw'); $('.na_cmode_sc').toggle(md === 'scenes'); };
     $('#na_scsize').on('change', function () { globalSettings().sceneSize = Number(this.value); saveGlobal(); });
     $('#na_scmodel').on('change', function () { globalSettings().sceneModel = this.value; saveGlobal(); });
     $('#na_stmodel').on('change', function () { globalSettings().stateModel = this.value; saveGlobal(); });
@@ -908,7 +989,7 @@ export function bindPanel() {
     $('#na_trkre_reset').on('click', () => { globalSettings().trackerRe = DEFAULT_TRACKER_RE; saveGlobal(); $('#na_trkre').val(DEFAULT_TRACKER_RE); trkInfo(); });
     $('#na_worknote').on('click', needChat(() => openWorkNote()));
     $('#na_stylesample').on('click', needChat(() => openStyleSamples()));
-    $('#na_cmode').on('change', function () { globalSettings().compressMode = this.value; saveGlobal(); cmodeRows(); });
+    $('#na_cmode').on('change', function () { globalSettings().compressMode = this.value; saveGlobal(); layoutCp(); });
     $('#na_evmodel').on('change', function () { globalSettings().eventsModel = this.value; saveGlobal(); });
     $('#na_track').on('change', async function () {
         if (!hasChat()) return;
@@ -1042,7 +1123,7 @@ export function bindPanel() {
     $('#na_fade_short').on('change', needChat(e => setFade({ short: Math.max(0, parseInt(e.target.value, 10) || 0) })));
     $('#na_fade_opts').on('click', '.na_fd_btn', needChat(e => { const f = e.currentTarget.dataset.f; const cur = fadeCfg(getMeta())[f]; setFade({ [f]: Math.max(0, cur + Number(e.currentTarget.dataset.d)) }); }));
     $('#na_fade_pick').on('click', needChat(async () => { await openFadePicker(); syncPanel(); }));
-    $('#na_fade_fill').on('click', needChat(e => { if (!draftReady() && !fadeFilling) return toastr.info('⚙ 설정 → AI · 번역 → 초안 모델을 먼저 정해 주세요. 섹션 카드의 버전 버튼에서 직접 붙여넣을 수도 있어요.'); fillFade($(e.currentTarget)); }));
+    $('#na_fade_fill').on('click', needChat(e => { if (!draftReady() && !fadeFilling) return toastr.info('⚙ 설정 → AI 모델 → 초안 모델을 먼저 정해 주세요. 섹션 카드의 버전 버튼에서 직접 붙여넣을 수도 있어요.'); fillFade($(e.currentTarget)); }));
     $('#na_router_test').on('click', needChat(async e => {
         const m = getMeta();
         const st = await withSpinner($(e.currentTarget), '고르는 중…', () => runRouter(m, { force: true }));
@@ -1097,6 +1178,7 @@ export function bindPanel() {
             if (hit) any = true;
         });
         $('#na_cfg_none').prop('hidden', !q || any);
+        layoutCfg();
     });
     $('#na_link_depth').on('change', async function () {
         if (!hasChat()) return;
@@ -1243,15 +1325,15 @@ export function syncPanel() {
     $('#na_boundary').val(m.boundary >= 0 ? m.boundary : '');
     $('#na_track').prop('checked', !!m.track);
     $('#na_chunk').val(String(chunkTok()));
-    { const md = compressMode(); $('#na_cmode').val(md); $('#na_evmodel').val(eventsModel()); $('.na_cmode_ev').toggle(md === 'events'); $('.na_cmode_raw').toggle(md === 'raw'); $('.na_cmode_sc').toggle(md === 'scenes'); }
+    $('#na_cmode').val(compressMode()); $('#na_evmodel').val(eventsModel()); layoutCp();
     $('#na_scsize').val(String(sceneSize())); $('#na_scmodel').val(sceneModel()); $('#na_stmodel').val(stateModel()); $('#na_trkre').val(trackerRe());
     $('#na_style_sub').text(styleLabel(getMeta()));
     { const wn = String(getMeta().workNote || '').trim(); $('#na_worknote_sub').text(wn ? `있음 · 약 ${wn.length.toLocaleString()}자 · 장면마다 같이 보내요` : '이 이야기의 인수인계 · canon · 살린 줄 · 이전 실수 · 장면마다 같이 보내요'); }
     {
         const au = auOf(m);
         $('#na_au_sub').text(au.on ? `켜짐 · 요약이 본편 뒤 ${au.name} 묶음으로 이어져요` : '본편 기억을 들고 온 채팅이면 켜요');
-        $('#na_quick_sub').text(draftReady() ? `초안 모델(${drLabel()})로 요약 → 확인하고 추가${au.on ? ` · ${au.name}` : ''}` : '⚙ 설정 → AI · 번역 → 초안 모델을 정하면 쓸 수 있어요');
-        $('#na_studio_sub').text(draftReady() ? studioLabel() : '⚙ 설정 → AI · 번역 → 초안 모델을 정하면 쓸 수 있어요');
+        $('#na_quick_sub').text(draftReady() ? `초안 모델(${drLabel()})로 요약 → 확인하고 추가${au.on ? ` · ${au.name}` : ''}` : '⚙ 설정 → AI 모델 → 초안 모델을 정하면 쓸 수 있어요');
+        $('#na_studio_sub').text(draftReady() ? studioLabel() : '⚙ 설정 → AI 모델 → 초안 모델을 정하면 쓸 수 있어요');
     }
     $('#na_boundary_row').toggleClass('na_disabled', !!m.track);
     {
