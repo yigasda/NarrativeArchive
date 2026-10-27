@@ -3984,3 +3984,30 @@ body:not(.na_darkui) #na_settings .na_cp_mbtn.on { background: #FFFAF6; }
 body:not(.na_darkui) #na_settings .na_cfg_tabbtn.on { background: #FFFFFF; }
 #na_settings .na_tab_pane[data-pane="config"] .na_tab_off, #na_settings .na_tab_pane[data-pane="config"] .na_tab_empty { display: none !important; }
 #na_settings .na_cfg_one .na_cfg_label { display: none; }
+
+/* ============ ⚙ 설정 묶음 화면 = 시안 L+M 그대로 (v3.80.1): cream sheet, white list cards, orange values */
+body:not(.na_darkui) #na_settings { --sv-page: #FFFAF6; --sv-card: #FFFFFF; --sv-line: #EEE2D8; --sv-tile: #F7EEE7; --sv-seg: #F1E6DD; --sv-segon: #FFFFFF; --sv-val: #A84A17; --sv-acc: #B8541F; --sv-dim: #8A7A70; --sv-ink: #463428; }
+body.na_darkui #na_settings { --sv-page: #2F2621; --sv-card: #3A2F28; --sv-line: #4C3F36; --sv-tile: #45382F; --sv-seg: #261F1B; --sv-segon: #4A3C33; --sv-val: #EE9A66; --sv-acc: #D9733A; --sv-dim: #B3A396; --sv-ink: #EFE3D8; }
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one { background: var(--sv-page); border-radius: 18px; padding: 18px 16px; gap: 14px; color: var(--sv-ink); }
+#na_settings .na_cfg_one .na_cfg_search { display: none; }
+#na_settings .na_cfg_one .na_cfg_head { gap: 8px; }
+#na_settings .na_cfg_one .na_cfg_back { width: auto; height: auto; padding: 0 2px; border: 0 !important; background: transparent !important; color: var(--sv-acc); }
+#na_settings .na_cfg_one .na_cfg_head b { font-size: 1.43em; color: var(--sv-ink) !important; }
+#na_settings .na_cfg_one .na_cfg_pill { background: transparent !important; border: 1px solid var(--sv-line) !important; color: var(--sv-dim); font-size: 0.857em; padding: 6px 12px; }
+/* tiles: on = cream, off = white with a line */
+#na_settings .na_cfg_one .na_cfg_tile { background: var(--sv-card); border: 1px solid var(--sv-line); border-radius: 18px; padding: 14px; gap: 4px; }
+#na_settings .na_cfg_one .na_cfg_tile.on { background: var(--sv-tile); border-color: transparent; }
+#na_settings .na_cfg_one .na_cfg_tile small, #na_settings .na_cfg_one .na_cfg_tile span { font-size: 0.857em; color: var(--sv-dim); }
+#na_settings .na_cfg_one .na_cfg_tile b { font-size: 1.357em; color: var(--sv-ink); }
+#na_settings .na_cfg_one .na_cfg_tile:not(.on) b { color: var(--sv-dim); }
+#na_settings .na_cfg_one .na_cfg_tabs { background: var(--sv-seg); margin-top: 4px; }
+#na_settings .na_cfg_one .na_cfg_tabbtn { color: var(--sv-dim); font-size: 1em; }
+#na_settings .na_cfg_one .na_cfg_tabbtn.on { background: var(--sv-segon) !important; color: var(--sv-ink); box-shadow: 0 1px 3px rgba(70, 52, 40, 0.12); }
+/* list cards */
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box { background: var(--sv-card) !important; border: 1px solid var(--sv-line) !important; border-radius: 16px; }
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row { padding: 15px 16px; border-top-color: var(--sv-line); }
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row > span:first-child { font-size: 1.071em !important; gap: 3px; }
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row > span small { font-size: 0.8em !important; color: var(--sv-dim); }
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_set_row > .na_cfg_val { color: var(--sv-val); font-size: 1em !important; }
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val :is(select, input) { color: var(--sv-val) !important; }
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_go > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_chev { color: var(--sv-val); }
