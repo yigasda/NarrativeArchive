@@ -396,8 +396,8 @@ export function renderPanel() {
                 <div class="na_set_list">
                   <label class="na_set_row" title="섹션과 숨긴 원문을 뜻으로도 찾아요 · 라우터 · 회상이 단어가 안 겹쳐도 비슷한 뜻이면 찾고, 한국어 채팅으로 영어 아카이브도 찾아요 · 실리태번 서버의 벡터 저장소를 써요"><span><span>뜻으로 찾기 (임베딩)</span><small>라우터 · 회상이 비슷한 뜻도 찾게</small></span>
                     <span class="na_cfg_val"><select id="na_emb_src" class="text_pole">${Object.entries(EMBED_SOURCES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" id="na_emb_model_row" hidden><span><span>임베딩 모델</span><small>비우면 기본 모델</small></span><span class="na_cfg_val"><input type="text" id="na_emb_model" class="text_pole" spellcheck="false"></span></label>
-                  <label class="na_set_row" id="na_emb_url_row" hidden><span><span>Ollama 주소</span></span><span class="na_cfg_val"><input type="text" id="na_emb_url" class="text_pole" spellcheck="false" placeholder="http://127.0.0.1:11434"></span></label>
+                  <label class="na_set_row" id="na_emb_model_row" hidden><span><span>임베딩 모델</span><small>비우면 기본 모델</small></span><span class="na_cfg_val"><input type="text" id="na_emb_model" class="text_pole" spellcheck="false">${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" id="na_emb_url_row" hidden><span><span>Ollama 주소</span></span><span class="na_cfg_val"><input type="text" id="na_emb_url" class="text_pole" spellcheck="false" placeholder="http://127.0.0.1:11434">${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <button type="button" class="na_set_row na_cfg_go" id="na_emb_build" hidden><span><span>뜻 색인 만들기</span><small id="na_emb_sub">처음 한 번 · 이 채팅의 섹션과 숨긴 원문</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   <label class="na_set_row" title="답이 잘리면 늘려 주세요"><span>답 최대 길이</span><span class="na_cfg_val"><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                 </div>
