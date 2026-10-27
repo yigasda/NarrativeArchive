@@ -123,9 +123,9 @@ export function rangeRaw(c, g, from, to, keepUpTo = -1) {
 
 // Long ranges go to the model in parts of about this many tokens: one 145-message log in one request comes back
 // as a skim (quotes picked off the surface, events out of order). Each part continues from the one before it.
-// 압축 → 설정 → 나눠 보내기: 0 = one request for the whole range
-export const CHUNK_CHOICES = { 0: '안 나눔', 40000: '크게 · 약 4만 토큰씩', 20000: '작게 · 약 2만 토큰씩' };
-export const chunkTok = () => { const v = globalSettings().chunkTok; return v === undefined || v === null || !(String(v) in CHUNK_CHOICES) ? 20000 : Number(v); };
+// fixed at about 20,000 tokens a part since 3.87.4 (40,000 read as a skim; a shorter range goes in one part anyway)
+export const CHUNK_TOK = 20000;
+export const chunkTok = () => CHUNK_TOK;
 const estTok = t => { const s = String(t), h = (s.match(/[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]/g) || []).length; return Math.ceil(h + (s.length - h) / 3.6); };
 // parts of even size (no lone message left at the end): as many parts as the size needs, then equal shares
 export function chunkItems(items) {
@@ -316,7 +316,6 @@ export async function quickCompress() {
         <details class="na_qc_more"><summary>자세히 · 모델, 지시문${scenes ? ', 장면 나누기' : ''}</summary>
         <div class="na_qc_rows">${rows.join('')}</div>
         ${to < last ? `<small class="na_qc_note">마지막 ${last - to}개(${last === to + 1 ? `#${last}` : `#${to + 1}–#${last}`})는 지금 장면이라 남겨요</small>` : ''}
-        ${!scenes && n <= 1 && estTok(raw) > 60000 ? '<small class="na_qc_note">원문이 길어서 중간을 훑을 수 있어요 · 압축 → 설정 → 나눠 보내기</small>' : ''}
         ${scenes ? `<label class="na_qc_sclabel">장면 나누기 <small>한 줄에 장면 하나 · 앞 번호(시작)만 봐요 · 줄을 추가하면 나누고, 지우면 앞 장면에 합쳐요</small></label>
         <textarea class="text_pole na_qc_scenes" rows="${Math.min(10, Math.max(3, n))}" spellcheck="false">${esc(sceneLines)}</textarea>` : ''}
         </details>

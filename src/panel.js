@@ -33,7 +33,7 @@ import { refreshStatus } from './status.js';
 import { ICO_A, setUiTheme, svgA, uiTheme } from './theme.js';
 import { AI_SYS_TRANSLATE, askTranslator, glossaryEntries, openGlossary } from './translate.js';
 import { chatLabel, confirm, copyText, countTokens, download, esc, escRe, fmt, nowStamp, timeLabel } from './util.js';
-import { NUDGE_CHOICES, CHUNK_CHOICES, COMPRESS_MODES, chunkTok, compressMode, openAuSettings, openWizard, quickCompress } from './wizard.js';
+import { NUDGE_CHOICES, COMPRESS_MODES, compressMode, openAuSettings, openWizard, quickCompress } from './wizard.js';
 import { openStudio, studioLabel } from './studio.js';
 import { DEFAULT_TRACKER_RE, SCENE_MODELS, SCENE_SIZES, openStyleSamples, openWorkNote, styleLabel, sceneModel, sceneSize, stateModel, trackerRe } from './scenes.js';
 import { openWorlds, worldBooks, worldIsOn } from './world.js';
@@ -214,7 +214,6 @@ export function renderPanel() {
                   <div class="na_cp_row na_cmode_sc na_trk_row" data-m="quick studio" title="그룹 이름 date · place · time · 비우면 메시지 수로만 잘라요"><span class="na_cp_txt"><span>장면 · 트래커 정규식</span><small>날짜·장소가 바뀌는 곳에서 끊어요</small><textarea class="text_pole na_trk_re" id="na_trkre" rows="2" spellcheck="false"></textarea><span class="na_trk_btns"><button type="button" class="na_linkbtn" id="na_trkre_reset">기본값</button><small id="na_trkre_info"></small></span></span></div>
                   <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_stylesample"><span class="na_cp_txt"><span>문체 견본</span><small id="na_style_sub"></small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                   <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_worknote"><span class="na_cp_txt"><span>작업 노트</span><small id="na_worknote_sub">장면마다 같이 보내요</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
-                  <label class="na_cp_row na_cmode_raw" data-m="quick" title="조각마다 앞 조각에 이어 써요"><span class="na_cp_txt"><span>원문 그대로 · 나눠 보내기</span><small>긴 원문을 나눌 크기</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_chunk">${Object.entries(CHUNK_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                   <label class="na_cp_row" data-m="quick" title="불릿 수 · 단어 수 · 엠대시 · 금지어를 확장이 세고, 넘친 섹션만 다시 고쳐 받아요 · 지시문의 규칙은 그대로"><span class="na_cp_txt"><span>세는 규칙 검사</span><small>넘친 섹션만 다시 고쳐 받아요</small></span><input type="checkbox" class="na_toggle" id="na_count_check"></label>
                   <label class="na_cp_row" data-m="quick" title="지시문의 규칙은 시스템 메시지에, 원문 · 메모 · 마지막 점검은 요청에"><span class="na_cp_txt"><span>규칙은 시스템 메시지로</span><small>중계 서버가 버리면 끄세요</small></span><input type="checkbox" class="na_toggle" id="na_rules_sys"></label>
                   <label class="na_cp_row" title="압축할 메시지가 이만큼 쌓이면 알림 · 누르면 압축"><span class="na_cp_txt"><span>쌓이면 알려 주기</span><small>이만큼 쌓이면 알림</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_nudge">${Object.entries(NUDGE_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
@@ -745,7 +744,7 @@ function layoutCp() {
         const $r = $(this);
         let show = this.dataset.m.split(' ').includes(md);
         // in 한 번에 the scene rows follow 압축 방식; 작업실 always cuts scenes
-        if (show && md === 'quick') show = !($r.hasClass('na_cmode_raw') && cm !== 'raw') && !($r.hasClass('na_cmode_sc') && cm !== 'scenes');
+        if (show && md === 'quick') show = !($r.hasClass('na_cmode_sc') && cm !== 'scenes');
         $r.toggle(show);
     });
     $('#na_cmode_sub').text({ raw: '원문을 그대로 보내요', scenes: '장면마다 섹션 하나씩' }[cm] || '');
@@ -1141,7 +1140,6 @@ export function bindPanel() {
         renderReplace();
         toastr.success(`${n}군데 바꿨어요`);
     }));
-    $('#na_chunk').on('change', function () { globalSettings().chunkTok = Number(this.value); saveGlobal(); });
     $('#na_count_check').on('change', function () { globalSettings().countCheck = this.checked; saveGlobal(); });
     $('#na_rules_sys').on('change', function () { globalSettings().rulesInSystem = this.checked; saveGlobal(); });
     $('#na_scsize').on('change', function () { globalSettings().sceneSize = Number(this.value); saveGlobal(); });
@@ -1517,7 +1515,6 @@ export function syncPanel() {
     rememberArchive();
     $('#na_boundary').val(m.boundary >= 0 ? m.boundary : '');
     $('#na_track').prop('checked', !!m.track);
-    $('#na_chunk').val(String(chunkTok()));
     $('#na_count_check').prop('checked', globalSettings().countCheck !== false);
     $('#na_rules_sys').prop('checked', globalSettings().rulesInSystem !== false);
     $('#na_cmode').val(compressMode()); layoutCp();
