@@ -12,7 +12,7 @@ import { parseSections } from './sections.js';
 
 export const MODULE = 'narrative_archive';
 export const PROMPT_KEY = 'narrative_archive_injection';
-export const VERSION = '3.86.14';
+export const VERSION = '3.86.15';
 export const SNAPSHOT_MAX = 5;
 export const SNAPSHOT_MAX_CHARS = 2_000_000;
 
