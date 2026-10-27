@@ -296,13 +296,14 @@ export async function openSectionFix(s) {
         busy = true;
         try {
             const useRaw = !!src.raw && $root.find('.na_sf_rawon').prop('checked');
-            const { polishStyle } = await import('./style.js');
+            const { polishStyle, styleSummary } = await import('./style.js');
             const r = await withSpinner($(this), '다듬는 중', () => polishStyle(draft, m, { withRaw: useRaw, rawOf: () => src.raw }));
             if (!r) return;
             if (!r.changed) return toastr.info(r.kept.length ? `그대로 뒀어요 · ${r.kept[0].why}` : '바꿀 곳이 없대요', '문체 다듬기');
             draft = trimEnd(r.text).trim();
             asked.push('문체 다듬기');
             draw();
+            toastr.success(`다듬었어요${styleSummary(r)} · 적용을 눌러야 바뀌어요`, '문체 다듬기', { timeOut: 9000 });
         } finally { busy = false; }
     });
     $root.find('.na_sf_q').on('keydown', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); send(); } });

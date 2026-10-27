@@ -854,7 +854,7 @@ export async function openAppend(prefill = {}) {
         if (apf.busy) return;
         apf.busy = true;
         try {
-            const { polishStyle } = await import('./style.js');
+            const { polishStyle, styleSummary } = await import('./style.js');
             const r = await withSpinner($(this), '다듬는 중', () => polishStyle(draft, m, { withRaw: $root.find('.na_apf_raw').length ? $root.find('.na_apf_raw').prop('checked') : true }));
             if (!r) return;
             const why = r.kept.length ? ` · 그대로 둔 섹션 ${r.kept.length}개 (${r.kept.map(k => `${k.head.split(' — ')[0]}: ${k.why}`).join(', ')})` : '';
@@ -865,7 +865,7 @@ export async function openAppend(prefill = {}) {
             $ta.val(r.text).trigger('input');
             $root.find('.na_apf_log').html(apf.asked.map(x => `<div class="na_sf_bubble">${esc(x)}</div>`).join(''));
             $root.find('.na_apf_undo').prop('hidden', false);
-            toastr.success(`섹션 ${r.changed}개를 다듬었어요${r.raws ? ` (원문 대조 ${r.raws}개)` : ''}${r.countFixed ? ` · 그중 ${r.countFixed}개는 세는 규칙도 다시 맞췄어요` : ''}${why} · 되돌리기로 앞 모양으로`, '문체 다듬기', { timeOut: 6000 });
+            toastr.success(`섹션 ${r.changed}개를 다듬었어요${r.raws ? ` (원문 대조 ${r.raws}개)` : ''}${styleSummary(r)}${r.countFixed ? ` · 세는 규칙 ${r.countFixed}개 다시 맞춤` : ''}${why} · 되돌리기로 앞 모양으로`, '문체 다듬기', { timeOut: 9000 });
         } catch (e) {
             console.error('[NarrativeArchive] style pass', e);
             toastr.error(String(e?.message || e), '문체 다듬기');
