@@ -747,7 +747,7 @@ function layoutCp() {
         if (show && md === 'quick') show = !($r.hasClass('na_cmode_sc') && cm !== 'scenes');
         $r.toggle(show);
     });
-    $('#na_cmode_sub').text({ raw: '원문을 그대로 보내요', scenes: '장면마다 섹션 하나씩' }[cm] || '');
+    $('#na_cmode_sub').text({ raw: '결이 중요하면 장면별', scenes: '장면마다 섹션 하나씩' }[cm] || '');
     $('#na_cp_for').text(`· ${CP_METHODS[md]}`);
     const flag = (id, on) => $(id).attr('aria-pressed', String(on)).toggleClass('on', on).find('b').text(on ? '켬' : '끔');
     flag('#na_flag_auto', !!g.quickAuto);
@@ -1516,7 +1516,7 @@ export function syncPanel() {
     $('#na_boundary').val(m.boundary >= 0 ? m.boundary : '');
     $('#na_track').prop('checked', !!m.track);
     $('#na_count_check').prop('checked', globalSettings().countCheck !== false);
-    $('#na_rules_sys').prop('checked', globalSettings().rulesInSystem !== false);
+    $('#na_rules_sys').prop('checked', !!globalSettings().rulesInSystem);
     $('#na_cmode').val(compressMode()); layoutCp();
     $('#na_scsize').val(String(sceneSize())); $('#na_scmodel').val(sceneModel()); $('#na_stmodel').val(stateModel()); $('#na_trkre').val(trackerRe());
     $('#na_style_sub').text(styleLabel(getMeta()));

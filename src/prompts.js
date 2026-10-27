@@ -405,7 +405,7 @@ export const compressPrompt = (tpl, vars, m, memo = '', size = '') => {
 // 규칙은 시스템 메시지로: the rules (after <current_state>, up to "# 9. Before you write") go in the system part;
 // the raw log, the state, the AU block, this stretch's notes and the closing step stay in the request.
 // Turned off, or a template without both marks: everything in the request, as before.
-export const rulesInSystem = () => globalSettings().rulesInSystem !== false; // on unless turned off
+export const rulesInSystem = () => !!globalSettings().rulesInSystem;
 export function compressParts(tpl, vars, m, memo = '', size = '') {
     const whole = () => ({ system: '', prompt: compressPrompt(tpl, vars, m, memo, size) });
     if (!rulesInSystem()) return whole();

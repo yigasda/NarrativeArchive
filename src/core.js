@@ -12,7 +12,7 @@ import { parseSections } from './sections.js';
 
 export const MODULE = 'narrative_archive';
 export const PROMPT_KEY = 'narrative_archive_injection';
-export const VERSION = '3.87.4';
+export const VERSION = '3.87.5';
 export const SNAPSHOT_MAX = 5;
 export const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -165,6 +165,9 @@ export function globalSettings() {
     if (g.compressMode === 'events') g.compressMode = 'raw';
     // prompt library: [{ id, name, text, fav }], first entry is the built-in basic one
     if (g.aiMaxTokens === 4096 && !g.aiMaxSet) g.aiMaxTokens = 8192; // the old default, never changed by hand
+    // 규칙은 시스템 메시지로: off for a new install (some relays drop the system part); a setup from before 3.87.5,
+    // which had it on without asking, keeps it on
+    if (g.rulesInSystem === undefined) g.rulesInSystem = Array.isArray(g.prompts);
     if (!Array.isArray(g.prompts)) {
         g.prompts = [{ id: 'basic', name: '기본', text: BASIC_PROMPT, fav: true }];
         const old = typeof g.prompt === 'string' ? g.prompt : '';
