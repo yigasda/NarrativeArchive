@@ -8,7 +8,7 @@ import { sectionPanel, syncPanel } from './panel.js';
 import { mdBlock } from './reader.js';
 import { routerCfg, routerState } from './router.js';
 import { RANGE_HEAD, filterMuted, keywordWaiting, linkedMap, parseSections, pinnedSet, sectionKey, sectionLinks } from './sections.js';
-import { sectionStarred } from './recall.js';
+import { sectionKept } from './keeps.js';
 import { ICO_A, svgA } from './theme.js';
 import { trCachedLines, trLineOk, translateLines, withLineTr } from './translate.js';
 import { confirm, countTokens, esc, fmt } from './util.js';
@@ -32,8 +32,8 @@ export function fadeWants(m, text = m.text) {
     for (const s of secs) {
         while (stack.length && stack[stack.length - 1].level >= s.level) stack.pop();
         if (s.group) { stack.push(s); continue; }
-        // a section that holds a ★ scene never fades
-        if (RANGE_HEAD.test(s.title)) nums.push({ s, safe: pinned.has(sectionKey(s)) || stack.some(g => pinned.has(sectionKey(g))) || sectionStarred(s.title), star: sectionStarred(s.title) });
+        // a section that holds a 꼭 남길 장면 never fades
+        if (RANGE_HEAD.test(s.title)) nums.push({ s, safe: pinned.has(sectionKey(s)) || stack.some(g => pinned.has(sectionKey(g))) || sectionKept(m, s.title), star: sectionKept(m, s.title) });
     }
     // called in right now: keyword links that fired, the router's picks (and what they point at)
     const lm = linkedMap(m), waiting = keywordWaiting(m);
@@ -249,7 +249,7 @@ export async function openLayers(s) {
     const use = plan ? fadeUse(m, m.text, s, plan.want) : null;
     const name = { long: '원문', short: '짧게', line: '한 줄' };
     const into = { long: '원문으로', short: '짧은 버전으로', line: '한 줄로' };
-    const noteHtml = (p, u) => p ? `지금 <b>${into[u]}</b> 들어가요${p.why === 'pin' ? ' (📌 고정)' : p.why === 'star' ? ' (★ 중요 장면)' : p.why === 'called' ? ' (지금 불려 온 섹션)' : p.why === 'manual' ? ' (직접 고름)' : ''}${u !== p.want ? ` · 고른 건 ${name[p.want]}인데 ${stale ? '원문이 바뀌어서' : '그 버전이 없어서'}` : ''}` : '망각 곡선이 꺼져 있어 원문으로 들어가요';
+    const noteHtml = (p, u) => p ? `지금 <b>${into[u]}</b> 들어가요${p.why === 'pin' ? ' (📌 고정)' : p.why === 'star' ? ' (꼭 남길 장면)' : p.why === 'called' ? ' (지금 불려 온 섹션)' : p.why === 'manual' ? ' (직접 고름)' : ''}${u !== p.want ? ` · 고른 건 ${name[p.want]}인데 ${stale ? '원문이 바뀌어서' : '그 버전이 없어서'}` : ''}` : '망각 곡선이 꺼져 있어 원문으로 들어가요';
     const forced = () => fadeForce(getMeta())[sectionKey(s)] || 'auto';
     const now = t => use === t ? ' · 지금 들어감' : '';
     let tab = use && use !== 'long' ? use : (L.short ? 'short' : 'long');
@@ -474,7 +474,7 @@ export async function openFadePicker() {
             const head = r.group !== lastGroup ? `<div class="na_fp_group">${esc(r.group || '묶음 없음')}</div>` : '';
             lastGroup = r.group;
             const state = r.muted ? '<span class="na_fp_use off">꺼짐</span>' : `<span class="na_fp_use ${r.use}">${name[r.use]}</span>`;
-            const why = r.force ? '<span class="na_fp_why">직접</span>' : r.p?.why === 'pin' ? '<span class="na_fp_why">고정</span>' : r.p?.why === 'star' ? '<span class="na_fp_why">★ 중요</span>' : r.p?.why === 'called' ? '<span class="na_fp_why">불려 옴</span>' : '';
+            const why = r.force ? '<span class="na_fp_why">직접</span>' : r.p?.why === 'pin' ? '<span class="na_fp_why">고정</span>' : r.p?.why === 'star' ? '<span class="na_fp_why">꼭 남길</span>' : r.p?.why === 'called' ? '<span class="na_fp_why">불려 옴</span>' : '';
             return `${head}<label class="na_fp_row ${picked.has(r.k) ? 'on' : ''}" data-k="${esc(r.k)}"><input type="checkbox" ${picked.has(r.k) ? 'checked' : ''}><span class="na_fp_title">${esc(r.s.title)}</span><span class="na_fp_has"><i class="${r.has.short ? 'y' : ''}" title="짧은 버전 ${r.has.short ? '있음' : '없음'}">짧</i><i class="${r.has.line ? 'y' : ''}" title="한 줄 ${r.has.line ? '있음' : '없음'}">줄</i></span>${why}${state}</label>`;
         }).join('') : '<div class="na_empty">해당하는 섹션이 없어요.</div>');
         const n = picked.size;

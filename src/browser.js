@@ -1,5 +1,6 @@
 // The archive tab: section cards (list and timeline).
 
+import { editKeep, keepsIn, sectionKept } from './keeps.js';
 import { commitText, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { digestedKeys, openDigest } from './digest.js';
 import { fillFade, layersOf, openLayers, setFadeForce } from './fade.js';
@@ -452,6 +453,7 @@ export function mountSectionBrowser($host) {
                       <button type="button" class="na_icon na_up" title="위로" aria-label="위로"><i class="fa-solid fa-arrow-up"></i></button>
                       <button type="button" class="na_icon na_down" title="아래로" aria-label="아래로"><i class="fa-solid fa-arrow-down"></i></button>
                       <button type="button" class="na_icon na_ins" title="아래에 새 섹션" aria-label="아래에 새 섹션"><i class="fa-solid fa-plus"></i></button>
+                      ${rm ? `<button type="button" class="na_icon na_keep_t ${sectionKept(m, s.title) ? 'active' : ''}" title="꼭 남길 장면으로 적기" aria-label="꼭 남길 장면"><i class="fa-solid fa-feather-pointed"></i></button>` : ''}
                       <button type="button" class="na_icon na_pin_t ${isPin ? 'active' : ''}" title="${isPin ? '고정 풀기' : '망각 곡선에서도 늘 원문으로 고정'}" aria-label="고정"><i class="fa-solid fa-thumbtack"></i></button>
                       <button type="button" class="na_icon na_del na_danger" title="섹션 삭제" aria-label="섹션 삭제"><i class="fa-solid fa-trash-can"></i></button>
                       <span class="na_spacer"></span>
@@ -481,6 +483,7 @@ export function mountSectionBrowser($host) {
                     <button type="button" class="na_icon na_up" title="위로" aria-label="위로">${svgA(ICO_A.up, 17)}</button>
                     <button type="button" class="na_icon na_down" title="아래로" aria-label="아래로">${svgA(ICO_A.dn, 17)}</button>
                     <button type="button" class="na_icon na_ins" title="아래에 새 섹션" aria-label="아래에 새 섹션">${svgA(ICO_A.plus, 17)}</button>
+                    ${rm ? `<button type="button" class="na_icon na_keep_t ${sectionKept(m, s.title) ? 'active' : ''}" title="꼭 남길 장면으로 적기" aria-label="꼭 남길 장면"><i class="fa-solid fa-feather-pointed"></i></button>` : ''}
                     <button type="button" class="na_icon na_keys ${hasKeys ? 'active' : ''}" title="키워드 연동" aria-label="키워드 연동">${svgA(ICO_A.key, 17)}</button>
                     ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_icon na_layers_btn ${layersOf(m)[key] ? 'active' : ''}" title="짧은 버전 · 한 줄 (망각 곡선)" aria-label="짧은 버전">${svgA(ICO_A.layers, 17)}</button>` : ''}
                     <button type="button" class="na_icon na_edit" title="편집" aria-label="편집">${svgA(ICO_A.pen, 17)}</button>
@@ -519,6 +522,14 @@ export function mountSectionBrowser($host) {
             $card.find('.na_up').on('click', () => move(s, -1));
             $card.find('.na_down').on('click', () => move(s, 1));
             $card.find('.na_ins').on('click', () => insertAfter(s));
+            $card.find('.na_keep_t').on('click', async e => {
+                e.stopPropagation();
+                const r = s.title.match(RANGE_HEAD);
+                if (!r) return;
+                const a = Math.min(+r[2], +r[4]), b = Math.max(+r[2], +r[4]);
+                const k = keepsIn(m, a, b).find(x => x.from === a && x.to === b);
+                if (await editKeep(k || { from: a, to: b })) render();
+            });
             $card.find('.na_keys').on('click', async () => {
                 const keys = await openKeywords(s, body, links[sectionKey(s)] || []);
                 if (keys) await setLinked(sectionKey(s), keys);

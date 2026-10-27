@@ -15,6 +15,7 @@ import { fadeCfg, fadeFilling, fadeForce, fadeMissing, fadePlan, fadeUse, fillFa
 import { openHealth } from './health.js';
 import { applyHide, lastIndex, openUnhide, syncTrackedBoundary } from './hide.js';
 import { applyInjection, lastBuild, stateCfg } from './inject.js';
+import { keepsOf, openKeeps } from './keeps.js';
 import { lastRecall, offstageMode, recallCfg, runRecall, setRecall } from './recall.js';
 import { openKeywordTest } from './keywords.js';
 import { knowledgeRows, openKnowledge } from './knowledge.js';
@@ -190,6 +191,7 @@ export function renderPanel() {
                 <div class="na_v2_card na_v2_list">
                   <button type="button" class="na_cp_row" id="na_open_extract"><span class="na_cp_num">1</span><span class="na_cp_txt"><b>원문 뽑기</b><small>경계선 이후 메시지 · 지시문 붙여 복사</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                   <button type="button" class="na_cp_row" id="na_open_append"><span class="na_cp_num">2</span><span class="na_cp_txt"><b>아카이브에 추가</b><small>압축본 붙여넣기 · 번호 검사 · 경계선 자동</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
+                  <button type="button" class="na_cp_row" id="na_open_keeps"><span class="na_cp_num">3</span><span class="na_cp_txt"><b>꼭 남길 장면</b><small id="na_keeps_sub">압축할 때 자세히 남길 구간과 그 이유</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                 </div>
                 <div class="na_v2_label">설정</div>
                 <div class="na_v2_card na_v2_list na_cp_set">
@@ -836,6 +838,7 @@ export function bindPanel() {
     $('#na_quotes').on('click', needChat(openQuotes));
     $('#na_branches, #na_branch_fix').on('click', needChat(openBranches));
     $('#na_open_append').on('click', needChat(openAppend));
+    $('#na_open_keeps').on('click', needChat(openKeeps));
     $('#na_apply_hide').on('click', needChat(() => applyHide()));
     $('#na_unhide').on('click', needChat(openUnhide));
 
@@ -1104,6 +1107,7 @@ export function syncPanel() {
     $('#na_role').val(String(m.role));
     $('#na_muted_n').text(mutedCount(m));
     $('#na_link_depth').val(m.linkDepth || 4);
+    { const kn = keepsOf(m).length; $('#na_keeps_sub').text(kn ? `${kn}개 · 압축할 때 자세히, 망각 곡선은 그대로` : '압축할 때 자세히 남길 구간과 그 이유'); }
     {
         const r = recallCfg(m);
         $('#na_recall').prop('checked', r.on); $('#na_recall_opts').prop('hidden', !r.on);

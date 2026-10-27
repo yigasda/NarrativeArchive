@@ -1,5 +1,6 @@
 // Compression wizard.
 
+import { keepLabel, keepsIn } from './keeps.js';
 import { offstageSet } from './recall.js';
 import { SECTION_GUARD, aiLabel, askAI, askCompress, askDraft, compressEffort, drLabel, draftReady, isBlocked, withSpinner } from './ai.js';
 import { openAppend } from './append.js';
@@ -37,7 +38,7 @@ REPORT ONLY THESE
     e.g. the summary says Ivo said "…", but in the log Mara said it.
 3. 빠짐 (missing): an important event, decision, promise, confession, secret revealed, injury, or change in a relationship that the SUMMARY leaves out.
     Small talk, repeated actions and atmosphere are NOT important.
-    A message the RAW LOG's last line marks as an important scene counts as missing when the SUMMARY leaves it out or blurs it into a vague line.
+    A stretch listed after the RAW LOG as a scene to keep in detail counts as missing when the SUMMARY drops it or squeezes it into a vague line.
 4. 해석 (interpretation): a feeling, motive or judgment the SUMMARY states as fact when the RAW LOG only shows actions and words.
     e.g. the summary says Ren was jealous; in the log she only changed the subject.
 
@@ -453,6 +454,7 @@ export async function quickCompress() {
             row('STATE', esc(short(sceneModelLabel(stateModel()))), '마지막에 한 번'),
             ...(String(m.workNote || '').trim() ? [row('작업 노트', '있음', `약 ${fmt(estTok(m.workNote))} 토큰`)] : []),
         ] : [row('요약', esc(short(drLabel())), n > 1 ? `${n}번에 나눠 · 약 ${fmt(chunkTok())} 토큰씩` : '한 번에')]),
+        ...(keepsIn(m, from, to).length ? [row('꼭 남길 장면', `${keepsIn(m, from, to).length}개`, esc(keepsIn(m, from, to).map(keepLabel).join(', ')))] : []),
         row('보낼 양', `약 ${fmt(sendEst.tok)} 토큰`, `요청 ${sendEst.req}번 · 생각과 답은 빼고 · 어림값`),
         row('지시문', esc(p.name), `생각 ${effort}${p.id === 'basic' && p.text !== BASIC_PROMPT ? ' · <span class="na_qc_warn">고친 버전이라 최신 기본 규칙이 안 들어가 있어요</span>' : ''}`),
         ...(au.on ? [row('AU', esc(au.name), '본편 뒤에 이어서')] : []),

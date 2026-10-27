@@ -1,12 +1,13 @@
 // Search index over the raw chat (hidden messages too) and the archive's sections: BM25 on words, and on two-letter
 // pieces of Korean, Japanese and Chinese words (they take particles, so "세트가" still finds "세트는").
 // Used by 회상 (relevant old lines injected before each reply), 질문하기 and the voice notes.
-// Also here: ★ important scenes (a mark on the message itself) and off-story messages (/comment, /sys, QR asides, OOC).
+// Also here: off-story messages (/comment, /sys, QR asides, OOC). 꼭 남길 장면 come first among equal hits.
 
 import { ctx, getMeta, globalSettings, hasChat, saveMeta } from './core.js';
 import { cleanMessage } from './extract.js';
 import { currentInjection } from './inject.js';
-import { RANGE_HEAD, mutedSet, parseSections, sectionKey, splitTail } from './sections.js';
+import { isKeptAt, sectionKept } from './keeps.js';
+import { mutedSet, parseSections, sectionKey, splitTail } from './sections.js';
 
 export const RECALL_KEY = 'narrative_archive_recall';
 
@@ -42,66 +43,6 @@ export function offstageSet(chat = ctx().chat || []) {
     chat.forEach((x, i) => { if (isOffstage(x, chat[i - 1])) out.add(i); });
     return out;
 }
-
-// ---- ★ important scenes: stored on the message, so deleting messages before it does not move the mark
-
-export const isStarred = msg => !!msg?.extra?.na_star;
-export const starredIndexes = (from = 0, to = Infinity) => (ctx().chat || []).flatMap((x, i) => (i >= from && i <= to && isStarred(x) ? [i] : []));
-// one line for a compress request: which messages in the range the user marked
-export function starNote(from, to) {
-    const s = starredIndexes(from, to);
-    return s.length ? `Messages the user marked as important scenes: ${s.map(i => `#${i}`).join(', ')}. Keep them in detail: what happened, who said what (their key lines word for word), and what it changed. Never fold them into a one-line summary.` : '';
-}
-// does a "#a–#b" section hold a starred message?
-export function sectionStarred(title) {
-    const r = String(title || '').match(RANGE_HEAD);
-    if (!r) return false;
-    const a = Math.min(+r[2], +r[4]), b = Math.max(+r[2], +r[4]);
-    return starredIndexes(a, b).length > 0;
-}
-
-export async function toggleStar(id) {
-    const c = ctx();
-    const msg = c.chat?.[id];
-    if (!msg) return;
-    msg.extra ||= {};
-    const on = !msg.extra.na_star;
-    if (on) msg.extra.na_star = true; else delete msg.extra.na_star;
-    await c.saveChat?.();
-    decorateMessage(id);
-    toastr.success(on ? '중요 장면으로 표시했어요. 압축할 때 자세히 남기고, 망각 곡선이 줄이지 않고, 회상할 때 먼저 꺼내요.' : '중요 표시를 지웠어요.', '서사 아카이브', { timeOut: 4000 });
-}
-
-export function decorateMessage(id) {
-    const el = document.querySelector(`#chat .mes[mesid="${id}"]`);
-    const msg = ctx().chat?.[id];
-    if (!el || !msg) return;
-    const extra = el.querySelector('.extraMesButtons');
-    if (extra && !extra.querySelector('.na_mes_star')) {
-        const b = document.createElement('div');
-        b.className = 'mes_button na_mes_star fa-regular fa-star';
-        b.title = '서사 아카이브: 중요 장면으로 표시';
-        b.tabIndex = 0;
-        extra.prepend(b);
-    }
-    const on = isStarred(msg);
-    const btn = el.querySelector('.na_mes_star');
-    if (btn) { btn.classList.toggle('fa-solid', on); btn.classList.toggle('fa-regular', !on); }
-    let badge = el.querySelector('.na_star_badge');
-    if (on && !badge) {
-        badge = document.createElement('span');
-        badge.className = 'na_star_badge fa-solid fa-star';
-        badge.title = '중요 장면 · 누르면 표시를 지워요';
-        el.querySelector('.name_text')?.after(badge);
-    } else if (!on && badge) badge.remove();
-}
-export const decorateAll = () => document.querySelectorAll('#chat .mes[mesid]').forEach(el => decorateMessage(Number(el.getAttribute('mesid'))));
-$(document).on('click', '.na_mes_star, .na_star_badge', function (e) {
-    const id = Number(this.closest('.mes')?.getAttribute('mesid'));
-    if (Number.isNaN(id)) return;
-    e.stopPropagation();
-    toggleStar(id);
-});
 
 // ---- tokens and BM25
 
@@ -162,6 +103,7 @@ export function bm25(items, query, { k1 = 1.2, b = 0.75 } = {}) {
 export function rawItems({ only = 'all', upto = Infinity } = {}) {
     const chat = ctx().chat || [];
     const off = offstageSet(chat);
+    const m = hasChat() ? getMeta() : null;
     const out = [];
     chat.forEach((x, i) => {
         if (!x || i > upto || off.has(i)) return;
@@ -170,7 +112,7 @@ export function rawItems({ only = 'all', upto = Infinity } = {}) {
         const text = cleanMessage(String(x.mes || ''), { stripTags: true });
         if (!text.trim()) return;
         const name = x.name || (x.is_user ? 'User' : 'Char');
-        const star = isStarred(x);
+        const star = !!m && isKeptAt(m, i);
         for (const p of passages(text)) out.push({ kind: 'raw', i, name, star, text: p });
     });
     return out;
@@ -201,7 +143,7 @@ function passages(text, max = 700) {
 export function sectionItems(m) {
     const [body] = splitTail(m.text);
     const muted = mutedSet(m);
-    return parseSections(body).filter(s => !s.group && !muted.has(sectionKey(s))).map(s => ({ kind: 'sec', s, title: s.title, star: sectionStarred(s.title), text: body.slice(s.start, s.end) }));
+    return parseSections(body).filter(s => !s.group && !muted.has(sectionKey(s))).map(s => ({ kind: 'sec', s, title: s.title, star: sectionKept(m, s.title), text: body.slice(s.start, s.end) }));
 }
 
 // bullets of the sections that are not going in whole right now (faded, waiting for a keyword, picked out by the router)
@@ -239,7 +181,7 @@ export function recallQuery(n) {
     return out.length ? `${out[0]}\n${out.join('\n')}` : '';
 }
 
-// hits for a query: raw passages (and section bullets), stars first among equals, at most one passage per message,
+// hits for a query: raw passages (and section bullets), 꼭 남길 장면 first among equals, at most one passage per message,
 // within the token budget. minHits: how many different query words an item must share
 export function pick(results, { k, budget, minHits = 2 }) {
     if (!results.length) return [];
@@ -262,7 +204,7 @@ export function pick(results, { k, budget, minHits = 2 }) {
 }
 
 export const recallLine = r => r.item.kind === 'raw'
-    ? `- [#${r.item.i}${r.item.star ? ' ★' : ''} ${r.item.name}] ${r.item.text.replace(/\s*\n\s*/g, ' ')}`
+    ? `- [#${r.item.i} ${r.item.name}] ${r.item.text.replace(/\s*\n\s*/g, ' ')}`
     : `- [${r.item.title.replace(/\s*\(.*$/, '')}] ${r.item.text}`;
 
 export const lastRecall = new Map(); // chat id → { at, lines, tokens }
