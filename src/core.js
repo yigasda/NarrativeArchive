@@ -12,7 +12,7 @@ import { parseSections } from './sections.js';
 
 export const MODULE = 'narrative_archive';
 export const PROMPT_KEY = 'narrative_archive_injection';
-export const VERSION = '3.82.6';
+export const VERSION = '3.83.0';
 export const SNAPSHOT_MAX = 5;
 export const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -21,8 +21,9 @@ export const DEFAULT_META = Object.freeze({
     boundary: -1,   // last message index covered by the archive
     keep: 1,        // how many compressed messages stay visible
     enabled: true,
-    position: 1,    // extension_prompt_types: 0 after main prompt, 1 in chat, 2 before main prompt
+    position: 3,    // 3 right after the hidden messages (depth worked out), or extension_prompt_types: 0 after main prompt, 1 in chat, 2 before main prompt
     depth: 1,
+    placeV: 2,      // 2: chats from before 3.83.0 moved to position 3 once
     role: 0,        // 0 system, 1 user, 2 assistant
     track: false,   // boundary follows the last #number in the archive's headings
     snapshots: [],  // [{ at, reason, text, boundary }] newest first
@@ -40,7 +41,8 @@ export const DEFAULT_META = Object.freeze({
 });
 
 export const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'muted', 'track', 'tokenCap', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'router', 'people', 'temps', 'voice', 'voiceInject', 'layers', 'fade', 'worldOn', 'quoteExclude', 'quoteMined', 'knowMined', 'personLines', 'fadeForce', 'au', 'digests', 'workNote', 'styleSamples', 'recall', 'stateRemind'];
-export const POSITIONS = { 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
+export const POSITIONS = { 3: '이어지는 자리', 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
+export const POSITION_ORDER = [3, 1, 0, 2];
 export const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
 
 export const ctx = () => SillyTavern.getContext();
@@ -72,6 +74,8 @@ export function getMeta() {
     const md = ctx().chatMetadata;
     if (!md) return null;
     if (!md[MODULE] || typeof md[MODULE] !== 'object') md[MODULE] = structuredClone(DEFAULT_META);
+    // 3.83.0: every chat moves once to the place right after the hidden messages, so the past reads before what came after it
+    if (md[MODULE].placeV !== 2) { md[MODULE].position = 3; md[MODULE].placeV = 2; }
     for (const k of Object.keys(DEFAULT_META)) {
         if (!Object.hasOwn(md[MODULE], k)) md[MODULE][k] = structuredClone(DEFAULT_META[k]);
     }

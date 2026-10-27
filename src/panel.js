@@ -8,7 +8,7 @@ import { branchState, openBranches } from './branches.js';
 import { mountSectionBrowser } from './browser.js';
 import { openCalendar } from './calendar.js';
 import { carryOffer, currentChatId, importArchive, openChatPicker, pickFromBundle, rememberArchive, setCarryOffer } from './chats.js';
-import { POSITIONS, ROLES, SETTING_KEYS, SNAPSHOT_MAX, VERSION, commitText, ctx, getMeta, globalSettings, hasChat, pushSnapshot, saveGlobal, saveMeta } from './core.js';
+import { POSITIONS, POSITION_ORDER, ROLES, SETTING_KEYS, SNAPSHOT_MAX, VERSION, commitText, ctx, getMeta, globalSettings, hasChat, pushSnapshot, saveGlobal, saveMeta } from './core.js';
 import { openCompare, openDiff } from './diff.js';
 import { openDrift } from './drift.js';
 import { guessEndNumber, openExtract } from './extract.js';
@@ -303,7 +303,7 @@ export function renderPanel() {
                     <span class="na_cfg_val"><select id="na_place_preset" class="text_pole">${Object.entries(PLACE_PRESETS).map(([k, p]) => `<option value="${k}">${p.name}</option>`).join('')}<option value="custom" disabled>직접 정함</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row"><span>아카이브 주입</span><input type="checkbox" id="na_enabled" class="na_toggle"></label>
                   <label class="na_set_row"><span>위치</span>
-                    <span class="na_cfg_val"><select id="na_position" class="text_pole">${Object.entries(POSITIONS).map(([v, l]) => `<option value="${v}">${l.replace(/\s*\(깊이\)$/, '')}</option>`).join('')}</select><span class="na_cfg_depth" id="na_depth_field">&nbsp;· 깊이&nbsp;<input type="number" id="na_depth" class="text_pole" min="0" max="999" title="채팅 끝에서 몇 번째 메시지 위에 넣을지"></span>${svgA(ICO_A.right, 15, 2.2)}</span>
+                    <span class="na_cfg_val"><select id="na_position" class="text_pole">${POSITION_ORDER.map(v => `<option value="${v}">${POSITIONS[v].replace(/\s*\(깊이\)$/, '')}</option>`).join('')}</select><span class="na_cfg_depth" id="na_depth_field">&nbsp;· 깊이&nbsp;<input type="number" id="na_depth" class="text_pole" min="0" max="999" title="채팅 끝에서 몇 번째 메시지 위에 넣을지"></span>${svgA(ICO_A.right, 15, 2.2)}</span>
                   </label>
                   <label class="na_set_row"><span>역할</span>
                     <span class="na_cfg_val"><select id="na_role" class="text_pole">${Object.entries(ROLES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span>
@@ -1382,7 +1382,7 @@ export function bindPanel() {
 
 // 자리 묶음: where the archive, the STATE block and the recall block go, set together
 export const PLACE_PRESETS = {
-    near: { name: '기본', sub: '아카이브는 채팅 안 깊이 1 · STATE 따로 안 뺌', position: 1, depth: 1, role: 0, state: { on: false, depth: 3 }, recall: 2 },
+    near: { name: '기본', sub: '아카이브는 숨긴 메시지 바로 뒤 (이어지는 자리) · STATE 따로 안 뺌', position: 3, depth: 1, role: 0, state: { on: false, depth: 3 }, recall: 2 },
     stable: { name: '안정형', sub: '아카이브는 메인 프롬프트 뒤 · STATE 깊이 3 · 회상 깊이 2', position: 0, depth: 1, role: 0, state: { on: true, depth: 3 }, recall: 2 },
     recent: { name: '최근 강조형', sub: '아카이브도 채팅 안 깊이 6 · STATE 깊이 2 · 회상 깊이 1 · 앞쪽을 자꾸 놓칠 때', position: 1, depth: 6, role: 0, state: { on: true, depth: 2 }, recall: 1 },
     user: { name: '유저 메시지형', sub: '최근 강조형을 유저 역할로 · 시스템 지시를 약하게 따르는 모델용', position: 1, depth: 6, role: 1, state: { on: true, depth: 2 }, recall: 1 },

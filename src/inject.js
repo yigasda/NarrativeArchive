@@ -25,7 +25,28 @@ export function takeState(m, text) {
     const rest = blocks.filter(b => b !== st).map(b => b.text).join('\n\n');
     return { text: `${trimEnd(body)}${rest ? `\n\n${rest}` : ''}\n`, state: st.text };
 }
-export const stateText = state => (state ? `[CURRENT STATE: where things stand right now. Keep the next reply consistent with it, and never mention it.]\n${state.replace(/^# /, '')}` : '');
+// STATE is a snapshot from where the archive ends; messages written after that are newer and win
+export const stateText = state => (state ? `[STATE: where things stood when the archive ends. The chat after that point is newer: where it differs, the chat is right. Otherwise keep the next reply consistent with this, and never mention it.]\n${state.replace(/^# /, '')}` : '');
+
+// 이어지는 자리: just above the first visible message after the archive's last one, so the past is read before what followed it.
+// The spot only moves when messages are hidden, so the prompt before it stays the same from reply to reply.
+// skipLast: a swipe leaves the reply being replaced out of the prompt; extra: a typed message not in the chat yet
+export function autoDepth(m, { skipLast = false, extra = 0 } = {}) {
+    const chat = ctx().chat || [];
+    const end = skipLast ? chat.length - 1 : chat.length;
+    const from = Number.isFinite(+m?.boundary) ? Math.max(0, +m.boundary + 1) : 0;
+    let n = extra;
+    for (let i = from; i < end; i++) if (!chat[i]?.is_system) n++;
+    return n;
+}
+const placeOf = m => (Number(m.position) === 3 ? [1, autoDepth(m)] : [[0, 1, 2].includes(Number(m.position)) ? Number(m.position) : 1, Math.max(0, Number(m.depth) || 0)]);
+
+// right before a reply is written, so the worked-out depth counts the chat as the prompt will have it
+export function placeArchive(o) {
+    const m = hasChat() ? getMeta() : null;
+    if (!m || !m.enabled || !lastBuild.text || Number(m.position) !== 3) return;
+    ctx().setExtensionPrompt(PROMPT_KEY, lastBuild.text, 1, autoDepth(m, o), false, Number(m.role) || 0);
+}
 
 export async function buildInjection(m) {
     // digests stand in for their sections first, then muted sections drop out, then the forgetting curve
@@ -61,8 +82,8 @@ export function applyInjection() {
         if (trimChanged) sectionPanel?.render();
         if (!m || !m.enabled || !b.text) c.setExtensionPrompt(PROMPT_KEY, '', 1, 1);
         else {
-            const pos = [0, 1, 2].includes(Number(m.position)) ? Number(m.position) : 1;
-            c.setExtensionPrompt(PROMPT_KEY, b.text, pos, Math.max(0, Number(m.depth) || 0), false, Number(m.role) || 0);
+            const [pos, depth] = placeOf(m);
+            c.setExtensionPrompt(PROMPT_KEY, b.text, pos, depth, false, Number(m.role) || 0);
         }
         if (!m || !m.enabled || !b.state) c.setExtensionPrompt(STATE_KEY, '', 1, 0);
         else c.setExtensionPrompt(STATE_KEY, b.state, 1, stateCfg(m).depth, false, 0);

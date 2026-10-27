@@ -2,7 +2,7 @@
 
 import { POSITIONS, ROLES, ctx, getMeta } from './core.js';
 import { fadeCfg } from './fade.js';
-import { currentInjection } from './inject.js';
+import { autoDepth, currentInjection } from './inject.js';
 import { keyLabel, linkWaiting, mutedSet, parseSections, pinnedSet, sectionKey } from './sections.js';
 import { copyText, esc, fmt } from './util.js';
 import { worldBooks, worldIsOn } from './world.js';
@@ -11,7 +11,7 @@ export async function openPreview() {
     const c = ctx();
     const m = getMeta();
     const b = await currentInjection();
-    const where = Number(m.position) === 1 ? `채팅 안 · ${m.depth}` : POSITIONS[m.position];
+    const where = Number(m.position) === 1 ? `채팅 안 · ${m.depth}` : Number(m.position) === 3 ? `이어지는 자리 · 지금 깊이 ${autoDepth(m)}` : POSITIONS[m.position];
     const titles = new Set(parseSections(m.text).map(sectionKey));
     const muted = [...mutedSet(m)].filter(t => titles.has(t));
     const waiting = [...linkWaiting(m)].filter(t => titles.has(t) && !muted.includes(t));

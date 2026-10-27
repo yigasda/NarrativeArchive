@@ -5,7 +5,7 @@ import { currentChatId } from './chats.js';
 import { getMeta, globalSettings, hasChat } from './core.js';
 import { recentForCheck } from './drift.js';
 import { lastIndex } from './hide.js';
-import { applyInjection, currentInjection } from './inject.js';
+import { applyInjection, currentInjection, placeArchive } from './inject.js';
 import { KW_STOP } from './keywords.js';
 import { castNames } from './knowledge.js';
 import { RANGE_HEAD, linkWaiting, linkedMap, mutedSet, parseSections, pinnedSet, sectionKey } from './sections.js';
@@ -20,10 +20,13 @@ import { shortHash } from './translate.js';
 // (awaited) right after. So on a normal send the router and keyword links wait for MESSAGE_SENT,
 // otherwise they would never see the message being answered.
 export let genPending = null;
+let genType = '';
 export async function onGenerationStarted(type, opts, dryRun) {
     if (dryRun || type === 'quiet' || !hasChat()) return;
+    genType = type || 'normal';
     const typed = String($('#send_textarea').val() || '').trim();
     if (typed && [undefined, 'normal'].includes(type) && !opts?.automatic_trigger) {
+        placeArchive({ extra: 1 }); // the typed message is not in the chat yet
         // fallback in case no MESSAGE_SENT follows (e.g. a bias-only message sent as a system note)
         genPending = setTimeout(() => { genPending = null; prepareGeneration(); }, 3000);
         return;
@@ -64,6 +67,7 @@ export async function prepareGeneration() {
         for (const k of links) if (!waiting.has(k) && !muted.has(k)) { st.on[k] = (st.on[k] || 0) + 1; st.last[k] = lastIndex(); }
         m.linkStats = st;
     }
+    placeArchive({ skipLast: genType === 'swipe' });
 }
 
 // Right before a reply, a small model reads the recent chat and picks the sections it needs.
