@@ -130,7 +130,7 @@ export function routerReady() {
 export async function runRouter(m, { force = false } = {}) {
     const cfg = routerCfg(m);
     if (cfg.mode === 'off') return null;
-    if (!routerReady()) throw new Error('라우터는 RP와 따로 연결한 모델이 필요해요 (⚙ 설정 → AI · 번역 → 모델에서 프로필·커스텀 API·Vertex)');
+    if (!routerReady()) throw new Error('라우터는 RP와 따로 연결한 모델이 필요해요 (⚙ 설정 → AI 모델 → 모델에서 프로필·커스텀 API·Vertex)');
     const cands = routerCandidates(m);
     const id = currentChatId();
     const msgs = recentForCheck(4);

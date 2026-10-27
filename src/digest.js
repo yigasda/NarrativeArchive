@@ -247,7 +247,7 @@ export async function openDigest(group = null, keys = null) {
     let busy = false;
     const go = async () => {
         if (busy || $root.find('.na_dg_go').prop('disabled')) return;
-        if (!draftReady()) return toastr.info('⚙ 설정 → AI · 번역 → 초안 모델을 먼저 정해 주세요.', '다이제스트');
+        if (!draftReady()) return toastr.info('⚙ 설정 → AI 모델 → 초안 모델을 먼저 정해 주세요.', '다이제스트');
         const idx = [...picked].sort((a, b) => a - b), sel = idx.map(i => secsNow()[i]);
         const target = Math.max(100, parseInt($root.find('.na_dg_tokin').val(), 10) || DIGEST_DEFAULT_TOK);
         const note = String($root.find('.na_dg_note').val() || '').trim();

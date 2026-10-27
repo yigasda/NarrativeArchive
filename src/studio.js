@@ -353,7 +353,7 @@ function fitStudio(el) {
 }
 export async function openStudio() {
     const c = ctx();
-    if (!draftReady()) return toastr.info('⚙ 설정 → AI · 번역 → 초안 모델을 먼저 정해 주세요.', '압축 작업실');
+    if (!draftReady()) return toastr.info('⚙ 설정 → AI 모델 → 초안 모델을 먼저 정해 주세요.', '압축 작업실');
     let m = getMeta();
     let st = sessionOf(m);
     // a run that already went in is over
