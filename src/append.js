@@ -429,7 +429,7 @@ export async function openAppend(prefill = {}) {
         <div class="na_wz2_chips na_ap_outinfo"></div>
         <div class="na_v2_row2 na_ap_tools">
           <button type="button" class="na_v2_btn na_append_file_btn">${svgA('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>', 15)}파일 불러오기</button>
-          <button type="button" class="na_v2_btn na_ap_style" title="문장 결만 아카이브처럼 다듬어요 · 내용 · 출처 번호 · 인용 · 불릿 수는 그대로 · 원문 같이 보내기가 켜져 있으면 섹션마다 그 원문으로 대조해요 · AI 기능 모델">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>', 15)}문체 다듬기</button>
+          <button type="button" class="na_v2_btn na_ap_style" title="문장 결만 아카이브처럼 다듬어요 · 내용 · 출처 번호 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 보내요 · AI 기능 모델">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>', 15)}문체 다듬기</button>
           ${pre.grade ? '' : `<button type="button" class="na_v2_btn na_ap_grade" title="붙여넣은 섹션을 그 번호의 원문과 맞춰 봐요 · AI 기능 모델">${svgA('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14l2 2 4-4"/>', 15)}원문 대조</button>`}
         </div>
         <input type="file" class="na_append_file" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden>
@@ -855,7 +855,7 @@ export async function openAppend(prefill = {}) {
         apf.busy = true;
         try {
             const { polishStyle, styleSummary } = await import('./style.js');
-            const r = await withSpinner($(this), '다듬는 중', () => polishStyle(draft, m, { withRaw: $root.find('.na_apf_raw').length ? $root.find('.na_apf_raw').prop('checked') : true }));
+            const r = await withSpinner($(this), '다듬는 중', () => polishStyle(draft, m));
             if (!r) return;
             const why = r.kept.length ? ` · 그대로 둔 섹션 ${r.kept.length}개 (${r.kept.map(k => `${k.head.split(' — ')[0]}: ${k.why}`).join(', ')})` : '';
             if (!r.changed) return toastr.info(`바꾼 섹션이 없어요${why}`, '문체 다듬기', { timeOut: 6000 });
@@ -865,7 +865,7 @@ export async function openAppend(prefill = {}) {
             $ta.val(r.text).trigger('input');
             $root.find('.na_apf_log').html(apf.asked.map(x => `<div class="na_sf_bubble">${esc(x)}</div>`).join(''));
             $root.find('.na_apf_undo').prop('hidden', false);
-            toastr.success(`섹션 ${r.changed}개를 다듬었어요${r.raws ? ` (원문 대조 ${r.raws}개)` : ''}${styleSummary(r)}${r.countFixed ? ` · 세는 규칙 ${r.countFixed}개 다시 맞춤` : ''}${why} · 되돌리기로 앞 모양으로`, '문체 다듬기', { timeOut: 9000 });
+            toastr.success(`섹션 ${r.changed}개를 다듬었어요${styleSummary(r)}${r.countFixed ? ` · 세는 규칙 ${r.countFixed}개 다시 맞춤` : ''}${why} · 되돌리기로 앞 모양으로`, '문체 다듬기', { timeOut: 9000 });
         } catch (e) {
             console.error('[NarrativeArchive] style pass', e);
             toastr.error(String(e?.message || e), '문체 다듬기');

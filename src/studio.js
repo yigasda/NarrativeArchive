@@ -446,7 +446,7 @@ export async function openStudio() {
             const fixBtn = fixBusy.has(i) ? '<button type="button" class="na_st_fix" disabled>고치는 중…</button>'
                 : countable ? `<button type="button" class="na_st_fix" data-i="${i}" title="단어 · 엠대시 · 불릿 수가 넘친 섹션만 초안 모델에 다시 고쳐 받아요 · 출처 번호와 제목은 그대로">고쳐 받기</button>` : '';
             const free = !(t.scene !== undefined && locked.has(t.scene)) && blocks.some(x => x.a !== null);
-            const styleBtn = free && !fixBusy.has(i) ? `<button type="button" class="na_st_fix na_st_polish" data-i="${i}" title="문장 결만 아카이브처럼 · 내용 · 출처 번호 · 인용 · 불릿 수는 그대로 · 원문으로 대조 · AI 기능 모델">문체 다듬기</button>` : '';
+            const styleBtn = free && !fixBusy.has(i) ? `<button type="button" class="na_st_fix na_st_polish" data-i="${i}" title="문장 결만 아카이브처럼 · 내용 · 출처 번호 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 · AI 기능 모델">문체 다듬기</button>` : '';
             const backBtn = t.before && !fixBusy.has(i) ? `<button type="button" class="na_st_unfix" data-i="${i}" title="고치기 전 답으로">고치기 전으로</button>` : '';
             return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st_tags">${tags}<span class="na_st_lks">${fixBtn}${styleBtn}${backBtn}${koBtn}${locks}</span></div></div>`;
         }).join('') + (busy ? '<div class="na_st_bub na_st_typing"><i></i><i></i><i></i><small>쓰는 중 · 이 탭에 있어야 받아요</small></div>' : '');
@@ -551,7 +551,7 @@ export async function openStudio() {
             toastr.error(String(e?.message || e), '고쳐 받기');
         } finally { fixBusy.delete(i); draw(); }
     });
-    // 문체 다듬기: the same swap, with the sentences polished against each section's own raw log
+    // 문체 다듬기: the same swap, with the sentences polished (the sections alone, no raw log)
     $root.on('click', '.na_st_polish', async function () {
         const i = Number(this.dataset.i), s = sessionOf(getMeta()), t = s?.turns[i];
         if (!t || fixBusy.has(i) || busy) return;
@@ -562,7 +562,7 @@ export async function openStudio() {
         fixBusy.add(i); draw();
         try {
             const { polishStyle, styleSummary } = await import('./style.js');
-            const r = await polishStyle(blocks.map(x => sectionText(x, '')).join('\n\n'), getMeta(), { rawOf: b => { const [a, z] = b.key.split('-').map(Number); return rawOf(s, a, z); } });
+            const r = await polishStyle(blocks.map(x => sectionText(x, '')).join('\n\n'), getMeta());
             if (!r.changed) return toastr.info(r.kept.length ? `그대로 뒀어요 · ${r.kept.map(k => `${k.head.split(' — ')[0]}: ${k.why}`).join(', ')}` : '바꿀 곳이 없대요', '문체 다듬기', { timeOut: 6000 });
             const s2 = sessionOf(getMeta()), t2 = s2?.turns[i];
             if (!t2 || t2.text !== t.text) return toastr.warning('그사이 답이 바뀌어서 다듬은 걸 버렸어요.', '문체 다듬기');

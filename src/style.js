@@ -29,7 +29,7 @@ WHAT YOU LOOK FOR, bullet by bullet
 2. Length and rhythm: two to four sentences per bullet, mostly of middle length, and a short, flat sentence often closes it. Join acts in one sentence only when they are one motion; when the purpose changes, start a new sentence ("paid…, packed…, and sent…" becomes two). Splitting must not take a bullet past four sentences: if it would, drop staging words or keep two acts of one motion together.
 3. Openings: most sentences open on their subject, a name or he/she; only now and then does one open otherwise, in a shape like the VOICE RULES' examples. Never two sentences in one bullet opening with the same word, he and she included (only a name may repeat): give one of them the name. A sentence that opens on a feeling or a participle ("Stung that…", "Furious at…", "Hoping to…") is one that opens otherwise; more than one in a section is too many. The easiest fix is the subject first and the reason after the act: a reason can come after the act as easily as before it ("He told her to stay, stung that…").
 4. Feeling: the characters carry it through what they did and said; the narrator stays quiet. Name a feeling once and say whose it is, or give the one bodily sign the log gives, never both ("Pale and afraid" keeps one).
-5. Images and endings: no narrator metaphors; an image stays only if the raw log has it ("her smile melted his anger" becomes what happened: "and his anger was gone"). A bullet does not end on what it meant.
+5. Images and endings: no narrator metaphors. An image stays only if the raw log has it; with no raw log, write it plainly ("her smile melted his anger" becomes what happened: "and his anger was gone"). A bullet does not end on what it meant.
 6. Punctuation: a colon only to introduce a line, a reason, or what something meant to someone; a semicolon for two acts that answer each other; at most one em dash in a section's bullets, the rest a comma, a colon or a new sentence. No long "and… and… and" sentences.
 FOUND, under a section, lists what the extension counted in it. Fix every item there as well.
 
@@ -99,7 +99,7 @@ export function styleLint(text, { english = true } = {}) {
             if (/,\s+[a-z]+\b[^,;]*,\s+and\s+(?!(?:the|a|an|his|her|their|he|she|they|it|its|that|this|then|so)\b)[a-z]+/.test(x)) out.push(`${B}: several acts joined in one sentence ("${x.split(/\s+/).slice(0, 6).join(' ')}…")`);
             if (SHAPE.test(x.replace(/^["“(]+/, ''))) shaped.push(`${B} "${x.split(/\s+/).slice(0, 2).join(' ')}…"`);
             const mt = x.match(METAPHORS);
-            if (mt) out.push(`${B}: "${mt[0]}" may be a narrator image: keep it only if the raw log has it`);
+            if (mt) out.push(`${B}: "${mt[0]}" may be a narrator image: say plainly what happened`);
             if (BODY.test(x) && FEELING.test(x)) out.push(`${B}: a feeling named and shown by the body together ("${x.match(BODY)[0]}", "${x.match(FEELING)[0]}"): keep one`);
         }
     });
@@ -119,11 +119,12 @@ export function styleGuard(before, after) {
     return '';
 }
 
-// draft: the append window's text; withRaw: each section goes with the messages it covers.
+// draft: the append window's text; withRaw: each section goes with the messages it covers (off: the pass is about
+// wording alone, the guards keep the facts, and a long raw log only pulls the editor's eye off the checklist).
 // Returns { text, changed, kept: [{ head, why }], raws, notes, foundBefore, left }, or throws
 // rawOf: where a section's messages come from (default: this chat, read by its heading's numbers)
 // again: what the count still finds after the pass gets one more pass, once
-export async function polishStyle(draft, m, { withRaw = true, rawOf = null, again = true } = {}) {
+export async function polishStyle(draft, m, { withRaw = false, rawOf = null, again = true } = {}) {
     const [body, tail] = splitTail(String(draft || ''));
     const blocks = rangedBlocks(body);
     if (!blocks.length) throw new Error('다듬을 섹션이 없어요 · 제목 줄이 `## #시작–#끝 — 제목` 모양이어야 해요');
