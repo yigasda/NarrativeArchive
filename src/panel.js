@@ -299,7 +299,7 @@ export function renderPanel() {
                 <div class="na_cfg_label"><i class="fa-solid fa-syringe"></i> 넣는 자리</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
-                  <label class="na_set_row" title="아래 위치 · 깊이 · 역할, STATE 가까이 넣기, 회상 깊이를 한 번에 맞춰요 · 고른 뒤에도 칸마다 직접 바꿀 수 있어요 · 이 채팅에만"><span><span>자리 묶음</span><small id="na_place_sub">넣는 자리를 한 번에</small></span>
+                  <label class="na_set_row" title="아래 위치 · 깊이 · 역할, STATE 가까이 넣기, 회상 깊이를 한 번에 맞춰요 · 고른 뒤에도 칸마다 직접 바꿀 수 있어요 · 이 채팅에만"><span><span>자리 묶음</span><small id="na_place_sub">위치 · 역할을 한 번에</small></span>
                     <span class="na_cfg_val"><select id="na_place_preset" class="text_pole">${Object.entries(PLACE_PRESETS).map(([k, p]) => `<option value="${k}">${p.name}</option>`).join('')}<option value="custom" disabled>직접 정함</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row"><span>아카이브 주입</span><input type="checkbox" id="na_enabled" class="na_toggle"></label>
                   <label class="na_set_row"><span>위치</span>
@@ -1371,7 +1371,8 @@ export function syncPanel() {
     {
         const cur = placePresetOf(m);
         $('#na_place_preset').val(cur || 'custom');
-        $('#na_place_sub').text(cur ? PLACE_PRESETS[cur].sub : '칸마다 직접 정했어요');
+        // the short line stays as in the mockup; what the picked set does goes in the row's tooltip
+        $('#na_place_sub').text(cur ? '위치 · 역할을 한 번에' : '칸마다 직접 정했어요').closest('.na_set_row').attr('title', `${cur ? `${PLACE_PRESETS[cur].name} · ${PLACE_PRESETS[cur].sub}\n` : ''}위치 · 깊이 · 역할, STATE 가까이 넣기, 회상 깊이를 한 번에 맞춰요 · 고른 뒤에도 칸마다 직접 바꿀 수 있어요 · 이 채팅에만`);
     }
     $('#na_muted_n').text(mutedCount(m));
     $('#na_link_depth').val(m.linkDepth || 4);
