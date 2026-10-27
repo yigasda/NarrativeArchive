@@ -4011,3 +4011,4 @@ body.na_darkui #na_settings { --sv-page: #2F2621; --sv-card: #3A2F28; --sv-line:
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_set_row > .na_cfg_val { color: var(--sv-val); font-size: 1em !important; }
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val :is(select, input) { color: var(--sv-val) !important; }
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_go > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_chev { color: var(--sv-val); }
+.na_cc_note { flex: 1; min-width: 0; font-size: 0.86em; color: var(--na-dim); line-height: 1.4; }

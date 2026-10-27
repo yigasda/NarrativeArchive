@@ -22,7 +22,7 @@ export const EMBED_SOURCES = {
     ollama: 'Ollama',
 };
 // the model a source uses when none is typed
-export const EMBED_DEFAULT_MODEL = { palm: 'gemini-embedding-001', vertexai: 'gemini-embedding-001', openai: 'text-embedding-3-small', openrouter: 'openai/text-embedding-3-small', cohere: 'embed-multilingual-v3.0', ollama: 'bge-m3' };
+export const EMBED_DEFAULT_MODEL = { palm: 'gemini-embedding-001', vertexai: 'text-multilingual-embedding-002', openai: 'text-embedding-3-small', openrouter: 'openai/text-embedding-3-small', cohere: 'embed-multilingual-v3.0', ollama: 'bge-m3' };
 const MODEL_FREE = new Set(['transformers', 'mistral', 'nomicai']); // the server picks the model itself
 
 export function embedCfg() {
@@ -65,10 +65,16 @@ function sourceBody() {
         case 'llamacpp': b.apiUrl = altUrl('llamacpp'); break;
         case 'vllm': b.model = vs.vllm_model; b.apiUrl = altUrl('vllm'); break;
         case 'palm': b.model = pickModel('google_model'); b.api = 'makersuite'; break;
-        case 'vertexai':
+        case 'vertexai': {
+            // our own pick always uses the service account JSON saved in SillyTavern; embedding models are not
+            // served from the 'global' endpoint, so that one becomes us-central1
             b.model = pickModel('google_model'); b.api = 'vertexai';
-            b.vertexai_auth_mode = oai.vertexai_auth_mode; b.vertexai_region = oai.vertexai_region; b.vertexai_express_project_id = oai.vertexai_express_project_id;
+            b.vertexai_auth_mode = own ? 'full' : oai.vertexai_auth_mode;
+            const region = String(oai.vertexai_region || '').trim();
+            b.vertexai_region = !region || region === 'global' ? 'us-central1' : region;
+            b.vertexai_express_project_id = oai.vertexai_express_project_id;
             break;
+        }
         default: break;
     }
     return b;
@@ -143,7 +149,8 @@ export async function syncEmbed({ onProgress = null, force = false } = {}) {
         const add = all.filter(x => !have.has(x.hash));
         const gone = [...have].filter(h => !want.has(h));
         if (gone.length) await vec('delete', { ...b, collectionId: st.coll, hashes: gone });
-        const step = ['transformers', 'ollama'].includes(b.source) ? 8 : 40;
+        // gemini-embedding on Vertex takes one text per request, and the server sends what it gets in one go
+        const step = b.source === 'vertexai' && /^gemini-embedding/.test(b.model || '') ? 1 : ['transformers', 'ollama'].includes(b.source) ? 8 : 40;
         for (let k = 0; k < add.length; k += step) {
             if (currentChatId() !== id) throw new Error('채팅이 바뀌어서 멈췄어요');
             await vec('insert', { ...b, collectionId: st.coll, items: add.slice(k, k + step).map((x, j) => ({ hash: x.hash, text: x.text, index: k + j })) }, 120_000);

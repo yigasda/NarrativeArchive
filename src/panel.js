@@ -1,7 +1,7 @@
 // The side panel: markup, event wiring (bindPanel) and refresh (syncPanel).
 
 import { activeBooks, loreCfg, setLore } from './lore.js';
-import { fallbackOf, aiLabel, aiProfiles, apiFormat, askAI, askDraft, compressEffort, connSettings, drLabel, draftReady, draftSettings, listModels, parseServiceAccount, trLabel, trSettings, vxTokens, withSpinner } from './ai.js';
+import { fallbackOf, aiLabel, aiProfiles, apiFormat, askAI, askDraft, compressEffort, connSettings, drLabel, draftReady, draftSettings, listModels, trLabel, trSettings, vxModelList, withSpinner } from './ai.js';
 import { openAppend } from './append.js';
 import { openAsk } from './ask.js';
 import { branchState, openBranches } from './branches.js';
@@ -403,7 +403,7 @@ export function renderPanel() {
                   <button type="button" class="na_set_row na_cfg_go" id="na_emb_build" hidden><span><span>뜻 색인 만들기</span><small id="na_emb_sub">처음 한 번 · 이 채팅의 섹션과 숨긴 원문</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   <label class="na_set_row" title="답이 잘리면 늘려 주세요"><span>답 최대 길이</span><span class="na_cfg_val"><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                 </div>
-                <small class="na_dim na_conn_note" id="na_conn_note" hidden>키와 JSON은 이 기기의 실리태번 설정에만 저장돼요. 아카이브 백업에는 안 들어가요.</small>
+                <small class="na_dim na_conn_note" id="na_conn_note" hidden>키는 이 기기의 실리태번 설정에만 저장돼요. Vertex는 실리태번에 저장한 서비스 계정 JSON을 써요. 아카이브 백업에는 안 들어가요.</small>
                 </div>
               </div>
               <div class="na_cfg_grp" data-g="aitask" title="AI 기능 모델이 하는 일 · 막혔을 때 · 로어북 · 이탈 감지">
@@ -464,13 +464,13 @@ export function connCfgHtml(p) {
                   <div class="na_cc_models" id="na_${p}_models" role="listbox" hidden></div>
                   <small class="na_cc_hint" id="na_${p}_cchint" hidden></small>
                 </div>
-                <div class="na_tr_cfg" id="na_${p}_vertex" hidden>
-                  <textarea class="text_pole" id="na_${p}_vxjson" rows="4" placeholder="서비스 계정 JSON (키 파일 내용을 통째로 붙여넣기)" spellcheck="false"></textarea>
-                  <div class="na_tr_pair">
-                    <input type="text" class="text_pole" id="na_${p}_vxloc" placeholder="리전 (예: global, us-central1)" autocomplete="off" spellcheck="false">
-                    <input type="text" class="text_pole" id="na_${p}_vxmodel" placeholder="모델 (예: gemini-2.5-flash)" autocomplete="off" spellcheck="false">
+                <div class="na_tr_cfg na_cc" id="na_${p}_vertex" hidden>
+                  <div class="na_cc_box">
+                    <div class="na_cc_row"><span class="na_cc_lbl">키</span><span class="na_cc_note" id="na_${p}_vxinfo">실리태번에 저장한 서비스 계정 JSON</span></div>
+                    <label class="na_cc_row"><span class="na_cc_lbl">지역</span><input type="text" class="text_pole" id="na_${p}_vxloc" placeholder="비우면 실리태번 설정 따라" autocomplete="off" spellcheck="false"></label>
+                    <div class="na_cc_row"><span class="na_cc_lbl">모델</span><input type="text" class="text_pole na_cc_model" id="na_${p}_vxmodel" placeholder="불러와서 고르거나 직접 입력" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="na_${p}_vxmodels"><button type="button" class="na_cc_load" id="na_${p}_vxload" title="실리태번의 Vertex 모델 목록 불러오기">${svgA(ICO_A.redo, 15)}<span>불러오기</span></button></div>
                   </div>
-                  <div class="na_tr_vxrow"><small class="na_dim" id="na_${p}_vxinfo"></small><button type="button" class="na_linkbtn na_danger" id="na_${p}_vxclear" hidden><i class="fa-solid fa-eraser"></i> JSON 지우기</button></div>
+                  <div class="na_cc_models" id="na_${p}_vxmodels" role="listbox" hidden></div>
                 </div>
                 <div class="na_tr_test_row" id="na_${p}_test_row" hidden>
                   <button type="button" class="na_btn na_small" id="na_${p}_test"><i class="fa-solid fa-plug"></i> 연결 테스트</button>
@@ -492,22 +492,18 @@ export function renderConn(p) {
         : claude && !t.effort ? 'Claude는 생각을 끌 수 없어요(Opus 5.5). 생각 토큰도 출력 요금이라, 비용을 줄이려면 생각을 "낮게"로 두세요.'
         : t.noEffort && t.effort ? '이 주소는 생각 강도를 받지 않아서 빼고 보내고 있어요.' : '';
     $(`#na_${p}_cchint`).text(hint).prop('hidden', !hint);
-    // a saved key is never shown again; the box only takes a replacement
-    $(`#na_${p}_vxjson`).val('').attr('placeholder', t.vxJson.trim() ? '저장됨 · 바꾸려면 새 JSON을 붙여넣기' : '서비스 계정 JSON (키 파일 내용을 통째로 붙여넣기)');
-    $(`#na_${p}_vxclear`).prop('hidden', !t.vxJson.trim());
-    $(`#na_${p}_vxloc`).val(t.vxLocation); $(`#na_${p}_vxmodel`).val(t.vxModel);
-    let info = '';
-    if (t.vxJson.trim()) { try { const sa = parseServiceAccount(t.vxJson); info = `프로젝트 ${sa.project_id} · ${sa.client_email}`; } catch (e) { info = e.message; } }
-    $(`#na_${p}_vxinfo`).text(info);
+    $(`#na_${p}_vxloc`).val(t.vxLocation).attr('placeholder', `비우면 실리태번 설정 따라 (${ctx().chatCompletionSettings?.vertexai_region || 'global'})`);
+    $(`#na_${p}_vxmodel`).val(t.vxModel);
     return own;
 }
 
 // the model list under a custom API's model box: everything, or what matches the typed text
-export function drawModels(p, open) {
-    const t = connSettings(p), $l = $(`#na_${p}_models`), $in = $(`#na_${p}_model`);
-    const ids = Array.isArray(t.models) ? t.models : [];
+// vx: the Vertex model box, listing the models SillyTavern offers for Vertex
+export function drawModels(p, open, vx = false) {
+    const t = connSettings(p), $l = $(`#na_${p}_${vx ? 'vxmodels' : 'models'}`), $in = $(`#na_${p}_${vx ? 'vxmodel' : 'model'}`);
+    const ids = vx ? vxModelList() : Array.isArray(t.models) ? t.models : [];
     if (!open || !ids.length) { $l.prop('hidden', true); $in.attr('aria-expanded', 'false'); return; }
-    const q = String($in.val() || '').trim().toLowerCase(), cur = t.model;
+    const q = String($in.val() || '').trim().toLowerCase(), cur = vx ? t.vxModel : t.model;
     const list = q && q !== cur.toLowerCase() ? ids.filter(x => x.toLowerCase().includes(q)) : ids;
     $l.html(list.length
         ? list.slice(0, 400).map(x => `<button type="button" role="option" class="na_cc_opt ${x === cur ? 'on' : ''}" data-id="${esc(x)}" aria-selected="${x === cur}"><span>${esc(x)}</span>${x === cur ? svgA(ICO_A.check, 15, 2.4) : ''}</button>`).join('')
@@ -901,12 +897,22 @@ export function bindPanel() {
             connSettings(p).model = this.dataset.id; saveGlobal();
             drawModels(p, false); renderAiSettings();
         });
-        $(`#na_${p}_vxjson`).on('change', function () {
-            if (!this.value.trim()) return;
-            try { parseServiceAccount(this.value); } catch (e) { toastr.warning(e.message); return; }
-            connSettings(p).vxJson = this.value.trim(); vxTokens.clear(); saveGlobal(); renderAiSettings();
+        $(`#na_${p}_vxmodel`).on('focus click', () => drawModels(p, true, true))
+            .on('input', () => drawModels(p, true, true))
+            .on('blur', () => setTimeout(() => { if (!$(`#na_${p}_vxmodels`).is(':hover')) drawModels(p, false, true); }, 150))
+            .on('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); drawModels(p, false, true); } });
+        $(`#na_${p}_vxmodels`).on('mousedown', e => e.preventDefault()).on('click', '.na_cc_opt', function () {
+            connSettings(p).vxModel = this.dataset.id; saveGlobal();
+            drawModels(p, false, true); renderAiSettings();
         });
-        $(`#na_${p}_vxclear`).on('click', () => { connSettings(p).vxJson = ''; vxTokens.clear(); saveGlobal(); renderAiSettings(); });
+        $(`#na_${p}_vxload`).on('click', () => {
+            const n = vxModelList().length;
+            if (!n) return toastr.warning('실리태번의 Vertex 모델 목록을 못 찾았어요. 모델 이름을 직접 넣어 주세요.');
+            toastr.success(`실리태번의 Vertex 모델 ${n}개`);
+            $(`#na_${p}_vxmodel`).val('');
+            drawModels(p, true, true);
+            $(`#na_${p}_vxmodel`).val(connSettings(p).vxModel).trigger('focus');
+        });
     }
     $('#na_ai_test').on('click', async function () {
         const out = await withSpinner($(this), '확인하는 중…', () => askAI('Reply with one short sentence: which model are you?', { maxTokens: 300 }));

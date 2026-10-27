@@ -16,7 +16,8 @@ export function connSettings(which) {
     t.url ??= ''; t.key ??= ''; t.model ??= '';
     t.fmt ??= '';    // custom API wire format: '' = guess from the address, 'openai', 'anthropic'
     t.effort ??= ''; // thinking effort the user fixed for this connection: '' = whatever the job asks for
-    t.vxJson ??= ''; t.vxLocation ??= 'global'; t.vxModel ??= 'gemini-2.5-flash';
+    t.vxLocation ??= ''; t.vxModel ??= 'gemini-2.5-flash';
+    delete t.vxJson; // keys now live in SillyTavern only
     // the old default was us-central1; move untouched settings to global once
     if (!t.vxLocV2) { if (t.vxLocation === 'us-central1') t.vxLocation = 'global'; t.vxLocV2 = true; }
     return t;
@@ -199,46 +200,20 @@ export async function callOpenAICompat(t, system, prompt, maxTokens, effort = ''
     return out;
 }
 
-// --- Vertex AI: sign a JWT with the service account key in the browser, trade it for an access token
+// --- Vertex AI through SillyTavern's own server, with the service account JSON saved in SillyTavern
+// (API 연결 → Vertex AI → 서비스 계정). The key never reaches the browser; the server signs and calls Google.
 
-export const b64url = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-export const b64urlText = s => b64url(new TextEncoder().encode(s));
-export const vxTokens = new Map(); // client_email → { token, exp }
-
-export function parseServiceAccount(raw) {
-    let sa;
-    try { sa = JSON.parse(String(raw || '')); } catch { throw new Error('서비스 계정 JSON을 읽지 못했어요. 파일 내용을 통째로 붙여넣어 주세요.'); }
-    if (!sa?.private_key || !sa?.client_email || !sa?.project_id) throw new Error('서비스 계정 JSON에 private_key, client_email, project_id가 있어야 해요.');
-    return sa;
+// the Vertex models SillyTavern lists in its own model picker
+export function vxModelList() {
+    const ids = [...document.querySelectorAll('#model_vertexai_select option')].map(o => o.value).filter(Boolean);
+    return [...new Set(ids)];
 }
-
-export async function vertexToken(sa) {
-    const hit = vxTokens.get(sa.client_email);
-    if (hit && hit.exp > Date.now() + 60_000) return hit.token;
-    const pem = sa.private_key.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
-    const der = Uint8Array.from(atob(pem), ch => ch.charCodeAt(0));
-    const key = await crypto.subtle.importKey('pkcs8', der.buffer, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
-    const now = Math.floor(Date.now() / 1000);
-    const aud = sa.token_uri || 'https://oauth2.googleapis.com/token';
-    const unsigned = `${b64urlText(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))}.${b64urlText(JSON.stringify({
-        iss: sa.client_email, scope: 'https://www.googleapis.com/auth/cloud-platform', aud, iat: now, exp: now + 3600,
-    }))}`;
-    const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(unsigned));
-    const r = await fetch(aud, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: `${unsigned}.${b64url(sig)}` }),
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.access_token) throw new Error(`Vertex 인증 실패 ${r.status}: ${j.error_description || j.error || '토큰을 못 받았어요'}`);
-    vxTokens.set(sa.client_email, { token: j.access_token, exp: Date.now() + (Number(j.expires_in) || 3600) * 1000 });
-    return j.access_token;
-}
+export const vxRegion = t => String(t.vxLocation || '').trim() || ctx().chatCompletionSettings?.vertexai_region || 'global';
 
 // a model that a region does not carry answers 404 "Publisher model … not found": try the other usual regions once,
 // and keep the one that worked
 export async function callVertex(t, system, prompt, maxTokens) {
-    const first = String(t.vxLocation || 'global').trim();
+    const first = vxRegion(t);
     const others = ['global', 'us-central1', 'us-east5', 'europe-west4'].filter(x => x !== first);
     try { return await callVertexAt(t, first, system, prompt, maxTokens); }
     catch (e) {
@@ -254,32 +229,31 @@ export async function callVertex(t, system, prompt, maxTokens) {
         throw e;
     }
 }
-async function callVertexAt({ vxJson, vxModel }, loc, system, prompt, maxTokens) {
-    const sa = parseServiceAccount(vxJson);
-    const model = String(vxModel || '').trim();
-    if (!model) throw new Error('Vertex 모델 이름을 넣어 주세요 (예: gemini-2.5-flash)');
-    const host = loc === 'global' ? 'aiplatform.googleapis.com' : `${loc}-aiplatform.googleapis.com`;
-    const url = `https://${host}/v1/projects/${encodeURIComponent(sa.project_id)}/locations/${encodeURIComponent(loc)}/publishers/google/models/${encodeURIComponent(model)}:generateContent`;
-    const token = await vertexToken(sa);
-    const cats = ['HARM_CATEGORY_HARASSMENT', 'HARM_CATEGORY_HATE_SPEECH', 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'HARM_CATEGORY_DANGEROUS_CONTENT'];
-    const r = await fetch(url, {
+async function callVertexAt(t, loc, system, prompt, maxTokens) {
+    const model = String(t.vxModel || '').trim();
+    if (!model) throw new Error('Vertex 모델을 골라 주세요 (예: gemini-2.5-flash)');
+    const effort = ['low', 'medium', 'high'].includes(t.effort) ? t.effort : 'auto';
+    const r = await fetch('/api/backends/chat-completions/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: ctx().getRequestHeaders(),
         body: JSON.stringify({
-            contents: turnsOf(prompt).map(x => ({ role: x.role === 'assistant' ? 'model' : 'user', parts: [{ text: x.content }] })),
-            ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
-            generationConfig: { maxOutputTokens: maxTokens, temperature: 0.3 },
-            safetySettings: cats.map(category => ({ category, threshold: 'BLOCK_NONE' })),
+            chat_completion_source: 'vertexai', vertexai_auth_mode: 'full', vertexai_region: loc, model,
+            messages: [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt)],
+            use_sysprompt: true, max_tokens: maxTokens, temperature: 0.3, stream: false,
+            reasoning_effort: effort, include_reasoning: false,
         }),
     });
     const body = await r.text();
-    if (!r.ok) throw new Error(`Vertex 오류 ${r.status}: ${body.slice(0, 200)}`);
-    const j = JSON.parse(body);
-    const cand = j?.candidates?.[0];
-    const out = (cand?.content?.parts || []).map(p => p.text || '').join('');
-    if (!out && cand?.finishReason) throw new Error(`Vertex가 답을 막았어요 (${cand.finishReason})`);
-    if (!out && j?.promptFeedback?.blockReason) throw new Error(`Vertex가 요청을 막았어요 (${j.promptFeedback.blockReason})`);
-    return out;
+    let j = null;
+    try { j = JSON.parse(body); } catch { /* not JSON */ }
+    const msg = j?.error?.message || j?.message || (typeof j?.error === 'string' ? j.error : '') || body.slice(0, 200);
+    if (!r.ok || j?.error) {
+        if (/service account|Service Account/i.test(msg)) throw new Error('실리태번에 Vertex 서비스 계정 JSON이 없어요. API 연결 → Chat Completion → Google Vertex AI → 서비스 계정에서 넣어 주세요.');
+        if (/404|NOT_FOUND|not found/i.test(msg)) throw new Error(`Vertex 오류 404: ${msg.slice(0, 160)}`);
+        if (/blocked|SAFETY|PROHIBITED|RECITATION|candidate/i.test(msg)) throw new Error(`Vertex가 답을 막았어요 (${msg.slice(0, 120)})`);
+        throw new Error(`Vertex 오류 ${r.status}${msg && msg !== 'true' ? `: ${msg.slice(0, 200)}` : ' · 실리태번 서버 창에 자세한 내용이 있어요'}`);
+    }
+    return String(j?.choices?.[0]?.message?.content || '');
 }
 
 // ---- refusals and blocks: a refusal is never saved as a section; a blocked request goes to the stand-in model
