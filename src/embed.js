@@ -217,7 +217,15 @@ function corpus(m) {
     return out;
 }
 
-const state = new Map(); // chat id → { sig, coll, items: Map(hash → item), synced, at, busy }
+const state = new Map(); // chat id → { sig, coll, items: Map(hash → item), synced, at, busy, key }
+
+// a cheap fingerprint of what corpus() would read: the archive text, and which messages are hidden and how long they are
+function corpusKey(m) {
+    const chat = ctx().chat || [];
+    let n = 0, len = 0, last = -1;
+    for (let i = 0; i < chat.length; i++) { const x = chat[i]; if (x?.is_system) { n++; len += String(x.mes || '').length; last = i; } }
+    return `${shortHash(String(m?.text || ''))}|${n}|${len}|${last}`; // a new, visible message changes none of it
+}
 let broken = ''; // last error; searching stops until 다시 만들기 or a settings change
 export const embedError = () => broken;
 export const embedState = () => state.get(currentChatId()) || null;
@@ -234,6 +242,10 @@ export async function syncEmbed({ onProgress = null, force = false } = {}) {
     if (st?.busy) return st;
     if (!st || st.sig !== sig) { st = { sig, coll: collId(b), items: new Map(), synced: false, at: 0 }; state.set(id, st); }
     if (force) broken = '';
+    // nothing to do when the archive and the hidden messages are as they were at the last finished sync: this check
+    // is a few milliseconds, cutting and hashing every hidden message again is not (it froze phones on every reply)
+    const key = corpusKey(getMeta());
+    if (!force && st.synced && st.key === key) return st;
     st.busy = true;
     try {
         const all = corpus(getMeta());
@@ -300,6 +312,7 @@ export async function syncEmbed({ onProgress = null, force = false } = {}) {
         st.skipped = skipped;
         st.regionMoved = regionMoved;
         st.items = want;
+        st.key = key;
         st.synced = true;
         st.at = Date.now();
         st.secs = all.filter(x => x.kind === 'sec').length;
