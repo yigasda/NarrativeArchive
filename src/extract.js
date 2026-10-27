@@ -1,10 +1,11 @@
 // Raw message extraction ("[number] name:" format) and the extract popup.
 
-import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
+import { ctx, getMeta, globalSettings, hasChat, saveGlobal, saveMeta } from './core.js';
 import { activePrompt, compressPrompt, referenceSection, renderPromptSettings } from './prompts.js';
 import { headingLines, headingRanges, splitTail } from './sections.js';
 import { refreshStatus } from './status.js';
-import { offstageSet, starNote } from './recall.js';
+import { keepNote } from './keeps.js';
+import { offstageSet } from './recall.js';
 import { ICO_A, svgA } from './theme.js';
 import { chatLabel, copyText, countTokens, download, esc, escRe, fmt, timeLabel } from './util.js';
 
@@ -69,13 +70,13 @@ export function cleanMessage(text, g) {
         .trim();
 }
 
-// ★ messages in the range get a line after the log, so every compress path keeps them in detail
+// 꼭 남길 장면 in the range get their notes after the log, so every compress path keeps them in detail
 export function formatExtract(items, g) {
     const log = items.map(x => {
         const head = `[${x.i}] ${x.name}:`;
         return `${head}\n${x.text}`;
     }).join('\n\n');
-    const note = items.length ? starNote(items[0].i, items[items.length - 1].i) : '';
+    const note = items.length && hasChat() ? keepNote(getMeta(), items[0].i, items[items.length - 1].i) : '';
     return note ? `${log}\n\n[${note}]` : log;
 }
 
