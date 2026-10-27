@@ -1,7 +1,7 @@
 // Search index over the raw chat (hidden messages too) and the archive's sections: BM25 on words. Korean words also
 // count by their stem without the particle, so "세트가" still finds "세트는".
 // Used by 옛 장면 불러오기 (relevant old lines injected before each reply), 질문하기 and the voice notes.
-// Also here: 롤플 밖 메시지 (/comment, OOC, requests to pause the RP, /sys). 꼭 남길 장면 come first among equal hits.
+// Also here: 롤플 밖 메시지 (/comment, OOC, /sys). 꼭 남길 장면 come first among equal hits.
 
 import { glossaryEntries } from './translate.js';
 import { ctx, getMeta, globalSettings, hasChat, saveGlobal, saveMeta } from './core.js';
@@ -17,7 +17,6 @@ export const RECALL_KEY = 'narrative_archive_recall';
 export const OFF_KINDS = {
     comment: ['/comment 코멘트', '분석 QR처럼 /comment로 넣은 메모', '코멘트'],
     ooc: ['OOC 메모', 'OOC:, 사담: 으로 시작하는 메시지', 'OOC'],
-    pause: ['롤플을 멈추자는 요청과 그 답', '"롤플 잠깐 멈추고", "pause the RP" 같은 메시지와 바로 다음 답', '멈춤 요청'],
     narrator: ['/sys 내레이터 메시지', '상태창이나 선택지를 /sys로 띄우는 경우', '/sys'],
 };
 // 3.69's single choice ('keep' | 'aside' | 'all') carries over the first time
@@ -25,18 +24,12 @@ export function offKinds() {
     const g = globalSettings();
     if (!g.offKinds || typeof g.offKinds !== 'object') {
         const old = g.offstage;
-        g.offKinds = old === 'keep' || old === '' ? { comment: false, ooc: false, pause: false, narrator: false } : { comment: true, ooc: true, pause: true, narrator: old === 'all' };
+        g.offKinds = old === 'keep' || old === '' ? { comment: false, ooc: false, narrator: false } : { comment: true, ooc: true, narrator: old === 'all' };
     }
-    return { comment: g.offKinds.comment !== false, ooc: g.offKinds.ooc !== false, pause: g.offKinds.pause !== false, narrator: g.offKinds.narrator === true };
+    return { comment: g.offKinds.comment !== false, ooc: g.offKinds.ooc !== false, narrator: g.offKinds.narrator === true };
 }
 export const setOffKind = (k, on) => { const g = globalSettings(); g.offKinds = { ...offKinds(), [k]: !!on }; saveGlobal(); };
 
-const STEP_OUT = [
-    /\b(pause|stop|break from|step out of|leave|outside)\b(?:\s+\w+){0,4}?\s+(?:the\s+)?(?:role-?play|rp|story)\b/i,
-    /\b(?:role-?play|rp)\s+(?:pause|break|stop)\b/i,
-    /(?:롤플레이|롤플|역할극|알피|RP)\s*(?:은|는|을|를)?\s*(?:잠깐|잠시|일단)?\s*(?:멈|중단|쉬|밖)/i,
-];
-const stepsOut = text => STEP_OUT.some(re => re.test(text));
 const OOC_RE = /^\s*[([{【]?\s*(ooc|out of character|사담|잡담)\s*[:：)\]】]/i;
 
 export function isOffstage(msg, prev = null) {
@@ -44,7 +37,6 @@ export function isOffstage(msg, prev = null) {
     const k = offKinds(), extra = msg.extra || {}, text = String(msg.mes || '');
     if (k.comment && extra.type === 'comment') return true;
     if (k.ooc && OOC_RE.test(text)) return true;
-    if (k.pause && (msg.is_user ? stepsOut(text) : !!prev?.is_user && stepsOut(String(prev.mes || '')))) return true;
     return k.narrator && extra.type === 'narrator';
 }
 // indexes of off-story messages in the chat (or the given list)

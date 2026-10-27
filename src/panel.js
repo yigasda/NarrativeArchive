@@ -388,6 +388,7 @@ export function renderPanel() {
                   <label class="na_set_row" title="답이 잘리면 늘려 주세요"><span>답 최대 길이</span><span class="na_cfg_val"><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="AI 답이 이만큼 쌓일 때마다 조용히 검사하고, 어긋나면 알려 줘요 · 그때마다 토큰이 들어가요"><span><span>이탈 자동 감지</span><small>AI 답이 쌓이면 조용히 검사</small></span>
                     <span class="na_cfg_val"><select id="na_drift_auto" class="text_pole"><option value="0">끄기</option><option value="5">답 5개마다</option><option value="10">답 10개마다</option><option value="20">답 20개마다</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" title="근거 글을 아카이브에서 못 찾은 경고만 AI 기능 모델에 한 번 더 물어봐요 · 그럴 때만 비용이 들어요"><span><span>못 찾은 근거 다시 묻기</span><small>이탈 감지 · 헛경고와 놓친 경고 줄이기</small></span><input type="checkbox" id="na_drift_recheck" class="na_toggle"></label>
                   <button type="button" class="na_set_row na_cfg_go" id="na_gloss_edit" title="이름·장소의 한국어 표기를 정해 두면 번역이 늘 그대로 써요"><span><span>번역 용어집</span><small>이름·장소 한국어 표기</small></span><span class="na_cfg_val"><span><span id="na_gloss_n">0</span>개</span>${svgA(ICO_A.right, 15, 2.2)}</span></button>
                 </div>
                 <small class="na_dim na_conn_note" id="na_conn_note" hidden>키와 JSON은 이 기기의 실리태번 설정에만 저장돼요. 아카이브 백업에는 안 들어가요.</small>
@@ -484,6 +485,7 @@ export function renderAiSettings() {
     const g = globalSettings();
     $('#na_gloss_n').text(hasChat() ? glossaryEntries(getMeta()).length : 0);
     $('#na_drift_auto').val(String(g.driftAuto || 0));
+    $('#na_drift_recheck').prop('checked', g.driftRecheck !== false);
     const a = connSettings('ai');
     const profiles = aiProfiles();
     const opts = [`<option value="">지금 연결된 모델</option>`, ...profiles.map(p => `<option value="${esc(p.id)}">프로필: ${esc(p.name)}</option>`)];
@@ -649,6 +651,7 @@ export function bindPanel() {
         const v = Math.max(256, parseInt(this.value, 10) || 4096);
         globalSettings().aiMaxTokens = v; globalSettings().aiMaxSet = true; this.value = v; saveGlobal();
     });
+    $('#na_drift_recheck').on('change', function () { globalSettings().driftRecheck = this.checked; saveGlobal(); });
     $('#na_drift_auto').on('change', function () { globalSettings().driftAuto = Number(this.value) || 0; saveGlobal(); });
     $('#na_gloss_edit').on('click', needChat(async () => { await openGlossary(); renderAiSettings(); }));
     $('#na_tr_mode').on('change', function () { trSettings().mode = this.value; saveGlobal(); renderAiSettings(); });
