@@ -27,7 +27,7 @@ export const AI_SYS_STYLE = `You are the line editor of a role-play's long-term 
 Never change:
 - what happened, who did it, why, in what order, or what it changed. Every cause stays before its reaction, every trigger before its decision.
 - any quote: a line in quotation marks stays exactly as written, and keeps the words around it that say who said it.
-- the message numbers in parentheses, such as (#88). Every sentence keeps its numbers; when you split a sentence, each part gets the numbers it needs; when you join two, keep both.
+- the message numbers in parentheses, such as (#88). Each bullet keeps exactly the numbers it has, no more and none fewer, and nothing moves from one bullet to another. Every sentence ends with its numbers; when you split a sentence, each part gets the numbers it needs; when you join two, keep both.
 - a reading that belongs to a character ("In her own reckoning", "claiming he…"): it stays theirs.
 - heading lines, "PLOT:", how many bullets there are and what each one covers.
 
@@ -36,15 +36,29 @@ A section may come with its RAW LOG: the messages it covers. It is there so you 
 The VOICE SAMPLES are already in the archive. Never output, copy or continue them; take only their sound.
 Output only the new sections, in the same order, each starting with its heading line, without the <section> tags or the raw log. Nothing else.`;
 
-const cites = t => [...String(t).matchAll(/\(([^()]*#\d[^()]*)\)/g)].flatMap(x => x[1].match(/\d+/g) || []).sort().join(',');
+// which messages a section points to: a split sentence repeats a number and a joined one carries it once,
+// so what must match is the set (none lost, none new), not how often each appears
+const citeSet = t => new Set([...String(t).matchAll(/\(([^()]*#\d[^()]*)\)/g)].flatMap(x => (x[1].match(/\d+/g) || []).map(Number)));
+const bulletsOf = t => String(t).split('\n').filter(l => /^\s*[-*•]\s/.test(l));
+// each bullet keeps the messages it pointed to: '' when it does, else what was lost or added, e.g. "불릿 2 #17 빠짐"
+function citeDrift(before, after) {
+    const a = bulletsOf(before), b = bulletsOf(after);
+    for (let k = 0; k < a.length; k++) {
+        const x = citeSet(a[k]), y = citeSet(b[k] || '');
+        const lost = [...x].filter(n => !y.has(n)), added = [...y].filter(n => !x.has(n));
+        if (lost.length || added.length) return `불릿 ${k + 1} ${[lost.length && `${lost.map(n => `#${n}`).join(', ')} 빠짐`, added.length && `${added.map(n => `#${n}`).join(', ')} 생김`].filter(Boolean).join(' · ')}`;
+    }
+    return '';
+}
 const quotes = t => [...String(t).matchAll(/["“]([^"”\n]{2,})["”]/g)].map(x => x[1].replace(/[.,!?…]+$/, '').trim());
-const bulletCount = t => String(t).split('\n').filter(l => /^\s*[-*•]\s/.test(l)).length;
+const bulletCount = t => bulletsOf(t).length;
 
 // why a rewritten section is not taken ('' when it is)
 export function styleGuard(before, after) {
     if (!after) return '답에 없음';
     if (bulletCount(after) !== bulletCount(before)) return '불릿 수가 바뀜';
-    if (cites(after) !== cites(before)) return '출처 번호가 바뀜';
+    const drift = citeDrift(before, after);
+    if (drift) return `출처 번호가 바뀜 (${drift})`;
     const q = quotes(after).join('\n');
     if (quotes(before).some(x => !q.includes(x))) return '인용이 바뀜';
     if (after.split('\n')[0].trim() !== before.split('\n')[0].trim()) return '제목 줄이 바뀜';
