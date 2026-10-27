@@ -3923,3 +3923,11 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_dr2_ev_ok, .na_dr2_ev_no { margin-left: auto; font-size: 0.75em; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
 .na_dr2_ev_ok { color: var(--na-ok, #3f9a5a); background: var(--na-ok-soft, color-mix(in srgb, #2e8b57 14%, transparent)); }
 .na_dr2_ev_no { color: var(--na-dim); background: var(--na-card2); }
+
+#na_settings .na_off_row { flex-wrap: wrap; row-gap: 8px; }
+#na_settings .na_off_row > span:first-child { flex: 1 1 100%; }
+.na_off_chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.na_off_chip { border: 1px solid var(--na-line); background: transparent; color: var(--na-dim); border-radius: 999px; padding: 4px 12px; font-size: 0.85em; cursor: pointer; }
+.na_off_chip.on { background: var(--na-accent-soft); border-color: transparent; color: var(--na-accent); font-weight: 600; }
+#na_settings .na_off_row .na_off_chips { display: flex !important; flex-direction: row !important; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; }
+#na_settings .na_off_row .na_off_chip { width: auto; flex: 0 0 auto; margin: 0; }

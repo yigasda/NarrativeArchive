@@ -284,7 +284,14 @@ async function callVertexAt({ vxJson, vxModel }, loc, system, prompt, maxTokens)
 
 // ---- refusals and blocks: a refusal is never saved as a section; a blocked request goes to the stand-in model
 
-export const BLOCK_RE = /prompt was blocked|block_?reason|prohibited_content|blocklist|content.?filter|content_policy|moderation|flagged|refus|\bSAFETY\b|PROHIBITED|SPII|막았어요/i;
+// a stop by the provider shows in the errors our own calls throw (Vertex's finish or block reason, Anthropic's refusal,
+// an OpenAI-style content_filter finish), or as policy words in an API error body
+const BLOCK_HINTS = [
+    /막았어요|거절했어요/,
+    /멈춘 이유: content_filter/,
+    /\b(PROHIBITED_CONTENT|BLOCKLIST|SPII|IMAGE_SAFETY)\b/,
+    /\b(content[ _]?policy|usage polic(?:y|ies)|safety (?:system|settings|filters?)|harm_category)\b/i,
+];
 // a refusal opens with an apology or a "can't do this", or points at a policy
 const REFUSAL_HINTS = [
     /\b(sorry|apologi[sz]e)\b/i,
@@ -302,7 +309,7 @@ export const looksRefused = (out, guard) => {
     const head = t.slice(0, 300);
     return REFUSAL_HINTS.some(re => re.test(head));
 };
-export const isBlocked = e => !!e?.refused || BLOCK_RE.test(String(e?.message || e || ''));
+export const isBlocked = e => !!e?.refused || BLOCK_HINTS.some(re => re.test(String(e?.message || e || '')));
 const refusedError = who => Object.assign(new Error(`${who}이 요청을 거절했어요. 거절한 답은 넣지 않았어요`), { refused: true });
 
 // the stand-in for a refused or blocked request: '' none, 'ai' the AI 기능 모델, 'dr' the draft model

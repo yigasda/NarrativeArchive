@@ -344,10 +344,8 @@ export function renderPanel() {
                     <button type="button" class="na_set_row na_cfg_go" id="na_recall_test"><span><span>지금 해 보기</span><small>최근 대화로 무엇이 불려 오는지</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   </div>
                   <label class="na_set_row" title="STATE 블록을 아카이브 블록에서 빼서 최근 대화 가까이에 따로 넣어요 · 토큰은 그대로 · 이 채팅에만"><span><span>STATE 가까이 넣기</span><small>STATE를 최근 대화 가까이 따로</small></span><span class="na_cfg_val"><span class="na_cfg_depth" id="na_state_depth_field">깊이&nbsp;<input type="number" id="na_state_depth" class="text_pole" min="0" max="20"></span><input type="checkbox" id="na_state_on" class="na_toggle"></span></label>
-                  <details class="na_cfg_fold" id="na_off_fold">
-                    <summary class="na_set_row" title="압축 · 원문 뽑기 · 이탈 감지 · 옛 장면 불러오기 · 말투 지문에서 빼요"><span><span>롤플 밖 메시지 빼기</span><small id="na_off_sub"></small></span><span class="na_cfg_val"><span class="na_cfg_chev">${svgA(ICO_A.right, 15, 2.2)}</span></span></summary>
-                    ${Object.entries(OFF_KINDS).map(([k, [name, sub]]) => `<label class="na_set_row na_cfg_sub"><span><span>${name}</span><small>${sub}</small></span><input type="checkbox" class="na_toggle na_off_kind" data-k="${k}"></label>`).join('')}
-                  </details>
+                  <div class="na_set_row na_off_row" id="na_off_fold" title="켠 것은 압축 · 원문 뽑기 · 이탈 감지 · 옛 장면 불러오기 · 말투 지문에서 빠져요"><span><span>롤플 밖 메시지 빼기</span><small id="na_off_sub"></small></span>
+                    <span class="na_off_chips">${Object.entries(OFF_KINDS).map(([k, [name, sub, chip]]) => `<button type="button" class="na_off_chip" data-k="${k}" title="${name} · ${sub}" aria-pressed="false">${chip}</button>`).join('')}</span></div>
                 </div>
                 </div>
               </div>
@@ -1053,7 +1051,7 @@ export function bindPanel() {
     }));
     $('#na_state_on').on('change', needChat(async e => { const m = getMeta(); m.stateRemind = { ...stateCfg(m), on: e.target.checked }; await saveMeta(); applyInjection(); syncPanel(); }));
     $('#na_state_depth').on('change', needChat(async e => { const m = getMeta(); m.stateRemind = { ...stateCfg(m), depth: Math.min(20, Math.max(0, parseInt(e.target.value, 10) || 0)) }; await saveMeta(); applyInjection(); syncPanel(); }));
-    $('#na_off_fold').on('change', '.na_off_kind', function () { setOffKind(this.dataset.k, this.checked); syncPanel(); refreshStatus(); });
+    $('#na_off_fold').on('click', '.na_off_chip', function () { setOffKind(this.dataset.k, !offKinds()[this.dataset.k]); syncPanel(); refreshStatus(); });
     $('#na_fallback').on('change', function () { globalSettings().fallback = this.value; saveGlobal(); });
     $('#na_lore').on('change', function () { setLore({ on: this.checked }); syncPanel(); });
     $('#na_lore_budget').on('change', function () { setLore({ budget: Number(this.value) }); syncPanel(); });
@@ -1123,7 +1121,7 @@ export function syncPanel() {
         $('#na_recall_sub').text(r.on ? `최대 ${r.k}줄 · ${fmt(r.budget)} 토큰 · 깊이 ${r.depth}${last ? ` · 지난 답에 ${last.lines.length}줄` : ''}` : '숨긴 원문에서 지금 대화와 맞는 줄을 찾아 넣어요');
         const sc = stateCfg(m);
         $('#na_state_on').prop('checked', sc.on); $('#na_state_depth').val(sc.depth); $('#na_state_depth_field').prop('hidden', !sc.on);
-        { const ok = offKinds(); $('#na_off_fold .na_off_kind').each(function () { this.checked = !!ok[this.dataset.k]; }); const on = Object.keys(OFF_KINDS).filter(k => ok[k]); $('#na_off_sub').text(on.length ? `${on.length}가지 빼는 중` : '아무것도 안 빼요'); }
+        { const ok = offKinds(); $('#na_off_fold .na_off_chip').each(function () { $(this).toggleClass('on', !!ok[this.dataset.k]).attr('aria-pressed', String(!!ok[this.dataset.k])); }); const on = Object.keys(OFF_KINDS).filter(k => ok[k]); $('#na_off_sub').text(on.length ? `누르면 켜고 꺼요 · ${on.length}가지 빼는 중` : '누르면 켜고 꺼요 · 지금은 아무것도 안 빼요'); }
         $('#na_fallback').val(fallbackOf());
         const lc = loreCfg();
         $('#na_lore').prop('checked', lc.on); $('#na_lore_budget').val(lc.budget); $('#na_lore_budget_row').toggle(lc.on);
