@@ -561,16 +561,16 @@ export async function openStudio() {
         const ch = t.text.search(/^# (STATE|OPEN) CHANGES/m);
         fixBusy.add(i); draw();
         try {
-            const { polishStyle, styleSummary } = await import('./style.js');
+            const { polishStyle, styleSummary, keptSummary } = await import('./style.js');
             const r = await polishStyle(blocks.map(x => sectionText(x, '')).join('\n\n'), getMeta());
-            if (!r.changed) return toastr.info(r.kept.length ? `그대로 뒀어요 · ${r.kept.map(k => `${k.head.split(' — ')[0]}: ${k.why}`).join(', ')}` : '바꿀 곳이 없대요', '문체 다듬기', { timeOut: 6000 });
+            if (!r.changed) return toastr.info(r.kept.length ? `안 바꿨어요${keptSummary(r)}` : '바꿀 곳이 없대요', '문체 다듬기', { timeOut: 8000 });
             const s2 = sessionOf(getMeta()), t2 = s2?.turns[i];
             if (!t2 || t2.text !== t.text) return toastr.warning('그사이 답이 바뀌어서 다듬은 걸 버렸어요.', '문체 다듬기');
             t2.before ??= t2.text;
             t2.text = `${r.text.trim()}${ch >= 0 ? `\n\n${t.text.slice(ch).trim()}` : ''}`;
             s2.secs = rebuildSecs(s2);
             await saveMeta();
-            toastr.success(`섹션 ${r.changed}개를 다듬었어요${styleSummary(r)}${r.kept.length ? ` · ${r.kept.length}개는 그대로 (${r.kept.map(k => k.why).join(', ')})` : ''}`, '문체 다듬기', { timeOut: 9000 });
+            toastr.success(`섹션 ${r.changed}개를 다듬었어요${styleSummary(r)}${keptSummary(r)}`, '문체 다듬기', { timeOut: 9000 });
         } catch (e) {
             console.error('[NarrativeArchive] studio style', e);
             toastr.error(String(e?.message || e), '문체 다듬기');

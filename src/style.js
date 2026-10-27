@@ -51,22 +51,40 @@ The VOICE SAMPLES are already in the archive. Never output, copy or continue the
 OUTPUT
 For each section in order: its <notes> block, then the section starting with its heading line. No <section> tags, no raw log, nothing else.`;
 
-// which messages a section points to: a split sentence repeats a number and a joined one carries it once,
-// so what must match is the set (none lost, none new), not how often each appears
-const citeSet = t => new Set([...String(t).matchAll(/\(([^()]*#\d[^()]*)\)/g)].flatMap(x => (x[1].match(/\d+/g) || []).map(Number)));
-const bulletsOf = t => String(t).split('\n').filter(l => /^\s*[-*•]\s/.test(l));
-// each bullet keeps the messages it pointed to: '' when it does, else what was lost or added, e.g. "불릿 2 #17 빠짐"
-function citeDrift(before, after) {
-    const a = bulletsOf(before), b = bulletsOf(after);
-    for (let k = 0; k < a.length; k++) {
-        const x = citeSet(a[k]), y = citeSet(b[k] || '');
-        const lost = [...x].filter(n => !y.has(n)), added = [...y].filter(n => !x.has(n));
-        if (lost.length || added.length) return `불릿 ${k + 1} ${[lost.length && `${lost.map(n => `#${n}`).join(', ')} 빠짐`, added.length && `${added.map(n => `#${n}`).join(', ')} 생김`].filter(Boolean).join(' · ')}`;
+// which messages a bullet points to. A range "(#5–#7)" stands for 5, 6 and 7, so a sentence split out of it with (#6)
+// is not a new number; what may not happen is a number the bullet did not cover, or one it named going missing
+const CITE_PAREN = /\(([^()]*#\d[^()]*)\)/g;
+function citeNums(t) {
+    const singles = new Set(), ranges = [], covered = new Set();
+    for (const mk of String(t).matchAll(CITE_PAREN)) {
+        for (const r of mk[1].matchAll(/#?(\d+)\s*(?:[–—~-]\s*#?(\d+))?/g)) {
+            const x = Number(r[1]), y = r[2] !== undefined ? Number(r[2]) : x, lo = Math.min(x, y), hi = Math.max(x, y);
+            if (lo === hi) singles.add(lo); else ranges.push([lo, hi]);
+            for (let n = lo; n <= hi && n - lo <= 60; n++) covered.add(n);
+        }
     }
-    return '';
+    return { singles, ranges, covered };
+}
+const bulletsOf = t => String(t).split('\n').filter(l => /^\s*[-*•]\s/.test(l));
+// one bullet: '' when it keeps its messages, else what was lost or added, e.g. "#17 빠짐"
+function bulletCiteDrift(before, after) {
+    const x = citeNums(before), y = citeNums(after);
+    // a single number must still be there; a range must keep at least one of its messages
+    const lost = [...[...x.singles].filter(n => !y.covered.has(n)), ...x.ranges.filter(([lo, hi]) => ![...y.covered].some(n => n >= lo && n <= hi)).map(([lo, hi]) => `${lo}–#${hi}`)];
+    // a number between the bullet's own first and last is a split sentence, not content from elsewhere
+    const lo = Math.min(...x.covered), hi = Math.max(...x.covered);
+    const added = [...y.covered].filter(n => !x.covered.has(n) && !(n > lo && n < hi));
+    return [lost.length && `${lost.map(n => `#${n}`).join(', ')} 빠짐`, added.length && `${added.map(n => `#${n}`).join(', ')} 생김`].filter(Boolean).join(' · ');
 }
 const quotes = t => [...String(t).matchAll(/["“]([^"”\n]{2,})["”]/g)].map(x => x[1].replace(/[.,!?…]+$/, '').trim());
-const bulletCount = t => bulletsOf(t).length;
+// one bullet rewritten: '' when it can be taken
+function bulletGuard(before, after) {
+    const drift = bulletCiteDrift(before, after);
+    if (drift) return `출처 번호 ${drift}`;
+    const q = quotes(after).join('\n');
+    if (quotes(before).some(x => !q.includes(x))) return '인용이 바뀜';
+    return '';
+}
 
 // ---- what the extension can count in the sentences, sent to the editor as FOUND and checked again after
 const NOT_NAMES = new Set(['he', 'she', 'they', 'his', 'her', 'their', 'him', 'it', 'its', 'the', 'a', 'an', 'when', 'but', 'then', 'after', 'as', 'at', 'in', 'on', 'so', 'and', 'with', 'by', 'while', 'once', 'still', 'this', 'that', 'there']);
@@ -107,17 +125,25 @@ export function styleLint(text, { english = true } = {}) {
     return [...new Set(out)];
 }
 
-// why a rewritten section is not taken ('' when it is)
-export function styleGuard(before, after) {
-    if (!after) return '답에 없음';
-    if (bulletCount(after) !== bulletCount(before)) return '불릿 수가 바뀜';
-    const drift = citeDrift(before, after);
-    if (drift) return `출처 번호가 바뀜 (${drift})`;
-    const q = quotes(after).join('\n');
-    if (quotes(before).some(x => !q.includes(x))) return '인용이 바뀜';
-    if (after.split('\n')[0].trim() !== before.split('\n')[0].trim()) return '제목 줄이 바뀜';
-    return '';
+// a rewritten section, bullet by bullet: the heading and the number of bullets must hold, or it all stays;
+// then each bullet that keeps its numbers and quotes is taken, and one that does not stays as it was.
+// Returns { text, why, kept: ['B1: …'] } — why is set when nothing could be taken
+export function mergeRewrite(before, after) {
+    if (!after) return { text: before, why: '답에 없음', kept: [] };
+    if (after.split('\n')[0].trim() !== before.split('\n')[0].trim()) return { text: before, why: '제목 줄이 바뀜', kept: [] };
+    const a = bulletsOf(before), b = bulletsOf(after);
+    if (a.length !== b.length) return { text: before, why: '불릿 수가 바뀜', kept: [] };
+    const kept = [];
+    let k = 0;
+    const text = before.split('\n').map(l => {
+        if (!/^\s*[-*•]\s/.test(l)) return l;
+        const i = k++, why = bulletGuard(a[i], b[i]);
+        if (why) { kept.push(`B${i + 1}: ${why}`); return l; }
+        return b[i];
+    }).join('\n');
+    return { text, why: kept.length === a.length ? kept.join(', ') : '', kept };
 }
+export const styleGuard = (before, after) => { const r = mergeRewrite(before, after); return r.why || (r.kept.length ? r.kept.join(', ') : ''); };
 
 // draft: the append window's text; withRaw: each section goes with the messages it covers (off: the pass is about
 // wording alone, the guards keep the facts, and a long raw log only pulls the editor's eye off the checklist).
@@ -149,11 +175,12 @@ export async function polishStyle(draft, m, { withRaw = false, rawOf = null, aga
     const kept = [];
     // swap from the end, so the earlier positions stay right
     for (const b of [...blocks].reverse()) {
-        const a = got.find(x => x.key === b.key)?.text || '';
-        const why = styleGuard(b.text, a);
-        if (why) { kept.unshift({ head: b.head.replace(/^##\s*/, ''), why }); continue; }
-        if (a.trim() === b.text.trim()) continue;
-        text = `${text.slice(0, b.start)}${a}\n\n${text.slice(b.end).replace(/^\s+/, '')}`;
+        const mg = mergeRewrite(b.text, got.find(x => x.key === b.key)?.text || '');
+        const head = b.head.replace(/^##\s*/, '');
+        if (mg.why) { kept.unshift({ head, why: mg.why }); continue; }
+        if (mg.kept.length) kept.unshift({ head, why: `${mg.kept.join(', ')} · 그 불릿만 그대로`, part: true });
+        if (mg.text.trim() === b.text.trim()) continue;
+        text = `${text.slice(0, b.start)}${mg.text}\n\n${text.slice(b.end).replace(/^\s+/, '')}`;
         changed++;
     }
     // what is still there after the pass, counted the same way
@@ -174,3 +201,5 @@ export async function polishStyle(draft, m, { withRaw = false, rawOf = null, aga
 
 // one line for the toast: how many changes the editor listed, and what the count still finds
 export const styleSummary = r => `${r.notes?.length ? ` · 고친 점 ${r.notes.length}개` : ''}${r.left?.length ? ` · 아직 남은 것 ${r.left.length}개: ${r.left.slice(0, 3).join(' / ')}${r.left.length > 3 ? ' …' : ''}` : ' · 셀 수 있는 건 다 고쳐졌어요'}`;
+// what stayed as it was: whole sections, or single bullets inside a section that was otherwise taken
+export const keptSummary = r => (r.kept?.length ? ` · 그대로 둔 것: ${r.kept.map(k => `${k.head.split(' — ')[0]} ${k.why.replace(/ · 그 불릿만 그대로$/, '')}`).join(' / ')}` : '');

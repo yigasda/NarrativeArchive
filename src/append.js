@@ -854,10 +854,10 @@ export async function openAppend(prefill = {}) {
         if (apf.busy) return;
         apf.busy = true;
         try {
-            const { polishStyle, styleSummary } = await import('./style.js');
+            const { polishStyle, styleSummary, keptSummary } = await import('./style.js');
             const r = await withSpinner($(this), '다듬는 중', () => polishStyle(draft, m));
             if (!r) return;
-            const why = r.kept.length ? ` · 그대로 둔 섹션 ${r.kept.length}개 (${r.kept.map(k => `${k.head.split(' — ')[0]}: ${k.why}`).join(', ')})` : '';
+            const why = keptSummary(r);
             if (!r.changed) return toastr.info(`바꾼 섹션이 없어요${why}`, '문체 다듬기', { timeOut: 6000 });
             if (apf.original === null) apf.original = draft;
             apf.steps.push(draft);
