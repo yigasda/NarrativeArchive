@@ -40,51 +40,13 @@ export const extractToText = items => items.map(x => `[${x.i}] ${x.name}:\n${x.t
 
 // What goes to a model from a chat message, always the same way, with no list of tags to keep up:
 // - out whole: a model's own reasoning (<think>, <thinking>, <reasoning>, also when only its closing half is left), a
-//   preset's <scene_plan>,
-//   what is not writing at all (style and script blocks, comments, embedded base64 data), and a preset's long block
-//   beside the story (below)
+//   preset's <scene_plan>, and what is not writing at all (style and script blocks, comments, embedded base64 data)
 // - every other tag is markup: the tags go and their text stays. Text styling (bold, italics, a span…) just drops away;
 //   any other tag, a preset's own included, stands for a block and leaves a line break, so its text does not run into
 //   the next (a tracker still gives its date and place)
 const REASONING = 'think|thinking|reasoning';
-// a preset's own block (a tag that is not HTML, such as a planning or bookkeeping block) that is long and sits beside the
-// story goes whole as well. A short one (a tracker line) stays as text, and one that holds the story itself (nothing much
-// left without it) stays too. What counts is the size, never the tag's name
-const HTML_TAG = /^(?:a|abbr|article|aside|b|big|blockquote|body|br|caption|center|code|col|dd|del|details|dfn|div|dl|dt|em|figcaption|figure|font|footer|h[1-6]|head|header|hr|html|i|img|ins|kbd|label|li|main|mark|nav|ol|p|pre|q|rp|rt|ruby|s|samp|section|small|span|strike|strong|sub|summary|sup|table|tbody|td|tfoot|th|thead|time|tr|tt|u|ul|var)$/i;
-const LONG_BLOCK = 300, STORY_LEFT = 150;
 const INLINE_TAGS = /^(?:b|i|u|s|em|strong|span|a|small|big|sub|sup|mark|font|code|kbd|del|ins|q|abbr|ruby|rt|rp)$/i;
 const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', '#39': "'" };
-const textLen = x => x.replace(/<[^>\n]+>/g, '').trim().length;
-// a block that reads like a list ("1. …", "- …", "Mood: …" lines): planning or bookkeeping, not the story
-const listLike = x => { const ls = x.replace(/<[^>\n]+>/g, '\n').split('\n').map(l => l.trim()).filter(Boolean); return ls.length >= 3 && ls.filter(l => /^(?:[-*•▪◦]|\d+[.)]|#{1,6}\s|[^\s:：]{1,24}\s*[:：])/.test(l)).length / ls.length >= 0.4; };
-function dropPresetBlocks(t) {
-    // the preset's own tag pairs, nested ones too
-    const pairs = [], stack = [];
-    for (const mt of t.matchAll(/<(\/?)([a-zA-Z][\w:-]*)\b[^>]*>/g)) {
-        const name = mt[2].toLowerCase();
-        if (HTML_TAG.test(name)) continue;
-        if (!mt[1]) { stack.push({ name, start: mt.index, from: mt.index + mt[0].length }); continue; }
-        const k = stack.map(x => x.name).lastIndexOf(name);
-        if (k < 0) continue;
-        const open = stack[k]; stack.length = k;
-        pairs.push({ start: open.start, end: mt.index + mt[0].length, inner: t.slice(open.from, mt.index) });
-    }
-    const all = textLen(t);
-    // a block holding nearly the whole message is the story itself; a long one beside the story goes
-    const drop = pairs.filter(p => textLen(p.inner) >= LONG_BLOCK && all - textLen(p.inner) >= STORY_LEFT);
-    const outer = drop.filter(p => !drop.some(q => q !== p && q.start <= p.start && q.end >= p.end));
-    const left = () => all - outer.reduce((n, p) => n + textLen(p.inner), 0);
-    // taking every one would leave next to nothing: one of them is the story, and stays. The story is the one with
-    // dialogue in it, then the one that does not read like a list, then the longest
-    if (outer.length > 1 && left() < STORY_LEFT) {
-        const talk = x => (/["“”「」『』]/.test(x.replace(/<[^>\n]+>/g, '')) ? 1 : 0);
-        const keep = [...outer].sort((a, b) => talk(b.inner) - talk(a.inner) || Number(listLike(a.inner)) - Number(listLike(b.inner)) || textLen(b.inner) - textLen(a.inner))[0];
-        outer.splice(outer.indexOf(keep), 1);
-    }
-    let out = t;
-    for (const p of [...outer].sort((a, b) => b.start - a.start)) out = `${out.slice(0, p.start)}\n${out.slice(p.end)}`;
-    return out;
-}
 export function cleanMessage(text) {
     let t = String(text || '');
     const close = new RegExp(`</(?:${REASONING})\\s*>`, 'i'), close1 = t.search(close);
@@ -92,7 +54,6 @@ export function cleanMessage(text) {
     t = t.replace(new RegExp(`<(${REASONING}|scene_plan|style|script)\\b[^>]*>[\\s\\S]*?</\\1\\s*>`, 'gi'), '')
         .replace(/<!--[\s\S]*?-->/g, '')
         .replace(/data:[\w.+-]+\/[\w.+-]+;base64,[A-Za-z0-9+/=]+/g, '');
-    t = dropPresetBlocks(t);
     t = t.replace(/<\/?([a-zA-Z][\w:-]*)\b[^>\n]*\/?>/g, (tag, name) => (INLINE_TAGS.test(name) ? '' : '\n'))
         .replace(/&(amp|lt|gt|quot|apos|nbsp|#39);/g, (e, k) => ENTITIES[k]);
     return t.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
