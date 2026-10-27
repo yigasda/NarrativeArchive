@@ -288,6 +288,8 @@ export function renderPanel() {
                 <div class="na_cfg_label"><i class="fa-solid fa-syringe"></i> 주입</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
+                  <label class="na_set_row" title="아래 위치 · 깊이 · 역할, STATE 가까이 넣기, 회상 깊이를 한 번에 맞춰요 · 고른 뒤에도 칸마다 직접 바꿀 수 있어요 · 이 채팅에만"><span><span>자리 묶음</span><small id="na_place_sub">넣는 자리를 한 번에</small></span>
+                    <span class="na_cfg_val"><select id="na_place_preset" class="text_pole">${Object.entries(PLACE_PRESETS).map(([k, p]) => `<option value="${k}">${p.name}</option>`).join('')}<option value="custom" disabled>직접 정함</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row"><span>아카이브 주입</span><input type="checkbox" id="na_enabled" class="na_toggle"></label>
                   <label class="na_set_row"><span>위치</span>
                     <span class="na_cfg_val"><select id="na_position" class="text_pole">${Object.entries(POSITIONS).map(([v, l]) => `<option value="${v}">${l.replace(/\s*\(깊이\)$/, '')}</option>`).join('')}</select><span class="na_cfg_depth" id="na_depth_field">&nbsp;· 깊이&nbsp;<input type="number" id="na_depth" class="text_pole" min="0" max="999" title="채팅 끝에서 몇 번째 메시지 위에 넣을지"></span>${svgA(ICO_A.right, 15, 2.2)}</span>
@@ -1009,12 +1011,22 @@ export function bindPanel() {
         if (!hasChat()) return;
         const m = getMeta();
         m.depth = Math.max(0, parseInt(this.value, 10) || 0); this.value = m.depth;
-        await saveMeta(); applyInjection();
+        await saveMeta(); applyInjection(); syncPanel();
     });
+    $('#na_place_preset').on('change', needChat(async e => {
+        const p = PLACE_PRESETS[e.target.value];
+        if (!p) return;
+        const m = getMeta();
+        Object.assign(m, { position: p.position, depth: p.depth, role: p.role });
+        m.stateRemind = { ...stateCfg(m), on: p.state.on, depth: p.state.depth };
+        m.recall = { ...(m.recall || {}), depth: p.recall };
+        await saveMeta(); applyInjection(); await runRecall(); syncPanel();
+        toastr.success(`${p.name}으로 맞췄어요`, '자리 묶음', { timeOut: 2500 });
+    }));
     $('#na_role').on('change', async function () {
         if (!hasChat()) return;
         const m = getMeta();
-        m.role = parseInt(this.value, 10) || 0; await saveMeta(); applyInjection();
+        m.role = parseInt(this.value, 10) || 0; await saveMeta(); applyInjection(); syncPanel();
     });
     $('#na_kw_test').on('click', needChat(openKeywordTest));
     const setRouter = async patch => { const m = getMeta(); m.router = { ...routerCfg(m), ...patch }; routerState.delete(currentChatId()); await saveMeta(); applyInjection(); syncPanel(); };
@@ -1100,6 +1112,22 @@ export function bindPanel() {
     });
 }
 
+// 자리 묶음: where the archive, the STATE block and the recall block go, set together
+export const PLACE_PRESETS = {
+    near: { name: '기본', sub: '아카이브는 채팅 안 깊이 1 · STATE 따로 안 뺌', position: 1, depth: 1, role: 0, state: { on: false, depth: 3 }, recall: 2 },
+    stable: { name: '안정형', sub: '아카이브는 메인 프롬프트 뒤 · STATE 깊이 3 · 회상 깊이 2', position: 0, depth: 1, role: 0, state: { on: true, depth: 3 }, recall: 2 },
+    recent: { name: '최근 강조형', sub: '아카이브도 채팅 안 깊이 6 · STATE 깊이 2 · 회상 깊이 1 · 앞쪽을 자꾸 놓칠 때', position: 1, depth: 6, role: 0, state: { on: true, depth: 2 }, recall: 1 },
+    user: { name: '유저 메시지형', sub: '최근 강조형을 유저 역할로 · 시스템 지시를 약하게 따르는 모델용', position: 1, depth: 6, role: 1, state: { on: true, depth: 2 }, recall: 1 },
+};
+export function placePresetOf(m) {
+    const sc = stateCfg(m), rc = recallCfg(m);
+    return Object.keys(PLACE_PRESETS).find(k => {
+        const p = PLACE_PRESETS[k];
+        return Number(m.position) === p.position && (p.position !== 1 || Number(m.depth) === p.depth) && Number(m.role) === p.role
+            && sc.on === p.state.on && (!p.state.on || sc.depth === p.state.depth) && rc.depth === p.recall;
+    }) || null;
+}
+
 export let cfgFadeOpen = false;
 export function syncPanel() {
     if (!$('#na_settings').length) return;
@@ -1115,6 +1143,11 @@ export function syncPanel() {
     $('#na_depth').val(m.depth);
     $('#na_depth_field').prop('hidden', Number(m.position) !== 1);
     $('#na_role').val(String(m.role));
+    {
+        const cur = placePresetOf(m);
+        $('#na_place_preset').val(cur || 'custom');
+        $('#na_place_sub').text(cur ? PLACE_PRESETS[cur].sub : '칸마다 직접 정했어요');
+    }
     $('#na_muted_n').text(mutedCount(m));
     $('#na_link_depth').val(m.linkDepth || 4);
     { const kn = keepsOf(m).length; $('#na_keeps_sub').text(kn ? `${kn}개 · 압축할 때 자세히, 망각 곡선은 그대로` : '압축할 때 자세히 남길 구간과 그 이유'); }
