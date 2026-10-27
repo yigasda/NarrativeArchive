@@ -143,14 +143,17 @@ export function findRewrites(eBody, pBody) {
         const pre = (r[1] || '').trim(), to = Math.max(parseInt(r[2], 10), parseInt(r[4], 10));
         covered.set(pre, Math.max(covered.get(pre) ?? -1, to));
     }
-    const groupTitles = new Set(parseSections(eBody).filter(x => x.group || x.level === 1).map(x => x.title.trim()));
+    // the archive's title or a divider counts as the same one even when its numbers moved on:
+    // "# A × B — Context Archive (#0–#150)" pasted over an archive that says (#0–#104)
+    const bare = t => t.trim().replace(/#?\d+/g, '#').replace(/\s+/g, ' ');
+    const groupTitles = new Set(parseSections(eBody).filter(x => x.group || x.level === 1).map(x => bare(x.title)));
     const out = [];
     for (const sec of parseSections(pBody)) {
         if (sec.title === '(머리말)' || sec.title === '(제목 없음)') continue;
         const r = sec.title.match(RANGE_HEAD);
         if (!r) {
             // a "# ── Y2 ──" divider (or the archive title) that the archive already has
-            if (sec.level === 1 && groupTitles.has(sec.title.trim()) && !sec.note) out.push({ sec, kind: 'divider' });
+            if (sec.level === 1 && groupTitles.has(bare(sec.title))) out.push({ sec, kind: 'divider' });
             continue;
         }
         const pre = (r[1] || '').trim(), from = parseInt(r[2], 10), to = parseInt(r[4], 10);
