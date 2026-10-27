@@ -182,7 +182,7 @@ const numHash = s => { let h = 0x811c9dc5 ^ 0x5bd1; for (let i = 0; i < s.length
 // what goes in: every numbered section in pieces of about 900 characters, each with its title in front,
 // and every hidden raw passage (회상 finds old lines from those)
 const PIECE = 900;
-const RAW_PIECE = 1500;
+const RAW_PIECE = 1800; // fills one text up to MAX_TEXT, with room left for the speaker names
 function corpus(m) {
     const out = [];
     for (const x of sectionItems(m)) {

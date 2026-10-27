@@ -4012,3 +4012,21 @@ body.na_darkui #na_settings { --sv-page: #2F2621; --sv-card: #3A2F28; --sv-line:
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val :is(select, input) { color: var(--sv-val) !important; }
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_go > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_chev { color: var(--sv-val); }
 .na_cc_note { flex: 1; min-width: 0; font-size: 0.86em; color: var(--na-dim); line-height: 1.4; }
+
+/* ---- 3.81.8: popups don't squeeze their cards (rows were cut off in 아카이브에 추가) */
+.na_v2 > * { flex-shrink: 0; }
+
+/* the position row: the place name gets the room, the depth box only what a number needs */
+#na_settings .na_tab_pane[data-pane="config"] .na_set_row > .na_cfg_val:has(#na_position) { max-width: 74%; }
+#na_settings .na_tab_pane[data-pane="config"] .na_set_row .na_cfg_val #na_depth { width: 2.6ch !important; min-width: 2.6ch; field-sizing: fixed; text-align: right; }
+#na_settings .na_tab_pane[data-pane="config"] .na_set_row .na_cfg_val #na_position { field-sizing: content; }
+
+/* connection boxes (custom API, Vertex): the fields sit flat in the box whatever a theme does to inputs */
+#na_settings .na_cc .na_cc_box .na_cc_row input.text_pole,
+#na_settings .na_cc .na_cc_box .na_cc_row input.text_pole:is(:hover, :focus, :read-only, :disabled, :autofill) {
+    -webkit-appearance: none !important; appearance: none !important;
+    background: transparent !important; background-color: transparent !important; background-image: none !important;
+    border: 0 !important; outline: none !important; box-shadow: none !important; border-radius: 0 !important;
+    margin: 0 !important; padding: 0 !important; height: 40px !important; min-height: 0 !important; color: inherit !important;
+}
+#na_settings .na_cc .na_cc_box .na_cc_row input.text_pole:autofill { -webkit-text-fill-color: currentColor; transition: background-color 9999s; }
