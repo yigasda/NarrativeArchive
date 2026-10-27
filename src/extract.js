@@ -39,12 +39,12 @@ export function guessEndNumber(text) {
 export const extractToText = items => items.map(x => `[${x.i}] ${x.name}:\n${x.text}`).join('\n\n');
 
 // What goes to a model from a chat message, always the same way, with no list of tags to keep up:
-// - out whole: a model's own reasoning (<think>, <thinking>, <reasoning>, also when only its closing half is left), a
+// - out whole: a model's own reasoning (<think>, <thinking>, <thought>, <reasoning>, also when only its closing half is left), a
 //   preset's <scene_plan>, and what is not writing at all (style and script blocks, comments, embedded base64 data)
 // - every other tag is markup: the tags go and their text stays. Text styling (bold, italics, a span…) just drops away;
 //   any other tag, a preset's own included, stands for a block and leaves a line break, so its text does not run into
 //   the next (a tracker still gives its date and place)
-const REASONING = 'think|thinking|reasoning';
+const REASONING = 'think|thinking|thought|reasoning';
 const INLINE_TAGS = /^(?:b|i|u|s|em|strong|span|a|small|big|sub|sup|mark|font|code|kbd|del|ins|q|abbr|ruby|rt|rp)$/i;
 const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', '#39': "'" };
 export function cleanMessage(text) {
