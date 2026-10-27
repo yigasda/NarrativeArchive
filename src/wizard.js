@@ -9,7 +9,7 @@ import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta } from '
 import { driftHtml } from './drift.js';
 import { hasChanges, resolveChanges } from './statechg.js';
 import { checkCounts, countCheckOn } from './rulecheck.js';
-import { lastSections, chunksFromStarts, detectScenes, sceneChunks, sceneCompress, sceneModel, sceneModelLabel, sceneSize, scenesText, startsFromText, stateModel } from './scenes.js';
+import { lastSections, chunksFromStarts, cutScores, detectScenes, sceneChunks, sceneCompress, sceneModel, sceneModelLabel, sceneSize, scenesText, startsFromText, stateModel } from './scenes.js';
 import { buildExtract, cleanMessage, formatExtract, guessEndNumber } from './extract.js';
 import { BASIC_PROMPT, LANG_NAME, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressParts, compressPrompt, dropReproduced, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, trimEnd } from './sections.js';
@@ -127,21 +127,34 @@ export function rangeRaw(c, g, from, to, keepUpTo = -1) {
 export const CHUNK_TOK = 20000;
 export const chunkTok = () => CHUNK_TOK;
 const estTok = t => { const s = String(t), h = (s.match(/[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]/g) || []).length; return Math.ceil(h + (s.length - h) / 3.6); };
-// parts of even size (no lone message left at the end): as many parts as the size needs, then equal shares
-export function chunkItems(items) {
+// parts of about even size, each starting just before a user turn (a reply stays with the turn it answers): near each
+// mark, within a quarter of a part either way, a new day, place or a jump of hours wins, then a new room, then the
+// nearest user turn. With no user turn that near (a long run of bot messages), the cut falls at the mark itself
+export function chunkItems(items, { chat = ctx().chat || [] } = {}) {
     const sizes = items.map(x => estTok(x.text) + 8);
     const total = sizes.reduce((a, t) => a + t, 0);
-    const size = chunkTok();
-    const n = size ? Math.max(1, Math.ceil(total / size)) : 1;
+    const n = Math.max(1, Math.ceil(total / chunkTok()));
+    if (n <= 1 || items.length < 2) return [items];
     const target = total / n;
-    const out = [];
-    let cur = [], tok = 0;
-    items.forEach((x, i) => {
-        if (cur.length && out.length < n - 1 && tok + sizes[i] / 2 > target) { out.push(cur); cur = []; tok = 0; }
-        cur.push(x); tok += sizes[i];
-    });
-    if (cur.length) out.push(cur);
-    return out;
+    const cum = [0];
+    for (const t of sizes) cum.push(cum[cum.length - 1] + t);
+    const score = cutScores(items, { chat });
+    const cuts = [];
+    let prev = 0;
+    for (let j = 1; j < n; j++) {
+        const want = target * j, lo = want - target / 4, hi = want + target / 4;
+        let best = -1, bestScore = 0, bestDist = Infinity;
+        for (let k = prev + 1; k < items.length; k++) {
+            if (cum[k] < lo) continue;
+            if (cum[k] > hi) break;
+            const d = Math.abs(cum[k] - want);
+            if (score[k] > bestScore || (score[k] && score[k] === bestScore && d < bestDist)) { best = k; bestScore = score[k]; bestDist = d; }
+        }
+        if (best < 0) best = cum.findIndex((c, k) => k > prev && k < items.length && c >= want);
+        if (best <= prev) break;
+        cuts.push(best); prev = best;
+    }
+    return [0, ...cuts].map((at, j) => items.slice(at, cuts[j] ?? items.length)).filter(x => x.length);
 }
 
 // The draft model compresses items part by part. Each part sees the archive plus what the parts before it wrote

@@ -47,6 +47,17 @@ function sceneJump(a, b) {
     return a.room && b.room && a.room !== b.room ? 1 : 0;
 }
 
+// how good a place each message is to start a new part of a long raw log: 0 = never (not a user turn, so the reply would
+// leave the turn it answers), 1 = just before a user turn, 2 = and a new room, 3 = and a new day, place or 3+ hours on
+export function cutScores(items, { re = trackerRe(), chat = ctx().chat || [] } = {}) {
+    let rx = null;
+    try { rx = re ? new RegExp(re, 's') : null; } catch { rx = null; }
+    const trk = items.map(x => readTracker(chat[x.i]?.mes, rx));
+    const before = k => { for (let j = k - 1; j >= 0; j--) if (trk[j]) return trk[j]; return null; };
+    const after = k => { for (let j = k; j < items.length; j++) if (trk[j]) return trk[j]; return null; };
+    return items.map((x, k) => (k && chat[x.i]?.is_user ? 1 + sceneJump(before(k), after(k)) : 0));
+}
+
 // items (in order) → [[items], …]; cuts only just before a user turn, so a reply stays with the turn it answers
 export function sceneChunks(items, { size = sceneSize(), re = trackerRe(), chat = ctx().chat || [] } = {}) {
     let rx = null;
