@@ -2289,7 +2289,7 @@ body.na_darkui .na_cp_num { color: #F2B48C; }
 /* the value at the right: plain dim text, the select / number box hidden in it */
 .na_set_row > .na_cfg_val, .na_cfg_val { flex: none; flex-direction: row; max-width: 58%; display: flex; align-items: center; gap: 0; color: var(--na-dim); font-size: 0.929em; white-space: nowrap; }
 .na_cfg_val > .na_svg, .na_cfg_val > .na_cfg_chev { margin-left: 4px; }
-#na_settings .na_tab_pane[data-pane="config"] .na_set_row .na_cfg_val :is(select, input[type="number"]) {
+#na_settings .na_tab_pane[data-pane="config"] .na_set_row .na_cfg_val :is(select, input[type="number"], input[type="text"]) {
     appearance: none; -moz-appearance: textfield; margin: 0 !important; padding: 0 !important; min-height: 0; height: auto; width: auto;
     border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; outline: 0;
     color: inherit; font: inherit; font-size: 1em; line-height: 1.5; text-align: right; cursor: pointer;
@@ -3964,3 +3964,6 @@ body:not(.na_darkui) #na_settings .na_cp_mbtn.on { background: #FFFAF6; }
 #na_settings .na_cfg_ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--hm-acc-soft); color: var(--hm-acc); }
 #na_settings .na_cfg_grp.na_cfg_off { display: none; }
 #na_settings .na_cfg_one .na_cfg_grp:not(.na_cfg_keeplab) .na_cfg_label { display: none; }
+
+/* 뜻으로 찾기: model name and address read like the other values, right-aligned (v3.79.1) */
+#na_settings .na_tab_pane[data-pane="config"] .na_set_row .na_cfg_val input[type="text"] { width: 11em; max-width: 100%; min-width: 0; cursor: text; text-overflow: ellipsis; }
