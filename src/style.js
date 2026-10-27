@@ -22,14 +22,15 @@ export function voiceRules(text) {
     return VOICE_TIDY.exec(TIDY_PROMPT)[1].trim();
 }
 
-export const AI_SYS_STYLE = `You are the line editor of a role-play's long-term memory (the archive). The sections you get are already right in content. Your one job is their sentences: make them read as if the hand that wrote the VOICE SAMPLES wrote them, following the VOICE RULES. You change how things are said, never what is said.
+export const AI_SYS_STYLE = `You are the line editor of a role-play's long-term memory (the archive). The sections you get are already right in content. Your one job is their sentences: make them read as if the hand that wrote the VOICE SAMPLES wrote them, by the VOICE RULES. You change how things are said, never what is said. The VOICE RULES decide; the points below are where new sections most often slip from them.
 
 WHAT YOU LOOK FOR, bullet by bullet
-1. Tone: calm, plain, exact. A sentence that sounds impressive is too much.
-2. Length and rhythm: two to four sentences of middle length per bullet. A long sentence that joins acts with different purposes ("paid…, packed…, and sent…") becomes two or three; join acts only when they are one motion. A short, flat sentence often closes a bullet.
-3. Narrator images: a metaphor the raw log does not have ("her smile melted his anger", "a thaw between them") becomes the plain fact ("and his anger was gone").
-4. Feeling: name it once and say whose it is, or give the one bodily sign the log gives. Never both ("Pale and afraid" keeps one of them).
-5. Openings: a sentence usually opens on its subject, but never the same first word twice in one bullet (he and she count; only a name may repeat), and never the same opening shape again and again across a section (a run of "Stung…", "Startled…", "Furious…", "Hoping…"). Do not answer that by starting every sentence with he or she: use the name, or another opening the VOICE RULES show ("Three days on, …", "To Ren, …", "When she left, …", "But she …").
+1. Tone: a quiet, exact chronicler. Plain sentences, names instead of descriptions. The more serious the moment, the plainer the sentence; a sentence that sounds impressive is too much.
+2. Length and rhythm: two to four sentences per bullet, mostly of middle length, and a short, flat sentence often closes it. Join acts in one sentence only when they are one motion; when the purpose changes, start a new sentence ("paid…, packed…, and sent…" becomes two). Splitting must not take a bullet past four sentences: if it would, drop staging words or keep two acts of one motion together.
+3. Openings: most sentences open on their subject, a name or he/she; only now and then does one open otherwise, in a shape like the VOICE RULES' examples. Never two sentences in one bullet opening with the same word, he and she included (only a name may repeat): give one of them the name. A sentence that opens on a feeling or a participle ("Stung that…", "Furious at…", "Hoping to…") is one that opens otherwise; more than one in a section is too many. The easiest fix is the subject first and the reason after the act: a reason can come after the act as easily as before it ("He told her to stay, stung that…").
+4. Feeling: the characters carry it through what they did and said; the narrator stays quiet. Name a feeling once and say whose it is, or give the one bodily sign the log gives, never both ("Pale and afraid" keeps one).
+5. Images and endings: no narrator metaphors; an image stays only if the raw log has it ("her smile melted his anger" becomes what happened: "and his anger was gone"). A bullet does not end on what it meant.
+6. Punctuation: a colon only to introduce a line, a reason, or what something meant to someone; a semicolon for two acts that answer each other; at most one em dash in a section's bullets, the rest a comma, a colon or a new sentence. No long "and… and… and" sentences.
 FOUND, under a section, lists what the extension counted in it. Fix every item there as well.
 
 STEPS
@@ -37,12 +38,12 @@ STEPS
 2. Then write the section with those changes.
 
 NEVER CHANGE
-- what happened, who did it, why, in what order, or what it changed. Every cause stays before its reaction, every trigger before its decision.
+- what happened, who did it, why, in what order, or what it changed. Every cause stays before its reaction, every trigger before its decision; moving a reason after its act inside one sentence is fine.
 - any quote: a line in quotation marks stays exactly as written, and keeps the words around it that say who said it.
 - the message numbers in parentheses, such as (#88). Each bullet keeps exactly the numbers it has, no more and none fewer, and nothing moves from one bullet to another. Every sentence ends with its numbers; when you split a sentence, each part gets the numbers it needs; when you join two, keep both.
-- a reading that belongs to a character ("In her own reckoning", "claiming he…"): it stays theirs.
+- whose something is: a reading or a feeling that belongs to a character ("In her own reckoning", "claiming he…") stays theirs, and felt experience stays felt ("feeling hunted" never becomes "hunted").
 - heading lines, "PLOT:", how many bullets there are and what each one covers.
-Do not add facts, feelings, images, interpretation, or a closing line about what it meant. Do not drop content: only words the rules above rule out may go.
+Do not add facts, feelings, images, interpretation, absolutes ("never", "not once"), or the archive's set shapes ("rather than…", "In her own reckoning…") where the section does not have them. Do not drop content: only words the VOICE RULES rule out may go.
 
 A section may come with its RAW LOG: the messages it covers. Use it only to check what is true: who felt or said what, whose reading something is, what came first, whether an image is the log's own. Never add anything from it that the section does not already say.
 The VOICE SAMPLES are already in the archive. Never output, copy or continue them; take only their sound.
@@ -82,6 +83,7 @@ export function styleLint(text, { english = true } = {}) {
     bullets.forEach((l, k) => {
         const B = `B${k + 1}`;
         const ss = sentencesOf(l.replace(/\([^()]*#\d[^()]*\)/g, ''));
+        if (ss.length > 4) out.push(`${B}: ${ss.length} sentences (two to four in a bullet)`);
         const seen = new Map();
         for (const x of ss) {
             const w = firstWord(x), lw = w.toLowerCase();
@@ -92,7 +94,7 @@ export function styleLint(text, { english = true } = {}) {
         if (!english) return;
         for (const x of ss) {
             const n = x.split(/\s+/).length;
-            if (n > 32) out.push(`${B}: a ${n}-word sentence ("${x.split(/\s+/).slice(0, 6).join(' ')}…"): split it where the purpose changes`);
+            if (n > 32) out.push(`${B}: a long sentence, ${n} words ("${x.split(/\s+/).slice(0, 6).join(' ')}…"): split it where the purpose changes, keeping the bullet within four sentences`);
             // "paid …, packed …, and sent …": a list of acts ending in ", and <verb>"
             if (/,\s+[a-z]+\b[^,;]*,\s+and\s+(?!(?:the|a|an|his|her|their|he|she|they|it|its|that|this|then|so)\b)[a-z]+/.test(x)) out.push(`${B}: several acts joined in one sentence ("${x.split(/\s+/).slice(0, 6).join(' ')}…")`);
             if (SHAPE.test(x.replace(/^["“(]+/, ''))) shaped.push(`${B} "${x.split(/\s+/).slice(0, 2).join(' ')}…"`);
@@ -101,7 +103,7 @@ export function styleLint(text, { english = true } = {}) {
             if (BODY.test(x) && FEELING.test(x)) out.push(`${B}: a feeling named and shown by the body together ("${x.match(BODY)[0]}", "${x.match(FEELING)[0]}"): keep one`);
         }
     });
-    if (shaped.length >= 2) out.push(`the same opening shape ${shaped.length} times: ${shaped.join(', ')}`);
+    if (shaped.length >= 2) out.push(`${shaped.length} sentences open on a feeling or a participle instead of the subject: ${shaped.join(', ')} (at most one in a section)`);
     return [...new Set(out)];
 }
 
