@@ -35,7 +35,7 @@ HOW MUCH TO CHANGE
 - Fix what is wrong, as little as it takes. Most bullets need one change or none; a bullet that already reads right stays word for word.
 - The small words that carry the logic (and, but, or, yet, still, because, so, only) keep their meaning: "angry at this and at that" never becomes "angry at this or that".
 - The points above are the voice's habits, not quotas. When two of them pull against each other, choose the plainer sentence that keeps the meaning exact.
-- Under a section, MUST lists breaks of the VOICE RULES the extension counted: fix every one. CHECK lists what it suspects by rule of thumb: fix the items that are real; for one you leave as it is, say why in your notes.
+- Under a section, MUST lists breaks of the archive's rules the extension counted: fix every one. CHECK lists what it suspects by rule of thumb: fix the items that are real; for one you leave as it is, say why in your notes.
 
 STEPS
 1. For each section, first write <notes>…</notes>: one line per change, "B<bullet number>: what is wrong → what you do". A bullet with nothing wrong gets no line and stays word for word.
@@ -93,12 +93,22 @@ function bulletGuard(before, after) {
 // ---- what the extension can count in the sentences, sent to the editor as MUST / CHECK and checked again after
 const NOT_NAMES = new Set(['he', 'she', 'they', 'his', 'her', 'their', 'him', 'it', 'its', 'the', 'a', 'an', 'when', 'but', 'then', 'after', 'as', 'at', 'in', 'on', 'so', 'and', 'with', 'by', 'while', 'once', 'still', 'this', 'that', 'there']);
 const METAPHORS = /\b(melt(?:ed|ing|s)?|disarm(?:ed|ing|s)?|thaw(?:ed|ing|s)?|shatter(?:ed|ing|s)?|crumbl(?:ed|ing|es)|flood(?:ed|ing|s)|wash(?:ed|es)? over|ignit(?:ed|ing|es)|spark(?:ed|ing|s)|pierc(?:ed|ing|es)|drown(?:ed|ing|s)|swallow(?:ed|ing|s) (?:by|in)|crack(?:ed|ing)? open|wall(?:s)? (?:came|come|coming) down)\b/i;
-const BODY = /\b(flushed|blushing|blushed|trembling|shaking|pale|red-faced|tearful|in tears|clenched|white-knuckled)\b/i;
-const FEELING = /\b(angry|furious|ashamed|embarrassed|afraid|scared|hurt|jealous|anxious|nervous|stung|glad|relieved|upset|annoyed|irritated|resentful)\b/i;
+// a body sign and a named feeling side by side ("flushed and angry", "pale with fear", "angry, his jaw clenched"):
+// within six words. Returns [body word, feeling word], or null. "shaking his head" is a gesture, not a sign
+const FEELING_NEAR = /^(angry|anger|furious|fury|rage|ashamed|shame|embarrassed|embarrassment|afraid|fear|scared|terror|panic|dread|hurt|jealous|jealousy|anxious|anxiety|nervous|stung|glad|relieved|relief|upset|annoyed|irritated|irritation|resentful|resentment|grief|guilt|humiliation)$/i;
+const BODY_NEAR = /^(flushed|blushing|blushed|trembling|shaking|pale|red-faced|tearful|tears|clenched|white-knuckled)$/i;
+const bodyAndFeeling = x => {
+    const w = x.split(/\s+/).map(t => t.replace(/^[^\p{L}]+|[^\p{L}-]+$/gu, ''));
+    const b = w.map((t, i) => (BODY_NEAR.test(t) && !(/^shaking$/i.test(t) && /^(his|her|their)$/i.test(w[i + 1] || '') && /^heads?$/i.test(w[i + 2] || '')) ? i : -1)).filter(i => i >= 0);
+    const f = w.map((t, i) => (FEELING_NEAR.test(t) ? i : -1)).filter(i => i >= 0);
+    for (const i of b) for (const j of f) if (Math.abs(i - j) <= 6) return [w[i], w[j]];
+    return null;
+};
 const sentencesOf = line => line.replace(/^\s*[-*•]\s*/, '').split(/(?<=[.!?…]["”]?)\s+(?=["“(]?[A-Z가-힣])/).map(x => x.trim()).filter(Boolean);
 const firstWord = x => (x.replace(/^["“(]+/, '').match(/^[\p{L}'’-]+/u) || [''])[0];
 const SHAPE = /^(?:[A-Z][a-z]+(?:ed|ing)\b|(?:Furious|Angry|Glad|Afraid|Unable|Resentful|Flushed|Hurt|Desperate|Determined|Stung|Surprised|Relieved|Annoyed|Ashamed|Jealous)\b)/;
-// { must, check }: must = breaks of the instruction's own rules, with no exceptions (fixed every time);
+// { must, check }: must = breaks of the archive's rules with no exceptions (the instruction's, and the user's own:
+// "while" twice, an "also" patch), fixed every time;
 // check = what a rule of thumb suspects (fixed when real). Bullet and word counts are not here: the pass may not
 // change how many bullets there are or drop content, so those stay with the count check that runs after it
 export function styleLint(text, { english = true } = {}) {
@@ -118,7 +128,7 @@ export function styleLint(text, { english = true } = {}) {
         }
         if (!english) return;
         const whiles = (l.match(/\bwhile\b/gi) || []).length;
-        if (whiles >= 2) check.push(`${B}: "while" ${whiles} times`);
+        if (whiles >= 2) must.push(`${B}: "while" ${whiles} times: keep one`);
         for (const x of ss) {
             const n = x.split(/\s+/).length;
             if (n > 32) check.push(`${B}: a long sentence, ${n} words ("${x.split(/\s+/).slice(0, 6).join(' ')}…"): split it where the purpose changes, unless it is one motion`);
@@ -130,12 +140,13 @@ export function styleLint(text, { english = true } = {}) {
             // a feeling standing as its own sentence: "He was furious at …", "She felt hurt …"
             const fs = x.replace(/^["“(]+/, '').match(/^(?:He|She|They|[A-Z][a-z]+) (?:was|were|felt|grew|became) (?:\w+ )?(angry|furious|ashamed|embarrassed|afraid|scared|hurt|jealous|anxious|nervous|stung|glad|relieved|upset|annoyed|irritated|resentful|surprised|startled|shocked|pleased|happy|sad|worried|frustrated)\b/);
             if (fs) check.push(`${B}: the feeling stands as its own sentence ("${x.split(/\s+/).slice(0, 4).join(' ')}…"): the act first, the feeling after it in the same sentence`);
-            if (BODY.test(x) && FEELING.test(x)) check.push(`${B}: a feeling named and shown by the body together ("${x.match(BODY)[0]}", "${x.match(FEELING)[0]}"): keep one`);
+            const bf = bodyAndFeeling(x);
+            if (bf) must.push(`${B}: a feeling named and shown by the body together ("${bf[0]}", "${bf[1]}"): keep one`);
         }
     });
     // "also" opening or patching a sentence; "Then" is left alone, it carries the order or the pause of a closing beat
     const alsos = bullets.flatMap((l, k) => sentencesOf(l).filter(x => /^Also\b|^\S+ also\b/.test(x)).map(() => `B${k + 1}`));
-    if (english && alsos.length) check.push(`"also" patches ${alsos.length} sentence${alsos.length > 1 ? 's' : ''} (${alsos.join(', ')}): join the act to the one before it instead`);
+    if (english && alsos.length) must.push(`"also" patches ${alsos.length} sentence${alsos.length > 1 ? 's' : ''} (${alsos.join(', ')}): join the act to the one before it instead`);
     if (shaped.length >= 2) check.push(`${shaped.length} sentences open on a feeling or a participle instead of the subject: ${shaped.join(', ')}. Keep the one that reads best, turn the others subject first`);
     return { must: [...new Set(must)], check: [...new Set(check)] };
 }
