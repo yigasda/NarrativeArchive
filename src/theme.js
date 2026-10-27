@@ -78,3 +78,39 @@ export const SVG_B = {
     userx: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M17 8l5 5M22 8l-5 5"/>',
     redo: '<path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/>',
 };
+
+// ---- flat fields: a search box or a connection box is one rounded shape; the field inside must stay see-through.
+// A theme's own input rules can win any stylesheet fight (they load later), so the few fields that sit inside a
+// drawn shape get their look as inline !important styles, which no stylesheet overrides
+const FLAT_SEL = [
+    '.na_search_wrap input', '.na_cfg_search input',
+    'input.na_pc_q', 'input.na_ss_find', '#na_find_q',
+    '.na_cc .na_cc_box .na_cc_row input', '.na_cc .na_cc_box .na_cc_row select', '.na_cc .na_cc_box .na_cc_row textarea',
+].join(', ');
+const FLAT_STYLE = {
+    background: 'transparent', 'background-color': 'transparent', 'background-image': 'none',
+    border: '0', 'border-radius': '0', outline: 'none', 'box-shadow': 'none', filter: 'none',
+};
+function flatten(el) {
+    if (el.dataset.naFlat) return;
+    el.dataset.naFlat = '1';
+    for (const [k, v] of Object.entries(FLAT_STYLE)) {
+        // a select keeps the drawn chevron its stylesheet gives it
+        if (k === 'background-image' && el.tagName === 'SELECT') continue;
+        el.style.setProperty(k, v, 'important');
+    }
+}
+function flattenIn(root) {
+    if (!root?.querySelectorAll) return;
+    if (root.matches?.(FLAT_SEL)) flatten(root);
+    root.querySelectorAll(FLAT_SEL).forEach(flatten);
+}
+let flatObs = null;
+export function keepFieldsFlat() {
+    flattenIn(document.body);
+    if (flatObs) return;
+    flatObs = new MutationObserver(list => {
+        for (const m of list) for (const n of m.addedNodes) if (n.nodeType === 1) flattenIn(n);
+    });
+    flatObs.observe(document.body, { childList: true, subtree: true });
+}

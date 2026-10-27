@@ -3887,7 +3887,7 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_ss_row b { font-size: 0.9em; }
 .na_ss_row small { font-size: 0.8em; color: var(--na-dim); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 
-/* ---- 3.69: 회상 · 지금 상태 · 번외편, 설정 찾기, 꼭 남길 장면, 캐해 시트, 원문 대조 */
+/* ---- 3.69: 회상 · STATE · OOC, 설정 찾기, 꼭 남길 장면, 말투 지문, 원문 대조 */
 #na_settings .na_cfg_hide { display: none !important; }
 .na_cfg_search { margin: 4px 0 10px; }
 #na_recall_opts { display: flex; flex-direction: column; }
@@ -4012,3 +4012,47 @@ body.na_darkui #na_settings { --sv-page: #2F2621; --sv-card: #3A2F28; --sv-line:
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val :is(select, input) { color: var(--sv-val) !important; }
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_go > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_chev { color: var(--sv-val); }
 .na_cc_note { flex: 1; min-width: 0; font-size: 0.86em; color: var(--na-dim); line-height: 1.4; }
+
+/* ---- 3.81.8: popups don't squeeze their cards (rows were cut off in 아카이브에 추가) */
+.na_v2 > * { flex-shrink: 0; }
+
+/* the position row: the place name gets the room, the depth box only what a number needs */
+#na_settings .na_tab_pane[data-pane="config"] .na_set_row > .na_cfg_val:has(#na_position) { max-width: 74%; }
+#na_settings .na_tab_pane[data-pane="config"] .na_set_row .na_cfg_val #na_depth { width: 2.6ch !important; min-width: 2.6ch; field-sizing: fixed; text-align: right; }
+#na_settings .na_tab_pane[data-pane="config"] .na_set_row .na_cfg_val #na_position { field-sizing: content; }
+
+/* connection boxes (custom API, Vertex): the fields sit flat in the box whatever a theme does to inputs */
+#na_settings .na_cc .na_cc_box .na_cc_row input.text_pole,
+#na_settings .na_cc .na_cc_box .na_cc_row input.text_pole:is(:hover, :focus, :read-only, :disabled, :autofill) {
+    -webkit-appearance: none !important; appearance: none !important;
+    background: transparent !important; background-color: transparent !important; background-image: none !important;
+    border: 0 !important; outline: none !important; box-shadow: none !important; border-radius: 0 !important;
+    margin: 0 !important; padding: 0 !important; height: 40px !important; min-height: 0 !important; color: inherit !important;
+}
+#na_settings .na_cc .na_cc_box .na_cc_row input.text_pole:autofill { -webkit-text-fill-color: currentColor; transition: background-color 9999s; }
+
+/* ---- 3.82.1: the same for every field in a connection box — select boxes (형식 · 생각) and anything a theme restyles */
+#na_settings .na_cc .na_cc_box .na_cc_row :is(input, select, textarea),
+#na_settings .na_cc .na_cc_box .na_cc_row :is(input, select, textarea):is(:hover, :focus, :focus-visible, :read-only, :disabled) {
+    background-color: transparent !important; border: 0 !important; outline: none !important; box-shadow: none !important;
+    border-radius: 0 !important; margin: 0 !important; min-height: 0 !important; color: inherit !important; filter: none !important;
+}
+#na_settings .na_cc .na_cc_box .na_cc_row select.na_cc_sel {
+    flex: 1; width: auto !important; min-width: 0; height: 40px !important; padding: 0 22px 0 0 !important; font: inherit; font-size: 0.9em;
+    -webkit-appearance: none !important; appearance: none !important; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238A7A70' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important; background-position: right 2px center !important; background-size: 14px !important;
+}
+
+/* ---- 3.82.2: search boxes are one rounded field — the input inside sits flat, whatever a theme does to inputs */
+:is(#na_settings, .na_v2, .na_popup) .na_search_wrap input,
+:is(#na_settings, .na_v2, .na_popup) .na_search_wrap input:is(:hover, :focus, :focus-visible),
+:is(#na_settings, .na_v2, .na_popup) input:is(.na_pc_q, .na_ss_find, #na_find_q),
+:is(#na_settings, .na_v2, .na_popup) input:is(.na_pc_q, .na_ss_find, #na_find_q):is(:hover, :focus, :focus-visible) {
+    background: transparent !important; background-color: transparent !important; background-image: none !important;
+    border: 0 !important; outline: none !important; box-shadow: none !important; border-radius: 0 !important; filter: none !important;
+}
+:is(#na_settings, .na_v2, .na_popup) .na_search_wrap input::-webkit-search-decoration { -webkit-appearance: none; }
+
+/* the 도구 tab's group boxes in the same card colour as the settings cards */
+#na_settings .na_tab_pane[data-pane="tools"] > .na_block { background: var(--hm-card); border: 1px solid var(--hm-line); border-radius: 18px; }

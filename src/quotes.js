@@ -157,7 +157,7 @@ export function voiceRules(out) {
     return rules.map(l => `- ${l}`);
 }
 
-// ---- 캐해 sheet: a constant core, speech rules and real lines, from the character card and the chat itself
+// ---- voice sheet: a constant core, speech rules and real lines, from the character card and the chat itself
 // (hidden messages too, spread over the whole story) as well as the quote bank. The samples must be in the chat word for word.
 export const AI_SYS_VOICE2 = `GOAL
 Write the notes another writer needs to go on writing one character of a long role-play the way they have been written so far: who they are, how they sound, and a few of their real lines.

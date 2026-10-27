@@ -13,7 +13,7 @@ import { RECALL_KEY } from './src/recall.js';
 import { onGenerationStarted, onMessageSent } from './src/router.js';
 import { linkedMap } from './src/sections.js';
 import { refreshStatusSoon } from './src/status.js';
-import { applyTheme } from './src/theme.js';
+import { applyTheme, keepFieldsFlat } from './src/theme.js';
 import { xrayArm, xrayCapture, xrayWorldInfo } from './src/xray.js';
 
 (function init() {
@@ -27,6 +27,7 @@ import { xrayArm, xrayCapture, xrayWorldInfo } from './src/xray.js';
         started = true;
         if (!$('#na_settings').length) renderPanel();
         applyTheme();
+        keepFieldsFlat();
         addWandMenu();
         onChatChanged();
         setTimeout(moveOldStars, 300);

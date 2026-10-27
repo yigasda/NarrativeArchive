@@ -372,6 +372,16 @@ export function renderPanel() {
                 </div>
                 ${connCfgHtml('ai')}
                 <div class="na_set_list">
+                  <label class="na_set_row" title="번역(한국어로 보기 · 한국어로 읽기 · 용어집)은 보통 이 모델로 해요 · 양이 많아서 싸고 빠른 모델로 따로 돌리고 싶을 때만 켜요"><span><span>번역은 다른 모델로</span><small>끄면 위 AI 기능 모델로 번역해요</small></span><input type="checkbox" id="na_tr_own" class="na_toggle"></label>
+                  <label class="na_set_row" id="na_tr_mode_row" hidden><span><span>번역 모델</span><small>한국어로 보기 · 읽기 · 용어집</small></span>
+                    <span class="na_cfg_val"><select id="na_tr_mode" class="text_pole">
+                      <option value="custom">커스텀 API</option>
+                      <option value="vertex">Gemini · Vertex AI</option>
+                    </select>${svgA(ICO_A.right, 15, 2.2)}</span>
+                  </label>
+                </div>
+                ${connCfgHtml('tr')}
+                <div class="na_set_list">
                   <label class="na_set_row" title="압축 초안처럼 아카이브에 들어갈 글을 써 주는 모델이에요 (예: Opus). 정하지 않으면 초안 버튼이 안 보여요"><span><span>초안 모델</span><small>압축 초안 · 섹션 짧은 버전</small></span>
                     <span class="na_cfg_val"><select id="na_dr_mode" class="text_pole">
                       <option value="same">쓰지 않음</option>
@@ -386,20 +396,11 @@ export function renderPanel() {
                   <label class="na_set_row"><span><span>초안 최대 길이</span><small>초안이 끊기면 늘려 주세요</small></span><span class="na_cfg_val"><input type="number" id="na_dr_max" class="text_pole" min="1024" step="1024"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                 </div>
                 <div class="na_set_list">
-                  <label class="na_set_row" title="비교 화면의 &quot;한국어로 보기&quot;에 써요"><span>번역 모델</span>
-                    <span class="na_cfg_val"><select id="na_tr_mode" class="text_pole">
-                      <option value="same">AI 기능 모델과 같이</option>
-                      <option value="custom">커스텀 API</option>
-                      <option value="vertex">Gemini · Vertex AI</option>
-                    </select>${svgA(ICO_A.right, 15, 2.2)}</span>
-                  </label>
-                </div>
-                ${connCfgHtml('tr')}
-                <div class="na_set_list">
                   <label class="na_set_row" title="섹션과 숨긴 원문을 뜻으로도 찾아요 · 라우터 · 회상이 단어가 안 겹쳐도 비슷한 뜻이면 찾고, 한국어 채팅으로 영어 아카이브도 찾아요 · 실리태번 서버의 벡터 저장소를 써요"><span><span>뜻으로 찾기 (임베딩)</span><small>라우터 · 회상이 비슷한 뜻도 찾게</small></span>
                     <span class="na_cfg_val"><select id="na_emb_src" class="text_pole">${Object.entries(EMBED_SOURCES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" id="na_emb_pick_row" hidden><span><span>임베딩 모델</span><small id="na_emb_pick_sub"></small></span><span class="na_cfg_val"><select id="na_emb_pick" class="text_pole"></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" id="na_emb_model_row" hidden><span><span>모델 이름</span><small>직접 입력</small></span><span class="na_cfg_val"><input type="text" id="na_emb_model" class="text_pole" spellcheck="false">${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" id="na_emb_region_row" hidden title="Vertex 임베딩 모델은 지역마다 다르게 있어요 · global에서 500이 나면 us-central1"><span><span>임베딩 지역</span><small id="na_emb_region_sub">비우면 실리태번 Vertex 설정 지역</small></span><span class="na_cfg_val"><input type="text" id="na_emb_region" class="text_pole" spellcheck="false" placeholder="us-central1">${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" id="na_emb_url_row" hidden><span><span>Ollama 주소</span></span><span class="na_cfg_val"><input type="text" id="na_emb_url" class="text_pole" spellcheck="false" placeholder="http://127.0.0.1:11434">${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <button type="button" class="na_set_row na_cfg_go" id="na_emb_build" hidden><span><span>뜻 색인 만들기</span><small id="na_emb_sub">처음 한 번 · 이 채팅의 섹션과 숨긴 원문</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   <label class="na_set_row" title="답이 잘리면 늘려 주세요"><span>답 최대 길이</span><span class="na_cfg_val"><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
@@ -527,7 +528,10 @@ export function renderAiSettings() {
     opts.push('<option value="__custom">커스텀 API (OpenAI 호환)</option>', '<option value="__vertex">Gemini · Vertex AI</option>');
     $('#na_ai_profile').html(opts.join('')).val(a.mode === 'st' ? (g.aiProfile || '') : `__${a.mode}`);
     $('#na_ai_max').val(g.aiMaxTokens || 8192);
-    $('#na_tr_mode').val(trSettings().mode);
+    const trm = trSettings().mode;
+    $('#na_tr_own').prop('checked', trm !== 'same');
+    $('#na_tr_mode_row').prop('hidden', trm === 'same');
+    if (trm !== 'same') $('#na_tr_mode').val(trm);
     $('#na_dr_mode').val(draftSettings().mode);
     $('#na_dr_max_row').prop('hidden', !draftReady());
     $('#na_dr_ceffort').val(compressEffort());
@@ -584,7 +588,7 @@ const cfgTab = {}; // group → open tab
 const CFG_TABS = {
     inject: { tabs: [['place', '넣는 자리'], ['size', '분량'], ['pick', '고르기']], marks: [['#na_place_preset', 'place'], ['#na_cap', 'size'], ['#na_router_mode', 'pick']] },
     recall: { tabs: [['recall', '회상'], ['state', 'STATE'], ['ooc', 'OOC']], marks: [['#na_recall', 'recall'], ['#na_state_on', 'state'], ['#na_off_fold', 'ooc']] },
-    aimodel: { tabs: [['ai', 'AI 기능'], ['dr', '초안'], ['tr', '번역'], ['emb', '뜻 찾기']], marks: [['#na_ai_profile', 'ai'], ['#na_dr_mode', 'dr'], ['#na_tr_mode', 'tr'], ['#na_emb_src', 'emb'], ['#na_ai_max', 'ai'], ['#na_conn_note', 'all']] },
+    aimodel: { tabs: [['ai', 'AI 기능'], ['dr', '초안'], ['emb', '뜻 찾기']], marks: [['#na_ai_profile', 'ai'], ['#na_dr_mode', 'dr'], ['#na_emb_src', 'emb'], ['#na_ai_max', 'ai'], ['#na_conn_note', 'all']] },
     aitask: { tabs: [['find', '찾기'], ['check', '점검'], ['etc', '기타']], marks: [['#na_fallback', 'etc'], ['#na_lore', 'find'], ['#na_drift_auto', 'check'], ['#na_gloss_edit', 'etc']] },
 };
 const onOff = v => (v ? '켬' : '끔');
@@ -619,7 +623,7 @@ function cfgTiles(g) {
         return [
             ['AI 기능 모델', a1, a2 || '질문 · 점검 · 라우터', true, 'ai'],
             ['초안 모델', draftReady() ? (draftSettings().mode === 'vertex' ? 'Vertex' : '커스텀') : '없음', draftReady() ? drLabel() : '압축 초안 · 짧은 버전', draftReady(), 'dr'],
-            ['번역 모델', tr === 'same' ? '같이' : split2(trLabel())[0], tr === 'same' ? 'AI 기능 모델' : split2(trLabel())[1], tr !== 'same', 'tr'],
+            ['번역 모델', tr === 'same' ? '같이' : split2(trLabel())[0], tr === 'same' ? 'AI 기능 모델' : split2(trLabel())[1], tr !== 'same', 'ai'],
             ['뜻으로 찾기', e.source ? ({ st: '실리태번', vertexai: 'Vertex', palm: 'AI Studio', transformers: '로컬' }[e.source] || split2(embedLabel())[0]) : '끔', e.source ? (st?.synced ? `섹션 ${st.secs} · 원문 ${st.raws}` : '색인 아직') : '단어로만 찾아요', !!e.source, 'emb'],
         ];
     }
@@ -717,6 +721,10 @@ function syncEmbedRows() {
     $('#na_emb_model_row').prop('hidden', free || (picks.length > 0 && !!known && !embTyping));
     $('#na_emb_model').val(e.model).attr('placeholder', EMBED_DEFAULT_MODEL[e.source] || '');
     $('#na_emb_url_row').prop('hidden', e.source !== 'ollama');
+    $('#na_emb_region_row').prop('hidden', e.source !== 'vertexai');
+    $('#na_emb_region').val(e.region);
+    const stRegion = String(ctx().chatCompletionSettings?.vertexai_region || '').trim();
+    $('#na_emb_region_sub').text(e.region ? '임베딩만 이 지역으로' : `비우면 실리태번 Vertex 설정 지역${stRegion ? ` (${stRegion})` : ''}`);
     $('#na_emb_url').val(e.url);
     $('#na_emb_build').prop('hidden', !e.source);
     if ($('#na_emb_build').hasClass('na_busy')) return;
@@ -872,6 +880,13 @@ export function bindPanel() {
     $('#na_drift_auto').on('change', function () { globalSettings().driftAuto = Number(this.value) || 0; saveGlobal(); });
     $('#na_gloss_edit').on('click', needChat(async () => { await openGlossary(); renderAiSettings(); }));
     $('#na_tr_mode').on('change', function () { trSettings().mode = this.value; saveGlobal(); renderAiSettings(); });
+    // off = translate with the AI model; on = its own connection, back to whatever was set there before
+    $('#na_tr_own').on('change', function () {
+        const t = trSettings();
+        if (this.checked) t.mode = ['custom', 'vertex'].includes(t.lastMode) ? t.lastMode : 'custom';
+        else { if (t.mode !== 'same') t.lastMode = t.mode; t.mode = 'same'; }
+        saveGlobal(); renderAiSettings();
+    });
     $('#na_dr_mode').on('change', function () { draftSettings().mode = this.value; saveGlobal(); renderAiSettings(); });
     $('#na_dr_ceffort').on('change', function () { draftSettings().cEffort = this.value; saveGlobal(); });
     $('#na_dr_max').on('change', function () { const v = Math.max(1024, parseInt(this.value, 10) || 16000); draftSettings().max = v; this.value = v; saveGlobal(); });
@@ -1304,15 +1319,21 @@ export function bindPanel() {
         if (embTyping) $('#na_emb_model').val('').trigger('focus');
     });
     $('#na_emb_url').on('change', function () { setEmbed({ url: this.value.trim() }); syncEmbedRows(); });
+    $('#na_emb_region').on('change', function () { setEmbed({ region: this.value.trim() }); syncEmbedRows(); });
     $('#na_emb_build').on('click', needChat(async e => {
         const $b = $(e.currentTarget);
         if ($b.hasClass('na_busy')) return;
         $b.addClass('na_busy');
         $('#na_emb_sub').text('목록 보는 중…');
         try {
-            const st = await syncEmbed({ force: true, onProgress: (n, all) => $('#na_emb_sub').text(`만드는 중… ${n} / ${all}`) });
-            if (st) toastr.success(`섹션 조각 ${st.secs}개 · 숨긴 원문 ${st.raws}개`, '뜻 색인');
-        } catch (err) { toastr.error(String(err.message || err), '뜻 색인을 못 만들었어요'); }
+            const st = await syncEmbed({ force: true, onProgress: (n, all, note) => $('#na_emb_sub').text(`만드는 중… ${n} / ${all}${note ? ` · ${note}` : ''}`) });
+            if (st) toastr.success(`섹션 조각 ${st.secs}개 · 숨긴 원문 ${st.raws}개${st.skipped ? ` · 못 넣은 ${st.skipped}개는 다음에 다시 해요` : ''}${st.regionMoved ? ' · 원래 지역에서 안 돼서 임베딩 지역을 us-central1로 정했어요' : ''}`, '뜻 색인', { timeOut: st.regionMoved ? 12000 : 5000 });
+        } catch (err) {
+            // a 5xx that survived the retries is the service's quota or an outage; what went in so far is kept
+            const e = embedCfg(), m = e.model || EMBED_DEFAULT_MODEL[e.source] || '';
+            const hint = err.status >= 500 ? ` · 만든 데까지는 남아 있어서 다시 누르면 이어서 해요${e.source === 'vertexai' ? `. 계속 안 되면 ① 실리태번 API 연결 → Vertex AI에서 인증(Express 키 또는 서비스 계정)과 프로젝트가 맞는지 ② 임베딩 지역을 us-central1로${/^gemini-embedding/.test(m) ? ' ③ 모델을 text-multilingual-embedding-002로(한 번에 10개씩)' : ''} 확인해 보세요. 자세한 이유는 실리태번 서버 콘솔 창에 찍혀요` : ''}` : '';
+            toastr.error(`${String(err.message || err)}${hint}`, '뜻 색인을 못 만들었어요', { timeOut: 15000 });
+        }
         finally { $b.removeClass('na_busy'); syncEmbedRows(); }
     }));
     $('#na_guess').on('change', function () { globalSettings().guess = this.value; saveGlobal(); syncPanel(); });
