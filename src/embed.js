@@ -90,21 +90,38 @@ function sourceBody() {
 const signature = b => `${b.source}|${MODEL_FREE.has(b.source) ? '' : b.model || ''}`;
 export const embedLabel = () => { if (!embedOn()) return '끔'; const b = sourceBody(); return `${EMBED_SOURCES[b.source] || b.source}${b.model ? ` · ${b.model}` : ''}`; };
 
-async function vec(path, body, ms = 30_000) {
-    const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), ms);
-    try {
-        const r = await fetch(`/api/vector/${path}`, { method: 'POST', headers: ctx().getRequestHeaders(), body: JSON.stringify(body), signal: ctl.signal });
-        if (!r.ok) {
-            const txt = (await r.text().catch(() => '')).slice(0, 200);
-            throw new Error(`임베딩 ${r.status}${txt && !/^<!doctype/i.test(txt) ? `: ${txt}` : ''}`);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// one call to the server's vector API. A remote embedding service that is over its per-minute quota or briefly down
+// comes back as a 5xx (SillyTavern's server turns Vertex's 429 into a 500), so those are tried again after a pause;
+// a 4xx is a real mistake and is not
+async function vec(path, body, ms = 30_000, { retries = 0, stop = null } = {}) {
+    let last = null;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        if (attempt) {
+            const wait = [4000, 12000, 30000][attempt - 1] ?? 30000;
+            for (let t = 0; t < wait; t += 500) { if (stop?.()) throw new Error('채팅이 바뀌어서 멈췄어요'); await sleep(500); }
         }
-        return path === 'list' || path === 'query' ? r.json() : null;
-    } catch (e) {
-        if (e.name === 'AbortError') throw new Error(`임베딩이 ${Math.round(ms / 1000)}초 안에 답이 없었어요`);
-        throw e;
-    } finally { clearTimeout(t); }
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), ms);
+        try {
+            const r = await fetch(`/api/vector/${path}`, { method: 'POST', headers: ctx().getRequestHeaders(), body: JSON.stringify(body), signal: ctl.signal });
+            if (!r.ok) {
+                const txt = (await r.text().catch(() => '')).slice(0, 200);
+                last = new Error(`임베딩 ${r.status}${txt && !/^<!doctype/i.test(txt) ? `: ${txt}` : ''}`);
+                last.status = r.status;
+                if (r.status >= 400 && r.status < 500 && r.status !== 429) break;
+                continue;
+            }
+            return path === 'list' || path === 'query' ? r.json() : null;
+        } catch (e) {
+            last = e.name === 'AbortError' ? new Error(`임베딩이 ${Math.round(ms / 1000)}초 안에 답이 없었어요`) : e;
+        } finally { clearTimeout(timer); }
+    }
+    throw last;
 }
+const REMOTE = new Set(['palm', 'vertexai', 'openai', 'openrouter', 'cohere', 'mistral', 'nomicai', 'togetherai', 'electronhub', 'chutes', 'nanogpt', 'siliconflow', 'workers_ai']);
+const MAX_TEXT = 2000; // characters per embedded text; gemini-embedding reads about 2,000 tokens at most
 
 // a positive 32-bit number per text, the kind of hash the vector store keys items by
 const numHash = s => { let h = 0x811c9dc5 ^ 0x5bd1; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0) || 1; };
@@ -152,17 +169,34 @@ export async function syncEmbed({ onProgress = null, force = false } = {}) {
     try {
         const all = corpus(getMeta());
         const want = new Map(all.map(x => [x.hash, x]));
-        const have = new Set((await vec('list', { ...b, collectionId: st.coll })).map(Number));
+        const have = new Set((await vec('list', { ...b, collectionId: st.coll }, 30_000, { retries: 1 })).map(Number));
         const add = all.filter(x => !have.has(x.hash));
         const gone = [...have].filter(h => !want.has(h));
-        if (gone.length) await vec('delete', { ...b, collectionId: st.coll, hashes: gone });
-        // gemini-embedding on Vertex takes one text per request, and the server sends what it gets in one go
-        const step = b.source === 'vertexai' && /^gemini-embedding/.test(b.model || '') ? 1 : ['transformers', 'ollama'].includes(b.source) ? 8 : 40;
+        if (gone.length) await vec('delete', { ...b, collectionId: st.coll, hashes: gone }, 30_000, { retries: 1 });
+        // gemini-embedding on Vertex takes one text per request; other Google models take a few; the server sends
+        // what it gets in one go. A remote service gets a short pause between requests so its per-minute quota holds
+        const google = b.source === 'vertexai' || b.source === 'palm';
+        const step = google && /^gemini-embedding/.test(b.model || '') ? 1 : google ? 10 : ['transformers', 'ollama'].includes(b.source) ? 8 : 40;
+        const pace = REMOTE.has(b.source) ? 400 : 0;
+        const stop = () => currentChatId() !== id;
+        let skipped = 0, failRun = 0;
         for (let k = 0; k < add.length; k += step) {
-            if (currentChatId() !== id) throw new Error('채팅이 바뀌어서 멈췄어요');
-            await vec('insert', { ...b, collectionId: st.coll, items: add.slice(k, k + step).map((x, j) => ({ hash: x.hash, text: x.text, index: k + j })) }, 120_000);
+            if (stop()) throw new Error('채팅이 바뀌어서 멈췄어요');
+            const items = add.slice(k, k + step).map((x, j) => ({ hash: x.hash, text: x.text.slice(0, MAX_TEXT), index: k + j }));
+            try {
+                await vec('insert', { ...b, collectionId: st.coll, items }, 120_000, { retries: 3, stop });
+                failRun = 0;
+            } catch (e) {
+                // one text the service keeps refusing is skipped (it is tried again on the next build);
+                // several in a row means the service itself is down, so stop and say so
+                if (stop() || ++failRun >= 3 || step > 1) throw e;
+                skipped += items.length;
+                console.warn('[narrative-archive] embed skip', e);
+            }
             onProgress?.(Math.min(add.length, k + step), add.length);
+            if (pace && k + step < add.length) await sleep(pace);
         }
+        st.skipped = skipped;
         st.items = want;
         st.synced = true;
         st.at = Date.now();

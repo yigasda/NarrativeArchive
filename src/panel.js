@@ -1311,8 +1311,13 @@ export function bindPanel() {
         $('#na_emb_sub').text('목록 보는 중…');
         try {
             const st = await syncEmbed({ force: true, onProgress: (n, all) => $('#na_emb_sub').text(`만드는 중… ${n} / ${all}`) });
-            if (st) toastr.success(`섹션 조각 ${st.secs}개 · 숨긴 원문 ${st.raws}개`, '뜻 색인');
-        } catch (err) { toastr.error(String(err.message || err), '뜻 색인을 못 만들었어요'); }
+            if (st) toastr.success(`섹션 조각 ${st.secs}개 · 숨긴 원문 ${st.raws}개${st.skipped ? ` · 못 넣은 ${st.skipped}개는 다음에 다시 해요` : ''}`, '뜻 색인');
+        } catch (err) {
+            // a 5xx that survived the retries is the service's quota or an outage; what went in so far is kept
+            const e = embedCfg(), m = e.model || EMBED_DEFAULT_MODEL[e.source] || '';
+            const hint = err.status >= 500 ? ` · 만든 데까지는 남아 있어서 다시 누르면 이어서 해요${e.source === 'vertexai' && /^gemini-embedding/.test(m) ? '. 계속 끊기면 모델을 text-multilingual-embedding-002로 바꿔 보세요 (한 번에 10개씩이라 요청 수가 훨씬 적어요)' : ''}` : '';
+            toastr.error(`${String(err.message || err)}${hint}`, '뜻 색인을 못 만들었어요', { timeOut: 15000 });
+        }
         finally { $b.removeClass('na_busy'); syncEmbedRows(); }
     }));
     $('#na_guess').on('change', function () { globalSettings().guess = this.value; saveGlobal(); syncPanel(); });
