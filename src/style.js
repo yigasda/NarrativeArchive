@@ -6,6 +6,7 @@ import { askFix, stripThink } from './ai.js';
 import { globalSettings } from './core.js';
 import { TIDY_PROMPT, activePrompt, langBlock } from './prompts.js';
 import { checkCounts, countCheckOn, rangedBlocks } from './rulecheck.js';
+import { rawFor } from './retitle.js';
 import { lastSections, styleSamples } from './scenes.js';
 import { splitTail } from './sections.js';
 
@@ -31,8 +32,9 @@ Never change:
 - heading lines, "PLOT:", how many bullets there are and what each one covers.
 
 Do not add facts, feelings, images, interpretation, or a closing line about what it meant. Do not drop content: only words the voice rules themselves rule out may go.
+A section may come with its RAW LOG: the messages it covers. It is there so you do not misstate anything. Use it only to check what is true: who felt or said what, whose reading something is, what came first. Never add anything from it that the section does not already say, and never move content from one section to another. Where the section's wording and the raw log disagree, keep the section's content and only fix the wording to what the raw log shows.
 The VOICE SAMPLES are already in the archive. Never output, copy or continue them; take only their sound.
-Output only the new sections, in the same order, each starting with its heading line. Nothing else.`;
+Output only the new sections, in the same order, each starting with its heading line, without the <section> tags or the raw log. Nothing else.`;
 
 const cites = t => [...String(t).matchAll(/\(([^()]*#\d[^()]*)\)/g)].flatMap(x => x[1].match(/\d+/g) || []).sort().join(',');
 const quotes = t => [...String(t).matchAll(/["“]([^"”\n]{2,})["”]/g)].map(x => x[1].replace(/[.,!?…]+$/, '').trim());
@@ -49,15 +51,20 @@ export function styleGuard(before, after) {
     return '';
 }
 
-// draft: the append window's text. Returns { text, changed, kept: [{ head, why }] }, or throws
-export async function polishStyle(draft, m) {
+// draft: the append window's text; withRaw: each section goes with the messages it covers.
+// Returns { text, changed, kept: [{ head, why }], raws }, or throws
+export async function polishStyle(draft, m, { withRaw = true } = {}) {
     const [body, tail] = splitTail(String(draft || ''));
     const blocks = rangedBlocks(body);
     if (!blocks.length) throw new Error('다듬을 섹션이 없어요 · 제목 줄이 `## #시작–#끝 — 제목` 모양이어야 해요');
     const own = styleSamples(m).map(x => x.text);
     const samples = (own.length ? own : lastSections(m?.text || '', 2)).join('\n\n');
-    const prompt = `VOICE RULES:\n${voiceRules(activePrompt(globalSettings())?.text)}\n\n${samples ? `VOICE SAMPLES (already in the archive: never output them):\n${samples}\n\n` : ''}NEW SECTIONS:\n${blocks.map(b => b.text).join('\n\n')}${langBlock(m?.text || body, { tail: false, src: '' })}`;
-    const out = stripThink(await askFix(prompt, { system: AI_SYS_STYLE })).replace(/^```[a-z]*\n?|```\s*$/g, '').trim();
+    // each section's own messages, read from the chat (they are not hidden yet); one that cannot be found goes alone
+    const raws = withRaw ? await Promise.all(blocks.map(b => rawFor(m, { title: b.head.replace(/^##\s*/, '') }, { here: true }).then(r => r.raw || '').catch(() => ''))) : blocks.map(() => '');
+    const secs = blocks.map((b, i) => (raws[i] ? `<section>\n${b.text}\n</section>\n<raw_log>\n${raws[i]}\n</raw_log>` : `<section>\n${b.text}\n</section>`)).join('\n\n');
+    const prompt = `VOICE RULES:\n${voiceRules(activePrompt(globalSettings())?.text)}\n\n${samples ? `VOICE SAMPLES (already in the archive: never output them):\n${samples}\n\n` : ''}NEW SECTIONS${raws.some(Boolean) ? ', each with its RAW LOG' : ''}:\n${secs}${langBlock(m?.text || body, { tail: false, src: raws.some(Boolean) ? 'the raw log is' : '' })}`;
+    const out = stripThink(await askFix(prompt, { system: AI_SYS_STYLE })).replace(/^```[a-z]*\n?|```\s*$/g, '')
+        .replace(/<raw_log>[\s\S]*?<\/raw_log>/g, '').replace(/^\s*<\/?section>\s*$/gm, '').trim(); // tags a model echoed back
     const got = rangedBlocks(out);
     if (!got.length) throw new Error('모델이 섹션 모양으로 답하지 않았어요 · 초안은 그대로예요');
     let text = body, changed = 0;
@@ -71,7 +78,7 @@ export async function polishStyle(draft, m) {
         text = `${text.slice(0, b.start)}${a}\n\n${text.slice(b.end).replace(/^\s+/, '')}`;
         changed++;
     }
-    let res = { text: `${text.replace(/\n{3,}/g, '\n\n')}${tail}`, changed, kept };
+    let res = { text: `${text.replace(/\n{3,}/g, '\n\n')}${tail}`, changed, kept, raws: raws.filter(Boolean).length };
     // the rewrite may have brought back an em dash or a long bullet: the counts are checked again
     if (changed && countCheckOn()) {
         const c = await checkCounts({ text: res.text }, { m });
