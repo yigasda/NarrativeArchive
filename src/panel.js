@@ -35,7 +35,7 @@ import { AI_SYS_TRANSLATE, askTranslator, glossaryEntries, openGlossary } from '
 import { chatLabel, confirm, copyText, countTokens, download, esc, escRe, fmt, nowStamp, timeLabel } from './util.js';
 import { NUDGE_CHOICES, COMPRESS_MODES, compressMode, openAuSettings, openWizard, quickCompress } from './wizard.js';
 import { openStudio, studioLabel } from './studio.js';
-import { SCENE_MODELS, SCENE_SIZES, openStyleSamples, openWorkNote, styleLabel, sceneModel, sceneSize, stateModel } from './scenes.js';
+import { SCENE_SIZES, openStyleSamples, openWorkNote, styleLabel, sceneSize } from './scenes.js';
 import { openWorlds, worldBooks, worldIsOn } from './world.js';
 import { openXray } from './xray.js';
 
@@ -209,8 +209,6 @@ export function renderPanel() {
                   <label class="na_cp_row" hidden title="검사가 다 통과하면 추가 창 없이 넣고 숨겨요 · 알림에서 되돌리기 · 걸리는 게 있으면 추가 창"><span class="na_cp_txt"><span>한 번에 압축 · 바로 넣기</span><small>검사 통과하면 바로 넣기</small></span><input type="checkbox" class="na_toggle" id="na_quick_auto"></label>
                   <label class="na_cp_row" data-m="quick"><span class="na_cp_txt"><span>압축 방식</span><small id="na_cmode_sub"></small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_cmode">${Object.entries(COMPRESS_MODES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                   <label class="na_cp_row na_cmode_sc" data-m="quick studio" title="장면마다 섹션 하나씩 따로 받아요"><span class="na_cp_txt"><span>장면 크기</span><small>클수록 싸고, 작을수록 꼼꼼해요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_scsize">${Object.entries(SCENE_SIZES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <label class="na_cp_row na_cmode_sc" data-m="quick"><span class="na_cp_txt"><span>장면별 · 섹션 모델</span><small>장면 수만큼 불러요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_scmodel">${Object.entries(SCENE_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <label class="na_cp_row na_cmode_sc" data-m="quick"><span class="na_cp_txt"><span>장면별 · STATE 모델</span><small>마지막에 한 번</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_stmodel">${Object.entries(SCENE_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                   <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_stylesample"><span class="na_cp_txt"><span>문체 견본</span><small id="na_style_sub"></small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                   <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_worknote"><span class="na_cp_txt"><span>작업 노트</span><small id="na_worknote_sub">장면마다 같이 보내요</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                   <label class="na_cp_row" data-m="quick" title="지시문의 규칙은 시스템 메시지에, 원문 · 메모 · 마지막 점검은 요청에"><span class="na_cp_txt"><span>규칙은 시스템 메시지로</span><small>중계 서버가 버리면 끄세요</small></span><input type="checkbox" class="na_toggle" id="na_rules_sys"></label>
@@ -1134,8 +1132,6 @@ export function bindPanel() {
     }));
     $('#na_rules_sys').on('change', function () { globalSettings().rulesInSystem = this.checked; saveGlobal(); });
     $('#na_scsize').on('change', function () { globalSettings().sceneSize = Number(this.value); saveGlobal(); });
-    $('#na_scmodel').on('change', function () { globalSettings().sceneModel = this.value; saveGlobal(); });
-    $('#na_stmodel').on('change', function () { globalSettings().stateModel = this.value; saveGlobal(); });
     $('#na_worknote').on('click', needChat(() => openWorkNote()));
     $('#na_stylesample').on('click', needChat(() => openStyleSamples()));
     $('#na_cmode').on('change', function () { globalSettings().compressMode = this.value; saveGlobal(); layoutCp(); });
@@ -1505,7 +1501,7 @@ export function syncPanel() {
     $('#na_track').prop('checked', !!m.track);
     $('#na_rules_sys').prop('checked', !!globalSettings().rulesInSystem);
     $('#na_cmode').val(compressMode()); layoutCp();
-    $('#na_scsize').val(String(sceneSize())); $('#na_scmodel').val(sceneModel()); $('#na_stmodel').val(stateModel());
+    $('#na_scsize').val(String(sceneSize()));
     $('#na_style_sub').text(styleLabel(getMeta()));
     { const wn = String(getMeta().workNote || '').trim(); $('#na_worknote_sub').text(wn ? `약 ${wn.length.toLocaleString()}자 · 장면마다 같이` : '장면마다 같이 보내요'); }
     {

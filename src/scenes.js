@@ -14,9 +14,9 @@ import { esc } from './util.js';
 
 export const SCENE_SIZES = { 20: '작게 · 약 20개씩', 30: '보통 · 약 30개씩', 40: '크게 · 약 40개씩' };
 export const sceneSize = () => { const v = Number(globalSettings().sceneSize); return v in SCENE_SIZES ? v : 30; };
-export const SCENE_MODELS = { dr: '초안 모델', ai: 'AI 기능 모델' };
-export const sceneModel = () => (globalSettings().sceneModel === 'ai' ? 'ai' : 'dr');
-export const stateModel = () => (globalSettings().stateModel === 'ai' ? 'ai' : 'dr');
+// 장면별 writes the sections and the STATE changes with the draft model, like every other compression (since 3.87.15)
+export const sceneModel = () => 'dr';
+export const stateModel = () => 'dr';
 export const sceneModelLabel = k => (k === 'ai' ? aiLabel() : drLabel());
 const ask = (which, prompt, system = '', guard = null, keepSystem = false) => (which === 'ai' ? askAI(prompt, { system, maxTokens: 12000, guard, keepSystem }) : askCompress(prompt, { system, guard, keepSystem }));
 
