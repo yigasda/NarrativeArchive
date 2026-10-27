@@ -4059,3 +4059,7 @@ body.na_darkui #na_settings { --sv-page: #2F2621; --sv-card: #3A2F28; --sv-line:
 
 /* the 도구 tab's group boxes in the same card colour as the settings cards */
 #na_settings .na_tab_pane[data-pane="tools"] > .na_block { background: var(--hm-card); border: 1px solid var(--hm-line); border-radius: 18px; }
+
+/* 아카이브에 추가: sections come in finished, so the writing checks stay out of sight; the ones that keep the archive whole
+   (numbering, STATE, sections already there) still show */
+.na_ap2 .na_cites, .na_ap2 .na_bullets, .na_ap2 .na_names, .na_ap2 .na_cut { display: none !important; }
