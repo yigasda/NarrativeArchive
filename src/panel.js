@@ -218,8 +218,9 @@ export function renderPanel() {
                 </div>
                 <div class="na_v2_card na_v2_list na_cp_set">
                   <details class="na_cp_fold na_cp_more_fold" id="na_cp_more">
-                    <summary class="na_cp_row"><span class="na_cp_txt"><span>원문 손질 · 지시문 · 경계선</span><small id="na_cp_more_sub">압축 지시문 · 아카이브 따라가기</small></span><span class="na_cp_more">더 보기</span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
+                    <summary class="na_cp_row"><span class="na_cp_txt"><span>원문 손질 · 지시문 · 경계선</span><small id="na_cp_more_sub">태그 지우기 · 압축 지시문 · 아카이브 따라가기</small></span><span class="na_cp_more">더 보기</span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
                   <label class="na_cp_row"><span class="na_cp_txt"><span>숨긴 메시지 빼고 뽑기</span></span><input type="checkbox" class="na_toggle" id="na_opt_hidden"></label>
+                  <label class="na_cp_row" title="think · thinking · thought · reasoning · scene_plan · style · script와 주석은 통째로 빼고, 나머지 HTML 태그는 지우고 글자만 남겨요 · 끄면 메시지를 그대로 보내요"><span class="na_cp_txt"><span>태그 지우기</span><small>생각 · 계획 블록은 통째로 · 나머지는 글자만</small></span><input type="checkbox" class="na_toggle" id="na_opt_tags"></label>
                   <details class="na_cp_fold" id="na_cmp_settings">
                     <summary class="na_cp_row"><span class="na_cp_txt"><span>압축 지시문</span><small id="na_plib_sum">이 기기의 실리태번 설정에만 저장돼요</small></span><span class="na_cp_more">편집</span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
                     <div class="na_cp_sub"><div class="na_plib" id="na_plib"></div></div>

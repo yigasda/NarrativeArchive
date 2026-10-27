@@ -12,7 +12,7 @@ import { parseSections } from './sections.js';
 
 export const MODULE = 'narrative_archive';
 export const PROMPT_KEY = 'narrative_archive_injection';
-export const VERSION = '3.87.13';
+export const VERSION = '3.87.14';
 export const SNAPSHOT_MAX = 5;
 export const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -162,8 +162,8 @@ export function globalSettings() {
     // 2단계 was taken out in 3.87.3: its setting goes, and a chat set to it compresses from the raw log
     delete g.eventsModel;
     delete g.chunkTok; // 나눠 보내기 is fixed at about 20,000 tokens since 3.87.4
-    // 3.87.8: tags are cleaned up the same way always, and the count check always runs
-    delete g.stripTags; delete g.stripCustom; delete g.countCheck;
+    // 3.87.8: no hand-written tag list any more (태그 지우기 is on unless turned off), and the count check always runs
+    delete g.stripCustom; delete g.countCheck;
     if (g.compressMode === 'events') g.compressMode = 'raw';
     // prompt library: [{ id, name, text, fav }], first entry is the built-in basic one
     if (g.aiMaxTokens === 4096 && !g.aiMaxSet) g.aiMaxTokens = 8192; // the old default, never changed by hand

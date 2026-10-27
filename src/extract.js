@@ -47,7 +47,9 @@ export const extractToText = items => items.map(x => `[${x.i}] ${x.name}:\n${x.t
 const REASONING = 'think|thinking|thought|reasoning';
 const INLINE_TAGS = /^(?:b|i|u|s|em|strong|span|a|small|big|sub|sup|mark|font|code|kbd|del|ins|q|abbr|ruby|rt|rp)$/i;
 const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', '#39': "'" };
-export function cleanMessage(text) {
+// g.stripTags false (압축 → 설정 → 태그 지우기 off): the message goes as it is
+export function cleanMessage(text, g) {
+    if (g && g.stripTags === false) return String(text || '');
     let t = String(text || '');
     const close = new RegExp(`</(?:${REASONING})\\s*>`, 'i'), close1 = t.search(close);
     if (close1 >= 0 && !new RegExp(`<(?:${REASONING})\\b`, 'i').test(t.slice(0, close1))) t = t.slice(close1).replace(close, '');
@@ -126,7 +128,7 @@ export async function openExtract() {
     const showProw = () => $root.find('.na_ex_prow').toggle(!!g.usePrompt);
     showProw();
     fillQuick();
-    $root.find('.na_ex_optsum').text(`${[g.skipHidden ? '숨긴 메시지 뺌' : '숨긴 메시지 포함', '생각 · 계획 블록 뺌', '[번호] 이름:'].join(' · ')}`);
+    $root.find('.na_ex_optsum').text(`${[g.skipHidden ? '숨긴 메시지 뺌' : '숨긴 메시지 포함', g.stripTags !== false ? '태그 지움' : '태그 그대로', '[번호] 이름:'].join(' · ')}`);
     $root.find('.na_ex_toset').on('click', () => { $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoCompressSettings(); });
 
     let current = '';

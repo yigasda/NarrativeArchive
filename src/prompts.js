@@ -470,6 +470,7 @@ export function fillPrompt(tpl, vars) {
 export function renderPromptSettings() {
     const g = globalSettings();
     $('#na_opt_hidden').prop('checked', !!g.skipHidden);
+    $('#na_opt_tags').prop('checked', g.stripTags !== false);
     $('#na_quick_auto').prop('checked', !!g.quickAuto);
     $('#na_nudge').val(String(g.compressNudge === undefined || g.compressNudge === null || g.compressNudge === '' ? 60 : Number(g.compressNudge) || 0));
     const $h = $('#na_plib');
@@ -514,6 +515,7 @@ export function bindPromptSettings() {
           <button type="button" class="na_linkbtn na_prompt_reset">처음 모양으로 되돌리기</button>
         </div>`);
     $('#na_opt_hidden').on('change', function () { g().skipHidden = this.checked; saveGlobal(); });
+    $('#na_opt_tags').on('change', function () { g().stripTags = this.checked; saveGlobal(); });
     $('#na_quick_auto').on('change', function () { g().quickAuto = this.checked; saveGlobal(); });
     $('#na_nudge').on('change', function () { g().compressNudge = Number(this.value) || 0; saveGlobal(); });
     const pick = id => { g().activePrompt = id; saveGlobal(); renderPromptSettings(); };
