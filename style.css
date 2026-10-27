@@ -3919,7 +3919,7 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_ap2 .na_ap_tools .na_v2_btn { flex: 1; }
 .na_ap2 .na_ap_outinfo:empty { display: none; }
 
-.na_dr2_weak { margin-top: 10px; opacity: 0.75; }
-.na_dr2_weak > summary { cursor: pointer; font-size: 0.85em; color: var(--na-dim); padding: 6px 2px; }
-.na_dr2_weak > summary small { display: block; font-size: 0.9em; }
-.na_dr2_weak .na_v2_card { margin-top: 8px; }
+.na_dr2_unbacked { opacity: 0.55; }
+.na_dr2_ev_ok, .na_dr2_ev_no { margin-left: auto; font-size: 0.75em; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.na_dr2_ev_ok { color: var(--na-ok, #3f9a5a); background: var(--na-ok-soft, color-mix(in srgb, #2e8b57 14%, transparent)); }
+.na_dr2_ev_no { color: var(--na-dim); background: var(--na-card2); }
