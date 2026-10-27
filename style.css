@@ -3918,3 +3918,8 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 
 .na_ap2 .na_ap_tools .na_v2_btn { flex: 1; }
 .na_ap2 .na_ap_outinfo:empty { display: none; }
+
+.na_dr2_weak { margin-top: 10px; opacity: 0.75; }
+.na_dr2_weak > summary { cursor: pointer; font-size: 0.85em; color: var(--na-dim); padding: 6px 2px; }
+.na_dr2_weak > summary small { display: block; font-size: 0.9em; }
+.na_dr2_weak .na_v2_card { margin-top: 8px; }

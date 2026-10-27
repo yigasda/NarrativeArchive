@@ -1,5 +1,7 @@
 // Drift check: does the recent chat contradict the archive?
 
+import { tokenize } from './recall.js';
+import { loreBlock } from './lore.js';
 import { aiLabel, askAI, withSpinner } from './ai.js';
 import { gotoSection, renderAnswer } from './ask.js';
 import { currentChatId } from './chats.js';
@@ -23,6 +25,7 @@ YOU GET
 - CURRENT CAST: the characters in the story right now.
 - WHO KNOWS WHAT (sometimes): secrets, and who does not know them.
 - CHARACTER NOTES (sometimes): each character's constant core and how they talk.
+- LOREBOOK (sometimes): the user's setting reference. A clear clash with it counts as FACT.
 - RECENT CHAT: numbered messages. Messages marked USER are written by the user.
 
 WHO TO CHECK
@@ -48,10 +51,11 @@ DO NOT REPORT
 - Anything you are not sure about. If unsure, leave it out.
 
 OUTPUT: Korean, one bullet per problem, exactly like this
-- #<message number> <character> [<TYPE>]: <what clashes> — 근거: <the archive fact it clashes with, short> [[<archive section heading, copied exactly>]]
+- #<message number> <character> [<TYPE>]: <what clashes> — 근거: "<a few words copied exactly from that section>" [[<archive section heading, copied exactly>]]
 <TYPE> is one of FACT, SECRET, SETTLED, TIME, CHARACTER (the numbered list above; TIME covers place too).
+The words after 근거 are checked against the section, so copy them as they stand there, in the archive's language. A problem you cannot back with such words from the archive is not one: leave it out.
 Example:
-- #612 Ivo [CHARACTER]: 렌에게 명령조로 말함 — 근거: 더는 렌에게 명령하지 않기로 했음 [[STATE AT #600 (…)]]
+- #612 Ivo [CHARACTER]: 렌에게 명령조로 말함 — 근거: "no longer gives Ren orders" [[STATE AT #600 (…)]]
 If there is no problem, write exactly: 없음`;
 
 export function recentForCheck(n) {
@@ -66,17 +70,39 @@ export function recentForCheck(n) {
     return out;
 }
 
+// does a warning's evidence stand in the archive? The quoted words must be in a section it cites (or anywhere, when the
+// citation does not match a heading): word for word, or nearly all of their words. No call to the model.
+const normE = s => String(s).normalize('NFC').replace(/[^\p{L}\p{N}]+/gu, '').toLowerCase();
+export function driftBacked(line, m, secs = parseSections(m.text)) {
+    const mt = String(line).trim().match(DRIFT_LINE);
+    if (!mt) return true; // not a warning line: shown as it is
+    const fact = String(mt[5] || '').trim();
+    if (!fact) return false;
+    const quote = (fact.match(/["“]([^"”]{3,})["”]/) || [, fact])[1];
+    const cited = mt[6] ? [...mt[6].matchAll(/\[\[(.+?)\]\](?!\])/g)].map(x => findCited(secs, x[1])).filter(Boolean) : [];
+    const hay = cited.length ? cited.map(s => m.text.slice(s.start, s.end)).join('\n') : m.text;
+    const q = normE(quote);
+    if (q.length >= 6 && normE(hay).includes(q)) return true;
+    const words = [...new Set(tokenize(quote))];
+    if (words.length < 2) return false;
+    const have = new Set(tokenize(hay));
+    return words.filter(w => have.has(w)).length / words.length >= 0.7;
+}
+export const driftLines = text => String(text || '').split('\n').filter(l => /^\s*[-*•]/.test(l));
+
 export async function runDrift(m, n) {
     const recent = recentForCheck(n);
     if (!recent.length) throw new Error('검사할 메시지가 없어요');
     const kr = knowledgeRows(m);
     const cast = castNames(m);
     const vn = m.voice && Object.keys(m.voice).length ? extraBlocks({ ...m, knowInject: false, voiceInject: true }).trim() : '';
-    const prompt = `[ARCHIVE]\n${m.text}${cast.length ? `\n\n[CURRENT CAST]\n${cast.join(', ')}` : ''}${kr.length ? `\n\n[WHO KNOWS WHAT]\n${extraBlocks({ ...m, knowInject: true, voiceInject: false }).trim()}` : ''}${vn ? `\n\n[CHARACTER NOTES]\n${vn.replace(/^# CHARACTER NOTES\n_[^\n]*_\n/, '')}` : ''}\n\n[RECENT CHAT]\n${recent.join('\n\n')}`;
+    const prompt = `[ARCHIVE]\n${m.text}${cast.length ? `\n\n[CURRENT CAST]\n${cast.join(', ')}` : ''}${kr.length ? `\n\n[WHO KNOWS WHAT]\n${extraBlocks({ ...m, knowInject: true, voiceInject: false }).trim()}` : ''}${await loreBlock(recent.join('\n'))}${vn ? `\n\n[CHARACTER NOTES]\n${vn.replace(/^# CHARACTER NOTES\n_[^\n]*_\n/, '')}` : ''}\n\n[RECENT CHAT]\n${recent.join('\n\n')}`;
     const out = await askAI(prompt, { system: AI_SYS_DRIFT, maxTokens: 2500 });
     const none = /^\s*(없음|none)\.?\s*$/i.test(out);
     const from = Number((recent[0].match(/^\[#(\d+)/) || [])[1]);
-    m.driftLast = { at: Date.now(), n: none ? 0 : out.split('\n').filter(l => /^\s*[-*•]/.test(l)).length || 1, none, text: out, upto: lastIndex(), count: recent.length, ...(Number.isFinite(from) ? { from } : {}) };
+    const lines = none ? [] : driftLines(out);
+    const strong = lines.filter(l => driftBacked(l, m)).length;
+    m.driftLast = { at: Date.now(), n: none ? 0 : lines.length ? strong : 1, weak: lines.length - strong, checked: true, none, text: out, upto: lastIndex(), count: recent.length, ...(Number.isFinite(from) ? { from } : {}) };
     await saveMeta();
     syncPanel();
     return m.driftLast;
@@ -113,10 +139,14 @@ export function driftSecLabel(title) {
 // parses one "- #57 Set [SECRET]: … — 근거: fact [[…]]" line (older answers have no [TYPE] / fact)
 export const DRIFT_LINE = /^[-*•]\s*#(\d+)\s+([^:：[\]]{1,40}?)\s*(?:\[([^\]]{1,20})\])?\s*[:：]\s*(.+?)(?:\s*[—–-]\s*근거\s*[:：]?\s*(.*?)\s*((?:\[\[[^\]]+\]\][\s,]*)+))?\s*$/;
 // one card per drift line; anything else falls back to the plain rendering
-export function driftCards(text, m) {
+export function driftCards(text, m, { check = false } = {}) {
     const secs = parseSections(m.text);
     const lines = String(text).split('\n').map(l => l.trim()).filter(l => /^[-*•]/.test(l));
     if (!lines.length) return `<div class="na_v2_card">${driftHtml(text, m)}</div>`;
+    if (check) {
+        const strong = lines.filter(l => driftBacked(l, m, secs)), weak = lines.filter(l => !driftBacked(l, m, secs));
+        return `${driftCards(strong.join('\n'), m)}${weak.length ? `<details class="na_dr2_weak"><summary>근거를 아카이브에서 못 찾은 경고 ${weak.length}개 <small>모델이 든 근거 글이 그 섹션에 없어요 · 헛경고일 수 있어요</small></summary>${driftCards(weak.join('\n'), m)}</details>` : ''}`;
+    }
     return lines.map(l => {
         const mt = l.match(DRIFT_LINE);
         if (!mt) return `<div class="na_v2_card na_dr2_item">${driftHtml(l, m)}</div>`;
@@ -160,7 +190,7 @@ export async function openDrift() {
         const okBar = text => `<div class="na_dr2_ok">${svgB(SVG_B.check, 15, 2.6)}<span>${text}</span></div>`;
         $root.find('.na_dr_out').html(d.none
             ? `<div class="na_v2_label"><span>검사 결과</span><small>${meta}</small></div>${okBar(`검사한 ${d.count}개 메시지 모두 아카이브와 맞아요`)}`
-            : `<div class="na_v2_label"><span>어긋난 곳${n ? ` ${n}개` : ''}</span><small>${meta}</small></div>${driftCards(d.text, m)}${flagged && rest > 0 ? okBar(`나머지 ${rest}개 메시지는 아카이브와 맞아요`) : ''}`);
+            : `<div class="na_v2_label"><span>어긋난 곳${d.checked ? ` ${d.n}개` : n ? ` ${n}개` : ''}</span><small>${meta}</small></div>${driftCards(d.text, m, { check: !!d.checked })}${flagged && rest > 0 ? okBar(`나머지 ${rest}개 메시지는 아카이브와 맞아요`) : ''}`);
     };
     $root.find('.na_dr2_dec, .na_dr2_inc').on('click', function () { const $n = $root.find('.na_dr_n'); $n.val(Math.min(60, Math.max(2, (parseInt($n.val(), 10) || 12) + ($(this).hasClass('na_dr2_inc') ? 2 : -2)))); });
     countTokens(m.text).then(t => {
@@ -202,7 +232,7 @@ export async function driftTick(msgId) {
     driftBusy = true;
     try {
         const d = await runDrift(m, Math.min(60, every + 2));
-        if (!d.none) toastr.warning(`최근 대화에서 아카이브와 어긋난 곳 ${d.n}개 · 눌러서 보기`, '이탈 감지', { timeOut: 12000, onclick: () => openDrift() });
+        if (!d.none && d.n > 0) toastr.warning(`최근 대화에서 아카이브와 어긋난 곳 ${d.n}개 · 눌러서 보기`, '이탈 감지', { timeOut: 12000, onclick: () => openDrift() });
     } catch (e) { console.warn('[narrative-archive] auto drift', e); }
     finally { driftBusy = false; }
 }

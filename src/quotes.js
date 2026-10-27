@@ -1,5 +1,6 @@
 // Quote bank and voice fingerprints.
 
+import { loreBlock } from './lore.js';
 import { aiLabel, askAI, withSpinner } from './ai.js';
 import { ctx, getMeta, saveMeta } from './core.js';
 import { applyInjection, extraBlocks } from './inject.js';
@@ -251,8 +252,9 @@ export async function makeVoice(m, who) {
     const card = cardOf(who);
     if (items.length + bank.length < 3) throw new Error(`${who}: 채팅이나 대사 은행에 대사가 3개는 있어야 말투를 볼 수 있어요`);
     const prompt = `NAME: ${who}${card ? `\n\nCARD:\n${card}` : ''}\n\nCHAT LINES${total > items.length ? ` (${items.length} of ${total}, spread across the whole story)` : ''}:\n${items.map(x => `[#${x.i}] ${x.text}`).join('\n\n') || '(none)'}${bank.length ? `\n\nARCHIVE LINES:\n${bank.join('\n')}` : ''}`;
+    const lore = await loreBlock(`${who}\n${card}`, { budget: 800 });
     // room for models that think before answering (their thinking counts against the limit and cut the rules short)
-    const ask = extra => askAI(`${prompt}${extra}`, { system: AI_SYS_VOICE2, maxTokens: 8000 });
+    const ask = extra => askAI(`${prompt}${lore}${extra}`, { system: AI_SYS_VOICE2, maxTokens: 8000 });
     let sh = parseSheet(await ask(''));
     if (sh.rules.length < 3) sh = parseSheet(await ask('\n\nYour last answer was cut off or not in the format. Answer again with the three parts CORE:, SPEECH:, SAMPLES: exactly as asked, nothing else.'));
     if (!sh.rules.length) throw new Error(`${who}: 모델 답에서 규칙을 못 찾았어요. 다시 눌러 주세요`);

@@ -3,6 +3,7 @@
 // Used by 회상 (relevant old lines injected before each reply), 질문하기 and the voice notes.
 // Also here: off-story messages (/comment, /sys, QR asides, OOC). 꼭 남길 장면 come first among equal hits.
 
+import { glossaryEntries } from './translate.js';
 import { ctx, getMeta, globalSettings, hasChat, saveMeta } from './core.js';
 import { cleanMessage } from './extract.js';
 import { currentInjection } from './inject.js';
@@ -160,6 +161,18 @@ export function bulletItems(m, injected) {
     return out;
 }
 
+// the glossary's name pairs (Set = 세트) join a query in both spellings, so a Korean chat still finds an English archive
+export function withGlossary(m, q) {
+    const low = String(q || '').toLowerCase();
+    const add = [];
+    for (const e of glossaryEntries(m)) {
+        const a = e.src.toLowerCase(), b = e.ko.toLowerCase();
+        if (low.includes(a) && !low.includes(b)) add.push(e.ko);
+        else if (low.includes(b) && !low.includes(a)) add.push(e.src);
+    }
+    return add.length ? `${q}\n${add.join(' ')}` : q;
+}
+
 // ---- 회상: before each reply, find old lines that fit the newest messages
 
 export function recallCfg(m) {
@@ -215,7 +228,7 @@ export async function runRecall() {
     const m = getMeta();
     const cfg = recallCfg(m);
     if (!m.enabled || !cfg.on) { c.setExtensionPrompt(RECALL_KEY, '', 1, 0); return null; }
-    const q = recallQuery(cfg.scan);
+    const q = withGlossary(m, recallQuery(cfg.scan));
     const injected = cfg.secs ? (await currentInjection()).text || '' : '';
     const items = [...rawItems({ only: 'hidden' }), ...(cfg.secs ? bulletItems(m, injected) : [])];
     const qn = new Set(tokenize(q)).size;

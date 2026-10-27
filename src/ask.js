@@ -1,10 +1,11 @@
 // Ask the archive.
 
+import { loreBlock } from './lore.js';
 import { aiHtml, aiLabel, askAI, withSpinner } from './ai.js';
 import { currentChatId } from './chats.js';
 import { ctx, getMeta, globalSettings, saveGlobal } from './core.js';
 import { archiveLang } from './prompts.js';
-import { bm25, estTok, pick, rawItems, recallLine, sectionItems } from './recall.js';
+import { bm25, estTok, pick, rawItems, recallLine, sectionItems, withGlossary } from './recall.js';
 import { openSource } from './source.js';
 import { sectionPanel, showArchiveView, showTab } from './panel.js';
 import { mdBlock } from './reader.js';
@@ -55,7 +56,8 @@ export async function askContext(m, q, { whole = false } = {}) {
     if (whole) return { prompt: `[SECTIONS]\n${m.text}\n\n[QUESTION]\n${q}`, secs: [], raws: [], picked: false };
     const items = sectionItems(m);
     const [, tail] = splitTail(m.text);
-    let secHits = pick(bm25(items, q), { k: 6, budget: 9000, minHits: 1 }).map(r => r.item);
+    const qq = withGlossary(m, q);
+    let secHits = pick(bm25(items, qq), { k: 6, budget: 9000, minHits: 1 }).map(r => r.item);
     let words = '';
     const hangulQ = /[\uac00-\ud7af]/.test(q), lang = archiveLang(m.text);
     let picked = false;
@@ -71,11 +73,12 @@ export async function askContext(m, q, { whole = false } = {}) {
             picked = true;
         } catch (e) { console.warn('[narrative-archive] ask pick', e); }
     }
-    const rawHits = pick(bm25(rawItems(), `${q}\n${words}`), { k: 6, budget: 2500, minHits: 1 }).map(r => r);
+    const rawHits = pick(bm25(rawItems(), `${qq}\n${words}`), { k: 6, budget: 2500, minHits: 1 }).map(r => r);
     const order = new Map(items.map((x, i) => [x, i]));
     secHits.sort((a, b) => order.get(a) - order.get(b));
     const heads = items.length > secHits.length ? items.map(x => `## ${x.title}`).join('\n') : '';
-    const prompt = `${heads ? `[HEADINGS]\n${heads}\n\n` : ''}[SECTIONS]\n${secHits.map(x => x.text.trim()).join('\n\n') || '(none found)'}${tail.trim() ? `\n\n${tail.trim()}` : ''}${rawHits.length ? `\n\n[ORIGINAL LINES]\n${rawHits.sort((a, b) => a.item.i - b.item.i).map(recallLine).join('\n')}` : ''}\n\n[QUESTION]\n${q}`;
+    const lore = await loreBlock(`${q}\n${secHits.map(x => x.text).join('\n')}`);
+    const prompt = `${heads ? `[HEADINGS]\n${heads}\n\n` : ''}[SECTIONS]\n${secHits.map(x => x.text.trim()).join('\n\n') || '(none found)'}${tail.trim() ? `\n\n${tail.trim()}` : ''}${rawHits.length ? `\n\n[ORIGINAL LINES]\n${rawHits.sort((a, b) => a.item.i - b.item.i).map(recallLine).join('\n')}` : ''}${lore}\n\n[QUESTION]\n${q}`;
     return { prompt, secs: secHits, raws: rawHits, picked };
 }
 
