@@ -1,10 +1,10 @@
 // Search index over the raw chat (hidden messages too) and the archive's sections: BM25 on words, and on two-letter
 // pieces of Korean, Japanese and Chinese words (they take particles, so "세트가" still finds "세트는").
-// Used by 회상 (relevant old lines injected before each reply), 질문하기 and the voice notes.
-// Also here: off-story messages (/comment, /sys, QR asides, OOC). 꼭 남길 장면 come first among equal hits.
+// Used by 옛 장면 불러오기 (relevant old lines injected before each reply), 질문하기 and the voice notes.
+// Also here: 롤플 밖 메시지 (/comment, OOC, requests to pause the RP, /sys). 꼭 남길 장면 come first among equal hits.
 
 import { glossaryEntries } from './translate.js';
-import { ctx, getMeta, globalSettings, hasChat, saveMeta } from './core.js';
+import { ctx, getMeta, globalSettings, hasChat, saveGlobal, saveMeta } from './core.js';
 import { cleanMessage } from './extract.js';
 import { currentInjection } from './inject.js';
 import { isKeptAt, sectionKept } from './keeps.js';
@@ -12,9 +12,25 @@ import { mutedSet, parseSections, sectionKey, splitTail } from './sections.js';
 
 export const RECALL_KEY = 'narrative_archive_recall';
 
-// ---- off-story messages
+// ---- 롤플 밖 메시지: what is not the story, by kind. Each kind is switched on its own in the settings.
 
-// a QR that pauses the role-play for a side piece (a balance game, a what-if), or an OOC note
+export const OFF_KINDS = {
+    comment: ['/comment 코멘트', '분석 QR처럼 /comment로 넣은 메모'],
+    ooc: ['OOC 메모', 'OOC:, 사담: 으로 시작하는 메시지'],
+    pause: ['롤플을 멈추자는 요청과 그 답', '"롤플 잠깐 멈추고", "pause the RP" 같은 메시지와 바로 다음 답'],
+    narrator: ['/sys 내레이터 메시지', '상태창이나 선택지를 /sys로 띄우는 경우'],
+};
+// 3.69's single choice ('keep' | 'aside' | 'all') carries over the first time
+export function offKinds() {
+    const g = globalSettings();
+    if (!g.offKinds || typeof g.offKinds !== 'object') {
+        const old = g.offstage;
+        g.offKinds = old === 'keep' || old === '' ? { comment: false, ooc: false, pause: false, narrator: false } : { comment: true, ooc: true, pause: true, narrator: old === 'all' };
+    }
+    return { comment: g.offKinds.comment !== false, ooc: g.offKinds.ooc !== false, pause: g.offKinds.pause !== false, narrator: g.offKinds.narrator === true };
+}
+export const setOffKind = (k, on) => { const g = globalSettings(); g.offKinds = { ...offKinds(), [k]: !!on }; saveGlobal(); };
+
 const STEP_OUT = [
     /\b(pause|stop|break from|step out of|leave|outside)\b(?:\s+\w+){0,4}?\s+(?:the\s+)?(?:role-?play|rp|story)\b/i,
     /\b(?:role-?play|rp)\s+(?:pause|break|stop)\b/i,
@@ -23,20 +39,13 @@ const STEP_OUT = [
 const stepsOut = text => STEP_OUT.some(re => re.test(text));
 const OOC_RE = /^\s*[([{【]?\s*(ooc|out of character|사담|잡담)\s*[:：)\]】]/i;
 
-// '' = keep everything, 'aside' = comments, OOC and QR side pieces (default), 'all' = also /sys narrator lines
-export const offstageMode = () => { const v = globalSettings().offstage; return v === '' || v === 'keep' ? 'keep' : v === 'all' ? 'all' : 'aside'; };
 export function isOffstage(msg, prev = null) {
     if (!msg) return false;
-    const mode = offstageMode();
-    if (mode === 'keep') return false;
-    const extra = msg.extra || {};
-    if (extra.type === 'comment' || extra.na_aside) return true;
-    const text = String(msg.mes || '');
-    if (OOC_RE.test(text)) return true;
-    if (msg.is_user && stepsOut(text)) return true;
-    // the answer to a side-piece request is a side piece too
-    if (!msg.is_user && prev?.is_user && stepsOut(String(prev.mes || ''))) return true;
-    return mode === 'all' && (extra.type === 'narrator' || extra.model === 'slash command');
+    const k = offKinds(), extra = msg.extra || {}, text = String(msg.mes || '');
+    if (k.comment && extra.type === 'comment') return true;
+    if (k.ooc && OOC_RE.test(text)) return true;
+    if (k.pause && (msg.is_user ? stepsOut(text) : !!prev?.is_user && stepsOut(String(prev.mes || '')))) return true;
+    return k.narrator && extra.type === 'narrator';
 }
 // indexes of off-story messages in the chat (or the given list)
 export function offstageSet(chat = ctx().chat || []) {
@@ -76,9 +85,12 @@ function termsOf(text) {
     return hit;
 }
 
-// items: [{ text, ... }] → [{ item, score, hits }] best first; hits = distinct query words found
+// items: [{ text, ... }] → [{ item, score, hits }] best first; hits = distinct query words found.
+// query: a string, or [{ text, w }] where each part's words count w times (a word in several parts keeps its largest w)
 export function bm25(items, query, { k1 = 1.2, b = 0.75 } = {}) {
-    const q = [...new Set(tokenize(query))];
+    const wt = new Map();
+    for (const part of Array.isArray(query) ? query : [{ text: query, w: 1 }]) for (const t of tokenize(part.text)) wt.set(t, Math.max(wt.get(t) || 0, part.w));
+    const q = [...wt.keys()];
     if (!q.length || !items.length) return [];
     const docs = items.map(x => termsOf(x.text));
     const avg = docs.reduce((a, d) => a + d.len, 0) / docs.length || 1;
@@ -91,7 +103,7 @@ export function bm25(items, query, { k1 = 1.2, b = 0.75 } = {}) {
             const f = d.get(t);
             if (!f) continue;
             hits++;
-            s += idf.get(t) * (f * (k1 + 1)) / (f + k1 * (1 - b + b * d.len / avg));
+            s += wt.get(t) * idf.get(t) * (f * (k1 + 1)) / (f + k1 * (1 - b + b * d.len / avg));
         }
         if (s > 0) out.push({ item: items[i], score: s, hits });
     });
@@ -173,7 +185,7 @@ export function withGlossary(m, q) {
     return add.length ? `${q}\n${add.join(' ')}` : q;
 }
 
-// ---- 회상: before each reply, find old lines that fit the newest messages
+// ---- 옛 장면 불러오기: before each reply, find old lines that fit the newest messages
 
 export function recallCfg(m) {
     const r = m?.recall && typeof m.recall === 'object' ? m.recall : {};
@@ -181,7 +193,7 @@ export function recallCfg(m) {
     return { on: !!r.on, k: num(r.k, 4, 1, 12), budget: num(r.budget, 600, 100, 4000), depth: num(r.depth, 2, 0, 20), scan: num(r.scan, 3, 1, 10), secs: r.secs !== false };
 }
 
-// the newest messages, the very last one counted twice
+// the newest messages as a weighted query: the one being answered counts most, each older one a little less
 export function recallQuery(n) {
     const chat = ctx().chat || [];
     const off = offstageSet(chat);
@@ -191,7 +203,7 @@ export function recallQuery(n) {
         if (!x || x.is_system || off.has(i)) continue;
         out.push(cleanMessage(String(x.mes || ''), { stripTags: true }).slice(-2000));
     }
-    return out.length ? `${out[0]}\n${out.join('\n')}` : '';
+    return out.map((text, k) => ({ text, w: Math.max(0.3, 1 - k * 0.25) }));
 }
 
 // hits for a query: raw passages (and section bullets), 꼭 남길 장면 first among equals, at most one passage per message,
@@ -228,16 +240,16 @@ export async function runRecall() {
     const m = getMeta();
     const cfg = recallCfg(m);
     if (!m.enabled || !cfg.on) { c.setExtensionPrompt(RECALL_KEY, '', 1, 0); return null; }
-    const q = withGlossary(m, recallQuery(cfg.scan));
+    const q = recallQuery(cfg.scan).map(x => ({ ...x, text: withGlossary(m, x.text) }));
     const injected = cfg.secs ? (await currentInjection()).text || '' : '';
     const items = [...rawItems({ only: 'hidden' }), ...(cfg.secs ? bulletItems(m, injected) : [])];
-    const qn = new Set(tokenize(q)).size;
+    const qn = new Set(q.flatMap(x => tokenize(x.text))).size;
     const hits = pick(bm25(items, q), { k: cfg.k, budget: cfg.budget, minHits: qn < 6 ? 1 : 2 })
         .sort((x, y) => (x.item.i ?? -1) - (y.item.i ?? -1));
     const id = String(c.getCurrentChatId?.() || c.chatId || '');
     if (!hits.length) { c.setExtensionPrompt(RECALL_KEY, '', 1, 0); lastRecall.set(id, { at: Date.now(), lines: [], tokens: 0 }); return null; }
     const lines = hits.map(recallLine);
-    const text = `<recalled_memories>\nEarlier moments that may matter for the next reply, from the original messages and the archive. Background only: keep consistent with them, never quote, list or mention them.\n${lines.join('\n')}\n</recalled_memories>`;
+    const text = `# FROM EARLIER IN THE STORY\n_Old moments that touch what is happening now, from the original messages and the archive. For consistency only: never quote, list or mention them._\n${lines.join('\n')}`;
     c.setExtensionPrompt(RECALL_KEY, text, 1, cfg.depth, false, 0);
     const st = { at: Date.now(), lines, tokens: estTok(text) };
     lastRecall.set(id, st);

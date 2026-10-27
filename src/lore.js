@@ -1,4 +1,4 @@
-// 로어북 같이 보기: entries from the lorebooks this chat uses, sent along with compression, drift checks, questions and
+// 로어북 곁들이기: entries from the lorebooks this chat uses, sent along with compression, drift checks, questions and
 // voice notes so names, places and rules stay as the lorebook has them. An entry goes along when one of its keys is in the
 // text the job reads (the same rule SillyTavern uses); always-on entries come after, while the budget lasts.
 

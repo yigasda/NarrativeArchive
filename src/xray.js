@@ -63,7 +63,7 @@ export function xrayCapture(data) {
         if (sp) cards.push({ label: `${ch.name} 카드 시스템 프롬프트`, text: sp });
         if (ph) cards.push({ label: `${ch.name} 카드 마지막 지시`, text: ph });
     }
-    const ext = Object.entries(c.extensionPrompts || {}).filter(([k, v]) => k !== PROMPT_KEY && String(v?.value || '').trim()).map(([k, v]) => ({ label: { narrative_archive_recall: '서사 아카이브 · 회상', narrative_archive_state: '서사 아카이브 · 지금 상태' }[k] || k, text: String(v.value).trim() }));
+    const ext = Object.entries(c.extensionPrompts || {}).filter(([k, v]) => k !== PROMPT_KEY && String(v?.value || '').trim()).map(([k, v]) => ({ label: { narrative_archive_recall: '서사 아카이브 · 옛 장면', narrative_archive_state: '서사 아카이브 · STATE' }[k] || k, text: String(v.value).trim() }));
     xrayLast = {
         at: Date.now(), chatId: currentChatId(), messages,
         archive: m?.enabled && lastBuild.text ? lastBuild.text.trim() : '',

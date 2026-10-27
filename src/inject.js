@@ -14,7 +14,7 @@ import { worldText } from './world.js';
 export const STATE_KEY = 'narrative_archive_state';
 export const stateCfg = m => { const r = m?.stateRemind && typeof m.stateRemind === 'object' ? m.stateRemind : {}; return { on: !!r.on, depth: Number.isFinite(+r.depth) && r.depth !== undefined && r.depth !== '' ? Math.min(20, Math.max(0, +r.depth)) : 3 }; };
 
-// 지금 상태 리마인더: the STATE block leaves the archive block and goes in on its own, close to the newest messages
+// STATE 가까이 넣기: the STATE block leaves the archive block and goes in on its own, close to the newest messages
 export function takeState(m, text) {
     if (!stateCfg(m).on) return { text, state: '' };
     const [body, tail] = splitTail(text);

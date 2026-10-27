@@ -17,7 +17,7 @@ import { openHealth } from './health.js';
 import { applyHide, lastIndex, openUnhide, syncTrackedBoundary } from './hide.js';
 import { applyInjection, lastBuild, stateCfg } from './inject.js';
 import { keepsOf, openKeeps } from './keeps.js';
-import { lastRecall, offstageMode, recallCfg, runRecall, setRecall } from './recall.js';
+import { OFF_KINDS, lastRecall, offKinds, recallCfg, runRecall, setOffKind, setRecall } from './recall.js';
 import { openKeywordTest } from './keywords.js';
 import { knowledgeRows, openKnowledge } from './knowledge.js';
 import { openPeople } from './people.js';
@@ -273,7 +273,7 @@ export function renderPanel() {
             <!-- 설정 (⚙) -->
             <section class="na_tab_pane" data-pane="config" hidden>
               <div class="na_cfg_head"><button type="button" class="na_cfg_back" id="na_cfg_back" title="돌아가기" aria-label="돌아가기">${svgA(ICO_A.left, 18, 2.2)}</button><b>설정</b><button type="button" class="na_cfg_pill" id="na_cfg_preview">주입 미리보기</button></div>
-              <div class="na_search_wrap na_cfg_search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" class="text_pole na_search" id="na_cfg_q" placeholder="설정 찾기 · 예: 회상, 깊이, 거절" aria-label="설정 찾기"></div>
+              <div class="na_search_wrap na_cfg_search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" class="text_pole na_search" id="na_cfg_q" placeholder="설정 찾기 · 예: 옛 장면, 깊이, 로어북" aria-label="설정 찾기"></div>
               <div class="na_empty" id="na_cfg_none" hidden>맞는 설정이 없어요.</div>
               <div class="na_cfg_grp">
                 <div class="na_cfg_label"><i class="fa-solid fa-palette"></i> 테마</div>
@@ -331,21 +331,23 @@ export function renderPanel() {
                 </div>
               </div>
               <div class="na_cfg_grp">
-                <div class="na_cfg_label"><i class="fa-solid fa-clock-rotate-left"></i> 회상 · 지금 상태 · 번외편</div>
+                <div class="na_cfg_label"><i class="fa-solid fa-clock-rotate-left"></i> 옛 장면 · STATE · 롤플 밖</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
-                  <label class="na_set_row" title="답하기 직전에 숨긴 원문과 지금 안 들어가는 섹션에서 최근 대화와 맞는 줄을 찾아 넣어요 · AI를 안 써서 비용이 없어요 · 이 채팅에만"><span><span>회상</span><small id="na_recall_sub">숨긴 원문에서 지금 대화와 맞는 줄을 찾아 넣어요</small></span><input type="checkbox" id="na_recall" class="na_toggle"></label>
+                  <label class="na_set_row" title="답하기 직전에 숨긴 원문과 지금 안 들어가는 섹션에서 최근 대화와 맞는 줄을 찾아 넣어요 · AI를 안 써서 비용이 없어요 · 이 채팅에만"><span><span>옛 장면 불러오기</span><small id="na_recall_sub">숨긴 원문에서 지금 대화와 맞는 줄을 찾아 넣어요</small></span><input type="checkbox" id="na_recall" class="na_toggle"></label>
                   <div id="na_recall_opts" hidden>
                     <label class="na_set_row"><span><span>한 번에 최대</span><small>넣을 줄 수</small></span><span class="na_cfg_val"><input type="number" id="na_recall_k" class="text_pole" min="1" max="12"><span class="na_cfg_unit">줄</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                    <label class="na_set_row"><span><span>토큰 한도</span><small>회상 블록 전체</small></span><span class="na_cfg_val"><input type="number" id="na_recall_budget" class="text_pole" min="100" max="4000" step="100"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                    <label class="na_set_row"><span><span>토큰 한도</span><small>불러온 줄 전체</small></span><span class="na_cfg_val"><input type="number" id="na_recall_budget" class="text_pole" min="100" max="4000" step="100"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                     <label class="na_set_row"><span><span>넣는 깊이</span><small>채팅 끝에서 몇 번째 메시지 위</small></span><span class="na_cfg_val"><input type="number" id="na_recall_depth" class="text_pole" min="0" max="20">${svgA(ICO_A.right, 15, 2.2)}</span></label>
                     <label class="na_set_row"><span><span>볼 메시지</span><small>최근 몇 개로 찾을지</small></span><span class="na_cfg_val"><input type="number" id="na_recall_scan" class="text_pole" min="1" max="10"><span class="na_cfg_unit">개</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                     <label class="na_set_row" title="망각 곡선으로 줄었거나 키워드를 기다리는 섹션의 줄도 찾아요"><span><span>섹션에서도 찾기</span><small>지금 통째로 안 들어가는 섹션</small></span><input type="checkbox" id="na_recall_secs" class="na_toggle"></label>
                     <button type="button" class="na_set_row na_cfg_go" id="na_recall_test"><span><span>지금 해 보기</span><small>최근 대화로 무엇이 불려 오는지</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   </div>
-                  <label class="na_set_row" title="STATE 블록을 아카이브 블록에서 빼서 최근 대화 가까이에 따로 넣어요 · 토큰은 그대로 · 이 채팅에만"><span><span>지금 상태 리마인더</span><small>STATE를 최근 대화 가까이 따로</small></span><span class="na_cfg_val"><span class="na_cfg_depth" id="na_state_depth_field">깊이&nbsp;<input type="number" id="na_state_depth" class="text_pole" min="0" max="20"></span><input type="checkbox" id="na_state_on" class="na_toggle"></span></label>
-                  <label class="na_set_row" title="압축 · 원문 뽑기 · 이탈 감지 · 회상 · 말투에서 빼요"><span><span>번외편 빼기</span><small>코멘트 · OOC · QR 번외편</small></span>
-                    <span class="na_cfg_val"><select id="na_offstage" class="text_pole"><option value="aside">코멘트 · OOC · 번외편 빼기</option><option value="all">/sys 내레이션까지 빼기</option><option value="keep">빼지 않기</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" title="STATE 블록을 아카이브 블록에서 빼서 최근 대화 가까이에 따로 넣어요 · 토큰은 그대로 · 이 채팅에만"><span><span>STATE 가까이 넣기</span><small>STATE를 최근 대화 가까이 따로</small></span><span class="na_cfg_val"><span class="na_cfg_depth" id="na_state_depth_field">깊이&nbsp;<input type="number" id="na_state_depth" class="text_pole" min="0" max="20"></span><input type="checkbox" id="na_state_on" class="na_toggle"></span></label>
+                  <details class="na_cfg_fold" id="na_off_fold">
+                    <summary class="na_set_row" title="압축 · 원문 뽑기 · 이탈 감지 · 옛 장면 불러오기 · 말투 지문에서 빼요"><span><span>롤플 밖 메시지 빼기</span><small id="na_off_sub"></small></span><span class="na_cfg_val"><span class="na_cfg_chev">${svgA(ICO_A.right, 15, 2.2)}</span></span></summary>
+                    ${Object.entries(OFF_KINDS).map(([k, [name, sub]]) => `<label class="na_set_row na_cfg_sub"><span><span>${name}</span><small>${sub}</small></span><input type="checkbox" class="na_toggle na_off_kind" data-k="${k}"></label>`).join('')}
+                  </details>
                 </div>
                 </div>
               </div>
@@ -381,9 +383,9 @@ export function renderPanel() {
                 </div>
                 ${connCfgHtml('tr')}
                 <div class="na_set_list">
-                  <label class="na_set_row" title="모델이 거절하거나 안전 필터에 막히면 다른 모델로 한 번 더 보내요 · 거절한 답은 아카이브에 안 넣어요 · 압축은 막힌 구간을 반으로 나눠 다시 보내요"><span><span>거절될 때</span><small>다른 모델로 다시 보내기</small></span>
+                  <label class="na_set_row" title="모델이 거절하거나 안전 필터에 막히면 다른 모델로 한 번 더 보내요 · 거절한 답은 아카이브에 안 넣어요 · 압축은 막힌 구간을 반으로 나눠 다시 보내요"><span><span>막혔을 때</span><small>거절이나 차단이면 다른 모델로</small></span>
                     <span class="na_cfg_val"><select id="na_fallback" class="text_pole"><option value="">다시 안 보냄</option><option value="ai">AI 기능 모델로</option><option value="dr">초안 모델로</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" title="이 채팅이 쓰는 로어북에서 키워드가 맞는 항목을 압축 · 이탈 감지 · 질문 · 말투 지문에 같이 보내요 · 그만큼 보낼 양이 늘어요"><span><span>로어북 같이 보기</span><small id="na_lore_sub">이름 · 장소 · 설정이 로어북과 맞게</small></span><input type="checkbox" id="na_lore" class="na_toggle"></label>
+                  <label class="na_set_row" title="이 채팅이 쓰는 로어북에서 키워드가 맞는 항목을 압축 · 이탈 감지 · 질문 · 말투 지문에 같이 보내요 · 그만큼 보낼 양이 늘어요"><span><span>로어북 곁들이기</span><small id="na_lore_sub">이름 · 장소 · 설정이 로어북과 맞게</small></span><input type="checkbox" id="na_lore" class="na_toggle"></label>
                   <label class="na_set_row" id="na_lore_budget_row"><span><span>로어북 한도</span><small>한 번에 보낼 항목 양</small></span><span class="na_cfg_val"><input type="number" id="na_lore_budget" class="text_pole" min="300" max="12000" step="500"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="답이 잘리면 늘려 주세요"><span>답 최대 길이</span><span class="na_cfg_val"><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="AI 답이 이만큼 쌓일 때마다 조용히 검사하고, 어긋나면 알려 줘요 · 그때마다 토큰이 들어가요"><span><span>이탈 자동 감지</span><small>AI 답이 쌓이면 조용히 검사</small></span>
@@ -1033,7 +1035,7 @@ export function bindPanel() {
         await applyInjection(); syncPanel();
         toastr.info(st.titles.length ? st.titles.map(t => `• ${esc(t.slice(0, 60))}`).join('<br>') : '고른 섹션이 없어요', `라우터 · ${st.titles.length}개 · ${(st.ms / 1000).toFixed(1)}초`, { escapeHtml: false, timeOut: 10000 });
     }));
-    // 회상 · 지금 상태 · 번외편
+    // 옛 장면 불러오기 · STATE 가까이 · 롤플 밖 메시지
     $('#na_recall').on('change', needChat(async e => { await setRecall({ on: e.target.checked }); syncPanel(); }));
     for (const [id, k] of [['k', 'k'], ['budget', 'budget'], ['depth', 'depth'], ['scan', 'scan']]) {
         $(`#na_recall_${id}`).on('change', needChat(async e => { await setRecall({ [k]: Number(e.target.value) }); syncPanel(); }));
@@ -1047,11 +1049,11 @@ export function bindPanel() {
         m.recall.on = was;
         if (!was) await runRecall();
         const lines = st?.lines || [];
-        toastr.info(lines.length ? lines.map(l => esc(l.length > 160 ? `${l.slice(0, 160)}…` : l)).join('<br>') : '맞는 줄이 없어요. 숨긴 원문이 없거나 최근 대화와 겹치는 말이 적어요.', `회상 · ${lines.length}줄${st ? ` · 약 ${fmt(st.tokens)} 토큰` : ''}`, { escapeHtml: false, timeOut: 15000 });
+        toastr.info(lines.length ? lines.map(l => esc(l.length > 160 ? `${l.slice(0, 160)}…` : l)).join('<br>') : '맞는 줄이 없어요. 숨긴 원문이 없거나 최근 대화와 겹치는 말이 적어요.', `옛 장면 · ${lines.length}줄${st ? ` · 약 ${fmt(st.tokens)} 토큰` : ''}`, { escapeHtml: false, timeOut: 15000 });
     }));
     $('#na_state_on').on('change', needChat(async e => { const m = getMeta(); m.stateRemind = { ...stateCfg(m), on: e.target.checked }; await saveMeta(); applyInjection(); syncPanel(); }));
     $('#na_state_depth').on('change', needChat(async e => { const m = getMeta(); m.stateRemind = { ...stateCfg(m), depth: Math.min(20, Math.max(0, parseInt(e.target.value, 10) || 0)) }; await saveMeta(); applyInjection(); syncPanel(); }));
-    $('#na_offstage').on('change', function () { globalSettings().offstage = this.value; saveGlobal(); refreshStatus(); });
+    $('#na_off_fold').on('change', '.na_off_kind', function () { setOffKind(this.dataset.k, this.checked); syncPanel(); refreshStatus(); });
     $('#na_fallback').on('change', function () { globalSettings().fallback = this.value; saveGlobal(); });
     $('#na_lore').on('change', function () { setLore({ on: this.checked }); syncPanel(); });
     $('#na_lore_budget').on('change', function () { setLore({ budget: Number(this.value) }); syncPanel(); });
@@ -1121,7 +1123,8 @@ export function syncPanel() {
         $('#na_recall_sub').text(r.on ? `최대 ${r.k}줄 · ${fmt(r.budget)} 토큰 · 깊이 ${r.depth}${last ? ` · 지난 답에 ${last.lines.length}줄` : ''}` : '숨긴 원문에서 지금 대화와 맞는 줄을 찾아 넣어요');
         const sc = stateCfg(m);
         $('#na_state_on').prop('checked', sc.on); $('#na_state_depth').val(sc.depth); $('#na_state_depth_field').prop('hidden', !sc.on);
-        $('#na_offstage').val(offstageMode()); $('#na_fallback').val(fallbackOf());
+        { const ok = offKinds(); $('#na_off_fold .na_off_kind').each(function () { this.checked = !!ok[this.dataset.k]; }); const on = Object.keys(OFF_KINDS).filter(k => ok[k]); $('#na_off_sub').text(on.length ? `${on.length}가지 빼는 중` : '아무것도 안 빼요'); }
+        $('#na_fallback').val(fallbackOf());
         const lc = loreCfg();
         $('#na_lore').prop('checked', lc.on); $('#na_lore_budget').val(lc.budget); $('#na_lore_budget_row').toggle(lc.on);
         activeBooks().then(bs => $('#na_lore_sub').text(bs.length ? `${lc.on ? '켬' : '꺼짐'} · 이 채팅의 로어북 ${bs.length}개` : '이 채팅이 쓰는 로어북이 없어요'));

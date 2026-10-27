@@ -143,13 +143,13 @@ export function driftCards(text, m, { check = false } = {}) {
     const secs = parseSections(m.text);
     const lines = String(text).split('\n').map(l => l.trim()).filter(l => /^[-*•]/.test(l));
     if (!lines.length) return `<div class="na_v2_card">${driftHtml(text, m)}</div>`;
-    if (check) {
-        const strong = lines.filter(l => driftBacked(l, m, secs)), weak = lines.filter(l => !driftBacked(l, m, secs));
-        return `${driftCards(strong.join('\n'), m)}${weak.length ? `<details class="na_dr2_weak"><summary>근거를 아카이브에서 못 찾은 경고 ${weak.length}개 <small>모델이 든 근거 글이 그 섹션에 없어요 · 헛경고일 수 있어요</small></summary>${driftCards(weak.join('\n'), m)}</details>` : ''}`;
-    }
     return lines.map(l => {
+        // checked answers: each card says whether its evidence was found in the archive; unfound ones are dimmed in place
+        const backed = check ? driftBacked(l, m, secs) : null;
+        const mark = backed === null ? '' : backed ? '<span class="na_dr2_ev_ok">근거 확인</span>' : '<span class="na_dr2_ev_no" title="모델이 든 근거 글을 그 섹션에서 못 찾았어요 · 헛경고일 수 있어요">근거 못 찾음</span>';
         const mt = l.match(DRIFT_LINE);
         if (!mt) return `<div class="na_v2_card na_dr2_item">${driftHtml(l, m)}</div>`;
+        const dim = backed === false ? ' na_dr2_unbacked' : '';
         const kind = driftKind(mt[3]);
         const fact = (mt[5] || '').trim();
         const links = mt[6] ? [...mt[6].matchAll(/\[\[(.+?)\]\](?!\])/g)].map(x => {
@@ -158,8 +158,8 @@ export function driftCards(text, m, { check = false } = {}) {
                 : `<span class="na_dr2_sec na_dr2_miss" title="아카이브에서 못 찾은 제목">${esc(x[1])}</span>`;
         }).join('') : '';
         return `
-          <div class="na_v2_card na_dr2_item">
-            <div class="na_dr2_head"><button type="button" class="na_cite na_cite_msg na_dr2_msg" data-msg="${mt[1]}" title="메시지 #${mt[1]} 보기">#${mt[1]}</button><b>${esc(mt[2].trim())}</b>${kind ? `<span class="na_dr2_kind ${kind[1]}">${esc(kind[0])}</span>` : ''}</div>
+          <div class="na_v2_card na_dr2_item${dim}">
+            <div class="na_dr2_head"><button type="button" class="na_cite na_cite_msg na_dr2_msg" data-msg="${mt[1]}" title="메시지 #${mt[1]} 보기">#${mt[1]}</button><b>${esc(mt[2].trim())}</b>${kind ? `<span class="na_dr2_kind ${kind[1]}">${esc(kind[0])}</span>` : ''}${mark}</div>
             <div class="na_dr2_text">${esc(mt[4])}</div>
             ${fact || links ? `<div class="na_dr2_ev">${svgB(SVG_B.bookmark, 14)}<span>${fact ? `<span class="na_dr2_fact">${esc(fact)}</span>` : ''}${links}</span></div>` : ''}
           </div>`;
