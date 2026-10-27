@@ -14,7 +14,7 @@ export const MAX_DASHES = 1;
 const BANNED = ['tender', 'intimate', 'profound', 'palpable', 'a testament to', 'unspoken', 'electric', 'in that moment', 'it was clear that', "couldn't help but", 'their bond deepened', 'something shifted'];
 const bannedRe = new RegExp(`\\b(${BANNED.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, "['’]")).join('|')})\\b`, 'gi');
 
-export const countCheckOn = () => globalSettings().countCheck !== false;
+export const countCheckOn = () => true; // always on since 3.87.8: it only asks again when a section breaks a count
 
 // the "## #a–#b — Title" blocks of an answer's body, with where each one sits
 export function rangedBlocks(body) {

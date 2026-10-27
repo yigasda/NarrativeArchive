@@ -35,7 +35,7 @@ import { AI_SYS_TRANSLATE, askTranslator, glossaryEntries, openGlossary } from '
 import { chatLabel, confirm, copyText, countTokens, download, esc, escRe, fmt, nowStamp, timeLabel } from './util.js';
 import { NUDGE_CHOICES, COMPRESS_MODES, compressMode, openAuSettings, openWizard, quickCompress } from './wizard.js';
 import { openStudio, studioLabel } from './studio.js';
-import { DEFAULT_TRACKER_RE, SCENE_MODELS, SCENE_SIZES, openStyleSamples, openWorkNote, styleLabel, sceneModel, sceneSize, stateModel, trackerRe } from './scenes.js';
+import { SCENE_MODELS, SCENE_SIZES, openStyleSamples, openWorkNote, styleLabel, sceneModel, sceneSize, stateModel } from './scenes.js';
 import { openWorlds, worldBooks, worldIsOn } from './world.js';
 import { openXray } from './xray.js';
 
@@ -211,24 +211,15 @@ export function renderPanel() {
                   <label class="na_cp_row na_cmode_sc" data-m="quick studio" title="장면마다 섹션 하나씩 따로 받아요"><span class="na_cp_txt"><span>장면 크기</span><small>클수록 싸고, 작을수록 꼼꼼해요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_scsize">${Object.entries(SCENE_SIZES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                   <label class="na_cp_row na_cmode_sc" data-m="quick"><span class="na_cp_txt"><span>장면별 · 섹션 모델</span><small>장면 수만큼 불러요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_scmodel">${Object.entries(SCENE_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                   <label class="na_cp_row na_cmode_sc" data-m="quick"><span class="na_cp_txt"><span>장면별 · STATE 모델</span><small>마지막에 한 번</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_stmodel">${Object.entries(SCENE_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <div class="na_cp_row na_cmode_sc na_trk_row" data-m="quick studio" title="그룹 이름 date · place · time · 비우면 메시지 수로만 잘라요"><span class="na_cp_txt"><span>장면 · 트래커 정규식</span><small>날짜·장소가 바뀌는 곳에서 끊어요</small><textarea class="text_pole na_trk_re" id="na_trkre" rows="2" spellcheck="false"></textarea><span class="na_trk_btns"><button type="button" class="na_linkbtn" id="na_trkre_reset">기본값</button><small id="na_trkre_info"></small></span></span></div>
                   <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_stylesample"><span class="na_cp_txt"><span>문체 견본</span><small id="na_style_sub"></small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                   <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_worknote"><span class="na_cp_txt"><span>작업 노트</span><small id="na_worknote_sub">장면마다 같이 보내요</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
-                  <label class="na_cp_row" data-m="quick" title="불릿 수 · 단어 수 · 엠대시 · 금지어를 확장이 세고, 넘친 섹션만 다시 고쳐 받아요 · 지시문의 규칙은 그대로"><span class="na_cp_txt"><span>세는 규칙 검사</span><small>넘친 섹션만 다시 고쳐 받아요</small></span><input type="checkbox" class="na_toggle" id="na_count_check"></label>
                   <label class="na_cp_row" data-m="quick" title="지시문의 규칙은 시스템 메시지에, 원문 · 메모 · 마지막 점검은 요청에"><span class="na_cp_txt"><span>규칙은 시스템 메시지로</span><small>중계 서버가 버리면 끄세요</small></span><input type="checkbox" class="na_toggle" id="na_rules_sys"></label>
                   <label class="na_cp_row" title="압축할 메시지가 이만큼 쌓이면 알림 · 누르면 압축"><span class="na_cp_txt"><span>쌓이면 알려 주기</span><small>이만큼 쌓이면 알림</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_nudge">${Object.entries(NUDGE_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                 </div>
                 <div class="na_v2_card na_v2_list na_cp_set">
                   <details class="na_cp_fold na_cp_more_fold" id="na_cp_more">
-                    <summary class="na_cp_row"><span class="na_cp_txt"><span>원문 손질 · 지시문 · 경계선</span><small id="na_cp_more_sub">태그 지우기 · 압축 지시문 · 아카이브 따라가기</small></span><span class="na_cp_more">더 보기</span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
+                    <summary class="na_cp_row"><span class="na_cp_txt"><span>원문 손질 · 지시문 · 경계선</span><small id="na_cp_more_sub">압축 지시문 · 아카이브 따라가기</small></span><span class="na_cp_more">더 보기</span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
                   <label class="na_cp_row"><span class="na_cp_txt"><span>숨긴 메시지 빼고 뽑기</span></span><input type="checkbox" class="na_toggle" id="na_opt_hidden"></label>
-                  <div class="na_strip_box">
-                    <label class="na_cp_row"><span class="na_cp_txt"><span>태그 지우기</span><small id="na_strip_sub">&lt;think&gt; 통째로 · 나머지 태그는 글자만</small></span><input type="checkbox" class="na_toggle" id="na_opt_tags"></label>
-                    <div class="na_cp_sub">
-                      <textarea class="text_pole na_strip_ta" id="na_strip_custom" rows="2" spellcheck="false" placeholder="통째로 지울 태그나 /정규식/, 한 줄에 하나&#10;scene_plan"></textarea>
-                      <small class="na_strip_info" id="na_strip_info"></small>
-                    </div>
-                  </div>
                   <details class="na_cp_fold" id="na_cmp_settings">
                     <summary class="na_cp_row"><span class="na_cp_txt"><span>압축 지시문</span><small id="na_plib_sum">이 기기의 실리태번 설정에만 저장돼요</small></span><span class="na_cp_more">편집</span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
                     <div class="na_cp_sub"><div class="na_plib" id="na_plib"></div></div>
@@ -1140,14 +1131,10 @@ export function bindPanel() {
         renderReplace();
         toastr.success(`${n}군데 바꿨어요`);
     }));
-    $('#na_count_check').on('change', function () { globalSettings().countCheck = this.checked; saveGlobal(); });
     $('#na_rules_sys').on('change', function () { globalSettings().rulesInSystem = this.checked; saveGlobal(); });
     $('#na_scsize').on('change', function () { globalSettings().sceneSize = Number(this.value); saveGlobal(); });
     $('#na_scmodel').on('change', function () { globalSettings().sceneModel = this.value; saveGlobal(); });
     $('#na_stmodel').on('change', function () { globalSettings().stateModel = this.value; saveGlobal(); });
-    const trkInfo = () => { const v = String($('#na_trkre').val() || ''); let ok = true; try { if (v) new RegExp(v, 's'); } catch { ok = false; } $('#na_trkre_info').text(!v ? '트래커 없이 메시지 수로만 잘라요' : ok ? '' : '정규식이 틀렸어요 · 메시지 수로만 잘라요'); };
-    $('#na_trkre').on('input', function () { globalSettings().trackerRe = this.value; saveGlobal(); trkInfo(); });
-    $('#na_trkre_reset').on('click', () => { globalSettings().trackerRe = DEFAULT_TRACKER_RE; saveGlobal(); $('#na_trkre').val(DEFAULT_TRACKER_RE); trkInfo(); });
     $('#na_worknote').on('click', needChat(() => openWorkNote()));
     $('#na_stylesample').on('click', needChat(() => openStyleSamples()));
     $('#na_cmode').on('change', function () { globalSettings().compressMode = this.value; saveGlobal(); layoutCp(); });
@@ -1515,10 +1502,9 @@ export function syncPanel() {
     rememberArchive();
     $('#na_boundary').val(m.boundary >= 0 ? m.boundary : '');
     $('#na_track').prop('checked', !!m.track);
-    $('#na_count_check').prop('checked', globalSettings().countCheck !== false);
     $('#na_rules_sys').prop('checked', !!globalSettings().rulesInSystem);
     $('#na_cmode').val(compressMode()); layoutCp();
-    $('#na_scsize').val(String(sceneSize())); $('#na_scmodel').val(sceneModel()); $('#na_stmodel').val(stateModel()); $('#na_trkre').val(trackerRe());
+    $('#na_scsize').val(String(sceneSize())); $('#na_scmodel').val(sceneModel()); $('#na_stmodel').val(stateModel());
     $('#na_style_sub').text(styleLabel(getMeta()));
     { const wn = String(getMeta().workNote || '').trim(); $('#na_worknote_sub').text(wn ? `약 ${wn.length.toLocaleString()}자 · 장면마다 같이` : '장면마다 같이 보내요'); }
     {

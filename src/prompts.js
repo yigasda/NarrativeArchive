@@ -1,7 +1,6 @@
 // Compression instructions (prompt library) and their settings.
 
 import { ctx, globalSettings, newId, saveGlobal } from './core.js';
-import { showStripInfo } from './extract.js';
 import { RANGE_HEAD, lastRangedSection, parseSections, splitTail } from './sections.js';
 import { confirm, esc } from './util.js';
 
@@ -473,9 +472,6 @@ export function renderPromptSettings() {
     $('#na_opt_hidden').prop('checked', !!g.skipHidden);
     $('#na_quick_auto').prop('checked', !!g.quickAuto);
     $('#na_nudge').val(String(g.compressNudge === undefined || g.compressNudge === null || g.compressNudge === '' ? 60 : Number(g.compressNudge) || 0));
-    $('#na_opt_tags').prop('checked', !!g.stripTags);
-    if (document.activeElement?.id !== 'na_strip_custom') $('#na_strip_custom').val(g.stripCustom || '');
-    showStripInfo();
     const $h = $('#na_plib');
     if (!$h.length) return;
     const cur = activePrompt(g);
@@ -520,8 +516,6 @@ export function bindPromptSettings() {
     $('#na_opt_hidden').on('change', function () { g().skipHidden = this.checked; saveGlobal(); });
     $('#na_quick_auto').on('change', function () { g().quickAuto = this.checked; saveGlobal(); });
     $('#na_nudge').on('change', function () { g().compressNudge = Number(this.value) || 0; saveGlobal(); });
-    $('#na_opt_tags').on('change', function () { g().stripTags = this.checked; saveGlobal(); showStripInfo(); });
-    $('#na_strip_custom').on('input', function () { g().stripCustom = this.value; saveGlobal(); showStripInfo(); });
     const pick = id => { g().activePrompt = id; saveGlobal(); renderPromptSettings(); };
     const askName = async (title, value) => {
         const v = await ctx().Popup.show.input(title, '', value);

@@ -7,7 +7,7 @@ import { refreshStatus } from './status.js';
 import { keepNote } from './keeps.js';
 import { offstageSet } from './recall.js';
 import { ICO_A, svgA } from './theme.js';
-import { chatLabel, copyText, countTokens, download, esc, escRe, fmt, timeLabel } from './util.js';
+import { chatLabel, copyText, countTokens, download, esc, fmt, timeLabel } from './util.js';
 
 export function buildExtract(start, end) {
     const chat = ctx().chat || [];
@@ -38,36 +38,21 @@ export function guessEndNumber(text) {
 
 export const extractToText = items => items.map(x => `[${x.i}] ${x.name}:\n${x.text}`).join('\n\n');
 
-// "지울 것" lines → RegExps. A bare tag name (scene_plan or <scene_plan>) removes that whole block,
-// /…/flags is a regular expression, anything else is removed as plain text.
-export function stripPatterns(src) {
-    const out = [], bad = [];
-    for (const raw of String(src || '').split('\n')) {
-        const line = raw.trim();
-        if (!line) continue;
-        const rx = line.match(/^\/(.+)\/([a-z]*)$/s);
-        try {
-            if (rx) out.push(new RegExp(rx[1], rx[2].includes('g') ? rx[2] : `${rx[2]}g`));
-            else {
-                const tag = line.match(/^<?\/?([A-Za-z][\w:.-]*)\/?>?$/);
-                if (tag) {
-                    const n = escRe(tag[1]);
-                    out.push(new RegExp(`<${n}\\b[^>]*>[\\s\\S]*?<\\/${n}\\s*>|<${n}\\b[^>]*\\/>`, 'gi'));
-                } else out.push(new RegExp(escRe(line), 'g'));
-            }
-        } catch { bad.push(line); }
-    }
-    return { list: out, bad };
-}
-
-export function cleanMessage(text, g) {
-    if (!g.stripTags) return text;
-    for (const re of stripPatterns(globalSettings().stripCustom).list) text = text.replace(re, '');
-    return text
-        .replace(/<(think|thinking|details)[^>]*>[\s\S]*?<\/\1>/gi, '')
-        .replace(/<[^>\n]+>/g, '')
-        .replace(/\n{3,}/g, '\n\n')
-        .trim();
+// What goes to a model from a chat message, always: blocks that are never story come out whole (a model's hidden
+// reasoning, a preset's planning: any tag named for thinking or for a plan, such as <think>, <reasoning>, <scene_plan>,
+// <plan_next>; folded <details>; comments, styles, scripts). Every other tag goes and its text stays, so a tracker or a
+// status line still gives its date and place.
+const HIDDEN_BLOCK = /^(?:think|thinking|thoughts?|reasoning|reflection|analysis|scratchpad|cot|details|style|script|(?:[a-z0-9]+[_-])?plans?(?:[_-][a-z0-9]+)?|(?:[a-z0-9]+[_-])?planning(?:[_-][a-z0-9]+)?)$/i;
+const THINK_CLOSE = /<\/(?:think|thinking|reasoning)\s*>/i;
+export function cleanMessage(text) {
+    let t = String(text || '').replace(/<!--[\s\S]*?-->/g, '');
+    // a reply that kept only the end of its reasoning ("…</think> the reply"): everything up to the closing tag goes
+    const close = t.search(THINK_CLOSE);
+    if (close >= 0 && !/<(?:think|thinking|reasoning)\b/i.test(t.slice(0, close))) t = t.slice(close).replace(THINK_CLOSE, '');
+    // innermost first, so a hidden block inside a kept one goes too
+    let prev;
+    do { prev = t; t = t.replace(/<([a-zA-Z][\w:-]*)\b[^>]*>((?:(?!<\1\b)[\s\S])*?)<\/\1\s*>/g, (all, name, inner) => (HIDDEN_BLOCK.test(name) ? '' : inner)); } while (t !== prev);
+    return t.replace(/<\/?[a-zA-Z][\w:-]*\b[^>\n]*\/?>/g, '').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 // 꼭 남길 장면 in the range get their notes after the log, so every compress path keeps them in detail
@@ -137,7 +122,7 @@ export async function openExtract() {
     const showProw = () => $root.find('.na_ex_prow').toggle(!!g.usePrompt);
     showProw();
     fillQuick();
-    $root.find('.na_ex_optsum').text(`${[g.skipHidden ? '숨긴 메시지 뺌' : '숨긴 메시지 포함', g.stripTags ? `태그 지움${stripPatterns(g.stripCustom).list.length ? ` (+${stripPatterns(g.stripCustom).list.length})` : ''}` : '', '[번호] 이름:'].filter(Boolean).join(' · ')}`);
+    $root.find('.na_ex_optsum').text(`${[g.skipHidden ? '숨긴 메시지 뺌' : '숨긴 메시지 포함', '생각 · 계획 블록 뺌', '[번호] 이름:'].join(' · ')}`);
     $root.find('.na_ex_toset').on('click', () => { $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoCompressSettings(); });
 
     let current = '';
@@ -218,15 +203,6 @@ export async function openExtract() {
 
     await render();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
-}
-
-export function showStripInfo() {
-    const { list, bad } = stripPatterns(globalSettings().stripCustom);
-    $('.na_strip_box').toggleClass('na_off', !globalSettings().stripTags);
-    $('#na_strip_info').toggleClass('na_warn_txt', !!bad.length)
-        .text(bad.length ? `정규식이 잘못된 줄: ${bad.join(' / ')}` : '');
-    // the count of hand-added tags reads in the row's caption
-    $('#na_strip_sub').text(`<think> 통째로 · 나머지 태그는 글자만${list.length ? ` · 직접 추가 ${list.length}개` : ''}`);
 }
 
 // Open the compress tab with its settings fold open
