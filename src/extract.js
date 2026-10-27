@@ -38,21 +38,26 @@ export function guessEndNumber(text) {
 
 export const extractToText = items => items.map(x => `[${x.i}] ${x.name}:\n${x.text}`).join('\n\n');
 
-// What goes to a model from a chat message, always: blocks that are never story come out whole (a model's hidden
-// reasoning, a preset's planning: any tag named for thinking or for a plan, such as <think>, <reasoning>, <scene_plan>,
-// <plan_next>; folded <details>; comments, styles, scripts). Every other tag goes and its text stays, so a tracker or a
-// status line still gives its date and place.
-const HIDDEN_BLOCK = /^(?:think|thinking|thoughts?|reasoning|reflection|analysis|scratchpad|cot|details|style|script|(?:[a-z0-9]+[_-])?plans?(?:[_-][a-z0-9]+)?|(?:[a-z0-9]+[_-])?planning(?:[_-][a-z0-9]+)?)$/i;
-const THINK_CLOSE = /<\/(?:think|thinking|reasoning)\s*>/i;
+// What goes to a model from a chat message, always the same way, with no list of tags to keep up:
+// - out whole: a model's own reasoning (<think>, <thinking>, <reasoning>, also when only its closing half is left) and
+//   what is not writing at all (style and script blocks, comments, embedded base64 data)
+// - every other tag is markup: the tags go and their text stays. Text styling (bold, italics, a span…) just drops away;
+//   any other tag, a preset's own included, stands for a block and leaves a line break, so its text does not run into
+//   the next (a tracker still gives its date and place; a planning block reads as plain text, which the instruction
+//   tells the model to skip)
+const REASONING = 'think|thinking|reasoning';
+const INLINE_TAGS = /^(?:b|i|u|s|em|strong|span|a|small|big|sub|sup|mark|font|code|kbd|del|ins|q|abbr|ruby|rt|rp)$/i;
+const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', '#39': "'" };
 export function cleanMessage(text) {
-    let t = String(text || '').replace(/<!--[\s\S]*?-->/g, '');
-    // a reply that kept only the end of its reasoning ("…</think> the reply"): everything up to the closing tag goes
-    const close = t.search(THINK_CLOSE);
-    if (close >= 0 && !/<(?:think|thinking|reasoning)\b/i.test(t.slice(0, close))) t = t.slice(close).replace(THINK_CLOSE, '');
-    // innermost first, so a hidden block inside a kept one goes too
-    let prev;
-    do { prev = t; t = t.replace(/<([a-zA-Z][\w:-]*)\b[^>]*>((?:(?!<\1\b)[\s\S])*?)<\/\1\s*>/g, (all, name, inner) => (HIDDEN_BLOCK.test(name) ? '' : inner)); } while (t !== prev);
-    return t.replace(/<\/?[a-zA-Z][\w:-]*\b[^>\n]*\/?>/g, '').replace(/\n{3,}/g, '\n\n').trim();
+    let t = String(text || '');
+    const close = new RegExp(`</(?:${REASONING})\\s*>`, 'i'), close1 = t.search(close);
+    if (close1 >= 0 && !new RegExp(`<(?:${REASONING})\\b`, 'i').test(t.slice(0, close1))) t = t.slice(close1).replace(close, '');
+    t = t.replace(new RegExp(`<(${REASONING}|style|script)\\b[^>]*>[\\s\\S]*?</\\1\\s*>`, 'gi'), '')
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/data:[\w.+-]+\/[\w.+-]+;base64,[A-Za-z0-9+/=]+/g, '');
+    t = t.replace(/<\/?([a-zA-Z][\w:-]*)\b[^>\n]*\/?>/g, (tag, name) => (INLINE_TAGS.test(name) ? '' : '\n'))
+        .replace(/&(amp|lt|gt|quot|apos|nbsp|#39);/g, (e, k) => ENTITIES[k]);
+    return t.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 // 꼭 남길 장면 in the range get their notes after the log, so every compress path keeps them in detail
