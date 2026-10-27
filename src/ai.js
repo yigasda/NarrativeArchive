@@ -285,9 +285,23 @@ async function callVertexAt({ vxJson, vxModel }, loc, system, prompt, maxTokens)
 // ---- refusals and blocks: a refusal is never saved as a section; a blocked request goes to the stand-in model
 
 export const BLOCK_RE = /prompt was blocked|block_?reason|prohibited_content|blocklist|content.?filter|content_policy|moderation|flagged|refus|\bSAFETY\b|PROHIBITED|SPII|막았어요/i;
-const REFUSAL_RE = /^(?:\s*[*_"'“]*)?(?:i'?m sorry|i am sorry|sorry,|i can(?:'|no)t|i cannot|i won'?t|i'?m unable|i am unable|i'?m not able|i am not able|as an ai|i must decline|i'?m not comfortable|죄송(?:합니다|하지만|해요)|요청하신 내용은|도와드릴 수 없|申し訳|できません|抱歉|我无法|我不能)/i;
-// guard: what a real answer has (a section heading); a short apology without it is a refusal
-export const looksRefused = (out, guard) => { const t = String(out || '').trim(); return !!guard && t.length < 1200 && REFUSAL_RE.test(t) && !guard.test(t); };
+// a refusal opens with an apology or a "can't do this", or points at a policy
+const REFUSAL_HINTS = [
+    /\b(sorry|apologi[sz]e)\b/i,
+    /\b(can ?not|can't|unable to|won't|will not|not able to)\b.{0,40}\b(help|assist|continue|comply|provide|write|create|produce|do that)\b/i,
+    /\b(against|violat\w*)\b.{0,30}\b(polic\w*|guidelines?)\b/i,
+    /\bas an ai\b/i,
+    /죄송|할 수 없|드릴 수 없|어렵습니다|정책/,
+    /申し訳|できません|お応えでき/,
+    /抱歉|无法|不能/,
+];
+// guard: what a real answer has (a section heading); a short answer without it whose opening reads like a refusal is one
+export const looksRefused = (out, guard) => {
+    const t = String(out || '').trim();
+    if (!guard || t.length >= 1200 || guard.test(t)) return false;
+    const head = t.slice(0, 300);
+    return REFUSAL_HINTS.some(re => re.test(head));
+};
 export const isBlocked = e => !!e?.refused || BLOCK_RE.test(String(e?.message || e || ''));
 const refusedError = who => Object.assign(new Error(`${who}이 요청을 거절했어요. 거절한 답은 넣지 않았어요`), { refused: true });
 

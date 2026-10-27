@@ -37,9 +37,9 @@ REPORT ONLY THESE (a clear clash with something the archive actually says)
 3. SETTLED: something the archive marks as decided or resolved is undone or reopened with no reason in the chat.
     e.g. STATE says the two have stopped fighting over the house; the chat restarts that fight as if new.
 4. TIME/PLACE: time of day or the calendar goes backwards, or one character is in two places at once.
-5. CHARACTER: a character clearly acts or talks against what the archive or the CHARACTER NOTES say about them: the wrong speech level, first-person word or way of addressing someone, a tone that does not fit them, or behaviour against their core, with no story reason.
+5. CHARACTER: a character behaves or sounds unlike the archive or the CHARACTER NOTES, and the chat gives no reason: they talk up or down to someone in a way they never do, call someone by a name they don't use, or act against who the notes say they are.
     e.g. STATE says Ivo no longer gives Ren orders; in the chat he orders her around with no reason.
-    Gradual change the archive supports, and a mood with a clear cause, are not mistakes.
+    A change the archive has been building toward, or a mood the scene itself explains, is fine.
 
 DO NOT REPORT
 - New events, new places, new feelings: the story moving forward is not a mistake.
