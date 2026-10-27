@@ -39,7 +39,8 @@ export function guessEndNumber(text) {
 export const extractToText = items => items.map(x => `[${x.i}] ${x.name}:\n${x.text}`).join('\n\n');
 
 // What goes to a model from a chat message, always the same way, with no list of tags to keep up:
-// - out whole: a model's own reasoning (<think>, <thinking>, <reasoning>, also when only its closing half is left),
+// - out whole: a model's own reasoning (<think>, <thinking>, <reasoning>, also when only its closing half is left), a
+//   preset's <scene_plan>,
 //   what is not writing at all (style and script blocks, comments, embedded base64 data), and a preset's long block
 //   beside the story (below)
 // - every other tag is markup: the tags go and their text stays. Text styling (bold, italics, a span…) just drops away;
@@ -88,7 +89,7 @@ export function cleanMessage(text) {
     let t = String(text || '');
     const close = new RegExp(`</(?:${REASONING})\\s*>`, 'i'), close1 = t.search(close);
     if (close1 >= 0 && !new RegExp(`<(?:${REASONING})\\b`, 'i').test(t.slice(0, close1))) t = t.slice(close1).replace(close, '');
-    t = t.replace(new RegExp(`<(${REASONING}|style|script)\\b[^>]*>[\\s\\S]*?</\\1\\s*>`, 'gi'), '')
+    t = t.replace(new RegExp(`<(${REASONING}|scene_plan|style|script)\\b[^>]*>[\\s\\S]*?</\\1\\s*>`, 'gi'), '')
         .replace(/<!--[\s\S]*?-->/g, '')
         .replace(/data:[\w.+-]+\/[\w.+-]+;base64,[A-Za-z0-9+/=]+/g, '');
     t = dropPresetBlocks(t);
