@@ -9,7 +9,9 @@ import { applyInjection, currentInjection } from './inject.js';
 import { KW_STOP } from './keywords.js';
 import { castNames } from './knowledge.js';
 import { RANGE_HEAD, linkWaiting, linkedMap, mutedSet, parseSections, pinnedSet, sectionKey } from './sections.js';
-import { runRecall } from './recall.js';
+import { bm25, recallCfg, recallQuery, runRecall, withGlossary } from './recall.js';
+import { layersOf } from './fade.js';
+import { guessMode, sceneGuess } from './guess.js';
 import { refreshStatusSoon } from './status.js';
 import { shortHash } from './translate.js';
 
@@ -47,6 +49,8 @@ export async function prepareGeneration() {
     }
     if (Object.keys(linkedMap(m)).length || routerCfg(m).mode !== 'off') { applyInjection(); refreshStatusSoon(); } // keyword links look at the latest messages
     await currentInjection();
+    // 회상 can search with the guessed scene too; with the router on it was made there already
+    if (routerCfg(m).mode === 'off' && guessMode() === 'both' && m.enabled && recallCfg(m).on) await sceneGuess(m, routerReady());
     try { await runRecall(); } catch (e) { console.warn('[narrative-archive] recall', e); }
     // how often each keyword-linked section actually went in, for the X-ray
     const links = Object.keys(linkedMap(m));
@@ -69,12 +73,19 @@ Pick the sections it needs so it does not forget or contradict something.
 
 YOU GET
 - MAIN CAST: characters who are in almost every section. Their names alone are NOT a reason to pick a section.
+- NOW: the title of the newest archived section, so you know where the story stands (date, place).
 - RECENT CHAT: the last messages. The one marked LATEST is what the next reply answers.
-- SECTIONS: numbered. Each has a title, the other names in it (people, places, things), its keywords, and how it begins.
+- GUESS (sometimes): a helper's picture of the earlier moment the chat points back at. It may be wrong; use it as a lead.
+- LIKELY SECTIONS: numbered. A word search found these closest to the chat. Each has a title, the other names in it,
+  its keywords, and the lines that fit the chat best (or how it begins).
+- OTHER SECTIONS: the rest of the archive, title only (sometimes with a one-line summary). Titles carry the story date,
+  the place and what happened. The word search cannot see hints, so this list is where hints get solved.
 
 PICK A SECTION IF ANY OF THESE IS TRUE
 1. Something from it is named or clearly meant in the recent chat: a person who is not main cast, a place, an object, an event.
    Watch for hints, not only exact names: "that night", "the cliff", "what you promised me", "your old life", a nickname.
+   For a hint, look through OTHER SECTIONS: match the time ("three days ago", "last winter" against NOW and the dates
+   in the titles), the place, or the event the hint points at.
 2. The chat is about a promise, secret, wound, fight, rule or wish that started or changed in that section.
 3. The next reply has to stay consistent with it: the chat goes back to a place, a habit, or a relationship moment described there.
 
@@ -85,7 +96,7 @@ DO NOT PICK
 
 HOW TO WORK
 Step 1. Read the LATEST message first, then the others. List for yourself the people, places, objects, past events and promises they mention or hint at.
-Step 2. Go through the sections one by one and match them against that list.
+Step 2. Match that list against LIKELY SECTIONS first, then scan the titles of OTHER SECTIONS for anything hinted at.
 Step 3. Put the most important first. Fewer is better than wrong.
 
 OUTPUT: exactly one line, nothing else
@@ -93,7 +104,32 @@ PICK: 3, 12, 7
 If no section is needed:
 PICK: none`;
 
-export const routerState = new Map(); // chat id → { key, picks: Set, titles, at, ms, cands }
+export const routerState = new Map(); // chat id → { key, picks: Set, titles, at, ms, cands, via: 'ai' | 'index', why }
+
+const DETAIL_N = 18; // candidates that get a full card; the rest go in as a title line
+const ALL_DETAIL = 24; // with this few candidates every one gets a card
+
+// the word search over the candidates: whole sections against the newest messages (glossary spellings added)
+function rankCandidates(m, cands, guess = '') {
+    const q = recallQuery(4).map(p => ({ ...p, text: withGlossary(m, p.text) }));
+    if (guess) q.push({ text: guess, w: 0.8 });
+    const items = cands.map((s, i) => ({ i, s, text: m.text.slice(s.start, s.end) }));
+    return { q, ranked: bm25(items, q) };
+}
+
+// the 1–2 lines of a section that share the most words with the chat
+function fitLines(body, q) {
+    const lines = body.split('\n').map(l => l.replace(/^\s*[-*•]\s+/, '').trim()).filter(l => l.length >= 20);
+    return bm25(lines.map(text => ({ text })), q).filter(r => r.hits >= 2).slice(0, 2).map(r => r.item.text.length > 200 ? `${r.item.text.slice(0, 199)}…` : r.item.text);
+}
+
+// no model, or it failed: the sections the word search is surest about
+function indexPicks(ranked, max) {
+    if (!ranked.length) return [];
+    const top = ranked[0].score;
+    return ranked.filter(r => r.hits >= 2 && r.score >= top * 0.6).slice(0, Math.min(max, 3)).map(r => r.item.s);
+}
+
 export let routerWarned = false;
 
 export function routerCfg(m) {
@@ -130,7 +166,6 @@ export function routerReady() {
 export async function runRouter(m, { force = false } = {}) {
     const cfg = routerCfg(m);
     if (cfg.mode === 'off') return null;
-    if (!routerReady()) throw new Error('라우터는 RP와 따로 연결한 모델이 필요해요 (⚙ 설정 → AI 모델 → 모델에서 프로필·커스텀 API·Vertex)');
     const cands = routerCandidates(m);
     const id = currentChatId();
     const msgs = recentForCheck(4);
@@ -139,12 +174,30 @@ export async function runRouter(m, { force = false } = {}) {
     const key = shortHash(`${recent}|${cands.map(sectionKey).join('|')}|${cfg.max}`);
     const prev = routerState.get(id);
     if (!force && prev?.key === key) return prev; // a swipe or regenerate on the same chat
-    if (!cands.length) { const st = { key, picks: new Set(), titles: [], at: Date.now(), ms: 0, cands: 0 }; routerState.set(id, st); return st; }
-    // each candidate: title, the names in it other than the main cast, its keywords, and how it begins
+    const done = (picked, extra) => { const st = { key, picks: new Set(picked.map(sectionKey)), titles: picked.map(s => s.title), at: Date.now(), ms: 0, cands: cands.length, via: 'ai', ...extra }; routerState.set(id, st); return st; };
+    if (!cands.length) return done([]);
+    const guess = await sceneGuess(m, routerReady());
+    const { q, ranked } = rankCandidates(m, cands, guess);
+    if (!routerReady()) {
+        const st = done(indexPicks(ranked, cfg.max), { via: 'index', why: '따로 연결한 모델이 없어요' });
+        if (force) throw new Error('라우터는 RP와 따로 연결한 모델이 필요해요 (⚙ 설정 → AI 모델 → 모델에서 프로필·커스텀 API·Vertex)');
+        return st;
+    }
+    // which candidates get a full card: the best word-search hits, and last turn's picks (the chat often keeps talking about them)
+    const many = cands.length > ALL_DETAIL;
+    // a card only for a real hit (two words in common, not far below the best), best first
+    const top = ranked[0]?.score || 0;
+    const hits = ranked.filter(r => r.hits >= 2 && r.score >= top * 0.2).slice(0, DETAIL_N).map(r => r.item.i);
+    const detail = new Set(many ? hits : cands.map((_, i) => i));
+    if (many && prev?.picks) cands.forEach((s, i) => { if (prev.picks.has(sectionKey(s))) detail.add(i); });
+    const order = many ? [...detail] : [...detail].sort((x, y) => x - y);
+    const rest = cands.map((_, i) => i).filter(i => !detail.has(i));
+    // each card: title, the names in it other than the main cast, its keywords, and the lines that fit the chat (else how it begins)
     const main = castNames(m);
     const mainSet = new Set(main.flatMap(n => n.split(/\s+/)));
     const lm = linkedMap(m);
-    const list = cands.map((s, i) => {
+    const layers = layersOf(m);
+    const card = (s, n) => {
         const body = m.text.slice(s.start, s.end).replace(/^#{1,3} [^\n]*\n?/, '');
         const counts = new Map();
         // capitalised words in mid-sentence only, so sentence openers ("Inside", "Asked") don't pass as names
@@ -152,19 +205,33 @@ export async function runRouter(m, { force = false } = {}) {
             .filter(w => w.length > 2 && !KW_STOP.has(w) && !mainSet.has(w)).forEach(w => counts.set(w, (counts.get(w) || 0) + 1));
         const names = [...counts].sort((a, b) => b[1] - a[1]).slice(0, 10).map(x => x[0]);
         const keys = Array.isArray(lm[sectionKey(s)]) ? lm[sectionKey(s)] : [];
+        const fits = fitLines(body, q);
         const flat = body.replace(/\s+/g, ' ').trim();
-        return `${i + 1}. ${s.title}${names.length ? `\n   names: ${names.join(', ')}` : ''}${keys.length ? `\n   keywords: ${keys.join(', ')}` : ''}\n   begins: ${flat.slice(0, 220)}${flat.length > 220 ? '…' : ''}`;
-    }).join('\n');
+        return `${n}. ${s.title}${names.length ? `\n   names: ${names.join(', ')}` : ''}${keys.length ? `\n   keywords: ${keys.join(', ')}` : ''}`
+            + (fits.length ? fits.map(f => `\n   fits: ${f}`).join('') : `\n   begins: ${flat.slice(0, 220)}${flat.length > 220 ? '…' : ''}`);
+    };
+    const line = (s, n) => { const one = String(layers[sectionKey(s)]?.line || '').replace(/\s+/g, ' ').trim(); return `${n}. ${s.title}${one ? ` — ${one.slice(0, 140)}` : ''}`; };
+    const listed = [...order, ...rest]; // the number shown to the model → candidate
+    const likely = order.map((i, k) => card(cands[i], k + 1)).join('\n');
+    const other = rest.map((i, k) => line(cands[i], order.length + k + 1)).join('\n');
+    const ranged = parseSections(m.text).filter(x => !x.group && RANGE_HEAD.test(x.title));
+    const now = ranged.length ? ranged[ranged.length - 1].title : '';
     const t0 = Date.now();
-    const out = await Promise.race([
-        askAI(`${main.length ? `[MAIN CAST]\n${main.join(', ')}\n\n` : ''}[RECENT CHAT]\n${recent}\n\n[SECTIONS]\n${list}\n\nPick at most ${cfg.max}.`, { system: AI_SYS_ROUTER, maxTokens: 1024 }),
-        new Promise((_, no) => setTimeout(() => no(new Error('20초 안에 답이 없었어요')), 20_000)),
-    ]);
+    let out;
+    try {
+        out = await Promise.race([
+            askAI(`${main.length ? `[MAIN CAST]\n${main.join(', ')}\n\n` : ''}${now ? `[NOW]\n${now}\n\n` : ''}[RECENT CHAT]\n${recent}\n\n${guess ? `[GUESS]\n${guess}\n\n` : ''}[LIKELY SECTIONS]\n${likely || '(none)'}${other ? `\n\n[OTHER SECTIONS]\n${other}` : ''}\n\nPick at most ${cfg.max}.`, { system: AI_SYS_ROUTER, maxTokens: 1024 }),
+            new Promise((_, no) => setTimeout(() => no(new Error('20초 안에 답이 없었어요')), 20_000)),
+        ]);
+    } catch (e) {
+        // the model failed: go with what the word search is surest about, and say why
+        if (force) throw e;
+        const st = done(indexPicks(ranked, cfg.max), { via: 'index', why: e.message || String(e), ms: Date.now() - t0 });
+        if (!routerWarned) { routerWarned = true; toastr.warning(`AI 라우터가 안 돼서 색인으로 골랐어요: ${e.message || e}`, '서사 아카이브'); }
+        return st;
+    }
     // read the "PICK:" line if there is one (so numbers in any reasoning are ignored), else the whole answer
     const pickLine = (out.match(/PICK\s*:\s*(.*)$/im) || [null, out])[1];
-    const nums = /^\s*none\b/i.test(pickLine) ? [] : [...new Set((pickLine.match(/\d+/g) || []).map(Number))].filter(n => n >= 1 && n <= cands.length).slice(0, cfg.max);
-    const picked = nums.map(n => cands[n - 1]);
-    const st = { key, picks: new Set(picked.map(sectionKey)), titles: picked.map(s => s.title), at: Date.now(), ms: Date.now() - t0, cands: cands.length };
-    routerState.set(id, st);
-    return st;
+    const nums = /^\s*none\b/i.test(pickLine) ? [] : [...new Set((pickLine.match(/\d+/g) || []).map(Number))].filter(n => n >= 1 && n <= listed.length).slice(0, cfg.max);
+    return done(nums.map(n => cands[listed[n - 1]]), { ms: Date.now() - t0, short: order.length, guess });
 }
