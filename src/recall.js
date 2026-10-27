@@ -1,5 +1,5 @@
-// Search index over the raw chat (hidden messages too) and the archive's sections: BM25 on words, and on two-letter
-// pieces of Korean, Japanese and Chinese words (they take particles, so "세트가" still finds "세트는").
+// Search index over the raw chat (hidden messages too) and the archive's sections: BM25 on words. Korean words also
+// count by their stem without the particle, so "세트가" still finds "세트는".
 // Used by 옛 장면 불러오기 (relevant old lines injected before each reply), 질문하기 and the voice notes.
 // Also here: 롤플 밖 메시지 (/comment, OOC, requests to pause the RP, /sys). 꼭 남길 장면 come first among equal hits.
 
@@ -15,10 +15,10 @@ export const RECALL_KEY = 'narrative_archive_recall';
 // ---- 롤플 밖 메시지: what is not the story, by kind. Each kind is switched on its own in the settings.
 
 export const OFF_KINDS = {
-    comment: ['/comment 코멘트', '분석 QR처럼 /comment로 넣은 메모'],
-    ooc: ['OOC 메모', 'OOC:, 사담: 으로 시작하는 메시지'],
-    pause: ['롤플을 멈추자는 요청과 그 답', '"롤플 잠깐 멈추고", "pause the RP" 같은 메시지와 바로 다음 답'],
-    narrator: ['/sys 내레이터 메시지', '상태창이나 선택지를 /sys로 띄우는 경우'],
+    comment: ['/comment 코멘트', '분석 QR처럼 /comment로 넣은 메모', '코멘트'],
+    ooc: ['OOC 메모', 'OOC:, 사담: 으로 시작하는 메시지', 'OOC'],
+    pause: ['롤플을 멈추자는 요청과 그 답', '"롤플 잠깐 멈추고", "pause the RP" 같은 메시지와 바로 다음 답', '멈춤 요청'],
+    narrator: ['/sys 내레이터 메시지', '상태창이나 선택지를 /sys로 띄우는 경우', '/sys'],
 };
 // 3.69's single choice ('keep' | 'aside' | 'all') carries over the first time
 export function offKinds() {
@@ -56,14 +56,22 @@ export function offstageSet(chat = ctx().chat || []) {
 
 // ---- tokens and BM25
 
-const CJK = /[぀-ヿ㐀-鿿가-힯]/;
+// Korean words are matched by their stem: the particle at the end comes off and both forms are kept ("세트가" → 세트가, 세트).
+// Japanese and Chinese have no spaces, so they go in two-letter pieces.
+const HANGUL = /[가-힯]/, KANA_HAN = /[぀-ヿ㐀-鿿]/;
+const KO_TAIL = /(?:에서부터|으로부터|에게서|한테서|으로서|으로써|이라고|이라는|에서|에게|한테|께서|까지|부터|처럼|보다|이랑|이나|이며|으로|랑|나|며|로|은|는|이|가|을|를|의|에|와|과|도|만|야|아|요)$/;
 const STOP = new Set(('the a an and but or if then so of to in on at by for from with as is are was were be been it its this that these those he she they we you i '
     + 'his her their our your my me him them us not no do did does had has have will would could should can just very too also than there here what who when where why how '
     + 'said says into out up down over again all any some one only still even back now').split(' '));
 export function tokenize(text) {
     const out = [];
     for (const w of String(text || '').toLowerCase().match(/[\p{L}\p{N}]+/gu) || []) {
-        if (CJK.test(w)) {
+        if (HANGUL.test(w)) {
+            if (w.length < 2) continue;
+            out.push(w);
+            const stem = w.replace(KO_TAIL, '');
+            if (stem && stem !== w) out.push(stem);
+        } else if (KANA_HAN.test(w)) {
             if (w.length <= 2) out.push(w);
             else for (let i = 0; i < w.length - 1; i++) out.push(w.slice(i, i + 2));
         } else if (w.length >= 2 && !STOP.has(w)) out.push(w);
