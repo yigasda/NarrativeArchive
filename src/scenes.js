@@ -4,6 +4,7 @@
 // it (so the same moment is not counted twice), the archive's last sections for style, STATE, and the work note.
 // STATE · OPEN are updated once at the end, from the new sections, as change lists.
 
+import { loreBlock } from './lore.js';
 import { SECTION_GUARD, aiLabel, askAI, askCompress, drLabel } from './ai.js';
 import { ctx, getMeta, globalSettings, saveMeta } from './core.js';
 import { formatExtract } from './extract.js';
@@ -248,7 +249,7 @@ export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = 
     for (const [k, part] of chunks.entries()) {
         const from = part[0].i, to = part[part.length - 1].i;
         onStep(k, chunks.length, from, to, 'scenes');
-        const prompt = `<raw_log range="#${from}–#${to}">\n${formatExtract(part, g)}\n</raw_log>\n\n<previous_section>\n${prev || '(none: this is the start of the archive)'}\n</previous_section>\n\n<recent_archive>\n${recentFor(k) || '(none)'}\n</recent_archive>${styleBlock(m)}\n\n<current_state>\n${tail || '(none)'}\n</current_state>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}\n\n<rules>\n${rulesFor(from, to).trim()}\n</rules>${au.on ? `\n\n${auBlock(m).trim()}` : ''}${memoBlock(memo)}${langBlock(m.text, { tail: false })}\n\n${SCENE_ASK(from, to, prefix)}`;
+        const prompt = `<raw_log range="#${from}–#${to}">\n${formatExtract(part, g)}\n</raw_log>\n\n<previous_section>\n${prev || '(none: this is the start of the archive)'}\n</previous_section>\n\n<recent_archive>\n${recentFor(k) || '(none)'}\n</recent_archive>${styleBlock(m)}\n\n<current_state>\n${tail || '(none)'}\n</current_state>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}\n\n<rules>\n${rulesFor(from, to).trim()}\n</rules>${au.on ? `\n\n${auBlock(m).trim()}` : ''}${await loreBlock(formatExtract(part, g))}${memoBlock(memo)}${langBlock(m.text, { tail: false })}\n\n${SCENE_ASK(from, to, prefix)}`;
         let got;
         try { got = parseSceneAnswer(await ask(sceneModel(), prompt, '', SECTION_GUARD), from, to); }
         catch (e) { error = e; break; }

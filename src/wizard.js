@@ -1,5 +1,6 @@
 // Compression wizard.
 
+import { loreBlock } from './lore.js';
 import { keepLabel, keepsIn } from './keeps.js';
 import { offstageSet } from './recall.js';
 import { SECTION_GUARD, aiLabel, askAI, askCompress, askDraft, compressEffort, drLabel, draftReady, isBlocked, withSpinner } from './ai.js';
@@ -159,7 +160,7 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
         const shadow = acc.length ? `${m.text}\n\n${acc.join('\n\n')}` : m.text;
         const state = tail || splitTail(m.text)[1].trim() || '(없음)';
         const prompt = compressPrompt(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(shadow), state, archive: shadow }, { ...m, text: shadow }, memo,
-            sizeBlock({ k, n: parts.length, count: part.length, total: items.length, from: items[0].i, to: items[items.length - 1].i, partFrom: from, partTo: to }));
+            sizeBlock({ k, n: parts.length, count: part.length, total: items.length, from: items[0].i, to: items[items.length - 1].i, partFrom: from, partTo: to })) + await loreBlock(raw);
         let out;
         try { out = cleanDraft(await askCompress(prompt, { guard: SECTION_GUARD })); }
         catch (e) {

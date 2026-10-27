@@ -1,5 +1,6 @@
 // The side panel: markup, event wiring (bindPanel) and refresh (syncPanel).
 
+import { activeBooks, loreCfg, setLore } from './lore.js';
 import { fallbackOf, aiLabel, aiProfiles, apiFormat, askAI, askDraft, compressEffort, connSettings, drLabel, draftReady, draftSettings, listModels, parseServiceAccount, trLabel, trSettings, vxTokens, withSpinner } from './ai.js';
 import { openAppend } from './append.js';
 import { openAsk } from './ask.js';
@@ -382,6 +383,8 @@ export function renderPanel() {
                 <div class="na_set_list">
                   <label class="na_set_row" title="모델이 거절하거나 안전 필터에 막히면 다른 모델로 한 번 더 보내요 · 거절한 답은 아카이브에 안 넣어요 · 압축은 막힌 구간을 반으로 나눠 다시 보내요"><span><span>거절될 때</span><small>다른 모델로 다시 보내기</small></span>
                     <span class="na_cfg_val"><select id="na_fallback" class="text_pole"><option value="">다시 안 보냄</option><option value="ai">AI 기능 모델로</option><option value="dr">초안 모델로</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" title="이 채팅이 쓰는 로어북에서 키워드가 맞는 항목을 압축 · 이탈 감지 · 질문 · 말투 지문에 같이 보내요 · 그만큼 보낼 양이 늘어요"><span><span>로어북 같이 보기</span><small id="na_lore_sub">이름 · 장소 · 설정이 로어북과 맞게</small></span><input type="checkbox" id="na_lore" class="na_toggle"></label>
+                  <label class="na_set_row" id="na_lore_budget_row"><span><span>로어북 한도</span><small>한 번에 보낼 항목 양</small></span><span class="na_cfg_val"><input type="number" id="na_lore_budget" class="text_pole" min="300" max="6000" step="100"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="답이 잘리면 늘려 주세요"><span>답 최대 길이</span><span class="na_cfg_val"><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="AI 답이 이만큼 쌓일 때마다 조용히 검사하고, 어긋나면 알려 줘요 · 그때마다 토큰이 들어가요"><span><span>이탈 자동 감지</span><small>AI 답이 쌓이면 조용히 검사</small></span>
                     <span class="na_cfg_val"><select id="na_drift_auto" class="text_pole"><option value="0">끄기</option><option value="5">답 5개마다</option><option value="10">답 10개마다</option><option value="20">답 20개마다</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
@@ -1050,6 +1053,8 @@ export function bindPanel() {
     $('#na_state_depth').on('change', needChat(async e => { const m = getMeta(); m.stateRemind = { ...stateCfg(m), depth: Math.min(20, Math.max(0, parseInt(e.target.value, 10) || 0)) }; await saveMeta(); applyInjection(); syncPanel(); }));
     $('#na_offstage').on('change', function () { globalSettings().offstage = this.value; saveGlobal(); refreshStatus(); });
     $('#na_fallback').on('change', function () { globalSettings().fallback = this.value; saveGlobal(); });
+    $('#na_lore').on('change', function () { setLore({ on: this.checked }); syncPanel(); });
+    $('#na_lore_budget').on('change', function () { setLore({ budget: Number(this.value) }); syncPanel(); });
     // settings search: rows whose words match stay, the rest of each group folds away
     $('#na_cfg_q').on('input', function () {
         const q = this.value.trim().toLowerCase();
@@ -1117,6 +1122,9 @@ export function syncPanel() {
         const sc = stateCfg(m);
         $('#na_state_on').prop('checked', sc.on); $('#na_state_depth').val(sc.depth); $('#na_state_depth_field').prop('hidden', !sc.on);
         $('#na_offstage').val(offstageMode()); $('#na_fallback').val(fallbackOf());
+        const lc = loreCfg();
+        $('#na_lore').prop('checked', lc.on); $('#na_lore_budget').val(lc.budget); $('#na_lore_budget_row').toggle(lc.on);
+        activeBooks().then(bs => $('#na_lore_sub').text(bs.length ? `${lc.on ? '켬' : '꺼짐'} · 이 채팅의 로어북 ${bs.length}개` : '이 채팅이 쓰는 로어북이 없어요'));
     }
     const rc = routerCfg(m);
     $('#na_router_mode').val(rc.mode);
@@ -1184,7 +1192,8 @@ export function syncPanel() {
         $('#na_quotes_badge').text(qn ? `대사 ${qn}` : '').prop('hidden', !qn);
         const dl = mm.driftLast;
         $('#na_drift_sub').text(dl ? `${timeLabel(dl.at)}에 살펴봄` : '최근 대화가 아카이브와 어긋나는지');
-        $('#na_drift_badge').text(dl ? (dl.none ? '어긋남 없음' : `${dl.n}개 어긋남`) : '').toggleClass('warn', !!dl && !dl.none).prop('hidden', !dl);
+        const dOk = !!dl && (dl.none || (dl.checked && !dl.n));
+        $('#na_drift_badge').text(dl ? (dOk ? '어긋남 없음' : `${dl.n}개 어긋남`) : '').toggleClass('warn', !!dl && !dOk).prop('hidden', !dl);
     }
     const br = hasChat() ? branchState(getMeta()) : null;
     $('#na_branch_card').prop('hidden', !br?.ahead.length);
