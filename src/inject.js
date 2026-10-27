@@ -2,6 +2,7 @@
 
 import { PROMPT_KEY, ctx, getMeta, hasChat } from './core.js';
 import { applyDigests } from './digest.js';
+import { embedSoon } from './embed.js';
 import { applyFade } from './fade.js';
 import { currentCast, inCast, knowledgeRows } from './knowledge.js';
 import { sectionPanel } from './panel.js';
@@ -47,6 +48,7 @@ export let injectSeq = 0;
 export let injectReady = Promise.resolve(lastBuild);
 
 export function applyInjection() {
+    embedSoon();
     const c = ctx();
     const m = hasChat() ? getMeta() : null;
     const seq = ++injectSeq;

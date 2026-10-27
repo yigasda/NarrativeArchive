@@ -27,6 +27,7 @@ import { openQuotes } from './quotes.js';
 import { openReader } from './reader.js';
 import { routerCandidates, routerCfg, routerState, runRouter } from './router.js';
 import { GUESS_MODES, guessMode, lastGuess } from './guess.js';
+import { EMBED_DEFAULT_MODEL, EMBED_SOURCES, embedCfg, embedError, embedLabel, embedState, setEmbed, syncEmbed } from './embed.js';
 import { cachedTokens, checkHeadings, filterMuted, groupLabel, linkedMap, mutedCount, parseSections, pinnedSet, sectionKey } from './sections.js';
 import { refreshStatus } from './status.js';
 import { ICO_A, setUiTheme, svgA, uiTheme } from './theme.js';
@@ -393,6 +394,11 @@ export function renderPanel() {
                 </div>
                 ${connCfgHtml('tr')}
                 <div class="na_set_list">
+                  <label class="na_set_row" title="섹션과 숨긴 원문을 뜻으로도 찾아요 · 라우터 · 회상이 단어가 안 겹쳐도 비슷한 뜻이면 찾고, 한국어 채팅으로 영어 아카이브도 찾아요 · 실리태번 서버의 벡터 저장소를 써요"><span><span>뜻으로 찾기 (임베딩)</span><small>라우터 · 회상이 비슷한 뜻도 찾게</small></span>
+                    <span class="na_cfg_val"><select id="na_emb_src" class="text_pole">${Object.entries(EMBED_SOURCES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" id="na_emb_model_row" hidden><span><span>임베딩 모델</span><small>비우면 기본 모델</small></span><span class="na_cfg_val"><input type="text" id="na_emb_model" class="text_pole" spellcheck="false"></span></label>
+                  <label class="na_set_row" id="na_emb_url_row" hidden><span><span>Ollama 주소</span></span><span class="na_cfg_val"><input type="text" id="na_emb_url" class="text_pole" spellcheck="false" placeholder="http://127.0.0.1:11434"></span></label>
+                  <button type="button" class="na_set_row na_cfg_go" id="na_emb_build" hidden><span><span>뜻 색인 만들기</span><small id="na_emb_sub">처음 한 번 · 이 채팅의 섹션과 숨긴 원문</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   <label class="na_set_row" title="답이 잘리면 늘려 주세요"><span>답 최대 길이</span><span class="na_cfg_val"><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                 </div>
                 <small class="na_dim na_conn_note" id="na_conn_note" hidden>키와 JSON은 이 기기의 실리태번 설정에만 저장돼요. 아카이브 백업에는 안 들어가요.</small>
@@ -510,6 +516,7 @@ export function drawModels(p, open) {
 }
 
 export function renderAiSettings() {
+    syncEmbedRows();
     const g = globalSettings();
     $('#na_gloss_n').text(hasChat() ? glossaryEntries(getMeta()).length : 0);
     $('#na_drift_auto').val(String(g.driftAuto || 0));
@@ -579,7 +586,7 @@ function cfgSummaries() {
     const sum = {
         inject: [on('na_enabled') ? optText('na_place_preset') || '직접 정함' : '주입 끔', inChat ? `깊이 ${$('#na_depth').val()}` : pos, `망각 곡선 ${on('na_fade') ? '켬' : '끔'}`],
         recall: [`회상 ${on('na_recall') ? '켬' : '끔'}`, on('na_state_on') ? `STATE 깊이 ${$('#na_state_depth').val()}` : 'STATE 같이', `OOC ${$('#na_off_fold .na_off_chip[aria-pressed="true"]').length}가지`],
-        aimodel: [clip(aiLabel() || '-', 18), `초안 ${draftReady() ? clip(drLabel(), 16) : '없음'}`],
+        aimodel: [clip(aiLabel() || '-', 18), `초안 ${draftReady() ? clip(drLabel(), 16) : '없음'}`, embedCfg().source ? '뜻 찾기' : ''],
         aitask: [`막혔을 때 ${optText('na_fallback')}`, `로어북 ${on('na_lore') ? '켬' : '끔'}`, `이탈 감지 ${optText('na_drift_auto')}`, guessMode() !== 'off' ? '짐작' : ''],
         theme: [$('input[name="na_ui_theme"]:checked').closest('label').find('b').text() || '-'],
         alert: [Number($('#na_backup_every').val()) > 0 ? `백업 ${$('#na_backup_every').val()}번마다` : '백업 알림 끔'],
@@ -595,6 +602,21 @@ function layoutCfg() {
     $('#na_cfg_title').text(!q && cfgView ? CFG_GROUPS.find(x => x[0] === cfgView)[1] : '설정');
     $('#na_cfg_back').attr({ title: cfgView ? '설정 목차로' : '돌아가기', 'aria-label': cfgView ? '설정 목차로' : '돌아가기' });
     if (!cfgView || q) cfgSummaries();
+}
+
+// 뜻으로 찾기 rows: model and address only for a source of our own, the build row once it is on
+function syncEmbedRows() {
+    const e = embedCfg();
+    $('#na_emb_src').val(e.source);
+    const own = e.source && e.source !== 'st';
+    $('#na_emb_model_row').prop('hidden', !own || ['transformers', 'mistral', 'nomicai'].includes(e.source));
+    $('#na_emb_model').val(e.model).attr('placeholder', EMBED_DEFAULT_MODEL[e.source] || '');
+    $('#na_emb_url_row').prop('hidden', e.source !== 'ollama');
+    $('#na_emb_url').val(e.url);
+    $('#na_emb_build').prop('hidden', !e.source);
+    if ($('#na_emb_build').hasClass('na_busy')) return;
+    const st = embedState(), err = embedError();
+    $('#na_emb_sub').text(err ? `안 됨: ${err.slice(0, 80)} · 눌러서 다시` : st?.synced ? `${embedLabel()} · 섹션 조각 ${st.secs} · 원문 ${st.raws} · ${timeLabel(st.at)}` : `${embedLabel()} · 처음 한 번 만들어요 · 답할 때 알아서도 만들어요`);
 }
 
 // 압축 탭: picked method, and only the rows that method uses
@@ -1154,6 +1176,20 @@ export function bindPanel() {
     $('#na_state_depth').on('change', needChat(async e => { const m = getMeta(); m.stateRemind = { ...stateCfg(m), depth: Math.min(20, Math.max(0, parseInt(e.target.value, 10) || 0)) }; await saveMeta(); applyInjection(); syncPanel(); }));
     $('#na_off_fold').on('click', '.na_off_chip', function () { setOffKind(this.dataset.k, !offKinds()[this.dataset.k]); syncPanel(); refreshStatus(); });
     $('#na_fallback').on('change', function () { globalSettings().fallback = this.value; saveGlobal(); });
+    $('#na_emb_src').on('change', function () { setEmbed({ source: this.value }); syncEmbedRows(); if (this.value) $('#na_emb_build').trigger('click'); });
+    $('#na_emb_model').on('change', function () { setEmbed({ model: this.value.trim() }); syncEmbedRows(); });
+    $('#na_emb_url').on('change', function () { setEmbed({ url: this.value.trim() }); syncEmbedRows(); });
+    $('#na_emb_build').on('click', needChat(async e => {
+        const $b = $(e.currentTarget);
+        if ($b.hasClass('na_busy')) return;
+        $b.addClass('na_busy');
+        $('#na_emb_sub').text('목록 보는 중…');
+        try {
+            const st = await syncEmbed({ force: true, onProgress: (n, all) => $('#na_emb_sub').text(`만드는 중… ${n} / ${all}`) });
+            if (st) toastr.success(`섹션 조각 ${st.secs}개 · 숨긴 원문 ${st.raws}개`, '뜻 색인');
+        } catch (err) { toastr.error(String(err.message || err), '뜻 색인을 못 만들었어요'); }
+        finally { $b.removeClass('na_busy'); syncEmbedRows(); }
+    }));
     $('#na_guess').on('change', function () { globalSettings().guess = this.value; saveGlobal(); syncPanel(); });
     $('#na_lore').on('change', function () { setLore({ on: this.checked }); syncPanel(); });
     $('#na_lore_budget').on('change', function () { setLore({ budget: Number(this.value) }); syncPanel(); });
@@ -1283,6 +1319,7 @@ export function syncPanel() {
     }
     const rs = routerState.get(currentChatId());
     $('#na_guess').val(guessMode());
+    syncEmbedRows();
     { const gs = lastGuess(); $('#na_guess_sub').text(guessMode() === 'off' ? '돌려 말한 지난 일도 찾게' : gs ? `마지막 짐작: ${gs.length > 60 ? `${gs.slice(0, 59)}…` : gs}` : '돌려 말한 지난 일도 찾게 · 답마다 짧게 한 번 더').attr('title', gs); }
     $('#na_router_info').text(rs ? `마지막: ${rs.titles.length}개 · ${rs.via === 'index' ? `색인으로 (${rs.why || 'AI 안 됨'})` : `${(rs.ms / 1000).toFixed(1)}초`} · 후보 ${rs.cands}개${rs.short && rs.short < rs.cands ? ` 중 ${rs.short}개 자세히` : ''}` : `후보 ${routerCandidates(m).length}개 · 최근 대화로 한 번 골라 봐요`);
     {
