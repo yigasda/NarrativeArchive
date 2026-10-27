@@ -301,8 +301,8 @@ export function renderPanel() {
                 </div>
                 </div>
               </div>
-              <div class="na_cfg_grp na_cfg_keeplab" data-g="inject" title="섹션 카드의 스위치 · 고정 · 키워드로 섹션마다 정하고, 여기선 한꺼번에 관리해요.">
-                <div class="na_cfg_label"><i class="fa-solid fa-scale-balanced"></i> 분량 · 라우터</div>
+              <div class="na_cfg_grp na_cfg_keeplab" data-g="inject">
+                <div class="na_cfg_label"><i class="fa-solid fa-scale-balanced"></i> 분량</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
                   <label class="na_set_row"><span><span>토큰 상한</span><small>넘으면 알려 줘요</small></span><span class="na_cfg_val"><input type="number" id="na_cap" class="text_pole" min="0" step="1000" placeholder="없음" title="0이나 빈칸이면 상한 없음"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
@@ -317,6 +317,13 @@ export function renderPanel() {
                     <div class="na_fd_fill"><span id="na_fade_info">-</span><button type="button" class="na_v2_btn primary" id="na_fade_fill"><i class="fa-solid fa-feather-pointed"></i> 초안 모델로 채우기</button></div>
                   </div>
                   <button type="button" class="na_set_row na_cfg_go" id="na_fade_pick"><span><span>섹션별 버전 고르기</span><small id="na_fade_pick_sub">여러 섹션을 골라 원문 · 짧게 · 한 줄로</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
+                </div>
+                </div>
+              </div>
+              <div class="na_cfg_grp na_cfg_keeplab" data-g="call" title="섹션 카드의 스위치 · 고정 · 키워드로 섹션마다 정하고, 여기선 한꺼번에 관리해요.">
+                <div class="na_cfg_label"><i class="fa-solid fa-magnifying-glass"></i> 호출</div>
+                <div class="na_cfg_box">
+                <div class="na_set_list">
                   <label class="na_set_row" title="답하기 직전에 작은 모델이 지금 대화에 필요한 섹션을 골라 넣어요 · 따로 연결한 모델이 필요해요"><span><span>AI 라우터</span><small>답하기 직전에 필요한 섹션을 골라요</small></span>
                     <span class="na_cfg_val"><select id="na_router_mode" class="text_pole"><option value="off">끄기</option><option value="linked">키워드에 더해 AI도</option><option value="old">오래된 섹션 전부</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <div class="na_router_opts" id="na_router_opts" hidden>
@@ -325,6 +332,15 @@ export function renderPanel() {
                     <label class="na_set_row" id="na_router_keep_row"><span><span>최근 섹션은 항상</span><small>마지막 몇 개는 AI가 안 고르고 늘 넣어요</small></span><span class="na_cfg_val"><input type="number" id="na_router_keep" class="text_pole" min="0" max="20"><span class="na_cfg_unit">개</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                     <button type="button" class="na_set_row na_cfg_go" id="na_router_test"><span><span>지금 해 보기</span><small id="na_router_info">최근 대화로 한 번 골라 봐요</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   </div>
+                  <label class="na_set_row" title="&quot;그날 밤&quot;처럼 지난 일을 돌려 말하면, AI 기능 모델이 그때 장면을 짐작해 적고 그 말로 섹션 본문까지 찾아요 · 제목에 없는 장면도 찾게 · 답할 때마다 짧게 한 번 더 불러요"><span><span>지난 장면 짐작하기</span><small id="na_guess_sub">돌려 말한 지난 일도 찾게</small></span>
+                    <span class="na_cfg_val"><select id="na_guess" class="text_pole">${Object.entries(GUESS_MODES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" title="섹션을 뜻으로도 찾아요 · 라우터가 단어가 안 겹쳐도 비슷한 뜻이면 찾고, 한국어 채팅으로 영어 아카이브도 찾아요 · 실리태번 서버의 벡터 저장소를 써요"><span><span>뜻으로 찾기 (임베딩)</span><small>라우터가 비슷한 뜻도 찾게</small></span>
+                    <span class="na_cfg_val"><select id="na_emb_src" class="text_pole">${Object.entries(EMBED_SOURCES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" id="na_emb_pick_row" hidden><span><span>임베딩 모델</span><small id="na_emb_pick_sub"></small></span><span class="na_cfg_val"><select id="na_emb_pick" class="text_pole"></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" id="na_emb_model_row" hidden><span><span>모델 이름</span><small>직접 입력</small></span><span class="na_cfg_val"><input type="text" id="na_emb_model" class="text_pole" spellcheck="false">${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" id="na_emb_region_row" hidden title="Vertex 임베딩 모델은 지역마다 다르게 있어요 · global에서 500이 나면 us-central1"><span><span>임베딩 지역</span><small id="na_emb_region_sub">비우면 실리태번 Vertex 설정 지역</small></span><span class="na_cfg_val"><input type="text" id="na_emb_region" class="text_pole" spellcheck="false" placeholder="us-central1">${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" id="na_emb_url_row" hidden><span><span>Ollama 주소</span></span><span class="na_cfg_val"><input type="text" id="na_emb_url" class="text_pole" spellcheck="false" placeholder="http://127.0.0.1:11434">${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <button type="button" class="na_set_row na_cfg_go" id="na_emb_build" hidden><span><span>뜻 색인 만들기</span><small id="na_emb_sub">처음 한 번 · 이 채팅의 섹션</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   <label class="na_set_row"><span><span>키워드 연동</span><small>최근 메시지에서 찾을 범위 · 연동 <span id="na_linked_n">0</span>개</small></span><span class="na_cfg_val"><span>최근&nbsp;</span><input type="number" id="na_link_depth" class="text_pole" min="1" max="50"><span>개</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <button type="button" class="na_set_row na_cfg_go" id="na_kw_test"><span><span>키워드 테스트</span><small>문장을 넣어 어떤 섹션이 불려 오는지</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   <details class="na_cfg_fold" id="na_pm_fold">
@@ -335,7 +351,7 @@ export function renderPanel() {
                 </div>
                 </div>
               </div>
-              <div class="na_cfg_grp" data-g="aimodel" title="질문 · 키워드 제안 · 점검 · 라우터에 쓰는 모델이에요. AI는 답하고 검사만 하고, 아카이브는 직접 고쳐요.">
+              <div class="na_cfg_grp" data-g="aimodel" title="질문 · 키워드 제안 · 점검 · 라우터에 쓰는 모델이에요. 임베딩은 호출에 있어요. AI는 답하고 검사만 하고, 아카이브는 직접 고쳐요.">
                 <div class="na_cfg_label"><i class="fa-solid fa-robot"></i> AI 모델</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
@@ -367,19 +383,12 @@ export function renderPanel() {
                   <label class="na_set_row"><span><span>초안 최대 길이</span><small>초안이 끊기면 늘려 주세요</small></span><span class="na_cfg_val"><input type="number" id="na_dr_max" class="text_pole" min="1024" step="1024"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                 </div>
                 <div class="na_set_list">
-                  <label class="na_set_row" title="섹션을 뜻으로도 찾아요 · 라우터가 단어가 안 겹쳐도 비슷한 뜻이면 찾고, 한국어 채팅으로 영어 아카이브도 찾아요 · 실리태번 서버의 벡터 저장소를 써요"><span><span>뜻으로 찾기 (임베딩)</span><small>라우터가 비슷한 뜻도 찾게</small></span>
-                    <span class="na_cfg_val"><select id="na_emb_src" class="text_pole">${Object.entries(EMBED_SOURCES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" id="na_emb_pick_row" hidden><span><span>임베딩 모델</span><small id="na_emb_pick_sub"></small></span><span class="na_cfg_val"><select id="na_emb_pick" class="text_pole"></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" id="na_emb_model_row" hidden><span><span>모델 이름</span><small>직접 입력</small></span><span class="na_cfg_val"><input type="text" id="na_emb_model" class="text_pole" spellcheck="false">${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" id="na_emb_region_row" hidden title="Vertex 임베딩 모델은 지역마다 다르게 있어요 · global에서 500이 나면 us-central1"><span><span>임베딩 지역</span><small id="na_emb_region_sub">비우면 실리태번 Vertex 설정 지역</small></span><span class="na_cfg_val"><input type="text" id="na_emb_region" class="text_pole" spellcheck="false" placeholder="us-central1">${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" id="na_emb_url_row" hidden><span><span>Ollama 주소</span></span><span class="na_cfg_val"><input type="text" id="na_emb_url" class="text_pole" spellcheck="false" placeholder="http://127.0.0.1:11434">${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <button type="button" class="na_set_row na_cfg_go" id="na_emb_build" hidden><span><span>뜻 색인 만들기</span><small id="na_emb_sub">처음 한 번 · 이 채팅의 섹션과 숨긴 원문</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   <label class="na_set_row" title="답이 잘리면 늘려 주세요"><span>답 최대 길이</span><span class="na_cfg_val"><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                 </div>
                 <small class="na_dim na_conn_note" id="na_conn_note" hidden>키는 이 기기의 실리태번 설정에만 저장돼요. Vertex는 실리태번에 저장한 서비스 계정 JSON을 써요. 아카이브 백업에는 안 들어가요.</small>
                 </div>
               </div>
-              <div class="na_cfg_grp" data-g="aitask" title="AI 기능 모델이 하는 일 · 막혔을 때 · 로어북 · 이탈 감지">
+              <div class="na_cfg_grp" data-g="aitask" title="AI 기능 모델이 하는 일 · 막혔을 때 · 로어북 · 이탈 감지 · 용어집">
                 <div class="na_cfg_label"><i class="fa-solid fa-wand-magic-sparkles"></i> AI가 하는 일</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
@@ -387,8 +396,6 @@ export function renderPanel() {
                     <span class="na_cfg_val"><select id="na_fallback" class="text_pole"><option value="">다시 안 보냄</option><option value="ai">AI 기능 모델로</option><option value="dr">초안 모델로</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="이 채팅이 쓰는 로어북에서 키워드가 맞는 항목을 압축 · 이탈 감지 · 질문 · 말투 지문에 같이 보내요 · 그만큼 보낼 양이 늘어요"><span><span>로어북 곁들이기</span><small id="na_lore_sub">이름 · 장소 · 설정이 로어북과 맞게</small></span><input type="checkbox" id="na_lore" class="na_toggle"></label>
                   <label class="na_set_row" id="na_lore_budget_row"><span><span>로어북 한도</span><small>한 번에 보낼 항목 양</small></span><span class="na_cfg_val"><input type="number" id="na_lore_budget" class="text_pole" min="300" max="12000" step="500"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" title="&quot;그날 밤&quot;처럼 지난 일을 돌려 말하면, AI 기능 모델이 그때 장면을 짐작해 적고 그 말로 섹션 본문 · 숨긴 원문까지 찾아요 · 제목에 없는 장면도 찾게 · 답할 때마다 짧게 한 번 더 불러요"><span><span>지난 장면 짐작하기</span><small id="na_guess_sub">돌려 말한 지난 일도 찾게</small></span>
-                    <span class="na_cfg_val"><select id="na_guess" class="text_pole">${Object.entries(GUESS_MODES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="AI 답이 이만큼 쌓일 때마다 조용히 검사하고, 어긋나면 알려 줘요 · 그때마다 토큰이 들어가요"><span><span>이탈 자동 감지</span><small>AI 답이 쌓이면 조용히 검사</small></span>
                     <span class="na_cfg_val"><select id="na_drift_auto" class="text_pole"><option value="0">끄기</option><option value="5">답 5개마다</option><option value="10">답 10개마다</option><option value="20">답 20개마다</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="근거 글을 아카이브에서 못 찾은 경고만 AI 기능 모델에 한 번 더 물어봐요 · 그럴 때만 비용이 들어요"><span><span>못 찾은 근거 다시 묻기</span><small>이탈 감지 · 헛경고와 놓친 경고 줄이기</small></span><input type="checkbox" id="na_drift_recheck" class="na_toggle"></label>
@@ -545,6 +552,7 @@ export async function markBackup(how) {
 // ⚙ 설정: a card per group up top; tapping one shows that group alone
 const CFG_GROUPS = [
     ['inject', '주입', 'M12 3v12M7 10l5 5 5-5M5 21h14'],
+    ['call', '호출', '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>'],
     ['aimodel', 'AI 모델', '<rect x="4" y="6" width="16" height="12" rx="3"/><path d="M9 11h.01M15 11h.01M9 15h6"/>'],
     ['aitask', 'AI가 하는 일', 'M12 3l2.5 5 5.5.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.5-.8z'],
     ['theme', '테마', '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/>'],
@@ -556,9 +564,10 @@ const cfgTab = {}; // group → open tab
 // inside a group: tiles show where things stand, tabs split the rows. Each marker starts a tab; the rows after it
 // (in page order) belong to that tab until the next marker
 const CFG_TABS = {
-    inject: { tabs: [['place', '넣는 자리'], ['size', '분량'], ['pick', '고르기']], marks: [['#na_enabled', 'place'], ['#na_cap', 'size'], ['#na_router_mode', 'pick']] },
-    aimodel: { tabs: [['ai', 'AI 기능'], ['dr', '초안'], ['emb', '뜻 찾기']], marks: [['#na_ai_profile', 'ai'], ['#na_dr_mode', 'dr'], ['#na_emb_src', 'emb'], ['#na_ai_max', 'ai'], ['#na_conn_note', 'all']] },
-    aitask: { tabs: [['find', '찾기'], ['check', '점검'], ['etc', '기타']], marks: [['#na_fallback', 'etc'], ['#na_lore', 'find'], ['#na_drift_auto', 'check'], ['#na_gloss_edit', 'etc']] },
+    inject: { tabs: [['place', '넣는 자리'], ['size', '분량']], marks: [['#na_enabled', 'place'], ['#na_cap', 'size']] },
+    call: { tabs: [['router', 'AI 라우터'], ['emb', '뜻 찾기'], ['kw', '키워드 · 고정']], marks: [['#na_router_mode', 'router'], ['#na_emb_src', 'emb'], ['#na_link_depth', 'kw']] },
+    aimodel: { tabs: [['ai', 'AI 기능'], ['dr', '초안']], marks: [['#na_ai_profile', 'ai'], ['#na_dr_mode', 'dr'], ['#na_ai_max', 'ai'], ['#na_conn_note', 'all']] },
+    aitask: { tabs: [['lore', '로어북'], ['check', '점검'], ['etc', '기타']], marks: [['#na_fallback', 'etc'], ['#na_lore', 'lore'], ['#na_drift_auto', 'check'], ['#na_gloss_edit', 'etc']] },
 };
 const onOff = v => (v ? '켬' : '끔');
 const split2 = t => { const [a, ...b] = String(t || '').split(' · '); return [a, b.join(' · ')]; };
@@ -568,31 +577,40 @@ function cfgTiles(g) {
     const val = id => $(`#${id}`).val();
     if (g === 'inject') {
         const inChat = !$('#na_depth_field').prop('hidden');
-        const rm = val('na_router_mode'), follows = val('na_position') === '3';
+        const follows = val('na_position') === '3';
         return [
             ['넣는 곳', on('na_enabled') ? `${optText('na_position').replace(/\s*\(.*$/, '')}${inChat ? ` · ${val('na_depth')}` : ''}` : '주입 끔', follows ? '숨긴 메시지 바로 뒤' : '', on('na_enabled'), 'place'],
             ['말하는 역할', optText('na_role'), '', true, 'place'],
             ['망각 곡선', onOff(on('na_fade')), on('na_fade') ? `원문 ${val('na_fade_full')} · 짧게 ${val('na_fade_short')}` : '원문 그대로', on('na_fade'), 'size'],
-            ['AI 라우터', rm === 'off' ? '끔' : rm === 'old' ? 'AI가 전부' : '키워드 + AI', rm === 'off' ? '키워드만' : `한 번에 ${val('na_router_max')}개`, rm !== 'off', 'pick'],
+            ['토큰 상한', Number(val('na_cap')) > 0 ? `${Number(val('na_cap')).toLocaleString()}` : '없음', Number(val('na_cap')) > 0 ? '넘으면 알려 줘요' : '', Number(val('na_cap')) > 0, 'size'],
+        ];
+    }
+    if (g === 'call') {
+        const rm = val('na_router_mode');
+        const e = embedCfg(), st = embedState();
+        return [
+            ['AI 라우터', rm === 'off' ? '끔' : rm === 'old' ? 'AI가 전부' : '키워드 + AI', rm === 'off' ? '키워드만' : `한 번에 ${val('na_router_max')}개`, rm !== 'off', 'router'],
+            ['장면 짐작', guessMode() === 'off' ? '끔' : '켬', '돌려 말한 지난 일', guessMode() !== 'off', 'router'],
+            ['뜻으로 찾기', e.source ? ({ st: '실리태번', vertexai: 'Vertex', palm: 'AI Studio', transformers: '로컬' }[e.source] || split2(embedLabel())[0]) : '끔', e.source ? (st?.synced ? `섹션 ${st.secs}` : '색인 아직') : '단어로만 찾아요', !!e.source, 'emb'],
+            ['키워드 연동', `${$('#na_linked_n').text() || 0}개`, `고정 ${$('#na_pinned_n').text() || 0} · 꺼짐 ${$('#na_muted_n').text() || 0}`, Number($('#na_linked_n').text()) > 0, 'kw'],
         ];
     }
     if (g === 'aimodel') {
         const [a1, a2] = split2(aiLabel());
-        const e = embedCfg(), st = embedState();
         const tr = trSettings().mode;
         return [
             ['AI 기능 모델', a1, a2 || '질문 · 점검 · 라우터', true, 'ai'],
             ['초안 모델', draftReady() ? (draftSettings().mode === 'vertex' ? 'Vertex' : '커스텀') : '없음', draftReady() ? drLabel() : '압축 초안 · 짧은 버전', draftReady(), 'dr'],
             ['번역 모델', tr === 'same' ? '같이' : split2(trLabel())[0], tr === 'same' ? 'AI 기능 모델' : split2(trLabel())[1], tr !== 'same', 'ai'],
-            ['뜻으로 찾기', e.source ? ({ st: '실리태번', vertexai: 'Vertex', palm: 'AI Studio', transformers: '로컬' }[e.source] || split2(embedLabel())[0]) : '끔', e.source ? (st?.synced ? `섹션 ${st.secs}` : '색인 아직') : '단어로만 찾아요', !!e.source, 'emb'],
+            ['답 최대 길이', `${Number(val('na_ai_max') || 0).toLocaleString()}`, '토큰 · 잘리면 늘려요', true, 'ai'],
         ];
     }
     if (g === 'aitask') {
         return [
             ['막혔을 때', val('na_fallback') ? optText('na_fallback') : '안 함', '거절 · 차단이면 다른 모델로', !!val('na_fallback'), 'etc'],
-            ['로어북', onOff(on('na_lore')), on('na_lore') ? `${val('na_lore_budget')} 토큰까지` : '같이 안 보내요', on('na_lore'), 'find'],
-            ['장면 짐작', GUESS_MODES[guessMode()] === '끄기' ? '끔' : GUESS_MODES[guessMode()], '돌려 말한 지난 일', guessMode() !== 'off', 'find'],
+            ['로어북', onOff(on('na_lore')), on('na_lore') ? `${val('na_lore_budget')} 토큰까지` : '같이 안 보내요', on('na_lore'), 'lore'],
             ['이탈 감지', val('na_drift_auto') === '0' ? '끔' : optText('na_drift_auto'), on('na_drift_recheck') ? '못 찾은 근거 다시 묻기' : '근거 확인만', val('na_drift_auto') !== '0', 'check'],
+            ['번역 용어집', `${$('#na_gloss_n').text() || 0}개`, '이름 · 장소 한국어 표기', Number($('#na_gloss_n').text()) > 0, 'etc'],
         ];
     }
     return [];
@@ -643,8 +661,9 @@ function cfgSummaries() {
     const pos = optText('na_position'), inChat = !$('#na_depth_field').prop('hidden');
     const sum = {
         inject: [on('na_enabled') ? pos.replace(/\s*\(.*$/, '') : '주입 끔', inChat ? `깊이 ${$('#na_depth').val()}` : '', `망각 곡선 ${on('na_fade') ? '켬' : '끔'}`],
-        aimodel: [clip(aiLabel() || '-', 18), `초안 ${draftReady() ? clip(drLabel(), 16) : '없음'}`, embedCfg().source ? '뜻 찾기' : ''],
-        aitask: [`막혔을 때 ${optText('na_fallback')}`, `로어북 ${on('na_lore') ? '켬' : '끔'}`, `이탈 감지 ${optText('na_drift_auto')}`, guessMode() !== 'off' ? '짐작' : ''],
+        call: [$('#na_router_mode').val() === 'off' ? '라우터 끔' : '라우터 켬', `키워드 ${$('#na_linked_n').text() || 0}개`, guessMode() !== 'off' ? '짐작' : '', embedCfg().source ? '뜻 찾기' : ''],
+        aimodel: [clip(aiLabel() || '-', 18), `초안 ${draftReady() ? clip(drLabel(), 16) : '없음'}`],
+        aitask: [`막혔을 때 ${optText('na_fallback')}`, `로어북 ${on('na_lore') ? '켬' : '끔'}`, `이탈 감지 ${optText('na_drift_auto')}`],
         theme: [$('input[name="na_ui_theme"]:checked').closest('label').find('b').text() || '-'],
         alert: [Number($('#na_backup_every').val()) > 0 ? `백업 ${$('#na_backup_every').val()}번마다` : '백업 알림 끔'],
     };
