@@ -7,6 +7,7 @@ import { glossaryEntries } from './translate.js';
 import { ctx, getMeta, globalSettings, hasChat, saveGlobal, saveMeta } from './core.js';
 import { cleanMessage } from './extract.js';
 import { currentInjection } from './inject.js';
+import { guessMode, lastGuess } from './guess.js';
 import { isKeptAt, sectionKept } from './keeps.js';
 import { mutedSet, parseSections, sectionKey, splitTail } from './sections.js';
 
@@ -241,6 +242,7 @@ export async function runRecall() {
     const cfg = recallCfg(m);
     if (!m.enabled || !cfg.on) { c.setExtensionPrompt(RECALL_KEY, '', 1, 0); return null; }
     const q = recallQuery(cfg.scan).map(x => ({ ...x, text: withGlossary(m, x.text) }));
+    if (guessMode() === 'both' && lastGuess()) q.push({ text: lastGuess(), w: 0.7 }); // 지난 장면 짐작하기
     const injected = cfg.secs ? (await currentInjection()).text || '' : '';
     const items = [...rawItems({ only: 'hidden' }), ...(cfg.secs ? bulletItems(m, injected) : [])];
     const qn = new Set(q.flatMap(x => tokenize(x.text))).size;

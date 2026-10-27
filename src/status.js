@@ -54,7 +54,7 @@ export async function refreshStatus() {
     $('#na_meter .na_seg_raw').css('width', `${total ? 100 - pct : 0}%`).removeClass('na_over');
     // small line under the tiles: the router, and anything that cuts what goes in
     $('#na_meter_legend').html(`
-      ${routerCfg(m).mode !== 'off' ? `<span class="na_router_st">${svgA(ICO_A.compass, 13)} 라우터 · ${routerState.get(currentChatId()) ? `${routerState.get(currentChatId()).titles.length}개 고름` : '답할 때 골라요'}</span>` : ''}
+      ${routerCfg(m).mode !== 'off' ? `<span class="na_router_st">${svgA(ICO_A.compass, 13)} 라우터 · ${routerState.get(currentChatId()) ? `${routerState.get(currentChatId()).titles.length}개 고름${routerState.get(currentChatId()).via === 'index' ? ' (색인)' : ''}` : '답할 때 골라요'}</span>` : ''}
       ${mutedCount(m) ? `<span class="na_warn_txt"><i class="fa-solid fa-toggle-off"></i> 섹션 ${mutedCount(m)}개 꺼짐</span>` : ''}
       ${build.trimmed.length ? `<span class="na_warn_txt"><i class="fa-solid fa-scissors"></i> 상한 ${fmt(build.cap)}에 맞춰 ${build.trimmed.length}개 뺌</span>` : ''}
       ${build.over ? `<span class="na_warn_txt"><i class="fa-solid fa-triangle-exclamation"></i> 상한 ${fmt(build.cap)} 넘음</span>` : ''}`);

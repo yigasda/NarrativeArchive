@@ -26,6 +26,7 @@ import { auOf, bindPromptSettings } from './prompts.js';
 import { openQuotes } from './quotes.js';
 import { openReader } from './reader.js';
 import { routerCandidates, routerCfg, routerState, runRouter } from './router.js';
+import { GUESS_MODES, guessMode, lastGuess } from './guess.js';
 import { cachedTokens, checkHeadings, filterMuted, groupLabel, linkedMap, mutedCount, parseSections, pinnedSet, sectionKey } from './sections.js';
 import { refreshStatus } from './status.js';
 import { ICO_A, setUiTheme, svgA, uiTheme } from './theme.js';
@@ -405,6 +406,8 @@ export function renderPanel() {
                     <span class="na_cfg_val"><select id="na_fallback" class="text_pole"><option value="">다시 안 보냄</option><option value="ai">AI 기능 모델로</option><option value="dr">초안 모델로</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="이 채팅이 쓰는 로어북에서 키워드가 맞는 항목을 압축 · 이탈 감지 · 질문 · 말투 지문에 같이 보내요 · 그만큼 보낼 양이 늘어요"><span><span>로어북 곁들이기</span><small id="na_lore_sub">이름 · 장소 · 설정이 로어북과 맞게</small></span><input type="checkbox" id="na_lore" class="na_toggle"></label>
                   <label class="na_set_row" id="na_lore_budget_row"><span><span>로어북 한도</span><small>한 번에 보낼 항목 양</small></span><span class="na_cfg_val"><input type="number" id="na_lore_budget" class="text_pole" min="300" max="12000" step="500"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" title="&quot;그날 밤&quot;처럼 지난 일을 돌려 말하면, AI 기능 모델이 그때 장면을 짐작해 적고 그 말로 섹션 본문 · 숨긴 원문까지 찾아요 · 제목에 없는 장면도 찾게 · 답할 때마다 짧게 한 번 더 불러요"><span><span>지난 장면 짐작하기</span><small id="na_guess_sub">돌려 말한 지난 일도 찾게</small></span>
+                    <span class="na_cfg_val"><select id="na_guess" class="text_pole">${Object.entries(GUESS_MODES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="AI 답이 이만큼 쌓일 때마다 조용히 검사하고, 어긋나면 알려 줘요 · 그때마다 토큰이 들어가요"><span><span>이탈 자동 감지</span><small>AI 답이 쌓이면 조용히 검사</small></span>
                     <span class="na_cfg_val"><select id="na_drift_auto" class="text_pole"><option value="0">끄기</option><option value="5">답 5개마다</option><option value="10">답 10개마다</option><option value="20">답 20개마다</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="근거 글을 아카이브에서 못 찾은 경고만 AI 기능 모델에 한 번 더 물어봐요 · 그럴 때만 비용이 들어요"><span><span>못 찾은 근거 다시 묻기</span><small>이탈 감지 · 헛경고와 놓친 경고 줄이기</small></span><input type="checkbox" id="na_drift_recheck" class="na_toggle"></label>
@@ -577,7 +580,7 @@ function cfgSummaries() {
         inject: [on('na_enabled') ? optText('na_place_preset') || '직접 정함' : '주입 끔', inChat ? `깊이 ${$('#na_depth').val()}` : pos, `망각 곡선 ${on('na_fade') ? '켬' : '끔'}`],
         recall: [`회상 ${on('na_recall') ? '켬' : '끔'}`, on('na_state_on') ? `STATE 깊이 ${$('#na_state_depth').val()}` : 'STATE 같이', `OOC ${$('#na_off_fold .na_off_chip[aria-pressed="true"]').length}가지`],
         aimodel: [clip(aiLabel() || '-', 18), `초안 ${draftReady() ? clip(drLabel(), 16) : '없음'}`],
-        aitask: [`막혔을 때 ${optText('na_fallback')}`, `로어북 ${on('na_lore') ? '켬' : '끔'}`, `이탈 감지 ${optText('na_drift_auto')}`],
+        aitask: [`막혔을 때 ${optText('na_fallback')}`, `로어북 ${on('na_lore') ? '켬' : '끔'}`, `이탈 감지 ${optText('na_drift_auto')}`, guessMode() !== 'off' ? '짐작' : ''],
         theme: [$('input[name="na_ui_theme"]:checked').closest('label').find('b').text() || '-'],
         alert: [Number($('#na_backup_every').val()) > 0 ? `백업 ${$('#na_backup_every').val()}번마다` : '백업 알림 끔'],
     };
@@ -1129,7 +1132,7 @@ export function bindPanel() {
         const st = await withSpinner($(e.currentTarget), '고르는 중…', () => runRouter(m, { force: true }));
         if (!st) return;
         await applyInjection(); syncPanel();
-        toastr.info(st.titles.length ? st.titles.map(t => `• ${esc(t.slice(0, 60))}`).join('<br>') : '고른 섹션이 없어요', `라우터 · ${st.titles.length}개 · ${(st.ms / 1000).toFixed(1)}초`, { escapeHtml: false, timeOut: 10000 });
+        toastr.info(st.titles.length ? st.titles.map(t => `• ${esc(t.slice(0, 60))}`).join('<br>') : '고른 섹션이 없어요', `라우터 · ${st.titles.length}개 · ${(st.ms / 1000).toFixed(1)}초${st.short && st.short < st.cands ? ` · 후보 ${st.cands}개 중 ${st.short}개 자세히` : ''}`, { escapeHtml: false, timeOut: 10000 });
     }));
     // 회상 · STATE 가까이 · OOC 빼기
     $('#na_recall').on('change', needChat(async e => { await setRecall({ on: e.target.checked }); syncPanel(); }));
@@ -1151,6 +1154,7 @@ export function bindPanel() {
     $('#na_state_depth').on('change', needChat(async e => { const m = getMeta(); m.stateRemind = { ...stateCfg(m), depth: Math.min(20, Math.max(0, parseInt(e.target.value, 10) || 0)) }; await saveMeta(); applyInjection(); syncPanel(); }));
     $('#na_off_fold').on('click', '.na_off_chip', function () { setOffKind(this.dataset.k, !offKinds()[this.dataset.k]); syncPanel(); refreshStatus(); });
     $('#na_fallback').on('change', function () { globalSettings().fallback = this.value; saveGlobal(); });
+    $('#na_guess').on('change', function () { globalSettings().guess = this.value; saveGlobal(); syncPanel(); });
     $('#na_lore').on('change', function () { setLore({ on: this.checked }); syncPanel(); });
     $('#na_lore_budget').on('change', function () { setLore({ budget: Number(this.value) }); syncPanel(); });
     // settings search: rows whose words match stay, the rest of each group folds away
@@ -1278,7 +1282,9 @@ export function syncPanel() {
         }
     }
     const rs = routerState.get(currentChatId());
-    $('#na_router_info').text(rs ? `마지막: ${rs.titles.length}개 · ${(rs.ms / 1000).toFixed(1)}초 · 후보 ${rs.cands}개` : `후보 ${routerCandidates(m).length}개 · 최근 대화로 한 번 골라 봐요`);
+    $('#na_guess').val(guessMode());
+    { const gs = lastGuess(); $('#na_guess_sub').text(guessMode() === 'off' ? '돌려 말한 지난 일도 찾게' : gs ? `마지막 짐작: ${gs.length > 60 ? `${gs.slice(0, 59)}…` : gs}` : '돌려 말한 지난 일도 찾게 · 답마다 짧게 한 번 더').attr('title', gs); }
+    $('#na_router_info').text(rs ? `마지막: ${rs.titles.length}개 · ${rs.via === 'index' ? `색인으로 (${rs.why || 'AI 안 됨'})` : `${(rs.ms / 1000).toFixed(1)}초`} · 후보 ${rs.cands}개${rs.short && rs.short < rs.cands ? ` 중 ${rs.short}개 자세히` : ''}` : `후보 ${routerCandidates(m).length}개 · 최근 대화로 한 번 골라 봐요`);
     {
         const keys = new Set(parseSections(m.text).map(sectionKey));
         $('#na_linked_n').text(Object.keys(linkedMap(m)).filter(t => keys.has(t)).length);
