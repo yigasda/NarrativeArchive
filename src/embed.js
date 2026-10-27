@@ -100,12 +100,12 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 // one call to the server's vector API. A remote embedding service that is over its per-minute quota or briefly down
 // comes back as a 5xx (SillyTavern's server turns Vertex's 429 into a 500), so those are tried again after a pause;
 // a 4xx is a real mistake and is not
-async function vec(path, body, ms = 30_000, { retries = 0, stop = null } = {}) {
+async function vec(path, body, ms = 30_000, { retries = 0, stop = null, waits = [4000, 12000, 30000], onWait = null } = {}) {
     let last = null;
     for (let attempt = 0; attempt <= retries; attempt++) {
         if (attempt) {
-            const wait = [4000, 12000, 30000][attempt - 1] ?? 30000;
-            for (let t = 0; t < wait; t += 500) { if (stop?.()) throw new Error('채팅이 바뀌어서 멈췄어요'); await sleep(500); }
+            const wait = waits[attempt - 1] ?? waits[waits.length - 1];
+            for (let t = 0; t < wait; t += 500) { if (stop?.()) throw new Error('채팅이 바뀌어서 멈췄어요'); onWait?.(Math.ceil((wait - t) / 1000)); await sleep(500); }
         }
         const ctl = new AbortController();
         const timer = setTimeout(() => ctl.abort(), ms);
@@ -178,25 +178,40 @@ export async function syncEmbed({ onProgress = null, force = false } = {}) {
         const add = all.filter(x => !have.has(x.hash));
         const gone = [...have].filter(h => !want.has(h));
         if (gone.length) await vec('delete', { ...b, collectionId: st.coll, hashes: gone }, 30_000, { retries: 1 });
-        // gemini-embedding on Vertex takes one text per request; other Google models take a few; the server sends
-        // what it gets in one go. A remote service gets a short pause between requests so its per-minute quota holds
+        // Vertex counts requests per minute per model family (the text-embedding models share one "textembedding-gecko"
+        // quota, often small), and the server sends each insert as one request — so texts go in as few requests as
+        // the model allows: gemini-embedding one per request, the others up to 40 texts / about 9,000 characters.
+        // A remote service also gets a pause between requests, longer once it has said "too many"
         const google = b.source === 'vertexai' || b.source === 'palm';
-        const step = google && /^gemini-embedding/.test(b.model || '') ? 1 : google ? 10 : ['transformers', 'ollama'].includes(b.source) ? 8 : 40;
-        const pace = REMOTE.has(b.source) ? 400 : 0;
+        const one = google && /^gemini-embedding/.test(b.model || '');
+        const maxN = one ? 1 : ['transformers', 'ollama'].includes(b.source) ? 8 : 40;
+        const maxChars = google && !one ? 9000 : Infinity;
+        const batches = [];
+        for (const x of add) {
+            const cur = batches[batches.length - 1];
+            const len = Math.min(MAX_TEXT, x.text.length);
+            if (cur && cur.n < maxN && cur.chars + len <= maxChars) { cur.items.push(x); cur.n++; cur.chars += len; }
+            else batches.push({ items: [x], n: 1, chars: len });
+        }
+        let pace = REMOTE.has(b.source) ? 400 : 0;
+        // a quota is per minute: wait out a whole minute (and a bit) before trying again
+        const quotaWaits = REMOTE.has(b.source) ? [15_000, 65_000, 65_000, 65_000, 65_000] : [4000, 12000, 30000];
         const stop = () => currentChatId() !== id;
-        let skipped = 0, failRun = 0, regionMoved = '';
-        for (let k = 0; k < add.length; k += step) {
+        let skipped = 0, failRun = 0, regionMoved = '', done = 0, slowed = false;
+        for (let bi = 0; bi < batches.length; bi++) {
+            const k = bi; // first batch = k 0 (region fallback below looks at it)
             if (stop()) throw new Error('채팅이 바뀌어서 멈췄어요');
-            const items = add.slice(k, k + step).map((x, j) => ({ hash: x.hash, text: x.text.slice(0, MAX_TEXT), index: k + j }));
+            const items = batches[bi].items.map((x, j) => ({ hash: x.hash, text: x.text.slice(0, MAX_TEXT), index: done + j }));
+            const onWait = sec => { slowed = true; onProgress?.(done, add.length, `한도에 걸려 쉬는 중… ${sec}초`); };
             try {
                 try {
-                    await vec('insert', { ...b, collectionId: st.coll, items }, 120_000, { retries: k === 0 && regionCanMove(b) ? 1 : 3, stop });
+                    await vec('insert', { ...b, collectionId: st.coll, items }, 120_000, k === 0 && regionCanMove(b) ? { retries: 1, stop } : { retries: quotaWaits.length, waits: quotaWaits, stop, onWait });
                 } catch (e) {
                     // the first text failing on Vertex with no region chosen for embeddings: try us-central1 once,
                     // where every Vertex embedding model is served, and keep it if that works
                     if (k !== 0 || !regionCanMove(b) || !(e.status >= 500)) throw e;
                     const moved = { ...b, vertexai_region: 'us-central1' };
-                    await vec('insert', { ...moved, collectionId: st.coll, items }, 120_000, { retries: 2, stop });
+                    await vec('insert', { ...moved, collectionId: st.coll, items }, 120_000, { retries: quotaWaits.length, waits: quotaWaits, stop, onWait });
                     Object.assign(b, moved);
                     globalSettings().embed = { ...embedCfg(), region: 'us-central1' }; saveGlobal();
                     regionMoved = `${e.status}`;
@@ -205,12 +220,15 @@ export async function syncEmbed({ onProgress = null, force = false } = {}) {
             } catch (e) {
                 // one text the service keeps refusing is skipped (it is tried again on the next build);
                 // several in a row means the service itself is down, so stop and say so
-                if (stop() || ++failRun >= 3 || step > 1) throw e;
+                if (stop() || ++failRun >= 3 || items.length > 1) throw e;
                 skipped += items.length;
                 console.warn('[narrative-archive] embed skip', e);
             }
-            onProgress?.(Math.min(add.length, k + step), add.length);
-            if (pace && k + step < add.length) await sleep(pace);
+            done += items.length;
+            onProgress?.(done, add.length);
+            // after a "too many", keep well under the quota for the rest of the run
+            if (slowed && pace) { pace = Math.max(pace, 3000); slowed = false; }
+            if (pace && bi + 1 < batches.length) await sleep(pace);
         }
         st.skipped = skipped;
         st.regionMoved = regionMoved;

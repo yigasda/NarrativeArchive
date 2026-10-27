@@ -1316,7 +1316,7 @@ export function bindPanel() {
         $b.addClass('na_busy');
         $('#na_emb_sub').text('목록 보는 중…');
         try {
-            const st = await syncEmbed({ force: true, onProgress: (n, all) => $('#na_emb_sub').text(`만드는 중… ${n} / ${all}`) });
+            const st = await syncEmbed({ force: true, onProgress: (n, all, note) => $('#na_emb_sub').text(`만드는 중… ${n} / ${all}${note ? ` · ${note}` : ''}`) });
             if (st) toastr.success(`섹션 조각 ${st.secs}개 · 숨긴 원문 ${st.raws}개${st.skipped ? ` · 못 넣은 ${st.skipped}개는 다음에 다시 해요` : ''}${st.regionMoved ? ' · 원래 지역에서 안 돼서 임베딩 지역을 us-central1로 정했어요' : ''}`, '뜻 색인', { timeOut: st.regionMoved ? 12000 : 5000 });
         } catch (err) {
             // a 5xx that survived the retries is the service's quota or an outage; what went in so far is kept
