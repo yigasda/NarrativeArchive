@@ -167,11 +167,11 @@ YOU GET
 - ARCHIVE LINES (sometimes): quotes of this character from the story archive.
 
 STEPS
-1. CORE: 4 to 6 lines about who the character is: temperament, values and motives, flaws, emotional range, how they treat others and the user's character, and what they would never do. Behaviour, not labels: "Teases when worried instead of saying so", not "Caring". Only what the CARD or at least two CHAT LINES show. No plot, no events, no looks.
+1. CORE: 4 to 6 lines that stay true for this character in any scene. Cover what drives them, what they want and what they fear, where they are soft and where they are hard, how they act toward the user's character and toward everyone else, and the lines they will not cross. Write each as something they do: "Teases when worried instead of saying so", not "Caring". Keep only what the CARD says or at least two CHAT LINES show. No plot, no events, no looks.
 2. SPEECH: 4 to 7 rules for how they talk. Check: sentence length and rhythm · speech level, formal or casual · first-person word · how they address each person (names, titles, pet names) · orders, questions or statements · words and images they come back to · humor · how feelings leak out · what they never say.
    Each rule: one Korean tag in square brackets, then one full English sentence saying what they do, then one short example copied word for word from the lines, in parentheses and quotes. Leave the example out if no line fits.
    Tags: 길이 · 명령 · 질문 · 호칭 · 존댓말 · 반말 · 1인칭 · 감정 · 유머 · 반복 · 말버릇 · 비유 · 조건 · 금기 · 침묵.
-3. SAMPLES: up to 6 short lines of this character's own dialogue, copied exactly, character for character, in the original language. Pick lines that show temperament, humor, affection or irritation, and lines said to other characters. No plot exposition. Each under 120 characters.
+3. SAMPLES: up to 6 of this character's own lines that a reader would know as theirs even with the name hidden. Copy each one exactly as it stands in the lines: same language, same spelling, same punctuation. Prefer lines spoken to someone over lines that explain the plot. One or two sentences each, no longer.
 
 DO NOT
 - No rules any character could have ("speaks naturally", "shows emotion").

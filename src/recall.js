@@ -13,7 +13,12 @@ export const RECALL_KEY = 'narrative_archive_recall';
 // ---- off-story messages
 
 // a QR that pauses the role-play for a side piece (a balance game, a what-if), or an OOC note
-const ASIDE_RE = /\b(pause|stop|halt|suspend|interrupt)\b[^.\n]{0,40}\b(role-?play|rp|scenario|story|roleplay)\b|\bpause\s+rp\b|set aside all prior prompts|(롤플|역할극|RP)[^\n]{0,12}(멈|중단|정지|잠깐)/i;
+const STEP_OUT = [
+    /\b(pause|stop|break from|step out of|leave|outside)\b(?:\s+\w+){0,4}?\s+(?:the\s+)?(?:role-?play|rp|story)\b/i,
+    /\b(?:role-?play|rp)\s+(?:pause|break|stop)\b/i,
+    /(?:롤플레이|롤플|역할극|알피|RP)\s*(?:은|는|을|를)?\s*(?:잠깐|잠시|일단)?\s*(?:멈|중단|쉬|밖)/i,
+];
+const stepsOut = text => STEP_OUT.some(re => re.test(text));
 const OOC_RE = /^\s*[([{【]?\s*(ooc|out of character|사담|잡담)\s*[:：)\]】]/i;
 
 // '' = keep everything, 'aside' = comments, OOC and QR side pieces (default), 'all' = also /sys narrator lines
@@ -26,9 +31,9 @@ export function isOffstage(msg, prev = null) {
     if (extra.type === 'comment' || extra.na_aside) return true;
     const text = String(msg.mes || '');
     if (OOC_RE.test(text)) return true;
-    if (msg.is_user && ASIDE_RE.test(text)) return true;
+    if (msg.is_user && stepsOut(text)) return true;
     // the answer to a side-piece request is a side piece too
-    if (!msg.is_user && prev?.is_user && ASIDE_RE.test(String(prev.mes || ''))) return true;
+    if (!msg.is_user && prev?.is_user && stepsOut(String(prev.mes || ''))) return true;
     return mode === 'all' && (extra.type === 'narrator' || extra.model === 'slash command');
 }
 // indexes of off-story messages in the chat (or the given list)

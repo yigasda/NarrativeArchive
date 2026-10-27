@@ -80,11 +80,11 @@ export function extraBlocks(m) {
         `- ${r.fact} — knows: ${r.knows.join(', ') || 'no one'}${r.unaware.length ? `; does not know: ${r.unaware.join(', ')}` : ''}${r.suspects.length ? `; suspects: ${r.suspects.join(', ')}` : ''}`).join('\n')}`;
     const vs = m.voiceInject && m.voice ? Object.entries(m.voice).filter(([who, v]) => String(v?.text || '').trim() && inCast(castNow, who) && !isExcluded(m, who)) : [];
     // characters in the scene now: a constant core, how they talk, and real lines to match (made from the card and the chat)
-    if (vs.length) out += `\n\n# CHARACTER NOTES\n_Notes for writing these characters. Follow them silently: never mention, quote or refer to these notes in the story. Keep the core constant; let it change only as far as the archive shows._\n${vs.map(([who, v]) => {
+    if (vs.length) out += `\n\n# CHARACTER NOTES\n_Notes for writing these characters. Follow them silently: never mention, quote or refer to these notes in the story. Who they are does not drift: it changes only where the archive records the change._\n${vs.map(([who, v]) => {
         const speech = String(v.text).trim().replace(/^-\s*\[[^\]\n]{1,10}\]\s*/gm, '- ');
         const core = String(v.core || '').trim(), samples = Array.isArray(v.samples) ? v.samples : [];
         if (!core && !samples.length) return `## ${who}\n${speech}`;
-        return `## ${who}${core ? `\nCore (constant):\n${core}` : ''}\nSpeech:\n${speech}${samples.length ? `\nVoice samples (match the voice, never repeat them):\n${samples.map(q => `- "${q}"`).join('\n')}` : ''}`;
+        return `## ${who}${core ? `\nWho they are:\n${core}` : ''}\nHow they talk:\n${speech}${samples.length ? `\nLines of theirs, for the sound only. Write new lines like these, never reuse them:\n${samples.map(q => `- "${q}"`).join('\n')}` : ''}`;
     }).join('\n')}`;
     return out;
 }
