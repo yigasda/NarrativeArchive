@@ -31,7 +31,7 @@ import { refreshStatus } from './status.js';
 import { ICO_A, setUiTheme, svgA, uiTheme } from './theme.js';
 import { AI_SYS_TRANSLATE, askTranslator, glossaryEntries, openGlossary } from './translate.js';
 import { chatLabel, confirm, copyText, countTokens, download, esc, escRe, fmt, nowStamp, timeLabel } from './util.js';
-import { CHUNK_CHOICES, COMPRESS_MODES, EVENTS_MODELS, chunkTok, compressMode, eventsModel, openAuSettings, openWizard, quickCompress } from './wizard.js';
+import { NUDGE_CHOICES, CHUNK_CHOICES, COMPRESS_MODES, EVENTS_MODELS, chunkTok, compressMode, eventsModel, openAuSettings, openWizard, quickCompress } from './wizard.js';
 import { openStudio, studioLabel } from './studio.js';
 import { DEFAULT_TRACKER_RE, SCENE_MODELS, SCENE_SIZES, openStyleSamples, openWorkNote, styleLabel, sceneModel, sceneSize, stateModel, trackerRe } from './scenes.js';
 import { openWorlds, worldBooks, worldIsOn } from './world.js';
@@ -197,6 +197,8 @@ export function renderPanel() {
                 <div class="na_v2_label">설정</div>
                 <div class="na_v2_card na_v2_list na_cp_set">
                   <label class="na_cp_row"><span class="na_cp_txt"><span>숨긴 메시지 빼고 뽑기</span></span><input type="checkbox" class="na_toggle" id="na_opt_hidden"></label>
+                  <label class="na_cp_row"><span class="na_cp_txt"><span>한 번에 압축 · 바로 넣기</span><small>검사가 다 통과하면 추가 창 없이 넣고 숨겨요 · 알림에서 되돌리기 · 걸리는 게 있으면 추가 창</small></span><input type="checkbox" class="na_toggle" id="na_quick_auto"></label>
+                  <label class="na_cp_row"><span class="na_cp_txt"><span>쌓이면 알려 주기</span><small>압축할 메시지가 이만큼 쌓이면 알림 · 누르면 압축</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_nudge">${Object.entries(NUDGE_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                   <label class="na_cp_row"><span class="na_cp_txt"><span>한 번에 압축 · 방식</span><small>2단계: 정리 모델이 메시지마다 한 줄로 정리(되짚기는 빼고) → 초안 모델이 그 목록으로 섹션을 써요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_cmode">${Object.entries(COMPRESS_MODES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                   <label class="na_cp_row na_cmode_ev"><span class="na_cp_txt"><span>2단계 · 정리 모델</span><small>메시지 15개씩 여러 번 불러요 · 싼 모델 추천</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_evmodel">${Object.entries(EVENTS_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                   <label class="na_cp_row na_cmode_sc"><span class="na_cp_txt"><span>장면별 · 장면 크기</span><small>장면마다 섹션 하나씩 따로 받아요 · 클수록 싸고, 작을수록 꼼꼼해요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_scsize">${Object.entries(SCENE_SIZES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
