@@ -273,7 +273,7 @@ export function renderPanel() {
             <!-- 설정 (⚙) -->
             <section class="na_tab_pane" data-pane="config" hidden>
               <div class="na_cfg_head"><button type="button" class="na_cfg_back" id="na_cfg_back" title="돌아가기" aria-label="돌아가기">${svgA(ICO_A.left, 18, 2.2)}</button><b>설정</b><button type="button" class="na_cfg_pill" id="na_cfg_preview">주입 미리보기</button></div>
-              <div class="na_search_wrap na_cfg_search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" class="text_pole na_search" id="na_cfg_q" placeholder="설정 찾기 · 예: 옛 장면, 깊이, 로어북" aria-label="설정 찾기"></div>
+              <div class="na_search_wrap na_cfg_search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" class="text_pole na_search" id="na_cfg_q" placeholder="설정 찾기 · 예: 회상, 깊이, 로어북" aria-label="설정 찾기"></div>
               <div class="na_empty" id="na_cfg_none" hidden>맞는 설정이 없어요.</div>
               <div class="na_cfg_grp">
                 <div class="na_cfg_label"><i class="fa-solid fa-palette"></i> 테마</div>
@@ -331,10 +331,10 @@ export function renderPanel() {
                 </div>
               </div>
               <div class="na_cfg_grp">
-                <div class="na_cfg_label"><i class="fa-solid fa-clock-rotate-left"></i> 옛 장면 · STATE · 롤플 밖</div>
+                <div class="na_cfg_label"><i class="fa-solid fa-clock-rotate-left"></i> 회상 · STATE · 롤플 밖</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
-                  <label class="na_set_row" title="답하기 직전에 숨긴 원문과 지금 안 들어가는 섹션에서 최근 대화와 맞는 줄을 찾아 넣어요 · AI를 안 써서 비용이 없어요 · 이 채팅에만"><span><span>옛 장면 불러오기</span><small id="na_recall_sub">숨긴 원문에서 지금 대화와 맞는 줄을 찾아 넣어요</small></span><input type="checkbox" id="na_recall" class="na_toggle"></label>
+                  <label class="na_set_row" title="답하기 직전에 숨긴 원문과 지금 안 들어가는 섹션에서 최근 대화와 맞는 줄을 찾아 넣어요 · AI를 안 써서 비용이 없어요 · 이 채팅에만"><span><span>회상</span><small id="na_recall_sub">숨긴 원문에서 지금 대화와 맞는 줄을 찾아 넣어요</small></span><input type="checkbox" id="na_recall" class="na_toggle"></label>
                   <div id="na_recall_opts" hidden>
                     <label class="na_set_row"><span><span>한 번에 최대</span><small>넣을 줄 수</small></span><span class="na_cfg_val"><input type="number" id="na_recall_k" class="text_pole" min="1" max="12"><span class="na_cfg_unit">줄</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                     <label class="na_set_row"><span><span>토큰 한도</span><small>불러온 줄 전체</small></span><span class="na_cfg_val"><input type="number" id="na_recall_budget" class="text_pole" min="100" max="4000" step="100"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
@@ -344,7 +344,7 @@ export function renderPanel() {
                     <button type="button" class="na_set_row na_cfg_go" id="na_recall_test"><span><span>지금 해 보기</span><small>최근 대화로 무엇이 불려 오는지</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   </div>
                   <label class="na_set_row" title="STATE 블록을 아카이브 블록에서 빼서 최근 대화 가까이에 따로 넣어요 · 토큰은 그대로 · 이 채팅에만"><span><span>STATE 가까이 넣기</span><small>STATE를 최근 대화 가까이 따로</small></span><span class="na_cfg_val"><span class="na_cfg_depth" id="na_state_depth_field">깊이&nbsp;<input type="number" id="na_state_depth" class="text_pole" min="0" max="20"></span><input type="checkbox" id="na_state_on" class="na_toggle"></span></label>
-                  <div class="na_set_row na_off_row" id="na_off_fold" title="켠 것은 압축 · 원문 뽑기 · 이탈 감지 · 옛 장면 불러오기 · 말투 지문에서 빠져요"><span><span>롤플 밖 메시지 빼기</span><small id="na_off_sub"></small></span>
+                  <div class="na_set_row na_off_row" id="na_off_fold" title="켠 것은 압축 · 원문 뽑기 · 이탈 감지 · 회상 · 말투 지문에서 빠져요"><span><span>롤플 밖 메시지 빼기</span><small id="na_off_sub"></small></span>
                     <span class="na_off_chips">${Object.entries(OFF_KINDS).map(([k, [name, sub, chip]]) => `<button type="button" class="na_off_chip" data-k="${k}" title="${name} · ${sub}" aria-pressed="false">${chip}</button>`).join('')}</span></div>
                 </div>
                 </div>
@@ -1036,7 +1036,7 @@ export function bindPanel() {
         await applyInjection(); syncPanel();
         toastr.info(st.titles.length ? st.titles.map(t => `• ${esc(t.slice(0, 60))}`).join('<br>') : '고른 섹션이 없어요', `라우터 · ${st.titles.length}개 · ${(st.ms / 1000).toFixed(1)}초`, { escapeHtml: false, timeOut: 10000 });
     }));
-    // 옛 장면 불러오기 · STATE 가까이 · 롤플 밖 메시지
+    // 회상 · STATE 가까이 · 롤플 밖 메시지
     $('#na_recall').on('change', needChat(async e => { await setRecall({ on: e.target.checked }); syncPanel(); }));
     for (const [id, k] of [['k', 'k'], ['budget', 'budget'], ['depth', 'depth'], ['scan', 'scan']]) {
         $(`#na_recall_${id}`).on('change', needChat(async e => { await setRecall({ [k]: Number(e.target.value) }); syncPanel(); }));
@@ -1050,7 +1050,7 @@ export function bindPanel() {
         m.recall.on = was;
         if (!was) await runRecall();
         const lines = st?.lines || [];
-        toastr.info(lines.length ? lines.map(l => esc(l.length > 160 ? `${l.slice(0, 160)}…` : l)).join('<br>') : '맞는 줄이 없어요. 숨긴 원문이 없거나 최근 대화와 겹치는 말이 적어요.', `옛 장면 · ${lines.length}줄${st ? ` · 약 ${fmt(st.tokens)} 토큰` : ''}`, { escapeHtml: false, timeOut: 15000 });
+        toastr.info(lines.length ? lines.map(l => esc(l.length > 160 ? `${l.slice(0, 160)}…` : l)).join('<br>') : '맞는 줄이 없어요. 숨긴 원문이 없거나 최근 대화와 겹치는 말이 적어요.', `회상 · ${lines.length}줄${st ? ` · 약 ${fmt(st.tokens)} 토큰` : ''}`, { escapeHtml: false, timeOut: 15000 });
     }));
     $('#na_state_on').on('change', needChat(async e => { const m = getMeta(); m.stateRemind = { ...stateCfg(m), on: e.target.checked }; await saveMeta(); applyInjection(); syncPanel(); }));
     $('#na_state_depth').on('change', needChat(async e => { const m = getMeta(); m.stateRemind = { ...stateCfg(m), depth: Math.min(20, Math.max(0, parseInt(e.target.value, 10) || 0)) }; await saveMeta(); applyInjection(); syncPanel(); }));

@@ -1,6 +1,6 @@
 // Search index over the raw chat (hidden messages too) and the archive's sections: BM25 on words. Korean words also
 // count by their stem without the particle, so "세트가" still finds "세트는".
-// Used by 옛 장면 불러오기 (relevant old lines injected before each reply), 질문하기 and the voice notes.
+// Used by 회상 (relevant old lines injected before each reply), 질문하기 and the voice notes.
 // Also here: 롤플 밖 메시지 (/comment, OOC, /sys). 꼭 남길 장면 come first among equal hits.
 
 import { glossaryEntries } from './translate.js';
@@ -185,7 +185,7 @@ export function withGlossary(m, q) {
     return add.length ? `${q}\n${add.join(' ')}` : q;
 }
 
-// ---- 옛 장면 불러오기: before each reply, find old lines that fit the newest messages
+// ---- 회상: before each reply, find old lines that fit the newest messages
 
 export function recallCfg(m) {
     const r = m?.recall && typeof m.recall === 'object' ? m.recall : {};
