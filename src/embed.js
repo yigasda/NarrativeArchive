@@ -134,6 +134,7 @@ const numHash = s => { let h = 0x811c9dc5 ^ 0x5bd1; for (let i = 0; i < s.length
 // what goes in: every numbered section in pieces of about 900 characters, each with its title in front,
 // and every hidden raw passage (회상 finds old lines from those)
 const PIECE = 900;
+const RAW_PIECE = 1500;
 function corpus(m) {
     const out = [];
     for (const x of sectionItems(m)) {
@@ -149,7 +150,22 @@ function corpus(m) {
         if (cur || !pieces.length) pieces.push(cur);
         for (const p of pieces) { const text = `${title}\n${p}`.trim(); out.push({ kind: 'sec', title: x.title, text, hash: numHash(`s|${text}`) }); }
     }
-    for (const r of rawItems({ only: 'hidden' })) { const text = `${r.name}: ${r.text}`; out.push({ kind: 'raw', i: r.i, text, hash: numHash(`r|${r.i}|${text}`) }); }
+    // hidden raw lines: consecutive passages joined into pieces of about 1,500 characters (two or three messages),
+    // so a long chat is a few hundred texts rather than thousands — each piece remembers the passages in it
+    let group = [], len = 0;
+    const flush = () => {
+        if (!group.length) return;
+        const text = group.map(g => `${g.name}: ${g.text}`).join('\n');
+        out.push({ kind: 'raw', i: group[0].i, to: group[group.length - 1].i, parts: group, text, hash: numHash(`r2|${group[0].i}|${text}`) });
+        group = []; len = 0;
+    };
+    for (const r of rawItems({ only: 'hidden' })) {
+        const add = r.name.length + r.text.length + 3;
+        if (group.length && (len + add > RAW_PIECE || r.i - group[group.length - 1].i > 1)) flush();
+        group.push({ i: r.i, name: r.name, text: r.text });
+        len += add;
+    }
+    flush();
     return out;
 }
 
@@ -185,7 +201,7 @@ export async function syncEmbed({ onProgress = null, force = false } = {}) {
         const google = b.source === 'vertexai' || b.source === 'palm';
         const one = google && /^gemini-embedding/.test(b.model || '');
         const maxN = one ? 1 : ['transformers', 'ollama'].includes(b.source) ? 8 : 40;
-        const maxChars = google && !one ? 9000 : Infinity;
+        const maxChars = google && !one ? 15000 : Infinity;
         const batches = [];
         for (const x of add) {
             const cur = batches[batches.length - 1];
@@ -254,7 +270,12 @@ export async function embedSearch(query, { topK = 24, ms = 8000 } = {}) {
     if (signature(b) !== st.sig) { state.delete(currentChatId()); return []; }
     try {
         const r = await vec('query', { ...b, collectionId: st.coll, searchText: String(query).slice(-1500), topK }, ms);
-        return (r?.hashes || []).map((h, rank) => ({ ...st.items.get(Number(h)), rank })).filter(x => x.kind);
+        // a raw piece comes back as the passages it holds, each with the piece's rank
+        return (r?.hashes || []).flatMap((h, rank) => {
+            const x = st.items.get(Number(h));
+            if (!x?.kind) return [];
+            return x.kind === 'raw' && x.parts ? x.parts.map(p => ({ kind: 'raw', i: p.i, text: `${p.name}: ${p.text}`, rank })) : [{ ...x, rank }];
+        });
     } catch (e) {
         console.warn('[narrative-archive] embed search', e);
         return [];
