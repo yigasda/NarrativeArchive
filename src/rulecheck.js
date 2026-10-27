@@ -33,14 +33,14 @@ export function rangedBlocks(body) {
 }
 
 // what one section breaks: [] when nothing
-export function sectionProblems(text, { english = false, counts = true } = {}) {
+export function sectionProblems(text, { english = false, counts = true, maxWords = MAX_WORDS } = {}) {
     const bullets = String(text).split('\n').filter(l => /^\s*[-*•]\s/.test(l));
     const plain = bullets.map(l => l.replace(/^\s*[-*•]\s/, '').replace(/\([^()]*#\d[^()]*\)/g, ' '));
     const words = plain.join(' ').split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w)).length;
     const dashes = plain.join(' ').split('—').length - 1;
     const out = [];
     if (counts && bullets.length > MAX_BULLETS) out.push(`${bullets.length} bullets (at most ${MAX_BULLETS}: merge bullets that belong together)`);
-    if (counts && words > MAX_WORDS) out.push(`about ${words} words (about 250 at most: cut staging, repeats and lower-priority detail)`);
+    if (counts && words > maxWords) out.push(`about ${words} words (about 250 at most: cut staging, repeats and lower-priority detail)`);
     if (dashes > MAX_DASHES) out.push(`${dashes} em dashes in the bullets (at most ${MAX_DASHES}: rewrite the rest with a comma, a colon or a new sentence)`);
     if (english) {
         const hits = [...new Set((plain.join(' ').match(bannedRe) || []).map(w => w.toLowerCase()))];
@@ -60,11 +60,12 @@ Output only the fixed sections, in the same order, each starting with its headin
 
 // res: a compression's answer ({ text, … }). Returns it with the over-limit sections asked for again and swapped in
 // where the new one breaks fewer rules. memo: a user's note wins over the counts, so with one only dashes and wording are checked
-export async function checkCounts(res, { m, memo = '' } = {}) {
-    if (!countCheckOn() || !res?.text) return res;
+// force: asked for by hand (작업실's 고쳐 받기), so it runs with the switch off; maxWords: 작업실 marks from 250 on
+export async function checkCounts(res, { m, memo = '', force = false, maxWords = MAX_WORDS } = {}) {
+    if ((!force && !countCheckOn()) || !res?.text) return res;
     const [body, tail] = splitTail(res.text);
     const english = archiveLang(m?.text || body) === 'en';
-    const opt = { english, counts: !String(memo || '').trim() };
+    const opt = { english, counts: !String(memo || '').trim(), maxWords };
     const blocks = rangedBlocks(body);
     const bad = blocks.map(b => ({ ...b, probs: sectionProblems(b.text, opt) })).filter(b => b.probs.length);
     if (!bad.length) return { ...res, countFixed: 0, countLeft: 0 };

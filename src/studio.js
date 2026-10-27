@@ -15,6 +15,7 @@ import { translateLines, trLineOk } from './translate.js';
 import { svgA } from './theme.js';
 import { confirm, esc, timeLabel } from './util.js';
 import { nextRange, rangeRaw } from './wizard.js';
+import { checkCounts } from './rulecheck.js';
 
 const STUDIO_SYS = `GOAL
 Write the long-term-memory archive of a role-play together with its user, one scene at a time, in this conversation. You turn each scene the user sends into its section; the user reads every answer and corrects you. A correction holds for the rest of the conversation: apply it to every later scene too, not only the one it was about.
@@ -401,7 +402,7 @@ export async function openStudio() {
       </div>`);
     const archLang = archiveLang(getMeta().text);
     // 한국어로: answers shown in Korean (this window only; the archive gets the English)
-    const koOn = new Set(), koBusy = new Set(), koMap = new Map();
+    const koOn = new Set(), koBusy = new Set(), koMap = new Map(), fixBusy = new Set();
     const draw = ({ restore } = {}) => {
         const m2 = getMeta(), s = sessionOf(m2);
         if (!s) return;
@@ -440,7 +441,12 @@ export async function openStudio() {
             const locks = mine.map(sk => `<button type="button" class="na_st_lk${locked.has(sk) ? ' on' : ''}" data-k="${sk}">${svgA(ICO.lock, 11, 2.6)}${mine.length > 1 ? `장면 ${sk + 1} ` : ''}${locked.has(sk) ? '확정됨' : '확정'}</button>`).join('');
             const ko = koOn.has(i);
             const koBtn = `<button type="button" class="na_st_ko${ko ? ' on' : ''}" data-i="${i}">${koBusy.has(i) ? '번역하는 중…' : ko ? '영어로' : '한국어로'}</button>`;
-            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st_tags">${tags}<span class="na_st_lks">${koBtn}${locks}</span></div></div>`;
+            // 고쳐 받기: the counted rules this answer breaks (words, em dashes, bullets), its approved scenes aside
+            const countable = issues.some(x => /\d+단어$|em대쉬 \d+개$|불릿 \d+개$/.test(x)) && !(t.scene !== undefined && locked.has(t.scene));
+            const fixBtn = fixBusy.has(i) ? '<button type="button" class="na_st_fix" disabled>고치는 중…</button>'
+                : countable ? `<button type="button" class="na_st_fix" data-i="${i}" title="단어 · 엠대시 · 불릿 수가 넘친 섹션만 초안 모델에 다시 고쳐 받아요 · 출처 번호와 제목은 그대로">고쳐 받기</button>` : '';
+            const backBtn = t.before && !fixBusy.has(i) ? `<button type="button" class="na_st_unfix" data-i="${i}" title="고쳐 받기 전 답으로">고치기 전으로</button>` : '';
+            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st_tags">${tags}<span class="na_st_lks">${fixBtn}${backBtn}${koBtn}${locks}</span></div></div>`;
         }).join('') + (busy ? '<div class="na_st_bub na_st_typing"><i></i><i></i><i></i><small>쓰는 중 · 이 탭에 있어야 받아요</small></div>' : '');
         const $log = $root.find('.na_st_log');
         const atEnd = $log[0] ? $log[0].scrollHeight - $log[0].scrollTop - $log[0].clientHeight < 80 : true;
@@ -514,6 +520,41 @@ export async function openStudio() {
     });
     $root.find('.na_st_note').on('click', () => { $menu.prop('hidden', true); openWorkNote(); });
     $root.find('.na_st_style').on('click', async () => { $menu.prop('hidden', true); await openStyleSamples(); draw(); });
+    // 고쳐 받기: the answer's sections go to the count check by hand; the fixed ones take the answer's place, so the
+    // conversation and the sections it builds both carry them. The answer before stays for 고치기 전으로
+    $root.on('click', '.na_st_fix', async function () {
+        const i = Number(this.dataset.i), s = sessionOf(getMeta()), t = s?.turns[i];
+        if (!t || fixBusy.has(i) || busy) return;
+        const sc = t.scene !== undefined ? s.scenes[t.scene] : null;
+        const blocks = (sc ? parseSceneAnswer(t.text, sc.a, sc.b) : answerBlocks(t.text)).filter(x => x.a !== null && !lockedHit(s, x));
+        if (!blocks.length) return toastr.info('고칠 수 있는 섹션이 없어요 (번호가 없거나 확정한 장면이에요).', '고쳐 받기');
+        const ch = t.text.search(/^# (STATE|OPEN) CHANGES/m);
+        fixBusy.add(i); draw();
+        try {
+            const res = await checkCounts({ text: blocks.map(x => sectionText(x, '')).join('\n\n') }, { m: getMeta(), force: true, maxWords: 250 });
+            if (!res.countFixed) {
+                toastr.info(res.countError ? `못 고쳤어요: ${res.countError}` : res.countLeft ? '고친 답이 더 낫지 않아서 그대로 뒀어요' : '넘친 섹션이 없어요', '고쳐 받기');
+                return;
+            }
+            const s2 = sessionOf(getMeta()), t2 = s2?.turns[i];
+            if (!t2 || t2.text !== t.text) return toastr.warning('그사이 답이 바뀌어서 고친 걸 버렸어요.', '고쳐 받기');
+            t2.before ??= t2.text;
+            t2.text = `${res.text.trim()}${ch >= 0 ? `\n\n${t.text.slice(ch).trim()}` : ''}`;
+            s2.secs = rebuildSecs(s2);
+            await saveMeta();
+            toastr.success(`섹션 ${res.countFixed}개를 고쳐 받았어요${res.countLeft ? ` · ${res.countLeft}개는 아직 넘어요` : ''}`, '고쳐 받기');
+        } catch (e) {
+            console.error('[NarrativeArchive] studio fix', e);
+            toastr.error(String(e?.message || e), '고쳐 받기');
+        } finally { fixBusy.delete(i); draw(); }
+    });
+    $root.on('click', '.na_st_unfix', async function () {
+        const i = Number(this.dataset.i), s = sessionOf(getMeta()), t = s?.turns[i];
+        if (!t?.before || busy) return;
+        t.text = t.before; delete t.before;
+        s.secs = rebuildSecs(s);
+        await saveMeta(); draw();
+    });
     $root.on('click', '.na_st_ko', async function () {
         const i = Number(this.dataset.i), t = sessionOf(getMeta())?.turns[i];
         if (!t || koBusy.has(i)) return;
