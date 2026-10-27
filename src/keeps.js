@@ -1,6 +1,6 @@
 // 꼭 남길 장면: stretches of the chat the user wants kept in detail, each with a short note on why.
 // Kept in the chat's archive record by message number, like the archive's own headings. Compression gets the notes as
-// instructions, the forgetting curve leaves sections holding them whole, and recall looks there first.
+// instructions, the forgetting curve leaves sections holding them whole.
 
 import { ctx, getMeta, hasChat, saveMeta } from './core.js';
 import { RANGE_HEAD } from './sections.js';
@@ -80,7 +80,7 @@ export async function openKeeps() {
     const c = ctx();
     const $root = $(`
       <div class="na_popup na_v2 na_kp">
-        <div class="na_v2_title"><b>꼭 남길 장면</b><small>압축은 자세히, 망각 곡선은 그대로, 회상은 먼저</small></div>
+        <div class="na_v2_title"><b>꼭 남길 장면</b><small>압축은 자세히, 망각 곡선은 그대로</small></div>
         <div class="na_kp_list"></div>
         <button type="button" class="na_v2_btn primary wide na_kp_add">+ 구간 적기</button>
       </div>`);

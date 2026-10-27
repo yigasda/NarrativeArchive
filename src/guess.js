@@ -1,5 +1,5 @@
 // 지난 장면 짐작하기: when the chat points back without naming it ("that night", "what you promised"), a small model
-// pictures that earlier moment in the words the archive would use. The router and 회상 search with those words too,
+// pictures that earlier moment in the words the archive would use. The router searches with those words too,
 // so a section is found even when neither its title nor the chat says "festival" but its body does.
 
 import { askAI } from './ai.js';
@@ -11,8 +11,9 @@ import { LANG_NAME, archiveLang } from './prompts.js';
 import { RANGE_HEAD, parseSections } from './sections.js';
 import { shortHash } from './translate.js';
 
-export const GUESS_MODES = { off: '끄기', router: '라우터만', both: '라우터 · 회상' };
-export const guessMode = () => (globalSettings().guess in GUESS_MODES ? globalSettings().guess : 'router');
+export const GUESS_MODES = { off: '끄기', router: '켜기' };
+// 'both' (라우터 · 회상) went with 회상 in 3.88.0 and reads as on
+export const guessMode = () => (globalSettings().guess === 'off' ? 'off' : 'router');
 
 export const AI_SYS_GUESS = `GOAL
 A long role-play is stored as an archive of past scenes. The newest messages may point back at an earlier moment
@@ -61,5 +62,5 @@ export async function sceneGuess(m, ready) {
     return text;
 }
 
-// what the last guess said, for the recall search and the settings line
+// what the last guess said, for the settings line
 export const lastGuess = () => cache.get(currentChatId())?.text || '';

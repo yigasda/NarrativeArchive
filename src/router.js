@@ -9,9 +9,9 @@ import { applyInjection, currentInjection, placeArchive } from './inject.js';
 import { KW_STOP } from './keywords.js';
 import { castNames } from './knowledge.js';
 import { RANGE_HEAD, linkWaiting, linkedMap, mutedSet, parseSections, pinnedSet, sectionKey } from './sections.js';
-import { bm25, recallCfg, recallQuery, runRecall, withGlossary } from './recall.js';
+import { bm25, recallQuery, withGlossary } from './recall.js';
 import { layersOf } from './fade.js';
-import { guessMode, sceneGuess } from './guess.js';
+import { sceneGuess } from './guess.js';
 import { embedSearch } from './embed.js';
 import { refreshStatusSoon } from './status.js';
 import { shortHash } from './translate.js';
@@ -53,9 +53,6 @@ export async function prepareGeneration() {
     }
     if (Object.keys(linkedMap(m)).length || routerCfg(m).mode !== 'off') { applyInjection(); refreshStatusSoon(); } // keyword links look at the latest messages
     await currentInjection();
-    // 회상 can search with the guessed scene too; with the router on it was made there already
-    if (routerCfg(m).mode === 'off' && guessMode() === 'both' && m.enabled && recallCfg(m).on) await sceneGuess(m, routerReady());
-    try { await runRecall(); } catch (e) { console.warn('[narrative-archive] recall', e); }
     // how often each keyword-linked section actually went in, for the X-ray
     const links = Object.keys(linkedMap(m));
     if (m.enabled && links.length) {
