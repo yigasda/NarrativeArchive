@@ -5,8 +5,13 @@
 import { ctx, globalSettings, saveGlobal } from './core.js';
 import { estTok } from './recall.js';
 
-export const loreCfg = () => { const g = globalSettings(); const l = g.lore && typeof g.lore === 'object' ? g.lore : {}; return { on: !!l.on, budget: Number.isFinite(+l.budget) && l.budget ? Math.min(6000, Math.max(300, +l.budget)) : 1500 }; };
-export const setLore = patch => { const g = globalSettings(); g.lore = { ...loreCfg(), ...patch }; saveGlobal(); };
+// budget: 5000 unless set by hand (3.71.0 saved its old 1500 default along with the switch)
+export const loreCfg = () => {
+    const g = globalSettings(); const l = g.lore && typeof g.lore === 'object' ? g.lore : {};
+    const b = Number.isFinite(+l.budget) && l.budget && (l.budgetSet || +l.budget !== 1500) ? +l.budget : 5000;
+    return { on: !!l.on, budget: Math.min(12000, Math.max(300, b)) };
+};
+export const setLore = patch => { const g = globalSettings(); const l = g.lore && typeof g.lore === 'object' ? g.lore : {}; g.lore = { ...l, ...patch, ...('budget' in patch ? { budgetSet: true } : {}) }; saveGlobal(); };
 
 // the books this chat uses: the global picks, the character's own and extra books, the chat's book
 export async function activeBooks() {
