@@ -627,18 +627,36 @@ _Unresolved at #{{to}}; check recent messages before treating any as pending._
 \`\`\`
 The heading is always "STATE AT", never "CURRENT STATE". The STATE rules in 8 apply: short lines, no events already in the sections, a character's reading attributed to them. OPEN may be split into groups (e.g. ## Deep past · ## Relationships · ## World and live plot); keep threads short and do not prescribe future actions.`;
 
+// the note, the size and the language go before a closing "Before you write" step, so that step is read last
+// (a later part of a long range already has the STATE the first part wrote, so it gets change lists again)
+function compressExtra(tpl, vars, m, memo, size) {
+    const noState = vars.state === undefined ? !splitTail(String(vars.archive ?? m.text ?? ''))[1].trim() : !String(vars.state).trim() || String(vars.state).trim() === '(없음)';
+    const fresh = /NEW CHAT note/.test(tpl) && noState ? `\n\n${NEW_CHAT_NOTE.split('{{from}}').join(vars.from ?? '').split('{{to}}').join(vars.to ?? '')}` : '';
+    return fresh + memoBlock(memo) + size + langBlock(m.text);
+}
 export const compressPrompt = (tpl, vars, m, memo = '', size = '') => {
     const body = fillPrompt(tpl, { recent: recentSections(vars.archive ?? m.text), ...vars });
     const au = auBlock(m), cut = body.indexOf('</current_state>');
     const withAu = !au ? body : cut >= 0 ? `${body.slice(0, cut + 16)}\n\n${au.trim()}${body.slice(cut + 16)}` : au + body;
-    // the note, the size and the language go before a closing "Before you write" step, so that step is read last
-    // (a later part of a long range already has the STATE the first part wrote, so it gets change lists again)
-    const noState = vars.state === undefined ? !splitTail(String(vars.archive ?? m.text ?? ''))[1].trim() : !String(vars.state).trim() || String(vars.state).trim() === '(없음)';
-    const fresh = /NEW CHAT note/.test(tpl) && noState ? `\n\n${NEW_CHAT_NOTE.split('{{from}}').join(vars.from ?? '').split('{{to}}').join(vars.to ?? '')}` : '';
-    const extra = fresh + memoBlock(memo) + size + langBlock(m.text);
+    const extra = compressExtra(tpl, vars, m, memo, size);
     const last = withAu.lastIndexOf('\n# 9. Before you write');
     return last >= 0 ? `${withAu.slice(0, last).replace(/\s+$/, '')}${extra}\n\n${withAu.slice(last + 1)}` : withAu + extra;
 };
+
+// 규칙은 시스템 메시지로: the rules (after <current_state>, up to "# 9. Before you write") go in the system part;
+// the raw log, the state, the AU block, this stretch's notes and the closing step stay in the request.
+// Off, or a template without both marks: everything in the request, as before.
+export const rulesInSystem = () => !!globalSettings().rulesInSystem;
+export function compressParts(tpl, vars, m, memo = '', size = '') {
+    const whole = () => ({ system: '', prompt: compressPrompt(tpl, vars, m, memo, size) });
+    if (!rulesInSystem()) return whole();
+    const body = fillPrompt(tpl, { recent: recentSections(vars.archive ?? m.text), ...vars });
+    const cut = body.indexOf('</current_state>'), last = body.lastIndexOf('\n# 9. Before you write');
+    if (cut < 0 || last < cut) return whole();
+    const rules = body.slice(cut + 16, last).trim();
+    const au = auBlock(m).trim(), notes = compressExtra(tpl, vars, m, memo, size).trim();
+    return { system: rules, prompt: `${body.slice(0, cut + 16)}${au ? `\n\n${au}` : ''}\n\n[The rules for this job are in the system message. Follow them.]${notes ? `\n\n${notes}` : ''}\n\n${body.slice(last + 1)}` };
+}
 
 // An AU answer that forgot its prefix or divider gets them: "## #12–#30" → "## AU #12–#30",
 // "# STATE AT #30" → "# STATE AT AU #30", and "# ── AU ──" above the first new section.

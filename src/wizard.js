@@ -9,9 +9,10 @@ import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta, textHas
 import { driftHtml } from './drift.js';
 import { castNames } from './knowledge.js';
 import { hasChanges, resolveChanges } from './statechg.js';
+import { checkCounts, countCheckOn } from './rulecheck.js';
 import { lastSections, chunksFromStarts, detectScenes, sceneChunks, sceneCompress, sceneModel, sceneModelLabel, sceneSize, scenesText, startsFromText, stateModel } from './scenes.js';
 import { buildExtract, cleanMessage, formatExtract, guessEndNumber } from './extract.js';
-import { BASIC_PROMPT, LANG_NAME, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressPrompt, dropReproduced, eventsNote, eventsSystem, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
+import { BASIC_PROMPT, LANG_NAME, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressParts, compressPrompt, dropReproduced, eventsNote, eventsSystem, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, trimEnd } from './sections.js';
 import { openSource } from './source.js';
 import { refreshStatus } from './status.js';
@@ -159,10 +160,11 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
         const raw = events || formatExtract(part, g);
         const shadow = acc.length ? `${m.text}\n\n${acc.join('\n\n')}` : m.text;
         const state = tail || splitTail(m.text)[1].trim() || '(없음)';
-        const prompt = compressPrompt(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(shadow), state, archive: shadow }, { ...m, text: shadow }, memo,
-            sizeBlock({ k, n: parts.length, count: part.length, total: items.length, from: items[0].i, to: items[items.length - 1].i, partFrom: from, partTo: to })) + await loreBlock(raw);
+        const sent = compressParts(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(shadow), state, archive: shadow }, { ...m, text: shadow }, memo,
+            sizeBlock({ k, n: parts.length, count: part.length, total: items.length, from: items[0].i, to: items[items.length - 1].i, partFrom: from, partTo: to }));
+        const prompt = sent.prompt + await loreBlock(raw), system = sent.system;
         let out;
-        try { out = cleanDraft(await askCompress(prompt, { guard: SECTION_GUARD })); }
+        try { out = cleanDraft(await askCompress(prompt, { system, keepSystem: !!system, guard: SECTION_GUARD })); }
         catch (e) {
             // refused or blocked: the part goes again as two halves, so one hard scene does not stop the whole range
             if (isBlocked(e) && !events && part.length >= 4) {
@@ -179,7 +181,7 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
         if (!answerLangOk(shadow, out)) {
             const want = LANG_NAME[archiveLang(shadow)];
             if (await confirm('답 언어가 달라요', `#${from}–#${to} 요약을 모델이 아카이브(${want})와 다른 언어로 썼어요.<br><b>${want}로 다시 받을까요?</b> (요청 1번 더)<br><small>아니요를 누르면 이 답 그대로 써요.</small>`)) {
-                try { out = cleanDraft(await askCompress(`[Your previous answer to this request was not in ${want}. Answer in ${want} only.]\n\n${prompt}`, { guard: SECTION_GUARD })) || out; }
+                try { out = cleanDraft(await askCompress(`[Your previous answer to this request was not in ${want}. Answer in ${want} only.]\n\n${prompt}`, { system, keepSystem: !!system, guard: SECTION_GUARD })) || out; }
                 catch (e) { error = e; break; }
             }
         }
@@ -355,7 +357,16 @@ export function sectionsFromEvents(args, ev) {
 }
 // the one entry for both buttons: 2단계 by default, the raw log when 압축 → 설정 says so.
 // reuse: a saved step-1 list for this exact range (same messages) is used instead of making a new one
-export async function compressDraft(args, { reuse = false } = {}) {
+export async function compressDraft(args, o = {}) {
+    const res = await compressDraft0(args, o);
+    if (!res?.text || !countCheckOn()) return res;
+    args.onStep?.(0, 1, args.items[0].i, args.items[args.items.length - 1].i, 'check');
+    const out = await checkCounts(res, { m: args.m, memo: args.memo });
+    if (out.countFixed) toastr.info(`섹션 ${out.countFixed}개가 불릿·단어·엠대시 규칙을 넘어서 그 섹션만 다시 고쳐 받았어요${out.countLeft ? ` · ${out.countLeft}개는 아직 넘어요` : ''}`, '세는 규칙 검사', { timeOut: 5000 });
+    else if (out.countLeft) toastr.warning(`섹션 ${out.countLeft}개가 규칙을 넘는데 고친 답이 더 낫지 않아서 그대로 뒀어요${out.countError ? ` (${out.countError})` : ''}`, '세는 규칙 검사', { timeOut: 6000 });
+    return out;
+}
+async function compressDraft0(args, { reuse = false } = {}) {
     if (compressMode() === 'raw') return draftCompress(args);
     if (compressMode() === 'scenes') return sceneCompress(args);
     const { m, g, items, onStep = () => {} } = args;
@@ -490,7 +501,7 @@ export async function quickCompress() {
         r = await (() => compressDraft({ m, g, p, items, grade: !!globalSettings().quickGrade, memo: runMemo, chunks: sceneList,
             onStep: (k, total, a, b, stage) => {
                 const msg = stage === 'events' ? `1단계 정리 #${a}–#${b} (${k + 1}/${total})` : stage === 'sections' ? `2단계 섹션 쓰는 중 #${a}–#${b}`
-                    : stage === 'scenes' ? `장면 ${k + 1}/${total} · #${a}–#${b} 쓰는 중` : stage === 'state' ? 'STATE·OPEN 바뀌는 것 정리 중' : total > 1 ? `#${a}–#${b} 요약하는 중… (${k + 1}/${total})` : '';
+                    : stage === 'scenes' ? `장면 ${k + 1}/${total} · #${a}–#${b} 쓰는 중` : stage === 'state' ? 'STATE·OPEN 바뀌는 것 정리 중' : stage === 'check' ? '세는 규칙 검사 중' : total > 1 ? `#${a}–#${b} 요약하는 중… (${k + 1}/${total})` : '';
                 if (msg) $(toast).find('.toast-message').text(`${msg} · 이 탭에 있어야 끝까지 받아요 (다른 탭·앱으로 가면 끊길 수 있어요)`);
             } }, { reuse: quickReuse }))();
         // 장면별 writes scene by scene; its sections are checked against the whole range once at the end
@@ -663,7 +674,7 @@ export async function openWizard() {
         const $b = $(this);
         const r = await withSpinner($b, '쓰는 중… 창을 닫지 마세요', () => compressDraft({ m, g, p, items,
             onStep: (k, total, a, b, stage) => {
-                const msg = stage === 'events' ? `1단계 정리 ${k + 1}/${total}` : stage === 'sections' ? '2단계 섹션 쓰는 중' : total > 1 ? `쓰는 중… ${k + 1}/${total}` : '';
+                const msg = stage === 'events' ? `1단계 정리 ${k + 1}/${total}` : stage === 'sections' ? '2단계 섹션 쓰는 중' : stage === 'check' ? '세는 규칙 검사 중' : total > 1 ? `쓰는 중… ${k + 1}/${total}` : '';
                 if (msg) $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> ${msg}`);
             } }));
         if (!r) return;

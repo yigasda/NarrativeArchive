@@ -216,6 +216,8 @@ export function renderPanel() {
                   <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_stylesample"><span class="na_cp_txt"><span>문체 견본</span><small id="na_style_sub"></small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                   <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_worknote"><span class="na_cp_txt"><span>작업 노트</span><small id="na_worknote_sub">이 이야기의 인수인계 · canon · 살린 줄 · 이전 실수 · 장면마다 같이 보내요</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                   <label class="na_cp_row na_cmode_raw" data-m="quick"><span class="na_cp_txt"><span>원문 그대로 · 나눠 보내기</span><small>긴 원문을 몇 조각으로 보낼지 · 조각마다 앞 조각에 이어 써요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_chunk">${Object.entries(CHUNK_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <label class="na_cp_row" data-m="quick"><span class="na_cp_txt"><span>세는 규칙 검사</span><small>불릿 수 · 단어 수 · 엠대시 · 금지어를 확장이 세고, 넘친 섹션만 다시 고쳐 받아요 · 지시문의 규칙은 그대로</small></span><input type="checkbox" class="na_toggle" id="na_count_check"></label>
+                  <label class="na_cp_row" data-m="quick"><span class="na_cp_txt"><span>규칙은 시스템 메시지로</span><small>지시문의 규칙은 시스템 메시지에, 원문 · 메모 · 마지막 점검은 요청에 · 시스템 메시지를 버리는 중계 서버면 끄세요</small></span><input type="checkbox" class="na_toggle" id="na_rules_sys"></label>
                   <label class="na_cp_row"><span class="na_cp_txt"><span>쌓이면 알려 주기</span><small>압축할 메시지가 이만큼 쌓이면 알림 · 누르면 압축</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_nudge">${Object.entries(NUDGE_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                 </div>
                 <div class="na_v2_card na_v2_list na_cp_set">
@@ -1140,6 +1142,8 @@ export function bindPanel() {
         toastr.success(`${n}군데 바꿨어요`);
     }));
     $('#na_chunk').on('change', function () { globalSettings().chunkTok = Number(this.value); saveGlobal(); });
+    $('#na_count_check').on('change', function () { globalSettings().countCheck = this.checked; saveGlobal(); });
+    $('#na_rules_sys').on('change', function () { globalSettings().rulesInSystem = this.checked; saveGlobal(); });
     $('#na_scsize').on('change', function () { globalSettings().sceneSize = Number(this.value); saveGlobal(); });
     $('#na_scmodel').on('change', function () { globalSettings().sceneModel = this.value; saveGlobal(); });
     $('#na_stmodel').on('change', function () { globalSettings().stateModel = this.value; saveGlobal(); });
@@ -1515,6 +1519,8 @@ export function syncPanel() {
     $('#na_boundary').val(m.boundary >= 0 ? m.boundary : '');
     $('#na_track').prop('checked', !!m.track);
     $('#na_chunk').val(String(chunkTok()));
+    $('#na_count_check').prop('checked', globalSettings().countCheck !== false);
+    $('#na_rules_sys').prop('checked', !!globalSettings().rulesInSystem);
     $('#na_cmode').val(compressMode()); $('#na_evmodel').val(eventsModel()); layoutCp();
     $('#na_scsize').val(String(sceneSize())); $('#na_scmodel').val(sceneModel()); $('#na_stmodel').val(stateModel()); $('#na_trkre').val(trackerRe());
     $('#na_style_sub').text(styleLabel(getMeta()));
