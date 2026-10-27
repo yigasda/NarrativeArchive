@@ -4,14 +4,14 @@
 
 import { askFix, stripThink } from './ai.js';
 import { globalSettings } from './core.js';
-import { TIDY_PROMPT, activePrompt, archiveLang, langBlock } from './prompts.js';
+import { BASIC_PROMPT, activePrompt, archiveLang, langBlock } from './prompts.js';
 import { checkCounts, countCheckOn, rangedBlocks, sectionProblems } from './rulecheck.js';
 import { rawFor } from './retitle.js';
 import { lastSections, styleSamples } from './scenes.js';
 import { splitTail } from './sections.js';
 
-// the voice rules of the instruction in use: the tidied one's "# 6.", the basic one's <tone> + <archive_voice>,
-// or the tidied one's for an instruction that has neither
+// the voice rules of the instruction in use: 기본's "# 6.", an older basic's <tone> + <archive_voice>,
+// or 기본's for an instruction that has neither
 const VOICE_TIDY = /^# 6\. The archive's voice\n([\s\S]*?)\n# 7\./m;
 export function voiceRules(text) {
     const t = String(text || '');
@@ -19,7 +19,7 @@ export function voiceRules(text) {
     if (a) return a[1].trim();
     const tone = /<tone>[\s\S]*?<\/tone>/.exec(t)?.[0] || '', voice = /<archive_voice>[\s\S]*?<\/archive_voice>/.exec(t)?.[0] || '';
     if (voice) return `${tone}\n\n${voice}`.trim();
-    return VOICE_TIDY.exec(TIDY_PROMPT)[1].trim();
+    return VOICE_TIDY.exec(BASIC_PROMPT)[1].trim();
 }
 
 export const AI_SYS_STYLE = `You are the line editor of a role-play's long-term memory (the archive). The sections you get are already right in content. Your one job is their sentences: make them read as if the hand that wrote the VOICE SAMPLES wrote them, by the VOICE RULES. You change how things are said, never what is said. The VOICE RULES decide; the points below are where new sections most often slip from them.

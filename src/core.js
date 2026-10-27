@@ -3,7 +3,7 @@
 import { syncTrackedBoundary } from './hide.js';
 import { applyInjection } from './inject.js';
 import { syncPanel } from './panel.js';
-import { BASIC_PROMPT, OLD_BASIC, OLD_BASIC_HASHES, OLD_DEFAULTS, OLD_SHORT_HASHES, PREV_BASIC, SHORT_PROMPT, TIDY_PROMPT } from './prompts.js';
+import { BASIC_PROMPT, OLD_BASIC, OLD_BASIC_HASHES, OLD_DEFAULTS, OLD_SHORT_HASHES, OLD_TIDY_HASHES, PREV_BASIC, SHORT_PROMPT } from './prompts.js';
 import { parseSections } from './sections.js';
 
 // 서사 아카이브 (Narrative Archive)
@@ -12,7 +12,7 @@ import { parseSections } from './sections.js';
 
 export const MODULE = 'narrative_archive';
 export const PROMPT_KEY = 'narrative_archive_injection';
-export const VERSION = '3.86.19';
+export const VERSION = '3.87.0';
 export const SNAPSHOT_MAX = 5;
 export const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -161,7 +161,6 @@ export function globalSettings() {
     for (const [k, v] of Object.entries(defaults)) if (!Object.hasOwn(g, k)) g[k] = v;
     // prompt library: [{ id, name, text, fav }], first entry is the built-in basic one
     if (g.aiMaxTokens === 4096 && !g.aiMaxSet) g.aiMaxTokens = 8192; // the old default, never changed by hand
-    const freshLib = !Array.isArray(g.prompts);
     if (!Array.isArray(g.prompts)) {
         g.prompts = [{ id: 'basic', name: '기본', text: BASIC_PROMPT, fav: true }];
         const old = typeof g.prompt === 'string' ? g.prompt : '';
@@ -178,10 +177,14 @@ export function globalSettings() {
     if (!g.prompts.some(p => p.id === 'short')) g.prompts.splice(g.prompts.indexOf(basic) + 1, 0, { id: 'short', name: '짧은 기본', text: SHORT_PROMPT, fav: true });
     const short = g.prompts.find(p => p.id === 'short');
     if (OLD_SHORT_HASHES.has(textHash(short.text))) short.text = SHORT_PROMPT;
-    // the tidied basic one, after the short one
-    if (!g.prompts.some(p => p.id === 'tidy')) g.prompts.splice(g.prompts.indexOf(short) + 1, 0, { id: 'tidy', name: '기본 (정리본)', text: TIDY_PROMPT, fav: true });
-    // a new install starts on the tidied one (a prompt carried over from before 2.x stays the active one)
-    if (freshLib && g.activePrompt === 'basic') g.activePrompt = 'tidy';
+    // 3.87.0: 기본 (정리본) became 기본 itself. An untouched copy goes; one the user edited stays as their own prompt
+    const tidy = g.prompts.find(p => p.id === 'tidy');
+    if (tidy) {
+        const untouched = OLD_TIDY_HASHES.has(textHash(tidy.text));
+        if (untouched) g.prompts = g.prompts.filter(p => p !== tidy);
+        else Object.assign(tidy, { id: newId(), name: '기본 (정리본) · 고친 것' });
+        if (g.activePrompt === 'tidy') g.activePrompt = untouched ? 'basic' : tidy.id;
+    }
     if (!g.prompts.some(p => p.id === g.activePrompt)) g.activePrompt = g.prompts[0].id;
     return g;
 }
