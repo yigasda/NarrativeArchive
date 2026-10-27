@@ -2,6 +2,7 @@
 // You write the archive. This extension stores it per chat, injects it, hides already-compressed messages,
 // extracts raw ranges, and shows token counts. The code lives in src/.
 
+import { compressNudge } from './src/wizard.js';
 import { onChatChanged } from './src/chats.js';
 import { ctx, getMeta, hasChat } from './src/core.js';
 import { driftTick } from './src/drift.js';
@@ -42,6 +43,7 @@ import { xrayArm, xrayCapture, xrayWorldInfo } from './src/xray.js';
     if (et.CHAT_COMPLETION_PROMPT_READY) es.on(et.CHAT_COMPLETION_PROMPT_READY, xrayCapture);
     if (et.GENERATE_AFTER_COMBINE_PROMPTS) es.on(et.GENERATE_AFTER_COMBINE_PROMPTS, xrayCapture);
     if (et.MESSAGE_RECEIVED) es.on(et.MESSAGE_RECEIVED, driftTick);
+    if (et.MESSAGE_RECEIVED) es.on(et.MESSAGE_RECEIVED, () => setTimeout(compressNudge, 500));
     for (const ev of [et.MESSAGE_RECEIVED, et.MESSAGE_SENT, et.MESSAGE_DELETED, et.MESSAGE_UPDATED]) {
         if (ev) es.on(ev, refreshStatusSoon);
     }

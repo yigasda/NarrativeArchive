@@ -4,7 +4,7 @@ import { loreBlock } from './lore.js';
 import { keepLabel, keepsIn } from './keeps.js';
 import { offstageSet } from './recall.js';
 import { SECTION_GUARD, aiLabel, askAI, askCompress, askDraft, compressEffort, drLabel, draftReady, isBlocked, withSpinner } from './ai.js';
-import { openAppend } from './append.js';
+import { autoAppend, openAppend } from './append.js';
 import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta, textHash } from './core.js';
 import { driftHtml } from './drift.js';
 import { castNames } from './knowledge.js';
@@ -437,6 +437,7 @@ export async function quickCompress() {
     if (!quickBound) {
         quickBound = true;
         $(document).on('change', '.na_qc_grade', function () { const gg = globalSettings(); gg.quickGrade = this.checked; saveGlobal(); });
+        $(document).on('change', '.na_qc_auto', function () { const gg = globalSettings(); gg.quickAuto = this.checked; saveGlobal(); });
         $(document).on('input', '.na_qc_memo', function () { quickMemo = this.value; });
         $(document).on('change', '.na_qc_reuse', function () { quickReuse = this.checked; });
         $(document).on('input', '.na_qc_scenes', function () { quickScenes = this.value; });
@@ -460,16 +461,21 @@ export async function quickCompress() {
         row('지시문', esc(p.name), `생각 ${effort}${p.id === 'basic' && p.text !== BASIC_PROMPT ? ' · <span class="na_qc_warn">고친 버전이라 최신 기본 규칙이 안 들어가 있어요</span>' : ''}`),
         ...(au.on ? [row('AU', esc(au.name), '본편 뒤에 이어서')] : []),
     ];
+    // one line on top, the rest folded under 자세히
+    const modeName = two ? '2단계' : scenes ? `장면별 ${n}개` : n > 1 ? `${n}번에 나눠` : '한 번에';
     if (!await confirm('한 번에 압축', `<div class="na_qc">
-        <div class="na_qc_head"><b>#${from} – #${to}</b><small>메시지 ${items.length}개 · 원문 약 ${fmt(estTok(raw))} 토큰</small></div>
+        <div class="na_qc_head"><b>#${from} – #${to}</b><small>메시지 ${items.length}개 · ${modeName} · 보낼 양 약 ${fmt(sendEst.tok)} 토큰</small></div>
+        <textarea class="text_pole na_qc_memo" rows="2" placeholder="이번 압축 메모 (선택) · 예: #40–#140은 정사 파트, 관계 변화만 한두 줄로"></textarea>
+        <label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_auto" ${g.quickAuto ? 'checked' : ''}><span>바로 넣기<small>검사가 다 통과하면 추가 창 없이 넣고 숨겨요 · 알림에서 되돌리기</small></span></label>
+        <label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_grade" ${g.quickGrade ? 'checked' : ''}><span>원문 대조도 같이<small>${esc(short(aiLabel()))}가 원문과 맞춰 봐요 · 비용 추가</small></span></label>
+        ${saved ? `<label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_reuse" checked><span>저장된 1단계 목록 쓰기<small>메시지가 그대로라 2단계만 다시 해요</small></span></label>` : ''}
+        <details class="na_qc_more"><summary>자세히 · 모델, 지시문${scenes ? ', 장면 나누기' : ''}</summary>
         <div class="na_qc_rows">${rows.join('')}</div>
         ${to < last ? `<small class="na_qc_note">마지막 ${last - to}개(${last === to + 1 ? `#${last}` : `#${to + 1}–#${last}`})는 지금 장면이라 남겨요</small>` : ''}
         ${!two && n <= 1 && estTok(raw) > 60000 ? '<small class="na_qc_note">원문이 길어서 중간을 훑을 수 있어요 · 압축 → 설정 → 나눠 보내기</small>' : ''}
         ${scenes ? `<label class="na_qc_sclabel">장면 나누기 <small>한 줄에 장면 하나 · 앞 번호(시작)만 봐요 · 줄을 추가하면 나누고, 지우면 앞 장면에 합쳐요</small></label>
         <textarea class="text_pole na_qc_scenes" rows="${Math.min(10, Math.max(3, n))}" spellcheck="false">${esc(sceneLines)}</textarea>` : ''}
-        <textarea class="text_pole na_qc_memo" rows="2" placeholder="이번 압축 메모 (선택) · 예: #40–#140은 정사 파트, 관계 변화만 한두 줄로"></textarea>
-        ${saved ? `<label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_reuse" checked><span>저장된 1단계 목록 쓰기<small>메시지가 그대로라 2단계만 다시 해요</small></span></label>` : ''}
-        <label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_grade" ${g.quickGrade ? 'checked' : ''}><span>원문 대조도 같이<small>${esc(short(aiLabel()))}가 원문과 맞춰 봐요 · 지어냄, 틀림, 빠짐, 해석 · 비용 추가</small></span></label>
+        </details>
       </div>`)) return;
     // the scene list as the user left it: their starts, taken as given
     if (scenes && quickScenes !== null && quickScenes.trim() !== sceneLines.trim()) {
@@ -514,6 +520,17 @@ export async function quickCompress() {
         if (r2.error) throw r2.error;
         return auFix(r2.text, getMeta());
     } : null;
+    // 바로 넣기: straight in when every check passes, with a way back; otherwise the window, saying why
+    if (globalSettings().quickAuto) {
+        const jg = joinGrades(r.grades);
+        const res = await autoAppend({ text, end: guessEndNumber(text) ?? upto, expectTo: upto, grade: jg.gradeError ? '' : jg.grade });
+        if (res.ok) {
+            delete getMeta().pendingDraft; await saveMeta();
+            toastr.success(`#${from}–#${res.end} 요약을 아카이브에 넣고 숨겼어요${res.snapAt ? ` <button type="button" class="na_undo_auto" data-at="${res.snapAt}">되돌리기</button>` : ''}`, '바로 넣기', { escapeHtml: false, timeOut: 20000, extendedTimeOut: 10000, closeButton: true, tapToDismiss: false });
+            return;
+        }
+        toastr.info(`확인할 게 있어서 추가 창을 열어요 · ${res.why.join(' · ')}`, '바로 넣기', { timeOut: 8000 });
+    }
     await openAppend({ text, end: guessEndNumber(text) ?? upto, expectTo: upto, events: r.events, rerun, ...joinGrades(r.grades) });
     if ((getMeta().boundary ?? -1) >= upto) { delete getMeta().pendingDraft; await saveMeta(); }
 }
@@ -703,4 +720,24 @@ export async function openWizard() {
     show();
     await build();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+}
+
+// 쌓이면 알려 주기: after a reply, when the messages waiting to be compressed reach the set number, one note that opens
+// 한 번에 압축 (or the wizard without a draft model); again only after as many more have piled up
+export const NUDGE_CHOICES = { 0: '끄기', 40: '40개마다', 60: '60개마다', 100: '100개마다', 150: '150개마다' };
+export const nudgeEvery = () => { const v = globalSettings().compressNudge; return v === undefined || v === null || v === '' ? 60 : Math.max(0, Number(v) || 0); };
+const nudged = new Map(); // chat id → waiting count at the last note, this session
+export function compressNudge() {
+    const every = nudgeEvery();
+    const c = ctx();
+    if (!every || !(c.chatId || c.getCurrentChatId?.())) return;
+    const m = getMeta();
+    const { from, to, after, last } = nextRange(c, m, { afterExport: false });
+    const n = after >= last ? 0 : Math.max(0, to - from + 1);
+    const id = String(c.getCurrentChatId?.() || c.chatId);
+    const prev = nudged.get(id) || 0;
+    if (n < every) { nudged.set(id, 0); return; }
+    if (prev && n < prev + every) return;
+    nudged.set(id, n);
+    toastr.info(`압축할 메시지가 ${n}개 쌓였어요 · #${from}–#${to} · 누르면 압축`, '서사 아카이브', { timeOut: 12000, onclick: () => (draftReady() ? quickCompress() : openWizard()) });
 }

@@ -3931,3 +3931,8 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_off_chip.on { background: var(--na-accent-soft); border-color: transparent; color: var(--na-accent); font-weight: 600; }
 #na_settings .na_off_row .na_off_chips { display: flex !important; flex-direction: row !important; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; }
 #na_settings .na_off_row .na_off_chip { width: auto; flex: 0 0 auto; margin: 0; }
+
+.na_qc_more { margin-top: 6px; }
+.na_qc_more > summary { cursor: pointer; font-size: 0.85em; color: var(--na-dim); padding: 4px 0; }
+.na_qc_more[open] > summary { margin-bottom: 6px; }
+#toast-container .na_undo_auto { margin-left: 6px; padding: 2px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.7); background: transparent; color: inherit; font-weight: 600; cursor: pointer; }

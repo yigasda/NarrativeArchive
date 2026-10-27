@@ -1,5 +1,6 @@
 // Adding new sections to the archive: checks, preview and the append popup.
 
+import { offstageSet } from './recall.js';
 import { aiHtml, askAI, askCompress, askFix, draftReady, stripThink, withSpinner } from './ai.js';
 import { commitText, ctx, getMeta, globalSettings, sectionChanges } from './core.js';
 import { lineDiff, renderDiff } from './diff.js';
@@ -338,6 +339,12 @@ export function restoreState(text, loss, pick) {
 }
 
 // Problems with the numbering of pasted sections, as display strings.
+// messages a summary may leave out without a gap: OOC 빼기 kinds, and empty ones
+const skippable = (a, b) => {
+    const chat = ctx().chat || [], off = offstageSet(chat);
+    for (let i = a; i <= b; i++) if (chat[i] && !off.has(i) && String(chat[i].mes || '').trim()) return false;
+    return true;
+};
 export function checkAppend(m, add, last) {
     const ranges = headingRanges(add);
     const issues = [];
@@ -349,7 +356,7 @@ export function checkAppend(m, add, last) {
     if (lastA) {
         const first = ranges.find(r => r.prefix === lastA.prefix);
         const want = lastA.to + 1;
-        if (first && first.from > want) issues.push(`첫 섹션이 ${label(first)}${first.from}부터예요. ${label(first)}${want}${first.from - 1 > want ? `–#${first.from - 1}` : ''} (${first.from - want}개)가 빠졌어요.`);
+        if (first && first.from > want && !skippable(want, first.from - 1)) issues.push(`첫 섹션이 ${label(first)}${first.from}부터예요. ${label(first)}${want}${first.from - 1 > want ? `–#${first.from - 1}` : ''} (${first.from - want}개)가 빠졌어요.`);
         else if (first && first.from < want) issues.push(`첫 섹션 ${label(first)}${first.from}가 아카이브에 이미 있는 ${label(lastA)}${lastA.to}까지와 겹쳐요.`);
     }
     // numbering restarts per prefix (Y1, Y2 …), so check continuity within each
@@ -359,7 +366,7 @@ export function checkAppend(m, add, last) {
         if (r.from > r.to) issues.push(`"${r.title}" — 시작 #${r.from}이 끝 #${r.to}보다 커요.`);
         const prev = lastBy.get(r.prefix);
         if (prev) {
-            if (r.from > prev.to + 1) {
+            if (r.from > prev.to + 1 && !skippable(prev.to + 1, r.from - 1)) {
                 issues.push(`${label(r)}${prev.to}와 #${r.from} 사이 #${prev.to + 1}${r.from - 1 > prev.to + 1 ? `–#${r.from - 1}` : ''}가 빠졌어요.`);
                 gaps.push({ prefix: r.prefix, from: prev.to + 1, to: r.from - 1, before: prev, after: r });
             }
@@ -905,3 +912,57 @@ export async function openAppend(prefill = {}) {
     if ($root.find('.na_do_hide').prop('checked')) await applyHide({ silent: true });
     toastr.success(`아카이브에 추가됨 · 경계선 #${end}`);
 }
+
+// 바로 넣기: what 추가하기 does, without the window, when nothing in the answer needs a look. Anything that would show a
+// warning in the window (numbers, a STATE change to tick, a cut-off answer, rewritten sections, near-miss names, lost
+// STATE headings, the grader's findings) sends it to the window instead. Returns { ok, why: [] }
+export async function autoAppend({ text, end, expectTo = null, grade = '' }) {
+    const m = getMeta();
+    const last = (ctx().chat?.length || 0) - 1;
+    const why = [];
+    let raw = auFix(String(text || '').replace(/\r\n/g, '\n').trim(), m);
+    if (!raw) return { ok: false, why: ['빈 답이에요'] };
+    const listed = hasChanges(raw);
+    if (listed) {
+        const r = resolveChanges(m.text, raw);
+        const off = r.plan.filter(c => !c.on);
+        if (off.length) why.push(`STATE·OPEN 바꿀 줄 중 ${off.length}개는 직접 골라야 해요`);
+        raw = r.text;
+    } else if (splitTail(m.text)[1].trim() && !splitTail(raw)[1].trim()) why.push('STATE·OPEN 바뀌는 목록이 없어요');
+    const add = stripCites(raw);
+    if (cutSigns(m.text, add).length) why.push('답이 중간에 끊긴 것 같아요');
+    const check = checkAppend(m, stripRewrites(m.text, add), last);
+    if (check.issues.length) why.push(check.soft ? '섹션 번호를 못 읽었어요' : '섹션 번호를 확인해야 해요');
+    if (Number.isFinite(expectTo)) {
+        const rs = headingRanges(splitTail(add)[0]);
+        const e = rs.length ? Math.max(rs[rs.length - 1].from, rs[rs.length - 1].to) : null;
+        if (e !== null && e < expectTo) why.push(`#${e + 1}–#${expectTo}가 요약에 없어요`);
+    }
+    if (findRewrites(splitTail(m.text)[0], splitTail(add)[0]).some(f => f.kind !== 'divider')) why.push('이미 있는 섹션을 다시 썼어요');
+    if (nameNearMisses(m.text, add).length) why.push('철자가 비슷한 이름이 있어요');
+    if (!listed && stateLoss(m.text, add)) why.push('STATE의 제목이 빠졌어요');
+    if (grade && !/^\s*문제 없음\.?\s*$/.test(grade)) why.push('원문 대조에서 짚은 게 있어요');
+    if (!Number.isFinite(end) || end < 0 || end > last) why.push('끝 번호를 확인해야 해요');
+    if (why.length) return { ok: false, why };
+    const plan = placeAppend(m.text, add, { renumber: true, rewrites: 'skip' });
+    if (!plan.text.trim() || plan.text === `${trimEnd(m.text)}\n`) return { ok: false, why: ['새로 추가할 섹션이 없어요'] };
+    await commitText(plan.text, '바로 넣기 전', { boundary: end });
+    await applyHide({ silent: true });
+    return { ok: true, why: [], snapAt: getMeta().snapshots[0]?.at ?? null, end };
+}
+
+// 되돌리기 after 바로 넣기: the archive and its boundary as they were, and the hiding redone for that boundary
+export async function undoAutoAppend(snapAt) {
+    const m = getMeta();
+    const snap = m.snapshots.find(s => s.at === snapAt);
+    if (!snap) return toastr.warning('되돌릴 복구 지점을 못 찾았어요. 도구 탭 › 복구 지점에서 골라 주세요.');
+    await commitText(snap.text, '되돌리기 전', { boundary: snap.boundary });
+    await applyHide({ silent: true });
+    toastr.success(`방금 넣은 요약을 되돌렸어요 · 경계선 #${snap.boundary}`);
+}
+$(document).on('click', '.na_undo_auto', function (e) {
+    e.stopPropagation();
+    const at = Number(this.dataset.at);
+    $(this).closest('.toast').remove();
+    undoAutoAppend(at);
+});
