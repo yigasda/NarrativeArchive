@@ -331,7 +331,7 @@ export function renderPanel() {
                 </div>
               </div>
               <div class="na_cfg_grp">
-                <div class="na_cfg_label"><i class="fa-solid fa-clock-rotate-left"></i> 회상 · STATE · 롤플 밖</div>
+                <div class="na_cfg_label"><i class="fa-solid fa-clock-rotate-left"></i> 회상 · STATE · OOC</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
                   <label class="na_set_row" title="답하기 직전에 숨긴 원문과 지금 안 들어가는 섹션에서 최근 대화와 맞는 줄을 찾아 넣어요 · AI를 안 써서 비용이 없어요 · 이 채팅에만"><span><span>회상</span><small id="na_recall_sub">숨긴 원문에서 지금 대화와 맞는 줄을 찾아 넣어요</small></span><input type="checkbox" id="na_recall" class="na_toggle"></label>
@@ -344,7 +344,7 @@ export function renderPanel() {
                     <button type="button" class="na_set_row na_cfg_go" id="na_recall_test"><span><span>지금 해 보기</span><small>최근 대화로 무엇이 불려 오는지</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   </div>
                   <label class="na_set_row" title="STATE 블록을 아카이브 블록에서 빼서 최근 대화 가까이에 따로 넣어요 · 토큰은 그대로 · 이 채팅에만"><span><span>STATE 가까이 넣기</span><small>STATE를 최근 대화 가까이 따로</small></span><span class="na_cfg_val"><span class="na_cfg_depth" id="na_state_depth_field">깊이&nbsp;<input type="number" id="na_state_depth" class="text_pole" min="0" max="20"></span><input type="checkbox" id="na_state_on" class="na_toggle"></span></label>
-                  <div class="na_set_row na_off_row" id="na_off_fold" title="켠 것은 압축 · 원문 뽑기 · 이탈 감지 · 회상 · 말투 지문에서 빠져요"><span><span>롤플 밖 메시지 빼기</span><small id="na_off_sub"></small></span>
+                  <div class="na_set_row na_off_row" id="na_off_fold" title="켠 것은 압축 · 원문 뽑기 · 이탈 감지 · 회상 · 말투 지문에서 빠져요"><span><span>OOC 빼기</span><small id="na_off_sub"></small></span>
                     <span class="na_off_chips">${Object.entries(OFF_KINDS).map(([k, [name, sub, chip]]) => `<button type="button" class="na_off_chip" data-k="${k}" title="${name} · ${sub}" aria-pressed="false">${chip}</button>`).join('')}</span></div>
                 </div>
                 </div>
@@ -1036,7 +1036,7 @@ export function bindPanel() {
         await applyInjection(); syncPanel();
         toastr.info(st.titles.length ? st.titles.map(t => `• ${esc(t.slice(0, 60))}`).join('<br>') : '고른 섹션이 없어요', `라우터 · ${st.titles.length}개 · ${(st.ms / 1000).toFixed(1)}초`, { escapeHtml: false, timeOut: 10000 });
     }));
-    // 회상 · STATE 가까이 · 롤플 밖 메시지
+    // 회상 · STATE 가까이 · OOC 빼기
     $('#na_recall').on('change', needChat(async e => { await setRecall({ on: e.target.checked }); syncPanel(); }));
     for (const [id, k] of [['k', 'k'], ['budget', 'budget'], ['depth', 'depth'], ['scan', 'scan']]) {
         $(`#na_recall_${id}`).on('change', needChat(async e => { await setRecall({ [k]: Number(e.target.value) }); syncPanel(); }));
