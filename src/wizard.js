@@ -125,7 +125,7 @@ export function rangeRaw(c, g, from, to, keepUpTo = -1) {
 // as a skim (quotes picked off the surface, events out of order). Each part continues from the one before it.
 // 압축 → 설정 → 나눠 보내기: 0 = one request for the whole range
 export const CHUNK_CHOICES = { 0: '안 나눔', 40000: '크게 · 약 4만 토큰씩', 20000: '작게 · 약 2만 토큰씩' };
-export const chunkTok = () => { const v = globalSettings().chunkTok; return v === undefined || v === null || !(String(v) in CHUNK_CHOICES) ? 40000 : Number(v); };
+export const chunkTok = () => { const v = globalSettings().chunkTok; return v === undefined || v === null || !(String(v) in CHUNK_CHOICES) ? 20000 : Number(v); };
 const estTok = t => { const s = String(t), h = (s.match(/[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]/g) || []).length; return Math.ceil(h + (s.length - h) / 3.6); };
 // parts of even size (no lone message left at the end): as many parts as the size needs, then equal shares
 export function chunkItems(items) {
