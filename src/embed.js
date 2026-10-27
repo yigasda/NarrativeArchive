@@ -23,6 +23,15 @@ export const EMBED_SOURCES = {
 };
 // the model a source uses when none is typed
 export const EMBED_DEFAULT_MODEL = { palm: 'gemini-embedding-001', vertexai: 'gemini-embedding-001', openai: 'text-embedding-3-small', openrouter: 'openai/text-embedding-3-small', cohere: 'embed-multilingual-v3.0', ollama: 'bge-m3' };
+// models offered per source: [name, what it is good at]; anything else can be typed in
+export const EMBED_MODELS = {
+    vertexai: [['gemini-embedding-001', '여러 언어 · 한국어 채팅에 좋아요 · 하나씩 보내서 처음 색인이 느려요'], ['text-multilingual-embedding-002', '여러 언어 · 빨라요'], ['text-embedding-005', '영어 위주 · 빨라요 · 채팅도 영어일 때']],
+    palm: [['gemini-embedding-001', '여러 언어 · 한국어 채팅에 좋아요']],
+    openai: [['text-embedding-3-small', '여러 언어 · 싸요'], ['text-embedding-3-large', '여러 언어 · 더 정확해요']],
+    openrouter: [['openai/text-embedding-3-small', '여러 언어 · 싸요'], ['openai/text-embedding-3-large', '여러 언어 · 더 정확해요']],
+    cohere: [['embed-multilingual-v3.0', '여러 언어'], ['embed-english-v3.0', '영어 위주']],
+    ollama: [['bge-m3', '여러 언어'], ['nomic-embed-text', '영어 위주']],
+};
 const MODEL_FREE = new Set(['transformers', 'mistral', 'nomicai']); // the server picks the model itself
 
 export function embedCfg() {
