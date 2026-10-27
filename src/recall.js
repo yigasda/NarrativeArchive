@@ -1,7 +1,7 @@
 // Search index over the raw chat (hidden messages too) and the archive's sections: BM25 on words. Korean words also
 // count by their stem without the particle, so "세트가" still finds "세트는".
 // Used by 회상 (relevant old lines injected before each reply), 질문하기 and the voice notes.
-// Also here: 롤플 밖 메시지 (/comment, OOC, /sys). 꼭 남길 장면 come first among equal hits.
+// Also here: OOC 빼기 (/comment, OOC, /sys). 꼭 남길 장면 come first among equal hits.
 
 import { glossaryEntries } from './translate.js';
 import { ctx, getMeta, globalSettings, hasChat, saveGlobal, saveMeta } from './core.js';
@@ -12,11 +12,11 @@ import { mutedSet, parseSections, sectionKey, splitTail } from './sections.js';
 
 export const RECALL_KEY = 'narrative_archive_recall';
 
-// ---- 롤플 밖 메시지: what is not the story, by kind. Each kind is switched on its own in the settings.
+// ---- OOC 빼기: what is not the story, by kind. Each kind is switched on its own in the settings.
 
 export const OFF_KINDS = {
     comment: ['/comment 코멘트', '분석 QR처럼 /comment로 넣은 메모', '코멘트'],
-    ooc: ['OOC 메모', 'OOC:, 사담: 으로 시작하는 메시지', 'OOC'],
+    ooc: ['OOC 메모', 'OOC:, 사담: 으로 시작하는 메시지', 'OOC 메모'],
     narrator: ['/sys 내레이터 메시지', '상태창이나 선택지를 /sys로 띄우는 경우', '/sys'],
 };
 // 3.69's single choice ('keep' | 'aside' | 'all') carries over the first time
