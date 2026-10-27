@@ -363,14 +363,8 @@ export function sizeBlock({ k = 0, n = 1, count, total = count, from, to, partFr
 // a chat whose archive has no STATE / OPEN yet: the built-in instruction asks for both blocks in full (and the archive's
 // title line), following this note; it goes in only then, so every later stretch reads a shorter instruction
 export const NEW_CHAT_NOTE = `# NEW CHAT
-This chat's archive has no STATE or OPEN yet. Start the output with the archive's title line and note, then the sections, then \`---\` and both blocks in full:
+This chat's archive has no STATE or OPEN yet. After the sections and the \`---\`, write both blocks in full:
 \`\`\`
-# <character> × <character> — Context Archive (#{{from}}–#{{to}})
-_Continuity record, not a script. Ends at #{{to}} — where the live chat differs, the live chat is correct._
-
-…sections…
-
----
 # STATE AT #{{to}} (date, part of day, place)
 _True at #{{to}}. A character's reading marked as such is not canon._
 ## <each character>
