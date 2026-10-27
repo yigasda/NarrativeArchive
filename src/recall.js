@@ -7,6 +7,7 @@ import { glossaryEntries } from './translate.js';
 import { ctx, getMeta, globalSettings, hasChat, saveGlobal, saveMeta } from './core.js';
 import { cleanMessage } from './extract.js';
 import { currentInjection } from './inject.js';
+import { embedSearch } from './embed.js';
 import { guessMode, lastGuess } from './guess.js';
 import { isKeptAt, sectionKept } from './keeps.js';
 import { mutedSet, parseSections, sectionKey, splitTail } from './sections.js';
@@ -233,6 +234,25 @@ export const recallLine = r => r.item.kind === 'raw'
     ? `- [#${r.item.i} ${r.item.name}] ${r.item.text.replace(/\s*\n\s*/g, ' ')}`
     : `- [${r.item.title.replace(/\s*\(.*$/, '')}] ${r.item.text}`;
 
+// 뜻으로 찾기: a passage both searches found counts more; one only the meaning search found joins below the word hits
+async function withMeaning(results, items, q) {
+    // the newest two messages and the guessed scene, if any
+    const mean = (await embedSearch(q.filter(x => x.w >= 0.7).map(x => x.text).join('\n'), { topK: 16 })).filter(x => x.kind === 'raw');
+    if (!mean.length) return results;
+    const key = x => `${x.i}|${x.name}: ${x.text}`;
+    const byKey = new Map(items.filter(x => x.kind === 'raw').map(x => [key(x), x]));
+    const rank = new Map(mean.map(x => [x.text, x.rank]));
+    const top = results[0]?.score || 1;
+    const out = results.map(r => (r.item.kind === 'raw' && rank.has(`${r.item.name}: ${r.item.text}`) ? { ...r, score: r.score * 1.6 } : r));
+    const seen = new Set(out.filter(r => r.item.kind === 'raw').map(r => key(r.item)));
+    for (const x of mean) {
+        const item = byKey.get(`${x.i}|${x.text}`);
+        if (!item || seen.has(key(item))) continue;
+        out.push({ item, score: top * 0.5 * (1 - x.rank / 40), hits: 99 });
+    }
+    return out.sort((a, b) => b.score - a.score);
+}
+
 export const lastRecall = new Map(); // chat id → { at, lines, tokens }
 
 export async function runRecall() {
@@ -246,7 +266,7 @@ export async function runRecall() {
     const injected = cfg.secs ? (await currentInjection()).text || '' : '';
     const items = [...rawItems({ only: 'hidden' }), ...(cfg.secs ? bulletItems(m, injected) : [])];
     const qn = new Set(q.flatMap(x => tokenize(x.text))).size;
-    const hits = pick(bm25(items, q), { k: cfg.k, budget: cfg.budget, minHits: qn < 6 ? 1 : 2 })
+    const hits = pick(await withMeaning(bm25(items, q), items, q), { k: cfg.k, budget: cfg.budget, minHits: qn < 6 ? 1 : 2 })
         .sort((x, y) => (x.item.i ?? -1) - (y.item.i ?? -1));
     const id = String(c.getCurrentChatId?.() || c.chatId || '');
     if (!hits.length) { c.setExtensionPrompt(RECALL_KEY, '', 1, 0); lastRecall.set(id, { at: Date.now(), lines: [], tokens: 0 }); return null; }

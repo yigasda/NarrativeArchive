@@ -12,6 +12,7 @@ import { RANGE_HEAD, linkWaiting, linkedMap, mutedSet, parseSections, pinnedSet,
 import { bm25, recallCfg, recallQuery, runRecall, withGlossary } from './recall.js';
 import { layersOf } from './fade.js';
 import { guessMode, sceneGuess } from './guess.js';
+import { embedSearch } from './embed.js';
 import { refreshStatusSoon } from './status.js';
 import { shortHash } from './translate.js';
 
@@ -108,6 +109,7 @@ export const routerState = new Map(); // chat id → { key, picks: Set, titles, 
 
 const DETAIL_N = 18; // candidates that get a full card; the rest go in as a title line
 const ALL_DETAIL = 24; // with this few candidates every one gets a card
+const MEAN_N = 6; // cards added by the meaning search on top of the word search
 
 // the word search over the candidates: whole sections against the newest messages (glossary spellings added)
 function rankCandidates(m, cands, guess = '') {
@@ -190,6 +192,19 @@ export async function runRouter(m, { force = false } = {}) {
     const hits = ranked.filter(r => r.hits >= 2 && r.score >= top * 0.2).slice(0, DETAIL_N).map(r => r.item.i);
     const detail = new Set(many ? hits : cands.map((_, i) => i));
     if (many && prev?.picks) cands.forEach((s, i) => { if (prev.picks.has(sectionKey(s))) detail.add(i); });
+    // 뜻으로 찾기: sections close in meaning get a card too, even with no word in common
+    const meanFit = new Map(); // candidate → the piece the meaning search matched
+    if (many) {
+        const byTitle = new Map(cands.map((s, i) => [s.title, i]));
+        const q2 = [...recallQuery(2).map(p => p.text), guess].filter(Boolean).join('\n');
+        let added = 0;
+        for (const h of await embedSearch(q2, { topK: 30 })) {
+            const i = h.kind === 'sec' ? byTitle.get(h.title) : undefined;
+            if (i === undefined || meanFit.has(i)) continue;
+            meanFit.set(i, h.text.split('\n').slice(1).join(' ').trim());
+            if (!detail.has(i) && added < MEAN_N) { detail.add(i); added++; }
+        }
+    }
     const order = many ? [...detail] : [...detail].sort((x, y) => x - y);
     const rest = cands.map((_, i) => i).filter(i => !detail.has(i));
     // each card: title, the names in it other than the main cast, its keywords, and the lines that fit the chat (else how it begins)
@@ -197,7 +212,7 @@ export async function runRouter(m, { force = false } = {}) {
     const mainSet = new Set(main.flatMap(n => n.split(/\s+/)));
     const lm = linkedMap(m);
     const layers = layersOf(m);
-    const card = (s, n) => {
+    const card = (s, n, i) => {
         const body = m.text.slice(s.start, s.end).replace(/^#{1,3} [^\n]*\n?/, '');
         const counts = new Map();
         // capitalised words in mid-sentence only, so sentence openers ("Inside", "Asked") don't pass as names
@@ -205,14 +220,15 @@ export async function runRouter(m, { force = false } = {}) {
             .filter(w => w.length > 2 && !KW_STOP.has(w) && !mainSet.has(w)).forEach(w => counts.set(w, (counts.get(w) || 0) + 1));
         const names = [...counts].sort((a, b) => b[1] - a[1]).slice(0, 10).map(x => x[0]);
         const keys = Array.isArray(lm[sectionKey(s)]) ? lm[sectionKey(s)] : [];
-        const fits = fitLines(body, q);
+        let fits = fitLines(body, q);
+        if (!fits.length && meanFit.get(i)) { const f = meanFit.get(i); fits = [f.length > 200 ? `${f.slice(0, 199)}…` : f]; }
         const flat = body.replace(/\s+/g, ' ').trim();
         return `${n}. ${s.title}${names.length ? `\n   names: ${names.join(', ')}` : ''}${keys.length ? `\n   keywords: ${keys.join(', ')}` : ''}`
             + (fits.length ? fits.map(f => `\n   fits: ${f}`).join('') : `\n   begins: ${flat.slice(0, 220)}${flat.length > 220 ? '…' : ''}`);
     };
     const line = (s, n) => { const one = String(layers[sectionKey(s)]?.line || '').replace(/\s+/g, ' ').trim(); return `${n}. ${s.title}${one ? ` — ${one.slice(0, 140)}` : ''}`; };
     const listed = [...order, ...rest]; // the number shown to the model → candidate
-    const likely = order.map((i, k) => card(cands[i], k + 1)).join('\n');
+    const likely = order.map((i, k) => card(cands[i], k + 1, i)).join('\n');
     const other = rest.map((i, k) => line(cands[i], order.length + k + 1)).join('\n');
     const ranged = parseSections(m.text).filter(x => !x.group && RANGE_HEAD.test(x.title));
     const now = ranged.length ? ranged[ranged.length - 1].title : '';
