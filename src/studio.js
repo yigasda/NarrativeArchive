@@ -63,6 +63,7 @@ const ICO = {
     up: 'M12 19V5M5 12l7-7 7 7', down: 'M12 5v14M6 13l6 6 6-6', plus: 'M12 5v14M5 12h14', x: 'M6 6l12 12M18 6L6 18',
     lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
     copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/>',
+    pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
     back: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
 };
 // a section as a card: range, title, (date, place) under it, bullets with quotes marked and source numbers small
@@ -405,6 +406,8 @@ export async function openStudio() {
     const archLang = archiveLang(getMeta().text);
     // 한국어로: answers shown in Korean (this window only; the archive gets the English)
     const koOn = new Set(), koBusy = new Set(), koMap = new Map(), fixBusy = new Set();
+    // 직접 고치기: the answer being edited by hand, and what is typed so far (kept across redraws)
+    let editAt = -1, editDraft = '';
     const draw = ({ restore } = {}) => {
         const m2 = getMeta(), s = sessionOf(m2);
         if (!s) return;
@@ -431,6 +434,7 @@ export async function openStudio() {
             }
             const blocks = answerBlocks(t.text);
             const ch = t.text.search(/^# (STATE|OPEN) CHANGES/m);
+            if (i === editAt) return `<div class="na_st_bub na_st_edit"><textarea class="text_pole na_st_edta" spellcheck="false">${esc(editDraft)}</textarea><div class="na_st_tags"><small class="na_st_edhint">제목 줄 · 출처 번호는 그대로 두면 좋아요</small><span class="na_st_lks"><button type="button" class="na_st_edcancel">취소</button><button type="button" class="na_st_edsave">저장</button></span></div></div>`;
             if (!blocks.length) return `<div class="na_st_bub${ch >= 0 ? ' na_st_pre' : ''}">${linkNums(esc(ch >= 0 ? t.text.slice(ch) : t.text))}</div>`;
             const scene = t.scene !== undefined ? s.scenes[t.scene] : null;
             const issues = checkBlocks(blocks, { scene, st: s, archLang });
@@ -450,7 +454,7 @@ export async function openStudio() {
             const free = !(t.scene !== undefined && locked.has(t.scene)) && blocks.some(x => x.a !== null);
             const styleBtn = free && !fixBusy.has(i) ? `<button type="button" class="na_st_fix na_st_polish" data-i="${i}" title="문체 다듬기 · 문장 결만 아카이브처럼 · 내용 · 출처 번호 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 · AI 기능 모델">다듬기</button>` : '';
             const backBtn = t.before && !fixBusy.has(i) ? `<button type="button" class="na_st_unfix na_st_ib" data-i="${i}" title="고치기 전 답으로" aria-label="고치기 전으로">${svgA(ICO.back, 13, 2.4)}</button>` : '';
-            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st_tags">${tags}<span class="na_st_lks">${fixBtn}${styleBtn}${backBtn}<button type="button" class="na_st_copy na_st_ib" data-i="${i}" title="이 답의 섹션을 아카이브 모양으로 복사 (출처 번호는 빼고)" aria-label="복사">${svgA(ICO.copy, 13, 2.2)}</button>${koBtn}${locks}</span></div></div>`;
+            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st_tags">${tags}<span class="na_st_lks">${fixBtn}${styleBtn}${backBtn}<button type="button" class="na_st_pen na_st_ib" data-i="${i}" title="직접 고치기 (답을 세 번 터치해도 돼요)" aria-label="직접 고치기">${svgA(ICO.pen, 13, 2.2)}</button><button type="button" class="na_st_copy na_st_ib" data-i="${i}" title="이 답의 섹션을 아카이브 모양으로 복사 (출처 번호는 빼고)" aria-label="복사">${svgA(ICO.copy, 13, 2.2)}</button>${koBtn}${locks}</span></div></div>`;
         }).join('') + (busy ? '<div class="na_st_bub na_st_typing"><i></i><i></i><i></i><small>쓰는 중 · 이 탭에 있어야 받아요</small></div>' : '');
         const $log = $root.find('.na_st_log');
         const atEnd = $log[0] ? $log[0].scrollHeight - $log[0].scrollTop - $log[0].clientHeight < 80 : true;
@@ -613,6 +617,44 @@ export async function openStudio() {
             console.error('[NarrativeArchive] studio translate', e);
             toastr.error(String(e?.message || e), '번역');
         } finally { koBusy.delete(i); draw(); }
+    });
+    // 직접 고치기: the answer's text as sections (numbered headings, PLOT, bullets, source marks), edited in place
+    const editTextOf = (s, t) => {
+        const sc = t.scene !== undefined ? s.scenes[t.scene] : null;
+        const blocks = sc ? parseSceneAnswer(t.text, sc.a, sc.b) : answerBlocks(t.text);
+        const ch = t.text.search(/^# (STATE|OPEN) CHANGES/m);
+        if (!blocks.length) return String(t.text || '');
+        return `${blocks.map(x => (x.a !== null ? sectionText(x, '') : `## ${x.title || 'Untitled'}\nPLOT:\n${x.bullets.join('\n')}`)).join('\n\n')}${ch >= 0 ? `\n\n${t.text.slice(ch).trim()}` : ''}`;
+    };
+    const startEdit = i => {
+        const s = sessionOf(getMeta()), t = s?.turns[i];
+        if (!t || t.role !== 'assistant' || busy || fixBusy.has(i)) return;
+        editAt = i; editDraft = editTextOf(s, t); draw();
+        const ta = $root.find('.na_st_edta')[0];
+        if (ta) { ta.style.height = `${Math.min(ta.scrollHeight + 4, 520)}px`; ta.focus(); }
+    };
+    $root.on('click', '.na_st_pen', function () { startEdit(Number(this.dataset.i)); });
+    // three quick taps on an answer open it too (not on its buttons, numbers or quotes)
+    $root.on('click', '.na_st_bub', function (e) {
+        if (e.detail !== 3 || $(e.target).closest('button, a, textarea, .na_st_tags').length) return;
+        const i = Number($(this).find('[data-i]').first().data('i'));
+        if (Number.isFinite(i)) { window.getSelection?.()?.removeAllRanges(); startEdit(i); }
+    });
+    $root.on('input', '.na_st_edta', function () { editDraft = this.value; this.style.height = 'auto'; this.style.height = `${Math.min(this.scrollHeight + 4, 520)}px`; });
+    $root.on('click', '.na_st_edcancel', () => { editAt = -1; editDraft = ''; draw(); });
+    $root.on('click', '.na_st_edsave', async () => {
+        const s = sessionOf(getMeta()), t = s?.turns[editAt];
+        const v = String($root.find('.na_st_edta').val() ?? editDraft).trim();
+        if (!t) { editAt = -1; return draw(); }
+        if (!v) return toastr.info('비우면 저장할 수 없어요 · 취소를 눌러 주세요', '직접 고치기');
+        if (v !== editTextOf(s, t).trim()) {
+            t.before ??= t.text;
+            t.text = v;
+            s.secs = rebuildSecs(s);
+            await saveMeta();
+            toastr.success('고친 답을 저장했어요 · ↶로 원래 답으로', '직접 고치기', { timeOut: 2500 });
+        }
+        editAt = -1; editDraft = ''; draw();
     });
     $root.on('click', '.na_st_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
     $root.find('.na_st_reset').on('click', async () => {
