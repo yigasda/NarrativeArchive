@@ -12,7 +12,7 @@ import { parseSections } from './sections.js';
 
 export const MODULE = 'narrative_archive';
 export const PROMPT_KEY = 'narrative_archive_injection';
-export const VERSION = '3.87.2';
+export const VERSION = '3.87.3';
 export const SNAPSHOT_MAX = 5;
 export const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -159,6 +159,9 @@ export function globalSettings() {
     const g = es[MODULE];
     const defaults = { usePrompt: false, skipHidden: true, stripTags: false, aiProfile: '', aiMaxTokens: 8192 };
     for (const [k, v] of Object.entries(defaults)) if (!Object.hasOwn(g, k)) g[k] = v;
+    // 2단계 was taken out in 3.87.3: its setting goes, and a chat set to it compresses from the raw log
+    delete g.eventsModel;
+    if (g.compressMode === 'events') g.compressMode = 'raw';
     // prompt library: [{ id, name, text, fav }], first entry is the built-in basic one
     if (g.aiMaxTokens === 4096 && !g.aiMaxSet) g.aiMaxTokens = 8192; // the old default, never changed by hand
     if (!Array.isArray(g.prompts)) {

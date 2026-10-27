@@ -3,16 +3,15 @@
 import { loreBlock } from './lore.js';
 import { keepLabel, keepsIn } from './keeps.js';
 import { offstageSet } from './recall.js';
-import { SECTION_GUARD, aiLabel, askAI, askCompress, askDraft, compressEffort, drLabel, draftReady, isBlocked, withSpinner } from './ai.js';
+import { SECTION_GUARD, aiLabel, askAI, askCompress, compressEffort, drLabel, draftReady, isBlocked, withSpinner } from './ai.js';
 import { autoAppend, openAppend } from './append.js';
-import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta, textHash } from './core.js';
+import { commitText, ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { driftHtml } from './drift.js';
-import { castNames } from './knowledge.js';
 import { hasChanges, resolveChanges } from './statechg.js';
 import { checkCounts, countCheckOn } from './rulecheck.js';
 import { lastSections, chunksFromStarts, detectScenes, sceneChunks, sceneCompress, sceneModel, sceneModelLabel, sceneSize, scenesText, startsFromText, stateModel } from './scenes.js';
 import { buildExtract, cleanMessage, formatExtract, guessEndNumber } from './extract.js';
-import { BASIC_PROMPT, LANG_NAME, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressParts, compressPrompt, dropReproduced, eventsNote, eventsSystem, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
+import { BASIC_PROMPT, LANG_NAME, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressParts, compressPrompt, dropReproduced, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, trimEnd } from './sections.js';
 import { openSource } from './source.js';
 import { refreshStatus } from './status.js';
@@ -148,8 +147,8 @@ export function chunkItems(items) {
 // The draft model compresses items part by part. Each part sees the archive plus what the parts before it wrote
 // (their last section as the format sample, their STATE · OPEN as the current one). Returns the joined answer;
 // on a failure partway, what was done so far and where it stopped.
-export async function draftCompress({ m, g, p, items, onStep = () => {}, grade = false, memo = '', events = '' }) {
-    const parts = events ? [items] : chunkItems(items);
+export async function draftCompress({ m, g, p, items, onStep = () => {}, grade = false, memo = '' }) {
+    const parts = chunkItems(items);
     const acc = [];
     let tail = '', lastChg = '', doneTo = null, error = null, dropped = 0;
     const grades = [];
@@ -157,7 +156,7 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
         const part = parts[k];
         const from = part[0].i, to = part[part.length - 1].i;
         onStep(k, parts.length, from, to);
-        const raw = events || formatExtract(part, g);
+        const raw = formatExtract(part, g);
         const shadow = acc.length ? `${m.text}\n\n${acc.join('\n\n')}` : m.text;
         const state = tail || splitTail(m.text)[1].trim() || '(없음)';
         const sent = compressParts(p.text, { raw, from: String(from), to: String(to), last_section: referenceSection(shadow), state, archive: shadow }, { ...m, text: shadow }, memo,
@@ -167,7 +166,7 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
         try { out = cleanDraft(await askCompress(prompt, { system, keepSystem: !!system, guard: SECTION_GUARD })); }
         catch (e) {
             // refused or blocked: the part goes again as two halves, so one hard scene does not stop the whole range
-            if (isBlocked(e) && !events && part.length >= 4) {
+            if (isBlocked(e) && part.length >= 4) {
                 const h = Math.ceil(part.length / 2);
                 parts.splice(k, 1, part.slice(0, h), part.slice(h));
                 toastr.info(`#${from}–#${to}가 막혀서 반으로 나눠 다시 보내요`, '한 번에 압축', { timeOut: 4000 });
@@ -198,7 +197,7 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
         } else if (t.trim()) { tail = t.trim(); lastChg = ''; }
         doneTo = to;
         if (grade) {
-            try { grades.push({ from, to, text: String(await askAI(`[RAW LOG]\n${events ? formatExtract(part, g) : raw}\n\n[SUMMARY]\n${out}`, { system: AI_SYS_GRADE, maxTokens: 2500 }) || '').trim() }); }
+            try { grades.push({ from, to, text: String(await askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${out}`, { system: AI_SYS_GRADE, maxTokens: 2500 }) || '').trim() }); }
             catch (e) { grades.push({ from, to, text: String(e?.message || e), error: true }); }
         }
     }
@@ -207,179 +206,19 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
     return { text, dropped, parts: parts.length, done: error ? parts.findIndex(x => x[x.length - 1].i === doneTo) + 1 : parts.length, doneTo, error, grades };
 }
 
-// 2단계 압축: step 1 (정리 모델) writes one line per message, a few messages at a time, marking re-tellings;
-// step 2 (초안 모델) writes the sections from that list in one request. 'raw' = the old way, the raw log itself.
-export const COMPRESS_MODES = { scenes: '장면별', events: '2단계', raw: '원문 그대로' };
-export const compressMode = () => { const v = globalSettings().compressMode; return v === 'raw' || v === 'events' ? v : v === 'scenes' ? 'scenes' : 'events'; };
-export const EVENTS_MODELS = { ai: 'AI 기능 모델', dr: '초안 모델' };
-export const eventsModel = () => (globalSettings().eventsModel === 'dr' ? 'dr' : 'ai');
-export const evLabel = () => (eventsModel() === 'dr' ? drLabel() : aiLabel());
-const EVENTS_GUARD = /^\s*\[?#?\d+/m;
-const askEvents = (prompt, system) => (eventsModel() === 'dr' ? askDraft(prompt, { system, maxTokens: 8000, guard: EVENTS_GUARD }) : askAI(prompt, { system, maxTokens: 8000, guard: EVENTS_GUARD }));
-// a few messages per request, so each one gets read
-export function eventBatches(items, n = 15, cap = 12000) {
-    const out = [];
-    let cur = [], tok = 0;
-    for (const x of items) {
-        const t = estTok(x.text) + 8;
-        if (cur.length && (cur.length >= n || tok + t > cap)) { out.push(cur); cur = []; tok = 0; }
-        cur.push(x); tok += t;
-    }
-    if (cur.length) out.push(cur);
-    return out;
-}
-// letters and digits only: a quote still counts when the model wrote "..." for "……" or dropped a space or a comma
-const normQ = s => String(s).normalize('NFC').replace(/[^\p{L}\p{N}]+/gu, '').toLowerCase();
-// "[58] = #57; Mara …" + '  "Then give me a reason."' → lines by message number (a message may get two);
-// a quote is kept only when that message really has it
-export function parseEvents(out, batch) {
-    const want = new Map(batch.map(x => [x.i, x]));
-    const got = new Map();
-    let cur = null;
-    for (const line of String(out || '').split('\n')) {
-        const h = line.match(/^\s*\[#?(\d+)\]\s*(.*)$/);
-        if (h) {
-            const n = Number(h[1]);
-            if (!want.has(n)) { cur = null; continue; }
-            if (!got.has(n)) got.set(n, { n, lines: [], badQ: 0 });
-            cur = { text: h[2].trim(), quotes: [] };
-            got.get(n).lines.push(cur);
-            continue;
-        }
-        const q = line.match(/^\s+["“「『](.*?)["”」』]?\s*[.,;]?\s*$/);
-        if (q && cur) {
-            const n = [...got.values()].find(e => e.lines.includes(cur)).n;
-            if (normQ(q[1]) && normQ(want.get(n).text).includes(normQ(q[1]))) cur.quotes.push(q[1].trim());
-            else got.get(n).badQ++;
-        }
-    }
-    return got;
-}
-// entries → the list step 2 reads. Out: "—" lines and bare "= #N" lines (a re-telling with nothing new) unless they
-// carry a quote; "= #N; what is new" stays as it is, so step 2 sees which moment it adds to
-export function eventLines(entries) {
-    const out = [];
-    let recaps = 0, empty = 0;
-    for (const e of entries) {
-        for (const l of e.lines) {
-            const blank = /^[—–-]*\s*$/.test(l.text), bare = /^=\s*#?\d+\s*[;,:]?\s*$/.test(l.text);
-            if ((blank || bare) && !l.quotes.length) { if (bare) recaps++; else empty++; continue; }
-            out.push(`[${e.n}] ${blank ? '(no new event)' : l.text}`, ...l.quotes.map(q => `  "${q}"`));
-        }
-    }
-    return { text: out.join('\n'), recaps, empty };
-}
-// who the story's characters are, so step 1 names them instead of "the god"
-const knownNames = (m, items) => {
-    const names = castNames(m);
-    return names.length ? names.join(', ') : [...new Set(items.map(x => x.name).filter(Boolean))].join(', ') || '(take them from the messages)';
-};
-// batches go out a few at a time; each sees the last messages before it as raw context instead of the
-// previous batch's lines, so they don't have to wait for each other
-const EV_PARALLEL = 3, EV_CONTEXT = 3;
-export async function eventList({ m, g, items, onStep = () => {} }) {
-    const batches = eventBatches(items);
-    const system = eventsSystem(LANG_NAME[archiveLang(m.text)]);
-    const names = knownNames(m, items);
-    const linesOf = es => es.flatMap(e => e.lines.map(l => `[${e.n}] ${l.text}`));
-    // a run cut off partway (the tab went to sleep, the connection dropped) keeps the batches it finished
-    const key = evKey(items, g), from = items[0].i, to = items[items.length - 1].i;
-    // kept in this browser, not the chat: saving the chat file after every batch made step 1 several times slower
-    const progKey = `na_evprog_${ctx().getCurrentChatId?.() || ctx().chatId || 'chat'}`;
-    let saved0 = null;
-    try { saved0 = JSON.parse(localStorage.getItem(progKey) || 'null'); } catch { /* no storage */ }
-    const res = saved0?.hash === key && saved0.from === from && saved0.to === to && saved0.res ? saved0.res : {};
-    const keep = () => { try { localStorage.setItem(progKey, JSON.stringify({ hash: key, from, to, res })); } catch { /* full or blocked: no resume */ } };
-    const before = first => { const at = items.findIndex(x => x.i === first.i); return items.slice(Math.max(0, at - EV_CONTEXT), at); };
-    const stat = { t0: Date.now(), slow: 0, retries: 0, reasks: 0 };
-    const ask = async (part, extra = '') => {
-        const ctxMsgs = before(part[0]);
-        const prompt = `KNOWN NAMES: ${names}\n\nEARLIER MESSAGES:\n${ctxMsgs.length ? formatExtract(ctxMsgs, g) : '(none — this is the start)'}${extra}\n\nMESSAGES:\n${formatExtract(part, g)}`;
-        // one more try after a short wait: a busy or rate-limited API often answers the second time
-        const t = Date.now();
-        // a refused or blocked batch goes again as two halves; a single message that stays blocked is passed on as it is
-        const halves = async () => {
-            if (part.length < 2) return new Map();
-            const h = Math.ceil(part.length / 2);
-            return new Map([...await ask(part.slice(0, h), extra), ...await ask(part.slice(h), extra)]);
-        };
-        try { return parseEvents(await askEvents(prompt, system), part); }
-        catch (e) {
-            if (isBlocked(e)) return halves();
-            stat.retries++; console.warn('[NarrativeArchive] step 1 batch failed, retrying', e); await new Promise(r => setTimeout(r, 2500));
-            try { return parseEvents(await askEvents(prompt, system), part); }
-            catch (e2) { if (isBlocked(e2)) return halves(); throw e2; }
-        }
-        finally { stat.slow = Math.max(stat.slow, Date.now() - t); }
-    };
-    const runBatch = async k => {
-        const b = batches[k];
-        const got = await ask(b);
-        // a message the model skipped: asked for once more on its own (with this batch's lines so far), then passed on as it is
-        const skip = b.filter(x => !got.has(x.i));
-        if (skip.length) {
-            stat.reasks++;
-            const so = linesOf([...got.values()].sort((x, y) => x.n - y.n)).join('\n');
-            try { for (const [n, e] of await ask(skip, so ? `\n\nYOUR LINES FOR THIS BATCH SO FAR:\n${so}` : '')) got.set(n, e); } catch { /* keep what we have */ }
-        }
-        res[k] = b.map(x => got.get(x.i) || { n: x.i, lines: [{ text: `(not condensed) ${x.name}: ${x.text}`, quotes: [] }], badQ: 0, missing: true });
-        keep();
-    };
-    const todo = batches.map((_, k) => k).filter(k => !res[k]);
-    let done = batches.length - todo.length;
-    const workers = Array.from({ length: Math.min(EV_PARALLEL, todo.length) }, async () => {
-        while (todo.length) {
-            const k = todo.shift();
-            await runBatch(k);
-            done++;
-            onStep(done - 1, batches.length, batches[k][0].i, batches[k][batches[k].length - 1].i);
-        }
-    });
-    await Promise.all(workers);
-    try { localStorage.removeItem(progKey); } catch { /* ignore */ }
-    const all = batches.flatMap((_, k) => res[k]);
-    const missing = all.filter(e => e.missing).map(e => e.n);
-    const badQ = all.reduce((t, e) => t + (e.badQ || 0), 0);
-    const { text, recaps, empty } = eventLines(all);
-    const secs = Math.round((Date.now() - stat.t0) / 1000);
-    console.info(`[NarrativeArchive] step 1: ${batches.length} batches in ${secs}s (slowest ${Math.round(stat.slow / 1000)}s), ${stat.retries} retried after an error, ${stat.reasks} re-asked for skipped messages`);
-    return { text, recaps, empty, badQ, missing, n: items.length, batches: batches.length, secs, slowest: Math.round(stat.slow / 1000), retries: stat.retries, reasks: stat.reasks };
-}
-// step 1's list is kept with the chat for its range, so step 2 can run again without paying for step 1
-const evKey = (items, g) => textHash(formatExtract(items, g));
-export function savedEvents(m, items, g) {
-    const e = m.lastEvents;
-    return e && items.length && e.from === items[0].i && e.to === items[items.length - 1].i && e.hash === evKey(items, g) && e.text ? e : null;
-}
-// step 2 alone: the sections from a list
-export function sectionsFromEvents(args, ev) {
-    return draftCompress({ ...args, onStep: () => {}, events: eventsNote() + ev.text });
-}
-// the one entry for both buttons: 2단계 by default, the raw log when 압축 → 설정 says so.
-// reuse: a saved step-1 list for this exact range (same messages) is used instead of making a new one
-export async function compressDraft(args, o = {}) {
-    const res = await compressDraft0(args, o);
+// 압축 방식: 'raw' sends the raw log itself (in parts when long), 'scenes' one section per scene.
+// (2단계, a one-line-per-message list first, was taken out in 3.87.3)
+export const COMPRESS_MODES = { raw: '원문 그대로', scenes: '장면별' };
+export const compressMode = () => (globalSettings().compressMode === 'scenes' ? 'scenes' : 'raw');
+// the one entry for both buttons: the raw log, or scene by scene when 압축 → 설정 says so; then the count check
+export async function compressDraft(args) {
+    const res = await (compressMode() === 'scenes' ? sceneCompress(args) : draftCompress(args));
     if (!res?.text || !countCheckOn()) return res;
     args.onStep?.(0, 1, args.items[0].i, args.items[args.items.length - 1].i, 'check');
     const out = await checkCounts(res, { m: args.m, memo: args.memo });
     if (out.countFixed) toastr.info(`섹션 ${out.countFixed}개가 불릿·단어·엠대시 규칙을 넘어서 그 섹션만 다시 고쳐 받았어요${out.countLeft ? ` · ${out.countLeft}개는 아직 넘어요` : ''}`, '세는 규칙 검사', { timeOut: 5000 });
     else if (out.countLeft) toastr.warning(`섹션 ${out.countLeft}개가 규칙을 넘는데 고친 답이 더 낫지 않아서 그대로 뒀어요${out.countError ? ` (${out.countError})` : ''}`, '세는 규칙 검사', { timeOut: 6000 });
     return out;
-}
-async function compressDraft0(args, { reuse = false } = {}) {
-    if (compressMode() === 'raw') return draftCompress(args);
-    if (compressMode() === 'scenes') return sceneCompress(args);
-    const { m, g, items, onStep = () => {} } = args;
-    let ev = reuse ? savedEvents(m, items, g) : null;
-    if (!ev) {
-        try { ev = await eventList({ m, g, items, onStep: (k, total, a, b) => onStep(k, total, a, b, 'events') }); }
-        catch (e) { return { text: '', dropped: 0, parts: 1, done: 0, doneTo: null, error: e, grades: [] }; }
-        m.lastEvents = { ...ev, from: items[0].i, to: items[items.length - 1].i, hash: evKey(items, g), at: Date.now() };
-        await saveMeta();
-    }
-    onStep(0, 1, items[0].i, items[items.length - 1].i, 'sections');
-    const r = await sectionsFromEvents(args, ev);
-    return { ...r, events: ev };
 }
 
 // several parts' grades in one box: "#0–#40" headings above each part's lines
@@ -392,7 +231,7 @@ const joinGrades = gs => {
 
 // One button: the next range → the draft model (with the wizard's instruction, and the AU block in an AU chat)
 // → 아카이브에 추가 with the summary filled in. Its checks, the boundary and the hide step stay.
-let quickBusy = false, quickBound = false, quickMemo = '', quickReuse = false, quickScenes = null;
+let quickBusy = false, quickBound = false, quickMemo = '', quickScenes = null;
 export async function quickCompress() {
     if (quickBusy) return toastr.info('요약을 받는 중이에요.');
     const c = ctx(), m = getMeta(), g = globalSettings();
@@ -412,7 +251,7 @@ export async function quickCompress() {
     const pend = m.pendingDraft;
     if (pend?.text && pend.from === from) {
         if (await confirm('받아 둔 요약', `<b>#${pend.from}–#${pend.to}</b> 요약을 ${esc(timeLabel(pend.at))}에 받아 놓고 아직 안 넣었어요.<br><b>이걸로 아카이브에 추가 창을 열까요?</b><br><small>아니요를 누르면 새로 받아요 (초안 모델 1번)</small>`)) {
-            await openAppend({ text: pend.text, end: guessEndNumber(pend.text) ?? pend.to, expectTo: pend.to, events: pend.events });
+            await openAppend({ text: pend.text, end: guessEndNumber(pend.text) ?? pend.to, expectTo: pend.to });
             if ((getMeta().boundary ?? -1) >= pend.to) { delete getMeta().pendingDraft; await saveMeta(); }
             return;
         }
@@ -421,9 +260,9 @@ export async function quickCompress() {
     if (!raw) return toastr.info('이 범위에 메시지가 없어요.', '한 번에 압축');
     const p = g.prompts.find(x => x.id === g.wizPrompt) || activePrompt(g);
     const au = auOf(m);
-    if (m.evProgress) { delete m.evProgress; await saveMeta(); } // left in the chat file by an older version
-    const mode = compressMode(), two = mode === 'events', scenes = mode === 'scenes';
-    const saved = two ? savedEvents(m, items, g) : null;
+    // left in the chat file by older versions (2단계's progress and saved list)
+    if (m.evProgress || m.lastEvents) { delete m.evProgress; delete m.lastEvents; await saveMeta(); }
+    const scenes = compressMode() === 'scenes';
     // 장면별: the AI 기능 모델 names the scenes first (the tracker cutter if that fails); the list can be edited below
     let sceneList = null, sceneBy = '', sceneNotes = new Map();
     if (scenes) {
@@ -436,12 +275,11 @@ export async function quickCompress() {
         if (!sceneList) { sceneList = sceneChunks(items); sceneBy = 'tracker'; }
     }
     const sceneLines = scenes ? scenesText(sceneList, { get: k => sceneNotes.get(k) || sceneNotes.get(k + 1) || '' }) : '';
-    const n = two ? eventBatches(items).length : scenes ? sceneList.length : chunkItems(items).length;
+    const n = scenes ? sceneList.length : chunkItems(items).length;
     const ce = compressEffort();
     // what goes out, roughly: the raw log once, plus what each request carries besides it
     const rawTok = estTok(raw), archTok = estTok(m.text), promptTok = estTok(p.text), stateTok = estTok(splitTail(m.text)[1]);
-    const sendEst = two ? { req: n + 1, tok: (saved ? 0 : rawTok * 1.2 + n * 1800) + archTok + promptTok + rawTok * 0.5 }
-        : scenes ? { req: n + 2, tok: rawTok * 2 + n * (estTok(lastSections(m.text, 4).join('\n\n')) + stateTok + promptTok + estTok(m.workNote || '')) + stateTok }
+    const sendEst = scenes ? { req: n + 2, tok: rawTok * 2 + n * (estTok(lastSections(m.text, 4).join('\n\n')) + stateTok + promptTok + estTok(m.workNote || '')) + stateTok }
         : { req: n, tok: rawTok + n * (archTok + promptTok) };
     sendEst.tok = Math.round(sendEst.tok);
     // the 채점 box lives in the confirm dialog; its state is remembered as soon as it changes
@@ -450,18 +288,14 @@ export async function quickCompress() {
         $(document).on('change', '.na_qc_grade', function () { const gg = globalSettings(); gg.quickGrade = this.checked; saveGlobal(); });
         $(document).on('change', '.na_qc_auto', function () { const gg = globalSettings(); gg.quickAuto = this.checked; saveGlobal(); });
         $(document).on('input', '.na_qc_memo', function () { quickMemo = this.value; });
-        $(document).on('change', '.na_qc_reuse', function () { quickReuse = this.checked; });
         $(document).on('input', '.na_qc_scenes', function () { quickScenes = this.value; });
     }
-    quickMemo = ''; quickReuse = !!saved; quickScenes = null;
+    quickMemo = ''; quickScenes = null;
     const short = l => String(l).replace(/^(커스텀|Vertex) · /, '');
     const effort = ce === 'conn' ? '연결 설정' : { high: '높게', medium: '보통', low: '낮게' }[ce] || ce;
     const row = (k, v, sub = '') => `<div class="na_qc_row"><span>${k}</span><b>${v}${sub ? `<small>${sub}</small>` : ''}</b></div>`;
     const rows = [
-        ...(two ? [
-            saved && quickReuse ? row('1단계 정리', '저장된 목록', esc(timeLabel(saved.at))) : row('1단계 정리', esc(short(evLabel())), `15개씩 ${n}번`),
-            row('2단계 요약', esc(short(drLabel())), '한 번'),
-        ] : scenes ? [
+        ...(scenes ? [
             row('장면', `${n}개`, sceneBy === 'ai' ? `${esc(short(aiLabel()))}가 나눔 · 아래에서 고쳐도 돼요` : '트래커·메시지 수로 나눔 · 아래에서 고쳐도 돼요'),
             row('섹션', esc(short(sceneModelLabel(sceneModel()))), `장면마다 · ${n}번`),
             row('STATE', esc(short(sceneModelLabel(stateModel()))), '마지막에 한 번'),
@@ -473,17 +307,16 @@ export async function quickCompress() {
         ...(au.on ? [row('AU', esc(au.name), '본편 뒤에 이어서')] : []),
     ];
     // one line on top, the rest folded under 자세히
-    const modeName = two ? '2단계' : scenes ? `장면별 ${n}개` : n > 1 ? `${n}번에 나눠` : '한 번에';
+    const modeName = scenes ? `장면별 ${n}개` : n > 1 ? `${n}번에 나눠` : '한 번에';
     if (!await confirm('한 번에 압축', `<div class="na_qc">
         <div class="na_qc_head"><b>#${from} – #${to}</b><small>메시지 ${items.length}개 · ${modeName} · 보낼 양 약 ${fmt(sendEst.tok)} 토큰</small></div>
         <textarea class="text_pole na_qc_memo" rows="2" placeholder="이번 압축 메모 (선택) · 예: #40–#140은 정사 파트, 관계 변화만 한두 줄로"></textarea>
         <label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_auto" ${g.quickAuto ? 'checked' : ''}><span>바로 넣기<small>검사가 다 통과하면 추가 창 없이 넣고 숨겨요 · 알림에서 되돌리기</small></span></label>
         <label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_grade" ${g.quickGrade ? 'checked' : ''}><span>원문 대조도 같이<small>${esc(short(aiLabel()))}가 원문과 맞춰 봐요 · 비용 추가</small></span></label>
-        ${saved ? `<label class="checkbox_label na_qc_check"><input type="checkbox" class="na_qc_reuse" checked><span>저장된 1단계 목록 쓰기<small>메시지가 그대로라 2단계만 다시 해요</small></span></label>` : ''}
         <details class="na_qc_more"><summary>자세히 · 모델, 지시문${scenes ? ', 장면 나누기' : ''}</summary>
         <div class="na_qc_rows">${rows.join('')}</div>
         ${to < last ? `<small class="na_qc_note">마지막 ${last - to}개(${last === to + 1 ? `#${last}` : `#${to + 1}–#${last}`})는 지금 장면이라 남겨요</small>` : ''}
-        ${!two && n <= 1 && estTok(raw) > 60000 ? '<small class="na_qc_note">원문이 길어서 중간을 훑을 수 있어요 · 압축 → 설정 → 나눠 보내기</small>' : ''}
+        ${!scenes && n <= 1 && estTok(raw) > 60000 ? '<small class="na_qc_note">원문이 길어서 중간을 훑을 수 있어요 · 압축 → 설정 → 나눠 보내기</small>' : ''}
         ${scenes ? `<label class="na_qc_sclabel">장면 나누기 <small>한 줄에 장면 하나 · 앞 번호(시작)만 봐요 · 줄을 추가하면 나누고, 지우면 앞 장면에 합쳐요</small></label>
         <textarea class="text_pole na_qc_scenes" rows="${Math.min(10, Math.max(3, n))}" spellcheck="false">${esc(sceneLines)}</textarea>` : ''}
         </details>
@@ -500,10 +333,9 @@ export async function quickCompress() {
     try {
         r = await (() => compressDraft({ m, g, p, items, grade: !!globalSettings().quickGrade, memo: runMemo, chunks: sceneList,
             onStep: (k, total, a, b, stage) => {
-                const msg = stage === 'events' ? `1단계 정리 #${a}–#${b} (${k + 1}/${total})` : stage === 'sections' ? `2단계 섹션 쓰는 중 #${a}–#${b}`
-                    : stage === 'scenes' ? `장면 ${k + 1}/${total} · #${a}–#${b} 쓰는 중` : stage === 'state' ? 'STATE·OPEN 바뀌는 것 정리 중' : stage === 'check' ? '세는 규칙 검사 중' : total > 1 ? `#${a}–#${b} 요약하는 중… (${k + 1}/${total})` : '';
+                const msg = stage === 'scenes' ? `장면 ${k + 1}/${total} · #${a}–#${b} 쓰는 중` : stage === 'state' ? 'STATE·OPEN 바뀌는 것 정리 중' : stage === 'check' ? '세는 규칙 검사 중' : total > 1 ? `#${a}–#${b} 요약하는 중… (${k + 1}/${total})` : '';
                 if (msg) $(toast).find('.toast-message').text(`${msg} · 이 탭에 있어야 끝까지 받아요 (다른 탭·앱으로 가면 끊길 수 있어요)`);
-            } }, { reuse: quickReuse }))();
+            } }))();
         // 장면별 writes scene by scene; its sections are checked against the whole range once at the end
         if (scenes && globalSettings().quickGrade && r.text && !r.error) {
             $(toast).find('.toast-message').text('원문과 대조하는 중 · 이 탭에 있어야 끝까지 받아요');
@@ -522,15 +354,9 @@ export async function quickCompress() {
     const upto = r.error ? r.doneTo : to;
     m.lastExport = { from, to: upto, at: Date.now(), how: 'draft' };
     // kept until it goes in, so a lost tab does not cost another request
-    m.pendingDraft = { text, from, to: upto, at: Date.now(), events: r.events || null };
+    m.pendingDraft = { text, from, to: upto, at: Date.now() };
     await saveMeta();
     refreshStatus();
-    // 2단계만 다시: the same list, prompt and note, a new answer from the draft model
-    const rerun = r.events && !r.error ? async () => {
-        const r2 = await sectionsFromEvents({ m: getMeta(), g, p, items, memo: runMemo }, r.events);
-        if (r2.error) throw r2.error;
-        return auFix(r2.text, getMeta());
-    } : null;
     // 바로 넣기: straight in when every check passes, with a way back; otherwise the window, saying why
     if (globalSettings().quickAuto) {
         const jg = joinGrades(r.grades);
@@ -542,7 +368,7 @@ export async function quickCompress() {
         }
         toastr.info(`확인할 게 있어서 추가 창을 열어요 · ${res.why.join(' · ')}`, '바로 넣기', { timeOut: 8000 });
     }
-    await openAppend({ text, end: guessEndNumber(text) ?? upto, expectTo: upto, events: r.events, rerun, ...joinGrades(r.grades) });
+    await openAppend({ text, end: guessEndNumber(text) ?? upto, expectTo: upto, ...joinGrades(r.grades) });
     if ((getMeta().boundary ?? -1) >= upto) { delete getMeta().pendingDraft; await saveMeta(); }
 }
 
@@ -674,7 +500,7 @@ export async function openWizard() {
         const $b = $(this);
         const r = await withSpinner($b, '쓰는 중… 창을 닫지 마세요', () => compressDraft({ m, g, p, items,
             onStep: (k, total, a, b, stage) => {
-                const msg = stage === 'events' ? `1단계 정리 ${k + 1}/${total}` : stage === 'sections' ? '2단계 섹션 쓰는 중' : stage === 'check' ? '세는 규칙 검사 중' : total > 1 ? `쓰는 중… ${k + 1}/${total}` : '';
+                const msg = stage === 'check' ? '세는 규칙 검사 중' : total > 1 ? `쓰는 중… ${k + 1}/${total}` : '';
                 if (msg) $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> ${msg}`);
             } }));
         if (!r) return;
