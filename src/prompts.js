@@ -104,10 +104,10 @@ A quiet, exact chronicler. Past tense, plain sentences, names instead of descrip
 
 RHYTHM
 - Two to four sentences per bullet, mostly of middle length. A short, flat sentence often closes it.
-- About half the sentences open on a name or he/she. The rest vary, for example:
+- Most sentences open on their subject: a name, or he/she. Only now and then does one open otherwise, for example:
   "Three days on, …" / "To Ren, …" / "The letter …" / "What he wanted was …" / "But she …" / ""Stay," she said, and …" / "Asked why, he …" / "When she left, …"
   Never open two sentences in a bullet with the same word, other than a name.
-- Most bullets begin with a name. A reason can come after the act as easily as before it.
+- A reason can come after the act as easily as before it.
 - Join acts in one sentence only when they are one motion. When the purpose changes, start a new sentence.
 - Colon only to introduce a line, a reason, or what something meant to someone. Semicolon for two acts that answer each other. At most one em-dash per block.
 
@@ -226,10 +226,10 @@ A quiet, exact chronicler. Past tense, plain sentences, names instead of descrip
 
 RHYTHM
 - Two to four sentences per bullet, mostly of middle length. A short, flat sentence often closes it.
-- About half the sentences open on a name or he/she. The rest vary, for example:
+- Most sentences open on their subject: a name, or he/she. Only now and then does one open otherwise, for example:
   "Three days on, …" / "To Ren, …" / "The letter …" / "What he wanted was …" / "But she …" / ""Stay," she said, and …" / "Asked why, he …" / "When she left, …"
   Never open two sentences in a bullet with the same word, other than a name.
-- Most bullets begin with a name. A reason can come after the act as easily as before it.
+- A reason can come after the act as easily as before it.
 - Join acts in one sentence only when they are one motion. When the purpose changes, start a new sentence.
 - Colon only to introduce a line, a reason, or what something meant to someone. Semicolon for two acts that answer each other. At most one em-dash per block.
 
@@ -266,7 +266,7 @@ PLOT:
 - Ivo pressed her to take the river road; Mara refused it because it was his idea, and the question was left there (#71, #74).
 
 Before you output, check each section once: a reaction or decision that lost its cause, order, anything said twice, verdicts of your own, quote length, em dashes, bullet count.`;
-export const OLD_SHORT_HASHES = new Set(['1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
+export const OLD_SHORT_HASHES = new Set(['17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
 export const BUILTIN_PROMPTS = new Set(['basic', 'short']);
 
 export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
@@ -284,7 +284,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['197ipyx', '1kagm56', '1kvass7', '5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8', 'k678s0', 'lbvxyj', '1cw54yj', '936ejv', '1aww7hu', 'nx8yvf']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['1qmckm4', '197ipyx', '1kagm56', '1kvass7', '5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8', 'k678s0', 'lbvxyj', '1cw54yj', '936ejv', '1aww7hu', 'nx8yvf']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
