@@ -53,14 +53,18 @@ export function styleGuard(before, after) {
 
 // draft: the append window's text; withRaw: each section goes with the messages it covers.
 // Returns { text, changed, kept: [{ head, why }], raws }, or throws
-export async function polishStyle(draft, m, { withRaw = true } = {}) {
+// rawOf: where a section's messages come from (default: this chat, read by its heading's numbers)
+export async function polishStyle(draft, m, { withRaw = true, rawOf = null } = {}) {
     const [body, tail] = splitTail(String(draft || ''));
     const blocks = rangedBlocks(body);
     if (!blocks.length) throw new Error('다듬을 섹션이 없어요 · 제목 줄이 `## #시작–#끝 — 제목` 모양이어야 해요');
     const own = styleSamples(m).map(x => x.text);
-    const samples = (own.length ? own : lastSections(m?.text || '', 2)).join('\n\n');
+    // a section being polished is never its own sample (one already in the archive is among its last sections)
+    const heads = new Set(blocks.map(b => b.head.trim()));
+    const samples = (own.length ? own : lastSections(m?.text || '', 4).filter(x => !heads.has(x.split('\n')[0].trim())).slice(-2)).join('\n\n');
     // each section's own messages, read from the chat (they are not hidden yet); one that cannot be found goes alone
-    const raws = withRaw ? await Promise.all(blocks.map(b => rawFor(m, { title: b.head.replace(/^##\s*/, '') }, { here: true }).then(r => r.raw || '').catch(() => ''))) : blocks.map(() => '');
+    const readRaw = rawOf || (b => rawFor(m, { title: b.head.replace(/^##\s*/, '') }, { here: true }).then(r => r.raw || ''));
+    const raws = withRaw ? await Promise.all(blocks.map(b => Promise.resolve(readRaw(b)).then(x => x || '', () => ''))) : blocks.map(() => '');
     const secs = blocks.map((b, i) => (raws[i] ? `<section>\n${b.text}\n</section>\n<raw_log>\n${raws[i]}\n</raw_log>` : `<section>\n${b.text}\n</section>`)).join('\n\n');
     const prompt = `VOICE RULES:\n${voiceRules(activePrompt(globalSettings())?.text)}\n\n${samples ? `VOICE SAMPLES (already in the archive: never output them):\n${samples}\n\n` : ''}NEW SECTIONS${raws.some(Boolean) ? ', each with its RAW LOG' : ''}:\n${secs}${langBlock(m?.text || body, { tail: false, src: raws.some(Boolean) ? 'the raw log is' : '' })}`;
     const out = stripThink(await askFix(prompt, { system: AI_SYS_STYLE })).replace(/^```[a-z]*\n?|```\s*$/g, '')
