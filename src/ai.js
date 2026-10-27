@@ -237,7 +237,7 @@ async function callVertexAt(t, loc, system, prompt, maxTokens) {
         method: 'POST',
         headers: ctx().getRequestHeaders(),
         body: JSON.stringify({
-            chat_completion_source: 'vertexai', vertexai_auth_mode: 'full', vertexai_region: loc, model,
+            chat_completion_source: 'vertexai', vertexai_auth_mode: ctx().chatCompletionSettings?.vertexai_auth_mode || 'full', vertexai_express_project_id: ctx().chatCompletionSettings?.vertexai_express_project_id, vertexai_region: loc, model,
             messages: [...(system ? [{ role: 'system', content: system }] : []), ...turnsOf(prompt)],
             use_sysprompt: true, max_tokens: maxTokens, temperature: 0.3, stream: false,
             reasoning_effort: effort, include_reasoning: false,

@@ -22,7 +22,7 @@ export const EMBED_SOURCES = {
     ollama: 'Ollama',
 };
 // the model a source uses when none is typed
-export const EMBED_DEFAULT_MODEL = { palm: 'gemini-embedding-001', vertexai: 'text-multilingual-embedding-002', openai: 'text-embedding-3-small', openrouter: 'openai/text-embedding-3-small', cohere: 'embed-multilingual-v3.0', ollama: 'bge-m3' };
+export const EMBED_DEFAULT_MODEL = { palm: 'gemini-embedding-001', vertexai: 'gemini-embedding-001', openai: 'text-embedding-3-small', openrouter: 'openai/text-embedding-3-small', cohere: 'embed-multilingual-v3.0', ollama: 'bge-m3' };
 const MODEL_FREE = new Set(['transformers', 'mistral', 'nomicai']); // the server picks the model itself
 
 export function embedCfg() {
@@ -66,12 +66,10 @@ function sourceBody() {
         case 'vllm': b.model = vs.vllm_model; b.apiUrl = altUrl('vllm'); break;
         case 'palm': b.model = pickModel('google_model'); b.api = 'makersuite'; break;
         case 'vertexai': {
-            // our own pick always uses the service account JSON saved in SillyTavern; embedding models are not
-            // served from the 'global' endpoint, so that one becomes us-central1
-            b.model = pickModel('google_model'); b.api = 'vertexai';
-            b.vertexai_auth_mode = own ? 'full' : oai.vertexai_auth_mode;
-            const region = String(oai.vertexai_region || '').trim();
-            b.vertexai_region = !region || region === 'global' ? 'us-central1' : region;
+            // the key, the region and the auth mode are the ones saved in SillyTavern's Vertex AI connection
+            b.model = String(pickModel('google_model')).replace(/^models\//, ''); b.api = 'vertexai';
+            b.vertexai_auth_mode = oai.vertexai_auth_mode || 'full';
+            b.vertexai_region = String(oai.vertexai_region || '').trim() || 'global';
             b.vertexai_express_project_id = oai.vertexai_express_project_id;
             break;
         }
