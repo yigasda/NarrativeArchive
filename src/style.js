@@ -35,7 +35,7 @@ HOW MUCH TO CHANGE
 - Fix what is wrong, as little as it takes. Most bullets need one change or none; a bullet that already reads right stays word for word.
 - The small words that carry the logic (and, but, or, yet, still, because, so, only) keep their meaning: "angry at this and at that" never becomes "angry at this or that".
 - The points above are the voice's habits, not quotas. When two of them pull against each other, choose the plainer sentence that keeps the meaning exact.
-- FOUND, under a section, is what the extension counted in it by rule of thumb. Fix the items that are real; one you leave as it is, say why in your notes.
+- Under a section, MUST lists breaks of the VOICE RULES the extension counted: fix every one. CHECK lists what it suspects by rule of thumb: fix the items that are real; for one you leave as it is, say why in your notes.
 
 STEPS
 1. For each section, first write <notes>…</notes>: one line per change, "B<bullet number>: what is wrong → what you do". A bullet with nothing wrong gets no line and stays word for word.
@@ -90,7 +90,7 @@ function bulletGuard(before, after) {
     return '';
 }
 
-// ---- what the extension can count in the sentences, sent to the editor as FOUND and checked again after
+// ---- what the extension can count in the sentences, sent to the editor as MUST / CHECK and checked again after
 const NOT_NAMES = new Set(['he', 'she', 'they', 'his', 'her', 'their', 'him', 'it', 'its', 'the', 'a', 'an', 'when', 'but', 'then', 'after', 'as', 'at', 'in', 'on', 'so', 'and', 'with', 'by', 'while', 'once', 'still', 'this', 'that', 'there']);
 const METAPHORS = /\b(melt(?:ed|ing|s)?|disarm(?:ed|ing|s)?|thaw(?:ed|ing|s)?|shatter(?:ed|ing|s)?|crumbl(?:ed|ing|es)|flood(?:ed|ing|s)|wash(?:ed|es)? over|ignit(?:ed|ing|es)|spark(?:ed|ing|s)|pierc(?:ed|ing|es)|drown(?:ed|ing|s)|swallow(?:ed|ing|s) (?:by|in)|crack(?:ed|ing)? open|wall(?:s)? (?:came|come|coming) down)\b/i;
 const BODY = /\b(flushed|blushing|blushed|trembling|shaking|pale|red-faced|tearful|in tears|clenched|white-knuckled)\b/i;
@@ -98,43 +98,46 @@ const FEELING = /\b(angry|furious|ashamed|embarrassed|afraid|scared|hurt|jealous
 const sentencesOf = line => line.replace(/^\s*[-*•]\s*/, '').split(/(?<=[.!?…]["”]?)\s+(?=["“(]?[A-Z가-힣])/).map(x => x.trim()).filter(Boolean);
 const firstWord = x => (x.replace(/^["“(]+/, '').match(/^[\p{L}'’-]+/u) || [''])[0];
 const SHAPE = /^(?:[A-Z][a-z]+(?:ed|ing)\b|(?:Furious|Angry|Glad|Afraid|Unable|Resentful|Flushed|Hurt|Desperate|Determined|Stung|Surprised|Relieved|Annoyed|Ashamed|Jealous)\b)/;
+// { must, check }: must = breaks of the instruction's own rules, with no exceptions (fixed every time);
+// check = what a rule of thumb suspects (fixed when real). Bullet and word counts are not here: the pass may not
+// change how many bullets there are or drop content, so those stay with the count check that runs after it
 export function styleLint(text, { english = true } = {}) {
-    const out = sectionProblems(text, { english });
+    const must = sectionProblems(text, { english, counts: false }), check = [];
     const bullets = bulletsOf(text);
     const shaped = [];
     bullets.forEach((l, k) => {
         const B = `B${k + 1}`;
         const ss = sentencesOf(l.replace(/\([^()]*#\d[^()]*\)/g, ''));
-        if (ss.length > 4) out.push(`${B}: ${ss.length} sentences (two to four in a bullet)`);
-        const whiles = (l.match(/\bwhile\b/gi) || []).length;
-        if (whiles >= 2) out.push(`${B}: "while" ${whiles} times`);
+        if (ss.length > 4) must.push(`${B}: ${ss.length} sentences (two to four in a bullet): join the ones that are one motion`);
         const seen = new Map();
         for (const x of ss) {
             const w = firstWord(x), lw = w.toLowerCase();
             if (!w) continue;
-            if (seen.has(lw) && (NOT_NAMES.has(lw) || !/^\p{Lu}/u.test(w))) { out.push(`${B}: two sentences open with "${w}"`); break; }
+            if (seen.has(lw) && (NOT_NAMES.has(lw) || !/^\p{Lu}/u.test(w))) { must.push(`${B}: two sentences open with "${w}"`); break; }
             seen.set(lw, true);
         }
         if (!english) return;
+        const whiles = (l.match(/\bwhile\b/gi) || []).length;
+        if (whiles >= 2) check.push(`${B}: "while" ${whiles} times`);
         for (const x of ss) {
             const n = x.split(/\s+/).length;
-            if (n > 32) out.push(`${B}: a long sentence, ${n} words ("${x.split(/\s+/).slice(0, 6).join(' ')}…"): split it where the purpose changes, keeping the bullet within four sentences`);
+            if (n > 32) check.push(`${B}: a long sentence, ${n} words ("${x.split(/\s+/).slice(0, 6).join(' ')}…"): split it where the purpose changes, unless it is one motion`);
             // "paid …, packed …, and sent …": a list of acts ending in ", and <verb>"
-            if (/,\s+[a-z]+\b[^,;]*,\s+and\s+(?!(?:the|a|an|his|her|their|he|she|they|it|its|that|this|then|so)\b)[a-z]+/.test(x)) out.push(`${B}: several acts joined in one sentence ("${x.split(/\s+/).slice(0, 6).join(' ')}…")`);
+            if (/,\s+[a-z]+\b[^,;]*,\s+and\s+(?!(?:the|a|an|his|her|their|he|she|they|it|its|that|this|then|so)\b)[a-z]+/.test(x)) check.push(`${B}: several acts joined in one sentence ("${x.split(/\s+/).slice(0, 6).join(' ')}…"): fine if they are one motion`);
             if (SHAPE.test(x.replace(/^["“(]+/, ''))) shaped.push(`${B} "${x.split(/\s+/).slice(0, 2).join(' ')}…"`);
             const mt = x.match(METAPHORS);
-            if (mt) out.push(`${B}: "${mt[0]}" may be a narrator image: say plainly what happened`);
+            if (mt) check.push(`${B}: "${mt[0]}" may be a narrator image: if it is, say plainly what happened`);
             // a feeling standing as its own sentence: "He was furious at …", "She felt hurt …"
             const fs = x.replace(/^["“(]+/, '').match(/^(?:He|She|They|[A-Z][a-z]+) (?:was|were|felt|grew|became) (?:\w+ )?(angry|furious|ashamed|embarrassed|afraid|scared|hurt|jealous|anxious|nervous|stung|glad|relieved|upset|annoyed|irritated|resentful|surprised|startled|shocked|pleased|happy|sad|worried|frustrated)\b/);
-            if (fs) out.push(`${B}: the feeling stands as its own sentence ("${x.split(/\s+/).slice(0, 4).join(' ')}…"): put the act first and the feeling after it in the same sentence`);
-            if (BODY.test(x) && FEELING.test(x)) out.push(`${B}: a feeling named and shown by the body together ("${x.match(BODY)[0]}", "${x.match(FEELING)[0]}"): keep one`);
+            if (fs) check.push(`${B}: the feeling stands as its own sentence ("${x.split(/\s+/).slice(0, 4).join(' ')}…"): the act first, the feeling after it in the same sentence`);
+            if (BODY.test(x) && FEELING.test(x)) check.push(`${B}: a feeling named and shown by the body together ("${x.match(BODY)[0]}", "${x.match(FEELING)[0]}"): keep one`);
         }
     });
-    // "Also" opening a sentence is a patch; "Then" is left alone, it carries the order or the pause of a closing beat
+    // "also" opening or patching a sentence; "Then" is left alone, it carries the order or the pause of a closing beat
     const alsos = bullets.flatMap((l, k) => sentencesOf(l).filter(x => /^Also\b|^\S+ also\b/.test(x)).map(() => `B${k + 1}`));
-    if (english && alsos.length) out.push(`"also" patches ${alsos.length} sentence${alsos.length > 1 ? 's' : ''} (${alsos.join(', ')}): join the act to the one before it instead`);
-    if (shaped.length >= 2) out.push(`${shaped.length} sentences open on a feeling or a participle instead of the subject: ${shaped.join(', ')}. Keep the one that reads best, turn the others subject first`);
-    return [...new Set(out)];
+    if (english && alsos.length) check.push(`"also" patches ${alsos.length} sentence${alsos.length > 1 ? 's' : ''} (${alsos.join(', ')}): join the act to the one before it instead`);
+    if (shaped.length >= 2) check.push(`${shaped.length} sentences open on a feeling or a participle instead of the subject: ${shaped.join(', ')}. Keep the one that reads best, turn the others subject first`);
+    return { must: [...new Set(must)], check: [...new Set(check)] };
 }
 
 // a rewritten section, bullet by bullet: the heading and the number of bullets must hold, or it all stays;
@@ -175,12 +178,13 @@ export async function polishStyle(draft, m, { withRaw = false, rawOf = null, aga
     const raws = withRaw ? await Promise.all(blocks.map(b => Promise.resolve(readRaw(b)).then(x => x || '', () => ''))) : blocks.map(() => '');
     const english = archiveLang(m?.text || body) !== 'ko';
     const found = blocks.map(b => styleLint(b.text, { english }));
-    const secs = blocks.map((b, i) => `<section>\n${b.text}\n</section>${found[i].length ? `\nFOUND:\n${found[i].map(x => `- ${x}`).join('\n')}` : ''}${raws[i] ? `\n<raw_log>\n${raws[i]}\n</raw_log>` : ''}`).join('\n\n');
+    const list = (name, xs) => (xs.length ? `\n${name}:\n${xs.map(x => `- ${x}`).join('\n')}` : '');
+    const secs = blocks.map((b, i) => `<section>\n${b.text}\n</section>${list('MUST', found[i].must)}${list('CHECK', found[i].check)}${raws[i] ? `\n<raw_log>\n${raws[i]}\n</raw_log>` : ''}`).join('\n\n');
     const prompt = `VOICE RULES:\n${voiceRules(activePrompt(globalSettings())?.text)}\n\n${samples ? `VOICE SAMPLES (already in the archive: never output them):\n${samples}\n\n` : ''}NEW SECTIONS${raws.some(Boolean) ? ', each with its RAW LOG' : ''}:\n${secs}${langBlock(m?.text || body, { tail: false, src: raws.some(Boolean) ? 'the raw log is' : '' })}`;
     const answer = stripThink(await askFix(prompt, { system: AI_SYS_STYLE })).replace(/^```[a-z]*\n?|```\s*$/g, '');
     // the editor's notes, one line per change; then what is left is the sections (tags a model echoed back go too)
     const notes = [...answer.matchAll(/<notes>([\s\S]*?)<\/notes>/g)].flatMap(x => x[1].split('\n').map(l => l.replace(/^\s*[-*•]\s*/, '').trim()).filter(Boolean));
-    const out = answer.replace(/<notes>[\s\S]*?<\/notes>/g, '').replace(/<raw_log>[\s\S]*?<\/raw_log>/g, '').replace(/^FOUND:\n(?:- .*\n?)*/gm, '').replace(/^\s*<\/?section>\s*$/gm, '').trim();
+    const out = answer.replace(/<notes>[\s\S]*?<\/notes>/g, '').replace(/<raw_log>[\s\S]*?<\/raw_log>/g, '').replace(/^(?:FOUND|MUST|CHECK):\n(?:- .*\n?)*/gm, '').replace(/^\s*<\/?section>\s*$/gm, '').trim();
     const got = rangedBlocks(out);
     if (!got.length) throw new Error('모델이 섹션 모양으로 답하지 않았어요 · 초안은 그대로예요');
     let text = body, changed = 0;
@@ -196,8 +200,10 @@ export async function polishStyle(draft, m, { withRaw = false, rawOf = null, aga
         changed++;
     }
     // what is still there after the pass, counted the same way
-    const after = rangedBlocks(text).map(b => styleLint(b.text, { english })).flat();
-    let res = { text: `${text.replace(/\n{3,}/g, '\n\n')}${tail}`, changed, kept, raws: raws.filter(Boolean).length, notes, foundBefore: found.flat().length, left: after };
+    // what still breaks a rule after the pass (the CHECK items may have been left on purpose, with a reason in the notes)
+    const mustLeft = t => rangedBlocks(t).flatMap(b => styleLint(b.text, { english }).must.map(x => `${b.head.replace(/^##\s*/, '').split(' — ')[0]} ${x}`));
+    const after = mustLeft(text);
+    let res = { text: `${text.replace(/\n{3,}/g, '\n\n')}${tail}`, changed, kept, raws: raws.filter(Boolean).length, notes, foundBefore: found.reduce((n, f) => n + f.must.length + f.check.length, 0), left: after };
     if (again && changed && after.length) {
         const r2 = await polishStyle(res.text, m, { withRaw, rawOf, again: false }).catch(() => null);
         if (r2?.changed) res = { ...r2, changed: Math.max(changed, r2.changed), kept: [...kept, ...r2.kept.filter(k => !kept.some(x => x.head === k.head))], notes: [...notes, ...r2.notes], foundBefore: res.foundBefore };
@@ -206,12 +212,12 @@ export async function polishStyle(draft, m, { withRaw = false, rawOf = null, aga
     if (again && res.changed && countCheckOn()) {
         const c = await checkCounts({ text: res.text }, { m });
         res = { ...res, text: c.text, countFixed: c.countFixed || 0, countLeft: c.countLeft || 0 };
-        if (c.countFixed) res.left = rangedBlocks(splitTail(res.text)[0]).map(b => styleLint(b.text, { english })).flat();
+        if (c.countFixed) res.left = mustLeft(splitTail(res.text)[0]);
     }
     return res;
 }
 
 // one line for the toast: how many changes the editor listed, and what the count still finds
-export const styleSummary = r => `${r.notes?.length ? ` · 고친 점 ${r.notes.length}개` : ''}${r.left?.length ? ` · 아직 남은 것 ${r.left.length}개: ${r.left.slice(0, 3).join(' / ')}${r.left.length > 3 ? ' …' : ''}` : ' · 셀 수 있는 건 다 고쳐졌어요'}`;
+export const styleSummary = r => `${r.notes?.length ? ` · 고친 점 ${r.notes.length}개` : ''}${r.left?.length ? ` · 아직 남은 규칙 위반 ${r.left.length}개: ${r.left.slice(0, 3).join(' / ')}${r.left.length > 3 ? ' …' : ''}` : ' · 규칙 위반은 다 고쳐졌어요'}`;
 // what stayed as it was: whole sections, or single bullets inside a section that was otherwise taken
 export const keptSummary = r => (r.kept?.length ? ` · 그대로 둔 것: ${r.kept.map(k => `${k.head.split(' — ')[0]} ${k.why.replace(/ · 그 불릿만 그대로$/, '')}`).join(' / ')}` : '');
