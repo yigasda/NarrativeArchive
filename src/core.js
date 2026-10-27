@@ -3,7 +3,7 @@
 import { syncTrackedBoundary } from './hide.js';
 import { applyInjection } from './inject.js';
 import { syncPanel } from './panel.js';
-import { BASIC_PROMPT, OLD_BASIC, OLD_BASIC_HASHES, OLD_DEFAULTS, OLD_SHORT_HASHES, PREV_BASIC, SHORT_PROMPT } from './prompts.js';
+import { BASIC_PROMPT, OLD_BASIC, OLD_BASIC_HASHES, OLD_DEFAULTS, OLD_SHORT_HASHES, PREV_BASIC, SHORT_PROMPT, TIDY_PROMPT } from './prompts.js';
 import { parseSections } from './sections.js';
 
 // 서사 아카이브 (Narrative Archive)
@@ -12,7 +12,7 @@ import { parseSections } from './sections.js';
 
 export const MODULE = 'narrative_archive';
 export const PROMPT_KEY = 'narrative_archive_injection';
-export const VERSION = '3.83.0';
+export const VERSION = '3.84.0';
 export const SNAPSHOT_MAX = 5;
 export const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -177,6 +177,8 @@ export function globalSettings() {
     if (!g.prompts.some(p => p.id === 'short')) g.prompts.splice(g.prompts.indexOf(basic) + 1, 0, { id: 'short', name: '짧은 기본', text: SHORT_PROMPT, fav: true });
     const short = g.prompts.find(p => p.id === 'short');
     if (OLD_SHORT_HASHES.has(textHash(short.text))) short.text = SHORT_PROMPT;
+    // the tidied basic one, after the short one
+    if (!g.prompts.some(p => p.id === 'tidy')) g.prompts.splice(g.prompts.indexOf(short) + 1, 0, { id: 'tidy', name: '기본 (정리본)', text: TIDY_PROMPT, fav: true });
     if (!g.prompts.some(p => p.id === g.activePrompt)) g.activePrompt = g.prompts[0].id;
     return g;
 }
