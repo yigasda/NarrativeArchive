@@ -12,7 +12,7 @@ import { extraBlocks } from './inject.js';
 import { castNames, knowledgeRows } from './knowledge.js';
 import { syncPanel } from './panel.js';
 import { isOffstage, offstageSet } from './recall.js';
-import { findCited, parseSections } from './sections.js';
+import { findCited, parseSections, splitTail } from './sections.js';
 import { openSource } from './source.js';
 import { SVG_B, svgB } from './theme.js';
 import { countTokens, esc, fmt, timeLabel } from './util.js';
@@ -88,6 +88,39 @@ export function driftBacked(line, m, secs = parseSections(m.text)) {
     const have = new Set(tokenize(hay));
     return words.filter(w => have.has(w)).length / words.length >= 0.7;
 }
+// warnings whose evidence the archive check could not find go to the AI 기능 모델 once more, with the message, the
+// section they cite and what was written after; only the ones it keeps come back as real warnings
+export const AI_SYS_DRIFT_RECHECK = `GOAL
+A checker flagged places where a role-play reply seems to break the story archive, but the evidence it quoted could not be found in the archive word for word. Decide for each one whether it is a real clash.
+
+YOU GET
+For each numbered WARNING: the warning itself, the MESSAGE it is about, the archive SECTION it cites (or the archive's end when it cites none), and LATER CHAT: what was written after that message.
+
+KEEP it when the section clearly says something the message contradicts, and nothing in the later chat explains or settles it.
+DROP it when the section does not say that, when the clash is only about wording, or when the later chat explains it.
+If unsure, DROP.
+
+OUTPUT: one line per warning, nothing else
+1: KEEP
+2: DROP`;
+export const driftRecheckOn = () => globalSettings().driftRecheck !== false;
+export async function recheckDrift(m, weak, recent) {
+    const secs = parseSections(m.text), chat = ctx().chat || [];
+    const [, tail] = splitTail(m.text);
+    const blocks = weak.map((l, k) => {
+        const mt = l.trim().match(DRIFT_LINE);
+        const n = mt ? Number(mt[1]) : NaN;
+        const cited = mt?.[6] ? [...mt[6].matchAll(/\[\[(.+?)\]\](?!\])/g)].map(x => findCited(secs, x[1])).filter(Boolean) : [];
+        const section = cited.length ? cited.map(s => m.text.slice(s.start, s.end).trim()).join('\n\n') : (tail.trim() || m.text.slice(-3000));
+        const msg = Number.isFinite(n) && chat[n] ? cleanMessage(String(chat[n].mes || ''), { stripTags: true }) : '';
+        const later = recent.filter(r => Number((r.match(/^\[#(\d+)/) || [])[1]) > n).join('\n\n');
+        return `[WARNING ${k + 1}]\n${l.trim()}\n[MESSAGE #${n}]\n${msg.slice(0, 3000) || '(not found)'}\n[SECTION]\n${section.slice(0, 4000)}\n[LATER CHAT]\n${later.slice(-4000) || '(none)'}`;
+    });
+    const out = await askAI(blocks.join('\n\n'), { system: AI_SYS_DRIFT_RECHECK, maxTokens: 1500 });
+    const keep = new Set([...String(out).matchAll(/^\s*(\d+)\s*[:.)-]\s*KEEP\b/gim)].map(x => Number(x[1]) - 1));
+    return weak.filter((_, k) => keep.has(k)).map(l => l.trim());
+}
+
 export const driftLines = text => String(text || '').split('\n').filter(l => /^\s*[-*•]/.test(l));
 
 export async function runDrift(m, n) {
@@ -101,8 +134,14 @@ export async function runDrift(m, n) {
     const none = /^\s*(없음|none)\.?\s*$/i.test(out);
     const from = Number((recent[0].match(/^\[#(\d+)/) || [])[1]);
     const lines = none ? [] : driftLines(out);
-    const strong = lines.filter(l => driftBacked(l, m)).length;
-    m.driftLast = { at: Date.now(), n: none ? 0 : lines.length ? strong : 1, weak: lines.length - strong, checked: true, none, text: out, upto: lastIndex(), count: recent.length, ...(Number.isFinite(from) ? { from } : {}) };
+    const weak = lines.filter(l => !driftBacked(l, m));
+    let kept = [];
+    if (weak.length && driftRecheckOn()) {
+        try { kept = await recheckDrift(m, weak, recent); }
+        catch (e) { console.warn('[narrative-archive] drift recheck', e); }
+    }
+    const strong = lines.length - weak.length + kept.length;
+    m.driftLast = { at: Date.now(), n: none ? 0 : lines.length ? strong : 1, weak: weak.length - kept.length, kept, checked: true, none, text: out, upto: lastIndex(), count: recent.length, ...(Number.isFinite(from) ? { from } : {}) };
     await saveMeta();
     syncPanel();
     return m.driftLast;
@@ -139,14 +178,16 @@ export function driftSecLabel(title) {
 // parses one "- #57 Set [SECRET]: … — 근거: fact [[…]]" line (older answers have no [TYPE] / fact)
 export const DRIFT_LINE = /^[-*•]\s*#(\d+)\s+([^:：[\]]{1,40}?)\s*(?:\[([^\]]{1,20})\])?\s*[:：]\s*(.+?)(?:\s*[—–-]\s*근거\s*[:：]?\s*(.*?)\s*((?:\[\[[^\]]+\]\][\s,]*)+))?\s*$/;
 // one card per drift line; anything else falls back to the plain rendering
-export function driftCards(text, m, { check = false } = {}) {
+export function driftCards(text, m, { check = false, kept: kept0 = [] } = {}) {
     const secs = parseSections(m.text);
     const lines = String(text).split('\n').map(l => l.trim()).filter(l => /^[-*•]/.test(l));
     if (!lines.length) return `<div class="na_v2_card">${driftHtml(text, m)}</div>`;
     return lines.map(l => {
         // checked answers: each card says whether its evidence was found in the archive; unfound ones are dimmed in place
-        const backed = check ? driftBacked(l, m, secs) : null;
-        const mark = backed === null ? '' : backed ? '<span class="na_dr2_ev_ok">근거 확인</span>' : '<span class="na_dr2_ev_no" title="모델이 든 근거 글을 그 섹션에서 못 찾았어요 · 헛경고일 수 있어요">근거 못 찾음</span>';
+        const found = check ? driftBacked(l, m, secs) : null;
+        const kept = check && !found && (kept0 || []).includes(l.trim());
+        const backed = found === null ? null : found || kept;
+        const mark = backed === null ? '' : found ? '<span class="na_dr2_ev_ok">근거 확인</span>' : kept ? '<span class="na_dr2_ev_ok" title="근거 글이 그대로는 없었지만 AI가 다시 보고 맞다고 했어요">다시 확인함</span>' : '<span class="na_dr2_ev_no" title="근거 글을 그 섹션에서 못 찾았고, 다시 확인에서도 남지 않았어요 · 헛경고일 수 있어요">근거 못 찾음</span>';
         const mt = l.match(DRIFT_LINE);
         if (!mt) return `<div class="na_v2_card na_dr2_item">${driftHtml(l, m)}</div>`;
         const dim = backed === false ? ' na_dr2_unbacked' : '';
@@ -190,7 +231,7 @@ export async function openDrift() {
         const okBar = text => `<div class="na_dr2_ok">${svgB(SVG_B.check, 15, 2.6)}<span>${text}</span></div>`;
         $root.find('.na_dr_out').html(d.none
             ? `<div class="na_v2_label"><span>검사 결과</span><small>${meta}</small></div>${okBar(`검사한 ${d.count}개 메시지 모두 아카이브와 맞아요`)}`
-            : `<div class="na_v2_label"><span>어긋난 곳${d.checked ? ` ${d.n}개` : n ? ` ${n}개` : ''}</span><small>${meta}</small></div>${driftCards(d.text, m, { check: !!d.checked })}${flagged && rest > 0 ? okBar(`나머지 ${rest}개 메시지는 아카이브와 맞아요`) : ''}`);
+            : `<div class="na_v2_label"><span>어긋난 곳${d.checked ? ` ${d.n}개` : n ? ` ${n}개` : ''}</span><small>${meta}</small></div>${driftCards(d.text, m, { check: !!d.checked, kept: d.kept || [] })}${flagged && rest > 0 ? okBar(`나머지 ${rest}개 메시지는 아카이브와 맞아요`) : ''}`);
     };
     $root.find('.na_dr2_dec, .na_dr2_inc').on('click', function () { const $n = $root.find('.na_dr_n'); $n.val(Math.min(60, Math.max(2, (parseInt($n.val(), 10) || 12) + ($(this).hasClass('na_dr2_inc') ? 2 : -2)))); });
     countTokens(m.text).then(t => {
