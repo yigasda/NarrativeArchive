@@ -4043,3 +4043,16 @@ body.na_darkui #na_settings { --sv-page: #2F2621; --sv-card: #3A2F28; --sv-line:
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238A7A70' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important; background-position: right 2px center !important; background-size: 14px !important;
 }
+
+/* ---- 3.82.2: search boxes are one rounded field — the input inside sits flat, whatever a theme does to inputs */
+:is(#na_settings, .na_v2, .na_popup) .na_search_wrap input,
+:is(#na_settings, .na_v2, .na_popup) .na_search_wrap input:is(:hover, :focus, :focus-visible),
+:is(#na_settings, .na_v2, .na_popup) input:is(.na_pc_q, .na_ss_find, #na_find_q),
+:is(#na_settings, .na_v2, .na_popup) input:is(.na_pc_q, .na_ss_find, #na_find_q):is(:hover, :focus, :focus-visible) {
+    background: transparent !important; background-color: transparent !important; background-image: none !important;
+    border: 0 !important; outline: none !important; box-shadow: none !important; border-radius: 0 !important; filter: none !important;
+}
+:is(#na_settings, .na_v2, .na_popup) .na_search_wrap input::-webkit-search-decoration { -webkit-appearance: none; }
+
+/* the 도구 tab's group boxes in the same card colour as the settings cards */
+#na_settings .na_tab_pane[data-pane="tools"] > .na_block { background: var(--hm-card); border: 1px solid var(--hm-line); border-radius: 18px; }
