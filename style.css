@@ -3967,3 +3967,20 @@ body:not(.na_darkui) #na_settings .na_cp_mbtn.on { background: #FFFAF6; }
 
 /* 뜻으로 찾기: model name and address read like the other values, right-aligned (v3.79.1) */
 #na_settings .na_tab_pane[data-pane="config"] .na_set_row .na_cfg_val input[type="text"] { width: 11em; max-width: 100%; min-width: 0; cursor: text; text-overflow: ellipsis; }
+
+/* ============ ⚙ 설정 묶음 안: tiles on top, tabs, one tab's rows (v3.80) */
+#na_settings .na_cfg_tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 4px; }
+#na_settings .na_cfg_tiles[hidden], #na_settings .na_cfg_tabs[hidden] { display: none; }
+#na_settings .na_cfg_tile { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-height: 92px; width: auto; margin: 0; padding: 13px 14px; box-sizing: border-box; border: 1px solid var(--hm-line); border-radius: 18px; background: transparent; color: var(--hm-dim); font: inherit; text-align: left; cursor: pointer; min-width: 0; }
+#na_settings .na_cfg_tile.on { background: var(--hm-card); border-color: transparent; color: var(--hm-ink); }
+#na_settings .na_cfg_tile:last-child:nth-child(odd) { grid-column: 1 / -1; min-height: 0; }
+#na_settings .na_cfg_tile small { font-size: 0.857em; color: var(--hm-dim); }
+#na_settings .na_cfg_tile b { font-size: 1.32em; font-weight: 700; line-height: 1.3; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#na_settings .na_cfg_tile:not(.on) b { color: var(--hm-dim); }
+#na_settings .na_cfg_tile span { margin-top: auto; font-size: 0.857em; color: var(--hm-dim); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#na_settings .na_cfg_tabs { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--hm-tile); margin-top: 2px; }
+#na_settings .na_cfg_tabbtn { flex: 1; min-width: 0; width: auto; margin: 0; border: 0; border-radius: 11px; padding: 9px 2px; font: inherit; font-size: 0.929em; background: transparent; color: var(--hm-dim); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#na_settings .na_cfg_tabbtn.on { background: var(--hm-card); color: var(--hm-ink); font-weight: 700; box-shadow: 0 1px 3px var(--hm-shadow); }
+body:not(.na_darkui) #na_settings .na_cfg_tabbtn.on { background: #FFFFFF; }
+#na_settings .na_tab_pane[data-pane="config"] .na_tab_off, #na_settings .na_tab_pane[data-pane="config"] .na_tab_empty { display: none !important; }
+#na_settings .na_cfg_one .na_cfg_label { display: none; }
