@@ -231,7 +231,9 @@ export function placeAppend(archive, add, { renumber, rewrites = 'skip' } = {}) 
     }
 
     let text = trimEnd(body);
-    if (blocks.length) text += `${sep || eTail ? '\n\n---\n\n' : '\n\n'}${blocks.map(b => b.text).join('\n\n')}`;
+    // a first STATE / OPEN (a new chat) keeps the --- the answer put before it
+    const pSep = /\n-{3,}\s*$/.test(trimEnd(pBody));
+    if (blocks.length) text += `${sep || eTail || pSep ? '\n\n---\n\n' : '\n\n'}${blocks.map(b => b.text).join('\n\n')}`;
     return { text: `${text}\n`, placed: !!eTail && !!pClean.trim(), replaced, renumbered, skipped, swapped, rewriteCount: found.filter(f => f.kind !== 'divider').length, exactCount: found.filter(f => f.kind === 'exact').length };
 }
 

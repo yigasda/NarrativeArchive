@@ -2,7 +2,7 @@
 
 import { ctx, globalSettings, newId, saveGlobal } from './core.js';
 import { showStripInfo } from './extract.js';
-import { RANGE_HEAD, lastRangedSection, parseSections } from './sections.js';
+import { RANGE_HEAD, lastRangedSection, parseSections, splitTail } from './sections.js';
 import { confirm, esc } from './util.js';
 
 export const BASIC_PROMPT = `<raw_log range="#{{from}}–#{{to}}">
@@ -13,57 +13,60 @@ export const BASIC_PROMPT = `<raw_log range="#{{from}}–#{{to}}">
 {{state}}
 </current_state>
 
-You continue the long-term-memory summary (the archive) of a long-running role-play. The archive is injected into the prompt and read alongside the live chat as "a snapshot of the past." The raw log #{{from}}–#{{to}} is above in <raw_log>, and the archive's current STATE and OPEN in <current_state>. Read the raw log in full, from the first message to the last, then write the new stretch that follows the archive.
+You continue the archive: the long-term memory of a long-running role-play, read alongside the live chat as a snapshot of the past. Read the raw log #{{from}}–#{{to}} in <raw_log> in full, from the first message to the last, then write the new stretch that follows the archive. <current_state> holds the archive's STATE and OPEN now.
 
 # 1. Output
 Output exactly these parts, in this order, with no greeting, explanation or commentary:
 0. The <scenes> block described in 9.
 1. The new section blocks, covering #{{from}}–#{{to}} continuously: no gaps, no overlaps, the first heading starting at #{{from}} and the last block ending at #{{to}}. Numbers are always message numbers.
 2. A line containing only \`---\`
-3. If the archive has \`# STATE AT …\` / \`# OPEN AT …\`: two change lists, \`# STATE CHANGES\` and \`# OPEN CHANGES\` (rules in 8). Never write the blocks out. If the archive has none, leave this part out.
+3. If the archive has \`# STATE AT …\` / \`# OPEN AT …\`: two change lists, \`# STATE CHANGES\` and \`# OPEN CHANGES\` (rules in 8). Never write the blocks out. If <current_state> is empty (a new chat), follow the NEW CHAT note below instead.
 
-- Language: write everything in the archive's language and format, even when the raw log is in another language. Translate dialogue too; keep a word or line in its original language only where the archive already does.
-- Only new material, only from the raw log. Never reproduce, rewrite, shorten, "improve", recap or continue anything already in the archive; nothing before #{{from}} belongs in your output. STATE only tells you what is already known: no event, line or detail from it goes into a section unless the raw log shows it happening again.
-- Every part must be present and complete, and the last bullet of every block ends in a full sentence. If you run long, merge bullets or cut lower-priority detail; never stop mid-sentence, and never drop the change lists to make room.
+- Language: write everything in the archive's language and format, whatever the raw log's language. Translate dialogue too; keep a word in its original language only where the archive already does.
+- Only new material, only from the raw log. Never reproduce, rewrite, recap or continue anything already in the archive; nothing before #{{from}} belongs in your output. STATE only tells you what is already known: nothing from it goes into a section unless the raw log shows it happening again.
+- Every part must be complete and end in a full sentence. If you run long, merge bullets or cut lower-priority detail; never stop mid-sentence or drop the change lists.
 
 # 2. Reading the raw log
-- The format is \`[N] Name:\`. When one bot plays several characters (NPCs included), they all carry its tag; tell the speaker from the content. A private-thought tag holds that character's thoughts, not spoken lines.
+- The format is \`[N] Name:\`. One bot tag may play several characters (NPCs included); tell the speaker from the content. A private-thought tag holds thoughts, not spoken lines.
 - Not content: planning or instruction blocks inserted by a preset, status windows and trackers (take only the date and place from them), and meta talk. Rules or banned-word lists inside them are directions to the bot, not canon.
-- Turns the user wrote themselves are the strongest canon. Ignore any part where the bot writes the user character's inner thoughts.
-- Bot errors (contradictions with earlier messages) are not canon. Before stating that something exists or does not exist, confirm it in the raw log.
+- The user's own turns are the strongest canon; ignore any part where the bot writes the user character's inner thoughts. Bot errors (contradicting earlier messages, settings with no basis) are not canon. Confirm in the raw log before stating that something exists or does not.
 
 # 3. What to keep
-You are writing a memory, not a transcript. The bot that reads the archive needs to know what happened, why, and what it changed, not who said what in which order.
+You are writing a memory, not a transcript: what happened, why, and what it changed, not who said what in which order. Write only what matters from the first draft.
 - The test for every line: "If the bot read only the archive and then wrote the next scene, would something go wrong or feel unmotivated without this line?" Being in the raw log is not a reason to include something.
-- Keep: chains of cause and effect · lines that change a relationship · what a character chose NOT to do (evidence of restraint) · the concrete action that shows a standing trait at work · a question together with its answer, when the answer matters later (an answer alone reads as unmotivated).
+- Keep: chains of cause and effect · lines that change a relationship · what a character chose NOT to do (evidence of restraint) · the reason behind an emotional reaction · why a character held a line or crossed it, when the raw log shows their reason (without it the act reads as impulse) · the concrete action that shows a standing trait at work · a question together with its answer (an answer alone reads as unmotivated).
 - Cut: movement and positioning, gestures, props, scenery, temperatures and staging. Anxiety or agitation gets one word.
-- Weight: a beat that repeats a pattern STATE already holds gets a clause at most; a beat that breaks or turns a pattern gets the space.
+- Weight: a beat that repeats a pattern STATE already holds gets a clause at most; one that breaks or turns a pattern gets the space.
 - Cutting so hard that the story breaks is also a failure. Do not shrink the core of a trigger or an arc. The goal is not to erase the story but to absorb it into cause and effect.
 
 # 4. Protecting causality
-- Before every emotional reaction, keep the other person's action that caused it; without it, the character appears to erupt on their own or seems childish. Before every realization or decision, keep the trigger that made it possible; cut the process and the character "suddenly understands."
-- Write felt experience as felt experience, not as the narrator's verdict. ("Trapped" ✗ → "Feeling trapped" ✓) A character's interpretation is written only as theirs, never as fact: "In her own reckoning, …", "as he took it, …". No interpretation, theme or summary-verdict sentences of your own.
-- When a reaction draws on a past event, name the event plainly and briefly, as in "remembering the shipwreck", never a summary of what it means, such as "refusing any echo of past self-destruction".
+- Before every emotional reaction, keep the other person's action that caused it; without it, the character seems to erupt on their own or seems childish (how many refusals piled up, a reason heard and still brushed aside, before she felt the wall and left; the threat, before the fear).
+- Before every realization or decision, keep the trigger that made it possible; cut the process and the character "suddenly understands" (he handed her the choice for the first time, so she chose).
+- Write felt experience as felt experience, not as the narrator's verdict. ("Hunted into a dead end" ✗ → "Feeling hunted into a dead end" ✓) A character's interpretation is written only as theirs, never as fact: "(her reading, not his intent)", "In her own reckoning, …". No interpretation, theme or summary-verdict sentences of your own.
+- When a reaction draws on a past event, name the event plainly ("remembering the shipwreck"), never a summary of its meaning ("refusing any echo of past self-destruction").
 - Preserve both sides' responsibility. Do not erase one side's fault because of the other side's hurt, in either direction.
+  ✗ "the old wound beneath her sense of being caged" (reads as if the cage was only in her head) → ✓ "the old wound that drove that fear so deep"
+  ✗ "running away gave her no freedom" → ✓ "running away alone could not prove she was free"
+- Write a character's present feelings from where the relationship stands now. Once the relationship has changed, describe how they see the other person today, not through the lens of an earlier arc.
 - Be careful with absolutes such as "never" and "not once." They make a character read as cold or indifferent.
-- Keep the raw log's order. Do not pull a later event (when someone remembered or noticed something) into an earlier bullet. No exaggeration beyond the raw log.
+- Keep the raw log's order. Do not pull a later event (when someone remembered or noticed something) into an earlier bullet. Nothing stronger than the raw log says.
 
 # 5. Writing the sections
 Sections
-- A section is a chapter, not a beat. Cut only where something turns: a relationship shifts, the situation changes, a secret comes out, a decision is made. Fold routine stretches and small beats into the section they belong to. Most sections cover 10–20 messages; a single long event may run longer, and a sharp turn may get a short section of its own.
+- A section is a chapter, not a beat. Cut only where something turns: a relationship shifts, the situation changes, a secret comes out, a decision is made. Fold small beats into the section they belong to. Most sections cover 10–20 messages; a long event may run longer, a sharp turn may get a short one.
 - Header: \`## #start–#end — Title (date, place)\`, then \`PLOT:\`, then \`- \` bullets. If STATE's heading puts a prefix before the numbers (e.g. \`# STATE AT Y2 #143\`), put it in your headings too.
-- The date and place come from the tracker and narration. A tracker date that does not fit (a season that does not match the month, a date that goes backward) is a model error; ignore it. If a large time skip happens without a record, note it in the header (e.g. "some five months later"). No clock times ("5:29 PM" ✗); a part of the day (morning, evening, night) is enough.
+- Date and place come from the tracker and narration; a tracker date that does not fit (a season wrong for the month, a date going backward) is a model error, ignore it. Note an unrecorded time skip in the header ("some five months later"). No clock times; a part of the day (morning, evening, night) is enough.
 
 Bullets
-- Bullets only, no paragraphs. One bullet = one turn of the scene: what happened, what caused it, and what it changed. A bullet may cover many messages; never one bullet per message, and never a conversation reported turn by turn ("He asked… She replied… He added…"). Collapse an exchange into what it revealed, decided or broke.
+- Bullets only, no paragraphs. One bullet = one event: what happened, what caused it, and what it changed. A bullet may cover many messages; never one bullet per message, and never a conversation reported turn by turn ("He asked… She replied…"). Collapse an exchange into what it revealed, decided or broke. To shorten, merge bullets.
 - 2–6 bullets per section, never more than 6; rarely more than about 250 words. A stretch that truly needs more is two chapters: split it where it turns.
-- Every sentence in a bullet ends with the number of the message it comes from, in parentheses: (#88), or (#88, #91) when it draws on two. Only numbers inside the section's own range, and for a reason or motive only messages up to the moment it explains. A sentence you cannot point to a message for (a motive, a fear, a meaning the log does not state) does not go in. The extension checks these numbers and removes them when it saves.
+- Every sentence in a bullet ends with its source message number in parentheses: (#88), or (#88, #91). Only numbers inside the section's own range. A sentence you cannot point to a message for (a motive, a fear, a meaning the log does not state) does not go in. The extension checks these numbers and removes them when it saves.
 - Do not say the same thing twice. When you add a sentence, check the bullets before and after it for the same content.
 - Em dashes sparingly: at most one in a section's bullets. Otherwise use a comma, a colon or a new sentence.
 
 Dialogue
-- Quotes are part of the memory, not decoration. Most bullets carry one: the line from the raw log the next scene would most need word for word: a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. At most two in a bullet; tell the rest in your own words.
-- A quote is a line that actually appears in the raw log (translated when the log is in another language), faithful to the original, including whether it is a question: if the original is a statement, do not add a question mark. Never invent or paraphrase a line and present it as a quote. Never leave a quote standing alone; attach the character's reaction to it.
+- Quotes are part of the memory, not decoration, and not a transcript. Quote only a line that changes a relationship or defines a character, the one the next scene would need word for word: a decision, a confession, a refusal, a correction, a promise, an accusation, a line that says what someone is to someone. Many bullets carry none; at most two in a bullet. Tell the rest in your own words, absorbed into cause and effect.
+- A quote is a line that actually appears in the raw log (translated when the log is in another language), faithful to the original, including whether it is a question: a statement gets no question mark. Never invent or paraphrase a line as a quote. Never leave a quote standing alone; attach the character's reaction to it.
 - Keep a quote short: one sentence, under about 20 words. If the line runs longer, quote the part that matters; never reword it.
 
 Special content
@@ -84,32 +87,18 @@ Titles
   ✗ Ren crosses the bridge; Mara pulls him up · Confrontation over Ren's injury
 
 # 6. Example
-✗ Turn-by-turn:
-- Mara knocked on Ren's door and stood silently in the doorway.
-- Ren asked why she had come back if she had said she was leaving.
-- Mara said she didn't know.
-- Ren let her in and made tea.
-- Ren told her the north road was closed.
-- Mara said, "Then I'll wait."
-
 ✓ Memory, in the archive's own style:
 ## #57–#69 — The north road (Spring 3, night, Varo)
 PLOT:
 - Mara came back the same night she had sworn to leave, unable to say why (#57, #59). Ren let her in without pressing and told her the north road was closed, and she stayed: "Then I'll wait." (#60, #63)
 - Over supper Ivo let slip that he had paid her passage toll in secret (#65). Ren did not cover for him; in his own account he had known for days and kept quiet because the debt was not his to name (#66, #68). Mara heard it as two men deciding her road between them and set the toll-mark on the table: "Neither of you asked." (#69)
 
-## #70–#73 — The toll-mark (Spring 4, dawn)
-PLOT:
-- Ivo offered to take the mark back; Mara refused, since returning it would only let him decide a second time (#70, #71). She asked Ren to walk her to the gate instead, and he went without a word, which she read as the first thing either of them had let her choose (#72, #73).
 
 # 7. Before you output
 Draft the stretch, then revise it once and output only the revised version:
-1. Delete every bullet that fails the test in 3.
-2. Merge bullets that share one cause or one outcome.
-3. Cut staging that survived the draft: how a line was said (a voice, hands, a laugh), where someone stood, and what someone "knew" or "meant" unless it is written as their reading.
-4. Check that every quote is a line from the raw log and earns its place, and that every sentence has its message number.
-5. Count each section's bullets (more than 6 means merge or split), its words (over about 250 means cut) and its em dashes (more than one means rewrite).
-6. Check every bullet that touches sex against the sex rule; cut what it does not allow.
+1. Check that no emotional reaction, realization or decision has lost the action or trigger that caused it.
+2. Check that every quote is a line from the raw log and earns its place, and that every sentence has its message number.
+3. Count each section's bullets (more than 6: merge or split), its words (over about 250: cut) and its em dashes (more than one: rewrite). Check every bullet that touches sex against the sex rule.
 
 # 8. STATE and OPEN changes
 You do not rewrite STATE or OPEN. You list what this stretch changes in them; the extension applies the lists to <current_state>, and every line you do not list stays exactly as it is. One change per line:
@@ -122,14 +111,14 @@ DROP ## Heading :: - the old line, copied exactly
 ADD ## Group :: - a thread this stretch opened
 DROP ## Group :: - a thread this stretch closed, copied exactly
 \`\`\`
-- \`## Heading\` / \`## Group\` is the one the line sits under, spelled exactly as in <current_state>; leave out \`## Group ::\` when OPEN has no groups. Do not invent headings; a new fact goes under the heading it belongs to. A list with nothing in it is \`(none)\`.
-- EDIT a STATE line only when this stretch makes it untrue or outdated, so an old behavior a later arc changed does not stay in the present tense. Change only what changed and keep the rest of the line word for word; never shorten a line to save space, never merge lines.
-- DROP a STATE line only when the story itself has overturned it. What a character realized or resolved not to do stays until the story overturns it. Keep safety lines that lock the current state (e.g. "memories fully restored since #n": it stops the bot from mistaking an old arc for the present).
-- New and edited STATE lines: per character + relationships + current life. Only the changes and tendencies that PLOT alone does not capture, briefly; do not restate events already in the sections. One line for a core principle the bot is likely to confuse is allowed. Scope principles narrowly to prevent over-application ("no commands" ✗, which could change even how he talks → "no longer dictates her choices or movements" ✓); use "tends to" or "since #n" instead of "now" or "currently."
+- \`## Heading\` / \`## Group\` is the one the line sits under, spelled exactly as in <current_state>; leave out \`## Group ::\` when OPEN has no groups. Do not invent headings. An empty list is \`(none)\`.
+- EDIT a STATE line only when this stretch makes it untrue or outdated, so an old behavior a later arc changed does not stay in the present tense (one who used to ignore her signals and has changed: "can still ask, but stops at a clear no"). Change only what changed and keep the rest of the line word for word; never shorten a line to save space, never merge lines.
+- DROP a STATE line only when the story itself has overturned it; what a character realized or resolved stays until then. Keep safety lines that lock the current state (e.g. "memories fully restored since #n": it stops the bot from mistaking an old arc for the present).
+- New and edited STATE lines: per character + relationships + current situation (or household). Only the changes and tendencies that PLOT alone does not capture, briefly; do not restate events already in the sections. STATE may hold interpretation, but a character's reading is attributed to them, never raised to fact. One line for a core principle the bot is likely to confuse is allowed. Scope principles narrowly to prevent over-application ("no commands" ✗, which could change even how he talks → "no longer dictates her choices or movements" ✓); use "tends to" or "since #n" instead of "now" or "currently."
 - OPEN: drop only threads this stretch closed. Keep new threads short; do not prescribe future actions.
 
 # 9. Before you write
-First write the scene boundaries of #{{from}}–#{{to}} by message number (where time, place or the situation turns) inside <scenes>…</scenes>, one line per scene, and check there that every message from #{{from}} to #{{to}} falls inside one of them. The extension removes this block. Then write the sections on those boundaries. Do not output STATE or OPEN in full; <current_state> is for reading only.`;
+First list the scene boundaries of #{{from}}–#{{to}} by message number (where time, place or the situation turns) inside <scenes>…</scenes>, one line per scene, every message inside one of them; the extension removes this block. Then write the sections on those boundaries. Do not output STATE or OPEN in full unless the NEW CHAT note says so; <current_state> is for reading only.`;
 // earlier basic text, upgraded when untouched
 // 짧은 기본: the same rules cut to their core, for a lighter model or when the long one is not being followed
 export const SHORT_PROMPT = `<raw_log range="#{{from}}–#{{to}}">
@@ -196,7 +185,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8', 'k678s0', 'lbvxyj', '1cw54yj', '936ejv', '1aww7hu', 'nx8yvf']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['1kvass7', '5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8', 'k678s0', 'lbvxyj', '1cw54yj', '936ejv', '1aww7hu', 'nx8yvf']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -368,12 +357,36 @@ export function sizeBlock({ k = 0, n = 1, count, total = count, from, to, partFr
 }
 // the long raw log goes first (a template that puts it on top in <raw_log> / <current_state>), so the AU block
 // sits right after those, with the instructions; older templates keep it on top
+// a chat whose archive has no STATE / OPEN yet: the built-in instruction asks for both blocks in full (and the archive's
+// title line), following this note; it goes in only then, so every later stretch reads a shorter instruction
+export const NEW_CHAT_NOTE = `# NEW CHAT
+This chat's archive has no STATE or OPEN yet. Start the output with the archive's title line and note, then the sections, then \`---\` and both blocks in full:
+\`\`\`
+# <character> × <character> — Context Archive (#{{from}}–#{{to}})
+_Continuity record, not a script. Ends at #{{to}} — where the live chat differs, the live chat is correct._
+
+…sections…
+
+---
+# STATE AT #{{to}} (date, part of day, place)
+_True at #{{to}}. A character's reading marked as such is not canon._
+## <each character>
+## Relationships
+## Current situation
+# OPEN AT #{{to}}
+_Unresolved at #{{to}}; check recent messages before treating any as pending._
+\`\`\`
+The heading is always "STATE AT", never "CURRENT STATE". The STATE rules in 8 apply: short lines, no events already in the sections, a character's reading attributed to them. OPEN may be split into groups (e.g. ## Deep past · ## Relationships · ## World and live plot); keep threads short and do not prescribe future actions.`;
+
 export const compressPrompt = (tpl, vars, m, memo = '', size = '') => {
     const body = fillPrompt(tpl, { recent: recentSections(vars.archive ?? m.text), ...vars });
     const au = auBlock(m), cut = body.indexOf('</current_state>');
     const withAu = !au ? body : cut >= 0 ? `${body.slice(0, cut + 16)}\n\n${au.trim()}${body.slice(cut + 16)}` : au + body;
     // the note, the size and the language go before a closing "Before you write" step, so that step is read last
-    const extra = memoBlock(memo) + size + langBlock(m.text);
+    // (a later part of a long range already has the STATE the first part wrote, so it gets change lists again)
+    const noState = vars.state === undefined ? !splitTail(String(vars.archive ?? m.text ?? ''))[1].trim() : !String(vars.state).trim() || String(vars.state).trim() === '(없음)';
+    const fresh = /NEW CHAT note/.test(tpl) && noState ? `\n\n${NEW_CHAT_NOTE.split('{{from}}').join(vars.from ?? '').split('{{to}}').join(vars.to ?? '')}` : '';
+    const extra = fresh + memoBlock(memo) + size + langBlock(m.text);
     const last = withAu.lastIndexOf('\n# 9. Before you write');
     return last >= 0 ? `${withAu.slice(0, last).replace(/\s+$/, '')}${extra}\n\n${withAu.slice(last + 1)}` : withAu + extra;
 };
