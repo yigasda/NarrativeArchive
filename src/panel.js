@@ -27,7 +27,7 @@ import { openQuotes } from './quotes.js';
 import { openReader } from './reader.js';
 import { routerCandidates, routerCfg, routerState, runRouter } from './router.js';
 import { GUESS_MODES, guessMode, lastGuess } from './guess.js';
-import { EMBED_DEFAULT_MODEL, EMBED_SOURCES, embedCfg, embedError, embedLabel, embedState, setEmbed, syncEmbed } from './embed.js';
+import { EMBED_DEFAULT_MODEL, EMBED_MODELS, EMBED_SOURCES, embedCfg, embedError, embedLabel, embedState, setEmbed, syncEmbed } from './embed.js';
 import { cachedTokens, checkHeadings, filterMuted, groupLabel, linkedMap, mutedCount, parseSections, pinnedSet, sectionKey } from './sections.js';
 import { refreshStatus } from './status.js';
 import { ICO_A, setUiTheme, svgA, uiTheme } from './theme.js';
@@ -398,7 +398,8 @@ export function renderPanel() {
                 <div class="na_set_list">
                   <label class="na_set_row" title="섹션과 숨긴 원문을 뜻으로도 찾아요 · 라우터 · 회상이 단어가 안 겹쳐도 비슷한 뜻이면 찾고, 한국어 채팅으로 영어 아카이브도 찾아요 · 실리태번 서버의 벡터 저장소를 써요"><span><span>뜻으로 찾기 (임베딩)</span><small>라우터 · 회상이 비슷한 뜻도 찾게</small></span>
                     <span class="na_cfg_val"><select id="na_emb_src" class="text_pole">${Object.entries(EMBED_SOURCES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" id="na_emb_model_row" hidden><span><span>임베딩 모델</span><small>비우면 기본 모델</small></span><span class="na_cfg_val"><input type="text" id="na_emb_model" class="text_pole" spellcheck="false">${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" id="na_emb_pick_row" hidden><span><span>임베딩 모델</span><small id="na_emb_pick_sub"></small></span><span class="na_cfg_val"><select id="na_emb_pick" class="text_pole"></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" id="na_emb_model_row" hidden><span><span>모델 이름</span><small>직접 입력</small></span><span class="na_cfg_val"><input type="text" id="na_emb_model" class="text_pole" spellcheck="false">${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" id="na_emb_url_row" hidden><span><span>Ollama 주소</span></span><span class="na_cfg_val"><input type="text" id="na_emb_url" class="text_pole" spellcheck="false" placeholder="http://127.0.0.1:11434">${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <button type="button" class="na_set_row na_cfg_go" id="na_emb_build" hidden><span><span>뜻 색인 만들기</span><small id="na_emb_sub">처음 한 번 · 이 채팅의 섹션과 숨긴 원문</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   <label class="na_set_row" title="답이 잘리면 늘려 주세요"><span>답 최대 길이</span><span class="na_cfg_val"><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
@@ -619,7 +620,7 @@ function cfgTiles(g) {
             ['AI 기능 모델', a1, a2 || '질문 · 점검 · 라우터', true, 'ai'],
             ['초안 모델', draftReady() ? (draftSettings().mode === 'vertex' ? 'Vertex' : '커스텀') : '없음', draftReady() ? drLabel() : '압축 초안 · 짧은 버전', draftReady(), 'dr'],
             ['번역 모델', tr === 'same' ? '같이' : split2(trLabel())[0], tr === 'same' ? 'AI 기능 모델' : split2(trLabel())[1], tr !== 'same', 'tr'],
-            ['뜻으로 찾기', e.source ? (e.source === 'st' ? '실리태번' : split2(embedLabel())[0]) : '끔', e.source ? (st?.synced ? `섹션 ${st.secs} · 원문 ${st.raws}` : '색인 아직') : '단어로만 찾아요', !!e.source, 'emb'],
+            ['뜻으로 찾기', e.source ? ({ st: '실리태번', vertexai: 'Vertex', palm: 'AI Studio', transformers: '로컬' }[e.source] || split2(embedLabel())[0]) : '끔', e.source ? (st?.synced ? `섹션 ${st.secs} · 원문 ${st.raws}` : '색인 아직') : '단어로만 찾아요', !!e.source, 'emb'],
         ];
     }
     if (g === 'aitask') {
@@ -700,11 +701,20 @@ function layoutCfg() {
 }
 
 // 뜻으로 찾기 rows: model and address only for a source of our own, the build row once it is on
+let embTyping = false; // 직접 입력 picked: keep the name box open
 function syncEmbedRows() {
     const e = embedCfg();
     $('#na_emb_src').val(e.source);
     const own = e.source && e.source !== 'st';
-    $('#na_emb_model_row').prop('hidden', !own || ['transformers', 'mistral', 'nomicai'].includes(e.source));
+    // a list to pick from where we know the models, the name box for the rest or for "직접 입력"
+    const picks = own ? EMBED_MODELS[e.source] || [] : [];
+    const free = !own || ['transformers', 'mistral', 'nomicai'].includes(e.source);
+    const cur = e.model || EMBED_DEFAULT_MODEL[e.source] || '';
+    const known = embTyping ? null : picks.find(x => x[0] === cur);
+    $('#na_emb_pick_row').prop('hidden', free || !picks.length);
+    $('#na_emb_pick').html(picks.map(([v]) => `<option value="${esc(v)}">${esc(v)}</option>`).join('') + '<option value="">직접 입력…</option>').val(known ? cur : '');
+    $('#na_emb_pick_sub').text(known ? known[1] : '아래에 모델 이름을 넣어요');
+    $('#na_emb_model_row').prop('hidden', free || (picks.length > 0 && !!known && !embTyping));
     $('#na_emb_model').val(e.model).attr('placeholder', EMBED_DEFAULT_MODEL[e.source] || '');
     $('#na_emb_url_row').prop('hidden', e.source !== 'ollama');
     $('#na_emb_url').val(e.url);
@@ -1285,8 +1295,14 @@ export function bindPanel() {
     $('#na_state_depth').on('change', needChat(async e => { const m = getMeta(); m.stateRemind = { ...stateCfg(m), depth: Math.min(20, Math.max(0, parseInt(e.target.value, 10) || 0)) }; await saveMeta(); applyInjection(); syncPanel(); }));
     $('#na_off_fold').on('click', '.na_off_chip', function () { setOffKind(this.dataset.k, !offKinds()[this.dataset.k]); syncPanel(); refreshStatus(); });
     $('#na_fallback').on('change', function () { globalSettings().fallback = this.value; saveGlobal(); });
-    $('#na_emb_src').on('change', function () { setEmbed({ source: this.value }); syncEmbedRows(); if (this.value) $('#na_emb_build').trigger('click'); });
+    $('#na_emb_src').on('change', function () { embTyping = false; setEmbed({ source: this.value, model: '' }); syncEmbedRows(); if (this.value) $('#na_emb_build').trigger('click'); });
     $('#na_emb_model').on('change', function () { setEmbed({ model: this.value.trim() }); syncEmbedRows(); });
+    $('#na_emb_pick').on('change', function () {
+        embTyping = !this.value;
+        if (this.value) setEmbed({ model: this.value });
+        syncEmbedRows();
+        if (embTyping) $('#na_emb_model').val('').trigger('focus');
+    });
     $('#na_emb_url').on('change', function () { setEmbed({ url: this.value.trim() }); syncEmbedRows(); });
     $('#na_emb_build').on('click', needChat(async e => {
         const $b = $(e.currentTarget);
