@@ -12,7 +12,7 @@ import { parseSections } from './sections.js';
 
 export const MODULE = 'narrative_archive';
 export const PROMPT_KEY = 'narrative_archive_injection';
-export const VERSION = '3.73.1';
+export const VERSION = '3.73.2';
 export const SNAPSHOT_MAX = 5;
 export const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -122,10 +122,18 @@ export function pushSnapshot(m, reason) {
     return true;
 }
 
+// A title line ("# A × B — Context Archive (…)") and its "_Continuity record, not a script…_" note, which archives written
+// elsewhere carry at the top: the extension keeps neither (the STATE note already says the live chat wins)
+export function stripArchiveHead(text) {
+    return String(text)
+        .replace(/^\s*# [^\n]*Context Archive[^\n]*\n+/i, '')
+        .replace(/^\s*_?Continuity record, not a script\.[^\n]*\n+/im, '');
+}
+
 // Every change to the archive text goes through here: snapshot, save, re-inject, refresh UI.
 export async function commitText(text, reason, { boundary } = {}) {
     const m = getMeta();
-    const next = String(text).replace(/\r\n/g, '\n');
+    const next = stripArchiveHead(String(text).replace(/\r\n/g, '\n'));
     if (next === m.text && (boundary === undefined || boundary === m.boundary)) return false;
     const snapped = pushSnapshot(m, reason);
     if (next !== m.text) {
