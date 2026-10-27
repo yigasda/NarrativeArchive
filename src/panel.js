@@ -206,19 +206,19 @@ export function renderPanel() {
                 </div>
                 <div class="na_v2_label"><span>설정 <span class="na_cp_for" id="na_cp_for"></span></span></div>
                 <div class="na_v2_card na_v2_list na_cp_set">
-                  <label class="na_cp_row" hidden><span class="na_cp_txt"><span>한 번에 압축 · 바로 넣기</span><small>검사가 다 통과하면 추가 창 없이 넣고 숨겨요 · 알림에서 되돌리기 · 걸리는 게 있으면 추가 창</small></span><input type="checkbox" class="na_toggle" id="na_quick_auto"></label>
-                  <label class="na_cp_row" data-m="quick"><span class="na_cp_txt"><span>압축 방식</span><small>2단계: 정리 모델이 메시지마다 한 줄로 정리(되짚기는 빼고) → 초안 모델이 그 목록으로 섹션을 써요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_cmode">${Object.entries(COMPRESS_MODES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <label class="na_cp_row na_cmode_ev" data-m="quick"><span class="na_cp_txt"><span>2단계 · 정리 모델</span><small>메시지 15개씩 여러 번 불러요 · 싼 모델 추천</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_evmodel">${Object.entries(EVENTS_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <label class="na_cp_row na_cmode_sc" data-m="quick studio"><span class="na_cp_txt"><span>장면 크기</span><small>장면마다 섹션 하나씩 따로 받아요 · 클수록 싸고, 작을수록 꼼꼼해요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_scsize">${Object.entries(SCENE_SIZES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <label class="na_cp_row" hidden title="검사가 다 통과하면 추가 창 없이 넣고 숨겨요 · 알림에서 되돌리기 · 걸리는 게 있으면 추가 창"><span class="na_cp_txt"><span>한 번에 압축 · 바로 넣기</span><small>검사 통과하면 바로 넣기</small></span><input type="checkbox" class="na_toggle" id="na_quick_auto"></label>
+                  <label class="na_cp_row" data-m="quick"><span class="na_cp_txt"><span>압축 방식</span><small id="na_cmode_sub"></small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_cmode">${Object.entries(COMPRESS_MODES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <label class="na_cp_row na_cmode_ev" data-m="quick" title="메시지 15개씩 여러 번 불러요"><span class="na_cp_txt"><span>2단계 · 정리 모델</span><small>싼 모델 추천</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_evmodel">${Object.entries(EVENTS_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <label class="na_cp_row na_cmode_sc" data-m="quick studio" title="장면마다 섹션 하나씩 따로 받아요"><span class="na_cp_txt"><span>장면 크기</span><small>클수록 싸고, 작을수록 꼼꼼해요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_scsize">${Object.entries(SCENE_SIZES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                   <label class="na_cp_row na_cmode_sc" data-m="quick"><span class="na_cp_txt"><span>장면별 · 섹션 모델</span><small>장면 수만큼 불러요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_scmodel">${Object.entries(SCENE_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <label class="na_cp_row na_cmode_sc" data-m="quick"><span class="na_cp_txt"><span>장면별 · STATE 모델</span><small>마지막에 한 번 · 바뀌는 것만 받아요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_stmodel">${Object.entries(SCENE_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <div class="na_cp_row na_cmode_sc na_trk_row" data-m="quick studio"><span class="na_cp_txt"><span>장면 · 트래커 정규식</span><small>날짜·장소·시간이 바뀌는 곳에서 끊어요 (그룹 이름 date · place · time) · 비우면 메시지 수로만</small><textarea class="text_pole na_trk_re" id="na_trkre" rows="2" spellcheck="false"></textarea><span class="na_trk_btns"><button type="button" class="na_linkbtn" id="na_trkre_reset">기본값</button><small id="na_trkre_info"></small></span></span></div>
+                  <label class="na_cp_row na_cmode_sc" data-m="quick"><span class="na_cp_txt"><span>장면별 · STATE 모델</span><small>마지막에 한 번</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_stmodel">${Object.entries(SCENE_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <div class="na_cp_row na_cmode_sc na_trk_row" data-m="quick studio" title="그룹 이름 date · place · time · 비우면 메시지 수로만 잘라요"><span class="na_cp_txt"><span>장면 · 트래커 정규식</span><small>날짜·장소가 바뀌는 곳에서 끊어요</small><textarea class="text_pole na_trk_re" id="na_trkre" rows="2" spellcheck="false"></textarea><span class="na_trk_btns"><button type="button" class="na_linkbtn" id="na_trkre_reset">기본값</button><small id="na_trkre_info"></small></span></span></div>
                   <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_stylesample"><span class="na_cp_txt"><span>문체 견본</span><small id="na_style_sub"></small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
-                  <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_worknote"><span class="na_cp_txt"><span>작업 노트</span><small id="na_worknote_sub">이 이야기의 인수인계 · canon · 살린 줄 · 이전 실수 · 장면마다 같이 보내요</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
-                  <label class="na_cp_row na_cmode_raw" data-m="quick"><span class="na_cp_txt"><span>원문 그대로 · 나눠 보내기</span><small>긴 원문을 몇 조각으로 보낼지 · 조각마다 앞 조각에 이어 써요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_chunk">${Object.entries(CHUNK_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <label class="na_cp_row" data-m="quick"><span class="na_cp_txt"><span>세는 규칙 검사</span><small>불릿 수 · 단어 수 · 엠대시 · 금지어를 확장이 세고, 넘친 섹션만 다시 고쳐 받아요 · 지시문의 규칙은 그대로</small></span><input type="checkbox" class="na_toggle" id="na_count_check"></label>
-                  <label class="na_cp_row" data-m="quick"><span class="na_cp_txt"><span>규칙은 시스템 메시지로</span><small>지시문의 규칙은 시스템 메시지에, 원문 · 메모 · 마지막 점검은 요청에 · 시스템 메시지를 버리는 중계 서버면 끄세요</small></span><input type="checkbox" class="na_toggle" id="na_rules_sys"></label>
-                  <label class="na_cp_row"><span class="na_cp_txt"><span>쌓이면 알려 주기</span><small>압축할 메시지가 이만큼 쌓이면 알림 · 누르면 압축</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_nudge">${Object.entries(NUDGE_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_worknote"><span class="na_cp_txt"><span>작업 노트</span><small id="na_worknote_sub">장면마다 같이 보내요</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
+                  <label class="na_cp_row na_cmode_raw" data-m="quick" title="조각마다 앞 조각에 이어 써요"><span class="na_cp_txt"><span>원문 그대로 · 나눠 보내기</span><small>긴 원문을 나눌 크기</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_chunk">${Object.entries(CHUNK_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <label class="na_cp_row" data-m="quick" title="불릿 수 · 단어 수 · 엠대시 · 금지어를 확장이 세고, 넘친 섹션만 다시 고쳐 받아요 · 지시문의 규칙은 그대로"><span class="na_cp_txt"><span>세는 규칙 검사</span><small>넘친 섹션만 다시 고쳐 받아요</small></span><input type="checkbox" class="na_toggle" id="na_count_check"></label>
+                  <label class="na_cp_row" data-m="quick" title="지시문의 규칙은 시스템 메시지에, 원문 · 메모 · 마지막 점검은 요청에"><span class="na_cp_txt"><span>규칙은 시스템 메시지로</span><small>중계 서버가 버리면 끄세요</small></span><input type="checkbox" class="na_toggle" id="na_rules_sys"></label>
+                  <label class="na_cp_row" title="압축할 메시지가 이만큼 쌓이면 알림 · 누르면 압축"><span class="na_cp_txt"><span>쌓이면 알려 주기</span><small>이만큼 쌓이면 알림</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_nudge">${Object.entries(NUDGE_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                 </div>
                 <div class="na_v2_card na_v2_list na_cp_set">
                   <details class="na_cp_fold na_cp_more_fold" id="na_cp_more">
@@ -749,6 +749,7 @@ function layoutCp() {
         if (show && md === 'quick') show = !($r.hasClass('na_cmode_ev') && cm !== 'events') && !($r.hasClass('na_cmode_raw') && cm !== 'raw') && !($r.hasClass('na_cmode_sc') && cm !== 'scenes');
         $r.toggle(show);
     });
+    $('#na_cmode_sub').text({ raw: '원문을 그대로 보내요', scenes: '장면마다 섹션 하나씩', events: '메시지를 한 줄씩 줄인 뒤 써요' }[cm] || '');
     $('#na_cp_for').text(`· ${CP_METHODS[md]}`);
     const flag = (id, on) => $(id).attr('aria-pressed', String(on)).toggleClass('on', on).find('b').text(on ? '켬' : '끔');
     flag('#na_flag_auto', !!g.quickAuto);
@@ -1524,7 +1525,7 @@ export function syncPanel() {
     $('#na_cmode').val(compressMode()); $('#na_evmodel').val(eventsModel()); layoutCp();
     $('#na_scsize').val(String(sceneSize())); $('#na_scmodel').val(sceneModel()); $('#na_stmodel').val(stateModel()); $('#na_trkre').val(trackerRe());
     $('#na_style_sub').text(styleLabel(getMeta()));
-    { const wn = String(getMeta().workNote || '').trim(); $('#na_worknote_sub').text(wn ? `있음 · 약 ${wn.length.toLocaleString()}자 · 장면마다 같이 보내요` : '이 이야기의 인수인계 · canon · 살린 줄 · 이전 실수 · 장면마다 같이 보내요'); }
+    { const wn = String(getMeta().workNote || '').trim(); $('#na_worknote_sub').text(wn ? `약 ${wn.length.toLocaleString()}자 · 장면마다 같이` : '장면마다 같이 보내요'); }
     {
         const au = auOf(m);
         $('#na_au_sub').text(au.on ? `켜짐 · 요약이 본편 뒤 ${au.name} 묶음으로 이어져요` : '본편 기억을 들고 온 채팅이면 켜요');

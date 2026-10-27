@@ -322,7 +322,7 @@ export async function openStyleSamples() {
     $('#na_style_sub').text(styleLabel(getMeta()));
     toastr.success(picked.size ? '문체 견본을 저장했어요' : '문체 견본을 비웠어요', '문체 견본');
 }
-export const styleLabel = m => { const xs = styleSamples(m); return xs.length ? xs.map(x => x.title.replace(RANGE_HEAD, '$5').replace(/^\s*[—–-]\s*/, '').replace(/\s*\([^()]*\)\s*$/, '')).join(' · ') : '마음에 드는 섹션 1–2개 · 새 요약이 쌓여도 문체가 안 떠내려가요'; };
+export const styleLabel = m => { const xs = styleSamples(m); return xs.length ? xs.map(x => x.title.replace(RANGE_HEAD, '$5').replace(/^\s*[—–-]\s*/, '').replace(/\s*\([^()]*\)\s*$/, '')).join(' · ') : '마음에 드는 섹션 1–2개'; };
 
 // the work note's parts; a line added from the 압축 작업실 goes under one of them
 export const NOTE_PARTS = ['Canon', '살린 줄', '실수 목록', '문체'];
