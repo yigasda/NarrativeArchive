@@ -8,12 +8,12 @@ import { openAppend } from './append.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { activePrompt, archiveLang, auBlock, auFix, auOf, langBlock } from './prompts.js';
 import { NOTE_PARTS, STATE_SYS, answerBlocks, noteInsert, openStyleSamples, styleBlock, styleSamples, chunksFromStarts, detectScenes, lastSections, openWorkNote, parseSceneAnswer, rulesText, sceneChunks, scenesText, startsFromText } from './scenes.js';
-import { CITE_RE, headingRanges, lastRangeEnd, splitTail } from './sections.js';
+import { CITE_RE, headingRanges, lastRangeEnd, splitTail, stripCites } from './sections.js';
 import { openSource } from './source.js';
 import { refreshStatus } from './status.js';
 import { translateLines, trLineOk } from './translate.js';
 import { svgA } from './theme.js';
-import { confirm, esc, timeLabel } from './util.js';
+import { confirm, copyText, esc, timeLabel } from './util.js';
 import { nextRange, rangeRaw } from './wizard.js';
 import { checkCounts } from './rulecheck.js';
 
@@ -448,7 +448,7 @@ export async function openStudio() {
             const free = !(t.scene !== undefined && locked.has(t.scene)) && blocks.some(x => x.a !== null);
             const styleBtn = free && !fixBusy.has(i) ? `<button type="button" class="na_st_fix na_st_polish" data-i="${i}" title="문장 결만 아카이브처럼 · 내용 · 출처 번호 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 · AI 기능 모델">문체 다듬기</button>` : '';
             const backBtn = t.before && !fixBusy.has(i) ? `<button type="button" class="na_st_unfix" data-i="${i}" title="고치기 전 답으로">고치기 전으로</button>` : '';
-            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st_tags">${tags}<span class="na_st_lks">${fixBtn}${styleBtn}${backBtn}${koBtn}${locks}</span></div></div>`;
+            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st_tags">${tags}<span class="na_st_lks">${fixBtn}${styleBtn}${backBtn}<button type="button" class="na_st_copy" data-i="${i}" title="이 답의 섹션을 아카이브 모양으로 복사 (출처 번호는 빼고)">복사</button>${koBtn}${locks}</span></div></div>`;
         }).join('') + (busy ? '<div class="na_st_bub na_st_typing"><i></i><i></i><i></i><small>쓰는 중 · 이 탭에 있어야 받아요</small></div>' : '');
         const $log = $root.find('.na_st_log');
         const atEnd = $log[0] ? $log[0].scrollHeight - $log[0].scrollTop - $log[0].clientHeight < 80 : true;
@@ -575,6 +575,20 @@ export async function openStudio() {
             console.error('[NarrativeArchive] studio style', e);
             toastr.error(String(e?.message || e), '문체 다듬기');
         } finally { fixBusy.delete(i); draw(); }
+    });
+    // 복사: the answer's sections as they would go into the archive (heading with numbers, PLOT, bullets; no source marks)
+    $root.on('click', '.na_st_copy', async function () {
+        const i = Number(this.dataset.i), s = sessionOf(getMeta()), t = s?.turns[i];
+        if (!t) return;
+        const sc = t.scene !== undefined ? s.scenes[t.scene] : null;
+        const blocks = sc ? parseSceneAnswer(t.text, sc.a, sc.b) : answerBlocks(t.text);
+        const text = blocks.length ? stripCites(blocks.map(x => (x.a !== null ? sectionText(x, prefixOf(getMeta())) : `## ${x.title || 'Untitled'}\nPLOT:\n${x.bullets.join('\n')}`)).join('\n\n')) : String(t.text || '');
+        const ta = Object.assign(document.createElement('textarea'), { value: text });
+        ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+        this.closest('.na_st_bub')?.appendChild(ta);
+        const ok = await copyText(text, ta);
+        ta.remove();
+        if (ok) toastr.success('복사했어요', '압축 작업실', { timeOut: 1500 }); else toastr.warning('복사하지 못했어요', '압축 작업실');
     });
     $root.on('click', '.na_st_unfix', async function () {
         const i = Number(this.dataset.i), s = sessionOf(getMeta()), t = s?.turns[i];
