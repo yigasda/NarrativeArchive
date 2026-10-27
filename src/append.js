@@ -1,7 +1,7 @@
 // Adding new sections to the archive: checks, preview and the append popup.
 
 import { aiHtml, askAI, askCompress, askFix, draftReady, stripThink, withSpinner } from './ai.js';
-import { commitText, ctx, getMeta, sectionChanges } from './core.js';
+import { commitText, ctx, getMeta, globalSettings, sectionChanges } from './core.js';
 import { lineDiff, renderDiff } from './diff.js';
 import { guessEndNumber } from './extract.js';
 import { applyHide } from './hide.js';
@@ -412,11 +412,15 @@ export async function openAppend(prefill = {}) {
       <div class="na_popup na_v2 na_ap2">
         <div class="na_v2_titlebar">
           <div class="na_v2_title"><b>아카이브에 추가</b><small>STATE·OPEN 앞에 넣고, 새 STATE로 바꿔요</small></div>
-          <button type="button" class="na_v2_pillbtn na_append_file_btn" title="파일에서 불러오기">.txt</button>
-          <input type="file" class="na_append_file" accept=".txt,.md,text/plain" hidden>
         </div>
         <textarea class="text_pole na_append_ta" spellcheck="false" placeholder="## Y2 #574–#600 — 제목 (날짜, 장소)&#10;PLOT:&#10;- …"></textarea>
-        ${true ? `<div class="na_apf">
+        <div class="na_wz2_chips na_ap_outinfo"></div>
+        <div class="na_v2_row2 na_ap_tools">
+          <button type="button" class="na_v2_btn na_append_file_btn">${svgA('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>', 15)}파일 불러오기</button>
+          ${pre.grade ? '' : `<button type="button" class="na_v2_btn na_ap_grade" title="붙여넣은 섹션을 그 번호의 원문과 맞춰 봐요 · AI 기능 모델">${svgA('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14l2 2 4-4"/>', 15)}원문 대조</button>`}
+        </div>
+        <input type="file" class="na_append_file" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden>
+        ${true ? `<div class="na_apf" hidden>
           <div class="na_sf_log na_apf_log"></div>
           <div class="na_sf_note na_apf_note" hidden></div>
           <div class="na_ly_ask"><input type="text" class="na_ly_askq na_apf_q" placeholder="초안 고쳐 달라고 하기 (예: #60 이후 더 줄여줘)" aria-label="초안 고쳐 달라고 하기" enterkeyhint="send"><button type="button" class="na_ly_askgo na_apf_go" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>
@@ -747,6 +751,14 @@ export async function openAppend(prefill = {}) {
             // sections and STATE · OPEN apart: the tail is rewritten in full each time, so the total alone overstates the new summary
             const [body, tl] = splitTail(val), all = has ? await countTokens(val) : 0, tt = tl.trim() ? await countTokens(tl) : 0;
             $root.find('.na_append_info').text(has ? `약 ${fmt(all)} 토큰${tt ? ` (섹션 ${fmt(all - tt)} · STATE·OPEN ${fmt(tt)})` : ''} · 섹션 ${parseSections(body).filter(x => !x.group).length}개` : '');
+            // the same chips as the wizard's paste step: how many sections, whether their numbers follow on, STATE · OPEN, tokens
+            const secsN = parseSections(body).filter(x => !x.group && RANGE_HEAD.test(x.title)).length;
+            const rs = headingRanges(body).map(x => ({ a: Math.min(x.from, x.to), b: Math.max(x.from, x.to) })).sort((x, y) => x.a - y.a);
+            const joined = rs.length && rs.every((x, i) => !i || x.a === rs[i - 1].b + 1);
+            const okc = secsN && (!rs.length || joined);
+            const chk = svgA(ICO_A.check, 12, 3);
+            $root.find('.na_ap_outinfo').html(has ? `<span class="${okc ? 'ok' : secsN ? 'warn' : ''}">${okc ? chk : ''}섹션 ${secsN}개${rs.length ? ` · #${rs[0].a}–#${Math.max(...rs.map(x => x.b))}${joined ? ' 이어짐' : ' · 사이가 빔'}` : ''}</span>${tl.trim() ? `<span class="ok">${chk}STATE·OPEN</span>` : ''}<span>${fmt(all)} 토큰</span>` : '');
+            $root.find('.na_apf').prop('hidden', !has);
         }, 400);
     });
 
@@ -822,6 +834,22 @@ export async function openAppend(prefill = {}) {
         apf.original = null; apf.asked = []; apf.steps = [];
         $root.find('.na_apf_log').empty(); $root.find('.na_apf_note').prop('hidden', true); $root.find('.na_apf_undo').prop('hidden', true);
     });
+    // 원문 대조 for pasted text: the numbers its headings cover, hidden messages included
+    $root.find('.na_ap_grade').on('click', async function () {
+        const v = $ta.val().trim();
+        const rs = headingRanges(splitTail(v)[0]);
+        if (!rs.length) return toastr.info('번호가 붙은 섹션(## #시작–#끝)이 있어야 원문과 맞춰 볼 수 있어요.');
+        const from = Math.min(...rs.map(x => Math.min(x.from, x.to))), to = Math.max(...rs.map(x => Math.max(x.from, x.to)));
+        const { rangeRaw, AI_SYS_GRADE } = await import('./wizard.js');
+        const raw = rangeRaw(c, { ...globalSettings(), skipHidden: false }, from, Math.min(to, last)).raw;
+        if (!raw) return toastr.info(`#${from}–#${to} 원문이 이 채팅에 없어요.`);
+        const out = await withSpinner($(this), '대조하는 중', () => askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${v}`, { system: AI_SYS_GRADE, maxTokens: 3000 }));
+        if (out === null) return;
+        const ok = /^\s*문제 없음\.?\s*$/.test(out);
+        $root.find('.na_grade_out').prop('hidden', false).toggleClass('na_ai_ok', ok)
+            .html(ok ? '<i class="fa-solid fa-circle-check"></i> 원문 대조: 잘 맞아요' : `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 원문 대조 <span class="na_dim">· 참고용 · 고치려면 위 글을 직접 고치세요</span></div>${driftHtml(out, m)}`);
+    });
+    $root.on('click', '.na_grade_out .na_cite_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
     // 한 번에 압축 with 채점: the grader's verdict on the summary, message numbers open the raw log
     if (pre.grade) {
         const ok = /^\s*문제 없음\.?\s*$/.test(pre.grade);
@@ -829,7 +857,6 @@ export async function openAppend(prefill = {}) {
             .html(pre.gradeError ? `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 채점 못 했어요</div>${esc(pre.grade)}`
                 : ok ? '<i class="fa-solid fa-circle-check"></i> 채점: 원문과 잘 맞아요'
                 : `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 채점 <span class="na_dim">· 참고용 · 고치려면 위 글을 직접 고치세요</span></div>${driftHtml(pre.grade, m)}`);
-        $root.on('click', '.na_grade_out .na_cite_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
     }
     if (pre.text) {
         if (Number.isFinite(pre.end)) { $end.val(pre.end); endTouched = true; hideHint(); }

@@ -2407,7 +2407,7 @@ body.na_darkui .na_tab_pane[data-pane="config"] .na_cfg_box .na_cfg_sub, body.na
 .na_ap2.na_v2 { gap: 14px; }
 .na_ap2 .na_v2_card { border-radius: 18px; }
 .na_ap2 .na_append_file_btn { padding: 6px 11px; font-size: 12px; line-height: 1.5; background: var(--na-card); }
-.na_ap2 .na_append_ta { height: 230px !important; min-height: 120px; padding: 12px 14px !important; border-radius: 18px !important; font-family: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; line-height: 1.65; resize: vertical; }
+.na_ap2 .na_append_ta { height: 300px !important; min-height: 120px; padding: 12px 14px !important; border-radius: 18px !important; font-family: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; line-height: 1.65; resize: vertical; }
 body:not(.na_darkui) .na_ap2 .na_append_ta { background: #F2E9E2 !important; border: 1px solid var(--na-line) !important; color: #4A3D35 !important; }
 body.na_darkui .na_ap2 .na_append_ta { background: #2E2621 !important; border: 1px solid var(--na-line) !important; color: #E6D9CD !important; }
 .na_ap2 .na_ap2_label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 600; color: var(--na-dim); padding: 10px 14px 4px; }
@@ -3915,3 +3915,6 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_kp_range input { width: 90px !important; }
 .na_kp_form textarea { width: 100%; }
 .na_src_kept { font-size: 0.8em; color: var(--na-accent); }
+
+.na_ap2 .na_ap_tools .na_v2_btn { flex: 1; }
+.na_ap2 .na_ap_outinfo:empty { display: none; }
