@@ -293,6 +293,8 @@ export function renderPanel() {
               <div class="na_search_wrap na_cfg_search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" class="text_pole na_search" id="na_cfg_q" placeholder="설정 찾기 · 예: 회상, 깊이, 로어북" aria-label="설정 찾기"></div>
               <div class="na_empty" id="na_cfg_none" hidden>맞는 설정이 없어요.</div>
               <div class="na_cfg_index" id="na_cfg_index">${CFG_GROUPS.map(([k, name, ico]) => `<button type="button" class="na_cfg_card" data-g="${k}"><span class="na_cfg_ico">${svgA(ico, 18)}</span><b>${name}</b><small id="na_cfg_sum_${k}"></small></button>`).join('')}</div>
+              <div class="na_cfg_tiles" id="na_cfg_tiles" hidden></div>
+              <div class="na_cfg_tabs" id="na_cfg_tabs" role="tablist" hidden></div>
               <div class="na_cfg_grp na_cfg_keeplab" data-g="inject">
                 <div class="na_cfg_label"><i class="fa-solid fa-syringe"></i> 넣는 자리</div>
                 <div class="na_cfg_box">
@@ -578,6 +580,101 @@ const CFG_GROUPS = [
     ['alert', '알림', 'M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0'],
 ];
 let cfgView = '';
+const cfgTab = {}; // group → open tab
+
+// inside a group: tiles show where things stand, tabs split the rows. Each marker starts a tab; the rows after it
+// (in page order) belong to that tab until the next marker
+const CFG_TABS = {
+    inject: { tabs: [['place', '넣는 자리'], ['size', '분량'], ['pick', '고르기']], marks: [['#na_place_preset', 'place'], ['#na_cap', 'size'], ['#na_router_mode', 'pick']] },
+    recall: { tabs: [['recall', '회상'], ['state', 'STATE'], ['ooc', 'OOC']], marks: [['#na_recall', 'recall'], ['#na_state_on', 'state'], ['#na_off_fold', 'ooc']] },
+    aimodel: { tabs: [['ai', 'AI 기능'], ['dr', '초안'], ['tr', '번역'], ['emb', '뜻 찾기']], marks: [['#na_ai_profile', 'ai'], ['#na_dr_mode', 'dr'], ['#na_tr_mode', 'tr'], ['#na_emb_src', 'emb'], ['#na_ai_max', 'ai'], ['#na_conn_note', 'all']] },
+    aitask: { tabs: [['find', '찾기'], ['check', '점검'], ['etc', '기타']], marks: [['#na_fallback', 'etc'], ['#na_lore', 'find'], ['#na_drift_auto', 'check'], ['#na_gloss_edit', 'etc']] },
+};
+const onOff = v => (v ? '켬' : '끔');
+const split2 = t => { const [a, ...b] = String(t || '').split(' · '); return [a, b.join(' · ')]; };
+// [label, value, note, on, tab]
+function cfgTiles(g) {
+    const on = id => $(`#${id}`).prop('checked');
+    const val = id => $(`#${id}`).val();
+    if (g === 'inject') {
+        const inChat = !$('#na_depth_field').prop('hidden');
+        const preset = $('#na_place_preset').val() === 'custom' ? '직접 정함' : optText('na_place_preset');
+        const rm = val('na_router_mode');
+        return [
+            ['넣는 곳', on('na_enabled') ? `${optText('na_position').replace(/\s*\(.*$/, '')}${inChat ? ` · ${val('na_depth')}` : ''}` : '주입 끔', preset, on('na_enabled'), 'place'],
+            ['말하는 역할', optText('na_role'), preset, true, 'place'],
+            ['망각 곡선', onOff(on('na_fade')), on('na_fade') ? `원문 ${val('na_fade_full')} · 짧게 ${val('na_fade_short')}` : '원문 그대로', on('na_fade'), 'size'],
+            ['AI 라우터', rm === 'off' ? '끔' : rm === 'old' ? 'AI가 전부' : '키워드 + AI', rm === 'off' ? '키워드만' : `한 번에 ${val('na_router_max')}개`, rm !== 'off', 'pick'],
+        ];
+    }
+    if (g === 'recall') {
+        const offs = $('#na_off_fold .na_off_chip[aria-pressed="true"]').map((i, x) => x.textContent.trim()).get();
+        return [
+            ['회상', onOff(on('na_recall')), on('na_recall') ? `최대 ${val('na_recall_k')}줄 · 깊이 ${val('na_recall_depth')}` : '숨긴 원문에서 찾기', on('na_recall'), 'recall'],
+            ['STATE 가까이', on('na_state_on') ? `깊이 ${val('na_state_depth')}` : '끔', on('na_state_on') ? '최근 대화 가까이' : '아카이브 안에', on('na_state_on'), 'state'],
+            ['OOC 빼기', `${offs.length}가지`, offs.join(' · ') || '다 넣어요', offs.length > 0, 'ooc'],
+        ];
+    }
+    if (g === 'aimodel') {
+        const [a1, a2] = split2(aiLabel());
+        const e = embedCfg(), st = embedState();
+        const tr = trSettings().mode;
+        return [
+            ['AI 기능 모델', a1, a2 || '질문 · 점검 · 라우터', true, 'ai'],
+            ['초안 모델', draftReady() ? (draftSettings().mode === 'vertex' ? 'Vertex' : '커스텀') : '없음', draftReady() ? drLabel() : '압축 초안 · 짧은 버전', draftReady(), 'dr'],
+            ['번역 모델', tr === 'same' ? '같이' : split2(trLabel())[0], tr === 'same' ? 'AI 기능 모델' : split2(trLabel())[1], tr !== 'same', 'tr'],
+            ['뜻으로 찾기', e.source ? (e.source === 'st' ? '실리태번' : split2(embedLabel())[0]) : '끔', e.source ? (st?.synced ? `섹션 ${st.secs} · 원문 ${st.raws}` : '색인 아직') : '단어로만 찾아요', !!e.source, 'emb'],
+        ];
+    }
+    if (g === 'aitask') {
+        return [
+            ['막혔을 때', val('na_fallback') ? optText('na_fallback') : '안 함', '거절 · 차단이면 다른 모델로', !!val('na_fallback'), 'etc'],
+            ['로어북', onOff(on('na_lore')), on('na_lore') ? `${val('na_lore_budget')} 토큰까지` : '같이 안 보내요', on('na_lore'), 'find'],
+            ['장면 짐작', GUESS_MODES[guessMode()] === '끄기' ? '끔' : GUESS_MODES[guessMode()], '돌려 말한 지난 일', guessMode() !== 'off', 'find'],
+            ['이탈 감지', val('na_drift_auto') === '0' ? '끔' : optText('na_drift_auto'), on('na_drift_recheck') ? '못 찾은 근거 다시 묻기' : '근거 확인만', val('na_drift_auto') !== '0', 'check'],
+        ];
+    }
+    return [];
+}
+// rows of a group, in page order: the children of each box, a settings list counting as its own rows
+function cfgUnits(g) {
+    const out = [];
+    $(`#na_settings .na_cfg_grp[data-g="${g}"] .na_cfg_box`).each(function () {
+        $(this).children().each(function () { if ($(this).is('.na_set_list')) out.push(...$(this).children().get()); else out.push(this); });
+    });
+    return out;
+}
+function tagCfgTabs() {
+    for (const [g, def] of Object.entries(CFG_TABS)) {
+        let cur = def.tabs[0][0];
+        for (const el of cfgUnits(g)) {
+            const mark = def.marks.find(([sel]) => $(el).is(sel) || $(el).find(sel).length);
+            if (mark) cur = mark[1];
+            el.dataset.t = cur;
+        }
+    }
+}
+function renderCfgTiles() {
+    const def = CFG_TABS[cfgView];
+    const q = String($('#na_cfg_q').val() || '').trim();
+    $('#na_cfg_tiles, #na_cfg_tabs').prop('hidden', !def || !!q);
+    if (!def || q) return;
+    const tab = cfgTab[cfgView] || def.tabs[0][0];
+    $('#na_cfg_tiles').html(cfgTiles(cfgView).map(([lab, v, note, on, t]) => `<button type="button" class="na_cfg_tile${on ? ' on' : ''}${t === tab ? ' cur' : ''}" data-t="${t}"><small>${esc(lab)}</small><b>${esc(v || '-')}</b><span>${esc(note || '')}</span></button>`).join(''));
+    $('#na_cfg_tabs').html(def.tabs.map(([k, name]) => `<button type="button" class="na_cfg_tabbtn${k === tab ? ' on' : ''}" role="tab" aria-selected="${k === tab}" data-t="${k}">${name}</button>`).join(''));
+}
+function applyCfgTab() {
+    const def = CFG_TABS[cfgView];
+    const q = String($('#na_cfg_q').val() || '').trim();
+    const tab = def && !q ? cfgTab[cfgView] || def.tabs[0][0] : '';
+    const $pane = $('#na_settings .na_tab_pane[data-pane="config"]');
+    $pane.find('[data-t]').not('.na_cfg_tile, .na_cfg_tabbtn').each(function () { $(this).toggleClass('na_tab_off', !!tab && this.dataset.t !== tab && this.dataset.t !== 'all'); });
+    // a list or box left with nothing in it goes too, so no empty card is drawn
+    $pane.find('.na_cfg_grp .na_set_list, .na_cfg_grp .na_cfg_box, .na_cfg_grp').each(function () {
+        const kids = $(this).find('[data-t]');
+        $(this).toggleClass('na_tab_empty', !!tab && kids.length > 0 && kids.filter(':not(.na_tab_off)').length === 0);
+    });
+}
 const clip = (t, n) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
 const optText = id => $(`#${id} option:selected`).text().trim();
 function cfgSummaries() {
@@ -602,6 +699,8 @@ function layoutCfg() {
     $('#na_cfg_title').text(!q && cfgView ? CFG_GROUPS.find(x => x[0] === cfgView)[1] : '설정');
     $('#na_cfg_back').attr({ title: cfgView ? '설정 목차로' : '돌아가기', 'aria-label': cfgView ? '설정 목차로' : '돌아가기' });
     if (!cfgView || q) cfgSummaries();
+    renderCfgTiles();
+    applyCfgTab();
 }
 
 // 뜻으로 찾기 rows: model and address only for a source of our own, the build row once it is on
@@ -697,6 +796,10 @@ export function bindPanel() {
     bindPromptSettings();
     $('#na_gear').on('click', () => showTab($('[data-pane="config"]').prop('hidden') ? 'config' : (globalSettings().lastTab || 'home')));
     $('#na_cfg_back').on('click', () => { if (cfgView && !$('#na_cfg_q').val()) { cfgView = ''; layoutCfg(); } else showTab(globalSettings().lastTab || 'home'); });
+    tagCfgTabs();
+    $('#na_cfg_tiles, #na_cfg_tabs').on('click', '[data-t]', function () { cfgTab[cfgView] = this.dataset.t; renderCfgTiles(); applyCfgTab(); });
+    // tiles follow every change made below them
+    $('#na_settings .na_tab_pane[data-pane="config"]').on('change click', '.na_cfg_grp', () => { if (cfgView) setTimeout(renderCfgTiles, 0); });
     $('#na_cfg_index').on('click', '.na_cfg_card', function () { cfgView = this.dataset.g; layoutCfg(); $('#na_settings .na_tab_pane[data-pane="config"]').scrollTop(0); });
     $('input[name="na_ui_theme"]').prop('checked', function () { return this.value === uiTheme(); })
         .on('change', function () { if (this.checked) setUiTheme(this.value); });
