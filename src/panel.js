@@ -400,6 +400,7 @@ export function renderPanel() {
                     <span class="na_cfg_val"><select id="na_emb_src" class="text_pole">${Object.entries(EMBED_SOURCES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" id="na_emb_pick_row" hidden><span><span>임베딩 모델</span><small id="na_emb_pick_sub"></small></span><span class="na_cfg_val"><select id="na_emb_pick" class="text_pole"></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" id="na_emb_model_row" hidden><span><span>모델 이름</span><small>직접 입력</small></span><span class="na_cfg_val"><input type="text" id="na_emb_model" class="text_pole" spellcheck="false">${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" id="na_emb_region_row" hidden title="Vertex 임베딩 모델은 지역마다 다르게 있어요 · global에서 500이 나면 us-central1"><span><span>임베딩 지역</span><small id="na_emb_region_sub">비우면 실리태번 Vertex 설정 지역</small></span><span class="na_cfg_val"><input type="text" id="na_emb_region" class="text_pole" spellcheck="false" placeholder="us-central1">${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" id="na_emb_url_row" hidden><span><span>Ollama 주소</span></span><span class="na_cfg_val"><input type="text" id="na_emb_url" class="text_pole" spellcheck="false" placeholder="http://127.0.0.1:11434">${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <button type="button" class="na_set_row na_cfg_go" id="na_emb_build" hidden><span><span>뜻 색인 만들기</span><small id="na_emb_sub">처음 한 번 · 이 채팅의 섹션과 숨긴 원문</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   <label class="na_set_row" title="답이 잘리면 늘려 주세요"><span>답 최대 길이</span><span class="na_cfg_val"><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
@@ -717,6 +718,10 @@ function syncEmbedRows() {
     $('#na_emb_model_row').prop('hidden', free || (picks.length > 0 && !!known && !embTyping));
     $('#na_emb_model').val(e.model).attr('placeholder', EMBED_DEFAULT_MODEL[e.source] || '');
     $('#na_emb_url_row').prop('hidden', e.source !== 'ollama');
+    $('#na_emb_region_row').prop('hidden', e.source !== 'vertexai');
+    $('#na_emb_region').val(e.region);
+    const stRegion = String(ctx().chatCompletionSettings?.vertexai_region || '').trim();
+    $('#na_emb_region_sub').text(e.region ? '임베딩만 이 지역으로' : `비우면 실리태번 Vertex 설정 지역${stRegion ? ` (${stRegion})` : ''}`);
     $('#na_emb_url').val(e.url);
     $('#na_emb_build').prop('hidden', !e.source);
     if ($('#na_emb_build').hasClass('na_busy')) return;
@@ -1304,6 +1309,7 @@ export function bindPanel() {
         if (embTyping) $('#na_emb_model').val('').trigger('focus');
     });
     $('#na_emb_url').on('change', function () { setEmbed({ url: this.value.trim() }); syncEmbedRows(); });
+    $('#na_emb_region').on('change', function () { setEmbed({ region: this.value.trim() }); syncEmbedRows(); });
     $('#na_emb_build').on('click', needChat(async e => {
         const $b = $(e.currentTarget);
         if ($b.hasClass('na_busy')) return;
@@ -1311,11 +1317,11 @@ export function bindPanel() {
         $('#na_emb_sub').text('목록 보는 중…');
         try {
             const st = await syncEmbed({ force: true, onProgress: (n, all) => $('#na_emb_sub').text(`만드는 중… ${n} / ${all}`) });
-            if (st) toastr.success(`섹션 조각 ${st.secs}개 · 숨긴 원문 ${st.raws}개${st.skipped ? ` · 못 넣은 ${st.skipped}개는 다음에 다시 해요` : ''}`, '뜻 색인');
+            if (st) toastr.success(`섹션 조각 ${st.secs}개 · 숨긴 원문 ${st.raws}개${st.skipped ? ` · 못 넣은 ${st.skipped}개는 다음에 다시 해요` : ''}${st.regionMoved ? ' · 원래 지역에서 안 돼서 임베딩 지역을 us-central1로 정했어요' : ''}`, '뜻 색인', { timeOut: st.regionMoved ? 12000 : 5000 });
         } catch (err) {
             // a 5xx that survived the retries is the service's quota or an outage; what went in so far is kept
             const e = embedCfg(), m = e.model || EMBED_DEFAULT_MODEL[e.source] || '';
-            const hint = err.status >= 500 ? ` · 만든 데까지는 남아 있어서 다시 누르면 이어서 해요${e.source === 'vertexai' && /^gemini-embedding/.test(m) ? '. 계속 끊기면 모델을 text-multilingual-embedding-002로 바꿔 보세요 (한 번에 10개씩이라 요청 수가 훨씬 적어요)' : ''}` : '';
+            const hint = err.status >= 500 ? ` · 만든 데까지는 남아 있어서 다시 누르면 이어서 해요${e.source === 'vertexai' ? `. 계속 안 되면 ① 실리태번 API 연결 → Vertex AI에서 인증(Express 키 또는 서비스 계정)과 프로젝트가 맞는지 ② 임베딩 지역을 us-central1로${/^gemini-embedding/.test(m) ? ' ③ 모델을 text-multilingual-embedding-002로(한 번에 10개씩)' : ''} 확인해 보세요. 자세한 이유는 실리태번 서버 콘솔 창에 찍혀요` : ''}` : '';
             toastr.error(`${String(err.message || err)}${hint}`, '뜻 색인을 못 만들었어요', { timeOut: 15000 });
         }
         finally { $b.removeClass('na_busy'); syncEmbedRows(); }

@@ -36,7 +36,7 @@ const MODEL_FREE = new Set(['transformers', 'mistral', 'nomicai']); // the serve
 
 export function embedCfg() {
     const e = globalSettings().embed && typeof globalSettings().embed === 'object' ? globalSettings().embed : {};
-    return { source: e.source in EMBED_SOURCES ? e.source : '', model: String(e.model || '').trim(), url: String(e.url || '').trim() };
+    return { source: e.source in EMBED_SOURCES ? e.source : '', model: String(e.model || '').trim(), url: String(e.url || '').trim(), region: String(e.region || '').trim() };
 }
 export const embedOn = () => !!embedCfg().source;
 export function setEmbed(patch) {
@@ -75,10 +75,12 @@ function sourceBody() {
         case 'vllm': b.model = vs.vllm_model; b.apiUrl = altUrl('vllm'); break;
         case 'palm': b.model = pickModel('google_model'); b.api = 'makersuite'; break;
         case 'vertexai': {
-            // the key, the region and the auth mode are the ones saved in SillyTavern's Vertex AI connection
+            // the key and the auth mode are the ones saved in SillyTavern's Vertex AI connection, passed as they are
+            // (an unset mode means SillyTavern's own default, the Express key). The region is that connection's too,
+            // unless one is set for embeddings: the text-embedding models are not served on every region, "global" included
             b.model = String(pickModel('google_model')).replace(/^models\//, ''); b.api = 'vertexai';
-            b.vertexai_auth_mode = oai.vertexai_auth_mode || 'full';
-            b.vertexai_region = String(oai.vertexai_region || '').trim() || 'global';
+            b.vertexai_auth_mode = oai.vertexai_auth_mode;
+            b.vertexai_region = cfg.region || String(oai.vertexai_region || '').trim() || undefined;
             b.vertexai_express_project_id = oai.vertexai_express_project_id;
             break;
         }
@@ -86,6 +88,9 @@ function sourceBody() {
     }
     return b;
 }
+// Vertex with no embedding region of our own and not already on us-central1
+const regionCanMove = b => b.source === 'vertexai' && !embedCfg().region && b.vertexai_region !== 'us-central1';
+
 // what the vectors were made with; a different one needs its own collection
 const signature = b => `${b.source}|${MODEL_FREE.has(b.source) ? '' : b.model || ''}`;
 export const embedLabel = () => { if (!embedOn()) return '끔'; const b = sourceBody(); return `${EMBED_SOURCES[b.source] || b.source}${b.model ? ` · ${b.model}` : ''}`; };
@@ -179,12 +184,23 @@ export async function syncEmbed({ onProgress = null, force = false } = {}) {
         const step = google && /^gemini-embedding/.test(b.model || '') ? 1 : google ? 10 : ['transformers', 'ollama'].includes(b.source) ? 8 : 40;
         const pace = REMOTE.has(b.source) ? 400 : 0;
         const stop = () => currentChatId() !== id;
-        let skipped = 0, failRun = 0;
+        let skipped = 0, failRun = 0, regionMoved = '';
         for (let k = 0; k < add.length; k += step) {
             if (stop()) throw new Error('채팅이 바뀌어서 멈췄어요');
             const items = add.slice(k, k + step).map((x, j) => ({ hash: x.hash, text: x.text.slice(0, MAX_TEXT), index: k + j }));
             try {
-                await vec('insert', { ...b, collectionId: st.coll, items }, 120_000, { retries: 3, stop });
+                try {
+                    await vec('insert', { ...b, collectionId: st.coll, items }, 120_000, { retries: k === 0 && regionCanMove(b) ? 1 : 3, stop });
+                } catch (e) {
+                    // the first text failing on Vertex with no region chosen for embeddings: try us-central1 once,
+                    // where every Vertex embedding model is served, and keep it if that works
+                    if (k !== 0 || !regionCanMove(b) || !(e.status >= 500)) throw e;
+                    const moved = { ...b, vertexai_region: 'us-central1' };
+                    await vec('insert', { ...moved, collectionId: st.coll, items }, 120_000, { retries: 2, stop });
+                    Object.assign(b, moved);
+                    globalSettings().embed = { ...embedCfg(), region: 'us-central1' }; saveGlobal();
+                    regionMoved = `${e.status}`;
+                }
                 failRun = 0;
             } catch (e) {
                 // one text the service keeps refusing is skipped (it is tried again on the next build);
@@ -197,6 +213,7 @@ export async function syncEmbed({ onProgress = null, force = false } = {}) {
             if (pace && k + step < add.length) await sleep(pace);
         }
         st.skipped = skipped;
+        st.regionMoved = regionMoved;
         st.items = want;
         st.synced = true;
         st.at = Date.now();
