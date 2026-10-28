@@ -3960,8 +3960,6 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_vc_card textarea.na_vc_core { margin-bottom: 6px; }
 .na_ask2_whole { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .na_ask2_whole input { margin: 0; }
-.na_diff_head .na_src_keep { margin-left: auto; }
-.na_diff_head .na_src_keep + .na_src_check { margin-left: 0; }
 .na_diff_head .na_src_check { margin-left: auto; }
 .na_src_checkout { margin: 8px 0; }
 
