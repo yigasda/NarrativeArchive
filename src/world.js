@@ -208,7 +208,7 @@ export async function openWorlds() {
                 </div>
                 ${review.has(w.id) ? reviewHtml(w, review.get(w.id)) : ''}
                 <div class="na_wd_foot">
-                  ${ck ? `<label class="na_wd_bindchip ${bound ? 'on' : ''}" title="${esc(cn)}의 새 채팅에서 저절로 ${bound ? '켜져요' : '켜지게 해요'}${others > 0 ? ` · 다른 캐릭터 ${others}명에도 묶여 있어요` : ''}"><input type="checkbox" class="na_wd_bind" ${bound ? 'checked' : ''}>${faceHtml(cn, 20)}<span>저절로 ${bound ? '켜짐' : '켜기'}${others > 0 ? ` · +${others}` : ''}</span></label>` : '<span class="na_spacer"></span>'}
+                  ${ck ? `<label class="na_wd_bindchip ${bound ? 'on' : ''}" title="${esc(cn)}의 새 채팅에서 저절로 ${bound ? '켜져요' : '켜지게 해요'}${others > 0 ? ` · 다른 캐릭터 ${others}명에도 묶여 있어요` : ''}"><input type="checkbox" class="na_wd_bind" ${bound ? 'checked' : ''}>${faceHtml(cn, 20)}<span>캐릭터 연동${others > 0 ? ` · +${others}` : ''}</span></label>` : '<span class="na_spacer"></span>'}
                   <button type="button" class="na_wd_lore" title="실리태번 로어북(월드 인포)으로 내보내요 · 장소 · 소속 · 용어는 이름이 나올 때만, 사정 · 규칙과 이전 이야기는 늘 들어가는 항목으로">${svgA('M12 3v12M7 8l5-5 5 5M5 21h14', 15, 2)}<span>로어북</span></button>
                   <button type="button" class="na_wd_del" title="이 세계관 지우기" aria-label="이 세계관 지우기">${svgA(ICO_A.trash, 15, 2)}</button>
                 </div>

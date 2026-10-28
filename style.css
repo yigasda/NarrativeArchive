@@ -4202,3 +4202,6 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 .na_wd_foot .na_wd_lore { color: var(--sv-val, var(--na-accent)); }
 .na_wd_foot .na_wd_del { width: 34px; padding: 0; color: var(--na-bad); }
 .na_wd_foot .na_wd_del:hover { text-decoration: none; filter: brightness(0.95); }
+/* 캐릭터 연동: the same words on and off, so on shows in colour (face in colour, accent text) and off stays grey */
+.na_wd_foot .na_wd_bindchip.on > span { color: var(--sv-val, var(--na-accent)); font-weight: 600; }
+.na_wd_foot .na_wd_bindchip:not(.on) > span { color: var(--na-dim); }
