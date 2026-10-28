@@ -4158,3 +4158,27 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 
 /* ---- 3.98: 원문으로 불러옴 (라우터 · AI 없이 빠르게) */
 #na_settings .na_router_more { border: 0; background: none; color: inherit; font: inherit; padding: 0; margin: 0; cursor: pointer; text-align: left; text-decoration: underline dotted; text-underline-offset: 3px; }
+
+/* ============ 이야기 속 기념일 (v3.101): a card at the top of the calendar, a badge on the section, one line on home */
+#na_settings .na_anniv_now, .na_popup .na_cal_anniv { --av: var(--sv-acc, #B8541F); }
+.na_cal_anniv { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; }
+.na_cal_av_head { display: flex; align-items: center; gap: 8px; }
+.na_cal_av_head b { font-size: 1.02em; }
+.na_cal_av_head small { color: var(--na-dim); }
+.na_cal_av_add { width: 30px; height: 30px; margin: 0; padding: 0; border-radius: 9px; border: 1px solid var(--na-line); background: transparent; color: var(--av); font-size: 1.2em; line-height: 1; cursor: pointer; }
+.na_cal_av_row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "dot name x" "dot sub x"; column-gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--na-line); }
+.na_cal_av_row:first-of-type { border-top: 0; }
+.na_cal_av_dot { grid-area: dot; color: var(--av); font-size: 1.1em; }
+.na_cal_av_row .na_cal_av_name { grid-area: name; margin: 0; padding: 2px 0; border: 0 !important; background: transparent !important; font-weight: 700; min-height: 0; }
+.na_cal_av_row small { grid-area: sub; color: var(--na-dim); font-size: 0.82em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.na_cal_av_x { grid-area: x; width: auto; margin: 0; padding: 4px 6px; border: 0; background: transparent; color: var(--na-dim); cursor: pointer; }
+.na_cal_av_new { display: flex; flex-wrap: wrap; gap: 6px; }
+.na_cal_av_new select { flex: 1 1 100%; margin: 0; }
+.na_cal_av_new input { flex: 1; min-width: 0; margin: 0; }
+.na_cal_av_badge { font-style: normal; font-size: 0.82em; font-weight: 700; color: var(--av, #B8541F); white-space: nowrap; }
+#na_settings .na_anniv_now { display: flex; align-items: center; gap: 4px; padding: 10px 12px 10px 14px; border-radius: 14px; background: var(--hm-acc-soft); color: var(--sv-ink); }
+#na_settings .na_anniv_now[hidden] { display: none; }
+#na_settings .na_anniv_go { flex: 1; display: flex; align-items: center; gap: 8px; width: auto; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+#na_settings .na_anniv_dot { color: var(--av); font-size: 1.1em; }
+#na_settings .na_anniv_go b { color: var(--sv-val); }
+#na_settings .na_anniv_x { width: auto; margin: 0; padding: 4px 6px; border: 0; background: transparent; color: var(--sv-dim); cursor: pointer; }

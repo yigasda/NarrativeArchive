@@ -28,6 +28,7 @@ import { openReader } from './reader.js';
 import { routerCandidates, routerCfg, routerState, runRouter } from './router.js';
 import { GUESS_MODES, guessMode, lastGuess } from './guess.js';
 import { EMBED_DEFAULT_MODEL, EMBED_MODELS, EMBED_SOURCES, embedCfg, embedError, embedLabel, embedState, routerUsesEmbed, setEmbed, syncEmbed } from './embed.js';
+import { annivToday } from './anniv.js';
 import { RANGE_HEAD, cachedTokens, checkHeadings, filterMuted, groupLabel, linkedMap, mutedCount, parseSections, pinnedSet, sectionKey } from './sections.js';
 import { refreshStatus } from './status.js';
 import { ICO_A, setUiTheme, svgA, uiTheme } from './theme.js';
@@ -93,6 +94,7 @@ export function renderPanel() {
 
             <!-- 홈 -->
             <section class="na_tab_pane" data-pane="home">
+              <div class="na_anniv_now" id="na_anniv_now" hidden></div>
               <div class="na_start" id="na_start" hidden></div>
               <div class="na_next" id="na_next"></div>
               <div class="na_quick">
@@ -822,6 +824,9 @@ function renderStart(m) {
 // the one thing worth doing next, on the home tab
 export function renderNext(m, { afterTok, health }) {
     let html;
+    // 이야기 속 기념일: one line when the story's date comes round to a remembered day
+    const av = annivToday(m);
+    $('#na_anniv_now').prop('hidden', !av).html(av ? `<button type="button" class="na_anniv_go"><span class="na_anniv_dot">◎</span><span>이야기 속 오늘은 <b>${esc(av.name)}</b> ${av.years}년째예요</span></button><button type="button" class="na_anniv_x" data-k="${esc(`${av.key}:${av.years}`)}" title="닫기" aria-label="닫기">✕</button>` : '');
     // while 시작하기 is up it is the thing to do next
     if (renderStart(m)) { $('#na_next').html(''); $('#na_ai_status').html('').attr('title', ''); return; }
     const card = (icon, title, desc, btns, tone = '') => `<div class="na_next_card ${tone}"><i class="fa-solid ${icon}"></i><div class="na_next_main"><b>${title}</b>${desc ? `<span>${desc}</span>` : ''}</div><div class="na_next_btns">${btns}</div></div>`;
@@ -866,6 +871,8 @@ export function bindPanel() {
     $('#na_q_wizard').on('click', needChat(() => draftReady() ? quickCompress() : openWizard()));
     $('#na_q_preview').on('click', needChat(openPreview));
     $('#na_next').on('click', '[data-act]', function () { nextAction(this.dataset.act); });
+    $('#na_anniv_now').on('click', '.na_anniv_go', needChat(openCalendar))
+        .on('click', '.na_anniv_x', needChat(async e => { const m = getMeta(); m.annivSeen = { ...(m.annivSeen || {}), [e.currentTarget.dataset.k]: true }; await saveMeta(); refreshStatus(); }));
     $('#na_start').on('click', '.na_start_step', function () { startPick = Number(this.dataset.i); renderStart(getMeta()); })
         .on('click', '.na_start_go', function () { startPick = null; goStart(this.dataset.key); })
         .on('click', '.na_start_hide', () => { globalSettings().startHidden = true; saveGlobal(); refreshStatus(); });

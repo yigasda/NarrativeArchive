@@ -112,6 +112,43 @@ export function parseWorld(out) {
     return got;
 }
 
+// 로어북으로 내보내기: a SillyTavern World Info book made from a world book. Places, affiliations and terms become one
+// entry each, called in when their name comes up; the circumstances, what came before and any other text are always in
+export async function exportLorebook(w) {
+    const c = ctx();
+    const name = `${String(w.name || '세계관').trim()} · 서사 아카이브`.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
+    const names = c.getWorldInfoNames?.() || [];
+    if (names.includes(name) && !await confirm('로어북 덮어쓰기', `"${esc(name)}" 로어북이 이미 있어요. 지금 세계관 내용으로 바꿀까요?`)) return '';
+    const { newWorldInfoEntryTemplate } = await import('/scripts/world-info.js');
+    const data = { entries: {} };
+    let uid = 0;
+    const add = (comment, content, keys, constant) => {
+        data.entries[uid] = { ...structuredClone(newWorldInfoEntryTemplate), uid, comment, content, key: keys, constant, order: constant ? 100 : 50 };
+        uid++;
+    };
+    const sl = slotsOf(w);
+    const rows = k => sl[k].filter(filled);
+    const line = e => { const n = String(e.name || '').trim(), d = String(e.desc || '').trim(); return n && d ? `${n}: ${d}` : n || d; };
+    // the names a row is called in by: "Varo / the old town" gives both
+    const keysOf = e => String(e.name || '').split(/\s*[/,]\s*/).map(x => x.trim()).filter(x => x.length > 1);
+    for (const k of ['places', 'groups', 'terms']) for (const e of rows(k)) {
+        const keys = keysOf(e);
+        if (keys.length) add(`${WORLD_SLOTS.find(x => x.k === k).label} · ${String(e.name).trim()}`, line(e), keys, false);
+        else if (line(e)) add(WORLD_SLOTS.find(x => x.k === k).label, line(e), [], true);
+    }
+    for (const k of ['rules', 'past']) {
+        const r = rows(k), x = WORLD_SLOTS.find(y => y.k === k);
+        if (r.length) add(x.label, `${x.en}:\n${r.map(e => `- ${line(e)}`).join('\n')}`, [], true);
+    }
+    // the one-line intro and any older free text: one more entry that is always in
+    const rest = [String(w.intro || '').trim(), String(w.text || '').trim()].filter(Boolean);
+    if (rest.length) add(`${String(w.name || '세계관').trim()} · 소개`, rest.join('\n\n'), [], true);
+    if (!uid) { toastr.info('내보낼 내용이 없어요.'); return ''; }
+    await c.saveWorldInfo(name, data, true);
+    await c.updateWorldInfoList?.();
+    return name;
+}
+
 export async function openWorlds() {
     const c = ctx();
     const m = getMeta();
@@ -174,6 +211,7 @@ export async function openWorlds() {
                   ${ck ? `<label class="na_wd_bindchip ${bound ? 'on' : ''}"><input type="checkbox" class="na_wd_bind" ${bound ? 'checked' : ''}>${faceHtml(cn, 20)}<span>${esc(cn)} 채팅에서 저절로 ${bound ? '켜짐' : '켜기'}</span></label>` : ''}
                   ${others > 0 ? `<small class="na_v2_note">다른 캐릭터 ${others}명에도 묶임</small>` : ''}
                   <span class="na_spacer"></span>
+                  <button type="button" class="na_linkbtn na_wd_lore" title="실리태번 로어북(월드 인포)으로 만들어요 · 장소 · 소속 · 용어는 이름이 나올 때만, 사정 · 규칙과 이전 이야기는 늘 들어가는 항목으로">로어북으로 내보내기</button>
                   <button type="button" class="na_linkbtn na_danger na_wd_del">지우기</button>
                 </div>
               </div>` : ''}
@@ -324,6 +362,18 @@ export async function openWorlds() {
         w.chars = Array.isArray(w.chars) ? w.chars.filter(x => x !== k) : [];
         if (this.checked) w.chars.push(k);
         await save(); draw();
+    });
+    $root.on('click', '.na_wd_lore', async function () {
+        const w = book(this);
+        if (!worldBody(w).trim()) return toastr.info('내보낼 내용이 없어요.');
+        const name = await exportLorebook(w);
+        if (!name) return;
+        toastr.success(`실리태번 월드 인포에서 캐릭터나 채팅에 붙여 주세요.`, `로어북 "${name}"을 만들었어요`, { timeOut: 8000 });
+        // the same text would go in twice: from the lorebook and from here
+        if (worldIsOn(m, w) && await confirm('세계관 주입 끄기', `로어북을 붙이면 같은 내용이 두 번 들어가요. 이 채팅에서 "${esc(w.name || '세계관')}" 주입을 끌까요?`)) {
+            m.worldOn = { ...(m.worldOn || {}), [w.id]: false };
+            await save(); draw();
+        }
     });
     $root.on('click', '.na_wd_del', async function () {
         const w = book(this);
