@@ -66,7 +66,7 @@ YOU GET
 PARTS
 - INTRO: one line: when and where the story is set, and what kind of story it is.
 - PLACES: a place goes in only if it belongs to someone's life: they live, lived, work or grew up there. A place they only went to stays out, whatever happened there.
-- AFFILIATIONS: families, workplaces, schools, groups the characters belong to, and how they stand to each other.
+- AFFILIATIONS: a group goes in only if someone belongs to it: their family, workplace, school or group. A group they only dealt with stays out. Say how the groups stand to each other.
 - RULES: what holds in this world and shapes what people can do: laws, money, work, customs, how things work (magic or technology only if the story has them).
 - BACKGROUND: what happened before the story began and still shapes the present. Leave out anything that happens during the story: that is in the archive.
 - TERMS: titles, nicknames and words with a meaning special to this story. A person is not a term; a nickname for one is.
