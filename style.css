@@ -4191,4 +4191,4 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 .na_cal_av_badge .na_heart { vertical-align: -0.08em; margin-right: 2px; }
 /* a little more room: title ↔ heart, heart ↔ name */
 .na_cal_av_badge { margin-left: 5px; }
-.na_cal_av_badge .na_heart { margin-right: 4px; }
+.na_cal_av_badge .na_heart { margin-right: 1px; }
