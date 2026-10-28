@@ -92,7 +92,7 @@ function readTracker(text, re) {
     if (mt && gr.time) { const first = stClean(mt[0].split('|')[0].replace(/<[^>]*>/g, '')); if (first.includes(gr.time.trim())) gr.time = first; }
     const place = String(gr.place || '').trim();
     const parts = place.split(/\s*(?:→|->|>|\/|·)\s*/).filter(Boolean);
-    return { date: String(gr.date || '').trim(), city: parts[0] || '', room: parts[1] || '', min: minutes(gr.time), time: String(gr.time || '').trim(), place };
+    return { date: String(gr.date || '').trim(), city: parts[0] || '', room: parts.slice(1).join(' → '), min: minutes(gr.time), time: String(gr.time || '').trim(), place };
 }
 // 상태창 줄 in the settings: the last few status windows the cutter can read, newest first ([] = none found)
 export function recentTrackers(n = 5, { re = trackerRe(), chat = ctx().chat || [] } = {}) {
