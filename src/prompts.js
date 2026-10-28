@@ -198,7 +198,9 @@ Test every line: "Without it, would the bot's next scene go wrong or feel unmoti
 - When one of this RP's recurring devices returns (a phrase, an object, a song, a ritual), keep that event and line.
 
 # 5. What to leave out
-Leave out the steps that only carry a scene along: taking off a jacket or watch, fetching slippers or a blanket, sitting down, standing up, crossing a room, incidental weather and furniture. A physical act stays when it is the event itself (a slap, a kiss, a door locked against someone) or when it matters to a consequential choice or conflict. If a bullet reads like stage directions, cut the staging, not the event. Do not replace discarded actions with invented meaning.
+Leave out movement that only carries the scene, such as taking off a coat or crossing a room. Keep a physical act only if it is the event itself (a slap, a kiss) or drives a choice or conflict. Never fill the gap with invented meaning.
+✗ Ren hung up his coat, sat beside her and poured the tea before asking why she had come back.
+✓ Ren asked why she had come back.
 
 # 6. Emotional arc
 Preserve the emotional thread of the scene: what each character feels toward the other, how those feelings change, and what feelings remain in tension. When the raw log gives an inner thought or motive that matters to the relationship, state it briefly alongside the action it drives. When someone hides something or admits only part of it, keep what they left out. Do not invent feelings or resolve a conflict the log leaves unresolved. Cut staging and repetition to make room; do not add length.
@@ -247,7 +249,7 @@ PLOT:
 
 # 12. Before you write
 Check each section once before you output: a reaction or decision that lost its cause, order, anything said twice, verdicts of your own, quote length, em dashes, bullet count.`;
-export const OLD_SHORT_HASHES = new Set(['892qha', '13bqai', 'aromd8', '1ksvarl', 'vty6ef', '19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
+export const OLD_SHORT_HASHES = new Set(['amx6h2', '892qha', '13bqai', 'aromd8', '1ksvarl', 'vty6ef', '19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
 export const BUILTIN_PROMPTS = new Set(['basic', 'short']);
 const BUILTIN_TEXT = { basic: () => BASIC_PROMPT, short: () => SHORT_PROMPT };
 // 기본 (정리본) as it shipped in 3.84.0–3.86.x, before it became 기본 itself: an untouched copy is taken out
