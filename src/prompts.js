@@ -16,10 +16,10 @@ You continue the archive: the long-term memory of a long-running role-play, read
 
 # 1. Output
 Output exactly these parts, in this order, with no greeting, explanation or commentary:
-0. The <scenes> block described in 9.
+0. The <scenes> block described in 8.
 1. The new section blocks, covering #{{from}}–#{{to}} continuously: no gaps, no overlaps, the first heading starting at #{{from}} and the last block ending at #{{to}}. Numbers are always message numbers.
 2. A line containing only \`---\`
-3. If the archive has \`# STATE AT …\` / \`# OPEN AT …\`: two change lists, \`# STATE CHANGES\` and \`# OPEN CHANGES\` (rules in 8). Never write the blocks out. If <current_state> is empty (a new chat), follow the NEW CHAT note below instead.
+3. If the archive has \`# STATE AT …\` / \`# OPEN AT …\`: two change lists, \`# STATE CHANGES\` and \`# OPEN CHANGES\` (rules in 7). Never write the blocks out. If <current_state> is empty (a new chat), follow the NEW CHAT note below instead.
 
 - Language: write everything in the archive's language and format, whatever the raw log's language. Translate dialogue too; keep a word in its original language only where the archive already does.
 - Only new material, only from the raw log. Never reproduce, rewrite, recap or continue anything already in the archive; nothing before #{{from}} belongs in your output. STATE only tells you what is already known: nothing from it goes into a section unless the raw log shows it happening again.
@@ -122,14 +122,7 @@ NEVER
 - Long "and… and… and" sentences. Describing a known character instead of naming them.
 - "while" twice in one bullet. "Also" to tack an act on ("He also…"): join it to the act before it instead.
 
-# 7. Example
-✓ Memory, in the archive's own style:
-## #57–#69 — The north road (Spring 3, night, Varo)
-PLOT:
-- Mara came back the same night she had sworn to leave, unable to say why (#57, #59). Ren let her in without pressing and told her the north road was closed, and she stayed: "Then I'll wait." (#60, #63)
-- Over supper Ivo let slip that he had paid her passage toll in secret (#65). Ren did not cover for him; in his own account he had known for days and kept quiet because the debt was not his to name (#66, #68). Mara heard it as two men deciding her road between them and set the toll-mark on the table: "Neither of you asked." (#69)
-
-# 8. STATE and OPEN changes
+# 7. STATE and OPEN changes
 You do not rewrite STATE or OPEN. You list what this stretch changes in them; the extension applies the lists to <current_state>, and every line you do not list stays exactly as it is. One change per line:
 \`\`\`
 # STATE CHANGES
@@ -146,7 +139,7 @@ DROP ## Group :: - a thread this stretch closed, copied exactly
 - New and edited STATE lines: per character + relationships + current situation (or household). Only the changes and tendencies that PLOT alone does not capture, briefly; do not restate events already in the sections. STATE may hold interpretation, but a character's reading is attributed to them, never raised to fact. One line for a core principle the bot is likely to confuse is allowed. Scope principles narrowly to prevent over-application ("no commands" ✗, which could change even how he talks → "no longer dictates her choices or movements" ✓); use "tends to" or "since #n" instead of "now" or "currently."
 - OPEN: drop only threads this stretch closed. Keep new threads short; do not prescribe future actions.
 
-# 9. Before you write
+# 8. Before you write
 1. First list the scene boundaries of #{{from}}–#{{to}} by message number (where time, place or the situation turns) inside <scenes>…</scenes>, one line per scene, every message inside one of them; the extension removes this block.
 2. Draft the sections on those boundaries, then revise them once and output only the revised version. In the revision (a user's note above, if there is one, still wins over these counts):
    - No emotional reaction, realization or decision has lost its trigger, and no kept event is distorted by an omitted qualification. Keep the section within its length target.
@@ -273,7 +266,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['rnoag8', '1y824pg', '1a9dx2s', '1xqbitt', '1qmckm4', '197ipyx', '1kagm56', '1kvass7', '5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8', 'k678s0', 'lbvxyj', '1cw54yj', '936ejv', '1aww7hu', 'nx8yvf']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['1heknmb', 'rnoag8', '1y824pg', '1a9dx2s', '1xqbitt', '1qmckm4', '197ipyx', '1kagm56', '1kvass7', '5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8', 'k678s0', 'lbvxyj', '1cw54yj', '936ejv', '1aww7hu', 'nx8yvf']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
@@ -383,7 +376,7 @@ _True at #{{to}}. A character's reading marked as such is not canon._
 # OPEN AT #{{to}}
 _Unresolved at #{{to}}; check recent messages before treating any as pending._
 \`\`\`
-The heading is always "STATE AT", never "CURRENT STATE". The STATE rules in 8 apply: short lines, no events already in the sections, a character's reading attributed to them. OPEN may be split into groups (e.g. ## Deep past · ## Relationships · ## World and live plot); keep threads short and do not prescribe future actions.`;
+The heading is always "STATE AT", never "CURRENT STATE". The STATE rules above apply: short lines, no events already in the sections, a character's reading attributed to them. OPEN may be split into groups (e.g. ## Deep past · ## Relationships · ## World and live plot); keep threads short and do not prescribe future actions.`;
 
 // the note, the size and the language go before a closing "Before you write" step, so that step is read last
 // (a later part of a long range already has the STATE the first part wrote, so it gets change lists again)
@@ -392,16 +385,18 @@ function compressExtra(tpl, vars, m, memo, size) {
     const fresh = /NEW CHAT note/.test(tpl) && noState ? `\n\n${NEW_CHAT_NOTE.split('{{from}}').join(vars.from ?? '').split('{{to}}').join(vars.to ?? '')}` : '';
     return fresh + memoBlock(memo) + size + langBlock(m.text);
 }
+// where the closing "# N. Before you write" step starts (its number moved from 9 to 8 in 3.89.2; custom copies keep theirs)
+export const beforeAt = text => { let at = -1; for (const mt of String(text).matchAll(/\n# \d+\. Before you write/g)) at = mt.index; return at; };
 export const compressPrompt = (tpl, vars, m, memo = '', size = '') => {
     const body = fillPrompt(tpl, { recent: recentSections(vars.archive ?? m.text), ...vars });
     const au = auBlock(m), cut = body.indexOf('</current_state>');
     const withAu = !au ? body : cut >= 0 ? `${body.slice(0, cut + 16)}\n\n${au.trim()}${body.slice(cut + 16)}` : au + body;
     const extra = compressExtra(tpl, vars, m, memo, size);
-    const last = withAu.lastIndexOf('\n# 9. Before you write');
+    const last = beforeAt(withAu);
     return last >= 0 ? `${withAu.slice(0, last).replace(/\s+$/, '')}${extra}\n\n${withAu.slice(last + 1)}` : withAu + extra;
 };
 
-// 규칙은 시스템 메시지로: the rules (after <current_state>, up to "# 9. Before you write") go in the system part;
+// 규칙은 시스템 메시지로: the rules (after <current_state>, up to "# N. Before you write") go in the system part;
 // the raw log, the state, the AU block, this stretch's notes and the closing step stay in the request.
 // Turned off, or a template without both marks: everything in the request, as before.
 export const rulesInSystem = () => !!globalSettings().rulesInSystem;
@@ -409,7 +404,7 @@ export function compressParts(tpl, vars, m, memo = '', size = '') {
     const whole = () => ({ system: '', prompt: compressPrompt(tpl, vars, m, memo, size) });
     if (!rulesInSystem()) return whole();
     const body = fillPrompt(tpl, { recent: recentSections(vars.archive ?? m.text), ...vars });
-    const cut = body.indexOf('</current_state>'), last = body.lastIndexOf('\n# 9. Before you write');
+    const cut = body.indexOf('</current_state>'), last = beforeAt(body);
     if (cut < 0 || last < cut) return whole();
     const rules = body.slice(cut + 16, last).trim();
     const au = auBlock(m).trim(), notes = compressExtra(tpl, vars, m, memo, size).trim();
