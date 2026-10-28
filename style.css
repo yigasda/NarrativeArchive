@@ -3396,7 +3396,7 @@ body.na_darkui #na_settings {
 #na_settings #na_meter .na_meter_stats span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.76em !important; color: var(--hm-dim); }
 #na_settings #na_meter .na_meter_stats b { font-size: 1em !important; font-weight: 700; font-variant-numeric: tabular-nums; }
 #na_settings #na_meter .na_meter_legend { gap: 2px 12px; font-size: 0.78em !important; line-height: 1.5; opacity: 1; color: var(--hm-dim); }
-#na_settings #na_meter .na_meter_legend:not(:has(span)) { display: none; }
+#na_settings #na_meter .na_meter_legend:not(:has(span, button)) { display: none; }
 #na_settings #na_meter .na_meter_legend > span { font-size: 1em !important; }
 #na_settings #na_meter .na_router_st { display: inline-flex; align-items: center; gap: 5px; }
 #na_settings #na_meter .na_router_st .na_svg { flex: none; }
