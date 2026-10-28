@@ -33,7 +33,8 @@ export function rangedBlocks(body) {
 }
 
 // what one section breaks: [] when nothing
-export function sectionProblems(text, { english = false, counts = true, maxWords = MAX_WORDS } = {}) {
+// quotes: an English archive's quoted lines still in Korean (a user turn written in Korean, left as it was)
+export function sectionProblems(text, { english = false, counts = true, maxWords = MAX_WORDS, quotes = true } = {}) {
     const bullets = String(text).split('\n').filter(l => /^\s*[-*•]\s/.test(l));
     const plain = bullets.map(l => l.replace(/^\s*[-*•]\s/, '').replace(/\([^()]*#\d[^()]*\)/g, ' '));
     const words = plain.join(' ').split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w)).length;
@@ -45,6 +46,8 @@ export function sectionProblems(text, { english = false, counts = true, maxWords
     if (english) {
         const hits = [...new Set((plain.join(' ').match(bannedRe) || []).map(w => w.toLowerCase()))];
         if (hits.length) out.push(`banned wording: ${hits.map(w => `"${w}"`).join(', ')} (say the same thing plainly without it)`);
+        const raw = (bullets.join(' ').match(/["“][^"”]*[\uac00-\ud7af][^"”]*["”]/g) || []);
+        if (quotes && raw.length) out.push(`${raw.length} quote${raw.length > 1 ? 's' : ''} not in English: ${raw.slice(0, 3).join(' ')} (translate each into English, faithful to its meaning and the speaker's register)`);
     }
     return out;
 }
@@ -54,6 +57,7 @@ const FIX_SYS = `You fix sections of a role-play archive that break a few counte
 - Too many words: cut staging (movement, gestures, props, scenery), repeated content and lower-priority detail. Keep every cause before its reaction and every trigger before its decision. Quotes that stay stay exactly as written.
 - Too many em dashes: rewrite the extra ones with a comma, a colon or a new sentence.
 - Banned wording: say the same thing plainly, without it and without a new image.
+- A quote not in the archive's language: translate that quote, faithful to its meaning and the speaker's register; change nothing else around it.
 - Every sentence keeps its message numbers, such as (#88). A sentence made from two keeps the numbers of both.
 - Keep each heading line and "PLOT:" exactly as they are. Do not add facts, quotes, interpretation or a closing line about what it meant.
 Output only the fixed sections, in the same order, each starting with its heading line. Nothing else.`;

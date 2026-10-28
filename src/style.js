@@ -116,7 +116,7 @@ const SHAPE = /^(?:[A-Z][a-z]+(?:ed|ing)\b|(?:Furious|Angry|Glad|Afraid|Unable|R
 export function styleLint(text, { english = true } = {}) {
     // bullet and word counts are left out: the pass may not change how many bullets there are or drop content, so
     // those stay with the count check that runs after it
-    const out = sectionProblems(text, { english, counts: false });
+    const out = sectionProblems(text, { english, counts: false, quotes: false });
     const bullets = bulletsOf(text);
     const shaped = [];
     bullets.forEach((l, k) => {
