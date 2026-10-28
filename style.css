@@ -2935,6 +2935,13 @@ body.na_darkui :is(.na_v2, #na_settings) .na_wd_text.text_pole.text_pole { backg
 .na_wd_rv_row em { flex: none; font-style: normal; font-size: 0.8em; padding: 1px 7px; border-radius: 999px; background: var(--na-card2); color: var(--na-dim); }
 .na_wd_rv_row em.new { color: var(--na-accent); }
 .na_wd_rv_foot { display: flex; justify-content: flex-end; gap: 6px; }
+.na_wd_namerow { display: flex; align-items: center; gap: 8px; }
+.na_wd_namerow .na_wd_rename { flex: 1; min-width: 0; }
+.na_wd_namerow .na_wd_tr { flex: none; padding: 5px 10px; font-size: 0.82em; border-radius: 999px; }
+.na_wd_namerow .na_wd_tr.active { border-color: var(--na-accent); color: var(--na-accent); }
+.na_wd_ko { display: block; color: var(--na-dim); font-size: 0.84em; line-height: 1.5; padding: 0 6px; }
+.na_wd_ko:empty { display: none; }
+.na_wd_row .na_wd_ko { grid-column: 1 / -1; }
 
 /* Versions (section layers) */
 .na_layers { gap: 10px; }

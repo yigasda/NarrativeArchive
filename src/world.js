@@ -7,6 +7,7 @@ import { sectionPanel, syncPanel } from './panel.js';
 import { faceHtml } from './people.js';
 import { LANG_NAME, archiveLang } from './prompts.js';
 import { parseSections } from './sections.js';
+import { trCachedLines, translateLines } from './translate.js';
 import { ICO_A, svgA } from './theme.js';
 import { confirm, countTokens, esc, fmt } from './util.js';
 
@@ -117,6 +118,15 @@ export async function openWorlds() {
     const g = globalSettings();
     const open = new Set();
     const review = new Map(); // book id → what 아카이브에서 채우기 brought back, waiting to be ticked
+    // 한국어로 보기: each line's Korean under it (the book itself stays as written); the translations live in the shared cache
+    const trOn = new Set();
+    const entryLine = e => { const n = String(e.name || '').trim(), d = String(e.desc || '').trim(); return n && d ? `${n}: ${d}` : n || d; };
+    const trLines = w => {
+        const rv = review.get(w.id);
+        return [w.intro, ...Object.values(slotsOf(w)).flat().map(entryLine), ...(rv ? [rv.intro, ...rv.items.map(entryLine)] : [])].map(x => String(x || '').trim()).filter(Boolean);
+    };
+    let koOf = () => '';
+    const ko = (w, line) => { const t = trOn.has(w.id) && String(line || '').trim() ? koOf(String(line).trim()) : ''; return trOn.has(w.id) ? `<small class="na_wd_ko">${esc(t || '')}</small>` : ''; };
     let importing = false;
     const $root = $(`
       <div class="na_popup na_v2 na_worlds">
@@ -132,6 +142,9 @@ export async function openWorlds() {
     const save = async () => { saveGlobal(); await saveMeta(); applyInjection(); syncPanel(); };
     const draw = () => {
         const books = worldBooks(), ck = charKey(), cn = charName();
+        const cache = new Map();
+        for (const w of books.filter(x => trOn.has(x.id))) { const ls = trLines(w); trCachedLines(ls).forEach((t, i) => { if (t) cache.set(ls[i], t); }); }
+        koOf = line => cache.get(line) || '';
         $root.find('.na_wd_list').html(books.length ? books.map(w => {
             const on = worldIsOn(m, w), bound = Array.isArray(w.chars) && w.chars.includes(ck), others = (w.chars || []).length - (bound ? 1 : 0);
             const how = !on ? '꺼짐' : m.worldOn?.[w.id] === true ? '직접 켬' : `${esc(cn)} 채팅에 묶임`;
@@ -146,7 +159,10 @@ export async function openWorlds() {
               </div>
               ${open.has(w.id) ? `
               <div class="na_wd_body">
-                <input type="text" class="text_pole na_wd_rename" value="${esc(w.name || '')}" placeholder="이름" title="이름 고치기" aria-label="이름">
+                <div class="na_wd_namerow">
+                  <input type="text" class="text_pole na_wd_rename" value="${esc(w.name || '')}" placeholder="이름" title="이름 고치기" aria-label="이름">
+                  <button type="button" class="na_v2_btn na_wd_tr ${trOn.has(w.id) ? 'active' : ''}">${trOn.has(w.id) ? '원문만' : '한국어로 보기'}</button>
+                </div>
                 ${partsHtml(w)}
                 <div class="na_wd_fillbar">
                   <select class="text_pole na_wd_fillk" aria-label="채울 칸"><option value="">모든 칸</option>${WORLD_SLOTS.map(x => `<option value="${x.k}">${x.label}만</option>`).join('')}<option value="intro">한 줄 소개만</option></select>
@@ -183,6 +199,7 @@ export async function openWorlds() {
           <div class="na_wd_slot na_wd_intro">
             ${head(INTRO_ICO, '한 줄 소개', '언제, 어디, 어떤 이야기인지')}
             <textarea class="text_pole na_wd_introtx" rows="1" spellcheck="false" placeholder="예: 2020년대 서울, 같은 회사에 다니는 두 사람">${esc(w.intro || '')}</textarea>
+            ${ko(w, w.intro)}
           </div>
           ${WORLD_SLOTS.map(x => `
           <div class="na_wd_slot" data-k="${x.k}">
@@ -192,6 +209,7 @@ export async function openWorlds() {
                 <input type="text" class="text_pole na_wd_en" value="${esc(e.name || '')}" placeholder="이름" aria-label="이름">
                 <textarea class="text_pole na_wd_ed" rows="1" spellcheck="false" placeholder="설명" aria-label="설명">${esc(e.desc || '')}</textarea>
                 <button type="button" class="na_wd_rx" title="빼기" aria-label="빼기">${svgA('M6 6l12 12M18 6L6 18', 14, 2.2)}</button>
+                ${ko(w, entryLine(e))}
               </div>`).join('')}</div>` : ''}
           </div>`).join('')}
           ${String(w.text || '').trim() ? `
@@ -203,9 +221,9 @@ export async function openWorlds() {
     // what the model brought back: new entries ticked, changed ones show the old description, the rest are left out
     const reviewHtml = (w, rv) => {
         const by = k => rv.items.map((it, i) => ({ ...it, i })).filter(it => it.k === k);
-        const row = it => `<label class="na_wd_rv_row"><input type="checkbox" data-i="${it.i}" ${it.on ? 'checked' : ''}><span><b>${esc(it.name || '')}</b>${it.name ? ' ' : ''}${esc(it.desc)}${it.old !== undefined ? `<small class="na_wd_rv_old">지금: ${esc(it.old || '(설명 없음)')}</small>` : ''}</span><em class="${it.old !== undefined ? 'chg' : 'new'}">${it.old !== undefined ? '바뀜' : '새로'}</em></label>`;
+        const row = it => `<label class="na_wd_rv_row"><input type="checkbox" data-i="${it.i}" ${it.on ? 'checked' : ''}><span><b>${esc(it.name || '')}</b>${it.name ? ' ' : ''}${esc(it.desc)}${ko(w, entryLine(it))}${it.old !== undefined ? `<small class="na_wd_rv_old">지금: ${esc(it.old || '(설명 없음)')}</small>` : ''}</span><em class="${it.old !== undefined ? 'chg' : 'new'}">${it.old !== undefined ? '바뀜' : '새로'}</em></label>`;
         const groups = [
-            ...(rv.intro !== undefined ? [`<div class="na_wd_rv_grp"><b>한 줄 소개</b><label class="na_wd_rv_row"><input type="checkbox" data-i="intro" ${rv.introOn ? 'checked' : ''}><span>${esc(rv.intro)}${String(w.intro || '').trim() ? `<small class="na_wd_rv_old">지금: ${esc(w.intro)}</small>` : ''}</span><em class="${String(w.intro || '').trim() ? 'chg' : 'new'}">${String(w.intro || '').trim() ? '바뀜' : '새로'}</em></label></div>`] : []),
+            ...(rv.intro !== undefined ? [`<div class="na_wd_rv_grp"><b>한 줄 소개</b><label class="na_wd_rv_row"><input type="checkbox" data-i="intro" ${rv.introOn ? 'checked' : ''}><span>${esc(rv.intro)}${ko(w, rv.intro)}${String(w.intro || '').trim() ? `<small class="na_wd_rv_old">지금: ${esc(w.intro)}</small>` : ''}</span><em class="${String(w.intro || '').trim() ? 'chg' : 'new'}">${String(w.intro || '').trim() ? '바뀜' : '새로'}</em></label></div>`] : []),
             ...WORLD_SLOTS.filter(x => by(x.k).length).map(x => `<div class="na_wd_rv_grp"><b>${x.label}</b>${by(x.k).map(row).join('')}</div>`),
         ];
         return `<div class="na_wd_review">
@@ -220,12 +238,20 @@ export async function openWorlds() {
     $root.on('change', '.na_wd_text', async function () { book(this).text = this.value.replace(/\r\n/g, '\n'); await save(); counts(); });
     // the parts: typing saves without drawing again, so the cursor stays where it is
     const slotList = (w, el) => { const k = String($(el).closest('.na_wd_slot').data('k')); w.slots = slotsOf(w); return w.slots[k]; };
-    $root.on('change', '.na_wd_introtx', async function () { book(this).intro = this.value.replace(/\s*\n\s*/g, ' ').trim(); await save(); counts(); });
+    // with 한국어로 보기 on, an edited line gets its Korean again without drawing the list again
+    const retr = ($at, line) => { if (!line || !$at.length) return; translateLines([line]).then(([t]) => $at.text(t || '')).catch(() => {}); };
+    $root.on('change', '.na_wd_introtx', async function () {
+        const w = book(this);
+        w.intro = this.value.replace(/\s*\n\s*/g, ' ').trim();
+        await save(); counts();
+        if (trOn.has(w.id)) retr($(this).siblings('.na_wd_ko'), w.intro);
+    });
     $root.on('change', '.na_wd_en, .na_wd_ed', async function () {
         const w = book(this), list = slotList(w, this), e = list[Number($(this).closest('.na_wd_row').data('n'))];
         if (!e) return;
         e[$(this).hasClass('na_wd_en') ? 'name' : 'desc'] = this.value.replace(/\s*\n\s*/g, ' ').trim();
         await save(); counts();
+        if (trOn.has(w.id)) retr($(this).siblings('.na_wd_ko'), entryLine(e));
     });
     $root.on('click', '.na_wd_add', async function () {
         const w = book(this), list = slotList(w, this), k = String($(this).closest('.na_wd_slot').data('k'));
@@ -260,11 +286,21 @@ export async function openWorlds() {
         const intro = (!only || only === 'intro') && got.intro && !same(got.intro, w.intro) ? got.intro : undefined;
         if (!items.length && intro === undefined && !got.items.length && !got.intro) return toastr.warning('모델의 답에서 칸을 못 찾았어요. 다시 해 보세요.');
         review.set(w.id, { items, intro, introOn: true });
+        if (trOn.has(w.id)) await withSpinner($(this), '번역하는 중…', () => translateLines(trLines(w)));
         draw();
     });
     $root.on('change', '.na_wd_review input[type=checkbox]', function () {
         const rv = review.get(book(this).id), i = this.dataset.i;
         if (i === 'intro') rv.introOn = this.checked; else rv.items[Number(i)].on = this.checked;
+    });
+    $root.on('click', '.na_wd_tr', async function () {
+        const w = book(this);
+        if (trOn.has(w.id)) { trOn.delete(w.id); return draw(); }
+        const lines = trLines(w);
+        if (!lines.length) return toastr.info('번역할 내용이 없어요.');
+        const out = await withSpinner($(this), '번역하는 중…', () => translateLines(lines));
+        if (!out) return;
+        trOn.add(w.id); draw();
     });
     $root.on('click', '.na_wd_rv_no', function () { review.delete(book(this).id); draw(); });
     $root.on('click', '.na_wd_rv_go', async function () {
