@@ -400,10 +400,17 @@ export const beforeAt = text => { let at = -1; for (const mt of String(text).mat
 export const compressPrompt = (tpl, vars, m, memo = '', size = '') => {
     const body = fillPrompt(tpl, { recent: recentSections(vars.archive ?? m.text), ...vars });
     const au = auBlock(m), cut = body.indexOf('</current_state>');
-    const withAu = !au ? body : cut >= 0 ? `${body.slice(0, cut + 16)}\n\n${au.trim()}${body.slice(cut + 16)}` : au + body;
     const extra = compressExtra(tpl, vars, m, memo, size);
-    const last = beforeAt(withAu);
-    return last >= 0 ? `${withAu.slice(0, last).replace(/\s+$/, '')}${extra}\n\n${withAu.slice(last + 1)}` : withAu + extra;
+    // a template that opens with <raw_log> … <current_state> goes in the order of a story preset: the rules first,
+    // then the AU note, the raw log and STATE, this stretch's notes, and the closing check last
+    const last = beforeAt(body);
+    if (/^\s*<raw_log\b/.test(body) && cut >= 0 && last > cut) {
+        const head = body.slice(0, cut + 16).trim(), rules = body.slice(cut + 16, last).trim();
+        return `${rules}${au ? `\n\n${au.trim()}` : ''}\n\n${head}${extra}\n\n${body.slice(last + 1)}`;
+    }
+    const withAu = !au ? body : cut >= 0 ? `${body.slice(0, cut + 16)}\n\n${au.trim()}${body.slice(cut + 16)}` : au + body;
+    const at = beforeAt(withAu);
+    return at >= 0 ? `${withAu.slice(0, at).replace(/\s+$/, '')}${extra}\n\n${withAu.slice(at + 1)}` : withAu + extra;
 };
 
 // 규칙은 시스템 메시지로: the rules (after <current_state>, up to "# N. Before you write") go in the system part;
