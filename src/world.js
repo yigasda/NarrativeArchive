@@ -176,7 +176,8 @@ export async function openWorlds() {
     // the parts: a one-line intro, then each part as name + description rows; the old free text only when there is some
     const partsHtml = w => {
         const sl = slotsOf(w);
-        const head = (ico, label, hint, extra = '') => `<div class="na_wd_slot_head"><span class="na_wd_slot_ico">${svgA(ico, 15)}</span><b>${label}</b><small>${hint}</small>${extra}</div>`;
+        // the hint is a tooltip only: written out next to every part it was too long
+        const head = (ico, label, hint, extra = '') => `<div class="na_wd_slot_head" title="${hint}"><span class="na_wd_slot_ico">${svgA(ico, 15)}</span><b>${label}</b>${extra}</div>`;
         return `
           <div class="na_wd_slot na_wd_intro">
             ${head(INTRO_ICO, '한 줄 소개', '언제, 어디, 어떤 이야기인지')}
