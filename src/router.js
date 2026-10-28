@@ -101,8 +101,8 @@ Step 1. Read the LATEST message first, then the others. List for yourself the pe
 Step 2. Match that list against LIKELY SECTIONS first, then scan the titles of OTHER SECTIONS for anything hinted at.
 Step 3. Put the most important first. Fewer is better than wrong.
 
-OUTPUT: exactly one line, nothing else. After each number, one to three words in parentheses saying why
-PICK: 3 (Lukas), 12 (the promise), 7 (the north road)
+OUTPUT: exactly one line, nothing else
+PICK: 3, 12, 7
 If no section is needed:
 PICK: none`;
 
@@ -297,7 +297,7 @@ export async function runRouter(m, { force = false } = {}) {
         if (!routerWarned) { routerWarned = true; toastr.warning(`AI 라우터가 안 돼서 빠른 방식으로 골랐어요: ${e.message || e}`, '서사 아카이브'); }
         return st;
     }
-    // read the "PICK:" line if there is one (so numbers in any reasoning are ignored): "3 (Lukas), 12 (the promise)"
+    // read the "PICK:" line if there is one (so numbers in any reasoning are ignored); a word in parentheses after a number is kept as the why
     const pickLine = (out.match(/PICK\s*:\s*(.*)$/im) || [null, out])[1];
     const fresh = [];
     if (!/^\s*none\b/i.test(pickLine)) {
