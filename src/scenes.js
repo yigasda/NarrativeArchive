@@ -137,25 +137,6 @@ export function answerBlocks(out) {
     return blocks.filter(x => x.bullets.length);
 }
 
-// the <notes> a scene answer starts with (what must not be lost), taken out before the sections are read.
-// An unclosed one runs up to the first section heading; with no heading after it, nothing is left and the scene fails as before
-export function stripNotes(text) {
-    let t = String(text || '');
-    const notes = [];
-    t = t.replace(/<notes>([\s\S]*?)<\/notes>/gi, (_, x) => { notes.push(x.trim()); return ''; });
-    const open = t.search(/<notes>/i);
-    if (open >= 0) {
-        const rest = t.slice(open);
-        const head = rest.search(/\n\s*(?:TITLE\s*:|#{1,3}\s)/i);
-        notes.push((head >= 0 ? rest.slice(0, head) : rest).replace(/<notes>/i, '').trim());
-        t = t.slice(0, open) + (head >= 0 ? rest.slice(head) : '');
-    }
-    // a closing tag with no opening one: what comes before it was the notes
-    const close = t.search(/<\/notes>/i);
-    if (close >= 0) { notes.push(t.slice(0, close).trim()); t = t.slice(close).replace(/<\/notes>/i, ''); }
-    return { text: t.replace(/<\/?notes>/gi, ''), notes: notes.filter(Boolean).join('\n') };
-}
-
 const SCENE_ASK = (from, to, prefix) => `[THIS REQUEST]
 Write the section for #${from}–#${to}, the raw log in <raw_log>, following <rules> (ignore what they say about output parts, change lists, scene lists and section counts: here you write the section for this scene and nothing else).
 - Usually ONE section. Write TWO only when the story clearly turns inside this scene; then the first covers #${from} up to the turn and the second from the turn to #${to}, with no gap.
@@ -165,8 +146,7 @@ Write the section for #${from}–#${to}, the raw log in <raw_log>, following <ru
 - <style_sample>, when present, is the voice to write in: how long its sentences run, how it quotes, how it names feelings. Take its voice, never its events. Without it, follow the voice of <recent_archive>.
 - The line that turns a scene is quoted, not referred to. Vary sentence shape: a short sentence after a long one, no chain of "-ing" clauses.
 - <work_note>, when present, is the user's own notes on this story (canon, lines to keep, past mistakes). Follow it.
-- Before the section, write <notes> containing 0–3 source-supported details whose omission would materially distort a consequential event in this scene, including its cause, evidence, or what someone knew or admitted. Write "none" if there are none. In the section, preserve only details needed for events worth keeping, as briefly as possible; make room by cutting staging or repetition rather than expanding. Do not invent details. The extension removes <notes>.
-Output <notes>…</notes>, then only, for each section:
+Output only, for each section:
 ## #<first>–#<last> — <title> (<date>, <place>)
 PLOT:
 - <bullet>
@@ -284,11 +264,7 @@ export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = 
         const sys = rulesInSystem() ? rulesFor(from, to).trim() : '';
         const prompt = `<raw_log range="#${from}–#${to}">\n${formatExtract(part, g)}\n</raw_log>\n\n<previous_section>\n${prev || '(none: this is the start of the archive)'}\n</previous_section>\n\n<recent_archive>\n${recentFor(k) || '(none)'}\n</recent_archive>${styleBlock(m)}\n\n<current_state>\n${tail || '(none)'}\n</current_state>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}${sys ? '\n\n[The rules for this job are in the system message. Follow them.]' : `\n\n<rules>\n${rulesFor(from, to).trim()}\n</rules>`}${au.on ? `\n\n${auBlock(m).trim()}` : ''}${await loreBlock(formatExtract(part, g))}${memoBlock(memo)}${langBlock(m.text, { tail: false })}\n\n${SCENE_ASK(from, to, prefix)}`;
         let got;
-        try {
-            const n = stripNotes(await ask(sceneModel(), prompt, sys, SECTION_GUARD, !!sys));
-            console.info(`[NarrativeArchive] #${from}–#${to} notes · ${n.notes.length}자`, n.notes);
-            got = parseSceneAnswer(n.text, from, to);
-        }
+        try { got = parseSceneAnswer(await ask(sceneModel(), prompt, sys, SECTION_GUARD, !!sys), from, to); }
         catch (e) { error = e; break; }
         if (!got.length) { error = new Error(`#${from}–#${to} 답에 불릿이 없어요`); break; }
         const blocks = got.map(x => `## ${prefix ? `${prefix} ` : ''}#${x.a}–#${x.b} — ${x.title || 'Untitled'}\nPLOT:\n${x.bullets.join('\n')}`);
