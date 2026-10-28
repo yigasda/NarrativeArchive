@@ -273,7 +273,9 @@ export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = 
         const [rules, check] = splitCheck(rulesFor(from, to));
         // 규칙은 시스템 메시지로: the same rules, in the system part instead of <rules>
         const sys = rulesInSystem() ? rules : '';
-        const prompt = `<raw_log range="#${from}–#${to}">\n${formatExtract(part, g)}\n</raw_log>\n\n<previous_section>\n${prev || '(none: this is the start of the archive)'}\n</previous_section>\n\n<recent_archive>\n${recentFor(k) || '(none)'}\n</recent_archive>${styleBlock(m)}\n\n<current_state>\n${tail || '(none)'}\n</current_state>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}${sys ? '\n\n[The rules for this job are in the system message. Follow them.]' : `\n\n<rules>\n${rules}\n</rules>`}${au.on ? `\n\n${auBlock(m).trim()}` : ''}${await loreBlock(formatExtract(part, g))}${memoBlock(memo)}${langBlock(m.text, { tail: false })}\n\n${SCENE_ASK(from, to, prefix)}${check ? `\n\n${check}` : ''}`;
+        // the order of a story preset: the rules first, then the context, the raw log near the end, then the request and the check
+        const lore = await loreBlock(formatExtract(part, g));
+        const prompt = `${sys ? '[The rules for this job are in the system message. Follow them.]' : `<rules>\n${rules}\n</rules>`}${au.on ? `\n\n${auBlock(m).trim()}` : ''}\n\n<previous_section>\n${prev || '(none: this is the start of the archive)'}\n</previous_section>\n\n<recent_archive>\n${recentFor(k) || '(none)'}\n</recent_archive>${styleBlock(m)}\n\n<current_state>\n${tail || '(none)'}\n</current_state>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}${lore}\n\n<raw_log range="#${from}–#${to}">\n${formatExtract(part, g)}\n</raw_log>${memoBlock(memo)}${langBlock(m.text, { tail: false })}\n\n${SCENE_ASK(from, to, prefix)}${check ? `\n\n${check}` : ''}`;
         let got;
         try { got = parseSceneAnswer(await ask(sceneModel(), prompt, sys, SECTION_GUARD, !!sys), from, to); }
         catch (e) { error = e; break; }

@@ -164,7 +164,7 @@ export const SHORT_PROMPT = `<raw_log range="#{{from}}–#{{to}}">
 {{state}}
 </current_state>
 
-You write the next stretch of a role-play's long-term memory (the archive): #{{from}}–#{{to}} of the raw log above. The bot reads the archive as a snapshot of the past. Write a memory, not a transcript: what happened, why, and what it changed.
+You write the next stretch of a role-play's long-term memory (the archive): #{{from}}–#{{to}} of the raw log in <raw_log>. The bot reads the archive as a snapshot of the past. Write a memory, not a transcript: what happened, why, and what it changed.
 
 # 1. Output
 - Sections covering #{{from}}–#{{to}} with no gap or overlap, then a line \`---\`, then the change lists in 9 if <current_state> has STATE / OPEN blocks. Never write the blocks out. If <current_state> is empty (a new chat), follow the NEW CHAT note below instead.
@@ -255,7 +255,7 @@ In your thinking, not in the answer, run this check on each section:
    - Is there a physical act that is not the event itself and drives no choice or conflict? If yes, remove it.
 5. Fact Check:
    - Is there anything stated more strongly or more broadly than the log shows, or a fact the log does not give? If yes, bring it back to what the log says.`;
-export const OLD_SHORT_HASHES = new Set(['zy9q3q', 'rbkwkm', '126kcf5', '13w2m7p', '1s8i0of', 'f70apb', 'fu81dv', 'a67lz5', 'amx6h2', '892qha', '13bqai', 'aromd8', '1ksvarl', 'vty6ef', '19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
+export const OLD_SHORT_HASHES = new Set(['1fgro5b', 'zy9q3q', 'rbkwkm', '126kcf5', '13w2m7p', '1s8i0of', 'f70apb', 'fu81dv', 'a67lz5', 'amx6h2', '892qha', '13bqai', 'aromd8', '1ksvarl', 'vty6ef', '19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
 export const BUILTIN_PROMPTS = new Set(['basic', 'short']);
 const BUILTIN_TEXT = { basic: () => BASIC_PROMPT, short: () => SHORT_PROMPT };
 // 기본 (정리본) as it shipped in 3.84.0–3.86.x, before it became 기본 itself: an untouched copy is taken out
