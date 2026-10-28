@@ -51,7 +51,7 @@ export function sectionProblems(text, { english = false, counts = true, maxWords
 
 const FIX_SYS = `You fix sections of a role-play archive that break a few counted rules. Each section comes with what is wrong with it. Change only what the problem needs; keep everything else word for word.
 - Too many bullets: merge bullets that belong together. Never drop a cause, a reason, a decision or a quote to get there; merge instead.
-- Too many words: cut staging (movement, gestures, props, scenery), repeated content and lower-priority detail. Keep every cause before its reaction and every trigger before its decision. Quotes that stay stay exactly as written.
+- Too many words: cut staging (movement, gestures, props, scenery), repetition and lower-priority detail. Preserve event order, causal relationships and already-present qualifications needed to keep the events accurate, including limits on knowledge or admission. Quotes that stay stay exactly as written.
 - Too many em dashes: rewrite the extra ones with a comma, a colon or a new sentence.
 - Banned wording: say the same thing plainly, without it and without a new image.
 - Every sentence keeps its message numbers, such as (#88). A sentence made from two keeps the numbers of both.
