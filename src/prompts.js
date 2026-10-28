@@ -182,6 +182,7 @@ Test every line: "Without it, would the bot's next scene go wrong or feel unmoti
 - Keep: the reason behind an emotional reaction · why a character held a line or crossed it, when the raw log shows it (when it gives none, do not supply one) · what a character chose not to do ("…rather than knock") · an act and its contradiction together ("…said he would never forgive it, and still did not let go") · a question with its answer. Most bullets need one of these or none.
 - A beat that repeats a pattern STATE already holds gets a clause at most; one that breaks or turns it gets the space.
 - Cut staging: movement, gestures, props, how a line was said, scenery; light, rooms, weather, clothing or bodies described for mood; anxiety gets one word. A gesture stays only when it is the event itself, such as a slap, a kiss or a door locked against someone.
+- Leave out small touches, such as feeding by hand or licking a finger.
 - When one of this RP's recurring devices returns (a phrase, an object, a song, a ritual), keep that event and line.
 
 # 4. Emotional arc
@@ -254,7 +255,7 @@ In your thinking, not in the answer, run this check on each section:
    - Is there a physical act that is not the event itself and drives no choice or conflict? If yes, remove it.
 5. Fact Check:
    - Is there anything stated more strongly or more broadly than the log shows, or a fact the log does not give? If yes, bring it back to what the log says.`;
-export const OLD_SHORT_HASHES = new Set(['rbkwkm', '126kcf5', '13w2m7p', '1s8i0of', 'f70apb', 'fu81dv', 'a67lz5', 'amx6h2', '892qha', '13bqai', 'aromd8', '1ksvarl', 'vty6ef', '19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
+export const OLD_SHORT_HASHES = new Set(['zy9q3q', 'rbkwkm', '126kcf5', '13w2m7p', '1s8i0of', 'f70apb', 'fu81dv', 'a67lz5', 'amx6h2', '892qha', '13bqai', 'aromd8', '1ksvarl', 'vty6ef', '19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
 export const BUILTIN_PROMPTS = new Set(['basic', 'short']);
 const BUILTIN_TEXT = { basic: () => BASIC_PROMPT, short: () => SHORT_PROMPT };
 // 기본 (정리본) as it shipped in 3.84.0–3.86.x, before it became 기본 itself: an untouched copy is taken out
