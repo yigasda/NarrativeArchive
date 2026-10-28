@@ -762,7 +762,7 @@ export function showArchiveView(view) {
     }
 }
 
-// 시작하기: four steps for a first-time user, ticked by what the extension can see. Gone once all four have been
+// 시작하기: three steps for a first-time user (four when 주입 is off), ticked by what the extension can see. Gone once all four have been
 // done in some chat (or 숨기기), so people who already use it never see it again.
 const START_STEPS = [
     { key: 'model', short: '모델', title: '초안 모델 연결', btn: '초안 모델 정하러 가기',
@@ -788,12 +788,16 @@ async function scanForArchive() {
     const openChar = ctx().characters?.[ctx().characterId]?.avatar;
     try {
         if (hasChat() && getMeta().text.trim()) g.startDone = true;
-        for (const ch of ctx().characters || []) {
-            if (g.startDone) break;
+        // six characters at a time, so a big library is looked through in a few seconds
+        const chars = (ctx().characters || []).filter(ch => ch?.avatar);
+        const holds = async ch => {
             const r = await fetch('/api/characters/chats', { method: 'POST', headers: ctx().getRequestHeaders(), body: JSON.stringify({ avatar_url: ch.avatar, metadata: true }) });
             if (!r.ok) throw new Error(`chats ${r.status}`);
             const list = await r.json();
-            if (Array.isArray(list) && list.some(x => !(ch.avatar === openChar && x?.file_name === openChat) && String(x?.chat_metadata?.[MODULE]?.text || '').trim())) g.startDone = true;
+            return Array.isArray(list) && list.some(x => !(ch.avatar === openChar && x?.file_name === openChat) && String(x?.chat_metadata?.[MODULE]?.text || '').trim());
+        };
+        for (let i = 0; i < chars.length && !g.startDone; i += 6) {
+            if ((await Promise.all(chars.slice(i, i + 6).map(holds))).some(Boolean)) g.startDone = true;
         }
         g.startScanned = true;
         saveGlobal();
@@ -821,7 +825,9 @@ function goStart(key) {
 // true while the card is up
 function renderStart(m) {
     const g = globalSettings();
-    const done = START_STEPS.map(x => !!x.done(m));
+    // 주입 is on in a new chat, so its step only shows for someone who turned it off
+    const steps = START_STEPS.filter(x => x.key !== 'inject' || !m.enabled);
+    const done = steps.map(x => !!x.done(m));
     if (!g.startDone && done.every(Boolean)) { g.startDone = true; saveGlobal(); }
     // stay hidden until the one-time look through the other chats is over
     if (!g.startDone && !g.startScanned && !startScanFailed) { startScan ||= scanForArchive(); $('#na_start').prop('hidden', true); return false; }
@@ -829,13 +835,14 @@ function renderStart(m) {
     $('#na_start').prop('hidden', !show);
     if (!show) return false;
     const first = done.indexOf(false);
-    const cur = startPick !== null ? startPick : first;
-    const st = START_STEPS[cur];
+    const cur = startPick !== null && startPick < steps.length ? startPick : first;
+    const st = steps[cur];
     const n = done.filter(Boolean).length;
-    const fill = Math.max(0, Math.min(3, first)) / 3; // the line is orange up to the step to do
+    const last = steps.length - 1;
+    const fill = Math.max(0, Math.min(last, first)) / last; // the line is orange up to the step to do
     $('#na_start').html(`
-      <div class="na_start_head"><b>시작하기</b><span class="na_start_n">${n} / ${START_STEPS.length}</span><button type="button" class="na_start_hide">숨기기</button></div>
-      <div class="na_start_steps" style="--fill:${fill}">${START_STEPS.map((x, i) => `<button type="button" class="na_start_step${done[i] ? ' done' : ''}${i === cur ? ' cur' : ''}" data-i="${i}" aria-label="${i + 1}단계 · ${x.title}${done[i] ? ' · 했어요' : ''}"><span class="na_start_dot">${done[i] ? svgA(ICO_A.check, 14, 3) : i + 1}</span><span class="na_start_lab">${x.short}</span></button>`).join('')}</div>
+      <div class="na_start_head"><b>시작하기</b><span class="na_start_n">${n} / ${steps.length}</span><button type="button" class="na_start_hide">숨기기</button></div>
+      <div class="na_start_steps" style="--fill:${fill};--n:${steps.length}">${steps.map((x, i) => `<button type="button" class="na_start_step${done[i] ? ' done' : ''}${i === cur ? ' cur' : ''}" data-i="${i}" aria-label="${i + 1}단계 · ${x.title}${done[i] ? ' · 했어요' : ''}"><span class="na_start_dot">${done[i] ? svgA(ICO_A.check, 14, 3) : i + 1}</span><span class="na_start_lab">${x.short}</span></button>`).join('')}</div>
       <div class="na_start_body"><b>${st.title}${done[cur] ? ' <small>· 했어요</small>' : ''}</b><span>${st.desc}</span></div>
       <button type="button" class="na_start_go${done[cur] ? ' done' : ''}" data-key="${st.key}">${st.btn}</button>`);
     return true;

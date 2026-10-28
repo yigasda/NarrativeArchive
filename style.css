@@ -4091,9 +4091,9 @@ body.na_darkui #na_settings { --sv-page: #2F2621; --sv-card: #3A2F28; --sv-line:
 #na_settings .na_start_n { font-size: 0.857em; font-weight: 700; color: var(--sv-val); }
 #na_settings .na_start_hide { margin: 0 0 0 auto; width: auto; padding: 2px 4px; border: 0; background: transparent; color: var(--sv-dim); font: inherit; font-size: 0.857em; cursor: pointer; }
 #na_settings .na_start_steps { position: relative; display: flex; }
-#na_settings .na_start_steps::before, #na_settings .na_start_steps::after { content: ''; position: absolute; top: 14px; left: 12.5%; height: 2px; border-radius: 1px; }
-#na_settings .na_start_steps::before { right: 12.5%; background: var(--hm-track); }
-#na_settings .na_start_steps::after { width: calc(75% * var(--fill)); background: var(--sv-acc); }
+#na_settings .na_start_steps::before, #na_settings .na_start_steps::after { content: ''; position: absolute; top: 14px; left: calc(50% / var(--n, 4)); height: 2px; border-radius: 1px; }
+#na_settings .na_start_steps::before { right: calc(50% / var(--n, 4)); background: var(--hm-track); }
+#na_settings .na_start_steps::after { width: calc((100% - 100% / var(--n, 4)) * var(--fill)); background: var(--sv-acc); }
 #na_settings .na_start_step { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; width: auto; margin: 0; padding: 0; border: 0; background: transparent; color: var(--sv-dim); font: inherit; font-size: 0.857em; cursor: pointer; }
 #na_settings .na_start_dot { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; background: var(--hm-tile); color: var(--sv-dim); }
 #na_settings .na_start_step.done .na_start_dot { background: var(--sv-acc); color: #fff; }
