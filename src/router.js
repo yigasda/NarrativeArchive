@@ -308,5 +308,5 @@ export async function runRouter(m, { force = false } = {}) {
             if (fresh.length >= cfg.max) break;
         }
     }
-    return finish(id, key, cands, prev, fresh, cfg.max, { via: 'ai', ms: Date.now() - t0, short: order.length, guess });
+    return finish(id, key, cands, prev, fresh, cfg.max, { via: 'ai', ms: Date.now() - t0, short: order.length, guess, raw: out.trim().slice(-600) }); // raw: the model's answer, shown by 라우터 시험 when nothing was read from it
 }
