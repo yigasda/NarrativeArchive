@@ -4189,3 +4189,6 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 /* the badge sits on the title's baseline: plain inline text, the heart nudged down to the letters */
 .na_cal_av_badge { display: inline; vertical-align: baseline; }
 .na_cal_av_badge .na_heart { vertical-align: -0.08em; margin-right: 2px; }
+/* a little more room: title ↔ heart, heart ↔ name */
+.na_cal_av_badge { margin-left: 5px; }
+.na_cal_av_badge .na_heart { margin-right: 4px; }
