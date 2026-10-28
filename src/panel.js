@@ -1324,7 +1324,7 @@ export function bindPanel() {
         const st = await withSpinner($(e.currentTarget), '고르는 중…', () => runRouter(m, { force: true }));
         if (!st) return;
         await applyInjection(); syncPanel();
-        toastr.info(st.titles.length ? liftList(st) : `고른 섹션이 없어요${st.raw ? `<br><small>AI의 답: ${esc(st.raw)}</small>` : ''}`, `라우터 · ${st.titles.length}개 · ${(st.ms / 1000).toFixed(1)}초${st.short && st.short < st.cands ? ` · 후보 ${st.cands}개 중 ${st.short}개 자세히` : ''}`, { escapeHtml: false, timeOut: 10000 });
+        toastr.info(st.titles.length ? liftList(st) : '고른 섹션이 없어요', `라우터 · ${st.titles.length}개 · ${(st.ms / 1000).toFixed(1)}초${st.short && st.short < st.cands ? ` · 후보 ${st.cands}개 중 ${st.short}개 자세히` : ''}`, { escapeHtml: false, timeOut: 10000 });
     }));
     // OOC 빼기 (압축 → 설정)
     // 상태창: what the extension reads from the status windows, the last few as found
