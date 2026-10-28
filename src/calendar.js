@@ -166,7 +166,7 @@ export async function openCalendar() {
               <button type="button" class="na_cal_av_add" title="직접 추가" aria-label="직접 추가">+</button></div>
             ${adding ? `<div class="na_cal_av_new"><select class="text_pole na_cal_av_sec">${drows.map(r => `<option value="${esc(sectionKey(r.s))}">${esc(dateOf(r))} · ${esc(strip(r.s.title))}</option>`).join('')}</select><input type="text" class="text_pole na_cal_av_nm" placeholder="이름 (예: 첫 여행)"><button type="button" class="na_v2_btn primary na_cal_av_ok">추가</button></div>` : ''}
             ${avRows.length ? avRows.map(({ a, r }) => `
-              <div class="na_cal_av_row" data-k="${esc(a.key)}"><span class="na_cal_av_dot">◎</span><input type="text" class="text_pole na_cal_av_name" value="${esc(a.name)}" aria-label="기념일 이름"><small>${esc(dateOf(r))} · ${esc(strip(r.s.title))}</small><button type="button" class="na_cal_av_x" title="빼기" aria-label="빼기">✕</button></div>`).join('')
+              <div class="na_cal_av_row" data-k="${esc(a.key)}"><span class="na_cal_av_dot"><svg class="na_heart" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 20.5s-7.8-4.7-9.7-9.5C1 7.6 3.2 4.5 6.6 4.5c2.2 0 3.8 1.2 5.4 3.1 1.6-1.9 3.2-3.1 5.4-3.1 3.4 0 5.6 3.1 4.3 6.5-1.9 4.8-9.7 9.5-9.7 9.5z"/></svg></span><input type="text" class="text_pole na_cal_av_name" value="${esc(a.name)}" aria-label="기념일 이름"><small>${esc(dateOf(r))} · ${esc(strip(r.s.title))}</small><button type="button" class="na_cal_av_x" title="빼기" aria-label="빼기">✕</button></div>`).join('')
                 : `<small class="na_v2_note">${drows.length ? '아직 없어요. 찾기를 누르거나 + 로 직접 넣어요.' : '날짜가 있는 섹션이 있어야 해요.'} 이야기 속 날짜가 그날로 돌아오면 홈에 한 줄로 알려 줘요.</small>`}
           </div>`;
         $root.find('.na_cal_body').html(`
@@ -179,7 +179,7 @@ export async function openCalendar() {
             <div class="na_v2_card na_v2_list">${gr.rows.map(r => `
               <button type="button" class="na_cal_item ${r.warn ? 'warn' : ''}" data-start="${r.s.start}">
                 <span class="na_cal_day"><b>${esc(day(r))}</b><small>${esc(sub(r))}</small></span>
-                <span class="na_cal_txt"><span>${esc(strip(r.s.title))}${avBy.has(sectionKey(r.s)) ? ` <em class="na_cal_av_badge">◎ ${esc(avBy.get(sectionKey(r.s)))}</em>` : ''}</span><small>${esc(r.warn || [(r.s.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [''])[0], place(r), r.note].filter(Boolean).join(' · '))}</small></span>
+                <span class="na_cal_txt"><span>${esc(strip(r.s.title))}${avBy.has(sectionKey(r.s)) ? ` <em class="na_cal_av_badge"><svg class="na_heart" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 20.5s-7.8-4.7-9.7-9.5C1 7.6 3.2 4.5 6.6 4.5c2.2 0 3.8 1.2 5.4 3.1 1.6-1.9 3.2-3.1 5.4-3.1 3.4 0 5.6 3.1 4.3 6.5-1.9 4.8-9.7 9.5-9.7 9.5z"/></svg> ${esc(avBy.get(sectionKey(r.s)))}</em>` : ''}</span><small>${esc(r.warn || [(r.s.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [''])[0], place(r), r.note].filter(Boolean).join(' · '))}</small></span>
               </button>`).join('')}
             </div>`).join('')}`);
     };

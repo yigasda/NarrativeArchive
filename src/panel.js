@@ -826,7 +826,7 @@ export function renderNext(m, { afterTok, health }) {
     let html;
     // 이야기 속 기념일: one line when the story's date comes round to a remembered day
     const av = annivToday(m);
-    $('#na_anniv_now').prop('hidden', !av).html(av ? `<button type="button" class="na_anniv_go"><span class="na_anniv_dot">◎</span><span>이야기 속 오늘은 <b>${esc(av.name)}</b> ${av.years}년째예요</span></button><button type="button" class="na_anniv_x" data-k="${esc(`${av.key}:${av.years}`)}" title="닫기" aria-label="닫기">✕</button>` : '');
+    $('#na_anniv_now').prop('hidden', !av).html(av ? `<button type="button" class="na_anniv_go"><span class="na_anniv_dot"><svg class="na_heart" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 20.5s-7.8-4.7-9.7-9.5C1 7.6 3.2 4.5 6.6 4.5c2.2 0 3.8 1.2 5.4 3.1 1.6-1.9 3.2-3.1 5.4-3.1 3.4 0 5.6 3.1 4.3 6.5-1.9 4.8-9.7 9.5-9.7 9.5z"/></svg></span><span>이야기 속 오늘은 <b>${esc(av.name)}</b> ${av.years}년째예요</span></button><button type="button" class="na_anniv_x" data-k="${esc(`${av.key}:${av.years}`)}" title="닫기" aria-label="닫기">✕</button>` : '');
     // while 시작하기 is up it is the thing to do next
     if (renderStart(m)) { $('#na_next').html(''); $('#na_ai_status').html('').attr('title', ''); return; }
     const card = (icon, title, desc, btns, tone = '') => `<div class="na_next_card ${tone}"><i class="fa-solid ${icon}"></i><div class="na_next_main"><b>${title}</b>${desc ? `<span>${desc}</span>` : ''}</div><div class="na_next_btns">${btns}</div></div>`;

@@ -4182,3 +4182,7 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 #na_settings .na_anniv_dot { color: var(--av); font-size: 1.1em; }
 #na_settings .na_anniv_go b { color: var(--sv-val); }
 #na_settings .na_anniv_x { width: auto; margin: 0; padding: 4px 6px; border: 0; background: transparent; color: var(--sv-dim); cursor: pointer; }
+/* 기념일: a small filled heart instead of the double circle */
+.na_cal_av_dot, #na_settings .na_anniv_dot { display: inline-flex; align-items: center; }
+.na_cal_av_badge { display: inline-flex; align-items: center; gap: 3px; vertical-align: 1px; }
+.na_heart { flex: none; }
