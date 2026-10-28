@@ -138,7 +138,7 @@ export function answerBlocks(out) {
 }
 
 const SCENE_ASK = (from, to, prefix) => `[THIS REQUEST]
-Write the section for #${from}–#${to}, the raw log in <raw_log>, following <rules> (ignore what they say about output parts, change lists, scene lists and section counts: here you write the section for this scene and nothing else). If <rules> has a revision step under "Before you write", still do it before you answer.
+Write the section for #${from}–#${to}, the raw log in <raw_log>, following <rules> (ignore what they say about output parts, change lists, scene lists and section counts: here you write the section for this scene and nothing else).
 - Usually ONE section. Write TWO only when the story clearly turns inside this scene; then the first covers #${from} up to the turn and the second from the turn to #${to}, with no gap.
 - <previous_section> is already written and ends right before #${from}: do not repeat its events; carry on from where it stops.
 - Title: a quoted-line title only if no title in <previous_section> is one; otherwise pick another shape.
@@ -244,20 +244,6 @@ A list with nothing in it is (none). Nothing else.`;
 export const rulesText = (p, from, to) => fillPrompt(p.text, { raw: '(given above in <raw_log>)', state: '(given above in <current_state>)', from: String(from), to: String(to), last_section: '', archive: '', recent: '' })
     .replace(/<raw_log[^>]*>\s*\(given above in <raw_log>\)\s*<\/raw_log>\s*/, '').replace(/<current_state>\s*\(given above in <current_state>\)\s*<\/current_state>\s*/, '');
 
-// what one scene request reads of the instruction: the output list (§1), the change-list rules and the scene list
-// and STATE lines of "Before you write" are for a whole-stretch answer, so they stay out. Each cut needs its exact lines; a template
-// without them (a custom one) goes whole, and SCENE_ASK still says to ignore those parts
-export function sceneRulesText(p, from, to) {
-    let t = rulesText(p, from, to);
-    const out = t.match(/\nOutput exactly these parts[^\n]*\n(?:\d\.[^\n]*\n)+/);
-    if (out) t = t.replace(out[0], '\n');
-    const s8 = t.search(/\n# \d+\. STATE and OPEN changes/), s9 = t.search(/\n# \d+\. Before you write/);
-    if (s8 >= 0 && s9 > s8) t = t.slice(0, s8) + t.slice(s9);
-    t = t.replace(/\n1\. First list the scene boundaries[^\n]*/, '').replace(/\n3\. Do not output STATE or OPEN[^\n]*/, '').replace('2. Draft the sections on those boundaries, then revise them once', '2. Draft the section, then revise it once')
-        .replace('never stop mid-sentence or drop the change lists', 'never stop mid-sentence');
-    return t;
-}
-
 // the whole run: sections scene by scene, then the change lists. Same shape as draftCompress's answer.
 export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = '', chunks: given = null }) {
     const chunks = given?.length ? given : sceneChunks(items);
@@ -268,7 +254,7 @@ export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = 
     // the archive's last sections for style; the very last one is also the first scene's <previous_section>
     const recentAll = lastSections(m.text, 4);
     const recentFor = k => (k === 0 ? recentAll.slice(0, -1) : recentAll.slice(-3)).join('\n\n');
-    const rulesFor = (from, to) => sceneRulesText(p, from, to);
+    const rulesFor = (from, to) => rulesText(p, from, to);
     const secs = [];
     let prev = recentAll[recentAll.length - 1] || '', doneTo = null, error = null;
     for (const [k, part] of chunks.entries()) {
