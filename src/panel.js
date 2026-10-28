@@ -28,7 +28,7 @@ import { openReader } from './reader.js';
 import { routerCandidates, routerCfg, routerState, runRouter } from './router.js';
 import { GUESS_MODES, guessMode, lastGuess } from './guess.js';
 import { EMBED_DEFAULT_MODEL, EMBED_MODELS, EMBED_SOURCES, embedCfg, embedError, embedLabel, embedState, setEmbed, syncEmbed } from './embed.js';
-import { cachedTokens, checkHeadings, filterMuted, groupLabel, linkedMap, mutedCount, parseSections, pinnedSet, sectionKey } from './sections.js';
+import { RANGE_HEAD, cachedTokens, checkHeadings, filterMuted, groupLabel, linkedMap, mutedCount, parseSections, pinnedSet, sectionKey } from './sections.js';
 import { refreshStatus } from './status.js';
 import { ICO_A, setUiTheme, svgA, uiTheme } from './theme.js';
 import { AI_SYS_TRANSLATE, askTranslator, glossaryEntries, openGlossary } from './translate.js';
@@ -93,6 +93,7 @@ export function renderPanel() {
 
             <!-- 홈 -->
             <section class="na_tab_pane" data-pane="home">
+              <div class="na_start" id="na_start" hidden></div>
               <div class="na_next" id="na_next"></div>
               <div class="na_quick">
                 <button type="button" class="na_qbtn" id="na_q_read">${svgA(ICO_A.book, 16)}<span>읽기</span></button>
@@ -745,6 +746,7 @@ export function showTab(tab) {
     $('#na_gear').toggleClass('active', tab === 'config');
     if (tab !== 'config' && g.lastTab !== tab) { g.lastTab = tab; saveGlobal(); }
     if (tab === 'config') { cfgView = ''; renderAiSettings(); layoutCfg(); }
+    if (tab === 'home' && hasChat()) { startPick = null; refreshStatus(); }
     if (tab === 'archive') showArchiveView(g.archView || 'cards');
 }
 
@@ -760,9 +762,64 @@ export function showArchiveView(view) {
     }
 }
 
+// 시작하기: four steps for a first-time user, ticked by what the extension can see. Gone once all four have been
+// done in some chat (or 숨기기), so people who already use it never see it again.
+const START_STEPS = [
+    { key: 'model', short: '모델', title: '초안 모델 연결', btn: '초안 모델 정하러 가기',
+        desc: '압축을 써 줄 AI 모델을 정해요. 롤플에 쓰는 모델과 따로 정할 수 있어요.', done: () => draftReady() },
+    { key: 'first', short: '첫 압축', title: '첫 압축으로 아카이브 만들기', btn: '압축하러 가기',
+        desc: '지금까지의 대화를 섹션으로 정리해서 아카이브를 만들어요. 압축 탭에서 방법을 고르고 압축하기를 눌러요.',
+        done: m => parseSections(m.text).some(x => !x.group && RANGE_HEAD.test(x.title)) },
+    { key: 'line', short: '경계선', title: '경계선 확인', btn: '경계선 보러 가기',
+        desc: '아카이브가 어디까지 담았는지 표시해요. 그 앞 메시지는 숨겨서 AI가 같은 내용을 두 번 읽지 않게 해요.',
+        done: m => m.boundary >= 0 || !!m.track },
+    { key: 'inject', short: '주입', title: '주입 켜기', btn: '주입 켜러 가기',
+        desc: '아카이브를 롤플 모델에게 보여 줘요. 켜야 지난 이야기를 기억해요.', done: m => !!m.enabled },
+];
+let startPick = null; // a step the user tapped to read, else the first one not done
+function goStart(key) {
+    if (key === 'model' || key === 'inject') {
+        showTab('config');
+        cfgView = key === 'model' ? 'aimodel' : 'inject';
+        cfgTab[cfgView] = key === 'model' ? 'dr' : 'place';
+        layoutCfg();
+        $('#na_settings .na_tab_pane[data-pane="config"]').scrollTop(0);
+        return;
+    }
+    showTab('compress');
+    if (key === 'line') {
+        $('#na_cp_more').prop('open', true);
+        const row = document.getElementById(getMeta().track ? 'na_track' : 'na_boundary_row');
+        row?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        if (!getMeta().track) setTimeout(() => $('#na_boundary').trigger('focus'), 300);
+    }
+}
+// true while the card is up
+function renderStart(m) {
+    const g = globalSettings();
+    const done = START_STEPS.map(x => !!x.done(m));
+    if (!g.startDone && done.every(Boolean)) { g.startDone = true; saveGlobal(); }
+    const show = hasChat() && !g.startDone && !g.startHidden;
+    $('#na_start').prop('hidden', !show);
+    if (!show) return false;
+    const first = done.indexOf(false);
+    const cur = startPick !== null ? startPick : first;
+    const st = START_STEPS[cur];
+    const n = done.filter(Boolean).length;
+    const fill = Math.max(0, Math.min(3, first)) / 3; // the line is orange up to the step to do
+    $('#na_start').html(`
+      <div class="na_start_head"><b>시작하기</b><span class="na_start_n">${n} / ${START_STEPS.length}</span><button type="button" class="na_start_hide">숨기기</button></div>
+      <div class="na_start_steps" style="--fill:${fill}">${START_STEPS.map((x, i) => `<button type="button" class="na_start_step${done[i] ? ' done' : ''}${i === cur ? ' cur' : ''}" data-i="${i}" aria-label="${i + 1}단계 · ${x.title}${done[i] ? ' · 했어요' : ''}"><span class="na_start_dot">${done[i] ? svgA(ICO_A.check, 14, 3) : i + 1}</span><span class="na_start_lab">${x.short}</span></button>`).join('')}</div>
+      <div class="na_start_body"><b>${st.title}${done[cur] ? ' <small>· 했어요</small>' : ''}</b><span>${st.desc}</span></div>
+      <button type="button" class="na_start_go${done[cur] ? ' done' : ''}" data-key="${st.key}">${st.btn}</button>`);
+    return true;
+}
+
 // the one thing worth doing next, on the home tab
 export function renderNext(m, { afterTok, health }) {
     let html;
+    // while 시작하기 is up it is the thing to do next
+    if (renderStart(m)) { $('#na_next').html(''); $('#na_ai_status').html('').attr('title', ''); return; }
     const card = (icon, title, desc, btns, tone = '') => `<div class="na_next_card ${tone}"><i class="fa-solid ${icon}"></i><div class="na_next_main"><b>${title}</b>${desc ? `<span>${desc}</span>` : ''}</div><div class="na_next_btns">${btns}</div></div>`;
     const btn = (act, label, primary = true) => `<button type="button" class="na_btn na_small ${primary ? 'na_primary' : ''}" data-act="${act}">${label}</button>`;
     const issues = health ? health.items.filter(x => x.level === 'bad' || x.level === 'warn') : [];
@@ -805,6 +862,9 @@ export function bindPanel() {
     $('#na_q_wizard').on('click', needChat(() => draftReady() ? quickCompress() : openWizard()));
     $('#na_q_preview').on('click', needChat(openPreview));
     $('#na_next').on('click', '[data-act]', function () { nextAction(this.dataset.act); });
+    $('#na_start').on('click', '.na_start_step', function () { startPick = Number(this.dataset.i); renderStart(getMeta()); })
+        .on('click', '.na_start_go', function () { startPick = null; goStart(this.dataset.key); })
+        .on('click', '.na_start_hide', () => { globalSettings().startHidden = true; saveGlobal(); refreshStatus(); });
     // small menus
     $('#na_ed_more').on('click', e => { e.stopPropagation(); $('#na_ed_menu').prop('hidden', !$('#na_ed_menu').prop('hidden')); });
     $('#na_ed_menu').on('click', 'button', () => $('#na_ed_menu').prop('hidden', true));

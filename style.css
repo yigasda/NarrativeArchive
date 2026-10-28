@@ -4082,3 +4082,27 @@ body.na_darkui #na_settings { --sv-page: #2F2621; --sv-card: #3A2F28; --sv-line:
 .na_trk_list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .na_trk_item { display: flex; gap: 10px; align-items: baseline; padding: 8px 10px; border-radius: 10px; background: var(--na-softer); }
 .na_trk_item b { flex: none; font-variant-numeric: tabular-nums; opacity: 0.75; }
+
+/* ============ 홈 · 시작하기 (v3.97): steps in a row, the picked one explained, one big button */
+#na_settings .na_start { display: flex; flex-direction: column; gap: 14px; padding: 14px 16px 16px; border-radius: 18px; background: var(--sv-card); border: 1px solid var(--sv-line); color: var(--sv-ink); }
+#na_settings .na_start[hidden] { display: none; }
+#na_settings .na_start_head { display: flex; align-items: center; gap: 8px; }
+#na_settings .na_start_head b { font-size: 1.07em; }
+#na_settings .na_start_n { font-size: 0.857em; font-weight: 700; color: var(--sv-val); }
+#na_settings .na_start_hide { margin: 0 0 0 auto; width: auto; padding: 2px 4px; border: 0; background: transparent; color: var(--sv-dim); font: inherit; font-size: 0.857em; cursor: pointer; }
+#na_settings .na_start_steps { position: relative; display: flex; }
+#na_settings .na_start_steps::before, #na_settings .na_start_steps::after { content: ''; position: absolute; top: 14px; left: 12.5%; height: 2px; border-radius: 1px; }
+#na_settings .na_start_steps::before { right: 12.5%; background: var(--hm-track); }
+#na_settings .na_start_steps::after { width: calc(75% * var(--fill)); background: var(--sv-acc); }
+#na_settings .na_start_step { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; width: auto; margin: 0; padding: 0; border: 0; background: transparent; color: var(--sv-dim); font: inherit; font-size: 0.857em; cursor: pointer; }
+#na_settings .na_start_dot { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; background: var(--hm-tile); color: var(--sv-dim); }
+#na_settings .na_start_step.done .na_start_dot { background: var(--sv-acc); color: #fff; }
+#na_settings .na_start_step.cur .na_start_lab { color: var(--sv-ink); font-weight: 700; }
+#na_settings .na_start_step.cur:not(.done) .na_start_dot { background: var(--hm-acc-soft); color: var(--sv-val); box-shadow: 0 0 0 2px var(--sv-acc); }
+#na_settings .na_start_step.cur.done .na_start_dot { box-shadow: 0 0 0 2px var(--sv-card), 0 0 0 4px var(--sv-acc); }
+#na_settings .na_start_body { display: flex; flex-direction: column; gap: 4px; }
+#na_settings .na_start_body b { font-size: 1.21em; }
+#na_settings .na_start_body b small { font-size: 0.65em; font-weight: 400; color: var(--sv-dim); }
+#na_settings .na_start_body span { font-size: 0.93em; line-height: 1.55; color: var(--hm-mute); }
+#na_settings .na_start_go { width: 100%; margin: 0; padding: 13px; border: 0; border-radius: 14px; background: var(--sv-acc); color: #FFF7F0; font: inherit; font-size: 1.07em; font-weight: 700; cursor: pointer; }
+#na_settings .na_start_go.done { background: transparent; color: var(--sv-val); box-shadow: inset 0 0 0 1px var(--sv-line); font-weight: 600; }
