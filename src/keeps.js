@@ -28,7 +28,21 @@ export function sectionKept(m, title) {
 
 const save = async () => { await saveMeta(); (await import('./inject.js')).applyInjection(); (await import('./panel.js')).syncPanel(); };
 
-// add or change one; an existing stretch with the same numbers is updated instead of doubled
+// stretches that overlap or touch become one, their notes kept side by side
+export function mergeKeeps(list) {
+    const out = [];
+    for (const k of [...list].sort((x, y) => x.from - y.from || y.to - x.to)) {
+        const last = out[out.length - 1];
+        if (last && k.from <= last.to + 1) {
+            last.to = Math.max(last.to, k.to);
+            const notes = [last.note, k.note].map(x => String(x || '').trim()).filter(Boolean);
+            last.note = [...new Set(notes)].join(' · ');
+        } else out.push({ ...k });
+    }
+    return out;
+}
+
+// add or change one; it joins any stretch it overlaps or touches instead of standing next to it
 export async function putKeep(from, to, note, id = null) {
     const m = getMeta();
     m.keeps = keepsOf(m).slice();
@@ -36,7 +50,7 @@ export async function putKeep(from, to, note, id = null) {
     const hit = m.keeps.find(k => (id ? k.id === id : k.from === a && k.to === b));
     if (hit) Object.assign(hit, { from: a, to: b, note });
     else m.keeps.push({ id: `k${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, from: a, to: b, note, at: Date.now() });
-    m.keeps.sort((x, y) => x.from - y.from);
+    m.keeps = mergeKeeps(m.keeps);
     await save();
 }
 
@@ -91,6 +105,8 @@ export async function openKeeps() {
     const { cleanMessage } = await import('./extract.js');
     const chat = c.chat || [];
     const m0 = getMeta();
+    // stretches saved before they were joined: join them now
+    if (keepsOf(m0).length !== mergeKeeps(keepsOf(m0)).length) { m0.keeps = mergeKeeps(keepsOf(m0)); await saveMeta(); }
     const lo = Math.max(0, Number(m0.boundary) >= 0 ? Number(m0.boundary) + 1 : 0, chat.length - 400);
     let start = null;
     const opened = new Set(); // rows held down: their whole message shows under them
@@ -133,6 +149,7 @@ export async function openKeeps() {
         if (start === null) { start = i; $(this).addClass('start'); return hint(); }
         const a = Math.min(start, i), b = Math.max(start, i);
         start = null;
+        if (keepsOf(getMeta()).some(k => k.from <= a && k.to >= b)) { render(); return toastr.info(`이미 남겨 둔 구간이에요 (${keepLabel({ from: a, to: b })})`, '서사 아카이브', { timeOut: 2500 }); }
         await putKeep(a, b, '');
         render();
         toastr.success(`꼭 남길 장면: ${keepLabel({ from: a, to: b })}`, '서사 아카이브', { timeOut: 2500 });
