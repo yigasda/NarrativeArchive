@@ -4192,3 +4192,13 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 /* a little more room: title ↔ heart, heart ↔ name */
 .na_cal_av_badge { margin-left: 5px; }
 .na_cal_av_badge .na_heart { margin-right: 1px; }
+
+/* 세계관 카드 아래: one row — the bind chip (cut short if it has to), 로어북 and a trash button (v3.101.6) */
+.na_wd_foot { flex-wrap: nowrap !important; gap: 6px !important; }
+.na_wd_foot .na_wd_bindchip { min-width: 0; flex: 0 1 auto; margin-right: auto; }
+.na_wd_foot .na_wd_bindchip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.na_wd_foot .na_spacer { flex: 1; }
+.na_wd_foot :is(.na_wd_lore, .na_wd_del) { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 34px; margin: 0; padding: 0 10px; border-radius: 10px; border: 1px solid var(--sv-line, var(--na-line)); background: var(--sv-page, transparent); font: inherit; font-size: 1em; cursor: pointer; white-space: nowrap; }
+.na_wd_foot .na_wd_lore { color: var(--sv-val, var(--na-accent)); }
+.na_wd_foot .na_wd_del { width: 34px; padding: 0; color: var(--na-bad); }
+.na_wd_foot .na_wd_del:hover { text-decoration: none; filter: brightness(0.95); }
