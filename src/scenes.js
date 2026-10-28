@@ -138,7 +138,7 @@ export function answerBlocks(out) {
 }
 
 const SCENE_ASK = (from, to, prefix) => `[THIS REQUEST]
-Write the section for #${from}–#${to}, the raw log in <raw_log>, following <rules> (ignore what they say about output parts, change lists, scene lists and section counts: here you write the section for this scene and nothing else).
+Write the section for #${from}–#${to}, the raw log in <raw_log>, following <rules> (ignore what they say about output parts, change lists, scene lists and section counts: here you write the section for this scene and nothing else). If <rules> has a revision step (9.2), still do it before you answer.
 - Usually ONE section. Write TWO only when the story clearly turns inside this scene; then the first covers #${from} up to the turn and the second from the turn to #${to}, with no gap.
 - <previous_section> is already written and ends right before #${from}: do not repeat its events; carry on from where it stops.
 - Title: a quoted-line title only if no title in <previous_section> is one; otherwise pick another shape.
@@ -225,7 +225,7 @@ YOU GET
 RULES
 - EDIT a STATE line only when the new sections make it untrue or outdated, so an old behavior a later arc changed does not stay in the present tense. Change only what changed and keep the rest of the line word for word; never shorten a line to save space, never merge lines.
 - DROP a STATE line only when the story itself has overturned it. What a character realized or resolved not to do stays until the story overturns it. Keep safety lines that lock the current state.
-- New and edited lines: per character + relationships + current life. Only changes and tendencies the sections alone do not capture, briefly; do not restate events. Scope principles narrowly ("no commands" ✗ → "no longer dictates her choices or movements" ✓); use "tends to" or "since #n" instead of "now".
+- New and edited lines: per character + relationships + current life. Only changes and tendencies the sections alone do not capture, briefly; do not restate events. A character's reading stays theirs, never raised to fact. Scope principles narrowly ("no commands" ✗ → "no longer dictates her choices or movements" ✓); use "tends to" or "since #n" instead of "now".
 - "## Heading" / "## Group" is the one the line sits under, spelled exactly as in <current_state>; leave it out when OPEN has no groups. Do not invent headings.
 - OPEN: drop only threads the new sections closed; add threads they opened, short; do not prescribe future actions.
 - Copy old lines exactly in EDIT and DROP.
