@@ -4186,3 +4186,6 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 .na_cal_av_dot, #na_settings .na_anniv_dot { display: inline-flex; align-items: center; }
 .na_cal_av_badge { display: inline-flex; align-items: center; gap: 3px; vertical-align: 1px; }
 .na_heart { flex: none; }
+/* the badge sits on the title's baseline: plain inline text, the heart nudged down to the letters */
+.na_cal_av_badge { display: inline; vertical-align: baseline; }
+.na_cal_av_badge .na_heart { vertical-align: -0.08em; margin-right: 2px; }
