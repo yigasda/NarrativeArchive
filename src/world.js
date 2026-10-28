@@ -55,6 +55,7 @@ export function worldText(m) {
 // 아카이브에서 채우기: the AI 기능 모델 reads the archive and writes the parts; nothing goes in before the user ticks it
 const AI_SYS_WORLD = lang => `GOAL
 Fill a world reference for a long role-play from its story archive. The role-play model reads it before every reply, so the world stays consistent.
+This reference is shared by every chat with these characters. Put in only what stays true and useful in a new chat.
 
 YOU GET
 - ARCHIVE: the story so far, in sections, with the current state at the end.
@@ -64,7 +65,7 @@ YOU GET
 
 PARTS
 - INTRO: one line: when and where the story is set, and what kind of story it is.
-- PLACES: places where someone lives, lived or works, and places tied to what happened before the story began. Leave out passing visits.
+- PLACES: places where someone lives, lived or works, and places tied to what happened before the story began.
 - AFFILIATIONS: families, workplaces, schools, groups the characters belong to, and how they stand to each other.
 - RULES: what holds in this world and shapes what people can do: laws, money, work, customs, how things work (magic or technology only if the story has them).
 - BACKGROUND: what happened before the story began and still shapes the present. Leave out anything that happens during the story: that is in the archive.
@@ -75,7 +76,6 @@ RULES
 - The main characters themselves are not entries; their homes, families and jobs are.
 - One sentence per entry, two at most. Facts, not mood.
 - Say what a thing is and whose it is, not what happened there or with it: the scenes are already in the archive.
-- At most 12 entries per part, the ones that matter most.
 - An entry already in CURRENT WORLD: write it again only if the archive adds or changes something, under the same name.
 - Write in ${lang}. Spell names as the archive does.
 
