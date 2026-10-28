@@ -68,7 +68,7 @@ PARTS
 - AFFILIATIONS: families, workplaces, schools, groups the characters belong to, and how they stand to each other.
 - RULES: what holds in this world and shapes what people can do: laws, money, work, customs, how things work (magic or technology only if the story has them).
 - BACKGROUND: what happened before the story began and still shapes the present. Leave out anything that happens during the story: that is in the archive.
-- TERMS: names, titles, nicknames and words with a meaning special to this story.
+- TERMS: titles, nicknames and words with a meaning special to this story. A person is not a term; a nickname for one is.
 
 RULES
 - Use only what the archive shows. Never invent, and add no general knowledge about real places, groups or things. A part with nothing in the archive is left out.
