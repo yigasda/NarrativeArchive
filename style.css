@@ -3969,6 +3969,18 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_kp_range { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
 .na_kp_range input { width: 90px !important; }
 .na_kp_form textarea { width: 100%; }
+.na_kp_pick { display: flex; flex-direction: column; gap: 6px; }
+.na_kp_pick_head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.na_kp_hint { color: var(--na-dim); font-size: 0.86em; }
+.na_kp_msgs { display: flex; flex-direction: column; gap: 2px; max-height: 50vh; overflow-y: auto; border: 1px solid var(--na-line); border-radius: 12px; padding: 4px; }
+.na_kp_msg { display: flex; align-items: baseline; gap: 6px; width: 100%; padding: 7px 8px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; font-size: 0.88em; text-align: left; cursor: pointer; min-width: 0; }
+.na_kp_msg:hover { background: var(--na-card2); }
+.na_kp_msg b { flex: none; color: var(--na-dim); font-variant-numeric: tabular-nums; }
+.na_kp_who { flex: none; font-weight: 600; max-width: 30%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.na_kp_line { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.na_kp_msg.kept { background: var(--na-warm-soft, var(--na-accent-soft)); }
+.na_kp_msg.kept b { color: var(--na-accent); }
+.na_kp_msg.start { outline: 2px solid var(--na-accent); outline-offset: -2px; }
 .na_src_kept { font-size: 0.8em; color: var(--na-accent); }
 
 .na_ap2 .na_ap_tools .na_v2_btn { flex: 1; }

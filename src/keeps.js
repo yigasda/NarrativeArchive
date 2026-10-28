@@ -82,8 +82,30 @@ export async function openKeeps() {
       <div class="na_popup na_v2 na_kp">
         <div class="na_v2_title"><b>꼭 남길 장면</b><small>압축은 자세히, 망각 곡선은 그대로</small></div>
         <div class="na_kp_list"></div>
-        <button type="button" class="na_v2_btn primary wide na_kp_add">+ 구간 적기</button>
+        <div class="na_kp_pick">
+          <div class="na_kp_pick_head"><b>탭해서 고르기</b><small class="na_kp_hint"></small><span class="na_spacer"></span><button type="button" class="na_linkbtn na_kp_add">번호로 적기</button></div>
+          <div class="na_kp_msgs"></div>
+        </div>
       </div>`);
+    // 탭해서 고르기: the messages not compressed yet, one line each; the scene's first line, then its last
+    const { cleanMessage } = await import('./extract.js');
+    const chat = c.chat || [];
+    const m0 = getMeta();
+    const lo = Math.max(0, Number(m0.boundary) >= 0 ? Number(m0.boundary) + 1 : 0, chat.length - 400);
+    let start = null;
+    const hint = () => $root.find('.na_kp_hint').text(start === null ? '장면 첫 메시지를 탭하세요' : `#${start}부터 · 끝 메시지를 탭하세요 (같은 줄을 한 번 더 누르면 그 메시지만)`);
+    const drawMsgs = () => {
+        const mm = getMeta();
+        const rows = [];
+        for (let i = lo; i < chat.length; i++) {
+            const x = chat[i];
+            if (!x || x.is_system) continue;
+            const t = cleanMessage(String(x.mes || ''), { stripTags: true }).replace(/\s+/g, ' ').trim();
+            rows.push(`<button type="button" class="na_kp_msg ${isKeptAt(mm, i) ? 'kept' : ''} ${start === i ? 'start' : ''}" data-i="${i}"><b>#${i}</b><span class="na_kp_who">${esc(x.name || '')}</span><span class="na_kp_line">${esc(t.slice(0, 90)) || '<span class="na_dim">(비어 있음)</span>'}</span></button>`);
+        }
+        $root.find('.na_kp_msgs').html(rows.join('') || '<div class="na_empty">압축 안 된 메시지가 없어요.</div>');
+        hint();
+    };
     const render = () => {
         const ks = keepsOf(getMeta());
         $root.find('.na_kp_list').html(ks.length ? ks.map(k => `
@@ -92,8 +114,18 @@ export async function openKeeps() {
             <span class="na_kp_txt">${k.note ? esc(k.note) : '<span class="na_dim">메모 없음</span>'}</span>
             <button type="button" class="na_linkbtn na_kp_edit">고치기</button>
             <button type="button" class="na_linkbtn na_danger na_kp_del">지우기</button>
-          </div>`).join('') : '<div class="na_empty">아직 없어요. 원문 창이나 섹션 카드에서도 적을 수 있어요.</div>');
+          </div>`).join('') : '<div class="na_empty">아직 없어요. 아래에서 장면 첫 메시지와 끝 메시지를 탭하세요.</div>');
+        drawMsgs();
     };
+    $root.on('click', '.na_kp_msg', async function () {
+        const i = Number(this.dataset.i);
+        if (start === null) { start = i; $(this).addClass('start'); return hint(); }
+        const a = Math.min(start, i), b = Math.max(start, i);
+        start = null;
+        await putKeep(a, b, '');
+        render();
+        toastr.success(`꼭 남길 장면: ${keepLabel({ from: a, to: b })}`, '서사 아카이브', { timeOut: 2500 });
+    });
     const byId = el => keepsOf(getMeta()).find(k => k.id === String($(el).closest('.na_kp_item').data('id')));
     $root.on('click', '.na_kp_add', async () => { if (await editKeep()) render(); });
     $root.on('click', '.na_kp_edit', async function () { const k = byId(this); if (k && await editKeep(k)) render(); });
@@ -104,6 +136,8 @@ export async function openKeeps() {
     });
     $root.on('click', '.na_kp_src', async function () { const k = byId(this); if (k) (await import('./source.js')).openSource(k.from, k.to, keepLabel(k)); });
     render();
+    // the newest messages are where the scene usually just happened: open at the bottom
+    setTimeout(() => { const el = $root.find('.na_kp_msgs')[0]; if (el) el.scrollTop = el.scrollHeight; }, 0);
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
