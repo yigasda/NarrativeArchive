@@ -8,7 +8,7 @@ import { branchState, openBranches } from './branches.js';
 import { mountSectionBrowser } from './browser.js';
 import { openCalendar } from './calendar.js';
 import { carryOffer, currentChatId, importArchive, openChatPicker, pickFromBundle, rememberArchive, setCarryOffer } from './chats.js';
-import { POSITIONS, POSITION_ORDER, ROLES, SETTING_KEYS, SNAPSHOT_MAX, VERSION, commitText, ctx, getMeta, globalSettings, hasChat, pushSnapshot, saveGlobal, saveMeta } from './core.js';
+import { MODULE, POSITIONS, POSITION_ORDER, ROLES, SETTING_KEYS, SNAPSHOT_MAX, VERSION, commitText, ctx, getMeta, globalSettings, hasChat, pushSnapshot, saveGlobal, saveMeta } from './core.js';
 import { openCompare, openDiff } from './diff.js';
 import { openDrift } from './drift.js';
 import { guessEndNumber, openExtract } from './extract.js';
@@ -777,6 +777,25 @@ const START_STEPS = [
         desc: '아카이브를 롤플 모델에게 보여 줘요. 켜야 지난 이야기를 기억해요.', done: m => !!m.enabled },
 ];
 let startPick = null; // a step the user tapped to read, else the first one not done
+// once per install: if any character's chat already holds an archive, this person is no beginner. SillyTavern hands
+// out each chat's first line (where the archive lives) without loading the chat; the scan stops at the first one found
+let startScan = null;
+async function scanForArchive() {
+    const g = globalSettings();
+    try {
+        if (hasChat() && getMeta().text.trim()) g.startDone = true;
+        for (const ch of ctx().characters || []) {
+            if (g.startDone) break;
+            const r = await fetch('/api/characters/chats', { method: 'POST', headers: ctx().getRequestHeaders(), body: JSON.stringify({ avatar_url: ch.avatar, metadata: true }) });
+            const list = r.ok ? await r.json() : [];
+            if (Array.isArray(list) && list.some(x => String(x?.chat_metadata?.[MODULE]?.text || '').trim())) g.startDone = true;
+        }
+        g.startScanned = true;
+        saveGlobal();
+    } catch (e) { console.warn('[narrative-archive] archive scan', e); }
+    startScan = null;
+    refreshStatus();
+}
 function goStart(key) {
     if (key === 'model' || key === 'inject') {
         showTab('config');
@@ -799,6 +818,8 @@ function renderStart(m) {
     const g = globalSettings();
     const done = START_STEPS.map(x => !!x.done(m));
     if (!g.startDone && done.every(Boolean)) { g.startDone = true; saveGlobal(); }
+    // stay hidden until the one-time look through the other chats is over
+    if (!g.startDone && !g.startScanned) { startScan ||= scanForArchive(); $('#na_start').prop('hidden', true); return false; }
     const show = hasChat() && !g.startDone && !g.startHidden;
     $('#na_start').prop('hidden', !show);
     if (!show) return false;
