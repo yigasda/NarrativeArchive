@@ -86,8 +86,10 @@ function autoTracker(text) {
 }
 function readTracker(text, re) {
     const mt = re ? String(text || '').match(re) : null;
-    const gr = mt ? mt.groups || {} : autoTracker(text);
+    let gr = mt ? { ...(mt.groups || {}) } : autoTracker(text);
     if (!gr) return null;
+    // "<tracker> 오후 3:40 | …": the time group holds "3:40", the 오후 sits before it in the same field
+    if (mt && gr.time) { const first = stClean(mt[0].split('|')[0].replace(/<[^>]*>/g, '')); if (first.includes(gr.time.trim())) gr.time = first; }
     const place = String(gr.place || '').trim();
     const parts = place.split(/\s*(?:→|->|>|\/|·)\s*/).filter(Boolean);
     return { date: String(gr.date || '').trim(), city: parts[0] || '', room: parts[1] || '', min: minutes(gr.time), time: String(gr.time || '').trim(), place };
