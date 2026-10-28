@@ -65,7 +65,7 @@ YOU GET
 
 PARTS
 - INTRO: one line: when and where the story is set, and what kind of story it is.
-- PLACES: places where someone lives, lived or works, and places tied to what happened before the story began.
+- PLACES: a place goes in only if it belongs to someone's life: they live, lived, work or grew up there. A place they only went to stays out, whatever happened there.
 - AFFILIATIONS: families, workplaces, schools, groups the characters belong to, and how they stand to each other.
 - RULES: what holds in this world and shapes what people can do: laws, money, work, customs, how things work (magic or technology only if the story has them).
 - BACKGROUND: what happened before the story began and still shapes the present. Leave out anything that happens during the story: that is in the archive.
