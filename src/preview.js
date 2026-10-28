@@ -25,7 +25,7 @@ export async function openPreview() {
     // the injected text, headings marked with how each section goes in
     const tagOf = s => {
         const k = sectionKey(s), f = b.faded?.get(k);
-        if (f) return `<span class="na_pv2_tag ${f}">${f === 'line' ? '한 줄' : '짧게'}</span>`;
+        if (f) return `<span class="na_pv2_tag ${f}">${f === 'line' ? '요점' : '짧게'}</span>`;
         return pinned.has(k) ? '<span class="na_pv2_tag pin">고정</span>' : '';
     };
     const code = headsOnly => {
@@ -55,7 +55,7 @@ export async function openPreview() {
         </div>
         <div class="na_pv2_chips">
           <span class="world">세계관 ${worldN}</span>
-          ${fadeCfg(m).on ? `<span class="fade">짧게 ${fadeN.short} · 한 줄 ${fadeN.line}</span>` : ''}
+          ${fadeCfg(m).on ? `<span class="fade">짧게 ${fadeN.short} · 요점 ${fadeN.line}</span>` : ''}
           <span class="wait">키워드 대기 ${waiting.length}</span>
           <span class="off">꺼 둠 ${muted.length}</span>
         </div>

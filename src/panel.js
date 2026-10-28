@@ -311,17 +311,17 @@ export function renderPanel() {
                 <div class="na_cfg_box">
                 <div class="na_set_list">
                   <label class="na_set_row"><span><span>토큰 상한</span><small>넘으면 알려 줘요</small></span><span class="na_cfg_val"><input type="number" id="na_cap" class="text_pole" min="0" step="1000" placeholder="없음" title="0이나 빈칸이면 상한 없음"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" for="na_fade" title="오래된 섹션은 짧은 버전·한 줄로 넣어요. 버전이 없으면 원문 그대로 · 고정한 섹션과 지금 불려 온 섹션은 늘 원문"><span><span>망각 곡선</span><small id="na_fade_sub">오래된 섹션은 짧은 버전·한 줄로</small></span><button type="button" class="na_fd_more" id="na_fade_more" title="자세히" aria-label="자세히" hidden>${svgA(ICO_A.down, 15, 2.2)}</button><input type="checkbox" id="na_fade" class="na_toggle"></label>
+                  <label class="na_set_row" for="na_fade" title="오래된 섹션은 짧은 버전·요점으로 넣어요. 버전이 없으면 원문 그대로 · 고정한 섹션과 지금 불려 온 섹션은 늘 원문"><span><span>망각 곡선</span><small id="na_fade_sub">오래된 섹션은 짧은 버전·요점으로</small></span><button type="button" class="na_fd_more" id="na_fade_more" title="자세히" aria-label="자세히" hidden>${svgA(ICO_A.down, 15, 2.2)}</button><input type="checkbox" id="na_fade" class="na_toggle"></label>
                   <div id="na_fade_opts" class="na_v2 na_fd" hidden>
                     <div class="na_fd_save"><span><b id="na_fade_now">-</b><small>토큰</small><s id="na_fade_was"></s></span><span class="na_fd_pct" id="na_fade_pct"></span></div>
                     <div class="na_fd_strip" id="na_fade_strip" aria-hidden="true"></div>
                     <div class="na_fd_ends"><span>오래됨</span><span>최근</span></div>
                     <div class="na_fd_level"><i class="long"></i><span><span>원문 그대로</span><small>최근 섹션</small></span><span class="na_fd_step"><button type="button" class="na_fd_btn" data-f="full" data-d="-1" aria-label="줄이기">−</button><input type="number" id="na_fade_full" class="text_pole" min="0" max="200"><button type="button" class="na_fd_btn" data-f="full" data-d="1" aria-label="늘리기">+</button></span></div>
                     <div class="na_fd_level"><i class="short"></i><span><span>짧은 버전</span><small>그다음 섹션</small></span><span class="na_fd_step"><button type="button" class="na_fd_btn" data-f="short" data-d="-1" aria-label="줄이기">−</button><input type="number" id="na_fade_short" class="text_pole" min="0" max="500"><button type="button" class="na_fd_btn" data-f="short" data-d="1" aria-label="늘리기">+</button></span></div>
-                    <div class="na_fd_level"><i class="line"></i><span><span>한 줄</span><small>더 오래된 섹션 전부</small></span><b id="na_fade_lines">-</b></div>
+                    <div class="na_fd_level"><i class="line"></i><span><span>요점</span><small>더 오래된 섹션 전부</small></span><b id="na_fade_lines">-</b></div>
                     <div class="na_fd_fill"><span id="na_fade_info">-</span><button type="button" class="na_v2_btn primary" id="na_fade_fill"><i class="fa-solid fa-feather-pointed"></i> 초안 모델로 채우기</button></div>
                   </div>
-                  <button type="button" class="na_set_row na_cfg_go" id="na_fade_pick"><span><span>섹션별 버전 고르기</span><small id="na_fade_pick_sub">여러 섹션을 골라 원문 · 짧게 · 한 줄로</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
+                  <button type="button" class="na_set_row na_cfg_go" id="na_fade_pick"><span><span>섹션별 버전 고르기</span><small id="na_fade_pick_sub">여러 섹션을 골라 원문 · 짧게 · 요점으로</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                 </div>
                 </div>
               </div>
@@ -1454,10 +1454,10 @@ export function syncPanel() {
         const fc = fadeCfg(m);
         $('#na_fade').prop('checked', fc.on); $('#na_fade_opts').prop('hidden', !fc.on || !cfgFadeOpen);
         $('#na_fade_more').prop('hidden', !fc.on).toggleClass('on', cfgFadeOpen);
-        const fadeSub = pct => fc.on ? `원문 ${fc.full} · 짧게 ${fc.short} · 나머지 한 줄${pct ? ` · 지금 −${pct}%` : ''}` : '오래된 섹션은 짧은 버전·한 줄로';
+        const fadeSub = pct => fc.on ? `원문 ${fc.full} · 짧게 ${fc.short} · 나머지 요점${pct ? ` · 지금 −${pct}%` : ''}` : '오래된 섹션은 짧은 버전·요점으로';
         $('#na_fade_sub').text(fadeSub(0));
         $('#na_fade_full').val(fc.full); $('#na_fade_short').val(fc.short);
-        { const fn = Object.keys(fadeForce(m)).length; $('#na_fade_pick_sub').text(fn ? `직접 고른 섹션 ${fn}개 · 망각 곡선보다 먼저` : '여러 섹션을 골라 원문 · 짧게 · 한 줄로'); }
+        { const fn = Object.keys(fadeForce(m)).length; $('#na_fade_pick_sub').text(fn ? `직접 고른 섹션 ${fn}개 · 망각 곡선보다 먼저` : '여러 섹션을 골라 원문 · 짧게 · 요점으로'); }
         if (fc.on) {
             const plan = [...fadePlan(m).values()];
             const miss = fadeMissing(m).length, more = fadeMissing(m, true).length - miss;

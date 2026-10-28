@@ -14,7 +14,7 @@ import { trCachedLines, trLineOk, translateLines, withLineTr } from './translate
 import { confirm, countTokens, esc, fmt } from './util.js';
 
 // Each numbered section can keep a short version and a one-line version next to its full text (m.layers, keyed by section).
-// With the curve on, the newest sections go in whole, older ones as their short version, the oldest as one line.
+// With the curve on, the newest sections go in whole, older ones as their short version, the oldest as the gist (요점).
 // Pinned sections, and sections a keyword or the AI router just called in, always go in whole.
 export const fadeCfg = m => { const f = m?.fade && typeof m.fade === 'object' ? m.fade : {}; return { on: !!f.on, full: Number.isFinite(+f.full) && f.full !== undefined ? Math.max(0, +f.full) : 8, short: Number.isFinite(+f.short) && f.short !== undefined ? Math.max(0, +f.short) : 20 }; };
 // versions picked by hand per section ('long' | 'short' | 'line'); they beat the curve and work with it off
@@ -93,7 +93,7 @@ STEPS
 1. Read the section. Mark what MUST survive:
    who did what · decisions · promises · secrets that came out · injuries · how a relationship changed ·
    facts later parts may depend on (names, places, objects, numbers like #346).
-2. SHORT: rewrite the section in about one third of its length, never more than 85% of it
+2. SHORT: rewrite the section in about 60% of its length, never more than 85% of it
    (a section that is already short may stay near that limit, but must still be shorter).
    Same form as the original: bullets stay bullets, and every label line of the section (PLOT:, NOTES:, any line
    that ends with a colon) stays, in the same order, with its own shortened bullets under it. Keep every fact from step 1.
@@ -103,7 +103,7 @@ STEPS
    Keep WHOLE, however long, a line that turns the scene: one the section itself calls out ("the line that changed …"),
    or a confession, promise, vow, declaration, refusal or accusation that the rest of the section reacts to.
    Only minor lines may lose their quotation marks and be said in your own words.
-3. LINE: one sentence, 30 words or fewer: the single most important thing that happened or changed.
+3. LINE: the gist, about half of SHORT (30% of the section): two to four bullets with who did what, what was decided and what changed. No label lines, no mood.
 4. Same language as the section. Add nothing that is not in the section. No comments.
 
 EXAMPLE
@@ -125,14 +125,16 @@ PLOT:
 NOTES:
 - Ren's leg wound is untreated.
 LINE:
-Ren was hurt on the bridge and saved by Mara; that night he told her his sister is dead.
+- Mara pulled Ren up when a plank broke on the bridge; his leg is cut and untreated.
+- The south road is closed, so they go through Varo's market.
+- That night Ren told her his sister is dead.
 
 OUTPUT
 Exactly this, nothing else:
 SHORT:
 <short version>
 LINE:
-<one sentence>`;
+<two to four bullets>`;
 
 // a section that opens with a label line (PLOT: …) keeps it in its short version: put it back if it was dropped
 export function withTopLabel(chunk, short) {
@@ -155,7 +157,7 @@ export function changedQuotes(src, out) {
 }
 
 export const AI_SYS_LAYERS_REVISE = `GOAL
-Change the short version (and the one line) of a story-archive section the way the user asks — and nothing else.
+Change the short version (and the gist) of a story-archive section the way the user asks — and nothing else.
 
 YOU GET
 SECTION: the full section. It is the only source of facts and quotes.
@@ -180,7 +182,8 @@ PLOT:
 - A plank broke; Ren cut his leg and Mara pulled him up, telling him he owed her.
 - Ivo: the south road is closed.
 CURRENT LINE:
-Mara saved Ren on the bridge.
+- Mara saved Ren on the bridge.
+- The south road is closed.
 REQUEST:
 마라 대사는 원문 그대로 넣어줘
 Answer:
@@ -189,14 +192,15 @@ PLOT:
 - A plank broke; Ren cut his leg and Mara pulled him up: "Now you owe me, and I always collect."
 - Ivo: the south road is closed.
 LINE:
-Mara saved Ren on the bridge.
+- Mara saved Ren on the bridge.
+- The south road is closed.
 
 OUTPUT
 Exactly this, nothing else:
 SHORT:
 <short version>
 LINE:
-<one sentence>`;
+<two to four bullets>`;
 
 // short rewrites: low thinking effort and an 8,000-token ceiling (thinking counts against it), so a model that can't
 // switch thinking off doesn't spend the whole draft budget on one section
@@ -247,8 +251,8 @@ export async function openLayers(s) {
     const stale = L.h && L.h !== layerHash(m.text, s);
     const plan = fadeActive(m) ? fadePlan(m).get(sectionKey(s)) : null;
     const use = plan ? fadeUse(m, m.text, s, plan.want) : null;
-    const name = { long: '원문', short: '짧게', line: '한 줄' };
-    const into = { long: '원문으로', short: '짧은 버전으로', line: '한 줄로' };
+    const name = { long: '원문', short: '짧게', line: '요점' };
+    const into = { long: '원문으로', short: '짧은 버전으로', line: '요점으로' };
     const noteHtml = (p, u) => p ? `지금 <b>${into[u]}</b> 들어가요${p.why === 'pin' ? ' (📌 고정)' : p.why === 'star' ? ' (꼭 남길 장면)' : p.why === 'called' ? ' (지금 불려 온 섹션)' : p.why === 'manual' ? ' (직접 고름)' : ''}${u !== p.want ? ` · 고른 건 ${name[p.want]}인데 ${stale ? '원문이 바뀌어서' : '그 버전이 없어서'}` : ''}` : '망각 곡선이 꺼져 있어 원문으로 들어가요';
     const forced = () => fadeForce(getMeta())[sectionKey(s)] || 'auto';
     const now = t => use === t ? ' · 지금 들어감' : '';
@@ -257,12 +261,12 @@ export async function openLayers(s) {
       <div class="na_popup na_v2 na_layers">
         <div class="na_v2_title"><small>섹션 버전</small><b>${esc(s.title)}</b></div>
         <div class="na_v2_note na_ly_note">${noteHtml(plan, use)}</div>
-        <div class="na_ly_force"><span>넣을 버전</span><div class="na_v2_seg na_ly_forceseg">${[['auto', '자동'], ['long', '원문'], ['short', '짧게'], ['line', '한 줄']].map(([v, l]) => `<button type="button" data-v="${v}" class="${forced() === v ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+        <div class="na_ly_force"><span>넣을 버전</span><div class="na_v2_seg na_ly_forceseg">${[['auto', '자동'], ['long', '원문'], ['short', '짧게'], ['line', '요점']].map(([v, l]) => `<button type="button" data-v="${v}" class="${forced() === v ? 'on' : ''}">${l}</button>`).join('')}</div></div>
         ${stale ? '<div class="na_xr_warn slim">' + WARN_SVG + '<div>버전을 만든 뒤에 원문이 바뀌었어요. 저장할 때까지 원문으로 들어가요.</div></div>' : ''}
         <div class="na_v2_seg na_ly_tabs">
           <button type="button" data-t="long"><span>원문${now('long')}</span><small class="na_ly_tok_long"></small></button>
           <button type="button" data-t="short"><span>짧게${now('short')}</span><small class="na_ly_tok_short"></small></button>
-          <button type="button" data-t="line"><span>한 줄${now('line')}</span><small class="na_ly_tok_line"></small></button>
+          <button type="button" data-t="line"><span>요점${now('line')}</span><small class="na_ly_tok_line"></small></button>
         </div>
         <div class="na_ly_tools">
           <button type="button" class="na_v2_pillbtn na_ly_edit">${svgA(ICO_A.pen, 13)}<span>직접 고치기</span></button>
@@ -271,10 +275,10 @@ export async function openLayers(s) {
         </div>
         <div class="na_ly_pane" data-t="long"><div class="na_ly_view na_ly_full"></div></div>
         <div class="na_ly_pane" data-t="short"><div class="na_ly_view"></div><textarea class="text_pole na_ly_short" rows="8" spellcheck="false" hidden placeholder="원문을 1/3쯤으로 줄인 것. 직접 쓰거나 초안 모델로 만들어요."></textarea></div>
-        <div class="na_ly_pane" data-t="line"><div class="na_ly_view"></div><textarea class="text_pole na_ly_line" rows="3" spellcheck="false" hidden placeholder="가장 중요한 일 한 문장"></textarea></div>
+        <div class="na_ly_pane" data-t="line"><div class="na_ly_view"></div><textarea class="text_pole na_ly_line" rows="5" spellcheck="false" hidden placeholder="- 누가 무엇을 했고, 무엇이 바뀌었는지 (불릿 2~4개)"></textarea></div>
         ${draftReady() ? `<div class="na_ly_ask"><input type="text" class="na_ly_askq" placeholder="고쳐 달라고 하기 (예: 소망 대사는 원문 그대로)" aria-label="고쳐 달라고 하기" enterkeyhint="send"><button type="button" class="na_ly_askgo" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>` : ''}
         <div class="na_v2_row2 na_ly_btns">${draftReady() ? `<button type="button" class="na_v2_btn na_ly_draft">초안 모델로 ${L.short || L.line ? '다시' : '만들기'}</button>` : ''}<button type="button" class="na_v2_btn na_ly_save">저장</button></div>
-        ${draftReady() ? `<small class="na_v2_foot">${esc(drLabel())} · 짧게·한 줄을 같이 채워요. 저장해야 들어가요</small>` : '<small class="na_v2_foot">⚙ 설정 → AI 모델 → 초안 모델을 정하면 여기서 바로 만들 수 있어요</small>'}
+        ${draftReady() ? `<small class="na_v2_foot">${esc(drLabel())} · 짧게·요점을 같이 채워요. 저장해야 들어가요</small>` : '<small class="na_v2_foot">⚙ 설정 → AI 모델 → 초안 모델을 정하면 여기서 바로 만들 수 있어요</small>'}
       </div>`);
     const startShort = L.short ? withTopLabel(m.text.slice(s.start, s.end), L.short) : '', startLine = L.line || '';
     $root.find('.na_ly_short').val(startShort);
@@ -293,7 +297,7 @@ export async function openLayers(s) {
         const raw = text(tab);
         $pane.find('textarea').prop('hidden', !editing);
         $pane.find('.na_ly_view').prop('hidden', editing)
-            .html(raw.trim() ? mdBlock(korean ? withLineTr(raw, trMap) : raw) : `<span class="na_ly_empty">${tab === 'line' ? '한 줄이 아직 없어요' : '짧은 버전이 아직 없어요'} · 직접 고치기로 쓰거나 초안 모델로 만들어요</span>`);
+            .html(raw.trim() ? mdBlock(korean ? withLineTr(raw, trMap) : raw) : `<span class="na_ly_empty">${tab === 'line' ? '요점이 아직 없어요' : '짧은 버전이 아직 없어요'} · 직접 고치기로 쓰거나 초안 모델로 만들어요</span>`);
         $root.find('.na_ly_edit').prop('hidden', tab === 'long').find('span').text(editing ? '다 고쳤어요' : '직접 고치기');
         $root.find('.na_ly_edit').toggleClass('on', editing);
         $root.find('.na_ly_tr').prop('disabled', editing || !raw.trim()).toggleClass('on', korean).find('span').text(korean ? '원문으로' : '한국어로');
@@ -353,7 +357,7 @@ export async function openLayers(s) {
     const res = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '저장', cancelButton: '닫기' });
     if (res !== c.POPUP_RESULT.AFFIRMATIVE && res !== true) {
         // closed with changes not saved: ask instead of dropping them
-        if (!dirty() || !await confirm('저장 안 한 고침', '짧은 버전 · 한 줄을 고친 게 있어요. 저장할까요?')) return;
+        if (!dirty() || !await confirm('저장 안 한 고침', '짧은 버전 · 요점을 고친 게 있어요. 저장할까요?')) return;
     }
     await saveLayers(m, s, $root.find('.na_ly_short').val(), $root.find('.na_ly_line').val());
     toastr.success('섹션 버전을 저장했어요');
@@ -388,8 +392,8 @@ export async function fillFade($btn, only = null) {
     const m = getMeta();
     const pick = only && new Set(only);
     const todo = fadeMissing(m, true).filter(x => !pick || pick.has(sectionKey(x))), need = pick ? 0 : fadeMissing(m).length;
-    if (!todo.length) return toastr.info('모든 섹션에 짧게 · 한 줄 버전이 있어요.');
-    if (!await confirm('초안 모델로 채우기', `짧게 · 한 줄 버전이 없는 섹션 ${todo.length}개를 초안 모델(${drLabel()})로 하나씩 만들까요?${need ? ` 지금 곡선에 필요한 ${need}개부터 해요.` : ''} 섹션마다 요청이 한 번씩 가요. 도중에 멈출 수 있어요.`)) return;
+    if (!todo.length) return toastr.info('모든 섹션에 짧게 · 요점 버전이 있어요.');
+    if (!await confirm('초안 모델로 채우기', `짧게 · 요점 버전이 없는 섹션 ${todo.length}개를 초안 모델(${drLabel()})로 하나씩 만들까요?${need ? ` 지금 곡선에 필요한 ${need}개부터 해요.` : ''} 섹션마다 요청이 한 번씩 가요. 도중에 멈출 수 있어요.`)) return;
     fadeFilling = { stop: false };
     const html = $btn.html();
     let done = 0, failed = 0;
@@ -435,19 +439,19 @@ export async function setFadeForce(keys, v) {
 // pick sections and set their version in one go; also makes missing versions for the picked ones
 export async function openFadePicker() {
     const c = ctx();
-    const name = { long: '원문', short: '짧게', line: '한 줄' };
+    const name = { long: '원문', short: '짧게', line: '요점' };
     let filter = 'all';
     const picked = new Set();
     const $root = $(`
       <div class="na_popup na_v2 na_fp">
-        <div class="na_v2_title"><b>섹션별 버전</b><small>고른 섹션에 원문 · 짧게 · 한 줄을 한꺼번에 정해요. 자동은 망각 곡선을 따라요</small></div>
+        <div class="na_v2_title"><b>섹션별 버전</b><small>고른 섹션에 원문 · 짧게 · 요점을 한꺼번에 정해요. 자동은 망각 곡선을 따라요</small></div>
         <div class="na_v2_chips na_fp_filters">
           <button type="button" data-f="all" class="on">전체</button><button type="button" data-f="manual">직접 고른 것</button><button type="button" data-f="miss">버전 없음</button>
         </div>
         <div class="na_fp_list"></div>
         <div class="na_fp_bar">
           <div class="na_fp_barhead"><label class="na_fp_all"><input type="checkbox" class="na_fp_allbox"> <span class="na_fp_n">0개 고름</span></label><button type="button" class="na_linkbtn na_fp_make" hidden>버전 만들기</button></div>
-          <div class="na_v2_seg na_fp_set">${[['auto', '자동'], ['long', '원문'], ['short', '짧게'], ['line', '한 줄']].map(([v, l]) => `<button type="button" data-v="${v}" disabled>${l}</button>`).join('')}</div>
+          <div class="na_v2_seg na_fp_set">${[['auto', '자동'], ['long', '원문'], ['short', '짧게'], ['line', '요점']].map(([v, l]) => `<button type="button" data-v="${v}" disabled>${l}</button>`).join('')}</div>
         </div>
       </div>`);
     const rows = () => {
@@ -475,7 +479,7 @@ export async function openFadePicker() {
             lastGroup = r.group;
             const state = r.muted ? '<span class="na_fp_use off">꺼짐</span>' : `<span class="na_fp_use ${r.use}">${name[r.use]}</span>`;
             const why = r.force ? '<span class="na_fp_why">직접</span>' : r.p?.why === 'pin' ? '<span class="na_fp_why">고정</span>' : r.p?.why === 'star' ? '<span class="na_fp_why">꼭 남길</span>' : r.p?.why === 'called' ? '<span class="na_fp_why">불려 옴</span>' : '';
-            return `${head}<label class="na_fp_row ${picked.has(r.k) ? 'on' : ''}" data-k="${esc(r.k)}"><input type="checkbox" ${picked.has(r.k) ? 'checked' : ''}><span class="na_fp_title">${esc(r.s.title)}</span><span class="na_fp_has"><i class="${r.has.short ? 'y' : ''}" title="짧은 버전 ${r.has.short ? '있음' : '없음'}">짧</i><i class="${r.has.line ? 'y' : ''}" title="한 줄 ${r.has.line ? '있음' : '없음'}">줄</i></span>${why}${state}</label>`;
+            return `${head}<label class="na_fp_row ${picked.has(r.k) ? 'on' : ''}" data-k="${esc(r.k)}"><input type="checkbox" ${picked.has(r.k) ? 'checked' : ''}><span class="na_fp_title">${esc(r.s.title)}</span><span class="na_fp_has"><i class="${r.has.short ? 'y' : ''}" title="짧은 버전 ${r.has.short ? '있음' : '없음'}">짧</i><i class="${r.has.line ? 'y' : ''}" title="요점 ${r.has.line ? '있음' : '없음'}">요</i></span>${why}${state}</label>`;
         }).join('') : '<div class="na_empty">해당하는 섹션이 없어요.</div>');
         const n = picked.size;
         $root.find('.na_fp_n').text(`${n}개 고름`);
