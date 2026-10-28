@@ -32,7 +32,7 @@ Output exactly these parts, in this order, with no greeting, explanation or comm
 
 # 3. What to keep
 You are writing a memory, not a transcript: what happened, why, and what it changed, not who said what in which order. Write only what matters from the first draft.
-- The test for every line: "If the bot read only the archive, would leaving this line out make the next scene go wrong: a cause lost, evidence against the obvious reading dropped, or someone credited with knowing or admitting more than they did?" Being in the raw log is not a reason to include something.
+- The test for every line: "If the bot read only the archive and then wrote the next scene, would something go wrong or feel unmotivated without this line?" Being in the raw log is not a reason to include something.
 - Keep: chains of cause and effect · lines that change a relationship · what a character chose NOT to do (evidence of restraint) · an act and its contradiction together · the reason behind an emotional reaction · why a character held a line or crossed it, when the raw log shows their reason (without it the act reads as impulse; when the log gives no reason, do not supply one) · the concrete action that shows a standing trait at work · a question together with its answer (an answer alone reads as unmotivated).
 - Cut: movement and positioning, gestures, props, scenery, temperatures and staging; light, rooms, weather, clothing or bodies described for mood. Keep any of these, or a small act, only when it changed what happened. Anxiety or agitation gets one word.
 - Weight: a beat that repeats a pattern STATE already holds gets a clause at most; one that breaks or turns a pattern gets the space.
@@ -47,11 +47,11 @@ Cause and order
 
 Whose it is
 - Write felt experience as felt experience, not as the narrator's verdict. ("Hunted into a dead end" ✗ → "Feeling hunted into a dead end" ✓) A character's interpretation is written only as theirs, never as fact: "(her reading, not his intent)", "In her own reckoning, …".
-- Record each person's part as it happened, without softening it or making it worse. A partial confession stays partial: what someone did and what they admitted are two facts. Preserve both sides' responsibility: do not erase one side's fault because of the other side's hurt, in either direction.
+- Record each person's part as it happened, without softening it or making it worse. Preserve both sides' responsibility: do not erase one side's fault because of the other side's hurt, in either direction.
   ✗ "the old wound beneath her sense of being caged" (reads as if the cage was only in her head) → ✓ "the old wound that drove that fear so deep"
   ✗ "running away gave her no freedom" → ✓ "running away alone could not prove she was free"
 - Write a character's present feelings from where the relationship stands now. Once the relationship has changed, describe how they see the other person today, not through the lens of an earlier arc.
-- Be careful with absolutes such as "never", "not once", or "silence" for contact that only thinned. They make a character read as cold or indifferent.
+- Be careful with absolutes such as "never" and "not once." They make a character read as cold or indifferent.
 
 # 5. Writing the sections
 Sections
@@ -117,7 +117,7 @@ FEELING
 - No narrator metaphors. An image appears only if the log has it.
 
 NEVER
-- Interpretation, theme or verdict sentences of your own ("their bond deepened", "something shifted"); ending a bullet on what it meant. A motive, fear or mixed feeling the raw log states is not interpretation: keep it, as the character's.
+- Interpretation, theme or summary-verdict sentences of your own; summing up meaning: "their bond deepened", "something shifted". Ending a bullet on what it meant.
 - tender, intimate, profound, palpable, a testament to, unspoken, electric, in that moment, it was clear that, couldn't help but.
 - Long "and… and… and" sentences. Describing a known character instead of naming them.
 - "while" twice in one bullet. "Also" to tack an act on ("He also…"): join it to the act before it instead.
@@ -273,7 +273,7 @@ export const PREV_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카�
 [원문]
 {{raw}}`;
 export const OLD_DEFAULTS = new Set(['1y2ik7n', '4nh49a']);
-export const OLD_BASIC_HASHES = new Set(['1y824pg', '1xqbitt', '1qmckm4', '197ipyx', '1kagm56', '1kvass7', '5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8', 'k678s0', 'lbvxyj', '1cw54yj', '936ejv', '1aww7hu', 'nx8yvf']); // earlier built-in basics, upgraded when untouched
+export const OLD_BASIC_HASHES = new Set(['1a9dx2s', '1xqbitt', '1qmckm4', '197ipyx', '1kagm56', '1kvass7', '5uaca5', '1gtzaod', 'ztrqbn', '1u7aqka', '1nz5q9e', 'rlhw7z', 'cqcpi1', '12lkzac', '1gzouls', 'x3kmxl', '1269olm', 'l3h9zy', '124875u', 'zbr8fw', '189egig', '5wzwes', 'kf51sc', '2oz3nu', '17uau04', '16w0zvh', 'm1q50b', 'ou2i35', '1kk6bu', 'dc5o0o', 'e6en20', '1qnbhcj', 'cwt9a8', 'k678s0', 'lbvxyj', '1cw54yj', '936ejv', '1aww7hu', 'nx8yvf']); // earlier built-in basics, upgraded when untouched
 export const OLD_BASIC = `아래 원문(#{{from}}–#{{to}})을 기존 아카이브와 같은 형식으로 압축해 주세요.
 - 섹션 제목은 "## #시작–#끝 — 짧은 제목" 형식
 - 사건·관계 변화·약속·떡밥 위주로, 대사는 꼭 필요한 것만 원문 그대로
