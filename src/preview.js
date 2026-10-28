@@ -5,7 +5,7 @@ import { fadeCfg } from './fade.js';
 import { autoDepth, currentInjection } from './inject.js';
 import { keyLabel, linkWaiting, mutedSet, parseSections, pinnedSet, sectionKey } from './sections.js';
 import { copyText, esc, fmt } from './util.js';
-import { worldBooks, worldIsOn } from './world.js';
+import { worldBody, worldBooks, worldIsOn } from './world.js';
 
 export async function openPreview() {
     const c = ctx();
@@ -18,7 +18,7 @@ export async function openPreview() {
     const pinned = pinnedSet(m);
     const fadeN = { short: 0, line: 0 };
     for (const v of (b.faded || new Map()).values()) fadeN[v]++;
-    const worldN = worldBooks().filter(w => String(w.text || '').trim() && worldIsOn(m, w)).length;
+    const worldN = worldBooks().filter(w => worldBody(w).trim() && worldIsOn(m, w)).length;
     const outN = muted.length + waiting.length + b.trimmed.length;
     const text = m.enabled ? b.text : '';
     // the injected text, headings marked with how each section goes in

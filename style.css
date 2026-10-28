@@ -2895,6 +2895,46 @@ body.na_darkui :is(.na_v2, #na_settings) .na_wd_text.text_pole.text_pole { backg
 .na_wd_bindchip.on { background: var(--na-card2); color: inherit; }
 .na_wd_foot .na_wd_del { color: var(--na-bad); opacity: 1; font-size: 1.042em; padding: 0; }
 .na_wd_foot .na_wd_del:hover { text-decoration: underline; color: var(--na-bad); }
+/* 세계관 칸: 한 줄 소개, 장소 · 소속 · 사정 · 규칙 · 지나간 일 · 용어, 아카이브에서 채우기 */
+.na_wd_slot { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--na-line); border-radius: 14px; }
+.na_wd_slot_head { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 0.893em; }
+.na_wd_slot_head b { flex: none; }
+.na_wd_slot_head small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--na-dim); font-size: 0.92em; }
+.na_wd_slot_ico { flex: none; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: var(--na-warm-soft, var(--na-accent-soft)); color: var(--na-accent); }
+.na_wd_slot_n { flex: none; min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--na-card2); color: var(--na-dim); font-size: 0.86em; text-align: center; font-variant-numeric: tabular-nums; }
+.na_wd_add, .na_wd_rx { flex: none; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--na-dim); cursor: pointer; }
+.na_wd_add:hover { background: var(--na-card2); color: var(--na-accent); }
+.na_wd_rx:hover { background: var(--na-card2); color: var(--na-bad); }
+.na_wd_rows { display: flex; flex-direction: column; gap: 4px; }
+.na_wd_rows { gap: 6px; }
+.na_wd_row { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "n x" "d d"; gap: 3px 4px; padding: 6px; border-radius: 11px; background: var(--na-card2); }
+.na_wd_row .na_wd_en { grid-area: n; }
+.na_wd_row .na_wd_ed { grid-area: d; }
+.na_wd_row .na_wd_rx { grid-area: x; }
+:is(.na_v2, #na_settings) .na_wd_row .text_pole.text_pole { background: transparent; padding: 3px 6px; }
+:is(.na_v2, #na_settings) .na_wd_row .na_wd_en.text_pole.text_pole { min-height: 0; height: auto; align-self: center; }
+:is(.na_v2, #na_settings) .na_wd_slot .text_pole.text_pole { margin: 0; padding: 6px 9px; border: 1px solid transparent; border-radius: 9px; background: var(--na-card2); color: inherit; font-size: 0.88em; line-height: 1.5; min-width: 0; box-sizing: border-box; }
+:is(.na_v2, #na_settings) .na_wd_slot .text_pole.text_pole:focus { border-color: var(--na-accent); outline: none; }
+:is(.na_v2, #na_settings) .na_wd_slot textarea.text_pole.text_pole { width: 100%; resize: vertical; field-sizing: content; min-height: 2.1em; max-height: 40vh; }
+:is(.na_v2, #na_settings) .na_wd_slot .na_wd_en.text_pole.text_pole { font-weight: 600; }
+:is(.na_v2, #na_settings) .na_wd_slot .na_wd_text.text_pole.text_pole { min-height: 6.5em; }
+.na_wd_fillbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+:is(.na_v2, #na_settings) .na_wd_fillbar .text_pole.text_pole { margin: 0; width: auto; font-size: 0.88em; border-radius: 10px; }
+.na_wd_fillbar .na_wd_fillk { flex: none; max-width: 40%; }
+.na_wd_fillbar .na_wd_note { flex: 1; min-width: 120px; }
+.na_wd_fillbar .na_wd_fill { flex: 1 0 100%; }
+.na_wd_review { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1.5px dashed var(--na-accent); border-radius: 14px; }
+.na_wd_rv_title { display: flex; align-items: baseline; gap: 8px; }
+.na_wd_rv_title small { color: var(--na-dim); font-size: 0.86em; }
+.na_wd_rv_grp { display: flex; flex-direction: column; gap: 3px; }
+.na_wd_rv_grp > b { font-size: 0.86em; color: var(--na-dim); }
+.na_wd_rv_row { display: flex; align-items: flex-start; gap: 8px; font-size: 0.88em; line-height: 1.5; cursor: pointer; }
+.na_wd_rv_row input { flex: none; margin-top: 3px; }
+.na_wd_rv_row > span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.na_wd_rv_old { color: var(--na-dim); font-size: 0.92em; }
+.na_wd_rv_row em { flex: none; font-style: normal; font-size: 0.8em; padding: 1px 7px; border-radius: 999px; background: var(--na-card2); color: var(--na-dim); }
+.na_wd_rv_row em.new { color: var(--na-accent); }
+.na_wd_rv_foot { display: flex; justify-content: flex-end; gap: 6px; }
 
 /* Versions (section layers) */
 .na_layers { gap: 10px; }
