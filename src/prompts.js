@@ -248,20 +248,8 @@ PLOT:
 - Ivo pressed her to take the river road; Mara refused it because it was his idea, and the question was left there (#71, #74).
 
 # 12. Before you write
-In your thinking, not in the answer, run this check on each section:
-
-1. Cause Check:
-   - [ ] Have I kept what caused every reaction, decision and change of heart, in the log's order? If not, restore it.
-   - [ ] Have I written anyone's reading as fact? If yes, tie it to its owner.
-2. Emotional Arc Check:
-   - [ ] Can the reader tell what each character feels toward the other, and how it changed?
-   - [ ] Have I smoothed mixed feelings into one, or settled what the log leaves open? If yes, restore it.
-3. Keep Check:
-   - [ ] Have I kept what someone held back, hid or only partly admitted?
-4. Cut Check:
-   - [ ] Have I kept movement that only carries the scene? If yes, remove it.
-   - [ ] Is every physical act I kept the event itself or something that drives a choice or conflict? If not, remove it.`;
-export const OLD_SHORT_HASHES = new Set(['f70apb', 'a67lz5', 'amx6h2', '892qha', '13bqai', 'aromd8', '1ksvarl', 'vty6ef', '19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
+Check each section once before you output: a reaction or decision that lost its cause, a feeling smoothed into one, staging left in, order, anything said twice, verdicts of your own, quote length, em dashes, bullet count.`;
+export const OLD_SHORT_HASHES = new Set(['fu81dv', 'a67lz5', 'amx6h2', '892qha', '13bqai', 'aromd8', '1ksvarl', 'vty6ef', '19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
 export const BUILTIN_PROMPTS = new Set(['basic', 'short']);
 const BUILTIN_TEXT = { basic: () => BASIC_PROMPT, short: () => SHORT_PROMPT };
 // 기본 (정리본) as it shipped in 3.84.0–3.86.x, before it became 기본 itself: an untouched copy is taken out
