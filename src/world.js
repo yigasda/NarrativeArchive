@@ -35,8 +35,18 @@ export const WORLD_SLOTS = [
 const INTRO_ICO = ICO_A.globe;
 export const slotsOf = w => { const s = w.slots && typeof w.slots === 'object' ? w.slots : {}; return Object.fromEntries(WORLD_SLOTS.map(x => [x.k, Array.isArray(s[x.k]) ? s[x.k] : []])); };
 const filled = e => String(e?.name || '').trim() || String(e?.desc || '').trim();
-// 끄기: a row (e.off) or a whole part (w.slotsOff[k]) stays in the book but out of the prompt, for every chat that uses it
+// 끄기: a row (e.off) stays in the book but out of the prompt, for every chat that uses it.
+// 3.102.0 also had a switch for a whole part (w.slotsOff[k]); still read here, and turned into its rows when the window opens
 export const slotOff = (w, k) => !!(w.slotsOff && w.slotsOff[k]);
+const liftSlotsOff = w => {
+    if (!w.slotsOff) return false;
+    const sl = slotsOf(w);
+    for (const k of Object.keys(w.slotsOff)) if (w.slotsOff[k]) for (const e of sl[k] || []) e.off = true;
+    delete w.slotsOff;
+    return true;
+};
+const CK = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path class="na_ck_v" d="M5 12.5l4.5 4.5L19 7.5"/><path class="na_ck_p" d="M6 12h12"/></svg>';
+const check = (cls, on, label, part = false) => `<label class="na_ck ${part ? 'part' : ''}" title="${label}"><input type="checkbox" class="${cls}" ${on ? 'checked' : ''} aria-label="${label}">${CK}</label>`;
 // what a book puts in the prompt: the one-line intro, each part as a list, then the free text
 export function worldBody(w) {
     const parts = [], sl = slotsOf(w);
@@ -156,6 +166,7 @@ export async function openWorlds() {
     const c = ctx();
     const m = getMeta();
     const g = globalSettings();
+    if ((g.worlds || []).map(liftSlotsOff).some(Boolean)) saveGlobal();
     const open = new Set();
     const review = new Map(); // book id → what 아카이브에서 채우기 brought back, waiting to be ticked
     // 한국어로 보기: each line's Korean under it (the book itself stays as written); the translations live in the shared cache
@@ -241,13 +252,14 @@ export async function openWorlds() {
             ${ko(w, w.intro)}
           </div>
           ${WORLD_SLOTS.map(x => `
-          <div class="na_wd_slot ${slotOff(w, x.k) ? 'off' : ''}" data-k="${x.k}">
-            ${head(x.ico, x.label, x.hint, `<span class="na_spacer"></span>${sl[x.k].length ? `<span class="na_wd_slot_n">${sl[x.k].filter(e => !e.off).length < sl[x.k].length ? `${sl[x.k].filter(e => !e.off).length}/` : ''}${sl[x.k].length}</span><label class="na_wd_mini" title="${x.label} 전체 켜기 · 끄기"><input type="checkbox" class="na_toggle na_wd_son" ${slotOff(w, x.k) ? '' : 'checked'} aria-label="${x.label} 넣기"></label>` : ''}<button type="button" class="na_wd_add" title="${x.label} 추가" aria-label="${x.label} 추가">${svgA(ICO_A.plus, 15, 2.2)}</button>`)}
+          <div class="na_wd_slot" data-k="${x.k}">
+            ${head(x.ico, x.label, x.hint, `<span class="na_spacer"></span>${sl[x.k].length ? `<span class="na_wd_slot_n">${sl[x.k].filter(e => !e.off).length < sl[x.k].length ? `${sl[x.k].filter(e => !e.off).length}/` : ''}${sl[x.k].length}</span>${check('na_wd_son', sl[x.k].every(e => !e.off), `${x.label} 전체 켜기 · 끄기`, sl[x.k].some(e => !e.off) && sl[x.k].some(e => e.off))}` : ''}<button type="button" class="na_wd_add" title="${x.label} 추가" aria-label="${x.label} 추가">${svgA(ICO_A.plus, 15, 2.2)}</button>`)}
             ${sl[x.k].length ? `<div class="na_wd_rows">${sl[x.k].map((e, n) => `
               <div class="na_wd_row ${e.off ? 'off' : ''}" data-n="${n}">
+                ${check('na_wd_ron', !e.off, '이 줄 넣기')}
                 <input type="text" class="text_pole na_wd_en" value="${esc(e.name || '')}" placeholder="이름" aria-label="이름">
                 <textarea class="text_pole na_wd_ed" rows="1" spellcheck="false" placeholder="설명" aria-label="설명">${esc(e.desc || '')}</textarea>
-                <span class="na_wd_rtools"><label class="na_wd_mini" title="이 줄 켜기 · 끄기"><input type="checkbox" class="na_toggle na_wd_ron" ${e.off ? '' : 'checked'} aria-label="이 줄 넣기"></label><button type="button" class="na_wd_rx" title="빼기" aria-label="빼기">${svgA('M6 6l12 12M18 6L6 18', 14, 2.2)}</button></span>
+                <button type="button" class="na_wd_rx" title="빼기" aria-label="빼기">${svgA('M6 6l12 12M18 6L6 18', 14, 2.2)}</button>
                 ${ko(w, entryLine(e))}
               </div>`).join('')}</div>` : ''}
           </div>`).join('')}
@@ -298,10 +310,10 @@ export async function openWorlds() {
         await save(); draw();
         $root.find(`.na_wd[data-id="${w.id}"] .na_wd_slot[data-k="${k}"] .na_wd_row:last .na_wd_en`).trigger('focus');
     });
+    // the part's box: all on → all off; some or none on → all on
     $root.on('change', '.na_wd_son', async function () {
-        const w = book(this), k = String($(this).closest('.na_wd_slot').data('k'));
-        w.slotsOff = { ...(w.slotsOff || {}), [k]: !this.checked };
-        if (this.checked) delete w.slotsOff[k];
+        const list = slotList(book(this), this), on = list.some(e => e.off);
+        for (const e of list) { if (on) delete e.off; else e.off = true; }
         await save(); draw();
     });
     $root.on('change', '.na_wd_ron', async function () {

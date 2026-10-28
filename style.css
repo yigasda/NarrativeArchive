@@ -2907,7 +2907,7 @@ body.na_darkui :is(.na_v2, #na_settings) .na_wd_text.text_pole.text_pole { backg
 .na_wd_rx:hover { background: var(--na-card2); color: var(--na-bad); }
 .na_wd_rows { display: flex; flex-direction: column; gap: 4px; }
 .na_wd_rows { gap: 6px; }
-.na_wd_row { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "n x" "d d"; gap: 3px 4px; padding: 6px; border-radius: 11px; background: var(--na-card2); }
+.na_wd_row { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "c n x" "d d d"; align-items: center; gap: 3px 4px; padding: 6px; border-radius: 11px; background: var(--na-card2); }
 .na_wd_row .na_wd_en { grid-area: n; }
 .na_wd_row .na_wd_ed { grid-area: d; }
 .na_wd_row .na_wd_rx { grid-area: x; }
@@ -4207,10 +4207,14 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 .na_wd_foot .na_wd_bindchip:not(.on) > span { color: var(--na-dim); }
 
 /* 세계관 끄기 (v3.102): a small switch on each part and each row; what is off fades */
-.na_wd_mini { display: inline-flex; align-items: center; margin: 0 2px; cursor: pointer; }
-.na_wd_mini .na_tgl_ui { width: 30px; height: 18px; }
-.na_wd_mini .na_tgl_ui::after { top: 2px; left: 2px; width: 14px; height: 14px; }
-.na_wd_mini input.na_toggle:checked + .na_tgl_ui::after { transform: translateX(12px); }
-.na_wd_row .na_wd_rtools { grid-area: x; display: inline-flex; align-items: center; gap: 2px; }
-.na_wd_row.off :is(.na_wd_en, .na_wd_ed, .na_wd_ko), .na_wd_slot.off .na_wd_rows { opacity: 0.45; }
-.na_wd_slot.off .na_wd_slot_head b { color: var(--na-dim); }
+/* 세계관 줄 · 칸 체크: a ticked row goes in; the part's box shows − when only some are */
+.na_ck { position: relative; flex: none; display: grid; place-items: center; width: 18px; height: 18px; margin: 0 5px; box-sizing: border-box; border: 1.6px solid color-mix(in srgb, var(--na-dim) 70%, transparent); border-radius: 5px; color: transparent; cursor: pointer; }
+.na_ck input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.na_ck .na_ck_p { display: none; }
+.na_ck:has(input:checked) { background: var(--na-accent); border-color: var(--na-accent); color: #fff; }
+.na_ck.part { background: color-mix(in srgb, var(--na-accent) 18%, transparent); border-color: var(--na-accent); color: var(--na-accent); }
+.na_ck.part .na_ck_v { display: none; }
+.na_ck.part .na_ck_p { display: inline; }
+.na_ck:has(input:focus-visible) { outline: 2px solid var(--na-accent); outline-offset: 2px; }
+.na_wd_row > .na_ck { grid-area: c; margin: 0 2px 0 4px; }
+.na_wd_row.off :is(.na_wd_en, .na_wd_ed, .na_wd_ko) { opacity: 0.45; }
