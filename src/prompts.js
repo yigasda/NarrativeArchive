@@ -177,26 +177,31 @@ You write the next stretch of a role-play's long-term memory (the archive): #{{f
 - Trackers, status windows and planning blocks are not events; take only the date and place from them. Rules or banned-word lists inside them are directions to the bot, not canon.
 - Only the raw log is new. Never reproduce, rewrite or recap what the archive already holds. Nothing from <current_state> goes into a section unless the raw log shows it happening.
 
-# 3. What to keep
+# 3. Cause, order, whose it is
+Cause and order
+- Before every emotional reaction, keep the other person's action that caused it; without it, the character seems to erupt on their own or seems childish (the refusals that piled up before she left; the threat before the fear).
+- Before every realization or decision, keep the trigger that made it possible; cut the process and the character "suddenly understands" (he handed her the choice for the first time, so she chose).
+- When a reaction draws on a past event, name the event plainly and briefly ("remembering the shipwreck"), never a summary of its meaning. When the archive uses log prefixes, its numbers may follow with the prefix: (Y1 #322–#325).
+- Keep the raw log's order. Do not pull a later event into an earlier bullet. Nothing stronger than the raw log says: no "shattered" or "devastated" unless the text says so.
+
+Whose it is
+- Write felt experience as felt experience, not as the narrator's verdict ("Feeling hunted into a dead end", not "Hunted into a dead end"). A character's interpretation is written only as theirs, never as fact ("To Ren, it sounded like a sentence", "In her own reckoning, …").
+- Record each person's part as it happened, without softening it or making it worse. Do not erase one side's fault because of the other side's hurt, in either direction ("running away alone could not prove she was free", not "running away gave her no freedom").
+- Write a character's present feelings from where the relationship stands now, not through the lens of an earlier arc.
+- Be careful with absolutes such as "never" and "not once": they make a character read as cold. No verdicts, labels or themes of your own ("childish", "cold", "cowardly") unless a character says them.
+
+# 4. What to keep
 Test every line: "Without it, would the bot's next scene go wrong or feel unmotivated?" Being in the raw log is not a reason. Cutting so hard that the story breaks is also a failure: never shrink the core of a trigger or an arc.
 - Keep: the reason behind an emotional reaction · why a character held a line or crossed it, when the raw log shows it (when it gives none, do not supply one) · what a character chose not to do ("…rather than knock") · an act and its contradiction together ("…said he would never forgive it, and still did not let go") · a question with its answer. Most bullets need one of these or none.
 - A beat that repeats a pattern STATE already holds gets a clause at most; one that breaks or turns it gets the space.
-- Cut how a line was said, and light, rooms, clothing or bodies described for mood; anxiety gets one word. The rest of the staging: 4.
+- Cut how a line was said, and light, rooms, clothing or bodies described for mood; anxiety gets one word. The rest of the staging: 5.
 - When one of this RP's recurring devices returns (a phrase, an object, a song, a ritual), keep that event and line.
 
-# 4. What to leave out
+# 5. What to leave out
 Leave out the steps that only carry a scene along: taking off a jacket or watch, fetching slippers or a blanket, sitting down, standing up, crossing a room, incidental weather and furniture. A physical act stays when it is the event itself (a slap, a kiss, a door locked against someone) or when it matters to a consequential choice or conflict. If a bullet reads like stage directions, cut the staging, not the event. Do not replace discarded actions with invented meaning.
 
-# 5. Emotional arc
+# 6. Emotional arc
 Preserve the emotional thread of the scene: what each character feels toward the other, how those feelings change, and what feelings remain in tension. When the raw log gives an inner thought or motive that matters to the relationship, state it briefly alongside the action it drives. When someone hides something or admits only part of it, keep what they left out. Do not invent feelings or resolve a conflict the log leaves unresolved. Cut staging and repetition to make room; do not add length.
-
-# 6. Cause, order, whose it is
-- Keep the cause before every reaction (the refusals that piled up, the threat before the fear) and the trigger before every realization or decision (he handed her the choice for the first time, so she chose).
-- A reaction that draws on a past event names the event briefly, as in "remembering the shipwreck", not what it means. When the archive uses log prefixes, the numbers may follow with the prefix: (Y1 #322–#325).
-- Follow the raw log's order. Never mention an event before the bullet that tells it, and say nothing stronger than the raw log does: no "shattered" or "devastated" unless the text says so.
-- Felt experience is written as felt ("Feeling hunted into a dead end", not "Hunted into a dead end"). A reading belongs to the character who has it ("To Ren, it sounded like a sentence", "in her own reckoning", "her reading, not his intent"), never to you.
-- Record each person's part as it happened, without softening it or making it worse; one side's hurt never erases the other's fault, either way ("running away alone could not prove she was free", not "gave her no freedom").
-- Present feelings follow where the relationship stands now, not an earlier arc. Careful with "never" or "not once": they make a character read as cold. No verdicts, labels or themes of your own, such as "childish", "cold" or "cowardly", unless a character says them.
 
 # 7. Sections and bullets
 - A section is a chapter: cut where the story turns (a relationship shifts, a decision, a secret, a change of place or time). Most sections cover 10–20 messages.
@@ -242,7 +247,7 @@ PLOT:
 
 # 12. Before you write
 Check each section once before you output: a reaction or decision that lost its cause, order, anything said twice, verdicts of your own, quote length, em dashes, bullet count.`;
-export const OLD_SHORT_HASHES = new Set(['13bqai', 'aromd8', '1ksvarl', 'vty6ef', '19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
+export const OLD_SHORT_HASHES = new Set(['892qha', '13bqai', 'aromd8', '1ksvarl', 'vty6ef', '19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
 export const BUILTIN_PROMPTS = new Set(['basic', 'short']);
 const BUILTIN_TEXT = { basic: () => BASIC_PROMPT, short: () => SHORT_PROMPT };
 // 기본 (정리본) as it shipped in 3.84.0–3.86.x, before it became 기본 itself: an untouched copy is taken out
