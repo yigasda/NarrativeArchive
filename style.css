@@ -4205,3 +4205,12 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 /* 캐릭터 연동: the same words on and off, so on shows in colour (face in colour, accent text) and off stays grey */
 .na_wd_foot .na_wd_bindchip.on > span { color: var(--sv-val, var(--na-accent)); font-weight: 600; }
 .na_wd_foot .na_wd_bindchip:not(.on) > span { color: var(--na-dim); }
+
+/* 세계관 끄기 (v3.102): a small switch on each part and each row; what is off fades */
+.na_wd_mini { display: inline-flex; align-items: center; margin: 0 2px; cursor: pointer; }
+.na_wd_mini .na_tgl_ui { width: 30px; height: 18px; }
+.na_wd_mini .na_tgl_ui::after { top: 2px; left: 2px; width: 14px; height: 14px; }
+.na_wd_mini input.na_toggle:checked + .na_tgl_ui::after { transform: translateX(12px); }
+.na_wd_row .na_wd_rtools { grid-area: x; display: inline-flex; align-items: center; gap: 2px; }
+.na_wd_row.off :is(.na_wd_en, .na_wd_ed, .na_wd_ko), .na_wd_slot.off .na_wd_rows { opacity: 0.45; }
+.na_wd_slot.off .na_wd_slot_head b { color: var(--na-dim); }

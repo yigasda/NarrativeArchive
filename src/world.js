@@ -35,12 +35,14 @@ export const WORLD_SLOTS = [
 const INTRO_ICO = ICO_A.globe;
 export const slotsOf = w => { const s = w.slots && typeof w.slots === 'object' ? w.slots : {}; return Object.fromEntries(WORLD_SLOTS.map(x => [x.k, Array.isArray(s[x.k]) ? s[x.k] : []])); };
 const filled = e => String(e?.name || '').trim() || String(e?.desc || '').trim();
+// 끄기: a row (e.off) or a whole part (w.slotsOff[k]) stays in the book but out of the prompt, for every chat that uses it
+export const slotOff = (w, k) => !!(w.slotsOff && w.slotsOff[k]);
 // what a book puts in the prompt: the one-line intro, each part as a list, then the free text
 export function worldBody(w) {
     const parts = [], sl = slotsOf(w);
     if (String(w.intro || '').trim()) parts.push(String(w.intro).trim());
     for (const x of WORLD_SLOTS) {
-        const rows = sl[x.k].filter(filled).map(e => { const n = String(e.name || '').trim(), d = String(e.desc || '').trim(); return `- ${n ? `**${n}**${d ? `: ${d}` : ''}` : d}`; });
+        const rows = slotOff(w, x.k) ? [] : sl[x.k].filter(e => filled(e) && !e.off).map(e => { const n = String(e.name || '').trim(), d = String(e.desc || '').trim(); return `- ${n ? `**${n}**${d ? `: ${d}` : ''}` : d}`; });
         if (rows.length) parts.push(`## ${x.en}\n${rows.join('\n')}`);
     }
     if (String(w.text || '').trim()) parts.push(String(w.text).trim());
@@ -122,8 +124,8 @@ export async function exportLorebook(w) {
     const { newWorldInfoEntryTemplate } = await import('/scripts/world-info.js');
     const data = { entries: {} };
     let uid = 0;
-    const add = (comment, content, keys, constant) => {
-        data.entries[uid] = { ...structuredClone(newWorldInfoEntryTemplate), uid, comment, content, key: keys, constant, order: constant ? 100 : 50 };
+    const add = (comment, content, keys, constant, off = false) => {
+        data.entries[uid] = { ...structuredClone(newWorldInfoEntryTemplate), uid, comment, content, key: keys, constant, order: constant ? 100 : 50, disable: off };
         uid++;
     };
     const sl = slotsOf(w);
@@ -133,11 +135,12 @@ export async function exportLorebook(w) {
     const keysOf = e => String(e.name || '').split(/\s*[/,]\s*/).map(x => x.trim()).filter(x => x.length > 1);
     for (const k of ['places', 'groups', 'terms']) for (const e of rows(k)) {
         const keys = keysOf(e);
-        if (keys.length) add(`${WORLD_SLOTS.find(x => x.k === k).label} · ${String(e.name).trim()}`, line(e), keys, false);
-        else if (line(e)) add(WORLD_SLOTS.find(x => x.k === k).label, line(e), [], true);
+        const off = !!e.off || slotOff(w, k);
+        if (keys.length) add(`${WORLD_SLOTS.find(x => x.k === k).label} · ${String(e.name).trim()}`, line(e), keys, false, off);
+        else if (line(e)) add(WORLD_SLOTS.find(x => x.k === k).label, line(e), [], true, off);
     }
     for (const k of ['rules', 'past']) {
-        const r = rows(k), x = WORLD_SLOTS.find(y => y.k === k);
+        const r = slotOff(w, k) ? [] : rows(k).filter(e => !e.off), x = WORLD_SLOTS.find(y => y.k === k);
         if (r.length) add(x.label, `${x.en}:\n${r.map(e => `- ${line(e)}`).join('\n')}`, [], true);
     }
     // the one-line intro and any older free text: one more entry that is always in
@@ -238,13 +241,13 @@ export async function openWorlds() {
             ${ko(w, w.intro)}
           </div>
           ${WORLD_SLOTS.map(x => `
-          <div class="na_wd_slot" data-k="${x.k}">
-            ${head(x.ico, x.label, x.hint, `<span class="na_spacer"></span>${sl[x.k].length ? `<span class="na_wd_slot_n">${sl[x.k].length}</span>` : ''}<button type="button" class="na_wd_add" title="${x.label} 추가" aria-label="${x.label} 추가">${svgA(ICO_A.plus, 15, 2.2)}</button>`)}
+          <div class="na_wd_slot ${slotOff(w, x.k) ? 'off' : ''}" data-k="${x.k}">
+            ${head(x.ico, x.label, x.hint, `<span class="na_spacer"></span>${sl[x.k].length ? `<span class="na_wd_slot_n">${sl[x.k].filter(e => !e.off).length < sl[x.k].length ? `${sl[x.k].filter(e => !e.off).length}/` : ''}${sl[x.k].length}</span><label class="na_wd_mini" title="${x.label} 전체 켜기 · 끄기"><input type="checkbox" class="na_toggle na_wd_son" ${slotOff(w, x.k) ? '' : 'checked'} aria-label="${x.label} 넣기"></label>` : ''}<button type="button" class="na_wd_add" title="${x.label} 추가" aria-label="${x.label} 추가">${svgA(ICO_A.plus, 15, 2.2)}</button>`)}
             ${sl[x.k].length ? `<div class="na_wd_rows">${sl[x.k].map((e, n) => `
-              <div class="na_wd_row" data-n="${n}">
+              <div class="na_wd_row ${e.off ? 'off' : ''}" data-n="${n}">
                 <input type="text" class="text_pole na_wd_en" value="${esc(e.name || '')}" placeholder="이름" aria-label="이름">
                 <textarea class="text_pole na_wd_ed" rows="1" spellcheck="false" placeholder="설명" aria-label="설명">${esc(e.desc || '')}</textarea>
-                <button type="button" class="na_wd_rx" title="빼기" aria-label="빼기">${svgA('M6 6l12 12M18 6L6 18', 14, 2.2)}</button>
+                <span class="na_wd_rtools"><label class="na_wd_mini" title="이 줄 켜기 · 끄기"><input type="checkbox" class="na_toggle na_wd_ron" ${e.off ? '' : 'checked'} aria-label="이 줄 넣기"></label><button type="button" class="na_wd_rx" title="빼기" aria-label="빼기">${svgA('M6 6l12 12M18 6L6 18', 14, 2.2)}</button></span>
                 ${ko(w, entryLine(e))}
               </div>`).join('')}</div>` : ''}
           </div>`).join('')}
@@ -294,6 +297,18 @@ export async function openWorlds() {
         list.push({ name: '', desc: '' });
         await save(); draw();
         $root.find(`.na_wd[data-id="${w.id}"] .na_wd_slot[data-k="${k}"] .na_wd_row:last .na_wd_en`).trigger('focus');
+    });
+    $root.on('change', '.na_wd_son', async function () {
+        const w = book(this), k = String($(this).closest('.na_wd_slot').data('k'));
+        w.slotsOff = { ...(w.slotsOff || {}), [k]: !this.checked };
+        if (this.checked) delete w.slotsOff[k];
+        await save(); draw();
+    });
+    $root.on('change', '.na_wd_ron', async function () {
+        const w = book(this), e = slotList(w, this)[Number($(this).closest('.na_wd_row').data('n'))];
+        if (!e) return;
+        if (this.checked) delete e.off; else e.off = true;
+        await save(); draw();
     });
     $root.on('click', '.na_wd_rx', async function () {
         const w = book(this), list = slotList(w, this);
