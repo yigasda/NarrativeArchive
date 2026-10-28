@@ -76,12 +76,12 @@ Pick the sections it needs so it does not forget or contradict something.
 YOU GET
 - MAIN CAST: characters who are in almost every section. Their names alone are NOT a reason to pick a section.
 - NOW: the title of the newest archived section, so you know where the story stands (date, place).
-- ALL SECTIONS: every section you may pick, numbered, title only (sometimes with a one-line summary). Titles carry the
-  story date, the place and what happened. The word search cannot see hints, so this list is where hints get solved.
-- LIKELY SECTIONS: some of those, under the same numbers, that a word search found closest to the chat. Each has its
-  title, the other names in it, its keywords, and the lines that fit the chat best (or how it begins).
-- GUESS (sometimes): a helper's picture of the earlier moment the chat points back at. It may be wrong; use it as a lead.
 - RECENT CHAT: the last messages. The one marked LATEST is what the next reply answers.
+- GUESS (sometimes): a helper's picture of the earlier moment the chat points back at. It may be wrong; use it as a lead.
+- LIKELY SECTIONS: numbered. A word search found these closest to the chat. Each has a title, the other names in it,
+  its keywords, and the lines that fit the chat best (or how it begins).
+- OTHER SECTIONS: the rest of the archive, title only (sometimes with a one-line summary). Titles carry the story date,
+  the place and what happened. The word search cannot see hints, so this list is where hints get solved.
 
 PICK A SECTION IF ANY OF THESE IS TRUE
 1. Something from it is named or clearly meant in the recent chat: a person who is not main cast, a place, an object, an event.
@@ -98,7 +98,7 @@ DO NOT PICK
 
 HOW TO WORK
 Step 1. Read the LATEST message first, then the others. List for yourself the people, places, objects, past events and promises they mention or hint at.
-Step 2. Match that list against LIKELY SECTIONS first, then scan the titles in ALL SECTIONS for anything hinted at.
+Step 2. Match that list against LIKELY SECTIONS first, then scan the titles of OTHER SECTIONS for anything hinted at.
 Step 3. Put the most important first. Fewer is better than wrong.
 
 OUTPUT: exactly one line, nothing else. After each number, one to three words in parentheses saying why
@@ -262,7 +262,9 @@ export async function runRouter(m, { force = false } = {}) {
     const mainSet = new Set(main.flatMap(n => n.split(/\s+/)));
     const lm = linkedMap(m);
     const layers = layersOf(m);
-    const card = (s, i) => {
+    const order = many ? [...detail] : [...detail].sort((x, y) => x - y);
+    const rest = cands.map((_, i) => i).filter(i => !detail.has(i));
+    const card = (s, n, i) => {
         const body = m.text.slice(s.start, s.end).replace(/^#{1,3} [^\n]*\n?/, '');
         const counts = new Map();
         // capitalised words in mid-sentence only, so sentence openers ("Inside", "Asked") don't pass as names
@@ -273,21 +275,19 @@ export async function runRouter(m, { force = false } = {}) {
         let fits = fitLines(body, q);
         if (!fits.length && meanFit.get(i)) { const f = meanFit.get(i); fits = [f.length > 200 ? `${f.slice(0, 199)}…` : f]; }
         const flat = body.replace(/\s+/g, ' ').trim();
-        return `${i + 1}. ${s.title}${names.length ? `\n   names: ${names.join(', ')}` : ''}${keys.length ? `\n   keywords: ${keys.join(', ')}` : ''}`
+        return `${n}. ${s.title}${names.length ? `\n   names: ${names.join(', ')}` : ''}${keys.length ? `\n   keywords: ${keys.join(', ')}` : ''}`
             + (fits.length ? fits.map(f => `\n   fits: ${f}`).join('') : `\n   begins: ${flat.slice(0, 220)}${flat.length > 220 ? '…' : ''}`);
     };
-    // every candidate keeps the same number from reply to reply (archive order), and the list of them comes first:
-    // it only changes with the archive, so the model's cache can keep it; the cards, the guess and the chat come after
-    const line = (s, i) => { const one = String(layers[sectionKey(s)]?.line || '').replace(/\s+/g, ' ').trim(); return `${i + 1}. ${s.title}${one ? ` — ${one.slice(0, 140)}` : ''}`; };
-    const all = cands.map(line).join('\n');
-    const order = [...detail].sort((x, y) => x - y);
-    const likely = order.map(i => card(cands[i], i)).join('\n');
+    const line = (s, n) => { const one = String(layers[sectionKey(s)]?.line || '').replace(/\s+/g, ' ').trim(); return `${n}. ${s.title}${one ? ` — ${one.slice(0, 140)}` : ''}`; };
+    const listed = [...order, ...rest]; // the number shown to the model → candidate
+    const likely = order.map((i, k) => card(cands[i], k + 1, i)).join('\n');
+    const other = rest.map((i, k) => line(cands[i], order.length + k + 1)).join('\n');
     const ranged = parseSections(m.text).filter(x => !x.group && RANGE_HEAD.test(x.title));
     const now = ranged.length ? ranged[ranged.length - 1].title : '';
     let out;
     try {
         out = await Promise.race([
-            askAI(`${main.length ? `[MAIN CAST]\n${main.join(', ')}\n\n` : ''}${now ? `[NOW]\n${now}\n\n` : ''}[ALL SECTIONS]\n${all}\n\n[LIKELY SECTIONS]\n${likely || '(none)'}\n\n${guess ? `[GUESS]\n${guess}\n\n` : ''}[RECENT CHAT]\n${recent}\n\nPick at most ${cfg.max}.`, { system: AI_SYS_ROUTER, maxTokens: 1024 }),
+            askAI(`${main.length ? `[MAIN CAST]\n${main.join(', ')}\n\n` : ''}${now ? `[NOW]\n${now}\n\n` : ''}[RECENT CHAT]\n${recent}\n\n${guess ? `[GUESS]\n${guess}\n\n` : ''}[LIKELY SECTIONS]\n${likely || '(none)'}${other ? `\n\n[OTHER SECTIONS]\n${other}` : ''}\n\nPick at most ${cfg.max}.`, { system: AI_SYS_ROUTER, maxTokens: 1024 }),
             new Promise((_, no) => setTimeout(() => no(new Error('10초 안에 답이 없었어요')), 10_000)),
         ]);
     } catch (e) {
@@ -303,8 +303,9 @@ export async function runRouter(m, { force = false } = {}) {
     if (!/^\s*none\b/i.test(pickLine)) {
         for (const mt of pickLine.matchAll(/(\d+)\s*(?:\(([^)]*)\))?/g)) {
             const n = Number(mt[1]);
-            if (n < 1 || n > cands.length || fresh.some(x => x.key === sectionKey(cands[n - 1]))) continue;
-            fresh.push({ key: sectionKey(cands[n - 1]), why: String(mt[2] || '').trim().slice(0, 40) });
+            const s = cands[listed[n - 1]];
+            if (!s || fresh.some(x => x.key === sectionKey(s))) continue;
+            fresh.push({ key: sectionKey(s), why: String(mt[2] || '').trim().slice(0, 40) });
             if (fresh.length >= cfg.max) break;
         }
     }
