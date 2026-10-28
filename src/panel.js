@@ -326,8 +326,8 @@ export function renderPanel() {
                 <div class="na_cfg_label"><i class="fa-solid fa-magnifying-glass"></i> 호출</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
-                  <label class="na_set_row" title="답하기 직전에 작은 모델이 지금 대화에 필요한 섹션을 골라 넣어요 · 따로 연결한 모델이 필요해요"><span><span>AI 라우터</span><small>답하기 직전에 필요한 섹션을 골라요</small></span>
-                    <span class="na_cfg_val"><select id="na_router_mode" class="text_pole"><option value="off">끄기</option><option value="linked">키워드에 더해 AI도</option><option value="old">오래된 섹션 전부</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" title="답하기 직전에 지금 대화에 필요한 지난 섹션을 골라 원문으로 넣어요 · AI 없이 빠르게: 임베딩 · 키워드로 골라서 답마다 AI를 안 불러요, 나머지는 망각 곡선대로 · AI 모드는 따로 연결한 모델이 필요해요"><span><span>AI 라우터</span><small id="na_router_sub">답하기 직전에 필요한 섹션을 골라요</small></span>
+                    <span class="na_cfg_val"><select id="na_router_mode" class="text_pole"><option value="off">끄기</option><option value="lift">AI 없이 빠르게</option><option value="linked">키워드에 더해 AI도</option><option value="old">오래된 섹션 전부</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <div class="na_router_opts" id="na_router_opts" hidden>
                     <label class="na_set_row" title="고른 섹션 본문에 &quot;#217–#236&quot;처럼 적힌 섹션도 같이 넣어요"><span><span>가리키는 섹션도 같이</span><small>고른 섹션에 적힌 #번호의 섹션</small></span><input type="checkbox" id="na_router_follow" class="na_toggle"></label>
                     <label class="na_set_row"><span><span>한 번에 최대</span><small>AI가 고를 섹션 수</small></span><span class="na_cfg_val"><input type="number" id="na_router_max" class="text_pole" min="1" max="20"><span class="na_cfg_unit">개</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
@@ -591,7 +591,7 @@ function cfgTiles(g) {
         const rm = val('na_router_mode');
         const e = embedCfg(), st = embedState();
         return [
-            ['AI 라우터', rm === 'off' ? '끔' : rm === 'old' ? 'AI가 전부' : '키워드 + AI', rm === 'off' ? '키워드만' : `한 번에 ${val('na_router_max')}개`, rm !== 'off', 'router'],
+            ['AI 라우터', rm === 'off' ? '끔' : rm === 'lift' ? '빠르게' : rm === 'old' ? 'AI가 전부' : '키워드 + AI', rm === 'off' ? '키워드만' : `한 번에 ${val('na_router_max')}개`, rm !== 'off', 'router'],
             ['장면 짐작', guessMode() === 'off' ? '끔' : '켬', '돌려 말한 지난 일', guessMode() !== 'off', 'router'],
             ['임베딩', e.source ? ({ st: '실리태번', vertexai: 'Vertex', palm: 'AI Studio', transformers: '로컬' }[e.source] || split2(embedLabel())[0]) : '끔', e.source ? (st?.synced ? `섹션 ${st.secs}` : '색인 아직') : '단어로만 찾아요', !!e.source, 'emb'],
             ['키워드 연동', `${$('#na_linked_n').text() || 0}개`, `고정 ${$('#na_pinned_n').text() || 0} · 꺼짐 ${$('#na_muted_n').text() || 0}`, Number($('#na_linked_n').text()) > 0, 'kw'],
@@ -1310,12 +1310,21 @@ export function bindPanel() {
     $('#na_fade_opts').on('click', '.na_fd_btn', needChat(e => { const f = e.currentTarget.dataset.f; const cur = fadeCfg(getMeta())[f]; setFade({ [f]: Math.max(0, cur + Number(e.currentTarget.dataset.d)) }); }));
     $('#na_fade_pick').on('click', needChat(async () => { await openFadePicker(); syncPanel(); }));
     $('#na_fade_fill').on('click', needChat(e => { if (!draftReady() && !fadeFilling) return toastr.info('⚙ 설정 → AI 모델 → 초안 모델을 먼저 정해 주세요. 섹션 카드의 버전 버튼에서 직접 붙여넣을 수도 있어요.'); fillFade($(e.currentTarget)); }));
+    // 원문으로 불러옴 on the home tab: each section called in, why, and for how many more replies it stays
+    const liftList = st => [...st.picks].map((k, i) => {
+        const t = st.titles[i] || k, why = st.whyBy?.[k], left = st.hold?.get?.(k);
+        return `• ${esc(t.slice(0, 60))}${why ? `<br><small>${esc(why)}</small>` : ''}${!st.fresh?.has(k) && left ? `<small> · 이어서 ${left}답 더</small>` : ''}`;
+    }).join('<br>');
+    $('#na_meter_legend').on('click', '.na_router_more', () => {
+        const st = routerState.get(currentChatId());
+        if (st?.titles.length) toastr.info(liftList(st), `원문으로 불러온 섹션 ${st.titles.length}개`, { escapeHtml: false, timeOut: 10000 });
+    });
     $('#na_router_test').on('click', needChat(async e => {
         const m = getMeta();
         const st = await withSpinner($(e.currentTarget), '고르는 중…', () => runRouter(m, { force: true }));
         if (!st) return;
         await applyInjection(); syncPanel();
-        toastr.info(st.titles.length ? st.titles.map(t => `• ${esc(t.slice(0, 60))}`).join('<br>') : '고른 섹션이 없어요', `라우터 · ${st.titles.length}개 · ${(st.ms / 1000).toFixed(1)}초${st.short && st.short < st.cands ? ` · 후보 ${st.cands}개 중 ${st.short}개 자세히` : ''}`, { escapeHtml: false, timeOut: 10000 });
+        toastr.info(st.titles.length ? (st.via === 'lift' ? liftList(st) : st.titles.map(t => `• ${esc(t.slice(0, 60))}`).join('<br>')) : '고른 섹션이 없어요', `라우터 · ${st.titles.length}개 · ${(st.ms / 1000).toFixed(1)}초${st.short && st.short < st.cands ? ` · 후보 ${st.cands}개 중 ${st.short}개 자세히` : ''}`, { escapeHtml: false, timeOut: 10000 });
     }));
     // OOC 빼기 (압축 → 설정)
     // 상태창: what the extension reads from the status windows, the last few as found
@@ -1428,7 +1437,8 @@ export function syncPanel() {
     const rc = routerCfg(m);
     $('#na_router_mode').val(rc.mode);
     $('#na_router_opts').prop('hidden', rc.mode === 'off');
-    $('#na_router_keep_row').toggle(rc.mode === 'old');
+    $('#na_router_keep_row').toggle(rc.mode === 'old' || rc.mode === 'lift');
+    $('#na_router_sub').text(rc.mode === 'lift' ? (fadeCfg(m).on ? '임베딩 · 키워드로 골라 원문으로 · 나머지는 망각 곡선대로' : '망각 곡선을 켜야 효과가 있어요 · 지금은 전부 원문이에요') : '답하기 직전에 필요한 섹션을 골라요');
     $('#na_router_max').val(rc.max); $('#na_router_keep').val(rc.keep); $('#na_router_follow').prop('checked', rc.follow);
     {
         const fc = fadeCfg(m);
@@ -1459,7 +1469,7 @@ export function syncPanel() {
     $('#na_guess').val(guessMode());
     syncEmbedRows();
     { const gs = lastGuess(); $('#na_guess_sub').text(guessMode() === 'off' ? '돌려 말한 지난 일도 찾게' : gs ? `마지막 짐작: ${gs.length > 60 ? `${gs.slice(0, 59)}…` : gs}` : '돌려 말한 지난 일도 찾게 · 답마다 짧게 한 번 더').attr('title', gs); }
-    $('#na_router_info').text(rs ? `마지막: ${rs.titles.length}개 · ${rs.via === 'index' ? `색인으로 (${rs.why || 'AI 안 됨'})` : `${(rs.ms / 1000).toFixed(1)}초`} · 후보 ${rs.cands}개${rs.short && rs.short < rs.cands ? ` 중 ${rs.short}개 자세히` : ''}` : `후보 ${routerCandidates(m).length}개 · 최근 대화로 한 번 골라 봐요`);
+    $('#na_router_info').text(rs?.via === 'lift' ? `마지막: ${rs.titles.length}개 · AI 없이 · 후보 ${rs.cands}개` : rs ? `마지막: ${rs.titles.length}개 · ${rs.via === 'index' ? `색인으로 (${rs.why || 'AI 안 됨'})` : `${(rs.ms / 1000).toFixed(1)}초`} · 후보 ${rs.cands}개${rs.short && rs.short < rs.cands ? ` 중 ${rs.short}개 자세히` : ''}` : `후보 ${routerCandidates(m).length}개 · 최근 대화로 한 번 골라 봐요`);
     {
         const keys = new Set(parseSections(m.text).map(sectionKey));
         $('#na_linked_n').text(Object.keys(linkedMap(m)).filter(t => keys.has(t)).length);

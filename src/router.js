@@ -9,7 +9,7 @@ import { applyInjection, currentInjection, placeArchive } from './inject.js';
 import { KW_STOP } from './keywords.js';
 import { castNames } from './knowledge.js';
 import { RANGE_HEAD, linkWaiting, linkedMap, mutedSet, parseSections, pinnedSet, sectionKey } from './sections.js';
-import { bm25, recallQuery, withGlossary } from './recall.js';
+import { bm25, recallQuery, tokenize, withGlossary } from './recall.js';
 import { layersOf } from './fade.js';
 import { sceneGuess } from './guess.js';
 import { embedSearch } from './embed.js';
@@ -137,7 +137,7 @@ export let routerWarned = false;
 
 export function routerCfg(m) {
     const r = m?.router && typeof m.router === 'object' ? m.router : {};
-    return { mode: ['linked', 'old'].includes(r.mode) ? r.mode : 'off', max: Number(r.max) || 4, keep: Number.isFinite(Number(r.keep)) && r.keep !== undefined ? Number(r.keep) : 3, follow: r.follow !== false };
+    return { mode: ['linked', 'old', 'lift'].includes(r.mode) ? r.mode : 'off', max: Number(r.max) || 4, keep: Number.isFinite(Number(r.keep)) && r.keep !== undefined ? Number(r.keep) : 3, follow: r.follow !== false };
 }
 
 // sections the router may switch on: keyword-linked ones, and in 'old' mode every numbered section except the newest few and pinned ones
@@ -156,7 +156,7 @@ export function routerCandidates(m) {
         if (muted.has(key) || stack.some(g => muted.has(sectionKey(g)))) continue;
         const linked = Array.isArray(lm[key]) && lm[key].length;
         const safe = pinned.has(key) || stack.some(g => pinned.has(sectionKey(g)));
-        if (linked || (cfg.mode === 'old' && RANGE_HEAD.test(s.title) && !recent.has(key) && !safe)) out.push(s);
+        if (linked || (['old', 'lift'].includes(cfg.mode) && RANGE_HEAD.test(s.title) && !recent.has(key) && !safe)) out.push(s);
     }
     return out;
 }
@@ -166,9 +166,62 @@ export function routerReady() {
     return a.mode === 'custom' || a.mode === 'vertex' || !!globalSettings().aiProfile;
 }
 
+// 'lift' (AI 없이 빠르게): no model call before a reply. The word search and the meaning search (when 임베딩 is on) each
+// rank the older sections against the newest messages; the best few go in whole, the rest stay as the forgetting curve
+// has them (nothing is left out). A section called in stays for LIFT_HOLD more replies, so it does not flicker in and out.
+const LIFT_HOLD = 3;
+// the words a section shares with the chat, for the home tab's "why" (longest first, a few)
+function sharedWords(q, text) {
+    const mine = new Set(tokenize(text));
+    const seen = new Set();
+    return q.flatMap(p => tokenize(p.text)).filter(w => mine.has(w) && w.length >= 2 && !seen.has(w) && seen.add(w)).sort((a, b) => b.length - a.length).slice(0, 3);
+}
+async function runLift(m, cfg, force) {
+    const cands = routerCandidates(m);
+    const id = currentChatId();
+    const msgs = recentForCheck(4);
+    const key = shortHash(`lift|${msgs.join('\n\n').slice(-6000)}|${cands.map(sectionKey).join('|')}|${cfg.max}`);
+    const prev = routerState.get(id);
+    if (!force && prev?.key === key) return prev; // a swipe or regenerate on the same chat
+    const t0 = Date.now();
+    const { q, ranked } = rankCandidates(m, cands);
+    const score = new Map(), why = new Map();
+    const top = ranked[0]?.score || 0;
+    ranked.forEach((r, n) => {
+        if (r.hits < 2 || r.score < top * 0.5) return;
+        const k = sectionKey(r.item.s);
+        score.set(k, (score.get(k) || 0) + 1 / (4 + n));
+        const w = sharedWords(q, r.item.text);
+        if (w.length) why.set(k, w.join(', '));
+    });
+    const byTitle = new Map(cands.map(s => [s.title, s]));
+    let n = 0;
+    for (const h of await embedSearch(q.slice(0, 2).map(p => p.text).join('\n'), { topK: 20 })) {
+        const s = h.kind === 'sec' ? byTitle.get(h.title) : null;
+        if (!s) continue;
+        const k = sectionKey(s);
+        if (n < 4 && !score.has(k)) why.set(k, '뜻이 비슷함');
+        if (n++ < 4 || score.has(k)) score.set(k, (score.get(k) || 0) + 1 / (4 + h.rank));
+    }
+    const fresh = [...score].sort((a, b) => b[1] - a[1]).slice(0, cfg.max).map(x => x[0]);
+    // what was called in on the last replies stays a while: new picks first, then the held ones, up to the limit
+    const hold = new Map();
+    for (const [k, left] of prev?.hold || []) if (left > 1 && cands.some(s => sectionKey(s) === k)) hold.set(k, left - 1);
+    for (const k of fresh) hold.set(k, LIFT_HOLD);
+    const keys = [...fresh, ...[...hold.keys()].filter(k => !fresh.includes(k)).sort((a, b) => hold.get(b) - hold.get(a))].slice(0, cfg.max);
+    for (const k of [...hold.keys()]) if (!keys.includes(k)) hold.delete(k);
+    const picked = keys.map(k => cands.find(s => sectionKey(s) === k)).filter(Boolean);
+    const prevWhy = prev?.whyBy || {};
+    const whyBy = Object.fromEntries(picked.map(s => { const k = sectionKey(s); return [k, fresh.includes(k) ? why.get(k) || '' : prevWhy[k] || '']; }));
+    const st = { key, picks: new Set(keys), titles: picked.map(s => s.title), at: Date.now(), ms: Date.now() - t0, cands: cands.length, via: 'lift', hold, whyBy, fresh: new Set(fresh) };
+    routerState.set(id, st);
+    return st;
+}
+
 export async function runRouter(m, { force = false } = {}) {
     const cfg = routerCfg(m);
     if (cfg.mode === 'off') return null;
+    if (cfg.mode === 'lift') return runLift(m, cfg, force);
     const cands = routerCandidates(m);
     const id = currentChatId();
     const msgs = recentForCheck(4);
