@@ -93,7 +93,8 @@ export async function openKeeps() {
     const m0 = getMeta();
     const lo = Math.max(0, Number(m0.boundary) >= 0 ? Number(m0.boundary) + 1 : 0, chat.length - 400);
     let start = null;
-    const hint = () => $root.find('.na_kp_hint').text(start === null ? '장면 첫 메시지를 탭하세요' : `#${start}부터 · 끝 메시지를 탭하세요 (같은 줄을 한 번 더 누르면 그 메시지만)`);
+    const opened = new Set(); // rows held down: their whole message shows under them
+    const hint = () => $root.find('.na_kp_hint').text(start === null ? '장면 첫 메시지를 탭하세요 · 꾹 누르면 전체 보기' : `#${start}부터 · 끝 메시지를 탭하세요 (같은 줄을 한 번 더 누르면 그 메시지만)`);
     const drawMsgs = () => {
         const mm = getMeta();
         const rows = [];
@@ -101,7 +102,8 @@ export async function openKeeps() {
             const x = chat[i];
             if (!x || x.is_system) continue;
             const t = cleanMessage(String(x.mes || ''), { stripTags: true }).replace(/\s+/g, ' ').trim();
-            rows.push(`<button type="button" class="na_kp_msg ${isKeptAt(mm, i) ? 'kept' : ''} ${start === i ? 'start' : ''}" data-i="${i}"><b>#${i}</b><span class="na_kp_who">${esc(x.name || '')}</span><span class="na_kp_line">${esc(t.slice(0, 90)) || '<span class="na_dim">(비어 있음)</span>'}</span></button>`);
+            rows.push(`<button type="button" class="na_kp_msg ${isKeptAt(mm, i) ? 'kept' : ''} ${start === i ? 'start' : ''} ${opened.has(i) ? 'open' : ''}" data-i="${i}"><b>#${i}</b><span class="na_kp_who">${esc(x.name || '')}</span><span class="na_kp_line">${esc(t.slice(0, 90)) || '<span class="na_dim">(비어 있음)</span>'}</span></button>`
+                + (opened.has(i) ? `<div class="na_kp_full" data-i="${i}">${esc(cleanMessage(String(x.mes || ''), { stripTags: true }).trim()).replace(/\n/g, '<br>')}</div>` : ''));
         }
         $root.find('.na_kp_msgs').html(rows.join('') || '<div class="na_empty">압축 안 된 메시지가 없어요.</div>');
         hint();
@@ -117,7 +119,16 @@ export async function openKeeps() {
           </div>`).join('') : '<div class="na_empty">아직 없어요. 아래에서 장면 첫 메시지와 끝 메시지를 탭하세요.</div>');
         drawMsgs();
     };
+    // 꾹 누르기 (or right-click): open or close the whole message, without picking it
+    let held = null, heldFired = false;
+    const toggle = i => { opened.has(i) ? opened.delete(i) : opened.add(i); const top = $root.find('.na_kp_msgs').scrollTop(); drawMsgs(); $root.find('.na_kp_msgs').scrollTop(top); };
+    $root.on('pointerdown', '.na_kp_msg', function () { const i = Number(this.dataset.i); heldFired = false; clearTimeout(held); held = setTimeout(() => { heldFired = true; toggle(i); }, 500); });
+    $root.on('pointerup pointerleave pointercancel', '.na_kp_msg', () => clearTimeout(held));
+    $root.on('scroll', '.na_kp_msgs', () => clearTimeout(held));
+    $root.on('contextmenu', '.na_kp_msg', function (e) { e.preventDefault(); if (!heldFired) toggle(Number(this.dataset.i)); heldFired = true; });
+    $root.on('click', '.na_kp_full', function () { toggle(Number(this.dataset.i)); });
     $root.on('click', '.na_kp_msg', async function () {
+        if (heldFired) { heldFired = false; return; }
         const i = Number(this.dataset.i);
         if (start === null) { start = i; $(this).addClass('start'); return hint(); }
         const a = Math.min(start, i), b = Math.max(start, i);
