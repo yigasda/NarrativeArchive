@@ -12,7 +12,7 @@ import { checkCounts, countCheckOn } from './rulecheck.js';
 import { lastSections, chunksFromStarts, cutScores, detectScenes, sceneChunks, sceneCompress, sceneModel, sceneModelLabel, sceneSize, scenesText, startsFromText, stateModel } from './scenes.js';
 import { buildExtract, cleanMessage, formatExtract, guessEndNumber } from './extract.js';
 import { BASIC_PROMPT, LANG_NAME, SHORT_PROMPT, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressParts, compressPrompt, dropReproduced, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
-import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, trimEnd } from './sections.js';
+import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, rangeIssues, splitTail, trimEnd } from './sections.js';
 import { openSource } from './source.js';
 import { refreshStatus } from './status.js';
 import { ICO_A, svgA } from './theme.js';
@@ -542,7 +542,7 @@ export async function openWizard() {
         // "섹션 2개 · #35–#58 이어짐": the numbered headings' span, and whether they follow on without a gap
         const rs = headingRanges(v).map(x => ({ a: Math.min(x.from, x.to), b: Math.max(x.from, x.to) })).sort((x, y) => x.a - y.a);
         const joined = rs.length && rs.every((x, i) => !i || x.a === rs[i - 1].b + 1);
-        const span = rs.length ? ` · #${rs[0].a}–#${Math.max(...rs.map(x => x.b))}${joined ? ' 이어짐' : ' · 사이가 빔'}` : n !== null ? ` · 끝 #${n}` : '';
+        const span = rs.length ? ` · #${rs[0].a}–#${Math.max(...rs.map(x => x.b))}${joined ? ' 이어짐' : ` · ${rangeIssues(rs)}`}` : n !== null ? ` · 끝 #${n}` : '';
         const ok = secsN && (!rs.length || joined);
         const chk = svgA(ICO_A.check, 12, 3);
         countTokens(v).then(tk => $root.find('.na_wz_outinfo').html(v ? `<span class="${ok ? 'ok' : secsN ? 'warn' : ''}">${ok ? chk : ''}섹션 ${secsN}개${span}</span>${hasState ? `<span class="ok">${chk}STATE·OPEN</span>` : ''}<span>${fmt(tk)} 토큰</span>` : ''));

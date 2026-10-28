@@ -9,7 +9,7 @@ import { applyHide } from './hide.js';
 import { driftHtml } from './drift.js';
 import { nameNearMisses } from './keywords.js';
 import { auDivider, auFix, auOf, langBlock } from './prompts.js';
-import { RANGE_HEAD, citeIssues, headingRanges, lastRangeEnd, parseSections, splitTail, stripCites, tailBlocks, trimEnd } from './sections.js';
+import { RANGE_HEAD, citeIssues, headingRanges, lastRangeEnd, parseSections, rangeIssues, splitTail, stripCites, tailBlocks, trimEnd } from './sections.js';
 import { rawFor } from './retitle.js';
 import { hasChanges, resolveChanges } from './statechg.js';
 import { openSource } from './source.js';
@@ -750,7 +750,7 @@ export async function openAppend(prefill = {}) {
             const joined = rs.length && rs.every((x, i) => !i || x.a === rs[i - 1].b + 1);
             const okc = secsN && (!rs.length || joined);
             const chk = svgA(ICO_A.check, 12, 3);
-            $root.find('.na_ap_outinfo').html(has ? `<span class="${okc ? 'ok' : secsN ? 'warn' : ''}">${okc ? chk : ''}섹션 ${secsN}개${rs.length ? ` · #${rs[0].a}–#${Math.max(...rs.map(x => x.b))}${joined ? ' 이어짐' : ' · 사이가 빔'}` : ''}</span>${tl.trim() ? `<span class="ok">${chk}STATE·OPEN</span>` : ''}<span>${fmt(all)} 토큰</span>` : '');
+            $root.find('.na_ap_outinfo').html(has ? `<span class="${okc ? 'ok' : secsN ? 'warn' : ''}">${okc ? chk : ''}섹션 ${secsN}개${rs.length ? ` · #${rs[0].a}–#${Math.max(...rs.map(x => x.b))}${joined ? ' 이어짐' : ` · ${rangeIssues(rs)}`}` : ''}</span>${tl.trim() ? `<span class="ok">${chk}STATE·OPEN</span>` : ''}<span>${fmt(all)} 토큰</span>` : '');
             $root.find('.na_apf').prop('hidden', !has);
             drawApfChips();
             if (apf.raw) apfRawInfo();
