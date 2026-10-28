@@ -28,7 +28,7 @@ export const WORLD_SLOTS = [
     { k: 'places', label: '장소', hint: '집, 동네, 자주 가는 곳', en: 'Places', ico: '<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>' },
     { k: 'groups', label: '소속', hint: '가족, 회사 · 학교, 단체 · 세력', en: 'Affiliations', ico: ICO_A.users },
     { k: 'rules', label: '사정 · 규칙', hint: '이 세계에서 알아둘 것', en: 'Circumstances and rules', ico: '<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/>' },
-    { k: 'past', label: '지나간 일', hint: '지금에 영향을 주는 과거', en: 'Background', ico: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>' },
+    { k: 'past', label: '이전 이야기', hint: '이야기 시작 전 과거', en: 'Before the story', ico: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>' },
     { k: 'terms', label: '용어', hint: '호칭, 별명, 고유한 말', en: 'Terms', ico: ICO_A.book },
 ];
 const INTRO_ICO = ICO_A.globe;
@@ -66,7 +66,7 @@ PARTS
 - PLACES: places where someone lives, lived or works, and places tied to a past, secret or promise that still matters. Leave out places only passed through or visited on an outing.
 - AFFILIATIONS: families, workplaces, schools, groups the characters belong to, and how they stand to each other.
 - RULES: what holds in this world and shapes what people can do: laws, money, work, customs, how things work (magic or technology only if the story has them).
-- BACKGROUND: past events, before or during the story, that still shape the present. Not a retelling of scenes.
+- BACKGROUND: what happened before the story began and still shapes the present. Leave out anything that happens during the story: that is in the archive.
 - TERMS: names, titles, nicknames and words with a meaning special to this story.
 
 RULES
