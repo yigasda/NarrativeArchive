@@ -225,7 +225,7 @@ YOU GET
 RULES
 - EDIT a STATE line only when the new sections make it untrue or outdated, so an old behavior a later arc changed does not stay in the present tense. Change only what changed and keep the rest of the line word for word; never shorten a line to save space, never merge lines.
 - DROP a STATE line only when the story itself has overturned it. What a character realized or resolved not to do stays until the story overturns it. Keep safety lines that lock the current state.
-- New and edited lines: per character + relationships + current life. Only changes and tendencies the sections alone do not capture, briefly; do not restate events. A character's reading stays theirs, never raised to fact. Scope principles narrowly ("no commands" ✗ → "no longer dictates her choices or movements" ✓); use "tends to" or "since #n" instead of "now".
+- New and edited lines: per character + relationships + current life. Only changes and tendencies the sections alone do not capture, briefly; do not restate events. Scope principles narrowly ("no commands" ✗ → "no longer dictates her choices or movements" ✓); use "tends to" or "since #n" instead of "now".
 - "## Heading" / "## Group" is the one the line sits under, spelled exactly as in <current_state>; leave it out when OPEN has no groups. Do not invent headings.
 - OPEN: drop only threads the new sections closed; add threads they opened, short; do not prescribe future actions.
 - Copy old lines exactly in EDIT and DROP.
