@@ -260,8 +260,10 @@ In your thinking, not in the answer, run this check on each section:
    - Is there something someone held back, hid or only partly admitted that I dropped? If yes, restore it.
 4. Cut Check:
    - Is there movement that only carries the scene? If yes, remove it.
-   - Is there a physical act that is not the event itself and drives no choice or conflict? If yes, remove it.`;
-export const OLD_SHORT_HASHES = new Set(['f70apb', 'fu81dv', 'a67lz5', 'amx6h2', '892qha', '13bqai', 'aromd8', '1ksvarl', 'vty6ef', '19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
+   - Is there a physical act that is not the event itself and drives no choice or conflict? If yes, remove it.
+5. Fact Check:
+   - Is there anything stated more strongly or more broadly than the log shows, or a fact the log does not give? If yes, bring it back to what the log says.`;
+export const OLD_SHORT_HASHES = new Set(['1s8i0of', 'f70apb', 'fu81dv', 'a67lz5', 'amx6h2', '892qha', '13bqai', 'aromd8', '1ksvarl', 'vty6ef', '19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
 export const BUILTIN_PROMPTS = new Set(['basic', 'short']);
 const BUILTIN_TEXT = { basic: () => BASIC_PROMPT, short: () => SHORT_PROMPT };
 // 기본 (정리본) as it shipped in 3.84.0–3.86.x, before it became 기본 itself: an untouched copy is taken out
