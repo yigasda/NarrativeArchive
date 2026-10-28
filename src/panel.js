@@ -8,7 +8,7 @@ import { branchState, openBranches } from './branches.js';
 import { mountSectionBrowser } from './browser.js';
 import { openCalendar } from './calendar.js';
 import { carryOffer, currentChatId, importArchive, openChatPicker, pickFromBundle, rememberArchive, setCarryOffer } from './chats.js';
-import { MODULE, POSITIONS, POSITION_ORDER, ROLES, SETTING_KEYS, SNAPSHOT_MAX, VERSION, commitText, ctx, getMeta, globalSettings, hasChat, pushSnapshot, saveGlobal, saveMeta } from './core.js';
+import { POSITIONS, POSITION_ORDER, ROLES, SETTING_KEYS, SNAPSHOT_MAX, VERSION, commitText, ctx, getMeta, globalSettings, hasChat, pushSnapshot, saveGlobal, saveMeta } from './core.js';
 import { openCompare, openDiff } from './diff.js';
 import { openDrift } from './drift.js';
 import { guessEndNumber, openExtract } from './extract.js';
@@ -762,8 +762,8 @@ export function showArchiveView(view) {
     }
 }
 
-// 시작하기: three steps for a first-time user (four when 주입 is off), ticked by what the extension can see. Gone once all four have been
-// done in some chat (or 숨기기), so people who already use it never see it again.
+// 시작하기: three steps for a first-time user (four when 주입 is off), ticked by what the extension can see. Only a fresh install
+// gets it (see globalSettings); gone once every step has been done in some chat, or with 숨기기
 const START_STEPS = [
     { key: 'model', short: '모델', title: '초안 모델 연결', btn: '초안 모델 정하러 가기',
         desc: '압축을 써 줄 AI 모델을 정해요. 롤플에 쓰는 모델과 따로 정할 수 있어요.', done: () => draftReady() },
@@ -777,34 +777,6 @@ const START_STEPS = [
         desc: '아카이브를 롤플 모델에게 보여 줘요. 켜야 지난 이야기를 기억해요.', done: m => !!m.enabled },
 ];
 let startPick = null; // a step the user tapped to read, else the first one not done
-// once per install: if any character's chat already holds an archive, this person is no beginner. SillyTavern hands
-// out each chat's first line (where the archive lives) without loading the chat; the scan stops at the first one found
-let startScan = null;
-let startScanFailed = false; // a scan that failed is not tried again until the next load; the card shows meanwhile
-async function scanForArchive() {
-    const g = globalSettings();
-    // the open chat is judged only as it is now: a first compression made while the scan runs must not count
-    const openChat = hasChat() ? `${currentChatId()}.jsonl` : '';
-    const openChar = ctx().characters?.[ctx().characterId]?.avatar;
-    try {
-        if (hasChat() && getMeta().text.trim()) g.startDone = true;
-        // six characters at a time, so a big library is looked through in a few seconds
-        const chars = (ctx().characters || []).filter(ch => ch?.avatar);
-        const holds = async ch => {
-            const r = await fetch('/api/characters/chats', { method: 'POST', headers: ctx().getRequestHeaders(), body: JSON.stringify({ avatar_url: ch.avatar, metadata: true }) });
-            if (!r.ok) throw new Error(`chats ${r.status}`);
-            const list = await r.json();
-            return Array.isArray(list) && list.some(x => !(ch.avatar === openChar && x?.file_name === openChat) && String(x?.chat_metadata?.[MODULE]?.text || '').trim());
-        };
-        for (let i = 0; i < chars.length && !g.startDone; i += 6) {
-            if ((await Promise.all(chars.slice(i, i + 6).map(holds))).some(Boolean)) g.startDone = true;
-        }
-        g.startScanned = true;
-        saveGlobal();
-    } catch (e) { console.warn('[narrative-archive] archive scan', e); startScanFailed = true; }
-    startScan = null;
-    refreshStatus();
-}
 function goStart(key) {
     if (key === 'model' || key === 'inject') {
         showTab('config');
@@ -829,8 +801,6 @@ function renderStart(m) {
     const steps = START_STEPS.filter(x => x.key !== 'inject' || !m.enabled);
     const done = steps.map(x => !!x.done(m));
     if (!g.startDone && done.every(Boolean)) { g.startDone = true; saveGlobal(); }
-    // stay hidden until the one-time look through the other chats is over
-    if (!g.startDone && !g.startScanned && !startScanFailed) { startScan ||= scanForArchive(); $('#na_start').prop('hidden', true); return false; }
     const show = hasChat() && !g.startDone && !g.startHidden;
     $('#na_start').prop('hidden', !show);
     if (!show) return false;

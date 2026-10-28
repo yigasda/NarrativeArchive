@@ -12,7 +12,7 @@ import { parseSections } from './sections.js';
 
 export const MODULE = 'narrative_archive';
 export const PROMPT_KEY = 'narrative_archive_injection';
-export const VERSION = '3.97.4';
+export const VERSION = '3.97.5';
 export const SNAPSHOT_MAX = 5;
 export const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -155,8 +155,12 @@ export const newId = () => `p${Date.now().toString(36)}${Math.random().toString(
 
 export function globalSettings() {
     const es = ctx().extensionSettings;
+    // an install that already had settings is someone who used the extension before: 시작하기 never shows for them
+    const fresh = !es[MODULE] || typeof es[MODULE] !== 'object' || !Object.keys(es[MODULE]).length;
     if (!es[MODULE] || typeof es[MODULE] !== 'object') es[MODULE] = {};
     const g = es[MODULE];
+    // (a 3.97.0–3.97.4 install that already looked through its chats keeps what it found)
+    if (g.startDone === undefined && !g.startScanned) g.startDone = !fresh;
     const defaults = { usePrompt: false, skipHidden: true, aiProfile: '', aiMaxTokens: 8192 };
     for (const [k, v] of Object.entries(defaults)) if (!Object.hasOwn(g, k)) g[k] = v;
     // 2단계 was taken out in 3.87.3: its setting goes, and a chat set to it compresses from the raw log
