@@ -179,10 +179,11 @@ You write the next stretch of a role-play's long-term memory (the archive): #{{f
 
 # 3. Cause, order, whose it is
 Cause and order
+- Never distort the log's facts: state only what it shows, as strongly and as widely as it shows it (not "silence" for contact that thinned, not "lied" for what was true, not "shattered" unless the text says so).
 - Before every emotional reaction, keep the other person's action that caused it; without it, the character seems to erupt on their own or seems childish (the refusals that piled up before she left; the threat before the fear).
 - Before every realization or decision, keep the trigger that made it possible; cut the process and the character "suddenly understands" (he handed her the choice for the first time, so she chose).
 - When a reaction draws on a past event, name the event plainly and briefly ("remembering the shipwreck"), never a summary of its meaning. When the archive uses log prefixes, its numbers may follow with the prefix: (Y1 #322–#325).
-- Keep the raw log's order. Do not pull a later event into an earlier bullet. Nothing stronger than the raw log says: no "shattered" or "devastated" unless the text says so.
+- Keep the raw log's order. Do not pull a later event into an earlier bullet.
 
 Whose it is
 - Write felt experience as felt experience, not as the narrator's verdict ("Feeling hunted into a dead end", not "Hunted into a dead end"). A character's interpretation is written only as theirs, never as fact ("To Ren, it sounded like a sentence", "In her own reckoning, …").
@@ -263,7 +264,7 @@ In your thinking, not in the answer, run this check on each section:
    - Is there a physical act that is not the event itself and drives no choice or conflict? If yes, remove it.
 5. Fact Check:
    - Is there anything stated more strongly or more broadly than the log shows, or a fact the log does not give? If yes, bring it back to what the log says.`;
-export const OLD_SHORT_HASHES = new Set(['1s8i0of', 'f70apb', 'fu81dv', 'a67lz5', 'amx6h2', '892qha', '13bqai', 'aromd8', '1ksvarl', 'vty6ef', '19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
+export const OLD_SHORT_HASHES = new Set(['13w2m7p', '1s8i0of', 'f70apb', 'fu81dv', 'a67lz5', 'amx6h2', '892qha', '13bqai', 'aromd8', '1ksvarl', 'vty6ef', '19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
 export const BUILTIN_PROMPTS = new Set(['basic', 'short']);
 const BUILTIN_TEXT = { basic: () => BASIC_PROMPT, short: () => SHORT_PROMPT };
 // 기본 (정리본) as it shipped in 3.84.0–3.86.x, before it became 기본 itself: an untouched copy is taken out
