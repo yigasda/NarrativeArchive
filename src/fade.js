@@ -5,6 +5,7 @@ import { currentChatId } from './chats.js';
 import { ctx, getMeta, saveMeta, textHash } from './core.js';
 import { applyInjection } from './inject.js';
 import { sectionPanel, syncPanel } from './panel.js';
+import { estTok } from './picker.js';
 import { mdBlock } from './reader.js';
 import { routerCfg, routerState } from './router.js';
 import { RANGE_HEAD, atRest, filterMuted, keywordWaiting, linkedMap, parseSections, pinnedSet, sectionKey, sectionLinks } from './sections.js';
@@ -23,6 +24,8 @@ export const fadeActive = m => fadeCfg(m).on || Object.keys(fadeForce(m)).length
 export const layersOf = m => (m.layers && typeof m.layers === 'object' ? m.layers : {});
 export const layerHash = (text, s) => textHash(text.slice(s.start, s.end).replace(/^[^\n]*\n?/, '').trim());
 
+// a short version this small (tokens, roughly) is not taken down to the gist by the curve
+export const GIST_MIN = 200;
 // what each numbered section should be: 'long' | 'short' | 'line' (before checking which versions exist)
 export function fadeWants(m, text = m.text) {
     const cfg = fadeCfg(m);
@@ -51,7 +54,10 @@ export function fadeWants(m, text = m.text) {
         // called in right now always goes whole; then a hand-picked version; then pin and the curve
         if (called.has(k)) return out.set(k, { s, want: 'long', why: 'called' });
         if (force[k]) return out.set(k, { s, want: force[k], why: 'manual' });
-        out.set(k, { s, want: !cfg.on || safe || age < cfg.full ? 'long' : age < cfg.full + cfg.short ? 'short' : 'line', why: star ? 'star' : safe ? 'pin' : '' });
+        let want = !cfg.on || safe || age < cfg.full ? 'long' : age < cfg.full + cfg.short ? 'short' : 'line';
+        // a small section stops at its short version: its gist would save a few dozen tokens and lose most of it
+        if (want === 'line' && estTok(layersOf(m)[k]?.short || '') <= GIST_MIN) want = 'short';
+        out.set(k, { s, want, why: star ? 'star' : safe ? 'pin' : '' });
     });
     return out;
 }
