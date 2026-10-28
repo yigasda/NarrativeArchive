@@ -165,6 +165,7 @@ export const SHORT_PROMPT = `<raw_log range="#{{from}}–#{{to}}">
 </current_state>
 
 You write the next stretch of a role-play's long-term memory (the archive): #{{from}}–#{{to}} of the raw log above. The bot reads the archive as a snapshot of the past. Write a memory, not a transcript: what happened, why, and what it changed.
+Preserve causal distinctions, not the physical steps of a scene. Replace incidental actions with what they changed or revealed in the raw log, or drop them; do not add detail merely to demonstrate causality.
 
 # 1. Output
 - Sections covering #{{from}}–#{{to}} with no gap or overlap, then a line \`---\`, then the change lists in 9 if <current_state> has STATE / OPEN blocks. Never write the blocks out. If <current_state> is empty (a new chat), follow the NEW CHAT note below instead.
@@ -239,7 +240,7 @@ PLOT:
 
 # 11. Before you write
 Check each section once before you output: a reaction or decision that lost its cause, order, anything said twice, verdicts of your own, quote length, em dashes, bullet count.`;
-export const OLD_SHORT_HASHES = new Set(['19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
+export const OLD_SHORT_HASHES = new Set(['vty6ef', '19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
 export const BUILTIN_PROMPTS = new Set(['basic', 'short']);
 const BUILTIN_TEXT = { basic: () => BASIC_PROMPT, short: () => SHORT_PROMPT };
 // 기본 (정리본) as it shipped in 3.84.0–3.86.x, before it became 기본 itself: an untouched copy is taken out
