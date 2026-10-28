@@ -22,22 +22,75 @@ const ask = (which, prompt, system = '', guard = null, keepSystem = false) => (w
 
 // "<tracker> 🌇 05:48 오후 | 하티르 여드렛날, 2년 | 옴보스 → 서쪽 별채 | ☀️ 맑음 </tracker>": time | date | place.
 // Named groups time / date / place; an empty setting means no tracker (cut by message count only).
-export const DEFAULT_TRACKER_RE = String.raw`<tracker>[^|]*?(?<time>\d{1,2}:\d{2}\s*(?:오전|오후|AM|PM|am|pm)?)?[^|]*\|\s*(?<date>[^|]+?)\s*\|\s*(?<place>[^|<]+?)\s*(?:\||</tracker>)`;
-export const trackerRe = () => { const v = globalSettings().trackerRe; return v === undefined || v === null ? DEFAULT_TRACKER_RE : String(v); };
+export const DEFAULT_TRACKER_RE = String.raw`<tracker>[^|\d]*(?<time>\d{1,2}:\d{2}\s*(?:오전|오후|AM|PM|am|pm)?)?[^|]*\|\s*(?<date>[^|]+?)\s*\|\s*(?<place>[^|<]+?)\s*(?:\||</tracker>)`;
+// the default before 3.96.4 skipped the time; a setting saved with it reads as the new one
+const OLD_TRACKER_RE = String.raw`<tracker>[^|]*?(?<time>\d{1,2}:\d{2}\s*(?:오전|오후|AM|PM|am|pm)?)?[^|]*\|\s*(?<date>[^|]+?)\s*\|\s*(?<place>[^|<]+?)\s*(?:\||</tracker>)`;
+export const trackerRe = () => { const v = globalSettings().trackerRe; return v === undefined || v === null || v === OLD_TRACKER_RE ? DEFAULT_TRACKER_RE : String(v); };
 const minutes = t => {
-    const mt = String(t || '').match(/(\d{1,2}):(\d{2})\s*(오전|오후|AM|PM|am|pm)?/);
+    const str = String(t || '');
+    const mt = str.match(/(\d{1,2})\s*:\s*(\d{2})\s*(오전|오후|AM|PM|am|pm)?/);
     if (!mt) return null;
+    if (!mt[3] && /오후|저녁|밤|PM|pm/.test(str)) mt[3] = 'PM';
     let h = Number(mt[1]) % 12;
     if (/오후|PM|pm/.test(mt[3] || '')) h += 12; else if (!mt[3]) h = Number(mt[1]);
     return h * 60 + Number(mt[2]);
 };
+// a status window that is not <tracker>: one short line of fields ("[ 🌙 오후 8:15 · 12월 9일 (목) · 성 → 병동 · ❄️ -1°C ]")
+// or a few "label: value" lines (📅 날짜: … / 📍 장소: …). It needs a time or a date; story prose has long parts and full stops
+const ST_CLOCK = /\d{1,2}\s*:\s*\d{2}|(?:오전|오후|새벽|아침|낮|저녁|밤)\s*\d{1,2}\s*시|\b\d{1,2}\s*(?:am|pm)\b/i;
+const ST_DATE = /\d{1,4}\s*년|\d{1,2}\s*월\s*\d{1,2}\s*일|\b\d{4}[-./]\d{1,2}[-./]\d{1,2}\b|[(（][월화수목금토일][)）]|[월화수목금토일]요일|\d+\s*일\s*(?:째|차)|\bday\s*\d+\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}\b|\b\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i;
+const ST_WEATHER = /[☀🌤⛅🌥☁🌦🌧⛈🌩🌨❄☃🌫🌪☔]|-?\d+(?:\.\d+)?\s*(?:°\s*[CF]?|℃)|맑음|흐림|눈발|소나기|안개|\b(?:sunny|cloudy|rain\w*|snow\w*|fog\w*|clear)\b/iu;
+const ST_LABELS = [[/^(날짜|일자|요일|일시|date|day)$/i, 'date'], [/^(시간|시각|time)$/i, 'time'], [/^(장소|위치|location|place)$/i, 'place'], [/^(날씨|기온|weather)$/i, 'weather']];
+const stClean = t => String(t || '').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/\*\*|__|`/g, '').replace(/\s+/g, ' ').trim();
+const stLabel = l => { const mt = stClean(l).match(/^([^:：]{1,12})\s*[:：]\s*(.+)$/); const kind = mt && (ST_LABELS.find(([re]) => re.test(mt[1].trim())) || [])[1]; return kind ? [kind, mt[2].trim()] : null; };
+function stFields(parts) {
+    const f = { time: '', date: '', place: '' };
+    const rest = [];
+    for (const raw of parts) {
+        const lab = stLabel(raw), p = lab ? lab[1] : stClean(raw);
+        if (!p) continue;
+        const kind = lab ? lab[0] : /→|->|📍/.test(raw) ? 'place' : ST_CLOCK.test(p) ? 'time' : ST_DATE.test(p) ? 'date' : ST_WEATHER.test(raw) ? 'weather' : '';
+        if (kind === 'time') { const c = (p.match(/(?:오전|오후|새벽|아침|낮|저녁|밤|AM|PM)?\s*\d{1,2}\s*:\s*\d{2}\s*(?:AM|PM|오전|오후)?/i) || p.match(ST_CLOCK))[0].trim(); f.time ||= c; const d = p.replace(c, '').trim(); if (ST_DATE.test(d)) f.date ||= d; }
+        else if (kind === 'date') f.date ||= p;
+        else if (kind === 'place') f.place ||= p.replace(/\s*(?:->|⇒)\s*/g, ' → ');
+        else if (!kind) rest.push(p);
+    }
+    // no arrow or label: the first short part without numbers is usually the place
+    if (!f.place) f.place = rest.find(p => p.length <= 40 && !/\d/.test(p)) || '';
+    return f;
+}
+function autoTracker(text) {
+    const lines = String(text || '').replace(/<[^>]+>/g, '\n').split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        const t = lines[i].trim().replace(/^[>*_#\s]+|[*_\s]+$/g, '');
+        // "label: value" lines in a row
+        if (stLabel(t)) {
+            const run = [];
+            for (let j = i; j < lines.length && run.length < 10 && stLabel(lines[j].trim()); j++) run.push(lines[j].trim());
+            const kinds = new Set(run.map(l => stLabel(l)[0]));
+            if (run.length >= 2 && (kinds.has('date') || kinds.has('time'))) return stFields(run);
+            continue;
+        }
+        if (t.length < 8 || t.length > 300 || /^["“「]/.test(t)) continue;
+        const wrap = t.match(/^[[【〔(（]\s*([\s\S]+?)\s*[\]】〕)）]$/);
+        const parts = (wrap ? wrap[1] : t).split(/\s*[|·•｜ㆍ]\s*|\s+\/\s+/).map(x => x.trim()).filter(Boolean);
+        if (parts.length < 2 || parts.length > 10 || parts.some(x => x.length > 60)) continue;
+        const has = [ST_CLOCK, ST_DATE, ST_WEATHER, /→|->|📍/].map(re => parts.some(x => re.test(x)));
+        if (!has[0] && !has[1]) continue;
+        const score = has.filter(Boolean).length;
+        if (wrap ? score < 2 : score < 3 || parts.length < 3) continue;
+        if (!wrap && /[.!?。]$/.test(t)) continue;
+        return stFields(parts);
+    }
+    return null;
+}
 function readTracker(text, re) {
-    if (!re) return null;
-    const mt = String(text || '').match(re);
-    if (!mt) return null;
-    const gr = mt.groups || {};
-    const parts = String(gr.place || '').split(/\s*(?:→|->|>|\/|·)\s*/).filter(Boolean);
-    return { date: String(gr.date || '').trim(), city: parts[0] || '', room: parts[1] || '', min: minutes(gr.time), time: String(gr.time || '').trim(), place: String(gr.place || '').trim() };
+    const mt = re ? String(text || '').match(re) : null;
+    const gr = mt ? mt.groups || {} : autoTracker(text);
+    if (!gr) return null;
+    const place = String(gr.place || '').trim();
+    const parts = place.split(/\s*(?:→|->|>|\/|·)\s*/).filter(Boolean);
+    return { date: String(gr.date || '').trim(), city: parts[0] || '', room: parts[1] || '', min: minutes(gr.time), time: String(gr.time || '').trim(), place };
 }
 // 상태창 줄 in the settings: the last few status windows the cutter can read, newest first ([] = none found)
 export function recentTrackers(n = 5, { re = trackerRe(), chat = ctx().chat || [] } = {}) {

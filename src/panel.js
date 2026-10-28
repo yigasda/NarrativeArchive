@@ -1261,7 +1261,7 @@ export function bindPanel() {
         const ts = recentTrackers(5);
         const body = ts.length
             ? `<div class="na_v2_title"><b>상태창</b><small>압축할 때 날짜 · 장소는 섹션 제목에, 장면 나누기는 이게 바뀌는 곳에서</small></div><div class="na_trk_list">${ts.map(t => `<div class="na_trk_item"><b>#${t.i}</b><span>${esc([t.date, t.time, t.place].filter(Boolean).join(' · '))}</span></div>`).join('')}</div>`
-            : '<div class="na_v2_title"><b>상태창</b><small>이 채팅에서는 못 찾았어요</small></div><div class="na_dim"><code>&lt;tracker&gt; 시간 | 날짜 | 장소 &lt;/tracker&gt;</code> 모양을 찾아요. 못 찾으면 장면은 메시지 수로 나누고, 날짜 · 장소는 AI가 원문에서 읽어요.</div>';
+            : '<div class="na_v2_title"><b>상태창</b><small>이 채팅에서는 못 찾았어요</small></div><div class="na_dim">시간이나 날짜가 든 짧은 칸들로 된 줄(<code>[ 오후 8:15 · 12월 9일 · 성 → 병동 ]</code>), <code>날짜: … / 장소: …</code> 줄, <code>&lt;tracker&gt;</code>를 찾아요. 못 찾으면 장면은 메시지 수로 나누고, 날짜 · 장소는 AI가 원문에서 읽어요.</div>';
         await ctx().callGenericPopup($(`<div class="na_popup na_v2">${body}</div>`), ctx().POPUP_TYPE.TEXT, '', { okButton: '닫기' });
     });
     $('#na_off_fold').on('click', '.na_off_chip', function () { setOffKind(this.dataset.k, !offKinds()[this.dataset.k]); syncPanel(); refreshStatus(); });
