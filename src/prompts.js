@@ -218,7 +218,7 @@ Write every PLOT bullet in the voice of the existing archive, so your text reads
   Never open two sentences in a bullet with the same word, other than a name.
 - A reason can come after the act as easily as before it. Join acts in one sentence only when they are one motion; when the purpose changes, start a new sentence.
 - Colon only to introduce a line, a reason, or what something meant to someone. Semicolon for two acts that answer each other. At most one em dash in a section.
-- Let the characters carry the feeling through what they did and said. Name a feeling once and say whose it is, or show one bodily sign the log gives. Not both. No narrator metaphors; an image appears only if the log has it.
+- Name feelings when needed; keep them brief and attributed. Cut bodily signs that only repeat them. No commentary of the narrator's own. No narrator metaphors; an image appears only if the log has it.
 - Never: summing up meaning ("their bond deepened", "something shifted") or ending a bullet on what it meant · tender, intimate, profound, palpable, a testament to, unspoken, electric, in that moment, it was clear that, couldn't help but · long "and… and… and" sentences · describing a known character instead of naming them · "while" twice in one bullet · "Also" to tack an act on ("He also…"): join it to the act before it instead.
 
 # 9. STATE and OPEN changes
@@ -238,7 +238,7 @@ PLOT:
 
 # 11. Before you write
 Check each section once before you output: a reaction or decision that lost its cause, order, anything said twice, verdicts of your own, quote length, em dashes, bullet count.`;
-export const OLD_SHORT_HASHES = new Set(['1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
+export const OLD_SHORT_HASHES = new Set(['19jwyhk', '1onlmqn', '8w7l4g', 'xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
 export const BUILTIN_PROMPTS = new Set(['basic', 'short']);
 const BUILTIN_TEXT = { basic: () => BASIC_PROMPT, short: () => SHORT_PROMPT };
 // 기본 (정리본) as it shipped in 3.84.0–3.86.x, before it became 기본 itself: an untouched copy is taken out
