@@ -4071,10 +4071,8 @@ body.na_darkui #na_settings { --sv-page: #2F2621; --sv-card: #3A2F28; --sv-line:
    (numbering, STATE, sections already there) still show */
 .na_ap2 .na_cites, .na_ap2 .na_bullets, .na_ap2 .na_names, .na_ap2 .na_cut { display: none !important; }
 
-/* ---- 3.96: 이어서 고치기, 고른 문장 · 고칠 섹션 */
+/* ---- 3.96: 이어서 고치기, 고칠 섹션 칩 */
 #na_settings .na_apf_scope, .na_apf_scope { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 6px; }
-.na_apf_scope .na_apf_sel { align-self: flex-start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.na_apf_scope .na_apf_sel[hidden] { display: none; }
 .na_apf_chips { display: flex; gap: 6px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
 .na_apf_chips::-webkit-scrollbar { display: none; }
 .na_apf_chips:empty { display: none; }

@@ -78,24 +78,6 @@ PLOT:
 OUTPUT
 Only the section blocks you changed, each one whole (heading, PLOT:, every bullet), in order; leave out every section you did not change. If you merged or split sections, give the new blocks: they replace every old section whose range they overlap. If STATE or OPEN must change, write that whole block after a line with only ---. Then an optional NOTE line. No fences, no comments.`;
 
-// 고른 문장만 고치기: one stretch of text picked in the draft, rewritten alone
-export const AI_SYS_SENTFIX = `GOAL
-Rewrite only the SELECTED text of one story-archive section the way the user asks.
-
-YOU GET
-- SECTION: the whole section the selection sits in, for context. Do not output it.
-- SELECTED: the exact text to replace.
-- RAW LOG (sometimes): the messages the selection points to, each starting with [number] and the speaker. It is the only source of new facts and quotes.
-- REQUEST: what the user wants changed. It may be in Korean. The user knows this story: where REQUEST and your reading of the raw log disagree, REQUEST wins.
-
-RULES
-- Change only what REQUEST asks. Keep the selection's language, voice and message numbers such as (#88); a sentence you split or join keeps the numbers it needs.
-- It must still read on from the text before it and into the text after it in SECTION, without repeating them.
-- New facts and quotes come only from SECTION or RAW LOG. Never invent a quote.
-
-OUTPUT
-Only the replacement for SELECTED, nothing else: no heading, no label, no quotation marks around it, no comment.`;
-
 // 이어서 고치기 answers with only the sections it changed: they replace the draft sections whose range they
 // overlap, everything else stays as it was (faster to write, and nothing else can be touched)
 export function spliceChanged(draft, answer) {
@@ -454,7 +436,7 @@ export async function openAppend(prefill = {}) {
         ${true ? `<div class="na_apf" hidden>
           <div class="na_sf_log na_apf_log"></div>
           <div class="na_sf_note na_apf_note" hidden></div>
-          <div class="na_apf_scope"><button type="button" class="na_pchip on na_apf_sel" hidden title="누르면 풀려요"></button><div class="na_apf_chips" role="group" aria-label="고칠 섹션"></div></div>
+          <div class="na_apf_scope"><div class="na_apf_chips" role="group" aria-label="고칠 섹션"></div></div>
           <div class="na_ly_ask"><input type="text" class="na_ly_askq na_apf_q" placeholder="초안 고쳐 달라고 하기 (예: #60 이후 더 줄여줘)" aria-label="초안 고쳐 달라고 하기" enterkeyhint="send"><button type="button" class="na_ly_askgo na_apf_go" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>
           <div class="na_apf_foot"><label class="checkbox_label"><input type="checkbox" class="na_apf_raw" checked><span>원문 같이 보내기 <small class="na_apf_rawinfo"></small></span></label><button type="button" class="na_linkbtn na_apf_undo" hidden>되돌리기</button></div>
         </div>` : ''}
@@ -771,6 +753,7 @@ export async function openAppend(prefill = {}) {
             $root.find('.na_ap_outinfo').html(has ? `<span class="${okc ? 'ok' : secsN ? 'warn' : ''}">${okc ? chk : ''}섹션 ${secsN}개${rs.length ? ` · #${rs[0].a}–#${Math.max(...rs.map(x => x.b))}${joined ? ' 이어짐' : ' · 사이가 빔'}` : ''}</span>${tl.trim() ? `<span class="ok">${chk}STATE·OPEN</span>` : ''}<span>${fmt(all)} 토큰</span>` : '');
             $root.find('.na_apf').prop('hidden', !has);
             drawApfChips();
+            if (apf.raw) apfRawInfo();
         }, 400);
     });
 
@@ -784,7 +767,7 @@ export async function openAppend(prefill = {}) {
             .html(none ? '<i class="fa-solid fa-circle-check"></i> AI가 찾은 충돌 없음' : `<div class="na_ai_box_head"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 충돌 검사 <span class="na_dim">· 참고용이에요</span></div>${aiHtml(out)}`);
     });
     // 이어서 고치기: the whole draft revised by the draft model, with the raw log of its range when it can be found
-    const apf = { original: null, asked: [], steps: [], rawKey: '', raw: null, busy: false, pick: new Set(), sel: null };
+    const apf = { original: null, asked: [], steps: [], rawKey: '', raw: null, busy: false, pick: new Set() };
     // the draft's numbered sections, with where each one sits in the draft text
     const draftSecs = () => {
         const t = String($ta.val() || ''), body = splitTail(t)[0];
@@ -804,16 +787,8 @@ export async function openAppend(prefill = {}) {
         const k = this.dataset.k;
         apf.pick.has(k) ? apf.pick.delete(k) : apf.pick.add(k);
         $(this).toggleClass('on', apf.pick.has(k));
+        apfRawInfo();
     });
-    // 고른 문장: what is selected in the draft is kept, since tapping send on a phone clears the selection
-    const showSel = () => $root.find('.na_apf_sel').prop('hidden', !apf.sel).text(apf.sel ? `고른 문장: ${apf.sel.text.length > 40 ? `${apf.sel.text.slice(0, 39)}…` : apf.sel.text} ✕` : '');
-    $ta.on('select mouseup touchend keyup', () => {
-        const el = $ta[0], a = el.selectionStart, b = el.selectionEnd;
-        const text = String($ta.val() || '').slice(a, b);
-        if (b > a && text.trim().length >= 8 && !/^\s*#/m.test(text)) { apf.sel = { start: a, end: b, text }; showSel(); }
-    });
-    $ta.on('input', () => { if (apf.sel && String($ta.val() || '').slice(apf.sel.start, apf.sel.end) !== apf.sel.text) { apf.sel = null; showSel(); } });
-    $root.find('.na_apf_sel').on('click', () => { apf.sel = null; showSel(); });
     // the sections a request names: "#40" → the one holding it, "#40–#55" → the ones it overlaps, "#60 이후" → from there on
     const namedSecs = (q, secs) => {
         const out = new Set();
@@ -822,12 +797,6 @@ export async function openAppend(prefill = {}) {
             for (const x of secs) if (x.from <= b && x.to >= a) out.add(x.key);
         }
         return out;
-    };
-    // the raw log of some message numbers only, cut out of the raw log of the range around them
-    const rawOf = async (pre, from, to, keep = null) => {
-        const got = await rawFor(m, { title: `${pre ? `${pre} ` : ''}#${from}–#${to} — draft` }, { here: true });
-        if (!got.raw || !keep) return got.raw || '';
-        return got.raw.split(/\n\n(?=\[\d+\] )/).filter(b => keep.has(+(b.match(/^\[(\d+)\]/) || [])[1])).join('\n\n');
     };
     const draftRange = () => {
         const rs = headingRanges(auFix(String($ta.val() || ''), m));
@@ -846,7 +815,29 @@ export async function openAppend(prefill = {}) {
         $root.find('.na_apf_rawinfo').text(apf.raw.raw ? `· ${apf.raw.label} · 메시지 ${apf.raw.n}개 · 약 ${fmt(apf.raw.tok)} 토큰` : `· ${apf.raw.why}`);
         return apf.raw;
     };
-    $root.find('.na_apf_q').one('focus', () => { loadApfRaw(); });
+    // the sections this request goes to: the picked chips and the numbers it names ([] = the whole draft)
+    const apfPart = q => {
+        const secs = draftSecs(), pick = new Set([...apf.pick, ...namedSecs(q, secs)]);
+        return pick.size && pick.size < secs.length ? secs.filter(x => pick.has(x.key)) : null;
+    };
+    // the raw log of those sections only, cut out of the draft's whole raw log
+    const partRaw = (raw, part) => String(raw || '').split(/\n\n(?=\[\d+\] )/)
+        .filter(b => { const n = +(b.match(/^\[(\d+)\]/) || [])[1]; return part.some(x => n >= x.from && n <= x.to); });
+    // the line under the input says what will actually go: the picked sections' raw log, or the whole one
+    let infoSeq = 0;
+    const apfRawInfo = async () => {
+        const seq = ++infoSeq;
+        const full = await loadApfRaw();
+        const part = apfPart(String($root.find('.na_apf_q').val() || ''));
+        if (seq !== infoSeq || !full?.raw) return;
+        if (!part) { $root.find('.na_apf_rawinfo').text(`· ${full.label} · 메시지 ${full.n}개 · 약 ${fmt(full.tok)} 토큰`); return; }
+        const blocks = partRaw(full.raw, part);
+        const tok = await countTokens(blocks.join('\n\n'));
+        if (seq !== infoSeq) return;
+        $root.find('.na_apf_rawinfo').text(`· 고른 섹션 ${part.length}개 · ${part.map(x => `#${x.from}–#${x.to}`).join(', ')} · 메시지 ${blocks.length}개 · 약 ${fmt(tok)} 토큰`);
+    };
+    let infoT = null;
+    $root.find('.na_apf_q').one('focus', () => { apfRawInfo(); }).on('input', () => { clearTimeout(infoT); infoT = setTimeout(apfRawInfo, 300); });
     const apfSend = async () => {
         const q = String($root.find('.na_apf_q').val() || '').trim();
         const draft = String($ta.val() || '').trim();
@@ -856,41 +847,10 @@ export async function openAppend(prefill = {}) {
         const $b = $root.find('.na_apf_go').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
         try {
             const withRaw = $root.find('.na_apf_raw').prop('checked');
-            const secs = draftSecs();
-            // 고른 문장: only that text, its section for context, and the messages it points to (with one on each side)
-            if (apf.sel && draft.slice(apf.sel.start, apf.sel.end) === apf.sel.text) {
-                const { start, end, text } = apf.sel;
-                const sec = secs.find(x => start >= x.start && start < x.end);
-                if (!sec) throw new Error('고른 문장이 섹션 안에 있지 않아요');
-                const nums = new Set();
-                for (const mt of text.matchAll(/#(\d+)(?:\s*[–—-]\s*#?(\d+))?/g)) { const a = +mt[1], b = mt[2] ? +mt[2] : a; for (let n = Math.max(sec.from, a - 1); n <= Math.min(sec.to, b + 1); n++) nums.add(n); }
-                const raw = withRaw ? await rawOf(sec.pre, sec.from, sec.to, nums.size ? nums : null) : '';
-                const prompt = `SECTION:\n${sec.text}\n\nSELECTED:\n${text.trim()}\n\n${raw ? `RAW LOG:\n${raw}\n\n` : ''}REQUEST:\n${q}${langBlock(m.text, { tail: false })}`;
-                let rep = stripThink(await askFix(prompt, { system: AI_SYS_SENTFIX })).replace(/^```[a-z]*\n?|```\s*$/g, '').replace(/^\s*(?:SELECTED|REPLACEMENT)\s*:\s*/i, '').trim();
-                if (!rep || /^\s*##\s/m.test(rep)) throw new Error('모델이 고른 문장 자리에 맞게 답하지 않았어요 · 초안은 그대로예요');
-                if (/\(#\d/.test(text) && !/\(#\d/.test(rep)) throw new Error('고친 문장에서 출처 번호가 빠져서 안 넣었어요 · 초안은 그대로예요');
-                // keep the selection's own leading "- " and surrounding spaces
-                const lead = text.match(/^\s*(?:-\s+)?/)[0], trail = text.match(/\s*$/)[0];
-                rep = rep.replace(/^-\s+/, ''); // the selection's own "- ", if it had one, comes back with lead
-                const next = `${draft.slice(0, start)}${lead}${rep}${trail}${draft.slice(end)}`;
-                if (apf.original === null) apf.original = draft;
-                apf.steps.push(draft);
-                apf.asked.push(`[고른 문장] ${q}`);
-                apf.sel = null; showSel();
-                $ta.val(next).trigger('input');
-                $root.find('.na_apf_q').val('');
-                $root.find('.na_apf_log').html(apf.asked.map(x => `<div class="na_sf_bubble">${esc(x)}</div>`).join(''));
-                $root.find('.na_apf_note').prop('hidden', true);
-                $root.find('.na_apf_undo').prop('hidden', false);
-                toastr.success('고른 문장만 고쳤어요', '이어서 고치기');
-                return;
-            }
             // 고른 섹션 (chips, or the numbers in the request): only those sections and their raw log
-            const pick = new Set([...apf.pick, ...namedSecs(q, secs)]);
-            const part = pick.size && pick.size < secs.length ? secs.filter(x => pick.has(x.key)) : null;
-            let src = null;
-            if (withRaw && part) src = { raw: (await Promise.all(part.map(x => rawOf(x.pre, x.from, x.to)))).filter(Boolean).join('\n\n') };
-            else if (withRaw) src = await loadApfRaw();
+            const part = apfPart(q);
+            let src = withRaw ? await loadApfRaw() : null;
+            if (src?.raw && part) src = { raw: partRaw(src.raw, part).join('\n\n') };
             const given = part ? part.map(x => x.text).join('\n\n') : draft;
             const prompt = `DRAFT:\n${given}\n\n${src?.raw ? `RAW LOG:\n${src.raw}\n\n` : ''}${apf.asked.length ? `EARLIER REQUESTS:\n${apf.asked.map(x => `- ${x}`).join('\n')}\n\n` : ''}REQUEST:\n${q}${langBlock(m.text)}`;
             const out = stripThink(await askFix(prompt, { system: AI_SYS_DRAFTFIX })).replace(/^```[a-z]*\n?|```\s*$/g, '').trim();
