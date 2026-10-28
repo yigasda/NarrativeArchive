@@ -37,7 +37,18 @@ function readTracker(text, re) {
     if (!mt) return null;
     const gr = mt.groups || {};
     const parts = String(gr.place || '').split(/\s*(?:→|->|>|\/|·)\s*/).filter(Boolean);
-    return { date: String(gr.date || '').trim(), city: parts[0] || '', room: parts[1] || '', min: minutes(gr.time) };
+    return { date: String(gr.date || '').trim(), city: parts[0] || '', room: parts[1] || '', min: minutes(gr.time), time: String(gr.time || '').trim(), place: String(gr.place || '').trim() };
+}
+// 상태창 줄 in the settings: the last few status windows the cutter can read, newest first ([] = none found)
+export function recentTrackers(n = 5, { re = trackerRe(), chat = ctx().chat || [] } = {}) {
+    let rx = null;
+    try { rx = re ? new RegExp(re, 's') : null; } catch { rx = null; }
+    const out = [];
+    for (let i = chat.length - 1; i >= 0 && out.length < n; i--) {
+        const t = readTracker(chat[i]?.mes, rx);
+        if (t && (t.date || t.place)) out.push({ i, ...t });
+    }
+    return out;
 }
 // how much the story moved between two trackers: 2 = new day, new place or a jump of 3+ hours; 1 = new room; 0 = same scene
 function sceneJump(a, b) {

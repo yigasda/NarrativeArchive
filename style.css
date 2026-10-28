@@ -4077,3 +4077,8 @@ body.na_darkui #na_settings { --sv-page: #2F2621; --sv-card: #3A2F28; --sv-line:
 .na_apf_chips::-webkit-scrollbar { display: none; }
 .na_apf_chips:empty { display: none; }
 .na_apf_chips .na_pchip { flex: none; }
+
+/* ---- 3.96.3: 상태창 줄 */
+.na_trk_list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.na_trk_item { display: flex; gap: 10px; align-items: baseline; padding: 8px 10px; border-radius: 10px; background: var(--na-softer); }
+.na_trk_item b { flex: none; font-variant-numeric: tabular-nums; opacity: 0.75; }

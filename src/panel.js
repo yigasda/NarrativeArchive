@@ -35,7 +35,7 @@ import { AI_SYS_TRANSLATE, askTranslator, glossaryEntries, openGlossary } from '
 import { chatLabel, confirm, copyText, countTokens, download, esc, escRe, fmt, nowStamp, timeLabel } from './util.js';
 import { NUDGE_CHOICES, COMPRESS_MODES, compressMode, openAuSettings, openWizard, quickCompress } from './wizard.js';
 import { openStudio, studioLabel } from './studio.js';
-import { SCENE_SIZES, openStyleSamples, openWorkNote, styleLabel, sceneSize } from './scenes.js';
+import { SCENE_SIZES, openStyleSamples, openWorkNote, recentTrackers, styleLabel, sceneSize } from './scenes.js';
 import { openWorlds, worldBooks, worldIsOn } from './world.js';
 import { openXray } from './xray.js';
 
@@ -219,6 +219,7 @@ export function renderPanel() {
                     <summary class="na_cp_row"><span class="na_cp_txt"><span>원문 손질 · 지시문 · 경계선</span><small id="na_cp_more_sub">태그 · OOC 빼기 · 압축 지시문 · 아카이브 따라가기</small></span><span class="na_cp_more">더 보기</span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
                   <label class="na_cp_row"><span class="na_cp_txt"><span>숨긴 메시지 빼고 뽑기</span></span><input type="checkbox" class="na_toggle" id="na_opt_hidden"></label>
                   <label class="na_cp_row" title="think · thinking · thought · reasoning · scene_plan · style · script와 주석은 통째로 빼고, 나머지 HTML 태그는 지우고 글자만 남겨요 · 끄면 메시지를 그대로 보내요"><span class="na_cp_txt"><span>태그 지우기</span><small>생각 · 계획 블록은 통째로 · 나머지는 글자만</small></span><input type="checkbox" class="na_toggle" id="na_opt_tags"></label>
+                  <button type="button" class="na_cp_row na_trk_row" id="na_trk_row" title="원문의 상태창에서 날짜 · 장소를 섹션 제목에 쓰고, AI가 장면을 못 나누면 상태창이 바뀌는 곳에서 잘라요 · 누르면 최근에 찾은 상태창"><span class="na_cp_txt"><span>상태창</span><small id="na_trk_sub"></small></span><span class="na_cp_more">자동</span></button>
                   <div class="na_cp_row na_off_row" id="na_off_fold" title="켠 것은 압축 · 원문 뽑기 · 이탈 감지 · 말투 지문에서 빠져요"><span class="na_cp_txt"><span>OOC 빼기</span><small id="na_off_sub"></small></span>
                     <span class="na_off_chips">${Object.entries(OFF_KINDS).map(([k, [name, sub, chip]]) => `<button type="button" class="na_off_chip" data-k="${k}" title="${name} · ${sub}" aria-pressed="false">${chip}</button>`).join('')}</span></div>
                   <details class="na_cp_fold" id="na_cmp_settings">
@@ -1254,6 +1255,15 @@ export function bindPanel() {
         toastr.info(st.titles.length ? st.titles.map(t => `• ${esc(t.slice(0, 60))}`).join('<br>') : '고른 섹션이 없어요', `라우터 · ${st.titles.length}개 · ${(st.ms / 1000).toFixed(1)}초${st.short && st.short < st.cands ? ` · 후보 ${st.cands}개 중 ${st.short}개 자세히` : ''}`, { escapeHtml: false, timeOut: 10000 });
     }));
     // OOC 빼기 (압축 → 설정)
+    // 상태창: what the extension reads from the status windows, the last few as found
+    $('#na_trk_row').on('click', async () => {
+        if (!hasChat()) return toastr.info('채팅을 먼저 여세요.');
+        const ts = recentTrackers(5);
+        const body = ts.length
+            ? `<div class="na_v2_title"><b>상태창</b><small>압축할 때 날짜 · 장소는 섹션 제목에, 장면 나누기는 이게 바뀌는 곳에서</small></div><div class="na_trk_list">${ts.map(t => `<div class="na_trk_item"><b>#${t.i}</b><span>${esc([t.date, t.time, t.place].filter(Boolean).join(' · '))}</span></div>`).join('')}</div>`
+            : '<div class="na_v2_title"><b>상태창</b><small>이 채팅에서는 못 찾았어요</small></div><div class="na_dim"><code>&lt;tracker&gt; 시간 | 날짜 | 장소 &lt;/tracker&gt;</code> 모양을 찾아요. 못 찾으면 장면은 메시지 수로 나누고, 날짜 · 장소는 AI가 원문에서 읽어요.</div>';
+        await ctx().callGenericPopup($(`<div class="na_popup na_v2">${body}</div>`), ctx().POPUP_TYPE.TEXT, '', { okButton: '닫기' });
+    });
     $('#na_off_fold').on('click', '.na_off_chip', function () { setOffKind(this.dataset.k, !offKinds()[this.dataset.k]); syncPanel(); refreshStatus(); });
     $('#na_fallback').on('change', function () { globalSettings().fallback = this.value; saveGlobal(); });
     $('#na_emb_src').on('change', function () { embTyping = false; setEmbed({ source: this.value, model: '' }); syncEmbedRows(); if (this.value) $('#na_emb_build').trigger('click'); });
@@ -1345,6 +1355,7 @@ export function syncPanel() {
     $('#na_link_depth').val(m.linkDepth || 4);
     { const kn = keepsOf(m).length; $('#na_keeps_sub').text(kn ? `${kn}개 · 압축할 때 자세히, 망각 곡선은 그대로` : '압축할 때 자세히 남길 구간과 그 이유'); }
     {
+        { const t = hasChat() ? recentTrackers(1)[0] : null; $('#na_trk_sub').text(t ? `마지막 상태창: ${[t.date, t.time, t.place].filter(Boolean).join(' · ')} (#${t.i})` : '못 찾음 · 장면은 메시지 수로 나눠요'); }
         { const ok = offKinds(); $('#na_off_fold .na_off_chip').each(function () { $(this).toggleClass('on', !!ok[this.dataset.k]).attr('aria-pressed', String(!!ok[this.dataset.k])); }); const on = Object.keys(OFF_KINDS).filter(k => ok[k]); $('#na_off_sub').text(on.length ? `누르면 켜고 꺼요 · ${on.length}가지 빼는 중` : '누르면 켜고 꺼요 · 지금은 아무것도 안 빼요'); }
         $('#na_fallback').val(fallbackOf());
         const lc = loreCfg();
