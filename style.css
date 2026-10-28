@@ -4106,3 +4106,5 @@ body.na_darkui #na_settings { --sv-page: #2F2621; --sv-card: #3A2F28; --sv-line:
 #na_settings .na_start_body span { font-size: 0.93em; line-height: 1.55; color: var(--hm-mute); }
 #na_settings .na_start_go { width: 100%; margin: 0; padding: 13px; border: 0; border-radius: 14px; background: var(--sv-acc); color: #FFF7F0; font: inherit; font-size: 1.07em; font-weight: 700; cursor: pointer; }
 #na_settings .na_start_go.done { background: transparent; color: var(--sv-val); box-shadow: inset 0 0 0 1px var(--sv-line); font-weight: 600; }
+/* 시작하기: in the light theme a cream a shade off white, so the card sits softer on the page */
+body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
