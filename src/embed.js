@@ -331,8 +331,10 @@ export async function embedSearch(query, { topK = 24, ms = 8000 } = {}) {
 
 // after the archive or the hidden messages change: catch up quietly a moment later
 let soon = null;
+// only the AI router searches the index, so with the router off nothing is built (the 만들기 button still builds)
+export const routerUsesEmbed = m => ['linked', 'old'].includes(m?.router?.mode);
 export function embedSoon() {
-    if (!embedOn() || broken) return;
+    if (!embedOn() || broken || !hasChat() || !routerUsesEmbed(getMeta())) return;
     clearTimeout(soon);
     soon = setTimeout(() => syncEmbed().catch(e => console.warn('[narrative-archive] embed sync', e)), 4000);
 }

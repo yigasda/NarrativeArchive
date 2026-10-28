@@ -27,7 +27,7 @@ import { openQuotes } from './quotes.js';
 import { openReader } from './reader.js';
 import { routerCandidates, routerCfg, routerState, runRouter } from './router.js';
 import { GUESS_MODES, guessMode, lastGuess } from './guess.js';
-import { EMBED_DEFAULT_MODEL, EMBED_MODELS, EMBED_SOURCES, embedCfg, embedError, embedLabel, embedState, setEmbed, syncEmbed } from './embed.js';
+import { EMBED_DEFAULT_MODEL, EMBED_MODELS, EMBED_SOURCES, embedCfg, embedError, embedLabel, embedState, routerUsesEmbed, setEmbed, syncEmbed } from './embed.js';
 import { RANGE_HEAD, cachedTokens, checkHeadings, filterMuted, groupLabel, linkedMap, mutedCount, parseSections, pinnedSet, sectionKey } from './sections.js';
 import { refreshStatus } from './status.js';
 import { ICO_A, setUiTheme, svgA, uiTheme } from './theme.js';
@@ -709,7 +709,7 @@ function syncEmbedRows() {
     $('#na_emb_build').prop('hidden', !e.source);
     if ($('#na_emb_build').hasClass('na_busy')) return;
     const st = embedState(), err = embedError();
-    $('#na_emb_sub').text(err ? `안 됨: ${err.slice(0, 80)} · 눌러서 다시` : st?.synced ? `${embedLabel()} · 섹션 조각 ${st.secs} · ${timeLabel(st.at)}` : `${embedLabel()} · 처음 한 번 만들어요 · 답할 때 알아서도 만들어요`);
+    $('#na_emb_sub').text(err ? `안 됨: ${err.slice(0, 80)} · 눌러서 다시` : st?.synced ? `${embedLabel()} · 섹션 조각 ${st.secs} · ${timeLabel(st.at)}` : (hasChat() && !routerUsesEmbed(getMeta()) ? `${embedLabel()} · AI 라우터를 켜면 만들어요` : `${embedLabel()} · 처음 한 번 만들어요 · 답할 때 알아서도 만들어요`));
 }
 
 // 압축 탭: picked method, and only the rows that method uses
