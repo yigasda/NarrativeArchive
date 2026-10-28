@@ -76,12 +76,12 @@ Pick the sections it needs so it does not forget or contradict something.
 YOU GET
 - MAIN CAST: characters who are in almost every section. Their names alone are NOT a reason to pick a section.
 - NOW: the title of the newest archived section, so you know where the story stands (date, place).
-- RECENT CHAT: the last messages. The one marked LATEST is what the next reply answers.
+- ALL SECTIONS: every section you may pick, numbered, title only (sometimes with a one-line summary). Titles carry the
+  story date, the place and what happened. The word search cannot see hints, so this list is where hints get solved.
+- LIKELY SECTIONS: some of those, under the same numbers, that a word search found closest to the chat. Each has its
+  title, the other names in it, its keywords, and the lines that fit the chat best (or how it begins).
 - GUESS (sometimes): a helper's picture of the earlier moment the chat points back at. It may be wrong; use it as a lead.
-- LIKELY SECTIONS: numbered. A word search found these closest to the chat. Each has a title, the other names in it,
-  its keywords, and the lines that fit the chat best (or how it begins).
-- OTHER SECTIONS: the rest of the archive, title only (sometimes with a one-line summary). Titles carry the story date,
-  the place and what happened. The word search cannot see hints, so this list is where hints get solved.
+- RECENT CHAT: the last messages. The one marked LATEST is what the next reply answers.
 
 PICK A SECTION IF ANY OF THESE IS TRUE
 1. Something from it is named or clearly meant in the recent chat: a person who is not main cast, a place, an object, an event.
@@ -98,11 +98,11 @@ DO NOT PICK
 
 HOW TO WORK
 Step 1. Read the LATEST message first, then the others. List for yourself the people, places, objects, past events and promises they mention or hint at.
-Step 2. Match that list against LIKELY SECTIONS first, then scan the titles of OTHER SECTIONS for anything hinted at.
+Step 2. Match that list against LIKELY SECTIONS first, then scan the titles in ALL SECTIONS for anything hinted at.
 Step 3. Put the most important first. Fewer is better than wrong.
 
-OUTPUT: exactly one line, nothing else
-PICK: 3, 12, 7
+OUTPUT: exactly one line, nothing else. After each number, one to three words in parentheses saying why
+PICK: 3 (Lukas), 12 (the promise), 7 (the north road)
 If no section is needed:
 PICK: none`;
 
@@ -124,13 +124,6 @@ function rankCandidates(m, cands, guess = '') {
 function fitLines(body, q) {
     const lines = body.split('\n').map(l => l.replace(/^\s*[-*•]\s+/, '').trim()).filter(l => l.length >= 20);
     return bm25(lines.map(text => ({ text })), q).filter(r => r.hits >= 2).slice(0, 2).map(r => r.item.text.length > 200 ? `${r.item.text.slice(0, 199)}…` : r.item.text);
-}
-
-// no model, or it failed: the sections the word search is surest about
-function indexPicks(ranked, max) {
-    if (!ranked.length) return [];
-    const top = ranked[0].score;
-    return ranked.filter(r => r.hits >= 2 && r.score >= top * 0.6).slice(0, Math.min(max, 3)).map(r => r.item.s);
 }
 
 export let routerWarned = false;
@@ -168,23 +161,17 @@ export function routerReady() {
 
 // 'lift' (AI 없이 빠르게): no model call before a reply. The word search and the meaning search (when 임베딩 is on) each
 // rank the older sections against the newest messages; the best few go in whole, the rest stay as the forgetting curve
-// has them (nothing is left out). A section called in stays for LIFT_HOLD more replies, so it does not flicker in and out.
-const LIFT_HOLD = 3;
+// has them (nothing is left out). The AI modes fall back to the same picks when the model fails.
+// Whatever mode picked it, a section called in stays for HOLD more replies, so it does not flicker in and out.
+const HOLD = 3;
 // the words a section shares with the chat, for the home tab's "why" (longest first, a few)
 function sharedWords(q, text) {
     const mine = new Set(tokenize(text));
     const seen = new Set();
     return q.flatMap(p => tokenize(p.text)).filter(w => mine.has(w) && w.length >= 2 && !seen.has(w) && seen.add(w)).sort((a, b) => b.length - a.length).slice(0, 3);
 }
-async function runLift(m, cfg, force) {
-    const cands = routerCandidates(m);
-    const id = currentChatId();
-    const msgs = recentForCheck(4);
-    const key = shortHash(`lift|${msgs.join('\n\n').slice(-6000)}|${cands.map(sectionKey).join('|')}|${cfg.max}`);
-    const prev = routerState.get(id);
-    if (!force && prev?.key === key) return prev; // a swipe or regenerate on the same chat
-    const t0 = Date.now();
-    const { q, ranked } = rankCandidates(m, cands);
+// the word search and the meaning search, fused: [{ key, why }] best first, at most `max`
+async function fastPicks(m, cands, q, ranked, max) {
     const score = new Map(), why = new Map();
     const top = ranked[0]?.score || 0;
     ranked.forEach((r, n) => {
@@ -203,45 +190,56 @@ async function runLift(m, cfg, force) {
         if (n < 4 && !score.has(k)) why.set(k, '뜻이 비슷함');
         if (n++ < 4 || score.has(k)) score.set(k, (score.get(k) || 0) + 1 / (4 + h.rank));
     }
-    const fresh = [...score].sort((a, b) => b[1] - a[1]).slice(0, cfg.max).map(x => x[0]);
-    // what was called in on the last replies stays a while: new picks first, then the held ones, up to the limit
+    return [...score].sort((a, b) => b[1] - a[1]).slice(0, max).map(([key]) => ({ key, why: why.get(key) || '' }));
+}
+// this reply's picks plus what the last replies called in and still holds: new first, then held, up to the limit
+function finish(id, key, cands, prev, fresh, max, extra) {
+    const inCands = new Set(cands.map(sectionKey));
     const hold = new Map();
-    for (const [k, left] of prev?.hold || []) if (left > 1 && cands.some(s => sectionKey(s) === k)) hold.set(k, left - 1);
-    for (const k of fresh) hold.set(k, LIFT_HOLD);
-    const keys = [...fresh, ...[...hold.keys()].filter(k => !fresh.includes(k)).sort((a, b) => hold.get(b) - hold.get(a))].slice(0, cfg.max);
+    for (const [k, left] of prev?.hold || []) if (left > 1 && inCands.has(k)) hold.set(k, left - 1);
+    const freshKeys = fresh.map(x => x.key);
+    for (const k of freshKeys) hold.set(k, HOLD);
+    const keys = [...freshKeys, ...[...hold.keys()].filter(k => !freshKeys.includes(k)).sort((a, b) => hold.get(b) - hold.get(a))].slice(0, max);
     for (const k of [...hold.keys()]) if (!keys.includes(k)) hold.delete(k);
     const picked = keys.map(k => cands.find(s => sectionKey(s) === k)).filter(Boolean);
-    const prevWhy = prev?.whyBy || {};
-    const whyBy = Object.fromEntries(picked.map(s => { const k = sectionKey(s); return [k, fresh.includes(k) ? why.get(k) || '' : prevWhy[k] || '']; }));
-    const st = { key, picks: new Set(keys), titles: picked.map(s => s.title), at: Date.now(), ms: Date.now() - t0, cands: cands.length, via: 'lift', hold, whyBy, fresh: new Set(fresh) };
+    const whyBy = {};
+    for (const k of keys) whyBy[k] = fresh.find(x => x.key === k)?.why ?? prev?.whyBy?.[k] ?? '';
+    const st = { key, picks: new Set(keys), titles: picked.map(s => s.title), at: Date.now(), ms: 0, cands: cands.length, hold, whyBy, fresh: new Set(freshKeys), ...extra };
     routerState.set(id, st);
     return st;
+}
+// the last messages, the newest marked LATEST, and a key that stays the same on a swipe or regenerate
+function recentFor(cands, cfg, tag) {
+    const msgs = recentForCheck(4);
+    if (msgs.length) msgs[msgs.length - 1] = msgs[msgs.length - 1].replace(/^\[#(\d+)/, '[#$1 · LATEST');
+    const recent = msgs.join('\n\n').slice(-6000);
+    return { recent, key: shortHash(`${tag}|${recent}|${cands.map(sectionKey).join('|')}|${cfg.max}`) };
 }
 
 export async function runRouter(m, { force = false } = {}) {
     const cfg = routerCfg(m);
     if (cfg.mode === 'off') return null;
-    if (cfg.mode === 'lift') return runLift(m, cfg, force);
     const cands = routerCandidates(m);
     const id = currentChatId();
-    const msgs = recentForCheck(4);
-    if (msgs.length) msgs[msgs.length - 1] = msgs[msgs.length - 1].replace(/^\[#(\d+)/, '[#$1 · LATEST');
-    const recent = msgs.join('\n\n').slice(-6000);
-    const key = shortHash(`${recent}|${cands.map(sectionKey).join('|')}|${cfg.max}`);
+    const { recent, key } = recentFor(cands, cfg, cfg.mode === 'lift' ? 'lift' : 'ai');
     const prev = routerState.get(id);
     if (!force && prev?.key === key) return prev; // a swipe or regenerate on the same chat
-    const done = (picked, extra) => { const st = { key, picks: new Set(picked.map(sectionKey)), titles: picked.map(s => s.title), at: Date.now(), ms: 0, cands: cands.length, via: 'ai', ...extra }; routerState.set(id, st); return st; };
-    if (!cands.length) return done([]);
+    if (!cands.length) return finish(id, key, cands, prev, [], cfg.max, { via: cfg.mode === 'lift' ? 'lift' : 'ai' });
+    const t0 = Date.now();
+    if (cfg.mode === 'lift') {
+        const { q, ranked } = rankCandidates(m, cands);
+        return finish(id, key, cands, prev, await fastPicks(m, cands, q, ranked, cfg.max), cfg.max, { via: 'lift', ms: Date.now() - t0 });
+    }
     const guess = await sceneGuess(m, routerReady());
     const { q, ranked } = rankCandidates(m, cands, guess);
+    // no model, or it failed: the fast picks instead, and why
+    const fallback = async why => finish(id, key, cands, prev, await fastPicks(m, cands, q, ranked, cfg.max), cfg.max, { via: 'index', why, ms: Date.now() - t0 });
     if (!routerReady()) {
-        const st = done(indexPicks(ranked, cfg.max), { via: 'index', why: '따로 연결한 모델이 없어요' });
         if (force) throw new Error('라우터는 RP와 따로 연결한 모델이 필요해요 (⚙ 설정 → AI 모델 → 모델에서 프로필·커스텀 API·Vertex)');
-        return st;
+        return fallback('따로 연결한 모델이 없어요');
     }
-    // which candidates get a full card: the best word-search hits, and last turn's picks (the chat often keeps talking about them)
+    // which candidates get a full card: the best word-search hits, and what the last replies called in
     const many = cands.length > ALL_DETAIL;
-    // a card only for a real hit (two words in common, not far below the best), best first
     const top = ranked[0]?.score || 0;
     const hits = ranked.filter(r => r.hits >= 2 && r.score >= top * 0.2).slice(0, DETAIL_N).map(r => r.item.i);
     const detail = new Set(many ? hits : cands.map((_, i) => i));
@@ -259,14 +257,12 @@ export async function runRouter(m, { force = false } = {}) {
             if (!detail.has(i) && added < MEAN_N) { detail.add(i); added++; }
         }
     }
-    const order = many ? [...detail] : [...detail].sort((x, y) => x - y);
-    const rest = cands.map((_, i) => i).filter(i => !detail.has(i));
     // each card: title, the names in it other than the main cast, its keywords, and the lines that fit the chat (else how it begins)
     const main = castNames(m);
     const mainSet = new Set(main.flatMap(n => n.split(/\s+/)));
     const lm = linkedMap(m);
     const layers = layersOf(m);
-    const card = (s, n, i) => {
+    const card = (s, i) => {
         const body = m.text.slice(s.start, s.end).replace(/^#{1,3} [^\n]*\n?/, '');
         const counts = new Map();
         // capitalised words in mid-sentence only, so sentence openers ("Inside", "Asked") don't pass as names
@@ -277,31 +273,40 @@ export async function runRouter(m, { force = false } = {}) {
         let fits = fitLines(body, q);
         if (!fits.length && meanFit.get(i)) { const f = meanFit.get(i); fits = [f.length > 200 ? `${f.slice(0, 199)}…` : f]; }
         const flat = body.replace(/\s+/g, ' ').trim();
-        return `${n}. ${s.title}${names.length ? `\n   names: ${names.join(', ')}` : ''}${keys.length ? `\n   keywords: ${keys.join(', ')}` : ''}`
+        return `${i + 1}. ${s.title}${names.length ? `\n   names: ${names.join(', ')}` : ''}${keys.length ? `\n   keywords: ${keys.join(', ')}` : ''}`
             + (fits.length ? fits.map(f => `\n   fits: ${f}`).join('') : `\n   begins: ${flat.slice(0, 220)}${flat.length > 220 ? '…' : ''}`);
     };
-    const line = (s, n) => { const one = String(layers[sectionKey(s)]?.line || '').replace(/\s+/g, ' ').trim(); return `${n}. ${s.title}${one ? ` — ${one.slice(0, 140)}` : ''}`; };
-    const listed = [...order, ...rest]; // the number shown to the model → candidate
-    const likely = order.map((i, k) => card(cands[i], k + 1, i)).join('\n');
-    const other = rest.map((i, k) => line(cands[i], order.length + k + 1)).join('\n');
+    // every candidate keeps the same number from reply to reply (archive order), and the list of them comes first:
+    // it only changes with the archive, so the model's cache can keep it; the cards, the guess and the chat come after
+    const line = (s, i) => { const one = String(layers[sectionKey(s)]?.line || '').replace(/\s+/g, ' ').trim(); return `${i + 1}. ${s.title}${one ? ` — ${one.slice(0, 140)}` : ''}`; };
+    const all = cands.map(line).join('\n');
+    const order = [...detail].sort((x, y) => x - y);
+    const likely = order.map(i => card(cands[i], i)).join('\n');
     const ranged = parseSections(m.text).filter(x => !x.group && RANGE_HEAD.test(x.title));
     const now = ranged.length ? ranged[ranged.length - 1].title : '';
-    const t0 = Date.now();
     let out;
     try {
         out = await Promise.race([
-            askAI(`${main.length ? `[MAIN CAST]\n${main.join(', ')}\n\n` : ''}${now ? `[NOW]\n${now}\n\n` : ''}[RECENT CHAT]\n${recent}\n\n${guess ? `[GUESS]\n${guess}\n\n` : ''}[LIKELY SECTIONS]\n${likely || '(none)'}${other ? `\n\n[OTHER SECTIONS]\n${other}` : ''}\n\nPick at most ${cfg.max}.`, { system: AI_SYS_ROUTER, maxTokens: 1024 }),
-            new Promise((_, no) => setTimeout(() => no(new Error('20초 안에 답이 없었어요')), 20_000)),
+            askAI(`${main.length ? `[MAIN CAST]\n${main.join(', ')}\n\n` : ''}${now ? `[NOW]\n${now}\n\n` : ''}[ALL SECTIONS]\n${all}\n\n[LIKELY SECTIONS]\n${likely || '(none)'}\n\n${guess ? `[GUESS]\n${guess}\n\n` : ''}[RECENT CHAT]\n${recent}\n\nPick at most ${cfg.max}.`, { system: AI_SYS_ROUTER, maxTokens: 1024 }),
+            new Promise((_, no) => setTimeout(() => no(new Error('10초 안에 답이 없었어요')), 10_000)),
         ]);
     } catch (e) {
-        // the model failed: go with what the word search is surest about, and say why
+        // the model failed: go with the fast picks, and say why
         if (force) throw e;
-        const st = done(indexPicks(ranked, cfg.max), { via: 'index', why: e.message || String(e), ms: Date.now() - t0 });
-        if (!routerWarned) { routerWarned = true; toastr.warning(`AI 라우터가 안 돼서 색인으로 골랐어요: ${e.message || e}`, '서사 아카이브'); }
+        const st = await fallback(e.message || String(e));
+        if (!routerWarned) { routerWarned = true; toastr.warning(`AI 라우터가 안 돼서 빠른 방식으로 골랐어요: ${e.message || e}`, '서사 아카이브'); }
         return st;
     }
-    // read the "PICK:" line if there is one (so numbers in any reasoning are ignored), else the whole answer
+    // read the "PICK:" line if there is one (so numbers in any reasoning are ignored): "3 (Lukas), 12 (the promise)"
     const pickLine = (out.match(/PICK\s*:\s*(.*)$/im) || [null, out])[1];
-    const nums = /^\s*none\b/i.test(pickLine) ? [] : [...new Set((pickLine.match(/\d+/g) || []).map(Number))].filter(n => n >= 1 && n <= listed.length).slice(0, cfg.max);
-    return done(nums.map(n => cands[listed[n - 1]]), { ms: Date.now() - t0, short: order.length, guess });
+    const fresh = [];
+    if (!/^\s*none\b/i.test(pickLine)) {
+        for (const mt of pickLine.matchAll(/(\d+)\s*(?:\(([^)]*)\))?/g)) {
+            const n = Number(mt[1]);
+            if (n < 1 || n > cands.length || fresh.some(x => x.key === sectionKey(cands[n - 1]))) continue;
+            fresh.push({ key: sectionKey(cands[n - 1]), why: String(mt[2] || '').trim().slice(0, 40) });
+            if (fresh.length >= cfg.max) break;
+        }
+    }
+    return finish(id, key, cands, prev, fresh, cfg.max, { via: 'ai', ms: Date.now() - t0, short: order.length, guess });
 }

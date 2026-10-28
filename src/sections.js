@@ -144,7 +144,8 @@ export function linkWaiting(m) {
     for (const s of routerCandidates(m)) {
         const k = sectionKey(s);
         if (picks.has(k)) out.delete(k);
-        else if (cfg.mode === 'old' && !(Array.isArray(lm[k]) && lm[k].length)) out.add(k);
+        // 오래된 섹션 전부 leaves the rest out, unless the forgetting curve is on: then they stay short or as one line
+        else if (cfg.mode === 'old' && !m.fade?.on && !(Array.isArray(lm[k]) && lm[k].length)) out.add(k);
     }
     return out;
 }

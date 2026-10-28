@@ -15,13 +15,14 @@ import { countTokens, esc, fmt, timeLabel } from './util.js';
 
 export let statusTimer = null;
 // the router on the home tab: what it called in (the range of each, tap for titles and why)
-function routerLine(rs) {
+function routerLine(rs, m) {
     const ico = svgA(ICO_A.compass, 13);
     if (!rs) return `<span class="na_router_st">${ico} 라우터 · 답할 때 골라요</span>`;
-    if (rs.via !== 'lift') return `<span class="na_router_st">${ico} 라우터 · ${rs.titles.length}개 고름${rs.via === 'index' ? ' (색인)' : ''}</span>`;
-    if (!rs.titles.length) return `<span class="na_router_st">${ico} 불러온 섹션 없음</span>`;
+    if (!rs.titles.length) return `<span class="na_router_st">${ico} 불러온 섹션 없음${rs.via === 'index' ? ' (AI 대신 빠르게)' : ''}</span>`;
     const ranges = rs.titles.map(t => (t.match(RANGE_HEAD) ? `#${t.match(RANGE_HEAD)[2]}–#${t.match(RANGE_HEAD)[4]}` : t.slice(0, 16)));
-    return `<button type="button" class="na_router_st na_router_more">${ico} 원문으로 불러옴 · ${esc(ranges.join(', '))}</button>`;
+    // with the forgetting curve the picks go in whole over a shorter version; without it they go in at all
+    const verb = rs.via === 'lift' || m?.fade?.on ? '원문으로 불러옴' : '불러옴';
+    return `<button type="button" class="na_router_st na_router_more">${ico} ${verb}${rs.via === 'index' ? ' (AI 대신 빠르게)' : ''} · ${esc(ranges.join(', '))}</button>`;
 }
 
 export function refreshStatusSoon() {
@@ -64,7 +65,7 @@ export async function refreshStatus() {
     $('#na_meter .na_seg_raw').css('width', `${total ? 100 - pct : 0}%`).removeClass('na_over');
     // small line under the tiles: the router, and anything that cuts what goes in
     $('#na_meter_legend').html(`
-      ${routerCfg(m).mode !== 'off' ? routerLine(routerState.get(currentChatId())) : ''}
+      ${routerCfg(m).mode !== 'off' ? routerLine(routerState.get(currentChatId()), m) : ''}
       ${mutedCount(m) ? `<span class="na_warn_txt"><i class="fa-solid fa-toggle-off"></i> 섹션 ${mutedCount(m)}개 꺼짐</span>` : ''}
       ${build.trimmed.length ? `<span class="na_warn_txt"><i class="fa-solid fa-scissors"></i> 상한 ${fmt(build.cap)}에 맞춰 ${build.trimmed.length}개 뺌</span>` : ''}
       ${build.over ? `<span class="na_warn_txt"><i class="fa-solid fa-triangle-exclamation"></i> 상한 ${fmt(build.cap)} 넘음</span>` : ''}`);
