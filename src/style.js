@@ -12,7 +12,8 @@ import { splitTail } from './sections.js';
 
 // the voice rules of the instruction in use: 기본's "# 6.", an older basic's <tone> + <archive_voice>,
 // or 기본's for an instruction that has neither
-const VOICE_TIDY = /^# 6\. The archive's voice\n([\s\S]*?)\n# 7\./m;
+// the voice section of a numbered instruction, whatever its number (§6 in 상세, §8 in 기본)
+const VOICE_TIDY = /^# \d+\. The archive's voice\n([\s\S]*?)\n# \d+\./m;
 export function voiceRules(text) {
     const t = String(text || '');
     const a = VOICE_TIDY.exec(t);

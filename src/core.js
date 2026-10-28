@@ -12,7 +12,7 @@ import { parseSections } from './sections.js';
 
 export const MODULE = 'narrative_archive';
 export const PROMPT_KEY = 'narrative_archive_injection';
-export const VERSION = '3.91.3';
+export const VERSION = '3.92.0';
 export const SNAPSHOT_MAX = 5;
 export const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -166,27 +166,31 @@ export function globalSettings() {
     delete g.stripCustom; delete g.countCheck;
     delete g.sceneModel; delete g.stateModel; // 장면별 uses the draft model for both since 3.87.15
     if (g.compressMode === 'events') g.compressMode = 'raw';
-    // prompt library: [{ id, name, text, fav }], first entry is the built-in basic one
+    // prompt library: [{ id, name, text, fav }], led by the built-in 기본 (id 'short') and 상세 (id 'basic')
     if (g.aiMaxTokens === 4096 && !g.aiMaxSet) g.aiMaxTokens = 8192; // the old default, never changed by hand
     // 규칙은 시스템 메시지로: off for a new install (some relays drop the system part); a setup from before 3.87.5,
     // which had it on without asking, keeps it on
     if (g.rulesInSystem === undefined) g.rulesInSystem = Array.isArray(g.prompts);
     if (!Array.isArray(g.prompts)) {
-        g.prompts = [{ id: 'basic', name: '기본', text: BASIC_PROMPT, fav: true }];
+        g.prompts = [{ id: 'basic', name: '상세', text: BASIC_PROMPT, fav: true }];
         const old = typeof g.prompt === 'string' ? g.prompt : '';
         if (old.trim() && old !== OLD_BASIC && old !== BASIC_PROMPT && !OLD_DEFAULTS.has(textHash(old))) {
             g.prompts.push({ id: newId(), name: '내 지시문', text: old, fav: true });
         }
-        g.activePrompt = g.prompts[g.prompts.length - 1].id;
+        // a new install starts on 기본 (the short one, added below); an old hand-written prompt stays picked
+        g.activePrompt = g.prompts.length > 1 ? g.prompts[g.prompts.length - 1].id : 'short';
         delete g.prompt;
     }
-    if (!g.prompts.some(p => p.id === 'basic')) g.prompts.unshift({ id: 'basic', name: '기본', text: BASIC_PROMPT, fav: true });
+    if (!g.prompts.some(p => p.id === 'basic')) g.prompts.unshift({ id: 'basic', name: '상세', text: BASIC_PROMPT, fav: true });
     const basic = g.prompts.find(p => p.id === 'basic');
     if (basic.text === PREV_BASIC || basic.text === OLD_BASIC || OLD_BASIC_HASHES.has(textHash(basic.text))) basic.text = BASIC_PROMPT;
-    // the short one sits right after it
-    if (!g.prompts.some(p => p.id === 'short')) g.prompts.splice(g.prompts.indexOf(basic) + 1, 0, { id: 'short', name: '짧은 기본', text: SHORT_PROMPT, fav: true });
+    if (!g.prompts.some(p => p.id === 'short')) g.prompts.splice(g.prompts.indexOf(basic), 0, { id: 'short', name: '기본', text: SHORT_PROMPT, fav: true });
     const short = g.prompts.find(p => p.id === 'short');
     if (OLD_SHORT_HASHES.has(textHash(short.text))) short.text = SHORT_PROMPT;
+    // 3.91.4: the short one became 기본 and the long one 상세. The ids stay (upgrades go by them); the list starts with 기본.
+    // Whichever one a setup has picked stays picked
+    short.name = '기본'; basic.name = '상세';
+    g.prompts = [short, basic, ...g.prompts.filter(p => p !== short && p !== basic)];
     // 3.87.0: 기본 (정리본) became 기본 itself. An untouched copy goes; one the user edited stays as their own prompt
     const tidy = g.prompts.find(p => p.id === 'tidy');
     if (tidy) {

@@ -11,7 +11,7 @@ import { hasChanges, resolveChanges } from './statechg.js';
 import { checkCounts, countCheckOn } from './rulecheck.js';
 import { lastSections, chunksFromStarts, cutScores, detectScenes, sceneChunks, sceneCompress, sceneModel, sceneModelLabel, sceneSize, scenesText, startsFromText, stateModel } from './scenes.js';
 import { buildExtract, cleanMessage, formatExtract, guessEndNumber } from './extract.js';
-import { BASIC_PROMPT, LANG_NAME, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressParts, compressPrompt, dropReproduced, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
+import { BASIC_PROMPT, LANG_NAME, SHORT_PROMPT, activePrompt, answerLangOk, archiveLang, auFix, auOf, compressParts, compressPrompt, dropReproduced, hasAuDivider, referenceSection, renderPromptSettings, sizeBlock } from './prompts.js';
 import { RANGE_HEAD, headingRanges, lastRangeEnd, parseSections, splitTail, trimEnd } from './sections.js';
 import { openSource } from './source.js';
 import { refreshStatus } from './status.js';
@@ -316,7 +316,7 @@ export async function quickCompress() {
         ] : [row('요약', esc(short(drLabel())), n > 1 ? `${n}번에 나눠 · 약 ${fmt(chunkTok())} 토큰씩` : '한 번에')]),
         ...(keepsIn(m, from, to).length ? [row('꼭 남길 장면', `${keepsIn(m, from, to).length}개`, esc(keepsIn(m, from, to).map(keepLabel).join(', ')))] : []),
         row('보낼 양', `약 ${fmt(sendEst.tok)} 토큰`, `요청 ${sendEst.req}번 · 생각과 답은 빼고 · 어림값`),
-        row('지시문', esc(p.name), `생각 ${effort}${p.id === 'basic' && p.text !== BASIC_PROMPT ? ' · <span class="na_qc_warn">고친 버전이라 최신 기본 규칙이 안 들어가 있어요</span>' : ''}`),
+        row('지시문', esc(p.name), `생각 ${effort}${(p.id === 'basic' && p.text !== BASIC_PROMPT) || (p.id === 'short' && p.text !== SHORT_PROMPT) ? ' · <span class="na_qc_warn">고친 버전이라 최신 규칙이 안 들어가 있어요</span>' : ''}`),
         ...(au.on ? [row('AU', esc(au.name), '본편 뒤에 이어서')] : []),
     ];
     // one line on top, the rest folded under 자세히

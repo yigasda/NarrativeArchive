@@ -154,7 +154,8 @@ DROP ## Group :: - a thread this stretch closed, copied exactly
    - Count each section's bullets (more than 6: merge or split), its words (over about 250: cut) and its em dashes (more than one: rewrite). Check every bullet that touches sex against the sex rule.
 3. Do not output STATE or OPEN in full unless the NEW CHAT note says so; <current_state> is for reading only.`;
 // earlier basic text, upgraded when untouched
-// 짧은 기본: the same rules cut to their core, for a lighter model or when the long one is not being followed
+// 기본 (id 'short', 짧은 기본 until 3.91.4): the rules cut to their core. Gemini follows it better than 상세 (BASIC_PROMPT),
+// which keeps every rule at length
 export const SHORT_PROMPT = `<raw_log range="#{{from}}–#{{to}}">
 {{raw}}
 </raw_log>
