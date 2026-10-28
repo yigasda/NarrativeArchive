@@ -94,9 +94,16 @@ export function recentChatText(m, n = Math.max(1, Number(m.linkDepth) || 4)) {
 export const linkHits = (keys, hay) => keys.filter(w => w && hay.includes(String(w).toLowerCase()));
 
 // titles of linked sections whose keywords are not in the recent messages right now
+// 캐시 아끼기 builds the archive as it is at rest (no keyword fired, nothing picked by the router), so it stays the same
+// from reply to reply; what the scene calls in goes in a separate block. resting(fn) runs fn in that view.
+let rest = false;
+export const atRest = () => rest;
+export function resting(fn) { rest = true; try { return fn(); } finally { rest = false; } }
+
 export function keywordWaiting(m) {
     const entries = Object.entries(linkedMap(m)).filter(([, k]) => Array.isArray(k) && k.length);
     if (!entries.length) return new Set();
+    if (rest) return new Set(entries.map(([t]) => t));
     const hay = recentChatText(m);
     return new Set(entries.filter(([, keys]) => !linkHits(keys, hay).length).map(([t]) => t));
 }
@@ -137,7 +144,7 @@ export function linkWaiting(m) {
     const out = keywordWaiting(m);
     const cfg = routerCfg(m);
     if (cfg.mode === 'off') return out;
-    const picks = new Set(routerState.get(currentChatId())?.picks || []);
+    const picks = new Set(rest ? [] : routerState.get(currentChatId())?.picks || []);
     // a picked section brings the sections it points at (its "see #217" background), unless switched off
     if (cfg.follow !== false) { const { out: lk } = sectionLinks(m); for (const k of [...picks]) for (const t of lk.get(k) || []) picks.add(t); }
     const lm = linkedMap(m);

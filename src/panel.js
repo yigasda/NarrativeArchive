@@ -300,6 +300,7 @@ export function renderPanel() {
                   <label class="na_set_row"><span>역할</span>
                     <span class="na_cfg_val"><select id="na_role" class="text_pole">${Object.entries(ROLES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span>
                   </label>
+                  <label class="na_set_row" title="아카이브는 답마다 똑같이 두고, 그 답에만 필요한 것(키워드 · 라우터가 불러온 섹션, 지금 나오는 인물의 노트)은 마지막 메시지 두 개 바로 위에 따로 넣어요 · 앞부분이 늘 같아서 Claude · Gemini의 프롬프트 캐시가 덜 깨지고 싸져요 · Claude는 실리태번 config.yaml의 claude.cachingAtDepth를 켜야 해요"><span><span>캐시 아끼기</span><small>바뀌는 것만 대화 끝 가까이 따로</small></span><input type="checkbox" id="na_cache_save" class="na_toggle"></label>
                 </div>
                 </div>
               </div>
@@ -1274,6 +1275,7 @@ export function bindPanel() {
     });
 
     // --- config
+    $('#na_cache_save').on('change', function () { globalSettings().cacheSave = this.checked; saveGlobal(); applyInjection(); });
     $('#na_enabled').on('change', async function () {
         if (!hasChat()) return;
         const m = getMeta();
@@ -1419,6 +1421,7 @@ export function syncPanel() {
     if (!sectionPanel && $('#na_view_cards').length && !$('#na_view_cards').prop('hidden')) sectionPanel = mountSectionBrowser($('#na_sec_host'));
     if (!editorDirty) { editorBase = m.text; $('#na_editor').val(m.text).trigger('input'); }
     $('#na_enabled').prop('checked', !!m.enabled);
+    $('#na_cache_save').prop('checked', globalSettings().cacheSave !== false);
     $('#na_position').val(String(m.position));
     $('#na_depth').val(m.depth);
     $('#na_depth_field').prop('hidden', Number(m.position) !== 1);

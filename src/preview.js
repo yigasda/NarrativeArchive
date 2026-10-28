@@ -20,7 +20,8 @@ export async function openPreview() {
     for (const v of (b.faded || new Map()).values()) fadeN[v]++;
     const worldN = worldBooks().filter(w => worldBody(w).trim() && worldIsOn(m, w)).length;
     const outN = muted.length + waiting.length + b.trimmed.length;
-    const text = m.enabled ? b.text : '';
+    // 캐시 아끼기: the second block goes in near the end of the chat; shown after a marked line
+    const text = m.enabled ? (b.now ? `${b.text}\n\n_— 아래는 마지막 메시지 두 개 바로 위에 따로 들어가요 (캐시 아끼기) —_\n\n${b.now}` : b.text) : '';
     // the injected text, headings marked with how each section goes in
     const tagOf = s => {
         const k = sectionKey(s), f = b.faded?.get(k);

@@ -1,18 +1,24 @@
 // What gets injected: building the prompt block (muted, faded, world, extra blocks) and keeping it current.
 
-import { PROMPT_KEY, ctx, getMeta, hasChat } from './core.js';
+import { PROMPT_KEY, ctx, getMeta, globalSettings, hasChat } from './core.js';
 import { applyDigests } from './digest.js';
 import { embedSoon } from './embed.js';
 import { applyFade } from './fade.js';
 import { currentCast, inCast, knowledgeRows } from './knowledge.js';
 import { sectionPanel } from './panel.js';
 import { isExcluded } from './quotes.js';
-import { cachedTokens, filterMuted, trimEnd } from './sections.js';
+import { cachedTokens, filterMuted, parseSections, resting, sectionKey, trimEnd } from './sections.js';
 import { worldText } from './world.js';
 
 // What actually gets injected: digests in place of their sections, muted sections removed, older sections shortened by the forgetting curve,
 // the shared world first. The token cap only warns.
 export const STATE_KEY = 'narrative_archive_state';
+// 캐시 아끼기 (on unless turned off): the archive block holds only what stays put between replies, so the prompt up to it
+// and the chat after it can be served from the provider's prompt cache. What this reply alone needs (sections a keyword or
+// the router called in, notes on who is in the scene) goes in this second block, just above the last two messages.
+export const NOW_KEY = 'narrative_archive_now';
+export const NOW_DEPTH = 2;
+export const cacheSave = () => globalSettings().cacheSave !== false;
 // STATE 가까이 넣기 was taken out in 3.88.0: the archive now sits right after the hidden messages, so its STATE is
 // already read where it belongs. The key is still cleared, so a chat that had it on keeps no stale block
 
@@ -38,20 +44,32 @@ export function placeArchive(o) {
 
 export async function buildInjection(m) {
     // digests stand in for their sections first, then muted sections drop out, then the forgetting curve
-    const faded0 = applyFade(m, filterMuted(m, applyDigests(m, m.text)));
+    const build = () => applyFade(m, filterMuted(m, applyDigests(m, m.text)));
+    const faded0 = build();
     const { faded } = faded0;
-    const text = faded0.text;
+    const split = cacheSave();
+    // with 캐시 아끼기 the block is the archive at rest; the sections called in now go whole into the second block
+    const text = split ? resting(build).text : faded0.text;
     const cap = Math.max(0, Number(m.tokenCap) || 0);
     const trimmed = [];
     const extra = text.trim() ? extraBlocks(m) : '';
     const world = worldText(m);
-    const core = text.trim() ? `${trimEnd(text)}${extra}` : '';
+    const core = text.trim() ? `${trimEnd(text)}${split ? '' : extra}` : '';
     const final = world || core ? [world, core].filter(Boolean).join('\n\n') : '';
-    const tokens = await cachedTokens(final);
-    return { text: final, tokens, trimmed, cap, over: !!cap && tokens > cap, faded };
+    const now = split && text.trim() ? nowBlock(m, faded0.text, final, extra) : '';
+    const tokens = await cachedTokens(final) + (now ? await cachedTokens(now) : 0);
+    return { text: final, now, tokens, trimmed, cap, over: !!cap && tokens > cap, faded };
 }
 
-export let lastBuild = { text: '', tokens: 0, trimmed: [], cap: 0, over: false, faded: new Map() };
+// the second block: sections in the full build that the resting one lacks or holds only in part, then the scene notes
+function nowBlock(m, full, rest, extra) {
+    const secs = parseSections(full).filter(s => !s.group).map(s => full.slice(s.start, s.end).trim()).filter(t => t && !rest.includes(t));
+    let out = secs.length ? `# CALLED BACK FOR THIS SCENE\n_Earlier parts of the story that the scene now touches, in full. They happened in the past, in the order shown; the archive above stays the record._\n\n${secs.join('\n\n')}` : '';
+    if (extra.trim()) out += `${out ? '\n' : ''}${extra}`;
+    return out.trim();
+}
+
+export let lastBuild = { text: '', now: '', tokens: 0, trimmed: [], cap: 0, over: false, faded: new Map() };
 export let injectSeq = 0;
 export let injectReady = Promise.resolve(lastBuild);
 
@@ -61,7 +79,7 @@ export function applyInjection() {
     const m = hasChat() ? getMeta() : null;
     const seq = ++injectSeq;
     injectReady = (async () => {
-        const b = m ? await buildInjection(m) : { text: '', tokens: 0, trimmed: [], cap: 0, over: false, faded: new Map() };
+        const b = m ? await buildInjection(m) : { text: '', now: '', tokens: 0, trimmed: [], cap: 0, over: false, faded: new Map() };
         if (seq !== injectSeq) return lastBuild;
         const fadeSig = f => [...(f || [])].map(e => e.join('=')).join('\n');
         const trimChanged = b.trimmed.join('\n') !== lastBuild.trimmed.join('\n') || fadeSig(b.faded) !== fadeSig(lastBuild.faded);
@@ -73,6 +91,7 @@ export function applyInjection() {
             c.setExtensionPrompt(PROMPT_KEY, b.text, pos, depth, false, Number(m.role) || 0);
         }
         c.setExtensionPrompt(STATE_KEY, '', 1, 0);
+        c.setExtensionPrompt(NOW_KEY, m && m.enabled && b.text && b.now ? b.now : '', 1, NOW_DEPTH, false, Number(m?.role) || 0);
         return b;
     })();
     return injectReady;

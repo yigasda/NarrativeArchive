@@ -7,7 +7,7 @@ import { applyInjection } from './inject.js';
 import { sectionPanel, syncPanel } from './panel.js';
 import { mdBlock } from './reader.js';
 import { routerCfg, routerState } from './router.js';
-import { RANGE_HEAD, filterMuted, keywordWaiting, linkedMap, parseSections, pinnedSet, sectionKey, sectionLinks } from './sections.js';
+import { RANGE_HEAD, atRest, filterMuted, keywordWaiting, linkedMap, parseSections, pinnedSet, sectionKey, sectionLinks } from './sections.js';
 import { sectionKept } from './keeps.js';
 import { ICO_A, svgA } from './theme.js';
 import { trCachedLines, trLineOk, translateLines, withLineTr } from './translate.js';
@@ -39,7 +39,7 @@ export function fadeWants(m, text = m.text) {
     const lm = linkedMap(m), waiting = keywordWaiting(m);
     const called = new Set(Object.keys(lm).filter(k => !waiting.has(k)));
     const rc = routerCfg(m);
-    if (rc.mode !== 'off') {
+    if (rc.mode !== 'off' && !atRest()) {
         const picks = routerState.get(currentChatId())?.picks || [];
         for (const k of picks) { called.add(k); if (rc.follow) for (const t of sectionLinks(m).out.get(k) || []) called.add(t); }
     }
