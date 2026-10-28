@@ -63,7 +63,7 @@ YOU GET
 
 PARTS
 - INTRO: one line: when and where the story is set, and what kind of story it is.
-- PLACES: homes, neighbourhoods, workplaces, places people keep going back to.
+- PLACES: homes, neighbourhoods, workplaces: places the story keeps coming back to or that matter to it. Leave out a place visited once.
 - AFFILIATIONS: families, workplaces, schools, groups the characters belong to, and how they stand to each other.
 - RULES: what holds in this world and shapes what people can do: laws, money, work, customs, how things work (magic or technology only if the story has them).
 - BACKGROUND: past events, before or during the story, that still shape the present. Not a retelling of scenes.
@@ -73,6 +73,7 @@ RULES
 - Use only what the archive shows. Never invent. A part with nothing in the archive is left out.
 - The main characters themselves are not entries; their homes, families and jobs are.
 - One sentence per entry, two at most. Facts, not mood.
+- Say what a thing is and whose it is, not what happened there or with it: the scenes are already in the archive.
 - At most 12 entries per part, the ones that matter most.
 - An entry already in CURRENT WORLD: write it again only if the archive adds or changes something, under the same name.
 - Write in ${lang}. Spell names as the archive does.
