@@ -780,19 +780,24 @@ let startPick = null; // a step the user tapped to read, else the first one not 
 // once per install: if any character's chat already holds an archive, this person is no beginner. SillyTavern hands
 // out each chat's first line (where the archive lives) without loading the chat; the scan stops at the first one found
 let startScan = null;
+let startScanFailed = false; // a scan that failed is not tried again until the next load; the card shows meanwhile
 async function scanForArchive() {
     const g = globalSettings();
+    // the open chat is judged only as it is now: a first compression made while the scan runs must not count
+    const openChat = hasChat() ? `${currentChatId()}.jsonl` : '';
+    const openChar = ctx().characters?.[ctx().characterId]?.avatar;
     try {
         if (hasChat() && getMeta().text.trim()) g.startDone = true;
         for (const ch of ctx().characters || []) {
             if (g.startDone) break;
             const r = await fetch('/api/characters/chats', { method: 'POST', headers: ctx().getRequestHeaders(), body: JSON.stringify({ avatar_url: ch.avatar, metadata: true }) });
-            const list = r.ok ? await r.json() : [];
-            if (Array.isArray(list) && list.some(x => String(x?.chat_metadata?.[MODULE]?.text || '').trim())) g.startDone = true;
+            if (!r.ok) throw new Error(`chats ${r.status}`);
+            const list = await r.json();
+            if (Array.isArray(list) && list.some(x => !(ch.avatar === openChar && x?.file_name === openChat) && String(x?.chat_metadata?.[MODULE]?.text || '').trim())) g.startDone = true;
         }
         g.startScanned = true;
         saveGlobal();
-    } catch (e) { console.warn('[narrative-archive] archive scan', e); }
+    } catch (e) { console.warn('[narrative-archive] archive scan', e); startScanFailed = true; }
     startScan = null;
     refreshStatus();
 }
@@ -819,7 +824,7 @@ function renderStart(m) {
     const done = START_STEPS.map(x => !!x.done(m));
     if (!g.startDone && done.every(Boolean)) { g.startDone = true; saveGlobal(); }
     // stay hidden until the one-time look through the other chats is over
-    if (!g.startDone && !g.startScanned) { startScan ||= scanForArchive(); $('#na_start').prop('hidden', true); return false; }
+    if (!g.startDone && !g.startScanned && !startScanFailed) { startScan ||= scanForArchive(); $('#na_start').prop('hidden', true); return false; }
     const show = hasChat() && !g.startDone && !g.startHidden;
     $('#na_start').prop('hidden', !show);
     if (!show) return false;
