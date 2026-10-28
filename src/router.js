@@ -13,7 +13,7 @@ import { bm25, recallQuery, withGlossary } from './recall.js';
 import { layersOf } from './fade.js';
 import { sceneGuess } from './guess.js';
 import { embedSearch } from './embed.js';
-import { recentTrackers } from './scenes.js';
+import { recentTrackers, withoutTrackers } from './scenes.js';
 import { refreshStatusSoon } from './status.js';
 import { shortHash } from './translate.js';
 import { escRe } from './util.js';
@@ -184,7 +184,8 @@ const hasWord = (text, w) => /[가-힣]/.test(w) ? text.includes(w.toLowerCase()
 async function fastPicks(m, cands, max) {
     const score = new Map(), why = new Map();
     const add = (k, v, w) => { score.set(k, (score.get(k) || 0) + v); if (w && !why.get(k)?.includes(w)) why.set(k, why.get(k) ? `${why.get(k)}, ${w}` : w); };
-    const msgs = recallQuery(MSG_W.length).map(p => withGlossary(m, p.text).toLowerCase());
+    const trks = recentTrackers(MSG_W.length * 2); // the status windows are read on their own below, not as what the chat is about
+    const msgs = recallQuery(MSG_W.length).map(p => withGlossary(m, withoutTrackers(p.text, trks)).toLowerCase());
     // 1. names and keywords: a name in many sections says little, so each counts 1 / the sections it is in
     const mainSet = new Set(castNames(m).flatMap(n => n.split(/\s+/)));
     const lm = linkedMap(m);
@@ -202,11 +203,12 @@ async function fastPicks(m, cands, max) {
         if (at >= 0) seenAt.set(w, MSG_W[at]);
     }
     cands.forEach((s, i) => { for (const w of names[i]) if (seenAt.has(w)) add(sectionKey(s), seenAt.get(w) / df.get(w), w); });
-    // 2. back at a place: the newest status window names a place that the latest archived sections don't, but an older one does
-    const trk = recentTrackers(1)[0];
-    if (trk?.place) {
+    // 2. back at a place: the newest status window's room or building (after the city: "Frankfurt → Westend flat") is not in
+    // the latest archived section, but an older one happened there. The city alone says little: the story may never leave it
+    const trk = trks[0];
+    if (trk?.room) {
         const nowTitle = (ranged[ranged.length - 1]?.title || '').toLowerCase();
-        const words = capWords(withGlossary(m, [trk.room, trk.city].filter(Boolean).join(' '))).filter(w => !mainSet.has(w));
+        const words = capWords(withGlossary(m, trk.room)).filter(w => !mainSet.has(w));
         for (const w of words) {
             if (hasWord(nowTitle, w)) continue; // still where the story is now: nothing to go back to
             const at = cands.filter(s => hasWord(s.title.toLowerCase(), w));
