@@ -28,8 +28,8 @@ WHAT YOU LOOK FOR, bullet by bullet
 1. Tone: a quiet, exact chronicler. Plain sentences, names instead of descriptions. The more serious the moment, the plainer the sentence; a sentence that sounds impressive is too much.
 2. Length and rhythm
    - Two to four sentences per bullet, mostly of middle length; a short, flat sentence often closes it. Splitting must not take a bullet past four sentences.
-   - Join acts in one sentence only when they are one motion; when the purpose changes, start a new sentence ("paid…, packed…, and sent…" becomes two). A run of acts that is one motion stays one sentence ("he barred the door, carried the lamp upstairs and banked the fire"); to shorten it, the last act may close the bullet as a short sentence of its own.
-   - That closing beat, often the one that shows without saying what the scene was to the character, stays tied to what led to it: keep it in the sentence before ("…carried the lamp upstairs, banked the fire and stood by her empty chair"), or, on its own, open it with the word that carries the order or the pause ("Then he stood…", "There he stood…"). Never cut it loose as a bare act that opens on the name.
+   - A run of acts toward one purpose stays one sentence ("he barred the door, carried the lamp upstairs and banked the fire"). Start a new sentence only when the purpose changes.
+   - A closing beat, often the one that shows without saying what the scene was to the character, stays in the sentence that led to it ("…carried the lamp upstairs, banked the fire and stood by her empty chair"); never cut it loose as a sentence of its own.
    - Never patch a split or a repeated opening with "also".
 3. Openings
    - Most sentences open on their subject, a name or he/she; now and then one opens otherwise, and that is part of the voice, not a fault. Do not leave a section with no sentence opening otherwise.
@@ -134,9 +134,7 @@ export function styleLint(text, { english = true } = {}) {
         if (!english) return;
         for (const x of ss) {
             const n = x.split(/\s+/).length;
-            if (n > 32) out.push(`${B}: a long sentence, ${n} words ("${x.split(/\s+/).slice(0, 6).join(' ')}…"): split it where the purpose changes, keeping the bullet within four sentences`);
-            // "paid …, packed …, and sent …": a list of acts ending in ", and <verb>"
-            if (/,\s+[a-z]+\b[^,;]*,\s+and\s+(?!(?:the|a|an|his|her|their|he|she|they|it|its|that|this|then|so)\b)[a-z]+/.test(x)) out.push(`${B}: several acts joined in one sentence ("${x.split(/\s+/).slice(0, 6).join(' ')}…")`);
+            if (n > 40) out.push(`${B}: a long sentence, ${n} words ("${x.split(/\s+/).slice(0, 6).join(' ')}…"): split it where the purpose changes, keeping the bullet within four sentences`);
             if (SHAPE.test(x.replace(/^["“(]+/, ''))) shaped.push(`${B} "${x.split(/\s+/).slice(0, 2).join(' ')}…"`);
             const mt = x.match(METAPHORS);
             if (mt) out.push(`${B}: "${mt[0]}" may be a narrator image: say plainly what happened`);
