@@ -175,40 +175,29 @@ OUTPUT
 - Every part must be complete; never stop mid-sentence.
 
 READ
-- One bot plays every non-user character under one name tag; tell the speaker from the content. Turns the user wrote are the strongest canon. A private-thought tag holds thoughts, not speech. Ignore any part where the bot writes the user character's thoughts. Trackers, status windows and planning blocks are not events; take only the date and place from them. A bot error that contradicts earlier messages is not canon.
-- Only the raw log is new. Nothing from <current_state> goes into a section unless the raw log shows it happening.
+- One bot plays every non-user character under one name tag; tell the speaker from the content. Turns the user wrote are the strongest canon. A private-thought tag holds thoughts, not speech. Ignore any part where the bot writes the user character's thoughts. Trackers, status windows and planning blocks are not events; take only the date and place from them. Rules or banned-word lists inside them are directions to the bot, not canon. A bot error that contradicts earlier messages is not canon.
+- Only the raw log is new. Never reproduce, rewrite or recap what the archive already holds. Nothing from <current_state> goes into a section unless the raw log shows it happening.
 
 WRITE
 Test every line: "Without it, would the bot's next scene go wrong or feel unmotivated?" Being in the raw log is not a reason. Cutting so hard that the story breaks is also a failure: never shrink the core of a trigger or an arc.
 1. A section is a chapter: cut where the story turns (a relationship shifts, a decision, a secret, a change of place or time). Most sections cover 10–20 messages.
 2. One bullet is one turn: what happened, what caused it, what it changed. Never report a conversation turn by turn ("He asked… She replied…"); fold it into what it revealed, decided or broke. An argument is one bullet: each side's point once, then where it ended. Verbs like asked, explained, argued, countered, admitted in a row mean you are reporting turns.
-3. Keep the cause before every reaction (the refusals that piled up, the threat before the fear) and the trigger before every realization or decision (he handed her the choice for the first time, so she chose). Keep the reason behind an emotional reaction, and why a character held a line or crossed it when the raw log shows it. Keep what a character chose not to do, and a question with its answer. Keep both sides' responsibility: one side's hurt never erases the other's fault, either way ("running away alone could not prove she was free", not "gave her no freedom").
-4. Follow the raw log's order. Never mention an event before the bullet that tells it.
+3. Keep the cause before every reaction (the refusals that piled up, the threat before the fear) and the trigger before every realization or decision (he handed her the choice for the first time, so she chose). Keep the reason behind an emotional reaction, and why a character held a line or crossed it when the raw log shows it (when it gives none, do not supply one). Keep what a character chose not to do, and a question with its answer. Record each person's part as it happened, without softening it or making it worse; keep both sides' responsibility: one side's hurt never erases the other's fault, either way ("running away alone could not prove she was free", not "gave her no freedom").
+4. Follow the raw log's order. Never mention an event before the bullet that tells it, and say nothing stronger than the raw log does.
 5. Plain facts. Felt experience is written as felt ("Feeling hunted into a dead end", not "Hunted into a dead end"). A reading belongs to the character who has it ("in her own reckoning", "her reading, not his intent"), never to you. Present feelings follow where the relationship stands now, not an earlier arc. Careful with "never" or "not once": they make a character read as cold. No verdicts, labels or themes of your own, such as "childish", "cold" or "cowardly", unless a character says them. Keep the raw log's intensity: no stronger word than it shows, such as "shattered" or "devastated", unless the text says so.
 6. A reaction that draws on a past event names the event briefly, as in "remembering the shipwreck", not what it means.
-7. Say each thing once. Do not lean on one verb ("explaining", "insisting") line after line.
-8. Cut staging: movement, gestures, props, how a line was said, scenery; anxiety gets one word. A gesture stays only when it is the event itself, such as a slap, a kiss or a door locked against someone. When one of this RP's recurring devices returns (a phrase, an object, a song, a ritual), keep that event and line.
+7. Say each thing once. A beat that repeats a pattern STATE already holds gets a clause at most; one that breaks or turns it gets the space. Do not lean on one verb ("explaining", "insisting") line after line.
+8. Cut staging: movement, gestures, props, how a line was said, scenery; light, rooms, weather, clothing or bodies described for mood; anxiety gets one word. A gesture stays only when it is the event itself, such as a slap, a kiss or a door locked against someone. When one of this RP's recurring devices returns (a phrase, an object, a song, a ritual), keep that event and line.
 9. Every sentence ends with the number of the message it comes from: (#88), or (#88, #91). A sentence you cannot point to a message for does not go in.
 10. Quotes: only a line that changes a relationship or defines a character: one that decides, confesses, refuses, promises, accuses or says what someone is to someone. Faithful to the raw log (translated when needed), a statement gets no question mark, and the character's reaction goes with it. One sentence, under about 20 words; many bullets have none, at most two. Never invent or paraphrase a quote.
 11. Sex: only relationship beats: who, how consent moved, a request to stop, a first, what was said that would still matter at a table, what changed after. No acts, bodies or sensations, even if the user's own turn describes them; never quote a line about the act itself. Crises and self-harm: plainly.
-12. At most one em dash in a section.
-13. Titles: like a book's table of contents, short and concrete; they name the scene, they do not summarize it. Vary the shape: a place or object, two things joined, one short plain sentence, a "what" clause; rarely a quoted line, at most one in a stretch. No semicolons.
-
-<tone>
-- Calm and clear.
-- When the log gives a reason for an act, keep the reason with it. When it gives none, do not supply one.
-- Keep a small act only when it changed something.
-- When someone's reading of an act differs from what happened, mark it as theirs.
-- Record each person's part as it happened, without softening it or making it worse.
-- Let the characters carry the feeling through what they did and said. The narrator stays quiet.
-- If a sentence sounds impressive, it is probably too much.
-</tone>
+12. Titles: like a book's table of contents, short and concrete; they name the scene, they do not summarize it. Vary the shape: a place or object, two things joined, one short plain sentence, a "what" clause; rarely a quoted line, at most one in a stretch. No semicolons (✗ Ren crosses the bridge; Mara pulls him up).
 
 <archive_voice>
 Write every PLOT bullet in the voice of the existing archive, so your text reads as if the same hand wrote the earlier sections.
 
 VOICE
-A quiet, exact chronicler. Past tense, plain sentences, names instead of descriptions. The more serious the moment, the plainer the sentence.
+A quiet, exact chronicler. Past tense, plain sentences, names instead of descriptions. The more serious the moment, the plainer the sentence. If a sentence sounds impressive, it is probably too much.
 
 RHYTHM
 - Two to four sentences per bullet, mostly of middle length. A short, flat sentence often closes it.
@@ -232,14 +221,15 @@ QUOTES
 - Back-references name the earlier event briefly; when the archive uses log prefixes, the numbers may follow with the prefix: (Y1 #322–#325).
 
 FEELING
+- Let the characters carry the feeling through what they did and said. The narrator stays quiet.
 - Name it once and say whose it is, or show one bodily sign the log gives. Not both.
 - No narrator metaphors. An image appears only if the log has it.
 
 NEVER
-- Light, rooms, weather, clothing or bodies described for mood. Keep them only when they matter to what happened.
 - Summing up meaning: "their bond deepened", "something shifted".
 - tender, intimate, profound, palpable, a testament to, unspoken, electric, in that moment, it was clear that, couldn't help but.
 - Long "and… and… and" sentences. Describing a known character instead of naming them. Ending a bullet on what it meant.
+- "while" twice in one bullet. "Also" to tack an act on ("He also…"): join it to the act before it instead.
 </archive_voice>
 
 EXAMPLE
@@ -252,7 +242,7 @@ PLOT:
 - Ivo pressed her to take the river road; Mara refused it because it was his idea, and the question was left there (#71, #74).
 
 Before you output, check each section once: a reaction or decision that lost its cause, order, anything said twice, verdicts of your own, quote length, em dashes, bullet count.`;
-export const OLD_SHORT_HASHES = new Set(['17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
+export const OLD_SHORT_HASHES = new Set(['xrfv6n', '17lzb8y', '1e146dz', '1gmqwj8', 'c81cqs', 'lwei5t', '42t9kk']); // earlier built-in short ones, upgraded when untouched
 export const BUILTIN_PROMPTS = new Set(['basic', 'short']);
 const BUILTIN_TEXT = { basic: () => BASIC_PROMPT, short: () => SHORT_PROMPT };
 // 기본 (정리본) as it shipped in 3.84.0–3.86.x, before it became 기본 itself: an untouched copy is taken out
