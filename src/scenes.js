@@ -244,6 +244,15 @@ A list with nothing in it is (none). Nothing else.`;
 export const rulesText = (p, from, to) => fillPrompt(p.text, { raw: '(given above in <raw_log>)', state: '(given above in <current_state>)', from: String(from), to: String(to), last_section: '', archive: '', recent: '' })
     .replace(/<raw_log[^>]*>\s*\(given above in <raw_log>\)\s*<\/raw_log>\s*/, '').replace(/<current_state>\s*\(given above in <current_state>\)\s*<\/current_state>\s*/, '');
 
+// the rules without their closing "# N. Before you write" section, and that section ('' when the template has none)
+export function splitCheck(text) {
+    const t = String(text || '').trim();
+    const at = t.search(/\n# \d+\. Before you write\b/);
+    // 상세's closing step asks for a <scenes> list first; read last, it could end up in the answer, so it stays in the rules
+    if (at < 0 || /<scenes>/.test(t.slice(at))) return [t, ''];
+    return [t.slice(0, at).trim(), t.slice(at).trim()];
+}
+
 // the whole run: sections scene by scene, then the change lists. Same shape as draftCompress's answer.
 export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = '', chunks: given = null }) {
     const chunks = given?.length ? given : sceneChunks(items);
@@ -260,9 +269,11 @@ export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = 
     for (const [k, part] of chunks.entries()) {
         const from = part[0].i, to = part[part.length - 1].i;
         onStep(k, chunks.length, from, to, 'scenes');
+        // the instruction's closing "Before you write" check goes last, after SCENE_ASK, so it is the last thing read
+        const [rules, check] = splitCheck(rulesFor(from, to));
         // 규칙은 시스템 메시지로: the same rules, in the system part instead of <rules>
-        const sys = rulesInSystem() ? rulesFor(from, to).trim() : '';
-        const prompt = `<raw_log range="#${from}–#${to}">\n${formatExtract(part, g)}\n</raw_log>\n\n<previous_section>\n${prev || '(none: this is the start of the archive)'}\n</previous_section>\n\n<recent_archive>\n${recentFor(k) || '(none)'}\n</recent_archive>${styleBlock(m)}\n\n<current_state>\n${tail || '(none)'}\n</current_state>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}${sys ? '\n\n[The rules for this job are in the system message. Follow them.]' : `\n\n<rules>\n${rulesFor(from, to).trim()}\n</rules>`}${au.on ? `\n\n${auBlock(m).trim()}` : ''}${await loreBlock(formatExtract(part, g))}${memoBlock(memo)}${langBlock(m.text, { tail: false })}\n\n${SCENE_ASK(from, to, prefix)}`;
+        const sys = rulesInSystem() ? rules : '';
+        const prompt = `<raw_log range="#${from}–#${to}">\n${formatExtract(part, g)}\n</raw_log>\n\n<previous_section>\n${prev || '(none: this is the start of the archive)'}\n</previous_section>\n\n<recent_archive>\n${recentFor(k) || '(none)'}\n</recent_archive>${styleBlock(m)}\n\n<current_state>\n${tail || '(none)'}\n</current_state>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}${sys ? '\n\n[The rules for this job are in the system message. Follow them.]' : `\n\n<rules>\n${rules}\n</rules>`}${au.on ? `\n\n${auBlock(m).trim()}` : ''}${await loreBlock(formatExtract(part, g))}${memoBlock(memo)}${langBlock(m.text, { tail: false })}\n\n${SCENE_ASK(from, to, prefix)}${check ? `\n\n${check}` : ''}`;
         let got;
         try { got = parseSceneAnswer(await ask(sceneModel(), prompt, sys, SECTION_GUARD, !!sys), from, to); }
         catch (e) { error = e; break; }
