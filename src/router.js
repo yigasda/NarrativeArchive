@@ -288,7 +288,7 @@ export async function runRouter(m, { force = false } = {}) {
     try {
         out = await Promise.race([
             askAI(`${main.length ? `[MAIN CAST]\n${main.join(', ')}\n\n` : ''}${now ? `[NOW]\n${now}\n\n` : ''}[RECENT CHAT]\n${recent}\n\n${guess ? `[GUESS]\n${guess}\n\n` : ''}[LIKELY SECTIONS]\n${likely || '(none)'}${other ? `\n\n[OTHER SECTIONS]\n${other}` : ''}\n\nPick at most ${cfg.max}.`, { system: AI_SYS_ROUTER, maxTokens: 1024 }),
-            new Promise((_, no) => setTimeout(() => no(new Error('10초 안에 답이 없었어요')), 10_000)),
+            new Promise((_, no) => setTimeout(() => no(new Error('20초 안에 답이 없었어요')), 20_000)),
         ]);
     } catch (e) {
         // the model failed: go with the fast picks, and say why
