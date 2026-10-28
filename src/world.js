@@ -63,14 +63,14 @@ YOU GET
 
 PARTS
 - INTRO: one line: when and where the story is set, and what kind of story it is.
-- PLACES: homes, neighbourhoods, workplaces: places the story keeps coming back to or that matter to it. Leave out a place visited once.
+- PLACES: places where someone lives, lived or works, and places tied to a past, secret or promise that still matters. Leave out places only passed through or visited on an outing.
 - AFFILIATIONS: families, workplaces, schools, groups the characters belong to, and how they stand to each other.
 - RULES: what holds in this world and shapes what people can do: laws, money, work, customs, how things work (magic or technology only if the story has them).
 - BACKGROUND: past events, before or during the story, that still shape the present. Not a retelling of scenes.
 - TERMS: names, titles, nicknames and words with a meaning special to this story.
 
 RULES
-- Use only what the archive shows. Never invent. A part with nothing in the archive is left out.
+- Use only what the archive shows. Never invent, and add no general knowledge about real places, groups or things. A part with nothing in the archive is left out.
 - The main characters themselves are not entries; their homes, families and jobs are.
 - One sentence per entry, two at most. Facts, not mood.
 - Say what a thing is and whose it is, not what happened there or with it: the scenes are already in the archive.
