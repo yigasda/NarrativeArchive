@@ -8,36 +8,102 @@ import { loreBlock } from './lore.js';
 import { SECTION_GUARD, aiLabel, askAI, askCompress, drLabel } from './ai.js';
 import { ctx, getMeta, globalSettings, saveMeta } from './core.js';
 import { formatExtract } from './extract.js';
-import { activePrompt, auBlock, auOf, fillPrompt, langBlock, memoBlock } from './prompts.js';
+import { activePrompt, auBlock, auOf, fillPrompt, langBlock, memoBlock, rulesInSystem } from './prompts.js';
 import { RANGE_HEAD, headingRanges, parseSections, splitTail, trimEnd } from './sections.js';
 import { esc } from './util.js';
 
 export const SCENE_SIZES = { 20: '작게 · 약 20개씩', 30: '보통 · 약 30개씩', 40: '크게 · 약 40개씩' };
 export const sceneSize = () => { const v = Number(globalSettings().sceneSize); return v in SCENE_SIZES ? v : 30; };
-export const SCENE_MODELS = { dr: '초안 모델', ai: 'AI 기능 모델' };
-export const sceneModel = () => (globalSettings().sceneModel === 'ai' ? 'ai' : 'dr');
-export const stateModel = () => (globalSettings().stateModel === 'ai' ? 'ai' : 'dr');
+// 장면별 writes the sections and the STATE changes with the draft model, like every other compression (since 3.87.15)
+export const sceneModel = () => 'dr';
+export const stateModel = () => 'dr';
 export const sceneModelLabel = k => (k === 'ai' ? aiLabel() : drLabel());
-const ask = (which, prompt, system = '', guard = null) => (which === 'ai' ? askAI(prompt, { system, maxTokens: 12000, guard }) : askCompress(prompt, { system, guard }));
+const ask = (which, prompt, system = '', guard = null, keepSystem = false) => (which === 'ai' ? askAI(prompt, { system, maxTokens: 12000, guard, keepSystem }) : askCompress(prompt, { system, guard, keepSystem }));
 
 // "<tracker> 🌇 05:48 오후 | 하티르 여드렛날, 2년 | 옴보스 → 서쪽 별채 | ☀️ 맑음 </tracker>": time | date | place.
 // Named groups time / date / place; an empty setting means no tracker (cut by message count only).
-export const DEFAULT_TRACKER_RE = String.raw`<tracker>[^|]*?(?<time>\d{1,2}:\d{2}\s*(?:오전|오후|AM|PM|am|pm)?)?[^|]*\|\s*(?<date>[^|]+?)\s*\|\s*(?<place>[^|<]+?)\s*(?:\||</tracker>)`;
-export const trackerRe = () => { const v = globalSettings().trackerRe; return v === undefined || v === null ? DEFAULT_TRACKER_RE : String(v); };
+export const DEFAULT_TRACKER_RE = String.raw`<tracker>[^|\d]*(?<time>\d{1,2}:\d{2}\s*(?:오전|오후|AM|PM|am|pm)?)?[^|]*\|\s*(?<date>[^|]+?)\s*\|\s*(?<place>[^|<]+?)\s*(?:\||</tracker>)`;
+// the default before 3.96.4 skipped the time; a setting saved with it reads as the new one
+const OLD_TRACKER_RE = String.raw`<tracker>[^|]*?(?<time>\d{1,2}:\d{2}\s*(?:오전|오후|AM|PM|am|pm)?)?[^|]*\|\s*(?<date>[^|]+?)\s*\|\s*(?<place>[^|<]+?)\s*(?:\||</tracker>)`;
+export const trackerRe = () => { const v = globalSettings().trackerRe; return v === undefined || v === null || v === OLD_TRACKER_RE ? DEFAULT_TRACKER_RE : String(v); };
 const minutes = t => {
-    const mt = String(t || '').match(/(\d{1,2}):(\d{2})\s*(오전|오후|AM|PM|am|pm)?/);
+    const str = String(t || '');
+    const mt = str.match(/(\d{1,2})\s*:\s*(\d{2})\s*(오전|오후|AM|PM|am|pm)?/);
     if (!mt) return null;
+    if (!mt[3] && /오후|저녁|밤|PM|pm/.test(str)) mt[3] = 'PM';
     let h = Number(mt[1]) % 12;
     if (/오후|PM|pm/.test(mt[3] || '')) h += 12; else if (!mt[3]) h = Number(mt[1]);
     return h * 60 + Number(mt[2]);
 };
+// a status window that is not <tracker>: one short line of fields ("[ 🌙 오후 8:15 · 12월 9일 (목) · 성 → 병동 · ❄️ -1°C ]")
+// or a few "label: value" lines (📅 날짜: … / 📍 장소: …). It needs a time or a date; story prose has long parts and full stops
+const ST_CLOCK = /\d{1,2}\s*:\s*\d{2}|(?:오전|오후|새벽|아침|낮|저녁|밤)\s*\d{1,2}\s*시|\b\d{1,2}\s*(?:am|pm)\b/i;
+const ST_DATE = /\d{1,4}\s*년|\d{1,2}\s*월\s*\d{1,2}\s*일|\b\d{4}[-./]\d{1,2}[-./]\d{1,2}\b|[(（][월화수목금토일][)）]|[월화수목금토일]요일|\d+\s*일\s*(?:째|차)|\bday\s*\d+\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}\b|\b\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i;
+const ST_WEATHER = /[☀🌤⛅🌥☁🌦🌧⛈🌩🌨❄☃🌫🌪☔]|-?\d+(?:\.\d+)?\s*(?:°\s*[CF]?|℃)|맑음|흐림|눈발|소나기|안개|\b(?:sunny|cloudy|rain\w*|snow\w*|fog\w*|clear)\b/iu;
+const ST_LABELS = [[/^(날짜|일자|요일|일시|date|day)$/i, 'date'], [/^(시간|시각|time)$/i, 'time'], [/^(장소|위치|location|place)$/i, 'place'], [/^(날씨|기온|weather)$/i, 'weather']];
+const stClean = t => String(t || '').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/\*\*|__|`/g, '').replace(/\s+/g, ' ').trim();
+const stLabel = l => { const mt = stClean(l).match(/^([^:：]{1,12})\s*[:：]\s*(.+)$/); const kind = mt && (ST_LABELS.find(([re]) => re.test(mt[1].trim())) || [])[1]; return kind ? [kind, mt[2].trim()] : null; };
+function stFields(parts) {
+    const f = { time: '', date: '', place: '' };
+    const rest = [];
+    for (const raw of parts) {
+        const lab = stLabel(raw), p = lab ? lab[1] : stClean(raw);
+        if (!p) continue;
+        const kind = lab ? lab[0] : /→|->|📍/.test(raw) ? 'place' : ST_CLOCK.test(p) ? 'time' : ST_DATE.test(p) ? 'date' : ST_WEATHER.test(raw) ? 'weather' : '';
+        if (kind === 'time') { const c = (p.match(/(?:오전|오후|새벽|아침|낮|저녁|밤|AM|PM)?\s*\d{1,2}\s*:\s*\d{2}\s*(?:AM|PM|오전|오후)?/i) || p.match(ST_CLOCK))[0].trim(); f.time ||= c; const d = p.replace(c, '').trim(); if (ST_DATE.test(d)) f.date ||= d; }
+        else if (kind === 'date') f.date ||= p;
+        else if (kind === 'place') f.place ||= p.replace(/\s*(?:->|⇒)\s*/g, ' → ');
+        else if (!kind) rest.push(p);
+    }
+    // no arrow or label: the first short part without numbers is usually the place
+    if (!f.place) f.place = rest.find(p => p.length <= 40 && !/\d/.test(p)) || '';
+    return f;
+}
+function autoTracker(text) {
+    const lines = String(text || '').replace(/<[^>]+>/g, '\n').split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        const t = lines[i].trim().replace(/^[>*_#\s]+|[*_\s]+$/g, '');
+        // "label: value" lines in a row
+        if (stLabel(t)) {
+            const run = [];
+            for (let j = i; j < lines.length && run.length < 10 && stLabel(lines[j].trim()); j++) run.push(lines[j].trim());
+            const kinds = new Set(run.map(l => stLabel(l)[0]));
+            if (run.length >= 2 && (kinds.has('date') || kinds.has('time'))) return stFields(run);
+            continue;
+        }
+        if (t.length < 8 || t.length > 300 || /^["“「]/.test(t)) continue;
+        const wrap = t.match(/^[[【〔(（]\s*([\s\S]+?)\s*[\]】〕)）]$/);
+        const parts = (wrap ? wrap[1] : t).split(/\s*[|·•｜ㆍ]\s*|\s+\/\s+/).map(x => x.trim()).filter(Boolean);
+        if (parts.length < 2 || parts.length > 10 || parts.some(x => x.length > 60)) continue;
+        const has = [ST_CLOCK, ST_DATE, ST_WEATHER, /→|->|📍/].map(re => parts.some(x => re.test(x)));
+        if (!has[0] && !has[1]) continue;
+        const score = has.filter(Boolean).length;
+        if (wrap ? score < 2 : score < 3 || parts.length < 3) continue;
+        if (!wrap && /[.!?。]$/.test(t)) continue;
+        return stFields(parts);
+    }
+    return null;
+}
 function readTracker(text, re) {
-    if (!re) return null;
-    const mt = String(text || '').match(re);
-    if (!mt) return null;
-    const gr = mt.groups || {};
-    const parts = String(gr.place || '').split(/\s*(?:→|->|>|\/|·)\s*/).filter(Boolean);
-    return { date: String(gr.date || '').trim(), city: parts[0] || '', room: parts[1] || '', min: minutes(gr.time) };
+    const mt = re ? String(text || '').match(re) : null;
+    let gr = mt ? { ...(mt.groups || {}) } : autoTracker(text);
+    if (!gr) return null;
+    // "<tracker> 오후 3:40 | …": the time group holds "3:40", the 오후 sits before it in the same field
+    if (mt && gr.time) { const first = stClean(mt[0].split('|')[0].replace(/<[^>]*>/g, '')); if (first.includes(gr.time.trim())) gr.time = first; }
+    const place = String(gr.place || '').trim();
+    const parts = place.split(/\s*(?:→|->|>|\/|·)\s*/).filter(Boolean);
+    return { date: String(gr.date || '').trim(), city: parts[0] || '', room: parts.slice(1).join(' → '), min: minutes(gr.time), time: String(gr.time || '').trim(), place };
+}
+// 상태창 줄 in the settings: the last few status windows the cutter can read, newest first ([] = none found)
+export function recentTrackers(n = 5, { re = trackerRe(), chat = ctx().chat || [] } = {}) {
+    let rx = null;
+    try { rx = re ? new RegExp(re, 's') : null; } catch { rx = null; }
+    const out = [];
+    for (let i = chat.length - 1; i >= 0 && out.length < n; i--) {
+        const t = readTracker(chat[i]?.mes, rx);
+        if (t && (t.date || t.place)) out.push({ i, ...t });
+    }
+    return out;
 }
 // how much the story moved between two trackers: 2 = new day, new place or a jump of 3+ hours; 1 = new room; 0 = same scene
 function sceneJump(a, b) {
@@ -45,6 +111,17 @@ function sceneJump(a, b) {
     if ((a.date && b.date && a.date !== b.date) || (a.city && b.city && a.city !== b.city)) return 2;
     if (a.min !== null && b.min !== null && Math.abs(b.min - a.min) >= 180) return 2;
     return a.room && b.room && a.room !== b.room ? 1 : 0;
+}
+
+// how good a place each message is to start a new part of a long raw log: 0 = never (not a user turn, so the reply would
+// leave the turn it answers), 1 = just before a user turn, 2 = and a new room, 3 = and a new day, place or 3+ hours on
+export function cutScores(items, { re = trackerRe(), chat = ctx().chat || [] } = {}) {
+    let rx = null;
+    try { rx = re ? new RegExp(re, 's') : null; } catch { rx = null; }
+    const trk = items.map(x => readTracker(chat[x.i]?.mes, rx));
+    const before = k => { for (let j = k - 1; j >= 0; j--) if (trk[j]) return trk[j]; return null; };
+    const after = k => { for (let j = k; j < items.length; j++) if (trk[j]) return trk[j]; return null; };
+    return items.map((x, k) => (k && chat[x.i]?.is_user ? 1 + sceneJump(before(k), after(k)) : 0));
 }
 
 // items (in order) → [[items], …]; cuts only just before a user turn, so a reply stays with the turn it answers
@@ -233,6 +310,15 @@ A list with nothing in it is (none). Nothing else.`;
 export const rulesText = (p, from, to) => fillPrompt(p.text, { raw: '(given above in <raw_log>)', state: '(given above in <current_state>)', from: String(from), to: String(to), last_section: '', archive: '', recent: '' })
     .replace(/<raw_log[^>]*>\s*\(given above in <raw_log>\)\s*<\/raw_log>\s*/, '').replace(/<current_state>\s*\(given above in <current_state>\)\s*<\/current_state>\s*/, '');
 
+// the rules without their closing "# N. Before you write" section, and that section ('' when the template has none)
+export function splitCheck(text) {
+    const t = String(text || '').trim();
+    const at = t.search(/\n# \d+\. Before you write\b/);
+    // 상세's closing step asks for a <scenes> list first; read last, it could end up in the answer, so it stays in the rules
+    if (at < 0 || /<scenes>/.test(t.slice(at))) return [t, ''];
+    return [t.slice(0, at).trim(), t.slice(at).trim()];
+}
+
 // the whole run: sections scene by scene, then the change lists. Same shape as draftCompress's answer.
 export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = '', chunks: given = null }) {
     const chunks = given?.length ? given : sceneChunks(items);
@@ -249,9 +335,15 @@ export async function sceneCompress({ m, g, p, items, onStep = () => {}, memo = 
     for (const [k, part] of chunks.entries()) {
         const from = part[0].i, to = part[part.length - 1].i;
         onStep(k, chunks.length, from, to, 'scenes');
-        const prompt = `<raw_log range="#${from}–#${to}">\n${formatExtract(part, g)}\n</raw_log>\n\n<previous_section>\n${prev || '(none: this is the start of the archive)'}\n</previous_section>\n\n<recent_archive>\n${recentFor(k) || '(none)'}\n</recent_archive>${styleBlock(m)}\n\n<current_state>\n${tail || '(none)'}\n</current_state>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}\n\n<rules>\n${rulesFor(from, to).trim()}\n</rules>${au.on ? `\n\n${auBlock(m).trim()}` : ''}${await loreBlock(formatExtract(part, g))}${memoBlock(memo)}${langBlock(m.text, { tail: false })}\n\n${SCENE_ASK(from, to, prefix)}`;
+        // the instruction's closing "Before you write" check goes last, after SCENE_ASK, so it is the last thing read
+        const [rules, check] = splitCheck(rulesFor(from, to));
+        // 규칙은 시스템 메시지로: the same rules, in the system part instead of <rules>
+        const sys = rulesInSystem() ? rules : '';
+        // the order of a story preset: the rules first, then the context, the raw log near the end, then the request and the check
+        const lore = await loreBlock(formatExtract(part, g));
+        const prompt = `${sys ? '[The rules for this job are in the system message. Follow them.]' : `<rules>\n${rules}\n</rules>`}${au.on ? `\n\n${auBlock(m).trim()}` : ''}\n\n<previous_section>\n${prev || '(none: this is the start of the archive)'}\n</previous_section>\n\n<recent_archive>\n${recentFor(k) || '(none)'}\n</recent_archive>${styleBlock(m)}\n\n<current_state>\n${tail || '(none)'}\n</current_state>${note ? `\n\n<work_note>\n${note}\n</work_note>` : ''}${lore}\n\n<raw_log range="#${from}–#${to}">\n${formatExtract(part, g)}\n</raw_log>${memoBlock(memo)}${langBlock(m.text, { tail: false })}\n\n${SCENE_ASK(from, to, prefix)}${check ? `\n\n${check}` : ''}`;
         let got;
-        try { got = parseSceneAnswer(await ask(sceneModel(), prompt, '', SECTION_GUARD), from, to); }
+        try { got = parseSceneAnswer(await ask(sceneModel(), prompt, sys, SECTION_GUARD, !!sys), from, to); }
         catch (e) { error = e; break; }
         if (!got.length) { error = new Error(`#${from}–#${to} 답에 불릿이 없어요`); break; }
         const blocks = got.map(x => `## ${prefix ? `${prefix} ` : ''}#${x.a}–#${x.b} — ${x.title || 'Untitled'}\nPLOT:\n${x.bullets.join('\n')}`);
@@ -320,7 +412,7 @@ export async function openStyleSamples() {
     $('#na_style_sub').text(styleLabel(getMeta()));
     toastr.success(picked.size ? '문체 견본을 저장했어요' : '문체 견본을 비웠어요', '문체 견본');
 }
-export const styleLabel = m => { const xs = styleSamples(m); return xs.length ? xs.map(x => x.title.replace(RANGE_HEAD, '$5').replace(/^\s*[—–-]\s*/, '').replace(/\s*\([^()]*\)\s*$/, '')).join(' · ') : '마음에 드는 섹션 1–2개 · 새 요약이 쌓여도 문체가 안 떠내려가요'; };
+export const styleLabel = m => { const xs = styleSamples(m); return xs.length ? xs.map(x => x.title.replace(RANGE_HEAD, '$5').replace(/^\s*[—–-]\s*/, '').replace(/\s*\([^()]*\)\s*$/, '')).join(' · ') : '마음에 드는 섹션 1–2개'; };
 
 // the work note's parts; a line added from the 압축 작업실 goes under one of them
 export const NOTE_PARTS = ['Canon', '살린 줄', '실수 목록', '문체'];

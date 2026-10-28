@@ -3,7 +3,7 @@
 import { syncTrackedBoundary } from './hide.js';
 import { applyInjection } from './inject.js';
 import { syncPanel } from './panel.js';
-import { BASIC_PROMPT, OLD_BASIC, OLD_BASIC_HASHES, OLD_DEFAULTS, OLD_SHORT_HASHES, PREV_BASIC, SHORT_PROMPT } from './prompts.js';
+import { BASIC_PROMPT, OLD_BASIC, OLD_BASIC_HASHES, OLD_DEFAULTS, OLD_SHORT_HASHES, OLD_TIDY_HASHES, PREV_BASIC, SHORT_PROMPT } from './prompts.js';
 import { parseSections } from './sections.js';
 
 // 서사 아카이브 (Narrative Archive)
@@ -12,7 +12,7 @@ import { parseSections } from './sections.js';
 
 export const MODULE = 'narrative_archive';
 export const PROMPT_KEY = 'narrative_archive_injection';
-export const VERSION = '3.82.6';
+export const VERSION = '3.96.6';
 export const SNAPSHOT_MAX = 5;
 export const SNAPSHOT_MAX_CHARS = 2_000_000;
 
@@ -21,8 +21,9 @@ export const DEFAULT_META = Object.freeze({
     boundary: -1,   // last message index covered by the archive
     keep: 1,        // how many compressed messages stay visible
     enabled: true,
-    position: 1,    // extension_prompt_types: 0 after main prompt, 1 in chat, 2 before main prompt
+    position: 3,    // 3 right after the hidden messages (depth worked out), or extension_prompt_types: 0 after main prompt, 1 in chat, 2 before main prompt
     depth: 1,
+    placeV: 2,      // 2: chats from before 3.83.0 moved to position 3 once
     role: 0,        // 0 system, 1 user, 2 assistant
     track: false,   // boundary follows the last #number in the archive's headings
     snapshots: [],  // [{ at, reason, text, boundary }] newest first
@@ -40,7 +41,8 @@ export const DEFAULT_META = Object.freeze({
 });
 
 export const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'muted', 'track', 'tokenCap', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'router', 'people', 'temps', 'voice', 'voiceInject', 'layers', 'fade', 'worldOn', 'quoteExclude', 'quoteMined', 'knowMined', 'personLines', 'fadeForce', 'au', 'digests', 'workNote', 'styleSamples', 'recall', 'stateRemind'];
-export const POSITIONS = { 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
+export const POSITIONS = { 3: '이어지는 자리', 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
+export const POSITION_ORDER = [3, 1, 0, 2];
 export const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
 
 export const ctx = () => SillyTavern.getContext();
@@ -72,6 +74,8 @@ export function getMeta() {
     const md = ctx().chatMetadata;
     if (!md) return null;
     if (!md[MODULE] || typeof md[MODULE] !== 'object') md[MODULE] = structuredClone(DEFAULT_META);
+    // 3.83.0: every chat moves once to the place right after the hidden messages, so the past reads before what came after it
+    if (md[MODULE].placeV !== 2) { md[MODULE].position = 3; md[MODULE].placeV = 2; }
     for (const k of Object.keys(DEFAULT_META)) {
         if (!Object.hasOwn(md[MODULE], k)) md[MODULE][k] = structuredClone(DEFAULT_META[k]);
     }
@@ -153,26 +157,48 @@ export function globalSettings() {
     const es = ctx().extensionSettings;
     if (!es[MODULE] || typeof es[MODULE] !== 'object') es[MODULE] = {};
     const g = es[MODULE];
-    const defaults = { usePrompt: false, skipHidden: true, stripTags: false, aiProfile: '', aiMaxTokens: 8192 };
+    const defaults = { usePrompt: false, skipHidden: true, aiProfile: '', aiMaxTokens: 8192 };
     for (const [k, v] of Object.entries(defaults)) if (!Object.hasOwn(g, k)) g[k] = v;
-    // prompt library: [{ id, name, text, fav }], first entry is the built-in basic one
+    // 2단계 was taken out in 3.87.3: its setting goes, and a chat set to it compresses from the raw log
+    delete g.eventsModel;
+    delete g.chunkTok; // 나눠 보내기 is fixed at about 20,000 tokens since 3.87.4
+    // 3.87.8: no hand-written tag list any more (태그 지우기 is on unless turned off), and the count check always runs
+    delete g.stripCustom; delete g.countCheck;
+    delete g.sceneModel; delete g.stateModel; // 장면별 uses the draft model for both since 3.87.15
+    if (g.compressMode === 'events') g.compressMode = 'raw';
+    // prompt library: [{ id, name, text, fav }], led by the built-in 기본 (id 'short') and 상세 (id 'basic')
     if (g.aiMaxTokens === 4096 && !g.aiMaxSet) g.aiMaxTokens = 8192; // the old default, never changed by hand
+    // 규칙은 시스템 메시지로: off for a new install (some relays drop the system part); a setup from before 3.87.5,
+    // which had it on without asking, keeps it on
+    if (g.rulesInSystem === undefined) g.rulesInSystem = Array.isArray(g.prompts);
     if (!Array.isArray(g.prompts)) {
-        g.prompts = [{ id: 'basic', name: '기본', text: BASIC_PROMPT, fav: true }];
+        g.prompts = [{ id: 'basic', name: '상세', text: BASIC_PROMPT, fav: true }];
         const old = typeof g.prompt === 'string' ? g.prompt : '';
         if (old.trim() && old !== OLD_BASIC && old !== BASIC_PROMPT && !OLD_DEFAULTS.has(textHash(old))) {
             g.prompts.push({ id: newId(), name: '내 지시문', text: old, fav: true });
         }
-        g.activePrompt = g.prompts[g.prompts.length - 1].id;
+        // a new install starts on 기본 (the short one, added below); an old hand-written prompt stays picked
+        g.activePrompt = g.prompts.length > 1 ? g.prompts[g.prompts.length - 1].id : 'short';
         delete g.prompt;
     }
-    if (!g.prompts.some(p => p.id === 'basic')) g.prompts.unshift({ id: 'basic', name: '기본', text: BASIC_PROMPT, fav: true });
+    if (!g.prompts.some(p => p.id === 'basic')) g.prompts.unshift({ id: 'basic', name: '상세', text: BASIC_PROMPT, fav: true });
     const basic = g.prompts.find(p => p.id === 'basic');
     if (basic.text === PREV_BASIC || basic.text === OLD_BASIC || OLD_BASIC_HASHES.has(textHash(basic.text))) basic.text = BASIC_PROMPT;
-    // the short one sits right after it
-    if (!g.prompts.some(p => p.id === 'short')) g.prompts.splice(g.prompts.indexOf(basic) + 1, 0, { id: 'short', name: '짧은 기본', text: SHORT_PROMPT, fav: true });
+    if (!g.prompts.some(p => p.id === 'short')) g.prompts.splice(g.prompts.indexOf(basic), 0, { id: 'short', name: '기본', text: SHORT_PROMPT, fav: true });
     const short = g.prompts.find(p => p.id === 'short');
     if (OLD_SHORT_HASHES.has(textHash(short.text))) short.text = SHORT_PROMPT;
+    // 3.91.4: the short one became 기본 and the long one 상세. The ids stay (upgrades go by them); the list starts with 기본.
+    // Whichever one a setup has picked stays picked
+    short.name = '기본'; basic.name = '상세';
+    g.prompts = [short, basic, ...g.prompts.filter(p => p !== short && p !== basic)];
+    // 3.87.0: 기본 (정리본) became 기본 itself. An untouched copy goes; one the user edited stays as their own prompt
+    const tidy = g.prompts.find(p => p.id === 'tidy');
+    if (tidy) {
+        const untouched = OLD_TIDY_HASHES.has(textHash(tidy.text));
+        if (untouched) g.prompts = g.prompts.filter(p => p !== tidy);
+        else Object.assign(tidy, { id: newId(), name: '기본 (정리본) · 고친 것' });
+        if (g.activePrompt === 'tidy') g.activePrompt = untouched ? 'basic' : tidy.id;
+    }
     if (!g.prompts.some(p => p.id === g.activePrompt)) g.activePrompt = g.prompts[0].id;
     return g;
 }

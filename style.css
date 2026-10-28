@@ -3728,9 +3728,6 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 .na_ap2_checks .na_check:has(.na_ck_btns) { flex-wrap: wrap; }
 .na_ck_btns { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; padding-left: 32px; box-sizing: border-box; }
 /* 2단계 압축: step 1's list, folded, in the append window */
-.na_ap_events summary small { color: var(--na-dim); font-weight: 400; margin-left: 4px; }
-.na_ap_events_text { margin: 8px 0 0; padding: 10px 12px; max-height: none; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, var(--monoFontFamily, monospace); font-size: 11.5px; line-height: 1.6; background: var(--na-soft); border-radius: 12px; }
-.na_ap_rerun { margin-top: 8px; }
 /* 한 번에 압축 confirm: range on top, then what runs where, as label · value rows */
 .na_qc { --na-line: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 14%, transparent); --na-dim: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 62%, transparent); --na-card: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 5%, transparent); text-align: left; display: flex; flex-direction: column; gap: 10px; }
 .na_qc_head { display: flex; flex-direction: column; align-items: center; gap: 2px; }
@@ -3830,11 +3827,24 @@ dialog.popup:has(.na_st) .popup-controls { display: none !important; }
 .na_st_tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 9px; }
 .na_st_tag { font-size: 0.76em; font-weight: 500; padding: 3px 9px; border-radius: 999px; background: var(--st-w); color: var(--st-warn); box-shadow: inset 0 0 0 1px var(--st-warnline); }
 .na_st_tag.ok { color: var(--st-ok); box-shadow: inset 0 0 0 1px var(--st-oksoft); }
-.na_st_lks { margin-left: auto; display: flex; gap: 6px; }
+.na_st_lks { margin-left: auto; display: flex; flex-wrap: nowrap; gap: 5px; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.na_st_lks::-webkit-scrollbar { display: none; }
+/* the answer's small buttons: one line each, whatever the theme does to buttons (they wrapped into tall boxes) */
+.na_st_lks > button { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; min-height: 0 !important; height: auto !important; margin: 0 !important; padding: 4px 9px !important; line-height: 1.35 !important; white-space: nowrap !important; box-shadow: none; }
+.na_st_lks > .na_st_ib { display: inline-flex !important; align-items: center; padding: 4px 7px !important; }
+.na_st_edit { padding: 10px !important; }
+.na_st_edta { width: 100%; box-sizing: border-box; min-height: 160px; font-size: 0.92em; line-height: 1.55; border-radius: 12px; padding: 10px 12px; resize: vertical; }
+.na_st_edhint { color: var(--st-dim); font-size: 0.74em; }
+.na_st_pen, .na_st_edcancel, .na_st_edsave { border: 0; border-radius: 999px; background: var(--st-w); color: var(--st-dim) !important; font-size: 0.8em !important; font-weight: 700 !important; cursor: pointer; }
+.na_st_edsave { background: var(--st-acc); color: #fff !important; }
+.na_st_copy { border: 0; border-radius: 999px; background: var(--st-w); color: var(--st-dim) !important; font-size: 0.8em !important; font-weight: 700 !important; cursor: pointer; }
 .na_st_lk { display: inline-flex; align-items: center; gap: 5px; border: 0; border-radius: 999px; padding: 4px 10px; background: var(--st-w); color: var(--st-dim) !important; font-size: 0.8em !important; font-weight: 700 !important; cursor: pointer; }
 .na_st_lk.on { background: var(--st-ok); color: #fff !important; }
 .na_st_ko { border: 0; border-radius: 999px; padding: 4px 10px; background: var(--st-w); color: var(--st-dim) !important; font-size: 0.8em !important; font-weight: 700 !important; cursor: pointer; }
 .na_st_ko.on { color: var(--st-acc) !important; }
+.na_st_fix, .na_st_unfix { border: 0; border-radius: 999px; padding: 4px 10px; background: var(--st-w); color: var(--st-acc) !important; font-size: 0.8em !important; font-weight: 700 !important; cursor: pointer; }
+.na_st_unfix { color: var(--st-dim) !important; }
+.na_st_fix:disabled { opacity: 0.6; cursor: default; }
 body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_st_me { align-self: flex-end; max-width: 80%; margin-top: 6px; padding: 9px 15px; border-radius: 20px 20px 7px 20px; background: linear-gradient(135deg, var(--st-acc2), var(--st-acc)); color: #fff; white-space: pre-wrap; word-break: break-word; line-height: 1.45; }
 .na_st_tonote { align-self: flex-end; border: 0; background: none; padding: 0 4px; font-size: 0.75em !important; color: var(--st-dim) !important; cursor: pointer; margin-bottom: 4px; }
@@ -4056,3 +4066,19 @@ body.na_darkui #na_settings { --sv-page: #2F2621; --sv-card: #3A2F28; --sv-line:
 
 /* the 도구 tab's group boxes in the same card colour as the settings cards */
 #na_settings .na_tab_pane[data-pane="tools"] > .na_block { background: var(--hm-card); border: 1px solid var(--hm-line); border-radius: 18px; }
+
+/* 아카이브에 추가: sections come in finished, so the writing checks stay out of sight; the ones that keep the archive whole
+   (numbering, STATE, sections already there) still show */
+.na_ap2 .na_cites, .na_ap2 .na_bullets, .na_ap2 .na_names, .na_ap2 .na_cut { display: none !important; }
+
+/* ---- 3.96: 이어서 고치기, 고칠 섹션 칩 */
+#na_settings .na_apf_scope, .na_apf_scope { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 6px; }
+.na_apf_chips { display: flex; gap: 6px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+.na_apf_chips::-webkit-scrollbar { display: none; }
+.na_apf_chips:empty { display: none; }
+.na_apf_chips .na_pchip { flex: none; }
+
+/* ---- 3.96.3: 상태창 줄 */
+.na_trk_list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.na_trk_item { display: flex; gap: 10px; align-items: baseline; padding: 8px 10px; border-radius: 10px; background: var(--na-softer); }
+.na_trk_item b { flex: none; font-variant-numeric: tabular-nums; opacity: 0.75; }

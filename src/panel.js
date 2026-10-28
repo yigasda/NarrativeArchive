@@ -8,16 +8,16 @@ import { branchState, openBranches } from './branches.js';
 import { mountSectionBrowser } from './browser.js';
 import { openCalendar } from './calendar.js';
 import { carryOffer, currentChatId, importArchive, openChatPicker, pickFromBundle, rememberArchive, setCarryOffer } from './chats.js';
-import { POSITIONS, ROLES, SETTING_KEYS, SNAPSHOT_MAX, VERSION, commitText, ctx, getMeta, globalSettings, hasChat, pushSnapshot, saveGlobal, saveMeta } from './core.js';
+import { POSITIONS, POSITION_ORDER, ROLES, SETTING_KEYS, SNAPSHOT_MAX, VERSION, commitText, ctx, getMeta, globalSettings, hasChat, pushSnapshot, saveGlobal, saveMeta } from './core.js';
 import { openCompare, openDiff } from './diff.js';
 import { openDrift } from './drift.js';
 import { guessEndNumber, openExtract } from './extract.js';
 import { fadeCfg, fadeFilling, fadeForce, fadeMissing, fadePlan, fadeUse, fillFade, openFadePicker } from './fade.js';
 import { openHealth } from './health.js';
 import { applyHide, lastIndex, openUnhide, syncTrackedBoundary } from './hide.js';
-import { applyInjection, lastBuild, stateCfg } from './inject.js';
+import { applyInjection, lastBuild } from './inject.js';
 import { keepsOf, openKeeps } from './keeps.js';
-import { OFF_KINDS, lastRecall, offKinds, recallCfg, runRecall, setOffKind, setRecall } from './recall.js';
+import { OFF_KINDS, offKinds, setOffKind } from './recall.js';
 import { openKeywordTest } from './keywords.js';
 import { knowledgeRows, openKnowledge } from './knowledge.js';
 import { openPeople } from './people.js';
@@ -33,9 +33,9 @@ import { refreshStatus } from './status.js';
 import { ICO_A, setUiTheme, svgA, uiTheme } from './theme.js';
 import { AI_SYS_TRANSLATE, askTranslator, glossaryEntries, openGlossary } from './translate.js';
 import { chatLabel, confirm, copyText, countTokens, download, esc, escRe, fmt, nowStamp, timeLabel } from './util.js';
-import { NUDGE_CHOICES, CHUNK_CHOICES, COMPRESS_MODES, EVENTS_MODELS, chunkTok, compressMode, eventsModel, openAuSettings, openWizard, quickCompress } from './wizard.js';
+import { NUDGE_CHOICES, COMPRESS_MODES, compressMode, openAuSettings, openWizard, quickCompress } from './wizard.js';
 import { openStudio, studioLabel } from './studio.js';
-import { DEFAULT_TRACKER_RE, SCENE_MODELS, SCENE_SIZES, openStyleSamples, openWorkNote, styleLabel, sceneModel, sceneSize, stateModel, trackerRe } from './scenes.js';
+import { SCENE_SIZES, openStyleSamples, openWorkNote, recentTrackers, styleLabel, sceneSize } from './scenes.js';
 import { openWorlds, worldBooks, worldIsOn } from './world.js';
 import { openXray } from './xray.js';
 
@@ -206,29 +206,22 @@ export function renderPanel() {
                 </div>
                 <div class="na_v2_label"><span>설정 <span class="na_cp_for" id="na_cp_for"></span></span></div>
                 <div class="na_v2_card na_v2_list na_cp_set">
-                  <label class="na_cp_row" hidden><span class="na_cp_txt"><span>한 번에 압축 · 바로 넣기</span><small>검사가 다 통과하면 추가 창 없이 넣고 숨겨요 · 알림에서 되돌리기 · 걸리는 게 있으면 추가 창</small></span><input type="checkbox" class="na_toggle" id="na_quick_auto"></label>
-                  <label class="na_cp_row" data-m="quick"><span class="na_cp_txt"><span>압축 방식</span><small>2단계: 정리 모델이 메시지마다 한 줄로 정리(되짚기는 빼고) → 초안 모델이 그 목록으로 섹션을 써요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_cmode">${Object.entries(COMPRESS_MODES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <label class="na_cp_row na_cmode_ev" data-m="quick"><span class="na_cp_txt"><span>2단계 · 정리 모델</span><small>메시지 15개씩 여러 번 불러요 · 싼 모델 추천</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_evmodel">${Object.entries(EVENTS_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <label class="na_cp_row na_cmode_sc" data-m="quick studio"><span class="na_cp_txt"><span>장면 크기</span><small>장면마다 섹션 하나씩 따로 받아요 · 클수록 싸고, 작을수록 꼼꼼해요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_scsize">${Object.entries(SCENE_SIZES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <label class="na_cp_row na_cmode_sc" data-m="quick"><span class="na_cp_txt"><span>장면별 · 섹션 모델</span><small>장면 수만큼 불러요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_scmodel">${Object.entries(SCENE_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <label class="na_cp_row na_cmode_sc" data-m="quick"><span class="na_cp_txt"><span>장면별 · STATE 모델</span><small>마지막에 한 번 · 바뀌는 것만 받아요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_stmodel">${Object.entries(SCENE_MODELS).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <div class="na_cp_row na_cmode_sc na_trk_row" data-m="quick studio"><span class="na_cp_txt"><span>장면 · 트래커 정규식</span><small>날짜·장소·시간이 바뀌는 곳에서 끊어요 (그룹 이름 date · place · time) · 비우면 메시지 수로만</small><textarea class="text_pole na_trk_re" id="na_trkre" rows="2" spellcheck="false"></textarea><span class="na_trk_btns"><button type="button" class="na_linkbtn" id="na_trkre_reset">기본값</button><small id="na_trkre_info"></small></span></span></div>
+                  <label class="na_cp_row" hidden title="검사가 다 통과하면 추가 창 없이 넣고 숨겨요 · 알림에서 되돌리기 · 걸리는 게 있으면 추가 창"><span class="na_cp_txt"><span>한 번에 압축 · 바로 넣기</span><small>검사 통과하면 바로 넣기</small></span><input type="checkbox" class="na_toggle" id="na_quick_auto"></label>
+                  <label class="na_cp_row" data-m="quick"><span class="na_cp_txt"><span>압축 방식</span><small id="na_cmode_sub"></small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_cmode">${Object.entries(COMPRESS_MODES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <label class="na_cp_row na_cmode_sc" data-m="quick studio" title="장면마다 섹션 하나씩 따로 받아요"><span class="na_cp_txt"><span>장면 크기</span><small>클수록 싸고, 작을수록 꼼꼼해요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_scsize">${Object.entries(SCENE_SIZES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                   <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_stylesample"><span class="na_cp_txt"><span>문체 견본</span><small id="na_style_sub"></small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
-                  <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_worknote"><span class="na_cp_txt"><span>작업 노트</span><small id="na_worknote_sub">이 이야기의 인수인계 · canon · 살린 줄 · 이전 실수 · 장면마다 같이 보내요</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
-                  <label class="na_cp_row na_cmode_raw" data-m="quick"><span class="na_cp_txt"><span>원문 그대로 · 나눠 보내기</span><small>긴 원문을 몇 조각으로 보낼지 · 조각마다 앞 조각에 이어 써요</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_chunk">${Object.entries(CHUNK_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
-                  <label class="na_cp_row"><span class="na_cp_txt"><span>쌓이면 알려 주기</span><small>압축할 메시지가 이만큼 쌓이면 알림 · 누르면 압축</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_nudge">${Object.entries(NUDGE_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_worknote"><span class="na_cp_txt"><span>작업 노트</span><small id="na_worknote_sub">장면마다 같이 보내요</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
+                  <label class="na_cp_row" data-m="quick" title="지시문의 규칙은 시스템 메시지에, 원문 · 메모 · 마지막 점검은 요청에"><span class="na_cp_txt"><span>규칙은 시스템 메시지로</span><small>중계 서버가 버리면 끄세요</small></span><input type="checkbox" class="na_toggle" id="na_rules_sys"></label>
+                  <label class="na_cp_row" title="압축할 메시지가 이만큼 쌓이면 알림 · 누르면 압축"><span class="na_cp_txt"><span>쌓이면 알려 주기</span><small>이만큼 쌓이면 알림</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_nudge">${Object.entries(NUDGE_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
                 </div>
                 <div class="na_v2_card na_v2_list na_cp_set">
                   <details class="na_cp_fold na_cp_more_fold" id="na_cp_more">
-                    <summary class="na_cp_row"><span class="na_cp_txt"><span>원문 손질 · 지시문 · 경계선</span><small id="na_cp_more_sub">태그 지우기 · 압축 지시문 · 아카이브 따라가기</small></span><span class="na_cp_more">더 보기</span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
+                    <summary class="na_cp_row"><span class="na_cp_txt"><span>원문 손질 · 지시문 · 경계선</span><small id="na_cp_more_sub">태그 · OOC 빼기 · 압축 지시문 · 아카이브 따라가기</small></span><span class="na_cp_more">더 보기</span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
                   <label class="na_cp_row"><span class="na_cp_txt"><span>숨긴 메시지 빼고 뽑기</span></span><input type="checkbox" class="na_toggle" id="na_opt_hidden"></label>
-                  <div class="na_strip_box">
-                    <label class="na_cp_row"><span class="na_cp_txt"><span>태그 지우기</span><small id="na_strip_sub">&lt;think&gt; 통째로 · 나머지 태그는 글자만</small></span><input type="checkbox" class="na_toggle" id="na_opt_tags"></label>
-                    <div class="na_cp_sub">
-                      <textarea class="text_pole na_strip_ta" id="na_strip_custom" rows="2" spellcheck="false" placeholder="통째로 지울 태그나 /정규식/, 한 줄에 하나&#10;scene_plan"></textarea>
-                      <small class="na_strip_info" id="na_strip_info"></small>
-                    </div>
-                  </div>
+                  <label class="na_cp_row" title="think · thinking · thought · reasoning · scene_plan · style · script와 주석은 통째로 빼고, 나머지 HTML 태그는 지우고 글자만 남겨요 · 끄면 메시지를 그대로 보내요"><span class="na_cp_txt"><span>태그 지우기</span><small>생각 · 계획 블록은 통째로 · 나머지는 글자만</small></span><input type="checkbox" class="na_toggle" id="na_opt_tags"></label>
+                  <button type="button" class="na_cp_row na_trk_row" id="na_trk_row" title="원문의 상태창에서 날짜 · 장소를 섹션 제목에 쓰고, AI가 장면을 못 나누면 상태창이 바뀌는 곳에서 잘라요 · 누르면 최근에 찾은 상태창"><span class="na_cp_txt"><span>상태창</span><small id="na_trk_sub"></small></span><span class="na_cp_more">자동</span></button>
+                  <div class="na_cp_row na_off_row" id="na_off_fold" title="켠 것은 압축 · 원문 뽑기 · 이탈 감지 · 말투 지문에서 빠져요"><span class="na_cp_txt"><span>OOC 빼기</span><small id="na_off_sub"></small></span>
+                    <span class="na_off_chips">${Object.entries(OFF_KINDS).map(([k, [name, sub, chip]]) => `<button type="button" class="na_off_chip" data-k="${k}" title="${name} · ${sub}" aria-pressed="false">${chip}</button>`).join('')}</span></div>
                   <details class="na_cp_fold" id="na_cmp_settings">
                     <summary class="na_cp_row"><span class="na_cp_txt"><span>압축 지시문</span><small id="na_plib_sum">이 기기의 실리태번 설정에만 저장돼요</small></span><span class="na_cp_more">편집</span><span class="na_cp_chev">${svgA(ICO_A.right, 16, 2.2)}</span></summary>
                     <div class="na_cp_sub"><div class="na_plib" id="na_plib"></div></div>
@@ -260,7 +253,7 @@ export function renderPanel() {
                 <div class="na_kw_label">백업 · 가져오기 <span class="na_dim" id="na_backup_info"></span></div>
                 <div class="na_tiles na_tiles3">
                   <button type="button" class="na_tile" id="na_export_json"><i class="fa-solid fa-box-archive"></i><span>.json 백업</span><small>설정·복구 지점까지</small></button>
-                  <button type="button" class="na_tile" id="na_export"><i class="fa-solid fa-file-lines"></i><span>.txt 내보내기</span><small>본문만</small></button>
+                  <button type="button" class="na_tile" id="na_export"><i class="fa-solid fa-file-lines"></i><span>.txt 내보내기</span><small>현재 아카이브</small></button>
                   <button type="button" class="na_tile" id="na_import_menu"><i class="fa-solid fa-file-import"></i><span>가져오기</span><small>파일 · 다른 채팅</small></button>
                 </div>
                 <div class="na_import_opts" id="na_import_opts" hidden>
@@ -290,7 +283,7 @@ export function renderPanel() {
             <!-- 설정 (⚙) -->
             <section class="na_tab_pane" data-pane="config" hidden>
               <div class="na_cfg_head"><button type="button" class="na_cfg_back" id="na_cfg_back" title="돌아가기" aria-label="돌아가기">${svgA(ICO_A.left, 18, 2.2)}</button><b id="na_cfg_title">설정</b><button type="button" class="na_cfg_pill" id="na_cfg_preview">주입 미리보기</button></div>
-              <div class="na_search_wrap na_cfg_search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" class="text_pole na_search" id="na_cfg_q" placeholder="설정 찾기 · 예: 회상, 깊이, 로어북" aria-label="설정 찾기"></div>
+              <div class="na_search_wrap na_cfg_search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" class="text_pole na_search" id="na_cfg_q" placeholder="설정 찾기 · 예: 깊이, 로어북, OOC" aria-label="설정 찾기"></div>
               <div class="na_empty" id="na_cfg_none" hidden>맞는 설정이 없어요.</div>
               <div class="na_cfg_index" id="na_cfg_index">${CFG_GROUPS.map(([k, name, ico]) => `<button type="button" class="na_cfg_card" data-g="${k}"><span class="na_cfg_ico">${svgA(ico, 18)}</span><b>${name}</b><small id="na_cfg_sum_${k}"></small></button>`).join('')}</div>
               <div class="na_cfg_tiles" id="na_cfg_tiles" hidden></div>
@@ -299,11 +292,9 @@ export function renderPanel() {
                 <div class="na_cfg_label"><i class="fa-solid fa-syringe"></i> 넣는 자리</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
-                  <label class="na_set_row" title="아래 위치 · 깊이 · 역할, STATE 가까이 넣기, 회상 깊이를 한 번에 맞춰요 · 고른 뒤에도 칸마다 직접 바꿀 수 있어요 · 이 채팅에만"><span><span>자리 묶음</span><small id="na_place_sub">위치 · 역할을 한 번에</small></span>
-                    <span class="na_cfg_val"><select id="na_place_preset" class="text_pole">${Object.entries(PLACE_PRESETS).map(([k, p]) => `<option value="${k}">${p.name}</option>`).join('')}<option value="custom" disabled>직접 정함</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row"><span>아카이브 주입</span><input type="checkbox" id="na_enabled" class="na_toggle"></label>
                   <label class="na_set_row"><span>위치</span>
-                    <span class="na_cfg_val"><select id="na_position" class="text_pole">${Object.entries(POSITIONS).map(([v, l]) => `<option value="${v}">${l.replace(/\s*\(깊이\)$/, '')}</option>`).join('')}</select><span class="na_cfg_depth" id="na_depth_field">&nbsp;· 깊이&nbsp;<input type="number" id="na_depth" class="text_pole" min="0" max="999" title="채팅 끝에서 몇 번째 메시지 위에 넣을지"></span>${svgA(ICO_A.right, 15, 2.2)}</span>
+                    <span class="na_cfg_val"><select id="na_position" class="text_pole">${POSITION_ORDER.map(v => `<option value="${v}">${POSITIONS[v].replace(/\s*\(깊이\)$/, '')}</option>`).join('')}</select><span class="na_cfg_depth" id="na_depth_field">&nbsp;· 깊이&nbsp;<input type="number" id="na_depth" class="text_pole" min="0" max="999" title="채팅 끝에서 몇 번째 메시지 위에 넣을지"></span>${svgA(ICO_A.right, 15, 2.2)}</span>
                   </label>
                   <label class="na_set_row"><span>역할</span>
                     <span class="na_cfg_val"><select id="na_role" class="text_pole">${Object.entries(ROLES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span>
@@ -311,8 +302,8 @@ export function renderPanel() {
                 </div>
                 </div>
               </div>
-              <div class="na_cfg_grp na_cfg_keeplab" data-g="inject" title="섹션 카드의 스위치 · 고정 · 키워드로 섹션마다 정하고, 여기선 한꺼번에 관리해요.">
-                <div class="na_cfg_label"><i class="fa-solid fa-scale-balanced"></i> 분량 · 라우터</div>
+              <div class="na_cfg_grp na_cfg_keeplab" data-g="inject">
+                <div class="na_cfg_label"><i class="fa-solid fa-scale-balanced"></i> 분량</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
                   <label class="na_set_row"><span><span>토큰 상한</span><small>넘으면 알려 줘요</small></span><span class="na_cfg_val"><input type="number" id="na_cap" class="text_pole" min="0" step="1000" placeholder="없음" title="0이나 빈칸이면 상한 없음"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
@@ -327,6 +318,13 @@ export function renderPanel() {
                     <div class="na_fd_fill"><span id="na_fade_info">-</span><button type="button" class="na_v2_btn primary" id="na_fade_fill"><i class="fa-solid fa-feather-pointed"></i> 초안 모델로 채우기</button></div>
                   </div>
                   <button type="button" class="na_set_row na_cfg_go" id="na_fade_pick"><span><span>섹션별 버전 고르기</span><small id="na_fade_pick_sub">여러 섹션을 골라 원문 · 짧게 · 한 줄로</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
+                </div>
+                </div>
+              </div>
+              <div class="na_cfg_grp na_cfg_keeplab" data-g="call" title="섹션 카드의 스위치 · 고정 · 키워드로 섹션마다 정하고, 여기선 한꺼번에 관리해요.">
+                <div class="na_cfg_label"><i class="fa-solid fa-magnifying-glass"></i> 호출</div>
+                <div class="na_cfg_box">
+                <div class="na_set_list">
                   <label class="na_set_row" title="답하기 직전에 작은 모델이 지금 대화에 필요한 섹션을 골라 넣어요 · 따로 연결한 모델이 필요해요"><span><span>AI 라우터</span><small>답하기 직전에 필요한 섹션을 골라요</small></span>
                     <span class="na_cfg_val"><select id="na_router_mode" class="text_pole"><option value="off">끄기</option><option value="linked">키워드에 더해 AI도</option><option value="old">오래된 섹션 전부</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <div class="na_router_opts" id="na_router_opts" hidden>
@@ -335,6 +333,15 @@ export function renderPanel() {
                     <label class="na_set_row" id="na_router_keep_row"><span><span>최근 섹션은 항상</span><small>마지막 몇 개는 AI가 안 고르고 늘 넣어요</small></span><span class="na_cfg_val"><input type="number" id="na_router_keep" class="text_pole" min="0" max="20"><span class="na_cfg_unit">개</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                     <button type="button" class="na_set_row na_cfg_go" id="na_router_test"><span><span>지금 해 보기</span><small id="na_router_info">최근 대화로 한 번 골라 봐요</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   </div>
+                  <label class="na_set_row" title="&quot;그날 밤&quot;처럼 지난 일을 돌려 말하면, AI 기능 모델이 그때 장면을 짐작해 적고 그 말로 섹션 본문까지 찾아요 · 제목에 없는 장면도 찾게 · 답할 때마다 짧게 한 번 더 불러요"><span><span>지난 장면 짐작하기</span><small id="na_guess_sub">돌려 말한 지난 일도 찾게</small></span>
+                    <span class="na_cfg_val"><select id="na_guess" class="text_pole">${Object.entries(GUESS_MODES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" title="섹션을 뜻으로도 찾아요 · 라우터가 단어가 안 겹쳐도 비슷한 뜻이면 찾고, 한국어 채팅으로 영어 아카이브도 찾아요 · 실리태번 서버의 벡터 저장소를 써요"><span><span>임베딩</span><small>라우터가 비슷한 뜻도 찾게</small></span>
+                    <span class="na_cfg_val"><select id="na_emb_src" class="text_pole">${Object.entries(EMBED_SOURCES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" id="na_emb_pick_row" hidden><span><span>임베딩 모델</span><small id="na_emb_pick_sub"></small></span><span class="na_cfg_val"><select id="na_emb_pick" class="text_pole"></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" id="na_emb_model_row" hidden><span><span>모델 이름</span><small>직접 입력</small></span><span class="na_cfg_val"><input type="text" id="na_emb_model" class="text_pole" spellcheck="false">${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" id="na_emb_region_row" hidden title="Vertex 임베딩 모델은 지역마다 다르게 있어요 · global에서 500이 나면 us-central1"><span><span>임베딩 지역</span><small id="na_emb_region_sub">비우면 실리태번 Vertex 설정 지역</small></span><span class="na_cfg_val"><input type="text" id="na_emb_region" class="text_pole" spellcheck="false" placeholder="us-central1">${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <label class="na_set_row" id="na_emb_url_row" hidden><span><span>Ollama 주소</span></span><span class="na_cfg_val"><input type="text" id="na_emb_url" class="text_pole" spellcheck="false" placeholder="http://127.0.0.1:11434">${svgA(ICO_A.right, 15, 2.2)}</span></label>
+                  <button type="button" class="na_set_row na_cfg_go" id="na_emb_build" hidden><span><span>임베딩 색인 만들기</span><small id="na_emb_sub">처음 한 번 · 이 채팅의 섹션</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   <label class="na_set_row"><span><span>키워드 연동</span><small>최근 메시지에서 찾을 범위 · 연동 <span id="na_linked_n">0</span>개</small></span><span class="na_cfg_val"><span>최근&nbsp;</span><input type="number" id="na_link_depth" class="text_pole" min="1" max="50"><span>개</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <button type="button" class="na_set_row na_cfg_go" id="na_kw_test"><span><span>키워드 테스트</span><small>문장을 넣어 어떤 섹션이 불려 오는지</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   <details class="na_cfg_fold" id="na_pm_fold">
@@ -345,26 +352,7 @@ export function renderPanel() {
                 </div>
                 </div>
               </div>
-              <div class="na_cfg_grp" data-g="recall">
-                <div class="na_cfg_label"><i class="fa-solid fa-clock-rotate-left"></i> 회상 · STATE · OOC</div>
-                <div class="na_cfg_box">
-                <div class="na_set_list">
-                  <label class="na_set_row" title="답하기 직전에 숨긴 원문과 지금 안 들어가는 섹션에서 최근 대화와 맞는 줄을 찾아 넣어요 · AI를 안 써서 비용이 없어요 · 이 채팅에만"><span><span>회상</span><small id="na_recall_sub">숨긴 원문에서 지금 대화와 맞는 줄을 찾아 넣어요</small></span><input type="checkbox" id="na_recall" class="na_toggle"></label>
-                  <div id="na_recall_opts" hidden>
-                    <label class="na_set_row"><span><span>한 번에 최대</span><small>넣을 줄 수</small></span><span class="na_cfg_val"><input type="number" id="na_recall_k" class="text_pole" min="1" max="12"><span class="na_cfg_unit">줄</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                    <label class="na_set_row"><span><span>토큰 한도</span><small>불러온 줄 전체</small></span><span class="na_cfg_val"><input type="number" id="na_recall_budget" class="text_pole" min="100" max="4000" step="100"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                    <label class="na_set_row"><span><span>넣는 깊이</span><small>채팅 끝에서 몇 번째 메시지 위</small></span><span class="na_cfg_val"><input type="number" id="na_recall_depth" class="text_pole" min="0" max="20">${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                    <label class="na_set_row"><span><span>볼 메시지</span><small>최근 몇 개로 찾을지</small></span><span class="na_cfg_val"><input type="number" id="na_recall_scan" class="text_pole" min="1" max="10"><span class="na_cfg_unit">개</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                    <label class="na_set_row" title="망각 곡선으로 줄었거나 키워드를 기다리는 섹션의 줄도 찾아요"><span><span>섹션에서도 찾기</span><small>지금 통째로 안 들어가는 섹션</small></span><input type="checkbox" id="na_recall_secs" class="na_toggle"></label>
-                    <button type="button" class="na_set_row na_cfg_go" id="na_recall_test"><span><span>지금 해 보기</span><small>최근 대화로 무엇이 불려 오는지</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
-                  </div>
-                  <label class="na_set_row" title="STATE 블록을 아카이브 블록에서 빼서 최근 대화 가까이에 따로 넣어요 · 토큰은 그대로 · 이 채팅에만"><span><span>STATE 가까이 넣기</span><small>STATE를 최근 대화 가까이 따로</small></span><span class="na_cfg_val"><span class="na_cfg_depth" id="na_state_depth_field">깊이&nbsp;<input type="number" id="na_state_depth" class="text_pole" min="0" max="20"></span><input type="checkbox" id="na_state_on" class="na_toggle"></span></label>
-                  <div class="na_set_row na_off_row" id="na_off_fold" title="켠 것은 압축 · 원문 뽑기 · 이탈 감지 · 회상 · 말투 지문에서 빠져요"><span><span>OOC 빼기</span><small id="na_off_sub"></small></span>
-                    <span class="na_off_chips">${Object.entries(OFF_KINDS).map(([k, [name, sub, chip]]) => `<button type="button" class="na_off_chip" data-k="${k}" title="${name} · ${sub}" aria-pressed="false">${chip}</button>`).join('')}</span></div>
-                </div>
-                </div>
-              </div>
-              <div class="na_cfg_grp" data-g="aimodel" title="질문 · 키워드 제안 · 점검 · 라우터에 쓰는 모델이에요. AI는 답하고 검사만 하고, 아카이브는 직접 고쳐요.">
+              <div class="na_cfg_grp" data-g="aimodel" title="질문 · 키워드 제안 · 점검 · 라우터에 쓰는 모델이에요. 임베딩은 호출에 있어요. AI는 답하고 검사만 하고, 아카이브는 직접 고쳐요.">
                 <div class="na_cfg_label"><i class="fa-solid fa-robot"></i> AI 모델</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
@@ -396,19 +384,12 @@ export function renderPanel() {
                   <label class="na_set_row"><span><span>초안 최대 길이</span><small>초안이 끊기면 늘려 주세요</small></span><span class="na_cfg_val"><input type="number" id="na_dr_max" class="text_pole" min="1024" step="1024"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                 </div>
                 <div class="na_set_list">
-                  <label class="na_set_row" title="섹션과 숨긴 원문을 뜻으로도 찾아요 · 라우터 · 회상이 단어가 안 겹쳐도 비슷한 뜻이면 찾고, 한국어 채팅으로 영어 아카이브도 찾아요 · 실리태번 서버의 벡터 저장소를 써요"><span><span>뜻으로 찾기 (임베딩)</span><small>라우터 · 회상이 비슷한 뜻도 찾게</small></span>
-                    <span class="na_cfg_val"><select id="na_emb_src" class="text_pole">${Object.entries(EMBED_SOURCES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" id="na_emb_pick_row" hidden><span><span>임베딩 모델</span><small id="na_emb_pick_sub"></small></span><span class="na_cfg_val"><select id="na_emb_pick" class="text_pole"></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" id="na_emb_model_row" hidden><span><span>모델 이름</span><small>직접 입력</small></span><span class="na_cfg_val"><input type="text" id="na_emb_model" class="text_pole" spellcheck="false">${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" id="na_emb_region_row" hidden title="Vertex 임베딩 모델은 지역마다 다르게 있어요 · global에서 500이 나면 us-central1"><span><span>임베딩 지역</span><small id="na_emb_region_sub">비우면 실리태번 Vertex 설정 지역</small></span><span class="na_cfg_val"><input type="text" id="na_emb_region" class="text_pole" spellcheck="false" placeholder="us-central1">${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" id="na_emb_url_row" hidden><span><span>Ollama 주소</span></span><span class="na_cfg_val"><input type="text" id="na_emb_url" class="text_pole" spellcheck="false" placeholder="http://127.0.0.1:11434">${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <button type="button" class="na_set_row na_cfg_go" id="na_emb_build" hidden><span><span>뜻 색인 만들기</span><small id="na_emb_sub">처음 한 번 · 이 채팅의 섹션과 숨긴 원문</small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
                   <label class="na_set_row" title="답이 잘리면 늘려 주세요"><span>답 최대 길이</span><span class="na_cfg_val"><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                 </div>
                 <small class="na_dim na_conn_note" id="na_conn_note" hidden>키는 이 기기의 실리태번 설정에만 저장돼요. Vertex는 실리태번에 저장한 서비스 계정 JSON을 써요. 아카이브 백업에는 안 들어가요.</small>
                 </div>
               </div>
-              <div class="na_cfg_grp" data-g="aitask" title="AI 기능 모델이 하는 일 · 막혔을 때 · 로어북 · 이탈 감지">
+              <div class="na_cfg_grp" data-g="aitask" title="AI 기능 모델이 하는 일 · 막혔을 때 · 로어북 · 이탈 감지 · 용어집">
                 <div class="na_cfg_label"><i class="fa-solid fa-wand-magic-sparkles"></i> AI가 하는 일</div>
                 <div class="na_cfg_box">
                 <div class="na_set_list">
@@ -416,8 +397,6 @@ export function renderPanel() {
                     <span class="na_cfg_val"><select id="na_fallback" class="text_pole"><option value="">다시 안 보냄</option><option value="ai">AI 기능 모델로</option><option value="dr">초안 모델로</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="이 채팅이 쓰는 로어북에서 키워드가 맞는 항목을 압축 · 이탈 감지 · 질문 · 말투 지문에 같이 보내요 · 그만큼 보낼 양이 늘어요"><span><span>로어북 곁들이기</span><small id="na_lore_sub">이름 · 장소 · 설정이 로어북과 맞게</small></span><input type="checkbox" id="na_lore" class="na_toggle"></label>
                   <label class="na_set_row" id="na_lore_budget_row"><span><span>로어북 한도</span><small>한 번에 보낼 항목 양</small></span><span class="na_cfg_val"><input type="number" id="na_lore_budget" class="text_pole" min="300" max="12000" step="500"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
-                  <label class="na_set_row" title="&quot;그날 밤&quot;처럼 지난 일을 돌려 말하면, AI 기능 모델이 그때 장면을 짐작해 적고 그 말로 섹션 본문 · 숨긴 원문까지 찾아요 · 제목에 없는 장면도 찾게 · 답할 때마다 짧게 한 번 더 불러요"><span><span>지난 장면 짐작하기</span><small id="na_guess_sub">돌려 말한 지난 일도 찾게</small></span>
-                    <span class="na_cfg_val"><select id="na_guess" class="text_pole">${Object.entries(GUESS_MODES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="AI 답이 이만큼 쌓일 때마다 조용히 검사하고, 어긋나면 알려 줘요 · 그때마다 토큰이 들어가요"><span><span>이탈 자동 감지</span><small>AI 답이 쌓이면 조용히 검사</small></span>
                     <span class="na_cfg_val"><select id="na_drift_auto" class="text_pole"><option value="0">끄기</option><option value="5">답 5개마다</option><option value="10">답 10개마다</option><option value="20">답 20개마다</option></select>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                   <label class="na_set_row" title="근거 글을 아카이브에서 못 찾은 경고만 AI 기능 모델에 한 번 더 물어봐요 · 그럴 때만 비용이 들어요"><span><span>못 찾은 근거 다시 묻기</span><small>이탈 감지 · 헛경고와 놓친 경고 줄이기</small></span><input type="checkbox" id="na_drift_recheck" class="na_toggle"></label>
@@ -574,7 +553,7 @@ export async function markBackup(how) {
 // ⚙ 설정: a card per group up top; tapping one shows that group alone
 const CFG_GROUPS = [
     ['inject', '주입', 'M12 3v12M7 10l5 5 5-5M5 21h14'],
-    ['recall', '회상 · STATE · OOC', 'M3 12a9 9 0 1 0 3-6.7M3 4v5h5M12 7v5l3 2'],
+    ['call', '호출', '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>'],
     ['aimodel', 'AI 모델', '<rect x="4" y="6" width="16" height="12" rx="3"/><path d="M9 11h.01M15 11h.01M9 15h6"/>'],
     ['aitask', 'AI가 하는 일', 'M12 3l2.5 5 5.5.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.5-.8z'],
     ['theme', '테마', '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/>'],
@@ -586,10 +565,10 @@ const cfgTab = {}; // group → open tab
 // inside a group: tiles show where things stand, tabs split the rows. Each marker starts a tab; the rows after it
 // (in page order) belong to that tab until the next marker
 const CFG_TABS = {
-    inject: { tabs: [['place', '넣는 자리'], ['size', '분량'], ['pick', '고르기']], marks: [['#na_place_preset', 'place'], ['#na_cap', 'size'], ['#na_router_mode', 'pick']] },
-    recall: { tabs: [['recall', '회상'], ['state', 'STATE'], ['ooc', 'OOC']], marks: [['#na_recall', 'recall'], ['#na_state_on', 'state'], ['#na_off_fold', 'ooc']] },
-    aimodel: { tabs: [['ai', 'AI 기능'], ['dr', '초안'], ['emb', '뜻 찾기']], marks: [['#na_ai_profile', 'ai'], ['#na_dr_mode', 'dr'], ['#na_emb_src', 'emb'], ['#na_ai_max', 'ai'], ['#na_conn_note', 'all']] },
-    aitask: { tabs: [['find', '찾기'], ['check', '점검'], ['etc', '기타']], marks: [['#na_fallback', 'etc'], ['#na_lore', 'find'], ['#na_drift_auto', 'check'], ['#na_gloss_edit', 'etc']] },
+    inject: { tabs: [['place', '넣는 자리'], ['size', '분량']], marks: [['#na_enabled', 'place'], ['#na_cap', 'size']] },
+    call: { tabs: [['router', 'AI 라우터'], ['emb', '임베딩'], ['kw', '키워드 · 고정']], marks: [['#na_router_mode', 'router'], ['#na_emb_src', 'emb'], ['#na_link_depth', 'kw']] },
+    aimodel: { tabs: [['ai', 'AI 기능'], ['dr', '초안']], marks: [['#na_ai_profile', 'ai'], ['#na_dr_mode', 'dr'], ['#na_ai_max', 'ai'], ['#na_conn_note', 'all']] },
+    aitask: { tabs: [['lore', '로어북'], ['check', '점검'], ['etc', '기타']], marks: [['#na_fallback', 'etc'], ['#na_lore', 'lore'], ['#na_drift_auto', 'check'], ['#na_gloss_edit', 'etc']] },
 };
 const onOff = v => (v ? '켬' : '끔');
 const split2 = t => { const [a, ...b] = String(t || '').split(' · '); return [a, b.join(' · ')]; };
@@ -599,40 +578,40 @@ function cfgTiles(g) {
     const val = id => $(`#${id}`).val();
     if (g === 'inject') {
         const inChat = !$('#na_depth_field').prop('hidden');
-        const preset = $('#na_place_preset').val() === 'custom' ? '직접 정함' : optText('na_place_preset');
-        const rm = val('na_router_mode');
+        const follows = val('na_position') === '3';
         return [
-            ['넣는 곳', on('na_enabled') ? `${optText('na_position').replace(/\s*\(.*$/, '')}${inChat ? ` · ${val('na_depth')}` : ''}` : '주입 끔', preset, on('na_enabled'), 'place'],
-            ['말하는 역할', optText('na_role'), preset, true, 'place'],
+            ['넣는 곳', on('na_enabled') ? `${optText('na_position').replace(/\s*\(.*$/, '')}${inChat ? ` · ${val('na_depth')}` : ''}` : '주입 끔', follows ? '숨긴 메시지 바로 뒤' : '', on('na_enabled'), 'place'],
+            ['말하는 역할', optText('na_role'), '', true, 'place'],
             ['망각 곡선', onOff(on('na_fade')), on('na_fade') ? `원문 ${val('na_fade_full')} · 짧게 ${val('na_fade_short')}` : '원문 그대로', on('na_fade'), 'size'],
-            ['AI 라우터', rm === 'off' ? '끔' : rm === 'old' ? 'AI가 전부' : '키워드 + AI', rm === 'off' ? '키워드만' : `한 번에 ${val('na_router_max')}개`, rm !== 'off', 'pick'],
+            ['토큰 상한', Number(val('na_cap')) > 0 ? `${Number(val('na_cap')).toLocaleString()}` : '없음', Number(val('na_cap')) > 0 ? '넘으면 알려 줘요' : '', Number(val('na_cap')) > 0, 'size'],
         ];
     }
-    if (g === 'recall') {
-        const offs = $('#na_off_fold .na_off_chip[aria-pressed="true"]').map((i, x) => x.textContent.trim()).get();
+    if (g === 'call') {
+        const rm = val('na_router_mode');
+        const e = embedCfg(), st = embedState();
         return [
-            ['회상', onOff(on('na_recall')), on('na_recall') ? `최대 ${val('na_recall_k')}줄 · 깊이 ${val('na_recall_depth')}` : '숨긴 원문에서 찾기', on('na_recall'), 'recall'],
-            ['STATE 가까이', on('na_state_on') ? `깊이 ${val('na_state_depth')}` : '끔', on('na_state_on') ? '최근 대화 가까이' : '아카이브 안에', on('na_state_on'), 'state'],
-            ['OOC 빼기', `${offs.length}가지`, offs.join(' · ') || '다 넣어요', offs.length > 0, 'ooc'],
+            ['AI 라우터', rm === 'off' ? '끔' : rm === 'old' ? 'AI가 전부' : '키워드 + AI', rm === 'off' ? '키워드만' : `한 번에 ${val('na_router_max')}개`, rm !== 'off', 'router'],
+            ['장면 짐작', guessMode() === 'off' ? '끔' : '켬', '돌려 말한 지난 일', guessMode() !== 'off', 'router'],
+            ['임베딩', e.source ? ({ st: '실리태번', vertexai: 'Vertex', palm: 'AI Studio', transformers: '로컬' }[e.source] || split2(embedLabel())[0]) : '끔', e.source ? (st?.synced ? `섹션 ${st.secs}` : '색인 아직') : '단어로만 찾아요', !!e.source, 'emb'],
+            ['키워드 연동', `${$('#na_linked_n').text() || 0}개`, `고정 ${$('#na_pinned_n').text() || 0} · 꺼짐 ${$('#na_muted_n').text() || 0}`, Number($('#na_linked_n').text()) > 0, 'kw'],
         ];
     }
     if (g === 'aimodel') {
         const [a1, a2] = split2(aiLabel());
-        const e = embedCfg(), st = embedState();
         const tr = trSettings().mode;
         return [
             ['AI 기능 모델', a1, a2 || '질문 · 점검 · 라우터', true, 'ai'],
             ['초안 모델', draftReady() ? (draftSettings().mode === 'vertex' ? 'Vertex' : '커스텀') : '없음', draftReady() ? drLabel() : '압축 초안 · 짧은 버전', draftReady(), 'dr'],
             ['번역 모델', tr === 'same' ? '같이' : split2(trLabel())[0], tr === 'same' ? 'AI 기능 모델' : split2(trLabel())[1], tr !== 'same', 'ai'],
-            ['뜻으로 찾기', e.source ? ({ st: '실리태번', vertexai: 'Vertex', palm: 'AI Studio', transformers: '로컬' }[e.source] || split2(embedLabel())[0]) : '끔', e.source ? (st?.synced ? `섹션 ${st.secs} · 원문 ${st.raws}` : '색인 아직') : '단어로만 찾아요', !!e.source, 'emb'],
+            ['답 최대 길이', `${Number(val('na_ai_max') || 0).toLocaleString()}`, '토큰 · 잘리면 늘려요', true, 'ai'],
         ];
     }
     if (g === 'aitask') {
         return [
             ['막혔을 때', val('na_fallback') ? optText('na_fallback') : '안 함', '거절 · 차단이면 다른 모델로', !!val('na_fallback'), 'etc'],
-            ['로어북', onOff(on('na_lore')), on('na_lore') ? `${val('na_lore_budget')} 토큰까지` : '같이 안 보내요', on('na_lore'), 'find'],
-            ['장면 짐작', GUESS_MODES[guessMode()] === '끄기' ? '끔' : GUESS_MODES[guessMode()], '돌려 말한 지난 일', guessMode() !== 'off', 'find'],
+            ['로어북', onOff(on('na_lore')), on('na_lore') ? `${val('na_lore_budget')} 토큰까지` : '같이 안 보내요', on('na_lore'), 'lore'],
             ['이탈 감지', val('na_drift_auto') === '0' ? '끔' : optText('na_drift_auto'), on('na_drift_recheck') ? '못 찾은 근거 다시 묻기' : '근거 확인만', val('na_drift_auto') !== '0', 'check'],
+            ['번역 용어집', `${$('#na_gloss_n').text() || 0}개`, '이름 · 장소 한국어 표기', Number($('#na_gloss_n').text()) > 0, 'etc'],
         ];
     }
     return [];
@@ -682,10 +661,10 @@ function cfgSummaries() {
     const on = id => $(`#${id}`).prop('checked');
     const pos = optText('na_position'), inChat = !$('#na_depth_field').prop('hidden');
     const sum = {
-        inject: [on('na_enabled') ? optText('na_place_preset') || '직접 정함' : '주입 끔', inChat ? `깊이 ${$('#na_depth').val()}` : pos, `망각 곡선 ${on('na_fade') ? '켬' : '끔'}`],
-        recall: [`회상 ${on('na_recall') ? '켬' : '끔'}`, on('na_state_on') ? `STATE 깊이 ${$('#na_state_depth').val()}` : 'STATE 같이', `OOC ${$('#na_off_fold .na_off_chip[aria-pressed="true"]').length}가지`],
-        aimodel: [clip(aiLabel() || '-', 18), `초안 ${draftReady() ? clip(drLabel(), 16) : '없음'}`, embedCfg().source ? '뜻 찾기' : ''],
-        aitask: [`막혔을 때 ${optText('na_fallback')}`, `로어북 ${on('na_lore') ? '켬' : '끔'}`, `이탈 감지 ${optText('na_drift_auto')}`, guessMode() !== 'off' ? '짐작' : ''],
+        inject: [on('na_enabled') ? pos.replace(/\s*\(.*$/, '') : '주입 끔', inChat ? `깊이 ${$('#na_depth').val()}` : '', `망각 곡선 ${on('na_fade') ? '켬' : '끔'}`],
+        call: [$('#na_router_mode').val() === 'off' ? '라우터 끔' : '라우터 켬', `키워드 ${$('#na_linked_n').text() || 0}개`, guessMode() !== 'off' ? '짐작' : '', embedCfg().source ? '임베딩' : ''],
+        aimodel: [clip(aiLabel() || '-', 18), `초안 ${draftReady() ? clip(drLabel(), 16) : '없음'}`],
+        aitask: [`막혔을 때 ${optText('na_fallback')}`, `로어북 ${on('na_lore') ? '켬' : '끔'}`, `이탈 감지 ${optText('na_drift_auto')}`],
         theme: [$('input[name="na_ui_theme"]:checked').closest('label').find('b').text() || '-'],
         alert: [Number($('#na_backup_every').val()) > 0 ? `백업 ${$('#na_backup_every').val()}번마다` : '백업 알림 끔'],
     };
@@ -729,7 +708,7 @@ function syncEmbedRows() {
     $('#na_emb_build').prop('hidden', !e.source);
     if ($('#na_emb_build').hasClass('na_busy')) return;
     const st = embedState(), err = embedError();
-    $('#na_emb_sub').text(err ? `안 됨: ${err.slice(0, 80)} · 눌러서 다시` : st?.synced ? `${embedLabel()} · 섹션 조각 ${st.secs} · 원문 ${st.raws} · ${timeLabel(st.at)}` : `${embedLabel()} · 처음 한 번 만들어요 · 답할 때 알아서도 만들어요`);
+    $('#na_emb_sub').text(err ? `안 됨: ${err.slice(0, 80)} · 눌러서 다시` : st?.synced ? `${embedLabel()} · 섹션 조각 ${st.secs} · ${timeLabel(st.at)}` : `${embedLabel()} · 처음 한 번 만들어요 · 답할 때 알아서도 만들어요`);
 }
 
 // 압축 탭: picked method, and only the rows that method uses
@@ -744,9 +723,10 @@ function layoutCp() {
         const $r = $(this);
         let show = this.dataset.m.split(' ').includes(md);
         // in 한 번에 the scene rows follow 압축 방식; 작업실 always cuts scenes
-        if (show && md === 'quick') show = !($r.hasClass('na_cmode_ev') && cm !== 'events') && !($r.hasClass('na_cmode_raw') && cm !== 'raw') && !($r.hasClass('na_cmode_sc') && cm !== 'scenes');
+        if (show && md === 'quick') show = !($r.hasClass('na_cmode_sc') && cm !== 'scenes');
         $r.toggle(show);
     });
+    $('#na_cmode_sub').text({ raw: '결이 중요하면 장면별', scenes: '장면마다 섹션 하나씩' }[cm] || '');
     $('#na_cp_for').text(`· ${CP_METHODS[md]}`);
     const flag = (id, on) => $(id).attr('aria-pressed', String(on)).toggleClass('on', on).find('b').text(on ? '켬' : '끔');
     flag('#na_flag_auto', !!g.quickAuto);
@@ -1139,17 +1119,11 @@ export function bindPanel() {
         renderReplace();
         toastr.success(`${n}군데 바꿨어요`);
     }));
-    $('#na_chunk').on('change', function () { globalSettings().chunkTok = Number(this.value); saveGlobal(); });
+    $('#na_rules_sys').on('change', function () { globalSettings().rulesInSystem = this.checked; saveGlobal(); });
     $('#na_scsize').on('change', function () { globalSettings().sceneSize = Number(this.value); saveGlobal(); });
-    $('#na_scmodel').on('change', function () { globalSettings().sceneModel = this.value; saveGlobal(); });
-    $('#na_stmodel').on('change', function () { globalSettings().stateModel = this.value; saveGlobal(); });
-    const trkInfo = () => { const v = String($('#na_trkre').val() || ''); let ok = true; try { if (v) new RegExp(v, 's'); } catch { ok = false; } $('#na_trkre_info').text(!v ? '트래커 없이 메시지 수로만 잘라요' : ok ? '' : '정규식이 틀렸어요 · 메시지 수로만 잘라요'); };
-    $('#na_trkre').on('input', function () { globalSettings().trackerRe = this.value; saveGlobal(); trkInfo(); });
-    $('#na_trkre_reset').on('click', () => { globalSettings().trackerRe = DEFAULT_TRACKER_RE; saveGlobal(); $('#na_trkre').val(DEFAULT_TRACKER_RE); trkInfo(); });
     $('#na_worknote').on('click', needChat(() => openWorkNote()));
     $('#na_stylesample').on('click', needChat(() => openStyleSamples()));
     $('#na_cmode').on('change', function () { globalSettings().compressMode = this.value; saveGlobal(); layoutCp(); });
-    $('#na_evmodel').on('change', function () { globalSettings().eventsModel = this.value; saveGlobal(); });
     $('#na_track').on('change', async function () {
         if (!hasChat()) return;
         const m = getMeta();
@@ -1253,16 +1227,6 @@ export function bindPanel() {
         m.depth = Math.max(0, parseInt(this.value, 10) || 0); this.value = m.depth;
         await saveMeta(); applyInjection(); syncPanel();
     });
-    $('#na_place_preset').on('change', needChat(async e => {
-        const p = PLACE_PRESETS[e.target.value];
-        if (!p) return;
-        const m = getMeta();
-        Object.assign(m, { position: p.position, depth: p.depth, role: p.role });
-        m.stateRemind = { ...stateCfg(m), on: p.state.on, depth: p.state.depth };
-        m.recall = { ...(m.recall || {}), depth: p.recall };
-        await saveMeta(); applyInjection(); await runRecall(); syncPanel();
-        toastr.success(`${p.name}으로 맞췄어요`, '자리 묶음', { timeOut: 2500 });
-    }));
     $('#na_role').on('change', async function () {
         if (!hasChat()) return;
         const m = getMeta();
@@ -1290,24 +1254,16 @@ export function bindPanel() {
         await applyInjection(); syncPanel();
         toastr.info(st.titles.length ? st.titles.map(t => `• ${esc(t.slice(0, 60))}`).join('<br>') : '고른 섹션이 없어요', `라우터 · ${st.titles.length}개 · ${(st.ms / 1000).toFixed(1)}초${st.short && st.short < st.cands ? ` · 후보 ${st.cands}개 중 ${st.short}개 자세히` : ''}`, { escapeHtml: false, timeOut: 10000 });
     }));
-    // 회상 · STATE 가까이 · OOC 빼기
-    $('#na_recall').on('change', needChat(async e => { await setRecall({ on: e.target.checked }); syncPanel(); }));
-    for (const [id, k] of [['k', 'k'], ['budget', 'budget'], ['depth', 'depth'], ['scan', 'scan']]) {
-        $(`#na_recall_${id}`).on('change', needChat(async e => { await setRecall({ [k]: Number(e.target.value) }); syncPanel(); }));
-    }
-    $('#na_recall_secs').on('change', needChat(async e => { await setRecall({ secs: e.target.checked }); }));
-    $('#na_recall_test').on('click', needChat(async () => {
-        const m = getMeta();
-        const was = m.recall?.on;
-        m.recall = { ...(m.recall || {}), on: true };
-        const st = await runRecall();
-        m.recall.on = was;
-        if (!was) await runRecall();
-        const lines = st?.lines || [];
-        toastr.info(lines.length ? lines.map(l => esc(l.length > 160 ? `${l.slice(0, 160)}…` : l)).join('<br>') : '맞는 줄이 없어요. 숨긴 원문이 없거나 최근 대화와 겹치는 말이 적어요.', `회상 · ${lines.length}줄${st ? ` · 약 ${fmt(st.tokens)} 토큰` : ''}`, { escapeHtml: false, timeOut: 15000 });
-    }));
-    $('#na_state_on').on('change', needChat(async e => { const m = getMeta(); m.stateRemind = { ...stateCfg(m), on: e.target.checked }; await saveMeta(); applyInjection(); syncPanel(); }));
-    $('#na_state_depth').on('change', needChat(async e => { const m = getMeta(); m.stateRemind = { ...stateCfg(m), depth: Math.min(20, Math.max(0, parseInt(e.target.value, 10) || 0)) }; await saveMeta(); applyInjection(); syncPanel(); }));
+    // OOC 빼기 (압축 → 설정)
+    // 상태창: what the extension reads from the status windows, the last few as found
+    $('#na_trk_row').on('click', async () => {
+        if (!hasChat()) return toastr.info('채팅을 먼저 여세요.');
+        const ts = recentTrackers(5);
+        const body = ts.length
+            ? `<div class="na_v2_title"><b>상태창</b><small>압축할 때 날짜 · 장소는 섹션 제목에, 장면 나누기는 이게 바뀌는 곳에서</small></div><div class="na_trk_list">${ts.map(t => `<div class="na_trk_item"><b>#${t.i}</b><span>${esc([t.date, t.time, t.place].filter(Boolean).join(' · '))}</span></div>`).join('')}</div>`
+            : '<div class="na_v2_title"><b>상태창</b><small>이 채팅에서는 못 찾았어요</small></div><div class="na_dim">시간이나 날짜가 든 짧은 칸들로 된 줄(<code>[ 오후 8:15 · 12월 9일 · 성 → 병동 ]</code>), <code>날짜: … / 장소: …</code> 줄, <code>&lt;tracker&gt;</code>를 찾아요. 못 찾으면 장면은 메시지 수로 나누고, 날짜 · 장소는 AI가 원문에서 읽어요.</div>';
+        await ctx().callGenericPopup($(`<div class="na_popup na_v2">${body}</div>`), ctx().POPUP_TYPE.TEXT, '', { okButton: '닫기' });
+    });
     $('#na_off_fold').on('click', '.na_off_chip', function () { setOffKind(this.dataset.k, !offKinds()[this.dataset.k]); syncPanel(); refreshStatus(); });
     $('#na_fallback').on('change', function () { globalSettings().fallback = this.value; saveGlobal(); });
     $('#na_emb_src').on('change', function () { embTyping = false; setEmbed({ source: this.value, model: '' }); syncEmbedRows(); if (this.value) $('#na_emb_build').trigger('click'); });
@@ -1327,12 +1283,12 @@ export function bindPanel() {
         $('#na_emb_sub').text('목록 보는 중…');
         try {
             const st = await syncEmbed({ force: true, onProgress: (n, all, note) => $('#na_emb_sub').text(`만드는 중… ${n} / ${all}${note ? ` · ${note}` : ''}`) });
-            if (st) toastr.success(`섹션 조각 ${st.secs}개 · 숨긴 원문 ${st.raws}개${st.skipped ? ` · 못 넣은 ${st.skipped}개는 다음에 다시 해요` : ''}${st.regionMoved ? ' · 원래 지역에서 안 돼서 임베딩 지역을 us-central1로 정했어요' : ''}`, '뜻 색인', { timeOut: st.regionMoved ? 12000 : 5000 });
+            if (st) toastr.success(`섹션 조각 ${st.secs}개${st.skipped ? ` · 못 넣은 ${st.skipped}개는 다음에 다시 해요` : ''}${st.regionMoved ? ' · 원래 지역에서 안 돼서 임베딩 지역을 us-central1로 정했어요' : ''}`, '임베딩 색인', { timeOut: st.regionMoved ? 12000 : 5000 });
         } catch (err) {
             // a 5xx that survived the retries is the service's quota or an outage; what went in so far is kept
             const e = embedCfg(), m = e.model || EMBED_DEFAULT_MODEL[e.source] || '';
             const hint = err.status >= 500 ? ` · 만든 데까지는 남아 있어서 다시 누르면 이어서 해요${e.source === 'vertexai' ? `. 계속 안 되면 ① 실리태번 API 연결 → Vertex AI에서 인증(Express 키 또는 서비스 계정)과 프로젝트가 맞는지 ② 임베딩 지역을 us-central1로${/^gemini-embedding/.test(m) ? ' ③ 모델을 text-multilingual-embedding-002로(한 번에 10개씩)' : ''} 확인해 보세요. 자세한 이유는 실리태번 서버 콘솔 창에 찍혀요` : ''}` : '';
-            toastr.error(`${String(err.message || err)}${hint}`, '뜻 색인을 못 만들었어요', { timeOut: 15000 });
+            toastr.error(`${String(err.message || err)}${hint}`, '임베딩 색인을 못 만들었어요', { timeOut: 15000 });
         }
         finally { $b.removeClass('na_busy'); syncEmbedRows(); }
     }));
@@ -1380,22 +1336,6 @@ export function bindPanel() {
     });
 }
 
-// 자리 묶음: where the archive, the STATE block and the recall block go, set together
-export const PLACE_PRESETS = {
-    near: { name: '기본', sub: '아카이브는 채팅 안 깊이 1 · STATE 따로 안 뺌', position: 1, depth: 1, role: 0, state: { on: false, depth: 3 }, recall: 2 },
-    stable: { name: '안정형', sub: '아카이브는 메인 프롬프트 뒤 · STATE 깊이 3 · 회상 깊이 2', position: 0, depth: 1, role: 0, state: { on: true, depth: 3 }, recall: 2 },
-    recent: { name: '최근 강조형', sub: '아카이브도 채팅 안 깊이 6 · STATE 깊이 2 · 회상 깊이 1 · 앞쪽을 자꾸 놓칠 때', position: 1, depth: 6, role: 0, state: { on: true, depth: 2 }, recall: 1 },
-    user: { name: '유저 메시지형', sub: '최근 강조형을 유저 역할로 · 시스템 지시를 약하게 따르는 모델용', position: 1, depth: 6, role: 1, state: { on: true, depth: 2 }, recall: 1 },
-};
-export function placePresetOf(m) {
-    const sc = stateCfg(m), rc = recallCfg(m);
-    return Object.keys(PLACE_PRESETS).find(k => {
-        const p = PLACE_PRESETS[k];
-        return Number(m.position) === p.position && (p.position !== 1 || Number(m.depth) === p.depth) && Number(m.role) === p.role
-            && sc.on === p.state.on && (!p.state.on || sc.depth === p.state.depth) && rc.depth === p.recall;
-    }) || null;
-}
-
 export let cfgFadeOpen = false;
 export function syncPanel() {
     if (!$('#na_settings').length) return;
@@ -1411,23 +1351,11 @@ export function syncPanel() {
     $('#na_depth').val(m.depth);
     $('#na_depth_field').prop('hidden', Number(m.position) !== 1);
     $('#na_role').val(String(m.role));
-    {
-        const cur = placePresetOf(m);
-        $('#na_place_preset').val(cur || 'custom');
-        // the short line stays as in the mockup; what the picked set does goes in the row's tooltip
-        $('#na_place_sub').text(cur ? '위치 · 역할을 한 번에' : '칸마다 직접 정했어요').closest('.na_set_row').attr('title', `${cur ? `${PLACE_PRESETS[cur].name} · ${PLACE_PRESETS[cur].sub}\n` : ''}위치 · 깊이 · 역할, STATE 가까이 넣기, 회상 깊이를 한 번에 맞춰요 · 고른 뒤에도 칸마다 직접 바꿀 수 있어요 · 이 채팅에만`);
-    }
     $('#na_muted_n').text(mutedCount(m));
     $('#na_link_depth').val(m.linkDepth || 4);
     { const kn = keepsOf(m).length; $('#na_keeps_sub').text(kn ? `${kn}개 · 압축할 때 자세히, 망각 곡선은 그대로` : '압축할 때 자세히 남길 구간과 그 이유'); }
     {
-        const r = recallCfg(m);
-        $('#na_recall').prop('checked', r.on); $('#na_recall_opts').prop('hidden', !r.on);
-        $('#na_recall_k').val(r.k); $('#na_recall_budget').val(r.budget); $('#na_recall_depth').val(r.depth); $('#na_recall_scan').val(r.scan); $('#na_recall_secs').prop('checked', r.secs);
-        const last = lastRecall.get(currentChatId());
-        $('#na_recall_sub').text(r.on ? `최대 ${r.k}줄 · ${fmt(r.budget)} 토큰 · 깊이 ${r.depth}${last ? ` · 지난 답에 ${last.lines.length}줄` : ''}` : '숨긴 원문에서 지금 대화와 맞는 줄을 찾아 넣어요');
-        const sc = stateCfg(m);
-        $('#na_state_on').prop('checked', sc.on); $('#na_state_depth').val(sc.depth); $('#na_state_depth_field').prop('hidden', !sc.on);
+        { const t = hasChat() ? recentTrackers(1)[0] : null; $('#na_trk_sub').text(t ? `마지막 상태창: ${[t.date, t.time, t.place].filter(Boolean).join(' · ')} (#${t.i})` : '못 찾음 · 장면은 메시지 수로 나눠요'); }
         { const ok = offKinds(); $('#na_off_fold .na_off_chip').each(function () { $(this).toggleClass('on', !!ok[this.dataset.k]).attr('aria-pressed', String(!!ok[this.dataset.k])); }); const on = Object.keys(OFF_KINDS).filter(k => ok[k]); $('#na_off_sub').text(on.length ? `누르면 켜고 꺼요 · ${on.length}가지 빼는 중` : '누르면 켜고 꺼요 · 지금은 아무것도 안 빼요'); }
         $('#na_fallback').val(fallbackOf());
         const lc = loreCfg();
@@ -1514,11 +1442,11 @@ export function syncPanel() {
     rememberArchive();
     $('#na_boundary').val(m.boundary >= 0 ? m.boundary : '');
     $('#na_track').prop('checked', !!m.track);
-    $('#na_chunk').val(String(chunkTok()));
-    $('#na_cmode').val(compressMode()); $('#na_evmodel').val(eventsModel()); layoutCp();
-    $('#na_scsize').val(String(sceneSize())); $('#na_scmodel').val(sceneModel()); $('#na_stmodel').val(stateModel()); $('#na_trkre').val(trackerRe());
+    $('#na_rules_sys').prop('checked', !!globalSettings().rulesInSystem);
+    $('#na_cmode').val(compressMode()); layoutCp();
+    $('#na_scsize').val(String(sceneSize()));
     $('#na_style_sub').text(styleLabel(getMeta()));
-    { const wn = String(getMeta().workNote || '').trim(); $('#na_worknote_sub').text(wn ? `있음 · 약 ${wn.length.toLocaleString()}자 · 장면마다 같이 보내요` : '이 이야기의 인수인계 · canon · 살린 줄 · 이전 실수 · 장면마다 같이 보내요'); }
+    { const wn = String(getMeta().workNote || '').trim(); $('#na_worknote_sub').text(wn ? `약 ${wn.length.toLocaleString()}자 · 장면마다 같이` : '장면마다 같이 보내요'); }
     {
         const au = auOf(m);
         $('#na_au_sub').text(au.on ? `켜짐 · 요약이 본편 뒤 ${au.name} 묶음으로 이어져요` : '본편 기억을 들고 온 채팅이면 켜요');

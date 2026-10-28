@@ -7,43 +7,51 @@ import { applyFade } from './fade.js';
 import { currentCast, inCast, knowledgeRows } from './knowledge.js';
 import { sectionPanel } from './panel.js';
 import { isExcluded } from './quotes.js';
-import { cachedTokens, filterMuted, splitTail, tailBlocks, trimEnd } from './sections.js';
+import { cachedTokens, filterMuted, trimEnd } from './sections.js';
 import { worldText } from './world.js';
 
 // What actually gets injected: digests in place of their sections, muted sections removed, older sections shortened by the forgetting curve,
 // the shared world first. The token cap only warns.
 export const STATE_KEY = 'narrative_archive_state';
-export const stateCfg = m => { const r = m?.stateRemind && typeof m.stateRemind === 'object' ? m.stateRemind : {}; return { on: !!r.on, depth: Number.isFinite(+r.depth) && r.depth !== undefined && r.depth !== '' ? Math.min(20, Math.max(0, +r.depth)) : 3 }; };
+// STATE 가까이 넣기 was taken out in 3.88.0: the archive now sits right after the hidden messages, so its STATE is
+// already read where it belongs. The key is still cleared, so a chat that had it on keeps no stale block
 
-// STATE 가까이 넣기: the STATE block leaves the archive block and goes in on its own, close to the newest messages
-export function takeState(m, text) {
-    if (!stateCfg(m).on) return { text, state: '' };
-    const [body, tail] = splitTail(text);
-    const blocks = tailBlocks(tail);
-    const st = blocks.find(b => b.key === 'STATE');
-    if (!st) return { text, state: '' };
-    const rest = blocks.filter(b => b !== st).map(b => b.text).join('\n\n');
-    return { text: `${trimEnd(body)}${rest ? `\n\n${rest}` : ''}\n`, state: st.text };
+// 이어지는 자리: just above the first visible message after the archive's last one, so the past is read before what followed it.
+// The spot only moves when messages are hidden, so the prompt before it stays the same from reply to reply.
+// skipLast: a swipe leaves the reply being replaced out of the prompt; extra: a typed message not in the chat yet
+export function autoDepth(m, { skipLast = false, extra = 0 } = {}) {
+    const chat = ctx().chat || [];
+    const end = skipLast ? chat.length - 1 : chat.length;
+    const from = Number.isFinite(+m?.boundary) ? Math.max(0, +m.boundary + 1) : 0;
+    let n = extra;
+    for (let i = from; i < end; i++) if (!chat[i]?.is_system) n++;
+    return n;
 }
-export const stateText = state => (state ? `[CURRENT STATE: where things stand right now. Keep the next reply consistent with it, and never mention it.]\n${state.replace(/^# /, '')}` : '');
+const placeOf = m => (Number(m.position) === 3 ? [1, autoDepth(m)] : [[0, 1, 2].includes(Number(m.position)) ? Number(m.position) : 1, Math.max(0, Number(m.depth) || 0)]);
+
+// right before a reply is written, so the worked-out depth counts the chat as the prompt will have it
+export function placeArchive(o) {
+    const m = hasChat() ? getMeta() : null;
+    if (!m || !m.enabled || !lastBuild.text || Number(m.position) !== 3) return;
+    ctx().setExtensionPrompt(PROMPT_KEY, lastBuild.text, 1, autoDepth(m, o), false, Number(m.role) || 0);
+}
 
 export async function buildInjection(m) {
     // digests stand in for their sections first, then muted sections drop out, then the forgetting curve
     const faded0 = applyFade(m, filterMuted(m, applyDigests(m, m.text)));
     const { faded } = faded0;
-    const { text, state } = takeState(m, faded0.text);
+    const text = faded0.text;
     const cap = Math.max(0, Number(m.tokenCap) || 0);
     const trimmed = [];
     const extra = text.trim() ? extraBlocks(m) : '';
     const world = worldText(m);
     const core = text.trim() ? `${trimEnd(text)}${extra}` : '';
     const final = world || core ? [world, core].filter(Boolean).join('\n\n') : '';
-    const st = stateText(state);
-    const tokens = await cachedTokens([final, st].filter(Boolean).join('\n\n'));
-    return { text: final, tokens, trimmed, cap, over: !!cap && tokens > cap, faded, state: st };
+    const tokens = await cachedTokens(final);
+    return { text: final, tokens, trimmed, cap, over: !!cap && tokens > cap, faded };
 }
 
-export let lastBuild = { text: '', tokens: 0, trimmed: [], cap: 0, over: false, faded: new Map(), state: '' };
+export let lastBuild = { text: '', tokens: 0, trimmed: [], cap: 0, over: false, faded: new Map() };
 export let injectSeq = 0;
 export let injectReady = Promise.resolve(lastBuild);
 
@@ -53,7 +61,7 @@ export function applyInjection() {
     const m = hasChat() ? getMeta() : null;
     const seq = ++injectSeq;
     injectReady = (async () => {
-        const b = m ? await buildInjection(m) : { text: '', tokens: 0, trimmed: [], cap: 0, over: false, faded: new Map(), state: '' };
+        const b = m ? await buildInjection(m) : { text: '', tokens: 0, trimmed: [], cap: 0, over: false, faded: new Map() };
         if (seq !== injectSeq) return lastBuild;
         const fadeSig = f => [...(f || [])].map(e => e.join('=')).join('\n');
         const trimChanged = b.trimmed.join('\n') !== lastBuild.trimmed.join('\n') || fadeSig(b.faded) !== fadeSig(lastBuild.faded);
@@ -61,11 +69,10 @@ export function applyInjection() {
         if (trimChanged) sectionPanel?.render();
         if (!m || !m.enabled || !b.text) c.setExtensionPrompt(PROMPT_KEY, '', 1, 1);
         else {
-            const pos = [0, 1, 2].includes(Number(m.position)) ? Number(m.position) : 1;
-            c.setExtensionPrompt(PROMPT_KEY, b.text, pos, Math.max(0, Number(m.depth) || 0), false, Number(m.role) || 0);
+            const [pos, depth] = placeOf(m);
+            c.setExtensionPrompt(PROMPT_KEY, b.text, pos, depth, false, Number(m.role) || 0);
         }
-        if (!m || !m.enabled || !b.state) c.setExtensionPrompt(STATE_KEY, '', 1, 0);
-        else c.setExtensionPrompt(STATE_KEY, b.state, 1, stateCfg(m).depth, false, 0);
+        c.setExtensionPrompt(STATE_KEY, '', 1, 0);
         return b;
     })();
     return injectReady;

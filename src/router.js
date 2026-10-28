@@ -5,13 +5,13 @@ import { currentChatId } from './chats.js';
 import { getMeta, globalSettings, hasChat } from './core.js';
 import { recentForCheck } from './drift.js';
 import { lastIndex } from './hide.js';
-import { applyInjection, currentInjection } from './inject.js';
+import { applyInjection, currentInjection, placeArchive } from './inject.js';
 import { KW_STOP } from './keywords.js';
 import { castNames } from './knowledge.js';
 import { RANGE_HEAD, linkWaiting, linkedMap, mutedSet, parseSections, pinnedSet, sectionKey } from './sections.js';
-import { bm25, recallCfg, recallQuery, runRecall, withGlossary } from './recall.js';
+import { bm25, recallQuery, withGlossary } from './recall.js';
 import { layersOf } from './fade.js';
-import { guessMode, sceneGuess } from './guess.js';
+import { sceneGuess } from './guess.js';
 import { embedSearch } from './embed.js';
 import { refreshStatusSoon } from './status.js';
 import { shortHash } from './translate.js';
@@ -20,10 +20,13 @@ import { shortHash } from './translate.js';
 // (awaited) right after. So on a normal send the router and keyword links wait for MESSAGE_SENT,
 // otherwise they would never see the message being answered.
 export let genPending = null;
+let genType = '';
 export async function onGenerationStarted(type, opts, dryRun) {
     if (dryRun || type === 'quiet' || !hasChat()) return;
+    genType = type || 'normal';
     const typed = String($('#send_textarea').val() || '').trim();
     if (typed && [undefined, 'normal'].includes(type) && !opts?.automatic_trigger) {
+        placeArchive({ extra: 1 }); // the typed message is not in the chat yet
         // fallback in case no MESSAGE_SENT follows (e.g. a bias-only message sent as a system note)
         genPending = setTimeout(() => { genPending = null; prepareGeneration(); }, 3000);
         return;
@@ -50,9 +53,6 @@ export async function prepareGeneration() {
     }
     if (Object.keys(linkedMap(m)).length || routerCfg(m).mode !== 'off') { applyInjection(); refreshStatusSoon(); } // keyword links look at the latest messages
     await currentInjection();
-    // 회상 can search with the guessed scene too; with the router on it was made there already
-    if (routerCfg(m).mode === 'off' && guessMode() === 'both' && m.enabled && recallCfg(m).on) await sceneGuess(m, routerReady());
-    try { await runRecall(); } catch (e) { console.warn('[narrative-archive] recall', e); }
     // how often each keyword-linked section actually went in, for the X-ray
     const links = Object.keys(linkedMap(m));
     if (m.enabled && links.length) {
@@ -64,6 +64,7 @@ export async function prepareGeneration() {
         for (const k of links) if (!waiting.has(k) && !muted.has(k)) { st.on[k] = (st.on[k] || 0) + 1; st.last[k] = lastIndex(); }
         m.linkStats = st;
     }
+    placeArchive({ skipLast: genType === 'swipe' });
 }
 
 // Right before a reply, a small model reads the recent chat and picks the sections it needs.

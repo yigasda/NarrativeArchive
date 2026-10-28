@@ -9,7 +9,7 @@ import { applyHide } from './hide.js';
 import { driftHtml } from './drift.js';
 import { nameNearMisses } from './keywords.js';
 import { auDivider, auFix, auOf, langBlock } from './prompts.js';
-import { RANGE_HEAD, citeIssues, headingRanges, lastRangeEnd, parseSections, splitTail, stripCites, tailBlocks, trimEnd } from './sections.js';
+import { RANGE_HEAD, citeIssues, headingRanges, lastRangeEnd, parseSections, rangeIssues, splitTail, stripCites, tailBlocks, trimEnd } from './sections.js';
 import { rawFor } from './retitle.js';
 import { hasChanges, resolveChanges } from './statechg.js';
 import { openSource } from './source.js';
@@ -429,12 +429,14 @@ export async function openAppend(prefill = {}) {
         <div class="na_wz2_chips na_ap_outinfo"></div>
         <div class="na_v2_row2 na_ap_tools">
           <button type="button" class="na_v2_btn na_append_file_btn">${svgA('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>', 15)}파일 불러오기</button>
+          <button type="button" class="na_v2_btn na_ap_style" title="문장 결만 아카이브처럼 다듬어요 · 내용 · 출처 번호 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 보내요 · AI 기능 모델">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>', 15)}문체 다듬기</button>
           ${pre.grade ? '' : `<button type="button" class="na_v2_btn na_ap_grade" title="붙여넣은 섹션을 그 번호의 원문과 맞춰 봐요 · AI 기능 모델">${svgA('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14l2 2 4-4"/>', 15)}원문 대조</button>`}
         </div>
         <input type="file" class="na_append_file" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden>
         ${true ? `<div class="na_apf" hidden>
           <div class="na_sf_log na_apf_log"></div>
           <div class="na_sf_note na_apf_note" hidden></div>
+          <div class="na_apf_scope"><div class="na_apf_chips" role="group" aria-label="고칠 섹션"></div></div>
           <div class="na_ly_ask"><input type="text" class="na_ly_askq na_apf_q" placeholder="초안 고쳐 달라고 하기 (예: #60 이후 더 줄여줘)" aria-label="초안 고쳐 달라고 하기" enterkeyhint="send"><button type="button" class="na_ly_askgo na_apf_go" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>
           <div class="na_apf_foot"><label class="checkbox_label"><input type="checkbox" class="na_apf_raw" checked><span>원문 같이 보내기 <small class="na_apf_rawinfo"></small></span></label><button type="button" class="na_linkbtn na_apf_undo" hidden>되돌리기</button></div>
         </div>` : ''}
@@ -458,11 +460,6 @@ export async function openAppend(prefill = {}) {
           <button type="button" class="na_cp_row na_ai_conflict" title="기존 아카이브와 어긋나는 이름·날짜·사실·해결된 떡밥을 AI가 찾아요">${svgB(SVG_B.star, 14)} AI로 충돌 검사 · 날짜·사실·해결된 떡밥</button>
           <div class="na_ai_box na_conflict_out" hidden></div>
         </div>
-        ${pre.events?.text ? `<details class="na_v2_card na_v2_more na_ap_events">
-          <summary>1단계 정리 목록 <small>메시지 ${pre.events.n}개${pre.events.recaps || pre.events.empty ? ` · ${[pre.events.recaps && `되짚기 ${pre.events.recaps}개`, pre.events.empty && `빈 메시지 ${pre.events.empty}개`].filter(Boolean).join(' · ')} 뺌` : ''}${pre.events.badQ ? ` · 원문에 없는 대사 ${pre.events.badQ}개 버림` : ''}${pre.events.missing?.length ? ` · 정리 못 한 메시지 ${pre.events.missing.length}개는 원문 그대로` : ''}</small></summary>
-          <pre class="na_ap_events_text">${esc(pre.events.text)}</pre>
-          ${pre.rerun ? '<button type="button" class="na_btn na_small na_ap_rerun" title="1단계는 다시 안 하고, 이 목록으로 초안 모델에 섹션만 다시 받아요">이 목록으로 2단계만 다시 받기</button>' : ''}
-        </details>` : ''}
         <div class="na_v2_card na_v2_list">
           <label class="na_cp_row"><span class="na_cp_txt"><span>이번에 압축한 끝 번호</span><small class="na_end_hint"></small></span><span class="na_ap2_end">#<input type="number" class="na_end" min="0" max="${last}" value="${Math.max(0, last)}"></span></label>
           <label class="na_cp_row"><span class="na_cp_txt"><span>추가한 뒤 숨기기</span><small class="na_hide_hint">마지막 ${m.keep}개는 남겨요</small></span><input type="checkbox" class="na_toggle na_do_hide" checked></label>
@@ -590,22 +587,6 @@ export async function openAppend(prefill = {}) {
             toastr.error(String(e?.message || e), '빠진 구간');
             $b.prop('disabled', false).text('다시 받기');
         } finally { gapBusy = false; }
-    });
-    $root.on('click', '.na_ap_rerun', async function () {
-        if (!pre.rerun || $(this).prop('disabled')) return;
-        const $b = $(this).prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> 2단계 다시 받는 중…');
-        try {
-            const out = await pre.rerun();
-            if (!out?.trim()) throw new Error('초안 모델이 빈 답을 줬어요');
-            if (apf.original === null) apf.original = String($ta.val() || '');
-            apf.steps.push(String($ta.val() || ''));
-            $root.find('.na_apf_undo').prop('hidden', false);
-            $ta.val(out).trigger('input');
-            toastr.success('2단계를 다시 받았어요 · 처음으로를 누르면 앞 결과로 돌아가요', '2단계만 다시');
-        } catch (e) {
-            console.error('[NarrativeArchive] rerun step 2', e);
-            toastr.error(String(e?.message || e), '2단계만 다시');
-        } finally { $b.prop('disabled', false).text('이 목록으로 2단계만 다시 받기'); }
     });
     // STATE · OPEN changes the model listed: risky ones start unticked; ticking rebuilds the tail from the archive's own
     let chg = null;
@@ -769,8 +750,10 @@ export async function openAppend(prefill = {}) {
             const joined = rs.length && rs.every((x, i) => !i || x.a === rs[i - 1].b + 1);
             const okc = secsN && (!rs.length || joined);
             const chk = svgA(ICO_A.check, 12, 3);
-            $root.find('.na_ap_outinfo').html(has ? `<span class="${okc ? 'ok' : secsN ? 'warn' : ''}">${okc ? chk : ''}섹션 ${secsN}개${rs.length ? ` · #${rs[0].a}–#${Math.max(...rs.map(x => x.b))}${joined ? ' 이어짐' : ' · 사이가 빔'}` : ''}</span>${tl.trim() ? `<span class="ok">${chk}STATE·OPEN</span>` : ''}<span>${fmt(all)} 토큰</span>` : '');
+            $root.find('.na_ap_outinfo').html(has ? `<span class="${okc ? 'ok' : secsN ? 'warn' : ''}">${okc ? chk : ''}섹션 ${secsN}개${rs.length ? ` · #${rs[0].a}–#${Math.max(...rs.map(x => x.b))}${joined ? ' 이어짐' : ` · ${rangeIssues(rs)}`}` : ''}</span>${tl.trim() ? `<span class="ok">${chk}STATE·OPEN</span>` : ''}<span>${fmt(all)} 토큰</span>` : '');
             $root.find('.na_apf').prop('hidden', !has);
+            drawApfChips();
+            if (apf.raw) apfRawInfo();
         }, 400);
     });
 
@@ -784,7 +767,37 @@ export async function openAppend(prefill = {}) {
             .html(none ? '<i class="fa-solid fa-circle-check"></i> AI가 찾은 충돌 없음' : `<div class="na_ai_box_head"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 충돌 검사 <span class="na_dim">· 참고용이에요</span></div>${aiHtml(out)}`);
     });
     // 이어서 고치기: the whole draft revised by the draft model, with the raw log of its range when it can be found
-    const apf = { original: null, asked: [], steps: [], rawKey: '', raw: null, busy: false };
+    const apf = { original: null, asked: [], steps: [], rawKey: '', raw: null, busy: false, pick: new Set() };
+    // the draft's numbered sections, with where each one sits in the draft text
+    const draftSecs = () => {
+        const t = String($ta.val() || ''), body = splitTail(t)[0];
+        return parseSections(body).filter(x => !x.group && RANGE_HEAD.test(x.title)).map(x => {
+            const r = x.title.match(RANGE_HEAD);
+            const pre = (r[1] || '').trim(), from = Math.min(+r[2], +r[4]), to = Math.max(+r[2], +r[4]);
+            return { key: `${pre}|${from}|${to}`, pre, from, to, start: x.start, end: x.end, text: trimEnd(body.slice(x.start, x.end)).replace(/\n-{3,}\s*$/, '').trim() };
+        });
+    };
+    // 고칠 섹션 chips: tap to send only those sections and their raw log
+    const drawApfChips = () => {
+        const secs = draftSecs();
+        apf.pick = new Set([...apf.pick].filter(k => secs.some(x => x.key === k)));
+        $root.find('.na_apf_chips').html(secs.length > 1 ? secs.map(x => `<button type="button" class="na_pchip${apf.pick.has(x.key) ? ' on' : ''}" data-k="${esc(x.key)}">${esc(`${x.pre ? `${x.pre} ` : ''}#${x.from}–#${x.to}`)}</button>`).join('') : '');
+    };
+    $root.on('click', '.na_apf_chips .na_pchip', function () {
+        const k = this.dataset.k;
+        apf.pick.has(k) ? apf.pick.delete(k) : apf.pick.add(k);
+        $(this).toggleClass('on', apf.pick.has(k));
+        apfRawInfo();
+    });
+    // the sections a request names: "#40" → the one holding it, "#40–#55" → the ones it overlaps, "#60 이후" → from there on
+    const namedSecs = (q, secs) => {
+        const out = new Set();
+        for (const mt of String(q).matchAll(/#(\d+)(?:\s*[–—~-]\s*#?(\d+))?(\s*(?:이후|부터|뒤|after|onward))?/gi)) {
+            const a = +mt[1], b = mt[2] ? +mt[2] : mt[3] ? Infinity : a;
+            for (const x of secs) if (x.from <= b && x.to >= a) out.add(x.key);
+        }
+        return out;
+    };
     const draftRange = () => {
         const rs = headingRanges(auFix(String($ta.val() || ''), m));
         if (!rs.length) return null;
@@ -802,7 +815,29 @@ export async function openAppend(prefill = {}) {
         $root.find('.na_apf_rawinfo').text(apf.raw.raw ? `· ${apf.raw.label} · 메시지 ${apf.raw.n}개 · 약 ${fmt(apf.raw.tok)} 토큰` : `· ${apf.raw.why}`);
         return apf.raw;
     };
-    $root.find('.na_apf_q').one('focus', () => { loadApfRaw(); });
+    // the sections this request goes to: the picked chips and the numbers it names ([] = the whole draft)
+    const apfPart = q => {
+        const secs = draftSecs(), pick = new Set([...apf.pick, ...namedSecs(q, secs)]);
+        return pick.size && pick.size < secs.length ? secs.filter(x => pick.has(x.key)) : null;
+    };
+    // the raw log of those sections only, cut out of the draft's whole raw log
+    const partRaw = (raw, part) => String(raw || '').split(/\n\n(?=\[\d+\] )/)
+        .filter(b => { const n = +(b.match(/^\[(\d+)\]/) || [])[1]; return part.some(x => n >= x.from && n <= x.to); });
+    // the line under the input says what will actually go: the picked sections' raw log, or the whole one
+    let infoSeq = 0;
+    const apfRawInfo = async () => {
+        const seq = ++infoSeq;
+        const full = await loadApfRaw();
+        const part = apfPart(String($root.find('.na_apf_q').val() || ''));
+        if (seq !== infoSeq || !full?.raw) return;
+        if (!part) { $root.find('.na_apf_rawinfo').text(`· ${full.label} · 메시지 ${full.n}개 · 약 ${fmt(full.tok)} 토큰`); return; }
+        const blocks = partRaw(full.raw, part);
+        const tok = await countTokens(blocks.join('\n\n'));
+        if (seq !== infoSeq) return;
+        $root.find('.na_apf_rawinfo').text(`· 고른 섹션 ${part.length}개 · ${part.map(x => `#${x.from}–#${x.to}`).join(', ')} · 메시지 ${blocks.length}개 · 약 ${fmt(tok)} 토큰`);
+    };
+    let infoT = null;
+    $root.find('.na_apf_q').one('focus', () => { apfRawInfo(); }).on('input', () => { clearTimeout(infoT); infoT = setTimeout(apfRawInfo, 300); });
     const apfSend = async () => {
         const q = String($root.find('.na_apf_q').val() || '').trim();
         const draft = String($ta.val() || '').trim();
@@ -811,8 +846,13 @@ export async function openAppend(prefill = {}) {
         apf.busy = true;
         const $b = $root.find('.na_apf_go').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i>');
         try {
-            const src = $root.find('.na_apf_raw').prop('checked') ? await loadApfRaw() : null;
-            const prompt = `DRAFT:\n${draft}\n\n${src?.raw ? `RAW LOG:\n${src.raw}\n\n` : ''}${apf.asked.length ? `EARLIER REQUESTS:\n${apf.asked.map(x => `- ${x}`).join('\n')}\n\n` : ''}REQUEST:\n${q}${langBlock(m.text)}`;
+            const withRaw = $root.find('.na_apf_raw').prop('checked');
+            // 고른 섹션 (chips, or the numbers in the request): only those sections and their raw log
+            const part = apfPart(q);
+            let src = withRaw ? await loadApfRaw() : null;
+            if (src?.raw && part) src = { raw: partRaw(src.raw, part).join('\n\n') };
+            const given = part ? part.map(x => x.text).join('\n\n') : draft;
+            const prompt = `DRAFT:\n${given}\n\n${src?.raw ? `RAW LOG:\n${src.raw}\n\n` : ''}${apf.asked.length ? `EARLIER REQUESTS:\n${apf.asked.map(x => `- ${x}`).join('\n')}\n\n` : ''}REQUEST:\n${q}${langBlock(m.text)}`;
             const out = stripThink(await askFix(prompt, { system: AI_SYS_DRAFTFIX })).replace(/^```[a-z]*\n?|```\s*$/g, '').trim();
             const note = (out.match(/^NOTE:\s*(.+)$/m) || [])[1] || '';
             const body = out.replace(/^NOTE:.*$/m, '').trim();
@@ -823,7 +863,7 @@ export async function openAppend(prefill = {}) {
             if (next.refused) throw new Error(`${next.refused} · 초안은 그대로예요`);
             if (apf.original === null) apf.original = draft;
             apf.steps.push(draft);
-            apf.asked.push(q);
+            apf.asked.push(part ? `[${part.map(x => `#${x.from}–#${x.to}`).join(', ')}] ${q}` : q);
             $ta.val(next).trigger('input');
             $root.find('.na_apf_q').val('');
             $root.find('.na_apf_log').html(apf.asked.map(x => `<div class="na_sf_bubble">${esc(x)}</div>`).join(''));
@@ -845,6 +885,30 @@ export async function openAppend(prefill = {}) {
         $ta.val(apf.original).trigger('input');
         apf.original = null; apf.asked = []; apf.steps = [];
         $root.find('.na_apf_log').empty(); $root.find('.na_apf_note').prop('hidden', true); $root.find('.na_apf_undo').prop('hidden', true);
+    });
+    // 문체 다듬기: the sentences only; a section that comes back with other bullets, numbers or quotes stays as it was
+    $root.find('.na_ap_style').on('click', async function () {
+        const draft = String($ta.val() || '').trim();
+        if (!draft) return toastr.info('먼저 다듬을 초안이 있어야 해요.');
+        if (apf.busy) return;
+        apf.busy = true;
+        try {
+            const { polishStyle, styleSummary, keptSummary } = await import('./style.js');
+            const r = await withSpinner($(this), '다듬는 중', () => polishStyle(draft, m));
+            if (!r) return;
+            const why = keptSummary(r);
+            if (!r.changed) return toastr.info(`바꾼 섹션이 없어요${why}`, '문체 다듬기', { timeOut: 6000 });
+            if (apf.original === null) apf.original = draft;
+            apf.steps.push(draft);
+            apf.asked.push('문체 다듬기');
+            $ta.val(r.text).trigger('input');
+            $root.find('.na_apf_log').html(apf.asked.map(x => `<div class="na_sf_bubble">${esc(x)}</div>`).join(''));
+            $root.find('.na_apf_undo').prop('hidden', false);
+            toastr.success(`섹션 ${r.changed}개를 다듬었어요${styleSummary(r)}${r.countFixed ? ` · 세는 규칙 ${r.countFixed}개 다시 맞춤` : ''}${why} · 되돌리기로 앞 모양으로`, '문체 다듬기', { timeOut: 9000 });
+        } catch (e) {
+            console.error('[NarrativeArchive] style pass', e);
+            toastr.error(String(e?.message || e), '문체 다듬기');
+        } finally { apf.busy = false; }
     });
     // 원문 대조 for pasted text: the numbers its headings cover, hidden messages included
     $root.find('.na_ap_grade').on('click', async function () {

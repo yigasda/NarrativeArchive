@@ -305,6 +305,21 @@ export function findCited(secs, raw) {
 // "## Y2 #574–#600 — ..." → { from: 574, to: 600 }
 // "## Y2 #574–#600 — ..." → { prefix: 'Y2', from: 574, to: 600 }. A title line like
 // "# Name — Archive (Y1 #0–#590 · Y2 #0–#573)" is not a section and is skipped.
+// how sorted ranges ({ a, b }) follow on: '' when they join, else where they overlap and which numbers are missing
+// ("겹침 #48 · 빔 #60–#61"), a few of each
+export function rangeIssues(rs) {
+    const over = [], gaps = [];
+    const lab = (x, y) => (x === y ? `#${x}` : `#${x}–#${y}`);
+    let end = rs.length ? rs[0].b : 0;
+    for (const x of rs.slice(1)) {
+        if (x.a <= end) over.push(lab(x.a, Math.min(end, x.b)));
+        else if (x.a > end + 1) gaps.push(lab(end + 1, x.a - 1));
+        end = Math.max(end, x.b);
+    }
+    const cut = l => (l.length > 3 ? `${l.slice(0, 3).join(', ')} 외 ${l.length - 3}곳` : l.join(', '));
+    return [over.length ? `겹침 ${cut(over)}` : '', gaps.length ? `빔 ${cut(gaps)}` : ''].filter(Boolean).join(' · ');
+}
+
 export function headingRanges(text) {
     return headingLines(text).map(h => h.title).flatMap(line => {
         const title = line.replace(/^#+\s*/, '');

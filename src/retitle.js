@@ -1,7 +1,7 @@
 // Asking the draft model to rework archive sections: new titles for many sections at once,
 // and one section rewritten the way the user asks (with its raw messages when they can be found).
 
-import { aiLabel, askCompress, askDraft, askFix, drLabel, draftReady, draftSettings, stripThink } from './ai.js';
+import { aiLabel, askCompress, askDraft, askFix, drLabel, draftReady, draftSettings, stripThink, withSpinner } from './ai.js';
 import { fetchOtherChat } from './chats.js';
 import { commitText, ctx, getMeta, globalSettings, saveMeta } from './core.js';
 import { lineDiff, renderDiff } from './diff.js';
@@ -258,7 +258,7 @@ export async function openSectionFix(s) {
         <div class="na_v2_card na_sf_view"><div class="na_diff na_sf_diff"></div></div>
         <div class="na_sf_note" hidden></div>
         <div class="na_ly_ask na_sf_ask"><input type="text" class="na_ly_askq na_sf_q" placeholder="고칠 것 (예: 소망 대사 원문 그대로 넣어줘)" aria-label="고칠 것" enterkeyhint="send"><button type="button" class="na_ly_askgo na_sf_go" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>
-        <div class="na_v2_row2"><button type="button" class="na_v2_btn na_sf_undo" disabled>처음으로</button><button type="button" class="na_v2_btn primary na_sf_apply" disabled>적용</button></div>
+        <div class="na_v2_row2"><button type="button" class="na_v2_btn na_sf_style" title="문장 결만 아카이브처럼 다듬어요 · 내용 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 · AI 기능 모델">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>', 15)}문체 다듬기</button><button type="button" class="na_v2_btn na_sf_undo" disabled>처음으로</button><button type="button" class="na_v2_btn primary na_sf_apply" disabled>적용</button></div>
       </div>`);
     const draw = () => {
         const changed = draft !== original;
@@ -290,6 +290,21 @@ export async function openSectionFix(s) {
         } finally { busy = false; $b.prop('disabled', false).html(svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)); }
     };
     $root.find('.na_sf_go').on('click', send);
+    // 문체 다듬기: the sentences only, from the section alone (원문 같이 보내기 is for asked-for fixes)
+    $root.find('.na_sf_style').on('click', async function () {
+        if (busy) return;
+        busy = true;
+        try {
+            const { polishStyle, styleSummary, keptSummary } = await import('./style.js');
+            const r = await withSpinner($(this), '다듬는 중', () => polishStyle(draft, m));
+            if (!r) return;
+            if (!r.changed) return toastr.info(r.kept.length ? `안 바꿨어요${keptSummary(r)}` : '바꿀 곳이 없대요', '문체 다듬기', { timeOut: 8000 });
+            draft = trimEnd(r.text).trim();
+            asked.push('문체 다듬기');
+            draw();
+            toastr.success(`다듬었어요${styleSummary(r)}${keptSummary(r)} · 적용을 눌러야 바뀌어요`, '문체 다듬기', { timeOut: 9000 });
+        } finally { busy = false; }
+    });
     $root.find('.na_sf_q').on('keydown', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); send(); } });
     $root.find('.na_sf_undo').on('click', () => { draft = original; asked.length = 0; $root.find('.na_sf_note').prop('hidden', true); draw(); });
     let applied = false;

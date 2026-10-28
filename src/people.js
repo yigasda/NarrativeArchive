@@ -169,8 +169,23 @@ export function stateParts(m) {
     return { per, shared };
 }
 
+// the pair the story is about, named in the archive's title line ("# Mara × Ren Vale — Context Archive"): they are in every
+// numbered section, though the sections mostly call them he and she. With no such line, a cast of two is the pair
+export function principals(m, names = peopleList(m)) {
+    const head = String(m.text || '').split('\n').find(l => /^#\s/.test(l)) || '';
+    const mt = head.match(/^#\s+(.+?)\s+[×xX]\s+(.+?)(?:\s+[—–-]\s|$)/);
+    const same = (a, b) => { const x = nameKey(a), y = nameKey(b); return x === y || x.startsWith(`${y} `) || y.startsWith(`${x} `); };
+    if (mt) {
+        const ps = [mt[1], mt[2]].map(part => names.find(n => same(n, part))).filter(Boolean);
+        if (ps.length) return [...new Set(ps)];
+    }
+    const cast = castNames(m);
+    return cast.length && cast.length <= 2 ? names.filter(n => cast.some(c => same(c, n))) : [];
+}
+
 export function peopleData(m) {
     const names = peopleList(m);
+    const leads = principals(m, names);
     const res = names.map(n => ({ n, re: nameRe(n), first: n.split(/\s+/)[0] }));
     const text = String(m.text || '');
     const secs = parseSections(text).filter(s => !s.group && RANGE_HEAD.test(s.title));
@@ -180,7 +195,7 @@ export function peopleData(m) {
     const pairKey = (a, b) => [a, b].sort().join('\u0001');
     for (const s of secs) {
         const body = text.slice(s.start, s.end);
-        const here = res.filter(r => r.re.test(body)).map(r => r.n);
+        const here = [...new Set([...leads, ...res.filter(r => r.re.test(body)).map(r => r.n)])];
         for (const n of here) people.get(n).secs.push(s);
         for (let i = 0; i < here.length; i++) for (let j = i + 1; j < here.length; j++) {
             const k = pairKey(here[i], here[j]);
@@ -205,7 +220,7 @@ export function peopleData(m) {
 }
 
 // ---- relationship temperature: the AI rates each section two people share from -5 (cold) to +5 (warm)
-// m.temps = { "A\u0001B": { sectionKey: { s, why, h } } }; h is the section text's hash, so an edited section is rated again
+// m.temps = { "A\u0001B": { sectionKey: { s, why, h } | { absent, why, h } } }; h is the section text's hash, so an edited section is rated again
 export const AI_SYS_TEMP = `GOAL
 Rate how WARM or COLD the relationship between two people is in each section of a story archive.
 
@@ -224,8 +239,8 @@ SCALE (one whole number from -5 to 5)
 
 STEPS
 1. Take one section.
-2. Look ONLY at how the two people in the PAIR treat and feel about each other in that section. Ignore everyone else.
-3. If both are there but do not really deal with each other, the score is 0.
+2. Look ONLY at how the two people in the PAIR treat and feel about each other in that section. Ignore everyone else. Sections often call them "he" and "she" rather than by name: tell who is who from the section and the ones before it.
+3. If both are there but do not really deal with each other, the score is 0. If one of them is not in the section at all, write "-" instead of a score.
 4. If the mood changes inside the section, the END of the section counts more than the start.
 5. Pick the number from the SCALE.
 6. Write the reason in Korean, 12 words or fewer.
@@ -240,12 +255,12 @@ S4: Ren apologizes. Mara does not forgive him yet but lets him walk her home.
 Answer:
 S1 | 4 | 렌이 마라를 구하고 밤새 이야기함
 S2 | -3 | 편지 거짓말이 드러나 마라가 떠남
-S3 | 0 | 둘이 거의 엮이지 않음
+S3 | - | 렌이 이 장면에 없음
 S4 | 1 | 사과를 받고 조심스레 곁을 허락함
 
 OUTPUT
 One line per section, in order, exactly like this:
-S<number> | <score> | <reason>
+S<number> | <score or -> | <reason>
 Nothing else. No title, no notes, no summary.`;
 
 export async function rateTemps(m, pair, secs, onStep) {
@@ -265,9 +280,11 @@ export async function rateTemps(m, pair, secs, onStep) {
         onStep?.(pi + 1, parts.length);
         const body = part.map((s, i) => `S${i + 1}: ${s.title}\n${m.text.slice(s.start, s.end).replace(/^[^\n]*\n?/, '').trim()}`).join('\n\n');
         const out = await askAI(`PAIR: ${pair.a} & ${pair.b}\n\nSECTIONS\n${body}`, { system: AI_SYS_TEMP, maxTokens: 3000 });
-        for (const mt of out.matchAll(/^\s*\**S(\d+)\**\s*[|:]\s*([+\-−–]?\s*\d+)\s*[|:]\s*(.+)$/gm)) {
+        for (const mt of out.matchAll(/^\s*\**S(\d+)\**\s*[|:]\s*([+\-−–]?\s*\d+|[-−–—])\s*[|:]\s*(.+)$/gm)) {
             const s = part[Number(mt[1]) - 1];
             if (!s) continue;
+            // one of the two is not in this section: kept as such, so it is neither drawn nor asked again
+            if (/^[-−–—]$/.test(mt[2].trim())) { store[sectionKey(s)] = { absent: true, why: mt[3].trim().slice(0, 80), h: textHash(m.text.slice(s.start, s.end)) }; got++; continue; }
             const v = Math.max(-5, Math.min(5, parseInt(mt[2].replace(/[−–]/, '-').replace(/\s/g, ''), 10) || 0));
             store[sectionKey(s)] = { s: v, why: mt[3].trim().slice(0, 80), h: textHash(m.text.slice(s.start, s.end)) };
             got++;
@@ -279,7 +296,12 @@ export async function rateTemps(m, pair, secs, onStep) {
 
 export function tempPoints(m, pair) {
     const store = m.temps?.[[pair.a, pair.b].sort().join('\u0001')] || {};
-    return pair.secs.map(s => { const t = store[sectionKey(s)]; return { s, t: t || null, stale: !!t && t.h !== textHash(m.text.slice(s.start, s.end)) }; });
+    return pair.secs.map(s => {
+        const t = store[sectionKey(s)], h = textHash(m.text.slice(s.start, s.end));
+        // absent: the AI said one of the two is not in this section (and it has not changed since)
+        const absent = !!t?.absent && t.h === h;
+        return { s, t: t && !t.absent ? t : null, stale: !!t && !t.absent && t.h !== h, absent };
+    });
 }
 
 // smooth line graph, fixed 320×150 box scaled to the width: x = shared sections in story order, y = −5…5
@@ -480,26 +502,26 @@ export async function openPeople() {
         const pair = pairs.find(p => data.pairKey(p.a, p.b) === tpair) || pairs.find(p => p.a === sel || p.b === sel) || pairs[0];
         tpair = data.pairKey(pair.a, pair.b);
         const pts = tempPoints(m, pair);
-        const todo = pts.filter(p => !p.t || p.stale).length, scored = pts.filter(p => p.t);
+        const todo = pts.filter(p => (!p.t || p.stale) && !p.absent).length, scored = pts.filter(p => p.t), shared = pts.filter(p => !p.absent).length;
         const picker = `
           <label class="na_tp_pick">
             <span class="na_tp_faces">${faceHtml(pair.a, 38)}${faceHtml(pair.b, 38)}</span>
-            <span class="na_tp_pickname"><b>${esc(pair.a)} · ${esc(pair.b)}</b><small>함께 나온 섹션 ${pts.length}개</small></span>
+            <span class="na_tp_pickname"><b>${esc(pair.a)} · ${esc(pair.b)}</b><small>함께 나온 섹션 ${shared}개</small></span>
             <svg class="na_tp_chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
             <select class="na_temp_sel" aria-label="짝 고르기">${pairs.map(p => `<option value="${esc(data.pairKey(p.a, p.b))}" ${p === pair ? 'selected' : ''}>${esc(p.a)} · ${esc(p.b)} (${p.secs.length})</option>`).join('')}</select>
           </label>`;
         const runBtns = `
           <div class="na_v2_row2">
-            ${scored.length ? `<button type="button" class="na_v2_btn na_tp_listbtn">섹션별 점수 ${pts.length}개</button>` : ''}
+            ${scored.length ? `<button type="button" class="na_v2_btn na_tp_listbtn">섹션별 점수 ${scored.length}개</button>` : ''}
             ${todo ? `<button type="button" class="na_v2_btn primary na_temp_run" data-all="0">${scored.length ? `안 잰 섹션 ${todo}개 재기` : `섹션 ${todo}개 재기`}</button>` : `<button type="button" class="na_v2_btn na_temp_run" data-all="1">전부 다시 재기</button>`}
           </div>
           <small class="na_v2_foot">AI 기능 모델(${esc(aiLabel())})이 섹션마다 −5(차가움) ~ +5(따뜻함)으로 매겨요</small>`;
-        if (!scored.length) return `${picker}<div class="na_v2_card na_tp_empty"><i class="fa-solid fa-temperature-half"></i><b>아직 안 쟀어요</b><small>두 사람이 함께 나온 섹션 ${pts.length}개를 AI가 읽고 온도를 매겨요</small></div>${runBtns}`;
+        if (!scored.length) return `${picker}<div class="na_v2_card na_tp_empty"><i class="fa-solid fa-temperature-half"></i><b>아직 안 쟀어요</b><small>두 사람이 함께 나온 섹션 ${shared}개를 AI가 읽고 온도를 매겨요</small></div>${runBtns}`;
         const now = [...scored].pop().t.s;
         const vals = scored.map(p => p.t.s);
         const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 10) / 10;
         const hi = scored.reduce((a, p) => p.t.s > a.t.s ? p : a, scored[0]), lo = scored.reduce((a, p) => p.t.s < a.t.s ? p : a, scored[0]);
-        const ch = tempChart(pts);
+        const ch = tempChart(pts.filter(p => !p.absent));
         // the biggest jumps between one scored section and the next
         const turns = scored.slice(1).map((p, i) => ({ p, from: scored[i].t.s, d: p.t.s - scored[i].t.s })).filter(x => Math.abs(x.d) >= 3)
             .sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 3);
@@ -531,7 +553,7 @@ export async function openPeople() {
               <span class="na_tp_turntxt"><b>${esc(x.p.t.why)}</b><small>${esc(short(x.p.s))} · ${esc(label(x.p.s))}</small></span>
             </button>`).join('')}` : ''}
           ${runBtns}
-          <div class="na_tp_list" hidden>${pts.map(p => `
+          <div class="na_tp_list" hidden>${pts.filter(p => !p.absent).map(p => `
             <button type="button" class="na_tp_row" data-start="${p.s.start}">
               <b class="na_temp_pill ${p.t ? tempCls(p.t.s) : 'none'}">${p.t ? tempSign(p.t.s) : '–'}</b>
               <span class="na_tp_turntxt"><span>${p.t ? esc(p.t.why) : '안 잼'}${p.stale ? ' <small class="na_warn_txt">섹션이 바뀜</small>' : ''}</span><small>${esc(short(p.s))} · ${esc(label(p.s))}</small></span>
@@ -579,7 +601,7 @@ export async function openPeople() {
         const pair = data.pairs.find(p => data.pairKey(p.a, p.b) === tpair);
         if (!pair) return;
         const all = this.dataset.all === '1';
-        const secs = tempPoints(m, pair).filter(p => all || !p.t || p.stale).map(p => p.s);
+        const secs = tempPoints(m, pair).filter(p => all || ((!p.t || p.stale) && !p.absent)).map(p => p.s);
         if (all && !await confirm('전부 다시', `${esc(pair.a)} · ${esc(pair.b)}이 함께 나온 섹션 ${secs.length}개를 모두 다시 잴까요?`)) return;
         busy = true;
         const $b = $(this);

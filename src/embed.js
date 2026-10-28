@@ -1,10 +1,10 @@
-// 뜻으로 찾기: sections and hidden raw passages also go into SillyTavern's vector store, so the router and 회상
+// 뜻으로 찾기: sections also go into SillyTavern's vector store, so the router can
 // find a moment by meaning ("all those lights" → a section about paper lanterns), and a Korean chat finds an
 // English archive. Uses the server's /api/vector endpoints; vectors stay in SillyTavern's own data folder.
 
 import { currentChatId } from './chats.js';
 import { ctx, getMeta, globalSettings, hasChat, saveGlobal } from './core.js';
-import { rawItems, sectionItems } from './recall.js';
+import { sectionItems } from './recall.js';
 import { shortHash } from './translate.js';
 
 // '' = off, 'st' = whatever the Vector Storage extension is set to, else a source of our own
@@ -180,9 +180,8 @@ const MAX_TEXT = 2000; // characters per embedded text; gemini-embedding reads a
 const numHash = s => { let h = 0x811c9dc5 ^ 0x5bd1; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0) || 1; };
 
 // what goes in: every numbered section in pieces of about 900 characters, each with its title in front,
-// and every hidden raw passage (회상 finds old lines from those)
+// (hidden raw passages went in too while 회상 was there; since 3.88.0 only the router searches, by section)
 const PIECE = 900;
-const RAW_PIECE = 1800; // fills one text up to MAX_TEXT, with room left for the speaker names
 function corpus(m) {
     const out = [];
     for (const x of sectionItems(m)) {
@@ -198,22 +197,6 @@ function corpus(m) {
         if (cur || !pieces.length) pieces.push(cur);
         for (const p of pieces) { const text = `${title}\n${p}`.trim(); out.push({ kind: 'sec', title: x.title, text, hash: numHash(`s|${text}`) }); }
     }
-    // hidden raw lines: consecutive passages joined into pieces of about 1,500 characters (two or three messages),
-    // so a long chat is a few hundred texts rather than thousands — each piece remembers the passages in it
-    let group = [], len = 0;
-    const flush = () => {
-        if (!group.length) return;
-        const text = group.map(g => `${g.name}: ${g.text}`).join('\n');
-        out.push({ kind: 'raw', i: group[0].i, to: group[group.length - 1].i, parts: group, text, hash: numHash(`r2|${group[0].i}|${text}`) });
-        group = []; len = 0;
-    };
-    for (const r of rawItems({ only: 'hidden' })) {
-        const add = r.name.length + r.text.length + 3;
-        if (group.length && (len + add > RAW_PIECE || r.i - group[group.length - 1].i > 1)) flush();
-        group.push({ i: r.i, name: r.name, text: r.text });
-        len += add;
-    }
-    flush();
     return out;
 }
 

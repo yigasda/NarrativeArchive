@@ -487,7 +487,7 @@ export function mountSectionBrowser($host) {
                     <button type="button" class="na_icon na_keys ${hasKeys ? 'active' : ''}" title="키워드 연동" aria-label="키워드 연동">${svgA(ICO_A.key, 17)}</button>
                     ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_icon na_layers_btn ${layersOf(m)[key] ? 'active' : ''}" title="짧은 버전 · 한 줄 (망각 곡선)" aria-label="짧은 버전">${svgA(ICO_A.layers, 17)}</button>` : ''}
                     <button type="button" class="na_icon na_edit" title="편집" aria-label="편집">${svgA(ICO_A.pen, 17)}</button>
-                    ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_icon na_fix_btn" title="초안 모델에게 고쳐 달라고 하기" aria-label="고쳐 달라고 하기">${svgA(ICO_A.chat, 17)}</button>` : ''}
+                    ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_icon na_fix_btn" title="AI 기능 모델에게 고쳐 달라고 하기" aria-label="고쳐 달라고 하기">${svgA(ICO_A.chat, 17)}</button>` : ''}
                     <button type="button" class="na_icon na_del na_danger" title="섹션 삭제" aria-label="섹션 삭제">${svgA(ICO_A.trash, 17)}</button>
                     <span class="na_spacer"></span>
                     <button type="button" class="na_icon na_pin_t ${isPin ? 'active' : ''}" title="${isPin ? '고정 풀기' : '망각 곡선에서도 늘 원문으로 고정'}" aria-label="고정">${svgA(ICO_A.pin, 17)}</button>

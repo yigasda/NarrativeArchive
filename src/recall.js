@@ -1,17 +1,15 @@
 // Search index over the raw chat (hidden messages too) and the archive's sections: BM25 on words. Korean words also
 // count by their stem without the particle, so "세트가" still finds "세트는".
-// Used by 회상 (relevant old lines injected before each reply), 질문하기 and the voice notes.
+// Used by 질문하기, the AI router and the voice notes.
 // Also here: OOC 빼기 (/comment, OOC, /sys). 꼭 남길 장면 come first among equal hits.
 
 import { glossaryEntries } from './translate.js';
-import { ctx, getMeta, globalSettings, hasChat, saveGlobal, saveMeta } from './core.js';
+import { ctx, getMeta, globalSettings, hasChat, saveGlobal } from './core.js';
 import { cleanMessage } from './extract.js';
-import { currentInjection } from './inject.js';
-import { embedSearch } from './embed.js';
-import { guessMode, lastGuess } from './guess.js';
 import { isKeptAt, sectionKept } from './keeps.js';
 import { mutedSet, parseSections, sectionKey, splitTail } from './sections.js';
 
+// 회상 went in 3.88.0; the key is still cleared so an old chat keeps no stale block
 export const RECALL_KEY = 'narrative_archive_recall';
 
 // ---- OOC 빼기: what is not the story, by kind. Each kind is switched on its own in the settings.
@@ -161,20 +159,6 @@ export function sectionItems(m) {
     return parseSections(body).filter(s => !s.group && !muted.has(sectionKey(s))).map(s => ({ kind: 'sec', s, title: s.title, star: sectionKept(m, s.title), text: body.slice(s.start, s.end) }));
 }
 
-// bullets of the sections that are not going in whole right now (faded, waiting for a keyword, picked out by the router)
-export function bulletItems(m, injected) {
-    const out = [];
-    for (const x of sectionItems(m)) {
-        const head = x.text.match(/^[^\n]*/)[0];
-        if (injected.includes(x.text.trim())) continue;
-        for (const line of x.text.slice(head.length).split('\n')) {
-            const l = line.replace(/^\s*[-*•]\s+/, '').trim();
-            if (l.length >= 25 && !/^[A-Z][A-Z ]*:\s*$/.test(l)) out.push({ kind: 'bullet', title: x.title, star: x.star, text: l });
-        }
-    }
-    return out;
-}
-
 // the glossary's name pairs (Set = 세트) join a query in both spellings, so a Korean chat still finds an English archive
 export function withGlossary(m, q) {
     const low = String(q || '').toLowerCase();
@@ -185,14 +169,6 @@ export function withGlossary(m, q) {
         else if (low.includes(b) && !low.includes(a)) add.push(e.src);
     }
     return add.length ? `${q}\n${add.join(' ')}` : q;
-}
-
-// ---- 회상: before each reply, find old lines that fit the newest messages
-
-export function recallCfg(m) {
-    const r = m?.recall && typeof m.recall === 'object' ? m.recall : {};
-    const num = (v, d, lo, hi) => (Number.isFinite(+v) && v !== '' && v !== undefined ? Math.min(hi, Math.max(lo, +v)) : d);
-    return { on: !!r.on, k: num(r.k, 4, 1, 12), budget: num(r.budget, 600, 100, 4000), depth: num(r.depth, 2, 0, 20), scan: num(r.scan, 3, 1, 10), secs: r.secs !== false };
 }
 
 // the newest messages as a weighted query: the one being answered counts most, each older one a little less
@@ -233,54 +209,3 @@ export function pick(results, { k, budget, minHits = 2 }) {
 export const recallLine = r => r.item.kind === 'raw'
     ? `- [#${r.item.i} ${r.item.name}] ${r.item.text.replace(/\s*\n\s*/g, ' ')}`
     : `- [${r.item.title.replace(/\s*\(.*$/, '')}] ${r.item.text}`;
-
-// 뜻으로 찾기: a passage both searches found counts more; one only the meaning search found joins below the word hits
-async function withMeaning(results, items, q) {
-    // the newest two messages and the guessed scene, if any
-    const mean = (await embedSearch(q.filter(x => x.w >= 0.7).map(x => x.text).join('\n'), { topK: 16 })).filter(x => x.kind === 'raw');
-    if (!mean.length) return results;
-    const key = x => `${x.i}|${x.name}: ${x.text}`;
-    const byKey = new Map(items.filter(x => x.kind === 'raw').map(x => [key(x), x]));
-    const rank = new Map(mean.map(x => [x.text, x.rank]));
-    const top = results[0]?.score || 1;
-    const out = results.map(r => (r.item.kind === 'raw' && rank.has(`${r.item.name}: ${r.item.text}`) ? { ...r, score: r.score * 1.6 } : r));
-    const seen = new Set(out.filter(r => r.item.kind === 'raw').map(r => key(r.item)));
-    for (const x of mean) {
-        const item = byKey.get(`${x.i}|${x.text}`);
-        if (!item || seen.has(key(item))) continue;
-        out.push({ item, score: top * 0.5 * (1 - x.rank / 40), hits: 99 });
-    }
-    return out.sort((a, b) => b.score - a.score);
-}
-
-export const lastRecall = new Map(); // chat id → { at, lines, tokens }
-
-export async function runRecall() {
-    const c = ctx();
-    if (!hasChat()) { c.setExtensionPrompt(RECALL_KEY, '', 1, 0); return null; }
-    const m = getMeta();
-    const cfg = recallCfg(m);
-    if (!m.enabled || !cfg.on) { c.setExtensionPrompt(RECALL_KEY, '', 1, 0); return null; }
-    const q = recallQuery(cfg.scan).map(x => ({ ...x, text: withGlossary(m, x.text) }));
-    if (guessMode() === 'both' && lastGuess()) q.push({ text: lastGuess(), w: 0.7 }); // 지난 장면 짐작하기
-    const injected = cfg.secs ? (await currentInjection()).text || '' : '';
-    const items = [...rawItems({ only: 'hidden' }), ...(cfg.secs ? bulletItems(m, injected) : [])];
-    const qn = new Set(q.flatMap(x => tokenize(x.text))).size;
-    const hits = pick(await withMeaning(bm25(items, q), items, q), { k: cfg.k, budget: cfg.budget, minHits: qn < 6 ? 1 : 2 })
-        .sort((x, y) => (x.item.i ?? -1) - (y.item.i ?? -1));
-    const id = String(c.getCurrentChatId?.() || c.chatId || '');
-    if (!hits.length) { c.setExtensionPrompt(RECALL_KEY, '', 1, 0); lastRecall.set(id, { at: Date.now(), lines: [], tokens: 0 }); return null; }
-    const lines = hits.map(recallLine);
-    const text = `# FROM EARLIER IN THE STORY\n_Old moments that touch what is happening now, from the original messages and the archive. For consistency only: never quote, list or mention them._\n${lines.join('\n')}`;
-    c.setExtensionPrompt(RECALL_KEY, text, 1, cfg.depth, false, 0);
-    const st = { at: Date.now(), lines, tokens: estTok(text) };
-    lastRecall.set(id, st);
-    return st;
-}
-
-export async function setRecall(patch) {
-    const m = getMeta();
-    m.recall = { ...(m.recall && typeof m.recall === 'object' ? m.recall : {}), ...patch };
-    await saveMeta();
-    await runRecall();
-}
