@@ -311,7 +311,7 @@ PLOT:
 | `inject.js` · `fade.js` · `world.js` · `knowledge.js` | 주입 블록, 망각 곡선, 세계관, 누가 아는가 |
 | `router.js` · `recall.js` · `embed.js` · `guess.js` | 답 직전 준비: 라우터, 낱말 색인 · OOC 빼기, 임베딩, 지난 장면 짐작 |
 | `wizard.js` · `scenes.js` · `studio.js` · `prompts.js` | 한 번에 압축 · 마법사, 장면별, 작업실, 압축 지시문 |
-| `append.js` · `statechg.js` · `rulecheck.js` · `style.js` | 아카이브에 추가, STATE 변경 목록, 세는 규칙 검사, 문체 다듬기 |
+| `append.js` · `appendtext.js` · `statechg.js` · `rulecheck.js` · `style.js` | 아카이브에 추가, STATE 변경 목록, 세는 규칙 검사, 문체 다듬기 |
 | `panel.js` · `panelhtml.js` · `panelbind.js` · `panelcfg.js` · `browser.js` · `status.js` · `theme.js` | 사이드 패널(탭 · 새로고침 / HTML 틀 / 버튼 연결 / ⚙ 설정 화면), 아카이브 탭, 계기판, 배색 |
 | `ai.js` · `translate.js` · `lore.js` | AI 연결(프로필 · 커스텀 API · Vertex), 번역 · 용어집, 로어북 곁들이기 |
 | `phone.js` · `phonedata.js` · `phoneai.js` · `phonehome.js` · `phoneapps.js` | 캐릭터 휴대폰: 창 · 화면 전환 / 폰 데이터 · 만들기 요청 · 날짜 표기 / 사진 그리기 · 카메라 · 새로 쓰기 · 검색 결과 / 홈 · 잠금화면 / 앱 화면 |
