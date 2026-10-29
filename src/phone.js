@@ -10,7 +10,7 @@ import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drawing, drawPhoto, drawPost, searching, searchPage, shooting, takePhoto, writeEntry, writing } from './phoneai.js';
 import { APPS, AXB, AXB_C, busyHtml, callScreen, callWho, calOne, calScreen, camScreen, diaryOne, diaryScreen, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, searchOne, searchScreen, setLore, setRemake, setScreen, setTheme, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
-import { koOn, loreOff, makePhone, newSections, phoneLore, REMAKE, showNow, storyNow } from './phonedata.js';
+import { ensureIds, koOn, loreOff, makePhone, newSections, phoneLore, REMAKE, showNow, storyNow } from './phonedata.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
 import { openGlossary } from './translate.js';
 import { confirm, esc } from './util.js';
@@ -43,6 +43,8 @@ export async function openPhone(who = null) {
     const c = ctx();
     const m = getMeta();
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
+    // phones saved before records had ids get them now, once
+    if (Object.values(m.phones).reduce((n, p) => n + ensureIds(p), 0)) saveMeta();
     const names = peopleList(m);
     const roster = new Set(names.map(nameKey));
     let owner = who && names.some(n => nameKey(n) === nameKey(who)) ? names.find(n => nameKey(n) === nameKey(who)) : (names.find(n => m.phones[nameKey(n)]) || names[0] || null);

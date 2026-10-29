@@ -6,6 +6,7 @@ import { calendars, headingDate } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
 import { recentForCheck } from './drift.js';
 import { applyInjection } from './inject.js';
+import { knowledgeRows } from './knowledge.js';
 import { headingPlaces, nameKey, nameRe } from './people.js';
 import { estTok } from './recall.js';
 import { recentTrackers } from './scenes.js';
@@ -30,6 +31,7 @@ YOU GET
 - LOREBOOK (sometimes): setting notes the user picked.
 - RECENT CHAT: the newest messages, after the archive.
 - OWNER: whose phone it is.
+- OWNER DOESN'T KNOW (sometimes): facts the owner does not know, or only suspects. Nothing on the phone may show them as known.
 - PHONE NOW (only when updating): what the phone holds already.
 
 ONE TEST FOR EVERY ITEM
@@ -70,7 +72,9 @@ JSON (one object, nothing before or after it)
 }
 At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches, 6 events, 5 posts with up to 4 comments,
 6 mails, 5 diary entries. Fewer is fine; an empty list is fine.
-Oldest first in every list.`;
+Oldest first in every list.
+Any item may carry "ev": a short tag for one story event, the same on every item that comes from it (the flight's mail, its event and its photo all "ev": "berlin-flight"). Keep the tags PHONE NOW uses.
+A value the story does not give (a booking number, a seat, a price, an exact time) stays empty; never make one up.`;
 
 const UPDATE_ASK = `[UPDATE]
 Write only what came onto the phone after PHONE NOW's "now", in the same JSON: new messages (under the thread they belong to),
@@ -92,6 +96,9 @@ const hhmm = v => { const mt = String(v || '').match(/(\d{1,2}):(\d{2})/); retur
 export const ko = v => line(v, 400);
 export const arr = v => (Array.isArray(v) ? v : []);
 export const pick = (v, list, dflt) => (list.includes(v) ? v : dflt);
+// an event tag, kept only when given: items from the same story event share it (links between apps)
+const evOf = v => line(v, 40).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '');
+const withEv = (x, raw) => { const ev = evOf(raw?.ev); return ev ? { ...x, ev } : x; };
 
 export function parsePhone(out) {
     const s = String(out || '').replace(/```(?:json)?/gi, '');
@@ -107,16 +114,16 @@ export function parsePhone(out) {
         now: when(raw.now),
         contacts: arr(raw.contacts).map(x => ({ name: line(x?.name, 40), saved: line(x?.saved, 40) })).filter(x => x.name).slice(0, CAP.contacts),
         threads: arr(raw.threads).map(t => ({ with: line(t?.with, 40), messages: arr(t?.messages).map(msg).filter(x => x.text) })).filter(t => t.with && t.messages.length).slice(0, CAP.threads),
-        calls: arr(raw.calls).map(x => ({ with: line(x?.with, 40), type: pick(x?.type, ['in', 'out', 'missed'], 'in'), time: when(x?.time), min: Math.max(0, Math.min(600, Math.round(Number(x?.min) || 0))) })).filter(x => x.with),
-        photos: arr(raw.photos).map(x => ({ caption: line(x?.caption, 200), ko: ko(x?.ko), time: when(x?.time), mood: pick(x?.mood, MOODS, 'warm') })).filter(x => x.caption),
-        notes: arr(raw.notes).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 1500), ko: str(x?.ko, 1500), time: when(x?.time) })).filter(x => x.title || x.text),
-        searches: arr(raw.searches).map(x => ({ q: line(x?.q, 120), ko: ko(x?.ko), time: when(x?.time) })).filter(x => x.q),
-        events: arr(raw.events).map(x => ({ title: line(x?.title, 80), ko: ko(x?.ko), date: when(x?.date).slice(0, 5), time: hhmm(x?.time) })).filter(x => x.title && x.date),
+        calls: arr(raw.calls).map(x => withEv({ with: line(x?.with, 40), type: pick(x?.type, ['in', 'out', 'missed'], 'in'), time: when(x?.time), min: Math.max(0, Math.min(600, Math.round(Number(x?.min) || 0))) }, x)).filter(x => x.with),
+        photos: arr(raw.photos).map(x => withEv({ caption: line(x?.caption, 200), ko: ko(x?.ko), time: when(x?.time), mood: pick(x?.mood, MOODS, 'warm') }, x)).filter(x => x.caption),
+        notes: arr(raw.notes).map(x => withEv({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 1500), ko: str(x?.ko, 1500), time: when(x?.time) }, x)).filter(x => x.title || x.text),
+        searches: arr(raw.searches).map(x => withEv({ q: line(x?.q, 120), ko: ko(x?.ko), time: when(x?.time) }, x)).filter(x => x.q),
+        events: arr(raw.events).map(x => withEv({ title: line(x?.title, 80), ko: ko(x?.ko), date: when(x?.date).slice(0, 5), time: hhmm(x?.time) }, x)).filter(x => x.title && x.date),
         profile: raw.profile && typeof raw.profile === 'object' ? { handle: line(raw.profile.handle, 40), bio: line(raw.profile.bio, 200), ko: ko(raw.profile.ko), followers: Math.max(0, Math.round(Number(raw.profile.followers) || 0)), following: Math.max(0, Math.round(Number(raw.profile.following) || 0)) } : null,
-        posts: arr(raw.posts).map(x => ({ text: str(x?.text, 800), ko: str(x?.ko, 800), photo: line(x?.photo, 200), pko: ko(x?.pko), time: when(x?.time), likes: Math.max(0, Math.min(99999, Math.round(Number(x?.likes) || 0))),
-            comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) })).filter(x => x.text || x.photo),
-        mails: arr(raw.mails).map(x => ({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: !!x?.unread })).filter(x => x.from && (x.subject || x.text)),
-        diary: arr(raw.diary).map(x => ({ date: when(x?.date).slice(0, 5), title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000) })).filter(x => x.date && x.text),
+        posts: arr(raw.posts).map(x => withEv({ text: str(x?.text, 800), ko: str(x?.ko, 800), photo: line(x?.photo, 200), pko: ko(x?.pko), time: when(x?.time), likes: Math.max(0, Math.min(99999, Math.round(Number(x?.likes) || 0))),
+            comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) }, x)).filter(x => x.text || x.photo),
+        mails: arr(raw.mails).map(x => withEv({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: !!x?.unread }, x)).filter(x => x.from && (x.subject || x.text)),
+        diary: arr(raw.diary).map(x => withEv({ date: when(x?.date).slice(0, 5), title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000) }, x)).filter(x => x.date && x.text),
     };
 }
 
@@ -129,6 +136,30 @@ const SIG = {
 const sigOf = (k, x) => JSON.stringify(SIG[k](x)).toLowerCase();
 const fresh = (k, old, add) => { const seen = new Set(old.map(x => sigOf(k, x))); return add.filter(x => !seen.has(sigOf(k, x)) && seen.add(sigOf(k, x))); };
 // an update's new items go after the old ones; every list keeps its newest, the threads the ones written in last
+// every record gets the app's own id (not the model's): links between apps point at it, and it survives trimming and 다시 만들기.
+// Phones saved before ids get theirs when next opened or made
+const newId = () => Math.random().toString(36).slice(2, 8);
+export function ensureIds(p) {
+    let n = 0;
+    for (const k of [...LISTS, 'threads', 'contacts']) for (const x of p?.[k] || []) if (x && typeof x === 'object' && !x.id) { x.id = newId(); n++; }
+    return n;
+}
+// 다시 만들기 of an app: a record that comes back the same keeps what the user did with it (its id, picture, read state, results page)
+const CARRY = ['id', 'img', 'tags', 'via', 'seen', 'results'];
+function carryOver(k, was, now) {
+    const keyOf = k === 'threads' ? t => nameKey(t.with) : k === 'contacts' ? c => nameKey(c.name) : SIG[k] ? x => sigOf(k, x) : null;
+    if (!keyOf || !Array.isArray(was)) return;
+    const old = new Map(was.map(x => [keyOf(x), x]));
+    for (const x of now) {
+        const o = old.get(keyOf(x));
+        if (!o) continue;
+        for (const f of CARRY) if (o[f] !== undefined && x[f] === undefined) x[f] = o[f];
+        if (k === 'mails' && o.unread === false) x.unread = false;
+    }
+}
+// 재구성 (src "guess") records are the model's imagining, not the story: they never go back to the model or into the role-play
+export const isGuess = x => x?.src === 'guess';
+
 function mergePhone(p, add) {
     const keep = (list, n) => list.slice(-n);
     for (const t of add.threads) {
@@ -202,6 +233,12 @@ export const namesBlock = m => { const g = glossaryEntries(m); return g.length ?
 // 다시 만들기, app by app: which JSON keys each app is drawn from
 export const REMAKE = { msg: ['threads', 'contacts'], call: ['calls'], photo: ['photos'], note: ['notes'], search: ['searches'], cal: ['events'], sns: ['profile', 'posts'], mail: ['mails'], diary: ['diary'] };
 const onlyAsk = keys => `[ONLY THESE]\nThe phone already holds the rest. Write only these keys of the JSON, from the whole story: ${keys.join(', ')}.`;
+// 누가 아는가: what the owner doesn't know (or only suspects) stays off their phone
+const blindBlock = (m, owner) => {
+    const me = n => nameKey(n) === nameKey(owner);
+    const rows = knowledgeRows(m).flatMap(r => (r.unaware.some(me) ? [`- ${r.fact}`] : r.suspects.some(me) ? [`- ${r.fact} (only suspects)`] : []));
+    return rows.length ? `[OWNER DOESN'T KNOW]\n${rows.join('\n')}` : '';
+};
 function phoneRequest(m, owner, p = null, lore = '', only = null) {
     const world = worldText(m);
     const recent = recentForCheck(6).join('\n\n').slice(-6000);
@@ -214,25 +251,29 @@ function phoneRequest(m, owner, p = null, lore = '', only = null) {
         lore ? `[LOREBOOK]\n${lore}` : '',
         recent ? `[RECENT CHAT]\n${recent}` : '',
         `[OWNER]\n${owner}`,
+        blindBlock(m, owner),
         namesBlock(m),
         p ? UPDATE_ASK : '',
         only ? onlyAsk(only) : '',
     ].filter(Boolean).join('\n\n');
 }
 // what the model is shown of a phone it is updating: the newest of each list, without the Korean
+// PHONE NOW for the model: the newest of each list with its event tags; nothing 재구성, no ids
+const real = xs => (xs || []).filter(x => !isGuess(x));
+const ev = (x, o) => (x.ev ? { ...o, ev: x.ev } : o);
 const phoneForModel = p => ({
     country: p.country, now: p.now,
-    contacts: p.contacts,
-    threads: p.threads.map(t => ({ with: t.with, messages: t.messages.slice(-6).map(({ from, text, time }) => ({ from, text, time })) })),
-    calls: p.calls.slice(-5).map(({ ko: _, ...x }) => x),
-    photos: p.photos.slice(-4).map(({ caption, time }) => ({ caption, time })),
-    notes: p.notes.slice(-3).map(({ title, text, time }) => ({ title, text: text.slice(0, 200), time })),
-    searches: p.searches.slice(-4).map(({ q, time }) => ({ q, time })),
-    events: p.events.slice(-4).map(({ title, date, time }) => ({ title, date, time })),
+    contacts: p.contacts.map(({ name, saved }) => ({ name, saved })),
+    threads: p.threads.map(t => ({ with: t.with, messages: real(t.messages).slice(-6).map(({ from, text, time }) => ({ from, text, time })) })),
+    calls: real(p.calls).slice(-5).map(x => ev(x, { with: x.with, type: x.type, time: x.time, min: x.min })),
+    photos: real(p.photos).slice(-4).map(x => ev(x, { caption: x.caption, time: x.time })),
+    notes: real(p.notes).slice(-3).map(x => ev(x, { title: x.title, text: x.text.slice(0, 200), time: x.time })),
+    searches: real(p.searches).slice(-4).map(x => ev(x, { q: x.q, time: x.time })),
+    events: real(p.events).slice(-4).map(x => ev(x, { title: x.title, date: x.date, time: x.time })),
     profile: p.profile ? { handle: p.profile.handle, bio: p.profile.bio } : undefined,
-    posts: (p.posts || []).slice(-3).map(({ text, photo, time }) => ({ text: text.slice(0, 200), photo, time })),
-    mails: (p.mails || []).slice(-3).map(({ from, subject, time }) => ({ from, subject, time })),
-    diary: (p.diary || []).slice(-2).map(({ date, title, text }) => ({ date, title, text: text.slice(0, 300) })),
+    posts: real(p.posts).slice(-3).map(x => ev(x, { text: x.text.slice(0, 200), photo: x.photo, time: x.time })),
+    mails: real(p.mails).slice(-3).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })),
+    diary: real(p.diary).slice(-2).map(x => ev(x, { date: x.date, title: x.title, text: x.text.slice(0, 300) })),
 });
 
 // apps: some of REMAKE's names, made again from the whole story while the rest of the phone stays as it is
@@ -245,8 +286,11 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
     if (part) {
         const p = m.phones[key];
+        const was = Object.fromEntries(part.map(k => [k, p[k]]));
         for (const k of part) p[k] = k === 'profile' ? (got.profile || p.profile) : [];
         mergePhone(p, { ...got, ...Object.fromEntries([...LISTS, 'threads', 'contacts'].filter(k => !part.includes(k)).map(k => [k, []])), profile: null, now: '' });
+        for (const k of part) if (k !== 'profile') carryOver(k, was[k], p[k]);
+        ensureIds(p);
         await saveMeta();
         if (p.inject) applyInjection();
         return p;
@@ -259,6 +303,7 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         m.phones[key] = mergePhone(base, got);
     }
     const p = m.phones[key];
+    ensureIds(p);
     p.upto = lastEnd(m);
     p.at = Date.now();
     await saveMeta();
@@ -276,13 +321,14 @@ export function phoneBlock(m) {
         const saved = p.contacts.filter(c => c.saved && c.saved !== c.name).map(c => `${c.name} as "${c.saved}"`);
         if (saved.length) out.push(`Contacts saved: ${saved.join(', ')}`);
         for (const t of [...p.threads].sort((a, b) => lastTime(b).localeCompare(lastTime(a))).slice(0, 4)) {
-            out.push(`Texts with ${t.with}: ${t.messages.slice(-4).map(x => `${said(p, x)}: "${x.text}"`).join(' / ')}`);
+            out.push(`Texts with ${t.with}: ${t.messages.filter(x => !isGuess(x)).slice(-4).map(x => `${said(p, x)}: "${x.text}"`).join(' / ')}`);
         }
-        const missed = p.calls.filter(c => c.type === 'missed').slice(-3);
+        const missed = p.calls.filter(c => c.type === 'missed' && !isGuess(c)).slice(-3);
         if (missed.length) out.push(`Missed calls: ${missed.map(c => `${c.with} (${c.time})`).join(', ')}`);
-        const soon = p.events.filter(e => !p.now || upcoming(e, p.now)).slice(0, 3);
+        const soon = p.events.filter(e => !isGuess(e) && (!p.now || upcoming(e, p.now))).slice(0, 3);
         if (soon.length) out.push(`Calendar: ${soon.map(e => `${e.date}${e.time ? ` ${e.time}` : ''} ${e.title}`).join('; ')}`);
-        if (p.notes.length) out.push(`Notes: ${p.notes.slice(-3).map(n => n.title || n.text.slice(0, 40)).join('; ')}`);
+        const notes = p.notes.filter(n => !isGuess(n));
+        if (notes.length) out.push(`Notes: ${notes.slice(-3).map(n => n.title || n.text.slice(0, 40)).join('; ')}`);
         return `## ${p.owner}'s phone${p.now ? ` (as of ${p.now})` : ''}\n${out.map(l => `- ${l}`).join('\n')}`;
     }).join('\n')}`;
 }

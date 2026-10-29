@@ -6,7 +6,7 @@ import { calendars } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
 import { recentForCheck } from './drift.js';
 import { headingPlaces, nameKey, peopleList } from './people.js';
-import { arr, CAP, COUNTRIES, ko, line, MOODS, namesBlock, pad, parts, pick, rowDay, storyNow, str } from './phonedata.js';
+import { arr, CAP, COUNTRIES, ensureIds, ko, line, MOODS, namesBlock, pad, parts, pick, rowDay, storyNow, str } from './phonedata.js';
 
 // ---- 사진 그리기: the AI 기능 모델 turns a caption into image tags, one line for the picture and one per person. With
 // AutoPic in 직접 생성 mode the picture goes through AutoPic (its model, vibes, registered looks; only the people in the
@@ -212,6 +212,7 @@ export async function takePhoto(m, p) {
     if (!caption) throw new Error('모델 답에서 사진 설명을 찾지 못했어요');
     p.photos.push({ caption, ko: ko(raw?.ko), time: storyNow(p) || p.now || '', mood: pick(raw?.mood, MOODS, 'warm') });
     p.photos = p.photos.slice(-CAP.photos);
+    ensureIds(p);
     await saveMeta();
     return p.photos.length - 1;
 }
@@ -251,6 +252,7 @@ export async function writeEntry(m, p, kind) {
     const x = { title: line(raw?.title, 80), kt: line(raw?.kt, 80), text, ko: str(raw?.ko, 2000) };
     if (diary) { p.diary = [...(p.diary || []), { date: now.slice(0, 5), ...x }].slice(-CAP.diary); }
     else { p.notes.push({ ...x, time: now }); p.notes = p.notes.slice(-CAP.notes); }
+    ensureIds(p);
     await saveMeta();
     return (diary ? p.diary : p.notes).length - 1;
 }
