@@ -314,6 +314,7 @@ PLOT:
 | `append.js` · `statechg.js` · `rulecheck.js` · `style.js` | 아카이브에 추가, STATE 변경 목록, 세는 규칙 검사, 문체 다듬기 |
 | `panel.js` · `browser.js` · `status.js` · `theme.js` | 사이드 패널, 아카이브 탭, 계기판, 배색 |
 | `ai.js` · `translate.js` · `lore.js` | AI 연결(프로필 · 커스텀 API · Vertex), 번역 · 용어집, 로어북 곁들이기 |
-| 나머지 | 화면 하나씩: `ask` `drift` `quotes` `health` `xray` `people` `calendar` `phone` `branches` `diff` `preview` `reader` `source` `keywords` `chats` `util` … |
+| `phone.js` · `phonedata.js` · `phoneai.js` · `phonehome.js` · `phoneapps.js` | 캐릭터 휴대폰: 창 · 화면 전환 / 폰 데이터 · 만들기 요청 · 날짜 표기 / 사진 그리기 · 카메라 · 새로 쓰기 · 검색 결과 / 홈 · 잠금화면 / 앱 화면 |
+| 나머지 | 화면 하나씩: `ask` `drift` `quotes` `health` `xray` `people` `calendar` `branches` `diff` `preview` `reader` `source` `keywords` `chats` `util` … |
 
 </details>
