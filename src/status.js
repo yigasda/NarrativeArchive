@@ -11,7 +11,7 @@ import { activePrompt } from './prompts.js';
 import { routerCfg, routerState } from './router.js';
 import { ICO_A, svgA } from './theme.js';
 import { RANGE_HEAD, linkWaiting, mutedCount } from './sections.js';
-import { countTokens, esc, fmt, timeLabel } from './util.js';
+import { countTokens, esc, fmt } from './util.js';
 
 export let statusTimer = null;
 // the router on the home tab: what it called in (the range of each, tap for titles and why)
@@ -79,15 +79,11 @@ export async function refreshStatus() {
     } else { $('#na_health span').text('-'); $('#na_tool_health_sub').text('번호·숨기기·키워드·백업을 AI 없이 살펴봐요'); }
     renderNext(m, { afterTok, health: h });
 
-    const lx = m.lastExport;
-    const lxNote = lx ? `<small class="na_v2_note">최근 내보냄 #${lx.from}–#${lx.to} · ${esc(timeLabel(lx.at))}</small>` : '';
     const hn = hiddenIndexes().length;
     $('#na_hidden_n').text(hn ? `지금 숨긴 메시지 ${hn}개` : '숨긴 메시지 없음');
     { const gs = globalSettings(), ap = activePrompt(gs); $('#na_plib_sum').text(`${gs.prompts.length}개 · ${ap.fav ? '즐겨찾기 ★' : '지금'} ${ap.name}`); }
     $('#na_since').html(m.boundary >= 0 ? `
       <div class="na_cp_hhead"><span>경계선 #${m.boundary} 뒤에 쌓인 원문</span><span>마지막 #${last}</span></div>
       <div class="na_cp_big"><b>${fmt(afterTok)}</b><span>토큰 · 메시지 ${after.length}개</span></div>
-      <div class="na_cp_bar"><span class="hid" style="flex:${Math.max(1, m.boundary + 1)}"></span><span class="raw" style="flex:${Math.max(1, last - m.boundary)}"></span></div>
-      <div class="na_cp_hhead"><small>#0 – #${m.boundary} 숨김 (압축됨)</small><small>${last > m.boundary ? `#${m.boundary + 1} – #${last} 원문` : '원문 없음'}</small></div>
-      ${lxNote}` : '<div class="na_cp_hhead"><span>경계선이 아직 없어요</span></div><small class="na_v2_note">직접 적거나 "아카이브에 추가"를 쓰면 자동으로 정해져요.</small>');
+      <div class="na_cp_bar"><span class="hid" style="flex:${Math.max(1, m.boundary + 1)}"></span><span class="raw" style="flex:${Math.max(1, last - m.boundary)}"></span></div>` : '<div class="na_cp_hhead"><span>경계선이 아직 없어요</span></div><small class="na_v2_note">직접 적거나 "아카이브에 추가"를 쓰면 자동으로 정해져요.</small>');
 }
