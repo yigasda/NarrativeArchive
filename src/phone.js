@@ -1192,14 +1192,26 @@ export async function openPhone(who = null) {
     let owner = who && names.some(n => nameKey(n) === nameKey(who)) ? names.find(n => nameKey(n) === nameKey(who)) : (names.find(n => m.phones[nameKey(n)]) || names[0] || null);
     let view = 'lock', menu = false, sheet = false, adding = false, loreOpen = false;
     const loreExp = new Set(), loreEnts = new Map(); // books opened to their entries, and their entries once read
+    // the phone has the screen to itself: one layer over everything (a dialog, so the extension's colours and
+    // SillyTavern's top layer both hold), the people along the top, the controls in a sheet behind ⚙
+    let sheetOpen = false;
     const $root = $(`
-      <div class="na_popup na_v2 na_phone">
-        <div class="na_v2_titlebar"><div class="na_v2_title"><b>캐릭터 휴대폰</b><small>아카이브에 있는 만큼만 · 보기 전용</small></div><button type="button" class="na_v2_pillbtn na_ph_fullbtn">${ic('full', 14, 2.2)}폰만 보기</button></div>
-        <div class="na_ph_owners"></div>
-        <div class="na_ph_addrow" hidden><input type="text" class="text_pole na_ph_addname" placeholder="로어북에만 있는 인물 이름" enterkeyhint="done"><button type="button" class="na_v2_pillbtn na_ph_addok">추가</button></div>
-        <div class="na_ph_wrap"><div class="na_ph_frame"></div><button type="button" class="na_ph_fullx" aria-label="폰만 보기 닫기">${ic('x', 20, 2.4)}</button></div>
-        <div class="na_ph_ctrl"></div>
+      <div class="na_popup na_v2 na_phone na_phl_root">
+        <div class="na_phl_top">
+          <div class="na_ph_owners"></div>
+          <button type="button" class="na_phl_btn na_phl_gear" aria-label="폰 설정" aria-expanded="false">${svgGear}</button>
+          <button type="button" class="na_phl_btn na_phl_close" aria-label="닫기">${ic('x', 20, 2.4)}</button>
+        </div>
+        <div class="na_ph_wrap"><div class="na_ph_frame"></div></div>
+        <div class="na_phl_shade" hidden></div>
+        <div class="na_phl_sheet" hidden>
+          <div class="na_phl_grab"></div>
+          <div class="na_phl_sheethead"><b>캐릭터 휴대폰</b><small>아카이브에 있는 만큼만 · 보기 전용</small></div>
+          <div class="na_ph_addrow" hidden><input type="text" class="text_pole na_ph_addname" placeholder="로어북에만 있는 인물 이름" enterkeyhint="done"><button type="button" class="na_v2_pillbtn na_ph_addok">추가</button></div>
+          <div class="na_ph_ctrl"></div>
+        </div>
       </div>`);
+    const setSheet = on => { sheetOpen = on; $root.find('.na_phl_sheet, .na_phl_shade').prop('hidden', !on); $root.find('.na_phl_gear').attr('aria-expanded', String(on)).toggleClass('on', on); };
     const phone = () => (owner ? m.phones[nameKey(owner)] : null);
     const drawOwners = () => {
         $root.find('.na_ph_owners').html(`${names.map(n => `
@@ -1277,7 +1289,7 @@ export async function openPhone(who = null) {
     // the screen changes first; saving waits
     $root.on('click', '.na_ph_pick:not(.na_ph_addp)', function () { owner = this.dataset.n; view = 'lock'; menu = false; sheet = false; draw(); });
     // a person only the lorebook knows: into the same list as 인물 도감's +
-    $root.on('click', '.na_ph_addp', () => { adding = !adding; drawOwners(); if (adding) $root.find('.na_ph_addname').trigger('focus'); });
+    $root.on('click', '.na_ph_addp', () => { adding = !adding; drawOwners(); if (adding) { setSheet(true); $root.find('.na_ph_addname').trigger('focus'); } });
     const addPerson = async () => {
         const v = String($root.find('.na_ph_addname').val() || '').trim();
         if (!v) return;
@@ -1290,10 +1302,8 @@ export async function openPhone(who = null) {
     };
     $root.on('click', '.na_ph_addok', addPerson);
     $root.on('keydown', '.na_ph_addname', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); addPerson(); } });
-    // 폰만 보기: the phone alone, as tall as the screen; ✕ or a tap beside it comes back
-    $root.on('click', '.na_ph_fullbtn', () => $root.addClass('na_ph_full'));
-    $root.on('click', '.na_ph_fullx', () => $root.removeClass('na_ph_full'));
-    $root.on('click', '.na_ph_wrap', e => { if (e.target === e.currentTarget && $root.hasClass('na_ph_full')) $root.removeClass('na_ph_full'); });
+    $root.on('click', '.na_phl_gear', () => setSheet(!sheetOpen));
+    $root.on('click', '.na_phl_shade', () => setSheet(false));
     $root.on('click', '.na_ph_lorebtn', () => { loreOpen = !loreOpen; drawCtrl(); if (loreOpen) setTimeout(() => $root.find('.na_ph_lorelist')[0]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 0); });
     // the list is drawn again on every switch; where it was scrolled to stays
     const redrawLore = () => { const top = $root.find('.na_ph_lorescroll').scrollTop(); drawCtrl(); $root.find('.na_ph_lorescroll').scrollTop(top); };
@@ -1398,9 +1408,30 @@ export async function openPhone(who = null) {
     const ro = new ResizeObserver(fit);
     ro.observe(frame);
     cgFonts();
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: false, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    const dlg = document.createElement('dialog');
+    dlg.className = 'popup na_phl';
+    dlg.id = 'na_phl';
+    dlg.append($root[0]);
+    document.body.append(dlg);
+    // toasts sit in the top layer with the phone, then go back
+    let toasts = document.getElementById('toast-container');
+    if (!toasts) { toasts = document.createElement('div'); toasts.id = 'toast-container'; if (toastr.options?.positionClass) toasts.classList.add(toastr.options.positionClass); }
+    dlg.append(toasts);
+    dlg.showModal();
+    await new Promise(done => {
+        const close = () => { if (dlg.open) dlg.close(); };
+        // ✕, Esc, or a tap on the dark around the phone (the sheet closes first)
+        $root.on('click', '.na_phl_close', close);
+        $root.on('click', '.na_ph_wrap', e => { if (e.target === e.currentTarget) { if (sheetOpen) setSheet(false); else close(); } });
+        dlg.addEventListener('cancel', e => { e.preventDefault(); if (sheetOpen) setSheet(false); else close(); });
+        dlg.addEventListener('close', done, { once: true });
+    });
     ro.disconnect();
+    const t = dlg.querySelector('#toast-container');
+    if (t) { if (t.childNodes.length) document.body.append(t); else t.remove(); }
+    dlg.remove();
 }
+const svgGear = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
 // the board's fonts (Inter Tight for numbers, Noto Sans KR), once
 function cgFonts() {
     if (document.getElementById('na_cg_fonts')) return;

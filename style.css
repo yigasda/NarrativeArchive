@@ -4913,3 +4913,39 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .ax .ax_btns > .na_ph_draw.ax_camdraw { --axbg: #ecc3ae; color: #4a2420 !important; position: static; width: auto !important; margin: 0 !important; display: flex !important; justify-content: center; border-radius: 16px !important; font-size: 14.5px !important; padding: 11px 0 !important; }
 /* ⋯ when its menu is open: the accent and an ✕ */
 .na_ph_more.on { border-color: var(--na-accent); color: var(--na-accent); }
+
+/* ============ 캐릭터 휴대폰 · 한 겹: the phone over the whole screen (a dialog of its own), the people on top, ⚙ for the rest */
+body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl {
+    position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; min-width: 0; min-height: 0;
+    margin: 0; padding: 0; border: 0 !important; border-radius: 0; box-shadow: none !important; overflow: hidden;
+    background: rgba(12, 10, 9, 0.95) !important; color: #fff !important; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+dialog.popup.na_phl::backdrop { background: transparent; }
+.na_phl_root { position: relative; display: flex; flex-direction: column; gap: 0; width: 100%; height: 100%; padding: max(8px, env(safe-area-inset-top)) 0 max(8px, env(safe-area-inset-bottom)); box-sizing: border-box; }
+.na_phl_top { flex: none; display: flex; align-items: center; gap: 6px; padding: 0 10px 6px; }
+.na_phl_top .na_ph_owners { flex: 1; min-width: 0; padding: 0; gap: 2px; }
+.na_phl_top .na_ph_pick { width: 52px; padding: 4px 2px; font-size: 0.68em; color: rgba(255, 255, 255, 0.7); }
+.na_phl_top .na_ph_pick .na_face { font-size: 11px; }
+.na_phl_top .na_ph_pick.on { color: #fff; }
+.na_phl_top .na_ph_pick i { box-shadow: 0 0 0 2px #1e1915; }
+.na_phl_top .na_ph_addic { color: rgba(255, 255, 255, 0.75); border-color: rgba(255, 255, 255, 0.35); }
+.na_phl_btn { flex: none; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.14); color: #fff; cursor: pointer; }
+.na_phl_btn.on { background: #fff; color: #16130f; }
+body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_btn { background: rgba(255, 255, 255, 0.14) !important; color: #fff !important; border: 0 !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_btn.on { background: #fff !important; color: #16130f !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_top .na_ph_pick.on { background: rgba(255, 255, 255, 0.14) !important; }
+/* the phone as tall as the screen allows */
+.na_phl .na_ph_wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0 10px; }
+.na_phl .na_ph_frame { width: min(calc(100vw - 20px), calc((100dvh - 84px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 390 / 844 + 14px), 470px); }
+/* the sheet: everything that was under the phone */
+.na_phl_shade { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); }
+.na_phl_sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 72dvh; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 8px 16px max(16px, env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3); animation: na_phl_up 0.18s ease-out; }
+body:not(.na_darkui) .na_phl_sheet { background: #F0E4DB; color: #463428; }
+body.na_darkui .na_phl_sheet { background: #2A221D; color: #EFE3D8; }
+.na_phl_grab { width: 40px; height: 4px; margin: 0 auto 2px; border-radius: 2px; background: var(--na-line); }
+.na_phl_sheethead { display: flex; align-items: baseline; gap: 8px; }
+.na_phl_sheethead small { color: var(--na-dim); font-size: 0.8em; }
+@keyframes na_phl_up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+/* the people on top: no theme border or ring, the picked one a soft light */
+body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_top .na_ph_pick { border: 0 !important; outline: none !important; box-shadow: none !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_top .na_ph_pick:not(.on) { background: transparent !important; }
