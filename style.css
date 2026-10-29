@@ -5031,9 +5031,5 @@ body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .cg_wcal :is(.c
 .ax .ax_fab { --axbg: #3d3127; --axsh: 0 8px 20px rgba(60, 40, 20, 0.25); position: absolute; display: grid; place-items: center; z-index: 4; }
 .ax .ax_fab:disabled { cursor: default; opacity: 0.85; }
 .ax_fabbusy { color: #fbf8f2; font-size: 20px; }
-/* 일기 · 캘린더: the days are buttons; the one picked has a ring */
+/* 일기 · 캘린더: the days are buttons */
 .ax .ax_dpick { --axbg: none; --axsh: none; display: block; width: 100%; padding: 0; text-align: center; }
-.ax_strip b.s:not(.on) { box-shadow: inset 0 0 0 1.5px #3d3127; }
-.ax_strip b.on.s { box-shadow: 0 0 0 3px #f3ede3, 0 0 0 4.5px #3d3127; }
-.ax_cal7 b.s:not(.t) { box-shadow: inset 0 0 0 1.5px #b0564e; color: #b0564e; font-weight: 600; }
-.ax_cal7 b.t.s { box-shadow: 0 0 0 3px #fff, 0 0 0 4.5px #b0564e; }

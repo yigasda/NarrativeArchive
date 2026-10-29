@@ -899,7 +899,8 @@ function snsPost(p, now, k) {
       ${axInd()}`;
 }
 // a day tapped in the strip shows only that day; the same day again shows them all
-const dayBtn = (go, d, pick, cls, label) => `<button type="button" class="ax_dpick" data-go="${go}"${d === pick ? '' : ` data-i="${d}"`} aria-pressed="${d === pick}"><b class="${cls}${d === pick ? ' s' : ''}">${label}</b></button>`;
+// the filled circle sits on the day picked, else on today
+const dayBtn = (go, d, pick, cls, label) => `<button type="button" class="ax_dpick" data-go="${go}"${d === pick ? '' : ` data-i="${d}"`} aria-pressed="${d === pick}"><b class="${cls}">${label}</b></button>`;
 function diaryScreen(p, now, pick = '') {
     const all = (p.diary || []).map((x, k) => [x, k]).reverse(), x0 = parts(now);
     const ds = pick ? all.filter(([y]) => y.date === pick) : all;
@@ -911,7 +912,7 @@ function diaryScreen(p, now, pick = '') {
       <div class="ax_dytop"><button type="button" class="ax_back" data-go="home">${ax('back', 22, '#8a6d4a', 2.4)}</button>${ax('search', 22, '#8a6d4a')}</div>
       <div class="ax_scroll">
         <div class="ax_dymonth"><b>${x0 ? `${x0.mo}월` : '일기'}</b><span>${pick ? `${esc(fmtDate(p, pick))} · ${ds.length}편` : `${all.length}편`}</span></div>
-        ${days.length ? `<div class="ax_strip">${days.map(d => dayBtn('diary', d, pick, `${d === String(now).slice(0, 5) ? 'on' : ''} ${have.has(d) ? 'd' : ''}`, Number(d.slice(3)))).join('')}</div>` : ''}
+        ${days.length ? `<div class="ax_strip">${days.map(d => dayBtn('diary', d, pick, `${d === (pick || String(now).slice(0, 5)) ? 'on' : ''} ${have.has(d) ? 'd' : ''}`, Number(d.slice(3)))).join('')}</div>` : ''}
         ${pick && !ds.length ? '<div class="ax_empty">이날 쓴 일기가 없어요</div>' : ds.length ? ds.map(([y, k]) => `
           <button type="button" class="ax_dcard" data-go="diaryone" data-i="${k}"><span class="ax_dd"><b class="cg_num">${esc(String(parts(y.date)?.d || ''))}</b>${esc(`${parts(y.date)?.mo || ''}월`)}</span><span class="ax_dtx"><span class="ax_dh">${esc(y.title || '')}${y.kt && koOn() ? `<small>${esc(y.kt)}</small>` : ''}</span><span class="ax_dp">${esc(y.text.replace(/\s+/g, ' '))}</span></span></button>`).join('') : '<div class="ax_empty">일기가 없어요</div>'}
       </div>
@@ -1152,7 +1153,7 @@ function calScreen(p, now, m, pick = '') {
     const evs = p.events.map((e, k) => ({ e, k }));
     const marked = new Set([...p.events.map(e => e.date), ...an.map(a => a.date)]);
     const len = new Date(2000, x0.mo, 0).getDate();
-    const grid = Array.from({ length: len }, (_, n) => { const d = `${pad(x0.mo)}-${pad(n + 1)}`; return dayBtn('cal', d, pick, `${d === day ? 't' : ''} ${marked.has(d) ? 'e' : ''}`, n + 1); }).join('');
+    const grid = Array.from({ length: len }, (_, n) => { const d = `${pad(x0.mo)}-${pad(n + 1)}`; return dayBtn('cal', d, pick, `${d === (pick || day) ? 't' : ''} ${marked.has(d) ? 'e' : ''}`, n + 1); }).join('');
     const row = ({ e, k }, when = '') => `<button type="button" class="ax_ev" data-go="calone" data-i="${k}"><i style="background: ${AX_EVC[k % AX_EVC.length]}"></i><span class="ax_tx"><b>${esc(e.title)}</b>${e.ko && koOn() ? `<span class="ax_p">${esc(e.ko)}</span>` : ''}</span><small class="cg_num">${e.time ? esc(fmtTime(p, `${e.date} ${e.time}`)) : '하루 종일'}${when ? `<br>${esc(when)}` : ''}</small></button>`;
     const anRow = a => `<div class="ax_ev"><i style="background: #d494a7"></i><span class="ax_tx"><b>♥ ${esc(a.name)}</b><span class="ax_p">기념일 · 매년 ${esc(fmtDate(p, a.date))}</span></span></div>`;
     const soon = [...new Set(evs.filter(x => x.e.date >= day).map(x => x.e.date))].sort();
