@@ -274,6 +274,44 @@ RULES
 
 ANSWER — one JSON object, nothing else:
 { "results": [{ "site": the site's name, "url": a short address like "site.com/page", "title", "kt", "text": a one- or two-line snippet, "ko" }] }`;
+// 미발송 초안 (떠올리기): what the owner might have typed to someone and held back. The model's imagining (src "guess"):
+// shown as such, never sent back to the model or into the role-play
+const AI_SYS_DRAFT = `GOAL
+In a long role-play, the owner of a phone started a text to someone and never sent it. Write that unsent text.
+
+YOU GET
+- OWNER and TO: who was writing, and to whom.
+- THREAD: their texts so far, newest last.
+- RECENT CHAT: the story's newest messages.
+
+RULES
+- What the owner might have typed and held back, given THREAD and RECENT CHAT: nearer to what they mean than what they sent. No new events, nothing the chat does not support.
+- In the language and voice of the owner's own texts in THREAD. Short like a text; it may break off mid-sentence.
+- A text not in Korean gets "ko": a natural Korean translation.
+
+ANSWER — one JSON object, nothing else:
+{ "text", "ko" }`;
+export const drafting = new Set(); // "owner:thread id" being imagined
+export async function makeDraft(m, p, i) {
+    const t = p.threads[i];
+    if (!t) return null;
+    const said = x => (x.from === 'me' ? p.owner : x.from);
+    const prompt = [
+        `[OWNER]\n${p.owner}`, `[TO]\n${t.with}`,
+        `[THREAD]\n${t.messages.filter(x => x.src !== 'guess').slice(-12).map(x => `${said(x)} (${x.time}): ${x.text}`).join('\n')}`,
+        `[RECENT CHAT]\n${recentForCheck(8).join('\n\n').slice(-7000)}`,
+        namesBlock(m),
+    ].filter(Boolean).join('\n\n');
+    const out = String(await askAI(prompt, { system: AI_SYS_DRAFT, maxTokens: 1200 }) || '').replace(/```(?:json)?/gi, '');
+    const a = out.indexOf('{'), b = out.lastIndexOf('}');
+    let raw = null;
+    try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
+    const text = str(raw?.text, 600);
+    if (!text) throw new Error('모델 답에서 초안을 찾지 못했어요');
+    t.draft = { text, ko: ko(raw?.ko), time: storyNow(p) || p.now || '', src: 'guess' };
+    await saveMeta();
+    return t.draft;
+}
 export const searching = new Set(); // "owner:index" of searches whose page is being made
 // where the owner was the day of a search: the places in that day's headings (not the story itself, so the page
 // answers the query and not the scene)

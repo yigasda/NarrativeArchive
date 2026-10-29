@@ -58,11 +58,12 @@ JSON (one object, nothing before or after it)
   "accent": one of ${ACCENTS.join(', ')},
   "now": "MM-DD HH:MM",
   "contacts": [{ "name": name in the story, "saved": how the owner saved them (a nickname, an emoji, or just the name) }],
-  "threads": [{ "with": name, "messages": [{ "from": "me" or the sender's name, "text", "ko", "time" }] }],
+  "threads": [{ "with": name, "messages": [{ "from": "me" or the sender's name, "text", "ko", "time" }],
+               "draft": { "text", "ko", "time" } only when the archive or chat shows the owner wrote a text to them and didn't send it }],
   "calls": [{ "with": name, "type": "in" | "out" | "missed", "time", "min": minutes talked }],
   "photos": [{ "caption": what the photo shows, "ko", "time", "mood": one of ${MOODS.join(', ')} }],
   "notes": [{ "title", "kt": Korean title, "text", "ko", "time" }],
-  "searches": [{ "q", "ko", "time" }],
+  "searches": [{ "q", "ko", "time", "tab": true if its page is still open on the phone, "mark": true if they bookmarked it }],
   "events": [{ "title", "ko", "date": "MM-DD", "time": "HH:MM" or "" }],
   "profile": { "handle": the owner's SNS name, "bio", "ko", "followers": a number, "following": a number },
   "posts": [{ "text", "ko", "photo": what the posted photo shows or "", "pko": its Korean, "time", "likes": a number,
@@ -70,7 +71,7 @@ JSON (one object, nothing before or after it)
   "mails": [{ "from": sender, "subject", "ks": Korean subject, "text", "ko", "time", "unread": true or false }],
   "diary": [{ "date": "MM-DD", "title", "kt": Korean title, "text", "ko" }]
 }
-At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches, 6 events, 5 posts with up to 4 comments,
+At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches (3 open at most), 6 events, 5 posts with up to 4 comments,
 6 mails, 5 diary entries. Fewer is fine; an empty list is fine.
 Oldest first in every list.
 Any item may carry "ev": a short tag for one story event, the same on every item that comes from it (the flight's mail, its event and its photo all "ev": "berlin-flight"). Keep the tags PHONE NOW uses.
@@ -113,11 +114,11 @@ export function parsePhone(out) {
         accent: pick(raw.accent, ACCENTS, ''),
         now: when(raw.now),
         contacts: arr(raw.contacts).map(x => ({ name: line(x?.name, 40), saved: line(x?.saved, 40) })).filter(x => x.name).slice(0, CAP.contacts),
-        threads: arr(raw.threads).map(t => ({ with: line(t?.with, 40), messages: arr(t?.messages).map(msg).filter(x => x.text) })).filter(t => t.with && t.messages.length).slice(0, CAP.threads),
+        threads: arr(raw.threads).map(t => { const d = t?.draft && str(t.draft.text, 600); return { with: line(t?.with, 40), messages: arr(t?.messages).map(msg).filter(x => x.text), ...(d ? { draft: { text: d, ko: ko(t.draft.ko), time: when(t.draft.time), src: 'story' } } : {}) }; }).filter(t => t.with && t.messages.length).slice(0, CAP.threads),
         calls: arr(raw.calls).map(x => withEv({ with: line(x?.with, 40), type: pick(x?.type, ['in', 'out', 'missed'], 'in'), time: when(x?.time), min: Math.max(0, Math.min(600, Math.round(Number(x?.min) || 0))) }, x)).filter(x => x.with),
         photos: arr(raw.photos).map(x => withEv({ caption: line(x?.caption, 200), ko: ko(x?.ko), time: when(x?.time), mood: pick(x?.mood, MOODS, 'warm') }, x)).filter(x => x.caption),
         notes: arr(raw.notes).map(x => withEv({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 1500), ko: str(x?.ko, 1500), time: when(x?.time) }, x)).filter(x => x.title || x.text),
-        searches: arr(raw.searches).map(x => withEv({ q: line(x?.q, 120), ko: ko(x?.ko), time: when(x?.time) }, x)).filter(x => x.q),
+        searches: arr(raw.searches).map(x => withEv({ q: line(x?.q, 120), ko: ko(x?.ko), time: when(x?.time), ...(x?.tab ? { tab: true } : {}), ...(x?.mark ? { mark: true } : {}) }, x)).filter(x => x.q),
         events: arr(raw.events).map(x => withEv({ title: line(x?.title, 80), ko: ko(x?.ko), date: when(x?.date).slice(0, 5), time: hhmm(x?.time) }, x)).filter(x => x.title && x.date),
         profile: raw.profile && typeof raw.profile === 'object' ? { handle: line(raw.profile.handle, 40), bio: line(raw.profile.bio, 200), ko: ko(raw.profile.ko), followers: Math.max(0, Math.round(Number(raw.profile.followers) || 0)), following: Math.max(0, Math.round(Number(raw.profile.following) || 0)) } : null,
         posts: arr(raw.posts).map(x => withEv({ text: str(x?.text, 800), ko: str(x?.ko, 800), photo: line(x?.photo, 200), pko: ko(x?.pko), time: when(x?.time), likes: Math.max(0, Math.min(99999, Math.round(Number(x?.likes) || 0))),
@@ -145,7 +146,7 @@ export function ensureIds(p) {
     return n;
 }
 // 다시 만들기 of an app: a record that comes back the same keeps what the user did with it (its id, picture, read state, results page)
-const CARRY = ['id', 'img', 'tags', 'via', 'seen', 'results'];
+const CARRY = ['id', 'img', 'tags', 'via', 'seen', 'results', 'draft', 'closed', 'marks', 'unmark'];
 function carryOver(k, was, now) {
     const keyOf = k === 'threads' ? t => nameKey(t.with) : k === 'contacts' ? c => nameKey(c.name) : SIG[k] ? x => sigOf(k, x) : null;
     if (!keyOf || !Array.isArray(was)) return;
@@ -164,7 +165,7 @@ function mergePhone(p, add) {
     const keep = (list, n) => list.slice(-n);
     for (const t of add.threads) {
         const old = p.threads.find(x => nameKey(x.with) === nameKey(t.with));
-        if (old) old.messages = keep([...old.messages, ...fresh('msg', old.messages, t.messages)], CAP.messages);
+        if (old) { old.messages = keep([...old.messages, ...fresh('msg', old.messages, t.messages)], CAP.messages); if (t.draft) old.draft = t.draft; }
         else p.threads.push({ ...t, messages: keep(fresh('msg', [], t.messages), CAP.messages) });
     }
     p.threads = keep([...p.threads].sort((a, b) => lastTime(a).localeCompare(lastTime(b))), CAP.threads);

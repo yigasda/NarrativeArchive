@@ -5057,3 +5057,64 @@ body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .cg_wcal :is(.c
 .ax_pvtags code { display: block; margin-top: 6px; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; color: rgba(255, 255, 255, 0.8); white-space: pre-wrap; background: none; padding: 0; border: 0; user-select: text; -webkit-user-select: text; }
 .ax .ax_postmore, .ax .ax_postsave { --axbg: none; display: grid; place-items: center; }
 
+/* 연락처 (v3.132): the list under 전화, and a person's card with what 인물 도감 holds */
+.ax .ax_who2 { --axbg: none; text-align: left; }
+.ax_book p { margin: 0; padding: 0 16px 8px; font-size: 14px; line-height: 1.55; color: #3a414c; }
+.ax_book p:last-child { padding-bottom: 14px; }
+.ax_book .ax_bookline { font-style: italic; color: #4d5562; }
+.ax .ax_more { --axbg: none; display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 11px 16px; border-top: 1px solid #eef0f3; font-size: 14px; color: var(--axd); font-weight: 600; box-sizing: border-box; }
+.ax .ax_dock button { white-space: nowrap; }
+/* 미발송 초안 (v3.132): the unsent text sits in the input field; opened, it is a dashed bubble */
+.ax_draftw { color: #c0473d; font-weight: 600; margin-right: 4px; }
+.ax .ax_draftbar { height: auto; min-height: 50px; padding: 7px 8px 7px 16px; width: auto; text-align: left; }
+.ax_dtx { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ax_dlb { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #7c8592; }
+.ax_dtext { margin-top: 2px; font-size: 14.5px; color: #4d5562; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
+.ax_dtext.ax_dnone { font-style: normal; color: #8a929d; }
+.ax .ax_dmake { --axbg: var(--axc); flex: none; height: 36px; padding: 0 12px; border-radius: 18px; display: flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--axd); }
+.ax .ax_dmake:disabled { opacity: 0.75; cursor: default; }
+.ax_dview { padding-top: 20px; }
+.ax_bdraft { align-self: flex-end; max-width: 80%; padding: 9px 14px; border-radius: 20px; border-bottom-right-radius: 7px; border: 1.5px dashed color-mix(in srgb, var(--axd) 45%, transparent); background: rgba(255, 255, 255, 0.5); color: #4d5562; font-size: 15.5px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; -webkit-user-select: text; flex: none; }
+.ax_bdraft .ax_k { font-size: 12.5px; color: #7c8592; margin-top: 5px; padding-top: 5px; border-top: 1px dashed #d7dbe2; }
+.ax_dmeta { align-self: flex-end; margin: 4px 4px 0; font-size: 11px; color: #8a929d; }
+/* 브라우저 (v3.132): favourites, a Safari-like bar, tabs, pages, bookmarks and history */
+.ax_tbar { position: absolute; left: 0; right: 0; bottom: 0; height: 110px; padding: 8px 14px 0; box-sizing: border-box; background: rgba(244, 245, 247, 0.94); border-top: 1px solid #e6e8ec; z-index: 4; }
+.ax_addr { height: 44px; border-radius: 14px; background: #fff; box-shadow: 0 1px 4px rgba(22, 27, 34, 0.08); display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 14px; font-size: 14.5px; color: #161b22; white-space: nowrap; overflow: hidden; }
+.ax_addr small { font-size: 14.5px; color: #8a929d; }
+.ax_tbi { display: flex; justify-content: space-around; margin-top: 6px; color: var(--axd); }
+.ax_tbi > * { position: relative; width: 44px; height: 32px; display: grid; place-items: center; }
+.ax .ax_tbi > button { --axbg: none; color: var(--axd); }
+.ax_tbi .dim { color: #c7ccd3; }
+.ax_tabn b { position: absolute; top: 9px; left: 0; right: 0; text-align: center; font: 600 9px 'Inter Tight', -apple-system, sans-serif; }
+.ax_favs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 6px; padding: 14px 10px 16px; }
+.ax .ax_fav { --axbg: none; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11.5px; color: #3a414c; text-align: center; }
+.ax_fav > span:last-child { max-width: 74px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ax_fav .ax_fi { border-radius: 16px; font-size: 22px; }
+.ax_fi { border-radius: 9px; display: grid; place-items: center; color: #fff; font: 600 13px 'Inter Tight', -apple-system, sans-serif; flex: none; }
+.ax .ax_sres { display: block; width: auto; text-align: left; }
+.ax_sres > span { display: block; }
+.ax_sres .ax_ssite { display: flex; }
+.ax_sp2 { margin: 5px 0 0; font-size: 13.5px; line-height: 1.45; color: #4d5562; }
+.ax_page { padding: 4px 20px 0; user-select: text; -webkit-user-select: text; }
+.ax_psite { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #7c8592; margin-bottom: 10px; }
+.ax_psite .ax_fi { border-radius: 6px; font-size: 11px; }
+.ax_page h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; line-height: 1.3; color: #161b22; }
+.ax_pkt2 { font-size: 14px; color: #7c8592; margin-bottom: 14px; }
+.ax_page p { margin: 10px 0 12px; font-size: 15px; line-height: 1.65; color: #2a313b; white-space: pre-wrap; }
+.ax_pko2 { padding: 12px 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.75); font-size: 13.5px; line-height: 1.6; color: #5c6470; white-space: pre-wrap; }
+.ax_pfrom { margin-top: 12px; font-size: 12px; color: #8a929d; }
+.ax_tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 6px 16px; }
+.ax_tabc { border-radius: 18px; overflow: hidden; background: #fff; box-shadow: 0 1px 2px rgba(22, 27, 34, 0.05), 0 8px 20px rgba(22, 27, 34, 0.07); display: flex; flex-direction: column; }
+.ax_tabh { display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 10px; font-size: 11.5px; font-weight: 600; border-bottom: 1px solid #eef0f3; }
+.ax_tabh .ax_fi { border-radius: 5px; font-size: 9px; }
+.ax_tabh > span:not(.ax_fi) { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ax .ax_tabh > button { --axbg: #eef0f3; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.ax .ax_tabb { --axbg: none; display: flex; flex-direction: column; justify-content: flex-start; height: 170px; padding: 10px; overflow: hidden; font-size: 10px; line-height: 1.45; color: #4d5562; text-align: left; }
+.ax_tabb strong { display: block; font-size: 12px; color: #161b22; margin-bottom: 4px; }
+.ax_tabfoot { position: absolute; left: 0; right: 0; bottom: 0; height: 90px; display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 22px 0; box-sizing: border-box; background: rgba(244, 245, 247, 0.94); border-top: 1px solid #e6e8ec; color: var(--axd); font-size: 15px; font-weight: 600; z-index: 4; }
+.ax_tabfoot small { color: #4d5562; font-weight: 600; font-size: 14px; }
+.ax_tabfoot .dim { color: #c7ccd3; }
+.ax .ax_tabfoot > button { --axbg: none; color: var(--axd); font-size: 15px; font-weight: 600; }
+.ax_seg2 { display: flex; margin: 0 16px 12px; padding: 3px; border-radius: 12px; background: #e6e8ec; flex: none; }
+.ax .ax_seg2 > button { --axbg: none; flex: 1; text-align: center; padding: 7px 0; border-radius: 9px; font-size: 13.5px; font-weight: 600; color: #4d5562; }
+.ax .ax_seg2 > button.on { --axbg: #fff; --axsh: 0 1px 3px rgba(22, 27, 34, 0.1); color: #161b22; }

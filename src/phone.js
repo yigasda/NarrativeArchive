@@ -8,8 +8,8 @@ import { draftReady, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
-import { drawing, drawPhoto, drawPost, searching, searchPage, shooting, takePhoto, writeEntry, writing } from './phoneai.js';
-import { APPS, AXB, AXB_C, busyHtml, callScreen, callWho, calOne, calScreen, camScreen, diaryOne, diaryScreen, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, searchOne, searchScreen, setLore, setRemake, setScreen, setTheme, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
+import { drafting, drawing, drawPhoto, drawPost, makeDraft, searching, searchPage, shooting, takePhoto, writeEntry, writing } from './phoneai.js';
+import { APPS, AXB, AXB_C, busyHtml, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, marksScreen, msgList, noteOne, noteScreen, pageView, photoScreen, photoView, searchOne, searchScreen, setLore, setRemake, setScreen, setTheme, setWho, snsPost, snsScreen, statusBar, tabsScreen, threadScreen } from './phoneapps.js';
 import { ensureIds, koOn, loreOff, makePhone, newSections, phoneLore, REMAKE, showNow, storyNow } from './phonedata.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
 import { openGlossary } from './translate.js';
@@ -23,9 +23,9 @@ function screen(p, view, m, roster, ui) {
     showNow(now);
     const [v, i] = view.split(':');
     const body = v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'msg' ? msgList(p, now, roster)
-        : v === 'thread' ? threadScreen(p, now, Number(i), roster) : v === 'call' || v === 'callmiss' ? callScreen(p, now, roster, v === 'callmiss') : v === 'callwho' ? callWho(p, now, Number(i), roster)
+        : v === 'thread' ? threadScreen(p, now, Number(i), roster) : v === 'draft' ? draftView(p, now, Number(i), roster) : v === 'call' || v === 'callmiss' ? callScreen(p, now, roster, v === 'callmiss') : v === 'callwho' ? callWho(p, now, Number(i), roster) : v === 'contacts' ? contactsScreen(p, now, roster) : v === 'contact' ? contactOne(p, now, decodeURIComponent(i || ''), roster, m, ui.contactBack)
         : v === 'photo' ? photoScreen(p, now) : v === 'photoone' ? photoView(p, now, Number(i))
-        : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
+        : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '') : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
         : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, now, m)
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
         : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'set' ? setScreen(p, now, m, ui) : v === 'settheme' ? setTheme(p, now) : v === 'setremake' ? setRemake(p, now, ui) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
@@ -48,7 +48,7 @@ export async function openPhone(who = null) {
     const names = peopleList(m);
     const roster = new Set(names.map(nameKey));
     let owner = who && names.some(n => nameKey(n) === nameKey(who)) ? names.find(n => nameKey(n) === nameKey(who)) : (names.find(n => m.phones[nameKey(n)]) || names[0] || null);
-    let view = 'lock', sheet = false, adding = false, loreOpen = false;
+    let view = 'lock', contactBack = '', sheet = false, adding = false, loreOpen = false;
     const loreExp = new Set(), loreEnts = new Map(); // books opened to their entries, and their entries once read
     const remake = new Set(); // the apps ticked in 설정 › 다시 만들기
     // the phone has the screen to itself: one layer over everything (a dialog, so the extension's colours and
@@ -93,7 +93,7 @@ export async function openPhone(who = null) {
             return;
         }
         const top = keep ? $root.find('.na_ph_body, .ax_scroll').scrollTop() : 0;
-        $root.find('.na_ph_frame').html(screen(p, view, m, roster, { newN: newSections(m, p), loreExp, loreEnts, remake }));
+        $root.find('.na_ph_frame').html(screen(p, view, m, roster, { newN: newSections(m, p), loreExp, loreEnts, remake, contactBack }));
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
     };
@@ -193,7 +193,9 @@ export async function openPhone(who = null) {
         const go = this.dataset.go;
         if (!go) return;
         e.stopPropagation();
-        view = ['thread', 'callwho', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost'].includes(go) || (['cal', 'diary'].includes(go) && this.dataset.i) ? `${go}:${this.dataset.i}` : go;
+        // a person's card goes back where it was opened from
+        if (go === 'contact' && !view.startsWith('contact')) contactBack = view;
+        view = ['thread', 'draft', 'page', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost'].includes(go) || (['cal', 'diary'].includes(go) && this.dataset.i) ? `${go}:${this.dataset.i}` : go;
         const mail = go === 'mailone' ? phone()?.mails?.[Number(this.dataset.i)] : null;
         if (mail?.unread) { mail.unread = false; saveMeta(); }
         const p0 = phone();
@@ -261,6 +263,35 @@ export async function openPhone(who = null) {
         try { await drawPhoto(m, p, k); toastr.success('사진을 그렸어요', '캐릭터 휴대폰'); }
         catch (err) { console.error('[narrative-archive] photo', err); toastr.error(String(err?.message || err), '사진 그리기 실패'); }
         finally { drawing.delete(id); drawPhone(true); }
+    });
+    // 미발송 초안 떠올리기: one thread at a time; the screen can change meanwhile
+    $root.on('click', '.na_ph_draftmake', async function (e) {
+        e.stopPropagation();
+        const p = phone(), i = Number(this.dataset.i), t = p?.threads?.[i];
+        if (!t) return;
+        const id = `${nameKey(p.owner)}:${t.id || i}`;
+        if (drafting.has(id)) return;
+        drafting.add(id); drawPhone(true);
+        try { await makeDraft(m, p, i); toastr.success('보내지 않은 메시지를 떠올렸어요', '캐릭터 휴대폰'); }
+        catch (err) { console.error('[narrative-archive] draft', err); toastr.error(String(err?.message || err), '떠올리기 실패'); }
+        finally { drafting.delete(id); if (phone() === p) drawPhone(true); }
+    });
+    // 브라우저: closing a tab, and bookmarks (the model's "mark" can be taken off; the user's are kept in marks)
+    $root.on('click', '.na_ph_tabx', async function (e) {
+        e.stopPropagation();
+        const x = phone()?.searches?.[Number(this.dataset.i)];
+        if (!x) return;
+        x.closed = true; drawPhone(true); await saveMeta();
+    });
+    $root.on('click', '.na_ph_bmark', async function (e) {
+        e.stopPropagation();
+        const x = phone()?.searches?.[Number(this.dataset.i)], r = Number(this.dataset.r);
+        if (!x) return;
+        const marks = new Set(x.marks || []);
+        const on = r < 0 ? (x.mark && !x.unmark) || marks.has(-1) : marks.has(r);
+        if (on) { marks.delete(r); if (r < 0 && x.mark) x.unmark = true; } else { marks.add(r); if (r < 0) delete x.unmark; }
+        x.marks = [...marks];
+        drawPhone(true); await saveMeta();
     });
     $root.on('click', '.na_ph_postdraw', async function (e) {
         e.stopPropagation();
