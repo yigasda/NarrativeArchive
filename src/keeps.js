@@ -119,7 +119,7 @@ export async function openKeeps() {
             if (!x || x.is_system) continue;
             const t = cleanMessage(String(x.mes || ''), { stripTags: true }).replace(/\s+/g, ' ').trim();
             rows.push(`<button type="button" class="na_kp_msg ${isKeptAt(mm, i) ? 'kept' : ''} ${start === i ? 'start' : ''} ${opened.has(i) ? 'open' : ''}" data-i="${i}"><b>#${i}</b><span class="na_kp_who">${esc(x.name || '')}</span><span class="na_kp_line">${esc(t.slice(0, 90)) || '<span class="na_dim">(비어 있음)</span>'}</span></button>`
-                + (opened.has(i) ? `<div class="na_kp_full" data-i="${i}">${esc(cleanMessage(String(x.mes || ''), { stripTags: true }).trim()).replace(/\n/g, '<br>')}</div>` : ''));
+                + (opened.has(i) ? `<div class="na_kp_full" data-i="${i}">${esc(cleanMessage(String(x.mes || ''), { stripTags: true }).trim()).replace(/\n/g, '<br>')}<button type="button" class="na_linkbtn na_kp_fold">접기</button></div>` : ''));
         }
         $root.find('.na_kp_msgs').html(rows.join('') || '<div class="na_empty">압축 안 된 메시지가 없어요.</div>');
         hint();
@@ -141,8 +141,10 @@ export async function openKeeps() {
     $root.on('pointerdown', '.na_kp_msg', function () { const i = Number(this.dataset.i); heldFired = false; clearTimeout(held); held = setTimeout(() => { heldFired = true; toggle(i); }, 500); });
     $root.on('pointerup pointerleave pointercancel', '.na_kp_msg', () => clearTimeout(held));
     $root.on('scroll', '.na_kp_msgs', () => clearTimeout(held));
-    $root.on('contextmenu', '.na_kp_msg', function (e) { e.preventDefault(); if (!heldFired) toggle(Number(this.dataset.i)); heldFired = true; });
-    $root.on('click', '.na_kp_full', function () { toggle(Number(this.dataset.i)); });
+    // a phone's own long-press (contextmenu) can come before or after the timer: only one of them opens the row
+    $root.on('contextmenu', '.na_kp_msg, .na_kp_full', function (e) { e.preventDefault(); clearTimeout(held); if (!heldFired && $(this).hasClass('na_kp_msg')) toggle(Number(this.dataset.i)); heldFired = true; });
+    // the whole message closes only from its 접기 (a tap that clears a selection must not close it)
+    $root.on('click', '.na_kp_fold', function (e) { e.stopPropagation(); toggle(Number($(this).closest('.na_kp_full').data('i'))); });
     $root.on('click', '.na_kp_msg', async function () {
         if (heldFired) { heldFired = false; return; }
         const i = Number(this.dataset.i);
