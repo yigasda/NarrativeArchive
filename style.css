@@ -4455,6 +4455,8 @@ button.na_ph_lorebtn { width: 100%; border: 0; font: inherit; color: inherit; te
 .na_ph_lorebtn > .na_ph_i { color: var(--na-dim); }
 .na_ph_lorelist { display: flex; flex-direction: column; gap: 2px; margin-top: -4px; padding: 8px 10px; border-radius: 14px; border: 1px solid var(--na-line); }
 .na_ph_lorelist > small { margin-top: 4px; color: var(--na-dim); font-size: 0.8em; }
+/* the books in a box of their own that scrolls, so a long list does not push the phone away */
+.na_ph_lorescroll { display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; overscroll-behavior: contain; margin: 0 -4px; padding: 0 4px; }
 .na_ph_loreitem { display: flex; align-items: center; gap: 6px; padding: 6px 2px; cursor: pointer; font-size: 0.92em; }
 .na_ph_loreitem .na_ck { margin: 0 4px 0 0; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_ph_lorebtn { background: var(--na-card2) !important; border-color: transparent !important; color: inherit !important; }

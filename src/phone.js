@@ -1230,7 +1230,7 @@ export async function openPhone(who = null) {
         const all = loreOpen ? (ctx().getWorldInfoNames?.() || []) : [];
         return `
           <button type="button" class="na_ph_crow na_ph_lorebtn"><span><b>참고 로어북</b><small>${on.length ? esc(on.join(', ')) : '없음 · 아카이브만 읽어요'}</small></span>${ic(loreOpen ? 'down' : 'right', 16, 2.2)}</button>
-          ${loreOpen ? `<div class="na_ph_lorelist">${all.length ? all.map(b => `<label class="na_ph_loreitem"><span class="na_ck"><input type="checkbox" class="na_ph_lorepick" value="${esc(b)}" ${on.includes(b) ? 'checked' : ''}><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path class="na_ck_v" d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>${esc(b)}</span></label>`).join('') : '<div class="na_empty">로어북이 없어요</div>'}<small>이 채팅의 모든 폰이 같이 읽어요 · 2만 토큰까지 통째로</small></div>` : ''}`;
+          ${loreOpen ? `<div class="na_ph_lorelist">${all.length ? `<div class="na_ph_lorescroll">${all.map(b => `<label class="na_ph_loreitem"><span class="na_ck"><input type="checkbox" class="na_ph_lorepick" value="${esc(b)}" ${on.includes(b) ? 'checked' : ''}><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path class="na_ck_v" d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>${esc(b)}</span></label>`).join('')}</div>` : '<div class="na_empty">로어북이 없어요</div>'}<small>이 채팅의 모든 폰이 같이 읽어요 · 2만 토큰까지 통째로</small></div>` : ''}`;
     };
     const drawCtrl = () => {
         const p = phone();
