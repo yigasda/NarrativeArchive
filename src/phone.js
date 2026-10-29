@@ -739,7 +739,7 @@ const threadNew = t => t.messages[t.messages.length - 1]?.from !== 'me' && t.see
 function homeScreen(p, now, m) {
     const mono = p.theme === 'gray';
     const day = String(now).slice(0, 5), x = parts(now);
-    const anniv = annivToday(m, now);
+    const anniv = annivToday(m, now, p.owner);
     const unread = p.threads.filter(threadNew).length;
     const missed = p.calls.filter(c => c.type === 'missed' && !c.seen && c.time.slice(0, 5) === day).length;
     const bars = mono ? ['#2a313b', 'rgba(22, 27, 34, 0.22)'] : ['#d89f98', '#8faed1'];
@@ -822,12 +822,14 @@ function looksSheet(m) {
       </div>`;
 }
 
-function annivToday(m, now) {
+// an anniversary is on a phone only if its owner is in the section it comes from (the chat keeps one list for everyone)
+const annivMine = (m, r, owner) => !owner || nameRe(owner).test(m.text.slice(r.s.start, r.s.end));
+function annivToday(m, now, owner) {
     const day = String(now).slice(0, 5);
     const rows = datedRows(m);
     for (const a of annivsOf(m)) {
         const r = rows.find(x => sectionKey(x.s) === a.key);
-        if (r && rowDay(r) === day) return a.name;
+        if (r && rowDay(r) === day && annivMine(m, r, owner)) return a.name;
     }
     return '';
 }
@@ -1137,13 +1139,13 @@ function searchOne(p, now, k, busy) {
 
 // 캘린더: the story's month (no weekdays: its dates carry no year), then the days that have something
 const AX_EVC = ['#b0564e', '#8faed1', '#89b892', '#dcc680', '#a699c9'];
-function annivList(m) {
+function annivList(m, owner) {
     const rows = datedRows(m);
-    return annivsOf(m).map(a => { const r = rows.find(x => sectionKey(x.s) === a.key); return r && rowDay(r) ? { name: a.name, date: rowDay(r) } : null; }).filter(Boolean);
+    return annivsOf(m).map(a => { const r = rows.find(x => sectionKey(x.s) === a.key); return r && rowDay(r) && annivMine(m, r, owner) ? { name: a.name, date: rowDay(r) } : null; }).filter(Boolean);
 }
 function calScreen(p, now, m) {
     const day = String(now).slice(0, 5), x0 = parts(now) || parts(p.events[0]?.date) || { mo: 1, d: 1 };
-    const an = annivList(m);
+    const an = annivList(m, p.owner);
     const evs = p.events.map((e, k) => ({ e, k }));
     const marked = new Set([...p.events.map(e => e.date), ...an.map(a => a.date)]);
     const len = new Date(2000, x0.mo, 0).getDate();
