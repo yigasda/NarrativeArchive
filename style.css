@@ -5008,3 +5008,8 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .na_phl .na_ph_frame { width: min(calc(100vw - 20px), calc((100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 390 / 844 + 14px), 470px); }
 .cg .cg_ind.na_ph_quit { height: 38px; flex-direction: column; gap: 4px; justify-content: flex-end; padding-bottom: 9px; cursor: pointer; }
 .cg_ind.na_ph_quit small { font-size: 11px; font-weight: 600; color: rgba(22, 27, 34, 0.55); letter-spacing: 0.04em; }
+/* 도구 › 이야기: 캐릭터 휴대폰이 맨 위 큰 카드 */
+.na_toolrow.na_toolhero { margin-bottom: 6px; padding: 14px 14px; border-radius: 16px; border: 1px solid var(--na-line); background: linear-gradient(135deg, var(--na-soft), var(--na-softer)); }
+.na_toolrow.na_toolhero:hover { border-color: var(--na-accent); }
+.na_toolhero_ic { flex: none !important; width: 44px; height: 44px; display: grid !important; place-items: center; border-radius: 13px; background: var(--na-accent); color: #fff; font-size: 1.25em; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+.na_toolhero > span:nth-child(2) b { font-size: 1.05em; }

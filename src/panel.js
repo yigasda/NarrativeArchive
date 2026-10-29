@@ -214,6 +214,7 @@ export function renderPanel() {
                   <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_stylesample"><span class="na_cp_txt"><span>문체 견본</span><small id="na_style_sub"></small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                   <button type="button" class="na_cp_row na_cmode_sc" data-m="quick studio" id="na_worknote"><span class="na_cp_txt"><span>작업 노트</span><small id="na_worknote_sub">장면마다 같이 보내요</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                   <label class="na_cp_row" title="압축할 메시지가 이만큼 쌓이면 알림 · 누르면 압축"><span class="na_cp_txt"><span>쌓이면 알려 주기</span><small>이만큼 쌓이면 알림</small></span><select class="text_pole na_cc_sel na_cp_sel" id="na_nudge">${Object.entries(NUDGE_CHOICES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+                  <button type="button" class="na_cp_row" id="na_au" title="본편 아카이브를 들고 새 채팅에서 AU를 할 때 켜요 · 압축할 때 AU 안내가 붙어요"><span class="na_cp_txt"><span>AU 채팅</span><small id="na_au_sub">본편 기억을 들고 온 채팅이면 켜요</small></span><span class="na_cp_more" id="na_au_on" hidden>켜짐</span>${svgA(ICO_A.right, 16, 2.2)}</button>
                 </div>
                 <div class="na_v2_card na_v2_list na_cp_set">
                   <details class="na_cp_fold na_cp_more_fold" id="na_cp_more">
@@ -240,12 +241,11 @@ export function renderPanel() {
             <section class="na_tab_pane" data-pane="tools" hidden>
               <div class="na_block">
                 <div class="na_kw_label">이야기</div>
-                <button type="button" class="na_toolrow" id="na_worlds"><i class="fa-solid fa-earth-asia"></i><span><b>세계관 공유</b><small id="na_worlds_sub">여러 채팅이 같이 쓰는 설정 · 고치면 모든 채팅에 반영</small></span><i class="fa-solid fa-chevron-right"></i></button>
-                <button type="button" class="na_toolrow" id="na_au"><i class="fa-solid fa-shuffle"></i><span><b>AU 채팅</b><small id="na_au_sub">본편 기억을 들고 온 채팅이면 켜요</small></span><i class="fa-solid fa-chevron-right"></i></button>
-                <button type="button" class="na_toolrow" id="na_people"><i class="fa-solid fa-address-book"></i><span><b>인물 도감 · 관계도</b><small>인물 프로필과 관계도</small></span><i class="fa-solid fa-chevron-right"></i></button>
-                <button type="button" class="na_toolrow" id="na_tool_gloss"><i class="fa-solid fa-spell-check"></i><span><b>번역 용어집</b><small>이름 · 장소의 한국어 표기 · 풀네임 (번역 · 휴대폰이 그대로 써요)</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" class="na_toolrow na_toolhero" id="na_phone"><span class="na_toolhero_ic"><i class="fa-solid fa-mobile-screen-button"></i></span><span><b>캐릭터 휴대폰</b><small>문자 · 통화 · 사진 · SNS · 일정을 아카이브만큼</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" class="na_toolrow" id="na_people"><i class="fa-solid fa-address-book"></i><span><b>인물 도감</b><small>프로필 · 관계도 · 관계 온도</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_story_cal"><i class="fa-solid fa-calendar-days"></i><span><b>이야기 달력</b><small>섹션을 날짜 순서로 · 기념일 찾기</small></span><i class="fa-solid fa-chevron-right"></i></button>
-                <button type="button" class="na_toolrow" id="na_phone"><i class="fa-solid fa-mobile-screen-button"></i><span><b>캐릭터 휴대폰</b><small>문자 · 통화 · 사진 · 일정을 아카이브만큼</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" class="na_toolrow" id="na_worlds"><i class="fa-solid fa-earth-asia"></i><span><b>세계관 공유</b><small id="na_worlds_sub">여러 채팅이 같이 쓰는 설정 · 고치면 모든 채팅에 반영</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" class="na_toolrow" id="na_tool_gloss"><i class="fa-solid fa-spell-check"></i><span><b>번역 용어집</b><small>이름 · 장소의 한국어 표기</small></span><i class="fa-solid fa-chevron-right"></i></button>
               </div>
               <div class="na_block">
                 <div class="na_kw_label">점검</div>
@@ -1533,7 +1533,8 @@ export function syncPanel() {
     { const wn = String(getMeta().workNote || '').trim(); $('#na_worknote_sub').text(wn ? `약 ${wn.length.toLocaleString()}자 · 장면마다 같이` : '장면마다 같이 보내요'); }
     {
         const au = auOf(m);
-        $('#na_au_sub').text(au.on ? `켜짐 · 요약이 본편 뒤 ${au.name} 묶음으로 이어져요` : '본편 기억을 들고 온 채팅이면 켜요');
+        $('#na_au_sub').text(au.on ? `요약이 본편 뒤 ${au.name} 묶음으로 이어져요` : '본편 기억을 들고 온 채팅이면 켜요');
+        $('#na_au_on').prop('hidden', !au.on);
         $('#na_quick_sub').text(draftReady() ? `초안 모델(${drLabel()})로 요약 → 확인하고 추가${au.on ? ` · ${au.name}` : ''}` : '⚙ 설정 → AI 모델 → 초안 모델을 정하면 쓸 수 있어요');
         $('#na_studio_sub').text(draftReady() ? studioLabel() : '⚙ 설정 → AI 모델 → 초안 모델을 정하면 쓸 수 있어요');
     }
