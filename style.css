@@ -4233,3 +4233,22 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 .na_ck:has(input:focus-visible) { outline: 2px solid var(--na-accent); outline-offset: 2px; }
 .na_wd_row > .na_ck { grid-area: c; margin: 0 2px 0 4px; }
 .na_wd_row.off :is(.na_wd_en, .na_wd_ed, .na_wd_ko) { opacity: 0.45; }
+
+/* ============ SillyTavern themes that force their own colours (!important) on popups, buttons and inputs:
+   inside the extension's popups the extension's palette wins. Inputs drawn see-through on purpose stay see-through. */
+body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) { background: #F0E4DB !important; background-image: none !important; color: #463428 !important; }
+body.na_darkui dialog.popup:has(.na_popup, #na_settings) { background: #2A221D !important; background-image: none !important; color: #EFE3D8 !important; }
+body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #F7EEE7 !important; background-image: none !important; border: 1px solid #E5D5C9 !important; color: #463428 !important; box-shadow: none !important; }
+body.na_darkui dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #3A2F28 !important; background-image: none !important; border: 1px solid #54463D !important; color: #EFE3D8 !important; box-shadow: none !important; }
+body:not(.na_darkui) dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #F2E9E2 !important; background-image: none !important; border-color: #E5D5C9 !important; color: #463428 !important; }
+body.na_darkui dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #2E2621 !important; background-image: none !important; border-color: #54463D !important; color: #EFE3D8 !important; }
+/* the popup's own input row (이름 짓기) */
+body:not(.na_darkui) dialog.popup:has(.na_popup) .popup-input { background-color: #F2E9E2 !important; border-color: #E5D5C9 !important; color: #463428 !important; }
+body.na_darkui dialog.popup:has(.na_popup) .popup-input { background-color: #2E2621 !important; border-color: #54463D !important; color: #EFE3D8 !important; }
+/* inputs the extension draws on a card (세계관 칸) or see-through (inside a pill, a stepper, a dashed name line):
+   stronger than the fill above, so a forced theme colour doesn't box them in */
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.na_wd_slot .text_pole) { background-color: var(--na-card2) !important; background-image: none !important; border-color: transparent !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.na_wd_rename, .na_wd_text, .na_wd_row .text_pole, .na_ly_pane textarea, .na_ask2_input textarea, .na_wz2_range input, .na_uh2_range input, .na_fd_step input, .na_ap2_end input, .na_ly_ask input.na_ly_askq, .na_st_field textarea.na_st_q) { background-color: transparent !important; background-image: none !important; box-shadow: none !important; border-color: transparent !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.na_wd_slot .text_pole, .na_wd_row .text_pole):focus { border-color: var(--na-accent) !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_wd_rename.text_pole { border-color: var(--na-line) !important; }
+.na_confirm_text { line-height: 1.6; }
