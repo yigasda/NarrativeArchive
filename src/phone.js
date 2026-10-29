@@ -468,6 +468,7 @@ const ICO = {
     heart: '<path d="M12 20.5s-7.8-4.7-9.7-9.5C1 7.6 3.2 4.5 6.6 4.5c2.2 0 3.8 1.2 5.4 3.1 1.6-1.9 3.2-3.1 5.4-3.1 3.4 0 5.6 3.1 4.3 6.5-1.9 4.8-9.7 9.5-9.7 9.5z"/>',
     lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    full: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
     right: '<path d="M9 6l6 6-6 6"/>', down: '<path d="M6 9l6 6 6-6"/>', plus: '<path d="M12 5v14M5 12h14"/>',
     redo: '<path d="M21 4v6h-6"/><path d="M20.5 10A8.5 8.5 0 1 0 19 16.5"/>',
 };
@@ -694,10 +695,10 @@ export async function openPhone(who = null) {
     let view = 'lock', menu = false, sheet = false, adding = false, loreOpen = false;
     const $root = $(`
       <div class="na_popup na_v2 na_phone">
-        <div class="na_v2_title"><b>캐릭터 휴대폰</b><small>아카이브에 있는 만큼만 · 보기 전용</small></div>
+        <div class="na_v2_titlebar"><div class="na_v2_title"><b>캐릭터 휴대폰</b><small>아카이브에 있는 만큼만 · 보기 전용</small></div><button type="button" class="na_v2_pillbtn na_ph_fullbtn">${ic('full', 14, 2.2)}폰만 보기</button></div>
         <div class="na_ph_owners"></div>
         <div class="na_ph_addrow" hidden><input type="text" class="text_pole na_ph_addname" placeholder="로어북에만 있는 인물 이름" enterkeyhint="done"><button type="button" class="na_v2_pillbtn na_ph_addok">추가</button></div>
-        <div class="na_ph_wrap"><div class="na_ph_frame"></div></div>
+        <div class="na_ph_wrap"><div class="na_ph_frame"></div><button type="button" class="na_ph_fullx" aria-label="폰만 보기 닫기">${ic('x', 20, 2.4)}</button></div>
         <div class="na_ph_ctrl"></div>
       </div>`);
     const phone = () => (owner ? m.phones[nameKey(owner)] : null);
@@ -777,6 +778,10 @@ export async function openPhone(who = null) {
     };
     $root.on('click', '.na_ph_addok', addPerson);
     $root.on('keydown', '.na_ph_addname', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); addPerson(); } });
+    // 폰만 보기: the phone alone, as tall as the screen; ✕ or a tap beside it comes back
+    $root.on('click', '.na_ph_fullbtn', () => $root.addClass('na_ph_full'));
+    $root.on('click', '.na_ph_fullx', () => $root.removeClass('na_ph_full'));
+    $root.on('click', '.na_ph_wrap', e => { if (e.target === e.currentTarget && $root.hasClass('na_ph_full')) $root.removeClass('na_ph_full'); });
     $root.on('click', '.na_ph_lorebtn', () => { loreOpen = !loreOpen; drawCtrl(); });
     $root.on('change', '.na_ph_lorepick', async function () {
         const set = new Set(phoneLore(m));
