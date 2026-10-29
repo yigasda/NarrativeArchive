@@ -344,18 +344,24 @@ function storyNow(p) {
     return p.now || '';
 }
 
-// ---- the places they have been: section headings that name a place, in sections the owner is in (no model)
+// ---- the places they have been: section headings that name a place, in sections the owner is in (no model).
+// One row a place, newest visit first: a move ("A → B") counts for both, and a place gone to again counts up
 export function placesOf(m, owner) {
-    const re = nameRe(owner), cals = calendars(), out = [];
-    for (const s of parseSections(String(m.text || '')).filter(x => !x.group && RANGE_HEAD.test(x.title))) {
+    const re = nameRe(owner), cals = calendars(), seen = new Map();
+    for (const s of parseSections(String(m.text || '')).filter(x => !x.group && RANGE_HEAD.test(x.title)).reverse()) {
         if (!re.test(m.text.slice(s.start, s.end))) continue;
         const pl = headingPlaces(s.title, cals);
         if (!pl.length) continue;
         const d = headingDate(s.title, cals);
+        const day = d.date?.d && cals[d.date.cal]?.length === 12 ? `${pad(d.date.m + 1)}-${pad(d.date.d)}` : '';
         const name = s.title.match(RANGE_HEAD)[5].replace(/^\s*[—–-]\s*/, '').replace(/\s*\([^()]*\)\s*(\[[^\]]*\])?\s*$/, '').trim();
-        out.push({ place: pl.join(' → '), date: d.date?.label || '', time: d.time || '', scene: name, key: sectionKey(s) });
+        for (const place of pl) {
+            const k = nameKey(place), had = seen.get(k);
+            if (had) had.n++;
+            else seen.set(k, { place, n: 1, day, date: d.date?.label || '', time: d.time || '', scene: name, key: sectionKey(s) });
+        }
     }
-    return out.reverse().slice(0, 40);
+    return [...seen.values()].slice(0, 40);
 }
 
 // ---- 사진 그리기: the AI 기능 모델 turns a caption into image tags, one line for the picture and one per person. With
@@ -1289,7 +1295,7 @@ function mapScreen(p, now, m) {
         ${axH1('다녀간 곳', pl.length ? `${pl.length}곳` : '')}
         ${pl.length ? `<div class="ax_card ax_mapart" aria-hidden="true">${pl.slice(0, 5).map((_, k) => `<i style="left: ${[18, 62, 38, 80, 28][k]}%; top: ${[34, 26, 58, 64, 80][k]}%">${pin}</i>`).join('')}</div>
         <div class="ax_card">${pl.map(x => `
-          <div class="ax_rw ax_place"><span class="ax_si" style="background: var(--axc)">${ax('pin', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.place)}</span>${x.scene ? `<span class="ax_p1">${esc(x.scene)}</span>` : ''}</span><small>${esc(x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small></div>`).join('')}</div>` : '<div class="ax_empty">아카이브 제목에 이 인물이 간 장소가 아직 없어요</div>'}
+          <div class="ax_rw ax_place"><span class="ax_si" style="background: var(--axc)">${ax('pin', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.place)}</span><span class="ax_p1">${x.n > 1 ? `${x.n}번 · 마지막 ` : ''}${esc(x.scene)}</span></span><small>${esc(x.day ? fmtDate(p, x.day, true) : x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small></div>`).join('')}</div>` : '<div class="ax_empty">아카이브 제목에 이 인물이 간 장소가 아직 없어요</div>'}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
