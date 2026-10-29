@@ -6,6 +6,7 @@ import { embedSoon } from './embed.js';
 import { applyFade } from './fade.js';
 import { currentCast, inCast, knowledgeRows } from './knowledge.js';
 import { sectionPanel } from './panel.js';
+import { phoneBlock } from './phone.js';
 import { isExcluded } from './quotes.js';
 import { cachedTokens, filterMuted, parseSections, resting, sectionKey, trimEnd } from './sections.js';
 import { worldText } from './world.js';
@@ -114,5 +115,5 @@ export function extraBlocks(m) {
         if (!core && !samples.length) return `## ${who}\n${speech}`;
         return `## ${who}${core ? `\nWho they are:\n${core}` : ''}\nHow they talk:\n${speech}${samples.length ? `\nLines of theirs, for the sound only. Write new lines like these, never reuse them:\n${samples.map(q => `- "${q}"`).join('\n')}` : ''}`;
     }).join('\n')}`;
-    return out;
+    return out + phoneBlock(m);
 }

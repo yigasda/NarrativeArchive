@@ -20,6 +20,7 @@ import { OFF_KINDS, offKinds, setOffKind } from './recall.js';
 import { openKeywordTest } from './keywords.js';
 import { knowledgeRows, openKnowledge } from './knowledge.js';
 import { openPeople } from './people.js';
+import { openPhone } from './phone.js';
 import { openPreview } from './preview.js';
 import { auOf, bindPromptSettings } from './prompts.js';
 import { openQuotes } from './quotes.js';
@@ -243,6 +244,7 @@ export function renderPanel() {
                 <button type="button" class="na_toolrow" id="na_au"><i class="fa-solid fa-shuffle"></i><span><b>AU 채팅</b><small id="na_au_sub">본편 기억을 들고 온 채팅이면 켜요</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_people"><i class="fa-solid fa-address-book"></i><span><b>인물 도감 · 관계도</b><small>인물 프로필과 관계도</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_story_cal"><i class="fa-solid fa-calendar-days"></i><span><b>이야기 달력</b><small>섹션을 날짜 순서로 · 기념일 찾기</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" class="na_toolrow" id="na_phone"><i class="fa-solid fa-mobile-screen-button"></i><span><b>캐릭터 휴대폰</b><small>문자 · 통화 · 사진 · 일정을 아카이브만큼</small></span><i class="fa-solid fa-chevron-right"></i></button>
               </div>
               <div class="na_block">
                 <div class="na_kw_label">점검</div>
@@ -883,6 +885,7 @@ export function bindPanel() {
     $('#na_tool_xray').on('click', needChat(openXray));
     $('#na_story_cal').on('click', needChat(openCalendar));
     $('#na_people').on('click', needChat(openPeople));
+    $('#na_phone').on('click', needChat(() => openPhone()));
     $('#na_worlds').on('click', needChat(openWorlds));
     $('#na_au').on('click', needChat(async () => { await openAuSettings(); syncPanel(); }));
 
@@ -1710,6 +1713,7 @@ export async function openLauncher() {
         ['이야기', [
             ['people', ICO_A.users, '인물 도감', openPeople, true],
             ['calendar', ICO_A.calendar, '이야기 달력', openCalendar, true],
+            ['phone', ICO_A.phone, '캐릭터 휴대폰', () => openPhone(), true],
             ['worlds', ICO_A.globe, '세계관 공유', openWorlds, false],
         ]],
         ['AI 도구 · 점검', [
