@@ -12,6 +12,7 @@ import { applyInjection } from './inject.js';
 import { faceHtml, headingPlaces, nameKey, nameRe, peopleList } from './people.js';
 import { calendars, headingDate } from './calendar.js';
 import { RANGE_HEAD, parseSections, sectionKey, splitTail } from './sections.js';
+import { estTok } from './recall.js';
 import { recentTrackers } from './scenes.js';
 import { confirm, esc } from './util.js';
 import { worldText } from './world.js';
@@ -29,13 +30,15 @@ An app draws the screens from your JSON; you only write the content.
 YOU GET
 - ARCHIVE: the story so far, in sections (#numbers are chat messages), with the current state at the end.
 - WORLD (sometimes): the shared setting.
+- LOREBOOK (sometimes): setting notes the user picked.
 - RECENT CHAT: the newest messages, after the archive.
 - OWNER: whose phone it is.
 - PHONE NOW (only when updating): what the phone holds already.
 
 ONE TEST FOR EVERY ITEM
-Could this be on the owner's phone, given what the archive and chat show? If not, leave it out.
-- Events (a meeting, a fight, a confession, a trip, a loss) only if the archive has them.
+Could this be on the owner's phone, given what the archive, lorebook and chat show? If not, leave it out.
+- The lorebook counts as fact like the archive; where the two disagree, the archive wins.
+- Events (a meeting, a fight, a confession, a trip, a loss) only if the archive or lorebook has them.
 - Small everyday things around those events are fine: how a text was worded, a photo of a place they were, a search they would make.
 - People: only people the story has. A relationship word (girlfriend, ex, husband, boss) only if the archive uses it for them.
 - Nothing later than the newest moment of the story.
@@ -142,7 +145,35 @@ function archiveFor(m, after = -1) {
 }
 export const newSections = (m, p) => (p ? parseSections(String(m.text || '')).filter(s => !s.group && secEnd(s) > (p.upto ?? -1)).length : 0);
 
-function phoneRequest(m, owner, p = null) {
+// 참고 로어북 (this chat): the books picked go whole up to LORE_MAX tokens; past that, the owner's entries first,
+// then the always-on ones, then the rest, while there is room
+const LORE_MAX = 20_000;
+export const phoneLore = m => (Array.isArray(m.phoneLore) ? m.phoneLore.filter(Boolean) : []);
+export async function loreFor(m, owner) {
+    const c = ctx(), re = nameRe(owner), items = [];
+    for (const name of phoneLore(m)) {
+        let data = null;
+        try { data = await c.loadWorldInfo(name); } catch { /* a book that is gone */ }
+        for (const e of Object.values(data?.entries || {})) {
+            const body = String(e?.content || '').trim();
+            if (!body || e.disable) continue;
+            const title = String(e.comment || (e.key || []).join(', ')).trim();
+            const mine = [body, title, ...(e.key || []), ...(e.keysecondary || [])].some(x => re.test(String(x)));
+            items.push({ text: `- ${title ? `${title}: ` : ''}${body}`, rank: mine ? 0 : e.constant ? 1 : 2 });
+        }
+    }
+    const all = items.map(x => x.text).join('\n');
+    if (estTok(all) <= LORE_MAX) return all;
+    const out = [];
+    let used = 0;
+    for (const x of [...items].sort((a, b) => a.rank - b.rank)) {
+        const t = estTok(x.text);
+        if (used + t <= LORE_MAX) { out.push(x.text); used += t; }
+    }
+    return out.join('\n');
+}
+
+function phoneRequest(m, owner, p = null, lore = '') {
     const world = worldText(m);
     const recent = recentForCheck(6).join('\n\n').slice(-6000);
     const ar = archiveFor(m, p ? p.upto ?? -1 : -1);
@@ -151,6 +182,7 @@ function phoneRequest(m, owner, p = null) {
         p ? `[PHONE NOW]\n${now}` : '',
         `[ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}]\n${ar.text || '(nothing new)'}`,
         world ? `[WORLD]\n${world}` : '',
+        lore ? `[LOREBOOK]\n${lore}` : '',
         recent ? `[RECENT CHAT]\n${recent}` : '',
         `[OWNER]\n${owner}`,
         p ? UPDATE_ASK : '',
@@ -171,7 +203,7 @@ const phoneForModel = p => ({
 export async function makePhone(m, owner, { update = false } = {}) {
     const key = nameKey(owner);
     const old = update ? m.phones?.[key] : null;
-    const out = await askDraft(phoneRequest(m, owner, old), { system: AI_SYS_PHONE, maxTokens: 16000 });
+    const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner)), { system: AI_SYS_PHONE, maxTokens: 16000 });
     const got = parsePhone(out);
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
     if (old) mergePhone(old, got);
@@ -436,6 +468,7 @@ const ICO = {
     heart: '<path d="M12 20.5s-7.8-4.7-9.7-9.5C1 7.6 3.2 4.5 6.6 4.5c2.2 0 3.8 1.2 5.4 3.1 1.6-1.9 3.2-3.1 5.4-3.1 3.4 0 5.6 3.1 4.3 6.5-1.9 4.8-9.7 9.5-9.7 9.5z"/>',
     lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    right: '<path d="M9 6l6 6-6 6"/>', down: '<path d="M6 9l6 6 6-6"/>', plus: '<path d="M12 5v14M5 12h14"/>',
     redo: '<path d="M21 4v6h-6"/><path d="M20.5 10A8.5 8.5 0 1 0 19 16.5"/>',
 };
 const ic = (k, s = 18, w = 2) => `<svg class="na_ph_i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]}</svg>`;
@@ -658,17 +691,22 @@ export async function openPhone(who = null) {
     const names = peopleList(m);
     const roster = new Set(names.map(nameKey));
     let owner = who && names.some(n => nameKey(n) === nameKey(who)) ? names.find(n => nameKey(n) === nameKey(who)) : (names.find(n => m.phones[nameKey(n)]) || names[0] || null);
-    let view = 'lock', menu = false, sheet = false;
+    let view = 'lock', menu = false, sheet = false, adding = false, loreOpen = false;
     const $root = $(`
       <div class="na_popup na_v2 na_phone">
         <div class="na_v2_title"><b>캐릭터 휴대폰</b><small>아카이브에 있는 만큼만 · 보기 전용</small></div>
         <div class="na_ph_owners"></div>
+        <div class="na_ph_addrow" hidden><input type="text" class="text_pole na_ph_addname" placeholder="로어북에만 있는 인물 이름" enterkeyhint="done"><button type="button" class="na_v2_pillbtn na_ph_addok">추가</button></div>
         <div class="na_ph_wrap"><div class="na_ph_frame"></div></div>
         <div class="na_ph_ctrl"></div>
       </div>`);
     const phone = () => (owner ? m.phones[nameKey(owner)] : null);
-    const drawOwners = () => $root.find('.na_ph_owners').html(names.length ? names.map(n => `
-        <button type="button" class="na_ph_pick ${n === owner ? 'on' : ''}" data-n="${esc(n)}">${faceHtml(n, 40)}<span>${esc(n)}</span>${m.phones[nameKey(n)] ? '<i></i>' : ''}</button>`).join('') : '<div class="na_empty">STATE에 "## 이름" 인물이 없어요. 인물 도감에서 인물을 넣어 주세요.</div>');
+    const drawOwners = () => {
+        $root.find('.na_ph_owners').html(`${names.map(n => `
+          <button type="button" class="na_ph_pick ${n === owner ? 'on' : ''}" data-n="${esc(n)}">${faceHtml(n, 40)}<span>${esc(n)}</span>${m.phones[nameKey(n)] ? '<i></i>' : ''}</button>`).join('')}
+          <button type="button" class="na_ph_pick na_ph_addp" title="인물 넣기"><span class="na_ph_addic">${ic('plus', 18, 2)}</span><span>넣기</span></button>`);
+        $root.find('.na_ph_addrow').prop('hidden', !adding);
+    };
     const drawPhone = (keep = false) => {
         const p = phone();
         if (!owner) { $root.find('.na_ph_frame').html(''); return; }
@@ -679,7 +717,7 @@ export async function openPhone(who = null) {
                   <div class="na_ph_makecard">
                     <span class="na_ph_makeface">${faceHtml(owner, 64)}</span>
                     <b>${esc(owner)}의 폰</b>
-                    <p>아카이브를 읽고 메시지 · 통화 · 사진 · 메모 · 검색 · 일정을 채워요. 국적에 맞는 말로 쓰고 한국어를 밑에 붙여요.</p>
+                    <p>${phoneLore(m).length ? '아카이브와 로어북을' : '아카이브를'} 읽고 메시지 · 통화 · 사진 · 메모 · 검색 · 일정을 채워요. 국적에 맞는 말로 쓰고 한국어를 밑에 붙여요.</p>
                     <button type="button" class="na_ph_makebtn">폰 만들기</button>
                     <small>초안 모델 · ${esc(drLabel())}</small>
                   </div>
@@ -691,11 +729,18 @@ export async function openPhone(who = null) {
         if (sheet && view === 'photo') $root.find('.na_ph_scr').append(looksSheet(m));
         if (keep) $root.find('.na_ph_body').scrollTop(top);
     };
+    const loreRow = () => {
+        const on = phoneLore(m);
+        const all = loreOpen ? (ctx().getWorldInfoNames?.() || []) : [];
+        return `
+          <button type="button" class="na_ph_crow na_ph_lorebtn"><span><b>참고 로어북</b><small>${on.length ? esc(on.join(', ')) : '없음 · 아카이브만 읽어요'}</small></span>${ic(loreOpen ? 'down' : 'right', 16, 2.2)}</button>
+          ${loreOpen ? `<div class="na_ph_lorelist">${all.length ? all.map(b => `<label class="na_ph_loreitem"><span class="na_ck"><input type="checkbox" class="na_ph_lorepick" value="${esc(b)}" ${on.includes(b) ? 'checked' : ''}><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path class="na_ck_v" d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>${esc(b)}</span></label>`).join('') : '<div class="na_empty">로어북이 없어요</div>'}<small>이 채팅의 모든 폰이 같이 읽어요 · 2만 토큰까지 통째로</small></div>` : ''}`;
+    };
     const drawCtrl = () => {
         const p = phone();
-        if (!p) { $root.find('.na_ph_ctrl').html(''); return; }
+        if (!p) { $root.find('.na_ph_ctrl').html(owner ? loreRow() : ''); return; }
         const n = newSections(m, p);
-        $root.find('.na_ph_ctrl').html(`
+        $root.find('.na_ph_ctrl').html(`${loreRow()}
           <label class="na_ph_crow"><span><b>롤플에 넣기</b><small>켜면 이 폰의 최근 문자 · 일정이 주입돼요</small></span><input type="checkbox" class="na_toggle na_ph_inject" ${p.inject ? 'checked' : ''}></label>
           <div class="na_ph_cbtns">
             <button type="button" class="na_v2_btn na_ph_update">${ic('redo', 15)}<span>새로 일어난 일 반영${n ? ` · 새 섹션 ${n}` : ''}</span></button>
@@ -717,7 +762,29 @@ export async function openPhone(who = null) {
         toastr.success(update ? '새로 일어난 일을 폰에 넣었어요' : `${owner}의 폰을 만들었어요`, '캐릭터 휴대폰');
     };
     // the screen changes first; saving waits
-    $root.on('click', '.na_ph_pick', function () { owner = this.dataset.n; view = 'lock'; menu = false; sheet = false; draw(); });
+    $root.on('click', '.na_ph_pick:not(.na_ph_addp)', function () { owner = this.dataset.n; view = 'lock'; menu = false; sheet = false; draw(); });
+    // a person only the lorebook knows: into the same list as 인물 도감's +
+    $root.on('click', '.na_ph_addp', () => { adding = !adding; drawOwners(); if (adding) $root.find('.na_ph_addname').trigger('focus'); });
+    const addPerson = async () => {
+        const v = String($root.find('.na_ph_addname').val() || '').trim();
+        if (!v) return;
+        const have = names.find(n => nameKey(n) === nameKey(v));
+        if (!have) { m.people = [...(Array.isArray(m.people) ? m.people : []), v]; names.push(v); roster.add(nameKey(v)); }
+        owner = have || v; adding = false; view = 'lock'; menu = false; sheet = false;
+        $root.find('.na_ph_addname').val('');
+        draw();
+        if (!have) await saveMeta();
+    };
+    $root.on('click', '.na_ph_addok', addPerson);
+    $root.on('keydown', '.na_ph_addname', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); addPerson(); } });
+    $root.on('click', '.na_ph_lorebtn', () => { loreOpen = !loreOpen; drawCtrl(); });
+    $root.on('change', '.na_ph_lorepick', async function () {
+        const set = new Set(phoneLore(m));
+        if (this.checked) set.add(this.value); else set.delete(this.value);
+        m.phoneLore = [...set];
+        $root.find('.na_ph_lorebtn small').text(m.phoneLore.length ? m.phoneLore.join(', ') : '없음 · 아카이브만 읽어요');
+        await saveMeta();
+    });
     $root.on('click', '.na_ph_frame [data-go]', function (e) {
         const go = this.dataset.go;
         if (!go) return;

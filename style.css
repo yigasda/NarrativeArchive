@@ -4445,3 +4445,16 @@ body.na_darkui .na_ph_apbadge { color: #b79bff; }
 .na_ph_lta.off { opacity: 0.5; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup textarea.na_ph_lta { background: var(--pf2) !important; color: var(--pt) !important; border-color: transparent !important; box-shadow: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup textarea.na_ph_lta:focus { border-color: var(--ph-acc) !important; }
+/* 참고 로어북 · 인물 넣기 (v3.111) */
+.na_ph_addic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1.5px dashed color-mix(in srgb, var(--na-dim) 60%, transparent); color: var(--na-dim); }
+.na_ph_addrow { display: flex; gap: 6px; align-items: center; margin: 0 2px 10px; }
+.na_ph_addrow[hidden] { display: none; }
+.na_ph_addrow .text_pole { flex: 1; margin: 0; }
+button.na_ph_lorebtn { width: 100%; border: 0; font: inherit; color: inherit; text-align: left; }
+.na_ph_lorebtn small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.na_ph_lorebtn > .na_ph_i { color: var(--na-dim); }
+.na_ph_lorelist { display: flex; flex-direction: column; gap: 2px; margin-top: -4px; padding: 8px 10px; border-radius: 14px; border: 1px solid var(--na-line); }
+.na_ph_lorelist > small { margin-top: 4px; color: var(--na-dim); font-size: 0.8em; }
+.na_ph_loreitem { display: flex; align-items: center; gap: 6px; padding: 6px 2px; cursor: pointer; font-size: 0.92em; }
+.na_ph_loreitem .na_ck { margin: 0 4px 0 0; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_ph_lorebtn { background: var(--na-card2) !important; border-color: transparent !important; color: inherit !important; }
