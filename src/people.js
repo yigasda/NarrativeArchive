@@ -363,7 +363,7 @@ export async function openPeople() {
     const label = s => s.title.replace(/\s*\([^()]*\)\s*(\[[^\]]*\])?\s*$/, '').replace(RANGE_HEAD, (all, p, a, d, b, rest) => rest.replace(/^\s*[—–-]\s*/, '')) || s.title;
     const chip = s => `<button type="button" class="na_ref_chip" data-start="${s.start}" title="${esc(s.title)}">${esc(short(s))}</button>`;
     const hue = n => { let h = 0; for (const ch of nameKey(n)) h = (h * 31 + ch.codePointAt(0)) % 360; return h; };
-    let view = 'book', sel = null, tab = 'state', center = null, other = null, tpair = null, busy = false, adding = false, showAll = false, coverOpen = false, lineEdit = false, data = peopleData(m);
+    let view = 'book', sel = null, tab = 'state', center = null, other = null, tpair = null, busy = false, adding = false, showAll = false, coverOpen = false, lineEdit = false, looksEdit = false, data = peopleData(m);
     g.covers = g.covers && typeof g.covers === 'object' ? g.covers : {};
     const $root = $(`
       <div class="na_popup na_v2 na_people">
@@ -424,6 +424,14 @@ export async function openPeople() {
               </div>`
                 : line ? `<button type="button" class="na_pb_quote" title="한 줄 대사 바꾸기">“${esc(line)}”</button>`
                 : '<button type="button" class="na_linkbtn na_pb_quote_add">+ 한 줄 대사</button>'}
+              ${looksEdit ? `
+              <div class="na_pb_lineedit na_pb_looksedit">
+                <textarea class="text_pole na_pb_looksin" rows="3" spellcheck="false" placeholder="예: long black hair, brown eyes, slim, mole under eye">${esc(g.looks?.[nameKey(sel)] || '')}</textarea>
+                <small>외모만, 영어 단부루 태그로 (머리 · 눈 · 피부 · 체형 · 키). 휴대폰 사진을 그릴 때 이 인물 자리에 들어가요</small>
+                <div class="na_pb_linebtns"><button type="button" class="na_v2_pillbtn na_pb_looksok">저장</button><button type="button" class="na_v2_pillbtn na_pb_lookscancel">취소</button></div>
+              </div>`
+                : g.looks?.[nameKey(sel)] ? `<button type="button" class="na_pb_looks" title="그림 태그 고치기"><b>그림 태그</b> ${esc(g.looks[nameKey(sel)])}</button>`
+                : '<button type="button" class="na_linkbtn na_pb_looks">+ 그림 태그</button>'}
               <span class="na_pb_faceacts">
                 ${stFace(sel) && st ? '<button type="button" class="na_linkbtn na_face_st">실리태번 아바타로</button>' : ''}
                 ${st !== 'none' && faceOf(sel) ? '<button type="button" class="na_linkbtn na_face_none">얼굴 빼기</button>' : ''}
@@ -570,7 +578,7 @@ export async function openPeople() {
     const go = st => { $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); };
     $root.on('click', '.na_people_tabs button', function () { view = this.dataset.v; draw(); });
     // 도감
-    $root.on('click', '.na_pb_pick', function () { sel = String($(this).data('n')); lineEdit = false; draw(); });
+    $root.on('click', '.na_pb_pick', function () { sel = String($(this).data('n')); lineEdit = false; looksEdit = false; draw(); });
     $root.on('click', '.na_v2_under button', function () { tab = this.dataset.t; draw(); });
     $root.on('click', '.na_pb_more', () => { showAll = true; draw(); });
     $root.on('click', '.na_pb_addbtn', () => { adding = !adding; draw(); if (adding) $root.find('.na_people_name').trigger('focus'); });
@@ -643,6 +651,16 @@ export async function openPeople() {
         await saveMeta(); draw();
     };
     $root.on('click', '.na_pb_quote, .na_pb_quote_add', () => { lineEdit = true; draw(); $root.find('.na_pb_linein').trigger('focus'); });
+    // 그림 태그 (every chat): how this person looks, as image tags, for drawing phone photos
+    $root.on('click', '.na_pb_looks', () => { looksEdit = true; draw(); $root.find('.na_pb_looksin').trigger('focus'); });
+    $root.on('click', '.na_pb_lookscancel', () => { looksEdit = false; draw(); });
+    $root.on('click', '.na_pb_looksok', () => {
+        const v = String($root.find('.na_pb_looksin').val() || '').replace(/\s+/g, ' ').trim();
+        g.looks = g.looks && typeof g.looks === 'object' ? g.looks : {};
+        if (v) g.looks[nameKey(sel)] = v; else delete g.looks[nameKey(sel)];
+        looksEdit = false;
+        saveGlobal(); draw();
+    });
     $root.on('click', '.na_pb_linepick button', function () { setLine([...new Set(data.people.get(sel).quotes.map(q => q.text))][+this.dataset.i]); });
     $root.on('click', '.na_pb_lineok', () => setLine(String($root.find('.na_pb_linein').val() || '').trim()));
     $root.on('click', '.na_pb_lineauto', () => setLine(null));

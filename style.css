@@ -4398,7 +4398,30 @@ body.na_darkui .na_ph_mapart { background: linear-gradient(90deg, rgba(255, 255,
 .na_pb_phonebtn { position: absolute; top: 10px; left: 10px; z-index: 1; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 11px 0 9px; border: 0; border-radius: 15px; background: rgba(0, 0, 0, 0.22); color: #fff; font: inherit; font-size: 0.8em; font-weight: 600; cursor: pointer; }
 .na_pb_phonebtn:hover { background: rgba(0, 0, 0, 0.4); }
 /* 캐릭터 휴대폰 under a theme that paints every button: the phone's buttons keep their own (see-through) look */
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame button:not(.na_ph_widget, .na_ph_kochip, .na_ph_makebtn, .na_ph_bar),
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame button:not(.na_ph_widget, .na_ph_kochip, .na_ph_makebtn, .na_ph_bar, .na_ph_thumb, .na_ph_draw),
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_pick:not(.on) { background: transparent !important; background-image: none !important; border-color: transparent !important; box-shadow: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_pick.on { background: var(--na-card2) !important; border-color: transparent !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_pb_phonebtn { background: rgba(0, 0, 0, 0.22) !important; border-color: transparent !important; color: #fff !important; }
+
+/* 사진 그리기 (v3.108): a 그리기 pill on a photo with no picture yet; a tapped photo opens big with its tags */
+.na_ph_pc { position: relative; }
+.na_ph_thumb { display: grid !important; place-items: center; width: 100% !important; overflow: hidden; }
+.na_ph_thumb img, .na_ph_big img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.na_ph_draw { display: inline-flex !important; align-items: center; justify-content: center; gap: 5px; border-radius: 999px !important; font-size: 11.5px !important; font-weight: 600 !important; }
+.na_ph_draw.on_thumb { position: absolute; top: 62px; right: 6px; padding: 4px 10px !important; background: rgba(0, 0, 0, 0.38) !important; color: #fff !important; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.na_ph_draw.wide { width: 100% !important; margin-top: 12px !important; padding: 10px !important; background: var(--ph-acc) !important; color: #fff !important; font-size: 14px !important; }
+.na_ph_draw:disabled { opacity: 0.75; cursor: default; }
+.na_ph_viewer { padding: 0 14px 30px; }
+.na_ph_big { display: grid; place-items: center; min-height: 220px; border-radius: 16px; overflow: hidden; color: rgba(255, 255, 255, 0.85); }
+.na_ph_big.has { min-height: 0; background: var(--pf2); }
+.na_ph_big.has img { height: auto; }
+.na_ph_viewer > p { margin: 12px 2px 0; font-size: 15px; line-height: 1.45; }
+.na_ph_viewer > p .na_ph_ko { display: block; margin-top: 3px; color: var(--pd); font-size: 13.5px; }
+.na_ph_viewer > p small { display: block; margin-top: 4px; color: var(--pd); font-size: 12px; }
+.na_ph_tags { margin-top: 12px; color: var(--pd); font-size: 12px; }
+.na_ph_tags summary { cursor: pointer; }
+.na_ph_tags code { display: block; margin-top: 6px; padding: 8px 10px; border-radius: 10px; background: var(--pf2); color: var(--pt); font-size: 11.5px; line-height: 1.5; white-space: normal; word-break: break-word; user-select: text; -webkit-user-select: text; }
+/* 인물 도감: 그림 태그 under the name */
+button.na_pb_looks { max-width: 100%; padding: 2px 8px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 0.8em; color: var(--na-dim); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button.na_pb_looks b { color: var(--na-accent); font-weight: 600; margin-right: 3px; }
+.na_pb_looksedit textarea.text_pole { width: 100%; resize: vertical; font-size: 0.88em; }

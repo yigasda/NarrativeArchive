@@ -4,7 +4,7 @@
 // m.phones = { [name key]: { owner, country, wall, accent, now, contacts, threads, calls, photos, notes, searches, events,
 //   upto (the last message number the archive held), at, inject } }
 
-import { askDraft, drLabel, withSpinner } from './ai.js';
+import { askAI, askDraft, drLabel, withSpinner } from './ai.js';
 import { annivsOf, datedRows } from './anniv.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { recentForCheck } from './drift.js';
@@ -256,6 +256,98 @@ export function placesOf(m, owner) {
     return out.reverse().slice(0, 40);
 }
 
+// ---- 사진 그리기: the AI 기능 모델 turns a caption into image tags, and SillyTavern's image generation (NovelAI or
+// whatever is connected there) draws it quietly, without a chat message. How people look comes from 인물 도감's 그림 태그.
+export const AI_SYS_PHOTO = `GOAL
+A photo on a character's phone is known only by its caption. Turn it into a NovelAI image prompt.
+
+YOU GET
+- PHOTO: the caption and when it was taken.
+- OWNER: whose phone it is.
+- LOOKS: people whose looks the app already has, by exact name.
+- STORY: the archive around that day, for place, clothes and light.
+
+ANSWER — two lines, nothing before or after:
+TAGS: …
+AVOID: …   (negative tags; empty if none are needed)
+
+LANGUAGE AND FORM
+- English only. Danbooru-style tags as NovelAI reads them, separated by commas.
+- Tags, never sentences. No labels ("Character 1:"), no quotes, no <>, HTML, links, markdown or file paths.
+
+LOOKS COME FROM THE APP (most important)
+- A person in LOOKS is written as [exact name] where they appear; the app puts their looks there.
+  Copy the name exactly as LOOKS has it: no nickname, alias, role or translation.
+- For them, never write hair (colour, length, style), eyes, skin or tan, body type, chest size,
+  face shape, height or size difference — not even if the story mentions it.
+- Someone not in LOOKS is described in full: gender, rough age, hair, eyes, build, clothes.
+- A selfie, or a person the caption does not name, is the owner.
+
+ORDER
+1. How many in frame: no humans, 1girl, 1boy, 2girls, 1girl 1boy, multiple boys …
+2. Each person ([name] or full looks), then what changes day to day: expression, gaze, pose,
+   action, who they touch, the clothes they wear that day and their state.
+3. Place, time of day, weather, light, mood.
+4. How a phone took it: selfie, mirror selfie, candid, pov, from behind, close-up, upper body, blurry, flash.
+
+EXPLICIT PHOTOS
+- Allowed when the caption is explicit; tag it plainly.
+- Clothing state: nude, topless, open shirt, clothes lift, panties aside, disheveled …
+- Bare parts are always tagged: nipples, penis (erection if aroused), pussy.
+- Mood as the scene warrants: blush, heavy breathing, sweat, trembling, tears …
+
+NEVER
+- gritting teeth, clenched teeth, clenched jaw.
+
+LAST CHECK
+No hair, eye, skin, body or height tag for anyone in LOOKS.`;
+const NEVER_NEG = 'gritting teeth, clenched teeth, clenched jaw';
+export const looksOf = () => { const l = globalSettings().looks; return l && typeof l === 'object' ? l : {}; };
+const drawing = new Set(); // 'owner key:photo index' being drawn now
+
+// the dated sections of the photo's day (or the last one before it), for place, clothes and light
+function storyAround(m, time) {
+    const rows = datedRows(m), x = parts(time);
+    let hit = x ? rows.filter(r => r.date.m === x.mo && r.date.d === x.d) : [];
+    if (!hit.length && x) hit = rows.filter(r => r.date.m < x.mo || (r.date.m === x.mo && r.date.d <= x.d)).slice(-1);
+    if (!hit.length) hit = rows.slice(-1);
+    return hit.slice(-2).map(r => m.text.slice(r.s.start, r.s.end).trim()).join('\n\n').slice(0, 6000);
+}
+const tagLine = (out, key) => (String(out || '').match(new RegExp(`^[\\s*]*${key}[*\\s]*:(.*)$`, 'mi')) || [, ''])[1];
+const tagList = s => String(s).replace(/[<>"`|]/g, ' ').split(',').map(t => t.trim()).filter(Boolean);
+// TAGS with every [name] swapped for that person's 그림 태그; AVOID with the teeth tags always in
+export function photoPrompt(out, names = []) {
+    const looks = looksOf(), known = new Set(names.map(nameKey));
+    const tags = tagList(tagLine(out, 'TAGS').replace(/\[([^\]]{1,40})\]/g, (all, n) => looks[nameKey(n)] || (known.has(nameKey(n)) ? '' : all)));
+    if (!tags.length) throw new Error('모델 답에서 TAGS 줄을 찾지 못했어요');
+    const neg = [...new Set([...tagList(tagLine(out, 'AVOID')), ...tagList(NEVER_NEG)])];
+    return { tags: tags.join(', '), neg: neg.join(', ') };
+}
+async function drawImage(tags, neg) {
+    const c = ctx();
+    if (!c.SlashCommandParser?.commands?.imagine) throw new Error('실리태번 이미지 생성 확장이 꺼져 있어요. 확장 → 이미지 생성에서 NovelAI를 연결해 주세요');
+    const r = await c.executeSlashCommandsWithOptions(`/imagine quiet=true gallery=false extend=false negative="${neg}" ${tags}`);
+    const url = String(r?.pipe || '').trim();
+    if (!url || r?.isError) throw new Error('그림을 받지 못했어요. 실리태번 이미지 생성 설정을 확인해 주세요');
+    return url;
+}
+export async function drawPhoto(m, p, k) {
+    const ph = p.photos[k];
+    if (!ph) return null;
+    const looks = looksOf(), names = peopleList(m);
+    const prompt = [
+        `[PHOTO]\n${ph.caption}${ph.time ? ` (taken ${ph.time})` : ''}`,
+        `[OWNER]\n${p.owner}`,
+        `[LOOKS]\n${names.filter(n => looks[nameKey(n)]).join('\n') || '(nobody)'}`,
+        `[STORY]\n${storyAround(m, ph.time) || '(none)'}`,
+    ].join('\n\n');
+    const { tags, neg } = photoPrompt(await askAI(prompt, { system: AI_SYS_PHOTO, maxTokens: 2000 }), names);
+    ph.img = await drawImage(tags, neg);
+    ph.tags = tags;
+    await saveMeta();
+    return ph;
+}
+
 // ---- drawing
 const ICO = {
     msg: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/>',
@@ -383,11 +475,25 @@ function callScreen(p, roster) {
           <div><b>${esc(savedName(p, c.with))}</b><p>${ic(c.type === 'out' ? 'out' : 'in', 12, 2.4)} ${c.type === 'missed' ? '부재중' : c.type === 'out' ? '발신' : '수신'}${c.min && c.type !== 'missed' ? ` · ${c.min}분` : ''}</p></div><small>${esc(listTime(p, c.time))}</small></div>`).join('') : empty('통화 기록이 없어요')}</div>`;
 }
 
+const busyHtml = '<i class="fa-solid fa-spinner fa-spin"></i>';
+const drawBtn = (p, k, cls = '') => { const busy = drawing.has(`${nameKey(p.owner)}:${k}`); return `<button type="button" class="na_ph_draw ${cls}" data-k="${k}" ${busy ? 'disabled' : ''}>${busy ? `${busyHtml} 그리는 중` : p.photos[k].img ? '다시 그리기' : '그리기'}</button>`; };
+const thumb = (x, size = 26) => (x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy">` : ic(MOOD_ICO[x.mood] || 'photo', size, 1.6));
 function photoScreen(p) {
-    const ps = [...p.photos].reverse();
+    const ps = p.photos.map((x, k) => [x, k]).reverse();
     return `${head(p, '사진', { sub: ps.length ? `${ps.length}장` : '' })}
-      <div class="na_ph_photos">${ps.length ? ps.map(x => `
-        <div class="na_ph_pc"><div class="na_ph_thumb m_${x.mood}">${ic(MOOD_ICO[x.mood] || 'photo', 26, 1.6)}</div><p>${tr(p, x.caption, x.ko)}<small>${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</small></p></div>`).join('') : empty('사진이 없어요')}</div>`;
+      <div class="na_ph_photos">${ps.length ? ps.map(([x, k]) => `
+        <div class="na_ph_pc"><button type="button" class="na_ph_thumb m_${x.mood} ${x.img ? 'has' : ''}" data-go="photoone" data-i="${k}" aria-label="크게 보기">${thumb(x)}</button>${x.img ? '' : drawBtn(p, k, 'on_thumb')}<p>${tr(p, x.caption, x.ko)}<small>${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</small></p></div>`).join('') : empty('사진이 없어요')}</div>`;
+}
+function photoView(p, k) {
+    const x = p.photos[k];
+    if (!x) return photoScreen(p);
+    return `${head(p, '', { back: 'photo' })}
+      <div class="na_ph_viewer">
+        <div class="na_ph_big m_${x.mood} ${x.img ? 'has' : ''}">${thumb(x, 40)}</div>
+        <p>${tr(p, x.caption, x.ko)}<small>${esc(fmtDate(p, x.time))} ${esc(fmtTime(p, x.time))}</small></p>
+        ${drawBtn(p, k, 'wide')}
+        ${x.tags ? `<details class="na_ph_tags"><summary>그린 태그</summary><code>${esc(x.tags)}</code></details>` : ''}
+      </div>`;
 }
 
 function noteScreen(p, i) {
@@ -444,7 +550,7 @@ function screen(p, view, m, roster) {
     const now = storyNow(p);
     const [v, i] = view.split(':');
     const body = v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'msg' ? msgList(p, roster)
-        : v === 'thread' ? threadScreen(p, Number(i), roster) : v === 'call' ? callScreen(p, roster) : v === 'photo' ? photoScreen(p)
+        : v === 'thread' ? threadScreen(p, Number(i), roster) : v === 'call' ? callScreen(p, roster) : v === 'photo' ? photoScreen(p) : v === 'photoone' ? photoView(p, Number(i))
         : v === 'note' ? noteScreen(p, -1) : v === 'noteone' ? noteScreen(p, Number(i)) : v === 'search' ? searchScreen(p)
         : v === 'cal' ? calScreen(p, now, m) : v === 'map' ? mapScreen(p, m) : homeScreen(p, now, m);
     const glass = v === 'lock' || v === 'home';
@@ -470,7 +576,7 @@ export async function openPhone(who = null) {
     const phone = () => (owner ? m.phones[nameKey(owner)] : null);
     const drawOwners = () => $root.find('.na_ph_owners').html(names.length ? names.map(n => `
         <button type="button" class="na_ph_pick ${n === owner ? 'on' : ''}" data-n="${esc(n)}">${faceHtml(n, 40)}<span>${esc(n)}</span>${m.phones[nameKey(n)] ? '<i></i>' : ''}</button>`).join('') : '<div class="na_empty">STATE에 "## 이름" 인물이 없어요. 인물 도감에서 인물을 넣어 주세요.</div>');
-    const drawPhone = () => {
+    const drawPhone = (keep = false) => {
         const p = phone();
         if (!owner) { $root.find('.na_ph_frame').html(''); return; }
         if (!p) {
@@ -487,7 +593,9 @@ export async function openPhone(who = null) {
                 </div></div>`);
             return;
         }
+        const top = keep ? $root.find('.na_ph_body').scrollTop() : 0;
         $root.find('.na_ph_frame').html(screen(p, view, m, roster));
+        if (keep) $root.find('.na_ph_body').scrollTop(top);
     };
     const drawCtrl = () => {
         const p = phone();
@@ -520,12 +628,22 @@ export async function openPhone(who = null) {
         const go = this.dataset.go;
         if (!go) return;
         e.stopPropagation();
-        view = go === 'thread' || go === 'noteone' ? `${go}:${this.dataset.i}` : go;
+        view = ['thread', 'noteone', 'photoone'].includes(go) ? `${go}:${this.dataset.i}` : go;
         drawPhone();
         $root.find('.na_ph_body').scrollTop(view.startsWith('thread') ? 1e6 : 0);
     });
     $root.on('click', '.na_ph_kochip', e => { e.stopPropagation(); const g = globalSettings(); g.phoneKo = !koOn(); drawPhone(); if (view.startsWith('thread')) $root.find('.na_ph_body').scrollTop(1e6); saveGlobal(); });
     $root.on('click', '.na_ph_makebtn', function () { make($(this), false); });
+    // one photo at a time; the screen can change while it draws
+    $root.on('click', '.na_ph_draw', async function (e) {
+        e.stopPropagation();
+        const p = phone(), k = Number(this.dataset.k), id = `${nameKey(p.owner)}:${k}`;
+        if (drawing.has(id)) return;
+        drawing.add(id); drawPhone(true);
+        try { await drawPhoto(m, p, k); toastr.success('사진을 그렸어요', '캐릭터 휴대폰'); }
+        catch (err) { console.error('[narrative-archive] photo', err); toastr.error(String(err?.message || err), '사진 그리기 실패'); }
+        finally { drawing.delete(id); drawPhone(true); }
+    });
     $root.on('click', '.na_ph_update', function () { make($(this), true); });
     $root.on('click', '.na_ph_more', () => { menu = !menu; drawCtrl(); });
     $root.on('change', '.na_ph_inject', async function () { phone().inject = this.checked; await saveMeta(); applyInjection(); });
