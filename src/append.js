@@ -910,6 +910,15 @@ export async function openAppend(prefill = {}) {
             toastr.error(String(e?.message || e), '문체 다듬기');
         } finally { apf.busy = false; }
     });
+    // [이대로 고쳐 줘] under a verdict with problems: the problems go to 초안 고쳐 달라고 하기 as the request
+    // (their #numbers pick the sections they are in), with the raw log, and the draft changes in place
+    const gradeFix = out => $root.find('.na_apf').length ? `<button type="button" class="na_ck_btn na_grade_fix" data-ask="${esc(`원문 대조에서 짚은 것만 원문대로 고쳐 줘, 나머지는 그대로: ${String(out).split('\n').map(l => l.replace(/^\s*[-*•]\s*/, '').trim()).filter(Boolean).join(' / ')}`)}">이대로 고쳐 줘</button>` : '';
+    $root.on('click', '.na_grade_fix', function () {
+        $root.find('.na_apf_raw').prop('checked', true);
+        $root.find('.na_apf_q').val(this.dataset.ask);
+        $root.find('.na_apf_go').trigger('click');
+        $(this).prop('disabled', true).text('고쳐 달라고 보냈어요');
+    });
     // 원문 대조 for pasted text: the numbers its headings cover, hidden messages included
     $root.find('.na_ap_grade').on('click', async function () {
         const v = $ta.val().trim();
@@ -923,7 +932,7 @@ export async function openAppend(prefill = {}) {
         if (out === null) return;
         const ok = /^\s*문제 없음\.?\s*$/.test(out);
         $root.find('.na_grade_out').prop('hidden', false).toggleClass('na_ai_ok', ok)
-            .html(ok ? '<i class="fa-solid fa-circle-check"></i> 원문 대조: 잘 맞아요' : `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 원문 대조 <span class="na_dim">· 참고용 · 고치려면 위 글을 직접 고치세요</span></div>${driftHtml(out, m)}`);
+            .html(ok ? '<i class="fa-solid fa-circle-check"></i> 원문 대조: 잘 맞아요' : `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 원문 대조 <span class="na_dim">· 참고용</span></div>${driftHtml(out, m)}${gradeFix(out)}`);
     });
     $root.on('click', '.na_grade_out .na_cite_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
     // 한 번에 압축 with 채점: the grader's verdict on the summary, message numbers open the raw log
@@ -932,7 +941,7 @@ export async function openAppend(prefill = {}) {
         $root.find('.na_grade_out').prop('hidden', false).toggleClass('na_ai_ok', ok)
             .html(pre.gradeError ? `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 채점 못 했어요</div>${esc(pre.grade)}`
                 : ok ? '<i class="fa-solid fa-circle-check"></i> 채점: 원문과 잘 맞아요'
-                : `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 채점 <span class="na_dim">· 참고용 · 고치려면 위 글을 직접 고치세요</span></div>${driftHtml(pre.grade, m)}`);
+                : `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 채점 <span class="na_dim">· 참고용</span></div>${driftHtml(pre.grade, m)}${gradeFix(pre.grade)}`);
     }
     if (pre.text) {
         if (Number.isFinite(pre.end)) { $end.val(pre.end); endTouched = true; hideHint(); }
