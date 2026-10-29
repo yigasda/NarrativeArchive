@@ -87,7 +87,8 @@ const str = (v, n) => String(v ?? '').replace(/[ \t]+/g, ' ').trim().slice(0, n)
 const line = (v, n) => str(v, n).replace(/\s*\n\s*/g, ' ');
 const pad = x => String(x).padStart(2, '0');
 const when = v => {
-    const mt = String(v || '').match(/(\d{1,2})[-/.](\d{1,2})(?:[ T]+(\d{1,2}):(\d{2}))?/);
+    // "10-25 21:00", or with the year in front ("2026-10-25 21:00", "2026/10/25T21:00")
+    const mt = String(v || '').match(/(?:^|\D)(?:\d{4}[-/.])?(\d{1,2})[-/.](\d{1,2})(?:[ T]+(\d{1,2}):(\d{2}))?/);
     if (!mt || Number(mt[1]) > 12 || Number(mt[2]) > 31) return '';
     return `${pad(mt[1])}-${pad(mt[2])}${mt[3] ? ` ${pad(mt[3])}:${mt[4]}` : ''}`;
 };
@@ -123,21 +124,30 @@ export function parsePhone(out) {
     };
 }
 
-// an update's new items go after the old ones; every list keeps its newest
+// what makes two items the same, list by list: an update that repeats what the phone holds adds nothing
+const SIG = {
+    msg: x => [nameKey(x.from), x.text, x.time], calls: x => [nameKey(x.with), x.type, x.time], photos: x => [x.caption, x.time],
+    notes: x => [x.title, x.text], searches: x => [x.q, x.time], events: x => [x.title, x.date, x.time], posts: x => [x.text, x.photo, x.time],
+    mails: x => [x.from, x.subject, x.time], diary: x => [x.date, x.title, x.text],
+};
+const sigOf = (k, x) => JSON.stringify(SIG[k](x)).toLowerCase();
+const fresh = (k, old, add) => { const seen = new Set(old.map(x => sigOf(k, x))); return add.filter(x => !seen.has(sigOf(k, x)) && seen.add(sigOf(k, x))); };
+// an update's new items go after the old ones; every list keeps its newest, the threads the ones written in last
 function mergePhone(p, add) {
     const keep = (list, n) => list.slice(-n);
     for (const t of add.threads) {
         const old = p.threads.find(x => nameKey(x.with) === nameKey(t.with));
-        if (old) old.messages = keep([...old.messages, ...t.messages], CAP.messages);
-        else p.threads.push({ ...t, messages: keep(t.messages, CAP.messages) });
+        if (old) old.messages = keep([...old.messages, ...fresh('msg', old.messages, t.messages)], CAP.messages);
+        else p.threads.push({ ...t, messages: keep(fresh('msg', [], t.messages), CAP.messages) });
     }
-    p.threads = keep(p.threads, CAP.threads);
-    for (const k of LISTS) p[k] = keep([...(p[k] || []), ...(add[k] || [])], CAP[k]);
+    p.threads = keep([...p.threads].sort((a, b) => lastTime(a).localeCompare(lastTime(b))), CAP.threads);
+    for (const k of LISTS) p[k] = keep([...(p[k] || []), ...fresh(k, p[k] || [], add[k] || [])], CAP[k]);
     if (add.profile?.handle || add.profile?.bio) p.profile = { ...(p.profile || {}), ...Object.fromEntries(Object.entries(add.profile).filter(([, v]) => v)) };
     for (const c of add.contacts) {
         const old = p.contacts.find(x => nameKey(x.name) === nameKey(c.name));
         if (old) old.saved = c.saved || old.saved; else p.contacts.push(c);
     }
+    p.contacts = keep(p.contacts, CAP.contacts);
     if (add.now) p.now = add.now;
     return p;
 }
@@ -226,7 +236,12 @@ export async function makePhone(m, owner, { update = false } = {}) {
     const got = parsePhone(out);
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
     if (old) mergePhone(old, got);
-    else m.phones[key] = { owner, inject: false, ...got, wall: got.wall || 'dusk', accent: got.accent || 'blue', country: got.country || 'KR' };
+    else {
+        const was = m.phones[key];
+        const base = { owner, inject: false, ...got, wall: got.wall || 'dusk', accent: got.accent || 'blue', country: got.country || 'KR', threads: [], contacts: [], ...Object.fromEntries(LISTS.map(k => [k, []])) };
+        if (was?.theme) base.theme = was.theme;
+        m.phones[key] = mergePhone(base, got);
+    }
     const p = m.phones[key];
     p.upto = lastEnd(m);
     p.at = Date.now();
@@ -249,7 +264,7 @@ export function phoneBlock(m) {
         }
         const missed = p.calls.filter(c => c.type === 'missed').slice(-3);
         if (missed.length) out.push(`Missed calls: ${missed.map(c => `${c.with} (${c.time})`).join(', ')}`);
-        const soon = p.events.filter(e => !p.now || e.date >= p.now.slice(0, 5)).slice(0, 3);
+        const soon = p.events.filter(e => !p.now || upcoming(e, p.now)).slice(0, 3);
         if (soon.length) out.push(`Calendar: ${soon.map(e => `${e.date}${e.time ? ` ${e.time}` : ''} ${e.title}`).join('; ')}`);
         if (p.notes.length) out.push(`Notes: ${p.notes.slice(-3).map(n => n.title || n.text.slice(0, 40)).join('; ')}`);
         return `## ${p.owner}'s phone${p.now ? ` (as of ${p.now})` : ''}\n${out.map(l => `- ${l}`).join('\n')}`;
@@ -273,22 +288,37 @@ const tOf = (p, h, mi) => { const f = fmtOf(p); return f.t ? f.t(h, mi) : `${pad
 export function fmtDate(p, v, short = false) { const x = parts(v); if (!x) return ''; const f = fmtOf(p); return short ? f.s(x.mo, x.d) : f.d(x.mo, x.d); }
 export function fmtTime(p, v) { const x = parts(v); return x && x.h !== null ? tOf(p, x.h, x.mi) : ''; }
 // a list's time: the clock on the phone's today, the short date before it
-const listTime = (p, v) => (String(v).slice(0, 5) === String(p.now).slice(0, 5) ? fmtTime(p, v) : fmtDate(p, v, true));
+// the moment the screen being drawn shows (the story's now), set by screen(); the phone's own "now" otherwise
+let shownNow = '';
+const nowOf = p => shownNow || p.now || '';
+const listTime = (p, v) => (String(v).slice(0, 5) === String(nowOf(p)).slice(0, 5) ? fmtTime(p, v) : fmtDate(p, v, true));
 const bigClock = (p, v) => { const x = parts(v); if (!x || x.h === null) return ''; return fmtOf(p).h12 ? `${x.h % 12 || 12}:${x.mi}` : `${pad(x.h)}:${x.mi}`; };
 const minsOf = v => { const x = parts(v); return x ? ((x.mo * 31 + x.d) * 24 + (x.h ?? 0)) * 60 + (Number(x.mi) || 0) : 0; };
 const ago = (p, v) => {
-    const d = minsOf(p.now) - minsOf(v);
-    if (String(v).slice(0, 5) !== String(p.now).slice(0, 5) || d < 0) return fmtDate(p, v, true);
+    const d = minsOf(nowOf(p)) - minsOf(v);
+    if (String(v).slice(0, 5) !== String(nowOf(p)).slice(0, 5) || d < 0) return fmtDate(p, v, true);
     return d < 1 ? '지금' : d < 60 ? `${d}분 전` : `${Math.floor(d / 60)}시간 전`;
 };
 const lastTime = t => t.messages[t.messages.length - 1]?.time || '';
+// still to come at `now`: a later day, or today at a time not yet passed (or all day)
+const upcoming = (e, now) => { const day = String(now).slice(0, 5), hm = String(now).slice(6); return e.date > day || (e.date === day && (!e.time || !hm || e.time >= hm)); };
 
 // the story's now: the newest status window when it has a time, else what the phone was made with
+// a date's month and day, 1-based: "2026-10-26", "10/26", or a month name the calendars know (their months count from 0)
+export function monthDay(text) {
+    const s = String(text || '');
+    const num = s.match(/(?:^|\D)(?:\d{4}[-/.]\s*)?(\d{1,2})[-/.]\s*(\d{1,2})(?!\d)/);
+    if (num && Number(num[1]) >= 1 && Number(num[1]) <= 12 && Number(num[2]) >= 1 && Number(num[2]) <= 31) return { mo: Number(num[1]), d: Number(num[2]) };
+    const cals = calendars(), d = headingDate(`(${s})`, cals).date;
+    return d?.d && cals[d.cal]?.length === 12 ? { mo: d.m + 1, d: d.d } : null;
+}
+// a dated row's day as the phone writes it ("10-25"), or '' when its calendar is not a 12-month one
+const rowDay = r => (r?.date?.d && calendars()[r.date.cal]?.length === 12 ? `${pad(r.date.m + 1)}-${pad(r.date.d)}` : '');
 function storyNow(p) {
     try {
         const t = recentTrackers(1)[0];
-        const d = t?.date ? headingDate(`(${t.date})`, calendars()).date : null;
-        if (t && Number.isFinite(t.min) && d?.d && d.m <= 12) return `${pad(d.m)}-${pad(d.d)} ${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}`;
+        const d = t?.date ? monthDay(t.date) : null;
+        if (t && Number.isFinite(t.min) && d) return `${pad(d.mo)}-${pad(d.d)} ${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}`;
     } catch { /* no status window */ }
     return p.now || '';
 }
@@ -363,9 +393,9 @@ const drawing = new Set(); // 'owner key:photo index' being drawn now
 
 // the dated sections of the photo's day (or the last one before it), for place, clothes and light
 function storyAround(m, time) {
-    const rows = datedRows(m), x = parts(time);
-    let hit = x ? rows.filter(r => r.date.m === x.mo && r.date.d === x.d) : [];
-    if (!hit.length && x) hit = rows.filter(r => r.date.m < x.mo || (r.date.m === x.mo && r.date.d <= x.d)).slice(-1);
+    const rows = datedRows(m).filter(r => rowDay(r)), x = parts(time), day = x ? `${pad(x.mo)}-${pad(x.d)}` : '';
+    let hit = day ? rows.filter(r => rowDay(r) === day) : [];
+    if (!hit.length && day) hit = rows.filter(r => rowDay(r) <= day).slice(-1);
     if (!hit.length) hit = rows.slice(-1);
     return hit.slice(-2).map(r => m.text.slice(r.s.start, r.s.end).trim()).join('\n\n').slice(0, 6000);
 }
@@ -552,7 +582,7 @@ function lockNotes(p, now) {
         const n = missed.filter(c => nameKey(c.with) === nameKey(last.with)).length;
         notes.push({ app: 'call', title: '부재중 전화', text: `${savedName(p, last.with)}${n > 1 ? ` · ${n}통` : ''}`, time: last.time });
     }
-    const ev = p.events.find(e => e.date >= day);
+    const ev = p.events.find(e => upcoming(e, now));
     if (ev && notes.length < 3) notes.push({ app: 'cal', title: '캘린더', text: `${ev.title}${ev.time ? ` · ${fmtTime(p, `${ev.date} ${ev.time}`)}` : ''}`, ko: ev.ko, time: '' });
     return notes.slice(0, 3);
 }
@@ -605,7 +635,7 @@ function homeScreen(p, now, m) {
     const missed = p.calls.filter(c => c.type === 'missed' && c.time.slice(0, 5) === day).length;
     const bars = mono ? ['#2a313b', 'rgba(22, 27, 34, 0.22)'] : ['#d89f98', '#8faed1'];
     const evs = [...(anniv ? [{ title: anniv, when: '기념일', heart: true }] : []),
-        ...p.events.filter(e => e.date >= day).map(e => ({ title: e.title, when: `${e.date === day ? '' : `${fmtDate(p, e.date, true)} `}${e.time ? fmtTime(p, `${e.date} ${e.time}`) : e.date === day ? '하루 종일' : ''}`.trim() }))].slice(0, 2);
+        ...p.events.filter(e => upcoming(e, now)).map(e => ({ title: e.title, when: `${e.date === day ? '' : `${fmtDate(p, e.date, true)} `}${e.time ? fmtTime(p, `${e.date} ${e.time}`) : e.date === day ? '하루 종일' : ''}`.trim() }))].slice(0, 2);
     const note = p.notes[p.notes.length - 1], items = noteItems(note);
     // SNS: comments from others on today's posts; 메일: unread
     const badges = { sns: (p.posts || []).filter(x => x.time.slice(0, 5) === day).reduce((n, x) => n + x.comments.filter(c => nameKey(c.from) !== nameKey(p.owner)).length, 0), mail: (p.mails || []).filter(x => x.unread).length };
@@ -694,7 +724,7 @@ function annivToday(m, now) {
     const rows = datedRows(m);
     for (const a of annivsOf(m)) {
         const r = rows.find(x => sectionKey(x.s) === a.key);
-        if (r && `${pad(r.date.m)}-${pad(r.date.d)}` === day) return a.name;
+        if (r && rowDay(r) === day) return a.name;
     }
     return '';
 }
@@ -998,7 +1028,7 @@ function searchOne(p, now, k) {
 const AX_EVC = ['#b0564e', '#8faed1', '#89b892', '#dcc680', '#a699c9'];
 function annivList(m) {
     const rows = datedRows(m);
-    return annivsOf(m).map(a => { const r = rows.find(x => sectionKey(x.s) === a.key); return r ? { name: a.name, date: `${pad(r.date.m)}-${pad(r.date.d)}` } : null; }).filter(Boolean);
+    return annivsOf(m).map(a => { const r = rows.find(x => sectionKey(x.s) === a.key); return r && rowDay(r) ? { name: a.name, date: rowDay(r) } : null; }).filter(Boolean);
 }
 function calScreen(p, now, m) {
     const day = String(now).slice(0, 5), x0 = parts(now) || parts(p.events[0]?.date) || { mo: 1, d: 1 };
@@ -1131,6 +1161,7 @@ function mapScreen(p, m) {
 
 function screen(p, view, m, roster) {
     const now = storyNow(p);
+    shownNow = now;
     const [v, i] = view.split(':');
     const body = v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'msg' ? msgList(p, now, roster)
         : v === 'thread' ? threadScreen(p, now, Number(i), roster) : v === 'call' || v === 'callmiss' ? callScreen(p, now, roster, v === 'callmiss') : v === 'callwho' ? callWho(p, now, Number(i), roster)
