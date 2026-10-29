@@ -15,7 +15,7 @@ export const keepLabel = k => (k.from === k.to ? `#${k.from}` : `#${k.from}–#$
 export function keepNote(m, from, to) {
     const ks = keepsIn(m, from, to);
     if (!ks.length) return '';
-    return `Scenes the user asked to keep in detail. For each one write what happened step by step, the lines that matter word for word, and what it changed. Do not shrink them to one line.\n${ks.map(k => `- ${keepLabel(k)}${k.note ? `: ${k.note}` : ''}`).join('\n')}`;
+    return `KEEP WHOLE: the user marked these stretches of the raw log. Give each one its own bullets: every step in order, why each happened, and any quoted line exactly as it was said. Do not cut them for space.\n${ks.map(k => `- ${keepLabel(k)}${k.note ? `: ${k.note}` : ''}`).join('\n')}`;
 }
 
 // does a "#a–#b" section cover one of them?
@@ -94,7 +94,7 @@ export async function openKeeps() {
     const c = ctx();
     const $root = $(`
       <div class="na_popup na_v2 na_kp">
-        <div class="na_v2_title"><b>꼭 남길 장면</b><small>압축은 자세히, 망각 곡선은 그대로</small></div>
+        <div class="na_v2_title"><b>꼭 남길 장면</b><small>압축할 때 자세히 · 오래돼도 안 줄어요</small></div>
         <div class="na_kp_list"></div>
         <div class="na_kp_pick">
           <div class="na_kp_pick_head"><b>탭해서 고르기</b><small class="na_kp_hint"></small><span class="na_spacer"></span><button type="button" class="na_linkbtn na_kp_add">번호로 적기</button></div>
