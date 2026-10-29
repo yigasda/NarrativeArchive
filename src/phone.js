@@ -532,14 +532,9 @@ const ICO = {
 };
 const ic = (k, s = 18, w = 2) => `<svg class="na_ph_i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]}</svg>`;
 const APPS = { msg: '메시지', call: '전화', photo: '사진', note: '메모', search: '검색', cal: '캘린더', map: '지도', sns: 'SNS', mail: '메일', diary: '일기', set: '설정', cam: '카메라' };
-const MOOD_ICO = { warm: 'photo', cool: 'photo', green: 'map', dark: 'clock', bright: 'photo', pink: 'heart' };
 const koOn = () => globalSettings().phoneKo !== false;
 const savedName = (p, n) => p.contacts.find(c => nameKey(c.name) === nameKey(n))?.saved || n;
-const tr = (p, t, k) => `${esc(t)}${k && koOn() ? `<span class="na_ph_ko">${esc(k)}</span>` : ''}`;
 const hasKo = p => [...p.threads.flatMap(t => t.messages), ...p.photos, ...p.notes, ...p.searches, ...p.events, ...(p.posts || []), ...(p.mails || []), ...(p.diary || [])].some(x => x.ko);
-// a face: the archive's own face for people in the roster, else the first letter on the accent
-const av = (name, size, roster) => roster.has(nameKey(name)) ? faceHtml(name, size) : `<span class="na_ph_letter" style="width:${size}px;height:${size}px">${esc([...String(name).trim()][0] || '?')}</span>`;
-
 function statusBar(p, now) {
     return `<div class="na_ph_sb"><span>${esc(fmtTime(p, now) || '')}</span><i>${ic('sig', 15)}${ic('bat', 20, 1.6)}</i></div>`;
 }
@@ -671,58 +666,8 @@ const head = (p, title, { back = 'home', sub = '', chip = true, extra = '' } = {
   <div class="na_ph_title">${esc(title)}${sub ? `<small>${esc(sub)}</small>` : ''}</div>`;
 const empty = t => `<div class="na_ph_empty">${esc(t)}</div>`;
 
-function msgList(p, roster) {
-    const ts = [...p.threads].sort((a, b) => lastTime(b).localeCompare(lastTime(a)));
-    return `${head(p, '메시지')}
-      <div class="na_ph_list">${ts.length ? ts.map(t => { const x = t.messages[t.messages.length - 1]; const i = p.threads.indexOf(t); return `
-        <button type="button" class="na_ph_row" data-go="thread" data-i="${i}">${av(t.with, 44, roster)}
-          <div><b>${esc(savedName(p, t.with))}</b><p>${esc(x.text)}</p></div><small>${esc(listTime(p, x.time))}</small>${x.from !== 'me' ? '<i class="na_ph_dot"></i>' : ''}</button>`; }).join('') : empty('메시지가 없어요')}</div>`;
-}
-
-function threadScreen(p, i, roster) {
-    const t = p.threads[i];
-    if (!t) return msgList(p, roster);
-    const others = new Set(t.messages.filter(x => x.from !== 'me').map(x => nameKey(x.from)));
-    let day = '', prev = '';
-    const lastMe = t.messages.map(x => x.from).lastIndexOf('me');
-    const rows = t.messages.map((x, n) => {
-        let out = '';
-        const d = x.time.slice(0, 5);
-        if (d && d !== day) { day = d; out += `<div class="na_ph_day">${esc(fmtDate(p, x.time))}${x.time.length > 5 ? ` ${esc(fmtTime(p, x.time))}` : ''}</div>`; prev = ''; }
-        const me = x.from === 'me';
-        if (!me && others.size > 1 && prev !== x.from) out += `<div class="na_ph_who">${esc(savedName(p, x.from))}</div>`;
-        prev = x.from;
-        out += `<div class="na_ph_b ${me ? 'me' : 'them'}">${tr(p, x.text, x.ko)}</div>`;
-        if (n === lastMe && n === t.messages.length - 1 && x.time.length > 5) out += `<div class="na_ph_read">읽음 ${esc(fmtTime(p, x.time))}</div>`;
-        return out;
-    }).join('');
-    return `
-      <div class="na_ph_head na_ph_chathead">
-        <button type="button" class="na_ph_back" data-go="msg" aria-label="뒤로">${ic('back', 20, 2.4)}</button>
-        <div class="na_ph_who2">${av(t.with, 40, roster)}<span>${esc(savedName(p, t.with))}</span></div>
-        ${hasKo(p) ? `<button type="button" class="na_ph_kochip ${koOn() ? 'on' : ''}">가 한국어</button>` : '<span></span>'}
-      </div>
-      <div class="na_ph_msgs">${rows}</div>
-      <div class="na_ph_input">${ic('lock', 13)} 보기 전용</div>`;
-}
-
-function callScreen(p, roster) {
-    const cs = [...p.calls].reverse();
-    return `${head(p, '최근 기록', { chip: false })}
-      <div class="na_ph_list">${cs.length ? cs.map(c => `
-        <div class="na_ph_row ${c.type}">${av(c.with, 40, roster)}
-          <div><b>${esc(savedName(p, c.with))}</b><p>${ic(c.type === 'out' ? 'out' : 'in', 12, 2.4)} ${c.type === 'missed' ? '부재중' : c.type === 'out' ? '발신' : '수신'}${c.min && c.type !== 'missed' ? ` · ${c.min}분` : ''}</p></div><small>${esc(listTime(p, c.time))}</small></div>`).join('') : empty('통화 기록이 없어요')}</div>`;
-}
-
 const busyHtml = '<i class="fa-solid fa-spinner fa-spin"></i>';
 const drawBtn = (p, k, cls = '') => { const busy = drawing.has(`${nameKey(p.owner)}:${k}`); return `<button type="button" class="na_ph_draw ${cls}" data-k="${k}" ${busy ? 'disabled' : ''}>${busy ? `${busyHtml} 그리는 중` : p.photos[k].img ? '다시 그리기' : '그리기'}</button>`; };
-const thumb = (x, size = 26) => (x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy">` : ic(MOOD_ICO[x.mood] || 'photo', size, 1.6));
-function photoScreen(p) {
-    const ps = p.photos.map((x, k) => [x, k]).reverse();
-    return `${head(p, '사진', { sub: ps.length ? `${ps.length}장` : '', extra: `<button type="button" class="na_ph_kochip na_ph_looksbtn">${ic('user', 12, 2.4)} 외모</button>` })}
-      <div class="na_ph_photos">${ps.length ? ps.map(([x, k]) => `
-        <div class="na_ph_pc"><div class="na_ph_thumb m_${x.mood} ${x.img ? 'has' : ''}" data-go="photoone" data-i="${k}" role="button" tabindex="0" aria-label="크게 보기">${thumb(x)}</div>${x.img ? '' : drawBtn(p, k, 'on_thumb')}<p>${tr(p, x.caption, x.ko)}<small>${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</small></p></div>`).join('') : empty('사진이 없어요')}</div>`;
-}
 // 외모: a sheet over the album with everyone's looks for drawing (every chat). AutoPic's registered looks come first
 function looksSheet(m) {
     const looks = looksOf(), ap = autopic() ? autopicPeople() : [];
@@ -744,37 +689,6 @@ function looksSheet(m) {
       </div>`;
 }
 
-function photoView(p, k) {
-    const x = p.photos[k];
-    if (!x) return photoScreen(p);
-    return `${head(p, '', { back: 'photo' })}
-      <div class="na_ph_viewer">
-        <div class="na_ph_big m_${x.mood} ${x.img ? 'has' : ''}">${thumb(x, 40)}</div>
-        <p>${tr(p, x.caption, x.ko)}<small>${esc(fmtDate(p, x.time))} ${esc(fmtTime(p, x.time))}</small></p>
-        ${drawBtn(p, k, 'wide')}
-        ${x.tags ? `<details class="na_ph_tags"><summary>그린 태그${x.via === 'autopic' ? ' · 오토픽' : ''}</summary><code>${esc(x.tags)}</code></details>` : ''}
-      </div>`;
-}
-
-function noteScreen(p, i) {
-    const n = p.notes[i];
-    if (n) return `${head(p, '', { back: 'note' })}
-      <div class="na_ph_notebody"><small>${esc(fmtDate(p, n.time))} ${esc(fmtTime(p, n.time))}</small><h4>${tr(p, n.title, n.kt)}</h4><p>${esc(n.text)}</p>${n.ko && koOn() ? `<p class="na_ph_ko">${esc(n.ko)}</p>` : ''}</div>`;
-    const ns = p.notes.map((x, k) => [x, k]).reverse();
-    return `${head(p, '메모')}
-      <div class="na_ph_list na_ph_cards">${ns.length ? ns.map(([x, k]) => `
-        <button type="button" class="na_ph_row" data-go="noteone" data-i="${k}"><div><b>${tr(p, x.title || x.text.slice(0, 30), x.kt)}</b><p>${esc(x.text.replace(/\s+/g, ' '))}</p></div><small>${esc(listTime(p, x.time))}</small></button>`).join('') : empty('메모가 없어요')}</div>`;
-}
-
-function searchScreen(p) {
-    const ss = [...p.searches].reverse();
-    return `${head(p, '검색')}
-      <div class="na_ph_sbar">${ic('search', 15)} 검색</div>
-      <div class="na_ph_sub">최근 검색</div>
-      <div class="na_ph_list">${ss.length ? ss.map(x => `
-        <div class="na_ph_row na_ph_srow">${ic('clock', 16)}<div><b>${tr(p, x.q, x.ko)}</b></div><small>${esc(listTime(p, x.time))}</small></div>`).join('') : empty('검색 기록이 없어요')}</div>`;
-}
-
 function annivToday(m, now) {
     const day = String(now).slice(0, 5);
     const rows = datedRows(m);
@@ -784,20 +698,6 @@ function annivToday(m, now) {
     }
     return '';
 }
-function calScreen(p, now, m) {
-    const day = String(now).slice(0, 5);
-    const soon = p.events.filter(e => e.date >= day), past = p.events.filter(e => e.date < day).reverse();
-    const rows = datedRows(m);
-    const anniv = annivsOf(m).map(a => { const r = rows.find(x => sectionKey(x.s) === a.key); return r ? { name: a.name, date: `${pad(r.date.m)}-${pad(r.date.d)}` } : null; }).filter(Boolean);
-    const ev = e => `<div class="na_ph_ev"><span class="na_ph_evd"><b>${esc(String(parts(e.date)?.d || ''))}</b>${esc(`${parts(e.date)?.mo || ''}월`)}</span><div><b>${tr(p, e.title, e.ko)}</b>${e.time ? `<small>${esc(fmtTime(p, `${e.date} ${e.time}`))}</small>` : '<small>하루 종일</small>'}</div></div>`;
-    return `${head(p, '캘린더', { sub: fmtDate(p, now) })}
-      <div class="na_ph_list">
-        <div class="na_ph_sub">다가오는 일정</div>${soon.length ? soon.map(ev).join('') : empty('다가오는 일정이 없어요')}
-        ${anniv.length ? `<div class="na_ph_sub">기념일</div>${anniv.map(a => `<div class="na_ph_ev"><span class="na_ph_evd heart">${ic('heart', 15, 2.2)}</span><div><b>${esc(a.name)}</b><small>매년 ${esc(fmtDate(p, a.date))}</small></div></div>`).join('')}` : ''}
-        ${past.length ? `<div class="na_ph_sub">지난 일정</div>${past.map(ev).join('')}` : ''}
-      </div>`;
-}
-
 // ---- SNS · 메일 · 일기 · 설정 · 카메라: drawn like the real apps (the approved boards), at 390 × 844 and scaled like the home
 const AX = {
     back: 'M15 5l-7 7 7 7', heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z', cmt: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z',
@@ -809,7 +709,11 @@ const AX = {
     pen: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18',
     palette: 'M12 3a9 9 0 0 0 0 18c1 0 1.5-.6 1.5-1.4 0-.9-.7-1.3-.7-2.1 0-.8.6-1.5 1.5-1.5H17a4 4 0 0 0 4-4c0-5-4-9-9-9zM7.5 11h.01M10 7h.01M14.5 7h.01',
     lang: 'M4 6h9M8.5 4v2M6 6c0 4 3 7 6 8M11 6c0 3-3 7-7 8M14 20l4-9 4 9M15.5 17h5', user: 'M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 21a8 8 0 0 1 16 0',
-    info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v5M12 8h.01', bolt: 'M13 2L4 14h7l-1 8 9-12h-7z', flip: 'M20 12a8 8 0 0 1-14 5M4 12a8 8 0 0 1 14-5M18 3v4h-4M6 21v-4h4', down: 'M6 9l6 6 6-6',
+    info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v5M12 8h.01', in: 'M17 7L7 17M15 17H7V9', out: 'M7 17L17 7M9 7h8v8',
+    star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z', clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2',
+    keypad: 'M4 4h4v4H4zM10 4h4v4h-4zM16 4h4v4h-4zM4 10h4v4H4zM10 10h4v4h-4zM16 10h4v4h-4zM4 16h4v4H4zM10 16h4v4h-4zM16 16h4v4h-4z', voice: 'M5 10v4M9 7v10M13 4v16M17 8v8M21 11v2',
+    call: 'M6 3h3l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v3a2 2 0 0 1-2 2A17 17 0 0 1 4 5a2 2 0 0 1 2-2z', video: 'M3 7h12v10H3zM15 10l6-3v10l-6-3', mail: 'M3 6h18v12H3zM3 7l9 6 9-6',
+    lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3', mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3', check: 'M5 12.5l4.5 4.5L19 7.5', share: 'M12 3v12M7 8l5-5 5 5M5 14v6h14v-6', bolt: 'M13 2L4 14h7l-1 8 9-12h-7z', flip: 'M20 12a8 8 0 0 1-14 5M4 12a8 8 0 0 1 14-5M18 3v4h-4M6 21v-4h4', down: 'M6 9l6 6 6-6',
 };
 const ax = (k, z = 22, c = 'currentColor', w = 2, f = 'none') => `<svg aria-hidden="true" width="${z}" height="${z}" viewBox="0 0 24 24" fill="${f}" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="${AX[k]}"/></svg>`;
 const axBar = (p, now, c = '#111') => `
@@ -865,7 +769,7 @@ function mailScreen(p, now) {
       <div class="ax_mltop"><button type="button" class="ax_back ax_blue" data-go="home">${ax('back', 22, '#2f6bff', 2.4)}사서함</button><span>편집</span></div>
       <div class="ax_scroll">
         <div class="ax_big">받은편지함</div>
-        <div class="ax_search">${ax('search', 17, '#8e8e93', 2.2)}검색</div>
+        <div class="ax_find">${ax('search', 17, '#8e8e93', 2.2)}검색</div>
         ${ms.length ? ms.map(([x, k]) => `
           <button type="button" class="ax_mrow ${x.unread ? 'u' : ''}" data-go="mailone" data-i="${k}"><span class="ax_mdot">${x.unread ? '<i></i>' : ''}</span><span class="ax_mtx">
             <span class="ax_mh"><b>${esc(x.from)}</b><small class="cg_num">${esc(listTime(p, x.time))}</small>${ax('chev', 14, '#c4c4c7', 2.4)}</span>
@@ -924,7 +828,7 @@ function setScreen(p, now, m) {
       <div class="ax_sttop"><button type="button" class="ax_back ax_blue" data-go="home">${ax('back', 24, '#2f6bff', 2.4)}</button></div>
       <div class="ax_scroll">
         <div class="ax_big">설정</div>
-        <div class="ax_search ax_search2">${ax('search', 17, '#8e8e93', 2.2)}검색</div>
+        <div class="ax_find ax_search2">${ax('search', 17, '#8e8e93', 2.2)}검색</div>
         <div class="ax_grp"><div class="ax_srow ax_me">${axFace(p.owner, 58)}<span class="ax_st"><b>${esc(p.owner)}</b><small>${esc([p.profile?.handle, COUNTRIES[p.country] || p.country].filter(Boolean).join(' · '))}</small></span></div></div>
         <div class="ax_ghead">화면</div>
         <div class="ax_grp">
@@ -968,6 +872,235 @@ function camScreen(p, now, k, busy) {
       ${modes}${bar}${axInd('#fff')}`;
 }
 
+// ---- 메시지 · 전화 · 사진 · 메모 · 검색 · 캘린더: the same real-app look (the approved boards)
+const AX_AV = ['#a5b8d6, #6f89b3', '#c4b6e2, #9483c4', '#f0c2a4, #d38b6e', '#a5aab3, #868b94', '#b9d4b0, #6f9a76', '#f2bfcd, #cf7f98'];
+// a face for people in the archive, a letter for the rest
+const axAv = (n, z, roster) => roster.has(nameKey(n)) ? axFace(n, z)
+    : `<span class="ax_avc" style="width: ${z}px; height: ${z}px; font-size: ${Math.round(z * 0.42)}px; background: linear-gradient(180deg, ${AX_AV[[...String(n)].reduce((h, ch) => (h * 31 + ch.codePointAt(0)) % 9973, 7) % AX_AV.length]})">${esc([...String(n).trim()][0] || '?')}</span>`;
+const axKoBtn = (p, c) => (hasKo(p) ? `<button type="button" class="na_ph_kochip ax_kobtn ${koOn() ? 'on' : ''}" style="--axk: ${c}">한국어</button>` : '');
+const axNewest = xs => xs.map((x, k) => [x, k]).sort((a, b) => String(b[0].time).localeCompare(String(a[0].time)));
+const axDay = (p, now, v) => (String(v).slice(0, 5) === String(now).slice(0, 5) ? '오늘' : fmtDate(p, v));
+// days from b to a (both MM-DD), in one year; -1 when a is before b
+const axDays = (a, b) => { const x = parts(a), y = parts(b); return x && y ? Math.round((new Date(2000, x.mo - 1, x.d) - new Date(2000, y.mo - 1, y.d)) / 864e5) : -1; };
+
+function msgList(p, now, roster) {
+    const ts = [...p.threads].sort((a, b) => lastTime(b).localeCompare(lastTime(a)));
+    return `${axBar(p, now)}
+      <div class="ax_nav"><span class="ax_blue">편집</span><span class="ax_navr">${axKoBtn(p, '#2f6bff')}${ax('compose', 22, '#2f6bff')}</span></div>
+      <div class="ax_scroll">
+        <div class="ax_big">메시지</div>
+        <div class="ax_find">${ax('search', 17, '#8e8e93', 2.2)}검색</div>
+        ${ts.length ? ts.map(t => { const x = t.messages[t.messages.length - 1]; return `
+          <button type="button" class="ax_crow" data-go="thread" data-i="${p.threads.indexOf(t)}"><span class="ax_ud">${x.from !== 'me' ? '<i></i>' : ''}</span>${axAv(t.with, 52, roster)}<span class="ax_ctx">
+            <span class="ax_ch"><b>${esc(savedName(p, t.with))}</b><small class="cg_num">${esc(listTime(p, x.time))}</small>${ax('chev', 14, '#c4c4c7', 2.4)}</span>
+            <span class="ax_cp">${esc(x.text)}${x.ko && koOn() ? `<span class="ax_ko">${esc(x.ko)}</span>` : ''}</span></span></button>`; }).join('') : '<div class="ax_empty">메시지가 없어요</div>'}
+      </div>
+      ${axInd()}`;
+}
+function threadScreen(p, now, i, roster) {
+    const t = p.threads[i];
+    if (!t) return msgList(p, now, roster);
+    const ms = t.messages, group = new Set(ms.filter(x => x.from !== 'me').map(x => nameKey(x.from))).size > 1;
+    let day = '';
+    const rows = ms.map((x, n) => {
+        let out = '';
+        const d = x.time.slice(0, 5), me = x.from === 'me', prev = ms[n - 1], next = ms[n + 1];
+        if (d && d !== day) { day = d; out += `<div class="ax_tm"><b>${esc(axDay(p, now, x.time))}</b> ${esc(fmtTime(p, x.time))}</div>`; }
+        else if (prev && prev.from !== x.from) out += '<i class="ax_gap"></i>';
+        if (!me && group && (!prev || prev.from !== x.from || d !== prev.time.slice(0, 5))) out += `<div class="ax_who">${esc(savedName(p, x.from))}</div>`;
+        const tail = !next || next.from !== x.from || next.time.slice(0, 5) !== d;
+        out += `<div class="ax_bb ${me ? 'ax_bm' : 'ax_bt'} ${tail ? 'tail' : ''}">${esc(x.text)}${x.ko && koOn() ? `<span class="ax_k">${esc(x.ko)}</span>` : ''}</div>`;
+        if (me && !next && x.time.length > 5) out += `<div class="ax_read">읽음 ${esc(fmtTime(p, x.time))}</div>`;
+        return out;
+    }).join('');
+    return `${axBar(p, now)}
+      <div class="ax_th"><button type="button" class="ax_back ax_thbk" data-go="msg" aria-label="뒤로">${ax('back', 26, '#2f6bff', 2.4)}</button><span class="ax_thko">${axKoBtn(p, '#2f6bff')}</span>${axAv(t.with, 50, roster)}<b>${esc(savedName(p, t.with))} ${ax('chev', 11, '#8e8e93', 2.6)}</b></div>
+      <div class="ax_scroll ax_msgs">${rows}</div>
+      <div class="ax_ibar"><span class="ax_pl">${ax('plus', 20, '#8e8e93', 2.4)}</span><span class="ax_f">${ax('lock', 14, '#a0a0a5')}보기 전용<span class="ax_sp"></span>${ax('mic', 18, '#a0a0a5')}</span></div>
+      ${axInd()}`;
+}
+
+// 전화: one row per run of the same person and kind on one day, newest first
+function callRuns(p, onlyMissed) {
+    const runs = [];
+    for (let k = p.calls.length - 1; k >= 0; k--) {
+        const c = p.calls[k], last = runs[runs.length - 1];
+        if (onlyMissed && c.type !== 'missed') continue;
+        if (last && nameKey(last.c.with) === nameKey(c.with) && last.c.type === c.type && last.c.time.slice(0, 5) === c.time.slice(0, 5)) last.n++;
+        else runs.push({ c, k, n: 1 });
+    }
+    return runs;
+}
+const callKind = c => (c.type === 'missed' ? '부재중' : c.min ? `${c.min}분` : c.type === 'out' ? '발신' : '수신');
+function callScreen(p, now, roster, onlyMissed) {
+    const runs = callRuns(p, onlyMissed);
+    const tab = (k, label, on) => `<span class="${on ? 'on' : ''}">${ax(k, 26, on ? '#2f6bff' : '#8e8e93', k === 'keypad' ? 1.6 : 1.8)}${label}</span>`;
+    return `${axBar(p, now)}
+      <div class="ax_nav"><span class="ax_blue">편집</span><span></span></div>
+      <div class="ax_seg"><button type="button" class="${onlyMissed ? '' : 'on'}" data-go="call">전체</button><button type="button" class="${onlyMissed ? 'on' : ''}" data-go="callmiss">부재중</button></div>
+      <div class="ax_scroll">
+        <div class="ax_big ax_big6">최근 기록</div>
+        ${runs.length ? runs.map(({ c, k, n }) => `
+          <button type="button" class="ax_prow" data-go="callwho" data-i="${k}"><span class="ax_ti">${c.type === 'missed' ? '' : ax(c.type, 16, '#8e8e93', 2.2)}</span><span class="ax_ptx"><b class="${c.type === 'missed' ? 'm' : ''}">${esc(savedName(p, c.with))}${n > 1 ? ` (${n})` : ''}</b><span>휴대전화 · ${callKind(c)}</span></span><small class="cg_num">${esc(listTime(p, c.time))}</small>${ax('info', 22, '#2f6bff', 1.8)}</button>`).join('') : `<div class="ax_empty">${onlyMissed ? '부재중 전화가 없어요' : '통화 기록이 없어요'}</div>`}
+      </div>
+      <div class="ax_tabbar">${tab('star', '즐겨찾기')}${tab('clock', '최근 기록', true)}${tab('user', '연락처')}${tab('keypad', '키패드')}${tab('voice', '음성 사서함')}</div>
+      ${axInd()}`;
+}
+function callWho(p, now, k, roster) {
+    const c0 = p.calls[k];
+    if (!c0) return callScreen(p, now, roster, false);
+    const who = c0.with, saved = savedName(p, who), ti = p.threads.findIndex(t => nameKey(t.with) === nameKey(who));
+    const cs = p.calls.filter(c => nameKey(c.with) === nameKey(who)).reverse();
+    const days = [...new Set(cs.map(c => c.time.slice(0, 5)))];
+    const act = (k2, label, go) => (go ? `<button type="button" ${go}>${ax(k2, 22, '#2f6bff')}${label}</button>` : `<span>${ax(k2, 22, '#2f6bff')}${label}</span>`);
+    return `${axBar(p, now)}
+      <div class="ax_scroll">
+        <div class="ax_ctop">
+          <div class="ax_nav"><button type="button" class="ax_back ax_blue" data-go="call">${ax('back', 22, '#2f6bff', 2.4)}최근 기록</button><span class="ax_blue">편집</span></div>
+          ${axAv(who, 96, roster)}<h2>${esc(saved)}</h2><p>${saved !== who ? `저장된 이름 · ${esc(who)}` : '휴대전화'}</p>
+        </div>
+        <div class="ax_acts">${act('cmt', '메시지', ti >= 0 ? `data-go="thread" data-i="${ti}"` : '')}${act('call', '전화')}${act('video', '영상')}${act('mail', '메일')}</div>
+        ${days.map(d => `<div class="ax_card"><div class="ax_hd">${esc(axDay(p, now, d))}</div>${cs.filter(c => c.time.slice(0, 5) === d).map(c => `<div class="ax_lr"><span class="${c.type === 'missed' ? 'm' : ''}">${c.type === 'missed' ? '부재중 전화' : `${c.type === 'out' ? '발신' : '수신'} 전화${c.min ? ` · ${c.min}분` : ''}`}</span><span class="cg_num">${esc(fmtTime(p, c.time))}</span></div>`).join('')}</div>`).join('')}
+      </div>
+      ${axInd()}`;
+}
+
+// 사진: the album by day; a photo with no picture yet has a 그리기 pill
+const axPic = (x, z) => (x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy">` : ax('photo', z, '#fff', z > 40 ? 1.2 : 1.6));
+function photoScreen(p, now) {
+    const ps = axNewest(p.photos);
+    const days = [...new Set(ps.map(([x]) => x.time.slice(0, 5)))];
+    return `${axBar(p, now)}
+      <div class="ax_pnav"><b>보관함</b><span><button type="button" class="ax_pchip na_ph_looksbtn">${ax('user', 14, '#111', 2.2)}외모</button>${hasKo(p) ? `<button type="button" class="ax_pchip na_ph_kochip ${koOn() ? 'on' : ''}">가 한국어</button>` : ''}</span></div>
+      <div class="ax_scroll">
+        ${ps.length ? days.map(d => { const xs = ps.filter(([x]) => x.time.slice(0, 5) === d); return `
+          <div class="ax_pday">${esc(axDay(p, now, d))}<small>${xs.length}장</small></div>
+          <div class="ax_pg3">${xs.map(([x, k]) => `<div class="ax_pq" data-go="photoone" data-i="${k}" role="button" tabindex="0" aria-label="크게 보기" style="background: linear-gradient(160deg, ${AX_MOOD[x.mood] || AX_MOOD.warm})">${axPic(x, 24)}${x.img ? '' : drawBtn(p, k, 'ax_dr')}</div>`).join('')}</div>`; }).join('') : '<div class="ax_empty">사진이 없어요</div>'}
+      </div>
+      <div class="ax_pbar"><span class="on">보관함</span><span>추억</span><span>앨범</span></div>
+      ${axInd()}`;
+}
+function photoView(p, now, k) {
+    const x = p.photos[k];
+    if (!x) return photoScreen(p, now);
+    return `${axBar(p, now, '#fff')}
+      <div class="ax_pvtop"><button type="button" class="ax_back" data-go="photo" aria-label="뒤로">${ax('back', 24, '#fff', 2.4)}</button><div>${esc(axDay(p, now, x.time))}<small class="cg_num">${esc(fmtTime(p, x.time))}</small></div>${ax('heart', 22, '#fff')}</div>
+      <div class="ax_pvimg ${x.img ? 'has' : ''}" style="background: linear-gradient(170deg, ${AX_MOOD[x.mood] || AX_MOOD.warm})">${axPic(x, 64)}</div>
+      <div class="ax_scroll">
+        <div class="ax_pvcap"><p>${esc(x.caption)}${x.ko && koOn() ? `<span class="ax_k">${esc(x.ko)}</span>` : ''}</p>${x.tags ? `<div class="ax_tags">그린 태그${x.via === 'autopic' ? ' · 오토픽' : ''} · ${esc(x.tags)}</div>` : ''}</div>
+        <div class="ax_pvbtns">${drawBtn(p, k, 'ax_pvdraw')}<button type="button" data-go="photo">보관함</button></div>
+      </div>
+      ${axInd('#fff')}`;
+}
+
+// 메모: grouped like the real app (오늘 · 이전 7일 · 이전 30일 · by month)
+function noteScreen(p, now) {
+    const ns = axNewest(p.notes);
+    const label = t => { const n = axDays(now, t); return n === 0 ? '오늘' : n > 0 && n <= 7 ? '이전 7일' : n > 0 && n <= 30 ? '이전 30일' : `${parts(t)?.mo || ''}월`; };
+    const groups = [];
+    for (const [x, k] of ns) { const l = label(x.time), g = groups[groups.length - 1]; if (g && g.l === l) g.xs.push([x, k]); else groups.push({ l, xs: [[x, k]] }); }
+    return `${axBar(p, now)}
+      <div class="ax_nnav"><button type="button" class="ax_back" data-go="home">${ax('back', 22, '#d9a400', 2.4)}폴더</button><span class="ax_navr">${axKoBtn(p, '#d9a400')}${ax('more', 24, '#d9a400', 3)}</span></div>
+      <div class="ax_scroll">
+        <div class="ax_big">메모</div>
+        <div class="ax_find ax_search2">${ax('search', 17, '#8e8e93', 2.2)}검색</div>
+        ${groups.length ? groups.map(g => `<div class="ax_ghead2">${esc(g.l)}</div><div class="ax_ngrp">${g.xs.map(([x, k]) => `
+          <button type="button" class="ax_nrow" data-go="noteone" data-i="${k}"><b>${axKo(x.title || x.text.slice(0, 30), x.kt)}</b><span class="ax_np"><span class="cg_num">${esc(listTime(p, x.time))}</span>${esc(x.text.split('\n').map(l => l.trim().replace(NOTE_MARK, '')).filter(Boolean).join(' · '))}</span></button>`).join('')}</div>`).join('') : '<div class="ax_empty">메모가 없어요</div>'}
+      </div>
+      <div class="ax_nfoot">${ax('folder', 24, '#d9a400')}<small>메모 ${p.notes.length}개</small>${ax('compose', 24, '#d9a400')}</div>
+      ${axInd()}`;
+}
+// a note's lines: "- a", "[ ] a", "[x] a", "✓ a" read as a checklist, the rest as plain lines
+const NOTE_MARK = /^(\[x\]|✓|✔|\[ \]|[-*•])\s*/i;
+function noteOne(p, now, k) {
+    const n = p.notes[k];
+    if (!n) return noteScreen(p, now);
+    const body = String(n.text || '').split('\n').map(l => {
+        const t = l.trim(), mt = t.match(NOTE_MARK);
+        if (!mt) return t ? `<div class="ax_nline">${esc(t)}</div>` : '<div class="ax_nline"><br></div>';
+        const done = /^(\[x\]|✓|✔)/i.test(mt[1]);
+        return `<div class="ax_chk ${done ? 'd' : ''}"><i>${done ? ax('check', 14, '#fff', 3.2) : ''}</i><span>${esc(t.slice(mt[0].length))}</span></div>`;
+    }).join('');
+    return `${axBar(p, now)}
+      <div class="ax_nnav"><button type="button" class="ax_back" data-go="note">${ax('back', 22, '#d9a400', 2.4)}메모</button><span class="ax_navr">${axKoBtn(p, '#d9a400')}${ax('share', 22, '#d9a400')}${ax('more', 24, '#d9a400', 3)}</span></div>
+      <div class="ax_scroll ax_nd">
+        <div class="ax_ndt cg_num">${esc(fmtDate(p, n.time))} ${esc(fmtTime(p, n.time))}</div>
+        <h2>${esc(n.title || '')}</h2>${n.kt && koOn() ? `<div class="ax_nkt">${esc(n.kt)}</div>` : ''}
+        ${body}
+        ${n.ko && koOn() ? `<div class="ax_nko">${esc(n.ko)}</div>` : ''}
+      </div>
+      ${axInd()}`;
+}
+
+// 검색: what they looked up and when (the result pages aren't in the archive)
+function searchScreen(p, now) {
+    const ss = axNewest(p.searches);
+    return `${axBar(p, now)}
+      <div class="ax_sxh">검색${axKoBtn(p, '#2f6bff')}</div>
+      <div class="ax_scroll">
+        <div class="ax_sxf">${ax('search', 19, '#8e8e93', 2.2)}검색어 또는 주소</div>
+        ${ss.length ? `<div class="ax_ghead2">최근 검색</div><div class="ax_ngrp">${ss.map(([x, k]) => `
+          <button type="button" class="ax_sxr" data-go="searchone" data-i="${k}">${ax('clock', 20, '#8e8e93', 1.8)}<span class="ax_sxt"><b>${esc(x.q)}</b>${x.ko && koOn() ? `<span>${esc(x.ko)}</span>` : ''}</span><small class="cg_num">${esc(listTime(p, x.time))}</small></button>`).join('')}</div>` : '<div class="ax_empty">검색 기록이 없어요</div>'}
+      </div>
+      <div class="ax_sxbar"><div>${ax('search', 17, '#8e8e93', 2.2)}검색어 또는 주소</div></div>
+      ${axInd()}`;
+}
+function searchOne(p, now, k) {
+    const x = p.searches[k];
+    if (!x) return searchScreen(p, now);
+    return `${axBar(p, now)}
+      <div class="ax_nav"><button type="button" class="ax_back ax_blue" data-go="search">${ax('back', 22, '#2f6bff', 2.4)}검색</button>${axKoBtn(p, '#2f6bff')}</div>
+      <div class="ax_scroll">
+        <div class="ax_sqf">${ax('search', 18, '#8e8e93', 2.2)}<span>${esc(x.q)}</span></div>
+        <div class="ax_sqt"><span class="on">전체</span><span>뉴스</span><span>지도</span><span>이미지</span></div>
+        <div class="ax_sqk"><small>이 검색 · <span class="cg_num">${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</span></small><p>${esc(x.q)}</p>${x.ko && koOn() ? `<div class="ax_k">${esc(x.ko)}</div>` : ''}</div>
+        <div class="ax_sqn">검색 결과 페이지는 아카이브에 없어서 보여주지 않아요.<br>검색어와 시간만 남아요.</div>
+      </div>
+      ${axInd()}`;
+}
+
+// 캘린더: the story's month (no weekdays: its dates carry no year), then the days that have something
+const AX_EVC = ['#ff3b30', '#2f6bff', '#34c759', '#ff9f0a', '#a66cf0'];
+function annivList(m) {
+    const rows = datedRows(m);
+    return annivsOf(m).map(a => { const r = rows.find(x => sectionKey(x.s) === a.key); return r ? { name: a.name, date: `${pad(r.date.m)}-${pad(r.date.d)}` } : null; }).filter(Boolean);
+}
+function calScreen(p, now, m) {
+    const day = String(now).slice(0, 5), x0 = parts(now) || parts(p.events[0]?.date) || { mo: 1, d: 1 };
+    const an = annivList(m);
+    const evs = p.events.map((e, k) => ({ e, k }));
+    const marked = new Set([...p.events.map(e => e.date), ...an.map(a => a.date)]);
+    const len = new Date(2000, x0.mo, 0).getDate();
+    const grid = Array.from({ length: len }, (_, n) => { const d = `${pad(x0.mo)}-${pad(n + 1)}`; return `<b class="${d === day ? 't' : ''} ${marked.has(d) ? 'e' : ''}">${n + 1}</b>`; }).join('');
+    const row = ({ e, k }) => `<button type="button" class="ax_ce" data-go="calone" data-i="${k}"><i style="background: ${AX_EVC[k % AX_EVC.length]}"></i><span class="ax_cetx"><b>${esc(e.title)}</b>${e.ko && koOn() ? `<span>${esc(e.ko)}</span>` : ''}</span><small class="cg_num">${e.time ? esc(fmtTime(p, `${e.date} ${e.time}`)) : '하루 종일'}</small></button>`;
+    const anRow = a => `<div class="ax_ce"><i style="background: #ff2d55"></i><span class="ax_cetx"><b>♥ ${esc(a.name)}</b><span>기념일 · 매년 ${esc(fmtDate(p, a.date))}</span></span></div>`;
+    const soon = [...new Set(evs.filter(x => x.e.date >= day).map(x => x.e.date))].sort();
+    if (an.some(a => a.date === day) && !soon.includes(day)) soon.unshift(day);
+    const past = evs.filter(x => x.e.date < day).reverse();
+    return `${axBar(p, now)}
+      <div class="ax_cnav"><button type="button" class="ax_back" data-go="home">${ax('back', 22, '#ff3b30', 2.4)}캘린더</button><span class="ax_navr">${axKoBtn(p, '#ff3b30')}${ax('search', 22, '#ff3b30')}${ax('plus', 24, '#ff3b30')}</span></div>
+      <div class="ax_scroll">
+        <div class="ax_cm">${x0.mo}월</div>
+        <div class="ax_cg7">${grid}</div>
+        ${soon.map(d => `<div class="ax_cl"><div class="ax_hd">${esc(fmtDate(p, d))}${d === day ? ' · 오늘' : ''}</div>${an.filter(a => a.date === d).map(anRow).join('')}${evs.filter(x => x.e.date === d).map(row).join('')}</div>`).join('')}
+        ${soon.length ? '' : '<div class="ax_cl"><div class="ax_hd">다가오는 일정 없음</div></div>'}
+        ${an.length ? `<div class="ax_cl"><div class="ax_hd">기념일</div>${an.map(anRow).join('')}</div>` : ''}
+        ${past.length ? `<div class="ax_cl"><div class="ax_hd">지난 일정</div>${past.map(({ e, k }) => row({ e, k }).replace('</small>', `<br>${esc(fmtDate(p, e.date, true))}</small>`)).join('')}</div>` : ''}
+      </div>
+      ${axInd()}`;
+}
+function calOne(p, now, k, m) {
+    const e = p.events[k];
+    if (!e) return calScreen(p, now, m);
+    return `${axBar(p, now)}
+      <div class="ax_cnav"><button type="button" class="ax_back" data-go="cal">${ax('back', 22, '#ff3b30', 2.4)}${esc(fmtDate(p, e.date, true))}</button>${axKoBtn(p, '#ff3b30')}</div>
+      <div class="ax_scroll">
+        <div class="ax_edh"><h2>${esc(e.title)}</h2>${e.ko && koOn() ? `<div class="ax_k">${esc(e.ko)}</div>` : ''}<p class="cg_num">${esc(fmtDate(p, e.date))}<br>${e.time ? esc(fmtTime(p, `${e.date} ${e.time}`)) : '하루 종일'}</p></div>
+        <div class="ax_grp"><div class="ax_srow"><span class="ax_st">캘린더</span><span class="ax_sv"><i class="ax_cdot" style="background: ${AX_EVC[k % AX_EVC.length]}"></i>${esc(p.owner)}</span></div></div>
+      </div>
+      ${axInd()}`;
+}
+
 function mapScreen(p, m) {
     const pl = placesOf(m, p.owner);
     return `${head(p, '다녀간 곳', { chip: false, sub: pl.length ? `${pl.length}곳` : '' })}
@@ -979,16 +1112,17 @@ function mapScreen(p, m) {
 function screen(p, view, m, roster) {
     const now = storyNow(p);
     const [v, i] = view.split(':');
-    const body = v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'msg' ? msgList(p, roster)
-        : v === 'thread' ? threadScreen(p, Number(i), roster) : v === 'call' ? callScreen(p, roster) : v === 'photo' ? photoScreen(p) : v === 'photoone' ? photoView(p, Number(i))
-        : v === 'note' ? noteScreen(p, -1) : v === 'noteone' ? noteScreen(p, Number(i)) : v === 'search' ? searchScreen(p)
-        : v === 'cal' ? calScreen(p, now, m) : v === 'map' ? mapScreen(p, m)
+    const body = v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'msg' ? msgList(p, now, roster)
+        : v === 'thread' ? threadScreen(p, now, Number(i), roster) : v === 'call' || v === 'callmiss' ? callScreen(p, now, roster, v === 'callmiss') : v === 'callwho' ? callWho(p, now, Number(i), roster)
+        : v === 'photo' ? photoScreen(p, now) : v === 'photoone' ? photoView(p, now, Number(i))
+        : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'searchone' ? searchOne(p, now, Number(i))
+        : v === 'cal' ? calScreen(p, now, m) : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, m)
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
         : v === 'diary' ? diaryScreen(p, now) : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'set' ? setScreen(p, now, m) : v === 'settheme' ? setTheme(p, now)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
-    // SNS · 메일 · 일기 · 설정 · 카메라: drawn at the boards' size too, each its own app look
-    if (['sns', 'snspost', 'mail', 'mailone', 'diary', 'diaryone', 'set', 'settheme', 'cam'].includes(v)) return `<div class="na_ph_scr app ax ax_${v} v_${v}" style="--ph-acc:var(--ph-${p.accent})"><div class="cg_canvas ax_canvas">${body}</div></div>`;
+    // every app but 지도: drawn at the boards' size too, each its own app look
+    if (!['map', 'home', 'lock'].includes(v)) return `<div class="na_ph_scr app ax ax_${v} v_${v}" style="--ph-acc:var(--ph-${p.accent})"><div class="cg_canvas ax_canvas">${body}</div></div>`;
     if (v === 'home' || v === 'lock') return `<div class="na_ph_scr cg ${p.theme === 'gray' ? 'cg_mono' : 'cg_gel'} v_${v}" style="--ph-acc:var(--ph-${p.accent})"><div class="cg_canvas">${body}</div></div>`;
     const glass = v === 'lock';
     return `<div class="na_ph_scr ${glass ? `glass w_${p.wall}` : 'app'} v_${v}" style="--ph-acc:var(--ph-${p.accent})">${statusBar(p, now)}<div class="na_ph_body">${body}</div><button type="button" class="na_ph_bar" data-go="home" aria-label="홈"></button></div>`;
@@ -1035,10 +1169,10 @@ export async function openPhone(who = null) {
                 </div></div>`);
             return;
         }
-        const top = keep ? $root.find('.na_ph_body').scrollTop() : 0;
+        const top = keep ? $root.find('.na_ph_body, .ax_scroll').scrollTop() : 0;
         $root.find('.na_ph_frame').html(screen(p, view, m, roster));
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
-        if (keep) $root.find('.na_ph_body').scrollTop(top);
+        if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
     };
     const loreRow = () => {
         const on = phoneLore(m);
@@ -1103,12 +1237,12 @@ export async function openPhone(who = null) {
         const go = this.dataset.go;
         if (!go) return;
         e.stopPropagation();
-        view = ['thread', 'noteone', 'photoone', 'mailone', 'diaryone', 'snspost'].includes(go) ? `${go}:${this.dataset.i}` : go;
+        view = ['thread', 'callwho', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost'].includes(go) ? `${go}:${this.dataset.i}` : go;
         const mail = go === 'mailone' ? phone()?.mails?.[Number(this.dataset.i)] : null;
         if (mail?.unread) { mail.unread = false; saveMeta(); }
         sheet = false;
         drawPhone();
-        $root.find('.na_ph_body').scrollTop(view.startsWith('thread') ? 1e6 : 0);
+        $root.find('.na_ph_body, .ax_scroll').scrollTop(view.startsWith('thread') ? 1e6 : 0);
     });
     $root.on('click', '.na_ph_looksbtn, .na_ph_looksbtn2', e => { e.stopPropagation(); sheet = true; drawPhone(true); });
     $root.on('click', '.na_ph_shutter', async e => {
@@ -1128,7 +1262,7 @@ export async function openPhone(who = null) {
         if (v) g.looks[nameKey(this.dataset.n)] = v; else delete g.looks[nameKey(this.dataset.n)];
         saveGlobal();
     });
-    $root.on('click', '.na_ph_kochip:not(.na_ph_looksbtn)', e => { e.stopPropagation(); const g = globalSettings(); g.phoneKo = !koOn(); drawPhone(); if (view.startsWith('thread')) $root.find('.na_ph_body').scrollTop(1e6); saveGlobal(); });
+    $root.on('click', '.na_ph_kochip:not(.na_ph_looksbtn)', e => { e.stopPropagation(); const g = globalSettings(); g.phoneKo = !koOn(); drawPhone(); if (view.startsWith('thread')) $root.find('.ax_scroll').scrollTop(1e6); saveGlobal(); });
     $root.on('click', '.na_ph_makebtn', function () { make($(this), false); });
     // one photo at a time; the screen can change while it draws
     $root.on('click', '.na_ph_draw', async function (e) {
