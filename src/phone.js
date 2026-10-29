@@ -273,7 +273,7 @@ AVOID: …   (negative tags; empty if none are needed)
 
 LANGUAGE AND FORM
 - English only. Danbooru-style tags as NovelAI reads them, separated by commas.
-- Tags, never sentences. No labels ("Character 1:"), no quotes, no <>, HTML, links, markdown or file paths.
+- Tags, never sentences.
 
 LOOKS COME FROM THE APP (most important)
 - A person in LOOKS is written as [exact name] where they appear; the app puts their looks there.
