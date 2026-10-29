@@ -4982,3 +4982,10 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .ax .ax_in::placeholder { color: #a2a7af; }
 .ax .ax_addok { --axbg: var(--axc); flex: none; height: 36px; padding: 0 16px; border-radius: 18px; color: var(--axd); font-size: 14.5px; font-weight: 600; }
 .na_phl_btn:focus:not(:focus-visible) { outline: none; }
+/* 지도 · 다시 만들기 (v3.122) */
+.ax_mapart { position: relative; height: 150px; background: linear-gradient(90deg, rgba(63, 122, 79, 0.08) 1px, transparent 1px) 0 0 / 24px 24px, linear-gradient(0deg, rgba(63, 122, 79, 0.08) 1px, transparent 1px) 0 0 / 24px 24px, linear-gradient(160deg, #e6f2e6, #dde9f3); }
+.ax_mapart i { position: absolute; transform: translate(-50%, -100%); filter: drop-shadow(0 2px 3px rgba(22, 27, 34, 0.18)); }
+.ax .ax_place .ax_tx .ax_n { overflow-wrap: anywhere; }
+.ax .ax_place small { line-height: 1.4; }
+.ax_n.ax_off { color: #a2a7af; }
+.ax .ax_rw:disabled { cursor: default; }

@@ -20,11 +20,11 @@ export function headingPlaces(title, cals) {
     const d = headingDate(title, cals);
     let text = paren;
     if (d.date) text = text.replace(d.date.label, '');
-    const parts = text.split(/,|;/).map(x => x.trim()).filter(Boolean)
+    // "A → B" is a move inside one section, and "morning → midday" the hours it runs: split first, then drop the times
+    return text.split(/,|;/).flatMap(x => x.split(/\s*(?:→|->|⇒)\s*/)).map(x => x.trim()).filter(Boolean)
         .filter(x => !PLACE_SKIP.test(x) && !TIME_WORDS.some(([re]) => re.test(x) && x.split(/\s+/).length <= 3))
-        .filter(x => !/^(?:month of|after|before|until|during|into)\b/i.test(x));
-    // "A → B" is a move inside one section
-    return parts.flatMap(x => x.split(/\s*(?:→|->|⇒)\s*/)).map(x => x.replace(/^(?:the|a|an)\s+/i, '').trim()).filter(Boolean);
+        .filter(x => !/^(?:month of|after|before|until|during|into)\b/i.test(x))
+        .map(x => x.replace(/^(?:the|a|an)\s+/i, '').trim()).filter(Boolean);
 }
 
 // The roster is the STATE character headings plus names added by hand (m.people). Faces are kept in the global settings by name,

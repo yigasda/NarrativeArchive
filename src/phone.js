@@ -201,7 +201,10 @@ export async function loreFor(m, owner) {
     return out.join('\n');
 }
 
-function phoneRequest(m, owner, p = null, lore = '') {
+// 다시 만들기, app by app: which JSON keys each app is drawn from
+export const REMAKE = { msg: ['threads', 'contacts'], call: ['calls'], photo: ['photos'], note: ['notes'], search: ['searches'], cal: ['events'], sns: ['profile', 'posts'], mail: ['mails'], diary: ['diary'] };
+const onlyAsk = keys => `[ONLY THESE]\nThe phone already holds the rest. Write only these keys of the JSON, from the whole story: ${keys.join(', ')}.`;
+function phoneRequest(m, owner, p = null, lore = '', only = null) {
     const world = worldText(m);
     const recent = recentForCheck(6).join('\n\n').slice(-6000);
     const ar = archiveFor(m, p ? p.upto ?? -1 : -1);
@@ -214,6 +217,7 @@ function phoneRequest(m, owner, p = null, lore = '') {
         recent ? `[RECENT CHAT]\n${recent}` : '',
         `[OWNER]\n${owner}`,
         p ? UPDATE_ASK : '',
+        only ? onlyAsk(only) : '',
     ].filter(Boolean).join('\n\n');
 }
 // what the model is shown of a phone it is updating: the newest of each list, without the Korean
@@ -232,12 +236,22 @@ const phoneForModel = p => ({
     diary: (p.diary || []).slice(-2).map(({ date, title, text }) => ({ date, title, text: text.slice(0, 300) })),
 });
 
-export async function makePhone(m, owner, { update = false } = {}) {
+// apps: some of REMAKE's names, made again from the whole story while the rest of the phone stays as it is
+export async function makePhone(m, owner, { update = false, apps = null } = {}) {
     const key = nameKey(owner);
     const old = update ? m.phones?.[key] : null;
-    const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner)), { system: AI_SYS_PHONE, maxTokens: 16000 });
+    const part = apps && m.phones?.[key] ? apps.flatMap(a => REMAKE[a] || []) : null;
+    const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner), part), { system: AI_SYS_PHONE, maxTokens: 16000 });
     const got = parsePhone(out);
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
+    if (part) {
+        const p = m.phones[key];
+        for (const k of part) p[k] = k === 'profile' ? (got.profile || p.profile) : [];
+        mergePhone(p, { ...got, ...Object.fromEntries([...LISTS, 'threads', 'contacts'].filter(k => !part.includes(k)).map(k => [k, []])), profile: null, now: '' });
+        await saveMeta();
+        if (p.inject) applyInjection();
+        return p;
+    }
     if (old) mergePhone(old, got);
     else {
         const was = m.phones[key];
@@ -691,12 +705,6 @@ function lockScreen(p, now) {
       </div>`;
 }
 
-const head = (p, title, { back = 'home', sub = '', chip = true, extra = '' } = {}) => `
-  <div class="na_ph_head">
-    <button type="button" class="na_ph_back" data-go="${back}" aria-label="뒤로">${ic('back', 20, 2.4)}</button>
-    <span class="na_ph_headr">${extra}${chip && hasKo(p) ? `<button type="button" class="na_ph_kochip ${koOn() ? 'on' : ''}">가 한국어</button>` : ''}</span>
-  </div>
-  <div class="na_ph_title">${esc(title)}${sub ? `<small>${esc(sub)}</small>` : ''}</div>`;
 const empty = t => `<div class="na_ph_empty">${esc(t)}</div>`;
 
 const busyHtml = '<i class="fa-solid fa-spinner fa-spin"></i>';
@@ -746,7 +754,7 @@ const AX = {
     star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z', clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2',
     keypad: 'M4 4h4v4H4zM10 4h4v4h-4zM16 4h4v4h-4zM4 10h4v4H4zM10 10h4v4h-4zM16 10h4v4h-4zM4 16h4v4H4zM10 16h4v4h-4zM16 16h4v4h-4z', voice: 'M5 10v4M9 7v10M13 4v16M17 8v8M21 11v2',
     call: 'M6 3h3l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v3a2 2 0 0 1-2 2A17 17 0 0 1 4 5a2 2 0 0 1 2-2z', video: 'M3 7h12v10H3zM15 10l6-3v10l-6-3', mail: 'M3 6h18v12H3zM3 7l9 6 9-6',
-    lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3', mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3', check: 'M5 12.5l4.5 4.5L19 7.5', book: 'M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 7h6', redo: 'M20 12a8 8 0 1 1-2.3-5.7L20 8.5M20 3.5v5h-5', share: 'M12 3v12M7 8l5-5 5 5M5 14v6h14v-6', bolt: 'M13 2L4 14h7l-1 8 9-12h-7z', flip: 'M20 12a8 8 0 0 1-14 5M4 12a8 8 0 0 1 14-5M18 3v4h-4M6 21v-4h4', down: 'M6 9l6 6 6-6',
+    lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3', mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3', check: 'M5 12.5l4.5 4.5L19 7.5', pin: 'M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z', book: 'M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 7h6', redo: 'M20 12a8 8 0 1 1-2.3-5.7L20 8.5M20 3.5v5h-5', share: 'M12 3v12M7 8l5-5 5 5M5 14v6h14v-6', bolt: 'M13 2L4 14h7l-1 8 9-12h-7z', flip: 'M20 12a8 8 0 0 1-14 5M4 12a8 8 0 0 1 14-5M18 3v4h-4M6 21v-4h4', down: 'M6 9l6 6 6-6',
 };
 const ax = (k, z = 22, c = 'currentColor', w = 2, f = 'none') => `<svg aria-hidden="true" width="${z}" height="${z}" viewBox="0 0 24 24" fill="${f}" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="${AX[k]}"/></svg>`;
 const axBar = (p, now, c = '#111') => `
@@ -828,7 +836,7 @@ function diaryOne(p, now, k) {
 }
 // ---- 메시지 · 전화 · 사진 · 메모 · 검색 · 캘린더 · 메일 · 설정 · 카메라 (v3.118): the boards' layout in the home's flat look —
 // each app one colour (메시지 · 전화 blue, the rest their home icon's), round glass buttons, white cards, no gradients
-const AXB = { msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setlore: 'slate', setwho: 'slate', cam: 'apri' };
+const AXB = { msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', cam: 'apri', map: 'blue' };
 const AXB_C = { blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'] };
 // people outside the archive get a letter on one of the home icons' colours
 const AX_AV = ['#8faed1', '#a699c9', '#d89f98', '#89b892', '#d494a7', '#a2a7af', '#dcc680'];
@@ -1130,7 +1138,7 @@ function setScreen(p, now, m, ui) {
         </div>
         <div class="ax_foot">롤플에 넣기를 켜면 이 폰의 최근 문자 · 일정이 주입돼요.</div>
         <div class="ax_card">
-          <button type="button" class="ax_rw ax_rwn na_ph_setremake"><span class="ax_tx"><span class="ax_n ax_blue">처음부터 다시 만들기</span></span></button>
+          <button type="button" class="ax_rw ax_rwn" data-go="setremake"><span class="ax_tx"><span class="ax_n ax_blue">다시 만들기</span></span>${axChev}</button>
           <button type="button" class="ax_rw ax_rwn na_ph_setdel"><span class="ax_tx"><span class="ax_n ax_red">이 폰 지우기</span></span></button>
         </div>
         <i class="ax_pad"></i>
@@ -1143,6 +1151,25 @@ function setTheme(p, now) {
     return `${axBar(p, now)}
       ${axTop(axCb('set'))}
       <div class="ax_scroll">${axH1('테마')}<div class="ax_card ax_themes">${opt('gel', '컬러 젤')}${opt('gray', '화이트 그레이')}</div><div class="ax_foot">홈 화면과 잠금화면에 쓰여요.</div></div>
+      ${axInd()}`;
+}
+// 다시 만들기: the apps ticked are made again from the whole story; the rest stay
+const REMAKE_IC = { msg: ['#89b892', 'cmt'], call: ['#89b892', 'call'], photo: ['#d89f98', 'photo'], note: ['#dcc680', 'pen'], search: ['#8faed1', 'search'], cal: ['#d494a7', 'cal'], sns: ['#d494a7', 'heart'], mail: ['#8faed1', 'mail'], diary: ['#a699c9', 'compose'] };
+function setRemake(p, now, ui) {
+    const all = Object.keys(REMAKE), n = ui.remake.size;
+    return `${axBar(p, now)}
+      ${axTop(axCb('set'))}
+      <div class="ax_scroll">
+        ${axH1('다시 만들기', n ? `${n}개 고름` : '')}
+        <div class="ax_card">
+          <button type="button" class="ax_rw ax_rwn ax_rmall"><span class="ax_tx"><span class="ax_n ax_blue">${n === all.length ? '모두 풀기' : '모두 고르기'}</span></span></button>
+        </div>
+        <div class="ax_card">${all.map(k => { const on = ui.remake.has(k); return `
+          <button type="button" class="ax_rw ax_rmpick" data-k="${k}"><span class="ax_si" style="background: ${REMAKE_IC[k][0]}">${ax(REMAKE_IC[k][1], 17, '#fff')}</span><span class="ax_tx"><span class="ax_n">${APPS[k]}</span></span><span class="ax_radio ${on ? 'on' : ''}">${on ? ax('check', 14, '#fff', 3.4) : ''}</span></button>`; }).join('')}</div>
+        <div class="ax_foot">고른 앱만 아카이브 전체를 다시 읽고 새로 채워요. 나머지는 그대로예요.</div>
+        <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_setremake" ${n ? '' : 'disabled'}><span class="ax_tx"><span class="ax_n ${n ? 'ax_red' : 'ax_off'}">${n ? `${n}개 다시 만들기` : '앱을 골라 주세요'}</span></span></button></div>
+        <i class="ax_pad"></i>
+      </div>
       ${axInd()}`;
 }
 // 인물: whose phone this is; a person only the lorebook knows goes in at the bottom
@@ -1205,12 +1232,20 @@ function camScreen(p, now, k, busy) {
       ${modes}${bar}${axInd('#fff')}`;
 }
 
-function mapScreen(p, m) {
+// 지도: the places in the archive's headings where the owner was, newest first (no AI)
+function mapScreen(p, now, m) {
     const pl = placesOf(m, p.owner);
-    return `${head(p, '다녀간 곳', { chip: false, sub: pl.length ? `${pl.length}곳` : '' })}
-      <div class="na_ph_mapart" aria-hidden="true">${pl.slice(0, 5).map((_, k) => `<i style="left:${[18, 62, 38, 80, 28][k]}%;top:${[30, 22, 58, 62, 78][k]}%">${ic('map', 18, 2.2)}</i>`).join('')}</div>
-      <div class="na_ph_list">${pl.length ? pl.map(x => `
-        <div class="na_ph_row na_ph_place">${ic('map', 18)}<div><b>${esc(x.place)}</b><p>${esc(x.scene)}</p></div><small>${esc(x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small></div>`).join('') : empty('아카이브 제목에 이 인물이 간 장소가 아직 없어요')}</div>`;
+    const pin = ax('pin', 22, 'var(--axd)', 2.2, 'var(--axc)');
+    return `${axBar(p, now)}
+      ${axTop(axCb('home'))}
+      <div class="ax_scroll">
+        ${axH1('다녀간 곳', pl.length ? `${pl.length}곳` : '')}
+        ${pl.length ? `<div class="ax_card ax_mapart" aria-hidden="true">${pl.slice(0, 5).map((_, k) => `<i style="left: ${[18, 62, 38, 80, 28][k]}%; top: ${[34, 26, 58, 64, 80][k]}%">${pin}</i>`).join('')}</div>
+        <div class="ax_card">${pl.map(x => `
+          <div class="ax_rw ax_place"><span class="ax_si" style="background: var(--axc)">${ax('pin', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.place)}</span>${x.scene ? `<span class="ax_p1">${esc(x.scene)}</span>` : ''}</span><small>${esc(x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small></div>`).join('')}</div>` : '<div class="ax_empty">아카이브 제목에 이 인물이 간 장소가 아직 없어요</div>'}
+        <i class="ax_pad"></i>
+      </div>
+      ${axInd()}`;
 }
 
 function screen(p, view, m, roster, ui) {
@@ -1221,13 +1256,13 @@ function screen(p, view, m, roster, ui) {
         : v === 'thread' ? threadScreen(p, now, Number(i), roster) : v === 'call' || v === 'callmiss' ? callScreen(p, now, roster, v === 'callmiss') : v === 'callwho' ? callWho(p, now, Number(i), roster)
         : v === 'photo' ? photoScreen(p, now) : v === 'photoone' ? photoView(p, now, Number(i))
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'searchone' ? searchOne(p, now, Number(i))
-        : v === 'cal' ? calScreen(p, now, m) : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, m)
+        : v === 'cal' ? calScreen(p, now, m) : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, now, m)
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
-        : v === 'diary' ? diaryScreen(p, now) : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'set' ? setScreen(p, now, m, ui) : v === 'settheme' ? setTheme(p, now) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
+        : v === 'diary' ? diaryScreen(p, now) : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'set' ? setScreen(p, now, m, ui) : v === 'settheme' ? setTheme(p, now) : v === 'setremake' ? setRemake(p, now, ui) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
-    // every app but 지도: drawn at the boards' size too, each its own app look
-    if (!['map', 'home', 'lock'].includes(v)) { const c = AXB_C[AXB[v]]; return `<div class="na_ph_scr app ax ax_${v} v_${v}${c ? ' axb' : ''}" style="--ph-acc:var(--ph-${p.accent})${c ? `; --axd: ${c[0]}; --axc: ${c[1]}` : ''}"><div class="cg_canvas ax_canvas">${body}</div></div>`; }
+    // every app: drawn at the boards' size too, each its own app look
+    if (!['home', 'lock'].includes(v)) { const c = AXB_C[AXB[v]]; return `<div class="na_ph_scr app ax ax_${v} v_${v}${c ? ' axb' : ''}" style="--ph-acc:var(--ph-${p.accent})${c ? `; --axd: ${c[0]}; --axc: ${c[1]}` : ''}"><div class="cg_canvas ax_canvas">${body}</div></div>`; }
     if (v === 'home' || v === 'lock') return `<div class="na_ph_scr cg ${p.theme === 'gray' ? 'cg_mono' : 'cg_gel'} v_${v}" style="--ph-acc:var(--ph-${p.accent})"><div class="cg_canvas">${body}</div></div>`;
     const glass = v === 'lock';
     return `<div class="na_ph_scr ${glass ? `glass w_${p.wall}` : 'app'} v_${v}" style="--ph-acc:var(--ph-${p.accent})">${statusBar(p, now)}<div class="na_ph_body">${body}</div><button type="button" class="na_ph_bar" data-go="home" aria-label="홈"></button></div>`;
@@ -1243,6 +1278,7 @@ export async function openPhone(who = null) {
     let owner = who && names.some(n => nameKey(n) === nameKey(who)) ? names.find(n => nameKey(n) === nameKey(who)) : (names.find(n => m.phones[nameKey(n)]) || names[0] || null);
     let view = 'lock', sheet = false, adding = false, loreOpen = false;
     const loreExp = new Set(), loreEnts = new Map(); // books opened to their entries, and their entries once read
+    const remake = new Set(); // the apps ticked in 설정 › 다시 만들기
     // the phone has the screen to itself: one layer over everything (a dialog, so the extension's colours and
     // SillyTavern's top layer both hold), the person on top (a tap: everyone in a sheet), the controls in the phone's 설정
     let sheetOpen = false;
@@ -1289,7 +1325,7 @@ export async function openPhone(who = null) {
             return;
         }
         const top = keep ? $root.find('.na_ph_body, .ax_scroll').scrollTop() : 0;
-        $root.find('.na_ph_frame').html(screen(p, view, m, roster, { newN: newSections(m, p), loreExp, loreEnts }));
+        $root.find('.na_ph_frame').html(screen(p, view, m, roster, { newN: newSections(m, p), loreExp, loreEnts, remake }));
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
     };
@@ -1435,12 +1471,22 @@ export async function openPhone(who = null) {
     $root.on('change', '.na_ph_country', async function () { phone().country = this.value; drawPhone(); await saveMeta(); });
     $root.on('click', '.na_ph_theme', async function () { const p = phone(); if (this.dataset.v === 'gray') p.theme = 'gray'; else delete p.theme; drawPhone(); drawCtrl(); await saveMeta(); });
     $root.on('click', '.na_ph_wsw', async function () { phone().wall = this.dataset.w; drawPhone(); drawCtrl(); await saveMeta(); });
+    $root.on('click', '.ax_rmpick', function (e) { e.stopPropagation(); const k = this.dataset.k; if (!remake.delete(k)) remake.add(k); drawPhone(true); });
+    $root.on('click', '.ax_rmall', e => { e.stopPropagation(); const all = Object.keys(REMAKE); if (remake.size === all.length) remake.clear(); else all.forEach(k => remake.add(k)); drawPhone(true); });
     $root.on('click', '.na_ph_setremake', async function (e) {
         e.stopPropagation();
-        if (!await confirm('처음부터 다시 만들까요?', '지금 폰 내용은 지워지고 아카이브 전체를 다시 읽어요.')) return;
-        const keep = phone().inject;
-        await makeFrom($(this).find('.ax_n'), false);
-        if (phone() && keep) { phone().inject = true; await saveMeta(); applyInjection(); drawPhone(true); }
+        if (!remake.size || making) return;
+        const apps = Object.keys(REMAKE).filter(k => remake.has(k)), whole = apps.length === Object.keys(REMAKE).length;
+        if (!await confirm(whole ? '폰 전체를 다시 만들까요?' : `고른 앱 ${apps.length}개를 다시 만들까요?`, `${apps.map(k => APPS[k]).join(' · ')}의 지금 내용은 지워지고 아카이브 전체를 다시 읽어요.`)) return;
+        const keep = phone().inject, $at = $(this).find('.ax_n');
+        making = true;
+        try {
+            const p = await withSpinner($at, '다시 만드는 중', () => makePhone(m, owner, whole ? {} : { apps }));
+            if (!p) return;
+            if (whole && keep) { p.inject = true; await saveMeta(); applyInjection(); }
+            remake.clear(); view = whole ? 'lock' : 'set'; draw();
+            toastr.success(whole ? `${owner}의 폰을 다시 만들었어요` : '고른 앱을 다시 만들었어요', '캐릭터 휴대폰');
+        } finally { making = false; }
     });
     $root.on('click', '.na_ph_setdel', async e => {
         e.stopPropagation();
