@@ -5004,3 +5004,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .ax .ax_sgo { --axbg: var(--axc); margin-bottom: 10px; padding: 10px 20px; border-radius: 20px; color: var(--axd); font-weight: 600; font-size: 14.5px; }
 .ax_igtop .ax_igback { margin: 0 6px 0 -6px; display: grid; place-items: center; }
 .ax_igtop > .ax_sp { flex: 1; }
+/* the phone has the whole height; the bar at the bottom of the home and lock screens closes it, with 닫기 over it */
+.na_phl .na_ph_frame { width: min(calc(100vw - 20px), calc((100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 390 / 844 + 14px), 470px); }
+.cg .cg_ind.na_ph_quit { height: 38px; flex-direction: column; gap: 4px; justify-content: flex-end; padding-bottom: 9px; cursor: pointer; }
+.cg_ind.na_ph_quit small { font-size: 11px; font-weight: 600; color: rgba(22, 27, 34, 0.55); letter-spacing: 0.04em; }

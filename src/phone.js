@@ -674,18 +674,22 @@ function noteItems(n) {
     const list = (lines.length > 1 ? lines : String(n.text || n.title || '').split(/(?<=[.!?。])\s+/)).map(l => l.replace(/^[-*•]\s*/, '').trim()).filter(Boolean);
     return list.slice(0, 3).map(l => { const done = /^(\[x\]|✓|✔)\s*/i.test(l); return { done, text: l.replace(/^(\[x\]|\[ \]|✓|✔)\s*/i, '') }; });
 }
+// red badges and blue dots: gone once the user has opened them (a thread keeps the last message it was opened at,
+// so a new one from an update shows again)
+const lastSig = t => { const x = t.messages[t.messages.length - 1]; return x ? `${x.time}|${x.text}` : ''; };
+const threadNew = t => t.messages[t.messages.length - 1]?.from !== 'me' && t.seen !== lastSig(t);
 function homeScreen(p, now, m) {
     const mono = p.theme === 'gray';
     const day = String(now).slice(0, 5), x = parts(now);
     const anniv = annivToday(m, now);
-    const unread = p.threads.filter(t => t.messages[t.messages.length - 1]?.from !== 'me').length;
-    const missed = p.calls.filter(c => c.type === 'missed' && c.time.slice(0, 5) === day).length;
+    const unread = p.threads.filter(threadNew).length;
+    const missed = p.calls.filter(c => c.type === 'missed' && !c.seen && c.time.slice(0, 5) === day).length;
     const bars = mono ? ['#2a313b', 'rgba(22, 27, 34, 0.22)'] : ['#d89f98', '#8faed1'];
     const evs = [...(anniv ? [{ title: anniv, when: '기념일', heart: true }] : []),
         ...p.events.filter(e => upcoming(e, now)).map(e => ({ title: e.title, when: `${e.date === day ? '' : `${fmtDate(p, e.date, true)} `}${e.time ? fmtTime(p, `${e.date} ${e.time}`) : e.date === day ? '하루 종일' : ''}`.trim() }))].slice(0, 2);
     const note = p.notes[p.notes.length - 1], items = noteItems(note);
     // SNS: comments from others on today's posts; 메일: unread
-    const badges = { sns: (p.posts || []).filter(x => x.time.slice(0, 5) === day).reduce((n, x) => n + x.comments.filter(c => nameKey(c.from) !== nameKey(p.owner)).length, 0), mail: (p.mails || []).filter(x => x.unread).length };
+    const badges = { sns: (p.posts || []).filter(x => !x.seen && x.time.slice(0, 5) === day).reduce((n, x) => n + x.comments.filter(c => nameKey(c.from) !== nameKey(p.owner)).length, 0), mail: (p.mails || []).filter(x => x.unread).length };
     return `
       <div class="cg_bg1" aria-hidden="true"></div><div class="cg_bg2" aria-hidden="true"></div>
       <svg class="cg_noise" aria-hidden="true" width="390" height="844"><filter id="cgn"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#cgn)"/></svg>
@@ -709,7 +713,7 @@ function homeScreen(p, now, m) {
         <div class="cg_fill"></div>
         <div class="cg_dots" aria-hidden="true"><span></span><span class="on"></span></div>
         <div class="cg_dockwrap"><div class="cg_glass cg_dock">${cgIcon('call', mono, missed)}${cgIcon('msg', mono, unread)}${cgIcon('cam', mono)}${cgIcon('search', mono)}</div></div>
-        <button type="button" class="cg_ind" data-go="lock" aria-label="잠금화면"><span></span></button>
+        <button type="button" class="cg_ind na_ph_quit" aria-label="폰 닫기"><small>닫기</small><span></span></button>
       </div>`;
 }
 
@@ -731,7 +735,7 @@ function lockScreen(p, now) {
             <button type="button" class="cg_glass cg_nt" data-go="${n.app}">${cgMini(n.app, mono)}<span class="cg_nttx"><b>${esc(n.title)}</b><span>${esc(n.text)}</span>${n.ko && koOn() ? `<small class="cg_ntko">${esc(n.ko)}</small>` : ''}</span>${n.time ? `<span class="cg_ntw">${esc(ago(p, n.time))}</span>` : ''}</button>`).join('')}</span>
           <span class="cg_lkopen">눌러서 열기</span>
         </div>
-        <span class="cg_ind cg_lkind" aria-hidden="true"><span></span></span>
+        <button type="button" class="cg_ind cg_lkind na_ph_quit" aria-label="폰 닫기"><small>닫기</small><span></span></button>
       </div>`;
 }
 
@@ -893,7 +897,7 @@ function msgList(p, now, roster) {
         ${axH1('메시지', ts.length ? `${ts.length}개 대화` : '')}
         ${axFind()}
         ${ts.length ? `<div class="ax_card">${ts.map(t => { const x = t.messages[t.messages.length - 1]; return `
-          <button type="button" class="ax_rw" data-go="thread" data-i="${p.threads.indexOf(t)}">${x.from !== 'me' ? '<i class="ax_dot"></i>' : ''}${axAv(t.with, 48, roster)}<span class="ax_tx">
+          <button type="button" class="ax_rw" data-go="thread" data-i="${p.threads.indexOf(t)}">${threadNew(t) ? '<i class="ax_dot"></i>' : ''}${axAv(t.with, 48, roster)}<span class="ax_tx">
             <span class="ax_h"><b>${esc(savedName(p, t.with))}</b><small class="cg_num">${esc(listTime(p, x.time))}</small></span>
             <span class="ax_p">${esc(x.text)}${x.ko && koOn() ? `<span class="ax_ko">${esc(x.ko)}</span>` : ''}</span></span></button>`; }).join('')}</div>` : '<div class="ax_empty">메시지가 없어요</div>'}
         <i class="ax_pad"></i>
@@ -1317,14 +1321,10 @@ export async function openPhone(who = null) {
     const loreExp = new Set(), loreEnts = new Map(); // books opened to their entries, and their entries once read
     const remake = new Set(); // the apps ticked in 설정 › 다시 만들기
     // the phone has the screen to itself: one layer over everything (a dialog, so the extension's colours and
-    // SillyTavern's top layer both hold), the person on top (a tap: everyone in a sheet), the controls in the phone's 설정
+    // SillyTavern's top layer both hold); the bar at the bottom of the home and lock screens closes it, the controls are in its 설정
     let sheetOpen = false;
     const $root = $(`
       <div class="na_popup na_v2 na_phone na_phl_root">
-        <div class="na_phl_top">
-          <span class="na_phl_sp"></span>
-          <button type="button" class="na_phl_btn na_phl_close" aria-label="닫기">${ic('x', 20, 2.4)}</button>
-        </div>
         <div class="na_ph_wrap"><div class="na_ph_frame"></div></div>
         <div class="na_phl_shade" hidden></div>
         <div class="na_phl_sheet" hidden>
@@ -1465,6 +1465,13 @@ export async function openPhone(who = null) {
         view = ['thread', 'callwho', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost'].includes(go) ? `${go}:${this.dataset.i}` : go;
         const mail = go === 'mailone' ? phone()?.mails?.[Number(this.dataset.i)] : null;
         if (mail?.unread) { mail.unread = false; saveMeta(); }
+        const p0 = phone();
+        const th = go === 'thread' ? p0?.threads?.[Number(this.dataset.i)] : null;
+        if (th && threadNew(th)) { th.seen = lastSig(th); saveMeta(); }
+        const calls = go === 'call' || go === 'callmiss' ? (p0?.calls || []).filter(c => c.type === 'missed' && !c.seen) : [];
+        if (calls.length) { calls.forEach(c => { c.seen = true; }); saveMeta(); }
+        const posts = go === 'sns' ? (p0?.posts || []).filter(x => !x.seen) : [];
+        if (posts.length) { posts.forEach(x => { x.seen = true; }); saveMeta(); }
         sheet = false;
         drawPhone();
         $root.find('.na_ph_body, .ax_scroll').scrollTop(view.startsWith('thread') ? 1e6 : 0);
@@ -1565,7 +1572,7 @@ export async function openPhone(who = null) {
     await new Promise(done => {
         const close = () => { if (dlg.open) dlg.close(); };
         // ✕, Esc, or a tap on the dark around the phone (the sheet closes first)
-        $root.on('click', '.na_phl_close', close);
+        $root.on('click', '.na_ph_quit', e => { e.stopPropagation(); close(); });
         $root.on('click', '.na_ph_wrap', e => { if (e.target === e.currentTarget) { if (sheetOpen) setSheet(false); else close(); } });
         dlg.addEventListener('cancel', e => { e.preventDefault(); if (sheetOpen) setSheet(false); else close(); });
         dlg.addEventListener('close', done, { once: true });
