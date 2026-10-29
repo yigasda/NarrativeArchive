@@ -66,7 +66,7 @@ JSON (one object, nothing before or after it)
   "notes": [{ "title", "kt": Korean title, "text", "ko", "time" }],
   "searches": [{ "q", "ko", "time" }],
   "events": [{ "title", "ko", "date": "MM-DD", "time": "HH:MM" or "" }],
-  "profile": { "handle": the owner's SNS name, "bio", "ko" },
+  "profile": { "handle": the owner's SNS name, "bio", "ko", "followers": a number, "following": a number },
   "posts": [{ "text", "ko", "photo": what the posted photo shows or "", "pko": its Korean, "time", "likes": a number,
               "comments": [{ "from": name, "text", "ko" }] }],
   "mails": [{ "from": sender, "subject", "ks": Korean subject, "text", "ko", "time", "unread": true or false }],
@@ -115,7 +115,7 @@ export function parsePhone(out) {
         notes: arr(raw.notes).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 1500), ko: str(x?.ko, 1500), time: when(x?.time) })).filter(x => x.title || x.text),
         searches: arr(raw.searches).map(x => ({ q: line(x?.q, 120), ko: ko(x?.ko), time: when(x?.time) })).filter(x => x.q),
         events: arr(raw.events).map(x => ({ title: line(x?.title, 80), ko: ko(x?.ko), date: when(x?.date).slice(0, 5), time: hhmm(x?.time) })).filter(x => x.title && x.date),
-        profile: raw.profile && typeof raw.profile === 'object' ? { handle: line(raw.profile.handle, 40), bio: line(raw.profile.bio, 200), ko: ko(raw.profile.ko) } : null,
+        profile: raw.profile && typeof raw.profile === 'object' ? { handle: line(raw.profile.handle, 40), bio: line(raw.profile.bio, 200), ko: ko(raw.profile.ko), followers: Math.max(0, Math.round(Number(raw.profile.followers) || 0)), following: Math.max(0, Math.round(Number(raw.profile.following) || 0)) } : null,
         posts: arr(raw.posts).map(x => ({ text: str(x?.text, 800), ko: str(x?.ko, 800), photo: line(x?.photo, 200), pko: ko(x?.pko), time: when(x?.time), likes: Math.max(0, Math.min(99999, Math.round(Number(x?.likes) || 0))),
             comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) })).filter(x => x.text || x.photo),
         mails: arr(raw.mails).map(x => ({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: !!x?.unread })).filter(x => x.from && (x.subject || x.text)),
@@ -798,64 +798,174 @@ function calScreen(p, now, m) {
       </div>`;
 }
 
-// SNS: the owner's page — who they are, then their posts with likes and a few comments
-function snsScreen(p, roster) {
-    const pr = p.profile || {}, posts = [...(p.posts || [])].reverse();
-    return `${head(p, '')}
-      <div class="na_ph_snsprof">${faceHtml(p.owner, 64)}<div><b>${esc(pr.handle || p.owner)}</b>${pr.bio ? `<p>${tr(p, pr.bio, pr.ko)}</p>` : ''}<small>게시물 ${posts.length}</small></div></div>
-      <div class="na_ph_list na_ph_posts">${posts.length ? posts.map(x => `
-        <div class="na_ph_post">
-          ${x.photo ? `<div class="na_ph_postpic">${ic('photo', 26, 1.6)}<span>${tr(p, x.photo, x.pko)}</span></div>` : ''}
-          ${x.text ? `<p>${tr(p, x.text, x.ko)}</p>` : ''}
-          <div class="na_ph_postmeta">${ic('heart', 14, 2.2)} ${x.likes.toLocaleString()}<span>${esc(listTime(p, x.time))}</span></div>
-          ${x.comments.length ? `<div class="na_ph_comments">${x.comments.map(c => `<div><b>${esc(savedName(p, c.from))}</b> ${tr(p, c.text, c.ko)}</div>`).join('')}</div>` : ''}
-        </div>`).join('') : empty('게시물이 없어요')}</div>`;
+// ---- SNS · 메일 · 일기 · 설정 · 카메라: drawn like the real apps (the approved boards), at 390 × 844 and scaled like the home
+const AX = {
+    back: 'M15 5l-7 7 7 7', heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z', cmt: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z',
+    send: 'M22 3L11 13M22 3l-7 18-4-8-8-4z', save: 'M6 3h12v18l-6-4-6 4z', grid: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z', tag: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
+    plus: 'M12 5v14M5 12h14', menu: 'M4 7h16M4 12h16M4 17h16', home: 'M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z', search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
+    reels: 'M4 4h16v16H4zM4 9h16M9 4l3 5M15 4l3 5', photo: 'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 16l5-5 4 4 3-3 6 6M15 9h.01',
+    compose: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', filter: 'M4 6h16M7 12h10M10 18h4', trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3', folder: 'M3 6h6l2 2h10v11H3z',
+    reply: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 6 6v3', more: 'M5 12h.01M12 12h.01M19 12h.01', chev: 'M9 6l6 6-6 6', cal: 'M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM4 10h16M9 3v4M15 3v4',
+    pen: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18',
+    palette: 'M12 3a9 9 0 0 0 0 18c1 0 1.5-.6 1.5-1.4 0-.9-.7-1.3-.7-2.1 0-.8.6-1.5 1.5-1.5H17a4 4 0 0 0 4-4c0-5-4-9-9-9zM7.5 11h.01M10 7h.01M14.5 7h.01',
+    lang: 'M4 6h9M8.5 4v2M6 6c0 4 3 7 6 8M11 6c0 3-3 7-7 8M14 20l4-9 4 9M15.5 17h5', user: 'M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 21a8 8 0 0 1 16 0',
+    info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v5M12 8h.01', bolt: 'M13 2L4 14h7l-1 8 9-12h-7z', flip: 'M20 12a8 8 0 0 1-14 5M4 12a8 8 0 0 1 14-5M18 3v4h-4M6 21v-4h4', down: 'M6 9l6 6 6-6',
+};
+const ax = (k, z = 22, c = 'currentColor', w = 2, f = 'none') => `<svg aria-hidden="true" width="${z}" height="${z}" viewBox="0 0 24 24" fill="${f}" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="${AX[k]}"/></svg>`;
+const axBar = (p, now, c = '#111') => `
+  <div class="ax_sb" style="color: ${c}"><span class="cg_num">${esc(bigClock(p, now) || '')}</span><span class="ax_sbi">
+    <svg aria-hidden="true" width="18" height="12" viewBox="0 0 18 12" fill="${c}"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+    <svg aria-hidden="true" width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round"><path d="M1.5 4.2a9.5 9.5 0 0 1 13 0"/><path d="M4 7a6 6 0 0 1 8 0"/><circle cx="8" cy="10" r="1" fill="${c}" stroke="none"/></svg>
+    <svg aria-hidden="true" width="27" height="13" viewBox="0 0 27 13" fill="none"><rect x="0.5" y="0.5" width="23" height="12" rx="3.8" stroke="${c}" stroke-opacity="0.4"/><rect x="2.5" y="2.5" width="16" height="8" rx="2" fill="${c}"/></svg>
+  </span></div>`;
+const axInd = (c = '#111') => `<button type="button" class="ax_ind" data-go="home" aria-label="홈"><span style="background: ${c}"></span></button>`;
+const axKo = (t, k) => `${esc(t)}${k && koOn() ? `<span class="ax_ko">${esc(k)}</span>` : ''}`;
+// a photo's colours, from its mood (or, for a post, from its words)
+const AX_MOOD = { warm: '#f0b38a, #c66a6f', cool: '#9fbadb, #5f7fa8', green: '#b9d4b0, #6f9a76', pink: '#f2bfcd, #cf7f98', dark: '#6d6478, #2f2a38', bright: '#f6dd8f, #e5a85a' };
+const moodOf = s => MOODS[[...String(s)].reduce((h, ch) => (h * 31 + ch.codePointAt(0)) % 9973, 7) % MOODS.length];
+const axFace = (n, z) => `<span class="ax_face" style="width: ${z}px; height: ${z}px">${faceHtml(n, z)}</span>`;
+
+function snsScreen(p, now) {
+    const pr = p.profile || {}, posts = (p.posts || []).map((x, k) => [x, k]).reverse();
+    const n = v => (Number(v) || 0).toLocaleString();
+    return `${axBar(p, now)}
+      <div class="ax_igtop"><b>${esc(pr.handle || p.owner)} ${ax('down', 18, '#111', 2.4)}</b><span>${ax('plus', 24, '#111')}${ax('menu', 24, '#111')}</span></div>
+      <div class="ax_scroll">
+        <div class="ax_igprof"><span class="ax_ring">${axFace(p.owner, 82)}</span><span class="ax_stats"><span><b>${posts.length}</b>게시물</span><span><b>${n(pr.followers)}</b>팔로워</span><span><b>${n(pr.following)}</b>팔로잉</span></span></div>
+        <div class="ax_igname"><b>${esc(p.owner)}</b>${pr.bio ? `<br>${axKo(pr.bio, pr.ko)}` : ''}</div>
+        <div class="ax_igbtns"><span>프로필 편집</span><span>프로필 공유</span></div>
+        <div class="ax_igtabs"><span class="on">${ax('grid', 22)}</span><span>${ax('tag', 22)}</span></div>
+        <div class="ax_grid3">${posts.length ? posts.map(([x, k]) => x.photo
+            ? `<button type="button" class="ax_tile" data-go="snspost" data-i="${k}" style="--axbg: linear-gradient(160deg, ${AX_MOOD[moodOf(x.photo)]})">${ax('photo', 26, '#fff', 1.6)}<span class="ax_tcap">${esc(x.photo)}</span></button>`
+            : `<button type="button" class="ax_tile ax_ttext" data-go="snspost" data-i="${k}">${axKo(x.text, x.ko)}</button>`).join('') : ''}</div>
+        ${posts.length ? '' : '<div class="ax_empty">게시물이 없어요</div>'}
+      </div>
+      <div class="ax_ignav">${ax('home', 26, '#111')}${ax('search', 26, '#111')}${ax('plus', 26, '#111')}${ax('reels', 26, '#111', 1.8)}<span class="ax_navme">${axFace(p.owner, 28)}</span></div>
+      ${axInd()}`;
 }
-// 메일: the inbox, newest first; a mail opens whole
-function mailScreen(p, i) {
-    const ms = p.mails || [], x = ms[i];
-    if (x) return `${head(p, '', { back: 'mail' })}
-      <div class="na_ph_notebody"><small>${esc(x.from)} · ${esc(fmtDate(p, x.time))} ${esc(fmtTime(p, x.time))}</small><h4>${tr(p, x.subject, x.ks)}</h4><p>${esc(x.text)}</p>${x.ko && koOn() ? `<p class="na_ph_ko">${esc(x.ko)}</p>` : ''}</div>`;
-    const list = ms.map((y, k) => [y, k]).reverse();
-    return `${head(p, '메일', { sub: ms.some(y => y.unread) ? `안 읽음 ${ms.filter(y => y.unread).length}` : '' })}
-      <div class="na_ph_list">${list.length ? list.map(([y, k]) => `
-        <button type="button" class="na_ph_row na_ph_mailrow" data-go="mailone" data-i="${k}"><div><b>${esc(y.from)}</b><p class="na_ph_subj">${esc(y.subject)}</p><p>${esc(y.text.replace(/\s+/g, ' '))}</p></div><small>${esc(listTime(p, y.time))}</small>${y.unread ? '<i class="na_ph_dot"></i>' : ''}</button>`).join('') : empty('메일이 없어요')}</div>`;
+function snsPost(p, now, k) {
+    const x = (p.posts || [])[k], pr = p.profile || {};
+    if (!x) return snsScreen(p, now);
+    return `${axBar(p, now)}
+      <div class="ax_igtop ax_center"><button type="button" class="ax_back" data-go="sns" aria-label="뒤로">${ax('back', 26, '#111', 2.2)}</button><b>게시물</b><span class="ax_sp"></span></div>
+      <div class="ax_scroll">
+        <div class="ax_posth"><span class="ax_ring ax_ring_s">${axFace(p.owner, 30)}</span><div><b>${esc(pr.handle || p.owner)}</b></div>${ax('more', 22, '#111', 3)}</div>
+        ${x.photo ? `<div class="ax_postpic" style="background: linear-gradient(160deg, ${AX_MOOD[moodOf(x.photo)]})">${ax('photo', 56, '#fff', 1.3)}<div class="ax_alt">${axKo(x.photo, x.pko)}</div></div>` : ''}
+        <div class="ax_postact">${ax('heart', 26, '#ed4956', 2, '#ed4956')}${ax('cmt', 25, '#111', 1.9)}${ax('send', 24, '#111', 1.9)}<span class="ax_sp"></span>${ax('save', 24, '#111', 1.9)}</div>
+        <div class="ax_postbody"><b>좋아요 ${x.likes.toLocaleString()}개</b></div>
+        ${x.text ? `<div class="ax_postbody"><b>${esc(pr.handle || p.owner)}</b> ${axKo(x.text, x.ko)}</div>` : ''}
+        ${x.comments.map(c => `<div class="ax_cmt"><b>${esc(savedName(p, c.from))}</b> ${axKo(c.text, c.ko)}</div>`).join('')}
+        <div class="ax_postt">${esc(fmtDate(p, x.time))}</div>
+      </div>
+      ${axInd()}`;
 }
-// 일기: one entry a day, newest first
-function diaryScreen(p, i) {
-    const ds = p.diary || [], x = ds[i];
-    if (x) return `${head(p, '', { back: 'diary' })}
-      <div class="na_ph_notebody"><small>${esc(fmtDate(p, x.date))}</small>${x.title ? `<h4>${tr(p, x.title, x.kt)}</h4>` : ''}<p>${esc(x.text)}</p>${x.ko && koOn() ? `<p class="na_ph_ko">${esc(x.ko)}</p>` : ''}</div>`;
-    const list = ds.map((y, k) => [y, k]).reverse();
-    return `${head(p, '일기')}
-      <div class="na_ph_list">${list.length ? list.map(([y, k]) => `
-        <button type="button" class="na_ph_row na_ph_diaryrow" data-go="diaryone" data-i="${k}"><span class="na_ph_dday"><b>${esc(String(parts(y.date)?.d || ''))}</b>${esc(`${parts(y.date)?.mo || ''}월`)}</span><div><b>${tr(p, y.title || y.text.slice(0, 24), y.kt)}</b><p>${esc(y.text.replace(/\s+/g, ' '))}</p></div></button>`).join('') : empty('일기가 없어요')}</div>`;
+function mailScreen(p, now) {
+    const ms = (p.mails || []).map((x, k) => [x, k]).reverse(), unread = ms.filter(([x]) => x.unread).length;
+    return `${axBar(p, now)}
+      <div class="ax_mltop"><button type="button" class="ax_back ax_blue" data-go="home">${ax('back', 22, '#2f6bff', 2.4)}사서함</button><span>편집</span></div>
+      <div class="ax_scroll">
+        <div class="ax_big">받은편지함</div>
+        <div class="ax_search">${ax('search', 17, '#8e8e93', 2.2)}검색</div>
+        ${ms.length ? ms.map(([x, k]) => `
+          <button type="button" class="ax_mrow ${x.unread ? 'u' : ''}" data-go="mailone" data-i="${k}"><span class="ax_mdot">${x.unread ? '<i></i>' : ''}</span><span class="ax_mtx">
+            <span class="ax_mh"><b>${esc(x.from)}</b><small class="cg_num">${esc(listTime(p, x.time))}</small>${ax('chev', 14, '#c4c4c7', 2.4)}</span>
+            <span class="ax_ms">${esc(x.subject)}</span><span class="ax_mp">${axKo(x.text.replace(/\s+/g, ' '), x.ko ? x.ko.replace(/\s+/g, ' ') : '')}</span></span></button>`).join('') : '<div class="ax_empty">메일이 없어요</div>'}
+      </div>
+      <div class="ax_mbar">${ax('filter', 24, '#2f6bff')}<small>방금 업데이트됨<br><span>${unread ? `안 읽음 ${unread}` : '모두 읽음'}</span></small>${ax('compose', 24, '#2f6bff')}</div>
+      ${axInd()}`;
 }
-// 설정: the phone's own settings — theme, country, the Korean lines, looks
-function setScreen(p) {
-    return `${head(p, '설정', { chip: false })}
-      <div class="na_ph_list na_ph_set">
-        <div class="na_ph_row na_ph_setme">${faceHtml(p.owner, 52)}<div><b>${esc(p.owner)}</b><p>${esc(COUNTRIES[p.country] || p.country || '')}${p.profile?.handle ? ` · ${esc(p.profile.handle)}` : ''}</p></div></div>
-        <div class="na_ph_sub">화면</div>
-        <div class="na_ph_row"><div><b>테마</b></div><span class="na_ph_seg na_ph_seg2"><button type="button" class="na_ph_theme ${p.theme === 'gray' ? '' : 'on'}" data-v="gel">컬러 젤</button><button type="button" class="na_ph_theme ${p.theme === 'gray' ? 'on' : ''}" data-v="gray">화이트 그레이</button></span></div>
-        <div class="na_ph_row"><div><b>한국어 보기</b><p>외국어 글 밑에 한국어</p></div><button type="button" class="na_ph_kochip ${koOn() ? 'on' : ''}">${koOn() ? '켬' : '끔'}</button></div>
-        <div class="na_ph_sub">일반</div>
-        <label class="na_ph_row"><div><b>국적</b><p>글 · 날짜 · 시간 표기</p></div><select class="na_ph_country">${Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === p.country ? 'selected' : ''}>${v}</option>`).join('')}${COUNTRIES[p.country] ? '' : `<option value="${esc(p.country)}" selected>${esc(p.country)}</option>`}</select></label>
-        <button type="button" class="na_ph_row na_ph_looksbtn2"><div><b>외모</b><p>사진 그릴 때 사람마다 들어가는 태그</p></div>${ic('right', 16, 2.2)}</button>
-      </div>`;
+function mailOne(p, now, k) {
+    const x = (p.mails || [])[k];
+    if (!x) return mailScreen(p, now);
+    return `${axBar(p, now)}
+      <div class="ax_mltop"><button type="button" class="ax_back ax_blue" data-go="mail">${ax('back', 22, '#2f6bff', 2.4)}받은편지함</button>${ax('down', 22, '#2f6bff', 2.4)}</div>
+      <div class="ax_scroll">
+        <div class="ax_mdfrom"><span class="ax_mdav">${esc([...String(x.from).trim()][0] || '?')}</span><div><b>${esc(x.from)}</b><small>받는 사람: ${esc(p.owner)}</small></div><small class="cg_num">${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</small></div>
+        <div class="ax_mdsub">${axKo(x.subject, x.ks)}</div>
+        <div class="ax_mdbody">${esc(x.text)}</div>
+        ${x.ko && koOn() ? `<div class="ax_mdko">${esc(x.ko)}</div>` : ''}
+      </div>
+      <div class="ax_mbar">${ax('trash', 24, '#2f6bff')}${ax('folder', 24, '#2f6bff')}${ax('reply', 24, '#2f6bff')}${ax('compose', 24, '#2f6bff')}</div>
+      ${axInd()}`;
 }
-// 카메라: a viewfinder; the shutter asks for one photo of this moment
-function camScreen(p, busy) {
-    const last = p.photos[p.photos.length - 1];
-    return `
-      <div class="na_ph_cam">
-        <div class="na_ph_camview m_${last?.mood || 'cool'}"><i></i><i></i><i></i><i></i><span>${busy ? '찍는 중…' : '지금 이 장면'}</span></div>
-        <div class="na_ph_cambar">
-          <button type="button" class="na_ph_camthumb m_${last?.mood || 'cool'}" data-go="photo" aria-label="사진첩">${last?.img ? `<img src="${esc(last.img)}" alt="">` : ''}</button>
-          <button type="button" class="na_ph_shutter" aria-label="찍기" ${busy ? 'disabled' : ''}><span>${busy ? busyHtml : ''}</span></button>
-          <button type="button" class="na_ph_camx" data-go="home" aria-label="닫기">${ic('x', 20, 2.2)}</button>
+function diaryScreen(p, now) {
+    const ds = (p.diary || []).map((x, k) => [x, k]).reverse(), x0 = parts(now);
+    const have = new Set((p.diary || []).map(d => d.date));
+    // the week up to the story's today (no weekday names: the story's dates carry no year)
+    const days = [];
+    if (x0) for (let n = 6; n >= 0; n--) { const d = new Date(2001, x0.mo - 1, x0.d - n); days.push(`${pad(d.getMonth() + 1)}-${pad(d.getDate())}`); }
+    return `${axBar(p, now, '#3d3127')}
+      <div class="ax_dytop"><button type="button" class="ax_back" data-go="home">${ax('back', 22, '#8a6d4a', 2.4)}</button>${ax('search', 22, '#8a6d4a')}</div>
+      <div class="ax_scroll">
+        <div class="ax_dymonth"><b>${x0 ? `${x0.mo}월` : '일기'}</b><span>${ds.length}편</span></div>
+        ${days.length ? `<div class="ax_strip">${days.map(d => `<b class="${d === String(now).slice(0, 5) ? 'on' : ''} ${have.has(d) ? 'd' : ''}">${Number(d.slice(3))}</b>`).join('')}</div>` : ''}
+        ${ds.length ? ds.map(([y, k]) => `
+          <button type="button" class="ax_dcard" data-go="diaryone" data-i="${k}"><span class="ax_dd"><b class="cg_num">${esc(String(parts(y.date)?.d || ''))}</b>${esc(`${parts(y.date)?.mo || ''}월`)}</span><span class="ax_dtx"><span class="ax_dh">${esc(y.title || '')}${y.kt && koOn() ? `<small>${esc(y.kt)}</small>` : ''}</span><span class="ax_dp">${esc(y.text.replace(/\s+/g, ' '))}</span></span></button>`).join('') : '<div class="ax_empty">일기가 없어요</div>'}
+      </div>
+      <span class="ax_fab" aria-hidden="true">${ax('pen', 24, '#fbf8f2')}</span>
+      ${axInd()}`;
+}
+function diaryOne(p, now, k) {
+    const x = (p.diary || [])[k];
+    if (!x) return diaryScreen(p, now);
+    return `${axBar(p, now, '#3d3127')}
+      <div class="ax_dytop"><button type="button" class="ax_back" data-go="diary">${ax('back', 22, '#8a6d4a', 2.4)}${esc(`${parts(x.date)?.mo || ''}월`)}</button>${x.ko ? `<button type="button" class="na_ph_kochip ax_kobtn ${koOn() ? 'on' : ''}">한국어</button>` : ''}</div>
+      <div class="ax_scroll ax_paper">
+        <div class="ax_pdt">${esc(fmtDate(p, x.date))}</div>
+        <h3>${esc(x.title || '')}</h3>${x.kt && koOn() ? `<div class="ax_pkt">${esc(x.kt)}</div>` : ''}
+        <p>${esc(x.text)}</p>
+        ${x.ko && koOn() ? `<div class="ax_pko">${esc(x.ko)}</div>` : ''}
+      </div>
+      ${axInd()}`;
+}
+function setScreen(p, now, m) {
+    const looks = looksOf(), nLooks = peopleList(m).filter(n => looks[nameKey(n)]).length;
+    return `${axBar(p, now)}
+      <div class="ax_sttop"><button type="button" class="ax_back ax_blue" data-go="home">${ax('back', 24, '#2f6bff', 2.4)}</button></div>
+      <div class="ax_scroll">
+        <div class="ax_big">설정</div>
+        <div class="ax_search ax_search2">${ax('search', 17, '#8e8e93', 2.2)}검색</div>
+        <div class="ax_grp"><div class="ax_srow ax_me">${axFace(p.owner, 58)}<span class="ax_st"><b>${esc(p.owner)}</b><small>${esc([p.profile?.handle, COUNTRIES[p.country] || p.country].filter(Boolean).join(' · '))}</small></span></div></div>
+        <div class="ax_ghead">화면</div>
+        <div class="ax_grp">
+          <button type="button" class="ax_srow" data-go="settheme"><span class="ax_si" style="background: #a66cf0">${ax('palette', 18, '#fff')}</span><span class="ax_st">테마</span><span class="ax_sv">${p.theme === 'gray' ? '화이트 그레이' : '컬러 젤'}</span>${ax('chev', 16, '#c4c4c7', 2.4)}</button>
+          <button type="button" class="ax_srow na_ph_kochip ax_koline"><span class="ax_si" style="background: #34c759">${ax('lang', 18, '#fff')}</span><span class="ax_st">한국어 보기</span><span class="ax_sw ${koOn() ? 'on' : ''}"></span></button>
         </div>
-      </div>`;
+        <div class="ax_foot">외국어로 된 문자 · 메모 · 글 밑에 한국어를 붙여요.</div>
+        <div class="ax_ghead">일반</div>
+        <div class="ax_grp">
+          <label class="ax_srow"><span class="ax_si" style="background: #2f8cff">${ax('globe', 18, '#fff')}</span><span class="ax_st">국적</span><span class="ax_sv">${esc(COUNTRIES[p.country] || p.country || '')}</span>${ax('chev', 16, '#c4c4c7', 2.4)}<select class="na_ph_country ax_sel" aria-label="국적">${Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === p.country ? 'selected' : ''}>${v}</option>`).join('')}${COUNTRIES[p.country] ? '' : `<option value="${esc(p.country)}" selected>${esc(p.country)}</option>`}</select></label>
+          <button type="button" class="ax_srow na_ph_looksbtn2"><span class="ax_si" style="background: #ff9f0a">${ax('user', 18, '#fff')}</span><span class="ax_st">외모</span><span class="ax_sv">${nLooks ? `${nLooks}명` : ''}</span>${ax('chev', 16, '#c4c4c7', 2.4)}</button>
+          <div class="ax_srow"><span class="ax_si" style="background: #8e8e93">${ax('info', 18, '#fff')}</span><span class="ax_st">이 폰에 대해</span><span class="ax_sv cg_num">${p.upto >= 0 ? `#${p.upto}까지` : ''}</span></div>
+        </div>
+      </div>
+      ${axInd()}`;
+}
+function setTheme(p, now) {
+    const mini = gray => `<span class="ax_mini"><i class="b1" ${gray ? 'style="opacity: 0.75"' : ''}></i><i class="b2" ${gray ? 'style="opacity: 0.75"' : ''}></i><i class="w" style="left: 8px"></i><i class="w" style="left: 58px"></i><span class="g">${(gray ? Array(8).fill('rgba(255, 255, 255, 0.5)') : ['#e8b8a8', '#eceef2', '#ead69c', '#acc9ad', '#e2b3c3', '#a8c1df', '#bdb1db', '#bcc0c6']).map(c => `<i style="background: ${c}"></i>`).join('')}</span><i class="d"></i></span>`;
+    const opt = (v, label) => { const on = (p.theme === 'gray') === (v === 'gray'); return `<button type="button" class="ax_tp na_ph_theme" data-v="${v}">${mini(v === 'gray')}<span>${label}</span><span class="ax_radio ${on ? 'on' : ''}">${on ? '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ''}</span></button>`; };
+    return `${axBar(p, now)}
+      <div class="ax_sttop"><button type="button" class="ax_back ax_blue" data-go="set">${ax('back', 24, '#2f6bff', 2.4)}설정</button><b>테마</b><span class="ax_sp"></span></div>
+      <div class="ax_scroll"><div class="ax_themes">${opt('gel', '컬러 젤')}${opt('gray', '화이트 그레이')}</div><div class="ax_foot">홈 화면과 잠금화면에 쓰여요.</div></div>
+      ${axInd()}`;
+}
+function camScreen(p, now, k, busy) {
+    const shot = k >= 0 ? p.photos[k] : null, last = p.photos[p.photos.length - 1];
+    const t = recentTrackers(1)[0];
+    const modes = '<div class="ax_modes"><span>타임랩스</span><span>동영상</span><span class="on">사진</span><span>인물</span><span>파노라마</span></div>';
+    const bar = `<div class="ax_cbar"><button type="button" class="ax_cthumb" data-go="photo" aria-label="사진첩" style="--axbg: linear-gradient(160deg, ${AX_MOOD[(shot || last)?.mood || 'green']})">${(shot || last)?.img ? `<img src="${esc((shot || last).img)}" alt="">` : ''}</button><button type="button" class="ax_shut na_ph_shutter" aria-label="찍기" ${busy ? 'disabled' : ''}><span>${busy ? busyHtml : ''}</span></button><span class="ax_flip" aria-hidden="true">${ax('flip', 24, '#fff')}</span></div>`;
+    if (shot) return `${axBar(p, now, '#fff')}
+      <div class="ax_camtop">${ax('bolt', 22, '#fff')}<span class="ax_pill">사진첩에 넣었어요</span><button type="button" class="ax_back" data-go="home" aria-label="닫기">${ax('down', 22, '#fff', 2.4)}</button></div>
+      <div class="ax_shot" style="background: linear-gradient(170deg, ${AX_MOOD[shot.mood || 'warm']})">${shot.img ? `<img src="${esc(shot.img)}" alt="">` : ax('photo', 64, 'rgba(255, 255, 255, 0.7)', 1.2)}
+        <div class="ax_sheet"><small>방금 찍은 사진</small><p>${esc(shot.caption)}</p>${shot.ko && koOn() ? `<div class="ax_k">${esc(shot.ko)}</div>` : ''}
+          <div class="ax_btns">${drawBtn(p, k, 'ax_yellow')}<button type="button" data-go="photoone" data-i="${k}">사진첩</button><button type="button" data-go="cam">다시 찍기</button></div></div></div>
+      ${modes}${bar}${axInd('#fff')}`;
+    return `${axBar(p, now, '#fff')}
+      <div class="ax_camtop">${ax('bolt', 22, '#fff')}<span class="ax_pill">${busy ? '찍는 중…' : `지금 장면 · ${esc(fmtDate(p, now, true))} ${esc(fmtTime(p, now))}`}</span><button type="button" class="ax_back" data-go="home" aria-label="닫기">${ax('down', 22, '#fff', 2.4)}</button></div>
+      <div class="ax_vf"><i class="ax_scene" style="background: radial-gradient(60% 50% at 30% 35%, #f2c08f 0, transparent 60%), radial-gradient(50% 45% at 75% 60%, #8a5a7a 0, transparent 65%), linear-gradient(170deg, ${AX_MOOD[last?.mood || 'warm']})"></i><i class="ax_vig"></i>
+        <i class="ax_gl" style="left: 33.3%; top: 0; bottom: 0; width: 1px"></i><i class="ax_gl" style="left: 66.6%; top: 0; bottom: 0; width: 1px"></i><i class="ax_gl" style="top: 33.3%; left: 0; right: 0; height: 1px"></i><i class="ax_gl" style="top: 66.6%; left: 0; right: 0; height: 1px"></i>
+        <i class="ax_focus"></i>${t?.place ? `<span class="ax_hint">${esc(t.place)}</span>` : ''}<span class="ax_zoom"><span>.5</span><span class="on">1×</span><span>2</span></span></div>
+      ${modes}${bar}${axInd('#fff')}`;
 }
 
 function mapScreen(p, m) {
@@ -873,10 +983,12 @@ function screen(p, view, m, roster) {
         : v === 'thread' ? threadScreen(p, Number(i), roster) : v === 'call' ? callScreen(p, roster) : v === 'photo' ? photoScreen(p) : v === 'photoone' ? photoView(p, Number(i))
         : v === 'note' ? noteScreen(p, -1) : v === 'noteone' ? noteScreen(p, Number(i)) : v === 'search' ? searchScreen(p)
         : v === 'cal' ? calScreen(p, now, m) : v === 'map' ? mapScreen(p, m)
-        : v === 'sns' ? snsScreen(p, roster) : v === 'mail' ? mailScreen(p, -1) : v === 'mailone' ? mailScreen(p, Number(i))
-        : v === 'diary' ? diaryScreen(p, -1) : v === 'diaryone' ? diaryScreen(p, Number(i)) : v === 'set' ? setScreen(p)
-        : v === 'cam' ? camScreen(p, shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
+        : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
+        : v === 'diary' ? diaryScreen(p, now) : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'set' ? setScreen(p, now, m) : v === 'settheme' ? setTheme(p, now)
+        : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
+    // SNS · 메일 · 일기 · 설정 · 카메라: drawn at the boards' size too, each its own app look
+    if (['sns', 'snspost', 'mail', 'mailone', 'diary', 'diaryone', 'set', 'settheme', 'cam'].includes(v)) return `<div class="na_ph_scr app ax ax_${v} v_${v}" style="--ph-acc:var(--ph-${p.accent})"><div class="cg_canvas ax_canvas">${body}</div></div>`;
     if (v === 'home' || v === 'lock') return `<div class="na_ph_scr cg ${p.theme === 'gray' ? 'cg_mono' : 'cg_gel'} v_${v}" style="--ph-acc:var(--ph-${p.accent})"><div class="cg_canvas">${body}</div></div>`;
     const glass = v === 'lock';
     return `<div class="na_ph_scr ${glass ? `glass w_${p.wall}` : 'app'} v_${v}" style="--ph-acc:var(--ph-${p.accent})">${statusBar(p, now)}<div class="na_ph_body">${body}</div><button type="button" class="na_ph_bar" data-go="home" aria-label="홈"></button></div>`;
@@ -991,7 +1103,7 @@ export async function openPhone(who = null) {
         const go = this.dataset.go;
         if (!go) return;
         e.stopPropagation();
-        view = ['thread', 'noteone', 'photoone', 'mailone', 'diaryone'].includes(go) ? `${go}:${this.dataset.i}` : go;
+        view = ['thread', 'noteone', 'photoone', 'mailone', 'diaryone', 'snspost'].includes(go) ? `${go}:${this.dataset.i}` : go;
         const mail = go === 'mailone' ? phone()?.mails?.[Number(this.dataset.i)] : null;
         if (mail?.unread) { mail.unread = false; saveMeta(); }
         sheet = false;
@@ -1004,7 +1116,7 @@ export async function openPhone(who = null) {
         const p = phone(), id = nameKey(p.owner);
         if (shooting.has(id)) return;
         shooting.add(id); drawPhone();
-        try { const k = await takePhoto(m, p); if (phone() === p) view = `photoone:${k}`; toastr.success('사진을 찍었어요', '캐릭터 휴대폰'); }
+        try { const k = await takePhoto(m, p); if (phone() === p) view = `cam:${k}`; toastr.success('사진을 찍었어요', '캐릭터 휴대폰'); }
         catch (err) { console.error('[narrative-archive] camera', err); toastr.error(String(err?.message || err), '사진 찍기 실패'); }
         finally { shooting.delete(id); drawPhone(); }
     });
@@ -1061,5 +1173,5 @@ export async function openPhone(who = null) {
 // the board's fonts (Inter Tight for numbers, Noto Sans KR), once
 function cgFonts() {
     if (document.getElementById('na_cg_fonts')) return;
-    $('head').append('<link id="na_cg_fonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@100;200;300;400;500;600&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap">');
+    $('head').append('<link id="na_cg_fonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@100;200;300;400;500;600&family=Noto+Sans+KR:wght@300;400;500;600;700&family=Noto+Serif+KR:wght@400;500;600&display=swap">');
 }
