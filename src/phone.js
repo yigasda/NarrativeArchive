@@ -898,8 +898,11 @@ function snsPost(p, now, k) {
       </div>
       ${axInd()}`;
 }
-function diaryScreen(p, now) {
-    const ds = (p.diary || []).map((x, k) => [x, k]).reverse(), x0 = parts(now);
+// a day tapped in the strip shows only that day; the same day again shows them all
+const dayBtn = (go, d, pick, cls, label) => `<button type="button" class="ax_dpick" data-go="${go}"${d === pick ? '' : ` data-i="${d}"`} aria-pressed="${d === pick}"><b class="${cls}${d === pick ? ' s' : ''}">${label}</b></button>`;
+function diaryScreen(p, now, pick = '') {
+    const all = (p.diary || []).map((x, k) => [x, k]).reverse(), x0 = parts(now);
+    const ds = pick ? all.filter(([y]) => y.date === pick) : all;
     const have = new Set((p.diary || []).map(d => d.date));
     // the week up to the story's today (no weekday names: the story's dates carry no year)
     const days = [];
@@ -907,9 +910,9 @@ function diaryScreen(p, now) {
     return `${axBar(p, now, '#3d3127')}
       <div class="ax_dytop"><button type="button" class="ax_back" data-go="home">${ax('back', 22, '#8a6d4a', 2.4)}</button>${ax('search', 22, '#8a6d4a')}</div>
       <div class="ax_scroll">
-        <div class="ax_dymonth"><b>${x0 ? `${x0.mo}월` : '일기'}</b><span>${ds.length}편</span></div>
-        ${days.length ? `<div class="ax_strip">${days.map(d => `<b class="${d === String(now).slice(0, 5) ? 'on' : ''} ${have.has(d) ? 'd' : ''}">${Number(d.slice(3))}</b>`).join('')}</div>` : ''}
-        ${ds.length ? ds.map(([y, k]) => `
+        <div class="ax_dymonth"><b>${x0 ? `${x0.mo}월` : '일기'}</b><span>${pick ? `${esc(fmtDate(p, pick))} · ${ds.length}편` : `${all.length}편`}</span></div>
+        ${days.length ? `<div class="ax_strip">${days.map(d => dayBtn('diary', d, pick, `${d === String(now).slice(0, 5) ? 'on' : ''} ${have.has(d) ? 'd' : ''}`, Number(d.slice(3)))).join('')}</div>` : ''}
+        ${pick && !ds.length ? '<div class="ax_empty">이날 쓴 일기가 없어요</div>' : ds.length ? ds.map(([y, k]) => `
           <button type="button" class="ax_dcard" data-go="diaryone" data-i="${k}"><span class="ax_dd"><b class="cg_num">${esc(String(parts(y.date)?.d || ''))}</b>${esc(`${parts(y.date)?.mo || ''}월`)}</span><span class="ax_dtx"><span class="ax_dh">${esc(y.title || '')}${y.kt && koOn() ? `<small>${esc(y.kt)}</small>` : ''}</span><span class="ax_dp">${esc(y.text.replace(/\s+/g, ' '))}</span></span></button>`).join('') : '<div class="ax_empty">일기가 없어요</div>'}
       </div>
       ${(busy => `<button type="button" class="ax_fab na_ph_write" data-k="diary" aria-label="오늘 일기 쓰기" ${busy ? 'disabled' : ''}>${busy ? `<span class="ax_fabbusy">${busyHtml}</span>` : ax('pen', 24, '#fbf8f2')}</button>`)(writing.has(`${nameKey(p.owner)}:diary`))}
@@ -1143,13 +1146,13 @@ function annivList(m, owner) {
     const rows = datedRows(m);
     return annivsOf(m).map(a => { const r = rows.find(x => sectionKey(x.s) === a.key); return r && rowDay(r) && annivMine(m, r, owner) ? { name: a.name, date: rowDay(r) } : null; }).filter(Boolean);
 }
-function calScreen(p, now, m) {
+function calScreen(p, now, m, pick = '') {
     const day = String(now).slice(0, 5), x0 = parts(now) || parts(p.events[0]?.date) || { mo: 1, d: 1 };
     const an = annivList(m, p.owner);
     const evs = p.events.map((e, k) => ({ e, k }));
     const marked = new Set([...p.events.map(e => e.date), ...an.map(a => a.date)]);
     const len = new Date(2000, x0.mo, 0).getDate();
-    const grid = Array.from({ length: len }, (_, n) => { const d = `${pad(x0.mo)}-${pad(n + 1)}`; return `<b class="${d === day ? 't' : ''} ${marked.has(d) ? 'e' : ''}">${n + 1}</b>`; }).join('');
+    const grid = Array.from({ length: len }, (_, n) => { const d = `${pad(x0.mo)}-${pad(n + 1)}`; return dayBtn('cal', d, pick, `${d === day ? 't' : ''} ${marked.has(d) ? 'e' : ''}`, n + 1); }).join('');
     const row = ({ e, k }, when = '') => `<button type="button" class="ax_ev" data-go="calone" data-i="${k}"><i style="background: ${AX_EVC[k % AX_EVC.length]}"></i><span class="ax_tx"><b>${esc(e.title)}</b>${e.ko && koOn() ? `<span class="ax_p">${esc(e.ko)}</span>` : ''}</span><small class="cg_num">${e.time ? esc(fmtTime(p, `${e.date} ${e.time}`)) : '하루 종일'}${when ? `<br>${esc(when)}` : ''}</small></button>`;
     const anRow = a => `<div class="ax_ev"><i style="background: #d494a7"></i><span class="ax_tx"><b>♥ ${esc(a.name)}</b><span class="ax_p">기념일 · 매년 ${esc(fmtDate(p, a.date))}</span></span></div>`;
     const soon = [...new Set(evs.filter(x => x.e.date >= day).map(x => x.e.date))].sort();
@@ -1160,10 +1163,10 @@ function calScreen(p, now, m) {
       <div class="ax_scroll">
         ${axH1(`${x0.mo}월`, p.events.length ? `일정 ${p.events.length}` : '')}
         <div class="ax_card"><div class="ax_cal7">${grid}</div></div>
-        ${soon.map(d => `<div class="ax_sec">${esc(fmtDate(p, d))}${d === day ? ' · 오늘' : ''}</div><div class="ax_card">${d === day ? an.filter(a => a.date === d).map(anRow).join('') : ''}${evs.filter(x => x.e.date === d).map(x => row(x)).join('')}</div>`).join('')}
+        ${pick ? `<div class="ax_sec">${esc(fmtDate(p, pick))}${pick === day ? ' · 오늘' : ''}</div>${(list => (list ? `<div class="ax_card">${list}</div>` : '<div class="ax_empty">이날 일정이 없어요</div>'))(`${an.filter(a => a.date === pick).map(anRow).join('')}${evs.filter(x => x.e.date === pick).map(x => row(x)).join('')}`)}` : `${soon.map(d => `<div class="ax_sec">${esc(fmtDate(p, d))}${d === day ? ' · 오늘' : ''}</div><div class="ax_card">${d === day ? an.filter(a => a.date === d).map(anRow).join('') : ''}${evs.filter(x => x.e.date === d).map(x => row(x)).join('')}</div>`).join('')}
         ${soon.length ? '' : '<div class="ax_sec">다가오는 일정 없음</div>'}
         ${an.length ? `<div class="ax_sec">기념일</div><div class="ax_card">${an.map(anRow).join('')}</div>` : ''}
-        ${past.length ? `<div class="ax_sec">지난 일정</div><div class="ax_card">${past.map(x => row(x, fmtDate(p, x.e.date, true))).join('')}</div>` : ''}
+        ${past.length ? `<div class="ax_sec">지난 일정</div><div class="ax_card">${past.map(x => row(x, fmtDate(p, x.e.date, true))).join('')}</div>` : ''}`}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
@@ -1359,9 +1362,9 @@ function screen(p, view, m, roster, ui) {
         : v === 'thread' ? threadScreen(p, now, Number(i), roster) : v === 'call' || v === 'callmiss' ? callScreen(p, now, roster, v === 'callmiss') : v === 'callwho' ? callWho(p, now, Number(i), roster)
         : v === 'photo' ? photoScreen(p, now) : v === 'photoone' ? photoView(p, now, Number(i))
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
-        : v === 'cal' ? calScreen(p, now, m) : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, now, m)
+        : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, now, m)
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
-        : v === 'diary' ? diaryScreen(p, now) : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'set' ? setScreen(p, now, m, ui) : v === 'settheme' ? setTheme(p, now) : v === 'setremake' ? setRemake(p, now, ui) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
+        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'set' ? setScreen(p, now, m, ui) : v === 'settheme' ? setTheme(p, now) : v === 'setremake' ? setRemake(p, now, ui) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app: drawn at the boards' size too, each its own app look
@@ -1524,7 +1527,7 @@ export async function openPhone(who = null) {
         const go = this.dataset.go;
         if (!go) return;
         e.stopPropagation();
-        view = ['thread', 'callwho', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost'].includes(go) ? `${go}:${this.dataset.i}` : go;
+        view = ['thread', 'callwho', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost'].includes(go) || (['cal', 'diary'].includes(go) && this.dataset.i) ? `${go}:${this.dataset.i}` : go;
         const mail = go === 'mailone' ? phone()?.mails?.[Number(this.dataset.i)] : null;
         if (mail?.unread) { mail.unread = false; saveMeta(); }
         const p0 = phone();
@@ -1577,7 +1580,7 @@ export async function openPhone(who = null) {
         writing.add(id); drawPhone(true);
         try {
             const k = await writeEntry(m, p, kind);
-            if (phone() === p && view === kind) view = `${kind === 'diary' ? 'diaryone' : 'noteone'}:${k}`;
+            if (phone() === p && view.split(':')[0] === kind) view = `${kind === 'diary' ? 'diaryone' : 'noteone'}:${k}`;
             toastr.success(kind === 'diary' ? '일기를 썼어요' : '메모를 썼어요', '캐릭터 휴대폰');
         } catch (err) { console.error('[narrative-archive] write', err); toastr.error(String(err?.message || err), kind === 'diary' ? '일기 쓰기 실패' : '메모 쓰기 실패'); }
         finally { writing.delete(id); if (phone() === p) drawPhone(); }
