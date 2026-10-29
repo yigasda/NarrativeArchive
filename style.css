@@ -4398,7 +4398,7 @@ body.na_darkui .na_ph_mapart { background: linear-gradient(90deg, rgba(255, 255,
 .na_pb_phonebtn { position: absolute; top: 10px; left: 10px; z-index: 1; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 11px 0 9px; border: 0; border-radius: 15px; background: rgba(0, 0, 0, 0.22); color: #fff; font: inherit; font-size: 0.8em; font-weight: 600; cursor: pointer; }
 .na_pb_phonebtn:hover { background: rgba(0, 0, 0, 0.4); }
 /* 캐릭터 휴대폰 under a theme that paints every button: the phone's buttons keep their own (see-through) look */
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame button:not(.na_ph_widget, .na_ph_kochip, .na_ph_makebtn, .na_ph_bar, .na_ph_thumb, .na_ph_draw, .cg_wcal, .cg_wnote, .cg_ic),
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame button:not(.na_ph_widget, .na_ph_kochip, .na_ph_makebtn, .na_ph_bar, .na_ph_thumb, .na_ph_draw, .cg_wcal, .cg_wnote, .cg_ic, .cg_nt),
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_pick:not(.on) { background: transparent !important; background-image: none !important; border-color: transparent !important; box-shadow: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_pick.on { background: var(--na-card2) !important; border-color: transparent !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_pb_phonebtn { background: rgba(0, 0, 0, 0.22) !important; border-color: transparent !important; color: #fff !important; }
@@ -4543,3 +4543,19 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .na_ph_seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--na-card2); }
 .na_ph_seg button { padding: 4px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--na-dim); font: inherit; font-size: 0.86em; cursor: pointer; }
 .na_ph_seg button.on { background: var(--na-card, #fff); color: inherit; font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+/* 잠금화면 · 클리어 글래스 (v3.114): the home's ground and glass; a thin big clock, notes as glass cards */
+.cg .cg_lock { cursor: pointer; }
+.cg_lk { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 0 16px; min-height: 0; }
+.cg_lkdate { margin-top: 18px; font-size: 19px; font-weight: 600; color: #3a4250; }
+.cg_lkclock { font-size: 108px; font-weight: 200; letter-spacing: -0.05em; line-height: 1; margin-top: 2px; }
+.cg_lknotes { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.cg .cg_nt { width: 100%; box-sizing: border-box; border-radius: 26px; padding: 13px 15px; display: flex; gap: 12px; align-items: flex-start; background: rgba(255, 255, 255, 0.32); }
+.cg .cg_mini { width: 38px; height: 38px; border-radius: 11px; }
+.cg_nttx { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cg_nttx b { font-size: 14.5px; font-weight: 600; }
+.cg_nttx > span { margin-top: 2px; font-size: 14.5px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cg_nttx .cg_ntko { margin-top: 1px; font-size: 12.5px; color: #59616d; }
+.cg_ntw { flex: none; margin-top: 2px; font-size: 12px; color: #59616d; }
+.cg_lkopen { margin: 14px 0 6px; font-size: 13px; color: #59616d; }
+.cg .cg_lkind { display: flex; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg .cg_nt { background: rgba(255, 255, 255, 0.32) !important; border-color: transparent !important; color: #161b22 !important; }
