@@ -14,10 +14,10 @@ export const RECALL_KEY = 'narrative_archive_recall';
 
 // ---- OOC 빼기: what is not the story, by kind. Each kind is switched on its own in the settings.
 
+// a /comment message is never the story, so it is always left out (no switch)
 export const OFF_KINDS = {
-    comment: ['/comment 코멘트', '분석 QR처럼 /comment로 넣은 메모', '코멘트'],
     ooc: ['OOC 메모', 'OOC:, 사담: 으로 시작하는 메시지', 'OOC 메모'],
-    narrator: ['/sys 내레이터 메시지', '상태창이나 선택지를 /sys로 띄우는 경우', '/sys'],
+    narrator: ['나레이터 메시지', '상태창이나 선택지를 나레이터로 띄우는 경우 (/sys)', '나레이터'],
 };
 // 3.69's single choice ('keep' | 'aside' | 'all') carries over the first time
 export function offKinds() {
@@ -26,7 +26,7 @@ export function offKinds() {
         const old = g.offstage;
         g.offKinds = old === 'keep' || old === '' ? { comment: false, ooc: false, narrator: false } : { comment: true, ooc: true, narrator: old === 'all' };
     }
-    return { comment: g.offKinds.comment !== false, ooc: g.offKinds.ooc !== false, narrator: g.offKinds.narrator === true };
+    return { ooc: g.offKinds.ooc !== false, narrator: g.offKinds.narrator === true };
 }
 export const setOffKind = (k, on) => { const g = globalSettings(); g.offKinds = { ...offKinds(), [k]: !!on }; saveGlobal(); };
 
@@ -35,7 +35,7 @@ const OOC_RE = /^\s*[([{【]?\s*(ooc|out of character|사담|잡담)\s*[:：)\]�
 export function isOffstage(msg, prev = null) {
     if (!msg) return false;
     const k = offKinds(), extra = msg.extra || {}, text = String(msg.mes || '');
-    if (k.comment && extra.type === 'comment') return true;
+    if (extra.type === 'comment') return true;
     if (k.ooc && OOC_RE.test(text)) return true;
     return k.narrator && extra.type === 'narrator';
 }
