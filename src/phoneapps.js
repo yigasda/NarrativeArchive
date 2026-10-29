@@ -85,7 +85,7 @@ const AX = {
     pen: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18',
     palette: 'M12 3a9 9 0 0 0 0 18c1 0 1.5-.6 1.5-1.4 0-.9-.7-1.3-.7-2.1 0-.8.6-1.5 1.5-1.5H17a4 4 0 0 0 4-4c0-5-4-9-9-9zM7.5 11h.01M10 7h.01M14.5 7h.01',
     lang: 'M4 6h9M8.5 4v2M6 6c0 4 3 7 6 8M11 6c0 3-3 7-7 8M14 20l4-9 4 9M15.5 17h5', user: 'M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 21a8 8 0 0 1 16 0',
-    info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v5M12 8h.01', in: 'M17 7L7 17M15 17H7V9', out: 'M7 17L17 7M9 7h8v8', missed: 'M4 7l6 6 4-4 6 6', x: 'M6 6l12 12M18 6L6 18',
+    info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v5M12 8h.01', dl: 'M12 4v11M7 10l5 5 5-5M5 20h14', again: 'M21 4v6h-6M20.5 10A8.5 8.5 0 1 0 19 16.5', in: 'M17 7L7 17M15 17H7V9', out: 'M7 17L17 7M9 7h8v8', missed: 'M4 7l6 6 4-4 6 6', x: 'M6 6l12 12M18 6L6 18',
     star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z', clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2',
     keypad: 'M4 4h4v4H4zM10 4h4v4h-4zM16 4h4v4h-4zM4 10h4v4H4zM10 10h4v4h-4zM16 10h4v4h-4zM4 16h4v4H4zM10 16h4v4h-4zM16 16h4v4h-4z', voice: 'M5 10v4M9 7v10M13 4v16M17 8v8M21 11v2',
     call: 'M6 3h3l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v3a2 2 0 0 1-2 2A17 17 0 0 1 4 5a2 2 0 0 1 2-2z', video: 'M3 7h12v10H3zM15 10l6-3v10l-6-3', mail: 'M3 6h18v12H3zM3 7l9 6 9-6',
@@ -136,9 +136,9 @@ export function snsPost(p, now, k) {
     return `${axBar(p, now)}
       <div class="ax_igtop ax_center"><button type="button" class="ax_back" data-go="sns" aria-label="뒤로">${ax('back', 26, '#111', 2.2)}</button><b>게시물</b><span class="ax_sp"></span></div>
       <div class="ax_scroll">
-        <div class="ax_posth"><span class="ax_ring ax_ring_s">${axFace(p.owner, 30)}</span><div><b>${esc(pr.handle || p.owner)}</b></div>${ax('more', 22, '#111', 3)}</div>
+        <div class="ax_posth"><span class="ax_ring ax_ring_s">${axFace(p.owner, 30)}</span><div><b>${esc(pr.handle || p.owner)}</b></div>${x.img ? `<button type="button" class="ax_postmore" data-k="${k}" aria-label="더 보기">${ax('more', 22, '#111', 3)}</button>` : ax('more', 22, '#111', 3)}</div>
         ${x.photo ? postPic(p, x, k) : ''}
-        <div class="ax_postact">${ax('heart', 26, '#ed4956', 2, '#ed4956')}${ax('cmt', 25, '#111', 1.9)}${ax('send', 24, '#111', 1.9)}<span class="ax_sp"></span>${ax('save', 24, '#111', 1.9)}</div>
+        <div class="ax_postact">${ax('heart', 26, '#ed4956', 2, '#ed4956')}${ax('cmt', 25, '#111', 1.9)}${ax('send', 24, '#111', 1.9)}<span class="ax_sp"></span>${x.img ? `<button type="button" class="ax_presssave ax_postsave" data-src="post" data-k="${k}" aria-label="사진 저장">${ax('save', 24, '#111', 1.9)}</button>` : ax('save', 24, '#111', 1.9)}</div>
         <div class="ax_postbody"><b>좋아요 ${x.likes.toLocaleString()}개</b></div>
         ${x.text ? `<div class="ax_postbody"><b>${esc(pr.handle || p.owner)}</b> ${axKo(x.text, x.ko)}</div>` : ''}
         ${x.comments.map(c => `<div class="ax_cmt"><b>${esc(savedName(p, c.from))}</b> ${axKo(c.text, c.ko)}</div>`).join('')}
@@ -301,6 +301,16 @@ export function photoScreen(p, now) {
       </div>
       ${axInd()}`;
 }
+// a drawn photo's tools, where the phone's photo app keeps them: 저장 · 정보 (the tags) · 다시 그리기
+function pvTools(p, x, k) {
+    const busy = drawing.has(`${nameKey(p.owner)}:${k}`);
+    return `<div class="ax_pvtools">
+          <button type="button" class="ax_presssave" data-src="photo" data-k="${k}">${ax('dl', 22, '#fff', 2)}<span>저장</span></button>
+          <button type="button" class="ax_pvinfo" aria-expanded="false">${ax('info', 22, '#fff', 2)}<span>정보</span></button>
+          <button type="button" class="na_ph_postdraw" data-src="photo" data-k="${k}" ${busy ? 'disabled' : ''}>${busy ? busyHtml : ax('again', 22, '#fff', 2)}<span>${busy ? '그리는 중' : '다시 그리기'}</span></button>
+        </div>
+        <div class="ax_pvtags" hidden><small>그린 태그${x.via === 'autopic' ? ' · 오토픽' : ''}</small><code>${esc(x.tags || '')}</code></div>`;
+}
 export function photoView(p, now, k) {
     const x = p.photos[k];
     if (!x) return photoScreen(p, now);
@@ -310,7 +320,7 @@ export function photoView(p, now, k) {
         : `<div class="ax_pvimg" style="background: ${axFlat(x.mood)}">${axPic(x, 60)}</div>`}
       <div class="ax_scroll">
         <div class="ax_pvcap"><p>${esc(x.caption)}${x.ko && koOn() ? `<span class="ax_k">${esc(x.ko)}</span>` : ''}</p></div>
-        ${x.img ? '' : `<div class="ax_pvbtns">${drawBtn(p, k, 'ax_pvdraw')}</div>`}
+        ${x.img ? pvTools(p, x, k) : `<div class="ax_pvbtns">${drawBtn(p, k, 'ax_pvdraw')}</div>`}
       </div>
       ${axInd('#fff')}`;
 }

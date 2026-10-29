@@ -5046,3 +5046,14 @@ body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .cg_wcal :is(.c
 .ax_presssheet .ax_btns { margin-top: 12px; }
 .ax_pvimg.na_ph_press { position: relative; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 .ax_pvimg.na_ph_press > img { pointer-events: none; -webkit-user-drag: none; }
+/* 사진's tools under a drawn photo, and SNS's ⋯ / 저장 as real buttons (v3.130) */
+.ax_pvtools { display: flex; justify-content: space-around; padding: 14px 14px 4px; }
+.ax .ax_pvtools > button { --axbg: none; display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 74px; padding: 6px 4px; font-size: 11.5px; font-weight: 600; color: rgba(255, 255, 255, 0.85); text-align: center; }
+.ax .ax_pvtools > button[aria-expanded="true"] { color: #f0cbb5; }
+.ax .ax_pvtools > button[aria-expanded="true"] svg { stroke: #f0cbb5; }
+.ax .ax_pvtools > button:disabled { opacity: 0.7; cursor: default; }
+.ax_pvtags { margin: 8px 14px 40px; padding: 12px 14px; border-radius: 18px; background: rgba(255, 255, 255, 0.06); }
+.ax_pvtags small { font-size: 11.5px; color: rgba(255, 255, 255, 0.55); font-weight: 600; letter-spacing: 0.04em; }
+.ax_pvtags code { display: block; margin-top: 6px; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; color: rgba(255, 255, 255, 0.8); white-space: pre-wrap; background: none; padding: 0; border: 0; user-select: text; -webkit-user-select: text; }
+.ax .ax_postmore, .ax .ax_postsave { --axbg: none; display: grid; place-items: center; }
+

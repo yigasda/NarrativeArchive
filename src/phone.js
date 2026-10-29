@@ -289,8 +289,23 @@ export async function openPhone(who = null) {
             a.href = URL.createObjectURL(blob);
             a.download = `${p.owner}_${album ? 'Photo' : 'SNS'}_${String(x.time || '').replace(/\D/g, '') || 'photo'}.${(blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`;
             document.body.append(a); a.click(); a.remove();
+            toastr.success('사진을 저장했어요', '캐릭터 휴대폰');
             setTimeout(() => URL.revokeObjectURL(a.href), 10000);
         } catch (err) { console.error('[narrative-archive] save photo', err); toastr.error(String(err?.message || err), '사진 저장 실패'); }
+    });
+    // the same sheet from SNS's ⋯; 사진's 정보 opens the tags under the caption
+    $root.on('click', '.ax_postmore', function (e) {
+        e.stopPropagation();
+        const el = $root.find(`.na_ph_press[data-src="post"][data-k="${this.dataset.k}"]`)[0];
+        if (!el) return;
+        if ($(el).find('.ax_presssheet').length) { $(el).find('.ax_presssheet').remove(); return; }
+        pressSheet(el); justPressed = false;
+    });
+    $root.on('click', '.ax_pvinfo', function (e) {
+        e.stopPropagation();
+        const open = this.getAttribute('aria-expanded') !== 'true';
+        this.setAttribute('aria-expanded', String(open));
+        $root.find('.ax_pvtags').prop('hidden', !open);
     });
     $root.on('pointerdown', '.na_ph_press', function () { const el = this; clearTimeout(pressT); pressT = setTimeout(() => { pressT = null; pressSheet(el); }, 500); });
     $root.on('pointerup pointerleave pointercancel', '.na_ph_press', () => { clearTimeout(pressT); pressT = null; });
