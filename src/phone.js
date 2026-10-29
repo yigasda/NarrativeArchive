@@ -573,20 +573,31 @@ A character in a long role-play searched this on their phone. Write the results 
 
 YOU GET
 - OWNER, QUERY, and when it was searched.
-- STORY: the archive around that day, for where and when the owner is.
+- WHERE: the country the phone is set to, and the places the owner was that day.
 
 RULES
 - The results are what the web of the story's world would show for this query: sites, articles, shops, places, forums.
 - The web knows only what is public. The owner and the people around them are not on it, unless the story makes them public.
 - Each result in the language a site for this query would use. A result not in Korean gets "kt" (its title in Korean) and "ko" (its text in Korean).
+- Each result is a different site with something different to say.
 - 4 to 6 results.
 
 ANSWER — one JSON object, nothing else:
 { "results": [{ "site": the site's name, "url": a short address like "site.com/page", "title", "kt", "text": a one- or two-line snippet, "ko" }] }`;
 const searching = new Set(); // "owner:index" of searches whose page is being made
+// where the owner was the day of a search: the places in that day's headings (not the story itself, so the page
+// answers the query and not the scene)
+function placesThatDay(m, time) {
+    const cals = calendars(), rows = datedRows(m).filter(r => rowDay(r)), x = parts(time), day = x ? `${pad(x.mo)}-${pad(x.d)}` : '';
+    let hit = day ? rows.filter(r => rowDay(r) === day) : [];
+    if (!hit.length && day) hit = rows.filter(r => rowDay(r) <= day).slice(-1);
+    if (!hit.length) hit = rows.slice(-1);
+    return [...new Set(hit.flatMap(r => headingPlaces(r.s.title, cals)))].slice(0, 6);
+}
 async function searchPage(m, p, k) {
     const x = p.searches[k];
-    const prompt = [`[OWNER]\n${p.owner}`, `[QUERY]\n${x.q}`, `[SEARCHED]\n${x.time || p.now || ''}`, `[STORY]\n${storyAround(m, x.time) || '(none)'}`, namesBlock(m)].filter(Boolean).join('\n\n');
+    const where = [p.country ? `Country: ${COUNTRIES[p.country] ? `${p.country} (${COUNTRIES[p.country]})` : p.country}` : '', (pl => (pl.length ? `Places that day: ${pl.join(', ')}` : ''))(placesThatDay(m, x.time))].filter(Boolean).join('\n');
+    const prompt = [`[OWNER]\n${p.owner}`, `[QUERY]\n${x.q}`, `[SEARCHED]\n${x.time || p.now || ''}`, `[WHERE]\n${where || '(unknown)'}`, namesBlock(m)].filter(Boolean).join('\n\n');
     const out = String(await askAI(prompt, { system: AI_SYS_SEARCH, maxTokens: 2500 }) || '').replace(/```(?:json)?/gi, '');
     const a = out.indexOf('{'), b = out.lastIndexOf('}');
     let raw = null;
