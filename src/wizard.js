@@ -28,7 +28,11 @@ YOU GET
 
 HOW TO WORK
 Step 1. Read the whole RAW LOG, to the last message.
-Step 2. Go through the SUMMARY one bullet at a time. For each bullet, find the messages it is based on.
+Step 2. Go through the SUMMARY one bullet at a time. For each bullet, find the messages it is based on, and check
+   two kinds of words against them on their own:
+   - every word that says who someone is to someone (ex, suitor, friend, fiancé, stranger…);
+   - every word that says how something was said or done (quietly, warned, pleaded, shouted, calmly…).
+   One wrong word of these is a problem even when the rest of the bullet is right.
 Step 3. Then go through the RAW LOG again and look for important things the SUMMARY never mentions.
 
 REPORT ONLY THESE
@@ -36,17 +40,18 @@ REPORT ONLY THESE
     e.g. the summary says Ren cried; in the log she only went quiet.
 2. 틀림 (wrong): it is in the log but the summary gets it wrong: wrong person, wrong speaker of a quote, wrong order, wrong place or time, a quote with changed words, or a heading whose #from–#to does not match the messages.
     e.g. the summary says Ivo said "…", but in the log Mara said it.
+    e.g. the summary calls Ivo her suitor; in the log Mara says she already ended it with him, so he is her ex.
 3. 빠짐 (missing): an important event, decision, promise, confession, secret revealed, injury, or change in a relationship that the SUMMARY leaves out.
     Small talk, repeated actions and atmosphere are NOT important.
-    A stretch listed after the RAW LOG as a scene to keep in detail counts as missing when the SUMMARY drops it or squeezes it into a vague line.
-4. 해석 (interpretation): a feeling, motive or judgment the SUMMARY states as fact when the RAW LOG only shows actions and words.
+4. 해석 (interpretation): a feeling, motive or judgment the SUMMARY states as fact when the RAW LOG only shows actions and words,
+   or a manner the log does not show (it says "quietly warned" where the log has her plead, or "calmly" where she shouts).
     e.g. the summary says Ren was jealous; in the log she only changed the subject.
 
 DO NOT REPORT
 - wording, style, length, or how something could be phrased better
 - the summary being shorter than the log: shortening is its job
 - STATE and OPEN facts that come from before this log (they carry over from the archive); only check what they say about events in this log
-- anything you are not sure about
+- a 지어냄 you are not sure about after reading the log again
 
 OUTPUT: Korean, one bullet per problem, most serious first, exactly like this
 - 지어냄: <what is wrong> (#<message number>)
