@@ -4916,8 +4916,8 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 
 /* ============ 캐릭터 휴대폰 · 한 겹: the phone over the whole screen (a dialog of its own), the people on top, ⚙ for the rest */
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl {
-    position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; min-width: 0; min-height: 0;
-    margin: 0; padding: 0; border: 0 !important; border-radius: 0; box-shadow: none !important; overflow: hidden;
+    position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100dvh !important; max-width: none !important; max-height: none !important; min-width: 0 !important; min-height: 0 !important;
+    margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; overflow: hidden; transform: none !important;
     background: rgba(12, 10, 9, 0.95) !important; color: #fff !important; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
 }
 dialog.popup.na_phl::backdrop { background: transparent; }
