@@ -4457,6 +4457,18 @@ button.na_ph_lorebtn { width: 100%; border: 0; font: inherit; color: inherit; te
 .na_ph_lorelist > small { margin-top: 4px; color: var(--na-dim); font-size: 0.8em; }
 /* the books in a box of their own that scrolls, so a long list does not push the phone away */
 .na_ph_lorescroll { display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; overscroll-behavior: contain; margin: 0 -4px; padding: 0 4px; }
+.na_ph_lorebook { display: flex; align-items: center; gap: 4px; }
+.na_ph_lorebook .na_ph_loreitem { flex: 1; min-width: 0; }
+.na_ph_lorename { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.na_ph_loreitem small { flex: none; color: var(--na-dim); font-size: 0.85em; font-variant-numeric: tabular-nums; }
+.na_ph_loreexp { flex: none; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 9px; background: transparent; color: var(--na-dim); cursor: pointer; }
+.na_ph_loreexp:hover, .na_ph_loreexp.on { background: var(--na-card2); color: var(--na-accent); }
+.na_ph_loreents { display: flex; flex-direction: column; gap: 1px; margin: 0 0 6px 28px; padding-left: 8px; border-left: 2px solid var(--na-line); }
+.na_ph_loreent { display: flex; align-items: center; gap: 4px; padding: 4px 2px; cursor: pointer; font-size: 0.86em; }
+.na_ph_loreent .na_ck { margin: 0 4px 0 0; width: 16px; height: 16px; }
+.na_ph_loreent > span:not(.na_ck) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.na_ph_loreent em { flex: none; font-style: normal; font-size: 0.82em; padding: 0 6px; border-radius: 999px; background: var(--na-card2); color: var(--na-dim); }
+.na_ph_lorewait { padding: 4px 2px; color: var(--na-dim); font-size: 0.85em; }
 .na_ph_loreitem { display: flex; align-items: center; gap: 6px; padding: 6px 2px; cursor: pointer; font-size: 0.92em; }
 .na_ph_loreitem .na_ck { margin: 0 4px 0 0; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_ph_lorebtn { background: var(--na-card2) !important; border-color: transparent !important; color: inherit !important; }

@@ -174,14 +174,17 @@ export const newSections = (m, p) => (p ? parseSections(String(m.text || '')).fi
 // then the always-on ones, then the rest, while there is room
 const LORE_MAX = 20_000;
 export const phoneLore = m => (Array.isArray(m.phoneLore) ? m.phoneLore.filter(Boolean) : []);
+// entries of a picked book left out by hand: m.phoneLoreOff = { [book]: [uid, …] }
+export const loreOff = (m, book) => new Set((m.phoneLoreOff && typeof m.phoneLoreOff === 'object' && Array.isArray(m.phoneLoreOff[book]) ? m.phoneLoreOff[book] : []).map(String));
 export async function loreFor(m, owner) {
     const c = ctx(), re = nameRe(owner), items = [];
     for (const name of phoneLore(m)) {
         let data = null;
         try { data = await c.loadWorldInfo(name); } catch { /* a book that is gone */ }
-        for (const e of Object.values(data?.entries || {})) {
+        const off = loreOff(m, name);
+        for (const [uid, e] of Object.entries(data?.entries || {})) {
             const body = String(e?.content || '').trim();
-            if (!body || e.disable) continue;
+            if (!body || e.disable || off.has(String(e.uid ?? uid))) continue;
             const title = String(e.comment || (e.key || []).join(', ')).trim();
             const mine = [body, title, ...(e.key || []), ...(e.keysecondary || [])].some(x => re.test(String(x)));
             items.push({ text: `- ${title ? `${title}: ` : ''}${body}`, rank: mine ? 0 : e.constant ? 1 : 2 });
@@ -1188,6 +1191,7 @@ export async function openPhone(who = null) {
     const roster = new Set(names.map(nameKey));
     let owner = who && names.some(n => nameKey(n) === nameKey(who)) ? names.find(n => nameKey(n) === nameKey(who)) : (names.find(n => m.phones[nameKey(n)]) || names[0] || null);
     let view = 'lock', menu = false, sheet = false, adding = false, loreOpen = false;
+    const loreExp = new Set(), loreEnts = new Map(); // books opened to their entries, and their entries once read
     const $root = $(`
       <div class="na_popup na_v2 na_phone">
         <div class="na_v2_titlebar"><div class="na_v2_title"><b>캐릭터 휴대폰</b><small>아카이브에 있는 만큼만 · 보기 전용</small></div><button type="button" class="na_v2_pillbtn na_ph_fullbtn">${ic('full', 14, 2.2)}폰만 보기</button></div>
@@ -1225,12 +1229,26 @@ export async function openPhone(who = null) {
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
     };
+    // 참고 로어북: each book with its switch; › opens its entries, each with its own (a book with some left out shows −)
+    const LCK = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path class="na_ck_v" d="M5 12.5l4.5 4.5L19 7.5"/><path class="na_ck_p" d="M6 12h12"/></svg>';
+    const loreSum = () => { const on = phoneLore(m); return on.length ? on.map(b => (loreOff(m, b).size ? `${b} (일부)` : b)).join(', ') : '없음 · 아카이브만 읽어요'; };
     const loreRow = () => {
         const on = phoneLore(m);
         const all = loreOpen ? (ctx().getWorldInfoNames?.() || []) : [];
+        const book = b => {
+            const picked = on.includes(b), off = loreOff(m, b), ents = loreEnts.get(b), open = loreExp.has(b);
+            const n = ents ? ents.length : 0, onN = picked ? (ents ? ents.filter(e => !off.has(e.uid)).length : null) : 0;
+            return `
+              <div class="na_ph_lorebook">
+                <label class="na_ph_loreitem"><span class="na_ck ${picked && off.size ? 'part' : ''}"><input type="checkbox" class="na_ph_lorepick" value="${esc(b)}" ${picked ? 'checked' : ''}>${LCK}</span><span class="na_ph_lorename">${esc(b)}</span>${ents && picked && off.size ? `<small>${onN}/${n}</small>` : ''}</label>
+                <button type="button" class="na_ph_loreexp ${open ? 'on' : ''}" data-b="${esc(b)}" aria-label="${open ? '항목 닫기' : '항목 보기'}" aria-expanded="${open}">${ic(open ? 'down' : 'right', 15, 2.2)}</button>
+              </div>
+              ${open ? `<div class="na_ph_loreents">${!ents ? `<small class="na_ph_lorewait">${busyHtml} 항목 읽는 중</small>` : ents.length ? ents.map(e => `
+                <label class="na_ph_loreent"><span class="na_ck"><input type="checkbox" class="na_ph_loreentpick" data-b="${esc(b)}" data-u="${esc(e.uid)}" ${picked && !off.has(e.uid) ? 'checked' : ''}>${LCK}</span><span>${esc(e.title)}</span>${e.always ? '<em>항상</em>' : ''}</label>`).join('') : '<small class="na_ph_lorewait">쓸 수 있는 항목이 없어요</small>'}</div>` : ''}`;
+        };
         return `
-          <button type="button" class="na_ph_crow na_ph_lorebtn"><span><b>참고 로어북</b><small>${on.length ? esc(on.join(', ')) : '없음 · 아카이브만 읽어요'}</small></span>${ic(loreOpen ? 'down' : 'right', 16, 2.2)}</button>
-          ${loreOpen ? `<div class="na_ph_lorelist">${all.length ? `<div class="na_ph_lorescroll">${all.map(b => `<label class="na_ph_loreitem"><span class="na_ck"><input type="checkbox" class="na_ph_lorepick" value="${esc(b)}" ${on.includes(b) ? 'checked' : ''}><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path class="na_ck_v" d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>${esc(b)}</span></label>`).join('')}</div>` : '<div class="na_empty">로어북이 없어요</div>'}<small>이 채팅의 모든 폰이 같이 읽어요 · 2만 토큰까지 통째로</small></div>` : ''}`;
+          <button type="button" class="na_ph_crow na_ph_lorebtn"><span><b>참고 로어북</b><small>${esc(loreSum())}</small></span>${ic(loreOpen ? 'down' : 'right', 16, 2.2)}</button>
+          ${loreOpen ? `<div class="na_ph_lorelist">${all.length ? `<div class="na_ph_lorescroll">${all.map(book).join('')}</div>` : '<div class="na_empty">로어북이 없어요</div>'}<small>이 채팅의 모든 폰이 같이 읽어요 · 2만 토큰까지 통째로</small></div>` : ''}`;
     };
     const drawCtrl = () => {
         const p = phone();
@@ -1277,11 +1295,37 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_fullx', () => $root.removeClass('na_ph_full'));
     $root.on('click', '.na_ph_wrap', e => { if (e.target === e.currentTarget && $root.hasClass('na_ph_full')) $root.removeClass('na_ph_full'); });
     $root.on('click', '.na_ph_lorebtn', () => { loreOpen = !loreOpen; drawCtrl(); });
+    // the list is drawn again on every switch; where it was scrolled to stays
+    const redrawLore = () => { const top = $root.find('.na_ph_lorescroll').scrollTop(); drawCtrl(); $root.find('.na_ph_lorescroll').scrollTop(top); };
+    const setOff = (b, uids) => { m.phoneLoreOff = m.phoneLoreOff && typeof m.phoneLoreOff === 'object' ? m.phoneLoreOff : {}; if (uids.size) m.phoneLoreOff[b] = [...uids]; else delete m.phoneLoreOff[b]; };
+    const setOn = (b, yes) => { const set = new Set(phoneLore(m)); if (yes) set.add(b); else set.delete(b); m.phoneLore = [...set]; };
     $root.on('change', '.na_ph_lorepick', async function () {
-        const set = new Set(phoneLore(m));
-        if (this.checked) set.add(this.value); else set.delete(this.value);
-        m.phoneLore = [...set];
-        $root.find('.na_ph_lorebtn small').text(m.phoneLore.length ? m.phoneLore.join(', ') : '없음 · 아카이브만 읽어요');
+        // a whole book: on with every entry, or off
+        setOn(this.value, this.checked); setOff(this.value, new Set());
+        redrawLore();
+        await saveMeta();
+    });
+    $root.on('click', '.na_ph_loreexp', async function () {
+        const b = this.dataset.b;
+        if (loreExp.has(b)) { loreExp.delete(b); return redrawLore(); }
+        loreExp.add(b); redrawLore();
+        if (loreEnts.has(b)) return;
+        let data = null;
+        try { data = await ctx().loadWorldInfo(b); } catch { /* a book that is gone */ }
+        loreEnts.set(b, Object.entries(data?.entries || {})
+            .filter(([, e]) => String(e?.content || '').trim() && !e.disable)
+            .map(([uid, e]) => ({ uid: String(e.uid ?? uid), title: String(e.comment || (e.key || []).join(', ') || String(e.content).slice(0, 40)).trim(), always: !!e.constant })));
+        redrawLore();
+    });
+    $root.on('change', '.na_ph_loreentpick', async function () {
+        const b = this.dataset.b, u = this.dataset.u, ents = loreEnts.get(b) || [];
+        const wasOn = phoneLore(m).includes(b);
+        // an entry ticked in a book that was off: that book, with only this entry
+        const off = wasOn ? loreOff(m, b) : new Set(ents.map(e => e.uid));
+        if (this.checked) off.delete(u); else off.add(u);
+        const left = ents.filter(e => !off.has(e.uid)).length;
+        setOn(b, left > 0); setOff(b, left > 0 ? off : new Set());
+        redrawLore();
         await saveMeta();
     });
     $root.on('click', '.na_ph_frame [data-go]', function (e) {
