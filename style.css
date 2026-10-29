@@ -4244,7 +4244,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 .na_ph_frame :where(button) { appearance: none; -webkit-appearance: none; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; color: inherit; font: inherit; text-align: inherit; width: auto; height: auto; min-height: 0; cursor: pointer; }
 /* small text: the colour of where it sits (white on glass), grey in app lists — stronger than the popups' small rule */
 .na_v2 .na_ph_scr small:not([class]) { color: var(--ph-small, inherit); }
-.na_ph_scr.app :is(.na_ph_row, .na_ph_pc, .na_ph_ev, .na_ph_notebody, .na_ph_title) { --ph-small: var(--pd); }
+.na_ph_scr.app :is(.na_ph_row, .na_ph_pc, .na_ph_ev, .na_ph_notebody, .na_ph_title, .na_ph_lrow, .na_ph_sheethead) { --ph-small: var(--pd); }
 .na_ph_scr { position: relative; height: 100%; display: flex; flex-direction: column; overflow: hidden; border-radius: 37px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 14px; line-height: 1.4; letter-spacing: -0.01em; }
 .na_ph_sb { flex: none; display: flex; justify-content: space-between; align-items: center; padding: 13px 26px 4px; font-size: 13px; font-weight: 600; }
 .na_ph_sb i { display: inline-flex; gap: 5px; align-items: center; font-style: normal; }
@@ -4405,7 +4405,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 
 /* 사진 그리기 (v3.108): a 그리기 pill on a photo with no picture yet; a tapped photo opens big with its tags */
 .na_ph_pc { position: relative; }
-.na_ph_thumb { display: grid !important; place-items: center; width: 100% !important; overflow: hidden; }
+.na_ph_thumb { display: grid; place-items: center; width: 100%; overflow: hidden; cursor: pointer; }
 .na_ph_thumb img, .na_ph_big img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .na_ph_draw { display: inline-flex !important; align-items: center; justify-content: center; gap: 5px; border-radius: 999px !important; font-size: 11.5px !important; font-weight: 600 !important; }
 .na_ph_draw.on_thumb { position: absolute; top: 62px; right: 6px; padding: 4px 10px !important; background: rgba(0, 0, 0, 0.38) !important; color: #fff !important; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
@@ -4421,7 +4421,27 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 .na_ph_tags { margin-top: 12px; color: var(--pd); font-size: 12px; }
 .na_ph_tags summary { cursor: pointer; }
 .na_ph_tags code { display: block; margin-top: 6px; padding: 8px 10px; border-radius: 10px; background: var(--pf2); color: var(--pt); font-size: 11.5px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text; }
-/* 인물 도감: 그림 태그 under the name */
-button.na_pb_looks { max-width: 100%; padding: 2px 8px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 0.8em; color: var(--na-dim); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-button.na_pb_looks b { color: var(--na-accent); font-weight: 600; margin-right: 3px; }
-.na_pb_looksedit textarea.text_pole { width: 100%; resize: vertical; font-size: 0.88em; }
+/* 사진첩 외모 (v3.110): a sheet that rises over the album */
+.na_ph_headr { display: inline-flex; align-items: center; gap: 6px; }
+.na_ph_looksbtn { display: inline-flex !important; align-items: center; gap: 4px; color: var(--ph-acc) !important; }
+.na_ph_shade { position: absolute; inset: 0; z-index: 4; background: rgba(0, 0, 0, 0.32); cursor: pointer; }
+.na_ph_sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; flex-direction: column; max-height: 80%; padding: 8px 16px 18px; border-radius: 22px 22px 0 0; background: var(--pf); color: var(--pt); box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.18); animation: na_ph_up 0.22s ease-out; }
+@keyframes na_ph_up { from { transform: translateY(40%); opacity: 0.4; } to { transform: none; opacity: 1; } }
+.na_ph_grab { flex: none; width: 38px; height: 5px; margin: 0 auto 10px; border-radius: 3px; background: var(--pl); }
+.na_ph_sheethead { flex: none; display: flex; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
+.na_ph_sheethead b { flex: 1; font-size: 17px; }
+.na_ph_sheethead small { display: block; margin-top: 2px; color: var(--pd); font-size: 11.5px; font-weight: 400; }
+.na_ph_done { color: var(--ph-acc) !important; font-weight: 600 !important; font-size: 15px !important; padding: 2px 4px !important; }
+.na_ph_lrows { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.na_ph_lrow { display: flex; gap: 10px; padding: 10px 0; border-top: 0.5px solid var(--pl); }
+.na_ph_lrow > div { flex: 1; min-width: 0; }
+.na_ph_lrow b { font-size: 14px; }
+.na_ph_lrow small { display: block; margin-top: 4px; color: var(--pd); font-size: 11.5px; }
+.na_ph_apbadge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, #8b5cf6 16%, transparent); color: #7c4dde; font-size: 10.5px; font-weight: 600; vertical-align: 1px; }
+body.na_darkui .na_ph_apbadge { color: #b79bff; }
+.na_ph_lta { display: block; width: 100%; box-sizing: border-box; margin-top: 5px; min-height: 44px; padding: 7px 10px; border: 1px solid transparent; border-radius: 10px; background: var(--pf2); color: var(--pt); font: inherit; font-size: 12.5px; line-height: 1.45; resize: none; field-sizing: content; user-select: text; -webkit-user-select: text; }
+.na_ph_lta:focus { outline: none; border-color: var(--ph-acc); }
+.na_ph_lta::placeholder { color: var(--pd); }
+.na_ph_lta.off { opacity: 0.5; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup textarea.na_ph_lta { background: var(--pf2) !important; color: var(--pt) !important; border-color: transparent !important; box-shadow: none !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup textarea.na_ph_lta:focus { border-color: var(--ph-acc) !important; }

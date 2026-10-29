@@ -435,6 +435,7 @@ const ICO = {
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     heart: '<path d="M12 20.5s-7.8-4.7-9.7-9.5C1 7.6 3.2 4.5 6.6 4.5c2.2 0 3.8 1.2 5.4 3.1 1.6-1.9 3.2-3.1 5.4-3.1 3.4 0 5.6 3.1 4.3 6.5-1.9 4.8-9.7 9.5-9.7 9.5z"/>',
     lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
     redo: '<path d="M21 4v6h-6"/><path d="M20.5 10A8.5 8.5 0 1 0 19 16.5"/>',
 };
 const ic = (k, s = 18, w = 2) => `<svg class="na_ph_i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]}</svg>`;
@@ -495,10 +496,10 @@ function homeScreen(p, now, m) {
       </div>`;
 }
 
-const head = (p, title, { back = 'home', sub = '', chip = true } = {}) => `
+const head = (p, title, { back = 'home', sub = '', chip = true, extra = '' } = {}) => `
   <div class="na_ph_head">
     <button type="button" class="na_ph_back" data-go="${back}" aria-label="뒤로">${ic('back', 20, 2.4)}</button>
-    ${chip && hasKo(p) ? `<button type="button" class="na_ph_kochip ${koOn() ? 'on' : ''}">가 한국어</button>` : ''}
+    <span class="na_ph_headr">${extra}${chip && hasKo(p) ? `<button type="button" class="na_ph_kochip ${koOn() ? 'on' : ''}">가 한국어</button>` : ''}</span>
   </div>
   <div class="na_ph_title">${esc(title)}${sub ? `<small>${esc(sub)}</small>` : ''}</div>`;
 const empty = t => `<div class="na_ph_empty">${esc(t)}</div>`;
@@ -551,10 +552,31 @@ const drawBtn = (p, k, cls = '') => { const busy = drawing.has(`${nameKey(p.owne
 const thumb = (x, size = 26) => (x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy">` : ic(MOOD_ICO[x.mood] || 'photo', size, 1.6));
 function photoScreen(p) {
     const ps = p.photos.map((x, k) => [x, k]).reverse();
-    return `${head(p, '사진', { sub: ps.length ? `${ps.length}장` : '' })}
+    return `${head(p, '사진', { sub: ps.length ? `${ps.length}장` : '', extra: `<button type="button" class="na_ph_kochip na_ph_looksbtn">${ic('user', 12, 2.4)} 외모</button>` })}
       <div class="na_ph_photos">${ps.length ? ps.map(([x, k]) => `
-        <div class="na_ph_pc"><button type="button" class="na_ph_thumb m_${x.mood} ${x.img ? 'has' : ''}" data-go="photoone" data-i="${k}" aria-label="크게 보기">${thumb(x)}</button>${x.img ? '' : drawBtn(p, k, 'on_thumb')}<p>${tr(p, x.caption, x.ko)}<small>${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</small></p></div>`).join('') : empty('사진이 없어요')}</div>`;
+        <div class="na_ph_pc"><div class="na_ph_thumb m_${x.mood} ${x.img ? 'has' : ''}" data-go="photoone" data-i="${k}" role="button" tabindex="0" aria-label="크게 보기">${thumb(x)}</div>${x.img ? '' : drawBtn(p, k, 'on_thumb')}<p>${tr(p, x.caption, x.ko)}<small>${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</small></p></div>`).join('') : empty('사진이 없어요')}</div>`;
 }
+// 외모: a sheet over the album with everyone's looks for drawing (every chat). AutoPic's registered looks come first
+function looksSheet(m) {
+    const looks = looksOf(), ap = autopic() ? autopicPeople() : [];
+    const rows = peopleList(m).map(n => {
+        const reg = ap.find(x => nameKey(x.name) === nameKey(n));
+        return `
+          <div class="na_ph_lrow">${faceHtml(n, 40)}<div>
+            <b>${esc(n)}</b>${reg ? '<span class="na_ph_apbadge">오토픽 외모 사용</span>' : ''}
+            ${reg ? `<div class="na_ph_lta off">${esc(reg.prompt || '(오토픽에 외모 없음)')}</div><small>오토픽에 등록된 외모가 먼저 들어가요</small>`
+                : `<textarea class="na_ph_lta" data-n="${esc(n)}" rows="2" spellcheck="false" placeholder="외모 태그 (머리 · 눈 · 피부 · 체형 · 키)">${esc(looks[nameKey(n)] || '')}</textarea>`}
+          </div></div>`;
+    }).join('');
+    return `
+      <div class="na_ph_shade na_ph_lclose"></div>
+      <div class="na_ph_sheet">
+        <div class="na_ph_grab"></div>
+        <div class="na_ph_sheethead"><b>인물 외모<small>사진 그릴 때 들어가요 · 모든 채팅</small></b><button type="button" class="na_ph_lclose na_ph_done">완료</button></div>
+        <div class="na_ph_lrows">${rows || empty('인물이 없어요')}</div>
+      </div>`;
+}
+
 function photoView(p, k) {
     const x = p.photos[k];
     if (!x) return photoScreen(p);
@@ -636,7 +658,7 @@ export async function openPhone(who = null) {
     const names = peopleList(m);
     const roster = new Set(names.map(nameKey));
     let owner = who && names.some(n => nameKey(n) === nameKey(who)) ? names.find(n => nameKey(n) === nameKey(who)) : (names.find(n => m.phones[nameKey(n)]) || names[0] || null);
-    let view = 'lock', menu = false;
+    let view = 'lock', menu = false, sheet = false;
     const $root = $(`
       <div class="na_popup na_v2 na_phone">
         <div class="na_v2_title"><b>캐릭터 휴대폰</b><small>아카이브에 있는 만큼만 · 보기 전용</small></div>
@@ -666,6 +688,7 @@ export async function openPhone(who = null) {
         }
         const top = keep ? $root.find('.na_ph_body').scrollTop() : 0;
         $root.find('.na_ph_frame').html(screen(p, view, m, roster));
+        if (sheet && view === 'photo') $root.find('.na_ph_scr').append(looksSheet(m));
         if (keep) $root.find('.na_ph_body').scrollTop(top);
     };
     const drawCtrl = () => {
@@ -694,16 +717,26 @@ export async function openPhone(who = null) {
         toastr.success(update ? '새로 일어난 일을 폰에 넣었어요' : `${owner}의 폰을 만들었어요`, '캐릭터 휴대폰');
     };
     // the screen changes first; saving waits
-    $root.on('click', '.na_ph_pick', function () { owner = this.dataset.n; view = 'lock'; menu = false; draw(); });
+    $root.on('click', '.na_ph_pick', function () { owner = this.dataset.n; view = 'lock'; menu = false; sheet = false; draw(); });
     $root.on('click', '.na_ph_frame [data-go]', function (e) {
         const go = this.dataset.go;
         if (!go) return;
         e.stopPropagation();
         view = ['thread', 'noteone', 'photoone'].includes(go) ? `${go}:${this.dataset.i}` : go;
+        sheet = false;
         drawPhone();
         $root.find('.na_ph_body').scrollTop(view.startsWith('thread') ? 1e6 : 0);
     });
-    $root.on('click', '.na_ph_kochip', e => { e.stopPropagation(); const g = globalSettings(); g.phoneKo = !koOn(); drawPhone(); if (view.startsWith('thread')) $root.find('.na_ph_body').scrollTop(1e6); saveGlobal(); });
+    $root.on('click', '.na_ph_looksbtn', e => { e.stopPropagation(); sheet = true; drawPhone(true); });
+    $root.on('click', '.na_ph_lclose', e => { e.stopPropagation(); sheet = false; drawPhone(true); });
+    // each box is kept as it is left
+    $root.on('change', '.na_ph_lta[data-n]', function () {
+        const g = globalSettings(), v = String(this.value || '').replace(/\s+/g, ' ').trim();
+        g.looks = g.looks && typeof g.looks === 'object' ? g.looks : {};
+        if (v) g.looks[nameKey(this.dataset.n)] = v; else delete g.looks[nameKey(this.dataset.n)];
+        saveGlobal();
+    });
+    $root.on('click', '.na_ph_kochip:not(.na_ph_looksbtn)', e => { e.stopPropagation(); const g = globalSettings(); g.phoneKo = !koOn(); drawPhone(); if (view.startsWith('thread')) $root.find('.na_ph_body').scrollTop(1e6); saveGlobal(); });
     $root.on('click', '.na_ph_makebtn', function () { make($(this), false); });
     // one photo at a time; the screen can change while it draws
     $root.on('click', '.na_ph_draw', async function (e) {
