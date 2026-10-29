@@ -430,7 +430,7 @@ export async function openAppend(prefill = {}) {
         <div class="na_v2_row2 na_ap_tools">
           <button type="button" class="na_v2_btn na_append_file_btn">${svgA('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>', 15)}파일 불러오기</button>
           <button type="button" class="na_v2_btn na_ap_style" title="문장 결만 아카이브처럼 다듬어요 · 내용 · 출처 번호 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 보내요 · AI 기능 모델">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>', 15)}문체 다듬기</button>
-          ${pre.grade ? '' : `<button type="button" class="na_v2_btn na_ap_grade" title="붙여넣은 섹션을 그 번호의 원문과 맞춰 봐요 · AI 기능 모델">${svgA('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14l2 2 4-4"/>', 15)}원문 대조</button>`}
+          ${pre.grade || pre.gradeLater ? '' : `<button type="button" class="na_v2_btn na_ap_grade" title="붙여넣은 섹션을 그 번호의 원문과 맞춰 봐요 · AI 기능 모델">${svgA('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14l2 2 4-4"/>', 15)}원문 대조</button>`}
         </div>
         <input type="file" class="na_append_file" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden>
         ${true ? `<div class="na_apf" hidden>
@@ -928,7 +928,7 @@ export async function openAppend(prefill = {}) {
         const { rangeRaw, AI_SYS_GRADE } = await import('./wizard.js');
         const raw = rangeRaw(c, { ...globalSettings(), skipHidden: false }, from, Math.min(to, last)).raw;
         if (!raw) return toastr.info(`#${from}–#${to} 원문이 이 채팅에 없어요.`);
-        const out = await withSpinner($(this), '대조하는 중', () => askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${v}`, { system: AI_SYS_GRADE, maxTokens: 3000 }));
+        const out = await withSpinner($(this), '대조하는 중', () => askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${v}`, { system: AI_SYS_GRADE, maxTokens: 6000 }));
         if (out === null) return;
         const ok = /^\s*문제 없음\.?\s*$/.test(out);
         $root.find('.na_grade_out').prop('hidden', false).toggleClass('na_ai_ok', ok)
@@ -936,12 +936,19 @@ export async function openAppend(prefill = {}) {
     });
     $root.on('click', '.na_grade_out .na_cite_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
     // 한 번에 압축 with 채점: the grader's verdict on the summary, message numbers open the raw log
-    if (pre.grade) {
-        const ok = /^\s*문제 없음\.?\s*$/.test(pre.grade);
-        $root.find('.na_grade_out').prop('hidden', false).toggleClass('na_ai_ok', ok)
-            .html(pre.gradeError ? `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 채점 못 했어요</div>${esc(pre.grade)}`
+    const showGrade = (grade, error) => {
+        const ok = /^\s*문제 없음\.?\s*$/.test(grade);
+        $root.find('.na_grade_out').prop('hidden', false).toggleClass('na_ai_ok', !error && ok)
+            .html(error ? `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 채점 못 했어요</div>${esc(grade)}`
                 : ok ? '<i class="fa-solid fa-circle-check"></i> 채점: 원문과 잘 맞아요'
-                : `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 채점 <span class="na_dim">· 참고용</span></div>${driftHtml(pre.grade, m)}${gradeFix(pre.grade)}`);
+                : `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 채점 <span class="na_dim">· 참고용</span></div>${driftHtml(grade, m)}${gradeFix(grade)}`);
+    };
+    if (pre.grade) showGrade(pre.grade, pre.gradeError);
+    // still running when the window opens: the box says so and fills in when the verdict comes
+    if (pre.gradeLater) {
+        $root.find('.na_grade_out').prop('hidden', false).removeClass('na_ai_ok')
+            .html('<div class="na_ai_box_head"><i class="fa-solid fa-spinner fa-spin"></i> 원문과 대조하는 중 <span class="na_dim">· 기다리지 않고 추가해도 돼요</span></div>');
+        pre.gradeLater.then(r => { if ($root.closest('body').length) showGrade(r.grade, r.gradeError); });
     }
     if (pre.text) {
         if (Number.isFinite(pre.end)) { $end.val(pre.end); endTouched = true; hideHint(); }

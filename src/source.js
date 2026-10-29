@@ -82,7 +82,7 @@ export async function openSource(from, to, label, otherChat = null, prefix = '')
         const g = globalSettings();
         const raw = rangeRaw(c, { ...g, skipHidden: false }, from, to).raw;
         const sum = m.text.slice(sec.start, sec.end).trim();
-        const out = await withSpinner($(this), '대조하는 중', () => askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${sum}`, { system: AI_SYS_GRADE, maxTokens: 2500 }));
+        const out = await withSpinner($(this), '대조하는 중', () => askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${sum}`, { system: AI_SYS_GRADE, maxTokens: 6000 }));
         if (out === null) return;
         const ok = /^\s*문제 없음\.?\s*$/.test(out);
         $v.find('.na_src_checkout').prop('hidden', false).toggleClass('na_ai_ok', ok)
