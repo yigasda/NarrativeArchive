@@ -533,25 +533,22 @@ The owner of a phone in a long role-play takes one photo right now. Write what t
 
 YOU GET
 - OWNER, and NOW: the story's moment.
-- STORY END: the last archived sections and the current state.
 - RECENT CHAT: the newest messages; the photo is taken at the end of them.
 - PHOTOS SO FAR: captions already on the phone, for the language and the style.
 
 RULES
-- Only what is really in front of the owner at this moment; nothing the story has not shown.
+- Only what is really in front of the owner at this moment; nothing RECENT CHAT has not shown.
 - One short caption, the way a photo is described: who or what is in it, where, the light.
 - In the language of PHOTOS SO FAR (the owner's own). A caption that is not Korean gets "ko", a Korean translation.
 
 ANSWER — one JSON object, nothing else:
 { "caption", "ko", "mood": one of ${MOODS.join(', ')} }`;
 const shooting = new Set(); // owner keys taking a photo now
+// the chat only: the archive is often summed up long after, so its end can be well behind this moment
 async function takePhoto(m, p) {
-    const [body, tail] = splitTail(String(m.text || ''));
-    const secs = parseSections(body).filter(x => !x.group).slice(-2).map(x => body.slice(x.start, x.end).trim());
     const prompt = [
         `[OWNER]\n${p.owner}`, `[NOW]\n${storyNow(p) || p.now || ''}`,
-        `[STORY END]\n${[...secs, tail.trim()].filter(Boolean).join('\n\n').slice(-8000)}`,
-        `[RECENT CHAT]\n${recentForCheck(6).join('\n\n').slice(-5000)}`,
+        `[RECENT CHAT]\n${recentForCheck(12).join('\n\n').slice(-9000)}`,
         `[PHOTOS SO FAR]\n${p.photos.slice(-3).map(x => `- ${x.caption}`).join('\n') || '(none)'}`,
         namesBlock(m),
     ].filter(Boolean).join('\n\n');
@@ -565,6 +562,45 @@ async function takePhoto(m, p) {
     p.photos = p.photos.slice(-CAP.photos);
     await saveMeta();
     return p.photos.length - 1;
+}
+
+// ---- 메모 · 일기 새로 쓰기: one new entry at this very moment, from the newest messages (the AI 기능 모델; the chat only, like the camera)
+const AI_SYS_WRITE = `GOAL
+The owner of a phone in a long role-play writes one new entry on it right now: a note or a diary entry (WRITE says which). Write it.
+
+YOU GET
+- OWNER, and NOW: the story's moment.
+- RECENT CHAT: the newest messages; the entry is written at the end of them.
+- SO FAR: the owner's earlier entries of this kind, for the language and the way they write.
+
+RULES
+- Only what RECENT CHAT shows happened, and what the owner felt about it. Nothing it does not show.
+- In the owner's own language, as in SO FAR. A title or text not in Korean gets "kt" and "ko", its Korean.
+- A note is short, the way people jot things on a phone: a list, a reminder, a line or two. A diary entry is a few short paragraphs in the owner's voice.
+
+ANSWER — one JSON object, nothing else:
+{ "title", "kt", "text", "ko" }`;
+const writing = new Set(); // "owner:note" / "owner:diary" being written
+async function writeEntry(m, p, kind) {
+    const diary = kind === 'diary', list = diary ? (p.diary || []) : p.notes;
+    const prompt = [
+        `[OWNER]\n${p.owner}${p.country ? ` (phone set to ${p.country})` : ''}`, `[NOW]\n${storyNow(p) || p.now || ''}`, `[WRITE]\n${diary ? 'a diary entry' : 'a note'}`,
+        `[RECENT CHAT]\n${recentForCheck(12).join('\n\n').slice(-9000)}`,
+        `[SO FAR]\n${list.slice(-3).map(x => `- ${x.title ? `${x.title}: ` : ''}${x.text.slice(0, 300)}`).join('\n') || '(none)'}`,
+        namesBlock(m),
+    ].filter(Boolean).join('\n\n');
+    const out = String(await askAI(prompt, { system: AI_SYS_WRITE, maxTokens: 2500 }) || '').replace(/```(?:json)?/gi, '');
+    const a = out.indexOf('{'), b = out.lastIndexOf('}');
+    let raw = null;
+    try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
+    const text = str(raw?.text, 2000);
+    if (!text) throw new Error(`모델 답에서 ${diary ? '일기' : '메모'}를 찾지 못했어요`);
+    const now = storyNow(p) || p.now || '';
+    const x = { title: line(raw?.title, 80), kt: line(raw?.kt, 80), text, ko: str(raw?.ko, 2000) };
+    if (diary) { p.diary = [...(p.diary || []), { date: now.slice(0, 5), ...x }].slice(-CAP.diary); }
+    else { p.notes.push({ ...x, time: now }); p.notes = p.notes.slice(-CAP.notes); }
+    await saveMeta();
+    return (diary ? p.diary : p.notes).length - 1;
 }
 
 // ---- 검색: a search's results page, made once when it is first opened (the AI 기능 모델) and kept
@@ -874,7 +910,7 @@ function diaryScreen(p, now) {
         ${ds.length ? ds.map(([y, k]) => `
           <button type="button" class="ax_dcard" data-go="diaryone" data-i="${k}"><span class="ax_dd"><b class="cg_num">${esc(String(parts(y.date)?.d || ''))}</b>${esc(`${parts(y.date)?.mo || ''}월`)}</span><span class="ax_dtx"><span class="ax_dh">${esc(y.title || '')}${y.kt && koOn() ? `<small>${esc(y.kt)}</small>` : ''}</span><span class="ax_dp">${esc(y.text.replace(/\s+/g, ' '))}</span></span></button>`).join('') : '<div class="ax_empty">일기가 없어요</div>'}
       </div>
-      <span class="ax_fab" aria-hidden="true">${ax('pen', 24, '#fbf8f2')}</span>
+      ${(busy => `<button type="button" class="ax_fab na_ph_write" data-k="diary" aria-label="오늘 일기 쓰기" ${busy ? 'disabled' : ''}>${busy ? `<span class="ax_fabbusy">${busyHtml}</span>` : ax('pen', 24, '#fbf8f2')}</button>`)(writing.has(`${nameKey(p.owner)}:diary`))}
       ${axInd()}`;
 }
 function diaryOne(p, now, k) {
@@ -1026,13 +1062,14 @@ function photoView(p, now, k) {
 
 // 메모: grouped like the real app (오늘 · 이전 7일 · 이전 30일 · by month)
 const NOTE_MARK = /^(\[x\]|✓|✔|\[ \]|[-*•])\s*/i;
+const writeBtn = (p, kind) => { const busy = writing.has(`${nameKey(p.owner)}:${kind}`); return `<button type="button" class="ax_write na_ph_write" data-k="${kind}" ${busy ? 'disabled' : ''}>${busy ? busyHtml : ax('compose', 15, 'currentColor', 2.2)}<span>${busy ? '쓰는 중' : kind === 'diary' ? '오늘 일기' : '새 메모'}</span></button>`; };
 function noteScreen(p, now) {
     const ns = axNewest(p.notes);
     const label = t => { const n = axDays(now, t); return n === 0 ? '오늘' : n > 0 && n <= 7 ? '이전 7일' : n > 0 && n <= 30 ? '이전 30일' : `${parts(t)?.mo || ''}월`; };
     const groups = [];
     for (const [x, k] of ns) { const l = label(x.time), g = groups[groups.length - 1]; if (g && g.l === l) g.xs.push([x, k]); else groups.push({ l, xs: [[x, k]] }); }
     return `${axBar(p, now)}
-      ${axTop(axCb('home'), axKp(p))}
+      ${axTop(axCb('home'), `${axKp(p)}${writeBtn(p, 'note')}`)}
       <div class="ax_scroll">
         ${axH1('메모', ns.length ? `${ns.length}개` : '')}
         ${axFind()}
@@ -1530,6 +1567,19 @@ export async function openPhone(who = null) {
     });
     $root.on('click', '.na_ph_kochip:not(.na_ph_looksbtn)', e => { e.stopPropagation(); const g = globalSettings(); g.phoneKo = !koOn(); drawPhone(); if (view.startsWith('thread')) $root.find('.ax_scroll').scrollTop(1e6); saveGlobal(); });
     $root.on('click', '.na_ph_makebtn', function () { make($(this), false); });
+    // the screen can change while it writes; the new entry opens if its app is still showing
+    $root.on('click', '.na_ph_write', async function (e) {
+        e.stopPropagation();
+        const p = phone(), kind = this.dataset.k, id = `${nameKey(p.owner)}:${kind}`;
+        if (writing.has(id)) return;
+        writing.add(id); drawPhone(true);
+        try {
+            const k = await writeEntry(m, p, kind);
+            if (phone() === p && view === kind) view = `${kind === 'diary' ? 'diaryone' : 'noteone'}:${k}`;
+            toastr.success(kind === 'diary' ? '일기를 썼어요' : '메모를 썼어요', '캐릭터 휴대폰');
+        } catch (err) { console.error('[narrative-archive] write', err); toastr.error(String(err?.message || err), kind === 'diary' ? '일기 쓰기 실패' : '메모 쓰기 실패'); }
+        finally { writing.delete(id); if (phone() === p) drawPhone(); }
+    });
     $root.on('click', '.na_ph_gloss', async e => { e.stopPropagation(); await openGlossary(); drawPhone(true); });
     // one photo at a time; the screen can change while it draws
     $root.on('click', '.na_ph_draw', async function (e) {

@@ -5024,3 +5024,10 @@ body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .cg_wcal { over
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .cg_wcal:has(.cg_ev) .cg_day { font-size: 44px !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .cg_wcal .cg_evs { gap: 4px; }
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .cg_wcal :is(.cg_evt, .cg_evw) { line-height: 1.3 !important; }
+/* 메모 · 일기 새로 쓰기 */
+.ax .ax_write { --axbg: rgba(255, 255, 255, 0.78); --axsh: 0 1px 2px rgba(22, 27, 34, 0.06), 0 6px 16px rgba(22, 27, 34, 0.06); display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 13px; border-radius: 17px; font-size: 13.5px; font-weight: 600; color: var(--axd, #4d5562); }
+.ax .ax_write:disabled { opacity: 0.7; cursor: default; }
+.ax .ax_dytop .ax_write { color: #8a6d4a; }
+.ax .ax_fab { --axbg: #3d3127; --axsh: 0 8px 20px rgba(60, 40, 20, 0.25); position: absolute; display: grid; place-items: center; z-index: 4; }
+.ax .ax_fab:disabled { cursor: default; opacity: 0.85; }
+.ax_fabbusy { color: #fbf8f2; font-size: 20px; }
