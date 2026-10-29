@@ -511,22 +511,75 @@ function lockScreen(p, now) {
       </div>`;
 }
 
+// ---- 홈: 클리어 글래스 (the user's design board, drawn at its own 390 × 844 and scaled to the phone).
+// Two themes, both the user's boards: 컬러 젤 (Gel.dc.html, the default) and 화이트 그레이 (Main.dc.html, p.theme = 'gray');
+// every value below is the boards'
+const CG_W = 390, CG_H = 844;
+const CG_ALPHA = 'd9'; // clarity 0.85
+const CG_I = {
+    msg: 'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-5 4z',
+    call: 'M6 3h3l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v3a2 2 0 0 1-2 2A17 17 0 0 1 4 5a2 2 0 0 1 2-2z',
+    photo: 'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 16l5-5 4 4 3-3 6 6M15 9h.01',
+    note: 'M6 3h9l4 4v14H6zM15 3v4h4M9 12h7M9 16h5',
+    cal: 'M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM4 10h16M9 3v4M15 3v4',
+    map: 'M9 4L4 6v14l5-2 6 2 5-2V4l-5 2zM9 4v14M15 6v14',
+    search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
+};
+const CG_GEL = { photo: ['#f0cbb5', '#d89f98'], cal: ['#f6f7f9', '#dcdfe5', '#b0564e'], note: ['#f4e5b5', '#dcc680', '#5a4a1f'], map: ['#c3dcc1', '#93ba97'], call: ['#bbddc0', '#89b892'], msg: ['#bbddc0', '#89b892'], search: ['#bfd3e9', '#8faed1'] };
+const cgIcon = (k, mono, badge = 0) => {
+    const [c1, c2, g = '#ffffff'] = CG_GEL[k];
+    const svg = mono
+        ? `<svg aria-hidden="true" width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="#2a313b" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="${CG_I[k]}"/></svg>`
+        : `<svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${g}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${CG_I[k]}"/></svg>`;
+    return `<button type="button" class="cg_ic" data-go="${k}" aria-label="${APPS[k]}"${mono ? '' : ` style="--c1: ${c1}${CG_ALPHA}; --c2: ${c2}${CG_ALPHA}"`}>${svg}${badge ? `<span class="cg_badge cg_num">${badge}</span>` : ''}</button>`;
+};
+const cgBar = (p, now) => `
+  <div class="cg_sb"><span class="cg_num">${esc(bigClock(p, now) || '')}</span><span class="cg_sbi">
+    <svg aria-hidden="true" width="18" height="12" viewBox="0 0 18 12" fill="#161b22"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+    <svg aria-hidden="true" width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="#161b22" stroke-width="1.8" stroke-linecap="round"><path d="M1.5 4.2a9.5 9.5 0 0 1 13 0"/><path d="M4 7a6 6 0 0 1 8 0"/><circle cx="8" cy="10" r="1" fill="#161b22" stroke="none"/></svg>
+    <svg aria-hidden="true" width="27" height="13" viewBox="0 0 27 13" fill="none"><rect x="0.5" y="0.5" width="23" height="12" rx="3.8" stroke="#161b22" stroke-opacity="0.4"/><rect x="2.5" y="2.5" width="16" height="8" rx="2" fill="#161b22"/><path d="M25.5 4.5v4" stroke="#161b22" stroke-opacity="0.4" stroke-width="1.5" stroke-linecap="round"/></svg>
+  </span></div>`;
+// a note's lines for the checklist widget: "- a" lines, else its sentences; "[x]" or "✓" at the start reads as done
+function noteItems(n) {
+    if (!n) return [];
+    const lines = String(n.text || '').split('\n').map(l => l.trim()).filter(Boolean);
+    const list = (lines.length > 1 ? lines : String(n.text || n.title || '').split(/(?<=[.!?。])\s+/)).map(l => l.replace(/^[-*•]\s*/, '').trim()).filter(Boolean);
+    return list.slice(0, 3).map(l => { const done = /^(\[x\]|✓|✔)\s*/i.test(l); return { done, text: l.replace(/^(\[x\]|\[ \]|✓|✔)\s*/i, '') }; });
+}
 function homeScreen(p, now, m) {
-    const day = String(now).slice(0, 5);
+    const mono = p.theme === 'gray';
+    const day = String(now).slice(0, 5), x = parts(now);
     const anniv = annivToday(m, now);
-    const ev = p.events.find(e => e.date >= day);
     const unread = p.threads.filter(t => t.messages[t.messages.length - 1]?.from !== 'me').length;
     const missed = p.calls.filter(c => c.type === 'missed' && c.time.slice(0, 5) === day).length;
-    const badge = { msg: unread, call: missed };
-    const app = (k, label = true) => `<button type="button" class="na_ph_appbtn" data-go="${k}"><span class="na_ph_app a_${k}">${ic(k, 24)}${badge[k] ? `<em>${badge[k]}</em>` : ''}</span>${label ? `<span>${APPS[k]}</span>` : ''}</button>`;
+    const bars = mono ? ['#2a313b', 'rgba(22, 27, 34, 0.22)'] : ['#d89f98', '#8faed1'];
+    const evs = [...(anniv ? [{ title: anniv, when: '기념일', heart: true }] : []),
+        ...p.events.filter(e => e.date >= day).map(e => ({ title: e.title, when: `${e.date === day ? '' : `${fmtDate(p, e.date, true)} `}${e.time ? fmtTime(p, `${e.date} ${e.time}`) : e.date === day ? '하루 종일' : ''}`.trim() }))].slice(0, 2);
+    const note = p.notes[p.notes.length - 1], items = noteItems(note);
     return `
-      <div class="na_ph_home">
-        <button type="button" class="na_ph_widget" data-go="cal">
-          <b>${anniv ? '오늘은' : '캘린더'} · ${esc(fmtDate(p, now))}</b>
-          ${anniv ? `<span>${ic('heart', 13, 2.4)} ${esc(anniv)}</span>` : ev ? `<span>${tr(p, ev.title, ev.ko)}</span><small>${esc(ev.date === day ? '오늘' : fmtDate(p, ev.date))}${ev.time ? ` · ${esc(fmtTime(p, `${ev.date} ${ev.time}`))}` : ''}</small>` : '<span class="na_ph_dim">다가오는 일정 없음</span>'}
-        </button>
-        <div class="na_ph_grid">${['cal', 'photo', 'note', 'map'].map(k => app(k)).join('')}</div>
-        <div class="na_ph_dock">${['call', 'msg', 'search'].map(k => app(k, false)).join('')}</div>
+      <div class="cg_bg1" aria-hidden="true"></div><div class="cg_bg2" aria-hidden="true"></div>
+      <svg class="cg_noise" aria-hidden="true" width="390" height="844"><filter id="cgn"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#cgn)"/></svg>
+      <div class="cg_col">
+        ${cgBar(p, now)}
+        <div class="cg_top">
+          <div class="cg_widgets">
+            <button type="button" class="cg_glass cg_wcal" data-go="cal">
+              <span class="cg_cap cg_capcal">${x ? `${x.mo}월` : '캘린더'}</span>
+              <span class="cg_num cg_day">${x ? x.d : ''}</span>
+              <span class="cg_fill"></span>
+              <span class="cg_evs">${evs.length ? evs.map((e, k) => `<span class="cg_ev"><span class="cg_evbar" style="background: ${bars[k]}"></span><span class="cg_evtx"><span class="cg_evt">${e.heart ? '♥ ' : ''}${esc(e.title)}</span><span class="cg_num cg_evw">${esc(e.when)}</span></span></span>`).join('') : '<span class="cg_evw">다가오는 일정 없음</span>'}</span>
+            </button>
+            <button type="button" class="cg_glass cg_wnote" data-go="note">
+              <span class="cg_wh"><span class="cg_cap cg_capnote">메모</span><span class="cg_num cg_evw">${p.notes.length ? esc(fmtDate(p, note.time, true)) : ''}</span></span>
+              ${items.length ? items.map(i => `<span class="cg_item ${i.done ? 'done' : ''}"><span class="cg_chk">${i.done ? '<svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>' : ''}</span><span class="cg_itx">${esc(i.text)}</span></span>`).join('') : '<span class="cg_evw">메모 없음</span>'}
+            </button>
+          </div>
+          <div class="cg_grid">${['photo', 'cal', 'note', 'map'].map(k => `<div class="cg_cell">${cgIcon(k, mono)}<span class="cg_lbl">${APPS[k]}</span></div>`).join('')}</div>
+        </div>
+        <div class="cg_fill"></div>
+        <div class="cg_dots" aria-hidden="true"><span></span><span class="on"></span></div>
+        <div class="cg_dockwrap"><div class="cg_glass cg_dock">${cgIcon('call', mono, missed)}${cgIcon('msg', mono, unread)}${cgIcon('search', mono)}</div></div>
+        <button type="button" class="cg_ind" data-go="lock" aria-label="잠금화면"><span></span></button>
       </div>`;
 }
 
@@ -680,8 +733,10 @@ function screen(p, view, m, roster) {
         : v === 'thread' ? threadScreen(p, Number(i), roster) : v === 'call' ? callScreen(p, roster) : v === 'photo' ? photoScreen(p) : v === 'photoone' ? photoView(p, Number(i))
         : v === 'note' ? noteScreen(p, -1) : v === 'noteone' ? noteScreen(p, Number(i)) : v === 'search' ? searchScreen(p)
         : v === 'cal' ? calScreen(p, now, m) : v === 'map' ? mapScreen(p, m) : homeScreen(p, now, m);
-    const glass = v === 'lock' || v === 'home';
-    return `<div class="na_ph_scr ${glass ? `glass w_${p.wall}` : 'app'} v_${v}" style="--ph-acc:var(--ph-${p.accent})">${statusBar(p, now)}<div class="na_ph_body">${body}</div><button type="button" class="na_ph_bar" data-go="${v === 'lock' ? 'home' : v === 'home' ? 'lock' : 'home'}" aria-label="홈"></button></div>`;
+    // the home is the design board itself, at its own size, scaled to the screen (--k)
+    if (v === 'home') return `<div class="na_ph_scr cg ${p.theme === 'gray' ? 'cg_mono' : 'cg_gel'} v_home" style="--ph-acc:var(--ph-${p.accent})"><div class="cg_canvas">${body}</div></div>`;
+    const glass = v === 'lock';
+    return `<div class="na_ph_scr ${glass ? `glass w_${p.wall}` : 'app'} v_${v}" style="--ph-acc:var(--ph-${p.accent})">${statusBar(p, now)}<div class="na_ph_body">${body}</div><button type="button" class="na_ph_bar" data-go="home" aria-label="홈"></button></div>`;
 }
 
 // ---- the window
@@ -750,7 +805,8 @@ export async function openPhone(who = null) {
           ${menu ? `
           <div class="na_ph_menu">
             <label><span>국적</span><select class="text_pole na_ph_country">${Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === p.country ? 'selected' : ''}>${v}</option>`).join('')}${COUNTRIES[p.country] ? '' : `<option value="${esc(p.country)}" selected>${esc(p.country)}</option>`}</select></label>
-            <label><span>배경</span><span class="na_ph_walls">${WALLS.map(w => `<button type="button" class="na_ph_wsw w_${w} ${w === p.wall ? 'on' : ''}" data-w="${w}" aria-label="${w}"></button>`).join('')}</span></label>
+            <label><span>테마</span><span class="na_ph_seg"><button type="button" class="na_ph_theme ${p.theme === 'gray' ? '' : 'on'}" data-v="gel">컬러 젤</button><button type="button" class="na_ph_theme ${p.theme === 'gray' ? 'on' : ''}" data-v="gray">화이트 그레이</button></span></label>
+            <label><span>잠금</span><span class="na_ph_walls">${WALLS.map(w => `<button type="button" class="na_ph_wsw w_${w} ${w === p.wall ? 'on' : ''}" data-w="${w}" aria-label="${w}"></button>`).join('')}</span></label>
             <div class="na_ph_menubtns"><button type="button" class="na_v2_pillbtn na_ph_remake">처음부터 다시 만들기</button><button type="button" class="na_v2_pillbtn na_ph_del">이 폰 지우기</button></div>
           </div>` : ''}`);
     };
@@ -824,6 +880,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_more', () => { menu = !menu; drawCtrl(); });
     $root.on('change', '.na_ph_inject', async function () { phone().inject = this.checked; await saveMeta(); applyInjection(); });
     $root.on('change', '.na_ph_country', async function () { phone().country = this.value; drawPhone(); await saveMeta(); });
+    $root.on('click', '.na_ph_theme', async function () { const p = phone(); if (this.dataset.v === 'gray') p.theme = 'gray'; else delete p.theme; drawPhone(); drawCtrl(); await saveMeta(); });
     $root.on('click', '.na_ph_wsw', async function () { phone().wall = this.dataset.w; drawPhone(); drawCtrl(); await saveMeta(); });
     $root.on('click', '.na_ph_remake', async function () {
         if (!await confirm('처음부터 다시 만들까요?', '지금 폰 내용은 지워지고 아카이브 전체를 다시 읽어요.')) return;
@@ -840,5 +897,17 @@ export async function openPhone(who = null) {
         if (was) applyInjection();
     });
     draw();
+    // the home board is 390 px wide: --k scales it to whatever width the screen has now
+    const frame = $root.find('.na_ph_frame')[0];
+    const fit = () => { const w = frame.clientWidth - 14; if (w > 0) frame.style.setProperty('--k', String(w / CG_W)); };
+    const ro = new ResizeObserver(fit);
+    ro.observe(frame);
+    cgFonts();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: false, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    ro.disconnect();
+}
+// the board's fonts (Inter Tight for numbers, Noto Sans KR), once
+function cgFonts() {
+    if (document.getElementById('na_cg_fonts')) return;
+    $('head').append('<link id="na_cg_fonts" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@100;200;300;400;500;600&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap">');
 }

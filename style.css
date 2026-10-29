@@ -4240,12 +4240,12 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 .na_ph_pick.on { background: var(--na-card2); color: var(--na-ink, inherit); font-weight: 600; }
 .na_ph_pick i { position: absolute; top: 6px; right: 10px; width: 9px; height: 9px; border-radius: 50%; background: var(--na-accent); box-shadow: 0 0 0 2px var(--na-card, #F7EEE7); }
 .na_ph_wrap { display: flex; justify-content: center; padding: 2px 0 12px; }
-.na_ph_frame { width: min(100%, 330px); height: 640px; padding: 7px; border-radius: 44px; background: #16130f; box-shadow: 0 12px 30px rgba(50, 30, 15, 0.22), inset 0 0 0 1.5px #3a332c; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+.na_ph_frame { width: min(100%, 330px); height: auto; padding: 7px; border-radius: 44px; background: #16130f; box-shadow: 0 12px 30px rgba(50, 30, 15, 0.22), inset 0 0 0 1.5px #3a332c; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
 .na_ph_frame :where(button) { appearance: none; -webkit-appearance: none; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; color: inherit; font: inherit; text-align: inherit; width: auto; height: auto; min-height: 0; cursor: pointer; }
 /* small text: the colour of where it sits (white on glass), grey in app lists — stronger than the popups' small rule */
 .na_v2 .na_ph_scr small:not([class]) { color: var(--ph-small, inherit); }
 .na_ph_scr.app :is(.na_ph_row, .na_ph_pc, .na_ph_ev, .na_ph_notebody, .na_ph_title, .na_ph_lrow, .na_ph_sheethead) { --ph-small: var(--pd); }
-.na_ph_scr { position: relative; height: 100%; display: flex; flex-direction: column; overflow: hidden; border-radius: 37px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 14px; line-height: 1.4; letter-spacing: -0.01em; }
+.na_ph_scr { position: relative; aspect-ratio: 390 / 844; display: flex; flex-direction: column; overflow: hidden; border-radius: 37px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 14px; line-height: 1.4; letter-spacing: -0.01em; }
 .na_ph_sb { flex: none; display: flex; justify-content: space-between; align-items: center; padding: 13px 26px 4px; font-size: 13px; font-weight: 600; }
 .na_ph_sb i { display: inline-flex; gap: 5px; align-items: center; font-style: normal; }
 .na_ph_body { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; }
@@ -4398,7 +4398,7 @@ body.na_darkui .na_ph_mapart { background: linear-gradient(90deg, rgba(255, 255,
 .na_pb_phonebtn { position: absolute; top: 10px; left: 10px; z-index: 1; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 11px 0 9px; border: 0; border-radius: 15px; background: rgba(0, 0, 0, 0.22); color: #fff; font: inherit; font-size: 0.8em; font-weight: 600; cursor: pointer; }
 .na_pb_phonebtn:hover { background: rgba(0, 0, 0, 0.4); }
 /* 캐릭터 휴대폰 under a theme that paints every button: the phone's buttons keep their own (see-through) look */
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame button:not(.na_ph_widget, .na_ph_kochip, .na_ph_makebtn, .na_ph_bar, .na_ph_thumb, .na_ph_draw),
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame button:not(.na_ph_widget, .na_ph_kochip, .na_ph_makebtn, .na_ph_bar, .na_ph_thumb, .na_ph_draw, .cg_wcal, .cg_wnote, .cg_ic),
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_pick:not(.on) { background: transparent !important; background-image: none !important; border-color: transparent !important; box-shadow: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_pick.on { background: var(--na-card2) !important; border-color: transparent !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_pb_phonebtn { background: rgba(0, 0, 0, 0.22) !important; border-color: transparent !important; color: #fff !important; }
@@ -4467,6 +4467,78 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup butt
 .na_ph_fullbtn { flex: none; margin-top: 2px; }
 .na_ph_fullx { display: none; }
 .na_phone.na_ph_full .na_ph_wrap { position: fixed; inset: 0; z-index: 10050; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(12, 10, 9, 0.94); }
-.na_phone.na_ph_full .na_ph_frame { width: min(94vw, calc(min(100dvh - 84px, 900px) * 0.5156)); height: auto; aspect-ratio: 330 / 640; }
+.na_phone.na_ph_full .na_ph_frame { width: min(94vw, calc(min(100dvh - 98px, 900px) * 390 / 844 + 14px)); height: auto; }
 .na_phone.na_ph_full .na_ph_fullx { position: absolute; top: max(4px, env(safe-area-inset-top)); right: 8px; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.14); color: #fff; cursor: pointer; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_fullx { background: rgba(255, 255, 255, 0.14) !important; color: #fff !important; border-color: transparent !important; }
+
+/* ============ 휴대폰 홈 · 클리어 글래스 (v3.113): the user's two boards as two themes — 컬러 젤 (Gel.dc.html, .cg_gel) and
+   화이트 그레이 (Main.dc.html, .cg_mono) — values as drawn there.
+   Drawn at 390 × 844 and scaled by --k (the screen's width / 390). */
+.na_ph_scr.cg { display: block; background: #eceef1; color: #161b22; font-family: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; letter-spacing: normal; line-height: normal; font-size: 16px; }
+.cg_canvas { position: absolute; left: 0; top: 0; width: 390px; height: 844px; overflow: hidden; transform-origin: 0 0; transform: scale(var(--k, 0.81)); }
+.cg :where(button) { font: inherit; color: inherit; cursor: pointer; padding: 0; border: 0; background: none; text-align: left; margin: 0; width: auto; height: auto; min-height: 0; box-shadow: none; }
+.cg_num { font-family: 'Inter Tight', -apple-system, sans-serif; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1, "cv11" 1; }
+.cg_bg1, .cg_bg2 { position: absolute; left: -75px; width: 540px; border-radius: 50%; filter: blur(80px); }
+.cg_bg1 { top: -200px; height: 480px; background: #a9b4c0; }
+.cg_bg2 { bottom: -250px; height: 460px; background: #9aa1ae; }
+.cg_gel :is(.cg_bg1, .cg_bg2) { opacity: 0.55; }
+.cg_mono :is(.cg_bg1, .cg_bg2) { opacity: 0.7; }
+.cg_noise { position: absolute; left: 0; top: 0; opacity: 0.06; mix-blend-mode: multiply; pointer-events: none; }
+.cg_col { position: relative; height: 100%; display: flex; flex-direction: column; }
+.cg_sb { height: 54px; flex: none; display: flex; justify-content: space-between; align-items: center; padding: 4px 30px 0 36px; font-size: 16px; font-weight: 600; box-sizing: border-box; }
+.cg_sb > .cg_num { letter-spacing: -0.01em; }
+.cg_sbi { display: flex; gap: 6px; align-items: center; }
+.cg_top { padding: 12px 20px 0; display: flex; flex-direction: column; gap: 26px; }
+.cg_widgets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.cg_glass { position: relative; background: rgba(255, 255, 255, 0.32); backdrop-filter: blur(26px) saturate(120%); -webkit-backdrop-filter: blur(26px) saturate(120%); box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, 0.95), inset 0 -1px 1px rgba(80, 90, 110, 0.06), 0 14px 34px rgba(40, 50, 70, 0.1); }
+.cg_glass::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(160deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.35) 35%, rgba(255, 255, 255, 0.12) 65%, rgba(255, 255, 255, 0.7)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+.cg .cg_wcal, .cg .cg_wnote { height: 168px; box-sizing: border-box; border-radius: 26px; padding: 15px 16px; display: flex; flex-direction: column; min-width: 0; background: rgba(255, 255, 255, 0.32); }
+.cg .cg_wnote { gap: 10px; }
+.cg_cap { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: #59616d; }
+.cg_gel .cg_capcal { color: #b0564e; } .cg_gel .cg_capnote { color: #8a7335; }
+.cg_mono .cg_capcal { color: #2a313b; }
+.cg_day { font-size: 54px; font-weight: 200; letter-spacing: -0.05em; line-height: 1; margin: 2px 0 0 -2px; }
+.cg_fill { flex: 1; }
+.cg_evs { display: flex; flex-direction: column; gap: 6px; }
+.cg_ev { display: flex; gap: 7px; align-items: center; min-width: 0; }
+.cg_evbar { flex: none; width: 3px; height: 26px; border-radius: 2px; }
+.cg_evtx { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.cg_evt { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cg_evw { font-size: 11px; color: #59616d; }
+.cg_wh { display: flex; justify-content: space-between; align-items: center; }
+.cg_item { display: flex; gap: 9px; align-items: center; min-width: 0; }
+.cg_chk { width: 16px; height: 16px; flex: none; border-radius: 50%; box-sizing: border-box; border: 1.5px solid rgba(22, 27, 34, 0.4); display: flex; align-items: center; justify-content: center; }
+.cg_item.done .cg_chk { border: 0; }
+.cg_gel .cg_item.done .cg_chk { background: #dcc680; } .cg_mono .cg_item.done .cg_chk { background: #2a313b; }
+.cg_itx { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cg_item.done .cg_itx { color: #6a727e; text-decoration: line-through; }
+.cg_grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 22px; padding: 0 4px; }
+.cg_cell { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+.cg_lbl { font-size: 11.5px; font-weight: 600; color: #1f252e; letter-spacing: -0.01em; white-space: nowrap; }
+.cg .cg_ic { position: relative; width: 62px; height: 62px; border-radius: 18px; display: flex; align-items: center; justify-content: center; flex: none; }
+.cg_gel .cg_ic { background: linear-gradient(180deg, var(--c1), var(--c2)); backdrop-filter: blur(18px) saturate(120%); -webkit-backdrop-filter: blur(18px) saturate(120%); box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, 0.8), inset 0 -3px 6px rgba(40, 40, 60, 0.14), 0 1px 1px rgba(40, 50, 70, 0.08), 0 8px 20px rgba(40, 50, 70, 0.16); }
+.cg_gel .cg_ic::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.25) 35%, rgba(255, 255, 255, 0.05) 62%, rgba(255, 255, 255, 0.55)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+.cg_gel .cg_ic::after { content: ""; position: absolute; left: 7px; right: 7px; top: 3px; height: 24px; border-radius: 15px 15px 45% 45%; background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0)); pointer-events: none; }
+.cg_gel .cg_ic svg { position: relative; z-index: 1; filter: drop-shadow(0 1px 1px rgba(40, 40, 60, 0.18)); }
+.cg_mono .cg_ic { background: radial-gradient(130% 100% at 28% 10%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.18) 50%, rgba(255, 255, 255, 0.1) 100%); backdrop-filter: blur(20px) saturate(120%); -webkit-backdrop-filter: blur(20px) saturate(120%); box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, 0.95), inset 0 -2px 4px rgba(70, 80, 100, 0.12), 0 1px 1px rgba(40, 50, 70, 0.06), 0 8px 20px rgba(40, 50, 70, 0.12); }
+.cg_mono .cg_ic::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(160deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3) 35%, rgba(255, 255, 255, 0.1) 62%, rgba(255, 255, 255, 0.75)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+.cg_mono .cg_ic::after { content: ""; position: absolute; left: 8px; right: 8px; top: 3px; height: 22px; border-radius: 15px 15px 45% 45%; background: linear-gradient(rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0)); pointer-events: none; }
+.cg_mono .cg_ic svg { position: relative; z-index: 1; filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.8)); }
+.cg_badge { position: absolute; top: -5px; right: -5px; z-index: 2; min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box; border-radius: 10px; color: #ffffff; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9); }
+.cg_gel .cg_badge { background: #e5484d; } .cg_mono .cg_badge { background: #ff3b30; }
+.cg_dots { display: flex; justify-content: center; gap: 7px; padding-bottom: 16px; }
+.cg_dots span { width: 7px; height: 7px; border-radius: 50%; background: rgba(22, 27, 34, 0.25); }
+.cg_dots span.on { background: #161b22; }
+.cg_dockwrap { padding: 0 14px; }
+.cg .cg_dock { border-radius: 34px; padding: 13px 16px; display: flex; justify-content: space-between; background: rgba(255, 255, 255, 0.24); }
+.cg .cg_ind { height: 30px; width: 100%; display: flex; align-items: center; justify-content: center; }
+.cg_ind span { width: 134px; height: 5px; border-radius: 3px; background: #161b22; }
+/* themes that paint every button: the board's own surfaces stay */
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg :is(.cg_wcal, .cg_wnote) { background: rgba(255, 255, 255, 0.32) !important; border-color: transparent !important; color: #161b22 !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg_gel .cg_ic { background: linear-gradient(180deg, var(--c1), var(--c2)) !important; border-color: transparent !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg_mono .cg_ic { background: radial-gradient(130% 100% at 28% 10%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.18) 50%, rgba(255, 255, 255, 0.1) 100%) !important; border-color: transparent !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg .cg_ind { background: transparent !important; border-color: transparent !important; }
+/* the 테마 switch in ⋯ */
+.na_ph_seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--na-card2); }
+.na_ph_seg button { padding: 4px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--na-dim); font: inherit; font-size: 0.86em; cursor: pointer; }
+.na_ph_seg button.on { background: var(--na-card, #fff); color: inherit; font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
