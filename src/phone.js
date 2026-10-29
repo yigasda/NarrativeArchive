@@ -276,8 +276,22 @@ export async function openPhone(who = null) {
         if (!x) return;
         justPressed = true;
         $(el).find('.ax_presssheet').remove();
-        $(el).append(`<div class="ax_presssheet"><small>그린 태그${x.via === 'autopic' ? ' · 오토픽' : ''}</small><code>${esc(x.tags || '')}</code><div class="ax_btns"><button type="button" class="na_ph_postdraw" data-k="${el.dataset.k}">다시 그리기</button><button type="button" class="ax_pressx">닫기</button></div></div>`);
+        $(el).append(`<div class="ax_presssheet"><small>그린 태그${x.via === 'autopic' ? ' · 오토픽' : ''}</small><code>${esc(x.tags || '')}</code><div class="ax_btns"><button type="button" class="na_ph_postdraw" data-k="${el.dataset.k}">다시 그리기</button><button type="button" class="ax_presssave" data-k="${el.dataset.k}">저장</button><button type="button" class="ax_pressx">닫기</button></div></div>`);
     };
+    // 저장: the picture as a file (owner, SNS, the post's time in the name)
+    $root.on('click', '.ax_presssave', async function (e) {
+        e.stopPropagation();
+        const p = phone(), x = p?.posts?.[Number(this.dataset.k)];
+        if (!x?.img) return;
+        try {
+            const blob = await (await fetch(x.img)).blob();
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${p.owner}_SNS_${String(x.time || '').replace(/\D/g, '') || 'photo'}.${(blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`;
+            document.body.append(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+        } catch (err) { console.error('[narrative-archive] save photo', err); toastr.error(String(err?.message || err), '사진 저장 실패'); }
+    });
     $root.on('pointerdown', '.na_ph_press', function () { const el = this; clearTimeout(pressT); pressT = setTimeout(() => { pressT = null; pressSheet(el); }, 500); });
     $root.on('pointerup pointerleave pointercancel', '.na_ph_press', () => { clearTimeout(pressT); pressT = null; });
     $root.on('contextmenu', '.na_ph_press', e => e.preventDefault());
