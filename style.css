@@ -4420,7 +4420,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 .na_ph_viewer > p small { display: block; margin-top: 4px; color: var(--pd); font-size: 12px; }
 .na_ph_tags { margin-top: 12px; color: var(--pd); font-size: 12px; }
 .na_ph_tags summary { cursor: pointer; }
-.na_ph_tags code { display: block; margin-top: 6px; padding: 8px 10px; border-radius: 10px; background: var(--pf2); color: var(--pt); font-size: 11.5px; line-height: 1.5; white-space: normal; word-break: break-word; user-select: text; -webkit-user-select: text; }
+.na_ph_tags code { display: block; margin-top: 6px; padding: 8px 10px; border-radius: 10px; background: var(--pf2); color: var(--pt); font-size: 11.5px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text; }
 /* 인물 도감: 그림 태그 under the name */
 button.na_pb_looks { max-width: 100%; padding: 2px 8px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 0.8em; color: var(--na-dim); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 button.na_pb_looks b { color: var(--na-accent); font-weight: 600; margin-right: 3px; }

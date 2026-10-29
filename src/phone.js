@@ -256,8 +256,10 @@ export function placesOf(m, owner) {
     return out.reverse().slice(0, 40);
 }
 
-// ---- 사진 그리기: the AI 기능 모델 turns a caption into image tags, and SillyTavern's image generation (NovelAI or
-// whatever is connected there) draws it quietly, without a chat message. How people look comes from 인물 도감's 그림 태그.
+// ---- 사진 그리기: the AI 기능 모델 turns a caption into image tags, one line for the picture and one per person. With
+// AutoPic in 직접 생성 mode the picture goes through AutoPic (its model, vibes, registered looks; only the people in the
+// photo); otherwise, or if that fails, SillyTavern's image generation draws it quietly, without a chat message.
+// How people look: AutoPic's registered characters, else 인물 도감's 그림 태그.
 export const AI_SYS_PHOTO = `GOAL
 A photo on a character's phone is known only by its caption. Turn it into a NovelAI image prompt.
 
@@ -267,33 +269,36 @@ YOU GET
 - LOOKS: people whose looks the app already has, by exact name.
 - STORY: the archive around that day, for place, clothes and light.
 
-ANSWER — two lines, nothing before or after:
-TAGS: …
-AVOID: …   (negative tags; empty if none are needed)
+ANSWER — one line each, nothing before or after:
+PHOTO: tags for the whole picture
+[exact name]: tags for one person from LOOKS who is in the photo (a line for each)
+OTHER: tags for one person not in LOOKS (a line for each)
+AVOID: negative tags (empty if none are needed)
 
 LANGUAGE AND FORM
 - English only. Danbooru-style tags as NovelAI reads them, separated by commas.
 - Tags, never sentences.
 
 LOOKS COME FROM THE APP (most important)
-- A person in LOOKS is written as [exact name] where they appear; the app puts their looks there.
+- A person from LOOKS who is in the photo gets a line starting with [exact name]:; the app adds their looks.
   Copy the name exactly as LOOKS has it: no nickname, alias, role or translation.
 - For them, never write hair (colour, length, style), eyes, skin or tan, body type, chest size,
   face shape, height or size difference — not even if the story mentions it.
-- Someone not in LOOKS is described in full: gender, rough age, hair, eyes, build, clothes.
+- Someone not in LOOKS gets an OTHER line, described in full: gender, rough age, hair, eyes, build, clothes.
 - A selfie, or a person the caption does not name, is the owner.
+- Nobody gets a line who is not in the photo.
 
-ORDER
-1. How many in frame: no humans, 1girl, 1boy, 2girls, 1girl 1boy, multiple boys …
-2. Each person ([name] or full looks), then what changes day to day: expression, gaze, pose,
-   action, who they touch, the clothes they wear that day and their state.
-3. Place, time of day, weather, light, mood.
-4. How a phone took it: selfie, mirror selfie, candid, pov, from behind, close-up, upper body, blurry, flash.
+WHAT GOES WHERE
+- PHOTO: how many in frame (no humans, 1girl, 1boy, 2girls, 1girl 1boy, multiple boys …), what they do together,
+  place, time of day, weather, light, mood, and how a phone took it (selfie, mirror selfie, candid, pov,
+  from behind, close-up, upper body, blurry, flash).
+- A person's line: what changes day to day — expression, gaze, pose, action, who they touch,
+  the clothes they wear that day and their state.
 
 EXPLICIT PHOTOS
 - Allowed when the caption is explicit; tag it plainly.
 - Clothing state: nude, topless, open shirt, clothes lift, panties aside, disheveled …
-- Bare parts are always tagged: nipples, penis (erection if aroused), pussy.
+- Bare parts are always tagged, in that person's line: nipples, penis (erection if aroused), pussy.
 - Mood as the scene warrants: blush, heavy breathing, sweat, trembling, tears …
 
 NEVER
@@ -313,17 +318,43 @@ function storyAround(m, time) {
     if (!hit.length) hit = rows.slice(-1);
     return hit.slice(-2).map(r => m.text.slice(r.s.start, r.s.end).trim()).join('\n\n').slice(0, 6000);
 }
-const tagLine = (out, key) => (String(out || '').match(new RegExp(`^[\\s*]*${key}[*\\s]*:(.*)$`, 'mi')) || [, ''])[1];
-const tagList = s => String(s).replace(/[<>"`|]/g, ' ').split(',').map(t => t.trim()).filter(Boolean);
-// TAGS with every [name] swapped for that person's 그림 태그; AVOID with the teeth tags always in
-export function photoPrompt(out, names = []) {
-    const looks = looksOf(), known = new Set(names.map(nameKey));
-    const tags = tagList(tagLine(out, 'TAGS').replace(/\[([^\]]{1,40})\]/g, (all, n) => looks[nameKey(n)] || (known.has(nameKey(n)) ? '' : all)));
-    if (!tags.length) throw new Error('모델 답에서 TAGS 줄을 찾지 못했어요');
-    const neg = [...new Set([...tagList(tagLine(out, 'AVOID')), ...tagList(NEVER_NEG)])];
-    return { tags: tags.join(', '), neg: neg.join(', ') };
+
+// ---- AutoPic (another extension, used only when it is installed): its settings and registered characters, read only
+const autopic = () => { const es = ctx().extensionSettings || {}; const a = es.AutoPic || es.autopic; return a && typeof a === 'object' ? a : null; };
+const autopicDirect = () => { const g = autopic()?.naiParams?.generationMode; return !!g && g !== 'legacy'; };
+// the characters AutoPic has for this chat's character card
+function autopicPeople() {
+    const c = ctx(), ch = c.characters?.[c.characterId];
+    const list = ch ? autopic()?.characterPrompts?.[ch.avatar] : null;
+    return Array.isArray(list) ? list.filter(x => x && x.enabled !== false && String(x.name || '').trim()).map(x => ({ name: String(x.name).trim(), prompt: String(x.prompt || '').trim(), uc: String(x.uc || '').trim(), center: x.center })) : [];
 }
-async function drawImage(tags, neg) {
+
+const tagList = s => String(s).replace(/[<>"`|]/g, ' ').split(',').map(t => t.trim()).filter(Boolean);
+// the answer's lines: PHOTO, one per [name], OTHER, AVOID (TAGS: from the first version reads as PHOTO)
+export function readPhotoAnswer(out) {
+    const r = { scene: [], people: [], others: [], neg: [] };
+    for (const raw of String(out || '').split('\n')) {
+        const l = raw.replace(/^[\s*>-]+/, '').replace(/\*\*/g, '');
+        let mt;
+        if ((mt = l.match(/^(?:PHOTO|TAGS)\s*:(.*)$/i))) r.scene.push(...tagList(mt[1]));
+        else if ((mt = l.match(/^\[([^\]]{1,40})\]\s*:(.*)$/))) r.people.push({ name: mt[1].trim(), tags: tagList(mt[2]) });
+        else if ((mt = l.match(/^OTHER\s*:(.*)$/i))) { const t = tagList(mt[1]); if (t.length) r.others.push(t); }
+        else if ((mt = l.match(/^AVOID\s*:(.*)$/i))) r.neg.push(...tagList(mt[1]));
+    }
+    if (!r.scene.length && !r.people.length && !r.others.length) throw new Error('모델 답에서 PHOTO 줄을 찾지 못했어요');
+    r.neg = [...new Set([...r.neg, ...tagList(NEVER_NEG)])];
+    return r;
+}
+// one prompt for SillyTavern's image generation: the picture, then each person with their looks
+function onePrompt(a, ap) {
+    const looks = looksOf();
+    const lookOf = n => ap.find(x => nameKey(x.name) === nameKey(n))?.prompt || looks[nameKey(n)] || '';
+    const tags = [...a.scene, ...a.people.flatMap(x => [...tagList(lookOf(x.name)), ...x.tags]), ...a.others.flat()];
+    return { tags: [...new Set(tags)].join(', '), neg: a.neg.join(', ') };
+}
+const shownTags = a => [`PHOTO: ${a.scene.join(', ')}`, ...a.people.map(x => `[${x.name}]: ${x.tags.join(', ')}`), ...a.others.map(t => `OTHER: ${t.join(', ')}`), a.neg.length ? `AVOID: ${a.neg.join(', ')}` : ''].filter(Boolean).join('\n');
+
+async function drawWithST(tags, neg) {
     const c = ctx();
     if (!c.SlashCommandParser?.commands?.imagine) throw new Error('실리태번 이미지 생성 확장이 꺼져 있어요. 확장 → 이미지 생성에서 NovelAI를 연결해 주세요');
     const r = await c.executeSlashCommandsWithOptions(`/imagine quiet=true gallery=false extend=false negative="${neg}" ${tags}`);
@@ -331,19 +362,59 @@ async function drawImage(tags, neg) {
     if (!url || r?.isError) throw new Error('그림을 받지 못했어요. 실리태번 이미지 생성 설정을 확인해 주세요');
     return url;
 }
+// AutoPic 직접 생성: each person in the photo as a NovelAI character prompt (registered looks first), nobody else.
+// Its reference image needs AutoPic's own helper, so it stays off for phone photos; vibes and the rest are AutoPic's.
+async function drawWithAutopic(a, ap) {
+    const mod = await import('/scripts/extensions/third-party/AutoPic/nai-direct.mjs');
+    if (typeof mod.generateDirect !== 'function') throw new Error('AutoPic 직접 생성 함수를 찾지 못했어요');
+    const looks = looksOf();
+    const characterPrompts = [
+        ...a.people.map(x => {
+            const base = ap.find(y => nameKey(y.name) === nameKey(x.name));
+            return { name: base?.name || x.name, prompt: [...tagList(base?.prompt || looks[nameKey(x.name)] || ''), ...x.tags].join(', '), uc: base?.uc || '', enabled: true, ...(base?.center ? { center: { ...base.center } } : {}) };
+        }),
+        ...a.others.map(t => ({ name: '', prompt: t.join(', '), uc: '', enabled: true })),
+    ].filter(x => x.prompt);
+    const c = ctx();
+    const prompt = a.scene.join(', ');
+    return mod.generateDirect({
+        nai: { ...autopic().naiParams, refEnabled: false },
+        prompt,
+        payload: { prompt, negative_prompt: a.neg.join(', '), characterPrompts },
+        library: ap,
+        context: c,
+        getHeaders: () => c.getRequestHeaders(),
+        saveImage: saveImageFile,
+    });
+}
+async function saveImageFile(base64, folder, name, format) {
+    const r = await fetch('/api/images/upload', { method: 'POST', headers: ctx().getRequestHeaders(), body: JSON.stringify({ image: base64, format, ch_name: folder, filename: String(name).replace(/\./g, '_') }) });
+    if (!r.ok) throw new Error('그림을 저장하지 못했어요');
+    return (await r.json()).path;
+}
+
 export async function drawPhoto(m, p, k) {
     const ph = p.photos[k];
     if (!ph) return null;
-    const looks = looksOf(), names = peopleList(m);
+    const looks = looksOf(), ap = autopic() ? autopicPeople() : [];
+    const known = [...new Set([...ap.map(x => x.name), ...peopleList(m).filter(n => looks[nameKey(n)])])];
     const prompt = [
         `[PHOTO]\n${ph.caption}${ph.time ? ` (taken ${ph.time})` : ''}`,
         `[OWNER]\n${p.owner}`,
-        `[LOOKS]\n${names.filter(n => looks[nameKey(n)]).join('\n') || '(nobody)'}`,
+        `[LOOKS]\n${known.join('\n') || '(nobody)'}`,
         `[STORY]\n${storyAround(m, ph.time) || '(none)'}`,
     ].join('\n\n');
-    const { tags, neg } = photoPrompt(await askAI(prompt, { system: AI_SYS_PHOTO, maxTokens: 2000 }), names);
-    ph.img = await drawImage(tags, neg);
-    ph.tags = tags;
+    const a = readPhotoAnswer(await askAI(prompt, { system: AI_SYS_PHOTO, maxTokens: 2000 }));
+    let url = '', via = 'st';
+    if (autopicDirect()) {
+        try { url = await drawWithAutopic(a, ap); via = 'autopic'; }
+        catch (e) {
+            console.warn('[narrative-archive] AutoPic direct', e);
+            toastr.warning(`오토픽으로 못 그려서 실리태번 이미지 생성으로 그려요 (${String(e?.message || e).slice(0, 80)})`, '캐릭터 휴대폰', { timeOut: 6000 });
+        }
+    }
+    if (!url) { const one = onePrompt(a, ap); url = await drawWithST(one.tags, one.neg); }
+    ph.img = url; ph.tags = shownTags(a); ph.via = via;
     await saveMeta();
     return ph;
 }
@@ -492,7 +563,7 @@ function photoView(p, k) {
         <div class="na_ph_big m_${x.mood} ${x.img ? 'has' : ''}">${thumb(x, 40)}</div>
         <p>${tr(p, x.caption, x.ko)}<small>${esc(fmtDate(p, x.time))} ${esc(fmtTime(p, x.time))}</small></p>
         ${drawBtn(p, k, 'wide')}
-        ${x.tags ? `<details class="na_ph_tags"><summary>그린 태그</summary><code>${esc(x.tags)}</code></details>` : ''}
+        ${x.tags ? `<details class="na_ph_tags"><summary>그린 태그${x.via === 'autopic' ? ' · 오토픽' : ''}</summary><code>${esc(x.tags)}</code></details>` : ''}
       </div>`;
 }
 
