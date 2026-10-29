@@ -243,6 +243,7 @@ export function renderPanel() {
                 <button type="button" class="na_toolrow" id="na_worlds"><i class="fa-solid fa-earth-asia"></i><span><b>세계관 공유</b><small id="na_worlds_sub">여러 채팅이 같이 쓰는 설정 · 고치면 모든 채팅에 반영</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_au"><i class="fa-solid fa-shuffle"></i><span><b>AU 채팅</b><small id="na_au_sub">본편 기억을 들고 온 채팅이면 켜요</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_people"><i class="fa-solid fa-address-book"></i><span><b>인물 도감 · 관계도</b><small>인물 프로필과 관계도</small></span><i class="fa-solid fa-chevron-right"></i></button>
+                <button type="button" class="na_toolrow" id="na_tool_gloss"><i class="fa-solid fa-spell-check"></i><span><b>번역 용어집</b><small>이름 · 장소의 한국어 표기 · 풀네임 (번역 · 휴대폰이 그대로 써요)</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_story_cal"><i class="fa-solid fa-calendar-days"></i><span><b>이야기 달력</b><small>섹션을 날짜 순서로 · 기념일 찾기</small></span><i class="fa-solid fa-chevron-right"></i></button>
                 <button type="button" class="na_toolrow" id="na_phone"><i class="fa-solid fa-mobile-screen-button"></i><span><b>캐릭터 휴대폰</b><small>문자 · 통화 · 사진 · 일정을 아카이브만큼</small></span><i class="fa-solid fa-chevron-right"></i></button>
               </div>
@@ -931,6 +932,7 @@ export function bindPanel() {
     $('#na_drift_recheck').on('change', function () { globalSettings().driftRecheck = this.checked; saveGlobal(); });
     $('#na_drift_auto').on('change', function () { globalSettings().driftAuto = Number(this.value) || 0; saveGlobal(); });
     $('#na_gloss_edit').on('click', needChat(async () => { await openGlossary(); renderAiSettings(); }));
+    $('#na_tool_gloss').on('click', needChat(async () => { await openGlossary(); renderAiSettings(); }));
     $('#na_tr_mode').on('change', function () { trSettings().mode = this.value; saveGlobal(); renderAiSettings(); });
     // off = translate with the AI model; on = its own connection, back to whatever was set there before
     $('#na_tr_own').on('change', function () {

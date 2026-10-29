@@ -15,6 +15,7 @@ import { RANGE_HEAD, parseSections, sectionKey, splitTail } from './sections.js'
 import { estTok } from './recall.js';
 import { recentTrackers } from './scenes.js';
 import { confirm, esc } from './util.js';
+import { glossaryEntries, openGlossary } from './translate.js';
 import { worldText } from './world.js';
 
 export const WALLS = ['dusk', 'ocean', 'forest', 'rose', 'night', 'sand', 'mono', 'aurora'];
@@ -201,6 +202,8 @@ export async function loreFor(m, owner) {
     return out.join('\n');
 }
 
+// 번역 용어집: names as the user wants them, in the Korean and as full names
+const namesBlock = m => { const g = glossaryEntries(m); return g.length ? `[NAMES]\nHow these names are written. Korean text uses the Korean form; a person's full name is the one given here.\n${g.map(e => `- ${e.src} = ${e.ko}`).join('\n')}` : ''; };
 // 다시 만들기, app by app: which JSON keys each app is drawn from
 export const REMAKE = { msg: ['threads', 'contacts'], call: ['calls'], photo: ['photos'], note: ['notes'], search: ['searches'], cal: ['events'], sns: ['profile', 'posts'], mail: ['mails'], diary: ['diary'] };
 const onlyAsk = keys => `[ONLY THESE]\nThe phone already holds the rest. Write only these keys of the JSON, from the whole story: ${keys.join(', ')}.`;
@@ -216,6 +219,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null) {
         lore ? `[LOREBOOK]\n${lore}` : '',
         recent ? `[RECENT CHAT]\n${recent}` : '',
         `[OWNER]\n${owner}`,
+        namesBlock(m),
         p ? UPDATE_ASK : '',
         only ? onlyAsk(only) : '',
     ].filter(Boolean).join('\n\n');
@@ -543,7 +547,8 @@ async function takePhoto(m, p) {
         `[STORY END]\n${[...secs, tail.trim()].filter(Boolean).join('\n\n').slice(-8000)}`,
         `[RECENT CHAT]\n${recentForCheck(6).join('\n\n').slice(-5000)}`,
         `[PHOTOS SO FAR]\n${p.photos.slice(-3).map(x => `- ${x.caption}`).join('\n') || '(none)'}`,
-    ].join('\n\n');
+        namesBlock(m),
+    ].filter(Boolean).join('\n\n');
     const out = String(await askAI(prompt, { system: AI_SYS_SHOT, maxTokens: 1500 }) || '').replace(/```(?:json)?/gi, '');
     const a = out.indexOf('{'), b = out.lastIndexOf('}');
     let raw = null;
@@ -575,7 +580,7 @@ ANSWER — one JSON object, nothing else:
 const searching = new Set(); // "owner:index" of searches whose page is being made
 async function searchPage(m, p, k) {
     const x = p.searches[k];
-    const prompt = [`[OWNER]\n${p.owner}`, `[QUERY]\n${x.q}`, `[SEARCHED]\n${x.time || p.now || ''}`, `[STORY]\n${storyAround(m, x.time) || '(none)'}`].join('\n\n');
+    const prompt = [`[OWNER]\n${p.owner}`, `[QUERY]\n${x.q}`, `[SEARCHED]\n${x.time || p.now || ''}`, `[STORY]\n${storyAround(m, x.time) || '(none)'}`, namesBlock(m)].filter(Boolean).join('\n\n');
     const out = String(await askAI(prompt, { system: AI_SYS_SEARCH, maxTokens: 2500 }) || '').replace(/```(?:json)?/gi, '');
     const a = out.indexOf('{'), b = out.lastIndexOf('}');
     let raw = null;
@@ -1163,8 +1168,9 @@ function setScreen(p, now, m, ui) {
         <div class="ax_card">
           <button type="button" class="ax_rw" data-go="settheme">${si('#a699c9', 'palette')}<span class="ax_tx"><span class="ax_n">테마</span></span><span class="ax_v">${p.theme === 'gray' ? '화이트 그레이' : '컬러 젤'}</span>${axChev}</button>
           <button type="button" class="ax_rw na_ph_kochip ax_koline">${si('#89b892', 'lang')}<span class="ax_tx"><span class="ax_n">한국어 보기</span></span><span class="ax_sw ${koOn() ? 'on' : ''}"></span></button>
+          <button type="button" class="ax_rw na_ph_gloss">${si('#dcc680', 'pen')}<span class="ax_tx"><span class="ax_n">번역 용어집</span></span><span class="ax_v">${(n => (n ? `${n}개` : ''))(glossaryEntries(m).length)}</span>${axChev}</button>
         </div>
-        <div class="ax_foot">외국어로 된 문자 · 메모 · 글 밑에 한국어를 붙여요.</div>
+        <div class="ax_foot">외국어로 된 문자 · 메모 · 글 밑에 한국어를 붙여요. 용어집의 이름 표기 · 풀네임은 다음에 만들 때부터 써요.</div>
         <div class="ax_sec">일반</div>
         <div class="ax_card">
           <label class="ax_rw">${si('#8faed1', 'globe')}<span class="ax_tx"><span class="ax_n">국적</span></span><span class="ax_v">${esc(COUNTRIES[p.country] || p.country || '')}</span>${axChev}<select class="na_ph_country ax_sel" aria-label="국적">${Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === p.country ? 'selected' : ''}>${v}</option>`).join('')}${COUNTRIES[p.country] ? '' : `<option value="${esc(p.country)}" selected>${esc(p.country)}</option>`}</select></label>
@@ -1507,6 +1513,7 @@ export async function openPhone(who = null) {
     });
     $root.on('click', '.na_ph_kochip:not(.na_ph_looksbtn)', e => { e.stopPropagation(); const g = globalSettings(); g.phoneKo = !koOn(); drawPhone(); if (view.startsWith('thread')) $root.find('.ax_scroll').scrollTop(1e6); saveGlobal(); });
     $root.on('click', '.na_ph_makebtn', function () { make($(this), false); });
+    $root.on('click', '.na_ph_gloss', async e => { e.stopPropagation(); await openGlossary(); drawPhone(true); });
     // one photo at a time; the screen can change while it draws
     $root.on('click', '.na_ph_draw', async function (e) {
         e.stopPropagation();
