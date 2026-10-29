@@ -8,7 +8,7 @@ import { draftReady, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
-import { drawing, drawPhoto, searching, searchPage, shooting, takePhoto, writeEntry, writing } from './phoneai.js';
+import { drawing, drawPhoto, drawPost, searching, searchPage, shooting, takePhoto, writeEntry, writing } from './phoneai.js';
 import { APPS, AXB, AXB_C, busyHtml, callScreen, callWho, calOne, calScreen, camScreen, diaryOne, diaryScreen, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, searchOne, searchScreen, setLore, setRemake, setScreen, setTheme, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
 import { koOn, loreOff, makePhone, newSections, phoneLore, REMAKE, showNow, storyNow } from './phonedata.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
@@ -259,6 +259,32 @@ export async function openPhone(who = null) {
         try { await drawPhoto(m, p, k); toastr.success('사진을 그렸어요', '캐릭터 휴대폰'); }
         catch (err) { console.error('[narrative-archive] photo', err); toastr.error(String(err?.message || err), '사진 그리기 실패'); }
         finally { drawing.delete(id); drawPhone(true); }
+    });
+    $root.on('click', '.na_ph_postdraw', async function (e) {
+        e.stopPropagation();
+        const p = phone(), k = Number(this.dataset.k), id = `${nameKey(p.owner)}:post${k}`;
+        if (drawing.has(id)) return;
+        drawing.add(id); drawPhone(true);
+        try { await drawPost(m, p, k); toastr.success('사진을 그렸어요', '캐릭터 휴대폰'); }
+        catch (err) { console.error('[narrative-archive] post photo', err); toastr.error(String(err?.message || err), '사진 그리기 실패'); }
+        finally { drawing.delete(id); drawPhone(true); }
+    });
+    // a drawn SNS photo shows only the picture; a long press shows its tags and 다시 그리기 (the phone's own image menu stays shut)
+    let pressT = null, justPressed = false;
+    const pressSheet = el => {
+        const x = phone()?.posts?.[Number(el.dataset.k)];
+        if (!x) return;
+        justPressed = true;
+        $(el).find('.ax_presssheet').remove();
+        $(el).append(`<div class="ax_presssheet"><small>그린 태그${x.via === 'autopic' ? ' · 오토픽' : ''}</small><code>${esc(x.tags || '')}</code><div class="ax_btns"><button type="button" class="na_ph_postdraw" data-k="${el.dataset.k}">다시 그리기</button><button type="button" class="ax_pressx">닫기</button></div></div>`);
+    };
+    $root.on('pointerdown', '.na_ph_press', function () { const el = this; clearTimeout(pressT); pressT = setTimeout(() => { pressT = null; pressSheet(el); }, 500); });
+    $root.on('pointerup pointerleave pointercancel', '.na_ph_press', () => { clearTimeout(pressT); pressT = null; });
+    $root.on('contextmenu', '.na_ph_press', e => e.preventDefault());
+    $root.on('click', '.na_ph_press', function (e) {
+        if ($(e.target).closest('.ax_presssheet').length && !$(e.target).closest('.ax_pressx').length) return;
+        if (justPressed) { justPressed = false; return; }
+        $(this).find('.ax_presssheet').remove();
     });
     // 설정's rows: the busy text goes where the row's value is
     let making = false;

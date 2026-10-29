@@ -5033,3 +5033,15 @@ body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .cg_wcal :is(.c
 .ax_fabbusy { color: #fbf8f2; font-size: 20px; }
 /* 일기 · 캘린더: the days are buttons */
 .ax .ax_dpick { --axbg: none; --axsh: none; display: block; width: 100%; padding: 0; text-align: center; }
+/* SNS 사진 그리기 (v3.128): before, its words and 그리기; after, only the picture; a long press shows the tags */
+.ax .ax_postdraw { --axbg: rgba(255, 255, 255, 0.88); position: absolute; right: 14px; top: 14px; padding: 7px 14px; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: #111; }
+.ax .ax_postdraw:disabled { opacity: 0.8; cursor: default; }
+.ax_postpic.has { aspect-ratio: auto; display: block; background: #000; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.ax_postpic.has > img { display: block; width: 100%; height: auto; pointer-events: none; -webkit-user-drag: none; }
+.ax_postbusy { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 7px 14px; border-radius: 999px; background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.ax .ax_tileimg { background: #000; }
+.ax_tileimg > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ax_presssheet { position: absolute; left: 12px; right: 12px; bottom: 12px; padding: 14px 14px 12px; border-radius: 20px; background: rgba(20, 20, 22, 0.74); backdrop-filter: blur(18px) saturate(120%); -webkit-backdrop-filter: blur(18px) saturate(120%); color: #fff; z-index: 3; }
+.ax_presssheet small { font-size: 11.5px; color: rgba(255, 255, 255, 0.6); font-weight: 600; letter-spacing: 0.04em; }
+.ax_presssheet code { display: block; margin-top: 6px; max-height: 180px; overflow-y: auto; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; color: rgba(255, 255, 255, 0.88); white-space: pre-wrap; background: none; padding: 0; border: 0; user-select: text; -webkit-user-select: text; }
+.ax_presssheet .ax_btns { margin-top: 12px; }

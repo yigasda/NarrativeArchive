@@ -116,12 +116,19 @@ export function snsScreen(p, now) {
         <div class="ax_igbtns"><span>프로필 편집</span><span>프로필 공유</span></div>
         <div class="ax_igtabs"><span class="on">${ax('grid', 22)}</span><span>${ax('tag', 22)}</span></div>
         <div class="ax_grid3">${posts.length ? posts.map(([x, k]) => x.photo
-            ? `<button type="button" class="ax_tile" data-go="snspost" data-i="${k}" style="--axbg: linear-gradient(160deg, ${AX_MOOD[moodOf(x.photo)]})">${ax('photo', 26, '#fff', 1.6)}<span class="ax_tcap">${esc(x.photo)}</span></button>`
+            ? x.img ? `<button type="button" class="ax_tile ax_tileimg" data-go="snspost" data-i="${k}"><img src="${esc(x.img)}" alt="" loading="lazy"></button>`
+                : `<button type="button" class="ax_tile" data-go="snspost" data-i="${k}" style="--axbg: linear-gradient(160deg, ${AX_MOOD[moodOf(x.photo)]})">${ax('photo', 26, '#fff', 1.6)}<span class="ax_tcap">${esc(x.photo)}</span></button>`
             : `<button type="button" class="ax_tile ax_ttext" data-go="snspost" data-i="${k}">${axKo(x.text, x.ko)}</button>`).join('') : ''}</div>
         ${posts.length ? '' : '<div class="ax_empty">게시물이 없어요</div>'}
       </div>
       <div class="ax_ignav">${ax('home', 26, '#111')}${ax('search', 26, '#111')}${ax('plus', 26, '#111')}${ax('reels', 26, '#111', 1.8)}<span class="ax_navme">${axFace(p.owner, 28)}</span></div>
       ${axInd()}`;
+}
+// a post's photo: before it is drawn, its words and 그리기; after, only the picture (a long press shows the tags)
+function postPic(p, x, k) {
+    const busy = drawing.has(`${nameKey(p.owner)}:post${k}`);
+    if (x.img) return `<div class="ax_postpic has na_ph_press" data-k="${k}"><img src="${esc(x.img)}" alt="" draggable="false">${busy ? `<span class="ax_postbusy">${busyHtml} 그리는 중</span>` : ''}</div>`;
+    return `<div class="ax_postpic" style="background: linear-gradient(160deg, ${AX_MOOD[moodOf(x.photo)]})">${ax('photo', 56, '#fff', 1.3)}<div class="ax_alt">${axKo(x.photo, x.pko)}</div><button type="button" class="na_ph_postdraw ax_postdraw" data-k="${k}" ${busy ? 'disabled' : ''}>${busy ? `${busyHtml} 그리는 중` : '그리기'}</button></div>`;
 }
 export function snsPost(p, now, k) {
     const x = (p.posts || [])[k], pr = p.profile || {};
@@ -130,7 +137,7 @@ export function snsPost(p, now, k) {
       <div class="ax_igtop ax_center"><button type="button" class="ax_back" data-go="sns" aria-label="뒤로">${ax('back', 26, '#111', 2.2)}</button><b>게시물</b><span class="ax_sp"></span></div>
       <div class="ax_scroll">
         <div class="ax_posth"><span class="ax_ring ax_ring_s">${axFace(p.owner, 30)}</span><div><b>${esc(pr.handle || p.owner)}</b></div>${ax('more', 22, '#111', 3)}</div>
-        ${x.photo ? `<div class="ax_postpic" style="background: linear-gradient(160deg, ${AX_MOOD[moodOf(x.photo)]})">${ax('photo', 56, '#fff', 1.3)}<div class="ax_alt">${axKo(x.photo, x.pko)}</div></div>` : ''}
+        ${x.photo ? postPic(p, x, k) : ''}
         <div class="ax_postact">${ax('heart', 26, '#ed4956', 2, '#ed4956')}${ax('cmt', 25, '#111', 1.9)}${ax('send', 24, '#111', 1.9)}<span class="ax_sp"></span>${ax('save', 24, '#111', 1.9)}</div>
         <div class="ax_postbody"><b>좋아요 ${x.likes.toLocaleString()}개</b></div>
         ${x.text ? `<div class="ax_postbody"><b>${esc(pr.handle || p.owner)}</b> ${axKo(x.text, x.ko)}</div>` : ''}

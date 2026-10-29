@@ -145,16 +145,15 @@ async function saveImageFile(base64, folder, name, format) {
     return (await r.json()).path;
 }
 
-export async function drawPhoto(m, p, k) {
-    const ph = p.photos[k];
-    if (!ph) return null;
+// one picture for a caption: an album photo's or an SNS post's
+async function drawCaption(m, p, ph, caption, time) {
     const looks = looksOf(), ap = autopic() ? autopicPeople() : [];
     const known = [...new Set([...ap.map(x => x.name), ...peopleList(m).filter(n => looks[nameKey(n)])])];
     const prompt = [
-        `[PHOTO]\n${ph.caption}${ph.time ? ` (taken ${ph.time})` : ''}`,
+        `[PHOTO]\n${caption}${time ? ` (taken ${time})` : ''}`,
         `[OWNER]\n${p.owner}`,
         `[LOOKS]\n${known.join('\n') || '(nobody)'}`,
-        `[STORY]\n${storyAround(m, ph.time) || '(none)'}`,
+        `[STORY]\n${storyAround(m, time) || '(none)'}`,
     ].join('\n\n');
     const a = readPhotoAnswer(await askAI(prompt, { system: AI_SYS_PHOTO, maxTokens: 2000 }));
     let url = '', via = 'st';
@@ -169,6 +168,15 @@ export async function drawPhoto(m, p, k) {
     ph.img = url; ph.tags = shownTags(a); ph.via = via;
     await saveMeta();
     return ph;
+}
+export async function drawPhoto(m, p, k) {
+    const ph = p.photos[k];
+    return ph ? drawCaption(m, p, ph, ph.caption, ph.time) : null;
+}
+// an SNS post's photo, drawn the same way; the post then shows only the picture
+export async function drawPost(m, p, k) {
+    const x = (p.posts || [])[k];
+    return x?.photo ? drawCaption(m, p, x, x.photo, x.time) : null;
 }
 
 // ---- 카메라: one photo of this very moment, from the newest messages (the AI 기능 모델)
