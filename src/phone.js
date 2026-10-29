@@ -556,6 +556,36 @@ async function takePhoto(m, p) {
     return p.photos.length - 1;
 }
 
+// ---- 검색: a search's results page, made once when it is first opened (the AI 기능 모델) and kept
+const AI_SYS_SEARCH = `GOAL
+A character in a long role-play searched this on their phone. Write the results page the search showed.
+
+YOU GET
+- OWNER, QUERY, and when it was searched.
+- STORY: the archive around that day, for where and when the owner is.
+
+RULES
+- The results are what the web of the story's world would show for this query: sites, articles, shops, places, forums.
+- The web knows only what is public. The owner and the people around them are not on it, unless the story makes them public.
+- Each result in the language a site for this query would use. A result not in Korean gets "kt" (its title in Korean) and "ko" (its text in Korean).
+- 4 to 6 results.
+
+ANSWER — one JSON object, nothing else:
+{ "results": [{ "site": the site's name, "url": a short address like "site.com/page", "title", "kt", "text": a one- or two-line snippet, "ko" }] }`;
+const searching = new Set(); // "owner:index" of searches whose page is being made
+async function searchPage(m, p, k) {
+    const x = p.searches[k];
+    const prompt = [`[OWNER]\n${p.owner}`, `[QUERY]\n${x.q}`, `[SEARCHED]\n${x.time || p.now || ''}`, `[STORY]\n${storyAround(m, x.time) || '(none)'}`].join('\n\n');
+    const out = String(await askAI(prompt, { system: AI_SYS_SEARCH, maxTokens: 2500 }) || '').replace(/```(?:json)?/gi, '');
+    const a = out.indexOf('{'), b = out.lastIndexOf('}');
+    let raw = null;
+    try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
+    const rs = arr(raw?.results).map(r => ({ site: line(r?.site, 60), url: line(r?.url, 120), title: line(r?.title, 160), kt: line(r?.kt, 160), text: line(r?.text, 400), ko: line(r?.ko, 400) })).filter(r => r.title).slice(0, 8);
+    if (!rs.length) throw new Error('모델 답에서 검색 결과를 찾지 못했어요');
+    x.results = rs;
+    await saveMeta();
+}
+
 // ---- drawing
 const ICO = {
     msg: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/>',
@@ -774,7 +804,7 @@ function snsScreen(p, now) {
     const pr = p.profile || {}, posts = (p.posts || []).map((x, k) => [x, k]).reverse();
     const n = v => (Number(v) || 0).toLocaleString();
     return `${axBar(p, now)}
-      <div class="ax_igtop"><b>${esc(pr.handle || p.owner)} ${ax('down', 18, '#111', 2.4)}</b><span>${ax('plus', 24, '#111')}${ax('menu', 24, '#111')}</span></div>
+      <div class="ax_igtop"><button type="button" class="ax_back ax_igback" data-go="home" aria-label="홈으로">${ax('back', 26, '#111', 2.2)}</button><b>${esc(pr.handle || p.owner)} ${ax('down', 18, '#111', 2.4)}</b><span class="ax_sp"></span><span>${ax('plus', 24, '#111')}${ax('menu', 24, '#111')}</span></div>
       <div class="ax_scroll">
         <div class="ax_igprof"><span class="ax_ring">${axFace(p.owner, 82)}</span><span class="ax_stats"><span><b>${posts.length}</b>게시물</span><span><b>${n(pr.followers)}</b>팔로워</span><span><b>${n(pr.following)}</b>팔로잉</span></span></div>
         <div class="ax_igname"><b>${esc(p.owner)}</b>${pr.bio ? `<br>${axKo(pr.bio, pr.ko)}` : ''}</div>
@@ -1022,15 +1052,22 @@ function searchScreen(p, now) {
       </div>
       ${axInd()}`;
 }
-function searchOne(p, now, k) {
+function searchOne(p, now, k, busy) {
     const x = p.searches[k];
     if (!x) return searchScreen(p, now);
     return `${axBar(p, now)}
       ${axTop(axCb('search'), axKp(p))}
       <div class="ax_scroll">
         <div class="ax_find ax_findq">${ax('search', 16, 'currentColor', 2.2)}<span>${esc(x.q)}</span></div>
-        <div class="ax_card ax_sqk"><small>이 검색 · <span class="cg_num">${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</span></small><p>${esc(x.q)}</p>${x.ko && koOn() ? `<div class="ax_k">${esc(x.ko)}</div>` : ''}</div>
-        <div class="ax_sqn">검색 결과 페이지는 아카이브에 없어서 보여주지 않아요.<br>검색어와 시간만 남아요.</div>
+        <div class="ax_stabs"><span class="on">전체</span><span>이미지</span><span>뉴스</span><span>지도</span></div>
+        <div class="ax_sqmeta"><span class="cg_num">${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</span>에 검색함${x.ko && koOn() ? ` · ${esc(x.ko)}` : ''}</div>
+        ${x.results?.length ? x.results.map(r => `
+        <div class="ax_card ax_sres">
+          <div class="ax_ssite"><span class="ax_sfav" style="background: ${axTint(r.site || r.url)}">${esc([...String(r.site || r.url || '?').trim()][0] || '?')}</span><span class="ax_tx"><b>${esc(r.site || r.url)}</b>${r.url ? `<small>${esc(r.url)}</small>` : ''}</span></div>
+          <div class="ax_stitle">${esc(r.title)}</div>${r.kt && koOn() ? `<div class="ax_k">${esc(r.kt)}</div>` : ''}
+          ${r.text ? `<p>${esc(r.text)}</p>` : ''}${r.ko && koOn() ? `<div class="ax_k">${esc(r.ko)}</div>` : ''}
+        </div>`).join('') : busy ? `<div class="ax_sqn">${busyHtml} 검색 결과 불러오는 중</div>` : '<div class="ax_sqn"><button type="button" class="ax_sgo na_ph_sgo">결과 불러오기</button><br>AI 기능 모델이 결과 페이지를 한 번 만들어 두어요</div>'}
+        <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
 }
@@ -1255,7 +1292,7 @@ function screen(p, view, m, roster, ui) {
     const body = v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'msg' ? msgList(p, now, roster)
         : v === 'thread' ? threadScreen(p, now, Number(i), roster) : v === 'call' || v === 'callmiss' ? callScreen(p, now, roster, v === 'callmiss') : v === 'callwho' ? callWho(p, now, Number(i), roster)
         : v === 'photo' ? photoScreen(p, now) : v === 'photoone' ? photoView(p, now, Number(i))
-        : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'searchone' ? searchOne(p, now, Number(i))
+        : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
         : v === 'cal' ? calScreen(p, now, m) : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, now, m)
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
         : v === 'diary' ? diaryScreen(p, now) : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'set' ? setScreen(p, now, m, ui) : v === 'settheme' ? setTheme(p, now) : v === 'setremake' ? setRemake(p, now, ui) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
@@ -1431,7 +1468,18 @@ export async function openPhone(who = null) {
         sheet = false;
         drawPhone();
         $root.find('.na_ph_body, .ax_scroll').scrollTop(view.startsWith('thread') ? 1e6 : 0);
+        if (go === 'searchone' && !phone()?.searches?.[Number(this.dataset.i)]?.results?.length) loadSearch(Number(this.dataset.i));
     });
+    // the page is made once, the first time a search is opened; the screen can change while it loads
+    const loadSearch = async k => {
+        const p = phone(), id = `${nameKey(p.owner)}:${k}`;
+        if (searching.has(id)) return;
+        searching.add(id); drawPhone(true);
+        try { await searchPage(m, p, k); }
+        catch (err) { console.error('[narrative-archive] search', err); toastr.error(String(err?.message || err), '검색 결과 실패'); }
+        finally { searching.delete(id); if (phone() === p) drawPhone(true); }
+    };
+    $root.on('click', '.na_ph_sgo', e => { e.stopPropagation(); loadSearch(Number(view.split(':')[1])); });
     $root.on('click', '.na_ph_looksbtn, .na_ph_looksbtn2', e => { e.stopPropagation(); sheet = true; drawPhone(true); });
     $root.on('click', '.na_ph_shutter', async e => {
         e.stopPropagation();
