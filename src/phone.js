@@ -4,7 +4,7 @@
 // m.phones = { [name key]: { owner, country, wall, accent, now, contacts, threads, calls, photos, notes, searches, events,
 //   upto (the last message number the archive held), at, inject } }
 
-import { askAI, askDraft, drLabel, withSpinner } from './ai.js';
+import { askAI, askDraft, draftReady, withSpinner } from './ai.js';
 import { annivsOf, datedRows } from './anniv.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { recentForCheck } from './drift.js';
@@ -746,7 +746,7 @@ const AX = {
     star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z', clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2',
     keypad: 'M4 4h4v4H4zM10 4h4v4h-4zM16 4h4v4h-4zM4 10h4v4H4zM10 10h4v4h-4zM16 10h4v4h-4zM4 16h4v4H4zM10 16h4v4h-4zM16 16h4v4h-4z', voice: 'M5 10v4M9 7v10M13 4v16M17 8v8M21 11v2',
     call: 'M6 3h3l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v3a2 2 0 0 1-2 2A17 17 0 0 1 4 5a2 2 0 0 1 2-2z', video: 'M3 7h12v10H3zM15 10l6-3v10l-6-3', mail: 'M3 6h18v12H3zM3 7l9 6 9-6',
-    lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3', mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3', check: 'M5 12.5l4.5 4.5L19 7.5', share: 'M12 3v12M7 8l5-5 5 5M5 14v6h14v-6', bolt: 'M13 2L4 14h7l-1 8 9-12h-7z', flip: 'M20 12a8 8 0 0 1-14 5M4 12a8 8 0 0 1 14-5M18 3v4h-4M6 21v-4h4', down: 'M6 9l6 6 6-6',
+    lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3', mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3', check: 'M5 12.5l4.5 4.5L19 7.5', book: 'M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 7h6', redo: 'M20 12a8 8 0 1 1-2.3-5.7L20 8.5M20 3.5v5h-5', share: 'M12 3v12M7 8l5-5 5 5M5 14v6h14v-6', bolt: 'M13 2L4 14h7l-1 8 9-12h-7z', flip: 'M20 12a8 8 0 0 1-14 5M4 12a8 8 0 0 1 14-5M18 3v4h-4M6 21v-4h4', down: 'M6 9l6 6 6-6',
 };
 const ax = (k, z = 22, c = 'currentColor', w = 2, f = 'none') => `<svg aria-hidden="true" width="${z}" height="${z}" viewBox="0 0 24 24" fill="${f}" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="${AX[k]}"/></svg>`;
 const axBar = (p, now, c = '#111') => `
@@ -828,7 +828,7 @@ function diaryOne(p, now, k) {
 }
 // ---- 메시지 · 전화 · 사진 · 메모 · 검색 · 캘린더 · 메일 · 설정 · 카메라 (v3.118): the boards' layout in the home's flat look —
 // each app one colour (메시지 · 전화 blue, the rest their home icon's), round glass buttons, white cards, no gradients
-const AXB = { msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', cam: 'apri' };
+const AXB = { msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setlore: 'slate', setwho: 'slate', cam: 'apri' };
 const AXB_C = { blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'] };
 // people outside the archive get a letter on one of the home icons' colours
 const AX_AV = ['#8faed1', '#a699c9', '#d89f98', '#89b892', '#d494a7', '#a2a7af', '#dcc680'];
@@ -1102,14 +1102,14 @@ function mailOne(p, now, k) {
 }
 
 // 설정
-function setScreen(p, now, m) {
+function setScreen(p, now, m, ui) {
     const looks = looksOf(), nLooks = peopleList(m).filter(n => looks[nameKey(n)]).length;
     const si = (c, k) => `<span class="ax_si" style="background: ${c}">${ax(k, 17, '#fff')}</span>`;
     return `${axBar(p, now)}
       ${axTop(axCb('home'))}
       <div class="ax_scroll">
         ${axH1('설정')}
-        <div class="ax_card"><div class="ax_rw ax_me">${axFace(p.owner, 56)}<span class="ax_tx"><b>${esc(p.owner)}</b><span class="ax_p">${esc([p.profile?.handle, COUNTRIES[p.country] || p.country].filter(Boolean).join(' · '))}</span></span></div></div>
+        <div class="ax_card"><button type="button" class="ax_rw ax_me" data-go="setwho">${axFace(p.owner, 56)}<span class="ax_tx"><b>${esc(p.owner)}</b><span class="ax_p">${esc([p.profile?.handle, COUNTRIES[p.country] || p.country].filter(Boolean).join(' · '))}</span></span><span class="ax_v">인물 바꾸기</span>${axChev}</button></div>
         <div class="ax_sec">화면</div>
         <div class="ax_card">
           <button type="button" class="ax_rw" data-go="settheme">${si('#a699c9', 'palette')}<span class="ax_tx"><span class="ax_n">테마</span></span><span class="ax_v">${p.theme === 'gray' ? '화이트 그레이' : '컬러 젤'}</span>${axChev}</button>
@@ -1122,6 +1122,17 @@ function setScreen(p, now, m) {
           <button type="button" class="ax_rw na_ph_looksbtn2">${si('#d89f98', 'user')}<span class="ax_tx"><span class="ax_n">외모</span></span><span class="ax_v">${nLooks ? `${nLooks}명` : ''}</span>${axChev}</button>
           <div class="ax_rw">${si('#a2a7af', 'info')}<span class="ax_tx"><span class="ax_n">이 폰에 대해</span></span><span class="ax_v cg_num">${p.upto >= 0 ? `#${p.upto}까지` : ''}</span></div>
         </div>
+        <div class="ax_sec">아카이브</div>
+        <div class="ax_card">
+          <button type="button" class="ax_rw" data-go="setlore">${si('#dcc680', 'book')}<span class="ax_tx"><span class="ax_n">참고 로어북</span></span><span class="ax_v">${(n => (n ? `${n}권` : '없음'))(phoneLore(m).length)}</span>${axChev}</button>
+          <button type="button" class="ax_rw na_ph_setinj">${si('#d494a7', 'in')}<span class="ax_tx"><span class="ax_n">롤플에 넣기</span></span><span class="ax_sw ${p.inject ? 'on' : ''}"></span></button>
+          <button type="button" class="ax_rw na_ph_setupd">${si('#8faed1', 'redo')}<span class="ax_tx"><span class="ax_n">새로 일어난 일 반영</span></span><span class="ax_v">${ui.newN ? `새 섹션 ${ui.newN}` : ''}</span></button>
+        </div>
+        <div class="ax_foot">롤플에 넣기를 켜면 이 폰의 최근 문자 · 일정이 주입돼요.</div>
+        <div class="ax_card">
+          <button type="button" class="ax_rw ax_rwn na_ph_setremake"><span class="ax_tx"><span class="ax_n ax_blue">처음부터 다시 만들기</span></span></button>
+          <button type="button" class="ax_rw ax_rwn na_ph_setdel"><span class="ax_tx"><span class="ax_n ax_red">이 폰 지우기</span></span></button>
+        </div>
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
@@ -1132,6 +1143,46 @@ function setTheme(p, now) {
     return `${axBar(p, now)}
       ${axTop(axCb('set'))}
       <div class="ax_scroll">${axH1('테마')}<div class="ax_card ax_themes">${opt('gel', '컬러 젤')}${opt('gray', '화이트 그레이')}</div><div class="ax_foot">홈 화면과 잠금화면에 쓰여요.</div></div>
+      ${axInd()}`;
+}
+// 인물: whose phone this is; a person only the lorebook knows goes in at the bottom
+function setWho(p, now, m) {
+    const names = peopleList(m);
+    return `${axBar(p, now)}
+      ${axTop(axCb('set'))}
+      <div class="ax_scroll">
+        ${axH1('인물', `${names.length}명`)}
+        <div class="ax_card">${names.map(n => { const on = nameKey(n) === nameKey(p.owner); return `
+          <button type="button" class="ax_rw ax_whopick" data-n="${esc(n)}">${axFace(n, 40)}<span class="ax_tx"><span class="ax_n">${esc(n)}</span><span class="ax_p1">${m.phones?.[nameKey(n)] ? '폰 있음' : '아직 폰 없음'}</span></span>${on ? `<span class="ax_radio on">${ax('check', 14, '#fff', 3.4)}</span>` : ''}</button>`; }).join('')}</div>
+        <div class="ax_sec">로어북에만 있는 인물</div>
+        <div class="ax_card"><div class="ax_rw ax_rwn ax_add na_ph_addbox"><input type="text" class="ax_in na_ph_addname" placeholder="이름" enterkeyhint="done"><button type="button" class="ax_addok na_ph_addok">넣기</button></div></div>
+        <i class="ax_pad"></i>
+      </div>
+      ${axInd()}`;
+}
+// 참고 로어북: each book with its switch; › opens its entries, each with its own tick
+function setLore(p, now, m, ui) {
+    const on = phoneLore(m), all = ctx().getWorldInfoNames?.() || [];
+    const book = b => {
+        const picked = on.includes(b), off = loreOff(m, b), ents = ui.loreEnts.get(b), open = ui.loreExp.has(b);
+        const part = picked && off.size, onN = ents ? ents.filter(e => !off.has(e.uid)).length : 0;
+        return `
+          <div class="ax_rw ax_rwn ax_lb">
+            <button type="button" class="ax_lbx ${open ? 'on' : ''}" data-b="${esc(b)}" aria-label="${open ? '항목 닫기' : '항목 보기'}" aria-expanded="${open}">${ax('chev', 15, '#9aa1ab', 2.4)}</button>
+            <span class="ax_tx"><span class="ax_n">${esc(b)}</span>${part ? `<span class="ax_p1">${ents ? `${onN}/${ents.length}개` : '일부'} 읽어요</span>` : ''}</span>
+            <button type="button" class="ax_sw ax_lbon ${picked ? 'on' : ''} ${part ? 'part' : ''}" data-b="${esc(b)}" aria-label="${esc(b)} ${picked ? '끄기' : '켜기'}"></button>
+          </div>
+          ${open ? (!ents ? `<div class="ax_rw ax_rwn ax_le"><span class="ax_tx"><span class="ax_p1">${busyHtml} 항목 읽는 중</span></span></div>` : ents.length ? ents.map(e => { const y = picked && !off.has(e.uid); return `
+          <button type="button" class="ax_rw ax_rwn ax_le" data-b="${esc(b)}" data-u="${esc(e.uid)}"><span class="ax_radio ${y ? 'on' : ''}">${y ? ax('check', 14, '#fff', 3.4) : ''}</span><span class="ax_tx"><span class="ax_n">${esc(e.title)}</span></span>${e.always ? '<span class="ax_v">항상</span>' : ''}</button>`; }).join('') : '<div class="ax_rw ax_rwn ax_le"><span class="ax_tx"><span class="ax_p1">쓸 수 있는 항목이 없어요</span></span></div>') : ''}`;
+    };
+    return `${axBar(p, now)}
+      ${axTop(axCb('set'))}
+      <div class="ax_scroll">
+        ${axH1('참고 로어북', on.length ? `${on.length}권 켜짐` : '')}
+        ${all.length ? `<div class="ax_card ax_lbs">${all.map(book).join('')}</div>` : '<div class="ax_empty">로어북이 없어요</div>'}
+        <div class="ax_foot">이 채팅의 모든 폰이 같이 읽어요 · 2만 토큰까지 통째로</div>
+        <i class="ax_pad"></i>
+      </div>
       ${axInd()}`;
 }
 function camScreen(p, now, k, busy) {
@@ -1162,7 +1213,7 @@ function mapScreen(p, m) {
         <div class="na_ph_row na_ph_place">${ic('map', 18)}<div><b>${esc(x.place)}</b><p>${esc(x.scene)}</p></div><small>${esc(x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small></div>`).join('') : empty('아카이브 제목에 이 인물이 간 장소가 아직 없어요')}</div>`;
 }
 
-function screen(p, view, m, roster) {
+function screen(p, view, m, roster, ui) {
     const now = storyNow(p);
     shownNow = now;
     const [v, i] = view.split(':');
@@ -1172,7 +1223,7 @@ function screen(p, view, m, roster) {
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'searchone' ? searchOne(p, now, Number(i))
         : v === 'cal' ? calScreen(p, now, m) : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, m)
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
-        : v === 'diary' ? diaryScreen(p, now) : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'set' ? setScreen(p, now, m) : v === 'settheme' ? setTheme(p, now)
+        : v === 'diary' ? diaryScreen(p, now) : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'set' ? setScreen(p, now, m, ui) : v === 'settheme' ? setTheme(p, now) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app but 지도: drawn at the boards' size too, each its own app look
@@ -1190,17 +1241,15 @@ export async function openPhone(who = null) {
     const names = peopleList(m);
     const roster = new Set(names.map(nameKey));
     let owner = who && names.some(n => nameKey(n) === nameKey(who)) ? names.find(n => nameKey(n) === nameKey(who)) : (names.find(n => m.phones[nameKey(n)]) || names[0] || null);
-    let view = 'lock', menu = false, sheet = false, adding = false, loreOpen = false;
+    let view = 'lock', sheet = false, adding = false, loreOpen = false;
     const loreExp = new Set(), loreEnts = new Map(); // books opened to their entries, and their entries once read
     // the phone has the screen to itself: one layer over everything (a dialog, so the extension's colours and
-    // SillyTavern's top layer both hold), the people along the top, the controls in a sheet behind ⚙
+    // SillyTavern's top layer both hold), the person on top (a tap: everyone in a sheet), the controls in the phone's 설정
     let sheetOpen = false;
     const $root = $(`
       <div class="na_popup na_v2 na_phone na_phl_root">
         <div class="na_phl_top">
-          <button type="button" class="na_phl_who" aria-label="인물 바꾸기"></button>
           <span class="na_phl_sp"></span>
-          <button type="button" class="na_phl_btn na_phl_gear" aria-label="폰 설정" aria-expanded="false">${svgGear}</button>
           <button type="button" class="na_phl_btn na_phl_close" aria-label="닫기">${ic('x', 20, 2.4)}</button>
         </div>
         <div class="na_ph_wrap"><div class="na_ph_frame"></div></div>
@@ -1209,18 +1258,17 @@ export async function openPhone(who = null) {
           <div class="na_phl_grab"></div>
           <div class="na_phl_sheethead"><b>캐릭터 휴대폰</b><small>아카이브에 있는 만큼만 · 보기 전용</small></div>
           <div class="na_ph_owners"></div>
-          <div class="na_ph_addrow" hidden><input type="text" class="text_pole na_ph_addname" placeholder="로어북에만 있는 인물 이름" enterkeyhint="done"><button type="button" class="na_v2_pillbtn na_ph_addok">추가</button></div>
+          <div class="na_ph_addrow na_ph_addbox" hidden><input type="text" class="text_pole na_ph_addname" placeholder="로어북에만 있는 인물 이름" enterkeyhint="done"><button type="button" class="na_v2_pillbtn na_ph_addok">추가</button></div>
           <div class="na_ph_ctrl"></div>
         </div>
       </div>`);
-    const setSheet = on => { sheetOpen = on; $root.find('.na_phl_sheet, .na_phl_shade').prop('hidden', !on); $root.find('.na_phl_gear').attr('aria-expanded', String(on)).toggleClass('on', on); };
+    const setSheet = on => { sheetOpen = on; $root.find('.na_phl_sheet, .na_phl_shade').prop('hidden', !on); };
     const phone = () => (owner ? m.phones[nameKey(owner)] : null);
     const drawOwners = () => {
         $root.find('.na_ph_owners').html(`${names.map(n => `
           <button type="button" class="na_ph_pick ${n === owner ? 'on' : ''}" data-n="${esc(n)}">${faceHtml(n, 40)}<span>${esc(n)}</span>${m.phones[nameKey(n)] ? '<i></i>' : ''}</button>`).join('')}
           <button type="button" class="na_ph_pick na_ph_addp" title="인물 넣기"><span class="na_ph_addic">${ic('plus', 18, 2)}</span><span>넣기</span></button>`);
         $root.find('.na_ph_addrow').prop('hidden', !adding);
-        $root.find('.na_phl_who').html(owner ? `${faceHtml(owner, 30)}<span>${esc(owner)}</span>${ic('down', 14, 2.4)}` : `<span>인물 고르기</span>${ic('down', 14, 2.4)}`);
     };
     const drawPhone = (keep = false) => {
         const p = phone();
@@ -1232,15 +1280,16 @@ export async function openPhone(who = null) {
                   <div class="na_ph_makecard">
                     <span class="na_ph_makeface">${faceHtml(owner, 64)}</span>
                     <b>${esc(owner)}의 폰</b>
-                    <p>${phoneLore(m).length ? '아카이브와 로어북을' : '아카이브를'} 읽고 메시지 · 통화 · 사진 · 메모 · 검색 · 일정을 채워요. 국적에 맞는 말로 쓰고 한국어를 밑에 붙여요.</p>
+                    <p>아카이브를 읽고 폰을 채워요</p>
                     <button type="button" class="na_ph_makebtn">폰 만들기</button>
-                    <small>초안 모델 · ${esc(drLabel())}</small>
+                    <span class="na_ph_makelinks"><button type="button" class="na_ph_makewho">인물 바꾸기</button><i>·</i><button type="button" class="na_ph_makelore">로어북 ${(n => (n ? `${n}권` : '없음'))(phoneLore(m).length)}</button></span>
+                    ${draftReady() ? '' : '<small>⚙ 설정 → AI 모델에서 초안 모델을 먼저 정해 주세요</small>'}
                   </div>
                 </div></div>`);
             return;
         }
         const top = keep ? $root.find('.na_ph_body, .ax_scroll').scrollTop() : 0;
-        $root.find('.na_ph_frame').html(screen(p, view, m, roster));
+        $root.find('.na_ph_frame').html(screen(p, view, m, roster, { newN: newSections(m, p), loreExp, loreEnts }));
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
     };
@@ -1265,21 +1314,10 @@ export async function openPhone(who = null) {
           <button type="button" class="na_ph_crow na_ph_lorebtn"><span><b>참고 로어북</b><small>${esc(loreSum())}</small></span>${ic(loreOpen ? 'down' : 'right', 16, 2.2)}</button>
           ${loreOpen ? `<div class="na_ph_lorelist">${all.length ? `<div class="na_ph_lorescroll">${all.map(book).join('')}</div>` : '<div class="na_empty">로어북이 없어요</div>'}<small>이 채팅의 모든 폰이 같이 읽어요 · 2만 토큰까지 통째로</small></div>` : ''}`;
     };
+    // before there is a phone, the sheet has its lorebook (read when making it); after, all of it is in 설정
     const drawCtrl = () => {
         const p = phone();
-        if (!p) { $root.find('.na_ph_ctrl').html(owner ? loreRow() : ''); return; }
-        const n = newSections(m, p);
-        $root.find('.na_ph_ctrl').html(`${loreRow()}
-          <label class="na_ph_crow"><span><b>롤플에 넣기</b><small>켜면 이 폰의 최근 문자 · 일정이 주입돼요</small></span><input type="checkbox" class="na_toggle na_ph_inject" ${p.inject ? 'checked' : ''}></label>
-          <div class="na_ph_cbtns">
-            <button type="button" class="na_v2_btn na_ph_update">${ic('redo', 15)}<span>새로 일어난 일 반영${n ? ` · 새 섹션 ${n}` : ''}</span></button>
-            <button type="button" class="na_v2_btn na_ph_more ${menu ? 'on' : ''}" aria-label="${menu ? '메뉴 닫기' : '더 보기'}" aria-expanded="${menu}">${menu ? ic('x', 16, 2.4) : '⋯'}</button>
-          </div>
-          ${menu ? `
-          <div class="na_ph_menu">
-            <small class="na_ph_menunote">테마 · 국적 · 외모는 폰 안 설정 앱에 있어요</small>
-            <div class="na_ph_menubtns"><button type="button" class="na_v2_pillbtn na_ph_remake">처음부터 다시 만들기</button><button type="button" class="na_v2_pillbtn na_ph_del">이 폰 지우기</button></div>
-          </div>` : ''}`);
+        $root.find('.na_ph_ctrl').html(owner && !p ? loreRow() : '');
     };
     const draw = () => { drawOwners(); drawPhone(); drawCtrl(); };
     const make = async ($btn, update) => {
@@ -1290,37 +1328,39 @@ export async function openPhone(who = null) {
         toastr.success(update ? '새로 일어난 일을 폰에 넣었어요' : `${owner}의 폰을 만들었어요`, '캐릭터 휴대폰');
     };
     // the screen changes first; saving waits
-    $root.on('click', '.na_ph_pick:not(.na_ph_addp)', function () { const same = owner === this.dataset.n; owner = this.dataset.n; view = 'lock'; menu = false; sheet = false; draw(); if (!same) setSheet(false); });
-    $root.on('click', '.na_phl_who', () => setSheet(!sheetOpen));
+    $root.on('click', '.na_ph_pick:not(.na_ph_addp), .ax_whopick', function (e) { e.stopPropagation(); const same = owner === this.dataset.n; owner = this.dataset.n; if (!same) { view = 'lock'; sheet = false; draw(); setSheet(false); } });
+    $root.on('click', '.na_ph_makewho', () => { loreOpen = false; drawCtrl(); setSheet(true); });
     // a person only the lorebook knows: into the same list as 인물 도감's +
     $root.on('click', '.na_ph_addp', () => { adding = !adding; drawOwners(); if (adding) { setSheet(true); $root.find('.na_ph_addname').trigger('focus'); } });
-    const addPerson = async () => {
-        const v = String($root.find('.na_ph_addname').val() || '').trim();
+    const addPerson = async el => {
+        const v = String($(el).closest('.na_ph_addbox').find('.na_ph_addname').val() || '').trim();
         if (!v) return;
         const have = names.find(n => nameKey(n) === nameKey(v));
         if (!have) { m.people = [...(Array.isArray(m.people) ? m.people : []), v]; names.push(v); roster.add(nameKey(v)); }
-        owner = have || v; adding = false; view = 'lock'; menu = false; sheet = false;
+        owner = have || v; adding = false; view = 'lock'; sheet = false;
         $root.find('.na_ph_addname').val('');
         draw();
         setSheet(false);
         if (!have) await saveMeta();
     };
-    $root.on('click', '.na_ph_addok', addPerson);
-    $root.on('keydown', '.na_ph_addname', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); addPerson(); } });
-    $root.on('click', '.na_phl_gear', () => setSheet(!sheetOpen));
+    $root.on('click', '.na_ph_addok', function (e) { e.stopPropagation(); addPerson(this); });
+    $root.on('keydown', '.na_ph_addname', function (e) { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); addPerson(this); } });
+    $root.on('click', '.na_ph_makelore', () => { loreOpen = true; drawCtrl(); setSheet(true); showOpened('.na_ph_lorelist'); });
     $root.on('click', '.na_phl_shade', () => setSheet(false));
+    // what opens in the sheet scrolls into sight, so the tap visibly does something
+    const showOpened = sel => setTimeout(() => $root.find(sel)[0]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 0);
     $root.on('click', '.na_ph_lorebtn', () => { loreOpen = !loreOpen; drawCtrl(); if (loreOpen) setTimeout(() => $root.find('.na_ph_lorelist')[0]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 0); });
     // the list is drawn again on every switch; where it was scrolled to stays
-    const redrawLore = () => { const top = $root.find('.na_ph_lorescroll').scrollTop(); drawCtrl(); $root.find('.na_ph_lorescroll').scrollTop(top); };
+    const redrawLore = () => { const top = $root.find('.na_ph_lorescroll').scrollTop(); drawCtrl(); $root.find('.na_ph_lorescroll').scrollTop(top); if (view === 'setlore') drawPhone(true); };
     const setOff = (b, uids) => { m.phoneLoreOff = m.phoneLoreOff && typeof m.phoneLoreOff === 'object' ? m.phoneLoreOff : {}; if (uids.size) m.phoneLoreOff[b] = [...uids]; else delete m.phoneLoreOff[b]; };
     const setOn = (b, yes) => { const set = new Set(phoneLore(m)); if (yes) set.add(b); else set.delete(b); m.phoneLore = [...set]; };
-    $root.on('change', '.na_ph_lorepick', async function () {
-        // a whole book: on with every entry, or off
-        setOn(this.value, this.checked); setOff(this.value, new Set());
-        redrawLore();
-        await saveMeta();
-    });
-    $root.on('click', '.na_ph_loreexp', async function () {
+    // a whole book: on with every entry, or off
+    const pickBook = async (b, yes) => { setOn(b, yes); setOff(b, new Set()); redrawLore(); await saveMeta(); };
+    $root.on('change', '.na_ph_lorepick', function () { pickBook(this.value, this.checked); });
+    $root.on('click', '.ax_lbon', function (e) { e.stopPropagation(); pickBook(this.dataset.b, !phoneLore(m).includes(this.dataset.b) || loreOff(m, this.dataset.b).size > 0); });
+    $root.on('click', '.ax_lb .ax_tx', function (e) { e.stopPropagation(); $(this).siblings('.ax_lbx').trigger('click'); });
+    $root.on('click', '.na_ph_loreexp, .ax_lbx', async function (e) {
+        e.stopPropagation();
         const b = this.dataset.b;
         if (loreExp.has(b)) { loreExp.delete(b); return redrawLore(); }
         loreExp.add(b); redrawLore();
@@ -1332,17 +1372,19 @@ export async function openPhone(who = null) {
             .map(([uid, e]) => ({ uid: String(e.uid ?? uid), title: String(e.comment || (e.key || []).join(', ') || String(e.content).slice(0, 40)).trim(), always: !!e.constant })));
         redrawLore();
     });
-    $root.on('change', '.na_ph_loreentpick', async function () {
-        const b = this.dataset.b, u = this.dataset.u, ents = loreEnts.get(b) || [];
+    const pickEntry = async (b, u, yes) => {
+        const ents = loreEnts.get(b) || [];
         const wasOn = phoneLore(m).includes(b);
         // an entry ticked in a book that was off: that book, with only this entry
         const off = wasOn ? loreOff(m, b) : new Set(ents.map(e => e.uid));
-        if (this.checked) off.delete(u); else off.add(u);
+        if (yes) off.delete(u); else off.add(u);
         const left = ents.filter(e => !off.has(e.uid)).length;
         setOn(b, left > 0); setOff(b, left > 0 ? off : new Set());
         redrawLore();
         await saveMeta();
-    });
+    };
+    $root.on('change', '.na_ph_loreentpick', function () { pickEntry(this.dataset.b, this.dataset.u, this.checked); });
+    $root.on('click', '.ax_le[data-u]', function (e) { e.stopPropagation(); const b = this.dataset.b, u = this.dataset.u; pickEntry(b, u, !(phoneLore(m).includes(b) && !loreOff(m, b).has(u))); });
     $root.on('click', '.na_ph_frame [data-go]', function (e) {
         const go = this.dataset.go;
         if (!go) return;
@@ -1384,25 +1426,28 @@ export async function openPhone(who = null) {
         catch (err) { console.error('[narrative-archive] photo', err); toastr.error(String(err?.message || err), '사진 그리기 실패'); }
         finally { drawing.delete(id); drawPhone(true); }
     });
-    $root.on('click', '.na_ph_update', function () { make($(this), true); });
+    // 설정's rows: the busy text goes where the row's value is
+    let making = false;
+    const makeFrom = async ($at, update) => { if (making) return; making = true; try { await make($at, update); } finally { making = false; } };
+    $root.on('click', '.na_ph_setupd', function (e) { e.stopPropagation(); makeFrom($(this).find('.ax_v'), true); });
+    $root.on('click', '.na_ph_setinj', async e => { e.stopPropagation(); const p = phone(); p.inject = !p.inject; drawPhone(true); await saveMeta(); applyInjection(); });
     // what opens under the phone scrolls into sight, so the tap visibly does something
-    const showOpened = sel => setTimeout(() => $root.find(sel)[0]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 0);
-    $root.on('click', '.na_ph_more', () => { menu = !menu; drawCtrl(); if (menu) showOpened('.na_ph_menu'); });
-    $root.on('change', '.na_ph_inject', async function () { phone().inject = this.checked; await saveMeta(); applyInjection(); });
     $root.on('change', '.na_ph_country', async function () { phone().country = this.value; drawPhone(); await saveMeta(); });
     $root.on('click', '.na_ph_theme', async function () { const p = phone(); if (this.dataset.v === 'gray') p.theme = 'gray'; else delete p.theme; drawPhone(); drawCtrl(); await saveMeta(); });
     $root.on('click', '.na_ph_wsw', async function () { phone().wall = this.dataset.w; drawPhone(); drawCtrl(); await saveMeta(); });
-    $root.on('click', '.na_ph_remake', async function () {
+    $root.on('click', '.na_ph_setremake', async function (e) {
+        e.stopPropagation();
         if (!await confirm('처음부터 다시 만들까요?', '지금 폰 내용은 지워지고 아카이브 전체를 다시 읽어요.')) return;
         const keep = phone().inject;
-        await make($(this), false);
-        if (phone() && keep) { phone().inject = true; await saveMeta(); applyInjection(); drawCtrl(); }
+        await makeFrom($(this).find('.ax_n'), false);
+        if (phone() && keep) { phone().inject = true; await saveMeta(); applyInjection(); drawPhone(true); }
     });
-    $root.on('click', '.na_ph_del', async () => {
+    $root.on('click', '.na_ph_setdel', async e => {
+        e.stopPropagation();
         if (!await confirm('이 폰을 지울까요?', `${esc(owner)}의 폰 내용이 이 채팅에서 지워져요.`)) return;
         const was = phone()?.inject;
         delete m.phones[nameKey(owner)];
-        menu = false; view = 'lock'; draw();
+        view = 'lock'; draw();
         await saveMeta();
         if (was) applyInjection();
     });
@@ -1436,7 +1481,6 @@ export async function openPhone(who = null) {
     if (t) { if (t.childNodes.length) document.body.append(t); else t.remove(); }
     dlg.remove();
 }
-const svgGear = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
 // the board's fonts (Inter Tight for numbers, Noto Sans KR), once
 function cgFonts() {
     if (document.getElementById('na_cg_fonts')) return;

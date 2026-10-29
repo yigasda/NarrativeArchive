@@ -4398,7 +4398,7 @@ body.na_darkui .na_ph_mapart { background: linear-gradient(90deg, rgba(255, 255,
 .na_pb_phonebtn { position: absolute; top: 10px; left: 10px; z-index: 1; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 11px 0 9px; border: 0; border-radius: 15px; background: rgba(0, 0, 0, 0.22); color: #fff; font: inherit; font-size: 0.8em; font-weight: 600; cursor: pointer; }
 .na_pb_phonebtn:hover { background: rgba(0, 0, 0, 0.4); }
 /* 캐릭터 휴대폰 under a theme that paints every button: the phone's buttons keep their own (see-through) look */
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame button:not(.na_ph_widget, .na_ph_kochip, .na_ph_makebtn, .na_ph_bar, .na_ph_thumb, .na_ph_draw, .cg_wcal, .cg_wnote, .cg_ic, .cg_nt, .na_ph_camthumb, .ax button),
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame button:not(.na_ph_widget, .na_ph_kochip, .na_ph_makebtn, .na_ph_makelinks button, .na_ph_bar, .na_ph_thumb, .na_ph_draw, .cg_wcal, .cg_wnote, .cg_ic, .cg_nt, .na_ph_camthumb, .ax button),
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_pick:not(.on) { background: transparent !important; background-image: none !important; border-color: transparent !important; box-shadow: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_pick.on { background: var(--na-card2) !important; border-color: transparent !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_pb_phonebtn { background: rgba(0, 0, 0, 0.22) !important; border-color: transparent !important; color: #fff !important; }
@@ -4951,12 +4951,34 @@ body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_top .na
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_top .na_ph_pick:not(.on) { background: transparent !important; }
 /* the top: whose phone (tap: the sheet with everyone), ⚙, ✕; the people themselves live in the sheet */
 .na_phl_sp { flex: 1; }
-.na_phl_who { flex: none; display: inline-flex; align-items: center; gap: 7px; max-width: 60%; height: 40px; padding: 0 12px 0 5px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.14); color: #fff; font: inherit; font-size: 0.88em; font-weight: 600; cursor: pointer; }
-.na_phl_who > span:not(.na_face) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.na_phl_who .na_face { font-size: 10px; }
-body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_who { background: rgba(255, 255, 255, 0.14) !important; color: #fff !important; border: 0 !important; box-shadow: none !important; }
 .na_phl_sheet .na_ph_owners { padding: 2px 0 4px; }
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_sheet .na_ph_pick { border: 0 !important; box-shadow: none !important; outline: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_sheet .na_ph_pick:not(.on) { background: transparent !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_sheet .na_ph_pick.on { background: var(--na-card2) !important; }
 .na_phl .na_ph_frame { width: min(calc(100vw - 20px), calc((100dvh - 74px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 390 / 844 + 14px), 470px); }
+
+/* 캐릭터 휴대폰 · 설정 앱의 아카이브 칸 (로어북 · 롤플에 넣기 · 반영 · 다시 만들기 · 지우기) */
+.ax_n.ax_blue { color: #2f6bff; }
+.ax_n.ax_red { color: #c0473d; }
+.ax .ax_lb { padding-left: 8px; }
+.ax .ax_lb .ax_tx { cursor: pointer; }
+.ax .ax_lbx { --axbg: none; flex: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; transition: transform 0.15s; }
+.ax .ax_lbx.on { transform: rotate(90deg); }
+.ax .ax_lbon { --axbg: #e5e7eb; }
+.ax .ax_lbon.on { --axbg: #89b892; }
+.ax .ax_lbon.part { --axbg: #c6dcc9; }
+.ax .ax_le { padding: 10px 14px 10px 50px; --axbg: #f6f7f9; }
+.ax .ax_le .ax_n { font-size: 14.5px; }
+.ax .ax_le .ax_radio { flex: none; }
+.ax_lbs .ax_rw + .ax_rw::before { left: 18px; }
+.ax_lbs .ax_le + .ax_le::before { left: 50px; }
+.na_ph_makelinks { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 12.5px; }
+.na_ph_makelinks i { opacity: 0.5; font-style: normal; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame .na_ph_makelinks button { padding: 4px 2px !important; border: 0 !important; background: none !important; box-shadow: none !important; color: #fff !important; font: inherit; opacity: 0.85; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.ax .ax_me .ax_v { font-size: 13.5px; }
+.ax .ax_add { padding: 8px 8px 8px 18px; gap: 8px; }
+.ax .ax_in { flex: 1; min-width: 0; height: 36px; padding: 0; border: 0; outline: none; background: none; color: #161b22; font: inherit; font-size: 15.5px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax .ax_in { background: none !important; border: 0 !important; box-shadow: none !important; color: #161b22 !important; }
+.ax .ax_in::placeholder { color: #a2a7af; }
+.ax .ax_addok { --axbg: var(--axc); flex: none; height: 36px; padding: 0 16px; border-radius: 18px; color: var(--axd); font-size: 14.5px; font-weight: 600; }
+.na_phl_btn:focus:not(:focus-visible) { outline: none; }
