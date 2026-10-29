@@ -4949,3 +4949,14 @@ body.na_darkui .na_phl_sheet { background: #2A221D; color: #EFE3D8; }
 /* the people on top: no theme border or ring, the picked one a soft light */
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_top .na_ph_pick { border: 0 !important; outline: none !important; box-shadow: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_top .na_ph_pick:not(.on) { background: transparent !important; }
+/* the top: whose phone (tap: the sheet with everyone), ⚙, ✕; the people themselves live in the sheet */
+.na_phl_sp { flex: 1; }
+.na_phl_who { flex: none; display: inline-flex; align-items: center; gap: 7px; max-width: 60%; height: 40px; padding: 0 12px 0 5px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.14); color: #fff; font: inherit; font-size: 0.88em; font-weight: 600; cursor: pointer; }
+.na_phl_who > span:not(.na_face) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.na_phl_who .na_face { font-size: 10px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_who { background: rgba(255, 255, 255, 0.14) !important; color: #fff !important; border: 0 !important; box-shadow: none !important; }
+.na_phl_sheet .na_ph_owners { padding: 2px 0 4px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_sheet .na_ph_pick { border: 0 !important; box-shadow: none !important; outline: none !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_sheet .na_ph_pick:not(.on) { background: transparent !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_sheet .na_ph_pick.on { background: var(--na-card2) !important; }
+.na_phl .na_ph_frame { width: min(calc(100vw - 20px), calc((100dvh - 74px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 390 / 844 + 14px), 470px); }

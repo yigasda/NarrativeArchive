@@ -1198,7 +1198,8 @@ export async function openPhone(who = null) {
     const $root = $(`
       <div class="na_popup na_v2 na_phone na_phl_root">
         <div class="na_phl_top">
-          <div class="na_ph_owners"></div>
+          <button type="button" class="na_phl_who" aria-label="인물 바꾸기"></button>
+          <span class="na_phl_sp"></span>
           <button type="button" class="na_phl_btn na_phl_gear" aria-label="폰 설정" aria-expanded="false">${svgGear}</button>
           <button type="button" class="na_phl_btn na_phl_close" aria-label="닫기">${ic('x', 20, 2.4)}</button>
         </div>
@@ -1207,6 +1208,7 @@ export async function openPhone(who = null) {
         <div class="na_phl_sheet" hidden>
           <div class="na_phl_grab"></div>
           <div class="na_phl_sheethead"><b>캐릭터 휴대폰</b><small>아카이브에 있는 만큼만 · 보기 전용</small></div>
+          <div class="na_ph_owners"></div>
           <div class="na_ph_addrow" hidden><input type="text" class="text_pole na_ph_addname" placeholder="로어북에만 있는 인물 이름" enterkeyhint="done"><button type="button" class="na_v2_pillbtn na_ph_addok">추가</button></div>
           <div class="na_ph_ctrl"></div>
         </div>
@@ -1218,6 +1220,7 @@ export async function openPhone(who = null) {
           <button type="button" class="na_ph_pick ${n === owner ? 'on' : ''}" data-n="${esc(n)}">${faceHtml(n, 40)}<span>${esc(n)}</span>${m.phones[nameKey(n)] ? '<i></i>' : ''}</button>`).join('')}
           <button type="button" class="na_ph_pick na_ph_addp" title="인물 넣기"><span class="na_ph_addic">${ic('plus', 18, 2)}</span><span>넣기</span></button>`);
         $root.find('.na_ph_addrow').prop('hidden', !adding);
+        $root.find('.na_phl_who').html(owner ? `${faceHtml(owner, 30)}<span>${esc(owner)}</span>${ic('down', 14, 2.4)}` : `<span>인물 고르기</span>${ic('down', 14, 2.4)}`);
     };
     const drawPhone = (keep = false) => {
         const p = phone();
@@ -1287,7 +1290,8 @@ export async function openPhone(who = null) {
         toastr.success(update ? '새로 일어난 일을 폰에 넣었어요' : `${owner}의 폰을 만들었어요`, '캐릭터 휴대폰');
     };
     // the screen changes first; saving waits
-    $root.on('click', '.na_ph_pick:not(.na_ph_addp)', function () { owner = this.dataset.n; view = 'lock'; menu = false; sheet = false; draw(); });
+    $root.on('click', '.na_ph_pick:not(.na_ph_addp)', function () { const same = owner === this.dataset.n; owner = this.dataset.n; view = 'lock'; menu = false; sheet = false; draw(); if (!same) setSheet(false); });
+    $root.on('click', '.na_phl_who', () => setSheet(!sheetOpen));
     // a person only the lorebook knows: into the same list as 인물 도감's +
     $root.on('click', '.na_ph_addp', () => { adding = !adding; drawOwners(); if (adding) { setSheet(true); $root.find('.na_ph_addname').trigger('focus'); } });
     const addPerson = async () => {
@@ -1298,6 +1302,7 @@ export async function openPhone(who = null) {
         owner = have || v; adding = false; view = 'lock'; menu = false; sheet = false;
         $root.find('.na_ph_addname').val('');
         draw();
+        setSheet(false);
         if (!have) await saveMeta();
     };
     $root.on('click', '.na_ph_addok', addPerson);
