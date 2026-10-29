@@ -111,15 +111,18 @@ export async function openKeeps() {
     let start = null;
     const opened = new Set(); // rows held down: their whole message shows under them
     const hint = () => $root.find('.na_kp_hint').text(start === null ? '장면 첫 메시지를 탭하세요 · 꾹 누르면 전체 보기' : `#${start}부터 · 끝 메시지를 탭하세요 (같은 줄을 한 번 더 누르면 그 메시지만)`);
+    // each message cleaned once, not on every redraw
+    const clean = new Map();
+    const cleanOf = i => { if (!clean.has(i)) clean.set(i, cleanMessage(String(chat[i]?.mes || ''), { stripTags: true }).trim()); return clean.get(i); };
     const drawMsgs = () => {
         const mm = getMeta();
         const rows = [];
         for (let i = lo; i < chat.length; i++) {
             const x = chat[i];
             if (!x || x.is_system) continue;
-            const t = cleanMessage(String(x.mes || ''), { stripTags: true }).replace(/\s+/g, ' ').trim();
+            const t = cleanOf(i).replace(/\s+/g, ' ');
             rows.push(`<button type="button" class="na_kp_msg ${isKeptAt(mm, i) ? 'kept' : ''} ${start === i ? 'start' : ''} ${opened.has(i) ? 'open' : ''}" data-i="${i}"><b>#${i}</b><span class="na_kp_who">${esc(x.name || '')}</span><span class="na_kp_line">${esc(t.slice(0, 90)) || '<span class="na_dim">(비어 있음)</span>'}</span></button>`
-                + (opened.has(i) ? `<div class="na_kp_full" data-i="${i}">${esc(cleanMessage(String(x.mes || ''), { stripTags: true }).trim()).replace(/\n/g, '<br>')}<button type="button" class="na_linkbtn na_kp_fold">접기</button></div>` : ''));
+                + (opened.has(i) ? `<div class="na_kp_full" data-i="${i}">${esc(cleanOf(i)).replace(/\n/g, '<br>')}<button type="button" class="na_linkbtn na_kp_fold">접기</button></div>` : ''));
         }
         $root.find('.na_kp_msgs').html(rows.join('') || '<div class="na_empty">압축 안 된 메시지가 없어요.</div>');
         hint();
@@ -152,8 +155,10 @@ export async function openKeeps() {
         const a = Math.min(start, i), b = Math.max(start, i);
         start = null;
         if (keepsOf(getMeta()).some(k => k.from <= a && k.to >= b)) { render(); return toastr.info(`이미 남겨 둔 구간이에요 (${keepLabel({ from: a, to: b })})`, '서사 아카이브', { timeOut: 2500 }); }
-        await putKeep(a, b, '');
+        // the list changes at once; saving and rebuilding what goes in follow in the background
+        const saving = putKeep(a, b, '');
         render();
+        saving.catch(e => toastr.error(String(e?.message || e), '꼭 남길 장면'));
         toastr.success(`꼭 남길 장면: ${keepLabel({ from: a, to: b })}`, '서사 아카이브', { timeOut: 2500 });
     });
     const byId = el => keepsOf(getMeta()).find(k => k.id === String($(el).closest('.na_kp_item').data('id')));

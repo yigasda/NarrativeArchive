@@ -3982,6 +3982,7 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_kp_msg.kept b { color: var(--na-accent); }
 .na_kp_msg.start { outline: 2px solid var(--na-accent); outline-offset: -2px; }
 .na_kp_msgs, .na_kp_msgs * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.na_kp_msg { touch-action: manipulation; }
 .na_kp_msg.open .na_kp_line { color: var(--na-dim); }
 .na_kp_full { margin: 0 6px 6px 34px; padding: 8px 10px; border-left: 2px solid var(--na-line); font-size: 0.86em; line-height: 1.6; white-space: normal; }
 .na_kp_full .na_kp_fold { display: block; margin: 6px 0 0 auto; font-size: 0.95em; }
