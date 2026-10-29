@@ -1258,7 +1258,7 @@ export async function openPhone(who = null) {
           <label class="na_ph_crow"><span><b>롤플에 넣기</b><small>켜면 이 폰의 최근 문자 · 일정이 주입돼요</small></span><input type="checkbox" class="na_toggle na_ph_inject" ${p.inject ? 'checked' : ''}></label>
           <div class="na_ph_cbtns">
             <button type="button" class="na_v2_btn na_ph_update">${ic('redo', 15)}<span>새로 일어난 일 반영${n ? ` · 새 섹션 ${n}` : ''}</span></button>
-            <button type="button" class="na_v2_btn na_ph_more" aria-label="더 보기">⋯</button>
+            <button type="button" class="na_v2_btn na_ph_more ${menu ? 'on' : ''}" aria-label="${menu ? '메뉴 닫기' : '더 보기'}" aria-expanded="${menu}">${menu ? ic('x', 16, 2.4) : '⋯'}</button>
           </div>
           ${menu ? `
           <div class="na_ph_menu">
@@ -1294,7 +1294,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_fullbtn', () => $root.addClass('na_ph_full'));
     $root.on('click', '.na_ph_fullx', () => $root.removeClass('na_ph_full'));
     $root.on('click', '.na_ph_wrap', e => { if (e.target === e.currentTarget && $root.hasClass('na_ph_full')) $root.removeClass('na_ph_full'); });
-    $root.on('click', '.na_ph_lorebtn', () => { loreOpen = !loreOpen; drawCtrl(); });
+    $root.on('click', '.na_ph_lorebtn', () => { loreOpen = !loreOpen; drawCtrl(); if (loreOpen) setTimeout(() => $root.find('.na_ph_lorelist')[0]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 0); });
     // the list is drawn again on every switch; where it was scrolled to stays
     const redrawLore = () => { const top = $root.find('.na_ph_lorescroll').scrollTop(); drawCtrl(); $root.find('.na_ph_lorescroll').scrollTop(top); };
     const setOff = (b, uids) => { m.phoneLoreOff = m.phoneLoreOff && typeof m.phoneLoreOff === 'object' ? m.phoneLoreOff : {}; if (uids.size) m.phoneLoreOff[b] = [...uids]; else delete m.phoneLoreOff[b]; };
@@ -1370,7 +1370,9 @@ export async function openPhone(who = null) {
         finally { drawing.delete(id); drawPhone(true); }
     });
     $root.on('click', '.na_ph_update', function () { make($(this), true); });
-    $root.on('click', '.na_ph_more', () => { menu = !menu; drawCtrl(); });
+    // what opens under the phone scrolls into sight, so the tap visibly does something
+    const showOpened = sel => setTimeout(() => $root.find(sel)[0]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 0);
+    $root.on('click', '.na_ph_more', () => { menu = !menu; drawCtrl(); if (menu) showOpened('.na_ph_menu'); });
     $root.on('change', '.na_ph_inject', async function () { phone().inject = this.checked; await saveMeta(); applyInjection(); });
     $root.on('change', '.na_ph_country', async function () { phone().country = this.value; drawPhone(); await saveMeta(); });
     $root.on('click', '.na_ph_theme', async function () { const p = phone(); if (this.dataset.v === 'gray') p.theme = 'gray'; else delete p.theme; drawPhone(); drawCtrl(); await saveMeta(); });
