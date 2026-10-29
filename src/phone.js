@@ -262,32 +262,32 @@ export async function openPhone(who = null) {
     });
     $root.on('click', '.na_ph_postdraw', async function (e) {
         e.stopPropagation();
-        const p = phone(), k = Number(this.dataset.k), id = `${nameKey(p.owner)}:post${k}`;
+        const p = phone(), k = Number(this.dataset.k), album = this.dataset.src === 'photo', id = `${nameKey(p.owner)}:${album ? '' : 'post'}${k}`;
         if (drawing.has(id)) return;
         drawing.add(id); drawPhone(true);
-        try { await drawPost(m, p, k); toastr.success('사진을 그렸어요', '캐릭터 휴대폰'); }
+        try { await (album ? drawPhoto : drawPost)(m, p, k); toastr.success('사진을 그렸어요', '캐릭터 휴대폰'); }
         catch (err) { console.error('[narrative-archive] post photo', err); toastr.error(String(err?.message || err), '사진 그리기 실패'); }
         finally { drawing.delete(id); drawPhone(true); }
     });
-    // a drawn SNS photo shows only the picture; a long press shows its tags and 다시 그리기 (the phone's own image menu stays shut)
+    // a drawn picture (사진 or SNS) shows only itself; a long press shows its tags, 다시 그리기 and 저장 (the phone's own image menu stays shut)
     let pressT = null, justPressed = false;
     const pressSheet = el => {
-        const x = phone()?.posts?.[Number(el.dataset.k)];
+        const x = (el.dataset.src === 'photo' ? phone()?.photos : phone()?.posts)?.[Number(el.dataset.k)];
         if (!x) return;
         justPressed = true;
         $(el).find('.ax_presssheet').remove();
-        $(el).append(`<div class="ax_presssheet"><small>그린 태그${x.via === 'autopic' ? ' · 오토픽' : ''}</small><code>${esc(x.tags || '')}</code><div class="ax_btns"><button type="button" class="na_ph_postdraw" data-k="${el.dataset.k}">다시 그리기</button><button type="button" class="ax_presssave" data-k="${el.dataset.k}">저장</button><button type="button" class="ax_pressx">닫기</button></div></div>`);
+        $(el).append(`<div class="ax_presssheet"><small>그린 태그${x.via === 'autopic' ? ' · 오토픽' : ''}</small><code>${esc(x.tags || '')}</code><div class="ax_btns"><button type="button" class="na_ph_postdraw" data-src="${el.dataset.src}" data-k="${el.dataset.k}">다시 그리기</button><button type="button" class="ax_presssave" data-src="${el.dataset.src}" data-k="${el.dataset.k}">저장</button><button type="button" class="ax_pressx">닫기</button></div></div>`);
     };
-    // 저장: the picture as a file (owner, SNS, the post's time in the name)
+    // 저장: the picture as a file (owner, 사진 or SNS, its time in the name)
     $root.on('click', '.ax_presssave', async function (e) {
         e.stopPropagation();
-        const p = phone(), x = p?.posts?.[Number(this.dataset.k)];
+        const p = phone(), album = this.dataset.src === 'photo', x = (album ? p?.photos : p?.posts)?.[Number(this.dataset.k)];
         if (!x?.img) return;
         try {
             const blob = await (await fetch(x.img)).blob();
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `${p.owner}_SNS_${String(x.time || '').replace(/\D/g, '') || 'photo'}.${(blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`;
+            a.download = `${p.owner}_${album ? 'Photo' : 'SNS'}_${String(x.time || '').replace(/\D/g, '') || 'photo'}.${(blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`;
             document.body.append(a); a.click(); a.remove();
             setTimeout(() => URL.revokeObjectURL(a.href), 10000);
         } catch (err) { console.error('[narrative-archive] save photo', err); toastr.error(String(err?.message || err), '사진 저장 실패'); }

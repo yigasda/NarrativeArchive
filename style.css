@@ -4811,7 +4811,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .ax_pvcap { margin: 12px 14px 0; padding: 14px 16px; border-radius: 22px; background: rgba(255, 255, 255, 0.08); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1); }
 .ax_pvcap p { margin: 0; font-size: 15.5px; line-height: 1.45; }
 .ax_pvcap .ax_k { font-size: 13.5px; color: rgba(255, 255, 255, 0.62); margin-top: 3px; }
-.ax_tags { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 11.5px; color: rgba(255, 255, 255, 0.48); line-height: 1.5; user-select: text; -webkit-user-select: text; }
 .ax_pvbtns { display: flex; gap: 8px; padding: 12px 14px 40px; }
 .ax .ax_pvbtns > button { --axbg: rgba(255, 255, 255, 0.1); flex: 1; text-align: center; padding: 13px 0; border-radius: 18px; font-size: 14.5px; font-weight: 600; justify-content: center; }
 .ax .ax_pvbtns > .na_ph_draw.ax_pvdraw { --axbg: #ecc3ae; color: #4a2420 !important; display: flex !important; border-radius: 18px !important; font-size: 14.5px !important; padding: 13px 0 !important; }
@@ -5045,3 +5044,5 @@ body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .cg_wcal :is(.c
 .ax_presssheet small { font-size: 11.5px; color: rgba(255, 255, 255, 0.6); font-weight: 600; letter-spacing: 0.04em; }
 .ax_presssheet code { display: block; margin-top: 6px; max-height: 180px; overflow-y: auto; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; color: rgba(255, 255, 255, 0.88); white-space: pre-wrap; background: none; padding: 0; border: 0; user-select: text; -webkit-user-select: text; }
 .ax_presssheet .ax_btns { margin-top: 12px; }
+.ax_pvimg.na_ph_press { position: relative; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.ax_pvimg.na_ph_press > img { pointer-events: none; -webkit-user-drag: none; }

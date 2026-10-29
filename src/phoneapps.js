@@ -127,7 +127,7 @@ export function snsScreen(p, now) {
 // a post's photo: before it is drawn, its words and 그리기; after, only the picture (a long press shows the tags)
 function postPic(p, x, k) {
     const busy = drawing.has(`${nameKey(p.owner)}:post${k}`);
-    if (x.img) return `<div class="ax_postpic has na_ph_press" data-k="${k}"><img src="${esc(x.img)}" alt="" draggable="false">${busy ? `<span class="ax_postbusy">${busyHtml} 그리는 중</span>` : ''}</div>`;
+    if (x.img) return `<div class="ax_postpic has na_ph_press" data-src="post" data-k="${k}"><img src="${esc(x.img)}" alt="" draggable="false">${busy ? `<span class="ax_postbusy">${busyHtml} 그리는 중</span>` : ''}</div>`;
     return `<div class="ax_postpic" style="background: linear-gradient(160deg, ${AX_MOOD[moodOf(x.photo)]})">${ax('photo', 56, '#fff', 1.3)}<div class="ax_alt">${axKo(x.photo, x.pko)}</div><button type="button" class="na_ph_postdraw ax_postdraw" data-k="${k}" ${busy ? 'disabled' : ''}>${busy ? `${busyHtml} 그리는 중` : '그리기'}</button></div>`;
 }
 export function snsPost(p, now, k) {
@@ -306,10 +306,11 @@ export function photoView(p, now, k) {
     if (!x) return photoScreen(p, now);
     return `${axBar(p, now, '#fff')}
       <div class="ax_top">${axCb('photo')}<span class="ax_ttl">${esc(axDay(p, now, x.time))}<small class="cg_num">${esc(fmtTime(p, x.time))}</small></span><span class="ax_topr">${axKp(p) || '<i class="ax_cbsp"></i>'}</span></div>
-      <div class="ax_pvimg ${x.img ? 'has' : ''}" style="background: ${axFlat(x.mood)}">${axPic(x, 60)}</div>
+      ${x.img ? `<div class="ax_pvimg has na_ph_press" data-src="photo" data-k="${k}">${axPic(x, 60)}${drawing.has(`${nameKey(p.owner)}:${k}`) ? `<span class="ax_postbusy">${busyHtml} 그리는 중</span>` : ''}</div>`
+        : `<div class="ax_pvimg" style="background: ${axFlat(x.mood)}">${axPic(x, 60)}</div>`}
       <div class="ax_scroll">
-        <div class="ax_pvcap"><p>${esc(x.caption)}${x.ko && koOn() ? `<span class="ax_k">${esc(x.ko)}</span>` : ''}</p>${x.tags ? `<div class="ax_tags">그린 태그${x.via === 'autopic' ? ' · 오토픽' : ''} · ${esc(x.tags)}</div>` : ''}</div>
-        <div class="ax_pvbtns">${drawBtn(p, k, 'ax_pvdraw')}<button type="button" data-go="photo">사진</button></div>
+        <div class="ax_pvcap"><p>${esc(x.caption)}${x.ko && koOn() ? `<span class="ax_k">${esc(x.ko)}</span>` : ''}</p></div>
+        ${x.img ? '' : `<div class="ax_pvbtns">${drawBtn(p, k, 'ax_pvdraw')}</div>`}
       </div>
       ${axInd('#fff')}`;
 }
