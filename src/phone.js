@@ -709,7 +709,7 @@ const AX = {
     pen: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18',
     palette: 'M12 3a9 9 0 0 0 0 18c1 0 1.5-.6 1.5-1.4 0-.9-.7-1.3-.7-2.1 0-.8.6-1.5 1.5-1.5H17a4 4 0 0 0 4-4c0-5-4-9-9-9zM7.5 11h.01M10 7h.01M14.5 7h.01',
     lang: 'M4 6h9M8.5 4v2M6 6c0 4 3 7 6 8M11 6c0 3-3 7-7 8M14 20l4-9 4 9M15.5 17h5', user: 'M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 21a8 8 0 0 1 16 0',
-    info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v5M12 8h.01', in: 'M17 7L7 17M15 17H7V9', out: 'M7 17L17 7M9 7h8v8',
+    info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v5M12 8h.01', in: 'M17 7L7 17M15 17H7V9', out: 'M7 17L17 7M9 7h8v8', missed: 'M4 7l6 6 4-4 6 6', x: 'M6 6l12 12M18 6L6 18',
     star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z', clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2',
     keypad: 'M4 4h4v4H4zM10 4h4v4h-4zM16 4h4v4h-4zM4 10h4v4H4zM10 10h4v4h-4zM16 10h4v4h-4zM4 16h4v4H4zM10 16h4v4h-4zM16 16h4v4h-4z', voice: 'M5 10v4M9 7v10M13 4v16M17 8v8M21 11v2',
     call: 'M6 3h3l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v3a2 2 0 0 1-2 2A17 17 0 0 1 4 5a2 2 0 0 1 2-2z', video: 'M3 7h12v10H3zM15 10l6-3v10l-6-3', mail: 'M3 6h18v12H3zM3 7l9 6 9-6',
@@ -763,35 +763,6 @@ function snsPost(p, now, k) {
       </div>
       ${axInd()}`;
 }
-function mailScreen(p, now) {
-    const ms = (p.mails || []).map((x, k) => [x, k]).reverse(), unread = ms.filter(([x]) => x.unread).length;
-    return `${axBar(p, now)}
-      <div class="ax_mltop"><button type="button" class="ax_back ax_blue" data-go="home">${ax('back', 22, '#2f6bff', 2.4)}사서함</button><span>편집</span></div>
-      <div class="ax_scroll">
-        <div class="ax_big">받은편지함</div>
-        <div class="ax_find">${ax('search', 17, '#8e8e93', 2.2)}검색</div>
-        ${ms.length ? ms.map(([x, k]) => `
-          <button type="button" class="ax_mrow ${x.unread ? 'u' : ''}" data-go="mailone" data-i="${k}"><span class="ax_mdot">${x.unread ? '<i></i>' : ''}</span><span class="ax_mtx">
-            <span class="ax_mh"><b>${esc(x.from)}</b><small class="cg_num">${esc(listTime(p, x.time))}</small>${ax('chev', 14, '#c4c4c7', 2.4)}</span>
-            <span class="ax_ms">${esc(x.subject)}</span><span class="ax_mp">${axKo(x.text.replace(/\s+/g, ' '), x.ko ? x.ko.replace(/\s+/g, ' ') : '')}</span></span></button>`).join('') : '<div class="ax_empty">메일이 없어요</div>'}
-      </div>
-      <div class="ax_mbar">${ax('filter', 24, '#2f6bff')}<small>방금 업데이트됨<br><span>${unread ? `안 읽음 ${unread}` : '모두 읽음'}</span></small>${ax('compose', 24, '#2f6bff')}</div>
-      ${axInd()}`;
-}
-function mailOne(p, now, k) {
-    const x = (p.mails || [])[k];
-    if (!x) return mailScreen(p, now);
-    return `${axBar(p, now)}
-      <div class="ax_mltop"><button type="button" class="ax_back ax_blue" data-go="mail">${ax('back', 22, '#2f6bff', 2.4)}받은편지함</button>${ax('down', 22, '#2f6bff', 2.4)}</div>
-      <div class="ax_scroll">
-        <div class="ax_mdfrom"><span class="ax_mdav">${esc([...String(x.from).trim()][0] || '?')}</span><div><b>${esc(x.from)}</b><small>받는 사람: ${esc(p.owner)}</small></div><small class="cg_num">${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</small></div>
-        <div class="ax_mdsub">${axKo(x.subject, x.ks)}</div>
-        <div class="ax_mdbody">${esc(x.text)}</div>
-        ${x.ko && koOn() ? `<div class="ax_mdko">${esc(x.ko)}</div>` : ''}
-      </div>
-      <div class="ax_mbar">${ax('trash', 24, '#2f6bff')}${ax('folder', 24, '#2f6bff')}${ax('reply', 24, '#2f6bff')}${ax('compose', 24, '#2f6bff')}</div>
-      ${axInd()}`;
-}
 function diaryScreen(p, now) {
     const ds = (p.diary || []).map((x, k) => [x, k]).reverse(), x0 = parts(now);
     const have = new Set((p.diary || []).map(d => d.date));
@@ -822,62 +793,22 @@ function diaryOne(p, now, k) {
       </div>
       ${axInd()}`;
 }
-function setScreen(p, now, m) {
-    const looks = looksOf(), nLooks = peopleList(m).filter(n => looks[nameKey(n)]).length;
-    return `${axBar(p, now)}
-      <div class="ax_sttop"><button type="button" class="ax_back ax_blue" data-go="home">${ax('back', 24, '#2f6bff', 2.4)}</button></div>
-      <div class="ax_scroll">
-        <div class="ax_big">설정</div>
-        <div class="ax_find ax_search2">${ax('search', 17, '#8e8e93', 2.2)}검색</div>
-        <div class="ax_grp"><div class="ax_srow ax_me">${axFace(p.owner, 58)}<span class="ax_st"><b>${esc(p.owner)}</b><small>${esc([p.profile?.handle, COUNTRIES[p.country] || p.country].filter(Boolean).join(' · '))}</small></span></div></div>
-        <div class="ax_ghead">화면</div>
-        <div class="ax_grp">
-          <button type="button" class="ax_srow" data-go="settheme"><span class="ax_si" style="background: #a66cf0">${ax('palette', 18, '#fff')}</span><span class="ax_st">테마</span><span class="ax_sv">${p.theme === 'gray' ? '화이트 그레이' : '컬러 젤'}</span>${ax('chev', 16, '#c4c4c7', 2.4)}</button>
-          <button type="button" class="ax_srow na_ph_kochip ax_koline"><span class="ax_si" style="background: #34c759">${ax('lang', 18, '#fff')}</span><span class="ax_st">한국어 보기</span><span class="ax_sw ${koOn() ? 'on' : ''}"></span></button>
-        </div>
-        <div class="ax_foot">외국어로 된 문자 · 메모 · 글 밑에 한국어를 붙여요.</div>
-        <div class="ax_ghead">일반</div>
-        <div class="ax_grp">
-          <label class="ax_srow"><span class="ax_si" style="background: #2f8cff">${ax('globe', 18, '#fff')}</span><span class="ax_st">국적</span><span class="ax_sv">${esc(COUNTRIES[p.country] || p.country || '')}</span>${ax('chev', 16, '#c4c4c7', 2.4)}<select class="na_ph_country ax_sel" aria-label="국적">${Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === p.country ? 'selected' : ''}>${v}</option>`).join('')}${COUNTRIES[p.country] ? '' : `<option value="${esc(p.country)}" selected>${esc(p.country)}</option>`}</select></label>
-          <button type="button" class="ax_srow na_ph_looksbtn2"><span class="ax_si" style="background: #ff9f0a">${ax('user', 18, '#fff')}</span><span class="ax_st">외모</span><span class="ax_sv">${nLooks ? `${nLooks}명` : ''}</span>${ax('chev', 16, '#c4c4c7', 2.4)}</button>
-          <div class="ax_srow"><span class="ax_si" style="background: #8e8e93">${ax('info', 18, '#fff')}</span><span class="ax_st">이 폰에 대해</span><span class="ax_sv cg_num">${p.upto >= 0 ? `#${p.upto}까지` : ''}</span></div>
-        </div>
-      </div>
-      ${axInd()}`;
-}
-function setTheme(p, now) {
-    const mini = gray => `<span class="ax_mini"><i class="b1" ${gray ? 'style="opacity: 0.75"' : ''}></i><i class="b2" ${gray ? 'style="opacity: 0.75"' : ''}></i><i class="w" style="left: 8px"></i><i class="w" style="left: 58px"></i><span class="g">${(gray ? Array(8).fill('rgba(255, 255, 255, 0.5)') : ['#e8b8a8', '#eceef2', '#ead69c', '#acc9ad', '#e2b3c3', '#a8c1df', '#bdb1db', '#bcc0c6']).map(c => `<i style="background: ${c}"></i>`).join('')}</span><i class="d"></i></span>`;
-    const opt = (v, label) => { const on = (p.theme === 'gray') === (v === 'gray'); return `<button type="button" class="ax_tp na_ph_theme" data-v="${v}">${mini(v === 'gray')}<span>${label}</span><span class="ax_radio ${on ? 'on' : ''}">${on ? '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ''}</span></button>`; };
-    return `${axBar(p, now)}
-      <div class="ax_sttop"><button type="button" class="ax_back ax_blue" data-go="set">${ax('back', 24, '#2f6bff', 2.4)}설정</button><b>테마</b><span class="ax_sp"></span></div>
-      <div class="ax_scroll"><div class="ax_themes">${opt('gel', '컬러 젤')}${opt('gray', '화이트 그레이')}</div><div class="ax_foot">홈 화면과 잠금화면에 쓰여요.</div></div>
-      ${axInd()}`;
-}
-function camScreen(p, now, k, busy) {
-    const shot = k >= 0 ? p.photos[k] : null, last = p.photos[p.photos.length - 1];
-    const t = recentTrackers(1)[0];
-    const modes = '<div class="ax_modes"><span>타임랩스</span><span>동영상</span><span class="on">사진</span><span>인물</span><span>파노라마</span></div>';
-    const bar = `<div class="ax_cbar"><button type="button" class="ax_cthumb" data-go="photo" aria-label="사진첩" style="--axbg: linear-gradient(160deg, ${AX_MOOD[(shot || last)?.mood || 'green']})">${(shot || last)?.img ? `<img src="${esc((shot || last).img)}" alt="">` : ''}</button><button type="button" class="ax_shut na_ph_shutter" aria-label="찍기" ${busy ? 'disabled' : ''}><span>${busy ? busyHtml : ''}</span></button><span class="ax_flip" aria-hidden="true">${ax('flip', 24, '#fff')}</span></div>`;
-    if (shot) return `${axBar(p, now, '#fff')}
-      <div class="ax_camtop">${ax('bolt', 22, '#fff')}<span class="ax_pill">사진첩에 넣었어요</span><button type="button" class="ax_back" data-go="home" aria-label="닫기">${ax('down', 22, '#fff', 2.4)}</button></div>
-      <div class="ax_shot" style="background: linear-gradient(170deg, ${AX_MOOD[shot.mood || 'warm']})">${shot.img ? `<img src="${esc(shot.img)}" alt="">` : ax('photo', 64, 'rgba(255, 255, 255, 0.7)', 1.2)}
-        <div class="ax_sheet"><small>방금 찍은 사진</small><p>${esc(shot.caption)}</p>${shot.ko && koOn() ? `<div class="ax_k">${esc(shot.ko)}</div>` : ''}
-          <div class="ax_btns">${drawBtn(p, k, 'ax_yellow')}<button type="button" data-go="photoone" data-i="${k}">사진첩</button><button type="button" data-go="cam">다시 찍기</button></div></div></div>
-      ${modes}${bar}${axInd('#fff')}`;
-    return `${axBar(p, now, '#fff')}
-      <div class="ax_camtop">${ax('bolt', 22, '#fff')}<span class="ax_pill">${busy ? '찍는 중…' : `지금 장면 · ${esc(fmtDate(p, now, true))} ${esc(fmtTime(p, now))}`}</span><button type="button" class="ax_back" data-go="home" aria-label="닫기">${ax('down', 22, '#fff', 2.4)}</button></div>
-      <div class="ax_vf"><i class="ax_scene" style="background: radial-gradient(60% 50% at 30% 35%, #f2c08f 0, transparent 60%), radial-gradient(50% 45% at 75% 60%, #8a5a7a 0, transparent 65%), linear-gradient(170deg, ${AX_MOOD[last?.mood || 'warm']})"></i><i class="ax_vig"></i>
-        <i class="ax_gl" style="left: 33.3%; top: 0; bottom: 0; width: 1px"></i><i class="ax_gl" style="left: 66.6%; top: 0; bottom: 0; width: 1px"></i><i class="ax_gl" style="top: 33.3%; left: 0; right: 0; height: 1px"></i><i class="ax_gl" style="top: 66.6%; left: 0; right: 0; height: 1px"></i>
-        <i class="ax_focus"></i>${t?.place ? `<span class="ax_hint">${esc(t.place)}</span>` : ''}<span class="ax_zoom"><span>.5</span><span class="on">1×</span><span>2</span></span></div>
-      ${modes}${bar}${axInd('#fff')}`;
-}
-
-// ---- 메시지 · 전화 · 사진 · 메모 · 검색 · 캘린더: the same real-app look (the approved boards)
-const AX_AV = ['#a5b8d6, #6f89b3', '#c4b6e2, #9483c4', '#f0c2a4, #d38b6e', '#a5aab3, #868b94', '#b9d4b0, #6f9a76', '#f2bfcd, #cf7f98'];
-// a face for people in the archive, a letter for the rest
-const axAv = (n, z, roster) => roster.has(nameKey(n)) ? axFace(n, z)
-    : `<span class="ax_avc" style="width: ${z}px; height: ${z}px; font-size: ${Math.round(z * 0.42)}px; background: linear-gradient(180deg, ${AX_AV[[...String(n)].reduce((h, ch) => (h * 31 + ch.codePointAt(0)) % 9973, 7) % AX_AV.length]})">${esc([...String(n).trim()][0] || '?')}</span>`;
-const axKoBtn = (p, c) => (hasKo(p) ? `<button type="button" class="na_ph_kochip ax_kobtn ${koOn() ? 'on' : ''}" style="--axk: ${c}">한국어</button>` : '');
+// ---- 메시지 · 전화 · 사진 · 메모 · 검색 · 캘린더 · 메일 · 설정 · 카메라 (v3.118): the boards' layout in the home's flat look —
+// each app one colour (메시지 · 전화 blue, the rest their home icon's), round glass buttons, white cards, no gradients
+const AXB = { msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', cam: 'apri' };
+const AXB_C = { blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'] };
+// people outside the archive get a letter on one of the home icons' colours
+const AX_AV = ['#8faed1', '#a699c9', '#d89f98', '#89b892', '#d494a7', '#a2a7af', '#dcc680'];
+const axTint = n => AX_AV[[...String(n)].reduce((h, ch) => (h * 31 + ch.codePointAt(0)) % 9973, 7) % AX_AV.length];
+const axLetter = (n, z) => `<span class="ax_avc" style="width: ${z}px; height: ${z}px; font-size: ${Math.round(z * 0.4)}px; background: ${axTint(n)}">${esc([...String(n).trim()][0] || '?')}</span>`;
+const axAv = (n, z, roster) => (roster.has(nameKey(n)) ? axFace(n, z) : axLetter(n, z));
+const axFlat = mood => (AX_MOOD[mood] || AX_MOOD.warm).split(', ')[1];
+const axCb = (go, k = 'back') => `<button type="button" class="ax_cb" data-go="${go}" aria-label="${k === 'x' ? '닫기' : '뒤로'}">${ax(k, 18, 'currentColor', 2.3)}</button>`;
+const axKp = p => (hasKo(p) ? `<button type="button" class="na_ph_kochip ax_kp ${koOn() ? 'on' : ''}">가 한국어</button>` : '');
+const axTop = (left, right = '') => `<div class="ax_top">${left}<span class="ax_topr">${right}</span></div>`;
+const axH1 = (t, sub = '') => `<div class="ax_h1"><b>${esc(t)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>`;
+const axFind = (t = '검색') => `<div class="ax_find">${ax('search', 16, 'currentColor', 2.2)}${t}</div>`;
+const axChev = ax('chev', 15, '#b7bdc6', 2.4);
 const axNewest = xs => xs.map((x, k) => [x, k]).sort((a, b) => String(b[0].time).localeCompare(String(a[0].time)));
 const axDay = (p, now, v) => (String(v).slice(0, 5) === String(now).slice(0, 5) ? '오늘' : fmtDate(p, v));
 // days from b to a (both MM-DD), in one year; -1 when a is before b
@@ -886,21 +817,22 @@ const axDays = (a, b) => { const x = parts(a), y = parts(b); return x && y ? Mat
 function msgList(p, now, roster) {
     const ts = [...p.threads].sort((a, b) => lastTime(b).localeCompare(lastTime(a)));
     return `${axBar(p, now)}
-      <div class="ax_nav"><span class="ax_blue">편집</span><span class="ax_navr">${axKoBtn(p, '#2f6bff')}${ax('compose', 22, '#2f6bff')}</span></div>
+      ${axTop(axCb('home'), axKp(p))}
       <div class="ax_scroll">
-        <div class="ax_big">메시지</div>
-        <div class="ax_find">${ax('search', 17, '#8e8e93', 2.2)}검색</div>
-        ${ts.length ? ts.map(t => { const x = t.messages[t.messages.length - 1]; return `
-          <button type="button" class="ax_crow" data-go="thread" data-i="${p.threads.indexOf(t)}"><span class="ax_ud">${x.from !== 'me' ? '<i></i>' : ''}</span>${axAv(t.with, 52, roster)}<span class="ax_ctx">
-            <span class="ax_ch"><b>${esc(savedName(p, t.with))}</b><small class="cg_num">${esc(listTime(p, x.time))}</small>${ax('chev', 14, '#c4c4c7', 2.4)}</span>
-            <span class="ax_cp">${esc(x.text)}${x.ko && koOn() ? `<span class="ax_ko">${esc(x.ko)}</span>` : ''}</span></span></button>`; }).join('') : '<div class="ax_empty">메시지가 없어요</div>'}
+        ${axH1('메시지', ts.length ? `${ts.length}개 대화` : '')}
+        ${axFind()}
+        ${ts.length ? `<div class="ax_card">${ts.map(t => { const x = t.messages[t.messages.length - 1]; return `
+          <button type="button" class="ax_rw" data-go="thread" data-i="${p.threads.indexOf(t)}">${x.from !== 'me' ? '<i class="ax_dot"></i>' : ''}${axAv(t.with, 48, roster)}<span class="ax_tx">
+            <span class="ax_h"><b>${esc(savedName(p, t.with))}</b><small class="cg_num">${esc(listTime(p, x.time))}</small></span>
+            <span class="ax_p">${esc(x.text)}${x.ko && koOn() ? `<span class="ax_ko">${esc(x.ko)}</span>` : ''}</span></span></button>`; }).join('')}</div>` : '<div class="ax_empty">메시지가 없어요</div>'}
+        <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
 }
 function threadScreen(p, now, i, roster) {
     const t = p.threads[i];
     if (!t) return msgList(p, now, roster);
-    const ms = t.messages, group = new Set(ms.filter(x => x.from !== 'me').map(x => nameKey(x.from))).size > 1;
+    const ms = t.messages, group = new Set(ms.filter(x => x.from !== 'me').map(x => nameKey(x.from))).size > 1, saved = savedName(p, t.with);
     let day = '';
     const rows = ms.map((x, n) => {
         let out = '';
@@ -914,9 +846,9 @@ function threadScreen(p, now, i, roster) {
         return out;
     }).join('');
     return `${axBar(p, now)}
-      <div class="ax_th"><button type="button" class="ax_back ax_thbk" data-go="msg" aria-label="뒤로">${ax('back', 26, '#2f6bff', 2.4)}</button><span class="ax_thko">${axKoBtn(p, '#2f6bff')}</span>${axAv(t.with, 50, roster)}<b>${esc(savedName(p, t.with))} ${ax('chev', 11, '#8e8e93', 2.6)}</b></div>
-      <div class="ax_scroll ax_msgs">${rows}</div>
-      <div class="ax_ibar"><span class="ax_pl">${ax('plus', 20, '#8e8e93', 2.4)}</span><span class="ax_f">${ax('lock', 14, '#a0a0a5')}보기 전용<span class="ax_sp"></span>${ax('mic', 18, '#a0a0a5')}</span></div>
+      ${axTop(`${axCb('msg')}<span class="ax_who2">${axAv(t.with, 38, roster)}<span><b>${esc(saved)}</b><small>${saved !== t.with ? esc(t.with) : '휴대전화'}</small></span></span>`, axKp(p))}
+      <div class="ax_scroll ax_msgs">${rows}<i class="ax_pad big"></i></div>
+      <div class="ax_ibar">${ax('lock', 14, 'currentColor')}보기 전용<span class="ax_mi">${ax('mic', 17, 'currentColor')}</span></div>
       ${axInd()}`;
 }
 
@@ -931,19 +863,21 @@ function callRuns(p, onlyMissed) {
     }
     return runs;
 }
-const callKind = c => (c.type === 'missed' ? '부재중' : c.min ? `${c.min}분` : c.type === 'out' ? '발신' : '수신');
+const callKind = c => (c.type === 'missed' ? '부재중' : `${c.type === 'out' ? '발신' : '수신'}${c.min ? ` · ${c.min}분` : ''}`);
 function callScreen(p, now, roster, onlyMissed) {
-    const runs = callRuns(p, onlyMissed);
-    const tab = (k, label, on) => `<span class="${on ? 'on' : ''}">${ax(k, 26, on ? '#2f6bff' : '#8e8e93', k === 'keypad' ? 1.6 : 1.8)}${label}</span>`;
+    const runs = callRuns(p, onlyMissed), day = String(now).slice(0, 5);
+    const row = ({ c, k, n }) => `<button type="button" class="ax_rw" data-go="callwho" data-i="${k}"><span class="ax_ci ${c.type}">${ax(c.type, 17, 'currentColor', 2.2)}</span><span class="ax_tx"><b class="${c.type === 'missed' ? 'm' : ''}">${esc(savedName(p, c.with))}${n > 1 ? ` (${n})` : ''}</b><span class="ax_p">${callKind(c)}</span></span><small class="cg_num">${esc(listTime(p, c.time))}</small></button>`;
+    const today = runs.filter(r => r.c.time.slice(0, 5) === day), before = runs.filter(r => r.c.time.slice(0, 5) !== day);
     return `${axBar(p, now)}
-      <div class="ax_nav"><span class="ax_blue">편집</span><span></span></div>
-      <div class="ax_seg"><button type="button" class="${onlyMissed ? '' : 'on'}" data-go="call">전체</button><button type="button" class="${onlyMissed ? 'on' : ''}" data-go="callmiss">부재중</button></div>
+      ${axTop(axCb('home'))}
       <div class="ax_scroll">
-        <div class="ax_big ax_big6">최근 기록</div>
-        ${runs.length ? runs.map(({ c, k, n }) => `
-          <button type="button" class="ax_prow" data-go="callwho" data-i="${k}"><span class="ax_ti">${c.type === 'missed' ? '' : ax(c.type, 16, '#8e8e93', 2.2)}</span><span class="ax_ptx"><b class="${c.type === 'missed' ? 'm' : ''}">${esc(savedName(p, c.with))}${n > 1 ? ` (${n})` : ''}</b><span>휴대전화 · ${callKind(c)}</span></span><small class="cg_num">${esc(listTime(p, c.time))}</small>${ax('info', 22, '#2f6bff', 1.8)}</button>`).join('') : `<div class="ax_empty">${onlyMissed ? '부재중 전화가 없어요' : '통화 기록이 없어요'}</div>`}
+        ${axH1('최근 기록', runs.length ? `${runs.reduce((s, r) => s + r.n, 0)}통` : '')}
+        ${today.length ? `<div class="ax_sec">오늘</div><div class="ax_card">${today.map(row).join('')}</div>` : ''}
+        ${before.length ? `<div class="ax_sec">${today.length ? '이전' : '최근'}</div><div class="ax_card">${before.map(row).join('')}</div>` : ''}
+        ${runs.length ? '' : `<div class="ax_empty">${onlyMissed ? '부재중 전화가 없어요' : '통화 기록이 없어요'}</div>`}
+        <i class="ax_pad big"></i>
       </div>
-      <div class="ax_tabbar">${tab('star', '즐겨찾기')}${tab('clock', '최근 기록', true)}${tab('user', '연락처')}${tab('keypad', '키패드')}${tab('voice', '음성 사서함')}</div>
+      <div class="ax_dock"><button type="button" class="${onlyMissed ? '' : 'on'}" data-go="call">전체</button><button type="button" class="${onlyMissed ? 'on' : ''}" data-go="callmiss">부재중</button></div>
       ${axInd()}`;
 }
 function callWho(p, now, k, roster) {
@@ -952,15 +886,14 @@ function callWho(p, now, k, roster) {
     const who = c0.with, saved = savedName(p, who), ti = p.threads.findIndex(t => nameKey(t.with) === nameKey(who));
     const cs = p.calls.filter(c => nameKey(c.with) === nameKey(who)).reverse();
     const days = [...new Set(cs.map(c => c.time.slice(0, 5)))];
-    const act = (k2, label, go) => (go ? `<button type="button" ${go}>${ax(k2, 22, '#2f6bff')}${label}</button>` : `<span>${ax(k2, 22, '#2f6bff')}${label}</span>`);
+    const act = (k2, label, go) => (go ? `<button type="button" ${go}>${ax(k2, 21, 'currentColor')}${label}</button>` : `<span>${ax(k2, 21, 'currentColor')}${label}</span>`);
     return `${axBar(p, now)}
+      ${axTop(axCb('call'))}
       <div class="ax_scroll">
-        <div class="ax_ctop">
-          <div class="ax_nav"><button type="button" class="ax_back ax_blue" data-go="call">${ax('back', 22, '#2f6bff', 2.4)}최근 기록</button><span class="ax_blue">편집</span></div>
-          ${axAv(who, 96, roster)}<h2>${esc(saved)}</h2><p>${saved !== who ? `저장된 이름 · ${esc(who)}` : '휴대전화'}</p>
-        </div>
+        <div class="ax_ptop"><span class="ax_ring2" style="background: ${axTint(who)}">${axAv(who, 88, roster)}</span><h2>${esc(saved)}</h2><p>${saved !== who ? `저장된 이름 · ${esc(who)}` : '휴대전화'}</p></div>
         <div class="ax_acts">${act('cmt', '메시지', ti >= 0 ? `data-go="thread" data-i="${ti}"` : '')}${act('call', '전화')}${act('video', '영상')}${act('mail', '메일')}</div>
         ${days.map(d => `<div class="ax_card"><div class="ax_hd">${esc(axDay(p, now, d))}</div>${cs.filter(c => c.time.slice(0, 5) === d).map(c => `<div class="ax_lr"><span class="${c.type === 'missed' ? 'm' : ''}">${c.type === 'missed' ? '부재중 전화' : `${c.type === 'out' ? '발신' : '수신'} 전화${c.min ? ` · ${c.min}분` : ''}`}</span><span class="cg_num">${esc(fmtTime(p, c.time))}</span></div>`).join('')}</div>`).join('')}
+        <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
 }
@@ -971,47 +904,48 @@ function photoScreen(p, now) {
     const ps = axNewest(p.photos);
     const days = [...new Set(ps.map(([x]) => x.time.slice(0, 5)))];
     return `${axBar(p, now)}
-      <div class="ax_pnav"><b>보관함</b><span><button type="button" class="ax_pchip na_ph_looksbtn">${ax('user', 14, '#111', 2.2)}외모</button>${hasKo(p) ? `<button type="button" class="ax_pchip na_ph_kochip ${koOn() ? 'on' : ''}">가 한국어</button>` : ''}</span></div>
+      ${axTop(axCb('home'), `<button type="button" class="ax_kp on na_ph_looksbtn">${ax('user', 14, 'currentColor', 2.2)} 외모</button>${axKp(p)}`)}
       <div class="ax_scroll">
+        ${axH1('사진', ps.length ? `${ps.length}장` : '')}
         ${ps.length ? days.map(d => { const xs = ps.filter(([x]) => x.time.slice(0, 5) === d); return `
           <div class="ax_pday">${esc(axDay(p, now, d))}<small>${xs.length}장</small></div>
-          <div class="ax_pg3">${xs.map(([x, k]) => `<div class="ax_pq" data-go="photoone" data-i="${k}" role="button" tabindex="0" aria-label="크게 보기" style="background: linear-gradient(160deg, ${AX_MOOD[x.mood] || AX_MOOD.warm})">${axPic(x, 24)}${x.img ? '' : drawBtn(p, k, 'ax_dr')}</div>`).join('')}</div>`; }).join('') : '<div class="ax_empty">사진이 없어요</div>'}
+          <div class="ax_pg">${xs.map(([x, k]) => `<div class="ax_pq" data-go="photoone" data-i="${k}" role="button" tabindex="0" aria-label="크게 보기" style="background: ${axFlat(x.mood)}">${axPic(x, 24)}${x.img ? '' : drawBtn(p, k, 'ax_dr')}</div>`).join('')}</div>`; }).join('') : '<div class="ax_empty">사진이 없어요</div>'}
+        <i class="ax_pad"></i>
       </div>
-      <div class="ax_pbar"><span class="on">보관함</span><span>추억</span><span>앨범</span></div>
       ${axInd()}`;
 }
 function photoView(p, now, k) {
     const x = p.photos[k];
     if (!x) return photoScreen(p, now);
     return `${axBar(p, now, '#fff')}
-      <div class="ax_pvtop"><button type="button" class="ax_back" data-go="photo" aria-label="뒤로">${ax('back', 24, '#fff', 2.4)}</button><div>${esc(axDay(p, now, x.time))}<small class="cg_num">${esc(fmtTime(p, x.time))}</small></div>${ax('heart', 22, '#fff')}</div>
-      <div class="ax_pvimg ${x.img ? 'has' : ''}" style="background: linear-gradient(170deg, ${AX_MOOD[x.mood] || AX_MOOD.warm})">${axPic(x, 64)}</div>
+      <div class="ax_top">${axCb('photo')}<span class="ax_ttl">${esc(axDay(p, now, x.time))}<small class="cg_num">${esc(fmtTime(p, x.time))}</small></span><span class="ax_topr">${axKp(p) || '<i class="ax_cbsp"></i>'}</span></div>
+      <div class="ax_pvimg ${x.img ? 'has' : ''}" style="background: ${axFlat(x.mood)}">${axPic(x, 60)}</div>
       <div class="ax_scroll">
         <div class="ax_pvcap"><p>${esc(x.caption)}${x.ko && koOn() ? `<span class="ax_k">${esc(x.ko)}</span>` : ''}</p>${x.tags ? `<div class="ax_tags">그린 태그${x.via === 'autopic' ? ' · 오토픽' : ''} · ${esc(x.tags)}</div>` : ''}</div>
-        <div class="ax_pvbtns">${drawBtn(p, k, 'ax_pvdraw')}<button type="button" data-go="photo">보관함</button></div>
+        <div class="ax_pvbtns">${drawBtn(p, k, 'ax_pvdraw')}<button type="button" data-go="photo">사진</button></div>
       </div>
       ${axInd('#fff')}`;
 }
 
 // 메모: grouped like the real app (오늘 · 이전 7일 · 이전 30일 · by month)
+const NOTE_MARK = /^(\[x\]|✓|✔|\[ \]|[-*•])\s*/i;
 function noteScreen(p, now) {
     const ns = axNewest(p.notes);
     const label = t => { const n = axDays(now, t); return n === 0 ? '오늘' : n > 0 && n <= 7 ? '이전 7일' : n > 0 && n <= 30 ? '이전 30일' : `${parts(t)?.mo || ''}월`; };
     const groups = [];
     for (const [x, k] of ns) { const l = label(x.time), g = groups[groups.length - 1]; if (g && g.l === l) g.xs.push([x, k]); else groups.push({ l, xs: [[x, k]] }); }
     return `${axBar(p, now)}
-      <div class="ax_nnav"><button type="button" class="ax_back" data-go="home">${ax('back', 22, '#d9a400', 2.4)}폴더</button><span class="ax_navr">${axKoBtn(p, '#d9a400')}${ax('more', 24, '#d9a400', 3)}</span></div>
+      ${axTop(axCb('home'), axKp(p))}
       <div class="ax_scroll">
-        <div class="ax_big">메모</div>
-        <div class="ax_find ax_search2">${ax('search', 17, '#8e8e93', 2.2)}검색</div>
-        ${groups.length ? groups.map(g => `<div class="ax_ghead2">${esc(g.l)}</div><div class="ax_ngrp">${g.xs.map(([x, k]) => `
-          <button type="button" class="ax_nrow" data-go="noteone" data-i="${k}"><b>${axKo(x.title || x.text.slice(0, 30), x.kt)}</b><span class="ax_np"><span class="cg_num">${esc(listTime(p, x.time))}</span>${esc(x.text.split('\n').map(l => l.trim().replace(NOTE_MARK, '')).filter(Boolean).join(' · '))}</span></button>`).join('')}</div>`).join('') : '<div class="ax_empty">메모가 없어요</div>'}
+        ${axH1('메모', ns.length ? `${ns.length}개` : '')}
+        ${axFind()}
+        ${groups.length ? groups.map(g => `<div class="ax_sec">${esc(g.l)}</div><div class="ax_card">${g.xs.map(([x, k]) => `
+          <button type="button" class="ax_rw ax_rwn" data-go="noteone" data-i="${k}"><span class="ax_tx"><b>${axKo(x.title || x.text.slice(0, 30), x.kt)}</b><span class="ax_p1"><span class="cg_num">${esc(listTime(p, x.time))}</span>${esc(x.text.split('\n').map(l => l.trim().replace(NOTE_MARK, '')).filter(Boolean).join(' · '))}</span></span></button>`).join('')}</div>`).join('') : '<div class="ax_empty">메모가 없어요</div>'}
+        <i class="ax_pad"></i>
       </div>
-      <div class="ax_nfoot">${ax('folder', 24, '#d9a400')}<small>메모 ${p.notes.length}개</small>${ax('compose', 24, '#d9a400')}</div>
       ${axInd()}`;
 }
 // a note's lines: "- a", "[ ] a", "[x] a", "✓ a" read as a checklist, the rest as plain lines
-const NOTE_MARK = /^(\[x\]|✓|✔|\[ \]|[-*•])\s*/i;
 function noteOne(p, now, k) {
     const n = p.notes[k];
     if (!n) return noteScreen(p, now);
@@ -1019,15 +953,16 @@ function noteOne(p, now, k) {
         const t = l.trim(), mt = t.match(NOTE_MARK);
         if (!mt) return t ? `<div class="ax_nline">${esc(t)}</div>` : '<div class="ax_nline"><br></div>';
         const done = /^(\[x\]|✓|✔)/i.test(mt[1]);
-        return `<div class="ax_chk ${done ? 'd' : ''}"><i>${done ? ax('check', 14, '#fff', 3.2) : ''}</i><span>${esc(t.slice(mt[0].length))}</span></div>`;
+        return `<div class="ax_chk ${done ? 'd' : ''}"><i>${done ? ax('check', 13, '#5a4a1f', 3.2) : ''}</i><span>${esc(t.slice(mt[0].length))}</span></div>`;
     }).join('');
     return `${axBar(p, now)}
-      <div class="ax_nnav"><button type="button" class="ax_back" data-go="note">${ax('back', 22, '#d9a400', 2.4)}메모</button><span class="ax_navr">${axKoBtn(p, '#d9a400')}${ax('share', 22, '#d9a400')}${ax('more', 24, '#d9a400', 3)}</span></div>
+      ${axTop(axCb('note'), axKp(p))}
       <div class="ax_scroll ax_nd">
         <div class="ax_ndt cg_num">${esc(fmtDate(p, n.time))} ${esc(fmtTime(p, n.time))}</div>
         <h2>${esc(n.title || '')}</h2>${n.kt && koOn() ? `<div class="ax_nkt">${esc(n.kt)}</div>` : ''}
-        ${body}
+        ${body ? `<div class="ax_card ax_ncard">${body}</div>` : ''}
         ${n.ko && koOn() ? `<div class="ax_nko">${esc(n.ko)}</div>` : ''}
+        <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
 }
@@ -1036,31 +971,31 @@ function noteOne(p, now, k) {
 function searchScreen(p, now) {
     const ss = axNewest(p.searches);
     return `${axBar(p, now)}
-      <div class="ax_sxh">검색${axKoBtn(p, '#2f6bff')}</div>
+      ${axTop(axCb('home'), axKp(p))}
       <div class="ax_scroll">
-        <div class="ax_sxf">${ax('search', 19, '#8e8e93', 2.2)}검색어 또는 주소</div>
-        ${ss.length ? `<div class="ax_ghead2">최근 검색</div><div class="ax_ngrp">${ss.map(([x, k]) => `
-          <button type="button" class="ax_sxr" data-go="searchone" data-i="${k}">${ax('clock', 20, '#8e8e93', 1.8)}<span class="ax_sxt"><b>${esc(x.q)}</b>${x.ko && koOn() ? `<span>${esc(x.ko)}</span>` : ''}</span><small class="cg_num">${esc(listTime(p, x.time))}</small></button>`).join('')}</div>` : '<div class="ax_empty">검색 기록이 없어요</div>'}
+        ${axH1('검색')}
+        <div class="ax_find ax_findbig">${ax('search', 18, 'currentColor', 2.2)}<span>검색어 또는 주소</span></div>
+        ${ss.length ? `<div class="ax_sec">최근 검색</div><div class="ax_card">${ss.map(([x, k]) => `
+          <button type="button" class="ax_rw" data-go="searchone" data-i="${k}">${ax('clock', 20, '#8faed1', 1.9)}<span class="ax_tx"><b class="ax_n">${esc(x.q)}</b>${x.ko && koOn() ? `<span class="ax_p">${esc(x.ko)}</span>` : ''}</span><small class="cg_num">${esc(listTime(p, x.time))}</small></button>`).join('')}</div>` : '<div class="ax_empty">검색 기록이 없어요</div>'}
+        <i class="ax_pad"></i>
       </div>
-      <div class="ax_sxbar"><div>${ax('search', 17, '#8e8e93', 2.2)}검색어 또는 주소</div></div>
       ${axInd()}`;
 }
 function searchOne(p, now, k) {
     const x = p.searches[k];
     if (!x) return searchScreen(p, now);
     return `${axBar(p, now)}
-      <div class="ax_nav"><button type="button" class="ax_back ax_blue" data-go="search">${ax('back', 22, '#2f6bff', 2.4)}검색</button>${axKoBtn(p, '#2f6bff')}</div>
+      ${axTop(axCb('search'), axKp(p))}
       <div class="ax_scroll">
-        <div class="ax_sqf">${ax('search', 18, '#8e8e93', 2.2)}<span>${esc(x.q)}</span></div>
-        <div class="ax_sqt"><span class="on">전체</span><span>뉴스</span><span>지도</span><span>이미지</span></div>
-        <div class="ax_sqk"><small>이 검색 · <span class="cg_num">${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</span></small><p>${esc(x.q)}</p>${x.ko && koOn() ? `<div class="ax_k">${esc(x.ko)}</div>` : ''}</div>
+        <div class="ax_find ax_findq">${ax('search', 16, 'currentColor', 2.2)}<span>${esc(x.q)}</span></div>
+        <div class="ax_card ax_sqk"><small>이 검색 · <span class="cg_num">${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</span></small><p>${esc(x.q)}</p>${x.ko && koOn() ? `<div class="ax_k">${esc(x.ko)}</div>` : ''}</div>
         <div class="ax_sqn">검색 결과 페이지는 아카이브에 없어서 보여주지 않아요.<br>검색어와 시간만 남아요.</div>
       </div>
       ${axInd()}`;
 }
 
 // 캘린더: the story's month (no weekdays: its dates carry no year), then the days that have something
-const AX_EVC = ['#ff3b30', '#2f6bff', '#34c759', '#ff9f0a', '#a66cf0'];
+const AX_EVC = ['#b0564e', '#8faed1', '#89b892', '#dcc680', '#a699c9'];
 function annivList(m) {
     const rows = datedRows(m);
     return annivsOf(m).map(a => { const r = rows.find(x => sectionKey(x.s) === a.key); return r ? { name: a.name, date: `${pad(r.date.m)}-${pad(r.date.d)}` } : null; }).filter(Boolean);
@@ -1072,20 +1007,21 @@ function calScreen(p, now, m) {
     const marked = new Set([...p.events.map(e => e.date), ...an.map(a => a.date)]);
     const len = new Date(2000, x0.mo, 0).getDate();
     const grid = Array.from({ length: len }, (_, n) => { const d = `${pad(x0.mo)}-${pad(n + 1)}`; return `<b class="${d === day ? 't' : ''} ${marked.has(d) ? 'e' : ''}">${n + 1}</b>`; }).join('');
-    const row = ({ e, k }) => `<button type="button" class="ax_ce" data-go="calone" data-i="${k}"><i style="background: ${AX_EVC[k % AX_EVC.length]}"></i><span class="ax_cetx"><b>${esc(e.title)}</b>${e.ko && koOn() ? `<span>${esc(e.ko)}</span>` : ''}</span><small class="cg_num">${e.time ? esc(fmtTime(p, `${e.date} ${e.time}`)) : '하루 종일'}</small></button>`;
-    const anRow = a => `<div class="ax_ce"><i style="background: #ff2d55"></i><span class="ax_cetx"><b>♥ ${esc(a.name)}</b><span>기념일 · 매년 ${esc(fmtDate(p, a.date))}</span></span></div>`;
+    const row = ({ e, k }, when = '') => `<button type="button" class="ax_ev" data-go="calone" data-i="${k}"><i style="background: ${AX_EVC[k % AX_EVC.length]}"></i><span class="ax_tx"><b>${esc(e.title)}</b>${e.ko && koOn() ? `<span class="ax_p">${esc(e.ko)}</span>` : ''}</span><small class="cg_num">${e.time ? esc(fmtTime(p, `${e.date} ${e.time}`)) : '하루 종일'}${when ? `<br>${esc(when)}` : ''}</small></button>`;
+    const anRow = a => `<div class="ax_ev"><i style="background: #d494a7"></i><span class="ax_tx"><b>♥ ${esc(a.name)}</b><span class="ax_p">기념일 · 매년 ${esc(fmtDate(p, a.date))}</span></span></div>`;
     const soon = [...new Set(evs.filter(x => x.e.date >= day).map(x => x.e.date))].sort();
     if (an.some(a => a.date === day) && !soon.includes(day)) soon.unshift(day);
     const past = evs.filter(x => x.e.date < day).reverse();
     return `${axBar(p, now)}
-      <div class="ax_cnav"><button type="button" class="ax_back" data-go="home">${ax('back', 22, '#ff3b30', 2.4)}캘린더</button><span class="ax_navr">${axKoBtn(p, '#ff3b30')}${ax('search', 22, '#ff3b30')}${ax('plus', 24, '#ff3b30')}</span></div>
+      ${axTop(axCb('home'), axKp(p))}
       <div class="ax_scroll">
-        <div class="ax_cm">${x0.mo}월</div>
-        <div class="ax_cg7">${grid}</div>
-        ${soon.map(d => `<div class="ax_cl"><div class="ax_hd">${esc(fmtDate(p, d))}${d === day ? ' · 오늘' : ''}</div>${an.filter(a => a.date === d).map(anRow).join('')}${evs.filter(x => x.e.date === d).map(row).join('')}</div>`).join('')}
-        ${soon.length ? '' : '<div class="ax_cl"><div class="ax_hd">다가오는 일정 없음</div></div>'}
-        ${an.length ? `<div class="ax_cl"><div class="ax_hd">기념일</div>${an.map(anRow).join('')}</div>` : ''}
-        ${past.length ? `<div class="ax_cl"><div class="ax_hd">지난 일정</div>${past.map(({ e, k }) => row({ e, k }).replace('</small>', `<br>${esc(fmtDate(p, e.date, true))}</small>`)).join('')}</div>` : ''}
+        ${axH1(`${x0.mo}월`, p.events.length ? `일정 ${p.events.length}` : '')}
+        <div class="ax_card"><div class="ax_cal7">${grid}</div></div>
+        ${soon.map(d => `<div class="ax_sec">${esc(fmtDate(p, d))}${d === day ? ' · 오늘' : ''}</div><div class="ax_card">${d === day ? an.filter(a => a.date === d).map(anRow).join('') : ''}${evs.filter(x => x.e.date === d).map(x => row(x)).join('')}</div>`).join('')}
+        ${soon.length ? '' : '<div class="ax_sec">다가오는 일정 없음</div>'}
+        ${an.length ? `<div class="ax_sec">기념일</div><div class="ax_card">${an.map(anRow).join('')}</div>` : ''}
+        ${past.length ? `<div class="ax_sec">지난 일정</div><div class="ax_card">${past.map(x => row(x, fmtDate(p, x.e.date, true))).join('')}</div>` : ''}
+        <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
 }
@@ -1093,12 +1029,96 @@ function calOne(p, now, k, m) {
     const e = p.events[k];
     if (!e) return calScreen(p, now, m);
     return `${axBar(p, now)}
-      <div class="ax_cnav"><button type="button" class="ax_back" data-go="cal">${ax('back', 22, '#ff3b30', 2.4)}${esc(fmtDate(p, e.date, true))}</button>${axKoBtn(p, '#ff3b30')}</div>
+      ${axTop(axCb('cal'), axKp(p))}
       <div class="ax_scroll">
-        <div class="ax_edh"><h2>${esc(e.title)}</h2>${e.ko && koOn() ? `<div class="ax_k">${esc(e.ko)}</div>` : ''}<p class="cg_num">${esc(fmtDate(p, e.date))}<br>${e.time ? esc(fmtTime(p, `${e.date} ${e.time}`)) : '하루 종일'}</p></div>
-        <div class="ax_grp"><div class="ax_srow"><span class="ax_st">캘린더</span><span class="ax_sv"><i class="ax_cdot" style="background: ${AX_EVC[k % AX_EVC.length]}"></i>${esc(p.owner)}</span></div></div>
+        <div class="ax_card ax_edh"><h2>${esc(e.title)}</h2>${e.ko && koOn() ? `<div class="ax_k">${esc(e.ko)}</div>` : ''}<p class="cg_num">${esc(fmtDate(p, e.date))}<br>${e.time ? esc(fmtTime(p, `${e.date} ${e.time}`)) : '하루 종일'}</p></div>
+        <div class="ax_card"><div class="ax_lr"><span>캘린더</span><span class="ax_v"><i class="ax_cdot" style="background: ${AX_EVC[k % AX_EVC.length]}"></i>${esc(p.owner)}</span></div></div>
       </div>
       ${axInd()}`;
+}
+
+// 메일
+function mailScreen(p, now) {
+    const ms = (p.mails || []).map((x, k) => [x, k]).reverse(), unread = ms.filter(([x]) => x.unread).length;
+    return `${axBar(p, now)}
+      ${axTop(axCb('home'), axKp(p))}
+      <div class="ax_scroll">
+        ${axH1('받은편지함', unread ? `안 읽음 ${unread}` : '')}
+        ${axFind()}
+        ${ms.length ? `<div class="ax_card">${ms.map(([x, k]) => `
+          <button type="button" class="ax_rw ax_rwm" data-go="mailone" data-i="${k}">${x.unread ? '<i class="ax_dot"></i>' : ''}${axLetter(x.from, 42)}<span class="ax_tx">
+            <span class="ax_h"><b>${esc(x.from)}</b><small class="cg_num">${esc(listTime(p, x.time))}</small></span>
+            <span class="ax_s ${x.unread ? 'u' : ''}">${esc(x.subject)}</span><span class="ax_p">${axKo(x.text.replace(/\s+/g, ' '), x.ko ? x.ko.replace(/\s+/g, ' ') : '')}</span></span></button>`).join('')}</div>` : '<div class="ax_empty">메일이 없어요</div>'}
+        <i class="ax_pad"></i>
+      </div>
+      ${axInd()}`;
+}
+function mailOne(p, now, k) {
+    const x = (p.mails || [])[k];
+    if (!x) return mailScreen(p, now);
+    return `${axBar(p, now)}
+      ${axTop(axCb('mail'), axKp(p))}
+      <div class="ax_scroll">
+        <div class="ax_card ax_rw ax_mfrom">${axLetter(x.from, 44)}<span class="ax_tx"><b>${esc(x.from)}</b><span class="ax_p">받는 사람: ${esc(p.owner)}</span></span><small class="cg_num">${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</small></div>
+        <div class="ax_msub">${axKo(x.subject, x.ks)}</div>
+        <div class="ax_mbody">${esc(x.text)}</div>
+        ${x.ko && koOn() ? `<div class="ax_mko">${esc(x.ko)}</div>` : ''}
+        <i class="ax_pad"></i>
+      </div>
+      ${axInd()}`;
+}
+
+// 설정
+function setScreen(p, now, m) {
+    const looks = looksOf(), nLooks = peopleList(m).filter(n => looks[nameKey(n)]).length;
+    const si = (c, k) => `<span class="ax_si" style="background: ${c}">${ax(k, 17, '#fff')}</span>`;
+    return `${axBar(p, now)}
+      ${axTop(axCb('home'))}
+      <div class="ax_scroll">
+        ${axH1('설정')}
+        <div class="ax_card"><div class="ax_rw ax_me">${axFace(p.owner, 56)}<span class="ax_tx"><b>${esc(p.owner)}</b><span class="ax_p">${esc([p.profile?.handle, COUNTRIES[p.country] || p.country].filter(Boolean).join(' · '))}</span></span></div></div>
+        <div class="ax_sec">화면</div>
+        <div class="ax_card">
+          <button type="button" class="ax_rw" data-go="settheme">${si('#a699c9', 'palette')}<span class="ax_tx"><span class="ax_n">테마</span></span><span class="ax_v">${p.theme === 'gray' ? '화이트 그레이' : '컬러 젤'}</span>${axChev}</button>
+          <button type="button" class="ax_rw na_ph_kochip ax_koline">${si('#89b892', 'lang')}<span class="ax_tx"><span class="ax_n">한국어 보기</span></span><span class="ax_sw ${koOn() ? 'on' : ''}"></span></button>
+        </div>
+        <div class="ax_foot">외국어로 된 문자 · 메모 · 글 밑에 한국어를 붙여요.</div>
+        <div class="ax_sec">일반</div>
+        <div class="ax_card">
+          <label class="ax_rw">${si('#8faed1', 'globe')}<span class="ax_tx"><span class="ax_n">국적</span></span><span class="ax_v">${esc(COUNTRIES[p.country] || p.country || '')}</span>${axChev}<select class="na_ph_country ax_sel" aria-label="국적">${Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === p.country ? 'selected' : ''}>${v}</option>`).join('')}${COUNTRIES[p.country] ? '' : `<option value="${esc(p.country)}" selected>${esc(p.country)}</option>`}</select></label>
+          <button type="button" class="ax_rw na_ph_looksbtn2">${si('#d89f98', 'user')}<span class="ax_tx"><span class="ax_n">외모</span></span><span class="ax_v">${nLooks ? `${nLooks}명` : ''}</span>${axChev}</button>
+          <div class="ax_rw">${si('#a2a7af', 'info')}<span class="ax_tx"><span class="ax_n">이 폰에 대해</span></span><span class="ax_v cg_num">${p.upto >= 0 ? `#${p.upto}까지` : ''}</span></div>
+        </div>
+        <i class="ax_pad"></i>
+      </div>
+      ${axInd()}`;
+}
+function setTheme(p, now) {
+    const mini = gray => `<span class="ax_mini"><i class="b1" ${gray ? 'style="opacity: 0.75"' : ''}></i><i class="b2" ${gray ? 'style="opacity: 0.75"' : ''}></i><i class="w" style="left: 8px"></i><i class="w" style="left: 58px"></i><span class="g">${(gray ? Array(8).fill('rgba(255, 255, 255, 0.5)') : ['#e8b8a8', '#eceef2', '#ead69c', '#acc9ad', '#e2b3c3', '#a8c1df', '#bdb1db', '#bcc0c6']).map(c => `<i style="background: ${c}"></i>`).join('')}</span><i class="d"></i></span>`;
+    const opt = (v, label) => { const on = (p.theme === 'gray') === (v === 'gray'); return `<button type="button" class="ax_tp na_ph_theme" data-v="${v}">${mini(v === 'gray')}<span>${label}</span><span class="ax_radio ${on ? 'on' : ''}">${on ? ax('check', 14, '#fff', 3.4) : ''}</span></button>`; };
+    return `${axBar(p, now)}
+      ${axTop(axCb('set'))}
+      <div class="ax_scroll">${axH1('테마')}<div class="ax_card ax_themes">${opt('gel', '컬러 젤')}${opt('gray', '화이트 그레이')}</div><div class="ax_foot">홈 화면과 잠금화면에 쓰여요.</div></div>
+      ${axInd()}`;
+}
+function camScreen(p, now, k, busy) {
+    const shot = k >= 0 ? p.photos[k] : null, last = p.photos[p.photos.length - 1], th = shot || last;
+    const t = recentTrackers(1)[0];
+    const modes = '<div class="ax_modes"><span>동영상</span><span class="on">사진</span><span>인물</span></div>';
+    const bar = `<div class="ax_cbar"><button type="button" class="ax_cthumb" data-go="photo" aria-label="사진" style="--axbg: ${axFlat(th?.mood || 'green')}">${th?.img ? `<img src="${esc(th.img)}" alt="">` : ''}</button><button type="button" class="ax_shut na_ph_shutter" aria-label="찍기" ${busy ? 'disabled' : ''}><span>${busy ? busyHtml : ''}</span></button><span class="ax_flip" aria-hidden="true">${ax('flip', 22, '#fff')}</span></div>`;
+    const top = pill => `<div class="ax_camtop">${ax('bolt', 22, '#fff')}<span class="ax_pill">${pill}</span><button type="button" class="ax_back" data-go="home" aria-label="닫기">${ax('x', 22, '#fff', 2.4)}</button></div>`;
+    if (shot) return `${axBar(p, now, '#fff')}
+      ${top('사진에 넣었어요')}
+      <div class="ax_shot" style="background: ${axFlat(shot.mood)}">${shot.img ? `<img src="${esc(shot.img)}" alt="">` : ax('photo', 64, 'rgba(255, 255, 255, 0.7)', 1.2)}
+        <div class="ax_sheet"><small>방금 찍은 사진</small><p>${esc(shot.caption)}</p>${shot.ko && koOn() ? `<div class="ax_k">${esc(shot.ko)}</div>` : ''}
+          <div class="ax_btns">${drawBtn(p, k, 'ax_camdraw')}<button type="button" data-go="photoone" data-i="${k}">사진</button><button type="button" data-go="cam">다시 찍기</button></div></div></div>
+      ${modes}${bar}${axInd('#fff')}`;
+    return `${axBar(p, now, '#fff')}
+      ${top(busy ? '찍는 중…' : `지금 장면 · ${esc(fmtDate(p, now, true))} ${esc(fmtTime(p, now))}`)}
+      <div class="ax_vf"><i class="ax_scene" style="background: radial-gradient(60% 50% at 30% 35%, #f2c08f 0, transparent 60%), radial-gradient(50% 45% at 75% 60%, #8a5a7a 0, transparent 65%), linear-gradient(170deg, ${AX_MOOD[last?.mood || 'warm']})"></i>
+        <i class="ax_gl" style="left: 33.3%; top: 0; bottom: 0; width: 1px"></i><i class="ax_gl" style="left: 66.6%; top: 0; bottom: 0; width: 1px"></i><i class="ax_gl" style="top: 33.3%; left: 0; right: 0; height: 1px"></i><i class="ax_gl" style="top: 66.6%; left: 0; right: 0; height: 1px"></i>
+        <i class="ax_focus"></i>${t?.place ? `<span class="ax_hint">${esc(t.place)}</span>` : ''}<span class="ax_zoom"><span>.5</span><span class="on">1×</span><span>2</span></span></div>
+      ${modes}${bar}${axInd('#fff')}`;
 }
 
 function mapScreen(p, m) {
@@ -1122,7 +1142,7 @@ function screen(p, view, m, roster) {
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app but 지도: drawn at the boards' size too, each its own app look
-    if (!['map', 'home', 'lock'].includes(v)) return `<div class="na_ph_scr app ax ax_${v} v_${v}" style="--ph-acc:var(--ph-${p.accent})"><div class="cg_canvas ax_canvas">${body}</div></div>`;
+    if (!['map', 'home', 'lock'].includes(v)) { const c = AXB_C[AXB[v]]; return `<div class="na_ph_scr app ax ax_${v} v_${v}${c ? ' axb' : ''}" style="--ph-acc:var(--ph-${p.accent})${c ? `; --axd: ${c[0]}; --axc: ${c[1]}` : ''}"><div class="cg_canvas ax_canvas">${body}</div></div>`; }
     if (v === 'home' || v === 'lock') return `<div class="na_ph_scr cg ${p.theme === 'gray' ? 'cg_mono' : 'cg_gel'} v_${v}" style="--ph-acc:var(--ph-${p.accent})"><div class="cg_canvas">${body}</div></div>`;
     const glass = v === 'lock';
     return `<div class="na_ph_scr ${glass ? `glass w_${p.wall}` : 'app'} v_${v}" style="--ph-acc:var(--ph-${p.accent})">${statusBar(p, now)}<div class="na_ph_body">${body}</div><button type="button" class="na_ph_bar" data-go="home" aria-label="홈"></button></div>`;
