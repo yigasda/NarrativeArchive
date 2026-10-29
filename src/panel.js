@@ -16,7 +16,6 @@ import { fadeCfg, fadeFilling, fadeForce, fadeMissing, fadePlan, fadeUse, fillFa
 import { openHealth } from './health.js';
 import { applyHide, lastIndex, openUnhide, syncTrackedBoundary } from './hide.js';
 import { applyInjection, lastBuild } from './inject.js';
-import { keepsOf, openKeeps } from './keeps.js';
 import { OFF_KINDS, offKinds, setOffKind } from './recall.js';
 import { openKeywordTest } from './keywords.js';
 import { knowledgeRows, openKnowledge } from './knowledge.js';
@@ -205,7 +204,6 @@ export function renderPanel() {
                 <div class="na_v2_card na_v2_list">
                   <button type="button" class="na_cp_row" id="na_open_extract"><span class="na_cp_num">1</span><span class="na_cp_txt"><b>원문 뽑기</b><small>경계선 이후 메시지 · 지시문 붙여 복사</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                   <button type="button" class="na_cp_row" id="na_open_append"><span class="na_cp_num">2</span><span class="na_cp_txt"><b>아카이브에 추가</b><small>압축본 붙여넣기 · 번호 검사 · 경계선 자동</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
-                  <button type="button" class="na_cp_row" id="na_open_keeps"><span class="na_cp_num">3</span><span class="na_cp_txt"><b>꼭 남길 장면</b><small id="na_keeps_sub">압축할 때 자세히 남길 구간과 그 이유</small></span>${svgA(ICO_A.right, 16, 2.2)}</button>
                 </div>
                 <div class="na_v2_label"><span>설정 <span class="na_cp_for" id="na_cp_for"></span></span></div>
                 <div class="na_v2_card na_v2_list na_cp_set">
@@ -1140,7 +1138,6 @@ export function bindPanel() {
     $('#na_quotes').on('click', needChat(openQuotes));
     $('#na_branches, #na_branch_fix').on('click', needChat(openBranches));
     $('#na_open_append').on('click', needChat(openAppend));
-    $('#na_open_keeps').on('click', needChat(openKeeps));
     $('#na_apply_hide').on('click', needChat(() => applyHide()));
     $('#na_unhide').on('click', needChat(openUnhide));
 
@@ -1435,7 +1432,6 @@ export function syncPanel() {
     $('#na_role').val(String(m.role));
     $('#na_muted_n').text(mutedCount(m));
     $('#na_link_depth').val(m.linkDepth || 4);
-    { const kn = keepsOf(m).length; $('#na_keeps_sub').text(kn ? `${kn}개 · 압축할 때 자세히, 망각 곡선은 그대로` : '압축할 때 자세히 남길 구간과 그 이유'); }
     {
         { const t = hasChat() ? recentTrackers(1)[0] : null; $('#na_trk_sub').text(t ? `마지막 상태창: ${[t.date, t.time, t.place].filter(Boolean).join(' · ')} (#${t.i})` : '못 찾음 · 장면은 메시지 수로 나눠요'); }
         { const ok = offKinds(); $('#na_off_fold .na_off_chip').each(function () { $(this).toggleClass('on', !!ok[this.dataset.k]).attr('aria-pressed', String(!!ok[this.dataset.k])); }); const on = Object.keys(OFF_KINDS).filter(k => ok[k]); $('#na_off_sub').text(on.length ? `누르면 켜고 꺼요 · ${on.length}가지 빼는 중` : '누르면 켜고 꺼요 · 지금은 아무것도 안 빼요'); }
@@ -1464,7 +1460,7 @@ export function syncPanel() {
             if (!fadeFilling) $('#na_fade_info').html(miss ? `버전 없는 섹션 <b>${miss}</b>개 · 지금은 원문으로 들어가요` : more ? `필요한 버전은 다 있어요 · 나머지 <b>${more}</b>개도 채울 수 있어요` : '모든 섹션에 버전이 있어요');
             $('#na_fade_lines').text(`${plan.filter(p => p.want === 'line').length}개`);
             // one bar per numbered section, oldest first: tall = whole, mid = short, low = one line
-            $('#na_fade_strip').html(plan.map(p => { const use = fadeUse(m, m.text, p.s, p.want); const k = p.why === 'pin' || p.why === 'star' ? 'pin' : use !== p.want && p.want !== 'long' ? 'miss' : use; return `<span class="${k}" title="${esc(p.s.title)}"></span>`; }).join(''));
+            $('#na_fade_strip').html(plan.map(p => { const use = fadeUse(m, m.text, p.s, p.want); const k = p.why === 'pin' ? 'pin' : use !== p.want && p.want !== 'long' ? 'miss' : use; return `<span class="${k}" title="${esc(p.s.title)}"></span>`; }).join(''));
             const was = filterMuted(m, m.text);
             cachedTokens(was).then(t => {
                 const now = lastBuild.tokens || 0;

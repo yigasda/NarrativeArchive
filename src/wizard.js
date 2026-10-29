@@ -1,7 +1,6 @@
 // Compression wizard.
 
 import { loreBlock } from './lore.js';
-import { keepLabel, keepsIn } from './keeps.js';
 import { offstageSet } from './recall.js';
 import { SECTION_GUARD, aiLabel, askAI, askCompress, compressEffort, drLabel, draftReady, isBlocked, withSpinner } from './ai.js';
 import { autoAppend, openAppend } from './append.js';
@@ -314,7 +313,6 @@ export async function quickCompress() {
             row('STATE', esc(short(sceneModelLabel(stateModel()))), '마지막에 한 번'),
             ...(String(m.workNote || '').trim() ? [row('작업 노트', '있음', `약 ${fmt(estTok(m.workNote))} 토큰`)] : []),
         ] : [row('요약', esc(short(drLabel())), n > 1 ? `${n}번에 나눠 · 약 ${fmt(chunkTok())} 토큰씩` : '한 번에')]),
-        ...(keepsIn(m, from, to).length ? [row('꼭 남길 장면', `${keepsIn(m, from, to).length}개`, esc(keepsIn(m, from, to).map(keepLabel).join(', ')))] : []),
         row('보낼 양', `약 ${fmt(sendEst.tok)} 토큰`, `요청 ${sendEst.req}번 · 생각과 답은 빼고 · 어림값`),
         row('지시문', esc(p.name), `생각 ${effort}${(p.id === 'basic' && p.text !== BASIC_PROMPT) || (p.id === 'short' && p.text !== SHORT_PROMPT) ? ' · <span class="na_qc_warn">고친 버전이라 최신 규칙이 안 들어가 있어요</span>' : ''}`),
         ...(au.on ? [row('AU', esc(au.name), '본편 뒤에 이어서')] : []),
