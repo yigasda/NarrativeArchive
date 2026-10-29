@@ -4398,7 +4398,7 @@ body.na_darkui .na_ph_mapart { background: linear-gradient(90deg, rgba(255, 255,
 .na_pb_phonebtn { position: absolute; top: 10px; left: 10px; z-index: 1; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 11px 0 9px; border: 0; border-radius: 15px; background: rgba(0, 0, 0, 0.22); color: #fff; font: inherit; font-size: 0.8em; font-weight: 600; cursor: pointer; }
 .na_pb_phonebtn:hover { background: rgba(0, 0, 0, 0.4); }
 /* 캐릭터 휴대폰 under a theme that paints every button: the phone's buttons keep their own (see-through) look */
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame button:not(.na_ph_widget, .na_ph_kochip, .na_ph_makebtn, .na_ph_bar, .na_ph_thumb, .na_ph_draw, .cg_wcal, .cg_wnote, .cg_ic, .cg_nt),
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame button:not(.na_ph_widget, .na_ph_kochip, .na_ph_makebtn, .na_ph_bar, .na_ph_thumb, .na_ph_draw, .cg_wcal, .cg_wnote, .cg_ic, .cg_nt, .na_ph_camthumb),
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_pick:not(.on) { background: transparent !important; background-image: none !important; border-color: transparent !important; box-shadow: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_pick.on { background: var(--na-card2) !important; border-color: transparent !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_pb_phonebtn { background: rgba(0, 0, 0, 0.22) !important; border-color: transparent !important; color: #fff !important; }
@@ -4559,3 +4559,52 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .cg_lkopen { margin: 14px 0 6px; font-size: 13px; color: #59616d; }
 .cg .cg_lkind { display: flex; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg .cg_nt { background: rgba(255, 255, 255, 0.32) !important; border-color: transparent !important; color: #161b22 !important; }
+/* 휴대폰 새 앱 (v3.115): SNS · 메일 · 일기 · 설정 · 카메라, in the app screens' look */
+.na_ph_snsprof { display: flex; gap: 14px; align-items: center; padding: 4px 18px 14px; border-bottom: 0.5px solid var(--pl); }
+.na_ph_snsprof > div { flex: 1; min-width: 0; }
+.na_ph_snsprof b { font-size: 18px; }
+.na_ph_snsprof p { margin: 3px 0 0; font-size: 13px; line-height: 1.45; }
+.na_ph_snsprof .na_ph_ko { display: block; color: var(--pd); font-size: 12.5px; }
+.na_ph_snsprof small { display: block; margin-top: 4px; color: var(--pd); font-size: 12px; }
+.na_ph_posts { gap: 10px; padding: 12px 12px 26px; }
+.na_ph_post { border-radius: 16px; background: var(--pf2); overflow: hidden; }
+.na_ph_postpic { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 120px; padding: 14px; background: linear-gradient(160deg, #f0cbb5, #d89f98); color: #fff; text-align: center; font-size: 12.5px; line-height: 1.4; }
+.na_ph_postpic .na_ph_ko { display: block; opacity: 0.85; font-size: 12px; }
+.na_ph_post > p { margin: 0; padding: 10px 12px 0; font-size: 14px; line-height: 1.45; }
+.na_ph_post > p .na_ph_ko { display: block; color: var(--pd); font-size: 12.5px; margin-top: 2px; }
+.na_ph_postmeta { display: flex; align-items: center; gap: 4px; padding: 8px 12px; font-size: 12.5px; font-weight: 600; color: #e5484d; }
+.na_ph_postmeta span { margin-left: auto; color: var(--pd); font-weight: 400; }
+.na_ph_comments { display: flex; flex-direction: column; gap: 4px; padding: 0 12px 10px; font-size: 13px; line-height: 1.4; }
+.na_ph_comments .na_ph_ko { display: block; color: var(--pd); font-size: 12px; }
+.na_ph_mailrow .na_ph_subj { color: var(--pt); font-weight: 500; -webkit-line-clamp: 1; }
+.na_ph_diaryrow { align-items: flex-start; }
+.na_ph_dday { flex: none; width: 40px; display: flex; flex-direction: column; align-items: center; color: var(--pd); font-size: 11px; }
+.na_ph_dday b { color: var(--pt); font-size: 22px; font-weight: 300; line-height: 1.1; }
+.na_ph_set .na_ph_row { min-height: 52px; }
+.na_ph_set .na_ph_row + .na_ph_row::before { left: 16px; }
+.na_ph_set .na_ph_setme { padding-bottom: 14px; }
+.na_ph_set .na_ph_setme b { font-size: 17px; }
+.na_ph_set select { flex: none; max-width: 120px; padding: 5px 8px; border: 1px solid var(--pl); border-radius: 9px; background: var(--pf2); color: var(--pt); font: inherit; font-size: 13px; }
+.na_ph_seg2 { background: var(--pf2); }
+.na_ph_seg2 button { color: var(--pd); }
+.na_ph_seg2 button.on { background: var(--pf); color: var(--pt); }
+.na_ph_set .na_ph_kochip { flex: none; }
+.na_ph_menunote { color: var(--na-dim); font-size: 0.8em; }
+/* 카메라 */
+.na_ph_cam { position: absolute; inset: 0; display: flex; flex-direction: column; background: #0c0c0e; color: #fff; }
+.na_ph_camview { position: relative; flex: 1; margin: 58px 0 0; overflow: hidden; display: grid; place-items: center; filter: saturate(0.8) brightness(0.85); }
+.na_ph_camview i { position: absolute; background: rgba(255, 255, 255, 0.25); }
+.na_ph_camview i:nth-child(1) { left: 33.3%; top: 0; bottom: 0; width: 1px; } .na_ph_camview i:nth-child(2) { left: 66.6%; top: 0; bottom: 0; width: 1px; }
+.na_ph_camview i:nth-child(3) { top: 33.3%; left: 0; right: 0; height: 1px; } .na_ph_camview i:nth-child(4) { top: 66.6%; left: 0; right: 0; height: 1px; }
+.na_ph_camview span { position: relative; padding: 5px 12px; border-radius: 999px; background: rgba(0, 0, 0, 0.35); font-size: 12px; letter-spacing: 0.04em; }
+.na_ph_cambar { flex: none; height: 130px; display: flex; align-items: center; justify-content: space-around; padding: 0 20px 18px; }
+.na_ph_camthumb { width: 44px !important; height: 44px !important; border-radius: 10px !important; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.8) !important; }
+.na_ph_camthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.na_ph_shutter { width: 72px !important; height: 72px !important; border-radius: 50% !important; border: 4px solid #fff !important; display: grid !important; place-items: center; padding: 4px !important; }
+.na_ph_shutter span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: #fff; color: #0c0c0e; }
+.na_ph_shutter:disabled span { background: rgba(255, 255, 255, 0.6); }
+.na_ph_camx { width: 44px !important; height: 44px !important; display: grid !important; place-items: center; color: #fff !important; }
+.na_ph_scr.v_cam .na_ph_bar { background: rgba(255, 255, 255, 0.7) !important; z-index: 4; }
+.na_ph_scr.v_cam .na_ph_sb { position: relative; z-index: 2; color: #fff; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_camthumb.m_warm { background: linear-gradient(160deg, #f6a35b, #c2557a) !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_shutter { background: transparent !important; }

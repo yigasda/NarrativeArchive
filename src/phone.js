@@ -21,7 +21,8 @@ export const WALLS = ['dusk', 'ocean', 'forest', 'rose', 'night', 'sand', 'mono'
 export const ACCENTS = ['blue', 'green', 'orange', 'pink', 'purple', 'red'];
 const MOODS = ['warm', 'cool', 'green', 'dark', 'bright', 'pink'];
 const COUNTRIES = { KR: '한국', US: '미국', GB: '영국', DE: '독일', FR: '프랑스', IT: '이탈리아', ES: '스페인', JP: '일본', CN: '중국', TW: '대만', CA: '캐나다', AU: '호주', RU: '러시아', BR: '브라질' };
-const CAP = { threads: 12, messages: 40, calls: 30, photos: 24, notes: 12, searches: 20, events: 16, contacts: 30 };
+const CAP = { threads: 12, messages: 40, calls: 30, photos: 24, notes: 12, searches: 20, events: 16, contacts: 30, posts: 20, comments: 8, mails: 20, diary: 20 };
+const LISTS = ['calls', 'photos', 'notes', 'searches', 'events', 'posts', 'mails', 'diary'];
 
 export const AI_SYS_PHONE = `GOAL
 Show what one character's phone holds right now, in a long role-play. The user opens it to peek at the story from the phone's side.
@@ -42,6 +43,7 @@ Could this be on the owner's phone, given what the archive, lorebook and chat sh
 - Small everyday things around those events are fine: how a text was worded, a photo of a place they were, a search they would make.
 - People: only people the story has. A relationship word (girlfriend, ex, husband, boss) only if the archive uses it for them.
 - Nothing later than the newest moment of the story.
+- The diary holds only what the archive shows happened and what the owner felt about it; no new secrets, no new feelings.
 
 LANGUAGE
 - Each text is in the language its writer would really use on a phone: from their nationality and where they live; between two people, the language they share.
@@ -63,14 +65,21 @@ JSON (one object, nothing before or after it)
   "photos": [{ "caption": what the photo shows, "ko", "time", "mood": one of ${MOODS.join(', ')} }],
   "notes": [{ "title", "kt": Korean title, "text", "ko", "time" }],
   "searches": [{ "q", "ko", "time" }],
-  "events": [{ "title", "ko", "date": "MM-DD", "time": "HH:MM" or "" }]
+  "events": [{ "title", "ko", "date": "MM-DD", "time": "HH:MM" or "" }],
+  "profile": { "handle": the owner's SNS name, "bio", "ko" },
+  "posts": [{ "text", "ko", "photo": what the posted photo shows or "", "pko": its Korean, "time", "likes": a number,
+              "comments": [{ "from": name, "text", "ko" }] }],
+  "mails": [{ "from": sender, "subject", "ks": Korean subject, "text", "ko", "time", "unread": true or false }],
+  "diary": [{ "date": "MM-DD", "title", "kt": Korean title, "text", "ko" }]
 }
-At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches, 6 events. Fewer is fine; an empty list is fine.
+At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches, 6 events, 5 posts with up to 4 comments,
+6 mails, 5 diary entries. Fewer is fine; an empty list is fine.
 Oldest first in every list.`;
 
 const UPDATE_ASK = `[UPDATE]
 Write only what came onto the phone after PHONE NOW's "now", in the same JSON: new messages (under the thread they belong to),
-calls, photos, notes, searches and events, and "now" as the new newest moment. Contacts only if new or saved differently.
+calls, photos, notes, searches, events, posts, mails and diary entries, and "now" as the new newest moment.
+Contacts and profile only if new or changed.
 Leave out country, wallpaper and accent. If nothing new would be on the phone, answer {"now": …} alone.`;
 
 // ---- what the model sends back, cleaned: known keys only, text cut short, times in one shape
@@ -106,6 +115,11 @@ export function parsePhone(out) {
         notes: arr(raw.notes).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 1500), ko: str(x?.ko, 1500), time: when(x?.time) })).filter(x => x.title || x.text),
         searches: arr(raw.searches).map(x => ({ q: line(x?.q, 120), ko: ko(x?.ko), time: when(x?.time) })).filter(x => x.q),
         events: arr(raw.events).map(x => ({ title: line(x?.title, 80), ko: ko(x?.ko), date: when(x?.date).slice(0, 5), time: hhmm(x?.time) })).filter(x => x.title && x.date),
+        profile: raw.profile && typeof raw.profile === 'object' ? { handle: line(raw.profile.handle, 40), bio: line(raw.profile.bio, 200), ko: ko(raw.profile.ko) } : null,
+        posts: arr(raw.posts).map(x => ({ text: str(x?.text, 800), ko: str(x?.ko, 800), photo: line(x?.photo, 200), pko: ko(x?.pko), time: when(x?.time), likes: Math.max(0, Math.min(99999, Math.round(Number(x?.likes) || 0))),
+            comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) })).filter(x => x.text || x.photo),
+        mails: arr(raw.mails).map(x => ({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: !!x?.unread })).filter(x => x.from && (x.subject || x.text)),
+        diary: arr(raw.diary).map(x => ({ date: when(x?.date).slice(0, 5), title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000) })).filter(x => x.date && x.text),
     };
 }
 
@@ -118,7 +132,8 @@ function mergePhone(p, add) {
         else p.threads.push({ ...t, messages: keep(t.messages, CAP.messages) });
     }
     p.threads = keep(p.threads, CAP.threads);
-    for (const k of ['calls', 'photos', 'notes', 'searches', 'events']) p[k] = keep([...p[k], ...add[k]], CAP[k]);
+    for (const k of LISTS) p[k] = keep([...(p[k] || []), ...(add[k] || [])], CAP[k]);
+    if (add.profile?.handle || add.profile?.bio) p.profile = { ...(p.profile || {}), ...Object.fromEntries(Object.entries(add.profile).filter(([, v]) => v)) };
     for (const c of add.contacts) {
         const old = p.contacts.find(x => nameKey(x.name) === nameKey(c.name));
         if (old) old.saved = c.saved || old.saved; else p.contacts.push(c);
@@ -198,6 +213,10 @@ const phoneForModel = p => ({
     notes: p.notes.slice(-3).map(({ title, text, time }) => ({ title, text: text.slice(0, 200), time })),
     searches: p.searches.slice(-4).map(({ q, time }) => ({ q, time })),
     events: p.events.slice(-4).map(({ title, date, time }) => ({ title, date, time })),
+    profile: p.profile ? { handle: p.profile.handle, bio: p.profile.bio } : undefined,
+    posts: (p.posts || []).slice(-3).map(({ text, photo, time }) => ({ text: text.slice(0, 200), photo, time })),
+    mails: (p.mails || []).slice(-3).map(({ from, subject, time }) => ({ from, subject, time })),
+    diary: (p.diary || []).slice(-2).map(({ date, title, text }) => ({ date, title, text: text.slice(0, 300) })),
 });
 
 export async function makePhone(m, owner, { update = false } = {}) {
@@ -451,6 +470,45 @@ export async function drawPhoto(m, p, k) {
     return ph;
 }
 
+// ---- 카메라: one photo of this very moment, from the newest messages (the AI 기능 모델)
+const AI_SYS_SHOT = `GOAL
+The owner of a phone in a long role-play takes one photo right now. Write what the photo shows.
+
+YOU GET
+- OWNER, and NOW: the story's moment.
+- STORY END: the last archived sections and the current state.
+- RECENT CHAT: the newest messages; the photo is taken at the end of them.
+- PHOTOS SO FAR: captions already on the phone, for the language and the style.
+
+RULES
+- Only what is really in front of the owner at this moment; nothing the story has not shown.
+- One short caption, the way a photo is described: who or what is in it, where, the light.
+- In the language of PHOTOS SO FAR (the owner's own). A caption that is not Korean gets "ko", a Korean translation.
+
+ANSWER — one JSON object, nothing else:
+{ "caption", "ko", "mood": one of ${MOODS.join(', ')} }`;
+const shooting = new Set(); // owner keys taking a photo now
+async function takePhoto(m, p) {
+    const [body, tail] = splitTail(String(m.text || ''));
+    const secs = parseSections(body).filter(x => !x.group).slice(-2).map(x => body.slice(x.start, x.end).trim());
+    const prompt = [
+        `[OWNER]\n${p.owner}`, `[NOW]\n${storyNow(p) || p.now || ''}`,
+        `[STORY END]\n${[...secs, tail.trim()].filter(Boolean).join('\n\n').slice(-8000)}`,
+        `[RECENT CHAT]\n${recentForCheck(6).join('\n\n').slice(-5000)}`,
+        `[PHOTOS SO FAR]\n${p.photos.slice(-3).map(x => `- ${x.caption}`).join('\n') || '(none)'}`,
+    ].join('\n\n');
+    const out = String(await askAI(prompt, { system: AI_SYS_SHOT, maxTokens: 1500 }) || '').replace(/```(?:json)?/gi, '');
+    const a = out.indexOf('{'), b = out.lastIndexOf('}');
+    let raw = null;
+    try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
+    const caption = line(raw?.caption, 200);
+    if (!caption) throw new Error('모델 답에서 사진 설명을 찾지 못했어요');
+    p.photos.push({ caption, ko: ko(raw?.ko), time: storyNow(p) || p.now || '', mood: pick(raw?.mood, MOODS, 'warm') });
+    p.photos = p.photos.slice(-CAP.photos);
+    await saveMeta();
+    return p.photos.length - 1;
+}
+
 // ---- drawing
 const ICO = {
     msg: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/>',
@@ -473,12 +531,12 @@ const ICO = {
     redo: '<path d="M21 4v6h-6"/><path d="M20.5 10A8.5 8.5 0 1 0 19 16.5"/>',
 };
 const ic = (k, s = 18, w = 2) => `<svg class="na_ph_i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]}</svg>`;
-const APPS = { msg: '메시지', call: '전화', photo: '사진', note: '메모', search: '검색', cal: '캘린더', map: '다녀간 곳' };
+const APPS = { msg: '메시지', call: '전화', photo: '사진', note: '메모', search: '검색', cal: '캘린더', map: '지도', sns: 'SNS', mail: '메일', diary: '일기', set: '설정', cam: '카메라' };
 const MOOD_ICO = { warm: 'photo', cool: 'photo', green: 'map', dark: 'clock', bright: 'photo', pink: 'heart' };
 const koOn = () => globalSettings().phoneKo !== false;
 const savedName = (p, n) => p.contacts.find(c => nameKey(c.name) === nameKey(n))?.saved || n;
 const tr = (p, t, k) => `${esc(t)}${k && koOn() ? `<span class="na_ph_ko">${esc(k)}</span>` : ''}`;
-const hasKo = p => [...p.threads.flatMap(t => t.messages), ...p.photos, ...p.notes, ...p.searches, ...p.events].some(x => x.ko);
+const hasKo = p => [...p.threads.flatMap(t => t.messages), ...p.photos, ...p.notes, ...p.searches, ...p.events, ...(p.posts || []), ...(p.mails || []), ...(p.diary || [])].some(x => x.ko);
 // a face: the archive's own face for people in the roster, else the first letter on the accent
 const av = (name, size, roster) => roster.has(nameKey(name)) ? faceHtml(name, size) : `<span class="na_ph_letter" style="width:${size}px;height:${size}px">${esc([...String(name).trim()][0] || '?')}</span>`;
 
@@ -517,8 +575,13 @@ const CG_I = {
     cal: 'M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM4 10h16M9 3v4M15 3v4',
     map: 'M9 4L4 6v14l5-2 6 2 5-2V4l-5 2zM9 4v14M15 6v14',
     search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
+    sns: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
+    set: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1',
+    cam: 'M4 8h3l2-3h6l2 3h3v11H4zM12 10a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z',
+    mail: 'M3 6h18v12H3zM3 7l9 6 9-6',
+    diary: 'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11',
 };
-const CG_GEL = { photo: ['#f0cbb5', '#d89f98'], cal: ['#f6f7f9', '#dcdfe5', '#b0564e'], note: ['#f4e5b5', '#dcc680', '#5a4a1f'], map: ['#c3dcc1', '#93ba97'], call: ['#bbddc0', '#89b892'], msg: ['#bbddc0', '#89b892'], search: ['#bfd3e9', '#8faed1'] };
+const CG_GEL = { sns: ['#efc4d0', '#d494a7'], mail: ['#bfd3e9', '#8faed1'], diary: ['#d3cae9', '#a699c9'], set: ['#d1d4d9', '#a2a7af'], cam: ['#e2e4e8', '#aeb2b9', '#2a313b'], photo: ['#f0cbb5', '#d89f98'], cal: ['#f6f7f9', '#dcdfe5', '#b0564e'], note: ['#f4e5b5', '#dcc680', '#5a4a1f'], map: ['#c3dcc1', '#93ba97'], call: ['#bbddc0', '#89b892'], msg: ['#bbddc0', '#89b892'], search: ['#bfd3e9', '#8faed1'] };
 const cgIcon = (k, mono, badge = 0) => {
     const [c1, c2, g = '#ffffff'] = CG_GEL[k];
     const svg = mono
@@ -549,6 +612,8 @@ function homeScreen(p, now, m) {
     const evs = [...(anniv ? [{ title: anniv, when: '기념일', heart: true }] : []),
         ...p.events.filter(e => e.date >= day).map(e => ({ title: e.title, when: `${e.date === day ? '' : `${fmtDate(p, e.date, true)} `}${e.time ? fmtTime(p, `${e.date} ${e.time}`) : e.date === day ? '하루 종일' : ''}`.trim() }))].slice(0, 2);
     const note = p.notes[p.notes.length - 1], items = noteItems(note);
+    // SNS: comments from others on today's posts; 메일: unread
+    const badges = { sns: (p.posts || []).filter(x => x.time.slice(0, 5) === day).reduce((n, x) => n + x.comments.filter(c => nameKey(c.from) !== nameKey(p.owner)).length, 0), mail: (p.mails || []).filter(x => x.unread).length };
     return `
       <div class="cg_bg1" aria-hidden="true"></div><div class="cg_bg2" aria-hidden="true"></div>
       <svg class="cg_noise" aria-hidden="true" width="390" height="844"><filter id="cgn"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#cgn)"/></svg>
@@ -567,11 +632,11 @@ function homeScreen(p, now, m) {
               ${items.length ? items.map(i => `<span class="cg_item ${i.done ? 'done' : ''}"><span class="cg_chk">${i.done ? '<svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>' : ''}</span><span class="cg_itx">${esc(i.text)}</span></span>`).join('') : '<span class="cg_evw">메모 없음</span>'}
             </button>
           </div>
-          <div class="cg_grid">${['photo', 'cal', 'note', 'map'].map(k => `<div class="cg_cell">${cgIcon(k, mono)}<span class="cg_lbl">${APPS[k]}</span></div>`).join('')}</div>
+          <div class="cg_grid">${['photo', 'cal', 'note', 'map', 'sns', 'mail', 'diary', 'set'].map(k => `<div class="cg_cell">${cgIcon(k, mono, badges[k] || 0)}<span class="cg_lbl">${APPS[k]}</span></div>`).join('')}</div>
         </div>
         <div class="cg_fill"></div>
         <div class="cg_dots" aria-hidden="true"><span></span><span class="on"></span></div>
-        <div class="cg_dockwrap"><div class="cg_glass cg_dock">${cgIcon('call', mono, missed)}${cgIcon('msg', mono, unread)}${cgIcon('search', mono)}</div></div>
+        <div class="cg_dockwrap"><div class="cg_glass cg_dock">${cgIcon('call', mono, missed)}${cgIcon('msg', mono, unread)}${cgIcon('cam', mono)}${cgIcon('search', mono)}</div></div>
         <button type="button" class="cg_ind" data-go="lock" aria-label="잠금화면"><span></span></button>
       </div>`;
 }
@@ -733,6 +798,66 @@ function calScreen(p, now, m) {
       </div>`;
 }
 
+// SNS: the owner's page — who they are, then their posts with likes and a few comments
+function snsScreen(p, roster) {
+    const pr = p.profile || {}, posts = [...(p.posts || [])].reverse();
+    return `${head(p, '')}
+      <div class="na_ph_snsprof">${faceHtml(p.owner, 64)}<div><b>${esc(pr.handle || p.owner)}</b>${pr.bio ? `<p>${tr(p, pr.bio, pr.ko)}</p>` : ''}<small>게시물 ${posts.length}</small></div></div>
+      <div class="na_ph_list na_ph_posts">${posts.length ? posts.map(x => `
+        <div class="na_ph_post">
+          ${x.photo ? `<div class="na_ph_postpic">${ic('photo', 26, 1.6)}<span>${tr(p, x.photo, x.pko)}</span></div>` : ''}
+          ${x.text ? `<p>${tr(p, x.text, x.ko)}</p>` : ''}
+          <div class="na_ph_postmeta">${ic('heart', 14, 2.2)} ${x.likes.toLocaleString()}<span>${esc(listTime(p, x.time))}</span></div>
+          ${x.comments.length ? `<div class="na_ph_comments">${x.comments.map(c => `<div><b>${esc(savedName(p, c.from))}</b> ${tr(p, c.text, c.ko)}</div>`).join('')}</div>` : ''}
+        </div>`).join('') : empty('게시물이 없어요')}</div>`;
+}
+// 메일: the inbox, newest first; a mail opens whole
+function mailScreen(p, i) {
+    const ms = p.mails || [], x = ms[i];
+    if (x) return `${head(p, '', { back: 'mail' })}
+      <div class="na_ph_notebody"><small>${esc(x.from)} · ${esc(fmtDate(p, x.time))} ${esc(fmtTime(p, x.time))}</small><h4>${tr(p, x.subject, x.ks)}</h4><p>${esc(x.text)}</p>${x.ko && koOn() ? `<p class="na_ph_ko">${esc(x.ko)}</p>` : ''}</div>`;
+    const list = ms.map((y, k) => [y, k]).reverse();
+    return `${head(p, '메일', { sub: ms.some(y => y.unread) ? `안 읽음 ${ms.filter(y => y.unread).length}` : '' })}
+      <div class="na_ph_list">${list.length ? list.map(([y, k]) => `
+        <button type="button" class="na_ph_row na_ph_mailrow" data-go="mailone" data-i="${k}"><div><b>${esc(y.from)}</b><p class="na_ph_subj">${esc(y.subject)}</p><p>${esc(y.text.replace(/\s+/g, ' '))}</p></div><small>${esc(listTime(p, y.time))}</small>${y.unread ? '<i class="na_ph_dot"></i>' : ''}</button>`).join('') : empty('메일이 없어요')}</div>`;
+}
+// 일기: one entry a day, newest first
+function diaryScreen(p, i) {
+    const ds = p.diary || [], x = ds[i];
+    if (x) return `${head(p, '', { back: 'diary' })}
+      <div class="na_ph_notebody"><small>${esc(fmtDate(p, x.date))}</small>${x.title ? `<h4>${tr(p, x.title, x.kt)}</h4>` : ''}<p>${esc(x.text)}</p>${x.ko && koOn() ? `<p class="na_ph_ko">${esc(x.ko)}</p>` : ''}</div>`;
+    const list = ds.map((y, k) => [y, k]).reverse();
+    return `${head(p, '일기')}
+      <div class="na_ph_list">${list.length ? list.map(([y, k]) => `
+        <button type="button" class="na_ph_row na_ph_diaryrow" data-go="diaryone" data-i="${k}"><span class="na_ph_dday"><b>${esc(String(parts(y.date)?.d || ''))}</b>${esc(`${parts(y.date)?.mo || ''}월`)}</span><div><b>${tr(p, y.title || y.text.slice(0, 24), y.kt)}</b><p>${esc(y.text.replace(/\s+/g, ' '))}</p></div></button>`).join('') : empty('일기가 없어요')}</div>`;
+}
+// 설정: the phone's own settings — theme, country, the Korean lines, looks
+function setScreen(p) {
+    return `${head(p, '설정', { chip: false })}
+      <div class="na_ph_list na_ph_set">
+        <div class="na_ph_row na_ph_setme">${faceHtml(p.owner, 52)}<div><b>${esc(p.owner)}</b><p>${esc(COUNTRIES[p.country] || p.country || '')}${p.profile?.handle ? ` · ${esc(p.profile.handle)}` : ''}</p></div></div>
+        <div class="na_ph_sub">화면</div>
+        <div class="na_ph_row"><div><b>테마</b></div><span class="na_ph_seg na_ph_seg2"><button type="button" class="na_ph_theme ${p.theme === 'gray' ? '' : 'on'}" data-v="gel">컬러 젤</button><button type="button" class="na_ph_theme ${p.theme === 'gray' ? 'on' : ''}" data-v="gray">화이트 그레이</button></span></div>
+        <div class="na_ph_row"><div><b>한국어 보기</b><p>외국어 글 밑에 한국어</p></div><button type="button" class="na_ph_kochip ${koOn() ? 'on' : ''}">${koOn() ? '켬' : '끔'}</button></div>
+        <div class="na_ph_sub">일반</div>
+        <label class="na_ph_row"><div><b>국적</b><p>글 · 날짜 · 시간 표기</p></div><select class="na_ph_country">${Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === p.country ? 'selected' : ''}>${v}</option>`).join('')}${COUNTRIES[p.country] ? '' : `<option value="${esc(p.country)}" selected>${esc(p.country)}</option>`}</select></label>
+        <button type="button" class="na_ph_row na_ph_looksbtn2"><div><b>외모</b><p>사진 그릴 때 사람마다 들어가는 태그</p></div>${ic('right', 16, 2.2)}</button>
+      </div>`;
+}
+// 카메라: a viewfinder; the shutter asks for one photo of this moment
+function camScreen(p, busy) {
+    const last = p.photos[p.photos.length - 1];
+    return `
+      <div class="na_ph_cam">
+        <div class="na_ph_camview m_${last?.mood || 'cool'}"><i></i><i></i><i></i><i></i><span>${busy ? '찍는 중…' : '지금 이 장면'}</span></div>
+        <div class="na_ph_cambar">
+          <button type="button" class="na_ph_camthumb m_${last?.mood || 'cool'}" data-go="photo" aria-label="사진첩">${last?.img ? `<img src="${esc(last.img)}" alt="">` : ''}</button>
+          <button type="button" class="na_ph_shutter" aria-label="찍기" ${busy ? 'disabled' : ''}><span>${busy ? busyHtml : ''}</span></button>
+          <button type="button" class="na_ph_camx" data-go="home" aria-label="닫기">${ic('x', 20, 2.2)}</button>
+        </div>
+      </div>`;
+}
+
 function mapScreen(p, m) {
     const pl = placesOf(m, p.owner);
     return `${head(p, '다녀간 곳', { chip: false, sub: pl.length ? `${pl.length}곳` : '' })}
@@ -747,7 +872,10 @@ function screen(p, view, m, roster) {
     const body = v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'msg' ? msgList(p, roster)
         : v === 'thread' ? threadScreen(p, Number(i), roster) : v === 'call' ? callScreen(p, roster) : v === 'photo' ? photoScreen(p) : v === 'photoone' ? photoView(p, Number(i))
         : v === 'note' ? noteScreen(p, -1) : v === 'noteone' ? noteScreen(p, Number(i)) : v === 'search' ? searchScreen(p)
-        : v === 'cal' ? calScreen(p, now, m) : v === 'map' ? mapScreen(p, m) : homeScreen(p, now, m);
+        : v === 'cal' ? calScreen(p, now, m) : v === 'map' ? mapScreen(p, m)
+        : v === 'sns' ? snsScreen(p, roster) : v === 'mail' ? mailScreen(p, -1) : v === 'mailone' ? mailScreen(p, Number(i))
+        : v === 'diary' ? diaryScreen(p, -1) : v === 'diaryone' ? diaryScreen(p, Number(i)) : v === 'set' ? setScreen(p)
+        : v === 'cam' ? camScreen(p, shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     if (v === 'home' || v === 'lock') return `<div class="na_ph_scr cg ${p.theme === 'gray' ? 'cg_mono' : 'cg_gel'} v_${v}" style="--ph-acc:var(--ph-${p.accent})"><div class="cg_canvas">${body}</div></div>`;
     const glass = v === 'lock';
@@ -797,7 +925,7 @@ export async function openPhone(who = null) {
         }
         const top = keep ? $root.find('.na_ph_body').scrollTop() : 0;
         $root.find('.na_ph_frame').html(screen(p, view, m, roster));
-        if (sheet && view === 'photo') $root.find('.na_ph_scr').append(looksSheet(m));
+        if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         if (keep) $root.find('.na_ph_body').scrollTop(top);
     };
     const loreRow = () => {
@@ -819,8 +947,7 @@ export async function openPhone(who = null) {
           </div>
           ${menu ? `
           <div class="na_ph_menu">
-            <label><span>국적</span><select class="text_pole na_ph_country">${Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === p.country ? 'selected' : ''}>${v}</option>`).join('')}${COUNTRIES[p.country] ? '' : `<option value="${esc(p.country)}" selected>${esc(p.country)}</option>`}</select></label>
-            <label><span>테마</span><span class="na_ph_seg"><button type="button" class="na_ph_theme ${p.theme === 'gray' ? '' : 'on'}" data-v="gel">컬러 젤</button><button type="button" class="na_ph_theme ${p.theme === 'gray' ? 'on' : ''}" data-v="gray">화이트 그레이</button></span></label>
+            <small class="na_ph_menunote">테마 · 국적 · 외모는 폰 안 설정 앱에 있어요</small>
             <div class="na_ph_menubtns"><button type="button" class="na_v2_pillbtn na_ph_remake">처음부터 다시 만들기</button><button type="button" class="na_v2_pillbtn na_ph_del">이 폰 지우기</button></div>
           </div>` : ''}`);
     };
@@ -864,12 +991,23 @@ export async function openPhone(who = null) {
         const go = this.dataset.go;
         if (!go) return;
         e.stopPropagation();
-        view = ['thread', 'noteone', 'photoone'].includes(go) ? `${go}:${this.dataset.i}` : go;
+        view = ['thread', 'noteone', 'photoone', 'mailone', 'diaryone'].includes(go) ? `${go}:${this.dataset.i}` : go;
+        const mail = go === 'mailone' ? phone()?.mails?.[Number(this.dataset.i)] : null;
+        if (mail?.unread) { mail.unread = false; saveMeta(); }
         sheet = false;
         drawPhone();
         $root.find('.na_ph_body').scrollTop(view.startsWith('thread') ? 1e6 : 0);
     });
-    $root.on('click', '.na_ph_looksbtn', e => { e.stopPropagation(); sheet = true; drawPhone(true); });
+    $root.on('click', '.na_ph_looksbtn, .na_ph_looksbtn2', e => { e.stopPropagation(); sheet = true; drawPhone(true); });
+    $root.on('click', '.na_ph_shutter', async e => {
+        e.stopPropagation();
+        const p = phone(), id = nameKey(p.owner);
+        if (shooting.has(id)) return;
+        shooting.add(id); drawPhone();
+        try { const k = await takePhoto(m, p); if (phone() === p) view = `photoone:${k}`; toastr.success('사진을 찍었어요', '캐릭터 휴대폰'); }
+        catch (err) { console.error('[narrative-archive] camera', err); toastr.error(String(err?.message || err), '사진 찍기 실패'); }
+        finally { shooting.delete(id); drawPhone(); }
+    });
     $root.on('click', '.na_ph_lclose', e => { e.stopPropagation(); sheet = false; drawPhone(true); });
     // each box is kept as it is left
     $root.on('change', '.na_ph_lta[data-n]', function () {
