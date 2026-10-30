@@ -9,3 +9,16 @@ test('phone module graph initializes, and backup settings include shared financi
  assert.equal(typeof phone.openPhone,'function');const financial={accounts:{a:{amount:100}},prices:{},transfers:{}};
  const copied=pickSettings({finance:financial,phones:{}});assert.deepEqual(copied.finance,financial);assert.notEqual(copied.finance,financial);
 });
+test('phone reopening remembers the last character per chat and explicit selection wins',async()=>{
+ const {selectedPhoneOwner}=await import('../src/phone.js');
+ const names=['Oscar','Somang'], m={phones:{oscar:{},somang:{}},lastPhoneOwner:'Somang'};
+ assert.equal(selectedPhoneOwner(m,names),'Somang');
+ assert.equal(selectedPhoneOwner(m,[...names].reverse()),'Somang');
+ assert.equal(selectedPhoneOwner(m,names,'Oscar'),'Oscar');
+ assert.equal(selectedPhoneOwner(m,names,'missing'),'Somang');
+ assert.equal(selectedPhoneOwner({...m,lastPhoneOwner:'removed'},names),'Oscar');
+ assert.equal(selectedPhoneOwner({phones:{somang:{}}},names),'Somang');
+ assert.equal(selectedPhoneOwner({phones:{}},names),'Oscar');
+ assert.equal(selectedPhoneOwner(m,[]),null);
+ assert.equal(selectedPhoneOwner({phones:{},lastPhoneOwner:'Somang'},names),'Somang');
+});

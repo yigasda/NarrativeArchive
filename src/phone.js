@@ -43,6 +43,12 @@ function screen(p, view, m, roster, ui) {
     return `<div class="na_ph_scr ${glass ? `glass w_${p.wall}` : 'app'} v_${v}" style="--ph-acc:var(--ph-${p.accent})">${statusBar(p, now)}<div class="na_ph_body">${body}</div><button type="button" class="na_ph_bar" data-go="home" aria-label="홈"></button></div>`;
 }
 
+// Selection belongs to this chat, not the order of the character list.
+export function selectedPhoneOwner(m, names, who = null) {
+    const find = value => typeof value === 'string' && names.find(n => nameKey(n) === nameKey(value));
+    return find(who) || find(m.lastPhoneOwner) || names.find(n => m.phones?.[nameKey(n)]) || names[0] || null;
+}
+
 // ---- the window
 export async function openPhone(who = null) {
     const c = ctx();
@@ -52,7 +58,8 @@ export async function openPhone(who = null) {
     if (Object.values(m.phones).reduce((n, p) => n + ensureIds(p), 0)) saveMeta();
     const names = peopleList(m);
     const roster = new Set(names.map(nameKey));
-    let owner = who && names.some(n => nameKey(n) === nameKey(who)) ? names.find(n => nameKey(n) === nameKey(who)) : (names.find(n => m.phones[nameKey(n)]) || names[0] || null);
+    let owner = selectedPhoneOwner(m, names, who);
+    if (owner && m.lastPhoneOwner !== owner) { m.lastPhoneOwner = owner; await saveMeta(); }
     let investing = false;
     for (const p of Object.values(m.phones)) migrateBank(m, p);
     if (Object.values(m.phones).some(p => p.money)) await saveMeta();
@@ -204,7 +211,7 @@ export async function openPhone(who = null) {
         view = `searchone:${k}`; drawPhone(); if (!p.searches[k].results?.length) loadSearch(k);
     });
     // the screen changes first; saving waits
-    $root.on('click', '.na_ph_pick:not(.na_ph_addp), .ax_whopick', function (e) { e.stopPropagation(); const same = owner === this.dataset.n; owner = this.dataset.n; if (!same) { view = 'lock'; sheet = false; draw(); setSheet(false); } });
+    $root.on('click', '.na_ph_pick:not(.na_ph_addp), .ax_whopick', async function (e) { e.stopPropagation(); const same = owner === this.dataset.n; owner = this.dataset.n; if (!same) { view = 'lock'; sheet = false; draw(); setSheet(false); } m.lastPhoneOwner = owner; await saveMeta(); });
     $root.on('click', '.na_ph_makewho', () => { loreOpen = false; drawCtrl(); setSheet(true); });
     // a person only the lorebook knows: into the same list as 인물 도감's +
     $root.on('click', '.na_ph_addp', () => { adding = !adding; drawOwners(); if (adding) { setSheet(true); $root.find('.na_ph_addname').trigger('focus'); } });
@@ -213,11 +220,11 @@ export async function openPhone(who = null) {
         if (!v) return;
         const have = names.find(n => nameKey(n) === nameKey(v));
         if (!have) { m.people = [...(Array.isArray(m.people) ? m.people : []), v]; names.push(v); roster.add(nameKey(v)); }
-        owner = have || v; adding = false; view = 'lock'; sheet = false;
+        owner = have || v; m.lastPhoneOwner = owner; adding = false; view = 'lock'; sheet = false;
         $root.find('.na_ph_addname').val('');
         draw();
         setSheet(false);
-        if (!have) await saveMeta();
+        await saveMeta();
     };
     $root.on('click', '.na_ph_addok', function (e) { e.stopPropagation(); addPerson(this); });
     $root.on('keydown', '.na_ph_addname', function (e) { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); addPerson(this); } });
