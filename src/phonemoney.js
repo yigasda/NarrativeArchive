@@ -223,12 +223,11 @@ export function cardView(p, now, i) {
         <div class="cd_card">${cardArt(p,c)}</div>
         <div class="cd_identity"><b>${esc(a?.name || mo(p).bank.name)}</b><span>${credit ? '신용카드' : '체크카드'} · ${esc(c.account)}</span></div>
         <section class="cd_summary"><div class="cd_summary_label"><span>${credit ? '이번 달 이용 금액' : '연결 계좌 잔액'}</span>${pending ? `<span class="cd_pending">승인 대기 ${pending}</span>` : ''}</div><strong class="cg_num">${esc(fmtIn(p,amount,cur))}</strong>
-          ${conversion ? `<details class="cd_fx"><summary>${conversion}${ax('down',12)}</summary><p>${converted(p,a)}</p></details>` : ''}
+          ${conversion ? `<details class="cd_fx"><summary>${conversion}</summary><p>${converted(p,a)}</p></details>` : ''}
           ${ai >= 0 ? `<button type="button" class="cd_account" data-go="acct" data-i="${ai}"><span>${ax('card',16)} ${credit ? '카드 이용 내역' : '연결 계좌 보기'}</span><span>•••• ${esc(a.last4)} ${ax('chev',14)}</span></button>` : ''}
         </section>
         <div class="cd_section"><h2>최근 결제</h2>${ai >= 0 ? `<button type="button" data-go="acct" data-i="${ai}">전체 보기 ${ax('chev',12)}</button>` : ''}</div>
         <div class="cd_payments">${xs.map(payment).join('') || `<div class="cd_empty">${ax('receipt',25)}<b>아직 결제 내역이 없어요</b><span>이 카드의 결제 기록이 여기에 표시돼요.</span></div>`}</div>
-        <details class="cd_info"><summary>${ax('info',17)} 카드 정보<span>상세 보기 ${ax('down',13)}</span></summary><dl><div><dt>카드 소유자</dt><dd>${esc(p.owner)}</dd></div><div><dt>카드 번호</dt><dd>•••• •••• •••• ${esc(c.account)}</dd></div><div><dt>유효 기간</dt><dd>${esc(c.exp || '—')}</dd></div><div><dt>계좌 통화</dt><dd>${esc(cur)}</dd></div></dl></details>
         <i class="ax_pad"></i>
       </div></div>${axInd()}`;
 }

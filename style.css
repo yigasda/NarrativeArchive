@@ -5745,7 +5745,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .cd_summary > strong { display: block; margin: 8px 0 4px; font: 650 32px/1.2 'Inter Tight', -apple-system,sans-serif; letter-spacing: -.035em; overflow-wrap: anywhere; }
 .cd_fx { margin: 8px 0 0; font-size: 11px; color: #7e8997; }
 .cd_fx > summary { display: flex; align-items: center; gap: 5px; list-style: none; cursor: pointer; min-height: 24px; }
-.cd_fx > summary::-webkit-details-marker, .cd_info > summary::-webkit-details-marker { display: none; }
+.cd_fx > summary::-webkit-details-marker { display: none; }
 .cd_fx p { font-size: 10px; line-height: 1.7; margin: 5px 0 0; }
 .ax .cd_account { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 8px; padding: 15px 0; margin-top: 15px; border-top: 1px solid #eef0f4; font-size: 11px; color: #56657c; }
 .cd_account > span { display: inline-flex; align-items: center; gap: 6px; }
@@ -5762,12 +5762,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .cd_payment_amount { display: flex; align-items: center; gap: 5px; flex: none; max-width: 48%; color: #263142; font: 600 13px 'Inter Tight',sans-serif; overflow-wrap: anywhere; }
 .cd_payment_amount svg { color: #bac1cc; flex: none; }
 .cd_payment_amount.incoming { color: #2b8669; }
-.cd_info { background: #fff; border: 1px solid #edf0f4; border-radius: 17px; margin: 14px 16px 0; padding: 17px; }
-.cd_info > summary { display: flex; align-items: center; gap: 8px; list-style: none; cursor: pointer; font-size: 12px; color: #526176; }
-.cd_info > summary > span { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font-size: 10px; color: #939daa; }
-.cd_info dl { border-top: 1px solid #edf0f4; margin: 15px 0 0; padding-top: 5px; }
-.cd_info dl > div { display: flex; justify-content: space-between; gap: 12px; margin: 12px 0; font-size: 11px; }
-.cd_info dt { color: #8c95a0; }.cd_info dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
 .cd_empty { display: flex; align-items: center; flex-direction: column; padding: 25px 12px; gap: 9px; color: #a0a9b5; }
 .cd_empty b { font-size: 12px; font-weight: 500; color: #7e8999; }.cd_empty span { font-size: 10px; }
 /* About this phone uses the same grouped rows and lore entries as Settings. */

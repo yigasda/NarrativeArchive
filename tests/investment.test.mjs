@@ -188,7 +188,7 @@ test('card detail separates credit usage from cash and links real payment record
  const debit=moneyUI.cardView(p,'10-30','0'),credit=moneyUI.cardView(p,'10-30','1');
  assert.match(debit,/연결 계좌 잔액/);assert.match(debit,/data-i="debit-tx"/);assert.doesNotMatch(debit,/Bookshop/);
  assert.match(credit,/이번 달 이용 금액/);assert.match(credit,/3,000,000/);assert.match(credit,/승인 대기 1/);assert.match(credit,/data-i="credit-tx"/);assert.doesNotMatch(credit,/연결 계좌 잔액|Coffee/);
- assert.match(credit,/<details class="cd_info">/);assert.match(credit,/11\/29/);assert.match(credit,/<details class="cd_fx">/);assert.equal(JSON.stringify(m.finance),before);
+ assert.doesNotMatch(credit,/<details class="cd_info">|카드 소유자/);assert.match(credit,/<details class="cd_fx">/);assert.equal(JSON.stringify(m.finance),before);
 });
 test('explicit bank rebuild changes current cash once and preserves linked transfers and credit semantics',async()=>{
  const {m,p}=euroWallet();finance.migrateBank(m,p);
