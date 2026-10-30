@@ -249,6 +249,7 @@ test('investment creation passes its selected profile into the source request',a
  const proxy=encoded(`export const storyNow=p=>p.now;export const sideRequest=async(m,owner,blocks,options)=>{globalThis.__investTest.profileOptions=options;return m.text+'\\n'+blocks.join('\\n')};`);
  const actual=await load('investdata.js',{'./ai.js':ai,'./core.js':core,'./phonedata.js':proxy,'./finance.js':financeURL});
  await actual.fillInvestment(m,p,'2026-10-30');assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile});
+ await actual.fillInvestment(m,p,'2026-10-30',{regenerate:true});assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile});
  globalThis.__investTest.answer={};
  await assert.rejects(actual.collectInvestmentRecords(m,p,'notes','stock:NYSE:X'),/노트/);
  assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile});
@@ -335,4 +336,48 @@ test('stock details omit retired investment memo and creation button without del
  const html=ui.investmentScreen(m,p,'10-30','stock','NYSE:X',false);
  assert.doesNotMatch(html,/투자 메모|새 메모|iv_notemake|Saved old investment memo/);
  assert.match(html,/거래 내역/);assert.equal(p.investment.notes.length,1);
+});
+
+test('explicit investment rebuild replaces trades but regenerates cash while preserving transfers and other owners',async()=>{
+ const {m,p}=setup();await dataMod.fillInvestment(m,p,'2026-10-30');
+ const key=p.investment.accounts[0].key, oldTrade=p.investment.trades[0].id;
+ finance.baseline(m,'bank','USD',1000,'2026-10-01',p.owner);
+ finance.baseline(m,'other','USD',333,'2026-10-01','Other');
+ const transfer={id:'linked',from:'bank:USD',to:key,sent:200,received:200,fee:0,date:'2026-10-30'};
+ finance.transfer(m,transfer);
+ const external=structuredClone(m.finance.accounts['other:USD']),bank=structuredClone(m.finance.accounts['bank:USD']),quotes=structuredClone(m.finance.prices);
+ globalThis.__investTest.answer.cash[0].amount=999999; // Explicit regeneration replaces opening cash.
+ globalThis.__investTest.answer.trades[0].quantity=5;
+ globalThis.__investTest.answer.watch[0].note='new watch reason';
+ await dataMod.fillInvestment(m,p,'2026-10-30',{regenerate:true});
+ assert.equal(p.investment.accounts[0].key,key);assert.equal(m.finance.accounts[key].amount,999999);
+ assert.equal(m.finance.accounts[key].entries[oldTrade],undefined);assert.equal(finance.cash(m.finance.accounts[key]),999699);
+ assert.equal(m.finance.accounts[key].entries.linked.amount,200);assert.deepEqual(m.finance.transfers.linked,transfer);
+ assert.deepEqual(m.finance.accounts['bank:USD'],bank);assert.deepEqual(m.finance.accounts['other:USD'],external);assert.deepEqual(m.finance.prices,quotes);
+ assert.equal(p.investment.watch[0].note,'new watch reason');assert.match(globalThis.__investTest.inputs.at(-1).input,/PRESERVED INVESTMENT CASH/);
+ await dataMod.fillInvestment(m,p,'2026-10-30',{regenerate:true});assert.equal(finance.cash(m.finance.accounts[key]),999699);
+ assert.equal(Object.keys(m.finance.accounts[key].entries).length,2);
+});
+test('failed investment rebuild leaves entire portfolio and ledger untouched',async()=>{
+ const {m,p}=setup();await dataMod.fillInvestment(m,p,'2026-10-30');const before=JSON.stringify([m.finance,p.investment]);
+ globalThis.__investTest.answer.trades[0].quantity=1000;
+ await assert.rejects(dataMod.fillInvestment(m,p,'2026-10-30',{regenerate:true}),/현금|잔액/);assert.equal(JSON.stringify([m.finance,p.investment]),before);
+ globalThis.__investTest.error=true;await assert.rejects(dataMod.fillInvestment(m,p,'2026-10-30',{regenerate:true}),/network/);assert.equal(JSON.stringify([m.finance,p.investment]),before);
+});
+test('investment rebuild preserves snapshot-included transfers and rejects concurrent changes',async()=>{
+ const {m,p}=setup();await dataMod.fillInvestment(m,p,'2026-10-30');const key=p.investment.accounts[0].key;
+ finance.baseline(m,'bank','USD',900,'2026-10-01',p.owner);
+ const t={id:'included',from:'bank:USD',to:key,sent:100,received:100,fee:0,date:'2026-10-30',includedFrom:true,includedTo:true};finance.transfer(m,t);
+ await dataMod.fillInvestment(m,p,'2026-10-30',{regenerate:true});assert.equal(finance.cash(m.finance.accounts[key]),1000);assert.deepEqual(m.finance.accounts[key].included,['included']);
+ const inv=p.investment,answer=globalThis.__investTest.answer;
+ Object.defineProperty(globalThis.__investTest,'answer',{get(){m.finance.accounts[key].entries.external={amount:10,date:'2026-10-30'};return answer;}});
+ await assert.rejects(dataMod.fillInvestment(m,p,'2026-10-30',{regenerate:true}),/변경/);
+ assert.equal(p.investment,inv);assert.equal(m.finance.accounts[key].entries.external.amount,10);
+});
+test('investment generation prompts share existing section format and keep JSON contracts',async()=>{
+ const source=await readFile(new URL('../src/investdata.js',import.meta.url),'utf8');
+ for(const name of ['INVEST_SYS','MARKET_SYS','INVEST_NOTES_SYS','INVEST_RECORDS_SYS','CHART_SYS']) {
+  const start=source.indexOf(`const ${name} = `),end=source.indexOf('`;',start);
+  const prompt=source.slice(start,end);for(const heading of ['GOAL','YOU GET','RULES','ANSWER'])assert.ok(prompt.includes(heading),`${name}: ${heading}`);
+ }
 });

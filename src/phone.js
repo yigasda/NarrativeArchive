@@ -6,7 +6,7 @@
 
 import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './phoneprofile.js';
 import { investmentScreen } from './investui.js';
-import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, validDate } from './investdata.js';
+import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, investmentDate, validDate } from './investdata.js';
 import { finance, migrateBank, reviseBaseline, selectPrice, transfer } from './finance.js';
 import { draftReady, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
@@ -34,7 +34,7 @@ function screen(p, view, m, roster, ui) {
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
         : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, now, m)
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
-        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'set' ? setScreen(p, now, m, ui) : v === 'settheme' ? setTheme(p, now) : v === 'setremake' ? setRemake(p, now, ui) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
+        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'set' ? setScreen(p, now, m, ui) : v === 'settheme' ? setTheme(p, now) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app: drawn at the boards' size too, each its own app look
@@ -613,15 +613,17 @@ export async function openPhone(who = null) {
     $root.on('click', '.ax_rmall', e => { e.stopPropagation(); const all = [...Object.keys(REMAKE), ...REMAKE_MORE]; if (remake.size === all.length) remake.clear(); else all.forEach(k => remake.add(k)); drawPhone(true); });
     $root.on('click', '.na_ph_setremake', async function (e) {
         e.stopPropagation();
-        if (!remake.size || making) return;
+        if (!remake.size || making || investing) return;
         const apps = Object.keys(REMAKE).filter(k => remake.has(k)), more = REMAKE_MORE.filter(k => remake.has(k)), whole = apps.length === Object.keys(REMAKE).length;
+        const date=more.includes('invest') ? ($root.find('.ax_investdate').val() || investmentDate(m,phone())) : '';
+        if(more.includes('invest') && !validDate(date)) {toastr.warning('투자 기준일을 입력해 주세요');return;}
         if (!await confirm(whole ? '폰 전체를 다시 만들까요?' : `고른 앱 ${apps.length + more.length}개를 다시 만들까요?`, `${[...apps, ...more].map(k => APPS[k]).join(' · ')} 다시 만들기${more.includes('money') ? ' · 잔액 재생성, 기존 거래 유지' : ''}`)) return;
         const keep = phone().inject, $at = $(this).find('.ax_n');
         making = true;
         try {
             const p = await withSpinner($at, '다시 만드는 중', async () => {
                 const q = apps.length ? await makePhone(m, owner, whole ? {} : { apps }) : phone();
-                for (const k of more) if (q) await (k === 'money' ? fillMoney(m,q,{regenerateBalances:true}) : fillVoice(m,q));
+                for (const k of more) if (q) await (k === 'money' ? fillMoney(m,q,{regenerateBalances:true}) : k === 'invest' ? fillInvestment(m,q,date,{regenerate:true}) : fillVoice(m,q));
                 return q;
             });
             if (!p) return;

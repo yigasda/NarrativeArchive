@@ -2,6 +2,7 @@
 
 import { annivsOf, datedRows } from './anniv.js';
 import { ctx } from './core.js';
+import { investmentDate } from './investdata.js';
 import { profileChoices, phoneDataInfo } from './phoneprofile.js';
 import { faceHtml, nameKey, nameRe, peopleData, peopleList, personLine } from './people.js';
 import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './phoneai.js';
@@ -559,9 +560,9 @@ export function setTheme(p, now) {
 }
 // 다시 만들기: the apps ticked are made again from the whole story; the rest stay
 // apps made by their own request (채우기), offered alongside
-export const REMAKE_MORE = ['money', 'voice'];
-const REMAKE_IC = { money: ['#6f86b3', 'card'], voice: ['#c9a581', 'mic'], msg: ['#89b892', 'cmt'], call: ['#89b892', 'call'], photo: ['#d89f98', 'photo'], note: ['#dcc680', 'pen'], search: ['#8faed1', 'search'], cal: ['#d494a7', 'cal'], sns: ['#d494a7', 'heart'], mail: ['#8faed1', 'mail'], diary: ['#a699c9', 'compose'] };
-export function setRemake(p, now, ui) {
+export const REMAKE_MORE = ['money', 'voice', 'invest'];
+const REMAKE_IC = { invest: ['#73998a', 'card'], money: ['#6f86b3', 'card'], voice: ['#c9a581', 'mic'], msg: ['#89b892', 'cmt'], call: ['#89b892', 'call'], photo: ['#d89f98', 'photo'], note: ['#dcc680', 'pen'], search: ['#8faed1', 'search'], cal: ['#d494a7', 'cal'], sns: ['#d494a7', 'heart'], mail: ['#8faed1', 'mail'], diary: ['#a699c9', 'compose'] };
+export function setRemake(p, now, ui, mForRemake = {}) {
     const all = [...Object.keys(REMAKE), ...REMAKE_MORE], n = ui.remake.size;
     return `${axBar(p, now)}
       ${axTop(axCb('set'))}
@@ -572,6 +573,7 @@ export function setRemake(p, now, ui) {
         </div>
         <div class="ax_card">${all.map(k => { const on = ui.remake.has(k); return `
           <button type="button" class="ax_rw ax_rmpick" data-k="${k}"><span class="ax_si" style="background: ${REMAKE_IC[k][0]}">${ax(REMAKE_IC[k][1], 17, '#fff')}</span><span class="ax_tx"><span class="ax_n">${APPS[k]}</span></span><span class="ax_radio ${on ? 'on' : ''}">${on ? ax('check', 14, '#fff', 3.4) : ''}</span></button>`; }).join('')}</div>
+        ${ui.remake.has('invest') ? `<div class="ax_card"><label class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">투자 기준일</span></span><input type="date" class="ax_in ax_investdate" aria-label="투자 기준일" value="${esc(investmentDate(mForRemake,p))}"></label></div>` : ''}
         <div class="ax_foot">고른 앱만 아카이브 전체를 다시 읽고 새로 채워요. 나머지는 그대로예요.</div>
         <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_setremake" ${n ? '' : 'disabled'}><span class="ax_tx"><span class="ax_n ${n ? 'ax_red' : 'ax_off'}">${n ? `${n}개 다시 만들기` : '앱을 골라 주세요'}</span></span></button></div>
         <i class="ax_pad"></i>
