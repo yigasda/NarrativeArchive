@@ -2,7 +2,7 @@
 // 롤플에 넣기, dates and times as the owner's phone shows them, and the places they have been.
 
 import { askDraft } from './ai.js';
-import { migrateBank } from './finance.js';
+import { migrateBank, finance, finite, cash, reviseBaseline } from './finance.js';
 import { calendars, headingDate } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
 import { recentForCheck } from './drift.js';
@@ -505,23 +505,54 @@ export function parseMoney(raw) {
 }
 // what the phone already holds, so the money side reuses its event tags
 const moneyContext = p => JSON.stringify({ now: p.now, mails: (p.mails || []).slice(-8).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })), events: real(p.events).slice(-8).map(x => ev(x, { title: x.title, date: x.date, time: x.time })), searches: real(p.searches).slice(-6).map(x => ev(x, { q: x.q, time: x.time })) });
-export async function fillMoney(m, p) {
+export async function fillMoney(m, p, { regenerateBalances = false } = {}) {
     migrateBank(m, p);
-    const old = p.money;
-    const out = await askDraft(await sideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p)}`, old ? `[EXISTING ACCOUNTS]\n${JSON.stringify(old.bank.accounts)}` : '']), { system: AI_SYS_MONEY, maxTokens: 12000 });
-    const next = parseMoney(jsonOf(out));
+    const old = p.money, rebuild = !!old && regenerateBalances;
+    const accountState = () => JSON.stringify((old?.bank.accounts || []).map(a => finance(m).accounts[`${a.id}:${a.currency}`] || null));
+    const before = accountState();
+    const preserved = rebuild ? `[REBUILD ACCOUNTS]\n${JSON.stringify(old.bank.accounts.map(({id,kind,name,last4,currency})=>({id,kind,name,last4,currency})))}\n[PRESERVED TRANSACTIONS]\n${JSON.stringify(old.tx)}\n[APPLIED CASH ENTRIES]\n${JSON.stringify(old.bank.accounts.map(a=>({id:a.id,currency:a.currency,entries:finance(m).accounts[`${a.id}:${a.currency}`]?.entries || {}})))}` : old ? `[EXISTING ACCOUNTS]\n${JSON.stringify(old.bank.accounts)}` : '';
+    const system = AI_SYS_MONEY + (rebuild ? `
+REBUILD BALANCES
+REBUILD ACCOUNTS explicitly requests new balances, not locked snapshots. Keep every supplied account id, kind, last4 and currency; no added or omitted accounts. Re-read the story and infer fresh personal cash where unspecified, rather than copying previous invented balances.
+Each balance is the CURRENT balance AFTER preserved transactions and applied cash entries, not an opening balance. They may describe the same event: never count it twice. Do not replay transfers, currency conversion, or credit company/family assets to personal cash. Explicit current personal balances take priority; preserve the amounts and currencies of established receipts and spending (for example, EUR 15000 received and EUR 2000 spent may leave EUR 13000 when no other funds or movements exist).
+Existing transaction records are preserved by the app; do not rewrite their amounts or dates. Credit balance is current monthly spending, never deposit cash. Return a finite nonnegative balance for every account and explain the evidence/invented scale in basis.` : '');
+    const out = await askDraft(await sideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p)}`, preserved]), { system, maxTokens: 12000 });
+    const raw = jsonOf(out), next = parseMoney(raw);
+    if (p.money !== old || accountState() !== before) throw new Error('생성 중 계좌가 변경됐어요. 다시 시도해 주세요');
     if (old) {
-        next.bank.accounts = old.bank.accounts.map(a => ({ ...a, name: next.bank.accounts.find(b => b.id === a.id)?.name || a.name }));
+        if (rebuild) {
+            const rows = raw?.bank?.accounts;
+            if (!Array.isArray(rows) || rows.length !== old.bank.accounts.length || old.bank.accounts.some(a => {
+                const matches = rows.filter(b=>b.id === a.id);
+                return matches.length !== 1 || matches[0].currency !== a.currency || matches[0].kind !== a.kind || String(matches[0].last4) !== a.last4 || !finite(matches[0].balance) || matches[0].balance < 0;
+            })) throw new Error('새 계좌 잔액을 확인하지 못했어요. 기존 잔액은 유지돼요');
+            next.bank.accounts = old.bank.accounts.map(a => {
+                const b = rows.find(b=>b.id === a.id);
+                return {...a,name:next.bank.accounts.find(b=>b.id === a.id)?.name || a.name,balance:b.balance,...(a.kind === 'credit' ? {spent:b.balance} : {})};
+            });
+        } else next.bank.accounts = old.bank.accounts.map(a => ({ ...a, name: next.bank.accounts.find(b => b.id === a.id)?.name || a.name }));
         next.currency = old.currency;
         next.displayCurrency = old.displayCurrency;
         next.fxDate = old.fxDate;
-        next.tx = old.tx; // history and transfer ids survive visual regeneration
+        next.tx = old.tx;
         next.asOf = old.asOf;
-        next.basis = old.basis || next.basis;
+        if (!rebuild) next.basis = old.basis || next.basis;
     }
-    p.money = { ...next, at: Date.now() };
-    ensureIds(p);
-    migrateBank(m, p);
+    // Stage the whole result: malformed responses cannot partially rewrite a baseline.
+    const staged = {finance:structuredClone(finance(m))};
+    if (rebuild) for (const a of next.bank.accounts) {
+        if (a.kind === 'credit') continue;
+        const key = `${a.id}:${a.currency}`, ledger = staged.finance.accounts[key];
+        if (ledger) {
+            // The new amount is current cash. Retain all ledger entries and offset them once.
+            const net = cash(ledger) - ledger.amount;
+            reviseBaseline(staged,key,a.balance - net,'계좌 새로 만들기');
+        }
+    }
+    const updated = {...p,money:{...next,at:Date.now()}};
+    ensureIds(updated);
+    migrateBank(staged,updated);
+    p.money = updated.money; m.finance = staged.finance;
     await saveMeta();
     return p.money;
 }

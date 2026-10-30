@@ -189,3 +189,28 @@ test('card detail separates credit usage from cash and links real payment record
  assert.match(credit,/이번 달 이용 금액/);assert.match(credit,/3,000,000/);assert.match(credit,/승인 대기 1/);assert.match(credit,/data-i="credit-tx"/);assert.doesNotMatch(credit,/연결 계좌 잔액|Coffee/);
  assert.match(credit,/<details class="cd_info">/);assert.match(credit,/11\/29/);assert.match(credit,/<details class="cd_fx">/);assert.equal(JSON.stringify(m.finance),before);
 });
+test('explicit bank rebuild changes current cash once and preserves linked transfers and credit semantics',async()=>{
+ const {m,p}=euroWallet();finance.migrateBank(m,p);
+ finance.baseline(m,'broker','EUR',0,'2026-10-01',p.owner);
+ const t={id:'move',from:'eur:EUR',to:'broker:EUR',date:'2026-10-30',sent:1000,received:1000,fee:0};finance.transfer(m,t);
+ const entries=structuredClone(m.finance.accounts['eur:EUR'].entries);const oldTx=p.money.tx=[{id:'receipt',account:'1234',amount:15000},{id:'spend',account:'1234',amount:-2000}];
+ p.investment={sentinel:1};p.money.displayCurrency='KRW';
+ globalThis.__investTest.answer={currency:'EUR',basis:'Revised scale',bank:{name:'New bank',accounts:[{id:'eur',last4:'1234',kind:'checking',currency:'EUR',balance:50000},{id:'credit',last4:'5678',kind:'credit',currency:'EUR',balance:300}]},tx:[{account:'1234',who:'Duplicate',amount:-1000}],cards:[],passes:[],orders:[]};
+ await phonedata.fillMoney(m,p,{regenerateBalances:true});
+ assert.equal(p.money.bank.accounts[0].balance,50000);assert.equal(finance.cash(m.finance.accounts['eur:EUR']),50000);assert.equal(m.finance.accounts['eur:EUR'].amount,51000);
+ assert.deepEqual(m.finance.accounts['eur:EUR'].entries,entries);assert.deepEqual(m.finance.transfers.move,t);assert.equal(finance.cash(m.finance.accounts['broker:EUR']),1000);assert.deepEqual(p.money.tx,oldTx);
+ assert.equal(p.money.bank.accounts[1].spent,300);assert.equal(p.money.bank.accounts[1].balance,300);assert.equal(p.money.basis,'Revised scale');assert.equal(p.money.displayCurrency,'KRW');assert.equal(p.investment.sentinel,1);
+ assert.match(globalThis.__investTest.inputs.at(-1).input,/PRESERVED TRANSACTIONS/);assert.match(globalThis.__investTest.inputs.at(-1).system,/CURRENT balance/);
+ finance.migrateBank(m,p);assert.equal(p.money.bank.accounts[0].balance,50000);
+ await phonedata.fillMoney(m,p,{regenerateBalances:true});assert.equal(finance.cash(m.finance.accounts['eur:EUR']),50000);assert.equal(Object.keys(m.finance.transfers).length,1);
+});
+test('malformed rebuilt balances leave every account and its ledger unchanged',async()=>{
+ const {m,p}=euroWallet();finance.migrateBank(m,p);const before=JSON.stringify({money:p.money,finance:m.finance});
+ for(const invalid of [null,-1,'1000']) {
+ globalThis.__investTest.answer={bank:{accounts:[{id:'eur',last4:'1234',kind:'checking',currency:'EUR',balance:50000},{id:'credit',last4:'5678',kind:'credit',currency:'EUR',balance:invalid}]}};
+ await assert.rejects(phonedata.fillMoney(m,p,{regenerateBalances:true}),/잔액/);assert.equal(JSON.stringify({money:p.money,finance:m.finance}),before);
+ }
+ globalThis.__investTest.answer={bank:{accounts:[{id:'eur',last4:'1234',kind:'checking',currency:'KRW',balance:50000},{id:'credit',last4:'5678',kind:'credit',currency:'EUR',balance:300}]}};
+ await assert.rejects(phonedata.fillMoney(m,p,{regenerateBalances:true}),/잔액/);assert.equal(JSON.stringify({money:p.money,finance:m.finance}),before);
+ globalThis.__investTest.error=true;await assert.rejects(phonedata.fillMoney(m,p,{regenerateBalances:true}),/network/);assert.equal(JSON.stringify({money:p.money,finance:m.finance}),before);
+});

@@ -497,20 +497,21 @@ export async function openPhone(who = null) {
         e.stopPropagation();
         if (!remake.size || making) return;
         const apps = Object.keys(REMAKE).filter(k => remake.has(k)), more = REMAKE_MORE.filter(k => remake.has(k)), whole = apps.length === Object.keys(REMAKE).length;
-        if (!await confirm(whole ? '폰 전체를 다시 만들까요?' : `고른 앱 ${apps.length + more.length}개를 다시 만들까요?`, `${[...apps, ...more].map(k => APPS[k]).join(' · ')}의 지금 내용은 지워지고 아카이브 전체를 다시 읽어요.`)) return;
+        if (!await confirm(whole ? '폰 전체를 다시 만들까요?' : `고른 앱 ${apps.length + more.length}개를 다시 만들까요?`, `${[...apps, ...more].map(k => APPS[k]).join(' · ')} 다시 만들기${more.includes('money') ? ' · 잔액 재생성, 기존 거래 유지' : ''}`)) return;
         const keep = phone().inject, $at = $(this).find('.ax_n');
         making = true;
         try {
             const p = await withSpinner($at, '다시 만드는 중', async () => {
                 const q = apps.length ? await makePhone(m, owner, whole ? {} : { apps }) : phone();
-                for (const k of more) if (q) await (k === 'money' ? fillMoney : fillVoice)(m, q);
+                for (const k of more) if (q) await (k === 'money' ? fillMoney(m,q,{regenerateBalances:true}) : fillVoice(m,q));
                 return q;
             });
             if (!p) return;
             if (whole && keep) { p.inject = true; await saveMeta(); applyInjection(); }
             remake.clear(); view = whole ? 'lock' : 'set'; draw();
             toastr.success(whole ? `${owner}의 폰을 다시 만들었어요` : '고른 앱을 다시 만들었어요', '캐릭터 휴대폰');
-        } finally { making = false; }
+        } catch (err) { toastr.error(String(err?.message || err), '다시 만들기'); }
+        finally { making = false; }
     });
     $root.on('click', '.na_ph_setdel', async e => {
         e.stopPropagation();
