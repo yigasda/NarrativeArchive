@@ -143,8 +143,8 @@ test('fictional dividends stay scheduled, private and idempotent without changin
  globalThis.__investTest.answer={schedules:[{...draft,date:'2026-11-20'}]};await dataMod.collectInvestmentRecords(m,p);
  assert.equal(p.investment.schedules.length,1);assert.match(globalThis.__investTest.inputs.at(-1).input,/EXISTING SCHEDULES/);
  assert.equal(JSON.stringify(m.finance),before);
- const html=ui.investmentScreen(m,p,'10-30','ivschedule','',false);assert.match(html,/가상 예정/);assert.doesNotMatch(html,/class="ir_evidence"/);
- p.investment.date='2026-11-11';assert.match(ui.investmentScreen(m,p,'11-11','ivschedule','',false),/가상 · 날짜 지남/);assert.equal(p.investment.schedules[0].status,'scheduled');assert.equal(JSON.stringify(m.finance),before);
+ const html=ui.investmentScreen(m,p,'10-30','ivschedule','',false);assert.match(html,/예정/);assert.doesNotMatch(html,/가상|상상/);assert.doesNotMatch(html,/class="ir_evidence"/);
+ p.investment.date='2026-11-11';assert.match(ui.investmentScreen(m,p,'11-11','ivschedule','',false),/날짜 지남/);assert.equal(p.investment.schedules[0].status,'scheduled');assert.equal(JSON.stringify(m.finance),before);
  p.investment.date='2026-10-30';const id=p.investment.schedules[0].id;
  m.text+=' Dividend payment is scheduled for 2026-11-10.';
  globalThis.__investTest.answer={schedules:[{...draft,source:'story',evidence:'Dividend payment is scheduled for 2026-11-10.'}]};await dataMod.collectInvestmentRecords(m,p);
@@ -164,7 +164,7 @@ test('bank converts EUR cash to KRW without converting the ledger or counting cr
  for(const html of [moneyUI.bankHome(p,'10-30'),moneyUI.bankAcct(p,'10-30','0')]) {
   assert.match(html,/19,500,000/);assert.doesNotMatch(html,/22,500,000/);
  }
- assert.match(moneyUI.bankAcct(p,'10-30','0'),/13,000/);assert.match(moneyUI.bankAcct(p,'10-30','0'),/가상 환율/);
+ assert.match(moneyUI.bankAcct(p,'10-30','0'),/13,000/);assert.doesNotMatch(moneyUI.bankAcct(p,'10-30','0'),/가상|상상/);
  finance.addPrice(m,'FX:EUR/KRW','2026-10-30',{value:1600,source:'story',ref:'One euro equals 1600 won.'});
  assert.match(moneyUI.bankHome(p,'10-30'),/20,800,000/);assert.equal(JSON.stringify(m.finance.accounts),before);assert.equal(p.money.bank.accounts[0].balance,13000);assert.equal(p.money.currency,'EUR');
  p.money.displayCurrency='EUR';assert.match(moneyUI.bankHome(p,'10-30'),/13,000/);assert.equal(JSON.stringify(m.finance.accounts),before);

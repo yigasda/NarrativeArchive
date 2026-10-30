@@ -42,7 +42,7 @@ function converted(p, a, brief = false) {
     const rate = fx(meta,from,to,date), q = price(meta,`FX:${from}/${to}`,date);
     if (!finite(amount) || rate === null) return `${esc(to)} 환산 대기`;
     if (brief) return `${esc(fmtIn(p,amount * rate,to))} 환산`;
-    return `${esc(fmtIn(p,amount * rate,to))} 환산 · 1 ${esc(from)} = ${esc(fmtIn(p,rate,to))} · ${esc(date)} · ${q?.source === 'story' ? '원문 환율' : '가상 환율'}${q?.conflict ? ' · 환율 확인 필요' : ''}`;
+    return `${esc(fmtIn(p,amount * rate,to))} 환산 · 1 ${esc(from)} = ${esc(fmtIn(p,rate,to))} · ${esc(date)}${q?.conflict ? ' · 환율 확인 필요' : ''}`;
 }
 function bankSum(p) {
     const meta = getMeta(); migrateBank(meta,p);
