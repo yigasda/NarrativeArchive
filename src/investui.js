@@ -66,8 +66,8 @@ const closes = (m, sym, date, from = '') => Object.keys(finance(m).prices[`STOCK
 const TABS = [['invest', '홈', 'homeS'], ['ivwatch', '관심', 'star'], ['ivactivity', '거래', 'receipt'], ['ivcash', '자산', 'card']];
 const tabs = on => `<div class="iv_tab">${TABS.map(([go, l, ic]) => `<button type="button" class="${go === on ? 'on' : ''}" data-go="${go}">${ax(ic, 23, 'currentColor')}${l}</button>`).join('')}</div>`;
 const top = (back, title = '', right = '') => `<div class="iv_top"><button type="button" class="iv_ib" data-go="${back}" aria-label="뒤로">${ax('back', 20, 'currentColor', 2.3)}</button>${title ? `<b class="iv_tt">${title}</b>` : '<b class="iv_brand">kurs<i>.</i></b>'}<span class="iv_topr">${right}</span></div>`;
-function frame(p, now, { back = 'invest', title = '', right = '', tab = '', body, footer = '' }) {
-    return `<div class="iv_app${UPRED.has(p.country) ? ' iv_east' : ''}">${axBar(p, now)}${top(back, title, right)}<div class="ax_scroll iv_scroll">${body}${footer || '<div class="iv_footer">은행 예금과 투자자산은 따로 계산해요 · 가상 시세는 롤플에 들어가지 않아요</div>'}<i class="ax_pad"></i></div>${tab ? tabs(tab) : ''}</div>${axInd()}`;
+function frame(p, now, { back = 'invest', title = '', right = '', tab = '', body }) {
+    return `<div class="iv_app${UPRED.has(p.country) ? ' iv_east' : ''}">${axBar(p, now)}${top(back, title, right)}<div class="ax_scroll iv_scroll">${body}<i class="ax_pad"></i></div>${tab ? tabs(tab) : ''}</div>${axInd()}`;
 }
 // the evaluation day and the market calls, kept small: a real app has no such row, but the story's date is ours to set
 const tools = (m, p, busy) => p.investment
@@ -81,7 +81,7 @@ const hd = (t, right = '') => `<div class="iv_hd"><b>${t}</b>${right}</div>`;
 export function investmentScreen(m, p, now, view, key, busy) {
     const inv = p.investment;
     if (!inv) {
-        return frame(p, now, { back: 'home2', body: `<div class="iv_empty"><span class="iv_emptyic">${ax('chart', 30, 'currentColor', 2)}</span><b>아직 투자 계좌가 없어요</b><p>아카이브와 고른 로어북을 읽고 이 사람에게 맞는 투자 계좌를 만들어요. 현금과 거래 기록을 같이 계산하고, 가문 지분은 근거가 있는 것만 보여 줘요.</p></div>${tools(m, p, busy)}` });
+        return frame(p, now, { back: 'home2', body: `<div class="iv_empty"><span class="iv_emptyic">${ax('chart', 30, 'currentColor', 2)}</span><b>아직 투자 계좌가 없어요</b></div>${tools(m, p, busy)}` });
     }
     const date = inv.date, f = finance(m), trades = inv.trades.filter(t => t.date <= inv.date), holdings = positions(trades), costs = baseCosts(trades, inv.base);
     const lookup = s => inv.securities.find(x => x.symbol === s), held = holdings.filter(h => h.quantity > 0);
@@ -93,7 +93,6 @@ export function investmentScreen(m, p, now, view, key, busy) {
     const evidence = x => `<details class="ir_evidence"><summary>${ax('doc',14)}<span>원문 근거${x.ref ? ` · ${esc(x.ref)}` : ''}</span>${ax('chev',13)}</summary><p>${esc(x.evidence)}</p></details>`;
     const filters = v => `<div class="ir_filters" aria-label="대상 선택"><button type="button" class="${key ? '' : 'on'}" data-go="${v}" data-i="">전체</button>${targets.filter(t=>v !== 'ivhistory' || t.key.startsWith('stake:')).map(t=>`<button type="button" class="${key === t.key ? 'on' : ''}" data-go="${v}" data-i="${esc(t.key)}">${esc(t.name)}</button>`).join('')}</div>`;
     const reload = `<button type="button" class="iv_ib iv_records" ${busy ? 'disabled' : ''} aria-label="일정 채우기 · 원문 변경 확인" title="일정 채우기 · 원문 변경 확인">${busy ? '<i class="fa-solid fa-spinner fa-spin"></i>' : ax('redo',18)}</button>`;
-    const foot = message => `<details class="ir_help"><summary>${ax('lock',12)} 기록 안내 ${ax('down',12)}</summary><p>${message}</p>${inv.recordsChecked ? `<small>${esc(inv.recordsChecked)}에 확인</small>` : ''}</details>`;
     const emptyRecord = (icon,title,desc) => `<div class="ir_empty">${ax(icon,30)}<b>${title}</b><p>${desc}</p></div>`;
     // Old saved routes lead to the containing detail, not a separate journal.
     if (view === 'ivnotes') return investmentScreen(m,p,now,key?.startsWith('stock:') ? 'stock' : key?.startsWith('stake:') ? 'ivstakes' : 'invest',key?.startsWith('stock:') ? key.slice(6) : '',busy);
@@ -115,10 +114,10 @@ export function investmentScreen(m, p, now, view, key, busy) {
         const months=[...new Set(xs.map(x=>x.date.slice(0,7)))];
         const status=x=>x.source === 'guess' ? (x.date < date ? '가상 · 날짜 지남' : '가상 예정') : x.status === 'paid' ? '지급 확인' : x.status === 'cancelled' ? '취소' : x.date < date ? '이행 확인 필요' : x.date === date ? '오늘' : '예정';
         const diff=next ? Math.round((Date.parse(next.date)-Date.parse(date))/dayMs) : null;
-        return frame(p,now,{title:'배당 · 권리 일정',tab:'ivcash',right:reload,footer:foot('일반 종목의 가상 배당 예정은 설정이 아니에요. 가문 지분·권리 일정은 원문 근거가 필요하며, 어떤 일정도 자동 입금하거나 권리를 바꾸지 않아요.'),body:`
+        return frame(p,now,{title:'배당 · 권리 일정',tab:'ivcash',right:reload,body:`
           <div class="iv_hero ir_agenda"><div class="ir_hero_label"><small>NEXT UP</small><span>${upcoming.length}개 예정</span></div><div class="ir_due">${next ? diff === 0 ? 'TODAY' : `D−${diff}` : '—'}</div><h2>${next ? esc(next.title) : '다가오는 일정 없음'}</h2><p>${next ? `${esc(targetName(next.target))} · ${esc(next.date)}${next.source === 'guess' ? ' · 가상 예정' : ''}` : '확인된 일정이 생기면 여기에 모여요'}</p></div>
           ${filters('ivschedule')}
-          ${months.map(mo=>`${hd(`${Number(mo.slice(0,4))}년 ${Number(mo.slice(5))}월`)}<div class="iv_card ir_agenda_list">${xs.filter(x=>x.date.startsWith(mo)).map(x=>`<div class="ir_event"><div class="ir_date"><small>${Number(x.date.slice(5,7))}월</small><b>${Number(x.date.slice(8))}</b></div><div class="ir_event_body"><div class="ir_event_type">${kinds[x.kind]}<span class="ir_status ${x.status}">${status(x)}</span></div><h3>${esc(x.title)}</h3><small>${esc(targetName(x.target))}</small>${x.source === 'guess' ? '<small class="iv_hint">가상 배당 일정 · 자동 입금 안 됨</small>' : evidence(x)}</div></div>`).join('')}</div>`).join('') || emptyRecord('cal','확인된 일정이 없어요','오른쪽 위 새로고침으로 배당 예정을 채우고 원문 일정을 확인해 보세요.')}
+          ${months.map(mo=>`${hd(`${Number(mo.slice(0,4))}년 ${Number(mo.slice(5))}월`)}<div class="iv_card ir_agenda_list">${xs.filter(x=>x.date.startsWith(mo)).map(x=>`<div class="ir_event"><div class="ir_date"><small>${Number(x.date.slice(5,7))}월</small><b>${Number(x.date.slice(8))}</b></div><div class="ir_event_body"><div class="ir_event_type">${kinds[x.kind]}<span class="ir_status ${x.status}">${status(x)}</span></div><h3>${esc(x.title)}</h3><small>${esc(targetName(x.target))}</small>${x.source === 'guess' ? '' : evidence(x)}</div></div>`).join('')}</div>`).join('') || emptyRecord('cal','확인된 일정이 없어요','오른쪽 위 새로고침으로 배당 예정을 채우고 원문 일정을 확인해 보세요.')}
           <button type="button" class="ir_calendar" data-go="cal">${ax('cal',18)}<span>휴대폰 캘린더에서 보기</span>${ax('chev',16)}</button>`});
     }
     if (view === 'stock') {
@@ -138,8 +137,8 @@ export function investmentScreen(m, p, now, view, key, busy) {
             ${row(`${inv.base} 기준 평가손익`, money(p, baseGain, inv.base, true))}
             ${row('주가 변화 몫', money(p, finite(gain) && rate !== null && finite(baseGain) ? gain * rate : null, inv.base, true))}
             ${row('환율 변화 몫', money(p, finite(baseGain) && finite(gain) && rate !== null ? baseGain - gain * rate : null, inv.base, true))}
-            <small>주가 몫은 지금 환율로, 환율 몫은 산 날 환율과의 차이로 나눴어요</small></details>`}
-          ${h.realized ? card(row('실현손익', money(p, h.realized, s.currency, true)), 'iv_one') : ''}<small class="iv_note">평균 매수가는 수수료를 넣어 계산했어요</small>`
+            <small>주가 몫 · 현재 환율 기준 / 환율 몫 · 매수일 대비</small></details>`}
+          ${h.realized ? card(row('실현손익', money(p, h.realized, s.currency, true)), 'iv_one') : ''}<small class="iv_note">평균 매수가 · 수수료 포함</small>`
             : `${hd('내 투자')}${card(`<p class="iv_muted">가진 주식이 없어요${inv.watch.some(w => w.symbol === sym) ? ' · 관심 종목이에요' : ''}${h?.realized ? ` · 실현손익 ${money(p, h.realized, s.currency, true)}` : ''}</p>`)}`;
         const tl = inv.trades.filter(t => t.symbol === sym).slice().reverse();
         const watch = inv.watch.find(w => w.symbol === sym);
@@ -148,11 +147,11 @@ export function investmentScreen(m, p, now, view, key, busy) {
             body: `<div class="iv_quote">${logo(s, 46)}<span class="iv_qn"><b>${esc(s.ko || s.name)}</b><small>${esc(s.name)} · ${esc(s.symbol)}</small></span></div>
               <div class="iv_big cg_num">${money(p, q?.value, s.currency)}</div>
               <div class="iv_chg ${tone(p, change)}">${finite(change) && prev ? `${arrow(change)} ${money(p, q.value - prev.value, s.currency, true)} (${pct(change)}) <small>${esc(shortDay(prev.date))} 대비</small>` : `<small>${q ? (q.stale ? `${esc(shortDay(q.date))} 마지막 시세` : '이전 시세가 없어요') : '아직 평가 전이에요'}</small>`}</div>
-              <div class="iv_src">${q ? `${esc(shortDay(q.date))} ${esc(q.time || '시각 모름')} · ${q.source === 'story' ? '원문 가격' : '가상 시세'}${q.stale ? ' · 이전 시세' : ''}` : ''}${q?.conflict ? ` · <button type="button" class="iv_link" data-go="ivprices" data-i="${esc(`STOCK:${sym}`)}">가격 확인 필요 · 나중에 확인 가능</button>` : ''}</div>
+              <div class="iv_src">${q ? `${esc(shortDay(q.date))} ${esc(q.time || '시각 모름')} · ${q.source === 'story' ? '원문 가격' : '가상 시세'}${q.stale ? ' · 이전 시세' : ''}` : ''}${q?.conflict ? ` · <button type="button" class="iv_link" data-go="ivprices" data-i="${esc(`STOCK:${sym}`)}">가격 확인 필요</button>` : ''}</div>
               ${candles(m, p, sym, date, daysBack(date, days), s.currency)}${chips('stock', sym, rg)}
               ${mine}
               ${noteBlock(`stock:${sym}`)}
-              ${watch ? `${hd('관심 메모')}${card(`<p>${esc(watch.note)}</p>${watch.ko ? `<p class="iv_ko">${esc(watch.ko)}</p>` : ''}<small>상상한 메모예요</small>`)}` : ''}
+              ${watch ? `${hd('관심 메모')}${card(`<p>${esc(watch.note)}</p>${watch.ko ? `<p class="iv_ko">${esc(watch.ko)}</p>` : ''}<small>상상</small>`)}` : ''}
               ${hd('거래 내역', `<button type="button" class="iv_link" data-go="ivprices" data-i="${esc(`STOCK:${sym}`)}">가격 기록과 출처</button>`)}
               ${card(tl.map(t => trow(p, t, s)).join('') || '<p class="iv_muted">거래가 없어요</p>', 'iv_list')}
               <button type="button" class="iv_btn wide iv_news" data-symbol="${esc(sym)}">${ax('search', 16, 'currentColor', 2.3)} 관련 뉴스 검색</button>`,
@@ -160,10 +159,10 @@ export function investmentScreen(m, p, now, view, key, busy) {
     }
     if (view === 'ivwatch') {
         return frame(p, now, { title: '관심 종목', tab: 'ivwatch', body: `${inv.watch.length ? `<div class="iv_card iv_list">${inv.watch.map(w => { const s = lookup(w.symbol), q = price(m, `STOCK:${w.symbol}`, date), c = dayChange(w.symbol), ser = closes(m, w.symbol, date, daysBack(date, 31)).map(x => x.v);
-            return `<button type="button" class="iv_hold" data-go="stock" data-i="${esc(w.symbol)}">${logo(s)}<span class="iv_hn"><b>${esc(s?.ko || s?.name || w.symbol)}</b><small>${esc(w.note)}</small></span>${spark(ser, tone(p, ser.length > 1 ? ser[ser.length - 1] - ser[0] : 0))}<span class="iv_hv"><b class="cg_num">${money(p, q?.value, s?.currency)}</b><small class="${tone(p, c)}">${pct(c)}</small></span></button>`; }).join('')}</div>` : card('<p class="iv_muted">관심 종목이 없어요</p>')}${inv.watch.length ? '<small class="iv_note">관심 메모는 상상한 거예요</small>' : ''}` });
+            return `<button type="button" class="iv_hold" data-go="stock" data-i="${esc(w.symbol)}">${logo(s)}<span class="iv_hn"><b>${esc(s?.ko || s?.name || w.symbol)}</b><small>${esc(w.note)}</small></span>${spark(ser, tone(p, ser.length > 1 ? ser[ser.length - 1] - ser[0] : 0))}<span class="iv_hv"><b class="cg_num">${money(p, q?.value, s?.currency)}</b><small class="${tone(p, c)}">${pct(c)}</small></span></button>`; }).join('')}</div>` : card('<p class="iv_muted">관심 종목이 없어요</p>')}` });
     }
     if (view === 'ivstakes') {
-        return frame(p, now, { title: '소유 지분', body: `<p class="iv_hint">일반 투자 합계에는 넣지 않아요. 빈칸은 권리나 제한이 없다는 뜻이 아니에요.</p>${inv.stakes.map(s => card(`<div class="iv_sh">${logo({ symbol: s.company }, 36)}<b>${esc(s.company)}</b><span class="iv_pill">${s.listed === null ? '상장 여부 모름' : s.listed ? '상장' : '비상장'}</span></div>
+        return frame(p, now, { title: '소유 지분', body: `${inv.stakes.map(s => card(`<div class="iv_sh">${logo({ symbol: s.company }, 36)}<b>${esc(s.company)}</b><span class="iv_pill">${s.listed === null ? '상장 여부 모름' : s.listed ? '상장' : '비상장'}</span></div>
             <div class="iv_stake cg_num">${s.percent === null ? '—' : `${s.percent}%`}<small>지분율</small></div>
             ${row('직접 보유자', esc(s.holder) || '—')}${row('의결권 행사자', esc(s.voter) || '—')}${row('배당 수익자', esc(s.beneficiary) || '—')}${row('매도 제한 · 조건', esc(s.restriction) || '—')}${row('설정상 평가액', money(p, s.value, s.currency))}
             <details><summary>설정 근거</summary><p>${esc(s.evidence)}</p></details>${historyBlock(`stake:${s.id}`)}`)).join('') || card('<p class="iv_muted">확인된 소유 지분 정보가 없어요</p>')}` });
@@ -186,7 +185,7 @@ export function investmentScreen(m, p, now, view, key, busy) {
         return frame(p, now, { title: '자산', tab: 'ivcash', body: `${hd('현금')}${accounts.map(([k, a]) => card(`<div class="iv_sh"><span class="iv_cur">${esc(a.currency)}</span><b>${isBroker(k) ? '증권 현금' : '은행'} · ${esc(a.currency)}</b></div><div class="iv_stake cg_num">${money(p, cash(a), a.currency)}<small>지금 잔액</small></div>${row('기준 잔액', money(p, a.amount, a.currency))}<small>${esc(a.asOf)} 기준 · 그 뒤 거래 ${a.included.length}건 포함</small>
             <details><summary>기준 잔액 고치기</summary><input type="number" class="iv_balance" value="${a.amount}" step="any"><input class="iv_reason" placeholder="고치는 이유"><button type="button" class="iv_baseline iv_btn" data-key="${esc(k)}">기준점 고치기</button></details>`)).join('')}
           <div class="iv_menu"><button type="button" data-go="ivstakes">${ax('grid4', 20, 'currentColor')}<b>소유 지분</b></button><button type="button" data-go="ivprices">${ax('swap', 20, 'currentColor')}<b>가격 · 환율</b></button></div>
-          ${hd('실제로 있었던 이체 연결')}<div class="iv_card iv_form"><p class="iv_muted">새 사건을 만들지 않아요. 원래 있던 기록을 이을 때, 이미 잔액에 들어갔는지 하나씩 골라 주세요.</p>
+          ${hd('실제로 있었던 이체 연결')}<div class="iv_card iv_form">
             <label><small>거래 ID</small><input class="iv_tid" placeholder="같은 거래는 같은 ID"></label>
             <label><small>나가는 계좌</small><select class="iv_from">${accounts.map(opt).join('')}</select></label><label><small>들어오는 계좌</small><select class="iv_to">${accounts.map(opt).join('')}</select></label>
             <div class="iv_two"><label><small>보내는 원금</small><input type="number" class="iv_sent" step="any"></label><label><small>받는 원금</small><input type="number" class="iv_received" step="any"></label></div>
@@ -240,7 +239,7 @@ export function investmentScreen(m, p, now, view, key, busy) {
           ${cashRows.length ? `${hd('주문 가능 현금')}${card(cashRows.map(a => `<div class="iv_cash"><span class="iv_cur">${esc(a.currency)}</span><b>${esc(a.currency)} 예수금</b><b class="cg_num">${money(p, a.amount, a.currency)}</b></div>`).join(''), 'iv_list')}` : ''}
           <button type="button" class="ir_calendar" data-go="ivschedule">${ax('cal',18)}<span>배당 · 권리 일정</span>${ax('chev',16)}</button>
           ${tools(m, p, busy)}
-          <details class="iv_card iv_more"><summary>이 계좌는 어떻게 만들어졌나요</summary><p>${esc(inv.basis)}</p><small>상상한 구성은 확정된 설정이 아니에요</small></details>`,
+          <details class="iv_card iv_more"><summary>계좌 구성 근거</summary><p>${esc(inv.basis)}</p></details>`,
     });
 }
 // one trade as a row: what, how many, at what

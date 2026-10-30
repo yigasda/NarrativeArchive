@@ -51,7 +51,7 @@ function bankSum(p) {
 const missingSum = (p,sum) => sum.missing.map(x=>`<span>${esc(fmtIn(p,x.amount,x.currency))} · ${esc(x.currency)} 환산 대기</span>`).join('');
 function displayTools(p) {
     const selected = bankDisplayCurrency(p), options = [...new Set([selected,...Object.values(LOCAL_CURRENCY),p.money.currency].filter(Boolean))];
-    return `<div class="ax_fx_tools"><label>표시 통화<select class="bank_display">${options.map(c=>`<option value="${esc(c)}" ${c === selected ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label><label>환산 날짜<input type="date" class="bank_fxdate" value="${esc(bankDate(p))}"></label><button type="button" class="bank_fxrefresh">환율 확인</button><small>환산 표시만 바뀌며 실제 환전되지 않아요 · 가상 환율은 앱용이에요</small></div>`;
+    return `<div class="ax_fx_tools"><label>표시 통화<select class="bank_display">${options.map(c=>`<option value="${esc(c)}" ${c === selected ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label><label>환산 날짜<input type="date" class="bank_fxdate" value="${esc(bankDate(p))}"></label><button type="button" class="bank_fxrefresh">환율 확인</button></div>`;
 }
 const busyOf = (p, k) => filling.has(`${nameKey(p.owner)}:${k}`);
 const mo = p => p.money || null;
@@ -83,7 +83,7 @@ function emptyApp(p, now, title, kind, what) {
         ${axH1(title)}
         <div class="ax_card ax_fillc"><p>${what}</p>
           <button type="button" class="ax_fillb na_ph_fill" data-k="${kind}" ${busy ? 'disabled' : ''}>${busy ? `${busyHtml} 채우는 중` : '채우기'}</button>
-          <small>${kind === 'money' ? '초안 모델이 은행 · 지갑 · 쇼핑을 한 번에 채워요 · 금액은 서로 맞춰요' : '초안 모델이 아카이브의 순간들에서 메모 몇 개를 만들어요'}</small></div>
+          </div>
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
@@ -223,7 +223,7 @@ export function cardView(p, now, i) {
         <div class="cd_card">${cardArt(p,c)}</div>
         <div class="cd_identity"><b>${esc(a?.name || mo(p).bank.name)}</b><span>${credit ? '신용카드' : '체크카드'} · ${esc(c.account)}</span></div>
         <section class="cd_summary"><div class="cd_summary_label"><span>${credit ? '이번 달 이용 금액' : '연결 계좌 잔액'}</span>${pending ? `<span class="cd_pending">승인 대기 ${pending}</span>` : ''}</div><strong class="cg_num">${esc(fmtIn(p,amount,cur))}</strong>
-          ${conversion ? `<details class="cd_fx"><summary>${conversion}${ax('down',12)}</summary><p>${converted(p,a)}<br>표시용 환산이며 실제 환전되지 않아요.</p></details>` : ''}
+          ${conversion ? `<details class="cd_fx"><summary>${conversion}${ax('down',12)}</summary><p>${converted(p,a)}</p></details>` : ''}
           ${ai >= 0 ? `<button type="button" class="cd_account" data-go="acct" data-i="${ai}"><span>${ax('card',16)} ${credit ? '카드 이용 내역' : '연결 계좌 보기'}</span><span>•••• ${esc(a.last4)} ${ax('chev',14)}</span></button>` : ''}
         </section>
         <div class="cd_section"><h2>최근 결제</h2>${ai >= 0 ? `<button type="button" data-go="acct" data-i="${ai}">전체 보기 ${ax('chev',12)}</button>` : ''}</div>

@@ -40,7 +40,7 @@ test('missing FX produces partial subtotal, and conflict can stay unresolved dur
  const {m,p}=setup();await dataMod.fillInvestment(m,p,'2026-10-30');delete m.finance.prices['FX:EUR/USD'];
  finance.addPrice(m,'STOCK:NYSE:X','2026-10-30',{value:120,source:'story',time:'12:00',ref:'another'});
  const home=ui.investmentScreen(m,p,'10-30','invest','',false);assert.match(home,/환산 가능한 소계/);assert.match(home,/환산 대기/);assert.ok(!home.includes('총 투자자산'));
- const detail=ui.investmentScreen(m,p,'10-30','stock','NYSE:X',false);assert.match(detail,/나중에 확인 가능/);assert.equal(finance.price(m,'STOCK:NYSE:X','2026-10-30').value,110);
+ const detail=ui.investmentScreen(m,p,'10-30','stock','NYSE:X',false);assert.match(detail,/가격 확인 필요/);assert.equal(finance.price(m,'STOCK:NYSE:X','2026-10-30').value,110);
 });
 test('legacy credit renders without regeneration and stays out of bank deposits',()=>{
  const {m,p}=setup();p.money={currency:'EUR',bank:{name:'Bank',accounts:[{id:'a',kind:'checking',last4:'1234',balance:100},{id:'b',kind:'credit',last4:'5678',balance:70},{id:'c',kind:'savings',last4:'9999',balance:100,currency:'USD'}]},tx:[],orders:[],passes:[],cards:[]};
