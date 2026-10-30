@@ -110,26 +110,35 @@ export async function refreshMarket(m, p, date, checkStory = false) {
     await saveMeta();
 }
 
+export const INVEST_NOTES_SYS = `GOAL
+Write one short private investment note for the requested TARGET: why this owner bought, keeps or watches it. Use their voice, not investment advice or a generic personality label. This note cannot create trades, cash movements or ownership, and is never injected into RP.
+YOU GET
+STORY INPUT: archive, selected lore, recent chat and the owner's knowledge limits. AS OF is the story date, not the real date.
+TARGETS identify the requested security or family stake; they are not evidence. APP CONTEXT contains app-only trades and watch notes, which may inform imagination but never prove story claims.
+RULES
+- Use the requested target key only. Never expose information the owner does not know; suspicions stay suspicions. Do not invent family secrets, rights or relationships.
+- An imagined reason is source guess, never canon. Source story requires an exact excerpt from STORY INPUT explicitly supporting that reason, not merely naming the company. Never cite TARGETS or earlier generated app text as evidence. Put source message/section numbers in ref when available.
+- Keep original names. Write in the owner's language and include natural Korean in ko when needed. Return at most one short note; no other records or keys.
+OUTPUT JSON only
+{"notes":[{"target":"provided key","text":"short note","ko":"translation","source":"guess|story","evidence":"exact supporting excerpt for story, otherwise empty","ref":""}]}`;
+
 export const INVEST_RECORDS_SYS = `GOAL
-Read one character's investment life: private investment notes, dated dividend/rights schedules, and historical changes to family stakes. This is a read-only companion to the financial ledger. Never create trades, cash movements or new ownership.
+Extract dated dividend/rights schedules and historical changes to one character's family stakes. This is a read-only companion to the financial ledger. Never create trades, cash movements or new ownership.
 YOU GET
 STORY INPUT: archive, selected lore, recent chat and the owner's knowledge limits.
 TARGETS: existing securities and family stakes, with stable keys. They identify the screen, not independent evidence.
-MODE: notes or records. AS OF is the story date, not the real date.
-APP CONTEXT (notes only): existing app-only trades and watch notes may inform a guess note, but are never evidence for story claims.
+AS OF is the story date, not the real date.
 RULES
 - Use only TARGETS keys. Never expose information the owner does not know; suspicions stay suspicions.
-- notes: one short private note for the requested target, in the owner's voice, about why they bought, keep or watch it. Not investment advice or a generic personality label. An imagined note is source guess and is never canon. Source story requires an exact excerpt explicitly supporting that reason. No invented family secrets, rights or relationships. Include Korean in ko when needed.
-- records: return schedules and history only, never notes. Empty lists are valid; do not fill the screen for decoration.
+- Return schedules and history only, never notes. Empty lists are valid; do not fill the screen for decoration.
 - Schedules require an explicitly established date AND event: dividend payment, shareholder meeting, sale restriction release or voting delegation expiry. Future dates are allowed only when already announced in the story by AS OF. No inferred annual recurrence. A due date passing does not establish payment or release. paid/cancelled require explicit evidence; otherwise scheduled.
 - History is an actual change already shown by AS OF, not a current snapshot rewritten as an event. Only family stake targets. Fields: percent, holder, voter, beneficiary, restriction. Preserve the direction: who used to hold or exercise the right, and who does now. A change in feelings alone never changes legal rights. Unknown before/after or date stays empty. Unknown is not none or zero. Do not invent a transfer from the present ownership alone.
 - Every schedule and history entry includes an exact supporting excerpt from STORY INPUT, never from TARGETS or earlier generated records. The excerpt must support the date, condition and parties, not merely name the company. Put source message/section numbers in ref when available. A historical date may be empty if unspecified; a schedule without a date is omitted.
 - No currency amounts or credited dividends: this request cannot alter balances or the current rights card. History records explain events, not instructions to change the portfolio.
 OUTPUT JSON only
-{"notes":[{"target":"provided key","text":"short note","ko":"translation","source":"guess|story","evidence":"","ref":""}],
-"schedules":[{"target":"provided key","kind":"dividend|meeting|release|delegation","date":"YYYY-MM-DD","title":"short title","status":"scheduled|paid|cancelled","evidence":"exact excerpt","ref":""}],
+{"schedules":[{"target":"provided key","kind":"dividend|meeting|release|delegation","date":"YYYY-MM-DD","title":"short title","status":"scheduled|paid|cancelled","evidence":"exact excerpt","ref":""}],
 "history":[{"target":"stake key","field":"percent|holder|voter|beneficiary|restriction","date":"YYYY-MM-DD or empty","before":"","after":"","evidence":"exact excerpt","ref":""}]}
-At most one note, 16 schedules and 16 changes. Keep the original names and full years. Output no other keys.`;
+At most 16 schedules and 16 changes. Keep the original names and full years. Output no other keys.`;
 export function investmentTargets(inv) {
     return [...inv.securities.map(s => ({ key: `stock:${s.symbol}`, name: s.name })), ...inv.stakes.map(s => ({ key: `stake:${s.id}`, name: s.company }))];
 }
@@ -168,7 +177,7 @@ export async function collectInvestmentRecords(m, p, mode = 'records', target = 
     const targets = investmentTargets(inv).filter(t => mode !== 'notes' || t.key === target);
     const appContext = mode === 'notes' && target.startsWith('stock:') ? { trades: inv.trades.filter(t => `stock:${t.symbol}` === target).slice(-8), watch: inv.watch.filter(w => `stock:${w.symbol}` === target) } : null;
     const input = `${source}\n\n[AS OF]\n${inv.date}\n[MODE]\n${mode}\n[TARGETS — identification only]\n${JSON.stringify(targets)}${appContext ? `\n[APP CONTEXT — imagination, not evidence]\n${JSON.stringify(appContext)}` : ''}`;
-    const raw = json(await askDraft(input,{system:INVEST_RECORDS_SYS,maxTokens:mode === 'notes' ? 2000 : 6500}));
+    const raw = json(await askDraft(input,{system:mode === 'notes' ? INVEST_NOTES_SYS : INVEST_RECORDS_SYS,maxTokens:mode === 'notes' ? 2000 : 6500}));
     const got = parseInvestmentRecords(raw,inv,source,mode,target);
     if (mode === 'notes' && !got.notes.length) throw new Error('사용할 수 있는 투자 노트를 받지 못했어요');
     mergeInvestmentRecords(inv,got);

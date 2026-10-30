@@ -115,3 +115,20 @@ test('record provenance cannot cite generated target names as source; notes stay
  globalThis.__investTest.answer={schedules:[{target:'stock:NYSE:X',kind:'dividend',date:'2026-11-10',title:'bad',status:'scheduled',evidence:p.investment.securities[0].name}]};await dataMod.collectInvestmentRecords(m,p);assert.equal(p.investment.schedules.length,0);
  p.inject=true;p.contacts=[];p.calls=[];p.notes=[];m.phones={a:p};p.investment.notes=[{text:'PRIVATE INVESTMENT NOTE',source:'guess'}];assert.ok(!phonedata.phoneBlock(m).includes('PRIVATE INVESTMENT NOTE'));assert.equal(p.events.length,0);
 });
+test('note and record requests use separate prompts and retain provenance boundaries',async()=>{
+ const {m,p}=setup();await dataMod.fillInvestment(m,p,'2026-10-30');
+ globalThis.__investTest.answer={notes:[{target:'stock:NYSE:X',text:'Keep watching.',source:'guess'}]};
+ await dataMod.collectInvestmentRecords(m,p,'notes','stock:NYSE:X');
+ const note=globalThis.__investTest.inputs.at(-1);
+ assert.equal(note.system,dataMod.INVEST_NOTES_SYS);
+ assert.doesNotMatch(note.system,/"schedules"|"history"/);
+ assert.match(note.input,/APP CONTEXT/);
+ assert.match(note.system,/exact excerpt from STORY INPUT/);
+ globalThis.__investTest.answer={schedules:[],history:[]};
+ await dataMod.collectInvestmentRecords(m,p);
+ const records=globalThis.__investTest.inputs.at(-1);
+ assert.equal(records.system,dataMod.INVEST_RECORDS_SYS);
+ assert.doesNotMatch(records.system,/"notes"/);
+ assert.doesNotMatch(records.input,/APP CONTEXT/);
+ assert.match(records.system,/exact supporting excerpt from STORY INPUT/);
+});
