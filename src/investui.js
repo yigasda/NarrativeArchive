@@ -30,12 +30,11 @@ function line(vals, w, h, pad = 4) {
     return { pts, min, max, d: pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ') };
 }
 // 종목 차트: a candle a day like a real broker's — open is the day before's close, the wick spans every price saved
-// that day (one price a day leaves no wick: nothing is made up); the 20-day average; the scale on the right
+// that day (one price a day leaves no wick: nothing is made up); the scale on the right
 function candles(m, p, sym, date, from, cur, busy = false) {
     const book = finance(m).prices[`STOCK:${sym}`] || {}, all = Object.keys(book).filter(d => d <= date).sort();
     const close = d => price(m, `STOCK:${sym}`, d)?.value;
     const rows = all.map((d, i) => { const c = close(d), o = i ? close(all[i - 1]) : c, vs = [o, c, ...(book[d].rows || []).map(r => r.value)].filter(finite); return { d, o, c, h: Math.max(...vs), l: Math.min(...vs), i }; }).filter(x => finite(x.c));
-    const ma = (n, i) => (i + 1 >= n ? rows.slice(i + 1 - n, i + 1).reduce((a, x) => a + x.c, 0) / n : null);
     const show = rows.filter(x => x.d >= from);
     if (show.length < 2) return `<div class="iv_chart iv_nochart">${busy ? '시세 불러오는 중…' : '선택 기간의 기록 부족'}</div>`;
     const W = 358, H = 236, R = 50, T = 26, B = 22, pw = W - R - 8, ph = H - T - B;
@@ -46,13 +45,12 @@ function candles(m, p, sym, date, from, cur, busy = false) {
     const nice = v => (Math.abs(v) >= 1000 ? v.toLocaleString('en-US', { maximumFractionDigits: 0 }) : v.toFixed(2));
     const grid = Array.from({ length: 5 }, (_, k) => bot + (top - bot) * k / 4).map(v => `<line x1="8" x2="${8 + pw}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="iv_gl"/><text x="${W - 4}" y="${(y(v) + 3.5).toFixed(1)}" class="iv_yl" text-anchor="end">${nice(v)}</text>`).join('');
     const bars = show.map((r, k) => { const col = r.c >= r.o ? up : dn, yo = y(r.o), yc = y(r.c), bt = Math.min(yo, yc), bh = Math.max(1.2, Math.abs(yc - yo)); return `<line x1="${x(k).toFixed(1)}" x2="${x(k).toFixed(1)}" y1="${y(r.h).toFixed(1)}" y2="${y(r.l).toFixed(1)}" stroke="${col}" stroke-width="1"/><rect x="${(x(k) - cw / 2).toFixed(1)}" y="${bt.toFixed(1)}" width="${cw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}" rx="${cw > 6 ? 1.2 : 0.6}"/>`; }).join('');
-    const maLine = (n, col) => { const pts = show.map((r, k) => [x(k), ma(n, r.i)]).filter(([, v]) => v !== null); return pts.length > 1 ? `<path d="${pts.map(([px, v], j) => `${j ? 'L' : 'M'}${px.toFixed(1)} ${y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="${col}" stroke-width="1.3" stroke-linejoin="round"/>` : ''; };
     const last = show[show.length - 1], ih = show.reduce((a, r, k) => (r.h > show[a].h ? k : a), 0), il = show.reduce((a, r, k) => (r.l < show[a].l ? k : a), 0);
     const mark = (k, v, below) => { const right = x(k) < pw * 0.55, tx = right ? x(k) + 8 : x(k) - 8, ty = below ? y(v) + 13 : y(v) - 6, chg = (last.c / v - 1) * 100; return `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" class="iv_mk ${below ? 'lo' : 'hi'}" text-anchor="${right ? 'start' : 'end'}">${right ? '← ' : ''}${nice(v)} (${chg > 0 ? '+' : ''}${chg.toFixed(2)}%, ${shortDay(show[k].d)})${right ? '' : ' →'}</text>`; };
     const ly = y(last.c), tagCol = last.c >= last.o ? up : dn;
     const dates = [0, Math.floor((show.length - 1) / 2), show.length - 1].filter((v, i, a) => a.indexOf(v) === i).map(k => `<text x="${x(k).toFixed(1)}" y="${H - 6}" class="iv_xl" text-anchor="${k === 0 ? 'start' : k === show.length - 1 ? 'end' : 'middle'}">${shortDay(show[k].d)}</text>`).join('');
-    return `<div class="iv_cd"><div class="iv_leg"><i style="background: #d1453b"></i>20일 평균<span>${esc(cur)} · 하루 한 봉</span></div>
-      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="일봉 차트">${grid}${bars}${maLine(20, '#d1453b')}
+    return `<div class="iv_cd"><div class="iv_leg"><span>${esc(cur)} · 하루 한 봉</span></div>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="일봉 차트">${grid}${bars}
         <line x1="8" x2="${8 + pw}" y1="${ly.toFixed(1)}" y2="${ly.toFixed(1)}" stroke="${tagCol}" stroke-width="0.8" stroke-dasharray="2 3"/>
         <rect x="${W - R + 2}" y="${(ly - 9).toFixed(1)}" width="${R - 4}" height="18" rx="4" fill="${tagCol}"/><text x="${W - 4}" y="${(ly + 3.8).toFixed(1)}" class="iv_tag" text-anchor="end">${nice(last.c)}</text>
         ${mark(ih, show[ih].h, false)}${il !== ih ? mark(il, show[il].l, true) : ''}${dates}</svg></div>`;
