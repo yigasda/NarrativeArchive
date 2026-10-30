@@ -2,6 +2,7 @@
 // p.money = { currency, bank: { name, accounts }, cards, tx, passes, orders } (채우기, one request so the amounts agree);
 // p.voice = memos (the story's, 채우기's from the archive, and 떠올리기's right now). Records with the same "ev" link to each other.
 
+import { creditAmount, creditLabel } from './finance.js';
 import { getMeta } from './core.js';
 import { migrateBank, total, fx, price, finite, currency } from './finance.js';
 import { investmentDate } from './investdata.js';
@@ -38,7 +39,7 @@ const bankDate = p => p.money?.fxDate || investmentDate(getMeta(),p);
 function converted(p, a, brief = false) {
     const from = a.currency || p.money.currency, to = bankDisplayCurrency(p), date = bankDate(p);
     if (from === to) return '';
-    const meta = getMeta(), amount = a.kind === 'credit' ? a.spent ?? a.balance : a.balance;
+    const meta = getMeta(), amount = a.kind === 'credit' ? creditAmount(a) : a.balance;
     const rate = fx(meta,from,to,date), q = price(meta,`FX:${from}/${to}`,date);
     if (!finite(amount) || rate === null) return `${esc(to)} 환산 대기`;
     if (brief) return `${esc(fmtIn(p,amount * rate,to))} 환산`;
@@ -105,7 +106,7 @@ export function bankHome(p, now) {
       </div>
       <div class="ax_bks"><div class="ax_scroll">
         ${displayTools(p)}<div class="ax_shd">내 계좌</div>
-        <div class="ax_card">${M.bank.accounts.map((a, i) => `<button type="button" class="ax_acc" data-go="acct" data-i="${i}"><span class="ax_accic ${a.kind}">${ax(a.kind === 'savings' ? 'star' : 'card', 20, 'currentColor')}</span><span class="ax_tx"><b>${kindName[a.kind]}${a.name ? ` · ${esc(a.name)}` : ''}</b><small class="cg_num">•••• ${esc(a.last4)}</small></span><span class="ax_accv"><b class="cg_num">${esc(fmtMoney({ ...p, money: { currency: a.currency || M.currency } }, a.kind === 'credit' ? a.spent ?? a.balance : a.balance))}</b><small>${a.kind === 'credit' ? '이번 달 사용' : '사용 가능'}</small>${converted(p,a) ? `<small class="ax_fx_note">${converted(p,a,true)}</small>` : ''}</span></button>`).join('')}</div>
+        <div class="ax_card">${M.bank.accounts.map((a, i) => `<button type="button" class="ax_acc" data-go="acct" data-i="${i}"><span class="ax_accic ${a.kind}">${ax(a.kind === 'savings' ? 'star' : 'card', 20, 'currentColor')}</span><span class="ax_tx"><b>${kindName[a.kind]}${a.name ? ` · ${esc(a.name)}` : ''}</b><small class="cg_num">•••• ${esc(a.last4)}</small></span><span class="ax_accv"><b class="cg_num">${esc(fmtMoney({ ...p, money: { currency: a.currency || M.currency } }, a.kind === 'credit' ? creditAmount(a) : a.balance))}</b><small>${a.kind === 'credit' ? creditLabel(a) : '사용 가능'}</small>${converted(p,a) ? `<small class="ax_fx_note">${converted(p,a,true)}</small>` : ''}</span></button>`).join('')}</div>
         <div class="iv_navs"><button type="button" class="iv_nav" data-go="invest">투자 계좌</button><button type="button" class="iv_nav" data-go="ivactivity">연결된 이체</button></div><div class="ax_shd">최근 거래</div>
         <div class="ax_card">${newestTx(p).slice(0, 4).map(x => txRow(p, x)).join('') || '<div class="ax_empty">거래가 없어요</div>'}</div>
         <i class="ax_pad"></i>
@@ -123,7 +124,7 @@ export function bankAcct(p, now, key) {
     return `<div class="ax_bk">
       <div class="ax_bkh">${axBar(p, now, '#fff')}
         <div class="ax_bkr"><button type="button" class="ax_bkc" data-go="bank" aria-label="뒤로">${ax('back', 18, '#fff', 2.3)}</button><span class="ax_bkt">${kindName[a.kind]} · ${esc(a.last4)}</span><span class="ax_bkc">${ax('search', 17, '#fff', 2.3)}</span></div>
-        <div class="ax_bktot ax_center"><small>${a.kind === 'credit' ? '이번 달 사용' : '사용 가능 잔액'}</small><b class="cg_num">${esc(fmtMoney({ ...p, money: { currency: a.currency || mo(p).currency } }, a.kind === 'credit' ? a.spent ?? a.balance : a.balance))}</b>${converted(p,a) ? `<span>${converted(p,a)}</span>` : ''}<span>${pendSum ? `대기 중 ${esc(fmtMoney({ ...p, money: { currency: a.currency || mo(p).currency } }, pendSum, true))}` : esc(a.name || '')}</span></div>
+        <div class="ax_bktot ax_center"><small>${a.kind === 'credit' ? creditLabel(a) : '사용 가능 잔액'}</small><b class="cg_num">${esc(fmtMoney({ ...p, money: { currency: a.currency || mo(p).currency } }, a.kind === 'credit' ? creditAmount(a) : a.balance))}</b>${converted(p,a) ? `<span>${converted(p,a)}</span>` : ''}<span>${pendSum ? `대기 중 ${esc(fmtMoney({ ...p, money: { currency: a.currency || mo(p).currency } }, pendSum, true))}` : esc(a.name || '')}</span></div>
         <div class="ax_bkacts ax_three"><span><b>${ax('send2', 20, '#fff', 2.2)}</b>송금</span><span><b>${ax('swap', 20, '#fff', 2.2)}</b>이체</span><span><b>${ax('doc', 20, '#fff')}</b>명세서</span></div>
       </div>
       <div class="ax_bks"><div class="ax_scroll">
@@ -214,7 +215,7 @@ export function cardView(p, now, i) {
     const a = acctOf(p, c.account), ai = mo(p).bank.accounts.indexOf(a), credit = a?.kind === 'credit';
     const all = newestTx(p).filter(x => x.account === c.account && x.kind === 'card'), xs = all.slice(0,5);
     const pending = all.filter(x=>x.pending).length, cur = a?.currency || mo(p).currency;
-    const amount = a ? credit ? a.spent ?? a.balance : a.balance : null;
+    const amount = a ? credit ? creditAmount(a) : a.balance : null;
     const conversion = a ? converted(p,a,true) : '';
     const payment = x => `<button type="button" class="cd_payment" data-go="tx" data-i="${esc(x.id)}">${fi(x.who,38,axTint(x.who),12)}<span class="cd_merchant"><b>${esc(x.who)}</b><small>${esc(fmtDate(p,x.time,true))}${x.pending ? ' · 승인 대기' : x.amount > 0 ? ' · 입금·환급 기록' : ' · 결제'}</small></span><span class="cd_payment_amount ${x.amount > 0 ? 'incoming' : ''}">${esc(txMoney(p,x,true))}${ax('chev',13)}</span></button>`;
     return `<div class="cd_app">${axBar(p,now)}
@@ -222,7 +223,7 @@ export function cardView(p, now, i) {
       <div class="ax_scroll cd_scroll">
         <div class="cd_card">${cardArt(p,c)}</div>
         <div class="cd_identity"><b>${esc(a?.name || mo(p).bank.name)}</b><span>${credit ? '신용카드' : '체크카드'} · ${esc(c.account)}</span></div>
-        <section class="cd_summary"><div class="cd_summary_label"><span>${credit ? '이번 달 이용 금액' : '연결 계좌 잔액'}</span>${pending ? `<span class="cd_pending">승인 대기 ${pending}</span>` : ''}</div><strong class="cg_num">${esc(fmtIn(p,amount,cur))}</strong>
+        <section class="cd_summary"><div class="cd_summary_label"><span>${credit ? creditLabel(a,'이번 달 이용 금액') : '연결 계좌 잔액'}</span>${pending ? `<span class="cd_pending">승인 대기 ${pending}</span>` : ''}</div><strong class="cg_num">${esc(fmtIn(p,amount,cur))}</strong>
           ${conversion ? `<details class="cd_fx"><summary>${conversion}</summary><p>${converted(p,a)}</p></details>` : ''}
           ${ai >= 0 ? `<button type="button" class="cd_account" data-go="acct" data-i="${ai}"><span>${ax('card',16)} ${credit ? '카드 이용 내역' : '연결 계좌 보기'}</span><span>•••• ${esc(a.last4)} ${ax('chev',14)}</span></button>` : ''}
         </section>

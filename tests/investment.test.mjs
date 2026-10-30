@@ -46,7 +46,7 @@ test('missing FX produces partial subtotal, and conflict can stay unresolved dur
 });
 test('legacy credit renders without regeneration and stays out of bank deposits',()=>{
  const {m,p}=setup();p.money={currency:'EUR',bank:{name:'Bank',accounts:[{id:'a',kind:'checking',last4:'1234',balance:100},{id:'b',kind:'credit',last4:'5678',balance:70},{id:'c',kind:'savings',last4:'9999',balance:100,currency:'USD'}]},tx:[],orders:[],passes:[],cards:[]};
- const html=moneyUI.bankHome(p,'10-30');assert.match(html,/환산 가능한 소계/);assert.match(html,/이번 달 사용/);assert.equal(p.money.bank.accounts[1].spent,70);assert.ok(!html.includes('€270'));assert.equal(globalThis.__investTest.inputs.length,0);
+ const html=moneyUI.bankHome(p,'10-30');assert.match(html,/환산 가능한 소계/);assert.match(html,/이번 달 사용/);assert.equal(p.money.bank.accounts[1].spent,0);assert.ok(!html.includes('€270'));assert.equal(globalThis.__investTest.inputs.length,0);
 });
 
 // Optional local browser inspection fixture. Never a user's saved archive.
@@ -189,7 +189,7 @@ test('card detail separates credit usage from cash and links real payment record
  finance.migrateBank(m,p);finance.addPrice(m,'FX:EUR/KRW','2026-10-30',{value:1500});const before=JSON.stringify(m.finance);
  const debit=moneyUI.cardView(p,'10-30','0'),credit=moneyUI.cardView(p,'10-30','1');
  assert.match(debit,/연결 계좌 잔액/);assert.match(debit,/data-i="debit-tx"/);assert.doesNotMatch(debit,/Bookshop/);
- assert.match(credit,/이번 달 이용 금액/);assert.match(credit,/3,000,000/);assert.match(credit,/승인 대기 1/);assert.match(credit,/data-i="credit-tx"/);assert.doesNotMatch(credit,/연결 계좌 잔액|Coffee/);
+ assert.match(credit,/이번 달 이용 금액/);assert.doesNotMatch(credit,/3,000,000/);assert.equal(p.money.bank.accounts[1].spent,0);assert.match(credit,/승인 대기 1/);assert.match(credit,/data-i="credit-tx"/);assert.doesNotMatch(credit,/연결 계좌 잔액|Coffee/);
  assert.doesNotMatch(credit,/<details class="cd_info">|카드 소유자/);assert.match(credit,/<details class="cd_fx">/);assert.equal(JSON.stringify(m.finance),before);
 });
 test('explicit bank rebuild changes current cash once and preserves linked transfers and credit semantics',async()=>{
@@ -203,7 +203,7 @@ test('explicit bank rebuild changes current cash once and preserves linked trans
  assert.equal(p.money.bank.accounts[0].balance,50000);assert.equal(finance.cash(m.finance.accounts['eur:EUR']),50000);assert.equal(m.finance.accounts['eur:EUR'].amount,51000);
  assert.deepEqual(m.finance.accounts['eur:EUR'].entries,entries);assert.deepEqual(m.finance.transfers.move,t);assert.equal(finance.cash(m.finance.accounts['broker:EUR']),1000);assert.notDeepEqual(p.money.tx,oldTx);assert.equal(p.money.tx[0].who,'New purchase');assert.ok(!m.finance.accounts['eur:EUR'].included.includes('receipt'));assert.ok(m.finance.accounts['eur:EUR'].included.includes(p.money.tx[0].id));
  assert.deepEqual(p.money.orders,[]);assert.deepEqual(p.money.passes,[]);assert.deepEqual(p.money.cards,[]);
- assert.equal(p.money.bank.accounts[1].spent,300);assert.equal(p.money.bank.accounts[1].balance,300);assert.equal(p.money.basis,'Revised scale');assert.equal(p.money.displayCurrency,'KRW');assert.equal(p.investment.sentinel,1);
+ assert.equal(p.money.bank.accounts[1].spent,0);assert.equal(p.money.bank.accounts[1].balance,0);assert.equal(p.money.basis,'Revised scale');assert.equal(p.money.displayCurrency,'KRW');assert.equal(p.investment.sentinel,1);
  assert.doesNotMatch(globalThis.__investTest.inputs.at(-1).input,/PRESERVED TRANSACTIONS|receipt|spend/);assert.match(globalThis.__investTest.inputs.at(-1).system,/CURRENT balance/);
  finance.migrateBank(m,p);assert.equal(p.money.bank.accounts[0].balance,50000);
  await phonedata.fillMoney(m,p,{regenerateBalances:true});assert.equal(finance.cash(m.finance.accounts['eur:EUR']),50000);assert.equal(Object.keys(m.finance.transfers).length,1);
@@ -211,7 +211,7 @@ test('explicit bank rebuild changes current cash once and preserves linked trans
 test('malformed rebuilt balances leave every account and its ledger unchanged',async()=>{
  const {m,p}=euroWallet();finance.migrateBank(m,p);const before=JSON.stringify({money:p.money,finance:m.finance});
  for(const invalid of [null,-1,'1000']) {
- globalThis.__investTest.answer={bank:{accounts:[{id:'eur',last4:'1234',kind:'checking',currency:'EUR',balance:50000},{id:'credit',last4:'5678',kind:'credit',currency:'EUR',balance:invalid}]}};
+ globalThis.__investTest.answer={bank:{accounts:[{id:'eur',last4:'1234',kind:'checking',currency:'EUR',balance:invalid},{id:'credit',last4:'5678',kind:'credit',currency:'EUR',balance:0}]}};
  await assert.rejects(phonedata.fillMoney(m,p,{regenerateBalances:true}),/잔액/);assert.equal(JSON.stringify({money:p.money,finance:m.finance}),before);
  }
  globalThis.__investTest.answer={bank:{accounts:[{id:'eur',last4:'1234',kind:'checking',currency:'KRW',balance:50000},{id:'credit',last4:'5678',kind:'credit',currency:'EUR',balance:300}]}};
@@ -458,4 +458,18 @@ test('failed first generation retains the pending profile and creates no phone',
  const {m}=setup();const binding={type:'character',id:'a.png'};m.phoneProfiles={a:binding};
  globalThis.__investTest.context={characters:[{avatar:'a.png',description:'Owner background.'}]};globalThis.__investTest.error=true;
  await assert.rejects(phonedata.makePhone(m,'A'),/network/);assert.deepEqual(m.phoneProfiles.a,binding);assert.equal(m.phones?.a,undefined);
+});
+
+test('saved negative credit total is recalculated from the six actual purchases without regeneration',()=>{
+ const {m,p}=euroWallet();const a=p.money.bank.accounts[1];a.balance=-5418.30;a.spent=-5418.30;
+ p.money.tx=[490,640,54.85,485,118.45,620].map((amount,i)=>({id:String(i),account:'5678',kind:'card',who:'Shop',amount:-amount,time:'10-25 10:00'}));
+ const tx=structuredClone(p.money.tx);finance.migrateBank(m,p);assert.equal(a.spent,2408.30);assert.equal(a.refundCredit,0);assert.deepEqual(p.money.tx,tx);
+ assert.match(moneyUI.bankAcct(p,'10-30','1'),/2,408.3/);assert.equal(finance.cash(m.finance.accounts['eur:EUR']),13000);
+});
+test('credit usage subtracts refunds but ignores repayments, other months and pending transactions',()=>{
+ const {m,p}=euroWallet(),a=p.money.bank.accounts[1];
+ p.money.tx=[{account:'5678',kind:'card',amount:-100,time:'10-20'},{account:'5678',kind:'card',amount:30,time:'10-21'},{account:'5678',kind:'transfer',amount:200,time:'10-22'},{account:'5678',kind:'card',amount:-900,time:'09-20'},{account:'5678',kind:'card',amount:-500,time:'10-22',pending:true}];
+ finance.migrateBank(m,p);assert.equal(a.spent,70);
+ p.money.tx.push({account:'5678',kind:'card',amount:100,time:'10-23'});finance.migrateBank(m,p);assert.equal(a.spent,0);assert.equal(a.refundCredit,30);
+ const html=moneyUI.bankAcct(p,'10-30','1');assert.match(html,/이번 달 순환급/);assert.equal(finance.creditAmount(a),30);
 });

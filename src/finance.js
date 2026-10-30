@@ -91,12 +91,30 @@ export function total(m, amounts, base, date) {
     return { value: round(value), complete: missing.length === 0, missing };
 }
 // Existing bank balances are snapshots, including the old transactions. Never replay those transactions.
+// Credit summaries are derived from the displayed ledger, not a separately invented balance.
+export function creditUsage(p,a) {
+    const dateParts=value=> /^(?:(\d{4})-)?(\d{2})-(\d{2})/.exec(String(value || '').trim());
+    const now=dateParts(p.now) || dateParts(p.money?.asOf) || dateParts(p.money?.fxDate);
+    if(!Array.isArray(p.money?.tx) || !a.last4 || !now) return {spent:finite(a.spent)&&a.spent>=0?a.spent:finite(a.balance)&&a.balance>=0?a.balance:null,refund:0};
+    let net=0;
+    for(const t of p.money.tx) {
+        if(t.account!==a.last4 || t.kind!=='card' || t.pending) continue;
+        const d=dateParts(t.time);
+        if(!d) return {spent:null,refund:0};
+        if(d[2]!==now[2] || d[1]&&now[1]&&d[1]!==now[1] || Number(d[3])>Number(now[3])) continue;
+        if(!finite(t.amount)) return {spent:null,refund:0};
+        net=round(net-t.amount);
+    }
+    return {spent:Math.max(0,net),refund:Math.max(0,-net)};
+}
+export const creditAmount = a => a.refundCredit>0 ? a.refundCredit : a.spent ?? null;
+export const creditLabel = (a,label='이번 달 사용') => a.refundCredit>0 ? '이번 달 순환급' : label;
 export function migrateBank(m, p) {
     if (!p.money) return;
     const f = finance(m);
     for (const a of p.money.bank.accounts) {
         a.id ||= uid(); a.currency ||= p.money.currency;
-        if (a.kind === 'credit') { if (!finite(a.spent)) a.spent = finite(a.balance) ? a.balance : null; continue; }
+        if (a.kind === 'credit') { const usage=creditUsage(p,a);a.spent=usage.spent;a.refundCredit=usage.refund;continue; }
         if (!currency(a.currency) || !finite(a.balance)) continue;
         const b = baseline(m, a.id, a.currency, a.balance, p.money.asOf || p.now || '', p.owner);
         if (!b.legacyImported) { b.included.push(...(p.money.tx || []).filter(t => t.account === a.last4).map(t => t.id).filter(Boolean)); b.legacyImported = true; }

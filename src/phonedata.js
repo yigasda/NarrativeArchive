@@ -467,8 +467,9 @@ STORY OR INVENTED
 - Preserve explicit amounts with their owner, currency, purpose and date. A company valuation, transfer amount or old balance is not a current personal bank balance.
 - Where personal balances are unspecified, invent a coherent scale from the owner's business reach, ownership, access to funds, lifestyle and established spending. Do not turn company assets, family wealth or an expected inheritance into personal cash. Never invent restrictions or trusts to explain a low balance.
 - Distinguish everyday spending cash and reserves. Investment holdings belong outside bank cash. Record a short "basis" explaining the supplied evidence and the invented scale; invented amounts are app-only, never new canon.
+- Credit account balance is a placeholder: return 0. The app computes monthly usage from the returned card transactions: purchases negative, refunds positive; repayments are transfers, not refunds. Include all current-month card transactions you intend to show, and mark pending authorizations pending. Never invent a separate monthly spending total.
 - Last four digits, card expiry dates and everyday payments may be invented. Large purchases, wages and distributions need story support.
-- EXISTING ACCOUNTS, when provided, are locked financial snapshots. Keep their id, currency, balance, kind and last4 exactly. You may change their display names; do not invent extra accounts or replay old transactions. Credit balance is monthly spending, never cash.
+- EXISTING ACCOUNTS, when provided, are locked financial snapshots. Keep their id, currency, balance, kind and last4 exactly. You may change their display names; do not invent extra accounts or replay old transactions. Credit accounts are not cash; monthly usage is computed from card transactions.
 - A booking number, seat, gate or delivery date the story doesn't give stays empty.
 - Orders stand as of the story's now: with no sign it arrived, it is not "delivered".
 
@@ -555,7 +556,7 @@ REBUILD MONEY APPS
 REBUILD ACCOUNTS explicitly requests new balances, not locked snapshots. Keep every supplied account id, kind, last4 and currency; no added or omitted accounts. Re-read the story and infer fresh personal cash where unspecified, rather than copying previous invented balances.
 Regenerate cards, transactions, passes and orders together from the supplied story and owner profile. Previous generated records are replaced, not carried forward. Re-read explicit receipts, spending and purchases from the story; keep their owner, amount, currency and date. Matching orders, passes and card payments describe the same event: use consistent dates, amounts and ev tags.
 Each balance is the CURRENT balance AFTER the newly returned transactions and applied cash entries, not an opening balance. Applied cash entries remain in the ledger; do not duplicate them in tx or replay them. They may describe the same story event: never count it twice. Do not replay transfers, currency conversion, or credit company/family assets to personal cash. Explicit current personal balances take priority; preserve the amounts and currencies of established receipts and spending (for example, EUR 15000 received and EUR 2000 spent may leave EUR 13000 when no other funds or movements exist).
-Return complete cards, tx, passes and orders arrays (empty when appropriate); all tx must reference a returned account last4. Credit balance is current monthly spending, never deposit cash. Return a finite nonnegative balance for every account and explain the evidence/invented scale in basis.` : '');
+Return complete cards, tx, passes and orders arrays (empty when appropriate); all tx must reference a returned account last4. For credit accounts return balance 0; the app computes usage from card transactions. Return a finite nonnegative balance for each deposit account and explain the evidence/invented scale in basis.` : '');
     const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p)}`,preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}\nAlso return fx:[{from,to,date,value}] for account currencies to ${plan.currency}; existing rates: ${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`],{profile:p.financeProfile});
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {
@@ -567,12 +568,12 @@ Return complete cards, tx, passes and orders arrays (empty when appropriate); al
                 const rows = raw?.bank?.accounts;
                 if (!Array.isArray(rows) || rows.length !== old.bank.accounts.length || old.bank.accounts.some(a => {
                     const matches = rows.filter(b=>b.id === a.id);
-                    return matches.length !== 1 || matches[0].currency !== a.currency || matches[0].kind !== a.kind || String(matches[0].last4) !== a.last4 || !finite(matches[0].balance) || matches[0].balance < 0;
+                    return matches.length !== 1 || matches[0].currency !== a.currency || matches[0].kind !== a.kind || String(matches[0].last4) !== a.last4 || a.kind!=='credit' && (!finite(matches[0].balance) || matches[0].balance < 0);
                 })) throw new Error('새 계좌 잔액을 확인하지 못했어요. 기존 잔액은 유지돼요');
                 if (['cards','tx','passes','orders'].some(k=>!Array.isArray(raw[k])) || next.tx.some(t=>!old.bank.accounts.some(a=>a.last4===t.account))) throw new Error('새 거래 내역을 확인하지 못했어요. 기존 데이터는 유지돼요');
                 next.bank.accounts = old.bank.accounts.map(a => {
                     const b = rows.find(b=>b.id === a.id);
-                    return {...a,name:next.bank.accounts.find(b=>b.id === a.id)?.name || a.name,balance:b.balance,...(a.kind === 'credit' ? {spent:b.balance} : {})};
+                    return {...a,name:next.bank.accounts.find(b=>b.id === a.id)?.name || a.name,balance:a.kind==='credit'?0:b.balance};
                 });
             } else next.bank.accounts = old.bank.accounts.map(a => ({ ...a, name: next.bank.accounts.find(b => b.id === a.id)?.name || a.name }));
             next.currency = old.currency;
