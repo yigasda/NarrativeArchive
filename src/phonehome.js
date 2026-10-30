@@ -41,8 +41,12 @@ const CG_I = {
     cam: 'M4 8h3l2-3h6l2 3h3v11H4zM12 10a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z',
     mail: 'M3 6h18v12H3zM3 7l9 6 9-6',
     diary: 'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11',
+    bank: 'M3 10l9-6 9 6M5 10v8M9.7 10v8M14.3 10v8M19 10v8M3 20h18',
+    wallet: 'M3 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1M3 8v9a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2zM16 14h.01',
+    shop: 'M5 8h14l-1.2 11a1 1 0 0 1-1 .9H7.2a1 1 0 0 1-1-.9zM9 8V6a3 3 0 0 1 6 0v2',
+    voice: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
 };
-const CG_GEL = { sns: ['#efc4d0', '#d494a7'], mail: ['#bfd3e9', '#8faed1'], diary: ['#d3cae9', '#a699c9'], set: ['#d1d4d9', '#a2a7af'], cam: ['#e2e4e8', '#aeb2b9', '#2a313b'], photo: ['#f0cbb5', '#d89f98'], cal: ['#f6f7f9', '#dcdfe5', '#b0564e'], note: ['#f4e5b5', '#dcc680', '#5a4a1f'], map: ['#c3dcc1', '#93ba97'], call: ['#bbddc0', '#89b892'], msg: ['#bbddc0', '#89b892'], search: ['#bfd3e9', '#8faed1'] };
+const CG_GEL = { sns: ['#efc4d0', '#d494a7'], mail: ['#bfd3e9', '#8faed1'], diary: ['#d3cae9', '#a699c9'], set: ['#d1d4d9', '#a2a7af'], cam: ['#e2e4e8', '#aeb2b9', '#2a313b'], photo: ['#f0cbb5', '#d89f98'], cal: ['#f6f7f9', '#dcdfe5', '#b0564e'], note: ['#f4e5b5', '#dcc680', '#5a4a1f'], map: ['#c3dcc1', '#93ba97'], call: ['#bbddc0', '#89b892'], msg: ['#bbddc0', '#89b892'], search: ['#bfd3e9', '#8faed1'] , bank: ['#b8c6df', '#6f86b3'], wallet: ['#c7cdd9', '#8b95aa'], shop: ['#bfe0dc', '#86bdb6'], voice: ['#e8d3bb', '#c9a581'] };
 const cgIcon = (k, mono, badge = 0) => {
     const [c1, c2, g = '#ffffff'] = CG_GEL[k];
     const svg = mono
@@ -67,7 +71,7 @@ function noteItems(n) {
 // so a new one from an update shows again)
 export const lastSig = t => { const x = t.messages[t.messages.length - 1]; return x ? `${x.time}|${x.text}` : ''; };
 export const threadNew = t => t.messages[t.messages.length - 1]?.from !== 'me' && t.seen !== lastSig(t);
-export function homeScreen(p, now, m) {
+export function homeScreen(p, now, m, page = 1) {
     const mono = p.theme === 'gray';
     const day = String(now).slice(0, 5), x = parts(now);
     const anniv = annivToday(m, now, p.owner);
@@ -85,7 +89,7 @@ export function homeScreen(p, now, m) {
       <div class="cg_col">
         ${cgBar(p, now)}
         <div class="cg_top">
-          <div class="cg_widgets">
+          <div class="cg_widgets">${page === 2 ? walletW(p, now, mono) : `
             <button type="button" class="cg_glass cg_wcal" data-go="cal">
               <span class="cg_cap cg_capcal">${x ? `${x.mo}월` : '캘린더'}</span>
               <span class="cg_num cg_day">${x ? x.d : ''}</span>
@@ -95,12 +99,11 @@ export function homeScreen(p, now, m) {
             <button type="button" class="cg_glass cg_wnote" data-go="note">
               <span class="cg_wh"><span class="cg_cap cg_capnote">메모</span><span class="cg_num cg_evw">${p.notes.length ? esc(fmtDate(p, note.time, true)) : ''}</span></span>
               ${items.length ? items.map(i => `<span class="cg_item ${i.done ? 'done' : ''}"><span class="cg_chk">${i.done ? '<svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>' : ''}</span><span class="cg_itx">${esc(i.text)}</span></span>`).join('') : '<span class="cg_evw">메모 없음</span>'}
-            </button>
-          </div>
-          <div class="cg_grid">${['photo', 'cal', 'note', 'map', 'sns', 'mail', 'diary', 'set'].map(k => `<div class="cg_cell">${cgIcon(k, mono, badges[k] || 0)}<span class="cg_lbl">${APPS[k]}</span></div>`).join('')}</div>
+            </button>`}</div>
+          <div class="cg_grid">${(page === 2 ? ['bank', 'wallet', 'shop', 'voice'] : ['photo', 'cal', 'note', 'map', 'sns', 'mail', 'diary', 'set']).map(k => `<div class="cg_cell">${cgIcon(k, mono, badges[k] || 0)}<span class="cg_lbl">${APPS[k]}</span></div>`).join('')}</div>
         </div>
         <div class="cg_fill"></div>
-        <div class="cg_dots" aria-hidden="true"><span></span><span class="on"></span></div>
+        <div class="cg_dots"><button type="button" class="${page === 1 ? 'on' : ''}" data-go="home" aria-label="홈 1쪽"></button><button type="button" class="${page === 2 ? 'on' : ''}" data-go="home2" aria-label="홈 2쪽"></button></div>
         <div class="cg_dockwrap"><div class="cg_glass cg_dock">${cgIcon('call', mono, missed)}${cgIcon('msg', mono, unread)}${cgIcon('cam', mono)}${cgIcon('search', mono)}</div></div>
         <button type="button" class="cg_ind na_ph_quit" aria-label="폰 닫기"><small>닫기</small><span></span></button>
       </div>`;
@@ -108,6 +111,20 @@ export function homeScreen(p, now, m) {
 
 // 잠금화면 · 클리어 글래스: the home's ground and glass, a thin big clock, the notes as glass cards
 const cgMini = (k, mono) => { const [c1, c2, g = '#ffffff'] = CG_GEL[k]; return `<span class="cg_ic cg_mini"${mono ? '' : ` style="--c1: ${c1}${CG_ALPHA}; --c2: ${c2}${CG_ALPHA}"`}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${mono ? '#2a313b' : g}" stroke-width="${mono ? 1.75 : 2}" stroke-linecap="round" stroke-linejoin="round"><path d="${CG_I[k]}"/></svg></span>`; };
+// the 2nd page's widget: the next pass in the wallet, and an order on its way (or a nudge to fill them)
+function walletW(p, now, mono) {
+    const M = p.money, day = String(now).slice(0, 5), bars = mono ? ['#2a313b', 'rgba(22, 27, 34, 0.22)'] : ['#8b95aa', '#86bdb6'];
+    const next = M ? [...M.passes].filter(x => !x.date || x.date >= day).sort((a, b) => String(a.date).localeCompare(String(b.date)))[0] : null;
+    const ord = M ? M.orders.find(x => x.status !== 'delivered' && x.status !== 'unknown') : null;
+    const route = next ? (next.from && next.to && next.kind !== 'hotel' ? `${next.from} → ${next.to}` : next.by) : '';
+    return `<button type="button" class="cg_glass cg_wcal cg_wwal" data-go="wallet">
+      <span class="cg_wh"><span class="cg_cap">지갑</span><span class="cg_evw cg_num">${M ? `카드 ${M.cards.length} · 패스 ${M.passes.length}` : ''}</span></span>
+      ${route ? `<span class="cg_wroute cg_num">${esc(route)}</span>` : `<span class="cg_wroute cg_wroute2">${M ? '예정된 패스 없음' : '눌러서 채우기'}</span>`}
+      <span class="cg_fill"></span>
+      <span class="cg_evs">${next ? `<span class="cg_ev"><span class="cg_evbar" style="background: ${bars[0]}"></span><span class="cg_evtx"><span class="cg_evt">${esc(next.by)} · ${esc(fmtDate(p, next.date, true))}</span><span class="cg_num cg_evw">${esc(next.time || '')}</span></span></span>` : ''}
+        ${ord ? `<span class="cg_ev"><span class="cg_evbar" style="background: ${bars[1]}"></span><span class="cg_evtx"><span class="cg_evt">쇼핑 · ${esc(ord.item)}</span><span class="cg_evw">${ord.eta ? `${esc(fmtDate(p, ord.eta, true))} 도착 예정` : '배송 중'}</span></span></span>` : ''}</span>
+    </button>`;
+}
 export function lockScreen(p, now) {
     const mono = p.theme === 'gray';
     return `

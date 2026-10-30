@@ -18,8 +18,8 @@ export const WALLS = ['dusk', 'ocean', 'forest', 'rose', 'night', 'sand', 'mono'
 export const ACCENTS = ['blue', 'green', 'orange', 'pink', 'purple', 'red'];
 export const MOODS = ['warm', 'cool', 'green', 'dark', 'bright', 'pink'];
 export const COUNTRIES = { KR: '한국', US: '미국', GB: '영국', DE: '독일', FR: '프랑스', IT: '이탈리아', ES: '스페인', JP: '일본', CN: '중국', TW: '대만', CA: '캐나다', AU: '호주', RU: '러시아', BR: '브라질' };
-export const CAP = { threads: 12, messages: 40, calls: 30, photos: 24, notes: 12, searches: 20, events: 16, contacts: 30, posts: 20, comments: 8, mails: 20, diary: 20 };
-const LISTS = ['calls', 'photos', 'notes', 'searches', 'events', 'posts', 'mails', 'diary'];
+export const CAP = { threads: 12, messages: 40, calls: 30, photos: 24, notes: 12, searches: 20, events: 16, contacts: 30, posts: 20, comments: 8, mails: 20, diary: 20, voice: 12 };
+const LISTS = ['calls', 'photos', 'notes', 'searches', 'events', 'posts', 'mails', 'diary', 'voice'];
 
 export const AI_SYS_PHONE = `GOAL
 Show what one character's phone holds right now, in a long role-play. The user opens it to peek at the story from the phone's side.
@@ -69,7 +69,8 @@ JSON (one object, nothing before or after it)
   "posts": [{ "text", "ko", "photo": what the posted photo shows or "", "pko": its Korean, "time", "likes": a number,
               "comments": [{ "from": name, "text", "ko" }] }],
   "mails": [{ "from": sender, "subject", "ks": Korean subject, "text", "ko", "time", "unread": true or false }],
-  "diary": [{ "date": "MM-DD", "title", "kt": Korean title, "text", "ko" }]
+  "diary": [{ "date": "MM-DD", "title", "kt": Korean title, "text", "ko" }],
+  "voice": [{ "title", "kt", "text", "ko", "time", "sec", "place" }] only when the archive or chat shows the owner recorded one
 }
 At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches (3 open at most), 6 events, 5 posts with up to 4 comments,
 6 mails, 5 diary entries. Fewer is fine; an empty list is fine.
@@ -125,6 +126,7 @@ export function parsePhone(out) {
             comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) }, x)).filter(x => x.text || x.photo),
         mails: arr(raw.mails).map(x => withEv({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: !!x?.unread }, x)).filter(x => x.from && (x.subject || x.text)),
         diary: arr(raw.diary).map(x => withEv({ date: when(x?.date).slice(0, 5), title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000) }, x)).filter(x => x.date && x.text),
+        voice: arr(raw.voice).map(x => withEv({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: Math.max(3, Math.min(900, Math.round(Number(x?.sec) || 30))), place: line(x?.place, 60), src: 'story' }, x)).filter(x => x.text),
     };
 }
 
@@ -132,7 +134,7 @@ export function parsePhone(out) {
 const SIG = {
     msg: x => [nameKey(x.from), x.text, x.time], calls: x => [nameKey(x.with), x.type, x.time], photos: x => [x.caption, x.time],
     notes: x => [x.title, x.text], searches: x => [x.q, x.time], events: x => [x.title, x.date, x.time], posts: x => [x.text, x.photo, x.time],
-    mails: x => [x.from, x.subject, x.time], diary: x => [x.date, x.title, x.text],
+    mails: x => [x.from, x.subject, x.time], diary: x => [x.date, x.title, x.text], voice: x => [x.title, x.time],
 };
 const sigOf = (k, x) => JSON.stringify(SIG[k](x)).toLowerCase();
 const fresh = (k, old, add) => { const seen = new Set(old.map(x => sigOf(k, x))); return add.filter(x => !seen.has(sigOf(k, x)) && seen.add(sigOf(k, x))); };
@@ -142,7 +144,8 @@ const fresh = (k, old, add) => { const seen = new Set(old.map(x => sigOf(k, x)))
 const newId = () => Math.random().toString(36).slice(2, 8);
 export function ensureIds(p) {
     let n = 0;
-    for (const k of [...LISTS, 'threads', 'contacts']) for (const x of p?.[k] || []) if (x && typeof x === 'object' && !x.id) { x.id = newId(); n++; }
+    const mo = p?.money;
+    for (const xs of [...[...LISTS, 'threads', 'contacts'].map(k => p?.[k]), mo?.tx, mo?.passes, mo?.orders, mo?.bank?.accounts]) for (const x of xs || []) if (x && typeof x === 'object' && !x.id) { x.id = newId(); n++; }
     return n;
 }
 // 다시 만들기 of an app: a record that comes back the same keeps what the user did with it (its id, picture, read state, results page)
@@ -410,3 +413,105 @@ export function placesOf(m, owner) {
 export const koOn = () => globalSettings().phoneKo !== false;
 export const savedName = (p, n) => p.contacts.find(c => nameKey(c.name) === nameKey(n))?.saved || n;
 export const hasKo = p => [...p.threads.flatMap(t => t.messages), ...p.photos, ...p.notes, ...p.searches, ...p.events, ...(p.posts || []), ...(p.mails || []), ...(p.diary || [])].some(x => x.ko);
+
+// ---- 은행 · 지갑 · 쇼핑 (채우기): one request for all three, so the amounts agree. Balances and everyday payments are
+// invented (the user wants a real-looking bank); purchases and bookings come from the story. None of it goes back to the
+// model or into the role-play
+export const AI_SYS_MONEY = `GOAL
+Fill the money side of one character's phone in a long role-play: their bank, the cards and passes in their wallet, and their online orders. The user opens these apps to peek at the character's life.
+
+YOU GET
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD and LOREBOOK.
+- PHONE NOW: what the phone already holds (mails, events, searches), with their "ev" tags.
+
+STORY OR INVENTED
+- Purchases, bookings, trips, gifts, rent, wages: only what the story shows or plainly implies. Give each the "ev" tag the phone's mail or event for it already has.
+- Balances, last four digits, card expiry dates, everyday payments (coffee, groceries, transit), and amounts the story doesn't give: invent them, fitting the owner's life, job and country.
+- A booking number, seat, gate or delivery date the story doesn't give stays empty.
+- Orders stand as of the story's now: with no sign it arrived, it is not "delivered".
+
+ONE THING, ONE AMOUNT
+A purchase is in "orders" or "passes" and once in "tx", with the same amount, date and "ev".
+
+LANGUAGE
+Banks, shops, merchants and items named as they would be in the owner's country. A name not in Korean gets "ko".
+
+JSON (one object, nothing before or after it)
+{
+  "currency": three-letter code,
+  "bank": { "name", "accounts": [{ "kind": "checking" | "savings" | "credit", "name", "last4", "balance": number }] },
+  "cards": [{ "account": last4, "exp": "MM/YY" }],
+  "tx": [{ "account": last4, "who": merchant or person, "ko", "amount": number (minus for money out), "time": "MM-DD HH:MM",
+           "kind": "card" | "transfer" | "deposit", "memo", "pending": true or false, "ev" }],
+  "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by": airline, line, hotel or venue, "from", "to",
+               "date": "MM-DD", "time": "HH:MM", "seat", "gate", "no", "status", "ev" }],
+  "orders": [{ "shop", "item", "ko", "option", "qty", "price": number, "time", "status": "ordered" | "shipped" | "on the way" | "delivered" | "unknown",
+               "eta": "MM-DD", "arrived": "MM-DD", "gift": who it is for or "", "ev" }]
+}
+2 or 3 accounts and 8 to 15 transactions. Passes and orders only from the story; an empty list is fine. Oldest first.`;
+
+// 음성 메모 (채우기): memos at moments the archive has, spoken rather than written
+export const AI_SYS_VOICES = `GOAL
+Fill the voice memo app of one character's phone in a long role-play: memos they recorded to themselves at moments in the story so far.
+
+YOU GET
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD and LOREBOOK.
+- DIARY: the owner's diary entries, so the memos are not the same moments told again.
+
+RULES
+- 3 or 4 memos, each at a moment the archive has where the owner could plausibly talk into their phone alone: after a fight, on the way somewhere, late at night. Not the days the diary already covers, where possible.
+- Spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences. Not a diary entry.
+- Only what the archive shows happened and what the owner felt about it; no new events, no new secrets.
+- In the owner's own language. Speech not in Korean gets "ko".
+- 20 to 90 seconds of speech each.
+
+ANSWER — one JSON object, nothing else:
+{ "memos": [{ "title": the name the phone would show, "kt", "text", "ko", "time": "MM-DD HH:MM", "sec": its length in seconds, "place": where, or "" }] }
+Oldest first.`;
+
+const jsonOf = out => { const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}'); try { return a >= 0 && b > a ? JSON.parse(t.slice(a, b + 1)) : null; } catch { return null; } };
+const num = v => { const n = Number(String(v ?? '').replace(/[^\d.,-]/g, '').replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '')); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
+const last4 = v => String(v ?? '').replace(/\D/g, '').slice(-4);
+async function sideRequest(m, owner, blocks) {
+    const world = worldText(m), lore = await loreFor(m, owner);
+    const recent = recentForCheck(6).join('\n\n').slice(-6000);
+    return [
+        `[ARCHIVE]\n${archiveFor(m, -1).text || '(empty)'}`,
+        world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
+        recent ? `[RECENT CHAT]\n${recent}` : '',
+        `[OWNER]\n${owner}`, blindBlock(m, owner), ...blocks, namesBlock(m),
+    ].filter(Boolean).join('\n\n');
+}
+export function parseMoney(raw) {
+    if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 은행 · 지갑 · 쇼핑 내용(JSON)을 찾지 못했어요');
+    const cur = /^[A-Z]{3}$/.test(String(raw.currency || '').toUpperCase()) ? String(raw.currency).toUpperCase() : 'EUR';
+    const accounts = arr(raw.bank?.accounts).map(a => ({ kind: pick(a?.kind, ['checking', 'savings', 'credit'], 'checking'), name: line(a?.name, 40), last4: last4(a?.last4), balance: num(a?.balance) ?? 0 })).filter(a => a.last4).slice(0, 4);
+    return {
+        currency: cur,
+        bank: { name: line(raw.bank?.name, 40) || 'Bank', accounts },
+        cards: arr(raw.cards).map(c => ({ account: last4(c?.account), exp: line(c?.exp, 5) })).filter(c => accounts.some(a => a.last4 === c.account)).slice(0, 4),
+        tx: arr(raw.tx).map(x => withEv({ account: last4(x?.account), who: line(x?.who, 60), ko: ko(x?.ko), amount: num(x?.amount), time: when(x?.time), kind: pick(x?.kind, ['card', 'transfer', 'deposit'], 'card'), memo: line(x?.memo, 80), pending: !!x?.pending }, x)).filter(x => x.who && x.amount !== null).slice(-30),
+        passes: arr(raw.passes).map(x => withEv({ kind: pick(x?.kind, ['flight', 'train', 'hotel', 'event', 'other'], 'other'), by: line(x?.by, 60), from: line(x?.from, 40), to: line(x?.to, 40), date: when(x?.date).slice(0, 5), time: hhmm(x?.time), seat: line(x?.seat, 12), gate: line(x?.gate, 12), no: line(x?.no, 24), status: line(x?.status, 30) }, x)).filter(x => x.by).slice(-8),
+        orders: arr(raw.orders).map(x => withEv({ shop: line(x?.shop, 60), item: line(x?.item, 80), ko: ko(x?.ko), option: line(x?.option, 60), qty: Math.max(1, Math.round(Number(x?.qty) || 1)), price: num(x?.price), time: when(x?.time), status: pick(x?.status, ['ordered', 'shipped', 'on the way', 'delivered', 'unknown'], 'unknown'), eta: when(x?.eta).slice(0, 5), arrived: when(x?.arrived).slice(0, 5), gift: line(x?.gift, 40) }, x)).filter(x => x.item).slice(-12),
+    };
+}
+// what the phone already holds, so the money side reuses its event tags
+const moneyContext = p => JSON.stringify({ now: p.now, mails: (p.mails || []).slice(-8).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })), events: real(p.events).slice(-8).map(x => ev(x, { title: x.title, date: x.date, time: x.time })), searches: real(p.searches).slice(-6).map(x => ev(x, { q: x.q, time: x.time })) });
+export async function fillMoney(m, p) {
+    const out = await askDraft(await sideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p)}`]), { system: AI_SYS_MONEY, maxTokens: 12000 });
+    p.money = { ...parseMoney(jsonOf(out)), at: Date.now() };
+    ensureIds(p);
+    await saveMeta();
+    return p.money;
+}
+export async function fillVoice(m, p) {
+    const diary = (p.diary || []).slice(-6).map(d => `- ${d.date} ${d.title}`).join('\n');
+    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`]), { system: AI_SYS_VOICES, maxTokens: 6000 });
+    const memos = arr(jsonOf(out)?.memos).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: Math.max(3, Math.min(900, Math.round(Number(x?.sec) || 30))), place: line(x?.place, 60), src: 'guess' })).filter(x => x.text);
+    if (!memos.length) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
+    p.voice = [...(p.voice || []).filter(x => x.src === 'story' || x.now), ...memos].sort((a, b) => String(a.time).localeCompare(String(b.time))).slice(-CAP.voice);
+    p.voiceAt = Date.now();
+    ensureIds(p);
+    await saveMeta();
+    return p.voice;
+}

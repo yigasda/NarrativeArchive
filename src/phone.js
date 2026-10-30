@@ -8,10 +8,11 @@ import { draftReady, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
-import { drafting, drawing, drawPhoto, drawPost, makeDraft, searching, searchPage, shooting, takePhoto, writeEntry, writing } from './phoneai.js';
-import { APPS, AXB, AXB_C, busyHtml, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, marksScreen, msgList, noteOne, noteScreen, pageView, photoScreen, photoView, searchOne, searchScreen, setLore, setRemake, setScreen, setTheme, setWho, snsPost, snsScreen, statusBar, tabsScreen, threadScreen } from './phoneapps.js';
-import { ensureIds, koOn, loreOff, makePhone, newSections, phoneLore, REMAKE, showNow, storyNow } from './phonedata.js';
+import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, recording, recordVoice, searching, searchPage, shooting, takePhoto, writeEntry, writing } from './phoneai.js';
+import { APPS, AXB, AXB_C, busyHtml, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, marksScreen, msgList, noteOne, noteScreen, pageView, photoScreen, photoView, REMAKE_MORE, searchOne, searchScreen, setLore, setRemake, setScreen, setTheme, setWho, snsPost, snsScreen, statusBar, tabsScreen, threadScreen } from './phoneapps.js';
+import { ensureIds, fillMoney, fillVoice, koOn, loreOff, makePhone, newSections, phoneLore, REMAKE, showNow, storyNow } from './phonedata.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
+import { bankAcct, bankHome, bankTx, cardView, orderView, passView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
 import { openGlossary } from './translate.js';
 import { confirm, esc } from './util.js';
 
@@ -22,7 +23,7 @@ function screen(p, view, m, roster, ui) {
     const now = storyNow(p);
     showNow(now);
     const [v, i] = view.split(':');
-    const body = v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'msg' ? msgList(p, now, roster)
+    const body = v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'home2' ? homeScreen(p, now, m, 2) : v === 'bank' ? bankHome(p, now) : v === 'acct' ? bankAcct(p, now, i || '0') : v === 'tx' ? bankTx(p, now, i || '') : v === 'wallet' ? walletScreen(p, now) : v === 'card' ? cardView(p, now, i || '0') : v === 'pass' ? passView(p, now, i || '') : v === 'shop' ? shopScreen(p, now, i || 'all') : v === 'order' ? orderView(p, now, i || '') : v === 'voice' ? voiceScreen(p, now, i || '') : v === 'voiceone' ? voiceOne(p, now, i || '0') : v === 'msg' ? msgList(p, now, roster)
         : v === 'thread' ? threadScreen(p, now, Number(i), roster) : v === 'draft' ? draftView(p, now, Number(i), roster) : v === 'call' || v === 'callmiss' ? callScreen(p, now, roster, v === 'callmiss') : v === 'callwho' ? callWho(p, now, Number(i), roster) : v === 'contacts' ? contactsScreen(p, now, roster) : v === 'contact' ? contactOne(p, now, decodeURIComponent(i || ''), roster, m, ui.contactBack)
         : v === 'photo' ? photoScreen(p, now) : v === 'photoone' ? photoView(p, now, Number(i))
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '') : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
@@ -32,8 +33,8 @@ function screen(p, view, m, roster, ui) {
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app: drawn at the boards' size too, each its own app look
-    if (!['home', 'lock'].includes(v)) { const c = AXB_C[AXB[v]]; return `<div class="na_ph_scr app ax ax_${v} v_${v}${c ? ' axb' : ''}" style="--ph-acc:var(--ph-${p.accent})${c ? `; --axd: ${c[0]}; --axc: ${c[1]}` : ''}"><div class="cg_canvas ax_canvas">${body}</div></div>`; }
-    if (v === 'home' || v === 'lock') return `<div class="na_ph_scr cg ${p.theme === 'gray' ? 'cg_mono' : 'cg_gel'} v_${v}" style="--ph-acc:var(--ph-${p.accent})"><div class="cg_canvas">${body}</div></div>`;
+    if (!['home', 'home2', 'lock'].includes(v)) { const c = AXB_C[AXB[v]]; return `<div class="na_ph_scr app ax${['card', 'tx'].includes(v) ? '' : ` ax_${v}`} v_${v}${c ? ' axb' : ''}" style="--ph-acc:var(--ph-${p.accent})${c ? `; --axd: ${c[0]}; --axc: ${c[1]}` : ''}"><div class="cg_canvas ax_canvas">${body}</div></div>`; }
+    if (v === 'home' || v === 'home2' || v === 'lock') return `<div class="na_ph_scr cg ${p.theme === 'gray' ? 'cg_mono' : 'cg_gel'} v_${v}" style="--ph-acc:var(--ph-${p.accent})"><div class="cg_canvas">${body}</div></div>`;
     const glass = v === 'lock';
     return `<div class="na_ph_scr ${glass ? `glass w_${p.wall}` : 'app'} v_${v}" style="--ph-acc:var(--ph-${p.accent})">${statusBar(p, now)}<div class="na_ph_body">${body}</div><button type="button" class="na_ph_bar" data-go="home" aria-label="홈"></button></div>`;
 }
@@ -195,7 +196,7 @@ export async function openPhone(who = null) {
         e.stopPropagation();
         // a person's card goes back where it was opened from
         if (go === 'contact' && !view.startsWith('contact')) contactBack = view;
-        view = ['thread', 'draft', 'page', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost'].includes(go) || (['cal', 'diary'].includes(go) && this.dataset.i) ? `${go}:${this.dataset.i}` : go;
+        view = ['thread', 'draft', 'page', 'acct', 'tx', 'card', 'pass', 'order', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost'].includes(go) || (['cal', 'diary', 'shop', 'voice'].includes(go) && this.dataset.i) ? `${go}:${this.dataset.i}` : go;
         const mail = go === 'mailone' ? phone()?.mails?.[Number(this.dataset.i)] : null;
         if (mail?.unread) { mail.unread = false; saveMeta(); }
         const p0 = phone();
@@ -263,6 +264,36 @@ export async function openPhone(who = null) {
         try { await drawPhoto(m, p, k); toastr.success('사진을 그렸어요', '캐릭터 휴대폰'); }
         catch (err) { console.error('[narrative-archive] photo', err); toastr.error(String(err?.message || err), '사진 그리기 실패'); }
         finally { drawing.delete(id); drawPhone(true); }
+    });
+    // 은행 · 지갑 · 쇼핑 / 음성 메모 채우기, and 음성 메모 떠올리기 (the red button)
+    $root.on('click', '.na_ph_fill', async function (e) {
+        e.stopPropagation();
+        const p = phone(), k = this.dataset.k, id = `${nameKey(p.owner)}:${k}`;
+        if (filling.has(id)) return;
+        filling.add(id); drawPhone(true);
+        try { await (k === 'money' ? fillMoney : fillVoice)(m, p); toastr.success(k === 'money' ? '은행 · 지갑 · 쇼핑을 채웠어요' : '음성 메모를 채웠어요', '캐릭터 휴대폰'); }
+        catch (err) { console.error('[narrative-archive] fill', err); toastr.error(String(err?.message || err), '채우기 실패'); }
+        finally { filling.delete(id); if (phone() === p) drawPhone(true); }
+    });
+    $root.on('click', '.na_ph_rec', async function (e) {
+        e.stopPropagation();
+        const p = phone(), id = nameKey(p.owner);
+        if (recording.has(id)) return;
+        recording.add(id); drawPhone(true);
+        try { const k = await recordVoice(m, p); if (phone() === p && view.startsWith('voice')) view = `voice:${p.voice[k].id}`; toastr.success('음성 메모를 떠올렸어요', '캐릭터 휴대폰'); }
+        catch (err) { console.error('[narrative-archive] voice', err); toastr.error(String(err?.message || err), '떠올리기 실패'); }
+        finally { recording.delete(id); if (phone() === p) drawPhone(true); }
+    });
+    // the home's two pages: swipe sideways, or tap a dot
+    let swipeX = null, swipeY = 0;
+    $root.on('pointerdown', '.v_home .cg_col, .v_home2 .cg_col', e => { swipeX = e.clientX; swipeY = e.clientY; });
+    $root.on('pointerup', '.v_home .cg_col, .v_home2 .cg_col', e => {
+        if (swipeX === null) return;
+        const dx = e.clientX - swipeX, dy = e.clientY - swipeY;
+        swipeX = null;
+        if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
+        const to = dx < 0 ? 'home2' : 'home';
+        if (to !== view) { view = to; drawPhone(); }
     });
     // 미발송 초안 떠올리기: one thread at a time; the screen can change meanwhile
     $root.on('click', '.na_ph_draftmake', async function (e) {
@@ -358,16 +389,20 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_theme', async function () { const p = phone(); if (this.dataset.v === 'gray') p.theme = 'gray'; else delete p.theme; drawPhone(); drawCtrl(); await saveMeta(); });
     $root.on('click', '.na_ph_wsw', async function () { phone().wall = this.dataset.w; drawPhone(); drawCtrl(); await saveMeta(); });
     $root.on('click', '.ax_rmpick', function (e) { e.stopPropagation(); const k = this.dataset.k; if (!remake.delete(k)) remake.add(k); drawPhone(true); });
-    $root.on('click', '.ax_rmall', e => { e.stopPropagation(); const all = Object.keys(REMAKE); if (remake.size === all.length) remake.clear(); else all.forEach(k => remake.add(k)); drawPhone(true); });
+    $root.on('click', '.ax_rmall', e => { e.stopPropagation(); const all = [...Object.keys(REMAKE), ...REMAKE_MORE]; if (remake.size === all.length) remake.clear(); else all.forEach(k => remake.add(k)); drawPhone(true); });
     $root.on('click', '.na_ph_setremake', async function (e) {
         e.stopPropagation();
         if (!remake.size || making) return;
-        const apps = Object.keys(REMAKE).filter(k => remake.has(k)), whole = apps.length === Object.keys(REMAKE).length;
-        if (!await confirm(whole ? '폰 전체를 다시 만들까요?' : `고른 앱 ${apps.length}개를 다시 만들까요?`, `${apps.map(k => APPS[k]).join(' · ')}의 지금 내용은 지워지고 아카이브 전체를 다시 읽어요.`)) return;
+        const apps = Object.keys(REMAKE).filter(k => remake.has(k)), more = REMAKE_MORE.filter(k => remake.has(k)), whole = apps.length === Object.keys(REMAKE).length;
+        if (!await confirm(whole ? '폰 전체를 다시 만들까요?' : `고른 앱 ${apps.length + more.length}개를 다시 만들까요?`, `${[...apps, ...more].map(k => APPS[k]).join(' · ')}의 지금 내용은 지워지고 아카이브 전체를 다시 읽어요.`)) return;
         const keep = phone().inject, $at = $(this).find('.ax_n');
         making = true;
         try {
-            const p = await withSpinner($at, '다시 만드는 중', () => makePhone(m, owner, whole ? {} : { apps }));
+            const p = await withSpinner($at, '다시 만드는 중', async () => {
+                const q = apps.length ? await makePhone(m, owner, whole ? {} : { apps }) : phone();
+                for (const k of more) if (q) await (k === 'money' ? fillMoney : fillVoice)(m, q);
+                return q;
+            });
             if (!p) return;
             if (whole && keep) { p.inject = true; await saveMeta(); applyInjection(); }
             remake.clear(); view = whole ? 'lock' : 'set'; draw();

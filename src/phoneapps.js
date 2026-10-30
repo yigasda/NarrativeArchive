@@ -33,7 +33,7 @@ const ICO = {
     redo: '<path d="M21 4v6h-6"/><path d="M20.5 10A8.5 8.5 0 1 0 19 16.5"/>',
 };
 export const ic = (k, s = 18, w = 2) => `<svg class="na_ph_i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]}</svg>`;
-export const APPS = { msg: '메시지', call: '전화', photo: '사진', note: '메모', search: '검색', cal: '캘린더', map: '지도', sns: 'SNS', mail: '메일', diary: '일기', set: '설정', cam: '카메라' };
+export const APPS = { msg: '메시지', call: '전화', photo: '사진', note: '메모', search: '검색', cal: '캘린더', map: '지도', sns: 'SNS', mail: '메일', diary: '일기', set: '설정', cam: '카메라', bank: '은행', wallet: '지갑', shop: '쇼핑', voice: '음성 메모', money: '은행 · 지갑 · 쇼핑' };
 export function statusBar(p, now) {
     return `<div class="na_ph_sb"><span>${esc(fmtTime(p, now) || '')}</span><i>${ic('sig', 15)}${ic('bat', 20, 1.6)}</i></div>`;
 }
@@ -75,7 +75,7 @@ export function annivToday(m, now, owner) {
     return '';
 }
 // ---- SNS · 메일 · 일기 · 설정 · 카메라: drawn like the real apps (the approved boards), at 390 × 844 and scaled like the home
-const AX = {
+export const AX = {
     back: 'M15 5l-7 7 7 7', heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z', cmt: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z',
     send: 'M22 3L11 13M22 3l-7 18-4-8-8-4z', save: 'M6 3h12v18l-6-4-6 4z', grid: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z', tag: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
     plus: 'M12 5v14M5 12h14', menu: 'M4 7h16M4 12h16M4 17h16', home: 'M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z', search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
@@ -91,15 +91,15 @@ const AX = {
     call: 'M6 3h3l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v3a2 2 0 0 1-2 2A17 17 0 0 1 4 5a2 2 0 0 1 2-2z', video: 'M3 7h12v10H3zM15 10l6-3v10l-6-3', mail: 'M3 6h18v12H3zM3 7l9 6 9-6',
     lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3', mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3', check: 'M5 12.5l4.5 4.5L19 7.5', pin: 'M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z', book: 'M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 7h6', redo: 'M20 12a8 8 0 1 1-2.3-5.7L20 8.5M20 3.5v5h-5', share: 'M12 3v12M7 8l5-5 5 5M5 14v6h14v-6', bolt: 'M13 2L4 14h7l-1 8 9-12h-7z', flip: 'M20 12a8 8 0 0 1-14 5M4 12a8 8 0 0 1 14-5M18 3v4h-4M6 21v-4h4', down: 'M6 9l6 6 6-6',
 };
-const ax = (k, z = 22, c = 'currentColor', w = 2, f = 'none') => `<svg aria-hidden="true" width="${z}" height="${z}" viewBox="0 0 24 24" fill="${f}" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="${AX[k]}"/></svg>`;
-const axBar = (p, now, c = '#111') => `
+export const ax = (k, z = 22, c = 'currentColor', w = 2, f = 'none') => `<svg aria-hidden="true" width="${z}" height="${z}" viewBox="0 0 24 24" fill="${f}" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="${AX[k]}"/></svg>`;
+export const axBar = (p, now, c = '#111') => `
   <div class="ax_sb" style="color: ${c}"><span class="cg_num">${esc(bigClock(p, now) || '')}</span><span class="ax_sbi">
     <svg aria-hidden="true" width="18" height="12" viewBox="0 0 18 12" fill="${c}"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
     <svg aria-hidden="true" width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round"><path d="M1.5 4.2a9.5 9.5 0 0 1 13 0"/><path d="M4 7a6 6 0 0 1 8 0"/><circle cx="8" cy="10" r="1" fill="${c}" stroke="none"/></svg>
     <svg aria-hidden="true" width="27" height="13" viewBox="0 0 27 13" fill="none"><rect x="0.5" y="0.5" width="23" height="12" rx="3.8" stroke="${c}" stroke-opacity="0.4"/><rect x="2.5" y="2.5" width="16" height="8" rx="2" fill="${c}"/></svg>
   </span></div>`;
-const axInd = (c = '#111') => `<button type="button" class="ax_ind" data-go="home" aria-label="홈"><span style="background: ${c}"></span></button>`;
-const axKo = (t, k) => `${esc(t)}${k && koOn() ? `<span class="ax_ko">${esc(k)}</span>` : ''}`;
+export const axInd = (c = '#111') => `<button type="button" class="ax_ind" data-go="home" aria-label="홈"><span style="background: ${c}"></span></button>`;
+export const axKo = (t, k) => `${esc(t)}${k && koOn() ? `<span class="ax_ko">${esc(k)}</span>` : ''}`;
 // a photo's colours, from its mood (or, for a post, from its words)
 const AX_MOOD = { warm: '#f0b38a, #c66a6f', cool: '#9fbadb, #5f7fa8', green: '#b9d4b0, #6f9a76', pink: '#f2bfcd, #cf7f98', dark: '#6d6478, #2f2a38', bright: '#f6dd8f, #e5a85a' };
 const moodOf = s => MOODS[[...String(s)].reduce((h, ch) => (h * 31 + ch.codePointAt(0)) % 9973, 7) % MOODS.length];
@@ -182,22 +182,22 @@ export function diaryOne(p, now, k) {
 }
 // ---- 메시지 · 전화 · 사진 · 메모 · 검색 · 캘린더 · 메일 · 설정 · 카메라 (v3.118): the boards' layout in the home's flat look —
 // each app one colour (메시지 · 전화 blue, the rest their home icon's), round glass buttons, white cards, no gradients
-export const AXB = { msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', cam: 'apri', map: 'blue' };
-export const AXB_C = { blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'] };
+export const AXB = { msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', cam: 'apri', map: 'blue' };
+export const AXB_C = { blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'], bank: ['#2c4a80', '#e2e9f5'], wallet: ['#3d4a66', '#e3e7ef'], shop: ['#2f7d74', '#d9efec'], voice: ['#8a5a2e', '#f2e7d6'] };
 // people outside the archive get a letter on one of the home icons' colours
 const AX_AV = ['#8faed1', '#a699c9', '#d89f98', '#89b892', '#d494a7', '#a2a7af', '#dcc680'];
-const axTint = n => AX_AV[[...String(n)].reduce((h, ch) => (h * 31 + ch.codePointAt(0)) % 9973, 7) % AX_AV.length];
-const axLetter = (n, z) => `<span class="ax_avc" style="width: ${z}px; height: ${z}px; font-size: ${Math.round(z * 0.4)}px; background: ${axTint(n)}">${esc([...String(n).trim()][0] || '?')}</span>`;
+export const axTint = n => AX_AV[[...String(n)].reduce((h, ch) => (h * 31 + ch.codePointAt(0)) % 9973, 7) % AX_AV.length];
+export const axLetter = (n, z) => `<span class="ax_avc" style="width: ${z}px; height: ${z}px; font-size: ${Math.round(z * 0.4)}px; background: ${axTint(n)}">${esc([...String(n).trim()][0] || '?')}</span>`;
 const axAv = (n, z, roster) => (roster.has(nameKey(n)) ? axFace(n, z) : axLetter(n, z));
-const axFlat = mood => (AX_MOOD[mood] || AX_MOOD.warm).split(', ')[1];
-const axCb = (go, k = 'back') => `<button type="button" class="ax_cb" data-go="${go}" aria-label="${k === 'x' ? '닫기' : '뒤로'}">${ax(k, 18, 'currentColor', 2.3)}</button>`;
-const axKp = p => (hasKo(p) ? `<button type="button" class="na_ph_kochip ax_kp ${koOn() ? 'on' : ''}">가 한국어</button>` : '');
-const axTop = (left, right = '') => `<div class="ax_top">${left}<span class="ax_topr">${right}</span></div>`;
-const axH1 = (t, sub = '') => `<div class="ax_h1"><b>${esc(t)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>`;
-const axFind = (t = '검색') => `<div class="ax_find">${ax('search', 16, 'currentColor', 2.2)}${t}</div>`;
-const axChev = ax('chev', 15, '#b7bdc6', 2.4);
+export const axFlat = mood => (AX_MOOD[mood] || AX_MOOD.warm).split(', ')[1];
+export const axCb = (go, k = 'back') => `<button type="button" class="ax_cb" data-go="${go}" aria-label="${k === 'x' ? '닫기' : '뒤로'}">${ax(k, 18, 'currentColor', 2.3)}</button>`;
+export const axKp = p => (hasKo(p) ? `<button type="button" class="na_ph_kochip ax_kp ${koOn() ? 'on' : ''}">가 한국어</button>` : '');
+export const axTop = (left, right = '') => `<div class="ax_top">${left}<span class="ax_topr">${right}</span></div>`;
+export const axH1 = (t, sub = '') => `<div class="ax_h1"><b>${esc(t)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>`;
+export const axFind = (t = '검색') => `<div class="ax_find">${ax('search', 16, 'currentColor', 2.2)}${t}</div>`;
+export const axChev = ax('chev', 15, '#b7bdc6', 2.4);
 const axNewest = xs => xs.map((x, k) => [x, k]).sort((a, b) => String(b[0].time).localeCompare(String(a[0].time)));
-const axDay = (p, now, v) => (String(v).slice(0, 5) === String(now).slice(0, 5) ? '오늘' : fmtDate(p, v));
+export const axDay = (p, now, v) => (String(v).slice(0, 5) === String(now).slice(0, 5) ? '오늘' : fmtDate(p, v));
 // days from b to a (both MM-DD), in one year; -1 when a is before b
 const axDays = (a, b) => { const x = parts(a), y = parts(b); return x && y ? Math.round((new Date(2000, x.mo - 1, x.d) - new Date(2000, y.mo - 1, y.d)) / 864e5) : -1; };
 
@@ -661,9 +661,11 @@ export function setTheme(p, now) {
       ${axInd()}`;
 }
 // 다시 만들기: the apps ticked are made again from the whole story; the rest stay
-const REMAKE_IC = { msg: ['#89b892', 'cmt'], call: ['#89b892', 'call'], photo: ['#d89f98', 'photo'], note: ['#dcc680', 'pen'], search: ['#8faed1', 'search'], cal: ['#d494a7', 'cal'], sns: ['#d494a7', 'heart'], mail: ['#8faed1', 'mail'], diary: ['#a699c9', 'compose'] };
+// apps made by their own request (채우기), offered alongside
+export const REMAKE_MORE = ['money', 'voice'];
+const REMAKE_IC = { money: ['#6f86b3', 'card'], voice: ['#c9a581', 'mic'], msg: ['#89b892', 'cmt'], call: ['#89b892', 'call'], photo: ['#d89f98', 'photo'], note: ['#dcc680', 'pen'], search: ['#8faed1', 'search'], cal: ['#d494a7', 'cal'], sns: ['#d494a7', 'heart'], mail: ['#8faed1', 'mail'], diary: ['#a699c9', 'compose'] };
 export function setRemake(p, now, ui) {
-    const all = Object.keys(REMAKE), n = ui.remake.size;
+    const all = [...Object.keys(REMAKE), ...REMAKE_MORE], n = ui.remake.size;
     return `${axBar(p, now)}
       ${axTop(axCb('set'))}
       <div class="ax_scroll">

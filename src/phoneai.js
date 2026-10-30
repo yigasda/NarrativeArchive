@@ -312,6 +312,43 @@ export async function makeDraft(m, p, i) {
     await saveMeta();
     return t.draft;
 }
+// 음성 메모 떠올리기 (the red button): one memo the owner records right now, spoken rather than written
+const AI_SYS_VOICE = `GOAL
+The owner of a phone in a long role-play records a short voice memo to themselves right now. Write what they say.
+
+YOU GET
+- OWNER, and NOW: the story's moment.
+- RECENT CHAT: the newest messages; the memo is recorded at the end of them.
+- SO FAR: the owner's earlier memos.
+
+RULES
+- Spoken, not written: the way the owner talks in the chat, with pauses (…), restarts and half sentences. Not a diary entry.
+- Only what RECENT CHAT shows happened and what the owner felt about it; nothing it doesn't support.
+- In the owner's own language. Speech not in Korean gets "ko".
+- 20 to 90 seconds of speech.
+
+ANSWER — one JSON object, nothing else:
+{ "title": the name the phone would show, "kt", "text", "ko", "sec": its length in seconds, "place": where it was recorded, or "" }`;
+export const filling = new Set(); // "owner:money" / "owner:voice" being filled
+export const recording = new Set(); // owner keys recording a memo now
+export async function recordVoice(m, p) {
+    const prompt = [
+        `[OWNER]\n${p.owner}${p.country ? ` (phone set to ${p.country})` : ''}`, `[NOW]\n${storyNow(p) || p.now || ''}`,
+        `[RECENT CHAT]\n${recentForCheck(12).join('\n\n').slice(-9000)}`,
+        `[SO FAR]\n${(p.voice || []).slice(-3).map(x => `- ${x.title}: ${x.text.slice(0, 200)}`).join('\n') || '(none)'}`,
+        namesBlock(m),
+    ].filter(Boolean).join('\n\n');
+    const out = String(await askAI(prompt, { system: AI_SYS_VOICE, maxTokens: 2000 }) || '').replace(/```(?:json)?/gi, '');
+    const a = out.indexOf('{'), b = out.lastIndexOf('}');
+    let raw = null;
+    try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
+    const text = str(raw?.text, 2000);
+    if (!text) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
+    p.voice = [...(p.voice || []), { title: line(raw?.title, 80), kt: line(raw?.kt, 80), text, ko: str(raw?.ko, 2000), time: storyNow(p) || p.now || '', sec: Math.max(3, Math.min(900, Math.round(Number(raw?.sec) || 30))), place: line(raw?.place, 60), src: 'guess', now: true }].slice(-CAP.voice);
+    ensureIds(p);
+    await saveMeta();
+    return p.voice.length - 1;
+}
 export const searching = new Set(); // "owner:index" of searches whose page is being made
 // where the owner was the day of a search: the places in that day's headings (not the story itself, so the page
 // answers the query and not the scene)
