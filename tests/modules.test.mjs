@@ -22,3 +22,21 @@ test('phone reopening remembers the last character per chat and explicit selecti
  assert.equal(selectedPhoneOwner(m,[]),null);
  assert.equal(selectedPhoneOwner({phones:{},lastPhoneOwner:'Somang'},names),'Somang');
 });
+test('phone selection survives reload with stale metadata, stays scoped, and is backed up',async()=>{
+ const {selectedPhoneOwner,phoneSelectionKey,readPhoneSelection,rememberPhoneSelection}=await import('../src/phone.js');
+ const {pickSettings}=await import('../src/chats.js');
+ const store=new Map(), storage={getItem:k=>store.get(k) ?? null,setItem:(k,v)=>store.set(k,v)};
+ const c={characterId:0,characters:[{avatar:'oscar.png'}],getCurrentChatId:()=> 'chat-a'};
+ const key=phoneSelectionKey(c),m={phones:{oscar:{},somang:{}},lastPhoneOwner:'Somang'};
+ rememberPhoneSelection(m,'Oscar',key,storage);
+ // The server copy was not flushed before refresh. Only browser storage survives.
+ const reloaded={phones:{oscar:{},somang:{}},lastPhoneOwner:'Somang'};
+ assert.equal(selectedPhoneOwner(reloaded,['Somang','Oscar'],null,readPhoneSelection(phoneSelectionKey(c),storage)),'Oscar');
+ assert.equal(selectedPhoneOwner(reloaded,['Somang','Oscar'],'Somang',readPhoneSelection(key,storage)),'Somang');
+ assert.equal(readPhoneSelection(phoneSelectionKey({...c,getCurrentChatId:()=> 'chat-b'}),storage),null);
+ assert.equal(readPhoneSelection(phoneSelectionKey({...c,characters:[{avatar:'other.png'}]}),storage),null);
+ assert.equal(readPhoneSelection(phoneSelectionKey({...c,groupId:'group'}),storage),null);
+ assert.equal(pickSettings(m).lastPhoneOwner,'Oscar');
+ const blocked={getItem(){throw Error('blocked')},setItem(){throw Error('blocked')}};
+ rememberPhoneSelection(m,'Somang',key,blocked);assert.equal(m.lastPhoneOwner,'Somang');assert.equal(readPhoneSelection(key,blocked),null);
+});

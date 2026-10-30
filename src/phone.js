@@ -44,9 +44,25 @@ function screen(p, view, m, roster, ui) {
 }
 
 // Selection belongs to this chat, not the order of the character list.
-export function selectedPhoneOwner(m, names, who = null) {
+export function selectedPhoneOwner(m, names, who = null, saved = null) {
     const find = value => typeof value === 'string' && names.find(n => nameKey(n) === nameKey(value));
-    return find(who) || find(m.lastPhoneOwner) || names.find(n => m.phones?.[nameKey(n)]) || names[0] || null;
+    return find(who) || find(saved) || find(m.lastPhoneOwner) || names.find(n => m.phones?.[nameKey(n)]) || names[0] || null;
+}
+
+// Save synchronously as well: a reload may precede the host's metadata write.
+export function phoneSelectionKey(c) {
+    const chat = c.getCurrentChatId?.() || c.chatId;
+    if (chat === undefined || chat === null || chat === '') return null;
+    const scope = c.groupId != null && c.groupId !== '' ? ['group',c.groupId] : ['character',c.characters?.[c.characterId]?.avatar || (c.characterId ?? '')];
+    return `narrativearchive:phone-owner:${JSON.stringify([...scope,String(chat)])}`;
+}
+export function readPhoneSelection(key, storage) {
+    try { return key ? (storage || globalThis.localStorage)?.getItem(key) : null; } catch { return null; }
+}
+export function rememberPhoneSelection(m, owner, key, storage) {
+    if (!owner) return;
+    m.lastPhoneOwner = owner;
+    try { if (key) (storage || globalThis.localStorage)?.setItem(key,owner); } catch { /* Metadata remains available when browser storage is disabled. */ }
 }
 
 // ---- the window
@@ -57,9 +73,11 @@ export async function openPhone(who = null) {
     // phones saved before records had ids get them now, once
     if (Object.values(m.phones).reduce((n, p) => n + ensureIds(p), 0)) saveMeta();
     const names = peopleList(m);
+    for (const p of Object.values(m.phones)) if (p?.owner && !names.some(n=>nameKey(n) === nameKey(p.owner))) names.push(p.owner);
     const roster = new Set(names.map(nameKey));
-    let owner = selectedPhoneOwner(m, names, who);
-    if (owner && m.lastPhoneOwner !== owner) { m.lastPhoneOwner = owner; await saveMeta(); }
+    const selectionKey = phoneSelectionKey(c);
+    let owner = selectedPhoneOwner(m, names, who, readPhoneSelection(selectionKey));
+    if (owner) { rememberPhoneSelection(m,owner,selectionKey); await saveMeta(); }
     let investing = false;
     for (const p of Object.values(m.phones)) migrateBank(m, p);
     if (Object.values(m.phones).some(p => p.money)) await saveMeta();
@@ -211,7 +229,7 @@ export async function openPhone(who = null) {
         view = `searchone:${k}`; drawPhone(); if (!p.searches[k].results?.length) loadSearch(k);
     });
     // the screen changes first; saving waits
-    $root.on('click', '.na_ph_pick:not(.na_ph_addp), .ax_whopick', async function (e) { e.stopPropagation(); const same = owner === this.dataset.n; owner = this.dataset.n; if (!same) { view = 'lock'; sheet = false; draw(); setSheet(false); } m.lastPhoneOwner = owner; await saveMeta(); });
+    $root.on('click', '.na_ph_pick:not(.na_ph_addp), .ax_whopick', async function (e) { e.stopPropagation(); const same = owner === this.dataset.n; owner = this.dataset.n; rememberPhoneSelection(m,owner,selectionKey); if (!same) { view = 'lock'; sheet = false; draw(); setSheet(false); } await saveMeta(); });
     $root.on('click', '.na_ph_makewho', () => { loreOpen = false; drawCtrl(); setSheet(true); });
     // a person only the lorebook knows: into the same list as 인물 도감's +
     $root.on('click', '.na_ph_addp', () => { adding = !adding; drawOwners(); if (adding) { setSheet(true); $root.find('.na_ph_addname').trigger('focus'); } });
@@ -220,7 +238,7 @@ export async function openPhone(who = null) {
         if (!v) return;
         const have = names.find(n => nameKey(n) === nameKey(v));
         if (!have) { m.people = [...(Array.isArray(m.people) ? m.people : []), v]; names.push(v); roster.add(nameKey(v)); }
-        owner = have || v; m.lastPhoneOwner = owner; adding = false; view = 'lock'; sheet = false;
+        owner = have || v; rememberPhoneSelection(m,owner,selectionKey); adding = false; view = 'lock'; sheet = false;
         $root.find('.na_ph_addname').val('');
         draw();
         setSheet(false);

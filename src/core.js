@@ -40,7 +40,7 @@ export const DEFAULT_META = Object.freeze({
     lastExport: null, // { from, to, at, how } — the latest extract copied or saved
 });
 
-export const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'muted', 'track', 'tokenCap', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'router', 'people', 'temps', 'voice', 'voiceInject', 'layers', 'fade', 'worldOn', 'quoteExclude', 'quoteMined', 'knowMined', 'personLines', 'fadeForce', 'au', 'digests', 'workNote', 'styleSamples', 'recall', 'stateRemind', 'annivs', 'annivScan', 'phones', 'finance', 'phoneLore', 'phoneLoreOff'];
+export const SETTING_KEYS = ['keep', 'enabled', 'position', 'depth', 'role', 'muted', 'track', 'tokenCap', 'pinned', 'backupEvery', 'linked', 'linkDepth', 'glossary', 'logLinks', 'knowledge', 'knowInject', 'quotes', 'router', 'people', 'temps', 'voice', 'voiceInject', 'layers', 'fade', 'worldOn', 'quoteExclude', 'quoteMined', 'knowMined', 'personLines', 'fadeForce', 'au', 'digests', 'workNote', 'styleSamples', 'recall', 'stateRemind', 'annivs', 'annivScan', 'phones', 'lastPhoneOwner', 'finance', 'phoneLore', 'phoneLoreOff'];
 export const POSITIONS = { 3: '이어지는 자리', 1: '채팅 안 (깊이)', 0: '메인 프롬프트 뒤', 2: '메인 프롬프트 앞' };
 export const POSITION_ORDER = [3, 1, 0, 2];
 export const ROLES = { 0: '시스템', 1: '유저', 2: '어시스턴트' };
