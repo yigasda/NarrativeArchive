@@ -7,7 +7,7 @@
 import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './phoneprofile.js';
 import { investmentScreen } from './investui.js';
 import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, investmentDate, validDate } from './investdata.js';
-import { migrateBank, reviseBaseline, selectPrice } from './finance.js';
+import { migrateBank, selectPrice } from './finance.js';
 import { draftReady, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
@@ -216,13 +216,6 @@ export async function openPhone(who = null) {
     });
     $root.on('click', '.iv_select', async function () {
         try { selectPrice(m, this.dataset.key, this.dataset.date, this.dataset.id); await saveMeta(); drawPhone(true); }
-        catch (err) { toastr.error(err.message); }
-    });
-    $root.on('click', '.iv_baseline', async function () {
-        const box = $(this).closest('details'), value = box.find('.iv_balance').val(), reason = String(box.find('.iv_reason').val() || '');
-        if (value === '' || !reason.trim()) return toastr.warning('금액과 수정 이유를 입력해 주세요');
-        if (!await confirm('기준 잔액을 수정할까요?', '이미 기록된 이후 거래는 유지되고 현재 잔액이 다시 계산돼요.')) return;
-        try { reviseBaseline(m, this.dataset.key, Number(value), reason); migrateBank(m, phone()); await saveMeta(); drawPhone(true); }
         catch (err) { toastr.error(err.message); }
     });
     $root.on('click', '.iv_news', async function () {

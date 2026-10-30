@@ -174,8 +174,7 @@ export function investmentScreen(m, p, now, view, key, busy) {
     if (view === 'ivcash') {
         const accounts = Object.entries(f.accounts).filter(([, a]) => a.owner === p.owner);
         const isBroker = k => inv.accounts.some(x => x.key === k);
-        return frame(p, now, { title: '자산', tab: 'ivcash', body: `${hd('현금')}${accounts.map(([k, a]) => card(`<div class="iv_sh"><span class="iv_cur">${esc(a.currency)}</span><b>${isBroker(k) ? '증권 현금' : '은행'} · ${esc(a.currency)}</b></div><div class="iv_stake cg_num">${money(p, cash(a), a.currency)}<small>지금 잔액</small></div>${row('기준 잔액', money(p, a.amount, a.currency))}<small>${esc(a.asOf)} 기준 · 그 뒤 거래 ${a.included.length}건 포함</small>
-            <details><summary>기준 잔액 고치기</summary><input type="number" class="iv_balance" value="${a.amount}" step="any"><input class="iv_reason" placeholder="고치는 이유"><button type="button" class="iv_baseline iv_btn" data-key="${esc(k)}">기준점 고치기</button></details>`)).join('')}
+        return frame(p, now, { title: '자산', tab: 'ivcash', body: `${hd('현금')}${accounts.map(([k, a]) => card(`<div class="iv_sh"><span class="iv_cur">${esc(a.currency)}</span><b>${isBroker(k) ? '증권 현금' : '은행'} · ${esc(a.currency)}</b></div><div class="iv_stake cg_num">${money(p, cash(a), a.currency)}<small>지금 잔액</small></div>${row('기준 잔액', money(p, a.amount, a.currency))}<small>${esc(a.asOf)} 기준 · 그 뒤 거래 ${a.included.length}건 포함</small>`)).join('')}
           <div class="iv_menu"><button type="button" data-go="ivstakes">${ax('grid4', 20, 'currentColor')}<b>소유 지분</b></button><button type="button" data-go="ivprices">${ax('swap', 20, 'currentColor')}<b>가격 · 환율</b></button></div>` });
     }
 
