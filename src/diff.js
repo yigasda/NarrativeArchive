@@ -128,7 +128,7 @@ export function renderDiff(rows, context = 2, { src = true } = {}) {
         const mk = markedPair(rows[d].line, rows[a].line);
         if (mk) { marked.set(d, mk.old); marked.set(a, mk.new); }
     }
-    // the section each row sits in, for a "원문" chip at the start of each run of changes
+    // Show a source chip at each changed section, including adjacent added sections.
     const m = src && hasChat() ? getMeta() : null;
     const isHead = l => /^#{1,3} /.test(l);
     let headOld = '', headNew = '';
@@ -141,7 +141,7 @@ export function renderDiff(rows, context = 2, { src = true } = {}) {
     rows.forEach((r, i) => {
         if (!keep[i]) { skipped++; return; }
         flush();
-        if (m && r.t !== ' ' && (i === 0 || rows[i - 1].t === ' ')) {
+        if (m && r.t !== ' ' && (i === 0 || rows[i - 1].t === ' ' || heads[i] !== heads[i - 1])) {
             const b = srcButton(m, heads[i], 'chip');
             if (b) html += `<div class="na_diff_src">${b}</div>`;
         }
