@@ -290,7 +290,7 @@ export async function openPhone(who = null) {
         if(this.dataset.type==='persona') {
             const version=state.version=(state.version || 0)+1;
             state.binding={type:'none'};state.resolved=null;state.error='';state.busy=true;
-            state.personaLoading=true;state.personaPicked=false;state.openType=null;state.openPreview=true;profileRedraw(p,state);
+            state.personaLoading=true;state.personaPicked=false;state.openType=null;state.openPreview=false;profileRedraw(p,state);
             try {
                 const binding=await currentPersonaBinding(ctx());
                 if(state.version!==version) return;
