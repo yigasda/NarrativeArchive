@@ -5515,29 +5515,144 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .wb_lab button.on { --axbg: var(--axc); }
 .ax .wb_seg button.on { --axbg: #fff; --axsh: 0 1px 3px rgba(22, 27, 34, 0.1); }
 
-/* Investments: quiet brokerage cards, distinct from the blue bank. */
-.na_phone .iv_scroll { padding: 0 18px 32px; color: #172e28; }
-.na_phone .iv_card { display: block; background: #fff; border: 1px solid #dfebe5; border-radius: 18px; margin: 12px 0; padding: 16px; font-size: 13px; overflow-wrap: anywhere; }
-.na_phone .iv_card h2, .na_phone .iv_card h3 { margin: 0 0 12px; font-size: 17px; }
-.na_phone .iv_card p { line-height: 1.6; white-space: pre-wrap; }
-.na_phone .iv_card small, .na_phone .iv_footer, .na_phone .iv_hint { color: #62766e; font-size: 11px; line-height: 1.6; }
-.na_phone .iv_hero { background: #143c32; color: #f3fff6; padding: 24px 20px; border-radius: 22px; margin: 14px 0; }
-.na_phone .iv_hero h2 { font: 500 30px 'Inter Tight', sans-serif; margin: 12px 0; }
-.na_phone .iv_hero small, .na_phone .iv_hero span { font-size: 12px; }
-.na_phone .iv_hero p { font-size: 12px; color: #c1e5d7; }
-.na_phone .iv_navs, .na_phone .iv_tools { display: flex; flex-wrap: wrap; gap: 7px; margin: 10px 0; }
-.na_phone .iv_nav, .na_phone .iv_tools button, .na_phone .iv_card button { border: 1px solid #cee1d7; background: #eff8f2; border-radius: 10px; color: #17644e; padding: 8px 10px; font-size: 12px; cursor: pointer; }
-.na_phone .iv_tools label, .na_phone .iv_card label { display: block; font-size: 12px; margin: 8px 0; }
-.na_phone .iv_tools input, .na_phone .iv_card input:not([type=checkbox]), .na_phone .iv_card select { display: block; width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #c9dcd2; border-radius: 7px; background: #fff; color: #193f31; margin: 5px 0; }
-.na_phone .iv_row { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; padding: 10px 0; border-bottom: 1px solid #edf3ef; }
-.na_phone .iv_row span { color: #66786e; flex: 1; }
-.na_phone .iv_row b { text-align: right; font-weight: 500; max-width: 65%; }
-.na_phone .iv_holding { display: flex; width: 100%; justify-content: space-between; gap: 8px; padding: 14px 0; border: 0; border-bottom: 1px solid #e6eee9; background: transparent; text-align: left; color: inherit; }
-.na_phone .iv_holding span:last-child { text-align: right; }
-.na_phone .iv_holding small { display: block; margin-top: 6px; }
-.na_phone .iv_chart { width: 100%; color: #278269; margin: 15px 0; }
-.na_phone .iv_quote { padding: 12px 0; border-top: 1px solid #dce8e0; }
-.na_phone .iv_quote span, .na_phone .iv_quote small { display: block; margin: 7px 0; }
-.na_phone .iv_footer { margin: 24px 4px; }
-.na_phone .iv_scroll > * { flex-shrink: 0; }
-.na_phone .iv_card .iv_holding { border-radius: 0; border: 0; border-bottom: 1px solid #e6eee9; background: transparent; padding: 14px 0; color: #193a2d; }
+/* ============ 투자 (kurs.): a broker app of its own — a light page, the line on top, quiet white cards; up/down by the
+   owner's country (iv_good / iv_bad), the brand green only for the brand and the active tab */
+.iv_app { --iv-ink: #0f1a17; --iv-mut: #7b8784; --iv-line: #e9edeb; --iv-brand: #1f8f6a; --iv-up: #12a26b; --iv-dn: #e5484d;
+  position: absolute; inset: 0; display: flex; flex-direction: column; background: #f5f7f6; color: var(--iv-ink); }
+.iv_app .ax_scroll { flex: 1; min-height: 0; }
+.iv_up { color: var(--iv-up) !important; } .iv_dn { color: var(--iv-dn) !important; } .iv_flat { color: var(--iv-mut); }
+.iv_app.iv_east { --iv-up: #e5484d; --iv-dn: #3b6fe0; }
+.iv_top { flex: none; height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 16px; }
+.ax .iv_ib { --axbg: #fff; --axsh: 0 1px 2px rgba(15, 26, 23, 0.06), 0 6px 16px rgba(15, 26, 23, 0.06); width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; flex: none; color: var(--iv-ink); }
+.ax .iv_ib:disabled { opacity: 0.6; cursor: default; }
+.iv_brand { font: 700 22px 'Inter Tight', -apple-system, sans-serif; letter-spacing: -0.03em; } .iv_brand i { font-style: normal; color: var(--iv-brand); }
+.iv_tt { font: 700 17px 'Inter Tight', -apple-system, sans-serif; letter-spacing: -0.01em; }
+.iv_topr { margin-left: auto; display: flex; gap: 8px; }
+.iv_scroll { padding: 4px 0 0; }
+.iv_scroll > * { flex: none; }
+.iv_sum { padding: 10px 22px 0; }
+.iv_sum > small { font-size: 13px; color: var(--iv-mut); font-weight: 600; }
+.iv_big { font: 600 38px/1.1 'Inter Tight', -apple-system, sans-serif; letter-spacing: -0.03em; margin-top: 4px; padding: 0 22px; }
+.iv_sum .iv_big { padding: 0; }
+.iv_chg { margin-top: 6px; padding: 0 22px; font: 600 14.5px 'Inter Tight', -apple-system, sans-serif; }
+.iv_sum .iv_chg { padding: 0; }
+.iv_chg small { font-weight: 500; color: var(--iv-mut); margin-left: 4px; font-family: inherit; }
+.iv_miss { margin-top: 6px; font-size: 12px; color: #a8660b; }
+.iv_src { padding: 4px 22px 0; font-size: 12px; color: var(--iv-mut); }
+.ax .iv_link { --axbg: none; color: var(--iv-brand); font-size: 12.5px; font-weight: 600; }
+.iv_chart { position: relative; height: 170px; margin: 14px 0 6px; color: var(--iv-mut); }
+.iv_chart svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.iv_chart .iv_base { stroke: currentColor; stroke-opacity: 0.35; stroke-width: 1; stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
+.iv_dot { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 5px color-mix(in srgb, currentColor 20%, transparent); }
+.iv_ax { position: absolute; left: 22px; right: 22px; bottom: -18px; display: flex; justify-content: space-between; font-size: 11px; color: var(--iv-mut); }
+.iv_nochart { display: grid; place-items: center; height: 120px; margin: 14px 16px; border-radius: 22px; background: #fff; font-size: 13px; color: var(--iv-mut); }
+.iv_seg { display: flex; gap: 4px; margin: 26px 16px 18px; padding: 4px; border-radius: 14px; background: #e9eeec; }
+.ax .iv_seg button { --axbg: none; flex: 1; height: 32px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--iv-mut); text-align: center; }
+.ax .iv_seg button.on { --axbg: #fff; --axsh: 0 1px 3px rgba(15, 26, 23, 0.12); color: var(--iv-ink); }
+.iv_card { margin: 0 14px 12px; padding: 14px 16px; border-radius: 22px; background: #fff; box-shadow: 0 1px 2px rgba(15, 26, 23, 0.04), 0 8px 24px rgba(15, 26, 23, 0.05); font-size: 13.5px; }
+.iv_card p { margin: 0; line-height: 1.55; }
+.iv_card small, .iv_note, .iv_hint { display: block; font-size: 11.5px; color: var(--iv-mut); line-height: 1.5; }
+.iv_note { margin: -4px 26px 12px; } .iv_hint { margin: 0 24px 12px; }
+.iv_muted { color: var(--iv-mut); }
+.iv_ko { color: var(--iv-mut); margin-top: 4px !important; }
+.iv_list { padding: 4px 0; }
+.iv_hd { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 8px 24px 10px; }
+.iv_hd b { font-size: 16px; font-weight: 700; } .iv_hd b span { color: var(--iv-mut); font-weight: 600; margin-left: 4px; }
+.iv_hd small { font-size: 12px; color: var(--iv-mut); }
+.iv_grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
+.iv_kv small { font-size: 12px; color: var(--iv-mut); } .iv_kv b { display: block; margin-top: 3px; font: 600 16px 'Inter Tight', -apple-system, sans-serif; overflow-wrap: anywhere; }
+.iv_logo { display: grid; place-items: center; flex: none; border-radius: 13px; color: #fff; font: 700 13px 'Inter Tight', -apple-system, sans-serif; letter-spacing: 0.02em; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.ax .iv_hold { --axbg: none; display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px; box-sizing: border-box; text-align: left; }
+.iv_hold + .iv_hold, .iv_tr + .iv_tr, .iv_cash + .iv_cash { border-top: 1px solid var(--iv-line); }
+.iv_hn { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.iv_hn b { font-size: 15px; font-weight: 600; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.iv_hn small { font-size: 12px; color: var(--iv-mut); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.iv_spark { width: 56px; height: 24px; flex: none; color: var(--iv-mut); }
+.iv_hv { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; max-width: 42%; }
+.iv_hv b { font: 600 15px 'Inter Tight', -apple-system, sans-serif; white-space: nowrap; }
+.iv_hv small { font: 500 12px 'Inter Tight', -apple-system, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.iv_cash { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.iv_cash b:nth-child(2) { flex: 1; font-size: 14.5px; font-weight: 600; } .iv_cash b:last-child { font: 600 15px 'Inter Tight', -apple-system, sans-serif; }
+.iv_cur { width: 40px; height: 40px; border-radius: 13px; background: #eef3f1; color: var(--iv-brand); display: grid; place-items: center; font: 700 11.5px 'Inter Tight', -apple-system, sans-serif; flex: none; }
+.iv_tr { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.iv_tr > b { font: 600 14.5px 'Inter Tight', -apple-system, sans-serif; white-space: nowrap; flex: none; }
+.iv_tr > b.iv_in { color: var(--iv-up); }
+.iv_kind { flex: none; width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.iv_kind.buy { background: #e6f4ee; color: #12805a; } .iv_kind.sell { background: #fdecec; color: #c2383c; } .iv_kind.dividend { background: #fdf3dd; color: #a06a0a; }
+.iv_quote { display: flex; align-items: center; gap: 12px; padding: 4px 22px 12px; }
+.iv_qn { display: flex; flex-direction: column; min-width: 0; } .iv_qn b { font-size: 17px; font-weight: 700; } .iv_qn small { font-size: 12px; color: var(--iv-mut); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.iv_more summary { display: flex; justify-content: space-between; gap: 10px; font-weight: 600; cursor: pointer; list-style: none; }
+.iv_more summary::-webkit-details-marker { display: none; }
+.iv_more summary span { font-family: 'Inter Tight', -apple-system, sans-serif; color: var(--iv-mut); }
+.iv_more[open] summary { margin-bottom: 8px; }
+.iv_row { display: flex; justify-content: space-between; gap: 14px; padding: 9px 0; border-top: 1px solid var(--iv-line); font-size: 13.5px; }
+.iv_row span { color: var(--iv-mut); } .iv_row b { font-weight: 600; text-align: right; }
+.iv_sh { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; } .iv_sh > b { flex: 1; font-size: 15px; }
+.iv_pill { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #eef3f1; color: #4a6159; white-space: nowrap; }
+.iv_pill.warn { background: #fdf3dd; color: #a06a0a; }
+.iv_stake { font: 600 28px 'Inter Tight', -apple-system, sans-serif; letter-spacing: -0.02em; margin-bottom: 8px; } .iv_stake small { display: inline; margin-left: 6px; font-size: 12px; font-family: inherit; }
+.iv_qd { padding: 10px 16px; } .iv_qd + .iv_qd { border-top: 1px solid var(--iv-line); } .iv_qd > b { font-size: 13px; }
+.iv_qr { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 8px; padding: 8px 10px; border-radius: 12px; background: #f6f8f7; }
+.iv_qr.on { background: #e9f5ef; } .iv_qr > span { font: 600 15px 'Inter Tight', -apple-system, sans-serif; } .iv_qr > small { flex: 1; } .iv_qr em { font-style: normal; font-size: 11.5px; font-weight: 600; color: var(--iv-brand); }
+.iv_qr details { flex-basis: 100%; font-size: 12px; color: var(--iv-mut); }
+.ax .iv_btn { --axbg: var(--iv-ink); height: 40px; padding: 0 16px; border-radius: 13px; font-size: 13.5px; font-weight: 600; color: #fff; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.ax .iv_btn.ghost { --axbg: #eef3f1; color: var(--iv-ink); } .ax .iv_btn.sm { height: 30px; padding: 0 10px; font-size: 12px; border-radius: 10px; }
+.ax .iv_btn.wide { display: flex; width: calc(100% - 28px); margin: 4px 14px 12px; height: 48px; border-radius: 16px; }
+.ax .iv_btn:disabled { opacity: 0.6; cursor: default; }
+.iv_tools { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.iv_tools label { flex: 1 1 100%; }
+.iv_app input:not([type=checkbox]), .iv_app select { display: block; width: 100%; box-sizing: border-box; height: 40px; margin-top: 4px; padding: 0 12px; border: 1px solid var(--iv-line) !important; border-radius: 12px !important; background: #f8faf9 !important; color: var(--iv-ink) !important; font: inherit; font-size: 14px; }
+.iv_form label { display: block; margin-top: 10px; } .iv_two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.iv_ck { display: flex !important; align-items: center; gap: 8px; font-size: 12.5px; }
+.iv_form .iv_btn.wide { width: 100%; margin: 14px 0 0; }
+.iv_app details summary { cursor: pointer; }
+.iv_app details input, .iv_app details .iv_btn { margin-top: 8px; }
+.iv_menu { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 14px 14px; }
+.ax .iv_menu button { --axbg: #fff; --axsh: 0 1px 2px rgba(15, 26, 23, 0.04), 0 8px 24px rgba(15, 26, 23, 0.05); display: flex; align-items: center; gap: 10px; padding: 14px; border-radius: 18px; color: var(--iv-brand); }
+.iv_menu b { color: var(--iv-ink); font-size: 14px; }
+.iv_empty { margin: 30px 22px 18px; text-align: center; }
+.iv_emptyic { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 20px; display: grid; place-items: center; background: linear-gradient(160deg, #b7dfcc, #4c9a80); color: #fff; }
+.iv_empty b { font-size: 17px; } .iv_empty p { margin: 8px 0 0; font-size: 13.5px; line-height: 1.6; color: var(--iv-mut); }
+.iv_footer { margin: 18px 26px 6px; font-size: 11px; line-height: 1.5; color: var(--iv-mut); text-align: center; }
+.iv_tab { flex: none; height: 84px; display: flex; justify-content: space-around; padding-top: 10px; box-sizing: border-box; background: rgba(255, 255, 255, 0.92); border-top: 1px solid var(--iv-line); }
+.ax .iv_tab button { --axbg: none; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 600; color: #a3aca9; }
+.ax .iv_tab button.on { color: var(--iv-ink); }
+/* the bank's way into the investment app */
+.iv_navs { display: flex; gap: 8px; padding: 0 14px 14px; flex: none; }
+.ax .iv_nav { --axbg: #fff; --axsh: 0 1px 2px rgba(22, 27, 34, 0.04), 0 6px 16px rgba(22, 27, 34, 0.05); flex: 1; height: 42px; border-radius: 14px; font-size: 13px; font-weight: 600; color: #1d3461; text-align: center; }
+.iv_sum .iv_src { padding: 0; margin-top: 2px; }
+.iv_one .iv_row { border-top: 0; padding: 0; }
+.iv_logo { letter-spacing: 0; }
+/* 홈: the amounts on a deep green card (the app icon's green, darkened), the money's spread under them */
+.iv_hero { position: relative; overflow: hidden; margin: 6px 14px 18px; padding: 20px 20px 18px; border-radius: 26px; color: #f1fbf6;
+  background: radial-gradient(120% 90% at 100% 0%, rgba(183, 223, 204, 0.28) 0, transparent 55%), linear-gradient(160deg, #1d5a49 0%, #123d33 60%, #0d2f27 100%);
+  box-shadow: 0 14px 30px rgba(13, 47, 39, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.12); }
+.iv_hero > small { font-size: 13px; font-weight: 600; opacity: 0.72; }
+.iv_hero .iv_big { padding: 0; margin-top: 6px; font-size: 36px; color: #fff; }
+.iv_hero .iv_chg { padding: 0; margin-top: 8px; }
+.iv_hero .iv_chg small, .iv_hero .iv_src { color: rgba(241, 251, 246, 0.6); padding: 0; }
+.iv_hero .iv_miss { color: #ffd58a; }
+.iv_hero { --iv-up: #6fe3b0; --iv-dn: #ff9a9a; }
+.iv_app.iv_east .iv_hero { --iv-up: #ff9a9a; --iv-dn: #9cc0ff; }
+.iv_herog { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.12); }
+.iv_herog .iv_kv small { color: rgba(241, 251, 246, 0.6); } .iv_herog .iv_kv b { color: #fff; font-size: 17px; }
+.iv_mix { display: flex; gap: 3px; height: 8px; margin-top: 16px; border-radius: 4px; overflow: hidden; }
+.iv_mix i { min-width: 3px; }
+.iv_mixl { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 10px; font-size: 11.5px; color: rgba(241, 251, 246, 0.78); }
+.iv_mixl span { display: inline-flex; align-items: center; gap: 5px; } .iv_mixl i { width: 7px; height: 7px; border-radius: 2px; }
+/* 종목: the candle chart */
+.iv_cd { margin: 14px 8px 4px; padding: 10px 8px 4px; border-radius: 22px; background: #fff; box-shadow: 0 1px 2px rgba(15, 26, 23, 0.04), 0 8px 24px rgba(15, 26, 23, 0.05); }
+.iv_cd svg { display: block; width: 100%; height: auto; }
+.iv_leg { display: flex; align-items: center; gap: 4px; padding: 0 8px 4px; font: 600 11px 'Inter Tight', -apple-system, sans-serif; color: var(--iv-mut); }
+.iv_leg i { width: 8px; height: 8px; border-radius: 2px; margin-left: 6px; } .iv_leg i:first-child { margin-left: 0; }
+.iv_leg span { margin-left: auto; font-weight: 500; }
+.iv_gl { stroke: #eef1f0; stroke-width: 1; }
+.iv_yl, .iv_xl { font: 500 10px 'Inter Tight', -apple-system, sans-serif; fill: #9aa4a1; }
+.iv_tag { font: 700 10px 'Inter Tight', -apple-system, sans-serif; fill: #fff; }
+.iv_mk { font: 600 9.5px 'Inter Tight', -apple-system, sans-serif; } .iv_mk.hi { fill: #c2383c; } .iv_mk.lo { fill: #2f6bd6; }
+.iv_app:not(.iv_east) .iv_mk.hi { fill: #12805a; } .iv_app:not(.iv_east) .iv_mk.lo { fill: #c2383c; }
+.iv_cd + .iv_seg { margin-top: 12px; }
+.iv_tools.sm { flex-wrap: nowrap; align-items: center; gap: 10px; padding: 10px 14px; }
+.iv_toolsl { font-size: 12.5px; font-weight: 600; color: var(--iv-mut); white-space: nowrap; }
+.iv_app .iv_tools.sm input.iv_date { flex: 1; min-width: 0; height: 34px; margin: 0; font-size: 13px; }
+.iv_tools.sm .iv_link { white-space: nowrap; font-size: 12.5px; }

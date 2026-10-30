@@ -29,6 +29,8 @@ export function fmtMoney(p, n, signed = false) {
     try { s = new Intl.NumberFormat(LOCALE[p.country] || 'en-US', { style: 'currency', currency: p.money?.currency || 'EUR' }).format(Number(n)); } catch { s = `${Number(n).toFixed(2)} ${p.money?.currency || ''}`; }
     return signed && n > 0 ? `+${s}` : s;
 }
+// the same, in a currency of its own (the investment app holds several)
+export const fmtIn = (p, n, cur, signed = false) => fmtMoney({ ...p, money: { currency: cur || p.money?.currency || 'EUR' } }, n, signed);
 const busyOf = (p, k) => filling.has(`${nameKey(p.owner)}:${k}`);
 const mo = p => p.money || null;
 const acctOf = (p, last4) => mo(p)?.bank?.accounts?.find(a => a.last4 === last4);
