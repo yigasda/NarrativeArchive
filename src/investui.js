@@ -173,18 +173,10 @@ export function investmentScreen(m, p, now, view, key, busy) {
     }
     if (view === 'ivcash') {
         const accounts = Object.entries(f.accounts).filter(([, a]) => a.owner === p.owner);
-        const isBroker = k => inv.accounts.some(x => x.key === k), opt = ([k, a]) => `<option value="${esc(k)}">${isBroker(k) ? '증권' : '은행'} · ${a.currency} · ${esc(a.id.slice(-6))}</option>`;
+        const isBroker = k => inv.accounts.some(x => x.key === k);
         return frame(p, now, { title: '자산', tab: 'ivcash', body: `${hd('현금')}${accounts.map(([k, a]) => card(`<div class="iv_sh"><span class="iv_cur">${esc(a.currency)}</span><b>${isBroker(k) ? '증권 현금' : '은행'} · ${esc(a.currency)}</b></div><div class="iv_stake cg_num">${money(p, cash(a), a.currency)}<small>지금 잔액</small></div>${row('기준 잔액', money(p, a.amount, a.currency))}<small>${esc(a.asOf)} 기준 · 그 뒤 거래 ${a.included.length}건 포함</small>
             <details><summary>기준 잔액 고치기</summary><input type="number" class="iv_balance" value="${a.amount}" step="any"><input class="iv_reason" placeholder="고치는 이유"><button type="button" class="iv_baseline iv_btn" data-key="${esc(k)}">기준점 고치기</button></details>`)).join('')}
-          <div class="iv_menu"><button type="button" data-go="ivstakes">${ax('grid4', 20, 'currentColor')}<b>소유 지분</b></button><button type="button" data-go="ivprices">${ax('swap', 20, 'currentColor')}<b>가격 · 환율</b></button></div>
-          ${hd('실제로 있었던 이체 연결')}<div class="iv_card iv_form">
-            <label><small>거래 ID</small><input class="iv_tid" placeholder="같은 거래는 같은 ID"></label>
-            <label><small>나가는 계좌</small><select class="iv_from">${accounts.map(opt).join('')}</select></label><label><small>들어오는 계좌</small><select class="iv_to">${accounts.map(opt).join('')}</select></label>
-            <div class="iv_two"><label><small>보내는 원금</small><input type="number" class="iv_sent" step="any"></label><label><small>받는 원금</small><input type="number" class="iv_received" step="any"></label></div>
-            <div class="iv_two"><label><small>수수료</small><input type="number" class="iv_fee" step="any" placeholder="모르면 비워 두기"></label><label><small>수수료 빼는 쪽</small><select class="iv_feeSide"><option value="sender">보내는 쪽에 따로</option><option value="receiver">받는 쪽에서 빼기</option></select></label></div>
-            <div class="iv_two"><label><small>적용 환율 · 통화가 다를 때</small><input type="number" class="iv_rate" step="any"></label><label><small>거래 날짜</small><input type="date" class="iv_tdate" value="${date}"></label></div>
-            <label class="iv_ck"><input type="checkbox" class="iv_incfrom"> 나간 돈은 기준 잔액에 이미 들어가 있어요</label><label class="iv_ck"><input type="checkbox" class="iv_incto"> 들어온 돈은 기준 잔액에 이미 들어가 있어요</label>
-            <button type="button" class="iv_transfer iv_btn wide">이체 연결</button></div>` });
+          <div class="iv_menu"><button type="button" data-go="ivstakes">${ax('grid4', 20, 'currentColor')}<b>소유 지분</b></button><button type="button" data-go="ivprices">${ax('swap', 20, 'currentColor')}<b>가격 · 환율</b></button></div>` });
     }
 
     // ---- 홈

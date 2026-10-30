@@ -7,7 +7,7 @@
 import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './phoneprofile.js';
 import { investmentScreen } from './investui.js';
 import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, investmentDate, validDate } from './investdata.js';
-import { finance, migrateBank, reviseBaseline, selectPrice, transfer } from './finance.js';
+import { migrateBank, reviseBaseline, selectPrice } from './finance.js';
 import { draftReady, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
@@ -224,16 +224,6 @@ export async function openPhone(who = null) {
         if (!await confirm('기준 잔액을 수정할까요?', '이미 기록된 이후 거래는 유지되고 현재 잔액이 다시 계산돼요.')) return;
         try { reviseBaseline(m, this.dataset.key, Number(value), reason); migrateBank(m, phone()); await saveMeta(); drawPhone(true); }
         catch (err) { toastr.error(err.message); }
-    });
-    $root.on('click', '.iv_transfer', async function () {
-        const box = $(this).closest('.iv_card'), val = k => box.find('.iv_' + k).val();
-        const n = k => val(k) === '' ? null : Number(val(k));
-        const from = val('from'), to = val('to'), side = val('feeSide');
-        if (!validDate(val('tdate'))) return toastr.warning('거래 날짜를 확인해 주세요');
-        try {
-            transfer(m, { id: String(val('tid') || '').trim(), from, to, sent: n('sent'), received: n('received'), fee: n('fee'), feeSide: side, feeCurrency: finance(m).accounts[side === 'sender' ? from : to]?.currency, rate: n('rate'), date: val('tdate'), includedFrom: box.find('.iv_incfrom').prop('checked'), includedTo: box.find('.iv_incto').prop('checked') });
-            migrateBank(m, phone()); await saveMeta(); drawPhone(true); toastr.success('이체 기록을 연결했어요');
-        } catch (err) { toastr.error(err.message, '이체 연결'); }
     });
     $root.on('click', '.iv_news', async function () {
         const p = phone(), inv = p.investment, symbol = this.dataset.symbol;
