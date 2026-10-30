@@ -5,13 +5,15 @@ import { pathToFileURL } from 'node:url';
 import * as finance from '../src/finance.js';
 const encoded = s => 'data:text/javascript;base64,'+Buffer.from(s).toString('base64');
 const core = encoded(`export const saveMeta=async()=>{globalThis.__investTest.saved++}; export const getMeta=()=>globalThis.__investTest.meta;`);
-const ai = encoded(`export const askDraft=async(input, options)=>{globalThis.__investTest.inputs.push({input,...options}); if(globalThis.__investTest.error)throw Error('network'); return JSON.stringify(globalThis.__investTest.answer)};`);
-const data = encoded(`export const sideRequest=async(m,owner,blocks)=>m.text+'\\n'+blocks.join('\\n'); export const storyNow=p=>p.now||''; export const fmtDate=(p,v)=>v; export const fmtTime=(p,v)=>v; export const koOn=()=>true; export const listTime=(p,v)=>v;`);
+const ai = encoded(`export const askDraft=async(input, options)=>{if(options.system.includes('Set a compact personal financial scale')){(globalThis.__investTest.wealthInputs ||= []).push(input);return JSON.stringify({currency:'EUR',deposits:{min:0,max:1e15},investments:{min:0,max:1e15},basis:'fixture'})}globalThis.__investTest.inputs.push({input,...options}); if(globalThis.__investTest.error)throw Error('network'); return JSON.stringify(globalThis.__investTest.answers?.length ? globalThis.__investTest.answers.shift() : globalThis.__investTest.answer)};`);
+const data = encoded(`export const sideRequest=async(m,owner,blocks)=>m.text+'\\n'+blocks.join('\\n'); export const prepareWealth=async()=>({currency:'EUR',deposits:{min:0,max:1e15},investments:{min:0,max:1e15},basis:'fixture'}); export const storyNow=p=>p.now||''; export const fmtDate=(p,v)=>v; export const fmtTime=(p,v)=>v; export const koOn=()=>true; export const listTime=(p,v)=>v;`);
 const apps = encoded(`export const AX={}; export const ax=()=>''; export const axBar=()=>'';export const axCb=()=>'';export const axH1=t=>'<h1>'+t+'</h1>';export const axInd=()=>'';export const axTop=()=>'';export const axDay=(p,n,d)=>d;export const axFind=()=>'';export const axKp=()=>'';export const axLetter=()=>'';export const axTint=()=> '#ffffff';export const busyHtml='';`);
 const util=encoded(`export const esc=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');`);
 const financeURL=pathToFileURL(new URL('../src/finance.js',import.meta.url).pathname).href;
 async function load(file, map) { const src=await readFile(new URL('../src/'+file,import.meta.url),'utf8');return import(encoded(src.replace(/from '([^']+)'/g,(all,k)=>`from '${map[k]||k}'`))); }
-const dataMod=await load('investdata.js',{'./ai.js':ai,'./core.js':core,'./phonedata.js':data,'./finance.js':financeURL});
+const wealthSource=await readFile(new URL('../src/wealth.js',import.meta.url),'utf8');
+const wealthURL=encoded(wealthSource.replace("'./ai.js'",JSON.stringify(ai)).replace("'./core.js'",JSON.stringify(core)).replace("'./finance.js'",JSON.stringify(financeURL)));
+const dataMod=await load('investdata.js',{'./wealth.js':wealthURL,'./ai.js':ai,'./core.js':core,'./phonedata.js':data,'./finance.js':financeURL});
 const dataURL=encoded(`export const investmentDate=(m,p)=>p.investment?.date||'2026-10-30';`);
 const fmtIn=encoded(`export const fmtIn=(p,n,c,signed)=>(signed&&n>0?'+':'')+new Intl.NumberFormat('ko-KR',{maximumFractionDigits:2}).format(n)+' '+(c||'');`);
 const ui=await load('investui.js',{'./phoneapps.js':apps,'./util.js':util,'./finance.js':financeURL,'./investdata.js':dataURL,'./phonemoney.js':fmtIn});
@@ -58,7 +60,7 @@ if (process.env.INVEST_PREVIEW) {
  for(const view of ['ivnotes','ivschedule','ivhistory','invest','stock','ivactivity','ivwatch','ivstakes','ivcash','ivprices']) await writeFile(`${process.env.INVEST_PREVIEW}/${view}.html`,`<!doctype html><html lang="ko"><meta charset="UTF-8"><style>${css}\nbody{margin:0;background:#edf1ee}.cg_canvas{position:relative;transform:none}.na_phone{width:390px;margin:12px auto}.ax_canvas{height:844px}.iv_scroll{overflow:auto}</style><div class="na_phone"><div class="na_ph_scr app ax axb"><div class="cg_canvas ax_canvas">${ui.investmentScreen(m,p,'10-30',view,view==='stock'?'NYSE:X':'',false)}</div></div></div></html>`);
 }
 
-const phonedata=await load('phonedata.js',{
+const phonedata=await load('phonedata.js',{'./wealth.js':wealthURL,
  './phoneprofile.js':pathToFileURL(new URL('../src/phoneprofile.js',import.meta.url).pathname).href,
  './ai.js':ai,'./finance.js':financeURL,'./core.js':encoded(`export const ctx=()=>globalThis.__investTest.context||({loadWorldInfo:async()=>null});export const globalSettings=()=>({});export const saveMeta=async()=>{globalThis.__investTest.saved++};`),
  './calendar.js':encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
@@ -254,8 +256,8 @@ test('bank creation and explicit rebuild include the chosen owner profile, not o
 });
 test('investment creation passes its selected profile into the source request',async()=>{
  const {m,p}=setup();p.financeProfile={type:'lore',book:'Family',id:'4'};
- const proxy=encoded(`export const storyNow=p=>p.now;export const sideRequest=async(m,owner,blocks,options)=>{globalThis.__investTest.profileOptions=options;return m.text+'\\n'+blocks.join('\\n')};`);
- const actual=await load('investdata.js',{'./ai.js':ai,'./core.js':core,'./phonedata.js':proxy,'./finance.js':financeURL});
+ const proxy=encoded(`export const prepareWealth=async()=>({currency:'EUR',deposits:{min:0,max:1e15},investments:{min:0,max:1e15},basis:'fixture'});export const storyNow=p=>p.now;export const sideRequest=async(m,owner,blocks,options)=>{globalThis.__investTest.profileOptions=options;return m.text+'\\n'+blocks.join('\\n')};`);
+ const actual=await load('investdata.js',{'./wealth.js':wealthURL,'./ai.js':ai,'./core.js':core,'./phonedata.js':proxy,'./finance.js':financeURL});
  await actual.fillInvestment(m,p,'2026-10-30');assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile});
  await actual.fillInvestment(m,p,'2026-10-30',{regenerate:true});assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile});
  globalThis.__investTest.answer={};
@@ -278,7 +280,7 @@ test('individual writing includes owner profile while camera and public search d
  const bridge=encoded(Object.keys(phonedata).map(k=>`export const ${k}=globalThis.__profileData.${k};`).join('\n'));
  const mod=await load('phoneai.js',{
  './phoneprofile.js':pathToFileURL(new URL('../src/phoneprofile.js',import.meta.url).pathname).href,
- './ai.js':encoded(`export const askAI=async(input)=>{globalThis.__investTest.inputs.push({input});return JSON.stringify(globalThis.__investTest.answer)};`),
+ './ai.js':encoded(`export const askAI=async(input)=>{globalThis.__investTest.inputs.push({input});return JSON.stringify(globalThis.__investTest.answers?.length ? globalThis.__investTest.answers.shift() : globalThis.__investTest.answer)};`),
  './core.js':encoded(`export const ctx=()=>globalThis.__investTest.context;export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
  './phonedata.js':bridge,'./anniv.js':encoded(`export const datedRows=()=>[];`),
  './calendar.js':encoded(`export const calendars=()=>({});`),'./drift.js':encoded(`export const recentForCheck=()=>[];`),
@@ -388,4 +390,60 @@ test('investment generation prompts share existing section format and keep JSON 
   const start=source.indexOf(`const ${name} = `),end=source.indexOf('`;',start);
   const prompt=source.slice(start,end);for(const heading of ['GOAL','YOU GET','RULES','ANSWER'])assert.ok(prompt.includes(heading),`${name}: ${heading}`);
  }
+});
+
+const scalePlan=(deposits,investments,cur='EUR')=>({currency:cur,deposits:{min:deposits,max:deposits},investments:{min:investments,max:investments},basis:'Explicit test scale'});
+test('wealth plan is shared and story/profile changes alone do not cause reassessment',async()=>{
+ const {m,p}=setup();
+ const first=await phonedata.prepareWealth(m,p);
+ m.text+=' A new RP message.';p.financeProfile={type:'character',id:'other.png'};globalThis.__investTest.context={characters:[{avatar:'other.png',description:'Updated profile.'}]};
+ assert.equal(await phonedata.prepareWealth(m,p),first);
+ assert.equal(globalThis.__investTest.wealthInputs.length,1);
+ await phonedata.prepareWealth(m,p,true);assert.equal(globalThis.__investTest.wealthInputs.length,2);
+});
+test('bank scale correction excludes credit spending and retries once without installing rejected records',async()=>{
+ const {m,p}=euroWallet();
+ const reply=amount=>({currency:'EUR',bank:{name:'Bank',accounts:[{id:'eur',kind:'checking',last4:'1234',currency:'EUR',balance:amount},{id:'credit',kind:'credit',last4:'5678',currency:'EUR',balance:900000}]},cards:[],tx:[],passes:[],orders:[]});
+ globalThis.__investTest.answers=[reply(100),reply(500000000)];
+ await phonedata.fillMoney(m,p,{regenerateBalances:true,wealthPlan:scalePlan(500000000,0)});
+ assert.equal(p.money.bank.accounts[0].balance,500000000);assert.equal(globalThis.__investTest.inputs.length,2);
+ assert.match(globalThis.__investTest.inputs[1].input,/SCALE CORRECTION/);
+ finance.migrateBank(m,p);const before=JSON.stringify([p.money,m.finance]);
+ globalThis.__investTest.answers=[reply(100),reply(200)];
+ await assert.rejects(phonedata.fillMoney(m,p,{regenerateBalances:true,wealthPlan:scalePlan(500000000,0)}),/재력 기준/);
+ assert.equal(globalThis.__investTest.inputs.length,4);assert.equal(JSON.stringify([p.money,m.finance]),before);
+});
+test('investment scale uses holdings plus cash, corrects once and keeps shared quotes fixed',async()=>{
+ const {m,p}=setup(),small=structuredClone(globalThis.__investTest.answer),large=structuredClone(small);
+ large.cash[0].amount=500000000;large.trades[0].quantity=1000000;
+ globalThis.__investTest.answers=[small,large];
+ await dataMod.fillInvestment(m,p,'2026-10-30',{wealthPlan:scalePlan(0,484500000)});
+ assert.equal(globalThis.__investTest.inputs.length,2);assert.equal(p.investment.trades[0].quantity,1000000);
+ const before=JSON.stringify([m.finance,p.investment]);
+ globalThis.__investTest.answers=[small,small];
+ await assert.rejects(dataMod.fillInvestment(m,p,'2026-10-30',{regenerate:true,wealthPlan:scalePlan(0,484500000)}),/재력 기준/);
+ assert.equal(globalThis.__investTest.inputs.length,4);assert.equal(JSON.stringify([m.finance,p.investment]),before);
+});
+test('missing bank FX cannot count as successful range validation',async()=>{
+ const {m,p}=euroWallet();finance.migrateBank(m,p);const before=JSON.stringify([p.money,m.finance]);
+ globalThis.__investTest.answer={currency:'EUR',bank:{name:'Bank',accounts:p.money.bank.accounts},cards:[],tx:[],passes:[],orders:[]};
+ await assert.rejects(phonedata.fillMoney(m,p,{regenerateBalances:true,wealthPlan:scalePlan(13000,0,'USD')}),/재력 기준/);
+ assert.equal(globalThis.__investTest.inputs.length,2);assert.match(globalThis.__investTest.inputs[1].input,/FX:EUR\/USD/);
+ assert.equal(JSON.stringify([p.money,m.finance]),before);
+});
+test('bank correction can supply missing FX without changing existing rates',async()=>{
+ const {m,p}=euroWallet();
+ const candidate={currency:'EUR',bank:{name:'Bank',accounts:p.money.bank.accounts},cards:[],tx:[],passes:[],orders:[]};
+ globalThis.__investTest.answers=[candidate,{...candidate,fx:[{from:'EUR',to:'USD',date:'2026-10-30',value:2}]}];
+ await phonedata.fillMoney(m,p,{regenerateBalances:true,wealthPlan:scalePlan(26000,0,'USD')});
+ assert.equal(globalThis.__investTest.inputs.length,2);assert.equal(finance.fx(m,'EUR','USD','2026-10-30'),2);
+});
+test('unpriced holdings fail valuation rather than becoming zero',async()=>{
+ const {m,p}=setup();globalThis.__investTest.answer.quotes=[];
+ await assert.rejects(dataMod.fillInvestment(m,p,'2026-10-30',{wealthPlan:scalePlan(0,950)}),/재력 기준/);
+ assert.equal(globalThis.__investTest.inputs.length,2);assert.match(globalThis.__investTest.inputs[1].input,/STOCK:NYSE:X/);assert.equal(p.investment,undefined);
+});
+test('malformed wealth ranges are rejected before app generation',async()=>{
+ const {readWealth}=await import(wealthURL);
+ for(const plan of [{currency:'EUR',deposits:{min:100,max:1},investments:{min:0,max:0},basis:'x'},{currency:'EUR',deposits:{min:'1',max:2},investments:{min:0,max:0},basis:'x'}]) assert.throws(()=>readWealth(JSON.stringify(plan)),/재력 기준/);
 });

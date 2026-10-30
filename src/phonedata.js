@@ -1,6 +1,7 @@
 // 캐릭터 휴대폰 · 데이터: what the phone holds — the model's JSON cleaned and merged, the request (archive, lorebook, world),
 // 롤플에 넣기, dates and times as the owner's phone shows them, and the places they have been.
 
+import { ensureWealth, wealthBlock, wealthDate, wealthCheck, addWealthFX } from './wealth.js';
 import { askDraft } from './ai.js';
 import { ownerProfileBlock } from './phoneprofile.js';
 import { migrateBank, finance, finite, cash, reviseBaseline } from './finance.js';
@@ -334,6 +335,7 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         const base = { owner, inject: false, ...got, wall: got.wall || 'dusk', accent: got.accent || 'blue', country: got.country || 'KR', threads: [], contacts: [], ...Object.fromEntries(LISTS.map(k => [k, []])) };
         if (was?.device) base.device = structuredClone(was.device);
         if (was?.theme) base.theme = was.theme;
+        if (was?.wealthPlan) base.wealthPlan = structuredClone(was.wealthPlan);
         if (was?.money) base.money = was.money;
         if (was?.investment) base.investment = was.investment;
         if (was?.financeProfile) base.financeProfile = structuredClone(was.financeProfile);
@@ -536,9 +538,12 @@ export function parseMoney(raw) {
 }
 // what the phone already holds, so the money side reuses its event tags
 const moneyContext = p => JSON.stringify({ now: p.now, mails: (p.mails || []).slice(-8).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })), events: real(p.events).slice(-8).map(x => ev(x, { title: x.title, date: x.date, time: x.time })), searches: real(p.searches).slice(-6).map(x => ev(x, { q: x.q, time: x.time })) });
-export async function fillMoney(m, p, { regenerateBalances = false } = {}) {
+export const prepareWealth = (m,p,refresh=false) => ensureWealth(m,p,()=>sideRequest(m,p.owner,[`[OWNER COUNTRY]\n${p.country || ''}`,`[ACCOUNT CURRENCIES]\n${JSON.stringify((p.money?.bank?.accounts || []).map(a=>a.currency))}`],{profile:p.financeProfile}),{refresh});
+export async function fillMoney(m, p, { regenerateBalances = false, wealthPlan = null } = {}) {
     migrateBank(m, p);
     const old = p.money, rebuild = !!old && regenerateBalances;
+    const plan = wealthPlan || await prepareWealth(m,p,regenerateBalances);
+    const date = wealthDate(m,p);
     const accountState = () => JSON.stringify([p.money,p.financeProfile,finance(m)]);
     const before = accountState();
     const preserved = rebuild ? `[REBUILD ACCOUNTS]\n${JSON.stringify(old.bank.accounts.map(({id,kind,name,last4,currency})=>({id,kind,name,last4,currency})))}\n[APPLIED CASH ENTRIES]\n${JSON.stringify(old.bank.accounts.map(a=>({id:a.id,currency:a.currency,entries:finance(m).accounts[`${a.id}:${a.currency}`]?.entries || {}})))}` : old ? `[EXISTING ACCOUNTS]\n${JSON.stringify(old.bank.accounts)}` : '';
@@ -548,55 +553,64 @@ REBUILD ACCOUNTS explicitly requests new balances, not locked snapshots. Keep ev
 Regenerate cards, transactions, passes and orders together from the supplied story and owner profile. Previous generated records are replaced, not carried forward. Re-read explicit receipts, spending and purchases from the story; keep their owner, amount, currency and date. Matching orders, passes and card payments describe the same event: use consistent dates, amounts and ev tags.
 Each balance is the CURRENT balance AFTER the newly returned transactions and applied cash entries, not an opening balance. Applied cash entries remain in the ledger; do not duplicate them in tx or replay them. They may describe the same story event: never count it twice. Do not replay transfers, currency conversion, or credit company/family assets to personal cash. Explicit current personal balances take priority; preserve the amounts and currencies of established receipts and spending (for example, EUR 15000 received and EUR 2000 spent may leave EUR 13000 when no other funds or movements exist).
 Return complete cards, tx, passes and orders arrays (empty when appropriate); all tx must reference a returned account last4. Credit balance is current monthly spending, never deposit cash. Return a finite nonnegative balance for every account and explain the evidence/invented scale in basis.` : '');
-    const out = await askDraft(await sideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p)}`, preserved], {profile:p.financeProfile}), { system, maxTokens: 12000 });
-    const raw = jsonOf(out), next = parseMoney(raw);
-    if (p.money !== old || accountState() !== before) throw new Error('생성 중 계좌가 변경됐어요. 다시 시도해 주세요');
-    if (old) {
+    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p)}`,preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}\nAlso return fx:[{from,to,date,value}] for account currencies to ${plan.currency}; existing rates: ${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`],{profile:p.financeProfile});
+    let correction='';
+    for(let attempt=0;attempt<2;attempt++) {
+        const out = await askDraft(input+'\n'+correction,{system,maxTokens:12000});
+        const raw = jsonOf(out), next = parseMoney(raw);
+        if (p.money !== old || accountState() !== before) throw new Error('생성 중 계좌가 변경됐어요. 다시 시도해 주세요');
+        if (old) {
+            if (rebuild) {
+                const rows = raw?.bank?.accounts;
+                if (!Array.isArray(rows) || rows.length !== old.bank.accounts.length || old.bank.accounts.some(a => {
+                    const matches = rows.filter(b=>b.id === a.id);
+                    return matches.length !== 1 || matches[0].currency !== a.currency || matches[0].kind !== a.kind || String(matches[0].last4) !== a.last4 || !finite(matches[0].balance) || matches[0].balance < 0;
+                })) throw new Error('새 계좌 잔액을 확인하지 못했어요. 기존 잔액은 유지돼요');
+                if (['cards','tx','passes','orders'].some(k=>!Array.isArray(raw[k])) || next.tx.some(t=>!old.bank.accounts.some(a=>a.last4===t.account))) throw new Error('새 거래 내역을 확인하지 못했어요. 기존 데이터는 유지돼요');
+                next.bank.accounts = old.bank.accounts.map(a => {
+                    const b = rows.find(b=>b.id === a.id);
+                    return {...a,name:next.bank.accounts.find(b=>b.id === a.id)?.name || a.name,balance:b.balance,...(a.kind === 'credit' ? {spent:b.balance} : {})};
+                });
+            } else next.bank.accounts = old.bank.accounts.map(a => ({ ...a, name: next.bank.accounts.find(b => b.id === a.id)?.name || a.name }));
+            next.currency = old.currency;
+            next.displayCurrency = old.displayCurrency;
+            next.fxDate = old.fxDate;
+            if (!rebuild) next.tx = old.tx;
+            next.asOf = old.asOf;
+            if (!rebuild) next.basis = old.basis || next.basis;
+        }
+        // Stage the whole result: malformed responses cannot partially rewrite a baseline.
+        const staged = {finance:structuredClone(finance(m))};
+        if (rebuild) for (const a of next.bank.accounts) {
+            if (a.kind === 'credit') continue;
+            const key = `${a.id}:${a.currency}`, ledger = staged.finance.accounts[key];
+            if (ledger) {
+                // The new amount is current cash. Retain all ledger entries and offset them once.
+                const net = cash(ledger) - ledger.amount;
+                reviseBaseline(staged,key,a.balance - net,'계좌 새로 만들기');
+            }
+        }
+        const updated = {...p,money:{...next,at:Date.now()}};
+        ensureIds(updated);
         if (rebuild) {
-            const rows = raw?.bank?.accounts;
-            if (!Array.isArray(rows) || rows.length !== old.bank.accounts.length || old.bank.accounts.some(a => {
-                const matches = rows.filter(b=>b.id === a.id);
-                return matches.length !== 1 || matches[0].currency !== a.currency || matches[0].kind !== a.kind || String(matches[0].last4) !== a.last4 || !finite(matches[0].balance) || matches[0].balance < 0;
-            })) throw new Error('새 계좌 잔액을 확인하지 못했어요. 기존 잔액은 유지돼요');
-            if (['cards','tx','passes','orders'].some(k=>!Array.isArray(raw[k])) || next.tx.some(t=>!old.bank.accounts.some(a=>a.last4===t.account))) throw new Error('새 거래 내역을 확인하지 못했어요. 기존 데이터는 유지돼요');
-            next.bank.accounts = old.bank.accounts.map(a => {
-                const b = rows.find(b=>b.id === a.id);
-                return {...a,name:next.bank.accounts.find(b=>b.id === a.id)?.name || a.name,balance:b.balance,...(a.kind === 'credit' ? {spent:b.balance} : {})};
-            });
-        } else next.bank.accounts = old.bank.accounts.map(a => ({ ...a, name: next.bank.accounts.find(b => b.id === a.id)?.name || a.name }));
-        next.currency = old.currency;
-        next.displayCurrency = old.displayCurrency;
-        next.fxDate = old.fxDate;
-        if (!rebuild) next.tx = old.tx;
-        next.asOf = old.asOf;
-        if (!rebuild) next.basis = old.basis || next.basis;
-    }
-    // Stage the whole result: malformed responses cannot partially rewrite a baseline.
-    const staged = {finance:structuredClone(finance(m))};
-    if (rebuild) for (const a of next.bank.accounts) {
-        if (a.kind === 'credit') continue;
-        const key = `${a.id}:${a.currency}`, ledger = staged.finance.accounts[key];
-        if (ledger) {
-            // The new amount is current cash. Retain all ledger entries and offset them once.
-            const net = cash(ledger) - ledger.amount;
-            reviseBaseline(staged,key,a.balance - net,'계좌 새로 만들기');
+            const oldIds = new Set((old.tx || []).map(t=>t.id));
+            for (const a of next.bank.accounts) {
+                const ledger = staged.finance.accounts[`${a.id}:${a.currency}`];
+                if (!ledger || a.kind === 'credit') continue;
+                ledger.included = ledger.included.filter(id=>!oldIds.has(id) || staged.finance.transfers[id]);
+                ledger.included = [...new Set([...ledger.included,...updated.money.tx.filter(t=>t.account===a.last4).map(t=>t.id)])];
+            }
         }
-    }
-    const updated = {...p,money:{...next,at:Date.now()}};
-    ensureIds(updated);
-    if (rebuild) {
-        const oldIds = new Set((old.tx || []).map(t=>t.id));
-        for (const a of next.bank.accounts) {
-            const ledger = staged.finance.accounts[`${a.id}:${a.currency}`];
-            if (!ledger || a.kind === 'credit') continue;
-            ledger.included = ledger.included.filter(id=>!oldIds.has(id) || staged.finance.transfers[id]);
-            ledger.included = [...new Set([...ledger.included,...updated.money.tx.filter(t=>t.account===a.last4).map(t=>t.id)])];
+        migrateBank(staged,updated);
+        if (!old || rebuild) {
+            addWealthFX(staged,raw.fx,date);
+            correction=wealthCheck(staged,plan,'deposits',updated.money.bank.accounts.filter(a=>a.kind!=='credit').map(a=>({currency:a.currency,amount:a.balance})),date);
+            if(correction) {if(attempt===0) {correction += '\n[PREVIOUS CANDIDATE]\n'+JSON.stringify(raw);continue;}throw new Error('예금 규모를 재력 기준에 맞추지 못했어요. 기존 금융 데이터는 유지돼요');}
         }
+        p.money = updated.money; m.finance = staged.finance;
+        await saveMeta();
+        return p.money;
     }
-    migrateBank(staged,updated);
-    p.money = updated.money; m.finance = staged.finance;
-    await saveMeta();
-    return p.money;
 }
 export async function fillVoice(m, p) {
     const diary = (p.diary || []).slice(-6).map(d => `- ${d.date} ${d.title}`).join('\n');

@@ -1,7 +1,8 @@
 // Investment generation: private portfolios, shared public quotes. All invented records stay out of RP injection.
+import { wealthBlock, wealthCheck, investmentWealthRows } from './wealth.js';
 import { askDraft } from './ai.js';
 import { saveMeta } from './core.js';
-import { sideRequest, storyNow } from './phonedata.js';
+import { sideRequest, storyNow, prepareWealth } from './phonedata.js';
 import { baseline, reviseBaseline, cash, currency, finance, finite, uid, positions, addPrice, migrateBank, fx, quoteKey } from './finance.js';
 
 export const INVEST_SYS = `GOAL
@@ -71,10 +72,11 @@ function ingestQuotes(m, raw, input, date, securities) {
     for (const x of list(raw.quotes).slice(0, 60)) if (allowed.has(x.symbol)) push(`STOCK:${x.symbol}`, x);
     for (const x of list(raw.fx).slice(0, 30)) if (currency(x.from) && currency(x.to) && x.from !== x.to) push(`FX:${x.from}/${x.to}`, x);
 }
-export async function fillInvestment(m, p, date, {regenerate = false} = {}) {
+export async function fillInvestment(m, p, date, {regenerate = false, wealthPlan = null} = {}) {
     const old = p.investment;
     if (old && !regenerate) throw new Error('기존 투자 기록은 보존돼요. 시세 갱신을 사용해 주세요');
     if (!validDate(date)) throw new Error('이야기 날짜를 YYYY-MM-DD로 입력해 주세요');
+    const plan = wealthPlan || await prepareWealth(m,p,regenerate);
     if (!old) migrateBank(m, p);
     const oldKeys = new Set((old?.accounts || []).map(a=>a.key));
     const oldTradeIds = new Set((old?.trades || []).map(t=>t.id));
@@ -85,49 +87,56 @@ export async function fillInvestment(m, p, date, {regenerate = false} = {}) {
         const entries=Object.fromEntries(Object.entries(a.entries).filter(([id])=>!oldTradeIds.has(id) || finance(m).transfers[id]));
         return {...a,entries};
     });
+    finance(m);
     const snapshot = () => JSON.stringify([m.finance,p.investment,p.money,p.financeProfile]);
     const before = snapshot();
     const rebuild = old ? `[REBUILD INVESTMENT]\nReplace ordinary securities, trades and watch lists using the owner's current profile and story. Generate fresh opening cash amounts, securities and trades appropriate to the current story and owner profile; old cash amounts are context, not fixed targets. Return cash for every existing account currency; new currencies are allowed. Old investment trades will be replaced; do not recreate bank transfers. External entries below are applied once by the app, not trades to return. Transfers marked included are already part of the opening cash; do not add them again. Generate affordable trades after the external entries.\n[PRESERVED INVESTMENT CASH]\n${JSON.stringify(preserved)}` : '';
-    const input = await sideRequest(m, p.owner, [`[DATE]\n${date}`, `[BANK — separate locked balances]\n${JSON.stringify(p.money?.bank || {})}`, rebuild], {profile:p.financeProfile});
-    const raw = json(await askDraft(input, { system: INVEST_SYS, maxTokens: 12000 }));
-    if (p.investment!==old || snapshot()!==before || m.phones && !Object.values(m.phones).includes(p)) throw new Error('생성 중 금융 정보가 변경됐어요. 다시 시도해 주세요');
-    if (!currency(raw.base)) throw new Error('기준 통화를 확인하지 못했어요');
-    const securities = list(raw.securities).slice(0, 10).map(s => ({ symbol: text(s.symbol, 80), name: text(s.name, 100), ko: text(s.ko, 100), currency: currency(s.currency) })).filter(s => s.symbol && s.name && s.currency);
-    if (new Set(securities.map(s => s.symbol)).size !== securities.length) throw new Error('중복 종목이 있어요');
-    const trades = list(raw.trades).slice(0, 30).map(t => ({ id: uid(), kind: t.kind, symbol: text(t.symbol, 80), currency: t.currency, date: t.date, quantity: t.quantity, price: t.price, fee: t.fee, amount: t.amount, source: 'guess' })).sort((a, b) => String(a.date).localeCompare(String(b.date)));
-    for (const t of trades) if (!validDate(t.date) || t.date > date || !securities.some(s => s.symbol === t.symbol && s.currency === t.currency)) throw new Error('거래 날짜나 종목 통화가 맞지 않아요');
-    positions(trades); // rejects overselling before any mutation
-    const starting = list(raw.cash).slice(0, 8);
-    if (!starting.length || starting.some(x => !currency(x.currency) || !finite(x.amount) || x.amount < 0) || new Set(starting.map(x => x.currency)).size !== starting.length) throw new Error('통화별 시작 잔액이 필요해요');
-    const scratch = { finance: structuredClone(finance(m)) }, accountId = preserved[0]?.id || uid();
-    // Reuse account identities and external records; explicitly revise opening cash on rebuild.
-    for(const a of preserved) scratch.finance.accounts[`${a.id}:${a.currency}`]=structuredClone(a);
-    const currencies=new Set(preserved.map(a=>a.currency));
-    if(currencies.size!==preserved.length) throw new Error('통화별 투자 계좌를 확인해 주세요');
-    const accounts=preserved.map(a=>({key:`${a.id}:${a.currency}`,currency:a.currency}));
-    for(const a of preserved) {
-        const opening=starting.find(x=>x.currency===a.currency);
-        if(!opening) throw new Error('기존 계좌 통화의 시작 잔액이 필요해요');
-        reviseBaseline(scratch,`${a.id}:${a.currency}`,opening.amount,'투자 다시 만들기');
+    const input = await sideRequest(m, p.owner, [`[DATE]\n${date}`, `[BANK — separate locked balances]\n${JSON.stringify(p.money?.bank || {})}`, rebuild,wealthBlock(plan,'investments'),`[EXISTING PUBLIC PRICES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).map(([k,book])=>[k,book[date]])))}`], {profile:p.financeProfile});
+    let correction='';
+    for(let attempt=0;attempt<2;attempt++) {
+        const raw = json(await askDraft(input+'\n'+correction, { system: INVEST_SYS, maxTokens: 12000 }));
+        if (p.investment!==old || snapshot()!==before || m.phones && !Object.values(m.phones).includes(p)) throw new Error('생성 중 금융 정보가 변경됐어요. 다시 시도해 주세요');
+        if (!currency(raw.base)) throw new Error('기준 통화를 확인하지 못했어요');
+        const securities = list(raw.securities).slice(0, 10).map(s => ({ symbol: text(s.symbol, 80), name: text(s.name, 100), ko: text(s.ko, 100), currency: currency(s.currency) })).filter(s => s.symbol && s.name && s.currency);
+        if (new Set(securities.map(s => s.symbol)).size !== securities.length) throw new Error('중복 종목이 있어요');
+        const trades = list(raw.trades).slice(0, 30).map(t => ({ id: uid(), kind: t.kind, symbol: text(t.symbol, 80), currency: t.currency, date: t.date, quantity: t.quantity, price: t.price, fee: t.fee, amount: t.amount, source: 'guess' })).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+        for (const t of trades) if (!validDate(t.date) || t.date > date || !securities.some(s => s.symbol === t.symbol && s.currency === t.currency)) throw new Error('거래 날짜나 종목 통화가 맞지 않아요');
+        positions(trades); // rejects overselling before any mutation
+        const starting = list(raw.cash).slice(0, 8);
+        if (!starting.length || starting.some(x => !currency(x.currency) || !finite(x.amount) || x.amount < 0) || new Set(starting.map(x => x.currency)).size !== starting.length) throw new Error('통화별 시작 잔액이 필요해요');
+        const scratch = { finance: structuredClone(finance(m)) }, accountId = preserved[0]?.id || uid();
+        // Reuse account identities and external records; explicitly revise opening cash on rebuild.
+        for(const a of preserved) scratch.finance.accounts[`${a.id}:${a.currency}`]=structuredClone(a);
+        const currencies=new Set(preserved.map(a=>a.currency));
+        if(currencies.size!==preserved.length) throw new Error('통화별 투자 계좌를 확인해 주세요');
+        const accounts=preserved.map(a=>({key:`${a.id}:${a.currency}`,currency:a.currency}));
+        for(const a of preserved) {
+            const opening=starting.find(x=>x.currency===a.currency);
+            if(!opening) throw new Error('기존 계좌 통화의 시작 잔액이 필요해요');
+            reviseBaseline(scratch,`${a.id}:${a.currency}`,opening.amount,'투자 다시 만들기');
+        }
+        for(const x of starting) if(!currencies.has(x.currency)) {
+            const a=baseline(scratch,accountId,x.currency,x.amount,trades[0]?.date || date,p.owner);
+            accounts.push({key:`${a.id}:${a.currency}`,currency:a.currency});currencies.add(x.currency);
+        }
+        for (const t of trades) {
+            const a = scratch.finance.accounts[accounts.find(a=>a.currency===t.currency)?.key];
+            if (!a) throw new Error('거래 통화의 현금 계좌가 없어요');
+            const amount = t.kind === 'buy' ? -(t.quantity * t.price + t.fee) : t.kind === 'sell' ? t.quantity * t.price - t.fee : t.amount;
+            a.entries[t.id] = { amount, date: t.date };
+            if (cash(a) < -0.01) throw new Error('생성된 거래에 필요한 현금이 부족해요. 다시 채워 주세요');
+        }
+        if(accounts.some(a=>cash(scratch.finance.accounts[a.key]) < -0.01)) throw new Error('기존 이체를 유지할 투자 잔액이 부족해요');
+        const stakes = list(raw.stakes).slice(0, 8).filter(s => s.evidence && input.includes(String(s.evidence))).map(s => ({ id: uid(), company: text(s.company, 100), listed: typeof s.listed === 'boolean' ? s.listed : null, percent: finite(s.percent) && s.percent >= 0 && s.percent <= 100 ? s.percent : null, holder: text(s.holder), voter: text(s.voter), beneficiary: text(s.beneficiary), restriction: text(s.restriction), value: finite(s.value) && s.value >= 0 ? s.value : null, currency: currency(s.currency), evidence: text(s.evidence, 2000), source: 'story' }));
+        ingestQuotes(scratch, raw, input, date, securities);
+        for (const t of trades) t.rateAtTrade = fx(scratch, t.currency, raw.base, t.date);
+        correction=wealthCheck(scratch,plan,'investments',investmentWealthRows(scratch,accounts,trades,securities,date),date);
+        if(correction) {if(attempt===0) {correction += '\n[PREVIOUS CANDIDATE]\n'+JSON.stringify(raw);continue;}throw new Error('투자 규모를 재력 기준에 맞추지 못했어요. 기존 금융 데이터는 유지돼요');}
+        m.finance = scratch.finance;
+        p.investment = { at: Date.now(), version: 1, base: raw.base, date, basis: text(raw.basis, 2000), securities, accounts, trades, stakes, watch: list(raw.watch).slice(0, 8).filter(w => securities.some(s => s.symbol === w.symbol)).map(w => ({ symbol: w.symbol, note: text(w.note), ko: text(w.ko), query: text(w.query, 120), source: 'guess' })), generatedDates: [date] };
+        await saveMeta();
+        return;
     }
-    for(const x of starting) if(!currencies.has(x.currency)) {
-        const a=baseline(scratch,accountId,x.currency,x.amount,trades[0]?.date || date,p.owner);
-        accounts.push({key:`${a.id}:${a.currency}`,currency:a.currency});currencies.add(x.currency);
-    }
-    for (const t of trades) {
-        const a = scratch.finance.accounts[accounts.find(a=>a.currency===t.currency)?.key];
-        if (!a) throw new Error('거래 통화의 현금 계좌가 없어요');
-        const amount = t.kind === 'buy' ? -(t.quantity * t.price + t.fee) : t.kind === 'sell' ? t.quantity * t.price - t.fee : t.amount;
-        a.entries[t.id] = { amount, date: t.date };
-        if (cash(a) < -0.01) throw new Error('생성된 거래에 필요한 현금이 부족해요. 다시 채워 주세요');
-    }
-    if(accounts.some(a=>cash(scratch.finance.accounts[a.key]) < -0.01)) throw new Error('기존 이체를 유지할 투자 잔액이 부족해요');
-    const stakes = list(raw.stakes).slice(0, 8).filter(s => s.evidence && input.includes(String(s.evidence))).map(s => ({ id: uid(), company: text(s.company, 100), listed: typeof s.listed === 'boolean' ? s.listed : null, percent: finite(s.percent) && s.percent >= 0 && s.percent <= 100 ? s.percent : null, holder: text(s.holder), voter: text(s.voter), beneficiary: text(s.beneficiary), restriction: text(s.restriction), value: finite(s.value) && s.value >= 0 ? s.value : null, currency: currency(s.currency), evidence: text(s.evidence, 2000), source: 'story' }));
-    ingestQuotes(scratch, raw, input, date, securities);
-    for (const t of trades) t.rateAtTrade = fx(scratch, t.currency, raw.base, t.date);
-    m.finance = scratch.finance;
-    p.investment = { at: Date.now(), version: 1, base: raw.base, date, basis: text(raw.basis, 2000), securities, accounts, trades, stakes, watch: list(raw.watch).slice(0, 8).filter(w => securities.some(s => s.symbol === w.symbol)).map(w => ({ symbol: w.symbol, note: text(w.note), ko: text(w.ko), query: text(w.query, 120), source: 'guess' })), generatedDates: [date] };
-    await saveMeta();
 }
 export async function refreshMarket(m, p, date, checkStory = false) {
     if (!validDate(date)) throw new Error('이야기 날짜를 확인해 주세요');
