@@ -532,11 +532,10 @@ export function setScreen(p, now, m, ui) {
         <div class="ax_card">
           <label class="ax_rw">${si('#8faed1', 'globe')}<span class="ax_tx"><span class="ax_n">국적</span></span><span class="ax_v">${esc(COUNTRIES[p.country] || p.country || '')}</span>${axChev}<select class="na_ph_country ax_sel" aria-label="국적">${Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === p.country ? 'selected' : ''}>${v}</option>`).join('')}${COUNTRIES[p.country] ? '' : `<option value="${esc(p.country)}" selected>${esc(p.country)}</option>`}</select></label>
           <button type="button" class="ax_rw na_ph_looksbtn2">${si('#d89f98', 'user')}<span class="ax_tx"><span class="ax_n">외모</span></span><span class="ax_v">${nLooks ? `${nLooks}명` : ''}</span>${axChev}</button>
-          <div class="ax_rw">${si('#a2a7af', 'info')}<span class="ax_tx"><span class="ax_n">이 폰에 대해</span></span><span class="ax_v cg_num">${p.upto >= 0 ? `#${p.upto}까지` : ''}</span></div>
+          <button type="button" class="ax_rw" data-go="setprofile">${si('#8faed1', 'user')}<span class="ax_tx"><span class="ax_n">인물 정보 연결</span></span><span class="ax_v">${esc(p.financeProfile?.label || '연결 안 함')}</span>${axChev}</button>
         </div>
         <div class="ax_sec">아카이브</div>
         <div class="ax_card">
-          <button type="button" class="ax_rw" data-go="setprofile">${si('#8faed1', 'user')}<span class="ax_tx"><span class="ax_n">인물 정보 연결</span></span><span class="ax_v">${esc(p.financeProfile?.label || '연결 안 함')}</span>${axChev}</button>
           <button type="button" class="ax_rw" data-go="setlore">${si('#dcc680', 'book')}<span class="ax_tx"><span class="ax_n">참고 로어북</span></span><span class="ax_v">${(n => (n ? `${n}권` : '없음'))(phoneLore(m).length)}</span>${axChev}</button>
           <button type="button" class="ax_rw na_ph_setinj">${si('#d494a7', 'in')}<span class="ax_tx"><span class="ax_n">롤플에 넣기</span></span><span class="ax_sw ${p.inject ? 'on' : ''}"></span></button>
           <button type="button" class="ax_rw na_ph_setupd">${si('#8faed1', 'redo')}<span class="ax_tx"><span class="ax_n">새로 일어난 일 반영</span></span><span class="ax_v">${ui.newN ? `새 섹션 ${ui.newN}` : ''}</span></button>
