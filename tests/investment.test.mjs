@@ -155,11 +155,13 @@ function euroWallet() {
  p.money={currency:'EUR',fxDate:'2026-10-30',bank:{name:'Bank',accounts:[{id:'eur',kind:'checking',last4:'1234',currency:'EUR',balance:13000},{id:'credit',kind:'credit',last4:'5678',currency:'EUR',balance:2000}]},cards:[{account:'1234'}],tx:[],passes:[],orders:[]};
  return {m,p};
 }
-test('bank and wallet convert EUR cash to KRW without converting the ledger or counting credit',()=>{
+test('bank converts EUR cash to KRW without converting the ledger or counting credit',()=>{
  const {m,p}=euroWallet();finance.migrateBank(m,p);const before=JSON.stringify(m.finance.accounts);
  finance.addPrice(m,'FX:EUR/KRW','2026-10-30',{value:1500,source:'guess'});
  assert.equal(moneyUI.bankDisplayCurrency(p),'KRW');
- for(const html of [moneyUI.bankHome(p,'10-30'),moneyUI.walletScreen(p,'10-30'),moneyUI.bankAcct(p,'10-30','0'),moneyUI.cardView(p,'10-30','0')]) {
+ assert.doesNotMatch(moneyUI.walletScreen(p,'10-30'),/ax_fx_total|bank_display|bank_fxrefresh/);
+ assert.doesNotMatch(moneyUI.cardView(p,'10-30','0'),/ax_fx_cardnote|19,500,000/);
+ for(const html of [moneyUI.bankHome(p,'10-30'),moneyUI.bankAcct(p,'10-30','0')]) {
   assert.match(html,/19,500,000/);assert.doesNotMatch(html,/22,500,000/);
  }
  assert.match(moneyUI.bankAcct(p,'10-30','0'),/13,000/);assert.match(moneyUI.bankAcct(p,'10-30','0'),/가상 환율/);
@@ -169,7 +171,7 @@ test('bank and wallet convert EUR cash to KRW without converting the ledger or c
 });
 test('missing or stale display FX never creates a full total or a fake conversion',()=>{
  const {m,p}=euroWallet();finance.addPrice(m,'FX:EUR/KRW','2026-10-29',{value:1500});
- for(const html of [moneyUI.bankHome(p,'10-30'),moneyUI.walletScreen(p,'10-30')]) {assert.match(html,/환산 미완료/);assert.match(html,/환산 대기/);assert.doesNotMatch(html,/19,500,000/);}
+ for(const html of [moneyUI.bankHome(p,'10-30')]) {assert.match(html,/환산 미완료/);assert.match(html,/환산 대기/);assert.doesNotMatch(html,/19,500,000/);}
  assert.match(moneyUI.bankAcct(p,'10-30','0'),/KRW 환산 대기/);assert.equal(p.money.bank.accounts[0].balance,13000);
 });
 test('bank FX refresh works without a portfolio and accepts only requested dates/pairs',async()=>{

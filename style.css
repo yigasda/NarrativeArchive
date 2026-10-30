@@ -5724,7 +5724,3 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .bank_fxrefresh { --axbg: #e8efec; color: #24664d; border-radius: 10px; padding: 9px 10px; font-size: 12px; }
 .ax_fx_tools > small { flex-basis: 100%; color: #89938e; font-size: 10px; line-height: 1.5; }
 .ax_accv .ax_fx_note { display: block; max-width: 150px; white-space: normal; font-size: 10px; line-height: 1.5; margin-top: 5px; }
-.ax_fx_total { padding: 18px; display: flex; flex-direction: column; gap: 8px; }
-.ax_fx_total b { font-size: 27px; color: #172d23; }
-.ax_fx_total small, .ax_fx_total > span, .ax_fx_cardnote { color: #7b8784; font-size: 11px; line-height: 1.6; }
-.ax_fx_cardnote { margin: 0 22px 18px; }

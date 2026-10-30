@@ -195,13 +195,12 @@ function qr(seed) {
 export function walletScreen(p, now) {
     const M = mo(p);
     if (!M) return emptyApp(p, now, '지갑', 'money', '아직 지갑이 비어 있어요. 채우면 은행 · 지갑 · 쇼핑이 함께 생겨요.');
-    const sum = bankSum(p);
+    migrateBank(getMeta(),p);
     const ps = [...M.passes].sort((a, b) => String(a.date).localeCompare(String(b.date)));
     return `${axBar(p, now)}
       ${axTop(axCb('home2'))}
       <div class="ax_scroll">
         ${axH1('지갑', `카드 ${M.cards.length} · 패스 ${ps.length}`)}
-        <div class="ax_card ax_fx_total"><small>${sum.complete ? '연결 계좌 잔액 · ' + esc(bankDisplayCurrency(p)) + ' 기준' : '환산 가능한 소계 · 환산 미완료'}</small><b>${esc(fmtIn(p,sum.value,bankDisplayCurrency(p)))}</b>${missingSum(p,sum)}<small>신용카드 사용액 제외 · ${esc(bankDate(p) || '날짜 미확정')}</small></div>${displayTools(p)}
         ${M.cards.length ? `<div class="ax_wl ax_ccstack">${M.cards.map((c, i) => `<button type="button" class="ax_wlb" data-go="card" data-i="${i}">${cardArt(p, c)}</button>`).join('')}</div>` : ''}
         ${ps.length ? `<div class="ax_shd">패스<span>${ps.length}개</span></div><div class="ax_wl ax_psstack">${ps.map(x => `<button type="button" class="ax_wlb" data-go="pass" data-i="${x.id}">${passArt(p, x, false)}</button>`).join('')}</div>` : ''}
         <i class="ax_pad"></i>
@@ -218,7 +217,7 @@ export function cardView(p, now, i) {
       ${axTop(axCb('wallet'))}
       <div class="ax_scroll">
         <div class="ax_wl">${cardArt(p, c)}</div>
-        ${a ? `<div class="ax_cbal"><span>${kindName[a.kind]} ${a.kind === 'credit' ? '사용액' : '잔액'}</span><b class="cg_num">${esc(fmtMoney({ ...p, money: { currency: a.currency || mo(p).currency } }, a.kind === 'credit' ? a.spent ?? a.balance : a.balance))}</b></div>${converted(p,a) ? `<p class="ax_fx_cardnote">${converted(p,a)}</p>` : ''}` : ''}
+        ${a ? `<div class="ax_cbal"><span>${kindName[a.kind]} ${a.kind === 'credit' ? '사용액' : '잔액'}</span><b class="cg_num">${esc(fmtMoney({ ...p, money: { currency: a.currency || mo(p).currency } }, a.kind === 'credit' ? a.spent ?? a.balance : a.balance))}</b></div>` : ''}
         <div class="ax_shd">최근 결제${ai >= 0 ? `<button type="button" data-go="acct" data-i="${ai}">은행에서 보기 ›</button>` : ''}</div>
         <div class="ax_card">${xs.map(x => txRow(p, x)).join('') || '<div class="ax_empty">결제가 없어요</div>'}</div>
         <i class="ax_pad"></i>
