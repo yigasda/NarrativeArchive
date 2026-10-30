@@ -96,7 +96,7 @@ function resultsBody(p, x, k, busy) {
         ${x.news?.length ? `<div class="wb_sec"><span>주요 뉴스</span></div><div class="wb_news">${x.news.map(n => `<div class="wb_nc">${art(n.title, 96)}<span class="wb_nt"><span class="wb_ns"><i style="background: ${colorOf(n)}"></i>${esc(n.site)}</span><b>${esc(n.title)}</b>${k1(n.kt)}<small>${esc(n.ago)}</small></span></div>`).join('')}</div>` : ''}
         ${x.questions?.length ? `<div class="wb_sec"><span>함께 찾은 질문</span></div><div class="wb_card">${x.questions.map(q => `<div class="wb_qq">${esc(q.q)}${k1(q.ko)}</div>`).join('')}</div>` : ''}
         ${x.related?.length ? `<div class="wb_sec"><span>관련 검색어</span></div><div class="wb_rel">${x.related.map(w => `<span>${ax('search', 13, 'currentColor', 2.6)}${esc(w)}</span>`).join('')}</div>` : ''}`
-        : busy ? `<div class="wb_wait">${busyHtml} 검색 결과 불러오는 중</div>` : '<div class="wb_wait"><button type="button" class="wb_go na_ph_sgo">결과 불러오기</button><br>AI 기능 모델이 결과 페이지를 한 번 만들어 두어요</div>'}`;
+        : busy ? `<div class="wb_wait">${busyHtml} 검색 결과 불러오는 중</div>` : '<div class="wb_wait"><button type="button" class="wb_go na_ph_sgo">결과 불러오기</button></div>'}`;
 }
 export function searchOne(p, now, k, busy) {
     const x = p.searches[k];
@@ -199,7 +199,7 @@ function pageBody(p, x, k, r, busy) {
     // not written yet: the site's header, and the snippet until the page comes
     const pg = { nav: [], title: res.title, kt: res.kt, lede: null, body: res.text ? [{ text: res.text, ko: res.ko }] : [] };
     return `<div class="wb_web wbk_${kind}">${KIND_DRAW[kind](p, res, pg, c)}
-      <div class="wb_wait">${busy ? `${busyHtml} 페이지 여는 중` : '<button type="button" class="wb_go na_ph_pgo">페이지 열기</button><br>AI 기능 모델이 이 페이지를 한 번 만들어 두어요'}</div></div>`;
+      <div class="wb_wait">${busy ? `${busyHtml} 페이지 여는 중` : '<button type="button" class="wb_go na_ph_pgo">페이지 열기</button>'}</div></div>`;
 }
 export function pageView(p, now, key, busy) {
     const [k, r] = String(key).split('.').map(Number), x = p.searches[k], res = x?.results?.[r];

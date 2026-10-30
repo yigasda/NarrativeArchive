@@ -71,7 +71,7 @@ function frame(p, now, { back = 'invest', title = '', right = '', tab = '', body
 }
 // the evaluation day and the market calls, kept small: a real app has no such row, but the story's date is ours to set
 const tools = (m, p, busy) => p.investment
-    ? `<div class="iv_card iv_tools sm"><span class="iv_toolsl">시세 날짜</span><input type="date" class="iv_date" value="${esc(investmentDate(m, p))}"><button type="button" class="iv_refresh iv_link" ${busy ? 'disabled' : ''}>${busy ? '불러오는 중…' : '시세 갱신'}</button><button type="button" class="iv_sync iv_link">원문 확인</button></div>`
+    ? `<div class="iv_card iv_tools sm"><span class="iv_toolsl">시세 날짜</span><input type="date" class="iv_date" value="${esc(investmentDate(m, p))}"><button type="button" class="iv_refresh iv_link" ${busy ? 'disabled' : ''}>${busy ? '불러오는 중…' : '시세 갱신'}</button><button type="button" class="iv_sync iv_link">업데이트</button></div>`
     : `<div class="iv_card iv_tools"><label><small>평가 날짜</small><input type="date" class="iv_date" value="${esc(investmentDate(m, p))}"></label><button type="button" class="iv_refresh iv_btn" ${busy ? 'disabled' : ''}>${busy ? '불러오는 중…' : '투자 앱 채우기'}</button></div>`;
 const kv = (label, value, cls = '') => `<div class="iv_kv"><small>${label}</small><b class="cg_num ${cls}">${value}</b></div>`;
 const row = (label, value) => `<div class="iv_row"><span>${label}</span><b class="cg_num">${value}</b></div>`;
@@ -90,9 +90,9 @@ export function investmentScreen(m, p, now, view, key, busy) {
 
     const targets = [...inv.securities.map(s => ({ key: `stock:${s.symbol}`, name: s.ko || s.name })), ...inv.stakes.map(s => ({ key: `stake:${s.id}`, name: s.company }))];
     const targetName = k => targets.find(t => t.key === k)?.name || k;
-    const evidence = x => `<details class="ir_evidence"><summary>${ax('doc',14)}<span>원문 근거${x.ref ? ` · ${esc(x.ref)}` : ''}</span>${ax('chev',13)}</summary><p>${esc(x.evidence)}</p></details>`;
+    const evidence = x => `<details class="ir_evidence"><summary>${ax('doc',14)}<span>상세 정보${x.ref ? ` · ${esc(x.ref)}` : ''}</span>${ax('chev',13)}</summary><p>${esc(x.evidence)}</p></details>`;
     const filters = v => `<div class="ir_filters" aria-label="대상 선택"><button type="button" class="${key ? '' : 'on'}" data-go="${v}" data-i="">전체</button>${targets.filter(t=>v !== 'ivhistory' || t.key.startsWith('stake:')).map(t=>`<button type="button" class="${key === t.key ? 'on' : ''}" data-go="${v}" data-i="${esc(t.key)}">${esc(t.name)}</button>`).join('')}</div>`;
-    const reload = `<button type="button" class="iv_ib iv_records" ${busy ? 'disabled' : ''} aria-label="일정 채우기 · 원문 변경 확인" title="일정 채우기 · 원문 변경 확인">${busy ? '<i class="fa-solid fa-spinner fa-spin"></i>' : ax('redo',18)}</button>`;
+    const reload = `<button type="button" class="iv_ib iv_records" ${busy ? 'disabled' : ''} aria-label="일정 업데이트" title="일정 업데이트">${busy ? '<i class="fa-solid fa-spinner fa-spin"></i>' : ax('redo',18)}</button>`;
     const emptyRecord = (icon,title,desc) => `<div class="ir_empty">${ax(icon,30)}<b>${title}</b><p>${desc}</p></div>`;
     // Old saved routes lead to the containing detail, not a separate journal.
     if (view === 'ivnotes') return investmentScreen(m,p,now,key?.startsWith('stock:') ? 'stock' : key?.startsWith('stake:') ? 'ivstakes' : 'invest',key?.startsWith('stock:') ? key.slice(6) : '',busy);
@@ -105,7 +105,7 @@ export function investmentScreen(m, p, now, view, key, busy) {
     const historyBlock = target => {
         const fields = {percent:'지분율',holder:'직접 보유자',voter:'의결권 행사자',beneficiary:'배당 수익자',restriction:'매도 제한·조건'};
         const xs = (inv.history || []).filter(x => x.target === target).slice().sort((a,b)=>(b.date || '').localeCompare(a.date || ''));
-        return `<details class="iv_history"><summary>변경 내역<span>${xs.length}건</span>${ax('chev',14)}</summary>${xs.map(x=>`<div class="iv_history_change"><small>${esc(x.date || '날짜 미상')} · ${fields[x.field] || esc(x.field)}</small><p>${esc(x.before) || '미상'} → <em>${esc(x.after) || '미상'}</em></p>${evidence(x)}</div>`).join('') || '<p class="iv_muted">확인된 변경 기록이 없어요.</p>'}<button type="button" class="iv_records iv_link" ${busy ? 'disabled' : ''}>${ax('redo',13)} ${busy ? '확인 중…' : '원문에서 변경 확인'}</button></details>`;
+        return `<details class="iv_history"><summary>변경 내역<span>${xs.length}건</span>${ax('chev',14)}</summary>${xs.map(x=>`<div class="iv_history_change"><small>${esc(x.date || '날짜 미상')} · ${fields[x.field] || esc(x.field)}</small><p>${esc(x.before) || '미상'} → <em>${esc(x.after) || '미상'}</em></p>${evidence(x)}</div>`).join('') || '<p class="iv_muted">확인된 변경 기록이 없어요.</p>'}<button type="button" class="iv_records iv_link" ${busy ? 'disabled' : ''}>${ax('redo',13)} ${busy ? '확인 중…' : '변경 내역 업데이트'}</button></details>`;
     };
     if (view === 'ivschedule') {
         const kinds = {dividend:'배당',meeting:'주주총회',release:'매도 제한 해제',delegation:'위임 만료'};
@@ -117,7 +117,7 @@ export function investmentScreen(m, p, now, view, key, busy) {
         return frame(p,now,{title:'배당 · 권리 일정',tab:'ivcash',right:reload,body:`
           <div class="iv_hero ir_agenda"><div class="ir_hero_label"><small>NEXT UP</small><span>${upcoming.length}개 예정</span></div><div class="ir_due">${next ? diff === 0 ? 'TODAY' : `D−${diff}` : '—'}</div><h2>${next ? esc(next.title) : '다가오는 일정 없음'}</h2><p>${next ? `${esc(targetName(next.target))} · ${esc(next.date)}` : '확인된 일정이 생기면 여기에 모여요'}</p></div>
           ${filters('ivschedule')}
-          ${months.map(mo=>`${hd(`${Number(mo.slice(0,4))}년 ${Number(mo.slice(5))}월`)}<div class="iv_card ir_agenda_list">${xs.filter(x=>x.date.startsWith(mo)).map(x=>`<div class="ir_event"><div class="ir_date"><small>${Number(x.date.slice(5,7))}월</small><b>${Number(x.date.slice(8))}</b></div><div class="ir_event_body"><div class="ir_event_type">${kinds[x.kind]}<span class="ir_status ${x.status}">${status(x)}</span></div><h3>${esc(x.title)}</h3><small>${esc(targetName(x.target))}</small>${x.source === 'guess' ? '' : evidence(x)}</div></div>`).join('')}</div>`).join('') || emptyRecord('cal','확인된 일정이 없어요','오른쪽 위 새로고침으로 배당 예정을 채우고 원문 일정을 확인해 보세요.')}
+          ${months.map(mo=>`${hd(`${Number(mo.slice(0,4))}년 ${Number(mo.slice(5))}월`)}<div class="iv_card ir_agenda_list">${xs.filter(x=>x.date.startsWith(mo)).map(x=>`<div class="ir_event"><div class="ir_date"><small>${Number(x.date.slice(5,7))}월</small><b>${Number(x.date.slice(8))}</b></div><div class="ir_event_body"><div class="ir_event_type">${kinds[x.kind]}<span class="ir_status ${x.status}">${status(x)}</span></div><h3>${esc(x.title)}</h3><small>${esc(targetName(x.target))}</small>${x.source === 'guess' ? '' : evidence(x)}</div></div>`).join('')}</div>`).join('') || emptyRecord('cal','확인된 일정이 없어요','새로고침으로 일정을 업데이트하세요.')}
           <button type="button" class="ir_calendar" data-go="cal">${ax('cal',18)}<span>휴대폰 캘린더에서 보기</span>${ax('chev',16)}</button>`});
     }
     if (view === 'stock') {
@@ -152,7 +152,7 @@ export function investmentScreen(m, p, now, view, key, busy) {
               ${mine}
               ${noteBlock(`stock:${sym}`)}
               ${watch ? `${hd('관심 메모')}${card(`<p>${esc(watch.note)}</p>${watch.ko ? `<p class="iv_ko">${esc(watch.ko)}</p>` : ''}`)}` : ''}
-              ${hd('거래 내역', `<button type="button" class="iv_link" data-go="ivprices" data-i="${esc(`STOCK:${sym}`)}">가격 기록과 출처</button>`)}
+              ${hd('거래 내역', `<button type="button" class="iv_link" data-go="ivprices" data-i="${esc(`STOCK:${sym}`)}">가격 기록</button>`)}
               ${card(tl.map(t => trow(p, t, s)).join('') || '<p class="iv_muted">거래가 없어요</p>', 'iv_list')}
               <button type="button" class="iv_btn wide iv_news" data-symbol="${esc(sym)}">${ax('search', 16, 'currentColor', 2.3)} 관련 뉴스 검색</button>`,
         });
@@ -164,13 +164,13 @@ export function investmentScreen(m, p, now, view, key, busy) {
     if (view === 'ivstakes') {
         return frame(p, now, { title: '소유 지분', body: `${inv.stakes.map(s => card(`<div class="iv_sh">${logo({ symbol: s.company }, 36)}<b>${esc(s.company)}</b><span class="iv_pill">${s.listed === null ? '상장 여부 모름' : s.listed ? '상장' : '비상장'}</span></div>
             <div class="iv_stake cg_num">${s.percent === null ? '—' : `${s.percent}%`}<small>지분율</small></div>
-            ${row('직접 보유자', esc(s.holder) || '—')}${row('의결권 행사자', esc(s.voter) || '—')}${row('배당 수익자', esc(s.beneficiary) || '—')}${row('매도 제한 · 조건', esc(s.restriction) || '—')}${row('설정상 평가액', money(p, s.value, s.currency))}
-            <details><summary>설정 근거</summary><p>${esc(s.evidence)}</p></details>${historyBlock(`stake:${s.id}`)}`)).join('') || card('<p class="iv_muted">확인된 소유 지분 정보가 없어요</p>')}` });
+            ${row('직접 보유자', esc(s.holder) || '—')}${row('의결권 행사자', esc(s.voter) || '—')}${row('배당 수익자', esc(s.beneficiary) || '—')}${row('매도 제한 · 조건', esc(s.restriction) || '—')}${row('평가액', money(p, s.value, s.currency))}
+            <details><summary>상세 정보</summary><p>${esc(s.evidence)}</p></details>${historyBlock(`stake:${s.id}`)}`)).join('') || card('<p class="iv_muted">확인된 소유 지분 정보가 없어요</p>')}` });
     }
     if (view === 'ivprices') {
         const keys = key ? [key] : Object.keys(f.prices).filter(k => k.startsWith('FX:') || inv.securities.some(s => k === `STOCK:${s.symbol}`));
         const name = k => { const s = k.startsWith('STOCK:') ? lookup(k.slice(6)) : null; return s ? esc(s.ko || s.name) : esc(k.replace(/^FX:/, '환율 ')); };
-        return frame(p, now, { back: key?.startsWith('STOCK:') ? `stock:${encodeURIComponent(key.slice(6))}` : 'invest', title: '가격 · 환율', body: keys.map(k => `${hd(name(k), `<small>${esc(k.replace(/^(STOCK|FX):/, ''))}</small>`)}${card(Object.entries(f.prices[k] || {}).filter(([d]) => d <= date).sort(([a], [b]) => b.localeCompare(a)).map(([d, slot]) => `<div class="iv_qd"><b class="cg_num">${esc(d)}${slot.conflict ? ' <span class="iv_pill warn">가격 확인 필요</span>' : ''}</b>${slot.rows.map(q => `<div class="iv_qr ${slot.selected === q.id ? 'on' : ''}"><span class="cg_num">${q.value}</span><small>${esc(q.time || '시각 모름')}</small>${slot.selected === q.id ? '<em>평가에 쓰는 중</em>' : `<button type="button" class="iv_select iv_btn ghost sm" data-key="${esc(k)}" data-date="${d}" data-id="${q.id}">이 가격 쓰기</button>`}${q.ref ? `<details><summary>근거</summary>${esc(q.ref)}</details>` : ''}</div>`).join('')}</div>`).join('') || '<p class="iv_muted">기록이 없어요</p>', 'iv_list')}`).join('') || card('<p class="iv_muted">가격 기록이 없어요</p>') });
+        return frame(p, now, { back: key?.startsWith('STOCK:') ? `stock:${encodeURIComponent(key.slice(6))}` : 'invest', title: '가격 · 환율', body: keys.map(k => `${hd(name(k), `<small>${esc(k.replace(/^(STOCK|FX):/, ''))}</small>`)}${card(Object.entries(f.prices[k] || {}).filter(([d]) => d <= date).sort(([a], [b]) => b.localeCompare(a)).map(([d, slot]) => `<div class="iv_qd"><b class="cg_num">${esc(d)}${slot.conflict ? ' <span class="iv_pill warn">가격 확인 필요</span>' : ''}</b>${slot.rows.map(q => `<div class="iv_qr ${slot.selected === q.id ? 'on' : ''}"><span class="cg_num">${q.value}</span><small>${esc(q.time || '시각 모름')}</small>${slot.selected === q.id ? '<em>평가에 쓰는 중</em>' : `<button type="button" class="iv_select iv_btn ghost sm" data-key="${esc(k)}" data-date="${d}" data-id="${q.id}">이 가격 쓰기</button>`}${q.ref ? `<details><summary>상세 정보</summary>${esc(q.ref)}</details>` : ''}</div>`).join('')}</div>`).join('') || '<p class="iv_muted">기록이 없어요</p>', 'iv_list')}`).join('') || card('<p class="iv_muted">가격 기록이 없어요</p>') });
     }
     if (view === 'ivactivity') {
         const transfers = Object.values(f.transfers).filter(t => f.accounts[t.from]?.owner === p.owner || f.accounts[t.to]?.owner === p.owner);
@@ -239,7 +239,7 @@ export function investmentScreen(m, p, now, view, key, busy) {
           ${cashRows.length ? `${hd('주문 가능 현금')}${card(cashRows.map(a => `<div class="iv_cash"><span class="iv_cur">${esc(a.currency)}</span><b>${esc(a.currency)} 예수금</b><b class="cg_num">${money(p, a.amount, a.currency)}</b></div>`).join(''), 'iv_list')}` : ''}
           <button type="button" class="ir_calendar" data-go="ivschedule">${ax('cal',18)}<span>배당 · 권리 일정</span>${ax('chev',16)}</button>
           ${tools(m, p, busy)}
-          <details class="iv_card iv_more"><summary>계좌 구성 근거</summary><p>${esc(inv.basis)}</p></details>`,
+          <details class="iv_card iv_more"><summary>계좌 정보</summary><p>${esc(inv.basis)}</p></details>`,
     });
 }
 // one trade as a row: what, how many, at what

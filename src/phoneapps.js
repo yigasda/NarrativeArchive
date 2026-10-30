@@ -647,7 +647,7 @@ export function mapScreen(p, now, m) {
         ${axH1('다녀간 곳', pl.length ? `${pl.length}곳` : '')}
         ${pl.length ? `<div class="ax_card ax_mapart" aria-hidden="true">${pl.slice(0, 5).map((_, k) => `<i style="left: ${[18, 62, 38, 80, 28][k]}%; top: ${[34, 26, 58, 64, 80][k]}%">${pin}</i>`).join('')}</div>
         <div class="ax_card">${pl.map(x => `
-          <div class="ax_rw ax_place"><span class="ax_si" style="background: var(--axc)">${ax('pin', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.place)}</span><span class="ax_p1">${x.n > 1 ? `${x.n}번 · 마지막 ` : ''}${esc(x.scene)}</span></span><small>${esc(x.day ? fmtDate(p, x.day, true) : x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small></div>`).join('')}</div>` : '<div class="ax_empty">아카이브 제목에 이 인물이 간 장소가 아직 없어요</div>'}
+          <div class="ax_rw ax_place"><span class="ax_si" style="background: var(--axc)">${ax('pin', 17, 'var(--axd)', 2.2)}</span><span class="ax_tx"><span class="ax_n">${esc(x.place)}</span><span class="ax_p1">${x.n > 1 ? `${x.n}번 · 마지막 ` : ''}${esc(x.scene)}</span></span><small>${esc(x.day ? fmtDate(p, x.day, true) : x.date)}${x.time ? `<br>${esc(x.time)}` : ''}</small></div>`).join('')}</div>` : '<div class="ax_empty">방문 기록 없음</div>'}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;

@@ -68,7 +68,7 @@ export async function openPhone(who = null) {
         <div class="na_phl_shade" hidden></div>
         <div class="na_phl_sheet" hidden>
           <div class="na_phl_grab"></div>
-          <div class="na_phl_sheethead"><b>캐릭터 휴대폰</b><small>아카이브에 있는 만큼만 · 보기 전용</small></div>
+          <div class="na_phl_sheethead"><b>캐릭터 휴대폰</b></div>
           <div class="na_ph_owners"></div>
           <div class="na_ph_addrow na_ph_addbox" hidden><input type="text" class="text_pole na_ph_addname" placeholder="로어북에만 있는 인물 이름" enterkeyhint="done"><button type="button" class="na_v2_pillbtn na_ph_addok">추가</button></div>
           <div class="na_ph_ctrl"></div>
