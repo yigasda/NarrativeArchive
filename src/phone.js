@@ -4,7 +4,7 @@
 // m.phones = { [name key]: { owner, country, wall, accent, now, contacts, threads, calls, photos, notes, searches, events,
 //   upto (the last message number the archive held), at, inject } }
 
-import { profileEntries, resolvePhoneProfile } from './phoneprofile.js';
+import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './phoneprofile.js';
 import { investmentScreen } from './investui.js';
 import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, validDate } from './investdata.js';
 import { finance, migrateBank, reviseBaseline, selectPrice, transfer } from './finance.js';
@@ -285,8 +285,23 @@ export async function openPhone(who = null) {
         const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
         state.pane='content';drawPhone();
     });
-    $root.on('click','.fp_source',function(){
+    $root.on('click','.fp_source',async function(){
         const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
+        if(this.dataset.type==='persona') {
+            const version=state.version=(state.version || 0)+1;
+            state.binding={type:'none'};state.resolved=null;state.error='';state.busy=true;
+            state.personaLoading=true;state.personaPicked=false;state.openType=null;state.openPreview=true;profileRedraw(p,state);
+            try {
+                const binding=await currentPersonaBinding(ctx());
+                if(state.version!==version) return;
+                state.binding=binding;state.personaPicked=true;state.personaLoading=false;
+                await loadProfile(p,state);
+            } catch(err) {
+                if(state.version===version) {state.error=String(err?.message || err);state.busy=false;state.personaLoading=false;profileRedraw(p,state);}
+            }
+            return;
+        }
+        if(state.personaLoading) {state.version++;state.busy=false;state.personaLoading=false;}
         state.openType=state.openType===this.dataset.type?null:this.dataset.type;drawPhone(true);
     });
     $root.on('click','.fp_book',function(){
@@ -298,6 +313,7 @@ export async function openPhone(who = null) {
     });
     $root.on('click','.fp_pick',function(){
         const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
+        state.openPreview=false;state.personaPicked=false;
         state.binding={type:this.dataset.type,id:this.dataset.id,...(this.dataset.type==='lore'?{book:this.dataset.book}:{})};
         loadProfile(p,state);
     });

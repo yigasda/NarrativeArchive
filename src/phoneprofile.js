@@ -45,3 +45,10 @@ export function phoneDataInfo(p) {
     const timestamps=[p.at,p.generatedAt,p.money?.at,p.voiceAt,p.investment?.at].filter(t=>typeof t==='number' && Number.isFinite(t) && t>0);
     return {apps,count:apps.filter(x=>x.ready).length,last:timestamps.length?Math.max(...timestamps):null};
 }
+
+// Read SillyTavern's active avatar only when the user chooses this source.
+export async function currentPersonaBinding(c, readAvatar = async () => (await import('/scripts/personas.js')).user_avatar) {
+    const id=await readAvatar();
+    if(typeof id!=='string' || !id || !Object.hasOwn(c.powerUserSettings?.personas || {},id)) throw new Error('현재 사용 중인 페르소나를 찾을 수 없어요');
+    return {type:'persona',id};
+}
