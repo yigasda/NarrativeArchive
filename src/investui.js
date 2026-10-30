@@ -92,7 +92,7 @@ export function investmentScreen(m, p, now, view, key, busy) {
     const targetName = k => targets.find(t => t.key === k)?.name || k;
     const evidence = x => `<details class="ir_evidence"><summary>${ax('doc',14)}<span>원문 근거${x.ref ? ` · ${esc(x.ref)}` : ''}</span>${ax('chev',13)}</summary><p>${esc(x.evidence)}</p></details>`;
     const filters = v => `<div class="ir_filters" aria-label="대상 선택"><button type="button" class="${key ? '' : 'on'}" data-go="${v}" data-i="">전체</button>${targets.filter(t=>v !== 'ivhistory' || t.key.startsWith('stake:')).map(t=>`<button type="button" class="${key === t.key ? 'on' : ''}" data-go="${v}" data-i="${esc(t.key)}">${esc(t.name)}</button>`).join('')}</div>`;
-    const reload = `<button type="button" class="iv_ib iv_records" ${busy ? 'disabled' : ''} aria-label="원문에서 일정과 변화 찾기" title="원문에서 일정과 변화 찾기">${busy ? '<i class="fa-solid fa-spinner fa-spin"></i>' : ax('redo',18)}</button>`;
+    const reload = `<button type="button" class="iv_ib iv_records" ${busy ? 'disabled' : ''} aria-label="일정 채우기 · 원문 변경 확인" title="일정 채우기 · 원문 변경 확인">${busy ? '<i class="fa-solid fa-spinner fa-spin"></i>' : ax('redo',18)}</button>`;
     const foot = message => `<details class="ir_help"><summary>${ax('lock',12)} 기록 안내 ${ax('down',12)}</summary><p>${message}</p>${inv.recordsChecked ? `<small>${esc(inv.recordsChecked)}에 확인</small>` : ''}</details>`;
     const emptyRecord = (icon,title,desc) => `<div class="ir_empty">${ax(icon,30)}<b>${title}</b><p>${desc}</p></div>`;
     // Old saved routes lead to the containing detail, not a separate journal.
@@ -113,12 +113,12 @@ export function investmentScreen(m, p, now, view, key, busy) {
         const xs = (inv.schedules || []).filter(x=>!key || x.target === key).slice().sort((a,b)=>a.date.localeCompare(b.date));
         const upcoming = xs.filter(x=>x.status === 'scheduled' && x.date >= date), next=upcoming[0];
         const months=[...new Set(xs.map(x=>x.date.slice(0,7)))];
-        const status=x=>x.status === 'paid' ? '지급 확인' : x.status === 'cancelled' ? '취소' : x.date < date ? '이행 확인 필요' : x.date === date ? '오늘' : '예정';
+        const status=x=>x.source === 'guess' ? (x.date < date ? '가상 · 날짜 지남' : '가상 예정') : x.status === 'paid' ? '지급 확인' : x.status === 'cancelled' ? '취소' : x.date < date ? '이행 확인 필요' : x.date === date ? '오늘' : '예정';
         const diff=next ? Math.round((Date.parse(next.date)-Date.parse(date))/dayMs) : null;
-        return frame(p,now,{title:'배당 · 권리 일정',tab:'ivcash',right:reload,footer:foot('원문에 확인된 날짜만 보여줘요. 예정일이 지나도 자동 입금하거나 권리를 바꾸지 않아요.'),body:`
-          <div class="iv_hero ir_agenda"><div class="ir_hero_label"><small>NEXT UP</small><span>${upcoming.length}개 예정</span></div><div class="ir_due">${next ? diff === 0 ? 'TODAY' : `D−${diff}` : '—'}</div><h2>${next ? esc(next.title) : '다가오는 일정 없음'}</h2><p>${next ? `${esc(targetName(next.target))} · ${esc(next.date)}` : '확인된 일정이 생기면 여기에 모여요'}</p></div>
+        return frame(p,now,{title:'배당 · 권리 일정',tab:'ivcash',right:reload,footer:foot('일반 종목의 가상 배당 예정은 설정이 아니에요. 가문 지분·권리 일정은 원문 근거가 필요하며, 어떤 일정도 자동 입금하거나 권리를 바꾸지 않아요.'),body:`
+          <div class="iv_hero ir_agenda"><div class="ir_hero_label"><small>NEXT UP</small><span>${upcoming.length}개 예정</span></div><div class="ir_due">${next ? diff === 0 ? 'TODAY' : `D−${diff}` : '—'}</div><h2>${next ? esc(next.title) : '다가오는 일정 없음'}</h2><p>${next ? `${esc(targetName(next.target))} · ${esc(next.date)}${next.source === 'guess' ? ' · 가상 예정' : ''}` : '확인된 일정이 생기면 여기에 모여요'}</p></div>
           ${filters('ivschedule')}
-          ${months.map(mo=>`${hd(`${Number(mo.slice(0,4))}년 ${Number(mo.slice(5))}월`)}<div class="iv_card ir_agenda_list">${xs.filter(x=>x.date.startsWith(mo)).map(x=>`<div class="ir_event"><div class="ir_date"><small>${Number(x.date.slice(5,7))}월</small><b>${Number(x.date.slice(8))}</b></div><div class="ir_event_body"><div class="ir_event_type">${kinds[x.kind]}<span class="ir_status ${x.status}">${status(x)}</span></div><h3>${esc(x.title)}</h3><small>${esc(targetName(x.target))}</small>${evidence(x)}</div></div>`).join('')}</div>`).join('') || emptyRecord('cal','확인된 일정이 없어요','오른쪽 위 새로고침으로 원문에서 일정을 찾아보세요.')}
+          ${months.map(mo=>`${hd(`${Number(mo.slice(0,4))}년 ${Number(mo.slice(5))}월`)}<div class="iv_card ir_agenda_list">${xs.filter(x=>x.date.startsWith(mo)).map(x=>`<div class="ir_event"><div class="ir_date"><small>${Number(x.date.slice(5,7))}월</small><b>${Number(x.date.slice(8))}</b></div><div class="ir_event_body"><div class="ir_event_type">${kinds[x.kind]}<span class="ir_status ${x.status}">${status(x)}</span></div><h3>${esc(x.title)}</h3><small>${esc(targetName(x.target))}</small>${x.source === 'guess' ? '<small class="iv_hint">가상 배당 일정 · 자동 입금 안 됨</small>' : evidence(x)}</div></div>`).join('')}</div>`).join('') || emptyRecord('cal','확인된 일정이 없어요','오른쪽 위 새로고침으로 배당 예정을 채우고 원문 일정을 확인해 보세요.')}
           <button type="button" class="ir_calendar" data-go="cal">${ax('cal',18)}<span>휴대폰 캘린더에서 보기</span>${ax('chev',16)}</button>`});
     }
     if (view === 'stock') {

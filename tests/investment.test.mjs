@@ -132,3 +132,21 @@ test('note and record requests use separate prompts and retain provenance bounda
  assert.doesNotMatch(records.input,/APP CONTEXT/);
  assert.match(records.system,/exact supporting excerpt from STORY INPUT/);
 });
+test('fictional dividends stay scheduled, private and idempotent without changing cash',async()=>{
+ const {m,p}=setup();await dataMod.fillInvestment(m,p,'2026-10-30');p.investment.stakes=[{id:'family',company:'Family'}];
+ const before=JSON.stringify(m.finance);
+ const draft={target:'stock:NYSE:X',kind:'dividend',date:'2026-11-10',title:'배당 예정',status:'scheduled',source:'guess',evidence:'invented'};
+ globalThis.__investTest.answer={schedules:[draft,{...draft,target:'stake:family'},{...draft,kind:'meeting'},{...draft,status:'paid'},{...draft,status:'cancelled'},{...draft,date:'2026-10-01'}],history:[{target:'stake:family',field:'voter',source:'guess',before:'A',after:'B',evidence:m.text}]};
+ await dataMod.collectInvestmentRecords(m,p);
+ assert.equal(p.investment.schedules.length,1);assert.equal(p.investment.history.length,0);
+ assert.equal(p.investment.schedules[0].source,'guess');assert.equal(p.investment.schedules[0].evidence,'');
+ globalThis.__investTest.answer={schedules:[{...draft,date:'2026-11-20'}]};await dataMod.collectInvestmentRecords(m,p);
+ assert.equal(p.investment.schedules.length,1);assert.match(globalThis.__investTest.inputs.at(-1).input,/EXISTING SCHEDULES/);
+ assert.equal(JSON.stringify(m.finance),before);
+ const html=ui.investmentScreen(m,p,'10-30','ivschedule','',false);assert.match(html,/가상 예정/);assert.doesNotMatch(html,/class="ir_evidence"/);
+ p.investment.date='2026-11-11';assert.match(ui.investmentScreen(m,p,'11-11','ivschedule','',false),/가상 · 날짜 지남/);assert.equal(p.investment.schedules[0].status,'scheduled');assert.equal(JSON.stringify(m.finance),before);
+ p.investment.date='2026-10-30';const id=p.investment.schedules[0].id;
+ m.text+=' Dividend payment is scheduled for 2026-11-10.';
+ globalThis.__investTest.answer={schedules:[{...draft,source:'story',evidence:'Dividend payment is scheduled for 2026-11-10.'}]};await dataMod.collectInvestmentRecords(m,p);
+ assert.equal(p.investment.schedules.length,1);assert.equal(p.investment.schedules[0].id,id);assert.equal(p.investment.schedules[0].source,'story');assert.equal(JSON.stringify(m.finance),before);
+});

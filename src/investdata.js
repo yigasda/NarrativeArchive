@@ -123,20 +123,21 @@ OUTPUT JSON only
 {"notes":[{"target":"provided key","text":"short note","ko":"translation","source":"guess|story","evidence":"exact supporting excerpt for story, otherwise empty","ref":""}]}`;
 
 export const INVEST_RECORDS_SYS = `GOAL
-Extract dated dividend/rights schedules and historical changes to one character's family stakes. This is a read-only companion to the financial ledger. Never create trades, cash movements or new ownership.
+Build investment schedules and extract historical changes to one character's family stakes. This is a read-only companion to the financial ledger. Never create trades, cash movements or new ownership.
 YOU GET
 STORY INPUT: archive, selected lore, recent chat and the owner's knowledge limits.
 TARGETS: existing securities and family stakes, with stable keys. They identify the screen, not independent evidence.
-AS OF is the story date, not the real date.
+AS OF is the story date, not the real date. EXISTING SCHEDULES are saved app records, not story evidence; preserve them.
 RULES
 - Use only TARGETS keys. Never expose information the owner does not know; suspicions stay suspicions.
 - Return schedules and history only, never notes. Empty lists are valid; do not fill the screen for decoration.
-- Schedules require an explicitly established date AND event: dividend payment, shareholder meeting, sale restriction release or voting delegation expiry. Future dates are allowed only when already announced in the story by AS OF. No inferred annual recurrence. A due date passing does not establish payment or release. paid/cancelled require explicit evidence; otherwise scheduled.
+- Ordinary stock dividend schedules may be imagined even without investment scenes: source guess, status scheduled, date on or after AS OF, no amount or evidence. At most one upcoming guess per stock target. Do not invent a new date when that target already has an upcoming schedule in EXISTING SCHEDULES. These are app-only fiction, not canon or a promise of payment. Do not assume every company pays dividends.
+- All other schedules, including every family-stake schedule, require an explicitly established date AND event: dividend payment, shareholder meeting, sale restriction release or voting delegation expiry. Future dates are allowed only when already announced in the story by AS OF. No inferred annual recurrence. A due date passing does not establish payment or release. paid/cancelled require explicit evidence; otherwise scheduled.
 - History is an actual change already shown by AS OF, not a current snapshot rewritten as an event. Only family stake targets. Fields: percent, holder, voter, beneficiary, restriction. Preserve the direction: who used to hold or exercise the right, and who does now. A change in feelings alone never changes legal rights. Unknown before/after or date stays empty. Unknown is not none or zero. Do not invent a transfer from the present ownership alone.
-- Every schedule and history entry includes an exact supporting excerpt from STORY INPUT, never from TARGETS or earlier generated records. The excerpt must support the date, condition and parties, not merely name the company. Put source message/section numbers in ref when available. A historical date may be empty if unspecified; a schedule without a date is omitted.
+- Every source story schedule and every history entry includes an exact supporting excerpt from STORY INPUT, never from TARGETS or earlier generated records. The excerpt must support the date, condition and parties, not merely name the company. Put source message/section numbers in ref when available. A historical date may be empty if unspecified; a schedule without a date is omitted.
 - No currency amounts or credited dividends: this request cannot alter balances or the current rights card. History records explain events, not instructions to change the portfolio.
 OUTPUT JSON only
-{"schedules":[{"target":"provided key","kind":"dividend|meeting|release|delegation","date":"YYYY-MM-DD","title":"short title","status":"scheduled|paid|cancelled","evidence":"exact excerpt","ref":""}],
+{"schedules":[{"target":"provided key","kind":"dividend|meeting|release|delegation","date":"YYYY-MM-DD","title":"short title","status":"scheduled|paid|cancelled","source":"guess|story","evidence":"exact excerpt for story; empty for guess","ref":""}],
 "history":[{"target":"stake key","field":"percent|holder|voter|beneficiary|restriction","date":"YYYY-MM-DD or empty","before":"","after":"","evidence":"exact excerpt","ref":""}]}
 At most 16 schedules and 16 changes. Keep the original names and full years. Output no other keys.`;
 export function investmentTargets(inv) {
@@ -152,8 +153,8 @@ export function parseInvestmentRecords(raw, inv, source, mode, target = '') {
         out.notes = list(raw.notes).filter(x => x.target === target && allowed.has(x.target) && text(x.text) && (x.source === 'guess' || x.source === 'story' && proof(x))).slice(0, 1).map(x => ({ ...common(x), date: inv.date, text: text(x.text, 1200), ko: text(x.ko, 1200), source: x.source, ...(x.source === 'guess' ? { evidence: '', ref: '' } : {}) }));
         return out;
     }
-    out.schedules = list(raw.schedules).filter(x => allowed.has(x.target) && ['dividend', 'meeting', 'release', 'delegation'].includes(x.kind) && validDate(x.date) && text(x.title) && proof(x) && ['scheduled', 'paid', 'cancelled'].includes(x.status) && !(x.date > inv.date && x.status === 'paid')).slice(0,16).map(x => ({ ...common(x), kind:x.kind, date:x.date, title:text(x.title,120), status:x.status }));
-    out.history = list(raw.history).filter(x => allowed.has(x.target) && x.target.startsWith('stake:') && ['percent','holder','voter','beneficiary','restriction'].includes(x.field) && (!x.date || validDate(x.date) && x.date <= inv.date) && proof(x) && (text(x.before) || text(x.after)) && text(x.before) !== text(x.after)).slice(0,16).map(x => ({ ...common(x), field:x.field, date:x.date || '', before:text(x.before), after:text(x.after) }));
+    out.schedules = list(raw.schedules).filter(x => allowed.has(x.target) && ['dividend', 'meeting', 'release', 'delegation'].includes(x.kind) && validDate(x.date) && text(x.title) && (x.source === 'guess' ? x.target.startsWith('stock:') && x.kind === 'dividend' && x.status === 'scheduled' && x.date >= inv.date : (x.source == null || x.source === 'story') && proof(x)) && ['scheduled', 'paid', 'cancelled'].includes(x.status) && !(x.date > inv.date && x.status === 'paid')).slice(0,16).map(x => ({ ...common(x), kind:x.kind, date:x.date, title:text(x.title,120), status:x.status, ...(x.source === 'guess' ? {source:'guess',evidence:'',ref:''} : {}) }));
+    out.history = list(raw.history).filter(x => x.source !== 'guess' && allowed.has(x.target) && x.target.startsWith('stake:') && ['percent','holder','voter','beneficiary','restriction'].includes(x.field) && (!x.date || validDate(x.date) && x.date <= inv.date) && proof(x) && (text(x.before) || text(x.after)) && text(x.before) !== text(x.after)).slice(0,16).map(x => ({ ...common(x), field:x.field, date:x.date || '', before:text(x.before), after:text(x.after) }));
     return out;
 }
 export function mergeInvestmentRecords(inv, got) {
@@ -162,6 +163,12 @@ export function mergeInvestmentRecords(inv, got) {
     for (const kind of ['notes','schedules','history']) {
         const xs = inv[kind] ||= [];
         for (const x of got[kind]) {
+            if (kind === 'schedules' && x.source === 'guess' && xs.some(y => y.target === x.target && y.kind === 'dividend' && y.date >= inv.date && y.status !== 'cancelled')) continue;
+            if (kind === 'schedules' && x.source === 'story') {
+                // A confirmed event replaces a fictional placeholder for that same date.
+                const placeholder = xs.findIndex(y => y.source === 'guess' && y.target === x.target && y.kind === x.kind && y.date === x.date);
+                if (placeholder >= 0) { xs[placeholder] = {...x,id:xs[placeholder].id}; continue; }
+            }
             const old = xs.find(y => signature(kind,y) === signature(kind,x));
             if (!old) xs.push({ ...x, id:uid() });
             // Don't erase the former status or a conflicting interpretation of the same evidence.
@@ -176,7 +183,7 @@ export async function collectInvestmentRecords(m, p, mode = 'records', target = 
     const source = await sideRequest(m,p.owner,[]);
     const targets = investmentTargets(inv).filter(t => mode !== 'notes' || t.key === target);
     const appContext = mode === 'notes' && target.startsWith('stock:') ? { trades: inv.trades.filter(t => `stock:${t.symbol}` === target).slice(-8), watch: inv.watch.filter(w => `stock:${w.symbol}` === target) } : null;
-    const input = `${source}\n\n[AS OF]\n${inv.date}\n[MODE]\n${mode}\n[TARGETS — identification only]\n${JSON.stringify(targets)}${appContext ? `\n[APP CONTEXT — imagination, not evidence]\n${JSON.stringify(appContext)}` : ''}`;
+    const input = `${source}\n\n[AS OF]\n${inv.date}\n[MODE]\n${mode}\n[TARGETS — identification only]\n${JSON.stringify(targets)}${mode === 'records' ? `\n[EXISTING SCHEDULES — app data, not evidence]\n${JSON.stringify(inv.schedules || [])}` : ''}${appContext ? `\n[APP CONTEXT — imagination, not evidence]\n${JSON.stringify(appContext)}` : ''}`;
     const raw = json(await askDraft(input,{system:mode === 'notes' ? INVEST_NOTES_SYS : INVEST_RECORDS_SYS,maxTokens:mode === 'notes' ? 2000 : 6500}));
     const got = parseInvestmentRecords(raw,inv,source,mode,target);
     if (mode === 'notes' && !got.notes.length) throw new Error('사용할 수 있는 투자 노트를 받지 못했어요');

@@ -156,7 +156,7 @@ export async function openPhone(who = null) {
         investing = true; drawPhone(true);
         try {
             const got = await collectInvestmentRecords(m, p, mode, target);
-            if (mode === 'records') toastr.info(got.schedules.length || got.history.length ? '근거가 있는 일정과 변경 기록을 확인했어요' : '새로 확인된 일정이나 변경 기록이 없어요');
+            if (mode === 'records') toastr.info(got.schedules.length || got.history.length ? '투자 일정과 변경 기록을 확인했어요' : '새로 확인된 일정이나 변경 기록이 없어요');
         } catch (err) { toastr.error(String(err?.message || err), '투자 기록'); }
         finally { investing = false; if (phone() === p) drawPhone(true); }
     });
