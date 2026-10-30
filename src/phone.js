@@ -128,9 +128,10 @@ export async function openPhone(who = null) {
             return;
         }
         const top = keep ? $root.find('.na_ph_body, .ax_scroll').scrollTop() : 0;
-        $root.find('.na_ph_frame').html(screen(p, view, m, roster, { newN: newSections(m, p), loreExp, loreEnts, remake, contactBack, investing, making, profileState:profileStates.get(nameKey(p.owner)) }));
+        $root.find('.na_ph_frame').html(screen(p, view, m, roster, { newN: newSections(m, p), loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)) }));
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
+        if (making && view === 'setremake') $root.find('.na_ph_setremake .ax_n').html(`${busyHtml} 다시 만드는 중`);
         queueMicrotask(() => autoChart());
     };
     // 참고 로어북: each book with its switch; › opens its entries, each with its own (a book with some left out shows −)
