@@ -5778,3 +5778,5 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .cd_info dt { color: #8c95a0; }.cd_info dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
 .cd_empty { display: flex; align-items: center; flex-direction: column; padding: 25px 12px; gap: 9px; color: #a0a9b5; }
 .cd_empty b { font-size: 12px; font-weight: 500; color: #7e8999; }.cd_empty span { font-size: 10px; }
+.iv_charttools { display: flex; justify-content: flex-end; margin: 0 23px 6px; }
+.ax .iv_charttools button { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 6px 0; }

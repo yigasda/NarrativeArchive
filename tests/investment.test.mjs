@@ -214,3 +214,23 @@ test('malformed rebuilt balances leave every account and its ledger unchanged',a
  await assert.rejects(phonedata.fillMoney(m,p,{regenerateBalances:true}),/잔액/);assert.equal(JSON.stringify({money:p.money,finance:m.finance}),before);
  globalThis.__investTest.error=true;await assert.rejects(phonedata.fillMoney(m,p,{regenerateBalances:true}),/network/);assert.equal(JSON.stringify({money:p.money,finance:m.finance}),before);
 });
+test('chart backfill preserves saved anchors, executions and FX and reuses the cached history',async()=>{
+ const {m,p}=setup();await dataMod.fillInvestment(m,p,'2026-10-30');
+ finance.addPrice(m,'STOCK:NYSE:X','2026-06-25',{value:90,source:'story',ref:'old anchor'});
+ const before=structuredClone(m.finance),trades=JSON.stringify(p.investment.trades), dates=dataMod.chartDates(m,p.investment,'NYSE:X','1m');
+ assert.ok(dates.length>=20 && dates.length<=24);assert.ok(dates.every(d=>d<='2026-10-30' && d>='2026-09-29'));
+ for(const range of ['1w','3m','all'])assert.ok(dataMod.chartDates(m,p.investment,'NYSE:X',range).length<=24);
+ const original=ui.investmentScreen(m,p,'10-30','stock','NYSE:X',false);assert.match(original,/선택 기간의 기록 부족/);assert.match(original,/iv_chartfill/);
+ globalThis.__investTest.answer={quotes:[...dates.map((date,i)=>({symbol:'NYSE:X',date,value:100+i/2,source:'guess'})),{symbol:'NYSE:X',date:'2026-06-25',value:1,source:'story',evidence:m.text},{symbol:'OTHER',date:dates[0],value:1},{symbol:'NYSE:X',date:'2026-11-02',value:999}],fx:[{from:'USD',to:'EUR',date:'2026-10-30',value:9}]};
+ assert.equal(await dataMod.fillChartHistory(m,p,'NYSE:X','1m'),dates.length-1);
+ assert.deepEqual(m.finance.prices['STOCK:NYSE:X']['2026-10-30'],before.prices['STOCK:NYSE:X']['2026-10-30']);assert.deepEqual(m.finance.prices['STOCK:NYSE:X']['2026-06-25'],before.prices['STOCK:NYSE:X']['2026-06-25']);
+ assert.equal(JSON.stringify(p.investment.trades),trades);assert.deepEqual(m.finance.accounts,before.accounts);assert.deepEqual(m.finance.prices['FX:EUR/USD'],before.prices['FX:EUR/USD']);assert.equal(m.finance.prices['STOCK:OTHER'],undefined);assert.equal(m.finance.prices['STOCK:NYSE:X']['2026-11-02'],undefined);
+ assert.match(ui.investmentScreen(m,p,'10-30','stock','NYSE:X',false),/aria-label="일봉 차트"/);
+ const calls=globalThis.__investTest.inputs.length;assert.equal(await dataMod.fillChartHistory(m,p,'NYSE:X','1m'),0);assert.equal(globalThis.__investTest.inputs.length,calls);
+});
+test('failed chart generation leaves the shared price book unchanged',async()=>{
+ const {m,p}=setup();await dataMod.fillInvestment(m,p,'2026-10-30');const before=JSON.stringify(m.finance);
+ globalThis.__investTest.answer={quotes:[{symbol:'NYSE:X',date:'2026-10-01',value:123,source:'story',evidence:'fabricated evidence'}]};
+ await assert.rejects(dataMod.fillChartHistory(m,p,'NYSE:X'),/시세/);assert.equal(JSON.stringify(m.finance),before);
+ globalThis.__investTest.error=true;await assert.rejects(dataMod.fillChartHistory(m,p,'NYSE:X'),/network/);assert.equal(JSON.stringify(m.finance),before);
+});

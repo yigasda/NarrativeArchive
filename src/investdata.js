@@ -29,7 +29,7 @@ OUTPUT — JSON only
 "stakes":[{"company":"name","listed":null,"percent":null,"holder":"","voter":"","beneficiary":"","restriction":"","value":null,"currency":"EUR","evidence":"exact supplied excerpt"}],
 "quotes":[{"symbol":"EXCHANGE:CODE","date":"YYYY-MM-DD","time":"","value":100,"source":"guess|story","evidence":""}],
 "fx":[{"from":"USD","to":"EUR","date":"YYYY-MM-DD","time":"","value":0.9,"source":"guess|story","evidence":""}]}
-At most 10 securities, 30 trades, 8 watches, 8 stakes. Include FX at trade dates when foreign executions need a cost basis, as well as evaluation-date FX. A few dated quotes per held security form a small chart; at most 60 quotes total. Fewer and empty lists are fine. Cash can remain uninvested. Family stakes never enter ordinary portfolio totals.`;
+At most 10 securities, 30 trades, 8 watches, 8 stakes. Include FX at trade dates when foreign executions need a cost basis, as well as evaluation-date FX. Include several prices spread across the last month for each held security, including the evaluation date, to form its default chart; at most 60 quotes total. Fewer and empty lists are fine. Cash can remain uninvested. Family stakes never enter ordinary portfolio totals.`;
 const MARKET_SYS = `GOAL
 Supply public market quotes and FX for DATE in this fictional story. Only the supplied securities and currency pairs. Never include portfolios, private ownership or private news.
 Existing quotes are fixed. Do not generate guess quotes for keys already present on DATE. Explicit story market prices may correct invented values; preserve exact evidence and actual time, leaving unknown time empty. Execution prices are not market quotes. Do not invent an exchange listing. Unsupported quotes are app-only guess values.
@@ -207,4 +207,34 @@ export async function refreshBankFX(m,p,date,base) {
     const rows = list(raw.fx).filter(x=>x.date === date && allowed.has(quoteKey(`FX:${x.from}/${x.to}`)));
     ingestQuotes(m,{fx:rows},input,date,[]);
     await saveMeta();
+}
+
+const CHART_SYS = `Fill missing chart prices for one public security in this fictional story. Return JSON only: {"quotes":[{"symbol":"provided symbol","date":"requested YYYY-MM-DD","value":100,"source":"guess|story","time":"","evidence":""}]}.
+Use only REQUESTED DATES and the supplied security. Produce a positive price for each requested date. Existing quotes are fixed anchors; make a plausible, coherent series around them, not unrelated random numbers. Missing public prices may be imagined. Never infer a market price from a purchase execution. Do not invent a listing date or prices outside the requested dates. Story quotes require an exact excerpt from STORY INPUT supporting that market price and date; otherwise source guess with empty evidence. Return no FX, trades, balances or ownership.`;
+export function chartDates(m, inv, symbol, range = '1m') {
+    if (!validDate(inv?.date) || !inv.securities.some(s=>s.symbol === symbol)) throw new Error('종목과 시세 날짜를 확인해 주세요');
+    const end = Date.parse(inv.date), day = 864e5;
+    const oldest = Object.keys(finance(m).prices[`STOCK:${symbol}`] || {}).filter(d=>validDate(d) && d <= inv.date).sort()[0];
+    const span = range === '1w' ? 7 : range === '3m' ? 92 : range === 'all' ? Math.min(366,Math.max(31,oldest ? (end-Date.parse(oldest))/day : 31)) : 31;
+    const dates = [];
+    for(let t=end-span*day;t<=end;t+=day) { const d=new Date(t); if(d.getUTCDay()!==0 && d.getUTCDay()!==6) dates.push(d.toISOString().slice(0,10)); }
+    // Sample longer periods to keep the request bounded. Saved quotes between samples remain visible.
+    return dates.length <= 24 ? dates : [...new Set(Array.from({length:24},(_,i)=>dates[Math.round(i*(dates.length-1)/23)]))];
+}
+export async function fillChartHistory(m,p,symbol,range='1m') {
+    const inv=p.investment, dates=chartDates(m,inv,symbol,range), key=`STOCK:${symbol}`, date=inv.date;
+    const book=finance(m).prices[key] || {}, missing=dates.filter(d=>!book[d]?.rows?.length);
+    if (!missing.length) return 0;
+    const source=await sideRequest(m,p.owner,[]);
+    const input=`${source}\n[SECURITY]\n${JSON.stringify(inv.securities.find(s=>s.symbol === symbol))}\n[REQUESTED DATES]\n${JSON.stringify(missing)}\n[EXISTING QUOTES — fixed anchors]\n${JSON.stringify(book)}`;
+    const raw=json(await askDraft(input,{system:CHART_SYS,maxTokens:5000}));
+    if(p.investment !== inv || inv.date !== date) throw new Error('시세 날짜가 변경됐어요. 다시 시도해 주세요');
+    const wanted=new Set(missing);
+    const rows=list(raw.quotes).filter(x=>x.symbol === symbol && wanted.has(x.date) && !finance(m).prices[key]?.[x.date]?.rows?.length);
+    const staged={finance:structuredClone(finance(m))};
+    // Evidence is checked against the source alone; generated anchors cannot cite themselves.
+    ingestQuotes(staged,{quotes:rows},source,date,inv.securities);
+    const added=missing.filter(d=>!finance(m).prices[key]?.[d]?.rows?.length && staged.finance.prices[key]?.[d]?.rows?.length).length;
+    if(!added) throw new Error('추가할 시세를 받지 못했어요. 다시 시도해 주세요');
+    m.finance=staged.finance;await saveMeta();return added;
 }

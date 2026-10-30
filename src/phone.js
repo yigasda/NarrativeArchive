@@ -5,7 +5,7 @@
 //   upto (the last message number the archive held), at, inject } }
 
 import { investmentScreen } from './investui.js';
-import { collectInvestmentRecords, fillInvestment, refreshMarket, refreshBankFX, validDate } from './investdata.js';
+import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, validDate } from './investdata.js';
 import { finance, migrateBank, reviseBaseline, selectPrice, transfer } from './finance.js';
 import { draftReady, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
@@ -186,6 +186,14 @@ export async function openPhone(who = null) {
         try { await withSpinner($(this),'확인 중',()=>refreshBankFX(m,p,date,base)); }
         catch (err) { toastr.error(String(err?.message || err),'환율'); }
         finally { investing = false; if (phone() === p) drawPhone(true); }
+    });
+    $root.on('click', '.iv_chartfill', async function () {
+        if (investing) return;
+        const p=phone(), symbol=this.dataset.symbol, range=this.dataset.range;
+        investing=true; drawPhone(true);
+        try { const added=await fillChartHistory(m,p,symbol,range); toastr.info(added ? `${added}개 시세를 추가했어요` : '저장된 시세가 모두 있어요'); }
+        catch(err) { toastr.error(String(err?.message || err),'차트'); }
+        finally { investing=false; if(phone()===p) drawPhone(true); }
     });
     $root.on('click', '.iv_refresh', () => investRun(false));
     $root.on('click', '.iv_sync', () => investRun(true));
