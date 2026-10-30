@@ -5724,3 +5724,55 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .bank_fxrefresh { --axbg: #e8efec; color: #24664d; border-radius: 10px; padding: 9px 10px; font-size: 12px; }
 .ax_fx_tools > small { flex-basis: 100%; color: #89938e; font-size: 10px; line-height: 1.5; }
 .ax_accv .ax_fx_note { display: block; max-width: 150px; white-space: normal; font-size: 10px; line-height: 1.5; margin-top: 5px; }
+
+/* Card detail: a compact card, native balance and a grouped payment feed. */
+.cd_app { position: absolute; inset: 0; display: flex; flex-direction: column; background: #f4f5f7; color: #18202d; }
+.cd_top { display: flex; align-items: center; gap: 11px; padding: 0 20px 12px; flex: none; }
+.ax .cd_back { --axbg: #fff; --axsh: 0 3px 12px #19233608; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #202a39; }
+.cd_top > b { font-size: 17px; letter-spacing: -.03em; }
+.cd_top > span { margin-left: auto; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: #89909c; }
+.cd_scroll { padding-bottom: 18px; }
+.cd_scroll > * { flex: none; }
+.cd_card { margin: 8px 38px 0; }
+.cd_card .ax_cc { border-radius: 18px; padding: 18px 20px; box-shadow: 0 14px 24px #1d294f25, inset 0 1px 0 #ffffff24; }
+.cd_card .ax_cclg { font-size: 15px; }
+.cd_card .ax_cckd { font-size: 16px; }
+.cd_card .ax_ccmid { margin-top: 12px; }
+.cd_card .ax_ccchip { width: 36px; height: 27px; }
+.cd_card .ax_ccno { margin-top: 12px; font-size: 16px; }
+.cd_card .ax_ccbot small { font-size: 8px; }
+.cd_card .ax_ccbot b { font-size: 11px; }
+.cd_identity { text-align: center; margin: 17px 24px 20px; }
+.cd_identity b { display: block; font-size: 14px; font-weight: 600; }
+.cd_identity > span { display: block; margin-top: 5px; color: #8b929d; font-size: 11px; }
+.cd_summary { margin: 0 16px; padding: 18px 19px 0; border: 1px solid #edf0f4; background: #fff; border-radius: 22px; }
+.cd_summary_label { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: #79818d; }
+.cd_pending { border-radius: 6px; background: #f6f1e6; color: #a48144; padding: 3px 6px; font-size: 9px; }
+.cd_summary > strong { display: block; margin: 8px 0 4px; font: 650 32px/1.2 'Inter Tight', -apple-system,sans-serif; letter-spacing: -.035em; overflow-wrap: anywhere; }
+.cd_fx { margin: 8px 0 0; font-size: 11px; color: #7e8997; }
+.cd_fx > summary { display: flex; align-items: center; gap: 5px; list-style: none; cursor: pointer; min-height: 24px; }
+.cd_fx > summary::-webkit-details-marker, .cd_info > summary::-webkit-details-marker { display: none; }
+.cd_fx p { font-size: 10px; line-height: 1.7; margin: 5px 0 0; }
+.ax .cd_account { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 8px; padding: 15px 0; margin-top: 15px; border-top: 1px solid #eef0f4; font-size: 11px; color: #56657c; }
+.cd_account > span { display: inline-flex; align-items: center; gap: 6px; }
+.cd_account > span:last-child { color: #8e97a5; font-size: 10px; }
+.cd_section { display: flex; align-items: center; justify-content: space-between; margin: 25px 23px 12px; }
+.cd_section h2 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.03em; }
+.ax .cd_section > button { display: inline-flex; align-items: center; gap: 3px; color: #8a939f; font-size: 11px; }
+.cd_payments { background: #fff; border: 1px solid #edf0f4; border-radius: 22px; margin: 0 16px; padding: 0 15px; overflow: hidden; }
+.ax .cd_payment { display: flex; align-items: center; gap: 11px; width: 100%; padding: 16px 0; text-align: left; }
+.cd_payment + .cd_payment { border-top: 1px solid #f1f3f6; }
+.cd_merchant { flex: 1; min-width: 0; }
+.cd_merchant b { display: block; color: #252e3b; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd_merchant small { display: block; margin-top: 5px; color: #9299a4; font-size: 10px; }
+.cd_payment_amount { display: flex; align-items: center; gap: 5px; flex: none; max-width: 48%; color: #263142; font: 600 13px 'Inter Tight',sans-serif; overflow-wrap: anywhere; }
+.cd_payment_amount svg { color: #bac1cc; flex: none; }
+.cd_payment_amount.incoming { color: #2b8669; }
+.cd_info { background: #fff; border: 1px solid #edf0f4; border-radius: 17px; margin: 14px 16px 0; padding: 17px; }
+.cd_info > summary { display: flex; align-items: center; gap: 8px; list-style: none; cursor: pointer; font-size: 12px; color: #526176; }
+.cd_info > summary > span { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font-size: 10px; color: #939daa; }
+.cd_info dl { border-top: 1px solid #edf0f4; margin: 15px 0 0; padding-top: 5px; }
+.cd_info dl > div { display: flex; justify-content: space-between; gap: 12px; margin: 12px 0; font-size: 11px; }
+.cd_info dt { color: #8c95a0; }.cd_info dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.cd_empty { display: flex; align-items: center; flex-direction: column; padding: 25px 12px; gap: 9px; color: #a0a9b5; }
+.cd_empty b { font-size: 12px; font-weight: 500; color: #7e8999; }.cd_empty span { font-size: 10px; }

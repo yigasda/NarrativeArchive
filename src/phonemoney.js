@@ -211,18 +211,26 @@ export function cardView(p, now, i) {
     const c = mo(p)?.cards?.[Number(i)];
     if (!c) return walletScreen(p, now);
     migrateBank(getMeta(),p);
-    const a = acctOf(p, c.account), ai = mo(p).bank.accounts.indexOf(a);
-    const xs = newestTx(p).filter(x => x.account === c.account && x.kind === 'card').slice(0, 5);
-    return `${axBar(p, now)}
-      ${axTop(axCb('wallet'))}
-      <div class="ax_scroll">
-        <div class="ax_wl">${cardArt(p, c)}</div>
-        ${a ? `<div class="ax_cbal"><span>${kindName[a.kind]} ${a.kind === 'credit' ? '사용액' : '잔액'}</span><b class="cg_num">${esc(fmtMoney({ ...p, money: { currency: a.currency || mo(p).currency } }, a.kind === 'credit' ? a.spent ?? a.balance : a.balance))}</b></div>` : ''}
-        <div class="ax_shd">최근 결제${ai >= 0 ? `<button type="button" data-go="acct" data-i="${ai}">은행에서 보기 ›</button>` : ''}</div>
-        <div class="ax_card">${xs.map(x => txRow(p, x)).join('') || '<div class="ax_empty">결제가 없어요</div>'}</div>
+    const a = acctOf(p, c.account), ai = mo(p).bank.accounts.indexOf(a), credit = a?.kind === 'credit';
+    const all = newestTx(p).filter(x => x.account === c.account && x.kind === 'card'), xs = all.slice(0,5);
+    const pending = all.filter(x=>x.pending).length, cur = a?.currency || mo(p).currency;
+    const amount = a ? credit ? a.spent ?? a.balance : a.balance : null;
+    const conversion = a ? converted(p,a,true) : '';
+    const payment = x => `<button type="button" class="cd_payment" data-go="tx" data-i="${esc(x.id)}">${fi(x.who,38,axTint(x.who),12)}<span class="cd_merchant"><b>${esc(x.who)}</b><small>${esc(fmtDate(p,x.time,true))}${x.pending ? ' · 승인 대기' : x.amount > 0 ? ' · 입금·환급 기록' : ' · 결제'}</small></span><span class="cd_payment_amount ${x.amount > 0 ? 'incoming' : ''}">${esc(txMoney(p,x,true))}${ax('chev',13)}</span></button>`;
+    return `<div class="cd_app">${axBar(p,now)}
+      <div class="cd_top"><button type="button" class="cd_back" data-go="wallet" aria-label="지갑으로 돌아가기">${ax('back',20)}</button><b>내 카드</b><span>${esc(mo(p).bank.name)}</span></div>
+      <div class="ax_scroll cd_scroll">
+        <div class="cd_card">${cardArt(p,c)}</div>
+        <div class="cd_identity"><b>${esc(a?.name || mo(p).bank.name)}</b><span>${credit ? '신용카드' : '체크카드'} · ${esc(c.account)}</span></div>
+        <section class="cd_summary"><div class="cd_summary_label"><span>${credit ? '이번 달 이용 금액' : '연결 계좌 잔액'}</span>${pending ? `<span class="cd_pending">승인 대기 ${pending}</span>` : ''}</div><strong class="cg_num">${esc(fmtIn(p,amount,cur))}</strong>
+          ${conversion ? `<details class="cd_fx"><summary>${conversion}${ax('down',12)}</summary><p>${converted(p,a)}<br>표시용 환산이며 실제 환전되지 않아요.</p></details>` : ''}
+          ${ai >= 0 ? `<button type="button" class="cd_account" data-go="acct" data-i="${ai}"><span>${ax('card',16)} ${credit ? '카드 이용 내역' : '연결 계좌 보기'}</span><span>•••• ${esc(a.last4)} ${ax('chev',14)}</span></button>` : ''}
+        </section>
+        <div class="cd_section"><h2>최근 결제</h2>${ai >= 0 ? `<button type="button" data-go="acct" data-i="${ai}">전체 보기 ${ax('chev',12)}</button>` : ''}</div>
+        <div class="cd_payments">${xs.map(payment).join('') || `<div class="cd_empty">${ax('receipt',25)}<b>아직 결제 내역이 없어요</b><span>이 카드의 결제 기록이 여기에 표시돼요.</span></div>`}</div>
+        <details class="cd_info"><summary>${ax('info',17)} 카드 정보<span>상세 보기 ${ax('down',13)}</span></summary><dl><div><dt>카드 소유자</dt><dd>${esc(p.owner)}</dd></div><div><dt>카드 번호</dt><dd>•••• •••• •••• ${esc(c.account)}</dd></div><div><dt>유효 기간</dt><dd>${esc(c.exp || '—')}</dd></div><div><dt>계좌 통화</dt><dd>${esc(cur)}</dd></div></dl></details>
         <i class="ax_pad"></i>
-      </div>
-      ${axInd()}`;
+      </div></div>${axInd()}`;
 }
 export function passView(p, now, id) {
     const x = mo(p)?.passes?.find(t => t.id === id);

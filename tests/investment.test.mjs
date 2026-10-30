@@ -160,7 +160,7 @@ test('bank converts EUR cash to KRW without converting the ledger or counting cr
  finance.addPrice(m,'FX:EUR/KRW','2026-10-30',{value:1500,source:'guess'});
  assert.equal(moneyUI.bankDisplayCurrency(p),'KRW');
  assert.doesNotMatch(moneyUI.walletScreen(p,'10-30'),/ax_fx_total|bank_display|bank_fxrefresh/);
- assert.doesNotMatch(moneyUI.cardView(p,'10-30','0'),/ax_fx_cardnote|19,500,000/);
+ assert.match(moneyUI.cardView(p,'10-30','0'),/19,500,000/);
  for(const html of [moneyUI.bankHome(p,'10-30'),moneyUI.bankAcct(p,'10-30','0')]) {
   assert.match(html,/19,500,000/);assert.doesNotMatch(html,/22,500,000/);
  }
@@ -179,4 +179,13 @@ test('bank FX refresh works without a portfolio and accepts only requested dates
  globalThis.__investTest.answer={fx:[{from:'EUR',to:'KRW',date:'2026-10-30',value:1500},{from:'USD',to:'JPY',date:'2026-10-30',value:150},{from:'EUR',to:'KRW',date:'2026-11-01',value:1800}],quotes:[{symbol:'NYSE:X',date:'2026-10-30',value:9}]};
  await dataMod.refreshBankFX(m,p,'2026-10-30','KRW');assert.equal(finance.fx(m,'EUR','KRW','2026-10-30'),1500);assert.equal(finance.fx(m,'USD','JPY','2026-10-30'),null);assert.equal(finance.fx(m,'EUR','KRW','2026-11-01'),null);assert.equal(p.investment,undefined);assert.equal(JSON.stringify(m.finance.accounts),before);
  globalThis.__investTest.answer={fx:[{from:'EUR',to:'KRW',date:'2026-10-30',value:9999}]};await dataMod.refreshBankFX(m,p,'2026-10-30','KRW');assert.equal(finance.fx(m,'EUR','KRW','2026-10-30'),1500);
+});
+test('card detail separates credit usage from cash and links real payment records',()=>{
+ const {m,p}=euroWallet();p.money.cards.push({account:'5678',exp:'11/29'});
+ p.money.tx=[{id:'debit-tx',account:'1234',kind:'card',who:'Coffee',amount:-6,time:'10-30 09:00'},{id:'credit-tx',account:'5678',kind:'card',who:'Bookshop',amount:-20,time:'10-29 18:00',pending:true}];
+ finance.migrateBank(m,p);finance.addPrice(m,'FX:EUR/KRW','2026-10-30',{value:1500});const before=JSON.stringify(m.finance);
+ const debit=moneyUI.cardView(p,'10-30','0'),credit=moneyUI.cardView(p,'10-30','1');
+ assert.match(debit,/연결 계좌 잔액/);assert.match(debit,/data-i="debit-tx"/);assert.doesNotMatch(debit,/Bookshop/);
+ assert.match(credit,/이번 달 이용 금액/);assert.match(credit,/3,000,000/);assert.match(credit,/승인 대기 1/);assert.match(credit,/data-i="credit-tx"/);assert.doesNotMatch(credit,/연결 계좌 잔액|Coffee/);
+ assert.match(credit,/<details class="cd_info">/);assert.match(credit,/11\/29/);assert.match(credit,/<details class="cd_fx">/);assert.equal(JSON.stringify(m.finance),before);
 });
