@@ -260,6 +260,11 @@ export async function openPhone(who = null) {
         const state={binding:structuredClone(p.financeProfile || {type:'none'}),entries:[]};
         profileStates.set(nameKey(p.owner),state); loadProfile(p,state);
     };
+    $root.on('click','.fp_source',function(){
+        const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state || state.binding.type === this.dataset.type) return;
+        state.binding={type:this.dataset.type};state.entries=[];
+        loadProfile(p,state);
+    });
     $root.on('change','.fp_select',function(){
         const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
         const field=this.dataset.field;

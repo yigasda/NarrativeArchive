@@ -532,7 +532,7 @@ export function setScreen(p, now, m, ui) {
         <div class="ax_card">
           <label class="ax_rw">${si('#8faed1', 'globe')}<span class="ax_tx"><span class="ax_n">국적</span></span><span class="ax_v">${esc(COUNTRIES[p.country] || p.country || '')}</span>${axChev}<select class="na_ph_country ax_sel" aria-label="국적">${Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === p.country ? 'selected' : ''}>${v}</option>`).join('')}${COUNTRIES[p.country] ? '' : `<option value="${esc(p.country)}" selected>${esc(p.country)}</option>`}</select></label>
           <button type="button" class="ax_rw na_ph_looksbtn2">${si('#d89f98', 'user')}<span class="ax_tx"><span class="ax_n">외모</span></span><span class="ax_v">${nLooks ? `${nLooks}명` : ''}</span>${axChev}</button>
-          <button type="button" class="ax_rw" data-go="setprofile">${si('#8faed1', 'user')}<span class="ax_tx"><span class="ax_n">인물 정보 연결</span></span><span class="ax_v">${esc(p.financeProfile?.label || '연결 안 함')}</span>${axChev}</button>
+          <button type="button" class="ax_rw" data-go="setprofile">${si('#a2a7af', 'info')}<span class="ax_tx"><span class="ax_n">이 폰에 대해</span></span><span class="ax_v">${esc(p.financeProfile?.label || '연결 안 함')}</span>${axChev}</button>
         </div>
         <div class="ax_sec">아카이브</div>
         <div class="ax_card">
@@ -654,12 +654,18 @@ export function mapScreen(p, now, m) {
       ${axInd()}`;
 }
 
-export function setOwnerProfile(p,now,state) {
-    const c=ctx(), binding=state?.binding || p.financeProfile || {type:'none'}, options=profileChoices(c);
-    const select=(field,title,rows,value)=>`<label class="fp_field"><span>${title}</span><select class="fp_select" data-field="${field}"><option value="">선택</option>${rows.map(x=>`<option value="${esc(x.id)}" ${x.id === value ? 'selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>`;
-    return `${axBar(p,now)}${axTop(axCb('set'))}<div class="ax_scroll">${axH1('인물 정보 연결',p.owner)}
-      <div class="ax_card fp_form"><label class="fp_field"><span>프로필 출처</span><select class="fp_select" data-field="type">${[['none','연결 안 함'],['character','캐릭터 카드'],['persona','사용자 페르소나'],['lore','로어북 항목']].map(([k,v])=>`<option value="${k}" ${binding.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
-      ${binding.type === 'character' ? select('id','캐릭터',options.characters,binding.id) : binding.type === 'persona' ? select('id','페르소나',options.personas,binding.id) : binding.type === 'lore' ? select('book','로어북',options.books.map(b=>({id:b,label:b})),binding.book)+ (binding.book ? select('id','인물 항목',state?.entries || [],binding.id) : '') : ''}</div>
-      ${state?.busy ? '<div class="ax_empty">프로필 불러오는 중…</div>' : state?.error ? `<div class="ax_empty">${esc(state.error)}</div>` : state?.resolved ? `<div class="ax_sec">${esc(state.resolved.label)}</div><div class="ax_card fp_preview">${esc(state.resolved.text)}</div>` : ''}
-      <div class="ax_card"><button type="button" class="ax_rw ax_rwn fp_save" ${state?.busy || binding.type !== 'none' && !state?.resolved ? 'disabled' : ''}><span class="ax_n ax_blue">${binding.type === 'none' ? '연결 해제' : '이 프로필 연결'}</span></button></div><i class="ax_pad"></i></div>${axInd()}`;
+export function setOwnerProfile(p, now, state) {
+    const binding = state?.binding || p.financeProfile || {type:'none'}, options = profileChoices(ctx());
+    const sources = [['character','캐릭터 카드','user','#8faed1'],['persona','사용자 페르소나','cmt','#a699c9'],['lore','로어북 항목','book','#dcc680'],['none','연결 안 함','x','#a2a7af']];
+    const select = (field,title,rows,value) => `<label class="ax_rw fp_picker"><span class="ax_tx"><span class="ax_n">${title}</span></span><span class="ax_v">${esc(rows.find(x=>x.id === value)?.label || '선택')}</span>${axChev}<select class="fp_select ax_sel" data-field="${field}" aria-label="${title}"><option value="">선택</option>${rows.map(x=>`<option value="${esc(x.id)}" ${x.id === value ? 'selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>`;
+    const linked = p.financeProfile && binding.type === p.financeProfile.type && binding.id === p.financeProfile.id && binding.book === p.financeProfile.book;
+    const preview = state?.resolved?.text || '';
+    const body = esc(preview).replace(/^\[(description|personality|scenario)\]$/gm,(_,k)=>`<strong>${{description:'소개',personality:'성격',scenario:'배경'}[k]}</strong>`);
+    return `${axBar(p,now)}${axTop(axCb('set'))}<div class="ax_scroll fp_screen">${axH1('이 폰에 대해')}
+      <div class="ax_card"><div class="ax_rw ax_me">${axFace(p.owner,48)}<span class="ax_tx"><b>${esc(p.owner)}</b><span class="ax_p">${esc(COUNTRIES[p.country] || p.country || '')}${p.upto >= 0 ? ` · #${p.upto}까지` : ''}</span></span><span class="fp_badge">${p.financeProfile ? '연결됨' : '연결 전'}</span></div></div>
+      <div class="ax_sec">인물 정보 가져오기</div>
+      <div class="ax_card">${sources.map(([type,title,icon,color])=>`<button type="button" class="ax_rw fp_source" data-type="${type}" aria-pressed="${binding.type === type}"><span class="ax_si" style="background:${color}">${ax(icon,17,'#fff')}</span><span class="ax_tx"><span class="ax_n">${title}</span></span><span class="ax_radio ${binding.type === type ? 'on' : ''}">${binding.type === type ? ax('check',14,'#fff',3.4) : ''}</span></button>`).join('')}</div>
+      ${binding.type === 'none' ? '' : `<div class="ax_sec">${binding.type === 'lore' ? '로어북에서 선택' : '인물 선택'}</div><div class="ax_card">${binding.type === 'character' ? select('id','캐릭터',options.characters,binding.id) : binding.type === 'persona' ? select('id','페르소나',options.personas,binding.id) : select('book','로어북',options.books.map(b=>({id:b,label:b})),binding.book) + (binding.book ? select('id','인물 항목',state?.entries || [],binding.id) : '')}</div>`}
+      ${state?.busy ? '<div class="ax_foot">불러오는 중…</div>' : state?.error ? `<div class="ax_foot">${esc(state.error)}</div>` : state?.resolved ? `<details class="ax_card fp_details"><summary class="ax_rw"><span class="ax_tx"><span class="ax_n">연결할 정보</span><span class="ax_p1">${esc(state.resolved.label)}</span></span>${axChev}</summary><div class="fp_preview">${body}</div></details>` : ''}
+      <div class="ax_card"><button type="button" class="ax_rw ax_rwn fp_save" ${state?.busy || binding.type !== 'none' && !state?.resolved || linked || binding.type === 'none' && !p.financeProfile ? 'disabled' : ''}><span class="ax_n ${linked ? 'ax_off' : 'ax_blue'}">${linked ? '연결된 정보예요' : binding.type === 'none' ? '연결 해제' : '이 인물 정보 연결'}</span></button></div><i class="ax_pad"></i></div>${axInd()}`;
 }

@@ -5778,8 +5778,12 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .cd_info dt { color: #8c95a0; }.cd_info dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
 .cd_empty { display: flex; align-items: center; flex-direction: column; padding: 25px 12px; gap: 9px; color: #a0a9b5; }
 .cd_empty b { font-size: 12px; font-weight: 500; color: #7e8999; }.cd_empty span { font-size: 10px; }
-.fp_form { padding: 16px; }
-.fp_field { display: block; margin-bottom: 14px; font-size: 12px; color: #7b8796; }
-.fp_field:last-child { margin-bottom: 0; }
-.ax .fp_field select { display: block; box-sizing: border-box; width: 100%; margin: 6px 0 0; min-height: 42px; padding: 8px 12px; border: 1px solid #e3e7ec; border-radius: 12px; color: #253244; background: #f7f8fa; font: inherit; font-size: 14px; }
-.fp_preview { padding: 18px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.8; max-height: 280px; overflow-y: auto; }
+/* About this phone follows the existing grouped settings rows. */
+.fp_screen .fp_badge { flex: none; padding: 5px 9px; border-radius: 20px; background: #f0f3f7; color: #8792a3; font-size: 10px; }
+.fp_screen .fp_picker { position: relative; }
+.fp_screen .fp_picker .ax_v { max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp_screen .fp_details > summary { cursor: pointer; list-style: none; }
+.fp_screen .fp_details > summary::-webkit-details-marker { display: none; }
+.fp_screen .fp_details[open] > summary > svg { transform: rotate(90deg); }
+.fp_screen .fp_preview { margin: 0 18px; padding: 14px 0 18px; border-top: 1px solid #edf0f4; color: #626d7d; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.8; }
+.fp_screen .fp_preview strong { color: #293240; font-weight: 600; }
