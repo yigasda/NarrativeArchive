@@ -6,47 +6,76 @@ import { sideRequest, storyNow, prepareWealth } from './phonedata.js';
 import { baseline, reviseBaseline, cash, currency, finance, finite, uid, positions, addPrice, migrateBank, fx, quoteKey } from './finance.js';
 
 export const INVEST_SYS = `GOAL
-Fill one character's investment app from the supplied story. The app computes holdings and returns; write inputs, not calculated totals.
+Fill one character's investment app in a long role-play: their brokerage cash, the shares they hold and how they came to hold them, the ones they watch, and any stake in a family company. The user opens it to peek at the character's life.
+The app works out holdings, totals and returns from your records; you write only the records.
 
 YOU GET
-- ARCHIVE, WORLD, selected LOREBOOK, RECENT CHAT, OWNER, OWNER DOESN'T KNOW, NAMES, DATE, and BANK when present.
-- OWNER PROFILE (sometimes): the background selected for this phone's owner.
-- REBUILD INVESTMENT and PRESERVED INVESTMENT CASH (when rebuilding): existing account currencies and external entries to preserve.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW.
+- DATE: the story's day the app shows.
+- BANK: the owner's bank accounts. They are separate and stay as they are.
+- FINANCIAL SCALE: how much the investments, brokerage cash included, come to, worked out beforehand.
+- EXISTING PUBLIC PRICES: prices the app already uses on DATE. They stay.
 
-RULES
-- Explicit amounts, dates, ownership and restrictions win. Infer a plausible personal investment scale from business reach, current personal ownership/access, lifestyle and spending. Do not credit company or family assets to personal cash.
-- Unspecified ordinary investments, watch notes, opening cash and historical prices may be imagined as app-only fiction. Make investment behaviour fit the character: concentrated long holding, conservative diversification, or mostly watching can all be right. Do not force active trading.
-- Family stakes, listing status, trusts, percentages, voting authority, beneficiaries, sale restrictions and their counterparties require explicit supplied evidence. Missing fields stay null or empty. Never infer ownership merely from being an heir. Put the exact supporting excerpt in each stake's evidence. Do not fabricate trust structures or a family valuation.
-- Privacy: only this owner's portfolio. Other characters' possessions are not theirs. Unknown or suspected facts never become known.
-- Opening cash is a baseline BEFORE the listed trades, per currency. Trades are chronological; no short selling, leverage, derivatives or automatic conversion. Buy costs include fees; sell proceeds subtract fees; dividends specify currency and amount. Provide enough opening cash for purchases; do not invent bank transfers to fund it. Bank balances are separate and locked. Transfer history is managed by the app, not this request.
-- Every security has a stable exchange:symbol key and one trading currency. No returns, averages or total values in your answer. All numbers are JSON numbers without separators. Fees explicitly zero when none in invented trades.
-- Full YYYY-MM-DD, never later than DATE. Use story dates, not today's real date. Do not turn an execution price into a market quote. A story market quote needs an exact evidence excerpt and its actual time if known; unknown time is empty. Other quotes are guess. Public quotes contain no owner information.
-- Names and short notes in the owner's language with natural Korean in ko fields. Use their behaviour, not a generic personality label. News search terms must concern public business news, never private family events.
-- At most 10 securities, 30 trades, 8 watches, 8 stakes. Include FX at trade dates when foreign executions need a cost basis, as well as evaluation-date FX. Include several prices spread across the last month for each held security, including the evaluation date, to form its default chart; at most 60 quotes total. Fewer and empty lists are fine. Cash can remain uninvested. Family stakes never enter ordinary portfolio totals.
+STORY OR INVENTED
+- Amounts, dates, holdings and conditions the story gives stay as they are.
+- Everything else may be invented for the app: the opening cash, the shares, the trades, the watch list, past prices. Invented records are never new facts in the role-play.
+- Invest the way this owner would: holding a few for years, spreading carefully, or mostly watching. Trading often only if that is them.
+- Only the owner's own money. Company money, family money and other people's things are not theirs. Nothing the owner doesn't know shows as known.
+
+FAMILY STAKES
+- A stake goes in only when the story says the owner holds it; being an heir is not holding.
+- Each of its fields (listed, percent, holder, voter, beneficiary, restriction, value) only from the story; otherwise null or "".
+- "evidence": the exact words from the story that show it. Stakes stay out of the portfolio totals.
+
+CASH AND TRADES
+- "cash": what the account held before the first trade, per currency; enough for every buy. Don't fund it with bank transfers.
+- Trades oldest first: buy, sell or dividend. No selling what isn't held, no borrowing, no derivatives, no currency exchange.
+- A buy's cost includes its fee; a sale's proceeds have the fee taken off; "fee": 0 when there is none. A dividend gives its "amount".
+
+PRICES
+- Each share has one key, "EXCHANGE:CODE", and one trading currency.
+- "quotes": market prices, several across the last month for each share held, DATE included.
+- A price the story gives is "source": "story", with the exact words as "evidence" and its time if given. Every other price is "guess". The price someone paid is not a market quote.
+- "fx": the rate on DATE from each other currency to "base", and on each trade date in a foreign currency.
+
+DATES AND LANGUAGE
+- Full "YYYY-MM-DD", in story time, never after DATE.
+- Names and notes in the owner's language, the Korean in "ko". "query": a search for public business news about the company, never private family matters.
 
 ANSWER — one JSON object, nothing else:
-{"base":"EUR","basis":"short evidence and invented-scale explanation",
+{"base":"EUR","basis":"what the story gave and what you invented",
 "cash":[{"currency":"EUR","amount":10000}],
 "securities":[{"symbol":"EXCHANGE:CODE","name":"Company","currency":"EUR","ko":"한국어 이름"}],
 "trades":[{"kind":"buy|sell|dividend","symbol":"EXCHANGE:CODE","currency":"EUR","date":"YYYY-MM-DD","quantity":1,"price":100,"fee":0,"amount":0}],
-"watch":[{"symbol":"EXCHANGE:CODE","note":"why watching","ko":"번역","query":"public news search"}],
-"stakes":[{"company":"name","listed":null,"percent":null,"holder":"","voter":"","beneficiary":"","restriction":"","value":null,"currency":"EUR","evidence":"exact supplied excerpt"}],
+"watch":[{"symbol":"EXCHANGE:CODE","note":"why they watch it","ko":"번역","query":"public news search"}],
+"stakes":[{"company":"name","listed":null,"percent":null,"holder":"","voter":"","beneficiary":"","restriction":"","value":null,"currency":"EUR","evidence":"exact words from the story"}],
 "quotes":[{"symbol":"EXCHANGE:CODE","date":"YYYY-MM-DD","time":"","value":100,"source":"guess|story","evidence":""}],
-"fx":[{"from":"USD","to":"EUR","date":"YYYY-MM-DD","time":"","value":0.9,"source":"guess|story","evidence":""}]}`;
+"fx":[{"from":"USD","to":"EUR","date":"YYYY-MM-DD","time":"","value":0.9,"source":"guess|story","evidence":""}]}
+At most 10 shares, 30 trades, 8 watched, 8 stakes and 60 quotes. Fewer is fine; cash may stay uninvested. Plain JSON numbers, without separators.`;
+// 투자 새로 만들기: the same account currencies, everything else made again
+const INVEST_REBUILD = `
+
+REBUILD
+REBUILD means the user asked for the investment app to be made again.
+- New shares, trades, watch list and opening cash, from the story as it is now. The old amounts are not targets.
+- "cash" covers every currency in REBUILD; new currencies are fine.
+- MONEY ALREADY MOVED is money the app already recorded going in or out of the account. Leave it out of "trades"; the entries marked included are already in the opening cash. Trades after them must be affordable.`;
 const MARKET_SYS = `GOAL
-Supply public market quotes and FX for DATE in this fictional story. Only the supplied securities and currency pairs. Never include portfolios, private ownership or private news.
+Give the public market prices and exchange rates for DATE in a long role-play's world, for one phone's investment app.
 
 YOU GET
-- STORY INPUT: archive, selected lore and recent chat.
+- ARCHIVE, RECENT CHAT, and sometimes WORLD and LOREBOOK.
 - DATE, PUBLIC SECURITIES, EXISTING QUOTES and FX PAIRS.
 
 RULES
-- Existing quotes are fixed. Do not generate guess quotes for keys already present on DATE. Explicit story market prices may correct invented values; preserve exact evidence and actual time, leaving unknown time empty. Execution prices are not market quotes. Do not invent an exchange listing. Unsupported quotes are app-only guess values.
-- Use the existing series as a coherent starting point, not unrelated random numbers. Do not create dates after DATE. No model-calculated returns.
-- At most one new guess per missing key on DATE. Empty lists are fine.
+- Only the shares in PUBLIC SECURITIES and the pairs in FX PAIRS, one price each on DATE.
+- EXISTING QUOTES stay. A key that already has a price on DATE gets none, unless the story gives a different one.
+- A price the story gives is "source": "story", with the exact words as "evidence" and its time if given. Every other price is "guess", carrying on from EXISTING QUOTES. The price someone paid is not a market quote.
+- Nothing about anyone's holdings or private news.
 
 ANSWER — one JSON object, nothing else:
-{"quotes":[{"symbol":"exchange:symbol","date":"YYYY-MM-DD","time":"","value":100,"source":"guess|story","evidence":"exact supplied excerpt for story"}],"fx":[{"from":"USD","to":"EUR","date":"YYYY-MM-DD","time":"","value":0.9,"source":"guess|story","evidence":""}]}`;
+{"quotes":[{"symbol":"exchange:symbol","date":"YYYY-MM-DD","time":"","value":100,"source":"guess|story","evidence":"exact words from the story, for story"}],"fx":[{"from":"USD","to":"EUR","date":"YYYY-MM-DD","time":"","value":0.9,"source":"guess|story","evidence":""}]}
+Empty lists are fine.`;
 const list = x => Array.isArray(x) ? x : [];
 const text = (s, n = 500) => String(s ?? '').trim().slice(0, n);
 const json = out => { const s = String(out).replace(/```(?:json)?/gi, ''); return JSON.parse(s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1)); };
@@ -90,11 +119,11 @@ export async function fillInvestment(m, p, date, {regenerate = false, wealthPlan
     finance(m);
     const snapshot = () => JSON.stringify([m.finance,p.investment,p.money,p.financeProfile]);
     const before = snapshot();
-    const rebuild = old ? `[REBUILD INVESTMENT]\nReplace ordinary securities, trades and watch lists using the owner's current profile and story. Generate fresh opening cash amounts, securities and trades appropriate to the current story and owner profile; old cash amounts are context, not fixed targets. Return cash for every existing account currency; new currencies are allowed. Old investment trades will be replaced; do not recreate bank transfers. External entries below are applied once by the app, not trades to return. Transfers marked included are already part of the opening cash; do not add them again. Generate affordable trades after the external entries.\n[PRESERVED INVESTMENT CASH]\n${JSON.stringify(preserved)}` : '';
-    const input = await sideRequest(m, p.owner, [`[DATE]\n${date}`, `[BANK — separate locked balances]\n${JSON.stringify(p.money?.bank || {})}`, rebuild,wealthBlock(plan,'investments'),`[EXISTING PUBLIC PRICES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).map(([k,book])=>[k,book[date]])))}`], {profile:p.financeProfile});
+    const rebuild = old ? `[REBUILD]\n${JSON.stringify([...new Set(preserved.map(a=>a.currency))])}\n[MONEY ALREADY MOVED]\n${JSON.stringify(preserved)}` : '';
+    const input = await sideRequest(m, p.owner, [`[DATE]\n${date}`, `[BANK — separate locked balances]\n${JSON.stringify(p.money?.bank || {})}`, rebuild,wealthBlock(plan,'investments'),`[EXISTING PUBLIC PRICES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).map(([k,book])=>[k,book[date]])))}`], {profile:p.financeProfile,money:true});
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {
-        const raw = json(await askDraft(input+'\n'+correction, { system: INVEST_SYS, maxTokens: 12000 }));
+        const raw = json(await askDraft(input+'\n'+correction, { system: INVEST_SYS + (old ? INVEST_REBUILD : ''), maxTokens: 12000 }));
         if (p.investment!==old || snapshot()!==before || m.phones && !Object.values(m.phones).includes(p)) throw new Error('생성 중 금융 정보가 변경됐어요. 다시 시도해 주세요');
         if (!currency(raw.base)) throw new Error('기준 통화를 확인하지 못했어요');
         const securities = list(raw.securities).slice(0, 10).map(s => ({ symbol: text(s.symbol, 80), name: text(s.name, 100), ko: text(s.ko, 100), currency: currency(s.currency) })).filter(s => s.symbol && s.name && s.currency);
@@ -156,41 +185,48 @@ export async function refreshMarket(m, p, date, checkStory = false) {
 }
 
 export const INVEST_NOTES_SYS = `GOAL
-Write one short private investment note for the requested TARGET: why this owner bought, keeps or watches it. Use their voice, not investment advice or a generic personality label. This note cannot create trades, cash movements or ownership, and is never injected into RP.
+Write one short note for TARGET in a character's investment app, in a long role-play: why they bought it, keep it or watch it, in their own words. It is not advice, and it adds no trade, money or ownership.
 
 YOU GET
-- STORY INPUT: archive, selected lore, recent chat and the owner's knowledge limits. AS OF is the story date, not the real date.
-- TARGETS identify the requested security or family stake; they are not evidence. APP CONTEXT contains app-only trades and watch notes, which may inform imagination but never prove story claims.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW.
+- AS OF: the story's day. TARGETS: the share or stake to write about; it proves nothing.
+- APP CONTEXT (sometimes): the app's own trades and watch notes for it. Ideas only, never evidence.
 
 RULES
-- Use the requested target key only. Never expose information the owner does not know; suspicions stay suspicions. Do not invent family secrets, rights or relationships.
-- An imagined reason is source guess, never canon. Source story requires an exact excerpt from STORY INPUT explicitly supporting that reason, not merely naming the company. Never cite TARGETS or earlier generated app text as evidence. Put source message/section numbers in ref when available.
-- Keep original names. Write in the owner's language and include natural Korean in ko when needed. Return at most one short note; no other records or keys.
+- An invented reason is "source": "guess". "story" only when the story itself gives the reason: the exact words from the story as "evidence", more than the company's name, and the message or section numbers as "ref".
+- No family secrets, rights or relationships the story doesn't have. Nothing the owner doesn't know shows as known.
+- Names as they are, in the owner's language, the Korean in "ko".
 
 ANSWER — one JSON object, nothing else:
-{"notes":[{"target":"provided key","text":"short note","ko":"translation","source":"guess|story","evidence":"exact supporting excerpt for story, otherwise empty","ref":""}]}`;
+{"notes":[{"target":"the TARGETS key","text":"short note","ko":"번역","source":"guess|story","evidence":"exact words from the story, for story; otherwise empty","ref":""}]}
+One note only.`;
 
 export const INVEST_RECORDS_SYS = `GOAL
-Build investment schedules and extract historical changes to one character's family stakes. This is a read-only companion to the financial ledger. Never create trades, cash movements or new ownership.
+Find the dates ahead and the past changes for one character's investments in a long role-play: dividend days, shareholder meetings, when a sale restriction or a voting delegation ends, and how a family stake changed hands. The app shows them; they change no balance and no holding.
 
 YOU GET
-- STORY INPUT: archive, selected lore, recent chat and the owner's knowledge limits.
-- TARGETS: existing securities and family stakes, with stable keys. They identify the screen, not independent evidence.
-- AS OF is the story date, not the real date. EXISTING SCHEDULES are saved app records, not story evidence; preserve them.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD, LOREBOOK and OWNER DOESN'T KNOW.
+- AS OF: the story's day.
+- TARGETS: the shares and stakes, with their keys. They name the screen; they prove nothing.
+- EXISTING SCHEDULES: what the app already has. They stay; they are not evidence.
 
-RULES
-- Use only TARGETS keys. Never expose information the owner does not know; suspicions stay suspicions.
-- Return schedules and history only, never notes. Empty lists are valid; do not fill the screen for decoration.
-- Ordinary stock dividend schedules may be imagined even without investment scenes: source guess, status scheduled, date on or after AS OF, no amount or evidence. At most one upcoming guess per stock target. Do not invent a new date when that target already has an upcoming schedule in EXISTING SCHEDULES. These are app-only fiction, not canon or a promise of payment. Do not assume every company pays dividends.
-- All other schedules, including every family-stake schedule, require an explicitly established date AND event: dividend payment, shareholder meeting, sale restriction release or voting delegation expiry. Future dates are allowed only when already announced in the story by AS OF. No inferred annual recurrence. A due date passing does not establish payment or release. paid/cancelled require explicit evidence; otherwise scheduled.
-- History is an actual change already shown by AS OF, not a current snapshot rewritten as an event. Only family stake targets. Fields: percent, holder, voter, beneficiary, restriction. Preserve the direction: who used to hold or exercise the right, and who does now. A change in feelings alone never changes legal rights. Unknown before/after or date stays empty. Unknown is not none or zero. Do not invent a transfer from the present ownership alone.
-- Every source story schedule and every history entry includes an exact supporting excerpt from STORY INPUT, never from TARGETS or earlier generated records. The excerpt must support the date, condition and parties, not merely name the company. Put source message/section numbers in ref when available. A historical date may be empty if unspecified; a schedule without a date is omitted.
-- No currency amounts or credited dividends: this request cannot alter balances or the current rights card. History records explain events, not instructions to change the portfolio.
+SCHEDULES
+- A share's next dividend may be guessed: "source": "guess", "status": "scheduled", on or after AS OF, at most one, and none when EXISTING SCHEDULES already has one ahead. Not every company pays dividends.
+- Every other schedule, and every one for a family stake, needs the story to give both the date and the event: "source": "story". A date ahead only if announced by AS OF. No yearly repeats.
+- "paid" or "cancelled" only when the story says so; a date passing is not a payment.
+
+HISTORY
+- Only family stakes, and only a change the story shows happened by AS OF: percent, holder, voter, beneficiary or restriction.
+- "before" is who held it, "after" who holds it now. A change of heart changes no right. What isn't known stays "".
+
+EVIDENCE
+- Each "story" item has "evidence": the exact words from the story that give its date, condition and people, not just the company's name. Never TARGETS or the app's own records. "ref": the message or section numbers, if any.
+- No amounts of money. Nothing the owner doesn't know shows as known.
 
 ANSWER — one JSON object, nothing else:
-{"schedules":[{"target":"provided key","kind":"dividend|meeting|release|delegation","date":"YYYY-MM-DD","title":"short title","status":"scheduled|paid|cancelled","source":"guess|story","evidence":"exact excerpt for story; empty for guess","ref":""}],
-"history":[{"target":"stake key","field":"percent|holder|voter|beneficiary|restriction","date":"YYYY-MM-DD or empty","before":"","after":"","evidence":"exact excerpt","ref":""}]}
-At most 16 schedules and 16 changes. Keep the original names and full years. Output no other keys.`;
+{"schedules":[{"target":"a TARGETS key","kind":"dividend|meeting|release|delegation","date":"YYYY-MM-DD","title":"short title","status":"scheduled|paid|cancelled","source":"guess|story","evidence":"exact words from the story; empty for guess","ref":""}],
+"history":[{"target":"a stake key","field":"percent|holder|voter|beneficiary|restriction","date":"YYYY-MM-DD or empty","before":"","after":"","evidence":"exact words from the story","ref":""}]}
+At most 16 schedules and 16 changes. Names as they are, full years, no other keys.`;
 export function investmentTargets(inv) {
     return [...inv.securities.map(s => ({ key: `stock:${s.symbol}`, name: s.name })), ...inv.stakes.map(s => ({ key: `stake:${s.id}`, name: s.company }))];
 }
@@ -234,7 +270,7 @@ export async function collectInvestmentRecords(m, p, mode = 'records', target = 
     const source = await sideRequest(m,p.owner,[], {profile:mode === 'notes' ? p.financeProfile : undefined});
     const targets = investmentTargets(inv).filter(t => mode !== 'notes' || t.key === target);
     const appContext = mode === 'notes' && target.startsWith('stock:') ? { trades: inv.trades.filter(t => `stock:${t.symbol}` === target).slice(-8), watch: inv.watch.filter(w => `stock:${w.symbol}` === target) } : null;
-    const input = `${source}\n\n[AS OF]\n${inv.date}\n[MODE]\n${mode}\n[TARGETS — identification only]\n${JSON.stringify(targets)}${mode === 'records' ? `\n[EXISTING SCHEDULES — app data, not evidence]\n${JSON.stringify(inv.schedules || [])}` : ''}${appContext ? `\n[APP CONTEXT — imagination, not evidence]\n${JSON.stringify(appContext)}` : ''}`;
+    const input = `${source}\n\n[AS OF]\n${inv.date}\n[TARGETS — identification only]\n${JSON.stringify(targets)}${mode === 'records' ? `\n[EXISTING SCHEDULES — app data, not evidence]\n${JSON.stringify(inv.schedules || [])}` : ''}${appContext ? `\n[APP CONTEXT — imagination, not evidence]\n${JSON.stringify(appContext)}` : ''}`;
     const raw = json(await askDraft(input,{system:mode === 'notes' ? INVEST_NOTES_SYS : INVEST_RECORDS_SYS,maxTokens:mode === 'notes' ? 2000 : 6500}));
     const got = parseInvestmentRecords(raw,inv,source,mode,target);
     if (mode === 'notes' && !got.notes.length) throw new Error('사용할 수 있는 투자 노트를 받지 못했어요');
@@ -262,17 +298,19 @@ export async function refreshBankFX(m,p,date,base) {
 }
 
 const CHART_SYS = `GOAL
-Fill missing chart prices for one public security in this fictional story.
+Fill the missing days of one share's price chart in a long role-play's world.
 
 YOU GET
-- STORY INPUT: archive, selected lore and recent chat.
-- SECURITY, REQUESTED DATES and EXISTING QUOTES: fixed anchors for the chart.
+- ARCHIVE, RECENT CHAT, and sometimes WORLD and LOREBOOK.
+- SECURITY, REQUESTED DATES, and EXISTING QUOTES: the prices already saved. They stay.
 
 RULES
-- Use only REQUESTED DATES and the supplied security. Produce a positive price for each requested date. Existing quotes are fixed anchors; make a plausible, coherent series around them, not unrelated random numbers. Missing public prices may be imagined. Never infer a market price from a purchase execution. Do not invent a listing date or prices outside the requested dates. Story quotes require an exact excerpt from STORY INPUT supporting that market price and date; otherwise source guess with empty evidence. Return no FX, trades, balances or ownership.
+- One positive price for each of REQUESTED DATES, for SECURITY only.
+- The series runs smoothly through EXISTING QUOTES; not random numbers.
+- A price the story gives is "source": "story", with the exact words from the story as "evidence". Every other price is "guess" with empty "evidence". The price someone paid is not a market quote.
 
 ANSWER — one JSON object, nothing else:
-{"quotes":[{"symbol":"provided symbol","date":"requested YYYY-MM-DD","value":100,"source":"guess|story","time":"","evidence":""}]}`;
+{"quotes":[{"symbol":"SECURITY's symbol","date":"a REQUESTED DATE","value":100,"source":"guess|story","time":"","evidence":""}]}`;
 export function chartDates(m, inv, symbol, range = '1m') {
     if (!validDate(inv?.date) || !inv.securities.some(s=>s.symbol === symbol)) throw new Error('종목과 시세 날짜를 확인해 주세요');
     const end = Date.parse(inv.date), day = 864e5;

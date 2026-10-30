@@ -228,6 +228,7 @@ YOU GET
 - OWNER, and NOW: the story's moment.
 - RECENT CHAT: the newest messages; the entry is written at the end of them.
 - SO FAR: the owner's earlier entries of this kind, for the language and the way they write.
+- OWNER PROFILE (sometimes): the background the user chose for the owner.
 
 RULES
 - Only what RECENT CHAT shows happened, and what the owner felt about it. Nothing it does not show.
@@ -332,6 +333,7 @@ YOU GET
 - OWNER and TO: who was writing, and to whom.
 - THREAD: their texts so far, newest last.
 - RECENT CHAT: the story's newest messages.
+- OWNER PROFILE (sometimes): the background the user chose for the owner.
 
 RULES
 - What the owner might have typed and held back, given THREAD and RECENT CHAT: nearer to what they mean than what they sent. No new events, nothing the chat does not support.
@@ -371,6 +373,7 @@ YOU GET
 - OWNER, and NOW: the story's moment.
 - RECENT CHAT: the newest messages; the memo is recorded at the end of them.
 - SO FAR: the owner's earlier memos.
+- OWNER PROFILE (sometimes): the background the user chose for the owner.
 
 RULES
 - Spoken, not written: the way the owner talks in the chat, with pauses (…), restarts and half sentences. Not a diary entry.

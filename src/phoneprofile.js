@@ -33,9 +33,15 @@ export async function resolvePhoneProfile(c, binding) {
     return {label:String(label),text:body};
 }
 // Keep financeProfile as the saved binding key for backward compatibility.
-export async function ownerProfileBlock(c,binding,owner) {
+// money: the bank, investment and wealth requests, which also read the profile for the owner's means
+export async function ownerProfileBlock(c,binding,owner,{money=false}={}) {
     const profile=await resolvePhoneProfile(c,binding);
-    return profile ? `[OWNER PROFILE — explicitly selected by the user for ${owner}]\n${profile.label}\n${profile.text}\n[PROFILE USE]\nUse this as background for this owner's personality, voice, relationships, interests, occupation, personal resources and lifestyle. Do not invent past events from background traits. Explicit current amounts and later story changes take precedence over background. Company and family assets are not personal cash. Do not turn profile secrets into another character's knowledge.` : '';
+    if (!profile) return '';
+    return `[OWNER PROFILE — chosen by the user for ${owner}]\n${profile.label}\n${profile.text}\n[PROFILE USE]
+Background for who the owner is: personality, voice, relationships, interests, work${money ? ' and means' : ''}.
+- It gives no events: nothing happened just because the profile makes it likely.
+- Where the story says otherwise, the story wins.
+- What the profile keeps secret, other people don't know.${money ? '\n- Company and family money are not the owner\'s own.' : ''}`;
 }
 
 // Empty arrays are valid generated app data; absent fields are not generated.

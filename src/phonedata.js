@@ -43,20 +43,9 @@ ANSWER — one JSON object, nothing else:
 { "name": the device's name, "model": model name, "os": OS name and version,
   "storage": storage capacity with its unit, "serial": serial number }`;
 
-export const AI_SYS_PHONE = `GOAL
-Show what one character's phone holds right now, in a long role-play. The user opens it to peek at the story from the phone's side.
-An app draws the screens from your JSON; you only write the content.
-
-YOU GET
-- ARCHIVE: the story so far, in sections (#numbers are chat messages), with the current state at the end.
-- WORLD (sometimes): the shared setting.
-- LOREBOOK (sometimes): setting notes the user picked.
-- RECENT CHAT: the newest messages, after the archive.
-- OWNER: whose phone it is.
-- OWNER DOESN'T KNOW (sometimes): facts the owner does not know, or only suspects. Nothing on the phone may show them as known.
-- PHONE NOW (only when updating): what the phone holds already.
-
-ONE TEST FOR EVERY ITEM
+// 폰 만들기 and 새로 일어난 일 반영 share the test, the language, the times and the app items; making a phone adds the
+// phone's own settings (country, wallpaper, device) and how much to fill
+const PHONE_TEST = `ONE TEST FOR EVERY ITEM
 Could this be on the owner's phone, given what the archive, lorebook and chat show? If not, leave it out.
 - The lorebook counts as fact like the archive; where the two disagree, the archive wins.
 - Events (a meeting, a fight, a confession, a trip, a loss) only if the archive or lorebook has them.
@@ -70,20 +59,9 @@ LANGUAGE
 - A text that is not in Korean gets "ko": a natural Korean translation. A Korean text gets no "ko".
 - People write the way they talk in the archive and chat. Texts are short, like real texts.
 
-DEVICE
-${DEVICE_RULES}
-
 TIMES
-"MM-DD HH:MM" (24-hour), in story time, from the archive's dates. "now" is the newest moment of the story.
-
-JSON (one object, nothing before or after it)
-{
-  "country": two-letter code of the country the owner lives in and their phone is set to, like "KR", "US", "DE",
-  "wallpaper": one of ${WALLS.join(', ')}, the one that suits the owner,
-  "accent": one of ${ACCENTS.join(', ')},
-  "now": "MM-DD HH:MM",
-  "device": { "name": device name, "model": model name, "os": OS and version, "storage": capacity with GB or TB, "serial": invented serial number },
-  "contacts": [{ "name": name in the story, "saved": how the owner saved them (a nickname, an emoji, or just the name) }],
+"MM-DD HH:MM" (24-hour), in story time, from the archive's dates. "now" is the newest moment of the story.`;
+const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how the owner saved them (a nickname, an emoji, or just the name) }],
   "threads": [{ "with": name, "messages": [{ "from": "me" or the sender's name, "text", "ko", "time" }],
                "draft": { "text", "ko", "time" } only when the archive or chat shows the owner wrote a text to them and didn't send it }],
   "calls": [{ "with": name, "type": "in" | "out" | "missed", "time", "min": minutes talked }],
@@ -96,19 +74,70 @@ JSON (one object, nothing before or after it)
               "comments": [{ "from": name, "text", "ko" }] }],
   "mails": [{ "from": sender, "subject", "ks": Korean subject, "text", "ko", "time", "unread": true or false }],
   "diary": [{ "date": "MM-DD", "title", "kt": Korean title, "text", "ko" }],
-  "voice": [{ "title", "kt", "text", "ko", "time", "sec", "place" }] only when the archive or chat shows the owner recorded one
+  "voice": [{ "title", "kt", "text", "ko", "time", "sec", "place" }] only when the archive or chat shows the owner recorded one`;
+const PHONE_LAST = `Any item may carry "ev": a short tag for one story event, the same on every item that comes from it (the flight's mail, its event and its photo all "ev": "berlin-flight").
+A value the story does not give (a booking number, a seat, a price, an exact time) stays empty; never make one up.`;
+
+export const AI_SYS_PHONE = `GOAL
+Show what one character's phone holds right now, in a long role-play. The user opens it to peek at the story from the phone's side.
+An app draws the screens from your JSON; you only write the content.
+
+YOU GET
+- ARCHIVE: the story so far, in sections (#numbers are chat messages), with the current state at the end.
+- WORLD (sometimes): the shared setting.
+- LOREBOOK (sometimes): setting notes the user picked.
+- RECENT CHAT: the newest messages, after the archive.
+- OWNER: whose phone it is.
+- OWNER PROFILE (sometimes): the background the user chose for the owner.
+- OWNER DOESN'T KNOW (sometimes): facts the owner does not know, or only suspects. Nothing on the phone may show them as known.
+
+${PHONE_TEST}
+
+DEVICE
+${DEVICE_RULES}
+
+JSON (one object, nothing before or after it)
+{
+  "country": two-letter code of the country the owner lives in and their phone is set to, like "KR", "US", "DE",
+  "wallpaper": one of ${WALLS.join(', ')}, the one that suits the owner,
+  "accent": one of ${ACCENTS.join(', ')},
+  "now": "MM-DD HH:MM",
+  "device": { "name": device name, "model": model name, "os": OS and version, "storage": capacity with GB or TB, "serial": invented serial number },
+${PHONE_ITEMS}
 }
 At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches (3 open at most), 6 events, 5 posts with up to 4 comments,
 6 mails, 5 diary entries. Fewer is fine; an empty list is fine.
 Oldest first in every list.
-Any item may carry "ev": a short tag for one story event, the same on every item that comes from it (the flight's mail, its event and its photo all "ev": "berlin-flight"). Keep the tags PHONE NOW uses.
-A value the story does not give (a booking number, a seat, a price, an exact time) stays empty; never make one up.`;
+${PHONE_LAST}`;
 
-const UPDATE_ASK = `[UPDATE]
-Write only what came onto the phone after PHONE NOW's "now", in the same JSON: new messages (under the thread they belong to),
-calls, photos, notes, searches, events, posts, mails and diary entries, and "now" as the new newest moment.
-Contacts and profile only if new or changed.
-Leave out country, wallpaper and accent. If nothing new would be on the phone, answer {"now": …} alone.`;
+// 새로 일어난 일 반영: only what came onto the phone since PHONE NOW, in the same items; the phone's settings stay as they are
+export const AI_SYS_PHONE_UPDATE = `GOAL
+Add to one character's phone what came onto it since it was last filled, in a long role-play. The user opens it to peek at the story from the phone's side.
+An app adds your JSON to the phone; you only write what is new.
+
+YOU GET
+- PHONE NOW: the newest of what the phone holds, with its "now" and its "ev" tags.
+- ARCHIVE: the sections since PHONE NOW, with the current state at the end.
+- WORLD (sometimes), LOREBOOK (sometimes) and RECENT CHAT, as when the phone was made.
+- OWNER: whose phone it is.
+- OWNER PROFILE (sometimes): the background the user chose for the owner.
+- OWNER DOESN'T KNOW (sometimes): facts the owner does not know, or only suspects. Nothing on the phone may show them as known.
+
+ONLY WHAT IS NEW
+- Only what came onto the phone after PHONE NOW's "now"; nothing PHONE NOW already holds.
+- A new message goes under the thread it belongs to.
+- Contacts and profile only if new or changed.
+- If nothing new would be on the phone, answer {"now": …} alone.
+
+${PHONE_TEST}
+
+JSON (one object, nothing before or after it)
+{
+  "now": "MM-DD HH:MM",
+${PHONE_ITEMS}
+}
+Fewer is fine; an empty list is fine. Oldest first in every list.
+${PHONE_LAST} Keep the tags PHONE NOW uses for its events; a new event gets a new tag.`;
 
 // ---- what the model sends back, cleaned: known keys only, text cut short, times in one shape
 export const str = (v, n) => String(v ?? '').replace(/[ \t]+/g, ' ').trim().slice(0, n);
@@ -278,7 +307,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '') 
     const now = p ? JSON.stringify(phoneForModel(p)) : '';
     return [
         p ? `[PHONE NOW]\n${now}` : '',
-        m.phones?.[nameKey(owner)]?.device ? `[DEVICE — locked]\n${JSON.stringify(m.phones[nameKey(owner)].device)}` : '',
+        !p && m.phones?.[nameKey(owner)]?.device ? `[DEVICE — locked]\n${JSON.stringify(m.phones[nameKey(owner)].device)}` : '',
         `[ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}]\n${ar.text || '(nothing new)'}`,
         world ? `[WORLD]\n${world}` : '',
         lore ? `[LOREBOOK]\n${lore}` : '',
@@ -286,7 +315,6 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '') 
         `[OWNER]\n${owner}`,
         profile, blindBlock(m, owner),
         namesBlock(m),
-        p ? UPDATE_ASK : '',
         only ? onlyAsk(only) : '',
     ].filter(Boolean).join('\n\n');
 }
@@ -315,7 +343,7 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     const old = update ? m.phones?.[key] : null;
     const part = apps && m.phones?.[key] ? apps.flatMap(a => REMAKE[a] || []) : null;
     const binding=structuredClone(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key]);
-    const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner), part, await ownerProfileBlock(ctx(),binding,owner)), { system: AI_SYS_PHONE, maxTokens: 16000 });
+    const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner), part, await ownerProfileBlock(ctx(),binding,owner)), { system: old ? AI_SYS_PHONE_UPDATE : AI_SYS_PHONE, maxTokens: 16000 });
     if(JSON.stringify(binding)!==JSON.stringify(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key])) throw new Error('생성 중 연결한 인물 정보가 변경됐어요. 다시 시도해 주세요');
     const got = parsePhone(out);
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
@@ -459,19 +487,24 @@ export const AI_SYS_MONEY = `GOAL
 Fill the money side of one character's phone in a long role-play: their bank, the cards and passes in their wallet, and their online orders. The user opens these apps to peek at the character's life.
 
 YOU GET
-- ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD and LOREBOOK.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD, LOREBOOK and OWNER PROFILE.
 - PHONE NOW: what the phone already holds (mails, events, searches), with their "ev" tags.
+- FINANCIAL SCALE: how much the owner's bank deposits come to, worked out beforehand.
+- EVALUATION DATE: the story's day, for exchange rates. SAVED RATES: the rates the app already has for it.
+- EXISTING ACCOUNTS (sometimes): the accounts the bank already has.
 
 STORY OR INVENTED
 - Purchases, bookings, trips, gifts, rent, wages: only what the story shows or plainly implies. Give each the "ev" tag the phone's mail or event for it already has.
-- Preserve explicit amounts with their owner, currency, purpose and date. A company valuation, transfer amount or old balance is not a current personal bank balance.
-- Where personal balances are unspecified, invent a coherent scale from the owner's business reach, ownership, access to funds, lifestyle and established spending. Do not turn company assets, family wealth or an expected inheritance into personal cash. Never invent restrictions or trusts to explain a low balance.
-- Distinguish everyday spending cash and reserves. Investment holdings belong outside bank cash. Record a short "basis" explaining the supplied evidence and the invented scale; invented amounts are app-only, never new canon.
-- Credit account balance is a placeholder: return 0. The app computes monthly usage from the returned card transactions: purchases negative, refunds positive; repayments are transfers, not refunds. Include all current-month card transactions you intend to show, and mark pending authorizations pending. Never invent a separate monthly spending total.
-- Last four digits, card expiry dates and everyday payments may be invented. Large purchases, wages and distributions need story support.
-- EXISTING ACCOUNTS, when provided, are locked financial snapshots. Keep their id, currency, balance, kind and last4 exactly. You may change their display names; do not invent extra accounts or replay old transactions. Credit accounts are not cash; monthly usage is computed from card transactions.
+- An amount the story gives stays as it is: whose it is, its currency, its date and what it was for. A company's value, a transfer or an old balance is not what the owner has in the bank now.
+- Balances, last four digits, card expiry dates, everyday payments (coffee, groceries, transit), and amounts the story doesn't give: invent them, fitting the owner's life, job and country. The deposits together fall within FINANCIAL SCALE.
+- Company money, family money and an inheritance still to come are not the owner's cash. Don't invent a trust or a restriction to explain a small balance.
 - A booking number, seat, gate or delivery date the story doesn't give stays empty.
 - Orders stand as of the story's now: with no sign it arrived, it is not "delivered".
+- "basis": a line or two on what the story gave and what you invented. Invented amounts are for the app only, never new facts in the role-play.
+
+ACCOUNTS
+- A credit card account has "balance": 0. The app adds up the month from its card payments in "tx": purchases minus, refunds plus; paying the card off is a transfer, not a refund. A payment not yet settled is "pending".
+- EXISTING ACCOUNTS keep their id, kind, last4, currency and balance; only their names may change. No new accounts.
 
 ONE THING, ONE AMOUNT
 A purchase is in "orders" or "passes" and once in "tx", with the same amount, date and "ev".
@@ -482,17 +515,30 @@ Banks, shops, merchants and items named as they would be in the owner's country.
 JSON (one object, nothing before or after it)
 {
   "currency": three-letter code,
-  "basis": short explanation of evidence and invented scale,
-  "bank": { "name", "accounts": [{ "id": existing id when supplied, "kind": "checking" | "savings" | "credit", "name", "last4", "currency": three-letter code, "balance": number }] },
+  "basis": what the story gave and what you invented,
+  "bank": { "name", "accounts": [{ "id": its id in EXISTING ACCOUNTS, or "", "kind": "checking" | "savings" | "credit", "name", "last4", "currency": three-letter code, "balance": number }] },
   "cards": [{ "account": last4, "exp": "MM/YY" }],
   "tx": [{ "account": last4, "who": merchant or person, "ko", "amount": number (minus for money out), "time": "MM-DD HH:MM",
            "kind": "card" | "transfer" | "deposit", "memo", "pending": true or false, "ev" }],
   "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by": airline, line, hotel or venue, "from", "to",
                "date": "MM-DD", "time": "HH:MM", "seat", "gate", "no", "status", "ev" }],
   "orders": [{ "shop", "item", "ko", "option", "qty", "price": number, "time", "status": "ordered" | "shipped" | "on the way" | "delivered" | "unknown",
-               "eta": "MM-DD", "arrived": "MM-DD", "gift": who it is for or "", "ev" }]
+               "eta": "MM-DD", "arrived": "MM-DD", "gift": who it is for or "", "ev" }],
+  "fx": [{ "from": an account currency, "to": FINANCIAL SCALE's currency, "date": EVALUATION DATE, "value": number }] for each pair SAVED RATES doesn't have
 }
-2 or 3 accounts and 8 to 15 transactions. Passes and orders only from the story; an empty list is fine. Oldest first.`;
+2 or 3 accounts and 8 to 15 transactions. Passes and orders only from the story; an empty list is fine. Oldest first.
+Numbers are plain JSON numbers, without separators.`;
+
+// 은행 새로 만들기: the same accounts, everything else made again
+const MONEY_REBUILD = `
+
+REBUILD
+REBUILD ACCOUNTS means the user asked for the money apps to be made again.
+- The same accounts, no more and no fewer: keep each one's id, kind, last4 and currency.
+- Everything else is new: balances, cards, transactions, passes and orders, read again from the story. Don't copy the old invented balances.
+- A deposit account's balance is its CURRENT balance, 0 or more: what it holds now, after your transactions and after MONEY ALREADY MOVED.
+- MONEY ALREADY MOVED is money the app already recorded going in or out of each account. Leave it out of "tx"; if it is the same story event as an amount you write, count it once.
+- Return every list, even an empty one.`;
 
 // 음성 메모 (채우기): memos at moments the archive has, spoken rather than written
 export const AI_SYS_VOICES = `GOAL
@@ -501,6 +547,7 @@ Fill the voice memo app of one character's phone in a long role-play: memos they
 YOU GET
 - ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD and LOREBOOK.
 - DIARY: the owner's diary entries, so the memos are not the same moments told again.
+- OWNER PROFILE (sometimes): the background the user chose for the owner.
 
 RULES
 - 3 or 4 memos, each at a moment the archive has where the owner could plausibly talk into their phone alone: after a fight, on the way somewhere, late at night. Not the days the diary already covers, where possible.
@@ -516,9 +563,9 @@ Oldest first.`;
 const jsonOf = out => { const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}'); try { return a >= 0 && b > a ? JSON.parse(t.slice(a, b + 1)) : null; } catch { return null; } };
 const num = v => { if (v === null || v === undefined || String(v).trim() === '') return null; const n = Number(String(v ?? '').replace(/[^\d.,-]/g, '').replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '')); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
 const last4 = v => String(v ?? '').replace(/\D/g, '').slice(-4);
-export async function sideRequest(m, owner, blocks, { profile } = {}) {
+export async function sideRequest(m, owner, blocks, { profile, money = false } = {}) {
     const world = worldText(m), lore = await loreFor(m, owner);
-    const profileText = await ownerProfileBlock(ctx(),profile,owner);
+    const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});
     const recent = recentForCheck(6).join('\n\n').slice(-6000);
     return [
         `[ARCHIVE]\n${archiveFor(m, -1).text || '(empty)'}`,
@@ -542,7 +589,7 @@ export function parseMoney(raw) {
 }
 // what the phone already holds, so the money side reuses its event tags
 const moneyContext = p => JSON.stringify({ now: p.now, mails: (p.mails || []).slice(-8).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })), events: real(p.events).slice(-8).map(x => ev(x, { title: x.title, date: x.date, time: x.time })), searches: real(p.searches).slice(-6).map(x => ev(x, { q: x.q, time: x.time })) });
-export const prepareWealth = (m,p,refresh=false) => ensureWealth(m,p,()=>sideRequest(m,p.owner,[`[OWNER COUNTRY]\n${p.country || ''}`,`[ACCOUNT CURRENCIES]\n${JSON.stringify((p.money?.bank?.accounts || []).map(a=>a.currency))}`],{profile:p.financeProfile}),{refresh});
+export const prepareWealth = (m,p,refresh=false) => ensureWealth(m,p,()=>sideRequest(m,p.owner,[`[OWNER COUNTRY]\n${p.country || ''}`,`[ACCOUNT CURRENCIES]\n${JSON.stringify((p.money?.bank?.accounts || []).map(a=>a.currency))}`],{profile:p.financeProfile,money:true}),{refresh});
 export async function fillMoney(m, p, { regenerateBalances = false, wealthPlan = null } = {}) {
     migrateBank(m, p);
     const old = p.money, rebuild = !!old && regenerateBalances;
@@ -550,14 +597,9 @@ export async function fillMoney(m, p, { regenerateBalances = false, wealthPlan =
     const date = wealthDate(m,p);
     const accountState = () => JSON.stringify([p.money,p.financeProfile,finance(m)]);
     const before = accountState();
-    const preserved = rebuild ? `[REBUILD ACCOUNTS]\n${JSON.stringify(old.bank.accounts.map(({id,kind,name,last4,currency})=>({id,kind,name,last4,currency})))}\n[APPLIED CASH ENTRIES]\n${JSON.stringify(old.bank.accounts.map(a=>({id:a.id,currency:a.currency,entries:finance(m).accounts[`${a.id}:${a.currency}`]?.entries || {}})))}` : old ? `[EXISTING ACCOUNTS]\n${JSON.stringify(old.bank.accounts)}` : '';
-    const system = AI_SYS_MONEY + (rebuild ? `
-REBUILD MONEY APPS
-REBUILD ACCOUNTS explicitly requests new balances, not locked snapshots. Keep every supplied account id, kind, last4 and currency; no added or omitted accounts. Re-read the story and infer fresh personal cash where unspecified, rather than copying previous invented balances.
-Regenerate cards, transactions, passes and orders together from the supplied story and owner profile. Previous generated records are replaced, not carried forward. Re-read explicit receipts, spending and purchases from the story; keep their owner, amount, currency and date. Matching orders, passes and card payments describe the same event: use consistent dates, amounts and ev tags.
-Each balance is the CURRENT balance AFTER the newly returned transactions and applied cash entries, not an opening balance. Applied cash entries remain in the ledger; do not duplicate them in tx or replay them. They may describe the same story event: never count it twice. Do not replay transfers, currency conversion, or credit company/family assets to personal cash. Explicit current personal balances take priority; preserve the amounts and currencies of established receipts and spending (for example, EUR 15000 received and EUR 2000 spent may leave EUR 13000 when no other funds or movements exist).
-Return complete cards, tx, passes and orders arrays (empty when appropriate); all tx must reference a returned account last4. For credit accounts return balance 0; the app computes usage from card transactions. Return a finite nonnegative balance for each deposit account and explain the evidence/invented scale in basis.` : '');
-    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p)}`,preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}\nAlso return fx:[{from,to,date,value}] for account currencies to ${plan.currency}; existing rates: ${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`],{profile:p.financeProfile});
+    const preserved = rebuild ? `[REBUILD ACCOUNTS]\n${JSON.stringify(old.bank.accounts.map(({id,kind,name,last4,currency})=>({id,kind,name,last4,currency})))}\n[MONEY ALREADY MOVED]\n${JSON.stringify(old.bank.accounts.map(a=>({id:a.id,currency:a.currency,entries:finance(m).accounts[`${a.id}:${a.currency}`]?.entries || {}})))}` : old ? `[EXISTING ACCOUNTS]\n${JSON.stringify(old.bank.accounts)}` : '';
+    const system = AI_SYS_MONEY + (rebuild ? MONEY_REBUILD : '');
+    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p)}`,preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,`[SAVED RATES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`],{profile:p.financeProfile,money:true});
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {
         const out = await askDraft(input+'\n'+correction,{system,maxTokens:12000});

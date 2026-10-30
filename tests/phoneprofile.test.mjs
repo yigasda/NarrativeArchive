@@ -11,7 +11,7 @@ test('explicit stable IDs select only the requested profile, even with duplicate
 });
 test('explicit lore entry loads in isolation and rereads current source contents',async()=>{
  const c=context(), binding={type:'lore',book:'Family',id:'4'};
- let block=await ownerProfileBlock(c,binding,'Mara');assert.match(block,/shipping business/);assert.doesNotMatch(block,/Unrelated secret/);assert.match(block,/current amounts and later story changes take precedence/);
+ let block=await ownerProfileBlock(c,binding,'Mara');assert.match(block,/shipping business/);assert.doesNotMatch(block,/Unrelated secret/);assert.match(block,/the story wins/);assert.doesNotMatch(block,/Company and family money/);assert.match(await ownerProfileBlock(c,binding,'Mara',{money:true}),/Company and family money are not the owner's own/);
  c.loadWorldInfo=async()=>({entries:{4:{uid:4,content:'Updated occupation.'}}});block=await ownerProfileBlock(c,binding,'Mara');assert.match(block,/Updated occupation/);assert.doesNotMatch(block,/shipping business/);
 });
 test('missing or empty sources never fall back to another character or active persona',async()=>{

@@ -126,14 +126,14 @@ test('note and record requests use separate prompts and retain provenance bounda
  assert.equal(note.system,dataMod.INVEST_NOTES_SYS);
  assert.doesNotMatch(note.system,/"schedules"|"history"/);
  assert.match(note.input,/APP CONTEXT/);
- assert.match(note.system,/exact excerpt from STORY INPUT/);
+ assert.match(note.system,/exact words from the story/);
  globalThis.__investTest.answer={schedules:[],history:[]};
  await dataMod.collectInvestmentRecords(m,p);
  const records=globalThis.__investTest.inputs.at(-1);
  assert.equal(records.system,dataMod.INVEST_RECORDS_SYS);
  assert.doesNotMatch(records.system,/"notes"/);
  assert.doesNotMatch(records.input,/APP CONTEXT/);
- assert.match(records.system,/exact supporting excerpt from STORY INPUT/);
+ assert.match(records.system,/exact words from the story/);
 });
 test('fictional dividends stay scheduled, private and idempotent without changing cash',async()=>{
  const {m,p}=setup();await dataMod.fillInvestment(m,p,'2026-10-30');p.investment.stakes=[{id:'family',company:'Family'}];
@@ -258,8 +258,8 @@ test('investment creation passes its selected profile into the source request',a
  const {m,p}=setup();p.financeProfile={type:'lore',book:'Family',id:'4'};
  const proxy=encoded(`export const prepareWealth=async()=>({currency:'EUR',deposits:{min:0,max:1e15},investments:{min:0,max:1e15},basis:'fixture'});export const storyNow=p=>p.now;export const sideRequest=async(m,owner,blocks,options)=>{globalThis.__investTest.profileOptions=options;return m.text+'\\n'+blocks.join('\\n')};`);
  const actual=await load('investdata.js',{'./wealth.js':wealthURL,'./ai.js':ai,'./core.js':core,'./phonedata.js':proxy,'./finance.js':financeURL});
- await actual.fillInvestment(m,p,'2026-10-30');assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile});
- await actual.fillInvestment(m,p,'2026-10-30',{regenerate:true});assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile});
+ await actual.fillInvestment(m,p,'2026-10-30');assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile,money:true});
+ await actual.fillInvestment(m,p,'2026-10-30',{regenerate:true});assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile,money:true});
  globalThis.__investTest.answer={};
  await assert.rejects(actual.collectInvestmentRecords(m,p,'notes','stock:NYSE:X'),/노트/);
  assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile});
@@ -364,7 +364,7 @@ test('explicit investment rebuild replaces trades but regenerates cash while pre
  assert.equal(m.finance.accounts[key].entries[oldTrade],undefined);assert.equal(finance.cash(m.finance.accounts[key]),999699);
  assert.equal(m.finance.accounts[key].entries.linked.amount,200);assert.deepEqual(m.finance.transfers.linked,transfer);
  assert.deepEqual(m.finance.accounts['bank:USD'],bank);assert.deepEqual(m.finance.accounts['other:USD'],external);assert.deepEqual(m.finance.prices,quotes);
- assert.equal(p.investment.watch[0].note,'new watch reason');assert.match(globalThis.__investTest.inputs.at(-1).input,/PRESERVED INVESTMENT CASH/);
+ assert.equal(p.investment.watch[0].note,'new watch reason');assert.match(globalThis.__investTest.inputs.at(-1).input,/MONEY ALREADY MOVED/);assert.match(globalThis.__investTest.inputs.at(-1).system,/REBUILD/);
  await dataMod.fillInvestment(m,p,'2026-10-30',{regenerate:true});assert.equal(finance.cash(m.finance.accounts[key]),999699);
  assert.equal(Object.keys(m.finance.accounts[key].entries).length,2);
 });
@@ -388,7 +388,7 @@ test('investment generation prompts share existing section format and keep JSON 
  const source=await readFile(new URL('../src/investdata.js',import.meta.url),'utf8');
  for(const name of ['INVEST_SYS','MARKET_SYS','INVEST_NOTES_SYS','INVEST_RECORDS_SYS','CHART_SYS']) {
   const start=source.indexOf(`const ${name} = `),end=source.indexOf('`;',start);
-  const prompt=source.slice(start,end);for(const heading of ['GOAL','YOU GET','RULES','ANSWER'])assert.ok(prompt.includes(heading),`${name}: ${heading}`);
+  const prompt=source.slice(start,end);for(const heading of ['GOAL','YOU GET','ANSWER'])assert.ok(prompt.includes(heading),`${name}: ${heading}`);
  }
 });
 
