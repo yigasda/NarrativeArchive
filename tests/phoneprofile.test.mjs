@@ -26,13 +26,14 @@ test('profile navigation preserves saved binding until connect and supports inli
  const handlers=new Map(), states=new Map(), saved={type:'character',id:'one.png',label:'Alex'};
  const p={owner:'Alex',financeProfile:{...saved}},c=context();let writes=0;
  const chunk=src.slice(src.indexOf('    const profileRedraw ='),src.indexOf("    $root.on('click', '.na_ph_pick"));
- const init=new Function('$root','profileStates','phone','ctx','resolvePhoneProfile','profileEntries','saveMeta',`
+ const init=new Function('$root','profileStates','phone','ctx','resolvePhoneProfile','profileEntries','saveMeta','fillDevice',`
+ const m={};
  const nameKey=s=>s.toLowerCase();let phoneClosed=false,view='setprofile';const drawPhone=()=>{};
  ${chunk}
  return editProfile;
  `);
  const {profileEntries}=await import('../src/phoneprofile.js');
- const edit=init({on:(event,selector,fn)=>handlers.set(selector,fn)},states,()=>p,()=>c,resolvePhoneProfile,profileEntries,async()=>{writes++});
+ const edit=init({on:(event,selector,fn)=>handlers.set(selector,fn)},states,()=>p,()=>c,resolvePhoneProfile,profileEntries,async()=>{writes++},async()=>{});
  const settle=()=>new Promise(r=>setTimeout(r,0));
  const click=async(selector,dataset={})=>{await handlers.get(selector).call({dataset});await settle();};
  edit();await settle();assert.equal(states.get('alex').pane,'about');
@@ -49,4 +50,11 @@ test('profile navigation preserves saved binding until connect and supports inli
  await click('.fp_back');await click('.fp_open');await click('.fp_pick',{type:'persona',id:'somang.png'});await click('.fp_save');
  assert.equal(p.financeProfile.id,'somang.png');assert.equal(p.financeProfile.type,'persona');
  await click('.fp_unlink');assert.equal(p.financeProfile,undefined);assert.equal(states.get('alex').pane,'about');
+});
+
+test('data summary counts stored empty app data and never invents missing timestamps',async()=>{
+ const {phoneDataInfo}=await import('../src/phoneprofile.js');
+ assert.equal(phoneDataInfo({}).count,0);assert.equal(phoneDataInfo({}).last,null);
+ const info=phoneDataInfo({threads:[],notes:[],money:{bank:{},cards:[],orders:[],at:200},at:100,generatedAt:300});
+ assert.equal(info.count,5);assert.equal(info.last,300);assert.equal(info.apps.find(x=>x.label==='투자').ready,false);
 });

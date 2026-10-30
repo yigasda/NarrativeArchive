@@ -288,3 +288,22 @@ test('individual writing includes owner profile while camera and public search d
  assert.doesNotMatch(globalThis.__investTest.inputs.at(-1).input,/PRIVATE OWNER PROFILE SENTINEL/);
 
 });
+
+test('device generation uses selected profile once and survives whole phone regeneration',async()=>{
+ const {m,p}=setup();p.financeProfile={type:'character',id:'a.png'};m.phones={a:p};
+ globalThis.__investTest.context={characters:[{avatar:'a.png',description:'Premium equipment and large personal resources.'}]};
+ const device={name:'A phone',model:'Example Pro',os:'Example OS 1',storage:'1 TB',serial:'EXAMPLE123'};
+ globalThis.__investTest.answer=device;
+ const results=await Promise.all([phonedata.fillDevice(m,p),phonedata.fillDevice(m,p)]);
+ assert.deepEqual(results,[device,device]);assert.equal(globalThis.__investTest.inputs.length,1);
+ assert.match(globalThis.__investTest.inputs[0].input,/Premium equipment/);assert.match(globalThis.__investTest.inputs[0].system,/capacity offered for that specific model/);
+ await phonedata.fillDevice(m,p);assert.equal(globalThis.__investTest.inputs.length,1);
+ globalThis.__investTest.answer={now:'10-30',device:{...device,storage:'256 GB'}};
+ const rebuilt=await phonedata.makePhone(m,'A');assert.deepEqual(rebuilt.device,device);
+ assert.doesNotMatch(phonedata.phoneBlock(m),/EXAMPLE123/);
+});
+test('invalid device generation leaves existing phone unchanged',async()=>{
+ const {m,p}=setup();globalThis.__investTest.answer={name:'Phone',model:'Pro',os:'OS',storage:'0 GB',serial:'TEST'};
+ await assert.rejects(phonedata.fillDevice(m,p),/기기/);assert.equal(p.device,undefined);
+ assert.equal(phonedata.parseDevice({name:'Phone',model:'Pro',os:'OS',storage:'lots',serial:'TEST'}),null);
+});

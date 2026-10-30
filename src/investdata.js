@@ -90,7 +90,7 @@ export async function fillInvestment(m, p, date) {
     ingestQuotes(scratch, raw, input, date, securities);
     for (const t of trades) t.rateAtTrade = fx(scratch, t.currency, raw.base, t.date);
     m.finance = scratch.finance;
-    p.investment = { version: 1, base: raw.base, date, basis: text(raw.basis, 2000), securities, accounts, trades, stakes, watch: list(raw.watch).slice(0, 8).filter(w => securities.some(s => s.symbol === w.symbol)).map(w => ({ symbol: w.symbol, note: text(w.note), ko: text(w.ko), query: text(w.query, 120), source: 'guess' })), generatedDates: [date] };
+    p.investment = { at: Date.now(), version: 1, base: raw.base, date, basis: text(raw.basis, 2000), securities, accounts, trades, stakes, watch: list(raw.watch).slice(0, 8).filter(w => securities.some(s => s.symbol === w.symbol)).map(w => ({ symbol: w.symbol, note: text(w.note), ko: text(w.ko), query: text(w.query, 120), source: 'guess' })), generatedDates: [date] };
     await saveMeta();
 }
 export async function refreshMarket(m, p, date, checkStory = false) {
@@ -188,6 +188,7 @@ export async function collectInvestmentRecords(m, p, mode = 'records', target = 
     const got = parseInvestmentRecords(raw,inv,source,mode,target);
     if (mode === 'notes' && !got.notes.length) throw new Error('사용할 수 있는 투자 노트를 받지 못했어요');
     mergeInvestmentRecords(inv,got);
+    inv.at=Date.now();
     if (mode === 'records') inv.recordsChecked = inv.date;
     await saveMeta();
     return got;

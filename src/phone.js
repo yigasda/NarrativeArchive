@@ -14,7 +14,7 @@ import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
 import { APPS, AXB, AXB_C, busyHtml, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
-import { ensureIds, fillMoney, fillVoice, koOn, loreOff, makePhone, newSections, phoneLore, REMAKE, showNow, storyNow } from './phonedata.js';
+import { ensureIds, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, newSections, phoneLore, REMAKE, showNow, storyNow } from './phonedata.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
 import { bankDisplayCurrency, bankAcct, bankHome, bankTx, cardView, orderView, passView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
 import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './phoneweb.js';
@@ -250,7 +250,7 @@ export async function openPhone(who = null) {
         state.busy=true; state.error=''; state.resolved=null; profileRedraw(p,state);
         try {
             const resolved=await resolvePhoneProfile(ctx(),{...state.binding});
-            if(state.version === version) state.resolved=resolved;
+            if(state.version === version) {state.resolved=resolved; if(!p.device) loadDevice(p,state);}
         } catch(err) { if(state.version === version) state.error=String(err?.message || err); }
         finally { if(state.version === version) { state.busy=false; profileRedraw(p,state); } }
     };
@@ -261,6 +261,14 @@ export async function openPhone(who = null) {
         catch(err) { state.books.set(book,{error:String(err?.message || err)}); }
         profileRedraw(p,state);
     };
+    const loadDevice = async (p,state) => {
+        if(state.deviceBusy || p.device) return;
+        state.deviceBusy=true;state.deviceError='';profileRedraw(p,state);
+        try {await fillDevice(m,p);} catch(err) {state.deviceError=String(err?.message || err);}
+        finally {state.deviceBusy=false;profileRedraw(p,state);}
+    };
+    $root.on('click','.fp_device',function(){const p=phone(),state=profileStates.get(nameKey(p.owner));if(state) loadDevice(p,state);});
+    $root.on('click','.fp_apps',function(){const p=phone(),state=profileStates.get(nameKey(p.owner));if(state){state.pane='apps';drawPhone();}});
     const editProfile = () => {
         const p=phone(); if(!p) return;
         const state={pane:'about',binding:structuredClone(p.financeProfile || {type:'none'}),books:new Map(),openBooks:new Set(),openType:null};

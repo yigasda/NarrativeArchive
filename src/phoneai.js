@@ -167,6 +167,7 @@ async function drawCaption(m, p, ph, caption, time) {
     }
     if (!url) { const one = onePrompt(a, ap); url = await drawWithST(one.tags, one.neg); }
     ph.img = url; ph.tags = shownTags(a); ph.via = via;
+    p.generatedAt = Date.now();
     await saveMeta();
     return ph;
 }
@@ -214,6 +215,7 @@ export async function takePhoto(m, p) {
     p.photos.push({ caption, ko: ko(raw?.ko), time: storyNow(p) || p.now || '', mood: pick(raw?.mood, MOODS, 'warm') });
     p.photos = p.photos.slice(-CAP.photos);
     ensureIds(p);
+    p.generatedAt = Date.now();
     await saveMeta();
     return p.photos.length - 1;
 }
@@ -255,6 +257,7 @@ export async function writeEntry(m, p, kind) {
     if (diary) { p.diary = [...(p.diary || []), { date: now.slice(0, 5), ...x }].slice(-CAP.diary); }
     else { p.notes.push({ ...x, time: now }); p.notes = p.notes.slice(-CAP.notes); }
     ensureIds(p);
+    p.generatedAt = Date.now();
     await saveMeta();
     return (diary ? p.diary : p.notes).length - 1;
 }
@@ -356,6 +359,7 @@ export async function makeDraft(m, p, i) {
     const text = str(raw?.text, 600);
     if (!text) throw new Error('모델 답에서 초안을 찾지 못했어요');
     t.draft = { text, ko: ko(raw?.ko), time: storyNow(p) || p.now || '', src: 'guess' };
+    p.generatedAt = Date.now();
     await saveMeta();
     return t.draft;
 }
@@ -394,6 +398,7 @@ export async function recordVoice(m, p) {
     if (!text) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
     p.voice = [...(p.voice || []), { title: line(raw?.title, 80), kt: line(raw?.kt, 80), text, ko: str(raw?.ko, 2000), time: storyNow(p) || p.now || '', sec: Math.max(3, Math.min(900, Math.round(Number(raw?.sec) || 30))), place: line(raw?.place, 60), src: 'guess', now: true }].slice(-CAP.voice);
     ensureIds(p);
+    p.generatedAt = Date.now();
     await saveMeta();
     return p.voice.length - 1;
 }
@@ -427,6 +432,7 @@ export async function searchPage(m, p, k) {
     x.news = arr(raw?.news).map(n => ({ site: line(n?.site, 60), color: hex(n?.color), title: line(n?.title, 160), kt: line(n?.kt, 160), ago: line(n?.ago, 20) })).filter(n => n.title).slice(0, 4);
     x.questions = arr(raw?.questions).map(q => ({ q: line(q?.q, 120), ko: line(q?.ko, 120) })).filter(q => q.q).slice(0, 4);
     x.related = arr(raw?.related).map(w => line(w, 60)).filter(Boolean).slice(0, 4);
+    p.generatedAt = Date.now();
     await saveMeta();
 }
 
@@ -461,5 +467,6 @@ export async function webPage(m, p, k, r) {
         other: () => ({}),
     }[kind]();
     res.page = { nav: arr(raw.nav).map(n => line(n, 20)).filter(Boolean).slice(0, 6), title: line(raw.title, 200) || res.title, kt: line(raw.kt, 200), lede: raw.lede && line(raw.lede.text, 300) ? txt(raw.lede, 300) : null, body, [kind]: extra };
+    p.generatedAt = Date.now();
     await saveMeta();
 }

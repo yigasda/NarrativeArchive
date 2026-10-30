@@ -37,3 +37,11 @@ export async function ownerProfileBlock(c,binding,owner) {
     const profile=await resolvePhoneProfile(c,binding);
     return profile ? `[OWNER PROFILE — explicitly selected by the user for ${owner}]\n${profile.label}\n${profile.text}\n[PROFILE USE]\nUse this as background for this owner's personality, voice, relationships, interests, occupation, personal resources and lifestyle. Do not invent past events from background traits. Explicit current amounts and later story changes take precedence over background. Company and family assets are not personal cash. Do not turn profile secrets into another character's knowledge.` : '';
 }
+
+// Empty arrays are valid generated app data; absent fields are not generated.
+export function phoneDataInfo(p) {
+    const apps=[['메시지','threads'],['전화','calls'],['연락처','contacts'],['사진','photos'],['메모','notes'],['검색','searches'],['캘린더','events'],['SNS','posts'],['메일','mails'],['일기','diary'],['음성 메모','voice']].map(([label,key])=>({label,ready:Array.isArray(p[key])}));
+    apps.push({label:'은행',ready:!!p.money?.bank},{label:'지갑',ready:Array.isArray(p.money?.cards) || Array.isArray(p.money?.passes)},{label:'쇼핑',ready:Array.isArray(p.money?.orders)},{label:'투자',ready:!!p.investment});
+    const timestamps=[p.at,p.generatedAt,p.money?.at,p.voiceAt,p.investment?.at].filter(t=>typeof t==='number' && Number.isFinite(t) && t>0);
+    return {apps,count:apps.filter(x=>x.ready).length,last:timestamps.length?Math.max(...timestamps):null};
+}

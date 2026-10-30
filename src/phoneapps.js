@@ -2,7 +2,7 @@
 
 import { annivsOf, datedRows } from './anniv.js';
 import { ctx } from './core.js';
-import { profileChoices } from './phoneprofile.js';
+import { profileChoices, phoneDataInfo } from './phoneprofile.js';
 import { faceHtml, nameKey, nameRe, peopleData, peopleList, personLine } from './people.js';
 import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './phoneai.js';
 import { bigClock, COUNTRIES, fmtDate, fmtTime, hasKo, koOn, lastTime, listTime, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName } from './phonedata.js';
@@ -671,9 +671,15 @@ export function setOwnerProfile(p, now, state) {
     let body='',title='이 폰에 대해';
     if(pane==='about') {
         const saved=p.financeProfile;
-        body=`<div class="ax_card">${row('이름',p.owner)}${row('국적',COUNTRIES[p.country] || p.country || '—')}${row('아카이브 반영',p.upto>=0?`#${p.upto}까지`:'—')}</div>
-        <div class="ax_sec">참고할 인물 정보</div><div class="ax_card">${row('출처',saved?.type==='lore'?`로어북 · ${saved.book}`:sourceName(saved),'fp_open')}${row('인물',saved?personName(saved,state?.resolved?.label || saved.label):'선택','fp_open')}${saved?row('내용 보기','','fp_content'):''}</div>
-        ${notice}${saved?'<div class="ax_card"><button type="button" class="ax_rw ax_rwn fp_unlink"><span class="ax_tx"><span class="ax_n ax_red">연결 해제</span></span></button></div>':''}`;
+        const info=phoneDataInfo(p), d=p.device;
+        const last=info.last?new Intl.DateTimeFormat('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(info.last)):'—';
+        body=`<div class="ax_sec">인물 정보</div><div class="ax_card">${row('출처',saved?.type==='lore'?`로어북 · ${saved.book}`:sourceName(saved),'fp_open')}${saved?row('내용 보기',personName(saved,state?.resolved?.label || saved.label),'fp_content'):''}</div>${notice}
+        <div class="ax_sec">데이터 정보</div><div class="ax_card">${row('아카이브 반영',p.upto>=0?`#${p.upto}까지`:'—')}${row('마지막 생성',last)}${row('생성된 앱',`${info.count}개`,'fp_apps')}</div>
+        <div class="ax_sec">기기 정보</div><div class="ax_card">${d?row('기기 이름',d.name)+row('모델명',d.model)+row('소프트웨어 버전',d.os)+row('저장 용량',d.storage)+row('일련번호',d.serial):row(state?.deviceBusy?'불러오는 중…':'기기 정보 불러오기','',state?.deviceBusy?'':'fp_device')}</div>
+        ${state?.deviceError?`<div class="ax_foot">${esc(state.deviceError)}</div>`:''}
+        ${saved?'<div class="ax_sec">관리</div><div class="ax_card"><button type="button" class="ax_rw ax_rwn fp_unlink"><span class="ax_tx"><span class="ax_n ax_red">연결 해제</span></span></button></div>':''}`;
+    } else if(pane==='apps') {
+        title='생성된 앱';body=`<div class="ax_card">${phoneDataInfo(p).apps.map(x=>row(x.label,x.ready?'생성됨':'아직 없음')).join('')}</div>`;
     } else if(pane==='content') {
         title='내용 보기';
         body=notice || `<div class="ax_sec">${esc(state?.resolved?.label || '')}</div><div class="ax_card"><div class="fp_preview">${preview}</div></div>`;

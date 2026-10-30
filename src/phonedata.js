@@ -50,6 +50,9 @@ LANGUAGE
 - A text that is not in Korean gets "ko": a natural Korean translation. A Korean text gets no "ko".
 - People write the way they talk in the archive and chat. Texts are short, like real texts.
 
+DEVICE
+Create a coherent device matching the story era, owner's resources, profession and usage. Explicit story specs take priority. Infer model and storage together: never default everyone to 256 GB, and use a capacity actually offered for that model. Choose a compatible OS version. Use a fictional serial, not a real person's device identifier. Existing DEVICE is locked; do not change it. Device details are phone UI flavor, not new story facts.
+
 TIMES
 "MM-DD HH:MM" (24-hour), in story time, from the archive's dates. "now" is the newest moment of the story.
 
@@ -59,6 +62,7 @@ JSON (one object, nothing before or after it)
   "wallpaper": one of ${WALLS.join(', ')}, the one that suits the owner,
   "accent": one of ${ACCENTS.join(', ')},
   "now": "MM-DD HH:MM",
+  "device": { "name": device name, "model": model name, "os": OS and version, "storage": capacity with GB or TB, "serial": invented serial number },
   "contacts": [{ "name": name in the story, "saved": how the owner saved them (a nickname, an emoji, or just the name) }],
   "threads": [{ "with": name, "messages": [{ "from": "me" or the sender's name, "text", "ko", "time" }],
                "draft": { "text", "ko", "time" } only when the archive or chat shows the owner wrote a text to them and didn't send it }],
@@ -112,6 +116,7 @@ export function parsePhone(out) {
     try { raw = JSON.parse(s.slice(a, b + 1)); } catch { throw new Error('모델 답의 JSON이 깨져 있어요. 다시 해 보세요'); }
     const msg = x => ({ from: line(x?.from, 40) || 'me', text: str(x?.text, 600), ko: ko(x?.ko), time: when(x?.time) });
     return {
+        device: parseDevice(raw.device),
         country: /^[A-Z]{2}$/.test(String(raw.country || '').toUpperCase()) ? String(raw.country).toUpperCase() : '',
         wall: pick(raw.wallpaper, WALLS, ''),
         accent: pick(raw.accent, ACCENTS, ''),
@@ -167,6 +172,7 @@ function carryOver(k, was, now) {
 export const isGuess = x => x?.src === 'guess';
 
 function mergePhone(p, add) {
+    if (!p.device && add.device) p.device = add.device;
     const keep = (list, n) => list.slice(-n);
     for (const t of add.threads) {
         const old = p.threads.find(x => nameKey(x.with) === nameKey(t.with));
@@ -252,6 +258,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '') 
     const now = p ? JSON.stringify(phoneForModel(p)) : '';
     return [
         p ? `[PHONE NOW]\n${now}` : '',
+        m.phones?.[nameKey(owner)]?.device ? `[DEVICE — locked]\n${JSON.stringify(m.phones[nameKey(owner)].device)}` : '',
         `[ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}]\n${ar.text || '(nothing new)'}`,
         world ? `[WORLD]\n${world}` : '',
         lore ? `[LOREBOOK]\n${lore}` : '',
@@ -297,6 +304,7 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         mergePhone(p, { ...got, ...Object.fromEntries([...LISTS, 'threads', 'contacts'].filter(k => !part.includes(k)).map(k => [k, []])), profile: null, now: '' });
         for (const k of part) if (k !== 'profile') carryOver(k, was[k], p[k]);
         ensureIds(p);
+        p.at = Date.now();
         await saveMeta();
         if (p.inject) applyInjection();
         return p;
@@ -305,6 +313,7 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     else {
         const was = m.phones[key];
         const base = { owner, inject: false, ...got, wall: got.wall || 'dusk', accent: got.accent || 'blue', country: got.country || 'KR', threads: [], contacts: [], ...Object.fromEntries(LISTS.map(k => [k, []])) };
+        if (was?.device) base.device = structuredClone(was.device);
         if (was?.theme) base.theme = was.theme;
         if (was?.money) base.money = was.money;
         if (was?.investment) base.investment = was.investment;
@@ -569,4 +578,32 @@ export async function fillVoice(m, p) {
     ensureIds(p);
     await saveMeta();
     return p.voice;
+}
+
+
+// Device flavor is private UI data. It never enters phoneBlock or the RP injection.
+export function parseDevice(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const d=Object.fromEntries(['name','model','os','storage','serial'].map(k=>[k,line(raw[k],k==='serial'?32:80)]));
+    if (Object.values(d).some(x=>!x) || !/^\d+(?:\.\d+)?\s*(GB|TB)$/i.test(d.storage) || parseFloat(d.storage)<=0) return null;
+    return d;
+}
+const deviceRequests = new WeakMap();
+export async function fillDevice(m,p) {
+    if(p.device) return p.device;
+    if(deviceRequests.has(p)) return deviceRequests.get(p);
+    const request=(async()=>{
+        const binding=JSON.stringify(p.financeProfile);
+        const input=await sideRequest(m,p.owner,[`[COUNTRY]\n${p.country || ''}`],{profile:p.financeProfile});
+        const out=await askDraft(input,{system:`Create one phone's device information for a fictional role-play. Return JSON only: {"name","model","os","storage","serial"}.
+Explicit device specs in the story take priority. Otherwise infer model and storage together from the owner's wealth, occupation, habits and story era. Do not use 256 GB as a default. Wealth can support a premium high-capacity model, while usage can also justify storage. Use a capacity offered for that specific model and a compatible OS version available in the story era; prefer known configurations over invented specs. Storage must be a positive number followed by GB or TB. Invent a plausible serial once. These are private phone UI details, not new RP facts.`,maxTokens:800});
+        const device=parseDevice(jsonOf(out));
+        if(!device) throw new Error('기기 정보를 받지 못했어요');
+        if(JSON.stringify(p.financeProfile)!==binding) throw new Error('인물 정보가 변경됐어요. 다시 불러와 주세요');
+        if(m.phones && m.phones[nameKey(p.owner)]!==p) return null;
+        if(!p.device) {p.device=device;await saveMeta();}
+        return p.device;
+    })();
+    deviceRequests.set(p,request);
+    try {return await request;} finally {deviceRequests.delete(p);}
 }
