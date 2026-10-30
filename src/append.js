@@ -1,6 +1,7 @@
 // Adding new sections to the archive: the 아카이브에 추가 window, and 바로 넣기 (autoAppend) with its undo.
 // The text work it leans on (placing, rewrites, numbering, STATE lines, checks) is appendtext.js.
 
+import { appendDraftStore } from './appenddraft.js';
 import { aiHtml, askAI, askFix, stripThink, withSpinner } from './ai.js';
 import { AI_SYS_CONFLICT, AI_SYS_DRAFTFIX, AI_SYS_GAPFILL, checkAppend, confirmWhole, cutSigns, findRewrites, fixTailNumber, looksWhole, placeAppend, restoreState, spliceChanged, stateLoss, stripRewrites, tailNumberGap } from './appendtext.js';
 import { commitText, ctx, getMeta, globalSettings } from './core.js';
@@ -23,6 +24,9 @@ export async function openAppend(prefill = {}) {
     const m = getMeta();
     const last = (c.chat?.length || 0) - 1;
     const pre = prefill && typeof prefill === 'object' && 'text' in prefill ? prefill : {};
+    let recovery=null, draftFinished=false, saveWarned=false;
+    try { recovery=appendDraftStore(c,pre.text); } catch(err) {toastr.warning(String(err?.message || err),'임시 저장을 사용할 수 없어요');}
+    const restored=recovery?.saved;
 
     const $root = $(`
       <div class="na_popup na_v2 na_ap2">
@@ -34,7 +38,7 @@ export async function openAppend(prefill = {}) {
         <div class="na_v2_row2 na_ap_tools">
           <button type="button" class="na_v2_btn na_append_file_btn">${svgA('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>', 15)}파일 불러오기</button>
           <button type="button" class="na_v2_btn na_ap_style" title="문장 결만 아카이브처럼 다듬어요 · 내용 · 출처 번호 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 보내요 · AI 기능 모델">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>', 15)}문체 다듬기</button>
-          ${pre.grade || pre.gradeLater ? '' : `<button type="button" class="na_v2_btn na_ap_grade" title="붙여넣은 섹션을 그 번호의 원문과 맞춰 봐요 · AI 기능 모델">${svgA('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14l2 2 4-4"/>', 15)}원문 대조</button>`}
+          ${(pre.grade || pre.gradeLater) && !restored ? '' : `<button type="button" class="na_v2_btn na_ap_grade" title="붙여넣은 섹션을 그 번호의 원문과 맞춰 봐요 · AI 기능 모델">${svgA('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14l2 2 4-4"/>', 15)}원문 대조</button>`}
         </div>
         <input type="file" class="na_append_file" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden>
         ${true ? `<div class="na_apf" hidden>
@@ -358,6 +362,7 @@ export async function openAppend(prefill = {}) {
             $root.find('.na_apf').prop('hidden', !has);
             drawApfChips();
             if (apf.raw) apfRawInfo();
+            persistDraft();
         }, 400);
     });
 
@@ -372,6 +377,19 @@ export async function openAppend(prefill = {}) {
     });
     // 이어서 고치기: the whole draft revised by the draft model, with the raw log of its range when it can be found
     const apf = { original: null, asked: [], steps: [], rawKey: '', raw: null, busy: false, pick: new Set() };
+    const persistDraft = () => {
+        if(!recovery || draftFinished) return;
+        try {
+            recovery.save({text:String($ta.val() || ''),end:$end.val(),endTouched,expectTo:pre.expectTo,
+                original:apf.original,asked:apf.asked,steps:apf.steps,pick:[...apf.pick],q:String($root.find('.na_apf_q').val() || ''),
+                doHide:$root.find('.na_do_hide').prop('checked'),doRenum:$root.find('.na_do_renum').prop('checked'),rwReplace});
+        } catch(err) {if(!saveWarned){saveWarned=true;toastr.error('브라우저 임시 저장에 실패했어요. 현재 내용을 복사해 두세요.','초안 저장 실패');}}
+    };
+    const finishDraft = () => {draftFinished=true;clearTimeout(t);try {recovery?.clear();}catch(err){toastr.warning('반영은 완료됐지만 임시 저장 정리는 실패했어요');}};
+    $ta.on('input',persistDraft);
+    $end.on('input',persistDraft);
+    $root.on('input change','.na_apf_q, .na_do_hide, .na_do_renum, .na_rw_replace',persistDraft);
+
     // the draft's numbered sections, with where each one sits in the draft text
     const draftSecs = () => {
         const t = String($ta.val() || ''), body = splitTail(t)[0];
@@ -470,6 +488,7 @@ export async function openAppend(prefill = {}) {
             apf.asked.push(part ? `[${part.map(x => `#${x.from}–#${x.to}`).join(', ')}] ${q}` : q);
             $ta.val(next).trigger('input');
             $root.find('.na_apf_q').val('');
+            persistDraft();
             $root.find('.na_apf_log').html(apf.asked.map(x => `<div class="na_sf_bubble">${esc(x)}</div>`).join(''));
             $root.find('.na_apf_note').prop('hidden', !note).text(note ? `못 한 것: ${note}` : '');
             $root.find('.na_apf_undo').prop('hidden', false);
@@ -485,9 +504,9 @@ export async function openAppend(prefill = {}) {
         if (apf.original === null) return;
         // one step back each press; the first press after one change is the original
         const back = apf.steps.pop();
-        if (back !== undefined && apf.steps.length) { $ta.val(back).trigger('input'); apf.asked.pop(); $root.find('.na_apf_log').html(apf.asked.map(x => `<div class="na_sf_bubble">${esc(x)}</div>`).join('')); toastr.info('한 단계 되돌렸어요'); return; }
+        if (back !== undefined && apf.steps.length) { $ta.val(back).trigger('input'); apf.asked.pop(); $root.find('.na_apf_log').html(apf.asked.map(x => `<div class="na_sf_bubble">${esc(x)}</div>`).join('')); persistDraft();toastr.info('한 단계 되돌렸어요'); return; }
         $ta.val(apf.original).trigger('input');
-        apf.original = null; apf.asked = []; apf.steps = [];
+        apf.original = null; apf.asked = []; apf.steps = [];persistDraft();
         $root.find('.na_apf_log').empty(); $root.find('.na_apf_note').prop('hidden', true); $root.find('.na_apf_undo').prop('hidden', true);
     });
     // 문체 다듬기: the sentences only; a section that comes back with other bullets, numbers or quotes stays as it was
@@ -512,7 +531,7 @@ export async function openAppend(prefill = {}) {
         } catch (e) {
             console.error('[NarrativeArchive] style pass', e);
             toastr.error(String(e?.message || e), '문체 다듬기');
-        } finally { apf.busy = false; }
+        } finally { apf.busy = false; persistDraft(); }
     });
     // [이대로 고쳐 줘] under a verdict with problems: the problems go to 초안 고쳐 달라고 하기 as the request
     // (their #numbers pick the sections they are in), with the raw log, and the draft changes in place
@@ -547,14 +566,24 @@ export async function openAppend(prefill = {}) {
                 : ok ? '<i class="fa-solid fa-circle-check"></i> 채점: 원문과 잘 맞아요'
                 : `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 채점 <span class="na_dim">· 참고용</span></div>${driftHtml(grade, m)}${gradeFix(grade)}`);
     };
-    if (pre.grade) showGrade(pre.grade, pre.gradeError);
+    if (pre.grade && !restored) showGrade(pre.grade, pre.gradeError);
     // still running when the window opens: the box says so and fills in when the verdict comes
-    if (pre.gradeLater) {
+    if (pre.gradeLater && !restored) {
         $root.find('.na_grade_out').prop('hidden', false).removeClass('na_ai_ok')
             .html('<div class="na_ai_box_head"><i class="fa-solid fa-spinner fa-spin"></i> 원문과 대조하는 중 <span class="na_dim">· 기다리지 않고 추가해도 돼요</span></div>');
         pre.gradeLater.then(r => { if ($root.closest('body').length) showGrade(r.grade, r.gradeError); });
     }
-    if (pre.text) {
+    if (restored) {
+        if(pre.expectTo===undefined) pre.expectTo=restored.expectTo;
+        apf.original=restored.original;apf.steps=restored.steps || [];apf.asked=restored.asked || [];apf.pick=new Set(restored.pick || []);
+        endTouched=!!restored.endTouched;$end.val(restored.end);rwReplace=!!restored.rwReplace;
+        $root.find('.na_do_hide').prop('checked',!!restored.doHide);$root.find('.na_do_renum').prop('checked',!!restored.doRenum);
+        $root.find('.na_apf_q').val(restored.q || '');
+        $root.find('.na_apf_log').html(apf.asked.map(x=>`<div class="na_sf_bubble">${esc(x)}</div>`).join(''));
+        $root.find('.na_apf_undo').prop('hidden',apf.original===null || apf.original===undefined);
+        $ta.val(restored.text).trigger('input');
+        toastr.info('마지막으로 수정한 초안을 불러왔어요');
+    } else if (pre.text) {
         if (Number.isFinite(pre.end)) { $end.val(pre.end); endTouched = true; hideHint(); }
         $ta.val(pre.text).trigger('input');
     }
@@ -564,6 +593,8 @@ export async function openAppend(prefill = {}) {
         wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '추가하기', cancelButton: '취소',
     });
 
+    persistDraft();
+    if(getMeta()!==m) return;
     if (wantWhole) {
         const whole = stripCites(String($ta.val() || '').replace(/\r\n/g, '\n').trim());
         const end = parseInt($end.val(), 10);
@@ -571,6 +602,7 @@ export async function openAppend(prefill = {}) {
         if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.map(esc).join('<br>')}<br><br>그래도 바꿀까요?`)) return;
         if (!await confirmWhole(m.text, whole)) return;
         await commitText(whole, '통째로 바꾸기 전', Number.isFinite(end) && end >= 0 ? { boundary: end } : {});
+        finishDraft();
         if ($root.find('.na_do_hide').prop('checked')) await applyHide({ silent: true });
         return toastr.success(Number.isFinite(end) && end >= 0 ? `아카이브를 통째로 바꿨어요 · 경계선 #${end}` : '아카이브를 통째로 바꿨어요');
     }
@@ -593,6 +625,7 @@ export async function openAppend(prefill = {}) {
     const plan = placeAppend(m.text, add, { renumber: $root.find('.na_do_renum').prop('checked'), rewrites: rwMode() });
     if (!plan.text.trim() || plan.text === `${trimEnd(m.text)}\n`) return toastr.info('새로 추가할 섹션이 없어요.');
     await commitText(plan.text, '추가 전', { boundary: end });
+    finishDraft();
     if ($root.find('.na_do_hide').prop('checked')) await applyHide({ silent: true });
     toastr.success(`아카이브에 추가됨 · 경계선 #${end}`);
 }
