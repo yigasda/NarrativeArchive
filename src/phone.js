@@ -4,6 +4,7 @@
 // m.phones = { [name key]: { owner, country, wall, accent, now, contacts, threads, calls, photos, notes, searches, events,
 //   upto (the last message number the archive held), at, inject } }
 
+import { profileEntries, resolvePhoneProfile } from './phoneprofile.js';
 import { investmentScreen } from './investui.js';
 import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, validDate } from './investdata.js';
 import { finance, migrateBank, reviseBaseline, selectPrice, transfer } from './finance.js';
@@ -12,7 +13,7 @@ import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
-import { APPS, AXB, AXB_C, busyHtml, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
+import { APPS, AXB, AXB_C, busyHtml, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setFinanceProfile, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
 import { ensureIds, fillMoney, fillVoice, koOn, loreOff, makePhone, newSections, phoneLore, REMAKE, showNow, storyNow } from './phonedata.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
 import { bankDisplayCurrency, bankAcct, bankHome, bankTx, cardView, orderView, passView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
@@ -33,7 +34,7 @@ function screen(p, view, m, roster, ui) {
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
         : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, now, m)
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
-        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'set' ? setScreen(p, now, m, ui) : v === 'settheme' ? setTheme(p, now) : v === 'setremake' ? setRemake(p, now, ui) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
+        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'set' ? setScreen(p, now, m, ui) : v === 'settheme' ? setTheme(p, now) : v === 'setremake' ? setRemake(p, now, ui) : v === 'setprofile' ? setFinanceProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app: drawn at the boards' size too, each its own app look
@@ -82,6 +83,7 @@ export async function openPhone(who = null) {
     for (const p of Object.values(m.phones)) migrateBank(m, p);
     if (Object.values(m.phones).some(p => p.money)) await saveMeta();
     let view = 'lock', contactBack = '', sheet = false, adding = false, loreOpen = false;
+    const profileStates = new Map();
     const loreExp = new Set(), loreEnts = new Map(); // books opened to their entries, and their entries once read
     const remake = new Set(); // the apps ticked in 설정 › 다시 만들기
     // the phone has the screen to itself: one layer over everything (a dialog, so the extension's colours and
@@ -126,7 +128,7 @@ export async function openPhone(who = null) {
             return;
         }
         const top = keep ? $root.find('.na_ph_body, .ax_scroll').scrollTop() : 0;
-        $root.find('.na_ph_frame').html(screen(p, view, m, roster, { newN: newSections(m, p), loreExp, loreEnts, remake, contactBack, investing }));
+        $root.find('.na_ph_frame').html(screen(p, view, m, roster, { newN: newSections(m, p), loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)) }));
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
         queueMicrotask(() => autoChart());
@@ -242,6 +244,37 @@ export async function openPhone(who = null) {
         view = `searchone:${k}`; drawPhone(); if (!p.searches[k].results?.length) loadSearch(k);
     });
     // the screen changes first; saving waits
+    const loadProfile = async (p,state) => {
+        const version = state.version = (state.version || 0)+1;
+        state.busy=true; state.error=''; state.resolved=null; drawPhone(true);
+        try {
+            const binding={...state.binding};
+            const entries=binding.type === 'lore' && binding.book ? await profileEntries(ctx(),binding.book) : [];
+            const resolved=binding.type !== 'none' && binding.id ? await resolvePhoneProfile(ctx(),binding) : null;
+            if(state.version === version) { state.entries=entries; state.resolved=resolved; }
+        } catch(err) { if(state.version === version) state.error=String(err?.message || err); }
+        finally { if(state.version === version) { state.busy=false; if(phone()===p && view==='setprofile') drawPhone(true); } }
+    };
+    const editProfile = () => {
+        const p=phone(); if(!p) return;
+        const state={binding:structuredClone(p.financeProfile || {type:'none'}),entries:[]};
+        profileStates.set(nameKey(p.owner),state); loadProfile(p,state);
+    };
+    $root.on('change','.fp_select',function(){
+        const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
+        const field=this.dataset.field;
+        if(field==='type') state.binding={type:this.value};
+        else if(field==='book') {state.binding.book=this.value; delete state.binding.id;state.entries=[];}
+        else state.binding.id=this.value;
+        loadProfile(p,state);
+    });
+    $root.on('click','.fp_save',async function(){
+        const p=phone(),state=profileStates.get(nameKey(p.owner));
+        if(!state || state.busy || state.binding.type !== 'none' && !state.resolved) return;
+        if(state.binding.type === 'none') delete p.financeProfile;
+        else p.financeProfile={...state.binding,label:state.resolved.label};
+        await saveMeta();view='set';drawPhone();
+    });
     $root.on('click', '.na_ph_pick:not(.na_ph_addp), .ax_whopick', async function (e) { e.stopPropagation(); const same = owner === this.dataset.n; owner = this.dataset.n; rememberPhoneSelection(m,owner,selectionKey); if (!same) { view = 'lock'; sheet = false; draw(); setSheet(false); } await saveMeta(); });
     $root.on('click', '.na_ph_makewho', () => { loreOpen = false; drawCtrl(); setSheet(true); });
     // a person only the lorebook knows: into the same list as 인물 도감's +
@@ -321,6 +354,7 @@ export async function openPhone(who = null) {
         $root.find('.na_ph_body, .ax_scroll').scrollTop(view.startsWith('thread') ? 1e6 : 0);
         if (go === 'searchone' && !phone()?.searches?.[Number(this.dataset.i)]?.results?.length) loadSearch(Number(this.dataset.i));
         if (go === 'page') openWeb(String(this.dataset.i));
+        if (go === 'setprofile') editProfile();
     });
     // the page is made once, the first time a search is opened; the screen can change while it loads
     const loadSearch = async k => {

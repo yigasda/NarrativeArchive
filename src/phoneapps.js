@@ -2,6 +2,7 @@
 
 import { annivsOf, datedRows } from './anniv.js';
 import { ctx } from './core.js';
+import { profileChoices } from './phoneprofile.js';
 import { faceHtml, nameKey, nameRe, peopleData, peopleList, personLine } from './people.js';
 import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './phoneai.js';
 import { bigClock, COUNTRIES, fmtDate, fmtTime, hasKo, koOn, lastTime, listTime, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName } from './phonedata.js';
@@ -182,7 +183,7 @@ export function diaryOne(p, now, k) {
 }
 // ---- 메시지 · 전화 · 사진 · 메모 · 검색 · 캘린더 · 메일 · 설정 · 카메라 (v3.118): the boards' layout in the home's flat look —
 // each app one colour (메시지 · 전화 blue, the rest their home icon's), round glass buttons, white cards, no gradients
-export const AXB = { ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', cam: 'apri', map: 'blue' };
+export const AXB = { setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', cam: 'apri', map: 'blue' };
 export const AXB_C = { invest: ['#17695d', '#d9eee5'], blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'], bank: ['#2c4a80', '#e2e9f5'], wallet: ['#3d4a66', '#e3e7ef'], shop: ['#2f7d74', '#d9efec'], voice: ['#8a5a2e', '#f2e7d6'] };
 // people outside the archive get a letter on one of the home icons' colours
 const AX_AV = ['#8faed1', '#a699c9', '#d89f98', '#89b892', '#d494a7', '#a2a7af', '#dcc680'];
@@ -535,6 +536,7 @@ export function setScreen(p, now, m, ui) {
         </div>
         <div class="ax_sec">아카이브</div>
         <div class="ax_card">
+          <button type="button" class="ax_rw" data-go="setprofile">${si('#8faed1', 'user')}<span class="ax_tx"><span class="ax_n">금융 프로필</span></span><span class="ax_v">${esc(p.financeProfile?.label || '연결 안 함')}</span>${axChev}</button>
           <button type="button" class="ax_rw" data-go="setlore">${si('#dcc680', 'book')}<span class="ax_tx"><span class="ax_n">참고 로어북</span></span><span class="ax_v">${(n => (n ? `${n}권` : '없음'))(phoneLore(m).length)}</span>${axChev}</button>
           <button type="button" class="ax_rw na_ph_setinj">${si('#d494a7', 'in')}<span class="ax_tx"><span class="ax_n">롤플에 넣기</span></span><span class="ax_sw ${p.inject ? 'on' : ''}"></span></button>
           <button type="button" class="ax_rw na_ph_setupd">${si('#8faed1', 'redo')}<span class="ax_tx"><span class="ax_n">새로 일어난 일 반영</span></span><span class="ax_v">${ui.newN ? `새 섹션 ${ui.newN}` : ''}</span></button>
@@ -651,4 +653,14 @@ export function mapScreen(p, now, m) {
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
+}
+
+export function setFinanceProfile(p,now,state) {
+    const c=ctx(), binding=state?.binding || p.financeProfile || {type:'none'}, options=profileChoices(c);
+    const select=(field,title,rows,value)=>`<label class="fp_field"><span>${title}</span><select class="fp_select" data-field="${field}"><option value="">선택</option>${rows.map(x=>`<option value="${esc(x.id)}" ${x.id === value ? 'selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>`;
+    return `${axBar(p,now)}${axTop(axCb('set'))}<div class="ax_scroll">${axH1('금융 프로필',p.owner)}
+      <div class="ax_card fp_form"><label class="fp_field"><span>프로필 출처</span><select class="fp_select" data-field="type">${[['none','연결 안 함'],['character','캐릭터 카드'],['persona','사용자 페르소나'],['lore','로어북 항목']].map(([k,v])=>`<option value="${k}" ${binding.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+      ${binding.type === 'character' ? select('id','캐릭터',options.characters,binding.id) : binding.type === 'persona' ? select('id','페르소나',options.personas,binding.id) : binding.type === 'lore' ? select('book','로어북',options.books.map(b=>({id:b,label:b})),binding.book)+ (binding.book ? select('id','인물 항목',state?.entries || [],binding.id) : '') : ''}</div>
+      ${state?.busy ? '<div class="ax_empty">프로필 불러오는 중…</div>' : state?.error ? `<div class="ax_empty">${esc(state.error)}</div>` : state?.resolved ? `<div class="ax_sec">${esc(state.resolved.label)}</div><div class="ax_card fp_preview">${esc(state.resolved.text)}</div>` : ''}
+      <div class="ax_card"><button type="button" class="ax_rw ax_rwn fp_save" ${state?.busy || binding.type !== 'none' && !state?.resolved ? 'disabled' : ''}><span class="ax_n ax_blue">${binding.type === 'none' ? '연결 해제' : '이 프로필 연결'}</span></button></div><i class="ax_pad"></i></div>${axInd()}`;
 }

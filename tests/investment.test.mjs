@@ -59,7 +59,8 @@ if (process.env.INVEST_PREVIEW) {
 }
 
 const phonedata=await load('phonedata.js',{
- './ai.js':ai,'./finance.js':financeURL,'./core.js':encoded(`export const ctx=()=>({loadWorldInfo:async()=>null});export const globalSettings=()=>({});export const saveMeta=async()=>{globalThis.__investTest.saved++};`),
+ './phoneprofile.js':pathToFileURL(new URL('../src/phoneprofile.js',import.meta.url).pathname).href,
+ './ai.js':ai,'./finance.js':financeURL,'./core.js':encoded(`export const ctx=()=>globalThis.__investTest.context||({loadWorldInfo:async()=>null});export const globalSettings=()=>({});export const saveMeta=async()=>{globalThis.__investTest.saved++};`),
  './calendar.js':encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
  './drift.js':encoded(`export const recentForCheck=()=>[];`), './inject.js':encoded(`export const applyInjection=()=>{};`),
  './knowledge.js':encoded(`export const knowledgeRows=()=>[];`),
@@ -76,8 +77,8 @@ test('bank regeneration preserves baseline, actual cash, old transactions and in
  await phonedata.fillMoney(m,p);assert.equal(p.money.bank.accounts[0].name,'Renamed');assert.equal(p.money.bank.accounts[0].balance,900);assert.equal(p.money.bank.accounts[0].currency,'EUR');assert.equal(p.money.tx[0].id,'history');assert.equal(m.finance.accounts['bank:EUR'].amount,1000);assert.equal(m.finance.transfers['stable-transfer'].sent,100);assert.equal(p.investment.sentinel,true);assert.equal(p.money.displayCurrency,'KRW');assert.equal(p.money.fxDate,'2026-10-30');
 });
 test('whole phone regeneration retains bank and investment data',async()=>{
- const {m,p}=setup();p.money={sentinel:1};p.investment={sentinel:2};m.phones={a:p};globalThis.__investTest.answer={now:'10-30'};
- const got=await phonedata.makePhone(m,'A');assert.equal(got.money.sentinel,1);assert.equal(got.investment.sentinel,2);
+ const {m,p}=setup();p.money={sentinel:1};p.investment={sentinel:2};p.financeProfile={type:'character',id:'a.png'};m.phones={a:p};globalThis.__investTest.answer={now:'10-30'};
+ const got=await phonedata.makePhone(m,'A');assert.equal(got.money.sentinel,1);assert.equal(got.investment.sentinel,2);assert.deepEqual(got.financeProfile,{type:'character',id:'a.png'});
 });
 test('missing numeric money value is unknown, not zero',()=>{
  const got=phonedata.parseMoney({currency:'EUR',bank:{accounts:[{kind:'checking',last4:'1234',balance:null}]}});assert.equal(got.bank.accounts[0].balance,null);
@@ -233,4 +234,19 @@ test('failed chart generation leaves the shared price book unchanged',async()=>{
  globalThis.__investTest.answer={quotes:[{symbol:'NYSE:X',date:'2026-10-01',value:123,source:'story',evidence:'fabricated evidence'}]};
  await assert.rejects(dataMod.fillChartHistory(m,p,'NYSE:X'),/시세/);assert.equal(JSON.stringify(m.finance),before);
  globalThis.__investTest.error=true;await assert.rejects(dataMod.fillChartHistory(m,p,'NYSE:X'),/network/);assert.equal(JSON.stringify(m.finance),before);
+});
+test('bank creation and explicit rebuild include the chosen owner profile, not other cards',async()=>{
+ const {m,p}=euroWallet();
+ globalThis.__investTest.context={characters:[{avatar:'a.png',name:'A',description:'Owner has substantial personal reserves.'},{avatar:'b.png',name:'B',description:'Other private profile.'}],loadWorldInfo:async()=>null};
+ p.financeProfile={type:'character',id:'a.png'};
+ globalThis.__investTest.answer={currency:'EUR',bank:{name:'Bank',accounts:p.money.bank.accounts},cards:[],tx:[],orders:[],passes:[]};
+ await phonedata.fillMoney(m,p,{regenerateBalances:true});const input=globalThis.__investTest.inputs.at(-1).input;assert.match(input,/Owner has substantial personal reserves/);assert.doesNotMatch(input,/Other private profile/);
+ assert.doesNotMatch(await phonedata.sideRequest(m,p.owner,[]),/OWNER PROFILE/);
+ const binding=p.financeProfile;delete p.money;await phonedata.fillMoney(m,p);assert.match(globalThis.__investTest.inputs.at(-1).input,/OWNER PROFILE/);assert.equal(p.financeProfile,binding);
+});
+test('investment creation passes its selected profile into the source request',async()=>{
+ const {m,p}=setup();p.financeProfile={type:'lore',book:'Family',id:'4'};
+ const proxy=encoded(`export const storyNow=p=>p.now;export const sideRequest=async(m,owner,blocks,options)=>{globalThis.__investTest.profileOptions=options;return m.text+'\\n'+blocks.join('\\n')};`);
+ const actual=await load('investdata.js',{'./ai.js':ai,'./core.js':core,'./phonedata.js':proxy,'./finance.js':financeURL});
+ await actual.fillInvestment(m,p,'2026-10-30');assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile});
 });

@@ -64,7 +64,7 @@ export async function fillInvestment(m, p, date) {
     if (p.investment) throw new Error('기존 투자 기록은 보존돼요. 시세 갱신을 사용해 주세요');
     if (!validDate(date)) throw new Error('이야기 날짜를 YYYY-MM-DD로 입력해 주세요');
     migrateBank(m, p);
-    const input = await sideRequest(m, p.owner, [`[DATE]\n${date}`, `[BANK — separate locked balances]\n${JSON.stringify(p.money?.bank || {})}`]);
+    const input = await sideRequest(m, p.owner, [`[DATE]\n${date}`, `[BANK — separate locked balances]\n${JSON.stringify(p.money?.bank || {})}`], {profile:p.financeProfile});
     const raw = json(await askDraft(input, { system: INVEST_SYS, maxTokens: 12000 }));
     if (!currency(raw.base)) throw new Error('기준 통화를 확인하지 못했어요');
     const securities = list(raw.securities).slice(0, 10).map(s => ({ symbol: text(s.symbol, 80), name: text(s.name, 100), ko: text(s.ko, 100), currency: currency(s.currency) })).filter(s => s.symbol && s.name && s.currency);

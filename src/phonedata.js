@@ -2,6 +2,7 @@
 // 롤플에 넣기, dates and times as the owner's phone shows them, and the places they have been.
 
 import { askDraft } from './ai.js';
+import { financeProfileBlock } from './phoneprofile.js';
 import { migrateBank, finance, finite, cash, reviseBaseline } from './finance.js';
 import { calendars, headingDate } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
@@ -307,6 +308,7 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         if (was?.theme) base.theme = was.theme;
         if (was?.money) base.money = was.money;
         if (was?.investment) base.investment = was.investment;
+        if (was?.financeProfile) base.financeProfile = structuredClone(was.financeProfile);
         m.phones[key] = mergePhone(base, got);
     }
     const p = m.phones[key];
@@ -480,14 +482,15 @@ Oldest first.`;
 const jsonOf = out => { const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}'); try { return a >= 0 && b > a ? JSON.parse(t.slice(a, b + 1)) : null; } catch { return null; } };
 const num = v => { if (v === null || v === undefined || String(v).trim() === '') return null; const n = Number(String(v ?? '').replace(/[^\d.,-]/g, '').replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '')); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
 const last4 = v => String(v ?? '').replace(/\D/g, '').slice(-4);
-export async function sideRequest(m, owner, blocks) {
+export async function sideRequest(m, owner, blocks, { profile } = {}) {
     const world = worldText(m), lore = await loreFor(m, owner);
+    const profileText = await financeProfileBlock(ctx(),profile,owner);
     const recent = recentForCheck(6).join('\n\n').slice(-6000);
     return [
         `[ARCHIVE]\n${archiveFor(m, -1).text || '(empty)'}`,
         world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
         recent ? `[RECENT CHAT]\n${recent}` : '',
-        `[OWNER]\n${owner}`, blindBlock(m, owner), ...blocks, namesBlock(m),
+        `[OWNER]\n${owner}`, profileText, blindBlock(m, owner), ...blocks, namesBlock(m),
     ].filter(Boolean).join('\n\n');
 }
 export function parseMoney(raw) {
@@ -516,7 +519,7 @@ REBUILD BALANCES
 REBUILD ACCOUNTS explicitly requests new balances, not locked snapshots. Keep every supplied account id, kind, last4 and currency; no added or omitted accounts. Re-read the story and infer fresh personal cash where unspecified, rather than copying previous invented balances.
 Each balance is the CURRENT balance AFTER preserved transactions and applied cash entries, not an opening balance. They may describe the same event: never count it twice. Do not replay transfers, currency conversion, or credit company/family assets to personal cash. Explicit current personal balances take priority; preserve the amounts and currencies of established receipts and spending (for example, EUR 15000 received and EUR 2000 spent may leave EUR 13000 when no other funds or movements exist).
 Existing transaction records are preserved by the app; do not rewrite their amounts or dates. Credit balance is current monthly spending, never deposit cash. Return a finite nonnegative balance for every account and explain the evidence/invented scale in basis.` : '');
-    const out = await askDraft(await sideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p)}`, preserved]), { system, maxTokens: 12000 });
+    const out = await askDraft(await sideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p)}`, preserved], {profile:p.financeProfile}), { system, maxTokens: 12000 });
     const raw = jsonOf(out), next = parseMoney(raw);
     if (p.money !== old || accountState() !== before) throw new Error('생성 중 계좌가 변경됐어요. 다시 시도해 주세요');
     if (old) {
