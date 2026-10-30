@@ -575,7 +575,7 @@ export function setRemake(p, now, ui, mForRemake = {}) {
           <button type="button" class="ax_rw ax_rmpick" data-k="${k}"><span class="ax_si" style="background: ${REMAKE_IC[k][0]}">${ax(REMAKE_IC[k][1], 17, '#fff')}</span><span class="ax_tx"><span class="ax_n">${APPS[k]}</span></span><span class="ax_radio ${on ? 'on' : ''}">${on ? ax('check', 14, '#fff', 3.4) : ''}</span></button>`; }).join('')}</div>
         ${ui.remake.has('invest') ? `<div class="ax_card"><label class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">투자 기준일</span></span><input type="date" class="ax_in ax_investdate" aria-label="투자 기준일" value="${esc(investmentDate(mForRemake,p))}"></label></div>` : ''}
         <div class="ax_foot">고른 앱만 아카이브 전체를 다시 읽고 새로 채워요. 나머지는 그대로예요.</div>
-        <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_setremake" ${n ? '' : 'disabled'}><span class="ax_tx"><span class="ax_n ${n ? 'ax_red' : 'ax_off'}">${n ? `${n}개 다시 만들기` : '앱을 골라 주세요'}</span></span></button></div>
+        <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_setremake" ${n && !ui.making ? '' : 'disabled'}><span class="ax_tx"><span class="ax_n ${n ? 'ax_red' : 'ax_off'}">${ui.making ? '다시 만드는 중…' : n ? `${n}개 다시 만들기` : '앱을 골라 주세요'}</span></span></button></div>
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;

@@ -79,7 +79,7 @@ export async function openPhone(who = null) {
     const selectionKey = phoneSelectionKey(c);
     let owner = selectedPhoneOwner(m, names, who, readPhoneSelection(selectionKey));
     if (owner) { rememberPhoneSelection(m,owner,selectionKey); await saveMeta(); }
-    let investing = false;
+    let investing = false, making = false;
     for (const p of Object.values(m.phones)) migrateBank(m, p);
     if (Object.values(m.phones).some(p => p.money)) await saveMeta();
     let view = 'lock', contactBack = '', sheet = false, adding = false, loreOpen = false;
@@ -128,7 +128,7 @@ export async function openPhone(who = null) {
             return;
         }
         const top = keep ? $root.find('.na_ph_body, .ax_scroll').scrollTop() : 0;
-        $root.find('.na_ph_frame').html(screen(p, view, m, roster, { newN: newSections(m, p), loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)) }));
+        $root.find('.na_ph_frame').html(screen(p, view, m, roster, { newN: newSections(m, p), loreExp, loreEnts, remake, contactBack, investing, making, profileState:profileStates.get(nameKey(p.owner)) }));
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
         queueMicrotask(() => autoChart());
@@ -169,6 +169,7 @@ export async function openPhone(who = null) {
     };
     // Investment calls are explicit; navigation and unresolved quote conflicts never trigger them.
     const investRun = async checkStory => {
+        if (making) return toastr.info('폰을 다시 만드는 중이에요');
         if (investing) return;
         const p = phone(), date = $root.find('.iv_date').val();
         investing = true; drawPhone(true);
@@ -183,6 +184,7 @@ export async function openPhone(who = null) {
         await saveMeta(); drawPhone(true);
     });
     $root.on('click', '.bank_fxrefresh', async function () {
+        if (making) return toastr.info('폰을 다시 만드는 중이에요');
         if (investing) return;
         const p = phone(), date = $root.find('.bank_fxdate').val(), base = bankDisplayCurrency(p);
         investing = true;
@@ -192,7 +194,7 @@ export async function openPhone(who = null) {
     });
     let chartAttempt = '', phoneClosed = false;
     const autoChart = async () => {
-        if (phoneClosed || investing || !view.startsWith('stock:')) return;
+        if (phoneClosed || making || investing || !view.startsWith('stock:')) return;
         const p = phone(); if (!p?.investment) return;
         const [symbol,range='1m'] = decodeURIComponent(view.slice(6)).split('~');
         const request = `${owner}|${p.investment.date}|${symbol}|${range}`;
@@ -205,6 +207,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.iv_refresh', () => investRun(false));
     $root.on('click', '.iv_sync', () => investRun(true));
     $root.on('click', '.iv_records', async function () {
+        if (making) return toastr.info('폰을 다시 만드는 중이에요');
         if (investing) return;
         const p = phone(), mode = 'records', target = this.dataset.target || '';
         investing = true; drawPhone(true);
@@ -584,7 +587,6 @@ export async function openPhone(who = null) {
         $(this).find('.ax_presssheet').remove();
     });
     // 설정's rows: the busy text goes where the row's value is
-    let making = false;
     const makeFrom = async ($at, update) => { if (making) return; making = true; try { await make($at, update); } finally { making = false; } };
     $root.on('click', '.na_ph_setupd', function (e) { e.stopPropagation(); makeFrom($(this).find('.ax_v'), true); });
     $root.on('click', '.na_ph_setinj', async e => { e.stopPropagation(); const p = phone(); p.inject = !p.inject; drawPhone(true); await saveMeta(); applyInjection(); });
@@ -596,25 +598,26 @@ export async function openPhone(who = null) {
     $root.on('click', '.ax_rmall', e => { e.stopPropagation(); const all = [...Object.keys(REMAKE), ...REMAKE_MORE]; if (remake.size === all.length) remake.clear(); else all.forEach(k => remake.add(k)); drawPhone(true); });
     $root.on('click', '.na_ph_setremake', async function (e) {
         e.stopPropagation();
-        if (!remake.size || making || investing) return;
+        if (!remake.size) return;
+        if (making) return toastr.info('폰을 다시 만드는 중이에요');
+        if (investing) return toastr.info('시세·환율 작업이 진행 중이에요. 완료 후 다시 눌러 주세요');
         const apps = Object.keys(REMAKE).filter(k => remake.has(k)), more = REMAKE_MORE.filter(k => remake.has(k)), whole = apps.length === Object.keys(REMAKE).length;
         const date=more.includes('invest') ? ($root.find('.ax_investdate').val() || investmentDate(m,phone())) : '';
         if(more.includes('invest') && !validDate(date)) {toastr.warning('투자 기준일을 입력해 주세요');return;}
-        if (!await confirm(whole ? '폰 전체를 다시 만들까요?' : `고른 앱 ${apps.length + more.length}개를 다시 만들까요?`, `${[...apps, ...more].map(k => APPS[k]).join(' · ')} 다시 만들기${more.includes('money') ? ' · 잔액·거래·주문 새로 만들기' : ''}`)) return;
-        const keep = phone().inject, $at = $(this).find('.ax_n');
+        const target = phone(), targetOwner = owner, keep = target.inject;
         making = true;
         try {
-            const p = await withSpinner($at, '다시 만드는 중', async () => {
-                const q = apps.length ? await makePhone(m, owner, whole ? {} : { apps }) : phone();
-                for (const k of more) if (q) await (k === 'money' ? fillMoney(m,q,{regenerateBalances:true}) : k === 'invest' ? fillInvestment(m,q,date,{regenerate:true}) : fillVoice(m,q));
-                return q;
-            });
-            if (!p) return;
+            if (!await confirm(whole ? '폰 전체를 다시 만들까요?' : `고른 앱 ${apps.length + more.length}개를 다시 만들까요?`, `${[...apps, ...more].map(k => APPS[k]).join(' · ')} 다시 만들기${more.includes('money') ? ' · 잔액·거래·주문 새로 만들기' : ''}`)) return;
+            if (phone() !== target || investing) {toastr.info('폰이나 진행 중인 작업이 바뀌었어요. 다시 눌러 주세요');return;}
+            drawPhone(true);
+            const p = apps.length ? await makePhone(m, targetOwner, whole ? {} : { apps }) : target;
+            if (!p) throw new Error('생성 결과를 받지 못했어요. 다시 시도해 주세요');
+            for (const k of more) await (k === 'money' ? fillMoney(m,p,{regenerateBalances:true}) : k === 'invest' ? fillInvestment(m,p,date,{regenerate:true}) : fillVoice(m,p));
             if (whole && keep) { p.inject = true; await saveMeta(); applyInjection(); }
-            remake.clear(); view = whole ? 'lock' : 'set'; draw();
-            toastr.success(whole ? `${owner}의 폰을 다시 만들었어요` : '고른 앱을 다시 만들었어요', '캐릭터 휴대폰');
+            if (phone() === p && !phoneClosed) {remake.clear(); view = whole ? 'lock' : 'set'; draw();}
+            toastr.success(whole ? `${targetOwner}의 폰을 다시 만들었어요` : '고른 앱을 다시 만들었어요', '캐릭터 휴대폰');
         } catch (err) { toastr.error(String(err?.message || err), '다시 만들기'); }
-        finally { making = false; }
+        finally { making = false; if (!phoneClosed) drawPhone(true); }
     });
     $root.on('click', '.na_ph_setdel', async e => {
         e.stopPropagation();
