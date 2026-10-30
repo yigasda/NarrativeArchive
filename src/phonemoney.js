@@ -145,7 +145,7 @@ function passArt(p, x, full) {
     const big = x.from && x.to && x.kind !== 'hotel' && x.kind !== 'event';
     const small = s => (String(s).length > 4 ? ' ax_pbsm' : '');
     return `<span class="ax_ps ${cream ? 'cream' : ''}" style="background: ${bg}">
-      <span class="ax_psh"><span class="ax_pslg">${ax(icon, 16, 'currentColor')}</span><span class="ax_psn">${esc(String(x.by).toUpperCase())}</span><span class="ax_pshr">${lab}<b class="cg_num">${esc(x.time || fmtDate(p, x.date, true) || '—')}</b></span></span>
+      <span class="ax_psh"><span class="ax_pslg">${ax(icon, 16, 'currentColor')}</span><span class="ax_psn">${esc(String(x.by || '').toUpperCase())}</span><span class="ax_pshr">${lab}<b class="cg_num">${esc(x.time || fmtDate(p, x.date, true) || '—')}</b></span></span>
       ${big ? `<span class="ax_psrt"><span><b class="${small(x.from)}">${esc(code(x.from))}</b></span><span class="ax_pspl">${ax(x.kind === 'flight' ? 'plane' : 'chev', 24, 'currentColor', 1.6)}</span><span class="ax_r"><b class="${small(x.to)}">${esc(code(x.to))}</b></span></span>` : `<span class="ax_psrt"><span><b class="ax_pbsm">${esc(x.to || x.from || x.by)}</b></span></span>`}
       <span class="ax_psfl"><span><small>날짜</small><b>${esc(fmtDate(p, x.date, true) || '—')}</b></span><span><small>${x.kind === 'flight' ? '좌석' : x.kind === 'hotel' ? '예약' : '좌석'}</small><b>${esc(x.kind === 'hotel' ? (x.no || '—') : (x.seat || '—'))}</b></span><span class="ax_r"><small>${x.kind === 'flight' ? '게이트' : '번호'}</small><b>${esc(x.kind === 'flight' ? (x.gate || '—') : (x.no || '—'))}</b></span>
         <span><small>소유자</small><b>${esc(String(p.owner).toUpperCase())}</b></span><span><small>시간</small><b class="cg_num">${esc(x.time || '—')}</b></span><span class="ax_r"><small>${x.kind === 'flight' ? '편명' : '상태'}</small><b>${esc(x.kind === 'flight' ? (x.no || '—') : (x.status || '—'))}</b></span></span>
@@ -233,7 +233,7 @@ export function shopScreen(p, now, f = 'all') {
         <div class="ax_sphd"><b>주문 내역</b><span>${os.length}건</span></div>
         <div class="ax_sptabs">${tb('all', '전체', os.length)}${tb('go', '배송 중', go.length)}${tb('ok', '배송 완료', ok.length)}</div>
         ${xs.map(x => `<div class="ax_card ax_oc"><div class="ax_och">${statusPill(p, x)}<small>${esc(fmtDate(p, x.time, true))} 주문</small></div>
-          <div class="ax_ocr">${prodImg(x)}<span class="ax_tx"><small class="ax_ocsl">${esc(String(x.shop).toUpperCase())}</small><b>${esc(x.item)}</b>${x.ko && koOn() ? `<span class="ax_p">${esc(x.ko)}</span>` : ''}<span class="ax_ocpr cg_num">${esc(fmtMoney(p, x.price === null ? null : x.price * x.qty))}<small>${x.qty}개${x.gift ? ' · 선물' : ''}</small></span></span></div>
+          <div class="ax_ocr">${prodImg(x)}<span class="ax_tx"><small class="ax_ocsl">${esc(String(x.shop || '').toUpperCase())}</small><b>${esc(x.item)}</b>${x.ko && koOn() ? `<span class="ax_p">${esc(x.ko)}</span>` : ''}<span class="ax_ocpr cg_num">${esc(fmtMoney(p, x.price === null ? null : x.price * (x.qty || 1)))}<small>${x.qty || 1}개${x.gift ? ' · 선물' : ''}</small></span></span></div>
           <div class="ax_ocb"><button type="button" data-go="order" data-i="${x.id}">주문 상세</button><button type="button" class="p" data-go="order" data-i="${x.id}">${x.status === 'delivered' ? '다시 보기' : '배송 조회'}</button></div></div>`).join('') || '<div class="ax_empty">주문이 없어요</div>'}
         <i class="ax_pad"></i>
       </div></div>
@@ -244,7 +244,7 @@ export function orderView(p, now, id) {
     if (!x) return shopScreen(p, now);
     const st = STEP[x.status], tx = x.ev ? mo(p).tx.find(t => t.ev === x.ev) : null, ai = tx ? mo(p).bank.accounts.findIndex(a => a.last4 === tx.account) : -1;
     const head = x.status === 'delivered' ? ['배송 완료', x.arrived ? `${fmtDate(p, x.arrived)} 도착` : '도착했어요'] : x.status === 'unknown' ? ['배송 상태', '확인되지 않았어요'] : [x.status === 'ordered' ? '주문 완료' : '배송 중', x.eta ? `${fmtDate(p, x.eta)} 도착 예정` : '도착일 미정'];
-    const total = x.price === null ? null : x.price * x.qty;
+    const total = x.price === null ? null : x.price * (x.qty || 1);
     return `<div class="ax_shopv">
       <div class="ax_sph ax_sphs">${axBar(p, now, '#fff')}
         <div class="ax_spr"><button type="button" class="ax_bkc" data-go="shop" aria-label="뒤로">${ax('back', 18, '#fff', 2.3)}</button><span class="ax_bkt">주문 상세</span><span class="ax_bkc">${ax('cart', 18, '#fff')}</span></div>
@@ -252,7 +252,7 @@ export function orderView(p, now, id) {
       <div class="ax_sps ax_spso"><div class="ax_scroll">
         <div class="ax_dhero"><small>${esc(head[0])}</small><b>${esc(head[1])}</b><span>${esc(x.shop)}${x.gift ? ` · 선물로 ${esc(x.gift)}에게` : ''}</span>
           ${st === undefined ? '' : `<span class="ax_steps" style="--done: ${[0, 34, 67, 100][st]}%">${['주문', '발송', '배송 중', '도착'].map((l, k) => `<span class="${k < st || (k === st && st === 3) ? 'd' : k === st ? 'c' : ''}"><i>${k < st || (k === st && st === 3) ? ax('check', 11, '#fff', 3) : ''}</i>${l}</span>`).join('')}</span>`}</div>
-        <div class="ax_card ax_oc"><div class="ax_ocr">${prodImg(x)}<span class="ax_tx"><small class="ax_ocsl">${esc(String(x.shop).toUpperCase())}</small><b>${esc(x.item)}</b>${x.ko && koOn() ? `<span class="ax_p">${esc(x.ko)}</span>` : ''}<span class="ax_ocpr cg_num">${esc(fmtMoney(p, x.price))}<small>${esc([x.option, `${x.qty}개`].filter(Boolean).join(' · '))}</small></span></span></div></div>
+        <div class="ax_card ax_oc"><div class="ax_ocr">${prodImg(x)}<span class="ax_tx"><small class="ax_ocsl">${esc(String(x.shop || '').toUpperCase())}</small><b>${esc(x.item)}</b>${x.ko && koOn() ? `<span class="ax_p">${esc(x.ko)}</span>` : ''}<span class="ax_ocpr cg_num">${esc(fmtMoney(p, x.price))}<small>${esc([x.option, `${x.qty || 1}개`].filter(Boolean).join(' · '))}</small></span></span></div></div>
         <div class="ax_sec">결제</div><div class="ax_card"><div class="ax_lr"><span>상품 금액</span><span class="cg_num">${esc(fmtMoney(p, total))}</span></div><div class="ax_lr"><span><b>총 결제</b></span><span class="cg_num"><b>${esc(fmtMoney(p, total))}</b></span></div>
           ${tx ? `<button type="button" class="ax_more" data-go="tx" data-i="${tx.id}">${ai >= 0 ? `${kindName[mo(p).bank.accounts[ai].kind]} •••• ${esc(tx.account)} · ` : ''}은행에서 보기 ${ax('chev', 14, 'currentColor', 2.4)}</button>` : ''}</div>
         <div class="ax_sec">주문 정보</div><div class="ax_card"><div class="ax_lr"><span>주문일</span><span class="cg_num">${esc(fmtDate(p, x.time))}</span></div>${x.gift ? `<div class="ax_lr"><span>받는 사람</span><span>${esc(x.gift)}</span></div>` : ''}</div>
