@@ -32,7 +32,8 @@ export async function resolvePhoneProfile(c, binding) {
     if (!body.trim()) throw new Error('선택한 프로필 내용이 비어 있어요');
     return {label:String(label),text:body};
 }
-export async function financeProfileBlock(c,binding,owner) {
+// Keep financeProfile as the saved binding key for backward compatibility.
+export async function ownerProfileBlock(c,binding,owner) {
     const profile=await resolvePhoneProfile(c,binding);
-    return profile ? `[OWNER PROFILE — explicitly selected by the user for ${owner}]\n${profile.label}\n${profile.text}\n[PROFILE USE]\nUse this as background for this owner's occupation, personal resources and lifestyle. Explicit current amounts and later story changes take precedence over background. Company and family assets are not personal cash. Do not turn profile secrets into another character's knowledge.` : '';
+    return profile ? `[OWNER PROFILE — explicitly selected by the user for ${owner}]\n${profile.label}\n${profile.text}\n[PROFILE USE]\nUse this as background for this owner's personality, voice, relationships, interests, occupation, personal resources and lifestyle. Do not invent past events from background traits. Explicit current amounts and later story changes take precedence over background. Company and family assets are not personal cash. Do not turn profile secrets into another character's knowledge.` : '';
 }

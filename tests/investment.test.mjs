@@ -77,8 +77,8 @@ test('bank regeneration preserves baseline, actual cash, old transactions and in
  await phonedata.fillMoney(m,p);assert.equal(p.money.bank.accounts[0].name,'Renamed');assert.equal(p.money.bank.accounts[0].balance,900);assert.equal(p.money.bank.accounts[0].currency,'EUR');assert.equal(p.money.tx[0].id,'history');assert.equal(m.finance.accounts['bank:EUR'].amount,1000);assert.equal(m.finance.transfers['stable-transfer'].sent,100);assert.equal(p.investment.sentinel,true);assert.equal(p.money.displayCurrency,'KRW');assert.equal(p.money.fxDate,'2026-10-30');
 });
 test('whole phone regeneration retains bank and investment data',async()=>{
- const {m,p}=setup();p.money={sentinel:1};p.investment={sentinel:2};p.financeProfile={type:'character',id:'a.png'};m.phones={a:p};globalThis.__investTest.answer={now:'10-30'};
- const got=await phonedata.makePhone(m,'A');assert.equal(got.money.sentinel,1);assert.equal(got.investment.sentinel,2);assert.deepEqual(got.financeProfile,{type:'character',id:'a.png'});
+ const {m,p}=setup();p.money={sentinel:1};p.investment={sentinel:2};p.financeProfile={type:'character',id:'a.png'};m.phones={a:p};globalThis.__investTest.context={characters:[{avatar:'a.png',description:'Selected owner background.'}]};globalThis.__investTest.answer={now:'10-30'};
+ const got=await phonedata.makePhone(m,'A');assert.equal(got.money.sentinel,1);assert.equal(got.investment.sentinel,2);assert.deepEqual(got.financeProfile,{type:'character',id:'a.png'});assert.match(globalThis.__investTest.inputs.at(-1).input,/Selected owner background/);
 });
 test('missing numeric money value is unknown, not zero',()=>{
  const got=phonedata.parseMoney({currency:'EUR',bank:{accounts:[{kind:'checking',last4:'1234',balance:null}]}});assert.equal(got.bank.accounts[0].balance,null);
@@ -249,4 +249,42 @@ test('investment creation passes its selected profile into the source request',a
  const proxy=encoded(`export const storyNow=p=>p.now;export const sideRequest=async(m,owner,blocks,options)=>{globalThis.__investTest.profileOptions=options;return m.text+'\\n'+blocks.join('\\n')};`);
  const actual=await load('investdata.js',{'./ai.js':ai,'./core.js':core,'./phonedata.js':proxy,'./finance.js':financeURL});
  await actual.fillInvestment(m,p,'2026-10-30');assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile});
+ globalThis.__investTest.answer={};
+ await assert.rejects(actual.collectInvestmentRecords(m,p,'notes','stock:NYSE:X'),/노트/);
+ assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile});
+ await actual.collectInvestmentRecords(m,p,'records');assert.equal(globalThis.__investTest.profileOptions?.profile,undefined);
+ await actual.refreshMarket(m,p,'2026-10-30',true);assert.equal(globalThis.__investTest.profileOptions?.profile,undefined);
+ await assert.rejects(actual.fillChartHistory(m,p,'NYSE:X'),/시세/);assert.equal(globalThis.__investTest.profileOptions?.profile,undefined);
+
+});
+
+test('voice batch generation receives the selected profile',async()=>{
+ const {m,p}=setup();p.financeProfile={type:'character',id:'a.png'};
+ globalThis.__investTest.context={characters:[{avatar:'a.png',description:'Speaks tersely and loves sailing.'}]};
+ globalThis.__investTest.answer={memos:[{title:'Today',text:'A quiet day.',time:'10-30 12:00'}]};
+ await phonedata.fillVoice(m,p);assert.match(globalThis.__investTest.inputs.at(-1).input,/Speaks tersely and loves sailing/);
+});
+test('individual writing includes owner profile while camera and public search do not',async()=>{
+ globalThis.__profileData=phonedata;
+ const bridge=encoded(Object.keys(phonedata).map(k=>`export const ${k}=globalThis.__profileData.${k};`).join('\n'));
+ const mod=await load('phoneai.js',{
+ './phoneprofile.js':pathToFileURL(new URL('../src/phoneprofile.js',import.meta.url).pathname).href,
+ './ai.js':encoded(`export const askAI=async(input)=>{globalThis.__investTest.inputs.push({input});return JSON.stringify(globalThis.__investTest.answer)};`),
+ './core.js':encoded(`export const ctx=()=>globalThis.__investTest.context;export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
+ './phonedata.js':bridge,'./anniv.js':encoded(`export const datedRows=()=>[];`),
+ './calendar.js':encoded(`export const calendars=()=>({});`),'./drift.js':encoded(`export const recentForCheck=()=>[];`),
+ './people.js':encoded(`export const headingPlaces=()=>[];export const nameKey=s=>s;export const peopleList=()=>[];`)
+ });
+ const {m,p}=setup();Object.assign(p,{financeProfile:{type:'character',id:'a.png'},notes:[],diary:[],photos:[],threads:[{with:'B',messages:[]}],searches:[{q:'weather'}]});
+ globalThis.__investTest.context={characters:[{avatar:'a.png',description:'PRIVATE OWNER PROFILE SENTINEL'}]};
+ globalThis.__investTest.answer={title:'Today',text:'Hello',caption:'A room',results:[{title:'Weather',text:'Sunny'}]};
+ for(const run of [()=>mod.writeEntry(m,p,'note'),()=>mod.writeEntry(m,p,'diary'),()=>mod.makeDraft(m,p,0),()=>mod.recordVoice(m,p)]){
+  await run();assert.match(globalThis.__investTest.inputs.at(-1).input,/PRIVATE OWNER PROFILE SENTINEL/);
+ }
+ for(const run of [()=>mod.takePhoto(m,p),()=>mod.searchPage(m,p,0),()=>mod.webPage(m,p,0,0)]){
+  await run();assert.doesNotMatch(globalThis.__investTest.inputs.at(-1).input,/PRIVATE OWNER PROFILE SENTINEL/);
+ }
+ await assert.rejects(mod.drawPhoto(m,p,0),/PHOTO/);
+ assert.doesNotMatch(globalThis.__investTest.inputs.at(-1).input,/PRIVATE OWNER PROFILE SENTINEL/);
+
 });

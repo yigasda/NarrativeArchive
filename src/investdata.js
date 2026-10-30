@@ -180,7 +180,7 @@ export async function collectInvestmentRecords(m, p, mode = 'records', target = 
     if (!inv || !['notes','records'].includes(mode)) throw new Error('투자 계좌를 먼저 만들어 주세요');
     if (mode === 'notes' && !investmentTargets(inv).some(t => t.key === target)) throw new Error('노트를 쓸 종목이나 지분을 찾지 못했어요');
     // Capture sources BEFORE appending generated targets. Prior app text cannot serve as evidence for itself.
-    const source = await sideRequest(m,p.owner,[]);
+    const source = await sideRequest(m,p.owner,[], {profile:mode === 'notes' ? p.financeProfile : undefined});
     const targets = investmentTargets(inv).filter(t => mode !== 'notes' || t.key === target);
     const appContext = mode === 'notes' && target.startsWith('stock:') ? { trades: inv.trades.filter(t => `stock:${t.symbol}` === target).slice(-8), watch: inv.watch.filter(w => `stock:${w.symbol}` === target) } : null;
     const input = `${source}\n\n[AS OF]\n${inv.date}\n[MODE]\n${mode}\n[TARGETS — identification only]\n${JSON.stringify(targets)}${mode === 'records' ? `\n[EXISTING SCHEDULES — app data, not evidence]\n${JSON.stringify(inv.schedules || [])}` : ''}${appContext ? `\n[APP CONTEXT — imagination, not evidence]\n${JSON.stringify(appContext)}` : ''}`;

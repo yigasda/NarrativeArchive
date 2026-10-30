@@ -2,7 +2,7 @@
 // 롤플에 넣기, dates and times as the owner's phone shows them, and the places they have been.
 
 import { askDraft } from './ai.js';
-import { financeProfileBlock } from './phoneprofile.js';
+import { ownerProfileBlock } from './phoneprofile.js';
 import { migrateBank, finance, finite, cash, reviseBaseline } from './finance.js';
 import { calendars, headingDate } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
@@ -245,7 +245,7 @@ const blindBlock = (m, owner) => {
     const rows = knowledgeRows(m).flatMap(r => (r.unaware.some(me) ? [`- ${r.fact}`] : r.suspects.some(me) ? [`- ${r.fact} (only suspects)`] : []));
     return rows.length ? `[OWNER DOESN'T KNOW]\n${rows.join('\n')}` : '';
 };
-function phoneRequest(m, owner, p = null, lore = '', only = null) {
+function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '') {
     const world = worldText(m);
     const recent = recentForCheck(6).join('\n\n').slice(-6000);
     const ar = archiveFor(m, p ? p.upto ?? -1 : -1);
@@ -257,7 +257,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null) {
         lore ? `[LOREBOOK]\n${lore}` : '',
         recent ? `[RECENT CHAT]\n${recent}` : '',
         `[OWNER]\n${owner}`,
-        blindBlock(m, owner),
+        profile, blindBlock(m, owner),
         namesBlock(m),
         p ? UPDATE_ASK : '',
         only ? onlyAsk(only) : '',
@@ -287,7 +287,7 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     const key = nameKey(owner);
     const old = update ? m.phones?.[key] : null;
     const part = apps && m.phones?.[key] ? apps.flatMap(a => REMAKE[a] || []) : null;
-    const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner), part), { system: AI_SYS_PHONE, maxTokens: 16000 });
+    const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner), part, await ownerProfileBlock(ctx(),m.phones?.[key]?.financeProfile,owner)), { system: AI_SYS_PHONE, maxTokens: 16000 });
     const got = parsePhone(out);
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
     if (part) {
@@ -484,7 +484,7 @@ const num = v => { if (v === null || v === undefined || String(v).trim() === '')
 const last4 = v => String(v ?? '').replace(/\D/g, '').slice(-4);
 export async function sideRequest(m, owner, blocks, { profile } = {}) {
     const world = worldText(m), lore = await loreFor(m, owner);
-    const profileText = await financeProfileBlock(ctx(),profile,owner);
+    const profileText = await ownerProfileBlock(ctx(),profile,owner);
     const recent = recentForCheck(6).join('\n\n').slice(-6000);
     return [
         `[ARCHIVE]\n${archiveFor(m, -1).text || '(empty)'}`,
@@ -561,7 +561,7 @@ Existing transaction records are preserved by the app; do not rewrite their amou
 }
 export async function fillVoice(m, p) {
     const diary = (p.diary || []).slice(-6).map(d => `- ${d.date} ${d.title}`).join('\n');
-    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`]), { system: AI_SYS_VOICES, maxTokens: 6000 });
+    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`], {profile:p.financeProfile}), { system: AI_SYS_VOICES, maxTokens: 6000 });
     const memos = arr(jsonOf(out)?.memos).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: Math.max(3, Math.min(900, Math.round(Number(x?.sec) || 30))), place: line(x?.place, 60), src: 'guess' })).filter(x => x.text);
     if (!memos.length) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
     p.voice = [...(p.voice || []).filter(x => x.src === 'story' || x.now), ...memos].sort((a, b) => String(a.time).localeCompare(String(b.time))).slice(-CAP.voice);

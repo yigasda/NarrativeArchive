@@ -536,7 +536,7 @@ export function setScreen(p, now, m, ui) {
         </div>
         <div class="ax_sec">아카이브</div>
         <div class="ax_card">
-          <button type="button" class="ax_rw" data-go="setprofile">${si('#8faed1', 'user')}<span class="ax_tx"><span class="ax_n">금융 프로필</span></span><span class="ax_v">${esc(p.financeProfile?.label || '연결 안 함')}</span>${axChev}</button>
+          <button type="button" class="ax_rw" data-go="setprofile">${si('#8faed1', 'user')}<span class="ax_tx"><span class="ax_n">인물 프로필</span></span><span class="ax_v">${esc(p.financeProfile?.label || '연결 안 함')}</span>${axChev}</button>
           <button type="button" class="ax_rw" data-go="setlore">${si('#dcc680', 'book')}<span class="ax_tx"><span class="ax_n">참고 로어북</span></span><span class="ax_v">${(n => (n ? `${n}권` : '없음'))(phoneLore(m).length)}</span>${axChev}</button>
           <button type="button" class="ax_rw na_ph_setinj">${si('#d494a7', 'in')}<span class="ax_tx"><span class="ax_n">롤플에 넣기</span></span><span class="ax_sw ${p.inject ? 'on' : ''}"></span></button>
           <button type="button" class="ax_rw na_ph_setupd">${si('#8faed1', 'redo')}<span class="ax_tx"><span class="ax_n">새로 일어난 일 반영</span></span><span class="ax_v">${ui.newN ? `새 섹션 ${ui.newN}` : ''}</span></button>
@@ -655,10 +655,10 @@ export function mapScreen(p, now, m) {
       ${axInd()}`;
 }
 
-export function setFinanceProfile(p,now,state) {
+export function setOwnerProfile(p,now,state) {
     const c=ctx(), binding=state?.binding || p.financeProfile || {type:'none'}, options=profileChoices(c);
     const select=(field,title,rows,value)=>`<label class="fp_field"><span>${title}</span><select class="fp_select" data-field="${field}"><option value="">선택</option>${rows.map(x=>`<option value="${esc(x.id)}" ${x.id === value ? 'selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>`;
-    return `${axBar(p,now)}${axTop(axCb('set'))}<div class="ax_scroll">${axH1('금융 프로필',p.owner)}
+    return `${axBar(p,now)}${axTop(axCb('set'))}<div class="ax_scroll">${axH1('인물 프로필',p.owner)}
       <div class="ax_card fp_form"><label class="fp_field"><span>프로필 출처</span><select class="fp_select" data-field="type">${[['none','연결 안 함'],['character','캐릭터 카드'],['persona','사용자 페르소나'],['lore','로어북 항목']].map(([k,v])=>`<option value="${k}" ${binding.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
       ${binding.type === 'character' ? select('id','캐릭터',options.characters,binding.id) : binding.type === 'persona' ? select('id','페르소나',options.personas,binding.id) : binding.type === 'lore' ? select('book','로어북',options.books.map(b=>({id:b,label:b})),binding.book)+ (binding.book ? select('id','인물 항목',state?.entries || [],binding.id) : '') : ''}</div>
       ${state?.busy ? '<div class="ax_empty">프로필 불러오는 중…</div>' : state?.error ? `<div class="ax_empty">${esc(state.error)}</div>` : state?.resolved ? `<div class="ax_sec">${esc(state.resolved.label)}</div><div class="ax_card fp_preview">${esc(state.resolved.text)}</div>` : ''}

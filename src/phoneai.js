@@ -1,5 +1,6 @@
 // 캐릭터 휴대폰 · AI 기능 모델: 사진 그리기 (실리태번 이미지 생성 or AutoPic), 카메라, 메모 · 일기 새로 쓰기, 검색 결과 페이지.
 
+import { ownerProfileBlock } from './phoneprofile.js';
 import { askAI } from './ai.js';
 import { datedRows } from './anniv.js';
 import { calendars } from './calendar.js';
@@ -237,6 +238,7 @@ export const writing = new Set(); // "owner:note" / "owner:diary" being written
 export async function writeEntry(m, p, kind) {
     const diary = kind === 'diary', list = diary ? (p.diary || []) : p.notes;
     const prompt = [
+        await ownerProfileBlock(ctx(),p.financeProfile,p.owner),
         `[OWNER]\n${p.owner}${p.country ? ` (phone set to ${p.country})` : ''}`, `[NOW]\n${storyNow(p) || p.now || ''}`, `[WRITE]\n${diary ? 'a diary entry' : 'a note'}`,
         `[RECENT CHAT]\n${recentForCheck(12).join('\n\n').slice(-9000)}`,
         `[SO FAR]\n${list.slice(-3).map(x => `- ${x.title ? `${x.title}: ` : ''}${x.text.slice(0, 300)}`).join('\n') || '(none)'}`,
@@ -341,6 +343,7 @@ export async function makeDraft(m, p, i) {
     if (!t) return null;
     const said = x => (x.from === 'me' ? p.owner : x.from);
     const prompt = [
+        await ownerProfileBlock(ctx(),p.financeProfile,p.owner),
         `[OWNER]\n${p.owner}`, `[TO]\n${t.with}`,
         `[THREAD]\n${t.messages.filter(x => x.src !== 'guess').slice(-12).map(x => `${said(x)} (${x.time}): ${x.text}`).join('\n')}`,
         `[RECENT CHAT]\n${recentForCheck(8).join('\n\n').slice(-7000)}`,
@@ -377,6 +380,7 @@ export const filling = new Set(); // "owner:money" / "owner:voice" being filled
 export const recording = new Set(); // owner keys recording a memo now
 export async function recordVoice(m, p) {
     const prompt = [
+        await ownerProfileBlock(ctx(),p.financeProfile,p.owner),
         `[OWNER]\n${p.owner}${p.country ? ` (phone set to ${p.country})` : ''}`, `[NOW]\n${storyNow(p) || p.now || ''}`,
         `[RECENT CHAT]\n${recentForCheck(12).join('\n\n').slice(-9000)}`,
         `[SO FAR]\n${(p.voice || []).slice(-3).map(x => `- ${x.title}: ${x.text.slice(0, 200)}`).join('\n') || '(none)'}`,
