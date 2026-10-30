@@ -5716,3 +5716,15 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .iv_history_change > p { font-size: 13px; margin: 5px 0; overflow-wrap: anywhere; }
 .iv_history_change em { font-style: normal; color: var(--iv-brand); font-weight: 600; }
 .iv_history > .iv_link { margin-top: 16px; }
+
+/* Bank/wallet conversion is a display preference; account balances remain native. */
+.ax_fx_tools { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin: 14px 16px; }
+.ax_fx_tools label { flex: 1; min-width: 105px; color: #75837d; font-size: 11px; }
+.ax .ax_fx_tools select, .ax .ax_fx_tools input { display: block; width: 100%; min-width: 0; height: 34px; box-sizing: border-box; margin: 5px 0 0; padding: 0 8px; border: 1px solid #e2e8e5; border-radius: 10px; background: #fff; color: #16251f; font: inherit; font-size: 12px; }
+.ax .bank_fxrefresh { --axbg: #e8efec; color: #24664d; border-radius: 10px; padding: 9px 10px; font-size: 12px; }
+.ax_fx_tools > small { flex-basis: 100%; color: #89938e; font-size: 10px; line-height: 1.5; }
+.ax_accv .ax_fx_note { display: block; max-width: 150px; white-space: normal; font-size: 10px; line-height: 1.5; margin-top: 5px; }
+.ax_fx_total { padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+.ax_fx_total b { font-size: 27px; color: #172d23; }
+.ax_fx_total small, .ax_fx_total > span, .ax_fx_cardnote { color: #7b8784; font-size: 11px; line-height: 1.6; }
+.ax_fx_cardnote { margin: 0 22px 18px; }

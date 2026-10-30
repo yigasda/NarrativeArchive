@@ -69,11 +69,11 @@ const phonedata=await load('phonedata.js',{
  './translate.js':encoded(`export const glossaryEntries=()=>[];`), './world.js':encoded(`export const worldText=()=>'';`)
 });
 test('bank regeneration preserves baseline, actual cash, old transactions and independent investments',async()=>{
- const {m,p}=setup();p.money={currency:'EUR',bank:{name:'Old',accounts:[{id:'bank',kind:'checking',last4:'1234',name:'Cash',balance:1000,currency:'EUR'}]},tx:[{id:'history',account:'1234',amount:-50}],orders:[],passes:[],cards:[],basis:'original'};
+ const {m,p}=setup();p.money={currency:'EUR',bank:{name:'Old',accounts:[{id:'bank',kind:'checking',last4:'1234',name:'Cash',balance:1000,currency:'EUR'}]},tx:[{id:'history',account:'1234',amount:-50}],orders:[],passes:[],cards:[],basis:'original',displayCurrency:'KRW',fxDate:'2026-10-30'};
  finance.migrateBank(m,p);finance.baseline(m,'broker','EUR',0,'2026-10-01',p.owner);
  finance.transfer(m,{id:'stable-transfer',from:'bank:EUR',to:'broker:EUR',sent:100,received:100,fee:0,date:'2026-10-30'});
  p.investment={sentinel:true};globalThis.__investTest.answer={currency:'USD',bank:{name:'New',accounts:[{id:'bank',kind:'checking',last4:'1234',name:'Renamed',currency:'USD',balance:999999}]},tx:[{account:'1234',who:'invented',amount:-100}],cards:[],orders:[],passes:[]};
- await phonedata.fillMoney(m,p);assert.equal(p.money.bank.accounts[0].name,'Renamed');assert.equal(p.money.bank.accounts[0].balance,900);assert.equal(p.money.bank.accounts[0].currency,'EUR');assert.equal(p.money.tx[0].id,'history');assert.equal(m.finance.accounts['bank:EUR'].amount,1000);assert.equal(m.finance.transfers['stable-transfer'].sent,100);assert.equal(p.investment.sentinel,true);
+ await phonedata.fillMoney(m,p);assert.equal(p.money.bank.accounts[0].name,'Renamed');assert.equal(p.money.bank.accounts[0].balance,900);assert.equal(p.money.bank.accounts[0].currency,'EUR');assert.equal(p.money.tx[0].id,'history');assert.equal(m.finance.accounts['bank:EUR'].amount,1000);assert.equal(m.finance.transfers['stable-transfer'].sent,100);assert.equal(p.investment.sentinel,true);assert.equal(p.money.displayCurrency,'KRW');assert.equal(p.money.fxDate,'2026-10-30');
 });
 test('whole phone regeneration retains bank and investment data',async()=>{
  const {m,p}=setup();p.money={sentinel:1};p.investment={sentinel:2};m.phones={a:p};globalThis.__investTest.answer={now:'10-30'};
@@ -149,4 +149,32 @@ test('fictional dividends stay scheduled, private and idempotent without changin
  m.text+=' Dividend payment is scheduled for 2026-11-10.';
  globalThis.__investTest.answer={schedules:[{...draft,source:'story',evidence:'Dividend payment is scheduled for 2026-11-10.'}]};await dataMod.collectInvestmentRecords(m,p);
  assert.equal(p.investment.schedules.length,1);assert.equal(p.investment.schedules[0].id,id);assert.equal(p.investment.schedules[0].source,'story');assert.equal(JSON.stringify(m.finance),before);
+});
+function euroWallet() {
+ const {m,p}=setup();p.country='KR';
+ p.money={currency:'EUR',fxDate:'2026-10-30',bank:{name:'Bank',accounts:[{id:'eur',kind:'checking',last4:'1234',currency:'EUR',balance:13000},{id:'credit',kind:'credit',last4:'5678',currency:'EUR',balance:2000}]},cards:[{account:'1234'}],tx:[],passes:[],orders:[]};
+ return {m,p};
+}
+test('bank and wallet convert EUR cash to KRW without converting the ledger or counting credit',()=>{
+ const {m,p}=euroWallet();finance.migrateBank(m,p);const before=JSON.stringify(m.finance.accounts);
+ finance.addPrice(m,'FX:EUR/KRW','2026-10-30',{value:1500,source:'guess'});
+ assert.equal(moneyUI.bankDisplayCurrency(p),'KRW');
+ for(const html of [moneyUI.bankHome(p,'10-30'),moneyUI.walletScreen(p,'10-30'),moneyUI.bankAcct(p,'10-30','0'),moneyUI.cardView(p,'10-30','0')]) {
+  assert.match(html,/19,500,000/);assert.doesNotMatch(html,/22,500,000/);
+ }
+ assert.match(moneyUI.bankAcct(p,'10-30','0'),/13,000/);assert.match(moneyUI.bankAcct(p,'10-30','0'),/가상 환율/);
+ finance.addPrice(m,'FX:EUR/KRW','2026-10-30',{value:1600,source:'story',ref:'One euro equals 1600 won.'});
+ assert.match(moneyUI.bankHome(p,'10-30'),/20,800,000/);assert.equal(JSON.stringify(m.finance.accounts),before);assert.equal(p.money.bank.accounts[0].balance,13000);assert.equal(p.money.currency,'EUR');
+ p.money.displayCurrency='EUR';assert.match(moneyUI.bankHome(p,'10-30'),/13,000/);assert.equal(JSON.stringify(m.finance.accounts),before);
+});
+test('missing or stale display FX never creates a full total or a fake conversion',()=>{
+ const {m,p}=euroWallet();finance.addPrice(m,'FX:EUR/KRW','2026-10-29',{value:1500});
+ for(const html of [moneyUI.bankHome(p,'10-30'),moneyUI.walletScreen(p,'10-30')]) {assert.match(html,/환산 미완료/);assert.match(html,/환산 대기/);assert.doesNotMatch(html,/19,500,000/);}
+ assert.match(moneyUI.bankAcct(p,'10-30','0'),/KRW 환산 대기/);assert.equal(p.money.bank.accounts[0].balance,13000);
+});
+test('bank FX refresh works without a portfolio and accepts only requested dates/pairs',async()=>{
+ const {m,p}=euroWallet();finance.migrateBank(m,p);const before=JSON.stringify(m.finance.accounts);
+ globalThis.__investTest.answer={fx:[{from:'EUR',to:'KRW',date:'2026-10-30',value:1500},{from:'USD',to:'JPY',date:'2026-10-30',value:150},{from:'EUR',to:'KRW',date:'2026-11-01',value:1800}],quotes:[{symbol:'NYSE:X',date:'2026-10-30',value:9}]};
+ await dataMod.refreshBankFX(m,p,'2026-10-30','KRW');assert.equal(finance.fx(m,'EUR','KRW','2026-10-30'),1500);assert.equal(finance.fx(m,'USD','JPY','2026-10-30'),null);assert.equal(finance.fx(m,'EUR','KRW','2026-11-01'),null);assert.equal(p.investment,undefined);assert.equal(JSON.stringify(m.finance.accounts),before);
+ globalThis.__investTest.answer={fx:[{from:'EUR',to:'KRW',date:'2026-10-30',value:9999}]};await dataMod.refreshBankFX(m,p,'2026-10-30','KRW');assert.equal(finance.fx(m,'EUR','KRW','2026-10-30'),1500);
 });

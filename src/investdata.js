@@ -192,3 +192,19 @@ export async function collectInvestmentRecords(m, p, mode = 'records', target = 
     await saveMeta();
     return got;
 }
+
+// Bank display FX works even when no investment portfolio has been generated.
+export async function refreshBankFX(m,p,date,base) {
+    if (!p.money || !validDate(date) || !currency(base)) throw new Error('환산 날짜와 표시 통화를 확인해 주세요');
+    const currencies = [...new Set(p.money.bank.accounts.map(a=>a.currency || p.money.currency))].filter(c=>currency(c) && c !== base);
+    const keys = currencies.map(c=>quoteKey(`FX:${c}/${base}`));
+    if (!keys.length) return;
+    const quotes = Object.fromEntries(keys.map(k=>[k,finance(m).prices[k] || {}]));
+    const input = await sideRequest(m,p.owner,[`[DATE]\n${date}`, '[PUBLIC SECURITIES]\n[]',`[EXISTING QUOTES]\n${JSON.stringify(quotes)}`,`[FX PAIRS]\n${currencies.map(c=>`${c}/${base}`).join(', ')}`]);
+    const raw = json(await askDraft(input,{system:MARKET_SYS,maxTokens:3000}));
+    // Only requested FX pairs on the selected day can be updated by this request.
+    const allowed = new Set(keys);
+    const rows = list(raw.fx).filter(x=>x.date === date && allowed.has(quoteKey(`FX:${x.from}/${x.to}`)));
+    ingestQuotes(m,{fx:rows},input,date,[]);
+    await saveMeta();
+}

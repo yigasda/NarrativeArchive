@@ -5,7 +5,7 @@
 //   upto (the last message number the archive held), at, inject } }
 
 import { investmentScreen } from './investui.js';
-import { collectInvestmentRecords, fillInvestment, refreshMarket, validDate } from './investdata.js';
+import { collectInvestmentRecords, fillInvestment, refreshMarket, refreshBankFX, validDate } from './investdata.js';
 import { finance, migrateBank, reviseBaseline, selectPrice, transfer } from './finance.js';
 import { draftReady, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
@@ -15,7 +15,7 @@ import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, rec
 import { APPS, AXB, AXB_C, busyHtml, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
 import { ensureIds, fillMoney, fillVoice, koOn, loreOff, makePhone, newSections, phoneLore, REMAKE, showNow, storyNow } from './phonedata.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
-import { bankAcct, bankHome, bankTx, cardView, orderView, passView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
+import { bankDisplayCurrency, bankAcct, bankHome, bankTx, cardView, orderView, passView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
 import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './phoneweb.js';
 import { openGlossary } from './translate.js';
 import { confirm, esc } from './util.js';
@@ -148,6 +148,20 @@ export async function openPhone(who = null) {
         catch (err) { toastr.error(String(err?.message || err), '투자'); }
         finally { investing = false; if (phone() === p) drawPhone(true); }
     };
+    $root.on('change', '.bank_display, .bank_fxdate', async function () {
+        const p = phone(); if (!p?.money) return;
+        if (this.classList.contains('bank_display')) p.money.displayCurrency = this.value;
+        else { if (!validDate(this.value)) return toastr.warning('이야기 날짜를 입력해 주세요'); p.money.fxDate = this.value; }
+        await saveMeta(); drawPhone(true);
+    });
+    $root.on('click', '.bank_fxrefresh', async function () {
+        if (investing) return;
+        const p = phone(), date = $root.find('.bank_fxdate').val(), base = bankDisplayCurrency(p);
+        investing = true;
+        try { await withSpinner($(this),'확인 중',()=>refreshBankFX(m,p,date,base)); }
+        catch (err) { toastr.error(String(err?.message || err),'환율'); }
+        finally { investing = false; if (phone() === p) drawPhone(true); }
+    });
     $root.on('click', '.iv_refresh', () => investRun(false));
     $root.on('click', '.iv_sync', () => investRun(true));
     $root.on('click', '.iv_records, .iv_notemake', async function () {

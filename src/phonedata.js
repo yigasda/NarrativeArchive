@@ -513,6 +513,8 @@ export async function fillMoney(m, p) {
     if (old) {
         next.bank.accounts = old.bank.accounts.map(a => ({ ...a, name: next.bank.accounts.find(b => b.id === a.id)?.name || a.name }));
         next.currency = old.currency;
+        next.displayCurrency = old.displayCurrency;
+        next.fxDate = old.fxDate;
         next.tx = old.tx; // history and transfer ids survive visual regeneration
         next.asOf = old.asOf;
         next.basis = old.basis || next.basis;
