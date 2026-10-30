@@ -31,13 +31,13 @@ function line(vals, w, h, pad = 4) {
 }
 // 종목 차트: a candle a day like a real broker's — open is the day before's close, the wick spans every price saved
 // that day (one price a day leaves no wick: nothing is made up); the 20-day average; the scale on the right
-function candles(m, p, sym, date, from, cur) {
+function candles(m, p, sym, date, from, cur, busy = false) {
     const book = finance(m).prices[`STOCK:${sym}`] || {}, all = Object.keys(book).filter(d => d <= date).sort();
     const close = d => price(m, `STOCK:${sym}`, d)?.value;
     const rows = all.map((d, i) => { const c = close(d), o = i ? close(all[i - 1]) : c, vs = [o, c, ...(book[d].rows || []).map(r => r.value)].filter(finite); return { d, o, c, h: Math.max(...vs), l: Math.min(...vs), i }; }).filter(x => finite(x.c));
     const ma = (n, i) => (i + 1 >= n ? rows.slice(i + 1 - n, i + 1).reduce((a, x) => a + x.c, 0) / n : null);
     const show = rows.filter(x => x.d >= from);
-    if (show.length < 2) return `<div class="iv_chart iv_nochart">선택 기간의 기록 부족</div>`;
+    if (show.length < 2) return `<div class="iv_chart iv_nochart">${busy ? '시세 불러오는 중…' : '선택 기간의 기록 부족'}</div>`;
     const W = 358, H = 236, R = 50, T = 26, B = 22, pw = W - R - 8, ph = H - T - B;
     const hi = Math.max(...show.map(x => x.h)), lo = Math.min(...show.map(x => x.l)), padv = (hi - lo || hi * 0.02 || 1) * 0.12;
     const top = hi + padv, bot = lo - padv, y = v => T + (top - v) / (top - bot) * ph;
@@ -148,8 +148,7 @@ export function investmentScreen(m, p, now, view, key, busy) {
               <div class="iv_big cg_num">${money(p, q?.value, s.currency)}</div>
               <div class="iv_chg ${tone(p, change)}">${finite(change) && prev ? `${arrow(change)} ${money(p, q.value - prev.value, s.currency, true)} (${pct(change)}) <small>${esc(shortDay(prev.date))} 대비</small>` : `<small>${q ? (q.stale ? `${esc(shortDay(q.date))} 마지막 시세` : '이전 시세가 없어요') : '아직 평가 전이에요'}</small>`}</div>
               <div class="iv_src">${q ? `${esc(shortDay(q.date))} ${esc(q.time || '시각 모름')} · 시세${q.stale ? ' · 이전 시세' : ''}` : ''}${q?.conflict ? ` · <button type="button" class="iv_link" data-go="ivprices" data-i="${esc(`STOCK:${sym}`)}">가격 확인 필요</button>` : ''}</div>
-              ${candles(m, p, sym, date, daysBack(date, days), s.currency)}${chips('stock', sym, rg)}
-              <div class="iv_charttools"><button type="button" class="iv_link iv_chartfill" data-symbol="${esc(sym)}" data-range="${esc(rg)}" ${busy ? 'disabled' : ''}>${ax('redo',13)} ${busy ? '시세 불러오는 중…' : '과거 시세 채우기'}</button></div>
+              ${candles(m, p, sym, date, daysBack(date, days), s.currency, busy)}${chips('stock', sym, rg)}
               ${mine}
               ${noteBlock(`stock:${sym}`)}
               ${watch ? `${hd('관심 메모')}${card(`<p>${esc(watch.note)}</p>${watch.ko ? `<p class="iv_ko">${esc(watch.ko)}</p>` : ''}`)}` : ''}

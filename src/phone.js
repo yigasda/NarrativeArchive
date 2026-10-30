@@ -129,6 +129,7 @@ export async function openPhone(who = null) {
         $root.find('.na_ph_frame').html(screen(p, view, m, roster, { newN: newSections(m, p), loreExp, loreEnts, remake, contactBack, investing }));
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
+        queueMicrotask(() => autoChart());
     };
     // 참고 로어북: each book with its switch; › opens its entries, each with its own (a book with some left out shows −)
     const LCK = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path class="na_ck_v" d="M5 12.5l4.5 4.5L19 7.5"/><path class="na_ck_p" d="M6 12h12"/></svg>';
@@ -187,14 +188,18 @@ export async function openPhone(who = null) {
         catch (err) { toastr.error(String(err?.message || err),'환율'); }
         finally { investing = false; if (phone() === p) drawPhone(true); }
     });
-    $root.on('click', '.iv_chartfill', async function () {
-        if (investing) return;
-        const p=phone(), symbol=this.dataset.symbol, range=this.dataset.range;
-        investing=true; drawPhone(true);
-        try { const added=await fillChartHistory(m,p,symbol,range); toastr.info(added ? `${added}개 시세를 추가했어요` : '저장된 시세가 모두 있어요'); }
-        catch(err) { toastr.error(String(err?.message || err),'차트'); }
-        finally { investing=false; if(phone()===p) drawPhone(true); }
-    });
+    let chartAttempt = '', phoneClosed = false;
+    const autoChart = async () => {
+        if (phoneClosed || investing || !view.startsWith('stock:')) return;
+        const p = phone(); if (!p?.investment) return;
+        const [symbol,range='1m'] = decodeURIComponent(view.slice(6)).split('~');
+        const request = `${owner}|${p.investment.date}|${symbol}|${range}`;
+        if (chartAttempt === request) return;
+        chartAttempt = request; investing = true; drawPhone(true);
+        try { await fillChartHistory(m,p,symbol,range); }
+        catch(err) { if (!phoneClosed && phone() === p) toastr.error(String(err?.message || err),'차트'); }
+        finally { investing=false; if (!phoneClosed) drawPhone(true); }
+    };
     $root.on('click', '.iv_refresh', () => investRun(false));
     $root.on('click', '.iv_sync', () => investRun(true));
     $root.on('click', '.iv_records, .iv_notemake', async function () {
@@ -297,6 +302,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.na_ph_frame [data-go]', function (e) {
         const go = this.dataset.go;
         if (!go) return;
+        if (go === 'stock') chartAttempt = '';
         e.stopPropagation();
         // a person's card goes back where it was opened from
         if (go === 'contact' && !view.startsWith('contact')) contactBack = view;
@@ -571,7 +577,7 @@ export async function openPhone(who = null) {
         $root.on('click', '.na_ph_quit', e => { e.stopPropagation(); close(); });
         $root.on('click', '.na_ph_wrap', e => { if (e.target === e.currentTarget) { if (sheetOpen) setSheet(false); else close(); } });
         dlg.addEventListener('cancel', e => { e.preventDefault(); if (sheetOpen) setSheet(false); else close(); });
-        dlg.addEventListener('close', done, { once: true });
+        dlg.addEventListener('close', () => { phoneClosed = true; done(); }, { once: true });
     });
     ro.disconnect();
     const t = dlg.querySelector('#toast-container');
