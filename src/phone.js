@@ -204,9 +204,9 @@ export async function openPhone(who = null) {
     };
     $root.on('click', '.iv_refresh', () => investRun(false));
     $root.on('click', '.iv_sync', () => investRun(true));
-    $root.on('click', '.iv_records, .iv_notemake', async function () {
+    $root.on('click', '.iv_records', async function () {
         if (investing) return;
-        const p = phone(), mode = this.classList.contains('iv_notemake') ? 'notes' : 'records', target = this.dataset.target || '';
+        const p = phone(), mode = 'records', target = this.dataset.target || '';
         investing = true; drawPhone(true);
         try {
             const got = await collectInvestmentRecords(m, p, mode, target);

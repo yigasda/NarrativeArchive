@@ -104,7 +104,7 @@ test('record generation and repeated scan leave ledger and current rights unchan
  await dataMod.collectInvestmentRecords(m,p);await dataMod.collectInvestmentRecords(m,p);
  assert.equal(JSON.stringify(m.finance),snapshot);assert.equal(p.investment.stakes[0].voter,'B');assert.equal(p.investment.history.length,1);assert.equal(p.investment.schedules.length,1);
  for(const v of ['ivnotes','ivschedule','ivhistory']){const html=ui.investmentScreen(m,p,'10-30',v,'',false);assert.ok(html.length>100);assert.ok(!html.includes('NaN'));}
- assert.match(ui.investmentScreen(m,p,'10-30','stock','NYSE:X',false),/투자 메모/);
+ assert.doesNotMatch(ui.investmentScreen(m,p,'10-30','stock','NYSE:X',false),/투자 메모/);
  assert.match(ui.investmentScreen(m,p,'10-30','ivstakes','',false),/변경 내역/);
 });
 test('failed companion request retains existing notes and finance',async()=>{
@@ -327,4 +327,12 @@ test('unreadable or empty device response does not save or retry',async()=>{
  const {m,p}=setup();globalThis.__investTest.answer={};
  await assert.rejects(phonedata.fillDevice(m,p),/JSON/);assert.equal(p.device,undefined);assert.equal(globalThis.__investTest.inputs.length,1);
  assert.equal(phonedata.readDeviceReply('not JSON'),null);
+});
+
+test('stock details omit retired investment memo and creation button without deleting saved data',async()=>{
+ const {m,p}=setup();await dataMod.fillInvestment(m,p,'2026-10-30');
+ p.investment.notes=[{target:'stock:NYSE:X',text:'Saved old investment memo',source:'guess'}];
+ const html=ui.investmentScreen(m,p,'10-30','stock','NYSE:X',false);
+ assert.doesNotMatch(html,/투자 메모|새 메모|iv_notemake|Saved old investment memo/);
+ assert.match(html,/거래 내역/);assert.equal(p.investment.notes.length,1);
 });

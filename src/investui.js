@@ -97,11 +97,6 @@ export function investmentScreen(m, p, now, view, key, busy) {
     // Old saved routes lead to the containing detail, not a separate journal.
     if (view === 'ivnotes') return investmentScreen(m,p,now,key?.startsWith('stock:') ? 'stock' : key?.startsWith('stake:') ? 'ivstakes' : 'invest',key?.startsWith('stock:') ? key.slice(6) : '',busy);
     if (view === 'ivhistory') return investmentScreen(m,p,now,'ivstakes','',busy);
-    const noteBlock = target => {
-        const notes = (inv.notes || []).filter(n => n.target === target).slice().reverse();
-        const content = n => `<p>${esc(n.text)}</p>${n.ko ? `<p class="iv_memo_translation">${esc(n.ko)}</p>` : ''}${n.source === 'story' ? evidence(n) : ''}`;
-        return `<section class="iv_card iv_memo"><header>${ax('pen',15)} 투자 메모 <small>${esc(notes[0]?.date || '')}</small></header>${notes.length ? content(notes[0]) : '<p class="iv_muted">아직 남긴 메모가 없어요.</p>'}<footer><span></span><button type="button" class="iv_link iv_notemake" data-target="${esc(target)}" ${busy ? 'disabled' : ''}>${ax('redo',13)} ${busy ? '불러오는 중…' : '새 메모'}</button></footer>${notes.length > 1 ? `<details class="iv_memo_older"><summary>이전 메모 ${notes.length - 1}개</summary>${notes.slice(1).map(n=>`<div><small>${esc(n.date)}</small>${content(n)}</div>`).join('')}</details>` : ''}</section>`;
-    };
     const historyBlock = target => {
         const fields = {percent:'지분율',holder:'직접 보유자',voter:'의결권 행사자',beneficiary:'배당 수익자',restriction:'매도 제한·조건'};
         const xs = (inv.history || []).filter(x => x.target === target).slice().sort((a,b)=>(b.date || '').localeCompare(a.date || ''));
@@ -150,7 +145,6 @@ export function investmentScreen(m, p, now, view, key, busy) {
               <div class="iv_src">${q ? `${esc(shortDay(q.date))} ${esc(q.time || '시각 모름')} · 시세${q.stale ? ' · 이전 시세' : ''}` : ''}${q?.conflict ? ` · <button type="button" class="iv_link" data-go="ivprices" data-i="${esc(`STOCK:${sym}`)}">가격 확인 필요</button>` : ''}</div>
               ${candles(m, p, sym, date, daysBack(date, days), s.currency, busy)}${chips('stock', sym, rg)}
               ${mine}
-              ${noteBlock(`stock:${sym}`)}
               ${watch ? `${hd('관심 메모')}${card(`<p>${esc(watch.note)}</p>${watch.ko ? `<p class="iv_ko">${esc(watch.ko)}</p>` : ''}`)}` : ''}
               ${hd('거래 내역', `<button type="button" class="iv_link" data-go="ivprices" data-i="${esc(`STOCK:${sym}`)}">가격 기록</button>`)}
               ${card(tl.map(t => trow(p, t, s)).join('') || '<p class="iv_muted">거래가 없어요</p>', 'iv_list')}
