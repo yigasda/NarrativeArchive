@@ -9,7 +9,7 @@ Fill one character's investment app from the supplied story. The app computes ho
 YOU GET
 ARCHIVE, WORLD, selected LOREBOOK, RECENT CHAT, OWNER, OWNER DOESN'T KNOW, NAMES, DATE, and BANK when present.
 STORY OR INVENTED
-Explicit amounts, dates, ownership and restrictions win. Infer a plausible personal investment scale from business reach, current personal ownership/access, lifestyle and spending; neither flatten a wealthy heir into a salary earner nor credit company or family assets to personal cash.
+Explicit amounts, dates, ownership and restrictions win. Infer a plausible personal investment scale from business reach, current personal ownership/access, lifestyle and spending. Do not credit company or family assets to personal cash.
 Unspecified ordinary investments, watch notes, opening cash and historical prices may be imagined as app-only fiction. Make investment behaviour fit the character: concentrated long holding, conservative diversification, or mostly watching can all be right. Do not force active trading.
 Family stakes, listing status, trusts, percentages, voting authority, beneficiaries, sale restrictions and their counterparties require explicit supplied evidence. Missing fields stay null or empty. Never infer ownership merely from being an heir. Put the exact supporting excerpt in each stake's evidence. Do not fabricate trust structures or a family valuation.
 Privacy: only this owner's portfolio. Other characters' possessions are not theirs. Unknown or suspected facts never become known.
@@ -108,4 +108,71 @@ export async function refreshMarket(m, p, date, checkStory = false) {
     ingestQuotes(m, raw, input, date, inv.securities);
     inv.date = date; inv.generatedDates = [...new Set([...inv.generatedDates, date])];
     await saveMeta();
+}
+
+export const INVEST_RECORDS_SYS = `GOAL
+Read one character's investment life: private investment notes, dated dividend/rights schedules, and historical changes to family stakes. This is a read-only companion to the financial ledger. Never create trades, cash movements or new ownership.
+YOU GET
+STORY INPUT: archive, selected lore, recent chat and the owner's knowledge limits.
+TARGETS: existing securities and family stakes, with stable keys. They identify the screen, not independent evidence.
+MODE: notes or records. AS OF is the story date, not the real date.
+APP CONTEXT (notes only): existing app-only trades and watch notes may inform a guess note, but are never evidence for story claims.
+RULES
+- Use only TARGETS keys. Never expose information the owner does not know; suspicions stay suspicions.
+- notes: one short private note for the requested target, in the owner's voice, about why they bought, keep or watch it. Not investment advice or a generic personality label. An imagined note is source guess and is never canon. Source story requires an exact excerpt explicitly supporting that reason. No invented family secrets, rights or relationships. Include Korean in ko when needed.
+- records: return schedules and history only, never notes. Empty lists are valid; do not fill the screen for decoration.
+- Schedules require an explicitly established date AND event: dividend payment, shareholder meeting, sale restriction release or voting delegation expiry. Future dates are allowed only when already announced in the story by AS OF. No inferred annual recurrence. A due date passing does not establish payment or release. paid/cancelled require explicit evidence; otherwise scheduled.
+- History is an actual change already shown by AS OF, not a current snapshot rewritten as an event. Only family stake targets. Fields: percent, holder, voter, beneficiary, restriction. Preserve the direction: who used to hold or exercise the right, and who does now. A change in feelings alone never changes legal rights. Unknown before/after or date stays empty. Unknown is not none or zero. Do not invent a transfer from the present ownership alone.
+- Every schedule and history entry includes an exact supporting excerpt from STORY INPUT, never from TARGETS or earlier generated records. The excerpt must support the date, condition and parties, not merely name the company. Put source message/section numbers in ref when available. A historical date may be empty if unspecified; a schedule without a date is omitted.
+- No currency amounts or credited dividends: this request cannot alter balances or the current rights card. History records explain events, not instructions to change the portfolio.
+OUTPUT JSON only
+{"notes":[{"target":"provided key","text":"short note","ko":"translation","source":"guess|story","evidence":"","ref":""}],
+"schedules":[{"target":"provided key","kind":"dividend|meeting|release|delegation","date":"YYYY-MM-DD","title":"short title","status":"scheduled|paid|cancelled","evidence":"exact excerpt","ref":""}],
+"history":[{"target":"stake key","field":"percent|holder|voter|beneficiary|restriction","date":"YYYY-MM-DD or empty","before":"","after":"","evidence":"exact excerpt","ref":""}]}
+At most one note, 16 schedules and 16 changes. Keep the original names and full years. Output no other keys.`;
+export function investmentTargets(inv) {
+    return [...inv.securities.map(s => ({ key: `stock:${s.symbol}`, name: s.name })), ...inv.stakes.map(s => ({ key: `stake:${s.id}`, name: s.company }))];
+}
+// This checks provenance text and structure, not whether an excerpt semantically entails every claim.
+export function parseInvestmentRecords(raw, inv, source, mode, target = '') {
+    const allowed = new Set(investmentTargets(inv).map(t => t.key));
+    const proof = x => typeof x.evidence === 'string' && x.evidence.trim().length >= 8 && source.includes(x.evidence.trim());
+    const common = x => ({ target: x.target, evidence: text(x.evidence, 2000), ref: text(x.ref, 120), source: 'story' });
+    const out = { notes: [], schedules: [], history: [] };
+    if (mode === 'notes') {
+        out.notes = list(raw.notes).filter(x => x.target === target && allowed.has(x.target) && text(x.text) && (x.source === 'guess' || x.source === 'story' && proof(x))).slice(0, 1).map(x => ({ ...common(x), date: inv.date, text: text(x.text, 1200), ko: text(x.ko, 1200), source: x.source, ...(x.source === 'guess' ? { evidence: '', ref: '' } : {}) }));
+        return out;
+    }
+    out.schedules = list(raw.schedules).filter(x => allowed.has(x.target) && ['dividend', 'meeting', 'release', 'delegation'].includes(x.kind) && validDate(x.date) && text(x.title) && proof(x) && ['scheduled', 'paid', 'cancelled'].includes(x.status) && !(x.date > inv.date && x.status === 'paid')).slice(0,16).map(x => ({ ...common(x), kind:x.kind, date:x.date, title:text(x.title,120), status:x.status }));
+    out.history = list(raw.history).filter(x => allowed.has(x.target) && x.target.startsWith('stake:') && ['percent','holder','voter','beneficiary','restriction'].includes(x.field) && (!x.date || validDate(x.date) && x.date <= inv.date) && proof(x) && (text(x.before) || text(x.after)) && text(x.before) !== text(x.after)).slice(0,16).map(x => ({ ...common(x), field:x.field, date:x.date || '', before:text(x.before), after:text(x.after) }));
+    return out;
+}
+export function mergeInvestmentRecords(inv, got) {
+    // Identity is independent of generated prose and status. New evidence stays as a separate sourced record.
+    const signature = (kind,x) => JSON.stringify(kind === 'notes' ? [x.target,x.date,x.text] : kind === 'schedules' ? [x.target,x.kind,x.date,x.evidence] : [x.target,x.field,x.date,x.evidence]);
+    for (const kind of ['notes','schedules','history']) {
+        const xs = inv[kind] ||= [];
+        for (const x of got[kind]) {
+            const old = xs.find(y => signature(kind,y) === signature(kind,x));
+            if (!old) xs.push({ ...x, id:uid() });
+            // Don't erase the former status or a conflicting interpretation of the same evidence.
+        }
+    }
+}
+export async function collectInvestmentRecords(m, p, mode = 'records', target = '') {
+    const inv = p.investment;
+    if (!inv || !['notes','records'].includes(mode)) throw new Error('투자 계좌를 먼저 만들어 주세요');
+    if (mode === 'notes' && !investmentTargets(inv).some(t => t.key === target)) throw new Error('노트를 쓸 종목이나 지분을 찾지 못했어요');
+    // Capture sources BEFORE appending generated targets. Prior app text cannot serve as evidence for itself.
+    const source = await sideRequest(m,p.owner,[]);
+    const targets = investmentTargets(inv).filter(t => mode !== 'notes' || t.key === target);
+    const appContext = mode === 'notes' && target.startsWith('stock:') ? { trades: inv.trades.filter(t => `stock:${t.symbol}` === target).slice(-8), watch: inv.watch.filter(w => `stock:${w.symbol}` === target) } : null;
+    const input = `${source}\n\n[AS OF]\n${inv.date}\n[MODE]\n${mode}\n[TARGETS — identification only]\n${JSON.stringify(targets)}${appContext ? `\n[APP CONTEXT — imagination, not evidence]\n${JSON.stringify(appContext)}` : ''}`;
+    const raw = json(await askDraft(input,{system:INVEST_RECORDS_SYS,maxTokens:mode === 'notes' ? 2000 : 6500}));
+    const got = parseInvestmentRecords(raw,inv,source,mode,target);
+    if (mode === 'notes' && !got.notes.length) throw new Error('사용할 수 있는 투자 노트를 받지 못했어요');
+    mergeInvestmentRecords(inv,got);
+    if (mode === 'records') inv.recordsChecked = inv.date;
+    await saveMeta();
+    return got;
 }

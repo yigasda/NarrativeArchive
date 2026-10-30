@@ -430,7 +430,7 @@ YOU GET
 STORY OR INVENTED
 - Purchases, bookings, trips, gifts, rent, wages: only what the story shows or plainly implies. Give each the "ev" tag the phone's mail or event for it already has.
 - Preserve explicit amounts with their owner, currency, purpose and date. A company valuation, transfer amount or old balance is not a current personal bank balance.
-- Where personal balances are unspecified, invent a coherent scale from the owner's business reach, ownership, access to funds, lifestyle and established spending. Do not flatten a multinational owner or heir into a generic salaried professional. Do not turn company assets, family wealth or an expected inheritance into personal cash. Never invent restrictions or trusts to explain a low balance.
+- Where personal balances are unspecified, invent a coherent scale from the owner's business reach, ownership, access to funds, lifestyle and established spending. Do not turn company assets, family wealth or an expected inheritance into personal cash. Never invent restrictions or trusts to explain a low balance.
 - Distinguish everyday spending cash and reserves. Investment holdings belong outside bank cash. Record a short "basis" explaining the supplied evidence and the invented scale; invented amounts are app-only, never new canon.
 - Last four digits, card expiry dates and everyday payments may be invented. Large purchases, wages and distributions need story support.
 - EXISTING ACCOUNTS, when provided, are locked financial snapshots. Keep their id, currency, balance, kind and last4 exactly. You may change their display names; do not invent extra accounts or replay old transactions. Credit balance is monthly spending, never cash.

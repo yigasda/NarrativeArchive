@@ -50,8 +50,12 @@ test('legacy credit renders without regeneration and stays out of bank deposits'
 // Optional local browser inspection fixture. Never a user's saved archive.
 if (process.env.INVEST_PREVIEW) {
  const {writeFile}=await import('node:fs/promises'); const {m,p}=setup(); await dataMod.fillInvestment(m,p,'2026-10-30');
+ p.investment.stakes=[{id:'family',company:'Varo Group',percent:12,holder:'Ren',voter:'Mara',beneficiary:'Ren',restriction:'설정상 동의 필요',listed:false,value:null,currency:'EUR',evidence:'Ren delegated his voting rights to Mara.'}];
+ p.investment.notes=[{id:'note',target:'stock:NYSE:X',date:'2026-10-30',text:'Do not sell just because today was difficult.',ko:'오늘 힘들었다고 팔지는 말 것.',source:'guess'}];
+ p.investment.schedules=[{id:'event',target:'stake:family',kind:'delegation',date:'2026-11-10',title:'의결권 위임 만료',status:'scheduled',evidence:'The voting delegation expires on November 10, 2026.',ref:'#120'}];
+ p.investment.history=[{id:'history',target:'stake:family',field:'voter',date:'2026-10-20',before:'Ren',after:'Mara',evidence:'Ren delegated his voting rights to Mara.',ref:'#118'}];
  const css=await readFile(new URL('../style.css',import.meta.url),'utf8');
- for(const view of ['invest','stock','ivactivity','ivwatch','ivstakes','ivcash','ivprices']) await writeFile(`${process.env.INVEST_PREVIEW}/${view}.html`,`<!doctype html><html lang="ko"><meta charset="UTF-8"><style>${css}\nbody{margin:0;background:#edf1ee}.cg_canvas{position:relative;transform:none}.na_phone{width:390px;margin:12px auto}.ax_canvas{height:844px}.iv_scroll{overflow:auto}</style><div class="na_phone"><div class="na_ph_scr app ax axb"><div class="cg_canvas ax_canvas">${ui.investmentScreen(m,p,'10-30',view,view==='stock'?'NYSE:X':'',false)}</div></div></div></html>`);
+ for(const view of ['ivnotes','ivschedule','ivhistory','invest','stock','ivactivity','ivwatch','ivstakes','ivcash','ivprices']) await writeFile(`${process.env.INVEST_PREVIEW}/${view}.html`,`<!doctype html><html lang="ko"><meta charset="UTF-8"><style>${css}\nbody{margin:0;background:#edf1ee}.cg_canvas{position:relative;transform:none}.na_phone{width:390px;margin:12px auto}.ax_canvas{height:844px}.iv_scroll{overflow:auto}</style><div class="na_phone"><div class="na_ph_scr app ax axb"><div class="cg_canvas ax_canvas">${ui.investmentScreen(m,p,'10-30',view,view==='stock'?'NYSE:X':'',false)}</div></div></div></html>`);
 }
 
 const phonedata=await load('phonedata.js',{
@@ -77,4 +81,37 @@ test('whole phone regeneration retains bank and investment data',async()=>{
 });
 test('missing numeric money value is unknown, not zero',()=>{
  const got=phonedata.parseMoney({currency:'EUR',bank:{accounts:[{kind:'checking',last4:'1234',balance:null}]}});assert.equal(got.bank.accounts[0].balance,null);
+});
+
+test('companion records require real source excerpts and valid target/date; unknown dates stay unknown',()=>{
+ const {m}=setup(),inv={date:'2026-10-30',securities:[{symbol:'NYSE:X',name:'X'}],stakes:[{id:'family',company:'Family'}]};
+ const source='A delegated voting rights to B. Dividend payment is scheduled for 2026-11-10.';
+ const raw={schedules:[{target:'stock:NYSE:X',kind:'dividend',date:'2026-11-10',title:'Dividend',status:'scheduled',evidence:'Dividend payment is scheduled for 2026-11-10.'},{target:'stock:NYSE:X',kind:'dividend',date:'2026-11-10',title:'Paid',status:'paid',evidence:source},{target:'stock:OTHER',kind:'meeting',date:'2026-11-10',title:'Other',status:'scheduled',evidence:source}],history:[{target:'stake:family',field:'voter',date:'',before:'A',after:'B',evidence:'A delegated voting rights to B.'},{target:'stake:family',field:'holder',date:'2026-11-10',before:'A',after:'B',evidence:source},{target:'stake:family',field:'percent',date:'2026-10-29',before:'0',after:'50',evidence:'a made up ownership transfer'}]};
+ const got=dataMod.parseInvestmentRecords(raw,inv,source,'records');assert.equal(got.schedules.length,1);assert.equal(got.history.length,1);assert.equal(got.history[0].date,'');assert.equal(got.history[0].before,'A');
+ dataMod.mergeInvestmentRecords(inv,got);const id=inv.schedules[0].id;dataMod.mergeInvestmentRecords(inv,got);assert.equal(inv.schedules.length,1);assert.equal(inv.schedules[0].id,id);assert.equal(inv.history.length,1);assert.equal(inv.stakes[0].voter,undefined);assert.equal(m.finance,undefined);
+});
+test('imagined notes cannot be promoted to canon and record mode cannot write notes',()=>{
+ const inv={date:'2026-10-30',securities:[{symbol:'NYSE:X',name:'X'}],stakes:[]};
+ const raw={notes:[{target:'stock:NYSE:X',text:'I will hold.',source:'story',evidence:'Invented note as evidence'},{target:'stock:NYSE:X',text:'I will wait.',source:'guess',evidence:'invented'}]};
+ const got=dataMod.parseInvestmentRecords(raw,inv,'Actual story only','notes','stock:NYSE:X');assert.equal(got.notes.length,1);assert.equal(got.notes[0].source,'guess');assert.equal(got.notes[0].evidence,'');assert.equal(dataMod.parseInvestmentRecords(raw,inv,'Actual story only','records').notes.length,0);
+});
+test('record generation and repeated scan leave ledger and current rights unchanged',async()=>{
+ const {m,p}=setup();await dataMod.fillInvestment(m,p,'2026-10-30');p.investment.stakes=[{id:'family',company:'Family',voter:'B'}];
+ m.text+=' A delegated voting rights to B. Dividend payment is scheduled for 2026-11-10.';
+ const snapshot=JSON.stringify(m.finance);
+ globalThis.__investTest.answer={notes:[],schedules:[{target:'stock:NYSE:X',kind:'dividend',date:'2026-11-10',title:'배당 예정',status:'scheduled',evidence:'Dividend payment is scheduled for 2026-11-10.'}],history:[{target:'stake:family',field:'voter',date:'',before:'A',after:'B',evidence:'A delegated voting rights to B.'}]};
+ await dataMod.collectInvestmentRecords(m,p);await dataMod.collectInvestmentRecords(m,p);
+ assert.equal(JSON.stringify(m.finance),snapshot);assert.equal(p.investment.stakes[0].voter,'B');assert.equal(p.investment.history.length,1);assert.equal(p.investment.schedules.length,1);
+ for(const v of ['ivnotes','ivschedule','ivhistory']){const html=ui.investmentScreen(m,p,'10-30',v,'',false);assert.ok(html.length>100);assert.ok(!html.includes('NaN'));}
+ assert.match(ui.investmentScreen(m,p,'10-30','stock','NYSE:X',false),/투자 메모/);
+ assert.match(ui.investmentScreen(m,p,'10-30','ivstakes','',false),/변경 내역/);
+});
+test('failed companion request retains existing notes and finance',async()=>{
+ const {m,p}=setup();await dataMod.fillInvestment(m,p,'2026-10-30');p.investment.notes=[{id:'existing',text:'keep'}];const before=JSON.stringify({f:m.finance,i:p.investment});globalThis.__investTest.error=true;
+ await assert.rejects(dataMod.collectInvestmentRecords(m,p,'notes','stock:NYSE:X'));assert.equal(JSON.stringify({f:m.finance,i:p.investment}),before);
+});
+test('record provenance cannot cite generated target names as source; notes stay out of phone injection',async()=>{
+ const {m,p}=setup();await dataMod.fillInvestment(m,p,'2026-10-30');p.investment.securities[0].name='Fabricated target dividend statement';
+ globalThis.__investTest.answer={schedules:[{target:'stock:NYSE:X',kind:'dividend',date:'2026-11-10',title:'bad',status:'scheduled',evidence:p.investment.securities[0].name}]};await dataMod.collectInvestmentRecords(m,p);assert.equal(p.investment.schedules.length,0);
+ p.inject=true;p.contacts=[];p.calls=[];p.notes=[];m.phones={a:p};p.investment.notes=[{text:'PRIVATE INVESTMENT NOTE',source:'guess'}];assert.ok(!phonedata.phoneBlock(m).includes('PRIVATE INVESTMENT NOTE'));assert.equal(p.events.length,0);
 });

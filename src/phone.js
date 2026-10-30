@@ -5,7 +5,7 @@
 //   upto (the last message number the archive held), at, inject } }
 
 import { investmentScreen } from './investui.js';
-import { fillInvestment, refreshMarket, validDate } from './investdata.js';
+import { collectInvestmentRecords, fillInvestment, refreshMarket, validDate } from './investdata.js';
 import { finance, migrateBank, reviseBaseline, selectPrice, transfer } from './finance.js';
 import { draftReady, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
@@ -27,7 +27,7 @@ function screen(p, view, m, roster, ui) {
     const now = storyNow(p);
     showNow(now);
     const [v, i] = view.split(':');
-    const body = ['invest', 'stock', 'ivactivity', 'ivwatch', 'ivstakes', 'ivcash', 'ivprices'].includes(v) ? investmentScreen(m, p, now, v, decodeURIComponent(i || ''), ui.investing) : v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'home2' ? homeScreen(p, now, m, 2) : v === 'bank' ? bankHome(p, now) : v === 'acct' ? bankAcct(p, now, i || '0') : v === 'tx' ? bankTx(p, now, i || '') : v === 'wallet' ? walletScreen(p, now) : v === 'card' ? cardView(p, now, i || '0') : v === 'pass' ? passView(p, now, i || '') : v === 'shop' ? shopScreen(p, now, i || 'all') : v === 'order' ? orderView(p, now, i || '') : v === 'voice' ? voiceScreen(p, now, i || '') : v === 'voiceone' ? voiceOne(p, now, i || '0') : v === 'msg' ? msgList(p, now, roster)
+    const body = ['ivnotes', 'ivschedule', 'ivhistory', 'invest', 'stock', 'ivactivity', 'ivwatch', 'ivstakes', 'ivcash', 'ivprices'].includes(v) ? investmentScreen(m, p, now, v, decodeURIComponent(i || ''), ui.investing) : v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'home2' ? homeScreen(p, now, m, 2) : v === 'bank' ? bankHome(p, now) : v === 'acct' ? bankAcct(p, now, i || '0') : v === 'tx' ? bankTx(p, now, i || '') : v === 'wallet' ? walletScreen(p, now) : v === 'card' ? cardView(p, now, i || '0') : v === 'pass' ? passView(p, now, i || '') : v === 'shop' ? shopScreen(p, now, i || 'all') : v === 'order' ? orderView(p, now, i || '') : v === 'voice' ? voiceScreen(p, now, i || '') : v === 'voiceone' ? voiceOne(p, now, i || '0') : v === 'msg' ? msgList(p, now, roster)
         : v === 'thread' ? threadScreen(p, now, Number(i), roster) : v === 'draft' ? draftView(p, now, Number(i), roster) : v === 'call' || v === 'callmiss' ? callScreen(p, now, roster, v === 'callmiss') : v === 'callwho' ? callWho(p, now, Number(i), roster) : v === 'contacts' ? contactsScreen(p, now, roster) : v === 'contact' ? contactOne(p, now, decodeURIComponent(i || ''), roster, m, ui.contactBack)
         : v === 'photo' ? photoScreen(p, now) : v === 'photoone' ? photoView(p, now, Number(i))
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
@@ -150,6 +150,16 @@ export async function openPhone(who = null) {
     };
     $root.on('click', '.iv_refresh', () => investRun(false));
     $root.on('click', '.iv_sync', () => investRun(true));
+    $root.on('click', '.iv_records, .iv_notemake', async function () {
+        if (investing) return;
+        const p = phone(), mode = this.classList.contains('iv_notemake') ? 'notes' : 'records', target = this.dataset.target || '';
+        investing = true; drawPhone(true);
+        try {
+            const got = await collectInvestmentRecords(m, p, mode, target);
+            if (mode === 'records') toastr.info(got.schedules.length || got.history.length ? '근거가 있는 일정과 변경 기록을 확인했어요' : '새로 확인된 일정이나 변경 기록이 없어요');
+        } catch (err) { toastr.error(String(err?.message || err), '투자 기록'); }
+        finally { investing = false; if (phone() === p) drawPhone(true); }
+    });
     $root.on('click', '.iv_select', async function () {
         try { selectPrice(m, this.dataset.key, this.dataset.date, this.dataset.id); await saveMeta(); drawPhone(true); }
         catch (err) { toastr.error(err.message); }
@@ -243,7 +253,7 @@ export async function openPhone(who = null) {
         e.stopPropagation();
         // a person's card goes back where it was opened from
         if (go === 'contact' && !view.startsWith('contact')) contactBack = view;
-        view = ['stock', 'ivprices', 'thread', 'draft', 'page', 'acct', 'tx', 'card', 'pass', 'order', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost'].includes(go) || (['cal', 'diary', 'shop', 'voice', 'invest'].includes(go) && this.dataset.i) ? `${go}:${['stock', 'ivprices'].includes(go) ? encodeURIComponent(this.dataset.i || '') : this.dataset.i}` : go;
+        view = ['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices', 'thread', 'draft', 'page', 'acct', 'tx', 'card', 'pass', 'order', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost'].includes(go) || (['cal', 'diary', 'shop', 'voice', 'invest'].includes(go) && this.dataset.i) ? `${go}:${['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices'].includes(go) ? encodeURIComponent(this.dataset.i || '') : this.dataset.i}` : go;
         const mail = go === 'mailone' ? phone()?.mails?.[Number(this.dataset.i)] : null;
         if (mail?.unread) { mail.unread = false; saveMeta(); }
         const p0 = phone();
