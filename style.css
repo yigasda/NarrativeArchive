@@ -5323,7 +5323,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .wb_tc { position: relative; border-radius: 20px; background: #fff; overflow: hidden; box-shadow: 0 1px 2px rgba(22, 27, 34, 0.04), 0 8px 24px rgba(22, 27, 34, 0.06); min-width: 0; }
 .ax .wb_tcb { cursor: pointer; display: block; width: 100%; text-align: left; }
 .ax .wb_tc .wb_th { height: 214px; }
-.ax .wb_tc .wb_mini { transform: scale(0.4205); }
+.ax .wb_tc .wb_mini { transform: scale(0.4462); }
 .ax .wb_tx2 { position: absolute; right: 8px; top: 8px; z-index: 2; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.88); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
 .ax .wb_tc .wb_tt { padding: 9px 11px 10px; font-size: 12.5px; }
 .ax .wb_seg { display: flex; margin: 0 16px 12px; padding: 3px; border-radius: 14px; background: rgba(22, 27, 34, 0.06); flex: none; }
@@ -5419,7 +5419,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .wb_band i { position: absolute; width: 300px; height: 110px; border-radius: 44%; background: rgba(0, 0, 0, 0.12); left: -40px; top: 30px; }
 .ax .wb_band i + i { left: 170px; top: 36px; background: rgba(0, 0, 0, 0.18); }
 .ax .wb_board { display: flex; align-items: flex-start; gap: 10px; padding: 8px 14px 12px; }
-.ax .wb_bic { width: 52px; height: 52px; margin-top: -30px; border-radius: 50%; border: 3px solid #fff; display: grid; place-items: center; flex: none; font: 800 20px 'Inter Tight', sans-serif; }
+.ax .wb_bic { position: relative; z-index: 1; width: 52px; height: 52px; margin-top: -30px; border-radius: 50%; border: 3px solid #fff; display: grid; place-items: center; flex: none; font: 800 20px 'Inter Tight', sans-serif; }
 .ax .wb_board > span:nth-child(2) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .ax .wb_board b { font-size: 17px; }
 .ax .wb_board small { font-size: 12px; color: #787c7e; }
