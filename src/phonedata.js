@@ -23,6 +23,25 @@ export const COUNTRIES = { KR: '한국', US: '미국', GB: '영국', DE: '독일
 export const CAP = { threads: 12, messages: 40, calls: 30, photos: 24, notes: 12, searches: 20, events: 16, contacts: 30, posts: 20, comments: 8, mails: 20, diary: 20, voice: 12 };
 const LISTS = ['calls', 'photos', 'notes', 'searches', 'events', 'posts', 'mails', 'diary', 'voice'];
 
+const DEVICE_RULES = `- Use the device described in the story when there is one.
+- Otherwise choose a phone that suits the owner's means, work and habits, in the story's time. Choose the model and storage together; no fixed default capacity.
+- Use a capacity offered for that specific model and an OS version that belongs with it. Invent a plausible serial number.
+- Keep an existing device as it is. These details belong to the phone screen, not new events in the role-play.`;
+
+export const AI_SYS_DEVICE = `GOAL
+Fill the device information in one character's phone settings.
+
+YOU GET
+- ARCHIVE, RECENT CHAT, OWNER, COUNTRY, and sometimes WORLD and LOREBOOK.
+- OWNER PROFILE (sometimes): the background selected for this phone's owner.
+
+RULES
+${DEVICE_RULES}
+
+ANSWER — one JSON object, nothing else:
+{ "name": the device's name, "model": model name, "os": OS name and version,
+  "storage": storage capacity with its unit, "serial": serial number }`;
+
 export const AI_SYS_PHONE = `GOAL
 Show what one character's phone holds right now, in a long role-play. The user opens it to peek at the story from the phone's side.
 An app draws the screens from your JSON; you only write the content.
@@ -51,7 +70,7 @@ LANGUAGE
 - People write the way they talk in the archive and chat. Texts are short, like real texts.
 
 DEVICE
-Create a coherent device matching the story era, owner's resources, profession and usage. Explicit story specs take priority. Infer model and storage together: never default everyone to 256 GB, and use a capacity actually offered for that model. Choose a compatible OS version. Use a fictional serial, not a real person's device identifier. Existing DEVICE is locked; do not change it. Device details are phone UI flavor, not new story facts.
+${DEVICE_RULES}
 
 TIMES
 "MM-DD HH:MM" (24-hour), in story time, from the archive's dates. "now" is the newest moment of the story.
@@ -589,35 +608,18 @@ export function parseDevice(raw, owner = '') {
     const first=(...values)=>values.map(scalar).find(Boolean) || '';
     const model=line(first(raw.model,raw.modelName,raw.model_name),80);
     const os=line(typeof raw.os==='object' && raw.os ? [scalar(raw.os.name),scalar(raw.os.version)].filter(Boolean).join(' ') : first(raw.os,raw.osVersion,raw.os_version,raw.softwareVersion,raw.software_version),80);
-    // A bare number has no reliable unit; accept numbers only with an explicit GB/TB field or unit.
+    // Keep display text as given. Normalize familiar units without rejecting other notations.
     const capacity=typeof raw.storage==='object' && raw.storage ? `${first(raw.storage.capacity,raw.storage.value)} ${scalar(raw.storage.unit)}`
         : first(raw.storage,raw.storageCapacity,raw.storage_capacity) || (raw.storageGB!=null ? `${scalar(raw.storageGB)} GB` : raw.storage_gb!=null ? `${scalar(raw.storage_gb)} GB` : '');
     const match=capacity.normalize('NFKC').replace(/기가바이트/gi,'GB').replace(/테라바이트/gi,'TB').match(/^\s*(\d+(?:[.,]\d+)?)\s*(GB|TB)\s*$/i);
-    if(!model || !os || !match || Number(match[1].replace(',','.'))<=0) return null;
-    const storage=`${Number(match[1].replace(',','.'))} ${match[2].toUpperCase()}`;
-    const name=line(first(raw.name,raw.deviceName,raw.device_name) || (owner?`${owner}의 휴대폰`:'휴대폰'),80);
-    const serial=line(first(raw.serial,raw.serialNumber,raw.serial_number) || `NA${Date.now().toString(36)}${Math.random().toString(36).slice(2,7)}`.toUpperCase(),32);
-    return {name,model,os,storage,serial};
+    const storage=match ? `${Number(match[1].replace(',','.'))} ${match[2].toUpperCase()}` : line(capacity,80);
+    const name=line(first(raw.name,raw.deviceName,raw.device_name),80);
+    const serial=line(first(raw.serial,raw.serialNumber,raw.serial_number),32);
+    const device={name,model,os,storage,serial};
+    return Object.values(device).some(Boolean) ? device : null;
 }
-// Read fenced or prose-wrapped JSON without merging separate objects into invalid JSON.
-export function readDeviceReply(out, owner='') {
-    const text=String(out || '');
-    for(let start=0;start<text.length;start++) {
-        if(text[start]!=='{') continue;
-        let depth=0,quoted=false,escaped=false;
-        for(let end=start;end<text.length;end++) {
-            const ch=text[end];
-            if(quoted) {if(escaped) escaped=false;else if(ch==='\\') escaped=true;else if(ch==='"') quoted=false;continue;}
-            if(ch==='"') quoted=true;
-            else if(ch==='{') depth++;
-            else if(ch==='}' && --depth===0) {
-                try {const device=parseDevice(JSON.parse(text.slice(start,end+1)),owner);if(device) return device;} catch {}
-                break;
-            }
-        }
-    }
-    return null;
-}
+// Use the same JSON extraction as bank and voice generation; keep every readable field.
+export const readDeviceReply = out => parseDevice(jsonOf(out));
 const deviceRequests = new WeakMap();
 export async function fillDevice(m,p) {
     if(p.device) return p.device;
@@ -625,15 +627,9 @@ export async function fillDevice(m,p) {
     const request=(async()=>{
         const binding=JSON.stringify(p.financeProfile);
         const input=await sideRequest(m,p.owner,[`[COUNTRY]\n${p.country || ''}`],{profile:p.financeProfile});
-        const system=`Create one phone's device information for a fictional role-play. Return one valid JSON object, no commentary, with exactly these string fields:
-{"name":"device name","model":"model name","os":"OS name and version","storage":"number followed by GB or TB","serial":"invented serial"}
-Explicit device specs in the story take priority. Otherwise infer model and storage together from the owner's wealth, occupation, habits and story era. Do not use 256 GB as a default. Wealth can support a premium high-capacity model, while usage can also justify storage. Use a capacity offered for that specific model and a compatible OS version available in the story era; prefer known configurations over invented specs. Invent a plausible serial once. These are private phone UI details, not new RP facts.`;
-        let device=null;
-        for(let attempt=0;attempt<2 && !device;attempt++) {
-            const prompt=attempt ? `${input}\n\n[OUTPUT FORMAT]\nThe previous response could not be read. Return complete valid JSON with name, model, os, storage and serial. Storage must include GB or TB. No Markdown or explanations.` : input;
-            device=readDeviceReply(await askDraft(prompt,{system,maxTokens:4000}),p.owner);
-        }
-        if(!device) throw new Error('기기 응답의 모델명·OS·저장 용량을 확인하지 못했어요. 다시 불러와 주세요');
+        const out=await askDraft(input,{system:AI_SYS_DEVICE,maxTokens:4000});
+        const device=readDeviceReply(out);
+        if(!device) throw new Error('모델 답에서 기기 정보(JSON)를 찾지 못했어요');
         if(JSON.stringify(p.financeProfile)!==binding) throw new Error('인물 정보가 변경됐어요. 다시 불러와 주세요');
         if(m.phones && m.phones[nameKey(p.owner)]!==p) return null;
         if(!p.device) {p.device=device;await saveMeta();}

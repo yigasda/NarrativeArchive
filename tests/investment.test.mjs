@@ -302,28 +302,29 @@ test('device generation uses selected profile once and survives whole phone rege
  const rebuilt=await phonedata.makePhone(m,'A');assert.deepEqual(rebuilt.device,device);
  assert.doesNotMatch(phonedata.phoneBlock(m),/EXAMPLE123/);
 });
-test('invalid device generation leaves existing phone unchanged',async()=>{
- const {m,p}=setup();globalThis.__investTest.answer={name:'Phone',model:'Pro',os:'OS',storage:'0 GB',serial:'TEST'};
- await assert.rejects(phonedata.fillDevice(m,p),/기기/);assert.equal(p.device,undefined);
- assert.equal(phonedata.parseDevice({name:'Phone',model:'Pro',os:'OS',storage:'lots',serial:'TEST'}),null);
-});
 
-test('device response accepts wrappers and explicit storage formats without inventing capacity',()=>{
- const core={model:'Example Pro',os:'Example OS 1',storage:'1TB'};
- for(const raw of [core,{device:core},{deviceInfo:core},{model_name:'Example Pro',software_version:'Example OS 1',storage:{value:1,unit:'TB'}},{...core,storage:'1 테라바이트'}]) {
-  const got=phonedata.readDeviceReply('```json\n'+JSON.stringify(raw)+'\n```','Oscar');
-  assert.equal(got.storage,'1 TB');assert.ok(got.serial);assert.equal(got.name,'Oscar의 휴대폰');
+test('device parser keeps partial data and original display text',()=>{
+ for(const raw of [{model:'Pro'},{os:'OS 1'},{storage:'1 TB (1024 GB)'},{serial:'TEST'}]) {
+  const got=phonedata.parseDevice(raw);for(const [key,value] of Object.entries(raw))assert.equal(got[key],value);
  }
- assert.equal(phonedata.parseDevice({...core,storage:1024}),null);
- assert.equal(phonedata.parseDevice({...core,storage:'unknown'}),null);
- assert.equal(phonedata.readDeviceReply('Example: {}\n'+JSON.stringify(core),'Oscar').model,'Example Pro');
+ assert.equal(phonedata.parseDevice({model:'Pro'}).serial,'');
+ assert.equal(phonedata.parseDevice({storage:1024}).storage,'1024');
+ assert.equal(phonedata.parseDevice({}),null);
+ const core={model:'Pro',os:'OS 1',storage:'1TB'};
+ for(const raw of [core,{device:core},{deviceInfo:core},{model_name:'Pro',software_version:'OS 1',storage:{value:1,unit:'TB'}}]){
+  const got=phonedata.readDeviceReply('```json\n'+JSON.stringify(raw)+'\n```');assert.equal(got.storage,'1 TB');assert.equal(got.model,'Pro');
+ }
 });
-test('invalid device response is retried once, and valid retry is saved once',async()=>{
- const {m,p}=setup();let calls=0;
- const device={name:'A',model:'Pro',os:'OS 1',storage:'1 TB',serial:'EXAMPLE'};
- // The normal harness can return a different JSON object per call through its answer getter.
- Object.defineProperty(globalThis.__investTest,'answer',{get(){return ++calls===1 ? {storage:'unknown'} : {device};},configurable:true});
- assert.deepEqual(await phonedata.fillDevice(m,p),device);assert.equal(calls,2);assert.equal(globalThis.__investTest.saved,1);
- assert.equal(globalThis.__investTest.inputs[0].maxTokens,4000);
- await phonedata.fillDevice(m,p);assert.equal(calls,2);
+test('partial device response saves once without retry or fabricated missing fields',async()=>{
+ const {m,p}=setup();globalThis.__investTest.answer={device:{model:'Pro',storage:'1 TB (1024 GB)'}};
+ const got=await phonedata.fillDevice(m,p);assert.equal(got.model,'Pro');assert.equal(got.storage,'1 TB (1024 GB)');
+ assert.equal(got.os,'');assert.equal(got.serial,'');assert.equal(globalThis.__investTest.inputs.length,1);
+ const system=globalThis.__investTest.inputs[0].system;
+ for(const heading of ['GOAL','YOU GET','RULES','ANSWER'])assert.ok(system.includes(heading));
+ await phonedata.fillDevice(m,p);assert.equal(globalThis.__investTest.inputs.length,1);
+});
+test('unreadable or empty device response does not save or retry',async()=>{
+ const {m,p}=setup();globalThis.__investTest.answer={};
+ await assert.rejects(phonedata.fillDevice(m,p),/JSON/);assert.equal(p.device,undefined);assert.equal(globalThis.__investTest.inputs.length,1);
+ assert.equal(phonedata.readDeviceReply('not JSON'),null);
 });
