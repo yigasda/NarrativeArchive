@@ -654,18 +654,46 @@ export function mapScreen(p, now, m) {
       ${axInd()}`;
 }
 
+const PROFILE_SOURCES = [
+    ['character','캐릭터 카드','저장된 캐릭터에서 선택','user','#8faed1'],
+    ['persona','사용자 페르소나','내 페르소나에서 선택','persona','#a699c9'],
+    ['lore','로어북','책 안의 인물 항목에서 선택','book','#dcc680'],
+];
+// Drawn for persona selection: a person with a small name badge.
+const personaIcon = '<svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3"/><path d="M3 20v-2a6 6 0 0 1 9-5.2"/><rect x="13" y="13" width="8" height="7" rx="1.6"/><path d="M15.5 16.5h3"/></svg>';
 export function setOwnerProfile(p, now, state) {
-    const binding = state?.binding || p.financeProfile || {type:'none'}, options = profileChoices(ctx());
-    const sources = [['character','캐릭터 카드','user','#8faed1'],['persona','사용자 페르소나','cmt','#a699c9'],['lore','로어북 항목','book','#dcc680'],['none','연결 안 함','x','#a2a7af']];
-    const select = (field,title,rows,value) => `<label class="ax_rw fp_picker"><span class="ax_tx"><span class="ax_n">${title}</span></span><span class="ax_v">${esc(rows.find(x=>x.id === value)?.label || '선택')}</span>${axChev}<select class="fp_select ax_sel" data-field="${field}" aria-label="${title}"><option value="">선택</option>${rows.map(x=>`<option value="${esc(x.id)}" ${x.id === value ? 'selected' : ''}>${esc(x.label)}</option>`).join('')}</select></label>`;
-    const linked = p.financeProfile && binding.type === p.financeProfile.type && binding.id === p.financeProfile.id && binding.book === p.financeProfile.book;
-    const preview = state?.resolved?.text || '';
-    const body = esc(preview).replace(/^\[(description|personality|scenario)\]$/gm,(_,k)=>`<strong>${{description:'소개',personality:'성격',scenario:'배경'}[k]}</strong>`);
-    return `${axBar(p,now)}${axTop(axCb('set'))}<div class="ax_scroll fp_screen">${axH1('이 폰에 대해')}
-      <div class="ax_card"><div class="ax_rw ax_me">${axFace(p.owner,48)}<span class="ax_tx"><b>${esc(p.owner)}</b><span class="ax_p">${esc(COUNTRIES[p.country] || p.country || '')}${p.upto >= 0 ? ` · #${p.upto}까지` : ''}</span></span><span class="fp_badge">${p.financeProfile ? '연결됨' : '연결 전'}</span></div></div>
-      <div class="ax_sec">인물 정보 가져오기</div>
-      <div class="ax_card">${sources.map(([type,title,icon,color])=>`<button type="button" class="ax_rw fp_source" data-type="${type}" aria-pressed="${binding.type === type}"><span class="ax_si" style="background:${color}">${ax(icon,17,'#fff')}</span><span class="ax_tx"><span class="ax_n">${title}</span></span><span class="ax_radio ${binding.type === type ? 'on' : ''}">${binding.type === type ? ax('check',14,'#fff',3.4) : ''}</span></button>`).join('')}</div>
-      ${binding.type === 'none' ? '' : `<div class="ax_sec">${binding.type === 'lore' ? '로어북에서 선택' : '인물 선택'}</div><div class="ax_card">${binding.type === 'character' ? select('id','캐릭터',options.characters,binding.id) : binding.type === 'persona' ? select('id','페르소나',options.personas,binding.id) : select('book','로어북',options.books.map(b=>({id:b,label:b})),binding.book) + (binding.book ? select('id','인물 항목',state?.entries || [],binding.id) : '')}</div>`}
-      ${state?.busy ? '<div class="ax_foot">불러오는 중…</div>' : state?.error ? `<div class="ax_foot">${esc(state.error)}</div>` : state?.resolved ? `<details class="ax_card fp_details"><summary class="ax_rw"><span class="ax_tx"><span class="ax_n">연결할 정보</span><span class="ax_p1">${esc(state.resolved.label)}</span></span>${axChev}</summary><div class="fp_preview">${body}</div></details>` : ''}
-      <div class="ax_card"><button type="button" class="ax_rw ax_rwn fp_save" ${state?.busy || binding.type !== 'none' && !state?.resolved || linked || binding.type === 'none' && !p.financeProfile ? 'disabled' : ''}><span class="ax_n ${linked ? 'ax_off' : 'ax_blue'}">${linked ? '연결된 정보예요' : binding.type === 'none' ? '연결 해제' : '이 인물 정보 연결'}</span></button></div><i class="ax_pad"></i></div>${axInd()}`;
+    const pane=state?.pane || 'about', binding=state?.binding || p.financeProfile || {type:'none'}, options=profileChoices(ctx());
+    const sourceName=b=>PROFILE_SOURCES.find(x=>x[0]===b?.type)?.[1] || '연결 안 함';
+    const personName=(b,label)=>b?.type==='lore' && label?.startsWith(`${b.book} · `) ? label.slice(b.book.length+3) : label || '선택';
+    const row=(title,value='',action='')=>`<${action?'button type="button"':'div'} class="ax_rw ax_rwn ${action}"><span class="ax_tx"><span class="ax_n">${title}</span></span>${value?`<span class="ax_v fp_value">${esc(value)}</span>`:''}${action?axChev:''}</${action?'button':'div'}>`;
+    const preview=esc(state?.resolved?.text || '').replace(/^\[(description|personality|scenario)\]$/gm,(_,k)=>`<strong>${{description:'소개',personality:'성격',scenario:'배경'}[k]}</strong>`);
+    const notice=state?.busy ? '<div class="ax_foot">불러오는 중…</div>' : state?.error ? `<div class="ax_foot">${esc(state.error)}</div>` : '';
+    let body='',title='이 폰에 대해';
+    if(pane==='about') {
+        const saved=p.financeProfile;
+        body=`<div class="ax_card">${row('이름',p.owner)}${row('국적',COUNTRIES[p.country] || p.country || '—')}${row('아카이브 반영',p.upto>=0?`#${p.upto}까지`:'—')}</div>
+        <div class="ax_sec">참고할 인물 정보</div><div class="ax_card">${row('출처',saved?.type==='lore'?`로어북 · ${saved.book}`:sourceName(saved),'fp_open')}${row('인물',saved?personName(saved,state?.resolved?.label || saved.label):'선택','fp_open')}${saved?row('내용 보기','','fp_content'):''}</div>
+        ${notice}${saved?'<div class="ax_card"><button type="button" class="ax_rw ax_rwn fp_unlink"><span class="ax_tx"><span class="ax_n ax_red">연결 해제</span></span></button></div>':''}`;
+    } else if(pane==='content') {
+        title='내용 보기';
+        body=notice || `<div class="ax_sec">${esc(state?.resolved?.label || '')}</div><div class="ax_card"><div class="fp_preview">${preview}</div></div>`;
+    } else {
+        title='출처 선택';
+        const items=(type,rows,book='')=>rows.length ? rows.map(x=>{
+            const on=binding.type===type && binding.id===x.id && (type!=='lore' || binding.book===book);
+            return `<button type="button" class="ax_rw ax_rwn ax_le fp_pick" data-type="${type}" data-id="${esc(x.id)}" data-book="${esc(book)}" aria-pressed="${on}"><span class="ax_radio ${on?'on':''}">${on?ax('check',14,'#fff',3.4):''}</span><span class="ax_tx"><span class="ax_n">${esc(x.label)}</span></span></button>`;
+        }).join('') : '<div class="ax_rw ax_rwn"><span class="ax_p1">선택할 항목이 없어요</span></div>';
+        const books=()=>options.books.map(book=>{
+            const open=state?.openBooks?.has(book), data=state?.books?.get(book);
+            return `<button type="button" class="ax_rw ax_rwn ax_lb fp_book" data-book="${esc(book)}" aria-expanded="${!!open}"><span class="ax_lbx ${open?'on':''}">${ax('chev',15,'#9aa1ab',2.4)}</span><span class="ax_tx"><span class="ax_n">${esc(book)}</span></span></button>${open ? data?.error ? `<div class="ax_foot">${esc(data.error)}</div>` : data?.entries ? items('lore',data.entries,book) : '<div class="ax_rw ax_rwn"><span class="ax_p1">항목 불러오는 중…</span></div>' : ''}`;
+        }).join('') || '<div class="ax_rw ax_rwn"><span class="ax_p1">로어북이 없어요</span></div>';
+        body=`<div class="ax_sec">가져올 정보</div><div class="ax_card ax_lbs">${PROFILE_SOURCES.map(([type,label,desc,icon,color])=>{
+            const open=state?.openType===type;
+            return `<button type="button" class="ax_rw fp_source" data-type="${type}" aria-expanded="${open}"><span class="ax_si" style="background:${color}">${type==='persona'?personaIcon:ax(icon,17,'#fff')}</span><span class="ax_tx"><span class="ax_n">${label}</span><span class="ax_p1">${desc}</span></span><span class="fp_chev ${open?'on':''}">${axChev}</span></button>${open ? `<div class="fp_source_items">${type==='lore'?books():items(type,type==='character'?options.characters:options.personas)}</div>` : ''}`;
+        }).join('')}</div>${notice}
+        ${state?.resolved ? `<details class="ax_card fp_details"><summary class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">${esc(personName(binding,state.resolved.label))}</span><span class="ax_p1">${esc(binding.type==='lore'?binding.book:sourceName(binding))} · 내용 보기</span></span>${axChev}</summary><div class="fp_preview">${preview}</div></details>` : ''}
+        <div class="ax_card"><button type="button" class="ax_rw ax_rwn fp_save" ${state?.busy || !state?.resolved ? 'disabled' : ''}><span class="ax_tx"><span class="ax_n ${state?.busy || !state?.resolved?'ax_off':'ax_blue'}">이 정보 연결</span></span></button></div>`;
+    }
+    const back=pane==='about'?axCb('set'):`<button type="button" class="ax_cb fp_back" aria-label="뒤로">${ax('back',20)}</button>`;
+    return `${axBar(p,now)}${axTop(back)}<div class="ax_scroll fp_screen">${axH1(title)}${body}<i class="ax_pad"></i></div>${axInd()}`;
 }

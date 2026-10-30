@@ -5778,12 +5778,15 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .cd_info dt { color: #8c95a0; }.cd_info dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
 .cd_empty { display: flex; align-items: center; flex-direction: column; padding: 25px 12px; gap: 9px; color: #a0a9b5; }
 .cd_empty b { font-size: 12px; font-weight: 500; color: #7e8999; }.cd_empty span { font-size: 10px; }
-/* About this phone follows the existing grouped settings rows. */
-.fp_screen .fp_badge { flex: none; padding: 5px 9px; border-radius: 20px; background: #f0f3f7; color: #8792a3; font-size: 10px; }
-.fp_screen .fp_picker { position: relative; }
-.fp_screen .fp_picker .ax_v { max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* About this phone uses the same grouped rows and lore entries as Settings. */
+.fp_screen .fp_value { max-width: 62%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp_screen .fp_chev { display: flex; flex: none; }
+.fp_screen .fp_chev.on { transform: rotate(90deg); }
+.fp_screen .fp_source_items { margin: 0 14px 12px 18px; }
+.fp_screen .fp_source > .ax_si + .ax_tx { min-width: 0; }
 .fp_screen .fp_details > summary { cursor: pointer; list-style: none; }
 .fp_screen .fp_details > summary::-webkit-details-marker { display: none; }
 .fp_screen .fp_details[open] > summary > svg { transform: rotate(90deg); }
-.fp_screen .fp_preview { margin: 0 18px; padding: 14px 0 18px; border-top: 1px solid #edf0f4; color: #626d7d; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.8; }
+.fp_screen .fp_preview { margin: 0 18px; padding: 14px 0 18px; color: #626d7d; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13.5px; line-height: 1.8; }
+.fp_screen .fp_details .fp_preview { border-top: 1px solid #edf0f4; }
 .fp_screen .fp_preview strong { color: #293240; font-weight: 600; }

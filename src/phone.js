@@ -244,41 +244,64 @@ export async function openPhone(who = null) {
         view = `searchone:${k}`; drawPhone(); if (!p.searches[k].results?.length) loadSearch(k);
     });
     // the screen changes first; saving waits
+    const profileRedraw = (p,state) => { if(!phoneClosed && phone()===p && view==='setprofile' && profileStates.get(nameKey(p.owner))===state) drawPhone(true); };
     const loadProfile = async (p,state) => {
         const version = state.version = (state.version || 0)+1;
-        state.busy=true; state.error=''; state.resolved=null; drawPhone(true);
+        state.busy=true; state.error=''; state.resolved=null; profileRedraw(p,state);
         try {
-            const binding={...state.binding};
-            const entries=binding.type === 'lore' && binding.book ? await profileEntries(ctx(),binding.book) : [];
-            const resolved=binding.type !== 'none' && binding.id ? await resolvePhoneProfile(ctx(),binding) : null;
-            if(state.version === version) { state.entries=entries; state.resolved=resolved; }
+            const resolved=await resolvePhoneProfile(ctx(),{...state.binding});
+            if(state.version === version) state.resolved=resolved;
         } catch(err) { if(state.version === version) state.error=String(err?.message || err); }
-        finally { if(state.version === version) { state.busy=false; if(phone()===p && view==='setprofile') drawPhone(true); } }
+        finally { if(state.version === version) { state.busy=false; profileRedraw(p,state); } }
+    };
+    const loadProfileBook = async (p,state,book) => {
+        if(state.books.has(book) && !state.books.get(book).error) return;
+        state.books.set(book,{}); profileRedraw(p,state);
+        try { state.books.set(book,{entries:await profileEntries(ctx(),book)}); }
+        catch(err) { state.books.set(book,{error:String(err?.message || err)}); }
+        profileRedraw(p,state);
     };
     const editProfile = () => {
         const p=phone(); if(!p) return;
-        const state={binding:structuredClone(p.financeProfile || {type:'none'}),entries:[]};
+        const state={pane:'about',binding:structuredClone(p.financeProfile || {type:'none'}),books:new Map(),openBooks:new Set(),openType:null};
         profileStates.set(nameKey(p.owner),state); loadProfile(p,state);
     };
+    $root.on('click','.fp_open',function(){
+        const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
+        state.pane='source';state.openType=state.binding.type==='none'?null:state.binding.type;
+        if(state.binding.type==='lore') {state.openBooks.add(state.binding.book);loadProfileBook(p,state,state.binding.book);}
+        drawPhone();
+    });
+    $root.on('click','.fp_back',()=>editProfile());
+    $root.on('click','.fp_content',function(){
+        const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
+        state.pane='content';drawPhone();
+    });
     $root.on('click','.fp_source',function(){
-        const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state || state.binding.type === this.dataset.type) return;
-        state.binding={type:this.dataset.type};state.entries=[];
+        const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
+        state.openType=state.openType===this.dataset.type?null:this.dataset.type;drawPhone(true);
+    });
+    $root.on('click','.fp_book',function(){
+        const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
+        const book=this.dataset.book;
+        if(state.openBooks.has(book)) state.openBooks.delete(book);
+        else {state.openBooks.add(book);loadProfileBook(p,state,book);}
+        drawPhone(true);
+    });
+    $root.on('click','.fp_pick',function(){
+        const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
+        state.binding={type:this.dataset.type,id:this.dataset.id,...(this.dataset.type==='lore'?{book:this.dataset.book}:{})};
         loadProfile(p,state);
     });
-    $root.on('change','.fp_select',function(){
-        const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
-        const field=this.dataset.field;
-        if(field==='type') state.binding={type:this.value};
-        else if(field==='book') {state.binding.book=this.value; delete state.binding.id;state.entries=[];}
-        else state.binding.id=this.value;
-        loadProfile(p,state);
+    $root.on('click','.fp_unlink',async function(){
+        const p=phone();if(!p) return;
+        delete p.financeProfile;editProfile();await saveMeta();
     });
     $root.on('click','.fp_save',async function(){
         const p=phone(),state=profileStates.get(nameKey(p.owner));
-        if(!state || state.busy || state.binding.type !== 'none' && !state.resolved) return;
-        if(state.binding.type === 'none') delete p.financeProfile;
-        else p.financeProfile={...state.binding,label:state.resolved.label};
-        await saveMeta();view='set';drawPhone();
+        if(!state || state.busy || !state.resolved || state.binding.type==='none') return;
+        p.financeProfile={...state.binding,label:state.resolved.label};
+        state.pane='about';drawPhone();await saveMeta();
     });
     $root.on('click', '.na_ph_pick:not(.na_ph_addp), .ax_whopick', async function (e) { e.stopPropagation(); const same = owner === this.dataset.n; owner = this.dataset.n; rememberPhoneSelection(m,owner,selectionKey); if (!same) { view = 'lock'; sheet = false; draw(); setSheet(false); } await saveMeta(); });
     $root.on('click', '.na_ph_makewho', () => { loreOpen = false; drawCtrl(); setSheet(true); });
