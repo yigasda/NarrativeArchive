@@ -4,6 +4,7 @@
 // m.phones = { [name key]: { owner, country, wall, accent, now, contacts, threads, calls, photos, notes, searches, events,
 //   upto (the last message number the archive held), at, inject } }
 
+import { phoneChatScope, ensurePhoneStory, resetPhoneStory } from './phonestory.js';
 import { prepareWealth } from './phonedata.js';
 import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './phoneprofile.js';
 import { investmentScreen } from './investui.js';
@@ -52,12 +53,8 @@ export function selectedPhoneOwner(m, names, who = null, saved = null) {
 }
 
 // Save synchronously as well: a reload may precede the host's metadata write.
-export function phoneSelectionKey(c) {
-    const chat = c.getCurrentChatId?.() || c.chatId;
-    if (chat === undefined || chat === null || chat === '') return null;
-    const scope = c.groupId != null && c.groupId !== '' ? ['group',c.groupId] : ['character',c.characters?.[c.characterId]?.avatar || (c.characterId ?? '')];
-    return `narrativearchive:phone-owner:${JSON.stringify([...scope,String(chat)])}`;
-}
+export const phoneSelectionKey = phoneChatScope;
+
 export function readPhoneSelection(key, storage) {
     try { return key ? (storage || globalThis.localStorage)?.getItem(key) : null; } catch { return null; }
 }
@@ -71,6 +68,8 @@ export function rememberPhoneSelection(m, owner, key, storage) {
 export async function openPhone(who = null) {
     const c = ctx();
     const m = getMeta();
+    if (!await ensurePhoneStory(m)) return;
+    applyInjection();
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
     // phones saved before records had ids get them now, once
     if (Object.values(m.phones).reduce((n, p) => n + ensureIds(p), 0)) saveMeta();
@@ -621,6 +620,15 @@ export async function openPhone(who = null) {
             toastr.success(whole ? `${targetOwner}의 폰을 다시 만들었어요` : '고른 앱을 다시 만들었어요', '캐릭터 휴대폰');
         } catch (err) { toastr.error(String(err?.message || err), '다시 만들기'); }
         finally { making = false; if (!phoneClosed) drawPhone(true); }
+    });
+    $root.on('click', '.na_ph_storyreset', async e => {
+        e.stopPropagation();
+        if (making || investing || filling.size) return toastr.info('생성 중인 작업이 끝난 뒤 다시 시도해 주세요');
+        const scope=phoneChatScope(ctx());
+        if (!await confirm('이 방의 폰을 새로 시작할까요?', '이 방의 모든 인물의 휴대폰·계좌·투자·재력 기준을 초기화해요. 아카이브와 다른 채팅방은 그대로예요.')) return;
+        if(getMeta()!==m || phoneChatScope(ctx())!==scope || making || investing || filling.size) return;
+        resetPhoneStory(m,scope);profileStates.clear();remake.clear();view='lock';
+        await saveMeta();applyInjection();draw();
     });
     $root.on('click', '.na_ph_setdel', async e => {
         e.stopPropagation();

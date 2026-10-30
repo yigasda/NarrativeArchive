@@ -544,6 +544,7 @@ export function setScreen(p, now, m, ui) {
         <div class="ax_foot">롤플에 넣기를 켜면 이 폰의 최근 문자 · 일정이 주입돼요.</div>
         <div class="ax_card">
           <button type="button" class="ax_rw ax_rwn" data-go="setremake"><span class="ax_tx"><span class="ax_n ax_blue">다시 만들기</span></span>${axChev}</button>
+          <button type="button" class="ax_rw ax_rwn na_ph_storyreset"><span class="ax_tx"><span class="ax_n ax_red">이 방의 폰 새로 시작</span></span></button>
           <button type="button" class="ax_rw ax_rwn na_ph_setdel"><span class="ax_tx"><span class="ax_n ax_red">이 폰 지우기</span></span></button>
         </div>
         <i class="ax_pad"></i>
