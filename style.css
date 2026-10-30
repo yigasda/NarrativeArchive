@@ -5274,3 +5274,5 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .na_ph_scr, .na_ph_scr .cg_canvas { overflow: clip; }
 .ax_cc, .ax_ps { min-width: 0; max-width: 100%; }
 .ax_ccno { overflow: hidden; }
+/* 통화 › 사람: the way to their contact card */
+.ax .ax_tocon { margin-top: 6px; color: var(--axd, #2f6bff); font-size: 13.5px; font-weight: 600; }

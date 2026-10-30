@@ -348,7 +348,7 @@ export function callWho(p, now, k, roster) {
     return `${axBar(p, now)}
       ${axTop(axCb('call'))}
       <div class="ax_scroll">
-        <div class="ax_ptop"><span class="ax_ring2" style="background: ${axTint(who)}">${axAv(who, 88, roster)}</span><h2>${esc(saved)}</h2><p>${saved !== who ? `저장된 이름 · ${esc(who)}` : '휴대전화'}</p></div>
+        <div class="ax_ptop"><span class="ax_ring2" style="background: ${axTint(who)}">${axAv(who, 88, roster)}</span><h2>${esc(saved)}</h2><p>${saved !== who ? `저장된 이름 · ${esc(who)}` : '휴대전화'}</p><button type="button" class="ax_tocon" data-go="contact" data-i="${encodeURIComponent(nameKey(who))}">연락처 보기 ›</button></div>
         <div class="ax_acts">${act('cmt', '메시지', ti >= 0 ? `data-go="thread" data-i="${ti}"` : '')}${act('call', '전화')}${act('video', '영상')}${act('mail', '메일')}</div>
         ${days.map(d => `<div class="ax_card"><div class="ax_hd">${esc(axDay(p, now, d))}</div>${cs.filter(c => c.time.slice(0, 5) === d).map(c => `<div class="ax_lr"><span class="${c.type === 'missed' ? 'm' : ''}">${c.type === 'missed' ? '부재중 전화' : `${c.type === 'out' ? '발신' : '수신'} 전화${c.min ? ` · ${c.min}분` : ''}`}</span><span class="cg_num">${esc(fmtTime(p, c.time))}</span></div>`).join('')}</div>`).join('')}
         <i class="ax_pad"></i>
