@@ -307,3 +307,23 @@ test('invalid device generation leaves existing phone unchanged',async()=>{
  await assert.rejects(phonedata.fillDevice(m,p),/기기/);assert.equal(p.device,undefined);
  assert.equal(phonedata.parseDevice({name:'Phone',model:'Pro',os:'OS',storage:'lots',serial:'TEST'}),null);
 });
+
+test('device response accepts wrappers and explicit storage formats without inventing capacity',()=>{
+ const core={model:'Example Pro',os:'Example OS 1',storage:'1TB'};
+ for(const raw of [core,{device:core},{deviceInfo:core},{model_name:'Example Pro',software_version:'Example OS 1',storage:{value:1,unit:'TB'}},{...core,storage:'1 테라바이트'}]) {
+  const got=phonedata.readDeviceReply('```json\n'+JSON.stringify(raw)+'\n```','Oscar');
+  assert.equal(got.storage,'1 TB');assert.ok(got.serial);assert.equal(got.name,'Oscar의 휴대폰');
+ }
+ assert.equal(phonedata.parseDevice({...core,storage:1024}),null);
+ assert.equal(phonedata.parseDevice({...core,storage:'unknown'}),null);
+ assert.equal(phonedata.readDeviceReply('Example: {}\n'+JSON.stringify(core),'Oscar').model,'Example Pro');
+});
+test('invalid device response is retried once, and valid retry is saved once',async()=>{
+ const {m,p}=setup();let calls=0;
+ const device={name:'A',model:'Pro',os:'OS 1',storage:'1 TB',serial:'EXAMPLE'};
+ // The normal harness can return a different JSON object per call through its answer getter.
+ Object.defineProperty(globalThis.__investTest,'answer',{get(){return ++calls===1 ? {storage:'unknown'} : {device};},configurable:true});
+ assert.deepEqual(await phonedata.fillDevice(m,p),device);assert.equal(calls,2);assert.equal(globalThis.__investTest.saved,1);
+ assert.equal(globalThis.__investTest.inputs[0].maxTokens,4000);
+ await phonedata.fillDevice(m,p);assert.equal(calls,2);
+});

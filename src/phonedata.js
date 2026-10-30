@@ -582,11 +582,41 @@ export async function fillVoice(m, p) {
 
 
 // Device flavor is private UI data. It never enters phoneBlock or the RP injection.
-export function parseDevice(raw) {
-    if (!raw || typeof raw !== 'object') return null;
-    const d=Object.fromEntries(['name','model','os','storage','serial'].map(k=>[k,line(raw[k],k==='serial'?32:80)]));
-    if (Object.values(d).some(x=>!x) || !/^\d+(?:\.\d+)?\s*(GB|TB)$/i.test(d.storage) || parseFloat(d.storage)<=0) return null;
-    return d;
+export function parseDevice(raw, owner = '') {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    raw = raw.device || raw.deviceInfo || raw.device_info || raw;
+    const scalar=v=>typeof v==='string' || typeof v==='number' ? String(v).trim() : '';
+    const first=(...values)=>values.map(scalar).find(Boolean) || '';
+    const model=line(first(raw.model,raw.modelName,raw.model_name),80);
+    const os=line(typeof raw.os==='object' && raw.os ? [scalar(raw.os.name),scalar(raw.os.version)].filter(Boolean).join(' ') : first(raw.os,raw.osVersion,raw.os_version,raw.softwareVersion,raw.software_version),80);
+    // A bare number has no reliable unit; accept numbers only with an explicit GB/TB field or unit.
+    const capacity=typeof raw.storage==='object' && raw.storage ? `${first(raw.storage.capacity,raw.storage.value)} ${scalar(raw.storage.unit)}`
+        : first(raw.storage,raw.storageCapacity,raw.storage_capacity) || (raw.storageGB!=null ? `${scalar(raw.storageGB)} GB` : raw.storage_gb!=null ? `${scalar(raw.storage_gb)} GB` : '');
+    const match=capacity.normalize('NFKC').replace(/기가바이트/gi,'GB').replace(/테라바이트/gi,'TB').match(/^\s*(\d+(?:[.,]\d+)?)\s*(GB|TB)\s*$/i);
+    if(!model || !os || !match || Number(match[1].replace(',','.'))<=0) return null;
+    const storage=`${Number(match[1].replace(',','.'))} ${match[2].toUpperCase()}`;
+    const name=line(first(raw.name,raw.deviceName,raw.device_name) || (owner?`${owner}의 휴대폰`:'휴대폰'),80);
+    const serial=line(first(raw.serial,raw.serialNumber,raw.serial_number) || `NA${Date.now().toString(36)}${Math.random().toString(36).slice(2,7)}`.toUpperCase(),32);
+    return {name,model,os,storage,serial};
+}
+// Read fenced or prose-wrapped JSON without merging separate objects into invalid JSON.
+export function readDeviceReply(out, owner='') {
+    const text=String(out || '');
+    for(let start=0;start<text.length;start++) {
+        if(text[start]!=='{') continue;
+        let depth=0,quoted=false,escaped=false;
+        for(let end=start;end<text.length;end++) {
+            const ch=text[end];
+            if(quoted) {if(escaped) escaped=false;else if(ch==='\\') escaped=true;else if(ch==='"') quoted=false;continue;}
+            if(ch==='"') quoted=true;
+            else if(ch==='{') depth++;
+            else if(ch==='}' && --depth===0) {
+                try {const device=parseDevice(JSON.parse(text.slice(start,end+1)),owner);if(device) return device;} catch {}
+                break;
+            }
+        }
+    }
+    return null;
 }
 const deviceRequests = new WeakMap();
 export async function fillDevice(m,p) {
@@ -595,10 +625,15 @@ export async function fillDevice(m,p) {
     const request=(async()=>{
         const binding=JSON.stringify(p.financeProfile);
         const input=await sideRequest(m,p.owner,[`[COUNTRY]\n${p.country || ''}`],{profile:p.financeProfile});
-        const out=await askDraft(input,{system:`Create one phone's device information for a fictional role-play. Return JSON only: {"name","model","os","storage","serial"}.
-Explicit device specs in the story take priority. Otherwise infer model and storage together from the owner's wealth, occupation, habits and story era. Do not use 256 GB as a default. Wealth can support a premium high-capacity model, while usage can also justify storage. Use a capacity offered for that specific model and a compatible OS version available in the story era; prefer known configurations over invented specs. Storage must be a positive number followed by GB or TB. Invent a plausible serial once. These are private phone UI details, not new RP facts.`,maxTokens:800});
-        const device=parseDevice(jsonOf(out));
-        if(!device) throw new Error('기기 정보를 받지 못했어요');
+        const system=`Create one phone's device information for a fictional role-play. Return one valid JSON object, no commentary, with exactly these string fields:
+{"name":"device name","model":"model name","os":"OS name and version","storage":"number followed by GB or TB","serial":"invented serial"}
+Explicit device specs in the story take priority. Otherwise infer model and storage together from the owner's wealth, occupation, habits and story era. Do not use 256 GB as a default. Wealth can support a premium high-capacity model, while usage can also justify storage. Use a capacity offered for that specific model and a compatible OS version available in the story era; prefer known configurations over invented specs. Invent a plausible serial once. These are private phone UI details, not new RP facts.`;
+        let device=null;
+        for(let attempt=0;attempt<2 && !device;attempt++) {
+            const prompt=attempt ? `${input}\n\n[OUTPUT FORMAT]\nThe previous response could not be read. Return complete valid JSON with name, model, os, storage and serial. Storage must include GB or TB. No Markdown or explanations.` : input;
+            device=readDeviceReply(await askDraft(prompt,{system,maxTokens:4000}),p.owner);
+        }
+        if(!device) throw new Error('기기 응답의 모델명·OS·저장 용량을 확인하지 못했어요. 다시 불러와 주세요');
         if(JSON.stringify(p.financeProfile)!==binding) throw new Error('인물 정보가 변경됐어요. 다시 불러와 주세요');
         if(m.phones && m.phones[nameKey(p.owner)]!==p) return null;
         if(!p.device) {p.device=device;await saveMeta();}
