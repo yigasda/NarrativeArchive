@@ -25,7 +25,7 @@ test('profile navigation preserves saved binding until connect and supports inli
  const src=await readFile(new URL('../src/phone.js',import.meta.url),'utf8');
  const handlers=new Map(), states=new Map(), saved={type:'character',id:'one.png',label:'Alex'};
  const p={owner:'Alex',financeProfile:{...saved}},c=context();let writes=0;
- const chunk=src.slice(src.indexOf('    const profileRedraw ='),src.indexOf("    $root.on('click', '.na_ph_pick"));
+ const chunk=src.slice(src.indexOf('    const profilePhone ='),src.indexOf("    $root.on('click', '.na_ph_pick"));
  const init=new Function('$root','profileStates','phone','ctx','resolvePhoneProfile','profileEntries','saveMeta','fillDevice','currentPersonaBinding',`
  const m={};
  const nameKey=s=>s.toLowerCase();let phoneClosed=false,view='setprofile';const drawPhone=()=>{};
@@ -68,4 +68,19 @@ test('current persona is read on every selection without name matching or fallba
  assert.equal(first.id,'somang.png');
  active='missing.png';await assert.rejects(currentPersonaBinding(c,read),/현재/);
  active='';await assert.rejects(currentPersonaBinding(c,read),/현재/);
+});
+test('pre-generation source picker saves a chat-scoped binding without generating device data',async()=>{
+ const {readFile}=await import('node:fs/promises');const src=await readFile(new URL('../src/phone.js',import.meta.url),'utf8');
+ const chunk=src.slice(src.indexOf('    const profilePhone ='),src.indexOf("    $root.on('click', '.na_ph_pick"));
+ const handlers=new Map(),states=new Map(),draft={owner:'Alex',profileDraft:true},m={};let deviceCalls=0;
+ const init=new Function('$root','profileStates','phone','pendingProfile','ctx','resolvePhoneProfile','profileEntries','saveMeta','fillDevice','currentPersonaBinding','m',`
+ const nameKey=s=>s.toLowerCase();let phoneClosed=false,view='setprofile';const drawPhone=()=>{};
+ ${chunk}
+ return editProfile;
+ `);
+ const {profileEntries}=await import('../src/phoneprofile.js');
+ const edit=init({on:(event,selector,fn)=>handlers.set(selector,fn)},states,()=>null,()=>draft,()=>context(),resolvePhoneProfile,profileEntries,async()=>{},async()=>deviceCalls++,async()=>({type:'persona',id:'somang.png'}),m);
+ edit();await new Promise(r=>setTimeout(r,0));assert.equal(states.get('alex').pane,'source');
+ await handlers.get('.fp_pick').call({dataset:{type:'character',id:'one.png'}});await new Promise(r=>setTimeout(r,0));
+ await handlers.get('.fp_save')();assert.equal(m.phoneProfiles.alex.id,'one.png');assert.equal(m.phones,undefined);assert.equal(deviceCalls,0);
 });

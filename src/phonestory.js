@@ -1,7 +1,7 @@
 // Phone content and its financial ledger travel together, only by explicit choice.
 import { ctx, getMeta, saveMeta } from './core.js';
 
-export const PHONE_STORY_KEYS = ['phones','finance','lastPhoneOwner','phoneLore','phoneLoreOff','phoneStoryScope'];
+export const PHONE_STORY_KEYS = ['phones','phoneProfiles','finance','lastPhoneOwner','phoneLore','phoneLoreOff','phoneStoryScope'];
 export function phoneChatScope(c) {
     const chat=c.getCurrentChatId?.() || c.chatId;
     if(chat===undefined || chat===null || chat==='') return null;
@@ -12,7 +12,7 @@ export function clearPhoneSelection(scope,storage) {
     try { if(scope) (storage || globalThis.localStorage)?.removeItem(scope); } catch { /* Metadata still works without browser storage. */ }
 }
 export function resetPhoneStory(m,scope) {
-    m.phones={};delete m.finance;delete m.lastPhoneOwner;
+    m.phones={};delete m.phoneProfiles;delete m.finance;delete m.lastPhoneOwner;
     delete m.phoneLore;delete m.phoneLoreOff;
     m.phoneStoryScope=scope;
     clearPhoneSelection(scope);
@@ -38,7 +38,7 @@ export async function ensurePhoneStory(m) {
     const scope=phoneChatScope(ctx());
     if(!scope || m.phoneStoryScope===scope) return true;
     // Older saves have no provenance: ask once rather than guess or erase them.
-    if(Object.keys(m.phones || {}).length || m.finance) {
+    if(Object.keys(m.phones || {}).length || Object.keys(m.phoneProfiles || {}).length || m.finance) {
         const choice=await choosePhoneStory();
         if(!choice || getMeta()!==m || phoneChatScope(ctx())!==scope) return false;
         if(choice==='fresh') resetPhoneStory(m,scope);else adoptPhoneStory(m,scope);

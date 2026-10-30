@@ -103,6 +103,12 @@ export async function openPhone(who = null) {
       </div>`);
     const setSheet = on => { sheetOpen = on; $root.find('.na_phl_sheet, .na_phl_shade').prop('hidden', !on); };
     const phone = () => (owner ? m.phones[nameKey(owner)] : null);
+    const profileDrafts = new Map();
+    const pendingProfile = () => {
+        const key=nameKey(owner);
+        if(!profileDrafts.has(key)) profileDrafts.set(key,{owner,country:'KR',profileDraft:true,financeProfile:structuredClone(m.phoneProfiles?.[key])});
+        return profileDrafts.get(key);
+    };
     const drawOwners = () => {
         $root.find('.na_ph_owners').html(`${names.map(n => `
           <button type="button" class="na_ph_pick ${n === owner ? 'on' : ''}" data-n="${esc(n)}">${faceHtml(n, 40)}<span>${esc(n)}</span>${m.phones[nameKey(n)] ? '<i></i>' : ''}</button>`).join('')}
@@ -112,6 +118,11 @@ export async function openPhone(who = null) {
     const drawPhone = (keep = false) => {
         const p = phone();
         if (!owner) { $root.find('.na_ph_frame').html(''); return; }
+        if (!p && view==='setprofile') {
+            const draft=pendingProfile();
+            $root.find('.na_ph_frame').html(screen(draft,view,m,roster,{profileState:profileStates.get(nameKey(owner))}));
+            return;
+        }
         if (!p) {
             $root.find('.na_ph_frame').html(`
               <div class="na_ph_scr glass w_dusk"><div class="na_ph_sb"><span></span><i>${ic('sig', 15)}${ic('bat', 20, 1.6)}</i></div>
@@ -120,6 +131,7 @@ export async function openPhone(who = null) {
                     <span class="na_ph_makeface">${faceHtml(owner, 64)}</span>
                     <b>${esc(owner)}의 폰</b>
                     <p>아카이브를 읽고 폰을 채워요</p>
+                    <span class="na_ph_makelinks"><button type="button" class="na_ph_makeprofile">${m.phoneProfiles?.[nameKey(owner)] ? `연결된 인물 정보 · ${esc(m.phoneProfiles[nameKey(owner)].label)}` : '인물 정보 연결'}</button></span>
                     <button type="button" class="na_ph_makebtn">폰 만들기</button>
                     <span class="na_ph_makelinks"><button type="button" class="na_ph_makewho">인물 바꾸기</button><i>·</i><button type="button" class="na_ph_makelore">로어북 ${(n => (n ? `${n}권` : '없음'))(phoneLore(m).length)}</button></span>
                     ${draftReady() ? '' : '<small>⚙ 설정 → AI 모델에서 초안 모델을 먼저 정해 주세요</small>'}
@@ -231,13 +243,14 @@ export async function openPhone(who = null) {
         view = `searchone:${k}`; drawPhone(); if (!p.searches[k].results?.length) loadSearch(k);
     });
     // the screen changes first; saving waits
-    const profileRedraw = (p,state) => { if(!phoneClosed && phone()===p && view==='setprofile' && profileStates.get(nameKey(p.owner))===state) drawPhone(true); };
+    const profilePhone = () => phone() || pendingProfile();
+    const profileRedraw = (p,state) => { if(!phoneClosed && profilePhone()===p && view==='setprofile' && profileStates.get(nameKey(p.owner))===state) drawPhone(true); };
     const loadProfile = async (p,state) => {
         const version = state.version = (state.version || 0)+1;
         state.busy=true; state.error=''; state.resolved=null; profileRedraw(p,state);
         try {
             const resolved=await resolvePhoneProfile(ctx(),{...state.binding});
-            if(state.version === version) {state.resolved=resolved; if(!p.device) loadDevice(p,state);}
+            if(state.version === version) {state.resolved=resolved; if(!p.profileDraft && !p.device) loadDevice(p,state);}
         } catch(err) { if(state.version === version) state.error=String(err?.message || err); }
         finally { if(state.version === version) { state.busy=false; profileRedraw(p,state); } }
     };
@@ -249,31 +262,31 @@ export async function openPhone(who = null) {
         profileRedraw(p,state);
     };
     const loadDevice = async (p,state) => {
-        if(state.deviceBusy || p.device) return;
+        if(p.profileDraft || state.deviceBusy || p.device) return;
         state.deviceBusy=true;state.deviceError='';profileRedraw(p,state);
         try {await fillDevice(m,p);} catch(err) {state.deviceError=String(err?.message || err);}
         finally {state.deviceBusy=false;profileRedraw(p,state);}
     };
-    $root.on('click','.fp_device',function(){const p=phone(),state=profileStates.get(nameKey(p.owner));if(state) loadDevice(p,state);});
-    $root.on('click','.fp_apps',function(){const p=phone(),state=profileStates.get(nameKey(p.owner));if(state){state.pane='apps';drawPhone();}});
+    $root.on('click','.fp_device',function(){const p=profilePhone(),state=profileStates.get(nameKey(p.owner));if(state) loadDevice(p,state);});
+    $root.on('click','.fp_apps',function(){const p=profilePhone(),state=profileStates.get(nameKey(p.owner));if(state){state.pane='apps';drawPhone();}});
     const editProfile = () => {
-        const p=phone(); if(!p) return;
-        const state={pane:'about',binding:structuredClone(p.financeProfile || {type:'none'}),books:new Map(),openBooks:new Set(),openType:null};
+        const p=profilePhone(); if(!p) return;
+        const state={pane:p.profileDraft?'source':'about',binding:structuredClone(p.financeProfile || {type:'none'}),books:new Map(),openBooks:new Set(),openType:null};
         profileStates.set(nameKey(p.owner),state); loadProfile(p,state);
     };
     $root.on('click','.fp_open',function(){
-        const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
+        const p=profilePhone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
         state.pane='source';state.openType=state.binding.type==='none'?null:state.binding.type;
         if(state.binding.type==='lore') {state.openBooks.add(state.binding.book);loadProfileBook(p,state,state.binding.book);}
         drawPhone();
     });
-    $root.on('click','.fp_back',()=>editProfile());
+    $root.on('click','.fp_back',()=>{if(profilePhone()?.profileDraft){view='lock';drawPhone();}else editProfile();});
     $root.on('click','.fp_content',function(){
-        const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
+        const p=profilePhone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
         state.pane='content';drawPhone();
     });
     $root.on('click','.fp_source',async function(){
-        const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
+        const p=profilePhone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
         if(this.dataset.type==='persona') {
             const version=state.version=(state.version || 0)+1;
             state.binding={type:'none'};state.resolved=null;state.error='';state.busy=true;
@@ -292,28 +305,31 @@ export async function openPhone(who = null) {
         state.openType=state.openType===this.dataset.type?null:this.dataset.type;drawPhone(true);
     });
     $root.on('click','.fp_book',function(){
-        const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
+        const p=profilePhone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
         const book=this.dataset.book;
         if(state.openBooks.has(book)) state.openBooks.delete(book);
         else {state.openBooks.add(book);loadProfileBook(p,state,book);}
         drawPhone(true);
     });
     $root.on('click','.fp_pick',function(){
-        const p=phone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
+        const p=profilePhone(),state=profileStates.get(nameKey(p.owner)); if(!state) return;
         state.openPreview=false;state.personaPicked=false;
         state.binding={type:this.dataset.type,id:this.dataset.id,...(this.dataset.type==='lore'?{book:this.dataset.book}:{})};
         loadProfile(p,state);
     });
     $root.on('click','.fp_unlink',async function(){
-        const p=phone();if(!p) return;
+        const p=profilePhone();if(!p) return;
         delete p.financeProfile;editProfile();await saveMeta();
     });
     $root.on('click','.fp_save',async function(){
-        const p=phone(),state=profileStates.get(nameKey(p.owner));
+        const p=profilePhone(),state=profileStates.get(nameKey(p.owner));
         if(!state || state.busy || !state.resolved || state.binding.type==='none') return;
         p.financeProfile={...state.binding,label:state.resolved.label};
-        state.pane='about';drawPhone();await saveMeta();
+        if(p.profileDraft) {(m.phoneProfiles ||= {})[nameKey(p.owner)]=structuredClone(p.financeProfile);view='lock';}
+        else state.pane='about';
+        drawPhone();await saveMeta();
     });
+    $root.on('click','.na_ph_makeprofile',()=>{view='setprofile';editProfile();drawPhone();});
     $root.on('click', '.na_ph_pick:not(.na_ph_addp), .ax_whopick', async function (e) { e.stopPropagation(); const same = owner === this.dataset.n; owner = this.dataset.n; rememberPhoneSelection(m,owner,selectionKey); if (!same) { view = 'lock'; sheet = false; draw(); setSheet(false); } await saveMeta(); });
     $root.on('click', '.na_ph_makewho', () => { loreOpen = false; drawCtrl(); setSheet(true); });
     // a person only the lorebook knows: into the same list as 인물 도감's +
@@ -627,7 +643,7 @@ export async function openPhone(who = null) {
         const scope=phoneChatScope(ctx());
         if (!await confirm('이 방의 폰을 새로 시작할까요?', '이 방의 모든 인물의 휴대폰·계좌·투자·재력 기준을 초기화해요. 아카이브와 다른 채팅방은 그대로예요.')) return;
         if(getMeta()!==m || phoneChatScope(ctx())!==scope || making || investing || filling.size) return;
-        resetPhoneStory(m,scope);profileStates.clear();remake.clear();view='lock';
+        resetPhoneStory(m,scope);profileStates.clear();profileDrafts.clear();remake.clear();view='lock';
         await saveMeta();applyInjection();draw();
     });
     $root.on('click', '.na_ph_setdel', async e => {

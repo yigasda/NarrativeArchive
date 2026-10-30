@@ -314,7 +314,9 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     const key = nameKey(owner);
     const old = update ? m.phones?.[key] : null;
     const part = apps && m.phones?.[key] ? apps.flatMap(a => REMAKE[a] || []) : null;
-    const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner), part, await ownerProfileBlock(ctx(),m.phones?.[key]?.financeProfile,owner)), { system: AI_SYS_PHONE, maxTokens: 16000 });
+    const binding=structuredClone(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key]);
+    const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner), part, await ownerProfileBlock(ctx(),binding,owner)), { system: AI_SYS_PHONE, maxTokens: 16000 });
+    if(JSON.stringify(binding)!==JSON.stringify(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key])) throw new Error('생성 중 연결한 인물 정보가 변경됐어요. 다시 시도해 주세요');
     const got = parsePhone(out);
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
     if (part) {
@@ -338,10 +340,11 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         if (was?.wealthPlan) base.wealthPlan = structuredClone(was.wealthPlan);
         if (was?.money) base.money = was.money;
         if (was?.investment) base.investment = was.investment;
-        if (was?.financeProfile) base.financeProfile = structuredClone(was.financeProfile);
+        if (binding) base.financeProfile = structuredClone(binding);
         m.phones[key] = mergePhone(base, got);
     }
     const p = m.phones[key];
+    if(m.phoneProfiles) delete m.phoneProfiles[key];
     ensureIds(p);
     p.upto = lastEnd(m);
     p.at = Date.now();

@@ -447,3 +447,15 @@ test('malformed wealth ranges are rejected before app generation',async()=>{
  const {readWealth}=await import(wealthURL);
  for(const plan of [{currency:'EUR',deposits:{min:100,max:1},investments:{min:0,max:0},basis:'x'},{currency:'EUR',deposits:{min:'1',max:2},investments:{min:0,max:0},basis:'x'}]) assert.throws(()=>readWealth(JSON.stringify(plan)),/재력 기준/);
 });
+test('first phone generation receives the preselected profile and keeps the binding',async()=>{
+ const {m}=setup();const binding={type:'character',id:'a.png',label:'A'};m.phoneProfiles={a:binding,other:{type:'character',id:'b.png'}};
+ globalThis.__investTest.context={characters:[{avatar:'a.png',description:'First generation owner background.'},{avatar:'b.png',description:'Other private background.'}]};
+ globalThis.__investTest.answer={now:'10-30'};
+ const p=await phonedata.makePhone(m,'A');assert.match(globalThis.__investTest.inputs[0].input,/First generation owner background/);assert.doesNotMatch(globalThis.__investTest.inputs[0].input,/Other private background/);
+ assert.deepEqual(p.financeProfile,binding);assert.equal(m.phoneProfiles.a,undefined);assert.ok(m.phoneProfiles.other);
+});
+test('failed first generation retains the pending profile and creates no phone',async()=>{
+ const {m}=setup();const binding={type:'character',id:'a.png'};m.phoneProfiles={a:binding};
+ globalThis.__investTest.context={characters:[{avatar:'a.png',description:'Owner background.'}]};globalThis.__investTest.error=true;
+ await assert.rejects(phonedata.makePhone(m,'A'),/network/);assert.deepEqual(m.phoneProfiles.a,binding);assert.equal(m.phones?.a,undefined);
+});

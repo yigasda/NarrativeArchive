@@ -6,7 +6,7 @@ const core=enc(`export const ctx=()=>globalThis.storyTest.context;export const g
 const src=await readFile(new URL('../src/phonestory.js',import.meta.url),'utf8');
 const story=await import(enc(src.replace("'./core.js'",JSON.stringify(core))));
 function setup(){
- const m={text:'Story archive',phones:{oscar:{owner:'Oscar',wealthPlan:{currency:'EUR'}}},finance:{accounts:{a:{amount:42}},prices:{},transfers:{}},lastPhoneOwner:'Oscar',phoneLore:['old'],phoneLoreOff:{old:[1]}};
+ const m={text:'Story archive',phoneProfiles:{newPerson:{type:'character',id:'new.png'}},phones:{oscar:{owner:'Oscar',wealthPlan:{currency:'EUR'}}},finance:{accounts:{a:{amount:42}},prices:{},transfers:{}},lastPhoneOwner:'Oscar',phoneLore:['old'],phoneLoreOff:{old:[1]}};
  const state=globalThis.storyTest={meta:m,saves:0,prompts:0,choice:'keep',confirmed:true};
  state.context={characterId:0,characters:[{avatar:'oscar.png'}],getCurrentChatId:()=>state.chat || 'branch',POPUP_TYPE:{CONFIRM:1},POPUP_RESULT:{AFFIRMATIVE:1},callGenericPopup:async()=>{state.prompts++;return state.confirmed}};
  globalThis.$=()=>({find:()=>({val:()=>state.choice})});
@@ -21,7 +21,7 @@ test('branched phones ask once, keep a detached copy, and preserve the source',a
 test('fresh story clears phones and financial records together, not the archive or source',async()=>{
  const {m,state}=setup();const source=structuredClone(m);m.phoneStoryScope='parent';state.choice='fresh';
  await story.ensurePhoneStory(m);
- assert.deepEqual(m.phones,{});for(const key of ['finance','lastPhoneOwner','phoneLore','phoneLoreOff'])assert.equal(m[key],undefined);
+ assert.deepEqual(m.phones,{});for(const key of ['finance','phoneProfiles','lastPhoneOwner','phoneLore','phoneLoreOff'])assert.equal(m[key],undefined);
  assert.equal(m.text,'Story archive');assert.equal(source.finance.accounts.a.amount,42);assert.equal(m.phoneStoryScope,story.phoneChatScope(state.context));
 });
 test('cancel and switching chats during choice leave saved phone data untouched',async()=>{
