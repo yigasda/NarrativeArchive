@@ -264,16 +264,60 @@ A character in a long role-play searched this on their phone. Write the results 
 YOU GET
 - OWNER, QUERY, and when it was searched.
 - WHERE: the country the phone is set to, and the places the owner was that day.
+- SHOPS: the shops and items in the owner's shopping app, if any.
 
 RULES
 - The results are what the web of the story's world would show for this query: sites, articles, shops, places, forums.
 - The web knows only what is public. The owner and the people around them are not on it, unless the story makes them public.
-- Each result in the language a site for this query would use. A result not in Korean gets "kt" (its title in Korean) and "ko" (its text in Korean).
-- Each result is a different site with something different to say.
-- 4 to 6 results.
+- Each result in the language a site for this query would use. A text not in Korean gets "ko" (a title gets "kt").
+- Each result is a different site with something different to say. A shop or item in SHOPS keeps its name there.
+- 4 to 6 results. "answer" only when a search engine would show one box on top (a timetable, the weather, opening hours, a short fact); else null.
+- "news" only when the query is about something in the news; "questions" and "related" are what other people searched.
 
 ANSWER — one JSON object, nothing else:
-{ "results": [{ "site": the site's name, "url": a short address like "site.com/page", "title", "kt", "text": a one- or two-line snippet, "ko" }] }`;
+{
+  "answer": null or { "label": what it is about, "text", "ko", "steps": [{ "time", "place", "off": true when it does not run }] or [], "site" },
+  "results": [{ "site": the site's name, "url": "site.com/path", "path": "the › path › shown", "color": the site's colour as "#hex",
+                "kind": "news" | "transit" | "forum" | "wiki" | "shop" | "blog" | "official" | "other",
+                "title", "kt", "date": "MM-DD" or "", "text": a one- or two-line snippet, "ko", "bold": [the words of it that match the query],
+                "links": [up to 3 short sub-page names] }],
+  "news": [{ "site", "color", "title", "kt", "ago": like "2시간 전" }],
+  "questions": [{ "q", "ko" }],
+  "related": [3 or 4 searches]
+}`;
+// 페이지: a result opened, written once as its site would have it (kept on the result as "page")
+const AI_SYS_PAGE = `GOAL
+A character in a long role-play opened a search result on their phone. Write the web page it opened, as that site would have it.
+
+YOU GET
+- OWNER, QUERY and when it was searched.
+- RESULT: the result that was opened (site, address, kind, colour, title, snippet).
+- WHERE: the country and the places the owner was that day.
+
+RULES
+- The page says what the snippet promised, in more detail, and nothing the story contradicts.
+- The web knows only what is public: the owner and the people around them are not on it, unless the story makes them public.
+- In the site's language. Each text not in Korean gets "ko" (a title gets "kt").
+- Write it like the real kind of site: a news article reads like news, a forum thread has people talking, a wiki is neutral.
+- Keep the site's name, address and colour from RESULT.
+- Fill only the part for this "kind"; leave the others out.
+
+ANSWER — one JSON object, nothing else:
+{
+  "kind": RESULT's kind, "nav": [3 to 6 menu items of the site],
+  "title", "kt", "lede": { "text": one sentence under the title, "ko" } or null,
+  "body": [2 to 5 paragraphs { "text", "ko" }],
+
+  "news":    { "section", "ticker": a short live line or "", "author", "date": "MM-DD HH:MM", "minutes", "photo": what the photo shows, "credit", "quote": { "text", "ko", "who" } or null },
+  "transit": { "stop": the stop the page is for, "alert": { "title", "text", "ko" } or null,
+               "departures": [3 to 5 { "line", "to", "note", "time": "HH:MM", "delay": minutes or 0, "off": true or false }],
+               "route": [3 to 6 { "stop", "time", "off": true or false }] },
+  "forum":   { "board", "members", "online", "author", "ago", "flair", "votes", "comments": [3 to 6 { "who", "ago", "text", "ko", "votes", "reply": true when it answers the one before, "op": true when the poster } ] },
+  "wiki":    { "note": a one-line hatnote or "", "photo", "facts": [3 to 5 { "k", "v" }], "langs": number, "sections": [1 to 3 { "h", "text", "ko" }] },
+  "shop":    { "crumbs": [2 or 3], "brand", "price": number, "old": number or null, "currency", "rating": 1–5, "reviews", "colors": [2 to 4 "#hex"], "ship" },
+  "blog":    { "blog": the blog's name, "category", "author", "date", "minutes", "photo", "tags": [2 to 4] },
+  "official":{ "hours": [{ "day", "time" }] or [], "address", "phone" }
+}`;
 // 미발송 초안 (떠올리기): what the owner might have typed to someone and held back. The model's imagining (src "guess"):
 // shown as such, never sent back to the model or into the role-play
 const AI_SYS_DRAFT = `GOAL
@@ -359,16 +403,59 @@ function placesThatDay(m, time) {
     if (!hit.length) hit = rows.slice(-1);
     return [...new Set(hit.flatMap(r => headingPlaces(r.s.title, cals)))].slice(0, 6);
 }
+export const KINDS = ['news', 'transit', 'forum', 'wiki', 'shop', 'blog', 'official', 'other'];
+const hex = v => (/^#[0-9a-f]{6}$/i.test(String(v || '').trim()) ? String(v).trim().toLowerCase() : '');
+const whereOf = (m, p, x) => [p.country ? `Country: ${COUNTRIES[p.country] ? `${p.country} (${COUNTRIES[p.country]})` : p.country}` : '', (pl => (pl.length ? `Places that day: ${pl.join(', ')}` : ''))(placesThatDay(m, x.time))].filter(Boolean).join('\n');
 export async function searchPage(m, p, k) {
     const x = p.searches[k];
-    const where = [p.country ? `Country: ${COUNTRIES[p.country] ? `${p.country} (${COUNTRIES[p.country]})` : p.country}` : '', (pl => (pl.length ? `Places that day: ${pl.join(', ')}` : ''))(placesThatDay(m, x.time))].filter(Boolean).join('\n');
-    const prompt = [`[OWNER]\n${p.owner}`, `[QUERY]\n${x.q}`, `[SEARCHED]\n${x.time || p.now || ''}`, `[WHERE]\n${where || '(unknown)'}`, namesBlock(m)].filter(Boolean).join('\n\n');
-    const out = String(await askAI(prompt, { system: AI_SYS_SEARCH, maxTokens: 2500 }) || '').replace(/```(?:json)?/gi, '');
+    const where = whereOf(m, p, x);
+    const shops = (p.money?.orders || []).map(o => `- ${o.shop}: ${o.item}`).join('\n');
+    const prompt = [`[OWNER]\n${p.owner}`, `[QUERY]\n${x.q}`, `[SEARCHED]\n${x.time || p.now || ''}`, `[WHERE]\n${where || '(unknown)'}`, shops ? `[SHOPS]\n${shops}` : '', namesBlock(m)].filter(Boolean).join('\n\n');
+    const out = String(await askAI(prompt, { system: AI_SYS_SEARCH, maxTokens: 4000 }) || '').replace(/```(?:json)?/gi, '');
     const a = out.indexOf('{'), b = out.lastIndexOf('}');
     let raw = null;
     try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
-    const rs = arr(raw?.results).map(r => ({ site: line(r?.site, 60), url: line(r?.url, 120), title: line(r?.title, 160), kt: line(r?.kt, 160), text: line(r?.text, 400), ko: line(r?.ko, 400) })).filter(r => r.title).slice(0, 8);
+    const rs = arr(raw?.results).map(r => ({ site: line(r?.site, 60), url: line(r?.url, 120), path: line(r?.path, 120), color: hex(r?.color), kind: pick(r?.kind, KINDS, 'other'), title: line(r?.title, 160), kt: line(r?.kt, 160), date: line(r?.date, 10), text: line(r?.text, 400), ko: line(r?.ko, 400), bold: arr(r?.bold).map(w => line(w, 40)).filter(Boolean).slice(0, 4), links: arr(r?.links).map(w => line(w, 30)).filter(Boolean).slice(0, 3) })).filter(r => r.title).slice(0, 8);
     if (!rs.length) throw new Error('모델 답에서 검색 결과를 찾지 못했어요');
     x.results = rs;
+    const an = raw?.answer;
+    x.answer = an && line(an.text, 200) ? { label: line(an.label, 60), text: line(an.text, 200), ko: line(an.ko, 200), site: line(an.site, 60), steps: arr(an.steps).map(t => ({ time: line(t?.time, 12), place: line(t?.place, 40), ...(t?.off === true ? { off: true } : {}) })).filter(t => t.place).slice(0, 5) } : null;
+    x.news = arr(raw?.news).map(n => ({ site: line(n?.site, 60), color: hex(n?.color), title: line(n?.title, 160), kt: line(n?.kt, 160), ago: line(n?.ago, 20) })).filter(n => n.title).slice(0, 4);
+    x.questions = arr(raw?.questions).map(q => ({ q: line(q?.q, 120), ko: line(q?.ko, 120) })).filter(q => q.q).slice(0, 4);
+    x.related = arr(raw?.related).map(w => line(w, 60)).filter(Boolean).slice(0, 4);
+    await saveMeta();
+}
+
+// a result opened: its page, written once and kept on the result
+export const paging = new Set(); // "owner:search.result" being written
+const txt = (v, n) => ({ text: str(v?.text, n), ko: str(v?.ko, n) });
+export async function webPage(m, p, k, r) {
+    const x = p.searches[k], res = x?.results?.[r];
+    if (!res) return;
+    const prompt = [`[OWNER]\n${p.owner}`, `[QUERY]\n${x.q}`, `[SEARCHED]\n${x.time || p.now || ''}`,
+        `[RESULT]\n${JSON.stringify({ site: res.site, url: res.url, kind: res.kind || 'other', color: res.color, title: res.title, text: res.text })}`,
+        `[WHERE]\n${whereOf(m, p, x) || '(unknown)'}`, namesBlock(m)].filter(Boolean).join('\n\n');
+    const out = String(await askAI(prompt, { system: AI_SYS_PAGE, maxTokens: 5000 }) || '').replace(/```(?:json)?/gi, '');
+    const a = out.indexOf('{'), b = out.lastIndexOf('}');
+    let raw = null;
+    try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
+    const body = arr(raw?.body).map(v => txt(v, 1200)).filter(v => v.text).slice(0, 6);
+    if (!raw || !(body.length || raw.title)) throw new Error('모델 답에서 페이지를 찾지 못했어요');
+    const kind = KINDS.includes(res.kind) ? res.kind : 'other', o = raw[kind] && typeof raw[kind] === 'object' ? raw[kind] : {};
+    const yes = v => v === true;
+    const extra = {
+        news: () => ({ section: line(o.section, 30), ticker: line(o.ticker, 120), author: line(o.author, 40), date: line(o.date, 16), minutes: line(o.minutes, 6), photo: line(o.photo, 160), credit: line(o.credit, 80), quote: o.quote && line(o.quote.text, 200) ? { ...txt(o.quote, 200), who: line(o.quote.who, 60) } : null }),
+        transit: () => ({ stop: line(o.stop, 50), alert: o.alert && line(o.alert.text, 300) ? { title: line(o.alert.title, 60), ...txt(o.alert, 300) } : null,
+            departures: arr(o.departures).map(d => ({ line: line(d?.line, 6), to: line(d?.to, 50), note: line(d?.note, 60), time: line(d?.time, 5), delay: Math.max(0, Math.min(180, Math.round(Number(d?.delay) || 0))), off: yes(d?.off) })).filter(d => d.to).slice(0, 6),
+            route: arr(o.route).map(d => ({ stop: line(d?.stop, 50), time: line(d?.time, 5), off: yes(d?.off) })).filter(d => d.stop).slice(0, 7) }),
+        forum: () => ({ board: line(o.board, 40), members: line(o.members, 12), online: line(o.online, 8), author: line(o.author, 30), ago: line(o.ago, 20), flair: line(o.flair, 20), votes: line(o.votes, 8),
+            comments: arr(o.comments).map(c => ({ who: line(c?.who, 30), ago: line(c?.ago, 20), ...txt(c, 600), votes: line(c?.votes, 8), reply: yes(c?.reply), op: yes(c?.op) })).filter(c => c.text).slice(0, 7) }),
+        wiki: () => ({ note: line(o.note, 160), photo: line(o.photo, 120), facts: arr(o.facts).map(f => ({ k: line(f?.k, 30), v: line(f?.v, 60) })).filter(f => f.k && f.v).slice(0, 6), langs: Math.max(0, Math.min(300, Math.round(Number(o.langs) || 0))), sections: arr(o.sections).map(v => ({ h: line(v?.h, 60), ...txt(v, 1200) })).filter(v => v.h && v.text).slice(0, 3) }),
+        shop: () => ({ crumbs: arr(o.crumbs).map(c => line(c, 30)).filter(Boolean).slice(0, 3), brand: line(o.brand, 40), price: Number.isFinite(Number(o.price)) && o.price !== null && o.price !== '' ? Number(o.price) : null, old: Number.isFinite(Number(o.old)) && o.old !== null && o.old !== '' ? Number(o.old) : null, currency: line(o.currency, 3).toUpperCase(), rating: Math.max(0, Math.min(5, Number(o.rating) || 0)), reviews: line(o.reviews, 10), colors: arr(o.colors).map(hex).filter(Boolean).slice(0, 4), ship: line(o.ship, 140) }),
+        blog: () => ({ blog: line(o.blog, 40), category: line(o.category, 30), author: line(o.author, 40), date: line(o.date, 20), minutes: line(o.minutes, 6), photo: line(o.photo, 160), tags: arr(o.tags).map(t => line(t, 20)).filter(Boolean).slice(0, 4) }),
+        official: () => ({ hours: arr(o.hours).map(h => ({ day: line(h?.day, 20), time: line(h?.time, 30) })).filter(h => h.day).slice(0, 7), address: line(o.address, 120), phone: line(o.phone, 30) }),
+        other: () => ({}),
+    }[kind]();
+    res.page = { nav: arr(raw.nav).map(n => line(n, 20)).filter(Boolean).slice(0, 6), title: line(raw.title, 200) || res.title, kt: line(raw.kt, 200), lede: raw.lede && line(raw.lede.text, 300) ? txt(raw.lede, 300) : null, body, [kind]: extra };
     await saveMeta();
 }

@@ -8,11 +8,12 @@ import { draftReady, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
-import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, recording, recordVoice, searching, searchPage, shooting, takePhoto, writeEntry, writing } from './phoneai.js';
-import { APPS, AXB, AXB_C, busyHtml, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, marksScreen, msgList, noteOne, noteScreen, pageView, photoScreen, photoView, REMAKE_MORE, searchOne, searchScreen, setLore, setRemake, setScreen, setTheme, setWho, snsPost, snsScreen, statusBar, tabsScreen, threadScreen } from './phoneapps.js';
+import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
+import { APPS, AXB, AXB_C, busyHtml, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
 import { ensureIds, fillMoney, fillVoice, koOn, loreOff, makePhone, newSections, phoneLore, REMAKE, showNow, storyNow } from './phonedata.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
 import { bankAcct, bankHome, bankTx, cardView, orderView, passView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
+import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './phoneweb.js';
 import { openGlossary } from './translate.js';
 import { confirm, esc } from './util.js';
 
@@ -26,7 +27,7 @@ function screen(p, view, m, roster, ui) {
     const body = v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'home2' ? homeScreen(p, now, m, 2) : v === 'bank' ? bankHome(p, now) : v === 'acct' ? bankAcct(p, now, i || '0') : v === 'tx' ? bankTx(p, now, i || '') : v === 'wallet' ? walletScreen(p, now) : v === 'card' ? cardView(p, now, i || '0') : v === 'pass' ? passView(p, now, i || '') : v === 'shop' ? shopScreen(p, now, i || 'all') : v === 'order' ? orderView(p, now, i || '') : v === 'voice' ? voiceScreen(p, now, i || '') : v === 'voiceone' ? voiceOne(p, now, i || '0') : v === 'msg' ? msgList(p, now, roster)
         : v === 'thread' ? threadScreen(p, now, Number(i), roster) : v === 'draft' ? draftView(p, now, Number(i), roster) : v === 'call' || v === 'callmiss' ? callScreen(p, now, roster, v === 'callmiss') : v === 'callwho' ? callWho(p, now, Number(i), roster) : v === 'contacts' ? contactsScreen(p, now, roster) : v === 'contact' ? contactOne(p, now, decodeURIComponent(i || ''), roster, m, ui.contactBack)
         : v === 'photo' ? photoScreen(p, now) : v === 'photoone' ? photoView(p, now, Number(i))
-        : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '') : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
+        : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
         : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, now, m)
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
         : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'set' ? setScreen(p, now, m, ui) : v === 'settheme' ? setTheme(p, now) : v === 'setremake' ? setRemake(p, now, ui) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
@@ -210,6 +211,7 @@ export async function openPhone(who = null) {
         drawPhone();
         $root.find('.na_ph_body, .ax_scroll').scrollTop(view.startsWith('thread') ? 1e6 : 0);
         if (go === 'searchone' && !phone()?.searches?.[Number(this.dataset.i)]?.results?.length) loadSearch(Number(this.dataset.i));
+        if (go === 'page') openWeb(String(this.dataset.i));
     });
     // the page is made once, the first time a search is opened; the screen can change while it loads
     const loadSearch = async k => {
@@ -221,6 +223,30 @@ export async function openPhone(who = null) {
         finally { searching.delete(id); if (phone() === p) drawPhone(true); }
     };
     $root.on('click', '.na_ph_sgo', e => { e.stopPropagation(); loadSearch(Number(view.split(':')[1])); });
+    // a result opened: the tab remembers it, the history lists it, and its page is written the first time
+    const openWeb = async key => {
+        const p = phone(), [k, r] = key.split('.').map(Number), x = p?.searches?.[k], res = x?.results?.[r];
+        if (!res) return;
+        const seen = new Set(x.seen || []);
+        if (x.at !== r || !seen.has(r)) { x.at = r; seen.add(r); x.seen = [...seen]; saveMeta(); }
+        if (res.page) return;
+        const id = `${nameKey(p.owner)}:${key}`;
+        if (paging.has(id)) return;
+        paging.add(id); drawPhone(true);
+        try { await webPage(m, p, k, r); }
+        catch (err) { console.error('[narrative-archive] web page', err); toastr.error(String(err?.message || err), '페이지 열기 실패'); }
+        finally { paging.delete(id); if (phone() === p) drawPhone(true); }
+    };
+    $root.on('click', '.na_ph_pgo', e => { e.stopPropagation(); openWeb(view.split(':')[1]); });
+    // a page scrolled down: the dock folds to its address; scrolling back up (or a tap on it) unfolds it
+    $root[0].addEventListener('scroll', e => {
+        const el = e.target;
+        if (!el.classList?.contains('wb_pg')) return;
+        const dock = el.parentElement?.querySelector('.wb_dock');
+        const y = el.scrollTop, last = Number(el.dataset.y || 0);
+        if (dock && Math.abs(y - last) > 8) { dock.classList.toggle('wb_fold', y > last && y > 80); el.dataset.y = String(y); }
+    }, true);
+    $root.on('click', '.wb_dock.wb_fold', function (e) { e.stopPropagation(); this.classList.remove('wb_fold'); });
     $root.on('click', '.na_ph_looksbtn, .na_ph_looksbtn2', e => { e.stopPropagation(); sheet = true; drawPhone(true); });
     $root.on('click', '.na_ph_shutter', async e => {
         e.stopPropagation();
