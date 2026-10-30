@@ -600,7 +600,7 @@ export async function openPhone(who = null) {
         const apps = Object.keys(REMAKE).filter(k => remake.has(k)), more = REMAKE_MORE.filter(k => remake.has(k)), whole = apps.length === Object.keys(REMAKE).length;
         const date=more.includes('invest') ? ($root.find('.ax_investdate').val() || investmentDate(m,phone())) : '';
         if(more.includes('invest') && !validDate(date)) {toastr.warning('투자 기준일을 입력해 주세요');return;}
-        if (!await confirm(whole ? '폰 전체를 다시 만들까요?' : `고른 앱 ${apps.length + more.length}개를 다시 만들까요?`, `${[...apps, ...more].map(k => APPS[k]).join(' · ')} 다시 만들기${more.includes('money') ? ' · 잔액 재생성, 기존 거래 유지' : ''}`)) return;
+        if (!await confirm(whole ? '폰 전체를 다시 만들까요?' : `고른 앱 ${apps.length + more.length}개를 다시 만들까요?`, `${[...apps, ...more].map(k => APPS[k]).join(' · ')} 다시 만들기${more.includes('money') ? ' · 잔액·거래·주문 새로 만들기' : ''}`)) return;
         const keep = phone().inject, $at = $(this).find('.ax_n');
         making = true;
         try {

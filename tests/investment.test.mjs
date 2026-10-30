@@ -195,13 +195,14 @@ test('explicit bank rebuild changes current cash once and preserves linked trans
  finance.baseline(m,'broker','EUR',0,'2026-10-01',p.owner);
  const t={id:'move',from:'eur:EUR',to:'broker:EUR',date:'2026-10-30',sent:1000,received:1000,fee:0};finance.transfer(m,t);
  const entries=structuredClone(m.finance.accounts['eur:EUR'].entries);const oldTx=p.money.tx=[{id:'receipt',account:'1234',amount:15000},{id:'spend',account:'1234',amount:-2000}];
- p.investment={sentinel:1};p.money.displayCurrency='KRW';
- globalThis.__investTest.answer={currency:'EUR',basis:'Revised scale',bank:{name:'New bank',accounts:[{id:'eur',last4:'1234',kind:'checking',currency:'EUR',balance:50000},{id:'credit',last4:'5678',kind:'credit',currency:'EUR',balance:300}]},tx:[{account:'1234',who:'Duplicate',amount:-1000}],cards:[],passes:[],orders:[]};
+ p.investment={sentinel:1};p.money.displayCurrency='KRW';p.money.orders=[{id:'old-order',item:'Old order'}];p.money.passes=[{id:'old-pass',by:'Old airline'}];p.money.cards=[{account:'1234',exp:'01/20'}];m.finance.accounts['eur:EUR'].included.push('receipt','spend');
+ globalThis.__investTest.answer={currency:'EUR',basis:'Revised scale',bank:{name:'New bank',accounts:[{id:'eur',last4:'1234',kind:'checking',currency:'EUR',balance:50000},{id:'credit',last4:'5678',kind:'credit',currency:'EUR',balance:300}]},tx:[{account:'1234',who:'New purchase',amount:-1000}],cards:[],passes:[],orders:[]};
  await phonedata.fillMoney(m,p,{regenerateBalances:true});
  assert.equal(p.money.bank.accounts[0].balance,50000);assert.equal(finance.cash(m.finance.accounts['eur:EUR']),50000);assert.equal(m.finance.accounts['eur:EUR'].amount,51000);
- assert.deepEqual(m.finance.accounts['eur:EUR'].entries,entries);assert.deepEqual(m.finance.transfers.move,t);assert.equal(finance.cash(m.finance.accounts['broker:EUR']),1000);assert.deepEqual(p.money.tx,oldTx);
+ assert.deepEqual(m.finance.accounts['eur:EUR'].entries,entries);assert.deepEqual(m.finance.transfers.move,t);assert.equal(finance.cash(m.finance.accounts['broker:EUR']),1000);assert.notDeepEqual(p.money.tx,oldTx);assert.equal(p.money.tx[0].who,'New purchase');assert.ok(!m.finance.accounts['eur:EUR'].included.includes('receipt'));assert.ok(m.finance.accounts['eur:EUR'].included.includes(p.money.tx[0].id));
+ assert.deepEqual(p.money.orders,[]);assert.deepEqual(p.money.passes,[]);assert.deepEqual(p.money.cards,[]);
  assert.equal(p.money.bank.accounts[1].spent,300);assert.equal(p.money.bank.accounts[1].balance,300);assert.equal(p.money.basis,'Revised scale');assert.equal(p.money.displayCurrency,'KRW');assert.equal(p.investment.sentinel,1);
- assert.match(globalThis.__investTest.inputs.at(-1).input,/PRESERVED TRANSACTIONS/);assert.match(globalThis.__investTest.inputs.at(-1).system,/CURRENT balance/);
+ assert.doesNotMatch(globalThis.__investTest.inputs.at(-1).input,/PRESERVED TRANSACTIONS|receipt|spend/);assert.match(globalThis.__investTest.inputs.at(-1).system,/CURRENT balance/);
  finance.migrateBank(m,p);assert.equal(p.money.bank.accounts[0].balance,50000);
  await phonedata.fillMoney(m,p,{regenerateBalances:true});assert.equal(finance.cash(m.finance.accounts['eur:EUR']),50000);assert.equal(Object.keys(m.finance.transfers).length,1);
 });
@@ -214,6 +215,13 @@ test('malformed rebuilt balances leave every account and its ledger unchanged',a
  globalThis.__investTest.answer={bank:{accounts:[{id:'eur',last4:'1234',kind:'checking',currency:'KRW',balance:50000},{id:'credit',last4:'5678',kind:'credit',currency:'EUR',balance:300}]}};
  await assert.rejects(phonedata.fillMoney(m,p,{regenerateBalances:true}),/잔액/);assert.equal(JSON.stringify({money:p.money,finance:m.finance}),before);
  globalThis.__investTest.error=true;await assert.rejects(phonedata.fillMoney(m,p,{regenerateBalances:true}),/network/);assert.equal(JSON.stringify({money:p.money,finance:m.finance}),before);
+});
+test('incomplete money rebuild preserves the old records and ledger',async()=>{
+ const {m,p}=euroWallet();finance.migrateBank(m,p);
+ const before=JSON.stringify([p.money,m.finance]);
+ globalThis.__investTest.answer={currency:'EUR',bank:{name:'Bank',accounts:p.money.bank.accounts},cards:[],tx:[],passes:[]};
+ await assert.rejects(phonedata.fillMoney(m,p,{regenerateBalances:true}),/거래 내역/);
+ assert.equal(JSON.stringify([p.money,m.finance]),before);
 });
 test('chart backfill preserves saved anchors, executions and FX and reuses the cached history',async()=>{
  const {m,p}=setup();await dataMod.fillInvestment(m,p,'2026-10-30');
