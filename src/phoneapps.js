@@ -33,7 +33,7 @@ const ICO = {
     redo: '<path d="M21 4v6h-6"/><path d="M20.5 10A8.5 8.5 0 1 0 19 16.5"/>',
 };
 export const ic = (k, s = 18, w = 2) => `<svg class="na_ph_i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]}</svg>`;
-export const APPS = { msg: '메시지', call: '전화', photo: '사진', note: '메모', search: '검색', cal: '캘린더', map: '지도', sns: 'SNS', mail: '메일', diary: '일기', set: '설정', cam: '카메라', bank: '은행', wallet: '지갑', shop: '쇼핑', voice: '음성 메모', money: '은행 · 지갑 · 쇼핑' };
+export const APPS = { msg: '메시지', call: '전화', photo: '사진', note: '메모', search: '검색', cal: '캘린더', map: '지도', sns: 'SNS', mail: '메일', diary: '일기', set: '설정', cam: '카메라', bank: '은행', wallet: '지갑', shop: '쇼핑', voice: '음성 메모', invest: '투자', money: '은행 · 지갑 · 쇼핑' };
 export function statusBar(p, now) {
     return `<div class="na_ph_sb"><span>${esc(fmtTime(p, now) || '')}</span><i>${ic('sig', 15)}${ic('bat', 20, 1.6)}</i></div>`;
 }
@@ -182,8 +182,8 @@ export function diaryOne(p, now, k) {
 }
 // ---- 메시지 · 전화 · 사진 · 메모 · 검색 · 캘린더 · 메일 · 설정 · 카메라 (v3.118): the boards' layout in the home's flat look —
 // each app one colour (메시지 · 전화 blue, the rest their home icon's), round glass buttons, white cards, no gradients
-export const AXB = { msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', cam: 'apri', map: 'blue' };
-export const AXB_C = { blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'], bank: ['#2c4a80', '#e2e9f5'], wallet: ['#3d4a66', '#e3e7ef'], shop: ['#2f7d74', '#d9efec'], voice: ['#8a5a2e', '#f2e7d6'] };
+export const AXB = { invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', cam: 'apri', map: 'blue' };
+export const AXB_C = { invest: ['#17695d', '#d9eee5'], blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'], bank: ['#2c4a80', '#e2e9f5'], wallet: ['#3d4a66', '#e3e7ef'], shop: ['#2f7d74', '#d9efec'], voice: ['#8a5a2e', '#f2e7d6'] };
 // people outside the archive get a letter on one of the home icons' colours
 const AX_AV = ['#8faed1', '#a699c9', '#d89f98', '#89b892', '#d494a7', '#a2a7af', '#dcc680'];
 export const axTint = n => AX_AV[[...String(n)].reduce((h, ch) => (h * 31 + ch.codePointAt(0)) % 9973, 7) % AX_AV.length];

@@ -4,6 +4,9 @@
 // m.phones = { [name key]: { owner, country, wall, accent, now, contacts, threads, calls, photos, notes, searches, events,
 //   upto (the last message number the archive held), at, inject } }
 
+import { investmentScreen } from './investui.js';
+import { fillInvestment, refreshMarket, validDate } from './investdata.js';
+import { finance, migrateBank, reviseBaseline, selectPrice, transfer } from './finance.js';
 import { draftReady, withSpinner } from './ai.js';
 import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
@@ -24,7 +27,7 @@ function screen(p, view, m, roster, ui) {
     const now = storyNow(p);
     showNow(now);
     const [v, i] = view.split(':');
-    const body = v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'home2' ? homeScreen(p, now, m, 2) : v === 'bank' ? bankHome(p, now) : v === 'acct' ? bankAcct(p, now, i || '0') : v === 'tx' ? bankTx(p, now, i || '') : v === 'wallet' ? walletScreen(p, now) : v === 'card' ? cardView(p, now, i || '0') : v === 'pass' ? passView(p, now, i || '') : v === 'shop' ? shopScreen(p, now, i || 'all') : v === 'order' ? orderView(p, now, i || '') : v === 'voice' ? voiceScreen(p, now, i || '') : v === 'voiceone' ? voiceOne(p, now, i || '0') : v === 'msg' ? msgList(p, now, roster)
+    const body = ['invest', 'stock', 'ivactivity', 'ivwatch', 'ivstakes', 'ivcash', 'ivprices'].includes(v) ? investmentScreen(m, p, now, v, decodeURIComponent(i || ''), ui.investing) : v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'home2' ? homeScreen(p, now, m, 2) : v === 'bank' ? bankHome(p, now) : v === 'acct' ? bankAcct(p, now, i || '0') : v === 'tx' ? bankTx(p, now, i || '') : v === 'wallet' ? walletScreen(p, now) : v === 'card' ? cardView(p, now, i || '0') : v === 'pass' ? passView(p, now, i || '') : v === 'shop' ? shopScreen(p, now, i || 'all') : v === 'order' ? orderView(p, now, i || '') : v === 'voice' ? voiceScreen(p, now, i || '') : v === 'voiceone' ? voiceOne(p, now, i || '0') : v === 'msg' ? msgList(p, now, roster)
         : v === 'thread' ? threadScreen(p, now, Number(i), roster) : v === 'draft' ? draftView(p, now, Number(i), roster) : v === 'call' || v === 'callmiss' ? callScreen(p, now, roster, v === 'callmiss') : v === 'callwho' ? callWho(p, now, Number(i), roster) : v === 'contacts' ? contactsScreen(p, now, roster) : v === 'contact' ? contactOne(p, now, decodeURIComponent(i || ''), roster, m, ui.contactBack)
         : v === 'photo' ? photoScreen(p, now) : v === 'photoone' ? photoView(p, now, Number(i))
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
@@ -50,6 +53,9 @@ export async function openPhone(who = null) {
     const names = peopleList(m);
     const roster = new Set(names.map(nameKey));
     let owner = who && names.some(n => nameKey(n) === nameKey(who)) ? names.find(n => nameKey(n) === nameKey(who)) : (names.find(n => m.phones[nameKey(n)]) || names[0] || null);
+    let investing = false;
+    for (const p of Object.values(m.phones)) migrateBank(m, p);
+    if (Object.values(m.phones).some(p => p.money)) await saveMeta();
     let view = 'lock', contactBack = '', sheet = false, adding = false, loreOpen = false;
     const loreExp = new Set(), loreEnts = new Map(); // books opened to their entries, and their entries once read
     const remake = new Set(); // the apps ticked in 설정 › 다시 만들기
@@ -95,7 +101,7 @@ export async function openPhone(who = null) {
             return;
         }
         const top = keep ? $root.find('.na_ph_body, .ax_scroll').scrollTop() : 0;
-        $root.find('.na_ph_frame').html(screen(p, view, m, roster, { newN: newSections(m, p), loreExp, loreEnts, remake, contactBack }));
+        $root.find('.na_ph_frame').html(screen(p, view, m, roster, { newN: newSections(m, p), loreExp, loreEnts, remake, contactBack, investing }));
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
     };
@@ -133,6 +139,46 @@ export async function openPhone(who = null) {
         draw();
         toastr.success(update ? '새로 일어난 일을 폰에 넣었어요' : `${owner}의 폰을 만들었어요`, '캐릭터 휴대폰');
     };
+    // Investment calls are explicit; navigation and unresolved quote conflicts never trigger them.
+    const investRun = async checkStory => {
+        if (investing) return;
+        const p = phone(), date = $root.find('.iv_date').val();
+        investing = true; drawPhone(true);
+        try { await (p.investment ? refreshMarket(m, p, date, checkStory) : fillInvestment(m, p, date)); }
+        catch (err) { toastr.error(String(err?.message || err), '투자'); }
+        finally { investing = false; if (phone() === p) drawPhone(true); }
+    };
+    $root.on('click', '.iv_refresh', () => investRun(false));
+    $root.on('click', '.iv_sync', () => investRun(true));
+    $root.on('click', '.iv_select', async function () {
+        try { selectPrice(m, this.dataset.key, this.dataset.date, this.dataset.id); await saveMeta(); drawPhone(true); }
+        catch (err) { toastr.error(err.message); }
+    });
+    $root.on('click', '.iv_baseline', async function () {
+        const box = $(this).closest('details'), value = box.find('.iv_balance').val(), reason = String(box.find('.iv_reason').val() || '');
+        if (value === '' || !reason.trim()) return toastr.warning('금액과 수정 이유를 입력해 주세요');
+        if (!await confirm('기준 잔액을 수정할까요?', '이미 기록된 이후 거래는 유지되고 현재 잔액이 다시 계산돼요.')) return;
+        try { reviseBaseline(m, this.dataset.key, Number(value), reason); migrateBank(m, phone()); await saveMeta(); drawPhone(true); }
+        catch (err) { toastr.error(err.message); }
+    });
+    $root.on('click', '.iv_transfer', async function () {
+        const box = $(this).closest('.iv_card'), val = k => box.find('.iv_' + k).val();
+        const n = k => val(k) === '' ? null : Number(val(k));
+        const from = val('from'), to = val('to'), side = val('feeSide');
+        if (!validDate(val('tdate'))) return toastr.warning('거래 날짜를 확인해 주세요');
+        try {
+            transfer(m, { id: String(val('tid') || '').trim(), from, to, sent: n('sent'), received: n('received'), fee: n('fee'), feeSide: side, feeCurrency: finance(m).accounts[side === 'sender' ? from : to]?.currency, rate: n('rate'), date: val('tdate'), includedFrom: box.find('.iv_incfrom').prop('checked'), includedTo: box.find('.iv_incto').prop('checked') });
+            migrateBank(m, phone()); await saveMeta(); drawPhone(true); toastr.success('이체 기록을 연결했어요');
+        } catch (err) { toastr.error(err.message, '이체 연결'); }
+    });
+    $root.on('click', '.iv_news', async function () {
+        const p = phone(), inv = p.investment, symbol = this.dataset.symbol;
+        const sec = inv?.securities.find(s => s.symbol === symbol); if (!sec) return;
+        const query = inv.watch.find(w => w.symbol === symbol)?.query || `${sec.name} business news`;
+        let k = p.searches.findIndex(x => x.investSymbol === symbol && x.investDate === inv.date);
+        if (k < 0) { p.searches.push({ q: query, time: inv.date.slice(5), tab: true, src: 'guess', investSymbol: symbol, investDate: inv.date }); k = p.searches.length - 1; await saveMeta(); }
+        view = `searchone:${k}`; drawPhone(); if (!p.searches[k].results?.length) loadSearch(k);
+    });
     // the screen changes first; saving waits
     $root.on('click', '.na_ph_pick:not(.na_ph_addp), .ax_whopick', function (e) { e.stopPropagation(); const same = owner === this.dataset.n; owner = this.dataset.n; if (!same) { view = 'lock'; sheet = false; draw(); setSheet(false); } });
     $root.on('click', '.na_ph_makewho', () => { loreOpen = false; drawCtrl(); setSheet(true); });
@@ -197,7 +243,7 @@ export async function openPhone(who = null) {
         e.stopPropagation();
         // a person's card goes back where it was opened from
         if (go === 'contact' && !view.startsWith('contact')) contactBack = view;
-        view = ['thread', 'draft', 'page', 'acct', 'tx', 'card', 'pass', 'order', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost'].includes(go) || (['cal', 'diary', 'shop', 'voice'].includes(go) && this.dataset.i) ? `${go}:${this.dataset.i}` : go;
+        view = ['stock', 'ivprices', 'thread', 'draft', 'page', 'acct', 'tx', 'card', 'pass', 'order', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost'].includes(go) || (['cal', 'diary', 'shop', 'voice'].includes(go) && this.dataset.i) ? `${go}:${['stock', 'ivprices'].includes(go) ? encodeURIComponent(this.dataset.i || '') : this.dataset.i}` : go;
         const mail = go === 'mailone' ? phone()?.mails?.[Number(this.dataset.i)] : null;
         if (mail?.unread) { mail.unread = false; saveMeta(); }
         const p0 = phone();

@@ -459,6 +459,7 @@ export function bindPanel() {
         if (json) {
             const d = json.data;
             for (const k of SETTING_KEYS) if (Object.hasOwn(d, k)) m[k] = d[k];
+            if (Object.hasOwn(d, 'phones') && !d.finance) delete m.finance;
             if (Array.isArray(d.snapshots)) {
                 const seen = new Set(m.snapshots.map(s => s.at));
                 m.snapshots = [...m.snapshots, ...d.snapshots.filter(s => s && typeof s.text === 'string' && !seen.has(s.at))]

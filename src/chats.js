@@ -23,6 +23,7 @@ export async function importArchive(src, label, fromChat = null) {
     const m = getMeta();
     if (m.text.trim() && !await confirm('아카이브 가져오기', `이 채팅의 아카이브를 "${esc(label)}"의 것으로 바꿀까요? 지금 내용은 복구 지점에 남아요.`)) return false;
     for (const k of SETTING_KEYS) if (src.settings && Object.hasOwn(src.settings, k)) m[k] = structuredClone(src.settings[k]);
+    if (src.settings && Object.hasOwn(src.settings, 'phones') && !src.settings.finance) delete m.finance;
     // the numbers that chat's archive ended on live in that chat: "원문" on those sections opens it
     if (fromChat) {
         const r = headingRanges(src.text);

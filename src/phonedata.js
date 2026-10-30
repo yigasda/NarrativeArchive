@@ -2,6 +2,7 @@
 // 롤플에 넣기, dates and times as the owner's phone shows them, and the places they have been.
 
 import { askDraft } from './ai.js';
+import { migrateBank } from './finance.js';
 import { calendars, headingDate } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
 import { recentForCheck } from './drift.js';
@@ -304,6 +305,8 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         const was = m.phones[key];
         const base = { owner, inject: false, ...got, wall: got.wall || 'dusk', accent: got.accent || 'blue', country: got.country || 'KR', threads: [], contacts: [], ...Object.fromEntries(LISTS.map(k => [k, []])) };
         if (was?.theme) base.theme = was.theme;
+        if (was?.money) base.money = was.money;
+        if (was?.investment) base.investment = was.investment;
         m.phones[key] = mergePhone(base, got);
     }
     const p = m.phones[key];
@@ -426,7 +429,11 @@ YOU GET
 
 STORY OR INVENTED
 - Purchases, bookings, trips, gifts, rent, wages: only what the story shows or plainly implies. Give each the "ev" tag the phone's mail or event for it already has.
-- Balances, last four digits, card expiry dates, everyday payments (coffee, groceries, transit), and amounts the story doesn't give: invent them, fitting the owner's life, job and country.
+- Preserve explicit amounts with their owner, currency, purpose and date. A company valuation, transfer amount or old balance is not a current personal bank balance.
+- Where personal balances are unspecified, invent a coherent scale from the owner's business reach, ownership, access to funds, lifestyle and established spending. Do not flatten a multinational owner or heir into a generic salaried professional. Do not turn company assets, family wealth or an expected inheritance into personal cash. Never invent restrictions or trusts to explain a low balance.
+- Distinguish everyday spending cash and reserves. Investment holdings belong outside bank cash. Record a short "basis" explaining the supplied evidence and the invented scale; invented amounts are app-only, never new canon.
+- Last four digits, card expiry dates and everyday payments may be invented. Large purchases, wages and distributions need story support.
+- EXISTING ACCOUNTS, when provided, are locked financial snapshots. Keep their id, currency, balance, kind and last4 exactly. You may change their display names; do not invent extra accounts or replay old transactions. Credit balance is monthly spending, never cash.
 - A booking number, seat, gate or delivery date the story doesn't give stays empty.
 - Orders stand as of the story's now: with no sign it arrived, it is not "delivered".
 
@@ -439,7 +446,8 @@ Banks, shops, merchants and items named as they would be in the owner's country.
 JSON (one object, nothing before or after it)
 {
   "currency": three-letter code,
-  "bank": { "name", "accounts": [{ "kind": "checking" | "savings" | "credit", "name", "last4", "balance": number }] },
+  "basis": short explanation of evidence and invented scale,
+  "bank": { "name", "accounts": [{ "id": existing id when supplied, "kind": "checking" | "savings" | "credit", "name", "last4", "currency": three-letter code, "balance": number }] },
   "cards": [{ "account": last4, "exp": "MM/YY" }],
   "tx": [{ "account": last4, "who": merchant or person, "ko", "amount": number (minus for money out), "time": "MM-DD HH:MM",
            "kind": "card" | "transfer" | "deposit", "memo", "pending": true or false, "ev" }],
@@ -470,9 +478,9 @@ ANSWER — one JSON object, nothing else:
 Oldest first.`;
 
 const jsonOf = out => { const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}'); try { return a >= 0 && b > a ? JSON.parse(t.slice(a, b + 1)) : null; } catch { return null; } };
-const num = v => { const n = Number(String(v ?? '').replace(/[^\d.,-]/g, '').replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '')); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
+const num = v => { if (v === null || v === undefined || String(v).trim() === '') return null; const n = Number(String(v ?? '').replace(/[^\d.,-]/g, '').replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '')); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
 const last4 = v => String(v ?? '').replace(/\D/g, '').slice(-4);
-async function sideRequest(m, owner, blocks) {
+export async function sideRequest(m, owner, blocks) {
     const world = worldText(m), lore = await loreFor(m, owner);
     const recent = recentForCheck(6).join('\n\n').slice(-6000);
     return [
@@ -485,9 +493,9 @@ async function sideRequest(m, owner, blocks) {
 export function parseMoney(raw) {
     if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 은행 · 지갑 · 쇼핑 내용(JSON)을 찾지 못했어요');
     const cur = /^[A-Z]{3}$/.test(String(raw.currency || '').toUpperCase()) ? String(raw.currency).toUpperCase() : 'EUR';
-    const accounts = arr(raw.bank?.accounts).map(a => ({ kind: pick(a?.kind, ['checking', 'savings', 'credit'], 'checking'), name: line(a?.name, 40), last4: last4(a?.last4), balance: num(a?.balance) ?? 0 })).filter(a => a.last4).slice(0, 4);
+    const accounts = arr(raw.bank?.accounts).map(a => ({ id: line(a?.id, 80), currency: /^[A-Z]{3}$/.test(a?.currency || '') ? a.currency : cur, kind: pick(a?.kind, ['checking', 'savings', 'credit'], 'checking'), name: line(a?.name, 40), last4: last4(a?.last4), balance: num(a?.balance) })).filter(a => a.last4).slice(0, 4);
     return {
-        currency: cur,
+        currency: cur, basis: str(raw.basis, 1500),
         bank: { name: line(raw.bank?.name, 40) || 'Bank', accounts },
         cards: arr(raw.cards).map(c => ({ account: last4(c?.account), exp: line(c?.exp, 5) })).filter(c => accounts.some(a => a.last4 === c.account)).slice(0, 4),
         tx: arr(raw.tx).map(x => withEv({ account: last4(x?.account), who: line(x?.who, 60), ko: ko(x?.ko), amount: num(x?.amount), time: when(x?.time), kind: pick(x?.kind, ['card', 'transfer', 'deposit'], 'card'), memo: line(x?.memo, 80), pending: !!x?.pending }, x)).filter(x => x.who && x.amount !== null).slice(-30),
@@ -498,9 +506,20 @@ export function parseMoney(raw) {
 // what the phone already holds, so the money side reuses its event tags
 const moneyContext = p => JSON.stringify({ now: p.now, mails: (p.mails || []).slice(-8).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })), events: real(p.events).slice(-8).map(x => ev(x, { title: x.title, date: x.date, time: x.time })), searches: real(p.searches).slice(-6).map(x => ev(x, { q: x.q, time: x.time })) });
 export async function fillMoney(m, p) {
-    const out = await askDraft(await sideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p)}`]), { system: AI_SYS_MONEY, maxTokens: 12000 });
-    p.money = { ...parseMoney(jsonOf(out)), at: Date.now() };
+    migrateBank(m, p);
+    const old = p.money;
+    const out = await askDraft(await sideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p)}`, old ? `[EXISTING ACCOUNTS]\n${JSON.stringify(old.bank.accounts)}` : '']), { system: AI_SYS_MONEY, maxTokens: 12000 });
+    const next = parseMoney(jsonOf(out));
+    if (old) {
+        next.bank.accounts = old.bank.accounts.map(a => ({ ...a, name: next.bank.accounts.find(b => b.id === a.id)?.name || a.name }));
+        next.currency = old.currency;
+        next.tx = old.tx; // history and transfer ids survive visual regeneration
+        next.asOf = old.asOf;
+        next.basis = old.basis || next.basis;
+    }
+    p.money = { ...next, at: Date.now() };
     ensureIds(p);
+    migrateBank(m, p);
     await saveMeta();
     return p.money;
 }

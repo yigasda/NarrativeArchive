@@ -5514,3 +5514,30 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .wb_tx2 { --axbg: rgba(255, 255, 255, 0.88); --axsh: 0 2px 8px rgba(0, 0, 0, 0.15); }
 .ax .wb_lab button.on { --axbg: var(--axc); }
 .ax .wb_seg button.on { --axbg: #fff; --axsh: 0 1px 3px rgba(22, 27, 34, 0.1); }
+
+/* Investments: quiet brokerage cards, distinct from the blue bank. */
+.na_phone .iv_scroll { padding: 0 18px 32px; color: #172e28; }
+.na_phone .iv_card { display: block; background: #fff; border: 1px solid #dfebe5; border-radius: 18px; margin: 12px 0; padding: 16px; font-size: 13px; overflow-wrap: anywhere; }
+.na_phone .iv_card h2, .na_phone .iv_card h3 { margin: 0 0 12px; font-size: 17px; }
+.na_phone .iv_card p { line-height: 1.6; white-space: pre-wrap; }
+.na_phone .iv_card small, .na_phone .iv_footer, .na_phone .iv_hint { color: #62766e; font-size: 11px; line-height: 1.6; }
+.na_phone .iv_hero { background: #143c32; color: #f3fff6; padding: 24px 20px; border-radius: 22px; margin: 14px 0; }
+.na_phone .iv_hero h2 { font: 500 30px 'Inter Tight', sans-serif; margin: 12px 0; }
+.na_phone .iv_hero small, .na_phone .iv_hero span { font-size: 12px; }
+.na_phone .iv_hero p { font-size: 12px; color: #c1e5d7; }
+.na_phone .iv_navs, .na_phone .iv_tools { display: flex; flex-wrap: wrap; gap: 7px; margin: 10px 0; }
+.na_phone .iv_nav, .na_phone .iv_tools button, .na_phone .iv_card button { border: 1px solid #cee1d7; background: #eff8f2; border-radius: 10px; color: #17644e; padding: 8px 10px; font-size: 12px; cursor: pointer; }
+.na_phone .iv_tools label, .na_phone .iv_card label { display: block; font-size: 12px; margin: 8px 0; }
+.na_phone .iv_tools input, .na_phone .iv_card input:not([type=checkbox]), .na_phone .iv_card select { display: block; width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #c9dcd2; border-radius: 7px; background: #fff; color: #193f31; margin: 5px 0; }
+.na_phone .iv_row { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; padding: 10px 0; border-bottom: 1px solid #edf3ef; }
+.na_phone .iv_row span { color: #66786e; flex: 1; }
+.na_phone .iv_row b { text-align: right; font-weight: 500; max-width: 65%; }
+.na_phone .iv_holding { display: flex; width: 100%; justify-content: space-between; gap: 8px; padding: 14px 0; border: 0; border-bottom: 1px solid #e6eee9; background: transparent; text-align: left; color: inherit; }
+.na_phone .iv_holding span:last-child { text-align: right; }
+.na_phone .iv_holding small { display: block; margin-top: 6px; }
+.na_phone .iv_chart { width: 100%; color: #278269; margin: 15px 0; }
+.na_phone .iv_quote { padding: 12px 0; border-top: 1px solid #dce8e0; }
+.na_phone .iv_quote span, .na_phone .iv_quote small { display: block; margin: 7px 0; }
+.na_phone .iv_footer { margin: 24px 4px; }
+.na_phone .iv_scroll > * { flex-shrink: 0; }
+.na_phone .iv_card .iv_holding { border-radius: 0; border: 0; border-bottom: 1px solid #e6eee9; background: transparent; padding: 14px 0; color: #193a2d; }
