@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { busy, exclusive, joinComments, realign, noteRead, newSync, makeMark, findMark, settleMarks, pickRound, addDone, settleRound, isDone, unreadCount, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from '../src/phonesync.js';
+import { pruneDropped, busy, exclusive, joinComments, realign, noteRead, newSync, makeMark, findMark, settleMarks, pickRound, addDone, settleRound, isDone, unreadCount, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from '../src/phonesync.js';
 
 // a chat of n messages, user and character in turn
 const chat = n => Array.from({ length: n }, (_, i) => ({ is_user: i % 2 === 0, is_system: false, name: i % 2 ? 'Ren' : 'Mara', mes: `message ${i}` }));
@@ -257,7 +257,8 @@ test('cases: hide and show again; changed while hidden; deleted while hidden', (
 });
 
 test('cases: a message moved up is not taken as deleted and new', () => {
-    const { c, s } = fresh(); const [x] = c.splice(20, 1); c.splice(14, 0, x);
+    const c = chat(30); c[20].mes = 'a longer line that gets moved further up'; const s = sync(c, 9); readAll(s, c, 29);
+    const [x] = c.splice(20, 1); c.splice(14, 0, x);
     const r = realign(s, all(c)); assert.equal(r.dropped.length, 0); assert.equal(r.changed.length, 0);
     assert.equal(pickRound(s, rows(c)).rows.length, 0);
 });
@@ -268,4 +269,23 @@ test('cases: one of two same messages deleted, or a branch cut after the start: 
     let r = realign(s, all(c)); assert.equal(r.dropped.length, 1); assert.equal(r.dropped[0].unsure, true);
     ({ c, s } = fresh()); const branch = c.slice(0, 22);
     r = realign(s, all(branch)); assert.deepEqual(r.dropped.map(x => x.old), [22, 23, 24, 25, 26, 27, 28, 29]);
+});
+
+test('cases: the last stretch written again with the same short line ("뭐 샀어?") in both: still all dropped, nothing taken as edited', () => {
+    const c = chat(30); for (const i of [21, 26]) c[i].mes = '뭐 샀어?';
+    for (let i = 20; i < 30; i++) if (![21, 26].includes(i)) c[i].mes = `old line number ${i} about the day`;
+    const s = sync(c, 9); readAll(s, c, 29);
+    c.splice(25, 5);
+    c.push({ is_user: true, name: 'Mara', mes: 'new line about the shop visit' }, { is_user: false, name: c[26 - 5 + 5]?.name || 'Ren', mes: '뭐 샀어?' }, { is_user: true, name: 'Mara', mes: 'new line about the lipstick' });
+    c[26].name = 'Mara';
+    const r = realign(s, all(c));
+    assert.equal(r.changed.length, 0);
+    assert.deepEqual(r.dropped.map(x => x.old), [25, 26, 27, 28, 29]);
+    assert.deepEqual(pickRound(s, rows(c)).rows.map(x => x.index), [25, 26, 27]);
+});
+
+test('빼기 only offers events still gone: undone ones and ones a new message took up again are not offered', () => {
+    const s = { events: { a: { at: null }, b: { at: 31 }, c: { at: null } }, dropped: [{ label: '#20–29', events: ['a', 'b', 'gone'] }, { label: '#40', events: ['b'] }] };
+    pruneDropped(s);
+    assert.deepEqual(s.dropped, [{ label: '#20–29', events: ['a'] }]);
 });

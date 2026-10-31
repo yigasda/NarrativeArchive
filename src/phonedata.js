@@ -18,7 +18,7 @@ import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
 import { applyMoney, investNow, moneyNow, replayEffects, revertEffects } from './phonesyncmoney.js';
-import { busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
+import { pruneDropped, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
 export const WALLS = ['dusk', 'ocean', 'forest', 'rose', 'night', 'sand', 'mono', 'aurora'];
 export const ACCENTS = ['blue', 'green', 'orange', 'pink', 'purple', 'red'];
@@ -550,6 +550,7 @@ async function updatePhone(m, owner) {
         p.syncLast = { checked: inRound.size, remaining: unreadCount(s, rows), apps: [...apps], failed: [...Object.entries(failed).map(([at, why]) => ({ at: Number(at), why, skipped: s.failed[at]?.tries >= 2 })), ...loose.map(why => ({ at: null, why }))], changes, notes, at: Date.now() };
         ensureIds(p);
         p.at = Date.now();
+        pruneDropped(s);
         p.syncUndo = { ...undo, round: id, read: [...inRound], readFp: round.rows.map(r => bodyMark(r.text)), comments: undo.comments,
             items: ITEM_KEYS.flatMap(k => (p[k] || []).filter(x => x.id && !had.has(x.id)).map(x => [k, x.id])),
             msgs: p.threads.filter(t => msgs.has(t.id) && t.messages.length > msgs.get(t.id)).map(t => [t.id, t.messages.slice(msgs.get(t.id)).map(x => JSON.stringify([x.from, x.text, x.time]))]),
@@ -619,13 +620,15 @@ function settleDropped(p, { dropped }, notes) {
 // 빼기: one gone stretch's events, with the app and money records they made; an event something later builds on
 // (an order delivered later, a record corrected later, shares sold later) stays, and is named
 export async function dropStretch(m, p, k) {
-    const s = p.sync, d = s.dropped?.[k];
+    const s = p.sync;
+    pruneDropped(s);
+    const d = s.dropped[k];
     if (!d) return { gone: 0, kept: [] };
     const kept = [];
     let gone = 0;
     for (const id of d.events) {
         const e = s.events[id];
-        if (!e) continue;
+        if (!e || e.at !== null) continue;
         const made = new Set((e.effects || []).filter(x => x.type === 'push' || x.type === 'entry').map(x => x.item?.id ?? x.id));
         // built on later: another event changed, corrected or counted one of its records as its own
         let tied = Object.entries(s.events).some(([o, x]) => o !== id && ((x.effects || []).some(y => ['status', 'amend', 'amendEntry'].includes(y.type) && made.has(y.id)) || (x.legs || []).some(l => l.state === 'included' && made.has(l.rec))));
@@ -680,6 +683,7 @@ export async function undoRound(m, p) {
         if (rest.length && now[id]) { s.events[id] = { ...now[id], effects: rest }; kept.push(now[id].summary || id); }
     }
     s.rounds.pop();
+    pruneDropped(s);
     p.now = u.now;
     delete p.syncLast; delete p.syncUndo;
     if (p.money) migrateBank(m, p);

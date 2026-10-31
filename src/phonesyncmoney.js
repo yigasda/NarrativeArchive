@@ -9,7 +9,8 @@
 // - an event seen before keeps the amounts it was given then; only a guessed amount the story later states is corrected,
 //   on the same record (no second payment), once
 // - balances may go below zero; no money is made up to cover a payment
-// Every change is listed in `effects`, so 복구 can add back what a save lost without touching anything else.
+// Every change is listed in `effects` (a copy of each record as it went in), so 복구 can add back what a save lost, and
+// 되돌리기 can tell a record the user changed since, without touching anything else.
 import { cash, finance, finite, fx, positions, round } from './finance.js';
 
 const STEP = { ordered: 0, shipped: 1, 'on the way': 2, delivered: 3 };
@@ -158,7 +159,7 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
         const row = { id, account: acct.last4, who: txt(x.who, 60), ko: txt(x.ko, 60), amount: round(amount), time: `${date}${e.time ? ` ${e.time}` : ''}`,
             kind: acct.kind === 'credit' ? 'card' : ['card', 'transfer', 'deposit'].includes(x.kind) ? x.kind : amount > 0 ? 'deposit' : 'card', memo: txt(x.memo), pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at, ...(guess ? { amountFrom: 'guess' } : {}) };
         tx.push(row);
-        out.effects.push({ type: 'push', path: 'money.tx', item: row });
+        out.effects.push({ type: 'push', path: 'money.tx', item: structuredClone(row) });
         if (acct.kind !== 'credit') {
             const lk = `${acct.id}:${acct.currency}`, L = f.accounts[lk];
             if (!L) fail('계좌 장부를 찾지 못했어요');
@@ -190,7 +191,7 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
             if (!txt(t.name)) fail('새 종목의 이름이 필요해요');
             const sec = { symbol, name: txt(t.name, 100), ko: txt(t.ko, 100), currency: cur };
             inv.securities.push(sec);
-            out.effects.push({ type: 'push', path: 'investment.securities', item: sec, idKey: 'symbol' });
+            out.effects.push({ type: 'push', path: 'investment.securities', item: structuredClone(sec), idKey: 'symbol' });
         }
         const quantity = Number(t.quantity), price = Number(t.price), fee = finite(Number(t.fee)) ? Number(t.fee) : 0, amount = Number(t.amount);
         if (kind === 'dividend' ? !finite(amount) || amount <= 0 : !finite(quantity) || quantity <= 0 || !finite(price) || price < 0) fail('매매 수량이나 가격을 확인하지 못했어요');
@@ -201,7 +202,7 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
         inv.trades.push(trade);
         const flow = kind === 'buy' ? -(quantity * price + fee) : kind === 'sell' ? quantity * price - fee : amount;
         L.entries[id] = { amount: round(flow), date: full };
-        out.effects.push({ type: 'push', path: 'investment.trades', item: trade }, { type: 'entry', key: a.key, id, amount: round(flow), date: full });
+        out.effects.push({ type: 'push', path: 'investment.trades', item: structuredClone(trade) }, { type: 'entry', key: a.key, id, amount: round(flow), date: full });
         if (full > (inv.date || '')) inv.date = full;
         out.changes.push({ app: '투자', label: `${inv.securities.find(x => x.symbol === symbol)?.name || symbol} ${kind === 'buy' ? '매수' : kind === 'sell' ? '매도' : '배당'}${kind === 'dividend' ? '' : ` ${quantity}주`}`, amount: round(flow), currency: cur });
         out.legs.push({ key, amount: size, state: 'applied', rec: id });
@@ -225,7 +226,7 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
         const row = { ...make(x), id: `sync:${e.id}:${path[0]}${k}`, ev: e.id, storyEvent: e.id, sourceIndex: e.at };
         if (path === 'orders' && row.status !== 'cancelled' && row.price && x.paid !== false && !x.gift && !list(mo.moves).some(y => Number(y.amount) < 0)) out.notes.push(`${row.item}: 주문은 넣었지만 결제가 없었어요`);
         box.push(row);
-        out.effects.push({ type: 'push', path: `money.${path}`, item: row });
+        out.effects.push({ type: 'push', path: `money.${path}`, item: structuredClone(row) });
         out.changes.push({ app: path === 'orders' ? '쇼핑' : '지갑', label: row.item || row.by, amount: null });
     });
     records('orders', list(mo.orders), x => {
@@ -265,7 +266,8 @@ export function revertEffects(m, p, effects) {
         if (!owner?.[field]) continue;
         const box = owner[field], idKey = x.idKey || 'id', i = box.findIndex(r => r[idKey] === (x.item?.[idKey] ?? x.id));
         if (i < 0) continue;
-        if (x.type === 'push') box.splice(i, 1);
+        // a record changed since it went in (an amount, a status, a count) is the user's now: it stays
+        if (x.type === 'push') { if (['amount', 'price', 'qty', 'quantity', 'status'].every(k => box[i][k] === x.item[k])) box.splice(i, 1); else left.push(x); }
         if (x.type === 'status') { if (box[i].status === x.status) box[i].status = x.prev; else left.push(x); }
         if (x.type === 'amend') { if (box[i].amount === x.to) { box[i].amount = x.from; box[i].amountFrom = 'guess'; } else left.push(x); }
     }

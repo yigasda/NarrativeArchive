@@ -341,3 +341,13 @@ test('되돌리기 leaves what changed since and says so; what is already gone i
     assert.equal(p.money.orders.length, 0);
     assert.equal(bank(), 975);
 });
+
+test('되돌리기 keeps a card purchase whose amount the user changed (no ledger line to tell it by)', () => {
+    const { m, p } = setup();
+    const r = applyMoney(m, p, ev('flowers', 9, '10-27', { moves: [{ account: '2222', amount: -30, who: 'Blumen' }, { account: '2222', amount: -6, who: 'Apotheke' }] }), opts());
+    p.money.tx = p.money.tx.filter(t => t.who !== 'Apotheke');
+    p.money.tx[0].amount = -35;
+    const left = revertEffects(m, p, r.effects);
+    assert.equal(left.length, 1);
+    assert.deepEqual(p.money.tx.map(t => t.amount), [-35]);
+});

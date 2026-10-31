@@ -88,14 +88,17 @@ export function realign(s, all) {
     const base = s.marks.base?.index ?? -1, cur = all.filter(r => r.index > base).map(r => ({ ...r, fp: bodyMark(r.text) }));
     if (!s.seen) { s.seen = {}; for (const r of cur) if (!r.hidden && isDone(s, r.index)) s.seen[r.index] = r.fp; }
     const old = [...Object.entries(s.seen).map(([i, f]) => ({ old: Number(i), fp: f })), ...Object.entries(s.hiddenRead || {}).map(([i, f]) => ({ old: Number(i), fp: f }))].sort((a, b) => a.old - b.old);
-    const pairs = lcs(old.map(x => x.fp), cur.map(x => x.fp));
+    // a short line ("뭐 샀어?") said again somewhere is no anchor unless its neighbours match too
+    const short = r => r.text.replace(/^\[#\d+[^\]]*\]\s*[^:]*:\s*/, '').length < 15;
+    const all_ = lcs(old.map(x => x.fp), cur.map(x => x.fp)), at = new Set(all_.map(([i, j]) => `${i},${j}`));
+    const pairs = all_.filter(([i, j]) => !short(cur[j]) || at.has(`${i - 1},${j - 1}`) || at.has(`${i + 1},${j + 1}`));
     const moved = {}, seen = {}, hiddenRead = {}, changed = [], dropped = [];
     for (const [i, j] of pairs) { moved[old[i].old] = cur[j].index; (cur[j].hidden ? hiddenRead : seen)[cur[j].index] = old[i].fp; }
     const anchors = [[-1, -1], ...pairs, [old.length, cur.length]], gaps = [];
     for (let k = 0; k + 1 < anchors.length; k++) { const [i0, j0] = anchors[k], [i1, j1] = anchors[k + 1]; gaps.push({ O: old.slice(i0 + 1, i1), N: cur.slice(j0 + 1, j1), last: k + 2 === anchors.length }); }
     // a message moved up or down: gone from one gap, the same words in another
     const pool = new Map();
-    for (const g of gaps) for (const r of g.N) (pool.get(r.fp) || pool.set(r.fp, []).get(r.fp)).push(r);
+    for (const g of gaps) for (const r of g.N) if (!short(r)) (pool.get(r.fp) || pool.set(r.fp, []).get(r.fp)).push(r);
     for (const g of gaps) g.O = g.O.filter(x => { const r = pool.get(x.fp)?.shift(); if (!r) return true; moved[x.old] = r.index; (r.hidden ? hiddenRead : seen)[r.index] = x.fp; r.taken = true; return false; });
     for (const { O, N: all_, last } of gaps) {
         const N = all_.filter(r => !r.taken);
@@ -148,6 +151,12 @@ export const unreadCount = (s, rows) => { const base = s.marks.base?.index ?? -1
 // nothing (a failed event can carry what they said); a second miss is skipped. Then the round counts as read.
 // failed: { [index]: why }, got: indices with an event that went in
 // `span` keeps which messages were read together, so a retry knows what already went in beside it
+// what 빼기 can offer: events still there and not taken up again by a message in the chat now (a new message may reuse
+// a gone one's event id; then it is that message's)
+export function pruneDropped(s) {
+    s.dropped = (s.dropped || []).map(d => ({ ...d, events: d.events.filter(id => s.events[id] && s.events[id].at === null) })).filter(d => d.events.length);
+}
+
 // rows: the round's { index, text }
 export function settleRound(s, rows, failed, got) {
     const round = rows.map(r => r.index), any = Object.keys(failed).length > 0, span = [Math.min(...round), Math.max(...round)];
