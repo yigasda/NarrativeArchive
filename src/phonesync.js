@@ -1,0 +1,100 @@
+// 새로 일어난 일 반영: where reading starts (one mark per app group), what has been read, and which archive sections
+// this round may use. No model calls here.
+// A mark is a message number plus a fingerprint of the user message at or before it. A swipe changes only the
+// character's last reply, so the mark holds; a message deleted before it moves the mark with it; a mark that can't
+// be found again (or matches twice) is asked for once more.
+export const SYNC_GROUPS = ['base', 'money', 'invest'];
+export const LIMIT = 12;
+const fp = s => { let h = 5381; const t = String(s ?? ''); for (let i = 0; i < t.length; i++) h = (h * 33 + t.charCodeAt(i)) >>> 0; return `${h.toString(36)}.${t.length}`; };
+const isUser = x => !!x && x.is_user && !x.is_system;
+
+export function newSync(scope) { return { v: 1, scope, order: 'oldest', limit: LIMIT, marks: {}, done: [], failed: {}, arch: {}, events: {} }; }
+export const syncOf = (p, scope) => (p.sync ||= newSync(scope));
+
+// a mark after message `index` (-1: from the first message)
+export function makeMark(chat, index) {
+    let user = -1;
+    for (let j = Math.min(index, chat.length - 1); j >= 0; j--) if (isUser(chat[j])) { user = j; break; }
+    return { index, user, fp: user >= 0 ? fp(chat[user].mes) : '' };
+}
+// 'ok', 'moved' (by `delta`), or 'lost'
+export function findMark(chat, mk) {
+    if (!mk) return { state: 'lost' };
+    if (mk.user < 0) return { state: 'ok', delta: 0 };
+    if (isUser(chat[mk.user]) && fp(chat[mk.user].mes) === mk.fp) return { state: 'ok', delta: 0 };
+    const hits = [];
+    for (let j = 0; j < chat.length; j++) if (isUser(chat[j]) && fp(chat[j].mes) === mk.fp) hits.push(j);
+    return hits.length === 1 ? { state: 'moved', delta: hits[0] - mk.user } : { state: 'lost' };
+}
+const shiftRanges = (rs, from, d) => rs.map(([a, b]) => (b < from ? [a, b] : [a < from ? a : a + d, b + d]));
+// marks that moved are moved, with what was read after them; returns the groups that need a new mark
+export function settleMarks(s, chat, groups = SYNC_GROUPS) {
+    const lost = [];
+    for (const g of groups) {
+        const mk = s.marks[g];
+        if (!mk) { lost.push(g); continue; }
+        const r = findMark(chat, mk);
+        if (r.state === 'lost') { lost.push(g); continue; }
+        if (r.state === 'moved' && r.delta) {
+            const from = mk.user;
+            mk.index += r.delta; mk.user += r.delta;
+            if (g === 'base') {
+                s.done = shiftRanges(s.done, from, r.delta);
+                s.failed = Object.fromEntries(Object.entries(s.failed).map(([k, v]) => [Number(k) >= from ? Number(k) + r.delta : k, v]));
+            }
+        }
+    }
+    return lost;
+}
+
+// read messages, as merged ranges [first, last]
+export const isDone = (s, i) => s.done.some(([a, b]) => i >= a && i <= b);
+export function addDone(s, idx) {
+    const all = [...s.done.map(r => [...r]), ...idx.map(i => [i, i])].sort((x, y) => x[0] - y[0]);
+    const out = [];
+    for (const r of all) { const last = out[out.length - 1]; if (last && r[0] <= last[1] + 1) last[1] = Math.max(last[1], r[1]); else out.push(r); }
+    s.done = out;
+}
+
+// this round's messages: `limit` unread ones from the chosen end, plus failed ones getting their one retry
+// rows: [{ index, text }] for every message the phone may read (system messages already left out)
+export function pickRound(s, rows) {
+    const base = s.marks.base?.index ?? -1, limit = Math.max(1, Math.min(100, Math.floor(Number(s.limit) || LIMIT)));
+    const unread = rows.filter(r => r.index > base && !isDone(s, r.index));
+    const take = s.order === 'newest' ? unread.slice(-limit) : unread.slice(0, limit);
+    const retry = rows.filter(r => s.failed[r.index]?.tries === 1 && !take.includes(r));
+    return { rows: [...retry, ...take].sort((a, b) => a.index - b.index), retry: retry.map(r => r.index), remaining: unread.length - take.length };
+}
+export const unreadCount = (s, rows) => { const base = s.marks.base?.index ?? -1; return rows.filter(r => r.index > base && !isDone(s, r.index)).length; };
+
+// archive sections ({ key, first, last, text }) for this round:
+// evidence — starts after the mark, and every message it covers is read or being read now, and not used before
+// background — everything it covers is before the mark or already read; never sent: sections with unread messages outside this round
+export function archiveRound(s, sections, rows, round) {
+    const base = s.marks.base?.index ?? -1, now = new Set(round.map(r => r.index)), idx = rows.map(r => r.index);
+    const covered = sec => idx.filter(i => i >= sec.first && i <= sec.last);
+    const evidence = [], background = [];
+    for (const sec of sections) {
+        const ins = covered(sec);
+        if (sec.first > base && ins.some(i => now.has(i)) && ins.every(i => now.has(i) || isDone(s, i)) && !s.arch[sec.key]) evidence.push(sec);
+        else if (ins.every(i => i <= base || (isDone(s, i) && !now.has(i)))) background.push(sec);
+    }
+    return { evidence, background };
+}
+
+// does this round reach the newest message? (only then may the archive's current state go along)
+export const reachesEnd = (s, rows, round) => { const last = rows[rows.length - 1]?.index ?? -1; return round.some(r => r.index === last) || isDone(s, last); };
+
+// a quote counts when it is in the source, ignoring spacing and case
+const norm = t => String(t || '').toLowerCase().replace(/\s+/g, ' ').trim();
+export const quoted = (quote, text) => { const q = norm(quote); return q.length >= 2 && norm(text).includes(q); };
+
+// 복구 기록: what each round added, kept in this browser per chat until the saved chat is seen to have it
+const jkey = scope => `narrativearchive:sync:${scope}`;
+export function journalRead(scope, storage = globalThis.localStorage) {
+    try { const j = JSON.parse(storage?.getItem(jkey(scope)) || '[]'); return Array.isArray(j) ? j : []; } catch { return []; }
+}
+export function journalWrite(scope, rounds, storage = globalThis.localStorage) {
+    try { if (rounds.length) storage?.setItem(jkey(scope), JSON.stringify(rounds)); else storage?.removeItem(jkey(scope)); } catch { /* the chat's own save still holds the round */ }
+}
+export const journalAdd = (scope, round, storage = globalThis.localStorage) => journalWrite(scope, [...journalRead(scope, storage), round].slice(-20), storage);

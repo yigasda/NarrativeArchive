@@ -5810,3 +5810,10 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax_delcard { padding: 0; }
 .ax .ax_delrow { --axbg: none; display: block; width: 100%; padding: 15px 18px; text-align: center; font-size: 15.5px; font-weight: 500; color: #d4483f; }
 .ax .ax_plx { --axbg: #f1f3f5; flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #8a929d; margin-left: 4px; }
+/* 설정 › 대화 반영: the round's size */
+.ax_step { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.ax_step b { min-width: 22px; text-align: center; font-size: 15px; font-weight: 600; }
+.ax .ax_step button { --axbg: #eef0f3; --axsh: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 17px; font-weight: 600; color: var(--axd); }
+.ax .ax_step button:disabled { opacity: 0.4; }
+.ax_foot.ax_foot_top { margin: 0 28px 12px; }
+.ax .ax_v.ax_plus { color: #2f8f5b; }

@@ -1,7 +1,3 @@
-import {readSettings} from './phonereadui.js';
-import {sourceRows,setBoundary,activeGroups,verifyBoundary,reconnectState} from './phoneread.js';
-import {recentForCheck} from './drift.js';
-import {recoverUpdate} from './phoneupdate.js';
 // 캐릭터 휴대폰: one character's phone as the story stands — messages, calls, photos (captions, no pictures), notes,
 // searches, a calendar and the places they have been. The draft model writes the content as JSON from the archive; the
 // screens are drawn here, the same for everyone. Texts are in the language the writer would use, with Korean under them.
@@ -20,7 +16,9 @@ import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
 import { APPS, AXB, AXB_C, busyHtml, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
-import { ensureIds, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, newSections, phoneLore, REMAKE, showNow, storyNow } from './phonedata.js';
+import { ensureIds, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, markAfter, phoneLore, REMAKE, restoreRounds, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
+import { syncOf } from './phonesync.js';
+import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
 import { bankDisplayCurrency, bankAcct, bankHome, bankTx, cardView, orderView, passView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
 import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './phoneweb.js';
@@ -40,7 +38,7 @@ function screen(p, view, m, roster, ui) {
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
         : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, now, m)
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
-        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setread' ? readSettings(p,now,ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'settheme' ? setTheme(p, now) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
+        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'settheme' ? setTheme(p, now) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app: drawn at the boards' size too, each its own app look
@@ -73,7 +71,10 @@ export async function openPhone(who = null) {
     const c = ctx();
     const m = getMeta();
     if (!await ensurePhoneStory(m)) return;
-    await recoverUpdate(m,phoneSelectionKey(c));
+    // a round this browser made that the saved chat doesn't have: kept, and offered in 설정 › 대화 반영; the phone opens anyway
+    let syncPending = 0;
+    try { syncPending = tidyJournal(m, phoneChatScope(c)); } catch (err) { console.error('[narrative-archive] sync journal', err); }
+    if (syncPending) toastr.info('저장되지 않은 반영 기록이 있어요. 설정 › 대화 반영에서 복구할 수 있어요', '캐릭터 휴대폰');
     applyInjection();
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
     // phones saved before records had ids get them now, once
@@ -88,8 +89,8 @@ export async function openPhone(who = null) {
     for (const p of Object.values(m.phones)) migrateBank(m, p);
     if (Object.values(m.phones).some(p => p.money)) await saveMeta();
     let view = 'lock', contactBack = '', sheet = false, adding = false, loreOpen = false;
+    let syncWhy = '', pickMore = 30;
     const profileStates = new Map();
-    let readRows=[],readScope=phoneChatScope(c);
     const loreExp = new Set(), loreEnts = new Map(); // books opened to their entries, and their entries once read
     const remake = new Set(); // the apps ticked in 설정 › 다시 만들기
     // the phone has the screen to itself: one layer over everything (a dialog, so the extension's colours and
@@ -146,7 +147,7 @@ export async function openPhone(who = null) {
             return;
         }
         const top = keep ? $root.find('.na_ph_body, .ax_scroll').scrollTop() : 0;
-        $root.find('.na_ph_frame').html(screen(p, view, m, roster, { readRows,readScope,newN: newSections(m, p), loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)) }));
+        $root.find('.na_ph_frame').html(screen(p, view, m, roster, { syncN: view === 'set' ? syncLeft(p) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)) }));
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
         if (making && view === 'setremake') $root.find('.na_ph_setremake .ax_n').html(`${busyHtml} 다시 만드는 중`);
@@ -179,34 +180,19 @@ export async function openPhone(who = null) {
         $root.find('.na_ph_ctrl').html(owner && !p ? loreRow() : '');
     };
     const draw = () => { drawOwners(); drawPhone(); drawCtrl(); };
-    const updateToast = (kind,message) => {
-        const toast=toastr[kind](message),container=toast?.closest('#toast-container')[0],dialog=$root.closest('dialog')[0];
-        // Toastr removes empty containers. Reattach a recreated container to the phone's top layer.
-        if(container&&dialog?.open)dialog.append(container);
-    };
     const make = async ($btn, update) => {
-        if(update){readRows=await sourceRows(recentForCheck((ctx().chat||[]).length,{excludeSystem:true}));const current=phone();if(!verifyBoundary(current?.readState,phoneChatScope(ctx()),readRows)||activeGroups(current).some(g=>!current.readState?.groups[g])){view='setread';drawPhone();return;}}
-        const p = await withSpinner($btn, update ? '반영하는 중' : '폰 만드는 중', async () => {
-            try { return await makePhone(m, owner, { update }); }
-            catch (error) {
-                if (!update) throw error;
-                console.error('[NarrativeArchive] 대화 반영', error);
-                updateToast('error',error?.code==='PHONE_INPUT_LIMIT'?error.message:'반영하지 못했어요. 다시 시도해 주세요');
-                return null;
-            }
-        });
+        // an older phone has no start yet, and a start whose message is gone is asked for again
+        if (update) { const st = syncState(phone()); if (st !== 'ok') { syncWhy = st; pickMore = 30; view = 'setsyncpick'; drawPhone(); return; } }
+        const p = await withSpinner($btn, update ? '반영하는 중' : '폰 만드는 중', () => makePhone(m, owner, { update }));
         if (!p) return;
         if (!update) view = 'lock';
         draw();
-        if (update) {
-            const r = p.lastUpdate, changed = !!(r.apps?.length || r.changes?.length);
-            if (r.failures?.length) {
-                if (changed) updateToast('warning','일부 내용을 반영하지 못했어요');
-                else updateToast('error','반영하지 못했어요. 다시 시도해 주세요');
-            } else if (changed) updateToast('success','새로운 일을 반영했어요');
-            else updateToast('info','새로 반영할 내용이 없어요');
-        }
-        else toastr.success(`${owner}의 폰을 만들었어요`, '캐릭터 휴대폰');
+        if (!update) return toastr.success(`${owner}의 폰을 만들었어요`, '캐릭터 휴대폰');
+        const r = p.syncLast;
+        if (!r?.checked) return toastr.info('새로 읽을 대화가 없어요', '캐릭터 휴대폰');
+        const head = `${r.checked}개 확인 · 남은 ${r.remaining}개`;
+        const tail = r.failed.length ? ` · 넣지 못한 일 ${r.failed.length}개` : '';
+        toastr[r.failed.length ? 'warning' : r.apps.length ? 'success' : 'info'](`${r.apps.length ? `${r.apps.join(' · ')}에 넣었어요` : '새로 넣은 건 없어요'}${tail}`, head);
     };
     // Investment calls are explicit; navigation and unresolved quote conflicts never trigger them.
     const investRun = async checkStory => {
@@ -572,7 +558,6 @@ export async function openPhone(who = null) {
     // 은행 · 지갑 · 쇼핑 / 음성 메모 채우기, and 음성 메모 떠올리기 (the red button)
     $root.on('click', '.na_ph_fill', async function (e) {
         e.stopPropagation();
-        if(making) return toastr.info('폰 반영 작업이 끝난 뒤 눌러 주세요');
         const p = phone(), k = this.dataset.k, id = `${nameKey(p.owner)}:${k}`;
         if (filling.has(id)) return;
         filling.add(id); drawPhone(true);
@@ -688,21 +673,36 @@ export async function openPhone(who = null) {
         $(this).find('.ax_presssheet').remove();
     });
     // 설정's rows: the busy text goes where the row's value is
-    const makeFrom = async ($at, update) => { if (making) return; if(investing || filling.size) return toastr.info('앱 생성 작업이 끝난 뒤 반영해 주세요'); making = true; try { await make($at, update); } finally { making = false; } };
-    $root.on('click','.na_read_open',async()=>{readRows=await sourceRows(recentForCheck((ctx().chat||[]).length,{excludeSystem:true}));readScope=phoneChatScope(ctx());view='setread';drawPhone();});
-    $root.on('change','.na_read_order,.na_read_limit',async()=>{const p=phone();p.readState||={version:1,scope:phoneChatScope(ctx()),groups:{},done:{}};p.readState.order=$root.find('.na_read_order').val();p.readState.limit=Math.max(1,Math.min(100,Math.floor(Number($root.find('.na_read_limit').val())||12)));await saveMeta();if(Object.keys(p.readState.groups).length)drawPhone(true);});
-    $root.on('change','.na_read_start,.na_read_override',function(){const v=$(this).val();$(this).siblings('.na_read_caption').text(v===''?'같은 위치':v==='-1'?'첫 대화부터':'#'+v+' 다음부터');});
-    $root.on('click','.na_read_save',async()=>{
-        const p=phone(),selected=$root.find('.na_read_start').val();if(selected===null||selected==='')return toastr.info('시작할 대화를 선택해 주세요');
-        const current=await sourceRows(recentForCheck((ctx().chat||[]).length,{excludeSystem:true}));if(JSON.stringify(current)!==JSON.stringify(readRows)||phoneChatScope(ctx())!==readScope)return toastr.info('대화가 바뀌었어요. 화면을 다시 열어 주세요');
-        const state=structuredClone(p.readState||{order:'oldest',limit:12});
-        const valid=verifyBoundary(p.readState,readScope,current);
-        const draft={...p,readHistory:structuredClone(p.readHistory||[]),readState:p.readState?state:undefined};
-        if(!valid)reconnectState(draft,readScope);
-        for(const g of activeGroups(p)){if(valid&&state.groups[g])continue;const choice=$root.find('.na_read_override[data-g="'+g+'"]').val(),index=Number(choice||selected),row=current.find(x=>x.index===index);if(index>=0&&!row)return;setBoundary(draft,{scope:readScope,index,hash:row?.hash||''},[g],'user');}
-        p.readState=draft.readState;p.readHistory=draft.readHistory;await saveMeta();drawPhone();toastr.success('시작 위치를 저장했어요');
-    });
+    const makeFrom = async ($at, update) => { if (making) return; making = true; try { await make($at, update); } finally { making = false; } };
     $root.on('click', '.na_ph_setupd', function (e) { e.stopPropagation(); makeFrom($(this).find('.ax_v'), true); });
+    // 설정 › 대화 반영
+    $root.on('click', '.na_sync_order', async function (e) { e.stopPropagation(); syncOf(phone(), phoneChatScope(ctx())).order = this.dataset.v; drawPhone(true); await saveMeta(); });
+    $root.on('click', '.na_sync_limit', async function (e) { e.stopPropagation(); const s = syncOf(phone(), phoneChatScope(ctx())); s.limit = Math.max(1, Math.min(100, (s.limit || 12) + Number(this.dataset.d))); drawPhone(true); await saveMeta(); });
+    $root.on('click', '.na_sync_more', e => { e.stopPropagation(); pickMore += 30; drawPhone(true); });
+    // a new start keeps what was read and the events already on the phone
+    $root.on('click', '.na_sync_pick', async function (e) {
+        e.stopPropagation();
+        const p = phone(), s = syncOf(p, phoneChatScope(ctx()));
+        const mark = markAfter(Number(this.dataset.i));
+        s.marks.base = mark; s.scope = phoneChatScope(ctx());
+        for (const g of ['money', 'invest']) if (!s.marks[g] && (g === 'money' ? p.money : p.investment)) s.marks[g] = { ...mark };
+        syncWhy = ''; view = 'setsync'; drawPhone(); await saveMeta();
+        toastr.success(mark.index < 0 ? '첫 대화부터 반영해요' : `#${mark.index} 다음부터 반영해요`, '캐릭터 휴대폰');
+    });
+    $root.on('click', '.na_sync_restore', async e => { e.stopPropagation(); const n = await restoreRounds(m, phoneChatScope(ctx())); syncPending = 0; drawPhone(); if (m.phones && Object.values(m.phones).some(p => p.inject)) applyInjection(); toastr.success(`반영 ${n}번을 복구했어요`, '캐릭터 휴대폰'); });
+    $root.on('click', '.na_sync_undo', async e => {
+        e.stopPropagation();
+        if (making) return;
+        const p = phone(), n = p.syncLast?.checked || 0;
+        if (!await confirm('이 반영 되돌리기', `방금 넣은 문자 · 일정 · 돈 움직임을 빼고, 대화 ${n}개는 다시 안 읽은 상태가 돼요.`)) return;
+        try { await undoRound(m, p); drawPhone(); toastr.success('반영을 되돌렸어요', '캐릭터 휴대폰'); }
+        catch (err) { toastr.error(String(err?.message || err), '되돌리기'); }
+    });
+    $root.on('click', '.na_sync_forget', async e => {
+        e.stopPropagation();
+        if (!await confirm('반영 기록 지우기', '저장되지 않은 반영 기록을 지울까요? 폰은 지금 그대로예요.')) return;
+        const { journalWrite } = await import('./phonesync.js'); journalWrite(phoneChatScope(ctx()), []); syncPending = 0; drawPhone();
+    });
     $root.on('click', '.na_ph_setinj', async e => { e.stopPropagation(); const p = phone(); p.inject = !p.inject; drawPhone(true); await saveMeta(); applyInjection(); });
     // what opens under the phone scrolls into sight, so the tap visibly does something
     $root.on('change', '.na_ph_country', async function () { phone().country = this.value; drawPhone(); await saveMeta(); });

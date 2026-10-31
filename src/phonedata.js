@@ -1,16 +1,12 @@
-import {archiveWindow,decisionEvidence,evidenceUnchanged,inputLimitError} from './phoneevidence.js';
-import {captureSource,validateCapture,sourceRows,setBoundary,selectWindow,markRead,BASE_GROUPS,activeGroups,coveredRows} from './phoneread.js';
 // 캐릭터 휴대폰 · 데이터: what the phone holds — the model's JSON cleaned and merged, the request (archive, lorebook, world),
 // 롤플에 넣기, dates and times as the owner's phone shows them, and the places they have been.
 
-import {updateWindow, updateLocks, bundle, prepareUpdate, financialContext, applyEvents, applyBatch, digest, UPDATE_EVENTS, recoverUpdate, commitUpdate} from './phoneupdate.js';
-import {phoneChatScope} from './phonestory.js';
 import { ensureWealth, wealthBlock, wealthDate, wealthCheck, addWealthFX } from './wealth.js';
 import { askDraft } from './ai.js';
 import { ownerProfileBlock } from './phoneprofile.js';
 import { migrateBank, finance, finite, cash, reviseBaseline } from './finance.js';
 import { calendars, headingDate } from './calendar.js';
-import { ctx, getMeta, globalSettings, saveMeta } from './core.js';
+import { ctx, globalSettings, saveMeta } from './core.js';
 import { recentForCheck } from './drift.js';
 import { applyInjection } from './inject.js';
 import { knowledgeRows } from './knowledge.js';
@@ -20,6 +16,9 @@ import { recentTrackers } from './scenes.js';
 import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js';
 import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
+import { phoneChatScope } from './phonestory.js';
+import { applyMoney, investNow, moneyNow, replayEffects, revertEffects } from './phonesyncmoney.js';
+import { newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
 export const WALLS = ['dusk', 'ocean', 'forest', 'rose', 'night', 'sand', 'mono', 'aurora'];
 export const ACCENTS = ['blue', 'green', 'orange', 'pink', 'purple', 'red'];
@@ -49,22 +48,22 @@ ANSWER — one JSON object, nothing else:
 
 // 폰 만들기 and 새로 일어난 일 반영 share the test, the language, the times and the app items; making a phone adds the
 // phone's own settings (country, wallpaper, device) and how much to fill
-const PHONE_TEST = `ONE TEST FOR EVERY ITEM
+const PHONE_FACT = `ONE TEST FOR EVERY ITEM
 Could this be on the owner's phone, given what the archive, lorebook and chat show? If not, leave it out.
 - The lorebook counts as fact like the archive; where the two disagree, the archive wins.
 - Events (a meeting, a fight, a confession, a trip, a loss) only if the archive or lorebook has them.
 - Small everyday things around those events are fine: how a text was worded, a photo of a place they were, a search they would make.
 - People: only people the story has. A relationship word (girlfriend, ex, husband, boss) only if the archive uses it for them.
 - Nothing later than the newest moment of the story.
-- The diary holds only what the archive shows happened and what the owner felt about it; no new secrets, no new feelings.
-
-LANGUAGE
+- The diary holds only what the archive shows happened and what the owner felt about it; no new secrets, no new feelings.`;
+const PHONE_STYLE = `LANGUAGE
 - Each text is in the language its writer would really use on a phone: from their nationality and where they live; between two people, the language they share.
 - A text that is not in Korean gets "ko": a natural Korean translation. A Korean text gets no "ko".
 - People write the way they talk in the archive and chat. Texts are short, like real texts.
 
 TIMES
 "MM-DD HH:MM" (24-hour), in story time, from the archive's dates. "now" is the newest moment of the story.`;
+const PHONE_TEST = `${PHONE_FACT}\n\n${PHONE_STYLE}`;
 const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how the owner saved them (a nickname, an emoji, or just the name) }],
   "threads": [{ "with": name, "messages": [{ "from": "me" or the sender's name, "text", "ko", "time" }],
                "draft": { "text", "ko", "time" } only when the archive or chat shows the owner wrote a text to them and didn't send it }],
@@ -114,18 +113,60 @@ At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches 
 Oldest first in every list.
 ${PHONE_LAST}`;
 
-// Incremental events have their own envelope; only the app item schema is shared with creation.
-export const AI_SYS_PHONE_UPDATE = `${UPDATE_EVENTS}
+// 새로 일어난 일 반영: one round of unread messages at a time; each story event says where it comes from
+export const AI_SYS_PHONE_UPDATE = `GOAL
+Add to one character's phone what a few new chat messages put on it, in a long role-play. The user opens the phone to peek at the story from the phone's side.
+An app adds your JSON to the phone; you only write what is new.
 
-PHONE CONTENT
-Within each event, "phone" holds only new or changed app items:
+YOU GET
+- NEW MESSAGES: the messages to read now, each with its number (#123).
+- ARCHIVE FOR THESE MESSAGES (sometimes): summary sections covering them. They count as evidence, like the messages.
+- ARCHIVE BEFORE (sometimes): what happened earlier. Background; nothing in it is new.
+- STORY NOW (sometimes): where the story stands after these messages. Background.
+- EVENTS ON THE PHONE: story events the phone already holds, with their ids.
+- MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.
+- PHONE NOW: the newest of what the phone holds.
+- OWNER, and sometimes WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
+
+WHAT IS NEW
+- Only what happens in NEW MESSAGES or ARCHIVE FOR THESE MESSAGES. Plans, guesses and memories of earlier days add nothing.
+- An event in EVENTS ON THE PHONE keeps its id; add only what the phone doesn't hold yet.
+- Small everyday things around an event are fine: how a text was worded, a photo of the place, a search they would make.
+- People: only people the story has.
+
+WHERE IT COMES FROM
+- "at": the number of the message the event happens in. For an archive section, the message in its range it belongs to.
+- "quote": a few exact words from that message or section.
+- "date": the story's day it happens, "MM-DD"; "time" if known.
+
+MONEY (only with MONEY NOW or INVESTMENTS NOW)
+- A payment, transfer, refund, order, ticket or trade that happens in these messages goes in the event's "money".
+- An amount the story gives stays as it is. A real one with no amount gets a plausible amount for the owner, the place and MONEY NOW: "amountFrom": "guess". Never invent the payment itself.
+- Already in MONEY NOW or INVESTMENTS NOW (the same payment, order or trade): its id as "already"; it is not paid again.
+- A payment to the same place on the same day as a record there is that record, unless the story clearly shows a second one: then "separate": true.
+- A card purchase goes on the card account; a refund is plus; paying the card off is a transfer from the bank.
+- No money is made up to cover a payment; a balance may go below zero.
+- An order or ticket only moves forward; a cancellation is not a refund until the money comes back.
+
+${PHONE_STYLE}
+
+ANSWER — one JSON object, nothing else:
+{ "now": "MM-DD HH:MM",
+  "events": [{ "id": an id from EVENTS ON THE PHONE, or a short new tag like "berlin-flight", "at": 123, "quote": "exact words",
+               "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line",
+               "phone": { only the app items this event puts on the phone },
+               "money": { "amountFrom": "story" | "guess",
+                          "moves": [{ "account": a bank account's last 4 digits or "broker:EUR", "amount": minus for money out, "currency", "who", "ko", "memo", "kind": "card" | "transfer" | "deposit", "already": "", "separate": false }],
+                          "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko", "currency", "quantity", "price", "fee", "amount": dividend only, "already": "" }],
+                          "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returned" | "refunded", "eta": "MM-DD", "gift", "already": "" }],
+                          "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }] } }] }
+"money" only when money moves or an order or ticket changes. Numbers are plain JSON numbers.
+Items in "phone":
 {
 ${PHONE_ITEMS}
 }
-- A new message goes under its thread. Contacts and profile only if changed.
-- Write in the language the writer would use, in their own voice. Non-Korean text gets a natural Korean "ko" translation.
-- App times use "MM-DD HH:MM", calendar dates "MM-DD". Use story time, never the phone clock as a cutoff.
-- Keep existing event tags. Empty fields and lists are fine; do not fill apps for their own sake.`;
+Fewer is fine. No new events: "events": [].
+A value the story does not give (a booking number, a seat, a price, an exact time) stays empty; never make one up.`;
 
 // ---- what the model sends back, cleaned: known keys only, text cut short, times in one shape
 export const str = (v, n) => String(v ?? '').replace(/[ \t]+/g, ' ').trim().slice(0, n);
@@ -208,9 +249,9 @@ function carryOver(k, was, now) {
 // 재구성 (src "guess") records are the model's imagining, not the story: they never go back to the model or into the role-play
 export const isGuess = x => x?.src === 'guess';
 
-export function mergePhone(p, add, {preserveHistory=false} = {}) {
+function mergePhone(p, add) {
     if (!p.device && add.device) p.device = add.device;
-    const keep = (list, n) => preserveHistory ? list : list.slice(-n);
+    const keep = (list, n) => list.slice(-n);
     for (const t of add.threads) {
         const old = p.threads.find(x => nameKey(x.with) === nameKey(t.with));
         if (old) { old.messages = keep([...old.messages, ...fresh('msg', old.messages, t.messages)], CAP.messages); if (t.draft) old.draft = t.draft; }
@@ -288,15 +329,15 @@ const blindBlock = (m, owner) => {
     const rows = knowledgeRows(m).flatMap(r => (r.unaware.some(me) ? [`- ${r.fact}`] : r.suspects.some(me) ? [`- ${r.fact} (only suspects)`] : []));
     return rows.length ? `[OWNER DOESN'T KNOW]\n${rows.join('\n')}` : '';
 };
-function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', rawWindow = null) {
+function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '') {
     const world = worldText(m);
-    const recent = rawWindow ?? recentForCheck(12,{excludeSystem:true}).join('\n\n');
+    const recent = recentForCheck(6).join('\n\n').slice(-6000);
     const ar = archiveFor(m, p ? p.upto ?? -1 : -1);
     const now = p ? JSON.stringify(phoneForModel(p)) : '';
     return [
         p ? `[PHONE NOW]\n${now}` : '',
         !p && m.phones?.[nameKey(owner)]?.device ? `[DEVICE — locked]\n${JSON.stringify(m.phones[nameKey(owner)].device)}` : '',
-        `[ARCHIVE${p ? ' — background' : ''}]\n${ar.text || '(nothing new)'}`,
+        `[ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}]\n${ar.text || '(nothing new)'}`,
         world ? `[WORLD]\n${world}` : '',
         lore ? `[LOREBOOK]\n${lore}` : '',
         recent ? `[RECENT CHAT]\n${recent}` : '',
@@ -328,27 +369,24 @@ const phoneForModel = p => ({
 // apps: some of REMAKE's names, made again from the whole story while the rest of the phone stays as it is
 export async function makePhone(m, owner, { update = false, apps = null } = {}) {
     const key = nameKey(owner);
-    if(update && m.phones?.[key]) return updatePhone(m,owner);
-    const requestRows=recentForCheck((ctx().chat||[]).length,{excludeSystem:true}),requestMeta=structuredClone(m);
-    const captured=await captureSource(phoneChatScope(ctx()),requestRows);
-    if(m.phones?.[key]?.readState?.scope && m.phones[key].readState.scope!==captured.scope)throw Error('반영 시작 위치를 먼저 연결해 주세요');
+    if (update && m.phones?.[key]) return updatePhone(m, owner);
+    // reading starts after the last message there was when this was asked; what comes in while it writes stays unread
+    const mark = markNow();
     const old = update ? m.phones?.[key] : null;
     const part = apps && m.phones?.[key] ? apps.flatMap(a => REMAKE[a] || []) : null;
     const binding=structuredClone(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key]);
-    const out = await askDraft(phoneRequest(requestMeta, owner, old, await loreFor(requestMeta, owner), part, await ownerProfileBlock(ctx(),binding,owner),requestRows.slice(-12).join('\n\n')), { system: AI_SYS_PHONE, maxTokens: 16000 });
+    const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner), part, await ownerProfileBlock(ctx(),binding,owner)), { system: old ? AI_SYS_PHONE_UPDATE : AI_SYS_PHONE, maxTokens: 16000 });
     if(JSON.stringify(binding)!==JSON.stringify(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key])) throw new Error('생성 중 연결한 인물 정보가 변경됐어요. 다시 시도해 주세요');
-    await validateCapture(captured,phoneChatScope(ctx()),recentForCheck((ctx().chat||[]).length,{excludeSystem:true}));
     const got = parsePhone(out);
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
     if (part) {
         const p = m.phones[key];
         const was = Object.fromEntries(part.map(k => [k, p[k]]));
         for (const k of part) p[k] = k === 'profile' ? (got.profile || p.profile) : [];
-        mergePhone(p, { ...got, ...Object.fromEntries([...LISTS, 'threads', 'contacts'].filter(k => !part.includes(k)).map(k => [k, []])), profile: null, now: '' },{preserveHistory:true});
+        mergePhone(p, { ...got, ...Object.fromEntries([...LISTS, 'threads', 'contacts'].filter(k => !part.includes(k)).map(k => [k, []])), profile: null, now: '' });
         for (const k of part) if (k !== 'profile') carryOver(k, was[k], p[k]);
         ensureIds(p);
         p.at = Date.now();
-        setBoundary(p,captured,apps);
         await saveMeta();
         if (p.inject) applyInjection();
         return p;
@@ -360,64 +398,194 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         if (was?.device) base.device = structuredClone(was.device);
         if (was?.theme) base.theme = was.theme;
         if (was?.wealthPlan) base.wealthPlan = structuredClone(was.wealthPlan);
-        if(was?.readState)base.readState=structuredClone(was.readState);
-        if(was?.readHistory)base.readHistory=structuredClone(was.readHistory);
         if (was?.money) base.money = was.money;
         if (was?.investment) base.investment = was.investment;
         if (binding) base.financeProfile = structuredClone(binding);
+        // the phone's own apps start reading again from here; the bank and investment keep their marks
+        base.sync = newSync(phoneChatScope(ctx()));
+        base.sync.marks.base = mark;
+        for (const g of ['money', 'invest']) if (was?.sync?.marks?.[g]) base.sync.marks[g] = was.sync.marks[g];
         m.phones[key] = mergePhone(base, got);
     }
     const p = m.phones[key];
     if(m.phoneProfiles) delete m.phoneProfiles[key];
     ensureIds(p);
-    setBoundary(p,captured,BASE_GROUPS);
-    if(p.voice?.length)setBoundary(p,captured,['voice']);
-    p.upto = lastEnd(requestMeta);
+    p.upto = lastEnd(m);
     p.at = Date.now();
     await saveMeta();
     if (p.inject) applyInjection();
     return p;
 }
 
-// All app updates share a single request, staged transaction, and recovery journal.
-async function updatePhone(m,owner) {
-    if(updateLocks.has(m)) throw new Error('새 사건을 반영하는 중이에요');
-    updateLocks.add(m);
+// ---- 새로 일어난 일 반영
+// every message the phone may read, numbered (system messages and offstage ones left out)
+export const syncRows = () => recentForCheck((ctx().chat || []).length, { excludeSystem: true }).map(text => ({ index: Number(/^\[#(\d+)/.exec(text)?.[1]), text })).filter(r => Number.isInteger(r.index));
+export const markNow = () => { const rows = syncRows(); return makeMark(ctx().chat || [], rows.length ? rows[rows.length - 1].index : -1); };
+export const markAfter = index => makeMark(ctx().chat || [], index);
+// 'ok', 'none' (no start yet: an older phone) or 'lost' (its message is gone or now matches twice)
+export function syncState(p) {
+    if (!p?.sync?.marks?.base) return 'none';
+    if (settleMarks(p.sync, ctx().chat || [], ['base']).length) return 'lost';
+    p.sync.scope = phoneChatScope(ctx());
+    return 'ok';
+}
+export const syncLeft = p => (p?.sync?.marks?.base ? unreadCount(p.sync, syncRows()) : null);
+const ITEM_KEYS = [...LISTS, 'threads', 'contacts'];
+const sizes = p => Object.fromEntries(ITEM_KEYS.map(k => [k, k === 'threads' ? p.threads.reduce((n, t) => n + t.messages.length, 0) : (p[k] || []).length]));
+const APP_NAME = { threads: '문자', contacts: '연락처', calls: '통화', photos: '사진', notes: '메모', searches: '검색', events: '캘린더', posts: 'SNS', mails: '메일', diary: '일기', voice: '음성 메모' };
+let syncing = false;
+async function updatePhone(m, owner) {
+    if (syncing) throw new Error('새로 일어난 일을 반영하는 중이에요');
+    syncing = true;
     try {
-        const scope=phoneChatScope(ctx());
-        const recoverySource={rows:(await sourceRows(recentForCheck((ctx().chat||[]).length,{excludeSystem:true}))).map(x=>[x.index,x.hash]),archive:await digest(String(m.text||''))};
-        await recoverUpdate(m,scope,localStorage,recoverySource);
-        const rows=recentForCheck((ctx().chat||[]).length,{excludeSystem:true}), key=nameKey(owner);
-        const before=JSON.stringify([bundle(m),m.text,rows,m.phoneLore,m.phoneLoreOff]);
-        const next=prepareUpdate(m),p=next.phones[key];
-        const rowsWithIds=await sourceRows(rows);
-        const window=selectWindow(p,scope,rowsWithIds);
-        const [archiveBody]=splitTail(String(m.text||''));
-        const sectionCounts=new Map();
-        const archive=await Promise.all(parseSections(archiveBody).filter(s=>!s.group&&s.title.match(RANGE_HEAD)).map(async s=>{
-            const occurrence=sectionCounts.get(s.title)||0;sectionCounts.set(s.title,occurrence+1);
-            const range=s.title.match(RANGE_HEAD),first=Number(range[2]),last=Number(range[4]),text=archiveBody.slice(s.start,s.end);
-            return {id:'archive:'+first+'-'+last+':'+(await digest(s.title)).slice(0,16)+':'+occurrence,first,last,text,hash:await digest(text)};
-        }));
-        const selectedArchive=archiveWindow(archive,window.rows,rowsWithIds,{covered:coveredRows(p,rowsWithIds),done:p.readState.archiveDone||{},lastChatIndex:(ctx().chat||[]).length-1,after:Math.min(...activeGroups(p).map(g=>p.readState.groups[g].index))});
-        const boundedMeta={...m,text:selectedArchive.background.map(s=>s.text).join('\n\n')};
-        const indices=[...new Set([...window.rows.map(x=>x.index),...rowsWithIds.filter(x=>selectedArchive.evidence.some(s=>s.eligibleIndices.includes(x.index))).map(x=>x.index)])];
-        const context={scope,rows:rowsWithIds,archive,selectedArchive:selectedArchive.evidence,selectedChatIndices:window.rows.map(x=>x.index)};
-        const pending=Object.entries(finance(next).updatePending||{}).filter(([,j])=>j.owner===owner&&evidenceUnchanged(j,context)).map(([key,j])=>({key,...j}));
-        const lore=await loreFor(m,owner),profile=await ownerProfileBlock(ctx(),p.financeProfile,owner);
-        const source=[window.text,...selectedArchive.evidence.map(s=>s.text)].join('\n\n');
-        const input=phoneRequest(boundedMeta,owner,{...p,upto:-1},lore,null,profile,window.text)+'\n[SELECTED SOURCE INDICES]\n'+JSON.stringify(indices)+'\n[ARCHIVE EVIDENCE IN SELECTED RANGE]\n'+JSON.stringify(selectedArchive.evidence)+'\n[REVIEW STORED DECISIONS]\n'+JSON.stringify(pending)+'\n[FINANCIAL APPS AND ALREADY APPLIED]\n'+JSON.stringify(financialContext(next,owner));
-        const out=(window.rows.length||selectedArchive.evidence.length||pending.length) ? await askDraft(input,{system:AI_SYS_PHONE_UPDATE,maxTokens:16000}).catch(error=>{throw inputLimitError(error)}) : '{"events":[]}';
-        if(getMeta()!==m || phoneChatScope(ctx())!==scope || JSON.stringify([bundle(m),m.text,recentForCheck((ctx().chat||[]).length,{excludeSystem:true}).slice(0,rows.length),m.phoneLore,m.phoneLoreOff])!==before) throw new Error('반영 중 채팅이나 폰 데이터가 바뀌었어요. 다시 시도해 주세요');
-        const raw=jsonOf(out);
-        const result=await applyBatch(next,owner,raw,source,parsePhone,mergePhone,indices,context);
-        const updated=next.phones[key];markRead(updated,window.rows);updated.readState.archiveDone||={};for(const s of selectedArchive.evidence)updated.readState.archiveDone[s.id]=s.hash;updated.at=Date.now();updated.lastUpdate={...result,checked:window.rows.length,archiveChecked:selectedArchive.evidence.length,remaining:window.remaining};
-        for(const phone of Object.values(next.phones))ensureIds(phone);
-        if(getMeta()!==m || phoneChatScope(ctx())!==scope || JSON.stringify([bundle(m),m.text,recentForCheck((ctx().chat||[]).length,{excludeSystem:true}).slice(0,rows.length),m.phoneLore,m.phoneLoreOff])!==before) throw new Error('반영 중 데이터가 바뀌었어요. 다시 시도해 주세요');
-        await commitUpdate(m,next,scope,saveMeta,localStorage,()=>getMeta()===m && phoneChatScope(ctx())===scope && JSON.stringify([bundle(m),m.text,recentForCheck((ctx().chat||[]).length,{excludeSystem:true}).slice(0,rows.length),m.phoneLore,m.phoneLoreOff])===before,{rows:rowsWithIds.map(x=>[x.index,x.hash]),archive:await digest(String(m.text||''))});
-        if(m.phones[key].inject)applyInjection();
-        return m.phones[key];
-    } finally {updateLocks.delete(m);}
+        const key = nameKey(owner), p = m.phones[key], scope = phoneChatScope(ctx());
+        if (syncState(p) !== 'ok') { const e = new Error('먼저 반영 시작 위치를 골라 주세요'); e.code = 'SYNC_PICK'; throw e; }
+        const s = p.sync, rows = syncRows(), round = pickRound(s, rows);
+        if (!round.rows.length) { p.syncLast = { checked: 0, remaining: 0, apps: [], failed: [], at: Date.now() }; await saveMeta(); return p; }
+        // the archive: sections covering this round are evidence; earlier ones are background; ones reaching unread messages stay out
+        const [body, tail] = splitTail(String(m.text || ''));
+        const sections = parseSections(body).filter(x => !x.group && RANGE_HEAD.test(x.title)).map(x => { const mt = x.title.match(RANGE_HEAD); return { key: `${mt[2]}-${mt[4]}:${x.title.length}`, first: Number(mt[2]), last: Number(mt[4]), text: body.slice(x.start, x.end).trim() }; });
+        const { evidence, background } = archiveRound(s, sections, rows, round.rows);
+        const before = [];
+        for (let i = background.length - 1, size = 0; i >= 0 && size + background[i].text.length <= ARCHIVE_MAX; i--) { before.unshift(background[i].text); size += background[i].text.length; }
+        const known = Object.entries(s.events).slice(-40).map(([id, e]) => `- ${id}: ${e.summary} (#${e.at})`).join('\n');
+        const world = worldText(m), lore = await loreFor(m, owner), profile = await ownerProfileBlock(ctx(), p.financeProfile, owner, { money: !!(p.money || p.investment) });
+        if (p.money) migrateBank(m, p);
+        const money = moneyNow(p), invest = investNow(m, p);
+        const year = (wealthDate(m, p) || String(p.money?.asOf || p.investment?.date || '')).slice(0, 4) || String(new Date().getFullYear());
+        const input = [
+            `[NEW MESSAGES]\n${round.rows.map(r => r.text).join('\n\n')}`,
+            evidence.length ? `[ARCHIVE FOR THESE MESSAGES]\n${evidence.map(x => x.text).join('\n\n')}` : '',
+            before.length ? `[ARCHIVE BEFORE]\n${before.join('\n\n')}` : '',
+            reachesEnd(s, rows, round.rows) && tail.trim() ? `[STORY NOW]\n${tail.trim()}` : '',
+            `[EVENTS ON THE PHONE]\n${known || '(none yet)'}`,
+            `[PHONE NOW]\n${JSON.stringify(phoneForModel(p))}`,
+            money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
+            (money || invest) && p.wealthPlan ? `[WEALTH]\n${JSON.stringify({ currency: p.wealthPlan.currency, deposits: p.wealthPlan.deposits, investments: p.wealthPlan.investments, basis: p.wealthPlan.basis })}` : '',
+            world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
+            `[OWNER]\n${owner}`, profile, blindBlock(m, owner), namesBlock(m),
+        ].filter(Boolean).join('\n\n');
+        const out = await askDraft(input, { system: AI_SYS_PHONE_UPDATE, maxTokens: 16000 });
+        // the answer is for the chat and messages it was asked about
+        if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p) throw new Error('반영하는 사이 채팅이나 폰이 바뀌었어요. 다시 해 주세요');
+        const nowText = new Map(syncRows().map(r => [r.index, r.text]));
+        if (round.rows.some(r => nowText.get(r.index) !== r.text)) throw new Error('반영하는 사이 대화가 바뀌었어요. 다시 해 주세요');
+        const raw = jsonOf(out);
+        if (!raw || !Array.isArray(raw.events)) throw new Error('모델 답에서 반영할 내용을 찾지 못했어요. 다시 해 주세요');
+        const inRound = new Set(round.rows.map(r => r.index)), textAt = new Map(round.rows.map(r => [r.index, r.text])), start = s.marks.base.index;
+        const failed = {}, loose = [], added = [], apps = new Set(), changes = [], notes = [];
+        // for 되돌리기: what was there before this round (ids and message counts), and the reading state
+        const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map(p.threads.map(t => [t.id, t.messages.length]));
+        const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events }), now: p.now, moneyAt: p.money?.at, investAt: p.investment?.at };
+        for (const e of raw.events.slice(0, 40)) {
+            const at = Number(e?.at), sec = evidence.find(x => at >= x.first && at <= x.last);
+            const fail = why => (inRound.has(at) ? (failed[at] ||= why) : loose.push(why));
+            if (!Number.isInteger(at) || at <= start || (!inRound.has(at) && !sec)) { fail('읽는 범위 밖의 일이에요'); continue; }
+            if (!quoted(e.quote, textAt.get(at) || '') && !(sec && quoted(e.quote, sec.text))) { fail('원문에서 근거를 찾지 못했어요'); continue; }
+            let add;
+            try { add = parsePhone(JSON.stringify(e.phone && typeof e.phone === 'object' ? e.phone : {})); } catch { fail('앱 내용 형식이 잘못됐어요'); continue; }
+            const id = evOf(e.id) || evOf(e.summary) || `ev-${at}`;
+            // the money first, on its own: a payment that can't be placed leaves the whole event out
+            const stage = structuredClone({ money: p.money, investment: p.investment, finance: m.finance });
+            let paid;
+            try { paid = applyMoney(m, p, { id, at, date: when(e.date).slice(0, 5), time: hhmm(e.time), summary: line(e.summary, 160), money: e.money }, { year, marks: s.marks, legs: s.events[id]?.legs || [] }); }
+            catch (err) { p.money = stage.money; p.investment = stage.investment; m.finance = stage.finance; fail(String(err?.message || err)); continue; }
+            for (const c of paid.changes) { apps.add(c.app); if (c.amount !== null) changes.push({ ...c, what: line(e.summary, 60) }); }
+            notes.push(...paid.notes);
+            for (const k of LISTS) for (const x of add[k]) x.ev ||= id;
+            const was = sizes(p);
+            mergePhone(p, { ...add, device: null, now: '' });
+            const got = sizes(p);
+            for (const k of ITEM_KEYS) if (got[k] !== was[k]) apps.add(APP_NAME[k]);
+            if (add.profile?.handle || add.profile?.bio) apps.add('SNS');
+            s.events[id] = { at, quote: line(e.quote, 200), summary: line(e.summary, 160), ...(paid.legs.length || s.events[id]?.legs ? { legs: [...(s.events[id]?.legs || []), ...paid.legs.filter(l => !(s.events[id]?.legs || []).some(o => o.key === l.key))] } : {}) };
+            added.push({ id, at, add, effects: paid.effects });
+        }
+        // read: this round's messages; a failed one gets one more try next round, then it is skipped
+        for (const i of inRound) {
+            if (failed[i]) s.failed[i] = { tries: (s.failed[i]?.tries || 0) + 1, why: failed[i] };
+            else if (round.retry.includes(i)) delete s.failed[i];
+        }
+        addDone(s, [...inRound]);
+        for (const x of evidence) s.arch[x.key] = 1;
+        const nowAt = when(raw.now);
+        if (nowAt && nowAt > (p.now || '')) p.now = nowAt;
+        // after the clock moves: the card's month is counted up to the story's now
+        if (p.money) migrateBank(m, p);
+        const id = Math.random().toString(36).slice(2, 10);
+        s.rounds = [...(s.rounds || []).slice(-19), id];
+        p.syncLast = { checked: inRound.size, remaining: unreadCount(s, rows), apps: [...apps], failed: [...Object.entries(failed).map(([at, why]) => ({ at: Number(at), why, skipped: s.failed[at]?.tries >= 2 })), ...loose.map(why => ({ at: null, why }))], changes, notes, at: Date.now() };
+        ensureIds(p);
+        p.at = Date.now();
+        p.syncUndo = { ...undo, round: id,
+            items: ITEM_KEYS.flatMap(k => (p[k] || []).filter(x => x.id && !had.has(x.id)).map(x => [k, x.id])),
+            msgs: p.threads.filter(t => msgs.has(t.id) && t.messages.length > msgs.get(t.id)).map(t => [t.id, t.messages.slice(msgs.get(t.id)).map(x => JSON.stringify([x.from, x.text, x.time]))]),
+            effects: added.flatMap(x => x.effects || []) };
+        // kept in this browser until the saved chat shows it: 복구 can add it back if the save didn't land
+        journalAdd(scope, { round: id, owner, at: Date.now(), events: added, done: [...inRound], failed: Object.fromEntries([...inRound].filter(i => s.failed[i]).map(i => [i, s.failed[i]])), arch: evidence.map(x => x.key) });
+        await saveMeta();
+        if (p.inject) applyInjection();
+        return p;
+    } finally { syncing = false; }
+}
+// 복구: rounds this browser made that the saved chat doesn't have; only what is missing is added, nothing is overwritten
+export const pendingRounds = (m, scope) => {
+    const j = journalRead(scope);
+    return j.filter(r => r.at < performance.timeOrigin && !m.phones?.[nameKey(r.owner)]?.sync?.rounds?.includes(r.round));
+};
+// rounds the saved chat already has are dropped once the page has been loaded again since they were made
+export function tidyJournal(m, scope) {
+    const j = journalRead(scope), keep = j.filter(r => !(r.at < performance.timeOrigin && m.phones?.[nameKey(r.owner)]?.sync?.rounds?.includes(r.round)));
+    if (keep.length !== j.length) journalWrite(scope, keep);
+    return pendingRounds(m, scope).length;
+}
+export async function restoreRounds(m, scope) {
+    const rounds = pendingRounds(m, scope);
+    for (const r of rounds) {
+        const p = m.phones?.[nameKey(r.owner)];
+        if (!p) continue;
+        const s = syncOf(p, scope);
+        for (const e of r.events) {
+            for (const k of LISTS) e.add[k] = arr(e.add[k]);
+            e.add.threads = arr(e.add.threads); e.add.contacts = arr(e.add.contacts);
+            mergePhone(p, { ...e.add, device: null, now: '' });
+            replayEffects(m, p, e.effects || []);
+            s.events[e.id] ||= { at: e.at, quote: '', summary: e.id };
+        }
+        addDone(s, r.done);
+        for (const [i, f] of Object.entries(r.failed || {})) s.failed[i] = f;
+        for (const k of r.arch || []) s.arch[k] = 1;
+        s.rounds = [...(s.rounds || []).slice(-19), r.round];
+        if (p.money) migrateBank(m, p);
+        ensureIds(p);
+    }
+    journalWrite(scope, journalRead(scope).filter(r => !rounds.includes(r)));
+    await saveMeta();
+    return rounds.length;
+}
+
+// 되돌리기: the last round only. What it added goes by its ids, its money comes back out, and those messages are unread again.
+// Something the user changed since stays as it is; a bank or investment made again since can't be undone this way.
+export async function undoRound(m, p) {
+    const u = p.syncUndo, s = p.sync;
+    if (!u || s?.rounds?.[s.rounds.length - 1] !== u.round) throw new Error('되돌릴 반영이 없어요');
+    if (p.money?.at !== u.moneyAt || p.investment?.at !== u.investAt) throw new Error('그 뒤에 은행이나 투자를 다시 만들어서 되돌릴 수 없어요');
+    const gone = new Set(u.items.map(([, id]) => id));
+    for (const k of ITEM_KEYS) if (Array.isArray(p[k])) p[k] = p[k].filter(x => !gone.has(x.id));
+    for (const [tid, sigs] of u.msgs) {
+        const t = p.threads.find(x => x.id === tid);
+        if (t) { const drop = new Set(sigs); t.messages = t.messages.filter(x => !drop.delete(JSON.stringify([x.from, x.text, x.time]))); }
+    }
+    revertEffects(m, p, u.effects);
+    Object.assign(s, structuredClone(u.sync));
+    s.rounds.pop();
+    p.now = u.now;
+    delete p.syncLast; delete p.syncUndo;
+    if (p.money) migrateBank(m, p);
+    const scope = phoneChatScope(ctx());
+    journalWrite(scope, journalRead(scope).filter(r => r.round !== u.round));
+    await saveMeta();
+    if (p.inject) applyInjection();
 }
 
 // ---- 롤플에 넣기: a short note of what the phones hold, after the archive
@@ -602,10 +770,10 @@ Oldest first.`;
 const jsonOf = out => { const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}'); try { return a >= 0 && b > a ? JSON.parse(t.slice(a, b + 1)) : null; } catch { return null; } };
 const num = v => { if (v === null || v === undefined || String(v).trim() === '') return null; const n = Number(String(v ?? '').replace(/[^\d.,-]/g, '').replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '')); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
 const last4 = v => String(v ?? '').replace(/\D/g, '').slice(-4);
-export async function sideRequest(m, owner, blocks, { profile, money = false, capturedRows } = {}) {
+export async function sideRequest(m, owner, blocks, { profile, money = false } = {}) {
     const world = worldText(m), lore = await loreFor(m, owner);
     const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});
-    const recent = (capturedRows||recentForCheck(12,{excludeSystem:true})).slice(-12).join('\n\n');
+    const recent = recentForCheck(6).join('\n\n').slice(-6000);
     return [
         `[ARCHIVE]\n${archiveFor(m, -1).text || '(empty)'}`,
         world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
@@ -630,19 +798,16 @@ export function parseMoney(raw) {
 const moneyContext = p => JSON.stringify({ now: p.now, mails: (p.mails || []).slice(-8).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })), events: real(p.events).slice(-8).map(x => ev(x, { title: x.title, date: x.date, time: x.time })), searches: real(p.searches).slice(-6).map(x => ev(x, { q: x.q, time: x.time })) });
 export const prepareWealth = (m,p,refresh=false) => ensureWealth(m,p,()=>sideRequest(m,p.owner,[`[OWNER COUNTRY]\n${p.country || ''}`,`[ACCOUNT CURRENCIES]\n${JSON.stringify((p.money?.bank?.accounts || []).map(a=>a.currency))}`],{profile:p.financeProfile,money:true}),{refresh});
 export async function fillMoney(m, p, { regenerateBalances = false, wealthPlan = null } = {}) {
-    const capturedRows=recentForCheck((ctx().chat||[]).length,{excludeSystem:true}),requestMeta=structuredClone(m);
-    const captured=await captureSource(phoneChatScope(ctx()),capturedRows);
-    if(p.readState?.scope && p.readState.scope!==captured.scope)throw Error('반영 시작 위치를 먼저 연결해 주세요');
+    const mark = markNow();
     migrateBank(m, p);
     const old = p.money, rebuild = !!old && regenerateBalances;
     const plan = wealthPlan || await prepareWealth(m,p,regenerateBalances);
-    if(m.phones?.[nameKey(p.owner)] && m.phones[nameKey(p.owner)]!==p) throw new Error('생성 중 폰이 변경됐어요. 다시 시도해 주세요');
     const date = wealthDate(m,p);
     const accountState = () => JSON.stringify([p.money,p.financeProfile,finance(m)]);
     const before = accountState();
     const preserved = rebuild ? `[REBUILD ACCOUNTS]\n${JSON.stringify(old.bank.accounts.map(({id,kind,name,last4,currency})=>({id,kind,name,last4,currency})))}\n[MONEY ALREADY MOVED]\n${JSON.stringify(old.bank.accounts.map(a=>({id:a.id,currency:a.currency,entries:finance(m).accounts[`${a.id}:${a.currency}`]?.entries || {}})))}` : old ? `[EXISTING ACCOUNTS]\n${JSON.stringify(old.bank.accounts)}` : '';
     const system = AI_SYS_MONEY + (rebuild ? MONEY_REBUILD : '');
-    const input = await sideRequest(requestMeta,p.owner,[`[PHONE NOW]\n${moneyContext(p)}`,preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,`[SAVED RATES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`],{profile:p.financeProfile,money:true,capturedRows});
+    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p)}`,preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,`[SAVED RATES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`],{profile:p.financeProfile,money:true});
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {
         const out = await askDraft(input+'\n'+correction,{system,maxTokens:12000});
@@ -696,24 +861,19 @@ export async function fillMoney(m, p, { regenerateBalances = false, wealthPlan =
             correction=wealthCheck(staged,plan,'deposits',updated.money.bank.accounts.filter(a=>a.kind!=='credit').map(a=>({currency:a.currency,amount:a.balance})),date);
             if(correction) {if(attempt===0) {correction += '\n[PREVIOUS CANDIDATE]\n'+JSON.stringify(raw);continue;}throw new Error('예금 규모를 재력 기준에 맞추지 못했어요. 기존 금융 데이터는 유지돼요');}
         }
-        await validateCapture(captured,phoneChatScope(ctx()),recentForCheck((ctx().chat||[]).length,{excludeSystem:true}));
         p.money = updated.money; m.finance = staged.finance;
-        setBoundary(p,captured,['money']);
+        syncOf(p, phoneChatScope(ctx())).marks.money = mark;
         await saveMeta();
         return p.money;
     }
 }
 export async function fillVoice(m, p) {
-    const capturedRows=recentForCheck((ctx().chat||[]).length,{excludeSystem:true}), captured=await captureSource(phoneChatScope(ctx()),capturedRows);
-    if(p.readState&&p.readState.scope!==captured.scope)throw Error('먼저 이 채팅의 반영 시작 위치를 연결해 주세요');
     const diary = (p.diary || []).slice(-6).map(d => `- ${d.date} ${d.title}`).join('\n');
-    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`], {profile:p.financeProfile,capturedRows}), { system: AI_SYS_VOICES, maxTokens: 6000 });
+    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`], {profile:p.financeProfile}), { system: AI_SYS_VOICES, maxTokens: 6000 });
     const memos = arr(jsonOf(out)?.memos).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: Math.max(3, Math.min(900, Math.round(Number(x?.sec) || 30))), place: line(x?.place, 60), src: 'guess' })).filter(x => x.text);
     if (!memos.length) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
-    await validateCapture(captured,phoneChatScope(ctx()),recentForCheck((ctx().chat||[]).length,{excludeSystem:true}));
     p.voice = [...(p.voice || []).filter(x => x.src === 'story' || x.now), ...memos].sort((a, b) => String(a.time).localeCompare(String(b.time))).slice(-CAP.voice);
     p.voiceAt = Date.now();
-    setBoundary(p,captured,['voice']);
     ensureIds(p);
     await saveMeta();
     return p.voice;
