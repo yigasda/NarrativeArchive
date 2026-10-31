@@ -64,3 +64,17 @@ test('a base given as an id still takes the finer kind its name points at', asyn
     assert.equal(picFromWords({ base: 'porridge' }, '단호박죽').base, 'juk-pumpkin');
     assert.equal(picFromWords({ base: 'pizza' }, '불고기 피자').base, 'pizza');
 });
+
+test('죽 이름에서 재료 짐작 (소고기죽 → 죽 + 소고기)', async () => {
+    const { picFromWords, guessPic } = await import('../src/phonefood.js');
+    const w = n => picFromWords({ base: 'porridge' }, n);
+    assert.deepEqual(w('소고기죽'), { base: 'juk', with: ['beef', 'carrot', 'scallion'], size: 'regular', set: [] });
+    assert.deepEqual(w('Veggie Porridge').with, ['carrot', 'zucchini', 'mushroom']);
+    assert.deepEqual(w('해물죽').with, ['shrimp', 'squid', 'mussel']);
+    assert.deepEqual(w('닭죽').with[0], 'chicken');
+    assert.deepEqual(picFromWords({ base: 'juk', with: ['egg'] }, '소고기죽').with, ['egg']);
+    // 죽이 아닌 메뉴는 그대로
+    assert.equal(guessPic('양념치킨').base, 'yangnyeom-chicken');
+    assert.equal(guessPic('새우볶음밥').base, 'fried-rice');
+    assert.equal(guessPic('김치찌개').base, 'kimchi-stew');
+});
