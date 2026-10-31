@@ -276,6 +276,20 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
         box.push(row);
         out.effects.push({ type: 'push', path: 'delivery.orders', item: structuredClone(row) });
         out.changes.push({ app: '배달', label: row.shop, amount: null });
+        // a shop the app doesn't have yet joins its list, with the model's dishes (or, without them, the ones ordered)
+        const shops = p.delivery.shops ||= [];
+        if (!shops.some(s => samePlace(s.name, row.shop))) {
+            const ns = x.newShop && typeof x.newShop === 'object' ? x.newShop : {};
+            const dish = (d, k) => { const pic = picFromWords(d?.pic, d?.name); return { name: txt(d?.name, 60), ko: txt(d?.ko, 60), desc: txt(d?.desc, 100), price: finite(Number(d?.price)) ? Number(d.price) : 0, top: d?.top === true || (!list(ns.menu).some(y => y?.top === true) && k === 0), ...(pic ? { pic } : {}) }; };
+            let menu = list(ns.menu).map(dish).filter(d => d.name).slice(0, 4);
+            if (!menu.length) menu = items.slice(0, 4).map((d, k) => ({ name: d.name, ko: d.ko, desc: '', price: d.price, top: k === 0, ...(d.pic ? { pic: d.pic } : {}) }));
+            const shop = { name: row.shop, ko: txt(ns.ko, 60), cuisine: txt(ns.cuisine, 30), rating: null, reviews: null, fee: finite(Number(ns.fee)) ? Math.abs(Number(ns.fee)) : row.fee, minOrder: null, eta: txt(ns.eta, 12), fav: false, menu,
+                id: `sync:${e.id}:s${k}`, ev: e.id, sourceIndex: e.at };
+            shops.push(shop);
+            out.effects.push({ type: 'push', path: 'delivery.shops', item: structuredClone(shop) });
+            // the list stays at five: the oldest shop not kept as a favourite makes room
+            if (shops.length > 5) { const old = shops.find(s => !s.fav && s !== shop); if (old) { shops.splice(shops.indexOf(old), 1); out.effects.push({ type: 'drop', path: 'delivery.shops', item: structuredClone(old) }); } }
+        }
     });
     return out;
 }

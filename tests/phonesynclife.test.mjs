@@ -323,3 +323,36 @@ test('a delivery a reflection puts in keeps the picture it described in words', 
     assert.deepEqual(o.items[0].pic, { base: 'fried-rice', with: ['beef', 'sesame'], size: 'regular', set: [] });
     assert.equal(o.items[1].pic, undefined);
 });
+
+test('a delivery from a shop the app never had: the shop joins the list with its dishes drawn; taken back with the order', async () => {
+    const { FOOD_IDS } = await import('../src/phonefood.js');
+    const { m, p } = setup();
+    p.delivery.shops = [{ id: 's1', name: 'Pasta Nostra', fav: true, menu: [] }];
+    const money = (shop, newShop) => ({ moves: [{ account: '2222', amount: -19.5, who: shop, kind: 'card', occurrence: 'new' }],
+        deliveries: [{ shop, items: [{ name: '새우 볶음밥', qty: 1, price: 12, pic: { base: 'fried rice', with: ['shrimp'] } }, { name: '짜장면', qty: 1, price: 7.5 }], status: 'delivered', occurrence: 'new', newShop }] });
+    const r = applyMoney(m, p, { ...ev('chinese', 9, '10-26'), money: money('홍콩반점', { name: '홍콩반점', ko: '홍콩반점', cuisine: 'chinese', fee: 3, eta: '25–35',
+        menu: [{ name: '새우 볶음밥', price: 12, top: true, pic: { base: 'fried rice', with: ['shrimp'] } }, { name: '짬뽕', price: 9, pic: { base: 'jjamppong', with: ['mussel', 'squid'] } }, { name: '탕수육', price: 18, pic: { base: 'tangsuyuk' } }] }) }, opts);
+    const s = p.delivery.shops.find(x => x.name === '홍콩반점');
+    assert.ok(s);
+    assert.equal(s.menu.length, 3);
+    assert.ok(s.menu.every(d => d.pic && FOOD_IDS.base.includes(d.pic.base)));
+    assert.deepEqual(s.menu[0].pic.with, ['shrimp']);
+    // the same shop again: no second one
+    applyMoney(m, p, { ...ev('chinese-2', 11, '10-27'), money: money('홍콩반점', null) }, opts);
+    assert.equal(p.delivery.shops.filter(x => x.name === '홍콩반점').length, 1);
+    // no "newShop" from the model: the dishes ordered make its menu
+    applyMoney(m, p, { ...ev('sushi', 12, '10-27'), money: money('Sushi Haru', null) }, opts);
+    assert.deepEqual(p.delivery.shops.find(x => x.name === 'Sushi Haru').menu.map(d => d.name), ['새우 볶음밥', '짜장면']);
+    // 빼기 of the first event: its order and its shop go
+    revertEffects(m, p, r.effects);
+    assert.ok(!p.delivery.shops.some(x => x.name === '홍콩반점'));
+});
+
+test('the shop list stays at five: the oldest one not kept as a favourite makes room, and comes back if the order is taken back', () => {
+    const { m, p } = setup();
+    p.delivery.shops = ['A', 'B', 'C', 'D', 'E'].map((n, k) => ({ id: `s${k}`, name: n, fav: k === 0, menu: [] }));
+    const r = applyMoney(m, p, { ...ev('new-shop', 9, '10-26'), money: { deliveries: [{ shop: 'F', items: [{ name: 'Pho', qty: 1, price: 10 }], status: 'delivered', occurrence: 'new' }] } }, opts);
+    assert.deepEqual(p.delivery.shops.map(x => x.name), ['A', 'C', 'D', 'E', 'F']);
+    revertEffects(m, p, r.effects);
+    assert.deepEqual(p.delivery.shops.map(x => x.name).sort(), ['A', 'B', 'C', 'D', 'E']);
+});

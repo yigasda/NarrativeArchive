@@ -139,7 +139,7 @@ YOU GET
 - EVENTS ON THE PHONE: story events the phone already holds, with their ids.
 - DAYS (sometimes): the story's days from the day before these messages on, with their weekdays. A weekday the story names ("on Friday") is the next one there.
 - MESSAGES READ BEFORE, NOW CHANGED (sometimes): messages put on the phone before and edited since, with the events they gave.
-${money ? `- MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.\n` : ''}${life ? `- LIFE NOW: the alarms, files and health days the phone already holds, with record ids.\n` : ''}${weather && tracker ? `- WEATHER NOW: the date, time, place and weather from the chat's newest status line.\n` : ''}- PHONE NOW: the newest of what the phone holds.
+${money ? `- MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.\n` : ''}${delivery ? `- DELIVERY SHOPS: the shops the delivery app already has.\n` : ''}${life ? `- LIFE NOW: the alarms, files and health days the phone already holds, with record ids.\n` : ''}${weather && tracker ? `- WEATHER NOW: the date, time, place and weather from the chat's newest status line.\n` : ''}- PHONE NOW: the newest of what the phone holds.
 - OWNER, and sometimes WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 
 WHAT IS NEW
@@ -181,6 +181,7 @@ MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - A new paid ${paid} has its payment as a move in the same event.
 - An order or ticket only moves forward. A cancelled order${delivery ? ' or delivery' : ''} moves no money; if it was already paid, its refund is a plus move.
 ${delivery ? `- A delivery paid in cash at the door has no move.
+- A delivery from a shop not in DELIVERY SHOPS also gives "newShop": that shop as the app would list it, with 2 to 4 dishes: the one ordered and ones it would have, each with different ingredients or broth.
 ` : ''}` : ''}
 ${PHONE_STYLE}
 
@@ -194,7 +195,8 @@ ANSWER — one JSON object, nothing else:
                           "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko", "currency", "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
                           "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returned" | "refunded", "eta": "MM-DD", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
                           "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }]${delivery ? `,
-                          "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients in English, like "beef", "shrimp"], "size": "regular" | "large", "set": [a set's sides or drinks, like "fries", "cola"] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived", "to": "home" | "work" | a person's name, "address", "left", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery", "for", "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "" }]` : ''} }` : ''} }]${life ? `,
+                          "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients in English, like "beef", "shrimp"], "size": "regular" | "large", "set": [a set's sides or drinks, like "fries", "cola"] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived", "to": "home" | "work" | a person's name, "address", "left", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery", "for", "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
+                                          "newShop": { "name": the same as "shop", "ko", "cuisine", "fee", "eta": like "25–35", "menu": [{ "name", "ko", "desc", "price", "top": true for its best-known dish, "pic": like the items' "pic" }] } or null }]` : ''} }` : ''} }]${life ? `,
   "days": [{ the same fields as "health", "from": "pattern" }]${weather ? `,
   "weather": { "place", "date", "time", "from": "chat" | "archive" | "guess", "cond": "clear" | "partly" | "cloudy" | "drizzle" | "rain" | "sleet" | "snow" | "fog" | "storm" | "wind", "temp", "hi", "lo", "line", "ko",
                "hours": [6 of { "time", "cond", "temp", "rain" }], "days": [10 of { "day", "cond", "lo", "hi", "rain" }],
@@ -558,6 +560,7 @@ async function updatePhone(m, owner) {
             reread.size ? `[MESSAGES READ BEFORE, NOW CHANGED]\n${[...reread].map(([at, evs]) => `- #${at}: ${evs.length ? evs.map(e => `${e.id} (${e.summary})`).join('; ') : 'nothing on the phone yet'}`).join('\n')}` : '',
             `[PHONE NOW]\n${JSON.stringify(phoneForModel(p))}`,
             money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
+            money && p.delivery ? `[DELIVERY SHOPS]\n${(p.delivery.shops || []).map(x => x.name).join('\n') || '(none yet)'}` : '',
             life ? `[LIFE NOW]\n${JSON.stringify(life)}` : '', askWeather && tracker ? `[WEATHER NOW]\n${JSON.stringify(tracker)}` : '',
             (money || invest) && p.wealthPlan ? `[WEALTH]\n${JSON.stringify({ currency: p.wealthPlan.currency, deposits: p.wealthPlan.deposits, investments: p.wealthPlan.investments, basis: p.wealthPlan.basis })}` : '',
             world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
