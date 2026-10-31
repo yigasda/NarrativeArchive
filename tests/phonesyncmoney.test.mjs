@@ -163,7 +163,33 @@ test('the same order and trade read again stay one', () => {
     const { m, p } = setup();
     const buy = { trades: [{ kind: 'buy', symbol: 'XETRA:SAP', currency: 'EUR', quantity: 1, price: 180, fee: 1 }], orders: [{ shop: 'Hugendubel', item: 'Reiseführer Lissabon', qty: 1, price: 24, status: 'ordered' }] };
     applyMoney(m, p, ev('a', 31, '10-26', buy), opts());
-    applyMoney(m, p, ev('b', 35, '10-27', structuredClone(buy)), opts());
+    applyMoney(m, p, ev('b', 35, '10-26', structuredClone(buy)), opts());
     assert.equal(p.investment.trades.length, 1);
     assert.equal(p.money.orders.length, 1);
+});
+
+test('really separate: the same 30,000 two days running, and the same stock bought twice at another price', () => {
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('d1', 9, '10-27', { moves: [{ account: '1111', amount: -30, who: 'Dohyeon', kind: 'transfer' }] }), opts());
+    applyMoney(m, p, ev('d2', 15, '10-28', { moves: [{ account: '1111', amount: -30, who: 'Dohyeon', kind: 'transfer' }] }), opts());
+    assert.equal(bank(), 940);
+    applyMoney(m, p, ev('b1', 20, '10-28', { trades: [{ kind: 'buy', symbol: 'XETRA:SAP', currency: 'EUR', quantity: 1, price: 180, fee: 0 }] }), opts());
+    applyMoney(m, p, ev('b2', 21, '10-28', { trades: [{ kind: 'buy', symbol: 'XETRA:SAP', currency: 'EUR', quantity: 1, price: 186, fee: 0 }] }), opts());
+    assert.equal(positions(p.investment.trades)[0].quantity, 2);
+});
+
+test('same day, same amount, different place: two payments', () => {
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('c1', 9, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau' }] }), opts());
+    applyMoney(m, p, ev('c2', 11, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Bäckerei Ott' }] }), opts());
+    assert.equal(bank(), 991);
+});
+
+test('same day, same café, same amount: one, unless the model says it is a second coffee', () => {
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('c1', 9, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau' }] }), opts());
+    applyMoney(m, p, ev('c2', 11, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau' }] }), opts());
+    assert.equal(bank(), 995.5);
+    applyMoney(m, p, ev('c3', 12, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', separate: true }] }), opts());
+    assert.equal(bank(), 991);
 });

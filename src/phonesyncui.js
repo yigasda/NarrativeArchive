@@ -14,7 +14,7 @@ export function syncSettings(p, now, ui) {
     const at = mk ? rows.find(r => r.index === mk.index) : null;
     const startText = !mk ? '정하지 않음' : mk.index < 0 ? '첫 대화부터' : `#${mk.index} 다음부터`;
     const limit = s.limit || 12;
-    const skipped = Object.entries(s.failed || {}).filter(([, f]) => f.tries >= 2);
+    const skipped = Object.entries(s.failed || {}).filter(([, f]) => f.tries >= 2 && !f.quiet);
     return `${axBar(p, now)}
       ${axTop(axCb('set'))}
       <div class="ax_scroll">

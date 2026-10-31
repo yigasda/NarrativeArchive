@@ -85,9 +85,18 @@ export function archiveRound(s, sections, rows, round) {
 // does this round reach the newest message? (only then may the archive's current state go along)
 export const reachesEnd = (s, rows, round) => { const last = rows[rows.length - 1]?.index ?? -1; return round.some(r => r.index === last) || isDone(s, last); };
 
-// a quote counts when it is in the source, ignoring spacing and case
-const norm = t => String(t || '').toLowerCase().replace(/\s+/g, ' ').trim();
-export const quoted = (quote, text) => { const q = norm(quote); return q.length >= 2 && norm(text).includes(q); };
+// a quote counts when it is in the source, ignoring spacing, case and punctuation; a longer one may differ a little
+// (a dropped particle, a changed ending) as long as most of its letter pairs are there
+const norm = t => String(t || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+const pairs = t => { const out = []; for (let i = 0; i < t.length - 1; i++) out.push(t.slice(i, i + 2)); return out; };
+export const quoted = (quote, text) => {
+    const q = norm(quote), t = norm(text);
+    if (q.length < 2) return false;
+    if (t.includes(q)) return true;
+    if (q.length < 6) return false;
+    const have = new Set(pairs(t)), want = pairs(q);
+    return want.filter(x => have.has(x)).length / want.length >= 0.7;
+};
 
 // 복구 기록: what each round added, kept in this browser per chat until the saved chat is seen to have it
 const jkey = scope => `narrativearchive:sync:${scope}`;

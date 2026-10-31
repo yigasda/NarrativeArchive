@@ -129,7 +129,9 @@ YOU GET
 - OWNER, and sometimes WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 
 WHAT IS NEW
-- Only what happens in NEW MESSAGES or ARCHIVE FOR THESE MESSAGES. Plans, guesses and memories of earlier days add nothing.
+- Only what happens in NEW MESSAGES or ARCHIVE FOR THESE MESSAGES. Guesses and memories of earlier days add nothing.
+- A plan made in these messages goes in the calendar; what is planned hasn't happened yet (no payment, no photo).
+- Each message's own replies, orders and payments belong to the event in that message, not folded into an earlier one.
 - An event in EVENTS ON THE PHONE keeps its id; add only what the phone doesn't hold yet.
 - Small everyday things around an event are fine: how a text was worded, a photo of the place, a search they would make.
 - People: only people the story has.
@@ -483,7 +485,11 @@ async function updatePhone(m, owner) {
             if (!Number.isInteger(at) || at <= start || (!inRound.has(at) && !sec)) { fail('읽는 범위 밖의 일이에요'); continue; }
             if (!quoted(e.quote, textAt.get(at) || '') && !(sec && quoted(e.quote, sec.text))) { fail('원문에서 근거를 찾지 못했어요'); continue; }
             let add;
-            try { add = parsePhone(JSON.stringify(e.phone && typeof e.phone === 'object' ? e.phone : {})); } catch { fail('앱 내용 형식이 잘못됐어요'); continue; }
+            const day = when(e.date).slice(0, 5), phone = e.phone && typeof e.phone === 'object' ? structuredClone(e.phone) : {};
+            // a time without its day ("15:10") takes the event's day
+            const dated = x => { if (x && typeof x === 'object' && /^\s*\d{1,2}:\d{2}\s*$/.test(String(x.time || '')) && day) x.time = `${day} ${hhmm(x.time)}`; };
+            for (const k of [...LISTS, 'threads']) for (const x of arr(phone[k])) { dated(x); for (const msg of arr(x?.messages)) dated(msg); if (x?.draft) dated(x.draft); }
+            try { add = parsePhone(JSON.stringify(phone)); } catch { fail('앱 내용 형식이 잘못됐어요'); continue; }
             const id = evOf(e.id) || evOf(e.summary) || `ev-${at}`;
             // the money first, on its own: a payment that can't be placed leaves the whole event out
             const stage = structuredClone({ money: p.money, investment: p.investment, finance: m.finance });
@@ -502,9 +508,13 @@ async function updatePhone(m, owner) {
             added.push({ id, at, add, effects: paid.effects });
         }
         // read: this round's messages; a failed one gets one more try next round, then it is skipped
+        // a failed event can carry what later messages said (a reply, an order): the messages that got nothing this round
+        // are read once more with it, so that content isn't lost
+        const anyFail = Object.keys(failed).length > 0, got = new Set(added.map(x => x.at));
         for (const i of inRound) {
             if (failed[i]) s.failed[i] = { tries: (s.failed[i]?.tries || 0) + 1, why: failed[i] };
-            else if (round.retry.includes(i)) delete s.failed[i];
+            else if (anyFail && !got.has(i)) s.failed[i] = { tries: (s.failed[i]?.tries || 0) + 1, why: '실패한 일과 같이 한 번 더 읽어요', quiet: true };
+            else delete s.failed[i];
         }
         addDone(s, [...inRound]);
         for (const x of evidence) s.arch[x.key] = 1;

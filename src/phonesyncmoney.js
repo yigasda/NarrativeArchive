@@ -2,8 +2,8 @@
 // the brokerage, the shop and the wallet. The model reads the story; the numbers are worked out here.
 // - an app made after the event's message already holds it; nothing moves
 // - a record the model points at ("already") already holds it; so does any record, old or added by an earlier round, with the
-//   same account, day (±1) and amount — or, for a guessed amount, the same place — unless the model says it is a second payment
-//   ("separate"). A missed second payment costs less than the same payment taken twice.
+//   same account, same day and amount (and the same place when both name one) — or, for a guessed amount, the same place —
+//   unless the model says it is a second payment ("separate"). Another day, another place or another price is another payment.
 // - an event seen before keeps the amounts it was given then; only a guessed amount the story later states is corrected,
 //   on the same record (no second payment), once
 // - balances may go below zero; no money is made up to cover a payment
@@ -84,7 +84,7 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [] } = {})
             if (!L) fail('증권 계좌를 찾지 못했어요');
             const key = `broker:${cur}`;
             if (keep(key, amount, rec => { const line = L.entries[rec]; if (!line) return; out.effects.push({ type: 'amendEntry', key: a.key, id: rec, from: line.amount, to: round(amount) }); out.notes.push(`증권 ${cur}: 추정 ${line.amount} → 실제 ${round(amount)}로 고쳤어요`); out.changes.push({ app: '투자', label: `증권 ${cur}`, amount: round(amount - line.amount), currency: cur }); line.amount = round(amount); })) return;
-            const twin = !x.separate && Object.entries(L.entries).find(([, v]) => Math.abs(v.amount - amount) < 0.01 && near(String(v.date).slice(5), date));
+            const twin = !x.separate && Object.entries(L.entries).find(([, v]) => Math.abs(v.amount - amount) < 0.01 && near(String(v.date).slice(5), date, 0));
             if (twin) { out.legs.push({ key, amount: round(amount), state: 'included', rec: twin[0] }); out.notes.push(`증권 ${cur} ${round(amount)}: 이미 있는 거래라 넣지 않았어요`); return; }
             const id = `sync:${e.id}:m${k}`;
             L.entries[id] = { amount: round(amount), date: full };
@@ -100,8 +100,8 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [] } = {})
         const tx = p.money.tx ||= [];
         if (keep(key, amount, rec => { const t = tx.find(r => r.id === rec); if (t) amend(t, amount, lk, label, acct); })) return;
         const pointed = x.already && tx.find(t => t.id === x.already);
-        const twin = !pointed && !x.separate && tx.find(t => t.account === acct.last4 && near(t.time, date) && Math.sign(t.amount) === Math.sign(amount)
-            && (Math.abs(t.amount - amount) < 0.01 || (guess || t.amountFrom === 'guess') && samePlace(t.who, x.who)));
+        const twin = !pointed && !x.separate && tx.find(t => t.account === acct.last4 && near(t.time, date, 0) && Math.sign(t.amount) === Math.sign(amount)
+            && (Math.abs(t.amount - amount) < 0.01 && (!plain(t.who) || !plain(x.who) || samePlace(t.who, x.who)) || (guess || t.amountFrom === 'guess') && samePlace(t.who, x.who)));
         if (twin && twin.amountFrom === 'guess' && !guess && Math.abs(twin.amount - amount) > 0.01) { amend(twin, amount, lk, label, acct); out.legs.push({ key, amount: round(amount), state: 'included', rec: twin.id }); return; }
         if (pointed || twin) {
             out.legs.push({ key, amount: round(amount), state: 'included', rec: (pointed || twin).id });
@@ -130,7 +130,8 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [] } = {})
         const key = `trade:${kind}:${symbol}`, size = kind === 'dividend' ? Number(t.amount) : Number(t.quantity);
         if (keep(key, size)) return;
         const pointed = t.already && inv.trades.find(x => x.id === t.already);
-        const twin = !pointed && !t.separate && inv.trades.find(x => x.symbol === symbol && x.kind === kind && (kind === 'dividend' ? Math.abs(x.amount - size) < 0.01 : x.quantity === size) && near(String(x.date).slice(5), date));
+        const twin = !pointed && !t.separate && inv.trades.find(x => x.symbol === symbol && x.kind === kind && near(String(x.date).slice(5), date, 0)
+            && (kind === 'dividend' ? Math.abs(x.amount - size) < 0.01 : x.quantity === size && Math.abs(x.price - Number(t.price)) <= Math.abs(x.price) * 0.01));
         if (pointed || twin) {
             out.legs.push({ key, amount: size, state: 'included', rec: (pointed || twin).id });
             if (twin) out.notes.push(`${symbol} ${kind === 'sell' ? '매도' : kind === 'buy' ? '매수' : '배당'}: 이미 있는 거래라 넣지 않았어요`);
@@ -182,7 +183,7 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [] } = {})
         const price = Number(x.price);
         if (!txt(x.item) || !txt(x.shop)) fail('주문의 가게나 물건을 확인하지 못했어요');
         return { shop: txt(x.shop, 60), item: txt(x.item), ko: txt(x.ko), option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: txt(x.eta, 5), arrived: '', gift: txt(x.gift, 40), ...(guess ? { amountFrom: 'guess' } : {}) };
-    }, (box, x) => box.find(o => samePlace(o.shop, x.shop) && samePlace(o.item, x.item) && near(o.time, date, 3)));
+    }, (box, x) => box.find(o => samePlace(o.shop, x.shop) && samePlace(o.item, x.item) && near(o.time, date)));
     records('passes', list(mo.passes), x => {
         if (!txt(x.by)) fail('티켓 정보를 확인하지 못했어요');
         return { kind: ['flight', 'train', 'hotel', 'event', 'other'].includes(x.kind) ? x.kind : 'other', by: txt(x.by, 60), from: txt(x.from, 40), to: txt(x.to, 40), date: /^\d{2}-\d{2}$/.test(x.date || '') ? x.date : date, time: txt(x.time, 5), seat: txt(x.seat, 12), gate: txt(x.gate, 12), no: txt(x.no, 24), status: txt(x.status, 30) };

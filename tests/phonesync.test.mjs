@@ -108,3 +108,10 @@ test('journal keeps rounds per chat and survives broken storage', () => {
     assert.deepEqual(journalRead('a', st), []);
     assert.doesNotThrow(() => journalAdd('a', { round: 'r3' }, { getItem() { throw Error('no'); }, setItem() { throw Error('quota'); } }));
 });
+
+test('a quote may drop quote marks or a particle, but not point at another message', () => {
+    assert.ok(quoted('제주도 11월 항공권 최저가를', '"제주도 11월 항공권 최저가"를 검색했다'));
+    assert.ok(quoted('ich bringe Blumen mit', 'Ja, ich bringe Blumen mit!'));
+    assert.ok(!quoted('빌린 3만 원', '오늘 점심은 뭐 먹지'));
+    assert.ok(!quoted('Rosen kaufen', 'Ja. Ich bringe Blumen mit.'));
+});
