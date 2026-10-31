@@ -307,8 +307,13 @@ export function payOrders(m, p, year) {
         if (a.kind !== 'credit') { const L = f.accounts[`${a.id}:${a.currency}`]; if (L) L.entries[id] = { amount, date: `${year}-${time.slice(0, 5)}` }; }
         n++;
     };
+    // a bank row tied to an order no longer there is the bank's own again
+    for (const t of tx) if (t.delivery && !p.delivery.orders.some(o => o.id === t.delivery)) delete t.delivery;
     for (const o of p.delivery.orders) {
         if (o.status === 'cancelled' || o.sync) continue;
+        // its payment is already in the bank (the bank was filled first): tie it, add none
+        const paid = o.paidBy && tx.find(t => t.id === o.paidBy);
+        if (paid) { paid.delivery = o.id; if (o.ev) paid.ev ||= o.ev; if (o.status === 'refunded') { const a = payAccount(p, o); if (a) put(o, a, `${PAY}${o.id}-r`, dlvTotal(o), o.arrived || o.time, 'Refund'); } continue; }
         const a = payAccount(p, o);
         if (!a) continue;
         const total = dlvTotal(o);

@@ -538,7 +538,7 @@ async function updatePhone(m, owner) {
         const askWeather = !!life && (!tracker || !!trackDay && trackDay !== life.weather?.date);
         const known = (wealthDate(m, p) || String(p.money?.asOf || p.investment?.date || '')).slice(0, 4), year = known || String(new Date().getFullYear());
         // the days ahead with their weekdays (only with a known year): "on Friday" is a date the model can look up
-        const today = String(p.now || '').slice(0, 5), dayList = known && /^\d{2}-\d{2}$/.test(today) ? Array.from({ length: 8 }, (_, k) => {
+        const today = String(p.now || '').slice(0, 5), dayList = known && /^\d{2}-\d{2}$/.test(today) ? Array.from({ length: 14 }, (_, k) => {
             const d = new Date(Date.UTC(Number(known), Number(today.slice(0, 2)) - 1, Number(today.slice(3, 5)) + k));
             return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()]}`;
         }) : [];

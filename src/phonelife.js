@@ -93,7 +93,7 @@ YOU GET
 - PHONE NOW: what the phone already holds, with their "ev" tags.
 - STORY DAYS: the last 14 days of the story, and where the owner was on each.
 - LIVES IN: where the owner lives now.
-- MONEY NOW (sometimes): the owner's bank accounts and cards, by their last 4 digits.
+- MONEY NOW (sometimes): the owner's bank accounts and cards, by their last 4 digits, and the bank's recent transactions with their ids.
 
 SHOPS
 - Up to 5 shops the owner orders from, the kind found where they live, named as they would be there. 3 or 4 dishes each.
@@ -105,6 +105,7 @@ ORDERS
 - "status" as of the story's now: "on the way" only for an order still coming then. An order only moves forward: "on the way", "delivered", then perhaps "cancelled" or "refunded".
 - "account": the card or account that paid, by its last 4 digits in MONEY NOW, or "cash". Without MONEY NOW, "account": "card" or "cash".
 - Don't write bank transactions; the app records the payment from "account".
+- A meal already in MONEY NOW's transactions (the same shop, day and amount) is that order's payment: "paidBy": its id. The app adds no second payment for it.
 
 CART
 - Dishes put in the basket and not ordered, or null. No money moves for it.
@@ -119,7 +120,7 @@ JSON (one object, nothing before or after it)
   "orders": [{ "shop", "items": [{ "name", "ko", "option", "qty", "price": unit price }], "fee", "tip", "discount",
                "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address": short,
                "left": where the courier left it, or "", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery": true or false, "for": how many people,
-               "status", "account": last 4 digits or "cash", "reviewed": true or false, "gift": who it was sent to, or "", "ev" }],
+               "status", "account": last 4 digits or "cash", "paidBy": a transaction id from MONEY NOW, or "", "reviewed": true or false, "gift": who it was sent to, or "", "ev" }],
   "cart": { "shop", "items": [{ "name", "ko", "option", "qty", "price" }], "noteShop", "noteShopKo", "noteRider", "noteRiderKo" } or null
 }
 Numbers are plain JSON numbers.`;
@@ -184,8 +185,11 @@ export function parseLife(raw, now) {
 
 // ---- 배달: parse
 const dish = x => ({ name: line(x?.name, 60), ko: ko(x?.ko), option: line(x?.option, 60), qty: int(x?.qty, 1, 50) ?? 1, price: num(x?.price) ?? 0 });
-export function parseDelivery(raw, accounts = []) {
+// tx: the bank's rows the model may point at ("paidBy": this order's payment is already there)
+export function parseDelivery(raw, accounts = [], tx = []) {
     if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 배달 내용(JSON)을 찾지 못했어요');
+    // a bank row it points at: that row is the payment, and its account is the order's
+    const paidOf = v => { const t = tx.find(r => r.id === String(v ?? '') && r.amount < 0); return t ? { paidBy: t.id, account: t.account } : {}; };
     const acct = v => { const s = String(v ?? '').trim().toLowerCase(); if (s === 'cash') return 'cash'; const l4 = last4(v); return l4 && accounts.some(a => a.last4 === l4) ? l4 : 'card'; };
     const cart = raw.cart && arr(raw.cart.items).length ? { shop: line(raw.cart.shop, 60), items: arr(raw.cart.items).map(dish).filter(x => x.name).slice(0, 8), noteShop: line(raw.cart.noteShop, 120), noteShopKo: ko(raw.cart.noteShopKo), noteRider: line(raw.cart.noteRider, 120), noteRiderKo: ko(raw.cart.noteRiderKo) } : null;
     return {
@@ -194,7 +198,7 @@ export function parseDelivery(raw, accounts = []) {
         orders: arr(raw.orders).map(o => withEv({ shop: line(o?.shop, 60), items: arr(o?.items).map(dish).filter(x => x.name).slice(0, 10), fee: num(o?.fee) ?? 0, tip: num(o?.tip) ?? 0, discount: Math.abs(num(o?.discount) ?? 0),
             mode: pick(o?.mode, ['delivery', 'pickup'], 'delivery'), time: when(o?.time), arrived: when(o?.arrived), to: line(o?.to, 40) || 'home', address: line(o?.address, 80), left: line(o?.left, 60),
             noteShop: line(o?.noteShop, 120), noteShopKo: ko(o?.noteShopKo), noteRider: line(o?.noteRider, 120), noteRiderKo: ko(o?.noteRiderKo), noCutlery: yes(o?.noCutlery), for: int(o?.for, 1, 30) ?? 1,
-            status: pick(o?.status, ['on the way', 'delivered', 'cancelled', 'refunded'], 'delivered'), account: acct(o?.account), reviewed: yes(o?.reviewed), gift: line(o?.gift, 40) }, o)).filter(o => o.shop && o.items.length && o.time)
+            status: pick(o?.status, ['on the way', 'delivered', 'cancelled', 'refunded'], 'delivered'), account: acct(o?.account), ...paidOf(o?.paidBy), reviewed: yes(o?.reviewed), gift: line(o?.gift, 40) }, o)).filter(o => o.shop && o.items.length && o.time)
             .sort((a, b) => a.time.localeCompare(b.time)).slice(-12),
         cart,
     };
@@ -223,10 +227,12 @@ export const fillLife = (m, p) => exclusive('fill', async () => {
 });
 export const fillDelivery = (m, p) => exclusive('fill', async () => {
     const accounts = p.money?.bank?.accounts || [];
-    const money = accounts.length ? `[MONEY NOW]\n${JSON.stringify(accounts.map(a => ({ last4: a.last4, kind: a.kind, name: a.name, currency: a.currency })))}` : '';
+    // the bank's own rows (not the ones this app put there): a meal already paid there is pointed at, not paid again
+    const tx = (p.money?.tx || []).filter(t => !String(t.id).startsWith('dlv-') && !t.delivery);
+    const money = accounts.length ? `[MONEY NOW]\n${JSON.stringify({ accounts: accounts.map(a => ({ last4: a.last4, kind: a.kind, name: a.name, currency: a.currency })), tx: tx.slice(-20).map(t => ({ id: t.id, account: t.account, time: t.time, who: t.who, amount: t.amount })) })}` : '';
     const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(storyDays(m, p)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money], { profile: p.financeProfile });
     const out = await askDraft(input, { system: AI_SYS_DELIVERY, maxTokens: 9000 });
-    const d = parseDelivery(jsonOf(out), accounts);
+    const d = parseDelivery(jsonOf(out), accounts, tx);
     if (p.delivery) unpayOrders(m, p);
     // orders a reflection put in stay (their payments are the bank's own rows)
     const kept = (p.delivery?.orders || []).filter(o => o.sync);

@@ -213,3 +213,40 @@ test('Vertex run 11: a night still going at 02:20 gets its row now; waking is fi
     revertEffects({}, p, fx);
     assert.ok(!d.wake);
 });
+
+test('review: a story day told again changes only what the new telling says', () => {
+    const { p } = setup();
+    p.life.health.usual = { sleep: '23:30', wake: '06:30', steps: 7000 };
+    applyLife(p, { id: 'cant-sleep', at: 7, date: '10-27', time: '02:15' }, { health: [{ date: '10-27', sleep: '02:15', steps: 320 }] }, true);
+    applyLife(p, { id: 'late-up', at: 9, date: '10-27', time: '07:20' }, { health: [{ date: '10-27', wake: '07:15', sleep: '', steps: null }] }, true);
+    const d = p.life.health.days.find(x => x.date === '10-27');
+    assert.equal(d.sleep, '02:15');
+    assert.equal(d.wake, '07:15');
+    assert.equal(d.steps, 320);
+    assert.equal(d.ev, 'late-up');
+});
+
+test('review: a forecast the model leaves out stays; a one-time alarm is off once it has rung', () => {
+    const { p } = setup();
+    applyWeather(p, { place: 'Varo', date: '10-26', cond: 'rain', temp: 9, from: 'chat' }, null);
+    assert.equal(p.life.weather.here.hours.length, 2);
+    assert.equal(p.life.weather.here.days.length, 3);
+    p.life.clock.alarms.push({ id: 'a2', time: '04:30', label: 'Flughafen', days: [], date: '10-30', on: true });
+    lifeClock(p, '10-30 04:00');
+    assert.equal(p.life.clock.alarms[1].on, true);
+    lifeClock(p, '10-30 09:00');
+    assert.equal(p.life.clock.alarms[1].on, false);
+});
+
+test('review: the bank filled first: an order pointing at the bank row it was paid with gets no second payment', () => {
+    const { m, p } = setup();
+    p.money.tx.push({ id: 'b7', account: '2222', who: 'Pasta Nostra', amount: -14, time: '10-18 20:10', kind: 'card' });
+    p.delivery.orders[0].paidBy = 'b7';
+    assert.equal(payOrders(m, p, '2026'), 0);
+    assert.equal(p.money.tx.length, 1);
+    assert.equal(p.money.tx[0].delivery, 'o1');
+    // the order gone (the app filled again): the row is the bank's own again
+    p.delivery.orders = [];
+    payOrders(m, p, '2026');
+    assert.equal(p.money.tx[0].delivery, undefined);
+});

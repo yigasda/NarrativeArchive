@@ -102,7 +102,7 @@ export function applyLife(p, e, phone, on) {
     const push = (path, row, app) => { boxAt(p, path, true).push(row); out.effects.push({ type: 'push', path, item: structuredClone(row) }); out.apps.add(app); };
     const tag = (row, k, c) => ({ ...row, id: `sync:${e.id}:${c}${k}`, ev: e.id, sourceIndex: e.at });
     // only the fields the model wrote, cleaned as a whole record would be
-    const given = (raw, clean, keys) => Object.fromEntries(keys.filter(k => raw[k] !== undefined && raw[k] !== '').map(k => [k, clean[k]]));
+    const given = (raw, clean, keys) => Object.fromEntries(keys.filter(k => raw[k] !== undefined && raw[k] !== '' && raw[k] !== null).map(k => [k, clean[k]]));
     arr(phone.alarms).forEach((a, k) => {
         if (!a || typeof a !== 'object') return;
         const clean = alarmOf(a), was = a.change && (L.clock?.alarms || []).find(o => o.id === a.change);
@@ -129,13 +129,15 @@ export function applyLife(p, e, phone, on) {
         if (!clean.date) return;
         // fell asleep after midnight: the row is the day they woke up, the event's own day, not the evening before
         if (clean.sleep && clean.sleep < '12:00' && e.date && dayGap(clean.date, e.date) === 1) clean.date = e.date;
+        const was = (L.health?.days || []).find(o => o.date === clean.date);
+        // a day the story already told: this telling changes only what it says
+        if (was?.from === 'story') return change('life.health.days', was, { ...given(d, clean, ['bed', 'sleep', 'wake', 'woke', 'steps', 'km', 'floors', 'workout', 'hr']), ev: e.id }, '건강');
         // what the story doesn't say is their usual
         const u = L.health?.usual || {};
         // waking: not before it happens (a night still going keeps it empty; the clock fills it once its time is past)
         const awake = !(clean.date === e.date && e.time && u.wake && e.time < u.wake);
         for (const k of ['bed', 'sleep', 'wake']) if (!clean[k] && u[k] && (k !== 'wake' || awake)) clean[k] = u[k];
         if (clean.steps === null && finiteNum(u.steps) && awake) clean.steps = u.steps;
-        const was = (L.health?.days || []).find(o => o.date === clean.date);
         const vals = { ...clean, ev: e.id };
         if (was) return change('life.health.days', was, vals, '건강');
         push('life.health.days', tag(vals, k, 'h'), '건강');
@@ -193,6 +195,14 @@ export function applyWeather(p, w, now, { archive = true } = {}) {
     if (w && typeof w === 'object') {
         const here = overlay(hereOf(w), now);
         if (here.from === 'archive' && !archive) here.from = 'chat';
+        // a forecast or a tile the model left out stays as it was (the clock trims what is past)
+        const old = was?.here;
+        if (old) {
+            if (!here.hours.length) here.hours = structuredClone(old.hours || []);
+            if (!here.days.length) here.days = structuredClone(old.days || []);
+            for (const [k, v] of Object.entries(here.tiles)) if ((v === null || v === '') && old.tiles?.[k] !== undefined) here.tiles[k] = old.tiles[k];
+            for (const k of ['hi', 'lo']) if (here[k] === null && old[k] !== undefined) here[k] = old[k];
+        }
         // the cities keep what the model leaves out (their time zone, their note)
         const cities = (was?.cities || []).map(c => { const n = arr(w.cities).find(x => line(x?.name, 40) === c.name); return n ? { ...c, cond: pick(n.cond, CONDS, c.cond), temp: int(n.temp, -60, 60) ?? c.temp, hi: int(n.hi, -60, 60) ?? c.hi, lo: int(n.lo, -60, 60) ?? c.lo } : c; });
         next = { ...(was || {}), here, cities };
@@ -206,14 +216,14 @@ export function applyWeather(p, w, now, { archive = true } = {}) {
 }
 
 // ---- the story's clock moved on (now: "MM-DD HH:MM"): what that does by itself
-// a one-time alarm whose day is over goes off; a timer that would have run out is gone; a trash older than 30 days is
+// a one-time alarm that has rung goes off; a timer that would have run out is gone; a trash older than 30 days is
 // emptied; the forecast's past hours fall away; health keeps 60 days
 export function lifeClock(p, now) {
     const out = [];
     const L = p.life, today = String(now || '').slice(0, 5), hm = String(now || '').slice(6, 11);
     if (!L || !/^\d{2}-\d{2}$/.test(today)) return out;
     const change = (path, r, vals) => { const keys = Object.keys(vals).filter(k => !same(r[k] ?? null, vals[k])); if (!keys.length) return; const fx = { type: 'change', path, id: r.id, from: fields(r, keys), to: fields(vals, keys) }; setFields(r, fx.to); out.push(fx); };
-    for (const a of L.clock?.alarms || []) if (a.on && a.date && !a.days?.length && dayGap(a.date, today) > 0) change('life.clock.alarms', a, { on: false });
+    for (const a of L.clock?.alarms || []) if (a.on && a.date && !a.days?.length && (dayGap(a.date, today) > 0 || a.date === today && hm && a.time && hm > a.time)) change('life.clock.alarms', a, { on: false });
     if (L.clock?.running) {
         const at = String(L.at || ''), gone = at.slice(0, 5) !== today || (hm && at.slice(6, 11) && minutes(hm) - minutes(at.slice(6, 11)) >= (L.clock.running.left || 0) / 60);
         if (gone) { out.push({ type: 'set', path: 'life.clock.running', from: structuredClone(L.clock.running), to: null }); L.clock.running = null; }
