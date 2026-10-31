@@ -22,7 +22,7 @@ Object.assign(AX, {
     therm: 'M10 14V5a2 2 0 0 1 4 0v9a4 4 0 1 1-4 0z', wind: 'M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8', eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
     nav: 'M12 2l7 19-7-4-7 4z', calS: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4', trk: 'M4 6h16v12H4zM8 10h8M8 14h5', cart: 'M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8L20 8H6M9 20h.01M17 20h.01',
     store: 'M4 9l1.5-5h13L20 9M4 9v11h16V9M4 9h16', rcp: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', user: 'M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 21a8 8 0 0 1 16 0', homeS: 'M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
-    bagS: 'M5 8h14l-1.2 11a1 1 0 0 1-1 .9H7.2a1 1 0 0 1-1-.9zM9 8V6a3 3 0 0 1 6 0v2', cardS: 'M3 6h18v12H3zM3 10h18', check: 'M5 12l5 5 9-10', arrR: 'M5 12h14M13 6l6 6-6 6', plusS: 'M12 5v14M5 12h14', eyeoff: 'M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-3 3.6M6.1 7.6A17 17 0 0 0 2.5 12S6 18 12 18a9 9 0 0 0 4-.9',
+    bagS: 'M5 8h14l-1.2 11a1 1 0 0 1-1 .9H7.2a1 1 0 0 1-1-.9zM9 8V6a3 3 0 0 1 6 0v2', cardS: 'M3 6h18v12H3zM3 10h18', check: 'M5 12l5 5 9-10', pause: 'M9 5v14M15 5v14', arrR: 'M5 12h14M13 6l6 6-6 6', plusS: 'M12 5v14M5 12h14', eyeoff: 'M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-3 3.6M6.1 7.6A17 17 0 0 0 2.5 12S6 18 12 18a9 9 0 0 0 4-.9',
 });
 
 // ---- shared bits
@@ -100,6 +100,8 @@ export function alarmScreen(p, now, id) {
         <div class="lf_mini">${[a.made ? `만든 날 ${esc(fmtDate(p, a.made))}` : '', off ? `마지막으로 끈 시각 ${off}` : '', a.on ? '' : '꺼 둔 알람'].filter(Boolean).join(' · ')}</div></div>
       ${axInd('#f2f2f4')}`;
 }
+// the dial's minute ticks: the ones still to run bright, the ones gone dim
+const ticks = frac => Array.from({ length: 60 }, (_, k) => { const a = k / 60 * 2 * Math.PI, r1 = k % 5 ? 99 : 95, x = v => (125 + v * Math.sin(a)).toFixed(1), y = v => (125 - v * Math.cos(a)).toFixed(1); return `<line x1="${x(r1)}" y1="${y(r1)}" x2="${x(104)}" y2="${y(104)}" stroke="${k / 60 < frac ? '#8b8f98' : '#34353b'}" stroke-width="${k % 5 ? 1.5 : 2.5}" stroke-linecap="round"/>`; }).join('');
 export function timerScreen(p, now) {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '시계', 'life', 'home2', true);
@@ -112,11 +114,12 @@ export function timerScreen(p, now) {
     return `${axBar(p, now, '#f2f2f4')}
       ${axTop(axCb('home2'))}
       <div class="ax_scroll">${axH1('타이머')}
-        ${r ? `<div class="lf_ring"><svg viewBox="0 0 250 250"><circle cx="125" cy="125" r="115" fill="none" stroke="#2b2c31" stroke-width="9"/><circle cx="125" cy="125" r="115" fill="none" stroke="#f5a524" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - frac)).toFixed(1)}" transform="rotate(-90 125 125)"/></svg>
-          <div><b class="cg_num">${left ? `${pad(Math.floor(left / 60))}:${pad(left % 60)}` : '끝'}</b><span>${esc(r.label || '타이머')} · ${Math.round(r.sec / 60)}분</span>${left ? `<em>${hm(Number(ring))}</em>` : ''}</div></div>
-          <div class="lf_tbtn"><span>취소</span><span class="a">${left ? '일시정지' : '다시'}</span></div>` : ''}
+        ${r ? `<div class="lf_ring"><svg viewBox="0 0 250 250">${ticks(frac)}<circle cx="125" cy="125" r="115" fill="none" stroke="#2b2c31" stroke-width="6"/><circle cx="125" cy="125" r="115" fill="none" stroke="#f5a524" stroke-width="6" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - frac)).toFixed(1)}" transform="rotate(-90 125 125)"/>${frac > 0 ? `<circle cx="${(125 + 115 * Math.sin(frac * 2 * Math.PI)).toFixed(1)}" cy="${(125 - 115 * Math.cos(frac * 2 * Math.PI)).toFixed(1)}" r="8" fill="#f5a524" stroke="#17181b" stroke-width="3"/>` : ''}</svg>
+          <div>${left ? `<b class="cg_num lf_dig"><span>${pad(Math.floor(left / 60))}</span><i>:</i><em>${pad(left % 60)}</em></b>` : '<b class="lf_dig">끝</b>'}<span>${esc(r.label || '타이머')} · ${Math.round(r.sec / 60)}분</span></div></div>
+          ${left ? `<div class="lf_tend">끝나는 시각 <b class="cg_num">${hm(Number(ring))}</b></div>` : ''}
+          <div class="lf_tbtn2"><span>${ax('x', 15, 'currentColor', 2.6)}취소</span><span class="a">${left ? `${ax('pause', 15, 'currentColor', 2.6)}일시정지` : `${ax('play', 15, 'currentColor', 2, 'currentColor')}다시`}</span></div>` : ''}
         <div class="lf_ch">저장된 타이머</div>
-        ${ts.length ? `<div class="lf_dcard">${ts.map(t => `<div class="lf_sv"><b class="cg_num">${Math.floor(t.sec / 60)}:${pad(t.sec % 60)}</b><span><span>${esc(t.label)}</span>${t.ko && koOn() ? `<em>${esc(t.ko)}</em>` : ''}<small>${t.last ? esc(fmtDate(p, t.last, true)) : ''}</small></span><i>${ax('play', 14, '#f5a524', 2, '#f5a524')}</i></div>`).join('')}</div>` : '<div class="lf_none">저장된 타이머가 없어요</div>'}
+        ${ts.length ? `<div class="lf_dcard lf_svl">${ts.map(t => `<div class="lf_sv"><b class="cg_num">${Math.floor(t.sec / 60)}:${pad(t.sec % 60)}</b><span class="lf_mq"><span>${esc(t.label)}${t.ko && koOn() ? ` <em>${esc(t.ko)}</em>` : ''}</span></span><small>${t.last ? esc(fmtDate(p, t.last, true)) : ''}</small><i>${ax('play', 13, '#f5a524', 2, '#f5a524')}</i></div>`).join('')}</div>` : '<div class="lf_none">저장된 타이머가 없어요</div>'}
         <i class="lf_pad"></i></div>
       ${clockDock('timer')}${axInd('#f2f2f4')}`;
 }

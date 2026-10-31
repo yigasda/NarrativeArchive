@@ -454,6 +454,15 @@ export async function openPhone(who = null) {
         catch (err) { console.error('[narrative-archive] web page', err); toastr.error(String(err?.message || err), '페이지 열기 실패'); }
         finally { paging.delete(id); if (phone() === p) drawPhone(true); }
     };
+    // a line cut short: a tap lets it run left to its end, and back
+    $root.on('click', '.lf_mq', function (e) {
+        e.stopPropagation();
+        const t = this.firstElementChild, over = t ? t.scrollWidth - this.clientWidth : 0;
+        if (over <= 2) return;
+        this.style.setProperty('--mq', `-${over + 6}px`);
+        this.style.setProperty('--mqd', `${Math.max(2.5, over / 40)}s`);
+        this.classList.remove('run'); void this.offsetWidth; this.classList.add('run');
+    });
     $root.on('click', '.na_ph_pgo', e => { e.stopPropagation(); openWeb(view.split(':')[1]); });
     // a page scrolled down: the dock folds to its address; scrolling back up (or a tap on it) unfolds it
     $root[0].addEventListener('scroll', e => {
