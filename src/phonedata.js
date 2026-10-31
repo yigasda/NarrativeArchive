@@ -586,7 +586,9 @@ async function updatePhone(m, owner) {
             const dated = x => { if (x && typeof x === 'object' && /^\s*\d{1,2}:\d{2}\s*$/.test(String(x.time || '')) && day) x.time = `${day} ${hhmm(x.time)}`; };
             for (const k of [...LISTS, 'threads']) for (const x of arr(phone[k])) { dated(x); for (const msg of arr(x?.messages)) dated(msg); if (x?.draft) dated(x.draft); }
             try { add = parsePhone(JSON.stringify(phone)); } catch { fail('앱 내용 형식이 잘못됐어요'); continue; }
-            const id = evOf(e.id) || evOf(e.summary) || `ev-${at}`;
+            // a bare number is no event id (a model counting its events would take an old event's number again)
+            const tagOf = v => { const t = evOf(v); return /^\d+$/.test(t) ? '' : t; };
+            const id = tagOf(e.id) || tagOf(e.summary) || `ev-${at}`;
             // a changed message already put its payments on the phone: only its own events may correct them
             if (reread.has(at) && e.money && !reread.get(at).some(x => x.id === id)) { notes.push(`#${at} 바뀐 대화의 결제는 새로 넣지 않았어요`); delete e.money; }
             // the money first, on its own: a payment that can't be placed leaves the whole event out
