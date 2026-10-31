@@ -43,3 +43,13 @@ test('Vertex run 17: ingredients and sides written as one string; a drink ordere
     assert.deepEqual(picFromWords({ base: 'sushi', with: 'salmon and tuna' }, '연어 초밥 세트').with, ['salmon', 'tuna']);
     assert.equal(picFromWords({ base: 'cola' }, '콜라').base, 'juice');
 });
+test('toppings change the picture on every base, and flavours read from words', async () => {
+    for (const base of FOOD_IDS.base) {
+        const a = dishSvg({ base, with: [], size: 'regular', set: [] }), b = dishSvg({ base, with: ['shrimp', 'cheese'], size: 'regular', set: [] });
+        if (!['sushi', 'sashimi', 'hoedeopbap'].includes(base)) assert.notEqual(a, b, base);
+    }
+    assert.equal(guessPic('돈코츠 라멘').base, 'ramen-tonkotsu');
+    assert.equal(guessPic('Spaghetti aglio e olio').base, 'pasta-oil');
+    assert.equal(guessPic('로제 떡볶이').base, 'tteokbokki-rose');
+    assert.equal(guessPic('Green curry with chicken').base, 'curry-green');
+});
