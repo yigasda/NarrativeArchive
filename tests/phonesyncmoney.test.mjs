@@ -324,3 +324,9 @@ test('a message the user edited: its stated amount is corrected on the same reco
     assert.equal(p.money.tx.length, 1);
     assert.ok(r.notes.some(n => n.includes('고친 대화')));
 });
+
+test('a gift order with no name is kept as a gift', () => {
+    const { m, p } = setup();
+    applyMoney(m, p, ev('present', 9, '10-27', { orders: [{ shop: 'Kakao', item: 'Kuchen', qty: 1, price: 20, status: 'ordered', gift: true, paid: false, occurrence: 'new' }] }), opts());
+    assert.equal(p.money.orders[0].gift, '선물');
+});
