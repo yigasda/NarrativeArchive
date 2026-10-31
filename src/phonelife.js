@@ -57,7 +57,7 @@ FILES
 WEATHER
 - With WEATHER NOW, its date, time, place and weather stand; write the rest to agree with them. Without it: what the chat describes, then the archive, then what fits the season and place ("from": "guess"). The place is where the story has the owner now.
 - "cities": places the owner saved, in their order: home first (where the archive and profile say they live), then work, family, past and coming trips. A city stays after the trip ends. A saved city is not proof of a relationship.
-- Only places the story names: never a city it doesn't.
+- Only places the story names. When it names none, one city that fits the owner's country, "from": "guess".
 - Never today's real-world weather.
 
 LANGUAGE
