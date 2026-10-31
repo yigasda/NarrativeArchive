@@ -86,7 +86,8 @@ JSON (one object, nothing before or after it)
                          "hours": [6 of { "time": "HH:MM", "cond", "temp", "rain": percent }],
                          "days": [10 of { "day": "MM-DD", "cond", "lo", "hi", "rain": percent }],
                          "tiles": { "rain24": mm, "rainNext": mm, "feels", "wind": km/h, "gust", "dir", "humidity", "dew", "sunrise": "HH:MM", "sunset": "HH:MM", "visibility": km } },
-               "cities": [{ "name", "ko", "tz": like "Europe/Berlin", "cond", "temp", "hi", "lo", "sunset": "HH:MM", "note": "" or a few words, like a past trip, "noteKo" }] }
+               "cities": [{ "name", "ko", "tz": like "Europe/Berlin", "cond", "temp", "hi", "lo", "sunset": "HH:MM",
+                 "rainNext": mm, "wind": km/h, "gust", "dir", "feels", "humidity", "dew", "note": "" or a few words, like a past trip, "noteKo" }] }
 }
 Numbers are plain JSON numbers. "ev" is a word tag, never a number: the "ev" of its story event in PHONE NOW, a short new one like "pasta-night" for a story event without one, or "" for an everyday record.`;
 

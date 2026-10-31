@@ -354,13 +354,13 @@ const tileLines = (h) => ({
     vis: h.tiles.visibility === null ? '' : h.tiles.visibility < 8 ? (h.cond === 'fog' ? '안개 때문에 멀리 안 보여요.' : '평소보다 짧아요.') : '멀리까지 잘 보여요.',
 });
 const tempBar = (d, lo, hi, cur) => { const span = Math.max(1, hi - lo), a = ((d.lo ?? lo) - lo) / span * 100, b = (hi - (d.hi ?? hi)) / span * 100, warm = (d.hi ?? 0) >= 15; return `<span class="bar"><i style="left: ${a}%; right: ${b}%; background: ${warm ? '#f3c66b' : '#8fd0e6'}"></i>${cur !== null && cur !== undefined ? `<b style="left: ${Math.max(0, Math.min(100, (cur - lo) / span * 100))}%"></b>` : ''}</span>`; };
-function weatherBody(p, h, name, night, sub, source) {
+function weatherBody(p, h, name, night, sub, source, lead = '') {
     const lo = Math.min(...h.days.map(d => d.lo ?? 99), h.lo ?? 99), hi = Math.max(...h.days.map(d => d.hi ?? -99), h.hi ?? -99), t = tileLines(h);
-    return `<div class="lf_wtop"><small>${sub}</small><h2>${esc(name)}</h2><div class="t">${h.temp ?? '—'}°</div><div class="c">${esc(h.said || WX[h.cond]?.[1] || '')}</div><div class="hl">최고:${h.hi ?? '—'}° 최저:${h.lo ?? '—'}°</div>${source}</div>
+    return `<div class="lf_wtop">${sub ? `<small>${sub}</small>` : ''}<h2>${esc(name)}</h2><div class="t">${h.temp ?? '—'}°</div><div class="c">${esc(h.said || WX[h.cond]?.[1] || '')}</div><div class="hl">최고:${h.hi ?? '—'}° 최저:${h.lo ?? '—'}°</div>${source}</div>
       ${h.hours.length ? `<div class="lf_wcard">${h.line ? `<div class="ln1">${esc(h.line)}${k1(h.ko, 'lf_wk')}</div>` : ''}<div class="lf_hrs">${h.hours.map((x, k) => `<div>${k ? esc(x.time.slice(0, 2)) + '시' : '지금'}<em>${x.rain >= 20 ? `${x.rain}%` : ''}</em>${wxIc(x.cond, 24, night && k < 3)}<b class="cg_num">${x.temp ?? '—'}°</b></div>`).join('')}</div></div>` : ''}
       ${h.days.length ? `<div class="lf_wcard"><div class="hd">${ax('calS', 12, '#fff', 2.2)} ${h.days.length}일간의 일기예보</div>${h.days.map((d, k) => `<div class="lf_d10"><span>${k ? WDK[WD[weekday(d.day)]] : '오늘'}</span><span class="ic">${wxIc(d.cond, 22)}${d.rain >= 30 ? `<em>${d.rain}%</em>` : ''}</span><span class="lo cg_num">${d.lo ?? '—'}°</span>${tempBar(d, lo, hi, k ? null : h.temp)}<span class="hi cg_num">${d.hi ?? '—'}°</span></div>`).join('')}</div>` : ''}
-      ${Object.values(h.tiles).some(v => v !== null && v !== '') ? `<div class="lf_tiles">
-        ${h.tiles.rain24 !== null ? `<div class="lf_tile"><div class="hd">${ax('drop', 12, '#fff', 2.2)} 강수량</div><b>${String(h.tiles.rain24).replace('.', ',')} <small>mm</small></b><div class="s">지난 24시간</div><p>${t.rain}</p></div>` : ''}
+      ${lead || Object.values(h.tiles).some(v => v !== null && v !== '') ? `<div class="lf_tiles">${lead}
+        ${h.tiles.rain24 !== null || h.tiles.rainNext !== null ? `<div class="lf_tile"><div class="hd">${ax('drop', 12, '#fff', 2.2)} 강수량</div><b>${String(h.tiles.rain24 ?? h.tiles.rainNext).replace('.', ',')} <small>mm</small></b><div class="s">${h.tiles.rain24 !== null ? '지난 24시간' : '앞으로'}</div><p>${t.rain}</p></div>` : ''}
         ${h.tiles.feels !== null ? `<div class="lf_tile"><div class="hd">${ax('therm', 12, '#fff', 2.2)} 체감 온도</div><b>${h.tiles.feels}°</b><p>${t.feels}</p></div>` : ''}
         ${h.tiles.wind !== null ? `<div class="lf_tile"><div class="hd">${ax('wind', 12, '#fff', 2.2)} 바람</div><b>${h.tiles.wind} <small>km/h</small></b>${h.tiles.gust ? `<div class="s">돌풍 ${h.tiles.gust} km/h</div>` : ''}<span class="lf_cmp"><i style="transform: rotate(${({ N: 0, NE: 45, E: 90, SE: 135, S: 180, SW: 225, W: 270, NW: 315, 북: 0, 북동: 45, 동: 90, 남동: 135, 남: 180, 남서: 225, 서: 270, 북서: 315 })[h.tiles.dir] ?? 225}deg)"></i></span><p>${esc(h.tiles.dir || '')}</p></div>` : ''}
         ${h.tiles.humidity !== null ? `<div class="lf_tile"><div class="hd">${ax('drop', 12, '#fff', 2.2)} 습도</div><b>${h.tiles.humidity}%</b><p>${t.humidity}</p></div>` : ''}
@@ -388,17 +388,16 @@ export function cityScreen(p, now, id) {
     const lf = L(p), c = lf?.weather.cities.find(x => x.id === id);
     if (!c) return weatherScreen(p, now);
     const t = cityTime(p, lf, c), night = t.night, bg = night && c.cond === 'clear' ? NIGHT : WX[c.cond]?.[0];
-    const h = { temp: c.temp, hi: c.hi, lo: c.lo, cond: c.cond, line: '', ko: '', hours: cityHours(c, t), days: [], tiles: { sunset: '', sunrise: '', rain24: null, rainNext: null, feels: null, wind: null, gust: null, humidity: null, dew: null, visibility: null, dir: '' } };
+    const h = { temp: c.temp, hi: c.hi, lo: c.lo, cond: c.cond, line: '', ko: '', hours: cityHours(c, t), days: [],
+        tiles: { sunset: '', sunrise: '', rain24: null, rainNext: c.rainNext ?? null, feels: c.feels ?? null, wind: c.wind ?? null, gust: c.gust ?? null, humidity: c.humidity ?? null, dew: c.dew ?? null, visibility: null, dir: c.dir || '' } };
     const lm = toMin(t.time), span = Math.max(1, (c.hi ?? 0) - (c.lo ?? 0));
-    const tiles = `<div class="lf_tiles">
-      <div class="lf_tile"><div class="hd">${ax('clock', 12, '#fff', 2.2)} 현지 시각</div><b class="cg_num">${t.time}</b><span class="lf_bigface">${face(lm, t.night)}</span><p>${t.dayShift}</p></div>
-      <div class="lf_tile"><div class="hd">${ax('globe', 12, '#fff', 2.2)} 시차</div><b class="cg_num">${t.off >= 0 ? '+' : '−'}${Math.abs(t.off)}<small>시간</small></b><p>${t.off ? `지금 있는 곳보다 ${Math.abs(t.off)}시간 ${t.off > 0 ? '빨라요' : '늦어요'}.` : '지금 있는 곳과 같은 시각이에요.'}</p></div>
-      ${c.sunset ? `<div class="lf_tile"><div class="hd">${ax('sun', 12, '#fff', 2.2)} 일몰</div><b class="cg_num">${c.sunset}</b><svg class="arc" viewBox="0 0 150 46"><path d="M4 42 Q75 -12 146 42" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2"/><line x1="0" y1="34" x2="150" y2="34" stroke="rgba(255,255,255,.3)"/></svg><p>${t.night ? '해가 졌어요.' : `${dur(Math.max(0, ((toMin(c.sunset) - lm) + 1440) % 1440))} 뒤`}</p></div>` : ''}
-      <div class="lf_tile"><div class="hd">${ax('therm', 12, '#fff', 2.2)} 오늘 기온</div><b class="cg_num">${c.temp ?? '—'}°</b><div class="lf_rng2 cg_num"><span>${c.lo ?? '—'}°</span><span class="bar"><i></i>${c.temp !== null && c.lo !== null ? `<b style="left: ${Math.max(0, Math.min(100, (c.temp - c.lo) / span * 100))}%"></b>` : ''}</span><span>${c.hi ?? '—'}°</span></div><p>최저 · 최고</p></div></div>`;
+    // the city's own tiles first: its sunset and today's temperatures; no clock, the status bar and the list already tell the time
+    const lead = `${c.sunset ? `<div class="lf_tile"><div class="hd">${ax('sun', 12, '#fff', 2.2)} 일몰</div><b class="cg_num">${c.sunset}</b><svg class="arc" viewBox="0 0 150 46"><path d="M4 42 Q75 -12 146 42" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2"/><line x1="0" y1="34" x2="150" y2="34" stroke="rgba(255,255,255,.3)"/></svg><p>${t.night ? '해가 졌어요.' : `${dur(Math.max(0, ((toMin(c.sunset) - lm) + 1440) % 1440))} 뒤`}</p></div>` : ''}
+      <div class="lf_tile"><div class="hd">${ax('therm', 12, '#fff', 2.2)} 오늘 기온</div><b class="cg_num">${c.temp ?? '—'}°</b><div class="lf_rng2 cg_num"><span>${c.lo ?? '—'}°</span><span class="bar"><i></i>${c.temp !== null && c.lo !== null ? `<b style="left: ${Math.max(0, Math.min(100, (c.temp - c.lo) / span * 100))}%"></b>` : ''}</span><span>${c.hi ?? '—'}°</span></div><p>최저 · 최고</p></div>`;
     return `<div class="lf_wx" style="background: ${bg}">${sky(c.cond, night)}
       ${axBar(p, now, '#fff')}
       <div class="ax_top lf_wbar">${axCb('wlist')}<span></span></div>
-      <div class="ax_scroll">${weatherBody(p, h, c.name, night, `${t.time} · ${t.off >= 0 ? '+' : '−'}${Math.abs(t.off)}시간`, c.note ? `<div class="lf_wsrc">${esc(c.note)}${c.noteKo && koOn() ? ` · ${esc(c.noteKo)}` : ''}</div>` : '<div class="lf_wgap"></div>')}${tiles}<i class="lf_pad"></i></div>
+      <div class="ax_scroll">${weatherBody(p, h, c.name, night, '', c.note ? `<div class="lf_wsrc">${esc(c.note)}${c.noteKo && koOn() ? ` · ${esc(c.noteKo)}` : ''}</div>` : '<div class="lf_wgap"></div>', lead)}<i class="lf_pad"></i></div>
       ${axInd('#fff')}</div>`;
 }
 export function cityList(p, now) {

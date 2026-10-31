@@ -21,7 +21,8 @@ export const fileOf = x => withEv({ name: line(x?.name, 80), kind: pick(x?.kind,
 export const dayOf = d => withEv({ date: day5(d?.date), bed: hhmm(d?.bed), sleep: hhmm(d?.sleep), wake: hhmm(d?.wake), woke: int(d?.woke, 0, 30) ?? 0, steps: int(d?.steps, 0, 120000), km: num(d?.km), floors: int(d?.floors, 0, 400),
     workout: d?.workout && line(d.workout.kind, 30) ? { kind: line(d.workout.kind, 30), time: hhmm(d.workout.time), min: int(d.workout.min, 0, 600), km: num(d.workout.km) } : null,
     hr: arr(d?.hr).map(x => int(x, 30, 220)).filter(x => x !== null).slice(0, 2), from: pick(d?.from, ['story', 'pattern'], 'pattern') }, d);
-const cityOf = c => ({ name: line(c?.name, 40), ko: ko(c?.ko), tz: tz(c?.tz), cond: pick(c?.cond, CONDS, 'cloudy'), temp: int(c?.temp, -60, 60), hi: int(c?.hi, -60, 60), lo: int(c?.lo, -60, 60), sunset: hhmm(c?.sunset), note: line(c?.note, 40), noteKo: ko(c?.noteKo) });
+const cityOf = c => ({ name: line(c?.name, 40), ko: ko(c?.ko), tz: tz(c?.tz), cond: pick(c?.cond, CONDS, 'cloudy'), temp: int(c?.temp, -60, 60), hi: int(c?.hi, -60, 60), lo: int(c?.lo, -60, 60), sunset: hhmm(c?.sunset),
+    rainNext: num(c?.rainNext), wind: num(c?.wind), gust: num(c?.gust), dir: line(c?.dir, 12), feels: int(c?.feels, -60, 60), humidity: int(c?.humidity, 0, 100), dew: int(c?.dew, -60, 60), note: line(c?.note, 40), noteKo: ko(c?.noteKo) });
 
 // ---- 날씨: the chat's status line stands; the model's numbers only fill what it doesn't say
 const COND_RE = [['storm', /storm|thunder|뇌우|천둥|번개|gewitter|雷/i], ['snow', /snow|눈|schnee|雪/i], ['rain', /rain|drizzle|shower|비|소나기|regen|雨/i], ['fog', /fog|mist|안개|nebel|霧/i], ['cloudy', /cloud|overcast|흐림|구름|bewölkt|wolk|曇/i], ['clear', /clear|sun|맑|화창|sonnig|klar|晴/i]];
@@ -234,7 +235,7 @@ export function applyWeather(p, w, now, { archive = true } = {}) {
             for (const k of ['hi', 'lo']) if (here[k] === null && old[k] !== undefined) here[k] = old[k];
         }
         // the cities keep what the model leaves out (their time zone, their note)
-        const cities = (was?.cities || []).map(c => { const n = arr(w.cities).find(x => line(x?.name, 40) === c.name); return n ? { ...c, cond: pick(n.cond, CONDS, c.cond), temp: int(n.temp, -60, 60) ?? c.temp, hi: int(n.hi, -60, 60) ?? c.hi, lo: int(n.lo, -60, 60) ?? c.lo } : c; });
+        const cities = (was?.cities || []).map(c => { const n = arr(w.cities).find(x => line(x?.name, 40) === c.name); if (!n) return c; const f = cityOf(n), out = { ...c, cond: pick(n.cond, CONDS, c.cond) }; for (const k of ['temp', 'hi', 'lo', 'rainNext', 'wind', 'gust', 'dir', 'feels', 'humidity', 'dew']) if (f[k] !== null && f[k] !== '') out[k] = f[k]; return out; });
         next = { ...(was || {}), here, cities };
     } else if (now && was?.here) {
         // only the status line: its words stand over the weather there was

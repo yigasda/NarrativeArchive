@@ -164,7 +164,7 @@ LIFE
   - "date" is the day they woke up: asleep 10-26 at 23:40 or 10-27 at 02:15 → "10-27".
   - A night still going (they fell asleep, not yet woken): its row now, with "sleep"; "wake" stays empty.
 ${weather ? `- "weather": ${tracker ? 'WEATHER NOW stands (its date, time, place and weather); write the rest of the forecast to agree with it, "from": "chat".' : 'what these messages describe, else the archive. If the story\'s day or place changed with nothing to go on, what fits the season and place, "from": "guess". If neither changed and nothing describes it: null (the app keeps the last weather).'}
-- With new weather, also write the saved cities' "cond", "temp", "hi" and "lo".
+- With new weather, also write each saved city's weather: "cond", "temp", "hi", "lo", rain, wind, "feels", "humidity" and "dew".
 ` : ''}` : ''}${money ? `
 MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - A payment, transfer, refund, order, ticket or trade that happens in these messages goes in the event's "money".
@@ -195,7 +195,7 @@ ANSWER — one JSON object, nothing else:
   "weather": { "place", "date", "time", "from": "chat" | "archive" | "guess", "cond": "clear" | "cloudy" | "rain" | "snow" | "fog" | "storm", "temp", "hi", "lo", "line", "ko",
                "hours": [6 of { "time", "cond", "temp", "rain" }], "days": [10 of { "day", "cond", "lo", "hi", "rain" }],
                "tiles": { "rain24", "rainNext", "feels", "wind", "gust", "dir", "humidity", "dew", "sunrise", "sunset", "visibility" },
-               "cities": [{ "name", "cond", "temp", "hi", "lo" }] } or null` : ''}` : ''} }
+               "cities": [{ "name", "cond", "temp", "hi", "lo", "rainNext": mm, "wind": km/h, "gust", "dir", "feels", "humidity", "dew" }] } or null` : ''}` : ''} }
 ${money ? `"money" only when money moves or an order or ticket changes. ` : ''}Numbers are plain JSON numbers.
 Items in "phone":
 {
