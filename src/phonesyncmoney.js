@@ -22,7 +22,7 @@ const near = (a, b, days = 1) => Math.abs(day(a) - day(b)) <= days * 86400000;
 // a twin only stands for this one if the model didn't say it happens here, or both come from the same message, or (on a
 // retry) from a message read together with this one before
 let together = null;
-const fresh = (x, twin, at) => (x.separate || x.occurrence === 'new') && twin.sourceIndex !== at
+const fresh = (x, twin, at) => x.occurrence === 'new' && twin.sourceIndex !== at
     && !(together && twin.sourceIndex >= together[0] && twin.sourceIndex <= together[1]);
 const plain = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 const samePlace = (a, b) => !!plain(a) && plain(a) === plain(b);

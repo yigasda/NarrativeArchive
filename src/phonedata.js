@@ -124,6 +124,7 @@ YOU GET
 - ARCHIVE BEFORE (sometimes): what happened earlier. Background; nothing in it is new.
 - STORY NOW (sometimes): where the story stands after these messages. Background.
 - EVENTS ON THE PHONE: story events the phone already holds, with their ids.
+- MESSAGES READ BEFORE, NOW CHANGED (sometimes): messages put on the phone before and edited since, with the events they gave.
 - MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.
 - PHONE NOW: the newest of what the phone holds.
 - OWNER, and sometimes WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.

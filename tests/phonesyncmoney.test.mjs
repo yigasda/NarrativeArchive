@@ -40,7 +40,7 @@ test('already in the bank (900 after a 100 transfer): the same transfer read aga
     const r = applyMoney(m, p, ev('to-mara', 7, '10-25', { moves: [{ account: '1111', amount: -100, who: 'Mara', kind: 'transfer' }] }), opts());
     assert.equal(bank(), 900);
     assert.equal(r.legs[0].state, 'included');
-    const r2 = applyMoney(m, p, ev('to-mara-again', 8, '10-25', { moves: [{ account: '1111', amount: -100, who: 'Mara', kind: 'transfer', separate: true }] }), opts());
+    const r2 = applyMoney(m, p, ev('to-mara-again', 8, '10-25', { moves: [{ account: '1111', amount: -100, who: 'Mara', kind: 'transfer', occurrence: 'new' }] }), opts());
     assert.equal(bank(), 800);
     assert.equal(r2.legs[0].state, 'applied');
 });
@@ -190,7 +190,7 @@ test('same day, same café, same amount: one, unless the model says it is a seco
     applyMoney(m, p, ev('c1', 9, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau' }] }), opts());
     applyMoney(m, p, ev('c2', 11, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau' }] }), opts());
     assert.equal(bank(), 995.5);
-    applyMoney(m, p, ev('c3', 12, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', separate: true }] }), opts());
+    applyMoney(m, p, ev('c3', 12, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', occurrence: 'new' }] }), opts());
     assert.equal(bank(), 991);
 });
 
