@@ -6292,3 +6292,32 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .lf_mq.run > span { animation: lf_mq var(--mqd, 3s) ease-in-out 1 both; }
 @keyframes lf_mq { 0%, 12% { transform: translateX(0); } 55%, 75% { transform: translateX(var(--mq, 0)); } 100% { transform: translateX(0); } }
 @media (prefers-reduced-motion: reduce) { .ax .lf_mq.run { white-space: normal; } .ax .lf_mq.run > span { animation: none; } }
+/* 세계 시계: map on grid paper, analog dials */
+.ax .lf_wmap { position: relative; margin: 0 14px 14px; border-radius: 22px; background: #1f2024; box-shadow: inset 0 0 0 1px #2a2b30; overflow: hidden; padding: 10px 8px; flex: none; }
+.ax .lf_wmap svg { display: block; width: 100%; height: auto; }
+.ax .lf_pin text { font: 600 6.2px 'Inter Tight', -apple-system, sans-serif; fill: #d5d7dc; paint-order: stroke; stroke: #1f2024; stroke-width: 2px; }
+.ax .lf_pin.here text { fill: #f5a524; }
+.ax .lf_pin .pulse { transform-box: fill-box; transform-origin: center; animation: lf_pulse 2.4s ease-out infinite; }
+@keyframes lf_pulse { from { transform: scale(1); opacity: 0.9; } to { transform: scale(3.2); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ax .lf_pin .pulse { animation: none; opacity: 0; } }
+.ax .lf_dial { width: 46px; height: 46px; margin-right: 14px; flex: none; }
+.ax .lf_dial circle:first-child { fill: #e9e9ec; }
+.ax .lf_dial .t { stroke: #9a9da4; stroke-width: 1; stroke-linecap: round; }
+.ax .lf_dial .t.b { stroke: #17181b; stroke-width: 1.6; }
+.ax .lf_dial .h { stroke: #17181b; stroke-width: 2.6; stroke-linecap: round; }
+.ax .lf_dial .m { stroke: #17181b; stroke-width: 1.6; stroke-linecap: round; }
+.ax .lf_dial .c { fill: #f5a524; }
+.ax .lf_dial.n circle:first-child { fill: #2b2c31; }
+.ax .lf_dial.n .t { stroke: #5c5f66; }
+.ax .lf_dial.n .t.b { stroke: #d5d7dc; }
+.ax .lf_dial.n .h, .ax .lf_dial.n .m { stroke: #f2f2f4; }
+.ax .lf_wc { padding: 12px 18px 12px 16px; }
+.ax .lf_wc > b { font: 300 38px/1 'Inter Tight', sans-serif; letter-spacing: -0.02em; }
+.ax .lf_wct b { font-size: 19px; }
+.ax .lf_wmap svg { aspect-ratio: 360 / 140; height: auto; max-height: none; }
+.ax .lf_pin text tspan { fill: #8b8f98; font-weight: 500; }
+.ax .lf_pin.here text tspan { fill: #c98a1c; }
+.ax .lf_dots circle { fill: #4a4d55; }
+.ax .lf_dots circle.c { fill: #f2f2f4; }
+.ax .lf_dots circle.h { fill: #f5a524; }
+.ax .lf_dots circle.pulse { fill: none; stroke: #f5a524; stroke-width: 0.8; transform-box: fill-box; transform-origin: center; animation: lf_pulse 2.4s ease-out infinite; }

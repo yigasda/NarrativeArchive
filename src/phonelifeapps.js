@@ -11,6 +11,7 @@ import { orderTotal, shiftDay } from './phonelife.js';
 import { fmtMoney } from './phonemoney.js';
 import { nameKey } from './people.js';
 import { esc } from './util.js';
+import { DOT_C, DOT_R, DOTS, MAP_BOT, MAP_H, MAP_TOP, MAP_W, TZ_AT } from './worldmap.js';
 
 Object.assign(AX, {
     alarm: 'M12 6a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM12 9v4l2 2M5 3L2 6M19 3l3 3', hourglass: 'M12 7a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM12 10v4M10 3h4', globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
@@ -133,14 +134,31 @@ function cityTime(p, lf, c) {
     const local = t + off * 60, night = (() => { const ss = toMin(c.sunset) ?? 18 * 60; const l = ((local % 1440) + 1440) % 1440; return l >= ss || l < 6 * 60 + 30; })();
     return { off, time: hm(local), night, dayShift: local >= 1440 ? '내일' : local < 0 ? '어제' : '오늘' };
 }
+// the world map card: grid paper, the land, tonight's shadow (from the story's date and time), a pin per saved city
+const geo = (lat, lon) => [((lon + 180) / 360 * MAP_W), ((MAP_TOP - lat) / (MAP_TOP - MAP_BOT) * MAP_H)];
+const cityAt = (c, hereTz, off) => { const at = TZ_AT[c.tz] || TZ_AT[hereTz]; return at ? [at[0], at[1] + (TZ_AT[c.tz] ? 0 : off * 15)] : [45, Math.max(-170, Math.min(170, off * 15))]; };
+function worldMap(p, lf, rows) {
+    const here = hereZone(lf), cw = MAP_W / DOT_C, ch = MAP_H / DOT_R;
+    // each saved city lights the dot it falls in (the place the story is in, amber)
+    const lit = new Map();
+    rows.forEach(({ c, t }, k) => { const [la, lo] = cityAt(c, here, t.off), [px, py] = geo(la, lo), key = `${Math.min(DOT_C - 1, Math.max(0, Math.floor(px / cw)))}:${Math.min(DOT_R - 1, Math.max(0, Math.floor(py / ch)))}`; if (!lit.has(key) || !k) lit.set(key, k ? 'c' : 'h'); });
+    const dots = DOTS.flatMap((row, r) => [...row].map((v, c) => { const on = lit.get(`${c}:${r}`), x = ((c + 0.5) * cw).toFixed(2), y = ((r + 0.5) * ch).toFixed(2); return on ? `<circle cx="${x}" cy="${y}" r="2.3" class="${on}"/>${on === 'h' ? `<circle cx="${x}" cy="${y}" r="2.3" class="pulse"/>` : ''}` : v === '1' ? `<circle cx="${x}" cy="${y}" r="1.55"/>` : ''; })).join('');
+    return `<div class="lf_wmap"><svg viewBox="0 0 ${MAP_W} ${MAP_H}" preserveAspectRatio="xMidYMid meet">
+      <defs><pattern id="lfgrid" width="${cw}" height="${ch}" patternUnits="userSpaceOnUse"><path d="M${cw} 0V${ch}H0" fill="none" stroke="#26272c" stroke-width="0.5"/></pattern></defs>
+      <rect width="${MAP_W}" height="${MAP_H}" fill="url(#lfgrid)"/><g class="lf_dots">${dots}</g></svg></div>`;
+}
+// a small analog clock: twelve ticks, hour and minute hands, a light face by day and a dark one at night
+const face = (min, night) => { const h = (min % 720) / 720 * 360, m = (min % 60) * 6; return `<svg class="lf_dial ${night ? 'n' : 'd'}" viewBox="0 0 48 48"><circle cx="24" cy="24" r="23"/>${Array.from({ length: 12 }, (_, k) => { const a = k * 30 * Math.PI / 180, r1 = k % 3 ? 19.5 : 18; return `<line x1="${(24 + r1 * Math.sin(a)).toFixed(1)}" y1="${(24 - r1 * Math.cos(a)).toFixed(1)}" x2="${(24 + 21 * Math.sin(a)).toFixed(1)}" y2="${(24 - 21 * Math.cos(a)).toFixed(1)}" class="t${k % 3 ? '' : ' b'}"/>`; }).join('')}<line x1="24" y1="24" x2="24" y2="12.5" class="h" transform="rotate(${h.toFixed(1)} 24 24)"/><line x1="24" y1="24" x2="24" y2="7.5" class="m" transform="rotate(${m} 24 24)"/><circle cx="24" cy="24" r="2.6" class="c"/></svg>`; };
 export function worldScreen(p, now) {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '시계', 'life', 'home2', true);
-    const cs = lf.weather.cities;
+    const here = { name: lf.weather.here.place || '현재 위치', tz: hereZone(lf), sunset: lf.weather.here.tiles?.sunset || '', note: '' };
+    const rows = [here, ...lf.weather.cities.filter(c => c.name !== here.name)].map(c => ({ c, t: cityTime(p, lf, c) }));
     return `${axBar(p, now, '#f2f2f4')}
       ${axTop(axCb('home2'))}
       <div class="ax_scroll">${axH1('세계 시계')}
-        ${cs.length ? `<div class="lf_dcard">${cs.map(c => { const t = cityTime(p, lf, c), mm = toMin(t.time); return `<div class="lf_wc"><span class="lf_face ${t.night ? '' : 'day'}"><i style="height: 12px; transform: rotate(${(mm / 720) * 360}deg)"></i><i style="height: 17px; transform: rotate(${(mm % 60) * 6}deg)"></i></span><span class="lf_wct"><small>${t.dayShift}, ${t.off >= 0 ? '+' : '−'}${Math.abs(t.off)}시간${c.note ? ` · ${esc(c.note)}` : ''}</small><b>${esc(c.name)}</b></span><b class="cg_num">${t.time}</b></div>`; }).join('')}</div>` : '<div class="lf_none">저장한 도시가 없어요</div>'}
+        ${worldMap(p, lf, rows)}
+        <div class="lf_dcard">${rows.map(({ c, t }, k) => `<div class="lf_wc">${face(toMin(t.time), t.night)}<span class="lf_wct"><small>${k ? `${t.dayShift}, ${t.off >= 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '현재 위치'}${c.note ? ` · ${esc(c.note)}` : ''}</small><b>${esc(c.name)}</b></span><b class="cg_num">${t.time}</b></div>`).join('')}</div>
         <i class="lf_pad"></i></div>
       ${clockDock('wclock')}${axInd('#f2f2f4')}`;
 }
