@@ -18,7 +18,7 @@ import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
 import { applyMoney, investNow, moneyNow, replayEffects, revertEffects } from './phonesyncmoney.js';
-import { newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
+import { joinComments, markTail, tailChanged, dropDone, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
 export const WALLS = ['dusk', 'ocean', 'forest', 'rose', 'night', 'sand', 'mono', 'aurora'];
 export const ACCENTS = ['blue', 'green', 'orange', 'pink', 'purple', 'red'];
@@ -148,7 +148,7 @@ MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - Already in MONEY NOW or INVESTMENTS NOW: its id as "already"; it is not paid again.
 - A card purchase goes on the card account; a refund is plus; paying the card off is a transfer from the bank.
 - No money is made up to cover a payment; a balance may go below zero.
-- An order or ticket only moves forward; a cancellation is not a refund until the money comes back.
+- An order or ticket only moves forward. A cancelled order moves no money; if it was already paid, its refund is a plus move.
 
 ${PHONE_STYLE}
 
@@ -260,6 +260,7 @@ function mergePhone(p, add) {
         else p.threads.push({ ...t, messages: keep(fresh('msg', [], t.messages), CAP.messages) });
     }
     p.threads = keep([...p.threads].sort((a, b) => lastTime(a).localeCompare(lastTime(b))), CAP.threads);
+    joinComments(p.posts, add.posts, CAP.comments);
     for (const k of LISTS) p[k] = keep([...(p[k] || []), ...fresh(k, p[k] || [], add[k] || [])], CAP[k]);
     if (add.profile?.handle || add.profile?.bio) p.profile = { ...(p.profile || {}), ...Object.fromEntries(Object.entries(add.profile).filter(([, v]) => v)) };
     for (const c of add.contacts) {
@@ -427,13 +428,14 @@ export const markAfter = index => makeMark(ctx().chat || [], index);
 // 'ok', 'none' (no start yet: an older phone) or 'lost' (its message is gone or now matches twice)
 export function syncState(p) {
     if (!p?.sync?.marks?.base) return 'none';
-    if (settleMarks(p.sync, ctx().chat || [], ['base']).length) return 'lost';
+    // the bank's and the investment's starts move with a deleted message too; one that can't be found again stays put
+    if (settleMarks(p.sync, ctx().chat || [], ['base', ...['money', 'invest'].filter(g => p.sync.marks[g])]).includes('base')) return 'lost';
     p.sync.scope = phoneChatScope(ctx());
     return 'ok';
 }
 export const syncLeft = p => (p?.sync?.marks?.base ? unreadCount(p.sync, syncRows()) : null);
 const ITEM_KEYS = [...LISTS, 'threads', 'contacts'];
-const sizes = p => Object.fromEntries(ITEM_KEYS.map(k => [k, k === 'threads' ? p.threads.reduce((n, t) => n + t.messages.length, 0) : (p[k] || []).length]));
+const sizes = p => Object.fromEntries(ITEM_KEYS.map(k => [k, k === 'threads' ? p.threads.reduce((n, t) => n + t.messages.length, 0) : k === 'posts' ? (p.posts || []).reduce((n, x) => n + 1 + (x.comments?.length || 0), 0) : (p[k] || []).length]));
 const APP_NAME = { threads: '문자', contacts: '연락처', calls: '통화', photos: '사진', notes: '메모', searches: '검색', events: '캘린더', posts: 'SNS', mails: '메일', diary: '일기', voice: '음성 메모' };
 let syncing = false;
 async function updatePhone(m, owner) {
@@ -442,8 +444,18 @@ async function updatePhone(m, owner) {
     try {
         const key = nameKey(owner), p = m.phones[key], scope = phoneChatScope(ctx());
         if (syncState(p) !== 'ok') { const e = new Error('먼저 반영 시작 위치를 골라 주세요'); e.code = 'SYNC_PICK'; throw e; }
-        const s = p.sync, rows = syncRows(), round = pickRound(s, rows);
-        if (!round.rows.length) { p.syncLast = { checked: 0, remaining: 0, apps: [], failed: [], at: Date.now() }; await saveMeta(); return p; }
+        const s = p.sync, swiped = [];
+        // the last reply read was swiped: the round that read it is undone and it is read again; an older round's items stay
+        if (tailChanged(s, syncRows())) {
+            const at = s.tail.index;
+            let undone = false;
+            if (p.syncUndo?.read?.includes(at)) { try { await undoRound(m, p); undone = true; } catch { /* a bank or investment made again since */ } }
+            if (!undone) dropDone(s, at);
+            delete s.tail;
+            swiped.push(undone ? `#${at} 답이 바뀌어서 지난 반영을 되돌리고 다시 읽었어요` : `#${at} 바뀐 답을 새로 읽어요. 전에 그 답에서 넣은 내용은 남아 있어요`);
+        }
+        const rows = syncRows(), round = pickRound(s, rows);
+        if (!round.rows.length) { p.syncLast = { checked: 0, remaining: 0, apps: [], failed: [], notes: swiped, at: Date.now() }; await saveMeta(); return p; }
         // the archive: sections covering this round are evidence; earlier ones are background; ones reaching unread messages stay out
         const [body, tail] = splitTail(String(m.text || ''));
         const sections = parseSections(body).filter(x => !x.group && RANGE_HEAD.test(x.title)).map(x => { const mt = x.title.match(RANGE_HEAD); return { key: `${mt[2]}-${mt[4]}:${x.title.length}`, first: Number(mt[2]), last: Number(mt[4]), text: body.slice(x.start, x.end).trim() }; });
@@ -475,10 +487,11 @@ async function updatePhone(m, owner) {
         const raw = jsonOf(out);
         if (!raw || !Array.isArray(raw.events)) throw new Error('모델 답에서 반영할 내용을 찾지 못했어요. 다시 해 주세요');
         const inRound = new Set(round.rows.map(r => r.index)), textAt = new Map(round.rows.map(r => [r.index, r.text])), start = s.marks.base.index;
-        const failed = {}, loose = [], added = [], apps = new Set(), changes = [], notes = [];
+        const failed = {}, loose = [], added = [], apps = new Set(), changes = [], notes = [...swiped];
         // for 되돌리기: what was there before this round (ids and message counts), and the reading state
         const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map(p.threads.map(t => [t.id, t.messages.length]));
-        const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events }), now: p.now, moneyAt: p.money?.at, investAt: p.investment?.at };
+        const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, tail: s.tail }), now: p.now, moneyAt: p.money?.at, investAt: p.investment?.at,
+            comments: (p.posts || []).filter(x => x.id).map(x => [x.id, x.comments?.length || 0]) };
         for (const e of raw.events.slice(0, 40)) {
             const at = Number(e?.at), sec = evidence.find(x => at >= x.first && at <= x.last);
             const fail = why => (inRound.has(at) ? (failed[at] ||= why) : loose.push(why));
@@ -521,7 +534,8 @@ async function updatePhone(m, owner) {
         p.syncLast = { checked: inRound.size, remaining: unreadCount(s, rows), apps: [...apps], failed: [...Object.entries(failed).map(([at, why]) => ({ at: Number(at), why, skipped: s.failed[at]?.tries >= 2 })), ...loose.map(why => ({ at: null, why }))], changes, notes, at: Date.now() };
         ensureIds(p);
         p.at = Date.now();
-        p.syncUndo = { ...undo, round: id,
+        markTail(s, round.rows[round.rows.length - 1]);
+        p.syncUndo = { ...undo, round: id, read: [...inRound], comments: undo.comments,
             items: ITEM_KEYS.flatMap(k => (p[k] || []).filter(x => x.id && !had.has(x.id)).map(x => [k, x.id])),
             msgs: p.threads.filter(t => msgs.has(t.id) && t.messages.length > msgs.get(t.id)).map(t => [t.id, t.messages.slice(msgs.get(t.id)).map(x => JSON.stringify([x.from, x.text, x.time]))]),
             effects: added.flatMap(x => x.effects || []) };
@@ -580,8 +594,10 @@ export async function undoRound(m, p) {
         const t = p.threads.find(x => x.id === tid);
         if (t) { const drop = new Set(sigs); t.messages = t.messages.filter(x => !drop.delete(JSON.stringify([x.from, x.text, x.time]))); }
     }
+    for (const [pid, n] of u.comments || []) { const x = (p.posts || []).find(y => y.id === pid); if (x?.comments?.length > n) x.comments = x.comments.slice(0, n); }
     revertEffects(m, p, u.effects);
     Object.assign(s, structuredClone(u.sync));
+    if (!u.sync.tail) delete s.tail;
     s.rounds.pop();
     p.now = u.now;
     delete p.syncLast; delete p.syncUndo;

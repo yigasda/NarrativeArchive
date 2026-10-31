@@ -47,6 +47,23 @@ export function settleMarks(s, chat, groups = SYNC_GROUPS) {
     return lost;
 }
 
+// the last message a round read, by its text: a swipe changes it after it was read
+export const markTail = (s, row) => { if (row) s.tail = { index: row.index, fp: fp(row.text) }; };
+export const tailChanged = (s, rows) => { const t = s.tail, row = t && rows.find(r => r.index === t.index); return !!row && fp(row.text) !== t.fp; };
+export function dropDone(s, i) { s.done = s.done.flatMap(([a, b]) => (i < a || i > b ? [[a, b]] : [...(a < i ? [[a, i - 1]] : []), ...(i < b ? [[i + 1, b]] : [])])); }
+// a post seen again may bring new comments: they join the post already there (same text, or same text, photo and time)
+export function joinComments(posts, adds, cap = 8) {
+    const key = c => `${String(c.from || '').toLowerCase()}|${c.text}`;
+    let n = 0;
+    for (const x of adds || []) {
+        const old = (posts || []).find(o => o.text && o.text === x.text || o.photo && o.photo === x.photo && o.time === x.time);
+        if (!old || !x.comments?.length) continue;
+        const seen = new Set((old.comments || []).map(key)), more = x.comments.filter(c => !seen.has(key(c)));
+        if (more.length) { old.comments = [...(old.comments || []), ...more].slice(-cap); n += more.length; }
+    }
+    return n;
+}
+
 // read messages, as merged ranges [first, last]
 export const isDone = (s, i) => s.done.some(([a, b]) => i >= a && i <= b);
 export function addDone(s, idx) {

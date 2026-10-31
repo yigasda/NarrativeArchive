@@ -83,8 +83,13 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
     };
     const from = guess ? 'guess' : 'story';
 
+    // an order that comes in already cancelled was never paid: its charge stays out, unless the same event also refunds it
+    const voided = list(mo.orders).filter(o => o.status === 'cancelled' && !o.already && o.occurrence !== 'again').map(o => round((Number(o.price) || 0) * Math.max(1, Math.round(Number(o.qty) || 1))));
+    const refunds = list(mo.moves).map(x => Number(x.amount)).filter(a => a > 0);
     list(mo.moves).forEach((x, k) => {
         const amount = Number(x.amount), broker = /^broker:/i.test(String(x.account || ''));
+        const v = amount < 0 ? voided.findIndex(c => c > 0 && Math.abs(c + amount) < 0.01) : -1;
+        if (v >= 0 && !refunds.some(r => Math.abs(r + amount) < 0.01)) { voided.splice(v, 1); out.legs.push({ key: `void:${k}`, amount, state: 'cancelled' }); out.notes.push(`${txt(x.who, 40)} ${round(amount)}: 취소된 주문이라 결제를 넣지 않았어요`); return; }
         if (!finite(amount) || amount === 0) fail('금액을 확인하지 못했어요');
         if (broker ? !investOn : !bankOn) { out.legs.push({ key: `before:${x.account}`, amount, state: 'before' }); return; }
         if (broker) {
@@ -114,6 +119,7 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
         const twin = !pointed && tx.find(t => match(t) && !fresh(x, t, e.at));
         if (!pointed && !twin && tx.some(match)) out.notes.push(`${txt(x.who, 40) || acct.name} ${round(amount)}: 같은 날 같은 결제가 하나 더 있어요 (새 결제라고 해서 따로 넣었어요)`);
         if (!pointed && !twin && x.occurrence === 'again') { out.legs.push({ key, amount: round(amount), state: 'again' }); out.notes.push(`${txt(x.who, 40) || acct.name} ${round(amount)}: 전에 있었던 결제라 넣지 않았어요`); return; }
+        if (pointed && pointed.amountFrom === 'guess' && !guess && Math.sign(pointed.amount) === Math.sign(amount) && Math.abs(pointed.amount - amount) > 0.01) { amend(pointed, amount, lk, label, acct); out.legs.push({ key, amount: round(amount), state: 'included', rec: pointed.id }); return; }
         if (twin && twin.amountFrom === 'guess' && !guess && Math.abs(twin.amount - amount) > 0.01) { amend(twin, amount, lk, label, acct); out.legs.push({ key, amount: round(amount), state: 'included', rec: twin.id }); return; }
         if (pointed || twin) {
             out.legs.push({ key, amount: round(amount), state: 'included', rec: (pointed || twin).id });

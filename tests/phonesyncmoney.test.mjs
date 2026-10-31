@@ -253,3 +253,23 @@ test('a retry re-reading the neighbours of a payment that already went in does n
     applyMoney(m, p, ev('coffee-again', 2, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', occurrence: 'new' }] }), opts({ span: [1, 4] }));
     assert.equal(bank(), 995.5);
 });
+
+test('the model pointing at a guessed record with the real amount corrects it', () => {
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('hair', 51, '10-30', { amountFrom: 'guess', moves: [{ account: '1111', amount: -25, who: 'Friseur', occurrence: 'new' }] }), opts());
+    const rec = p.money.tx[0].id;
+    applyMoney(m, p, ev('hair-bill', 52, '10-30', { amountFrom: 'story', moves: [{ account: '1111', amount: -38, who: 'Friseur', occurrence: 'again', already: rec }] }), opts());
+    assert.equal(bank(), 962);
+    assert.equal(p.money.tx.length, 1);
+    assert.equal(p.money.tx[0].amountFrom, undefined);
+});
+
+test('an order cancelled right away is not charged; paid then refunded in one event stays both', () => {
+    const { m, p } = setup();
+    applyMoney(m, p, ev('tumbler', 31, '10-29', { moves: [{ account: '2222', amount: -18, who: 'Shop', occurrence: 'new' }], orders: [{ shop: 'Shop', item: 'Tumbler', qty: 1, price: 18, status: 'cancelled', occurrence: 'new' }] }), opts());
+    migrateBank(m, p);
+    assert.equal(p.money.tx.length, 0);
+    assert.equal(p.money.orders[0].status, 'cancelled');
+    applyMoney(m, p, ev('mug', 33, '10-29', { moves: [{ account: '2222', amount: -12, who: 'Shop', occurrence: 'new' }, { account: '2222', amount: 12, who: 'Shop', occurrence: 'new' }], orders: [{ shop: 'Shop', item: 'Mug', qty: 1, price: 12, status: 'cancelled', occurrence: 'new' }] }), opts());
+    assert.equal(p.money.tx.length, 2);
+});

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newSync, makeMark, findMark, settleMarks, pickRound, addDone, settleRound, isDone, unreadCount, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from '../src/phonesync.js';
+import { joinComments, markTail, tailChanged, dropDone, newSync, makeMark, findMark, settleMarks, pickRound, addDone, settleRound, isDone, unreadCount, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from '../src/phonesync.js';
 
 // a chat of n messages, user and character in turn
 const chat = n => Array.from({ length: n }, (_, i) => ({ is_user: i % 2 === 0, is_system: false, name: i % 2 ? 'Ren' : 'Mara', mes: `message ${i}` }));
@@ -142,4 +142,32 @@ test('a retried message remembers which messages it was read with', () => {
     settleRound(s, r.rows.map(x => x.index), { 2: 'x' }, new Set([1]));
     assert.deepEqual(s.failed[2].span, [1, 4]);
     assert.deepEqual(s.failed[3].span, [1, 4]);
+});
+
+test('a comment on a post already there joins it; the same comment twice stays one', () => {
+    const posts = [{ text: 'Sonnenuntergang', photo: 'sunset', time: '10-28 18:00', comments: [{ from: 'Mara', text: 'schön!' }] }];
+    const n = joinComments(posts, [{ text: 'Sonnenuntergang', photo: 'sunset', time: '10-28 18:05', comments: [{ from: 'Mara', text: 'schön!' }, { from: 'Ivo', text: 'wo ist das?' }] }]);
+    assert.equal(n, 1);
+    assert.deepEqual(posts[0].comments.map(c => c.from), ['Mara', 'Ivo']);
+});
+
+test('a swiped reply that was read is noticed, even after more messages; it can be read again on its own', () => {
+    const c = chat(12), s = sync(c, 0);
+    addDone(s, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    markTail(s, rows(c)[11]);
+    assert.equal(tailChanged(s, rows(c)), false);
+    c[11].mes = 'another swipe';
+    c.push({ is_user: true, is_system: false, name: 'Mara', mes: 'next' });
+    assert.equal(tailChanged(s, rows(c)), true);
+    dropDone(s, 11);
+    assert.deepEqual(pickRound(s, rows(c)).rows.map(x => x.index), [11, 12]);
+    assert.deepEqual(s.done, [[1, 10]]);
+});
+
+test('a deleted message moves the bank and investment starts too', () => {
+    const c = chat(30), s = sync(c, 9);
+    s.marks.money = makeMark(c, 13); s.marks.invest = makeMark(c, 17);
+    c.splice(3, 1);
+    assert.deepEqual(settleMarks(s, c), []);
+    assert.deepEqual([s.marks.base.index, s.marks.money.index, s.marks.invest.index], [8, 12, 16]);
 });
