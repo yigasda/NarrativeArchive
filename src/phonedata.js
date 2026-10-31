@@ -192,7 +192,7 @@ ANSWER — one JSON object, nothing else:
                           "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }]${delivery ? `,
                           "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "qty", "price": unit price }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived", "to": "home" | "work" | a person's name, "address", "left", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery", "for", "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "" }]` : ''} }` : ''} }]${life ? `,
   "days": [{ the same fields as "health", "from": "pattern" }]${weather ? `,
-  "weather": { "place", "date", "time", "from": "chat" | "archive" | "guess", "cond": "clear" | "cloudy" | "rain" | "snow" | "fog" | "storm", "temp", "hi", "lo", "line", "ko",
+  "weather": { "place", "date", "time", "from": "chat" | "archive" | "guess", "cond": "clear" | "partly" | "cloudy" | "drizzle" | "rain" | "sleet" | "snow" | "fog" | "storm" | "wind", "temp", "hi", "lo", "line", "ko",
                "hours": [6 of { "time", "cond", "temp", "rain" }], "days": [10 of { "day", "cond", "lo", "hi", "rain" }],
                "tiles": { "rain24", "rainNext", "feels", "wind", "gust", "dir", "humidity", "dew", "sunrise", "sunset", "visibility" },
                "cities": [{ "name", "cond", "temp", "hi", "lo", "rainNext": mm, "wind": km/h, "gust", "dir", "feels", "humidity", "dew" }] } or null` : ''}` : ''} }

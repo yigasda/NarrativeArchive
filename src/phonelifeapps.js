@@ -131,7 +131,7 @@ function cityTime(p, lf, c) {
     const n = now5(p), x = md(n), at = x ? new Date(Date.UTC(YEAR, x.mo - 1, x.d, 12)) : new Date();
     const here = hereZone(lf), a = c.tz ? zoneMin(c.tz, at) : null, b = here ? zoneMin(here, at) : a;
     const off = a !== null && b !== null ? Math.round((a - b) / 60) : 0, t = toMin(n.slice(6)) ?? toMin(lf.weather.here.time) ?? 12 * 60;
-    const local = t + off * 60, night = (() => { const ss = toMin(c.sunset) ?? 18 * 60; const l = ((local % 1440) + 1440) % 1440; return l >= ss || l < 6 * 60 + 30; })();
+    const local = t + off * 60, night = (() => { const ss = toMin(c.sunset) ?? 18 * 60, sr = toMin(c.sunrise) ?? 6 * 60 + 30; const l = ((local % 1440) + 1440) % 1440; return l >= ss || l < sr; })();
     return { off, time: hm(local), night, dayShift: local >= 1440 ? '내일' : local < 0 ? '어제' : '오늘' };
 }
 // the world map card: grid paper, the land, tonight's shadow (from the story's date and time), a pin per saved city
@@ -334,82 +334,243 @@ export function fileScreen(p, now, id) {
 }
 
 // ================= 날씨 =================
-const WX = { clear: ['#3f86d6', '맑음', 'sun'], cloudy: ['#6b7f9c', '흐림', 'cloudF'], rain: ['#5d6f84', '비', 'rain'], snow: ['#8aa0b8', '눈', 'snow'], fog: ['#8b929a', '안개', 'fog'], storm: ['#3e4656', '뇌우', 'storm'] };
-const NIGHT = '#28324a';
-const wxIc = (c, z = 24, night = false) => (night && c === 'clear' ? ax('moon', z - 2, '#fff', 1.9, '#fff') : c === 'clear' ? ax('sun', z, '#f6c94a', 2, '#f6c94a') : c === 'cloudy' ? ax('cloudF', z, '#fff', 1.9, '#fff') : ax(WX[c]?.[2] || 'cloudF', z, '#fff', 1.9));
-// the sky behind the numbers: clouds drift, rain and snow fall, a storm flashes, the sun's halo breathes, stars twinkle at night
-function sky(c, night) {
-    const cl = (x, y, w, h, col, dx, d) => `<i class="cl" style="left: ${x}px; top: ${y}px; width: ${w}px; height: ${h}px; background: ${col}; --x: ${dx}px; --d: ${d}s"></i>`;
-    if (night && (c === 'clear' || c === 'cloudy')) return `<div class="lf_sky">${Array.from({ length: 28 }, (_, k) => `<i class="st" style="left: ${(k * 53) % 380}px; top: ${(k * 97) % 420}px; --dl: ${-(k % 7) * 0.6}s"></i>`).join('')}<i class="mn" style="right: 40px; top: 90px"></i>${c === 'cloudy' ? cl(-80, 60, 320, 150, 'rgba(255,255,255,.07)', 40, 26) : ''}</div>`;
-    if (c === 'clear') return `<div class="lf_sky"><i class="sun" style="right: -58px; top: 150px"></i><i class="halo" style="right: -88px; top: 120px; width: 180px; height: 180px"></i><i class="halo h2" style="right: -123px; top: 85px; width: 250px; height: 250px"></i>${cl(-60, 250, 200, 60, 'rgba(255,255,255,.14)', 60, 24)}</div>`;
-    const clouds = cl(-120, 40, 380, 200, 'rgba(255,255,255,.07)', 46, 22) + cl(200, 20, 300, 170, 'rgba(255,255,255,.1)', -40, 30) + cl(90, -60, 260, 150, 'rgba(255,255,255,.06)', 30, 18);
-    const fall = (n, cls) => Array.from({ length: n }, (_, k) => `<span class="${cls}" style="left: ${(k * 37) % 600}px; --d: ${(cls === 'rn' ? 1.35 + (k * 13 % 10) / 14 : 5 + (k * 7 % 10) / 2).toFixed(2)}s; --dl: ${-((k * 17) % 100) / 100 * (cls === 'rn' ? 2 : 6)}s${cls === 'rn' ? `; height: ${14 + (k * 7) % 16}px` : ''}"></span>`).join('');
-    return `<div class="lf_sky">${clouds}${c === 'rain' || c === 'storm' ? fall(60, 'rn') : c === 'snow' ? fall(44, 'sn') : ''}${c === 'storm' ? '<i class="fl"></i>' : ''}${c === 'fog' ? '<i class="fg"></i><i class="fg f2"></i>' : ''}</div>`;
+// what each sky is called; the colours come from pal() below
+const WX = { clear: '맑음', partly: '구름 조금', cloudy: '흐림', drizzle: '이슬비', rain: '비', sleet: '진눈깨비', snow: '눈', fog: '안개', storm: '뇌우', wind: '강풍' };
+// the part of the day a sky is drawn for: dawn and evening are the hour around sunrise and sunset
+function phaseOf(time, sunrise, sunset) {
+    const t = toMin(time), sr = toMin(sunrise) ?? 6 * 60 + 30, ss = toMin(sunset) ?? 18 * 60;
+    if (t === null) return 'day';
+    if (t >= sr - 45 && t <= sr + 45) return 'dawn';
+    if (t >= ss - 50 && t <= ss + 30) return 'eve';
+    return t > ss + 30 || t < sr - 45 ? 'night' : 'day';
+}
+const WET = { drizzle: 1, rain: 1, sleet: 1 };
+// one palette per sky and part of the day: flat layers only (sky, bands, three hills, clouds), no gradients
+function pal(cond, phase) {
+    const D = {
+        clear: { sky: '#4f8fd8', hills: ['#3f78bd', '#3569a6', '#2d5b92'], sun: 'day', puff: '#6ca1de' },
+        partly: { sky: '#5b93cf', hills: ['#4a80bb', '#3f72a9', '#356496'], sun: 'day', front: '#e9f0f8', cloud: '#84aedb' },
+        cloudy: { sky: '#6b7f9c', hills: ['#62758f', '#566881', '#4b5c73'], cloud: '#7b8ea9', cloud2: '#8a9cb5' },
+        drizzle: { sky: '#6f7f92', hills: ['#62717f', '#566472', '#4b5866'], cloud: '#7b8b9d', fall: 'drizzle' },
+        rain: { sky: '#5f7186', hills: ['#56687c', '#4a5b6e', '#3f4f61'], cloud: '#6b7d92', fall: 'rain' },
+        sleet: { sky: '#7889a0', hills: ['#6a7a8f', '#5e6d81', '#536174'], cloud: '#8596ab', fall: 'sleet' },
+        snow: { sky: '#8aa0b8', hills: ['#e6edf4', '#d5dfea', '#c3cfdd'], cloud: '#97abc1', fall: 'snow' },
+        fog: { sky: '#8b929a', hills: ['#7f878f', '#757d86', '#6b737c'], fog: 'rgba(255, 255, 255, 0.22)' },
+        storm: { sky: '#3e4656', hills: ['#343b49', '#2b313d', '#232833'], cloud: '#4b5466', fall: 'heavy', bolt: true },
+        wind: { sky: '#6b8bb0', hills: ['#58799f', '#4b6a8f', '#3f5c7f'], cloud: '#899fc0', wind: true },
+    };
+    const NIGHT = ['#222b40', '#1c2436', '#161d2c'];
+    if (cond === 'storm') return { ...D.storm, phase: 'day' };
+    if (phase === 'night') {
+        if (cond === 'clear' || cond === 'wind') return { sky: '#28324a', hills: NIGHT, moon: true, stars: 34, wind: cond === 'wind', phase };
+        if (cond === 'partly' || cond === 'cloudy') return { sky: '#28324a', hills: NIGHT, moon: true, stars: 16, cloud: '#333d55', phase };
+        if (WET[cond]) return { sky: '#2c3446', hills: ['#232a3a', '#1d2331', '#171c28'], cloud: '#363f53', fall: D[cond].fall, phase };
+        if (cond === 'snow') return { sky: '#2f3a52', hills: ['#c5cfdc', '#aab6c6', '#919fb2'], cloud: '#3a4660', fall: 'snow', phase };
+        return { sky: '#3b414b', hills: ['#343a43', '#2e333b', '#282c33'], fog: 'rgba(255, 255, 255, 0.12)', phase };
+    }
+    // snow at dawn and dusk: the low sun tints the snow on the hills
+    if (phase === 'dawn' && cond === 'snow') return { sky: '#8f97b8', bands: [[175, '#a6a6c4'], [225, '#c4b2c4']], cb: [[56, '#a6a6c4'], [76, '#c4b2c4']], hills: ['#efe6ee', '#ddd2e0', '#cbbfd2'], cloud: '#9ca3c2', fall: 'snow', phase };
+    if (phase === 'eve' && cond === 'snow') return { sky: '#b07a74', bands: [[165, '#c08a7e'], [220, '#d39f8c']], cb: [[50, '#c08a7e'], [74, '#d39f8c']], hills: ['#f3e3dc', '#e2cfc8', '#cfbab4'], cloud: '#a8726f', fall: 'snow', phase };
+    if (phase === 'dawn' && cond !== 'fog') {
+        if (cond === 'clear' || cond === 'partly' || cond === 'wind') return { sky: '#7484b3', bands: [[150, '#9a99c2'], [195, '#c9a9c0'], [235, '#eebda6']], cb: [[52, '#9a99c2'], [68, '#c9a9c0'], [80, '#eebda6']], hills: ['#8d7fa6', '#6f6390', '#5a5079'], sun: 'rise', stars: 12, cloud: cond === 'partly' ? '#9aa2c6' : '', phase };
+        return { sky: '#7c86a8', bands: [[175, '#9796b4'], [225, '#b59fb4']], cb: [[56, '#9796b4'], [76, '#b59fb4']], hills: cond === 'snow' ? D.snow.hills : ['#7c7298', '#665c84', '#554b72'], cloud: '#8a92b2', fall: D[cond].fall, phase };
+    }
+    if (phase === 'eve' && cond !== 'fog') {
+        if (cond === 'clear' || cond === 'partly' || cond === 'wind') return { sky: '#c8664f', bands: [[120, '#dc7c52'], [180, '#ec9a5c'], [230, '#f5bd6e']], cb: [[40, '#dc7c52'], [62, '#ec9a5c'], [78, '#f5bd6e']], hills: ['#7a4a5e', '#5d3a50', '#4a2e42'], sun: 'sink', puff: '#d98b78', cloud: cond === 'partly' ? '#d98b78' : '', phase };
+        return { sky: '#a8605a', bands: [[165, '#b9715f'], [220, '#c98466']], cb: [[50, '#b9715f'], [74, '#c98466']], hills: cond === 'snow' ? D.snow.hills : ['#6a4152', '#523446', '#43293a'], cloud: '#9a5d5e', fall: D[cond].fall, phase };
+    }
+    return { ...D[cond] || D.cloudy, phase: 'day' };
+}
+// cards and tiles sit on the sky in one flat colour: a shade darker, or a shade lighter on a night sky
+const shade = (hex, f) => { const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255]; const lum = (c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11) / 255; return `#${c.map(v => Math.round(lum < 0.25 ? v + (255 - v) * (1 - f) * 0.5 : v * f).toString(16).padStart(2, '0')).join('')}`; };
+// a fixed scatter per sky, so it doesn't jump between renders
+const rnd = seed => { let s = seed; return () => (s = (s * 9301 + 49297) % 233280) / 233280; };
+const puffSvg = (x, y, w, col, dx, d, op = 1) => `<svg class="cl" style="left: ${x}px; top: ${y}px; width: ${w}px; height: ${w / 2}px; --x: ${dx}px; --d: ${d}s${op < 1 ? `; opacity: ${op}` : ''}" viewBox="0 0 200 100"><g fill="${col}"><circle cx="60" cy="58" r="34"/><circle cx="104" cy="42" r="42"/><circle cx="148" cy="62" r="30"/><rect x="26" y="58" width="152" height="40" rx="20"/></g></svg>`;
+// the whole sky behind a weather screen: it moves (clouds drift, rain and snow fall, lightning, stars, the sun at dawn and dusk), and stands still with reduced motion
+function scene(cond, phase) {
+    const q = pal(cond, phase), r = rnd(cond.length * 31 + phase.length * 7), out = [];
+    for (const [y, c] of q.bands || []) out.push(`<i class="bd" style="top: ${y}px; background: ${c}"></i>`);
+    if (q.stars) out.push(Array.from({ length: q.stars }, () => `<i class="st${phase === 'dawn' ? ' fd' : ''}" style="left: ${Math.round(10 + r() * 370)}px; top: ${Math.round(60 + r() * 360)}px; --d: ${(2 + r() * 3).toFixed(1)}s; --dl: -${(r() * 4).toFixed(1)}s"></i>`).join(''));
+    const sun = (x, y, rad, core, halo, cls = '') => `<span class="sun ${cls}" style="left: ${x - rad * 2.4}px; top: ${y - rad * 2.4}px; width: ${rad * 4.8}px; height: ${rad * 4.8}px"><b style="background: ${halo}"></b><b class="h2" style="background: ${halo}"></b><i style="background: ${core}; width: ${rad * 2}px; height: ${rad * 2}px"></i></span>`;
+    if (q.sun === 'day') out.push(cond === 'partly' ? sun(320, 190, 42, '#f6c94a', 'rgba(255, 255, 255, 0.14)') : sun(330, 210, 46, '#f6c94a', 'rgba(255, 255, 255, 0.14)'));
+    if (q.sun === 'rise') out.push(sun(312, 262, 40, '#fbe6a6', 'rgba(246, 211, 154, 0.45)', 'rise'));
+    if (q.sun === 'sink') out.push(sun(312, 250, 46, '#fbe08f', 'rgba(247, 200, 115, 0.4)', 'sink'));
+    if (q.moon) out.push(`<span class="mn" style="left: ${cond === 'clear' || cond === 'wind' ? 292 : 300}px; top: ${cond === 'clear' || cond === 'wind' ? 150 : 170}px"><i></i><b style="background: ${q.sky}"></b></span>`);
+    if (q.puff) out.push(puffSvg(-40, phase === 'eve' ? 90 : 200, phase === 'eve' ? 200 : 170, q.puff, phase === 'eve' ? 50 : 70, 26));
+    if (cond === 'partly' && q.front) out.push(puffSvg(-60, 90, 200, q.cloud, 50, 24) + puffSvg(258, 196, 130, q.front, 24, 14));
+    else if (q.cloud && cond === 'wind') out.push(puffSvg(-60, 90, 240, q.cloud, 160, 9) + puffSvg(200, 160, 200, q.cloud, 160, 11));
+    else if (q.cloud) out.push(puffSvg(-80, 70, 300, q.cloud, 40, 22) + puffSvg(180, 40, 260, q.cloud, -50, 28) + puffSvg(60, 200, 220, q.cloud, 60, 30, 0.8) + (q.cloud2 ? puffSvg(-40, 300, 260, q.cloud2, 50, 20) : ''));
+    const drops = (n, cls, h0, hv, d0, dv) => Array.from({ length: n }, () => `<i class="${cls}" style="left: ${Math.round(-30 + r() * 450)}px; height: ${Math.round(h0 + r() * hv)}px; --d: ${(d0 + r() * dv).toFixed(2)}s; --dl: -${(r() * 3).toFixed(2)}s"></i>`).join('');
+    const flakes = (n, big) => Array.from({ length: n }, () => { const z = ((big ? 5 : 3) + r() * 3).toFixed(1); return `<i class="sn" style="left: ${Math.round(-10 + r() * 410)}px; width: ${z}px; height: ${z}px; --d: ${(6 + r() * 5).toFixed(1)}s; --dl: -${(r() * 10).toFixed(1)}s; --s: ${Math.round(-30 + r() * 60)}px"></i>`; }).join('');
+    if (q.fall === 'rain') out.push(drops(70, 'rn', 14, 16, 1.2, 0.7));
+    if (q.fall === 'drizzle') out.push(drops(90, 'rn dz', 6, 6, 1.8, 0.8));
+    if (q.fall === 'heavy') out.push(drops(90, 'rn hv', 20, 18, 0.8, 0.4));
+    if (q.fall === 'sleet') out.push(drops(40, 'rn', 14, 16, 1.2, 0.7) + flakes(30, false));
+    if (q.fall === 'snow') out.push(flakes(60, true));
+    if (q.fog) out.push([[320, -60, 330, 18], [390, 90, 360, 24], [460, -20, 300, 20], [530, 120, 320, 26], [600, -40, 380, 22]].map(([t, l, w, d]) => `<i class="fg" style="top: ${t}px; left: ${l}px; width: ${w}px; background: ${q.fog}; --d: ${d}s"></i>`).join(''));
+    if (q.bolt) out.push('<svg class="bolt" viewBox="0 0 60 120"><path d="M34 0 L8 64 L28 64 L14 120 L56 46 L34 46 L46 0Z" fill="#f6d34a"/></svg><i class="fl"></i>');
+    if (q.wind) out.push([[190, 120, 2.6, 0], [260, 90, 3.1, 1.2], [330, 150, 2.4, 0.6], [410, 110, 2.9, 2], [480, 130, 2.7, 1.5]].map(([t, w, d, dl]) => `<i class="wl" style="top: ${t}px; width: ${w}px; --d: ${d}s; --dl: -${dl}s"></i>`).join('')
+        + (phase === 'night' ? '' : Array.from({ length: 10 }, () => `<i class="lv" style="top: ${Math.round(160 + r() * 400)}px; --d: ${(3 + r() * 2).toFixed(1)}s; --dl: -${(r() * 4).toFixed(1)}s"></i>`).join('') + '<svg class="tree" viewBox="0 0 60 110"><rect x="27" y="50" width="6" height="60" fill="#2c4a37"/><ellipse cx="30" cy="40" rx="24" ry="36" fill="#335c42"/></svg>'));
+    const [h1, h2, h3] = q.hills;
+    out.push(`<svg class="land" viewBox="0 0 390 260" preserveAspectRatio="none"><path d="M0 70 Q90 20 190 60 T390 40 V260 H0Z" fill="${h1}"/><path d="M0 110 Q120 70 230 105 T390 90 V260 H0Z" fill="${h2}"/><path d="M0 160 Q140 130 260 160 T390 150 V260 H0Z" fill="${h3}"/></svg>`);
+    return `<div class="lf_sc">${out.join('')}</div>`;
+}
+// the same sky, small, for a card in the city list (358 by 118, drawn to fit any width)
+function cardSky(cond, phase) {
+    const q = pal(cond, phase), W = 358, out = [`<rect width="${W}" height="118" fill="${q.sky}"/>`];
+    for (const [y, c] of q.cb || []) out.push(`<rect y="${y}" width="${W}" height="118" fill="${c}"/>`);
+    if (q.stars) out.push(`<g fill="#fff"${phase === 'dawn' ? ' opacity=".7"' : ''}><circle cx="140" cy="18" r="1.2"/><circle cx="190" cy="44" r="1"/><circle cx="258" cy="62" r="1.4"/><circle cx="120" cy="56" r="1"/><circle cx="168" cy="72" r="1.1"/><circle cx="270" cy="12" r="1"/></g>`);
+    if (q.sun === 'day') out.push(cond === 'partly' ? '<circle cx="300" cy="34" r="50" fill="#69a0d8"/><circle cx="300" cy="34" r="26" fill="#f6c94a"/>' : '<circle cx="330" cy="30" r="62" fill="#5f9ade"/><circle cx="330" cy="30" r="44" fill="#74a8e2"/><circle cx="330" cy="30" r="26" fill="#f6c94a"/>');
+    if (q.sun === 'rise') out.push('<circle cx="226" cy="88" r="26" fill="#f6d39a"/><circle cx="226" cy="88" r="15" fill="#fbe6a6"/>');
+    if (q.sun === 'sink') out.push('<circle cx="226" cy="86" r="34" fill="#f7c873" opacity=".55"/><circle cx="226" cy="86" r="20" fill="#fbe08f"/>');
+    if (q.moon) out.push(`<circle cx="${q.cloud ? 150 : 222}" cy="28" r="16" fill="#f1ead2"/><circle cx="${q.cloud ? 158 : 230}" cy="22" r="14" fill="${q.sky}"/>`);
+    if (cond === 'partly' && q.front) out.push('<g fill="#e9f0f8"><circle cx="246" cy="58" r="20"/><circle cx="274" cy="48" r="26"/><circle cx="304" cy="60" r="18"/><rect x="226" y="58" width="96" height="20" rx="10"/></g>');
+    else if (q.cloud && cond !== 'wind') out.push(`<g fill="${q.cloud}"><circle cx="230" cy="34" r="26"/><circle cx="268" cy="22" r="34"/><circle cx="308" cy="36" r="24"/><rect x="206" y="34" width="124" height="28" rx="14"/></g>${q.cloud2 ? `<g fill="${q.cloud2}"><circle cx="320" cy="62" r="18"/><circle cx="346" cy="54" r="24"/><rect x="302" y="62" width="70" height="20" rx="10"/></g>` : ''}`);
+    const lines = (col, w, n, ln, sl, seed) => { const r = rnd(seed); return `<g stroke="${col}" stroke-width="${w}" stroke-linecap="round">${Array.from({ length: n }, () => { const x = Math.round(110 + r() * 240), y = Math.round(14 + r() * 60); return `<line x1="${x}" y1="${y}" x2="${x - sl}" y2="${y + ln}"/>`; }).join('')}</g>`; };
+    const dots = (n, rad, seed) => { const r = rnd(seed); return `<g fill="#fff">${Array.from({ length: n }, (_, k) => `<circle cx="${Math.round(100 + r() * 250)}" cy="${Math.round(10 + r() * 72)}" r="${k % 3 ? rad : rad * 0.7}"/>`).join('')}</g>`; };
+    if (q.fall === 'rain') out.push(lines('rgba(255,255,255,.3)', 1.5, 12, 14, 4, 3));
+    if (q.fall === 'drizzle') out.push(lines('rgba(255,255,255,.4)', 1, 22, 6, 1, 5));
+    if (q.fall === 'heavy') out.push(lines('rgba(255,255,255,.4)', 2, 16, 18, 6, 7));
+    if (q.fall === 'sleet') out.push(lines('rgba(255,255,255,.35)', 1.4, 9, 12, 4, 2) + dots(10, 2, 17));
+    if (q.fall === 'snow') out.push(dots(22, 2.2, 11));
+    if (q.fog) out.push('<g fill="rgba(255,255,255,.2)"><rect x="150" y="22" width="230" height="9" rx="4.5"/><rect x="110" y="44" width="200" height="9" rx="4.5"/><rect x="170" y="66" width="210" height="9" rx="4.5"/></g>');
+    if (q.bolt) out.push('<path d="M232 30 L216 62 L228 62 L218 92 L246 54 L232 54 L242 30Z" fill="#f6c94a"/>');
+    if (q.wind) out.push(`<g fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2" stroke-linecap="round"><path d="M110 40 H190 Q204 40 204 30"/><path d="M140 58 H230"/><path d="M100 74 H170 Q184 74 184 84"/></g>${phase === 'night' ? '' : '<g fill="#2f5f3e"><rect x="184" y="62" width="4" height="26" transform="rotate(12 186 88)"/><ellipse cx="196" cy="58" rx="12" ry="16" transform="rotate(24 196 74)"/></g>'}`);
+    const [h1, h2] = q.hills, low = cond === 'snow';
+    out.push(low ? `<path d="M0 106 Q90 98 180 104 T358 100 V118 H0Z" fill="${h1}"/><path d="M0 112 Q110 106 210 110 T358 108 V118 H0Z" fill="${h2}"/>`
+        : `<path d="M0 92 Q90 78 180 88 T358 82 V118 H0Z" fill="${h1}"/><path d="M0 104 Q110 94 210 102 T358 98 V118 H0Z" fill="${h2}"/>`);
+    return `<svg class="bg" viewBox="0 0 ${W} 118" preserveAspectRatio="xMidYMid slice">${out.join('')}</svg>`;
+}
+// small filled icons for the hourly row and the ten days
+const IC_CLOUD = '<path d="M7 19a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 10.5a4.3 4.3 0 0 1 0 8.5z" fill="#d7dfe8"/><path d="M7 17a4 4 0 0 1-.4-8A5.5 5.5 0 0 1 17.5 9a3.8 3.8 0 0 1 0 8z" fill="#fff"/>';
+const IC_TOP = '<path d="M7 14.5a4 4 0 0 1-.4-8A5.5 5.5 0 0 1 17.5 6.5a3.8 3.8 0 0 1 0 8z" fill="#fff"/>';
+const IC_SUN = '<g stroke="#f6c94a" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></g><circle cx="12" cy="12" r="5" fill="#f6c94a"/>';
+const IC_MOON = '<path d="M19 14.5A7.5 7.5 0 1 1 10 4.6a6 6 0 0 0 9 9.9z" fill="#f1ead2"/>';
+const drop = x => `<path d="M${x} 17l1.2 2.4a1.3 1.3 0 1 1-2.4 0z"/>`;
+function wxIc(c, z = 24, night = false) {
+    const g = {
+        clear: night ? IC_MOON : IC_SUN,
+        partly: `${night ? '<path d="M15 9.5A5 5 0 1 1 9 3a4 4 0 0 0 6 6.5z" fill="#f1ead2"/>' : '<g stroke="#f6c94a" stroke-width="1.8" stroke-linecap="round"><path d="M9 1.5v1.8M2.5 8h1.8M4.2 3.2l1.3 1.3M13.8 3.2l-1.3 1.3"/></g><circle cx="9" cy="8" r="3.8" fill="#f6c94a"/>'}<path d="M9 20a3.6 3.6 0 0 1-.4-7.2A4.6 4.6 0 0 1 17.6 13a3.5 3.5 0 0 1 .2 7z" fill="#fff"/>`,
+        cloudy: IC_CLOUD,
+        drizzle: `${IC_TOP}<g fill="#9fd6ff"><circle cx="8" cy="18" r="1"/><circle cx="12" cy="20" r="1"/><circle cx="16" cy="18" r="1"/><circle cx="10" cy="22" r="1"/><circle cx="14" cy="22.5" r="1"/></g>`,
+        rain: `${IC_TOP}<g fill="#7fc4f5">${drop(8)}${drop(12.5)}${drop(17)}</g>`,
+        sleet: `${IC_TOP}<g fill="#7fc4f5">${drop(8)}${drop(15.5)}</g><circle cx="12" cy="19.5" r="1.6" fill="#fff"/>`,
+        snow: `${IC_TOP}<g fill="#fff"><circle cx="8" cy="18.5" r="1.6"/><circle cx="12.5" cy="20.5" r="1.6"/><circle cx="17" cy="18.5" r="1.6"/></g>`,
+        fog: '<g fill="#fff"><rect x="3" y="7" width="18" height="2.4" rx="1.2"/><rect x="5" y="11.5" width="16" height="2.4" rx="1.2" opacity=".8"/><rect x="3" y="16" width="14" height="2.4" rx="1.2" opacity=".6"/></g>',
+        storm: `${IC_TOP}<path d="M12.5 13 L9 19 H12 L10.5 23.5 L16 16.5 H13 L14.5 13Z" fill="#f6d34a"/>`,
+        wind: '<g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M3 9h11a3 3 0 1 0-3-3"/><path d="M3 14h15a3 3 0 1 1-3 3"/><path d="M3 19h7"/></g>',
+    }[c] || IC_CLOUD;
+    return `<svg width="${z}" height="${z}" viewBox="0 0 24 24">${g}</svg>`;
 }
 // what the tiles say, from their numbers
 const tileLines = (h) => ({
-    rain: h.tiles.rainNext ? `앞으로 ${String(h.tiles.rainNext).replace('.', ',')} mm 더 와요.` : '당분간 비 소식이 없어요.',
-    feels: h.tiles.feels === null || h.temp === null ? '' : h.tiles.feels < h.temp - 1 ? (h.tiles.wind > 15 ? '바람 때문에 더 춥게 느껴져요.' : '실제보다 춥게 느껴져요.') : h.tiles.feels > h.temp + 1 ? (h.tiles.humidity > 70 ? '습도 때문에 더 덥게 느껴져요.' : '실제보다 덥게 느껴져요.') : '실제 기온과 비슷해요.',
-    humidity: h.tiles.dew === null ? '' : `이슬점이 지금 ${h.tiles.dew}°예요.`,
-    vis: h.tiles.visibility === null ? '' : h.tiles.visibility < 8 ? (h.cond === 'fog' ? '안개 때문에 멀리 안 보여요.' : '평소보다 짧아요.') : '멀리까지 잘 보여요.',
+    rain: h.tiles.rainNext ? `내일까지 ${String(h.tiles.rainNext).replace('.', ',')} mm 더 와요` : '내일까지 비 소식 없어요',
+    feels: h.tiles.feels === null || h.temp === null ? '' : h.tiles.feels < h.temp - 1 ? (h.tiles.wind > 15 ? '바람 탓에 더 추워요.' : '실제보다 춥게 느껴져요.') : h.tiles.feels > h.temp + 1 ? (h.tiles.humidity > 70 ? '습해서 더 더워요.' : '실제보다 덥게 느껴져요.') : '실제와 거의 같아요.',
+    humidity: h.tiles.dew === null ? '' : `이슬점 ${h.tiles.dew}°`,
+    vis: h.tiles.visibility === null ? '' : h.tiles.visibility < 8 ? (h.cond === 'fog' ? '안개 때문에 멀리 안 보여요.' : WET[h.cond] || h.cond === 'storm' ? '빗속이라 평소보다 짧아요.' : '평소보다 짧아요.') : '멀리까지 잘 보여요.',
 });
-const tempBar = (d, lo, hi, cur) => { const span = Math.max(1, hi - lo), a = ((d.lo ?? lo) - lo) / span * 100, b = (hi - (d.hi ?? hi)) / span * 100, warm = (d.hi ?? 0) >= 15; return `<span class="bar"><i style="left: ${a}%; right: ${b}%; background: ${warm ? '#f3c66b' : '#8fd0e6'}"></i>${cur !== null && cur !== undefined ? `<b style="left: ${Math.max(0, Math.min(100, (cur - lo) / span * 100))}%"></b>` : ''}</span>`; };
-function weatherBody(p, h, name, night, sub, source, lead = '') {
-    const lo = Math.min(...h.days.map(d => d.lo ?? 99), h.lo ?? 99), hi = Math.max(...h.days.map(d => d.hi ?? -99), h.hi ?? -99), t = tileLines(h);
-    return `<div class="lf_wtop">${sub ? `<small>${sub}</small>` : ''}<h2>${esc(name)}</h2><div class="t">${h.temp ?? '—'}°</div><div class="c">${esc(h.said || WX[h.cond]?.[1] || '')}</div><div class="hl">최고:${h.hi ?? '—'}° 최저:${h.lo ?? '—'}°</div>${source}</div>
-      ${h.hours.length ? `<div class="lf_wcard">${h.line ? `<div class="ln1">${esc(h.line)}${k1(h.ko, 'lf_wk')}</div>` : ''}<div class="lf_hrs">${h.hours.map((x, k) => `<div>${k ? esc(x.time.slice(0, 2)) + '시' : '지금'}<em>${x.rain >= 20 ? `${x.rain}%` : ''}</em>${wxIc(x.cond, 24, night && k < 3)}<b class="cg_num">${x.temp ?? '—'}°</b></div>`).join('')}</div></div>` : ''}
-      ${h.days.length ? `<div class="lf_wcard"><div class="hd">${ax('calS', 12, '#fff', 2.2)} ${h.days.length}일간의 일기예보</div>${h.days.map((d, k) => `<div class="lf_d10"><span>${k ? WDK[WD[weekday(d.day)]] : '오늘'}</span><span class="ic">${wxIc(d.cond, 22)}${d.rain >= 30 ? `<em>${d.rain}%</em>` : ''}</span><span class="lo cg_num">${d.lo ?? '—'}°</span>${tempBar(d, lo, hi, k ? null : h.temp)}<span class="hi cg_num">${d.hi ?? '—'}°</span></div>`).join('')}</div>` : ''}
-      ${lead || Object.values(h.tiles).some(v => v !== null && v !== '') ? `<div class="lf_tiles">${lead}
-        ${h.tiles.rain24 !== null || h.tiles.rainNext !== null ? `<div class="lf_tile"><div class="hd">${ax('drop', 12, '#fff', 2.2)} 강수량</div><b>${String(h.tiles.rain24 ?? h.tiles.rainNext).replace('.', ',')} <small>mm</small></b><div class="s">${h.tiles.rain24 !== null ? '지난 24시간' : '앞으로'}</div><p>${t.rain}</p></div>` : ''}
-        ${h.tiles.feels !== null ? `<div class="lf_tile"><div class="hd">${ax('therm', 12, '#fff', 2.2)} 체감 온도</div><b>${h.tiles.feels}°</b><p>${t.feels}</p></div>` : ''}
-        ${h.tiles.wind !== null ? `<div class="lf_tile"><div class="hd">${ax('wind', 12, '#fff', 2.2)} 바람</div><b>${h.tiles.wind} <small>km/h</small></b>${h.tiles.gust ? `<div class="s">돌풍 ${h.tiles.gust} km/h</div>` : ''}<span class="lf_cmp"><i style="transform: rotate(${({ N: 0, NE: 45, E: 90, SE: 135, S: 180, SW: 225, W: 270, NW: 315, 북: 0, 북동: 45, 동: 90, 남동: 135, 남: 180, 남서: 225, 서: 270, 북서: 315 })[h.tiles.dir] ?? 225}deg)"></i></span><p>${esc(h.tiles.dir || '')}</p></div>` : ''}
-        ${h.tiles.humidity !== null ? `<div class="lf_tile"><div class="hd">${ax('drop', 12, '#fff', 2.2)} 습도</div><b>${h.tiles.humidity}%</b><p>${t.humidity}</p></div>` : ''}
-        ${h.tiles.sunset ? `<div class="lf_tile"><div class="hd">${ax('sun', 12, '#fff', 2.2)} 일몰</div><b>${h.tiles.sunset}</b><svg class="arc" viewBox="0 0 150 46"><path d="M4 42 Q75 -12 146 42" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2"/><line x1="0" y1="34" x2="150" y2="34" stroke="rgba(255,255,255,.3)"/></svg><p>${h.tiles.sunrise ? `일출: ${h.tiles.sunrise}` : ''}</p></div>` : ''}
-        ${h.tiles.visibility !== null ? `<div class="lf_tile"><div class="hd">${ax('eye', 12, '#fff', 2.2)} 가시거리</div><b>${String(h.tiles.visibility).replace('.', ',')} <small>km</small></b><p>${t.vis}</p></div>` : ''}</div>` : ''}`;
+const DIRS = { N: 0, NE: 45, E: 90, SE: 135, S: 180, SW: 225, W: 270, NW: 315, 북: 0, 북동: 45, 동: 90, 남동: 135, 남: 180, 남서: 225, 서: 270, 북서: 315 };
+const DIR_KO = { N: '북풍', NE: '북동풍', E: '동풍', SE: '남동풍', S: '남풍', SW: '남서풍', W: '서풍', NW: '북서풍' };
+const TICKS = Array.from({ length: 36 }, (_, k) => { const a = k * 10 * Math.PI / 180, r1 = k % 9 ? 31 : 28; return `<line x1="${(41 + r1 * Math.sin(a)).toFixed(1)}" y1="${(41 - r1 * Math.cos(a)).toFixed(1)}" x2="${(41 + 35 * Math.sin(a)).toFixed(1)}" y2="${(41 - 35 * Math.cos(a)).toFixed(1)}" stroke="rgba(255,255,255,${k % 9 ? 0.4 : 0.9})" stroke-width="${k % 9 ? 1 : 1.6}"/>`; }).join('');
+// one tile: a label, a big number, a flat picture, a line
+const tile = (label, big, pic, line) => `<div class="lf_tile"><div class="hd">${label}</div><b>${big}</b>${pic}${line ? `<p>${line}</p>` : ''}</div>`;
+const mm = v => String(v).replace('.', ',');
+function sunsetTile(sunset, sunrise, now, tileCol) {
+    const lm = toMin(now), ss = toMin(sunset), past = lm !== null && ss !== null && (lm >= ss || lm < (toMin(sunrise) ?? 6 * 60 + 30));
+    const a = shade(tileCol, 0.92), b = shade(tileCol, 0.85);
+    return tile('일몰', sunset, `<svg class="pic sunset" viewBox="0 0 160 62" preserveAspectRatio="none"><circle cx="80" cy="46" r="34" fill="#f6c94a" opacity=".14"/><circle cx="80" cy="46" r="22" fill="#f6c94a" opacity=".26"/><circle cx="80" cy="46" r="13" fill="#f6c94a"/><rect x="0" y="46" width="160" height="16" fill="${a}"/><path d="M0 46 Q40 40 80 46 T160 44 V62 H0Z" fill="${b}"/><line x1="0" y1="46" x2="160" y2="46" stroke="rgba(255,255,255,.5)" stroke-width="1"/></svg>`,
+        past ? (sunrise ? `일출 ${sunrise}` : '해가 졌어요.') : lm !== null && ss !== null ? `${dur(ss - lm)} 뒤` : '');
 }
-const isNight = (h, time) => { const t = toMin(time), ss = toMin(h.tiles?.sunset) ?? 18 * 60, sr = toMin(h.tiles?.sunrise) ?? 6 * 60 + 30; return t !== null && (t >= ss || t < sr); };
+function weatherTiles(h, tileCol, lead = '') {
+    const T = h.tiles, t = tileLines(h), out = [lead];
+    if (!lead && T.sunset) out.push(sunsetTile(T.sunset, T.sunrise, h.time, tileCol));
+    if (T.rain24 !== null || T.rainNext !== null) {
+        const v = T.rain24 ?? T.rainNext, f = Math.min(1, v / 4), hs = [30, 38, 26, 16, 8, 4, 2];
+        const bars = v ? hs.map((x, k) => `<rect x="${2 + k * 20}" y="${42 - Math.max(2, Math.round(x * f))}" width="14" height="${Math.max(2, Math.round(x * f))}" rx="3" opacity="${[1, 1, 1, 0.6, 0.45, 0.35, 0.3][k]}"/>`).join('') : hs.map((_, k) => `<rect x="${2 + k * 20}" y="38" width="14" height="4" rx="2" opacity=".35"/>`).join('');
+        out.push(tile('강수량', `${mm(v)} <small>mm</small>`, `<svg class="pic bars" viewBox="0 0 140 42"><g fill="#a9dcff">${bars}</g></svg>`, t.rain));
+    }
+    if (T.wind !== null) out.push(tile('바람', `${T.wind} <small>km/h</small>`, `<svg class="pic cmp" viewBox="0 0 82 82"><circle cx="41" cy="41" r="36" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>${TICKS}<text x="41" y="13" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">N</text><g transform="rotate(${DIRS[T.dir] ?? 225} 41 41)"><path d="M41 12 L46 41 L41 36 L36 41Z" fill="#fff"/><path d="M41 70 L45 41 L37 41Z" fill="rgba(255,255,255,.45)"/></g><circle cx="41" cy="41" r="3" fill="#fff"/></svg>`,
+        [T.gust ? `돌풍 ${T.gust} km/h` : '', DIR_KO[T.dir] || T.dir].filter(Boolean).join(' · ')));
+    if (T.feels !== null) {
+        const real = h.temp ?? T.feels, lo = Math.min(real, T.feels) - 10, span = Math.max(real, T.feels) + 10 - lo, x = v => ((v - lo) / span * 140).toFixed(1);
+        const a = Math.min(x(real), x(T.feels)), b = Math.max(x(real), x(T.feels));
+        out.push(tile('체감 온도', `${T.feels}°`, `<svg class="pic feels" viewBox="0 0 140 28"><rect x="0" y="10" width="140" height="6" rx="3" fill="rgba(0,0,0,.18)"/><rect x="${a}" y="10" width="${(b - a).toFixed(1)}" height="6" rx="3" fill="${T.feels < real ? '#9fd6ec' : '#f3c66b'}"/><circle cx="${x(T.feels)}" cy="13" r="6" fill="#fff"/><line x1="${x(real)}" y1="4" x2="${x(real)}" y2="22" stroke="#fff" stroke-width="2" stroke-dasharray="2 2"/></svg>`, t.feels));
+    }
+    if (T.humidity !== null) { const y = Math.round(1 + 94 * (1 - T.humidity / 100)); out.push(tile('습도', `${T.humidity}%`, `<svg class="pic hum" viewBox="0 0 30 96"><rect x="1" y="1" width="28" height="94" rx="14" fill="rgba(0,0,0,.18)"/><rect x="1" y="${Math.min(y, 80)}" width="28" height="${95 - Math.min(y, 80)}" rx="14" fill="#a9dcff"/><path d="M1 ${Math.min(y, 80) + 14} Q8 ${Math.min(y, 80) + 10} 15 ${Math.min(y, 80) + 14} T29 ${Math.min(y, 80) + 14} V${Math.min(y, 80) + 22} H1Z" fill="#c4e7ff"/></svg>`, t.humidity)); }
+    if (T.visibility !== null) {
+        const lit = Math.max(1, Math.min(6, Math.ceil(T.visibility / 4))), hs = [26, 34, 22, 30, 24, 28];
+        out.push(tile('가시거리', `${mm(T.visibility)} <small>km</small>`, `<svg class="pic vis" viewBox="0 0 140 40" preserveAspectRatio="none">${hs.map((v, k) => `<rect x="${(k * 24.2).toFixed(1)}" y="${40 - v}" width="19" height="${v}" rx="3" fill="#fff" opacity="${k < lit ? (1 - k * 0.14).toFixed(2) : 0.12}"/>`).join('')}</svg>`, t.vis));
+    }
+    return out.filter(Boolean).length ? `<div class="lf_tiles">${out.join('')}</div>` : '';
+}
+const tempBar = (d, lo, hi, cur) => { const span = Math.max(1, hi - lo), a = ((d.lo ?? lo) - lo) / span * 100, b = (hi - (d.hi ?? hi)) / span * 100, warm = (d.hi ?? 0) >= 15; return `<span class="bar"><i style="left: ${a}%; right: ${b}%; background: ${warm ? '#f3c66b' : '#8fd0e6'}"></i>${cur !== null && cur !== undefined ? `<b style="left: ${Math.max(0, Math.min(100, (cur - lo) / span * 100))}%"></b>` : ''}</span>`; };
+// the hourly temperatures as a line under the row
+function hourLine(hours) {
+    const ts = hours.map(x => x.temp).filter(v => v !== null);
+    if (ts.length < 2) return '';
+    const lo = Math.min(...ts), span = Math.max(1, Math.max(...ts) - lo), step = 330 / hours.length;
+    const pts = hours.map((x, k) => x.temp === null ? null : [(step / 2 + k * step).toFixed(1), (6 + (1 - (x.temp - lo) / span) * 28).toFixed(1)]).filter(Boolean);
+    return `<svg class="lf_tl" viewBox="0 0 330 40" preserveAspectRatio="none"><polyline points="${pts.map(p => p.join(',')).join(' ')}" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" opacity=".6"/>${pts.map((p, k) => `<circle cx="${p[0]}" cy="${p[1]}" r="${k ? 2.4 : 3}" fill="#fff"/>`).join('')}</svg>`;
+}
+function weatherBody(p, h, name, night, sub, source, tileCol, lead = '') {
+    const lo = Math.min(...h.days.map(d => d.lo ?? 99), h.lo ?? 99), hi = Math.max(...h.days.map(d => d.hi ?? -99), h.hi ?? -99);
+    return `<div class="lf_wtop">${sub ? `<small>${sub}</small>` : ''}<h2>${esc(name)}</h2><div class="t">${h.temp ?? '—'}°</div><div class="c">${esc(h.said || WX[h.cond] || '')}</div><div class="hl">최고:${h.hi ?? '—'}° 최저:${h.lo ?? '—'}°</div>${source}</div>
+      ${h.hours.length ? `<div class="lf_wcard">${h.line ? `<div class="ln1">${esc(h.line)}${k1(h.ko, 'lf_wk')}</div>` : ''}<div class="lf_hrs">${h.hours.map((x, k) => `<div>${k ? esc(x.time.slice(0, 2)) + '시' : '지금'}<em>${x.rain >= 20 ? `${x.rain}%` : ''}</em>${wxIc(x.cond, 26, phaseOf(x.time, h.tiles.sunrise || h.sr, h.tiles.sunset || h.ss) === 'night')}<b class="cg_num">${x.temp ?? '—'}°</b></div>`).join('')}</div>${hourLine(h.hours)}</div>` : ''}
+      ${h.days.length ? `<div class="lf_wcard"><div class="hd">${h.days.length}일간의 일기예보</div>${h.days.map((d, k) => `<div class="lf_d10"><span>${k ? WDK[WD[weekday(d.day)]] : '오늘'}</span><span class="ic">${wxIc(d.cond, 22)}${d.rain >= 30 ? `<em>${d.rain}%</em>` : ''}</span><span class="lo cg_num">${d.lo ?? '—'}°</span>${tempBar(d, lo, hi, k ? null : h.temp)}<span class="hi cg_num">${d.hi ?? '—'}°</span></div>`).join('')}</div>` : ''}
+      ${weatherTiles(h, tileCol, lead)}`;
+}
+const isNight = (h, time) => phaseOf(time, h.tiles?.sunrise, h.tiles?.sunset) === 'night';
+// the screen's colours: the sky, and the one flat colour its cards and tiles sit in
+const wxVars = q => `background: ${q.sky}; --wcard: ${shade(q.sky, 0.9)}; --wtile: ${shade(q.sky, q.phase === 'day' && q.sky === '#4f8fd8' ? 0.62 : 0.8)}`;
 export function weatherScreen(p, now) {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '날씨', 'life');
-    const h = lf.weather.here, night = isNight(h, h.time || now5(p).slice(6)), bg = night && h.cond === 'clear' ? NIGHT : WX[h.cond]?.[0] || WX.cloudy[0];
-    const source = '<div class="lf_wgap"></div>';
-    return `<div class="lf_wx" style="background: ${bg}">${sky(h.cond, night)}
+    const h = lf.weather.here, time = h.time || now5(p).slice(6), phase = phaseOf(time, h.tiles?.sunrise, h.tiles?.sunset), q = pal(h.cond, phase);
+    return `<div class="lf_wx" style="${wxVars(q)}">${scene(h.cond, phase)}
       ${axBar(p, now, '#fff')}
       <div class="ax_top lf_wbar">${axCb('home2')}<button type="button" class="lf_pill wx" data-go="wlist">도시 ${lf.weather.cities.length}</button></div>
-      <div class="ax_scroll">${weatherBody(p, h, h.place || '현재 위치', night, `${ax('nav', 11, '#fff', 2.6, '#fff')} 현재 위치`, source)}<i class="lf_pad"></i></div>
+      <div class="ax_scroll">${weatherBody(p, { ...h, time }, h.place || '현재 위치', phase === 'night', '현재 위치', '<div class="lf_wgap"></div>', shade(q.sky, 0.8))}<i class="lf_pad"></i></div>
       ${axInd('#fff')}</div>`;
 }
 // a saved city: only its temperature, highs and lows and sky are the model's; its hours are drawn between them
 function cityHours(c, t) {
     const base = toMin(t.time) ?? 12 * 60, lo = c.lo ?? (c.temp ?? 10) - 4, hi = c.hi ?? (c.temp ?? 10) + 4;
-    return Array.from({ length: 6 }, (_, k) => { const m = base + k * 60, f = Math.cos(((m / 60 - 15) / 24) * 2 * Math.PI); return { time: hm(m), cond: c.cond, temp: k ? Math.round(lo + (hi - lo) * (f + 1) / 2) : c.temp, rain: c.cond === 'rain' ? 60 : c.cond === 'storm' ? 70 : 0 }; });
+    return Array.from({ length: 6 }, (_, k) => { const m = base + k * 60, f = Math.cos(((m / 60 - 15) / 24) * 2 * Math.PI); return { time: hm(m), cond: c.cond, temp: k ? Math.round(lo + (hi - lo) * (f + 1) / 2) : c.temp, rain: c.cond === 'rain' ? 60 : c.cond === 'storm' ? 70 : c.cond === 'drizzle' || c.cond === 'sleet' ? 40 : 0 }; });
+}
+// today's temperatures as a curve (coldest before dawn, warmest mid-afternoon), with a dot at the city's hour
+function dayCurve(c, lm, col) {
+    const lo = c.lo ?? (c.temp ?? 10) - 4, hi = c.hi ?? (c.temp ?? 10) + 4, span = Math.max(1, hi - lo);
+    const y = h => (8 + (1 - (lo + (hi - lo) * (Math.cos(((h - 15) / 24) * 2 * Math.PI) + 1) / 2 - lo) / span) * 40).toFixed(1);
+    const pts = Array.from({ length: 25 }, (_, k) => `${(k / 24 * 140).toFixed(1)},${y(k)}`);
+    const nowH = (lm ?? 12 * 60) / 60;
+    return `<svg class="pic curve" viewBox="0 0 140 58" preserveAspectRatio="none"><polyline points="${pts.join(' ')} 140,58 0,58" fill="${col}" opacity=".16" stroke="none"/><polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="2.4" stroke-linecap="round"/><circle cx="${(nowH / 24 * 140).toFixed(1)}" cy="${y(nowH)}" r="5" fill="#fff" stroke="${col}" stroke-width="2.5"/></svg>`;
 }
 export function cityScreen(p, now, id) {
     const lf = L(p), c = lf?.weather.cities.find(x => x.id === id);
     if (!c) return weatherScreen(p, now);
-    const t = cityTime(p, lf, c), night = t.night, bg = night && c.cond === 'clear' ? NIGHT : WX[c.cond]?.[0];
-    const h = { temp: c.temp, hi: c.hi, lo: c.lo, cond: c.cond, line: '', ko: '', hours: cityHours(c, t), days: [],
+    const t = cityTime(p, lf, c), phase = phaseOf(t.time, c.sunrise, c.sunset), q = pal(c.cond, phase), tileCol = shade(q.sky, q.phase === 'day' && q.sky === '#4f8fd8' ? 0.62 : 0.8);
+    const h = { temp: c.temp, hi: c.hi, lo: c.lo, cond: c.cond, time: t.time, sr: c.sunrise, ss: c.sunset, line: '', ko: '', hours: cityHours(c, t), days: [],
         tiles: { sunset: '', sunrise: '', rain24: null, rainNext: c.rainNext ?? null, feels: c.feels ?? null, wind: c.wind ?? null, gust: c.gust ?? null, humidity: c.humidity ?? null, dew: c.dew ?? null, visibility: null, dir: c.dir || '' } };
-    const lm = toMin(t.time), span = Math.max(1, (c.hi ?? 0) - (c.lo ?? 0));
+    const lm = toMin(t.time), warm = (c.hi ?? 0) >= 15 ? '#f3c66b' : '#9fd6ec';
     // the city's own tiles first: its sunset and today's temperatures; no clock, the status bar and the list already tell the time
-    const lead = `${c.sunset ? `<div class="lf_tile"><div class="hd">${ax('sun', 12, '#fff', 2.2)} 일몰</div><b class="cg_num">${c.sunset}</b><svg class="arc" viewBox="0 0 150 46"><path d="M4 42 Q75 -12 146 42" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2"/><line x1="0" y1="34" x2="150" y2="34" stroke="rgba(255,255,255,.3)"/></svg><p>${t.night ? '해가 졌어요.' : `${dur(Math.max(0, ((toMin(c.sunset) - lm) + 1440) % 1440))} 뒤`}</p></div>` : ''}
-      <div class="lf_tile"><div class="hd">${ax('therm', 12, '#fff', 2.2)} 오늘 기온</div><b class="cg_num">${c.temp ?? '—'}°</b><div class="lf_rng2 cg_num"><span>${c.lo ?? '—'}°</span><span class="bar"><i></i>${c.temp !== null && c.lo !== null ? `<b style="left: ${Math.max(0, Math.min(100, (c.temp - c.lo) / span * 100))}%"></b>` : ''}</span><span>${c.hi ?? '—'}°</span></div><p>최저 · 최고</p></div>`;
-    return `<div class="lf_wx" style="background: ${bg}">${sky(c.cond, night)}
+    const lead = `${c.sunset ? sunsetTile(c.sunset, c.sunrise, t.time, tileCol) : ''}${tile('오늘 기온', `${c.temp ?? '—'}°`, dayCurve(c, lm, warm), `최저 ${c.lo ?? '—'}° · 최고 ${c.hi ?? '—'}°`)}`;
+    return `<div class="lf_wx" style="${wxVars(q)}">${scene(c.cond, phase)}
       ${axBar(p, now, '#fff')}
       <div class="ax_top lf_wbar">${axCb('wlist')}<span></span></div>
-      <div class="ax_scroll">${weatherBody(p, h, c.name, night, '', c.note ? `<div class="lf_wsrc">${esc(c.note)}${c.noteKo && koOn() ? ` · ${esc(c.noteKo)}` : ''}</div>` : '<div class="lf_wgap"></div>', lead)}<i class="lf_pad"></i></div>
+      <div class="ax_scroll">${weatherBody(p, h, c.name, phase === 'night', '', c.note ? `<div class="lf_wsrc">${esc(c.note)}${c.noteKo && koOn() ? ` · ${esc(c.noteKo)}` : ''}</div>` : '<div class="lf_wgap"></div>', tileCol, lead)}<i class="lf_pad"></i></div>
       ${axInd('#fff')}</div>`;
 }
 export function cityList(p, now) {
     const lf = L(p); if (!lf) return weatherScreen(p, now);
-    const h = lf.weather.here, hn = isNight(h, h.time || now5(p).slice(6));
-    const card = (go, i, name, sub, cond, temp, hi, lo, foot, night) => `<button type="button" class="lf_city" data-go="${go}"${i ? ` data-i="${i}"` : ''} style="--axbg: ${night && cond === 'clear' ? NIGHT : WX[cond]?.[0]}">${night && cond === 'clear' ? '<i class="mn"></i>' : cond === 'clear' ? '<i class="sun"></i>' : '<i class="cl"></i>'}
-      <span class="l"><b>${esc(name)}</b><small>${esc(sub)}</small><span>${esc(foot)}</span></span><span class="r"><b class="cg_num">${temp ?? '—'}°</b><span>최고:${hi ?? '—'}° 최저:${lo ?? '—'}°</span></span></button>`;
+    const h = lf.weather.here, ht = h.time || now5(p).slice(6);
+    const nav = '<svg width="11" height="11" viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z" fill="#fff"/></svg>';
+    const card = (go, i, name, sub, cond, phase, temp, hi, lo, foot) => `<button type="button" class="lf_city" data-go="${go}"${i ? ` data-i="${i}"` : ''} style="--axbg: ${pal(cond, phase).sky}">${cardSky(cond, phase)}
+      <span class="l"><b>${esc(name)}</b><small>${sub}</small><span>${esc(foot)}</span></span><span class="r"><b>${temp ?? '—'}°</b><span>최고 ${hi ?? '—'}° 최저 ${lo ?? '—'}°</span></span></button>`;
     return `${axBar(p, now)}${axTop(axCb('weather'), axKp(p))}
       <div class="ax_scroll">${axH1('날씨')}
         <div class="lf_q">${ax('search', 16, '#8a929d', 2.4)}도시 또는 공항 검색</div>
-        ${card('weather', '', '현재 위치', h.place || '', h.cond, h.temp, h.hi, h.lo, h.said || WX[h.cond]?.[1], hn)}
-        ${lf.weather.cities.map(c => { const t = cityTime(p, lf, c); return card('wcity', c.id, c.name, t.time, c.cond, c.temp, c.hi, c.lo, [WX[c.cond]?.[1], c.note].filter(Boolean).join(' · '), t.night); }).join('')}
+        ${card('weather', '', h.place || '현재 위치', `${nav} 현재 위치`, h.cond, phaseOf(ht, h.tiles?.sunrise, h.tiles?.sunset), h.temp, h.hi, h.lo, h.said || WX[h.cond])}
+        ${lf.weather.cities.map(c => { const t = cityTime(p, lf, c); return card('wcity', c.id, c.name, t.off ? `${t.time} · ${t.off > 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '', c.cond, phaseOf(t.time, c.sunrise, c.sunset), c.temp, c.hi, c.lo, [WX[c.cond], c.note].filter(Boolean).join(' · ')); }).join('')}
         <i class="lf_pad"></i></div>${axInd()}`;
 }
 

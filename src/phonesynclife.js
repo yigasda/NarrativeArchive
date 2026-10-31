@@ -6,7 +6,7 @@
 import { arr, hhmm, ko, line, num, pad, pick, when, withEv } from './phoneparse.js';
 
 export const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-export const CONDS = ['clear', 'cloudy', 'rain', 'snow', 'fog', 'storm'];
+export const CONDS = ['clear', 'partly', 'cloudy', 'drizzle', 'rain', 'sleet', 'snow', 'fog', 'storm', 'wind'];
 export const FILE_KINDS = ['pdf', 'image', 'video', 'audio', 'zip', 'doc', 'sheet', 'slides', 'other'];
 const int = (v, lo, hi) => { const n = num(v); return n === null ? null : Math.max(lo, Math.min(hi, Math.round(n))); };
 const yes = v => v === true;
@@ -21,11 +21,11 @@ export const fileOf = x => withEv({ name: line(x?.name, 80), kind: pick(x?.kind,
 export const dayOf = d => withEv({ date: day5(d?.date), bed: hhmm(d?.bed), sleep: hhmm(d?.sleep), wake: hhmm(d?.wake), woke: int(d?.woke, 0, 30) ?? 0, steps: int(d?.steps, 0, 120000), km: num(d?.km), floors: int(d?.floors, 0, 400),
     workout: d?.workout && line(d.workout.kind, 30) ? { kind: line(d.workout.kind, 30), time: hhmm(d.workout.time), min: int(d.workout.min, 0, 600), km: num(d.workout.km) } : null,
     hr: arr(d?.hr).map(x => int(x, 30, 220)).filter(x => x !== null).slice(0, 2), from: pick(d?.from, ['story', 'pattern'], 'pattern') }, d);
-const cityOf = c => ({ name: line(c?.name, 40), ko: ko(c?.ko), tz: tz(c?.tz), cond: pick(c?.cond, CONDS, 'cloudy'), temp: int(c?.temp, -60, 60), hi: int(c?.hi, -60, 60), lo: int(c?.lo, -60, 60), sunset: hhmm(c?.sunset),
+const cityOf = c => ({ name: line(c?.name, 40), ko: ko(c?.ko), tz: tz(c?.tz), cond: pick(c?.cond, CONDS, 'cloudy'), temp: int(c?.temp, -60, 60), hi: int(c?.hi, -60, 60), lo: int(c?.lo, -60, 60), sunrise: hhmm(c?.sunrise), sunset: hhmm(c?.sunset),
     rainNext: num(c?.rainNext), wind: num(c?.wind), gust: num(c?.gust), dir: line(c?.dir, 12), feels: int(c?.feels, -60, 60), humidity: int(c?.humidity, 0, 100), dew: int(c?.dew, -60, 60), note: line(c?.note, 40), noteKo: ko(c?.noteKo) });
 
 // ---- 날씨: the chat's status line stands; the model's numbers only fill what it doesn't say
-const COND_RE = [['storm', /storm|thunder|뇌우|천둥|번개|gewitter|雷/i], ['snow', /snow|눈|schnee|雪/i], ['rain', /rain|drizzle|shower|비|소나기|regen|雨/i], ['fog', /fog|mist|안개|nebel|霧/i], ['cloudy', /cloud|overcast|흐림|구름|bewölkt|wolk|曇/i], ['clear', /clear|sun|맑|화창|sonnig|klar|晴/i]];
+const COND_RE = [['storm', /storm|thunder|뇌우|천둥|번개|gewitter|雷/i], ['sleet', /sleet|진눈깨비|schneeregen|霙|みぞれ/i], ['snow', /snow|눈|schnee|雪/i], ['drizzle', /drizzle|이슬비|가랑비|nieselregen|霧雨/i], ['rain', /rain|shower|비|소나기|regen|雨/i], ['fog', /fog|mist|안개|nebel|霧/i], ['wind', /gale|strong wind|windy|강풍|바람이 (?:세|강)|sturm|stürmisch|強風/i], ['partly', /partly|some clouds|구름 조금|구름 약간|teils|heiter|晴れ時々/i], ['cloudy', /cloud|overcast|흐림|구름|bewölkt|wolk|曇/i], ['clear', /clear|sun|맑|화창|sonnig|klar|晴/i]];
 export const condOf = text => COND_RE.find(([, re]) => re.test(String(text || '')))?.[0] || '';
 const tempOf = text => { const mt = String(text || '').match(/(-?\d{1,2})\s*°/); return mt ? Number(mt[1]) : null; };
 // a status line (scenes.js recentTrackers) as the weather it gives, or null

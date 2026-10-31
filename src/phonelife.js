@@ -82,11 +82,11 @@ JSON (one object, nothing before or after it)
                          "tag": "red" | "orange" | "", "private": true or false, "preview", "ko", "opened": "MM-DD HH:MM", "trashed": "MM-DD" only in the trash, "ev" }],
              "cloud": { "used": GB, "total": GB } },
   "weather": { "here": { "place", "date": "MM-DD", "time": "HH:MM" (only without WEATHER NOW), "from": "tracker" | "chat" | "archive" | "guess",
-                         "cond": "clear" | "cloudy" | "rain" | "snow" | "fog" | "storm", "temp", "hi", "lo", "line": one sentence of forecast, "ko",
+                         "cond": "clear" | "partly" | "cloudy" | "drizzle" | "rain" | "sleet" | "snow" | "fog" | "storm" | "wind", "temp", "hi", "lo", "line": one sentence of forecast, "ko",
                          "hours": [6 of { "time": "HH:MM", "cond", "temp", "rain": percent }],
                          "days": [10 of { "day": "MM-DD", "cond", "lo", "hi", "rain": percent }],
                          "tiles": { "rain24": mm, "rainNext": mm, "feels", "wind": km/h, "gust", "dir", "humidity", "dew", "sunrise": "HH:MM", "sunset": "HH:MM", "visibility": km } },
-               "cities": [{ "name", "ko", "tz": like "Europe/Berlin", "cond", "temp", "hi", "lo", "sunset": "HH:MM",
+               "cities": [{ "name", "ko", "tz": like "Europe/Berlin", "cond", "temp", "hi", "lo", "sunrise": "HH:MM", "sunset": "HH:MM",
                  "rainNext": mm, "wind": km/h, "gust", "dir", "feels", "humidity", "dew", "note": "" or a few words, like a past trip, "noteKo" }] }
 }
 Numbers are plain JSON numbers. "ev" is a word tag, never a number: the "ev" of its story event in PHONE NOW, a short new one like "pasta-night" for a story event without one, or "" for an everyday record.`;

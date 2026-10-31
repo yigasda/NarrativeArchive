@@ -6329,3 +6329,73 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 @media (prefers-reduced-motion: reduce) { .ax .lf_dial .s, .ax .lf_dial .run60, .ax .lf_dial .run12 { animation: none; } }
 .ax .lf_bigface { background: none; }
 .ax .lf_bigface .lf_dial { width: 56px; height: 56px; margin: 0; }
+
+/* ===== 날씨 다시 그리기: 하늘 장면 · 단색 카드 · 그림 타일 · 하늘 카드 목록 ===== */
+.ax .lf_wx { --wfont: -apple-system, 'Helvetica Neue', Arial, sans-serif; }
+.ax .lf_wx .lf_wtop .t, .ax .lf_wx .lf_tile b, .ax .lf_wx .cg_num, .ax .lf_city .r b { font-family: var(--wfont, -apple-system, 'Helvetica Neue', Arial, sans-serif); }
+.ax .lf_sc { position: absolute; left: 0; top: 0; width: 390px; height: 844px; overflow: hidden; z-index: 0; pointer-events: none; }
+.ax .lf_sc > * { position: absolute; }
+.ax .lf_sc .bd { left: 0; right: 0; bottom: 0; }
+.ax .lf_sc .land { left: 0; bottom: 0; width: 100%; height: 260px; z-index: 2; }
+.ax .lf_sc .cl { animation: lf_drift2 var(--d) ease-in-out infinite alternate; }
+@keyframes lf_drift2 { to { transform: translateX(var(--x)); } }
+.ax .lf_sc .sun b { position: absolute; inset: 18%; border-radius: 50%; animation: lf_halo 5s ease-in-out infinite; }
+.ax .lf_sc .sun b.h2 { inset: 0; animation-delay: -2.5s; }
+.ax .lf_sc .sun i { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 50%; }
+@keyframes lf_halo { 0%, 100% { transform: scale(0.94); opacity: 0.7; } 50% { transform: scale(1.04); opacity: 1; } }
+.ax .lf_sc .sun.rise { animation: lf_rise 14s ease-out infinite alternate; }
+@keyframes lf_rise { from { transform: translateY(70px); } to { transform: translateY(0); } }
+.ax .lf_sc .sun.sink { animation: lf_sink 14s ease-in infinite alternate; }
+@keyframes lf_sink { from { transform: translateY(-30px); } to { transform: translateY(50px); } }
+.ax .lf_sc .mn { width: 70px; height: 70px; animation: lf_mglow 6s ease-in-out infinite; }
+.ax .lf_sc .mn i { position: absolute; inset: 0; border-radius: 50%; background: #f1ead2; }
+.ax .lf_sc .mn b { position: absolute; left: 18px; top: -8px; width: 64px; height: 64px; border-radius: 50%; }
+@keyframes lf_mglow { 50% { filter: drop-shadow(0 0 10px rgba(241, 234, 210, 0.5)); } }
+.ax .lf_sc .st { width: 3px; height: 3px; border-radius: 50%; background: #fff; animation: lf_tw var(--d) ease-in-out var(--dl) infinite; }
+.ax .lf_sc .st.fd { opacity: 0.5; }
+@keyframes lf_tw { 50% { opacity: 0.2; transform: scale(0.6); } }
+.ax .lf_sc .rn { top: -40px; width: 2px; border-radius: 1px; background: rgba(255, 255, 255, 0.45); animation: lf_fall2 var(--d) linear var(--dl) infinite; }
+.ax .lf_sc .rn.dz { width: 1.4px; background: rgba(255, 255, 255, 0.4); }
+.ax .lf_sc .rn.hv { width: 2.6px; background: rgba(255, 255, 255, 0.5); }
+@keyframes lf_fall2 { from { transform: translate(0, -60px) rotate(10deg); } to { transform: translate(-150px, 900px) rotate(10deg); } }
+.ax .lf_sc .sn { top: -20px; border-radius: 50%; background: #fff; animation: lf_snow2 var(--d) linear var(--dl) infinite; }
+@keyframes lf_snow2 { 0% { transform: translate(0, -30px); } 25% { transform: translate(var(--s), 220px); } 50% { transform: translate(0, 440px); } 75% { transform: translate(var(--s), 660px); } 100% { transform: translate(0, 880px); } }
+.ax .lf_sc .fg { height: 34px; border-radius: 17px; animation: lf_fog2 var(--d) ease-in-out infinite alternate; }
+@keyframes lf_fog2 { from { transform: translateX(-50px); } to { transform: translateX(60px); } }
+.ax .lf_sc .bolt { left: 210px; top: 150px; width: 60px; height: 120px; opacity: 0; animation: lf_bolt 5s infinite; }
+.ax .lf_sc .fl { inset: 0; background: #fff; opacity: 0; animation: lf_flash2 5s infinite; }
+@keyframes lf_bolt { 0%, 58%, 66%, 100% { opacity: 0; } 60%, 64% { opacity: 1; } }
+@keyframes lf_flash2 { 0%, 58%, 64%, 100% { opacity: 0; } 60% { opacity: 0.35; } 62% { opacity: 0.1; } 63% { opacity: 0.3; } }
+.ax .lf_sc .wl { left: -160px; height: 2.5px; border-radius: 2px; background: rgba(255, 255, 255, 0.5); animation: lf_gust var(--d) linear var(--dl) infinite; }
+@keyframes lf_gust { from { transform: translateX(0); } to { transform: translateX(720px); } }
+.ax .lf_sc .lv { left: -30px; width: 12px; height: 6px; border-radius: 50%; background: #9ccb72; animation: lf_leaf var(--d) linear var(--dl) infinite; }
+@keyframes lf_leaf { 0% { transform: translate(0, 0) rotate(0); } 50% { transform: translate(220px, -40px) rotate(260deg); } 100% { transform: translate(460px, 30px) rotate(540deg); } }
+.ax .lf_sc .tree { left: 240px; bottom: 178px; width: 90px; height: 165px; z-index: 1; transform-origin: 50% 100%; animation: lf_sway 2.2s ease-in-out infinite alternate; }
+@keyframes lf_sway { from { transform: rotate(4deg); } to { transform: rotate(14deg); } }
+@media (prefers-reduced-motion: reduce) { .ax .lf_sc * { animation: none !important; } .ax .lf_sc .bolt, .ax .lf_sc .fl { display: none; } }
+
+.ax .lf_wx .lf_wcard { background: var(--wcard); }
+.ax .lf_wx .lf_wcard .hd { font-size: 11px; letter-spacing: 0.06em; opacity: 0.72; }
+.ax .lf_wx .lf_hrs svg { margin: 6px auto 4px; }
+.ax .lf_tl { display: block; width: 100%; height: 26px; margin-top: 2px; overflow: visible; }
+.ax .lf_wx .lf_tile { background: var(--wtile); height: 162px; border-radius: 18px; padding: 12px 13px; }
+.ax .lf_wx .lf_tile .hd { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; opacity: 0.72; }
+.ax .lf_wx .lf_tile b { font-size: 30px; font-weight: 400; margin-top: 4px; }
+.ax .lf_wx .lf_tile b small { font-size: 15px; }
+.ax .lf_wx .lf_tile p { bottom: 11px; font-size: 12px; font-weight: 500; opacity: 0.92; }
+.ax .lf_tile .pic { position: absolute; }
+.ax .lf_tile .pic.sunset { left: 0; right: 0; bottom: 30px; width: 100%; height: 62px; }
+.ax .lf_tile .pic.bars { left: 13px; top: 68px; width: calc(100% - 26px); height: 42px; }
+.ax .lf_tile .pic.cmp { right: 12px; top: 50px; width: 76px; height: 76px; }
+.ax .lf_tile .pic.feels { left: 13px; top: 78px; width: calc(100% - 26px); height: 28px; }
+.ax .lf_tile .pic.hum { right: 16px; top: 30px; width: 30px; height: 96px; }
+.ax .lf_tile .pic.hum ~ p { right: 56px; }
+.ax .lf_tile .pic.vis { left: 13px; top: 74px; width: calc(100% - 26px); height: 40px; }
+.ax .lf_tile .pic.curve { left: 13px; bottom: 30px; width: calc(100% - 26px); height: 58px; }
+
+.ax .lf_city { height: 118px; border-radius: 20px; width: calc(100% - 32px); margin: 0 16px 10px; padding: 14px 16px; }
+.ax .lf_city > svg.bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ax .lf_city .l b { font-size: 21px; letter-spacing: -0.01em; }
+.ax .lf_city .l small { display: flex; align-items: center; gap: 4px; margin-top: 1px; opacity: 0.85; }
+.ax .lf_city .l span, .ax .lf_city .r span { font-size: 13.5px; opacity: 0.92; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); }
+.ax .lf_city .r b { font-size: 50px; font-weight: 200; letter-spacing: -0.03em; margin-right: -4px; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.28), 0 1px 2px rgba(0, 0, 0, 0.18); }
