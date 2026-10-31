@@ -141,7 +141,8 @@ const T = {
     'roe': `<circle cx="-9" cy="-2" r="1.5" fill="#f27a2a"/><circle cx="-9" cy="1" r="1.5" fill="#f27a2a"/><circle cx="-6" cy="-2" r="1.5" fill="#f27a2a"/><circle cx="-6" cy="1" r="1.5" fill="#f27a2a"/><circle cx="-6" cy="4" r="1.5" fill="#f27a2a"/><circle cx="-3" cy="-5" r="1.5" fill="#f27a2a"/><circle cx="-3" cy="-2" r="1.5" fill="#f27a2a"/><circle cx="-3" cy="1" r="1.5" fill="#f27a2a"/><circle cx="-3" cy="4" r="1.5" fill="#f27a2a"/><circle cx="0" cy="-5" r="1.5" fill="#f27a2a"/><circle cx="0" cy="-2" r="1.5" fill="#f27a2a"/><circle cx="0" cy="1" r="1.5" fill="#f27a2a"/><circle cx="0" cy="4" r="1.5" fill="#f27a2a"/><circle cx="3" cy="-5" r="1.5" fill="#f27a2a"/><circle cx="3" cy="-2" r="1.5" fill="#f27a2a"/><circle cx="3" cy="1" r="1.5" fill="#f27a2a"/><circle cx="3" cy="4" r="1.5" fill="#f27a2a"/><circle cx="6" cy="-2" r="1.5" fill="#f27a2a"/><circle cx="6" cy="1" r="1.5" fill="#f27a2a"/><circle cx="6" cy="4" r="1.5" fill="#f27a2a"/><circle cx="9" cy="-2" r="1.5" fill="#f27a2a"/><circle cx="9" cy="1" r="1.5" fill="#f27a2a"/><circle cx="-6" cy="-2" r="0.8" fill="#fbb06a"/><circle cx="3" cy="1" r="0.8" fill="#fbb06a"/><circle cx="0" cy="-4" r="0.8" fill="#fbb06a"/>`,
     'egg': `<ellipse rx="10" ry="8" fill="#fff"/><circle cx="1" r="5" fill="#f2a632"/><circle cx="1" r="3" fill="#f6c94a"/><circle cx="-0.4" cy="-1.4" r="1" fill="#fbe08f"/>`,
     'fried-egg': `<path d="M-12 -2 q2 -11 13 -10 q12 0 10 12 q-2 11 -13 9 q-12 -2 -10 -11z" fill="#fff"/><circle cx="1" r="5.4" fill="#f2a632"/><circle cx="-0.6" cy="-1.6" r="1.8" fill="#f8c86a"/>`,
-    'cheese': `<path d="M-11 -7 h22 l-3 6 l3 6 h-22 l2 -6z" fill="#f6c43a"/><circle cx="-5" cy="-2" r="1.6" fill="#e8a828"/><circle cx="3" cy="1" r="1.6" fill="#e8a828"/><circle cx="6" cy="-4" r="1.6" fill="#e8a828"/><path d="M-6 5 q3 4 6 0" stroke="#f6c43a" stroke-width="2.4" fill="none"/>`,
+    'cheese': `<path d="M-12 -4 q2 -6 9 -5 q4 -3 9 -1 q7 0 6 6 q1 4 -2 6 q0 6 -3 6 q-3 0 -3 -4 q-3 2 -6 1 q-1 6 -4 6 q-3 0 -3 -5 q-4 -1 -3 -10z" fill="#f6c43a"/><path d="M-8 -4 q4 -3 9 -2" stroke="#fbe08a" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="5" cy="1" r="1.3" fill="#e8a828"/>`,
+    'snow-cheese': `<path d="M-11 5 q11 -16 22 0z" fill="#fdf6dc"/><circle cx="-4" cy="1" r="1" fill="#f3dc98"/><circle cx="3" cy="-1" r="1" fill="#f3dc98"/><circle cx="0" cy="3" r="1" fill="#f3dc98"/>`,
     'mozzarella': `<circle cx="-6" cy="-2" r="5.6" fill="#fbf8ee"/><circle cx="-7.4" cy="-3.4" r="1.6" fill="#fff"/><circle cx="5" cy="-4" r="5.6" fill="#fbf8ee"/><circle cx="3.6" cy="-5.4" r="1.6" fill="#fff"/><circle cx="1" cy="5" r="5.6" fill="#fbf8ee"/><circle cx="-0.3999999999999999" cy="3.6" r="1.6" fill="#fff"/>`,
     'scallion': `<circle cx="-6" cy="-3" r="2.6" fill="none" stroke="#7fbf5a" stroke-width="1.4"/><circle cx="2" cy="-5" r="2.6" fill="none" stroke="#7fbf5a" stroke-width="1.4"/><circle cx="6" cy="2" r="2.6" fill="none" stroke="#7fbf5a" stroke-width="1.4"/><circle cx="-2" cy="3" r="2.6" fill="none" stroke="#7fbf5a" stroke-width="1.4"/><circle cx="-8" cy="4" r="2.6" fill="none" stroke="#7fbf5a" stroke-width="1.4"/>`,
     'onion': `<path d="M-10 -2 q6 -5 12 0" stroke="#f4ece0" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M-10 -2 q6 -5 12 0" stroke="#d8c8e8" stroke-width=".8" fill="none"/><path d="M-4 4 q6 -5 12 0" stroke="#f4ece0" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M-4 4 q6 -5 12 0" stroke="#d8c8e8" stroke-width=".8" fill="none"/>`,
@@ -208,7 +209,7 @@ export const picOf = v => {
 };
 // a dish as a reflection's model describes it, in plain words ({ base: "fried rice", with: ["beef", "sesame"] }): the
 // words are matched to the drawn ids here, so the request needn't carry the id lists
-const WORD = { 'red bean': 'red-bean', 'red beans': 'red-bean', 'sweet red bean': 'red-bean', 'shine muscat': 'grape', grapes: 'grape', mandarin: 'tangerine', orange: 'tangerine', clementine: 'tangerine', choco: 'chocolate', 'chocolate chips': 'chocolate', 'green tea': 'matcha', blueberries: 'blueberry', strawberries: 'strawberry', prawn: 'shrimp', prawns: 'shrimp', 'spring onion': 'scallion', 'green onion': 'scallion', leek: 'scallion', 'minced meat': 'mince', 'ground beef': 'mince', 'ground pork': 'mince',
+const WORD = { 'snow cheese': 'snow-cheese', 'snowflake cheese': 'snow-cheese', 'cheese powder': 'snow-cheese', 'cheese snow': 'snow-cheese', 'melted cheese': 'cheese', 'red bean': 'red-bean', 'red beans': 'red-bean', 'sweet red bean': 'red-bean', 'shine muscat': 'grape', grapes: 'grape', mandarin: 'tangerine', orange: 'tangerine', clementine: 'tangerine', choco: 'chocolate', 'chocolate chips': 'chocolate', 'green tea': 'matcha', blueberries: 'blueberry', strawberries: 'strawberry', prawn: 'shrimp', prawns: 'shrimp', 'spring onion': 'scallion', 'green onion': 'scallion', leek: 'scallion', 'minced meat': 'mince', 'ground beef': 'mince', 'ground pork': 'mince',
     pepper: 'chili', chilli: 'chili', jalapeno: 'chili', 'bean sprouts': 'sprouts', 'rice cake': 'rice-cake', tteok: 'rice-cake', 'fish cake': 'fishcake', 'fried egg': 'fried-egg', 'sesame seeds': 'sesame',
     nori: 'seaweed', laver: 'seaweed', gim: 'seaweed', 'perilla leaf': 'perilla', 'pork belly': 'pork', 'beef belly': 'beef-belly', 'beef brisket': 'beef-belly', brisket: 'beef-belly', woosamgyeop: 'beef-belly', 'u-samgyeop': 'beef-belly', chadol: 'beef-belly', 'chadolbaegi': 'beef-belly', 'thin beef': 'beef-belly', 'sliced beef': 'beef-belly', steak: 'beef', bulgogi: 'beef', 'chicken breast': 'chicken', 'mozzarella cheese': 'mozzarella', shiitake: 'mushroom',
     breadcrumbs: 'crumbs', 'pickled radish': 'danmuji', 'yellow radish': 'danmuji', coke: 'cola', 'coca-cola': 'cola', lemonade: 'soda', sprite: 'soda', 'french fries': 'fries', chips: 'fries', dumpling: 'dumplings', gyoza: 'dumplings' };
@@ -227,7 +228,7 @@ export const picFromWords = (v, name = '') => {
     return { base, with: ids(v.with, T, 3), size: v.size === 'large' ? 'large' : 'regular', set: ids(v.set, S, 2) };
 };
 // words → a base, for dishes without a picture (older phones, the update round): first match wins
-const GUESS = [[/팥 ?죽|red ?bean (porridge|soup)|patjuk|단팥죽|동지죽/i, 'juk-redbean'], [/김치 ?죽|kimchi (porridge|congee)/i, 'juk-kimchi'], [/단?호박 ?죽|pumpkin (porridge|soup|congee)|hobakjuk/i, 'juk-pumpkin'], [/치즈볼|cheese ?ball/i, 'cheese-ball'], [/군만두|fried dumpling|yaki ?gyoza/i, 'gunmandu'], [/치즈스틱|cheese ?stick|mozzarella stick/i, 'cheese-stick'], [/웨지|wedge/i, 'wedges'], [/콘치즈|corn cheese/i, 'corn-cheese'],
+const GUESS = [[/뿌링클|눈꽃 ?치즈 ?치킨|snow ?cheese chicken/i, 'fried-chicken', ['snow-cheese']], [/팥 ?죽|red ?bean (porridge|soup)|patjuk|단팥죽|동지죽/i, 'juk-redbean'], [/김치 ?죽|kimchi (porridge|congee)/i, 'juk-kimchi'], [/단?호박 ?죽|pumpkin (porridge|soup|congee)|hobakjuk/i, 'juk-pumpkin'], [/치즈볼|cheese ?ball/i, 'cheese-ball'], [/군만두|fried dumpling|yaki ?gyoza/i, 'gunmandu'], [/치즈스틱|cheese ?stick|mozzarella stick/i, 'cheese-stick'], [/웨지|wedge/i, 'wedges'], [/콘치즈|corn cheese/i, 'corn-cheese'],
     [/아아|아이스 ?아메리카노|iced? ?americano|cold brew|콜드브루/i, 'iced-americano'], [/콜라|cola|coke|pepsi/i, 'cola'], [/사이다|sprite|7up|soda|limo|lemonade|탄산/i, 'cider'], [/맥주|beer|bier|lager|ipa|하이볼|highball/i, 'beer'],
     [/요거트 ?아이스|요아정|frozen yogh?urt|froyo/i, 'yogurt-ice'], [/크로플|croffle/i, 'croffle'], [/빙수|bingsu|shaved ice/i, 'bingsu'], [/티라미수|tiramisu/i, 'tiramisu'], [/치즈 ?케이크|cheesecake|käsekuchen/i, 'cheesecake'],
     [/에그 ?타르트|egg ?tart|pastel de nata/i, 'egg-tart'], [/스콘|scone/i, 'scone'], [/쿠키|cookie|keks/i, 'cookie'], [/마들렌|휘낭시에|madeleine|financier/i, 'madeleine'], [/소금빵|salt ?bread|shio ?pan/i, 'salt-bread'],
@@ -294,7 +295,16 @@ Object.assign(LAYERED, {
     tanghulu: tops => { const cs = tint(tops, FRUIT, ['#e8384a', '#a8d86a', '#f6a23a']); return '<rect x="48" y="10" width="4" height="86" rx="2" fill="#d9b07a"/>' + [24, 42, 60, 76].map((y, k) => `<circle cx="50" cy="${y}" r="10" fill="${cs[k % cs.length]}"/><circle cx="50" cy="${y}" r="10" fill="#fff" opacity=".18"/><ellipse cx="46" cy="${y - 4}" rx="3.4" ry="2" fill="#fff" opacity=".8"/>`).join(''); },
     cookie: tops => { const cs = tint(tops, { ...FRUIT, ...FL, chocolate: '#5a3424' }, ['#5a3424']); return '<circle cx="50" cy="52" r="42" fill="#ffffff"/>' + [[38, 42, 0], [62, 48, 30], [46, 68, 60]].map(([x, y, a]) => `<g transform="translate(${x} ${y}) rotate(${a})"><circle r="15" fill="${tops.includes('matcha') ? '#a8c880' : tops.includes('chocolate') ? '#8a5a3a' : '#d99a4a'}"/><ellipse cx="-4" cy="-5" rx="6" ry="3" fill="#fff" opacity=".2"/>${[[-6, 2], [4, -4], [6, 5], [-1, 8], [8, -1], [-8, -6]].map(([dx, dy], j) => `<circle cx="${dx}" cy="${dy}" r="2" fill="${cs[j % cs.length]}"/>`).join('')}</g>`).join(''); },
 });
+// snow cheese is a powder over the whole dish, not a piece on one spot
+const SNOW = slots => (slots.length ? slots : [[50, 52]]).flatMap(([x, y], k) => Array.from({ length: 16 }, (_, i) => i).map(i => {
+    const a = (i * 137 + k * 59) % 360 * Math.PI / 180, r = 2 + (i * 7 + k * 3) % 14, px = (x + Math.cos(a) * r).toFixed(1), py = (y + Math.sin(a) * r).toFixed(1);
+    return `<circle cx="${px}" cy="${py}" r="${i % 3 ? 1.4 : 2}" fill="${i % 4 ? '#fffdf4' : '#f6e6b0'}"/>`;
+})).join('');
 function body(p, bigLabel) {
+    if (p.with.includes('snow-cheese')) {
+        const [bg, svg] = body({ ...p, with: p.with.filter(t => t !== 'snow-cheese'), size: 'regular', set: [] }, '');
+        return body.wrap(p, bg, svg + SNOW(B[p.base][4]), bigLabel);
+    }
     const [, bg, full, plain, slots, dflt] = B[p.base];
     const tops = p.with.length ? p.with : dflt;
     let svg;
@@ -308,6 +318,9 @@ function body(p, bigLabel) {
         const sc = p.base === 'sashimi' ? 1 : p.base === 'pizza' || p.base === 'pizza-white' ? 0.7 : 0.85;
         svg = (plain || full) + slots.slice(0, n).map(([x, y], k) => at(T[tops[k % tops.length]], x, y, (k * 37) % 40 - 20, sc)).join('');
     } else svg = full;
+    return body.wrap(p, bg, svg, bigLabel);
+}
+body.wrap = (p, bg, svg, bigLabel) => {
     if (p.size === 'large' && p.base !== 'sushi') svg = `<g transform="translate(50 52) scale(1.08) translate(-50 -52)">${svg}</g>`;
     if (p.size === 'large' && bigLabel) svg += LARGE.replace('LARGE', bigLabel);
     if (p.set.length) svg = `<g transform="translate(6 4) scale(.72)">${svg}</g>` + p.set.map((s, k) => at(S[s], 80, k ? 46 : 80, 0, 1.05)).join('');
