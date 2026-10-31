@@ -6321,3 +6321,9 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .lf_dots circle.c { fill: #f2f2f4; }
 .ax .lf_dots circle.h { fill: #f5a524; }
 .ax .lf_dots circle.pulse { fill: none; stroke: #f5a524; stroke-width: 0.8; transform-box: fill-box; transform-origin: center; animation: lf_pulse 2.4s ease-out infinite; }
+/* the small clocks run while they are open (the story's time is where they start) */
+.ax .lf_dial .s { stroke: #f5a524; stroke-width: 0.9; stroke-linecap: round; transform-box: view-box; transform-origin: 24px 24px; animation: lf_spin 60s steps(60) infinite; }
+.ax .lf_dial .run60 { transform-box: view-box; transform-origin: 24px 24px; animation: lf_spin 3600s linear infinite; }
+.ax .lf_dial .run12 { transform-box: view-box; transform-origin: 24px 24px; animation: lf_spin 43200s linear infinite; }
+@keyframes lf_spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ax .lf_dial .s, .ax .lf_dial .run60, .ax .lf_dial .run12 { animation: none; } }
