@@ -309,3 +309,9 @@ test('sleep date 5–6: an answer in the old shape stays as it was; a reflection
     assert.equal(d26.length, 1);
     assert.deepEqual([d26[0].sleep, d26[0].wake], ['01:30', '09:05']);
 });
+
+test('Vertex run 16: a private file shows nothing of its inside, whatever the model wrote', async () => {
+    const { fileOf } = await import('../src/phonesynclife.js');
+    assert.equal(fileOf({ name: 'Gehaltsabrechnung.pdf', private: true, preview: 'Entgeltabrechnung September' }).preview, '');
+    assert.equal(fileOf({ name: 'Mietvertrag.pdf', preview: 'Mietvertrag Westend' }).preview, 'Mietvertrag Westend');
+});

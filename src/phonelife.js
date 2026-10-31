@@ -52,10 +52,12 @@ FILES
 - How tidy they are shows in names and folders: "final_FINAL(2)", a duplicate download, "New folder (3)", or neat names.
 - A ticket or booking file carries the same "ev" as that record. Every document gets "preview": one line on what its first page shows (for a booking in PHONE NOW the app draws its own).
 - An adult may keep a private file: name, type and size only, with "private": true. Nothing explicit in the name.
+- No booking the story doesn't have (a hotel, a ticket, a reservation). A detail the story doesn't give (a gate, a seat, a booking number) stays out of names and previews.
 
 WEATHER
-- With WEATHER NOW, its date, time, place and weather stand; write the rest to agree with them. Without it: what the chat describes, then the archive, then what fits the season and place ("from": "guess").
-- "cities": places the owner saved, in their order: home, work, family, past and coming trips. A city stays after the trip ends. A saved city is not proof of a relationship.
+- With WEATHER NOW, its date, time, place and weather stand; write the rest to agree with them. Without it: what the chat describes, then the archive, then what fits the season and place ("from": "guess"). The place is where the story has the owner now.
+- "cities": places the owner saved, in their order: home first (where the archive and profile say they live), then work, family, past and coming trips. A city stays after the trip ends. A saved city is not proof of a relationship.
+- Only places the story names: never a city it doesn't.
 - Never today's real-world weather.
 
 LANGUAGE
