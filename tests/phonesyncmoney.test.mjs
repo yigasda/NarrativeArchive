@@ -264,14 +264,14 @@ test('the model pointing at a guessed record with the real amount corrects it', 
     assert.equal(p.money.tx[0].amountFrom, undefined);
 });
 
-test('an order cancelled right away is not charged; paid then refunded in one event stays both', () => {
+test('an order cancelled right away is not charged; a charge and its refund in the same event both stay out', () => {
     const { m, p } = setup();
     applyMoney(m, p, ev('tumbler', 31, '10-29', { moves: [{ account: '2222', amount: -18, who: 'Shop', occurrence: 'new' }], orders: [{ shop: 'Shop', item: 'Tumbler', qty: 1, price: 18, status: 'cancelled', occurrence: 'new' }] }), opts());
     migrateBank(m, p);
     assert.equal(p.money.tx.length, 0);
     assert.equal(p.money.orders[0].status, 'cancelled');
     applyMoney(m, p, ev('mug', 33, '10-29', { moves: [{ account: '2222', amount: -12, who: 'Shop', occurrence: 'new' }, { account: '2222', amount: 12, who: 'Shop', occurrence: 'new' }], orders: [{ shop: 'Shop', item: 'Mug', qty: 1, price: 12, status: 'cancelled', occurrence: 'new' }] }), opts());
-    assert.equal(p.money.tx.length, 2);
+    assert.equal(p.money.tx.length, 0);
 });
 
 test('own accounts: what leaves must be what arrives (−100 / +80 is refused); a single transfer out is fine', () => {
@@ -302,4 +302,25 @@ test('a gift or cash-on-delivery order is not reported as a missing payment', ()
     const r = applyMoney(m, p, ev('gift', 9, '10-27', { orders: [{ shop: 'Thalia', item: 'Atlas', qty: 1, price: 40, status: 'ordered', gift: 'Mara', occurrence: 'new' }, { shop: 'Otto', item: 'Lampe', qty: 1, price: 60, status: 'ordered', paid: false, occurrence: 'new' }] }), opts());
     assert.equal(p.money.orders.length, 2);
     assert.ok(!r.notes.some(n => n.includes('결제가 없었어요')));
+});
+
+test('a transfer fee: amount is what is sent, the fee comes on top (an amount with the fee already in it also works)', () => {
+    const a = setup();
+    applyMoney(a.m, a.p, ev('fee1', 23, '10-29', { moves: [{ account: '1111', amount: -300, fee: 5, kind: 'transfer' }, { account: 'broker:EUR', amount: 300 }] }), opts());
+    assert.equal(a.bank(), 695); assert.equal(a.broker(), 1300);
+    const b = setup();
+    applyMoney(b.m, b.p, ev('fee2', 23, '10-29', { moves: [{ account: '1111', amount: -305, fee: 5, kind: 'transfer' }, { account: 'broker:EUR', amount: 300 }] }), opts());
+    assert.equal(b.bank(), 695);
+    const c = setup();
+    applyMoney(c.m, c.p, ev('fee3', 24, '10-29', { moves: [{ account: '1111', amount: -30, fee: 1, kind: 'transfer', who: 'Dohyeon' }] }), opts());
+    assert.equal(c.bank(), 969);
+});
+
+test('a message the user edited: its stated amount is corrected on the same record', () => {
+    const { m, p, bank } = setup();
+    const first = applyMoney(m, p, ev('coffee', 19, '10-28', { amountFrom: 'story', moves: [{ account: '1111', amount: -3, who: 'Café', occurrence: 'new' }] }), opts());
+    const r = applyMoney(m, p, ev('coffee', 19, '10-28', { amountFrom: 'story', moves: [{ account: '1111', amount: -4.5, who: 'Café', occurrence: 'new' }] }), opts({ legs: first.legs, edited: true }));
+    assert.equal(bank(), 995.5);
+    assert.equal(p.money.tx.length, 1);
+    assert.ok(r.notes.some(n => n.includes('고친 대화')));
 });

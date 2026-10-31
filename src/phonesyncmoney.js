@@ -52,7 +52,8 @@ export function investNow(m, p) {
 }
 
 // e: { id, at, date: 'MM-DD', time, summary, money }; opts: { year, marks, legs: what this event did before }
-export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span = null } = {}) {
+// edited: the message was changed by the user after it was read, so its amounts may be corrected even when stated
+export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span = null, edited = false } = {}) {
     together = span;
     const out = { effects: [], changes: [], notes: [], legs: [] };
     const mo = e.money;
@@ -68,14 +69,14 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
         out.effects.push({ type: 'amend', path: 'money.tx', id: t.id, from: was, to: t.amount });
         const line = lk && f.accounts[lk]?.entries[t.id];
         if (line) { out.effects.push({ type: 'amendEntry', key: lk, id: t.id, from: line.amount, to: t.amount }); line.amount = t.amount; }
-        out.notes.push(`${t.who || label}: 추정 ${was} → 실제 ${t.amount}로 고쳤어요`);
+        out.notes.push(edited ? `${t.who || label}: 고친 대화에 맞춰 ${was} → ${t.amount}로 고쳤어요` : `${t.who || label}: 추정 ${was} → 실제 ${t.amount}로 고쳤어요`);
         out.changes.push({ app: acct.kind === 'credit' ? '카드' : '은행', label, amount: round(t.amount - was), currency: acct.currency });
     };
     const keep = (key, amount, fix) => {
         const old = seen(key);
         if (!old) return false;
         if (finite(amount) && finite(old.amount) && Math.abs(old.amount - amount) > 0.01) {
-            if (fix && old.state === 'applied' && old.from === 'guess' && !guess) { fix(old.rec, amount); out.legs.push({ ...old, amount: round(amount), from: 'story' }); return true; }
+            if (fix && old.state === 'applied' && (edited || old.from === 'guess' && !guess)) { fix(old.rec, amount); out.legs.push({ ...old, amount: round(amount), from: 'story' }); return true; }
             out.notes.push(`${txt(e.summary, 40)}: 처음 정한 금액(${old.amount})을 그대로 뒀어요`);
         }
         out.legs.push(old);
@@ -88,20 +89,35 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
     // ("fee") is what goes missing on the way.
     const own = list(mo.moves).filter(x => x.occurrence !== 'again' && !x.already);
     const cur = x => (/^broker:/i.test(String(x.account || '')) ? String(x.account).slice(7).toUpperCase() : p.money?.bank.accounts.find(a => a.last4 === String(x.account ?? '').replace(/\D/g, '').slice(-4))?.currency);
-    const sent = x => -Number(x.amount) - (finite(Number(x.fee)) ? Number(x.fee) : 0);
-    const pairOff = (outs, ins) => { for (const y of ins) { const i = outs.findIndex(x => cur(x) === cur(y) && Math.abs(sent(x) - Number(y.amount)) < 0.01); if (i >= 0) outs.splice(i, 1); else if (outs.some(x => cur(x) === cur(y))) fail('이체의 보낸 돈과 받은 돈이 달라요'); } };
+    // "amount" is what is sent and "fee" comes on top; an amount that already has the fee in it is taken as it is
+    const feeOf = x => (finite(Number(x.fee)) && Number(x.fee) > 0 ? Number(x.fee) : 0);
+    const sent = x => -Number(x.amount) - (x.withFee ? feeOf(x) : 0);
+    const pairOff = (outs, ins) => { for (const y of ins) {
+        const i = outs.findIndex(x => cur(x) === cur(y) && (Math.abs(-Number(x.amount) - Number(y.amount)) < 0.01 || feeOf(x) && Math.abs(-Number(x.amount) - feeOf(x) - Number(y.amount)) < 0.01 && (x.withFee = true)));
+        if (i >= 0) outs.splice(i, 1); else if (outs.some(x => cur(x) === cur(y))) fail('이체의 보낸 돈과 받은 돈이 달라요');
+    } };
     const brokers = own.filter(x => /^broker:/i.test(String(x.account || ''))), bankT = own.filter(x => !/^broker:/i.test(String(x.account || '')) && x.kind === 'transfer');
     pairOff(bankT.filter(x => Number(x.amount) < 0), brokers.filter(x => Number(x.amount) > 0));
     pairOff(brokers.filter(x => Number(x.amount) < 0), bankT.filter(x => Number(x.amount) > 0));
     const bankOut = bankT.filter(x => Number(x.amount) < 0), bankIn = bankT.filter(x => Number(x.amount) > 0);
-    if (!brokers.length && bankOut.length === 1 && bankIn.length === 1 && cur(bankOut[0]) === cur(bankIn[0]) && Math.abs(sent(bankOut[0]) - Number(bankIn[0].amount)) > 0.01) fail('이체의 보낸 돈과 받은 돈이 달라요');
+    if (!brokers.length && bankOut.length === 1 && bankIn.length === 1 && cur(bankOut[0]) === cur(bankIn[0])) pairOff([...bankOut], bankIn);
+    // the fee leaves the account with the money
+    for (const x of list(mo.moves)) if (Number(x.amount) < 0 && feeOf(x) && !x.withFee) { x.amount = Number(x.amount) - feeOf(x); x.withFee = true; }
     // an order that comes in already cancelled was never paid: its charge stays out, unless the same event also refunds it
-    const voided = list(mo.orders).filter(o => o.status === 'cancelled' && !o.already && o.occurrence !== 'again').map(o => round((Number(o.price) || 0) * Math.max(1, Math.round(Number(o.qty) || 1))));
-    const refunds = list(mo.moves).map(x => Number(x.amount)).filter(a => a > 0);
+    // and a refund of it in the same event goes too: the order came and went before any money moved
+    const voided = new Set();
+    for (const o of list(mo.orders).filter(o => o.status === 'cancelled' && !o.already && o.occurrence !== 'again')) {
+        const c = round((Number(o.price) || 0) * Math.max(1, Math.round(Number(o.qty) || 1)));
+        const pay = list(mo.moves).findIndex((x, k) => !voided.has(k) && Math.abs(Number(x.amount) + c) < 0.01);
+        if (c <= 0 || pay < 0) continue;
+        voided.add(pay);
+        const back = list(mo.moves).findIndex((x, k) => !voided.has(k) && Math.abs(Number(x.amount) - c) < 0.01);
+        if (back >= 0) voided.add(back);
+        out.notes.push(`${txt(o.item, 40)}: 취소된 주문이라 결제${back >= 0 ? '·환불' : ''}을 넣지 않았어요`);
+    }
     list(mo.moves).forEach((x, k) => {
         const amount = Number(x.amount), broker = /^broker:/i.test(String(x.account || ''));
-        const v = amount < 0 ? voided.findIndex(c => c > 0 && Math.abs(c + amount) < 0.01) : -1;
-        if (v >= 0 && !refunds.some(r => Math.abs(r + amount) < 0.01)) { voided.splice(v, 1); out.legs.push({ key: `void:${k}`, amount, state: 'cancelled' }); out.notes.push(`${txt(x.who, 40)} ${round(amount)}: 취소된 주문이라 결제를 넣지 않았어요`); return; }
+        if (voided.has(k)) { out.legs.push({ key: `void:${k}`, amount, state: 'cancelled' }); return; }
         if (!finite(amount) || amount === 0) fail('금액을 확인하지 못했어요');
         if (broker ? !investOn : !bankOn) { out.legs.push({ key: `before:${x.account}`, amount, state: 'before' }); return; }
         if (broker) {
@@ -215,7 +231,7 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
     records('orders', list(mo.orders), x => {
         const price = Number(x.price);
         if (!txt(x.item) || !txt(x.shop)) fail('주문의 가게나 물건을 확인하지 못했어요');
-        return { shop: txt(x.shop, 60), item: txt(x.item), ko: txt(x.ko), option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: txt(x.eta, 5), arrived: '', gift: txt(x.gift, 40), ...(guess ? { amountFrom: 'guess' } : {}) };
+        return { shop: txt(x.shop, 60), item: txt(x.item), ko: txt(x.ko), option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: txt(x.eta, 5), arrived: '', gift: txt(x.gift === true ? '' : x.gift, 40), ...(x.paid === false ? { paid: false } : {}), ...(guess ? { amountFrom: 'guess' } : {}) };
     }, (o, x) => samePlace(o.shop, x.shop) && samePlace(o.item, x.item) && near(o.time, date));
     records('passes', list(mo.passes), x => {
         if (!txt(x.by)) fail('티켓 정보를 확인하지 못했어요');
