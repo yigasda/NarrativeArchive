@@ -172,7 +172,9 @@ const idOf = (w, set) => {
 export const picFromWords = (v, name = '') => {
     if (!v || typeof v !== 'object') return null;
     const base = B[String(v.base || '').trim()] ? String(v.base).trim() : guessPic(`${v.base || ''} ${name}`).base;
-    const ids = (a, set, n) => [...new Set((Array.isArray(a) ? a : []).map(x => idOf(x, set)).filter(Boolean))].slice(0, n);
+    // a list may come as one string ("beef", "fries, cola", "fries and cola")
+    const words = a => (Array.isArray(a) ? a : typeof a === 'string' ? a.split(/\s*(?:,|\/|&|\+|\band\b|\bwith\b)\s*/i) : []);
+    const ids = (a, set, n) => [...new Set(words(a).map(x => idOf(x, set)).filter(Boolean))].slice(0, n);
     return { base, with: ids(v.with, T, 3), size: v.size === 'large' ? 'large' : 'regular', set: ids(v.set, S, 2) };
 };
 // words → a base, for dishes without a picture (older phones, the update round): first match wins
@@ -185,7 +187,7 @@ const GUESS = [[/전복|abalone/i, 'juk', ['abalone', 'seaweed']], [/죽|porridg
     [/초밥|스시|sushi|nigiri/i, 'sushi'], [/스테이크|steak/i, 'steak'], [/burger|버거/i, 'burger'], [/fries|pommes|감자튀김/i, 'fries'], [/hot ?dog|핫도그|currywurst|wurst/i, 'hotdog'], [/pizza|피자/i, 'pizza'],
     [/lasagn|라자냐/i, 'lasagna'], [/panna|carbonara|alfredo|cream|크림|로제/i, 'pasta-cream'], [/pasta|spaghetti|tagliatelle|penne|파스타|스파게티/i, 'pasta-tomato'], [/pho|쌀국수/i, 'pho'], [/pad ?thai|팟타이/i, 'pad-thai'], [/curry|카레|커리/i, 'curry'],
     [/dim ?sum|딤섬|만두|dumpling|gyoza/i, 'dimsum'], [/볶음밥|fried rice|nasi/i, 'fried-rice'], [/kebab|döner|doner|케밥/i, 'kebab'], [/taco|타코/i, 'tacos'], [/burrito|부리또/i, 'burrito'], [/poke|포케/i, 'poke'], [/salad|salat|샐러드/i, 'salad'],
-    [/sandwich|panini|bagel|샌드위치/i, 'sandwich'], [/soup|suppe|수프|스프|eintopf/i, 'soup'], [/coffee|kaffee|latte|americano|커피|라떼/i, 'coffee'], [/bubble|boba|버블티|밀크티/i, 'bubble-tea'], [/juice|saft|주스|smoothie/i, 'juice'],
+    [/sandwich|panini|bagel|샌드위치/i, 'sandwich'], [/soup|suppe|수프|스프|eintopf/i, 'soup'], [/coffee|kaffee|latte|americano|커피|라떼/i, 'coffee'], [/bubble|boba|버블티|밀크티/i, 'bubble-tea'], [/juice|saft|주스|smoothie|cola|coke|콜라|사이다|soda|limo|lemonade|beer|bier|맥주|soju|소주|water|wasser|생수/i, 'juice'],
     [/cake|kuchen|torte|tiramisu|cheesecake|케이크|티라미수/i, 'cake'], [/donut|doughnut|도넛/i, 'donut'], [/ice ?cream|eis|gelato|아이스크림/i, 'ice-cream'], [/croissant|크루아상|빵|bread/i, 'croissant'], [/waffle|와플/i, 'waffle'],
     [/찌개|탕|stew|국\b/i, 'kimchi-stew'], [/밥|rice|bowl/i, 'donburi']];
 export const guessPic = text => { const g = GUESS.find(([re]) => re.test(String(text || ''))); return g ? { base: g[1], with: g[2] || [], size: 'regular', set: [] } : { base: 'bowl', with: [], size: 'regular', set: [] }; };

@@ -33,3 +33,13 @@ test('a reflection describes a dish in plain words: they become drawn ids (beef 
     assert.equal(picFromWords({ base: 'something odd' }, '전복죽').base, 'juk');
     assert.equal(picFromWords(null), null);
 });
+
+test('Vertex run 17: ingredients and sides written as one string; a drink ordered on its own', async () => {
+    const { picFromWords } = await import('../src/phonefood.js');
+    assert.deepEqual(picFromWords({ base: 'fried rice', with: 'beef' }, '소고기 볶음밥').with, ['beef']);
+    const pz = picFromWords({ base: 'pizza', with: 'shrimp', size: 'large', set: 'fries, cola' }, '새우 피자 세트');
+    assert.deepEqual([pz.with, pz.size, pz.set], [['shrimp'], 'large', ['fries', 'cola']]);
+    assert.deepEqual(picFromWords({ base: 'porridge', with: 'abalone' }, '전복죽'), { base: 'juk', with: ['abalone'], size: 'regular', set: [] });
+    assert.deepEqual(picFromWords({ base: 'sushi', with: 'salmon and tuna' }, '연어 초밥 세트').with, ['salmon', 'tuna']);
+    assert.equal(picFromWords({ base: 'cola' }, '콜라').base, 'juice');
+});
