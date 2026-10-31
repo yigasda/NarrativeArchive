@@ -12,7 +12,7 @@ test('words find a base', () => {
     assert.deepEqual(guessPic('전복죽').with, ['abalone', 'seaweed']);
     assert.equal(guessPic('Tagliatelle al ragù').base, 'pasta-tomato');
     assert.equal(guessPic('Penne alla panna').base, 'pasta-cream');
-    assert.equal(guessPic('Tiramisu').base, 'cake');
+    assert.equal(guessPic('Tiramisu').base, 'tiramisu');
     assert.equal(guessPic('짜장면').base, 'jajangmyeon');
     assert.equal(guessPic('something odd').base, 'bowl');
 });
@@ -41,7 +41,7 @@ test('Vertex run 17: ingredients and sides written as one string; a drink ordere
     assert.deepEqual([pz.with, pz.size, pz.set], [['shrimp'], 'large', ['fries', 'cola']]);
     assert.deepEqual(picFromWords({ base: 'porridge', with: 'abalone' }, '전복죽'), { base: 'juk', with: ['abalone'], size: 'regular', set: [] });
     assert.deepEqual(picFromWords({ base: 'sushi', with: 'salmon and tuna' }, '연어 초밥 세트').with, ['salmon', 'tuna']);
-    assert.equal(picFromWords({ base: 'cola' }, '콜라').base, 'juice');
+    assert.equal(picFromWords({ base: 'cola' }, '콜라').base, 'cola');
 });
 test('toppings change the picture on every base, and flavours read from words', async () => {
     for (const base of FOOD_IDS.base) {
