@@ -223,3 +223,33 @@ test('a missing word on a payment with no twin still goes in', () => {
     applyMoney(m, p, ev('rent', 9, '10-27', { moves: [{ account: '1111', amount: -700, who: 'Vermieter' }] }), opts());
     assert.equal(bank(), 300);
 });
+
+// when the model's word is wrong or missing: what happens, as it stands
+test('mislabels: a real second coffee called "again" or left blank is missed; a mention called "again" is not paid', () => {
+    const real = (word) => { const { m, p, bank } = setup();
+        applyMoney(m, p, ev('c1', 9, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', occurrence: 'new' }] }), opts());
+        applyMoney(m, p, ev('c2', 12, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', ...(word ? { occurrence: word } : {}) }] }), opts());
+        return bank(); };
+    assert.equal(real('new'), 991);
+    assert.equal(real('again'), 995.5); // missed: the model's word decides
+    assert.equal(real(''), 995.5);      // missed: blank is taken as the same payment
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('c1', 9, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', occurrence: 'new' }] }), opts());
+    applyMoney(m, p, ev('recall', 16, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', occurrence: 'again' }] }), opts());
+    assert.equal(bank(), 995.5);
+});
+
+test('mislabel: a mention called "new" from another message is paid twice, and the result says so', () => {
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('c1', 9, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', occurrence: 'new' }] }), opts());
+    const r = applyMoney(m, p, ev('recall', 16, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', occurrence: 'new' }] }), opts());
+    assert.equal(bank(), 991);
+    assert.ok(r.notes.some(n => n.includes('하나 더')));
+});
+
+test('a retry re-reading the neighbours of a payment that already went in does not pay it again, even marked "new"', () => {
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('coffee', 1, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', occurrence: 'new' }] }), opts());
+    applyMoney(m, p, ev('coffee-again', 2, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', occurrence: 'new' }] }), opts({ span: [1, 4] }));
+    assert.equal(bank(), 995.5);
+});

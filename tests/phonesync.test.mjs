@@ -135,3 +135,11 @@ test('a failed round reads the failed and the empty messages once more; what wen
     assert.equal(pickRound(s, rows(c)).retry.length, 0);
     assert.deepEqual(Object.keys(s.failed).sort(), ['2', '3', '4']);
 });
+
+test('a retried message remembers which messages it was read with', () => {
+    const c = chat(20), s = sync(c, 0); s.limit = 4;
+    const r = pickRound(s, rows(c));
+    settleRound(s, r.rows.map(x => x.index), { 2: 'x' }, new Set([1]));
+    assert.deepEqual(s.failed[2].span, [1, 4]);
+    assert.deepEqual(s.failed[3].span, [1, 4]);
+});

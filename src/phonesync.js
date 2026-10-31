@@ -70,11 +70,13 @@ export const unreadCount = (s, rows) => { const base = s.marks.base?.index ?? -1
 // after a round: a message whose event failed is read once more; when anything failed, so are the messages that got
 // nothing (a failed event can carry what they said); a second miss is skipped. Then the round counts as read.
 // failed: { [index]: why }, got: indices with an event that went in
+// `span` keeps which messages were read together, so a retry knows what already went in beside it
 export function settleRound(s, round, failed, got) {
-    const any = Object.keys(failed).length > 0;
+    const any = Object.keys(failed).length > 0, span = [Math.min(...round), Math.max(...round)];
     for (const i of round) {
-        if (failed[i]) s.failed[i] = { tries: (s.failed[i]?.tries || 0) + 1, why: failed[i] };
-        else if (any && !got.has(i)) s.failed[i] = { tries: (s.failed[i]?.tries || 0) + 1, why: '실패한 일과 같이 한 번 더 읽어요', quiet: true };
+        const was = s.failed[i]?.span, wide = was ? [Math.min(was[0], span[0]), Math.max(was[1], span[1])] : span;
+        if (failed[i]) s.failed[i] = { tries: (s.failed[i]?.tries || 0) + 1, why: failed[i], span: wide };
+        else if (any && !got.has(i)) s.failed[i] = { tries: (s.failed[i]?.tries || 0) + 1, why: '실패한 일과 같이 한 번 더 읽어요', quiet: true, span: wide };
         else delete s.failed[i];
     }
     addDone(s, round);

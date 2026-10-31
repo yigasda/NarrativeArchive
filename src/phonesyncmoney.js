@@ -18,8 +18,11 @@ const txt = (v, n = 80) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, 
 const list = v => (Array.isArray(v) ? v : []);
 const day = s => { const mt = /^(\d{2})-(\d{2})/.exec(String(s || '')); return mt ? Date.UTC(2001, mt[1] - 1, mt[2]) : NaN; };
 const near = (a, b, days = 1) => Math.abs(day(a) - day(b)) <= days * 86400000;
-// a twin only stands for this one if the model didn't say it happens here, or both come from the same message
-const fresh = (x, twin, at) => (x.separate || x.occurrence === 'new') && twin.sourceIndex !== at;
+// a twin only stands for this one if the model didn't say it happens here, or both come from the same message, or (on a
+// retry) from a message read together with this one before
+let together = null;
+const fresh = (x, twin, at) => (x.separate || x.occurrence === 'new') && twin.sourceIndex !== at
+    && !(together && twin.sourceIndex >= together[0] && twin.sourceIndex <= together[1]);
 const plain = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 const samePlace = (a, b) => !!plain(a) && plain(a) === plain(b);
 const fail = why => { throw new Error(why); };
@@ -49,7 +52,8 @@ export function investNow(m, p) {
 }
 
 // e: { id, at, date: 'MM-DD', time, summary, money }; opts: { year, marks, legs: what this event did before }
-export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [] } = {}) {
+export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span = null } = {}) {
+    together = span;
     const out = { effects: [], changes: [], notes: [], legs: [] };
     const mo = e.money;
     if (!mo || typeof mo !== 'object') return out;
@@ -108,6 +112,7 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [] } = {})
         const match = t => t.account === acct.last4 && near(t.time, date, 0) && Math.sign(t.amount) === Math.sign(amount)
             && (Math.abs(t.amount - amount) < 0.01 && (!plain(t.who) || !plain(x.who) || samePlace(t.who, x.who)) || (guess || t.amountFrom === 'guess') && samePlace(t.who, x.who));
         const twin = !pointed && tx.find(t => match(t) && !fresh(x, t, e.at));
+        if (!pointed && !twin && tx.some(match)) out.notes.push(`${txt(x.who, 40) || acct.name} ${round(amount)}: 같은 날 같은 결제가 하나 더 있어요 (새 결제라고 해서 따로 넣었어요)`);
         if (!pointed && !twin && x.occurrence === 'again') { out.legs.push({ key, amount: round(amount), state: 'again' }); out.notes.push(`${txt(x.who, 40) || acct.name} ${round(amount)}: 전에 있었던 결제라 넣지 않았어요`); return; }
         if (twin && twin.amountFrom === 'guess' && !guess && Math.abs(twin.amount - amount) > 0.01) { amend(twin, amount, lk, label, acct); out.legs.push({ key, amount: round(amount), state: 'included', rec: twin.id }); return; }
         if (pointed || twin) {

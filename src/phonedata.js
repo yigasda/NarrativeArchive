@@ -494,7 +494,7 @@ async function updatePhone(m, owner) {
             // the money first, on its own: a payment that can't be placed leaves the whole event out
             const stage = structuredClone({ money: p.money, investment: p.investment, finance: m.finance });
             let paid;
-            try { paid = applyMoney(m, p, { id, at, date: when(e.date).slice(0, 5), time: hhmm(e.time), summary: line(e.summary, 160), money: e.money }, { year, marks: s.marks, legs: s.events[id]?.legs || [] }); }
+            try { paid = applyMoney(m, p, { id, at, date: when(e.date).slice(0, 5), time: hhmm(e.time), summary: line(e.summary, 160), money: e.money }, { year, marks: s.marks, legs: s.events[id]?.legs || [], span: s.failed[at]?.span || null }); }
             catch (err) { p.money = stage.money; p.investment = stage.investment; m.finance = stage.finance; fail(String(err?.message || err)); continue; }
             for (const c of paid.changes) { apps.add(c.app); if (c.amount !== null) changes.push({ ...c, what: line(e.summary, 60) }); }
             notes.push(...paid.notes);
