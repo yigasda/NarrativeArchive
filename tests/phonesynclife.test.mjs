@@ -153,7 +153,9 @@ test('Vertex run 9: a night that started after midnight is the day they woke up;
     applyLife(p, { id: 'sleepless-night', at: 7, date: '10-27', time: '02:15' }, { health: [{ date: '10-26', sleep: '02:15', wake: '', steps: 4820, from: 'story' }] }, true);
     const d = p.life.health.days.find(x => x.ev === 'sleepless-night');
     assert.equal(d.date, '10-27');
-    assert.equal(d.wake, '06:30');
+    // told at 02:15, before they usually wake: waking waits for the clock (Vertex run 11)
+    assert.equal(d.wake, '');
+    assert.equal(d.bed, '23:10');
     assert.equal(d.sleep, '02:15');
     assert.equal(d.steps, 4820);
 });
@@ -190,4 +192,18 @@ test('Vertex run 10: weather said to come from an archive the request never carr
     assert.equal(p.life.weather.here.from, 'chat');
     applyWeather(p, { place: 'Berlin', date: '10-27', cond: 'snow', temp: 1, from: 'archive' }, null, { archive: true });
     assert.equal(p.life.weather.here.from, 'archive');
+});
+
+test('Vertex run 11: a night still going at 02:20 gets its row now; waking is filled only once its usual time has come', () => {
+    const { p } = setup();
+    p.life.health.usual = { sleep: '23:30', wake: '06:30', steps: 7000 };
+    applyLife(p, { id: 'cant-sleep', at: 7, date: '10-27', time: '02:15' }, { health: [{ date: '10-27', sleep: '02:15', from: 'story' }] }, true);
+    const d = p.life.health.days.find(x => x.ev === 'cant-sleep');
+    assert.ok(!d.wake);
+    lifeClock(p, '10-27 02:25');
+    assert.ok(!d.wake);
+    const fx = lifeClock(p, '10-27 09:00');
+    assert.equal(d.wake, '06:30');
+    revertEffects({}, p, fx);
+    assert.ok(!d.wake);
 });

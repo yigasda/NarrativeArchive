@@ -162,6 +162,7 @@ LIFE
   - Every other new day goes in the top-level "days", "from": "pattern", written freely from the character and their life, still following that day's events and tickets.
   - No new story day: "days": [].
   - "date" is the day they woke up: asleep 10-26 at 23:40 or 10-27 at 02:15 → "10-27".
+  - A night still going (they fell asleep, not yet woken): its row now, with "sleep"; "wake" stays empty.
 ${weather ? `- "weather": ${tracker ? 'WEATHER NOW stands (its date, time, place and weather); write the rest of the forecast to agree with it, "from": "chat".' : 'what these messages describe, else the archive. If the story\'s day or place changed with nothing to go on, what fits the season and place, "from": "guess". If neither changed and nothing describes it: null (the app keeps the last weather).'}
 - With new weather, also write the saved cities' "cond", "temp", "hi" and "lo".
 ` : ''}` : ''}${money ? `

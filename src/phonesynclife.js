@@ -131,7 +131,9 @@ export function applyLife(p, e, phone, on) {
         if (clean.sleep && clean.sleep < '12:00' && e.date && dayGap(clean.date, e.date) === 1) clean.date = e.date;
         // what the story doesn't say is their usual
         const u = L.health?.usual || {};
-        for (const k of ['bed', 'sleep', 'wake']) if (!clean[k] && u[k]) clean[k] = u[k];
+        // waking: not before it happens (a night still going keeps it empty; the clock fills it once its time is past)
+        const awake = !(clean.date === e.date && e.time && u.wake && e.time < u.wake);
+        for (const k of ['bed', 'sleep', 'wake']) if (!clean[k] && u[k] && (k !== 'wake' || awake)) clean[k] = u[k];
         if (clean.steps === null && finiteNum(u.steps)) clean.steps = u.steps;
         const was = (L.health?.days || []).find(o => o.date === clean.date);
         const vals = { ...clean, ev: e.id };
@@ -216,6 +218,9 @@ export function lifeClock(p, now) {
         const at = String(L.at || ''), gone = at.slice(0, 5) !== today || (hm && at.slice(6, 11) && minutes(hm) - minutes(at.slice(6, 11)) >= (L.clock.running.left || 0) / 60);
         if (gone) { out.push({ type: 'set', path: 'life.clock.running', from: structuredClone(L.clock.running), to: null }); L.clock.running = null; }
     }
+    // a night told while it went on: its waking is their usual, once that time has come
+    const u = L.health?.usual;
+    if (u?.wake) for (const d of L.health?.days || []) if (!d.wake && (dayGap(d.date, today) > 0 || d.date === today && hm && hm >= u.wake)) change('life.health.days', d, { wake: u.wake });
     const files = L.files?.items || [];
     for (const x of [...files]) if (x.trashed && dayGap(x.trashed, today) > 30) { files.splice(files.indexOf(x), 1); out.push({ type: 'drop', path: 'life.files.items', item: structuredClone(x) }); }
     const days = L.health?.days || [];
