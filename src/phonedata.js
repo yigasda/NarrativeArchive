@@ -435,11 +435,17 @@ export function syncState(p) {
     if (!p?.sync?.marks?.base) return 'none';
     // the bank's and the investment's starts move with a deleted message too; one that can't be found again stays put
     if (settleMarks(p.sync, ctx().chat || [], ['base', ...['money', 'invest'].filter(g => p.sync.marks[g])]).includes('base')) return 'lost';
+    p.sync.readChat ||= chatMark();
     p.sync.scope = phoneChatScope(ctx());
     return 'ok';
 }
 // counted on a copy: what changed since the last round is left for the round itself to see
-export const syncLeft = p => { if (!p?.sync?.marks?.base) return null; const s = structuredClone(p.sync); realign(s, chatRows()); return unreadCount(s, syncRows()); };
+// which chat the phone was last read in: SillyTavern gives a branch a new integrity mark (and names its main chat);
+// renaming a chat or importing a backup keeps the mark, so neither looks like a branch
+const chatMark = () => ctx().chatMetadata?.integrity || null;
+// a phone copied into a branch of the chat it was read in: messages past the branch point are other talk, never edits
+const otherChat = s => { const now = chatMark(); return !!s.readChat && !!now && s.readChat !== now && !!ctx().chatMetadata?.main_chat; };
+export const syncLeft = p => { if (!p?.sync?.marks?.base) return null; const s = structuredClone(p.sync); realign(s, chatRows(), { other: otherChat(s) }); return unreadCount(s, syncRows()); };
 const ITEM_KEYS = [...LISTS, 'threads', 'contacts'];
 const sizes = p => Object.fromEntries(ITEM_KEYS.map(k => [k, k === 'threads' ? p.threads.reduce((n, t) => n + t.messages.length, 0) : k === 'posts' ? (p.posts || []).reduce((n, x) => n + 1 + (x.comments?.length || 0), 0) : (p[k] || []).length]));
 // every app item that can carry a source: list items, text messages, comments
@@ -470,8 +476,9 @@ async function updatePhone(m, owner) {
         const s = p.sync, swiped = [];
         // a read message edited or swiped since: if the last round read it, that round is undone and read again;
         // an older round's items stay, and the changed message is simply read again
-        let moved = realign(s, chatRows());
+        let moved = realign(s, chatRows(), { other: otherChat(s) });
         settleDropped(p, moved, swiped);
+        s.readChat = chatMark() || s.readChat;
         renumber(m, p, moved);
         // an edit or swipe of a message the last round read: that round is undone (what can be) and read again
         if (moved.changed.some(x => p.syncUndo?.readFp?.includes(x.fp)) && canUndo(p)) {

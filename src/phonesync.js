@@ -84,7 +84,9 @@ const lcs = (a, b) => {
 };
 // all: every message with { index, text, hidden }. Returns moved (old → new number), changed ({ old, at, fp }) and
 // dropped ({ old, fp, unsure })
-export function realign(s, all) {
+// other: the chat now is not the one read before (a branch, or a chat copied): a message in a read one's place with other
+// words is another conversation, not an edit, so nothing counts as edited and what the old ones gave can be taken off
+export function realign(s, all, { other = false } = {}) {
     const base = s.marks.base?.index ?? -1, cur = all.filter(r => r.index > base).map(r => ({ ...r, fp: bodyMark(r.text) }));
     if (!s.seen) { s.seen = {}; for (const r of cur) if (!r.hidden && isDone(s, r.index)) s.seen[r.index] = r.fp; }
     const old = [...Object.entries(s.seen).map(([i, f]) => ({ old: Number(i), fp: f })), ...Object.entries(s.hiddenRead || {}).map(([i, f]) => ({ old: Number(i), fp: f }))].sort((a, b) => a.old - b.old);
@@ -105,7 +107,7 @@ export function realign(s, all) {
         if (!O.length) continue;
         const H = N.filter(r => r.hidden), V = N.filter(r => !r.hidden);
         if (!V.length && H.length >= O.length) { O.forEach((x, n) => { hiddenRead[H[n].index] = x.fp; moved[x.old] = H[n].index; }); continue; }
-        if (V.length === O.length && (!last || O.length === 1)) { O.forEach((x, n) => changed.push({ old: x.old, at: V[n].index, fp: x.fp })); continue; }
+        if (!other && V.length === O.length && (!last || O.length === 1)) { O.forEach((x, n) => changed.push({ old: x.old, at: V[n].index, fp: x.fp })); continue; }
         dropped.push(...O.map(x => ({ old: x.old, fp: x.fp })));
     }
     // the same words still in the chat don't make a gone message unsure when that copy is another read message,

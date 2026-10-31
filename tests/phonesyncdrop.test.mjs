@@ -12,10 +12,10 @@ const T = (globalThis.__dropTest = { chat: [], answers: [] });
 const map = {
     './phonesync.js': href('phonesync.js'), './phonesyncmoney.js': href('phonesyncmoney.js'), './finance.js': href('finance.js'),
     './phoneprofile.js': href('phoneprofile.js'),
-    './phonestory.js': encoded(`export const phoneChatScope=()=>'test';`),
+    './phonestory.js': encoded(`export const phoneChatScope=()=>globalThis.__dropTest.scope||'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-10-26';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
     './ai.js': encoded(`export const askDraft=async()=>JSON.stringify(globalThis.__dropTest.answers.shift());`),
-    './core.js': encoded(`export const ctx=()=>({chat:globalThis.__dropTest.chat,loadWorldInfo:async()=>null,characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
+    './core.js': encoded(`export const ctx=()=>({chat:globalThis.__dropTest.chat,chatMetadata:globalThis.__dropTest.meta,loadWorldInfo:async()=>null,characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=()=>[];export const chatRows=()=>globalThis.__dropTest.chat.map((x,i)=>({index:i,user:x.is_user,hidden:!!x.is_system,text:'[#'+i+'] '+x.name+': '+x.mes}));`),
     './inject.js': encoded(`export const applyInjection=()=>{};`),
@@ -33,7 +33,7 @@ globalThis.localStorage = { getItem: k => store.get(k) ?? null, setItem: (k, v) 
 
 const say = (who, mes) => ({ is_user: who === 'Ren', is_system: false, name: who, mes });
 function setup(chat) {
-    T.chat = chat; T.answers = [];
+    T.chat = chat; T.answers = []; T.scope = 'test'; T.meta = { integrity: 'main-mark' };
     const p = { owner: 'Ren', now: '10-26 09:00', contacts: [], threads: [], calls: [], photos: [], notes: [], searches: [], events: [], posts: [], mails: [], diary: [], voice: [],
         money: { currency: 'KRW', asOf: '2026-10-20', bank: { accounts: [{ id: 'chk', kind: 'checking', name: '입출금', last4: '1111', currency: 'KRW', balance: 100000 }] }, tx: [], orders: [], passes: [] } };
     const m = { text: '', phones: { ren: p } };
@@ -135,4 +135,59 @@ test('되돌리기 takes the round off as a source of what was already there', a
     assert.deepEqual(a(), [3, 6]);
     await data.undoRound(c.m, c.p);
     assert.deepEqual(a(), [3]);
+});
+
+test('a branch: talk cut off past the branch point is gone, even where a new message took its place; the main chat keeps all', async () => {
+    const c = await bookCase();
+    const main = structuredClone(c.m), mainChat = structuredClone(T.chat);
+    // a branch from #2 (SillyTavern gives it a new mark and names the main chat): the book talk (#3) is written over by
+    // other words, #4 happens to be said again the same way
+    T.scope = 'branch'; T.meta = { integrity: 'branch-mark', main_chat: 'main' };
+    T.chat.splice(3, 3, say('Mara', 'something else entirely happened'), say('Ren', 'see you tomorrow at the cafe'), say('Mara', 'a new last line'));
+    await run(c.m, { now: '10-26 15:00', events: [] });
+    const d = c.p.sync.dropped;
+    assert.equal(d.length, 1);
+    assert.equal(d[0].label, '#3');
+    assert.deepEqual(d[0].events, ['book']);
+    // B changed by hand stays; A goes, and so does the book's payment
+    c.p.threads[0].messages.find(x => x.text.startsWith('B')).text = 'B: 응 샀어 (고침)';
+    await data.dropStretch(c.m, c.p, 0);
+    assert.deepEqual(texts(c.p), ['B: 응 샀어 (고침)', 'E: 내일 카페에서 봐']);
+    assert.equal(c.bank(), 100000);
+    // reading on in the branch, an edit there is an edit again
+    T.chat[5].mes = 'a new last line, edited';
+    await run(c.m, { now: '10-26 16:00', events: [] });
+    assert.equal(c.p.sync.dropped.length, 0);
+    // the main chat has its own copy: back there nothing is gone
+    T.scope = 'test'; T.meta = { integrity: 'main-mark' }; T.chat = mainChat; c.m = main;
+    await run(c.m, { now: '10-26 15:00', events: [] });
+    assert.deepEqual(texts(main.phones.ren), ['A: 책 샀어?', 'B: 응 샀어', 'E: 내일 카페에서 봐']);
+    assert.equal(main.phones.ren.sync.dropped?.length || 0, 0);
+});
+
+test('in the same chat, a message written over in its place is still an edit, read again', async () => {
+    const c = await bookCase();
+    T.chat[3] = say('Mara', 'something else entirely happened');
+    await run(c.m, { now: '10-26 15:00', events: [] });
+    assert.equal(c.p.sync.dropped?.length || 0, 0);
+    assert.ok(c.p.syncLast.notes.some(n => /읽은 대화가 바뀌어서|바뀐 대화 1개/.test(n)));
+});
+
+test('a chat renamed or a backup imported keeps its mark: an edit made right after is still an edit, nothing is offered to take off', async () => {
+    for (const meta of [{ integrity: 'main-mark' }, { integrity: 'main-mark', main_chat: 'older main' }]) {
+        const c = await bookCase();
+        T.scope = 'renamed or imported'; T.meta = meta;
+        T.chat[3] = say('Mara', 'something else entirely happened');
+        await run(c.m, { now: '10-26 15:00', events: [] });
+        assert.equal(c.p.sync.dropped?.length || 0, 0);
+    }
+});
+
+test('an older phone without a mark yet takes the chat it is in as its own: no guess that it is a branch', async () => {
+    const c = await bookCase();
+    delete c.p.sync.readChat;
+    T.meta = { integrity: 'branch-mark', main_chat: 'main' };
+    T.chat[3] = say('Mara', 'something else entirely happened');
+    await run(c.m, { now: '10-26 15:00', events: [] });
+    assert.equal(c.p.sync.dropped?.length || 0, 0);
 });
