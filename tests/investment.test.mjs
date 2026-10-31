@@ -64,7 +64,7 @@ const phonedata=await load('phonedata.js',{'./wealth.js':wealthURL,
  './phoneprofile.js':pathToFileURL(new URL('../src/phoneprofile.js',import.meta.url).pathname).href,
  './ai.js':ai,'./finance.js':financeURL,'./core.js':encoded(`export const ctx=()=>globalThis.__investTest.context||({loadWorldInfo:async()=>null});export const globalSettings=()=>({});export const saveMeta=async()=>{globalThis.__investTest.saved++};`),
  './calendar.js':encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
- './drift.js':encoded(`export const recentForCheck=()=>[];`), './inject.js':encoded(`export const applyInjection=()=>{};`),
+ './drift.js':encoded(`export const recentForCheck=()=>[];export const chatRows=()=>[];`), './inject.js':encoded(`export const applyInjection=()=>{};`),
  './knowledge.js':encoded(`export const knowledgeRows=()=>[];`),
  './people.js':encoded(`export const nameKey=s=>String(s).toLowerCase();export const nameRe=s=>new RegExp(s,'i');export const headingPlaces=()=>[];`),
  './recall.js':encoded(`export const estTok=s=>s.length/4;`), './scenes.js':encoded(`export const recentTrackers=()=>[];`),
@@ -283,7 +283,7 @@ test('individual writing includes owner profile while camera and public search d
  './ai.js':encoded(`export const askAI=async(input)=>{globalThis.__investTest.inputs.push({input});return JSON.stringify(globalThis.__investTest.answers?.length ? globalThis.__investTest.answers.shift() : globalThis.__investTest.answer)};`),
  './core.js':encoded(`export const ctx=()=>globalThis.__investTest.context;export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
  './phonedata.js':bridge,'./anniv.js':encoded(`export const datedRows=()=>[];`),
- './calendar.js':encoded(`export const calendars=()=>({});`),'./drift.js':encoded(`export const recentForCheck=()=>[];`),
+ './calendar.js':encoded(`export const calendars=()=>({});`),'./drift.js':encoded(`export const recentForCheck=()=>[];export const chatRows=()=>[];`),
  './people.js':encoded(`export const headingPlaces=()=>[];export const nameKey=s=>s;export const peopleList=()=>[];`)
  });
  const {m,p}=setup();Object.assign(p,{financeProfile:{type:'character',id:'a.png'},notes:[],diary:[],photos:[],threads:[{with:'B',messages:[]}],searches:[{q:'weather'}]});

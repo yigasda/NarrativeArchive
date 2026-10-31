@@ -4,10 +4,10 @@
 import { ensureWealth, wealthBlock, wealthDate, wealthCheck, addWealthFX } from './wealth.js';
 import { askDraft } from './ai.js';
 import { ownerProfileBlock } from './phoneprofile.js';
-import { migrateBank, finance, finite, cash, reviseBaseline } from './finance.js';
+import { migrateBank, finance, finite, cash, reviseBaseline, positions } from './finance.js';
 import { calendars, headingDate } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
-import { recentForCheck } from './drift.js';
+import { chatRows, recentForCheck } from './drift.js';
 import { applyInjection } from './inject.js';
 import { knowledgeRows } from './knowledge.js';
 import { headingPlaces, nameKey, nameRe } from './people.js';
@@ -18,7 +18,7 @@ import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
 import { applyMoney, investNow, moneyNow, replayEffects, revertEffects } from './phonesyncmoney.js';
-import { busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
+import { pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
 export const WALLS = ['dusk', 'ocean', 'forest', 'rose', 'night', 'sand', 'mono', 'aurora'];
 export const ACCENTS = ['blue', 'green', 'orange', 'pink', 'purple', 'red'];
@@ -124,6 +124,7 @@ YOU GET
 - ARCHIVE BEFORE (sometimes): what happened earlier. Background; nothing in it is new.
 - STORY NOW (sometimes): where the story stands after these messages. Background.
 - EVENTS ON THE PHONE: story events the phone already holds, with their ids.
+- MESSAGES READ BEFORE, NOW CHANGED (sometimes): messages put on the phone before and edited since, with the events they gave.
 - MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.
 - PHONE NOW: the newest of what the phone holds.
 - OWNER, and sometimes WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
@@ -427,7 +428,7 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
 
 // ---- 새로 일어난 일 반영
 // every message the phone may read, numbered (system messages and offstage ones left out)
-export const syncRows = () => recentForCheck((ctx().chat || []).length, { excludeSystem: true }).map(text => ({ index: Number(/^\[#(\d+)/.exec(text)?.[1]), text })).filter(r => Number.isInteger(r.index));
+export const syncRows = () => chatRows().filter(r => !r.hidden).map(({ index, text }) => ({ index, text }));
 export const markNow = () => { const rows = syncRows(); return makeMark(ctx().chat || [], rows.length ? rows[rows.length - 1].index : -1); };
 export const markAfter = index => makeMark(ctx().chat || [], index);
 // 'ok', 'none' (no start yet: an older phone) or 'lost' (its message is gone or now matches twice)
@@ -435,13 +436,47 @@ export function syncState(p) {
     if (!p?.sync?.marks?.base) return 'none';
     // the bank's and the investment's starts move with a deleted message too; one that can't be found again stays put
     if (settleMarks(p.sync, ctx().chat || [], ['base', ...['money', 'invest'].filter(g => p.sync.marks[g])]).includes('base')) return 'lost';
+    p.sync.readChat ||= firstMark(p.sync);
     p.sync.scope = phoneChatScope(ctx());
     return 'ok';
 }
 // counted on a copy: what changed since the last round is left for the round itself to see
-export const syncLeft = p => { if (!p?.sync?.marks?.base) return null; const rows = syncRows(), s = structuredClone(p.sync); realign(s, rows); return unreadCount(s, rows); };
+// which chat the phone was last read in: SillyTavern gives a branch a new integrity mark (and names its main chat);
+// renaming a chat or importing a backup keeps the mark, so neither looks like a branch
+const chatMark = () => ctx().chatMetadata?.integrity || null;
+// a phone copied into a branch of the chat it was read in: messages past the branch point are other talk, never edits
+const otherChat = s => { const now = chatMark(), read = s.readChat || firstMark(s); return !!read && !!now && read !== now && !!ctx().chatMetadata?.main_chat; };
+// a phone from before marks (3.140 and older) knows only the chat it was last read in, by name (its scope). When that
+// name is this branch's main chat, the phone came here with the branch and still holds the main chat's later talk;
+// otherwise (read here already, a renamed chat, a backup) it is this chat's own
+const chatName = scope => { try { return JSON.parse(String(scope).replace(/^[^[]*/, '')).at(-1); } catch { return null; } };
+function firstMark(s) {
+    const main = ctx().chatMetadata?.main_chat;
+    return s.scope && main && s.scope !== phoneChatScope(ctx()) && chatName(s.scope) === main ? `before:${s.scope}` : chatMark();
+}
+export const syncLeft = p => { if (!p?.sync?.marks?.base) return null; const s = structuredClone(p.sync); realign(s, chatRows(), { other: otherChat(s) }); return unreadCount(s, syncRows()); };
 const ITEM_KEYS = [...LISTS, 'threads', 'contacts'];
 const sizes = p => Object.fromEntries(ITEM_KEYS.map(k => [k, k === 'threads' ? p.threads.reduce((n, t) => n + t.messages.length, 0) : k === 'posts' ? (p.posts || []).reduce((n, x) => n + 1 + (x.comments?.length || 0), 0) : (p[k] || []).length]));
+// every app item that can carry a source: list items, text messages, comments
+const phoneItems = p => [...LISTS.flatMap(k => (p[k] || []).map(x => ({ k, x }))), ...p.threads.flatMap(t => t.messages.map(x => ({ k: 'msg', x }))),
+    ...(p.posts || []).flatMap(x => (x.comments || []).map(c => ({ k: 'comment', x: c })))];
+// after a merge: the phone's own copy of each item an event gave (new, or one already there) notes where it came from
+const ckey = c => `${String(c.from || '').toLowerCase()}|${c.text}`;
+function tagItems(p, add, src) {
+    const tag = (k, x, a) => {
+        if (!x) return;
+        // an item already there with no sources (made with the phone, or before sources were kept) keeps that start
+        if (x !== a && !x.froms) addFrom(x, srcOf('before', '', ''));
+        x.made ||= itemMark(k, x);
+        for (const f of src ? [src] : a?.froms || []) { addFrom(x, f); if (src && x !== a) addFrom(a, f); }
+    };
+    for (const k of LISTS) for (const a of add[k] || []) tag(k, (p[k] || []).find(x => sigOf(k, x) === sigOf(k, a)), a);
+    for (const t of add.threads || []) { const own = p.threads.find(x => nameKey(x.with) === nameKey(t.with)); for (const a of t.messages) tag('msg', own?.messages.find(x => sigOf('msg', x) === sigOf('msg', a)), a); }
+    for (const a of add.posts || []) {
+        const own = (p.posts || []).find(o => o.text && o.text === a.text || o.photo && o.photo === a.photo && o.time === a.time);
+        for (const c of a.comments || []) tag('comment', own?.comments?.find(x => ckey(x) === ckey(c)), c);
+    }
+}
 const APP_NAME = { threads: '문자', contacts: '연락처', calls: '통화', photos: '사진', notes: '메모', searches: '검색', events: '캘린더', posts: 'SNS', mails: '메일', diary: '일기', voice: '음성 메모' };
 async function updatePhone(m, owner) {
     return exclusive('sync', async () => {
@@ -450,13 +485,16 @@ async function updatePhone(m, owner) {
         const s = p.sync, swiped = [];
         // a read message edited or swiped since: if the last round read it, that round is undone and read again;
         // an older round's items stay, and the changed message is simply read again
-        let moved = realign(s, syncRows());
+        let moved = realign(s, chatRows(), { other: otherChat(s) });
+        settleDropped(p, moved, swiped);
+        s.readChat = chatMark() || s.readChat;
         renumber(m, p, moved);
-        if (moved.gone.some(f => p.syncUndo?.readFp?.includes(f)) && canUndo(p)) {
-            await undoRound(m, p);
-            moved = realign(s, syncRows());
+        // an edit or swipe of a message the last round read: that round is undone (what can be) and read again
+        if (moved.changed.some(x => p.syncUndo?.readFp?.includes(x.fp)) && canUndo(p)) {
+            const kept = await undoRound(m, p);
+            moved = realign(s, chatRows());
             renumber(m, p, moved);
-            swiped.push('읽은 대화가 바뀌어서 지난 반영을 되돌리고 다시 읽었어요');
+            swiped.push('읽은 대화가 바뀌어서 지난 반영을 되돌리고 다시 읽었어요', ...kept.map(x => `${x}: 그 뒤 기록과 이어져 있거나 직접 바꾼 거라 남겨뒀어요`));
         }
         // an older message changed: read again, tied to the events it already gave (no new payment from it)
         const reread = new Map(moved.changed.map(x => [x.at, Object.entries(s.events).filter(([, e]) => e.at === x.at).map(([id, e]) => ({ id, summary: e.summary }))]));
@@ -488,8 +526,8 @@ async function updatePhone(m, owner) {
             `[OWNER]\n${owner}`, profile, blindBlock(m, owner), namesBlock(m),
         ].filter(Boolean).join('\n\n');
         const made = { money: p.money?.at, invest: p.investment?.at };
-        // medium thinking: enough to sort payments from mentions, without spending the answer's room on thinking
-        const out = await askDraft(input, { system: AI_SYS_PHONE_UPDATE, maxTokens: 16000, effort: 'medium' });
+        // low thinking: tested against medium on Vertex, the same payments, ids and amounts, without the thinking cost
+        const out = await askDraft(input, { system: AI_SYS_PHONE_UPDATE, maxTokens: 16000, effort: 'low' });
         // the answer is for the chat and messages it was asked about
         if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p) throw new Error('반영하는 사이 채팅이나 폰이 바뀌었어요. 다시 해 주세요');
         if (p.money?.at !== made.money || p.investment?.at !== made.invest) throw new Error('반영하는 사이 은행이나 투자가 새로 만들어졌어요. 다시 해 주세요');
@@ -498,6 +536,7 @@ async function updatePhone(m, owner) {
         const raw = jsonOf(out);
         if (!raw || !Array.isArray(raw.events)) throw new Error('모델 답에서 반영할 내용을 찾지 못했어요. 다시 해 주세요');
         const inRound = new Set(round.rows.map(r => r.index)), textAt = new Map(round.rows.map(r => [r.index, r.text])), start = s.marks.base.index;
+        const rid = Math.random().toString(36).slice(2, 10), rowText = new Map(rows.map(r => [r.index, r.text]));
         const failed = {}, loose = [], added = [], apps = new Set(), changes = [], notes = [...swiped];
         // for 되돌리기: what was there before this round (ids and message counts), and the reading state
         const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map(p.threads.map(t => [t.id, t.messages.length]));
@@ -525,12 +564,15 @@ async function updatePhone(m, owner) {
             for (const c of paid.changes) { apps.add(c.app); if (c.amount !== null) changes.push({ ...c, what: line(e.summary, 60) }); }
             notes.push(...paid.notes);
             for (const k of LISTS) for (const x of add[k]) x.ev ||= id;
+            for (const t of add.threads) for (const x of t.messages) x.ev ||= id;
             const was = sizes(p);
             mergePhone(p, { ...add, device: null, now: '' }, { keepAll: true });
+            // this message (its number and words) is a source of each item, new or already there
+            tagItems(p, add, srcOf(at, bodyMark(rowText.get(at) || ''), rid));
             const got = sizes(p);
             for (const k of ITEM_KEYS) if (got[k] !== was[k]) apps.add(APP_NAME[k]);
             if (add.profile?.handle || add.profile?.bio) apps.add('SNS');
-            s.events[id] = { at, quote: line(e.quote, 200), summary: line(e.summary, 160), ...(paid.legs.length || s.events[id]?.legs ? { legs: [...(s.events[id]?.legs || []), ...paid.legs.filter(l => !(s.events[id]?.legs || []).some(o => o.key === l.key))] } : {}) };
+            s.events[id] = { at, quote: line(e.quote, 200), summary: line(e.summary, 160), effects: [...(s.events[id]?.effects || []), ...paid.effects], ...(paid.legs.length || s.events[id]?.legs ? { legs: [...(s.events[id]?.legs || []), ...paid.legs.filter(l => !(s.events[id]?.legs || []).some(o => o.key === l.key))] } : {}) };
             added.push({ id, at, add, effects: paid.effects });
         }
         // read: this round's messages; a failed one gets one more try next round, then it is skipped
@@ -542,15 +584,17 @@ async function updatePhone(m, owner) {
         if (nowAt && nowAt > (p.now || '')) p.now = nowAt;
         // after the clock moves: the card's month is counted up to the story's now
         if (p.money) migrateBank(m, p);
-        const id = Math.random().toString(36).slice(2, 10);
+        const id = rid;
         s.rounds = [...(s.rounds || []).slice(-19), id];
         p.syncLast = { checked: inRound.size, remaining: unreadCount(s, rows), apps: [...apps], failed: [...Object.entries(failed).map(([at, why]) => ({ at: Number(at), why, skipped: s.failed[at]?.tries >= 2 })), ...loose.map(why => ({ at: null, why }))], changes, notes, at: Date.now() };
         ensureIds(p);
         p.at = Date.now();
+        pruneDropped(s, phoneItems(p));
+        p.syncLast.notes = p.syncLast.notes.filter(n => !n.endsWith('뺄 수 있어요') || s.dropped.some(d => n.startsWith(`대화 ${d.label}가`)));
         p.syncUndo = { ...undo, round: id, read: [...inRound], readFp: round.rows.map(r => bodyMark(r.text)), comments: undo.comments,
             items: ITEM_KEYS.flatMap(k => (p[k] || []).filter(x => x.id && !had.has(x.id)).map(x => [k, x.id])),
             msgs: p.threads.filter(t => msgs.has(t.id) && t.messages.length > msgs.get(t.id)).map(t => [t.id, t.messages.slice(msgs.get(t.id)).map(x => JSON.stringify([x.from, x.text, x.time]))]),
-            effects: added.flatMap(x => x.effects || []) };
+            effects: added.flatMap(x => x.effects || []), byEvent: added.map(x => [x.id, x.effects || []]) };
         // kept in this browser until the saved chat shows it: 복구 can add it back if the save didn't land
         journalAdd(scope, { round: id, owner, at: Date.now(), events: added, done: [...inRound], seen: round.rows.map(r => [r.index, bodyMark(r.text)]), failed: Object.fromEntries([...inRound].filter(i => s.failed[i]).map(i => [i, s.failed[i]])), arch: evidence.map(x => x.key) });
         await saveMeta();
@@ -579,6 +623,7 @@ export async function restoreRounds(m, scope) {
             for (const k of LISTS) e.add[k] = arr(e.add[k]);
             e.add.threads = arr(e.add.threads); e.add.contacts = arr(e.add.contacts);
             mergePhone(p, { ...e.add, device: null, now: '' }, { keepAll: true });
+            tagItems(p, e.add);
             replayEffects(m, p, e.effects || []);
             s.events[e.id] ||= { at: e.at, quote: '', summary: e.id };
         }
@@ -596,14 +641,76 @@ export async function restoreRounds(m, scope) {
     return rounds.length;
 }
 
+// read messages gone (deleted, or a stretch written again): what they put on the phone stays and is offered to take off
+// (설정 › 대화 반영 › 빼기); unsure ones (the same words are still elsewhere) are only told
+function settleDropped(p, { dropped }, notes) {
+    const s = p.sync;
+    if (!dropped.length) return;
+    s.dropped ||= [];
+    const runs = [];
+    for (const d of dropped) { const last = runs[runs.length - 1]; if (last && d.old === last.to + 1 && !!d.unsure === last.unsure) last.to = d.old; else runs.push({ from: d.old, to: d.old, unsure: !!d.unsure }); }
+    const items = phoneItems(p);
+    for (const r of runs) {
+        const ids = Object.entries(s.events).filter(([, e]) => e.at >= r.from && e.at <= r.to).map(([id]) => id), label = r.from === r.to ? `#${r.from}` : `#${r.from}–${r.to}`;
+        const key = Math.random().toString(36).slice(2, 10);
+        for (const id of ids) s.events[id].at = null;
+        // sources from these messages lose their number: a new message given the same number is not them
+        let hit = false;
+        for (const { x } of items) for (const f of x.froms || []) if (f.at !== null && f.at >= r.from && f.at <= r.to) { f.was = f.at; f.at = null; f.gone = key; hit = true; }
+        if (!ids.length && !hit) continue;
+        if (r.unsure) { notes.push(`대화 ${label}가 바뀌었어요. 같은 말이 여럿이라 어느 것인지 몰라서, 거기서 넣은 내용은 그대로 뒀어요`); continue; }
+        s.dropped.push({ key, label, events: ids, at: Date.now() });
+        notes.push(`대화 ${label}가 지워졌거나 바뀌었어요. 거기서 넣은 내용은 설정 › 대화 반영에서 뺄 수 있어요`);
+    }
+}
+// 빼기: one gone stretch's events, with the app and money records they made; an event something later builds on
+// (an order delivered later, a record corrected later, shares sold later) stays, and is named
+export async function dropStretch(m, p, k) {
+    const s = p.sync;
+    pruneDropped(s, phoneItems(p));
+    const d = s.dropped[k];
+    if (!d) return { gone: 0, items: 0, kept: [] };
+    const kept = [], stay = new Set(), out = new Set();
+    let gone = 0;
+    for (const id of d.events) {
+        const e = s.events[id];
+        if (!e || e.at !== null) continue;
+        const made = new Set((e.effects || []).filter(x => x.type === 'push' || x.type === 'entry').map(x => x.item?.id ?? x.id));
+        // built on later: another event changed, corrected or counted one of its records as its own
+        let tied = Object.entries(s.events).some(([o, x]) => o !== id && ((x.effects || []).some(y => ['status', 'amend', 'amendEntry'].includes(y.type) && made.has(y.id)) || (x.legs || []).some(l => l.state === 'included' && made.has(l.rec))));
+        const trades = new Set((e.effects || []).filter(x => x.path === 'investment.trades').map(x => x.item.id));
+        if (!tied && trades.size) { try { positions((p.investment?.trades || []).filter(t => !trades.has(t.id))); } catch { tied = true; } }
+        if (tied) { kept.push(e.summary || id); stay.add(id); continue; }
+        revertEffects(m, p, e.effects || []);
+        out.add(id);
+        delete s.events[id];
+        gone++;
+    }
+    // app items: one with sources goes when all of them are gone and it is as it went in (not changed by hand);
+    // one saved before sources goes with its event, as before. An item of an event that stays, stays.
+    const goes = (k, x) => !stay.has(x.ev) && (Array.isArray(x.froms) && x.froms.length ? orphanOf(x, d.key) && !edited(k, x) : out.has(x.ev));
+    let items = 0;
+    const keep = k => x => { if (!goes(k, x)) return true; items++; return false; };
+    for (const key of LISTS) if (Array.isArray(p[key])) p[key] = p[key].filter(keep(key));
+    for (const t of p.threads) t.messages = t.messages.filter(keep('msg'));
+    for (const x of p.posts || []) if (x.comments) x.comments = x.comments.filter(keep('comment'));
+    s.dropped.splice(k, 1);
+    if (p.money) migrateBank(m, p);
+    await saveMeta();
+    if (p.inject) applyInjection();
+    return { gone, items, kept };
+}
 export const canUndo = p => { const u = p?.syncUndo, s = p?.sync; return !!u && s?.rounds?.[s.rounds.length - 1] === u.round && p.money?.at === u.moneyAt && p.investment?.at === u.investAt; };
 // a message deleted before others: the events, failures and records that name a message number follow it
-function renumber(m, p, { moved, changed }) {
+function renumber(m, p, { moved, changed, dropped = [] }) {
     const map = { ...moved };
     for (const x of changed) map[x.old] = x.at;
+    // a gone message's number may be taken by a new one: records from it no longer name it
+    for (const x of dropped) map[x.old] = null;
     if (!Object.entries(map).some(([o, n]) => Number(o) !== n)) return;
     const to = i => (i !== undefined && map[i] !== undefined ? map[i] : i);
-    for (const e of Object.values(p.sync.events)) e.at = to(e.at);
+    for (const e of Object.values(p.sync.events)) if (e.at !== null) e.at = to(e.at);
+    for (const { x } of phoneItems(p)) for (const f of x.froms || []) if (f.at !== null) f.at = to(f.at);
     for (const f of Object.values(p.sync.failed)) if (f.span) f.span = [to(f.span[0]) ?? f.span[0], to(f.span[1]) ?? f.span[1]];
     for (const r of [...(p.money?.tx || []), ...(p.money?.orders || []), ...(p.money?.passes || []), ...(p.investment?.trades || [])]) if (r.sourceIndex !== undefined) r.sourceIndex = to(r.sourceIndex);
     for (const a of Object.values(m.finance?.accounts || {})) if (a.owner === p.owner) for (const x of Object.values(a.entries)) if (x.sourceIndex !== undefined) x.sourceIndex = to(x.sourceIndex);
@@ -621,9 +728,18 @@ export async function undoRound(m, p) {
         if (t) { const drop = new Set(sigs); t.messages = t.messages.filter(x => !drop.delete(JSON.stringify([x.from, x.text, x.time]))); }
     }
     for (const [pid, n] of u.comments || []) { const x = (p.posts || []).find(y => y.id === pid); if (x?.comments?.length > n) x.comments = x.comments.slice(0, n); }
-    revertEffects(m, p, u.effects);
+    // items that were there before the round forget it as a source
+    for (const { x } of phoneItems(p)) if (x.froms) x.froms = x.froms.filter(f => f.r !== u.round);
+    // what can't be put back (changed since, or built on) stays, and so does its event, with only what stayed
+    const now = structuredClone(s.events), kept = [];
+    const left = new Set(revertEffects(m, p, u.effects).map(x => JSON.stringify(x)));
     Object.assign(s, structuredClone(u.sync));
+    for (const [id, effects] of u.byEvent || []) {
+        const rest = effects.filter(x => left.has(JSON.stringify(x)));
+        if (rest.length && now[id]) { s.events[id] = { ...now[id], effects: rest }; kept.push(now[id].summary || id); }
+    }
     s.rounds.pop();
+    pruneDropped(s, phoneItems(p));
     p.now = u.now;
     delete p.syncLast; delete p.syncUndo;
     if (p.money) migrateBank(m, p);
@@ -631,6 +747,7 @@ export async function undoRound(m, p) {
     journalWrite(scope, journalRead(scope).filter(r => r.round !== u.round));
     await saveMeta();
     if (p.inject) applyInjection();
+    return kept;
 }
 
 // ---- 롤플에 넣기: a short note of what the phones hold, after the archive

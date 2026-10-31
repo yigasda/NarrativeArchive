@@ -58,31 +58,67 @@ export function settleMarks(s, chat, groups = SYNC_GROUPS) {
 // it was read is unread again, and deleting one doesn't shift what counts as read onto the next
 export const bodyMark = text => fp(String(text).replace(/^\[#\d+[^\]]*\]\s*/, ''));
 export const noteRead = (s, rows) => { s.seen ||= {}; for (const r of rows) s.seen[r.index] = bodyMark(r.text); };
-// read and failed messages found again by fingerprint (the first unmatched one, in order). Returns
-// - moved: old number → new number, for every read message found again (a delete before it shifts it)
-// - changed: new numbers of read-before messages that are unread again (edited or swiped), with their old number
-// - gone: fingerprints of read messages no longer there
-export function realign(s, rows) {
-    const base = s.marks.base?.index ?? -1, after = rows.filter(r => r.index > base);
-    if (!s.seen) { s.seen = {}; for (const r of after) if (isDone(s, r.index)) s.seen[r.index] = bodyMark(r.text); }
-    const olds = new Map(), fails = new Map();
-    for (const [i, f] of Object.entries(s.seen).sort((a, b) => a[0] - b[0])) (olds.get(f) || olds.set(f, []).get(f)).push(Number(i));
-    for (const x of Object.values(s.failed)) if (x.fp) (fails.get(x.fp) || fails.set(x.fp, []).get(x.fp)).push(x);
-    const moved = {}, seen = {}, failed = {}, unread = [];
-    for (const r of after) {
-        const f = bodyMark(r.text), old = olds.get(f)?.shift();
-        if (old !== undefined) { seen[r.index] = f; moved[old] = r.index; } else unread.push(r.index);
-        const x = fails.get(f)?.shift();
-        if (x) failed[r.index] = x;
+// the old reading laid over the chat as it is now. Read messages still there in the same order are anchors (a longest
+// common run of fingerprints); between two anchors, what vanished and what appeared is one gap:
+// - only new messages: unread, as they are
+// - as many changed as vanished, with an anchor after them (or the last message alone, a swipe): edits, read again
+//   tied to what they gave before
+// - a read message now hidden (or hidden and changed): still read; hiding is not deleting
+// - anything else (vanished, or a stretch rewritten): the new messages are new; what the old ones put on the phone stays,
+//   offered to take off ("unsure" when the same words are still elsewhere and it can't be told which one went)
+const lcs = (a, b) => {
+    let lo = 0;
+    while (lo < a.length && lo < b.length && a[lo] === b[lo]) lo++;
+    let ea = a.length, eb = b.length;
+    while (ea > lo && eb > lo && a[ea - 1] === b[eb - 1]) { ea--; eb--; }
+    const pairs = [];
+    for (let i = 0; i < lo; i++) pairs.push([i, i]);
+    const A = a.slice(lo, ea), B = b.slice(lo, eb), n = A.length, m = B.length;
+    if (n && m) {
+        const t = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
+        for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) t[i][j] = A[i] === B[j] ? t[i + 1][j + 1] + 1 : Math.max(t[i + 1][j], t[i][j + 1]);
+        for (let i = 0, j = 0; i < n && j < m;) { if (A[i] === B[j]) { pairs.push([lo + i, lo + j]); i++; j++; } else if (t[i + 1][j] >= t[i][j + 1]) i++; else j++; }
     }
-    // a message not found again sat between messages that were: its new number follows its neighbour's shift
-    const left = Object.entries(s.seen).map(([i]) => Number(i)).filter(i => moved[i] === undefined);
-    const shift = i => { let d = 0; for (const [o, n] of Object.entries(moved)) if (Number(o) < i) d = n - Number(o); return i + d; };
-    const changed = left.map(old => ({ old, at: shift(old) })).filter(x => unread.includes(x.at));
-    const gone = left.map(i => s.seen[i]);
-    s.seen = seen; s.failed = failed; s.done = [];
+    for (let k = 0; k < a.length - ea; k++) pairs.push([ea + k, eb + k]);
+    return pairs;
+};
+// all: every message with { index, text, hidden }. Returns moved (old → new number), changed ({ old, at, fp }) and
+// dropped ({ old, fp, unsure })
+// other: the chat now is not the one read before (a branch, or a chat copied): a message in a read one's place with other
+// words is another conversation, not an edit, so nothing counts as edited and what the old ones gave can be taken off
+export function realign(s, all, { other = false } = {}) {
+    const base = s.marks.base?.index ?? -1, cur = all.filter(r => r.index > base).map(r => ({ ...r, fp: bodyMark(r.text) }));
+    if (!s.seen) { s.seen = {}; for (const r of cur) if (!r.hidden && isDone(s, r.index)) s.seen[r.index] = r.fp; }
+    const old = [...Object.entries(s.seen).map(([i, f]) => ({ old: Number(i), fp: f })), ...Object.entries(s.hiddenRead || {}).map(([i, f]) => ({ old: Number(i), fp: f }))].sort((a, b) => a.old - b.old);
+    // a short line ("뭐 샀어?") said again somewhere is no anchor unless its neighbours match too
+    const short = r => r.text.replace(/^\[#\d+[^\]]*\]\s*[^:]*:\s*/, '').length < 15;
+    const all_ = lcs(old.map(x => x.fp), cur.map(x => x.fp)), at = new Set(all_.map(([i, j]) => `${i},${j}`));
+    const pairs = all_.filter(([i, j]) => !short(cur[j]) || at.has(`${i - 1},${j - 1}`) || at.has(`${i + 1},${j + 1}`));
+    const moved = {}, seen = {}, hiddenRead = {}, changed = [], dropped = [];
+    for (const [i, j] of pairs) { moved[old[i].old] = cur[j].index; (cur[j].hidden ? hiddenRead : seen)[cur[j].index] = old[i].fp; }
+    const anchors = [[-1, -1], ...pairs, [old.length, cur.length]], gaps = [];
+    for (let k = 0; k + 1 < anchors.length; k++) { const [i0, j0] = anchors[k], [i1, j1] = anchors[k + 1]; gaps.push({ O: old.slice(i0 + 1, i1), N: cur.slice(j0 + 1, j1), last: k + 2 === anchors.length }); }
+    // a message moved up or down: gone from one gap, the same words in another
+    const pool = new Map();
+    for (const g of gaps) for (const r of g.N) if (!short(r)) (pool.get(r.fp) || pool.set(r.fp, []).get(r.fp)).push(r);
+    for (const g of gaps) g.O = g.O.filter(x => { const r = pool.get(x.fp)?.shift(); if (!r) return true; moved[x.old] = r.index; (r.hidden ? hiddenRead : seen)[r.index] = x.fp; r.taken = true; return false; });
+    for (const { O, N: all_, last } of gaps) {
+        const N = all_.filter(r => !r.taken);
+        if (!O.length) continue;
+        const H = N.filter(r => r.hidden), V = N.filter(r => !r.hidden);
+        if (!V.length && H.length >= O.length) { O.forEach((x, n) => { hiddenRead[H[n].index] = x.fp; moved[x.old] = H[n].index; }); continue; }
+        if (!other && V.length === O.length && (!last || O.length === 1)) { O.forEach((x, n) => changed.push({ old: x.old, at: V[n].index, fp: x.fp })); continue; }
+        dropped.push(...O.map(x => ({ old: x.old, fp: x.fp })));
+    }
+    // the same words still in the chat don't make a gone message unsure when that copy is another read message,
+    // found in its own place; only a copy nothing accounts for might be this one, moved
+    const claimed = new Set([...Object.values(moved), ...changed.map(x => x.at)]);
+    for (const d of dropped) d.unsure = cur.some(r => r.fp === d.fp && !claimed.has(r.index));
+    const failed = {};
+    for (const [i, x] of Object.entries(s.failed)) if (moved[i] !== undefined && seen[moved[i]]) failed[moved[i]] = x;
+    s.seen = seen; s.hiddenRead = hiddenRead; s.failed = failed; s.done = [];
     addDone(s, Object.keys(seen).map(Number));
-    return { moved, changed, gone };
+    return { moved, changed, dropped, gone: [...changed, ...dropped].map(x => x.fp) };
 }
 // a post seen again may bring new comments: they join the post already there (same text, or same text, photo and time)
 export function joinComments(posts, adds, cap = 8) {
@@ -121,6 +157,30 @@ export const unreadCount = (s, rows) => { const base = s.marks.base?.index ?? -1
 // nothing (a failed event can carry what they said); a second miss is skipped. Then the round counts as read.
 // failed: { [index]: why }, got: indices with an event that went in
 // `span` keeps which messages were read together, so a retry knows what already went in beside it
+// what 빼기 can offer: events still there and not taken up again by a message in the chat now (a new message may reuse
+// a gone one's event id; then it is that message's)
+// items: every app item on the phone ({ k, x }); one whose every source is gone still counts, even when a new message
+// took its event up again
+export function pruneDropped(s, items = []) {
+    s.dropped = (s.dropped || []).map(d => ({ ...d, events: d.events.filter(id => s.events[id] && s.events[id].at === null), left: items.filter(({ k, x }) => orphanOf(x, d.key) && !edited(k, x)).length }))
+        .filter(d => d.events.length || d.left);
+}
+
+// 출처: where an item on the phone came from — the message's number and its words (r: the round that saw it).
+// The number tells apart two messages with the same words; the words tell apart a new message that got an old number.
+// A gone message's sources keep its words, lose the number (at: null) and name the gone stretch (gone).
+export const srcOf = (at, fp, r) => ({ at, fp, r });
+export function addFrom(x, src) {
+    const fs = (x.froms ||= []);
+    if (!fs.some(f => f.at === src.at && f.fp === src.fp)) fs.push({ ...src });
+}
+// an item that came from a message still in the chat stays; one from a gone stretch only, and only when it had sources
+export const orphanOf = (x, key) => !!key && Array.isArray(x?.froms) && x.froms.length > 0 && x.froms.some(f => f.gone === key) && x.froms.every(f => f.at === null);
+// what an item said when it went in: changed since (by hand on the phone) it is the user's, and 빼기 leaves it
+const ITEM_MARK = { msg: x => [x.from, x.text, x.time], comment: x => [x.from, x.text] };
+export const itemMark = (k, x) => { const { id, ev, froms, made, img, tags, via, seen, results, draft, closed, marks, unmark, unread, ko, kt, ks, pko, comments, ...rest } = x || {}; return fp(JSON.stringify(ITEM_MARK[k] ? ITEM_MARK[k](x) : rest)); };
+export const edited = (k, x) => !!x?.made && x.made !== itemMark(k, x);
+
 // rows: the round's { index, text }
 export function settleRound(s, rows, failed, got) {
     const round = rows.map(r => r.index), any = Object.keys(failed).length > 0, span = [Math.min(...round), Math.max(...round)];

@@ -40,7 +40,7 @@ test('already in the bank (900 after a 100 transfer): the same transfer read aga
     const r = applyMoney(m, p, ev('to-mara', 7, '10-25', { moves: [{ account: '1111', amount: -100, who: 'Mara', kind: 'transfer' }] }), opts());
     assert.equal(bank(), 900);
     assert.equal(r.legs[0].state, 'included');
-    const r2 = applyMoney(m, p, ev('to-mara-again', 8, '10-25', { moves: [{ account: '1111', amount: -100, who: 'Mara', kind: 'transfer', separate: true }] }), opts());
+    const r2 = applyMoney(m, p, ev('to-mara-again', 8, '10-25', { moves: [{ account: '1111', amount: -100, who: 'Mara', kind: 'transfer', occurrence: 'new' }] }), opts());
     assert.equal(bank(), 800);
     assert.equal(r2.legs[0].state, 'applied');
 });
@@ -190,7 +190,7 @@ test('same day, same café, same amount: one, unless the model says it is a seco
     applyMoney(m, p, ev('c1', 9, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau' }] }), opts());
     applyMoney(m, p, ev('c2', 11, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau' }] }), opts());
     assert.equal(bank(), 995.5);
-    applyMoney(m, p, ev('c3', 12, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', separate: true }] }), opts());
+    applyMoney(m, p, ev('c3', 12, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', occurrence: 'new' }] }), opts());
     assert.equal(bank(), 991);
 });
 
@@ -329,4 +329,34 @@ test('a gift order with no name is kept as a gift', () => {
     const { m, p } = setup();
     applyMoney(m, p, ev('present', 9, '10-27', { orders: [{ shop: 'Kakao', item: 'Kuchen', qty: 1, price: 20, status: 'ordered', gift: true, paid: false, occurrence: 'new' }] }), opts());
     assert.equal(p.money.orders[0].gift, '선물');
+});
+
+test('되돌리기 leaves what changed since and says so; what is already gone is fine', () => {
+    const { m, p, bank } = setup();
+    const r = applyMoney(m, p, ev('two', 9, '10-27', { moves: [{ account: '1111', amount: -10, who: 'A' }, { account: '1111', amount: -20, who: 'B' }], orders: [{ shop: 'S', item: 'Lamp', qty: 1, price: 5, status: 'ordered' }] }), opts());
+    p.money.tx = p.money.tx.filter(t => t.who !== 'A');                       // the user deleted one by hand
+    m.finance.accounts['chk:EUR'].entries[r.legs[1].rec].amount = -25;        // and another changed since
+    const left = revertEffects(m, p, r.effects);
+    assert.equal(left.length, 1);
+    assert.equal(p.money.orders.length, 0);
+    assert.equal(bank(), 975);
+});
+
+test('되돌리기 keeps a card purchase whose amount the user changed (no ledger line to tell it by)', () => {
+    const { m, p } = setup();
+    const r = applyMoney(m, p, ev('flowers', 9, '10-27', { moves: [{ account: '2222', amount: -30, who: 'Blumen' }, { account: '2222', amount: -6, who: 'Apotheke' }] }), opts());
+    p.money.tx = p.money.tx.filter(t => t.who !== 'Apotheke');
+    p.money.tx[0].amount = -35;
+    const left = revertEffects(m, p, r.effects);
+    assert.equal(left.length, 1);
+    assert.deepEqual(p.money.tx.map(t => t.amount), [-35]);
+});
+
+test('a payment from a deleted message, taken up again by a new one, now names the new message', () => {
+    const { m, p } = setup();
+    applyMoney(m, p, ev('book', 23, '10-28', { moves: [{ account: '1111', amount: -15, who: 'Kyobo', occurrence: 'new' }] }), opts());
+    p.money.tx[0].sourceIndex = null;
+    applyMoney(m, p, ev('book', 24, '10-28', { moves: [{ account: '1111', amount: -15, who: 'Kyobo', occurrence: 'again', already: p.money.tx[0].id }] }), opts());
+    assert.equal(p.money.tx.length, 1);
+    assert.equal(p.money.tx[0].sourceIndex, 24);
 });

@@ -25,6 +25,11 @@ export function syncSettings(p, now, ui) {
           <button type="button" class="ax_rw ax_rwn na_sync_restore"><span class="ax_tx"><span class="ax_n ax_blue">복구</span></span></button>
           <button type="button" class="ax_rw ax_rwn na_sync_forget"><span class="ax_tx"><span class="ax_n ax_red">기록 지우기</span></span></button>
         </div>` : ''}
+        ${(s.dropped || []).length ? `<div class="ax_sec">지운 대화</div>
+        <div class="ax_card">${s.dropped.map((d, k) => `
+          <div class="ax_rw"><span class="ax_tx"><span class="ax_n">대화 ${esc(d.label)}</span><span class="ax_p">${esc([d.events.length ? `넣은 일 ${d.events.length}개` : '', d.left ? `앱 기록 ${d.left}개` : ''].filter(Boolean).join(' · ') || '넣은 내용')}가 폰에 남아 있어요</span></span><button type="button" class="na_sync_drop" data-k="${k}">빼기</button></div>`).join('')}
+        </div>
+        <div class="ax_foot">빼면 그 대화에서만 나온 문자 · 일정 · 돈 기록이 빠져요. 다른 대화에도 나온 것, 직접 고친 것, 뒤의 기록과 이어진 건 남겨요.</div>` : ''}
         <div class="ax_sec">읽기</div>
         <div class="ax_card">
           <button type="button" class="ax_rw na_sync_order" data-v="oldest">${si('#8faed1', 'clock')}<span class="ax_tx"><span class="ax_n">오래된 대화부터</span></span>${radio(s.order !== 'newest')}</button>
