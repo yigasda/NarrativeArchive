@@ -225,7 +225,9 @@ export const picFromWords = (v, name = '') => {
     // a list may come as one string ("beef", "fries, cola", "fries and cola")
     const words = a => (Array.isArray(a) ? a : typeof a === 'string' ? a.split(/\s*(?:,|\/|&|\+|\band\b|\bwith\b)\s*/i) : []);
     const ids = (a, set, n) => [...new Set(words(a).map(x => idOf(x, set)).filter(Boolean))].slice(0, n);
-    return { base, with: ids(v.with, T, 3), size: v.size === 'large' ? 'large' : 'regular', set: ids(v.set, S, 2) };
+    // no ingredients given: the ones the dish's name says (전복죽 → abalone), when the name points at this same base
+    const guess = guessPic(name), tops = ids(v.with, T, 3);
+    return { base, with: tops.length ? tops : guess.base === base ? guess.with.slice(0, 3) : [], size: v.size === 'large' ? 'large' : 'regular', set: ids(v.set, S, 2) };
 };
 // words → a base, for dishes without a picture (older phones, the update round): first match wins
 const GUESS = [[/단?호박 ?죽|pumpkin (porridge|soup|congee)|hobakjuk/i, 'juk-pumpkin'], [/치즈볼|cheese ?ball/i, 'cheese-ball'], [/군만두|fried dumpling|yaki ?gyoza/i, 'gunmandu'], [/치즈스틱|cheese ?stick|mozzarella stick/i, 'cheese-stick'], [/웨지|wedge/i, 'wedges'], [/콘치즈|corn cheese/i, 'corn-cheese'],
