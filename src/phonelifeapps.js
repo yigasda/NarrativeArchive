@@ -12,6 +12,7 @@ import { fmtMoney } from './phonemoney.js';
 import { nameKey } from './people.js';
 import { esc } from './util.js';
 import { DOT_C, DOT_R, DOTS, MAP_BOT, MAP_H, MAP_TOP, MAP_W, TZ_AT } from './worldmap.js';
+import { CAT, dishSvg, guessPic } from './phonefood.js';
 
 Object.assign(AX, {
     alarm: 'M12 6a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM12 9v4l2 2M5 3L2 6M19 3l3 3', hourglass: 'M12 7a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM12 10v4M10 3h4', globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
@@ -519,7 +520,6 @@ function weatherBody(p, h, name, night, sub, source, tileCol, lead = '') {
       ${h.days.length ? `<div class="lf_wcard"><div class="hd">${h.days.length}일간의 일기예보</div>${h.days.map((d, k) => `<div class="lf_d10"><span>${k ? WDK[WD[weekday(d.day)]] : '오늘'}</span><span class="ic">${wxIc(d.cond, 22)}${d.rain >= 30 ? `<em>${d.rain}%</em>` : ''}</span><span class="lo cg_num">${d.lo ?? '—'}°</span>${tempBar(d, lo, hi, k ? null : h.temp)}<span class="hi cg_num">${d.hi ?? '—'}°</span></div>`).join('')}</div>` : ''}
       ${weatherTiles(h, tileCol, lead)}`;
 }
-const isNight = (h, time) => phaseOf(time, h.tiles?.sunrise, h.tiles?.sunset) === 'night';
 // the screen's colours: the sky, and the one flat colour its cards and tiles sit in
 const wxVars = q => `background: ${q.sky}; --wcard: ${shade(q.sky, 0.9)}; --wtile: ${shade(q.sky, q.phase === 'day' && q.sky === '#4f8fd8' ? 0.62 : 0.8)}`;
 export function weatherScreen(p, now) {
@@ -575,119 +575,195 @@ export function cityList(p, now) {
 }
 
 // ================= 배달 =================
+// two looks: 배달의민족 where the owner lives in Korea, Uber Eats elsewhere. Every dish is drawn (phonefood.js): the model names
+// a base, toppings, a size and sides; older records are guessed from their words. Nothing here is the model's prose but names and notes.
 const D = p => p.delivery || null;
 const CUR = { KR: 'KRW', US: 'USD', GB: 'GBP', JP: 'JPY', CH: 'CHF', CA: 'CAD', AU: 'AUD', CN: 'CNY', TW: 'TWD', BR: 'BRL', RU: 'RUB' };
 const money = (p, n) => fmtMoney({ ...p, money: { currency: p.money?.currency || CUR[p.lives || p.country] || 'EUR' } }, n);
-// a flat picture of a dish, picked from its words
-const FOOD = [[/죽|porridge|congee|juk/i, 'juk'], [/마라|mala|탕|soup|suppe|국|stew|eintopf|ramen|라멘|pho/i, 'soup'], [/pasta|tagliatelle|penne|spaghetti|파스타|lasagn/i, 'pasta'], [/pizza|피자/i, 'pizza'], [/sushi|초밥|스시|maki/i, 'sushi'], [/chicken|치킨|닭|hähnchen/i, 'chicken'], [/burger|버거/i, 'burger'], [/salad|salat|샐러드|bowl/i, 'salad']];
-const FA = {
-    juk: ['#f3e7d3', '<circle cx="50" cy="56" r="40" fill="#fff"/><circle cx="50" cy="56" r="33" fill="#ead8b6"/><circle cx="40" cy="50" r="4" fill="#5d7f3a"/><circle cx="58" cy="60" r="3.5" fill="#5d7f3a"/><circle cx="52" cy="46" r="5" fill="#3b3a36"/>'],
-    soup: ['#f6dfd6', '<circle cx="50" cy="56" r="40" fill="#fff"/><circle cx="50" cy="56" r="33" fill="#d9573c"/><rect x="34" y="44" width="14" height="5" rx="2" fill="#f2d6a2"/><rect x="52" y="58" width="16" height="5" rx="2" fill="#f2d6a2"/><circle cx="44" cy="64" r="4" fill="#6b9a3e"/>'],
-    pasta: ['#f2e3d0', '<circle cx="50" cy="56" r="40" fill="#fff"/><circle cx="50" cy="56" r="28" fill="#e9b75c"/><path d="M30 56c6-10 14 10 20 0s14 10 20 0M32 64c6-8 12 8 18 0s12 8 18 0" stroke="#d99a3a" stroke-width="3" fill="none"/><circle cx="50" cy="52" r="11" fill="#a8432f"/><circle cx="56" cy="47" r="3" fill="#6b9a3e"/>'],
-    pizza: ['#f0d9b5', '<circle cx="50" cy="54" r="40" fill="#e4a64c"/><circle cx="50" cy="54" r="33" fill="#f1d27a"/><circle cx="38" cy="44" r="6" fill="#b5352a"/><circle cx="60" cy="48" r="6" fill="#b5352a"/><circle cx="48" cy="66" r="6" fill="#b5352a"/><circle cx="66" cy="64" r="3" fill="#5d7f3a"/>'],
-    sushi: ['#e3e9ef', '<rect x="14" y="40" width="72" height="34" rx="6" fill="#2b2b2b"/><circle cx="32" cy="57" r="11" fill="#f4f1ea"/><circle cx="32" cy="57" r="5" fill="#f08a5d"/><circle cx="56" cy="57" r="11" fill="#f4f1ea"/><circle cx="56" cy="57" r="5" fill="#6b9a3e"/><circle cx="78" cy="57" r="8" fill="#f4f1ea"/>'],
-    chicken: ['#f7ecd9', '<ellipse cx="50" cy="60" rx="42" ry="30" fill="#fff"/><ellipse cx="38" cy="56" rx="14" ry="10" fill="#c9852f"/><ellipse cx="60" cy="54" rx="15" ry="10" fill="#b8742a"/><ellipse cx="50" cy="68" rx="14" ry="9" fill="#d29440"/>'],
-    burger: ['#f5e6cf', '<ellipse cx="50" cy="40" rx="30" ry="16" fill="#e0a456"/><rect x="20" y="48" width="60" height="7" rx="3" fill="#6b9a3e"/><rect x="18" y="55" width="64" height="10" rx="4" fill="#7a4a2a"/><ellipse cx="50" cy="72" rx="30" ry="8" fill="#e0a456"/>'],
-    salad: ['#e6efe0', '<circle cx="50" cy="56" r="40" fill="#fff"/><circle cx="50" cy="56" r="32" fill="#9fc27f"/><circle cx="40" cy="50" r="6" fill="#d9573c"/><circle cx="60" cy="60" r="6" fill="#f2c94c"/><circle cx="54" cy="44" r="5" fill="#6b9a3e"/>'],
-    bowl: ['#efe7da', '<circle cx="50" cy="56" r="40" fill="#fff"/><circle cx="50" cy="56" r="32" fill="#d8c3a1"/><circle cx="42" cy="50" r="5" fill="#a8432f"/><circle cx="58" cy="60" r="5" fill="#6b9a3e"/>'],
-};
-const food = (txt, cls = '') => { const k = FOOD.find(([re]) => re.test(txt))?.[1] || 'bowl', [bg, svg] = FA[k]; return `<span class="lf_food ${cls}" style="background: ${bg}"><svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">${svg}</svg></span>`; };
 const shopOf = (d, name) => d.shops.find(s => s.name === name);
-const shopFood = (d, name) => { const s = shopOf(d, name); return `${s?.cuisine || ''} ${s?.menu?.[0]?.name || ''} ${name}`; };
+// a dish's picture: its own, else the same dish on the shop's menu, else guessed from its words
+const picFor = (d, shopName, x) => x?.pic || shopOf(d, shopName)?.menu.find(m => m.name === x?.name)?.pic || guessPic(`${x?.name || ''} ${x?.desc || ''} ${shopOf(d, shopName)?.cuisine || ''}`);
+const shopPic = s => s.menu.find(m => m.top)?.pic || s.menu[0]?.pic || guessPic(`${s.menu[0]?.name || ''} ${s.cuisine} ${s.name}`);
+const pic = (p, cls = '', mode = 'thumb', big = '') => `<span class="dv_pic ${cls}">${dishSvg(p, mode, big)}</span>`;
 const ST_KO = { 'on the way': '배달 중', delivered: '배달완료', cancelled: '주문 취소', refunded: '환불 완료' }, ST_DE = { 'on the way': 'Unterwegs', delivered: 'Zugestellt', cancelled: 'Storniert', refunded: 'Erstattet' };
-const bmTab = on => `<div class="lf_bmtab">${[['dlv', 'homeS', '홈'], ['', 'search', '검색'], ['', 'heartF', '찜'], ['dorders', 'rcp', '주문내역'], ['', 'user', 'my배민']].map(([go, ic, t]) => `<${go ? `button type="button" data-go="${go}"` : 'span'} class="${go === on ? 'on' : ''}">${ax(ic, 22, 'currentColor', 2)}${t}</${go ? 'button' : 'span'}>`).join('')}</div>`;
-const ueTab = on => `<div class="lf_uetab">${[['dlv', 'homeS', 'Startseite'], ['', 'bagS', 'Lebensmittel'], ['', 'search', 'Suchen'], ['dorders', 'rcp', 'Bestellungen'], ['', 'user', 'Konto']].map(([go, ic, t]) => `<${go ? `button type="button" data-go="${go}"` : 'span'} class="${go === on ? 'on' : ''}">${ax(ic, 22, 'currentColor', 2)}${t}</${go ? 'button' : 'span'}>`).join('')}</div>`;
 const cartCount = d => (d.cart?.items || []).reduce((n, x) => n + x.qty, 0), cartSum = d => (d.cart?.items || []).reduce((n, x) => n + x.qty * x.price, 0);
+const orderSum = o => o.items.reduce((n, x) => n + x.qty * x.price, 0) + o.fee + o.tip - o.discount;
+const toLine = (o, bm) => (o.gift ? (bm ? `${o.gift} 집으로` : `an ${o.gift}`) : o.to === 'home' ? (bm ? '우리집' : 'Zuhause') : o.to === 'work' ? (bm ? '회사' : 'Arbeit') : o.to);
+const SV = (d, w = 22, extra = '') => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" aria-hidden="true"${extra}>${d}</svg>`;
+const I = {
+    back: SV('<path d="M20 12H5M11 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'),
+    x: SV('<path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>', 20),
+    cart: SV('<path d="M3 4h2.4l2 11h10.8l2-8H6.6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="19.5" r="1.4" fill="currentColor"/><circle cx="17" cy="19.5" r="1.4" fill="currentColor"/>', 24),
+    bell: SV('<path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z M10 21h4" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>', 24),
+    search: SV('<circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="2.2" fill="none"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>'),
+    share: SV('<path d="M14 4h6v6M20 4l-9 9M18 14v5H5V6h5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'),
+    heart: SV('<path d="M12 20s-7.5-4.6-8.6-9.6C2.6 6.8 6.4 4.4 9 6.2c1.3.9 2.2 2.2 3 3.2.8-1 1.7-2.3 3-3.2 2.6-1.8 6.4.6 5.6 4.2C19.5 15.4 12 20 12 20z" stroke="currentColor" stroke-width="2" fill="none"/>', 24),
+    heartF: SV('<path d="M12 20s-7.5-4.6-8.6-9.6C2.6 6.8 6.4 4.4 9 6.2c1.3.9 2.2 2.2 3 3.2.8-1 1.7-2.3 3-3.2 2.6-1.8 6.4.6 5.6 4.2C19.5 15.4 12 20 12 20z" fill="#f04452"/>', 24),
+    home: SV('<path d="M4 11l8-7 8 7v9h-5v-6h-6v6H4z" fill="currentColor"/>', 24),
+    list: SV('<rect x="5" y="3" width="14" height="18" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M9 9h6M9 13h6" stroke="currentColor" stroke-width="2"/>', 24),
+    my: SV('<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none"/><path d="M8 13q4 5 8 0" stroke="currentColor" stroke-width="2" fill="none"/>', 24),
+    pin: SV('<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="12" cy="9.5" r="2.5" stroke="currentColor" stroke-width="2" fill="none"/>', 18),
+    chev: SV('<path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/>', 16),
+    down: SV('<path d="M5 9l7 7 7-7" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/>', 16),
+    star: SV('<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" fill="#ffc531"/>', 15),
+    starK: SV('<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" fill="#000"/>', 15),
+    clock: SV('<circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>', 17),
+    phone: SV('<path d="M6 3h3l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v3a2 2 0 0 1-2 2A17 17 0 0 1 4 5a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>', 19),
+};
+const round = (go, icon, i = '') => `<${go ? `button type="button" data-go="${go}"${i ? ` data-i="${esc(i)}"` : ''}` : 'span'} class="dv_rb">${icon}</${go ? 'button' : 'span'}>`;
+const bmTab = on => `<div class="dv_tab">${[['dlv', I.home, '홈'], ['', I.heart, '찜'], ['dorders', I.list, '주문내역'], ['', I.my, 'my배민']].map(([go, ic, t]) => `<${go ? `button type="button" data-go="${go}"` : 'span'} class="${go && go === on ? 'on' : ''}"><i>${ic}</i>${t}</${go ? 'button' : 'span'}>`).join('')}</div>`;
+const ueTab = on => `<div class="dv_tab">${[['dlv', I.home, 'Startseite'], ['', I.search, 'Suchen'], ['dorders', I.list, 'Bestellungen'], ['', I.my, 'Konto']].map(([go, ic, t]) => `<${go ? `button type="button" data-go="${go}"` : 'span'} class="${go && go === on ? 'on' : ''}"><i>${ic}</i>${t}</${go ? 'button' : 'span'}>`).join('')}</div>`;
+const kk = x => (x?.ko && koOn() ? `<span class="lf_k">${esc(x.ko)}</span>` : '');
+const BM_CATS = [['rice', '한그릇'], ['chinese', '중식'], ['sushi', '돈까스·회'], ['pizza', '피자'], ['burger', '패스트푸드'], ['stew', '찜·탕'], ['jokbal', '족발·보쌈'], ['snack', '분식'], ['cafe', '카페'], ['chicken', '치킨']];
+const UE_CATS = [['pizza', 'Pizza'], ['sushi', 'Sushi'], ['burger', 'Burger'], ['asian', 'Asiatisch'], ['salad', 'Gesund']];
+const shopsByUse = d => [...d.shops].sort((a, b) => d.orders.filter(o => o.shop === b.name).length - d.orders.filter(o => o.shop === a.name).length);
+const rate = r => String(r).replace(',', '.');
 export function dlvScreen(p, now) {
     const d = D(p);
     if (!d) return lifeEmpty(p, now, '배달', 'delivery');
-    const shops = [...d.shops].sort((a, b) => d.orders.filter(o => o.shop === b.name).length - d.orders.filter(o => o.shop === a.name).length), recent = [...d.orders].reverse();
-    if (d.look === 'baemin') {
+    const shops = shopsByUse(d), recent = [...d.orders].reverse(), bm = d.look === 'baemin';
+    const used = shops.filter(s => d.orders.some(o => o.shop === s.name)), rest = shops.filter(s => !used.includes(s));
+    if (bm) {
         const addr = recent[0]?.to === 'home' || !recent[0] ? '우리집' : recent[0].to === 'work' ? '회사' : recent[0].to;
-        return `<div class="lf_bm"><div class="lf_bmh">${axBar(p, now, '#fff')}<div class="r1">${axCb('home2')}<b>${esc(addr)} ${ax('chev', 14, '#fff', 2.8)}</b><span class="lf_bmic"><span class="lf_cartb">${ax('bell', 22, '#fff', 2)}</span><button type="button" data-go="dcart" class="lf_cartb">${ax('cart', 22, '#fff', 2)}${cartCount(d) ? `<i>${cartCount(d)}</i>` : ''}</button></span></div>
-          <div class="q">${ax('search', 16, '#9aa0a6', 2.4)}찾는 메뉴가 뭐예요?</div></div>
-        <div class="ax_scroll lf_bmsc"><div class="lf_bmtabs"><span class="on">배달</span><span>픽업</span><span>장보기·쇼핑</span><span>선물하기</span></div>
-          <div class="lf_cat">${[['🍚', '한식', '#fff3e3'], ['🍢', '분식', '#ffeceb'], ['☕', '카페·디저트', '#f3efe9'], ['🍗', '치킨', '#fff0e0'], ['🍕', '피자', '#fff7dc'], ['🥟', '중식', '#ffeceb'], ['🥗', '샐러드', '#f2f7ec'], ['🍲', '죽', '#e9f3fb'], ['🌙', '야식', '#f4eefa'], ['⋯', '전체', '#f1f2f4']].map(([e, t, c]) => `<div><span style="background: ${c}">${e}</span>${t}</div>`).join('')}</div>
-          <div class="lf_bmsec">자주 시킨 가게</div>
-          <div class="lf_shops">${shops.map(s => `<button type="button" data-go="dshop" data-i="${s.id}">${food(`${s.cuisine} ${s.menu[0]?.name || ''} ${s.name}`, 'big')}<b>${esc(s.name)}</b><span>${s.rating ? `<em>★ ${String(s.rating).replace(',', '.')}</em>${s.reviews ? ` (${n0(s.reviews)})` : ''} · ` : ''}${esc(s.eta || '')}분</span></button>`).join('')}</div>
-          <i class="lf_pad"></i></div>
-        ${d.cart ? `<button type="button" class="lf_bmcta" data-go="dcart"><em>${cartCount(d)}</em>장바구니 · ${esc(d.cart.shop)}<span>${esc(money(p, cartSum(d)))}</span></button>` : ''}${bmTab('dlv')}</div>`;
+        const card = s => `<button type="button" class="dv_fav" data-go="dshop" data-i="${s.id}"><span class="ph">${pic(shopPic(s))}${s.eta ? `<em>${esc(s.eta.replace('–', '~'))}분</em>` : ''}</span><b>${esc(s.name)}</b>${kk(s)}<small>${s.rating ? `${I.star}<strong>${rate(s.rating)}</strong>` : ''}${s.reviews ? `<span>(${n0(s.reviews).replace(/\./g, ',')})</span>` : ''}</small><small class="m">배달팁 ${esc(money(p, s.fee))}</small></button>`;
+        const row = s => `<button type="button" class="dv_near" data-go="dshop" data-i="${s.id}">${pic(shopPic(s))}<span><b>${esc(s.name)}</b><small>${s.rating ? `${I.star}<strong>${rate(s.rating)}</strong>` : ''}${s.reviews ? ` (${n0(s.reviews).replace(/\./g, ',')})` : ''}${s.eta ? ` · ${esc(s.eta.replace('–', '~'))}분` : ''}</small><span class="tags">${s.minOrder ? `<i>최소주문 ${esc(money(p, s.minOrder))}</i>` : ''}<i>배달팁 ${esc(money(p, s.fee))}</i></span></span></button>`;
+        return `<div class="dv bm"><div class="dv_bmh">${axBar(p, now)}
+            <div class="dv_bmtop">${axCb('home2')}<b>${esc(addr)} ${I.down}</b><span class="r">${I.bell}${d.cart ? `<button type="button" data-go="dcart" class="dv_cartb">${I.cart}<em>${cartCount(d)}</em></button>` : `<span class="dv_cartb">${I.cart}</span>`}</span></div>
+            <div class="dv_q">${I.search}야식 뭐 먹지?</div></div>
+          <div class="ax_scroll dv_sc"><div class="dv_sheet"><div class="dv_tabs"><span class="on">음식배달</span><span>픽업</span></div>
+              <div class="dv_cats">${BM_CATS.map(([k, t]) => `<span><i>${CAT[k]}</i>${t}</span>`).join('')}</div>
+              <div class="dv_all">음식배달 전체 보기 ${I.chev}</div></div>
+            ${used.length ? `<div class="dv_sec"><b>자주 시킨 가게</b><span>전체보기 ${I.chev}</span></div><div class="dv_favs">${used.map(card).join('')}</div>` : ''}
+            ${rest.length ? `<div class="dv_sec"><b>우리 동네 인기 가게</b><span>전체보기 ${I.chev}</span></div>${rest.map(row).join('')}` : ''}
+            <i class="lf_pad"></i></div>${bmTab('dlv')}</div>`;
     }
-    return `<div class="lf_ue">${axBar(p, now)}<div class="lf_uetop"><div class="dn">${axCb('home2')}<div><small>Jetzt liefern</small><b>${esc(recent[0]?.address || 'Zuhause')} ${ax('chev', 13, '#000', 2.8)}</b></div><button type="button" data-go="dcart" class="lf_cartb">${ax('cart', 20, '#000', 2.1)}${cartCount(d) ? `<i>${cartCount(d)}</i>` : ''}</button></div>
-        <div class="q">${ax('search', 16, '#5e5e5e', 2.4)}Essen, Geschäfte, Getränke</div></div>
-      <div class="ax_scroll lf_uesc">
-        <div class="lf_uecat">${[['🍕', 'Pizza'], ['🍣', 'Sushi'], ['🍔', 'Burger'], ['🍜', 'Asiatisch'], ['🥗', 'Gesund']].map(([e, t]) => `<div><span>${e}</span>${t}</div>`).join('')}</div>
-        ${recent.length ? `<div class="lf_ueh">Erneut bestellen</div><div class="lf_again">${[...new Set(recent.map(o => o.shop))].slice(0, 4).map(n => { const s = shopOf(d, n); return `<button type="button" data-go="dshop" data-i="${s?.id || ''}">${food(shopFood(d, n))}<b>${esc(n)}</b><small>${esc(s?.eta || '')} Min.</small></button>`; }).join('')}</div>` : ''}
-        <div class="lf_ueh">Beliebt in deiner Nähe</div>
-        ${shops.slice(0, 3).map(s => `<button type="button" class="lf_sc" data-go="dshop" data-i="${s.id}">${food(`${s.cuisine} ${s.menu[0]?.name || ''} ${s.name}`, 'wide')}<span class="r"><span><b>${esc(s.name)}</b><small>${esc(money(p, s.fee))} Liefergebühr · ${esc(s.eta || '')} Min.</small></span>${s.rating ? `<i>${String(s.rating).replace(',', '.')}</i>` : ''}</span></button>`).join('')}
-        <i class="lf_pad"></i></div>${ueTab('dlv')}</div>`;
+    const big = (rest[0] || shops[0]);
+    return `<div class="dv ue">${axBar(p, now)}
+        <div class="dv_uetop">${axCb('home2')}<span class="a"><small>Jetzt liefern</small><b>${esc(recent[0]?.address || 'Zuhause')} ${I.down}</b></span><span class="r">${I.bell}${d.cart ? `<button type="button" data-go="dcart" class="dv_cartb">${I.cart}<em>${cartCount(d)}</em></button>` : `<span class="dv_cartb">${I.cart}</span>`}</span></div>
+        <div class="dv_q">${I.search}Essen, Geschäfte, Getränke</div>
+        <div class="ax_scroll dv_sc"><div class="dv_cats ue">${UE_CATS.map(([k, t]) => `<span><i>${CAT[k]}</i>${t}</span>`).join('')}</div>
+          <div class="dv_chips"><span>Abholung</span><span>Angebote</span><span class="on">Liefergebühr unter 2 € ${I.down}</span></div>
+          ${used.length ? `<div class="dv_h">Erneut bestellen</div><div class="dv_again">${used.slice(0, 4).map(s => `<button type="button" data-go="dshop" data-i="${s.id}">${pic(shopPic(s))}<b>${esc(s.name)}</b><small>${esc(s.eta || '')} Min.</small></button>`).join('')}</div>` : ''}
+          ${big ? `<div class="dv_h">Beliebt in deiner Nähe</div><button type="button" class="dv_big" data-go="dshop" data-i="${big.id}">${pic(shopPic(big), 'wide', 'hero')}<span class="r"><span><b>${esc(big.name)}</b><small>${esc(money(p, big.fee))} Liefergebühr${big.eta ? ` · ${esc(big.eta)} Min.` : ''}</small></span>${big.rating ? `<em>${rate(big.rating).replace('.', ',')}</em>` : ''}</span></button>` : ''}
+          <i class="lf_pad"></i></div>${ueTab('dlv')}</div>`;
 }
 export function shopScreen2(p, now, id) {
     const d = D(p), s = d?.shops.find(x => x.id === id);
     if (!s) return dlvScreen(p, now);
-    const bm = d.look === 'baemin', inCart = d.cart?.shop === s.name;
-    return `<div class="${bm ? 'lf_bm' : 'lf_ue'} lf_store">${food(`${s.cuisine} ${s.menu[0]?.name || ''} ${s.name}`, 'hero')}${axBar(p, now)}<div class="lf_herob">${axCb('dlv')}</div>
-      <div class="ax_scroll lf_storesc"><div class="lf_sinfo ${bm ? '' : 'ue'}"><h2>${esc(s.name)}</h2>${s.ko && koOn() ? `<span class="lf_k">${esc(s.ko)}</span>` : ''}
-          <div class="rt">${s.rating ? `<em>${'★'.repeat(Math.round(s.rating))}</em> ${String(s.rating).replace(',', '.')}` : ''}${s.reviews ? ` · ${bm ? '리뷰' : ''} ${n0(s.reviews)}${bm ? '' : '+ Bewertungen'}` : ''}${s.cuisine ? ` · ${esc(s.cuisine)}` : ''}</div>
-          <div class="meta">${bm ? `<span>최소주문</span><span>${s.minOrder ? esc(money(p, s.minOrder)) : '없음'}</span><span>배달팁</span><span>${esc(money(p, s.fee))}</span><span>배달시간</span><span>${esc(s.eta || '')}분 소요</span>` : `<span>Liefergebühr</span><span>${esc(money(p, s.fee))}</span><span>Lieferzeit</span><span>${esc(s.eta || '')} Min.</span>`}</div></div>
-        <div class="lf_mtabs"><span class="on">${bm ? '메뉴' : 'Beliebt'}</span><span>${bm ? '정보' : 'Info'}</span><span>${bm ? `리뷰 ${n0(s.reviews || 0)}` : 'Bewertungen'}</span></div>
-        ${s.menu.map(x => `<div class="lf_mi"><span class="lf_tx"><b>${x.top ? `<span class="rep">${bm ? '대표' : '#1'}</span>` : ''}${esc(x.name)}</b>${x.ko && koOn() ? `<span class="lf_k">${esc(x.ko)}</span>` : ''}${x.desc ? `<p>${esc(x.desc)}</p>` : ''}<strong>${esc(money(p, x.price))}</strong></span>${food(`${x.name} ${x.desc} ${s.cuisine}`)}</div>`).join('')}
-        <i class="lf_pad"></i></div>
-      ${inCart ? `<button type="button" class="${bm ? 'lf_bmcta' : 'lf_uecta'}" data-go="dcart"><em>${cartCount(d)}</em>${bm ? `${esc(money(p, cartSum(d)))} 장바구니 보기` : 'Warenkorb ansehen'}${bm ? '' : `<span>${esc(money(p, cartSum(d)))}</span>`}</button>` : ''}</div>`;
+    const bm = d.look === 'baemin', inCart = d.cart?.shop === s.name, sp = shopPic(s);
+    const dish = (x, k) => `<button type="button" class="dv_dish" data-go="ditem" data-i="${s.id}~${k}"><span class="t"><b>${x.top && bm ? '<em class="rep">대표</em>' : ''}${esc(x.name)}</b>${kk(x)}${x.desc ? `<small>${esc(x.desc)}</small>` : ''}<strong>${esc(money(p, x.price))}</strong>${x.top && !bm ? '<em class="pop">#1 Beliebt</em>' : ''}</span><span class="pw">${pic(picFor(d, s.name, x))}${bm ? '' : '<i>+</i>'}</span></button>`;
+    const head = `<div class="dv_hero">${pic(sp, 'hero', 'hero')}${axBar(p, now)}<div class="dv_herobar">${round('dlv', I.back)}<span>${bm ? round('', I.share) : round('', s.fav ? I.heartF : I.heart)}${round('', I.search)}${bm ? round(d.cart ? 'dcart' : '', I.cart) : ''}</span></div>${bm ? `<span class="dv_logo">${pic(sp)}</span>` : ''}</div>`;
+    const cta = inCart ? (bm ? `<div class="dv_bot"><span class="sum"><b>${esc(money(p, cartSum(d)))}</b><small>바로 주문할 수 있어요</small></span><button type="button" class="dv_btn" data-go="dcart"><em>${cartCount(d)}</em>장바구니 보기</button></div>`
+        : `<div class="dv_bot"><button type="button" class="dv_btn" data-go="dcart"><em>${cartCount(d)}</em>Warenkorb ansehen · ${esc(money(p, cartSum(d)))}</button></div>`) : '';
+    if (bm) return `<div class="dv bm white">${head}<div class="ax_scroll dv_sc top">
+        <div class="dv_shead"><div class="n"><h2>${esc(s.name)}</h2>${s.fav ? I.heartF : I.heart}</div>${kk(s)}<div class="r"><span>${s.rating ? `${I.star}<b>${rate(s.rating)}</b>` : ''}${s.reviews ? ` (${n0(s.reviews).replace(/\./g, ',')})` : ''} ${I.chev}</span><em>가게정보·원산지</em></div></div>
+        <div class="dv_info"><div class="sw"><span class="on">배달</span><span>픽업${s.eta ? ` 약 ${esc(s.eta.split(/[–-]/)[0])}분` : ''}</span></div><div class="kv"><span>최소주문</span><b>${s.minOrder ? esc(money(p, s.minOrder)) : '없음'}</b><span>배달시간</span><b>${esc((s.eta || '').replace('–', '~'))}분</b><span>배달팁</span><b>${esc(money(p, s.fee))}</b></div></div>
+        <div class="dv_mh">대표 메뉴</div>${s.menu.map(dish).join('')}<i class="lf_pad"></i></div>${cta}</div>`;
+    return `<div class="dv ue">${head}<div class="ax_scroll dv_sc top">
+        <div class="dv_shead ue"><h2>${esc(s.name)}</h2>${kk(s)}<div class="r">${s.rating ? `${I.starK}<b>${rate(s.rating).replace('.', ',')}</b>` : ''}${s.reviews ? `<span>(${n0(s.reviews)})</span>` : ''}${s.cuisine ? `<span>· ${esc(s.cuisine)}</span>` : ''}</div></div>
+        <div class="dv_uebox"><span><b>${esc(money(p, s.fee))}</b><small>Liefergebühr</small></span><span><b>${esc(s.eta || '—')}</b><small>Min.</small></span></div>
+        <div class="dv_mtabs"><span class="on">Beliebt</span><span>Speisekarte</span><span>Info</span></div>${s.menu.map(dish).join('')}<i class="lf_pad"></i></div>${cta}</div>`;
+}
+// one dish, big: its picture, words, the size choice and the add button (nothing is ordered from here)
+export function itemScreen(p, now, ref) {
+    const d = D(p), [sid, k] = String(ref || '').split('~'), s = d?.shops.find(x => x.id === sid), x = s?.menu[Number(k)];
+    if (!x) return s ? shopScreen2(p, now, sid) : dlvScreen(p, now);
+    const bm = d.look === 'baemin', pc = picFor(d, s.name, x), large = pc.size === 'large';
+    const up = v => (v >= 100 ? Math.round(v / 500) * 500 : Math.round(v * 2) / 2), sizes = bm ? (large ? [['보통', up(x.price / 1.3)], ['특대', x.price]] : [['보통', x.price], ['특대', up(x.price * 1.3)]]) : [['Normal', null], ['Groß', null]];
+    return `<div class="dv ${bm ? 'bm white' : 'ue'}"><div class="dv_hero item">${pic(pc, 'hero', 'item')}${axBar(p, now)}<div class="dv_herobar">${round(`dshop`, bm ? I.back : I.x, s.id)}${bm ? `<span>${round('', I.share)}${round('', I.search)}${round(d.cart ? 'dcart' : '', I.cart)}</span>` : ''}</div></div>
+      <div class="ax_scroll dv_sc top"><div class="dv_item">${bm && x.top ? '<div class="tg"><em>인기 1위</em><em>사장님 추천</em></div>' : ''}<h2>${esc(x.name)}</h2>${kk(x)}${bm ? '' : `<div class="pr">${esc(money(p, x.price))}</div>`}${x.desc ? `<p>${esc(x.desc)}</p>` : ''}
+        ${bm ? `<div class="rv">메뉴 리뷰 ${I.chev}</div><div class="row"><b>수량</b><span class="stp"><i>−</i>1<i>+</i></span></div>` : ''}
+        <div class="row h"><span><b>${bm ? '가격' : 'Größe'}</b>${bm ? '' : '<small>1 auswählen</small>'}</span><em>${bm ? '필수' : 'Erforderlich'}</em></div>
+        ${sizes.map(([t, v], j) => `<div class="opt"><i class="${(j === 1) === large ? 'on' : ''}"></i><span>${t}</span>${v !== null ? `<b>${esc(money(p, v))}</b>` : j ? '<small>+</small>' : ''}</div>`).join('')}</div><i class="lf_pad"></i></div>
+      <div class="dv_bot">${bm ? `<span class="sum"><small>배달 최소주문금액</small><b>${s.minOrder ? esc(money(p, s.minOrder)) : '없음'}</b></span><span class="dv_btn">${esc(money(p, x.price))} 담기</span>` : `<span class="stp ue"><i>−</i>1<i>+</i></span><span class="dv_btn">1 hinzufügen · ${esc(money(p, x.price))}</span>`}</div></div>`;
 }
 export function cartScreen(p, now) {
     const d = D(p); if (!d) return dlvScreen(p, now);
     const c = d.cart, bm = d.look === 'baemin', s = c && shopOf(d, c.shop), sum = cartSum(d), fee = s?.fee || 0;
-    const note = (label, t, k) => (t ? `<div class="lf_bx"><small>${label}</small>${esc(t)}${k && koOn() ? `<span class="lf_k">${esc(k)}</span>` : ''}</div>` : '');
-    return `<div class="${bm ? 'lf_bm' : 'lf_ue'} lf_cartv">${axBar(p, now)}<div class="lf_ctop">${axCb('dlv')}<b>${bm ? '장바구니' : 'Warenkorb'}</b><span></span></div>
-      <div class="ax_scroll">${c ? `<div class="lf_cart"><div class="sh">${ax('store', 18, '#222', 2.1)}${esc(c.shop)}</div>
-          ${c.items.map(x => `<div class="lf_ci">${food(`${x.name} ${s?.cuisine || ''}`)}<span class="lf_tx"><b>${esc(x.name)}</b>${x.ko && koOn() ? `<span class="lf_k">${esc(x.ko)}</span>` : ''}${x.option ? `<small>${esc(x.option)}</small>` : ''}<span class="q"><strong>${esc(money(p, x.price * x.qty))}</strong><span class="lf_step"><span>−</span><b>${x.qty}</b><span>+</span></span></span></span></div>`).join('')}</div>
-        ${c.noteShop || c.noteRider ? `<div class="lf_req"><h4>${bm ? '요청사항' : 'Hinweise'}</h4>${note(bm ? '가게 사장님께' : 'Für das Restaurant', c.noteShop, c.noteShopKo)}${note(bm ? '배달 기사님께' : 'Für den Kurier', c.noteRider, c.noteRiderKo)}</div>` : ''}
-        <div class="lf_sum"><div><span>${bm ? '주문금액' : 'Zwischensumme'}</span><span>${esc(money(p, sum))}</span></div><div><span>${bm ? '배달팁' : 'Liefergebühr'}</span><span>${esc(money(p, fee))}</span></div><div class="t"><span>${bm ? '결제예정금액' : 'Gesamt'}</span><span>${esc(money(p, sum + fee))}</span></div></div>
-`
-        : `<div class="lf_none">장바구니가 비어 있어요</div>`}<i class="lf_pad"></i></div>
-      ${c ? `<span class="${bm ? 'lf_bmcta' : 'lf_uecta'} off">${bm ? `${esc(money(p, sum + fee))} 배달 주문하기` : `Bestellen · ${esc(money(p, sum + fee))}`}</span>` : ''}</div>`;
+    const top = `${axBar(p, now)}<div class="dv_bar">${axCb('dlv')}<b>${bm ? '장바구니' : 'Warenkorb'}</b><span></span></div>`;
+    if (!c) return `<div class="dv ${bm ? 'bm' : 'ue'}">${top}<div class="ax_scroll dv_sc"><div class="lf_none">${bm ? '장바구니가 비어 있어요' : 'Dein Warenkorb ist leer'}</div></div></div>`;
+    const more = (s?.menu || []).filter(m => !c.items.some(x => x.name === m.name)).slice(0, 2);
+    const note = (t, v, k) => (v ? `<div class="nt"><small>${t}</small>${esc(v)}${k && koOn() ? `<span class="lf_k">${esc(k)}</span>` : ''}</div>` : '');
+    if (bm) return `<div class="dv bm">${top}<div class="ax_scroll dv_sc">
+        <button type="button" class="dv_cshop" ${s ? `data-go="dshop" data-i="${s.id}"` : ''}>${s ? pic(shopPic(s)) : ''}${esc(c.shop)} ${I.chev}</button>
+        <div class="dv_card list">${c.items.map(x => `<div class="dv_ci"><span class="t"><b>${esc(x.name)}</b>${kk(x)}${x.option ? `<small>${esc(x.option)}</small>` : ''}<strong>${esc(money(p, x.qty * x.price))}</strong></span>${pic(picFor(d, c.shop, x))}<span class="ctl"><span class="ob">옵션 변경</span><span class="stp"><i>−</i>${x.qty}<i>+</i></span></span></div>`).join('')}<div class="dv_add">+ 메뉴 추가</div></div>
+        ${note('가게 요청사항', c.noteShop, c.noteShopKo) || note('배달 요청사항', c.noteRider, c.noteRiderKo) ? `<div class="dv_card">${note('가게 요청사항', c.noteShop, c.noteShopKo)}${note('라이더 요청사항', c.noteRider, c.noteRiderKo)}</div>` : ''}
+        ${more.length ? `<div class="dv_ct">함께 먹으면 좋아요</div><div class="dv_card list">${more.map((m, k) => `<button type="button" class="dv_more" data-go="ditem" data-i="${s.id}~${s.menu.indexOf(m)}">${pic(picFor(d, s.name, m))}<span><em>주문수 ${k + 2}위</em><b>${esc(m.name)}</b><small>${esc(money(p, m.price))}~</small></span><i>+</i></button>`).join('')}</div>` : ''}
+        <i class="lf_pad"></i></div><div class="dv_bot"><span class="sum"><b>${esc(money(p, sum))}</b><small>${s?.minOrder && sum < s.minOrder ? `${esc(money(p, s.minOrder - sum))} 더 담으면 주문 가능` : '주문 가능'}</small></span><span class="dv_btn">배달 주문하기</span></div></div>`;
+    return `<div class="dv ue">${top}<div class="ax_scroll dv_sc">
+        <div class="dv_ueh">Bestellübersicht</div><button type="button" class="dv_cshop ue" ${s ? `data-go="dshop" data-i="${s.id}"` : ''}>${s ? pic(shopPic(s)) : ''}<span><b>${esc(c.shop)}</b><small>${cartCount(d)} Artikel</small></span>${I.chev}</button>
+        ${c.items.map(x => `<div class="dv_uei"><span class="q">${x.qty}</span><span class="t"><b>${esc(x.name)}</b>${kk(x)}${x.option ? `<small>${esc(x.option)}</small>` : ''}</span><span class="pr">${esc(money(p, x.qty * x.price))}</span>${pic(picFor(d, c.shop, x))}</div>`).join('')}
+        ${c.noteShop || c.noteRider ? `<div class="dv_ueh">Hinweise</div><div class="dv_uenotes">${note('Für das Restaurant', c.noteShop, c.noteShopKo)}${note('Für den Kurier', c.noteRider, c.noteRiderKo)}</div>` : ''}
+        <div class="dv_kv"><div><span>Zwischensumme</span><span>${esc(money(p, sum))}</span></div><div><span>Liefergebühr</span><span>${esc(money(p, fee))}</span></div><div class="t"><span>Gesamt</span><span>${esc(money(p, sum + fee))}</span></div></div>
+        <i class="lf_pad"></i></div><div class="dv_bot"><span class="dv_btn">Zur Kasse · ${esc(money(p, sum + fee))}</span></div></div>`;
 }
-const toLine = (o, bm) => (o.gift ? (bm ? `${o.gift} 집으로` : `an ${o.gift}`) : o.to === 'home' ? (bm ? '우리집' : 'Zuhause') : o.to === 'work' ? (bm ? '회사' : 'Arbeit') : o.to);
 export function ordersScreen(p, now) {
     const d = D(p); if (!d) return dlvScreen(p, now);
     const bm = d.look === 'baemin', os = [...d.orders].reverse();
-    if (bm) return `<div class="lf_bm">${axBar(p, now)}<div class="lf_ctop">${axCb('dlv')}<b>주문내역</b><span>${ax('search', 20, '#222', 2)}</span></div>
-      <div class="ax_scroll">${os.map(o => `<div class="lf_oc"><div class="hd"><span><b>${ST_KO[o.status]}</b> · ${esc(fmtDate(p, o.time, true))} ${esc(o.time.slice(6))}${o.gift ? '<span class="gift">선물</span>' : ''}</span><button type="button" data-go="dorder" data-i="${o.id}">주문상세 ›</button></div>
-          <button type="button" class="bd" data-go="dorder" data-i="${o.id}">${food(shopFood(d, o.shop))}<span><b>${esc(o.shop)} ›</b><small>${esc(o.items[0].name)}${o.items.length > 1 ? ` 외 ${o.items.length - 1}개` : ` ${o.items[0].qty}개`}${o.for > 1 ? ` · ${o.for}인분` : ''}</small><small>${esc(money(p, orderTotal(o)))} · ${esc(toLine(o, true))}</small></span></button>
-          ${o.status === 'delivered' ? `<div class="bt"><span>${o.reviewed ? '리뷰 작성 완료' : '리뷰 쓰기'}</span><span class="m">같은 메뉴 담기</span></div>` : ''}</div>`).join('') || '<div class="lf_none">주문 내역이 없어요</div>'}
+    const what = o => `${o.items[0].name}${o.items.length > 1 ? (bm ? ` 외 ${o.items.length - 1}개` : ` +${o.items.length - 1}`) : bm ? ` ${o.items[0].qty}개` : ''}`;
+    const sp = o => { const s = shopOf(d, o.shop); return s ? shopPic(s) : picFor(d, o.shop, o.items[0]); };
+    if (bm) return `<div class="dv bm">${axBar(p, now)}<div class="dv_bar l"><b>주문내역</b><span>${I.cart}</span></div>
+      <div class="dv_chips bm"><span>${I.search.replace('width="22" height="22"', 'width="15" height="15"')}검색</span><span>주소 ${I.down}</span><span>조회 기간 ${I.down}</span><span>주문 상태</span></div>
+      <div class="ax_scroll dv_sc">${os.map(o => `<div class="dv_card ord"><button type="button" class="hd" data-go="dorder" data-i="${o.id}">${pic(sp(o))}<span><b>${esc(o.shop)}</b><small>${esc(fmtDate(p, o.time, true))}${o.status === 'delivered' ? (o.reviewed ? ` · ${I.star.replace('#ffc531', '#b0b4ba')} 내 리뷰 5점` : ' · <strong>리뷰 쓰기</strong>') : ` · <strong class="${o.status === 'on the way' ? 'go' : 'no'}">${ST_KO[o.status]}</strong>`}${o.gift ? ' · 선물' : ''}</small></span><em>주문상세</em></button>
+          <div class="it">${esc(what(o))}</div><div class="pay"><b>결제금액</b><b>${esc(money(p, orderSum(o)))}</b></div><div class="bt"><span class="l">같은 메뉴 담기</span><span class="m">바로 주문</span></div></div>`).join('') || '<div class="lf_none">주문 내역이 없어요</div>'}
         <i class="lf_pad"></i></div>${bmTab('dorders')}</div>`;
-    return `<div class="lf_ue">${axBar(p, now)}<div class="lf_ctop">${axCb('dlv')}<b>Bestellungen</b><span></span></div>
-      <div class="lf_otab"><span class="on">Vergangene</span><span>Laufende</span></div>
-      <div class="ax_scroll">${os.map(o => `<button type="button" class="lf_or" data-go="dorder" data-i="${o.id}">${food(shopFood(d, o.shop))}<span class="lf_tx"><b>${esc(o.shop)}</b><small>${o.items.reduce((n, x) => n + x.qty, 0)} Artikel · ${esc(money(p, orderTotal(o)))} · ${esc(fmtDate(p, o.time, true))}</small><small class="${o.status === 'cancelled' || o.status === 'refunded' ? 'x' : ''}">${ST_DE[o.status]} · ${esc(toLine(o, false))}</small><u>Beleg ansehen</u></span>${o.status === 'delivered' ? '<em>Erneut</em>' : ''}</button>`).join('') || '<div class="lf_none">Noch keine Bestellungen</div>'}
+    return `<div class="dv ue">${axBar(p, now)}<div class="dv_bar l"><b>Bestellungen</b><span></span></div><div class="dv_mtabs ot"><span class="on">Vergangene</span><span>Laufende</span></div>
+      <div class="ax_scroll dv_sc">${os.map(o => `<button type="button" class="dv_uo" data-go="dorder" data-i="${o.id}">${pic(sp(o))}<span class="t"><b>${esc(o.shop)}</b><small class="k">${o.items.reduce((n, x) => n + x.qty, 0)} Artikel · ${esc(money(p, orderSum(o)))}</small><small>${esc(fmtDate(p, o.time, true))} · ${o.status === 'cancelled' || o.status === 'refunded' ? `<i class="no">${ST_DE[o.status]}</i>` : ST_DE[o.status]}${o.gift ? ` · an ${esc(o.gift)}` : ''}</small><u>Beleg ansehen</u></span><em>Erneut</em></button>`).join('') || '<div class="lf_none">Noch keine Bestellungen</div>'}
         <i class="lf_pad"></i></div>${ueTab('dorders')}</div>`;
 }
-// the route on a flat map: shop to door, drawn from the order's id so it stays put
-function routeMap(o) {
-    let s = [...o.id].reduce((n, ch) => n * 31 + ch.charCodeAt(0), 9);
-    const r = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
-    const x1 = 40 + r() * 60, y1 = 190 + r() * 40, x2 = 270 + r() * 70, y2 = 50 + r() * 40, mx = 140 + r() * 80;
-    return `<div class="lf_map"><span class="blk" style="left: 20px; top: 20px; width: 120px; height: 80px"></span><span class="blk" style="left: 170px; top: 120px; width: 90px; height: 70px"></span><span class="pk" style="left: 230px; top: 140px; width: 150px; height: 90px"></span>
-      <span class="rd" style="left: 0; right: 0; top: ${y1 - 7}px; height: 14px"></span><span class="rd" style="left: ${mx - 7}px; top: 0; bottom: 0; width: 14px"></span><span class="rd" style="left: 0; right: 0; top: ${y2 - 7}px; height: 12px"></span>
-      <svg viewBox="0 0 390 250"><path d="M${x1} ${y1} L${mx} ${y1} L${mx} ${y2} L${x2} ${y2}" fill="none" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg>
-      <span class="pin" style="left: ${x1 - 15}px; top: ${y1 - 15}px; background: #000">${ax('store', 15, '#fff', 2.2)}</span><span class="pin" style="left: ${x2 - 15}px; top: ${y2 - 15}px">${ax('homeS', 15, '#fff', 2.2)}</span></div>`;
+// a flat city map: blocks with buildings, parks, a river, the main roads; the route is one turn from shop to door,
+// and the rider sits partway along it while the order is on its way. Seeded by the order, so it stays put.
+function cityMap(o, accent, bike) {
+    let sd = [...o.id].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 233280, 7);
+    const r = () => { sd = (sd * 9301 + 49297) % 233280; return sd / 233280; };
+    const xs = [-20, 52, 128, 206, 284, 360, 430], ys = [-20, 70, 150, 226, 300, 384, 470, 580], parks = new Set(['1,1', '4,4', '0,5']), out = [];
+    for (let i = 0; i < xs.length - 1; i++) for (let j = 0; j < ys.length - 1; j++) {
+        const x0 = xs[i] + 7, x1 = xs[i + 1] - 7, y0 = ys[j] + 7, y1 = ys[j + 1] - 7, pk = parks.has(`${i},${j}`);
+        out.push(`<rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" rx="6" fill="${pk ? '#d7ebcf' : '#ebe8e2'}"/>`);
+        if (pk) for (let k = 0; k < 6; k++) out.push(`<circle cx="${Math.round(x0 + 8 + r() * (x1 - x0 - 16))}" cy="${Math.round(y0 + 8 + r() * (y1 - y0 - 16))}" r="${(4 + r() * 3).toFixed(1)}" fill="#bfdcb3"/>`);
+        else { const n = 1 + Math.floor(r() * 3), bw = (x1 - x0 - 6) / n; for (let k = 0; k < n; k++) out.push(`<rect x="${Math.round(x0 + 3 + k * bw)}" y="${y0 + 3}" width="${Math.round(bw - 3)}" height="${Math.round((y1 - y0) * (0.35 + r() * 0.15))}" rx="2" fill="#e4e0d8"/><rect x="${Math.round(x0 + 3 + k * bw)}" y="${Math.round(y1 - 3 - (y1 - y0) * (0.25 + r() * 0.15))}" width="${Math.round(bw - 3)}" height="${Math.round((y1 - y0) * 0.25)}" rx="2" fill="#e4e0d8"/>`); }
+    }
+    out.push('<path d="M-10 528 C80 500 170 548 260 520 S380 500 400 510 V580 H-10Z" fill="#c6dcf0"/>');
+    out.push(`<g fill="none" stroke-linecap="round">${[[`M-20 ${ys[3]} H410`, 12], [`M${xs[3]} -20 V600`, 12], ['M-20 40 L410 -10', 9]].map(([dd, w]) => `<path d="${dd}" stroke="#dcd8cf" stroke-width="${w + 3}"/><path d="${dd}" stroke="#fff" stroke-width="${w}"/>`).join('')}</g><path d="M-20 40 L410 -10" stroke="#f6d78a" stroke-width="3" fill="none"/>`);
+    const [sx, sy] = [128, 420], [hx, hy] = [300, 226], path = `M${sx} ${sy} V${hy} H${hx}`, going = o.status === 'on the way';
+    out.push(`<path d="${path}" stroke="#fff" stroke-width="9" fill="none" stroke-linejoin="round"/><path d="${path}" stroke="${accent}" stroke-width="5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>`);
+    out.push(`<g transform="translate(${sx} ${sy})"><circle r="16" fill="#16181c" stroke="#fff" stroke-width="3"/><path d="M-5 -7 v7 a3 3 0 0 0 6 0 v-7 M-2 -7 v14 M5 -7 c-3 4 -2 8 0 9 v5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></g><g transform="translate(${hx} ${hy})"><circle r="16" fill="#16181c" stroke="#fff" stroke-width="3"/><path d="M-7 1 l7 -7 7 7 v7 h-14z" fill="#fff"/></g>`);
+    if (going) out.push(`<g transform="translate(${sx} 300)"><circle r="22" fill="${accent}" opacity=".18"/><circle r="15" fill="#fff" stroke="${accent}" stroke-width="2.5"/>${bike}</g>`);
+    return `<svg class="dv_map" viewBox="0 0 390 560" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="390" height="560" fill="#f0eee9"/>${out.join('')}</svg>`;
 }
+const SCOOT = '<g transform="translate(-11 -9) scale(.55)"><rect x="2" y="6" width="12" height="11" rx="2" fill="#3fd4c1"/><circle cx="9" cy="27" r="5" fill="#2b2b2b"/><circle cx="31" cy="27" r="5" fill="#2b2b2b"/><path d="M6 22 h22 l4 -8 h3 v4 l-4 4 v4 h-25z" fill="#3fd4c1"/><circle cx="22" cy="5" r="4.4" fill="#3fd4c1"/><path d="M18 9 h7 l2 9 h-9z" fill="#3a3a3a"/></g>';
+const BIKE = '<g transform="translate(-10 -7)" fill="none" stroke="#16181c" stroke-width="2"><circle cx="4" cy="11" r="3.6"/><circle cx="16" cy="11" r="3.6"/><path d="M4 11 L8 4 h5 L16 11 M8 4 L11 11 L13 4" stroke-linejoin="round"/></g>';
+const minsLeft = (p, o) => { const n = String(storyNow(p) || p.now || ''), a = o.time.slice(6), b = n.slice(6); if (!/^\d\d:\d\d/.test(a) || !/^\d\d:\d\d/.test(b) || n.slice(0, 5) !== o.time.slice(0, 5)) return 20; const m = (s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5))); return Math.max(3, m(a) + 35 - m(b)); };
 export function orderScreen(p, now, id) {
     const d = D(p), o = d?.orders.find(x => x.id === id);
     if (!o) return ordersScreen(p, now);
     const bm = d.look === 'baemin', tx = (p.money?.tx || []).find(t => t.delivery === o.id && !String(t.id).endsWith('-r')), acct = tx && p.money.bank.accounts.find(a => a.last4 === tx.account);
-    const sub = o.items.reduce((n, x) => n + x.qty * x.price, 0);
-    const lines = [...o.items.map(x => `<div class="ln"><span><em>${x.qty}</em>${esc(x.name)}${x.option ? `<small>${esc(x.option)}</small>` : ''}${x.ko && koOn() ? `<span class="lf_k">${esc(x.ko)}</span>` : ''}</span><span>${esc(money(p, x.qty * x.price))}</span></div>`),
-        `<div class="ln g"><span>${bm ? '배달팁' : 'Liefergebühr'}</span><span>${esc(money(p, o.fee))}</span></div>`, o.tip ? `<div class="ln g"><span>${bm ? '팁' : 'Trinkgeld'}</span><span>${esc(money(p, o.tip))}</span></div>` : '',
-        o.discount ? `<div class="ln g"><span>${bm ? '할인' : 'Rabatt'}</span><span class="dc">−${esc(money(p, o.discount))}</span></div>` : '', `<div class="ln t"><span>${bm ? '결제금액' : 'Gesamt'}</span><span>${esc(money(p, sub + o.fee + o.tip - o.discount))}</span></div>`].join('');
-    const note = (label, t, k) => (t ? `<div class="note"><small>${label}</small>${esc(t)}${k && koOn() ? `<span class="lf_k">${esc(k)}</span>` : ''}</div>` : '');
-    const done = o.status === 'delivered', icon = done ? ax('check', 20, '#fff', 3) : o.status === 'on the way' ? ax('bagS', 20, '#fff', 2.2) : ax('x', 20, '#fff', 3);
-    return `<div class="${bm ? 'lf_bm' : 'lf_ue'} lf_od">${o.mode === 'delivery' && o.status !== 'cancelled' ? routeMap(o) : '<div style="height: 110px"></div>'}${axBar(p, now)}<div class="lf_herob">${axCb(`dorders`)}</div>
-      <div class="ax_scroll lf_odsc"><div class="lf_odb">
-        <div class="st"><i style="background: ${o.status === 'cancelled' || o.status === 'refunded' ? '#c0392b' : bm ? 'var(--m)' : '#06c167'}">${icon}</i><div><b>${bm ? ST_KO[o.status] : ST_DE[o.status]}${o.arrived ? ` · ${esc(o.arrived.slice(6))}` : ''}</b><span>${esc(o.shop)} · ${esc(fmtDate(p, o.time, true))} ${esc(o.time.slice(6))}${o.left ? ` · ${esc(o.left)}` : ''}</span></div></div>
-        ${lines}
-        ${note(bm ? '가게 사장님께' : 'Hinweis für das Restaurant', o.noteShop, o.noteShopKo)}${note(bm ? '배달 기사님께' : 'Hinweis für den Kurier', o.noteRider, o.noteRiderKo)}
-        <div class="meta2">${[toLine(o, bm), o.address, o.for > 1 ? (bm ? `${o.for}인분` : `Für ${o.for}`) : '', o.noCutlery ? (bm ? '수저 안 받음' : 'Ohne Besteck') : ''].filter(Boolean).map(esc).join(' · ')}</div>
-        <div class="pay">${ax('cardS', 20, '#000', 2)}${acct ? `${esc(acct.name || '')} •••• ${esc(acct.last4)}` : o.account === 'cash' ? (bm ? '만나서 현금결제' : 'Bar bei Lieferung') : (bm ? '카드' : 'Karte')}${tx ? `<button type="button" data-go="tx" data-i="${tx.id}">은행에서 보기 ›</button>` : ''}</div>
-      </div><i class="lf_pad"></i></div></div>`;
+    const sub = o.items.reduce((n, x) => n + x.qty * x.price, 0), total = orderSum(o), s = shopOf(d, o.shop);
+    const payBy = acct ? `${esc(acct.name || '')} •••• ${esc(acct.last4)}` : o.account === 'cash' ? (bm ? '만나서 현금결제' : 'Bar bei Lieferung') : (bm ? '카드' : 'Karte');
+    const bank = tx ? `<button type="button" class="dv_bank" data-go="tx" data-i="${esc(tx.id)}">${bm ? '은행 앱에서 보기' : 'In der Bank-App'} ${I.chev}</button>` : '';
+    const note = (t, v, k) => (v ? `<div class="nt"><small>${t}</small>${esc(v)}${k && koOn() ? `<span class="lf_k">${esc(k)}</span>` : ''}</div>` : '');
+    if (o.status === 'on the way' && o.mode === 'delivery') {
+        const left = minsLeft(p, o);
+        return `<div class="dv ${bm ? 'bm' : 'ue'} map">${cityMap(o, bm ? '#3fd4c1' : '#16181c', bm ? SCOOT : BIKE)}${axBar(p, now)}<div class="dv_herobar">${round('dorders', bm ? I.back : I.x)}${bm ? '' : '<span class="dv_help">Hilfe</span>'}</div>
+          <div class="dv_track"><i class="grab"></i>${bm ? `<div class="hd"><span><small>${esc(o.shop)}</small><b>${left}분 남음</b><span>주문하신 주소로 가고 있어요.</span></span>${SCOOT.replace('<g transform="translate(-11 -9) scale(.55)">', '<svg width="46" height="39" viewBox="0 0 40 34"><g>').replace(/<\/g>$/, '</g></svg>')}</div>
+            <div class="steps">${['주문확인', '조리완료', '배달중', '배달완료'].map((t, k) => `<span class="${k < 3 ? 'on' : ''} ${k === 2 ? 'now' : ''}"><i></i>${t}</span>`).join('')}</div>`
+            : `<div class="hd c"><b>Dein Kurier ist unterwegs</b><span>Noch etwa ${left} Min.</span></div><div class="bars">${[1, 1, 1, 0.5, 0].map(v => `<i class="${v === 1 ? 'on' : v ? 'half' : ''}"></i>`).join('')}</div><p>Deine Bestellung von ${esc(o.shop)} ist auf dem Weg.</p>`}
+            <div class="ad">${I.home}<span><b>${esc(toLine(o, bm))}</b>${o.address ? `<small>${esc(o.address)}</small>` : ''}</span></div>${note(bm ? '라이더 요청사항' : 'Hinweis für den Kurier', o.noteRider, o.noteRiderKo)}${bank}</div></div>`;
+    }
+    const lines = o.items.map(x => `<div class="dv_li">${bm ? '' : `<span class="q">${x.qty}</span>`}<span class="t"><b>${esc(x.name)}</b>${kk(x)}${x.option ? `<small>${bm ? '• ' : ''}${esc(x.option)}</small>` : ''}</span><span class="pr">${esc(money(p, x.qty * x.price))}${bm && x.qty > 1 ? `<small>${x.qty}개</small>` : ''}</span>${bm ? pic(picFor(d, o.shop, x)) : ''}</div>`).join('');
+    const kv = `<div class="dv_kv">${bm ? '' : `<div class="b"><span>Zwischensumme</span><span>${esc(money(p, sub))}</span></div>`}${bm ? `<div><span>메뉴금액</span><span>${esc(money(p, sub))}</span></div>` : ''}<div><span>${bm ? '배달팁' : 'Liefergebühr'}</span><span>${esc(money(p, o.fee))}</span></div>${o.tip ? `<div><span>${bm ? '팁' : 'Trinkgeld'}</span><span>${esc(money(p, o.tip))}</span></div>` : ''}${o.discount ? `<div><span>${bm ? '할인' : 'Rabatt'}</span><span class="dc">−${esc(money(p, o.discount))}</span></div>` : ''}${bm ? `<div class="t"><span>결제금액</span><span>${esc(money(p, total))}</span></div>` : ''}<div class="py"><span>${bm ? '결제방법' : 'Zahlung'}</span><span>${payBy}</span></div></div>`;
+    const meta = [toLine(o, bm), o.address, o.left, o.for > 1 ? (bm ? `${o.for}인분` : `Für ${o.for}`) : '', o.noCutlery ? (bm ? '수저·포크 안 받음' : 'Ohne Besteck') : ''].filter(Boolean).map(esc).join(' · ');
+    const stLine = o.status === 'cancelled' || o.status === 'refunded';
+    if (bm) return `<div class="dv bm white">${axBar(p, now)}<div class="dv_bar">${axCb('dorders')}<b>주문상세</b><span>${I.cart}</span></div><div class="ax_scroll dv_sc">
+        <div class="dv_box"><div class="st"><b class="${stLine ? 'no' : ''}">${o.status === 'delivered' ? '배달이 완료됐어요' : ST_KO[o.status]}</b><small>주문일시 ${esc(fmtDate(p, o.time, true))} ${esc(o.time.slice(6))}${o.arrived ? `<br>도착 ${esc(o.arrived.slice(6))}` : ''}</small></div>
+          <button type="button" class="sh" ${s ? `data-go="dshop" data-i="${s.id}"` : ''}>${s ? pic(shopPic(s)) : ''}<b>${esc(o.shop)}</b>${I.chev}<i>${s?.fav ? I.heartF : I.heart}</i></button></div>
+        <div class="dv_mh">주문 메뉴</div><div class="dv_box p">${lines}<div class="bt"><span class="l">같은 메뉴 담기</span><span class="m">바로 주문</span></div></div>
+        <div class="dv_mh">결제 정보</div><div class="dv_box p">${kv}${bank}</div>
+        <div class="dv_mh">배달 정보</div><div class="dv_box p"><div class="dv_meta">${meta}</div>${note('가게 요청사항', o.noteShop, o.noteShopKo)}${note('라이더 요청사항', o.noteRider, o.noteRiderKo)}</div>
+        <i class="lf_pad"></i></div></div>`;
+    return `<div class="dv ue">${axBar(p, now)}<div class="dv_bar">${axCb('dorders')}<b>Beleg</b><span></span></div><div class="ax_scroll dv_sc">
+        <div class="dv_rcpt"><div class="a"><b>Uber Eats</b><small><strong>Gesamt ${esc(money(p, total))}</strong><br>${esc(fmtDate(p, o.time, true))}</small></div><h2>${stLine ? `${ST_DE[o.status]}` : `Danke für deine Bestellung, ${esc(String(p.owner || '').split(/\s/)[0])}`}</h2><p>${stLine ? `Bestellung bei ${esc(o.shop)}` : `Hier ist dein Beleg von ${esc(o.shop)}.`}</p>
+          ${stLine ? '' : `<svg class="bill" viewBox="0 0 120 80" aria-hidden="true"><rect x="10" y="26" width="90" height="46" rx="4" fill="#1fa463"/><rect x="18" y="34" width="74" height="30" rx="3" fill="#2fbf74"/><circle cx="76" cy="50" r="20" fill="#0b7a45"/><path d="M66 50 l7 7 13 -14" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`}</div>
+        <div class="dv_rb2"><div class="tt"><span>Gesamt</span><span>${esc(money(p, total))}</span></div>${lines}${kv}${bank}<div class="dv_meta">${meta}</div>${note('Hinweis für das Restaurant', o.noteShop, o.noteShopKo)}${note('Hinweis für den Kurier', o.noteRider, o.noteRiderKo)}</div>
+        <i class="lf_pad"></i></div></div>`;
 }

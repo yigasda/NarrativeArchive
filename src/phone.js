@@ -23,7 +23,7 @@ import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js
 import { bankDisplayCurrency, bankAcct, bankHome, bankTx, cardView, orderView, passView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
 import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './phoneweb.js';
 import { fillDelivery, fillLife } from './phonelife.js';
-import { alarmScreen, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, orderScreen, ordersScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, weatherScreen, worldScreen } from './phonelifeapps.js';
+import { alarmScreen, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, itemScreen, orderScreen, ordersScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, weatherScreen, worldScreen } from './phonelifeapps.js';
 import { openGlossary } from './translate.js';
 import { confirm, esc } from './util.js';
 
@@ -37,7 +37,7 @@ function screen(p, view, m, roster, ui) {
     const cut = view.indexOf(':'), v = cut < 0 ? view : view.slice(0, cut), i = cut < 0 ? undefined : view.slice(cut + 1);
     const life = { clock: () => clockScreen(p, now), timer: () => timerScreen(p, now), wclock: () => worldScreen(p, now), alarm: () => alarmScreen(p, now, i), health: () => healthScreen(p, now, i || ''), hsteps: () => stepsScreen(p, now, i), hsleep: () => sleepScreen(p, now, i), hcmp: () => compareScreen(p, now),
         files: () => filesScreen(p, now), folder: () => folderScreen(p, now, i || ''), file: () => fileScreen(p, now, i), weather: () => weatherScreen(p, now), wcity: () => cityScreen(p, now, i), wlist: () => cityList(p, now),
-        dlv: () => dlvScreen(p, now), dshop: () => shopScreen2(p, now, i), dcart: () => cartScreen(p, now), dorders: () => ordersScreen(p, now), dorder: () => orderScreen(p, now, i) }[v];
+        dlv: () => dlvScreen(p, now), dshop: () => shopScreen2(p, now, i), dcart: () => cartScreen(p, now), dorders: () => ordersScreen(p, now), dorder: () => orderScreen(p, now, i), ditem: () => itemScreen(p, now, i) }[v];
     const body = life ? life() : ['ivnotes', 'ivschedule', 'ivhistory', 'invest', 'stock', 'ivactivity', 'ivwatch', 'ivstakes', 'ivcash', 'ivprices'].includes(v) ? investmentScreen(m, p, now, v, decodeURIComponent(i || ''), ui.investing) : v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'home2' ? homeScreen(p, now, m, 2) : v === 'bank' ? bankHome(p, now) : v === 'acct' ? bankAcct(p, now, i || '0') : v === 'tx' ? bankTx(p, now, i || '') : v === 'wallet' ? walletScreen(p, now) : v === 'card' ? cardView(p, now, i || '0') : v === 'pass' ? passView(p, now, i || '') : v === 'shop' ? shopScreen(p, now, i || 'all') : v === 'order' ? orderView(p, now, i || '') : v === 'voice' ? voiceScreen(p, now, i || '') : v === 'voiceone' ? voiceOne(p, now, i || '0') : v === 'msg' ? msgList(p, now, roster)
         : v === 'thread' ? threadScreen(p, now, Number(i), roster) : v === 'draft' ? draftView(p, now, Number(i), roster) : v === 'call' || v === 'callmiss' ? callScreen(p, now, roster, v === 'callmiss') : v === 'callwho' ? callWho(p, now, Number(i), roster) : v === 'contacts' ? contactsScreen(p, now, roster) : v === 'contact' ? contactOne(p, now, decodeURIComponent(i || ''), roster, m, ui.contactBack)
         : v === 'photo' ? photoScreen(p, now) : v === 'photoone' ? photoView(p, now, Number(i))
@@ -414,7 +414,7 @@ export async function openPhone(who = null) {
         e.stopPropagation();
         // a person's card goes back where it was opened from
         if (go === 'contact' && !view.startsWith('contact')) contactBack = view;
-        view = ['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices', 'thread', 'draft', 'page', 'acct', 'tx', 'card', 'pass', 'order', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost', 'alarm', 'hsteps', 'hsleep', 'folder', 'file', 'wcity', 'dshop', 'dorder'].includes(go) || (['cal', 'diary', 'shop', 'voice', 'invest', 'health'].includes(go) && this.dataset.i) ? `${go}:${['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices'].includes(go) ? encodeURIComponent(this.dataset.i || '') : this.dataset.i}` : go;
+        view = ['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices', 'thread', 'draft', 'page', 'acct', 'tx', 'card', 'pass', 'order', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost', 'alarm', 'hsteps', 'hsleep', 'folder', 'file', 'wcity', 'dshop', 'dorder', 'ditem'].includes(go) || (['cal', 'diary', 'shop', 'voice', 'invest', 'health'].includes(go) && this.dataset.i) ? `${go}:${['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices'].includes(go) ? encodeURIComponent(this.dataset.i || '') : this.dataset.i}` : go;
         const mail = go === 'mailone' ? phone()?.mails?.[Number(this.dataset.i)] : null;
         if (mail?.unread) { mail.unread = false; saveMeta(); }
         const p0 = phone();
