@@ -193,3 +193,33 @@ test('same day, same café, same amount: one, unless the model says it is a seco
     applyMoney(m, p, ev('c3', 12, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', separate: true }] }), opts());
     assert.equal(bank(), 991);
 });
+
+test('"new" from another message goes in beside a same-day twin; "again" or nothing does not', () => {
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('c1', 9, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', occurrence: 'new' }] }), opts());
+    applyMoney(m, p, ev('c2', 11, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', occurrence: 'new' }] }), opts());
+    assert.equal(bank(), 991);
+    applyMoney(m, p, ev('c3', 14, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', occurrence: 'again' }] }), opts());
+    applyMoney(m, p, ev('c4', 15, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau' }] }), opts());
+    assert.equal(bank(), 991);
+});
+
+test('the same payment twice in one message is one, even marked "new"', () => {
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('c1', 9, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', occurrence: 'new' }] }), opts());
+    applyMoney(m, p, ev('c1b', 9, '10-27', { moves: [{ account: '1111', amount: -4.5, who: 'Café Blau', occurrence: 'new' }] }), opts());
+    assert.equal(bank(), 995.5);
+});
+
+test('"again" with nothing on record moves nothing (money from before the phone)', () => {
+    const { m, p, bank } = setup();
+    const r = applyMoney(m, p, ev('old', 9, '10-20', { moves: [{ account: '1111', amount: -60, who: 'Mara', occurrence: 'again' }] }), opts());
+    assert.equal(bank(), 1000);
+    assert.equal(r.legs[0].state, 'again');
+});
+
+test('a missing word on a payment with no twin still goes in', () => {
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('rent', 9, '10-27', { moves: [{ account: '1111', amount: -700, who: 'Vermieter' }] }), opts());
+    assert.equal(bank(), 300);
+});

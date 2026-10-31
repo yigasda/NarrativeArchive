@@ -1,9 +1,11 @@
 // 새로 일어난 일 반영 · 돈: one story event's payments, transfers, trades, orders and tickets, applied to the bank, the card,
 // the brokerage, the shop and the wallet. The model reads the story; the numbers are worked out here.
 // - an app made after the event's message already holds it; nothing moves
-// - a record the model points at ("already") already holds it; so does any record, old or added by an earlier round, with the
-//   same account, same day and amount (and the same place when both name one) — or, for a guessed amount, the same place —
-//   unless the model says it is a second payment ("separate"). Another day, another place or another price is another payment.
+// - a record the model points at ("already") already holds it
+// - "again" means the message only talks about money moved before: it moves nothing. Without "new", a record with the
+//   same account, same day and amount (and the same place when both name one; for a guessed amount, the same place) is that one.
+// - "new" means it happens in this message: it goes in even beside a same-day twin, as long as the twin came from another
+//   message (the same payment twice in one message is one). Another day, another place or another price is another payment.
 // - an event seen before keeps the amounts it was given then; only a guessed amount the story later states is corrected,
 //   on the same record (no second payment), once
 // - balances may go below zero; no money is made up to cover a payment
@@ -16,6 +18,8 @@ const txt = (v, n = 80) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, 
 const list = v => (Array.isArray(v) ? v : []);
 const day = s => { const mt = /^(\d{2})-(\d{2})/.exec(String(s || '')); return mt ? Date.UTC(2001, mt[1] - 1, mt[2]) : NaN; };
 const near = (a, b, days = 1) => Math.abs(day(a) - day(b)) <= days * 86400000;
+// a twin only stands for this one if the model didn't say it happens here, or both come from the same message
+const fresh = (x, twin, at) => (x.separate || x.occurrence === 'new') && twin.sourceIndex !== at;
 const plain = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 const samePlace = (a, b) => !!plain(a) && plain(a) === plain(b);
 const fail = why => { throw new Error(why); };
@@ -84,11 +88,12 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [] } = {})
             if (!L) fail('증권 계좌를 찾지 못했어요');
             const key = `broker:${cur}`;
             if (keep(key, amount, rec => { const line = L.entries[rec]; if (!line) return; out.effects.push({ type: 'amendEntry', key: a.key, id: rec, from: line.amount, to: round(amount) }); out.notes.push(`증권 ${cur}: 추정 ${line.amount} → 실제 ${round(amount)}로 고쳤어요`); out.changes.push({ app: '투자', label: `증권 ${cur}`, amount: round(amount - line.amount), currency: cur }); line.amount = round(amount); })) return;
-            const twin = !x.separate && Object.entries(L.entries).find(([, v]) => Math.abs(v.amount - amount) < 0.01 && near(String(v.date).slice(5), date, 0));
+            const twin = Object.entries(L.entries).find(([, v]) => Math.abs(v.amount - amount) < 0.01 && near(String(v.date).slice(5), date, 0) && !fresh(x, v, e.at));
+            if (!twin && x.occurrence === 'again') { out.legs.push({ key, amount: round(amount), state: 'again' }); return; }
             if (twin) { out.legs.push({ key, amount: round(amount), state: 'included', rec: twin[0] }); out.notes.push(`증권 ${cur} ${round(amount)}: 이미 있는 거래라 넣지 않았어요`); return; }
             const id = `sync:${e.id}:m${k}`;
-            L.entries[id] = { amount: round(amount), date: full };
-            out.effects.push({ type: 'entry', key: a.key, id, amount: round(amount), date: full });
+            L.entries[id] = { amount: round(amount), date: full, sourceIndex: e.at };
+            out.effects.push({ type: 'entry', key: a.key, id, amount: round(amount), date: full, sourceIndex: e.at });
             out.changes.push({ app: '투자', label: `증권 ${cur}`, amount: round(amount), currency: cur });
             out.legs.push({ key, amount: round(amount), state: 'applied', rec: id, from });
             return;
@@ -100,8 +105,10 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [] } = {})
         const tx = p.money.tx ||= [];
         if (keep(key, amount, rec => { const t = tx.find(r => r.id === rec); if (t) amend(t, amount, lk, label, acct); })) return;
         const pointed = x.already && tx.find(t => t.id === x.already);
-        const twin = !pointed && !x.separate && tx.find(t => t.account === acct.last4 && near(t.time, date, 0) && Math.sign(t.amount) === Math.sign(amount)
-            && (Math.abs(t.amount - amount) < 0.01 && (!plain(t.who) || !plain(x.who) || samePlace(t.who, x.who)) || (guess || t.amountFrom === 'guess') && samePlace(t.who, x.who)));
+        const match = t => t.account === acct.last4 && near(t.time, date, 0) && Math.sign(t.amount) === Math.sign(amount)
+            && (Math.abs(t.amount - amount) < 0.01 && (!plain(t.who) || !plain(x.who) || samePlace(t.who, x.who)) || (guess || t.amountFrom === 'guess') && samePlace(t.who, x.who));
+        const twin = !pointed && tx.find(t => match(t) && !fresh(x, t, e.at));
+        if (!pointed && !twin && x.occurrence === 'again') { out.legs.push({ key, amount: round(amount), state: 'again' }); out.notes.push(`${txt(x.who, 40) || acct.name} ${round(amount)}: 전에 있었던 결제라 넣지 않았어요`); return; }
         if (twin && twin.amountFrom === 'guess' && !guess && Math.abs(twin.amount - amount) > 0.01) { amend(twin, amount, lk, label, acct); out.legs.push({ key, amount: round(amount), state: 'included', rec: twin.id }); return; }
         if (pointed || twin) {
             out.legs.push({ key, amount: round(amount), state: 'included', rec: (pointed || twin).id });
@@ -110,14 +117,14 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [] } = {})
         }
         const id = `sync:${e.id}:m${k}`;
         const row = { id, account: acct.last4, who: txt(x.who, 60), ko: txt(x.ko, 60), amount: round(amount), time: `${date}${e.time ? ` ${e.time}` : ''}`,
-            kind: acct.kind === 'credit' ? 'card' : ['card', 'transfer', 'deposit'].includes(x.kind) ? x.kind : amount > 0 ? 'deposit' : 'card', memo: txt(x.memo), pending: false, ev: e.id, storyEvent: e.id, ...(guess ? { amountFrom: 'guess' } : {}) };
+            kind: acct.kind === 'credit' ? 'card' : ['card', 'transfer', 'deposit'].includes(x.kind) ? x.kind : amount > 0 ? 'deposit' : 'card', memo: txt(x.memo), pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at, ...(guess ? { amountFrom: 'guess' } : {}) };
         tx.push(row);
         out.effects.push({ type: 'push', path: 'money.tx', item: row });
         if (acct.kind !== 'credit') {
             const lk = `${acct.id}:${acct.currency}`, L = f.accounts[lk];
             if (!L) fail('계좌 장부를 찾지 못했어요');
-            L.entries[id] = { amount: round(amount), date: full };
-            out.effects.push({ type: 'entry', key: lk, id, amount: round(amount), date: full });
+            L.entries[id] = { amount: round(amount), date: full, sourceIndex: e.at };
+            out.effects.push({ type: 'entry', key: lk, id, amount: round(amount), date: full, sourceIndex: e.at });
         }
         out.changes.push({ app: acct.kind === 'credit' ? '카드' : '은행', label, amount: round(amount), currency: acct.currency });
         out.legs.push({ key, amount: round(amount), state: 'applied', rec: id, from });
@@ -130,8 +137,9 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [] } = {})
         const key = `trade:${kind}:${symbol}`, size = kind === 'dividend' ? Number(t.amount) : Number(t.quantity);
         if (keep(key, size)) return;
         const pointed = t.already && inv.trades.find(x => x.id === t.already);
-        const twin = !pointed && !t.separate && inv.trades.find(x => x.symbol === symbol && x.kind === kind && near(String(x.date).slice(5), date, 0)
-            && (kind === 'dividend' ? Math.abs(x.amount - size) < 0.01 : x.quantity === size && Math.abs(x.price - Number(t.price)) <= Math.abs(x.price) * 0.01));
+        const twin = !pointed && inv.trades.find(x => x.symbol === symbol && x.kind === kind && near(String(x.date).slice(5), date, 0)
+            && (kind === 'dividend' ? Math.abs(x.amount - size) < 0.01 : x.quantity === size && Math.abs(x.price - Number(t.price)) <= Math.abs(x.price) * 0.01) && !fresh(t, x, e.at));
+        if (!pointed && !twin && t.occurrence === 'again') { out.legs.push({ key, amount: size, state: 'again' }); return; }
         if (pointed || twin) {
             out.legs.push({ key, amount: size, state: 'included', rec: (pointed || twin).id });
             if (twin) out.notes.push(`${symbol} ${kind === 'sell' ? '매도' : kind === 'buy' ? '매수' : '배당'}: 이미 있는 거래라 넣지 않았어요`);
@@ -163,7 +171,8 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [] } = {})
     const records = (path, rows, make, same) => rows.forEach((x, k) => {
         if (!bankOn) return;
         const box = p.money[path] ||= [];
-        const old = x.already && box.find(o => o.id === x.already) || same(box, x);
+        const old = x.already && box.find(o => o.id === x.already) || box.find(o => same(o, x) && !fresh(x, o, e.at));
+        if (!old && x.occurrence === 'again') return;
         if (old) {
             if (x.status && ORDER.includes(x.status) && x.status !== old.status && later(old.status, x.status)) {
                 const was = old.status;
@@ -174,7 +183,7 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [] } = {})
             }
             return;
         }
-        const row = { ...make(x), id: `sync:${e.id}:${path[0]}${k}`, ev: e.id, storyEvent: e.id };
+        const row = { ...make(x), id: `sync:${e.id}:${path[0]}${k}`, ev: e.id, storyEvent: e.id, sourceIndex: e.at };
         box.push(row);
         out.effects.push({ type: 'push', path: `money.${path}`, item: row });
         out.changes.push({ app: path === 'orders' ? '쇼핑' : '지갑', label: row.item || row.by, amount: null });
@@ -183,11 +192,11 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [] } = {})
         const price = Number(x.price);
         if (!txt(x.item) || !txt(x.shop)) fail('주문의 가게나 물건을 확인하지 못했어요');
         return { shop: txt(x.shop, 60), item: txt(x.item), ko: txt(x.ko), option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: txt(x.eta, 5), arrived: '', gift: txt(x.gift, 40), ...(guess ? { amountFrom: 'guess' } : {}) };
-    }, (box, x) => box.find(o => samePlace(o.shop, x.shop) && samePlace(o.item, x.item) && near(o.time, date)));
+    }, (o, x) => samePlace(o.shop, x.shop) && samePlace(o.item, x.item) && near(o.time, date));
     records('passes', list(mo.passes), x => {
         if (!txt(x.by)) fail('티켓 정보를 확인하지 못했어요');
         return { kind: ['flight', 'train', 'hotel', 'event', 'other'].includes(x.kind) ? x.kind : 'other', by: txt(x.by, 60), from: txt(x.from, 40), to: txt(x.to, 40), date: /^\d{2}-\d{2}$/.test(x.date || '') ? x.date : date, time: txt(x.time, 5), seat: txt(x.seat, 12), gate: txt(x.gate, 12), no: txt(x.no, 24), status: txt(x.status, 30) };
-    }, (box, x) => box.find(o => samePlace(o.by, x.by) && o.kind === x.kind && (o.no && o.no === txt(x.no, 24) || o.date === (x.date || date))));
+    }, (o, x) => samePlace(o.by, x.by) && o.kind === x.kind && (o.no && o.no === txt(x.no, 24) || o.date === (x.date || date)));
     return out;
 }
 
@@ -195,7 +204,7 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [] } = {})
 export function replayEffects(m, p, effects) {
     const f = finance(m);
     for (const x of effects) {
-        if (x.type === 'entry') { const L = f.accounts[x.key]; if (L && !L.entries[x.id]) L.entries[x.id] = { amount: x.amount, date: x.date }; continue; }
+        if (x.type === 'entry') { const L = f.accounts[x.key]; if (L && !L.entries[x.id]) L.entries[x.id] = { amount: x.amount, date: x.date, ...(x.sourceIndex !== undefined ? { sourceIndex: x.sourceIndex } : {}) }; continue; }
         if (x.type === 'amendEntry') { const line = f.accounts[x.key]?.entries[x.id]; if (line && line.amount === x.from) line.amount = x.to; continue; }
         const [app, field] = x.path.split('.'), owner = app === 'money' ? p.money : p.investment;
         if (!owner) continue;

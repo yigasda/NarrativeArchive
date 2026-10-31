@@ -67,6 +67,19 @@ export function pickRound(s, rows) {
 }
 export const unreadCount = (s, rows) => { const base = s.marks.base?.index ?? -1; return rows.filter(r => r.index > base && !isDone(s, r.index)).length; };
 
+// after a round: a message whose event failed is read once more; when anything failed, so are the messages that got
+// nothing (a failed event can carry what they said); a second miss is skipped. Then the round counts as read.
+// failed: { [index]: why }, got: indices with an event that went in
+export function settleRound(s, round, failed, got) {
+    const any = Object.keys(failed).length > 0;
+    for (const i of round) {
+        if (failed[i]) s.failed[i] = { tries: (s.failed[i]?.tries || 0) + 1, why: failed[i] };
+        else if (any && !got.has(i)) s.failed[i] = { tries: (s.failed[i]?.tries || 0) + 1, why: '실패한 일과 같이 한 번 더 읽어요', quiet: true };
+        else delete s.failed[i];
+    }
+    addDone(s, round);
+}
+
 // archive sections ({ key, first, last, text }) for this round:
 // evidence — starts after the mark, and every message it covers is read or being read now, and not used before
 // background — everything it covers is before the mark or already read; never sent: sections with unread messages outside this round
@@ -85,18 +98,10 @@ export function archiveRound(s, sections, rows, round) {
 // does this round reach the newest message? (only then may the archive's current state go along)
 export const reachesEnd = (s, rows, round) => { const last = rows[rows.length - 1]?.index ?? -1; return round.some(r => r.index === last) || isDone(s, last); };
 
-// a quote counts when it is in the source, ignoring spacing, case and punctuation; a longer one may differ a little
-// (a dropped particle, a changed ending) as long as most of its letter pairs are there
+// a quote counts when it is in the source word for word, ignoring only spacing, case and punctuation:
+// reworded text can turn "lent" into "borrowed", so it never counts
 const norm = t => String(t || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
-const pairs = t => { const out = []; for (let i = 0; i < t.length - 1; i++) out.push(t.slice(i, i + 2)); return out; };
-export const quoted = (quote, text) => {
-    const q = norm(quote), t = norm(text);
-    if (q.length < 2) return false;
-    if (t.includes(q)) return true;
-    if (q.length < 6) return false;
-    const have = new Set(pairs(t)), want = pairs(q);
-    return want.filter(x => have.has(x)).length / want.length >= 0.7;
-};
+export const quoted = (quote, text) => { const q = norm(quote); return q.length >= 2 && norm(text).includes(q); };
 
 // 복구 기록: what each round added, kept in this browser per chat until the saved chat is seen to have it
 const jkey = scope => `narrativearchive:sync:${scope}`;

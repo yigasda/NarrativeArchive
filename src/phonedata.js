@@ -18,7 +18,7 @@ import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
 import { applyMoney, investNow, moneyNow, replayEffects, revertEffects } from './phonesyncmoney.js';
-import { newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
+import { newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
 export const WALLS = ['dusk', 'ocean', 'forest', 'rose', 'night', 'sand', 'mono', 'aurora'];
 export const ACCENTS = ['blue', 'green', 'orange', 'pink', 'purple', 'red'];
@@ -138,14 +138,14 @@ WHAT IS NEW
 
 WHERE IT COMES FROM
 - "at": the number of the message the event happens in. For an archive section, the message in its range it belongs to.
-- "quote": a few exact words from that message or section.
+- "quote": a few words copied exactly as written in that message or section, not reworded.
 - "date": the story's day it happens, "MM-DD"; "time" if known.
 
 MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - A payment, transfer, refund, order, ticket or trade that happens in these messages goes in the event's "money".
 - An amount the story gives stays as it is. A real one with no amount gets a plausible amount for the owner, the place and MONEY NOW: "amountFrom": "guess". Never invent the payment itself.
-- Already in MONEY NOW or INVESTMENTS NOW (the same payment, order or trade): its id as "already"; it is not paid again.
-- A payment to the same place on the same day as a record there is that record, unless the story clearly shows a second one: then "separate": true.
+- Every move, trade and order says "occurrence": "new" when it happens in this message, "again" when the message only talks about one made before.
+- Already in MONEY NOW or INVESTMENTS NOW: its id as "already"; it is not paid again.
 - A card purchase goes on the card account; a refund is plus; paying the card off is a transfer from the bank.
 - No money is made up to cover a payment; a balance may go below zero.
 - An order or ticket only moves forward; a cancellation is not a refund until the money comes back.
@@ -158,9 +158,9 @@ ANSWER — one JSON object, nothing else:
                "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line",
                "phone": { only the app items this event puts on the phone },
                "money": { "amountFrom": "story" | "guess",
-                          "moves": [{ "account": a bank account's last 4 digits or "broker:EUR", "amount": minus for money out, "currency", "who", "ko", "memo", "kind": "card" | "transfer" | "deposit", "already": "", "separate": false }],
-                          "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko", "currency", "quantity", "price", "fee", "amount": dividend only, "already": "" }],
-                          "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returned" | "refunded", "eta": "MM-DD", "gift", "already": "" }],
+                          "moves": [{ "account": a bank account's last 4 digits or "broker:EUR", "amount": minus for money out, "currency", "who", "ko", "memo", "kind": "card" | "transfer" | "deposit", "occurrence": "new" | "again", "already": "" }],
+                          "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko", "currency", "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
+                          "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returned" | "refunded", "eta": "MM-DD", "gift", "occurrence": "new" | "again", "already": "" }],
                           "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }] } }] }
 "money" only when money moves or an order or ticket changes. Numbers are plain JSON numbers.
 Items in "phone":
@@ -510,13 +510,7 @@ async function updatePhone(m, owner) {
         // read: this round's messages; a failed one gets one more try next round, then it is skipped
         // a failed event can carry what later messages said (a reply, an order): the messages that got nothing this round
         // are read once more with it, so that content isn't lost
-        const anyFail = Object.keys(failed).length > 0, got = new Set(added.map(x => x.at));
-        for (const i of inRound) {
-            if (failed[i]) s.failed[i] = { tries: (s.failed[i]?.tries || 0) + 1, why: failed[i] };
-            else if (anyFail && !got.has(i)) s.failed[i] = { tries: (s.failed[i]?.tries || 0) + 1, why: '실패한 일과 같이 한 번 더 읽어요', quiet: true };
-            else delete s.failed[i];
-        }
-        addDone(s, [...inRound]);
+        settleRound(s, [...inRound], failed, new Set(added.map(x => x.at)));
         for (const x of evidence) s.arch[x.key] = 1;
         const nowAt = when(raw.now);
         if (nowAt && nowAt > (p.now || '')) p.now = nowAt;

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newSync, makeMark, findMark, settleMarks, pickRound, addDone, isDone, unreadCount, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from '../src/phonesync.js';
+import { newSync, makeMark, findMark, settleMarks, pickRound, addDone, settleRound, isDone, unreadCount, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from '../src/phonesync.js';
 
 // a chat of n messages, user and character in turn
 const chat = n => Array.from({ length: n }, (_, i) => ({ is_user: i % 2 === 0, is_system: false, name: i % 2 ? 'Ren' : 'Mara', mes: `message ${i}` }));
@@ -109,9 +109,29 @@ test('journal keeps rounds per chat and survives broken storage', () => {
     assert.doesNotThrow(() => journalAdd('a', { round: 'r3' }, { getItem() { throw Error('no'); }, setItem() { throw Error('quota'); } }));
 });
 
-test('a quote may drop quote marks or a particle, but not point at another message', () => {
+test('a quote may drop quote marks and spacing, but rewording never counts', () => {
     assert.ok(quoted('제주도 11월 항공권 최저가를', '"제주도 11월 항공권 최저가"를 검색했다'));
     assert.ok(quoted('ich bringe Blumen mit', 'Ja, ich bringe Blumen mit!'));
-    assert.ok(!quoted('빌린 3만 원', '오늘 점심은 뭐 먹지'));
+    assert.ok(!quoted('내가 빌렸다', '내가 빌려줬다'));
+    assert.ok(!quoted('빌린 3만 원', '도현한테 빌려줬던 3만 원 받았어'));
+    assert.ok(!quoted('I borrowed 30', 'I lent him 30'));
     assert.ok(!quoted('Rosen kaufen', 'Ja. Ich bringe Blumen mit.'));
+});
+
+test('a failed round reads the failed and the empty messages once more; what went in is not read again; no endless retries', () => {
+    const c = chat(20), s = sync(c, 0); s.limit = 4;
+    let r = pickRound(s, rows(c));
+    assert.deepEqual(r.rows.map(x => x.index), [1, 2, 3, 4]);
+    settleRound(s, r.rows.map(x => x.index), { 2: '근거 없음' }, new Set([1]));
+    r = pickRound(s, rows(c));
+    assert.deepEqual(r.retry, [2, 3, 4]);
+    assert.ok(!r.rows.some(x => x.index === 1));
+    settleRound(s, r.rows.map(x => x.index), { 2: '근거 없음' }, new Set([5, 6]));
+    assert.equal(s.failed[2].tries, 2);
+    assert.equal(s.failed[3].tries, 2);
+    r = pickRound(s, rows(c));
+    assert.deepEqual(r.retry, [7, 8]);
+    settleRound(s, r.rows.map(x => x.index), {}, new Set());
+    assert.equal(pickRound(s, rows(c)).retry.length, 0);
+    assert.deepEqual(Object.keys(s.failed).sort(), ['2', '3', '4']);
 });
