@@ -5817,3 +5817,4 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .ax_step button:disabled { opacity: 0.4; }
 .ax_foot.ax_foot_top { margin: 0 28px 12px; }
 .ax .ax_v.ax_plus { color: #2f8f5b; }
+.ax .na_sync_drop { --axbg: #fde8e6; --axsh: none; flex: none; margin-left: auto; padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #d4483f; }

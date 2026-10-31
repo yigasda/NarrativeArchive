@@ -330,3 +330,14 @@ test('a gift order with no name is kept as a gift', () => {
     applyMoney(m, p, ev('present', 9, '10-27', { orders: [{ shop: 'Kakao', item: 'Kuchen', qty: 1, price: 20, status: 'ordered', gift: true, paid: false, occurrence: 'new' }] }), opts());
     assert.equal(p.money.orders[0].gift, '선물');
 });
+
+test('되돌리기 leaves what changed since and says so; what is already gone is fine', () => {
+    const { m, p, bank } = setup();
+    const r = applyMoney(m, p, ev('two', 9, '10-27', { moves: [{ account: '1111', amount: -10, who: 'A' }, { account: '1111', amount: -20, who: 'B' }], orders: [{ shop: 'S', item: 'Lamp', qty: 1, price: 5, status: 'ordered' }] }), opts());
+    p.money.tx = p.money.tx.filter(t => t.who !== 'A');                       // the user deleted one by hand
+    m.finance.accounts['chk:EUR'].entries[r.legs[1].rec].amount = -25;        // and another changed since
+    const left = revertEffects(m, p, r.effects);
+    assert.equal(left.length, 1);
+    assert.equal(p.money.orders.length, 0);
+    assert.equal(bank(), 975);
+});

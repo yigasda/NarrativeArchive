@@ -16,7 +16,7 @@ import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
 import { APPS, AXB, AXB_C, busyHtml, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
-import { ensureIds, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, markAfter, phoneLore, REMAKE, restoreRounds, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
+import { dropStretch, ensureIds, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, markAfter, phoneLore, REMAKE, restoreRounds, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
@@ -692,12 +692,22 @@ export async function openPhone(who = null) {
         toastr.success(mark.index < 0 ? '첫 대화부터 반영해요' : `#${mark.index} 다음부터 반영해요`, '캐릭터 휴대폰');
     });
     $root.on('click', '.na_sync_restore', async e => { e.stopPropagation(); const n = await restoreRounds(m, phoneChatScope(ctx())); syncPending = 0; drawPhone(); if (m.phones && Object.values(m.phones).some(p => p.inject)) applyInjection(); toastr.success(`반영 ${n}번을 복구했어요`, '캐릭터 휴대폰'); });
+    $root.on('click', '.na_sync_drop', async function (e) {
+        e.stopPropagation();
+        if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+        const p = phone(), d = p.sync?.dropped?.[Number(this.dataset.k)];
+        if (!d || !await confirm(`대화 ${d.label}에서 넣은 일 빼기`, '그 일로 들어간 문자 · 일정 · 돈 기록을 폰에서 빼요. 뒤의 기록과 이어진 건 남겨요.')) return;
+        const r = await dropStretch(m, p, Number(this.dataset.k));
+        drawPhone();
+        if (r.kept.length) toastr.warning(`${r.gone}개를 뺐어요. ${r.kept.join(', ')}은(는) 뒤의 기록과 이어져 있어서 남겨뒀어요`, '캐릭터 휴대폰');
+        else toastr.success(`${r.gone}개를 뺐어요`, '캐릭터 휴대폰');
+    });
     $root.on('click', '.na_sync_undo', async e => {
         e.stopPropagation();
         if (making) return;
         const p = phone(), n = p.syncLast?.checked || 0;
         if (!await confirm('이 반영 되돌리기', `방금 넣은 문자 · 일정 · 돈 움직임을 빼고, 대화 ${n}개는 다시 안 읽은 상태가 돼요.`)) return;
-        try { await undoRound(m, p); drawPhone(); toastr.success('반영을 되돌렸어요', '캐릭터 휴대폰'); }
+        try { const kept = await undoRound(m, p); drawPhone(); kept.length ? toastr.warning(`되돌렸어요. ${kept.join(', ')}은(는) 그 사이 바뀌어서 남겨뒀어요`, '캐릭터 휴대폰') : toastr.success('반영을 되돌렸어요', '캐릭터 휴대폰'); }
         catch (err) { toastr.error(String(err?.message || err), '되돌리기'); }
     });
     $root.on('click', '.na_sync_forget', async e => {

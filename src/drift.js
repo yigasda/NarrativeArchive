@@ -58,6 +58,12 @@ Example:
 - #612 Ivo [CHARACTER]: 렌에게 명령조로 말함 — 근거: "no longer gives Ren orders" [[STATE AT #600 (…)]]
 If there is no problem, write exactly: 없음`;
 
+// every message with its number, as the phone reads it; hidden ones (hidden in SillyTavern, or offstage) are marked
+export function chatRows() {
+    const chat = ctx().chat || [], off = offstageSet(chat);
+    return chat.map((x, i) => (x && !(x.is_system && !x.is_user && !x.name) ? { index: i, user: !!x.is_user, hidden: !!x.is_system || off.has(i),
+        text: `[#${i}${x.is_user ? ' · USER' : ''}] ${x.name || (x.is_user ? 'User' : 'Char')}: ${cleanMessage(String(x.mes || ''), { stripTags: true })}` } : null)).filter(Boolean);
+}
 export function recentForCheck(n, {excludeSystem=false} = {}) {
     const chat = ctx().chat || [];
     const off = offstageSet(chat);

@@ -166,7 +166,7 @@ test('a read message edited or swiped is unread again; the others stay read', ()
     readAll(s, c, 11);
     c[5].mes = 'edited'; c[11].mes = 'another swipe';
     const r = realign(s, rows(c));
-    assert.deepEqual(r.changed, [{ old: 5, at: 5 }, { old: 11, at: 11 }]);
+    assert.deepEqual(r.changed.map(({ old, at }) => ({ old, at })), [{ old: 5, at: 5 }, { old: 11, at: 11 }]);
     assert.equal(r.gone.length, 2);
     assert.deepEqual(pickRound(s, rows(c)).rows.map(x => x.index), [5, 11]);
 });
@@ -205,7 +205,7 @@ test('a delete: read messages, failures and an edited one get their new numbers'
     const r = realign(s, rows(c));
     assert.equal(r.moved[13], 12);
     assert.equal(r.moved[3], 3);
-    assert.deepEqual(r.changed, [{ old: 9, at: 8 }]);
+    assert.deepEqual(r.changed.map(({ old, at }) => ({ old, at })), [{ old: 9, at: 8 }]);
     assert.ok(s.failed[9]);
 });
 
@@ -217,4 +217,55 @@ test('one job at a time, and the lock opens again after an error', async () => {
     await assert.rejects(exclusive('fill', async () => { throw Error('boom'); }), /boom/);
     assert.equal(busy.fill, 0);
     assert.equal(await exclusive('sync', async () => 7), 7);
+});
+
+// what the chat looks like now: every message with its number, hidden ones marked
+const all = c => c.map((x, i) => ({ index: i, hidden: !!x.hidden, text: `[#${i}] ${x.name}: ${x.mes}` }));
+const fresh = () => { const c = chat(30), s = sync(c, 9); readAll(s, c, 29); return { c, s }; };
+
+test('cases: swipe, one edit, two edits in a row', () => {
+    let { c, s } = fresh(); c[29].mes = 'swiped';
+    assert.deepEqual(realign(s, all(c)).changed.map(x => x.at), [29]);
+    ({ c, s } = fresh()); c[15].mes = 'edited';
+    let r = realign(s, all(c)); assert.deepEqual(r.changed.map(x => x.at), [15]); assert.equal(r.dropped.length, 0);
+    ({ c, s } = fresh()); c[15].mes = 'e1'; c[16].mes = 'e2';
+    r = realign(s, all(c)); assert.deepEqual(r.changed.map(x => x.at), [15, 16]); assert.equal(r.dropped.length, 0);
+});
+
+test('cases: one deleted, a stretch deleted in the middle, the last stretch deleted and written again', () => {
+    let { c, s } = fresh(); c.splice(15, 1);
+    let r = realign(s, all(c)); assert.deepEqual(r.dropped.map(x => x.old), [15]); assert.equal(r.changed.length, 0); assert.equal(r.moved[29], 28);
+    ({ c, s } = fresh()); c.splice(20, 5);
+    r = realign(s, all(c)); assert.deepEqual(r.dropped.map(x => x.old), [20, 21, 22, 23, 24]); assert.equal(r.moved[29], 24);
+    ({ c, s } = fresh()); c.splice(20, 10); for (let i = 20; i < 30; i++) c.push({ is_user: i % 2 === 0, name: i % 2 ? 'Ren' : 'Mara', mes: `new ${i}` });
+    r = realign(s, all(c)); assert.equal(r.dropped.length, 10); assert.equal(r.changed.length, 0);
+    assert.deepEqual(pickRound(s, rows(c)).rows.map(x => x.index).slice(0, 3), [20, 21, 22]);
+    ({ c, s } = fresh()); c.splice(27, 3); c.push({ is_user: false, name: 'Ren', mes: 'new 27' }, { is_user: true, name: 'Mara', mes: 'new 28' });
+    r = realign(s, all(c)); assert.deepEqual(r.dropped.map(x => x.old), [27, 28, 29]); assert.equal(r.changed.length, 0);
+});
+
+test('cases: hide and show again; changed while hidden; deleted while hidden', () => {
+    let { c, s } = fresh(); c[15].hidden = true;
+    let r = realign(s, all(c)); assert.equal(r.dropped.length, 0); assert.equal(r.changed.length, 0);
+    c[15].hidden = false; r = realign(s, all(c)); assert.equal(r.changed.length, 0);
+    assert.equal(pickRound(s, rows(c)).rows.length, 0);
+    ({ c, s } = fresh()); c[15].hidden = true; realign(s, all(c)); c[15].mes = 'changed while hidden';
+    r = realign(s, all(c)); assert.equal(r.dropped.length, 0);
+    c[15].hidden = false; r = realign(s, all(c)); assert.deepEqual(r.changed.map(x => x.at), [15]);
+    ({ c, s } = fresh()); c[15].hidden = true; realign(s, all(c)); c.splice(15, 1);
+    r = realign(s, all(c)); assert.deepEqual(r.dropped.map(x => x.old), [15]);
+});
+
+test('cases: a message moved up is not taken as deleted and new', () => {
+    const { c, s } = fresh(); const [x] = c.splice(20, 1); c.splice(14, 0, x);
+    const r = realign(s, all(c)); assert.equal(r.dropped.length, 0); assert.equal(r.changed.length, 0);
+    assert.equal(pickRound(s, rows(c)).rows.length, 0);
+});
+
+test('cases: one of two same messages deleted, or a branch cut after the start: unsure / dropped, never guessed', () => {
+    let { c, s } = (() => { const c = chat(30); c[12].mes = 'ㅇㅇ'; c[18].mes = 'ㅇㅇ'; c[12].name = c[18].name = 'Mara'; const s = sync(c, 9); readAll(s, c, 29); return { c, s }; })();
+    c.splice(18, 1);
+    let r = realign(s, all(c)); assert.equal(r.dropped.length, 1); assert.equal(r.dropped[0].unsure, true);
+    ({ c, s } = fresh()); const branch = c.slice(0, 22);
+    r = realign(s, all(branch)); assert.deepEqual(r.dropped.map(x => x.old), [22, 23, 24, 25, 26, 27, 28, 29]);
 });

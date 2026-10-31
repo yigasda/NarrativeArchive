@@ -254,18 +254,20 @@ export function replayEffects(m, p, effects) {
         if (x.type === 'amend') { const r = box.find(o => o.id === x.id); if (r && r.amount === x.from) { r.amount = x.to; delete r.amountFrom; } }
     }
 }
-// 되돌리기: undo one round's money, newest change first; a record changed since is left as it is
+// 되돌리기 · 빼기: undo money changes, newest first. A record gone already is fine; one changed since is left as it is and
+// returned, so the caller can say what stayed
 export function revertEffects(m, p, effects) {
-    const f = finance(m);
+    const f = finance(m), left = [];
     for (const x of [...effects].reverse()) {
-        if (x.type === 'entry') { const L = f.accounts[x.key]; if (L?.entries[x.id]?.amount === x.amount) delete L.entries[x.id]; continue; }
-        if (x.type === 'amendEntry') { const line = f.accounts[x.key]?.entries[x.id]; if (line && line.amount === x.to) line.amount = x.from; continue; }
+        if (x.type === 'entry') { const L = f.accounts[x.key]; if (!L?.entries[x.id]) continue; if (L.entries[x.id].amount === x.amount) delete L.entries[x.id]; else left.push(x); continue; }
+        if (x.type === 'amendEntry') { const line = f.accounts[x.key]?.entries[x.id]; if (!line) continue; if (line.amount === x.to) line.amount = x.from; else left.push(x); continue; }
         const [app, field] = x.path.split('.'), owner = app === 'money' ? p.money : p.investment;
         if (!owner?.[field]) continue;
         const box = owner[field], idKey = x.idKey || 'id', i = box.findIndex(r => r[idKey] === (x.item?.[idKey] ?? x.id));
         if (i < 0) continue;
         if (x.type === 'push') box.splice(i, 1);
-        if (x.type === 'status' && box[i].status === x.status) box[i].status = x.prev;
-        if (x.type === 'amend' && box[i].amount === x.to) { box[i].amount = x.from; box[i].amountFrom = 'guess'; }
+        if (x.type === 'status') { if (box[i].status === x.status) box[i].status = x.prev; else left.push(x); }
+        if (x.type === 'amend') { if (box[i].amount === x.to) { box[i].amount = x.from; box[i].amountFrom = 'guess'; } else left.push(x); }
     }
+    return left;
 }

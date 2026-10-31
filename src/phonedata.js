@@ -4,10 +4,10 @@
 import { ensureWealth, wealthBlock, wealthDate, wealthCheck, addWealthFX } from './wealth.js';
 import { askDraft } from './ai.js';
 import { ownerProfileBlock } from './phoneprofile.js';
-import { migrateBank, finance, finite, cash, reviseBaseline } from './finance.js';
+import { migrateBank, finance, finite, cash, reviseBaseline, positions } from './finance.js';
 import { calendars, headingDate } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
-import { recentForCheck } from './drift.js';
+import { chatRows, recentForCheck } from './drift.js';
 import { applyInjection } from './inject.js';
 import { knowledgeRows } from './knowledge.js';
 import { headingPlaces, nameKey, nameRe } from './people.js';
@@ -427,7 +427,7 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
 
 // ---- 새로 일어난 일 반영
 // every message the phone may read, numbered (system messages and offstage ones left out)
-export const syncRows = () => recentForCheck((ctx().chat || []).length, { excludeSystem: true }).map(text => ({ index: Number(/^\[#(\d+)/.exec(text)?.[1]), text })).filter(r => Number.isInteger(r.index));
+export const syncRows = () => chatRows().filter(r => !r.hidden).map(({ index, text }) => ({ index, text }));
 export const markNow = () => { const rows = syncRows(); return makeMark(ctx().chat || [], rows.length ? rows[rows.length - 1].index : -1); };
 export const markAfter = index => makeMark(ctx().chat || [], index);
 // 'ok', 'none' (no start yet: an older phone) or 'lost' (its message is gone or now matches twice)
@@ -439,7 +439,7 @@ export function syncState(p) {
     return 'ok';
 }
 // counted on a copy: what changed since the last round is left for the round itself to see
-export const syncLeft = p => { if (!p?.sync?.marks?.base) return null; const rows = syncRows(), s = structuredClone(p.sync); realign(s, rows); return unreadCount(s, rows); };
+export const syncLeft = p => { if (!p?.sync?.marks?.base) return null; const s = structuredClone(p.sync); realign(s, chatRows()); return unreadCount(s, syncRows()); };
 const ITEM_KEYS = [...LISTS, 'threads', 'contacts'];
 const sizes = p => Object.fromEntries(ITEM_KEYS.map(k => [k, k === 'threads' ? p.threads.reduce((n, t) => n + t.messages.length, 0) : k === 'posts' ? (p.posts || []).reduce((n, x) => n + 1 + (x.comments?.length || 0), 0) : (p[k] || []).length]));
 const APP_NAME = { threads: '문자', contacts: '연락처', calls: '통화', photos: '사진', notes: '메모', searches: '검색', events: '캘린더', posts: 'SNS', mails: '메일', diary: '일기', voice: '음성 메모' };
@@ -450,13 +450,15 @@ async function updatePhone(m, owner) {
         const s = p.sync, swiped = [];
         // a read message edited or swiped since: if the last round read it, that round is undone and read again;
         // an older round's items stay, and the changed message is simply read again
-        let moved = realign(s, syncRows());
+        let moved = realign(s, chatRows());
+        settleDropped(p, moved, swiped);
         renumber(m, p, moved);
-        if (moved.gone.some(f => p.syncUndo?.readFp?.includes(f)) && canUndo(p)) {
-            await undoRound(m, p);
-            moved = realign(s, syncRows());
+        // an edit or swipe of a message the last round read: that round is undone (what can be) and read again
+        if (moved.changed.some(x => p.syncUndo?.readFp?.includes(x.fp)) && canUndo(p)) {
+            const kept = await undoRound(m, p);
+            moved = realign(s, chatRows());
             renumber(m, p, moved);
-            swiped.push('읽은 대화가 바뀌어서 지난 반영을 되돌리고 다시 읽었어요');
+            swiped.push('읽은 대화가 바뀌어서 지난 반영을 되돌리고 다시 읽었어요', ...kept.map(x => `${x}: 그 뒤 기록과 이어져 있거나 직접 바꾼 거라 남겨뒀어요`));
         }
         // an older message changed: read again, tied to the events it already gave (no new payment from it)
         const reread = new Map(moved.changed.map(x => [x.at, Object.entries(s.events).filter(([, e]) => e.at === x.at).map(([id, e]) => ({ id, summary: e.summary }))]));
@@ -525,12 +527,13 @@ async function updatePhone(m, owner) {
             for (const c of paid.changes) { apps.add(c.app); if (c.amount !== null) changes.push({ ...c, what: line(e.summary, 60) }); }
             notes.push(...paid.notes);
             for (const k of LISTS) for (const x of add[k]) x.ev ||= id;
+            for (const t of add.threads) for (const x of t.messages) x.ev ||= id;
             const was = sizes(p);
             mergePhone(p, { ...add, device: null, now: '' }, { keepAll: true });
             const got = sizes(p);
             for (const k of ITEM_KEYS) if (got[k] !== was[k]) apps.add(APP_NAME[k]);
             if (add.profile?.handle || add.profile?.bio) apps.add('SNS');
-            s.events[id] = { at, quote: line(e.quote, 200), summary: line(e.summary, 160), ...(paid.legs.length || s.events[id]?.legs ? { legs: [...(s.events[id]?.legs || []), ...paid.legs.filter(l => !(s.events[id]?.legs || []).some(o => o.key === l.key))] } : {}) };
+            s.events[id] = { at, quote: line(e.quote, 200), summary: line(e.summary, 160), effects: [...(s.events[id]?.effects || []), ...paid.effects], ...(paid.legs.length || s.events[id]?.legs ? { legs: [...(s.events[id]?.legs || []), ...paid.legs.filter(l => !(s.events[id]?.legs || []).some(o => o.key === l.key))] } : {}) };
             added.push({ id, at, add, effects: paid.effects });
         }
         // read: this round's messages; a failed one gets one more try next round, then it is skipped
@@ -550,7 +553,7 @@ async function updatePhone(m, owner) {
         p.syncUndo = { ...undo, round: id, read: [...inRound], readFp: round.rows.map(r => bodyMark(r.text)), comments: undo.comments,
             items: ITEM_KEYS.flatMap(k => (p[k] || []).filter(x => x.id && !had.has(x.id)).map(x => [k, x.id])),
             msgs: p.threads.filter(t => msgs.has(t.id) && t.messages.length > msgs.get(t.id)).map(t => [t.id, t.messages.slice(msgs.get(t.id)).map(x => JSON.stringify([x.from, x.text, x.time]))]),
-            effects: added.flatMap(x => x.effects || []) };
+            effects: added.flatMap(x => x.effects || []), byEvent: added.map(x => [x.id, x.effects || []]) };
         // kept in this browser until the saved chat shows it: 복구 can add it back if the save didn't land
         journalAdd(scope, { round: id, owner, at: Date.now(), events: added, done: [...inRound], seen: round.rows.map(r => [r.index, bodyMark(r.text)]), failed: Object.fromEntries([...inRound].filter(i => s.failed[i]).map(i => [i, s.failed[i]])), arch: evidence.map(x => x.key) });
         await saveMeta();
@@ -596,14 +599,61 @@ export async function restoreRounds(m, scope) {
     return rounds.length;
 }
 
+// read messages gone (deleted, or a stretch written again): what they put on the phone stays and is offered to take off
+// (설정 › 대화 반영 › 빼기); unsure ones (the same words are still elsewhere) are only told
+function settleDropped(p, { dropped }, notes) {
+    const s = p.sync;
+    if (!dropped.length) return;
+    s.dropped ||= [];
+    const runs = [];
+    for (const d of dropped) { const last = runs[runs.length - 1]; if (last && d.old === last.to + 1 && !!d.unsure === last.unsure) last.to = d.old; else runs.push({ from: d.old, to: d.old, unsure: !!d.unsure }); }
+    for (const r of runs) {
+        const ids = Object.entries(s.events).filter(([, e]) => e.at >= r.from && e.at <= r.to).map(([id]) => id), label = r.from === r.to ? `#${r.from}` : `#${r.from}–${r.to}`;
+        for (const id of ids) s.events[id].at = null;
+        if (!ids.length) continue;
+        if (r.unsure) { notes.push(`대화 ${label}가 바뀌었어요. 같은 말이 여럿이라 어느 것인지 몰라서, 거기서 넣은 내용은 그대로 뒀어요`); continue; }
+        s.dropped.push({ label, events: ids, at: Date.now() });
+        notes.push(`대화 ${label}가 지워졌거나 바뀌었어요. 거기서 넣은 내용은 설정 › 대화 반영에서 뺄 수 있어요`);
+    }
+}
+// 빼기: one gone stretch's events, with the app and money records they made; an event something later builds on
+// (an order delivered later, a record corrected later, shares sold later) stays, and is named
+export async function dropStretch(m, p, k) {
+    const s = p.sync, d = s.dropped?.[k];
+    if (!d) return { gone: 0, kept: [] };
+    const kept = [];
+    let gone = 0;
+    for (const id of d.events) {
+        const e = s.events[id];
+        if (!e) continue;
+        const made = new Set((e.effects || []).filter(x => x.type === 'push' || x.type === 'entry').map(x => x.item?.id ?? x.id));
+        // built on later: another event changed, corrected or counted one of its records as its own
+        let tied = Object.entries(s.events).some(([o, x]) => o !== id && ((x.effects || []).some(y => ['status', 'amend', 'amendEntry'].includes(y.type) && made.has(y.id)) || (x.legs || []).some(l => l.state === 'included' && made.has(l.rec))));
+        const trades = new Set((e.effects || []).filter(x => x.path === 'investment.trades').map(x => x.item.id));
+        if (!tied && trades.size) { try { positions((p.investment?.trades || []).filter(t => !trades.has(t.id))); } catch { tied = true; } }
+        if (tied) { kept.push(e.summary || id); continue; }
+        revertEffects(m, p, e.effects || []);
+        for (const key of LISTS) if (Array.isArray(p[key])) p[key] = p[key].filter(x => x.ev !== id);
+        for (const t of p.threads) t.messages = t.messages.filter(x => x.ev !== id);
+        delete s.events[id];
+        gone++;
+    }
+    s.dropped.splice(k, 1);
+    if (p.money) migrateBank(m, p);
+    await saveMeta();
+    if (p.inject) applyInjection();
+    return { gone, kept };
+}
 export const canUndo = p => { const u = p?.syncUndo, s = p?.sync; return !!u && s?.rounds?.[s.rounds.length - 1] === u.round && p.money?.at === u.moneyAt && p.investment?.at === u.investAt; };
 // a message deleted before others: the events, failures and records that name a message number follow it
-function renumber(m, p, { moved, changed }) {
+function renumber(m, p, { moved, changed, dropped = [] }) {
     const map = { ...moved };
     for (const x of changed) map[x.old] = x.at;
+    // a gone message's number may be taken by a new one: records from it no longer name it
+    for (const x of dropped) map[x.old] = null;
     if (!Object.entries(map).some(([o, n]) => Number(o) !== n)) return;
     const to = i => (i !== undefined && map[i] !== undefined ? map[i] : i);
-    for (const e of Object.values(p.sync.events)) e.at = to(e.at);
+    for (const e of Object.values(p.sync.events)) if (e.at !== null) e.at = to(e.at);
     for (const f of Object.values(p.sync.failed)) if (f.span) f.span = [to(f.span[0]) ?? f.span[0], to(f.span[1]) ?? f.span[1]];
     for (const r of [...(p.money?.tx || []), ...(p.money?.orders || []), ...(p.money?.passes || []), ...(p.investment?.trades || [])]) if (r.sourceIndex !== undefined) r.sourceIndex = to(r.sourceIndex);
     for (const a of Object.values(m.finance?.accounts || {})) if (a.owner === p.owner) for (const x of Object.values(a.entries)) if (x.sourceIndex !== undefined) x.sourceIndex = to(x.sourceIndex);
@@ -621,8 +671,14 @@ export async function undoRound(m, p) {
         if (t) { const drop = new Set(sigs); t.messages = t.messages.filter(x => !drop.delete(JSON.stringify([x.from, x.text, x.time]))); }
     }
     for (const [pid, n] of u.comments || []) { const x = (p.posts || []).find(y => y.id === pid); if (x?.comments?.length > n) x.comments = x.comments.slice(0, n); }
-    revertEffects(m, p, u.effects);
+    // what can't be put back (changed since, or built on) stays, and so does its event, with only what stayed
+    const now = structuredClone(s.events), kept = [];
+    const left = new Set(revertEffects(m, p, u.effects).map(x => JSON.stringify(x)));
     Object.assign(s, structuredClone(u.sync));
+    for (const [id, effects] of u.byEvent || []) {
+        const rest = effects.filter(x => left.has(JSON.stringify(x)));
+        if (rest.length && now[id]) { s.events[id] = { ...now[id], effects: rest }; kept.push(now[id].summary || id); }
+    }
     s.rounds.pop();
     p.now = u.now;
     delete p.syncLast; delete p.syncUndo;
@@ -631,6 +687,7 @@ export async function undoRound(m, p) {
     journalWrite(scope, journalRead(scope).filter(r => r.round !== u.round));
     await saveMeta();
     if (p.inject) applyInjection();
+    return kept;
 }
 
 // ---- 롤플에 넣기: a short note of what the phones hold, after the archive
