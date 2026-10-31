@@ -99,6 +99,10 @@ YOU GET
 
 ${PHONE_TEST}
 
+EVERYDAY
+- Besides the story, a few plain records of the owner's daily life, from their profile, job and habits as the archive shows them: a shopping list, a recipe search, a newsletter, a photo of the sky, a reminder for the dentist. Each has "everyday": true.
+- No more than a third of any list. No event, person, place or feeling the story doesn't have in them.
+
 DEVICE
 ${DEVICE_RULES}
 
@@ -112,7 +116,7 @@ JSON (one object, nothing before or after it)
 ${PHONE_ITEMS}
 }
 At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches (3 open at most), 6 events, 5 posts with up to 4 comments,
-6 mails, 5 diary entries. Fewer is fine; an empty list is fine.
+6 mails, 5 diary entries. Fewer is fine; an empty list is fine. The diary has no "everyday" entries.
 Oldest first in every list.
 ${PHONE_LAST}`;
 
@@ -217,6 +221,8 @@ export function parsePhone(out) {
     if (a < 0 || b <= a) throw new Error('모델 답에서 폰 내용(JSON)을 찾지 못했어요');
     let raw;
     try { raw = JSON.parse(s.slice(a, b + 1)); } catch { throw new Error('모델 답의 JSON이 깨져 있어요. 다시 해 보세요'); }
+    // an everyday record the model made up from the owner's habits stays apart from the story (재구성)
+    const tag = (x, raw) => (raw?.everyday === true ? { ...withEv(x, raw), src: 'guess' } : withEv(x, raw));
     const msg = x => ({ from: line(x?.from, 40) || 'me', text: str(x?.text, 600), ko: ko(x?.ko), time: when(x?.time) });
     return {
         device: parseDevice(raw.device),
@@ -226,17 +232,17 @@ export function parsePhone(out) {
         now: when(raw.now),
         contacts: arr(raw.contacts).map(x => ({ name: line(x?.name, 40), saved: line(x?.saved, 40) })).filter(x => x.name).slice(0, CAP.contacts),
         threads: arr(raw.threads).map(t => { const d = t?.draft && str(t.draft.text, 600); return { with: line(t?.with, 40), messages: arr(t?.messages).map(msg).filter(x => x.text), ...(d ? { draft: { text: d, ko: ko(t.draft.ko), time: when(t.draft.time), src: 'story' } } : {}) }; }).filter(t => t.with && t.messages.length).slice(0, CAP.threads),
-        calls: arr(raw.calls).map(x => withEv({ with: line(x?.with, 40), type: pick(x?.type, ['in', 'out', 'missed'], 'in'), time: when(x?.time), min: Math.max(0, Math.min(600, Math.round(Number(x?.min) || 0))) }, x)).filter(x => x.with),
-        photos: arr(raw.photos).map(x => withEv({ caption: line(x?.caption, 200), ko: ko(x?.ko), time: when(x?.time), mood: pick(x?.mood, MOODS, 'warm') }, x)).filter(x => x.caption),
-        notes: arr(raw.notes).map(x => withEv({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 1500), ko: str(x?.ko, 1500), time: when(x?.time) }, x)).filter(x => x.title || x.text),
-        searches: arr(raw.searches).map(x => withEv({ q: line(x?.q, 120), ko: ko(x?.ko), time: when(x?.time), ...(x?.tab ? { tab: true } : {}), ...(x?.mark ? { mark: true } : {}) }, x)).filter(x => x.q),
-        events: arr(raw.events).map(x => withEv({ title: line(x?.title, 80), ko: ko(x?.ko), date: when(x?.date).slice(0, 5), time: hhmm(x?.time) }, x)).filter(x => x.title && x.date),
+        calls: arr(raw.calls).map(x => tag({ with: line(x?.with, 40), type: pick(x?.type, ['in', 'out', 'missed'], 'in'), time: when(x?.time), min: Math.max(0, Math.min(600, Math.round(Number(x?.min) || 0))) }, x)).filter(x => x.with),
+        photos: arr(raw.photos).map(x => tag({ caption: line(x?.caption, 200), ko: ko(x?.ko), time: when(x?.time), mood: pick(x?.mood, MOODS, 'warm') }, x)).filter(x => x.caption),
+        notes: arr(raw.notes).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 1500), ko: str(x?.ko, 1500), time: when(x?.time) }, x)).filter(x => x.title || x.text),
+        searches: arr(raw.searches).map(x => tag({ q: line(x?.q, 120), ko: ko(x?.ko), time: when(x?.time), ...(x?.tab ? { tab: true } : {}), ...(x?.mark ? { mark: true } : {}) }, x)).filter(x => x.q),
+        events: arr(raw.events).map(x => tag({ title: line(x?.title, 80), ko: ko(x?.ko), date: when(x?.date).slice(0, 5), time: hhmm(x?.time) }, x)).filter(x => x.title && x.date),
         profile: raw.profile && typeof raw.profile === 'object' ? { handle: line(raw.profile.handle, 40), bio: line(raw.profile.bio, 200), ko: ko(raw.profile.ko), followers: Math.max(0, Math.round(Number(raw.profile.followers) || 0)), following: Math.max(0, Math.round(Number(raw.profile.following) || 0)) } : null,
-        posts: arr(raw.posts).map(x => withEv({ text: str(x?.text, 800), ko: str(x?.ko, 800), photo: line(x?.photo, 200), pko: ko(x?.pko), time: when(x?.time), likes: Math.max(0, Math.min(99999, Math.round(Number(x?.likes) || 0))),
+        posts: arr(raw.posts).map(x => tag({ text: str(x?.text, 800), ko: str(x?.ko, 800), photo: line(x?.photo, 200), pko: ko(x?.pko), time: when(x?.time), likes: Math.max(0, Math.min(99999, Math.round(Number(x?.likes) || 0))),
             comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) }, x)).filter(x => x.text || x.photo),
-        mails: arr(raw.mails).map(x => withEv({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: !!x?.unread }, x)).filter(x => x.from && (x.subject || x.text)),
-        diary: arr(raw.diary).map(x => withEv({ date: when(x?.date).slice(0, 5), title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000) }, x)).filter(x => x.date && x.text),
-        voice: arr(raw.voice).map(x => withEv({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: Math.max(3, Math.min(900, Math.round(Number(x?.sec) || 30))), place: line(x?.place, 60), src: 'story' }, x)).filter(x => x.text),
+        mails: arr(raw.mails).map(x => tag({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: !!x?.unread }, x)).filter(x => x.from && (x.subject || x.text)),
+        diary: arr(raw.diary).map(x => tag({ date: when(x?.date).slice(0, 5), title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000) }, x)).filter(x => x.date && x.text),
+        voice: arr(raw.voice).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: Math.max(3, Math.min(900, Math.round(Number(x?.sec) || 30))), place: line(x?.place, 60), src: 'story' }, x)).filter(x => x.text),
     };
 }
 
@@ -908,7 +914,9 @@ YOU GET
 - EXISTING ACCOUNTS (sometimes): the accounts the bank already has.
 
 STORY OR INVENTED
-- Purchases, bookings, trips, gifts, rent, wages: only what the story shows or plainly implies. Give each the "ev" tag the phone's mail or event for it already has.
+- Trips, bookings, gifts and big purchases: only what the story shows or plainly implies. Give each the "ev" tag the phone's mail or event for it already has.
+- Rent, wages, bills and subscriptions: invent them, fitting the owner's job and life, unless the story gives them.
+- Besides the story's, 2 to 4 everyday online orders fitting the owner (household things, books, clothes), with no "ev".
 - An amount the story gives stays as it is: whose it is, its currency, its date and what it was for. A company's value, a transfer or an old balance is not what the owner has in the bank now.
 - Balances, last four digits, card expiry dates, everyday payments (coffee, groceries, transit), and amounts the story doesn't give: invent them, fitting the owner's life, job and country. The deposits together fall within FINANCIAL SCALE.
 - Company money, family money and an inheritance still to come are not the owner's cash. Don't invent a trust or a restriction to explain a small balance.

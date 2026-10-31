@@ -287,3 +287,10 @@ test('the request names the days ahead with their weekdays, so "on Friday" has a
     const c = await bookCase();
     assert.match(T.input, /\[DAYS\]\n10-26 Mon\n10-27 Tue\n10-28 Wed\n10-29 Thu\n10-30 Fri/);
 });
+
+test('a phone made with everyday records: they stay apart from the story (not sent back, not in the role-play)', () => {
+    const got = data.parsePhone(JSON.stringify({ notes: [{ title: 'Einkaufsliste', text: 'Milch, Brot', everyday: true }, { title: 'Flug', text: 'BER 07:00' }], searches: [{ q: 'Rezept Linsensuppe', everyday: true }] }));
+    assert.equal(got.notes[0].src, 'guess');
+    assert.equal(got.notes[1].src, undefined);
+    assert.equal(got.searches[0].src, 'guess');
+});
