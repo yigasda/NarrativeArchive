@@ -342,7 +342,11 @@ test('a delivery from a shop the app never had: the shop joins the list with its
     assert.equal(p.delivery.shops.filter(x => x.name === '홍콩반점').length, 1);
     // no "newShop" from the model: the dishes ordered make its menu
     applyMoney(m, p, { ...ev('sushi', 12, '10-27'), money: money('Sushi Haru', null) }, opts);
-    assert.deepEqual(p.delivery.shops.find(x => x.name === 'Sushi Haru').menu.map(d => d.name), ['새우 볶음밥', '짜장면']);
+    const haru = p.delivery.shops.find(x => x.name === 'Sushi Haru');
+    assert.deepEqual(haru.menu.map(d => d.name), ['새우 볶음밥', '짜장면']);
+    // what the screen shows (★ rating (reviews), minimum order) is never empty
+    assert.ok(haru.rating >= 4.3 && haru.rating <= 4.9 && haru.reviews > 0 && haru.minOrder > 0 && haru.eta);
+    assert.equal(s.fee, 3);
     // 빼기 of the first event: its order and its shop go
     revertEffects(m, p, r.effects);
     assert.ok(!p.delivery.shops.some(x => x.name === '홍콩반점'));

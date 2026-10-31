@@ -283,7 +283,12 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
             const dish = (d, k) => { const pic = picFromWords(d?.pic, d?.name); return { name: txt(d?.name, 60), ko: txt(d?.ko, 60), desc: txt(d?.desc, 100), price: finite(Number(d?.price)) ? Number(d.price) : 0, top: d?.top === true || (!list(ns.menu).some(y => y?.top === true) && k === 0), ...(pic ? { pic } : {}) }; };
             let menu = list(ns.menu).map(dish).filter(d => d.name).slice(0, 4);
             if (!menu.length) menu = items.slice(0, 4).map((d, k) => ({ name: d.name, ko: d.ko, desc: '', price: d.price, top: k === 0, ...(d.pic ? { pic: d.pic } : {}) }));
-            const shop = { name: row.shop, ko: txt(ns.ko, 60), cuisine: txt(ns.cuisine, 30), rating: null, reviews: null, fee: finite(Number(ns.fee)) ? Math.abs(Number(ns.fee)) : row.fee, minOrder: null, eta: txt(ns.eta, 12), fav: false, menu,
+            // what the model leaves out is made up from the shop's name (the same each time): a rating, reviews, a minimum order
+            let h = 7; for (const c of row.shop) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+            const won = (p.money?.currency || p.money?.bank?.accounts?.[0]?.currency) === 'KRW', num = (v, lo, hi) => { const n = Number(v); return finite(n) && n >= lo && n <= hi ? n : null; };
+            const shop = { name: row.shop, ko: txt(ns.ko, 60), cuisine: txt(ns.cuisine, 30), rating: num(ns.rating, 1, 5) ?? Math.round((4.3 + (h % 7) / 10) * 10) / 10,
+                reviews: Math.round(num(ns.reviews, 0, 999999) ?? 40 + h % 1400), fee: finite(Number(ns.fee)) ? Math.abs(Number(ns.fee)) : row.fee,
+                minOrder: num(ns.minOrder, 0, 1e7) ?? (won ? 10000 + (h % 3) * 2500 : 10 + (h % 3) * 2.5), eta: txt(ns.eta, 12) || `${20 + (h % 3) * 5}–${30 + (h % 3) * 5}`, fav: false, menu,
                 id: `sync:${e.id}:s${k}`, ev: e.id, sourceIndex: e.at };
             shops.push(shop);
             out.effects.push({ type: 'push', path: 'delivery.shops', item: structuredClone(shop) });
