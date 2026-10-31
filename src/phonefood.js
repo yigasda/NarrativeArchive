@@ -157,6 +157,24 @@ export const picOf = v => {
     const ids = (a, set, n) => (Array.isArray(a) ? a : []).map(x => String(x || '').trim()).filter(x => set[x]).slice(0, n);
     return { base, with: ids(v.with, T, 3), size: v.size === 'large' ? 'large' : 'regular', set: ids(v.set, S, 2) };
 };
+// a dish as a reflection's model describes it, in plain words ({ base: "fried rice", with: ["beef", "sesame"] }): the
+// words are matched to the drawn ids here, so the request needn't carry the id lists
+const WORD = { prawn: 'shrimp', prawns: 'shrimp', 'spring onion': 'scallion', 'green onion': 'scallion', leek: 'scallion', 'minced meat': 'mince', 'ground beef': 'mince', 'ground pork': 'mince',
+    pepper: 'chili', chilli: 'chili', jalapeno: 'chili', 'bean sprouts': 'sprouts', 'rice cake': 'rice-cake', tteok: 'rice-cake', 'fish cake': 'fishcake', 'fried egg': 'fried-egg', 'sesame seeds': 'sesame',
+    nori: 'seaweed', laver: 'seaweed', gim: 'seaweed', 'perilla leaf': 'perilla', 'pork belly': 'pork', steak: 'beef', bulgogi: 'beef', 'chicken breast': 'chicken', 'mozzarella cheese': 'mozzarella', shiitake: 'mushroom',
+    breadcrumbs: 'crumbs', 'pickled radish': 'danmuji', 'yellow radish': 'danmuji', coke: 'cola', 'coca-cola': 'cola', lemonade: 'soda', sprite: 'soda', 'french fries': 'fries', chips: 'fries', dumpling: 'dumplings', gyoza: 'dumplings' };
+const idOf = (w, set) => {
+    const t = String(w || '').trim().toLowerCase();
+    if (!t) return '';
+    for (const c of [t, WORD[t], t.replace(/\s+/g, '-'), t.replace(/e?s$/, ''), WORD[t.replace(/e?s$/, '')]]) if (c && set[c]) return c;
+    return '';
+};
+export const picFromWords = (v, name = '') => {
+    if (!v || typeof v !== 'object') return null;
+    const base = B[String(v.base || '').trim()] ? String(v.base).trim() : guessPic(`${v.base || ''} ${name}`).base;
+    const ids = (a, set, n) => [...new Set((Array.isArray(a) ? a : []).map(x => idOf(x, set)).filter(Boolean))].slice(0, n);
+    return { base, with: ids(v.with, T, 3), size: v.size === 'large' ? 'large' : 'regular', set: ids(v.set, S, 2) };
+};
 // words → a base, for dishes without a picture (older phones, the update round): first match wins
 const GUESS = [[/전복|abalone/i, 'juk', ['abalone', 'seaweed']], [/죽|porridge|congee|juk/i, 'juk'], [/양념|yangnyeom|spicy chicken/i, 'yangnyeom-chicken'], [/치킨|chicken wings|fried chicken|hähnchen|brathähnchen/i, 'fried-chicken'], [/너겟|nugget/i, 'nuggets'],
     [/떡볶이|tteok/i, 'tteokbokki'], [/김밥|gimbap|kimbap/i, 'gimbap'], [/라면|ramyeon/i, 'ramyeon'], [/라멘|ramen/i, 'ramen'], [/순대|sundae/i, 'sundae'], [/튀김|tempura/i, 'twigim'], [/비빔밥|bibimbap/i, 'bibimbap'], [/제육|jeyuk/i, 'jeyuk-rice'],

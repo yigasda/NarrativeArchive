@@ -7,7 +7,7 @@
 import { AX, ax, axBar, axCb, axH1, axInd, axKp, axTint, axTop, busyHtml } from './phoneapps.js';
 import { filling } from './phoneai.js';
 import { fmtDate, koOn, pad, storyNow } from './phonedata.js';
-import { orderTotal, shiftDay } from './phonelife.js';
+import { shiftDay } from './phonelife.js';
 import { fmtMoney } from './phonemoney.js';
 import { nameKey } from './people.js';
 import { esc } from './util.js';

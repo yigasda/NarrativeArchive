@@ -315,3 +315,11 @@ test('Vertex run 16: a private file shows nothing of its inside, whatever the mo
     assert.equal(fileOf({ name: 'Gehaltsabrechnung.pdf', private: true, preview: 'Entgeltabrechnung September' }).preview, '');
     assert.equal(fileOf({ name: 'Mietvertrag.pdf', preview: 'Mietvertrag Westend' }).preview, 'Mietvertrag Westend');
 });
+
+test('a delivery a reflection puts in keeps the picture it described in words', () => {
+    const { m, p } = setup();
+    applyMoney(m, p, { id: 'beef-rice', at: 9, date: '10-26', time: '20:00', money: { deliveries: [{ shop: '반점', items: [{ name: '소고기 볶음밥', qty: 1, price: 9000, pic: { base: 'fried rice', with: ['beef', 'sesame'] } }, { name: '짜장면', qty: 1, price: 7000 }], status: 'delivered', occurrence: 'new' }] } }, opts);
+    const o = p.delivery.orders.at(-1);
+    assert.deepEqual(o.items[0].pic, { base: 'fried-rice', with: ['beef', 'sesame'], size: 'regular', set: [] });
+    assert.equal(o.items[1].pic, undefined);
+});

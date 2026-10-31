@@ -25,3 +25,11 @@ test('every base draws in all three frames', () => {
     assert.ok(dishSvg({ base: 'sushi', with: ['salmon'], size: 'large', set: [] }, 'hero', '특대').includes('특대'));
     assert.ok(dishSvg({ base: 'udon', with: [], size: 'regular', set: ['dumplings', 'danmuji'] }).includes('scale(.72)'));
 });
+
+test('a reflection describes a dish in plain words: they become drawn ids (beef fried rice with sesame)', async () => {
+    const { picFromWords } = await import('../src/phonefood.js');
+    assert.deepEqual(picFromWords({ base: 'fried rice', with: ['beef', 'sesame seeds', 'unicorn'] }, '소고기 볶음밥'), { base: 'fried-rice', with: ['beef', 'sesame'], size: 'regular', set: [] });
+    assert.deepEqual(picFromWords({ base: 'pizza', with: ['Prawns', 'chilli'], size: 'large', set: ['Coke', 'French fries'] }), { base: 'pizza', with: ['shrimp', 'chili'], size: 'large', set: ['cola', 'fries'] });
+    assert.equal(picFromWords({ base: 'something odd' }, '전복죽').base, 'juk');
+    assert.equal(picFromWords(null), null);
+});

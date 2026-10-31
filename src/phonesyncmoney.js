@@ -13,6 +13,7 @@
 // 되돌리기 can tell a record the user changed since, without touching anything else.
 import { cash, finance, finite, fx, migrateBank, positions, round } from './finance.js';
 import { boxAt, lifeReplay, lifeRevert } from './phonesynclife.js';
+import { picFromWords } from './phonefood.js';
 
 const STEP = { ordered: 0, shipped: 1, 'on the way': 2, delivered: 3 };
 const ORDER = ['ordered', 'shipped', 'on the way', 'delivered', 'unknown', 'cancelled', 'returning', 'returned', 'refunded'];
@@ -247,7 +248,7 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
     list(mo.deliveries).forEach((x, k) => {
         if (!dlvOn) return;
         const box = p.delivery.orders ||= [];
-        const items = list(x.items).map(d => ({ name: txt(d?.name, 60), ko: txt(d?.ko, 60), option: txt(d?.option, 60), qty: Math.max(1, Math.round(Number(d?.qty) || 1)), price: finite(Number(d?.price)) ? Number(d.price) : 0 })).filter(d => d.name).slice(0, 10);
+        const items = list(x.items).map(d => { const pic = picFromWords(d?.pic, d?.name); return { name: txt(d?.name, 60), ko: txt(d?.ko, 60), option: txt(d?.option, 60), qty: Math.max(1, Math.round(Number(d?.qty) || 1)), price: finite(Number(d?.price)) ? Number(d.price) : 0, ...(pic ? { pic } : {}) }; }).filter(d => d.name).slice(0, 10);
         if (!txt(x.shop) || !items.length) fail('배달 주문의 가게나 메뉴를 확인하지 못했어요');
         const money = v => (finite(Number(v)) ? Math.abs(Number(v)) : 0), total = round(items.reduce((n, d) => n + d.qty * d.price, 0) + money(x.fee) + money(x.tip) - money(x.discount));
         const old = x.already && box.find(o => o.id === x.already) || box.find(o => samePlace(o.shop, x.shop) && near(String(o.time).slice(0, 5), date, 0) && Math.abs(dlvTotal(o) - total) < 0.01 && !fresh(x, o, e.at));
