@@ -82,7 +82,7 @@ const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how th
   "diary": [{ "date": "MM-DD", "title", "kt": Korean title, "text", "ko" }],
   "voice": [{ "title", "kt", "text", "ko", "time", "sec", "place" }] only when the archive or chat shows the owner recorded one`;
 const PHONE_LAST = `Any item may carry "ev": a short tag for one story event, the same on every item that comes from it (the flight's mail, its event and its photo all "ev": "berlin-flight").
-A value the story does not give (a booking number, a seat, a price, an exact time) stays empty; never make one up.`;
+A booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit. Never a booking, a trip or a purchase the story doesn't have.`;
 
 export const AI_SYS_PHONE = `GOAL
 Show what one character's phone holds right now, in a long role-play. The user opens it to peek at the story from the phone's side.
@@ -205,7 +205,7 @@ ${PHONE_ITEMS}${life ? `,
   "health": [{ "date", "bed", "sleep", "wake", "woke", "steps", "km", "floors", "workout": { "kind", "time", "min", "km" } or null, "hr": [low, high], "from": "story" }]` : ''}
 }
 Fewer is fine. No new events: "events": [].
-In "phone" items, a value the story does not give (a booking number, a seat, an exact time) stays empty; never make one up.${money ? ' Money amounts follow MONEY.' : ''}`;
+In "phone" items, a booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit; never a booking the story doesn't have.${money ? ' Money amounts follow MONEY.' : ''}`;
 }
 export const AI_SYS_PHONE_UPDATE = updateSystem();
 
@@ -912,7 +912,7 @@ STORY OR INVENTED
 - An amount the story gives stays as it is: whose it is, its currency, its date and what it was for. A company's value, a transfer or an old balance is not what the owner has in the bank now.
 - Balances, last four digits, card expiry dates, everyday payments (coffee, groceries, transit), and amounts the story doesn't give: invent them, fitting the owner's life, job and country. The deposits together fall within FINANCIAL SCALE.
 - Company money, family money and an inheritance still to come are not the owner's cash. Don't invent a trust or a restriction to explain a small balance.
-- A booking number, seat, gate or delivery date the story doesn't give stays empty.
+- A booking the story has carries the details a real one would (a booking number, a seat, a gate, a delivery date), made up to fit.
 - Orders stand as of the story's now: with no sign it arrived, it is not "delivered".
 - "basis": a line or two on what the story gave and what you invented. Invented amounts are for the app only, never new facts in the role-play.
 

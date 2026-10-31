@@ -10,7 +10,7 @@ import { saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
 import { arr, COUNTRIES, ensureIds, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, unpayOrders } from './phonesyncmoney.js';
-import { alarmOf, fileOf, nightsToDays, parseWeather, weatherFrom } from './phonesynclife.js';
+import { alarmOf, dayGap, fileOf, nightsToDays, parseWeather, weatherFrom } from './phonesynclife.js';
 import { exclusive } from './phonesync.js';
 import { recentTrackers } from './scenes.js';
 import { wealthDate } from './wealth.js';
@@ -30,6 +30,7 @@ STORY OR EVERYDAY
 - Everyday records stay plain: most alarms wake someone up, most files are dull, most days are ordinary. One or two things stand out, not every record.
 - Big things (a trip, a move, a new relationship, a job, a purchase, an illness) only from the story. Never invent one to explain a number.
 - An item tied to a story event takes that event's "ev" from PHONE NOW, and its date and place agree with it.
+- People: only people the story has. Nothing later than the story's now.
 
 CLOCK
 - Alarms the owner set: time, label in their own words, repeat days, on or off, when they made it. An alarm they no longer need may stay switched off: a trip that is over, an old shift.
@@ -52,7 +53,7 @@ FILES
 - How tidy they are shows in names and folders: "final_FINAL(2)", a duplicate download, "New folder (3)", or neat names.
 - A ticket or booking file carries the same "ev" as that record. Every document gets "preview": one line on what its first page shows (for a booking in PHONE NOW the app draws its own).
 - An adult may keep a private file: name, type and size only, with "private": true. Nothing explicit in the name.
-- No booking the story doesn't have (a hotel, a ticket, a reservation). A detail the story doesn't give (a gate, a seat, a booking number) stays out of names and previews.
+- No booking the story doesn't have (a hotel, a ticket, a reservation). A booking it has may show the details a real one would (a gate, a seat, a booking number), made up to fit.
 
 WEATHER
 - With WEATHER NOW, its date, time, place and weather stand; write the rest to agree with them. Without it: what the chat describes, then the archive, then what fits the season and place ("from": "guess"). The place is where the story has the owner now.
@@ -106,6 +107,7 @@ SHOPS
 ORDERS
 - A delivery the story shows or a scene plainly implies gets its "ev". Besides those, 2 to 5 everyday orders from the last weeks, the character's own: late and alone, the same dish again, food for two.
 - Never an order to explain a scene, and no big event (a party, a guest, a move) the story doesn't have.
+- People: only people the story has. No order later than the story's now.
 - The same place always has the same address. "tip" only where tipping is the custom; elsewhere 0.
 - "status" as of the story's now: "on the way" only for an order still coming then. An order only moves forward: "on the way", "delivered", then perhaps "cancelled" or "refunded".
 - "account": the card or account that paid, by its last 4 digits in MONEY NOW, or "cash". Without MONEY NOW, "account": "card" or "cash".
@@ -217,6 +219,8 @@ const yearOf = (m, p) => (wealthDate(m, p) || String(p.money?.asOf || '')).slice
 export const payDeliveries = (m, p) => payOrders(m, p, yearOf(m, p));
 export { unpayOrders as unpayDeliveries };
 
+// a "MM-DD HH:MM" after another (across New Year the short way round)
+const later = (t, now) => { const g = dayGap(String(now).slice(0, 5), String(t).slice(0, 5)); return g > 0 || g === 0 && String(t).slice(6, 11) > String(now).slice(6, 11) && !!String(now).slice(6, 11); };
 // ---- the fills
 export const fillLife = (m, p) => exclusive('fill', async () => {
     const now = weatherNow(), days = storyDays(m, p);
@@ -225,6 +229,8 @@ export const fillLife = (m, p) => exclusive('fill', async () => {
     const out = await askDraft(input, { system: AI_SYS_LIFE, maxTokens: 16000 });
     const life = parseLife(jsonOf(out), now, days.at(-1)?.day || '');
     // a booking the wallet holds is drawn from it: its file needs no line of its own
+    const at = storyNow(p) || p.now || '';
+    if (/^\d{2}-\d{2}/.test(at)) life.files.items = life.files.items.filter(x => !later(x.time, at));
     const booked = new Set((p.money?.passes || []).map(x => x.ev).filter(Boolean));
     for (const x of life.files.items) if (x.ev && booked.has(x.ev)) x.preview = '';
     p.life = { ...life, at: storyNow(p) || p.now || '' };
@@ -241,7 +247,9 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
     const money = accounts.length ? `[MONEY NOW]\n${JSON.stringify({ accounts: accounts.map(a => ({ last4: a.last4, kind: a.kind, name: a.name, currency: a.currency })), tx: tx.slice(-20).map(t => ({ id: t.id, account: t.account, time: t.time, who: t.who, amount: t.amount })) })}` : '';
     const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(storyDays(m, p)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money], { profile: p.financeProfile });
     const out = await askDraft(input, { system: AI_SYS_DELIVERY, maxTokens: 9000 });
-    const d = parseDelivery(jsonOf(out), accounts, tx);
+    const d = parseDelivery(jsonOf(out), accounts, tx), at = storyNow(p) || p.now || '';
+    // nothing after the story's now
+    if (/^\d{2}-\d{2}/.test(at)) d.orders = d.orders.filter(o => !later(o.time, at));
     if (p.delivery) unpayOrders(m, p);
     // orders a reflection put in stay (their payments are the bank's own rows)
     const kept = (p.delivery?.orders || []).filter(o => o.sync);
