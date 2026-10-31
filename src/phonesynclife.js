@@ -25,7 +25,14 @@ const cityOf = c => ({ name: line(c?.name, 40), ko: ko(c?.ko), tz: tz(c?.tz), co
     rainNext: num(c?.rainNext), wind: num(c?.wind), gust: num(c?.gust), dir: line(c?.dir, 12), feels: int(c?.feels, -60, 60), humidity: int(c?.humidity, 0, 100), dew: int(c?.dew, -60, 60), note: line(c?.note, 40), noteKo: ko(c?.noteKo) });
 
 // ---- 날씨: the chat's status line stands; the model's numbers only fill what it doesn't say
-const COND_RE = [['storm', /storm|thunder|뇌우|천둥|번개|gewitter|雷/i], ['sleet', /sleet|진눈깨비|schneeregen|霙|みぞれ/i], ['snow', /snow|눈|schnee|雪/i], ['drizzle', /drizzle|이슬비|가랑비|nieselregen|霧雨/i], ['rain', /rain|shower|비|소나기|regen|雨/i], ['fog', /fog|mist|안개|nebel|霧/i], ['wind', /gale|strong wind|windy|강풍|바람이 (?:세|강)|sturm|stürmisch|強風/i], ['partly', /partly|some clouds|구름 조금|구름 약간|teils|heiter|晴れ時々/i], ['cloudy', /cloud|overcast|흐림|구름|bewölkt|wolk|曇/i], ['clear', /clear|sun|맑|화창|sonnig|klar|晴/i]];
+// Korean "비" (rain) and "눈" (snow) count only as a word of their own ("비", "비 옴", "비가", "눈이 내림"), never inside
+// another word ("비행기", "눈부신")
+const RAIN_KO = '(?<![가-힣])비(?:(?![가-힣])|(?=[가옴와]))', SNOW_KO = '(?<![가-힣])눈(?:(?![가-힣])|(?=[이옴발]))';
+const COND_RE = [['storm', /storm|thunder|뇌우|천둥|번개|gewitter|雷/i], ['sleet', /sleet|진눈깨비|schneeregen|霙|みぞれ/i],
+    ['snow', new RegExp(`snow|폭설|함박눈|눈보라|${SNOW_KO}|schnee|雪`, 'i')], ['drizzle', /drizzle|이슬비|가랑비|nieselregen|霧雨/i],
+    ['rain', new RegExp(`rain|shower|소나기|장대비|폭우|호우|${RAIN_KO}|regen|雨`, 'i')], ['fog', /fog|mist|안개|nebel|霧/i],
+    ['wind', /gale|strong wind|windy|강풍|바람이 (?:세|강)|sturm|stürmisch|強風/i], ['partly', /partly|some clouds|구름 조금|구름 약간|teils|heiter|晴れ時々/i],
+    ['cloudy', /cloud|overcast|흐림|구름|bewölkt|wolk|曇/i], ['clear', /clear|sun|맑|화창|햇살|햇빛|sonnig|klar|晴/i]];
 export const condOf = text => COND_RE.find(([, re]) => re.test(String(text || '')))?.[0] || '';
 const tempOf = text => { const mt = String(text || '').match(/(-?\d{1,2})\s*°/); return mt ? Number(mt[1]) : null; };
 // a status line (scenes.js recentTrackers) as the weather it gives, or null
