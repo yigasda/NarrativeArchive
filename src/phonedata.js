@@ -435,7 +435,7 @@ export function syncState(p) {
     if (!p?.sync?.marks?.base) return 'none';
     // the bank's and the investment's starts move with a deleted message too; one that can't be found again stays put
     if (settleMarks(p.sync, ctx().chat || [], ['base', ...['money', 'invest'].filter(g => p.sync.marks[g])]).includes('base')) return 'lost';
-    p.sync.readChat ||= chatMark();
+    p.sync.readChat ||= firstMark(p.sync);
     p.sync.scope = phoneChatScope(ctx());
     return 'ok';
 }
@@ -444,7 +444,15 @@ export function syncState(p) {
 // renaming a chat or importing a backup keeps the mark, so neither looks like a branch
 const chatMark = () => ctx().chatMetadata?.integrity || null;
 // a phone copied into a branch of the chat it was read in: messages past the branch point are other talk, never edits
-const otherChat = s => { const now = chatMark(); return !!s.readChat && !!now && s.readChat !== now && !!ctx().chatMetadata?.main_chat; };
+const otherChat = s => { const now = chatMark(), read = s.readChat || firstMark(s); return !!read && !!now && read !== now && !!ctx().chatMetadata?.main_chat; };
+// a phone from before marks (3.140 and older) knows only the chat it was last read in, by name (its scope). When that
+// name is this branch's main chat, the phone came here with the branch and still holds the main chat's later talk;
+// otherwise (read here already, a renamed chat, a backup) it is this chat's own
+const chatName = scope => { try { return JSON.parse(String(scope).replace(/^[^[]*/, '')).at(-1); } catch { return null; } };
+function firstMark(s) {
+    const main = ctx().chatMetadata?.main_chat;
+    return s.scope && main && s.scope !== phoneChatScope(ctx()) && chatName(s.scope) === main ? `before:${s.scope}` : chatMark();
+}
 export const syncLeft = p => { if (!p?.sync?.marks?.base) return null; const s = structuredClone(p.sync); realign(s, chatRows(), { other: otherChat(s) }); return unreadCount(s, syncRows()); };
 const ITEM_KEYS = [...LISTS, 'threads', 'contacts'];
 const sizes = p => Object.fromEntries(ITEM_KEYS.map(k => [k, k === 'threads' ? p.threads.reduce((n, t) => n + t.messages.length, 0) : k === 'posts' ? (p.posts || []).reduce((n, x) => n + 1 + (x.comments?.length || 0), 0) : (p[k] || []).length]));

@@ -191,3 +191,32 @@ test('an older phone without a mark yet takes the chat it is in as its own: no g
     await run(c.m, { now: '10-26 15:00', events: [] });
     assert.equal(c.p.sync.dropped?.length || 0, 0);
 });
+
+// 3.140 phones: no mark, only the scope of the chat last read
+const scopeOf = name => `narrativearchive:phone-owner:${JSON.stringify(['character', 'a.png', name])}`;
+test('after the update, a phone that came into a branch from its main chat: the cut-off talk is told on the first round', async () => {
+    const c = await bookCase();
+    delete c.p.sync.readChat; c.p.sync.scope = scopeOf('Main');
+    T.scope = scopeOf('Main - Branch #1'); T.meta = { integrity: 'branch-mark', main_chat: 'Main' };
+    T.chat.splice(3, 3, say('Mara', 'something else entirely happened'), say('Ren', 'see you tomorrow at the cafe'), say('Mara', 'a new last line'));
+    await run(c.m, { now: '10-26 15:00', events: [] });
+    assert.deepEqual(c.p.sync.dropped.map(d => d.label), ['#3']);
+    assert.equal(c.p.sync.readChat, 'branch-mark');
+});
+
+test('after the update, a phone already read in its branch, a renamed chat, or a backup: its own chat, edits stay edits', async () => {
+    const cases = [
+        [scopeOf('Main - Branch #1'), scopeOf('Main - Branch #1'), { integrity: 'branch-mark', main_chat: 'Main' }],
+        [scopeOf('Old name'), scopeOf('New name'), { integrity: 'main-mark' }],
+        [scopeOf('Main - Branch #1'), scopeOf('Main - Branch #1 renamed'), { integrity: 'branch-mark', main_chat: 'Main' }],
+        [scopeOf('Main'), scopeOf('Main imported'), { integrity: 'main-mark' }],
+    ];
+    for (const [was, now, meta] of cases) {
+        const c = await bookCase();
+        delete c.p.sync.readChat; c.p.sync.scope = was;
+        T.scope = now; T.meta = meta;
+        T.chat[3] = say('Mara', 'something else entirely happened');
+        await run(c.m, { now: '10-26 15:00', events: [] });
+        assert.equal(c.p.sync.dropped?.length || 0, 0, now);
+    }
+});
