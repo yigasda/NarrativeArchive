@@ -4,13 +4,13 @@ import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import * as finance from '../src/finance.js';
 const encoded = s => 'data:text/javascript;base64,'+Buffer.from(s).toString('base64');
-const core = encoded(`export const saveMeta=async()=>{globalThis.__investTest.saved++}; export const getMeta=()=>globalThis.__investTest.meta;`);
+const core = encoded(`export const ctx=()=>globalThis.__investTest.context||{}; export const saveMeta=async()=>{globalThis.__investTest.saved++}; export const getMeta=()=>globalThis.__investTest.meta;`);
 const ai = encoded(`export const askDraft=async(input, options)=>{if(options.system.includes('Set a compact personal financial scale')){(globalThis.__investTest.wealthInputs ||= []).push(input);return JSON.stringify({currency:'EUR',deposits:{min:0,max:1e15},investments:{min:0,max:1e15},basis:'fixture'})}globalThis.__investTest.inputs.push({input,...options}); if(globalThis.__investTest.error)throw Error('network'); return JSON.stringify(globalThis.__investTest.answers?.length ? globalThis.__investTest.answers.shift() : globalThis.__investTest.answer)};`);
 const data = encoded(`export const sideRequest=async(m,owner,blocks)=>m.text+'\\n'+blocks.join('\\n'); export const prepareWealth=async()=>({currency:'EUR',deposits:{min:0,max:1e15},investments:{min:0,max:1e15},basis:'fixture'}); export const storyNow=p=>p.now||''; export const fmtDate=(p,v)=>v; export const fmtTime=(p,v)=>v; export const koOn=()=>true; export const listTime=(p,v)=>v;`);
 const apps = encoded(`export const AX={}; export const ax=()=>''; export const axBar=()=>'';export const axCb=()=>'';export const axH1=t=>'<h1>'+t+'</h1>';export const axInd=()=>'';export const axTop=()=>'';export const axDay=(p,n,d)=>d;export const axFind=()=>'';export const axKp=()=>'';export const axLetter=()=>'';export const axTint=()=> '#ffffff';export const busyHtml='';`);
 const util=encoded(`export const esc=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');`);
 const financeURL=pathToFileURL(new URL('../src/finance.js',import.meta.url).pathname).href;
-async function load(file, map) { const src=await readFile(new URL('../src/'+file,import.meta.url),'utf8');return import(encoded(src.replace(/from '([^']+)'/g,(all,k)=>`from '${map[k]||k}'`))); }
+async function load(file, map) { map={'./phoneevidence.js':new URL('../src/phoneevidence.js',import.meta.url).href,'./phoneread.js':new URL('../src/phoneread.js',import.meta.url).href,'./phonestory.js':encoded(`export const phoneChatScope=()=> 'test';`),'./drift.js':encoded(`export const recentForCheck=()=>[];`),...map}; const src=await readFile(new URL('../src/'+file,import.meta.url),'utf8');return import(encoded(src.replace(/from '([^']+)'/g,(all,k)=>`from '${map[k]||k}'`))); }
 const wealthSource=await readFile(new URL('../src/wealth.js',import.meta.url),'utf8');
 const wealthURL=encoded(wealthSource.replace("'./ai.js'",JSON.stringify(ai)).replace("'./core.js'",JSON.stringify(core)).replace("'./finance.js'",JSON.stringify(financeURL)));
 const dataMod=await load('investdata.js',{'./wealth.js':wealthURL,'./ai.js':ai,'./core.js':core,'./phonedata.js':data,'./finance.js':financeURL});
@@ -60,9 +60,9 @@ if (process.env.INVEST_PREVIEW) {
  for(const view of ['ivnotes','ivschedule','ivhistory','invest','stock','ivactivity','ivwatch','ivstakes','ivcash','ivprices']) await writeFile(`${process.env.INVEST_PREVIEW}/${view}.html`,`<!doctype html><html lang="ko"><meta charset="UTF-8"><style>${css}\nbody{margin:0;background:#edf1ee}.cg_canvas{position:relative;transform:none}.na_phone{width:390px;margin:12px auto}.ax_canvas{height:844px}.iv_scroll{overflow:auto}</style><div class="na_phone"><div class="na_ph_scr app ax axb"><div class="cg_canvas ax_canvas">${ui.investmentScreen(m,p,'10-30',view,view==='stock'?'NYSE:X':'',false)}</div></div></div></html>`);
 }
 
-const phonedata=await load('phonedata.js',{'./wealth.js':wealthURL,
+const phonedata=await load('phonedata.js',{'./phoneupdate.js':new URL('../src/phoneupdate.js',import.meta.url).href,'./phonestory.js':encoded(`export const phoneChatScope=()=> 'test';`),'./wealth.js':wealthURL,
  './phoneprofile.js':pathToFileURL(new URL('../src/phoneprofile.js',import.meta.url).pathname).href,
- './ai.js':ai,'./finance.js':financeURL,'./core.js':encoded(`export const ctx=()=>globalThis.__investTest.context||({loadWorldInfo:async()=>null});export const globalSettings=()=>({});export const saveMeta=async()=>{globalThis.__investTest.saved++};`),
+ './ai.js':ai,'./finance.js':financeURL,'./core.js':encoded(`export const getMeta=()=>globalThis.__investTest.meta;export const ctx=()=>globalThis.__investTest.context||({loadWorldInfo:async()=>null});export const globalSettings=()=>({});export const saveMeta=async()=>{globalThis.__investTest.saved++};`),
  './calendar.js':encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
  './drift.js':encoded(`export const recentForCheck=()=>[];`), './inject.js':encoded(`export const applyInjection=()=>{};`),
  './knowledge.js':encoded(`export const knowledgeRows=()=>[];`),
@@ -258,8 +258,8 @@ test('investment creation passes its selected profile into the source request',a
  const {m,p}=setup();p.financeProfile={type:'lore',book:'Family',id:'4'};
  const proxy=encoded(`export const prepareWealth=async()=>({currency:'EUR',deposits:{min:0,max:1e15},investments:{min:0,max:1e15},basis:'fixture'});export const storyNow=p=>p.now;export const sideRequest=async(m,owner,blocks,options)=>{globalThis.__investTest.profileOptions=options;return m.text+'\\n'+blocks.join('\\n')};`);
  const actual=await load('investdata.js',{'./wealth.js':wealthURL,'./ai.js':ai,'./core.js':core,'./phonedata.js':proxy,'./finance.js':financeURL});
- await actual.fillInvestment(m,p,'2026-10-30');assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile,money:true});
- await actual.fillInvestment(m,p,'2026-10-30',{regenerate:true});assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile,money:true});
+ await actual.fillInvestment(m,p,'2026-10-30');assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile,money:true,capturedRows:[]});
+ await actual.fillInvestment(m,p,'2026-10-30',{regenerate:true});assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile,money:true,capturedRows:[]});
  globalThis.__investTest.answer={};
  await assert.rejects(actual.collectInvestmentRecords(m,p,'notes','stock:NYSE:X'),/노트/);
  assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile});
@@ -281,7 +281,7 @@ test('individual writing includes owner profile while camera and public search d
  const mod=await load('phoneai.js',{
  './phoneprofile.js':pathToFileURL(new URL('../src/phoneprofile.js',import.meta.url).pathname).href,
  './ai.js':encoded(`export const askAI=async(input)=>{globalThis.__investTest.inputs.push({input});return JSON.stringify(globalThis.__investTest.answers?.length ? globalThis.__investTest.answers.shift() : globalThis.__investTest.answer)};`),
- './core.js':encoded(`export const ctx=()=>globalThis.__investTest.context;export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
+ './core.js':encoded(`export const getMeta=()=>globalThis.__investTest.meta;export const ctx=()=>globalThis.__investTest.context;export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
  './phonedata.js':bridge,'./anniv.js':encoded(`export const datedRows=()=>[];`),
  './calendar.js':encoded(`export const calendars=()=>({});`),'./drift.js':encoded(`export const recentForCheck=()=>[];`),
  './people.js':encoded(`export const headingPlaces=()=>[];export const nameKey=s=>s;export const peopleList=()=>[];`)
@@ -472,4 +472,24 @@ test('credit usage subtracts refunds but ignores repayments, other months and pe
  finance.migrateBank(m,p);assert.equal(a.spent,70);
  p.money.tx.push({account:'5678',kind:'card',amount:100,time:'10-23'});finance.migrateBank(m,p);assert.equal(a.spent,0);assert.equal(a.refundCredit,30);
  const html=moneyUI.bankAcct(p,'10-30','1');assert.match(html,/이번 달 순환급/);assert.equal(finance.creditAmount(a),30);
+});
+
+test('incremental merge preserves histories beyond every display cap',()=>{
+ const p=phonedata.parsePhone('{}');
+ for(const [key,limit]of Object.entries(phonedata.CAP))if(Array.isArray(p[key]))p[key]=Array.from({length:limit+5},(_,i)=>({id:key+i,title:'old'+i,text:'old'+i,time:'10-01',name:'old'+i,saved:'name'}));
+ p.threads=Array.from({length:17},(_,i)=>({with:'Person'+i,messages:Array.from({length:45},(_,j)=>({from:'me',text:'message'+j,time:'10-01'}))}));
+ const before=structuredClone(p);const add=phonedata.parsePhone(JSON.stringify({notes:[{title:'New',text:'New',time:'10-30'}],voice:[{title:'New voice',text:'New voice',time:'10-30'}]}));
+ phonedata.mergePhone(p,add,{preserveHistory:true});
+ for(const [key,value]of Object.entries(before))if(Array.isArray(value)&&key!=='threads')for(const row of value)assert.ok(p[key].some(x=>JSON.stringify(x)===JSON.stringify(row)),key);
+ for(const thread of before.threads)assert.deepEqual(p.threads.find(x=>x.with===thread.with).messages,thread.messages);
+});
+test('regenerating notes preserves unselected oversized voice and message histories',async()=>{
+ const {m}=setup(),p={owner:'A',...phonedata.parsePhone('{}')};m.phones={a:p};p.voice=Array.from({length:35},(_,i)=>({id:'v'+i,title:'Voice '+i,text:'Saved '+i,time:'10-01',src:'story'}));p.threads=Array.from({length:17},(_,i)=>({with:'Person '+i,messages:Array.from({length:45},(_,j)=>({id:'m'+i+'-'+j,from:'me',text:'Message '+j,time:'10-01'}))}));
+ phonedata.ensureIds(p);const before=JSON.stringify([p.voice,p.threads]);globalThis.__investTest.answer={notes:[{title:'New note',text:'Generated replacement',time:'10-30'}]};
+ await phonedata.makePhone(m,'A',{apps:['note']});assert.equal(JSON.stringify([p.voice,p.threads]),before);assert.equal(p.notes.length,1);
+});
+test('full phone regeneration preserves reconnect history and financial boundaries',async()=>{
+ const {m}=setup(),p={owner:'A',...phonedata.parsePhone('{}'),readHistory:[{savedAt:1,state:{scope:'old',done:{msg:{4:'hash'}}}}],readState:{version:1,scope:'test',groups:{money:{index:4,hash:'money'}},done:{money:{5:'read'}},order:'newest',limit:20}};m.phones={a:p};
+ const before=structuredClone(p);globalThis.__investTest.answer={now:'10-30'};const generated=await phonedata.makePhone(m,'A');
+ assert.deepEqual(generated.readHistory,before.readHistory);assert.deepEqual(generated.readState.groups.money,before.readState.groups.money);assert.deepEqual(generated.readState.done.money,before.readState.done.money);
 });

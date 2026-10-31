@@ -58,13 +58,13 @@ Example:
 - #612 Ivo [CHARACTER]: 렌에게 명령조로 말함 — 근거: "no longer gives Ren orders" [[STATE AT #600 (…)]]
 If there is no problem, write exactly: 없음`;
 
-export function recentForCheck(n) {
+export function recentForCheck(n, {excludeSystem=false} = {}) {
     const chat = ctx().chat || [];
     const off = offstageSet(chat);
     const out = [];
     for (let i = chat.length - 1; i >= 0 && out.length < n; i--) {
         const x = chat[i];
-        if (!x || (x.is_system && !x.is_user && !x.name) || off.has(i)) continue;
+        if (!x || (excludeSystem && x.is_system) || (x.is_system && !x.is_user && !x.name) || off.has(i)) continue;
         out.unshift(`[#${i}${x.is_user ? ' · USER' : ''}] ${x.name || (x.is_user ? 'User' : 'Char')}: ${cleanMessage(String(x.mes || ''), { stripTags: true })}`);
     }
     return out;

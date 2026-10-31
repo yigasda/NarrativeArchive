@@ -555,6 +555,7 @@ export function setScreen(p, now, m, ui) {
         <div class="ax_card">
           <button type="button" class="ax_rw" data-go="setlore">${si('#dcc680', 'book')}<span class="ax_tx"><span class="ax_n">참고 로어북</span></span><span class="ax_v">${(n => (n ? `${n}권` : '없음'))(phoneLore(m).length)}</span>${axChev}</button>
           <button type="button" class="ax_rw na_ph_setinj">${si('#d494a7', 'in')}<span class="ax_tx"><span class="ax_n">롤플에 넣기</span></span><span class="ax_sw ${p.inject ? 'on' : ''}"></span></button>
+          <button type="button" class="ax_rw na_read_open"><span class="ax_tx"><span class="ax_n">대화 반영 설정</span></span>${axChev}</button>
           <button type="button" class="ax_rw na_ph_setupd">${si('#8faed1', 'redo')}<span class="ax_tx"><span class="ax_n">새로 일어난 일 반영</span></span><span class="ax_v">${ui.newN ? `새 섹션 ${ui.newN}` : ''}</span></button>
         </div>
         <div class="ax_foot">롤플에 넣기를 켜면 이 폰의 최근 문자 · 일정이 주입돼요.</div>

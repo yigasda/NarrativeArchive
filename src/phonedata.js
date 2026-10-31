@@ -1,12 +1,16 @@
+import {archiveWindow,decisionEvidence,evidenceUnchanged,inputLimitError} from './phoneevidence.js';
+import {captureSource,validateCapture,sourceRows,setBoundary,selectWindow,markRead,BASE_GROUPS,activeGroups,coveredRows} from './phoneread.js';
 // 캐릭터 휴대폰 · 데이터: what the phone holds — the model's JSON cleaned and merged, the request (archive, lorebook, world),
 // 롤플에 넣기, dates and times as the owner's phone shows them, and the places they have been.
 
+import {updateWindow, updateLocks, bundle, prepareUpdate, financialContext, applyEvents, applyBatch, digest, UPDATE_EVENTS, recoverUpdate, commitUpdate} from './phoneupdate.js';
+import {phoneChatScope} from './phonestory.js';
 import { ensureWealth, wealthBlock, wealthDate, wealthCheck, addWealthFX } from './wealth.js';
 import { askDraft } from './ai.js';
 import { ownerProfileBlock } from './phoneprofile.js';
 import { migrateBank, finance, finite, cash, reviseBaseline } from './finance.js';
 import { calendars, headingDate } from './calendar.js';
-import { ctx, globalSettings, saveMeta } from './core.js';
+import { ctx, getMeta, globalSettings, saveMeta } from './core.js';
 import { recentForCheck } from './drift.js';
 import { applyInjection } from './inject.js';
 import { knowledgeRows } from './knowledge.js';
@@ -110,34 +114,18 @@ At most 6 threads of up to 12 messages, 10 calls, 8 photos, 5 notes, 8 searches 
 Oldest first in every list.
 ${PHONE_LAST}`;
 
-// 새로 일어난 일 반영: only what came onto the phone since PHONE NOW, in the same items; the phone's settings stay as they are
-export const AI_SYS_PHONE_UPDATE = `GOAL
-Add to one character's phone what came onto it since it was last filled, in a long role-play. The user opens it to peek at the story from the phone's side.
-An app adds your JSON to the phone; you only write what is new.
+// Incremental events have their own envelope; only the app item schema is shared with creation.
+export const AI_SYS_PHONE_UPDATE = `${UPDATE_EVENTS}
 
-YOU GET
-- PHONE NOW: the newest of what the phone holds, with its "now" and its "ev" tags.
-- ARCHIVE: the sections since PHONE NOW, with the current state at the end.
-- WORLD (sometimes), LOREBOOK (sometimes) and RECENT CHAT, as when the phone was made.
-- OWNER: whose phone it is.
-- OWNER PROFILE (sometimes): the background the user chose for the owner.
-- OWNER DOESN'T KNOW (sometimes): facts the owner does not know, or only suspects. Nothing on the phone may show them as known.
-
-ONLY WHAT IS NEW
-- Only what came onto the phone after PHONE NOW's "now"; nothing PHONE NOW already holds.
-- A new message goes under the thread it belongs to.
-- Contacts and profile only if new or changed.
-- If nothing new would be on the phone, answer {"now": …} alone.
-
-${PHONE_TEST}
-
-JSON (one object, nothing before or after it)
+PHONE CONTENT
+Within each event, "phone" holds only new or changed app items:
 {
-  "now": "MM-DD HH:MM",
 ${PHONE_ITEMS}
 }
-Fewer is fine; an empty list is fine. Oldest first in every list.
-${PHONE_LAST} Keep the tags PHONE NOW uses for its events; a new event gets a new tag.`;
+- A new message goes under its thread. Contacts and profile only if changed.
+- Write in the language the writer would use, in their own voice. Non-Korean text gets a natural Korean "ko" translation.
+- App times use "MM-DD HH:MM", calendar dates "MM-DD". Use story time, never the phone clock as a cutoff.
+- Keep existing event tags. Empty fields and lists are fine; do not fill apps for their own sake.`;
 
 // ---- what the model sends back, cleaned: known keys only, text cut short, times in one shape
 export const str = (v, n) => String(v ?? '').replace(/[ \t]+/g, ' ').trim().slice(0, n);
@@ -220,9 +208,9 @@ function carryOver(k, was, now) {
 // 재구성 (src "guess") records are the model's imagining, not the story: they never go back to the model or into the role-play
 export const isGuess = x => x?.src === 'guess';
 
-function mergePhone(p, add) {
+export function mergePhone(p, add, {preserveHistory=false} = {}) {
     if (!p.device && add.device) p.device = add.device;
-    const keep = (list, n) => list.slice(-n);
+    const keep = (list, n) => preserveHistory ? list : list.slice(-n);
     for (const t of add.threads) {
         const old = p.threads.find(x => nameKey(x.with) === nameKey(t.with));
         if (old) { old.messages = keep([...old.messages, ...fresh('msg', old.messages, t.messages)], CAP.messages); if (t.draft) old.draft = t.draft; }
@@ -300,15 +288,15 @@ const blindBlock = (m, owner) => {
     const rows = knowledgeRows(m).flatMap(r => (r.unaware.some(me) ? [`- ${r.fact}`] : r.suspects.some(me) ? [`- ${r.fact} (only suspects)`] : []));
     return rows.length ? `[OWNER DOESN'T KNOW]\n${rows.join('\n')}` : '';
 };
-function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '') {
+function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', rawWindow = null) {
     const world = worldText(m);
-    const recent = recentForCheck(6).join('\n\n').slice(-6000);
+    const recent = rawWindow ?? recentForCheck(12,{excludeSystem:true}).join('\n\n');
     const ar = archiveFor(m, p ? p.upto ?? -1 : -1);
     const now = p ? JSON.stringify(phoneForModel(p)) : '';
     return [
         p ? `[PHONE NOW]\n${now}` : '',
         !p && m.phones?.[nameKey(owner)]?.device ? `[DEVICE — locked]\n${JSON.stringify(m.phones[nameKey(owner)].device)}` : '',
-        `[ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}]\n${ar.text || '(nothing new)'}`,
+        `[ARCHIVE${p ? ' — background' : ''}]\n${ar.text || '(nothing new)'}`,
         world ? `[WORLD]\n${world}` : '',
         lore ? `[LOREBOOK]\n${lore}` : '',
         recent ? `[RECENT CHAT]\n${recent}` : '',
@@ -340,21 +328,27 @@ const phoneForModel = p => ({
 // apps: some of REMAKE's names, made again from the whole story while the rest of the phone stays as it is
 export async function makePhone(m, owner, { update = false, apps = null } = {}) {
     const key = nameKey(owner);
+    if(update && m.phones?.[key]) return updatePhone(m,owner);
+    const requestRows=recentForCheck((ctx().chat||[]).length,{excludeSystem:true}),requestMeta=structuredClone(m);
+    const captured=await captureSource(phoneChatScope(ctx()),requestRows);
+    if(m.phones?.[key]?.readState?.scope && m.phones[key].readState.scope!==captured.scope)throw Error('반영 시작 위치를 먼저 연결해 주세요');
     const old = update ? m.phones?.[key] : null;
     const part = apps && m.phones?.[key] ? apps.flatMap(a => REMAKE[a] || []) : null;
     const binding=structuredClone(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key]);
-    const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner), part, await ownerProfileBlock(ctx(),binding,owner)), { system: old ? AI_SYS_PHONE_UPDATE : AI_SYS_PHONE, maxTokens: 16000 });
+    const out = await askDraft(phoneRequest(requestMeta, owner, old, await loreFor(requestMeta, owner), part, await ownerProfileBlock(ctx(),binding,owner),requestRows.slice(-12).join('\n\n')), { system: AI_SYS_PHONE, maxTokens: 16000 });
     if(JSON.stringify(binding)!==JSON.stringify(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key])) throw new Error('생성 중 연결한 인물 정보가 변경됐어요. 다시 시도해 주세요');
+    await validateCapture(captured,phoneChatScope(ctx()),recentForCheck((ctx().chat||[]).length,{excludeSystem:true}));
     const got = parsePhone(out);
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
     if (part) {
         const p = m.phones[key];
         const was = Object.fromEntries(part.map(k => [k, p[k]]));
         for (const k of part) p[k] = k === 'profile' ? (got.profile || p.profile) : [];
-        mergePhone(p, { ...got, ...Object.fromEntries([...LISTS, 'threads', 'contacts'].filter(k => !part.includes(k)).map(k => [k, []])), profile: null, now: '' });
+        mergePhone(p, { ...got, ...Object.fromEntries([...LISTS, 'threads', 'contacts'].filter(k => !part.includes(k)).map(k => [k, []])), profile: null, now: '' },{preserveHistory:true});
         for (const k of part) if (k !== 'profile') carryOver(k, was[k], p[k]);
         ensureIds(p);
         p.at = Date.now();
+        setBoundary(p,captured,apps);
         await saveMeta();
         if (p.inject) applyInjection();
         return p;
@@ -366,6 +360,8 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         if (was?.device) base.device = structuredClone(was.device);
         if (was?.theme) base.theme = was.theme;
         if (was?.wealthPlan) base.wealthPlan = structuredClone(was.wealthPlan);
+        if(was?.readState)base.readState=structuredClone(was.readState);
+        if(was?.readHistory)base.readHistory=structuredClone(was.readHistory);
         if (was?.money) base.money = was.money;
         if (was?.investment) base.investment = was.investment;
         if (binding) base.financeProfile = structuredClone(binding);
@@ -374,11 +370,54 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     const p = m.phones[key];
     if(m.phoneProfiles) delete m.phoneProfiles[key];
     ensureIds(p);
-    p.upto = lastEnd(m);
+    setBoundary(p,captured,BASE_GROUPS);
+    if(p.voice?.length)setBoundary(p,captured,['voice']);
+    p.upto = lastEnd(requestMeta);
     p.at = Date.now();
     await saveMeta();
     if (p.inject) applyInjection();
     return p;
+}
+
+// All app updates share a single request, staged transaction, and recovery journal.
+async function updatePhone(m,owner) {
+    if(updateLocks.has(m)) throw new Error('새 사건을 반영하는 중이에요');
+    updateLocks.add(m);
+    try {
+        const scope=phoneChatScope(ctx());
+        const recoverySource={rows:(await sourceRows(recentForCheck((ctx().chat||[]).length,{excludeSystem:true}))).map(x=>[x.index,x.hash]),archive:await digest(String(m.text||''))};
+        await recoverUpdate(m,scope,localStorage,recoverySource);
+        const rows=recentForCheck((ctx().chat||[]).length,{excludeSystem:true}), key=nameKey(owner);
+        const before=JSON.stringify([bundle(m),m.text,rows,m.phoneLore,m.phoneLoreOff]);
+        const next=prepareUpdate(m),p=next.phones[key];
+        const rowsWithIds=await sourceRows(rows);
+        const window=selectWindow(p,scope,rowsWithIds);
+        const [archiveBody]=splitTail(String(m.text||''));
+        const sectionCounts=new Map();
+        const archive=await Promise.all(parseSections(archiveBody).filter(s=>!s.group&&s.title.match(RANGE_HEAD)).map(async s=>{
+            const occurrence=sectionCounts.get(s.title)||0;sectionCounts.set(s.title,occurrence+1);
+            const range=s.title.match(RANGE_HEAD),first=Number(range[2]),last=Number(range[4]),text=archiveBody.slice(s.start,s.end);
+            return {id:'archive:'+first+'-'+last+':'+(await digest(s.title)).slice(0,16)+':'+occurrence,first,last,text,hash:await digest(text)};
+        }));
+        const selectedArchive=archiveWindow(archive,window.rows,rowsWithIds,{covered:coveredRows(p,rowsWithIds),done:p.readState.archiveDone||{},lastChatIndex:(ctx().chat||[]).length-1,after:Math.min(...activeGroups(p).map(g=>p.readState.groups[g].index))});
+        const boundedMeta={...m,text:selectedArchive.background.map(s=>s.text).join('\n\n')};
+        const indices=[...new Set([...window.rows.map(x=>x.index),...rowsWithIds.filter(x=>selectedArchive.evidence.some(s=>s.eligibleIndices.includes(x.index))).map(x=>x.index)])];
+        const context={scope,rows:rowsWithIds,archive,selectedArchive:selectedArchive.evidence,selectedChatIndices:window.rows.map(x=>x.index)};
+        const pending=Object.entries(finance(next).updatePending||{}).filter(([,j])=>j.owner===owner&&evidenceUnchanged(j,context)).map(([key,j])=>({key,...j}));
+        const lore=await loreFor(m,owner),profile=await ownerProfileBlock(ctx(),p.financeProfile,owner);
+        const source=[window.text,...selectedArchive.evidence.map(s=>s.text)].join('\n\n');
+        const input=phoneRequest(boundedMeta,owner,{...p,upto:-1},lore,null,profile,window.text)+'\n[SELECTED SOURCE INDICES]\n'+JSON.stringify(indices)+'\n[ARCHIVE EVIDENCE IN SELECTED RANGE]\n'+JSON.stringify(selectedArchive.evidence)+'\n[REVIEW STORED DECISIONS]\n'+JSON.stringify(pending)+'\n[FINANCIAL APPS AND ALREADY APPLIED]\n'+JSON.stringify(financialContext(next,owner));
+        const out=(window.rows.length||selectedArchive.evidence.length||pending.length) ? await askDraft(input,{system:AI_SYS_PHONE_UPDATE,maxTokens:16000}).catch(error=>{throw inputLimitError(error)}) : '{"events":[]}';
+        if(getMeta()!==m || phoneChatScope(ctx())!==scope || JSON.stringify([bundle(m),m.text,recentForCheck((ctx().chat||[]).length,{excludeSystem:true}).slice(0,rows.length),m.phoneLore,m.phoneLoreOff])!==before) throw new Error('반영 중 채팅이나 폰 데이터가 바뀌었어요. 다시 시도해 주세요');
+        const raw=jsonOf(out);
+        const result=await applyBatch(next,owner,raw,source,parsePhone,mergePhone,indices,context);
+        const updated=next.phones[key];markRead(updated,window.rows);updated.readState.archiveDone||={};for(const s of selectedArchive.evidence)updated.readState.archiveDone[s.id]=s.hash;updated.at=Date.now();updated.lastUpdate={...result,checked:window.rows.length,archiveChecked:selectedArchive.evidence.length,remaining:window.remaining};
+        for(const phone of Object.values(next.phones))ensureIds(phone);
+        if(getMeta()!==m || phoneChatScope(ctx())!==scope || JSON.stringify([bundle(m),m.text,recentForCheck((ctx().chat||[]).length,{excludeSystem:true}).slice(0,rows.length),m.phoneLore,m.phoneLoreOff])!==before) throw new Error('반영 중 데이터가 바뀌었어요. 다시 시도해 주세요');
+        await commitUpdate(m,next,scope,saveMeta,localStorage,()=>getMeta()===m && phoneChatScope(ctx())===scope && JSON.stringify([bundle(m),m.text,recentForCheck((ctx().chat||[]).length,{excludeSystem:true}).slice(0,rows.length),m.phoneLore,m.phoneLoreOff])===before,{rows:rowsWithIds.map(x=>[x.index,x.hash]),archive:await digest(String(m.text||''))});
+        if(m.phones[key].inject)applyInjection();
+        return m.phones[key];
+    } finally {updateLocks.delete(m);}
 }
 
 // ---- 롤플에 넣기: a short note of what the phones hold, after the archive
@@ -563,10 +602,10 @@ Oldest first.`;
 const jsonOf = out => { const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}'); try { return a >= 0 && b > a ? JSON.parse(t.slice(a, b + 1)) : null; } catch { return null; } };
 const num = v => { if (v === null || v === undefined || String(v).trim() === '') return null; const n = Number(String(v ?? '').replace(/[^\d.,-]/g, '').replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '')); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
 const last4 = v => String(v ?? '').replace(/\D/g, '').slice(-4);
-export async function sideRequest(m, owner, blocks, { profile, money = false } = {}) {
+export async function sideRequest(m, owner, blocks, { profile, money = false, capturedRows } = {}) {
     const world = worldText(m), lore = await loreFor(m, owner);
     const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});
-    const recent = recentForCheck(6).join('\n\n').slice(-6000);
+    const recent = (capturedRows||recentForCheck(12,{excludeSystem:true})).slice(-12).join('\n\n');
     return [
         `[ARCHIVE]\n${archiveFor(m, -1).text || '(empty)'}`,
         world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
@@ -591,15 +630,19 @@ export function parseMoney(raw) {
 const moneyContext = p => JSON.stringify({ now: p.now, mails: (p.mails || []).slice(-8).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })), events: real(p.events).slice(-8).map(x => ev(x, { title: x.title, date: x.date, time: x.time })), searches: real(p.searches).slice(-6).map(x => ev(x, { q: x.q, time: x.time })) });
 export const prepareWealth = (m,p,refresh=false) => ensureWealth(m,p,()=>sideRequest(m,p.owner,[`[OWNER COUNTRY]\n${p.country || ''}`,`[ACCOUNT CURRENCIES]\n${JSON.stringify((p.money?.bank?.accounts || []).map(a=>a.currency))}`],{profile:p.financeProfile,money:true}),{refresh});
 export async function fillMoney(m, p, { regenerateBalances = false, wealthPlan = null } = {}) {
+    const capturedRows=recentForCheck((ctx().chat||[]).length,{excludeSystem:true}),requestMeta=structuredClone(m);
+    const captured=await captureSource(phoneChatScope(ctx()),capturedRows);
+    if(p.readState?.scope && p.readState.scope!==captured.scope)throw Error('반영 시작 위치를 먼저 연결해 주세요');
     migrateBank(m, p);
     const old = p.money, rebuild = !!old && regenerateBalances;
     const plan = wealthPlan || await prepareWealth(m,p,regenerateBalances);
+    if(m.phones?.[nameKey(p.owner)] && m.phones[nameKey(p.owner)]!==p) throw new Error('생성 중 폰이 변경됐어요. 다시 시도해 주세요');
     const date = wealthDate(m,p);
     const accountState = () => JSON.stringify([p.money,p.financeProfile,finance(m)]);
     const before = accountState();
     const preserved = rebuild ? `[REBUILD ACCOUNTS]\n${JSON.stringify(old.bank.accounts.map(({id,kind,name,last4,currency})=>({id,kind,name,last4,currency})))}\n[MONEY ALREADY MOVED]\n${JSON.stringify(old.bank.accounts.map(a=>({id:a.id,currency:a.currency,entries:finance(m).accounts[`${a.id}:${a.currency}`]?.entries || {}})))}` : old ? `[EXISTING ACCOUNTS]\n${JSON.stringify(old.bank.accounts)}` : '';
     const system = AI_SYS_MONEY + (rebuild ? MONEY_REBUILD : '');
-    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p)}`,preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,`[SAVED RATES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`],{profile:p.financeProfile,money:true});
+    const input = await sideRequest(requestMeta,p.owner,[`[PHONE NOW]\n${moneyContext(p)}`,preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,`[SAVED RATES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`],{profile:p.financeProfile,money:true,capturedRows});
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {
         const out = await askDraft(input+'\n'+correction,{system,maxTokens:12000});
@@ -653,18 +696,24 @@ export async function fillMoney(m, p, { regenerateBalances = false, wealthPlan =
             correction=wealthCheck(staged,plan,'deposits',updated.money.bank.accounts.filter(a=>a.kind!=='credit').map(a=>({currency:a.currency,amount:a.balance})),date);
             if(correction) {if(attempt===0) {correction += '\n[PREVIOUS CANDIDATE]\n'+JSON.stringify(raw);continue;}throw new Error('예금 규모를 재력 기준에 맞추지 못했어요. 기존 금융 데이터는 유지돼요');}
         }
+        await validateCapture(captured,phoneChatScope(ctx()),recentForCheck((ctx().chat||[]).length,{excludeSystem:true}));
         p.money = updated.money; m.finance = staged.finance;
+        setBoundary(p,captured,['money']);
         await saveMeta();
         return p.money;
     }
 }
 export async function fillVoice(m, p) {
+    const capturedRows=recentForCheck((ctx().chat||[]).length,{excludeSystem:true}), captured=await captureSource(phoneChatScope(ctx()),capturedRows);
+    if(p.readState&&p.readState.scope!==captured.scope)throw Error('먼저 이 채팅의 반영 시작 위치를 연결해 주세요');
     const diary = (p.diary || []).slice(-6).map(d => `- ${d.date} ${d.title}`).join('\n');
-    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`], {profile:p.financeProfile}), { system: AI_SYS_VOICES, maxTokens: 6000 });
+    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`], {profile:p.financeProfile,capturedRows}), { system: AI_SYS_VOICES, maxTokens: 6000 });
     const memos = arr(jsonOf(out)?.memos).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: Math.max(3, Math.min(900, Math.round(Number(x?.sec) || 30))), place: line(x?.place, 60), src: 'guess' })).filter(x => x.text);
     if (!memos.length) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
+    await validateCapture(captured,phoneChatScope(ctx()),recentForCheck((ctx().chat||[]).length,{excludeSystem:true}));
     p.voice = [...(p.voice || []).filter(x => x.src === 'story' || x.now), ...memos].sort((a, b) => String(a.time).localeCompare(String(b.time))).slice(-CAP.voice);
     p.voiceAt = Date.now();
+    setBoundary(p,captured,['voice']);
     ensureIds(p);
     await saveMeta();
     return p.voice;

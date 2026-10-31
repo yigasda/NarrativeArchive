@@ -12,12 +12,14 @@ export function clearPhoneSelection(scope,storage) {
     try { if(scope) (storage || globalThis.localStorage)?.removeItem(scope); } catch { /* Metadata still works without browser storage. */ }
 }
 export function resetPhoneStory(m,scope) {
+    try {globalThis.localStorage?.removeItem('narrativearchive:update:'+scope);} catch {}
     m.phones={};delete m.phoneProfiles;delete m.finance;delete m.lastPhoneOwner;
     delete m.phoneLore;delete m.phoneLoreOff;
     m.phoneStoryScope=scope;
     clearPhoneSelection(scope);
 }
 export function adoptPhoneStory(m,scope) {
+    try {globalThis.localStorage?.removeItem('narrativearchive:update:'+scope);} catch {}
     // Detach copied metadata from its source even if the host supplied shared objects.
     for(const k of PHONE_STORY_KEYS) if(k!=='phoneStoryScope' && Object.hasOwn(m,k)) m[k]=structuredClone(m[k]);
     m.phoneStoryScope=scope;
