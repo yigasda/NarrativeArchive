@@ -264,9 +264,14 @@ test('cases: a message moved up is not taken as deleted and new', () => {
 });
 
 test('cases: one of two same messages deleted, or a branch cut after the start: unsure / dropped, never guessed', () => {
-    let { c, s } = (() => { const c = chat(30); c[12].mes = 'ㅇㅇ'; c[18].mes = 'ㅇㅇ'; c[12].name = c[18].name = 'Mara'; const s = sync(c, 9); readAll(s, c, 29); return { c, s }; })();
+    const twins = () => { const c = chat(30); c[12].mes = 'ㅇㅇ'; c[18].mes = 'ㅇㅇ'; c[12].name = c[18].name = 'Mara'; const s = sync(c, 9); readAll(s, c, 29); return { c, s }; };
+    let { c, s } = twins();
+    // the other "ㅇㅇ" is still in its own place between the same neighbours: it is #12, so the gone one is #18 for sure
     c.splice(18, 1);
-    let r = realign(s, all(c)); assert.equal(r.dropped.length, 1); assert.equal(r.dropped[0].unsure, true);
+    let r = realign(s, all(c)); assert.deepEqual(r.dropped.map(x => [x.old, x.unsure]), [[18, false]]);
+    // a copy nothing accounts for (a new message with the same words) might be the gone one moved: unsure
+    ({ c, s } = twins()); c.splice(18, 1); c.push({ is_user: true, is_system: false, name: 'Mara', mes: 'ㅇㅇ' });
+    r = realign(s, all(c)); assert.deepEqual(r.dropped.map(x => [x.old, x.unsure]), [[18, true]]);
     ({ c, s } = fresh()); const branch = c.slice(0, 22);
     r = realign(s, all(branch)); assert.deepEqual(r.dropped.map(x => x.old), [22, 23, 24, 25, 26, 27, 28, 29]);
 });
@@ -287,5 +292,5 @@ test('cases: the last stretch written again with the same short line ("뭐 샀�
 test('빼기 only offers events still gone: undone ones and ones a new message took up again are not offered', () => {
     const s = { events: { a: { at: null }, b: { at: 31 }, c: { at: null } }, dropped: [{ label: '#20–29', events: ['a', 'b', 'gone'] }, { label: '#40', events: ['b'] }] };
     pruneDropped(s);
-    assert.deepEqual(s.dropped, [{ label: '#20–29', events: ['a'] }]);
+    assert.deepEqual(s.dropped, [{ label: '#20–29', events: ['a'], left: 0 }]);
 });

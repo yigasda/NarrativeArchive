@@ -106,8 +106,12 @@ export function realign(s, all) {
         const H = N.filter(r => r.hidden), V = N.filter(r => !r.hidden);
         if (!V.length && H.length >= O.length) { O.forEach((x, n) => { hiddenRead[H[n].index] = x.fp; moved[x.old] = H[n].index; }); continue; }
         if (V.length === O.length && (!last || O.length === 1)) { O.forEach((x, n) => changed.push({ old: x.old, at: V[n].index, fp: x.fp })); continue; }
-        dropped.push(...O.map(x => ({ old: x.old, fp: x.fp, unsure: cur.some(r => r.fp === x.fp) })));
+        dropped.push(...O.map(x => ({ old: x.old, fp: x.fp })));
     }
+    // the same words still in the chat don't make a gone message unsure when that copy is another read message,
+    // found in its own place; only a copy nothing accounts for might be this one, moved
+    const claimed = new Set([...Object.values(moved), ...changed.map(x => x.at)]);
+    for (const d of dropped) d.unsure = cur.some(r => r.fp === d.fp && !claimed.has(r.index));
     const failed = {};
     for (const [i, x] of Object.entries(s.failed)) if (moved[i] !== undefined && seen[moved[i]]) failed[moved[i]] = x;
     s.seen = seen; s.hiddenRead = hiddenRead; s.failed = failed; s.done = [];
@@ -153,9 +157,27 @@ export const unreadCount = (s, rows) => { const base = s.marks.base?.index ?? -1
 // `span` keeps which messages were read together, so a retry knows what already went in beside it
 // what 빼기 can offer: events still there and not taken up again by a message in the chat now (a new message may reuse
 // a gone one's event id; then it is that message's)
-export function pruneDropped(s) {
-    s.dropped = (s.dropped || []).map(d => ({ ...d, events: d.events.filter(id => s.events[id] && s.events[id].at === null) })).filter(d => d.events.length);
+// items: every app item on the phone ({ k, x }); one whose every source is gone still counts, even when a new message
+// took its event up again
+export function pruneDropped(s, items = []) {
+    s.dropped = (s.dropped || []).map(d => ({ ...d, events: d.events.filter(id => s.events[id] && s.events[id].at === null), left: items.filter(({ k, x }) => orphanOf(x, d.key) && !edited(k, x)).length }))
+        .filter(d => d.events.length || d.left);
 }
+
+// 출처: where an item on the phone came from — the message's number and its words (r: the round that saw it).
+// The number tells apart two messages with the same words; the words tell apart a new message that got an old number.
+// A gone message's sources keep its words, lose the number (at: null) and name the gone stretch (gone).
+export const srcOf = (at, fp, r) => ({ at, fp, r });
+export function addFrom(x, src) {
+    const fs = (x.froms ||= []);
+    if (!fs.some(f => f.at === src.at && f.fp === src.fp)) fs.push({ ...src });
+}
+// an item that came from a message still in the chat stays; one from a gone stretch only, and only when it had sources
+export const orphanOf = (x, key) => !!key && Array.isArray(x?.froms) && x.froms.length > 0 && x.froms.some(f => f.gone === key) && x.froms.every(f => f.at === null);
+// what an item said when it went in: changed since (by hand on the phone) it is the user's, and 빼기 leaves it
+const ITEM_MARK = { msg: x => [x.from, x.text, x.time], comment: x => [x.from, x.text] };
+export const itemMark = (k, x) => { const { id, ev, froms, made, img, tags, via, seen, results, draft, closed, marks, unmark, unread, ko, kt, ks, pko, comments, ...rest } = x || {}; return fp(JSON.stringify(ITEM_MARK[k] ? ITEM_MARK[k](x) : rest)); };
+export const edited = (k, x) => !!x?.made && x.made !== itemMark(k, x);
 
 // rows: the round's { index, text }
 export function settleRound(s, rows, failed, got) {

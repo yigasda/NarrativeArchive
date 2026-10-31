@@ -699,8 +699,9 @@ export async function openPhone(who = null) {
         if (!d || !await confirm(`대화 ${d.label}에서 넣은 일 빼기`, '그 일로 들어간 문자 · 일정 · 돈 기록을 폰에서 빼요. 뒤의 기록과 이어진 건 남겨요.')) return;
         const r = await dropStretch(m, p, Number(this.dataset.k));
         drawPhone();
-        if (r.kept.length) toastr.warning(`${r.gone}개를 뺐어요. ${r.kept.join(', ')}은(는) 뒤의 기록과 이어져 있어서 남겨뒀어요`, '캐릭터 휴대폰');
-        else toastr.success(`${r.gone}개를 뺐어요`, '캐릭터 휴대폰');
+        const did = [r.gone ? `일 ${r.gone}개` : '', r.items ? `앱 기록 ${r.items}개` : ''].filter(Boolean).join(' · ') || '뺄 것이 없어서 아무것도 안';
+        if (r.kept.length) toastr.warning(`${did}를 뺐어요. ${r.kept.join(', ')}은(는) 뒤의 기록과 이어져 있어서 남겨뒀어요`, '캐릭터 휴대폰');
+        else toastr.success(`${did}를 뺐어요`, '캐릭터 휴대폰');
     });
     $root.on('click', '.na_sync_undo', async e => {
         e.stopPropagation();

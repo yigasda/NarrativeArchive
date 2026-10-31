@@ -18,7 +18,7 @@ import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
 import { applyMoney, investNow, moneyNow, replayEffects, revertEffects } from './phonesyncmoney.js';
-import { pruneDropped, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
+import { pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
 export const WALLS = ['dusk', 'ocean', 'forest', 'rose', 'night', 'sand', 'mono', 'aurora'];
 export const ACCENTS = ['blue', 'green', 'orange', 'pink', 'purple', 'red'];
@@ -442,6 +442,26 @@ export function syncState(p) {
 export const syncLeft = p => { if (!p?.sync?.marks?.base) return null; const s = structuredClone(p.sync); realign(s, chatRows()); return unreadCount(s, syncRows()); };
 const ITEM_KEYS = [...LISTS, 'threads', 'contacts'];
 const sizes = p => Object.fromEntries(ITEM_KEYS.map(k => [k, k === 'threads' ? p.threads.reduce((n, t) => n + t.messages.length, 0) : k === 'posts' ? (p.posts || []).reduce((n, x) => n + 1 + (x.comments?.length || 0), 0) : (p[k] || []).length]));
+// every app item that can carry a source: list items, text messages, comments
+const phoneItems = p => [...LISTS.flatMap(k => (p[k] || []).map(x => ({ k, x }))), ...p.threads.flatMap(t => t.messages.map(x => ({ k: 'msg', x }))),
+    ...(p.posts || []).flatMap(x => (x.comments || []).map(c => ({ k: 'comment', x: c })))];
+// after a merge: the phone's own copy of each item an event gave (new, or one already there) notes where it came from
+const ckey = c => `${String(c.from || '').toLowerCase()}|${c.text}`;
+function tagItems(p, add, src) {
+    const tag = (k, x, a) => {
+        if (!x) return;
+        // an item already there with no sources (made with the phone, or before sources were kept) keeps that start
+        if (x !== a && !x.froms) addFrom(x, srcOf('before', '', ''));
+        x.made ||= itemMark(k, x);
+        for (const f of src ? [src] : a?.froms || []) { addFrom(x, f); if (src && x !== a) addFrom(a, f); }
+    };
+    for (const k of LISTS) for (const a of add[k] || []) tag(k, (p[k] || []).find(x => sigOf(k, x) === sigOf(k, a)), a);
+    for (const t of add.threads || []) { const own = p.threads.find(x => nameKey(x.with) === nameKey(t.with)); for (const a of t.messages) tag('msg', own?.messages.find(x => sigOf('msg', x) === sigOf('msg', a)), a); }
+    for (const a of add.posts || []) {
+        const own = (p.posts || []).find(o => o.text && o.text === a.text || o.photo && o.photo === a.photo && o.time === a.time);
+        for (const c of a.comments || []) tag('comment', own?.comments?.find(x => ckey(x) === ckey(c)), c);
+    }
+}
 const APP_NAME = { threads: '문자', contacts: '연락처', calls: '통화', photos: '사진', notes: '메모', searches: '검색', events: '캘린더', posts: 'SNS', mails: '메일', diary: '일기', voice: '음성 메모' };
 async function updatePhone(m, owner) {
     return exclusive('sync', async () => {
@@ -500,6 +520,7 @@ async function updatePhone(m, owner) {
         const raw = jsonOf(out);
         if (!raw || !Array.isArray(raw.events)) throw new Error('모델 답에서 반영할 내용을 찾지 못했어요. 다시 해 주세요');
         const inRound = new Set(round.rows.map(r => r.index)), textAt = new Map(round.rows.map(r => [r.index, r.text])), start = s.marks.base.index;
+        const rid = Math.random().toString(36).slice(2, 10), rowText = new Map(rows.map(r => [r.index, r.text]));
         const failed = {}, loose = [], added = [], apps = new Set(), changes = [], notes = [...swiped];
         // for 되돌리기: what was there before this round (ids and message counts), and the reading state
         const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map(p.threads.map(t => [t.id, t.messages.length]));
@@ -530,6 +551,8 @@ async function updatePhone(m, owner) {
             for (const t of add.threads) for (const x of t.messages) x.ev ||= id;
             const was = sizes(p);
             mergePhone(p, { ...add, device: null, now: '' }, { keepAll: true });
+            // this message (its number and words) is a source of each item, new or already there
+            tagItems(p, add, srcOf(at, bodyMark(rowText.get(at) || ''), rid));
             const got = sizes(p);
             for (const k of ITEM_KEYS) if (got[k] !== was[k]) apps.add(APP_NAME[k]);
             if (add.profile?.handle || add.profile?.bio) apps.add('SNS');
@@ -545,12 +568,12 @@ async function updatePhone(m, owner) {
         if (nowAt && nowAt > (p.now || '')) p.now = nowAt;
         // after the clock moves: the card's month is counted up to the story's now
         if (p.money) migrateBank(m, p);
-        const id = Math.random().toString(36).slice(2, 10);
+        const id = rid;
         s.rounds = [...(s.rounds || []).slice(-19), id];
         p.syncLast = { checked: inRound.size, remaining: unreadCount(s, rows), apps: [...apps], failed: [...Object.entries(failed).map(([at, why]) => ({ at: Number(at), why, skipped: s.failed[at]?.tries >= 2 })), ...loose.map(why => ({ at: null, why }))], changes, notes, at: Date.now() };
         ensureIds(p);
         p.at = Date.now();
-        pruneDropped(s);
+        pruneDropped(s, phoneItems(p));
         p.syncLast.notes = p.syncLast.notes.filter(n => !n.endsWith('뺄 수 있어요') || s.dropped.some(d => n.startsWith(`대화 ${d.label}가`)));
         p.syncUndo = { ...undo, round: id, read: [...inRound], readFp: round.rows.map(r => bodyMark(r.text)), comments: undo.comments,
             items: ITEM_KEYS.flatMap(k => (p[k] || []).filter(x => x.id && !had.has(x.id)).map(x => [k, x.id])),
@@ -584,6 +607,7 @@ export async function restoreRounds(m, scope) {
             for (const k of LISTS) e.add[k] = arr(e.add[k]);
             e.add.threads = arr(e.add.threads); e.add.contacts = arr(e.add.contacts);
             mergePhone(p, { ...e.add, device: null, now: '' }, { keepAll: true });
+            tagItems(p, e.add);
             replayEffects(m, p, e.effects || []);
             s.events[e.id] ||= { at: e.at, quote: '', summary: e.id };
         }
@@ -609,12 +633,17 @@ function settleDropped(p, { dropped }, notes) {
     s.dropped ||= [];
     const runs = [];
     for (const d of dropped) { const last = runs[runs.length - 1]; if (last && d.old === last.to + 1 && !!d.unsure === last.unsure) last.to = d.old; else runs.push({ from: d.old, to: d.old, unsure: !!d.unsure }); }
+    const items = phoneItems(p);
     for (const r of runs) {
         const ids = Object.entries(s.events).filter(([, e]) => e.at >= r.from && e.at <= r.to).map(([id]) => id), label = r.from === r.to ? `#${r.from}` : `#${r.from}–${r.to}`;
+        const key = Math.random().toString(36).slice(2, 10);
         for (const id of ids) s.events[id].at = null;
-        if (!ids.length) continue;
+        // sources from these messages lose their number: a new message given the same number is not them
+        let hit = false;
+        for (const { x } of items) for (const f of x.froms || []) if (f.at !== null && f.at >= r.from && f.at <= r.to) { f.was = f.at; f.at = null; f.gone = key; hit = true; }
+        if (!ids.length && !hit) continue;
         if (r.unsure) { notes.push(`대화 ${label}가 바뀌었어요. 같은 말이 여럿이라 어느 것인지 몰라서, 거기서 넣은 내용은 그대로 뒀어요`); continue; }
-        s.dropped.push({ label, events: ids, at: Date.now() });
+        s.dropped.push({ key, label, events: ids, at: Date.now() });
         notes.push(`대화 ${label}가 지워졌거나 바뀌었어요. 거기서 넣은 내용은 설정 › 대화 반영에서 뺄 수 있어요`);
     }
 }
@@ -622,10 +651,10 @@ function settleDropped(p, { dropped }, notes) {
 // (an order delivered later, a record corrected later, shares sold later) stays, and is named
 export async function dropStretch(m, p, k) {
     const s = p.sync;
-    pruneDropped(s);
+    pruneDropped(s, phoneItems(p));
     const d = s.dropped[k];
-    if (!d) return { gone: 0, kept: [] };
-    const kept = [];
+    if (!d) return { gone: 0, items: 0, kept: [] };
+    const kept = [], stay = new Set(), out = new Set();
     let gone = 0;
     for (const id of d.events) {
         const e = s.events[id];
@@ -635,18 +664,25 @@ export async function dropStretch(m, p, k) {
         let tied = Object.entries(s.events).some(([o, x]) => o !== id && ((x.effects || []).some(y => ['status', 'amend', 'amendEntry'].includes(y.type) && made.has(y.id)) || (x.legs || []).some(l => l.state === 'included' && made.has(l.rec))));
         const trades = new Set((e.effects || []).filter(x => x.path === 'investment.trades').map(x => x.item.id));
         if (!tied && trades.size) { try { positions((p.investment?.trades || []).filter(t => !trades.has(t.id))); } catch { tied = true; } }
-        if (tied) { kept.push(e.summary || id); continue; }
+        if (tied) { kept.push(e.summary || id); stay.add(id); continue; }
         revertEffects(m, p, e.effects || []);
-        for (const key of LISTS) if (Array.isArray(p[key])) p[key] = p[key].filter(x => x.ev !== id);
-        for (const t of p.threads) t.messages = t.messages.filter(x => x.ev !== id);
+        out.add(id);
         delete s.events[id];
         gone++;
     }
+    // app items: one with sources goes when all of them are gone and it is as it went in (not changed by hand);
+    // one saved before sources goes with its event, as before. An item of an event that stays, stays.
+    const goes = (k, x) => !stay.has(x.ev) && (Array.isArray(x.froms) && x.froms.length ? orphanOf(x, d.key) && !edited(k, x) : out.has(x.ev));
+    let items = 0;
+    const keep = k => x => { if (!goes(k, x)) return true; items++; return false; };
+    for (const key of LISTS) if (Array.isArray(p[key])) p[key] = p[key].filter(keep(key));
+    for (const t of p.threads) t.messages = t.messages.filter(keep('msg'));
+    for (const x of p.posts || []) if (x.comments) x.comments = x.comments.filter(keep('comment'));
     s.dropped.splice(k, 1);
     if (p.money) migrateBank(m, p);
     await saveMeta();
     if (p.inject) applyInjection();
-    return { gone, kept };
+    return { gone, items, kept };
 }
 export const canUndo = p => { const u = p?.syncUndo, s = p?.sync; return !!u && s?.rounds?.[s.rounds.length - 1] === u.round && p.money?.at === u.moneyAt && p.investment?.at === u.investAt; };
 // a message deleted before others: the events, failures and records that name a message number follow it
@@ -658,6 +694,7 @@ function renumber(m, p, { moved, changed, dropped = [] }) {
     if (!Object.entries(map).some(([o, n]) => Number(o) !== n)) return;
     const to = i => (i !== undefined && map[i] !== undefined ? map[i] : i);
     for (const e of Object.values(p.sync.events)) if (e.at !== null) e.at = to(e.at);
+    for (const { x } of phoneItems(p)) for (const f of x.froms || []) if (f.at !== null) f.at = to(f.at);
     for (const f of Object.values(p.sync.failed)) if (f.span) f.span = [to(f.span[0]) ?? f.span[0], to(f.span[1]) ?? f.span[1]];
     for (const r of [...(p.money?.tx || []), ...(p.money?.orders || []), ...(p.money?.passes || []), ...(p.investment?.trades || [])]) if (r.sourceIndex !== undefined) r.sourceIndex = to(r.sourceIndex);
     for (const a of Object.values(m.finance?.accounts || {})) if (a.owner === p.owner) for (const x of Object.values(a.entries)) if (x.sourceIndex !== undefined) x.sourceIndex = to(x.sourceIndex);
@@ -675,6 +712,8 @@ export async function undoRound(m, p) {
         if (t) { const drop = new Set(sigs); t.messages = t.messages.filter(x => !drop.delete(JSON.stringify([x.from, x.text, x.time]))); }
     }
     for (const [pid, n] of u.comments || []) { const x = (p.posts || []).find(y => y.id === pid); if (x?.comments?.length > n) x.comments = x.comments.slice(0, n); }
+    // items that were there before the round forget it as a source
+    for (const { x } of phoneItems(p)) if (x.froms) x.froms = x.froms.filter(f => f.r !== u.round);
     // what can't be put back (changed since, or built on) stays, and so does its event, with only what stayed
     const now = structuredClone(s.events), kept = [];
     const left = new Set(revertEffects(m, p, u.effects).map(x => JSON.stringify(x)));
@@ -684,7 +723,7 @@ export async function undoRound(m, p) {
         if (rest.length && now[id]) { s.events[id] = { ...now[id], effects: rest }; kept.push(now[id].summary || id); }
     }
     s.rounds.pop();
-    pruneDropped(s);
+    pruneDropped(s, phoneItems(p));
     p.now = u.now;
     delete p.syncLast; delete p.syncUndo;
     if (p.money) migrateBank(m, p);
