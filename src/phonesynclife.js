@@ -183,12 +183,14 @@ export function fillDays(p, now, round) {
     return out;
 }
 // w: the model's "weather" (null: keep it); now: the status line's (it stands over the model's)
-export function applyWeather(p, w, now) {
+// archive: the request carried archive sections (else the weather can't have come from there: it came from the chat)
+export function applyWeather(p, w, now, { archive = true } = {}) {
     if (!p.life) return [];
     const was = p.life.weather || null;
     let next;
     if (w && typeof w === 'object') {
         const here = overlay(hereOf(w), now);
+        if (here.from === 'archive' && !archive) here.from = 'chat';
         // the cities keep what the model leaves out (their time zone, their note)
         const cities = (was?.cities || []).map(c => { const n = arr(w.cities).find(x => line(x?.name, 40) === c.name); return n ? { ...c, cond: pick(n.cond, CONDS, c.cond), temp: int(n.temp, -60, 60) ?? c.temp, hi: int(n.hi, -60, 60) ?? c.hi, lo: int(n.lo, -60, 60) ?? c.lo } : c; });
         next = { ...(was || {}), here, cities };

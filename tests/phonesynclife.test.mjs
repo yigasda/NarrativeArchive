@@ -183,3 +183,11 @@ test('a story that jumped three months ahead gets only its last two weeks of day
     assert.equal(days[1], '01-07');
     assert.equal(days.at(-1), '01-20');
 });
+
+test('Vertex run 10: weather said to come from an archive the request never carried came from the chat', () => {
+    const { p } = setup();
+    applyWeather(p, { place: 'Berlin', date: '10-27', cond: 'rain', temp: 9, from: 'archive' }, null, { archive: false });
+    assert.equal(p.life.weather.here.from, 'chat');
+    applyWeather(p, { place: 'Berlin', date: '10-27', cond: 'snow', temp: 1, from: 'archive' }, null, { archive: true });
+    assert.equal(p.life.weather.here.from, 'archive');
+});

@@ -150,10 +150,12 @@ WHAT IS NEW
 WHERE IT COMES FROM
 - "at": the number of the message the event happens in. For an archive section, the message in its range it belongs to.
 - "quote": a few words copied exactly as written in that message or section, not reworded.
-- "date": the story's day it happens, "MM-DD"; "time" if known.
+- "date" and "time": when it happens in that message ("MM-DD", "HH:MM" if known). A plan for later happens when it is made; its later day goes only on the calendar item.
+- "now": the moment of the newest message, never a time something is only planned for.
 ${life ? `
 LIFE
 - An alarm the owner sets, changes or switches on or off in these messages; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
+- An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".
 - A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.
 - Health: a row for every story day these messages move into.
   - A day these messages show goes in that event's "phone"."health", "from": "story". A day already in LIFE NOW that the story now shows is rewritten the same way.
@@ -197,7 +199,7 @@ ${money ? `"money" only when money moves or an order or ticket changes. ` : ''}N
 Items in "phone":
 {
 ${PHONE_ITEMS}${life ? `,
-  "alarms": [{ "change": an id or "", "time", "label", "ko", "days", "date", "on", "wake", "then", "snooze" }],
+  "alarms": [{ "change": an id or "", "time", "label", "ko", "days": the weekdays it repeats or [], "date": "MM-DD" for a one-time alarm, "on", "wake", "then", "snooze" }],
   "files": [{ "change": an id or "", "name", "kind", "folder", "size": KB, "time", "from", "preview", "ko", "opened", "deleted": true when removed }],
   "health": [{ "date", "bed", "sleep", "wake", "woke", "steps", "km", "floors", "workout": { "kind", "time", "min", "km" } or null, "hr": [low, high], "from": "story" }]` : ''}
 }
@@ -617,7 +619,7 @@ async function updatePhone(m, owner) {
         const nowAt = when(raw.now);
         if (nowAt && nowAt > (p.now || '')) p.now = nowAt;
         // the round's own: new days nobody told, the weather, and what the clock moving on does by itself
-        const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = applyWeather(p, askWeather ? raw.weather : null, tracker);
+        const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = applyWeather(p, askWeather ? raw.weather : null, tracker, { archive: evidence.length + before.length > 0 });
         if (days.length) apps.add('건강');
         if (sky.length) apps.add('날씨');
         const roundFx = [...days, ...sky, ...lifeClock(p, p.now), ...dlvClock(p, p.now)];
