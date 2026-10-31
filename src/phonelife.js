@@ -10,7 +10,7 @@ import { saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
 import { arr, COUNTRIES, ensureIds, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, unpayOrders } from './phonesyncmoney.js';
-import { alarmOf, dayOf, fileOf, parseWeather, weatherFrom } from './phonesynclife.js';
+import { alarmOf, fileOf, nightsToDays, parseWeather, weatherFrom } from './phonesynclife.js';
 import { exclusive } from './phonesync.js';
 import { recentTrackers } from './scenes.js';
 import { wealthDate } from './wealth.js';
@@ -38,8 +38,10 @@ CLOCK
 - Timers they saved, with the day last used. "running" only when the story's now shows a timer going.
 
 HEALTH
-- Every day in STORY DAYS. "date" is the day they woke up: a night that ran past midnight belongs to the next day. The night after an evening on 10-25 (asleep 23:40 or 01:30) is the row "10-26"; that row carries the evening's "ev".
-- A day the story shows follows it: "from": "story" and its "ev". A long night out means short sleep, a day on foot means many steps.
+- One row per day in STORY DAYS: that day's steps, distance, floors, workout and heart rate, and in "night" the sleep after its evening (to bed, asleep, awake the next morning).
+- Pasta on the evening of 10-25, asleep at 23:40 or at 01:30, up at 08:50: all of that sleep is the 10-25 row's "night".
+- The last day's "night" only when the story's now is already past it; else null.
+- A day the story shows, or its night, follows it: "from": "story" and its "ev". A long night out means short sleep, a day on foot means many steps.
 - Any other day: write it freely from the character, the archive and their life, "from": "pattern". It still follows that day's events and tickets in PHONE NOW.
 - "usual" is their normal week.
 - Numbers only: no diagnosis, no mood, no reason.
@@ -69,8 +71,8 @@ JSON (one object, nothing before or after it)
              "timers": [{ "label", "ko", "sec", "last": "MM-DD" }],
              "running": { "label", "ko", "sec", "left": seconds } or null },
   "health": { "usual": { "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": per week, "rest": resting heart rate },
-              "days": [{ "date": "MM-DD", "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "woke": times awake, "steps", "km", "floors",
-                         "workout": { "kind", "time": "HH:MM", "min", "km" } or null, "hr": [low, high], "from": "story" | "pattern", "ev" }] },
+              "days": [{ "date": "MM-DD", "steps", "km", "floors", "workout": { "kind", "time": "HH:MM", "min", "km" } or null, "hr": [low, high],
+                         "night": { "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "woke": times awake } or null, "from": "story" | "pattern", "ev" }] },
   "files": { "folders": [{ "name", "ko", "count", "fav": true or false }],
              "items": [{ "name", "kind": "pdf" | "image" | "video" | "audio" | "zip" | "doc" | "sheet" | "slides" | "other",
                          "folder": a folder's name or "Downloads", "size": KB, "time": "MM-DD HH:MM", "from": where it came from, "pages", "length": "M:SS" for audio or video,
@@ -160,7 +162,8 @@ const int = (v, lo, hi) => { const n = num(v); return n === null ? null : Math.m
 const yes = v => v === true;
 const day5 = v => when(v).slice(0, 5);
 export { parseWeather };
-export function parseLife(raw, now) {
+// lastDay: the story's last day (a night after it hasn't ended yet)
+export function parseLife(raw, now, lastDay = '') {
     if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 시계 · 건강 · 파일 · 날씨 내용(JSON)을 찾지 못했어요');
     const c = raw.clock || {}, h = raw.health || {}, f = raw.files || {};
     const run = c.running && int(c.running.sec, 1, 86400) ? { label: line(c.running.label, 40), ko: ko(c.running.ko), sec: int(c.running.sec, 1, 86400), left: int(c.running.left, 0, 86400) ?? 0 } : null;
@@ -172,8 +175,8 @@ export function parseLife(raw, now) {
         },
         health: {
             usual: { bed: hhmm(h.usual?.bed), sleep: hhmm(h.usual?.sleep), wake: hhmm(h.usual?.wake), steps: int(h.usual?.steps, 0, 80000), workouts: int(h.usual?.workouts, 0, 21), rest: int(h.usual?.rest, 30, 140) },
-            days: arr(h.days).map(dayOf).filter(d => d.date)
-                .sort((a, b) => a.date.localeCompare(b.date)).filter((d, k, xs) => !k || xs[k - 1].date !== d.date).slice(-14),
+            // the model writes a day and the night after it; the app keeps a row per waking day
+            days: nightsToDays(h.days, { usual: { bed: hhmm(h.usual?.bed), sleep: hhmm(h.usual?.sleep), wake: hhmm(h.usual?.wake) }, lastDay }),
         },
         files: {
             folders: arr(f.folders).map(x => ({ name: line(x?.name, 40), ko: ko(x?.ko), count: int(x?.count, 0, 9999) ?? 0, fav: yes(x?.fav) })).filter(x => x.name).slice(0, 6),
@@ -218,7 +221,7 @@ export const fillLife = (m, p) => exclusive('fill', async () => {
     const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(days),
         now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile });
     const out = await askDraft(input, { system: AI_SYS_LIFE, maxTokens: 16000 });
-    const life = parseLife(jsonOf(out), now);
+    const life = parseLife(jsonOf(out), now, days.at(-1)?.day || '');
     // a booking the wallet holds is drawn from it: its file needs no line of its own
     const booked = new Set((p.money?.passes || []).map(x => x.ev).filter(Boolean));
     for (const x of life.files.items) if (x.ev && booked.has(x.ev)) x.preview = '';

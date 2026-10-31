@@ -145,6 +145,36 @@ export function applyLife(p, e, phone, on) {
     return out;
 }
 
+// ---- 처음 채우기의 건강: the model writes one row a day with the night after its evening ({ date, steps, …, night });
+// the app keeps one row a waking day (a night belongs to the morning it ends). Pasta on the evening of 10-25, asleep at
+// 01:30, up at 08:50: the model's 10-25 "night" → the app's 10-26 row. The night after the last story day hasn't ended:
+// it is left out. The first day's own night isn't in the answer: their usual. A row in the old shape (no "night") is
+// taken as a waking day, as it was.
+export function nightsToDays(rows, { usual = {}, lastDay = '' } = {}) {
+    const out = new Map();
+    const blank = date => ({ date, bed: '', sleep: '', wake: '', woke: 0, steps: null, km: null, floors: null, workout: null, hr: [], from: 'pattern' });
+    const at = date => (out.has(date) ? out.get(date) : out.set(date, blank(date)).get(date));
+    const list = arr(rows).filter(d => d && typeof d === 'object' && day5(d.date)).sort((a, b) => dayGap(day5(b.date), day5(a.date)));
+    for (const d of list) {
+        const date = day5(d.date), story = d.from === 'story';
+        if (!d.night || typeof d.night !== 'object') {
+            if (d.night === undefined && (d.sleep || d.wake)) { Object.assign(at(date), dayOf(d)); continue; }
+        }
+        const day = dayOf({ ...d, bed: '', sleep: '', wake: '', woke: 0 }), r = at(date);
+        for (const k of ['steps', 'km', 'floors', 'workout', 'hr']) r[k] = day[k];
+        if (story) { r.from = 'story'; if (day.ev) r.ev ||= day.ev; }
+        if (d.night && typeof d.night === 'object') {
+            const n = dayOf(d.night), w = at(plusDay(date, 1));
+            for (const k of ['bed', 'sleep', 'wake', 'woke']) w[k] = n[k];
+            // the night is what a health row is mostly about: its tag goes first
+            if (story) { w.from = 'story'; if (day.ev) w.ev = day.ev; }
+        }
+    }
+    const days = [...out.values()].filter(r => !lastDay || dayGap(lastDay, r.date) <= 0);
+    for (const r of days) if (!r.sleep && !r.wake && usual.sleep) Object.assign(r, { bed: usual.bed || usual.sleep, sleep: usual.sleep, wake: usual.wake || '' });
+    return days.sort((a, b) => dayGap(b.date, a.date)).slice(-14);
+}
+
 // ---- the round's own: the new days nobody told (pattern), and the weather
 // days: the model's top-level "days"; a day already there stays (a story day, or one written before)
 export function applyDays(p, days, round) {

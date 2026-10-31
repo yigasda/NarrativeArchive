@@ -259,3 +259,53 @@ test('Vertex run 13: the card month counts the delivery payments right away; a n
     assert.deepEqual(withEv({ a: 1 }, { ev: 1 }), { a: 1 });
     assert.deepEqual(withEv({ a: 1 }, { ev: 'pasta-night' }), { a: 1, ev: 'pasta-night' });
 });
+
+// 처음 채우기의 수면 날짜 (가짜 입력): the model writes a day and the night after it; the app keeps the waking day
+import { nightsToDays } from '../src/phonesynclife.js';
+const row = (date, night, extra = {}) => ({ date, steps: 7000, from: 'pattern', night, ...extra });
+const nightOf = (sleep, wake = '08:00') => ({ bed: sleep, sleep, wake, woke: 1 });
+
+test('sleep date 1–2: asleep 10-25 at 23:00 or 10-26 at 01:30, up on 10-26: both are the 10-26 row', () => {
+    for (const sleep of ['23:00', '01:30']) {
+        const days = nightsToDays([row('10-25', nightOf(sleep, '08:50'), { from: 'story', ev: 'pasta-night', steps: 9100 }), row('10-26', null)], { lastDay: '10-26', usual: { sleep: '23:30', wake: '06:30' } });
+        const d26 = days.find(d => d.date === '10-26'), d25 = days.find(d => d.date === '10-25');
+        assert.equal(d26.sleep, sleep);
+        assert.equal(d26.wake, '08:50');
+        assert.equal(d26.ev, 'pasta-night');
+        assert.equal(d26.from, 'story');
+        // the 25th keeps its own day (the pasta day's steps) and the night before it: here not told, so their usual
+        assert.equal(d25.steps, 9100);
+        assert.equal(d25.sleep, '23:30');
+        // the night after the last day hasn't ended: no 10-27 row
+        assert.ok(!days.some(d => d.date === '10-27'));
+    }
+});
+
+test('sleep date 3: two nights with different things each land on their own waking day, once', () => {
+    const days = nightsToDays([row('10-24', nightOf('23:20', '07:00')), row('10-25', nightOf('01:30', '08:50'), { from: 'story', ev: 'pasta-night' }),
+        row('10-26', nightOf('00:40', '05:10'), { from: 'story', ev: 'flight-prep' }), row('10-27', null)], { lastDay: '10-27' });
+    // 10-25 keeps the pasta day itself (its steps, its tag) with the plain night before it; the pasta night is 10-26
+    assert.deepEqual(days.map(d => [d.date, d.sleep, d.ev || '']), [['10-24', '', ''], ['10-25', '23:20', 'pasta-night'], ['10-26', '01:30', 'pasta-night'], ['10-27', '00:40', 'flight-prep']]);
+    assert.equal(new Set(days.map(d => d.date)).size, days.length);
+});
+
+test('sleep date 4: the end of a month and of a year', () => {
+    let days = nightsToDays([row('10-31', nightOf('00:30')), row('11-01', null)], { lastDay: '11-01' });
+    assert.equal(days.find(d => d.date === '11-01').sleep, '00:30');
+    days = nightsToDays([row('12-30', nightOf('23:10')), row('12-31', nightOf('02:00', '11:00'), { from: 'story', ev: 'silvester' }), row('01-01', null)], { lastDay: '01-01' });
+    assert.deepEqual(days.map(d => d.date), ['12-30', '12-31', '01-01']);
+    assert.equal(days.at(-1).sleep, '02:00');
+    assert.equal(days.at(-1).ev, 'silvester');
+});
+
+test('sleep date 5–6: an answer in the old shape stays as it was; a reflection later writes the same waking-day row', () => {
+    const old = nightsToDays([{ date: '10-26', sleep: '01:30', wake: '08:50', steps: 5000, from: 'story', ev: 'x' }], { lastDay: '10-26' });
+    assert.deepEqual([old[0].date, old[0].sleep], ['10-26', '01:30']);
+    const { p } = setup();
+    p.life.health.days = nightsToDays([row('10-25', nightOf('01:30', '08:50'), { from: 'story', ev: 'pasta-night' }), row('10-26', null)], { lastDay: '10-26' }).map((d, k) => ({ ...d, id: `h${k}` }));
+    // the next morning's message says when they really got up: the same 10-26 row, only what it says
+    applyLife(p, { id: 'late-up', at: 9, date: '10-26', time: '09:10' }, { health: [{ date: '10-26', wake: '09:05' }] }, true);
+    const d26 = p.life.health.days.filter(d => d.date === '10-26');
+    assert.equal(d26.length, 1);
+    assert.deepEqual([d26[0].sleep, d26[0].wake], ['01:30', '09:05']);
+});
