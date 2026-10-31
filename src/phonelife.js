@@ -34,6 +34,7 @@ STORY OR EVERYDAY
 CLOCK
 - Alarms the owner set: time, label in their own words, repeat days, on or off, when they made it. An alarm they no longer need may stay switched off: a trip that is over, an old shift.
 - "wake": true for alarms that get them up. A run of alarms minutes apart is one alarm with "then": the later times.
+- An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".
 - Timers they saved, with the day last used. "running" only when the story's now shows a timer going.
 
 HEALTH
