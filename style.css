@@ -6255,3 +6255,5 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .lf_rng2 .bar { flex: 1; height: 5px; border-radius: 3px; background: #f3c66b; position: relative; }
 .ax .lf_rng2 .bar b { position: absolute; top: -2.5px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2); }
 .ax .lf_tile p:last-child { opacity: 0.8; }
+.ax .lf_tile .lf_rng2 { bottom: auto; top: 88px; }
+.ax .lf_tile .lf_rng2 .bar b { top: 50%; margin: -5px 0 0 -5px; font: inherit; display: block; }
