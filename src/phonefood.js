@@ -218,7 +218,10 @@ const idOf = (w, set) => {
 };
 export const picFromWords = (v, name = '') => {
     if (!v || typeof v !== 'object') return null;
-    const base = B[String(v.base || '').trim()] ? String(v.base).trim() : guessPic(`${v.base || ''} ${name}`).base;
+    const given = String(v.base || '').trim(), named = guessPic(name).base;
+    // the dish's own name may point at a finer kind of the same base ("juk" named 단호박죽 → "juk-pumpkin", "ramen" named
+    // 돈코츠 라멘 → "ramen-tonkotsu"): that one draws it better
+    const base = B[given] ? (named.startsWith(`${given}-`) ? named : given) : guessPic(`${given} ${name}`).base;
     // a list may come as one string ("beef", "fries, cola", "fries and cola")
     const words = a => (Array.isArray(a) ? a : typeof a === 'string' ? a.split(/\s*(?:,|\/|&|\+|\band\b|\bwith\b)\s*/i) : []);
     const ids = (a, set, n) => [...new Set(words(a).map(x => idOf(x, set)).filter(Boolean))].slice(0, n);

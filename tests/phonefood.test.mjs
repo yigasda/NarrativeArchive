@@ -53,3 +53,11 @@ test('toppings change the picture on every base, and flavours read from words', 
     assert.equal(guessPic('로제 떡볶이').base, 'tteokbokki-rose');
     assert.equal(guessPic('Green curry with chicken').base, 'curry-green');
 });
+
+test('a base given as an id still takes the finer kind its name points at', async () => {
+    const { picFromWords } = await import('../src/phonefood.js');
+    assert.equal(picFromWords({ base: 'juk' }, '단호박죽').base, 'juk-pumpkin');
+    assert.equal(picFromWords({ base: 'juk' }, '전복죽').base, 'juk');
+    assert.equal(picFromWords({ base: 'porridge' }, '단호박죽').base, 'juk-pumpkin');
+    assert.equal(picFromWords({ base: 'pizza' }, '불고기 피자').base, 'pizza');
+});
