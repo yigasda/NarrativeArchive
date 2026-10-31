@@ -37,7 +37,7 @@ CLOCK
 - Timers they saved, with the day last used. "running" only when the story's now shows a timer going.
 
 HEALTH
-- Every day in STORY DAYS. "date" is the day they woke up: a night that ran past midnight belongs to the next day.
+- Every day in STORY DAYS. "date" is the day they woke up: a night that ran past midnight belongs to the next day. The night after an evening on 10-25 (asleep 23:40 or 01:30) is the row "10-26"; that row carries the evening's "ev".
 - A day the story shows follows it: "from": "story" and its "ev". A long night out means short sleep, a day on foot means many steps.
 - Any other day: write it freely from the character, the archive and their life, "from": "pattern". It still follows that day's events and tickets in PHONE NOW.
 - "usual" is their normal week.
@@ -47,7 +47,7 @@ FILES
 - What the owner received, saved or scanned: documents, downloads, voice recordings, archives, spreadsheets, a few saved pictures or videos. What the camera took is in the photos app, not here.
 - Folders they made, with how many files each holds; list only the files worth seeing, not every one.
 - How tidy they are shows in names and folders: "final_FINAL(2)", a duplicate download, "New folder (3)", or neat names.
-- A ticket or booking file carries the same "ev" as that record and no "preview"; the app draws it. Any other document gets "preview": one line on what its first page shows.
+- A ticket or booking file carries the same "ev" as that record. Every document gets "preview": one line on what its first page shows (for a booking in PHONE NOW the app draws its own).
 - An adult may keep a private file: name, type and size only, with "private": true. Nothing explicit in the name.
 
 WEATHER
@@ -99,7 +99,7 @@ SHOPS
 - Up to 5 shops the owner orders from, the kind found where they live, named as they would be there. 3 or 4 dishes each.
 
 ORDERS
-- A delivery the story shows or a scene plainly implies gets its "ev". A few more are the character's everyday orders: late and alone, the same dish again, food for two.
+- A delivery the story shows or a scene plainly implies gets its "ev". Besides those, 2 to 5 everyday orders from the last weeks, the character's own: late and alone, the same dish again, food for two.
 - Never an order to explain a scene, and no big event (a party, a guest, a move) the story doesn't have.
 - The same place always has the same address. "tip" only where tipping is the custom; elsewhere 0.
 - "status" as of the story's now: "on the way" only for an order still coming then. An order only moves forward: "on the way", "delivered", then perhaps "cancelled" or "refunded".
@@ -218,6 +218,9 @@ export const fillLife = (m, p) => exclusive('fill', async () => {
         now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile });
     const out = await askDraft(input, { system: AI_SYS_LIFE, maxTokens: 16000 });
     const life = parseLife(jsonOf(out), now);
+    // a booking the wallet holds is drawn from it: its file needs no line of its own
+    const booked = new Set((p.money?.passes || []).map(x => x.ev).filter(Boolean));
+    for (const x of life.files.items) if (x.ev && booked.has(x.ev)) x.preview = '';
     p.life = { ...life, at: storyNow(p) || p.now || '' };
     // a reflection reads on from here: what came before is in what was just written
     if (p.sync?.marks) p.sync.marks.life = markNow();
