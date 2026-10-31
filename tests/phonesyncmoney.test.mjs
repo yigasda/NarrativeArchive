@@ -351,3 +351,12 @@ test('되돌리기 keeps a card purchase whose amount the user changed (no ledge
     assert.equal(left.length, 1);
     assert.deepEqual(p.money.tx.map(t => t.amount), [-35]);
 });
+
+test('a payment from a deleted message, taken up again by a new one, now names the new message', () => {
+    const { m, p } = setup();
+    applyMoney(m, p, ev('book', 23, '10-28', { moves: [{ account: '1111', amount: -15, who: 'Kyobo', occurrence: 'new' }] }), opts());
+    p.money.tx[0].sourceIndex = null;
+    applyMoney(m, p, ev('book', 24, '10-28', { moves: [{ account: '1111', amount: -15, who: 'Kyobo', occurrence: 'again', already: p.money.tx[0].id }] }), opts());
+    assert.equal(p.money.tx.length, 1);
+    assert.equal(p.money.tx[0].sourceIndex, 24);
+});

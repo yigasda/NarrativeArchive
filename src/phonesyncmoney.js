@@ -151,7 +151,9 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
         if (pointed && pointed.amountFrom === 'guess' && !guess && Math.sign(pointed.amount) === Math.sign(amount) && Math.abs(pointed.amount - amount) > 0.01) { amend(pointed, amount, lk, label, acct); out.legs.push({ key, amount: round(amount), state: 'included', rec: pointed.id }); return; }
         if (twin && twin.amountFrom === 'guess' && !guess && Math.abs(twin.amount - amount) > 0.01) { amend(twin, amount, lk, label, acct); out.legs.push({ key, amount: round(amount), state: 'included', rec: twin.id }); return; }
         if (pointed || twin) {
-            out.legs.push({ key, amount: round(amount), state: 'included', rec: (pointed || twin).id });
+            const r = pointed || twin;
+            if (r.sourceIndex === null) r.sourceIndex = e.at;
+            out.legs.push({ key, amount: round(amount), state: 'included', rec: r.id });
             if (twin) out.notes.push(`${twin.who || acct.name} ${twin.amount}: 이미 있는 거래라 넣지 않았어요`);
             return;
         }

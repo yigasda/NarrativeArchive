@@ -490,8 +490,8 @@ async function updatePhone(m, owner) {
             `[OWNER]\n${owner}`, profile, blindBlock(m, owner), namesBlock(m),
         ].filter(Boolean).join('\n\n');
         const made = { money: p.money?.at, invest: p.investment?.at };
-        // medium thinking: enough to sort payments from mentions, without spending the answer's room on thinking
-        const out = await askDraft(input, { system: AI_SYS_PHONE_UPDATE, maxTokens: 16000, effort: 'medium' });
+        // low thinking: tested against medium on Vertex, the same payments, ids and amounts, without the thinking cost
+        const out = await askDraft(input, { system: AI_SYS_PHONE_UPDATE, maxTokens: 16000, effort: 'low' });
         // the answer is for the chat and messages it was asked about
         if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p) throw new Error('반영하는 사이 채팅이나 폰이 바뀌었어요. 다시 해 주세요');
         if (p.money?.at !== made.money || p.investment?.at !== made.invest) throw new Error('반영하는 사이 은행이나 투자가 새로 만들어졌어요. 다시 해 주세요');
@@ -551,6 +551,7 @@ async function updatePhone(m, owner) {
         ensureIds(p);
         p.at = Date.now();
         pruneDropped(s);
+        p.syncLast.notes = p.syncLast.notes.filter(n => !n.endsWith('뺄 수 있어요') || s.dropped.some(d => n.startsWith(`대화 ${d.label}가`)));
         p.syncUndo = { ...undo, round: id, read: [...inRound], readFp: round.rows.map(r => bodyMark(r.text)), comments: undo.comments,
             items: ITEM_KEYS.flatMap(k => (p[k] || []).filter(x => x.id && !had.has(x.id)).map(x => [k, x.id])),
             msgs: p.threads.filter(t => msgs.has(t.id) && t.messages.length > msgs.get(t.id)).map(t => [t.id, t.messages.slice(msgs.get(t.id)).map(x => JSON.stringify([x.from, x.text, x.time]))]),
