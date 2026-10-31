@@ -8,7 +8,7 @@ import { ctx, getMeta, hasChat } from './src/core.js';
 import { driftTick } from './src/drift.js';
 import { applyInjection } from './src/inject.js';
 import { addWandMenu, renderPanel, sectionPanel } from './src/panel.js';
-import { moveOldStars } from './src/keeps.js';
+import { addPhoneMenu } from './src/phonemenu.js';
 import { RECALL_KEY } from './src/recall.js';
 import { onGenerationStarted, onMessageSent } from './src/router.js';
 import { linkedMap } from './src/sections.js';
@@ -29,14 +29,14 @@ import { xrayArm, xrayCapture, xrayWorldInfo } from './src/xray.js';
         applyTheme();
         keepFieldsFlat();
         addWandMenu();
+        addPhoneMenu();
         onChatChanged();
-        setTimeout(moveOldStars, 300);
     };
 
     es.on(et.APP_READY, start);
     es.on(et.CHAT_CHANGED, onChatChanged);
-    // a recall made for another chat never carries over; stars from 3.69.0 become 꼭 남길 장면
-    es.on(et.CHAT_CHANGED, () => { c.setExtensionPrompt(RECALL_KEY, '', 1, 0); setTimeout(moveOldStars, 300); });
+    // a recall made for another chat never carries over
+    es.on(et.CHAT_CHANGED, () => { c.setExtensionPrompt(RECALL_KEY, '', 1, 0); });
     if (et.GENERATION_STARTED) es.on(et.GENERATION_STARTED, xrayArm);
     if (et.GENERATION_STARTED) es.on(et.GENERATION_STARTED, onGenerationStarted);
     if (et.MESSAGE_SENT) es.on(et.MESSAGE_SENT, onMessageSent);

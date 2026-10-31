@@ -105,6 +105,14 @@ export function recentTrackers(n = 5, { re = trackerRe(), chat = ctx().chat || [
     }
     return out;
 }
+// a message without the date, time and place of these status windows (recentTrackers), so their words don't pass as
+// what the message is about
+export function withoutTrackers(text, trackers) {
+    let out = String(text || '');
+    const vals = [...new Set(trackers.flatMap(t => [t.place, t.city, t.room, t.date, t.time]).filter(Boolean))].sort((x, y) => y.length - x.length);
+    for (const v of vals) out = out.split(v).join(' ');
+    return out;
+}
 // how much the story moved between two trackers: 2 = new day, new place or a jump of 3+ hours; 1 = new room; 0 = same scene
 function sceneJump(a, b) {
     if (!a || !b) return 0;

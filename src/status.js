@@ -10,10 +10,21 @@ import { renderNext } from './panel.js';
 import { activePrompt } from './prompts.js';
 import { routerCfg, routerState } from './router.js';
 import { ICO_A, svgA } from './theme.js';
-import { linkWaiting, mutedCount } from './sections.js';
-import { countTokens, esc, fmt, timeLabel } from './util.js';
+import { RANGE_HEAD, linkWaiting, mutedCount } from './sections.js';
+import { countTokens, esc, fmt } from './util.js';
 
 export let statusTimer = null;
+// the router on the home tab: what it called in (the range of each, tap for titles and why)
+function routerLine(rs, m) {
+    const ico = svgA(ICO_A.compass, 13);
+    if (!rs) return `<span class="na_router_st">${ico} 라우터 · 답할 때 골라요</span>`;
+    if (!rs.titles.length) return `<span class="na_router_st">${ico} 불러온 섹션 없음${rs.via === 'index' ? ' (AI 대신 빠르게)' : ''}</span>`;
+    const ranges = rs.titles.map(t => (t.match(RANGE_HEAD) ? `#${t.match(RANGE_HEAD)[2]}–#${t.match(RANGE_HEAD)[4]}` : t.slice(0, 16)));
+    // with the forgetting curve the picks go in whole over a shorter version; without it they go in at all
+    const verb = rs.via === 'lift' || m?.fade?.on ? '원문으로 불러옴' : '불러옴';
+    return `<button type="button" class="na_router_st na_router_more">${ico} ${verb}${rs.via === 'index' ? ' (AI 대신 빠르게)' : ''} · ${esc(ranges.join(', '))}</button>`;
+}
+
 export function refreshStatusSoon() {
     clearTimeout(statusTimer);
     statusTimer = setTimeout(refreshStatus, 400);
@@ -54,7 +65,7 @@ export async function refreshStatus() {
     $('#na_meter .na_seg_raw').css('width', `${total ? 100 - pct : 0}%`).removeClass('na_over');
     // small line under the tiles: the router, and anything that cuts what goes in
     $('#na_meter_legend').html(`
-      ${routerCfg(m).mode !== 'off' ? `<span class="na_router_st">${svgA(ICO_A.compass, 13)} 라우터 · ${routerState.get(currentChatId()) ? `${routerState.get(currentChatId()).titles.length}개 고름${routerState.get(currentChatId()).via === 'index' ? ' (색인)' : ''}` : '답할 때 골라요'}</span>` : ''}
+      ${routerCfg(m).mode !== 'off' ? routerLine(routerState.get(currentChatId()), m) : ''}
       ${mutedCount(m) ? `<span class="na_warn_txt"><i class="fa-solid fa-toggle-off"></i> 섹션 ${mutedCount(m)}개 꺼짐</span>` : ''}
       ${build.trimmed.length ? `<span class="na_warn_txt"><i class="fa-solid fa-scissors"></i> 상한 ${fmt(build.cap)}에 맞춰 ${build.trimmed.length}개 뺌</span>` : ''}
       ${build.over ? `<span class="na_warn_txt"><i class="fa-solid fa-triangle-exclamation"></i> 상한 ${fmt(build.cap)} 넘음</span>` : ''}`);
@@ -68,15 +79,11 @@ export async function refreshStatus() {
     } else { $('#na_health span').text('-'); $('#na_tool_health_sub').text('번호·숨기기·키워드·백업을 AI 없이 살펴봐요'); }
     renderNext(m, { afterTok, health: h });
 
-    const lx = m.lastExport;
-    const lxNote = lx ? `<small class="na_v2_note">최근 내보냄 #${lx.from}–#${lx.to} · ${esc(timeLabel(lx.at))}</small>` : '';
     const hn = hiddenIndexes().length;
     $('#na_hidden_n').text(hn ? `지금 숨긴 메시지 ${hn}개` : '숨긴 메시지 없음');
     { const gs = globalSettings(), ap = activePrompt(gs); $('#na_plib_sum').text(`${gs.prompts.length}개 · ${ap.fav ? '즐겨찾기 ★' : '지금'} ${ap.name}`); }
     $('#na_since').html(m.boundary >= 0 ? `
       <div class="na_cp_hhead"><span>경계선 #${m.boundary} 뒤에 쌓인 원문</span><span>마지막 #${last}</span></div>
       <div class="na_cp_big"><b>${fmt(afterTok)}</b><span>토큰 · 메시지 ${after.length}개</span></div>
-      <div class="na_cp_bar"><span class="hid" style="flex:${Math.max(1, m.boundary + 1)}"></span><span class="raw" style="flex:${Math.max(1, last - m.boundary)}"></span></div>
-      <div class="na_cp_hhead"><small>#0 – #${m.boundary} 숨김 (압축됨)</small><small>${last > m.boundary ? `#${m.boundary + 1} – #${last} 원문` : '원문 없음'}</small></div>
-      ${lxNote}` : '<div class="na_cp_hhead"><span>경계선이 아직 없어요</span></div><small class="na_v2_note">직접 적거나 "아카이브에 추가"를 쓰면 자동으로 정해져요.</small>');
+      <div class="na_cp_bar"><span class="hid" style="flex:${Math.max(1, m.boundary + 1)}"></span><span class="raw" style="flex:${Math.max(1, last - m.boundary)}"></span></div>` : '<div class="na_cp_hhead"><span>경계선이 아직 없어요</span></div><small class="na_v2_note">직접 적거나 "아카이브에 추가"를 쓰면 자동으로 정해져요.</small>');
 }

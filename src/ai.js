@@ -28,11 +28,11 @@ export const trSettings = () => connSettings('tr');
 export const apiFormat = t => t.fmt === 'anthropic' || t.fmt === 'openai' ? t.fmt : /anthropic\.com/i.test(String(t.url || '')) ? 'anthropic' : 'openai';
 
 // effort: 'low' | 'medium' | 'high' — how hard a thinking model may think. The connection's own setting wins over the job's.
-// Sent as output_config.effort (Anthropic format) or reasoning_effort (OpenAI format); Vertex ignores it.
+// Sent as output_config.effort (Anthropic format) or reasoning_effort (OpenAI format, and Vertex through SillyTavern).
 // force: the job's effort wins over the connection's (compression asks for its own level)
 export async function callConn(t, system, prompt, maxTokens, effort = '', force = false, keepSystem = false) {
     const e = force && effort ? effort : (t.effort || effort);
-    if (t.mode === 'vertex') return stripThink(await callVertex(t, system, prompt, maxTokens));
+    if (t.mode === 'vertex') return stripThink(await callVertex(t, system, prompt, maxTokens, e));
     // the instructions go at the top of the first message instead of the system part: some relays drop the system part
     // without a word, and the model then answers the bare request (a digest taken for "write the next section").
     // keepSystem: 규칙은 시스템 메시지로 is on, so the user asked for the real system part
@@ -213,15 +213,15 @@ export const vxRegion = t => String(t.vxLocation || '').trim() || ctx().chatComp
 
 // a model that a region does not carry answers 404 "Publisher model … not found": try the other usual regions once,
 // and keep the one that worked
-export async function callVertex(t, system, prompt, maxTokens) {
+export async function callVertex(t, system, prompt, maxTokens, effort = '') {
     const first = vxRegion(t);
     const others = ['global', 'us-central1', 'us-east5', 'europe-west4'].filter(x => x !== first);
-    try { return await callVertexAt(t, first, system, prompt, maxTokens); }
+    try { return await callVertexAt(t, first, system, prompt, maxTokens, effort); }
     catch (e) {
         if (!/Vertex 오류 404/.test(String(e?.message))) throw e;
         for (const loc of others) {
             try {
-                const out = await callVertexAt(t, loc, system, prompt, maxTokens);
+                const out = await callVertexAt(t, loc, system, prompt, maxTokens, effort);
                 t.vxLocation = loc; saveGlobal();
                 toastr.info(`Vertex 지역 ${first}에 이 모델이 없어서 ${loc}로 바꿨어요`, '서사 아카이브');
                 return out;
@@ -230,10 +230,11 @@ export async function callVertex(t, system, prompt, maxTokens) {
         throw e;
     }
 }
-async function callVertexAt(t, loc, system, prompt, maxTokens) {
+async function callVertexAt(t, loc, system, prompt, maxTokens, job = '') {
     const model = String(t.vxModel || '').trim();
     if (!model) throw new Error('Vertex 모델을 골라 주세요 (예: gemini-2.5-flash)');
-    const effort = ['low', 'medium', 'high'].includes(t.effort) ? t.effort : 'auto';
+    // the connection's own setting, else the job's, else the model decides
+    const effort = ['low', 'medium', 'high'].find(x => x === t.effort) || ['low', 'medium', 'high'].find(x => x === job) || 'auto';
     const r = await fetch('/api/backends/chat-completions/generate', {
         method: 'POST',
         headers: ctx().getRequestHeaders(),

@@ -4,7 +4,6 @@ import { ctx, getMeta, globalSettings, hasChat, saveGlobal, saveMeta } from './c
 import { activePrompt, compressPrompt, referenceSection, renderPromptSettings } from './prompts.js';
 import { headingLines, headingRanges, splitTail } from './sections.js';
 import { refreshStatus } from './status.js';
-import { keepNote } from './keeps.js';
 import { offstageSet } from './recall.js';
 import { ICO_A, svgA } from './theme.js';
 import { chatLabel, copyText, countTokens, download, esc, fmt, timeLabel } from './util.js';
@@ -61,14 +60,11 @@ export function cleanMessage(text, g) {
     return t.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-// 꼭 남길 장면 in the range get their notes after the log, so every compress path keeps them in detail
 export function formatExtract(items, g) {
-    const log = items.map(x => {
+    return items.map(x => {
         const head = `[${x.i}] ${x.name}:`;
         return `${head}\n${x.text}`;
     }).join('\n\n');
-    const note = items.length && hasChat() ? keepNote(getMeta(), items[0].i, items[items.length - 1].i) : '';
-    return note ? `${log}\n\n[${note}]` : log;
 }
 
 export async function openExtract() {

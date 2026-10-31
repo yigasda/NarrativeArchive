@@ -1,6 +1,5 @@
 // The archive tab: section cards (list and timeline).
 
-import { editKeep, keepsIn, sectionKept } from './keeps.js';
 import { commitText, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { digestedKeys, openDigest } from './digest.js';
 import { fillFade, layersOf, openLayers, setFadeForce } from './fade.js';
@@ -49,14 +48,14 @@ export function mountSectionBrowser($host) {
         </div>
         <div class="na_arch_tools"></div>
         <div class="na_br_filters"></div>
-        <div class="na_tl_legend" aria-hidden="true"><span><i class="st-long"></i>원문</span><span><i class="st-short"></i>짧게</span><span><i class="st-line"></i>한 줄</span><span><i class="st-key"></i>키워드 대기</span><span><i class="st-off"></i>꺼짐</span></div>
+        <div class="na_tl_legend" aria-hidden="true"><span><i class="st-long"></i>원문</span><span><i class="st-short"></i>짧게</span><span><i class="st-line"></i>요점</span><span><i class="st-key"></i>키워드 대기</span><span><i class="st-off"></i>꺼짐</span></div>
         <div class="na_search_info"></div>
         <div class="na_list"></div>
         <div class="na_selbar" hidden>
           <div class="na_selbar_top"><b class="na_sel_n"></b><button type="button" class="na_linkbtn na_sel_all">모두</button><button type="button" class="na_linkbtn na_sel_none">비우기</button><span class="na_spacer"></span><button type="button" class="na_linkbtn na_sel_close">닫기</button></div>
           <div class="na_selbar_acts">
-            <select class="text_pole na_sel_ver" title="넣을 버전"><option value="">넣을 버전…</option><option value="long">원문으로</option><option value="short">짧게</option><option value="line">한 줄</option><option value="auto">자동 (망각 곡선)</option></select>
-            <button type="button" class="na_v2_pillbtn" data-act="fill">짧게·한 줄 만들기</button>
+            <select class="text_pole na_sel_ver" title="넣을 버전"><option value="">넣을 버전…</option><option value="long">원문으로</option><option value="short">짧게</option><option value="line">요점</option><option value="auto">자동 (망각 곡선)</option></select>
+            <button type="button" class="na_v2_pillbtn" data-act="fill">짧게·요점 만들기</button>
             <button type="button" class="na_v2_pillbtn" data-act="digest">다이제스트</button>
             <button type="button" class="na_v2_pillbtn" data-act="merge">합치기</button>
             <button type="button" class="na_v2_pillbtn" data-act="retitle">제목 다시 짓기</button>
@@ -136,7 +135,7 @@ export function mountSectionBrowser($host) {
         const keys = pickedSecs().map(sectionKey);
         if (!v || !keys.length) return;
         await setFadeForce(keys, v);
-        toastr.success(`${keys.length}개를 ${{ long: '원문으로', short: '짧게', line: '한 줄로', auto: '자동으로' }[v]} 넣어요${v === 'short' || v === 'line' ? ' · 버전이 없는 섹션은 만들 때까지 원문이에요' : ''}`);
+        toastr.success(`${keys.length}개를 ${{ long: '원문으로', short: '짧게', line: '요점으로', auto: '자동으로' }[v]} 넣어요${v === 'short' || v === 'line' ? ' · 버전이 없는 섹션은 만들 때까지 원문이에요' : ''}`);
     });
     $root.on('click', '.na_selbar_acts button', async function () {
         const act = this.dataset.act, secs = pickedSecs(), keys = secs.map(sectionKey);
@@ -410,7 +409,7 @@ export function mountSectionBrowser($host) {
             const isWait = waiting.has(key), isPin = pinned.has(key), hasKeys = !!links[key]?.length;
             const dot = off || parentOff ? 'off' : isPin ? 'pin' : hasKeys && isWait ? 'key' : fade || 'long';
             const tags = [
-                fade && !off ? `<span class="na_tag fade" title="망각 곡선">${fade === 'line' ? '한 줄' : '짧게'}</span>` : '',
+                fade && !off ? `<span class="na_tag fade" title="망각 곡선">${fade === 'line' ? '요점' : '짧게'}</span>` : '',
                 hasKeys && !off ? `<span class="na_tag key" title="${isWait ? '키워드 대기' : '키워드 켜짐'}: ${esc(links[key].join(', '))}">키워드</span>` : '',
                 isPin ? '<span class="na_tag pin">고정</span>' : '',
                 digested.has(key) && !off ? '<span class="na_tag dig" role="button" title="다이제스트로 들어가요 · 눌러서 보기">다이제스트</span>' : '',
@@ -418,7 +417,7 @@ export function mountSectionBrowser($host) {
             ].join('');
             // list card: the section label ("PLOT:") on the first line is drawn as a small caption over the preview
             const lcLabel = tl ? '' : ((body.replace(/^#{1,2} [^\n]*\n?/, '').trim().split('\n')[0] || '').trim().match(/^([A-Z][A-Z /&'’-]{1,30}):$/) || [])[1] || '';
-            const status = off || parentOff ? '꺼 둠' : digested.has(key) ? '다이제스트로 들어감' : isPin ? '고정' : hasKeys ? (isWait ? `키워드 대기 (${esc(links[key][0])})` : '키워드 켜짐') : fade === 'line' ? '한 줄' : fade === 'short' ? '짧게' : '원문';
+            const status = off || parentOff ? '꺼 둠' : digested.has(key) ? '다이제스트로 들어감' : isPin ? '고정' : hasKeys ? (isWait ? `키워드 대기 (${esc(links[key][0])})` : '키워드 켜짐') : fade === 'line' ? '요점' : fade === 'short' ? '짧게' : '원문';
             const $card = $(tl ? `
               <div class="na_card ${off ? 'na_off' : ''} ${parentOff ? 'na_off_parent' : ''} ${isWait && !off ? 'na_waiting' : ''}" data-start="${s.start}" ${rm ? `data-a="${Math.min(+rm[2], +rm[4])}" data-b="${Math.max(+rm[2], +rm[4])}" data-p="${esc(rm[1] || '')}"` : ''}>
                 <div class="na_rail" aria-hidden="true">${rm ? `<span>#${rm[2]}</span><span>#${rm[4]}</span>` : ''}</div>
@@ -434,7 +433,7 @@ export function mountSectionBrowser($host) {
                   <div class="na_card_body" ${isOpen ? '' : 'hidden'}>
                     <div class="na_tlb_chips">
                       <span class="na_tlb_chip"><span class="na_tok">${fmt(body.length)}자</span></span>
-                      ${fade && !off ? `<span class="na_tlb_chip fade">${fade === 'line' ? '한 줄로' : '짧게'} 들어감</span>` : ''}
+                      ${fade && !off ? `<span class="na_tlb_chip fade">${fade === 'line' ? '요점으로' : '짧게'} 들어감</span>` : ''}
                       ${hasKeys && !off ? `<span class="na_tlb_chip key" title="${esc(links[key].join(', '))}">${isWait ? '키워드 대기' : '키워드 켜짐'}</span>` : ''}
                       ${isPin ? '<span class="na_tlb_chip pin">고정</span>' : ''}
                       ${paren ? `<span class="na_tlb_chip">${esc(paren)}</span>` : ''}
@@ -453,7 +452,7 @@ export function mountSectionBrowser($host) {
                       <button type="button" class="na_icon na_up" title="위로" aria-label="위로"><i class="fa-solid fa-arrow-up"></i></button>
                       <button type="button" class="na_icon na_down" title="아래로" aria-label="아래로"><i class="fa-solid fa-arrow-down"></i></button>
                       <button type="button" class="na_icon na_ins" title="아래에 새 섹션" aria-label="아래에 새 섹션"><i class="fa-solid fa-plus"></i></button>
-                      ${rm ? `<button type="button" class="na_icon na_keep_t ${sectionKept(m, s.title) ? 'active' : ''}" title="꼭 남길 장면으로 적기" aria-label="꼭 남길 장면"><i class="fa-solid fa-feather-pointed"></i></button>` : ''}
+                      
                       <button type="button" class="na_icon na_pin_t ${isPin ? 'active' : ''}" title="${isPin ? '고정 풀기' : '망각 곡선에서도 늘 원문으로 고정'}" aria-label="고정"><i class="fa-solid fa-thumbtack"></i></button>
                       <button type="button" class="na_icon na_del na_danger" title="섹션 삭제" aria-label="섹션 삭제"><i class="fa-solid fa-trash-can"></i></button>
                       <span class="na_spacer"></span>
@@ -483,9 +482,9 @@ export function mountSectionBrowser($host) {
                     <button type="button" class="na_icon na_up" title="위로" aria-label="위로">${svgA(ICO_A.up, 17)}</button>
                     <button type="button" class="na_icon na_down" title="아래로" aria-label="아래로">${svgA(ICO_A.dn, 17)}</button>
                     <button type="button" class="na_icon na_ins" title="아래에 새 섹션" aria-label="아래에 새 섹션">${svgA(ICO_A.plus, 17)}</button>
-                    ${rm ? `<button type="button" class="na_icon na_keep_t ${sectionKept(m, s.title) ? 'active' : ''}" title="꼭 남길 장면으로 적기" aria-label="꼭 남길 장면"><i class="fa-solid fa-feather-pointed"></i></button>` : ''}
+                    
                     <button type="button" class="na_icon na_keys ${hasKeys ? 'active' : ''}" title="키워드 연동" aria-label="키워드 연동">${svgA(ICO_A.key, 17)}</button>
-                    ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_icon na_layers_btn ${layersOf(m)[key] ? 'active' : ''}" title="짧은 버전 · 한 줄 (망각 곡선)" aria-label="짧은 버전">${svgA(ICO_A.layers, 17)}</button>` : ''}
+                    ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_icon na_layers_btn ${layersOf(m)[key] ? 'active' : ''}" title="짧은 버전 · 요점 (망각 곡선)" aria-label="짧은 버전">${svgA(ICO_A.layers, 17)}</button>` : ''}
                     <button type="button" class="na_icon na_edit" title="편집" aria-label="편집">${svgA(ICO_A.pen, 17)}</button>
                     ${RANGE_HEAD.test(s.title) ? `<button type="button" class="na_icon na_fix_btn" title="AI 기능 모델에게 고쳐 달라고 하기" aria-label="고쳐 달라고 하기">${svgA(ICO_A.chat, 17)}</button>` : ''}
                     <button type="button" class="na_icon na_del na_danger" title="섹션 삭제" aria-label="섹션 삭제">${svgA(ICO_A.trash, 17)}</button>
@@ -522,14 +521,6 @@ export function mountSectionBrowser($host) {
             $card.find('.na_up').on('click', () => move(s, -1));
             $card.find('.na_down').on('click', () => move(s, 1));
             $card.find('.na_ins').on('click', () => insertAfter(s));
-            $card.find('.na_keep_t').on('click', async e => {
-                e.stopPropagation();
-                const r = s.title.match(RANGE_HEAD);
-                if (!r) return;
-                const a = Math.min(+r[2], +r[4]), b = Math.max(+r[2], +r[4]);
-                const k = keepsIn(m, a, b).find(x => x.from === a && x.to === b);
-                if (await editKeep(k || { from: a, to: b })) render();
-            });
             $card.find('.na_keys').on('click', async () => {
                 const keys = await openKeywords(s, body, links[sectionKey(s)] || []);
                 if (keys) await setLinked(sectionKey(s), keys);

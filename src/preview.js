@@ -5,7 +5,7 @@ import { fadeCfg } from './fade.js';
 import { autoDepth, currentInjection } from './inject.js';
 import { keyLabel, linkWaiting, mutedSet, parseSections, pinnedSet, sectionKey } from './sections.js';
 import { copyText, esc, fmt } from './util.js';
-import { worldBooks, worldIsOn } from './world.js';
+import { worldBody, worldBooks, worldIsOn } from './world.js';
 
 export async function openPreview() {
     const c = ctx();
@@ -18,13 +18,14 @@ export async function openPreview() {
     const pinned = pinnedSet(m);
     const fadeN = { short: 0, line: 0 };
     for (const v of (b.faded || new Map()).values()) fadeN[v]++;
-    const worldN = worldBooks().filter(w => String(w.text || '').trim() && worldIsOn(m, w)).length;
+    const worldN = worldBooks().filter(w => worldBody(w).trim() && worldIsOn(m, w)).length;
     const outN = muted.length + waiting.length + b.trimmed.length;
-    const text = m.enabled ? b.text : '';
+    // 캐시 아끼기: the second block goes in near the end of the chat; shown after a marked line
+    const text = m.enabled ? (b.now ? `${b.text}\n\n_— 아래는 마지막 메시지 두 개 바로 위에 따로 들어가요 (캐시 아끼기) —_\n\n${b.now}` : b.text) : '';
     // the injected text, headings marked with how each section goes in
     const tagOf = s => {
         const k = sectionKey(s), f = b.faded?.get(k);
-        if (f) return `<span class="na_pv2_tag ${f}">${f === 'line' ? '한 줄' : '짧게'}</span>`;
+        if (f) return `<span class="na_pv2_tag ${f}">${f === 'line' ? '요점' : '짧게'}</span>`;
         return pinned.has(k) ? '<span class="na_pv2_tag pin">고정</span>' : '';
     };
     const code = headsOnly => {
@@ -54,7 +55,7 @@ export async function openPreview() {
         </div>
         <div class="na_pv2_chips">
           <span class="world">세계관 ${worldN}</span>
-          ${fadeCfg(m).on ? `<span class="fade">짧게 ${fadeN.short} · 한 줄 ${fadeN.line}</span>` : ''}
+          ${fadeCfg(m).on ? `<span class="fade">짧게 ${fadeN.short} · 요점 ${fadeN.line}</span>` : ''}
           <span class="wait">키워드 대기 ${waiting.length}</span>
           <span class="off">꺼 둠 ${muted.length}</span>
         </div>

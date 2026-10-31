@@ -743,7 +743,7 @@ async function setup() {
     if (!list) { list = sceneChunks(items); by = 'tracker'; }
     const lines = scenesText(list, { get: k => notes.get(k) || notes.get(k + 1) || '' });
     const note = String(m.workNote || '').trim();
-    const $d = $(`<div class="na_qc">
+    const $d = $(`<div class="na_popup na_qc">
         <div class="na_qc_head"><b>#${from} – #${to}</b><small>메시지 ${items.length}개 · 장면 ${list.length}개 · ${by === 'ai' ? `${esc(short(aiLabel()))}가 나눔` : '트래커·메시지 수로 나눔'}</small></div>
         <small class="na_qc_note">장면마다 ${esc(short(drLabel()))}에게 한 번씩 보내요. 답을 보고 고칠 점을 말하면, 그 말은 뒤 장면까지 따라가요. 고치는 말도 한 번에 1번이에요.${note ? '' : ' 작업 노트가 비어 있어요.'}</small>
         <label class="na_qc_sclabel">장면 나누기 <small>한 줄에 장면 하나 · 앞 번호(시작)만 봐요 · 줄을 추가하면 나누고, 지우면 앞 장면에 합쳐요</small></label>

@@ -36,9 +36,11 @@ export async function copyText(text, fallbackEl) {
     }
 }
 
+// in the extension's own box, so the popup takes the extension's colours rather than the SillyTavern theme's
 export async function confirm(title, text) {
     const c = ctx();
-    const r = await c.Popup.show.confirm(title, text);
+    const $b = $(`<div class="na_popup na_v2 na_confirm"><div class="na_v2_title"><b>${esc(title)}</b></div><div class="na_confirm_text">${text}</div></div>`);
+    const r = await c.callGenericPopup($b, c.POPUP_TYPE.CONFIRM, '', { okButton: '확인', cancelButton: '취소' });
     return r === c.POPUP_RESULT.AFFIRMATIVE || r === true;
 }
 

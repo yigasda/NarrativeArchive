@@ -4,7 +4,6 @@ import { currentChatId, fetchOtherChat, pickOtherChat } from './chats.js';
 import { AI_SYS_GRADE, rangeRaw } from './wizard.js';
 import { aiLabel, askAI, withSpinner } from './ai.js';
 import { driftHtml } from './drift.js';
-import { editKeep, keepsIn } from './keeps.js';
 import { ctx, getMeta, globalSettings, hasChat, saveMeta } from './core.js';
 import { cleanMessage } from './extract.js';
 import { sectionPanel } from './panel.js';
@@ -73,21 +72,17 @@ export async function openSource(from, to, label, otherChat = null, prefix = '')
     const sec = otherChat ? null : parseSections(m.text).find(x => !x.group && (r => r && !r.chat && !r.needLink && r.from === from && r.to === to)(sourceRange(m, x.title)));
     const $v = $(`
       <div class="na_popup na_popup_fill">
-        <div class="na_diff_head"><b>원문 ${esc(label)}</b><span class="na_dim">메시지 ${items.length}개</span>${otherChat ? '' : `<button type="button" class="na_v2_pillbtn na_src_keep" title="이 구간을 압축할 때 자세히 남기라고 적어 둬요">${keepsIn(m, from, to).length ? '꼭 남길 장면 ✓' : '꼭 남길 장면'}</button>`}${sec ? `<button type="button" class="na_v2_pillbtn na_src_check" title="${esc(`AI 기능 모델(${aiLabel()})이 섹션을 이 원문과 맞춰 봐요 · 지어낸 것, 틀린 것, 빠진 것, 원문에 없는 해석`)}">원문 대조</button>` : ''}</div>
+        <div class="na_diff_head"><b>원문 ${esc(label)}</b><span class="na_dim">메시지 ${items.length}개</span>${sec ? `<button type="button" class="na_v2_pillbtn na_src_check" title="${esc(`AI 기능 모델(${aiLabel()})이 섹션을 이 원문과 맞춰 봐요 · 지어낸 것, 틀린 것, 빠진 것, 원문에 없는 해석`)}">원문 대조</button>` : ''}</div>
         <div class="na_ai_box na_src_checkout" hidden></div>
         ${otherChat ? `<div class="na_src_from na_dim"><i class="fa-solid fa-link"></i> ${esc(otherChat)} <button type="button" class="na_linkbtn na_src_relink">다른 채팅으로 바꾸기</button></div>` : ''}
         <div class="na_src_list">${items.join('') || `<div class="na_empty">${otherChat ? '그 채팅에 이 번호의 메시지가 없어요. 다른 채팅을 골라 보세요.' : '이 채팅에 그 번호의 메시지가 없어요.'}</div>`}</div>
       </div>`);
     $v.data('prefix', prefix).data('range', { from, to, label });
-    $v.find('.na_src_keep').on('click', async function () {
-        const k = keepsIn(getMeta(), from, to).find(x => x.from === from && x.to === to);
-        if (await editKeep(k || { from, to })) $(this).text('꼭 남길 장면 ✓');
-    });
     $v.find('.na_src_check').on('click', async function () {
         const g = globalSettings();
         const raw = rangeRaw(c, { ...g, skipHidden: false }, from, to).raw;
         const sum = m.text.slice(sec.start, sec.end).trim();
-        const out = await withSpinner($(this), '대조하는 중', () => askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${sum}`, { system: AI_SYS_GRADE, maxTokens: 2500 }));
+        const out = await withSpinner($(this), '대조하는 중', () => askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${sum}`, { system: AI_SYS_GRADE, maxTokens: 6000 }));
         if (out === null) return;
         const ok = /^\s*문제 없음\.?\s*$/.test(out);
         $v.find('.na_src_checkout').prop('hidden', false).toggleClass('na_ai_ok', ok)

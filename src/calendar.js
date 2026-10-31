@@ -1,11 +1,13 @@
 // Story calendar: dates from section headings.
 
 import { gotoSection } from './ask.js';
-import { ctx, getMeta, globalSettings, saveGlobal } from './core.js';
+import { annivsOf, datedRows, findAnnivs } from './anniv.js';
+import { withSpinner } from './ai.js';
+import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { WARN_SVG } from './fade.js';
 import { headingPlaces } from './people.js';
-import { RANGE_HEAD, parseSections } from './sections.js';
-import { esc, escRe } from './util.js';
+import { RANGE_HEAD, parseSections, sectionKey } from './sections.js';
+import { confirm, esc, escRe } from './util.js';
 
 // Reads the date in each numbered heading ("(Mekhir 18, night, Ombos)", "(Phaophi 18 – Hathyr 4)", "(the next day)")
 // and lays the sections out on a time line, per log (Y1, Y2…). No AI.
@@ -111,6 +113,7 @@ export async function openCalendar() {
     const c = ctx();
     const m = getMeta();
     let logSel = null;
+    let adding = false;
     const $root = $(`
       <div class="na_popup na_v2 na_cal">
         <div class="na_v2_titlebar"><div class="na_v2_title"><b>이야기 달력</b><small class="na_cal_sum"></small></div><div class="na_v2_seg na_cal_logs"></div></div>
@@ -150,7 +153,24 @@ export async function openCalendar() {
         const day = r => r.date?.d ? (r.date.m2 !== r.date.m ? `${r.date.d}–` : r.date.d2 && r.date.d2 !== r.date.d ? `${r.date.d}–${r.date.d2}` : `${r.date.d}`) : (r.date ? '·' : '?');
         const sub = r => r.date?.d && r.date.m2 !== r.date.m ? `~${cals[r.date.cal][r.date.m2][0]} ${r.date.d2 || ''}`.trim() : (r.time || (r.date ? '' : r.rel || ''));
         const place = r => headingPlaces(r.s.title, cals).join(' → ');
+        // 기념일: the days found or added, each with its section; a badge on that section below
+        const av = annivsOf(m), avBy = new Map(av.map(a => [a.key, a.name]));
+        const drows = datedRows(m);
+        const left = drows.length - Math.min(Number(m.annivScan) || 0, drows.length);
+        const dateOf = r => `${cals[r.date.cal][r.date.m][0]} ${r.date.d}`;
+        const avRows = av.map(a => ({ a, r: drows.find(x => sectionKey(x.s) === a.key) })).filter(x => x.r);
+        const annivCard = `
+          <div class="na_v2_card na_cal_anniv">
+            <div class="na_cal_av_head"><b>기념일</b>${av.length ? `<small>${av.length}개</small>` : ''}<span class="na_spacer"></span>
+              ${drows.length ? `<button type="button" class="na_v2_btn na_cal_av_find" title="AI 기능 모델이 섹션을 읽고 첫 만남 · 고백한 날 같은 날을 찾아요">${!m.annivScan ? '기념일 찾기' : left ? `새 섹션에서 찾기 (${left})` : '처음부터 다시 찾기'}</button>` : ''}
+              <button type="button" class="na_cal_av_add" title="직접 추가" aria-label="직접 추가">+</button></div>
+            ${adding ? `<div class="na_cal_av_new"><select class="text_pole na_cal_av_sec">${drows.map(r => `<option value="${esc(sectionKey(r.s))}">${esc(dateOf(r))} · ${esc(strip(r.s.title))}</option>`).join('')}</select><input type="text" class="text_pole na_cal_av_nm" placeholder="이름 (예: 첫 여행)"><button type="button" class="na_v2_btn primary na_cal_av_ok">추가</button></div>` : ''}
+            ${avRows.length ? avRows.map(({ a, r }) => `
+              <div class="na_cal_av_row" data-k="${esc(a.key)}"><span class="na_cal_av_dot"><svg class="na_heart" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 20.5s-7.8-4.7-9.7-9.5C1 7.6 3.2 4.5 6.6 4.5c2.2 0 3.8 1.2 5.4 3.1 1.6-1.9 3.2-3.1 5.4-3.1 3.4 0 5.6 3.1 4.3 6.5-1.9 4.8-9.7 9.5-9.7 9.5z"/></svg></span><input type="text" class="text_pole na_cal_av_name" value="${esc(a.name)}" aria-label="기념일 이름"><small>${esc(dateOf(r))} · ${esc(strip(r.s.title))}</small><button type="button" class="na_cal_av_x" title="빼기" aria-label="빼기">✕</button></div>`).join('')
+                : `<small class="na_v2_note">${drows.length ? '아직 없어요. 찾기를 누르거나 + 로 직접 넣어요.' : '날짜가 있는 섹션이 있어야 해요.'} 이야기 속 날짜가 그날로 돌아오면 홈에 한 줄로 알려 줘요.</small>`}
+          </div>`;
         $root.find('.na_cal_body').html(`
+          ${annivCard}
           ${dated ? '' : '<div class="na_v2_card na_v2_note">제목에서 날짜를 못 찾았어요. 아래 "달 이름 바꾸기"에 이야기 속 달력을 적어 주세요.</div>'}
           ${l.warnings ? `<div class="na_xr_warn slim">${WARN_SVG}<div class="na_cal_warntxt">날짜가 거꾸로 가는 곳 ${l.warnings}개</div><button type="button" class="na_linkbtn na_cal_jump">보기</button></div>` : ''}
           ${groups.map(gr => `
@@ -159,12 +179,37 @@ export async function openCalendar() {
             <div class="na_v2_card na_v2_list">${gr.rows.map(r => `
               <button type="button" class="na_cal_item ${r.warn ? 'warn' : ''}" data-start="${r.s.start}">
                 <span class="na_cal_day"><b>${esc(day(r))}</b><small>${esc(sub(r))}</small></span>
-                <span class="na_cal_txt"><span>${esc(strip(r.s.title))}</span><small>${esc(r.warn || [(r.s.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [''])[0], place(r), r.note].filter(Boolean).join(' · '))}</small></span>
+                <span class="na_cal_txt"><span>${esc(strip(r.s.title))}${avBy.has(sectionKey(r.s)) ? ` <em class="na_cal_av_badge"><svg class="na_heart" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 20.5s-7.8-4.7-9.7-9.5C1 7.6 3.2 4.5 6.6 4.5c2.2 0 3.8 1.2 5.4 3.1 1.6-1.9 3.2-3.1 5.4-3.1 3.4 0 5.6 3.1 4.3 6.5-1.9 4.8-9.7 9.5-9.7 9.5z"/></svg> ${esc(avBy.get(sectionKey(r.s)))}</em>` : ''}</span><small>${esc(r.warn || [(r.s.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [''])[0], place(r), r.note].filter(Boolean).join(' · '))}</small></span>
               </button>`).join('')}
             </div>`).join('')}`);
     };
     $root.on('click', '.na_cal_logs button', function () { logSel = String($(this).data('p')); draw(); });
     $root.on('click', '.na_cal_jump', () => $root.find('.na_cal_item.warn')[0]?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+    $root.on('click', '.na_cal_av_find', async function () {
+        const again = !!m.annivScan && !(datedRows(m).length - (Number(m.annivScan) || 0));
+        if (again && annivsOf(m).length && !await confirm('기념일 다시 찾기', '지금 목록을 지우고 처음부터 다시 찾을까요? 직접 넣은 것도 지워져요.')) return;
+        const found = await withSpinner($(this), '찾는 중…', () => findAnnivs({ again, onProgress: (i, n) => { if (n > 40) $(this).html(`<i class="fa-solid fa-spinner fa-spin"></i> 찾는 중… ${i}/${n}`); } }));
+        if (found) toastr.info(found.length ? found.map(a => a.name).join(' · ') : '새로 찾은 날이 없어요', `기념일 ${found.length}개`);
+        draw();
+    });
+    $root.on('click', '.na_cal_av_add', () => { adding = !adding; draw(); if (adding) $root.find('.na_cal_av_nm').trigger('focus'); });
+    $root.on('click', '.na_cal_av_ok', async () => {
+        const key = String($root.find('.na_cal_av_sec').val() || ''), name = String($root.find('.na_cal_av_nm').val() || '').trim();
+        if (!key || !name) return toastr.info('섹션과 이름을 넣어 주세요.');
+        m.annivs = [...annivsOf(m).filter(a => a.key !== key), { key, name }];
+        adding = false; await saveMeta(); draw();
+    });
+    $root.on('keydown', '.na_cal_av_nm', e => { if (e.key === 'Enter') $root.find('.na_cal_av_ok').trigger('click'); });
+    $root.on('change', '.na_cal_av_name', async function () {
+        const key = String($(this).closest('.na_cal_av_row').data('k')), name = this.value.trim();
+        m.annivs = annivsOf(m).map(a => (a.key === key ? { ...a, name: name || a.name } : a));
+        await saveMeta(); draw();
+    });
+    $root.on('click', '.na_cal_av_x', async function () {
+        const key = String($(this).closest('.na_cal_av_row').data('k'));
+        m.annivs = annivsOf(m).filter(a => a.key !== key);
+        await saveMeta(); draw();
+    });
     $root.on('click', '.na_cal_item', function () { const st = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); });
     draw();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });

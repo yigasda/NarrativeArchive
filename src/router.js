@@ -6,15 +6,17 @@ import { getMeta, globalSettings, hasChat } from './core.js';
 import { recentForCheck } from './drift.js';
 import { lastIndex } from './hide.js';
 import { applyInjection, currentInjection, placeArchive } from './inject.js';
-import { KW_STOP } from './keywords.js';
+import { KW_STOP, capWords } from './keywords.js';
 import { castNames } from './knowledge.js';
 import { RANGE_HEAD, linkWaiting, linkedMap, mutedSet, parseSections, pinnedSet, sectionKey } from './sections.js';
 import { bm25, recallQuery, withGlossary } from './recall.js';
 import { layersOf } from './fade.js';
 import { sceneGuess } from './guess.js';
 import { embedSearch } from './embed.js';
+import { recentTrackers, withoutTrackers } from './scenes.js';
 import { refreshStatusSoon } from './status.js';
 import { shortHash } from './translate.js';
+import { escRe } from './util.js';
 
 // SillyTavern emits GENERATION_STARTED before it adds the typed message to the chat, and MESSAGE_SENT
 // (awaited) right after. So on a normal send the router and keyword links wait for MESSAGE_SENT,
@@ -126,18 +128,11 @@ function fitLines(body, q) {
     return bm25(lines.map(text => ({ text })), q).filter(r => r.hits >= 2).slice(0, 2).map(r => r.item.text.length > 200 ? `${r.item.text.slice(0, 199)}…` : r.item.text);
 }
 
-// no model, or it failed: the sections the word search is surest about
-function indexPicks(ranked, max) {
-    if (!ranked.length) return [];
-    const top = ranked[0].score;
-    return ranked.filter(r => r.hits >= 2 && r.score >= top * 0.6).slice(0, Math.min(max, 3)).map(r => r.item.s);
-}
-
 export let routerWarned = false;
 
 export function routerCfg(m) {
     const r = m?.router && typeof m.router === 'object' ? m.router : {};
-    return { mode: ['linked', 'old'].includes(r.mode) ? r.mode : 'off', max: Number(r.max) || 4, keep: Number.isFinite(Number(r.keep)) && r.keep !== undefined ? Number(r.keep) : 3, follow: r.follow !== false };
+    return { mode: ['linked', 'old', 'lift'].includes(r.mode) ? r.mode : 'off', max: Number(r.max) || 4, keep: Number.isFinite(Number(r.keep)) && r.keep !== undefined ? Number(r.keep) : 3, follow: r.follow !== false };
 }
 
 // sections the router may switch on: keyword-linked ones, and in 'old' mode every numbered section except the newest few and pinned ones
@@ -156,7 +151,7 @@ export function routerCandidates(m) {
         if (muted.has(key) || stack.some(g => muted.has(sectionKey(g)))) continue;
         const linked = Array.isArray(lm[key]) && lm[key].length;
         const safe = pinned.has(key) || stack.some(g => pinned.has(sectionKey(g)));
-        if (linked || (cfg.mode === 'old' && RANGE_HEAD.test(s.title) && !recent.has(key) && !safe)) out.push(s);
+        if (linked || (['old', 'lift'].includes(cfg.mode) && RANGE_HEAD.test(s.title) && !recent.has(key) && !safe)) out.push(s);
     }
     return out;
 }
@@ -166,29 +161,121 @@ export function routerReady() {
     return a.mode === 'custom' || a.mode === 'vertex' || !!globalSettings().aiProfile;
 }
 
+// 'lift' (AI 없이 빠르게): no model call before a reply, and no common words either. A section is called in only on a sure
+// sign: a name in it (not the main cast) or one of its keywords comes up in the chat, the status window goes back to a
+// place it happened, or (with 임베딩 on) the newest message is closest to it in meaning. The newest message counts most,
+// and only the picks that score near the best stay, so most replies call in none, one or two. The rest stay as the
+// forgetting curve has them (nothing is left out). The AI modes fall back to the same picks when the model fails.
+// Whatever mode picked it, a section called in stays for HOLD more replies, so it does not flicker in and out.
+const HOLD = 3;
+const MSG_W = [1, 0.4, 0.25, 0.15]; // the newest message first
+const MIN_SCORE = 0.5; // a name only in the newest message passes; one only in an older message does not
+const NEAR_TOP = 0.6;
+const DATE_WORDS = new Set('Jan January Feb February Mar March Apr April Jun June Jul July Aug August Sep Sept September Oct October Nov November Dec December Monday Tuesday Wednesday Thursday Friday Saturday Sunday Late Early'.split(' '));
+// the names in a section other than the main cast: capitalised words in its title, and mid-sentence in its body
+// (so sentence openers like "Inside" don't pass as names)
+function namesIn(m, s, mainSet) {
+    const body = m.text.slice(s.start, s.end).replace(/^#{1,3} [^\n]*\n?/, '');
+    const mid = [...body.matchAll(/[a-z0-9,;:]\s+([A-Z][a-z][A-Za-z'’]*)/g)].map(x => x[1].replace(/['’]s$/, ''));
+    return new Set([...capWords(s.title), ...mid].filter(w => w.length > 2 && !KW_STOP.has(w) && !DATE_WORDS.has(w) && !mainSet.has(w)));
+}
+const hasWord = (text, w) => /[가-힣]/.test(w) ? text.includes(w.toLowerCase()) : new RegExp(`(^|[^a-z0-9])${escRe(w.toLowerCase())}($|[^a-z0-9])`).test(text);
+// [{ key, why }] best first, at most `max`
+async function fastPicks(m, cands, max) {
+    const score = new Map(), why = new Map();
+    const add = (k, v, w) => { score.set(k, (score.get(k) || 0) + v); if (w && !why.get(k)?.includes(w)) why.set(k, why.get(k) ? `${why.get(k)}, ${w}` : w); };
+    const trks = recentTrackers(MSG_W.length * 2); // the status windows are read on their own below, not as what the chat is about
+    const msgs = recallQuery(MSG_W.length).map(p => withGlossary(m, withoutTrackers(p.text, trks)).toLowerCase());
+    // 1. names and keywords: a name in many sections says little, so each counts 1 / the sections it is in
+    const mainSet = new Set(castNames(m).flatMap(n => n.split(/\s+/)));
+    const lm = linkedMap(m);
+    const names = cands.map(s => new Set([...namesIn(m, s, mainSet), ...(Array.isArray(lm[sectionKey(s)]) ? lm[sectionKey(s)] : [])]));
+    // counted over the whole archive, anywhere in the text, so a main character the cast list misses is still common
+    const ranged = parseSections(m.text).filter(x => !x.group && RANGE_HEAD.test(x.title));
+    const texts = ranged.map(x => m.text.slice(x.start, x.end).toLowerCase());
+    const df = new Map();
+    for (const set of names) for (const w of set) if (!df.has(w)) df.set(w, Math.max(1, texts.filter(t => hasWord(t, w)).length));
+    const tooCommon = Math.max(2, ranged.length / 4);
+    const seenAt = new Map(); // name → weight of the newest message it is in
+    for (const w of df.keys()) {
+        if (df.get(w) > tooCommon) continue;
+        const at = msgs.findIndex(t => hasWord(t, w));
+        if (at >= 0) seenAt.set(w, MSG_W[at]);
+    }
+    cands.forEach((s, i) => { for (const w of names[i]) if (seenAt.has(w)) add(sectionKey(s), seenAt.get(w) / df.get(w), w); });
+    // 2. back at a place: the newest status window's room or building (after the city: "Frankfurt → Westend flat") is not in
+    // the latest archived section, but an older one happened there. The city alone says little: the story may never leave it
+    const trk = trks[0];
+    if (trk?.room) {
+        const nowTitle = (ranged[ranged.length - 1]?.title || '').toLowerCase();
+        const words = capWords(withGlossary(m, trk.room)).filter(w => !mainSet.has(w));
+        for (const w of words) {
+            if (hasWord(nowTitle, w)) continue; // still where the story is now: nothing to go back to
+            const at = cands.filter(s => hasWord(s.title.toLowerCase(), w));
+            if (!at.length || ranged.filter(x => hasWord(x.title.toLowerCase(), w)).length > tooCommon) continue;
+            add(sectionKey(at[at.length - 1]), 0.8, `같은 장소: ${w}`); // the last time there
+            break;
+        }
+    }
+    // 3. meaning (임베딩 on): the section closest to the newest message
+    const byTitle = new Map(cands.map(s => [s.title, s]));
+    for (const h of await embedSearch(recallQuery(1)[0]?.text || '', { topK: 10 })) {
+        const s = h.kind === 'sec' ? byTitle.get(h.title) : null;
+        if (!s) continue;
+        add(sectionKey(s), 0.6, '뜻이 비슷함');
+        break;
+    }
+    const ranked = [...score].sort((x, y) => y[1] - x[1]);
+    const top = ranked[0]?.[1] || 0;
+    return ranked.filter(([, v]) => v >= MIN_SCORE && v >= top * NEAR_TOP).slice(0, max).map(([key]) => ({ key, why: why.get(key) || '' }));
+}
+// this reply's picks plus what the last replies called in and still holds: new first, then held, up to the limit
+function finish(id, key, cands, prev, fresh, max, extra) {
+    const inCands = new Set(cands.map(sectionKey));
+    const hold = new Map();
+    for (const [k, left] of prev?.hold || []) if (left > 1 && inCands.has(k)) hold.set(k, left - 1);
+    const freshKeys = fresh.map(x => x.key);
+    for (const k of freshKeys) hold.set(k, HOLD);
+    const keys = [...freshKeys, ...[...hold.keys()].filter(k => !freshKeys.includes(k)).sort((a, b) => hold.get(b) - hold.get(a))].slice(0, max);
+    for (const k of [...hold.keys()]) if (!keys.includes(k)) hold.delete(k);
+    const picked = keys.map(k => cands.find(s => sectionKey(s) === k)).filter(Boolean);
+    const whyBy = {};
+    for (const k of keys) whyBy[k] = fresh.find(x => x.key === k)?.why ?? prev?.whyBy?.[k] ?? '';
+    const st = { key, picks: new Set(keys), titles: picked.map(s => s.title), at: Date.now(), ms: 0, cands: cands.length, hold, whyBy, fresh: new Set(freshKeys), ...extra };
+    routerState.set(id, st);
+    return st;
+}
+// the last messages, the newest marked LATEST, and a key that stays the same on a swipe or regenerate
+function recentFor(cands, cfg, tag) {
+    const msgs = recentForCheck(4);
+    if (msgs.length) msgs[msgs.length - 1] = msgs[msgs.length - 1].replace(/^\[#(\d+)/, '[#$1 · LATEST');
+    const recent = msgs.join('\n\n').slice(-6000);
+    return { recent, key: shortHash(`${tag}|${recent}|${cands.map(sectionKey).join('|')}|${cfg.max}`) };
+}
+
 export async function runRouter(m, { force = false } = {}) {
     const cfg = routerCfg(m);
     if (cfg.mode === 'off') return null;
     const cands = routerCandidates(m);
     const id = currentChatId();
-    const msgs = recentForCheck(4);
-    if (msgs.length) msgs[msgs.length - 1] = msgs[msgs.length - 1].replace(/^\[#(\d+)/, '[#$1 · LATEST');
-    const recent = msgs.join('\n\n').slice(-6000);
-    const key = shortHash(`${recent}|${cands.map(sectionKey).join('|')}|${cfg.max}`);
+    const { recent, key } = recentFor(cands, cfg, cfg.mode === 'lift' ? 'lift' : 'ai');
     const prev = routerState.get(id);
     if (!force && prev?.key === key) return prev; // a swipe or regenerate on the same chat
-    const done = (picked, extra) => { const st = { key, picks: new Set(picked.map(sectionKey)), titles: picked.map(s => s.title), at: Date.now(), ms: 0, cands: cands.length, via: 'ai', ...extra }; routerState.set(id, st); return st; };
-    if (!cands.length) return done([]);
+    if (!cands.length) return finish(id, key, cands, prev, [], cfg.max, { via: cfg.mode === 'lift' ? 'lift' : 'ai' });
+    const t0 = Date.now();
+    if (cfg.mode === 'lift') {
+        return finish(id, key, cands, prev, await fastPicks(m, cands, cfg.max), cfg.max, { via: 'lift', ms: Date.now() - t0 });
+    }
     const guess = await sceneGuess(m, routerReady());
     const { q, ranked } = rankCandidates(m, cands, guess);
+    // no model, or it failed: the fast picks instead, and why
+    const fallback = async why => finish(id, key, cands, prev, await fastPicks(m, cands, cfg.max), cfg.max, { via: 'index', why, ms: Date.now() - t0 });
     if (!routerReady()) {
-        const st = done(indexPicks(ranked, cfg.max), { via: 'index', why: '따로 연결한 모델이 없어요' });
         if (force) throw new Error('라우터는 RP와 따로 연결한 모델이 필요해요 (⚙ 설정 → AI 모델 → 모델에서 프로필·커스텀 API·Vertex)');
-        return st;
+        return fallback('따로 연결한 모델이 없어요');
     }
-    // which candidates get a full card: the best word-search hits, and last turn's picks (the chat often keeps talking about them)
+    // which candidates get a full card: the best word-search hits, and what the last replies called in
     const many = cands.length > ALL_DETAIL;
-    // a card only for a real hit (two words in common, not far below the best), best first
     const top = ranked[0]?.score || 0;
     const hits = ranked.filter(r => r.hits >= 2 && r.score >= top * 0.2).slice(0, DETAIL_N).map(r => r.item.i);
     const detail = new Set(many ? hits : cands.map((_, i) => i));
@@ -206,13 +293,13 @@ export async function runRouter(m, { force = false } = {}) {
             if (!detail.has(i) && added < MEAN_N) { detail.add(i); added++; }
         }
     }
-    const order = many ? [...detail] : [...detail].sort((x, y) => x - y);
-    const rest = cands.map((_, i) => i).filter(i => !detail.has(i));
     // each card: title, the names in it other than the main cast, its keywords, and the lines that fit the chat (else how it begins)
     const main = castNames(m);
     const mainSet = new Set(main.flatMap(n => n.split(/\s+/)));
     const lm = linkedMap(m);
     const layers = layersOf(m);
+    const order = many ? [...detail] : [...detail].sort((x, y) => x - y);
+    const rest = cands.map((_, i) => i).filter(i => !detail.has(i));
     const card = (s, n, i) => {
         const body = m.text.slice(s.start, s.end).replace(/^#{1,3} [^\n]*\n?/, '');
         const counts = new Map();
@@ -233,7 +320,6 @@ export async function runRouter(m, { force = false } = {}) {
     const other = rest.map((i, k) => line(cands[i], order.length + k + 1)).join('\n');
     const ranged = parseSections(m.text).filter(x => !x.group && RANGE_HEAD.test(x.title));
     const now = ranged.length ? ranged[ranged.length - 1].title : '';
-    const t0 = Date.now();
     let out;
     try {
         out = await Promise.race([
@@ -241,14 +327,23 @@ export async function runRouter(m, { force = false } = {}) {
             new Promise((_, no) => setTimeout(() => no(new Error('20초 안에 답이 없었어요')), 20_000)),
         ]);
     } catch (e) {
-        // the model failed: go with what the word search is surest about, and say why
+        // the model failed: go with the fast picks, and say why
         if (force) throw e;
-        const st = done(indexPicks(ranked, cfg.max), { via: 'index', why: e.message || String(e), ms: Date.now() - t0 });
-        if (!routerWarned) { routerWarned = true; toastr.warning(`AI 라우터가 안 돼서 색인으로 골랐어요: ${e.message || e}`, '서사 아카이브'); }
+        const st = await fallback(e.message || String(e));
+        if (!routerWarned) { routerWarned = true; toastr.warning(`AI 라우터가 안 돼서 빠른 방식으로 골랐어요: ${e.message || e}`, '서사 아카이브'); }
         return st;
     }
-    // read the "PICK:" line if there is one (so numbers in any reasoning are ignored), else the whole answer
+    // read the "PICK:" line if there is one (so numbers in any reasoning are ignored); a word in parentheses after a number is kept as the why
     const pickLine = (out.match(/PICK\s*:\s*(.*)$/im) || [null, out])[1];
-    const nums = /^\s*none\b/i.test(pickLine) ? [] : [...new Set((pickLine.match(/\d+/g) || []).map(Number))].filter(n => n >= 1 && n <= listed.length).slice(0, cfg.max);
-    return done(nums.map(n => cands[listed[n - 1]]), { ms: Date.now() - t0, short: order.length, guess });
+    const fresh = [];
+    if (!/^\s*none\b/i.test(pickLine)) {
+        for (const mt of pickLine.matchAll(/(\d+)\s*(?:\(([^)]*)\))?/g)) {
+            const n = Number(mt[1]);
+            const s = cands[listed[n - 1]];
+            if (!s || fresh.some(x => x.key === sectionKey(s))) continue;
+            fresh.push({ key: sectionKey(s), why: String(mt[2] || '').trim().slice(0, 40) });
+            if (fresh.length >= cfg.max) break;
+        }
+    }
+    return finish(id, key, cands, prev, fresh, cfg.max, { via: 'ai', ms: Date.now() - t0, short: order.length, guess });
 }

@@ -1,12 +1,11 @@
 // Search index over the raw chat (hidden messages too) and the archive's sections: BM25 on words. Korean words also
 // count by their stem without the particle, so "세트가" still finds "세트는".
 // Used by 질문하기, the AI router and the voice notes.
-// Also here: OOC 빼기 (/comment, OOC, /sys). 꼭 남길 장면 come first among equal hits.
+// Also here: OOC 빼기 (OOC, 나레이터; /comment always).
 
 import { glossaryEntries } from './translate.js';
 import { ctx, getMeta, globalSettings, hasChat, saveGlobal } from './core.js';
 import { cleanMessage } from './extract.js';
-import { isKeptAt, sectionKept } from './keeps.js';
 import { mutedSet, parseSections, sectionKey, splitTail } from './sections.js';
 
 // 회상 went in 3.88.0; the key is still cleared so an old chat keeps no stale block
@@ -14,10 +13,10 @@ export const RECALL_KEY = 'narrative_archive_recall';
 
 // ---- OOC 빼기: what is not the story, by kind. Each kind is switched on its own in the settings.
 
+// a /comment message is never the story, so it is always left out (no switch)
 export const OFF_KINDS = {
-    comment: ['/comment 코멘트', '분석 QR처럼 /comment로 넣은 메모', '코멘트'],
     ooc: ['OOC 메모', 'OOC:, 사담: 으로 시작하는 메시지', 'OOC 메모'],
-    narrator: ['/sys 내레이터 메시지', '상태창이나 선택지를 /sys로 띄우는 경우', '/sys'],
+    narrator: ['나레이터 메시지', '상태창이나 선택지를 나레이터로 띄우는 경우 (/sys)', '나레이터'],
 };
 // 3.69's single choice ('keep' | 'aside' | 'all') carries over the first time
 export function offKinds() {
@@ -26,7 +25,7 @@ export function offKinds() {
         const old = g.offstage;
         g.offKinds = old === 'keep' || old === '' ? { comment: false, ooc: false, narrator: false } : { comment: true, ooc: true, narrator: old === 'all' };
     }
-    return { comment: g.offKinds.comment !== false, ooc: g.offKinds.ooc !== false, narrator: g.offKinds.narrator === true };
+    return { ooc: g.offKinds.ooc !== false, narrator: g.offKinds.narrator === true };
 }
 export const setOffKind = (k, on) => { const g = globalSettings(); g.offKinds = { ...offKinds(), [k]: !!on }; saveGlobal(); };
 
@@ -35,7 +34,7 @@ const OOC_RE = /^\s*[([{【]?\s*(ooc|out of character|사담|잡담)\s*[:：)\]�
 export function isOffstage(msg, prev = null) {
     if (!msg) return false;
     const k = offKinds(), extra = msg.extra || {}, text = String(msg.mes || '');
-    if (k.comment && extra.type === 'comment') return true;
+    if (extra.type === 'comment') return true;
     if (k.ooc && OOC_RE.test(text)) return true;
     return k.narrator && extra.type === 'narrator';
 }
@@ -125,8 +124,7 @@ export function rawItems({ only = 'all', upto = Infinity } = {}) {
         const text = cleanMessage(String(x.mes || ''), { stripTags: true });
         if (!text.trim()) return;
         const name = x.name || (x.is_user ? 'User' : 'Char');
-        const star = !!m && isKeptAt(m, i);
-        for (const p of passages(text)) out.push({ kind: 'raw', i, name, star, text: p });
+        for (const p of passages(text)) out.push({ kind: 'raw', i, name, text: p });
     });
     return out;
 }
@@ -156,7 +154,7 @@ function passages(text, max = 700) {
 export function sectionItems(m) {
     const [body] = splitTail(m.text);
     const muted = mutedSet(m);
-    return parseSections(body).filter(s => !s.group && !muted.has(sectionKey(s))).map(s => ({ kind: 'sec', s, title: s.title, star: sectionKept(m, s.title), text: body.slice(s.start, s.end) }));
+    return parseSections(body).filter(s => !s.group && !muted.has(sectionKey(s))).map(s => ({ kind: 'sec', s, title: s.title, text: body.slice(s.start, s.end) }));
 }
 
 // the glossary's name pairs (Set = 세트) join a query in both spellings, so a Korean chat still finds an English archive
@@ -184,12 +182,12 @@ export function recallQuery(n) {
     return out.map((text, k) => ({ text, w: Math.max(0.3, 1 - k * 0.25) }));
 }
 
-// hits for a query: raw passages (and section bullets), 꼭 남길 장면 first among equals, at most one passage per message,
+// hits for a query: raw passages (and section bullets), at most one passage per message,
 // within the token budget. minHits: how many different query words an item must share
 export function pick(results, { k, budget, minHits = 2 }) {
     if (!results.length) return [];
     const top = results[0].score;
-    const scored = results.map(r => ({ ...r, score: r.score * (r.item.star ? 1.5 : 1) })).sort((x, y) => y.score - x.score);
+    const scored = [...results].sort((x, y) => y.score - x.score);
     const out = [], seen = new Set();
     let tok = 0;
     for (const r of scored) {

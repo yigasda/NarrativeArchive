@@ -7,6 +7,7 @@ import { ctx, getMeta, globalSettings, saveGlobal, saveMeta, textHash } from './
 import { castNames } from './knowledge.js';
 import { PICK_CHUNK_TOK, estTok } from './picker.js';
 import { sectionPeek } from './peek.js';
+import { openPhone } from './phone.js';
 import { RANGE_HEAD, parseSections, sectionKey, splitTail, tailBlocks } from './sections.js';
 import { confirm, esc, escRe } from './util.js';
 
@@ -19,11 +20,11 @@ export function headingPlaces(title, cals) {
     const d = headingDate(title, cals);
     let text = paren;
     if (d.date) text = text.replace(d.date.label, '');
-    const parts = text.split(/,|;/).map(x => x.trim()).filter(Boolean)
+    // "A → B" is a move inside one section, and "morning → midday" the hours it runs: split first, then drop the times
+    return text.split(/,|;/).flatMap(x => x.split(/\s*(?:→|->|⇒)\s*/)).map(x => x.trim()).filter(Boolean)
         .filter(x => !PLACE_SKIP.test(x) && !TIME_WORDS.some(([re]) => re.test(x) && x.split(/\s+/).length <= 3))
-        .filter(x => !/^(?:month of|after|before|until|during|into)\b/i.test(x));
-    // "A → B" is a move inside one section
-    return parts.flatMap(x => x.split(/\s*(?:→|->|⇒)\s*/)).map(x => x.replace(/^(?:the|a|an)\s+/i, '').trim()).filter(Boolean);
+        .filter(x => !/^(?:month of|after|before|until|during|into)\b/i.test(x))
+        .map(x => x.replace(/^(?:the|a|an)\s+/i, '').trim()).filter(Boolean);
 }
 
 // The roster is the STATE character headings plus names added by hand (m.people). Faces are kept in the global settings by name,
@@ -409,6 +410,7 @@ export async function openPeople() {
         return `${strip}
           <div class="na_pb_card" data-n="${esc(sel)}">
             <div class="na_pb_cover" style="--h:${hue(sel)}${cover ? `;--cover:${esc(cover)}` : ''}">
+              <button type="button" class="na_pb_phonebtn" title="${esc(sel)}의 휴대폰"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>휴대폰</button>
               <button type="button" class="na_pb_coverbtn ${coverOpen ? 'on' : ''}" aria-label="배경색 바꾸기" title="배경색 바꾸기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a10 10 0 1 1 10-10c0 2.8-2.2 4-4 4h-2.2a1.8 1.8 0 0 0-1.3 3.1A1.7 1.7 0 0 1 12 22z"/><circle cx="7.5" cy="10.5" r="1.2"/><circle cx="12" cy="7" r="1.2"/><circle cx="16.5" cy="10.5" r="1.2"/></svg></button>
             </div>
             <div class="na_pb_id">
@@ -628,6 +630,7 @@ export async function openPeople() {
     // the cover colour (kept with the faces, for every chat)
     const setCover = c => { if (c) g.covers[nameKey(sel)] = c; else delete g.covers[nameKey(sel)]; save(); };
     $root.on('click', '.na_pb_coverbtn', () => { coverOpen = !coverOpen; draw(); });
+    $root.on('click', '.na_pb_phonebtn', () => openPhone(sel));
     $root.on('click', '.na_pb_sw[data-c]', function () { setCover(this.dataset.c); });
     $root.on('input', '.na_pb_color', function () { $root.find('.na_pb_cover').css('--cover', this.value); });
     $root.on('change', '.na_pb_color', function () { setCover(this.value); });

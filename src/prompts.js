@@ -532,7 +532,8 @@ export function bindPromptSettings() {
     $('#na_nudge').on('change', function () { g().compressNudge = Number(this.value) || 0; saveGlobal(); });
     const pick = id => { g().activePrompt = id; saveGlobal(); renderPromptSettings(); };
     const askName = async (title, value) => {
-        const v = await ctx().Popup.show.input(title, '', value);
+        const c = ctx();
+        const v = await c.callGenericPopup($(`<div class="na_popup na_v2"><div class="na_v2_title"><b>${esc(title)}</b></div></div>`), c.POPUP_TYPE.INPUT, value, { okButton: '확인', cancelButton: '취소' });
         return typeof v === 'string' ? v.trim() : '';
     };
     $h.find('.na_psel').on('change', function () { pick(this.value); });

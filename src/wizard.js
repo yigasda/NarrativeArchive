@@ -1,7 +1,6 @@
 // Compression wizard.
 
 import { loreBlock } from './lore.js';
-import { keepLabel, keepsIn } from './keeps.js';
 import { offstageSet } from './recall.js';
 import { SECTION_GUARD, aiLabel, askAI, askCompress, compressEffort, drLabel, draftReady, isBlocked, withSpinner } from './ai.js';
 import { autoAppend, openAppend } from './append.js';
@@ -29,7 +28,11 @@ YOU GET
 
 HOW TO WORK
 Step 1. Read the whole RAW LOG, to the last message.
-Step 2. Go through the SUMMARY one bullet at a time. For each bullet, find the messages it is based on.
+Step 2. Go through the SUMMARY one bullet at a time. For each bullet, find the messages it is based on, and check
+   two kinds of words against them on their own:
+   - every word that says who someone is to someone (ex, suitor, friend, fiancé, stranger…);
+   - every word that says how something was said or done (quietly, warned, pleaded, shouted, calmly…).
+   One wrong word of these is a problem even when the rest of the bullet is right.
 Step 3. Then go through the RAW LOG again and look for important things the SUMMARY never mentions.
 
 REPORT ONLY THESE
@@ -37,17 +40,18 @@ REPORT ONLY THESE
     e.g. the summary says Ren cried; in the log she only went quiet.
 2. 틀림 (wrong): it is in the log but the summary gets it wrong: wrong person, wrong speaker of a quote, wrong order, wrong place or time, a quote with changed words, or a heading whose #from–#to does not match the messages.
     e.g. the summary says Ivo said "…", but in the log Mara said it.
+    e.g. the summary calls Ivo her suitor; in the log Mara says she already ended it with him, so he is her ex.
 3. 빠짐 (missing): an important event, decision, promise, confession, secret revealed, injury, or change in a relationship that the SUMMARY leaves out.
     Small talk, repeated actions and atmosphere are NOT important.
-    A stretch listed after the RAW LOG as a scene to keep in detail counts as missing when the SUMMARY drops it or squeezes it into a vague line.
-4. 해석 (interpretation): a feeling, motive or judgment the SUMMARY states as fact when the RAW LOG only shows actions and words.
+4. 해석 (interpretation): a feeling, motive or judgment the SUMMARY states as fact when the RAW LOG only shows actions and words,
+   or a manner the log does not show (it says "quietly warned" where the log has her plead, or "calmly" where she shouts).
     e.g. the summary says Ren was jealous; in the log she only changed the subject.
 
 DO NOT REPORT
 - wording, style, length, or how something could be phrased better
 - the summary being shorter than the log: shortening is its job
 - STATE and OPEN facts that come from before this log (they carry over from the archive); only check what they say about events in this log
-- anything you are not sure about
+- a 지어냄 you are not sure about after reading the log again
 
 OUTPUT: Korean, one bullet per problem, most serious first, exactly like this
 - 지어냄: <what is wrong> (#<message number>)
@@ -210,7 +214,7 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
         } else if (t.trim()) { tail = t.trim(); lastChg = ''; }
         doneTo = to;
         if (grade) {
-            try { grades.push({ from, to, text: String(await askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${out}`, { system: AI_SYS_GRADE, maxTokens: 2500 }) || '').trim() }); }
+            try { grades.push({ from, to, text: String(await askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${out}`, { system: AI_SYS_GRADE, maxTokens: 6000 }) || '').trim() }); }
             catch (e) { grades.push({ from, to, text: String(e?.message || e), error: true }); }
         }
     }
@@ -314,7 +318,6 @@ export async function quickCompress() {
             row('STATE', esc(short(sceneModelLabel(stateModel()))), '마지막에 한 번'),
             ...(String(m.workNote || '').trim() ? [row('작업 노트', '있음', `약 ${fmt(estTok(m.workNote))} 토큰`)] : []),
         ] : [row('요약', esc(short(drLabel())), n > 1 ? `${n}번에 나눠 · 약 ${fmt(chunkTok())} 토큰씩` : '한 번에')]),
-        ...(keepsIn(m, from, to).length ? [row('꼭 남길 장면', `${keepsIn(m, from, to).length}개`, esc(keepsIn(m, from, to).map(keepLabel).join(', ')))] : []),
         row('보낼 양', `약 ${fmt(sendEst.tok)} 토큰`, `요청 ${sendEst.req}번 · 생각과 답은 빼고 · 어림값`),
         row('지시문', esc(p.name), `생각 ${effort}${(p.id === 'basic' && p.text !== BASIC_PROMPT) || (p.id === 'short' && p.text !== SHORT_PROMPT) ? ' · <span class="na_qc_warn">고친 버전이라 최신 규칙이 안 들어가 있어요</span>' : ''}`),
         ...(au.on ? [row('AU', esc(au.name), '본편 뒤에 이어서')] : []),
@@ -340,18 +343,21 @@ export async function quickCompress() {
     }
     quickBusy = true;
     const runMemo = quickMemo;
+    // 원문 대조: with 바로 넣기 its verdict decides whether the summary goes straight in, so it is waited for;
+    // otherwise the append window opens at once and the verdict fills its box when it comes
+    const gradeNow = !!globalSettings().quickGrade && !!globalSettings().quickAuto;
     const toast = toastr.info(`#${from}–#${to} 요약하는 중… 이 탭에 있어야 끝까지 받아요`, '한 번에 압축', { timeOut: 0, extendedTimeOut: 0, tapToDismiss: false });
     let r;
     try {
-        r = await (() => compressDraft({ m, g, p, items, grade: !!globalSettings().quickGrade, memo: runMemo, chunks: sceneList,
+        r = await (() => compressDraft({ m, g, p, items, grade: gradeNow && !scenes, memo: runMemo, chunks: sceneList,
             onStep: (k, total, a, b, stage) => {
                 const msg = stage === 'scenes' ? `장면 ${k + 1}/${total} · #${a}–#${b} 쓰는 중` : stage === 'state' ? 'STATE·OPEN 바뀌는 것 정리 중' : stage === 'check' ? '세는 규칙 검사 중' : total > 1 ? `#${a}–#${b} 요약하는 중… (${k + 1}/${total})` : '';
                 if (msg) $(toast).find('.toast-message').text(`${msg} · 이 탭에 있어야 끝까지 받아요 (다른 탭·앱으로 가면 끊길 수 있어요)`);
             } }))();
         // 장면별 writes scene by scene; its sections are checked against the whole range once at the end
-        if (scenes && globalSettings().quickGrade && r.text && !r.error) {
+        if (scenes && gradeNow && r.text && !r.error) {
             $(toast).find('.toast-message').text('원문과 대조하는 중 · 이 탭에 있어야 끝까지 받아요');
-            try { r.grades = [{ from, to, text: String(await askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${r.text}`, { system: AI_SYS_GRADE, maxTokens: 3000 }) || '').trim() }]; }
+            try { r.grades = [{ from, to, text: String(await askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${r.text}`, { system: AI_SYS_GRADE, maxTokens: 6000 }) || '').trim() }]; }
             catch (e) { r.grades = [{ from, to, text: String(e?.message || e), error: true }]; }
         }
     } finally { quickBusy = false; toastr.clear(toast); }
@@ -380,7 +386,11 @@ export async function quickCompress() {
         }
         toastr.info(`확인할 게 있어서 추가 창을 열어요 · ${res.why.join(' · ')}`, '바로 넣기', { timeOut: 8000 });
     }
-    await openAppend({ text, end: guessEndNumber(text) ?? upto, expectTo: upto, ...joinGrades(r.grades) });
+    const later = globalSettings().quickGrade && !gradeNow
+        ? askAI(`[RAW LOG]\n${upto === to ? raw : rangeRaw(c, g, from, upto).raw}\n\n[SUMMARY]\n${text}`, { system: AI_SYS_GRADE, maxTokens: 6000 })
+            .then(t => ({ grade: String(t || '').trim(), gradeError: false }), e => ({ grade: String(e?.message || e), gradeError: true }))
+        : null;
+    await openAppend({ text, end: guessEndNumber(text) ?? upto, expectTo: upto, ...(later ? { gradeLater: later } : joinGrades(r.grades)) });
     if ((getMeta().boundary ?? -1) >= upto) { delete getMeta().pendingDraft; await saveMeta(); }
 }
 
@@ -552,7 +562,7 @@ export async function openWizard() {
         const sum = $root.find('.na_wz_out').val().trim();
         if (!sum) return toastr.info('먼저 결과를 붙여넣어 주세요.');
         await build();
-        const out = await withSpinner($(this), '채점하는 중…', () => askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${sum}`, { system: AI_SYS_GRADE, maxTokens: 2500 }));
+        const out = await withSpinner($(this), '채점하는 중…', () => askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${sum}`, { system: AI_SYS_GRADE, maxTokens: 6000 }));
         if (out === null) return;
         const ok = /^\s*문제 없음\.?\s*$/.test(out);
         $root.find('.na_wz_gradeout').prop('hidden', false).toggleClass('na_ai_ok', ok)

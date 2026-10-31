@@ -1,5 +1,6 @@
 // Other chats: carrying the archive into a new chat, reading other chat files, bundle import.
 
+import { PHONE_STORY_KEYS, phoneChatScope, choosePhoneStory, resetPhoneStory, adoptPhoneStory, clearPhoneSelection } from './phonestory.js';
 import { MODULE, SETTING_KEYS, commitText, ctx, getMeta, hasChat, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { setEditorDirty, syncPanel } from './panel.js';
@@ -22,7 +23,21 @@ export function rememberArchive() {
 export async function importArchive(src, label, fromChat = null) {
     const m = getMeta();
     if (m.text.trim() && !await confirm('아카이브 가져오기', `이 채팅의 아카이브를 "${esc(label)}"의 것으로 바꿀까요? 지금 내용은 복구 지점에 남아요.`)) return false;
-    for (const k of SETTING_KEYS) if (src.settings && Object.hasOwn(src.settings, k)) m[k] = structuredClone(src.settings[k]);
+    const scope=phoneChatScope(ctx());
+    const hasSource=!!Object.keys(src.settings?.phones || {}).length || !!Object.keys(src.settings?.phoneProfiles || {}).length;
+    const hasCurrent=!!Object.keys(m.phones || {}).length || !!Object.keys(m.phoneProfiles || {}).length || !!m.finance;
+    const phoneChoice=hasSource || hasCurrent ? await choosePhoneStory({importing:true,hasSource}) : 'fresh';
+    if(!phoneChoice || getMeta()!==m || phoneChatScope(ctx())!==scope) return false;
+    for (const k of SETTING_KEYS) if (!PHONE_STORY_KEYS.includes(k) && src.settings && Object.hasOwn(src.settings,k)) m[k]=structuredClone(src.settings[k]);
+    if(phoneChoice==='fresh') resetPhoneStory(m,scope);
+    else {
+        if(hasSource) {
+            for(const k of PHONE_STORY_KEYS) {
+                if(Object.hasOwn(src.settings,k)) m[k]=structuredClone(src.settings[k]);else delete m[k];
+            }
+        }
+        adoptPhoneStory(m,scope);clearPhoneSelection(scope);
+    }
     // the numbers that chat's archive ended on live in that chat: "원문" on those sections opens it
     if (fromChat) {
         const r = headingRanges(src.text);
@@ -199,6 +214,8 @@ export async function pickFromBundle(bundle) {
 }
 
 export function onChatChanged() {
+    const phoneDialog=document.getElementById('na_phl');
+    if(phoneDialog?.open) phoneDialog.close();
     setEditorDirty(false);
     setCarryOffer(hasChat() && lastSeen && lastSeen.chatId !== currentChatId() && !getMeta().text.trim() ? lastSeen : null);
     applyInjection();
