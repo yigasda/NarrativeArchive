@@ -5789,6 +5789,15 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .ax_ntb { --axbg: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--axd); }
 .ax .ax_ntb:disabled { opacity: 0.5; }
 .ax_ntc { font-size: 12px; color: #8a929d; }
+.ax_swp { position: relative; overflow: hidden; }
+.ax .ax_swp > .ax_rw { --axbg: #fff; z-index: 1; transition: transform 0.22s ease; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.ax_swp.open > .ax_rw { transform: translateX(-86px); }
+.ax_swp + .ax_swp > .ax_rw::before { content: ''; position: absolute; top: 0; left: 76px; right: 14px; border-top: 1px solid #eef0f3; }
+.ax .ax_swdel { --axbg: #f57d76; --axsh: none; position: absolute; top: 0; right: 0; bottom: 0; width: 86px; border-radius: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #fff; font-size: 12.5px; font-weight: 600; }
+.wb_rqw { position: relative; }
+.ax .wb_rqw > .wb_rq, .ax .wb_rqw > .wb_rw { padding-right: 48px; }
+.wb_rqw + .wb_rw::before, .wb_rqw + .wb_rqw > .wb_rq::before, .wb_rqw + .wb_rqw > .wb_rw::before, .wb_rw + .wb_rqw > .wb_rw::before { content: ''; position: absolute; top: 0; left: 58px; right: 14px; border-top: 1px solid #eef0f3; }
+.ax .wb_rqx { --axbg: none; --axsh: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #9aa1ab; }
 .ax_dyr { display: flex; align-items: center; gap: 12px; }
 .ax .ax_dydel { --axbg: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; }
 .ax .ax_pvdel { color: rgba(255, 255, 255, 0.85); }

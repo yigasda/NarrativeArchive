@@ -193,6 +193,8 @@ Object.assign(AX, { trash2: 'M4 7h16M10 11v6M14 11v6M5.5 7l1 12.2a2 2 0 0 0 2 1.
 // a round button on the top bar, and a red row in a card at the end (the way iOS deletes a contact or an event)
 const cbDel = (kind, i, label = '지우기') => `<button type="button" class="ax_cb na_ph_rm" data-kind="${kind}" data-i="${esc(String(i))}" aria-label="${label}">${ax('trash2', 18, 'currentColor', 2.1)}</button>`;
 const delRow = (kind, i, label) => `<div class="ax_card ax_delcard"><button type="button" class="na_ph_rm ax_delrow" data-kind="${kind}" data-i="${esc(String(i))}">${label}</button></div>`;
+// a list row that slides left to show 삭제 (메시지 · 메일 · 통화)
+const swipeRow = (kind, i, row) => `<div class="ax_swp"><button type="button" class="na_ph_rm ax_swdel" data-kind="${kind}" data-i="${esc(String(i))}">${ax('trash2', 21, 'currentColor', 2)}<span>삭제</span></button>${row}</div>`;
 const delBtn = (kind, i, cls, inner) => `<button type="button" class="na_ph_rm ${cls}" data-kind="${kind}" data-i="${esc(String(i))}" aria-label="지우기">${inner}</button>`;
 export const AXB = { setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', cam: 'apri', map: 'blue' };
 export const AXB_C = { invest: ['#17695d', '#d9eee5'], blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'], bank: ['#2c4a80', '#e2e9f5'], wallet: ['#3d4a66', '#e3e7ef'], shop: ['#2f7d74', '#d9efec'], voice: ['#8a5a2e', '#f2e7d6'] };
@@ -220,10 +222,10 @@ export function msgList(p, now, roster) {
       <div class="ax_scroll">
         ${axH1('메시지', ts.length ? `${ts.length}개 대화` : '')}
         ${axFind()}
-        ${ts.length ? `<div class="ax_card">${ts.map(t => { const x = t.messages[t.messages.length - 1]; return `
+        ${ts.length ? `<div class="ax_card">${ts.map(t => { const x = t.messages[t.messages.length - 1]; return swipeRow('thread', p.threads.indexOf(t), `
           <button type="button" class="ax_rw" data-go="thread" data-i="${p.threads.indexOf(t)}">${threadNew(t) ? '<i class="ax_dot"></i>' : ''}${axAv(t.with, 48, roster)}<span class="ax_tx">
             <span class="ax_h"><b>${esc(savedName(p, t.with))}</b><small class="cg_num">${esc(listTime(p, x.time))}</small></span>
-            <span class="ax_p">${t.draft ? `<span class="ax_draftw">초안</span>${esc(t.draft.text)}` : `${esc(x.text)}${x.ko && koOn() ? `<span class="ax_ko">${esc(x.ko)}</span>` : ''}`}</span></span></button>`; }).join('')}</div>` : '<div class="ax_empty">메시지가 없어요</div>'}
+            <span class="ax_p">${t.draft ? `<span class="ax_draftw">초안</span>${esc(t.draft.text)}` : `${esc(x.text)}${x.ko && koOn() ? `<span class="ax_ko">${esc(x.ko)}</span>` : ''}`}</span></span></button>`); }).join('')}</div>` : '<div class="ax_empty">메시지가 없어요</div>'}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
@@ -265,7 +267,7 @@ export function threadScreen(p, now, i, roster) {
         return out;
     }).join('');
     return `${axBar(p, now)}
-      ${axTop(`${axCb('msg')}<button type="button" class="ax_who2" data-go="contact" data-i="${encodeURIComponent(nameKey(t.with))}">${axAv(t.with, 38, roster)}<span><b>${esc(saved)}</b><small>연락처 보기 ›</small></span></button>`, `${axKp(p)}${cbDel('thread', i, '대화 지우기')}`)}
+      ${axTop(`${axCb('msg')}<button type="button" class="ax_who2" data-go="contact" data-i="${encodeURIComponent(nameKey(t.with))}">${axAv(t.with, 38, roster)}<span><b>${esc(saved)}</b><small>연락처 보기 ›</small></span></button>`, axKp(p))}
       <div class="ax_scroll ax_msgs">${rows}<i class="ax_pad big"></i></div>
       ${draftBar(p, t, i)}
       ${axInd()}`;
@@ -277,15 +279,15 @@ function callRuns(p, onlyMissed) {
     for (let k = p.calls.length - 1; k >= 0; k--) {
         const c = p.calls[k], last = runs[runs.length - 1];
         if (onlyMissed && c.type !== 'missed') continue;
-        if (last && nameKey(last.c.with) === nameKey(c.with) && last.c.type === c.type && last.c.time.slice(0, 5) === c.time.slice(0, 5)) last.n++;
-        else runs.push({ c, k, n: 1 });
+        if (last && nameKey(last.c.with) === nameKey(c.with) && last.c.type === c.type && last.c.time.slice(0, 5) === c.time.slice(0, 5)) { last.n++; last.ks.push(k); }
+        else runs.push({ c, k, n: 1, ks: [k] });
     }
     return runs;
 }
 const callKind = c => (c.type === 'missed' ? '부재중' : `${c.type === 'out' ? '발신' : '수신'}${c.min ? ` · ${c.min}분` : ''}`);
 export function callScreen(p, now, roster, onlyMissed) {
     const runs = callRuns(p, onlyMissed), day = String(now).slice(0, 5);
-    const row = ({ c, k, n }) => `<button type="button" class="ax_rw" data-go="callwho" data-i="${k}"><span class="ax_ci ${c.type}">${ax(c.type, 17, 'currentColor', 2.2)}</span><span class="ax_tx"><b class="${c.type === 'missed' ? 'm' : ''}">${esc(savedName(p, c.with))}${n > 1 ? ` (${n})` : ''}</b><span class="ax_p">${callKind(c)}</span></span><small class="cg_num">${esc(listTime(p, c.time))}</small></button>`;
+    const row = ({ c, k, n, ks }) => swipeRow('callrun', ks.join(','), `<button type="button" class="ax_rw" data-go="callwho" data-i="${k}"><span class="ax_ci ${c.type}">${ax(c.type, 17, 'currentColor', 2.2)}</span><span class="ax_tx"><b class="${c.type === 'missed' ? 'm' : ''}">${esc(savedName(p, c.with))}${n > 1 ? ` (${n})` : ''}</b><span class="ax_p">${callKind(c)}</span></span><small class="cg_num">${esc(listTime(p, c.time))}</small></button>`);
     const today = runs.filter(r => r.c.time.slice(0, 5) === day), before = runs.filter(r => r.c.time.slice(0, 5) !== day);
     return `${axBar(p, now)}
       ${axTop(axCb('home'))}
@@ -506,10 +508,10 @@ export function mailScreen(p, now) {
       <div class="ax_scroll">
         ${axH1('받은편지함', unread ? `안 읽음 ${unread}` : '')}
         ${axFind()}
-        ${ms.length ? `<div class="ax_card">${ms.map(([x, k]) => `
+        ${ms.length ? `<div class="ax_card">${ms.map(([x, k]) => swipeRow('mail', k, `
           <button type="button" class="ax_rw ax_rwm" data-go="mailone" data-i="${k}">${x.unread ? '<i class="ax_dot"></i>' : ''}${axLetter(x.from, 42)}<span class="ax_tx">
             <span class="ax_h"><b>${esc(x.from)}</b><small class="cg_num">${esc(listTime(p, x.time))}</small></span>
-            <span class="ax_s ${x.unread ? 'u' : ''}">${esc(x.subject)}</span><span class="ax_p">${axKo(x.text.replace(/\s+/g, ' '), x.ko ? x.ko.replace(/\s+/g, ' ') : '')}</span></span></button>`).join('')}</div>` : '<div class="ax_empty">메일이 없어요</div>'}
+            <span class="ax_s ${x.unread ? 'u' : ''}">${esc(x.subject)}</span><span class="ax_p">${axKo(x.text.replace(/\s+/g, ' '), x.ko ? x.ko.replace(/\s+/g, ' ') : '')}</span></span></button>`)).join('')}</div>` : '<div class="ax_empty">메일이 없어요</div>'}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
@@ -518,14 +520,15 @@ export function mailOne(p, now, k) {
     const x = (p.mails || [])[k];
     if (!x) return mailScreen(p, now);
     return `${axBar(p, now)}
-      ${axTop(axCb('mail'), `${axKp(p)}${cbDel('mail', k, '메일 삭제')}`)}
+      ${axTop(axCb('mail'), axKp(p))}
       <div class="ax_scroll">
         <div class="ax_card ax_rw ax_mfrom">${axLetter(x.from, 44)}<span class="ax_tx"><b>${esc(x.from)}</b><span class="ax_p">받는 사람: ${esc(p.owner)}</span></span><small class="cg_num">${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</small></div>
         <div class="ax_msub">${axKo(x.subject, x.ks)}</div>
         <div class="ax_mbody">${esc(x.text)}</div>
         ${x.ko && koOn() ? `<div class="ax_mko">${esc(x.ko)}</div>` : ''}
-        <i class="ax_pad"></i>
+        <i class="ax_pad big"></i>
       </div>
+      <div class="ax_ntool ax_mtool">${delBtn('mail', k, 'ax_ntb', ax('trash2', 22, 'currentColor', 1.9))}<span class="ax_ntc cg_num">받은편지함</span><span class="ax_ntb">${ax('reply', 22, 'currentColor', 1.9)}</span></div>
       ${axInd()}`;
 }
 

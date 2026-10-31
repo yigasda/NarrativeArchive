@@ -52,6 +52,8 @@ const homeDock = on => `<div class="wb_dock wb_lab">${[['search', 'home', '홈']
 // ---- 검색 홈
 const WORD = { DE: 'suche', AT: 'suche', CH: 'suche', FR: 'recherche', ES: 'buscar', IT: 'cerca', KR: '검색', JP: '検索', CN: '搜索', TW: '搜尋', RU: 'поиск', BR: 'busca' };
 const wordmark = p => { const w = [...(WORD[p.country] || 'search')]; return `${esc(w.slice(0, -1).join(''))}<span>${esc(w.at(-1))}</span>`; };
+// 최근 검색 · 방문 기록's ×: that search goes, with its pages
+const rqX = k => `<button type="button" class="na_ph_rm wb_rqx" data-kind="search" data-i="${k}" aria-label="검색 기록 지우기">${ax('x', 15, 'currentColor', 2.4)}</button>`;
 export function searchScreen(p, now) {
     const ss = newest(p.searches).slice(0, 6), ts = tabsOpen(p), bm = bookmarks(p).slice(0, 6);
     return `${axBar(p, now)}
@@ -60,7 +62,7 @@ export function searchScreen(p, now) {
         <div class="wb_logo">${wordmark(p)}</div>
         <div class="wb_bigq">${ax('search', 19, '#2a313b', 2.3)}<span>검색어 또는 주소</span>${ax('mic', 18, '#8a929d', 2.1)}</div>
         ${ss.length ? `<div class="wb_sec"><span>최근 검색</span><button type="button" data-go="history">모두 보기</button></div><div class="wb_card">${ss.map(([x, k]) => `
-          <button type="button" class="wb_rq" data-go="searchone" data-i="${k}"><span class="wb_ci">${ax('clock', 15, 'currentColor', 2.3)}</span><span class="wb_tx"><b>${esc(x.q)}${x.tab && !x.closed ? '<em>열림</em>' : ''}</b>${k1(x.ko)}</span><small class="cg_num">${esc(listTime(p, x.time))}</small></button>`).join('')}</div>`
+          <div class="wb_rqw"><button type="button" class="wb_rq" data-go="searchone" data-i="${k}"><span class="wb_ci">${ax('clock', 15, 'currentColor', 2.3)}</span><span class="wb_tx"><b>${esc(x.q)}${x.tab && !x.closed ? '<em>열림</em>' : ''}</b>${k1(x.ko)}</span><small class="cg_num">${esc(listTime(p, x.time))}</small></button>${rqX(k)}</div>`).join('')}</div>`
             : '<div class="wb_none">검색 기록이 없어요</div>'}
         ${ts.length ? `<div class="wb_sec"><span>열린 탭 ${ts.length}</span><button type="button" data-go="tabs">모두 보기</button></div>
           <div class="wb_strip">${ts.map(([x, i]) => `<div class="wb_tmini" role="button" tabindex="0" ${tabGo(x, i)}><div class="wb_th">${thumb(p, x, i)}</div><span class="wb_tt">${tabFav(x)}${esc(tabTitle(x))}</span></div>`).join('')}</div>` : ''}
@@ -102,7 +104,7 @@ export function searchOne(p, now, k, busy) {
     const x = p.searches[k];
     if (!x) return searchScreen(p, now);
     return `${axBar(p, now)}
-      ${axTop(axCb('search'), `${axKp(p)}<button type="button" class="ax_cb na_ph_rm" data-kind="search" data-i="${k}" aria-label="검색 기록 지우기">${ax('trash2', 18, 'currentColor', 2.1)}</button>`)}
+      ${axTop(axCb('search'), axKp(p))}
       <div class="ax_scroll">${resultsBody(p, x, k, busy)}<i class="wb_pad"></i></div>
       ${dock(p, { back: 'search', addr: `${ax('search', 14, '#6b7380', 2.6)}<span>${esc(x.q)}</span>`, mark: { i: k, r: -1, on: markedPage(x, -1) }, ko: false })}
       ${axInd()}`;
@@ -247,7 +249,7 @@ export function marksScreen(p, now, hist) {
         <div class="wb_seg"><button type="button" class="${hist ? '' : 'on'}" data-go="marks">북마크</button><button type="button" class="${hist ? 'on' : ''}" data-go="history">방문 기록</button></div>
         ${hist ? (days.length ? days.map(d => `<div class="wb_sec"><span>${esc(axDay(p, now, d))}</span></div><div class="wb_card">${ss.filter(([x]) => String(x.time).slice(0, 5) === d).map(([x, i]) => [
             ...(x.seen || []).filter(r => x.results?.[r]).reverse().map(r => row('page', `${i}.${r}`, fav(x.results[r], 30, 9), x.results[r].title, host(x.results[r]))),
-            row('searchone', i, sIc, x.q, '검색', fmtTime(p, x.time))].join('')).join('')}</div>`).join('') : '<div class="wb_none">방문 기록이 없어요</div>')
+            `<div class="wb_rqw">${row('searchone', i, sIc, x.q, '검색', fmtTime(p, x.time))}${rqX(i)}</div>`].join('')).join('')}</div>`).join('') : '<div class="wb_none">방문 기록이 없어요</div>')
             : (bm.length ? `<div class="wb_card">${bm.map(b => b.r >= 0 ? row('page', `${b.i}.${b.r}`, fav(b.x.results[b.r], 30, 9), b.x.results[b.r].title, host(b.x.results[b.r])) : row('searchone', b.i, sIc, b.x.q, '검색 결과')).join('')}</div>` : '<div class="wb_none">북마크가 없어요<br><small>페이지에서 주소 옆 별을 누르면 여기 모여요</small></div>')}
         <i class="wb_pad"></i>
       </div>

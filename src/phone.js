@@ -513,7 +513,7 @@ export async function openPhone(who = null) {
         thread: { list: p => p.threads, back: 'msg', what: '대화' }, event: { list: p => p.events, back: 'cal', what: '일정' },
         mail: { list: p => p.mails, back: 'mail', what: '메일' }, post: { list: p => p.posts, back: 'sns', what: '게시물' },
     };
-    const OTHER = { voice: '음성 메모', draft: '보내지 않은 메시지', calls: '통화 기록', contact: '연락처', place: '장소' };
+    const OTHER = { voice: '음성 메모', draft: '보내지 않은 메시지', calls: '통화 기록', callrun: '통화 기록', contact: '연락처', place: '장소' };
     $root.on('click', '.na_ph_rm', async function (e) {
         e.stopPropagation();
         const p = phone(), kind = this.dataset.kind, i = this.dataset.i;
@@ -526,14 +526,38 @@ export async function openPhone(who = null) {
         if (kind === 'voice') { p.voice = (p.voice || []).filter(x => x.id !== i); view = 'voice'; }
         else if (kind === 'draft') { const t = p.threads[Number(i)]; if (t) delete t.draft; view = `thread:${i}`; }
         else if (kind === 'calls') { p.calls = p.calls.filter(c => nameKey(c.with) !== i); view = 'call'; }
+        else if (kind === 'callrun') { const ks = new Set(i.split(',').map(Number)); p.calls = p.calls.filter((c, k) => !ks.has(k)); }
         // a contact or a place can come back from the story's records, so it is hidden rather than only removed
         else if (kind === 'contact') { p.contacts = p.contacts.filter(c => nameKey(c.name) !== i); p.hiddenContacts = [...new Set([...(p.hiddenContacts || []), i])]; view = 'contacts'; }
         else if (kind === 'place') p.hiddenPlaces = [...new Set([...(p.hiddenPlaces || []), i])];
-        else { const xs = RM[kind].list(p); if (xs?.[Number(i)]) xs.splice(Number(i), 1); view = RM[kind].back; }
+        // from a list (메시지 · 메일 · 최근 검색 · 방문 기록) the list stays
+        else { const xs = RM[kind].list(p); if (xs?.[Number(i)]) xs.splice(Number(i), 1); if (view.includes(':')) view = RM[kind].back; }
         drawPhone();
         await saveMeta();
         if (p.inject) applyInjection();
     });
+    // 밀어서 삭제: a row slides left by a drag (touch or mouse); a tap on an open row only closes it
+    let sw = null, swMoved = false;
+    const swClose = keep => $root.find('.ax_swp.open').not(keep || []).removeClass('open');
+    $root.on('pointerdown', '.ax_swp > .ax_rw', function (e) { swClose($(this).parent()); sw = { el: this, x: e.clientX, y: e.clientY, base: $(this).parent().hasClass('open') ? -86 : 0, dx: 0, on: false }; swMoved = false; });
+    $root.on('pointermove', e => {
+        if (!sw) return;
+        const dx = e.clientX - sw.x, dy = e.clientY - sw.y;
+        if (!sw.on) { if (Math.abs(dy) > 10) { sw = null; return; } if (Math.abs(dx) < 8) return; sw.on = true; swMoved = true; sw.el.style.transition = 'none'; sw.el.setPointerCapture?.(e.pointerId); }
+        sw.dx = dx;
+        sw.el.style.transform = `translateX(${Math.max(-120, Math.min(0, sw.base + dx))}px)`;
+    });
+    $root.on('pointerup pointercancel', () => {
+        if (!sw) return;
+        if (sw.on) { $(sw.el).parent().toggleClass('open', sw.base + sw.dx < -43); sw.el.style.transition = ''; sw.el.style.transform = ''; }
+        sw = null;
+    });
+    $root[0].addEventListener('click', e => {
+        const r = e.target.closest?.('.ax_swp > .ax_rw');
+        if (!r) { if (!e.target.closest?.('.ax_swdel')) swClose(); swMoved = false; return; }
+        if (swMoved) { e.stopImmediatePropagation(); swMoved = false; return; }
+        if (r.parentElement.classList.contains('open')) { e.stopImmediatePropagation(); $(r.parentElement).removeClass('open'); }
+    }, true);
     $root.on('click', '.na_ph_gloss', async e => { e.stopPropagation(); await openGlossary(); drawPhone(true); });
     // one photo at a time; the screen can change while it draws
     $root.on('click', '.na_ph_draw', async function (e) {
