@@ -282,3 +282,8 @@ test('the talk with the order deleted: 빼기 takes the order, its payment and t
     // what nobody told stays: the day and the weather are the round's, not the talk's
     assert.equal(c.p.life.health.days.length, 1);
 });
+
+test('the request names the days ahead with their weekdays, so "on Friday" has a date', async () => {
+    const c = await bookCase();
+    assert.match(T.input, /\[DAYS\]\n10-26 Mon\n10-27 Tue\n10-28 Wed\n10-29 Thu\n10-30 Fri/);
+});

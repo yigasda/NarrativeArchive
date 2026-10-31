@@ -2,7 +2,7 @@
 // their payments; every change can be taken back and put back
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyDays, applyLife, applyWeather, dlvClock, lifeClock } from '../src/phonesynclife.js';
+import { applyDays, applyLife, applyWeather, dlvClock, fillDays, lifeClock } from '../src/phonesynclife.js';
 import { applyMoney, payOrders, replayEffects, revertEffects } from '../src/phonesyncmoney.js';
 import { cash, migrateBank } from '../src/finance.js';
 
@@ -145,4 +145,41 @@ test('a delivery still on the way an hour and a half after its time has arrived;
     assert.equal(p.delivery.orders[1].status, 'on the way');
     dlvClock(p, '10-27 08:00');
     assert.ok(p.delivery.orders.every(o => o.status === 'delivered'));
+});
+
+test('Vertex run 9: a night that started after midnight is the day they woke up; what the story leaves out is their usual', () => {
+    const { p } = setup();
+    p.life.health.usual = { bed: '23:10', sleep: '23:30', wake: '06:30', steps: 7000, rest: 61 };
+    applyLife(p, { id: 'sleepless-night', at: 7, date: '10-27', time: '02:15' }, { health: [{ date: '10-26', sleep: '02:15', wake: '', steps: 4820, from: 'story' }] }, true);
+    const d = p.life.health.days.find(x => x.ev === 'sleepless-night');
+    assert.equal(d.date, '10-27');
+    assert.equal(d.wake, '06:30');
+    assert.equal(d.sleep, '02:15');
+    assert.equal(d.steps, 4820);
+});
+
+test('Vertex run 9: days the model left out are filled from their usual up to the story now, each a little different', () => {
+    const { p } = setup();
+    p.life.health.usual = { bed: '23:10', sleep: '23:30', wake: '06:30', steps: 7000, rest: 61 };
+    // 10-25 is there; now is 10-28 at 05:00, before they usually get up: 10-26 and 10-27 come in, 10-28 not yet
+    const fx = fillDays(p, '10-28 05:00', 'r9');
+    assert.deepEqual(p.life.health.days.map(x => x.date), ['10-25', '10-26', '10-27']);
+    assert.ok(p.life.health.days.slice(1).every(x => x.from === 'pattern' && x.steps > 3000 && x.steps < 11000));
+    assert.notEqual(p.life.health.days[1].steps, p.life.health.days[2].steps);
+    assert.equal(fx.length, 2);
+    // a day already there is never written over; after waking, today comes in
+    fillDays(p, '10-28 09:00', 'r10');
+    assert.deepEqual(p.life.health.days.map(x => x.date), ['10-25', '10-26', '10-27', '10-28']);
+    revertEffects({}, p, fx);
+    assert.deepEqual(p.life.health.days.map(x => x.date), ['10-25', '10-28']);
+});
+
+test('a story that jumped three months ahead gets only its last two weeks of days', () => {
+    const { p } = setup();
+    p.life.health.usual = { sleep: '23:30', wake: '06:30', steps: 7000 };
+    fillDays(p, '01-20 10:00', 'r');
+    const days = p.life.health.days.map(x => x.date);
+    assert.equal(days.length, 15);
+    assert.equal(days[1], '01-07');
+    assert.equal(days.at(-1), '01-20');
 });

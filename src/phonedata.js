@@ -19,7 +19,7 @@ import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
 import { arr, evOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 export { arr, hhmm, jsonOf, ko, last4, line, num, pad, pick, str, when, withEv };
-import { applyDays, applyLife, applyWeather, dlvClock, lifeClock, lifeNow, weatherFrom } from './phonesynclife.js';
+import { applyDays, applyLife, applyWeather, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
 import { pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
@@ -133,6 +133,7 @@ YOU GET
 - ARCHIVE BEFORE (sometimes): what happened earlier. Background; nothing in it is new.
 - STORY NOW (sometimes): where the story stands after these messages. Background.
 - EVENTS ON THE PHONE: story events the phone already holds, with their ids.
+- DAYS (sometimes): the story's days from the day before these messages on, with their weekdays. A weekday the story names ("on Friday") is the next one there.
 - MESSAGES READ BEFORE, NOW CHANGED (sometimes): messages put on the phone before and edited since, with the events they gave.
 ${money ? `- MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.\n` : ''}${life ? `- LIFE NOW: the alarms, files and health days the phone already holds, with record ids.\n` : ''}${weather && tracker ? `- WEATHER NOW: the date, time, place and weather from the chat's newest status line.\n` : ''}- PHONE NOW: the newest of what the phone holds.
 - OWNER, and sometimes WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
@@ -158,7 +159,7 @@ LIFE
   - A day these messages show goes in that event's "phone"."health", "from": "story". A day already in LIFE NOW that the story now shows is rewritten the same way.
   - Every other new day goes in the top-level "days", "from": "pattern", written freely from the character and their life, still following that day's events and tickets.
   - No new story day: "days": [].
-  - "date" is the day they woke up.
+  - "date" is the day they woke up: asleep 10-26 at 23:40 or 10-27 at 02:15 → "10-27".
 ${weather ? `- "weather": ${tracker ? 'WEATHER NOW stands (its date, time, place and weather); write the rest of the forecast to agree with it, "from": "chat".' : 'what these messages describe, else the archive. If the story\'s day or place changed with nothing to go on, what fits the season and place, "from": "guess". If neither changed and nothing describes it: null (the app keeps the last weather).'}
 - With new weather, also write the saved cities' "cond", "temp", "hi" and "lo".
 ` : ''}` : ''}${money ? `
@@ -523,7 +524,7 @@ async function updatePhone(m, owner) {
         const { evidence, background } = archiveRound(s, sections, rows, round.rows);
         const before = [];
         for (let i = background.length - 1, size = 0; i >= 0 && size + background[i].text.length <= ARCHIVE_MAX; i--) { before.unshift(background[i].text); size += background[i].text.length; }
-        const known = Object.entries(s.events).slice(-40).map(([id, e]) => `- ${id}: ${e.summary} (#${e.at})`).join('\n');
+        const events = Object.entries(s.events).slice(-40).map(([id, e]) => `- ${id}: ${e.summary} (#${e.at})`).join('\n');
         const world = worldText(m), lore = await loreFor(m, owner), profile = await ownerProfileBlock(ctx(), p.financeProfile, owner, { money: !!(p.money || p.investment) });
         if (p.money) migrateBank(m, p);
         const money = moneyNow(p), invest = investNow(m, p), life = lifeNow(p);
@@ -532,13 +533,19 @@ async function updatePhone(m, owner) {
         try { tracker = weatherFrom(recentTrackers(1)[0]); } catch { /* no status lines */ }
         const trackDay = tracker ? when(tracker.date).slice(0, 5) : '';
         const askWeather = !!life && (!tracker || !!trackDay && trackDay !== life.weather?.date);
-        const year = (wealthDate(m, p) || String(p.money?.asOf || p.investment?.date || '')).slice(0, 4) || String(new Date().getFullYear());
+        const known = (wealthDate(m, p) || String(p.money?.asOf || p.investment?.date || '')).slice(0, 4), year = known || String(new Date().getFullYear());
+        // the days ahead with their weekdays (only with a known year): "on Friday" is a date the model can look up
+        const today = String(p.now || '').slice(0, 5), dayList = known && /^\d{2}-\d{2}$/.test(today) ? Array.from({ length: 8 }, (_, k) => {
+            const d = new Date(Date.UTC(Number(known), Number(today.slice(0, 2)) - 1, Number(today.slice(3, 5)) + k));
+            return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()]}`;
+        }) : [];
         const input = [
             `[NEW MESSAGES]\n${round.rows.map(r => r.text).join('\n\n')}`,
             evidence.length ? `[ARCHIVE FOR THESE MESSAGES]\n${evidence.map(x => x.text).join('\n\n')}` : '',
             before.length ? `[ARCHIVE BEFORE]\n${before.join('\n\n')}` : '',
             reachesEnd(s, rows, round.rows) && tail.trim() ? `[STORY NOW]\n${tail.trim()}` : '',
-            `[EVENTS ON THE PHONE]\n${known || '(none yet)'}`,
+            `[EVENTS ON THE PHONE]\n${events || '(none yet)'}`,
+            dayList.length ? `[DAYS]\n${dayList.join('\n')}` : '',
             reread.size ? `[MESSAGES READ BEFORE, NOW CHANGED]\n${[...reread].map(([at, evs]) => `- #${at}: ${evs.length ? evs.map(e => `${e.id} (${e.summary})`).join('; ') : 'nothing on the phone yet'}`).join('\n')}` : '',
             `[PHONE NOW]\n${JSON.stringify(phoneForModel(p))}`,
             money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
@@ -610,7 +617,7 @@ async function updatePhone(m, owner) {
         const nowAt = when(raw.now);
         if (nowAt && nowAt > (p.now || '')) p.now = nowAt;
         // the round's own: new days nobody told, the weather, and what the clock moving on does by itself
-        const days = applyDays(p, raw.days, rid), sky = applyWeather(p, askWeather ? raw.weather : null, tracker);
+        const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = applyWeather(p, askWeather ? raw.weather : null, tracker);
         if (days.length) apps.add('건강');
         if (sky.length) apps.add('날씨');
         const roundFx = [...days, ...sky, ...lifeClock(p, p.now), ...dlvClock(p, p.now)];

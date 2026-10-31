@@ -127,6 +127,12 @@ export function applyLife(p, e, phone, on) {
     arr(phone.health).forEach((d, k) => {
         const clean = dayOf({ ...d, from: 'story' });
         if (!clean.date) return;
+        // fell asleep after midnight: the row is the day they woke up, the event's own day, not the evening before
+        if (clean.sleep && clean.sleep < '12:00' && e.date && dayGap(clean.date, e.date) === 1) clean.date = e.date;
+        // what the story doesn't say is their usual
+        const u = L.health?.usual || {};
+        for (const k of ['bed', 'sleep', 'wake']) if (!clean[k] && u[k]) clean[k] = u[k];
+        if (clean.steps === null && finiteNum(u.steps)) clean.steps = u.steps;
         const was = (L.health?.days || []).find(o => o.date === clean.date);
         const vals = { ...clean, ev: e.id };
         if (was) return change('life.health.days', was, vals, '건강');
@@ -150,6 +156,30 @@ export function applyDays(p, days, round) {
         out.push({ type: 'push', path: 'life.health.days', item: structuredClone(row) });
     });
     box.sort((a, b) => dayGap(b.date, a.date));
+    return out;
+}
+// days nobody wrote (the model left them out): their usual, a little different each day, up to the story's now. Today
+// only once the usual wake-up time has passed. No more than 14 days back.
+const finiteNum = v => typeof v === 'number' && Number.isFinite(v);
+const hash = s => { let h = 7; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
+const shiftHm = (t, min) => { const mt = /^(\d{2}):(\d{2})$/.exec(t || ''); if (!mt) return ''; const v = ((mt[1] * 60 + Number(mt[2]) + min) % 1440 + 1440) % 1440; return `${pad(Math.floor(v / 60))}:${pad(v % 60)}`; };
+const plusDay = (day, n) => { const mt = /^(\d{2})-(\d{2})$/.exec(day); const d = new Date(Date.UTC(2000, mt[1] - 1, Number(mt[2]) + n)); return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
+export function fillDays(p, now, round) {
+    const out = [], L = p.life, u = L?.health?.usual, today = String(now || '').slice(0, 5), hm = String(now || '').slice(6, 11);
+    if (!u || !/^\d{2}-\d{2}$/.test(today)) return out;
+    const box = boxAt(p, 'life.health.days', true), last = box.length ? box.reduce((a, d) => (dayGap(a, d.date) > 0 ? d.date : a), box[0].date) : plusDay(today, -14);
+    const end = hm && u.wake && hm < u.wake ? plusDay(today, -1) : today;
+    // a story that jumped ahead: only its last two weeks
+    const from = dayGap(last, today) > 14 ? plusDay(today, -13) : plusDay(last, 1);
+    for (let day = from, k = 0; dayGap(day, end) >= 0 && k < 15; day = plusDay(day, 1), k++) {
+        if (box.some(d => d.date === day)) continue;
+        const h = hash(day), j = n => ((h >> n) % 41 - 20) / 100, steps = finiteNum(u.steps) ? Math.round(u.steps * (1 + j(1) * 1.5)) : null;
+        const row = { date: day, bed: shiftHm(u.bed || u.sleep, Math.round(j(3) * 100)), sleep: shiftHm(u.sleep, Math.round(j(5) * 100)), wake: shiftHm(u.wake, Math.round(j(7) * 60)), woke: h % 3,
+            steps, km: steps === null ? null : Math.round(steps * 0.00072 * 10) / 10, floors: (h >> 9) % 9, workout: null, hr: u.rest ? [u.rest - 4 + h % 5, u.rest + 45 + (h >> 4) % 40] : [], from: 'pattern', id: `sync:${round}:g${k}` };
+        box.push(row);
+        out.push({ type: 'push', path: 'life.health.days', item: structuredClone(row) });
+    }
+    if (out.length) box.sort((a, b) => dayGap(b.date, a.date));
     return out;
 }
 // w: the model's "weather" (null: keep it); now: the status line's (it stands over the model's)
