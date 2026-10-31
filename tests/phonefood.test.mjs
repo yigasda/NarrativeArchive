@@ -58,6 +58,8 @@ test('a base given as an id still takes the finer kind its name points at', asyn
     const { picFromWords } = await import('../src/phonefood.js');
     assert.equal(picFromWords({ base: 'juk' }, '단호박죽').base, 'juk-pumpkin');
     assert.deepEqual(picFromWords({ base: 'juk' }, '전복죽'), { base: 'juk', with: ['abalone', 'seaweed'], size: 'regular', set: [] });
+    assert.deepEqual(picFromWords({ base: 'porridge' }, '전복죽'), { base: 'juk', with: ['abalone', 'seaweed'], size: 'regular', set: [] });
+    assert.deepEqual(picFromWords({ base: 'congee' }, 'Abalone Porridge').with, ['abalone', 'seaweed']);
     assert.deepEqual(picFromWords({ base: 'porridge', with: ['beef'] }, '전복죽').with, ['beef']);
     assert.equal(picFromWords({ base: 'porridge' }, '단호박죽').base, 'juk-pumpkin');
     assert.equal(picFromWords({ base: 'pizza' }, '불고기 피자').base, 'pizza');
