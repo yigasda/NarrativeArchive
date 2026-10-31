@@ -323,6 +323,8 @@ export function payOrders(m, p, year) {
     }
     tx.sort((a, b) => String(a.time).localeCompare(String(b.time)));
     for (const a of p.money.bank.accounts) if (a.kind !== 'credit') { const L = f.accounts[`${a.id}:${a.currency}`]; if (L) a.balance = round(L.amount + Object.values(L.entries).reduce((s, x) => s + x.amount, 0)); }
+    // the card's month counted again with the rows just added
+    if (n) migrateBank(m, p);
     return n;
 }
 

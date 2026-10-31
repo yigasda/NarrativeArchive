@@ -82,7 +82,7 @@ JSON (one object, nothing before or after it)
                          "tiles": { "rain24": mm, "rainNext": mm, "feels", "wind": km/h, "gust", "dir", "humidity", "dew", "sunrise": "HH:MM", "sunset": "HH:MM", "visibility": km } },
                "cities": [{ "name", "ko", "tz": like "Europe/Berlin", "cond", "temp", "hi", "lo", "sunset": "HH:MM", "note": "" or a few words, like a past trip, "noteKo" }] }
 }
-Numbers are plain JSON numbers.`;
+Numbers are plain JSON numbers. "ev" is a word tag, never a number: the "ev" of its story event in PHONE NOW, a short new one like "pasta-night" for a story event without one, or "" for an everyday record.`;
 
 export const AI_SYS_DELIVERY = `GOAL
 Fill the food delivery app on one character's phone in a long role-play: the shops they use, what they ordered, where it went, and what still sits in the basket. The user opens it to see how the character eats and lives.
@@ -123,7 +123,7 @@ JSON (one object, nothing before or after it)
                "status", "account": last 4 digits or "cash", "paidBy": a transaction id from MONEY NOW, or "", "reviewed": true or false, "gift": who it was sent to, or "", "ev" }],
   "cart": { "shop", "items": [{ "name", "ko", "option", "qty", "price" }], "noteShop", "noteShopKo", "noteRider", "noteRiderKo" } or null
 }
-Numbers are plain JSON numbers.`;
+Numbers are plain JSON numbers. "ev" is a word tag, never a number: the "ev" of its story event in PHONE NOW, a short new one like "pasta-night" for a story event without one, or "" for an everyday record.`;
 
 // ---- inputs
 const DAY = 864e5;

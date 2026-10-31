@@ -250,3 +250,12 @@ test('review: the bank filled first: an order pointing at the bank row it was pa
     payOrders(m, p, '2026');
     assert.equal(p.money.tx[0].delivery, undefined);
 });
+
+test('Vertex run 13: the card month counts the delivery payments right away; a number is no event tag', async () => {
+    const { m, p } = setup();
+    assert.equal(payOrders(m, p, '2026'), 1);
+    assert.equal(p.money.bank.accounts[1].spent, 14);
+    const { withEv } = await import('../src/phoneparse.js');
+    assert.deepEqual(withEv({ a: 1 }, { ev: 1 }), { a: 1 });
+    assert.deepEqual(withEv({ a: 1 }, { ev: 'pasta-night' }), { a: 1, ev: 'pasta-night' });
+});
