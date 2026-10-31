@@ -693,7 +693,7 @@ export function cartScreen(p, now) {
           <div class="op"><span class="on"><b>한집배달</b><small>${e1 || 25}~${e2 || 35}분</small><strong>${esc(money(p, fee))}</strong></span><span><b>알뜰배달</b><small>${(e1 || 25) + 5}~${(e2 || 35) + 10}분</small><strong>${esc(money(p, half))}</strong></span></div>
           <div class="rd"><i></i><b>픽업</b><small>${Math.max(5, (e1 || 25) - 10)}~${(e2 || 35) - 5}분 후 픽업</small></div></div>
         <div class="dv_ct">결제금액을 확인해주세요</div><div class="dv_card"><div class="dv_kv in"><div><span>메뉴 금액</span><span>${esc(money(p, sum))}</span></div><div><span>배달팁</span><span>${esc(money(p, fee))}</span></div><div class="t"><span>결제예정금액</span><span>${esc(money(p, sum + fee))}</span></div></div></div>`; })()}
-        <i class="lf_pad"></i></div><div class="dv_bot"><span class="sum"><b>${esc(money(p, sum + fee))}</b><small>${s?.minOrder && sum < s.minOrder ? `${esc(money(p, s.minOrder - sum))} 더 담으면 주문 가능` : '주문 가능'}</small></span><span class="dv_btn">배달 주문하기</span></div></div>`;
+        <i class="lf_pad"></i></div><div class="dv_bot"><span class="sum"><b>${esc(money(p, sum + fee))}</b><small>${s?.minOrder && sum < s.minOrder ? `${esc(money(p, s.minOrder - sum))} 더 담으면 주문 가능` : '주문 가능'}</small></span><button type="button" class="dv_btn" data-go="dpay">배달 주문하기</button></div></div>`;
     return `<div class="dv ue">${top}<div class="ax_scroll dv_sc">
         <div class="dv_ueh">Bestellübersicht</div><button type="button" class="dv_cshop ue" ${s ? `data-go="dshop" data-i="${s.id}"` : ''}>${s ? pic(shopPic(s)) : ''}<span><b>${esc(c.shop)}</b><small>${cartCount(d)} Artikel</small></span>${I.chev}</button>
         ${c.items.map(x => `<div class="dv_uei"><span class="q">${x.qty}</span><span class="t"><b>${esc(x.name)}</b>${kk(x)}${x.option ? `<small>${esc(x.option)}</small>` : ''}</span><span class="pr">${esc(money(p, x.qty * x.price))}</span>${pic(picFor(d, c.shop, x))}</div>`).join('')}
@@ -779,10 +779,20 @@ function usualPay(p, d) {
     const a = top && top !== 'cash' && top !== 'card' ? p.money?.bank?.accounts.find(x => x.last4 === top) : null;
     return a ? `${a.name || ''} •••• ${a.last4}` : top === 'cash' ? null : '';
 }
-// Uber Eats checkout: where the basket goes, the notes, how it's paid (nothing is sent from here)
+// checkout: where the basket goes, the notes, how it's paid (nothing is sent from here)
 export function payScreen(p, now) {
-    const d = D(p), c = d?.cart; if (!c || d.look === 'baemin') return cartScreen(p, now);
-    const s = shopOf(d, c.shop), sum = cartSum(d), fee = s?.fee || 0, last = [...d.orders].reverse()[0], pay = usualPay(p, d);
+    const d = D(p), c = d?.cart; if (!c) return cartScreen(p, now);
+    const bm = d.look === 'baemin', s = shopOf(d, c.shop), sum = cartSum(d), fee = s?.fee || 0, last = [...d.orders].reverse()[0], pay = usualPay(p, d);
+    const first = c.items[0], more = c.items.length - 1;
+    const note = (t, v, k, ph) => `<div class="nt"><small>${t}</small>${v ? esc(v) : `<span class="ph">${ph}</span>`}${v && k && koOn() ? `<span class="lf_k">${esc(k)}</span>` : ''}</div>`;
+    if (bm) return `<div class="dv bm">${axBar(p, now)}<div class="dv_bar">${axCb('dcart')}<b>주문하기</b><span></span></div><div class="ax_scroll dv_sc">
+        <div class="dv_pt"><b>배달로 받을게요</b><span>${I.clock}${esc((s?.eta || '30~40').replace('–', '~'))}분 후 도착</span></div>
+        <div class="dv_card"><div class="dv_cth">담은 메뉴</div><div class="dv_pm">${pic(picFor(d, c.shop, first))}<span><b>${esc(first.name)}${more > 0 ? ` 외 ${more}개` : ''}</b><small>${esc(money(p, sum))}</small></span></div></div>
+        <div class="dv_card"><div class="dv_cth">배달주소</div><div class="dv_ad">${I.pin}<b>${esc(last ? toLine(last, true) : '우리집')}</b></div>${last?.address ? `<div class="dv_ads">${esc(last.address)}</div>` : ''}<div class="dv_hr"></div>${note('라이더 요청사항', c.noteRider, c.noteRiderKo, '문 앞에 두고 벨 눌러주세요')}</div>
+        <div class="dv_card">${note('가게 요청사항', c.noteShop, c.noteShopKo, '요청사항 없음')}<div class="dv_chk">${last?.noCutlery ? '<i class="on">✓</i>' : '<i></i>'}수저·포크 안 받기</div></div>
+        <div class="dv_card"><div class="dv_cth">결제수단</div><div class="dv_rad"><i class="on"></i>${pay === null ? '만나서 현금결제' : '신용·체크카드'}</div>${pay ? `<div class="dv_cardsel">${esc(pay)}<span>✓</span></div>` : ''}</div>
+        <div class="dv_card"><div class="dv_kv"><div><span>메뉴금액</span><span>${esc(money(p, sum))}</span></div><div><span>배달팁</span><span>${esc(money(p, fee))}</span></div><div class="t"><span>결제금액</span><span>${esc(money(p, sum + fee))}</span></div></div></div>
+        <i class="lf_pad"></i></div><div class="dv_bot"><span class="dv_btn">${esc(money(p, sum + fee))} 결제하기</span></div></div>`;
     const eta = s?.eta || '25–35';
     return `<div class="dv ue">${axBar(p, now)}<div class="dv_bar">${axCb('dcart')}<b>Kasse</b><span></span></div><div class="ax_scroll dv_sc">
         <div class="dv_pt ue"><span>${I.clock}Voraussichtliche Lieferung</span><b>${esc(eta)} Min.</b></div>

@@ -6747,3 +6747,21 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .dv_how .op small { font-size: 13.5px; color: #4a4f57; }
 .ax .dv_how .op strong { font-size: 16px; margin-top: 4px; }
 .ax .dv .dv_kv.in { padding: 0; }
+
+/* 배달의민족 주문하기 */
+.ax .dv_pt { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px 12px; }
+.ax .dv_pt b { font-size: 18px; font-weight: 800; }
+.ax .dv_pt span { display: flex; align-items: center; gap: 4px; font-size: 14.5px; }
+.ax .dv_cth { font-size: 17px; font-weight: 800; margin-bottom: 12px; }
+.ax .dv_pm { display: flex; gap: 12px; align-items: center; }
+.ax .dv_pm .dv_pic { width: 62px; height: 62px; border-radius: 10px; }
+.ax .dv_pm span { display: flex; flex-direction: column; }
+.ax .dv_add { text-align: center; padding: 16px; font-size: 16px; font-weight: 700; }
+.ax .dv_ad { display: flex; align-items: center; gap: 4px; font-size: 16px; }
+.ax .dv_ads { font-size: 15px; margin-top: 3px; }
+.ax .dv_hr { height: 1px; background: #f0f1f3; margin: 14px -18px; }
+.ax .dv_rad { display: flex; align-items: center; gap: 12px; font-size: 16px; }
+.ax .dv_rad i { width: 24px; height: 24px; border-radius: 50%; border: 7px solid var(--ink); box-sizing: border-box; }
+.ax .dv_cardsel { margin: 12px 0 0 36px; border: 1.5px solid var(--ink); border-radius: 12px; padding: 12px 14px; display: flex; justify-content: space-between; font-size: 15px; }
+.ax .dv_card .dv_kv { padding: 0; }
+.ax .dv_card .dv_chk { margin-top: 12px; font-weight: 700; }
