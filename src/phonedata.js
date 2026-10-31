@@ -184,13 +184,13 @@ export const when = v => {
     if (!mt || Number(mt[1]) > 12 || Number(mt[2]) > 31) return '';
     return `${pad(mt[1])}-${pad(mt[2])}${mt[3] ? ` ${pad(mt[3])}:${mt[4]}` : ''}`;
 };
-const hhmm = v => { const mt = String(v || '').match(/(\d{1,2}):(\d{2})/); return mt ? `${pad(mt[1])}:${mt[2]}` : ''; };
+export const hhmm = v => { const mt = String(v || '').match(/(\d{1,2}):(\d{2})/); return mt ? `${pad(mt[1])}:${mt[2]}` : ''; };
 export const ko = v => line(v, 400);
 export const arr = v => (Array.isArray(v) ? v : []);
 export const pick = (v, list, dflt) => (list.includes(v) ? v : dflt);
 // an event tag, kept only when given: items from the same story event share it (links between apps)
 const evOf = v => line(v, 40).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '');
-const withEv = (x, raw) => { const ev = evOf(raw?.ev); return ev ? { ...x, ev } : x; };
+export const withEv = (x, raw) => { const ev = evOf(raw?.ev); return ev ? { ...x, ev } : x; };
 
 export function parsePhone(out) {
     const s = String(out || '').replace(/```(?:json)?/gi, '');
@@ -235,8 +235,9 @@ const fresh = (k, old, add) => { const seen = new Set(old.map(x => sigOf(k, x)))
 const newId = () => Math.random().toString(36).slice(2, 8);
 export function ensureIds(p) {
     let n = 0;
-    const mo = p?.money;
-    for (const xs of [...[...LISTS, 'threads', 'contacts'].map(k => p?.[k]), mo?.tx, mo?.passes, mo?.orders, mo?.bank?.accounts]) for (const x of xs || []) if (x && typeof x === 'object' && !x.id) { x.id = newId(); n++; }
+    const mo = p?.money, lf = p?.life, dv = p?.delivery;
+    for (const xs of [...[...LISTS, 'threads', 'contacts'].map(k => p?.[k]), mo?.tx, mo?.passes, mo?.orders, mo?.bank?.accounts,
+        lf?.clock?.alarms, lf?.clock?.timers, lf?.health?.days, lf?.files?.folders, lf?.files?.items, lf?.weather?.cities, dv?.shops, dv?.orders]) for (const x of xs || []) if (x && typeof x === 'object' && !x.id) { x.id = newId(); n++; }
     return n;
 }
 // 다시 만들기 of an app: a record that comes back the same keeps what the user did with it (its id, picture, read state, results page)
@@ -929,9 +930,9 @@ ANSWER — one JSON object, nothing else:
 { "memos": [{ "title": the name the phone would show, "kt", "text", "ko", "time": "MM-DD HH:MM", "sec": its length in seconds, "place": where, or "" }] }
 Oldest first.`;
 
-const jsonOf = out => { const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}'); try { return a >= 0 && b > a ? JSON.parse(t.slice(a, b + 1)) : null; } catch { return null; } };
-const num = v => { if (v === null || v === undefined || String(v).trim() === '') return null; const n = Number(String(v ?? '').replace(/[^\d.,-]/g, '').replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '')); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
-const last4 = v => String(v ?? '').replace(/\D/g, '').slice(-4);
+export const jsonOf = out => { const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}'); try { return a >= 0 && b > a ? JSON.parse(t.slice(a, b + 1)) : null; } catch { return null; } };
+export const num = v => { if (v === null || v === undefined || String(v).trim() === '') return null; const n = Number(String(v ?? '').replace(/[^\d.,-]/g, '').replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '')); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
+export const last4 = v => String(v ?? '').replace(/\D/g, '').slice(-4);
 export async function sideRequest(m, owner, blocks, { profile, money = false } = {}) {
     const world = worldText(m), lore = await loreFor(m, owner);
     const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});

@@ -5818,3 +5818,440 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax_foot.ax_foot_top { margin: 0 28px 12px; }
 .ax .ax_v.ax_plus { color: #2f8f5b; }
 .ax .na_sync_drop { --axbg: #fde8e6; --axsh: none; flex: none; margin-left: auto; padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #d4483f; }
+/* ---- 시계 · 건강 · 파일 · 날씨 · 배달 (v3.142). Buttons take their fill the phone's way (--axbg / --axsh). */
+.ax .lf_pad { display: block; height: 110px; flex: none; }
+.ax .lf_none { padding: 28px 24px; text-align: center; font-size: 14px; color: #8a929d; }
+.ax .lf_sub { padding: 0 22px 10px; font-size: 12.5px; color: #8a929d; flex: none; }
+.ax .lf_k { display: block; margin-top: 2px; font-size: 0.84em; font-weight: 400; color: #7c8592; line-height: 1.45; }
+.ax .lf_sec { margin: 14px 26px 8px; font-size: 12.5px; font-weight: 600; color: #6b7380; letter-spacing: 0.02em; flex: none; }
+.ax .lf_card { margin: 0 14px 12px; border-radius: 22px; background: #fff; box-shadow: 0 1px 2px rgba(22, 27, 34, 0.04), 0 8px 24px rgba(22, 27, 34, 0.05); overflow: hidden; flex: none; }
+.ax .lf_tx { flex: 1; min-width: 0; display: flex; flex-direction: column; text-align: left; }
+.ax .lf_rw { width: 100%; display: flex; gap: 12px; align-items: center; padding: 12px 16px; position: relative; font-size: 15.5px; }
+.ax .lf_rw + .lf_rw::before { content: ''; position: absolute; top: 0; left: 52px; right: 14px; border-top: 1px solid #eef0f3; }
+.ax .lf_rw b { font-weight: 500; }
+.ax .lf_rw small, .ax .lf_rw .lf_tx small { font-size: 12.5px; color: #8a929d; }
+.ax .lf_rows > div { display: flex; justify-content: space-between; gap: 12px; padding: 11px 16px; font-size: 14px; }
+.ax .lf_rows > div + div { border-top: 1px solid #eef0f3; }
+.ax .lf_rows b { font-weight: 600; text-align: right; }
+.ax .lf_pill { height: 32px; padding: 0 12px; border-radius: 16px; font-size: 13px; font-weight: 600; --axbg: rgba(255, 255, 255, 0.82); --axsh: inset 0 1px 0 #fff, 0 0 0 0.5px rgba(22, 27, 34, 0.06), 0 4px 14px rgba(22, 27, 34, 0.07); }
+.ax .lf_pill.hl { color: #e0405f; }
+.ax .lf_pill.wx { --axbg: rgba(255, 255, 255, 0.22); --axsh: none; color: #fff; }
+.ax .lf_dock { position: absolute; left: 28px; right: 28px; bottom: 22px; height: 50px; border-radius: 25px; display: flex; align-items: center; justify-content: space-around; padding: 0 5px; z-index: 6; background: rgba(255, 255, 255, 0.82); backdrop-filter: blur(22px) saturate(120%); -webkit-backdrop-filter: blur(22px) saturate(120%); box-shadow: inset 0 1px 0 #fff, 0 0 0 0.5px rgba(22, 27, 34, 0.07), 0 8px 26px rgba(22, 27, 34, 0.14); }
+.ax .lf_dock button { height: 40px; padding: 0 14px; border-radius: 20px; display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: #4d5562; }
+/* 시계: charcoal, amber */
+.ax:is(.v_clock, .v_timer, .v_wclock, .v_alarm) .ax_canvas { background: #17181b; color: #f2f2f4; }
+.ax:is(.v_clock, .v_timer, .v_wclock, .v_alarm) .ax_cb { --axbg: rgba(255, 255, 255, 0.1); --axsh: none; color: #f2f2f4; }
+.ax:is(.v_clock, .v_timer, .v_wclock, .v_alarm) .ax_h1 span { color: #8b8f98; }
+.ax:is(.v_clock, .v_timer, .v_wclock, .v_alarm) .lf_none { color: #8b8f98; }
+.ax .lf_dock.lf_dark { background: rgba(40, 41, 46, 0.88); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 8px 26px rgba(0, 0, 0, 0.4); }
+.ax .lf_dark button { color: #a3a7af; }
+.ax .lf_dark button.on { --axbg: rgba(245, 165, 36, 0.16); color: #f5a524; }
+.ax .lf_dcard { margin: 0 14px 12px; border-radius: 22px; background: #222327; overflow: hidden; flex: none; }
+.ax .lf_ch { margin: 14px 26px 8px; font-size: 12.5px; font-weight: 600; color: #8b8f98; flex: none; }
+.ax .lf_next { margin: 0 14px 12px; border-radius: 22px; background: #222327; padding: 14px 18px; display: flex; align-items: center; gap: 14px; flex: none; }
+.ax .lf_next > span { width: 42px; height: 42px; border-radius: 50%; background: rgba(245, 165, 36, 0.16); display: grid; place-items: center; flex: none; }
+.ax .lf_next b { display: block; font-size: 15px; font-weight: 600; }
+.ax .lf_next small { font-size: 13px; color: #8b8f98; }
+.ax .lf_al { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 16px 12px 20px; position: relative; text-align: left; color: #f2f2f4; }
+.ax .lf_al + .lf_al::before, .ax .lf_snz + .lf_al::before { content: ''; position: absolute; top: 0; left: 20px; right: 0; border-top: 1px solid #303136; }
+.ax .lf_alt { flex: 1; min-width: 0; }
+.ax .lf_alt b { display: flex; align-items: baseline; gap: 3px; font: 200 50px/1 'Inter Tight', -apple-system, sans-serif; letter-spacing: -0.03em; }
+.ax .lf_alt b small { font-size: 18px; font-weight: 400; letter-spacing: 0; }
+.ax .lf_alt > span { display: block; margin-top: 4px; font-size: 13.5px; color: #d5d7dc; }
+.ax .lf_alt em { font-style: normal; color: #8b8f98; }
+.ax .lf_al.off .lf_alt b, .ax .lf_al.off .lf_alt > span, .ax .lf_al.off .lf_alt em { color: #5c5f66; }
+.ax .lf_tg { width: 51px; height: 31px; border-radius: 16px; background: #3a3b40; position: relative; flex: none; }
+.ax .lf_tg::after { content: ''; position: absolute; left: 2px; top: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; transition: left 0.2s; }
+.ax .lf_tg.on { background: #f5a524; }
+.ax .lf_tg.on::after { left: 22px; }
+.ax .lf_snz { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 16px 14px 20px; margin-top: -2px; }
+.ax .lf_snz span { font: 500 13px 'Inter Tight', sans-serif; color: #f5a524; background: rgba(245, 165, 36, 0.13); border-radius: 8px; padding: 4px 8px; }
+.ax .lf_snz span.o { color: #5c5f66; background: #2b2c31; }
+.ax .lf_ring { width: 250px; height: 250px; margin: 6px auto 18px; position: relative; display: grid; place-items: center; flex: none; }
+.ax .lf_ring svg { position: absolute; inset: 0; }
+.ax .lf_ring > div { text-align: center; position: relative; }
+.ax .lf_ring b { display: block; font: 200 58px/1 'Inter Tight', sans-serif; letter-spacing: -0.02em; }
+.ax .lf_ring span { display: block; font-size: 13.5px; color: #8b8f98; margin-top: 6px; }
+.ax .lf_ring em { display: flex; align-items: center; justify-content: center; gap: 5px; font-style: normal; font-size: 13px; color: #f5a524; margin-top: 8px; }
+.ax .lf_tbtn { display: flex; justify-content: space-between; padding: 0 34px 16px; flex: none; }
+.ax .lf_tbtn span { width: 78px; height: 78px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; background: #3a3b40; box-shadow: 0 0 0 2px #17181b, 0 0 0 4px #3a3b40; }
+.ax .lf_tbtn span.a { background: rgba(245, 165, 36, 0.25); color: #f5a524; box-shadow: 0 0 0 2px #17181b, 0 0 0 4px rgba(245, 165, 36, 0.25); }
+.ax .lf_sv { display: flex; align-items: center; gap: 14px; padding: 11px 16px 11px 20px; position: relative; }
+.ax .lf_sv + .lf_sv::before { content: ''; position: absolute; top: 0; left: 20px; right: 0; border-top: 1px solid #303136; }
+.ax .lf_sv > b { font: 300 30px/1 'Inter Tight', sans-serif; width: 96px; flex: none; }
+.ax .lf_sv > span { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 14.5px; }
+.ax .lf_sv em { font-style: normal; font-size: 12px; color: #8b8f98; }
+.ax .lf_sv small { font-size: 12px; color: #8b8f98; }
+.ax .lf_sv > i { width: 34px; height: 34px; border-radius: 50%; background: rgba(245, 165, 36, 0.16); display: grid; place-items: center; flex: none; }
+.ax .lf_wc { display: flex; align-items: center; padding: 14px 18px 14px 20px; position: relative; }
+.ax .lf_wc + .lf_wc::before { content: ''; position: absolute; top: 0; left: 20px; right: 0; border-top: 1px solid #303136; }
+.ax .lf_wct { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ax .lf_wct small { font-size: 12.5px; color: #8b8f98; }
+.ax .lf_wct b { font-size: 22px; font-weight: 500; }
+.ax .lf_wc > b { font: 200 44px/1 'Inter Tight', sans-serif; }
+.ax .lf_face { width: 44px; height: 44px; border-radius: 50%; margin-right: 14px; position: relative; flex: none; background: #2b2c31; }
+.ax .lf_face.day { background: #e9e9ec; }
+.ax .lf_face i { position: absolute; left: 50%; bottom: 50%; width: 2px; margin-left: -1px; border-radius: 1px; transform-origin: bottom center; background: #fff; }
+.ax .lf_face.day i { background: #17181b; }
+.ax .lf_sheet { position: absolute; left: 0; right: 0; top: 60px; bottom: 0; border-radius: 14px 14px 0 0; background: #1d1e22; z-index: 6; overflow-y: auto; }
+.ax .lf_shh { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px 6px; font-size: 16px; }
+.ax .lf_shh button { color: #f5a524; font-size: 16px; }
+.ax .lf_shh span { width: 30px; }
+.ax .lf_wheel { display: flex; justify-content: center; gap: 26px; margin: 18px 0 22px; font: 300 34px 'Inter Tight', sans-serif; }
+.ax .lf_wheel div { display: flex; flex-direction: column; align-items: center; gap: 8px; color: #4c4f56; }
+.ax .lf_wheel b { font-weight: 300; color: #fff; font-size: 40px; background: #2b2c31; border-radius: 10px; padding: 2px 14px; }
+.ax .lf_days7 { display: flex; justify-content: center; gap: 6px; padding: 0 20px 14px; }
+.ax .lf_days7 span { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 13.5px; font-weight: 600; background: #2b2c31; color: #8b8f98; }
+.ax .lf_days7 span.on { background: #f5a524; color: #17181b; }
+.ax .lf_opts { background: #26272c; }
+.ax .lf_opts > div { display: flex; justify-content: space-between; padding: 12px 16px; font-size: 15px; }
+.ax .lf_opts > div + div { border-top: 1px solid #303136; }
+.ax .lf_opts small { color: #8b8f98; font-size: 13.5px; }
+.ax .lf_mini { padding: 0 30px 8px; font-size: 12px; color: #8b8f98; }
+/* 건강 */
+.ax .lf_hdays { display: flex; justify-content: space-between; padding: 0 18px 12px; flex: none; }
+.ax .lf_hdays button { width: 40px; text-align: center; font-size: 11.5px; color: #8a929d; }
+.ax .lf_hdays b { display: grid; place-items: center; width: 34px; height: 34px; margin: 4px auto 0; border-radius: 50%; font: 600 14px 'Inter Tight', sans-serif; color: #161b22; }
+.ax .lf_hdays button.on b { background: #161b22; color: #fff; }
+.ax .lf_hc { display: block; width: calc(100% - 28px); margin: 0 14px 10px; border-radius: 20px; padding: 13px 15px; text-align: left; flex: none; background: #fff; box-shadow: 0 1px 2px rgba(22, 27, 34, 0.04), 0 8px 24px rgba(22, 27, 34, 0.05); --axbg: #fff; --axsh: 0 1px 2px rgba(22, 27, 34, 0.04), 0 8px 24px rgba(22, 27, 34, 0.05); box-sizing: border-box; }
+.ax .lf_hl { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; }
+.ax .lf_hl small { margin-left: auto; font-size: 12px; color: #8a929d; font-weight: 500; }
+.ax .lf_hr { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 8px; font-size: 13px; color: #6b7380; gap: 10px; }
+.ax .lf_hr b { font: 600 30px/1 'Inter Tight', sans-serif; letter-spacing: -0.02em; color: #161b22; margin-right: 3px; }
+.ax .lf_mini2 { display: flex; align-items: flex-end; gap: 4px; height: 40px; flex: none; }
+.ax .lf_mini2 i { width: 7px; border-radius: 3px; }
+.ax .lf_seg { display: flex; margin: 0 16px 12px; padding: 3px; border-radius: 12px; background: rgba(22, 27, 34, 0.06); flex: none; }
+.ax .lf_seg span { flex: 1; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 13px; font-weight: 600; color: #6b7380; }
+.ax .lf_seg span.on { background: #fff; color: #161b22; box-shadow: 0 1px 3px rgba(22, 27, 34, 0.1); }
+.ax .lf_big { padding: 0 22px 8px; flex: none; }
+.ax .lf_big small { font-size: 12.5px; color: #8a929d; font-weight: 600; }
+.ax .lf_big b { display: block; font: 600 34px/1.15 'Inter Tight', sans-serif; letter-spacing: -0.02em; }
+.ax .lf_big b span { font-size: 15px; color: #6b7380; font-weight: 500; }
+.ax .lf_big em { font-style: normal; font-size: 13px; color: #6b7380; }
+.ax .lf_ch2 { position: relative; height: 190px; margin: 6px 0 4px; display: flex; align-items: flex-end; gap: 10px; padding-right: 38px; }
+.ax .lf_ch2 i { flex: 1; border-radius: 6px 6px 3px 3px; background: var(--k); opacity: 0.35; position: relative; }
+.ax .lf_ch2 i.on { opacity: 1; }
+.ax .lf_ch2 .g { position: absolute; left: 0; right: 38px; border-top: 1px solid #eef0f3; }
+.ax .lf_ch2 .ax2 { position: absolute; right: 0; font-size: 10.5px; color: #8a929d; transform: translateY(50%); }
+.ax .lf_ch2 .av { position: absolute; left: 0; right: 38px; border-top: 2px dashed #8a929d; z-index: 1; }
+.ax .lf_ch2 .av span { position: absolute; left: 0; top: -20px; font-size: 11px; color: #6b7380; background: #fff; padding: 0 4px; }
+.ax .lf_xl { display: flex; gap: 10px; padding-right: 38px; }
+.ax .lf_xl span { flex: 1; text-align: center; font-size: 11px; color: #8a929d; }
+.ax .lf_xl span.on { color: #161b22; font-weight: 700; }
+.ax .lf_hyp { position: relative; height: 146px; margin-top: 6px; }
+.ax .lf_hyp .lv { position: absolute; left: 0; font-size: 10.5px; color: #8a929d; }
+.ax .lf_hyp .bk { position: absolute; height: 20px; border-radius: 5px; }
+.ax .lf_leg { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11.5px; color: #6b7380; margin-top: 10px; }
+.ax .lf_leg i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 4px; }
+.ax .lf_tr { display: flex; gap: 12px; align-items: center; }
+.ax .lf_tr > span { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.ax .lf_tr b { display: block; font-size: 14.5px; }
+.ax .lf_tr small { font-size: 12.5px; color: #6b7380; }
+/* 파일 */
+.ax .lf_rec { display: flex; gap: 12px; padding: 0 16px; overflow-x: auto; scrollbar-width: none; flex: none; }
+.ax .lf_rec::-webkit-scrollbar { display: none; }
+.ax .lf_rec button, .ax .lf_grid button { width: 104px; flex: none; text-align: left; min-width: 0; }
+.ax .lf_rec b, .ax .lf_grid b { display: block; font-size: 12px; font-weight: 500; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ax .lf_rec small, .ax .lf_grid small { display: block; font-size: 11px; color: #8a929d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ax .lf_th { display: grid; place-items: center; height: 104px; border-radius: 14px; background: #fff; position: relative; overflow: hidden; box-shadow: 0 1px 2px rgba(22, 27, 34, 0.05), 0 6px 16px rgba(22, 27, 34, 0.07); }
+.ax .lf_thp { background: #e9ebef; }
+.ax .lf_hill { position: absolute; width: 150%; height: 70%; left: -25%; top: 55%; border-radius: 46%; background: rgba(0, 0, 0, 0.12); }
+.ax .lf_sunb { position: absolute; width: 22px; height: 22px; right: 16px; top: 16px; border-radius: 50%; background: rgba(255, 255, 255, 0.7); }
+.ax .lf_doc { width: 62px; height: 80px; border-radius: 4px; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18); padding: 8px 7px; position: relative; box-sizing: border-box; }
+.ax .lf_doc i { display: block; height: 3px; border-radius: 2px; background: #e3e6eb; margin-bottom: 4px; }
+.ax .lf_doc i.h { background: #2c4a80; height: 5px; width: 60%; }
+.ax .lf_doc em { position: absolute; left: 4px; bottom: 4px; font: 800 7px 'Inter Tight', sans-serif; color: #fff; border-radius: 2px; padding: 1px 3px; font-style: normal; }
+.ax .lf_fico { width: 38px; height: 46px; border-radius: 6px; position: relative; display: grid; place-items: end center; padding-bottom: 6px; font: 800 8.5px 'Inter Tight', sans-serif; color: #fff; flex: none; box-sizing: border-box; }
+.ax .lf_fico::before { content: ''; position: absolute; right: 0; top: 0; width: 11px; height: 11px; background: rgba(255, 255, 255, 0.45); border-bottom-left-radius: 5px; }
+.ax .lf_fico.s { width: 34px; height: 42px; }
+.ax .lf_fr { width: 100%; display: flex; gap: 12px; align-items: center; padding: 10px 16px; position: relative; text-align: left; }
+.ax .lf_fr + .lf_fr::before { content: ''; position: absolute; top: 0; left: 62px; right: 14px; border-top: 1px solid #eef0f3; }
+.ax .lf_fr b { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ax .lf_fr small { font-size: 12.5px; color: #8a929d; }
+.ax .lf_tagd { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.ax .lf_grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 10px; padding: 4px 16px 0; }
+.ax .lf_grid button { width: auto; text-align: center; }
+.ax .lf_grid .lf_th { height: 100px; border-radius: 12px; box-shadow: none; background: #f4f5f7; }
+.ax .lf_ttl { flex: 1; text-align: center; font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 8px; }
+.ax .lf_pv { margin: 4px 26px 8px; background: #fff; border-radius: 4px; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.14); padding: 20px 18px; min-height: 380px; font-family: 'Inter Tight', -apple-system, sans-serif; flex: none; }
+.ax .lf_bph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.ax .lf_bph b { font-size: 17px; color: #2c4a80; letter-spacing: 0.02em; }
+.ax .lf_bph span { font-size: 9.5px; color: #8a929d; letter-spacing: 0.08em; }
+.ax .lf_bp { border-radius: 12px; overflow: hidden; border: 1px solid #dfe3e8; }
+.ax .lf_bp .h { background: #2c4a80; color: #fff; display: flex; justify-content: space-between; padding: 10px 12px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; }
+.ax .lf_bp .r { display: flex; justify-content: space-between; align-items: flex-end; padding: 12px 12px 4px; }
+.ax .lf_bp .r b { display: block; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+.ax .lf_bp .r small { font-size: 10px; color: #6b7380; }
+.ax .lf_bp .g { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 12px 12px; font-size: 9px; color: #6b7380; }
+.ax .lf_bp .g b { display: block; font-size: 13.5px; color: #161b22; }
+.ax .lf_bp .bc { display: block; width: calc(100% - 24px); height: 40px; margin: 0 12px 12px; fill: #161b22; }
+.ax .lf_lines i { display: block; height: 6px; border-radius: 3px; background: #eceef2; margin-top: 9px; }
+.ax .lf_doc2 i.h { display: block; height: 8px; width: 40%; border-radius: 3px; margin-bottom: 14px; }
+.ax .lf_doc2 p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.5; color: #2a313b; }
+.ax .lf_lock { margin: 4px 22px 8px; height: 300px; border-radius: 18px; background: #e9ebef; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #8a929d; font-size: 13.5px; flex: none; }
+.ax .lf_lock small { font-size: 12px; }
+.ax .lf_pvimg { margin: 4px 22px 8px; flex: none; }
+.ax .lf_pvimg .lf_th { height: 320px; border-radius: 18px; }
+.ax .lf_pvaud { margin: 4px 22px 8px; height: 200px; border-radius: 18px; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; flex: none; }
+.ax .lf_wave { display: flex; align-items: center; gap: 3px; height: 70px; }
+.ax .lf_wave i { width: 3px; border-radius: 2px; background: #8a5a2e; }
+/* 날씨: the sky moves (rain falls, clouds drift, snow drifts down, a storm flashes, the sun breathes, stars twinkle) */
+.ax .lf_wx { position: absolute; inset: 0; display: flex; flex-direction: column; color: #fff; overflow: hidden; }
+.ax .lf_wx > .ax_sb, .ax .lf_wx > .ax_top, .ax .lf_wx > .ax_scroll { position: relative; z-index: 2; }
+.ax .lf_wbar .ax_cb { --axbg: rgba(255, 255, 255, 0.2); --axsh: none; color: #fff; }
+.ax .lf_sky { position: absolute; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+.ax .lf_sky i { position: absolute; border-radius: 50%; }
+.ax .lf_sky .cl { animation: lf_drift var(--d, 26s) ease-in-out infinite alternate; }
+.ax .lf_sky .rn { position: absolute; top: -40px; width: 1.5px; border-radius: 1px; background: rgba(255, 255, 255, 0.28); animation: lf_fall var(--d, 1.6s) linear infinite; animation-delay: var(--dl, 0s); }
+.ax .lf_sky .sn { position: absolute; top: -12px; width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.8); animation: lf_snow var(--d, 6s) linear infinite; animation-delay: var(--dl, 0s); }
+.ax .lf_sky .sun { width: 120px; height: 120px; background: #f6c94a; }
+.ax .lf_sky .halo { background: rgba(246, 201, 74, 0.2); animation: lf_glow 4.5s ease-in-out infinite alternate; }
+.ax .lf_sky .halo.h2 { background: rgba(246, 201, 74, 0.09); animation-delay: -2.2s; }
+.ax .lf_sky .st { width: 3px; height: 3px; background: #fff; animation: lf_twinkle 3s ease-in-out infinite alternate; animation-delay: var(--dl, 0s); }
+.ax .lf_sky .mn { width: 44px; height: 44px; background: #e9e4cf; box-shadow: -12px -8px 0 0 #28324a inset; }
+.ax .lf_sky .fl { inset: 0; border-radius: 0; background: #fff; opacity: 0; animation: lf_flash 7s linear infinite; }
+.ax .lf_sky .fg { left: -40%; width: 180%; height: 140px; top: 300px; border-radius: 50%; background: rgba(255, 255, 255, 0.12); animation: lf_drift 30s ease-in-out infinite alternate; --x: 60px; }
+.ax .lf_sky .fg.f2 { top: 520px; --x: -50px; }
+@keyframes lf_drift { from { transform: translateX(0); } to { transform: translateX(var(--x, 40px)); } }
+@keyframes lf_fall { from { transform: translate(0, 0) rotate(14deg); } to { transform: translate(-210px, 900px) rotate(14deg); } }
+@keyframes lf_snow { from { transform: translate(0, 0); } 50% { transform: translate(14px, 450px); } to { transform: translate(-6px, 900px); } }
+@keyframes lf_glow { from { transform: scale(1); opacity: 1; } to { transform: scale(1.08); opacity: 0.7; } }
+@keyframes lf_twinkle { from { opacity: 0.25; } to { opacity: 1; } }
+@keyframes lf_flash { 0%, 92%, 94%, 100% { opacity: 0; } 93% { opacity: 0.35; } 95% { opacity: 0.15; } }
+@media (prefers-reduced-motion: reduce) { .ax .lf_sky *, .ax .lf_city i { animation: none !important; } }
+.ax .lf_wtop { text-align: center; padding-top: 2px; flex: none; }
+.ax .lf_wtop small { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 12.5px; font-weight: 600; opacity: 0.9; }
+.ax .lf_wtop h2 { margin: 2px 0 0; font-size: 32px; font-weight: 500; color: #fff; }
+.ax .lf_wtop .t { font: 200 96px/1 'Inter Tight', -apple-system, sans-serif; margin-left: 22px; letter-spacing: -0.03em; }
+.ax .lf_wtop .c { font-size: 19px; font-weight: 600; opacity: 0.92; }
+.ax .lf_wtop .hl { font-size: 17px; font-weight: 600; margin-top: 2px; }
+.ax .lf_wsrc { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 16px; font-size: 11.5px; background: rgba(255, 255, 255, 0.16); border-radius: 12px; padding: 4px 10px; }
+.ax .lf_wcard { margin: 0 16px 10px; border-radius: 16px; background: rgba(255, 255, 255, 0.14); padding: 11px 14px; flex: none; }
+.ax .lf_wcard .hd { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; opacity: 0.75; padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.22); }
+.ax .lf_wcard .ln1 { font-size: 14.5px; font-weight: 500; padding: 2px 0 9px; border-bottom: 1px solid rgba(255, 255, 255, 0.22); line-height: 1.4; }
+.ax .lf_wk { display: block; font-size: 12.5px; opacity: 0.8; font-weight: 400; margin-top: 2px; }
+.ax .lf_hrs { display: flex; justify-content: space-between; padding-top: 10px; }
+.ax .lf_hrs div { width: 46px; text-align: center; font-size: 13.5px; font-weight: 600; display: flex; flex-direction: column; align-items: center; }
+.ax .lf_hrs em { font-style: normal; font-size: 11px; color: #9fd6ff; height: 14px; font-weight: 700; }
+.ax .lf_hrs svg { margin: 6px auto 4px; }
+.ax .lf_hrs b { font: 500 18px 'Inter Tight', sans-serif; }
+.ax .lf_d10 { display: flex; align-items: center; gap: 8px; padding: 9px 0; font-size: 16px; font-weight: 600; }
+.ax .lf_d10 + .lf_d10 { border-top: 1px solid rgba(255, 255, 255, 0.18); }
+.ax .lf_d10 > span:first-child { width: 42px; }
+.ax .lf_d10 .ic { width: 44px; display: flex; flex-direction: column; align-items: center; }
+.ax .lf_d10 .ic em { font-style: normal; font-size: 10.5px; color: #9fd6ff; font-weight: 700; }
+.ax .lf_d10 .lo { width: 30px; text-align: right; opacity: 0.6; font-weight: 500; }
+.ax .lf_d10 .hi { width: 30px; font-weight: 500; }
+.ax .lf_d10 .bar { flex: 1; height: 5px; border-radius: 3px; background: rgba(0, 0, 0, 0.18); position: relative; }
+.ax .lf_d10 .bar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+.ax .lf_d10 .bar b { position: absolute; top: -2.5px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25); }
+.ax .lf_tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 16px; flex: none; }
+.ax .lf_tile { border-radius: 16px; background: rgba(255, 255, 255, 0.14); padding: 11px 13px; height: 150px; position: relative; overflow: hidden; box-sizing: border-box; }
+.ax .lf_tile .hd { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; opacity: 0.75; }
+.ax .lf_tile b { display: block; font: 400 30px 'Inter Tight', sans-serif; margin-top: 6px; }
+.ax .lf_tile b small { font-size: 16px; }
+.ax .lf_tile .s { font-size: 12.5px; font-weight: 500; }
+.ax .lf_tile p { position: absolute; left: 13px; right: 13px; bottom: 11px; margin: 0; font-size: 12.5px; line-height: 1.35; font-weight: 500; }
+.ax .lf_tile .arc { position: absolute; left: 13px; right: 13px; top: 58px; height: 46px; }
+.ax .lf_cmp { position: absolute; right: 12px; top: 40px; width: 64px; height: 64px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, 0.4); }
+.ax .lf_cmp i { position: absolute; width: 3px; height: 30px; left: 50%; top: 50%; margin: -15px 0 0 -1.5px; background: #fff; border-radius: 2px; }
+.ax .lf_q { margin: 0 16px 14px; height: 38px; border-radius: 12px; background: rgba(22, 27, 34, 0.07); display: flex; align-items: center; gap: 7px; padding: 0 12px; color: #8a929d; font-size: 15px; flex: none; }
+.ax .lf_city { display: flex; justify-content: space-between; width: calc(100% - 28px); margin: 0 14px 10px; border-radius: 22px; padding: 14px 16px; color: #fff; position: relative; overflow: hidden; height: 112px; box-sizing: border-box; flex: none; }
+.ax .lf_city i { position: absolute; border-radius: 50%; }
+.ax .lf_city i.sun { width: 64px; height: 64px; left: 150px; top: -26px; background: #f6c94a; }
+.ax .lf_city i.mn { width: 34px; height: 34px; left: 150px; top: 14px; background: #e9e4cf; box-shadow: -9px -6px 0 0 #28324a inset; }
+.ax .lf_city i.cl { width: 220px; height: 110px; right: -60px; top: -30px; background: rgba(255, 255, 255, 0.08); animation: lf_drift 18s ease-in-out infinite alternate; }
+.ax .lf_city .l, .ax .lf_city .r { position: relative; z-index: 1; display: flex; flex-direction: column; }
+.ax .lf_city .l { text-align: left; }
+.ax .lf_city .l b { font-size: 22px; font-weight: 700; }
+.ax .lf_city .l small, .ax .lf_city .l span, .ax .lf_city .r span { font-size: 13px; font-weight: 600; opacity: 0.92; }
+.ax .lf_city .l span, .ax .lf_city .r span { margin-top: auto; }
+.ax .lf_city .r { text-align: right; }
+.ax .lf_city .r b { font: 300 48px/1 'Inter Tight', sans-serif; }
+/* 배달 — 배달의민족 */
+.ax .lf_bm { --m: #2ac1bc; position: absolute; inset: 0; display: flex; flex-direction: column; background: #f5f6f8; color: #222; font-family: 'Noto Sans KR', -apple-system, sans-serif; }
+.ax .lf_bmh { background: var(--m); color: #fff; padding: 0 16px 14px; flex: none; }
+.ax .lf_bmh .ax_sb { margin: 0 -16px; }
+.ax .lf_bmh .r1 { display: flex; align-items: center; gap: 8px; height: 46px; }
+.ax .lf_bmh .r1 .ax_cb { --axbg: rgba(255, 255, 255, 0.2); --axsh: none; color: #fff; width: 32px; height: 32px; }
+.ax .lf_bmh .r1 b { flex: 1; font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 3px; letter-spacing: -0.02em; }
+.ax .lf_bmh .r1 > span { display: flex; gap: 14px; align-items: center; }
+.ax .lf_cartb { position: relative; color: inherit; }
+.ax .lf_cartb i { position: absolute; right: -6px; top: -4px; width: 16px; height: 16px; border-radius: 50%; background: #fff; color: var(--m, #06c167); font: 800 10px 'Inter Tight', sans-serif; display: grid; place-items: center; font-style: normal; }
+.ax .lf_ue .lf_cartb i { background: #06c167; color: #fff; }
+.ax .lf_bmh .q { height: 46px; border-radius: 10px; background: #fff; display: flex; align-items: center; gap: 8px; padding: 0 14px; color: #9aa0a6; font-size: 15px; }
+.ax .lf_bmtabs { display: flex; gap: 18px; background: #fff; padding: 14px 18px 0; font-size: 15px; font-weight: 700; color: #9aa0a6; border-bottom: 1px solid #eef0f2; flex: none; }
+.ax .lf_bmtabs span { padding-bottom: 11px; }
+.ax .lf_bmtabs span.on { color: #222; box-shadow: inset 0 -2.5px 0 #222; }
+.ax .lf_cat { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px 0; background: #fff; padding: 16px 8px; flex: none; }
+.ax .lf_cat div { text-align: center; font-size: 12px; font-weight: 500; color: #333; }
+.ax .lf_cat span { display: grid; place-items: center; width: 52px; height: 52px; margin: 0 auto 6px; border-radius: 50%; font-size: 26px; }
+.ax .lf_bmsec { padding: 20px 16px 10px; font-size: 18px; font-weight: 800; letter-spacing: -0.02em; flex: none; }
+.ax .lf_shops { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 10px; padding: 0 16px; }
+.ax .lf_shops button { text-align: left; min-width: 0; }
+.ax .lf_shops b { display: block; font-size: 14.5px; margin-top: 7px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ax .lf_shops span:not(.lf_food) { display: block; font-size: 12.5px; color: #666; margin-top: 1px; }
+.ax .lf_shops em { font-style: normal; color: #ff9f1a; font-weight: 700; }
+.ax .lf_food { display: block; position: relative; overflow: hidden; width: 64px; height: 64px; border-radius: 10px; flex: none; }
+.ax .lf_food svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ax .lf_food.big { width: 100%; height: 104px; border-radius: 12px; }
+.ax .lf_food.wide { width: 100%; height: 150px; border-radius: 12px; }
+.ax .lf_food.hero { position: absolute; left: 0; right: 0; top: 0; width: auto; height: 220px; border-radius: 0; z-index: 0; }
+.ax .lf_bmtab, .ax .lf_uetab { position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #fff; border-top: 1px solid #eceef1; display: flex; justify-content: space-around; padding-top: 8px; font-size: 10.5px; color: #9aa0a6; z-index: 4; box-sizing: border-box; }
+.ax .lf_bmtab > *, .ax .lf_uetab > * { width: 62px; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; color: inherit; }
+.ax .lf_bmtab .on { color: #222; font-weight: 700; }
+.ax .lf_uetab .on { color: #000; font-weight: 700; }
+.ax .lf_bmcta { position: absolute; left: 14px; right: 14px; bottom: 96px; height: 52px; border-radius: 10px; --axbg: var(--m, #2ac1bc); --axsh: 0 6px 18px rgba(42, 193, 188, 0.35); color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: 15px; z-index: 5; }
+.ax .lf_bmcta span { margin-left: auto; }
+.ax .lf_bmcta em, .ax .lf_uecta em { font-style: normal; background: #fff; color: var(--m, #000); width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; }
+.ax .lf_store .lf_bmcta, .ax .lf_store .lf_uecta, .ax .lf_cartv .lf_bmcta, .ax .lf_cartv .lf_uecta { bottom: 26px; }
+.ax .lf_bmcta.off, .ax .lf_uecta.off { background: #b9c0c7; box-shadow: none; }
+.ax .lf_herob { position: absolute; top: 58px; left: 16px; z-index: 3; }
+.ax .lf_herob .ax_cb { --axbg: rgba(255, 255, 255, 0.92); }
+.ax .lf_store > .ax_sb, .ax .lf_od > .ax_sb { position: relative; z-index: 3; }
+.ax .lf_storesc, .ax .lf_odsc { position: relative; z-index: 1; padding-top: 110px; }
+.ax .lf_odsc { padding-top: 140px; }
+.ax .lf_sinfo { background: #fff; border-radius: 18px 18px 0 0; padding: 18px 18px 12px; text-align: center; flex: none; }
+.ax .lf_sinfo.ue { text-align: left; }
+.ax .lf_sinfo h2 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: inherit; }
+.ax .lf_sinfo .rt { font-size: 14px; margin-top: 4px; color: #333; }
+.ax .lf_sinfo .rt em { font-style: normal; color: #ff9f1a; letter-spacing: 1px; }
+.ax .lf_sinfo .meta { display: grid; grid-template-columns: auto 1fr; gap: 5px 14px; text-align: left; font-size: 13px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #f0f1f3; }
+.ax .lf_sinfo .meta span:nth-child(odd) { color: #9aa0a6; }
+.ax .lf_mtabs { display: flex; background: #fff; border-bottom: 1px solid #eef0f2; font-size: 14.5px; font-weight: 700; color: #9aa0a6; flex: none; }
+.ax .lf_mtabs span { flex: 1; text-align: center; padding: 12px 0; }
+.ax .lf_mtabs span.on { color: #222; box-shadow: inset 0 -2.5px 0 #222; }
+.ax .lf_mi { display: flex; gap: 12px; padding: 14px 16px; background: #fff; flex: none; }
+.ax .lf_mi + .lf_mi { border-top: 1px solid #f0f1f3; }
+.ax .lf_mi b { font-size: 15.5px; font-weight: 700; }
+.ax .lf_mi p { margin: 4px 0 6px; font-size: 12.5px; color: #888; line-height: 1.4; }
+.ax .lf_mi strong { font-size: 15px; font-weight: 700; }
+.ax .lf_mi .lf_food { width: 84px; height: 84px; }
+.ax .rep { font-size: 10.5px; font-weight: 800; color: #fff; background: #ff6b6b; border-radius: 4px; padding: 1px 5px; margin-right: 5px; vertical-align: 2px; }
+.ax .lf_ctop { display: flex; align-items: center; justify-content: space-between; padding: 6px 16px 12px; background: #fff; flex: none; }
+.ax .lf_ctop b { font-size: 17px; }
+.ax .lf_ctop > span { width: 38px; display: flex; justify-content: flex-end; }
+.ax .lf_cart { background: #fff; margin-bottom: 10px; }
+.ax .lf_cart .sh { display: flex; align-items: center; gap: 10px; padding: 14px 16px; font-size: 15.5px; font-weight: 800; border-bottom: 1px solid #f0f1f3; }
+.ax .lf_ci { display: flex; gap: 12px; padding: 14px 16px; }
+.ax .lf_ci + .lf_ci { border-top: 1px solid #f0f1f3; }
+.ax .lf_ci b { font-size: 15px; }
+.ax .lf_ci small { font-size: 12px; color: #888; margin: 2px 0 6px; }
+.ax .lf_ci .q { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+.ax .lf_step { display: flex; align-items: center; border: 1px solid #e2e4e8; border-radius: 8px; height: 32px; }
+.ax .lf_step span { width: 30px; text-align: center; font-size: 16px; color: #888; }
+.ax .lf_step b { width: 24px; text-align: center; font-size: 14px; }
+.ax .lf_req { background: #fff; padding: 14px 16px; margin-bottom: 10px; }
+.ax .lf_req h4 { margin: 0 0 10px; font-size: 15.5px; font-weight: 800; }
+.ax .lf_bx { border: 1px solid #e2e4e8; border-radius: 10px; padding: 11px 12px; font-size: 14px; margin-bottom: 8px; }
+.ax .lf_bx small { display: block; font-size: 11.5px; color: #9aa0a6; margin-bottom: 3px; }
+.ax .lf_sum { background: #fff; padding: 14px 16px; margin-bottom: 10px; }
+.ax .lf_sum div { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; color: #555; }
+.ax .lf_sum div.t { font-size: 16px; font-weight: 800; color: #222; border-top: 1px solid #f0f1f3; margin-top: 6px; padding-top: 10px; }
+.ax .lf_oc { background: #fff; margin-bottom: 10px; padding: 14px 16px; }
+.ax .lf_oc .hd { display: flex; justify-content: space-between; font-size: 12.5px; color: #9aa0a6; }
+.ax .lf_oc .hd b { color: #222; font-weight: 700; }
+.ax .lf_oc .hd button { color: #9aa0a6; font-size: 12.5px; }
+.ax .lf_oc .gift { font-size: 11px; font-weight: 700; color: #d1477a; background: #fde7ef; border-radius: 5px; padding: 1px 6px; margin-left: 6px; }
+.ax .lf_oc .bd { width: 100%; display: flex; gap: 12px; margin-top: 10px; align-items: center; text-align: left; }
+.ax .lf_oc .bd .lf_food { width: 60px; height: 60px; }
+.ax .lf_oc .bd > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.ax .lf_oc .bd b { font-size: 16px; font-weight: 800; }
+.ax .lf_oc .bd small { font-size: 13px; color: #666; }
+.ax .lf_oc .bt { display: flex; gap: 8px; margin-top: 12px; }
+.ax .lf_oc .bt span { flex: 1; height: 40px; border-radius: 8px; border: 1px solid #e2e4e8; display: grid; place-items: center; font-size: 14px; font-weight: 700; }
+.ax .lf_oc .bt span.m { border-color: var(--m); color: var(--m); }
+.ax .lf_bmsc { padding-bottom: 60px; }
+/* 배달 — Uber Eats */
+.ax .lf_ue { --m: #000; position: absolute; inset: 0; display: flex; flex-direction: column; background: #fff; color: #000; font-family: 'Inter Tight', -apple-system, 'Noto Sans KR', sans-serif; }
+.ax .lf_uetop { padding: 0 16px; flex: none; }
+.ax .lf_uetop .dn { display: flex; align-items: center; gap: 10px; height: 50px; }
+.ax .lf_uetop .dn > div { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.ax .lf_uetop .dn small { font-size: 12px; color: #5e5e5e; }
+.ax .lf_uetop .dn b { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ax .lf_uetop .dn .lf_cartb { width: 40px; height: 40px; border-radius: 50%; --axbg: #f3f3f3; display: grid; place-items: center; }
+.ax .lf_uetop .q { height: 46px; border-radius: 23px; background: #f3f3f3; display: flex; align-items: center; gap: 10px; padding: 0 16px; color: #5e5e5e; font-size: 15.5px; margin: 6px 0 4px; }
+.ax .lf_uecat { display: flex; gap: 4px; padding: 12px 10px 4px; flex: none; }
+.ax .lf_uecat div { width: 70px; flex: none; text-align: center; font-size: 12px; font-weight: 500; }
+.ax .lf_uecat span { display: grid; place-items: center; width: 56px; height: 56px; margin: 0 auto 5px; border-radius: 50%; background: #f6f6f6; font-size: 27px; }
+.ax .lf_ueh { padding: 18px 16px 10px; font-size: 21px; font-weight: 700; letter-spacing: -0.01em; flex: none; }
+.ax .lf_again { display: flex; gap: 12px; padding: 0 16px; overflow-x: auto; scrollbar-width: none; flex: none; }
+.ax .lf_again::-webkit-scrollbar { display: none; }
+.ax .lf_again button { width: 96px; flex: none; text-align: left; }
+.ax .lf_again .lf_food { width: 96px; height: 96px; }
+.ax .lf_again b { display: block; font-size: 13.5px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ax .lf_again small { font-size: 12px; color: #5e5e5e; }
+.ax .lf_sc { display: block; width: 100%; padding: 0 16px 16px; text-align: left; box-sizing: border-box; }
+.ax .lf_sc .r { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 8px; }
+.ax .lf_sc .r > span { display: flex; flex-direction: column; }
+.ax .lf_sc .r b { font-size: 16px; }
+.ax .lf_sc .r small { font-size: 13px; color: #5e5e5e; }
+.ax .lf_sc .r i { width: 30px; height: 30px; border-radius: 50%; background: #eee; display: grid; place-items: center; font: 700 12px 'Inter Tight', sans-serif; font-style: normal; flex: none; }
+.ax .lf_uecta { position: absolute; left: 14px; right: 14px; bottom: 96px; height: 54px; border-radius: 10px; --axbg: #000; color: #fff; display: flex; align-items: center; gap: 10px; padding: 0 18px; font-size: 16px; font-weight: 700; z-index: 5; box-sizing: border-box; }
+.ax .lf_uecta span { margin-left: auto; }
+.ax .lf_otab { display: flex; gap: 22px; padding: 0 16px; border-bottom: 1px solid #eee; font-size: 15px; font-weight: 600; color: #757575; flex: none; }
+.ax .lf_otab span { padding: 10px 0; }
+.ax .lf_otab span.on { color: #000; box-shadow: inset 0 -2px 0 #000; }
+.ax .lf_or { width: 100%; display: flex; gap: 12px; padding: 14px 16px; align-items: flex-start; border-bottom: 1px solid #f3f3f3; text-align: left; }
+.ax .lf_or b { font-size: 16px; }
+.ax .lf_or small { font-size: 13.5px; color: #5e5e5e; margin-top: 2px; }
+.ax .lf_or small.x { color: #c0392b; }
+.ax .lf_or u { font-size: 13.5px; font-weight: 700; margin-top: 8px; }
+.ax .lf_or em { font-style: normal; height: 36px; padding: 0 14px; border-radius: 18px; background: #f3f3f3; font-size: 14px; font-weight: 700; display: flex; align-items: center; flex: none; }
+.ax .lf_uesc { padding-bottom: 40px; }
+/* 주문 상세 (both looks): map, receipt */
+.ax .lf_map { position: absolute; left: 0; right: 0; top: 0; height: 250px; overflow: hidden; background: #eef0ea; z-index: 0; }
+.ax .lf_map .rd { position: absolute; background: #fff; }
+.ax .lf_map .blk { position: absolute; background: #e2e6dc; border-radius: 4px; }
+.ax .lf_map .pk { position: absolute; background: #cfe6c8; border-radius: 30px; }
+.ax .lf_map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ax .lf_map .pin { position: absolute; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--m, #06c167); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); }
+.ax .lf_ue .lf_map .pin + .pin { background: #06c167; }
+.ax .lf_odb { background: #fff; border-radius: 18px 18px 0 0; padding: 16px; flex: none; }
+.ax .lf_odb .st { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid #eee; }
+.ax .lf_odb .st i { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.ax .lf_odb .st b { font-size: 18px; display: block; }
+.ax .lf_odb .st span { font-size: 13px; color: #5e5e5e; }
+.ax .lf_odb .ln { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; font-size: 15px; }
+.ax .lf_odb .ln small { display: block; font-size: 12px; color: #888; margin-left: 30px; }
+.ax .lf_odb .ln em { font-style: normal; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 4px; background: #f3f3f3; font-size: 12px; font-weight: 700; margin-right: 8px; }
+.ax .lf_odb .ln .lf_k { margin-left: 30px; }
+.ax .lf_odb .ln.g { color: #5e5e5e; }
+.ax .lf_odb .ln .dc { color: #06c167; }
+.ax .lf_odb .ln.t { font-weight: 700; border-top: 1px solid #eee; margin-top: 6px; padding-top: 12px; }
+.ax .lf_odb .note { margin: 12px 0 0; border-radius: 10px; background: #f6f6f6; padding: 11px 13px; font-size: 14px; line-height: 1.5; }
+.ax .lf_odb .note small { display: block; font-size: 12px; color: #5e5e5e; font-weight: 600; margin-bottom: 2px; }
+.ax .lf_odb .meta2 { margin-top: 12px; font-size: 13px; color: #5e5e5e; }
+.ax .lf_odb .pay { display: flex; align-items: center; gap: 10px; padding: 12px 0 0; margin-top: 12px; border-top: 1px solid #eee; font-size: 14.5px; }
+.ax .lf_odb .pay button { margin-left: auto; color: #06c167; font-weight: 700; font-size: 13.5px; }
+.ax .lf_bm .lf_odb .pay button { color: var(--m); }
+.ax .ax_scroll > [class*="lf_"] { flex-shrink: 0; }
+.ax:is(.v_clock, .v_timer, .v_wclock, .v_alarm) .ax_kp { --axbg: rgba(255, 255, 255, 0.1); --axsh: none; color: #f5a524; }
+.ax:is(.v_clock, .v_timer, .v_wclock, .v_alarm) .ax_fillc { background: #222327; color: #f2f2f4; }
+.ax:is(.v_clock, .v_timer, .v_wclock, .v_alarm) .ax_fillc p { color: #d5d7dc; }
+.ax:is(.v_clock, .v_timer, .v_wclock, .v_alarm) .ax_fillb { --axbg: #f5a524; color: #17181b; }
+.ax .lf_bmcta { padding: 0 16px; box-sizing: border-box; }
+.ax .lf_fill { text-align: center; padding: 22px; }
+.ax .lf_wgap { height: 14px; }
+.ax .lf_bmic { display: flex; align-items: center; gap: 14px; }
+.ax .lf_bmic .lf_cartb { width: 26px; height: 26px; display: grid; place-items: center; }
+.ax .lf_bm .ax_scroll { padding-bottom: 70px; }
+.ax .lf_bmcta { bottom: 92px; height: 50px; }
+.ax .lf_bmcta > :not(em) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ax .lf_bmtab > *, .ax .lf_uetab > * { font-size: 10px; white-space: nowrap; overflow: hidden; }
+.ax .lf_bigface { position: absolute; right: 12px; top: 40px; width: 56px; height: 56px; margin: 0; }
+.ax .lf_rng { position: absolute; left: 13px; right: 13px; top: 70px; height: 5px; border-radius: 3px; background: rgba(0, 0, 0, 0.18); }
+.ax .lf_rng i { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: #f3c66b; }
+.ax .lf_rng b { position: absolute; top: -2.5px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25); }
+.ax .lf_pvaud { gap: 14px; padding: 0 20px; box-sizing: border-box; }
+.ax .lf_aud { display: flex; align-items: center; gap: 14px; width: 100%; }
+.ax .lf_aud .pl { width: 46px; height: 46px; border-radius: 50%; background: #2f6fbf; display: grid; place-items: center; flex: none; }
+.ax .lf_aud .pl svg { margin-left: 3px; }
+.ax .lf_pvaud .lf_wave { flex: 1; display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 0; }
+.ax .lf_pvaud .lf_wave i { width: 4px; border-radius: 2px; background: #c9d3e0; }
+.ax .lf_audt { display: flex; justify-content: space-between; width: 100%; font-size: 12.5px; color: #8a929d; padding-left: 60px; box-sizing: border-box; }
+.ax .lf_rng2 { position: absolute; left: 13px; right: 13px; bottom: 34px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+.ax .lf_rng2 span:first-child { opacity: 0.65; }
+.ax .lf_rng2 .bar { flex: 1; height: 5px; border-radius: 3px; background: #f3c66b; position: relative; }
+.ax .lf_rng2 .bar b { position: absolute; top: -2.5px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2); }
+.ax .lf_tile p:last-child { opacity: 0.8; }

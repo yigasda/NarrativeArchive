@@ -29,6 +29,11 @@ function lockNotes(p, now) {
 export const CG_W = 390, CG_H = 844;
 const CG_ALPHA = 'd9'; // clarity 0.85
 const CG_I = { invest: 'M3 20h18M5 16l5-6 4 3 6-9M15 4h5v5',
+    clock: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 8v4l2.5 2M5 3L2 6M19 3l3 3',
+    health: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10zM5 12h3l2-3 3 6 2-3h4',
+    files: 'M3 6h7l2 2h9v11H3zM3 10h18',
+    weather: 'M7 17a4 4 0 0 1 .5-8A5.5 5.5 0 0 1 18 11a3 3 0 0 1-.5 6zM15 4.5a3 3 0 0 1 3.5 2.5',
+    delivery: 'M4 7h9v8H4zM13 10h4l3 3v2h-7M7 18a1.6 1.6 0 1 0 0-.1M17 18a1.6 1.6 0 1 0 0-.1',
     msg: 'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-5 4z',
     call: 'M6 3h3l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v3a2 2 0 0 1-2 2A17 17 0 0 1 4 5a2 2 0 0 1 2-2z',
     photo: 'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 16l5-5 4 4 3-3 6 6M15 9h.01',
@@ -46,7 +51,7 @@ const CG_I = { invest: 'M3 20h18M5 16l5-6 4 3 6-9M15 4h5v5',
     shop: 'M5 8h14l-1.2 11a1 1 0 0 1-1 .9H7.2a1 1 0 0 1-1-.9zM9 8V6a3 3 0 0 1 6 0v2',
     voice: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
 };
-const CG_GEL = { invest: ['#b7dfcc', '#4c9a80'], sns: ['#efc4d0', '#d494a7'], mail: ['#bfd3e9', '#8faed1'], diary: ['#d3cae9', '#a699c9'], set: ['#d1d4d9', '#a2a7af'], cam: ['#e2e4e8', '#aeb2b9', '#2a313b'], photo: ['#f0cbb5', '#d89f98'], cal: ['#f6f7f9', '#dcdfe5', '#b0564e'], note: ['#f4e5b5', '#dcc680', '#5a4a1f'], map: ['#c3dcc1', '#93ba97'], call: ['#bbddc0', '#89b892'], msg: ['#bbddc0', '#89b892'], search: ['#bfd3e9', '#8faed1'] , bank: ['#b8c6df', '#6f86b3'], wallet: ['#c7cdd9', '#8b95aa'], shop: ['#bfe0dc', '#86bdb6'], voice: ['#e8d3bb', '#c9a581'] };
+const CG_GEL = { clock: ['#c9cbd2', '#3b3d45'], health: ['#f6c6d0', '#e0607b'], files: ['#c2d6ef', '#5b8fd1'], weather: ['#bcd7f2', '#5b9be0'], delivery: ['#b9ebe8', '#2ab3ae'], invest: ['#b7dfcc', '#4c9a80'], sns: ['#efc4d0', '#d494a7'], mail: ['#bfd3e9', '#8faed1'], diary: ['#d3cae9', '#a699c9'], set: ['#d1d4d9', '#a2a7af'], cam: ['#e2e4e8', '#aeb2b9', '#2a313b'], photo: ['#f0cbb5', '#d89f98'], cal: ['#f6f7f9', '#dcdfe5', '#b0564e'], note: ['#f4e5b5', '#dcc680', '#5a4a1f'], map: ['#c3dcc1', '#93ba97'], call: ['#bbddc0', '#89b892'], msg: ['#bbddc0', '#89b892'], search: ['#bfd3e9', '#8faed1'] , bank: ['#b8c6df', '#6f86b3'], wallet: ['#c7cdd9', '#8b95aa'], shop: ['#bfe0dc', '#86bdb6'], voice: ['#e8d3bb', '#c9a581'] };
 const cgIcon = (k, mono, badge = 0) => {
     const [c1, c2, g = '#ffffff'] = CG_GEL[k];
     const svg = mono
@@ -100,7 +105,7 @@ export function homeScreen(p, now, m, page = 1) {
               <span class="cg_wh"><span class="cg_cap cg_capnote">메모</span><span class="cg_num cg_evw">${p.notes.length ? esc(fmtDate(p, note.time, true)) : ''}</span></span>
               ${items.length ? items.map(i => `<span class="cg_item ${i.done ? 'done' : ''}"><span class="cg_chk">${i.done ? '<svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>' : ''}</span><span class="cg_itx">${esc(i.text)}</span></span>`).join('') : '<span class="cg_evw">메모 없음</span>'}
             </button>`}</div>
-          <div class="cg_grid">${(page === 2 ? ['bank', 'wallet', 'shop', 'voice', 'invest'] : ['photo', 'cal', 'note', 'map', 'sns', 'mail', 'diary', 'set']).map(k => `<div class="cg_cell">${cgIcon(k, mono, badges[k] || 0)}<span class="cg_lbl">${APPS[k]}</span></div>`).join('')}</div>
+          <div class="cg_grid">${(page === 2 ? ['bank', 'wallet', 'shop', 'voice', 'invest', 'clock', 'health', 'files', 'weather', 'delivery'] : ['photo', 'cal', 'note', 'map', 'sns', 'mail', 'diary', 'set']).map(k => `<div class="cg_cell">${cgIcon(k, mono, badges[k] || 0)}<span class="cg_lbl">${APPS[k]}</span></div>`).join('')}</div>
         </div>
         <div class="cg_fill"></div>
         <div class="cg_dots"><button type="button" class="${page === 1 ? 'on' : ''}" data-go="home" aria-label="홈 1쪽"></button><button type="button" class="${page === 2 ? 'on' : ''}" data-go="home2" aria-label="홈 2쪽"></button></div>
