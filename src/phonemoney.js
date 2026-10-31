@@ -247,9 +247,11 @@ export function passView(p, now, id) {
 }
 
 // ---- 쇼핑: a shop app's own face (its colour band, search, tab bar), the orders tab inside
+const ORDER_STATE={cancelled:'주문 취소',returning:'반품 진행',returned:'반품 완료',refunded:'환불 완료'};
 const STEP = { ordered: 0, shipped: 1, 'on the way': 2, delivered: 3 };
 const itemIc = x => (/buch|book|책|livre|libro/i.test(`${x.item} ${x.ko}`) ? 'book' : 'box');
 function statusPill(p, x) {
+    if(ORDER_STATE[x.status])return `<span class="ax_pill2 unk">${esc(ORDER_STATE[x.status])}</span>`;
     if (x.status === 'delivered') return `<span class="ax_pill2 ok">${ax('check', 12, 'currentColor', 2.8)} ${x.arrived ? `${esc(fmtDate(p, x.arrived, true))} 도착` : '배송 완료'}</span>`;
     if (x.status === 'unknown') return `<span class="ax_pill2 unk">${ax('info', 13, 'currentColor')} 배송 상태 모름</span>`;
     return `<span class="ax_pill2 go">${ax('truck', 13, 'currentColor')} ${x.eta ? `${esc(fmtDate(p, x.eta, true))} 도착 예정` : x.status === 'ordered' ? '주문 완료' : '배송 중'}</span>`;
@@ -282,7 +284,7 @@ export function orderView(p, now, id) {
     const x = mo(p)?.orders?.find(o => o.id === id);
     if (!x) return shopScreen(p, now);
     const st = STEP[x.status], tx = x.ev ? mo(p).tx.find(t => t.ev === x.ev) : null, ai = tx ? mo(p).bank.accounts.findIndex(a => a.last4 === tx.account) : -1;
-    const head = x.status === 'delivered' ? ['배송 완료', x.arrived ? `${fmtDate(p, x.arrived)} 도착` : '도착했어요'] : x.status === 'unknown' ? ['배송 상태', '확인되지 않았어요'] : [x.status === 'ordered' ? '주문 완료' : '배송 중', x.eta ? `${fmtDate(p, x.eta)} 도착 예정` : '도착일 미정'];
+    const head = ORDER_STATE[x.status] ? [ORDER_STATE[x.status], x.status==='refunded'?'환불됐어요':x.status==='returned'?'반품이 완료됐어요':x.status==='returning'?'반품 처리 중이에요':'주문이 취소됐어요'] : x.status === 'delivered' ? ['배송 완료', x.arrived ? `${fmtDate(p, x.arrived)} 도착` : '도착했어요'] : x.status === 'unknown' ? ['배송 상태', '확인되지 않았어요'] : [x.status === 'ordered' ? '주문 완료' : '배송 중', x.eta ? `${fmtDate(p, x.eta)} 도착 예정` : '도착일 미정'];
     const total = x.price === null ? null : x.price * (x.qty || 1);
     return `<div class="ax_shopv">
       <div class="ax_sph ax_sphs">${axBar(p, now, '#fff')}
@@ -292,7 +294,7 @@ export function orderView(p, now, id) {
         <div class="ax_dhero"><small>${esc(head[0])}</small><b>${esc(head[1])}</b><span>${esc(x.shop)}${x.gift ? ` · 선물로 ${esc(x.gift)}에게` : ''}</span>
           ${st === undefined ? '' : `<span class="ax_steps" style="--done: ${[0, 34, 67, 100][st]}%">${['주문', '발송', '배송 중', '도착'].map((l, k) => `<span class="${k < st || (k === st && st === 3) ? 'd' : k === st ? 'c' : ''}"><i>${k < st || (k === st && st === 3) ? ax('check', 11, '#fff', 3) : ''}</i>${l}</span>`).join('')}</span>`}</div>
         <div class="ax_card ax_oc"><div class="ax_ocr">${prodImg(x)}<span class="ax_tx"><small class="ax_ocsl">${esc(String(x.shop || '').toUpperCase())}</small><b>${esc(x.item)}</b>${x.ko && koOn() ? `<span class="ax_p">${esc(x.ko)}</span>` : ''}<span class="ax_ocpr cg_num">${esc(fmtMoney(p, x.price))}<small>${esc([x.option, `${x.qty || 1}개`].filter(Boolean).join(' · '))}</small></span></span></div></div>
-        <div class="ax_sec">결제</div><div class="ax_card"><div class="ax_lr"><span>상품 금액</span><span class="cg_num">${esc(fmtMoney(p, total))}</span></div><div class="ax_lr"><span><b>총 결제</b></span><span class="cg_num"><b>${esc(fmtMoney(p, total))}</b></span></div>
+        <div class="ax_sec">결제</div><div class="ax_card"><div class="ax_lr"><span>상품 금액</span><span class="cg_num">${esc(fmtMoney(p, total))}</span></div><div class="ax_lr"><span><b>${x.paid===false?'결제 예정':'총 결제'}</b></span><span class="cg_num"><b>${esc(fmtMoney(p, total))}</b></span></div>
           ${tx ? `<button type="button" class="ax_more" data-go="tx" data-i="${tx.id}">${ai >= 0 ? `${kindName[mo(p).bank.accounts[ai].kind]} •••• ${esc(tx.account)} · ` : ''}은행에서 보기 ${ax('chev', 14, 'currentColor', 2.4)}</button>` : ''}</div>
         <div class="ax_sec">주문 정보</div><div class="ax_card"><div class="ax_lr"><span>주문일</span><span class="cg_num">${esc(fmtDate(p, x.time))}</span></div>${x.gift ? `<div class="ax_lr"><span>받는 사람</span><span>${esc(x.gift)}</span></div>` : ''}</div>
         ${relatedRows(p, x.ev, `order:${x.id}`)}

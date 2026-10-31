@@ -124,7 +124,7 @@ export function migrateBank(m, p) {
 }
 export function positions(trades, opening = []) {
     const map = new Map(opening.map(x => [x.symbol, { ...x, quantity: x.quantity, cost: x.quantity * x.average, realized: 0, dividends: 0 }]));
-    for (const t of [...trades].sort((a, b) => a.date.localeCompare(b.date))) {
+    for (const t of [...trades].sort((a, b) => a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||'') || (a.sourceIndex??-1)-(b.sourceIndex??-1))) {
         const h = map.get(t.symbol) || { symbol: t.symbol, currency: t.currency, quantity: 0, cost: 0, realized: 0, dividends: 0 };
         if (h.currency !== t.currency) throw new Error('동일 종목의 거래 통화가 달라요');
         if (t.kind === 'dividend') { if (!finite(t.amount) || t.amount < 0) throw new Error('배당금을 확인해 주세요'); h.dividends += t.amount; }
@@ -145,7 +145,7 @@ export function positions(trades, opening = []) {
 // Historic FX is frozen on each execution. Later quote corrections change valuation, never acquisition cost.
 export function baseCosts(trades, base) {
     const out = {};
-    for (const t of [...trades].sort((a,b)=>a.date.localeCompare(b.date))) {
+    for (const t of [...trades].sort((a,b)=>a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||'') || (a.sourceIndex??-1)-(b.sourceIndex??-1))) {
         const h = out[t.symbol] ||= { quantity: 0, cost: 0 };
         if (t.kind === 'dividend') continue;
         if (t.kind === 'buy') {

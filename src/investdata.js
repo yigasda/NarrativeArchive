@@ -1,3 +1,7 @@
+import {captureSource,validateCapture,setBoundary} from './phoneread.js';
+import {phoneChatScope} from './phonestory.js';
+import {recentForCheck} from './drift.js';
+import {ctx} from './core.js';
 // Investment generation: private portfolios, shared public quotes. All invented records stay out of RP injection.
 import { wealthBlock, wealthCheck, investmentWealthRows } from './wealth.js';
 import { askDraft } from './ai.js';
@@ -102,6 +106,9 @@ function ingestQuotes(m, raw, input, date, securities) {
     for (const x of list(raw.fx).slice(0, 30)) if (currency(x.from) && currency(x.to) && x.from !== x.to) push(`FX:${x.from}/${x.to}`, x);
 }
 export async function fillInvestment(m, p, date, {regenerate = false, wealthPlan = null} = {}) {
+    const capturedRows=recentForCheck((ctx().chat||[]).length,{excludeSystem:true}),requestMeta=structuredClone(m);
+    const captured=await captureSource(phoneChatScope(ctx()),capturedRows);
+    if(p.readState?.scope && p.readState.scope!==captured.scope)throw Error('반영 시작 위치를 먼저 연결해 주세요');
     const old = p.investment;
     if (old && !regenerate) throw new Error('기존 투자 기록은 보존돼요. 시세 갱신을 사용해 주세요');
     if (!validDate(date)) throw new Error('이야기 날짜를 YYYY-MM-DD로 입력해 주세요');
@@ -120,7 +127,7 @@ export async function fillInvestment(m, p, date, {regenerate = false, wealthPlan
     const snapshot = () => JSON.stringify([m.finance,p.investment,p.money,p.financeProfile]);
     const before = snapshot();
     const rebuild = old ? `[REBUILD]\n${JSON.stringify([...new Set(preserved.map(a=>a.currency))])}\n[MONEY ALREADY MOVED]\n${JSON.stringify(preserved)}` : '';
-    const input = await sideRequest(m, p.owner, [`[DATE]\n${date}`, `[BANK — separate locked balances]\n${JSON.stringify(p.money?.bank || {})}`, rebuild,wealthBlock(plan,'investments'),`[EXISTING PUBLIC PRICES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).map(([k,book])=>[k,book[date]])))}`], {profile:p.financeProfile,money:true});
+    const input = await sideRequest(requestMeta, p.owner, [`[DATE]\n${date}`, `[BANK — separate locked balances]\n${JSON.stringify(p.money?.bank || {})}`, rebuild,wealthBlock(plan,'investments'),`[EXISTING PUBLIC PRICES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).map(([k,book])=>[k,book[date]])))}`], {profile:p.financeProfile,money:true,capturedRows});
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {
         const raw = json(await askDraft(input+'\n'+correction, { system: INVEST_SYS + (old ? INVEST_REBUILD : ''), maxTokens: 12000 }));
@@ -161,8 +168,10 @@ export async function fillInvestment(m, p, date, {regenerate = false, wealthPlan
         for (const t of trades) t.rateAtTrade = fx(scratch, t.currency, raw.base, t.date);
         correction=wealthCheck(scratch,plan,'investments',investmentWealthRows(scratch,accounts,trades,securities,date),date);
         if(correction) {if(attempt===0) {correction += '\n[PREVIOUS CANDIDATE]\n'+JSON.stringify(raw);continue;}throw new Error('투자 규모를 재력 기준에 맞추지 못했어요. 기존 금융 데이터는 유지돼요');}
+        await validateCapture(captured,phoneChatScope(ctx()),recentForCheck((ctx().chat||[]).length,{excludeSystem:true}));
         m.finance = scratch.finance;
         p.investment = { at: Date.now(), version: 1, base: raw.base, date, basis: text(raw.basis, 2000), securities, accounts, trades, stakes, watch: list(raw.watch).slice(0, 8).filter(w => securities.some(s => s.symbol === w.symbol)).map(w => ({ symbol: w.symbol, note: text(w.note), ko: text(w.ko), query: text(w.query, 120), source: 'guess' })), generatedDates: [date] };
+        setBoundary(p,captured,['invest']);
         await saveMeta();
         return;
     }
