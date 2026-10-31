@@ -102,7 +102,7 @@ export function searchOne(p, now, k, busy) {
     const x = p.searches[k];
     if (!x) return searchScreen(p, now);
     return `${axBar(p, now)}
-      ${axTop(axCb('search'), axKp(p))}
+      ${axTop(axCb('search'), `${axKp(p)}<button type="button" class="ax_cb na_ph_rm" data-kind="search" data-i="${k}" aria-label="검색 기록 지우기">${ax('trash2', 18, 'currentColor', 2.1)}</button>`)}
       <div class="ax_scroll">${resultsBody(p, x, k, busy)}<i class="wb_pad"></i></div>
       ${dock(p, { back: 'search', addr: `${ax('search', 14, '#6b7380', 2.6)}<span>${esc(x.q)}</span>`, mark: { i: k, r: -1, on: markedPage(x, -1) }, ko: false })}
       ${axInd()}`;

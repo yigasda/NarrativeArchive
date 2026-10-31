@@ -322,7 +322,7 @@ export function voiceScreen(p, now, open = '') {
         ${axFind()}
         <div class="ax_card ax_vm">${vs.map(([x, k]) => x.id === open ? `
           <div class="ax_rw ax_vmo"><button type="button" class="ax_vmh" data-go="voice" data-i=""><span class="ax_vmt"><b>${esc(x.title || '새로운 녹음')}</b><span class="cg_num">${secs(x.sec)}</span></span><span class="ax_vms"><span>${esc(fmtDate(p, x.time, true))} ${esc(fmtTime(p, x.time))}</span><span>${esc(x.place || '')}</span></span></button>
-            ${player(x, 64)}<button type="button" class="ax_vmmore" data-go="voiceone" data-i="${k}">글로 옮긴 내용 ›</button></div>` : `
+            ${player(x, 64)}<span class="ax_vmfoot"><button type="button" class="na_ph_rm ax_vmdel" data-kind="voice" data-i="${esc(x.id)}" aria-label="지우기">${ax('trash2', 21, 'currentColor', 1.9)}</button><button type="button" class="ax_vmmore" data-go="voiceone" data-i="${k}">글로 옮긴 내용 ›</button></span></div>` : `
           <button type="button" class="ax_rw ax_vmr" data-go="voice" data-i="${x.id}"><span class="ax_vmt"><b>${esc(x.title || '새로운 녹음')}</b><span class="cg_num">${secs(x.sec)}</span></span><span class="ax_vms"><span>${esc(fmtDate(p, x.time, true))}</span><span>${esc(x.place || '')}</span></span></button>`).join('') || '<div class="ax_empty">녹음이 없어요</div>'}</div>
         <i class="ax_pad big"></i><i class="ax_pad big"></i>
       </div>

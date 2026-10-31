@@ -473,10 +473,38 @@ export async function openPhone(who = null) {
         writing.add(id); drawPhone(true);
         try {
             const k = await writeEntry(m, p, kind);
-            if (phone() === p && view.split(':')[0] === kind) view = `${kind === 'diary' ? 'diaryone' : 'noteone'}:${k}`;
+            if (phone() === p && [kind, `${kind}one`].includes(view.split(':')[0])) view = `${kind === 'diary' ? 'diaryone' : 'noteone'}:${k}`;
             toastr.success(kind === 'diary' ? '일기를 썼어요' : '메모를 썼어요', '캐릭터 휴대폰');
         } catch (err) { console.error('[narrative-archive] write', err); toastr.error(String(err?.message || err), kind === 'diary' ? '일기 쓰기 실패' : '메모 쓰기 실패'); }
         finally { writing.delete(id); if (phone() === p) drawPhone(); }
+    });
+    // 지우기: what the user or the AI put on the phone, one item at a time; the screen goes back to its list
+    const RM = {
+        note: { list: p => p.notes, back: 'note', what: '메모' }, diary: { list: p => p.diary, back: 'diary', what: '일기' },
+        photo: { list: p => p.photos, back: 'photo', what: '사진' }, search: { list: p => p.searches, back: 'search', what: '검색 기록' },
+        thread: { list: p => p.threads, back: 'msg', what: '대화' }, event: { list: p => p.events, back: 'cal', what: '일정' },
+        mail: { list: p => p.mails, back: 'mail', what: '메일' }, post: { list: p => p.posts, back: 'sns', what: '게시물' },
+    };
+    const OTHER = { voice: '음성 메모', draft: '보내지 않은 메시지', calls: '통화 기록', contact: '연락처', place: '장소' };
+    $root.on('click', '.na_ph_rm', async function (e) {
+        e.stopPropagation();
+        const p = phone(), kind = this.dataset.kind, i = this.dataset.i;
+        if (!p) return;
+        if (kind === 'photo' && drawing.has(`${nameKey(p.owner)}:${i}`)) return toastr.info('그리는 중엔 지울 수 없어요', '캐릭터 휴대폰');
+        const what = OTHER[kind] || RM[kind]?.what;
+        const josa = w => (((w.charCodeAt(w.length - 1) - 0xac00) % 28) ? '을' : '를');
+        if (!what || !await confirm(`이 ${what}${josa(what)} 지울까요?`, '지운 건 되돌릴 수 없어요.')) return;
+        if (phone() !== p) return;
+        if (kind === 'voice') { p.voice = (p.voice || []).filter(x => x.id !== i); view = 'voice'; }
+        else if (kind === 'draft') { const t = p.threads[Number(i)]; if (t) delete t.draft; view = `thread:${i}`; }
+        else if (kind === 'calls') { p.calls = p.calls.filter(c => nameKey(c.with) !== i); view = 'call'; }
+        // a contact or a place can come back from the story's records, so it is hidden rather than only removed
+        else if (kind === 'contact') { p.contacts = p.contacts.filter(c => nameKey(c.name) !== i); p.hiddenContacts = [...new Set([...(p.hiddenContacts || []), i])]; view = 'contacts'; }
+        else if (kind === 'place') p.hiddenPlaces = [...new Set([...(p.hiddenPlaces || []), i])];
+        else { const xs = RM[kind].list(p); if (xs?.[Number(i)]) xs.splice(Number(i), 1); view = RM[kind].back; }
+        drawPhone();
+        await saveMeta();
+        if (p.inject) applyInjection();
     });
     $root.on('click', '.na_ph_gloss', async e => { e.stopPropagation(); await openGlossary(); drawPhone(true); });
     // one photo at a time; the screen can change while it draws
@@ -582,12 +610,15 @@ export async function openPhone(who = null) {
         } catch (err) { console.error('[narrative-archive] save photo', err); toastr.error(String(err?.message || err), '사진 저장 실패'); }
     });
     // the same sheet from SNS's ⋯; 사진's 정보 opens the tags under the caption
-    $root.on('click', '.ax_postmore', function (e) {
+    // SNS's ⋯: the app's own sheet (그린 태그 보기 · 다시 그리기 · 저장 · 삭제)
+    $root.on('click', '.ax_postmore', e => { e.stopPropagation(); $root.find('.ax_igsheet').prop('hidden', false); });
+    $root.on('click', '.ax_igsheet', function (e) { if (e.target === this) $(this).prop('hidden', true); });
+    $root.on('click', '.ax_igsheet button', () => $root.find('.ax_igsheet').prop('hidden', true));
+    $root.on('click', '.ax_igtags', function (e) {
         e.stopPropagation();
+        $root.find('.ax_igsheet').prop('hidden', true);
         const el = $root.find(`.na_ph_press[data-src="post"][data-k="${this.dataset.k}"]`)[0];
-        if (!el) return;
-        if ($(el).find('.ax_presssheet').length) { $(el).find('.ax_presssheet').remove(); return; }
-        pressSheet(el); justPressed = false;
+        if (el) { pressSheet(el); justPressed = false; }
     });
     $root.on('click', '.ax_pvinfo', function (e) {
         e.stopPropagation();
