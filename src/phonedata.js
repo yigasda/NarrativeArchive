@@ -18,7 +18,7 @@ import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
 import { applyMoney, investNow, moneyNow, replayEffects, revertEffects } from './phonesyncmoney.js';
-import { joinComments, markTail, tailChanged, dropDone, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
+import { busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
 export const WALLS = ['dusk', 'ocean', 'forest', 'rose', 'night', 'sand', 'mono', 'aurora'];
 export const ACCENTS = ['blue', 'green', 'orange', 'pink', 'purple', 'red'];
@@ -133,6 +133,7 @@ WHAT IS NEW
 - A plan made in these messages goes in the calendar; what is planned hasn't happened yet (no payment, no photo).
 - Each message's own replies, orders and payments belong to the event in that message, not folded into an earlier one.
 - An event in EVENTS ON THE PHONE keeps its id; add only what the phone doesn't hold yet.
+- MESSAGES READ BEFORE, NOW CHANGED were already put on the phone: give their events the ids listed there; a payment in them is that same payment, its amount corrected if it changed.
 - Small everyday things around an event are fine: how a text was worded, a photo of the place, a search they would make.
 - People: only people the story has.
 
@@ -148,6 +149,7 @@ MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - Already in MONEY NOW or INVESTMENTS NOW: its id as "already"; it is not paid again.
 - A card purchase goes on the card account; a refund is plus; paying the card off is a transfer from the bank.
 - No money is made up to cover a payment; a balance may go below zero.
+- A new paid order or ticket has its payment as a move in the same event.
 - An order or ticket only moves forward. A cancelled order moves no money; if it was already paid, its refund is a plus move.
 
 ${PHONE_STYLE}
@@ -158,9 +160,9 @@ ANSWER — one JSON object, nothing else:
                "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line",
                "phone": { only the app items this event puts on the phone },
                "money": { "amountFrom": "story" | "guess",
-                          "moves": [{ "account": a bank account's last 4 digits or "broker:EUR", "amount": minus for money out, "currency", "who", "ko", "memo", "kind": "card" | "transfer" | "deposit", "occurrence": "new" | "again", "already": "" }],
+                          "moves": [{ "account": a bank account's last 4 digits or "broker:EUR", "amount": minus for money out, "currency", "who", "ko", "memo", "kind": "card" | "transfer" | "deposit", "fee": transfer fee on the sending move, if any, "occurrence": "new" | "again", "already": "" }],
                           "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko", "currency", "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
-                          "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returned" | "refunded", "eta": "MM-DD", "gift", "occurrence": "new" | "again", "already": "" }],
+                          "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returned" | "refunded", "eta": "MM-DD", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
                           "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }] } }] }
 "money" only when money moves or an order or ticket changes. Numbers are plain JSON numbers.
 Items in "phone":
@@ -168,7 +170,7 @@ Items in "phone":
 ${PHONE_ITEMS}
 }
 Fewer is fine. No new events: "events": [].
-A value the story does not give (a booking number, a seat, a price, an exact time) stays empty; never make one up.`;
+In "phone" items, a value the story does not give (a booking number, a seat, an exact time) stays empty; never make one up. Money amounts follow MONEY.`;
 
 // ---- what the model sends back, cleaned: known keys only, text cut short, times in one shape
 export const str = (v, n) => String(v ?? '').replace(/[ \t]+/g, ' ').trim().slice(0, n);
@@ -251,9 +253,10 @@ function carryOver(k, was, now) {
 // 재구성 (src "guess") records are the model's imagining, not the story: they never go back to the model or into the role-play
 export const isGuess = x => x?.src === 'guess';
 
-function mergePhone(p, add) {
+// a reflection keeps everything (keepAll); making a phone keeps each list to its size
+function mergePhone(p, add, { keepAll = false } = {}) {
     if (!p.device && add.device) p.device = add.device;
-    const keep = (list, n) => list.slice(-n);
+    const keep = (list, n) => (keepAll ? list : list.slice(-n));
     for (const t of add.threads) {
         const old = p.threads.find(x => nameKey(x.with) === nameKey(t.with));
         if (old) { old.messages = keep([...old.messages, ...fresh('msg', old.messages, t.messages)], CAP.messages); if (t.draft) old.draft = t.draft; }
@@ -373,6 +376,7 @@ const phoneForModel = p => ({
 export async function makePhone(m, owner, { update = false, apps = null } = {}) {
     const key = nameKey(owner);
     if (update && m.phones?.[key]) return updatePhone(m, owner);
+    if (busy.sync || busy.fill) throw new Error('다른 폰 작업이 끝난 뒤 다시 해 주세요');
     // reading starts after the last message there was when this was asked; what comes in while it writes stays unread
     const mark = markNow();
     const old = update ? m.phones?.[key] : null;
@@ -433,27 +437,29 @@ export function syncState(p) {
     p.sync.scope = phoneChatScope(ctx());
     return 'ok';
 }
-export const syncLeft = p => (p?.sync?.marks?.base ? unreadCount(p.sync, syncRows()) : null);
+// counted on a copy: what changed since the last round is left for the round itself to see
+export const syncLeft = p => { if (!p?.sync?.marks?.base) return null; const rows = syncRows(), s = structuredClone(p.sync); realign(s, rows); return unreadCount(s, rows); };
 const ITEM_KEYS = [...LISTS, 'threads', 'contacts'];
 const sizes = p => Object.fromEntries(ITEM_KEYS.map(k => [k, k === 'threads' ? p.threads.reduce((n, t) => n + t.messages.length, 0) : k === 'posts' ? (p.posts || []).reduce((n, x) => n + 1 + (x.comments?.length || 0), 0) : (p[k] || []).length]));
 const APP_NAME = { threads: '문자', contacts: '연락처', calls: '통화', photos: '사진', notes: '메모', searches: '검색', events: '캘린더', posts: 'SNS', mails: '메일', diary: '일기', voice: '음성 메모' };
-let syncing = false;
 async function updatePhone(m, owner) {
-    if (syncing) throw new Error('새로 일어난 일을 반영하는 중이에요');
-    syncing = true;
-    try {
+    return exclusive('sync', async () => {
         const key = nameKey(owner), p = m.phones[key], scope = phoneChatScope(ctx());
         if (syncState(p) !== 'ok') { const e = new Error('먼저 반영 시작 위치를 골라 주세요'); e.code = 'SYNC_PICK'; throw e; }
         const s = p.sync, swiped = [];
-        // the last reply read was swiped: the round that read it is undone and it is read again; an older round's items stay
-        if (tailChanged(s, syncRows())) {
-            const at = s.tail.index;
-            let undone = false;
-            if (p.syncUndo?.read?.includes(at)) { try { await undoRound(m, p); undone = true; } catch { /* a bank or investment made again since */ } }
-            if (!undone) dropDone(s, at);
-            delete s.tail;
-            swiped.push(undone ? `#${at} 답이 바뀌어서 지난 반영을 되돌리고 다시 읽었어요` : `#${at} 바뀐 답을 새로 읽어요. 전에 그 답에서 넣은 내용은 남아 있어요`);
+        // a read message edited or swiped since: if the last round read it, that round is undone and read again;
+        // an older round's items stay, and the changed message is simply read again
+        let moved = realign(s, syncRows());
+        renumber(m, p, moved);
+        if (moved.gone.some(f => p.syncUndo?.readFp?.includes(f)) && canUndo(p)) {
+            await undoRound(m, p);
+            moved = realign(s, syncRows());
+            renumber(m, p, moved);
+            swiped.push('읽은 대화가 바뀌어서 지난 반영을 되돌리고 다시 읽었어요');
         }
+        // an older message changed: read again, tied to the events it already gave (no new payment from it)
+        const reread = new Map(moved.changed.map(x => [x.at, Object.entries(s.events).filter(([, e]) => e.at === x.at).map(([id, e]) => ({ id, summary: e.summary }))]));
+        if (reread.size) swiped.push(`바뀐 대화 ${reread.size}개를 다시 읽어요. 그 대화의 결제는 새로 넣지 않고 기존 기록만 고쳐요`);
         const rows = syncRows(), round = pickRound(s, rows);
         if (!round.rows.length) { p.syncLast = { checked: 0, remaining: 0, apps: [], failed: [], notes: swiped, at: Date.now() }; await saveMeta(); return p; }
         // the archive: sections covering this round are evidence; earlier ones are background; ones reaching unread messages stay out
@@ -473,15 +479,18 @@ async function updatePhone(m, owner) {
             before.length ? `[ARCHIVE BEFORE]\n${before.join('\n\n')}` : '',
             reachesEnd(s, rows, round.rows) && tail.trim() ? `[STORY NOW]\n${tail.trim()}` : '',
             `[EVENTS ON THE PHONE]\n${known || '(none yet)'}`,
+            reread.size ? `[MESSAGES READ BEFORE, NOW CHANGED]\n${[...reread].map(([at, evs]) => `- #${at}: ${evs.length ? evs.map(e => `${e.id} (${e.summary})`).join('; ') : 'nothing on the phone yet'}`).join('\n')}` : '',
             `[PHONE NOW]\n${JSON.stringify(phoneForModel(p))}`,
             money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
             (money || invest) && p.wealthPlan ? `[WEALTH]\n${JSON.stringify({ currency: p.wealthPlan.currency, deposits: p.wealthPlan.deposits, investments: p.wealthPlan.investments, basis: p.wealthPlan.basis })}` : '',
             world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
             `[OWNER]\n${owner}`, profile, blindBlock(m, owner), namesBlock(m),
         ].filter(Boolean).join('\n\n');
+        const made = { money: p.money?.at, invest: p.investment?.at };
         const out = await askDraft(input, { system: AI_SYS_PHONE_UPDATE, maxTokens: 16000 });
         // the answer is for the chat and messages it was asked about
         if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p) throw new Error('반영하는 사이 채팅이나 폰이 바뀌었어요. 다시 해 주세요');
+        if (p.money?.at !== made.money || p.investment?.at !== made.invest) throw new Error('반영하는 사이 은행이나 투자가 새로 만들어졌어요. 다시 해 주세요');
         const nowText = new Map(syncRows().map(r => [r.index, r.text]));
         if (round.rows.some(r => nowText.get(r.index) !== r.text)) throw new Error('반영하는 사이 대화가 바뀌었어요. 다시 해 주세요');
         const raw = jsonOf(out);
@@ -490,7 +499,7 @@ async function updatePhone(m, owner) {
         const failed = {}, loose = [], added = [], apps = new Set(), changes = [], notes = [...swiped];
         // for 되돌리기: what was there before this round (ids and message counts), and the reading state
         const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map(p.threads.map(t => [t.id, t.messages.length]));
-        const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, tail: s.tail }), now: p.now, moneyAt: p.money?.at, investAt: p.investment?.at,
+        const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, seen: s.seen }), now: p.now, moneyAt: p.money?.at, investAt: p.investment?.at,
             comments: (p.posts || []).filter(x => x.id).map(x => [x.id, x.comments?.length || 0]) };
         for (const e of raw.events.slice(0, 40)) {
             const at = Number(e?.at), sec = evidence.find(x => at >= x.first && at <= x.last);
@@ -504,6 +513,8 @@ async function updatePhone(m, owner) {
             for (const k of [...LISTS, 'threads']) for (const x of arr(phone[k])) { dated(x); for (const msg of arr(x?.messages)) dated(msg); if (x?.draft) dated(x.draft); }
             try { add = parsePhone(JSON.stringify(phone)); } catch { fail('앱 내용 형식이 잘못됐어요'); continue; }
             const id = evOf(e.id) || evOf(e.summary) || `ev-${at}`;
+            // a changed message already put its payments on the phone: only its own events may correct them
+            if (reread.has(at) && e.money && !reread.get(at).some(x => x.id === id)) { notes.push(`#${at} 바뀐 대화의 결제는 새로 넣지 않았어요`); delete e.money; }
             // the money first, on its own: a payment that can't be placed leaves the whole event out
             const stage = structuredClone({ money: p.money, investment: p.investment, finance: m.finance });
             let paid;
@@ -513,7 +524,7 @@ async function updatePhone(m, owner) {
             notes.push(...paid.notes);
             for (const k of LISTS) for (const x of add[k]) x.ev ||= id;
             const was = sizes(p);
-            mergePhone(p, { ...add, device: null, now: '' });
+            mergePhone(p, { ...add, device: null, now: '' }, { keepAll: true });
             const got = sizes(p);
             for (const k of ITEM_KEYS) if (got[k] !== was[k]) apps.add(APP_NAME[k]);
             if (add.profile?.handle || add.profile?.bio) apps.add('SNS');
@@ -523,7 +534,7 @@ async function updatePhone(m, owner) {
         // read: this round's messages; a failed one gets one more try next round, then it is skipped
         // a failed event can carry what later messages said (a reply, an order): the messages that got nothing this round
         // are read once more with it, so that content isn't lost
-        settleRound(s, [...inRound], failed, new Set(added.map(x => x.at)));
+        settleRound(s, round.rows, failed, new Set(added.map(x => x.at)));
         for (const x of evidence) s.arch[x.key] = 1;
         const nowAt = when(raw.now);
         if (nowAt && nowAt > (p.now || '')) p.now = nowAt;
@@ -534,17 +545,16 @@ async function updatePhone(m, owner) {
         p.syncLast = { checked: inRound.size, remaining: unreadCount(s, rows), apps: [...apps], failed: [...Object.entries(failed).map(([at, why]) => ({ at: Number(at), why, skipped: s.failed[at]?.tries >= 2 })), ...loose.map(why => ({ at: null, why }))], changes, notes, at: Date.now() };
         ensureIds(p);
         p.at = Date.now();
-        markTail(s, round.rows[round.rows.length - 1]);
-        p.syncUndo = { ...undo, round: id, read: [...inRound], comments: undo.comments,
+        p.syncUndo = { ...undo, round: id, read: [...inRound], readFp: round.rows.map(r => bodyMark(r.text)), comments: undo.comments,
             items: ITEM_KEYS.flatMap(k => (p[k] || []).filter(x => x.id && !had.has(x.id)).map(x => [k, x.id])),
             msgs: p.threads.filter(t => msgs.has(t.id) && t.messages.length > msgs.get(t.id)).map(t => [t.id, t.messages.slice(msgs.get(t.id)).map(x => JSON.stringify([x.from, x.text, x.time]))]),
             effects: added.flatMap(x => x.effects || []) };
         // kept in this browser until the saved chat shows it: 복구 can add it back if the save didn't land
-        journalAdd(scope, { round: id, owner, at: Date.now(), events: added, done: [...inRound], failed: Object.fromEntries([...inRound].filter(i => s.failed[i]).map(i => [i, s.failed[i]])), arch: evidence.map(x => x.key) });
+        journalAdd(scope, { round: id, owner, at: Date.now(), events: added, done: [...inRound], seen: round.rows.map(r => [r.index, bodyMark(r.text)]), failed: Object.fromEntries([...inRound].filter(i => s.failed[i]).map(i => [i, s.failed[i]])), arch: evidence.map(x => x.key) });
         await saveMeta();
         if (p.inject) applyInjection();
         return p;
-    } finally { syncing = false; }
+    });
 }
 // 복구: rounds this browser made that the saved chat doesn't have; only what is missing is added, nothing is overwritten
 export const pendingRounds = (m, scope) => {
@@ -566,28 +576,42 @@ export async function restoreRounds(m, scope) {
         for (const e of r.events) {
             for (const k of LISTS) e.add[k] = arr(e.add[k]);
             e.add.threads = arr(e.add.threads); e.add.contacts = arr(e.add.contacts);
-            mergePhone(p, { ...e.add, device: null, now: '' });
+            mergePhone(p, { ...e.add, device: null, now: '' }, { keepAll: true });
             replayEffects(m, p, e.effects || []);
             s.events[e.id] ||= { at: e.at, quote: '', summary: e.id };
         }
         addDone(s, r.done);
+        s.seen ||= {};
+        for (const [i, f] of r.seen || []) s.seen[i] = f;
         for (const [i, f] of Object.entries(r.failed || {})) s.failed[i] = f;
         for (const k of r.arch || []) s.arch[k] = 1;
         s.rounds = [...(s.rounds || []).slice(-19), r.round];
         if (p.money) migrateBank(m, p);
         ensureIds(p);
     }
-    journalWrite(scope, journalRead(scope).filter(r => !rounds.includes(r)));
+    // the record stays until a later load shows the round saved (tidyJournal): a failed save here can be restored again
     await saveMeta();
     return rounds.length;
 }
 
+export const canUndo = p => { const u = p?.syncUndo, s = p?.sync; return !!u && s?.rounds?.[s.rounds.length - 1] === u.round && p.money?.at === u.moneyAt && p.investment?.at === u.investAt; };
+// a message deleted before others: the events, failures and records that name a message number follow it
+function renumber(m, p, { moved, changed }) {
+    const map = { ...moved };
+    for (const x of changed) map[x.old] = x.at;
+    if (!Object.entries(map).some(([o, n]) => Number(o) !== n)) return;
+    const to = i => (i !== undefined && map[i] !== undefined ? map[i] : i);
+    for (const e of Object.values(p.sync.events)) e.at = to(e.at);
+    for (const f of Object.values(p.sync.failed)) if (f.span) f.span = [to(f.span[0]) ?? f.span[0], to(f.span[1]) ?? f.span[1]];
+    for (const r of [...(p.money?.tx || []), ...(p.money?.orders || []), ...(p.money?.passes || []), ...(p.investment?.trades || [])]) if (r.sourceIndex !== undefined) r.sourceIndex = to(r.sourceIndex);
+    for (const a of Object.values(m.finance?.accounts || {})) if (a.owner === p.owner) for (const x of Object.values(a.entries)) if (x.sourceIndex !== undefined) x.sourceIndex = to(x.sourceIndex);
+}
 // 되돌리기: the last round only. What it added goes by its ids, its money comes back out, and those messages are unread again.
 // Something the user changed since stays as it is; a bank or investment made again since can't be undone this way.
 export async function undoRound(m, p) {
     const u = p.syncUndo, s = p.sync;
     if (!u || s?.rounds?.[s.rounds.length - 1] !== u.round) throw new Error('되돌릴 반영이 없어요');
-    if (p.money?.at !== u.moneyAt || p.investment?.at !== u.investAt) throw new Error('그 뒤에 은행이나 투자를 다시 만들어서 되돌릴 수 없어요');
+    if (!canUndo(p)) throw new Error('그 뒤에 은행이나 투자를 다시 만들어서 되돌릴 수 없어요');
     const gone = new Set(u.items.map(([, id]) => id));
     for (const k of ITEM_KEYS) if (Array.isArray(p[k])) p[k] = p[k].filter(x => !gone.has(x.id));
     for (const [tid, sigs] of u.msgs) {
@@ -597,7 +621,6 @@ export async function undoRound(m, p) {
     for (const [pid, n] of u.comments || []) { const x = (p.posts || []).find(y => y.id === pid); if (x?.comments?.length > n) x.comments = x.comments.slice(0, n); }
     revertEffects(m, p, u.effects);
     Object.assign(s, structuredClone(u.sync));
-    if (!u.sync.tail) delete s.tail;
     s.rounds.pop();
     p.now = u.now;
     delete p.syncLast; delete p.syncUndo;
@@ -817,7 +840,8 @@ export function parseMoney(raw) {
 // what the phone already holds, so the money side reuses its event tags
 const moneyContext = p => JSON.stringify({ now: p.now, mails: (p.mails || []).slice(-8).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })), events: real(p.events).slice(-8).map(x => ev(x, { title: x.title, date: x.date, time: x.time })), searches: real(p.searches).slice(-6).map(x => ev(x, { q: x.q, time: x.time })) });
 export const prepareWealth = (m,p,refresh=false) => ensureWealth(m,p,()=>sideRequest(m,p.owner,[`[OWNER COUNTRY]\n${p.country || ''}`,`[ACCOUNT CURRENCIES]\n${JSON.stringify((p.money?.bank?.accounts || []).map(a=>a.currency))}`],{profile:p.financeProfile,money:true}),{refresh});
-export async function fillMoney(m, p, { regenerateBalances = false, wealthPlan = null } = {}) {
+export const fillMoney = (m, p, opts = {}) => exclusive('fill', () => makeMoney(m, p, opts));
+async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null } = {}) {
     const mark = markNow();
     migrateBank(m, p);
     const old = p.money, rebuild = !!old && regenerateBalances;

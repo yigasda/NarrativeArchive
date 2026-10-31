@@ -83,6 +83,18 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
     };
     const from = guess ? 'guess' : 'story';
 
+    // money between the owner's own accounts: each pair compared on its own (other spending in the event aside).
+    // bank ↔ brokerage always pairs; bank ↔ bank only when the event has just one out and one in. A fee on the out leg
+    // ("fee") is what goes missing on the way.
+    const own = list(mo.moves).filter(x => x.occurrence !== 'again' && !x.already);
+    const cur = x => (/^broker:/i.test(String(x.account || '')) ? String(x.account).slice(7).toUpperCase() : p.money?.bank.accounts.find(a => a.last4 === String(x.account ?? '').replace(/\D/g, '').slice(-4))?.currency);
+    const sent = x => -Number(x.amount) - (finite(Number(x.fee)) ? Number(x.fee) : 0);
+    const pairOff = (outs, ins) => { for (const y of ins) { const i = outs.findIndex(x => cur(x) === cur(y) && Math.abs(sent(x) - Number(y.amount)) < 0.01); if (i >= 0) outs.splice(i, 1); else if (outs.some(x => cur(x) === cur(y))) fail('이체의 보낸 돈과 받은 돈이 달라요'); } };
+    const brokers = own.filter(x => /^broker:/i.test(String(x.account || ''))), bankT = own.filter(x => !/^broker:/i.test(String(x.account || '')) && x.kind === 'transfer');
+    pairOff(bankT.filter(x => Number(x.amount) < 0), brokers.filter(x => Number(x.amount) > 0));
+    pairOff(brokers.filter(x => Number(x.amount) < 0), bankT.filter(x => Number(x.amount) > 0));
+    const bankOut = bankT.filter(x => Number(x.amount) < 0), bankIn = bankT.filter(x => Number(x.amount) > 0);
+    if (!brokers.length && bankOut.length === 1 && bankIn.length === 1 && cur(bankOut[0]) === cur(bankIn[0]) && Math.abs(sent(bankOut[0]) - Number(bankIn[0].amount)) > 0.01) fail('이체의 보낸 돈과 받은 돈이 달라요');
     // an order that comes in already cancelled was never paid: its charge stays out, unless the same event also refunds it
     const voided = list(mo.orders).filter(o => o.status === 'cancelled' && !o.already && o.occurrence !== 'again').map(o => round((Number(o.price) || 0) * Math.max(1, Math.round(Number(o.qty) || 1))));
     const refunds = list(mo.moves).map(x => Number(x.amount)).filter(a => a > 0);
@@ -195,6 +207,7 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
             return;
         }
         const row = { ...make(x), id: `sync:${e.id}:${path[0]}${k}`, ev: e.id, storyEvent: e.id, sourceIndex: e.at };
+        if (path === 'orders' && row.status !== 'cancelled' && row.price && x.paid !== false && !x.gift && !list(mo.moves).some(y => Number(y.amount) < 0)) out.notes.push(`${row.item}: 주문은 넣었지만 결제가 없었어요`);
         box.push(row);
         out.effects.push({ type: 'push', path: `money.${path}`, item: row });
         out.changes.push({ app: path === 'orders' ? '쇼핑' : '지갑', label: row.item || row.by, amount: null });

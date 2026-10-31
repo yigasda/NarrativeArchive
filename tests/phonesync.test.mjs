@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { joinComments, markTail, tailChanged, dropDone, newSync, makeMark, findMark, settleMarks, pickRound, addDone, settleRound, isDone, unreadCount, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from '../src/phonesync.js';
+import { busy, exclusive, joinComments, realign, noteRead, newSync, makeMark, findMark, settleMarks, pickRound, addDone, settleRound, isDone, unreadCount, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from '../src/phonesync.js';
 
 // a chat of n messages, user and character in turn
 const chat = n => Array.from({ length: n }, (_, i) => ({ is_user: i % 2 === 0, is_system: false, name: i % 2 ? 'Ren' : 'Mara', mes: `message ${i}` }));
@@ -91,7 +91,7 @@ test('archive: evidence only when it starts after the start and covers nothing u
     read(s, r); s.arch.d = 1; s.order = 'oldest';
     const r2 = pickRound(s, rows(c)), a2 = archiveRound(s, secs, rows(c), r2.rows);
     assert.deepEqual(a2.evidence.map(x => x.key), []);
-    assert.equal(reachesEnd(s, rows(c), r2.rows), true);
+    assert.equal(reachesEnd(s, rows(c), r2.rows), false); // an older round never sees the story's current state
 });
 
 test('quotes ignore spacing and case only', () => {
@@ -122,16 +122,16 @@ test('a failed round reads the failed and the empty messages once more; what wen
     const c = chat(20), s = sync(c, 0); s.limit = 4;
     let r = pickRound(s, rows(c));
     assert.deepEqual(r.rows.map(x => x.index), [1, 2, 3, 4]);
-    settleRound(s, r.rows.map(x => x.index), { 2: '근거 없음' }, new Set([1]));
+    settleRound(s, r.rows, { 2: '근거 없음' }, new Set([1]));
     r = pickRound(s, rows(c));
     assert.deepEqual(r.retry, [2, 3, 4]);
     assert.ok(!r.rows.some(x => x.index === 1));
-    settleRound(s, r.rows.map(x => x.index), { 2: '근거 없음' }, new Set([5, 6]));
+    settleRound(s, r.rows, { 2: '근거 없음' }, new Set([5, 6]));
     assert.equal(s.failed[2].tries, 2);
     assert.equal(s.failed[3].tries, 2);
     r = pickRound(s, rows(c));
     assert.deepEqual(r.retry, [7, 8]);
-    settleRound(s, r.rows.map(x => x.index), {}, new Set());
+    settleRound(s, r.rows, {}, new Set());
     assert.equal(pickRound(s, rows(c)).retry.length, 0);
     assert.deepEqual(Object.keys(s.failed).sort(), ['2', '3', '4']);
 });
@@ -139,7 +139,7 @@ test('a failed round reads the failed and the empty messages once more; what wen
 test('a retried message remembers which messages it was read with', () => {
     const c = chat(20), s = sync(c, 0); s.limit = 4;
     const r = pickRound(s, rows(c));
-    settleRound(s, r.rows.map(x => x.index), { 2: 'x' }, new Set([1]));
+    settleRound(s, r.rows, { 2: 'x' }, new Set([1]));
     assert.deepEqual(s.failed[2].span, [1, 4]);
     assert.deepEqual(s.failed[3].span, [1, 4]);
 });
@@ -151,23 +151,70 @@ test('a comment on a post already there joins it; the same comment twice stays o
     assert.deepEqual(posts[0].comments.map(c => c.from), ['Mara', 'Ivo']);
 });
 
-test('a swiped reply that was read is noticed, even after more messages; it can be read again on its own', () => {
-    const c = chat(12), s = sync(c, 0);
-    addDone(s, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-    markTail(s, rows(c)[11]);
-    assert.equal(tailChanged(s, rows(c)), false);
-    c[11].mes = 'another swipe';
-    c.push({ is_user: true, is_system: false, name: 'Mara', mes: 'next' });
-    assert.equal(tailChanged(s, rows(c)), true);
-    dropDone(s, 11);
-    assert.deepEqual(pickRound(s, rows(c)).rows.map(x => x.index), [11, 12]);
-    assert.deepEqual(s.done, [[1, 10]]);
-});
-
 test('a deleted message moves the bank and investment starts too', () => {
     const c = chat(30), s = sync(c, 9);
     s.marks.money = makeMark(c, 13); s.marks.invest = makeMark(c, 17);
     c.splice(3, 1);
     assert.deepEqual(settleMarks(s, c), []);
     assert.deepEqual([s.marks.base.index, s.marks.money.index, s.marks.invest.index], [8, 12, 16]);
+});
+
+const readAll = (s, c, upto) => { const r = rows(c).filter(x => x.index > s.marks.base.index && x.index <= upto); for (const x of r) addDone(s, [x.index]); noteRead(s, r); };
+
+test('a read message edited or swiped is unread again; the others stay read', () => {
+    const c = chat(12), s = sync(c, 0);
+    readAll(s, c, 11);
+    c[5].mes = 'edited'; c[11].mes = 'another swipe';
+    const r = realign(s, rows(c));
+    assert.deepEqual(r.changed, [{ old: 5, at: 5 }, { old: 11, at: 11 }]);
+    assert.equal(r.gone.length, 2);
+    assert.deepEqual(pickRound(s, rows(c)).rows.map(x => x.index), [5, 11]);
+});
+
+test('a read message deleted: what was read stays read, and the next new message is not swallowed', () => {
+    const c = chat(12), s = sync(c, 0);
+    readAll(s, c, 11);
+    c.splice(6, 1);
+    c.push({ is_user: true, is_system: false, name: 'Mara', mes: 'new one' }, { is_user: false, is_system: false, name: 'Ren', mes: 'and another' });
+    realign(s, rows(c));
+    assert.deepEqual(pickRound(s, rows(c)).rows.map(x => x.index), [11, 12]);
+});
+
+test('the same words said twice: only as many count as read as were read', () => {
+    const c = chat(6), s = sync(c, 0);
+    c[3].mes = 'ok'; readAll(s, c, 5);
+    c.push({ is_user: true, is_system: false, name: c[3].name, mes: 'ok' });
+    realign(s, rows(c));
+    assert.deepEqual(pickRound(s, rows(c)).rows.map(x => x.index), [6]);
+});
+
+test('a phone from before fingerprints: its read ranges are taken as they are', () => {
+    const c = chat(12), s = sync(c, 0);
+    addDone(s, [1, 2, 3, 4, 5]);
+    realign(s, rows(c));
+    assert.deepEqual(pickRound(s, rows(c)).rows[0].index, 6);
+    assert.equal(Object.keys(s.seen).length, 5);
+});
+
+test('a delete: read messages, failures and an edited one get their new numbers', () => {
+    const c = chat(14), s = sync(c, 0);
+    readAll(s, c, 13);
+    s.failed[10] = { tries: 1, why: 'x', fp: undefined };
+    settleRound(s, rows(c).filter(x => x.index === 10), { 10: 'x' }, new Set());
+    c.splice(4, 1); c[8].mes = 'edited after the delete';
+    const r = realign(s, rows(c));
+    assert.equal(r.moved[13], 12);
+    assert.equal(r.moved[3], 3);
+    assert.deepEqual(r.changed, [{ old: 9, at: 8 }]);
+    assert.ok(s.failed[9]);
+});
+
+test('one job at a time, and the lock opens again after an error', async () => {
+    let inside;
+    const slow = exclusive('sync', () => new Promise(res => { inside = res; }));
+    await assert.rejects(exclusive('fill', async () => 1), /반영하는 중/);
+    inside(); await slow;
+    await assert.rejects(exclusive('fill', async () => { throw Error('boom'); }), /boom/);
+    assert.equal(busy.fill, 0);
+    assert.equal(await exclusive('sync', async () => 7), 7);
 });

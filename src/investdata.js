@@ -3,7 +3,7 @@ import { wealthBlock, wealthCheck, investmentWealthRows } from './wealth.js';
 import { askDraft } from './ai.js';
 import { ctx, saveMeta } from './core.js';
 import { sideRequest, storyNow, prepareWealth } from './phonedata.js';
-import { syncOf, makeMark } from './phonesync.js';
+import { syncOf, makeMark, exclusive } from './phonesync.js';
 import { phoneChatScope } from './phonestory.js';
 import { baseline, reviseBaseline, cash, currency, finance, finite, uid, positions, addPrice, migrateBank, fx, quoteKey } from './finance.js';
 
@@ -103,7 +103,8 @@ function ingestQuotes(m, raw, input, date, securities) {
     for (const x of list(raw.quotes).slice(0, 60)) if (allowed.has(x.symbol)) push(`STOCK:${x.symbol}`, x);
     for (const x of list(raw.fx).slice(0, 30)) if (currency(x.from) && currency(x.to) && x.from !== x.to) push(`FX:${x.from}/${x.to}`, x);
 }
-export async function fillInvestment(m, p, date, {regenerate = false, wealthPlan = null} = {}) {
+export const fillInvestment = (m, p, date, opts = {}) => exclusive('fill', () => makeInvestment(m, p, date, opts));
+async function makeInvestment(m, p, date, {regenerate = false, wealthPlan = null} = {}) {
     const chat = ctx()?.chat || [], mark = makeMark(chat, chat.length - 1);
     const old = p.investment;
     if (old && !regenerate) throw new Error('기존 투자 기록은 보존돼요. 시세 갱신을 사용해 주세요');

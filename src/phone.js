@@ -17,7 +17,7 @@ import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
 import { APPS, AXB, AXB_C, busyHtml, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
 import { ensureIds, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, markAfter, phoneLore, REMAKE, restoreRounds, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
-import { syncOf } from './phonesync.js';
+import { busy, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
 import { bankDisplayCurrency, bankAcct, bankHome, bankTx, cardView, orderView, passView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
@@ -558,6 +558,7 @@ export async function openPhone(who = null) {
     // 은행 · 지갑 · 쇼핑 / 음성 메모 채우기, and 음성 메모 떠올리기 (the red button)
     $root.on('click', '.na_ph_fill', async function (e) {
         e.stopPropagation();
+        if (making) return toastr.info('폰 반영이나 다시 만들기가 끝난 뒤 눌러 주세요');
         const p = phone(), k = this.dataset.k, id = `${nameKey(p.owner)}:${k}`;
         if (filling.has(id)) return;
         filling.add(id); drawPhone(true);
@@ -673,7 +674,8 @@ export async function openPhone(who = null) {
         $(this).find('.ax_presssheet').remove();
     });
     // 설정's rows: the busy text goes where the row's value is
-    const makeFrom = async ($at, update) => { if (making) return; making = true; try { await make($at, update); } finally { making = false; } };
+    // one at a time: reflecting and making the bank or investment never overlap
+    const makeFrom = async ($at, update) => { if (making) return; if (investing || filling.size || busy.fill) return toastr.info('은행·투자를 만드는 중이에요. 끝난 뒤 눌러 주세요'); making = true; try { await make($at, update); } finally { making = false; } };
     $root.on('click', '.na_ph_setupd', function (e) { e.stopPropagation(); makeFrom($(this).find('.ax_v'), true); });
     // 설정 › 대화 반영
     $root.on('click', '.na_sync_order', async function (e) { e.stopPropagation(); syncOf(phone(), phoneChatScope(ctx())).order = this.dataset.v; drawPhone(true); await saveMeta(); });

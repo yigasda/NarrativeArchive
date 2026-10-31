@@ -273,3 +273,33 @@ test('an order cancelled right away is not charged; paid then refunded in one ev
     applyMoney(m, p, ev('mug', 33, '10-29', { moves: [{ account: '2222', amount: -12, who: 'Shop', occurrence: 'new' }, { account: '2222', amount: 12, who: 'Shop', occurrence: 'new' }], orders: [{ shop: 'Shop', item: 'Mug', qty: 1, price: 12, status: 'cancelled', occurrence: 'new' }] }), opts());
     assert.equal(p.money.tx.length, 2);
 });
+
+test('own accounts: what leaves must be what arrives (−100 / +80 is refused); a single transfer out is fine', () => {
+    const { m, p, bank } = setup();
+    assert.throws(() => applyMoney(m, p, ev('odd', 9, '10-27', { moves: [{ account: '1111', amount: -100, kind: 'transfer' }, { account: 'broker:EUR', amount: 80 }] }), opts()), /달라요/);
+    applyMoney(m, p, ev('rent', 10, '10-27', { moves: [{ account: '1111', amount: -100, kind: 'transfer', who: 'Vermieter' }] }), opts());
+    assert.equal(bank(), 900);
+});
+
+test('a new order with no payment goes in, and says so', () => {
+    const { m, p, bank } = setup();
+    const r = applyMoney(m, p, ev('book', 9, '10-27', { orders: [{ shop: 'Thalia', item: 'Roman', qty: 1, price: 100, status: 'ordered', occurrence: 'new' }] }), opts());
+    assert.equal(p.money.orders.length, 1);
+    assert.equal(bank(), 1000);
+    assert.ok(r.notes.some(n => n.includes('결제가 없었어요')));
+});
+
+test('a transfer pair is checked on its own: other spending in the event and a stated fee are fine', () => {
+    const { m, p, bank, broker } = setup();
+    applyMoney(m, p, ev('mix', 9, '10-27', { moves: [{ account: '1111', amount: -100, kind: 'transfer' }, { account: 'broker:EUR', amount: 100 }, { account: '1111', amount: -30, kind: 'transfer', who: 'Dohyeon' }] }), opts());
+    assert.equal(bank(), 870); assert.equal(broker(), 1100);
+    applyMoney(m, p, ev('fee', 10, '10-28', { moves: [{ account: '1111', amount: -101, kind: 'transfer', fee: 1 }, { account: 'broker:EUR', amount: 100 }] }), opts());
+    assert.equal(bank(), 769); assert.equal(broker(), 1200);
+});
+
+test('a gift or cash-on-delivery order is not reported as a missing payment', () => {
+    const { m, p } = setup();
+    const r = applyMoney(m, p, ev('gift', 9, '10-27', { orders: [{ shop: 'Thalia', item: 'Atlas', qty: 1, price: 40, status: 'ordered', gift: 'Mara', occurrence: 'new' }, { shop: 'Otto', item: 'Lampe', qty: 1, price: 60, status: 'ordered', paid: false, occurrence: 'new' }] }), opts());
+    assert.equal(p.money.orders.length, 2);
+    assert.ok(!r.notes.some(n => n.includes('결제가 없었어요')));
+});
