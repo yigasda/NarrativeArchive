@@ -6327,3 +6327,5 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .lf_dial .run12 { transform-box: view-box; transform-origin: 24px 24px; animation: lf_spin 43200s linear infinite; }
 @keyframes lf_spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .ax .lf_dial .s, .ax .lf_dial .run60, .ax .lf_dial .run12 { animation: none; } }
+.ax .lf_bigface { background: none; }
+.ax .lf_bigface .lf_dial { width: 56px; height: 56px; margin: 0; }
