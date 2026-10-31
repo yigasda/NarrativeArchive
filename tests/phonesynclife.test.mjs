@@ -153,6 +153,7 @@ test('Vertex run 9: a night that started after midnight is the day they woke up;
     applyLife(p, { id: 'sleepless-night', at: 7, date: '10-27', time: '02:15' }, { health: [{ date: '10-26', sleep: '02:15', wake: '', steps: 4820, from: 'story' }] }, true);
     const d = p.life.health.days.find(x => x.ev === 'sleepless-night');
     assert.equal(d.date, '10-27');
+    assert.equal(d.steps, 4820);
     // told at 02:15, before they usually wake: waking waits for the clock (Vertex run 11)
     assert.equal(d.wake, '');
     assert.equal(d.bed, '23:10');
@@ -200,10 +201,15 @@ test('Vertex run 11: a night still going at 02:20 gets its row now; waking is fi
     applyLife(p, { id: 'cant-sleep', at: 7, date: '10-27', time: '02:15' }, { health: [{ date: '10-27', sleep: '02:15', from: 'story' }] }, true);
     const d = p.life.health.days.find(x => x.ev === 'cant-sleep');
     assert.ok(!d.wake);
+    // Vertex run 12: no day's steps at two in the morning either
+    assert.equal(d.steps, null);
     lifeClock(p, '10-27 02:25');
     assert.ok(!d.wake);
     const fx = lifeClock(p, '10-27 09:00');
     assert.equal(d.wake, '06:30');
+    assert.equal(d.steps, null);
+    lifeClock(p, '10-28 08:00');
+    assert.equal(d.steps, 7000);
     revertEffects({}, p, fx);
     assert.ok(!d.wake);
 });
