@@ -1,0 +1,224 @@
+// 새로 일어난 일 반영 · 생활 (시계 · 건강 · 파일 · 날씨): what the new messages did to the everyday apps, and what the
+// story's clock moving on does to them. Like the money side, every change is listed in `effects` (what went in, and
+// what a changed record was before), so 되돌리기 and 빼기 can take it back and 복구 can put it back; a record the user
+// changed since stays as it is.
+// The model's records are cleaned here too, for the first fill (phonelife.js) and for a reflection alike.
+import { arr, hhmm, ko, line, num, pad, pick, when, withEv } from './phoneparse.js';
+
+export const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+export const CONDS = ['clear', 'cloudy', 'rain', 'snow', 'fog', 'storm'];
+export const FILE_KINDS = ['pdf', 'image', 'video', 'audio', 'zip', 'doc', 'sheet', 'slides', 'other'];
+const int = (v, lo, hi) => { const n = num(v); return n === null ? null : Math.max(lo, Math.min(hi, Math.round(n))); };
+const yes = v => v === true;
+const day5 = v => when(v).slice(0, 5);
+const tz = v => (/^[A-Za-z]+(?:\/[A-Za-z_+-]+){1,2}$/.test(String(v || '')) ? String(v) : '');
+
+// ---- cleaning one record
+export const alarmOf = a => withEv({ time: hhmm(a?.time), label: line(a?.label, 60), ko: ko(a?.ko), days: arr(a?.days).map(d => String(d).toLowerCase().slice(0, 3)).filter(d => DAYS.includes(d)), date: day5(a?.date),
+    on: a?.on !== false, wake: yes(a?.wake), then: arr(a?.then).map(hhmm).filter(Boolean).slice(0, 10), snooze: int(a?.snooze, 0, 60) ?? 0, snoozeCount: int(a?.snoozeCount, 0, 20) ?? 0, sound: line(a?.sound, 30), made: day5(a?.made) }, a);
+export const fileOf = x => withEv({ name: line(x?.name, 80), kind: pick(x?.kind, FILE_KINDS, 'other'), folder: line(x?.folder, 40) || 'Downloads', size: num(x?.size), time: when(x?.time), from: line(x?.from, 60),
+    pages: int(x?.pages, 0, 2000), length: line(x?.length, 8), tag: pick(x?.tag, ['red', 'orange'], ''), private: yes(x?.private), preview: line(x?.preview, 160), ko: ko(x?.ko), opened: when(x?.opened), trashed: day5(x?.trashed) }, x);
+export const dayOf = d => withEv({ date: day5(d?.date), bed: hhmm(d?.bed), sleep: hhmm(d?.sleep), wake: hhmm(d?.wake), woke: int(d?.woke, 0, 30) ?? 0, steps: int(d?.steps, 0, 120000), km: num(d?.km), floors: int(d?.floors, 0, 400),
+    workout: d?.workout && line(d.workout.kind, 30) ? { kind: line(d.workout.kind, 30), time: hhmm(d.workout.time), min: int(d.workout.min, 0, 600), km: num(d.workout.km) } : null,
+    hr: arr(d?.hr).map(x => int(x, 30, 220)).filter(x => x !== null).slice(0, 2), from: pick(d?.from, ['story', 'pattern'], 'pattern') }, d);
+const cityOf = c => ({ name: line(c?.name, 40), ko: ko(c?.ko), tz: tz(c?.tz), cond: pick(c?.cond, CONDS, 'cloudy'), temp: int(c?.temp, -60, 60), hi: int(c?.hi, -60, 60), lo: int(c?.lo, -60, 60), sunset: hhmm(c?.sunset), note: line(c?.note, 40), noteKo: ko(c?.noteKo) });
+
+// ---- 날씨: the chat's status line stands; the model's numbers only fill what it doesn't say
+const COND_RE = [['storm', /storm|thunder|뇌우|천둥|번개|gewitter|雷/i], ['snow', /snow|눈|schnee|雪/i], ['rain', /rain|drizzle|shower|비|소나기|regen|雨/i], ['fog', /fog|mist|안개|nebel|霧/i], ['cloudy', /cloud|overcast|흐림|구름|bewölkt|wolk|曇/i], ['clear', /clear|sun|맑|화창|sonnig|klar|晴/i]];
+export const condOf = text => COND_RE.find(([, re]) => re.test(String(text || '')))?.[0] || '';
+const tempOf = text => { const mt = String(text || '').match(/(-?\d{1,2})\s*°/); return mt ? Number(mt[1]) : null; };
+// a status line (scenes.js recentTrackers) as the weather it gives, or null
+export function weatherFrom(t) {
+    return t && (t.place || t.weather) ? { date: t.date || '', time: t.time || (Number.isFinite(t.min) ? `${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}` : ''), place: t.place || '', weather: t.weather || '' } : null;
+}
+const hereOf = h => ({
+    place: line(h.place, 60), date: day5(h.date), time: hhmm(h.time), from: pick(h.from, ['tracker', 'chat', 'archive', 'guess'], 'guess'),
+    cond: pick(h.cond, CONDS, 'cloudy'), temp: int(h.temp, -60, 60), hi: int(h.hi, -60, 60), lo: int(h.lo, -60, 60), line: line(h.line, 160), ko: ko(h.ko),
+    hours: arr(h.hours).map(x => ({ time: hhmm(x?.time), cond: pick(x?.cond, CONDS, 'cloudy'), temp: int(x?.temp, -60, 60), rain: int(x?.rain, 0, 100) ?? 0 })).filter(x => x.time).slice(0, 6),
+    days: arr(h.days).map(x => ({ day: day5(x?.day), cond: pick(x?.cond, CONDS, 'cloudy'), lo: int(x?.lo, -60, 60), hi: int(x?.hi, -60, 60), rain: int(x?.rain, 0, 100) ?? 0 })).filter(x => x.day).slice(0, 10),
+    tiles: Object.fromEntries(['rain24', 'rainNext', 'feels', 'wind', 'gust', 'humidity', 'dew', 'visibility'].map(k => [k, num(h.tiles?.[k])]).concat([['dir', line(h.tiles?.dir, 12)], ['sunrise', hhmm(h.tiles?.sunrise)], ['sunset', hhmm(h.tiles?.sunset)]])),
+});
+// the status line over a weather "here": its date, time, place and weather stand
+function overlay(here, now) {
+    if (!now) return here;
+    here.from = 'tracker';
+    if (now.place) here.place = line(now.place, 60);
+    if (/^\d{2}-\d{2}/.test(when(now.date))) here.date = day5(now.date);
+    if (now.time) here.time = hhmm(now.time);
+    const c = condOf(now.weather), t = tempOf(now.weather);
+    if (c) here.cond = c;
+    if (t !== null) here.temp = t;
+    here.said = line(now.weather, 60);
+    return here;
+}
+export function parseWeather(w, now) {
+    return { here: overlay(hereOf(w?.here || {}), now), cities: arr(w?.cities).map(cityOf).filter(c => c.name).slice(0, 5) };
+}
+
+// ---- story days: "MM-DD" without a year; a gap across New Year is taken the short way round
+const dnum = s => { const mt = /^(\d{2})-(\d{2})/.exec(String(s || '')); return mt ? Date.UTC(2000, mt[1] - 1, mt[2]) / 864e5 : NaN; };
+export const dayGap = (a, b) => { let g = dnum(b) - dnum(a); if (g < -180) g += 366; if (g > 180) g -= 366; return g; };
+
+// ---- effects on any record list of the phone, by path ("life.clock.alarms", "delivery.orders", "money.tx")
+const walk = (p, path, make) => {
+    const ks = path.split('.'), last = ks.pop();
+    let o = p;
+    for (const k of ks) { if (!o?.[k]) { if (!make) return null; o[k] = {}; } o = o[k]; }
+    if (!o) return null;
+    if (make && o[last] === undefined) o[last] = [];
+    return { parent: o, key: last };
+};
+export const boxAt = (p, path, make = false) => { const w = walk(p, path, make); return w ? w.parent[w.key] : null; };
+const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+const fields = (r, keys) => Object.fromEntries(keys.map(k => [k, r[k] === undefined ? null : structuredClone(r[k])]));
+const setFields = (r, vals) => { for (const [k, v] of Object.entries(vals)) if (v === null) delete r[k]; else r[k] = structuredClone(v); };
+// change: fields of one record (from → to); set: a whole value (the weather); drop: a record taken out (by the clock)
+export function lifeRevert(p, x) {
+    if (x.type === 'change') { const r = boxAt(p, x.path)?.find(o => o.id === x.id); if (!r) return true; if (!Object.keys(x.to).every(k => same(r[k] ?? null, x.to[k]))) return false; setFields(r, x.from); return true; }
+    if (x.type === 'set') { const w = walk(p, x.path); if (!w) return true; if (!same(w.parent[w.key], x.to)) return false; if (x.from === null) delete w.parent[w.key]; else w.parent[w.key] = structuredClone(x.from); return true; }
+    if (x.type === 'drop') { const box = boxAt(p, x.path, true); if (!box.some(o => o.id === x.item.id)) box.push(structuredClone(x.item)); return true; }
+    return null;
+}
+export function lifeReplay(p, x) {
+    if (x.type === 'change') { const r = boxAt(p, x.path)?.find(o => o.id === x.id); if (r && Object.keys(x.from).every(k => same(r[k] ?? null, x.from[k]))) setFields(r, x.to); return true; }
+    if (x.type === 'set') { const w = walk(p, x.path, false); if (w && same(w.parent[w.key] ?? null, x.from)) w.parent[w.key] = structuredClone(x.to); return true; }
+    if (x.type === 'drop') { const box = boxAt(p, x.path); const i = box ? box.findIndex(o => o.id === x.item.id) : -1; if (i >= 0) box.splice(i, 1); return true; }
+    return null;
+}
+
+// ---- one event's alarms, files and health days (e.phone's "alarms", "files", "health")
+// e: { id, at, date }; on: the everyday apps were made before this message (else they already hold it)
+export function applyLife(p, e, phone, on) {
+    const out = { effects: [], apps: new Set() };
+    if (!p.life || !on || !phone || typeof phone !== 'object') return out;
+    const L = p.life;
+    const change = (path, r, vals, app) => {
+        const keys = Object.keys(vals).filter(k => !same(r[k] ?? null, vals[k] ?? null));
+        if (!keys.length) return;
+        const fx = { type: 'change', path, id: r.id, from: fields(r, keys), to: Object.fromEntries(keys.map(k => [k, vals[k] ?? null])) };
+        setFields(r, fx.to);
+        out.effects.push(fx); out.apps.add(app);
+    };
+    const push = (path, row, app) => { boxAt(p, path, true).push(row); out.effects.push({ type: 'push', path, item: structuredClone(row) }); out.apps.add(app); };
+    const tag = (row, k, c) => ({ ...row, id: `sync:${e.id}:${c}${k}`, ev: e.id, sourceIndex: e.at });
+    // only the fields the model wrote, cleaned as a whole record would be
+    const given = (raw, clean, keys) => Object.fromEntries(keys.filter(k => raw[k] !== undefined && raw[k] !== '').map(k => [k, clean[k]]));
+    arr(phone.alarms).forEach((a, k) => {
+        if (!a || typeof a !== 'object') return;
+        const clean = alarmOf(a), was = a.change && (L.clock?.alarms || []).find(o => o.id === a.change);
+        if (was) return change('life.clock.alarms', was, given(a, clean, ['time', 'label', 'ko', 'days', 'date', 'on', 'wake', 'then', 'snooze']), '시계');
+        if (!clean.time) return;
+        if ((L.clock?.alarms || []).some(o => o.time === clean.time && o.label === clean.label && o.date === clean.date)) return;
+        push('life.clock.alarms', tag({ ...clean, made: clean.made || e.date }, k, 'a'), '시계');
+    });
+    arr(phone.files).forEach((x, k) => {
+        if (!x || typeof x !== 'object') return;
+        const clean = fileOf(x), was = x.change && (L.files?.items || []).find(o => o.id === x.change);
+        if (was) {
+            const vals = given(x, clean, ['name', 'folder', 'opened', 'preview', 'ko', 'tag']);
+            if (x.deleted === true) vals.trashed = e.date;
+            return change('life.files.items', was, vals, '파일');
+        }
+        if (!clean.name || x.deleted === true) return;
+        if ((L.files?.items || []).some(o => o.name === clean.name && o.folder === clean.folder && !o.trashed)) return;
+        push('life.files.items', tag({ ...clean, time: clean.time || `${e.date}${e.time ? ` ${e.time}` : ''}` }, k, 'f'), '파일');
+    });
+    // a day the story shows: written over the day already there (a pattern day, or an earlier telling of it)
+    arr(phone.health).forEach((d, k) => {
+        const clean = dayOf({ ...d, from: 'story' });
+        if (!clean.date) return;
+        const was = (L.health?.days || []).find(o => o.date === clean.date);
+        const vals = { ...clean, ev: e.id };
+        if (was) return change('life.health.days', was, vals, '건강');
+        push('life.health.days', tag(vals, k, 'h'), '건강');
+    });
+    return out;
+}
+
+// ---- the round's own: the new days nobody told (pattern), and the weather
+// days: the model's top-level "days"; a day already there stays (a story day, or one written before)
+export function applyDays(p, days, round) {
+    const out = [];
+    if (!p.life) return out;
+    const box = boxAt(p, 'life.health.days', true);
+    arr(days).forEach((d, k) => {
+        const clean = dayOf({ ...d, from: 'pattern' });
+        if (!clean.date || box.some(o => o.date === clean.date)) return;
+        delete clean.ev;
+        const row = { ...clean, id: `sync:${round}:d${k}` };
+        box.push(row);
+        out.push({ type: 'push', path: 'life.health.days', item: structuredClone(row) });
+    });
+    box.sort((a, b) => dayGap(b.date, a.date));
+    return out;
+}
+// w: the model's "weather" (null: keep it); now: the status line's (it stands over the model's)
+export function applyWeather(p, w, now) {
+    if (!p.life) return [];
+    const was = p.life.weather || null;
+    let next;
+    if (w && typeof w === 'object') {
+        const here = overlay(hereOf(w), now);
+        // the cities keep what the model leaves out (their time zone, their note)
+        const cities = (was?.cities || []).map(c => { const n = arr(w.cities).find(x => line(x?.name, 40) === c.name); return n ? { ...c, cond: pick(n.cond, CONDS, c.cond), temp: int(n.temp, -60, 60) ?? c.temp, hi: int(n.hi, -60, 60) ?? c.hi, lo: int(n.lo, -60, 60) ?? c.lo } : c; });
+        next = { ...(was || {}), here, cities };
+    } else if (now && was?.here) {
+        // only the status line: its words stand over the weather there was
+        next = { ...was, here: overlay(structuredClone(was.here), now) };
+    } else return [];
+    if (same(was, next)) return [];
+    p.life.weather = next;
+    return [{ type: 'set', path: 'life.weather', from: structuredClone(was), to: structuredClone(next) }];
+}
+
+// ---- the story's clock moved on (now: "MM-DD HH:MM"): what that does by itself
+// a one-time alarm whose day is over goes off; a timer that would have run out is gone; a trash older than 30 days is
+// emptied; the forecast's past hours fall away; health keeps 60 days
+export function lifeClock(p, now) {
+    const out = [];
+    const L = p.life, today = String(now || '').slice(0, 5), hm = String(now || '').slice(6, 11);
+    if (!L || !/^\d{2}-\d{2}$/.test(today)) return out;
+    const change = (path, r, vals) => { const keys = Object.keys(vals).filter(k => !same(r[k] ?? null, vals[k])); if (!keys.length) return; const fx = { type: 'change', path, id: r.id, from: fields(r, keys), to: fields(vals, keys) }; setFields(r, fx.to); out.push(fx); };
+    for (const a of L.clock?.alarms || []) if (a.on && a.date && !a.days?.length && dayGap(a.date, today) > 0) change('life.clock.alarms', a, { on: false });
+    if (L.clock?.running) {
+        const at = String(L.at || ''), gone = at.slice(0, 5) !== today || (hm && at.slice(6, 11) && minutes(hm) - minutes(at.slice(6, 11)) >= (L.clock.running.left || 0) / 60);
+        if (gone) { out.push({ type: 'set', path: 'life.clock.running', from: structuredClone(L.clock.running), to: null }); L.clock.running = null; }
+    }
+    const files = L.files?.items || [];
+    for (const x of [...files]) if (x.trashed && dayGap(x.trashed, today) > 30) { files.splice(files.indexOf(x), 1); out.push({ type: 'drop', path: 'life.files.items', item: structuredClone(x) }); }
+    const days = L.health?.days || [];
+    for (const d of [...days]) if (dayGap(d.date, today) > 60) { days.splice(days.indexOf(d), 1); out.push({ type: 'drop', path: 'life.health.days', item: structuredClone(d) }); }
+    const here = L.weather?.here;
+    if (here?.date) {
+        const next = structuredClone(L.weather);
+        if (here.date !== today) next.here.hours = [];
+        else if (hm) next.here.hours = here.hours.filter(x => minutes(x.time) >= minutes(hm) - 59);
+        next.here.days = here.days.filter(x => dayGap(x.day, today) <= 0);
+        if (!same(next, L.weather)) { out.push({ type: 'set', path: 'life.weather', from: structuredClone(L.weather), to: structuredClone(next) }); L.weather = next; }
+    }
+    return out;
+}
+const minutes = t => { const mt = /^(\d{2}):(\d{2})/.exec(String(t || '')); return mt ? mt[1] * 60 + Number(mt[2]) : 0; };
+
+// what the model sees of the everyday apps
+export function lifeNow(p) {
+    const L = p.life;
+    if (!L) return null;
+    return {
+        alarms: (L.clock?.alarms || []).map(a => ({ id: a.id, time: a.time, label: a.label, days: a.days, date: a.date, on: a.on })),
+        files: (L.files?.items || []).filter(x => !x.trashed).slice(-12).map(x => ({ id: x.id, name: x.name, folder: x.folder, time: x.time })),
+        health: (L.health?.days || []).slice(-3).map(d => ({ id: d.id, date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, from: d.from })),
+        weather: L.weather?.here ? { place: L.weather.here.place, date: L.weather.here.date, time: L.weather.here.time, cond: L.weather.here.cond, temp: L.weather.here.temp, cities: (L.weather.cities || []).map(c => c.name) } : null,
+    };
+}
+// a delivery still on the way an hour and a half after it was due (or ordered) has arrived by now
+export function dlvClock(p, now) {
+    const out = [], today = String(now || '').slice(0, 5), hm = String(now || '').slice(6, 11);
+    if (!p.delivery || !/^\d{2}-\d{2}$/.test(today)) return out;
+    for (const o of p.delivery.orders || []) {
+        if (o.status !== 'on the way') continue;
+        const at = String(o.arrived || o.time || ''), g = dayGap(at.slice(0, 5), today);
+        if (g > 0 || g === 0 && hm && at.slice(6, 11) && minutes(hm) - minutes(at.slice(6, 11)) >= 90) { out.push({ type: 'status', path: 'delivery.orders', id: o.id, status: 'delivered', prev: o.status }); o.status = 'delivered'; }
+    }
+    return out;
+}

@@ -7,9 +7,10 @@ import { askDraft } from './ai.js';
 import { datedRows } from './anniv.js';
 import { calendars } from './calendar.js';
 import { saveMeta } from './core.js';
-import { finance, migrateBank, round } from './finance.js';
 import { headingPlaces } from './people.js';
-import { arr, COUNTRIES, ensureIds, hhmm, jsonOf, ko, last4, line, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
+import { arr, COUNTRIES, ensureIds, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
+import { dlvTotal, payOrders, unpayOrders } from './phonesyncmoney.js';
+import { alarmOf, dayOf, fileOf, parseWeather, weatherFrom } from './phonesynclife.js';
 import { exclusive } from './phonesync.js';
 import { recentTrackers } from './scenes.js';
 import { wealthDate } from './wealth.js';
@@ -138,12 +139,8 @@ export function storyDays(m, p) {
 }
 // the chat's newest status line (date, time, place, weather), if any
 export function weatherNow() {
-    try { const t = recentTrackers(1)[0]; return t && (t.place || t.weather) ? { date: t.date || '', time: t.time || (Number.isFinite(t.min) ? `${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}` : ''), place: t.place || '', weather: t.weather || '' } : null; } catch { return null; }
+    try { return weatherFrom(recentTrackers(1)[0]); } catch { return null; }
 }
-// the status line's weather words as one of the app's kinds, and a temperature written in it
-const COND_RE = [['storm', /storm|thunder|뇌우|천둥|번개|gewitter|雷/i], ['snow', /snow|눈|schnee|雪/i], ['rain', /rain|drizzle|shower|비|소나기|regen|雨/i], ['fog', /fog|mist|안개|nebel|霧/i], ['cloudy', /cloud|overcast|흐림|구름|bewölkt|wolk|曇/i], ['clear', /clear|sun|맑|화창|sonnig|klar|晴/i]];
-export const condOf = text => COND_RE.find(([, re]) => re.test(String(text || '')))?.[0] || '';
-const tempOf = text => { const mt = String(text || '').match(/(-?\d{1,2})\s*°/); return mt ? Number(mt[1]) : null; };
 // where the owner lives: the profile's country (the delivery app is 배달의민족 there in Korea, Uber Eats elsewhere)
 export const livesIn = p => (p.lives || p.country || '');
 export const deliveryLook = p => (livesIn(p) === 'KR' ? 'baemin' : 'ubereats');
@@ -156,59 +153,29 @@ const phoneNow = p => JSON.stringify({
 });
 const daysBlock = days => `[STORY DAYS]\n${days.map(d => `${d.day}${d.places.length ? `: ${d.places.join(', ')}` : ''}`).join('\n') || '(unknown)'}`;
 
-// ---- 생활: parse
-const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-const CONDS = ['clear', 'cloudy', 'rain', 'snow', 'fog', 'storm'];
-const FILE_KINDS = ['pdf', 'image', 'video', 'audio', 'zip', 'doc', 'sheet', 'slides', 'other'];
+// ---- 생활: parse (one record at a time in phonesynclife.js, the same for a reflection)
 const int = (v, lo, hi) => { const n = num(v); return n === null ? null : Math.max(lo, Math.min(hi, Math.round(n))); };
 const yes = v => v === true;
-const tz = v => (/^[A-Za-z]+(?:\/[A-Za-z_+-]+){1,2}$/.test(String(v || '')) ? String(v) : '');
 const day5 = v => when(v).slice(0, 5);
-const cityOf = c => ({ name: line(c?.name, 40), ko: ko(c?.ko), tz: tz(c?.tz), cond: pick(c?.cond, CONDS, 'cloudy'), temp: int(c?.temp, -60, 60), hi: int(c?.hi, -60, 60), lo: int(c?.lo, -60, 60), sunset: hhmm(c?.sunset), note: line(c?.note, 40), noteKo: ko(c?.noteKo) });
-export function parseWeather(w, now) {
-    const h = w?.here || {};
-    const here = {
-        place: line(h.place, 60), date: day5(h.date), time: hhmm(h.time), from: pick(h.from, ['tracker', 'chat', 'archive', 'guess'], 'guess'),
-        cond: pick(h.cond, CONDS, 'cloudy'), temp: int(h.temp, -60, 60), hi: int(h.hi, -60, 60), lo: int(h.lo, -60, 60), line: line(h.line, 160), ko: ko(h.ko),
-        hours: arr(h.hours).map(x => ({ time: hhmm(x?.time), cond: pick(x?.cond, CONDS, 'cloudy'), temp: int(x?.temp, -60, 60), rain: int(x?.rain, 0, 100) ?? 0 })).filter(x => x.time).slice(0, 6),
-        days: arr(h.days).map(x => ({ day: day5(x?.day), cond: pick(x?.cond, CONDS, 'cloudy'), lo: int(x?.lo, -60, 60), hi: int(x?.hi, -60, 60), rain: int(x?.rain, 0, 100) ?? 0 })).filter(x => x.day).slice(0, 10),
-        tiles: Object.fromEntries(['rain24', 'rainNext', 'feels', 'wind', 'gust', 'humidity', 'dew', 'visibility'].map(k => [k, num(h.tiles?.[k])]).concat([['dir', line(h.tiles?.dir, 12)], ['sunrise', hhmm(h.tiles?.sunrise)], ['sunset', hhmm(h.tiles?.sunset)]])),
-    };
-    // the status line stands: its date, time, place and weather; the model's numbers only fill what it doesn't say
-    if (now) {
-        here.from = 'tracker';
-        if (now.place) here.place = line(now.place, 60);
-        if (md(when(now.date))) here.date = day5(now.date);
-        if (now.time) here.time = hhmm(now.time);
-        const c = condOf(now.weather), t = tempOf(now.weather);
-        if (c) here.cond = c;
-        if (t !== null) here.temp = t;
-        here.said = line(now.weather, 60);
-    }
-    return { here, cities: arr(w?.cities).map(cityOf).filter(c => c.name).slice(0, 5) };
-}
+export { parseWeather };
 export function parseLife(raw, now) {
     if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 시계 · 건강 · 파일 · 날씨 내용(JSON)을 찾지 못했어요');
     const c = raw.clock || {}, h = raw.health || {}, f = raw.files || {};
     const run = c.running && int(c.running.sec, 1, 86400) ? { label: line(c.running.label, 40), ko: ko(c.running.ko), sec: int(c.running.sec, 1, 86400), left: int(c.running.left, 0, 86400) ?? 0 } : null;
     return {
         clock: {
-            alarms: arr(c.alarms).map(a => withEv({ time: hhmm(a?.time), label: line(a?.label, 60), ko: ko(a?.ko), days: arr(a?.days).map(d => String(d).toLowerCase().slice(0, 3)).filter(d => DAYS.includes(d)), date: day5(a?.date),
-                on: a?.on !== false, wake: yes(a?.wake), then: arr(a?.then).map(hhmm).filter(Boolean).slice(0, 10), snooze: int(a?.snooze, 0, 60) ?? 0, snoozeCount: int(a?.snoozeCount, 0, 20) ?? 0, sound: line(a?.sound, 30), made: day5(a?.made) }, a)).filter(a => a.time).slice(0, 8),
+            alarms: arr(c.alarms).map(alarmOf).filter(a => a.time).slice(0, 8),
             timers: arr(c.timers).map(t => ({ label: line(t?.label, 40), ko: ko(t?.ko), sec: int(t?.sec, 1, 86400), last: day5(t?.last) })).filter(t => t.sec).slice(0, 4),
             running: run,
         },
         health: {
             usual: { bed: hhmm(h.usual?.bed), sleep: hhmm(h.usual?.sleep), wake: hhmm(h.usual?.wake), steps: int(h.usual?.steps, 0, 80000), workouts: int(h.usual?.workouts, 0, 21), rest: int(h.usual?.rest, 30, 140) },
-            days: arr(h.days).map(d => withEv({ date: day5(d?.date), bed: hhmm(d?.bed), sleep: hhmm(d?.sleep), wake: hhmm(d?.wake), woke: int(d?.woke, 0, 30) ?? 0, steps: int(d?.steps, 0, 120000), km: num(d?.km), floors: int(d?.floors, 0, 400),
-                workout: d?.workout && line(d.workout.kind, 30) ? { kind: line(d.workout.kind, 30), time: hhmm(d.workout.time), min: int(d.workout.min, 0, 600), km: num(d.workout.km) } : null,
-                hr: arr(d?.hr).map(x => int(x, 30, 220)).filter(x => x !== null).slice(0, 2), from: pick(d?.from, ['story', 'pattern'], 'pattern') }, d)).filter(d => d.date)
+            days: arr(h.days).map(dayOf).filter(d => d.date)
                 .sort((a, b) => a.date.localeCompare(b.date)).filter((d, k, xs) => !k || xs[k - 1].date !== d.date).slice(-14),
         },
         files: {
             folders: arr(f.folders).map(x => ({ name: line(x?.name, 40), ko: ko(x?.ko), count: int(x?.count, 0, 9999) ?? 0, fav: yes(x?.fav) })).filter(x => x.name).slice(0, 6),
-            items: arr(f.items).map(x => withEv({ name: line(x?.name, 80), kind: pick(x?.kind, FILE_KINDS, 'other'), folder: line(x?.folder, 40) || 'Downloads', size: num(x?.size), time: when(x?.time), from: line(x?.from, 60),
-                pages: int(x?.pages, 0, 2000), length: line(x?.length, 8), tag: pick(x?.tag, ['red', 'orange'], ''), private: yes(x?.private), preview: line(x?.preview, 160), ko: ko(x?.ko), opened: when(x?.opened), trashed: day5(x?.trashed) }, x)).filter(x => x.name).slice(0, 18),
+            items: arr(f.items).map(fileOf).filter(x => x.name).slice(0, 18),
             cloud: { used: num(f.cloud?.used), total: num(f.cloud?.total) },
         },
         weather: parseWeather(raw.weather, now),
@@ -233,47 +200,12 @@ export function parseDelivery(raw, accounts = []) {
     };
 }
 // what an order came to (the model never writes it)
-export const orderTotal = o => round(o.items.reduce((n, x) => n + x.qty * x.price, 0) + (o.fee || 0) + (o.tip || 0) - (o.discount || 0));
+export const orderTotal = dlvTotal;
 
-// ---- 배달 payments: one bank row per paid order (and a plus row for a refund), tied by the order's id and its "ev".
-// An order on a debit account also gets its ledger line, so the balance moves. "card" without a bank waits for one.
-const PAY = 'dlv-';
-const payAccount = (p, o) => {
-    const as = p.money?.bank?.accounts || [];
-    if (o.account === 'cash') return null;
-    return as.find(a => a.last4 === o.account) || (o.account === 'card' ? as.find(a => a.kind === 'credit') || as.find(a => a.kind === 'checking') || as[0] : null) || null;
-};
-export function unpayDeliveries(m, p) {
-    const tx = p.money?.tx;
-    if (!tx) return;
-    const f = finance(m), gone = tx.filter(t => String(t.id || '').startsWith(PAY));
-    for (const t of gone) for (const L of Object.values(f.accounts)) delete L.entries[t.id];
-    p.money.tx = tx.filter(t => !gone.includes(t));
-}
-export function payDeliveries(m, p) {
-    if (!p.money || !p.delivery) return 0;
-    migrateBank(m, p);
-    const f = finance(m), tx = p.money.tx ||= [], year = (wealthDate(m, p) || String(p.money.asOf || '')).slice(0, 4) || String(new Date().getFullYear());
-    let n = 0;
-    const put = (o, a, id, amount, time, memo) => {
-        if (tx.some(t => t.id === id)) return;
-        tx.push({ id, account: a.last4, who: o.shop, ko: o.ko || '', amount, time, kind: 'card', memo, pending: false, ...(o.ev ? { ev: o.ev } : {}), delivery: o.id });
-        if (a.kind !== 'credit') { const L = f.accounts[`${a.id}:${a.currency}`]; if (L) L.entries[id] = { amount, date: `${year}-${time.slice(0, 5)}` }; }
-        n++;
-    };
-    for (const o of p.delivery.orders) {
-        if (o.status === 'cancelled') continue;
-        const a = payAccount(p, o);
-        if (!a) continue;
-        const total = orderTotal(o);
-        if (!(total > 0)) continue;
-        put(o, a, `${PAY}${o.id}`, -total, o.time, o.mode === 'pickup' ? 'Pickup' : 'Delivery');
-        if (o.status === 'refunded') put(o, a, `${PAY}${o.id}-r`, total, o.arrived || o.time, 'Refund');
-    }
-    tx.sort((a, b) => String(a.time).localeCompare(String(b.time)));
-    for (const a of p.money.bank.accounts) if (a.kind !== 'credit') { const L = f.accounts[`${a.id}:${a.currency}`]; if (L) a.balance = round(L.amount + Object.values(L.entries).reduce((s, x) => s + x.amount, 0)); }
-    return n;
-}
+// ---- 배달 payments (phonesyncmoney.js): one bank row per paid order, tied by the order's id and its "ev"
+const yearOf = (m, p) => (wealthDate(m, p) || String(p.money?.asOf || '')).slice(0, 4) || String(new Date().getFullYear());
+export const payDeliveries = (m, p) => payOrders(m, p, yearOf(m, p));
+export { unpayOrders as unpayDeliveries };
 
 // ---- the fills
 export const fillLife = (m, p) => exclusive('fill', async () => {
@@ -283,6 +215,8 @@ export const fillLife = (m, p) => exclusive('fill', async () => {
     const out = await askDraft(input, { system: AI_SYS_LIFE, maxTokens: 16000 });
     const life = parseLife(jsonOf(out), now);
     p.life = { ...life, at: storyNow(p) || p.now || '' };
+    // a reflection reads on from here: what came before is in what was just written
+    if (p.sync?.marks) p.sync.marks.life = markNow();
     ensureIds(p);
     await saveMeta();
     return p.life;
@@ -293,8 +227,11 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
     const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(storyDays(m, p)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money], { profile: p.financeProfile });
     const out = await askDraft(input, { system: AI_SYS_DELIVERY, maxTokens: 9000 });
     const d = parseDelivery(jsonOf(out), accounts);
-    if (p.delivery) unpayDeliveries(m, p);
-    p.delivery = { ...d, look: deliveryLook(p), at: storyNow(p) || p.now || '' };
+    if (p.delivery) unpayOrders(m, p);
+    // orders a reflection put in stay (their payments are the bank's own rows)
+    const kept = (p.delivery?.orders || []).filter(o => o.sync);
+    p.delivery = { ...d, orders: [...d.orders, ...kept].sort((a, b) => String(a.time).localeCompare(String(b.time))), look: deliveryLook(p), at: storyNow(p) || p.now || '' };
+    if (p.sync?.marks) p.sync.marks.delivery = markNow();
     ensureIds(p);
     payDeliveries(m, p);
     await saveMeta();

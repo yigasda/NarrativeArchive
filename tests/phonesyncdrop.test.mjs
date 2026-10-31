@@ -10,11 +10,11 @@ const encoded = s => 'data:text/javascript;base64,' + Buffer.from(s).toString('b
 const href = f => pathToFileURL(new URL(`../src/${f}`, import.meta.url).pathname).href;
 const T = (globalThis.__dropTest = { chat: [], answers: [] });
 const map = {
-    './phonesync.js': href('phonesync.js'), './phonesyncmoney.js': href('phonesyncmoney.js'), './finance.js': href('finance.js'),
+    './phonesync.js': href('phonesync.js'), './phoneparse.js': href('phoneparse.js'), './phonesynclife.js': href('phonesynclife.js'), './phonesyncmoney.js': href('phonesyncmoney.js'), './finance.js': href('finance.js'),
     './phoneprofile.js': href('phoneprofile.js'),
     './phonestory.js': encoded(`export const phoneChatScope=()=>globalThis.__dropTest.scope||'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-10-26';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
-    './ai.js': encoded(`export const askDraft=async()=>JSON.stringify(globalThis.__dropTest.answers.shift());`),
+    './ai.js': encoded(`export const askDraft=async(input,o)=>{globalThis.__dropTest.sys=o.system;globalThis.__dropTest.input=input;return JSON.stringify(globalThis.__dropTest.answers.shift());};`),
     './core.js': encoded(`export const ctx=()=>({chat:globalThis.__dropTest.chat,chatMetadata:globalThis.__dropTest.meta,loadWorldInfo:async()=>null,characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=()=>[];export const chatRows=()=>globalThis.__dropTest.chat.map((x,i)=>({index:i,user:x.is_user,hidden:!!x.is_system,text:'[#'+i+'] '+x.name+': '+x.mes}));`),
@@ -219,4 +219,66 @@ test('after the update, a phone already read in its branch, a renamed chat, or a
         await run(c.m, { now: '10-26 15:00', events: [] });
         assert.equal(c.p.sync.dropped?.length || 0, 0, now);
     }
+});
+
+test('a phone without the everyday or delivery apps gets the same request as before', async () => {
+    const c = await bookCase();
+    assert.equal(T.sys, data.AI_SYS_PHONE_UPDATE);
+    assert.ok(!T.sys.includes('LIFE') && !T.sys.includes('deliveries'));
+});
+
+// the everyday apps and the delivery app, through a whole reflection: in, 되돌리기, and 빼기
+function lifeSetup() {
+    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'I set an alarm for the airport'),
+        say('Mara', 'we ordered pasta from Pasta Nostra for 24.80'), say('Ren', 'it was good'), say('Mara', 'good night then')];
+    const c = setup(chat);
+    c.p.life = { at: '10-26 09:00', clock: { alarms: [{ id: 'a1', time: '06:10', label: 'Aufstehen', days: ['mon'], date: '', on: true }], timers: [], running: null },
+        health: { usual: {}, days: [] }, files: { folders: [], items: [] },
+        weather: { here: { place: 'Varo', date: '10-26', time: '09:00', cond: 'clear', temp: 12, hours: [], days: [], tiles: {} }, cities: [] } };
+    c.p.delivery = { shops: [], orders: [], cart: null };
+    Object.assign(c.p.sync.marks, { life: { index: 1 }, delivery: { index: 1 }, money: { index: 1 } });
+    return c;
+}
+const lifeAnswer = () => ({ now: '10-26 22:00', days: [{ date: '10-26', sleep: '23:40', wake: '06:20', steps: 9100 }],
+    weather: { place: 'Varo', date: '10-26', time: '21:00', cond: 'rain', temp: 9, from: 'chat' },
+    events: [
+        { id: 'airport-alarm', at: 2, quote: 'set an alarm', summary: '공항 알람', date: '10-26', time: '20:00', phone: { alarms: [{ time: '04:30', label: 'Flughafen', date: '10-30', on: true }] } },
+        { id: 'pasta', at: 3, quote: 'ordered pasta', summary: '파스타 배달', date: '10-26', time: '20:14', phone: {},
+            money: { moves: [{ account: '1111', amount: -24.8, who: 'Pasta Nostra', kind: 'card', occurrence: 'new' }],
+                deliveries: [{ shop: 'Pasta Nostra', items: [{ name: 'Tagliatelle', qty: 1, price: 13.9 }, { name: 'Penne', qty: 1, price: 11.5 }], fee: 1.99, discount: 2.59, status: 'delivered', occurrence: 'new' }] } },
+    ] });
+
+test('the everyday and delivery apps through a reflection: asked for, put in, and taken back by 되돌리기', async () => {
+    const c = lifeSetup();
+    await run(c.m, lifeAnswer());
+    assert.ok(T.sys.includes('LIFE\n') && T.sys.includes('"deliveries"') && T.sys.includes('"weather"'));
+    assert.ok(T.input.includes('[LIFE NOW]'));
+    const L = c.p.life;
+    assert.deepEqual(L.clock.alarms.map(a => a.label), ['Aufstehen', 'Flughafen']);
+    assert.equal(L.health.days.length, 1);
+    assert.equal(L.weather.here.cond, 'rain');
+    const o = c.p.delivery.orders[0], t = c.p.money.tx.at(-1);
+    assert.equal(t.delivery, o.id);
+    assert.equal(c.bank(), 100000 - 24.8);
+    assert.ok(c.p.syncLast.apps.includes('시계') && c.p.syncLast.apps.includes('배달') && c.p.syncLast.apps.includes('건강') && c.p.syncLast.apps.includes('날씨'));
+    await data.undoRound(c.m, c.p);
+    assert.deepEqual(L.clock.alarms.map(a => a.label), ['Aufstehen']);
+    assert.equal(L.health.days.length, 0);
+    assert.equal(L.weather.here.cond, 'clear');
+    assert.equal(c.p.delivery.orders.length, 0);
+    assert.equal(c.bank(), 100000);
+});
+
+test('the talk with the order deleted: 빼기 takes the order, its payment and the alarm from the same talk', async () => {
+    const c = lifeSetup();
+    await run(c.m, lifeAnswer());
+    T.chat.splice(2, 2, say('Ren', 'nothing happened today at all'), say('Mara', 'nothing at all, really'), say('Ren', 'quiet evening'));
+    await run(c.m, { now: '10-26 22:30', events: [] });
+    assert.deepEqual(c.p.sync.dropped.map(d => d.label), ['#2–3']);
+    await data.dropStretch(c.m, c.p, 0);
+    assert.deepEqual(c.p.life.clock.alarms.map(a => a.label), ['Aufstehen']);
+    assert.equal(c.p.delivery.orders.length, 0);
+    assert.equal(c.bank(), 100000);
+    // what nobody told stays: the day and the weather are the round's, not the talk's
+    assert.equal(c.p.life.health.days.length, 1);
 });

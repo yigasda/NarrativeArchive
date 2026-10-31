@@ -11,7 +11,8 @@
 // - balances may go below zero; no money is made up to cover a payment
 // Every change is listed in `effects` (a copy of each record as it went in), so 복구 can add back what a save lost, and
 // 되돌리기 can tell a record the user changed since, without touching anything else.
-import { cash, finance, finite, fx, positions, round } from './finance.js';
+import { cash, finance, finite, fx, migrateBank, positions, round } from './finance.js';
+import { boxAt, lifeReplay, lifeRevert } from './phonesynclife.js';
 
 const STEP = { ordered: 0, shipped: 1, 'on the way': 2, delivered: 3 };
 const ORDER = ['ordered', 'shipped', 'on the way', 'delivered', 'unknown', 'cancelled', 'returning', 'returned', 'refunded'];
@@ -240,7 +241,84 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
         if (!txt(x.by)) fail('티켓 정보를 확인하지 못했어요');
         return { kind: ['flight', 'train', 'hotel', 'event', 'other'].includes(x.kind) ? x.kind : 'other', by: txt(x.by, 60), from: txt(x.from, 40), to: txt(x.to, 40), date: /^\d{2}-\d{2}$/.test(x.date || '') ? x.date : date, time: txt(x.time, 5), seat: txt(x.seat, 12), gate: txt(x.gate, 12), no: txt(x.no, 24), status: txt(x.status, 30) };
     }, (o, x) => samePlace(o.by, x.by) && o.kind === x.kind && (o.no && o.no === txt(x.no, 24) || o.date === (x.date || date)));
+    // 배달: an order in the delivery app. Its payment is a move of the same event (the card or bank row it made, or one
+    // already there), tied to it here; with no paying move it was paid in cash at the door
+    const dlvOn = !!p.delivery && e.at > (marks.delivery?.index ?? -1);
+    list(mo.deliveries).forEach((x, k) => {
+        if (!dlvOn) return;
+        const box = p.delivery.orders ||= [];
+        const items = list(x.items).map(d => ({ name: txt(d?.name, 60), ko: txt(d?.ko, 60), option: txt(d?.option, 60), qty: Math.max(1, Math.round(Number(d?.qty) || 1)), price: finite(Number(d?.price)) ? Number(d.price) : 0 })).filter(d => d.name).slice(0, 10);
+        if (!txt(x.shop) || !items.length) fail('배달 주문의 가게나 메뉴를 확인하지 못했어요');
+        const money = v => (finite(Number(v)) ? Math.abs(Number(v)) : 0), total = round(items.reduce((n, d) => n + d.qty * d.price, 0) + money(x.fee) + money(x.tip) - money(x.discount));
+        const old = x.already && box.find(o => o.id === x.already) || box.find(o => samePlace(o.shop, x.shop) && near(String(o.time).slice(0, 5), date, 0) && Math.abs(dlvTotal(o) - total) < 0.01 && !fresh(x, o, e.at));
+        if (!old && x.occurrence === 'again') return;
+        const status = ['on the way', 'delivered', 'cancelled', 'refunded'].includes(x.status) ? x.status : 'delivered';
+        if (old) {
+            if (status !== old.status && later(old.status, status)) {
+                out.effects.push({ type: 'status', path: 'delivery.orders', id: old.id, status, prev: old.status });
+                old.status = status;
+                out.changes.push({ app: '배달', label: `${old.shop} 상태`, amount: null });
+            }
+            return;
+        }
+        const time = /^\d{2}-\d{2}/.test(String(x.time || '')) ? txt(x.time, 11) : `${date}${e.time ? ` ${e.time}` : ''}`;
+        const row = { shop: txt(x.shop, 60), items, fee: money(x.fee), tip: money(x.tip), discount: money(x.discount), mode: x.mode === 'pickup' ? 'pickup' : 'delivery', time, arrived: txt(x.arrived, 11),
+            to: txt(x.to, 40) || 'home', address: txt(x.address, 80), left: txt(x.left, 60), noteShop: txt(x.noteShop, 120), noteShopKo: txt(x.noteShopKo, 200), noteRider: txt(x.noteRider, 120), noteRiderKo: txt(x.noteRiderKo, 200),
+            noCutlery: x.noCutlery === true, for: Math.max(1, Math.round(Number(x.for) || 1)), status, gift: txt(x.gift, 40), reviewed: false, account: 'cash',
+            id: `sync:${e.id}:d${k}`, ev: e.id, storyEvent: e.id, sourceIndex: e.at, sync: true };
+        // the row that paid it: made by this event, or one already in the bank this event pointed at
+        const made = out.effects.find(f => f.type === 'push' && f.path === 'money.tx' && Math.abs(f.item.amount + total) < 0.01 && !f.item.delivery);
+        const kept = !made && out.legs.find(l => l.state === 'included' && Math.abs(l.amount + total) < 0.01 && p.money?.tx?.some(t => t.id === l.rec && !t.delivery));
+        const t = made ? p.money.tx.find(r => r.id === made.item.id) : kept ? p.money.tx.find(r => r.id === kept.rec) : null;
+        if (t) { t.delivery = row.id; row.account = t.account; if (made) made.item.delivery = row.id; }
+        else if (status !== 'cancelled' && total > 0 && !row.gift && p.money && list(mo.moves).length) out.notes.push(`${row.shop}: 배달은 넣었지만 결제를 찾지 못해서 현금으로 뒀어요`);
+        box.push(row);
+        out.effects.push({ type: 'push', path: 'delivery.orders', item: structuredClone(row) });
+        out.changes.push({ app: '배달', label: row.shop, amount: null });
+    });
     return out;
+}
+// what a delivery order came to (the model never writes it)
+export const dlvTotal = o => round((o.items || []).reduce((n, x) => n + x.qty * x.price, 0) + (o.fee || 0) + (o.tip || 0) - (o.discount || 0));
+
+// 배달 app payments (its first fill, or a bank made after it): one bank row per paid order (and a plus row for a refund), tied by the order's id and its "ev".
+// An order on a debit account also gets its ledger line, so the balance moves. "card" without a bank waits for one.
+const PAY = 'dlv-';
+const payAccount = (p, o) => {
+    const as = p.money?.bank?.accounts || [];
+    if (o.account === 'cash') return null;
+    return as.find(a => a.last4 === o.account) || (o.account === 'card' ? as.find(a => a.kind === 'credit') || as.find(a => a.kind === 'checking') || as[0] : null) || null;
+};
+export function unpayOrders(m, p) {
+    const tx = p.money?.tx;
+    if (!tx) return;
+    const f = finance(m), gone = tx.filter(t => String(t.id || '').startsWith(PAY));
+    for (const t of gone) for (const L of Object.values(f.accounts)) delete L.entries[t.id];
+    p.money.tx = tx.filter(t => !gone.includes(t));
+}
+export function payOrders(m, p, year) {
+    if (!p.money || !p.delivery) return 0;
+    migrateBank(m, p);
+    const f = finance(m), tx = p.money.tx ||= [];
+    let n = 0;
+    const put = (o, a, id, amount, time, memo) => {
+        if (tx.some(t => t.id === id)) return;
+        tx.push({ id, account: a.last4, who: o.shop, ko: o.ko || '', amount, time, kind: 'card', memo, pending: false, ...(o.ev ? { ev: o.ev } : {}), delivery: o.id });
+        if (a.kind !== 'credit') { const L = f.accounts[`${a.id}:${a.currency}`]; if (L) L.entries[id] = { amount, date: `${year}-${time.slice(0, 5)}` }; }
+        n++;
+    };
+    for (const o of p.delivery.orders) {
+        if (o.status === 'cancelled' || o.sync) continue;
+        const a = payAccount(p, o);
+        if (!a) continue;
+        const total = dlvTotal(o);
+        if (!(total > 0)) continue;
+        put(o, a, `${PAY}${o.id}`, -total, o.time, o.mode === 'pickup' ? 'Pickup' : 'Delivery');
+        if (o.status === 'refunded') put(o, a, `${PAY}${o.id}-r`, total, o.arrived || o.time, 'Refund');
+    }
+    tx.sort((a, b) => String(a.time).localeCompare(String(b.time)));
+    for (const a of p.money.bank.accounts) if (a.kind !== 'credit') { const L = f.accounts[`${a.id}:${a.currency}`]; if (L) a.balance = round(L.amount + Object.values(L.entries).reduce((s, x) => s + x.amount, 0)); }
+    return n;
 }
 
 // 복구: put back what a lost save dropped; something already there stays as it is
@@ -249,14 +327,17 @@ export function replayEffects(m, p, effects) {
     for (const x of effects) {
         if (x.type === 'entry') { const L = f.accounts[x.key]; if (L && !L.entries[x.id]) L.entries[x.id] = { amount: x.amount, date: x.date, ...(x.sourceIndex !== undefined ? { sourceIndex: x.sourceIndex } : {}) }; continue; }
         if (x.type === 'amendEntry') { const line = f.accounts[x.key]?.entries[x.id]; if (line && line.amount === x.from) line.amount = x.to; continue; }
-        const [app, field] = x.path.split('.'), owner = app === 'money' ? p.money : p.investment;
-        if (!owner) continue;
-        const box = owner[field] ||= [], idKey = x.idKey || 'id';
+        if (lifeReplay(p, x) !== null) continue;
+        if (!p[x.path.split('.')[0]]) continue;
+        const box = boxAt(p, x.path, true), idKey = x.idKey || 'id';
         if (x.type === 'push' && !box.some(r => r[idKey] === x.item[idKey])) box.push(structuredClone(x.item));
         if (x.type === 'status') { const r = box.find(o => o.id === x.id); if (r && later(r.status, x.status)) r.status = x.status; }
         if (x.type === 'amend') { const r = box.find(o => o.id === x.id); if (r && r.amount === x.from) { r.amount = x.to; delete r.amountFrom; } }
     }
 }
+const LOOSE = ['sourceIndex', 'delivery', 'account'];
+const unchanged = (path, now, was) => (/^(money|investment)\./.test(path) ? ['amount', 'price', 'qty', 'quantity', 'status'].every(k => now[k] === was[k])
+    : Object.keys({ ...was, ...now }).filter(k => !LOOSE.includes(k)).every(k => JSON.stringify(now[k] ?? null) === JSON.stringify(was[k] ?? null)));
 // 되돌리기 · 빼기: undo money changes, newest first. A record gone already is fine; one changed since is left as it is and
 // returned, so the caller can say what stayed
 export function revertEffects(m, p, effects) {
@@ -264,12 +345,14 @@ export function revertEffects(m, p, effects) {
     for (const x of [...effects].reverse()) {
         if (x.type === 'entry') { const L = f.accounts[x.key]; if (!L?.entries[x.id]) continue; if (L.entries[x.id].amount === x.amount) delete L.entries[x.id]; else left.push(x); continue; }
         if (x.type === 'amendEntry') { const line = f.accounts[x.key]?.entries[x.id]; if (!line) continue; if (line.amount === x.to) line.amount = x.from; else left.push(x); continue; }
-        const [app, field] = x.path.split('.'), owner = app === 'money' ? p.money : p.investment;
-        if (!owner?.[field]) continue;
-        const box = owner[field], idKey = x.idKey || 'id', i = box.findIndex(r => r[idKey] === (x.item?.[idKey] ?? x.id));
+        const back = lifeRevert(p, x);
+        if (back !== null) { if (!back) left.push(x); continue; }
+        const box = boxAt(p, x.path);
+        if (!box) continue;
+        const idKey = x.idKey || 'id', i = box.findIndex(r => r[idKey] === (x.item?.[idKey] ?? x.id));
         if (i < 0) continue;
-        // a record changed since it went in (an amount, a status, a count) is the user's now: it stays
-        if (x.type === 'push') { if (['amount', 'price', 'qty', 'quantity', 'status'].every(k => box[i][k] === x.item[k])) box.splice(i, 1); else left.push(x); }
+        // a record changed since it went in (an amount, a status, a count; for the everyday apps, anything) is the user's now: it stays
+        if (x.type === 'push') { if (unchanged(x.path, box[i], x.item)) box.splice(i, 1); else left.push(x); }
         if (x.type === 'status') { if (box[i].status === x.status) box[i].status = x.prev; else left.push(x); }
         if (x.type === 'amend') { if (box[i].amount === x.to) { box[i].amount = x.from; box[i].amountFrom = 'guess'; } else left.push(x); }
     }
