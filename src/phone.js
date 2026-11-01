@@ -37,7 +37,8 @@ function screen(p, view, m, roster, ui) {
     const cut = view.indexOf(':'), v = cut < 0 ? view : view.slice(0, cut), i = cut < 0 ? undefined : view.slice(cut + 1);
     const life = { clock: () => clockScreen(p, now), timer: () => timerScreen(p, now), wclock: () => worldScreen(p, now), alarm: () => alarmScreen(p, now, i), health: () => healthScreen(p, now, i || ''), hsteps: () => stepsScreen(p, now, i), hsleep: () => sleepScreen(p, now, i), hcmp: () => compareScreen(p, now),
         files: () => filesScreen(p, now), folder: () => folderScreen(p, now, i || ''), file: () => fileScreen(p, now, i), weather: () => weatherScreen(p, now), wcity: () => cityScreen(p, now, i), wlist: () => cityList(p, now),
-        dlv: () => dlvScreen(p, now), dshop: () => shopScreen2(p, now, i), dcart: () => cartScreen(p, now), dorders: () => ordersScreen(p, now), dorder: () => orderScreen(p, now, i), ditem: () => itemScreen(p, now, i), dpay: () => payScreen(p, now), drate: () => rateScreen(p, now, i) }[v];
+        // the home's delivery icon opens it by its app name
+        dlv: () => dlvScreen(p, now), delivery: () => dlvScreen(p, now), dshop: () => shopScreen2(p, now, i), dcart: () => cartScreen(p, now), dorders: () => ordersScreen(p, now), dorder: () => orderScreen(p, now, i), ditem: () => itemScreen(p, now, i), dpay: () => payScreen(p, now), drate: () => rateScreen(p, now, i) }[v];
     const body = life ? life() : ['ivnotes', 'ivschedule', 'ivhistory', 'invest', 'stock', 'ivactivity', 'ivwatch', 'ivstakes', 'ivcash', 'ivprices'].includes(v) ? investmentScreen(m, p, now, v, decodeURIComponent(i || ''), ui.investing) : v === 'lock' ? lockScreen(p, now) : v === 'home' ? homeScreen(p, now, m) : v === 'home2' ? homeScreen(p, now, m, 2) : v === 'bank' ? bankHome(p, now) : v === 'acct' ? bankAcct(p, now, i || '0') : v === 'tx' ? bankTx(p, now, i || '') : v === 'wallet' ? walletScreen(p, now) : v === 'card' ? cardView(p, now, i || '0') : v === 'pass' ? passView(p, now, i || '') : v === 'shop' ? shopScreen(p, now, i || 'all') : v === 'order' ? orderView(p, now, i || '') : v === 'voice' ? voiceScreen(p, now, i || '') : v === 'voiceone' ? voiceOne(p, now, i || '0') : v === 'msg' ? msgList(p, now, roster)
         : v === 'thread' ? threadScreen(p, now, Number(i), roster) : v === 'draft' ? draftView(p, now, Number(i), roster) : v === 'call' || v === 'callmiss' ? callScreen(p, now, roster, v === 'callmiss') : v === 'callwho' ? callWho(p, now, Number(i), roster) : v === 'contacts' ? contactsScreen(p, now, roster) : v === 'contact' ? contactOne(p, now, decodeURIComponent(i || ''), roster, m, ui.contactBack)
         : v === 'photo' ? photoScreen(p, now) : v === 'photoone' ? photoView(p, now, Number(i))
@@ -153,7 +154,15 @@ export async function openPhone(who = null) {
             return;
         }
         const top = keep ? $root.find('.na_ph_body, .ax_scroll').scrollTop() : 0;
-        $root.find('.na_ph_frame').html(screen(p, view, m, roster, { syncN: view === 'set' ? syncLeft(p) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)) }));
+        // a screen that can't be drawn says why (and in the console), instead of leaving the phone blank or on another screen
+        let html;
+        try { html = screen(p, view, m, roster, { syncN: view === 'set' ? syncLeft(p) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)) }); }
+        catch (err) {
+            console.error('[narrative-archive] phone screen', view, err);
+            toastr.error(`${view} 화면을 그리지 못했어요: ${err?.message || err}`, '캐릭터 휴대폰');
+            html = `<div class="na_ph_scr glass w_dusk"><div class="na_ph_body na_ph_make"><div class="na_ph_makecard"><b>화면을 그리지 못했어요</b><p>${esc(`${view}: ${err?.message || err}`)}</p><button type="button" class="na_ph_makebtn" data-go="home">홈으로</button></div></div></div>`;
+        }
+        $root.find('.na_ph_frame').html(html);
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
         if (making && view === 'setremake') $root.find('.na_ph_setremake .ax_n').html(`${busyHtml} 다시 만드는 중`);
