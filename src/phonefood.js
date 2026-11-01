@@ -293,20 +293,29 @@ const WORD = { 'snow cheese': 'snow-cheese', 'snowflake cheese': 'snow-cheese', 
 const idOf = (w, set) => {
     const t = String(w || '').trim().toLowerCase();
     if (!t) return '';
-    for (const c of [t, WORD[t], t.replace(/\s+/g, '-'), t.replace(/e?s$/, ''), WORD[t.replace(/e?s$/, '')]]) if (c && set[c]) return c;
+    for (const c of [t, WORD[t], t.replace(/[\s_]+/g, '-'), t.replace(/e?s$/, ''), WORD[t.replace(/e?s$/, '')], KO_ALL()[t]]) if (c && set[c]) return c;
     return '';
 };
 // the model's words as drawn ids, without the name's help (dishPic adds that)
+// kinds of dish the model may name loosely and the menu name tells apart (and a plain bowl, which is any of them)
+const KINDS = [['fried-chicken', 'yangnyeom-chicken', 'dakgangjeong', 'chicken-tender', 'nuggets'],
+    ['kimchi-stew', 'doenjang-stew', 'soup-red', 'soup-white', 'budae-jjigae', 'gamjatang', 'gukbap', 'samgyetang', 'hotpot', 'soup', 'soup-cream', 'tteokguk', 'sujebi'],
+    ['donburi', 'jeyuk-rice', 'hoedeopbap', 'bibimbap', 'fried-rice', 'omurice', 'jjamppong-bap', 'tendon', 'dosirak', 'curry', 'biryani', 'risotto'],
+    ['cake', 'cheesecake', 'tiramisu', 'brownie', 'pie', 'crepe'], ['croissant', 'salt-bread', 'bagel', 'toast', 'scone', 'madeleine', 'donut'],
+    ['coffee', 'iced-americano', 'juice', 'smoothie', 'bubble-tea', 'iced-tea'], ['ice-cream', 'yogurt-ice', 'bingsu'],
+    ['ramyeon', 'ramen', 'udon', 'soba', 'kalguksu', 'janchi-guksu', 'naengmyeon', 'bibim-noodle', 'kongguksu', 'pho', 'bun-cha', 'jajangmyeon', 'jjamppong', 'pad-thai'],
+    ['pasta-tomato', 'pasta-oil', 'pasta-cream', 'pasta-rose', 'lasagna'], ['pizza', 'pizza-white'], ['twigim', 'tendon'], ['gimbap', 'maki', 'inari', 'sushi'],
+    ['samgyeopsal', 'bossam', 'jokbal', 'galbi', 'steak', 'ribs', 'gopchang', 'skewer'], ['stirfry-red', 'jjim', 'jjimdak', 'dakgalbi', 'malatang']];
+const sameKind = (a, b) => a === 'bowl' || a.split('-')[0] === b.split('-')[0] || KINDS.some(k => k.includes(a) && k.includes(b));
 const wordsPic = (v, name = '') => {
     if (!v || typeof v !== 'object') return null;
     const given = String(v.base || '').trim(), named = guessPic(name).base;
-    // the dish's own name may point at a finer kind of the same base ("juk" named 단호박죽 → "juk-pumpkin", "ramen" named
-    // 돈코츠 라멘 → "ramen-tonkotsu"): that one draws it better
-    // words that aren't a drawn id: the dish's name says it best, unless it only hits a catch-all (밥, 탕); then the
-    // model's words, then both together
-    const byName = guessAt(name), byGiven = guessAt(given);
-    const base = B[given] ? (named.startsWith(`${given}-`) ? named : given)
-        : byName.at >= 0 && byName.at < CATCH_ALL ? byName.base : byGiven.at >= 0 && byGiven.at < CATCH_ALL ? byGiven.base : guessPic(`${given} ${name}`).base;
+    // a drawn id gives way to the name's pick when that is a finer kind of it or the same kind told apart better (juk named
+    // 단호박죽 → juk-pumpkin, 덮밥 named 제육덮밥 → jeyuk-rice, cake named 티라미수 → tiramisu). Words that aren't an id: the
+    // name says it best unless it only hits a catch-all (밥, 탕), then the model's words, then both together
+    const sure = g => g.at >= 0 && g.at < CATCH_ALL;
+    const base = B[given] ? (named.startsWith(`${given}-`) || (sure(guessAt(name)) && sameKind(given, named)) ? named : given)
+        : sure(guessAt(name)) ? guessAt(name).base : sure(guessAt(given)) ? guessAt(given).base : guessPic(`${given} ${name}`).base;
     // a list may come as one string ("beef", "fries, cola", "fries and cola")
     const words = a => (Array.isArray(a) ? a : typeof a === 'string' ? a.split(/\s*(?:,|\/|&|\+|\band\b|\bwith\b)\s*/i) : []);
     const ids = (a, set, n) => [...new Set(words(a).map(x => idOf(x, set)).filter(Boolean))].slice(0, n);
@@ -326,6 +335,8 @@ const KO_T = { 딸기: 'strawberry', 망고: 'mango', 샤인머스캣: 'grape', 
     양상추: 'lettuce', 상추: 'lettuce', 오이: 'cucumber', 문어: 'octopus', 낙지: 'octopus', 쭈꾸미: 'octopus', 주꾸미: 'octopus', 생크림: 'cream', 휘핑: 'cream', 아이스크림: 'ice-cream-scoop',
     파인애플: 'pineapple', 올리브: 'olive', 피망: 'bell-pepper', 파프리카: 'bell-pepper', 고구마: 'sweet-potato', 바나나: 'banana', 레몬: 'lemon',
     견과류: 'nuts', 아몬드: 'nuts', 호두: 'nuts', 피칸: 'nuts', 땅콩: 'nuts', 캐러멜: 'caramel', 카라멜: 'caramel', 시럽: 'caramel', 오레오: 'cookie-crumbs', 크럼블: 'cookie-crumbs' };
+// a word the model wrote in Korean ("새우") is read like the menu's
+const KO_ALL = () => ({ ...Object.fromEntries(Object.entries(KO_T).filter(([, v]) => typeof v === 'string')), ...KO_T1, ...KO_S });
 const PART = Object.keys(KO_T).sort((a, b) => b.length - a.length);
 const KO_T1 = { 파: 'scallion', 김: 'seaweed', 깨: 'sesame', 햄: 'ham', 떡: 'rice-cake', 콘: 'corn', 게: 'crab', 팥: 'red-bean', 닭: 'chicken', 귤: 'tangerine' };
 const KO_S = { 감자튀김: 'fries', 감튀: 'fries', 콜라: 'cola', 제로콜라: 'cola', 사이다: 'soda', 맥주: 'beer', 소주: 'soju', 치즈볼: 'cheese-balls', 계란찜: 'egg-custard', 공기밥: 'rice', 미소국: 'miso', 단무지: 'danmuji', 생수: 'water', 피클: 'pickles', 코울슬로: 'coleslaw', 콜슬로: 'coleslaw', 주먹밥: 'jumeokbap', 치킨무: 'radish-pickle' };
@@ -393,15 +404,18 @@ const OWN = (() => {
     put(['tonkatsu', 'samgyeopsal', 'bossam', 'jokbal', 'tangsuyuk', 'guobaorou', 'jeyuk-rice'], ['pork']); put(['steak', 'galbi', 'yukhoe'], ['beef']);
     put(['gyeranmari', 'omurice'], ['egg']); put(['cheese-ball', 'cheese-stick'], ['cheese']); put(['corn-cheese'], ['corn', 'cheese']);
     put(['fries', 'wedges'], ['potato']); put(['gamjatang'], ['potato', 'pork']); put(['mapo-tofu'], ['tofu']); put(['takoyaki'], ['octopus']);
-    put(['gambas'], ['shrimp']); put(['sashimi'], []); put(['fish-chips'], ['potato']); put(['ribs'], ['pork']);
+    put(['gambas', 'tendon'], ['shrimp']); put(['fish-chips'], ['potato']); put(['ribs'], ['pork']); put(['salad'], ['lettuce']);
+    put(['ramyeon', 'ramen', 'ramen-spicy', 'ramen-miso', 'ramen-tonkotsu', 'udon', 'soba', 'kalguksu', 'janchi-guksu', 'kongguksu', 'naengmyeon', 'bibim-noodle', 'pho', 'bun-cha', 'jajangmyeon', 'jjamppong', 'jjamppong-white', 'pad-thai', 'japchae', 'pasta-tomato', 'pasta-oil', 'pasta-cream', 'pasta-rose'], ['noodles']);
+    put(['ice-cream', 'yogurt-ice'], ['ice-cream-scoop']); put(['cheesecake', 'pizza-white', 'quesadilla'], ['cheese']); put(['egg-tart'], ['egg']);
+    put(['naan-tandoori'], ['chicken']); put(['yukhoe'], ['beef']);
     return o;
 })();
 // drinks: a volume in their name is the bottle, not a size
 const DRINKS = new Set(['cola', 'cider', 'beer', 'iced-americano', 'coffee', 'juice', 'bubble-tea', 'smoothie', 'iced-tea', 'wine', 'makgeolli']);
 const VOLUME = /\d\s*(?:l|ml|리터|oz)(?![a-z가-힣])/i;
-const BIG = /특대|곱빼기|대자|라지|벤티|(?<![a-z])(?:large|xl|venti)(?![a-z])/i, BIG1 = /(?<![가-힣A-Za-z\d.]|[\d.]\s)(?:대|L)(?![가-힣A-Za-z])/;
+const BIG = /특대|곱빼기|대자|라지|벤티|사이즈 ?업|업사이즈|size ?up|(?<![a-z])(?:large|xl|venti)(?![a-z])/i, BIG1 = /(?<![가-힣A-Za-z\d.]|[\d.]\s)(?:대|L)(?![가-힣A-Za-z])/;
 // a small or middle size the words say (꿔바로우 소, 감자탕 (중), 피자 M, 톨) isn't drawn large whatever the model put
-const SMALL = /소자|중자|(?<![가-힣])[소중](?![가-힣])|미니|하프|(?<![a-z])(?:half|small|mini|regular|medium|tall)(?![a-z])|(?<![A-Za-z])[SMR](?![A-Za-z])|보통 ?사이즈|레귤러|톨/i;
+const SMALL = /소자|중자|(?<![가-힣])[소중](?=\s*$|\s*[)\]/,·])|미니|하프|(?<![a-z])(?:half|small|mini|regular|medium|tall)(?![a-z])|(?<![A-Za-z])[SMR](?![A-Za-z])|보통 ?사이즈|레귤러|톨/i;
 const hangul = s => /[가-힣]/.test(String(s || ''));
 // a menu item's picture: the model's (words from the update round, ids from a fill), then its name and option
 // fill in what the model left out. x: { name, ko, option, optionKo }
@@ -427,6 +441,7 @@ export const dishPic = (v, x = {}, ids = false) => {
         usual.push(...keep);
     }
     const o = blind ? { out: [], add: [] } : readOption(opt);
+    for (const t of names) o.out.push(...readOption((t.match(/[(\[][^)\]]*[)\]]/g) || []).join(' ')).out);
     const added = new Set(o.add.map(w => `${w.k}:${w.id}`));
     const gone = new Set(o.out.map(w => `${w.k}:${w.id}`).filter(k => !added.has(k))), cut = (k, list) => [...new Set(list)].filter(id => !gone.has(`${k}:${id}`));
     const of = (k, ws) => ws.filter(w => w.k === k).map(w => w.id);
@@ -502,6 +517,17 @@ const GUESS = [
     [/dim ?sum|딤섬|만두|dumpling|gyoza/i, 'dimsum'], [/볶음밥|fried rice|nasi/i, 'fried-rice'], [/kebab|döner|doner|케밥/i, 'kebab'], [/taco|타코/i, 'tacos'], [/burrito|부리또/i, 'burrito'], [/poke|포케/i, 'poke'], [/salad|salat|샐러드/i, 'salad'],
     [/sandwich|panini|bagel|샌드위치/i, 'sandwich'], [/soup|suppe|수프|스프|eintopf/i, 'soup'], [/coffee|kaffee|latte|americano|커피|라떼/i, 'coffee'], [/bubble|boba|버블티|밀크티/i, 'bubble-tea'], [/juice|saft|주스|smoothie|soju|소주|water|wasser|생수/i, 'juice'],
     [/croissant|크루아상|빵|bread/i, 'croissant'],
+    // dishes drawn with the nearest picture, after every dish that has its own (불고기버거 is a burger, 불고기 a plate of it)
+    [/궁보|kung ?pao|宫保/i, 'stirfry-red', ['chicken', 'nuts', 'chili']], [/라조기/i, 'stirfry-red', ['chicken', 'chili']],
+    [/깐쇼 ?새우|멘보샤/i, 'dakgangjeong', ['shrimp']], [/orange chicken|general tso|깐풍/i, 'dakgangjeong'],
+    [/야[끼키] ?소바|yakisoba|chow ?mein|lo ?mein|볶음 ?면|볶음 ?우동/i, 'japchae'], [/pad see ew|팟씨유/i, 'pad-thai'], [/짜파게티/i, 'jajangmyeon'],
+    [/불고기|bulgogi/i, 'galbi', ['beef']], [/유산슬|팔보채/i, 'jjim'],
+    [/samosa|춘권|spring ?rolls?|스프링 ?롤|egg ?rolls?|김말이|고로케|크로켓|croquette/i, 'twigim'], [/월남쌈|summer rolls?|rice paper/i, 'salad'],
+    [/shawarma|샤와르마|gyros?(?![a-z])|기로스/i, 'kebab'], [/fajitas?|파히타/i, 'tacos'], [/enchiladas?|엔칠라다/i, 'burrito'],
+    [/chili con carne|goulash|굴라시|borscht|보르시|laksa|락사/i, 'soup-red'], [/wonton|완탕/i, 'tteokguk'], [/(?:bao|바오)(?![a-z])|pierogi|피로시키/i, 'dimsum'],
+    [/sweet (?:and|&) sour/i, 'tangsuyuk'], [/생선 ?까스|치킨 ?까스/i, 'tonkatsu'], [/käsespätzle|spätzle/i, 'pasta-cream', ['cheese']], [/croque/i, 'toast'],
+    [/quiche|키쉬/i, 'pie'], [/paella|빠에야|파에야/i, 'risotto', ['shrimp', 'mussel']], [/(?<![a-z])(?:sub|hoagie)s?(?![a-z])/i, 'sandwich'], [/poutine|푸틴/i, 'fries'],
+    [/오코노미야끼/i, 'okonomiyaki'], [/칼제비/i, 'sujebi'], [/핫바|꼬치 ?어묵|어묵 ?꼬치/i, 'skewer', ['fishcake']], [/어묵|오뎅/i, 'soup-white', ['fishcake']],
     [/찌개|탕|stew|국\b/i, 'kimchi-stew'], [/밥|rice|bowl/i, 'donburi']];
 // which rule a text hits (-1: none); the last two rules (찌개·탕·국, 밥·rice·bowl) only catch what nothing else did
 const guessAt = text => { const at = GUESS.findIndex(([re]) => re.test(String(text || ''))); return { at, base: at >= 0 ? GUESS[at][1] : 'bowl' }; };

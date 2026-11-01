@@ -153,7 +153,7 @@ test('the new dishes: their own words stay off, the ingredients in their names g
     const want = {
         '낙지볶음': ['stirfry-red', 'octopus', ''], '쭈꾸미볶음': ['stirfry-red', 'octopus', ''], '오징어볶음': ['stirfry-red', 'squid', ''],
         '순두부찌개': ['soup-red', 'tofu', ''], '마파두부': ['mapo-tofu', '', ''], '계란말이': ['gyeranmari', '', ''], '치킨텐더': ['chicken-tender', '', ''],
-        '김치전': ['jeon', 'kimchi', ''], '해물파전': ['jeon', 'shrimp,squid,mussel', ''], '새우 텐동': ['tendon', 'shrimp', ''],
+        '김치전': ['jeon', 'kimchi', ''], '해물파전': ['jeon', 'shrimp,squid,mussel', ''], '새우 텐동': ['tendon', '', ''],
         '레몬에이드': ['iced-tea', 'lemon', ''], '바나나 스무디': ['smoothie', 'banana', ''], '오레오 쉐이크': ['smoothie', 'cookie-crumbs', ''],
         '생크림 와플': ['waffle', 'cream', ''], '아이스크림 와플': ['waffle', 'ice-cream-scoop', ''], '바닐라 아이스크림': ['ice-cream', '', ''], '생크림 케이크': ['cake', 'cream', ''],
         '까르보나라': ['pasta-cream', '', ''], '하와이안 피자': ['pizza', 'ham,pineapple', ''], '콤비네이션 피자': ['pizza', 'pepperoni,bell-pepper,olive', ''],
@@ -234,4 +234,31 @@ test('whole kinds of slips, not one menu at a time', async () => {
     // an English sauce in a name is the dish's, not a dip
     assert.deepEqual(d('Garlic Sauce Chicken', { base: 'fried chicken' }).set, []);
     assert.deepEqual(d('엽기떡볶이', { base: 'tteokbokki' }, '메추리알 추가').with, ['egg']);
+});
+
+test('second look: the same kind told apart by the name, Korean words from the model, brackets in a name', async () => {
+    const { dishPic } = await import('../src/phonefood.js');
+    const f = (name, v, x = {}) => dishPic(v, { name, ...x }, true);
+    assert.equal(f('제육덮밥', { base: 'donburi', with: ['pork'] }).base, 'jeyuk-rice');
+    assert.equal(f('순두부찌개', { base: 'kimchi-stew' }).base, 'soup-red');
+    assert.equal(f('티라미수', { base: 'cake' }).base, 'tiramisu');
+    assert.equal(f('아아', { base: 'coffee' }).base, 'iced-americano');
+    assert.equal(f('양념치킨', { base: 'fried-chicken' }).base, 'yangnyeom-chicken');
+    // another kind in the name stays the model's (a side named with the chicken)
+    assert.equal(f('후라이드 + 치즈볼', { base: 'fried-chicken', set: ['cheese-balls'] }).base, 'fried-chicken');
+    assert.equal(f('오징어볶음 덮밥', { base: 'donburi', with: ['squid'] }).base, 'donburi');
+    // what a name's brackets leave out
+    assert.deepEqual(f('짬뽕 (오징어 빼고)', { base: 'jjamppong', with: ['squid', 'mussel', 'pork'] }).with, ['mussel', 'pork']);
+    // the model's words in Korean, odd cases and underscores
+    assert.deepEqual(dishPic({ base: 'fried rice', with: '새우, 계란' }, { name: '볶음밥' }).with, ['shrimp', 'egg']);
+    assert.deepEqual(dishPic({ base: 'fried_rice', with: ['Shrimp', 'EGG', 'scallions'] }, { name: 'Shrimp Fried Rice', ko: '새우볶음밥', option: 'no egg', optionKo: '계란 빼고' }).with, ['shrimp', 'scallion']);
+    // noodle dishes don't take noodles on top, nor ice cream a scoop, nor a salad lettuce
+    assert.deepEqual(f('짜장면', { base: 'jajangmyeon', with: ['noodles', 'pork', 'onion'] }).with, ['pork', 'onion']);
+    assert.deepEqual(f('아이스크림', { base: 'ice-cream', with: ['ice-cream-scoop', 'chocolate'] }).with, ['chocolate']);
+    // sizes
+    assert.equal(f('피자', { base: 'pizza' }, { option: '사이즈업' }).size, 'large');
+    assert.equal(f('소 곱창 구이', { base: 'gopchang', size: 'large' }).size, 'large');
+    // dishes drawn with the nearest picture
+    for (const [n, b] of [['宫保鸡丁', 'stirfry-red'], ['불고기 정식', 'galbi'], ['불고기버거', 'burger'], ['짜파게티', 'jajangmyeon'], ['sweet and sour pork', 'tangsuyuk'], ['깐쇼새우', 'dakgangjeong'], ['오뎅', 'soup-white'], ['핫바', 'skewer'], ['생선까스', 'tonkatsu'], ['paella', 'risotto'], ['quiche', 'pie'], ['춘권', 'twigim']])
+        assert.equal(guessPic(n).base, b, n);
 });
