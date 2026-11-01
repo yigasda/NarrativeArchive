@@ -414,3 +414,12 @@ test('a delivery paid from last December goes in the ledger in the year before',
     // the bank lists them in story order: December first
     assert.deepEqual(p.money.tx.map(t => t.time.slice(0, 5)), ['12-30', '01-01']);
 });
+
+test('a file saved again takes the new time (a clock alone is that day), and an unreadable value blanks nothing', () => {
+    const { p } = setup();
+    applyLife(p, { id: 'cv', at: 5, date: '10-26', time: '16:00' }, { files: [{ change: 'f1', time: '16:00' }] }, true);
+    assert.equal(p.life.files.items[0].time, '10-26 16:00');
+    applyLife(p, { id: 'cv2', at: 6, date: '10-26', time: '17:00' }, { files: [{ change: 'f1', time: 'soon', look: 'Contract' }] }, true);
+    assert.equal(p.life.files.items[0].time, '10-26 16:00');
+    assert.equal(p.life.files.items[0].look, 'contract');
+});

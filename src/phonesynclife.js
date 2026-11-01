@@ -110,7 +110,8 @@ export function applyLife(p, e, phone, on) {
     const push = (path, row, app) => { boxAt(p, path, true).push(row); out.effects.push({ type: 'push', path, item: structuredClone(row) }); out.apps.add(app); };
     const tag = (row, k, c) => ({ ...row, id: `sync:${e.id}:${c}${k}`, ev: e.id, sourceIndex: e.at });
     // only the fields the model wrote, cleaned as a whole record would be
-    const given = (raw, clean, keys) => Object.fromEntries(keys.filter(k => raw[k] !== undefined && raw[k] !== '' && raw[k] !== null).map(k => [k, clean[k]]));
+    // what the model gave and the parser kept (a value it couldn't read never blanks the one there)
+    const given = (raw, clean, keys) => Object.fromEntries(keys.filter(k => raw[k] !== undefined && raw[k] !== '' && raw[k] !== null && clean[k] !== '' && clean[k] !== undefined && clean[k] !== null).map(k => [k, clean[k]]));
     arr(phone.alarms).forEach((a, k) => {
         if (!a || typeof a !== 'object') return;
         const clean = alarmOf(a), was = a.change && (L.clock?.alarms || []).find(o => o.id === a.change);
@@ -121,9 +122,10 @@ export function applyLife(p, e, phone, on) {
     });
     arr(phone.files).forEach((x, k) => {
         if (!x || typeof x !== 'object') return;
-        const clean = fileOf(x), was = x.change && (L.files?.items || []).find(o => o.id === x.change);
+        // a time without its day ("16:00") is the event's day
+        const clean = fileOf(/^\d{1,2}:\d{2}$/.test(String(x.time || '').trim()) ? { ...x, time: `${e.date} ${x.time}` } : x), was = x.change && (L.files?.items || []).find(o => o.id === x.change);
         if (was) {
-            const vals = given(x, clean, ['name', 'folder', 'opened', 'preview', 'look', 'ko', 'tag']);
+            const vals = given(x, clean, ['name', 'folder', 'time', 'opened', 'preview', 'look', 'ko', 'tag']);
             if (x.deleted === true) vals.trashed = e.date;
             return change('life.files.items', was, vals, '파일');
         }
