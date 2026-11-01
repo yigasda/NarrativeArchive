@@ -426,9 +426,12 @@ function cardLook(p, a, k) {
     const name = String(a?.name || ''), bank = mo(p).bank.name || '', [c1, c2] = BANK_C[hashOf(bank) % BANK_C.length];
     if (a?.kind === 'credit') {
         const has = mo(p).bank.accounts.filter(x => x.kind !== 'credit').reduce((n, x) => n + Math.max(0, Number(x.balance) || 0) / (SCALE[x.currency] || 1), 0);
-        if (/black|schwarz|블랙|infinite|centurion/i.test(name) || has >= 400000) return { tier: 'BLACK', bg: '#17181b', ink: '#d9dbe0', pat: 'brushed', chipc: '#b8bcc4', mono: true };
-        if (/platin|플래티넘/i.test(name) || has >= 120000) return { tier: 'PLATINUM', bg: '#c9ccd2', ink: '#23272e', pat: 'platinum', chipc: '#dcd6c4' };
-        if (/gold|골드/i.test(name) || has >= 40000) return { tier: 'GOLD', bg: '#b8913a', ink: '#2b2210', pat: 'guilloche', chipc: '#efe0b0' };
+        // the card's own name or what the owner holds, and never below the owner's tier at the bank (더보기)
+        const own = /black|schwarz|블랙|infinite|centurion/i.test(name) || has >= 400000 ? 3 : /platin|플래티넘/i.test(name) || has >= 120000 ? 2 : /gold|골드/i.test(name) || has >= 40000 ? 1 : 0;
+        const lv = Math.max(own, { PRIVATE: 3, PLATINUM: 2, GOLD: 1 }[bankTier(p).t?.k] || 0);
+        if (lv === 3) return { tier: 'BLACK', bg: '#17181b', ink: '#d9dbe0', pat: 'brushed', chipc: '#b8bcc4', mono: true };
+        if (lv === 2) return { tier: 'PLATINUM', bg: '#c9ccd2', ink: '#23272e', pat: 'platinum', chipc: '#dcd6c4' };
+        if (lv === 1) return { tier: 'GOLD', bg: '#b8913a', ink: '#2b2210', pat: 'guilloche', chipc: '#efe0b0' };
     }
     if (/student|studi|jugend|youth|junior|학생|청소년|대학/i.test(name)) return { tier: '', bg: '#e9eef6', ink: '#1d2f55', pat: 'stripe', chipc: '#d8b45a' };
     return { tier: '', bg: a?.kind === 'credit' ? c2 : c1, ink: '#fff', pat: PATS[(hashOf(`${bank}${a?.last4 || ''}`) + k) % PATS.length], chipc: '' };
