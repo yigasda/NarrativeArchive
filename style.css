@@ -2447,10 +2447,10 @@ body.na_darkui .na_ap2 .na_append_ta { background: #2E2621 !important; border: 1
 body:not(.na_darkui) .na_ap3 .na_v2_card { border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 body.na_darkui .na_ap3 .na_v2_card { border-color: transparent; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 6px 16px rgba(0, 0, 0, 0.22); }
 .na_ap3 .na_ap3_file.na_append_file_btn { background: transparent; border: 0; padding: 2px; }
-/* light: the window in the settings panel's paper (#FFFAF6), so the cream cards stand out as they do there; selected switch white */
-body:not(.na_darkui) dialog.popup.na_ap3_dlg:has(.na_ap3):not(#na_x) { background: #FFFAF6 !important; }
+/* light: as the settings panel — the window stays cream, the cards are its white paper (#FFFAF6), the selected switch white */
+body:not(.na_darkui) .na_ap3 .na_v2_card { background: #FFFAF6; }
 body:not(.na_darkui) .na_ap3 .na_ap3_seg button.on { background: #FFFFFF; }
-body:not(.na_darkui) .na_ap3_bar { background: linear-gradient(rgba(255, 250, 246, 0), #FFFAF6 14px); }
+body:not(.na_darkui) .na_ap3 :is(.na_ap3_fbody, .na_ap3_fdock) { background: #FFFAF6; }
 /* the draft card */
 .na_ap3_sum { display: flex; flex-direction: column; gap: 10px; padding: 14px; margin-top: 14px; }
 .na_ap3_head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
