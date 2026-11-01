@@ -23,7 +23,7 @@ import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js
 import { bankDisplayCurrency, bankAcct, bankHome, bankTx, cardView, orderView, passView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
 import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './phoneweb.js';
 import { fillDelivery, fillLife } from './phonelife.js';
-import { alarmScreen, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, heartScreen, itemScreen, orderScreen, ordersScreen, payScreen, rateScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, waterScreen, weatherScreen, weightScreen, workScreen, worldScreen } from './phonelifeapps.js';
+import { alarmScreen, setStory, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, heartScreen, itemScreen, orderScreen, ordersScreen, payScreen, rateScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, waterScreen, weatherScreen, weightScreen, workScreen, worldScreen } from './phonelifeapps.js';
 import { openGlossary } from './translate.js';
 import { confirm, esc } from './util.js';
 
@@ -33,6 +33,7 @@ export { phoneBlock } from './phonedata.js';
 function screen(p, view, m, roster, ui) {
     const now = storyNow(p);
     showNow(now);
+    setStory(p);
     // "view:id": an id may hold colons itself (a reflection's records are "sync:event:m0")
     const cut = view.indexOf(':'), v = cut < 0 ? view : view.slice(0, cut), i = cut < 0 ? undefined : view.slice(cut + 1);
     const life = { clock: () => clockScreen(p, now), timer: () => timerScreen(p, now), wclock: () => worldScreen(p, now), alarm: () => alarmScreen(p, now, i), health: () => healthScreen(p, now, i || ''), hsteps: () => stepsScreen(p, now, i), hsleep: () => sleepScreen(p, now, i), hcmp: () => compareScreen(p, now), hwork: () => workScreen(p, now, i), hheart: () => heartScreen(p, now, i), hwater: () => waterScreen(p, now, i), hweight: () => weightScreen(p, now, i),

@@ -35,10 +35,20 @@ const toMin = t => { const mt = String(t || '').match(/(\d{1,2}):(\d{2})/); retu
 const hm = n => `${pad(Math.floor(((n % 1440) + 1440) % 1440 / 60))}:${pad(((n % 60) + 60) % 60)}`;
 const dur = min => (min >= 60 ? `${Math.floor(min / 60)}시간 ${min % 60}분` : `${min}분`);
 const durBig = min => `${Math.floor(min / 60)}<span>시간</span> ${min % 60}<span>분</span>`;
-const n0 = v => (v === null || v === undefined ? '—' : Number(v).toLocaleString('de-DE'));
+// numbers as the phone's country writes them: 6,000 · 2.0 in Korea, the US, Japan…; 6.000 · 2,0 in Germany and most of Europe
+const DOT_LANDS = new Set(['KR', 'US', 'GB', 'JP', 'CN', 'TW', 'HK', 'CA', 'AU', 'NZ', 'IE', 'IN', 'SG', 'PH', 'MY', 'TH', 'IL', 'MX']);
+let STORY = { year: new Date().getFullYear(), now: '', dot: false };
+// the phone being drawn: its year (carried over New Year by the reflection), its now and its number style
+export function setStory(p) {
+    const y = Number(p?.year) || Number(String(p?.money?.asOf || p?.investment?.date || '').slice(0, 4)) || new Date().getFullYear();
+    STORY = { year: y, now: String(storyNow(p) || p?.now || '').slice(0, 5), dot: DOT_LANDS.has(String(p?.lives || p?.country || '').toUpperCase()) };
+}
+const n0 = v => (v === null || v === undefined ? '—' : Number(v).toLocaleString(STORY.dot ? 'en-US' : 'de-DE'));
 const md = s => { const mt = String(s || '').match(/^(\d{2})-(\d{2})/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]) } : null; };
-const YEAR = 2025; // weekdays need a year; the story's dates carry none
-const weekday = day => { const x = md(day); return x ? new Date(Date.UTC(YEAR, x.mo - 1, x.d)).getUTCDay() : 0; };
+// a story day as a real date: the story's year, and a day across New Year from its now in the year before or after
+const dayGap = (a, b) => { const A = md(a), B = md(b); if (!A || !B) return 0; let g = (Date.UTC(2001, B.mo - 1, B.d) - Date.UTC(2001, A.mo - 1, A.d)) / 864e5; if (g < -180) g += 365; if (g > 180) g -= 365; return g; };
+const realDate = (day, h = 0) => { const x = md(day), n = md(STORY.now); if (!x) return null; if (!n) return new Date(Date.UTC(STORY.year, x.mo - 1, x.d, h)); return new Date(Date.UTC(STORY.year, n.mo - 1, n.d + dayGap(STORY.now, day), h)); };
+const weekday = day => realDate(day)?.getUTCDay() ?? 0;
 const WD = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'], WDK = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' };
 const daysLine = days => { const s = days.join(','); return s === 'mon,tue,wed,thu,fri' ? '평일' : s === 'sat,sun' ? '주말' : days.length === 7 ? '매일' : days.map(d => WDK[d]).join(' '); };
 const ampm = t => { const m = toMin(t); return m === null ? ['', ''] : [`${(Math.floor(m / 60) % 12) || 12}:${pad(m % 60)}`, m < 720 ? 'AM' : 'PM']; };
@@ -129,7 +139,7 @@ export function timerScreen(p, now) {
 const zoneMin = (tz, at) => { try { const f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(at); const g = k => Number(f.find(x => x.type === k)?.value); return Math.round((Date.UTC(g('year'), g('month') - 1, g('day'), g('hour') % 24, g('minute')) - at.getTime()) / 6e4); } catch { return null; } };
 const hereZone = lf => { const pl = String(lf.weather.here.place || '').toLowerCase(); return (lf.weather.cities.find(c => c.tz && pl && (pl.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(pl.split(/[ ,]/)[0]))) || lf.weather.cities.find(c => c.tz))?.tz || ''; };
 function cityTime(p, lf, c) {
-    const n = now5(p), x = md(n), at = x ? new Date(Date.UTC(YEAR, x.mo - 1, x.d, 12)) : new Date();
+    const n = now5(p), at = realDate(n, 12) || new Date();
     const here = hereZone(lf), a = c.tz ? zoneMin(c.tz, at) : null, b = here ? zoneMin(here, at) : a;
     const off = a !== null && b !== null ? Math.round((a - b) / 60) : 0, t = toMin(n.slice(6)) ?? toMin(lf.weather.here.time) ?? 12 * 60;
     const local = t + off * 60, night = (() => { const ss = toMin(c.sunset) ?? 18 * 60, sr = toMin(c.sunrise) ?? 6 * 60 + 30; const l = ((local % 1440) + 1440) % 1440; return l >= ss || l < sr; })();
@@ -182,7 +192,7 @@ const lateMin = t => { const m = toMin(t); return m === null ? null : m < 12 * 6
 // the same numbers each time a day is drawn: a little random seeded by the date (and what it is for)
 const seeded = (key) => { let s = [...String(key)].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 233280, 7); return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; }; };
 const usualSleep = u => (u.sleep && u.wake ? ((toMin(u.wake) - toMin(u.sleep)) + 1440) % 1440 : null);
-const comma = v => String(v).replace('.', ',');
+const comma = v => (STORY.dot ? String(v) : String(v).replace('.', ','));
 // a day's choice among 일 · 주 · 월, carried in data-i as "MM-DD|w"
 const pickOf = (i = '') => { const [day, mode] = String(i || '').split('|'); return { day: day || '', mode: mode || '' }; };
 const seg = (go, day, on, modes) => `<div class="lf_seg">${modes.map(([k, n]) => `<button type="button" data-go="${go}" data-i="${day}|${k}" class="${k === on ? 'on' : ''}">${n}</button>`).join('')}</div>`;
@@ -233,18 +243,19 @@ function waterDay(d, u) {
 }
 // coffee: their usual cups (the first soon after waking) and the coffee ordered for delivery that day, each its own row
 const COFFEE = /coffee|kaffee|latte|americano|espresso|cappuccino|flat white|커피|아메리카노|라떼|카푸치노|에스프레소|콜드브루|cold brew/i;
+const DECAF = /디카페인|decaf|koffeinfrei|entkoffeiniert|カフェインレス|デカフェ|无咖啡因|低咖啡因/i;
 const CAFE = /caf[eé]|coffee|kaffee|espresso|starbucks|스타벅스|카페|커피|이디야|투썸|메가 ?커피|빽다방|컴포즈|할리스|폴 ?바셋|블루보틀|blue bottle|costa|tim hortons|dunkin|tchibo|doutor|ドトール|スタバ|tully|peet/i;
 function coffeeDay(p, d, u) {
     const r = seeded(`${d.date}:coffee`), wake = toMin(d.wake) ?? 450, out = [];
     // a coffee paid for at a café that day (the bank's own row, not a delivery's) stands in for one of the usual cups
     const cafe = (p.money?.tx || []).filter(t => String(t.time).slice(0, 5) === d.date && t.amount < 0 && !t.delivery && CAFE.test(`${t.who || ''} ${t.ko || ''} ${t.memo || ''}`))
-        .map(t => ({ t: String(t.time).slice(6, 11) || hm(wake + 30), what: t.ko || t.who, mg: 150, from: '' }));
+        .map(t => { const decaf = DECAF.test(`${t.who || ''} ${t.ko || ''} ${t.memo || ''}`); return { t: String(t.time).slice(6, 11) || hm(wake + 30), what: [t.ko || t.who, decaf ? '디카페인' : ''].filter(Boolean).join(' · '), mg: decaf ? 5 : 150, from: '' }; });
     const cups = u.coffee ? Math.max(0, Math.round(u.coffee + (r() - 0.45) * 1.4) - cafe.length) : 0;
     out.push(...cafe);
     for (let k = 0; k < cups; k++) out.push({ t: hm(k ? 780 + Math.round(r() * 200) + k * 20 : wake + 20 + Math.round(r() * 40)), what: u.coffeeKo || u.coffeeKind || '커피', mg: 120, from: '' });
     for (const o of p.delivery?.orders || []) {
         if (String(o.time).slice(0, 5) !== d.date || o.status === 'cancelled') continue;
-        for (const x of o.items || []) if (['coffee', 'iced-americano'].includes(x.pic?.base) || COFFEE.test(`${x.name} ${x.ko || ''}`)) for (let q = 0; q < (x.qty || 1); q++) out.push({ t: String(o.time).slice(6, 11), what: x.ko || x.name, mg: 150, from: o.shop });
+        for (const x of o.items || []) if (['coffee', 'iced-americano'].includes(x.pic?.base) || COFFEE.test(`${x.name} ${x.ko || ''}`)) for (let q = 0; q < (x.qty || 1); q++) out.push({ t: String(o.time).slice(6, 11), what: x.ko || x.name, mg: DECAF.test(`${x.name} ${x.ko || ''} ${x.option || ''} ${x.optionKo || ''}`) ? 5 : 150, from: o.shop });
     }
     return out.sort((a, b) => toMin(a.t) - toMin(b.t));
 }
