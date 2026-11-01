@@ -360,3 +360,11 @@ test('the shop list stays at five: the oldest one not kept as a favourite makes 
     revertEffects(m, p, r.effects);
     assert.deepEqual(p.delivery.shops.map(x => x.name).sort(), ['A', 'B', 'C', 'D', 'E']);
 });
+
+test('a reflected dish keeps its option in Korean, and the picture follows it', () => {
+    const { m, p } = setup();
+    applyMoney(m, p, { ...ev('lunch', 9, '10-26'), money: { deliveries: [{ shop: 'Kumo Sushi', items: [{ name: 'チーズピザ', ko: '치즈피자', option: 'チーズ抜き', optionKo: '치즈 빼고', qty: 1, price: 12, pic: { base: 'pizza', with: ['cheese', 'tomato'] } }], status: 'delivered', occurrence: 'new' }] } }, opts);
+    const it = p.delivery.orders.at(-1).items[0];
+    assert.equal(it.optionKo, '치즈 빼고');
+    assert.deepEqual(it.pic.with, ['tomato']);
+});

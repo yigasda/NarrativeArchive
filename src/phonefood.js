@@ -219,7 +219,8 @@ const idOf = (w, set) => {
     for (const c of [t, WORD[t], t.replace(/\s+/g, '-'), t.replace(/e?s$/, ''), WORD[t.replace(/e?s$/, '')]]) if (c && set[c]) return c;
     return '';
 };
-export const picFromWords = (v, name = '') => {
+// the model's words as drawn ids, without the name's help (dishPic adds that)
+const wordsPic = (v, name = '') => {
     if (!v || typeof v !== 'object') return null;
     const given = String(v.base || '').trim(), named = guessPic(name).base;
     // the dish's own name may point at a finer kind of the same base ("juk" named 단호박죽 → "juk-pumpkin", "ramen" named
@@ -228,10 +229,93 @@ export const picFromWords = (v, name = '') => {
     // a list may come as one string ("beef", "fries, cola", "fries and cola")
     const words = a => (Array.isArray(a) ? a : typeof a === 'string' ? a.split(/\s*(?:,|\/|&|\+|\band\b|\bwith\b)\s*/i) : []);
     const ids = (a, set, n) => [...new Set(words(a).map(x => idOf(x, set)).filter(Boolean))].slice(0, n);
-    // no ingredients given: the ones the dish's name says (전복죽 → abalone), when the name points at this same base
-    const guess = guessPic(name), tops = ids(v.with, T, 3);
-    return { base, with: tops.length ? tops : guess.base === base ? guess.with.slice(0, 3) : [], size: v.size === 'large' ? 'large' : 'regular', set: ids(v.set, S, 2) };
+    return { base, with: ids(v.with, T, 3), size: v.size === 'large' ? 'large' : 'regular', set: ids(v.set, S, 2) };
 };
+// ---- what the dish's own words say, on top of the model's picture
+// Korean words for toppings and sides. Names read only words of two letters or more (김가네's 김, 햄버거's 햄 stay out);
+// an option may also say a one-letter one ("파 빼고")
+const KO_T = { 딸기: 'strawberry', 망고: 'mango', 샤인머스캣: 'grape', 포도: 'grape', 한라봉: 'tangerine', 블루베리: 'blueberry', 단팥: 'red-bean', 초코: 'chocolate', 초콜릿: 'chocolate', 녹차: 'matcha', 말차: 'matcha',
+    우삼겹: 'beef-belly', 차돌: 'beef-belly', 차돌박이: 'beef-belly', 소고기: 'beef', 쇠고기: 'beef', 불고기: 'beef', 한우: 'beef', 돼지고기: 'pork', 닭고기: 'chicken', 닭가슴살: 'chicken', 치킨: 'chicken', 베이컨: 'bacon', 스팸: 'ham', 차슈: 'chashu', 다진고기: 'mince',
+    새우: 'shrimp', 전복: 'abalone', 오징어: 'squid', 홍합: 'mussel', 게살: 'crab', 꽃게: 'crab', 대게: 'crab', 크랩: 'crab', 연어: 'salmon', 광어: 'flatfish', 참치: 'tuna', 장어: 'eel', 날치알: 'roe', 명란: 'roe',
+    계란: 'egg', 달걀: 'egg', 계란후라이: 'fried-egg', 계란프라이: 'fried-egg', 치즈: 'cheese', 눈꽃치즈: 'snow-cheese', '눈꽃 치즈': 'snow-cheese', 모짜렐라: 'mozzarella', 모차렐라: 'mozzarella', 대파: 'scallion', 쪽파: 'scallion',
+    양파: 'onion', 버섯: 'mushroom', 당근: 'carrot', 애호박: 'zucchini', 옥수수: 'corn', 감자: 'potato', 김치: 'kimchi', 숙주: 'sprouts', 콩나물: 'sprouts', 깻잎: 'perilla', 고추: 'chili', 청양: 'chili', 할라피뇨: 'chili',
+    브로콜리: 'broccoli', 토마토: 'tomato', 아보카도: 'avocado', 김가루: 'seaweed', 미역: 'seaweed', 참깨: 'sesame', 떡사리: 'rice-cake', 어묵: 'fishcake', 오뎅: 'fishcake', 유부: 'tofu-skin', 빵가루: 'crumbs' };
+const KO_T1 = { 파: 'scallion', 김: 'seaweed', 깨: 'sesame', 햄: 'ham', 떡: 'rice-cake', 콘: 'corn', 게: 'crab', 팥: 'red-bean', 닭: 'chicken', 귤: 'tangerine' };
+const KO_S = { 감자튀김: 'fries', 감튀: 'fries', 콜라: 'cola', 제로콜라: 'cola', 사이다: 'soda', 맥주: 'beer', 소주: 'soju', 치즈볼: 'cheese-balls', 계란찜: 'egg-custard', 공기밥: 'rice', 미소국: 'miso', 단무지: 'danmuji', 생수: 'water' };
+// a base that is itself a side doesn't take that side again (콜라 단품 + 세트 콜라)
+const SELF_SIDE = { cola: 'cola', cider: 'soda', beer: 'beer', fries: 'fries', 'cheese-ball': 'cheese-balls', gunmandu: 'dumplings', dimsum: 'dumplings' };
+const esc = w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// every word, longest first so 눈꽃치즈 isn't read as 치즈 and 감자튀김 isn't 감자; English only as whole words
+const LEX = (() => {
+    const out = [], en = {};
+    for (const [w, id] of Object.entries(WORD)) if (T[id] || S[id]) en[w] = T[id] ? ['t', id] : ['s', id];
+    for (const id of Object.keys(S)) en[id.replace(/-/g, ' ')] = ['s', id];
+    for (const id of Object.keys(T)) en[id.replace(/-/g, ' ')] = ['t', id];
+    for (const [w, [k, id]] of Object.entries(en)) out.push([w, k, id, new RegExp(`(?<![a-z])${esc(w)}(?:e?s)?(?![a-z])`, 'gi'), 0]);
+    for (const [w, id] of Object.entries(KO_T)) out.push([w, 't', id, new RegExp(esc(w), 'g'), 0]);
+    for (const [w, id] of Object.entries(KO_S)) out.push([w, 's', id, new RegExp(esc(w), 'g'), 0]);
+    for (const [w, id] of Object.entries(KO_T1)) out.push([w, 't', id, new RegExp(`(?<=(?:^|[^가-힣])노?)${w}(?=$|[^가-힣]|빼|제외|없이|추가|대신|많이|더|듬뿍)`, 'g'), 1]);
+    return out.sort((a, b) => b[0].length - a[0].length);
+})();
+// the words that name the base itself (치즈볼's 치즈, 김치죽's 김치, 양념치킨's 치킨) go first; what they imply stays (전복죽 → 전복)
+const blankBase = (s, base) => {
+    const keep = [];
+    const kin = b => b === base || base.startsWith(`${b}-`) || b.startsWith(`${base}-`);
+    for (const [re, b, w] of GUESS) if (kin(b) && w && re.test(s)) keep.push(...w);
+    for (const l of String(B[base]?.[0] || '').split('·')) if (l.trim()) s = s.replace(new RegExp([...l.replace(/\s+/g, '')].map(esc).join('\\s?'), 'g'), m => ' '.repeat(m.length));
+    for (const [re, b, w] of GUESS) if (kin(b) && !w) s = s.replace(new RegExp(re.source, 'gi'), m => ' '.repeat(m.length));
+    return [s, keep];
+};
+// the words in a text, in the order they stand: { at, end, k: 't' | 's', id }
+const read = (text, one = false) => {
+    let s = String(text || '');
+    const out = [];
+    for (const [, k, id, re, single] of LEX) {
+        if (single && !one) continue;
+        s = s.replace(re, (m, at) => { out.push({ at, end: at + m.length, k, id }); return ' '.repeat(m.length); });
+    }
+    return out.sort((a, b) => a.at - b.at);
+};
+const OUT_AFTER = /(?:^|[\s,·/])(?:을|를|은|는|만|도)?\s*(?:빼|제외|없이|대신|x(?![a-z0-9]|\s*\d)|out\b)/i, OUT_BEFORE = /(?:^|[^가-힣a-z])(?:노|no|without|hold(?: the)?|minus)\s*$/i;
+const ADD_AFTER = /^\s*(?:을|를)?\s*(?:추가|더|많이|듬뿍|올려|넣어|extra\b|add)/i;
+// an option's words: what it leaves out, what it adds ("양파, 마늘 빼고" leaves out both, words it doesn't know between;
+// "치즈 빼고 새우 추가")
+const readOption = text => {
+    const s = String(text || ''), words = read(s, true), out = [], add = [];
+    let wait = [];
+    words.forEach((w, i) => {
+        const before = s.slice(i ? words[i - 1].end : 0, w.at), after = s.slice(w.end, words[i + 1]?.at ?? s.length);
+        if (OUT_BEFORE.test(before)) { out.push(w); return; }
+        wait.push(w);
+        if (ADD_AFTER.test(after)) { add.push(...wait); wait = []; } else if (OUT_AFTER.test(after)) { out.push(...wait); wait = []; }
+    });
+    return { out, add: [...add, ...wait] };
+};
+const BIG = /특대|곱빼기|대자|라지|(?<![a-z])(?:large|xl|big)(?![a-z])/i, BIG1 = /(?<![가-힣A-Za-z])(?:대|L)(?![가-힣A-Za-z])/;
+const hangul = s => /[가-힣]/.test(String(s || ''));
+// a menu item's picture: the model's (words from the update round, ids from a fill), then its name and option
+// fill in what the model left out. x: { name, ko, option, optionKo }
+export const dishPic = (v, x = {}, ids = false) => {
+    const p = ids ? picOf(v) : wordsPic(v, `${x.ko || ''} ${x.name || ''}`);
+    if (!p) return null;
+    if (ids) { const named = guessPic(`${x.ko || ''} ${x.name || ''}`).base; if (named.startsWith(`${p.base}-`)) p.base = named; }
+    // the option as the code can read it: Korean (its own, or its translation); one in another tongue without one
+    // is left to the model, which read it — what it left out isn't put back
+    const opt = x.optionKo || (hangul(x.option) ? x.option : ''), blind = !!String(x.option || '').trim() && !opt;
+    const names = [...new Set([x.ko, x.name].map(t => String(t || '').trim()).filter(Boolean))];
+    // the words the name says come first; what its kind of dish usually has (소고기죽's carrot) only after the model's
+    const fromName = [], usual = [];
+    for (const t of names) { const [s, keep] = blankBase(t, p.base); fromName.push(...read(s)); usual.push(...keep); }
+    const o = blind ? { out: [], add: [] } : readOption(opt);
+    const gone = new Set(o.out.map(w => `${w.k}:${w.id}`)), cut = (k, list) => [...new Set(list)].filter(id => !gone.has(`${k}:${id}`));
+    const of = (k, ws) => ws.filter(w => w.k === k).map(w => w.id);
+    const tops = blind ? p.with : cut('t', [...of('t', fromName), ...of('t', o.add), ...p.with, ...usual]);
+    const sides = (blind ? p.set : cut('s', [...of('s', fromName), ...of('s', o.add), ...p.set])).filter(id => id !== SELF_SIDE[p.base]);
+    const big = p.size === 'large' || [...names, opt].some(t => BIG.test(t) || BIG1.test(t));
+    return { base: p.base, with: tops.slice(0, 3), size: big ? 'large' : 'regular', set: sides.slice(0, 2) };
+};
+// plain words and a name (older callers): the same as dishPic with nothing more known
+export const picFromWords = (v, name = '') => dishPic(v, { name });
 // words → a base, for dishes without a picture (older phones, the update round): first match wins
 const GUESS = [[/뿌링클|눈꽃 ?치즈 ?치킨|snow ?cheese chicken/i, 'fried-chicken', ['snow-cheese']], [/팥 ?죽|red ?bean (porridge|soup)|patjuk|단팥죽|동지죽/i, 'juk-redbean'], [/김치 ?죽|kimchi (porridge|congee)/i, 'juk-kimchi'], [/단?호박 ?죽|pumpkin (porridge|soup|congee)|hobakjuk/i, 'juk-pumpkin'], [/치즈볼|cheese ?ball/i, 'cheese-ball'], [/군만두|fried dumpling|yaki ?gyoza/i, 'gunmandu'], [/치즈스틱|cheese ?stick|mozzarella stick/i, 'cheese-stick'], [/웨지|wedge/i, 'wedges'], [/콘치즈|corn cheese/i, 'corn-cheese'],
     [/아아|아이스 ?아메리카노|iced? ?americano|cold brew|콜드브루/i, 'iced-americano'], [/콜라|cola|coke|pepsi/i, 'cola'], [/사이다|sprite|7up|soda|limo|lemonade|탄산/i, 'cider'], [/맥주|beer|bier|lager|ipa|하이볼|highball/i, 'beer'],
@@ -241,12 +325,12 @@ const GUESS = [[/뿌링클|눈꽃 ?치즈 ?치킨|snow ?cheese chicken/i, 'fried
 [/돈코츠|tonkotsu/i, 'ramen-tonkotsu'], [/미소 ?라멘|miso ?ramen/i, 'ramen-miso'], [/탄탄|매운 ?라멘|spicy ?ramen|tantan/i, 'ramen-spicy'], [/green curry|그린 ?커리|그린 ?카레|gaeng/i, 'curry-green'],
     [/aglio|olio|오일 ?파스타|알리오|봉골레|vongole/i, 'pasta-oil'], [/로제 ?(파스타|스파게티|펜네)|rosé? ?(pasta|penne)/i, 'pasta-rose'], [/bianca|white pizza|화이트 ?피자|고르곤졸라|gorgonzola|quattro formaggi|콰트로/i, 'pizza-white'],
     [/크림 ?(수프|스프)|cream soup|chowder|차우더|potage|포타주|콘 ?(수프|스프)|corn soup|감자 ?(수프|스프)/i, 'soup-cream'], [/백짬뽕|white jjamppong/i, 'jjamppong-white'], [/로제 ?떡볶이/i, 'tteokbokki-rose'], [/크림 ?떡볶이|까르보 ?떡볶이/i, 'tteokbokki-cream'],[/전복|abalone/i, 'juk', ['abalone', 'seaweed']], [/(?:소고기|쇠고기|beef).*(?:죽|porridge|congee|juk)/i, 'juk', ['beef', 'carrot', 'scallion']], [/죽|porridge|congee|juk/i, 'juk'], [/양념|yangnyeom|spicy chicken/i, 'yangnyeom-chicken'], [/치킨|chicken wings|fried chicken|hähnchen|brathähnchen/i, 'fried-chicken'], [/너겟|nugget/i, 'nuggets'],
-    [/떡볶이|tteok/i, 'tteokbokki'], [/김밥|gimbap|kimbap/i, 'gimbap'], [/라면|ramyeon/i, 'ramyeon'], [/라멘|ramen/i, 'ramen'], [/순대|sundae/i, 'sundae'], [/튀김|tempura/i, 'twigim'], [/비빔밥|bibimbap/i, 'bibimbap'], [/제육|jeyuk/i, 'jeyuk-rice'],
+    [/떡볶이|tteok/i, 'tteokbokki'], [/김밥|gimbap|kimbap/i, 'gimbap'], [/라면|ramyeon/i, 'ramyeon'], [/라멘|ramen/i, 'ramen'], [/순대|sundae/i, 'sundae'], [/fries|pommes|감자 ?튀김|감튀/i, 'fries'], [/튀김|tempura/i, 'twigim'], [/비빔밥|bibimbap/i, 'bibimbap'], [/제육|jeyuk/i, 'jeyuk-rice'],
     [/부대찌개|budae/i, 'budae-jjigae'], [/김치찌개|kimchi.?stew/i, 'kimchi-stew'], [/된장|doenjang/i, 'doenjang-stew'], [/감자탕|gamjatang/i, 'gamjatang'], [/국밥|gukbap|해장/i, 'gukbap'], [/떡국|만둣국|tteokguk/i, 'tteokguk'],
     [/족발|jokbal/i, 'jokbal'], [/보쌈|bossam/i, 'bossam'], [/삼겹|samgyeop|pork belly/i, 'samgyeopsal'], [/짜장|자장|jajang/i, 'jajangmyeon'], [/짬뽕|jjamppong/i, 'jjamppong'], [/탕수육|tangsu/i, 'tangsuyuk'], [/냉면|naengmyeon/i, 'naengmyeon'],
     [/마라|mala/i, 'malatang'], [/찜닭|jjimdak/i, 'jjimdak'], [/닭갈비|dakgalbi/i, 'dakgalbi'], [/곱창|막창|gopchang/i, 'gopchang'], [/칼국수|kalguksu/i, 'kalguksu'], [/우동|udon/i, 'udon'], [/소바|soba/i, 'soba'],
     [/돈가스|돈까스|katsu|schnitzel/i, 'tonkatsu'], [/유부초밥|inari/i, 'inari'], [/오므라이스|omurice/i, 'omurice'], [/회덮밥|chirashi/i, 'hoedeopbap'], [/덮밥|돈부리|donburi|gyudon|don\b/i, 'donburi'], [/마끼|maki|롤|roll/i, 'maki'], [/모둠회|사시미|sashimi|\b회\b/i, 'sashimi'],
-    [/초밥|스시|sushi|nigiri/i, 'sushi'], [/스테이크|steak/i, 'steak'], [/burger|버거/i, 'burger'], [/fries|pommes|감자튀김/i, 'fries'], [/hot ?dog|핫도그|currywurst|wurst/i, 'hotdog'], [/pizza|피자/i, 'pizza'],
+    [/초밥|스시|sushi|nigiri/i, 'sushi'], [/스테이크|steak/i, 'steak'], [/burger|버거/i, 'burger'], [/hot ?dog|핫도그|currywurst|wurst/i, 'hotdog'], [/pizza|피자/i, 'pizza'],
     [/lasagn|라자냐/i, 'lasagna'], [/panna|carbonara|alfredo|cream|크림|로제/i, 'pasta-cream'], [/pasta|spaghetti|tagliatelle|penne|파스타|스파게티/i, 'pasta-tomato'], [/pho|쌀국수/i, 'pho'], [/pad ?thai|팟타이/i, 'pad-thai'], [/curry|카레|커리/i, 'curry'],
     [/dim ?sum|딤섬|만두|dumpling|gyoza/i, 'dimsum'], [/볶음밥|fried rice|nasi/i, 'fried-rice'], [/kebab|döner|doner|케밥/i, 'kebab'], [/taco|타코/i, 'tacos'], [/burrito|부리또/i, 'burrito'], [/poke|포케/i, 'poke'], [/salad|salat|샐러드/i, 'salad'],
     [/sandwich|panini|bagel|샌드위치/i, 'sandwich'], [/soup|suppe|수프|스프|eintopf/i, 'soup'], [/coffee|kaffee|latte|americano|커피|라떼/i, 'coffee'], [/bubble|boba|버블티|밀크티/i, 'bubble-tea'], [/juice|saft|주스|smoothie|soju|소주|water|wasser|생수/i, 'juice'],

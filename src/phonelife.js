@@ -8,7 +8,7 @@ import { datedRows } from './anniv.js';
 import { calendars } from './calendar.js';
 import { saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
-import { FOOD_IDS, picOf } from './phonefood.js';
+import { FOOD_IDS, dishPic } from './phonefood.js';
 import { arr, COUNTRIES, ensureIds, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, dayGap, fileOf, nightsToDays, parseWeather, weatherFrom } from './phonesynclife.js';
@@ -133,11 +133,11 @@ JSON (one object, nothing before or after it)
 {
   "shops": [{ "name", "ko", "cuisine", "rating", "reviews", "fee", "minOrder", "eta": like "25–35", "fav": true or false,
               "menu": [{ "name", "ko", "desc", "price", "top": true for the shop's best-known dish, "pic": { "base", "with": [], "size": "regular" | "large", "set": [] } }] }],
-  "orders": [{ "shop", "items": [{ "name", "ko", "option", "qty", "price": unit price, "pic" }], "fee", "tip", "discount",
+  "orders": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic" }], "fee", "tip", "discount",
                "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address": short,
                "left": where the courier left it, or "", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery": true or false, "for": how many people,
                "status", "account": last 4 digits or "cash", "paidBy": a transaction id from MONEY NOW, or "", "reviewed": true or false, "gift": who it was sent to, or "", "ev" }],
-  "cart": { "shop", "items": [{ "name", "ko", "option", "qty", "price", "pic" }], "noteShop", "noteShopKo", "noteRider", "noteRiderKo" } or null
+  "cart": { "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price", "pic" }], "noteShop", "noteShopKo", "noteRider", "noteRiderKo" } or null
 }
 Numbers are plain JSON numbers. "ev" is a word tag, never a number: the "ev" of its story event in PHONE NOW, a short new one like "pasta-night" for a story event without one, or "" for an everyday record.`;
 
@@ -201,7 +201,12 @@ export function parseLife(raw, now, lastDay = '') {
 }
 
 // ---- 배달: parse
-const dish = x => ({ name: line(x?.name, 60), ko: ko(x?.ko), option: line(x?.option, 60), qty: int(x?.qty, 1, 50) ?? 1, price: num(x?.price) ?? 0, ...(picOf(x?.pic) ? { pic: picOf(x.pic) } : {}) });
+const dish = x => {
+    const d = { name: line(x?.name, 60), ko: ko(x?.ko), option: line(x?.option, 60), optionKo: ko(x?.optionKo), qty: int(x?.qty, 1, 50) ?? 1, price: num(x?.price) ?? 0 };
+    if (!d.optionKo) delete d.optionKo;
+    const pic = dishPic(x?.pic, d, true);
+    return pic ? { ...d, pic } : d;
+};
 // tx: the bank's rows the model may point at ("paidBy": this order's payment is already there)
 export function parseDelivery(raw, accounts = [], tx = []) {
     if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 배달 내용(JSON)을 찾지 못했어요');
@@ -211,7 +216,7 @@ export function parseDelivery(raw, accounts = [], tx = []) {
     const cart = raw.cart && arr(raw.cart.items).length ? { shop: line(raw.cart.shop, 60), items: arr(raw.cart.items).map(dish).filter(x => x.name).slice(0, 8), noteShop: line(raw.cart.noteShop, 120), noteShopKo: ko(raw.cart.noteShopKo), noteRider: line(raw.cart.noteRider, 120), noteRiderKo: ko(raw.cart.noteRiderKo) } : null;
     return {
         shops: arr(raw.shops).map(s => ({ name: line(s?.name, 60), ko: ko(s?.ko), cuisine: line(s?.cuisine, 30), rating: num(s?.rating), reviews: int(s?.reviews, 0, 999999), fee: num(s?.fee) ?? 0, minOrder: num(s?.minOrder), eta: line(s?.eta, 12), fav: yes(s?.fav),
-            menu: arr(s?.menu).map(x => ({ name: line(x?.name, 60), ko: ko(x?.ko), desc: line(x?.desc, 100), price: num(x?.price) ?? 0, top: yes(x?.top), ...(picOf(x?.pic) ? { pic: picOf(x.pic) } : {}) })).filter(x => x.name).slice(0, 4) })).filter(s => s.name).slice(0, 5),
+            menu: arr(s?.menu).map(x => { const m = { name: line(x?.name, 60), ko: ko(x?.ko), desc: line(x?.desc, 100), price: num(x?.price) ?? 0, top: yes(x?.top) }, pic = dishPic(x?.pic, m, true); return pic ? { ...m, pic } : m; }).filter(x => x.name).slice(0, 4) })).filter(s => s.name).slice(0, 5),
         orders: arr(raw.orders).map(o => withEv({ shop: line(o?.shop, 60), items: arr(o?.items).map(dish).filter(x => x.name).slice(0, 10), fee: num(o?.fee) ?? 0, tip: num(o?.tip) ?? 0, discount: Math.abs(num(o?.discount) ?? 0),
             mode: pick(o?.mode, ['delivery', 'pickup'], 'delivery'), time: when(o?.time), arrived: when(o?.arrived), to: line(o?.to, 40) || 'home', address: line(o?.address, 80), left: line(o?.left, 60),
             noteShop: line(o?.noteShop, 120), noteShopKo: ko(o?.noteShopKo), noteRider: line(o?.noteRider, 120), noteRiderKo: ko(o?.noteRiderKo), noCutlery: yes(o?.noCutlery), for: int(o?.for, 1, 30) ?? 1,

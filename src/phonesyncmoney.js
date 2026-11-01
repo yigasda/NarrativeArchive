@@ -13,7 +13,7 @@
 // 되돌리기 can tell a record the user changed since, without touching anything else.
 import { cash, finance, finite, fx, migrateBank, positions, round } from './finance.js';
 import { boxAt, lifeReplay, lifeRevert } from './phonesynclife.js';
-import { picFromWords } from './phonefood.js';
+import { dishPic } from './phonefood.js';
 
 const STEP = { ordered: 0, shipped: 1, 'on the way': 2, delivered: 3 };
 const ORDER = ['ordered', 'shipped', 'on the way', 'delivered', 'unknown', 'cancelled', 'returning', 'returned', 'refunded'];
@@ -248,7 +248,7 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
     list(mo.deliveries).forEach((x, k) => {
         if (!dlvOn) return;
         const box = p.delivery.orders ||= [];
-        const items = list(x.items).map(d => { const pic = picFromWords(d?.pic, d?.name); return { name: txt(d?.name, 60), ko: txt(d?.ko, 60), option: txt(d?.option, 60), qty: Math.max(1, Math.round(Number(d?.qty) || 1)), price: finite(Number(d?.price)) ? Number(d.price) : 0, ...(pic ? { pic } : {}) }; }).filter(d => d.name).slice(0, 10);
+        const items = list(x.items).map(d => { const optionKo = txt(d?.optionKo, 60), pic = dishPic(d?.pic, { name: txt(d?.name, 60), ko: txt(d?.ko, 60), option: txt(d?.option, 60), optionKo }); return { name: txt(d?.name, 60), ko: txt(d?.ko, 60), option: txt(d?.option, 60), ...(optionKo ? { optionKo } : {}), qty: Math.max(1, Math.round(Number(d?.qty) || 1)), price: finite(Number(d?.price)) ? Number(d.price) : 0, ...(pic ? { pic } : {}) }; }).filter(d => d.name).slice(0, 10);
         if (!txt(x.shop) || !items.length) fail('배달 주문의 가게나 메뉴를 확인하지 못했어요');
         const money = v => (finite(Number(v)) ? Math.abs(Number(v)) : 0), total = round(items.reduce((n, d) => n + d.qty * d.price, 0) + money(x.fee) + money(x.tip) - money(x.discount));
         const old = x.already && box.find(o => o.id === x.already) || box.find(o => samePlace(o.shop, x.shop) && near(String(o.time).slice(0, 5), date, 0) && Math.abs(dlvTotal(o) - total) < 0.01 && !fresh(x, o, e.at));
@@ -280,7 +280,7 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
         const shops = p.delivery.shops ||= [];
         if (!shops.some(s => samePlace(s.name, row.shop))) {
             const ns = x.newShop && typeof x.newShop === 'object' ? x.newShop : {};
-            const dish = (d, k) => { const pic = picFromWords(d?.pic, d?.name); return { name: txt(d?.name, 60), ko: txt(d?.ko, 60), desc: txt(d?.desc, 100), price: finite(Number(d?.price)) ? Number(d.price) : 0, top: d?.top === true || (!list(ns.menu).some(y => y?.top === true) && k === 0), ...(pic ? { pic } : {}) }; };
+            const dish = (d, k) => { const pic = dishPic(d?.pic, { name: txt(d?.name, 60), ko: txt(d?.ko, 60) }); return { name: txt(d?.name, 60), ko: txt(d?.ko, 60), desc: txt(d?.desc, 100), price: finite(Number(d?.price)) ? Number(d.price) : 0, top: d?.top === true || (!list(ns.menu).some(y => y?.top === true) && k === 0), ...(pic ? { pic } : {}) }; };
             let menu = list(ns.menu).map(dish).filter(d => d.name).slice(0, 4);
             if (!menu.length) menu = items.slice(0, 4).map((d, k) => ({ name: d.name, ko: d.ko, desc: '', price: d.price, top: k === 0, ...(d.pic ? { pic: d.pic } : {}) }));
             // what the model leaves out is made up from the shop's name (the same each time): a rating, reviews, a minimum order
