@@ -261,28 +261,28 @@ export async function openLayers(s) {
     const forced = () => fadeForce(getMeta())[sectionKey(s)] || 'auto';
     const now = t => use === t ? ' · 지금 들어감' : '';
     let tab = use && use !== 'long' ? use : (L.short ? 'short' : 'long');
+    // (v3, docs/mockups/ext-layers A): the three versions as cards (tap to read one; the one going in is marked), an 자동으로
+    // 고르기 switch (off: the card you tap is the one that goes in), then the version's text with 직접 고치기 · 한국어로,
+    // 고쳐 달라고 하기 and 초안 모델로 만들기; 닫기 · 저장 at the bottom
     const $root = $(`
-      <div class="na_popup na_v2 na_layers">
-        <div class="na_v2_title"><small>섹션 버전</small><b>${esc(s.title)}</b></div>
+      <div class="na_popup na_v2 na_layers na_ly3">
+        <div class="na_v2_title"><b>섹션 버전</b><small>${esc(s.title)}</small></div>
         <div class="na_v2_note na_ly_note">${noteHtml(plan, use)}</div>
-        <div class="na_ly_force"><span>넣을 버전</span><div class="na_v2_seg na_ly_forceseg">${[['auto', '자동'], ['long', '원문'], ['short', '짧게'], ['line', '요점']].map(([v, l]) => `<button type="button" data-v="${v}" class="${forced() === v ? 'on' : ''}">${l}</button>`).join('')}</div></div>
         ${stale ? '<div class="na_xr_warn slim">' + WARN_SVG + '<div>버전을 만든 뒤에 원문이 바뀌었어요. 저장할 때까지 원문으로 들어가요.</div></div>' : ''}
-        <div class="na_v2_seg na_ly_tabs">
-          <button type="button" data-t="long"><span>원문${now('long')}</span><small class="na_ly_tok_long"></small></button>
-          <button type="button" data-t="short"><span>짧게${now('short')}</span><small class="na_ly_tok_short"></small></button>
-          <button type="button" data-t="line"><span>요점${now('line')}</span><small class="na_ly_tok_line"></small></button>
+        <div class="na_ly3_lbl"><span>넣을 버전</span><label class="na_ly3_auto">자동으로 고르기<input type="checkbox" class="na_toggle na_ly3_autoon"${forced() === 'auto' ? ' checked' : ''}></label></div>
+        <div class="na_ly3_cards na_ly_tabs">${[['long', '원문'], ['short', '짧게'], ['line', '요점']].map(([t, l]) => `<button type="button" class="na_ly3_card" data-t="${t}"><span class="na_ly3_in">넣는 중</span><b>${l}</b><small class="na_ly_tok_${t}"></small></button>`).join('')}</div>
+        <div class="na_v2_card na_ly3_body">
+          <div class="na_ly_tools">
+            <small class="na_ly_trinfo"></small>
+            <button type="button" class="na_v2_pillbtn na_ly_edit">${svgA(ICO_A.pen, 13)}<span>직접 고치기</span></button>
+            <button type="button" class="na_v2_pillbtn na_ly_tr"><i class="fa-solid fa-language"></i><span>한국어로</span></button>
+          </div>
+          <div class="na_ly_pane" data-t="long"><div class="na_ly_view na_ly_full"></div></div>
+          <div class="na_ly_pane" data-t="short"><div class="na_ly_view"></div><textarea class="text_pole na_ly_short" rows="8" spellcheck="false" hidden placeholder="원문을 1/3쯤으로 줄인 것. 직접 쓰거나 초안 모델로 만들어요."></textarea></div>
+          <div class="na_ly_pane" data-t="line"><div class="na_ly_view"></div><textarea class="text_pole na_ly_line" rows="5" spellcheck="false" hidden placeholder="- 누가 무엇을 했고, 무엇이 바뀌었는지 (불릿 2~4개)"></textarea></div>
+          ${draftReady() ? `<div class="na_ly_ask"><input type="text" class="na_ly_askq" placeholder="고쳐 달라고 하기 (예: 소망 대사는 원문 그대로)" aria-label="고쳐 달라고 하기" enterkeyhint="send"><button type="button" class="na_ly_askgo" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>` : ''}
+          ${draftReady() ? `<div class="na_ly3_foot"><button type="button" class="na_ly3_tool na_ly_draft">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/>', 13)}초안 모델로 ${L.short || L.line ? '다시 ' : ''}만들기</button><small>${esc(drLabel())} · 짧게·요점을 같이 채워요</small></div>` : '<small class="na_v2_foot">⚙ 설정 → AI 모델 → 초안 모델을 정하면 여기서 바로 만들 수 있어요</small>'}
         </div>
-        <div class="na_ly_tools">
-          <button type="button" class="na_v2_pillbtn na_ly_edit">${svgA(ICO_A.pen, 13)}<span>직접 고치기</span></button>
-          <button type="button" class="na_v2_pillbtn na_ly_tr"><i class="fa-solid fa-language"></i><span>한국어로</span></button>
-          <small class="na_ly_trinfo"></small>
-        </div>
-        <div class="na_ly_pane" data-t="long"><div class="na_ly_view na_ly_full"></div></div>
-        <div class="na_ly_pane" data-t="short"><div class="na_ly_view"></div><textarea class="text_pole na_ly_short" rows="8" spellcheck="false" hidden placeholder="원문을 1/3쯤으로 줄인 것. 직접 쓰거나 초안 모델로 만들어요."></textarea></div>
-        <div class="na_ly_pane" data-t="line"><div class="na_ly_view"></div><textarea class="text_pole na_ly_line" rows="5" spellcheck="false" hidden placeholder="- 누가 무엇을 했고, 무엇이 바뀌었는지 (불릿 2~4개)"></textarea></div>
-        ${draftReady() ? `<div class="na_ly_ask"><input type="text" class="na_ly_askq" placeholder="고쳐 달라고 하기 (예: 소망 대사는 원문 그대로)" aria-label="고쳐 달라고 하기" enterkeyhint="send"><button type="button" class="na_ly_askgo" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>` : ''}
-        <div class="na_v2_row2 na_ly_btns">${draftReady() ? `<button type="button" class="na_v2_btn na_ly_draft">초안 모델로 ${L.short || L.line ? '다시' : '만들기'}</button>` : ''}<button type="button" class="na_v2_btn na_ly_save">저장</button></div>
-        ${draftReady() ? `<small class="na_v2_foot">${esc(drLabel())} · 짧게·요점을 같이 채워요. 저장해야 들어가요</small>` : '<small class="na_v2_foot">⚙ 설정 → AI 모델 → 초안 모델을 정하면 여기서 바로 만들 수 있어요</small>'}
       </div>`);
     const startShort = L.short ? withTopLabel(m.text.slice(s.start, s.end), L.short) : '', startLine = L.line || '';
     $root.find('.na_ly_short').val(startShort);
@@ -295,7 +295,8 @@ export async function openLayers(s) {
     const trLines = t => [...new Set(text(t).split('\n').filter(trLineOk).map(l => l.trim()))];
     const fillTr = t => { const ls = trLines(t); trCachedLines(ls).forEach((x, i) => { if (x) trMap.set(ls[i], x); }); return ls; };
     const show = () => {
-        $root.find('.na_ly_tabs button').each(function () { $(this).toggleClass('on', this.dataset.t === tab); });
+        const mm = getMeta(), p2 = fadeActive(mm) ? fadePlan(mm).get(sectionKey(s)) : null, goes = p2 ? fadeUse(mm, mm.text, s, p2.want) : (forced() !== 'auto' ? forced() : null);
+        $root.find('.na_ly_tabs button').each(function () { $(this).toggleClass('on', this.dataset.t === tab).toggleClass('goes', this.dataset.t === goes).toggleClass('none', this.dataset.t !== 'long' && !text(this.dataset.t).trim()); });
         $root.find('.na_ly_pane').each(function () { this.hidden = this.dataset.t !== tab; });
         const $pane = $root.find(`.na_ly_pane[data-t="${tab}"]`);
         const raw = text(tab);
@@ -311,12 +312,13 @@ export async function openLayers(s) {
     };
     const tok = async () => {
         const [a, b, d] = await Promise.all([countTokens(full), countTokens($root.find('.na_ly_short').val()), countTokens($root.find('.na_ly_line').val())]);
-        $root.find('.na_ly_tok_long').text(fmt(a));
-        $root.find('.na_ly_tok_short').text(b ? `${fmt(b)} · ${Math.round(b / Math.max(1, a) * 100)}%` : '없음');
-        $root.find('.na_ly_tok_line').text(d ? fmt(d) : '없음');
+        $root.find('.na_ly_tok_long').text(`${fmt(a)} 토큰`);
+        $root.find('.na_ly_tok_short').text(b ? `${fmt(b)} 토큰 · ${Math.round(b / Math.max(1, a) * 100)}%` : '없음');
+        $root.find('.na_ly_tok_line').text(d ? `${fmt(d)} 토큰` : '없음');
+        show();
     };
     show(); tok();
-    $root.on('click', '.na_ly_tabs button', function () { tab = this.dataset.t; if (tab === 'long') editing = false; show(); });
+    $root.on('click', '.na_ly_tabs button', function () { tab = this.dataset.t; if (tab === 'long') editing = false; if (forced() !== 'auto') setForce(tab); else show(); });
     $root.on('click', '.na_ly_edit', () => { editing = !editing; if (editing) korean = false; show(); });
     $root.on('click', '.na_ly_tr', async function () {
         if (trBusy) return;
@@ -332,14 +334,15 @@ export async function openLayers(s) {
         korean = fillTr(tab).some(l => trMap.has(l));
         show();
     });
-    $root.on('click', '.na_ly_forceseg button', async function () {
-        await setFadeForce([sectionKey(s)], this.dataset.v);
-        $root.find('.na_ly_forceseg button').each(function () { $(this).toggleClass('on', this.dataset.v === forced()); });
+    const setForce = async v => {
+        await setFadeForce([sectionKey(s)], v);
         const mm = getMeta(), p2 = fadeActive(mm) ? fadePlan(mm).get(sectionKey(s)) : null;
         $root.find('.na_ly_note').html(noteHtml(p2, p2 ? fadeUse(mm, mm.text, s, p2.want) : null));
-    });
+        show();
+    };
+    // 자동으로 고르기: on = the curve picks; off = the card being read is the one that goes in
+    $root.on('change', '.na_ly3_autoon', function () { setForce(this.checked ? 'auto' : tab); });
     $root.find('textarea').on('input', tok);
-    $root.find('.na_ly_save').on('click', () => $root.closest('dialog').find('.popup-button-ok').trigger('click'));
     $root.find('.na_ly_draft').on('click', async function () {
         const r = await withSpinner($(this), '만드는 중…', () => draftLayers(m, s));
         if (r) { $root.find('.na_ly_short').val(r.short); $root.find('.na_ly_line').val(r.line); tab = 'short'; editing = false; korean = false; show(); tok(); }
