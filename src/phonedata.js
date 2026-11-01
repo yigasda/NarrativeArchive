@@ -401,6 +401,8 @@ const phoneForModel = p => ({
     posts: real(p.posts).slice(-3).map(x => ev(x, { text: x.text.slice(0, 200), photo: x.photo, time: x.time })),
     mails: real(p.mails).slice(-3).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })),
     diary: real(p.diary).slice(-2).map(x => ev(x, { date: x.date, title: x.title, text: x.text.slice(0, 300) })),
+    // so a memo already there isn't recorded again
+    voice: real(p.voice || []).slice(-3).map(x => ev(x, { title: x.title, time: x.time })),
 });
 
 // apps: some of REMAKE's names, made again from the whole story while the rest of the phone stays as it is
@@ -545,7 +547,10 @@ async function updatePhone(m, owner) {
         try { tracker = weatherFrom(recentTrackers(1)[0]); } catch { /* no status lines */ }
         const trackDay = tracker ? when(tracker.date).slice(0, 5) : '';
         const askWeather = !!life && (!tracker || !!trackDay && trackDay !== life.weather?.date);
-        const known = (wealthDate(m, p) || String(p.money?.asOf || p.investment?.date || '')).slice(0, 4), year = known || String(new Date().getFullYear());
+        // the year the phone's now is in: read once from the bank or the archive, then carried over New Year with the now
+        if (!p.year) { const y = Number((wealthDate(m, p) || String(p.money?.asOf || p.investment?.date || '')).slice(0, 4)); if (y > 1900) p.year = y; }
+        const known = p.year ? String(p.year) : '', year = known || String(new Date().getFullYear());
+        const anchor = known && /^\d{2}-\d{2}/.test(p.now || '') ? `${known}-${p.now.slice(0, 5)}` : '';
         // the days ahead with their weekdays (only with a known year): "on Friday" is a date the model can look up
         const today = String(p.now || '').slice(0, 5), dayList = known && /^\d{2}-\d{2}$/.test(today) ? Array.from({ length: 14 }, (_, k) => {
             const d = new Date(Date.UTC(Number(known), Number(today.slice(0, 2)) - 1, Number(today.slice(3, 5)) + k));
@@ -583,7 +588,7 @@ async function updatePhone(m, owner) {
         const failed = {}, loose = [], added = [], apps = new Set(), changes = [], notes = [...swiped];
         // for 되돌리기: what was there before this round (ids and message counts), and the reading state
         const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map(p.threads.map(t => [t.id, t.messages.length]));
-        const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, seen: s.seen }), now: p.now, moneyAt: p.money?.at, investAt: p.investment?.at,
+        const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, seen: s.seen }), now: p.now, year: p.year, moneyAt: p.money?.at, investAt: p.investment?.at,
             comments: (p.posts || []).filter(x => x.id).map(x => [x.id, x.comments?.length || 0]) };
         for (const e of raw.events.slice(0, 40)) {
             const at = Number(e?.at), sec = evidence.find(x => at >= x.first && at <= x.last);
@@ -604,7 +609,7 @@ async function updatePhone(m, owner) {
             // the money first, on its own: a payment that can't be placed leaves the whole event out
             const stage = structuredClone({ money: p.money, investment: p.investment, finance: m.finance, delivery: p.delivery });
             let paid;
-            try { paid = applyMoney(m, p, { id, at, date: when(e.date).slice(0, 5), time: hhmm(e.time), summary: line(e.summary, 160), money: e.money }, { year, marks: s.marks, legs: s.events[id]?.legs || [], span: s.failed[at]?.span || null, edited: reread.has(at) }); }
+            try { paid = applyMoney(m, p, { id, at, date: when(e.date).slice(0, 5), time: hhmm(e.time), summary: line(e.summary, 160), money: e.money }, { year, anchor, marks: s.marks, legs: s.events[id]?.legs || [], span: s.failed[at]?.span || null, edited: reread.has(at) }); }
             catch (err) { p.money = stage.money; p.investment = stage.investment; m.finance = stage.finance; if (p.delivery) p.delivery = Object.assign(p.delivery, stage.delivery); fail(String(err?.message || err)); continue; }
             for (const c of paid.changes) { apps.add(c.app); if (c.amount !== null) changes.push({ ...c, what: line(e.summary, 60) }); }
             notes.push(...paid.notes);
@@ -632,7 +637,10 @@ async function updatePhone(m, owner) {
         const nowAt = when(raw.now);
         // the phone's time only moves on, across New Year too (12-31 → 01-01 is a day later, not months back)
         const gap = nowAt && p.now ? dayGap(p.now.slice(0, 5), nowAt.slice(0, 5)) : 1;
-        if (nowAt && (gap > 0 || gap === 0 && nowAt.slice(6) > p.now.slice(6))) p.now = nowAt;
+        if (nowAt && (gap > 0 || gap === 0 && nowAt.slice(6) > p.now.slice(6))) {
+            if (p.year && p.now && nowAt.slice(0, 5) < p.now.slice(0, 5)) p.year++;
+            p.now = nowAt;
+        }
         // the round's own: new days nobody told, the weather, and what the clock moving on does by itself
         const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = applyWeather(p, askWeather ? raw.weather : null, tracker, { archive: evidence.length + before.length > 0 });
         if (days.length) apps.add('건강');
@@ -798,6 +806,7 @@ export async function undoRound(m, p) {
     s.rounds.pop();
     pruneDropped(s, phoneItems(p));
     p.now = u.now;
+    if (u.year !== undefined) p.year = u.year;
     delete p.syncLast; delete p.syncUndo;
     if (p.money) migrateBank(m, p);
     const scope = phoneChatScope(ctx());

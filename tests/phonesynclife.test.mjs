@@ -381,3 +381,12 @@ test('reflection look-over: an arrival time without its day, and a twin order ac
     assert.equal(q.money.orders.filter(o => o.item === 'Lamp').length, 1);
     assert.equal(q.money.orders.find(o => o.item === 'Lamp').status, 'shipped');
 });
+
+test('a payment in January after a December now is booked in the next year; a delivery without a day is refused', () => {
+    const { m, p } = setup();
+    applyMoney(m, p, { ...ev('nyd', 9, '01-02'), money: { moves: [{ account: '1111', amount: -10, who: 'Bakery', kind: 'card', occurrence: 'new' }] } }, { ...opts, anchor: '2026-12-30' });
+    assert.equal(m.finance.accounts['chk:EUR'].entries['sync:nyd:m0'].date, '2027-01-02');
+    applyMoney(m, p, { ...ev('dec', 10, '12-29'), money: { moves: [{ account: '1111', amount: -5, who: 'Bakery', kind: 'card', occurrence: 'new' }] } }, { ...opts, anchor: '2026-12-30' });
+    assert.equal(m.finance.accounts['chk:EUR'].entries['sync:dec:m0'].date, '2026-12-29');
+    assert.throws(() => applyMoney(m, p, { id: 'x', at: 11, date: '', time: '', money: { deliveries: [{ shop: 'A', items: [{ name: 'B', qty: 1, price: 1 }] }] } }, opts), /날짜/);
+});

@@ -12,7 +12,7 @@
 // Every change is listed in `effects` (a copy of each record as it went in), so 복구 can add back what a save lost, and
 // 되돌리기 can tell a record the user changed since, without touching anything else.
 import { cash, finance, finite, fx, migrateBank, positions, round } from './finance.js';
-import { boxAt, lifeReplay, lifeRevert } from './phonesynclife.js';
+import { boxAt, dayGap, lifeReplay, lifeRevert } from './phonesynclife.js';
 import { dishPic } from './phonefood.js';
 
 const STEP = { ordered: 0, shipped: 1, 'on the way': 2, delivered: 3 };
@@ -33,6 +33,12 @@ const fail = why => { throw new Error(why); };
 // a later state only: delivered never goes back to shipped; a cancellation or return can come at any point
 const later = (was, now) => !(was in STEP && now in STEP && STEP[now] < STEP[was]) && !(['cancelled', 'returned', 'refunded'].includes(was) && now in STEP);
 
+const fullDay = (year, anchor, date) => {
+    const a = /^(\d{4})-(\d{2})-(\d{2})$/.exec(anchor || '');
+    if (!a || !/^\d{2}-\d{2}$/.test(date || '')) return `${year}-${date}`;
+    const d = new Date(Date.UTC(Number(a[1]), a[2] - 1, Number(a[3]) + dayGap(`${a[2]}-${a[3]}`, date)));
+    return `${d.getUTCFullYear()}-${date}`;
+};
 // what the model sees of the money apps
 export function moneyNow(p) {
     const mo = p.money;
@@ -57,14 +63,16 @@ export function investNow(m, p) {
 
 // e: { id, at, date: 'MM-DD', time, summary, money }; opts: { year, marks, legs: what this event did before }
 // edited: the message was changed by the user after it was read, so its amounts may be corrected even when stated
-export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span = null, edited = false } = {}) {
+// anchor: the day ("YYYY-MM-DD") the year was read from; an event's day is taken as the one nearest it, so a story going
+// past New Year books January in the next year
+export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior = [], span = null, edited = false } = {}) {
     together = span;
     const out = { effects: [], changes: [], notes: [], legs: [] };
     const mo = e.money;
     if (!mo || typeof mo !== 'object') return out;
-    const f = finance(m), guess = mo.amountFrom === 'guess', date = e.date, full = `${year}-${date}`;
+    const f = finance(m), guess = mo.amountFrom === 'guess', date = e.date, full = fullDay(year, anchor, date);
     const bankOn = !!p.money && e.at > (marks.money?.index ?? -1), investOn = !!p.investment && e.at > (marks.invest?.index ?? -1);
-    if ((list(mo.moves).length || list(mo.trades).length || list(mo.orders).length || list(mo.passes).length) && !/^\d{2}-\d{2}$/.test(date || '')) fail('돈이 움직인 날짜를 확인하지 못했어요');
+    if ((list(mo.moves).length || list(mo.trades).length || list(mo.orders).length || list(mo.passes).length || list(mo.deliveries).length) && !/^\d{2}-\d{2}$/.test(date || '')) fail('돈이 움직인 날짜를 확인하지 못했어요');
     const seen = key => prior.find(l => l.key === key);
     // a guessed amount the story now states: the record and its ledger line change by the difference
     const amend = (t, amount, lk, label, acct) => {
