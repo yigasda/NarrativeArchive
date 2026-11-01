@@ -505,7 +505,7 @@ export function walletScreen(p, now, sel = '') {
     if (!M) return emptyApp(p, now, '지갑', 'money', '아직 지갑이 비어 있어요. 채우면 은행 · 지갑 · 쇼핑이 함께 생겨요.');
     migrateBank(getMeta(),p);
     const today = String(storyNow(p) || p.now || '').slice(0, 5), past = x => gapDays(today, x.date) < 0 || /used|benutzt|abgelaufen|expired|사용|지난/i.test(x.status || '');
-    const ps = [...M.passes].sort((a, b) => gapDays(p.now, a.date) - gapDays(p.now, b.date)), up = ps.filter(x => !past(x)), old = ps.filter(past);
+    const ps = [...M.passes].sort((a, b) => gapDays(today, a.date) - gapDays(today, b.date)), up = ps.filter(x => !past(x)), old = ps.filter(past);
     const t = bankTier(p).t, mc = t?.k === 'PRIVATE';
     // a tap on one lying behind brings it out whole; a tap on the open one opens it
     // those after the open one sit in a tail that cuts off whatever reaches past the last edge

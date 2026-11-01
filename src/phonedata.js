@@ -830,8 +830,10 @@ function settleDropped(p, { dropped }, notes) {
 // (an order delivered later, a record corrected later, shares sold later) stays, and is named
 export async function dropStretch(m, p, k) {
     const s = p.sync;
+    // k: the stretch's key (its place in the list can change when the list is tidied just below), or its place
+    const was = typeof k === 'string' ? null : s.dropped?.[k]?.key;
     pruneDropped(s, phoneItems(p));
-    const d = s.dropped[k];
+    const d = s.dropped.find(x => x.key === (typeof k === 'string' ? k : was));
     if (!d) return { gone: 0, items: 0, kept: [] };
     const kept = [], stay = new Set(), out = new Set();
     let gone = 0;
@@ -857,7 +859,7 @@ export async function dropStretch(m, p, k) {
     for (const key of LISTS) if (Array.isArray(p[key])) p[key] = p[key].filter(keep(key));
     for (const t of p.threads) t.messages = t.messages.filter(keep('msg'));
     for (const x of p.posts || []) if (x.comments) x.comments = x.comments.filter(keep('comment'));
-    s.dropped.splice(k, 1);
+    s.dropped.splice(s.dropped.indexOf(d), 1);
     if (p.money) migrateBank(m, p);
     await saveMeta();
     if (p.inject) applyInjection();

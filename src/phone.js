@@ -747,13 +747,14 @@ export async function openPhone(who = null) {
         syncWhy = ''; view = 'setsync'; drawPhone(); await saveMeta();
         toastr.success(mark.index < 0 ? '첫 대화부터 반영해요' : `#${mark.index} 다음부터 반영해요`, '캐릭터 휴대폰');
     });
-    $root.on('click', '.na_sync_restore', async e => { e.stopPropagation(); const n = await restoreRounds(m, phoneChatScope(ctx())); syncPending = 0; drawPhone(); if (m.phones && Object.values(m.phones).some(p => p.inject)) applyInjection(); toastr.success(`반영 ${n}번을 복구했어요`, '캐릭터 휴대폰'); });
+    $root.on('click', '.na_sync_restore', async e => { e.stopPropagation(); if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요'); const n = await restoreRounds(m, phoneChatScope(ctx())); syncPending = 0; drawPhone(); if (m.phones && Object.values(m.phones).some(p => p.inject)) applyInjection(); toastr.success(`반영 ${n}번을 복구했어요`, '캐릭터 휴대폰'); });
     $root.on('click', '.na_sync_drop', async function (e) {
         e.stopPropagation();
         if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
         const p = phone(), d = p.sync?.dropped?.[Number(this.dataset.k)];
         if (!d || !await confirm(`대화 ${d.label}에서 넣은 일 빼기`, '그 일로 들어간 문자 · 일정 · 돈 기록을 폰에서 빼요. 뒤의 기록과 이어진 건 남겨요.')) return;
-        const r = await dropStretch(m, p, Number(this.dataset.k));
+        if (making || busy.sync || busy.fill) return;
+        const r = await dropStretch(m, p, d.key);
         drawPhone();
         const did = [r.gone ? `일 ${r.gone}개` : '', r.items ? `앱 기록 ${r.items}개` : ''].filter(Boolean).join(' · ') || '뺄 것이 없어서 아무것도 안';
         if (r.kept.length) toastr.warning(`${did}를 뺐어요. ${r.kept.join(', ')}은(는) 뒤의 기록과 이어져 있어서 남겨뒀어요`, '캐릭터 휴대폰');
@@ -761,9 +762,11 @@ export async function openPhone(who = null) {
     });
     $root.on('click', '.na_sync_undo', async e => {
         e.stopPropagation();
-        if (making) return;
+        // not while a reflection or a fill writes the same records
+        if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
         const p = phone(), n = p.syncLast?.checked || 0;
         if (!await confirm('이 반영 되돌리기', `방금 넣은 문자 · 일정 · 돈 움직임을 빼고, 대화 ${n}개는 다시 안 읽은 상태가 돼요.`)) return;
+        if (making || busy.sync || busy.fill || phone() !== p) return;
         try { const kept = await undoRound(m, p); drawPhone(); kept.length ? toastr.warning(`되돌렸어요. ${kept.join(', ')}은(는) 그 사이 바뀌어서 남겨뒀어요`, '캐릭터 휴대폰') : toastr.success('반영을 되돌렸어요', '캐릭터 휴대폰'); }
         catch (err) { toastr.error(String(err?.message || err), '되돌리기'); }
     });
