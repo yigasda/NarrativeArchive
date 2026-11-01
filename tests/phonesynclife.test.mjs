@@ -368,3 +368,16 @@ test('a reflected dish keeps its option in Korean, and the picture follows it', 
     assert.equal(it.optionKo, '치즈 빼고');
     assert.deepEqual(it.pic.with, ['tomato']);
 });
+
+test('reflection look-over: an arrival time without its day, and a twin order across New Year', () => {
+    const p = { delivery: { orders: [{ id: 'o1', shop: 'A', items: [], status: 'on the way', time: '10-26 19:00', arrived: '19:40' }] } };
+    assert.equal(dlvClock(p, '10-26 20:00').length, 0);
+    assert.equal(dlvClock(p, '10-26 21:20').length, 1);
+    assert.equal(p.delivery.orders[0].status, 'delivered');
+    // a shop order told again on 01-01 is the one placed on 12-31 (a day apart), not months away
+    const { m, p: q } = setup();
+    applyMoney(m, q, { ...ev('nye', 9, '12-31'), money: { orders: [{ shop: 'Shop', item: 'Lamp', qty: 1, price: 30, status: 'ordered', paid: false, occurrence: 'new' }] } }, opts);
+    applyMoney(m, q, { ...ev('nyd', 11, '01-01'), money: { orders: [{ shop: 'Shop', item: 'Lamp', qty: 1, price: 30, status: 'shipped', paid: false, occurrence: 'again' }] } }, opts);
+    assert.equal(q.money.orders.filter(o => o.item === 'Lamp').length, 1);
+    assert.equal(q.money.orders.find(o => o.item === 'Lamp').status, 'shipped');
+});

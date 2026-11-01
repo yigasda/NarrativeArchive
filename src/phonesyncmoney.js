@@ -20,7 +20,8 @@ const ORDER = ['ordered', 'shipped', 'on the way', 'delivered', 'unknown', 'canc
 const txt = (v, n = 80) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
 const list = v => (Array.isArray(v) ? v : []);
 const day = s => { const mt = /^(\d{2})-(\d{2})/.exec(String(s || '')); return mt ? Date.UTC(2001, mt[1] - 1, mt[2]) : NaN; };
-const near = (a, b, days = 1) => Math.abs(day(a) - day(b)) <= days * 86400000;
+// days apart, across New Year too (12-31 and 01-01 are one day apart)
+const near = (a, b, days = 1) => { const d = Math.abs(day(a) - day(b)); return Math.min(d, 365 * 86400000 - d) <= days * 86400000; };
 // a twin only stands for this one if the model didn't say it happens here, or both come from the same message, or (on a
 // retry) from a message read together with this one before
 let together = null;

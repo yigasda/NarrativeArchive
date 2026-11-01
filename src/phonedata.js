@@ -19,7 +19,7 @@ import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
 import { arr, evOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 export { arr, hhmm, jsonOf, ko, last4, line, num, pad, pick, str, when, withEv };
-import { applyDays, applyLife, applyWeather, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom } from './phonesynclife.js';
+import { applyDays, applyLife, applyWeather, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
 import { pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
@@ -150,6 +150,7 @@ WHAT IS NEW
 - MESSAGES READ BEFORE, NOW CHANGED were already put on the phone: give their events the ids listed there; a payment in them is that same payment, its amount corrected if it changed.
 - Small everyday things around an event are fine: how a text was worded, a photo of the place, a search they would make.
 - People: only people the story has.
+- A diary entry holds only what these messages show and what the owner felt about it; no new secrets, no new feelings.
 
 WHERE IT COMES FROM
 - "at": the number of the message the event happens in. For an archive section, the message in its range it belongs to.
@@ -195,7 +196,7 @@ ANSWER — one JSON object, nothing else:
                           "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko", "currency", "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
                           "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returned" | "refunded", "eta": "MM-DD", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
                           "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }]${delivery ? `,
-                          "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients in English, like "beef", "shrimp"], "size": "regular" | "large", "set": [a set's sides or drinks, like "fries", "cola"] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived", "to": "home" | "work" | a person's name, "address", "left", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery", "for", "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
+                          "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients in English, like "beef", "shrimp"], "size": "regular" | "large", "set": [a set's sides or drinks, like "fries", "cola"] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "left", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery", "for": how many it feeds, "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
                                           "newShop": { "name": the same as "shop", "ko", "cuisine", "rating": like 4.7, "reviews": how many, "fee", "minOrder", "eta": like "25–35", "menu": [{ "name", "ko", "desc", "price", "top": true for its best-known dish, "pic": like the items' "pic" }] } or null }]` : ''} }` : ''} }]${life ? `,
   "days": [{ the same fields as "health", "from": "pattern" }]${weather ? `,
   "weather": { "place", "date", "time", "from": "chat" | "archive" | "guess", "cond": "clear" | "partly" | "cloudy" | "drizzle" | "rain" | "sleet" | "snow" | "fog" | "storm" | "wind", "temp", "hi", "lo", "line", "ko",
@@ -629,7 +630,9 @@ async function updatePhone(m, owner) {
         settleRound(s, round.rows, failed, new Set(added.map(x => x.at)));
         for (const x of evidence) s.arch[x.key] = 1;
         const nowAt = when(raw.now);
-        if (nowAt && nowAt > (p.now || '')) p.now = nowAt;
+        // the phone's time only moves on, across New Year too (12-31 → 01-01 is a day later, not months back)
+        const gap = nowAt && p.now ? dayGap(p.now.slice(0, 5), nowAt.slice(0, 5)) : 1;
+        if (nowAt && (gap > 0 || gap === 0 && nowAt.slice(6) > p.now.slice(6))) p.now = nowAt;
         // the round's own: new days nobody told, the weather, and what the clock moving on does by itself
         const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = applyWeather(p, askWeather ? raw.weather : null, tracker, { archive: evidence.length + before.length > 0 });
         if (days.length) apps.add('건강');
