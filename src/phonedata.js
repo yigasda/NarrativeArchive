@@ -1000,6 +1000,7 @@ YOU GET
 
 STORY OR INVENTED
 - Trips, bookings, gifts and big purchases: only what the story shows or plainly implies. Give each the "ev" tag the phone's mail or event for it already has.
+- Besides the story's, 2 to 4 passes already used in the past months, fitting the owner's life and tastes (a film, a match, a concert, an exhibition, a past trip's boarding pass or train ticket), dated before the story's now, "status": "used", with no "ev". Never one that contradicts the story. Coming bookings stay only the story's.
 - Rent, wages, bills and subscriptions: invent them, fitting the owner's job and life, unless the story gives them.
 - Besides the story's, 2 to 4 everyday online orders fitting the owner (household things, books, clothes), with no "ev".
 - An amount the story gives stays as it is: whose it is, its currency, its date and what it was for. A company's value, a transfer or an old balance is not what the owner has in the bank now.
@@ -1033,7 +1034,7 @@ JSON (one object, nothing before or after it)
                "eta": "MM-DD", "arrived": "MM-DD", "gift": who it is for or "", "ev" }],
   "fx": [{ "from": an account currency, "to": FINANCIAL SCALE's currency, "date": EVALUATION DATE, "value": number }] for each pair SAVED RATES doesn't have
 }
-2 or 3 accounts and 8 to 15 transactions. Passes and orders only from the story; an empty list is fine. Oldest first.
+2 to 4 accounts and 8 to 15 transactions. Coming passes and orders only from the story. Oldest first.
 Numbers are plain JSON numbers, without separators.`;
 
 // 은행 새로 만들기: the same accounts, everything else made again
@@ -1088,9 +1089,9 @@ export function parseMoney(raw, country = '') {
     return {
         currency: cur, basis: str(raw.basis, 1500),
         bank: { name: line(raw.bank?.name, 40) || 'Bank', accounts },
-        cards: arr(raw.cards).map(c => ({ account: last4(c?.account), exp: line(c?.exp, 5) })).filter(c => accounts.some(a => a.last4 === c.account)).slice(0, 4),
+        cards: arr(raw.cards).map(c => ({ account: last4(c?.account), exp: line(c?.exp, 5) })).filter(c => accounts.some(a => a.last4 === c.account)).slice(0, 6),
         tx: arr(raw.tx).map(x => withEv({ account: last4(x?.account), who: line(x?.who, 60), ko: ko(x?.ko), amount: num(x?.amount), time: when(x?.time), kind: pick(x?.kind, ['card', 'transfer', 'deposit'], 'card'), memo: line(x?.memo, 80), pending: !!x?.pending }, x)).filter(x => x.who && x.amount !== null).slice(-30),
-        passes: arr(raw.passes).map(x => withEv({ kind: pick(x?.kind, ['flight', 'train', 'hotel', 'event', 'other'], 'other'), by: line(x?.by, 60), from: line(x?.from, 40), to: line(x?.to, 40), date: when(x?.date).slice(0, 5), time: hhmm(x?.time), seat: line(x?.seat, 12), gate: line(x?.gate, 12), no: line(x?.no, 24), status: line(x?.status, 30) }, x)).filter(x => x.by).slice(-8),
+        passes: arr(raw.passes).map(x => withEv({ kind: pick(x?.kind, ['flight', 'train', 'hotel', 'event', 'other'], 'other'), by: line(x?.by, 60), from: line(x?.from, 40), to: line(x?.to, 40), date: when(x?.date).slice(0, 5), time: hhmm(x?.time), seat: line(x?.seat, 12), gate: line(x?.gate, 12), no: line(x?.no, 24), status: line(x?.status, 30) }, x)).filter(x => x.by).slice(-10),
         orders: arr(raw.orders).map(x => withEv({ shop: line(x?.shop, 60), item: line(x?.item, 80), ko: ko(x?.ko), option: line(x?.option, 60), qty: Math.max(1, Math.round(Number(x?.qty) || 1)), price: num(x?.price), time: when(x?.time), status: pick(x?.status, ['ordered', 'shipped', 'on the way', 'delivered', 'unknown'], 'unknown'), eta: when(x?.eta).slice(0, 5), arrived: when(x?.arrived).slice(0, 5), gift: giftOf(x?.gift) }, x)).filter(x => x.item).slice(-12),
     };
 }
