@@ -664,26 +664,34 @@ async function updatePhone(m, owner) {
         const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map(p.threads.map(t => [t.id, t.messages.length]));
         const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, seen: s.seen }), now: p.now, year: p.year, moneyAt: p.money?.at, investAt: p.investment?.at,
             comments: (p.posts || []).filter(x => x.id).map(x => [x.id, x.comments?.length || 0]) };
-        for (const e of raw.events.slice(0, 40)) {
-            const at = Number(e?.at), sec = evidence.find(x => at >= x.first && at <= x.last);
+        // an event's day when the model leaves it out: the day of the event before it, else the answer's now
+        let lastDay = when(raw.now).slice(0, 5);
+        const used = new Set();
+        for (const e of arr(raw.events).slice(0, 40)) {
+            if (!e || typeof e !== 'object') continue;
+            // "#151" or "151" for the message number
+            const at = Number(String(e.at ?? '').replace(/^\s*#/, '')), sec = evidence.find(x => at >= x.first && at <= x.last);
             const fail = why => (inRound.has(at) ? (failed[at] ||= why) : loose.push(why));
             if (!Number.isInteger(at) || at <= start || (!inRound.has(at) && !sec)) { fail('읽는 범위 밖의 일이에요'); continue; }
             if (!quoted(e.quote, textAt.get(at) || '') && !(sec && quoted(e.quote, sec.text))) { fail('원문에서 근거를 찾지 못했어요'); continue; }
             let add;
-            const day = when(e.date).slice(0, 5), phone = e.phone && typeof e.phone === 'object' ? structuredClone(e.phone) : {};
+            const day = when(e.date).slice(0, 5) || lastDay, phone = e.phone && typeof e.phone === 'object' ? structuredClone(e.phone) : {};
             // a time without its day ("15:10") takes the event's day
             const dated = x => { if (x && typeof x === 'object' && /^\s*\d{1,2}:\d{2}\s*$/.test(String(x.time || '')) && day) x.time = `${day} ${hhmm(x.time)}`; };
             for (const k of [...LISTS, 'threads']) for (const x of arr(phone[k])) { dated(x); for (const msg of arr(x?.messages)) dated(msg); if (x?.draft) dated(x.draft); }
             try { add = parsePhone(JSON.stringify(phone)); } catch { fail('앱 내용 형식이 잘못됐어요'); continue; }
             // a bare number is no event id (a model counting its events would take an old event's number again)
             const tagOf = v => { const t = evOf(v); return /^\d+$/.test(t) ? '' : t; };
-            const id = tagOf(e.id) || tagOf(e.summary) || `ev-${at}`;
+            // one id for two new events in one answer would take the second for the first (its payment kept out as the same one)
+            const id0 = tagOf(e.id) || tagOf(e.summary) || `ev-${at}`, id = used.has(id0) && added.some(x => x.id === id0 && x.at !== at) ? `${id0}-${at}` : id0;
+            used.add(id);
             // a changed message already put its payments on the phone: only its own events may correct them
             if (reread.has(at) && e.money && !reread.get(at).some(x => x.id === id)) { notes.push(`#${at} 바뀐 대화의 결제는 새로 넣지 않았어요`); delete e.money; }
             // the money first, on its own: a payment that can't be placed leaves the whole event out
             const stage = structuredClone({ money: p.money, investment: p.investment, finance: m.finance, delivery: p.delivery });
             let paid;
-            try { paid = applyMoney(m, p, { id, at, date: when(e.date).slice(0, 5), time: hhmm(e.time), summary: line(e.summary, 160), money: e.money }, { year, anchor, marks: s.marks, legs: s.events[id]?.legs || [], span: s.failed[at]?.span || null, edited: reread.has(at) }); }
+            if (day) lastDay = day;
+            try { paid = applyMoney(m, p, { id, at, date: day, time: hhmm(e.time), summary: line(e.summary, 160), money: e.money }, { year, anchor, marks: s.marks, legs: s.events[id]?.legs || [], span: s.failed[at]?.span || null, edited: reread.has(at) }); }
             catch (err) { p.money = stage.money; p.investment = stage.investment; m.finance = stage.finance; if (p.delivery) p.delivery = Object.assign(p.delivery, stage.delivery); fail(String(err?.message || err)); continue; }
             for (const c of paid.changes) { apps.add(c.app); if (c.amount !== null) changes.push({ ...c, what: line(e.summary, 60) }); }
             notes.push(...paid.notes);

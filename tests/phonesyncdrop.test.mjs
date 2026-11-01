@@ -361,3 +361,15 @@ test('run27: a quote with one word slipped in still counts; a file kind written 
     assert.equal(ph.notes[0].ko, '');
     assert.equal(ph.threads[0].messages[0].ko, '안녕');
 });
+
+test('an answer giving two new events one id pays both; an event with no date takes the day before it; "#4" is message 4', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Mara', 'coffee at the kiosk'), say('Ren', 'and another coffee later'), say('Mara', 'paid the taxi')];
+    const c = setup(chat);
+    await run(c.m, { now: '10-26 18:00', events: [
+        { id: 'coffee', at: 2, quote: 'coffee at the kiosk', date: '10-26', time: '09:00', summary: 'coffee', money: { moves: [{ account: '1111', amount: -5000, who: 'Kiosk', occurrence: 'new' }] } },
+        { id: 'coffee', at: 3, quote: 'another coffee later', date: '10-26', time: '15:00', summary: 'coffee', money: { moves: [{ account: '1111', amount: -5000, who: 'Cafe', occurrence: 'new' }] } },
+        { id: 'taxi', at: '#4', quote: 'paid the taxi', summary: 'taxi', money: { moves: [{ account: '1111', amount: -12000, who: 'Taxi', occurrence: 'new' }] } },
+    ] });
+    assert.deepEqual(c.p.money.tx.map(t => [t.who, t.amount, t.time.slice(0, 5)]), [['Kiosk', -5000, '10-26'], ['Cafe', -5000, '10-26'], ['Taxi', -12000, '10-26']]);
+    assert.equal(c.bank(), 100000 - 22000);
+});
