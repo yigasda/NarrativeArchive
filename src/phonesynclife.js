@@ -14,13 +14,26 @@ const day5 = v => when(v).slice(0, 5);
 const tz = v => (/^[A-Za-z]+(?:\/[A-Za-z_+-]+){1,2}$/.test(String(v || '')) ? String(v) : '');
 
 // ---- cleaning one record
-export const alarmOf = a => withEv({ time: hhmm(a?.time), label: line(a?.label, 60), ko: ko(a?.ko), days: arr(a?.days).map(d => String(d).toLowerCase().slice(0, 3)).filter(d => DAYS.includes(d)), date: day5(a?.date),
-    on: a?.on !== false, wake: yes(a?.wake), then: arr(a?.then).map(hhmm).filter(Boolean).slice(0, 10), snooze: int(a?.snooze, 0, 60) ?? 0, snoozeCount: int(a?.snoozeCount, 0, 20) ?? 0, sound: line(a?.sound, 30), made: day5(a?.made) }, a);
+// an alarm's repeat days as the model writes them: ["mon", …], Korean, German or Japanese day names, or one word ("weekdays", "매일")
+const DAY_WORD = { 월: 'mon', 화: 'tue', 수: 'wed', 목: 'thu', 금: 'fri', 토: 'sat', 일: 'sun', mo: 'mon', di: 'tue', mi: 'wed', do: 'thu', fr: 'fri', sa: 'sat', so: 'sun', 月: 'mon', 火: 'tue', 水: 'wed', 木: 'thu', 金: 'fri', 土: 'sat', 日: 'sun' };
+const daysOf = v => {
+    const one = String(Array.isArray(v) ? (v.length === 1 ? v[0] : '') : v || '').trim().toLowerCase();
+    if (/^(daily|every ?day|매일|täglich|毎日)$/.test(one)) return [...DAYS];
+    if (/^(weekdays?|평일|werktags|wochentags|平日)$/.test(one)) return DAYS.slice(0, 5);
+    if (/^(weekends?|주말|wochenende|週末)$/.test(one)) return DAYS.slice(5);
+    const out = arr(Array.isArray(v) ? v : String(v || '').split(/[\s,·/]+/)).map(d => { const s = String(d).trim().toLowerCase(); return DAYS.includes(s.slice(0, 3)) ? s.slice(0, 3) : DAY_WORD[s.replace(/요일$|曜日?$/, '').slice(0, 2)] || DAY_WORD[s.slice(0, 1)]; }).filter(Boolean);
+    return DAYS.filter(d => out.includes(d));
+};
+const off = v => v === false || /^(false|off|no|aus|꺼짐|끔)$/i.test(String(v ?? '').trim());
+export const alarmOf = a => withEv({ time: hhmm(a?.time), label: line(a?.label, 60), ko: ko(a?.ko), days: daysOf(a?.days), date: day5(a?.date),
+    on: !off(a?.on), wake: yes(a?.wake), then: arr(a?.then).map(hhmm).filter(Boolean).slice(0, 10), snooze: int(a?.snooze, 0, 60) ?? 0, snoozeCount: int(a?.snoozeCount, 0, 20) ?? 0, sound: line(a?.sound, 30), made: day5(a?.made) }, a);
 // a file's kind: the model's, or what an extension says (it may write "png" for the kind, or leave it out)
 const EXT_KIND = [[/^(png|jpe?g|heic|gif|webp|bmp|tiff?|raw)$/i, 'image'], [/^(mp4|mov|avi|mkv|webm|m4v)$/i, 'video'], [/^(mp3|m4a|wav|aac|flac|ogg|amr)$/i, 'audio'],
     [/^(zip|rar|7z|tar|gz)$/i, 'zip'], [/^(docx?|odt|rtf|txt|pages|hwp|hwpx)$/i, 'doc'], [/^(xlsx?|csv|ods|numbers)$/i, 'sheet'], [/^(pptx?|odp|key)$/i, 'slides'], [/^pdf$/i, 'pdf']];
 const kindOf = (k, name) => { if (FILE_KINDS.includes(k)) return k; for (const v of [k, (String(name || '').match(/\.([a-z0-9]{2,5})$/i) || [])[1]]) { const hit = EXT_KIND.find(([re]) => re.test(String(v || ''))); if (hit) return hit[1]; } return 'other'; };
-export const fileOf = x => withEv({ name: line(x?.name, 80), kind: kindOf(String(x?.kind || '').toLowerCase().replace(/^\./, ''), x?.name), folder: (f => (!f || /^(downloads?|download folder|다운로드|下载|ダウンロード|téléchargements|descargas|transferências|загрузки|scaricati)$/i.test(f) ? 'Downloads' : f))(line(x?.folder, 40)), size: num(x?.size), time: when(x?.time), from: line(x?.from, 60),
+// a size in KB: a number is KB; "1.2 MB", "3 GB", "800 KB" by their unit
+const kbOf = v => { const n = num(v); if (n === null) return null; const u = String(v ?? '').match(/([kmg])i?b\b|([kmg])바이트/i); const k = (u?.[1] || u?.[2] || 'k').toLowerCase(); return Math.round(n * (k === 'g' ? 1048576 : k === 'm' ? 1024 : 1)); };
+export const fileOf = x => withEv({ name: line(x?.name, 80), kind: kindOf(String(x?.kind || '').toLowerCase().replace(/^\./, ''), x?.name), folder: (f => (!f || /^(downloads?|download folder|다운로드|下载|ダウンロード|téléchargements|descargas|transferências|загрузки|scaricati)$/i.test(f) ? 'Downloads' : f))(line(x?.folder, 40)), size: kbOf(x?.size), time: when(x?.time), from: line(x?.from, 60),
     pages: int(x?.pages, 0, 2000), length: line(x?.length, 8), tag: pick(x?.tag, ['red', 'orange'], ''), private: yes(x?.private), preview: yes(x?.private) ? '' : line(x?.preview, 160), look: line(x?.look, 20).toLowerCase(), ko: ko(x?.ko), opened: when(x?.opened), trashed: day5(x?.trashed) }, x);
 export const dayOf = d => withEv({ date: day5(d?.date), bed: hhmm(d?.bed), sleep: hhmm(d?.sleep), wake: hhmm(d?.wake), woke: int(d?.woke, 0, 30) ?? 0, steps: int(d?.steps, 0, 120000), km: num(d?.km), floors: int(d?.floors, 0, 400),
     workout: d?.workout && line(d.workout.kind, 30) ? { kind: line(d.workout.kind, 30), time: hhmm(d.workout.time), min: int(d.workout.min, 0, 600), km: num(d.workout.km) } : null,
@@ -38,7 +51,7 @@ const COND_RE = [['storm', /storm|thunder|뇌우|천둥|번개|gewitter|雷/i], 
     ['wind', /gale|strong wind|windy|강풍|바람이 (?:세|강)|sturm|stürmisch|強風/i], ['partly', /partly|some clouds|구름 조금|구름 약간|teils|heiter|晴れ時々/i],
     ['cloudy', /cloud|overcast|흐림|구름|bewölkt|wolk|曇/i], ['clear', /clear|sun|맑|화창|햇살|햇빛|sonnig|klar|晴/i]];
 export const condOf = text => COND_RE.find(([, re]) => re.test(String(text || '')))?.[0] || '';
-const tempOf = text => { const mt = String(text || '').match(/(-?\d{1,2})\s*°/); return mt ? Number(mt[1]) : null; };
+const tempOf = text => { const s = String(text || ''), mt = s.match(/(영하\s*)?([-−]?\d{1,2}(?:[.,]\d)?)\s*(?:°|℃|도(?![가-힣]))/); if (!mt) return null; const n = Math.round(Number(mt[2].replace('−', '-').replace(',', '.'))); return mt[1] ? -Math.abs(n) : n; };
 // a status line (scenes.js recentTrackers) as the weather it gives, or null
 export function weatherFrom(t) {
     return t && (t.place || t.weather) ? { date: t.date || '', time: t.time || (Number.isFinite(t.min) ? `${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}` : ''), place: t.place || '', weather: t.weather || '' } : null;
@@ -68,8 +81,8 @@ export function parseWeather(w, now) {
 }
 
 // ---- story days: "MM-DD" without a year; a gap across New Year is taken the short way round
-const dnum = s => { const mt = /^(\d{2})-(\d{2})/.exec(String(s || '')); return mt ? Date.UTC(2000, mt[1] - 1, mt[2]) / 864e5 : NaN; };
-export const dayGap = (a, b) => { let g = dnum(b) - dnum(a); if (g < -180) g += 366; if (g > 180) g -= 366; return g; };
+const dnum = s => { const mt = /^(\d{2})-(\d{2})/.exec(String(s || '')); return mt ? Date.UTC(2001, mt[1] - 1, mt[2]) / 864e5 : NaN; };
+export const dayGap = (a, b) => { let g = dnum(b) - dnum(a); if (g < -180) g += 365; if (g > 180) g -= 365; return g; };
 
 // ---- effects on any record list of the phone, by path ("life.clock.alarms", "delivery.orders", "money.tx")
 const walk = (p, path, make) => {
@@ -121,7 +134,9 @@ export function applyLife(p, e, phone, on) {
         const clean = alarmOf(a), was = a.change && (L.clock?.alarms || []).find(o => o.id === a.change);
         if (was) return change('life.clock.alarms', was, given(a, clean, ['time', 'label', 'ko', 'days', 'date', 'on', 'wake', 'then', 'snooze']), '시계');
         if (!clean.time) return;
-        if ((L.clock?.alarms || []).some(o => o.time === clean.time && o.label === clean.label && o.date === clean.date)) return;
+        // the same alarm written again without its id: that alarm, changed (switched off, its days)
+        const twin = (L.clock?.alarms || []).find(o => o.time === clean.time && o.label === clean.label && o.date === clean.date);
+        if (twin) return change('life.clock.alarms', twin, given(a, clean, ['ko', 'days', 'on', 'wake', 'then', 'snooze']), '시계');
         push('life.clock.alarms', tag({ ...clean, made: clean.made || e.date }, k, 'a'), '시계');
     });
     arr(phone.files).forEach((x, k) => {
@@ -133,8 +148,11 @@ export function applyLife(p, e, phone, on) {
             if (x.deleted === true) vals.trashed = e.date;
             return change('life.files.items', was, vals, '파일');
         }
-        if (!clean.name || x.deleted === true) return;
-        if ((L.files?.items || []).some(o => o.name === clean.name && o.folder === clean.folder && !o.trashed)) return;
+        if (!clean.name) return;
+        // the same file written again without its id (saved again, or deleted): that file, changed
+        const twin = (L.files?.items || []).find(o => o.name === clean.name && !o.trashed && (o.folder === clean.folder || !x.folder || x.deleted === true));
+        if (twin) { const vals = given(x, clean, ['time', 'opened', 'preview', 'look', 'ko', 'tag']); if (x.deleted === true) vals.trashed = e.date; return change('life.files.items', twin, vals, '파일'); }
+        if (x.deleted === true) return;
         // a folder the phone already has, written another way ("work" for "Work"), is that folder
         const own = [...(L.files?.folders || []).map(f => f.name), ...(L.files?.items || []).map(f => f.folder)].find(n => n && n.toLowerCase() === clean.folder.toLowerCase());
         if (own) clean.folder = own;
@@ -143,7 +161,7 @@ export function applyLife(p, e, phone, on) {
     // their usual that the story changed (lost weight, quit coffee): each field on its own, so 되돌리기 takes back just it
     const uu = phone.usual && typeof phone.usual === 'object' ? phone.usual : null;
     if (uu) {
-        const n = (v, lo, hi, d = 1) => { const x = Number(v); return Number.isFinite(x) && x >= lo && x <= hi ? Math.round(x * d) / d : undefined; };
+        const n = (v, lo, hi, d = 1) => { const x = num(v); return Number.isFinite(x) && x >= lo && x <= hi ? Math.round(x * d) / d : undefined; };
         const vals = { weight: n(uu.weight, 20, 300, 10), coffee: n(uu.coffee, 0, 15), water: n(uu.water, 0, 8, 10), coffeeKind: uu.coffeeKind ? line(uu.coffeeKind, 30) : undefined, coffeeKo: uu.coffeeKo ? ko(uu.coffeeKo) : undefined };
         const u = (L.health ||= {}).usual ||= {};
         for (const [k, v] of Object.entries(vals)) {
@@ -167,6 +185,7 @@ export function applyLife(p, e, phone, on) {
         const awake = !(clean.date === e.date && e.time && u.wake && e.time < u.wake);
         for (const k of ['bed', 'sleep', 'wake']) if (!clean[k] && u[k] && (k !== 'wake' || awake)) clean[k] = u[k];
         if (clean.steps === null && finiteNum(u.steps) && awake) clean.steps = u.steps;
+        bedFirst(clean);
         const vals = { ...clean, ev: e.id };
         if (was) return change('life.health.days', was, vals, '건강');
         push('life.health.days', tag(vals, k, 'h'), '건강');
@@ -214,6 +233,7 @@ export function applyDays(p, days, round) {
         const clean = dayOf({ ...d, from: 'pattern' });
         if (!clean.date || box.some(o => o.date === clean.date)) return;
         delete clean.ev;
+        bedFirst(clean);
         const row = { ...clean, id: `sync:${round}:d${k}` };
         box.push(row);
         out.push({ type: 'push', path: 'life.health.days', item: structuredClone(row) });
@@ -223,14 +243,19 @@ export function applyDays(p, days, round) {
 }
 // days nobody wrote (the model left them out): their usual, a little different each day, up to the story's now. Today
 // only once the usual wake-up time has passed. No more than 14 days back.
+// night times past midnight count as late; in bed is never after asleep (a usual bed time put beside a told sleep, or two times moved apart)
+const lateMin = t => { const m = /^\d{2}:\d{2}$/.test(t || '') ? minutes(t) : null; return m === null ? null : m < 12 * 60 ? m + 1440 : m; };
+const bedFirst = r => { if (r.bed && r.sleep && lateMin(r.bed) > lateMin(r.sleep)) r.bed = r.sleep; return r; };
 const finiteNum = v => typeof v === 'number' && Number.isFinite(v);
 const hash = s => { let h = 7; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
 const shiftHm = (t, min) => { const mt = /^(\d{2}):(\d{2})$/.exec(t || ''); if (!mt) return ''; const v = ((mt[1] * 60 + Number(mt[2]) + min) % 1440 + 1440) % 1440; return `${pad(Math.floor(v / 60))}:${pad(v % 60)}`; };
-const plusDay = (day, n) => { const mt = /^(\d{2})-(\d{2})$/.exec(day); const d = new Date(Date.UTC(2000, mt[1] - 1, Number(mt[2]) + n)); return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
+// year: the story's (a leap year has its February 29), else a common year
+const plusDay0 = (day, n, year = 2001) => { const mt = /^(\d{2})-(\d{2})$/.exec(day); const d = new Date(Date.UTC(Number(year) || 2001, mt[1] - 1, Number(mt[2]) + n)); return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
+const plusDay = (day, n) => plusDay0(day, n);
 export function fillDays(p, now, round) {
     const out = [], L = p.life, u = L?.health?.usual, today = String(now || '').slice(0, 5), hm = String(now || '').slice(6, 11);
     if (!u || !/^\d{2}-\d{2}$/.test(today)) return out;
-    const box = boxAt(p, 'life.health.days', true);
+    const box = boxAt(p, 'life.health.days', true), Y = !p.noYear && p.year ? p.year : 2001, plusDay = (d, n) => plusDay0(d, n, Y);
     const end = hm && u.wake && hm < u.wake ? plusDay(today, -1) : today;
     // every day missing since the first one kept, gaps between days too (a story day told before the one between them);
     // a story that jumped ahead: only its last two weeks
@@ -242,8 +267,7 @@ export function fillDays(p, now, round) {
         const row = { date: day, bed: shiftHm(u.bed || u.sleep, Math.round(j(3) * 100)), sleep: shiftHm(u.sleep, Math.round(j(5) * 100)), wake: shiftHm(u.wake, Math.round(j(7) * 60)), woke: h % 3,
             steps, km: steps === null ? null : Math.round(steps * 0.00072 * 10) / 10, floors: (h >> 9) % 9, workout: null, hr: u.rest ? [u.rest - 4 + h % 5, u.rest + 45 + (h >> 4) % 40] : [], from: 'pattern', id: `sync:${round}:g${k}` };
         // to bed before asleep (each time is moved on its own; in bed 00:38 after asleep at 00:17 can't be)
-        const late = t => { const m = /^\d{2}:\d{2}$/.test(t || '') ? minutes(t) : null; return m === null ? null : m < 12 * 60 ? m + 1440 : m; };
-        if (row.bed && row.sleep && late(row.bed) > late(row.sleep)) row.bed = shiftHm(row.sleep, -(10 + h % 25));
+        if (row.bed && row.sleep && lateMin(row.bed) > lateMin(row.sleep)) row.bed = shiftHm(row.sleep, -(10 + h % 25));
         box.push(row);
         out.push({ type: 'push', path: 'life.health.days', item: structuredClone(row) });
     }
@@ -268,7 +292,7 @@ export function applyWeather(p, w, now, { archive = true } = {}) {
             for (const k of ['hi', 'lo']) if (here[k] === null && old[k] !== undefined) here[k] = old[k];
         }
         // the cities keep what the model leaves out (their time zone, their note)
-        const cities = (was?.cities || []).map(c => { const n = arr(w.cities).find(x => line(x?.name, 40) === c.name); if (!n) return c; const f = cityOf(n), out = { ...c, cond: pick(n.cond, CONDS, c.cond) }; for (const k of ['temp', 'hi', 'lo', 'rainNext', 'wind', 'gust', 'dir', 'feels', 'humidity', 'dew']) if (f[k] !== null && f[k] !== '') out[k] = f[k]; return out; });
+        const cities = (was?.cities || []).map(c => { const key = v => line(v, 40).toLowerCase(), n = arr(w.cities).find(x => [c.name, c.ko].filter(Boolean).map(key).includes(key(x?.name))); if (!n) return c; const f = cityOf(n), out = { ...c, cond: pick(n.cond, CONDS, c.cond) }; for (const k of ['temp', 'hi', 'lo', 'rainNext', 'wind', 'gust', 'dir', 'feels', 'humidity', 'dew']) if (f[k] !== null && f[k] !== '') out[k] = f[k]; return out; });
         next = { ...(was || {}), here, cities };
     } else if (now && was?.here) {
         // only the status line: its words stand over the weather there was
@@ -305,7 +329,7 @@ export function lifeClock(p, now) {
     if (here?.date) {
         const next = structuredClone(L.weather);
         if (here.date !== today) next.here.hours = [];
-        else if (hm) next.here.hours = here.hours.filter(x => minutes(x.time) >= minutes(hm) - 59);
+        else if (hm) { let add = 0, prev = -1; next.here.hours = here.hours.filter(x => { const m = minutes(x.time); if (m < prev) add += 1440; prev = m; return m + add >= minutes(hm) - 59; }); }
         next.here.days = here.days.filter(x => dayGap(x.day, today) <= 0);
         if (!same(next, L.weather)) { out.push({ type: 'set', path: 'life.weather', from: structuredClone(L.weather), to: structuredClone(next) }); L.weather = next; }
     }

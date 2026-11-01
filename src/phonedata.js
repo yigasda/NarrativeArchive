@@ -618,7 +618,7 @@ async function updatePhone(m, owner) {
         const money = moneyNow(p), invest = investNow(m, p), life = lifeNow(p);
         // the weather: a status line stands; the model writes it when there is none, or when the status line's day moved on
         let tracker = null;
-        try { tracker = weatherFrom(recentTrackers(1)[0]); } catch { /* no status lines */ }
+        try { tracker = trackerWeather(recentTrackers(1)[0]); } catch { /* no status lines */ }
         const trackDay = tracker ? when(tracker.date).slice(0, 5) : '';
         const askWeather = !!life && (!tracker || !!trackDay && trackDay !== life.weather?.date);
         // the year the phone's now is in: read once from the bank or the archive, then carried over New Year with the now
@@ -957,6 +957,8 @@ export function monthDay(text) {
 }
 // a dated row's day as the phone writes it ("10-25"), or '' when its calendar is not a 12-month one
 export const rowDay = r => (r?.date?.d && calendars()[r.date.cal]?.length === 12 ? `${pad(r.date.m + 1)}-${pad(r.date.d)}` : '');
+// the newest status line's weather, its date as "MM-DD" whatever shape the line writes it in ("1월 30일 (토)", "Jan 30")
+export const trackerWeather = t => { const w = weatherFrom(t); if (w) { const d = monthDay(w.date); w.date = d ? `${pad(d.mo)}-${pad(d.d)}` : when(w.date).slice(0, 5); } return w; };
 export function storyNow(p) {
     try {
         const t = recentTrackers(1)[0];

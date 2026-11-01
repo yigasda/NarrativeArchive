@@ -9,7 +9,7 @@ import { calendars } from './calendar.js';
 import { saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
-import { arr, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
+import { arr, trackerWeather, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, dayGap, fileOf, nightsToDays, parseWeather, weatherFrom } from './phonesynclife.js';
 import { exclusive } from './phonesync.js';
@@ -148,7 +148,7 @@ Numbers are plain JSON numbers. "ev" is a word tag, never a number: the "ev" of 
 const DAY = 864e5;
 const md = s => { const mt = String(s || '').match(/^(\d{2})-(\d{2})/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]) } : null; };
 // a story day moved by n days (MM-DD; the story's dates carry no year, so a leap year is assumed)
-export const shiftDay = (day, n) => { const x = md(day); if (!x) return ''; const t = new Date(Date.UTC(2000, x.mo - 1, x.d) + n * DAY); return `${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`; };
+export const shiftDay = (day, n) => { const x = md(day); if (!x) return ''; const t = new Date(Date.UTC(2001, x.mo - 1, x.d) + n * DAY); return `${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`; };
 // the last 14 story days, each with the places its archive sections name
 export function storyDays(m, p) {
     const now = String(storyNow(p) || p.now || '').slice(0, 5);
@@ -159,7 +159,7 @@ export function storyDays(m, p) {
 }
 // the chat's newest status line (date, time, place, weather), if any
 export function weatherNow() {
-    try { return weatherFrom(recentTrackers(1)[0]); } catch { return null; }
+    try { return trackerWeather(recentTrackers(1)[0]); } catch { return null; }
 }
 // where the owner lives: the profile's country (the delivery app is 배달의민족 there in Korea, Uber Eats elsewhere)
 export const livesIn = p => (p.lives || p.country || '');
