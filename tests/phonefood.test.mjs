@@ -140,7 +140,25 @@ test('포테이토 · 바지락 · 해물 read from a name', async () => {
     const { dishPic } = await import('../src/phonefood.js');
     const w = (base, name, option) => dishPic({ base }, { name, option }).with.join(',');
     assert.equal(w('pizza', '포테이토 피자'), 'potato');
-    assert.equal(w('kalguksu', '바지락 칼국수'), 'mussel');
+    assert.equal(w('kalguksu', '바지락 칼국수'), 'clam');
     assert.equal(w('jjamppong', '해물짬뽕'), 'shrimp,squid,mussel');
     assert.equal(w('jjamppong', '해물짬뽕', '오징어 빼고'), 'shrimp,mussel');
+});
+
+test('the new dishes: their own words stay off, the ingredients in their names go on', async () => {
+    const { dishPic } = await import('../src/phonefood.js');
+    const r = name => { const p = dishPic({ base: guessPic(name).base }, { name }); return [p.base, p.with.join(','), p.set.join(',')]; };
+    const want = {
+        '낙지볶음': ['stirfry-red', 'octopus', ''], '쭈꾸미볶음': ['stirfry-red', 'octopus', ''], '오징어볶음': ['stirfry-red', 'squid', ''],
+        '순두부찌개': ['soup-red', 'tofu', ''], '마파두부': ['mapo-tofu', '', ''], '계란말이': ['gyeranmari', '', ''], '치킨텐더': ['chicken-tender', '', ''],
+        '김치전': ['jeon', 'kimchi', ''], '해물파전': ['jeon', 'shrimp,squid,mussel', ''], '새우 텐동': ['tendon', 'shrimp', ''],
+        '레몬에이드': ['iced-tea', 'lemon', ''], '바나나 스무디': ['smoothie', 'banana', ''], '오레오 쉐이크': ['smoothie', 'cookie-crumbs', ''],
+        '생크림 와플': ['waffle', 'cream', ''], '아이스크림 와플': ['waffle', 'ice-cream-scoop', ''], '바닐라 아이스크림': ['ice-cream', '', ''], '생크림 케이크': ['cake', 'cream', ''],
+        '까르보나라': ['pasta-cream', '', ''], '하와이안 피자': ['pizza', 'ham,pineapple', ''], '콤비네이션 피자': ['pizza', 'pepperoni,bell-pepper,olive', ''],
+        '고구마피자': ['pizza', 'sweet-potato', ''], '라볶이': ['tteokbokki', 'noodles,fishcake', ''], '봉골레': ['pasta-oil', 'clam,garlic', ''], '마늘치킨': ['fried-chicken', 'garlic', ''],
+        '치킨 + 치킨무': ['fried-chicken', '', 'radish-pickle'], '피자 + 피클': ['pizza', '', 'pickles'], '치즈버거 감자튀김 세트': ['burger', 'cheese', 'fries'],
+        '새우튀김': ['twigim', 'shrimp', ''], '고구마튀김': ['twigim', 'sweet-potato', ''], 'Pepperoni Pizza': ['pizza', 'pepperoni', ''],
+    };
+    for (const [n, w] of Object.entries(want)) assert.deepEqual(r(n), w, n);
+    assert.equal(dishPic({ base: 'burger', with: ['lettuce', 'cucumber'] }, { name: '치킨버거', option: '노 오이' }).with.join(','), 'chicken,lettuce');
 });
