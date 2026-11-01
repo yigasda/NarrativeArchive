@@ -210,7 +210,7 @@ test('explicit bank rebuild changes current cash once and preserves linked trans
 });
 test('malformed rebuilt balances leave every account and its ledger unchanged',async()=>{
  const {m,p}=euroWallet();finance.migrateBank(m,p);const before=JSON.stringify({money:p.money,finance:m.finance});
- for(const invalid of [null,-1,'1000']) {
+ for(const invalid of [null,-1,'lots']) {
  globalThis.__investTest.answer={bank:{accounts:[{id:'eur',last4:'1234',kind:'checking',currency:'EUR',balance:invalid},{id:'credit',last4:'5678',kind:'credit',currency:'EUR',balance:0}]}};
  await assert.rejects(phonedata.fillMoney(m,p,{regenerateBalances:true}),/잔액/);assert.equal(JSON.stringify({money:p.money,finance:m.finance}),before);
  }

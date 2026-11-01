@@ -153,7 +153,7 @@ export const shiftDay = (day, n) => { const x = md(day); if (!x) return ''; cons
 export function storyDays(m, p) {
     const now = String(storyNow(p) || p.now || '').slice(0, 5);
     const rows = datedRows(m).filter(r => rowDay(r)), cals = calendars();
-    const last = md(now) ? now : rows.map(rowDay).sort().at(-1) || '';
+    const last = md(now) ? now : rows.map(rowDay).at(-1) || '';
     if (!last) return [];
     return Array.from({ length: 14 }, (_, k) => shiftDay(last, k - 13)).map(day => ({ day, places: [...new Set(rows.filter(r => rowDay(r) === day).flatMap(r => headingPlaces(r.s.title, cals)))].slice(0, 4) }));
 }
@@ -197,9 +197,9 @@ export function parseLife(raw, now, lastDay = '') {
             days: nightsToDays(h.days, { usual: { bed: hhmm(h.usual?.bed), sleep: hhmm(h.usual?.sleep), wake: hhmm(h.usual?.wake) }, lastDay }),
         },
         files: {
-            folders: arr(f.folders).map(x => ({ name: line(x?.name, 40), ko: ko(x?.ko), count: int(x?.count, 0, 9999) ?? 0, fav: yes(x?.fav) })).filter(x => x.name).slice(0, 6),
+            folders: arr(f.folders).map(x => ({ name: line(x?.name, 40), ko: ko(x?.ko), count: int(x?.count, 0, 9999) ?? 0, fav: yes(x?.fav) })).filter(x => x.name && fileOf({ name: 'x', folder: x.name }).folder !== 'Downloads').slice(0, 6),
             items: arr(f.items).map(fileOf).filter(x => x.name).slice(0, 18),
-            cloud: { used: num(f.cloud?.used), total: num(f.cloud?.total) },
+            cloud: (u => ({ used: u.total !== null && u.used !== null ? Math.min(u.used, u.total) : u.used, total: u.total }))({ used: num(f.cloud?.used), total: num(f.cloud?.total) }),
         },
         weather: parseWeather(raw.weather, now),
     };
@@ -223,7 +223,7 @@ export function parseDelivery(raw, accounts = [], tx = [], now = '') {
         shops: arr(raw.shops).map(s => ({ name: line(s?.name, 60), ko: ko(s?.ko), cuisine: line(s?.cuisine, 30), rating: num(s?.rating), reviews: int(s?.reviews, 0, 999999), fee: num(s?.fee) ?? 0, minOrder: num(s?.minOrder), eta: line(s?.eta, 12), fav: yes(s?.fav),
             menu: arr(s?.menu).map(x => { const m = { name: line(x?.name, 60), ko: ko(x?.ko), desc: line(x?.desc, 100), price: num(x?.price) ?? 0, top: yes(x?.top) }, pic = dishPic(x?.pic, m, true); return pic ? { ...m, pic } : m; }).filter(x => x.name).slice(0, 4) })).filter(s => s.name).slice(0, 5),
         orders: arr(raw.orders).map(o => withEv({ shop: line(o?.shop, 60), items: arr(o?.items).map(dish).filter(x => x.name).slice(0, 10), fee: num(o?.fee) ?? 0, tip: num(o?.tip) ?? 0, discount: Math.abs(num(o?.discount) ?? 0),
-            mode: pick(o?.mode, ['delivery', 'pickup'], 'delivery'), time: when(o?.time), arrived: when(o?.arrived), to: line(o?.to, 40) || 'home', address: line(o?.address, 80), left: line(o?.left, 60),
+            mode: pick(o?.mode, ['delivery', 'pickup'], 'delivery'), time: when(o?.time), arrived: when(o?.arrived) || hhmm(o?.arrived), to: line(o?.to, 40) || 'home', address: line(o?.address, 80), left: line(o?.left, 60),
             noteShop: line(o?.noteShop, 120), noteShopKo: ko(o?.noteShopKo), noteRider: line(o?.noteRider, 120), noteRiderKo: ko(o?.noteRiderKo), noCutlery: yes(o?.noCutlery), for: int(o?.for, 1, 30) ?? 1,
             status: pick(o?.status, ['on the way', 'delivered', 'cancelled', 'refunded'], 'delivered'), account: acct(o?.account), ...paidOf(o?.paidBy), reviewed: yes(o?.reviewed), gift: giftOf(o?.gift) }, o)).filter(o => o.shop && o.items.length && o.time)
             .sort(byStory(now)).slice(-12),

@@ -1100,14 +1100,20 @@ const HOME_CUR = { KR: 'KRW', US: 'USD', GB: 'GBP', DE: 'EUR', FR: 'EUR', IT: 'E
 export function parseMoney(raw, country = '') {
     if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 은행 · 지갑 · 쇼핑 내용(JSON)을 찾지 못했어요');
     const cur = /^[A-Z]{3}$/.test(String(raw.currency || '').toUpperCase()) ? String(raw.currency).toUpperCase() : HOME_CUR[country] || 'EUR';
-    const accounts = arr(raw.bank?.accounts).map(a => ({ id: line(a?.id, 80), currency: /^[A-Z]{3}$/.test(a?.currency || '') ? a.currency : cur, kind: pick(a?.kind, ['checking', 'savings', 'credit'], 'checking'), name: line(a?.name, 40), last4: last4(a?.last4), balance: num(a?.balance) })).filter(a => a.last4).slice(0, 4);
+    const code = v => { const c = String(v || '').trim().toUpperCase(); return /^[A-Z]{3}$/.test(c) ? c : ''; };
+    const accounts = arr(raw.bank?.accounts).map(a => ({ id: line(a?.id, 80), currency: code(a?.currency) || cur, kind: pick(a?.kind, ['checking', 'savings', 'credit'], 'checking'), name: line(a?.name, 40), last4: last4(a?.last4), balance: num(a?.balance) })).filter(a => a.last4).slice(0, 4);
+    // two accounts the model gave the same last 4 digits: the second gets its own (records find their account by them)
+    const seen4 = new Set(); for (const a of accounts) { while (seen4.has(a.last4)) a.last4 = String((Number(a.last4) + 1) % 10000).padStart(4, '0'); seen4.add(a.last4); }
+    // a record's account as the model names it: its last 4 digits, else its name
+    const acctOf = v => { const d = last4(v); if (accounts.some(a => a.last4 === d)) return d; const w = String(v || '').toLowerCase().replace(/\s+/g, ''); return (w && accounts.find(a => a.name && a.name.toLowerCase().replace(/\s+/g, '') === w))?.last4 || ''; };
     return {
         currency: cur, basis: str(raw.basis, 1500),
         bank: { name: line(raw.bank?.name, 40) || 'Bank', accounts },
-        cards: arr(raw.cards).map(c => ({ account: last4(c?.account), exp: line(c?.exp, 5) })).filter(c => accounts.some(a => a.last4 === c.account)).slice(0, 6),
-        tx: arr(raw.tx).map(x => withEv({ account: last4(x?.account), who: line(x?.who, 60), ko: ko(x?.ko), amount: num(x?.amount), time: when(x?.time), kind: pick(x?.kind, ['card', 'transfer', 'deposit', 'cash'], 'card'), memo: line(x?.memo, 80), pending: !!x?.pending }, x)).filter(x => x.who && x.amount !== null).slice(-30),
+        cards: arr(raw.cards).map(c => ({ account: acctOf(c?.account), exp: line(c?.exp, 5) })).filter(c => accounts.some(a => a.last4 === c.account)).slice(0, 6),
+        // a record on no account the bank has is shown nowhere: left out; money in with no kind is a deposit
+        tx: arr(raw.tx).map(x => withEv({ account: acctOf(x?.account), who: line(x?.who, 60), ko: ko(x?.ko), amount: num(x?.amount), time: when(x?.time), kind: pick(x?.kind, ['card', 'transfer', 'deposit', 'cash'], num(x?.amount) > 0 ? 'deposit' : 'card'), memo: line(x?.memo, 80), pending: x?.pending === true }, x)).filter(x => x.who && x.amount !== null && x.amount !== 0 && x.account).slice(-30),
         passes: arr(raw.passes).map(x => withEv({ kind: pick(x?.kind, ['flight', 'train', 'hotel', 'event', 'other'], 'other'), by: line(x?.by, 60), from: line(x?.from, 40), to: line(x?.to, 40), date: when(x?.date).slice(0, 5), time: hhmm(x?.time), seat: line(x?.seat, 12), gate: line(x?.gate, 12), no: line(x?.no, 24), status: line(x?.status, 30) }, x)).filter(x => x.by).slice(-10),
-        orders: arr(raw.orders).map(x => withEv({ shop: line(x?.shop, 60), item: line(x?.item, 80), ko: ko(x?.ko), option: line(x?.option, 60), qty: Math.max(1, Math.round(Number(x?.qty) || 1)), price: num(x?.price), time: when(x?.time), status: pick(x?.status, ['ordered', 'shipped', 'on the way', 'delivered', 'unknown'], 'unknown'), eta: when(x?.eta).slice(0, 5), arrived: when(x?.arrived).slice(0, 5), gift: giftOf(x?.gift) }, x)).filter(x => x.item).slice(-12),
+        orders: arr(raw.orders).map(x => withEv({ shop: line(x?.shop, 60), item: line(x?.item, 80), ko: ko(x?.ko), option: line(x?.option, 60), qty: Math.max(1, Math.round(num(x?.qty) || 1)), price: num(x?.price), time: when(x?.time), status: pick(x?.status, ['ordered', 'shipped', 'on the way', 'delivered', 'unknown', 'cancelled', 'returning', 'returned', 'refunded'], 'unknown'), eta: when(x?.eta).slice(0, 5), arrived: when(x?.arrived).slice(0, 5), gift: giftOf(x?.gift) }, x)).filter(x => x.item).slice(-12),
     };
 }
 // what the phone already holds, so the money side reuses its event tags
@@ -1136,12 +1142,12 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
                 const rows = raw?.bank?.accounts;
                 if (!Array.isArray(rows) || rows.length !== old.bank.accounts.length || old.bank.accounts.some(a => {
                     const matches = rows.filter(b=>b.id === a.id);
-                    return matches.length !== 1 || matches[0].currency !== a.currency || matches[0].kind !== a.kind || String(matches[0].last4) !== a.last4 || a.kind!=='credit' && (!finite(matches[0].balance) || matches[0].balance < 0);
+                    return matches.length !== 1 || String(matches[0].currency || '').toUpperCase() !== a.currency || matches[0].kind !== a.kind || last4(matches[0].last4) !== a.last4 || a.kind!=='credit' && (!finite(num(matches[0].balance)) || num(matches[0].balance) < 0);
                 })) throw new Error('새 계좌 잔액을 확인하지 못했어요. 기존 잔액은 유지돼요');
                 if (['cards','tx','passes','orders'].some(k=>!Array.isArray(raw[k])) || next.tx.some(t=>!old.bank.accounts.some(a=>a.last4===t.account))) throw new Error('새 거래 내역을 확인하지 못했어요. 기존 데이터는 유지돼요');
                 next.bank.accounts = old.bank.accounts.map(a => {
                     const b = rows.find(b=>b.id === a.id);
-                    return {...a,name:next.bank.accounts.find(b=>b.id === a.id)?.name || a.name,balance:a.kind==='credit'?0:b.balance};
+                    return {...a,name:next.bank.accounts.find(b=>b.id === a.id)?.name || a.name,balance:a.kind==='credit'?0:num(b.balance)};
                 });
             } else next.bank.accounts = old.bank.accounts.map(a => ({ ...a, name: next.bank.accounts.find(b => b.id === a.id)?.name || a.name }));
             next.currency = old.currency;
@@ -1187,10 +1193,12 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
         return p.money;
     }
 }
+// a recording's length: seconds, or "1:20"
+export const secOf = v => { const mt = String(v ?? '').match(/(\d{1,2}):(\d{2})/); const n = mt ? mt[1] * 60 + Number(mt[2]) : num(v); return Math.max(3, Math.min(900, Math.round(n || 30))); };
 export async function fillVoice(m, p) {
     const diary = (p.diary || []).slice(-6).map(d => `- ${d.date} ${d.title}`).join('\n');
     const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`], {story:CHAT_TOKENS.apps,profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });
-    const memos = arr(jsonOf(out)?.memos).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: Math.max(3, Math.min(900, Math.round(Number(x?.sec) || 30))), place: line(x?.place, 60), src: 'guess' })).filter(x => x.text);
+    const memos = arr(jsonOf(out)?.memos).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'guess' })).filter(x => x.text);
     if (!memos.length) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
     p.voice = [...(p.voice || []).filter(x => x.src === 'story' || x.now), ...memos].sort(byStory(p.now)).slice(-CAP.voice);
     p.voiceAt = Date.now();

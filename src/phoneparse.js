@@ -79,5 +79,18 @@ export function mendJson(t) {
 export const parseJson = s => { try { return JSON.parse(s); } catch { return JSON.parse(mendJson(s)); } };
 export const jsonOf = out => { const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}'); try { return a >= 0 && b > a ? parseJson(t.slice(a, b + 1)) : null; } catch { return null; } };
 // a number from a model's answer: "12,50", "€9.90", "1,200"; text with no digit in it ("lots", "free") is none, never 0
-export const num = v => { if (v === null || v === undefined || typeof v === 'object' || typeof v === 'boolean' || !/\d/.test(String(v))) return null; const n = Number(String(v ?? '').replace(/[−–]/g, '-').replace(/[^\d.,-]/g, '').replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '')); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
+export const num = v => {
+    if (v === null || v === undefined || typeof v === 'object' || typeof v === 'boolean') return null;
+    if (typeof v === 'number') return Number.isFinite(v) ? Math.round(v * 100) / 100 : null;
+    // the first number written ("4.7/5" is 4.7, "25–35" is 25), never two run together
+    const mt = String(v).replace(/[−–](?=\s*\d)/g, '-').match(/-?\d[\d.,]*/);
+    if (!mt) return null;
+    let t = mt[0].replace(/[.,]+$/, '');
+    // "1.200,50" and "1,200.50": the last mark is the decimal one; "12,50" is 12.5; "1,200" and "1.200.000" are thousands
+    if (t.includes('.') && t.includes(',')) { const d = Math.max(t.lastIndexOf('.'), t.lastIndexOf(',')); t = t.slice(0, d).replace(/[.,]/g, '') + '.' + t.slice(d + 1); }
+    else if (t.includes(',')) t = /,\d{1,2}$/.test(t) && (t.match(/,/g) || []).length === 1 ? t.replace(',', '.') : t.replace(/,/g, '');
+    else if ((t.match(/\./g) || []).length > 1) t = t.replace(/\./g, '');
+    const n = Number(t);
+    return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+};
 export const last4 = v => String(v ?? '').replace(/\D/g, '').slice(-4);
