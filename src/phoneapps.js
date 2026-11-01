@@ -584,12 +584,12 @@ export function setDate(p, now) {
     const on = !p.noYear, mt = /^(\d{2})-(\d{2})/.exec(String(now || p.now || ''));
     const y = on && Number(p.year), d = y && mt ? new Date(Date.UTC(y, mt[1] - 1, Number(mt[2]))) : null;
     const day = mt ? `${Number(mt[1])}월 ${Number(mt[2])}일${d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}` : '';
-    const row = (n, v) => `<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">${n}</span></span>${v}</div>`;
+    const row = (n, v, tag = 'div') => `<${tag} class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">${n}</span></span>${v}</${tag}>`;
     return `${axBar(p, now)}
       ${axTop(axCb('set'))}
       <div class="ax_scroll">${axH1('날짜 및 시간')}
         <div class="ax_card">
-          ${on ? row('연도', `<input type="number" class="ax_in na_ph_year cg_num" min="1900" max="2100" inputmode="numeric" aria-label="연도" value="${esc(String(p.year || ''))}">`) : ''}
+          ${on ? row('연도', `<input type="number" class="ax_in na_ph_year cg_num" min="1900" max="2100" inputmode="numeric" aria-label="연도" value="${esc(String(p.year || ''))}">${axChev}`, 'label') : ''}
           ${row('날짜', `<span class="ax_v cg_num">${esc(day)}</span>`)}
           ${row('시간', `<span class="ax_v cg_num">${esc(String(now || p.now || '').slice(6, 11))}</span>`)}
         </div>
