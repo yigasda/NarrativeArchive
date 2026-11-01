@@ -4378,6 +4378,15 @@ body.na_darkui .na_ph_mapart { background: linear-gradient(90deg, rgba(255, 255,
 .na_ph_makebtn { margin-top: 6px !important; padding: 10px 26px !important; border-radius: 999px !important; background: #fff !important; color: #2b2f63 !important; font-weight: 700 !important; }
 .na_ph_makebtn:disabled { opacity: 0.7; }
 .na_ph_ownercard { width: min(250px, 78%); }
+.na_ph_make { flex-direction: column; gap: 12px; }
+.na_ph_makecard { width: min(296px, 86%); box-sizing: border-box; }
+.na_ph_makeopts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; margin-top: 6px; }
+.na_ph_makecard > .na_ph_makebtn { align-self: stretch; }
+.na_ph_makeopts button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.na_ph_maketip { display: flex; align-items: center; gap: 10px; width: min(296px, 86%); box-sizing: border-box; padding: 12px 12px 12px 16px; border-radius: 20px; background: rgba(20, 16, 40, 0.32); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); color: #fff; }
+.na_ph_maketip .t { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; text-align: left; }
+.na_ph_maketip b { font-size: 13px; }
+.na_ph_maketip small { font-size: 11.5px; line-height: 1.4; opacity: 0.78; }
 .na_ph_noface { display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); border: 1.5px dashed rgba(255, 255, 255, 0.65); color: #fff; }
 .na_ph_owneradd { display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 100%; margin-top: 6px; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame .na_ph_owneradd input { box-sizing: border-box; width: 100%; margin: 0; padding: 10px 14px; border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 14px; background: rgba(255, 255, 255, 0.16); color: #fff; font-size: 14px; text-align: center; outline: none; box-shadow: none; }
@@ -4405,7 +4414,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 .na_pb_phonebtn { position: absolute; top: 10px; left: 10px; z-index: 1; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 11px 0 9px; border: 0; border-radius: 15px; background: rgba(0, 0, 0, 0.22); color: #fff; font: inherit; font-size: 0.8em; font-weight: 600; cursor: pointer; }
 .na_pb_phonebtn:hover { background: rgba(0, 0, 0, 0.4); }
 /* 캐릭터 휴대폰 under a theme that paints every button: the phone's buttons keep their own (see-through) look */
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame button:not(.na_ph_widget, .na_ph_kochip, .na_ph_makebtn, .na_ph_makelinks button, .na_ph_bar, .na_ph_thumb, .na_ph_draw, .cg_wcal, .cg_wnote, .cg_ic, .cg_nt, .na_ph_camthumb, .ax button, .cg_dots button),
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame button:not(.na_ph_widget, .na_ph_kochip, .na_ph_makebtn, .na_ph_makelinks button, .na_ph_makeopts button, .na_ph_maketip button, .na_ph_bar, .na_ph_thumb, .na_ph_draw, .cg_wcal, .cg_wnote, .cg_ic, .cg_nt, .na_ph_camthumb, .ax button, .cg_dots button),
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_pick:not(.on) { background: transparent !important; background-image: none !important; border-color: transparent !important; box-shadow: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_pick.on { background: var(--na-card2) !important; border-color: transparent !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_pb_phonebtn { background: rgba(0, 0, 0, 0.22) !important; border-color: transparent !important; color: #fff !important; }
@@ -6772,3 +6781,8 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .dv_cardsel { margin: 12px 0 0 36px; border: 1.5px solid var(--ink); border-radius: 12px; padding: 12px 14px; display: flex; justify-content: space-between; font-size: 15px; }
 .ax .dv_card .dv_kv { padding: 0; }
 .ax .dv_card .dv_chk { margin-top: 12px; font-weight: 700; }
+/* 폰 만들기 카드의 작은 버튼들: the frame resets its buttons above, so these come after */
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame .na_ph_makeopts button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 0; margin: 0; padding: 9px 4px 8px !important; border: 1px solid rgba(255, 255, 255, 0.22) !important; border-radius: 14px !important; background: rgba(255, 255, 255, 0.12) !important; box-shadow: none !important; color: #fff !important; font: inherit; font-size: 11.5px; font-weight: 500; line-height: 1.2; cursor: pointer; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame .na_ph_makeopts button:hover { background: rgba(255, 255, 255, 0.22) !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame .na_ph_maketip button { flex: none; margin: 0; padding: 8px 14px !important; border: 0 !important; border-radius: 999px !important; background: rgba(255, 255, 255, 0.9) !important; box-shadow: none !important; color: #2b2f63 !important; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame :is(.na_ph_makebtn, .na_ph_makeopts button, .na_ph_maketip button):focus { outline: none !important; box-shadow: none !important; }

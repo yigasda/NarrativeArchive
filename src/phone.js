@@ -160,12 +160,16 @@ export async function openPhone(who = null) {
                   <div class="na_ph_makecard">
                     <span class="na_ph_makeface">${faceHtml(owner, 64)}</span>
                     <b>${esc(owner)}의 폰</b>
-                    ${noArchive(m) ? '<p>아카이브가 없어서 대화 본문을 읽어요.<br>압축을 먼저 하면 더 정확하고 싸요</p><span class="na_ph_makelinks"><button type="button" class="na_ph_gocompress">압축하러 가기</button></span>' : '<p>아카이브를 읽고 폰을 채워요</p>'}
-                    <span class="na_ph_makelinks"><button type="button" class="na_ph_makeprofile">${m.phoneProfiles?.[nameKey(owner)] ? `연결된 인물 정보 · ${esc(m.phoneProfiles[nameKey(owner)].label)}` : '인물 정보 연결'}</button></span>
+                    <p>${noArchive(m) ? '대화 본문을 읽고 폰을 채워요' : '아카이브를 읽고 폰을 채워요'}</p>
                     <button type="button" class="na_ph_makebtn">폰 만들기</button>
-                    <span class="na_ph_makelinks"><button type="button" class="na_ph_makewho">인물 바꾸기</button><i>·</i><button type="button" class="na_ph_makelore">로어북 ${(n => (n ? `${n}권` : '없음'))(phoneLore(m).length)}</button></span>
+                    <span class="na_ph_makeopts">
+                      <button type="button" class="na_ph_makeprofile">${ic('user', 16, 2)}<span>${m.phoneProfiles?.[nameKey(owner)] ? esc(m.phoneProfiles[nameKey(owner)].label) : '인물 정보'}</span></button>
+                      <button type="button" class="na_ph_makewho">${ic('redo', 16, 2)}<span>인물 바꾸기</span></button>
+                      <button type="button" class="na_ph_makelore">${ic('note', 16, 2)}<span>로어북 ${(n => (n ? `${n}권` : '없음'))(phoneLore(m).length)}</span></button>
+                    </span>
                     ${draftReady() ? '' : '<small>⚙ 설정 → AI 모델에서 초안 모델을 먼저 정해 주세요</small>'}
                   </div>
+                  ${noArchive(m) ? `<div class="na_ph_maketip"><span class="t"><b>아직 아카이브가 없어요</b><small>압축해 두면 폰이 더 정확하고 싸게 만들어져요</small></span><button type="button" class="na_ph_gocompress">압축하기</button></div>` : ''}
                 </div></div>`);
             return;
         }
