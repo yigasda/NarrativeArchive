@@ -479,17 +479,34 @@ const ext = f => (String(f.name).match(/\.([a-z0-9]{2,4})$/i)?.[1] || FK[f.kind]
 const fico = (f, s = '') => `<span class="lf_fico ${s}" style="background: ${FK[f.kind][1]}">${esc(ext(f))}</span>`;
 const size = kb => (kb === null || kb === undefined ? '' : kb >= 1024 * 1024 ? `${(kb / 1048576).toFixed(1)} GB` : kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${Math.round(kb)} KB`).replace('.', ',');
 const live = lf => lf.files.items.filter(f => !f.trashed);
+// a photo's thumbnail: a flat little scene picked from its name, folder and time (sea, city, night, food, or hills)
+const SCENE = [['night', /night|nacht|nuit|noche|밤|야경|abend|evening|party|bar\b|club/i], ['sea', /sea|beach|strand|meer|plage|mar\b|praia|ocean|lake|see\b|fluss|river|바다|해변|강|호수|lisboa|lisbon|porto|nice|island/i],
+    ['food', /food|essen|lunch|dinner|brunch|cafe|café|kaffee|coffee|cake|kuchen|pizza|pasta|ramen|음식|밥|카페|커피|케이크|맛집/i], ['city', /city|stadt|street|straße|strasse|tram|bus|bahn|station|bridge|brücke|building|haus|dach|roof|garage|werkstatt|도시|거리|건물|역|다리|지붕/i]];
+function photoScene(f) {
+    const words = `${f.name} ${f.folder} ${f.preview || ''} ${f.ko || ''}`, h = Number(String(f.time || '').slice(6, 8));
+    const k = (SCENE.find(([, re]) => re.test(words)) || [])[0] || (h >= 20 || h < 5 ? 'night' : 'hills');
+    const r = [...String(f.name)].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 997, 7) % 5;
+    const S = {
+        sea: `<rect width="100" height="100" fill="#bfe0f2"/><circle cx="${70 + r * 3}" cy="26" r="9" fill="#fff6d6"/><rect y="52" width="100" height="22" fill="#5aa6d6"/><path d="M0 58h100M0 64h100" stroke="#8fc6e8" stroke-width="1.6" stroke-dasharray="8 6"/><path d="M0 74q50 -8 100 0v26H0z" fill="#efd9ad"/>`,
+        city: `<rect width="100" height="100" fill="#cfe1ee"/><circle cx="${20 + r * 8}" cy="22" r="8" fill="#fff4d0"/>${[[4, 46, 18], [22, 34, 16], [38, 52, 20], [58, 28, 18], [76, 44, 22]].map(([x, y, w]) => `<rect x="${x}" y="${y}" width="${w}" height="${100 - y}" fill="#7d93a8"/>${[0, 1, 2, 3].map(j => `<rect x="${x + 4}" y="${y + 6 + j * 11}" width="4" height="5" fill="#b9cad8"/><rect x="${x + w - 8}" y="${y + 6 + j * 11}" width="4" height="5" fill="#b9cad8"/>`).join('')}`).join('')}<rect y="88" width="100" height="12" fill="#5d6f80"/>`,
+        night: `<rect width="100" height="100" fill="#26304f"/><circle cx="${72 - r * 4}" cy="24" r="8" fill="#f4ecc8"/><circle cx="${69 - r * 4}" cy="22" r="7" fill="#26304f"/>${[[14, 18], [34, 10], [52, 30], [86, 14], [24, 36]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.2" fill="#fff"/>`).join('')}${[[0, 56, 22], [20, 44, 18], [40, 60, 24], [62, 40, 18], [80, 54, 20]].map(([x, y, w]) => `<rect x="${x}" y="${y}" width="${w}" height="${100 - y}" fill="#18203a"/>${[0, 1, 2].map(j => `<rect x="${x + 4 + (j % 2) * 8}" y="${y + 6 + j * 10}" width="4" height="5" fill="#f6d27a"/>`).join('')}`).join('')}`,
+        food: `<rect width="100" height="100" fill="#e9d2b4"/><path d="M0 70h100" stroke="#dcbf9c" stroke-width="2"/><circle cx="50" cy="52" r="32" fill="#fff"/><circle cx="50" cy="52" r="24" fill="#f6efe2"/><circle cx="${44 + r}" cy="48" r="9" fill="#e0904a"/><circle cx="58" cy="56" r="7" fill="#7fbf5a"/><circle cx="46" cy="60" r="6" fill="#e8463a"/><rect x="86" y="24" width="4" height="56" rx="2" fill="#c9ced4"/>`,
+        hills: `<rect width="100" height="100" fill="${['#cfe5d0', '#f3dcc0', '#d6e2f2', '#efd6dc', '#e2e8c8'][r]}"/><circle cx="72" cy="28" r="10" fill="#fffaf0"/><path d="M-10 78q30 -34 62 -6q22 -22 58 2V100H-10z" fill="${['#8cc28f', '#d8a46e', '#93add8', '#d79aa8', '#a9b96a'][r]}"/><path d="M-10 90q40 -20 120 -4V100H-10z" fill="${['#6aa66e', '#c08850', '#7592c4', '#c07a8a', '#8c9c4e'][r]}"/>`,
+    };
+    return `<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">${S[k]}</svg>`;
+}
 const thumb = (p, f) => f.private ? `<span class="lf_th lf_thp">${ax('eyeoff', 26, '#9aa0a8', 2)}</span>`
-    : f.kind === 'image' ? `<span class="lf_th" style="background: ${axTint(f.name)}"><i class="lf_hill"></i><i class="lf_sunb"></i></span>`
+    : f.kind === 'image' ? `<span class="lf_th lf_thi">${photoScene(f)}</span>`
     : f.kind === 'pdf' || f.kind === 'doc' ? `<span class="lf_th"><span class="lf_doc"><i class="h"></i><i></i><i></i><i style="width: 70%"></i><em style="background: ${FK[f.kind][1]}">${esc(ext(f))}</em></span></span>`
-    : f.kind === 'video' ? `<span class="lf_th" style="background: #3a3f4a">${ax('play', 26, '#fff', 2, '#fff')}</span>` : `<span class="lf_th">${fico(f)}</span>`;
+    : f.kind === 'video' ? `<span class="lf_th lf_thi">${photoScene(f)}<span class="lf_play">${ax('play', 20, '#fff', 2, '#fff')}</span></span>` : `<span class="lf_th">${fico(f)}</span>`;
 const fileRow = (p, f) => `<button type="button" class="lf_fr" data-go="file" data-i="${f.id}">${fico(f, 's')}<span class="lf_tx"><b>${esc(f.name)}</b><small>${esc(fmtDate(p, f.time, true))}${size(f.size) ? ` · ${size(f.size)}` : ''}${f.trashed ? ' · 휴지통' : ''}</small></span>${f.tag ? `<i class="lf_tagd" style="background: ${f.tag === 'red' ? '#d64545' : '#e8a317'}"></i>` : ''}</button>`;
 export function filesScreen(p, now) {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '파일', 'life');
     const fs = live(lf), recent = [...fs].filter(f => f.opened).sort(byStory(p.now, f => f.opened)).reverse().slice(0, 6), dl = fs.filter(f => f.folder === 'Downloads').length, trash = lf.files.items.filter(f => f.trashed).length, cl = lf.files.cloud || {};
     const favs = lf.files.folders.filter(x => x.fav), others = lf.files.folders.filter(x => !x.fav);
-    const fold = x => `<button type="button" class="lf_rw" data-go="folder" data-i="${encodeURIComponent(x.name)}">${ax('folder', 22, '#2f6fbf', 2, '#dfeaf8')}<span class="lf_tx"><b>${esc(x.name)}</b>${x.ko && koOn() ? `<small>${esc(x.ko)}</small>` : ''}</span><small>${x.count}</small>${ax('chev', 14, '#b7bdc6', 2.4)}</button>`;
+    const FOLD_C = [['#2f6fbf', '#dfeaf8'], ['#2f9a8a', '#d9f1ec'], ['#d0812f', '#fbe9d6'], ['#7a62c8', '#e9e3f8'], ['#c8566e', '#f8e0e6']];
+    const fold = x => { const [c, bg] = x.fav ? FOLD_C[[...x.name].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 97, 3) % FOLD_C.length] : FOLD_C[0]; return `<button type="button" class="lf_rw" data-go="folder" data-i="${encodeURIComponent(x.name)}">${ax('folder', 22, c, 2, bg)}<span class="lf_tx"><b>${esc(x.name)}</b>${x.ko && koOn() ? `<small>${esc(x.ko)}</small>` : ''}</span><small>${x.count}</small>${ax('chev', 14, '#b7bdc6', 2.4)}</button>`; };
     return `${axBar(p, now)}${axTop(axCb('home2'), axKp(p))}
       <div class="ax_scroll">${axH1('파일')}
         ${recent.length ? `<div class="lf_sec">최근</div><div class="lf_rec">${recent.map(f => `<button type="button" data-go="file" data-i="${f.id}">${thumb(p, f)}<b>${esc(f.name)}</b><small>${esc(fmtDate(p, f.opened, true))} · ${esc(f.folder === 'Downloads' ? '다운로드' : f.folder)}</small></button>`).join('')}</div>` : ''}
@@ -514,7 +531,8 @@ export function folderScreen(p, now, key) {
         ${trash ? '<div class="lf_sub">30일이 지나면 완전히 지워져요</div>' : ''}
         ${fs.length ? grid ? `<div class="lf_grid">${fs.map(f => `<button type="button" data-go="file" data-i="${f.id}">${thumb(p, f)}<b>${esc(f.name.replace(/\.[a-z0-9]{2,4}$/i, ''))}</b><small>${esc([f.length, size(f.size)].filter(Boolean).join(' · '))}</small></button>`).join('')}</div>`
             : `<div class="lf_card">${fs.map(f => fileRow(p, f)).join('')}</div>` : '<div class="lf_none">파일이 없어요</div>'}
-        ${fo && fo.count > fs.length ? `<div class="lf_sub">그 밖에 ${fo.count - fs.length}개</div>` : ''}
+        ${fo && fo.count > fs.length ? (() => { const n = fo.count - fs.length, shown = Math.min(n, grid ? 12 : 8);
+            return `${grid ? `<div class="lf_grid lf_ghost">${Array.from({ length: shown }, (_, k) => `<span><span class="lf_th"></span><i style="width: ${50 + (k * 17) % 40}%"></i></span>`).join('')}</div>` : `<div class="lf_card lf_ghost">${Array.from({ length: shown }, (_, k) => `<span class="lf_fr"><span class="lf_fico s"></span><span class="lf_tx"><i style="width: ${45 + (k * 23) % 40}%"></i><i style="width: 30%"></i></span></span>`).join('')}</div>`}<div class="lf_sub" style="text-align: center">이야기에 나오지 않은 파일 ${n}개</div>`; })() : ''}
         <i class="lf_pad"></i></div>${axInd()}`;
 }
 // a ticket or booking file: its first page drawn from the record with the same story event (no text from the model)
@@ -529,13 +547,19 @@ function ticketPage(p, f) {
         <svg class="bc" viewBox="0 0 ${String(t.no || t.by || f.name).length * 9} 40" preserveAspectRatio="none">${bc}</svg></div>
       <div class="lf_lines"><i style="width: 92%"></i><i style="width: 74%"></i><i style="width: 84%"></i></div></div>`;
 }
+// a document's first page: its preview as the title (split at " · "), the Korean under it, then paragraphs of grey lines
+function docPage(f) {
+    const [t, ...rest] = String(f.preview || f.name.replace(/\.[a-z0-9]{2,4}$/i, '').replace(/[_-]+/g, ' ')).split(' · ');
+    const r = [...String(f.name)].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 997, 7), block = (n, k) => `<div class="lf_lines">${Array.from({ length: n }, (_, j) => `<i style="width: ${j === n - 1 ? 40 + (r + k * 7) % 35 : 84 + (r + j * 13 + k) % 14}%"></i>`).join('')}</div>`;
+    return `<div class="lf_pv"><div class="lf_doc2"><i class="h" style="background: ${FK[f.kind][1]}"></i><h4>${esc(t)}</h4>${rest.length ? `<small>${esc(rest.join(' · '))}</small>` : ''}${k1(f.ko)}${block(3, 1)}${block(4, 2)}${f.kind === 'pdf' && (f.pages || 1) > 1 ? `${block(3, 3)}<div class="lf_sign"><i></i><i></i></div>` : block(2, 4)}</div></div>`;
+}
 export function fileScreen(p, now, id) {
     const lf = L(p), f = lf?.files.items.find(x => x.id === id);
     if (!f) return filesScreen(p, now);
     const page = f.private ? '' : ticketPage(p, f);
     const body = f.private ? `<div class="lf_lock">${ax('eyeoff', 30, '#8a929d', 2)}<span>미리보기 없음</span><small>${esc([FK[f.kind][0], f.length].filter(Boolean).join(' · '))}</small></div>`
         : page || (f.kind === 'image' ? `<div class="lf_pvimg">${thumb(p, f)}</div>` : f.kind === 'audio' ? `<div class="lf_pvaud"><div class="lf_aud"><span class="pl">${ax('play', 22, '#fff', 2, '#fff')}</span><div class="lf_wave">${Array.from({ length: 34 }, (_, k) => `<i style="height: ${Math.round(22 + 60 * Math.abs(Math.sin((k + f.name.length) * 0.55)) * (0.55 + 0.45 * Math.abs(Math.sin(k * 0.21))))}%"></i>`).join('')}</div></div><div class="lf_audt cg_num"><span>0:00</span><span>${esc(f.length ? `−${f.length}` : '')}</span></div></div>`
-        : `<div class="lf_pv"><div class="lf_doc2"><i class="h" style="background: ${FK[f.kind][1]}"></i>${f.preview ? `<p>${esc(f.preview)}${k1(f.ko)}</p>` : ''}<div class="lf_lines"><i style="width: 92%"></i><i style="width: 80%"></i><i style="width: 86%"></i><i style="width: 60%"></i></div></div></div>`);
+        : docPage(f));
     return `${axBar(p, now)}
       <div class="ax_top">${axCb(f.trashed ? 'folder:~trash' : `folder:${encodeURIComponent(f.folder)}`)}<span class="lf_ttl">${esc(f.name)}</span><span class="ax_topr">${axKp(p)}</span></div>
       <div class="ax_scroll">${body}

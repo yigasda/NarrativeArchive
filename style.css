@@ -6025,6 +6025,23 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .lf_thp { background: #e9ebef; }
 .ax .lf_hill { position: absolute; width: 150%; height: 70%; left: -25%; top: 55%; border-radius: 46%; background: rgba(0, 0, 0, 0.12); }
 .ax .lf_sunb { position: absolute; width: 22px; height: 22px; right: 16px; top: 16px; border-radius: 50%; background: rgba(255, 255, 255, 0.7); }
+.ax .lf_thi svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ax .lf_play { position: relative; width: 38px; height: 38px; border-radius: 50%; background: rgba(0, 0, 0, 0.35); display: grid; place-items: center; }
+.ax .lf_ghost .lf_th { background: #eceef2 !important; box-shadow: none; }
+.ax .lf_ghost { pointer-events: none; }
+.ax .lf_grid.lf_ghost { padding-top: 16px; }
+.ax .lf_grid.lf_ghost > span { display: block; }
+.ax .lf_ghost i { display: block; height: 7px; border-radius: 4px; background: #eceef2; margin: 8px auto 0; }
+.ax .lf_card.lf_ghost { margin-top: 10px; }
+.ax .lf_ghost .lf_fico { background: #eceef2; }
+.ax .lf_ghost .lf_fico::before { display: none; }
+.ax .lf_ghost .lf_tx { flex: 1; }
+.ax .lf_ghost .lf_tx i { margin: 4px 0; }
+.ax .lf_doc2 h4 { margin: 0 0 4px; font-size: 16px; font-weight: 700; color: #161b22; line-height: 1.35; }
+.ax .lf_doc2 > small { display: block; font-size: 12px; color: #6b7380; margin-bottom: 4px; }
+.ax .lf_doc2 .lf_lines { margin-top: 14px; }
+.ax .lf_sign { display: flex; gap: 24px; margin-top: 34px; }
+.ax .lf_sign i { flex: 1; border-top: 1.4px solid #c9ced4; }
 .ax .lf_doc { width: 62px; height: 80px; border-radius: 4px; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18); padding: 8px 7px; position: relative; box-sizing: border-box; }
 .ax .lf_doc i { display: block; height: 3px; border-radius: 2px; background: #e3e6eb; margin-bottom: 4px; }
 .ax .lf_doc i.h { background: #2c4a80; height: 5px; width: 60%; }
