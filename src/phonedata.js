@@ -523,11 +523,14 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         if (was?.wealthPlan) base.wealthPlan = structuredClone(was.wealthPlan);
         if (was?.money) base.money = was.money;
         if (was?.investment) base.investment = was.investment;
+        // the apps filled on their own (clock · health · files · weather, delivery) stay like the bank, and so does what the
+        // owner set: the year, hidden contacts and places, where they live
+        for (const k of ['life', 'delivery', 'voiceAt', 'year', 'noYear', 'hiddenContacts', 'hiddenPlaces', 'lives']) if (was?.[k] !== undefined) base[k] = was[k];
         if (binding) base.financeProfile = structuredClone(binding);
         // the phone's own apps start reading again from here; the bank and investment keep their marks
         base.sync = newSync(phoneChatScope(ctx()));
         base.sync.marks.base = mark;
-        for (const g of ['money', 'invest']) if (was?.sync?.marks?.[g]) base.sync.marks[g] = was.sync.marks[g];
+        for (const g of ['money', 'invest', 'life', 'delivery']) if (was?.sync?.marks?.[g]) base.sync.marks[g] = was.sync.marks[g];
         m.phones[key] = mergePhone(base, got);
     }
     const p = m.phones[key];
@@ -622,7 +625,7 @@ async function updatePhone(m, owner) {
         const { evidence, background } = archiveRound(s, sections, rows, round.rows);
         const before = [];
         for (let i = background.length - 1, size = 0; i >= 0 && size + background[i].text.length <= BEFORE_MAX; i--) { before.unshift(background[i].text); size += background[i].text.length; }
-        const events = Object.entries(s.events).slice(-40).map(([id, e]) => `- ${id}: ${e.summary} (#${e.at})`).join('\n');
+        const events = Object.entries(s.events).slice(-40).map(([id, e]) => `- ${id}: ${e.summary}${e.at === null || e.at === undefined ? '' : ` (#${e.at})`}`).join('\n');
         const world = worldText(m), lore = await loreFor(m, owner), profile = await ownerProfileBlock(ctx(), p.financeProfile, owner, { money: !!(p.money || p.investment) });
         if (p.money) migrateBank(m, p);
         const money = moneyNow(p), invest = investNow(m, p), life = lifeNow(p);
@@ -634,7 +637,9 @@ async function updatePhone(m, owner) {
         // the year the phone's now is in: read once from the bank or the archive, then carried over New Year with the now
         if (!p.year && !p.noYear) { const y = Number(storyYear(m, p) || String(p.money?.asOf || p.investment?.date || '').slice(0, 4)); if (y > 1900) p.year = y; }
         const known = p.year && !p.noYear ? String(p.year) : '', year = known || String(new Date().getFullYear());
-        const anchor = known && /^\d{2}-\d{2}/.test(p.now || '') ? `${known}-${p.now.slice(0, 5)}` : '';
+        // the ledger's days are taken nearest the phone's now (a story with no year of its own too: then this year), so a round
+        // past New Year books January after December
+        const anchor = /^\d{2}-\d{2}/.test(p.now || '') ? `${year}-${p.now.slice(0, 5)}` : '';
         // the days ahead with their weekdays (only with a known year): "on Friday" is a date the model can look up
         const today = String(p.now || '').slice(0, 5), dayList = known && /^\d{2}-\d{2}$/.test(today) ? Array.from({ length: 14 }, (_, k) => {
             const d = new Date(Date.UTC(Number(known), Number(today.slice(0, 2)) - 1, Number(today.slice(3, 5)) + k));
