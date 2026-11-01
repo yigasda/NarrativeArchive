@@ -35,22 +35,22 @@ const P = {
     box: (c, l) => `<path d="M10 20l20-10 20 10v24L30 54 10 44z" fill="${c}"/><path d="M10 20l20 10 20-10M30 30v24" stroke="${l}" stroke-width="1.6" fill="none"/>`,
 };
 // the item's words → a kind; first match wins, the narrower words first
-const KIND = [['phonecase', /handyhülle|phone ?case|폰 ?케이스|휴대폰 ?케이스|coque|スマホケース|携帯ケース|手机壳/i], ['earphones', /kopfhörer|earbud|earphone|headphone|airpods|이어폰|헤드폰|écouteurs|イヤホン|ヘッドホン|耳机/i], ['cable', /kabel|cable|charger|ladegerät|adapter|usb|충전기|케이블|어댑터|充電器|ケーブル|充电器|数据线|充电线/i],
-    ['laptop', /laptop|notebook|macbook|tablet|ipad|노트북|태블릿|ノートパソコン|パソコン|タブレット|笔记本电脑|平板/i], ['watch', /uhr\b|watch|armbanduhr|시계|워치|腕時計|スマートウォッチ|手表|智能手表/i], ['glasses', /brille|glasses|sunglass|안경|선글라스|lunettes|メガネ|眼鏡|サングラス|眼镜|墨镜/i],
-    ['scarf', /schal|scarf|tuch|목도리|스카프|머플러|écharpe|マフラー|スカーフ|围巾/i], ['sweater', /pullover|sweater|strick|cardigan|hoodie|니트|스웨터|가디건|후드|pull\b|セーター|ニット|カーディガン|パーカー|毛衣|针织|卫衣/i], ['jacket', /jacke|mantel|coat|jacket|blazer|parka|코트|재킷|자켓|패딩|점퍼|コート|ジャケット|ダウン|外套|夹克|大衣|羽绒服/i],
-    ['dress', /kleid|dress|robe|원피스|드레스|ワンピース|ドレス|连衣裙|裙子/i], ['pants', /hose|jeans|pants|trousers|slacks|바지|청바지|슬랙스|pantalon|パンツ|ズボン|ジーンズ|裤子|牛仔裤/i], ['tshirt', /t-?shirt|shirt|bluse|top\b|tee\b|티셔츠|셔츠|블라우스|Tシャツ|シャツ|ブラウス|T恤|衬衫/i],
-    ['boots', /stiefel|boots|부츠|ブーツ|靴子|长靴/i], ['shoes', /schuh|sneaker|shoe|turnschuh|운동화|신발|스니커즈|구두|chaussure|スニーカー|靴|シューズ|鞋|运动鞋/i], ['socks', /socken|socks|strümpfe|양말|靴下|ソックス|袜子/i], ['hat', /mütze|hut\b|cap\b|hat\b|beanie|모자|비니|帽子|キャップ|ニット帽/i],
-    ['backpack', /rucksack|backpack|백팩|배낭|リュック|バックパック|背包|双肩包/i], ['bag', /tasche|bag|handtasche|tote|가방|토트|파우치|sac\b|バッグ|トート|鞄|かばん|包包|钱包|手提包|托特包/i], ['umbrella', /schirm|umbrella|우산|傘|かさ|雨伞|伞/i],
-    ['book', /buch|book|roman|reiseführer|novel|comic|manga|책|소설|만화|가이드북|livre|libro|本\b|書籍|小説|漫画|ガイドブック|书|小说|漫画书/i], ['key', /schlüssel|(?<![a-z])keys?\b|열쇠|키링|鍵|合鍵|キー|钥匙/i], ['tool', /werkzeug|schrauben|zange|bohr|tool|wrench|hammer|공구|드라이버|렌치|工具|ドライバー|レンチ|扳手|螺丝刀|schraub/i],
-    ['perfume', /parfum|perfume|eau de|향수|香水|parfüm/i], ['cosmetics', /creme|cream|serum|lotion|shampoo|lipstick|makeup|kosmetik|skincare|화장품|크림|세럼|로션|샴푸|립스틱|스킨케어|化粧品|クリーム|美容液|化妆品|面霜|精华|口红/i],
-    ['candle', /kerze|candle|향초|캔들|キャンドル|ろうそく|蜡烛|香薰/i], ['mug', /tasse|becher|mug|cup\b|컵|머그|텀블러|マグ|カップ|コップ|杯子|马克杯/i], ['plant', /pflanze|plant|blumentopf|kaktus|화분|식물|다육|観葉植物|植物|鉢|盆栽|绿植|多肉/i], ['lamp', /lampe|lamp|leuchte|조명|스탠드|램프|ランプ|照明|スタンド|台灯|灯/i],
-    ['toy', /teddy|plüsch|spielzeug|toy|puppe|인형|장난감|ぬいぐるみ|おもちゃ|玩具|玩偶|毛绒/i], ['bottle', /wein|wine|sekt|whisky|gin\b|bottle|flasche|와인|위스키|술|ワイン|酒|葡萄酒|红酒/i], ['giftbox', /geschenk|gift|선물|ギフト|プレゼント|礼物|礼盒/i]];
+const KIND = [['phonecase', /handyhülle|phone ?case|폰 ?케이스|휴대폰 ?케이스|coque|スマホケース|携帯ケース|手机壳|핸드폰 ?케이스|아이폰 ?케이스|갤럭시 ?케이스|스마트톡/i], ['earphones', /kopfhörer|earbud|earphone|headphone|airpods|이어폰|헤드폰|écouteurs|イヤホン|ヘッドホン|耳机|에어팟|버즈|헤드셋/i], ['cable', /kabel|cable|charger|ladegerät|adapter|usb|충전기|케이블|어댑터|充電器|ケーブル|充电器|数据线|充电线|보조 ?배터리|멀티탭|충전/i],
+    ['laptop', /laptop|notebook|macbook|tablet|ipad|노트북|태블릿|ノートパソコン|パソコン|タブレット|笔记本电脑|平板|아이패드|맥북|모니터|키보드|마우스/i], ['watch', /uhr\b|watch|armbanduhr|시계|워치|腕時計|スマートウォッチ|手表|智能手表|손목시계|애플 ?워치/i], ['glasses', /brille|glasses|sunglass|안경|선글라스|lunettes|メガネ|眼鏡|サングラス|眼镜|墨镜|렌즈/i],
+    ['scarf', /schal|scarf|tuch|목도리|스카프|머플러|écharpe|マフラー|スカーフ|围巾|넥워머/i], ['sweater', /pullover|sweater|strick|cardigan|hoodie|니트|스웨터|가디건|후드|pull\b|セーター|ニット|カーディガン|パーカー|毛衣|针织|卫衣|맨투맨|후리스/i], ['jacket', /jacke|mantel|coat|jacket|blazer|parka|코트|재킷|자켓|패딩|점퍼|コート|ジャケット|ダウン|外套|夹克|大衣|羽绒服|바람막이|트렌치|블레이저|야상/i],
+    ['dress', /kleid|dress|robe|원피스|드레스|ワンピース|ドレス|连衣裙|裙子|치마|스커트/i], ['pants', /hose|jeans|pants|trousers|slacks|바지|청바지|슬랙스|pantalon|パンツ|ズボン|ジーンズ|裤子|牛仔裤|레깅스|반바지|조거|트레이닝/i], ['tshirt', /t-?shirt|shirt|bluse|top\b|tee\b|티셔츠|셔츠|블라우스|Tシャツ|シャツ|ブラウス|T恤|衬衫|반팔|긴팔|민소매|잠옷|파자마|속옷/i],
+    ['boots', /stiefel|boots|부츠|ブーツ|靴子|长靴|장화|워커/i], ['shoes', /schuh|sneaker|shoe|turnschuh|운동화|신발|스니커즈|구두|chaussure|スニーカー|靴|シューズ|鞋|运动鞋|로퍼|슬리퍼|샌들|러닝화/i], ['socks', /socken|socks|strümpfe|양말|靴下|ソックス|袜子|스타킹/i], ['hat', /mütze|hut\b|cap\b|hat\b|beanie|모자|비니|帽子|キャップ|ニット帽|버킷햇|베레모/i],
+    ['backpack', /rucksack|backpack|백팩|배낭|リュック|バックパック|背包|双肩包|책가방/i], ['bag', /tasche|bag|handtasche|tote|가방|토트|파우치|sac\b|バッグ|トート|鞄|かばん|包包|钱包|手提包|托特包|지갑|에코백|크로스백|숄더백|클러치|캐리어/i], ['umbrella', /schirm|umbrella|우산|傘|かさ|雨伞|伞|양산|우비/i],
+    ['book', /buch|book|roman|reiseführer|novel|comic|manga|책|소설|만화|가이드북|livre|libro|本\b|書籍|小説|漫画|ガイドブック|书|小说|漫画书|잡지|매거진|악보|교재|문제집|에세이|시집|다이어리|수첩|플래너|달력|앨범|노트/i], ['key', /schlüssel|(?<![a-z])keys?\b|열쇠|키링|鍵|合鍵|キー|钥匙|자물쇠|도어락/i], ['tool', /werkzeug|schrauben|zange|bohr|tool|wrench|hammer|공구|드라이버|렌치|工具|ドライバー|レンチ|扳手|螺丝刀|schraub|망치|드릴|펜치|줄자/i],
+    ['perfume', /parfum|perfume|eau de|향수|香水|parfüm|바디 ?미스트|디퓨저/i], ['cosmetics', /creme|cream|serum|lotion|shampoo|lipstick|makeup|kosmetik|skincare|화장품|크림|세럼|로션|샴푸|립스틱|스킨케어|化粧品|クリーム|美容液|化妆品|面霜|精华|口红|선크림|토너|마스크팩|쿠션|파운데이션|틴트|바디워시|핸드크림/i],
+    ['candle', /kerze|candle|향초|캔들|キャンドル|ろうそく|蜡烛|香薰|양초/i], ['mug', /tasse|becher|mug|cup\b|머그|텀블러|マグ|カップ|コップ|杯子|马克杯|머그컵|유리컵|텀블러|물병|보온병|그릇|접시|냄비|프라이팬/i], ['plant', /pflanze|plant|blumentopf|kaktus|화분|식물|다육|観葉植物|植物|鉢|盆栽|绿植|多肉|꽃다발|꽃|씨앗/i], ['lamp', /lampe|lamp|leuchte|조명|스탠드|램프|ランプ|照明|スタンド|台灯|灯|무드등|전구/i],
+    ['toy', /teddy|plüsch|spielzeug|toy|puppe|인형|장난감|ぬいぐるみ|おもちゃ|玩具|玩偶|毛绒|퍼즐|보드게임|레고|피규어/i], ['bottle', /wein|wine|sekt|whisky|gin\b|bottle|flasche|와인|위스키|술|ワイン|酒|葡萄酒|红酒|위스키|맥주|소주|샴페인|보드카/i], ['giftbox', /geschenk|gift|선물|ギフト|プレゼント|礼物|礼盒|선물 ?세트|기프트/i]];
 const COL = [[/グレー|灰色|grau|grey|gray|회색|그레이|gris/i, '#8a9099', '#cfd3d8'], [/ブラック|黒|黑色|schwarz|black|검정|블랙|noir/i, '#3a3d42', '#7a7e86'], [/ホワイト|白色|weiß|weiss|white|흰|화이트|blanc/i, '#d9dcdf', '#f4f5f6'],
     [/ネイビー|紺|藏青|海军蓝|navy|dunkelblau|네이비|남색/i, '#3f4f72', '#9aa6c0'], [/ブルー|青|蓝色|blau|blue|파랑|파란|블루|bleu/i, '#6a8ac8', '#c8d6ef'], [/レッド|赤|红色|rot\b|rote|red|빨간|빨강|레드|rouge/i, '#c86a6a', '#ecc4c4'],
     [/ピンク|粉色|rosa|pink|분홍|핑크|rose\b/i, '#dca0b0', '#f4dbe2'], [/グリーン|緑|绿色|grün|green|초록|녹색|그린|vert/i, '#6f9a74', '#cfe2d0'], [/ベージュ|米色|beige|creme|ivory|베이지|아이보리/i, '#cdb894', '#efe4d0'],
     [/ブラウン|茶色|棕色|braun|brown|갈색|브라운|marron/i, '#94704e', '#d8c4ae'], [/イエロー|黄色|gelb|yellow|노랑|노란|옐로|jaune/i, '#d8b84a', '#f2e4b0']];
-// the model's "look" first (the nearest of the kinds drawn), else the item's words
-export const prodKind = x => { if (P[x?.look] && x.look !== 'box') return x.look; if (x?.look === 'box') return ''; const w = `${x?.item || ''} ${x?.ko || ''} ${x?.option || ''}`; return (KIND.find(([, re]) => re.test(w)) || [])[0] || ''; };
+// read from the item's own words; the Korean line ("ko", always there off a Korean phone) is the one most worth knowing
+export const prodKind = x => { const w = `${x?.item || ''} ${x?.ko || ''} ${x?.option || ''}`; return (KIND.find(([, re]) => re.test(w)) || [])[0] || ''; };
 export function prodSvg(x) {
     const k = prodKind(x);
     if (!k) return '';

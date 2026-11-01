@@ -11,6 +11,8 @@ test('a product is read from its words in German, English, Korean, Japanese and 
     assert.equal(k('包子'), '');
     // the Korean line helps when the name is in a language the list doesn't know
     assert.equal(prodKind({ item: 'Écharpe-xyz', ko: '스카프' }), 'scarf');
+    // most orders come from the update round, named in the owner's language with a Korean line: that line carries it
+    assert.deepEqual([['Klaviernoten', '피아노 악보'], ['Monstera', '몬스테라 화분'], ['x', '마스크팩'], ['y', '컵라면']].map(([item, ko]) => prodKind({ item, ko })), ['book', 'plant', 'cosmetics', '']);
 });
 test('the picture takes a colour only when the item names one', () => {
     assert.match(prodSvg({ item: 'Wollschal, Grau' }), /#8a9099/);

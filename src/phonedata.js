@@ -1008,7 +1008,6 @@ STORY OR INVENTED
 - Company money, family money and an inheritance still to come are not the owner's cash. Don't invent a trust or a restriction to explain a small balance.
 - A booking the story has carries the details a real one would (a booking number, a seat, a gate, a delivery date), made up to fit.
 - Orders stand as of the story's now: with no sign it arrived, it is not "delivered".
-- Each order's "look" is the picture the shop shows, the nearest of: "scarf", "sweater", "tshirt", "jacket", "pants", "dress", "shoes", "boots", "bag", "backpack", "hat", "socks", "book" (also sheet music, magazines), "key", "earphones", "phonecase", "laptop", "cable", "watch", "glasses", "cosmetics", "perfume", "mug", "plant", "candle", "toy", "tool", "lamp", "umbrella", "bottle", "giftbox", or "box" for anything else.
 - "basis": a line or two on what the story gave and what you invented. Invented amounts are for the app only, never new facts in the role-play.
 
 ACCOUNTS
@@ -1032,7 +1031,7 @@ JSON (one object, nothing before or after it)
   "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by": airline, line, hotel or venue, "from", "to",
                "date": "MM-DD", "time": "HH:MM", "seat", "gate", "no", "status", "ev" }],
   "orders": [{ "shop", "item", "ko", "option", "qty", "price": number, "time", "status": "ordered" | "shipped" | "on the way" | "delivered" | "unknown",
-               "eta": "MM-DD", "arrived": "MM-DD", "gift": who it is for or "", "look", "ev" }],
+               "eta": "MM-DD", "arrived": "MM-DD", "gift": who it is for or "", "ev" }],
   "fx": [{ "from": an account currency, "to": FINANCIAL SCALE's currency, "date": EVALUATION DATE, "value": number }] for each pair SAVED RATES doesn't have
 }
 2 or 3 accounts and 8 to 15 transactions. Passes and orders only from the story; an empty list is fine. Oldest first.
@@ -1093,7 +1092,7 @@ export function parseMoney(raw, country = '') {
         cards: arr(raw.cards).map(c => ({ account: last4(c?.account), exp: line(c?.exp, 5) })).filter(c => accounts.some(a => a.last4 === c.account)).slice(0, 4),
         tx: arr(raw.tx).map(x => withEv({ account: last4(x?.account), who: line(x?.who, 60), ko: ko(x?.ko), amount: num(x?.amount), time: when(x?.time), kind: pick(x?.kind, ['card', 'transfer', 'deposit'], 'card'), memo: line(x?.memo, 80), pending: !!x?.pending }, x)).filter(x => x.who && x.amount !== null).slice(-30),
         passes: arr(raw.passes).map(x => withEv({ kind: pick(x?.kind, ['flight', 'train', 'hotel', 'event', 'other'], 'other'), by: line(x?.by, 60), from: line(x?.from, 40), to: line(x?.to, 40), date: when(x?.date).slice(0, 5), time: hhmm(x?.time), seat: line(x?.seat, 12), gate: line(x?.gate, 12), no: line(x?.no, 24), status: line(x?.status, 30) }, x)).filter(x => x.by).slice(-8),
-        orders: arr(raw.orders).map(x => withEv({ shop: line(x?.shop, 60), item: line(x?.item, 80), ko: ko(x?.ko), option: line(x?.option, 60), qty: Math.max(1, Math.round(Number(x?.qty) || 1)), price: num(x?.price), time: when(x?.time), status: pick(x?.status, ['ordered', 'shipped', 'on the way', 'delivered', 'unknown'], 'unknown'), eta: when(x?.eta).slice(0, 5), arrived: when(x?.arrived).slice(0, 5), gift: giftOf(x?.gift), look: line(x?.look, 16).toLowerCase() }, x)).filter(x => x.item).slice(-12),
+        orders: arr(raw.orders).map(x => withEv({ shop: line(x?.shop, 60), item: line(x?.item, 80), ko: ko(x?.ko), option: line(x?.option, 60), qty: Math.max(1, Math.round(Number(x?.qty) || 1)), price: num(x?.price), time: when(x?.time), status: pick(x?.status, ['ordered', 'shipped', 'on the way', 'delivered', 'unknown'], 'unknown'), eta: when(x?.eta).slice(0, 5), arrived: when(x?.arrived).slice(0, 5), gift: giftOf(x?.gift) }, x)).filter(x => x.item).slice(-12),
     };
 }
 // what the phone already holds, so the money side reuses its event tags
