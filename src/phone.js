@@ -169,7 +169,7 @@ export async function openPhone(who = null) {
                     </span>
                     ${draftReady() ? '' : '<small>⚙ 설정 → AI 모델에서 초안 모델을 먼저 정해 주세요</small>'}
                   </div>
-                  ${noArchive(m) ? `<div class="na_ph_maketip"><span class="t"><b>아직 아카이브가 없어요</b><small>압축해 두면 폰이 더 정확하고 싸게 만들어져요</small></span><button type="button" class="na_ph_gocompress">압축하기</button></div>` : ''}
+                  ${noArchive(m) ? `<div class="na_ph_maketip"><span class="t"><b>아직 아카이브가 없어요</b><small>압축해 두면 폰이 더 정확하고<br>싸게 만들어져요</small></span><button type="button" class="na_ph_gocompress">압축하기</button></div>` : ''}
                 </div></div>`);
             return;
         }
