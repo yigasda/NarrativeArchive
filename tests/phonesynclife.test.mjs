@@ -352,13 +352,13 @@ test('a delivery from a shop the app never had: the shop joins the list with its
     assert.ok(!p.delivery.shops.some(x => x.name === '홍콩반점'));
 });
 
-test('the shop list stays at five: the oldest one not kept as a favourite makes room, and comes back if the order is taken back', () => {
+test('the shop list stays at ten: the oldest one not kept as a favourite makes room, and comes back if the order is taken back', () => {
     const { m, p } = setup();
-    p.delivery.shops = ['A', 'B', 'C', 'D', 'E'].map((n, k) => ({ id: `s${k}`, name: n, fav: k === 0, menu: [] }));
+    p.delivery.shops = ['A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'J', 'K'].map((n, k) => ({ id: `s${k}`, name: n, fav: k === 0, menu: [] }));
     const r = applyMoney(m, p, { ...ev('new-shop', 9, '10-26'), money: { deliveries: [{ shop: 'F', items: [{ name: 'Pho', qty: 1, price: 10 }], status: 'delivered', occurrence: 'new' }] } }, opts);
-    assert.deepEqual(p.delivery.shops.map(x => x.name), ['A', 'C', 'D', 'E', 'F']);
+    assert.deepEqual(p.delivery.shops.map(x => x.name), ['A', 'C', 'D', 'E', 'G', 'H', 'I', 'J', 'K', 'F']);
     revertEffects(m, p, r.effects);
-    assert.deepEqual(p.delivery.shops.map(x => x.name).sort(), ['A', 'B', 'C', 'D', 'E']);
+    assert.deepEqual(p.delivery.shops.map(x => x.name).sort(), ['A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'J', 'K']);
 });
 
 test('a reflected dish keeps its option in Korean, and the picture follows it', () => {

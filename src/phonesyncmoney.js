@@ -292,8 +292,8 @@ export function applyMoney(m, p, e, { year, marks = {}, legs: prior = [], span =
                 id: `sync:${e.id}:s${k}`, ev: e.id, sourceIndex: e.at };
             shops.push(shop);
             out.effects.push({ type: 'push', path: 'delivery.shops', item: structuredClone(shop) });
-            // the list stays at five: the oldest shop not kept as a favourite makes room
-            if (shops.length > 5) { const old = shops.find(s => !s.fav && s !== shop); if (old) { shops.splice(shops.indexOf(old), 1); out.effects.push({ type: 'drop', path: 'delivery.shops', item: structuredClone(old) }); } }
+            // the list stays at ten: the oldest shop not kept as a favourite makes room
+            if (shops.length > 10) { const old = shops.find(s => !s.fav && s !== shop); if (old) { shops.splice(shops.indexOf(old), 1); out.effects.push({ type: 'drop', path: 'delivery.shops', item: structuredClone(old) }); } }
         }
     });
     return out;
