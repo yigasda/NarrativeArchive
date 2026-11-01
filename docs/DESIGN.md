@@ -254,7 +254,7 @@
   - 상품 그림은 `phoneprod.js` 실루엣이에요. 로고 · 탭은 테마 방지가 돼 있어요.
   - 맨 위 종 · 장바구니 아이콘은 아직 **눌러도 아무것도 안 돼요**(남은 일).
 - **배달:** 배달의민족(한국 거주) / Uber Eats(그 외) 두 모양이에요. 한국어 알약은 `dvKp`예요. 음식은 전부 `phonefood.js` 그림이에요.
-- **홈 2쪽:** 아이콘 색은 `CG_GEL`이고, 맨 위 위젯은 지금 있는 곳의 날씨예요(날씨를 안 채웠으면 지갑 위젯).
+- **홈 2쪽:** 아이콘 색은 `CG_GEL`이고, 맨 위 위젯은 지금 있는 곳의 날씨예요(`hereWidget`). 날씨를 안 채웠으면 구름 조금 하늘(지금 시간대)에 "눌러서 채우기"가 뜨고, 누르면 날씨 앱의 채우기로 가요. 예전 지갑 위젯(`walletW`)은 지금 안 쓰여요.
 
 ---
 
@@ -339,6 +339,11 @@ SillyTavern 테마는 `.menu_button`, `input`, `select`, `textarea`, `small`, �
    git clone https://github.com/SillyTavern/SillyTavern ~/sillytavern && cd ~/sillytavern && npm install
    node server.js   # :8000 (config.yaml이 처음 생겨요. whitelistMode 기본값으로 127.0.0.1 접속 가능)
    ```
+   새로 깐 SillyTavern은 처음 열 때 **환영 창(페르소나 이름)**이 떠서 캐릭터 목록이 안 불려요(`probe.cjs`가 `characters?.length > 0`에서 멈춰요). 한 번 저장을 눌러 넘겨요.
+   ```js
+   await p.goto('http://127.0.0.1:8000/'); await p.waitForTimeout(8000); await p.click('dialog .popup-button-ok');  // settings.json의 firstRun이 false가 돼요
+   ```
+   기본 연결이 AI Horde인데 클라우드 세션에서는 Horde에 접속이 안 돼요. `data/default-user/settings.json`의 `"main_api": "koboldhorde"`를 `"openai"`로 바꿔 둬요. 로그의 `aihorde.net` 오류와 확장 업데이트 500(`Directory is not a Git repository`)은 무시해도 돼요.
 2. 확장을 넣어요(바꿀 때마다 다시 복사).
    ```bash
    mkdir -p ~/sillytavern/data/default-user/extensions/NarrativeArchive
@@ -375,7 +380,7 @@ await s.close();
 
 ### 테스트
 ```bash
-node --test tests/*.test.mjs   # 지금 232개 통과
+node --test tests/*.test.mjs   # 지금 240개 통과
 ```
 낱말 추측 목록(음식 · 상품 등)을 바꾸면 `tests/phonefood.test.mjs`, `tests/phoneprod.test.mjs` 기대값도 같이 봐요. 낱말끼리 잘못 걸리는 경우가 많았어요. 예: Monkey→key, Bluetooth→blue, Brot→red, 책상→book, 아이스크림→화장품, 컵라면→머그. 좁은 낱말을 앞에 두거나 막는 조건을 넣어요.
 

@@ -923,10 +923,14 @@ export function cityScreen(p, now, id) {
       <div class="ax_scroll">${weatherBody(p, h, c.name, phase === 'night', '', c.note ? `<div class="lf_wsrc">${esc(c.note)}${c.noteKo && koOn() ? ` · ${esc(c.noteKo)}` : ''}</div>` : '<div class="lf_wgap"></div>', tileCol, lead)}<i class="lf_pad"></i></div>
       ${axInd('#fff')}</div>`;
 }
-// the home's second page: where the owner is now, drawn like the weather app's city card (nothing until the weather is filled)
+// the home's second page: where the owner is now, drawn like the weather app's city card (a partly cloudy sky and a nudge to fill it until the weather is filled)
 export function hereWidget(p, now) {
     const h = L(p)?.weather?.here;
-    if (!h || (h.temp === null || h.temp === undefined) && !h.cond) return '';
+    if (!h || (h.temp === null || h.temp === undefined) && !h.cond) {
+        const ph = phaseOf(now5(p).slice(6));
+        return `<button type="button" class="lf_city cg_wx cg_wxe" data-go="weather" style="--axbg: ${pal('partly', ph).sky}">${widgetSky('partly', ph)}
+      <span class="l"><b>날씨</b><small><svg width="11" height="11" viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z" fill="#fff"/></svg> 현재 위치</small><span>눌러서 채우기</span></span><span class="r"></span></button>`;
+    }
     const ht = h.time || now5(p).slice(6);
     return `<button type="button" class="lf_city cg_wx" data-go="weather" style="--axbg: ${pal(h.cond, phaseOf(ht, h.tiles?.sunrise, h.tiles?.sunset)).sky}">${widgetSky(h.cond, phaseOf(ht, h.tiles?.sunrise, h.tiles?.sunset))}
       <span class="l"><b>${esc(h.place || '현재 위치')}</b><small><svg width="11" height="11" viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z" fill="#fff"/></svg> 현재 위치</small><span>${esc(h.said || WX[h.cond] || '')}</span></span><span class="r"><b>${h.temp ?? '—'}°</b><span>최고 ${h.hi ?? '—'}° 최저 ${h.lo ?? '—'}°</span></span></button>`;
