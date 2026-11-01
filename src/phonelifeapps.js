@@ -166,57 +166,161 @@ export function worldScreen(p, now) {
 }
 
 // ================= 건강 =================
+// one palette for the whole app (peach · mint · lavender blue); everything below the model's numbers is worked out here:
+// the rings, the day's hours of steps and heart rate, the calories, water and coffee, the weight line, a workout's map
+const HC = { steps: '#f29e8e', run: '#6cbfa8', sleep: '#8f9fe6', hr: '#ec8597', kcal: '#f3a77c', water: '#7fb0e8', caf: '#b8927a', w: '#a99be0' };
+const HB = { steps: '#fde4de', run: '#d8f1e9', sleep: '#e2e7fb', hr: '#fbe3e8', kcal: '#fdebdf', water: '#e2eefb', caf: '#f1e7df', w: '#ece8fa' };
+Object.assign(AX, {
+    flame: 'M12 21c-4 0-6-3-5-6.5C8 11 10 11 10 7c3 2 4.5 4.5 4.5 6 1-1 1.2-2.3 1-3.5C18 11.5 18 14 18 15.5 18 18.5 15.5 21 12 21z',
+    cupH: 'M5 8h11v6a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5zM16 9h1.5a2.5 2.5 0 0 1 0 5H16M8 3v2M11 3v2', scaleH: 'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8.5 9a4 3 0 0 1 7 0M12 9l1.2-2',
+});
 const lastDays = (lf, n = 7, until = '') => { const ds = lf.health.days.filter(d => !until || d.date <= until); return ds.slice(-n); };
 const sleepMin = d => { const a = toMin(d.sleep), b = toMin(d.wake); return a === null || b === null ? null : ((b - a) + 1440) % 1440; };
 const avg = xs => { const v = xs.filter(x => x !== null && x !== undefined && Number.isFinite(x)); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
 // bedtimes past midnight count as late (00:30 is later than 23:30)
 const lateMin = t => { const m = toMin(t); return m === null ? null : m < 12 * 60 ? m + 1440 : m; };
-const bars = (vals, max, hi, color) => `<div class="lf_mini2">${vals.map((v, k) => `<i style="height: ${Math.max(6, Math.round((v || 0) / (max || 1) * 100))}%; background: ${k === hi ? color : '#eceef2'}"></i>`).join('')}</div>`;
+// the same numbers each time a day is drawn: a little random seeded by the date (and what it is for)
+const seeded = (key) => { let s = [...String(key)].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 233280, 7); return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; }; };
+const usualSleep = u => (u.sleep && u.wake ? ((toMin(u.wake) - toMin(u.sleep)) + 1440) % 1440 : null);
+const comma = v => String(v).replace('.', ',');
+// a day's choice among 일 · 주 · 월, carried in data-i as "MM-DD|w"
+const pickOf = (i = '') => { const [day, mode] = String(i || '').split('|'); return { day: day || '', mode: mode || '' }; };
+const seg = (go, day, on, modes) => `<div class="lf_seg">${modes.map(([k, n]) => `<button type="button" data-go="${go}" data-i="${day}|${k}" class="${k === on ? 'on' : ''}">${n}</button>`).join('')}</div>`;
 const hdays = (lf, pick) => `<div class="lf_hdays">${lf.health.days.slice(-7).map(d => `<button type="button" data-go="health" data-i="${d.date}" class="${d.date === pick ? 'on' : ''}">${WDK[WD[weekday(d.date)]]}<b>${Number(d.date.slice(3))}</b></button>`).join('')}</div>`;
+const ring = (r, f, c, bg) => { const C = 2 * Math.PI * r; return `<circle cx="62" cy="62" r="${r}" fill="none" stroke="${bg}" stroke-width="12"/>${f > 0 ? `<circle cx="62" cy="62" r="${r}" fill="none" stroke="${c}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${(C * Math.min(Math.max(f, 0), 1)).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 62 62)"/>` : ''}`; };
+const minis = (vals, col, hi) => { const m = Math.max(1, ...vals.map(v => v || 0)), w = 54 / vals.length; return `<svg width="54" height="26" class="lf_hsp">${vals.map((v, k) => { const h = Math.max(3, (v || 0) / m * 26); return `<rect x="${(k * w + 1).toFixed(1)}" y="${(26 - h).toFixed(1)}" width="${(w - 3).toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${k === hi ? col : '#eceef2'}"/>`; }).join('')}</svg>`; };
+const hbar = (f, c, bg, h = 6) => `<i class="lf_hbar" style="background: ${bg}; height: ${h}px"><i style="width: ${Math.round(Math.min(Math.max(f, 0), 1) * 100)}%; background: ${c}"></i></i>`;
+
+// ---- what the numbers make
+const RUNS = /run|lauf|jog|달리|러닝|조깅/i, RIDES = /cycl|bike|rad|자전거|사이클/i, CALM = /yoga|pilates|stretch|요가|필라테스|스트레칭/i, SWIM = /swim|schwimm|수영/i;
+const kcalOf = d => Math.round((d.steps || 0) * 0.04 + (d.workout?.min || 0) * (d.workout ? (RUNS.test(d.workout.kind) ? 10 : RIDES.test(d.workout.kind) ? 8 : SWIM.test(d.workout.kind) ? 9 : CALM.test(d.workout.kind) ? 3.5 : 6) : 0));
+const workKcal = w => Math.round((w?.min || 0) * (RUNS.test(w?.kind) ? 10 : RIDES.test(w?.kind) ? 8 : SWIM.test(w?.kind) ? 9 : CALM.test(w?.kind) ? 3.5 : 6));
+// a day's steps over its hours: none asleep, a little on waking, more around noon and the evening, the workout's hour full
+function hourSteps(d) {
+    const out = Array(24).fill(0), total = d.steps || 0;
+    if (!total) return out;
+    const r = seeded(`${d.date}:steps`), wake = Math.floor((toMin(d.wake) ?? 420) / 60), sleep = toMin(d.sleep), end = 23;
+    const wt = d.workout ? Math.floor((toMin(d.workout.time) ?? -60) / 60) : -1, wSteps = wt >= 0 && /walk|run|lauf|hike|걷|달리|러닝|산책|등산|조깅/i.test(d.workout.kind) ? Math.min(total * 0.6, (d.workout.km || d.workout.min / 10) * 1300) : 0;
+    const w = out.map((_, h) => (h < wake || h > end ? 0 : h === wt ? 0 : (h === wake ? 0.5 : 1) * (0.4 + r() * 0.9) * ([8, 12, 13, 18, 19].includes(h) ? 2.2 : h >= 22 ? 0.3 : 1)));
+    const sw = w.reduce((s, x) => s + x, 0) || 1;
+    w.forEach((x, h) => { out[h] = Math.round((total - wSteps) * x / sw); });
+    if (wt >= 0) out[wt] += Math.round(wSteps);
+    void sleep;
+    return out;
+}
+// the day's heart rate every 20 minutes: low asleep (until they woke), the workout's window high, between them resting
+function hrDay(d, next) {
+    const lo = d.hr?.[0] || 60, hi = d.hr?.[1] || lo + 50, r = seeded(`${d.date}:hr`), wake = toMin(d.wake) ?? 420, bed = next ? toMin(next.sleep) : null;
+    const ws = d.workout ? toMin(d.workout.time) : null, we = ws === null ? null : ws + (d.workout.min || 30);
+    const pts = [];
+    for (let m = 0; m <= 1440; m += 20) {
+        let v;
+        if (m < wake || (bed !== null && bed > 720 && m >= bed)) v = lo + r() * 5;
+        else if (ws !== null && m >= ws && m <= we) v = hi - 6 - r() * 14 + (m - ws < 10 ? -20 : 0);
+        else if (ws !== null && m > we && m < we + 40) v = lo + 30 + r() * 10;
+        else v = lo + 14 + r() * 18 + ([480, 760, 1100].some(t => Math.abs(m - t) < 40) ? 12 : 0);
+        pts.push([m, Math.min(hi, Math.max(lo, Math.round(v)))]);
+    }
+    if (ws === null) { const k = pts.reduce((b, p, i) => (p[1] > pts[b][1] ? i : b), 0); pts[k][1] = hi; }
+    return pts;
+}
+// water: their usual liters a day, a little more or less, drunk from soon after waking to the evening
+function waterDay(d, u) {
+    if (!u.water) return null;
+    const r = seeded(`${d.date}:water`), cups = Math.max(1, Math.round(u.water * 4 * (0.7 + r() * 0.55))), wake = toMin(d.wake) ?? 450, span = Math.max(240, 1290 - wake - 60);
+    const log = Array.from({ length: cups }, (_, k) => ({ t: hm(wake + 45 + Math.round(span * (k + r() * 0.6) / cups)), ml: [200, 250, 250, 300][Math.floor(r() * 4)] }));
+    return { ml: log.reduce((s, x) => s + x.ml, 0), log };
+}
+// coffee: their usual cups (the first soon after waking) and the coffee ordered for delivery that day, each its own row
+const COFFEE = /coffee|kaffee|latte|americano|espresso|cappuccino|flat white|커피|아메리카노|라떼|카푸치노|에스프레소|콜드브루|cold brew/i;
+function coffeeDay(p, d, u) {
+    const r = seeded(`${d.date}:coffee`), wake = toMin(d.wake) ?? 450, out = [];
+    const cups = u.coffee ? Math.max(0, Math.round(u.coffee + (r() - 0.45) * 1.4)) : 0;
+    for (let k = 0; k < cups; k++) out.push({ t: hm(k ? 780 + Math.round(r() * 200) + k * 20 : wake + 20 + Math.round(r() * 40)), what: u.coffeeKo || u.coffeeKind || '커피', mg: 120, from: '' });
+    for (const o of p.delivery?.orders || []) {
+        if (String(o.time).slice(0, 5) !== d.date || o.status === 'cancelled') continue;
+        for (const x of o.items || []) if (['coffee', 'iced-americano'].includes(x.pic?.base) || COFFEE.test(`${x.name} ${x.ko || ''}`)) for (let q = 0; q < (x.qty || 1); q++) out.push({ t: String(o.time).slice(6, 11), what: x.ko || x.name, mg: 150, from: o.shop });
+    }
+    return out.sort((a, b) => toMin(a.t) - toMin(b.t));
+}
+// weight: their usual, drifting a few hundred grams a day around it (seeded), the last 30 days
+function weightLine(lf, u, until) {
+    if (!u.weight) return [];
+    const ds = lf.health.days.filter(d => d.date <= until).slice(-30);
+    let v = u.weight + (seeded(`${ds[0]?.date}:w0`)() - 0.5) * 0.8;
+    return ds.map(d => { const r = seeded(`${d.date}:w`); v += (r() - 0.5) * 0.5 + (u.weight - v) * 0.15; return { date: d.date, kg: Math.round(v * 10) / 10 }; });
+}
+// one sentence for the day: the biggest thing the numbers say against the day before or the usual
+function highlight(lf, d, u) {
+    const ds = lf.health.days, prev = ds[ds.indexOf(d) - 1], sm = sleepMin(d), us = usualSleep(u);
+    if (d.workout && !prev?.workout) return ['run', `${esc(d.workout.kind)} ${d.workout.min || ''}분을 했어요`, d.workout.km ? `${comma(d.workout.km)} km · ${d.workout.time || ''}` : (d.workout.time || '')];
+    if (prev?.steps && d.steps && Math.abs(d.steps - prev.steps) >= 1500) return ['walk', `전날보다 ${n0(Math.abs(d.steps - prev.steps))}걸음 ${d.steps > prev.steps ? '더' : '덜'} 걸었어요`, `${n0(prev.steps)} → ${n0(d.steps)}`];
+    if (sm !== null && us && Math.abs(sm - us) >= 60) return ['moon', `평소보다 ${dur(Math.abs(sm - us))} ${sm > us ? '더' : '덜'} 잤어요`, `${d.sleep} – ${d.wake}`];
+    if (u.steps && d.steps && Math.abs(d.steps - u.steps) >= 1500) return ['walk', `평소보다 ${n0(Math.abs(d.steps - u.steps))}걸음 ${d.steps > u.steps ? '더' : '덜'} 걸었어요`, `평소 ${n0(u.steps)}`];
+    return null;
+}
+const htile = (go, i, c, ic, name, body) => `<button type="button" class="lf_hc lf_ht" ${go ? `data-go="${go}" data-i="${i}"` : ''}><span class="lf_hl" style="color: ${c}">${ax(ic, 14, c, 2.2, ic === 'heartF' || ic === 'flame' || ic === 'drop' ? c : 'none')}${name}</span>${body}</button>`;
 export function healthScreen(p, now, pick = '') {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '건강', 'life');
     const ds = lf.health.days, d = ds.find(x => x.date === pick) || ds.at(-1), u = lf.health.usual || {};
     if (!d) return `${axBar(p, now)}${axTop(axCb('home2'))}<div class="ax_scroll">${axH1('건강')}<div class="lf_none">기록이 없어요</div></div>${axInd()}`;
-    const wk = lastDays(lf, 7, d.date), i = wk.indexOf(d), sm = sleepMin(d), lastRun = [...ds].reverse().find(x => x.workout && x.date <= d.date);
+    const wk = lastDays(lf, 7, d.date), i = wk.indexOf(d), sm = sleepMin(d), us = usualSleep(u), lastRun = [...ds].reverse().find(x => x.workout && x.date <= d.date);
+    const goalSteps = u.steps || 8000, goalWork = 30, wmin = d.workout?.min || 0, hl = highlight(lf, d, u), water = waterDay(d, u), cof = coffeeDay(p, d, u), wl = weightLine(lf, u, d.date);
+    const rl = (c, n, v, s) => `<div class="lf_rl"><small style="color: ${c}">${n}</small><b class="cg_num">${v}</b><span>${s}</span></div>`;
     return `${axBar(p, now)}
       ${axTop(axCb('home2'), '<button type="button" class="lf_pill hl" data-go="hcmp">평소와 비교</button>')}
       <div class="ax_scroll">${axH1('요약', `${fmtDate(p, d.date)}`)}
         ${hdays(lf, d.date)}
-        <button type="button" class="lf_hc" data-go="hsteps" data-i="${d.date}"><span class="lf_hl" style="color: #f08a3c">${ax('walk', 15, '#f08a3c', 2.2)}걸음<small>${u.steps ? `평소 ${n0(u.steps)}` : ''}</small></span>
-          <span class="lf_hr"><span><b class="cg_num">${n0(d.steps)}</b>걸음${d.km ? ` · ${String(d.km).replace('.', ',')} km` : ''}</span>${bars(wk.map(x => x.steps), Math.max(...wk.map(x => x.steps || 0)), i, '#f08a3c')}</span></button>
-        <button type="button" class="lf_hc" data-go="hsleep" data-i="${d.date}"><span class="lf_hl" style="color: #6c63d9">${ax('moon', 15, '#6c63d9', 2.2)}수면<small>${d.wake ? `${d.wake} 깸` : ''}</small></span>
-          <span class="lf_hr"><span>${sm === null ? '—' : `<b class="cg_num">${Math.floor(sm / 60)}</b>시간 <b class="cg_num">${sm % 60}</b>분`}</span>${bars(wk.map(sleepMin), Math.max(...wk.map(x => sleepMin(x) || 0)), i, '#6c63d9')}</span></button>
-        <div class="lf_hc"><span class="lf_hl" style="color: #2fa36b">${ax('run', 15, '#2fa36b', 2.2)}운동<small>${lastRun && lastRun !== d ? `마지막 ${esc(fmtDate(p, lastRun.date, true))}` : ''}</small></span>
-          <span class="lf_hr"><span>${d.workout ? `<b class="cg_num">${d.workout.min ?? '—'}</b>분 · ${esc(d.workout.kind)}${d.workout.km ? ` ${String(d.workout.km).replace('.', ',')} km` : ''}${d.workout.time ? ` · ${d.workout.time}` : ''}` : '<b class="cg_num">0</b>분'}</span></span></div>
-        ${d.hr?.length === 2 ? `<div class="lf_hc"><span class="lf_hl" style="color: #e0405f">${ax('heartF', 15, '#e0405f', 2.2, '#e0405f')}심박수<small>${u.rest ? `안정 시 평소 ${u.rest}` : ''}</small></span>
-          <span class="lf_hr"><span><b class="cg_num">${d.hr[0]}–${d.hr[1]}</b>BPM</span>${hrLine()}</span></div>` : ''}
+        <div class="lf_hring"><svg width="124" height="124">${ring(55, (d.steps || 0) / goalSteps, HC.steps, HB.steps)}${ring(41, wmin / goalWork, HC.run, HB.run)}${ring(27, us && sm !== null ? sm / us : 0, HC.sleep, HB.sleep)}</svg>
+          <div>${rl(HC.steps, '걸음', n0(d.steps), `/ ${u.steps ? `평소 ${n0(u.steps)}` : n0(goalSteps)}`)}${rl(HC.run, '운동', wmin, `/ ${goalWork}분`)}${rl(HC.sleep, '수면', sm === null ? '—' : `${Math.floor(sm / 60)}:${pad(sm % 60)}`, us ? `/ ${Math.floor(us / 60)}:${pad(us % 60)}` : '')}</div></div>
+        ${hl ? `<div class="lf_hc lf_hhi"><span style="background: ${HB[hl[0] === 'run' ? 'run' : hl[0] === 'moon' ? 'sleep' : 'steps']}">${ax(hl[0], 16, HC[hl[0] === 'run' ? 'run' : hl[0] === 'moon' ? 'sleep' : 'steps'], 2.2)}</span><div><b>${hl[1]}</b><small>${hl[2]}</small></div></div>` : ''}
+        <div class="lf_hgrid">
+          ${htile('hsteps', d.date, HC.steps, 'walk', '걸음', `<span class="lf_hv"><span><b class="cg_num">${n0(d.steps)}</b></span>${minis(wk.map(x => x.steps), HC.steps, i)}</span>`)}
+          ${htile('hsleep', d.date, HC.sleep, 'moon', '수면', `<span class="lf_hv"><span>${sm === null ? '<b class="cg_num">—</b>' : `<b class="cg_num">${Math.floor(sm / 60)}</b>시간 <b class="cg_num">${sm % 60}</b>분`}<small>${d.sleep && d.wake ? `${d.sleep} – ${d.wake}` : ''}</small></span></span>`)}
+          ${htile(d.workout ? 'hwork' : '', d.date, HC.run, 'run', '운동', `<span class="lf_hv"><span><b class="cg_num">${wmin}</b>분${d.workout ? ` · ${esc(d.workout.kind)}` : ''}<small>${d.workout ? `${d.workout.km ? `${comma(d.workout.km)} km · ` : ''}${d.workout.time || ''}` : lastRun ? `마지막 ${esc(fmtDate(p, lastRun.date, true))}` : ''}</small></span></span>`)}
+          ${htile(d.hr?.length === 2 ? 'hheart' : '', d.date, HC.hr, 'heartF', '심박수', `<span class="lf_hv"><span>${d.hr?.length === 2 ? `<b class="cg_num">${d.hr[0]}–${d.hr[1]}</b>BPM` : '<b class="cg_num">—</b>'}<small>${u.rest ? `안정 시 평소 ${u.rest}` : ''}</small></span></span>`)}
+          ${htile('', '', HC.kcal, 'flame', '활동 칼로리', `<span class="lf_hv"><span><b class="cg_num">${n0(kcalOf(d))}</b>kcal${hbar(kcalOf(d) / 500, HC.kcal, HB.kcal)}</span></span>`)}
+          ${water ? htile('hwater', d.date, HC.water, 'drop', '물', `<span class="lf_hv"><span><b class="cg_num">${comma((water.ml / 1000).toFixed(1))}</b>/ ${comma(u.water)} L<i class="lf_hcups">${Array.from({ length: 8 }, (_, k) => `<i style="background: ${k < Math.round(water.ml / 1000 / u.water * 8) ? HC.water : HB.water}"></i>`).join('')}</i></span></span>`) : ''}
+          ${u.coffee !== undefined && u.coffee !== null || cof.length ? htile('hwater', d.date, HC.caf, 'cupH', '카페인', `<span class="lf_hv"><span><b class="cg_num">${cof.length}</b>잔 · ${cof.reduce((s, x) => s + x.mg, 0)} mg<small>${cof.length ? `마지막 ${cof.at(-1).t} ${esc(cof.at(-1).what)}` : '오늘은 안 마셨어요'}</small></span></span>`) : ''}
+          ${wl.length ? htile('hweight', d.date, HC.w, 'scaleH', '체중', `<span class="lf_hv"><span><b class="cg_num">${comma(wl.at(-1).kg.toFixed(1))}</b>kg<small>${wl.length > 1 ? `${wl.at(-1).kg <= wl[0].kg ? '▼' : '▲'} ${comma(Math.abs(wl.at(-1).kg - wl[0].kg).toFixed(1))} · ${wl.length}일` : ''}</small></span></span>`) : ''}
+        </div>
         <i class="lf_pad"></i></div>
       ${axInd()}`;
 }
-// a heart-rate line drawn from the day's low and high (a rough day curve: low at night, the high where it moved most)
-const hrLine = () => { const pts = [0.2, 0.15, 0.25, 0.6, 0.4, 1, 0.5, 0.35, 0.3].map((f, k) => `${4 + k * 13},${32 - f * 26}`); return `<svg width="112" height="36"><polyline points="${pts.join(' ')}" fill="none" stroke="#e0405f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`; };
-export function stepsScreen(p, now, day) {
+// a chart card: bars over a time axis, with gridlines and an optional usual line
+const hhead = (small, big, em) => `<div class="lf_big"><small>${small}</small><b class="cg_num">${big}</b><em>${em}</em></div>`;
+export function stepsScreen(p, now, i) {
     const lf = L(p); if (!lf) return healthScreen(p, now);
-    const wk = lastDays(lf, 7, day || ''), d = wk.find(x => x.date === day) || wk.at(-1), u = lf.health.usual || {};
-    const max = Math.max(10000, ...wk.map(x => x.steps || 0), u.steps || 0), top = Math.ceil(max / 5000) * 5000, a = avg(wk.map(x => x.steps));
-    return `${axBar(p, now)}${axTop(axCb(`health:${d?.date || ''}`))}
-      <div class="ax_scroll">${axH1('걸음')}
-        <div class="lf_seg"><span>일</span><span class="on">주</span><span>월</span><span>6개월</span></div>
-        <div class="lf_big"><small>평균</small><b class="cg_num">${n0(a === null ? null : Math.round(a))} <span>걸음</span></b><em>${wk.length ? `${esc(fmtDate(p, wk[0].date, true))} – ${esc(fmtDate(p, wk.at(-1).date, true))}` : ''}</em></div>
-        <div class="lf_hc lf_chart" style="--k: #f08a3c"><div class="lf_ch2">${[1, 0.5].map(f => `<span class="g" style="bottom: ${f * 100}%"></span><span class="ax2" style="bottom: ${f * 100}%">${n0(top * f)}</span>`).join('')}
-          ${u.steps ? `<span class="av" style="bottom: ${u.steps / top * 100}%"><span>평소 ${n0(u.steps)}</span></span>` : ''}
-          ${wk.map(x => `<i class="${x === d ? 'on' : ''}" style="height: ${Math.max(2, (x.steps || 0) / top * 100)}%"></i>`).join('')}</div>
-          <div class="lf_xl">${wk.map(x => `<span class="${x === d ? 'on' : ''}">${WDK[WD[weekday(x.date)]]}</span>`).join('')}</div></div>
-        ${d ? `<div class="lf_hc lf_rows"><div><span>${esc(fmtDate(p, d.date, true))}</span><b class="cg_num">${n0(d.steps)}걸음</b></div><div><span>거리</span><b class="cg_num">${d.km ? `${String(d.km).replace('.', ',')} km` : '—'}</b></div><div><span>오른 층수</span><b class="cg_num">${d.floors ?? '—'}층</b></div></div>` : ''}
-        <i class="lf_pad"></i></div>${axInd()}`;
+    const { day, mode } = pickOf(i), m = mode || 'd', u = lf.health.usual || {};
+    const all = lf.health.days, d = all.find(x => x.date === day) || all.at(-1);
+    if (!d) return healthScreen(p, now);
+    let chart, head, rows = '';
+    if (m === 'd') {
+        const hs = hourSteps(d), max = Math.max(1, ...hs), top = hs.indexOf(max);
+        head = hhead('합계', `${n0(d.steps)} <span>걸음</span>`, esc(fmtDate(p, d.date)));
+        chart = `<div class="lf_hc"><svg class="lf_hsvg" viewBox="0 0 300 124">${[0.5, 1].map(f => `<line x1="0" x2="300" y1="${120 - f * 110}" y2="${120 - f * 110}" class="g"/>`).join('')}<line x1="0" x2="300" y1="120" y2="120" class="g"/>${hs.map((v, h) => `<rect x="${(h * 12.4 + 2).toFixed(1)}" y="${(120 - v / max * 110).toFixed(1)}" width="8" height="${Math.max(1.5, v / max * 110).toFixed(1)}" rx="2.5" fill="${HC.steps}"/>`).join('')}</svg>
+          <div class="lf_xl"><span>0시</span><span>6시</span><span>12시</span><span>18시</span><span>24시</span></div>${max ? `<div class="lf_hnote">가장 많이 걸은 때 · <b>${top}시 ${n0(max)}걸음</b></div>` : ''}</div>`;
+        rows = `<div><span>거리</span><b class="cg_num">${d.km ? `${comma(d.km)} km` : '—'}</b></div><div><span>오른 층수</span><b class="cg_num">${d.floors ?? '—'}층</b></div>${u.steps && d.steps ? `<div><span>평소보다</span><b class="cg_num" style="color: ${HC.steps}">${d.steps >= u.steps ? '+' : '−'}${n0(Math.abs(d.steps - u.steps))}</b></div>` : ''}`;
+    } else {
+        const wk = lastDays(lf, m === 'w' ? 7 : 30, d.date), max = Math.max(10000, ...wk.map(x => x.steps || 0), u.steps || 0), top = Math.ceil(max / 5000) * 5000, a = avg(wk.map(x => x.steps)), bw = 300 / wk.length;
+        head = hhead('평균', `${n0(a === null ? null : Math.round(a))} <span>걸음</span>`, wk.length ? `${esc(fmtDate(p, wk[0].date, true))} – ${esc(fmtDate(p, wk.at(-1).date, true))}` : '');
+        const y = v => 120 - v / top * 110;
+        chart = `<div class="lf_hc"><svg class="lf_hsvg" viewBox="0 0 300 124">${[0.5, 1].map(f => `<line x1="0" x2="300" y1="${y(top * f)}" y2="${y(top * f)}" class="g"/><text x="298" y="${y(top * f) - 3}" text-anchor="end">${n0(top * f)}</text>`).join('')}
+          ${u.steps ? `<line x1="0" x2="300" y1="${y(u.steps)}" y2="${y(u.steps)}" class="av" stroke="${HC.steps}"/>` : ''}
+          ${wk.map((x, k) => `<rect x="${(k * bw + bw * 0.18).toFixed(1)}" y="${y(x.steps || 0).toFixed(1)}" width="${(bw * 0.64).toFixed(1)}" height="${Math.max(2, 120 - y(x.steps || 0)).toFixed(1)}" rx="${Math.min(6, bw * 0.2).toFixed(1)}" fill="${x === d ? HC.steps : HB.steps}"/>`).join('')}</svg>
+          <div class="lf_xl">${m === 'w' ? wk.map(x => `<span class="${x === d ? 'on' : ''}">${WDK[WD[weekday(x.date)]]}</span>`).join('') : [wk[0], wk[Math.floor(wk.length / 2)], wk.at(-1)].filter(Boolean).map(x => `<span>${esc(fmtDate(p, x.date, true))}</span>`).join('')}</div>${u.steps ? `<div class="lf_hnote"><i style="border-color: ${HC.steps}"></i>평소 ${n0(u.steps)}걸음</div>` : ''}</div>`;
+        rows = `<div><span>가장 많이 걸은 날</span><b>${(() => { const b = wk.reduce((x, y2) => ((y2.steps || 0) > (x.steps || 0) ? y2 : x), wk[0]); return b ? `${esc(fmtDate(p, b.date, true))} · ${n0(b.steps)}` : '—'; })()}</b></div><div><span>합계</span><b class="cg_num">${n0(wk.reduce((s, x) => s + (x.steps || 0), 0))}걸음</b></div>`;
+    }
+    return `${axBar(p, now)}${axTop(axCb(`health:${d.date}`))}
+      <div class="ax_scroll">${axH1('걸음')}${seg('hsteps', d.date, m, [['d', '일'], ['w', '주'], ['m', '월']])}${head}${chart}
+        <div class="lf_hc lf_rows">${rows}</div><i class="lf_pad"></i></div>${axInd()}`;
 }
 // sleep stages: drawn from when they fell asleep and woke and how often they woke (seeded by the date, so it stays put)
 function stages(d) {
     const s = toMin(d.sleep), total = sleepMin(d);
     if (s === null || !total) return [];
-    let seed = [...d.date].reduce((n, ch) => n * 31 + ch.charCodeAt(0), 7);
-    const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    const rnd = seeded(d.date);
     const out = [], wakes = new Set(Array.from({ length: d.woke || 0 }, (_, k) => Math.floor((k + 1) * total / ((d.woke || 0) + 1))));
     let t = 0;
     while (t < total) {
@@ -226,23 +330,107 @@ function stages(d) {
         if (w !== undefined) { if (w > t) out.push({ lvl, a: t, b: w }); out.push({ lvl: 'awake', a: w, b: Math.min(total, w + 5) }); wakes.delete(w); t = Math.min(total, w + 5); continue; }
         out.push({ lvl, a: t, b: t + len }); t += len;
     }
-    return out.map(x => ({ ...x, s }));
+    // neighbours of one stage join into one block
+    return out.reduce((a, x) => { const l = a.at(-1); if (l && l.lvl === x.lvl) l.b = x.b; else a.push({ ...x }); return a; }, []).map(x => ({ ...x, s }));
 }
-const ST = { awake: ['깸', '#f2994a', 0], rem: ['렘', '#58c8f0', 1], core: ['코어', '#5a8ff0', 2], deep: ['깊은', '#3a3fb0', 3] };
-export function sleepScreen(p, now, day) {
+const ST = { awake: ['깸', '#f3b38a', 0], rem: ['렘', '#9fd3ef', 1], core: ['코어', HC.sleep, 2], deep: ['깊은', '#5f6fc9', 3] };
+export function sleepScreen(p, now, i) {
     const lf = L(p); if (!lf) return healthScreen(p, now);
-    const d = lf.health.days.find(x => x.date === day) || lf.health.days.at(-1), u = lf.health.usual || {};
+    const { day, mode } = pickOf(i), m = mode || 'd', u = lf.health.usual || {};
+    const d = lf.health.days.find(x => x.date === day) || lf.health.days.at(-1);
     if (!d) return healthScreen(p, now);
-    const total = sleepMin(d), st = stages(d), sum = k => st.filter(x => x.lvl === k).reduce((n, x) => n + x.b - x.a, 0);
+    let body;
+    if (m === 'd') {
+        const total = sleepMin(d), st = stages(d), sum = k => st.filter(x => x.lvl === k).reduce((n, x) => n + x.b - x.a, 0), X0 = 34, W = 300, H = 34;
+        const x = t => X0 + (W - X0) * t / (total || 1), y = l => 8 + ST[l][2] * H;
+        const hyp = st.map((s, k) => `${k ? `<line x1="${x(s.a).toFixed(1)}" x2="${x(s.a).toFixed(1)}" y1="${Math.min(y(s.lvl), y(st[k - 1].lvl)) + 8}" y2="${Math.max(y(s.lvl), y(st[k - 1].lvl)) + 8}" class="cn"/>` : ''}<rect x="${x(s.a).toFixed(1)}" y="${y(s.lvl)}" width="${Math.max(2, x(s.b) - x(s.a)).toFixed(1)}" height="16" rx="6" fill="${ST[s.lvl][1]}"/>`).join('');
+        body = `${hhead('수면 시간', total === null ? '—' : durBig(total), `${esc(fmtDate(p, d.date))} · ${d.sleep || ''} – ${d.wake || ''}`)}
+          ${total ? `<div class="lf_hc"><svg class="lf_hsvg" viewBox="0 0 300 146">${Object.values(ST).map(([n, , l]) => `<line x1="${X0}" x2="${W}" y1="${16 + l * H}" y2="${16 + l * H}" class="g" stroke-dasharray="2 3"/><text x="0" y="${20 + l * H}">${n}</text>`).join('')}${hyp}</svg>
+            <div class="lf_xl" style="padding-left: 34px">${[0, 1, 2, 3].map(k => `<span>${hm((toMin(d.sleep) ?? 0) + Math.round(total * k / 3))}</span>`).join('')}</div></div>
+          <div class="lf_hc lf_hst">${Object.entries(ST).map(([k, [n, c]]) => `<div><span>${n}</span>${hbar(sum(k) / total, c, '#f0f1f3', 8)}<b class="cg_num">${k === 'awake' ? `${d.woke || 0}번 · ` : ''}${dur(sum(k))}</b></div>`).join('')}</div>` : ''}
+          <div class="lf_hc lf_rows"><div><span>침대에 누운 시간</span><b class="cg_num">${d.bed || '—'}</b></div>${d.bed && d.sleep ? `<div><span>잠들기까지</span><b class="cg_num">${dur(((toMin(d.sleep) - toMin(d.bed)) + 1440) % 1440)}</b></div>` : ''}${u.sleep ? `<div><span>평소 잠든 시각</span><b class="cg_num">${u.sleep}</b></div>` : ''}</div>`;
+    } else {
+        const wk = lastDays(lf, m === 'w' ? 7 : 30, d.date).filter(x => x.sleep && x.wake), base = 20 * 60;
+        const off = t => { const v = toMin(t); return v === null ? 0 : ((v - base) + 1440) % 1440; }, lo = Math.min(...wk.map(x => off(x.sleep)), 120), hi = Math.max(...wk.map(x => off(x.wake)), lo + 420);
+        const top = Math.floor(lo / 60) * 60, bot = Math.ceil(hi / 60) * 60, Y = v => 8 + (v - top) / (bot - top || 1) * 170, bw = 270 / Math.max(1, wk.length);
+        const ticks = []; for (let t = top; t <= bot; t += Math.max(60, Math.round((bot - top) / 4 / 60) * 60)) ticks.push(t);
+        const a = avg(wk.map(sleepMin));
+        body = `${hhead('평균 수면', a === null ? '—' : durBig(Math.round(a)), wk.length ? `${esc(fmtDate(p, wk[0].date, true))} – ${esc(fmtDate(p, wk.at(-1).date, true))}` : '')}
+          <div class="lf_hc"><svg class="lf_hsvg" viewBox="0 0 300 186">${ticks.map(t => `<line x1="30" x2="300" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}" class="g"/><text x="0" y="${(Y(t) + 4).toFixed(1)}">${hm(t + base)}</text>`).join('')}
+            ${u.sleep ? `<line x1="30" x2="300" y1="${Y(off(u.sleep)).toFixed(1)}" y2="${Y(off(u.sleep)).toFixed(1)}" class="av" stroke="${HC.sleep}"/>` : ''}
+            ${wk.map((x, k) => `<rect x="${(30 + k * bw + bw * 0.2).toFixed(1)}" y="${Y(off(x.sleep)).toFixed(1)}" width="${(bw * 0.6).toFixed(1)}" height="${Math.max(4, Y(off(x.wake)) - Y(off(x.sleep))).toFixed(1)}" rx="${Math.min(7, bw * 0.25).toFixed(1)}" fill="${x === d ? HC.sleep : HB.sleep}"/>`).join('')}</svg>
+            <div class="lf_xl" style="padding-left: 30px">${m === 'w' ? wk.map(x => `<span class="${x === d ? 'on' : ''}">${WDK[WD[weekday(x.date)]]}</span>`).join('') : [wk[0], wk.at(-1)].filter(Boolean).map(x => `<span>${esc(fmtDate(p, x.date, true))}</span>`).join('')}</div>${u.sleep ? `<div class="lf_hnote"><i style="border-color: ${HC.sleep}"></i>평소 잠드는 시각 ${u.sleep}</div>` : ''}</div>
+          <div class="lf_hc lf_rows"><div><span>평균 잠든 시각</span><b class="cg_num">${wk.length ? hm(Math.round(avg(wk.map(x => off(x.sleep)))) + base) : '—'}</b></div><div><span>평균 깬 시각</span><b class="cg_num">${wk.length ? hm(Math.round(avg(wk.map(x => off(x.wake)))) + base) : '—'}</b></div>${wk.length ? (() => { const l = wk.reduce((x, y2) => (off(y2.sleep) > off(x.sleep) ? y2 : x)); return `<div><span>가장 늦게 잔 날</span><b>${WDK[WD[weekday(l.date)]]} · ${l.sleep}</b></div>`; })() : ''}</div>`;
+    }
     return `${axBar(p, now)}${axTop(axCb(`health:${d.date}`))}
-      <div class="ax_scroll">${axH1('수면')}
-        <div class="lf_seg"><span class="on">일</span><span>주</span><span>월</span><span>6개월</span></div>
-        <div class="lf_big"><small>수면 시간</small><b class="cg_num">${total === null ? '—' : durBig(total)}</b><em>${esc(fmtDate(p, d.date))} ${d.sleep || ''} – ${d.wake || ''}</em></div>
-        <div class="lf_hc"><div class="lf_hyp">${Object.values(ST).map(([n, , y]) => `<span class="lv" style="top: ${4 + y * 36}px">${n}</span>`).join('')}
-          ${st.map(x => `<span class="bk" style="left: calc(40px + (100% - 40px) * ${(x.a / total).toFixed(3)}); width: calc((100% - 40px) * ${((x.b - x.a) / total).toFixed(3)}); top: ${2 + ST[x.lvl][2] * 36}px; background: ${ST[x.lvl][1]}"></span>`).join('')}</div>
-          <div class="lf_xl" style="padding-left: 40px">${[0, 1, 2, 3].map(k => `<span>${hm((toMin(d.sleep) ?? 0) + Math.round((total || 0) * k / 3))}</span>`).join('')}</div>
-          <div class="lf_leg">${Object.entries(ST).map(([k, [n, c]]) => `<span><i style="background: ${c}"></i>${n} ${k === 'awake' ? `${d.woke || 0}번 · ` : ''}${dur(sum(k))}</span>`).join('')}</div></div>
-        <div class="lf_hc lf_rows"><div><span>침대에 누운 시간</span><b class="cg_num">${d.bed || '—'}</b></div>${u.sleep ? `<div><span>평소 잠든 시각</span><b class="cg_num">${u.sleep}</b></div>` : ''}</div>
+      <div class="ax_scroll">${axH1('수면')}${seg('hsleep', d.date, m, [['d', '일'], ['w', '주'], ['m', '월']])}${body}<i class="lf_pad"></i></div>${axInd()}`;
+}
+// a workout: its kind, a loop on a little map when it went somewhere, the numbers and heart-rate zones
+export function workScreen(p, now, day) {
+    const lf = L(p); if (!lf) return healthScreen(p, now);
+    const d = lf.health.days.find(x => x.date === day && x.workout) || [...lf.health.days].reverse().find(x => x.workout);
+    if (!d) return healthScreen(p, now);
+    const w = d.workout, r = seeded(`${d.date}:route`), moved = !!w.km, ic = RUNS.test(w.kind) ? 'run' : 'walk';
+    const end = toMin(w.time) === null ? '' : hm(toMin(w.time) + (w.min || 0)), avgHr = d.hr?.length === 2 ? Math.round(d.hr[1] - 8 - r() * 10) : null;
+    const pace = w.km && w.min ? w.min / w.km : null;
+    const pts = Array.from({ length: 7 }, (_, k) => { const a = k / 7 * Math.PI * 2, rr = 46 + r() * 22; return [166 + Math.cos(a) * rr * 1.5, 76 + Math.sin(a) * rr * 0.75]; });
+    const path = `M${pts[0][0].toFixed(0)} ${pts[0][1].toFixed(0)} ${pts.map((q, k) => { const n = pts[(k + 1) % 7]; return `Q${q[0].toFixed(0)} ${q[1].toFixed(0)} ${((q[0] + n[0]) / 2).toFixed(0)} ${((q[1] + n[1]) / 2).toFixed(0)}`; }).join(' ')} Z`;
+    const zones = [0.1 + r() * 0.15, 0.3 + r() * 0.2, 0.2 + r() * 0.15, r() * 0.1], zs = zones.reduce((s, x) => s + x, 0);
+    const stat = (n, v, u2, c) => `<div><small>${n}</small><b class="cg_num" style="color: ${c}">${v}</b><span>${u2}</span></div>`;
+    return `${axBar(p, now)}${axTop(axCb(`health:${d.date}`))}
+      <div class="ax_scroll"><div class="lf_hwh"><span style="background: ${HB.run}">${ax(ic, 26, HC.run, 2.2)}</span><div><b>${esc(w.kind)}</b><small>${esc(fmtDate(p, d.date))}${w.time ? ` · ${w.time}${end ? ` – ${end}` : ''}` : ''}</small></div></div>
+        ${moved ? `<div class="lf_hc lf_hmap"><svg viewBox="0 0 332 150"><rect width="332" height="150" fill="#eaf1ec"/><path d="M0 38H332M0 112H332M92 0V150M236 0V150" stroke="#f7faf6" stroke-width="10"/><path d="M0 70Q160 56 332 92" stroke="#d6e6f4" stroke-width="14" fill="none"/><path d="${path}" stroke="${HC.run}" stroke-width="5" fill="none" stroke-linejoin="round"/><circle cx="${pts[0][0].toFixed(0)}" cy="${pts[0][1].toFixed(0)}" r="6" fill="#fff" stroke="${HC.run}" stroke-width="3"/></svg></div>` : ''}
+        <div class="lf_hc lf_hstat">${stat('운동 시간', w.min ? `${w.min}:00` : '—', '', HC.run)}${stat('거리', w.km ? comma(w.km) : '—', w.km ? 'km' : '', HC.water)}${pace ? stat('평균 페이스', `${Math.floor(pace)}′${pad(Math.round((pace % 1) * 60))}″`, '/km', '#161b22') : ''}${stat('활동 칼로리', workKcal(w), 'kcal', HC.kcal)}${avgHr ? stat('평균 심박수', avgHr, 'BPM', HC.hr) : ''}${d.hr?.[1] ? stat('최고 심박수', d.hr[1], 'BPM', HC.hr) : ''}</div>
+        ${avgHr && w.min ? `<div class="lf_hc lf_hst"><span class="lf_hl" style="color: ${HC.hr}">${ax('heartF', 14, HC.hr, 2.2, HC.hr)}심박수 구간</span>${zones.map((z, k) => { const mn = Math.round(w.min * z / zs); return `<div><span>구간 ${k + 2}</span>${hbar(z / zs, ['#9fd3ef', '#9fd8b8', '#f6c98a', HC.hr][k], '#f0f1f3', 8)}<b class="cg_num">${mn}분</b></div>`; }).join('')}</div>` : ''}
+        <i class="lf_pad"></i></div>${axInd()}`;
+}
+export function heartScreen(p, now, day) {
+    const lf = L(p); if (!lf) return healthScreen(p, now);
+    const ds = lf.health.days, d = ds.find(x => x.date === day) || ds.at(-1), u = lf.health.usual || {};
+    if (!d || d.hr?.length !== 2) return healthScreen(p, now);
+    const pts = hrDay(d, ds[ds.indexOf(d) + 1]), lo = Math.min(40, d.hr[0] - 10), hi = Math.max(180, d.hr[1] + 10), X = m => m / 1440 * 300, Y = v => 132 - (v - lo) / (hi - lo) * 124;
+    const wake = toMin(d.wake), ws = d.workout ? toMin(d.workout.time) : null;
+    const rest = Math.round(avg(pts.filter(q => wake === null || q[0] < wake).map(q => q[1])) || d.hr[0]), walking = Math.round(avg(pts.filter(q => wake !== null && q[0] >= wake && (ws === null || q[0] < ws || q[0] > ws + (d.workout.min || 0) + 40)).map(q => q[1])) || 0);
+    return `${axBar(p, now)}${axTop(axCb(`health:${d.date}`))}
+      <div class="ax_scroll">${axH1('심박수')}${hhead('범위', `${d.hr[0]}–${d.hr[1]} <span>BPM</span>`, esc(fmtDate(p, d.date)))}
+        <div class="lf_hc"><svg class="lf_hsvg" viewBox="0 0 300 136">${wake !== null ? `<rect x="0" y="0" width="${X(wake).toFixed(1)}" height="134" fill="${HB.sleep}"/><text x="4" y="10" fill="${HC.sleep}">수면</text>` : ''}${ws !== null ? `<rect x="${X(ws).toFixed(1)}" y="0" width="${Math.max(3, X(d.workout.min || 30)).toFixed(1)}" height="134" fill="${HB.run}"/><text x="${(X(ws) + 3).toFixed(1)}" y="10" fill="${HC.run}">${esc(d.workout.kind)}</text>` : ''}
+          ${[60, 100, 140, 180].filter(b => b > lo && b < hi).map(b => `<line x1="0" x2="300" y1="${Y(b).toFixed(1)}" y2="${Y(b).toFixed(1)}" class="g"/><text x="298" y="${(Y(b) - 3).toFixed(1)}" text-anchor="end">${b}</text>`).join('')}
+          <polyline points="${pts.map(q => `${X(q[0]).toFixed(1)},${Y(q[1]).toFixed(1)}`).join(' ')}" fill="none" stroke="${HC.hr}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+          <div class="lf_xl"><span>0시</span><span>6시</span><span>12시</span><span>18시</span><span>24시</span></div></div>
+        <div class="lf_hc lf_rows"><div><span>안정 시 심박수</span><b class="cg_num">${rest} BPM</b></div>${walking ? `<div><span>깨어 있을 때 평균</span><b class="cg_num">${walking} BPM</b></div>` : ''}${u.rest ? `<div><span>평소 안정 시</span><b class="cg_num">${u.rest} BPM</b></div>` : ''}</div>
+        <i class="lf_pad"></i></div>${axInd()}`;
+}
+export function waterScreen(p, now, day) {
+    const lf = L(p); if (!lf) return healthScreen(p, now);
+    const ds = lf.health.days, d = ds.find(x => x.date === day) || ds.at(-1), u = lf.health.usual || {};
+    if (!d) return healthScreen(p, now);
+    const wt = waterDay(d, u), cof = coffeeDay(p, d, u), mg = cof.reduce((s, x) => s + x.mg, 0);
+    const cup = f => `<svg width="22" height="28" viewBox="0 0 22 28"><path d="M3 4h16l-2 21H5z" fill="${HB.water}"/>${f ? `<path d="M3.6 9h14.8l-1.6 16H5.2z" fill="${HC.water}"/>` : ''}<path d="M3 4h16l-2 21H5z" fill="none" stroke="#c9d6e0" stroke-width="1.2"/></svg>`;
+    return `${axBar(p, now)}${axTop(axCb(`health:${d.date}`))}
+      <div class="ax_scroll">${axH1('물 · 카페인', esc(fmtDate(p, d.date)))}
+        ${wt ? `<div class="lf_hc"><span class="lf_hl" style="color: ${HC.water}">${ax('drop', 14, HC.water, 2.2, HC.water)}물<small>평소 ${comma(u.water)} L</small></span>
+          <div class="lf_hbig"><b class="cg_num">${comma((wt.ml / 1000).toFixed(1))}</b>L · ${wt.log.length}잔</div>
+          <div class="lf_hcupr">${Array.from({ length: Math.max(8, wt.log.length) }, (_, k) => cup(k < wt.log.length)).join('')}</div>
+          <div class="lf_rows">${wt.log.map(x => `<div><span class="cg_num">${x.t}</span><b class="cg_num">${x.ml} ml</b></div>`).join('')}</div></div>` : ''}
+        <div class="lf_hc"><span class="lf_hl" style="color: ${HC.caf}">${ax('cupH', 14, HC.caf, 2.2)}카페인<small>하루 400 mg까지</small></span>
+          <div class="lf_hbig"><b class="cg_num">${mg}</b>mg · ${cof.length}잔</div>${hbar(mg / 400, HC.caf, HB.caf, 8)}
+          ${cof.length ? `<div class="lf_rows">${cof.map(x => `<div><span><span class="cg_num">${x.t}</span> · ${esc(x.what)}${x.from ? `<small>배달 · ${esc(x.from)}</small>` : ''}</span><b class="cg_num">${x.mg} mg</b></div>`).join('')}</div>` : '<div class="lf_hnote">오늘은 안 마셨어요</div>'}
+          ${u.coffee ? `<div class="lf_hnote">평소 하루 ${u.coffee}잔${cof.length > u.coffee ? ` · 오늘은 ${cof.length - u.coffee}잔 더` : ''}</div>` : ''}</div>
+        <i class="lf_pad"></i></div>${axInd()}`;
+}
+export function weightScreen(p, now, day) {
+    const lf = L(p); if (!lf) return healthScreen(p, now);
+    const u = lf.health.usual || {}, ds = lf.health.days, d = ds.find(x => x.date === day) || ds.at(-1), wl = d ? weightLine(lf, u, d.date) : [];
+    if (!wl.length) return healthScreen(p, now);
+    const lo = Math.min(...wl.map(x => x.kg)) - 0.3, hi = Math.max(...wl.map(x => x.kg)) + 0.3, X = k => 10 + k * 280 / Math.max(1, wl.length - 1), Y = v => 14 + (hi - v) / (hi - lo) * 126;
+    const last = wl.at(-1), bmi = u.height ? last.kg / ((u.height / 100) ** 2) : null, diff = last.kg - wl[0].kg;
+    const grid = [hi - 0.3, (hi + lo) / 2, lo + 0.3].map(v => Math.round(v * 2) / 2);
+    return `${axBar(p, now)}${axTop(axCb(`health:${d.date}`))}
+      <div class="ax_scroll">${axH1('체중')}${hhead('최근', `${comma(last.kg.toFixed(1))} <span>kg</span>`, `${esc(fmtDate(p, last.date))}${wl.length > 1 ? ` · ${wl.length}일 전보다 ${comma(Math.abs(diff).toFixed(1))} kg ${diff <= 0 ? '적어요' : '많아요'}` : ''}`)}
+        <div class="lf_hc"><svg class="lf_hsvg" viewBox="0 0 300 150">${[...new Set(grid)].map(v => `<line x1="0" x2="300" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" class="g"/><text x="298" y="${(Y(v) - 3).toFixed(1)}" text-anchor="end">${comma(v.toFixed(1))}</text>`).join('')}
+          <polyline points="${wl.map((x, k) => `${X(k).toFixed(1)},${Y(x.kg).toFixed(1)}`).join(' ')}" fill="none" stroke="${HC.w}" stroke-width="2.2" stroke-linejoin="round"/>${wl.map((x, k) => `<circle cx="${X(k).toFixed(1)}" cy="${Y(x.kg).toFixed(1)}" r="${k === wl.length - 1 ? 4.5 : 2.4}" fill="${k === wl.length - 1 ? '#fff' : HC.w}" stroke="${HC.w}" stroke-width="${k === wl.length - 1 ? 2.4 : 0}"/>`).join('')}</svg>
+          <div class="lf_xl"><span>${esc(fmtDate(p, wl[0].date, true))}</span><span>${esc(fmtDate(p, last.date, true))}</span></div></div>
+        <div class="lf_hc lf_rows">${u.height ? `<div><span>키</span><b class="cg_num">${u.height} cm</b></div><div><span>BMI</span><b class="cg_num">${comma(bmi.toFixed(1))}</b></div>` : ''}<div><span>평소 체중</span><b class="cg_num">${comma(u.weight)} kg</b></div></div>
         <i class="lf_pad"></i></div>${axInd()}`;
 }
 // usual vs the last 7 days: a sentence only for what the numbers say (more, less, later, stopped, about the same)
@@ -250,14 +438,15 @@ export function compareScreen(p, now) {
     const lf = L(p); if (!lf) return healthScreen(p, now);
     const u = lf.health.usual || {}, wk = lastDays(lf, 7), rows = [];
     const st = avg(wk.map(x => x.steps)), sl = avg(wk.map(sleepMin)), bed = avg(wk.map(x => lateMin(x.sleep))), runs = wk.filter(x => x.workout).length, last = [...lf.health.days].reverse().find(x => x.workout);
-    const usualSleep = u.sleep && u.wake ? ((toMin(u.wake) - toMin(u.sleep)) + 1440) % 1440 : null;
-    const row = (dir, color, bg, title, sub) => rows.push(`<div class="lf_hc lf_tr"><span style="background: ${bg}">${ax(dir, 18, color, 2.4)}</span><div><b>${title}</b><small>${sub}</small></div></div>`);
-    if (st !== null && u.steps) { const r = st / u.steps; row(r > 1.15 ? 'up' : r < 0.85 ? 'down' : 'eq', r > 1.15 || r < 0.85 ? '#f08a3c' : '#8a929d', r > 1.15 || r < 0.85 ? '#fdebdc' : '#f1f2f4', r > 1.15 ? '걸음이 평소보다 많아요' : r < 0.85 ? '걸음이 평소보다 적어요' : '걸음은 평소와 비슷해요', `${n0(Math.round(st))} · 평소 ${n0(u.steps)}`); }
-    if (sl !== null && usualSleep) { const df = sl - usualSleep; row(df > 30 ? 'up' : df < -30 ? 'down' : 'eq', Math.abs(df) > 30 ? '#6c63d9' : '#8a929d', Math.abs(df) > 30 ? '#e6e4fb' : '#f1f2f4', df > 30 ? '수면이 평소보다 길어요' : df < -30 ? '수면이 평소보다 짧아요' : '수면은 평소와 비슷해요', `${dur(Math.round(sl))} · 평소 ${dur(usualSleep)}`); }
-    if (bed !== null && u.sleep) { const df = bed - lateMin(u.sleep); if (Math.abs(df) > 40) row(df > 0 ? 'down' : 'up', '#6c63d9', '#e6e4fb', df > 0 ? '잠드는 시각이 늦어요' : '잠드는 시각이 빨라요', `${hm(Math.round(bed))} · 평소 ${u.sleep}`); }
-    if (u.workouts) row(runs ? 'eq' : 'down', runs ? '#8a929d' : '#2fa36b', runs ? '#f1f2f4' : '#dff3e8', runs ? `운동은 이번 주 ${runs}회예요` : '운동이 끊겼어요', `이번 주 ${runs}회 · 평소 주 ${u.workouts}회${last ? ` · 마지막 ${esc(fmtDate(p, last.date, true))}` : ''}`);
+    const us = usualSleep(u), grey = ['#8a929d', '#f1f2f4'];
+    const row = (dir, [color, bg], title, sub) => rows.push(`<div class="lf_hc lf_tr"><span style="background: ${bg}">${ax(dir, 18, color, 2.4)}</span><div><b>${title}</b><small>${sub}</small></div></div>`);
+    if (st !== null && u.steps) { const r = st / u.steps; row(r > 1.15 ? 'up' : r < 0.85 ? 'down' : 'eq', r > 1.15 || r < 0.85 ? [HC.steps, HB.steps] : grey, r > 1.15 ? '걸음이 평소보다 많아요' : r < 0.85 ? '걸음이 평소보다 적어요' : '걸음은 평소와 비슷해요', `${n0(Math.round(st))} · 평소 ${n0(u.steps)}`); }
+    if (sl !== null && us) { const df = sl - us; row(df > 30 ? 'up' : df < -30 ? 'down' : 'eq', Math.abs(df) > 30 ? [HC.sleep, HB.sleep] : grey, df > 30 ? '수면이 평소보다 길어요' : df < -30 ? '수면이 평소보다 짧아요' : '수면은 평소와 비슷해요', `${dur(Math.round(sl))} · 평소 ${dur(us)}`); }
+    if (bed !== null && u.sleep) { const df = bed - lateMin(u.sleep); if (Math.abs(df) > 40) row(df > 0 ? 'down' : 'up', [HC.sleep, HB.sleep], df > 0 ? '잠드는 시각이 늦어요' : '잠드는 시각이 빨라요', `${hm(Math.round(bed))} · 평소 ${u.sleep}`); }
+    if (u.workouts) row(runs ? 'eq' : 'down', runs ? grey : [HC.run, HB.run], runs ? `운동은 이번 주 ${runs}회예요` : '운동이 끊겼어요', `이번 주 ${runs}회 · 평소 주 ${u.workouts}회${last ? ` · 마지막 ${esc(fmtDate(p, last.date, true))}` : ''}`);
     const rest = avg(wk.map(x => x.hr?.[0]));
-    if (rest !== null && u.rest) row(Math.abs(rest - u.rest) > 6 ? (rest > u.rest ? 'up' : 'down') : 'eq', '#e0405f', Math.abs(rest - u.rest) > 6 ? '#fbe3e8' : '#f1f2f4', Math.abs(rest - u.rest) > 6 ? (rest > u.rest ? '안정 시 심박이 평소보다 높아요' : '안정 시 심박이 평소보다 낮아요') : '심박수는 평소와 비슷해요', `${Math.round(rest)} · 평소 ${u.rest}`);
+    if (rest !== null && u.rest) row(Math.abs(rest - u.rest) > 6 ? (rest > u.rest ? 'up' : 'down') : 'eq', Math.abs(rest - u.rest) > 6 ? [HC.hr, HB.hr] : grey, Math.abs(rest - u.rest) > 6 ? (rest > u.rest ? '안정 시 심박이 평소보다 높아요' : '안정 시 심박이 평소보다 낮아요') : '심박수는 평소와 비슷해요', `${Math.round(rest)} · 평소 ${u.rest}`);
+    if (u.coffee) { const c = avg(wk.map(x => coffeeDay(p, x, u).length)); if (c !== null) row(c > u.coffee + 0.7 ? 'up' : c < u.coffee - 0.7 ? 'down' : 'eq', Math.abs(c - u.coffee) > 0.7 ? [HC.caf, HB.caf] : grey, c > u.coffee + 0.7 ? '커피를 평소보다 많이 마셔요' : c < u.coffee - 0.7 ? '커피를 평소보다 덜 마셔요' : '커피는 평소와 비슷해요', `하루 ${comma(c.toFixed(1))}잔 · 평소 ${u.coffee}잔`); }
     return `${axBar(p, now)}${axTop(axCb('health'))}
       <div class="ax_scroll">${axH1('평소와 비교')}<div class="lf_sub">최근 7일 평균 · 평소</div>
         ${rows.join('') || '<div class="lf_none">비교할 기록이 없어요</div>'}<i class="lf_pad"></i></div>${axInd()}`;

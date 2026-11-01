@@ -45,7 +45,7 @@ HEALTH
 - The last day's "night" only when the story's now is already past it; else null.
 - A day the story shows, or its night, follows it: "from": "story" and its "ev". A long night out means short sleep, a day on foot means many steps.
 - Any other day: write it freely from the character, the archive and their life, "from": "pattern". It still follows that day's events and tickets in PHONE NOW.
-- "usual" is their normal week.
+- "usual" is their normal week. Its water, coffee, weight and height fit the character (a coffee addict, an athlete, a student); the app draws each day's cups and the weight line from them.
 - Numbers only: no diagnosis, no mood, no reason.
 
 FILES
@@ -74,7 +74,9 @@ JSON (one object, nothing before or after it)
                           "wake": true or false, "then": ["HH:MM", …] or [], "snooze": minutes or 0, "snoozeCount", "sound", "made": "MM-DD", "ev" }],
              "timers": [{ "label", "ko", "sec", "last": "MM-DD" }],
              "running": { "label", "ko", "sec", "left": seconds } or null },
-  "health": { "usual": { "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": per week, "rest": resting heart rate },
+  "health": { "usual": { "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": per week, "rest": resting heart rate,
+                         "water": liters a day, "coffee": cups of coffee a day (0 if none), "coffeeKind": what they usually drink, like "Cappuccino", "coffeeKo",
+                         "weight": kg, "height": cm },
               "days": [{ "date": "MM-DD", "steps", "km", "floors", "workout": { "kind", "time": "HH:MM", "min", "km" } or null, "hr": [low, high],
                          "night": { "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "woke": times awake } or null, "from": "story" | "pattern", "ev" }] },
   "files": { "folders": [{ "name", "ko", "count", "fav": true or false }],
@@ -187,7 +189,9 @@ export function parseLife(raw, now, lastDay = '') {
             running: run,
         },
         health: {
-            usual: { bed: hhmm(h.usual?.bed), sleep: hhmm(h.usual?.sleep), wake: hhmm(h.usual?.wake), steps: int(h.usual?.steps, 0, 80000), workouts: int(h.usual?.workouts, 0, 21), rest: int(h.usual?.rest, 30, 140) },
+            usual: { bed: hhmm(h.usual?.bed), sleep: hhmm(h.usual?.sleep), wake: hhmm(h.usual?.wake), steps: int(h.usual?.steps, 0, 80000), workouts: int(h.usual?.workouts, 0, 21), rest: int(h.usual?.rest, 30, 140),
+                water: num(h.usual?.water) > 0 && num(h.usual?.water) <= 8 ? num(h.usual.water) : null, coffee: int(h.usual?.coffee, 0, 12), coffeeKind: line(h.usual?.coffeeKind, 30), coffeeKo: ko(h.usual?.coffeeKo),
+                weight: num(h.usual?.weight) >= 25 && num(h.usual?.weight) <= 250 ? num(h.usual.weight) : null, height: int(h.usual?.height, 100, 230) },
             // the model writes a day and the night after it; the app keeps a row per waking day
             days: nightsToDays(h.days, { usual: { bed: hhmm(h.usual?.bed), sleep: hhmm(h.usual?.sleep), wake: hhmm(h.usual?.wake) }, lastDay }),
         },

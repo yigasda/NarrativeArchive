@@ -23,7 +23,7 @@ import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js
 import { bankDisplayCurrency, bankAcct, bankHome, bankTx, cardView, orderView, passView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
 import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './phoneweb.js';
 import { fillDelivery, fillLife } from './phonelife.js';
-import { alarmScreen, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, itemScreen, orderScreen, ordersScreen, payScreen, rateScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, weatherScreen, worldScreen } from './phonelifeapps.js';
+import { alarmScreen, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, heartScreen, itemScreen, orderScreen, ordersScreen, payScreen, rateScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, waterScreen, weatherScreen, weightScreen, workScreen, worldScreen } from './phonelifeapps.js';
 import { openGlossary } from './translate.js';
 import { confirm, esc } from './util.js';
 
@@ -35,7 +35,7 @@ function screen(p, view, m, roster, ui) {
     showNow(now);
     // "view:id": an id may hold colons itself (a reflection's records are "sync:event:m0")
     const cut = view.indexOf(':'), v = cut < 0 ? view : view.slice(0, cut), i = cut < 0 ? undefined : view.slice(cut + 1);
-    const life = { clock: () => clockScreen(p, now), timer: () => timerScreen(p, now), wclock: () => worldScreen(p, now), alarm: () => alarmScreen(p, now, i), health: () => healthScreen(p, now, i || ''), hsteps: () => stepsScreen(p, now, i), hsleep: () => sleepScreen(p, now, i), hcmp: () => compareScreen(p, now),
+    const life = { clock: () => clockScreen(p, now), timer: () => timerScreen(p, now), wclock: () => worldScreen(p, now), alarm: () => alarmScreen(p, now, i), health: () => healthScreen(p, now, i || ''), hsteps: () => stepsScreen(p, now, i), hsleep: () => sleepScreen(p, now, i), hcmp: () => compareScreen(p, now), hwork: () => workScreen(p, now, i), hheart: () => heartScreen(p, now, i), hwater: () => waterScreen(p, now, i), hweight: () => weightScreen(p, now, i),
         files: () => filesScreen(p, now), folder: () => folderScreen(p, now, i || ''), file: () => fileScreen(p, now, i), weather: () => weatherScreen(p, now), wcity: () => cityScreen(p, now, i), wlist: () => cityList(p, now),
         // the home's delivery icon opens it by its app name
         dlv: () => dlvScreen(p, now), delivery: () => dlvScreen(p, now), dshop: () => shopScreen2(p, now, i), dcart: () => cartScreen(p, now), dorders: () => ordersScreen(p, now), dorder: () => orderScreen(p, now, i), ditem: () => itemScreen(p, now, i), dpay: () => payScreen(p, now), drate: () => rateScreen(p, now, i) }[v];
@@ -448,7 +448,7 @@ export async function openPhone(who = null) {
         e.stopPropagation();
         // a person's card goes back where it was opened from
         if (go === 'contact' && !view.startsWith('contact')) contactBack = view;
-        view = ['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices', 'thread', 'draft', 'page', 'acct', 'tx', 'card', 'pass', 'order', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost', 'alarm', 'hsteps', 'hsleep', 'folder', 'file', 'wcity', 'dshop', 'dorder', 'ditem', 'drate'].includes(go) || (['cal', 'diary', 'shop', 'voice', 'invest', 'health'].includes(go) && this.dataset.i) ? `${go}:${['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices'].includes(go) ? encodeURIComponent(this.dataset.i || '') : this.dataset.i}` : go;
+        view = ['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices', 'thread', 'draft', 'page', 'acct', 'tx', 'card', 'pass', 'order', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost', 'alarm', 'hsteps', 'hsleep', 'hwork', 'hheart', 'hwater', 'hweight', 'folder', 'file', 'wcity', 'dshop', 'dorder', 'ditem', 'drate'].includes(go) || (['cal', 'diary', 'shop', 'voice', 'invest', 'health'].includes(go) && this.dataset.i) ? `${go}:${['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices'].includes(go) ? encodeURIComponent(this.dataset.i || '') : this.dataset.i}` : go;
         const mail = go === 'mailone' ? phone()?.mails?.[Number(this.dataset.i)] : null;
         if (mail?.unread) { mail.unread = false; saveMeta(); }
         const p0 = phone();
