@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>아카이브 탭 B</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+.sw{width:40px;height:24px;border-radius:999px;background:#B8541F;position:relative;flex:none}
+.sw::after{content:'';position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff}
+.sw.off{background:#D9C8BC}.sw.off::after{right:auto;left:3px}
+</style>
+</helmet>
+<div style="width: 390px; height: 1400px; box-sizing: border-box; padding: 18px 16px 28px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 12px">
+
+  <div style="display: flex; align-items: center; gap: 8px">
+    <div style="flex: 1; display: flex; align-items: center; gap: 8px; border: 1px solid #E5D5C9; background: #FFFAF6; border-radius: 14px; padding: 9px 12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A7A70" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <span style="color: #A99C92; font-size: 13.5px">찾기</span>
+    </div>
+    <button aria-label="원문 편집" style="width: 42px; height: 42px; border: 1px solid #E5D5C9; background: #FFFAF6; border-radius: 14px; display: grid; place-items: center; padding: 0; color: #6B5A50"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>
+    <button aria-label="더 보기" style="width: 42px; height: 42px; border: 1px solid #E5D5C9; background: #FFFAF6; border-radius: 14px; display: grid; place-items: center; padding: 0; color: #6B5A50"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+  </div>
+
+  <div style="display: flex; gap: 10px; font-size: 11.5px; color: #6B5A50; padding: 0 2px">
+    <span style="display: flex; align-items: center; gap: 4px"><i style="width: 9px; height: 9px; border-radius: 50%; background: #B8541F"></i>원문</span>
+    <span style="display: flex; align-items: center; gap: 4px"><i style="width: 9px; height: 9px; border-radius: 50%; background: #E8A27C"></i>짧게</span>
+    <span style="display: flex; align-items: center; gap: 4px"><i style="width: 9px; height: 9px; border-radius: 50%; background: #F2CDB6"></i>한 줄</span>
+    <span style="display: flex; align-items: center; gap: 4px"><i style="width: 9px; height: 9px; border-radius: 50%; border: 2px solid #C99A1E; box-sizing: border-box"></i>키워드 대기</span>
+    <span style="display: flex; align-items: center; gap: 4px"><i style="width: 9px; height: 9px; border-radius: 50%; background: #D9C8BC"></i>꺼짐</span>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: #2A211C; color: #FFF6EF">
+    <span style="display: flex; flex-direction: column; line-height: 1.25; flex: 1">
+      <b style="font-size: 16px">Y1</b>
+      <span class="num" style="font-size: 12px; color: #CDBDB2">#0 – #590 · 섹션 24 · 9,340 토큰</span>
+    </span>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#CDBDB2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+  </div>
+
+  <div style="display: flex; flex-direction: column">
+    <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+      <div style="display: flex; gap: 10px">
+        <div style="flex: none; width: 44px; display: flex; flex-direction: column; align-items: flex-end; padding-top: 12px">
+          <span class="num" style="font-size: 11px; color: #8A7A70; line-height: 1.1">{{r.a}}</span>
+          <span class="num" style="font-size: 11px; color: #B8A99E; line-height: 1.1">{{r.b}}</span>
+        </div>
+        <div style="flex: none; width: 14px; display: flex; flex-direction: column; align-items: center">
+          <span style="width: 2px; height: 14px; background: #E3D3C7"></span>
+          <span style="width: 12px; height: 12px; border-radius: 50%; background: {{r.dot}}; border: {{r.ring}}; box-sizing: border-box"></span>
+          <span style="flex: 1; width: 2px; background: #E3D3C7"></span>
+        </div>
+        <div style="flex: 1; min-width: 0; margin: 4px 0; padding: 9px 12px; border-radius: 14px; background: #FFFAF6; border: 1px solid #E5D5C9; display: flex; align-items: center; gap: 8px; opacity: {{r.op}}">
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3">
+            <b style="font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.title}}</b>
+            <span class="num" style="font-size: 11.5px; color: #8A7A70">{{r.meta}}</span>
+          </span>
+          <span class="sw {{r.sw}}"></span>
+        </div>
+      </div>
+    </sc-for>
+
+    <div style="display: flex; gap: 10px">
+      <div style="flex: none; width: 44px; display: flex; flex-direction: column; align-items: flex-end; padding-top: 12px">
+        <span class="num" style="font-size: 11px; color: #A84A17; font-weight: 700; line-height: 1.1">#112</span>
+        <span class="num" style="font-size: 11px; color: #C98A66; line-height: 1.1">#123</span>
+      </div>
+      <div style="flex: none; width: 14px; display: flex; flex-direction: column; align-items: center">
+        <span style="width: 2px; height: 14px; background: #E3D3C7"></span>
+        <span style="width: 14px; height: 14px; border-radius: 50%; background: #E8A27C; box-shadow: 0 0 0 4px #F6D7C4"></span>
+        <span style="flex: 1; width: 2px; background: #E3D3C7"></span>
+      </div>
+      <div style="flex: 1; min-width: 0; margin: 4px 0; border-radius: 18px; background: #FFFAF6; border: 1.5px solid #D9A887; overflow: hidden">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 11px 12px 6px">
+          <b style="flex: 1; font-size: 14.5px; line-height: 1.3">Nephthys comes to Ombos</b>
+          <span class="sw"></span>
+        </div>
+        <div style="display: flex; gap: 5px; flex-wrap: wrap; padding: 0 12px 8px">
+          <span class="num" style="font-size: 11px; padding: 1px 8px; border-radius: 999px; background: #F1E6DD; color: #6B5A50">200 토큰</span>
+          <span style="font-size: 11px; padding: 1px 8px; border-radius: 999px; background: #EAE3F5; color: #5B3FA0">짧게 들어감</span>
+          <span style="font-size: 11px; padding: 1px 8px; border-radius: 999px; background: #FBEDE3; color: #7E3610">← Y2 #175</span>
+        </div>
+        <div style="padding: 0 12px 10px; font-size: 12.5px; line-height: 1.6; color: #3A2E27">At dawn Somang murmured in her sleep that Set was a “silly desert pig” but that she liked him. Nephthys arrived while she slept…</div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid #F1E6DD">
+          <button style="border: 0; border-right: 1px solid #F1E6DD; background: transparent; font: inherit; font-size: 11.5px; color: #6B5A50; padding: 8px 0; display: flex; flex-direction: column; align-items: center; gap: 2px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>편집</button>
+          <button style="border: 0; border-right: 1px solid #F1E6DD; background: transparent; font: inherit; font-size: 11.5px; color: #6B5A50; padding: 8px 0; display: flex; flex-direction: column; align-items: center; gap: 2px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7a4 4 0 1 1-3.9 5H3v4M7 12v3"/></svg>키워드</button>
+          <button style="border: 0; border-right: 1px solid #F1E6DD; background: transparent; font: inherit; font-size: 11.5px; color: #6B5A50; padding: 8px 0; display: flex; flex-direction: column; align-items: center; gap: 2px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 5-9 5-9-5zM3 12l9 5 9-5"/></svg>버전</button>
+          <button style="border: 0; background: transparent; font: inherit; font-size: 11.5px; color: #6B5A50; padding: 8px 0; display: flex; flex-direction: column; align-items: center; gap: 2px"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>더 보기</button>
+        </div>
+      </div>
+    </div>
+
+    <sc-for list="{{rows2}}" as="r" hint-placeholder-count="3">
+      <div style="display: flex; gap: 10px">
+        <div style="flex: none; width: 44px; display: flex; flex-direction: column; align-items: flex-end; padding-top: 12px">
+          <span class="num" style="font-size: 11px; color: #8A7A70; line-height: 1.1">{{r.a}}</span>
+          <span class="num" style="font-size: 11px; color: #B8A99E; line-height: 1.1">{{r.b}}</span>
+        </div>
+        <div style="flex: none; width: 14px; display: flex; flex-direction: column; align-items: center">
+          <span style="width: 2px; height: 14px; background: #E3D3C7"></span>
+          <span style="width: 12px; height: 12px; border-radius: 50%; background: {{r.dot}}; border: {{r.ring}}; box-sizing: border-box"></span>
+          <span style="flex: 1; width: 2px; background: #E3D3C7"></span>
+        </div>
+        <div style="flex: 1; min-width: 0; margin: 4px 0; padding: 9px 12px; border-radius: 14px; background: #FFFAF6; border: 1px solid #E5D5C9; display: flex; align-items: center; gap: 8px; opacity: {{r.op}}">
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3">
+            <b style="font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.title}}</b>
+            <span class="num" style="font-size: 11.5px; color: #8A7A70">{{r.meta}}</span>
+          </span>
+          <span class="sw {{r.sw}}"></span>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: #FFFAF6; border: 1px solid #E5D5C9">
+    <span style="display: flex; flex-direction: column; line-height: 1.25; flex: 1">
+      <b style="font-size: 15px">Y2 — one year later</b>
+      <span class="num" style="font-size: 12px; color: #8A7A70">#0 – #604 · 섹션 36 · 13.9k 토큰</span>
+    </span>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A7A70" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+  </div>
+  <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: #FFFAF6; border: 1px solid #E5D5C9">
+    <span style="display: flex; flex-direction: column; line-height: 1.25; flex: 1">
+      <b style="font-size: 15px">STATE · OPEN</b>
+      <span class="num" style="font-size: 12px; color: #8A7A70">Y2 #604 기준 · 섹션 6 · 1,013 토큰</span>
+    </span>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A7A70" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1400}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const dot = k => ({ long: ['#B8541F', 'none'], short: ['#E8A27C', 'none'], line: ['#F2CDB6', 'none'], key: ['transparent', '2px solid #C99A1E'], off: ['#D9C8BC', 'none'], pin: ['#7E3610', 'none'] }[k]);
+    const r = (a, b, title, meta, k) => { const [d, ring] = dot(k); return { a, b, title, meta, dot: d, ring, op: k === 'off' ? 0.5 : 1, sw: k === 'off' ? 'off' : '' }; };
+    return {
+      rows: [
+        r('#0', '#47', 'Ombos, half a year in', '244 토큰 · 한 줄', 'line'),
+        r('#48', '#63', 'The night ridge, the vow', '371 토큰 · 고정', 'pin'),
+        r('#64', '#111', 'The first night', '152 토큰 · 한 줄', 'line'),
+      ],
+      rows2: [
+        r('#124', '#216', 'Menen, Behedet, and the tribunal', '805 토큰 · 키워드 대기 (Menen)', 'key'),
+        r('#217', '#236', 'Bread, and the charge he conceded', '327 토큰 · 짧게', 'short'),
+        r('#237', '#244', 'What she wanted', '284 토큰 · 꺼 둠', 'off'),
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

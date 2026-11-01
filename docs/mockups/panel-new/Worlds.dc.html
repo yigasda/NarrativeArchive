@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>세계관 공유</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 390px; height: 900px; box-sizing: border-box; padding: 22px 20px 28px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 14px">
+
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <h1 style="margin: 0; font-size: 20px; letter-spacing: -0.01em">세계관 공유</h1>
+    <span style="font-size: 12.5px; color: #7A6A60">여러 채팅이 같이 쓰는 설정 · 고치면 켠 채팅 모두에 반영돼요</span>
+  </div>
+
+  <div style="display: flex; gap: 8px">
+    <button style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; border: 0; background: #B8541F; color: #fff; font: inherit; font-size: 13px; font-weight: 600; padding: 10px 0; border-radius: 12px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>새 세계관
+    </button>
+    <button style="flex: 1; border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13px; padding: 10px 0; border-radius: 12px">아카이브에서 가져오기</button>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; color: #7A6A60">
+    <span>이 채팅에 켜진 세계관 2개</span><b class="num" style="color: #2A211C">약 2,140 토큰</b>
+  </div>
+
+  <sc-for list="{{books}}" as="b" hint-placeholder-count="3">
+    <div style="background: #FFFAF6; border: {{b.border}}; border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <span style="flex: none; width: 40px; height: 40px; border-radius: 12px; background: {{b.tint}}; display: grid; place-items: center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{b.ink}}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
+        </span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3">
+          <b style="font-size: 14.5px">{{b.name}}</b>
+          <span class="num" style="font-size: 12px; color: #8A7A70">{{b.meta}}</span>
+        </span>
+        <span style="width: 44px; height: 26px; border-radius: 999px; background: {{b.track}}; position: relative; flex: none"><span style="position: absolute; left: {{b.knob}}px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.2)"></span></span>
+      </div>
+      <sc-if value="{{b.open}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="border: 1px solid #E5D5C9; border-radius: 12px; padding: 10px 12px; font-size: 12.5px; line-height: 1.6; color: #3A2E27; white-space: pre-line">{{b.text}}</div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 10px 3px 3px; border-radius: 999px; background: #F1E6DD">
+              <span style="width: 20px; height: 20px; border-radius: 50%; background: #8E3B2E; color: #fff; display: grid; place-items: center; font-size: 10px; font-weight: 700">S</span>Set 채팅에서 저절로 켜짐
+            </span>
+            <span style="flex: 1"></span>
+            <button style="border: 0; background: transparent; padding: 0; font: inherit; font-size: 12.5px; color: #B3261E">지우기</button>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const B = [
+      { name: 'Ombos 신전', meta: '1,420 토큰 · Set 채팅에 묶임', on: true, open: true, text: '## Ombos temple\n- 사제가 없어요. 셋이 직접 신전을 돌봐요.\n- 서쪽 방은 세트의 방, 열주 계단은 밤마다 별을 보는 자리.\n- 남쪽 사막의 바람이 신전 안 대화까지 실어 와요.' },
+      { name: '신들의 규칙', meta: '720 토큰 · 직접 켬', on: true, open: false, text: '' },
+      { name: 'Britain 항구', meta: '510 토큰 · 꺼짐', on: false, open: false, text: '' },
+    ];
+    return {
+      books: B.map(b => ({
+        ...b,
+        border: b.on ? '1.5px solid #E2B597' : '1px solid #E5D5C9',
+        tint: b.on ? '#FBE4D8' : '#F1E6DD', ink: b.on ? '#B8541F' : '#8A7A70',
+        track: b.on ? '#B8541F' : '#D9C8BC', knob: b.on ? 21 : 3,
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>관계도 A</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 390px; height: 1040px; box-sizing: border-box; padding: 22px 20px 28px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 14px">
+
+  <div style="display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: #EBDDD2">
+    <button style="flex: 1; border: 0; background: transparent; color: #6B5A50; font: inherit; font-size: 13px; padding: 9px 0; border-radius: 10px">도감</button>
+    <button style="flex: 1; border: 0; background: #FFFAF6; color: #A84A17; font: inherit; font-size: 13px; font-weight: 600; padding: 9px 0; border-radius: 10px; box-shadow: 0 1px 2px rgba(60,30,10,0.12)">관계도</button>
+    <button style="flex: 1; border: 0; background: transparent; color: #6B5A50; font: inherit; font-size: 13px; padding: 9px 0; border-radius: 10px">온도</button>
+  </div>
+
+  <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 22px; padding: 0 0 10px; display: flex; flex-direction: column; align-items: center">
+    <div style="position: relative; width: 350px; height: 350px">
+      <svg width="350" height="350" viewBox="0 0 350 350" style="position: absolute; inset: 0">
+        <line x1="296" y1="140" x2="250" y2="282" stroke="#3D6FB6" stroke-width="8.4" stroke-opacity="0.25" stroke-linecap="round"></line>
+        <line x1="54" y1="140" x2="296" y2="140" stroke="#A99C92" stroke-width="1.9" stroke-opacity="0.3" stroke-linecap="round"></line>
+        <line x1="250" y1="282" x2="100" y2="282" stroke="#A99C92" stroke-width="2.1" stroke-opacity="0.3" stroke-linecap="round"></line>
+        <line x1="175" y1="58" x2="296" y2="140" stroke="#D9662F" stroke-width="6.6" stroke-opacity="0.9" stroke-linecap="round"></line>
+        <line x1="175" y1="58" x2="250" y2="282" stroke="#D9662F" stroke-width="6.6" stroke-opacity="0.75" stroke-linecap="round"></line>
+        <line x1="175" y1="58" x2="100" y2="282" stroke="#D9662F" stroke-width="2.5" stroke-opacity="0.7" stroke-linecap="round"></line>
+        <line x1="175" y1="58" x2="54" y2="140" stroke="#A99C92" stroke-width="1.9" stroke-opacity="0.9" stroke-linecap="round"></line>
+      </svg>
+      <sc-for list="{{nodes}}" as="n" hint-placeholder-count="5">
+        <button style="position: absolute; left: {{n.x}}px; top: {{n.y}}px; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; border: 0; background: transparent; padding: 0; font: inherit; color: inherit">
+          <span style="width: {{n.size}}px; height: {{n.size}}px; border-radius: 50%; background: {{n.color}}; color: #fff; display: grid; place-items: center; font-size: 19px; font-weight: 700; box-shadow: {{n.ring}}">{{n.initial}}</span>
+          <span style="font-size: 12px; font-weight: {{n.weight}}; background: #FFFAF6; padding: 0 6px; border-radius: 6px">{{n.name}}</span>
+        </button>
+      </sc-for>
+    </div>
+    <div style="display: flex; gap: 16px; font-size: 11.5px; color: #7A6A60">
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 22px; height: 6px; border-radius: 3px; background: #6B5A50"></span>굵기 = 함께 나온 섹션</span>
+      <span style="display: flex; align-items: center; gap: 4px"><span style="width: 10px; height: 10px; border-radius: 50%; background: #D9662F"></span><span style="width: 10px; height: 10px; border-radius: 50%; background: #3D6FB6"></span>색 = 최근 온도</span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <span style="font-size: 13px; font-weight: 600; color: #6B5A50">Somang과 이어진 사람</span>
+    <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+      <button style="display: flex; align-items: center; gap: 12px; border: 1px solid #E5D5C9; background: #FFFAF6; border-radius: 14px; padding: 10px 12px; font: inherit; color: inherit; text-align: left">
+        <span style="width: 34px; height: 34px; border-radius: 50%; background: {{r.color}}; color: #fff; display: grid; place-items: center; font-size: 14px; font-weight: 700">{{r.initial}}</span>
+        <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3; min-width: 0">
+          <b style="font-size: 14px">{{r.name}}</b>
+          <span style="font-size: 12px; color: #8A7A70; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.line}}</span>
+        </span>
+        <svg width="56" height="24" viewBox="0 0 56 24"><line x1="0" x2="56" y1="12" y2="12" stroke="#E6D9CF" stroke-dasharray="2 3"></line><polyline points="{{r.spark}}" fill="none" stroke="{{r.tc}}" stroke-width="1.6" stroke-linejoin="round"></polyline></svg>
+        <span class="num" style="width: 30px; text-align: right; font-size: 13px; font-weight: 700; color: {{r.tc}}">{{r.t}}</span>
+      </button>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = {
+      Somang: { x: 175, y: 58, color: '#B5645A' },
+      Set: { x: 296, y: 140, color: '#8E3B2E' },
+      Horus: { x: 250, y: 282, color: '#5E7F3A' },
+      Chaewon: { x: 100, y: 282, color: '#9A6B3F' },
+      Nephthys: { x: 54, y: 140, color: '#4F6F8F' },
+    };
+    const sel = 'Somang';
+    const tc = t => t > 0 ? '#D9662F' : t < 0 ? '#3D6FB6' : '#A99C92';
+    const E = [['Somang', 'Set', 36, 4], ['Somang', 'Horus', 36, 3], ['Set', 'Horus', 48, -1], ['Somang', 'Chaewon', 7, 2], ['Somang', 'Nephthys', 3, 0], ['Set', 'Nephthys', 3, 0], ['Horus', 'Chaewon', 4, 0]];
+    const spark = vs => vs.map((v, i) => `${(i * 56 / (vs.length - 1)).toFixed(1)},${12 - v * 2}`).join(' ');
+    return {
+      edges: E.map(([a, b, n, t]) => ({ x1: P[a].x, y1: P[a].y, x2: P[b].x, y2: P[b].y, w: 1.5 + n / 7, color: tc(t), op: a === sel || b === sel ? 0.9 : 0.25 })),
+      nodes: Object.entries(P).map(([name, p]) => ({ name, initial: name[0], x: p.x, y: p.y, color: p.color, size: name === sel ? 60 : 50, weight: name === sel ? 700 : 500, ring: name === sel ? '0 0 0 3px #FFFAF6, 0 0 0 5px #B8541F' : '0 0 0 3px #FFFAF6' })),
+      rows: [
+        ['Set', '#8E3B2E', 4, '함께 36섹션 · 질투는 남았지만 권리로 삼지 않아요', [2, 4, 1, -2, 3, -3, 3, -5, 1, -4, 4, 5, 4]],
+        ['Horus', '#5E7F3A', 3, '함께 36섹션 · 평생의 짝, 파라오 앞에서 한 맹세', [0, 1, 2, 2, 3, 1, 3, 4, 3, 2, 4, 3, 3]],
+        ['Chaewon', '#9A6B3F', 2, '함께 7섹션 · 북쪽으로 떠나보냄', [0, 1, 2, 1, 2]],
+        ['Nephthys', '#4F6F8F', 0, '함께 3섹션 · 몇 번 스쳐 감', [0, 1, 0]],
+      ].map(([name, color, t, line, vs]) => ({ name, color, initial: name[0], line, t: t > 0 ? `+${t}` : `${t}`, tc: tc(t), spark: spark(vs) })),
+    };
+  }
+}
+</script>
+</body>
+</html>

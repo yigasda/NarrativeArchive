@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>말투 지문</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 390px; height: 860px; box-sizing: border-box; padding: 22px 20px 28px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 14px">
+
+  <div style="display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 14px; background: #EBDDD2">
+    <button style="flex: 1; border: 0; background: transparent; color: #6B5A50; font: inherit; font-size: 13px; padding: 9px 0; border-radius: 10px">대사 38</button>
+    <button style="flex: 1; border: 0; background: #FFFAF6; color: #A84A17; font: inherit; font-size: 13px; font-weight: 600; padding: 9px 0; border-radius: 10px; box-shadow: 0 1px 2px rgba(60,30,10,0.12)">말투 지문 3</button>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 10px; background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 14px; padding: 10px 12px">
+    <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.35">
+      <b style="font-size: 13.5px">조용히 주입</b>
+      <span style="font-size: 11.5px; color: #8A7A70">“본문에서 언급하지 말 것”을 붙여 보내요 · 약 180 토큰</span>
+    </span>
+    <span style="width: 44px; height: 26px; border-radius: 999px; background: #B8541F; position: relative; flex: none"><span style="position: absolute; right: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff"></span></span>
+  </div>
+
+  <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 20px; padding: 14px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <span style="width: 40px; height: 40px; border-radius: 50%; background: #8E3B2E; color: #fff; display: grid; place-items: center; font-weight: 700">S</span>
+      <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3">
+        <b style="font-size: 15px">Set</b>
+        <span style="font-size: 11.5px; color: #8A7A70">대사 12개로 만듦 · 지금 14개</span>
+      </span>
+      <button style="display: flex; align-items: center; gap: 5px; border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 12px; padding: 5px 10px; border-radius: 999px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/></svg>다시
+      </button>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <sc-for list="{{rules}}" as="r" hint-placeholder-count="5">
+        <div style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 12px; background: #FBF4EE">
+          <span style="flex: none; font-size: 11px; font-weight: 700; color: #8A3A12; padding: 1px 7px; border-radius: 6px; background: #F6E1D3; margin-top: 2px">{{r.tag}}</span>
+          <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.45">
+            <span style="font-size: 13px">{{r.rule}}</span>
+            <span style="font-size: 12px; color: #8A7A70; font-style: italic">{{r.ex}}</span>
+          </span>
+        </div>
+      </sc-for>
+    </div>
+    <button style="align-self: flex-start; border: 0; background: transparent; padding: 0; font: inherit; font-size: 12.5px; color: #A84A17">직접 고치기</button>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <button style="display: flex; align-items: center; gap: 10px; border: 1px solid #E5D5C9; background: #FFFAF6; border-radius: 14px; padding: 10px 12px; font: inherit; color: inherit; text-align: left">
+      <span style="width: 32px; height: 32px; border-radius: 50%; background: #5E7F3A; color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700">H</span>
+      <span style="flex: 1; font-size: 13.5px">Horus <span style="color: #8A7A70; font-size: 12px">· 규칙 5개</span></span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A7A70" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+    <button style="display: flex; align-items: center; gap: 10px; border: 1.5px dashed #D3C1B4; background: transparent; border-radius: 14px; padding: 10px 12px; font: inherit; color: inherit; text-align: left">
+      <span style="width: 32px; height: 32px; border-radius: 50%; background: #9A6B3F; color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700">C</span>
+      <span style="flex: 1; font-size: 13.5px">Chaewon <span style="color: #8A7A70; font-size: 12px">· 아직 없음</span></span>
+      <span style="font-size: 12.5px; font-weight: 600; color: #A84A17">만들기</span>
+    </button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      rules: [
+        ['길이', 'Uses short, clipped sentences.', '“Sit down.”'],
+        ['명령', 'Gives orders instead of asking.', '“Look at me.”'],
+        ['감정', 'Hides worry behind dry sarcasm.', '“Funny.”'],
+        ['반복', 'Repeats his own words back to make a point.', '“I said I would come back. I came back.”'],
+        ['선', 'Never names his feelings out loud.', ''],
+      ].map(([tag, rule, ex]) => ({ tag, rule, ex })),
+    };
+  }
+}
+</script>
+</body>
+</html>

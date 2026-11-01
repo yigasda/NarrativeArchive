@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>관계 온도 B</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 390px; height: 1060px; box-sizing: border-box; padding: 22px 20px 28px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 14px">
+
+  <div style="display: flex; align-items: center; gap: 10px">
+    <span style="width: 36px; height: 36px; border-radius: 50%; background: #B5645A; color: #fff; display: grid; place-items: center; font-weight: 700">S</span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A8B80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h13l-4-4M17 17H4l4 4"/></svg>
+    <span style="width: 36px; height: 36px; border-radius: 50%; background: #8E3B2E; color: #fff; display: grid; place-items: center; font-weight: 700">S</span>
+    <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3">
+      <b style="font-size: 15px">Somang · Set</b>
+      <span style="font-size: 12px; color: #7A6A60">26섹션 · 평균 +1.4</span>
+    </span>
+    <button style="border: 1px solid #E5D5C9; background: #FFFAF6; font: inherit; font-size: 12.5px; color: #2A211C; padding: 7px 12px; border-radius: 999px">짝 바꾸기</button>
+  </div>
+
+  <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 18px; padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #7A6A60">
+      <span>이야기 흐름에 따른 온도</span><span>섹션 1칸</span>
+    </div>
+    <div style="display: flex; gap: 3px; height: 54px; align-items: stretch">
+      <sc-for list="{{cells}}" as="c" hint-placeholder-count="26">
+        <span title="{{c.title}}" style="flex: 1; border-radius: 4px; background: {{c.color}}; outline: {{c.ring}}; outline-offset: 2px"></span>
+      </sc-for>
+    </div>
+    <div style="display: flex; font-size: 11px; color: #9A8B80">
+      <span style="flex: 12; border-top: 2px solid #D9C8BC; padding-top: 3px">Y1</span>
+      <span style="width: 6px"></span>
+      <span style="flex: 14; border-top: 2px solid #D9C8BC; padding-top: 3px">Y2</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 11px; color: #7A6A60">
+      <span>차가움</span>
+      <span style="width: 18px; height: 10px; border-radius: 3px; background: #2F5F9E"></span>
+      <span style="width: 18px; height: 10px; border-radius: 3px; background: #8FB2DE"></span>
+      <span style="width: 18px; height: 10px; border-radius: 3px; background: #E2D6CC"></span>
+      <span style="width: 18px; height: 10px; border-radius: 3px; background: #F0A27B"></span>
+      <span style="width: 18px; height: 10px; border-radius: 3px; background: #C4471A"></span>
+      <span>따뜻함</span>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+    <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column">
+      <span style="font-size: 11.5px; color: #7A6A60">따뜻한 섹션</span><b class="num" style="font-size: 20px; color: #C4471A">16</b>
+    </div>
+    <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column">
+      <span style="font-size: 11.5px; color: #7A6A60">차가운 섹션</span><b class="num" style="font-size: 20px; color: #2F5F9E">8</b>
+    </div>
+    <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column">
+      <span style="font-size: 11.5px; color: #7A6A60">지금</span><b class="num" style="font-size: 20px; color: #C4471A">+4</b>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 18px; padding: 6px 0">
+    <span style="font-size: 12px; font-weight: 600; color: #7A6A60; padding: 6px 14px 4px">Y2 · 최근부터</span>
+    <sc-for list="{{rows}}" as="r" hint-placeholder-count="9">
+      <button style="display: flex; align-items: center; gap: 12px; border: 0; border-top: 1px solid #F1E6DD; background: transparent; padding: 9px 14px; font: inherit; color: inherit; text-align: left">
+        <span class="num" style="flex: none; width: 34px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: {{r.color}}; color: {{r.fg}}">{{r.v}}</span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35">
+          <span style="font-size: 13.5px">{{r.why}}</span>
+          <span style="font-size: 11.5px; color: #8A7A70; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.sec}}</span>
+        </span>
+      </button>
+    </sc-for>
+    <button style="border: 0; border-top: 1px solid #F1E6DD; background: transparent; padding: 10px 14px 6px; font: inherit; font-size: 13px; color: #A84A17; text-align: left">Y1 섹션 12개 더 보기</button>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 8px">
+    <span style="flex: 1; font-size: 11.5px; color: #8A7A70">AI 기능 모델이 −5 ~ +5로 매겨요 · 안 잰 섹션 없음</span>
+    <button style="border: 1px solid #E5D5C9; background: #FFFAF6; font: inherit; font-size: 12.5px; color: #2A211C; padding: 7px 12px; border-radius: 999px">전부 다시</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1060}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = [2, 4, 4, 1, -2, 0, 3, 2, 3, -3, 1, 3, 3, 2, -1, -3, -5, 1, -1, -4, 2, 4, 5, 4, 3, 4];
+    const col = v => v >= 4 ? '#C4471A' : v >= 1 ? '#F0A27B' : v === 0 ? '#E2D6CC' : v >= -2 ? '#8FB2DE' : '#2F5F9E';
+    const fg = v => (v >= 4 || v <= -3) ? '#fff' : '#2A211C';
+    const sign = v => v > 0 ? `+${v}` : v < 0 ? `−${-v}` : '0';
+    const y2 = [
+      ['Y2 #574–#604 · Salmon', '연어 요리, 평온한 저녁', 4],
+      ['Y2 #528–#573 · “I want a child”', '아이를 원했지만 함께 거절, 받아들임', 3],
+      ['Y2 #510–#513 · Home', '집으로, 곁을 허락함', 4],
+      ['Y2 #500–#509 · “How must I let you go”', '떠나보내려다 끝내 붙잡음', 5],
+      ['Y2 #428–#437 · The stars', '별 아래 모든 기억이 돌아옴', 4],
+      ['Y2 #398–#407 · What the hand remembered', '손이 먼저 기억해 냄', 2],
+      ['Y2 #388–#397 · “Do I have to live being beaten”', '두려움이 터져 나옴', -4],
+      ['Y2 #366–#369 · “Love me”', '“사랑해 줘”, 다시 손을 뻗음', 1],
+      ['Y2 #354–#365 · “vermin”', '낯선 사람 같은 예의, “벌레”', -5],
+    ];
+    return {
+      cells: s.map((v, i) => ({ color: col(v), ring: i === 16 ? '2px solid #2A211C' : 'none', title: sign(v) })),
+      rows: y2.map(([sec, why, v]) => ({ sec, why, v: sign(v), color: col(v), fg: fg(v) })),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>인물 도감 A</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 390px; height: 1100px; box-sizing: border-box; padding: 22px 20px 28px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 14px">
+
+  <div style="display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: #EBDDD2">
+    <button style="flex: 1; border: 0; background: #FFFAF6; color: #A84A17; font: inherit; font-size: 13px; font-weight: 600; padding: 9px 0; border-radius: 10px; box-shadow: 0 1px 2px rgba(60,30,10,0.12)">도감</button>
+    <button style="flex: 1; border: 0; background: transparent; color: #6B5A50; font: inherit; font-size: 13px; padding: 9px 0; border-radius: 10px">관계도</button>
+    <button style="flex: 1; border: 0; background: transparent; color: #6B5A50; font: inherit; font-size: 13px; padding: 9px 0; border-radius: 10px">온도</button>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+    <sc-for list="{{people}}" as="p" hint-placeholder-count="5">
+      <button style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 6px 12px; border-radius: 18px; border: {{p.border}}; background: {{p.bg}}; font: inherit; color: inherit">
+        <span style="width: 60px; height: 60px; border-radius: 50%; background: {{p.color}}; color: #fff; display: grid; place-items: center; font-size: 24px; font-weight: 700">{{p.initial}}</span>
+        <b style="font-size: 13.5px; line-height: 1.2">{{p.name}}</b>
+        <span class="num" style="font-size: 11.5px; color: #8A7A70; line-height: 1.2">{{p.meta}}</span>
+      </button>
+    </sc-for>
+    <button style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 14px 6px 12px; border-radius: 18px; border: 1.5px dashed #D3C1B4; background: transparent; font: inherit; color: #8A7A70">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      <span style="font-size: 12.5px">인물 넣기</span>
+    </button>
+  </div>
+
+  <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: center; gap: 14px">
+      <span style="position: relative; flex: none">
+        <span style="width: 72px; height: 72px; border-radius: 50%; background: #8E3B2E; color: #fff; display: grid; place-items: center; font-size: 30px; font-weight: 700">S</span>
+        <button aria-label="얼굴 바꾸기" style="position: absolute; right: -2px; bottom: -2px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #FFFAF6; background: #2A211C; color: #fff; display: grid; place-items: center; padding: 0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </button>
+      </span>
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+        <b style="font-size: 20px; line-height: 1.2">Set</b>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap">
+          <span style="font-size: 11.5px; padding: 1px 8px; border-radius: 999px; background: #F1E6DD; color: #6B5A50">섹션 53</span>
+          <span style="font-size: 11.5px; padding: 1px 8px; border-radius: 999px; background: #F1E6DD; color: #6B5A50">대사 12</span>
+          <span style="font-size: 11.5px; padding: 1px 8px; border-radius: 999px; background: #F1E6DD; color: #6B5A50">실리태번 아바타</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+      <button style="border: 1px solid #EADBD0; background: #FBF4EE; border-radius: 12px; padding: 8px 10px; font: inherit; color: inherit; text-align: left; display: flex; flex-direction: column; line-height: 1.35">
+        <span style="font-size: 11px; color: #8A7A70">처음 나온 곳</span><b style="font-size: 13px">#0–#47</b>
+      </button>
+      <button style="border: 1px solid #EADBD0; background: #FBF4EE; border-radius: 12px; padding: 8px 10px; font: inherit; color: inherit; text-align: left; display: flex; flex-direction: column; line-height: 1.35">
+        <span style="font-size: 11px; color: #8A7A70">최근</span><b style="font-size: 13px">Y2 #574–#604</b>
+      </button>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <span style="font-size: 12.5px; font-weight: 600; color: #6B5A50">지금 상태</span>
+      <ul style="margin: 0; padding: 0 0 0 18px; font-size: 13px; line-height: 1.55; color: #3A2E27; display: flex; flex-direction: column; gap: 4px">
+        <li>남쪽 사막을 몸으로 다스리고, 바람이 실어 오는 말을 들어요.</li>
+        <li>사랑과 두려움이 그녀의 선택을 지울 권리는 아니라는 걸 배웠어요.</li>
+        <li>Y2 #506 첫 사과 이후로 명령하지 않고, 말하면 물러나요.</li>
+      </ul>
+      <button style="align-self: flex-start; border: 0; background: transparent; padding: 0; font: inherit; font-size: 12.5px; color: #A84A17">1개 더</button>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <span style="font-size: 12.5px; font-weight: 600; color: #6B5A50">관계</span>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: #FBF4EE">
+        <span style="width: 28px; height: 28px; border-radius: 50%; background: #B5645A; color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 700">S</span>
+        <span style="flex: 1; font-size: 13px">Somang</span>
+        <span class="num" style="font-size: 12px; font-weight: 700; color: #C4471A; padding: 1px 8px; border-radius: 999px; background: #FBE4D8">+4</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: #FBF4EE">
+        <span style="width: 28px; height: 28px; border-radius: 50%; background: #5E7F3A; color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 700">H</span>
+        <span style="flex: 1; font-size: 13px">Horus</span>
+        <span class="num" style="font-size: 12px; font-weight: 700; color: #2F5F9E; padding: 1px 8px; border-radius: 999px; background: #E3ECF8">−1</span>
+      </div>
+    </div>
+
+    <blockquote style="margin: 0; padding: 10px 14px; border-radius: 12px; background: #2A211C; color: #FFF6EF; font-size: 13.5px; line-height: 1.5">“You don’t get to decide that for me.”</blockquote>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const ps = [
+      ['Somang', '#B5645A', '섹션 42'],
+      ['Set', '#8E3B2E', '섹션 53'],
+      ['Horus', '#5E7F3A', '섹션 52'],
+      ['Chaewon', '#9A6B3F', '섹션 8'],
+      ['Nephthys', '#4F6F8F', '섹션 3'],
+    ];
+    return {
+      people: ps.map(([name, color, meta]) => ({
+        name, color, meta, initial: name[0],
+        bg: name === 'Set' ? '#FFFAF6' : 'rgba(255,250,246,0.55)',
+        border: name === 'Set' ? '2px solid #B8541F' : '1px solid #E5D5C9',
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>

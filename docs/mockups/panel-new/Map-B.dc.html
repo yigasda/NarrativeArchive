@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>관계도 B</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 390px; height: 1000px; box-sizing: border-box; padding: 22px 20px 28px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 14px">
+
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <h1 style="margin: 0; font-size: 20px; letter-spacing: -0.01em">Somang의 거리</h1>
+    <span style="font-size: 12.5px; color: #7A6A60">가까울수록 최근 온도가 따뜻해요 · 점 크기 = 함께 나온 섹션</span>
+  </div>
+
+  <div style="position: relative; width: 350px; height: 350px; align-self: center; border-radius: 50%; background: #FBF2EA">
+    <svg width="350" height="350" viewBox="0 0 350 350" style="position: absolute; inset: 0">
+      <circle cx="175" cy="175" r="72" fill="#FBE4D8" fill-opacity="0.7"></circle>
+      <circle cx="175" cy="175" r="72" fill="none" stroke="#EBC2AA" stroke-dasharray="3 4"></circle>
+      <circle cx="175" cy="175" r="122" fill="none" stroke="#DCCBBE" stroke-dasharray="3 4"></circle>
+      <circle cx="175" cy="175" r="168" fill="none" stroke="#C9D6E8" stroke-dasharray="3 4"></circle>
+      <line x1="175" y1="175" x2="225" y2="128" stroke="#D9662F" stroke-width="2.5"></line>
+      <line x1="175" y1="175" x2="115" y2="128" stroke="#D9662F" stroke-width="2.5"></line>
+      <line x1="175" y1="175" x2="232" y2="262" stroke="#E6A27E" stroke-width="1.5"></line>
+      <line x1="175" y1="175" x2="72" y2="246" stroke="#B8AAA0" stroke-width="1.2"></line>
+    </svg>
+    <span style="position: absolute; left: 175px; top: 103px; transform: translateX(-50%); font-size: 10.5px; color: #B8541F">따뜻</span>
+    <span style="position: absolute; left: 175px; top: 53px; transform: translateX(-50%); font-size: 10.5px; color: #8A7A70">보통</span>
+    <span style="position: absolute; left: 175px; top: 7px; transform: translateX(-50%); font-size: 10.5px; color: #3D6FB6">차가움</span>
+
+    <span style="position: absolute; left: 175px; top: 175px; transform: translate(-50%, -50%); width: 72px; height: 72px; border-radius: 50%; background: #B5645A; color: #fff; display: grid; place-items: center; font-size: 28px; font-weight: 700; box-shadow: 0 0 0 4px #FFFAF6, 0 4px 14px rgba(120,50,20,0.25)">S</span>
+
+    <sc-for list="{{others}}" as="o" hint-placeholder-count="4">
+      <button style="position: absolute; left: {{o.x}}px; top: {{o.y}}px; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px; border: 0; background: transparent; padding: 0; font: inherit; color: inherit">
+        <span style="width: {{o.size}}px; height: {{o.size}}px; border-radius: 50%; background: {{o.color}}; color: #fff; display: grid; place-items: center; font-size: 15px; font-weight: 700; box-shadow: 0 0 0 3px #FFFAF6">{{o.initial}}</span>
+        <span style="font-size: 11.5px; font-weight: 600; background: #FFFAF6; padding: 0 6px; border-radius: 6px; white-space: nowrap">{{o.name}} <span class="num" style="color: {{o.tc}}">{{o.t}}</span></span>
+      </button>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <span style="font-size: 12.5px; color: #7A6A60">가운데 사람 바꾸기</span>
+    <div style="display: flex; gap: 6px; flex-wrap: wrap">
+      <button style="border: 0; background: #2A211C; color: #FFFAF6; font: inherit; font-size: 13px; padding: 6px 14px; border-radius: 999px">Somang</button>
+      <button style="border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13px; padding: 5px 14px; border-radius: 999px">Set</button>
+      <button style="border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13px; padding: 5px 14px; border-radius: 999px">Horus</button>
+      <button style="border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13px; padding: 5px 14px; border-radius: 999px">Chaewon</button>
+      <button style="border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13px; padding: 5px 14px; border-radius: 999px">Nephthys</button>
+    </div>
+  </div>
+
+  <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <span style="width: 32px; height: 32px; border-radius: 50%; background: #8E3B2E; color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700">S</span>
+      <b style="flex: 1; font-size: 14.5px">Set</b>
+      <span class="num" style="font-size: 12px; color: #8A7A70">함께 36섹션</span>
+    </div>
+    <span style="font-size: 13px; line-height: 1.55; color: #3A2E27">질투는 남았지만 호루스를 그녀 삶에서 지울 권리로 삼지 않아요. 반대할 땐 얼굴을 보고 말하라는 게 그의 요구예요.</span>
+    <div style="display: flex; gap: 8px">
+      <button style="flex: 1; border: 0; background: #B8541F; color: #fff; font: inherit; font-size: 13px; font-weight: 600; padding: 9px 0; border-radius: 10px">온도 그래프</button>
+      <button style="flex: 1; border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13px; padding: 9px 0; border-radius: 10px">함께 나온 섹션</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const tc = t => t > 0 ? '#C4471A' : t < 0 ? '#2F5F9E' : '#8A7A70';
+    return {
+      others: [
+        ['Set', '#8E3B2E', 225, 128, 48, 4],
+        ['Horus', '#5E7F3A', 115, 128, 48, 3],
+        ['Chaewon', '#9A6B3F', 232, 262, 36, 2],
+        ['Nephthys', '#4F6F8F', 72, 246, 30, 0],
+      ].map(([name, color, x, y, size, t]) => ({ name, color, x, y, size, initial: name[0], t: t > 0 ? `+${t}` : `${t}`, tc: tc(t) })),
+    };
+  }
+}
+</script>
+</body>
+</html>

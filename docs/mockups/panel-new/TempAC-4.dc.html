@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>관계 온도 A+C 4</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 390px; height: 1160px; box-sizing: border-box; padding: 22px 20px 28px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 14px">
+
+  <div style="display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: #EBDDD2">
+    <button style="flex: 1; border: 0; background: transparent; color: #6B5A50; font: inherit; font-size: 13px; padding: 9px 0; border-radius: 10px">도감</button>
+    <button style="flex: 1; border: 0; background: transparent; color: #6B5A50; font: inherit; font-size: 13px; padding: 9px 0; border-radius: 10px">관계도</button>
+    <button style="flex: 1; border: 0; background: #FFFAF6; color: #A84A17; font: inherit; font-size: 13px; font-weight: 600; padding: 9px 0; border-radius: 10px; box-shadow: 0 1px 2px rgba(60,30,10,0.12)">온도</button>
+  </div>
+
+  <button style="display: flex; align-items: center; gap: 12px; border: 1px solid #E5D5C9; background: #FFFAF6; border-radius: 16px; padding: 10px 14px; font: inherit; color: inherit; text-align: left">
+    <span style="display: flex">
+      <span style="width: 38px; height: 38px; border-radius: 50%; background: #B5645A; color: #fff; display: grid; place-items: center; font-weight: 700; border: 2px solid #FFFAF6">S</span>
+      <span style="width: 38px; height: 38px; border-radius: 50%; background: #8E3B2E; color: #fff; display: grid; place-items: center; font-weight: 700; border: 2px solid #FFFAF6; margin-left: -12px">S</span>
+    </span>
+    <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.35">
+      <b style="font-size: 15px">Somang · Set</b>
+      <span style="font-size: 12px; color: #7A6A60">함께 나온 섹션 26개</span>
+    </span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7A6A60" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+  </button>
+
+  <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 22px; padding: 18px 16px 14px; display: flex; gap: 14px">
+    <div style="flex: none; width: 62px; display: flex; flex-direction: column; align-items: center; gap: 8px">
+      <div style="position: relative; width: 62px; height: 176px">
+        <span style="position: absolute; left: 17px; top: 0; width: 14px; height: 150px; border-radius: 7px; background: #F1E6DD"></span>
+        <span style="position: absolute; left: 17px; top: {{fillTop}}px; width: 14px; height: {{fillH}}px; border-radius: 7px; background: #D2602C"></span>
+        <span style="position: absolute; left: 10px; top: 146px; width: 28px; height: 28px; border-radius: 50%; background: #D2602C; box-shadow: 0 0 0 4px #FBE4D8"></span>
+        <span style="position: absolute; left: 36px; top: 5px; width: 6px; border-top: 1px solid #CDBBAE"></span>
+        <span style="position: absolute; left: 36px; top: 75px; width: 6px; border-top: 1px solid #CDBBAE"></span>
+        <span style="position: absolute; left: 44px; top: -4px; font-size: 10.5px; color: #9A8B80">+5</span>
+        <span style="position: absolute; left: 44px; top: 66px; font-size: 10.5px; color: #9A8B80">0</span>
+        <span style="position: absolute; left: 36px; top: {{avgTop}}px; width: 9px; border-top: 2px solid #2A211C"></span>
+      </div>
+      <span style="display: flex; flex-direction: column; align-items: center; line-height: 1.15">
+        <b class="num" style="font-size: 26px; color: #C4521C">+4</b>
+        <span style="font-size: 12px; font-weight: 600; color: #C4521C">따뜻함</span>
+      </span>
+    </div>
+
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #8A7A70">
+        <span>흐름</span><span class="num">평균 +1.4 <span style="display: inline-block; width: 9px; border-top: 2px solid #2A211C; vertical-align: middle"></span></span>
+      </div>
+      <svg width="240" height="176" viewBox="0 0 240 176" style="display: block; overflow: visible">
+        <defs>
+          <clipPath id="w4"><rect x="-4" y="-10" width="248" height="88"></rect></clipPath>
+          <clipPath id="c4"><rect x="-4" y="78" width="248" height="108"></rect></clipPath>
+        </defs>
+        <line x1="0" x2="240" y1="78" y2="78" stroke="#DCCBBE" stroke-dasharray="2 4"></line>
+        <line x1="{{divX}}" x2="{{divX}}" y1="0" y2="160" stroke="#EADBD0"></line>
+        <path d="{{area}}" fill="#F3B497" fill-opacity="0.4" clip-path="url(#w4)"></path>
+        <path d="{{area}}" fill="#9DBCE3" fill-opacity="0.45" clip-path="url(#c4)"></path>
+        <path d="{{curve}}" fill="none" stroke="#2A211C" stroke-width="1.8" stroke-linecap="round"></path>
+        <circle cx="{{lastX}}" cy="{{lastY}}" r="4.5" fill="#C4521C" stroke="#FFFAF6" stroke-width="2"></circle>
+        <text x="4" y="174" font-size="10.5" fill="#9A8B80" font-family="IBM Plex Sans KR, sans-serif">Y1</text>
+        <text x="{{divLabel}}" y="174" font-size="10.5" fill="#9A8B80" font-family="IBM Plex Sans KR, sans-serif">Y2</text>
+      </svg>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+    <button style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 16px; padding: 12px; display: flex; gap: 10px; align-items: flex-start; font: inherit; color: inherit; text-align: left">
+      <b class="num" style="flex: none; font-size: 18px; line-height: 1.2; color: #C4471A">+5</b>
+      <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0; line-height: 1.35">
+        <span style="font-size: 11px; color: #8A7A70">가장 따뜻했던 때</span>
+        <b style="font-size: 13px">Y2 #500–#509</b>
+        <span style="font-size: 11.5px; color: #6B5A50">떠나보내려다 붙잡음</span>
+      </span>
+    </button>
+    <button style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 16px; padding: 12px; display: flex; gap: 10px; align-items: flex-start; font: inherit; color: inherit; text-align: left">
+      <b class="num" style="flex: none; font-size: 18px; line-height: 1.2; color: #2F5F9E">−5</b>
+      <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0; line-height: 1.35">
+        <span style="font-size: 11px; color: #8A7A70">가장 차가웠던 때</span>
+        <b style="font-size: 13px">Y2 #354–#365</b>
+        <span style="font-size: 11.5px; color: #6B5A50">“벌레”라는 말</span>
+      </span>
+    </button>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <span style="font-size: 13px; font-weight: 600; color: #6B5A50">크게 바뀐 순간</span>
+    <sc-for list="{{moments}}" as="m" hint-placeholder-count="3">
+      <button style="display: flex; align-items: center; gap: 12px; border: 1px solid #E5D5C9; background: #FFFAF6; border-radius: 14px; padding: 10px 12px; font: inherit; color: inherit; text-align: left">
+        <span class="num" style="flex: none; min-width: 64px; text-align: center; padding: 4px 0; border-radius: 10px; font-size: 13px; font-weight: 700; background: {{m.bg}}; color: {{m.fg}}">{{m.jump}}</span>
+        <span style="flex: 1; display: flex; flex-direction: column; min-width: 0; line-height: 1.35">
+          <b style="font-size: 13px">{{m.why}}</b>
+          <span style="font-size: 12px; color: #7A6A60">{{m.sec}}</span>
+        </span>
+      </button>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; gap: 8px">
+    <button style="flex: 1; border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13px; padding: 11px 0; border-radius: 12px">섹션별 점수 26개</button>
+    <button style="flex: 1; border: 0; background: #B8541F; color: #fff; font: inherit; font-size: 13px; font-weight: 600; padding: 11px 0; border-radius: 12px">안 잰 섹션 2개 재기</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1160}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = [2, 4, 4, 1, -2, 0, 3, 2, 3, -3, 1, 3, 3, 2, -1, -3, -5, 1, -1, -4, 2, 4, 5, 4, 3, 4];
+    const W = 240, Z = 78, K = 14;
+    const P = s.map((v, i) => [4 + i * ((W - 8) / (s.length - 1)), Z - v * K]);
+    let curve = `M${P[0][0].toFixed(1)},${P[0][1].toFixed(1)}`;
+    for (let i = 0; i < P.length - 1; i++) {
+      const p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || p2;
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      curve += ` C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    }
+    const last = P[P.length - 1];
+    const level = v => 145 - (v + 5) / 10 * 140; // tube top 5 = +5, 145 = −5
+    const divX = (P[11][0] + P[12][0]) / 2;
+    return {
+      curve, area: `${curve} L${last[0].toFixed(1)},${Z} L${P[0][0].toFixed(1)},${Z} Z`,
+      divX, divLabel: divX + 4, lastX: last[0], lastY: last[1],
+      fillTop: level(4), fillH: 160 - level(4), avgTop: level(1.4),
+      moments: [
+        { jump: '+3 → −3', why: '약방 천막 사건 뒤 냉랭해짐', sec: '#402–#475 · The apothecary’s tent', bg: '#E3ECF8', fg: '#2F6DB5' },
+        { jump: '−5 → +1', why: '“사랑해 줘”, 다시 손을 뻗음', sec: 'Y2 #366–#369 · “Love me”', bg: '#FBE4D8', fg: '#B8471A' },
+        { jump: '−4 → +2', why: '손이 먼저 기억해 냄', sec: 'Y2 #398–#407 · What the hand remembered', bg: '#FBE4D8', fg: '#B8471A' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

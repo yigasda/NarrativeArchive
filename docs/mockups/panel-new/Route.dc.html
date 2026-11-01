@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>이동 경로</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 390px; height: 920px; box-sizing: border-box; padding: 22px 20px 28px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 16px">
+
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <h1 style="margin: 0; font-size: 20px; letter-spacing: -0.01em">이동 경로</h1>
+    <span style="font-size: 12.5px; color: #7A6A60">Y2 · 4곳을 거쳐 지금은 Ombos</span>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px">
+    <span style="padding: 3px 10px; border-radius: 999px; background: #EBDDD2">Ombos</span>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A8B80" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    <span style="padding: 3px 10px; border-radius: 999px; background: #EBDDD2">Thebes</span>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A8B80" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    <span style="padding: 3px 10px; border-radius: 999px; background: #EBDDD2">Ombos</span>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A8B80" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    <span style="padding: 3px 10px; border-radius: 999px; background: #EBDDD2">Britain</span>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A8B80" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    <span style="padding: 3px 10px; border-radius: 999px; background: #2A211C; color: #FFFAF6">Ombos</span>
+  </div>
+
+  <div style="display: flex; flex-direction: column">
+    <sc-for list="{{stops}}" as="s" hint-placeholder-count="5">
+      <div style="display: flex; gap: 14px">
+        <div style="flex: none; width: 22px; display: flex; flex-direction: column; align-items: center">
+          <span style="width: 14px; height: 14px; border-radius: 50%; margin-top: 14px; background: {{s.dot}}; box-shadow: 0 0 0 4px {{s.halo}}"></span>
+          <span style="flex: 1; width: 2px; background: {{s.line}}; margin-top: 6px"></span>
+        </div>
+        <div style="flex: 1; min-width: 0; padding-bottom: 12px">
+          <button style="width: 100%; display: flex; flex-direction: column; gap: 6px; border: {{s.border}}; background: #FFFAF6; border-radius: 16px; padding: 10px 14px; font: inherit; color: inherit; text-align: left">
+            <span style="display: flex; align-items: baseline; gap: 8px; width: 100%">
+              <b style="font-size: 15.5px">{{s.place}}</b>
+              <span style="flex: 1; font-size: 12px; color: #8A7A70">{{s.when}}</span>
+              <span class="num" style="font-size: 12px; color: #6B5A50; background: #F1E6DD; padding: 0 8px; border-radius: 999px">{{s.count}}</span>
+            </span>
+            <span class="num" style="font-size: 12px; color: #8A7A70">{{s.range}}</span>
+            <sc-if value="{{s.open}}" hint-placeholder-val="{{ false }}">
+              <span style="display: flex; flex-wrap: wrap; gap: 4px">
+                <sc-for list="{{s.rooms}}" as="room" hint-placeholder-count="3">
+                  <span style="font-size: 12px; padding: 1px 9px; border-radius: 999px; border: 1px solid #E5D5C9; color: #4A3D35">{{room}}</span>
+                </sc-for>
+              </span>
+            </sc-if>
+          </button>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":920}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const S = [
+      ['Ombos', 'Mekhir – Phamenoth 9', 'Y2 #0 – #263', '섹션 9', false, []],
+      ['Thebes', 'Phamenoth 9–15', 'Y2 #264 – #308', '섹션 2', false, []],
+      ['Ombos', 'Phamenoth 16 – Thoth 17', 'Y2 #309 – #482', '섹션 12', false, []],
+      ['Britain', 'Phaophi 16–18', 'Y2 #483 – #513', '섹션 4', true, ['남쪽 항구', '절벽', '바다 동굴']],
+      ['Ombos', 'Hathyr 4 – 지금', 'Y2 #510 – #604', '섹션 3', true, ['안뜰', '안쪽 방', '부엌']],
+    ];
+    return {
+      stops: S.map(([place, when, range, count, open, rooms], i) => {
+        const last = i === S.length - 1;
+        return {
+          place, when, range, count, open, rooms,
+          dot: last ? '#B8541F' : '#CDBBAE', halo: last ? '#F6D7C4' : '#F6EDE6',
+          line: last ? 'transparent' : '#DCCBBE',
+          border: last ? '1.5px solid #B8541F' : '1px solid #E5D5C9',
+        };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>

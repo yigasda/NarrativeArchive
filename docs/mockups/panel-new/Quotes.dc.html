@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>대사 은행</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 390px; height: 1000px; box-sizing: border-box; padding: 22px 18px 28px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 12px">
+
+  <div style="display: flex; gap: 3px; padding: 4px; border-radius: 14px; background: #EBDDD2">
+    <button style="flex: 1; border: 0; background: #FFFAF6; color: #A84A17; font: inherit; font-size: 13px; font-weight: 600; padding: 8px 0; border-radius: 10px; box-shadow: 0 1px 2px rgba(60,30,10,0.12)">대사 <span style="font-weight: 400; opacity: 0.75">38</span></button>
+    <button style="flex: 1; border: 0; background: transparent; color: #6B5A50; font: inherit; font-size: 13px; padding: 8px 0; border-radius: 10px">말투 지문 <span style="opacity: 0.75">3</span></button>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+    <button style="border: 0; background: #B8541F; color: #fff; font: inherit; font-size: 13px; font-weight: 600; padding: 10px 0; border-radius: 14px">AI로 모으기</button>
+    <button style="border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13px; padding: 10px 0; border-radius: 14px">아카이브에서 모으기</button>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 8px; border: 1px solid #E5D5C9; background: #FFFAF6; border-radius: 14px; padding: 8px 12px">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A7A70" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <span style="flex: 1; color: #A99C92; font-size: 13.5px">인물 · 대사로 찾기</span>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px">
+    <span style="color: #8A7A70">빼는 인물</span>
+    <span style="display: flex; align-items: center; gap: 4px; padding: 2px 4px 2px 10px; border-radius: 999px; background: #F1E6DD">Somang <button aria-label="다시 넣기" style="width: 18px; height: 18px; border: 0; background: transparent; padding: 0; color: #8A7A70">×</button></span>
+    <button style="border: 1px dashed #CDBBAE; background: transparent; color: #6B5A50; font: inherit; font-size: 12px; padding: 2px 10px; border-radius: 999px">+ 추가</button>
+  </div>
+
+  <sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; align-items: center; gap: 8px; padding: 0 2px">
+        <span style="width: 26px; height: 26px; border-radius: 50%; background: {{g.color}}; color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 700">{{g.i}}</span>
+        <b style="font-size: 14px">{{g.name}}</b>
+        <span class="num" style="flex: 1; font-size: 12px; color: #8A7A70">{{g.n}}</span>
+        <span style="font-size: 11.5px; padding: 1px 8px; border-radius: 999px; background: #F6E1D3; color: #8A3A12">{{g.fp}}</span>
+        <button aria-label="이 인물 대사 모두 지우기" style="width: 26px; height: 26px; border: 0; background: transparent; color: #B8A99E; padding: 0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
+      </div>
+      <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 16px; overflow: hidden">
+        <sc-for list="{{g.lines}}" as="l" hint-placeholder-count="3">
+          <div style="display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-top: {{l.line}}">
+            <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.45">
+              <span style="font-size: 13.5px">“{{l.text}}”</span>
+              <span style="font-size: 11.5px; color: #8A7A70">{{l.src}}</span>
+            </span>
+            <button aria-label="빼기" style="width: 22px; height: 22px; border: 0; background: transparent; color: #B8A99E; padding: 0; flex: none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-for>
+
+  <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; border: 1px dashed #D3C1B4">
+    <span style="flex: 1; font-size: 12.5px; color: #6B5A50">말한 사람 모름 <b>4</b>개 · 눌러서 고쳐 주세요</span>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8A7A70" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const lines = arr => arr.map(([text, src], i) => ({ text, src, line: i ? '1px solid #F1E6DD' : '0' }));
+    return {
+      groups: [
+        { name: 'Set', i: 'S', color: '#8E3B2E', n: '대사 14개', fp: '지문 있음', lines: lines([['Words given to Thoth never return.', '#0–#47 · Ombos, half a year in'], ['You don’t get to decide that for me.', 'Y2 #388–#397'], ['Then I will wait at the door until you do.', 'Y2 #35–#50']]) },
+        { name: 'Horus', i: 'H', color: '#5E7F3A', n: '대사 9개', fp: '지문 있음', lines: lines([['Staying under my wing is not mercy.', '#124–#216'], ['It is noted. That is all I will say.', 'Y2 #108–#116']]) },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

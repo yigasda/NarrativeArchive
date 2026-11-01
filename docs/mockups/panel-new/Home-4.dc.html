@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>홈 4 · 타일</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+button{font:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 960px; box-sizing: border-box; padding: 14px 14px 24px; background: #F0E4DB; color: #463428; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 12px">
+
+  <div style="display: flex; align-items: center; gap: 10px; padding: 8px 6px">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B8541F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 12.2A6 6 0 0 0 11.8 3.8L5 10.6V19h8.4z"/><path d="M16 8L2 22M17.5 15H9"/></svg>
+    <b style="font-size: 16px">서사 아카이브</b>
+    <span style="color: #8A7A70; font-size: 12.5px">v3.28</span>
+    <span style="flex: 1"></span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A7A70" stroke-width="2" stroke-linecap="round"><path d="M6 15l6-6 6 6"/></svg>
+  </div>
+
+  <div style="background: #F7EEE7; border-radius: 20px; padding: 16px; display: grid; grid-template-columns: 1fr auto; gap: 10px 12px; align-items: center">
+    <div style="display: flex; flex-direction: column; line-height: 1.15">
+      <span style="color: #8A7A70; font-size: 12px">주입 중인 토큰</span>
+      <span style="font-size: 32px; font-weight: 700; letter-spacing: -0.02em">21,548</span>
+    </div>
+    <div style="display: flex; gap: 6px">
+      <button aria-label="건강 점검 100점" style="width: 52px; height: 52px; border: 0; border-radius: 16px; background: #E3F2E8; color: #1F6A40; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1"><b style="font-size: 17px">100</b><span style="font-size: 10.5px">건강</span></button>
+      <button aria-label="설정" style="width: 52px; height: 52px; border: 0; border-radius: 16px; background: #EBDDD2; color: #6B5A50; display: grid; place-items: center; padding: 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3.1 14H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 20.9 10H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </div>
+    <div style="grid-column: 1 / -1; height: 6px; border-radius: 999px; background: #EBDDD2; overflow: hidden; display: flex"><span style="width: 100%; background: #B8541F"></span></div>
+    <div style="grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px">
+      <span style="padding: 2px 9px; border-radius: 999px; background: #F6E1D3; color: #A84A17; font-weight: 600">주입 중</span>
+      <span style="padding: 2px 9px; border-radius: 999px; background: #EBDDD2; color: #6B5A50">아카이브 21,548</span>
+      <span style="padding: 2px 9px; border-radius: 999px; background: #EBDDD2; color: #6B5A50">원문 0</span>
+      <span style="padding: 2px 9px; border-radius: 999px; background: #EBDDD2; color: #6B5A50">대기 6</span>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: #E6D6CA">
+    <button style="flex: 1; height: 34px; border: 0; border-radius: 999px; background: #F7EEE7; color: #A84A17; font-weight: 600">홈</button>
+    <button style="flex: 1; height: 34px; border: 0; border-radius: 999px; background: none; color: #6B5A50">아카이브</button>
+    <button style="flex: 1; height: 34px; border: 0; border-radius: 999px; background: none; color: #6B5A50">압축</button>
+    <button style="flex: 1; height: 34px; border: 0; border-radius: 999px; background: none; color: #6B5A50">도구</button>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 8px; padding: 0 6px; color: #1F6A40; font-size: 13px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><b>할 일 없어요</b><span style="color: #8A7A70">· 경계선 #604 뒤 원문 0 토큰</span></div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+    <button style="display: flex; flex-direction: column; align-items: flex-start; gap: 18px; padding: 14px; border: 0; border-radius: 18px; background: #F7EEE7; color: #463428; text-align: left"><span style="width: 38px; height: 38px; border-radius: 12px; background: #F6E1D3; color: #B8541F; display: grid; place-items: center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5h7a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H2z"/><path d="M22 5h-7a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h8z"/></svg></span><span style="display: flex; flex-direction: column; line-height: 1.3"><b style="font-size: 15px">읽기</b><span style="color: #8A7A70; font-size: 12px">아카이브를 책처럼</span></span></button>
+    <button style="display: flex; flex-direction: column; align-items: flex-start; gap: 18px; padding: 14px; border: 0; border-radius: 18px; background: #F7EEE7; color: #463428; text-align: left"><span style="width: 38px; height: 38px; border-radius: 12px; background: #F6E1D3; color: #B8541F; display: grid; place-items: center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/></svg></span><span style="display: flex; flex-direction: column; line-height: 1.3"><b style="font-size: 15px">질문</b><span style="color: #8A7A70; font-size: 12px">아카이브에 묻기</span></span></button>
+    <button style="display: flex; flex-direction: column; align-items: flex-start; gap: 18px; padding: 14px; border: 0; border-radius: 18px; background: #B8541F; color: #FFF6EF; text-align: left"><span style="width: 38px; height: 38px; border-radius: 12px; background: rgba(255,246,239,.18); color: #FFF6EF; display: grid; place-items: center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2M15 10V8M11 6h2M17 6h2M4 20L14 10M19 13v2M18 14h2"/></svg></span><span style="display: flex; flex-direction: column; line-height: 1.3"><b style="font-size: 15px">압축</b><span style="color: #F6D7C4; font-size: 12px">원문 0 토큰 쌓임</span></span></button>
+    <button style="display: flex; flex-direction: column; align-items: flex-start; gap: 18px; padding: 14px; border: 0; border-radius: 18px; background: #F7EEE7; color: #463428; text-align: left"><span style="width: 38px; height: 38px; border-radius: 12px; background: #F6E1D3; color: #B8541F; display: grid; place-items: center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><span style="display: flex; flex-direction: column; line-height: 1.3"><b style="font-size: 15px">미리보기</b><span style="color: #8A7A70; font-size: 12px">실제로 들어가는 글</span></span></button>
+  </div>
+
+  <span style="padding: 2px 6px 0; color: #8A7A70; font-size: 12.5px; font-weight: 600">AI 도구</span>
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px">
+    <button style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px; border: 0; border-radius: 16px; background: #F7EEE7; color: #463428; text-align: left"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B8541F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h8a3.5 3.5 0 0 0 0-7H8a3.5 3.5 0 0 1 0-7h8"/></svg><span style="display: flex; flex-direction: column; line-height: 1.3"><b style="font-size: 13.5px">이탈 감지</b><span style="color: #1F6A40; font-size: 11.5px">어긋남 없음</span></span></button>
+    <button style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px; border: 0; border-radius: 16px; background: #F7EEE7; color: #463428; text-align: left"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B8541F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg><span style="display: flex; flex-direction: column; line-height: 1.3"><b style="font-size: 13.5px">누가 아는가</b><span style="color: #8A7A70; font-size: 11.5px">비밀 1개</span></span></button>
+    <button style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px; border: 0; border-radius: 16px; background: #F7EEE7; color: #463428; text-align: left"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B8541F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h4v4c0 3-1.5 5-4 6M15 7h4v4c0 3-1.5 5-4 6"/></svg><span style="display: flex; flex-direction: column; line-height: 1.3"><b style="font-size: 13.5px">대사 은행</b><span style="color: #8A7A70; font-size: 11.5px">대사 62 · 지문 1</span></span></button>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":960}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
