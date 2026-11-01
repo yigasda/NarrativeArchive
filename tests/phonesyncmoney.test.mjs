@@ -377,3 +377,11 @@ test('line by line: amounts in words with commas, an account by its name, a curr
     const { when } = await import('../src/phoneparse.js');
     assert.deepEqual(['1월 20일 15:00', 'January 20, 2027', '20. Januar', 'the 3 cats'].map(when), ['01-20 15:00', '01-20', '01-20', '']);
 });
+
+test('the card\'s month leaves out the same month a year ago', () => {
+    const { m, p } = setup();
+    p.now = '10-26 12:00'; p.year = 2027;
+    p.money.tx.push({ id: 'old', account: '2222', who: 'Old', amount: -50, time: '10-05 10:00', day: '2026-10-05', kind: 'card' }, { id: 'new', account: '2222', who: 'New', amount: -20, time: '10-06 10:00', day: '2027-10-06', kind: 'card' });
+    migrateBank(m, p);
+    assert.equal(p.money.bank.accounts[1].spent, 20);
+});

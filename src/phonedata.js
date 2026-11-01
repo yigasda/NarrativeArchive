@@ -306,8 +306,9 @@ function mergePhone(p, add, { keepAll = false } = {}) {
     const keep = (list, n) => (keepAll ? list : list.slice(-n));
     for (const t of add.threads) {
         const old = p.threads.find(x => nameKey(x.with) === nameKey(t.with));
-        if (old) { old.messages = keep([...old.messages, ...fresh('msg', old.messages, t.messages)], CAP.messages); if (t.draft) old.draft = t.draft; }
-        else p.threads.push({ ...t, messages: keep(fresh('msg', [], t.messages), CAP.messages) });
+        // in story order: a later round can bring texts from before the ones there (an earlier stretch read late)
+        if (old) { old.messages = keep([...old.messages, ...fresh('msg', old.messages, t.messages)].sort(byStory(p.now)), CAP.messages); if (t.draft) old.draft = t.draft; }
+        else p.threads.push({ ...t, messages: keep(fresh('msg', [], t.messages).sort(byStory(p.now)), CAP.messages) });
     }
     p.threads = keep([...p.threads].sort(byStory(p.now, lastTime)), CAP.threads);
     joinComments(p.posts, add.posts, CAP.comments);

@@ -192,7 +192,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             return;
         }
         const id = `sync:${e.id}:m${k}`;
-        const row = { id, account: acct.last4, who: txt(x.who, 60), ko: txt(x.ko, 60), amount: round(amount), time: `${date}${e.time ? ` ${e.time}` : ''}`,
+        const row = { id, account: acct.last4, who: txt(x.who, 60), ko: txt(x.ko, 60), amount: round(amount), time: `${date}${e.time ? ` ${e.time}` : ''}`, day: full,
             kind: acct.kind === 'credit' ? 'card' : ['card', 'transfer', 'deposit', 'cash'].includes(x.kind) ? x.kind : amount > 0 ? 'deposit' : 'card', memo: txt(x.memo), pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at, ...(guess ? { amountFrom: 'guess' } : {}) };
         tx.push(row);
         out.effects.push({ type: 'push', path: 'money.tx', item: structuredClone(row) });
@@ -361,7 +361,7 @@ export function payOrders(m, p, year) {
     let n = 0;
     const put = (o, a, id, amount, time, memo) => {
         if (tx.some(t => t.id === id)) return;
-        tx.push({ id, account: a.last4, who: o.shop, ko: o.ko || '', amount, time, kind: 'card', memo, pending: false, ...(o.ev ? { ev: o.ev } : {}), delivery: o.id });
+        tx.push({ id, account: a.last4, who: o.shop, ko: o.ko || '', amount, time, day: fullDay(ny, anchor, String(time).slice(0, 5)), kind: 'card', memo, pending: false, ...(o.ev ? { ev: o.ev } : {}), delivery: o.id });
         if (a.kind !== 'credit') { const L = f.accounts[`${a.id}:${a.currency}`]; if (L) L.entries[id] = { amount, date: fullDay(ny, anchor, time.slice(0, 5)) }; }
         n++;
     };

@@ -89,7 +89,7 @@ test('빼기 leaves an item the user changed on the phone, and a record another 
     c.p.threads[0].messages.find(x => x.text.startsWith('E:')).text = 'E: 내일 카페에서 꼭 봐';
     await rewrite(c);
     await data.dropStretch(c.m, c.p, 0);
-    assert.deepEqual(texts(c.p), ['B: 응 샀어', 'E: 내일 카페에서 꼭 봐', 'C: 300쪽이야']);
+    assert.deepEqual(texts(c.p), ['B: 응 샀어', 'C: 300쪽이야', 'E: 내일 카페에서 꼭 봐']);
     // the book's payment belongs to the event the new talk took up again
     assert.equal(c.p.money.tx.length, 1);
     assert.equal(c.p.sync.events.book.at, 3);
