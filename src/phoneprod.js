@@ -49,7 +49,8 @@ const COL = [[/グレー|灰色|grau|grey|gray|회색|그레이|gris/i, '#8a9099
     [/ネイビー|紺|藏青|海军蓝|navy|dunkelblau|네이비|남색/i, '#3f4f72', '#9aa6c0'], [/ブルー|青|蓝色|blau|blue|파랑|파란|블루|bleu/i, '#6a8ac8', '#c8d6ef'], [/レッド|赤|红色|rot\b|rote|red|빨간|빨강|레드|rouge/i, '#c86a6a', '#ecc4c4'],
     [/ピンク|粉色|rosa|pink|분홍|핑크|rose\b/i, '#dca0b0', '#f4dbe2'], [/グリーン|緑|绿色|grün|green|초록|녹색|그린|vert/i, '#6f9a74', '#cfe2d0'], [/ベージュ|米色|beige|creme|ivory|베이지|아이보리/i, '#cdb894', '#efe4d0'],
     [/ブラウン|茶色|棕色|braun|brown|갈색|브라운|marron/i, '#94704e', '#d8c4ae'], [/イエロー|黄色|gelb|yellow|노랑|노란|옐로|jaune/i, '#d8b84a', '#f2e4b0']];
-export const prodKind = x => { const w = `${x?.item || ''} ${x?.ko || ''} ${x?.option || ''}`; return (KIND.find(([, re]) => re.test(w)) || [])[0] || ''; };
+// the model's "look" first (the nearest of the kinds drawn), else the item's words
+export const prodKind = x => { if (P[x?.look] && x.look !== 'box') return x.look; if (x?.look === 'box') return ''; const w = `${x?.item || ''} ${x?.ko || ''} ${x?.option || ''}`; return (KIND.find(([, re]) => re.test(w)) || [])[0] || ''; };
 export function prodSvg(x) {
     const k = prodKind(x);
     if (!k) return '';
