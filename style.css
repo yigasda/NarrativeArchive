@@ -5096,6 +5096,10 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .cg .cg_wwal { grid-column: 1 / -1; height: auto; min-height: 150px; gap: 8px; }
 .cg_wroute { font-size: 32px; font-weight: 200; letter-spacing: -0.03em; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cg_wroute2 { font-size: 15px; font-weight: 500; color: #59616d; letter-spacing: normal; }
+.cg .cg_wxe { height: 150px; }
+.cg .cg_wxeb { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+.cg .cg_wxeb b { font-size: 14px; font-weight: 600; color: #3a4250; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg .cg_wxeb small { font-size: 12px !important; color: #7a828e !important; opacity: 1 !important; }
 /* 은행 · 지갑 · 쇼핑 · 음성 메모 (v3.133) */
 .ax .ax_fillc { padding: 18px 18px 16px; text-align: center; }
 .ax_fillc p { margin: 0 0 14px; font-size: 14.5px; line-height: 1.55; color: #3a414c; }
