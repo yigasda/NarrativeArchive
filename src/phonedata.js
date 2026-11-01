@@ -341,6 +341,30 @@ export function ensureYear(m, p) {
     if (y) p.year = y; else p.noYear = true;
     return true;
 }
+// the story's year changed (설정 › 날짜 및 시간): every phone in the chat moves to it, and every full date its bank,
+// investments and the shared ledger hold moves by as many years, so their order stays as it was (a February 29 that
+// doesn't exist then becomes the 28th)
+const FULL_DAY = /^(\d{4})-(\d{2})-(\d{2})(.*)$/s;
+const shiftDay = (v, n) => {
+    const mt = FULL_DAY.exec(v); if (!mt) return v;
+    const y = Number(mt[1]) + n, d = mt[2] === '02' && mt[3] === '29' && new Date(Date.UTC(y, 1, 29)).getUTCMonth() !== 1 ? '28' : mt[3];
+    return `${y}-${mt[2]}-${d}${mt[4]}`;
+};
+const shiftAll = (o, n) => (Array.isArray(o) ? o.map(x => shiftAll(x, n)) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).map(([k, v]) => [shiftDay(k, n), shiftAll(v, n)])) : typeof o === 'string' ? shiftDay(o, n) : o);
+export const hasDatedRecords = m => !!m.finance || Object.values(m.phones || {}).some(p => p?.money || p?.investment);
+export function setStoryYear(m, p, year) {
+    const n = p.year && !p.noYear ? year - p.year : 0;
+    if (n) {
+        if (m.finance) m.finance = shiftAll(m.finance, n);
+        for (const q of Object.values(m.phones || {})) {
+            if (!q || typeof q !== 'object') continue;
+            for (const k of ['money', 'investment']) if (q[k]) q[k] = shiftAll(q[k], n);
+            if (q !== p && q.year && !q.noYear) q.year += n;
+        }
+    }
+    p.year = year; p.noYear = false;
+    return n;
+}
 // what the model is told of the year: a year in any text is this one (nothing when it is unknown)
 const yearBlock = (m, p) => { const y = storyYear(m, p); return y ? `[STORY YEAR]\n${y}` : ''; };
 // the archive block, or (budget) the chat in its place, then no RECENT CHAT: it is in there

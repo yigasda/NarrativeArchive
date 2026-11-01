@@ -16,7 +16,7 @@ import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
 import { APPS, AXB, AXB_C, busyHtml, setDate, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
-import { dropStretch, ensureIds, ensureYear, noArchive, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, markAfter, phoneLore, REMAKE, restoreRounds, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
+import { dropStretch, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, markAfter, phoneLore, REMAKE, restoreRounds, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
@@ -769,7 +769,14 @@ export async function openPhone(who = null) {
         const { journalWrite } = await import('./phonesync.js'); journalWrite(phoneChatScope(ctx()), []); syncPending = 0; drawPhone();
     });
     // 날짜 및 시간: the year this phone's dates are in, or none
-    $root.on('change', '.na_ph_year', async function () { const p = phone(), y = Math.round(Number(this.value)); if (!p || !(y >= 1900 && y <= 2100)) { drawPhone(true); return; } p.year = y; p.noYear = false; drawPhone(true); await saveMeta(); });
+    $root.on('change', '.na_ph_year', async function () {
+        const p = phone(), y = Math.round(Number(this.value));
+        if (!p || !(y >= 1900 && y <= 2100) || y === p.year) { drawPhone(true); return; }
+        // the bank's and investments' dates move with it (the whole chat's), so their order holds
+        if (p.year && hasDatedRecords(m) && !await confirm('연도 바꾸기', `${p.year}년 → ${y}년<br>은행 · 투자 기록의 날짜도 같이 옮겨요. 이 채팅의 다른 폰도 같은 연도가 돼요.`)) { drawPhone(true); return; }
+        setStoryYear(m, p, y);
+        drawPhone(true); await saveMeta();
+    });
     $root.on('click', '.na_ph_yearshow', async e => { e.stopPropagation(); const p = phone(); if (!p) return; p.noYear = !p.noYear; if (!p.noYear && !p.year) p.year = Number(storyYear(m, { ...p, year: 0 })) || new Date().getFullYear(); drawPhone(true); await saveMeta(); });
     $root.on('click', '.na_ph_setinj', async e => { e.stopPropagation(); const p = phone(); p.inject = !p.inject; drawPhone(true); await saveMeta(); applyInjection(); });
     // what opens under the phone scrolls into sight, so the tap visibly does something
