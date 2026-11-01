@@ -763,6 +763,37 @@ function cardSky(cond, phase) {
         : `<path d="M0 92 Q90 78 180 88 T358 82 V118 H0Z" fill="${h1}"/><path d="M0 104 Q110 94 210 102 T358 98 V118 H0Z" fill="${h2}"/>`);
     return `<svg class="bg" viewBox="0 0 ${W} 118" preserveAspectRatio="xMidYMid slice">${out.join('')}</svg>`;
 }
+// the home widget's sky: the same palette as the cards, the picture kept to the middle so the place, the temperature and the
+// line under them stay clear (340 × 150)
+function widgetSky(cond, phase) {
+    const q = pal(cond, phase), W = 340, H = 150, k = H / 118, out = [`<rect width="${W}" height="${H}" fill="${q.sky}"/>`];
+    for (const [y, c] of q.cb || []) out.push(`<rect y="${(y * k).toFixed(1)}" width="${W}" height="${H}" fill="${c}"/>`);
+    if (q.stars) out.push(`<g fill="#fff"${phase === 'dawn' ? ' opacity=".7"' : ''}>${[[132, 22], [214, 16], [250, 44], [118, 58], [196, 70], [150, 36], [236, 80]].map(([x, y], j) => `<circle cx="${x}" cy="${y}" r="${j % 2 ? 1 : 1.4}"/>`).join('')}</g>`);
+    const C = 180;
+    if (q.sun === 'day') out.push(`<circle cx="${cond === 'partly' ? C - 14 : C}" cy="50" r="40" fill="#fff" opacity=".14"/><circle cx="${cond === 'partly' ? C - 14 : C}" cy="50" r="24" fill="#f6c94a"/>`);
+    if (q.sun === 'rise') out.push(`<circle cx="${C}" cy="116" r="30" fill="#f6d39a" opacity=".6"/><circle cx="${C}" cy="116" r="18" fill="#fbe6a6"/>`);
+    if (q.sun === 'sink') out.push(`<circle cx="${C}" cy="112" r="38" fill="#f7c873" opacity=".5"/><circle cx="${C}" cy="112" r="22" fill="#fbe08f"/>`);
+    if (q.moon && !q.cloud) out.push(`<circle cx="${C}" cy="46" r="17" fill="#f1ead2"/><circle cx="${C + 8}" cy="40" r="15" fill="${q.sky}"/>`);
+    if (q.moon && q.cloud) out.push(`<circle cx="${C - 26}" cy="40" r="13" fill="#f1ead2"/><circle cx="${C - 20}" cy="35" r="12" fill="${q.sky}"/>`);
+    const cloud = (x, y, s, col) => `<g fill="${col}" transform="translate(${x} ${y}) scale(${s})"><circle cx="-22" cy="4" r="16"/><circle cx="0" cy="-6" r="22"/><circle cx="24" cy="4" r="15"/><rect x="-38" y="4" width="78" height="18" rx="9"/></g>`;
+    if (cond === 'partly' && q.front) out.push(cloud(C + 16, 62, 0.9, '#e9f0f8'));
+    else if (q.cloud && cond !== 'wind') out.push((q.cloud2 ? cloud(C - 46, 70, 0.6, q.cloud2) : '') + cloud(C + 6, 52, 1.05, q.cloud));
+    const r = rnd(cond.length * 13 + phase.length);
+    const lines = (col, w, n, ln, sl) => `<g stroke="${col}" stroke-width="${w}" stroke-linecap="round">${Array.from({ length: n }, () => { const x = Math.round(118 + r() * 132), y = Math.round(70 + r() * 42); return `<line x1="${x}" y1="${y}" x2="${x - sl}" y2="${y + ln}"/>`; }).join('')}</g>`;
+    const flakes = (n, rad) => `<g fill="#fff">${Array.from({ length: n }, (_, j) => `<circle cx="${Math.round(112 + r() * 140)}" cy="${Math.round(38 + r() * 80)}" r="${j % 3 ? rad : rad * 0.7}"/>`).join('')}</g>`;
+    if (q.fall === 'rain') out.push(lines('rgba(255,255,255,.45)', 1.6, 12, 14, 4));
+    if (q.fall === 'drizzle') out.push(lines('rgba(255,255,255,.5)', 1.1, 20, 6, 1));
+    if (q.fall === 'heavy') out.push(lines('rgba(255,255,255,.5)', 2, 16, 18, 6));
+    if (q.fall === 'sleet') out.push(lines('rgba(255,255,255,.45)', 1.4, 8, 12, 4) + flakes(9, 2));
+    if (q.fall === 'snow') out.push(flakes(22, 2.3));
+    if (q.fog) out.push(`<g fill="rgba(255,255,255,.22)"><rect x="96" y="58" width="170" height="10" rx="5"/><rect x="118" y="80" width="150" height="10" rx="5"/><rect x="104" y="102" width="164" height="10" rx="5"/></g>`);
+    if (q.bolt) out.push(`<path d="M${C} 62 L${C - 16} 94 L${C - 4} 94 L${C - 14} 124 L${C + 14} 86 L${C} 86 L${C + 10} 62Z" fill="#f6c94a"/>`);
+    if (q.wind || cond === 'wind') out.push(`<g fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2" stroke-linecap="round"><path d="M116 60 H196 Q210 60 210 50"/><path d="M134 80 H244"/><path d="M110 98 H180 Q194 98 194 108"/></g>${phase === 'night' ? '' : `<g fill="#2f5f3e"><rect x="${C + 18}" y="84" width="4" height="26" transform="rotate(12 ${C + 20} 110)"/><ellipse cx="${C + 30}" cy="80" rx="12" ry="16" transform="rotate(24 ${C + 30} 80)"/></g>`}`);
+    const [h1, h2] = q.hills;
+    out.push(cond === 'snow' ? `<path d="M0 136 Q90 128 180 134 T340 130 V150 H0Z" fill="${h1}"/><path d="M0 142 Q110 136 210 140 T340 138 V150 H0Z" fill="${h2}"/>`
+        : `<path d="M0 120 Q90 104 180 114 T340 108 V150 H0Z" fill="${h1}"/><path d="M0 134 Q110 122 210 130 T340 126 V150 H0Z" fill="${h2}"/>`);
+    return `<svg class="bg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice">${out.join('')}</svg>`;
+}
 // small filled icons for the hourly row and the ten days
 const IC_CLOUD = '<path d="M7 19a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 10.5a4.3 4.3 0 0 1 0 8.5z" fill="#d7dfe8"/><path d="M7 17a4 4 0 0 1-.4-8A5.5 5.5 0 0 1 17.5 9a3.8 3.8 0 0 1 0 8z" fill="#fff"/>';
 const IC_TOP = '<path d="M7 14.5a4 4 0 0 1-.4-8A5.5 5.5 0 0 1 17.5 6.5a3.8 3.8 0 0 1 0 8z" fill="#fff"/>';
@@ -886,7 +917,7 @@ export function hereWidget(p, now) {
     const h = L(p)?.weather?.here;
     if (!h || (h.temp === null || h.temp === undefined) && !h.cond) return '';
     const ht = h.time || now5(p).slice(6);
-    return `<button type="button" class="lf_city cg_wx" data-go="weather" style="--axbg: ${pal(h.cond, phaseOf(ht, h.tiles?.sunrise, h.tiles?.sunset)).sky}">${cardSky(h.cond, phaseOf(ht, h.tiles?.sunrise, h.tiles?.sunset))}
+    return `<button type="button" class="lf_city cg_wx" data-go="weather" style="--axbg: ${pal(h.cond, phaseOf(ht, h.tiles?.sunrise, h.tiles?.sunset)).sky}">${widgetSky(h.cond, phaseOf(ht, h.tiles?.sunrise, h.tiles?.sunset))}
       <span class="l"><b>${esc(h.place || '현재 위치')}</b><small><svg width="11" height="11" viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z" fill="#fff"/></svg> 현재 위치</small><span>${esc(h.said || WX[h.cond] || '')}</span></span><span class="r"><b>${h.temp ?? '—'}°</b><span>최고 ${h.hi ?? '—'}° 최저 ${h.lo ?? '—'}°</span></span></button>`;
 }
 export function cityList(p, now) {

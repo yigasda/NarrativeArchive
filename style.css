@@ -6206,6 +6206,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 :is(.ax, .cg) .lf_city .l, :is(.ax, .cg) .lf_city .r { position: relative; z-index: 1; display: flex; flex-direction: column; }
 :is(.ax, .cg) .lf_city .l { text-align: left; }
 .cg .lf_city.cg_wx { grid-column: 1 / -1; width: 100%; margin: 0; height: 150px; border-radius: 26px; background: var(--axbg) !important; text-align: left; box-shadow: 0 10px 24px rgba(22, 27, 34, 0.14); }
+.cg .lf_city.cg_wx .l, .cg .lf_city.cg_wx .r { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.22); }
 .cg .lf_city.cg_wx .r b { font: 300 46px/1 'Inter Tight', -apple-system, sans-serif; }
 :is(.ax, .cg) .lf_city .l b { font-size: 22px; font-weight: 700; }
 :is(.ax, .cg) .lf_city .l small, :is(.ax, .cg) .lf_city .l span, :is(.ax, .cg) .lf_city .r span { font-size: 13px; font-weight: 600; opacity: 0.92; }
