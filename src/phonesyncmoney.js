@@ -330,11 +330,13 @@ export function payOrders(m, p, year) {
     if (!p.money || !p.delivery) return 0;
     migrateBank(m, p);
     const f = finance(m), tx = p.money.tx ||= [];
+    // year is the one the phone's now is in: an order from last December goes in the year before
+    const now5 = String(p.now || '').slice(0, 5), ny = p.year && !p.noYear ? String(p.year) : year, anchor = /^\d{2}-\d{2}$/.test(now5) ? `${ny}-${now5}` : '';
     let n = 0;
     const put = (o, a, id, amount, time, memo) => {
         if (tx.some(t => t.id === id)) return;
         tx.push({ id, account: a.last4, who: o.shop, ko: o.ko || '', amount, time, kind: 'card', memo, pending: false, ...(o.ev ? { ev: o.ev } : {}), delivery: o.id });
-        if (a.kind !== 'credit') { const L = f.accounts[`${a.id}:${a.currency}`]; if (L) L.entries[id] = { amount, date: `${year}-${time.slice(0, 5)}` }; }
+        if (a.kind !== 'credit') { const L = f.accounts[`${a.id}:${a.currency}`]; if (L) L.entries[id] = { amount, date: fullDay(ny, anchor, time.slice(0, 5)) }; }
         n++;
     };
     // a bank row tied to an order no longer there is the bank's own again

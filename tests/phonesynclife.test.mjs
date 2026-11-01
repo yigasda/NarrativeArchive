@@ -403,3 +403,14 @@ test('the story changes their usual (lost weight, quit coffee): each field set o
     // nothing changed: nothing written
     assert.equal(applyLife(p, { id: 'x', at: 10, date: '10-26' }, { usual: { weight: 72 } }, true).effects.length, 0);
 });
+
+test('a delivery paid from last December goes in the ledger in the year before', () => {
+    const { m, p } = setup();
+    p.now = '01-02 12:00'; p.year = 2027;
+    p.delivery.orders = [{ id: 'o9', shop: 'Pasta Nostra', items: [{ name: 'Ragù', qty: 1, price: 12 }], fee: 2, tip: 0, discount: 0, time: '12-30 20:10', status: 'delivered', account: '1111' }, { id: 'o10', shop: 'Pasta Nostra', items: [{ name: 'Ragù', qty: 1, price: 12 }], fee: 0, tip: 0, discount: 0, time: '01-01 19:00', status: 'delivered', account: '1111' }];
+    payOrders(m, p, '2027');
+    const dates = Object.values(m.finance.accounts['chk:EUR'].entries).map(e => e.date).sort();
+    assert.deepEqual(dates, ['2026-12-30', '2027-01-01']);
+    // the bank lists them in story order: December first
+    assert.deepEqual(p.money.tx.map(t => t.time.slice(0, 5)), ['12-30', '01-01']);
+});

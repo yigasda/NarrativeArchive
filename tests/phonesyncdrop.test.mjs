@@ -312,7 +312,7 @@ test('the story\'s year comes only from a date, never from a bare number', async
 
 test('a new story year moves every dated record with it, in every phone of the chat', () => {
     const m = { finance: { accounts: { 'chk:EUR': { amount: 100, asOf: '2026-10-20', entries: { a: { amount: -5, date: '2026-12-31' }, b: { amount: -6, date: '2027-01-01' } } } }, prices: { 'FX:EUR/KRW': { '2026-10-20': { rows: [] } } } },
-        phones: { ren: { owner: 'Ren', year: 2027, money: { asOf: '2026-10-20', tx: [{ time: '12-31 20:00' }] }, investment: { date: '2027-01-01', trades: [{ date: '2024-02-29' }] } }, mara: { owner: 'Mara', year: 2027 }, ivo: { owner: 'Ivo', noYear: true } } };
+        phones: { ren: { owner: 'Ren', year: 2027, money: { asOf: '2026-10-20', tx: [{ time: '12-31 20:00' }] }, investment: { date: '2027-01-01', trades: [{ date: '2024-02-29' }] }, syncUndo: { year: 2027, effects: [{ type: 'push', path: 'investment.trades', item: { id: 't1', date: '2027-01-01' } }] }, sync: { events: { e1: { effects: [{ type: 'push', item: { date: '2026-12-31' } }] } } } }, mara: { owner: 'Mara', year: 2027 }, ivo: { owner: 'Ivo', noYear: true } } };
     const n = data.setStoryYear(m, m.phones.ren, 2026);
     assert.equal(n, -1);
     assert.deepEqual(Object.values(m.finance.accounts['chk:EUR'].entries).map(e => e.date), ['2025-12-31', '2026-01-01']);
@@ -322,6 +322,8 @@ test('a new story year moves every dated record with it, in every phone of the c
     assert.equal(m.phones.ren.money.tx[0].time, '12-31 20:00');
     assert.equal(m.phones.ren.investment.trades[0].date, '2023-02-28');
     assert.deepEqual([m.phones.ren.year, m.phones.mara.year, m.phones.ivo.year, m.phones.ivo.noYear], [2026, 2026, undefined, true]);
+    // 되돌리기 and 빼기 compare against copies that moved too, and undo goes back to the moved year
+    assert.deepEqual([m.phones.ren.syncUndo.year, m.phones.ren.syncUndo.effects[0].item.date, m.phones.ren.sync.events.e1.effects[0].item.date], [2026, '2026-01-01', '2025-12-31']);
     // a phone with no year yet just takes it: nothing to move
     const q = { phones: { a: { owner: 'A', noYear: true, money: { asOf: '2026-01-01' } } } };
     assert.equal(data.setStoryYear(q, q.phones.a, 2030), 0);

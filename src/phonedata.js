@@ -360,7 +360,16 @@ export function setStoryYear(m, p, year) {
             if (!q || typeof q !== 'object') continue;
             for (const k of ['money', 'investment']) if (q[k]) q[k] = shiftAll(q[k], n);
             if (q !== p && q.year && !q.noYear) q.year += n;
+            // the copies 되돌리기 and 빼기 compare against move too (else a moved record reads as changed by hand and stays),
+            // and 되돌리기 puts back the year it had moved to
+            if (q.syncUndo) { q.syncUndo = shiftAll(q.syncUndo, n); if (q.syncUndo.year) q.syncUndo.year += n; }
+            for (const e of Object.values(q.sync?.events || {})) if (e?.effects) e.effects = shiftAll(e.effects, n);
         }
+        // this browser's record of unsaved rounds (복구) too
+        try {
+            const scope = phoneChatScope(ctx()), owners = new Set(Object.values(m.phones || {}).map(q => q?.owner));
+            journalWrite(scope, journalRead(scope).map(r => (owners.has(r.owner) ? { ...r, events: shiftAll(r.events || [], n), life: shiftAll(r.life || [], n) } : r)));
+        } catch { /* no journal here */ }
     }
     p.year = year; p.noYear = false;
     return n;
