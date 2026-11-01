@@ -588,7 +588,6 @@ export function setDate(p, now) {
     return `${axBar(p, now)}
       ${axTop(axCb('set'))}
       <div class="ax_scroll">${axH1('날짜 및 시간')}
-        <div class="ax_card">${row('자동 날짜 및 시간', '<span class="ax_sw"></span>')}</div>
         <div class="ax_card">
           ${on ? row('연도', `<input type="number" class="ax_in na_ph_year cg_num" min="1900" max="2100" inputmode="numeric" aria-label="연도" value="${esc(String(p.year || ''))}">`) : ''}
           ${row('날짜', `<span class="ax_v cg_num">${esc(day)}</span>`)}
