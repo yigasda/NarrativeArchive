@@ -11,6 +11,7 @@ import { mountSectionPicker } from './picker.js';
 import { activePrompt, fillPrompt, langBlock, recentSections } from './prompts.js';
 import { RANGE_HEAD, groupLabel, stripCites, keyAt, linkedMap, parseSections, renameKeys, sectionKey, trimEnd } from './sections.js';
 import { sourceRange } from './source.js';
+import { translateButton } from './translate.js';
 import { ICO_A, svgA } from './theme.js';
 import { confirm, countTokens, esc, fmt } from './util.js';
 
@@ -247,25 +248,62 @@ export async function openSectionFix(s) {
     const asked = [];
     const src = await rawFor(m, s);
     const rawTok = src.raw ? await countTokens(src.raw) : 0;
+    // (v3, docs/mockups like 아카이브에 추가): the section card with 원래 | 바뀐 부분 and 한국어로 보기, then AI로 고치기 as a small
+    // chat whose replies the code writes (✓ what changed, 못 한 것, ✕ why not) with ↶ 되돌리기 by the last change, then 처음으로 · 적용
+    const SF_DOC = svgA('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>', 13);
     const $root = $(`
-      <div class="na_popup na_v2 na_sf">
-        <div class="na_v2_title"><b>고쳐 달라고 하기</b><small>${esc(s.title)}</small></div>
-        <label class="na_v2_card na_v2_switchrow na_sf_raw ${src.raw ? '' : 'off'}">
-          <span class="na_cp_txt"><span>원문 같이 보내기</span><small>${src.raw ? `${esc(src.label)} · ${esc(src.from)} · 메시지 ${src.n}개 · 약 ${fmt(rawTok)} 토큰` : esc(src.why)}</small></span>
-          <input type="checkbox" class="na_toggle na_sf_rawon" ${src.raw ? 'checked' : 'disabled'}>
-        </label>
-        <div class="na_sf_log"></div>
-        <div class="na_v2_card na_sf_view"><div class="na_diff na_sf_diff"></div></div>
-        <div class="na_sf_note" hidden></div>
-        <div class="na_ly_ask na_sf_ask"><input type="text" class="na_ly_askq na_sf_q" placeholder="고칠 것 (예: 소망 대사 원문 그대로 넣어줘)" aria-label="고칠 것" enterkeyhint="send"><button type="button" class="na_ly_askgo na_sf_go" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>
-        <div class="na_v2_row2"><button type="button" class="na_v2_btn na_sf_style" title="문장 결만 아카이브처럼 다듬어요 · 내용 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 · AI 기능 모델">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>', 15)}문체 다듬기</button><button type="button" class="na_v2_btn na_sf_undo" disabled>처음으로</button><button type="button" class="na_v2_btn primary na_sf_apply" disabled>적용</button></div>
+      <div class="na_popup na_v2 na_sf na_sf3">
+        <div class="na_sf3_head"><div class="na_v2_title"><b>고쳐 달라고 하기</b><small>${esc(s.title)}</small></div><button type="button" class="na_sf3_x" aria-label="닫기">${svgA('M6 6l12 12M18 6L6 18', 16)}</button></div>
+        <div class="na_v2_card na_sf3_card">
+          <div class="na_ap3_seg na_sf3_seg"><button type="button" class="on" data-v="old">원래</button><button type="button" data-v="new">바뀐 부분 <b class="na_sf3_add"></b><b class="na_sf3_del"></b></button></div>
+          <div class="na_sf3_trrow"></div>
+          <div class="na_sf_view"><div class="na_diff na_sf_diff"></div></div>
+        </div>
+        <div class="na_ap3_sect">AI로 고치기</div>
+        <div class="na_v2_card na_sf3_fix">
+          <div class="na_ap3_log na_sf_log"></div>
+          <div class="na_ly_ask na_sf_ask"><input type="text" class="na_ly_askq na_sf_q" placeholder="고칠 것 (예: 소망 대사 원문 그대로)" aria-label="고칠 것" enterkeyhint="send"><button type="button" class="na_ly_askgo na_sf_go" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>
+          <div class="na_sf3_foot">
+            <button type="button" class="na_sf3_tool na_sf_style" title="문장 결만 아카이브처럼 다듬어요 · 내용 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 · AI 기능 모델">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>', 14)}문체 다듬기</button>
+            <label class="na_ap3_raw na_sf_raw ${src.raw ? '' : 'off'}" title="${src.raw ? `${esc(src.label)} · ${esc(src.from)} · 메시지 ${src.n}개 · 약 ${fmt(rawTok)} 토큰` : esc(src.why)}"><input type="checkbox" class="na_sf_rawon" ${src.raw ? 'checked' : 'disabled'}>${SF_DOC}원문 포함<span class="na_ap3_tick">${svgA(ICO_A.check, 11, 3.2)}</span></label>
+          </div>
+        </div>
+        <div class="na_ap3_bar na_sf3_bar"><button type="button" class="na_ap3_cancel na_sf_undo">처음으로</button><button type="button" class="na_ap2_go na_sf_apply">적용</button></div>
       </div>`);
+    // the chat: each request and what came of it; ↶ 되돌리기 sits by the last request that changed the section
+    const chat = [], steps = [];
+    let view = 'old';
+    const tr = translateButton($root.find('.na_sf_diff'));
+    $root.find('.na_sf3_trrow').append(tr);
+    const changeCount = (a2, b2) => { const rows = lineDiff(a2, b2), add = rows.filter(r => r.t === '+').length, del = rows.filter(r => r.t === '-').length; return { add, del, text: [add && `+${fmt(add)}줄`, del && `−${fmt(del)}줄`].filter(Boolean).join(' ') }; };
     const draw = () => {
         const changed = draft !== original;
-        $root.find('.na_sf_diff').html(changed ? renderDiff(lineDiff(original, draft), 2, { src: false }) : `<div class="na_sf_plain">${esc(original)}</div>`);
-        $root.find('.na_sf_apply, .na_sf_undo').prop('disabled', !changed);
-        $root.find('.na_sf_log').html(asked.map(q => `<div class="na_sf_bubble">${esc(q)}</div>`).join(''));
+        if (!changed) view = 'old';
+        const n = changeCount(original, draft);
+        $root.find('.na_sf3_add').text(changed ? `+${fmt(n.add)}` : '');
+        $root.find('.na_sf3_del').text(changed && n.del ? `−${fmt(n.del)}` : '');
+        $root.find('.na_sf3_seg button').removeClass('on').filter(`[data-v="${view}"]`).addClass('on');
+        $root.find('.na_sf3_seg [data-v="new"]').prop('disabled', !changed);
+        tr.reset?.();
+        $root.find('.na_sf_diff').html(view === 'new' ? renderDiff(lineDiff(original, draft), 2, { src: false }) : `<div class="na_sf_plain">${esc(original)}</div>`);
+        $root.find('.na_sf_apply').prop('disabled', !changed);
+        $root.find('.na_sf_undo').prop('disabled', !changed);
+        const lastOk = chat.map(x => !!x.step).lastIndexOf(true);
+        $root.find('.na_sf_log').html(chat.map((x, k) => `<div class="na_ap3_me${k === lastOk ? ' last' : ''}">${k === lastOk ? '<button type="button" class="na_linkbtn na_sf3_back">↶ 되돌리기</button>' : ''}<span>${esc(x.q)}</span></div>${x.r.ok
+            ? `<div class="na_ap3_ai${x.r.note || x.r.more ? ' note' : ''}"><b>✓ 고쳤어요${x.r.what ? ` <span>${esc(x.r.what)}</span>` : ''}</b>${x.r.note ? `<div>못 한 것: ${esc(x.r.note)}</div>` : ''}${x.r.more ? `<div>${esc(x.r.more)}</div>` : ''}</div>`
+            : x.r.none ? `<div class="na_ap3_ai none"><b>바뀐 게 없어요</b>${x.r.why ? `<div>${esc(x.r.why)}</div>` : ''}</div>`
+            : `<div class="na_ap3_ai bad"><b>✕ 못 고쳤어요</b><div>${esc(x.r.why)}</div></div>`}`).join(''));
     };
+    const changed = (q, next, r) => { steps.push(draft); draft = next; view = 'new'; chat.push({ q, r, step: true }); draw(); };
+    $root.on('click', '.na_sf3_seg button', function () { if (this.disabled) return; view = this.dataset.v; draw(); });
+    $root.on('click', '.na_sf3_back', () => {
+        if (!steps.length) return;
+        draft = steps.pop();
+        const k = chat.map(x => !!x.step).lastIndexOf(true);
+        if (k >= 0) { const q = chat[k].q; chat.splice(k); const i2 = asked.lastIndexOf(q); if (i2 >= 0) asked.splice(i2, 1); }
+        draw();
+    });
+    $root.find('.na_sf3_x').on('click', () => $root.closest('dialog').find('.popup-button-ok').trigger('click'));
     let busy = false;
     const send = async () => {
         const q = String($root.find('.na_sf_q').val() || '').trim();
@@ -279,14 +317,13 @@ export async function openSectionFix(s) {
             const note = (out.match(/^NOTE:\s*(.+)$/m) || [])[1] || '';
             const body = trimEnd(out.replace(/^NOTE:.*$/m, '').trim());
             if (!/^#{1,3}\s/.test(body)) throw new Error('모델이 섹션 형태로 답하지 않았어요');
-            draft = body;
-            asked.push(q);
             $root.find('.na_sf_q').val('');
-            $root.find('.na_sf_note').prop('hidden', !note).text(note ? `못 한 것: ${note}` : '');
-            draw();
+            if (body === draft) { chat.push({ q, r: { ok: false, none: true, why: note ? `못 한 것: ${note}` : '' } }); draw(); return; }
+            asked.push(q);
+            changed(q, body, { ok: true, what: changeCount(draft, body).text, note });
         } catch (e) {
             console.error('[NarrativeArchive] section fix', e);
-            toastr.error(String(e?.message || e), '고쳐 달라고 하기');
+            chat.push({ q, r: { ok: false, why: String(e?.message || e) } }); draw();
         } finally { busy = false; $b.prop('disabled', false).html(svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)); }
     };
     $root.find('.na_sf_go').on('click', send);
@@ -298,15 +335,14 @@ export async function openSectionFix(s) {
             const { polishStyle, styleSummary, keptSummary } = await import('./style.js');
             const r = await withSpinner($(this), '다듬는 중', () => polishStyle(draft, m));
             if (!r) return;
-            if (!r.changed) return toastr.info(r.kept.length ? `안 바꿨어요${keptSummary(r)}` : '바꿀 곳이 없대요', '문체 다듬기', { timeOut: 8000 });
-            draft = trimEnd(r.text).trim();
+            if (!r.changed) { chat.push({ q: '문체 다듬기', r: { ok: false, none: true, why: keptSummary(r).replace(/^\s*·\s*/, '') } }); draw(); return; }
+            const next = trimEnd(r.text).trim();
             asked.push('문체 다듬기');
-            draw();
-            toastr.success(`다듬었어요${styleSummary(r)}${keptSummary(r)} · 적용을 눌러야 바뀌어요`, '문체 다듬기', { timeOut: 9000 });
+            changed('문체 다듬기', next, { ok: true, what: changeCount(draft, next).text, more: `${styleSummary(r)}${keptSummary(r)}`.replace(/^\s*·\s*/, '') });
         } finally { busy = false; }
     });
     $root.find('.na_sf_q').on('keydown', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); send(); } });
-    $root.find('.na_sf_undo').on('click', () => { draft = original; asked.length = 0; $root.find('.na_sf_note').prop('hidden', true); draw(); });
+    $root.find('.na_sf_undo').on('click', () => { draft = original; asked.length = 0; chat.length = 0; steps.length = 0; draw(); });
     let applied = false;
     const apply = async () => {
         const cur = getMeta();
@@ -322,6 +358,7 @@ export async function openSectionFix(s) {
     };
     $root.find('.na_sf_apply').on('click', async () => { if (await apply()) $root.closest('dialog').find('.popup-button-ok').trigger('click'); });
     draw();
+    setTimeout(() => $root.closest('dialog').addClass('na_ap3_dlg'), 0);
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
     // closed with a draft not applied: ask instead of dropping it
     if (!applied && draft !== original && await confirm('적용 안 한 수정', '고친 내용을 아직 적용하지 않았어요. 적용할까요?', '적용하기')) await apply();
