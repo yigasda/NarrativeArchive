@@ -405,7 +405,7 @@ const chip = '<span class="ax_ccchip"><i style="left: 0; right: 0; top: 11px; he
 const nfc = '<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".85"><path d="M8.5 8a6 6 0 0 1 0 8M12 5.5a10 10 0 0 1 0 13M15.5 3a14 14 0 0 1 0 18"/></svg>';
 const CC_BG = { checking: '#1d3461', credit: '#25272e', savings: '#2f5d50' };
 // each bank has its colour family (two shades) and each card a pattern; premium credit cards by how much the owner has
-const BANK_C = [['#2c4a80', '#1d2f55'], ['#b8323a', '#8e2730'], ['#2f6a5a', '#224f43'], ['#2f6f8f', '#225369'], ['#8a5a2e', '#6a431f'], ['#3f4a5a', '#2b333f']];
+const BANK_C = [['#2c4a80', '#1d2f55'], ['#b8323a', '#8e2730'], ['#2f6a5a', '#224f43'], ['#24505c', '#1a3c46'], ['#2f6f8f', '#225369'], ['#8a5a2e', '#6a431f'], ['#3f4a5a', '#2b333f']];
 const PAT = {
     waves: Array.from({ length: 6 }, (_, k) => `<path d="M-20 ${120 + k * 14} q80 -40 160 0 t160 0" stroke="#fff" stroke-opacity=".08" stroke-width="8" fill="none"/>`).join(''),
     circles: '<circle cx="250" cy="40" r="90" fill="#fff" fill-opacity=".07"/><circle cx="290" cy="150" r="70" fill="#fff" fill-opacity=".06"/>',
@@ -418,7 +418,8 @@ const PAT = {
     platinum: Array.from({ length: 100 }, (_, k) => `<path d="M0 ${k * 2} H330" stroke="${k % 2 ? '#fff' : '#000'}" stroke-opacity="${k % 2 ? 0.1 : 0.035}" stroke-width=".7"/>`).join('')
         + '<defs><linearGradient id="axplsh" x1="0" y1="0" x2="1" y2="1"><stop offset=".3" stop-color="#fff" stop-opacity="0"/><stop offset=".48" stop-color="#fff" stop-opacity=".45"/><stop offset=".56" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><rect width="330" height="200" fill="url(#axplsh)"/><rect x="7" y="7" width="316" height="186" rx="12" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width=".8"/>',
 };
-const PATS = ['waves', 'circles', 'lines', 'dots', 'grid'];
+// no diagonal stripes: its place goes to the waves, so every other card keeps its pattern
+const PATS = ['waves', 'circles', 'waves', 'dots', 'grid'];
 const hashOf = s => [...String(s || '')].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 2147483647, 7);
 // "how much they have" in the bank's money, scaled so the tiers mean about the same in won, yen or euros
 const SCALE = { KRW: 1300, JPY: 150, CNY: 7, TWD: 32, INR: 83, RUB: 90, BRL: 5, CAD: 1.35, AUD: 1.5, GBP: 0.8 };
