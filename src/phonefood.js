@@ -422,7 +422,7 @@ const GUESS = [
     [/맥너겟|mcnugget/i, 'nuggets'], [/맥플러리|mcflurry|엄마는 ?외계인|배스킨|baskin/i, 'ice-cream', ['cookie-crumbs']],
     [/에그 ?마요|egg ?mayo/i, 'sandwich', ['egg']], [/(?<![a-z])bmt(?![a-z])|써브웨이|서브웨이|subway|philly|cheesesteak|(?<![a-z])blt(?![a-z])|club sandwich|サンドイッチ|三明治/i, 'sandwich'],
     [/트위스터|twister|(?<![a-z])wraps?(?![a-z])|랩 ?샌드/i, 'burrito'],
-    [/엽떡|엽기 ?떡볶이|배떡|신전 ?떡볶이/i, 'tteokbokki'],
+    [/배떡|배달떡볶이/i, 'tteokbokki-rose'], [/엽떡|엽기 ?떡볶이|신전 ?떡볶이/i, 'tteokbokki'],
     [/에스프레소|espresso|카푸치노|cappuccino|플랫 ?화이트|flat white|모카|mocha|돌체|마키아토|macchiato|카페 ?라떼|カフェラテ|コーヒー|拿铁|咖啡|café au lait/i, 'coffee'],
     [/자바칩|프라푸치노|frappuccino|밀크 ?쉐이크|milkshake|쉐이크(?!쉑)|(?<![a-z])shake(?![a-z])(?! ?shack)/i, 'smoothie'],
     [/흑당|브라운 ?슈가|블랙 ?밀크티|珍珠奶茶|奶茶|タピオカ/i, 'bubble-tea'],
