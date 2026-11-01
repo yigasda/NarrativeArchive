@@ -2502,6 +2502,7 @@ body.na_darkui .na_ap3 .na_ap3_chip.on { background: #7A6457 !important; }
 .na_ap3 .na_apf_foot small { flex: 1; min-width: 0; font-size: 12.5px; color: var(--na-sub, var(--na-dim)); }
 .na_ap3_raw { display: inline-flex !important; align-items: center; gap: 6px; margin: 0; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; background: var(--na-card2); color: var(--na-mute); }
 .na_ap3_raw input { position: absolute; opacity: 0; pointer-events: none; }
+.na_ap3 .na_apf_foot .na_ap3_raw { flex: none; }
 .na_ap3_raw .na_ap3_tick { display: none; }
 .na_ap3_raw:has(input:checked) .na_ap3_tick { display: inline-flex; }
 body:not(.na_darkui) .na_ap3_raw:has(input:checked) { background: #E3F2E8; color: #1F6A40; }
