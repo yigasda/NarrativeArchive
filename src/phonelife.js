@@ -212,7 +212,7 @@ const dish = x => {
     return pic ? { ...d, pic } : d;
 };
 // tx: the bank's rows the model may point at ("paidBy": this order's payment is already there)
-export function parseDelivery(raw, accounts = [], tx = []) {
+export function parseDelivery(raw, accounts = [], tx = [], now = '') {
     if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 배달 내용(JSON)을 찾지 못했어요');
     // a bank row it points at: that row is the payment, and its account is the order's
     const paidOf = v => { const t = tx.find(r => r.id === String(v ?? '') && r.amount < 0); return t ? { paidBy: t.id, account: t.account } : {}; };
@@ -225,7 +225,7 @@ export function parseDelivery(raw, accounts = [], tx = []) {
             mode: pick(o?.mode, ['delivery', 'pickup'], 'delivery'), time: when(o?.time), arrived: when(o?.arrived), to: line(o?.to, 40) || 'home', address: line(o?.address, 80), left: line(o?.left, 60),
             noteShop: line(o?.noteShop, 120), noteShopKo: ko(o?.noteShopKo), noteRider: line(o?.noteRider, 120), noteRiderKo: ko(o?.noteRiderKo), noCutlery: yes(o?.noCutlery), for: int(o?.for, 1, 30) ?? 1,
             status: pick(o?.status, ['on the way', 'delivered', 'cancelled', 'refunded'], 'delivered'), account: acct(o?.account), ...paidOf(o?.paidBy), reviewed: yes(o?.reviewed), gift: line(o?.gift, 40) }, o)).filter(o => o.shop && o.items.length && o.time)
-            .sort(byStory(p.now)).slice(-12),
+            .sort(byStory(now)).slice(-12),
         cart,
     };
 }
@@ -265,7 +265,7 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
     const money = accounts.length ? `[MONEY NOW]\n${JSON.stringify({ accounts: accounts.map(a => ({ last4: a.last4, kind: a.kind, name: a.name, currency: a.currency })), tx: tx.slice(-20).map(t => ({ id: t.id, account: t.account, time: t.time, who: t.who, amount: t.amount })) })}` : '';
     const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(storyDays(m, p)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money], { profile: p.financeProfile, story: CHAT_TOKENS.apps });
     const out = await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 9000, effort: 'low' });
-    const d = parseDelivery(jsonOf(out), accounts, tx), at = storyNow(p) || p.now || '';
+    const d = parseDelivery(jsonOf(out), accounts, tx, storyNow(p) || p.now || ''), at = storyNow(p) || p.now || '';
     // nothing after the story's now
     if (/^\d{2}-\d{2}/.test(at)) d.orders = d.orders.filter(o => !later(o.time, at));
     if (p.delivery) unpayOrders(m, p);
