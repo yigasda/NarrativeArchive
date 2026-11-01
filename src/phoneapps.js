@@ -581,20 +581,21 @@ const dateLabel = (p, now, long = false) => {
     return `${y ? `${y}년 ` : ''}${Number(mt[1])}월 ${Number(mt[2])}일${long && d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}`;
 };
 export function setDate(p, now) {
-    const on = !p.noYear;
+    const on = !p.noYear, mt = /^(\d{2})-(\d{2})/.exec(String(now || p.now || ''));
+    const y = on && Number(p.year), d = y && mt ? new Date(Date.UTC(y, mt[1] - 1, Number(mt[2]))) : null;
+    const day = mt ? `${Number(mt[1])}월 ${Number(mt[2])}일${d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}` : '';
+    const row = (n, v) => `<div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">${n}</span></span>${v}</div>`;
     return `${axBar(p, now)}
       ${axTop(axCb('set'))}
       <div class="ax_scroll">${axH1('날짜 및 시간')}
+        <div class="ax_card">${row('자동 날짜 및 시간', '<span class="ax_sw"></span>')}</div>
         <div class="ax_card">
-          <div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">자동 날짜 및 시간</span></span><span class="ax_sw"></span></div>
-          <div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">날짜</span><span class="ax_p">${esc(dateLabel(p, now, true))}</span></span><span class="ax_v cg_num">${esc(String(now || p.now || '').slice(6, 11))}</span></div>
-          ${on ? `<label class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">연도</span></span><input type="number" class="ax_in na_ph_year" min="1900" max="2100" inputmode="numeric" aria-label="연도" value="${esc(String(p.year || ''))}"></label>` : ''}
+          ${on ? row('연도', `<input type="number" class="ax_in na_ph_year cg_num" min="1900" max="2100" inputmode="numeric" aria-label="연도" value="${esc(String(p.year || ''))}">`) : ''}
+          ${row('날짜', `<span class="ax_v cg_num">${esc(day)}</span>`)}
+          ${row('시간', `<span class="ax_v cg_num">${esc(String(now || p.now || '').slice(6, 11))}</span>`)}
         </div>
-        <div class="ax_sec">날짜 형식</div>
-        <div class="ax_card">
-          <button type="button" class="ax_rw ax_rwn na_ph_yearshow"><span class="ax_tx"><span class="ax_n">연도 표시</span></span><span class="ax_sw ${on ? 'on' : ''}"></span></button>
-        </div>
-        <div class="ax_foot">연도 표시를 끄면 날짜에 연도와 요일이 나오지 않아요.</div>
+        <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_yearshow"><span class="ax_tx"><span class="ax_n">연도 표시</span></span><span class="ax_sw ${on ? 'on' : ''}"></span></button></div>
+        <div class="ax_foot">끄면 날짜에 연도와 요일이 나오지 않아요.</div>
       </div>
       ${axInd()}`;
 }
