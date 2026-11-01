@@ -252,7 +252,7 @@ export function walletScreen(p, now) {
       <div class="ax_scroll">
         ${axH1('지갑', `카드 ${M.cards.length} · 패스 ${ps.length}`)}
         ${M.cards.length ? `<div class="ax_wl ax_ccstack">${M.cards.map((c, i) => `<button type="button" class="ax_wlb" data-go="card" data-i="${i}">${cardArt(p, c)}</button>`).join('')}</div>` : ''}
-        ${(() => { const past = x => gapDays(p.now, x.date) < 0 || /used|benutzt|abgelaufen|expired|사용|지난/i.test(x.status || ''), up = ps.filter(x => !past(x)), old = ps.filter(past).reverse();
+        ${(() => { const today = String(storyNow(p) || p.now || '').slice(0, 5), past = x => gapDays(today, x.date) < 0 || /used|benutzt|abgelaufen|expired|사용|지난/i.test(x.status || ''), up = ps.filter(x => !past(x)), old = ps.filter(past).reverse();
             const stack = (xs, cls) => `<div class="ax_wl ax_psstack ${cls}">${xs.map(x => `<button type="button" class="ax_wlb" data-go="pass" data-i="${x.id}">${passArt(p, x, false)}</button>`).join('')}</div>`;
             return `${up.length ? `<div class="ax_shd">패스<span>${up.length}개</span></div>${stack(up, '')}` : ''}${old.length ? `<div class="ax_shd">지난 패스<span>${old.length}개</span></div>${stack(old, 'ax_psold')}` : ''}`; })()}
         <i class="ax_pad"></i>
