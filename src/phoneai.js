@@ -156,7 +156,7 @@ async function drawCaption(m, p, ph, caption, time) {
         `[LOOKS]\n${known.join('\n') || '(nobody)'}`,
         `[STORY]\n${storyAround(m, time) || '(none)'}`,
     ].join('\n\n');
-    const a = readPhotoAnswer(await askAI(prompt, { system: AI_SYS_PHOTO, maxTokens: 2000 }));
+    const a = readPhotoAnswer(await askAI(prompt, { force: true, system: AI_SYS_PHOTO, maxTokens: 2000 }));
     let url = '', via = 'st';
     if (autopicDirect()) {
         try { url = await drawWithAutopic(a, ap); via = 'autopic'; }
@@ -206,7 +206,7 @@ export async function takePhoto(m, p) {
         `[PHOTOS SO FAR]\n${p.photos.slice(-3).map(x => `- ${x.caption}`).join('\n') || '(none)'}`,
         namesBlock(m),
     ].filter(Boolean).join('\n\n');
-    const out = String(await askAI(prompt, { system: AI_SYS_SHOT, maxTokens: 1500 }) || '').replace(/```(?:json)?/gi, '');
+    const out = String(await askAI(prompt, { force: true, system: AI_SYS_SHOT, maxTokens: 1500 }) || '').replace(/```(?:json)?/gi, '');
     const a = out.indexOf('{'), b = out.lastIndexOf('}');
     let raw = null;
     try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
@@ -247,7 +247,7 @@ export async function writeEntry(m, p, kind) {
         `[SO FAR]\n${list.slice(-3).map(x => `- ${x.title ? `${x.title}: ` : ''}${x.text.slice(0, 300)}`).join('\n') || '(none)'}`,
         namesBlock(m),
     ].filter(Boolean).join('\n\n');
-    const out = String(await askAI(prompt, { system: AI_SYS_WRITE, maxTokens: 2500 }) || '').replace(/```(?:json)?/gi, '');
+    const out = String(await askAI(prompt, { force: true, system: AI_SYS_WRITE, maxTokens: 2500 }) || '').replace(/```(?:json)?/gi, '');
     const a = out.indexOf('{'), b = out.lastIndexOf('}');
     let raw = null;
     try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
@@ -354,7 +354,7 @@ export async function makeDraft(m, p, i) {
         `[RECENT CHAT]\n${recentForCheck(8).join('\n\n').slice(-7000)}`,
         namesBlock(m),
     ].filter(Boolean).join('\n\n');
-    const out = String(await askAI(prompt, { system: AI_SYS_DRAFT, maxTokens: 1200 }) || '').replace(/```(?:json)?/gi, '');
+    const out = String(await askAI(prompt, { force: true, system: AI_SYS_DRAFT, maxTokens: 1200 }) || '').replace(/```(?:json)?/gi, '');
     const a = out.indexOf('{'), b = out.lastIndexOf('}');
     let raw = null;
     try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
@@ -393,7 +393,7 @@ export async function recordVoice(m, p) {
         `[SO FAR]\n${(p.voice || []).slice(-3).map(x => `- ${x.title}: ${x.text.slice(0, 200)}`).join('\n') || '(none)'}`,
         namesBlock(m),
     ].filter(Boolean).join('\n\n');
-    const out = String(await askAI(prompt, { system: AI_SYS_VOICE, maxTokens: 2000 }) || '').replace(/```(?:json)?/gi, '');
+    const out = String(await askAI(prompt, { force: true, system: AI_SYS_VOICE, maxTokens: 2000 }) || '').replace(/```(?:json)?/gi, '');
     const a = out.indexOf('{'), b = out.lastIndexOf('}');
     let raw = null;
     try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
@@ -423,7 +423,7 @@ export async function searchPage(m, p, k) {
     const where = whereOf(m, p, x);
     const shops = (p.money?.orders || []).map(o => `- ${o.shop}: ${o.item}`).join('\n');
     const prompt = [`[OWNER]\n${p.owner}`, `[QUERY]\n${x.q}`, `[SEARCHED]\n${x.time || p.now || ''}`, `[WHERE]\n${where || '(unknown)'}`, shops ? `[SHOPS]\n${shops}` : '', namesBlock(m)].filter(Boolean).join('\n\n');
-    const out = String(await askAI(prompt, { system: AI_SYS_SEARCH, maxTokens: 4000 }) || '').replace(/```(?:json)?/gi, '');
+    const out = String(await askAI(prompt, { force: true, system: AI_SYS_SEARCH, maxTokens: 4000 }) || '').replace(/```(?:json)?/gi, '');
     const a = out.indexOf('{'), b = out.lastIndexOf('}');
     let raw = null;
     try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
@@ -448,7 +448,7 @@ export async function webPage(m, p, k, r) {
     const prompt = [`[OWNER]\n${p.owner}`, `[QUERY]\n${x.q}`, `[SEARCHED]\n${x.time || p.now || ''}`,
         `[RESULT]\n${JSON.stringify({ site: res.site, url: res.url, kind: res.kind || 'other', color: res.color, title: res.title, text: res.text })}`,
         `[WHERE]\n${whereOf(m, p, x) || '(unknown)'}`, namesBlock(m)].filter(Boolean).join('\n\n');
-    const out = String(await askAI(prompt, { system: AI_SYS_PAGE, maxTokens: 5000 }) || '').replace(/```(?:json)?/gi, '');
+    const out = String(await askAI(prompt, { force: true, system: AI_SYS_PAGE, maxTokens: 5000 }) || '').replace(/```(?:json)?/gi, '');
     const a = out.indexOf('{'), b = out.lastIndexOf('}');
     let raw = null;
     try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }

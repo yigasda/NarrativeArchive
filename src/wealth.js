@@ -28,7 +28,7 @@ export async function ensureWealth(m,p,request,{refresh=false}={}) {
     if (!refresh && p.wealthPlan) return p.wealthPlan;
     const snapshot=JSON.stringify([p.owner,p.financeProfile,m.text]);
     const run=(async()=>{
-        const plan=readWealth(await askDraft(await request(),{system:WEALTH_SYS,maxTokens:1400}));
+        const plan=readWealth(await askDraft(await request(),{force:true,system:WEALTH_SYS,maxTokens:1400}));
         if (JSON.stringify([p.owner,p.financeProfile,m.text])!==snapshot || m.phones && !Object.values(m.phones).includes(p)) throw new Error('판단 중 인물 정보가 변경됐어요. 다시 시도해 주세요');
         p.wealthPlan={...plan,at:Date.now()};await saveMeta();return p.wealthPlan;
     })();

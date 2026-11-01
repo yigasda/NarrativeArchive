@@ -29,9 +29,10 @@ export const apiFormat = t => t.fmt === 'anthropic' || t.fmt === 'openai' ? t.fm
 
 // effort: 'low' | 'medium' | 'high' — how hard a thinking model may think. The connection's own setting wins over the job's.
 // Sent as output_config.effort (Anthropic format) or reasoning_effort (OpenAI format, and Vertex through SillyTavern).
-// force: the job's effort wins over the connection's (compression asks for its own level)
+// force: the job's effort wins over the connection's, '' then meaning the model's own (compression asks for its own level;
+// the phone's jobs keep theirs whatever the connection says)
 export async function callConn(t, system, prompt, maxTokens, effort = '', force = false, keepSystem = false) {
-    const e = force && effort ? effort : (t.effort || effort);
+    const e = force ? effort : (t.effort || effort);
     if (t.mode === 'vertex') return stripThink(await callVertex(t, system, prompt, maxTokens, e));
     // the instructions go at the top of the first message instead of the system part: some relays drop the system part
     // without a word, and the model then answers the bare request (a digest taken for "write the next section").
@@ -233,8 +234,8 @@ export async function callVertex(t, system, prompt, maxTokens, effort = '') {
 async function callVertexAt(t, loc, system, prompt, maxTokens, job = '') {
     const model = String(t.vxModel || '').trim();
     if (!model) throw new Error('Vertex 모델을 골라 주세요 (예: gemini-2.5-flash)');
-    // the connection's own setting, else the job's, else the model decides
-    const effort = ['low', 'medium', 'high'].find(x => x === t.effort) || ['low', 'medium', 'high'].find(x => x === job) || 'auto';
+    // callConn already chose between the connection's setting and the job's; nothing chosen: the model decides
+    const effort = ['low', 'medium', 'high'].find(x => x === job) || 'auto';
     const r = await fetch('/api/backends/chat-completions/generate', {
         method: 'POST',
         headers: ctx().getRequestHeaders(),
@@ -344,14 +345,14 @@ export async function askAI(prompt, opts = {}) {
     try { return await askAIOnce(prompt, opts); }
     catch (e) { return viaFallback(e, 'ai', prompt, opts); }
 }
-async function askAIOnce(prompt, { system = '', maxTokens = 0, effort = '', guard = null, keepSystem = false } = {}) {
+async function askAIOnce(prompt, { system = '', maxTokens = 0, effort = '', force = false, guard = null, keepSystem = false } = {}) {
     const c = ctx();
     const g = globalSettings();
     const max = Math.max(64, Number(maxTokens) || Number(g.aiMaxTokens) || 8192);
     let out;
     const a = connSettings('ai');
     if (a.mode === 'custom' || a.mode === 'vertex') {
-        out = await callConn(a, system, prompt, max, effort, false, keepSystem);
+        out = await callConn(a, system, prompt, max, effort, force, keepSystem);
     } else if (g.aiProfile) {
         const p = aiProfiles().find(x => x.id === g.aiProfile);
         if (!p) throw new Error('고른 연결 프로필을 찾을 수 없어요. ⚙ 설정 → AI 모델에서 다시 골라 주세요.');

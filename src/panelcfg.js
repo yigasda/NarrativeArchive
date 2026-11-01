@@ -48,8 +48,9 @@ export function renderConn(p) {
     // Claude thinks on every request (Opus 5.5 can't turn it off); effort only sticks through its own API format
     const claude = /claude|opus|sonnet|haiku/i.test(t.model || '');
     const hint = claude && apiFormat(t) !== 'anthropic' ? 'Claude 모델이에요. OpenAI 호환 주소는 생각 강도를 무시할 수 있어요 — 형식을 Anthropic으로 두면 생각 강도가 확실히 적용돼요.'
-        : claude && !t.effort ? 'Claude는 생각을 끌 수 없어요(Opus 5.5). 생각 토큰도 출력 요금이라, 비용을 줄이려면 생각을 "낮게"로 두세요.'
-        : t.noEffort && t.effort ? '이 주소는 생각 강도를 받지 않아서 빼고 보내고 있어요.' : '';
+        : claude && !t.effort ? 'Claude는 생각을 끌 수 없어요(Opus 5.5). 생각 토큰도 출력 요금이라, 비용을 줄이려면 생각을 "낮게"로 두세요. 휴대폰은 이 설정과 상관없이 작업마다 정해 둔 강도를 써요.'
+        : t.noEffort && t.effort ? '이 주소는 생각 강도를 받지 않아서 빼고 보내고 있어요.'
+        : t.effort ? '휴대폰은 이 설정과 상관없이 작업마다 정해 둔 강도를 써요.' : '';
     $(`#na_${p}_cchint`).text(hint).prop('hidden', !hint);
     $(`#na_${p}_vxloc`).val(t.vxLocation).attr('placeholder', `비우면 실리태번 설정 따라 (${ctx().chatCompletionSettings?.vertexai_region || 'global'})`);
     $(`#na_${p}_vxmodel`).val(t.vxModel);

@@ -127,7 +127,7 @@ async function makeInvestment(m, p, date, {regenerate = false, wealthPlan = null
     const input = await sideRequest(m, p.owner, [`[DATE]\n${date}`, `[BANK — separate locked balances]\n${JSON.stringify(p.money?.bank || {})}`, rebuild,wealthBlock(plan,'investments'),`[EXISTING PUBLIC PRICES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).map(([k,book])=>[k,book[date]])))}`], {profile:p.financeProfile,money:true});
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {
-        const raw = json(await askDraft(input+'\n'+correction, { system: INVEST_SYS + (old ? INVEST_REBUILD : ''), maxTokens: 12000 }));
+        const raw = json(await askDraft(input+'\n'+correction, { force: true, system: INVEST_SYS + (old ? INVEST_REBUILD : ''), maxTokens: 12000 }));
         if (p.investment!==old || snapshot()!==before || m.phones && !Object.values(m.phones).includes(p)) throw new Error('생성 중 금융 정보가 변경됐어요. 다시 시도해 주세요');
         if (!currency(raw.base)) throw new Error('기준 통화를 확인하지 못했어요');
         const securities = list(raw.securities).slice(0, 10).map(s => ({ symbol: text(s.symbol, 80), name: text(s.name, 100), ko: text(s.ko, 100), currency: currency(s.currency) })).filter(s => s.symbol && s.name && s.currency);
@@ -183,7 +183,7 @@ export async function refreshMarket(m, p, date, checkStory = false) {
     keys.push(...currencies.filter(c => c !== inv.base).map(c => `FX:${c}/${inv.base}`));
     const quotes = Object.fromEntries(keys.map(quoteKey).map(k => [k, finance(m).prices[k] || {}]));
     const input = await sideRequest(m, p.owner, [`[DATE]\n${date}`, `[PUBLIC SECURITIES]\n${JSON.stringify(inv.securities)}`, `[EXISTING QUOTES]\n${JSON.stringify(quotes)}`, `[FX PAIRS]\n${currencies.filter(c => c !== inv.base).map(c => `${c}/${inv.base}`).join(', ')}`]);
-    const raw = json(await askDraft(input, { system: MARKET_SYS, maxTokens: 6000 }));
+    const raw = json(await askDraft(input, { force: true, system: MARKET_SYS, maxTokens: 6000 }));
     ingestQuotes(m, raw, input, date, inv.securities);
     inv.date = date; inv.generatedDates = [...new Set([...inv.generatedDates, date])];
     await saveMeta();
@@ -276,7 +276,7 @@ export async function collectInvestmentRecords(m, p, mode = 'records', target = 
     const targets = investmentTargets(inv).filter(t => mode !== 'notes' || t.key === target);
     const appContext = mode === 'notes' && target.startsWith('stock:') ? { trades: inv.trades.filter(t => `stock:${t.symbol}` === target).slice(-8), watch: inv.watch.filter(w => `stock:${w.symbol}` === target) } : null;
     const input = `${source}\n\n[AS OF]\n${inv.date}\n[TARGETS — identification only]\n${JSON.stringify(targets)}${mode === 'records' ? `\n[EXISTING SCHEDULES — app data, not evidence]\n${JSON.stringify(inv.schedules || [])}` : ''}${appContext ? `\n[APP CONTEXT — imagination, not evidence]\n${JSON.stringify(appContext)}` : ''}`;
-    const raw = json(await askDraft(input,{system:mode === 'notes' ? INVEST_NOTES_SYS : INVEST_RECORDS_SYS,maxTokens:mode === 'notes' ? 2000 : 6500}));
+    const raw = json(await askDraft(input,{force:true,system:mode === 'notes' ? INVEST_NOTES_SYS : INVEST_RECORDS_SYS,maxTokens:mode === 'notes' ? 2000 : 6500}));
     const got = parseInvestmentRecords(raw,inv,source,mode,target);
     if (mode === 'notes' && !got.notes.length) throw new Error('사용할 수 있는 투자 노트를 받지 못했어요');
     mergeInvestmentRecords(inv,got);
@@ -294,7 +294,7 @@ export async function refreshBankFX(m,p,date,base) {
     if (!keys.length) return;
     const quotes = Object.fromEntries(keys.map(k=>[k,finance(m).prices[k] || {}]));
     const input = await sideRequest(m,p.owner,[`[DATE]\n${date}`, '[PUBLIC SECURITIES]\n[]',`[EXISTING QUOTES]\n${JSON.stringify(quotes)}`,`[FX PAIRS]\n${currencies.map(c=>`${c}/${base}`).join(', ')}`]);
-    const raw = json(await askDraft(input,{system:MARKET_SYS,maxTokens:3000}));
+    const raw = json(await askDraft(input,{force:true,system:MARKET_SYS,maxTokens:3000}));
     // Only requested FX pairs on the selected day can be updated by this request.
     const allowed = new Set(keys);
     const rows = list(raw.fx).filter(x=>x.date === date && allowed.has(quoteKey(`FX:${x.from}/${x.to}`)));
@@ -332,7 +332,7 @@ export async function fillChartHistory(m,p,symbol,range='1m') {
     if (!missing.length) return 0;
     const source=await sideRequest(m,p.owner,[]);
     const input=`${source}\n[SECURITY]\n${JSON.stringify(inv.securities.find(s=>s.symbol === symbol))}\n[REQUESTED DATES]\n${JSON.stringify(missing)}\n[EXISTING QUOTES — fixed anchors]\n${JSON.stringify(book)}`;
-    const raw=json(await askDraft(input,{system:CHART_SYS,maxTokens:5000}));
+    const raw=json(await askDraft(input,{force:true,system:CHART_SYS,maxTokens:5000}));
     if(p.investment !== inv || inv.date !== date) throw new Error('시세 날짜가 변경됐어요. 다시 시도해 주세요');
     const wanted=new Set(missing);
     const rows=list(raw.quotes).filter(x=>x.symbol === symbol && wanted.has(x.date) && !finance(m).prices[key]?.[x.date]?.rows?.length);

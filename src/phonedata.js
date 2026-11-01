@@ -412,7 +412,7 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     const old = update ? m.phones?.[key] : null;
     const part = apps && m.phones?.[key] ? apps.flatMap(a => REMAKE[a] || []) : null;
     const binding=structuredClone(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key]);
-    const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner), part, await ownerProfileBlock(ctx(),binding,owner)), { system: old ? AI_SYS_PHONE_UPDATE : AI_SYS_PHONE, maxTokens: 16000 });
+    const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner), part, await ownerProfileBlock(ctx(),binding,owner)), { force: true, system: old ? AI_SYS_PHONE_UPDATE : AI_SYS_PHONE, maxTokens: 16000 });
     if(JSON.stringify(binding)!==JSON.stringify(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key])) throw new Error('생성 중 연결한 인물 정보가 변경됐어요. 다시 시도해 주세요');
     const got = parsePhone(out);
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
@@ -568,7 +568,7 @@ async function updatePhone(m, owner) {
         ].filter(Boolean).join('\n\n');
         const made = { money: p.money?.at, invest: p.investment?.at, life: p.life, delivery: p.delivery };
         // low thinking: tested against medium on Vertex, the same payments, ids and amounts, without the thinking cost
-        const out = await askDraft(input, { system: updateSystem({ money: !!(money || invest), delivery: !!(money && p.delivery), life: !!life, weather: askWeather, tracker: !!tracker }), maxTokens: 16000, effort: 'low' });
+        const out = await askDraft(input, { force: true, system: updateSystem({ money: !!(money || invest), delivery: !!(money && p.delivery), life: !!life, weather: askWeather, tracker: !!tracker }), maxTokens: 16000, effort: 'low' });
         // the answer is for the chat and messages it was asked about
         if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p) throw new Error('반영하는 사이 채팅이나 폰이 바뀌었어요. 다시 해 주세요');
         if (p.money?.at !== made.money || p.investment?.at !== made.invest) throw new Error('반영하는 사이 은행이나 투자가 새로 만들어졌어요. 다시 해 주세요');
@@ -1027,7 +1027,7 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
     const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p)}`,preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,`[SAVED RATES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`],{profile:p.financeProfile,money:true});
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {
-        const out = await askDraft(input+'\n'+correction,{system,maxTokens:12000});
+        const out = await askDraft(input+'\n'+correction,{force:true,system,maxTokens:12000});
         const raw = jsonOf(out), next = parseMoney(raw);
         if (p.money !== old || accountState() !== before) throw new Error('생성 중 계좌가 변경됐어요. 다시 시도해 주세요');
         if (old) {
@@ -1088,7 +1088,7 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
 }
 export async function fillVoice(m, p) {
     const diary = (p.diary || []).slice(-6).map(d => `- ${d.date} ${d.title}`).join('\n');
-    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`], {profile:p.financeProfile}), { system: AI_SYS_VOICES, maxTokens: 6000 });
+    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`], {profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });
     const memos = arr(jsonOf(out)?.memos).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: Math.max(3, Math.min(900, Math.round(Number(x?.sec) || 30))), place: line(x?.place, 60), src: 'guess' })).filter(x => x.text);
     if (!memos.length) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
     p.voice = [...(p.voice || []).filter(x => x.src === 'story' || x.now), ...memos].sort((a, b) => String(a.time).localeCompare(String(b.time))).slice(-CAP.voice);
@@ -1126,7 +1126,7 @@ export async function fillDevice(m,p) {
     const request=(async()=>{
         const binding=JSON.stringify(p.financeProfile);
         const input=await sideRequest(m,p.owner,[`[COUNTRY]\n${p.country || ''}`],{profile:p.financeProfile});
-        const out=await askDraft(input,{system:AI_SYS_DEVICE,maxTokens:4000,effort:'low'});
+        const out=await askDraft(input,{force:true,system:AI_SYS_DEVICE,maxTokens:4000,effort:'low'});
         const device=readDeviceReply(out);
         if(!device) throw new Error('모델 답에서 기기 정보(JSON)를 찾지 못했어요');
         if(JSON.stringify(p.financeProfile)!==binding) throw new Error('인물 정보가 변경됐어요. 다시 불러와 주세요');
