@@ -131,7 +131,13 @@ export async function openPhone(who = null) {
     };
     const drawPhone = (keep = false) => {
         const p = phone();
-        if (!owner) { $root.find('.na_ph_frame').html(''); return; }
+        // nobody to show yet (no people in the archive, no phone in this chat): the picker opens instead of a blank phone
+        if (!owner) {
+            $root.find('.na_ph_frame').html(`<div class="na_ph_scr glass w_dusk"><div class="na_ph_body na_ph_make"><div class="na_ph_makecard"><b>누구의 폰을 볼까요?</b><p>아래에서 인물을 고르거나, 넣기로 이름을 적어 주세요</p></div></div></div>`);
+            if (!names.length) { adding = true; $root.find('.na_ph_addrow').prop('hidden', false); }
+            setSheet(true);
+            return;
+        }
         if (!p && view==='setprofile') {
             const draft=pendingProfile();
             $root.find('.na_ph_frame').html(screen(draft,view,m,roster,{profileState:profileStates.get(nameKey(owner))}));
