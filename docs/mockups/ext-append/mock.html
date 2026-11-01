@@ -1,0 +1,82 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>
+:root{--ink:#463428;--accent:#B8541F;--accent-ink:#A84A17;--soft:#F6E1D3;--line:#E5D5C9;--line2:#F1E6DD;--card:#F7EEE7;--card2:#F1E6DD;--dim:#8A7A70;--mute:#6B5A50;--sub:#7A6A60;--fill:#6E5D52;--ok:#1F6A40;--oksoft:#E3F2E8;--warn:#8A5A00;--warnsoft:#FFF1D6;--bg:#F0E4DB;--tile:#FBF6F2}
+*{box-sizing:border-box}body{margin:0;background:#141210;font-family:-apple-system,'Noto Sans KR',sans-serif;color:var(--ink);display:flex;gap:28px;padding:24px;align-items:flex-start}
+.col{display:flex;flex-direction:column;gap:10px;align-items:center}.lab{color:#ff6fa3;font:700 15px sans-serif}
+.pop{width:390px;height:820px;background:var(--bg);border-radius:26px;box-shadow:0 24px 60px rgba(0,0,0,.4);display:flex;flex-direction:column;overflow:hidden;position:relative}
+.sc{flex:1;overflow:hidden;padding:22px 18px 0}
+h1{margin:0;font-size:20px;letter-spacing:-.02em}.subt{font-size:13px;color:var(--sub);margin-top:4px}
+.ed{margin-top:14px;background:var(--tile);border-radius:16px;padding:12px 14px;font:12.5px/1.6 ui-monospace,Menlo,monospace;color:#3a2c22;white-space:pre-wrap;box-shadow:inset 0 0 0 1px var(--line)}
+.bar{display:flex;gap:8px;padding:12px 18px 16px;background:var(--bg);box-shadow:0 -1px 0 var(--line2)}
+.btn{height:46px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px;padding:0 16px}
+.ghost{color:var(--mute)}.sec{background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}.pri{background:var(--accent);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.2);flex:1}
+.ic{width:18px;height:18px;flex:none}
+.tools{display:flex;gap:8px;margin-top:12px;align-items:center}
+.tb{height:40px;border-radius:999px;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);display:flex;align-items:center;gap:6px;padding:0 12px;font-size:13px;font-weight:600;color:var(--mute);white-space:nowrap}
+.ask{flex:1;height:40px;border-radius:999px;background:var(--tile);box-shadow:inset 0 0 0 1px var(--line);display:flex;align-items:center;padding:0 4px 0 14px;font-size:13px;color:var(--dim);gap:6px;min-width:0}
+.ask > span:first-child{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.send{width:32px;height:32px;border-radius:999px;background:var(--accent);display:flex;align-items:center;justify-content:center;flex:none}
+.card{margin-top:12px;background:var(--tile);border-radius:16px;box-shadow:0 1px 2px rgba(70,52,40,.05),0 6px 16px rgba(70,52,40,.07);overflow:hidden}
+.row{display:flex;align-items:center;gap:10px;padding:12px 14px;font-size:14px}.row+.row{border-top:1px solid var(--line2)}
+.row small{display:block;font-size:12px;color:var(--sub);margin-top:2px}.row .v{margin-left:auto;color:var(--sub);font-size:13px;white-space:nowrap}
+.dot{width:24px;height:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;flex:none;font-size:13px;font-weight:700}
+.dot.ok{background:var(--oksoft);color:var(--ok)}.dot.w{background:var(--warnsoft);color:var(--warn)}
+.tg{width:42px;height:26px;border-radius:999px;background:var(--accent);position:relative;flex:none;margin-left:auto}.tg:after{content:"";position:absolute;right:3px;top:3px;width:20px;height:20px;border-radius:999px;background:#fff}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.chip{height:28px;border-radius:999px;display:flex;align-items:center;gap:5px;padding:0 10px;font-size:12.5px;font-weight:600}
+.chip.ok{background:var(--oksoft);color:var(--ok)}.chip.w{background:var(--warnsoft);color:var(--warn)}.chip.n{background:var(--card);color:var(--mute);box-shadow:inset 0 0 0 1px var(--line)}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:999px;background:var(--card2);margin-top:14px}
+.tab{height:36px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:600;color:var(--mute)}.tab.on{background:var(--card);color:var(--accent-ink);box-shadow:0 1px 2px rgba(70,52,40,.08),0 4px 10px rgba(70,52,40,.08)}
+.badge{min-width:18px;height:18px;border-radius:999px;background:var(--warn);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;padding:0 5px}
+.sumh{margin-top:14px;padding:16px;border-radius:18px;background:var(--tile);box-shadow:0 1px 2px rgba(70,52,40,.05),0 6px 16px rgba(70,52,40,.07)}
+.big{font-size:26px;font-weight:700;letter-spacing:-.02em}.big small{font-size:13px;color:var(--sub);font-weight:500;margin-left:6px}
+.prev{margin-top:10px;font:12px/1.55 ui-monospace,Menlo,monospace;color:var(--sub);max-height:56px;overflow:hidden;-webkit-mask:linear-gradient(#000 50%,transparent);white-space:pre-wrap}
+.edl{margin-top:10px;display:flex;gap:8px}.edl .tb{flex:1;justify-content:center}
+.sect{font-size:12.5px;font-weight:700;color:var(--dim);margin:16px 4px 0;letter-spacing:.02em}
+</style></head><body>
+<!-- A -->
+<div class="col"><div class="lab">A. 한 장 정리 · 아래 버튼 한 줄</div><div class="pop"><div class="sc">
+<h1>아카이브에 추가</h1><div class="subt">STATE·OPEN 앞에 넣고, 새 STATE로 바꿔요</div>
+<div class="ed">## #30–#41 — The bridge (Oct 26, morning, Varo)
+PLOT:
+- Mara meets Ren at the river bridge; he returns Ivo's key (#31–#34).
+- They agree to visit Ivo together on Saturday (#38).
+
+# STATE
+## Mara
+- Has Ivo's key again; owes Ren an answer.</div>
+<div class="chips"><span class="chip ok">✓ #30–#41</span><span class="chip ok">✓ STATE</span><span class="chip w">! 번호 확인</span><span class="chip n">74 토큰</span></div>
+<div class="tools"><span class="tb" title="파일"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span><span class="tb"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg></span><span class="tb"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 12l2 2 4-4"/></svg></span>
+<span class="ask"><span>고쳐 달라고 하기</span><span class="send"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-2-6z"/></svg></span></span></div>
+<div class="card"><div class="row"><span class="dot w">!</span><span>끝 번호를 확인해 주세요<small>#41이 채팅 마지막 #29보다 커요</small></span></div></div>
+<div class="card"><div class="row"><span>설정<small>끝 #41 · 추가한 뒤 숨기기 · 끝 번호 바꾸기</small></span><span class="v">›</span></div></div>
+</div><div class="bar"><span class="btn ghost">취소</span><span class="btn sec">미리보기</span><span class="btn pri">추가하기</span></div></div></div>
+
+<!-- B -->
+<div class="col"><div class="lab">B. 탭 두 개 (편집 · 검사)</div><div class="pop"><div class="sc">
+<h1>아카이브에 추가</h1><div class="subt">STATE·OPEN 앞에 넣고, 새 STATE로 바꿔요</div>
+<div class="tabs"><span class="tab on">편집</span><span class="tab">검사 <span class="badge">1</span></span></div>
+<div class="ed" style="min-height:300px">## #30–#41 — The bridge (Oct 26, morning, Varo)
+PLOT:
+- Mara meets Ren at the river bridge; he returns Ivo's key (#31–#34).
+- They agree to visit Ivo together on Saturday (#38).
+
+# STATE
+## Mara
+- Has Ivo's key again; owes Ren an answer.</div>
+<div class="tools" style="justify-content:space-between"><span class="tb"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>파일</span><span class="tb"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg>다듬기</span><span class="tb"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 12l2 2 4-4"/></svg>원문 대조</span></div>
+<div class="tools"><span class="ask"><span>고쳐 달라고 하기 (예: #60 이후 더 줄여 줘)</span><span class="send"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-2-6z"/></svg></span></span></div>
+<div class="chips" style="margin-top:14px"><span class="chip n">끝 #41</span><span class="chip n">숨기기 켬</span><span class="chip n">번호 바꾸기 켬</span><span class="chip n">74 토큰</span></div>
+</div><div class="bar"><span class="btn ghost">취소</span><span class="btn sec">미리보기</span><span class="btn pri">추가하기</span></div></div></div>
+
+<!-- C -->
+<div class="col"><div class="lab">C. 확인 먼저 (요약 카드 → 편집은 펼쳐서)</div><div class="pop"><div class="sc">
+<h1>아카이브에 추가</h1><div class="subt">STATE·OPEN 앞에 넣고, 새 STATE로 바꿔요</div>
+<div class="sumh"><div class="big">#30 – #41<small>섹션 1개 · 74 토큰</small></div>
+<div class="prev">## #30–#41 — The bridge (Oct 26, morning, Varo)
+PLOT:
+- Mara meets Ren at the river bridge; he returns Ivo's key (#31–#34).</div>
+<div class="edl"><span class="tb"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>편집</span><span class="tb"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg>다듬기</span><span class="tb"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 12l2 2 4-4"/></svg>대조</span></div></div>
+<div class="sect">검사</div>
+<div class="card"><div class="row"><span class="dot w">!</span><span>끝 번호를 확인해 주세요<small>#41이 채팅 마지막 #29보다 커요</small></span></div><div class="row"><span class="dot ok">✓</span><span>섹션이 #29 다음에 이어져요</span></div><div class="row"><span class="dot ok">✓</span><span>STATE를 새로 붙여요</span></div></div>
+<div class="sect">넣을 때</div>
+<div class="card"><div class="row"><span>끝 번호</span><span class="v" style="color:var(--ink);font-weight:600">#41</span></div><div class="row"><span>추가한 뒤 숨기기<small>#0–#40 숨김</small></span><span class="tg"></span></div><div class="row"><span>끝 번호도 바꾸기<small>#29 → #41</small></span><span class="tg"></span></div></div>
+</div><div class="bar"><span class="btn ghost">취소</span><span class="btn sec">미리보기</span><span class="btn pri">추가하기</span></div></div></div>
+</body></html>
