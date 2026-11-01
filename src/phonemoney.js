@@ -50,10 +50,15 @@ function bankSum(p) {
     const meta = getMeta(); migrateBank(meta,p);
     return total(meta,p.money.bank.accounts.filter(a=>a.kind !== 'credit').map(a=>({amount:a.balance,currency:a.currency || p.money.currency})),bankDisplayCurrency(p),bankDate(p));
 }
-const missingSum = (p,sum) => sum.missing.map(x=>`<span>${esc(fmtIn(p,x.amount,x.currency))} · ${esc(x.currency)} 환산 대기</span>`).join('');
+const missingSum = (p,sum) => sum.missing.length ? `<span class="ax_fxwait">${sum.missing.map(x=>`${esc(fmtIn(p,x.amount,x.currency))} 환산 대기`).join(' · ')}</span>` : '';
+// 표시 통화 · 환산 날짜 · 환율 확인 in one white strip: each half shows its value, the real picker lies over it unseen
 function displayTools(p) {
     const selected = bankDisplayCurrency(p), options = [...new Set([selected,...Object.values(LOCAL_CURRENCY),p.money.currency].filter(Boolean))];
-    return `<div class="ax_fx_tools"><label>표시 통화<select class="bank_display">${options.map(c=>`<option value="${esc(c)}" ${c === selected ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label><label>환산 날짜<input type="date" class="bank_fxdate" value="${esc(bankDate(p))}"></label><button type="button" class="bank_fxrefresh">환율 확인</button></div>`;
+    const d = String(bankDate(p) || '').match(/^(\d{4})-(\d{2})-(\d{2})/), day = d ? `${Number(d[2])}월 ${Number(d[3])}일` : '날짜 정하기';
+    return `<div class="ax_fx_tools">
+      <label class="ax_fxs">${ax('globe', 17, 'currentColor', 1.9)}<span><small>표시 통화</small><b>${esc(selected)}</b></span>${ax('chev', 12, '#a3aab4', 2.4)}<select class="bank_display" aria-label="표시 통화">${options.map(c=>`<option value="${esc(c)}" ${c === selected ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+      <label class="ax_fxs">${ax('cal', 17, 'currentColor', 1.9)}<span><small>환산 날짜</small><b class="cg_num">${esc(day)}</b></span>${ax('chev', 12, '#a3aab4', 2.4)}<input type="date" class="bank_fxdate" aria-label="환산 날짜" value="${esc(bankDate(p))}"></label>
+      <button type="button" class="bank_fxrefresh" aria-label="환율 확인">${ax('again', 17, 'currentColor', 2.1)}</button></div>`;
 }
 const busyOf = (p, k) => filling.has(`${nameKey(p.owner)}:${k}`);
 const mo = p => p.money || null;

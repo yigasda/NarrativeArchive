@@ -5770,11 +5770,15 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .iv_history > .iv_link { margin-top: 16px; }
 
 /* Bank/wallet conversion is a display preference; account balances remain native. */
-.ax_fx_tools { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin: 14px 16px; }
-.ax_fx_tools label { flex: 1; min-width: 105px; color: #75837d; font-size: 11px; }
-.ax .ax_fx_tools select, .ax .ax_fx_tools input { display: block; width: 100%; min-width: 0; height: 34px; box-sizing: border-box; margin: 5px 0 0; padding: 0 8px; border: 1px solid #e2e8e5; border-radius: 10px; background: #fff; color: #16251f; font: inherit; font-size: 12px; }
-.ax .bank_fxrefresh { --axbg: #e8efec; color: #24664d; border-radius: 10px; padding: 9px 10px; font-size: 12px; }
+.ax_fx_tools { display: flex; align-items: center; margin: 2px 16px 16px; padding: 6px 6px 6px 4px; border-radius: 18px; background: #fff; flex: none; }
+.ax .ax_fxs { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 6px 10px; color: #1d3461; cursor: pointer; }
+.ax_fxs + .ax_fxs { border-left: 1px solid #eef0f3; }
+.ax_fxs > span { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.ax_fxs small { font-size: 11px; color: #8a929d; } .ax_fxs b { font-size: 14px; font-weight: 600; color: #161b22; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ax .ax_fx_tools select, .ax .ax_fx_tools input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; font-size: 16px; }
+.ax .bank_fxrefresh { --axbg: #1d3461; color: #fff; width: 38px; height: 38px; border-radius: 50%; padding: 0; display: grid; place-items: center; flex: none; margin-left: 4px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18); }
 .ax_fx_tools > small { flex-basis: 100%; color: #89938e; font-size: 10px; line-height: 1.5; }
+.ax_bktot .ax_fxwait { display: block; margin-bottom: 2px; }
 .ax_accv .ax_fx_note { display: block; max-width: 150px; white-space: normal; font-size: 10px; line-height: 1.5; margin-top: 5px; }
 
 /* Card detail: a compact card, native balance and a grouped payment feed. */

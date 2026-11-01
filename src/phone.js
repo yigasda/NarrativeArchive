@@ -248,12 +248,14 @@ export async function openPhone(who = null) {
         else { if (!validDate(this.value)) return toastr.warning('이야기 날짜를 입력해 주세요'); p.money.fxDate = this.value; }
         await saveMeta(); drawPhone(true);
     });
+    // the date sits unseen over its strip: open its calendar on a tap anywhere there
+    $root.on('click', '.bank_fxdate', function () { try { this.showPicker?.(); } catch { /* not allowed here */ } });
     $root.on('click', '.bank_fxrefresh', async function () {
         if (making) return toastr.info('폰을 다시 만드는 중이에요');
         if (investing) return;
         const p = phone(), date = $root.find('.bank_fxdate').val(), base = bankDisplayCurrency(p);
         investing = true;
-        try { await withSpinner($(this),'확인 중',()=>refreshBankFX(m,p,date,base)); }
+        try { await withSpinner($(this),'',()=>refreshBankFX(m,p,date,base)); }
         catch (err) { toastr.error(String(err?.message || err),'환율'); }
         finally { investing = false; if (phone() === p) drawPhone(true); }
     });
