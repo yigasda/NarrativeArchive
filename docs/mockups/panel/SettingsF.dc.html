@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>설정 F</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B8541F}a:hover{color:#8F3F14}
+.card{background:#F7EEE7;border-radius:18px}
+.row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid #E5D5C9}
+.row:first-child{border-top:none}
+.sub{font-size:12px;color:#7A6A60;line-height:1.45}
+.nm{font-size:14px;display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.pill{margin-left:auto;flex:none;background:#F6E1D3;color:#A84A17;border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700}
+.sw{margin-left:auto;width:40px;height:24px;border-radius:12px;background:#B8541F;flex:none}
+.sw.off{background:#D9C8BC}
+.chip{border:1px solid #E5D5C9;border-radius:999px;padding:6px 12px;font-size:13px;color:#6B5A50;background:#FFFAF6}
+.chip.on{background:#B8541F;border-color:#B8541F;color:#FFF7F0;font-weight:700}
+.ic{width:30px;height:30px;border-radius:9px;background:#F6E1D3;color:#B8541F;display:flex;align-items:center;justify-content:center;flex:none}
+.u{color:#A84A17;font-weight:700;border-bottom:2px solid #E9B898}
+
+</style>
+</helmet>
+<div style="width: 400px; height: 1180px; box-sizing: border-box; padding: 16px; background: #FFFAF6; font-family: 'Noto Sans KR', sans-serif; color: #463428; display: flex; flex-direction: column; gap: 12px">
+  <div style="display: flex; align-items: center; gap: 10px; font-size: 18px"><span style="color: #B8541F">‹</span><b>주입</b><span style="margin-left: auto; font-size: 12px; border: 1px solid #E5D5C9; border-radius: 999px; padding: 6px 12px">주입 미리보기</span></div>
+  <div class="card" style="padding: 18px 16px; display: flex; flex-direction: column; gap: 10px">
+    <span class="sub" style="font-weight: 700; color: #6B5A50">지금 이렇게 넣고 있어요</span>
+    <div style="font-size: 16px; line-height: 1.9">
+      아카이브를 <span class="u">채팅 끝에서 6번째 위</span>에<br>
+      <span class="u">시스템</span> 말로 넣어요.<br>
+      오래된 섹션도 <span class="u">원문 그대로</span> 넣고,<br>
+      필요한 섹션은 <span class="u">키워드</span>로 골라요.
+    </div>
+    <span class="sub">밑줄을 누르면 바로 바꿀 수 있어요</span>
+  </div>
+  <div class="card" style="padding: 14px; display: flex; flex-direction: column; gap: 8px">
+    <span class="sub" style="font-weight: 700; color: #6B5A50">↓ "채팅 끝에서 6번째 위"를 누르면</span>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px"><span class="chip">맨 위</span><span class="chip on">채팅 안</span><span class="chip">맨 아래</span></div>
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 14px">깊이 <span class="chip">−</span><b>6</b><span class="chip">+</span><span class="sub">작을수록 최근 대화 가까이</span></div>
+  </div>
+  <div class="card" style="padding: 0">
+    <div class="row"><span class="nm"><span>자리 묶음</span><span class="sub">위 문장을 한 번에 바꾸는 미리 정한 조합</span></span><span class="pill">최근 강조형 ▾</span></div>
+    <div class="row"><span class="nm"><span>아카이브 주입</span></span><span class="sw"></span></div>
+  </div>
+  <div class="card" style="padding: 0">
+    <div class="row"><span class="nm"><span>자세히</span><span class="sub">토큰 상한 · 섹션별 버전 · 키워드 범위 · 라우터 세부 · 테스트 · 고정 · 꺼 둔 섹션</span></span><span style="margin-left:auto;color:#8A7A70">▸</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":400,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

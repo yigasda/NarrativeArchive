@@ -1,0 +1,129 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;background:#e6e8ec;font-family:-apple-system,'Helvetica Neue','Noto Sans CJK KR',sans-serif;display:flex;gap:28px;padding:28px;align-items:flex-start}
+.col{display:flex;flex-direction:column;gap:10px;align-items:center}
+.lab{font:700 15px sans-serif;color:#333}
+.ph{width:390px;height:844px;border-radius:44px;overflow:hidden;background:#f4f5f7;position:relative;display:flex;flex-direction:column;box-shadow:0 0 0 8px #111}
+.hd{background:#1d3461;color:#fff;padding:14px 16px 46px}
+.sb{display:flex;justify-content:space-between;font:600 15px sans-serif;padding:4px 14px 10px}
+.row{display:flex;align-items:center;gap:10px}
+.c{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.14);display:grid;place-items:center}
+.hi small{display:block;font-size:12px;opacity:.75}.hi b{font-size:16px}
+.tot{padding:22px 6px 0}.tot small{font-size:12px;opacity:.75}.tot b{display:block;font-size:34px;margin:4px 0}.tot span{font-size:11.5px;opacity:.7}
+.acts{display:grid;grid-template-columns:repeat(4,1fr);padding-top:20px}
+.acts div{display:flex;flex-direction:column;align-items:center;gap:7px;font-size:11.5px;font-weight:600}
+.acts i{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.14);display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.acts .new i{background:#fff;color:#1d3461;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.bs{flex:1;margin-top:-28px;border-radius:28px 28px 0 0;background:#f4f5f7;padding:18px 16px 0;overflow:hidden}
+.shd{font:700 15px sans-serif;color:#1b2230;margin:14px 4px 8px;display:flex;justify-content:space-between;align-items:baseline}.shd a{font-size:12px;color:#6b7686;font-weight:600}
+.card{background:#fff;border-radius:18px;padding:4px 14px}
+.acc{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #eef0f3}.acc:last-child{border:0}
+.ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none}
+.tx{flex:1;min-width:0}.tx b{display:block;font-size:14.5px;color:#1b2230}.tx small{font-size:12px;color:#8a929d}
+.v{text-align:right}.v b{display:block;font-size:14.5px;color:#1b2230}.v small{font-size:11.5px;color:#8a929d}
+.fx{background:#fff;border-radius:18px;padding:14px}
+.fxh{display:flex;justify-content:space-between;align-items:center}
+.fxh b{font-size:22px;color:#1b2230}.fxh small{font-size:12px;color:#6b7686}
+.bar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin:12px 0 4px;background:#eef0f3}
+.bar i{display:block}
+.nx{display:flex;gap:8px;margin-top:10px}
+.nx div{flex:1;background:#f4f5f7;border-radius:12px;padding:9px 10px}
+.nx small{display:block;font-size:11px;color:#8a929d}.nx b{font-size:13px;color:#1b2230}.nx em{font-style:normal;font-size:11px;font-weight:700;color:#c0563a;margin-left:4px}
+.dd{font:700 11px sans-serif;padding:3px 7px;border-radius:7px;background:#fdecea;color:#c0563a;margin-left:6px}
+.dd.ok{background:#e6f3ea;color:#2f7d4f}.dd.g{background:#eef0f3;color:#6b7686}
+.tab{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-top:1px solid #e9ebef;padding:8px 0 26px}
+.tab div{display:flex;flex-direction:column;align-items:center;font-size:10.5px;color:#9aa1ab;gap:3px}.tab .on{color:#1d3461}
+.hd2{background:#1d3461;color:#fff;padding:14px 16px 84px}
+.big{text-align:center;padding-top:18px}.big small{font-size:12px;opacity:.75}.big b{display:block;font-size:34px;margin:4px 0}.big span{font-size:11.5px;opacity:.75}
+.mon{display:flex;justify-content:center;gap:14px;margin-top:14px;font-size:12px}
+.mon span{padding:5px 12px;border-radius:12px;background:rgba(255,255,255,.14)}
+.cal{display:flex;gap:3px;margin:2px 0 10px;padding:12px 10px 10px;background:#fff;border-radius:18px;flex-wrap:wrap}
+.cal i{width:calc((100% - 18px)/7);height:30px;border-radius:8px;display:grid;place-items:center;font:600 11.5px sans-serif;font-style:normal;color:#9aa1ab}
+.cal i.p{background:#1d3461;color:#fff}.cal i.d{background:#dfe5f0;color:#1d3461}.cal i.t{box-shadow:inset 0 0 0 1.5px #1d3461;color:#1d3461}
+.sec{font:600 12px sans-serif;color:#6b7686;margin:12px 4px 6px}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+<symbol id="send" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="repeat" viewBox="0 0 24 24"><path d="M4 11V9a3 3 0 0 1 3-3h12M16 3l3 3-3 3M20 13v2a3 3 0 0 1-3 3H5M8 21l-3-3 3-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="card" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.9"/></symbol>
+<symbol id="swap" viewBox="0 0 24 24"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+<symbol id="back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+<symbol id="housei" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v9H4z M10 20v-5h4v5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></symbol>
+<symbol id="play" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M10 9l5 2.5-5 2.5z" fill="currentColor"/></symbol>
+<symbol id="music" viewBox="0 0 24 24"><path d="M9 18V6l10-2v12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="7" cy="18" r="2.4" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="17" cy="16" r="2.4" fill="none" stroke="currentColor" stroke-width="1.9"/></symbol>
+<symbol id="phone" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M11 18h2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+<symbol id="gym" viewBox="0 0 24 24"><path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+<symbol id="shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></symbol>
+</defs></svg>
+
+<div class="col"><div class="lab">A. 홈에 고정 지출 카드</div>
+<div class="ph">
+ <div class="hd"><div class="sb"><span>17:42</span><span>▮▮▮</span></div>
+  <div class="row"><span class="c"><svg width="18" height="18"><use href="#back"/></svg></span><span class="hi" style="flex:1"><small>Varo Bank</small><b>안녕하세요, Mara</b></span><span class="c"><svg width="18" height="18"><use href="#bell"/></svg></span></div>
+  <div class="tot"><small>예금 잔액 · EUR 기준</small><b>7.704,17 €</b><span>계좌 3개</span></div>
+  <div class="acts"><div><i><svg width="20" height="20"><use href="#send"/></svg></i>송금</div><div><i><svg width="20" height="20"><use href="#swap"/></svg></i>이체</div><div><i><svg width="20" height="20"><use href="#repeat"/></svg></i>고정 지출</div><div><i><svg width="20" height="20"><use href="#card"/></svg></i>카드</div></div>
+ </div>
+ <div class="bs">
+  <div class="shd" style="margin-top:2px">고정 지출 <a>전체 ›</a></div>
+  <div class="fx">
+   <div class="fxh"><span><small>11월 나갈 돈</small><br><b>671,98 €</b></span><small>4건 중 1건 나감</small></div>
+   <div class="bar"><i style="width:92.3%;background:#1d3461"></i><i style="width:7.7%;background:#c9d3e6"></i></div>
+   <div class="nx"><div><small>다음 · 11월 1일</small><b>Miete</b><em>오늘</em></div><div><small>11월 5일</small><b>Telekom</b><em style="color:#6b7686">D-4</em></div></div>
+  </div>
+  <div class="shd">내 계좌</div>
+  <div class="card">
+   <div class="acc"><span class="ic" style="background:#e3e9f5;color:#1d3461"><svg width="20" height="20"><use href="#card"/></svg></span><span class="tx"><b>입출금 · Girokonto</b><small>•••• 4821</small></span><span class="v"><b>1.284,17 €</b><small>사용 가능</small></span></div>
+   <div class="acc"><span class="ic" style="background:#eceef1;color:#3f4a5a"><svg width="20" height="20"><use href="#card"/></svg></span><span class="tx"><b>신용카드 · Kreditkarte</b><small>•••• 7710</small></span><span class="v"><b>13,99 €</b><small>이번 달 사용</small></span></div>
+  </div>
+ </div>
+ <div class="tab"><div class="on"><svg width="24" height="24"><use href="#home"/></svg>홈</div><div><svg width="24" height="24"><use href="#send"/></svg>송금</div><div><svg width="24" height="24"><use href="#card"/></svg>카드</div><div><svg width="24" height="24"><use href="#menu"/></svg>더보기</div></div>
+</div></div>
+
+<div class="col"><div class="lab">고정 지출 화면</div>
+<div class="ph">
+ <div class="hd2"><div class="sb"><span>17:42</span><span>▮▮▮</span></div>
+  <div class="row"><span class="c"><svg width="18" height="18"><use href="#back"/></svg></span><b style="flex:1;text-align:center;font-size:16px">고정 지출</b><span style="width:38px"></span></div>
+  <div class="big"><small>매달 나가는 돈</small><b>671,98 €</b><span>월급 1.450,00 €의 46%</span></div>
+ </div>
+ <div class="bs" style="margin-top:-62px;background:transparent;padding-top:0">
+  <div class="cal">
+   <i class="p">1</i><i>2</i><i>3</i><i>4</i><i class="d">5</i><i>6</i><i>7</i>
+   <i>8</i><i>9</i><i>10</i><i>11</i><i>12</i><i>13</i><i>14</i>
+   <i>15</i><i>16</i><i>17</i><i>18</i><i>19</i><i>20</i><i class="d">21</i>
+   <i>22</i><i>23</i><i>24</i><i>25</i><i>26</i><i>27</i><i class="d">28</i>
+  </div>
+  <div class="sec">11월</div>
+  <div class="card">
+   <div class="acc"><span class="ic" style="background:#e3e9f5;color:#1d3461"><svg width="20" height="20"><use href="#housei"/></svg></span><span class="tx"><b>Miete<span class="dd ok">나감</span></b><small>매달 1일 · 입출금 4821</small></span><span class="v"><b>-620,00 €</b><small>지난달 같음</small></span></div>
+   <div class="acc"><span class="ic" style="background:#f6e7e1;color:#b8573a"><svg width="20" height="20"><use href="#phone"/></svg></span><span class="tx"><b>Telekom<span class="dd">D-4</span></b><small>매달 5일 · 입출금 4821</small></span><span class="v"><b>-29,99 €</b><small>&nbsp;</small></span></div>
+   <div class="acc"><span class="ic" style="background:#f3e1e3;color:#b23a48"><svg width="20" height="20"><use href="#play"/></svg></span><span class="tx"><b>Netflix<span class="dd g">D-20</span></b><small>매달 21일 · 신용카드 7710</small></span><span class="v"><b>-13,99 €</b><small>구독</small></span></div>
+   <div class="acc"><span class="ic" style="background:#e3f1e8;color:#2f7d4f"><svg width="20" height="20"><use href="#music"/></svg></span><span class="tx"><b>Spotify<span class="dd g">D-27</span></b><small>매달 28일 · 신용카드 7710</small></span><span class="v"><b>-8,00 €</b><small>구독</small></span></div>
+  </div>
+  <div class="sec">지난 결제 · Netflix</div>
+  <div class="card"><div class="acc"><span class="tx"><b style="font-size:13.5px">10월 21일</b></span><span class="v"><b style="font-size:13.5px">-13,99 €</b></span></div><div class="acc"><span class="tx"><b style="font-size:13.5px">9월 21일</b></span><span class="v"><b style="font-size:13.5px">-13,99 €</b></span></div></div>
+ </div>
+ <div class="tab"><div class="on"><svg width="24" height="24"><use href="#home"/></svg>홈</div><div><svg width="24" height="24"><use href="#send"/></svg>송금</div><div><svg width="24" height="24"><use href="#card"/></svg>카드</div><div><svg width="24" height="24"><use href="#menu"/></svg>더보기</div></div>
+</div></div>
+
+<div class="col"><div class="lab">B. 버튼만 (홈은 그대로)</div>
+<div class="ph">
+ <div class="hd"><div class="sb"><span>17:42</span><span>▮▮▮</span></div>
+  <div class="row"><span class="c"><svg width="18" height="18"><use href="#back"/></svg></span><span class="hi" style="flex:1"><small>Varo Bank</small><b>안녕하세요, Mara</b></span><span class="c"><svg width="18" height="18"><use href="#bell"/></svg></span></div>
+  <div class="tot"><small>예금 잔액 · EUR 기준</small><b>7.704,17 €</b><span>계좌 3개</span></div>
+  <div class="acts"><div><i><svg width="20" height="20"><use href="#send"/></svg></i>송금</div><div class="new"><i><svg width="20" height="20"><use href="#repeat"/></svg></i>고정 지출</div><div><i><svg width="20" height="20"><use href="#swap"/></svg></i>이체</div><div><i><svg width="20" height="20"><use href="#card"/></svg></i>카드</div></div>
+ </div>
+ <div class="bs">
+  <div class="shd" style="margin-top:2px">내 계좌</div>
+  <div class="card">
+   <div class="acc"><span class="ic" style="background:#e3e9f5;color:#1d3461"><svg width="20" height="20"><use href="#card"/></svg></span><span class="tx"><b>입출금 · Girokonto</b><small>•••• 4821</small></span><span class="v"><b>1.284,17 €</b><small>사용 가능</small></span></div>
+   <div class="acc"><span class="ic" style="background:#eceef1;color:#3f4a5a"><svg width="20" height="20"><use href="#card"/></svg></span><span class="tx"><b>신용카드 · Kreditkarte</b><small>•••• 7710</small></span><span class="v"><b>13,99 €</b><small>이번 달 사용</small></span></div>
+   <div class="acc"><span class="ic" style="background:#e3f1e8;color:#2f7d4f"><svg width="20" height="20"><use href="#card"/></svg></span><span class="tx"><b>저축 · Tagesgeld</b><small>•••• 9902</small></span><span class="v"><b>6.420,00 €</b><small>사용 가능</small></span></div>
+  </div>
+  <div class="shd">최근 거래</div>
+  <div class="card"><div class="acc"><span class="ic" style="background:#d8c48a;color:#fff;font-weight:700">B</span><span class="tx"><b>Bäckerei Krume</b><small>25.10. · 카드</small></span><span class="v"><b>-4,80 €</b></span></div></div>
+ </div>
+ <div class="tab"><div class="on"><svg width="24" height="24"><use href="#home"/></svg>홈</div><div><svg width="24" height="24"><use href="#send"/></svg>송금</div><div><svg width="24" height="24"><use href="#card"/></svg>카드</div><div><svg width="24" height="24"><use href="#menu"/></svg>더보기</div></div>
+</div></div>
+</body></html>

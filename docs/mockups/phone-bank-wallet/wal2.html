@@ -1,0 +1,105 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;background:#e6e8ec;font-family:-apple-system,'Helvetica Neue','Noto Sans CJK KR',sans-serif;padding:28px;display:flex;gap:24px;align-items:flex-start;color:#161b22}
+.col{display:flex;flex-direction:column;gap:10px;align-items:center}.lab{font:700 15px sans-serif;color:#333;max-width:390px;text-align:center}
+.ph{width:390px;height:844px;border-radius:44px;overflow:hidden;background:#f4f5f7;position:relative;box-shadow:0 0 0 8px #111;display:flex;flex-direction:column}
+.sb{display:flex;justify-content:space-between;font:600 15px sans-serif;padding:16px 30px 6px}
+.top{display:flex;align-items:center;justify-content:space-between;padding:8px 18px 0}
+.bk{width:38px;height:38px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+h1{margin:6px 22px 2px;font-size:32px;font-weight:700;letter-spacing:-.02em}
+.sub{margin:0 22px 14px;color:#6b7380;font-size:13px}
+.cc{position:relative;border-radius:16px;aspect-ratio:1.586;color:#fff;overflow:hidden;padding:16px 18px;box-sizing:border-box;box-shadow:0 10px 24px rgba(22,27,34,.18),inset 0 1px 0 rgba(255,255,255,.18)}
+.cc .n{font:700 13px sans-serif;letter-spacing:.14em}.cc .t{position:absolute;right:16px;top:13px;font:italic 800 15px sans-serif}
+.cc .num{position:absolute;left:18px;bottom:42px;font:500 16px sans-serif;letter-spacing:.14em}.cc .h{position:absolute;left:18px;bottom:15px;font:700 11px sans-serif;letter-spacing:.08em}.cc .e{position:absolute;right:18px;bottom:15px;font:700 11px sans-serif}
+.chip{position:absolute;left:18px;top:50px;width:38px;height:28px;border-radius:6px;background:linear-gradient(135deg,#d9dbe0,#a9adb5)}
+.black{background:#17181b;color:#d9dbe0}.priv{background:#17181b}.priv .n{color:#c9a961}.priv:before{content:'';position:absolute;inset:7px;border:.8px solid rgba(201,169,97,.6);border-radius:11px}
+.sec{font:700 15px sans-serif;margin:6px 22px 8px;display:flex;justify-content:space-between;align-items:baseline}.sec span{font-size:12.5px;color:#6b7380;font-weight:600}
+.sh{box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.06)}
+/* D: Apple-like deck with info strips */
+.deck{margin:0 16px;position:relative}
+.strip{position:relative;border-radius:16px;height:226px;margin-bottom:-160px;padding:14px 16px;box-sizing:border-box;color:#fff;box-shadow:0 -2px 10px rgba(22,27,34,.10)}
+.strip .r{display:flex;justify-content:space-between;align-items:flex-start;font:700 13px sans-serif}.strip .r small{display:block;font:600 10px sans-serif;opacity:.7;text-align:right;letter-spacing:.04em}.strip .r b{display:block;font:700 15px sans-serif;text-align:right}
+.strip .big{font:300 34px sans-serif;margin-top:30px;letter-spacing:-.01em}
+.strip .meta{position:absolute;left:16px;right:16px;bottom:16px;display:flex;gap:22px;font:600 10px sans-serif;opacity:.95}.strip .meta b{display:block;font:700 14px sans-serif;margin-top:2px}
+.last{margin-bottom:0}
+/* E: leather wallet */
+.leather{margin:0 14px;border-radius:26px;background:#3b2a22;padding:16px 14px 18px;box-shadow:0 18px 30px rgba(40,25,15,.3),inset 0 1px 0 rgba(255,255,255,.08);position:relative}
+.leather:before{content:'';position:absolute;inset:7px;border:1.5px dashed rgba(230,200,160,.35);border-radius:20px;pointer-events:none}
+.slot{position:relative;height:66px;margin-top:-6px}
+.slot .cc{position:absolute;left:8px;right:8px;top:0;transform:none}
+.pocket{position:absolute;left:0;right:0;top:34px;height:36px;border-radius:10px 10px 6px 6px;background:#4a352a;box-shadow:0 -3px 8px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.06)}
+.pocket:after{content:'';position:absolute;left:10px;right:10px;top:6px;border-top:1.5px dashed rgba(230,200,160,.4)}
+.tpocket{margin-top:14px;background:#4a352a;border-radius:14px;padding:10px 10px 12px;position:relative}
+.tpocket small{color:#e6c8a0;font:700 11px sans-serif;letter-spacing:.1em;margin-left:4px}
+.tk{display:flex;align-items:center;gap:10px;background:#f5efe4;border-radius:10px;padding:10px 12px;margin-top:8px;position:relative}
+.tk:before,.tk:after{content:'';position:absolute;top:50%;width:12px;height:12px;border-radius:50%;background:#4a352a;transform:translateY(-50%)}.tk:before{left:-6px}.tk:after{right:-6px}
+.tk b{font-size:14px}.tk small{display:block;font-size:11.5px;color:#7c6a55}.tk .d{margin-left:auto;font:700 12px sans-serif;color:#7a3b2e;border-left:1.5px dashed #d8cbb4;padding-left:10px;text-align:center}
+/* F: next pass hero */
+.hero{margin:0 16px 16px;border-radius:24px;background:#2c4a80;color:#fff;padding:18px;position:relative;overflow:hidden}
+.hero:after{content:'';position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.07)}
+.hero small{font:600 12px sans-serif;opacity:.75}.hero .cd{font:700 40px sans-serif;letter-spacing:-.02em;margin:4px 0 2px}.hero .rt{font:500 16px sans-serif;opacity:.95}
+.hero .row{display:flex;gap:18px;margin-top:16px;font:600 10.5px sans-serif;opacity:.95}.hero .row b{display:block;font:700 15px sans-serif;margin-top:2px}
+.minis{display:flex;gap:12px;padding:0 16px 6px}
+.mc{flex:1;border-radius:14px;aspect-ratio:1.586;position:relative;overflow:hidden;color:#fff;padding:10px 12px;box-sizing:border-box}.mc .n{font:700 9.5px sans-serif;letter-spacing:.12em}.mc .x{position:absolute;left:12px;bottom:9px;font:600 12px sans-serif;letter-spacing:.1em}
+.ml{display:flex;justify-content:space-between;padding:0 18px;font:600 11.5px sans-serif;color:#6b7380;margin-bottom:14px}
+.chips{display:flex;gap:8px;padding:0 16px;flex-wrap:wrap}.chips span{display:flex;align-items:center;gap:8px;background:#fff;border-radius:14px;padding:8px 12px;font:600 12.5px sans-serif}.chips i{width:8px;height:8px;border-radius:50%}
+/* G: grid gallery */
+.seg{display:flex;gap:6px;padding:0 16px 14px}.seg span{padding:7px 13px;border-radius:999px;background:#fff;font:600 13px sans-serif;color:#4d5562;box-shadow:inset 0 0 0 1px #e6e8ec}.seg .on{background:#161b22;color:#fff;box-shadow:none}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px}
+.gi{display:flex;flex-direction:column;gap:7px}.gi .cap{font:600 12.5px sans-serif;padding-left:2px}.gi .cap small{display:block;font-weight:500;color:#8a929d;font-size:11px}
+.gp{border-radius:14px;aspect-ratio:1.586;color:#fff;padding:10px 12px;box-sizing:border-box;position:relative;overflow:hidden}.gp .k{font:700 9.5px sans-serif;letter-spacing:.1em;opacity:.8}.gp .b{font:600 17px sans-serif;margin-top:8px;line-height:1.15}.gp .s{position:absolute;left:12px;bottom:9px;font:600 10.5px sans-serif;opacity:.85}
+</style></head><body>
+
+<div class="col"><div class="lab">D. 애플 지갑식 (윗줄에 정보, 맨 앞만 펼침)</div><div class="ph">
+ <div class="sb"><span>17:42</span><span>▮▮▮</span></div>
+ <div class="top"><span class="bk">‹</span></div>
+ <h1>지갑</h1><div class="sub">다음 일정 · 리스본행 5일 뒤</div>
+ <div class="deck">
+  <div class="cc priv" style="margin-bottom:-162px"><span class="n">VARO PRIVATE</span><span class="t" style="font:700 10px sans-serif;opacity:.6;top:16px">MEMBER</span></div>
+  <div class="cc black" style="margin-bottom:-162px"><span class="n">VARO PRIVATE BANK</span><span class="t">credit</span></div>
+  <div class="strip" style="background:#7a3b52"><div class="r"><span>KONZERTHAUS</span><span><small>공연</small><b>11월 12일</b></span></div></div>
+  <div class="strip last sh" style="background:#2c4a80"><div class="r"><span><svg width="12" height="12" viewBox="0 0 24 24" style="vertical-align:-1px"><path d="M2 13l20-6-3 4-8 3-3 6-2-5z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg> VARO AIR</span><span><small>탑승</small><b>04:55</b></span></div><div class="big">Varo → Lisboa</div><div class="meta"><span>날짜<b>10.30.</b></span><span>게이트<b>B12</b></span><span>좌석<b>14C</b></span><span>편명<b>VA231</b></span></div></div>
+ </div>
+ <div class="sec" style="margin-top:18px">지난 패스<span>1개 ›</span></div>
+</div></div>
+
+<div class="col"><div class="lab">E. 가죽 지갑 (카드 칸에 꽂힌 카드 · 티켓 주머니)</div><div class="ph">
+ <div class="sb"><span>17:42</span><span>▮▮▮</span></div>
+ <div class="top"><span class="bk">‹</span></div>
+ <h1>지갑</h1><div class="sub">카드 2 · 패스 2</div>
+ <div class="leather">
+  <div class="slot" style="margin-top:0"><div class="cc priv"><span class="n">VARO PRIVATE</span></div><div class="pocket"></div></div>
+  <div class="slot"><div class="cc black"><span class="n">VARO PRIVATE BANK</span><span class="t">credit</span></div><div class="pocket"></div></div>
+  <div class="slot" style="height:160px"><div class="cc black" style="background:#2c4a80;color:#fff"><span class="n">VARO BANK</span><span class="t">debit</span><span class="chip"></span></div><div class="pocket" style="top:108px;height:56px"></div></div>
+  <div class="tpocket"><small>TICKETS</small>
+   <div class="tk"><span><b>Varo → Lisboa</b><small>VARO AIR · 14C · B12</small></span><span class="d">10.30<br>04:55</span></div>
+   <div class="tk"><span><b>Konzerthaus</b><small>Parkett · Reihe 7</small></span><span class="d">11.12<br>19:30</span></div>
+  </div>
+ </div>
+</div></div>
+
+<div class="col"><div class="lab">F. 다음 일정이 주인공 (패스 크게 · 카드 작게)</div><div class="ph">
+ <div class="sb"><span>17:42</span><span>▮▮▮</span></div>
+ <div class="top"><span class="bk">‹</span></div>
+ <h1>지갑</h1><div class="sub">10월 25일 토요일</div>
+ <div class="hero"><small><svg width="12" height="12" viewBox="0 0 24 24" style="vertical-align:-1px"><path d="M2 13l20-6-3 4-8 3-3 6-2-5z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg> 다음 일정 · VARO AIR VA231</small><div class="cd">5일 뒤</div><div class="rt">Varo → Lisboa · 10월 30일 04:55</div><div class="row"><span>게이트<b>B12</b></span><span>좌석<b>14C</b></span><span>탑승<b>04:25</b></span></div></div>
+ <div class="sec">카드<span>2장</span></div>
+ <div class="minis"><div class="mc" style="background:#17181b;color:#d9dbe0"><span class="n">VARO PRIVATE BANK</span><span class="x">•••• 7710</span></div><div class="mc" style="background:#17181b;box-shadow:inset 0 0 0 1px rgba(201,169,97,.6)"><span class="n" style="color:#c9a961">VARO PRIVATE</span><span class="x" style="color:#d9dbe0">MEMBER</span></div></div>
+ <div class="ml"><span>BLACK · 신용</span><span>멤버십</span></div>
+ <div class="sec">다른 패스<span>2개</span></div>
+ <div class="chips"><span><i style="background:#7a3b52"></i>Konzerthaus · 11.12</span><span style="opacity:.55"><i style="background:#9aa1ab"></i>Kino Metropol · 지남</span></div>
+</div></div>
+
+<div class="col"><div class="lab">G. 모아보기 갤러리 (2칸 · 위에 골라보기)</div><div class="ph">
+ <div class="sb"><span>17:42</span><span>▮▮▮</span></div>
+ <div class="top"><span class="bk">‹</span></div>
+ <h1>지갑</h1><div class="sub">4개</div>
+ <div class="seg"><span class="on">전체</span><span>카드</span><span>패스</span><span>멤버십</span></div>
+ <div class="grid">
+  <div class="gi"><div class="gp sh" style="background:#17181b;color:#d9dbe0"><span class="k">VARO PRIVATE BANK</span><span class="s" style="letter-spacing:.1em">•••• 7710</span><span style="position:absolute;right:10px;top:8px;font:italic 800 12px sans-serif">credit</span></div><span class="cap">BLACK 신용카드<small>이번 달 202,99 €</small></span></div>
+  <div class="gi"><div class="gp sh" style="background:#17181b;box-shadow:inset 0 0 0 1px rgba(201,169,97,.6)"><span class="k" style="color:#c9a961">VARO PRIVATE</span><span class="s">MEMBER</span></div><span class="cap">PRIVATE 멤버십<small>전담 PB</small></span></div>
+  <div class="gi"><div class="gp sh" style="background:#2c4a80"><span class="k"><svg width="12" height="12" viewBox="0 0 24 24" style="vertical-align:-1px"><path d="M2 13l20-6-3 4-8 3-3 6-2-5z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg> 항공 · D-5</span><div class="b">Varo →<br>Lisboa</div><span class="s">10.30 · 04:55</span></div><span class="cap">VARO AIR<small>14C · B12</small></span></div>
+  <div class="gi"><div class="gp sh" style="background:#7a3b52"><span class="k">공연 · D-18</span><div class="b">Konzert-<br>haus</div><span class="s">11.12 · 19:30</span></div><span class="cap">Konzerthaus<small>Parkett 7</small></span></div>
+  <div class="gi" style="opacity:.5"><div class="gp" style="background:#9aa1ab"><span class="k">영화 · 지남</span><div class="b">Kino<br>Metropol</div></div><span class="cap">Kino Metropol<small>9.14</small></span></div>
+ </div>
+</div></div>
+</body></html>

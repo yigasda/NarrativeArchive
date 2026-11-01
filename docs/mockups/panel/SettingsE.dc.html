@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>설정 E</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B8541F}a:hover{color:#8F3F14}
+.card{background:#F7EEE7;border-radius:18px}
+.row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid #E5D5C9}
+.row:first-child{border-top:none}
+.sub{font-size:12px;color:#7A6A60;line-height:1.45}
+.nm{font-size:14px;display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.pill{margin-left:auto;flex:none;background:#F6E1D3;color:#A84A17;border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700}
+.sw{margin-left:auto;width:40px;height:24px;border-radius:12px;background:#B8541F;flex:none}
+.sw.off{background:#D9C8BC}
+.chip{border:1px solid #E5D5C9;border-radius:999px;padding:6px 12px;font-size:13px;color:#6B5A50;background:#FFFAF6}
+.chip.on{background:#B8541F;border-color:#B8541F;color:#FFF7F0;font-weight:700}
+.ic{width:30px;height:30px;border-radius:9px;background:#F6E1D3;color:#B8541F;display:flex;align-items:center;justify-content:center;flex:none}
+.u{color:#A84A17;font-weight:700;border-bottom:2px solid #E9B898}
+
+</style>
+</helmet>
+<div style="width: 400px; height: 1180px; box-sizing: border-box; padding: 16px; background: #FFFAF6; font-family: 'Noto Sans KR', sans-serif; color: #463428; display: flex; flex-direction: column; gap: 12px">
+  <div style="display: flex; align-items: center; gap: 10px; font-size: 18px"><span style="color: #B8541F">‹</span><b>주입</b><span style="margin-left: auto; font-size: 12px; border: 1px solid #E5D5C9; border-radius: 999px; padding: 6px 12px">주입 미리보기</span></div>
+  <div class="sub" style="padding: 0 4px">질문에 답하듯 고르면 돼요</div>
+  <div class="card" style="padding: 0; overflow: hidden">
+    <div style="padding: 12px 14px; font-size: 12px; font-weight: 700; color: #B8541F">넣는 자리</div>
+    <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-top: 1px solid #E5D5C9">
+      <b style="font-size: 14px">아카이브를 어디에 넣을까요?</b><span class="sub">최근 대화에 가까울수록 모델이 잘 기억해요</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px"><span class="chip">맨 위</span><span class="chip on">채팅 안</span><span class="chip">맨 아래</span></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-top: 1px solid #E5D5C9">
+      <b style="font-size: 14px">채팅 끝에서 몇 번째 위에?</b><span class="sub">작을수록 최근 대화 가까이</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px"><span class="chip">2</span><span class="chip">4</span><span class="chip on">6</span><span class="chip">10</span><span class="chip">직접</span></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-top: 1px solid #E5D5C9">
+      <b style="font-size: 14px">누구 말로 넣을까요?</b><span class="sub">시스템 지시를 약하게 따르는 모델이면 유저</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px"><span class="chip on">시스템</span><span class="chip">유저</span><span class="chip">AI</span></div>
+    </div>
+  </div>
+  <div class="card" style="padding: 0; overflow: hidden">
+    <div style="padding: 12px 14px; font-size: 12px; font-weight: 700; color: #B8541F">분량</div>
+    <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-top: 1px solid #E5D5C9">
+      <b style="font-size: 14px">오래된 섹션은 어떻게 넣을까요?</b><span class="sub">망각 곡선 · 짧은 버전이 있는 섹션만 줄어요</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px"><span class="chip on">원문 그대로</span><span class="chip">오래된 건 짧게</span></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-top: 1px solid #E5D5C9">
+      <b style="font-size: 14px">필요한 섹션은 누가 고를까요?</b><span class="sub">AI 라우터 · 따로 연결한 모델이 필요해요</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px"><span class="chip on">키워드만</span><span class="chip">키워드 + AI</span><span class="chip">AI가 전부</span></div>
+    </div>
+  </div>
+  <div class="card"><div class="row"><span class="nm"><span>더 보기</span><span class="sub">토큰 상한 · 키워드 범위 · 테스트 · 고정 · 꺼 둔 섹션</span></span><span style="margin-left:auto;color:#8A7A70">▸</span></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":400,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

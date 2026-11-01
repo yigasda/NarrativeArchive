@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>설정 A</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B8541F}a:hover{color:#8F3F14}
+.card{background:#F7EEE7;border-radius:18px}
+.row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid #E5D5C9}
+.row:first-child{border-top:none}
+.sub{font-size:12px;color:#7A6A60}
+.val{margin-left:auto;color:#6B5A50;font-size:13px}
+.sw{margin-left:auto;width:40px;height:24px;border-radius:12px;background:#B8541F;flex:none}
+.sw.off{background:#D9C8BC}
+.head{display:flex;align-items:center;gap:10px;padding:14px 16px;font-weight:700;font-size:15px}
+.head small{font-weight:400;font-size:12px;color:#7A6A60}
+</style>
+</helmet>
+<div style="width: 400px; height: 1180px; box-sizing: border-box; padding: 16px; background: #FFFAF6; font-family: 'Noto Sans KR', sans-serif; color: #463428; display: flex; flex-direction: column; gap: 10px">
+  <div style="display: flex; align-items: center; gap: 10px"><b style="font-size: 18px">설정</b><span style="margin-left: auto; font-size: 12px; border: 1px solid #E5D5C9; border-radius: 999px; padding: 6px 12px">주입 미리보기</span></div>
+  <div style="border: 1px solid #E5D5C9; border-radius: 14px; padding: 10px 14px; font-size: 13px; color: #8A7A70">⌕ 설정 찾기 · 접힌 묶음 안까지 찾아요</div>
+  <div class="card">
+    <div class="head">▾ 주입<small>최근 강조형 · 깊이 6</small></div>
+    <div class="row"><span>자리 묶음</span><span class="val">최근 강조형 ›</span></div>
+    <div class="row"><span>아카이브 주입</span><span class="sw"></span></div>
+    <div class="row"><span>위치</span><span class="val">채팅 안 · 깊이 6 ›</span></div>
+    <div class="row"><span>망각 곡선</span><span class="sw off"></span></div>
+    <div class="row"><span>AI 라우터</span><span class="val">끄기 ›</span></div>
+    <div class="row"><span>키워드 연동</span><span class="val">최근 4개 ›</span></div>
+    <div class="row sub" style="font-size: 13px">▸ 고급 · 역할, 토큰 상한, 섹션별 버전, 키워드 테스트, 고정 · 꺼 둔 섹션</div>
+  </div>
+  <div class="card"><div class="head">▸ 회상 · STATE · OOC<small>회상 켬 · STATE 깊이 2 · OOC 2가지</small></div></div>
+  <div class="card"><div class="head">▸ AI 모델<small>AI 기능 · 초안 · 번역</small></div></div>
+  <div class="card"><div class="head">▸ AI가 하는 일<small>막혔을 때 · 로어북 · 이탈 감지</small></div></div>
+  <div class="card"><div class="head">▸ 테마 · 알림<small>라이트 · 백업 10번마다</small></div></div>
+  <div style="margin-top: 8px; border-top: 1px dashed #D9C8BC; padding-top: 12px" class="sub">↓ 회상 · STATE · OOC를 펼치면</div>
+  <div class="card">
+    <div class="head">▾ 회상 · STATE · OOC</div>
+    <div class="row"><span>회상</span><span class="sw"></span></div>
+    <div class="row"><span style="padding-left: 14px">한 번에 최대</span><span class="val">4줄 ›</span></div>
+    <div class="row"><span style="padding-left: 14px">넣는 깊이</span><span class="val">1 ›</span></div>
+    <div class="row sub" style="font-size: 13px; padding-left: 28px">▸ 더 보기 · 토큰 한도, 볼 메시지, 섹션에서도, 지금 해 보기</div>
+    <div class="row"><span>STATE 가까이 넣기</span><span class="val">깊이 2</span><span class="sw" style="margin-left: 8px"></span></div>
+    <div class="row" style="flex-wrap: wrap"><span>OOC 빼기</span><span style="flex-basis: 100%; display: flex; gap: 6px"><span style="background: #F6E1D3; color: #B8541F; border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 700">코멘트</span><span style="background: #F6E1D3; color: #B8541F; border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 700">OOC 메모</span><span style="border: 1px solid #E5D5C9; border-radius: 999px; padding: 4px 12px; font-size: 13px; color: #8A7A70">/sys</span></span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":400,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,602 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700;8..60,800&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:28px 34px;background:#e9e5e1;font-family:-apple-system,'SF Pro Text','Noto Sans KR',sans-serif;color:#161b22}
+.bt{font:700 26px 'Noto Sans KR',sans-serif;color:#3a332c;margin:0 0 4px 4px}.bs{font:400 14px 'Noto Sans KR',sans-serif;color:#7a6f66;margin:0 0 10px 4px}
+.row{display:flex;gap:40px;margin-bottom:46px;align-items:flex-start;padding:14px 14px 4px}
+.cap{font:600 14px 'Noto Sans KR',sans-serif;color:#6b625b;text-align:center;margin-top:16px;width:390px}
+.cap small{display:block;font-weight:400;color:#8a7f76;margin-top:3px}
+.ph{width:390px;height:844px;border-radius:48px;overflow:hidden;position:relative;box-shadow:0 0 0 10px #16130f,0 20px 50px rgba(0,0,0,.22);background:#f4f5f7;font-family:'Noto Sans KR',-apple-system,sans-serif}
+.sb{height:54px;display:flex;justify-content:space-between;align-items:center;padding:4px 30px 0 36px;font:600 16px 'Inter Tight',-apple-system,sans-serif;position:relative;z-index:3}
+.sb.w{color:#fff}
+.sb .i{display:flex;gap:6px;align-items:center}
+.ind{position:absolute;left:50%;bottom:8px;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:#161b22;z-index:9}
+.k{display:block;color:#7c8592;font-family:'Noto Sans KR',sans-serif;font-size:.84em;font-weight:400;margin-top:3px;line-height:1.5;letter-spacing:0;font-style:normal}
+.num{font-family:'Inter Tight',-apple-system,sans-serif;font-variant-numeric:tabular-nums}
+svg{flex:none;display:block}
+.art{position:absolute;border-radius:50%}
+
+/* ===== our app chrome ===== */
+:root{--d:#3f6a9e;--c:#dde8f4}
+.top{height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+.cb{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.82);box-shadow:inset 0 1px 0 #fff,0 0 0 .5px rgba(22,27,34,.06),0 4px 14px rgba(22,27,34,.07)}
+.kp{height:32px;padding:0 12px;border-radius:16px;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--d);background:rgba(255,255,255,.82);box-shadow:inset 0 1px 0 #fff,0 0 0 .5px rgba(22,27,34,.06),0 4px 14px rgba(22,27,34,.07)}
+.h1{padding:4px 22px 12px;display:flex;align-items:baseline;gap:8px}.h1 b{font-size:27px;font-weight:600;letter-spacing:-.02em}.h1 span{font-size:13.5px;color:#6b7380}
+.card{margin:0 14px 12px;border-radius:22px;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05);overflow:hidden}
+.sec{margin:14px 26px 8px;font-size:12.5px;font-weight:600;color:#6b7380;letter-spacing:.02em;display:flex;justify-content:space-between}
+.sec a{color:var(--d)}
+.rw{display:flex;gap:12px;align-items:center;padding:12px 14px 12px 16px;position:relative}
+.rw + .rw::before{content:'';position:absolute;top:0;left:var(--ln,58px);right:14px;border-top:1px solid #eef0f3}
+.rw .tx{flex:1;min-width:0}.rw b{font-size:15.5px;font-weight:500;display:block}.rw .p{font-size:13px;color:#7c8592;margin-top:1px;display:block}
+.rw small{font-size:12.5px;color:#8a929d;align-self:flex-start;margin-top:3px}
+.fv{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff;font:700 13px 'Inter Tight',sans-serif;flex:none}
+.ci{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--c);flex:none}
+/* the floating glass dock (like the other apps) */
+.dock{position:absolute;left:12px;right:12px;bottom:24px;height:50px;border-radius:25px;display:flex;align-items:center;gap:4px;padding:0 6px;z-index:8;background:rgba(255,255,255,.8);backdrop-filter:blur(22px) saturate(120%);box-shadow:inset 0 1px 0 #fff,0 0 0 .5px rgba(22,27,34,.07),0 8px 26px rgba(22,27,34,.14)}
+.dock .b{width:40px;height:40px;border-radius:20px;display:grid;place-items:center;color:#4d5562}
+.dock .b.off{color:#c3c8cf}
+.dock .ad{font-family:'Inter Tight','Noto Sans KR',sans-serif;letter-spacing:0;flex:1;height:40px;background:none;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14.5px;font-weight:500;color:#2a313b;white-space:nowrap;overflow:hidden;padding:0 10px}
+.dock .ko{width:40px;height:40px;display:grid;place-items:center;color:#4d5562;font-size:16px;font-weight:700}
+.dock .tbn{width:24px;height:24px;border-radius:7px;border:1.8px solid #4d5562;display:grid;place-items:center;font:700 11.5px 'Inter Tight',sans-serif;color:#4d5562}
+.dock.lab{justify-content:space-around;left:28px;right:28px}
+.dock.lab span{height:40px;padding:0 16px;border-radius:23px;display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;color:#4d5562}
+.dock.lab span.on{background:var(--c);color:var(--d)}
+.dock.mini{font-family:'Inter Tight',sans-serif;left:110px;right:110px;height:40px;bottom:22px;justify-content:center;font-size:13px;font-weight:600;color:#2a313b;gap:5px}
+
+/* ===== 검색 홈 ===== */
+.shome{padding-top:2px}
+.logo{text-align:center;margin:26px 0 18px;font:700 34px 'Fraunces',serif;letter-spacing:-.02em;color:#2a313b}
+.logo span{color:var(--d)}
+.bigq{margin:0 16px 8px;height:54px;border-radius:27px;background:#fff;display:flex;align-items:center;gap:10px;padding:0 18px;font-size:16px;color:#8a929d;box-shadow:0 1px 2px rgba(22,27,34,.05),0 8px 24px rgba(22,27,34,.07)}
+.bigq span{flex:1}
+.rq{display:flex;gap:12px;align-items:center;padding:12px 16px;position:relative}
+.rq + .rq::before{content:'';position:absolute;top:0;left:56px;right:14px;border-top:1px solid #eef0f3}
+.rq b{font-size:15.5px;font-weight:500;display:block}
+.rq .k{font-size:12.5px;margin-top:1px}
+.rq .tx{flex:1;min-width:0}
+.rq small{font-size:12.5px;color:#8a929d;align-self:flex-start;margin-top:3px}
+.rq.pin b::after{content:'열림';margin-left:6px;font-size:11px;font-weight:600;color:var(--d);background:var(--c);padding:2px 6px;border-radius:6px;vertical-align:2px}
+.tstrip{display:flex;gap:10px;padding:0 14px;overflow:hidden}
+.tmini{width:118px;flex:none;border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.05),0 6px 18px rgba(22,27,34,.07)}
+.tmini .th{height:132px;position:relative;overflow:hidden}
+.tmini .th > div{position:absolute;left:0;top:0;width:390px;transform:scale(.3026);transform-origin:0 0}
+.tmini p{margin:0;padding:6px 8px 7px;font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;gap:5px;align-items:center}
+.tmini p i{width:13px;height:13px;border-radius:4px;flex:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px}
+.chip{height:34px;border-radius:17px;background:#fff;display:flex;align-items:center;gap:7px;padding:0 12px 0 6px;font-size:13.5px;font-weight:500;box-shadow:0 1px 2px rgba(22,27,34,.05),0 4px 12px rgba(22,27,34,.05)}
+.chip i{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;color:#fff;font:700 11px 'Inter Tight',sans-serif;font-style:normal}
+
+/* ===== 검색 결과 ===== */
+.qbar{margin:0 16px 10px;height:48px;border-radius:24px;background:#fff;display:flex;align-items:center;gap:10px;padding:0 16px;font-size:16px;box-shadow:0 1px 2px rgba(22,27,34,.05),0 6px 18px rgba(22,27,34,.06)}
+.qbar span{flex:1}
+.stabs{display:flex;gap:6px;padding:0 16px 10px}
+.stabs span{height:32px;padding:0 13px;border-radius:16px;display:flex;align-items:center;font-size:13.5px;font-weight:600;color:#6b7380;background:rgba(255,255,255,.7)}
+.stabs span.on{background:#2a313b;color:#fff}
+.meta{padding:0 22px 10px;font-size:12.5px;color:#8a929d}
+.ans{margin:0 14px 12px;border-radius:22px;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05);padding:14px 16px}
+.ans .lb{font-size:12px;font-weight:700;color:var(--d);display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.ans .big{font:700 21px 'Noto Sans KR',sans-serif;letter-spacing:-.01em;line-height:1.3}
+.ans .big .k{font-size:13.5px;font-weight:400}
+.ans .src{display:flex;align-items:center;gap:7px;margin-top:10px;padding-top:10px;border-top:1px solid #eef0f3;font-size:12.5px;color:#6b7380}
+.ans .src i{width:18px;height:18px;border-radius:5px;font-style:normal;display:grid;place-items:center;color:#fff;font:700 10px 'Inter Tight',sans-serif}
+.tl{display:flex;gap:0;margin:10px 0 2px;font-size:12px}
+.tl div{flex:1;text-align:center;position:relative;padding-top:16px;color:#6b7380}
+.tl div::before{content:'';position:absolute;top:5px;left:0;right:0;height:3px;background:#d7dde5}
+.tl div::after{content:'';position:absolute;top:1px;left:50%;margin-left:-5px;width:11px;height:11px;border-radius:50%;background:#fff;border:3px solid #1f6b45}
+.tl div.x::after{border-color:#c0392b}.tl div.x{color:#c0392b}
+.tl div b{display:block;color:#161b22;font:700 13px 'Inter Tight',sans-serif}
+.res{margin:0 14px 12px;border-radius:22px;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05);padding:14px 16px}
+.site{display:flex;align-items:center;gap:9px}
+.site i{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#fff;font:700 12.5px 'Inter Tight',sans-serif;font-style:normal;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.04)}
+.site b{font-size:14px;font-weight:600;display:block}
+.site small{font-size:12px;color:#6b7380;display:block}
+.res h3{margin:9px 0 4px;font-size:18px;font-weight:600;color:var(--d);line-height:1.3;letter-spacing:-.01em}
+.res h3 .k{font-size:13px}
+.res p{margin:0;font-size:14px;line-height:1.5;color:#4d5562}
+.res p em{font-style:normal;font-weight:700;color:#2a313b}
+.res .dt{color:#8a929d}
+.sl{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.sl span{font-size:12.5px;font-weight:600;color:var(--d);background:var(--c);border-radius:10px;padding:5px 10px}
+.news{display:flex;gap:10px;padding:0 14px;overflow:hidden}
+.nc{width:210px;flex:none;border-radius:18px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05)}
+.nc .im{height:100px;position:relative;overflow:hidden}
+.nc div.t{padding:9px 12px 11px}
+.nc .s{font-size:11.5px;font-weight:600;color:#6b7380;display:flex;gap:5px;align-items:center}
+.nc .s i{width:14px;height:14px;border-radius:4px}
+.nc b{display:block;font-size:14px;font-weight:600;line-height:1.35;margin-top:4px}
+.nc small{font-size:11.5px;color:#8a929d;display:block;margin-top:5px}
+.paa .qq{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;font-size:15px;font-weight:500;position:relative}
+.paa .qq + .qq::before{content:'';position:absolute;top:0;left:16px;right:16px;border-top:1px solid #eef0f3}
+.paa .qq .k{font-size:12px}
+.rel{display:flex;flex-wrap:wrap;gap:8px;padding:0 14px}
+.rel span{height:38px;border-radius:19px;background:#fff;display:flex;align-items:center;gap:7px;padding:0 14px;font-size:14px;box-shadow:0 1px 2px rgba(22,27,34,.05),0 4px 12px rgba(22,27,34,.05)}
+
+/* ===== page 1: news ===== */
+.nw{font-family:'Source Serif 4','Noto Serif',serif;color:#141414;background:#fff;min-height:844px}
+.nwsb{background:#fff}
+.nwtop{display:flex;align-items:center;justify-content:space-between;padding:6px 16px 10px}
+.nwlogo{font:800 26px 'Source Serif 4',serif;letter-spacing:-.025em}
+.nwlogo span{color:#a8231b}
+.abo{height:28px;padding:0 11px;border-radius:5px;background:#a8231b;color:#fff;font:700 12px 'Inter Tight',sans-serif;display:flex;align-items:center}
+.nwnav{display:flex;gap:18px;padding:9px 16px;font:600 13px 'Inter Tight','Noto Sans KR',sans-serif;color:#555;border-top:3px double #141414;border-bottom:1px solid #e3e3e3;white-space:nowrap;overflow:hidden}
+.nwnav .on{color:#a8231b;box-shadow:inset 0 -2px 0 #a8231b;padding-bottom:6px;margin-bottom:-9px}
+.ticker{display:flex;align-items:center;gap:10px;padding:8px 16px;background:#f7f2ea;font:500 12.5px 'Inter Tight','Noto Sans KR',sans-serif;color:#3a2a20;white-space:nowrap;overflow:hidden}
+.ticker b{background:#a8231b;color:#fff;font-size:10.5px;letter-spacing:.06em;padding:3px 6px;border-radius:3px}
+.nwbody{padding:18px 18px 100px}
+.crumb{font:600 12px 'Inter Tight',sans-serif;color:#777;display:flex;gap:6px}
+.crumb b{color:#a8231b;letter-spacing:.05em;text-transform:uppercase}
+.nw h1{font-size:28.5px;line-height:1.14;margin:10px 0 10px;font-weight:800;letter-spacing:-.015em}
+.nw h1 .k{font-size:15px;font-weight:500;margin-top:7px}
+.lede{font-size:17.5px;line-height:1.5;color:#3a3a3a;margin:0 0 14px;font-weight:400}
+.by{display:flex;align-items:center;gap:10px;font:500 12.5px 'Inter Tight','Noto Sans KR',sans-serif;color:#666;padding:11px 0;border-top:1px solid #eee;margin-bottom:14px}
+.by .av{width:32px;height:32px;border-radius:50%;background:#d6c3ad;position:relative;overflow:hidden}
+.by .av::after{content:'';position:absolute;left:8px;top:7px;width:16px;height:16px;border-radius:50%;background:#b89d80;box-shadow:0 14px 0 6px #b89d80}
+.by b{color:#141414;display:block;font-size:13.5px}
+.by .sh{margin-left:auto;display:flex;gap:8px}
+.by .sh span{width:32px;height:32px;border-radius:50%;border:1px solid #ddd;display:grid;place-items:center}
+.hero{height:224px;position:relative;overflow:hidden;background:#8a9ba3;margin:0 -18px 6px}
+.cr{font:400 11.5px 'Inter Tight','Noto Sans KR',sans-serif;color:#777;margin-bottom:18px;line-height:1.45}
+.nw p.t{font-size:17.5px;line-height:1.62;margin:0 0 15px}
+.nw p.t .k{font-size:14px}
+.nw p.t.dc::first-letter{float:left;font-size:58px;line-height:.9;margin:4px 8px 0 0;font-weight:800;color:#a8231b}
+.pq{border-left:3px solid #a8231b;padding:2px 0 2px 14px;margin:6px 0 18px;font:600 italic 20px/1.35 'Source Serif 4',serif}
+.pq small{display:block;font:500 normal 12px 'Inter Tight',sans-serif;color:#777;margin-top:6px}
+.adv{border-top:1px solid #eee;border-bottom:1px solid #eee;padding:6px 0 10px;margin:4px 0 18px;text-align:center;font:500 10px 'Inter Tight',sans-serif;color:#aaa;letter-spacing:.08em}
+.adv div{height:70px;margin-top:6px;background:#f2efe9;border-radius:4px;display:flex;align-items:center;justify-content:center;gap:10px;font:700 15px 'Inter Tight',sans-serif;color:#2c4a80;letter-spacing:0}
+
+/* ===== page 2: transit ===== */
+.tr{background:#eef1ec;font-family:'Inter Tight','Noto Sans KR',sans-serif;color:#18241b;min-height:844px}
+.trtop{background:#1f6b45;color:#fff;padding:2px 16px 0}
+.trrow{display:flex;justify-content:space-between;align-items:center;height:44px}
+.trlogo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:18px;letter-spacing:-.02em}
+.trlogo i{width:30px;height:30px;border-radius:8px;background:#f6c344;color:#1f6b45;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:15px}
+.trtabs{display:flex;gap:18px;font-size:14px;font-weight:600;color:rgba(255,255,255,.65);padding:8px 0 0}
+.trtabs span{padding-bottom:10px}
+.trtabs .on{color:#fff;box-shadow:inset 0 -3px 0 #f6c344}
+.trq{margin:14px 14px 0;background:#fff;border-radius:16px;padding:4px 0;box-shadow:0 1px 2px rgba(0,0,0,.05);position:relative}
+.trq div{display:flex;align-items:center;gap:12px;padding:11px 14px;font-size:15px;font-weight:600}
+.trq div + div{border-top:1px solid #eef0ec;margin-left:40px;padding-left:0}
+.trq i{width:12px;height:12px;border-radius:50%;border:3px solid #1f6b45;flex:none}
+.trq i.e{background:#1f6b45}
+.trq em{font-style:normal;color:#7a857c;font-size:12px;font-weight:500;display:block}
+.trq .sw{position:absolute;right:12px;top:50%;margin-top:-17px;width:34px;height:34px;border-radius:50%;background:#eef1ec;display:grid;place-items:center}
+.trwhen{display:flex;gap:8px;margin:10px 14px 0}
+.trwhen span{flex:1;height:38px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13.5px;font-weight:600}
+.trwhen span.go{background:#f6c344;color:#18241b;font-weight:800}
+.alert{margin:14px 14px 0;background:#fff;border-radius:16px;overflow:hidden;display:flex}
+.alert::before{content:'';width:5px;background:#e0a100;flex:none}
+.alert div{padding:11px 13px;font-size:13.5px;line-height:1.45;color:#4a3c14}
+.alert b{display:flex;align-items:center;gap:6px;font-size:14px;color:#2d2408;margin-bottom:2px}
+.trsec{margin:16px 18px 8px;font-size:13px;font-weight:700;color:#5d6a60;display:flex;justify-content:space-between}
+.dep{margin:0 14px;background:#fff;border-radius:16px;overflow:hidden}
+.dr{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.dr + .dr{border-top:1px solid #eef0ec}
+.ln{min-width:40px;height:26px;border-radius:7px;background:#1f6b45;color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px}
+.ln.b{background:#c0392b}
+.dr .to{flex:1;font-size:15px;font-weight:700}
+.dr .to small{display:block;font-size:12.5px;font-weight:500;color:#7a857c;margin-top:1px}
+.dr .t{text-align:right;font-weight:800;font-size:17px}
+.dr .t small{display:block;font-size:11.5px;font-weight:700;color:#c0392b}
+.dr .t small.ok{color:#1f8a52}
+.dr.x .to b,.dr.x .t{color:#a9b0aa;text-decoration:line-through}
+.dr.x .to small{color:#c0392b;font-weight:700}
+.route{margin:0 14px;background:#fff;border-radius:16px;padding:14px 16px}
+.stop{display:flex;gap:12px;align-items:flex-start;position:relative;padding-bottom:12px;font-size:14.5px;font-weight:600}
+.stop:last-child{padding-bottom:0}
+.stop::before{content:'';position:absolute;left:6px;top:14px;bottom:-2px;width:3px;background:#1f6b45}
+.stop:last-child::before{display:none}
+.stop.x::before{background:repeating-linear-gradient(#c0392b 0 4px,transparent 4px 8px)}
+.stop i{width:15px;height:15px;border-radius:50%;background:#fff;border:3px solid #1f6b45;flex:none;margin-top:2px;position:relative;z-index:1}
+.stop.x i{border-color:#c0392b}
+.stop span{flex:1}
+.stop small{color:#7a857c;font-weight:500;font-size:12.5px}
+.stop.x span{color:#a9b0aa}
+
+/* ===== page 3: forum ===== */
+.fo{background:#e9edf1;font-family:'Inter Tight','Noto Sans KR',sans-serif;color:#1a1a1b;min-height:844px}
+.fohd{background:#fff}
+.fotop{display:flex;align-items:center;gap:10px;padding:4px 14px 10px}
+.fotop .lg{font:800 20px 'Inter Tight',sans-serif;color:#e8590c;letter-spacing:-.03em;flex:1;display:flex;align-items:center;gap:6px}
+.fotop .lg i{width:28px;height:28px;border-radius:50%;background:#e8590c;display:grid;place-items:center;color:#fff;font-style:normal;font-size:14px}
+.fotop .av{width:30px;height:30px;border-radius:50%;background:#a699c9}
+.comm{position:relative;height:66px;background:#3c6e91;overflow:hidden}
+.commb{display:flex;align-items:flex-start;gap:10px;padding:8px 14px 12px;position:relative}
+.commb .ic{margin-top:-30px;width:52px;height:52px;flex:none;border-radius:50%;background:#e8590c;border:3px solid #fff;display:grid;place-items:center;color:#fff;font:800 20px 'Inter Tight',sans-serif}
+.commb div{flex:1}
+.commb b{font-size:17px;display:block}
+.commb small{font-size:12px;color:#787c7e}
+.commb .jn{height:32px;padding:0 16px;border-radius:16px;background:#0b5394;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center}
+.post{background:#fff;margin-top:8px;padding:12px 14px}
+.pmeta{font-size:12px;color:#787c7e;display:flex;gap:6px;align-items:center}
+.pmeta b{color:#1a1a1b}
+.pmeta i{width:22px;height:22px;border-radius:50%;display:block}
+.post h2{font-size:19.5px;line-height:1.28;margin:8px 0 8px;font-weight:700;letter-spacing:-.01em}
+.post h2 .k{font-size:13.5px;font-weight:400}
+.flair{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:10px;background:#ffe4cf;color:#a3420a;margin-bottom:8px}
+.post p{font-size:15px;line-height:1.52;margin:0 0 12px}
+.acts{display:flex;gap:8px;font-size:12.5px;font-weight:700;color:#4d5157}
+.acts span{display:flex;align-items:center;gap:5px;height:32px;padding:0 11px;border-radius:16px;background:#f1f3f5}
+.acts span.up{color:#e8590c}
+.sortc{display:flex;align-items:center;gap:6px;padding:12px 14px 4px;font-size:12.5px;font-weight:700;color:#4d5157;background:#fff;margin-top:8px}
+.cmts{background:#fff;padding:0 14px 110px}
+.cm{padding:10px 0 2px;position:relative}
+.cm.r{margin-left:11px;padding-left:16px;border-left:2px solid #e3e6ea}
+.cm p{margin:5px 0 6px;font-size:14.5px;line-height:1.45}
+.cm .acts{font-size:12px;gap:14px;color:#787c7e}
+.cm .acts span{background:none;padding:0;height:auto}
+.op{color:#0b5394;font-weight:800}
+.aw{font-size:11px;background:#fff4c2;color:#7a5a00;border-radius:8px;padding:1px 6px;font-weight:700}
+
+/* ===== page 4: wiki ===== */
+.wk{background:#fff;font-family:'Inter Tight','Noto Sans KR',sans-serif;color:#202122;min-height:844px}
+.wktop{display:flex;align-items:center;gap:12px;padding:4px 14px 10px;border-bottom:1px solid #eaecf0}
+.wkglobe{width:30px;height:30px;border-radius:50%;background:#f8f9fa;border:1px solid #c8ccd1;position:relative;overflow:hidden}
+.wkglobe::before{content:'W';position:absolute;inset:0;display:grid;place-items:center;font:700 14px 'Noto Serif',serif}
+.wklogo{font:600 17px 'Noto Serif',serif;letter-spacing:.03em;flex:1;line-height:1}
+.wklogo small{display:block;font:400 10px 'Inter Tight',sans-serif;letter-spacing:.03em;color:#54595d;margin-top:3px}
+.wkbody{padding:14px 16px 110px}
+.wk h1{font:400 29px 'Noto Serif',serif;margin:0 0 6px}
+.wkbar{display:flex;align-items:center;gap:14px;padding:6px 0;border-top:1px solid #eaecf0;border-bottom:1px solid #eaecf0;font-size:13px;color:#202122;margin-bottom:8px}
+.wkbar .on{font-weight:700;box-shadow:inset 0 -2px 0 #202122;padding:6px 0;margin:-6px 0}
+.wkbar .lang{margin-left:auto;color:#3366cc;display:flex;gap:4px;align-items:center;font-weight:600}
+.wkfrom{font-size:12.5px;color:#54595d;margin-bottom:12px}
+.ibox{background:#f8f9fa;border:1px solid #a2a9b1;margin-bottom:14px;font-size:13px}
+.ibox .ih{background:#cedff2;text-align:center;font-weight:700;padding:7px;font-size:15px}
+.ibox .im{height:128px;background:#a8bcae;position:relative;overflow:hidden}
+.ibox .ic{text-align:center;font-size:11.5px;color:#54595d;padding:5px 8px}
+.ibox table{width:100%;border-collapse:collapse}
+.ibox td{padding:5px 8px;border-top:1px solid #eaecf0;vertical-align:top;line-height:1.35}
+.ibox td:first-child{font-weight:700;width:40%}
+.ibox td a{color:#3366cc}
+.wk p{font-size:15.5px;line-height:1.62;margin:0 0 12px}
+.wk a{color:#3366cc;text-decoration:none}
+.wk sup{font-size:10px;color:#3366cc}
+.wk h2{font:400 21px 'Noto Serif',serif;margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid #a2a9b1;display:flex;justify-content:space-between;align-items:center}
+.hat{font-size:13.5px;font-style:italic;color:#54595d;padding-left:14px;margin-bottom:10px}
+
+/* ===== page 5: shop ===== */
+.sp{background:#fff;font-family:'Inter Tight','Noto Sans KR',sans-serif;color:#161b22;min-height:844px}
+.sptop{display:flex;align-items:center;gap:10px;padding:4px 14px 10px;background:#2f7d74;color:#fff}
+.sptop .lg{font:800 22px 'Inter Tight',sans-serif;letter-spacing:-.04em}
+.sptop .q{flex:1;height:36px;border-radius:18px;background:#fff;display:flex;align-items:center;gap:6px;padding:0 12px;color:#8a929d;font-size:13.5px}
+.spcr{padding:10px 16px;font-size:12px;color:#6b7380}
+.spimg{height:236px;background:#efe9e1;position:relative;overflow:hidden;margin:0 16px;border-radius:18px}
+.dots{display:flex;justify-content:center;gap:6px;margin:10px 0 4px}
+.dots i{width:6px;height:6px;border-radius:50%;background:#d0d5db}
+.dots i.on{background:#2f7d74;width:16px;border-radius:3px}
+.spb{padding:6px 16px 120px}
+.brand{font-size:12.5px;font-weight:700;color:#2f7d74;letter-spacing:.04em;text-transform:uppercase}
+.sp h1{font-size:21px;font-weight:600;margin:4px 0 6px;line-height:1.3}
+.sp h1 .k{font-size:13.5px}
+.stars{display:flex;align-items:center;gap:4px;font-size:13px;color:#6b7380}
+.stars b{color:#e8a317;letter-spacing:1px}
+.price{display:flex;align-items:baseline;gap:8px;margin:12px 0 4px}
+.price b{font:800 28px 'Inter Tight',sans-serif;letter-spacing:-.02em}
+.price s{color:#8a929d;font-size:14px}
+.price em{font-style:normal;font-size:12px;font-weight:800;color:#fff;background:#c0392b;padding:2px 6px;border-radius:5px}
+.opt{display:flex;gap:8px;margin:12px 0}
+.opt span{width:38px;height:38px;border-radius:50%;border:2px solid transparent;display:grid;place-items:center}
+.opt span.on{border-color:#2f7d74}
+.opt span i{width:28px;height:28px;border-radius:50%}
+.ship{border-radius:14px;background:#f4f5f7;padding:11px 13px;font-size:13.5px;line-height:1.5;margin:4px 0 14px}
+.ship b{color:#1f8a52}
+.cta{display:flex;gap:10px}
+.cta span{flex:1;height:48px;border-radius:24px;display:grid;place-items:center;font-size:15px;font-weight:700}
+.cta .a{background:#2f7d74;color:#fff}
+.cta .b{background:#d9efec;color:#2f7d74}
+.rev{margin-top:16px;border-top:1px solid #eef0f3;padding-top:12px;font-size:14px;line-height:1.45}
+.rev b{font-size:15px}
+
+/* ===== page 6: blog ===== */
+.bl{background:#fbf8f3;font-family:'Noto Sans KR','Inter Tight',sans-serif;color:#2b2622;min-height:844px}
+.bltop{display:flex;align-items:center;justify-content:space-between;padding:4px 18px 12px}
+.bltop b{font:500 22px 'Fraunces',serif;letter-spacing:-.01em}
+.blhero{height:210px;position:relative;overflow:hidden;background:#c9b49a;margin:0 18px;border-radius:6px}
+.blb{padding:18px 22px 120px}
+.blcat{font-size:11.5px;font-weight:700;letter-spacing:.12em;color:#9a6b3f;text-transform:uppercase}
+.bl h1{font:500 30px/1.15 'Fraunces',serif;margin:8px 0 12px;letter-spacing:-.01em}
+.bl h1 .k{font:400 14px 'Noto Sans KR',sans-serif}
+.blby{display:flex;align-items:center;gap:10px;font-size:12.5px;color:#7d7268;margin-bottom:16px}
+.blby i{width:34px;height:34px;border-radius:50%;background:#a699c9}
+.blby b{color:#2b2622;display:block;font-size:13.5px}
+.bl p{font-size:16px;line-height:1.75;margin:0 0 14px}
+.bl p .k{font-size:13.5px}
+.bltags{display:flex;gap:6px;flex-wrap:wrap}
+.bltags span{font-size:12px;color:#9a6b3f;border:1px solid #e3d5c4;border-radius:12px;padding:3px 10px}
+
+/* ===== tabs + bookmarks (ours) ===== */
+.tg{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;padding:0 14px}
+.tc{border-radius:20px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.06);position:relative}
+.tc .tt{height:214px;overflow:hidden;position:relative}
+.tc .tt > div{position:absolute;left:0;top:0;width:390px;transform:scale(.4205);transform-origin:0 0}
+.tc .x{position:absolute;right:8px;top:8px;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.15);display:grid;place-items:center;z-index:2}
+.tc.on{box-shadow:0 0 0 3px var(--d),0 8px 24px rgba(22,27,34,.08)}
+.tc p{margin:0;padding:9px 11px 10px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;border-top:1px solid #eef0f3}
+.tc p i{width:16px;height:16px;border-radius:5px;flex:none}
+.seg{display:flex;margin:0 16px 14px;background:rgba(22,27,34,.06);border-radius:14px;padding:3px}
+.seg span{flex:1;height:34px;border-radius:11px;display:grid;place-items:center;font-size:13.5px;font-weight:600;color:#6b7380}
+.seg span.on{background:#fff;color:#161b22;box-shadow:0 1px 3px rgba(22,27,34,.1)}
+</style></head><body>
+
+<div class="bt">브라우저 — 틀은 우리 앱, 창 안만 진짜 웹</div>
+<div class="bs">앱 색(하늘 남색) · 동그란 글래스 버튼 · 흰 카드 · 아래 글래스 독. 웹페이지는 사이트마다 자기 디자인.</div>
+
+<!-- ============ ROW 1: home, results ×2, tabs ============ -->
+<div class="row">
+ <div><div class="ph">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="top"><span class="cb">BACK</span><span class="kp">가 한국어</span></div>
+  <div class="shome">
+   <div class="logo">such<span>e</span></div>
+   <div class="bigq"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2a313b" stroke-width="2.3" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span>검색어 또는 주소</span><svg width="18" height="20" viewBox="0 0 24 24" fill="none" stroke="#8a929d" stroke-width="2.1" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>
+   <div class="sec"><span>최근 검색</span><a>모두 보기</a></div>
+   <div class="card">
+    <div class="rq pin"><span class="ci">CLK</span><span class="tx"><b>Hochwasser Eastgate Straße</b><span class="k">이스트게이트 홍수 도로</span></span><small class="num">13:02</small></div>
+    <div class="rq"><span class="ci">CLK</span><span class="tx"><b>Schlüsseldienst Westend Samstag</b><span class="k">웨스트엔드 열쇠집 토요일</span></span><small class="num">어제</small></div>
+    <div class="rq"><span class="ci">CLK</span><span class="tx"><b>Bus Varo Eastgate Fahrplan</b><span class="k">바로–이스트게이트 버스 시간표</span></span><small class="num">어제</small></div>
+   </div>
+   <div class="sec"><span>열린 탭 3</span><a>모두 보기</a></div>
+   <div class="tstrip">
+    <div class="tmini"><div class="th"><div data-clone="nwpage"></div></div><p><i style="background:#a8231b"></i>Straße gesperrt</p></div>
+    <div class="tmini"><div class="th"><div data-clone="trpage"></div></div><p><i style="background:#1f6b45"></i>Linie 42</p></div>
+    <div class="tmini"><div class="th"><div data-clone="fopage"></div></div><p><i style="background:#e8590c"></i>Werkstatt?</p></div>
+   </div>
+   <div class="sec"><span>북마크</span></div>
+   <div class="chips"><span class="chip"><i style="background:#1f6b45">V</i>Varo Verkehr</span><span class="chip"><i style="background:#2f7d74">m</i>markt.</span><span class="chip"><i style="background:#54595d">W</i>Wikipedia</span></div>
+  </div>
+  <div class="dock lab"><span class="on">HOMEIC 홈</span><span>MARKIC 북마크</span><span>HISTIC 기록</span></div>
+  <div class="ind"></div>
+ </div><div class="cap">검색 홈 (첫 화면)<small>큰 검색창 · 최근 검색 · 열린 탭 · 북마크 · 아래 독</small></div></div>
+
+ <div><div class="ph">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="top"><span class="cb">BACK</span><span class="kp">가 한국어</span></div>
+  <div class="qbar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2a313b" stroke-width="2.3" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span>Bus Varo Eastgate Fahrplan</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a929d" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+  <div class="stabs"><span class="on">전체</span><span>뉴스</span><span>이미지</span><span>지도</span></div>
+  <div class="meta"><span class="num">25.10. 12:40</span>에 검색함 · 바로–이스트게이트 버스 시간표</div>
+  <div class="ans">
+   <div class="lb"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 18V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v11M4 13h16M7 18v2M17 18v2"/></svg>Linie 42 · Varo → Eastgate</div>
+   <div class="big">Heute nur bis Westend<span class="k">오늘은 웨스트엔드까지만</span></div>
+   <div class="tl"><div><b class="num">20:40</b>Varo</div><div><b class="num">20:58</b>Westend</div><div class="x"><b class="num">—</b>Eastgate</div></div>
+   <div class="src"><i style="background:#1f6b45">V</i>varo-verkehr.de · 25.10.</div>
+  </div>
+  <div class="res">
+   <div class="site"><i style="background:#1f6b45">V</i><div><b>Varo Verkehr</b><small>varo-verkehr.de › linie-42</small></div></div>
+   <h3>Linie 42: Fahrplan ab Varo<span class="k">42번 버스: 바로 출발 시간표</span></h3>
+   <p><span class="dt">25.10. — </span>Wegen <em>Hochwasser</em> fahren die Busse nur bis Westend. Letzte Abfahrt 21:10.</p>
+   <div class="sl"><span>Abfahrten</span><span>Störungen</span><span>Tickets</span></div>
+  </div>
+  <div class="dock"><span class="b">BK</span><span class="b off">FW</span><span class="ad">SRCH Bus Varo Eastgate…</span><span class="b"><span class="tbn">3</span></span></div>
+  <div class="ind"></div>
+ </div><div class="cap">검색 결과 · 위<small>바로 답 카드 · 사이트 결과(사이트 아이콘 · 주소 경로 · 굵은 검색어 · 하위 링크)</small></div></div>
+
+ <div><div class="ph">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div style="margin-top:6px"></div>
+  <div class="res">
+   <div class="site"><i style="background:#c0392b">N</i><div><b>Nordbahn</b><small>nordbahn.de › verbindungen</small></div></div>
+   <h3>Verbindungen Varo – Eastgate<span class="k">바로–이스트게이트 연결편</span></h3>
+   <p>Zwischen Westend und Eastgate ist ein <em>Ersatzverkehr</em> eingerichtet.</p>
+  </div>
+  <div class="sec" style="margin-top:6px"><span>주요 뉴스</span></div>
+  <div class="news">
+   <div class="nc"><div class="im" style="background:#8a9ba3"><i class="art" style="width:300px;height:140px;left:-50px;top:52px;background:#6f828b;border-radius:45%"></i><i class="art" style="width:34px;height:34px;left:150px;top:16px;background:#c5ced2"></i></div><div class="t"><span class="s"><i style="background:#a8231b"></i>Varoer Tagblatt</span><b>Straße nach Eastgate bis Montag gesperrt</b><small>2시간 전</small></div></div>
+   <div class="nc"><div class="im" style="background:#c9b49a"><i class="art" style="width:200px;height:120px;left:30px;top:50px;background:#b09a7d;border-radius:44%"></i></div><div class="t"><span class="s"><i style="background:#3d6fb4"></i>Wetter Varo</span><b>Pegel sinkt langsam</b><small>5시간 전</small></div></div>
+  </div>
+  <div class="sec" style="margin-top:16px"><span>함께 찾은 질문</span></div>
+  <div class="card paa">
+   <div class="qq"><span>Fährt der 42er am Sonntag?<span class="k">42번 일요일에 다녀요?</span></span>CHEV</div>
+   <div class="qq"><span>Wo hält der Ersatzbus in Westend?<span class="k">웨스트엔드 대체 버스 정류장은?</span></span>CHEV</div>
+  </div>
+  <div class="sec"><span>관련 검색어</span></div>
+  <div class="rel"><span>SRCH2 Hochwasser Varo</span><span>SRCH2 Ersatzbus Westend</span><span>SRCH2 Nordbahn Eastgate</span></div>
+  <div class="dock"><span class="b">BK</span><span class="b off">FW</span><span class="ad">SRCH Bus Varo Eastgate…</span><span class="b"><span class="tbn">3</span></span></div>
+  <div class="ind"></div>
+ </div><div class="cap">검색 결과 · 아래로 스크롤<small>주요 뉴스(가로) · 함께 찾은 질문 · 관련 검색어</small></div></div>
+
+ <div><div class="ph">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="top"><span class="cb">BACK</span><span class="kp" style="gap:5px">PLUS 새 탭</span></div>
+  <div class="h1"><b>탭</b><span>3개</span></div>
+  <div class="tg">
+   <div class="tc on"><span class="x">X</span><div class="tt"><div data-clone="nwpage"></div></div><p><i style="background:#a8231b"></i>Straße gesperrt</p></div>
+   <div class="tc"><span class="x">X</span><div class="tt"><div data-clone="trpage"></div></div><p><i style="background:#1f6b45"></i>Linie 42 · Fahrplan</p></div>
+   <div class="tc"><span class="x">X</span><div class="tt"><div data-clone="fopage"></div></div><p><i style="background:#e8590c"></i>Gute Werkstatt?</p></div>
+  </div>
+  <div class="ind"></div>
+ </div><div class="cap">탭<small>우리 앱 카드 · 지금 탭은 앱 색 테두리</small></div></div>
+</div>
+
+<!-- ============ ROW 2: pages ============ -->
+<div class="row">
+ <div><div class="ph" style="background:#fff">
+  <div id="nwpage" class="nw">
+   <div class="sb nwsb"><span>17:42</span><span class="i">SIG</span></div>
+   <div class="nwtop"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><div class="nwlogo">Varoer <span>Tagblatt</span></div><span class="abo">Abo</span></div>
+   <div class="nwnav"><span class="on">Lokales</span><span>Politik</span><span>Wetter</span><span>Sport</span><span>Kultur</span><span>Meinung</span></div>
+   <div class="ticker"><b>LIVE</b>Pegel Varo: 4,82 m · sinkend · Feuerwehr im Einsatz</div>
+   <div class="nwbody">
+    <div class="crumb"><b>Hochwasser</b><span>· Lesezeit 3 Min.</span></div>
+    <h1>Straße nach Eastgate bis Montag gesperrt<span class="k">이스트게이트 가는 도로, 월요일까지 통제</span></h1>
+    <p class="lede">Nach dem Starkregen steht die Landstraße unter Wasser. Busse fahren nur bis Westend.</p>
+    <div class="by"><span class="av"></span><div><b>Sela Brandt</b><span class="num">25.10.2025, 11:48 Uhr</span></div><div class="sh"><span>SHR</span><span>MRK</span></div></div>
+    <div class="hero"><i class="art" style="width:560px;height:300px;left:-100px;top:122px;background:#6f828b;border-radius:46%"></i><i class="art" style="width:440px;height:200px;left:70px;top:152px;background:#5c6d74;border-radius:44%"></i><i class="art" style="width:200px;height:60px;left:20px;top:150px;background:#4c5b61;border-radius:40%"></i><i class="art" style="width:72px;height:72px;left:288px;top:30px;background:#c5ced2"></i></div>
+    <div class="cr">Die Landstraße bei Eastgate am Samstagmorgen. · Foto: Tagblatt / M. Varo</div>
+    <p class="t dc">Die Feuerwehr hat die Strecke zwischen Varo und Eastgate am Samstag gesperrt.<span class="k">소방 당국은 토요일 바로와 이스트게이트 사이 구간을 막았다.</span></p>
+    <div class="pq">„Vor Montag fährt da keiner durch.“<small>— Einsatzleiter der Feuerwehr Varo</small></div>
+   </div>
+  </div>
+  <div class="dock"><span class="b">BK</span><span class="b off">FW</span><span class="ad">LOCK tagblatt-varo.de</span><span class="ko">가</span><span class="b"><span class="tbn">3</span></span></div>
+  <div class="ind"></div>
+ </div><div class="cap">페이지 · 뉴스<small>속보 띠 · 구독 버튼 · 기자 · 사진 크레딧 · 첫 글자 장식 · 인용</small></div></div>
+
+ <div><div class="ph" style="background:#eef1ec">
+  <div id="trpage" class="tr">
+   <div class="trtop"><div class="sb w" style="margin:0 -16px"><span>17:42</span><span class="i">SIGW</span></div>
+    <div class="trrow"><div class="trlogo"><i>V</i>Varo Verkehr</div><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></div>
+    <div class="trtabs"><span class="on">Abfahrten</span><span>Verbindung</span><span>Störungen ·1</span><span>Tickets</span></div></div>
+   <div class="alert"><div><b>WARN Störung · Hochwasser</b>Linie 42 fährt nur bis Westend. Ersatzbus E42 ab Westend.<span class="k">42번은 웨스트엔드까지만. 웨스트엔드부터 대체 버스 E42.</span></div></div>
+   <div class="trsec"><span>Abfahrten · Varo, Rathaus</span><span class="num">jetzt 20:31</span></div>
+   <div class="dep">
+    <div class="dr"><span class="ln num">42</span><span class="to"><b>Westend</b><small>Steig B · statt Eastgate</small></span><span class="t num">20:40<small>+5 Min.</small></span></div>
+    <div class="dr"><span class="ln b num">E42</span><span class="to"><b>Eastgate, Bahnhof</b><small>ab Westend · Ersatzbus</small></span><span class="t num">20:55<small class="ok">pünktlich</small></span></div>
+    <div class="dr"><span class="ln num">42</span><span class="to"><b>Westend</b><small>Letzte Fahrt heute</small></span><span class="t num">21:10<small class="ok">pünktlich</small></span></div>
+    <div class="dr x"><span class="ln num">42</span><span class="to"><b>Eastgate, Bahnhof</b><small>fällt aus</small></span><span class="t num">21:40</span></div>
+   </div>
+   <div class="trsec"><span>Linienverlauf 42</span></div>
+   <div class="route">
+    <div class="stop"><i></i><span>Varo, Rathaus</span><small class="num">20:40</small></div>
+    <div class="stop"><i></i><span>Brückenstraße</span><small class="num">20:49</small></div>
+    <div class="stop x"><i></i><span>Westend, Platz</span><small class="num">20:58</small></div>
+    <div class="stop x"><i></i><span>Eastgate, Bahnhof</span><small>gesperrt</small></div>
+   </div>
+   <div style="height:120px"></div>
+  </div>
+  <div class="dock"><span class="b">BK</span><span class="b off">FW</span><span class="ad">LOCK varo-verkehr.de</span><span class="ko">가</span><span class="b"><span class="tbn">3</span></span></div>
+  <div class="ind"></div>
+ </div><div class="cap">페이지 · 교통 / 시간표<small>메뉴 탭 · 운행 안내 · 출발표(지연 · 운행 취소) · 노선도</small></div></div>
+
+ <div><div class="ph" style="background:#e9edf1">
+  <div id="fopage" class="fo">
+   <div class="fohd"><div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+    <div class="fotop"><span class="lg"><i>v</i>varo-forum</span><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#1a1a1b" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span class="av"></span></div>
+    <div class="comm"><i class="art" style="width:300px;height:120px;left:-40px;top:30px;background:#335f7e;border-radius:44%"></i><i class="art" style="width:260px;height:100px;left:170px;top:36px;background:#2c5470;border-radius:44%"></i></div>
+    <div class="commb"><span class="ic">W</span><div><b>v/Westend</b><small class="num">4.812 Mitglieder · 38 online</small></div><span class="jn">Beitreten</span></div></div>
+   <div class="post">
+    <div class="pmeta"><i style="background:#8faed1"></i><b>u/schraube_ivo</b>· vor 3 Std.</div>
+    <h2>Gute Werkstatt in Westend? Mein Schlüssel ist weg<span class="k">웨스트엔드에 괜찮은 정비소? 열쇠가 없어졌어요</span></h2>
+    <span class="flair">Frage</span>
+    <p>Hab meinen Werkstattschlüssel verliehen und warte seit Tagen. Kennt jemand einen Schlüsseldienst, der samstags offen hat?</p>
+    <div class="acts"><span class="up">UP 24 DN</span><span>CMT 7</span><span>SHR Teilen</span></div>
+   </div>
+   <div class="sortc">Sortiert nach: Beste ▾</div>
+   <div class="cmts">
+    <div class="cm"><div class="pmeta"><i style="background:#a699c9"></i><b>anja_w</b>· vor 2 Std. <span class="aw">★ Hilfreich</span></div><p>Schlüsseldienst Kramer am Westend-Platz, Sa bis 14 Uhr.<span class="k">웨스트엔드 광장 크라머 열쇠집, 토요일 2시까지.</span></p><div class="acts"><span>▲ 11 ▼</span><span>Antworten</span></div></div>
+    <div class="cm r"><div class="pmeta"><i style="background:#8faed1"></i><b>schraube_ivo</b><span class="op">OP</span>· vor 1 Std.</div><p>Danke! Hoffe, ich krieg ihn bis Samstag zurück.</p><div class="acts"><span>▲ 3 ▼</span><span>Antworten</span></div></div>
+    <div class="cm"><div class="pmeta"><i style="background:#89b892"></i><b>renn3r</b>· vor 40 Min.</div><p>Wer hat ihn denn? 👀</p><div class="acts"><span>▲ 5 ▼</span><span>Antworten</span></div></div>
+   </div>
+  </div>
+  <div class="dock mini">LOCKS varo-forum.de</div>
+  <div class="ind"></div>
+ </div><div class="cap">페이지 · 커뮤니티<small>게시판 배너 · 회원 수 · 글 · 투표 · 정렬 · 댓글 트리 · 스크롤하면 독이 작아져요</small></div></div>
+
+ <div><div class="ph" style="background:#fff">
+  <div id="wkpage" class="wk">
+   <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+   <div class="wktop"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#202122" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="wkglobe"></span><div class="wklogo">WIKIPEDIA<small>Die freie Enzyklopädie</small></div><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#202122" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>
+   <div class="wkbody">
+    <h1>Eastgate</h1>
+    <div class="wkbar"><span class="on">Artikel</span><span>Diskussion</span><span class="lang">文A 12</span></div>
+    <div class="hat">Dieser Artikel behandelt die Stadt. Zum Bahnhof siehe <a>Eastgate (Bahnhof)</a>.</div>
+    <div class="ibox"><div class="ih">Eastgate</div><div class="im"><i class="art" style="width:320px;height:160px;left:-40px;top:64px;background:#8ea594;border-radius:45%"></i><i class="art" style="width:250px;height:120px;left:130px;top:82px;background:#76907e;border-radius:42%"></i><i class="art" style="width:40px;height:40px;left:280px;top:18px;background:#d5ddd6"></i></div><div class="ic">Die alte Flussbrücke</div>
+     <table><tr><td>Region</td><td><a>Varo-Tal</a></td></tr><tr><td>Einwohner</td><td class="num">8.412 (2024)</td></tr><tr><td>Höhe</td><td class="num">212 m</td></tr><tr><td>Verkehr</td><td><a>Linie 42</a>, <a>Nordbahn</a></td></tr></table></div>
+    <p><b>Eastgate</b> ist eine Kleinstadt östlich von <a>Varo</a>, bekannt für ihre alte <a>Flussbrücke</a> und den Bahnhof der <a>Nordbahn</a>.<sup>[1]</sup><span class="k">이스트게이트는 바로 동쪽의 작은 도시로, 오래된 강 다리와 노르트반 역으로 알려져 있다.</span></p>
+    <h2>Hochwasser <span style="font:400 13px 'Inter Tight';color:#3366cc">Bearbeiten</span></h2>
+    <p>Die Landstraße nach Varo wird bei Hochwasser regelmäßig gesperrt, zuletzt im Oktober 2025.<sup>[2]</sup></p>
+   </div>
+  </div>
+  <div class="dock"><span class="b">BK</span><span class="b off">FW</span><span class="ad">LOCK de.wikipedia.org</span><span class="ko">가</span><span class="b"><span class="tbn">3</span></span></div>
+  <div class="ind"></div>
+ </div><div class="cap">페이지 · 위키<small>문서/토론 탭 · 언어 수 · 안내문 · 정보 상자 · 각주 · 편집 링크</small></div></div>
+</div>
+
+<!-- ============ ROW 3: shop, blog, bookmarks, history ============ -->
+<div class="row">
+ <div><div class="ph" style="background:#fff">
+  <div class="sp">
+   <div style="background:#2f7d74"><div class="sb w"><span>17:42</span><span class="i">SIGW</span></div></div>
+   <div class="sptop"><span class="lg">markt.</span><span class="q">SRCHG Suchen</span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8L20 8H6"/></svg></div>
+   <div class="spcr">Damen › Accessoires › Schals</div>
+   <div class="spimg"><i class="art" style="width:200px;height:260px;left:95px;top:30px;background:#9aa0a6;border-radius:40%"></i><i class="art" style="width:150px;height:220px;left:120px;top:44px;background:#868c93;border-radius:42%"></i><i class="art" style="width:60px;height:150px;left:165px;top:120px;background:#767c83;border-radius:30px"></i></div>
+   <div class="dots"><i class="on"></i><i></i><i></i><i></i></div>
+   <div class="spb">
+    <div class="brand">Wollwerk Varo</div>
+    <h1>Wollschal, Grau — Merino<span class="k">울 목도리, 회색 — 메리노</span></h1>
+    <div class="stars"><b>★★★★☆</b><span class="num">4,6 · 128 Bewertungen</span></div>
+    <div class="price"><b class="num">39,90 €</b><s class="num">49,90 €</s><em>−20%</em></div>
+    <div class="opt"><span class="on"><i style="background:#868c93"></i></span><span><i style="background:#b0563f"></i></span><span><i style="background:#2c4a80"></i></span><span><i style="background:#e6dccd"></i></span></div>
+    <div class="ship"><b>Morgen</b> geliefert, wenn du in 2 Std. bestellst · Kostenloser Versand</div>
+    <div class="cta"><span class="b">♡ Merken</span><span class="a">In den Warenkorb</span></div>
+   </div>
+  </div>
+  <div class="dock"><span class="b">BK</span><span class="b off">FW</span><span class="ad">LOCK markt.de</span><span class="ko">가</span><span class="b"><span class="tbn">3</span></span></div>
+  <div class="ind"></div>
+ </div><div class="cap">페이지 · 쇼핑<small>상품 사진 넘기기 · 별점 · 할인가 · 색 옵션 · 배송 · 장바구니 (쇼핑 앱 가게와 같은 이름)</small></div></div>
+
+ <div><div class="ph" style="background:#fbf8f3">
+  <div class="bl">
+   <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+   <div class="bltop"><b>kleine notizen</b><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2b2622" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></div>
+   <div class="blhero"><i class="art" style="width:420px;height:200px;left:-60px;top:110px;background:#b39b7f;border-radius:44%"></i><i class="art" style="width:70px;height:70px;left:240px;top:34px;background:#e9dccb"></i><i class="art" style="width:120px;height:160px;left:60px;top:60px;background:#8f7a62;border-radius:12px"></i></div>
+   <div class="blb">
+    <div class="blcat">Varo · Herbst</div>
+    <h1>Die alte Garage am Fluss<span class="k">강가의 오래된 차고</span></h1>
+    <div class="blby"><i></i><div><b>Anja W.</b><span class="num">24. Oktober · 4 Min. Lesezeit</span></div></div>
+    <p>Abends, wenn das Licht hinter der Garage untergeht, ist Varo still. Ich war wieder dort.<span class="k">저녁, 차고 뒤로 해가 지면 바로는 조용해진다. 나는 또 거기 갔다.</span></p>
+    <div class="bltags"><span>#varo</span><span>#herbst</span><span>#fotos</span></div>
+   </div>
+  </div>
+  <div class="dock"><span class="b">BK</span><span class="b off">FW</span><span class="ad">LOCK anja-notizen.de</span><span class="ko">가</span><span class="b"><span class="tbn">3</span></span></div>
+  <div class="ind"></div>
+ </div><div class="cap">페이지 · 블로그<small>개인 블로그 제목 · 대표 사진 · 글쓴이 · 읽는 시간 · 태그</small></div></div>
+
+ <div><div class="ph">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="top"><span class="cb">BACK</span><span class="kp">가 한국어</span></div>
+  <div class="h1"><b>북마크</b></div>
+  <div class="seg"><span class="on">북마크</span><span>읽기 목록</span><span>방문 기록</span></div>
+  <div class="card">
+   <div class="rw" style="--ln:58px"><span class="fv" style="background:#1f6b45">V</span><span class="tx"><b>Linie 42 · Fahrplan</b><span class="p">varo-verkehr.de</span></span>CHEV</div>
+   <div class="rw" style="--ln:58px"><span class="fv" style="background:#a8231b;font-family:'Source Serif 4',serif">T</span><span class="tx"><b>Straße nach Eastgate gesperrt</b><span class="p">tagblatt-varo.de</span></span>CHEV</div>
+   <div class="rw" style="--ln:58px"><span class="fv" style="background:#2f7d74">m</span><span class="tx"><b>Wollschal, Grau — Merino</b><span class="p">markt.de</span></span>CHEV</div>
+  </div>
+  <div class="dock lab"><span>HOMEIC 홈</span><span class="on">MARKIC 북마크</span><span>HISTIC 기록</span></div>
+  <div class="ind"></div>
+ </div><div class="cap">북마크<small>우리 앱 화면 · 북마크 / 읽기 목록 / 방문 기록</small></div></div>
+
+ <div><div class="ph">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="top"><span class="cb">BACK</span><span class="kp">가 한국어</span></div>
+  <div class="h1"><b>방문 기록</b></div>
+  <div class="seg"><span>북마크</span><span>읽기 목록</span><span class="on">방문 기록</span></div>
+  <div class="sec" style="margin-top:2px"><span>오늘</span></div>
+  <div class="card">
+   <div class="rw"><span class="fv" style="background:#e8590c">v</span><span class="tx"><b>Gute Werkstatt in Westend?</b><span class="p">varo-forum.de</span></span><small class="num">13:20</small></div>
+   <div class="rw"><span class="fv" style="background:#a8231b;font-family:'Source Serif 4',serif">T</span><span class="tx"><b>Straße nach Eastgate gesperrt</b><span class="p">tagblatt-varo.de</span></span><small class="num">13:04</small></div>
+   <div class="rw"><span class="ci">SRCHD</span><span class="tx"><b>Hochwasser Eastgate Straße</b><span class="p">검색</span></span><small class="num">13:02</small></div>
+  </div>
+  <div class="sec"><span>어제</span></div>
+  <div class="card">
+   <div class="rw"><span class="fv" style="background:#1f6b45">V</span><span class="tx"><b>Linie 42 · Fahrplan</b><span class="p">varo-verkehr.de</span></span><small class="num">12:41</small></div>
+   <div class="rw"><span class="fv" style="background:#54595d;font-family:'Noto Serif',serif">W</span><span class="tx"><b>Eastgate – Wikipedia</b><span class="p">de.wikipedia.org</span></span><small class="num">12:30</small></div>
+  </div>
+  <div class="dock lab"><span>HOMEIC 홈</span><span>MARKIC 북마크</span><span class="on">HISTIC 기록</span></div>
+  <div class="ind"></div>
+ </div><div class="cap">방문 기록<small>날짜별 · 검색은 돋보기 · 페이지는 사이트 아이콘</small></div></div>
+</div>
+
+<script>
+const SIG = c => `<svg width="18" height="12" viewBox="0 0 18 12" fill="${c}"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="${c}" stroke-width="1.9" stroke-linecap="round"><path d="M1.5 4.5a9.5 9.5 0 0 1 13 0M4 7.3a6 6 0 0 1 8 0M6.6 10a2.2 2.2 0 0 1 2.8 0"/></svg><svg width="27" height="13" viewBox="0 0 27 13" fill="none"><rect x=".5" y=".5" width="23" height="12" rx="3.5" stroke="${c}" opacity=".45"/><rect x="2.5" y="2.5" width="19" height="8" rx="2" fill="${c}"/><path d="M25 4.5v4" stroke="${c}" stroke-width="1.5" stroke-linecap="round" opacity=".45"/></svg>`;
+const I = (d, z = 20, c = 'currentColor', w = 2.2) => `<svg width="${z}" height="${z}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+const R = {
+ BACK: I('M15 5l-7 7 7 7', 18, '#2a313b', 2.4), BK: I('M15 5l-7 7 7 7', 22), FW: I('M9 5l7 7-7 7', 22),
+ CLK: I('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2', 15, '#3f6a9e', 2.3),
+ SRCH: I('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 14, '#6b7380', 2.6),
+ SRCH2: I('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 14, '#3f6a9e', 2.6),
+ SRCHD: I('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 15, '#3f6a9e', 2.4),
+ SRCHG: I('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 14, '#8a929d', 2.6),
+ LOCK: '<svg width="10" height="12" viewBox="0 0 24 24" fill="#2a313b"><path d="M6 10V8a6 6 0 0 1 12 0v2h1v12H5V10zm3 0h6V8a3 3 0 0 0-6 0z"/></svg>',
+ LOCKS: '<svg width="9" height="11" viewBox="0 0 24 24" fill="#2a313b"><path d="M6 10V8a6 6 0 0 1 12 0v2h1v12H5V10zm3 0h6V8a3 3 0 0 0-6 0z"/></svg>',
+ CHEV: I('M9 5l7 7-7 7', 15, '#b7bdc6', 2.4), X: I('M6 6l12 12M18 6L6 18', 12, '#2a313b', 3), PLUS: I('M12 5v14M5 12h14', 14, '#3f6a9e', 2.8),
+ HOMEIC: I('M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z', 18), MARKIC: I('M6 4h12v17l-6-4-6 4z', 18), HISTIC: I('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2', 18),
+ SHR: I('M12 3v12M7 8l5-5 5 5M5 12v8h14v-8', 15, '#555', 2), MRK: I('M6 4h12v17l-6-4-6 4z', 15, '#555', 2),
+ WARN: I('M12 3l10 18H2zM12 10v5M12 18v.5', 17, '#b07a00', 2.4),
+ UP: I('M12 4l7 8h-4v8H9v-8H5z', 15, 'currentColor', 2.4), DN: I('M12 20l7-8h-4V4H9v8H5z', 15, '#787c7e', 2.4), CMT: I('M4 5h16v11H9l-5 4z', 15, 'currentColor', 2.2),
+};
+document.querySelectorAll('.sb .i').forEach(e => { e.innerHTML = SIG(e.textContent === 'SIGW' ? '#fff' : '#161b22'); });
+const walk = n => { for (const c of [...n.childNodes]) { if (c.nodeType === 3) { if (/\b(BACK|BK|FW|CLK|SRCHD|SRCHG|SRCH2|SRCH|LOCKS|LOCK|CHEV|X|PLUS|HOMEIC|MARKIC|HISTIC|SHR|MRK|WARN|UP|DN|CMT)\b/.test(c.textContent)) { const s = document.createElement('span'); s.style.display = 'contents'; s.innerHTML = c.textContent.replace(/\b(BACK|BK|FW|CLK|SRCHD|SRCHG|SRCH2|SRCH|LOCKS|LOCK|CHEV|X|PLUS|HOMEIC|MARKIC|HISTIC|SHR|MRK|WARN|UP|DN|CMT)\b/g, m => R[m]); c.replaceWith(s); } } else if (c.nodeType === 1 && !['SCRIPT', 'STYLE'].includes(c.tagName)) walk(c); } };
+walk(document.body);
+document.querySelectorAll('[data-clone]').forEach(e => { e.innerHTML = document.getElementById(e.dataset.clone).outerHTML.replace(/ id="[^"]*"/, ''); });
+</script>
+</body></html>

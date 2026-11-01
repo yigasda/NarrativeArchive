@@ -1,0 +1,73 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+
+*{box-sizing:border-box}
+body{margin:0;padding:28px;background:#e9e5e1;font-family:-apple-system,'Noto Sans KR',sans-serif}
+.row{display:flex;gap:40px;padding:14px}
+.cap{font:600 15px 'Noto Sans KR',sans-serif;color:#4a423b;text-align:center;margin-top:14px;width:390px}
+.cap small{display:block;font-weight:400;color:#8a7f76;font-size:13px;margin-top:3px}
+.ph{width:390px;height:844px;border-radius:48px;overflow:hidden;position:relative;box-shadow:0 0 0 10px #16130f,0 20px 50px rgba(0,0,0,.22);color:#fff}
+.n{font-family:'Inter Tight',-apple-system,sans-serif;font-variant-numeric:tabular-nums}
+.sky{position:absolute;inset:0;overflow:hidden}
+.sky svg{position:absolute;left:0;width:100%}
+.sb{position:relative;height:54px;display:flex;justify-content:space-between;align-items:center;padding:4px 30px 0 36px;font:600 16px 'Inter Tight',sans-serif;z-index:2}
+.top{position:relative;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:2}
+.cb{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:18px}
+.pill{height:32px;padding:0 12px;border-radius:16px;background:rgba(255,255,255,.2);display:flex;align-items:center;font-size:13px;font-weight:600}
+.hd{position:relative;z-index:2;text-align:center}
+.hd small{font-size:12.5px;font-weight:600;opacity:.85;letter-spacing:.04em}
+.hd h2{margin:2px 0 0;font-size:30px;font-weight:500}
+.hd .t{font:200 96px/1 'Inter Tight',sans-serif;margin-left:22px;letter-spacing:-.03em}
+.hd .c{font-size:18px;font-weight:600;opacity:.92}
+.hd .hl{font-size:16px;font-weight:600;margin-top:2px}
+.card{position:relative;z-index:2;margin:0 16px 10px;border-radius:18px;background:rgba(20,30,44,.22);padding:12px 14px}
+.card .ln1{font-size:14px;font-weight:500;padding:0 0 10px;border-bottom:1px solid rgba(255,255,255,.18);line-height:1.4}
+.hrs{display:grid;grid-template-columns:repeat(6,1fr);padding-top:10px;text-align:center}
+.hrs div{font-size:13px;font-weight:600}
+.hrs em{display:block;font-style:normal;font-size:10.5px;color:#a9dcff;height:13px;font-weight:700}
+.hrs svg{margin:4px auto 0;display:block}
+.tl{position:relative;height:26px;margin-top:4px}.hrt{display:grid;grid-template-columns:repeat(6,1fr);text-align:center;font-weight:600;font-size:16px;margin-top:4px}
+.tl svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.tl span{position:absolute;font:600 15px 'Inter Tight',sans-serif;transform:translate(-50%,-130%)}
+.d10{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:15.5px;font-weight:600}
+.d10+.d10{border-top:1px solid rgba(255,255,255,.15)}
+.d10>span:first-child{width:36px}
+.d10 .ic{width:34px;display:flex;flex-direction:column;align-items:center}
+.d10 .ic em{font-style:normal;font-size:10px;color:#a9dcff;font-weight:700}
+.d10 .lo{width:28px;text-align:right;opacity:.6}
+.d10 .hi{width:28px}
+.d10 .bar{flex:1;height:5px;border-radius:3px;background:rgba(0,0,0,.18);position:relative}
+.d10 .bar i{position:absolute;top:0;bottom:0;border-radius:3px}
+.d10 .bar b{position:absolute;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.2)}
+.chd{font-size:11px;font-weight:600;letter-spacing:.06em;opacity:.7;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.18);margin-bottom:2px}
+.tiles{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 16px}
+.tile{border-radius:18px;background:rgba(20,30,44,.22);padding:12px 13px;height:162px;position:relative;overflow:hidden}
+.tile .th{font-size:11px;font-weight:600;letter-spacing:.05em;opacity:.72}
+.tile b{display:block;font:400 30px 'Inter Tight',sans-serif;margin-top:4px}
+.tile b small{font-size:15px}
+.tile p{position:absolute;left:13px;right:13px;bottom:11px;margin:0;font-size:12px;line-height:1.35;font-weight:500;opacity:.92}
+.tile svg.v{position:absolute}
+.wl{background:#f2f3f5;color:#16181c}
+.wl .wc{color:#fff}
+.wl h1{margin:4px 22px 12px;font-size:32px;font-weight:700;letter-spacing:-.02em}
+.wl .q{margin:0 16px 14px;height:40px;border-radius:12px;background:#e3e5e9;display:flex;align-items:center;gap:8px;padding:0 12px;color:#8a929d;font-size:15px}
+.wc{position:relative;margin:0 16px 10px;height:118px;border-radius:20px;overflow:hidden;padding:14px 16px;display:flex;justify-content:space-between}
+.wc svg.bg{position:absolute;inset:0;width:100%;height:100%}
+.wc .l,.wc .r{position:relative;z-index:1;display:flex;flex-direction:column}
+.wc .l b{font-size:21px;font-weight:700;letter-spacing:-.01em}
+.wc .l small{font-size:13px;font-weight:600;opacity:.85;margin-top:1px;display:flex;align-items:center;gap:4px}
+.wc .l span{margin-top:auto;font-size:13.5px;font-weight:600;opacity:.92}
+.wc .r{align-items:flex-end}
+.wc .r b{font:200 50px/1 'Inter Tight',sans-serif;letter-spacing:-.03em;margin-right:-4px;text-shadow:0 2px 12px rgba(0,0,0,.28),0 1px 2px rgba(0,0,0,.18)}
+.wc .r span{font-family:'Inter Tight','Noto Sans KR',sans-serif}
+.wc .r span u{text-decoration:none;font-weight:600;font-size:14.5px;margin-right:8px}.wc .r span u:last-child{margin-right:0}
+.wc .r span em{font-style:normal;font-weight:500;opacity:.78;font-size:12px;margin-right:3px}
+/*rg*/.wc .rg{margin-top:auto;display:flex;align-items:center;gap:7px;font:600 13px 'Inter Tight',sans-serif}
+.wc .rg .lo{opacity:.7}
+.wc .rg .bar{width:84px;height:5px;border-radius:3px;background:rgba(0,0,0,.22);position:relative}
+.wc .rg .bar i{position:absolute;top:0;bottom:0;border-radius:3px}
+.wc .rg .bar b{position:absolute;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.18)}
+.wc .r span{margin-top:auto;font-size:13.5px;font-weight:600}
+.wc .r .hl{font-size:14px;font-weight:600;font-family:-apple-system,'Noto Sans KR',sans-serif}
+.wc .l span,.wc .r span{text-shadow:0 1px 4px rgba(0,0,0,.3)}
+</style></head><body style="background:#f2f3f5;padding:24px"><div class="wl" style="width:390px;background:transparent"><div style="font:600 13px sans-serif;color:#6b7280;margin:10px 18px 6px">비</div><div class="wc"><svg class="bg" viewBox="0 0 358 118" preserveAspectRatio="none"><rect width="358" height="118" fill="#5f7186"/><g fill="#6b7d92"><circle cx="250" cy="20" r="34"/><circle cx="300" cy="10" r="40"/><circle cx="350" cy="26" r="30"/><rect x="230" y="20" width="140" height="34" rx="17"/></g><g stroke="rgba(255,255,255,.3)" stroke-width="1.5" stroke-linecap="round"><line x1="150" y1="20" x2="146" y2="34"/><line x1="200" y1="56" x2="196" y2="70"/><line x1="120" y1="64" x2="116" y2="78"/><line x1="260" y1="66" x2="256" y2="80"/><line x1="310" y1="58" x2="306" y2="72"/><line x1="180" y1="10" x2="176" y2="24"/></g><path d="M0 92 Q90 78 180 88 T358 82 V118 H0Z" fill="#56687c"/><path d="M0 104 Q110 94 210 102 T358 98 V118 H0Z" fill="#4a5b6e"/></svg><div class="l"><b>Varo</b><small><svg width="11" height="11" viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z" fill="#fff"/></svg> 현재 위치</small><span>비</span></div><div class="r"><b>11°</b><span>최고 13° 최저 8°</span></div></div><div style="font:600 13px sans-serif;color:#6b7280;margin:10px 18px 6px">맑음</div><div class="wc"><svg class="bg" viewBox="0 0 358 118" preserveAspectRatio="xMidYMid slice"><rect width="358" height="118" fill="#4f8fd8"/><circle cx="330" cy="30" r="62" fill="#5f9ade"/><circle cx="330" cy="30" r="44" fill="#74a8e2"/><circle cx="330" cy="30" r="26" fill="#f6c94a"/><path d="M0 92 Q90 78 180 88 T358 82 V118 H0Z" fill="#3f78bd"/><path d="M0 104 Q110 94 210 102 T358 98 V118 H0Z" fill="#3569a6"/></svg><div class="l"><b>Westend</b><small></small><span>맑음</span></div><div class="r"><b>19°</b><span>최고 21° 최저 12°</span></div></div><div style="font:600 13px sans-serif;color:#6b7280;margin:10px 18px 6px">흐림</div><div class="wc"><svg class="bg" viewBox="0 0 358 118" preserveAspectRatio="xMidYMid slice"><rect width="358" height="118" fill="#6b7f9c"/><g fill="#7b8ea9"><circle cx="230" cy="34" r="26"/><circle cx="268" cy="22" r="34"/><circle cx="308" cy="36" r="24"/><rect x="206" y="34" width="124" height="28" rx="14"/></g><g fill="#8a9cb5"><circle cx="320" cy="62" r="18"/><circle cx="346" cy="54" r="24"/><rect x="302" y="62" width="70" height="20" rx="10"/></g><path d="M0 92 Q90 78 180 88 T358 82 V118 H0Z" fill="#62758f"/><path d="M0 104 Q110 94 210 102 T358 98 V118 H0Z" fill="#566881"/></svg><div class="l"><b>Eastgate</b><small></small><span>흐림 · Straße gesperrt</span></div><div class="r"><b>10°</b><span>최고 12° 최저 7°</span></div></div><div style="font:600 13px sans-serif;color:#6b7280;margin:10px 18px 6px">밤</div><div class="wc"><svg class="bg" viewBox="0 0 358 118" preserveAspectRatio="xMidYMid slice"><rect width="358" height="118" fill="#28324a"/><g fill="#fff"><circle cx="140" cy="18" r="1.2"/><circle cx="190" cy="44" r="1"/><circle cx="258" cy="62" r="1.4"/><circle cx="120" cy="56" r="1"/><circle cx="168" cy="72" r="1.1"/><circle cx="270" cy="12" r="1"/></g><circle cx="222" cy="28" r="16" fill="#f1ead2"/><circle cx="230" cy="22" r="14" fill="#28324a"/><path d="M0 92 Q90 78 180 88 T358 82 V118 H0Z" fill="#222b40"/><path d="M0 104 Q110 94 210 102 T358 98 V118 H0Z" fill="#1c2436"/></svg><div class="l"><b>Lisboa</b><small>16:42 · −1시간</small><span>맑음 · letzte Reise</span></div><div class="r"><b>17°</b><span>최고 22° 최저 15°</span></div></div><div style="font:600 13px sans-serif;color:#6b7280;margin:10px 18px 6px">새벽 (새로)</div><div class="wc"><svg class="bg" viewBox="0 0 358 118" preserveAspectRatio="xMidYMid slice"><rect width="358" height="118" fill="#7484b3"/><rect y="52" width="358" height="66" fill="#9a99c2"/><rect y="68" width="358" height="50" fill="#c9a9c0"/><rect y="80" width="358" height="38" fill="#eebda6"/><g fill="#fff" opacity=".7"><circle cx="150" cy="16" r="1.1"/><circle cx="196" cy="34" r="1"/><circle cx="262" cy="12" r="1.2"/></g><circle cx="226" cy="88" r="26" fill="#f6d39a"/><circle cx="226" cy="88" r="15" fill="#fbe6a6"/><path d="M0 92 Q90 78 180 88 T358 82 V118 H0Z" fill="#8d7fa6"/><path d="M0 104 Q110 94 210 102 T358 98 V118 H0Z" fill="#6f6390"/></svg><div class="l"><b>Hanbit</b><small>05:58 · +8시간</small><span>맑음 · 언니</span></div><div class="r"><b>4°</b><span>최고 11° 최저 3°</span></div></div><div style="font:600 13px sans-serif;color:#6b7280;margin:10px 18px 6px">저녁 (새로)</div><div class="wc"><svg class="bg" viewBox="0 0 358 118" preserveAspectRatio="xMidYMid slice"><rect width="358" height="118" fill="#c8664f"/><rect y="40" width="358" height="78" fill="#dc7c52"/><rect y="62" width="358" height="56" fill="#ec9a5c"/><rect y="78" width="358" height="40" fill="#f5bd6e"/><circle cx="226" cy="86" r="34" fill="#f7c873" opacity=".55"/><circle cx="226" cy="86" r="20" fill="#fbe08f"/><path d="M0 92 Q90 78 180 88 T358 82 V118 H0Z" fill="#7a4a5e"/><path d="M0 104 Q110 94 210 102 T358 98 V118 H0Z" fill="#5d3a50"/></svg><div class="l"><b>Westend</b><small></small><span>맑음</span></div><div class="r"><b>17°</b><span>최고 21° 최저 12°</span></div></div></div></body></html>

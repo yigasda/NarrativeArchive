@@ -1,0 +1,186 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+
+*{box-sizing:border-box}
+body{margin:0;padding:28px;background:#e9e5e1;font-family:-apple-system,'Noto Sans KR',sans-serif}
+.row{display:flex;gap:40px;padding:14px}
+.cap{font:600 15px 'Noto Sans KR',sans-serif;color:#4a423b;text-align:center;margin-top:14px;width:390px}
+.cap small{display:block;font-weight:400;color:#8a7f76;font-size:13px;margin-top:3px}
+.ph{width:390px;height:844px;border-radius:48px;overflow:hidden;position:relative;box-shadow:0 0 0 10px #16130f,0 20px 50px rgba(0,0,0,.22);color:#fff}
+.n{font-family:'Inter Tight',-apple-system,sans-serif;font-variant-numeric:tabular-nums}
+.sky{position:absolute;inset:0;overflow:hidden}
+.sky svg{position:absolute;left:0;width:100%}
+.sb{position:relative;height:54px;display:flex;justify-content:space-between;align-items:center;padding:4px 30px 0 36px;font:600 16px 'Inter Tight',sans-serif;z-index:2}
+.top{position:relative;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:2}
+.cb{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:18px}
+.pill{height:32px;padding:0 12px;border-radius:16px;background:rgba(255,255,255,.2);display:flex;align-items:center;font-size:13px;font-weight:600}
+.hd{position:relative;z-index:2;text-align:center}
+.hd small{font-size:12.5px;font-weight:600;opacity:.85;letter-spacing:.04em}
+.hd h2{margin:2px 0 0;font-size:30px;font-weight:500}
+.hd .t{font:200 96px/1 'Inter Tight',sans-serif;margin-left:22px;letter-spacing:-.03em}
+.hd .c{font-size:18px;font-weight:600;opacity:.92}
+.hd .hl{font-size:16px;font-weight:600;margin-top:2px}
+.card{position:relative;z-index:2;margin:0 16px 10px;border-radius:18px;background:rgba(20,30,44,.22);padding:12px 14px}
+.card .ln1{font-size:14px;font-weight:500;padding:0 0 10px;border-bottom:1px solid rgba(255,255,255,.18);line-height:1.4}
+.hrs{display:grid;grid-template-columns:repeat(6,1fr);padding-top:10px;text-align:center}
+.hrs div{font-size:13px;font-weight:600}
+.hrs em{display:block;font-style:normal;font-size:10.5px;color:#a9dcff;height:13px;font-weight:700}
+.hrs svg{margin:4px auto 0;display:block}
+.tl{position:relative;height:26px;margin-top:4px}.hrt{display:grid;grid-template-columns:repeat(6,1fr);text-align:center;font-weight:600;font-size:16px;margin-top:4px}
+.tl svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.tl span{position:absolute;font:600 15px 'Inter Tight',sans-serif;transform:translate(-50%,-130%)}
+.d10{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:15.5px;font-weight:600}
+.d10+.d10{border-top:1px solid rgba(255,255,255,.15)}
+.d10>span:first-child{width:36px}
+.d10 .ic{width:34px;display:flex;flex-direction:column;align-items:center}
+.d10 .ic em{font-style:normal;font-size:10px;color:#a9dcff;font-weight:700}
+.d10 .lo{width:28px;text-align:right;opacity:.6}
+.d10 .hi{width:28px}
+.d10 .bar{flex:1;height:5px;border-radius:3px;background:rgba(0,0,0,.18);position:relative}
+.d10 .bar i{position:absolute;top:0;bottom:0;border-radius:3px}
+.d10 .bar b{position:absolute;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.2)}
+.chd{font-size:11px;font-weight:600;letter-spacing:.06em;opacity:.7;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.18);margin-bottom:2px}
+.tiles{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 16px}
+.tile{border-radius:18px;background:rgba(20,30,44,.22);padding:12px 13px;height:162px;position:relative;overflow:hidden}
+.tile .th{font-size:11px;font-weight:600;letter-spacing:.05em;opacity:.72}
+.tile b{display:block;font:400 30px 'Inter Tight',sans-serif;margin-top:4px}
+.tile b small{font-size:15px}
+.tile p{position:absolute;left:13px;right:13px;bottom:11px;margin:0;font-size:12px;line-height:1.35;font-weight:500;opacity:.92}
+.tile svg.v{position:absolute}
+.wl{background:#f2f3f5;color:#16181c}
+.wl .wc{color:#fff}
+.wl h1{margin:4px 22px 12px;font-size:32px;font-weight:700;letter-spacing:-.02em}
+.wl .q{margin:0 16px 14px;height:40px;border-radius:12px;background:#e3e5e9;display:flex;align-items:center;gap:8px;padding:0 12px;color:#8a929d;font-size:15px}
+.wc{position:relative;margin:0 16px 10px;height:118px;border-radius:20px;overflow:hidden;padding:14px 16px;display:flex;justify-content:space-between}
+.wc svg.bg{position:absolute;inset:0;width:100%;height:100%}
+.wc .l,.wc .r{position:relative;z-index:1;display:flex;flex-direction:column}
+.wc .l b{font-size:21px;font-weight:700;letter-spacing:-.01em}
+.wc .l small{font-size:13px;font-weight:600;opacity:.85;margin-top:1px;display:flex;align-items:center;gap:4px}
+.wc .l span{margin-top:auto;font-size:13.5px;font-weight:600;opacity:.92}
+.wc .r{align-items:flex-end}
+.wc .r b{font:200 50px/1 'Inter Tight',sans-serif;letter-spacing:-.03em;margin-right:-4px;text-shadow:0 2px 12px rgba(0,0,0,.28),0 1px 2px rgba(0,0,0,.18)}
+.wc .r span{font-family:'Inter Tight','Noto Sans KR',sans-serif}
+.wc .r span u{text-decoration:none;font-weight:600;font-size:14.5px;margin-right:8px}.wc .r span u:last-child{margin-right:0}
+.wc .r span em{font-style:normal;font-weight:500;opacity:.78;font-size:12px;margin-right:3px}
+/*rg*/.wc .rg{margin-top:auto;display:flex;align-items:center;gap:7px;font:600 13px 'Inter Tight',sans-serif}
+.wc .rg .lo{opacity:.7}
+.wc .rg .bar{width:84px;height:5px;border-radius:3px;background:rgba(0,0,0,.22);position:relative}
+.wc .rg .bar i{position:absolute;top:0;bottom:0;border-radius:3px}
+.wc .rg .bar b{position:absolute;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.18)}
+.wc .r span{margin-top:auto;font-size:13.5px;font-weight:600}
+.wc .r .hl{font-size:14px;font-weight:600;font-family:-apple-system,'Noto Sans KR',sans-serif}
+.wc .l span,.wc .r span{text-shadow:0 1px 4px rgba(0,0,0,.3)}
+</style></head><body>
+<div class="row">
+
+<!-- 1: rain, here -->
+<div><div class="ph" style="background:#5f7186;height:auto">
+ <div style="position:absolute;left:0;right:0;top:843px;bottom:0;background:#3f4f61"></div>
+ <div class="sky">
+  <svg viewBox="0 0 390 844" style="top:0;height:844px">
+   <!-- far clouds -->
+   <g fill="#6b7d92"><circle cx="40" cy="120" r="60"/><circle cx="110" cy="100" r="70"/><circle cx="190" cy="130" r="55"/><rect x="-20" y="120" width="260" height="70" rx="35"/></g>
+   <g fill="#74869a"><circle cx="300" cy="70" r="55"/><circle cx="360" cy="95" r="60"/><circle cx="250" cy="105" r="40"/><rect x="220" y="95" width="200" height="60" rx="30"/></g>
+   <!-- horizon: three hills, then a town -->
+   <path d="M0 700 Q90 650 190 690 T390 670 V844 H0Z" fill="#56687c"/>
+   <g fill="#4c5d70"><rect x="30" y="676" width="22" height="40"/><rect x="56" y="660" width="16" height="56"/><path d="M56 660l8-12 8 12z"/><rect x="78" y="684" width="30" height="32"/><rect x="250" y="668" width="18" height="48"/><rect x="272" y="652" width="12" height="64"/><path d="M272 652l6-16 6 16z"/><rect x="290" y="680" width="34" height="36"/></g>
+   <path d="M0 740 Q120 700 230 735 T390 720 V844 H0Z" fill="#4a5b6e"/>
+   <path d="M0 790 Q140 760 260 790 T390 780 V844 H0Z" fill="#3f4f61"/>
+   <g stroke="rgba(255,255,255,.35)" stroke-width="1.6" stroke-linecap="round">
+    <line x1="30" y1="200" x2="24" y2="222"/><line x1="90" y1="260" x2="84" y2="282"/><line x1="150" y1="210" x2="144" y2="232"/><line x1="210" y1="300" x2="204" y2="322"/><line x1="270" y1="230" x2="264" y2="252"/><line x1="330" y1="280" x2="324" y2="302"/><line x1="370" y1="200" x2="364" y2="222"/><line x1="60" y1="380" x2="54" y2="402"/><line x1="120" y1="440" x2="114" y2="462"/><line x1="190" y1="400" x2="184" y2="422"/><line x1="250" y1="460" x2="244" y2="482"/><line x1="320" y1="420" x2="314" y2="442"/><line x1="40" y1="560" x2="34" y2="582"/><line x1="110" y1="600" x2="104" y2="622"/><line x1="180" y1="560" x2="174" y2="582"/><line x1="290" y1="590" x2="284" y2="612"/><line x1="360" y1="560" x2="354" y2="582"/>
+   </g>
+  </svg>
+ </div>
+ <div class="sb"><span>17:42</span><span></span></div>
+ <div class="top"><span class="cb">‹</span><span class="pill">도시 3</span></div>
+ <div class="hd"><small>현재 위치</small><h2>Varo</h2><div class="t n">11°</div><div class="c">비</div><div class="hl n">최고:13° 최저:8°</div></div>
+ <div style="height:18px"></div>
+ <div class="card" style="background:#55667a"><div class="ln1">22시쯤 비가 그쳐요. 내일 아침은 흐려요.</div>
+  <div class="hrs"><div>지금<em>90%</em>RAIN</div><div>18시<em>80%</em>RAIN</div><div>19시<em>70%</em>RAIN</div><div>20시<em>40%</em>CLOUD</div><div>21시<em></em>CLOUD</div><div>22시<em></em>MOON</div></div>
+  <div class="hrt n"><span>11°</span><span>10°</span><span>10°</span><span>9°</span><span>9°</span><span>8°</span></div><div class="tl"><svg viewBox="0 0 330 46" preserveAspectRatio="none" style="height:26px"><polyline points="27,14 82,22 137,22 192,30 247,30 302,38" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" opacity=".6"/><g fill="#fff"><circle cx="27" cy="14" r="3"/><circle cx="82" cy="22" r="2.4"/><circle cx="137" cy="22" r="2.4"/><circle cx="192" cy="30" r="2.4"/><circle cx="247" cy="30" r="2.4"/><circle cx="302" cy="38" r="2.4"/></g></svg></div></div>
+ <div class="card" style="background:#55667a"><div class="chd">10일간의 일기예보</div>
+  <div class="d10"><span>오늘</span><span class="ic">RAINS<em>90%</em></span><span class="lo n">8°</span><span class="bar"><i style="left:22%;right:34%;background:#9fd6ec"></i><b style="left:40%"></b></span><span class="hi n">13°</span></div>
+  <div class="d10"><span>일</span><span class="ic">CLOUDS</span><span class="lo n">7°</span><span class="bar"><i style="left:14%;right:28%;background:#9fd6ec"></i></span><span class="hi n">14°</span></div>
+  <div class="d10"><span>월</span><span class="ic">SUNS</span><span class="lo n">6°</span><span class="bar"><i style="left:8%;right:14%;background:#f3c66b"></i></span><span class="hi n">16°</span></div>
+  <div class="d10"><span>화</span><span class="ic">SUNS</span><span class="lo n">7°</span><span class="bar"><i style="left:23%;right:0%;background:#f3c66b"></i></span><span class="hi n">17°</span></div>
+  <div class="d10"><span>수</span><span class="ic">RAINS<em>70%</em></span><span class="lo n">8°</span><span class="bar"><i style="left:31%;right:38%;background:#9fd6ec"></i></span><span class="hi n">12°</span></div>
+  <div class="d10"><span>목</span><span class="ic">CLOUDS</span><span class="lo n">6°</span><span class="bar"><i style="left:15%;right:46%;background:#9fd6ec"></i></span><span class="hi n">11°</span></div>
+  <div class="d10"><span>금</span><span class="ic">CLOUDS</span><span class="lo n">5°</span><span class="bar"><i style="left:8%;right:54%;background:#9fd6ec"></i></span><span class="hi n">10°</span></div>
+  <div class="d10"><span>토</span><span class="ic">SUNS</span><span class="lo n">4°</span><span class="bar"><i style="left:0%;right:38%;background:#9fd6ec"></i></span><span class="hi n">12°</span></div>
+  <div class="d10"><span>일</span><span class="ic">SUNS</span><span class="lo n">5°</span><span class="bar"><i style="left:8%;right:31%;background:#9fd6ec"></i></span><span class="hi n">13°</span></div>
+  <div class="d10"><span>월</span><span class="ic">RAINS<em>60%</em></span><span class="lo n">6°</span><span class="bar"><i style="left:15%;right:46%;background:#9fd6ec"></i></span><span class="hi n">11°</span></div>
+ </div>
+ <div style="height:10px"></div>
+ <div class="tiles">
+  <div class="tile" style="background:#4d5e72"><div class="th">일몰</div><b class="n">17:58</b>
+   <svg class="v" style="left:0;right:0;bottom:30px;width:100%;height:62px" viewBox="0 0 160 62"><circle cx="80" cy="46" r="34" fill="#f6c94a" opacity=".12"/><circle cx="80" cy="46" r="22" fill="#f6c94a" opacity=".22"/><circle cx="80" cy="46" r="13" fill="#f6c94a"/><rect x="0" y="46" width="160" height="16" fill="#46576a"/><path d="M0 46 Q40 40 80 46 T160 44 V62 H0Z" fill="#415163"/><line x1="0" y1="46" x2="160" y2="46" stroke="rgba(255,255,255,.5)" stroke-width="1"/></svg>
+   <p>16분 뒤</p></div>
+  <div class="tile" style="background:#4d5e72"><div class="th">강수량</div><b class="n">4 <small>mm</small></b><svg class="v" style="left:13px;right:13px;top:68px;width:calc(100% - 26px);height:42px" viewBox="0 0 140 42"><g fill="#a9dcff"><rect x="2" y="12" width="14" height="30" rx="3"/><rect x="22" y="4" width="14" height="38" rx="3"/><rect x="42" y="16" width="14" height="26" rx="3"/><rect x="62" y="26" width="14" height="16" rx="3" opacity=".6"/><rect x="82" y="34" width="14" height="8" rx="3" opacity=".45"/><rect x="102" y="38" width="14" height="4" rx="2" opacity=".35"/><rect x="122" y="40" width="14" height="2" rx="1" opacity=".3"/></g></svg><p>내일까지 1 mm 더 와요</p></div>
+  <div class="tile" style="background:#4d5e72"><div class="th">바람</div><b class="n">14 <small>km/h</small></b><svg class="v" style="right:12px;top:50px" width="76" height="76" viewBox="0 0 82 82"><circle cx="41" cy="41" r="36" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>TICKS<text x="41" y="13" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">N</text><g transform="rotate(225 41 41)"><path d="M41 12 L46 41 L41 36 L36 41Z" fill="#fff"/><path d="M41 70 L45 41 L37 41Z" fill="rgba(255,255,255,.45)"/></g><circle cx="41" cy="41" r="3" fill="#fff"/></svg><p>돌풍 31 km/h · 남서풍</p></div>
+  <div class="tile" style="background:#4d5e72"><div class="th">체감 온도</div><b class="n">9°</b><svg class="v" style="left:13px;top:78px;width:calc(100% - 26px);height:28px" viewBox="0 0 140 28"><rect x="0" y="10" width="140" height="6" rx="3" fill="rgba(0,0,0,.18)"/><rect x="34" y="10" width="20" height="6" rx="3" fill="#9fd6ec"/><circle cx="34" cy="13" r="6" fill="#fff"/><line x1="54" y1="4" x2="54" y2="22" stroke="#fff" stroke-width="2" stroke-dasharray="2 2"/></svg><p>바람 탓에 더 추워요.</p></div>
+  <div class="tile" style="background:#4d5e72"><div class="th">습도</div><b class="n">93%</b><svg class="v" style="right:16px;top:30px" width="30" height="96" viewBox="0 0 30 96"><rect x="1" y="1" width="28" height="94" rx="14" fill="rgba(0,0,0,.18)"/><rect x="1" y="8" width="28" height="87" rx="14" fill="#a9dcff"/><path d="M1 22 Q8 18 15 22 T29 22 V30 H1Z" fill="#c4e7ff"/></svg><p style="right:56px">이슬점 10°</p></div>
+  <div class="tile" style="background:#4d5e72"><div class="th">가시거리</div><b class="n">6 <small>km</small></b>
+   <svg class="v" style="left:13px;right:13px;top:74px;width:calc(100% - 26px);height:40px" viewBox="0 0 140 40" preserveAspectRatio="none"><rect x="0.0" y="14" width="19" height="26" rx="3" fill="#fff" opacity="1"/><rect x="24.2" y="6" width="19" height="34" rx="3" fill="#fff" opacity="0.72"/><rect x="48.4" y="18" width="19" height="22" rx="3" fill="#fff" opacity="0.48"/><rect x="72.6" y="10" width="19" height="30" rx="3" fill="#fff" opacity="0.3"/><rect x="96.8" y="16" width="19" height="24" rx="3" fill="#fff" opacity="0.18"/><rect x="121.0" y="12" width="19" height="28" rx="3" fill="#fff" opacity="0.1"/></svg>
+   <p>빗속이라 평소보다 짧아요.</p></div>
+ </div>
+<div style="height:40px"></div>
+</div><div class="cap">지금 있는 곳 · 비 (스크롤 전체)<small>구름 덩어리 · 빗줄기 · 지평선에 겹겹 언덕과 마을 · 채운 아이콘 · 시간별 기온 선</small></div></div>
+
+<!-- 2: clear evening city -->
+<div><div class="ph" style="background:#4f8fd8;height:auto">
+ <div style="position:absolute;left:0;right:0;top:843px;bottom:0;background:#22477a"></div>
+ <div class="sky">
+  <svg viewBox="0 0 390 844" style="top:0;height:844px">
+   <circle cx="340" cy="250" r="110" fill="#5f9ade"/><circle cx="340" cy="250" r="78" fill="#74a8e2"/><circle cx="340" cy="250" r="52" fill="#f7d36a" opacity=".35"/><circle cx="340" cy="250" r="34" fill="#f6c94a"/>
+   <g fill="#69a1e0"><circle cx="70" cy="170" r="26"/><circle cx="100" cy="160" r="32"/><circle cx="132" cy="172" r="22"/><rect x="44" y="170" width="110" height="26" rx="13"/></g>
+   <path d="M0 640 Q110 600 210 630 T390 615 V844 H0Z" fill="#3f78bd"/>
+   <g fill="#3a6fae"><rect x="40" y="610" width="18" height="40"/><rect x="62" y="596" width="14" height="54"/><rect x="80" y="618" width="26" height="32"/><rect x="230" y="604" width="16" height="44"/><rect x="250" y="590" width="10" height="58"/><path d="M250 590l5-14 5 14z"/></g>
+   <path d="M0 700 Q130 660 250 695 T390 680 V844 H0Z" fill="#3569a6"/>
+   <path d="M0 760 Q150 730 270 760 T390 750 V844 H0Z" fill="#22477a"/>
+  </svg>
+ </div>
+ <div class="sb"><span>18:42</span><span></span></div>
+ <div class="top"><span class="cb">‹</span><span></span></div>
+ <div class="hd"><h2>Westend</h2><div class="t n">19°</div><div class="c">맑음</div><div class="hl n">최고:21° 최저:12°</div></div>
+ <div style="height:18px"></div>
+ <div class="card"><div class="ln1">밤까지 맑아요.</div>
+  <div class="hrs"><div>지금<em></em>SUN</div><div>18:51<em></em>SET</div><div>19시<em></em>MOON</div><div>20시<em></em>MOON</div><div>21시<em></em>MOON</div><div>22시<em></em>MOON</div></div>
+  <div class="hrt n"><span>19°</span><span>18°</span><span>17°</span><span>16°</span><span>15°</span><span>14°</span></div><div class="tl"><svg viewBox="0 0 330 46" preserveAspectRatio="none" style="height:26px"><polyline points="27,14 82,18 137,24 192,30 247,34 302,38" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" opacity=".6"/><g fill="#fff"><circle cx="27" cy="14" r="3"/><circle cx="82" cy="18" r="2.4"/><circle cx="137" cy="24" r="2.4"/><circle cx="192" cy="30" r="2.4"/><circle cx="247" cy="34" r="2.4"/><circle cx="302" cy="38" r="2.4"/></g></svg></div></div>
+ <div class="tiles" style="margin-top:0">
+  <div class="tile" style="background:#2c5a99"><div class="th">일몰</div><b class="n">18:51</b>
+   <svg class="v" style="left:0;right:0;bottom:30px;width:100%;height:62px" viewBox="0 0 160 62"><circle cx="80" cy="46" r="34" fill="#f6c94a" opacity=".18"/><circle cx="80" cy="46" r="22" fill="#f6c94a" opacity=".3"/><circle cx="80" cy="46" r="13" fill="#f6c94a"/><rect x="0" y="46" width="160" height="16" fill="#2f5d9a"/><path d="M0 46 Q40 40 80 46 T160 44 V62 H0Z" fill="#2a568f"/><line x1="0" y1="46" x2="160" y2="46" stroke="rgba(255,255,255,.5)" stroke-width="1"/></svg>
+   <p>9분 뒤</p></div>
+  <div class="tile" style="background:#2c5a99"><div class="th">오늘 기온</div><b class="n">19°</b>
+   <svg class="v" style="left:13px;right:13px;bottom:30px;width:calc(100% - 26px);height:58px" viewBox="0 0 140 58"><path d="M0 50 C20 50 30 44 45 30 S75 6 90 10 S120 30 140 40" fill="none" stroke="#f3c66b" stroke-width="2.4" stroke-linecap="round"/><path d="M0 50 C20 50 30 44 45 30 S75 6 90 10 S120 30 140 40 V58 H0Z" fill="#f3c66b" opacity=".16"/><circle cx="112" cy="22" r="5" fill="#fff" stroke="#f3c66b" stroke-width="2.5"/></svg>
+   <p>최저 12° · 최고 21°</p></div>
+  <div class="tile" style="background:#2c5a99"><div class="th">강수량</div><b class="n">0 <small>mm</small></b><svg class="v" style="left:13px;right:13px;top:68px;width:calc(100% - 26px);height:42px" viewBox="0 0 140 42"><g fill="#a9dcff" opacity=".35"><rect x="2" y="38" width="14" height="4" rx="2"/><rect x="22" y="38" width="14" height="4" rx="2"/><rect x="42" y="38" width="14" height="4" rx="2"/><rect x="62" y="38" width="14" height="4" rx="2"/><rect x="82" y="38" width="14" height="4" rx="2"/><rect x="102" y="38" width="14" height="4" rx="2"/><rect x="122" y="38" width="14" height="4" rx="2"/></g></svg><p>내일까지 비 소식 없어요</p></div>
+  <div class="tile" style="background:#2c5a99"><div class="th">바람</div><b class="n">9 <small>km/h</small></b><svg class="v" style="right:12px;top:50px" width="76" height="76" viewBox="0 0 82 82"><circle cx="41" cy="41" r="36" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>TICKS<text x="41" y="13" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">N</text><g transform="rotate(270 41 41)"><path d="M41 12 L46 41 L41 36 L36 41Z" fill="#fff"/><path d="M41 70 L45 41 L37 41Z" fill="rgba(255,255,255,.45)"/></g><circle cx="41" cy="41" r="3" fill="#fff"/></svg><p>돌풍 18 km/h · 서풍</p></div>
+  <div class="tile" style="background:#2c5a99"><div class="th">체감 온도</div><b class="n">18°</b><svg class="v" style="left:13px;top:78px;width:calc(100% - 26px);height:28px" viewBox="0 0 140 28"><rect x="0" y="10" width="140" height="6" rx="3" fill="rgba(0,0,0,.18)"/><rect x="66" y="10" width="6" height="6" rx="3" fill="#9fd6ec"/><circle cx="66" cy="13" r="6" fill="#fff"/><line x1="72" y1="4" x2="72" y2="22" stroke="#fff" stroke-width="2" stroke-dasharray="2 2"/></svg><p>실제와 거의 같아요.</p></div>
+  <div class="tile" style="background:#2c5a99"><div class="th">습도</div><b class="n">54%</b><svg class="v" style="right:16px;top:30px" width="30" height="96" viewBox="0 0 30 96"><rect x="1" y="1" width="28" height="94" rx="14" fill="rgba(0,0,0,.18)"/><rect x="1" y="44" width="28" height="51" rx="14" fill="#a9dcff"/><path d="M1 58 Q8 54 15 58 T29 58 V66 H1Z" fill="#c4e7ff"/></svg><p style="right:56px">이슬점 9°</p></div>
+ </div>
+ <div style="height:40px"></div>
+</div><div class="cap">저장한 도시 · 맑은 저녁<small>지평선 위로 내려가는 해와 빛무리 고리 · 같은 파랑 계열로 겹친 언덕 · 해 진 뒤는 달 아이콘</small></div></div>
+
+
+
+<div><div class="ph wl">
+ <div class="sb"><span>17:42</span><span></span></div>
+ <div class="top"><span class="cb" style="background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)">‹</span><span class="pill" style="background:#fff;color:#2f6fd0;box-shadow:0 1px 3px rgba(0,0,0,.08)">가 한국어</span></div>
+ <h1>날씨</h1>
+ <div class="q"><svg width="15" height="15" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="#8a929d" stroke-width="2.4"/><path d="M16.5 16.5L21 21" stroke="#8a929d" stroke-width="2.4" stroke-linecap="round"/></svg>도시 또는 공항 검색</div>
+ <div class="wc"><svg class="bg" viewBox="0 0 358 118" preserveAspectRatio="none"><rect width="358" height="118" fill="#5f7186"/><g fill="#6b7d92"><circle cx="250" cy="20" r="34"/><circle cx="300" cy="10" r="40"/><circle cx="350" cy="26" r="30"/><rect x="230" y="20" width="140" height="34" rx="17"/></g><g stroke="rgba(255,255,255,.3)" stroke-width="1.5" stroke-linecap="round"><line x1="150" y1="20" x2="146" y2="34"/><line x1="200" y1="56" x2="196" y2="70"/><line x1="120" y1="64" x2="116" y2="78"/><line x1="260" y1="66" x2="256" y2="80"/><line x1="310" y1="58" x2="306" y2="72"/><line x1="180" y1="10" x2="176" y2="24"/></g><path d="M0 92 Q90 78 180 88 T358 82 V118 H0Z" fill="#56687c"/><path d="M0 104 Q110 94 210 102 T358 98 V118 H0Z" fill="#4a5b6e"/></svg><div class="l"><b>Varo</b><small><svg width="11" height="11" viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z" fill="#fff"/></svg> 현재 위치</small><span>비</span></div><div class="r"><b>11°</b><span>최고 13° 최저 8°</span></div></div><div class="wc"><svg class="bg" viewBox="0 0 358 118" preserveAspectRatio="xMidYMid slice"><rect width="358" height="118" fill="#4f8fd8"/><circle cx="330" cy="30" r="62" fill="#5f9ade"/><circle cx="330" cy="30" r="44" fill="#74a8e2"/><circle cx="330" cy="30" r="26" fill="#f6c94a"/><path d="M0 92 Q90 78 180 88 T358 82 V118 H0Z" fill="#3f78bd"/><path d="M0 104 Q110 94 210 102 T358 98 V118 H0Z" fill="#3569a6"/></svg><div class="l"><b>Westend</b><small></small><span>맑음</span></div><div class="r"><b>19°</b><span>최고 21° 최저 12°</span></div></div><div class="wc"><svg class="bg" viewBox="0 0 358 118" preserveAspectRatio="xMidYMid slice"><rect width="358" height="118" fill="#6b7f9c"/><g fill="#7b8ea9"><circle cx="230" cy="34" r="26"/><circle cx="268" cy="22" r="34"/><circle cx="308" cy="36" r="24"/><rect x="206" y="34" width="124" height="28" rx="14"/></g><g fill="#8a9cb5"><circle cx="320" cy="62" r="18"/><circle cx="346" cy="54" r="24"/><rect x="302" y="62" width="70" height="20" rx="10"/></g><path d="M0 92 Q90 78 180 88 T358 82 V118 H0Z" fill="#62758f"/><path d="M0 104 Q110 94 210 102 T358 98 V118 H0Z" fill="#566881"/></svg><div class="l"><b>Eastgate</b><small></small><span>흐림 · Straße gesperrt</span></div><div class="r"><b>10°</b><span>최고 12° 최저 7°</span></div></div><div class="wc"><svg class="bg" viewBox="0 0 358 118" preserveAspectRatio="xMidYMid slice"><rect width="358" height="118" fill="#28324a"/><g fill="#fff"><circle cx="140" cy="18" r="1.2"/><circle cx="190" cy="44" r="1"/><circle cx="258" cy="62" r="1.4"/><circle cx="120" cy="56" r="1"/><circle cx="168" cy="72" r="1.1"/><circle cx="270" cy="12" r="1"/></g><circle cx="222" cy="28" r="16" fill="#f1ead2"/><circle cx="230" cy="22" r="14" fill="#28324a"/><path d="M0 92 Q90 78 180 88 T358 82 V118 H0Z" fill="#222b40"/><path d="M0 104 Q110 94 210 102 T358 98 V118 H0Z" fill="#1c2436"/></svg><div class="l"><b>Lisboa</b><small>16:42 · −1시간</small><span>맑음 · letzte Reise</span></div><div class="r"><b>17°</b><span>최고 22° 최저 15°</span></div></div>
+</div><div class="cap">도시 목록<small>카드마다 그 도시 하늘 · 같은 언덕 · 시차 나는 도시만 시각 · 밤이면 달과 별</small></div></div>
+
+</div>
+<script>
+const SUN = z => `<svg width="${z}" height="${z}" viewBox="0 0 24 24"><g stroke="#f6c94a" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></g><circle cx="12" cy="12" r="5" fill="#f6c94a"/></svg>`;
+const CLOUD = (z, dark = '#d7dfe8') => `<svg width="${z}" height="${z}" viewBox="0 0 24 24"><path d="M7 19a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 18 10.5a4.3 4.3 0 0 1 0 8.5z" fill="${dark}"/><path d="M7 17a4 4 0 0 1-.4-8A5.5 5.5 0 0 1 17.5 9a3.8 3.8 0 0 1 0 8z" fill="#fff"/></svg>`;
+const RAIN = z => `<svg width="${z}" height="${z}" viewBox="0 0 24 24"><path d="M7 14.5a4 4 0 0 1-.4-8A5.5 5.5 0 0 1 17.5 6.5a3.8 3.8 0 0 1 0 8z" fill="#fff"/><g fill="#7fc4f5"><path d="M8 17l1.2 2.4a1.3 1.3 0 1 1-2.4 0z"/><path d="M12.5 17l1.2 2.4a1.3 1.3 0 1 1-2.4 0z"/><path d="M17 17l1.2 2.4a1.3 1.3 0 1 1-2.4 0z"/></g></svg>`;
+const MOON = z => `<svg width="${z}" height="${z}" viewBox="0 0 24 24"><path d="M19 14.5A7.5 7.5 0 1 1 10 4.6a6 6 0 0 0 9 9.9z" fill="#f1ead2"/></svg>`;
+const SET = z => `<svg width="${z}" height="${z}" viewBox="0 0 24 24"><path d="M6 16a6 6 0 0 1 12 0z" fill="#f6c94a"/><g stroke="#f6c94a" stroke-width="2" stroke-linecap="round"><path d="M12 5v3M4.5 9l1.8 1.5M19.5 9l-1.8 1.5"/></g><rect x="2" y="17" width="20" height="2" rx="1" fill="#fff" opacity=".8"/></svg>`;
+const T = { RAINS: RAIN(22), CLOUDS: CLOUD(22), SUNS: SUN(22), RAIN: RAIN(28), CLOUD: CLOUD(28), MOON: MOON(26), SUN: SUN(28), SET: SET(28) };
+const ticks = Array.from({ length: 36 }, (_, k) => { const a = k * 10 * Math.PI / 180, r1 = k % 9 ? 31 : 28; return `<line x1="${41 + r1 * Math.sin(a)}" y1="${41 - r1 * Math.cos(a)}" x2="${41 + 35 * Math.sin(a)}" y2="${41 - 35 * Math.cos(a)}" stroke="rgba(255,255,255,${k % 9 ? .4 : .9})" stroke-width="${k % 9 ? 1 : 1.6}"/>`; }).join('');
+const dt = Array.from({ length: 12 }, (_, k) => { const a = k * 30 * Math.PI / 180, r1 = k % 3 ? 19.5 : 18; return `<line x1="${24 + r1 * Math.sin(a)}" y1="${24 - r1 * Math.cos(a)}" x2="${24 + 21 * Math.sin(a)}" y2="${24 - 21 * Math.cos(a)}" stroke="${k % 3 ? '#9a9da4' : '#17181b'}" stroke-width="${k % 3 ? 1 : 1.6}" stroke-linecap="round"/>`; }).join('');
+document.body.innerHTML = document.body.innerHTML.replace('DTICKS', dt).replace(/TICKS/g, ticks).replace(/\b(RAINS|CLOUDS|SUNS|RAIN|CLOUD|MOON|SUN|SET)\b(?![^<]*>)/g, m => T[m]);
+</script>
+</body></html>

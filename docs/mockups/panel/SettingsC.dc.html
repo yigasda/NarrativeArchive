@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>설정 C</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B8541F}a:hover{color:#8F3F14}
+.card{background:#F7EEE7;border-radius:18px}
+.row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid #E5D5C9}
+.row:first-child{border-top:none}
+.sub{font-size:12px;color:#7A6A60}
+.val{margin-left:auto;color:#6B5A50;font-size:13px}
+.sw{margin-left:auto;width:40px;height:24px;border-radius:12px;background:#B8541F;flex:none}
+.sw.off{background:#D9C8BC}
+.lab{font-size:12px;font-weight:700;color:#6B5A50;margin:6px 4px 0}
+.head{display:flex;align-items:center;gap:10px;padding:13px 16px;font-size:14px}
+.head small{margin-left:auto;font-size:12px;color:#7A6A60}
+</style>
+</helmet>
+<div style="width: 400px; height: 1180px; box-sizing: border-box; padding: 16px; background: #FFFAF6; font-family: 'Noto Sans KR', sans-serif; color: #463428; display: flex; flex-direction: column; gap: 10px">
+  <div style="display: flex; align-items: center; gap: 10px"><b style="font-size: 18px">설정</b><span style="margin-left: auto; font-size: 12px; border: 1px solid #E5D5C9; border-radius: 999px; padding: 6px 12px">주입 미리보기</span></div>
+  <div style="border: 1px solid #E5D5C9; border-radius: 14px; padding: 10px 14px; font-size: 13px; color: #8A7A70">⌕ 설정 찾기</div>
+  <div class="lab">자주 바꾸는 것</div>
+  <div class="card">
+    <div class="row"><span>아카이브 주입</span><span class="sw"></span></div>
+    <div class="row"><span>자리 묶음</span><span class="val">최근 강조형 ›</span></div>
+    <div class="row"><span>회상</span><span class="val">4줄 · 깊이 1</span><span class="sw" style="margin-left: 8px"></span></div>
+    <div class="row"><span>STATE 가까이 넣기</span><span class="val">깊이 2</span><span class="sw" style="margin-left: 8px"></span></div>
+    <div class="row"><span>망각 곡선</span><span class="sw off"></span></div>
+    <div class="row"><span>로어북 곁들이기</span><span class="sw off"></span></div>
+    <div class="row"><span>이탈 자동 감지</span><span class="val">끄기 ›</span></div>
+  </div>
+  <div class="lab">연결한 모델</div>
+  <div class="card">
+    <div class="row"><span>AI 기능 모델</span><span class="val">커스텀 · gemini ›</span></div>
+    <div class="row"><span>초안 모델</span><span class="val">Vertex · opus ›</span></div>
+    <div class="row"><span>번역 모델</span><span class="val">AI 기능 모델과 같이 ›</span></div>
+  </div>
+  <div class="lab">모든 설정 · 가끔 바꾸는 것</div>
+  <div class="card">
+    <div class="head">▸ 주입 자세히<small>위치 · 역할 · 토큰 상한 · 라우터 · 키워드</small></div>
+  </div>
+  <div class="card">
+    <div class="head">▸ 회상 자세히<small>토큰 한도 · 볼 메시지 · 섹션</small></div>
+  </div>
+  <div class="card">
+    <div class="head">▸ OOC 빼기<small>코멘트 · OOC 메모</small></div>
+  </div>
+  <div class="card">
+    <div class="head">▸ AI가 하는 일<small>막혔을 때 · 다시 묻기 · 용어집</small></div>
+  </div>
+  <div class="card">
+    <div class="head">▸ 모델 연결 자세히<small>주소 · 키 · 생각 · 길이</small></div>
+  </div>
+  <div class="card">
+    <div class="head">▸ 테마 · 알림<small>라이트 · 백업</small></div>
+  </div>
+  <div class="sub" style="text-align: center; margin-top: 4px">위는 늘 펼쳐 두고, 아래 묶음은 눌러야 펼쳐져요</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":400,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

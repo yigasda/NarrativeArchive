@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>압축 B</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B8541F}a:hover{color:#8F3F14}
+.card{background:#F7EEE7;border-radius:18px;padding:14px 16px}
+.row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid #E5D5C9}
+.row:first-child{border-top:none}
+.sub{font-size:12px;color:#7A6A60}
+.lab{font-size:12px;font-weight:700;color:#6B5A50;margin:4px 4px 0}
+.chev{margin-left:auto;color:#8A7A70;font-size:13px}
+.seg{flex:1;border:none;border-radius:12px;padding:10px 4px;font-family:inherit;font-size:13px;background:transparent;color:#6B5A50}
+.seg.on{background:#FFFAF6;color:#463428;font-weight:700;box-shadow:0 1px 3px rgba(70,52,40,.12)}
+</style>
+</helmet>
+<div style="width: 400px; height: 1060px; box-sizing: border-box; padding: 16px; background: #FFFAF6; font-family: 'Noto Sans KR', sans-serif; color: #463428; display: flex; flex-direction: column; gap: 14px">
+  <div class="card" style="display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #6B5A50"><span>경계선 #19 뒤에 쌓인 원문</span><span>마지막 #29</span></div>
+    <div style="display: flex; align-items: baseline; gap: 8px"><b style="font-size: 30px">297</b><span class="sub">토큰 · 메시지 10개</span></div>
+    <div style="height: 8px; border-radius: 4px; background: #D9C8BC; display: flex; overflow: hidden"><div style="width: 66%; background: #8A7A70"></div><div style="flex: 1; background: #B8541F"></div></div>
+    <div style="display: flex; justify-content: space-between" class="sub"><span>#0–#19 숨김</span><span>#20–#29 원문</span></div>
+    <div style="display: flex; gap: 4px; background: #F1E6DD; border-radius: 14px; padding: 4px">
+      <button type="button" class="seg on">한 번에</button>
+      <button type="button" class="seg">작업실</button>
+      <button type="button" class="seg">마법사</button>
+    </div>
+    <div class="sub">초안 모델이 요약하고, 검사가 다 통과하면 바로 넣어요</div>
+    <button type="button" style="border: none; border-radius: 16px; background: #B8541F; color: #FFF7F0; padding: 16px; font-family: inherit; font-size: 16px; font-weight: 700">압축하기</button>
+    <div style="display: flex; gap: 16px" class="sub"><span>바로 넣기 켬</span><span>원문 대조 끔</span><span style="margin-left: auto; color: #B8541F">바꾸기</span></div>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+    <div class="card"><b style="font-size: 14px">숨기기 다시 적용</b><div class="sub">경계선 앞만 숨기기</div></div>
+    <div class="card"><b style="font-size: 14px">숨김 해제</b><div class="sub">지금 숨긴 19개</div></div>
+  </div>
+  <div class="lab">따로 하기</div>
+  <div class="card" style="padding: 0">
+    <div class="row"><b style="font-size: 14px">원문 뽑기</b><span class="chev">›</span></div>
+    <div class="row"><b style="font-size: 14px">아카이브에 추가</b><span class="chev">›</span></div>
+    <div class="row"><b style="font-size: 14px">꼭 남길 장면</b><span class="sub">3개</span><span class="chev">›</span></div>
+  </div>
+  <div class="lab">설정 · 고른 방법에 맞는 것만</div>
+  <div class="card" style="padding: 0">
+    <div class="row"><span style="font-size: 14px">압축 방식</span><span class="chev">2단계 ›</span></div>
+    <div class="row"><span style="font-size: 14px">2단계 · 정리 모델</span><span class="chev">AI 기능 모델 ›</span></div>
+    <div class="row"><span style="font-size: 14px">쌓이면 알려 주기</span><span class="chev">60개마다 ›</span></div>
+  </div>
+  <div class="card" style="padding: 0">
+    <div class="row"><span style="font-size: 14px">원문 손질 · 지시문 · 경계선</span><span class="chev">더 보기 ▸</span></div>
+  </div>
+  <div class="sub" style="text-align: center">작업실이나 마법사를 고르면 그 방법에 쓰는 설정만 보여요</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":400,"height":1060}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

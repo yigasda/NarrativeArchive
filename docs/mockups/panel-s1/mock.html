@@ -1,0 +1,162 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="file:///home/user/NarrativeArchive/style.css">
+<style>
+body{margin:0;padding:28px 34px;background:#e9e5e1;font-family:'Noto Sans KR',sans-serif}
+.bundle{margin-bottom:56px;padding:6px}.bt0{font:700 26px 'Noto Sans KR',sans-serif;color:#3a332c;margin:0 0 4px 4px}.bs0{font:400 14px 'Noto Sans KR',sans-serif;color:#7a6f66;margin:0 0 18px 4px}
+.row{display:flex;gap:40px;align-items:flex-start}.cap2{font:600 14px 'Noto Sans KR',sans-serif;color:#6b625b;text-align:center;margin-top:14px}
+.frame{width:390px;height:844px;border-radius:48px;overflow:hidden;position:relative;box-shadow:0 0 0 10px #16130f,0 20px 50px rgba(0,0,0,.22)}
+.frame .na_ph_scr{width:390px;height:844px;border-radius:0;aspect-ratio:auto;--k:1}
+/* ---- new for stage 1 (mock) ---- */
+.ax_draftbar{position:absolute;left:14px;right:14px;bottom:26px;border-radius:25px;display:flex;align-items:center;gap:10px;padding:8px 8px 8px 16px;background:rgba(255,255,255,.62);box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 0 0 .5px rgba(22,27,34,.06),0 4px 14px rgba(22,27,34,.06);z-index:4}
+.ax_draftbar .tx{flex:1;min-width:0}
+.ax_draftbar .lb{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#7c8592}
+.ax_draftbar .lb i{font-style:normal;padding:1px 7px;border-radius:999px;background:#f3e8c9;color:#7f6a22;font-size:10.5px}
+.ax_draftbar .lb i.st{background:#dcefdf;color:#3f7d50}
+.ax_draftbar p{margin:2px 0 0;font-size:14.5px;color:#4d5562;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic}
+.ax_draftbar .go{width:36px;height:36px;border-radius:50%;background:var(--axc);display:grid;place-items:center;color:var(--axd);flex:none}
+.ax_bdraft{align-self:flex-end;max-width:76%;padding:9px 14px;border-radius:20px;border-bottom-right-radius:7px;border:1.5px dashed rgba(47,107,255,.45);color:#4d5562;font-size:15.5px;line-height:1.38;background:rgba(255,255,255,.5)}
+.ax_bdraft .k{display:block;font-size:12.5px;color:#7c8592;margin-top:5px;padding-top:5px;border-top:1px dashed #d7dbe2}
+.ax_dmeta{align-self:flex-end;font-size:11px;color:#8a929d;margin:3px 4px 0;display:flex;gap:6px;align-items:center}
+.ax_dmeta i{font-style:normal;padding:1px 7px;border-radius:999px;background:#f3e8c9;color:#7f6a22;font-size:10.5px;font-weight:600}
+.ax_crow_draft{color:#c0473d;font-weight:600;margin-right:4px}
+.ax_note{margin:4px 18px 0;padding:12px 14px;border-radius:16px;background:#f6edcf;color:#6b5a1f;font-size:12.5px;line-height:1.5}
+.ax_note.st{background:#dcefdf;color:#3f6a4c}
+.ax_ltr{position:sticky;top:0;padding:10px 22px 4px;font-size:12.5px;font-weight:700;color:#6b7380;background:#f4f5f7}
+.ax_tag2{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--axc);color:var(--axd);font-size:11.5px;font-weight:600;margin-right:4px}
+.ax_prof p{margin:0;padding:4px 16px 14px;font-size:14px;line-height:1.55;color:#3a414c}
+.ax_msgmini{padding:6px 16px 12px;display:flex;flex-direction:column;gap:4px}
+.ax_msgmini .b{max-width:80%;padding:7px 12px;border-radius:16px;font-size:13.5px;line-height:1.35}
+.ax_msgmini .t{align-self:flex-start;background:#f0f2f5}.ax_msgmini .m{align-self:flex-end;background:var(--axd);color:#fff}
+.ax_more{display:flex;justify-content:space-between;align-items:center;padding:11px 16px;border-top:1px solid #eef0f3;font-size:14px;color:var(--axd);font-weight:600}
+/* browser */
+.ax_favs{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 6px;padding:14px 10px 16px}
+.ax_fav{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11.5px;color:#3a414c;text-align:center}
+.ax_fav b{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;color:#fff;font:600 22px 'Inter Tight',sans-serif}
+.ax_fav span{max-width:74px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ax_tbar{position:absolute;left:0;right:0;bottom:0;height:96px;padding:8px 14px 0;background:rgba(244,245,247,.94);border-top:1px solid #e6e8ec;z-index:4}
+.ax_tbar .addr{height:44px;border-radius:14px;background:#fff;box-shadow:0 1px 4px rgba(22,27,34,.08);display:flex;align-items:center;justify-content:center;gap:6px;font-size:14.5px;color:#161b22}
+.ax_tbar .addr small{color:#8a929d}
+.ax_tbar .ic{display:flex;justify-content:space-around;margin-top:8px;color:var(--axd)}
+.ax_tbar .ic span{position:relative;display:grid;place-items:center;width:40px}
+.ax_tbar .ic .n{position:absolute;font:600 9px 'Inter Tight',sans-serif;top:6px}
+.ax_tabs{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:6px 16px}
+.ax_tabc{border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.05),0 8px 20px rgba(22,27,34,.07);position:relative}
+.ax_tabc.cur{box-shadow:0 0 0 2.5px var(--axd),0 8px 20px rgba(22,27,34,.07)}
+.ax_tabc .hd{display:flex;align-items:center;gap:6px;padding:8px 10px;font-size:11.5px;font-weight:600;border-bottom:1px solid #eef0f3}
+.ax_tabc .hd i{width:16px;height:16px;border-radius:5px;flex:none}
+.ax_tabc .hd span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ax_tabc .hd b{width:20px;height:20px;border-radius:50%;background:#eef0f3;display:grid;place-items:center;flex:none}
+.ax_tabc .bd{height:170px;padding:10px;font-size:10px;line-height:1.45;color:#4d5562;overflow:hidden}
+.ax_tabc .bd strong{display:block;font-size:12px;color:#161b22;margin-bottom:4px}
+.ax_tabfoot{position:absolute;left:0;right:0;bottom:0;height:90px;display:flex;justify-content:space-between;align-items:flex-start;padding:16px 22px 0;background:rgba(244,245,247,.94);border-top:1px solid #e6e8ec;color:var(--axd);font-size:15px;font-weight:600}
+.ax_tabfoot small{color:#4d5562;font-weight:600}
+.ax_page{padding:4px 20px 120px}
+.ax_page .site{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#7c8592;margin-bottom:10px}
+.ax_page .site i{width:22px;height:22px;border-radius:6px}
+.ax_page h2{margin:0 0 4px;font-size:22px;font-weight:700;line-height:1.3;color:#161b22}
+.ax_page .kt{font-size:14px;color:#7c8592;margin-bottom:14px}
+.ax_page p{margin:0 0 12px;font-size:15px;line-height:1.65;color:#2a313b}
+.ax_page .ko{padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.75);font-size:13.5px;line-height:1.6;color:#5c6470}
+.ax_from{margin:12px 0 0;font-size:12px;color:#8a929d}
+.ax_seg2{display:flex;margin:0 16px 12px;padding:3px;border-radius:12px;background:#e6e8ec}
+.ax_seg2 span{flex:1;text-align:center;padding:7px 0;border-radius:9px;font-size:13.5px;font-weight:600;color:#4d5562}.ax_seg2 span.on{background:#fff;color:#161b22;box-shadow:0 1px 3px rgba(22,27,34,.1)}
+.ax .ax_dock button{white-space:nowrap}
+.ax_fi{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff;font:600 13px 'Inter Tight',sans-serif;flex:none}
+</style></head><body><div id="out"></div>
+<script>
+const AX = {
+    back: 'M15 5l-7 7 7 7', heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z', cmt: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z',
+    send: 'M22 3L11 13M22 3l-7 18-4-8-8-4z', save: 'M6 3h12v18l-6-4-6 4z', grid: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z', tag: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
+    plus: 'M12 5v14M5 12h14', menu: 'M4 7h16M4 12h16M4 17h16', home: 'M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z', search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
+    reels: 'M4 4h16v16H4zM4 9h16M9 4l3 5M15 4l3 5', photo: 'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 16l5-5 4 4 3-3 6 6M15 9h.01',
+    compose: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', filter: 'M4 6h16M7 12h10M10 18h4', trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3', folder: 'M3 6h6l2 2h10v11H3z',
+    reply: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 6 6v3', more: 'M5 12h.01M12 12h.01M19 12h.01', chev: 'M9 6l6 6-6 6', cal: 'M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM4 10h16M9 3v4M15 3v4',
+    pen: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18',
+    palette: 'M12 3a9 9 0 0 0 0 18c1 0 1.5-.6 1.5-1.4 0-.9-.7-1.3-.7-2.1 0-.8.6-1.5 1.5-1.5H17a4 4 0 0 0 4-4c0-5-4-9-9-9zM7.5 11h.01M10 7h.01M14.5 7h.01',
+    lang: 'M4 6h9M8.5 4v2M6 6c0 4 3 7 6 8M11 6c0 3-3 7-7 8M14 20l4-9 4 9M15.5 17h5', user: 'M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 21a8 8 0 0 1 16 0',
+    info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v5M12 8h.01', dl: 'M12 4v11M7 10l5 5 5-5M5 20h14', again: 'M21 4v6h-6M20.5 10A8.5 8.5 0 1 0 19 16.5', in: 'M17 7L7 17M15 17H7V9', out: 'M7 17L17 7M9 7h8v8', missed: 'M4 7l6 6 4-4 6 6', x: 'M6 6l12 12M18 6L6 18',
+    star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z', clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2',
+    keypad: 'M4 4h4v4H4zM10 4h4v4h-4zM16 4h4v4h-4zM4 10h4v4H4zM10 10h4v4h-4zM16 10h4v4h-4zM4 16h4v4H4zM10 16h4v4h-4zM16 16h4v4h-4z', voice: 'M5 10v4M9 7v10M13 4v16M17 8v8M21 11v2',
+    call: 'M6 3h3l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v3a2 2 0 0 1-2 2A17 17 0 0 1 4 5a2 2 0 0 1 2-2z', video: 'M3 7h12v10H3zM15 10l6-3v10l-6-3', mail: 'M3 6h18v12H3zM3 7l9 6 9-6',
+    lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3', mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3', check: 'M5 12.5l4.5 4.5L19 7.5', pin: 'M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z', book: 'M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 7h6', redo: 'M20 12a8 8 0 1 1-2.3-5.7L20 8.5M20 3.5v5h-5', share: 'M12 3v12M7 8l5-5 5 5M5 14v6h14v-6', bolt: 'M13 2L4 14h7l-1 8 9-12h-7z', flip: 'M20 12a8 8 0 0 1-14 5M4 12a8 8 0 0 1 14-5M18 3v4h-4M6 21v-4h4', down: 'M6 9l6 6 6-6',
+};
+const ax = (k, z = 22, c = 'currentColor', w = 2, f = 'none') => `<svg aria-hidden="true" width="${z}" height="${z}" viewBox="0 0 24 24" fill="${f}" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="${AX[k]}"/></svg>`;
+AX.tabs='M4 6h11v11H4zM8 3h12v12';AX.bookmark='M6 3h12v18l-6-4-6 4z';AX.fwd='M9 5l7 7-7 7';AX.star2=AX.star;AX.hist='M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2';
+const sb = (c='#111') => `<div class="ax_sb" style="color:${c}"><span class="cg_num">17:42</span><span class="ax_sbi"><svg width="18" height="12" viewBox="0 0 18 12" fill="${c}"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round"><path d="M1.5 4.2a9.5 9.5 0 0 1 13 0"/><path d="M4 7a6 6 0 0 1 8 0"/><circle cx="8" cy="10" r="1" fill="${c}" stroke="none"/></svg><svg width="27" height="13" viewBox="0 0 27 13" fill="none"><rect x="0.5" y="0.5" width="23" height="12" rx="3.8" stroke="${c}" stroke-opacity="0.4"/><rect x="2.5" y="2.5" width="16" height="8" rx="2" fill="${c}"/></svg></span></div>`;
+const ind = (c='#111') => `<button class="ax_ind"><span style="background:${c}"></span></button>`;
+const cb = k => `<button class="ax_cb">${ax(k,18,'currentColor',2.3)}</button>`;
+const kp = `<button class="na_ph_kochip ax_kp on">가 한국어</button>`;
+const tp = (l, r='') => `<div class="ax_top">${l}<span class="ax_topr">${r}</span></div>`;
+const h1 = (t, s='') => `<div class="ax_h1"><b>${t}</b>${s?`<span>${s}</span>`:''}</div>`;
+const lt = (n, z, c) => `<span class="ax_avc" style="width:${z}px;height:${z}px;font-size:${Math.round(z*.4)}px;background:${c}">${n[0]}</span>`;
+const C = { blue: '--axd:#2f6bff;--axc:#e1e9ff', sky: '--axd:#3f6a9e;--axc:#dde8f4' };
+const scr = (acc, inner, dark) => `<div class="frame"><div class="na_ph_scr app ax axb" style="${C[acc]}"><div class="cg_canvas ax_canvas" style="transform:none;position:absolute;inset:0;${dark?'background:#0e1013;color:#fff':''}">${inner}</div></div></div>`;
+const B = [];
+// ---------- 연락처 ----------
+B.push(['연락처 상세', '전화 앱 아래 알약에 「연락처」 · 사람을 누르면 상세 · 인물 도감 프로필을 그대로', [
+['연락처 목록', scr('blue', `${sb()}${tp(cb('back'))}<div class="ax_scroll">${h1('연락처','4명')}<div class="ax_find">${ax('search',16,'currentColor',2.2)}검색</div>
+<div class="ax_card"><div class="ax_rw">${lt('Mara',48,'#d89f98')}<span class="ax_tx"><b>나 · Mara</b><span class="ax_p">내 카드</span></span></div></div>
+<div class="ax_sec">A</div><div class="ax_card"><div class="ax_rw">${lt('Anja',40,'#a699c9')}<span class="ax_tx"><b>Anja</b></span>${ax('chev',15,'#b7bdc6',2.4)}</div></div>
+<div class="ax_sec">I</div><div class="ax_card"><div class="ax_rw">${lt('Ivo',40,'#8faed1')}<span class="ax_tx"><b>Ivo (Werkstatt)</b><span class="ax_p">Ivo</span></span>${ax('chev',15,'#b7bdc6',2.4)}</div></div>
+<div class="ax_sec">R</div><div class="ax_card"><div class="ax_rw">${lt('Ren',40,'#89b892')}<span class="ax_tx"><b>Ren ♥</b><span class="ax_p">Ren</span></span>${ax('chev',15,'#b7bdc6',2.4)}</div></div>
+<i class="ax_pad big"></i></div>
+<div class="ax_dock"><button>전체</button><button>부재중</button><button class="on">연락처</button></div>${ind()}`)],
+['연락처 상세', scr('blue', `${sb()}${tp(cb('back'))}<div class="ax_scroll">
+<div class="ax_ptop"><span class="ax_ring2" style="background:#89b892">${lt('Ren',88,'#89b892')}</span><h2>Ren ♥</h2><p>이름 · Ren</p></div>
+<div class="ax_acts"><button>${ax('cmt',21)}메시지</button><span>${ax('call',21)}전화</span><span>${ax('video',21)}영상</span><span>${ax('mail',21)}메일</span></div>
+<div class="ax_card ax_prof"><div class="ax_hd">인물 도감</div><div style="padding:0 16px 8px"><span class="ax_tag2">애인</span><span class="ax_tag2">같은 동네</span></div><p>Varo에 사는 정비공. 말수가 적고 화가 나면 차고에 틀어박힌다.</p></div>
+<div class="ax_card"><div class="ax_hd">최근 문자 · 오늘</div><div class="ax_msgmini"><div class="b t">Ich steh vor der Garage. Komm raus.</div><div class="b m">Fünf Minuten.</div></div><div class="ax_more">대화방 열기 ${ax('chev',14,'currentColor',2.4)}</div></div>
+<div class="ax_card"><div class="ax_hd">최근 통화</div><div class="ax_lr"><span>발신 전화 · 14분</span><span class="cg_num">어제 22:10</span></div><div class="ax_more">통화 기록 전체 ${ax('chev',14,'currentColor',2.4)}</div></div>
+<i class="ax_pad"></i></div>${ind()}`)]]]);
+// ---------- 미발송 초안 ----------
+B.push(['미발송 초안', '보내지 않은 말은 진짜 폰처럼 입력창에 남아 있어요 · 점선 = 안 보냄 · 노란 딱지 = AI 재구성', [
+['목록: 초안 있는 대화', scr('blue', `${sb()}${tp(cb('back'), kp)}<div class="ax_scroll">${h1('메시지','2개 대화')}<div class="ax_find">${ax('search',16,'currentColor',2.2)}검색</div>
+<div class="ax_card"><div class="ax_rw"><i class="ax_dot"></i>${lt('Ren',48,'#89b892')}<span class="ax_tx"><span class="ax_h"><b>Ren ♥</b><small class="cg_num">17:40</small></span><span class="ax_p"><span class="ax_crow_draft">초안</span>Es tut mir auch leid. Ich hab gelogen, es ist mir nicht egal…</span></span></div>
+<div class="ax_rw">${lt('Ivo',48,'#8faed1')}<span class="ax_tx"><span class="ax_h"><b>Ivo (Werkstatt)</b><small class="cg_num">17:30</small></span><span class="ax_p">Ruf mich zurück. Wichtig.<span class="ax_ko">다시 전화해. 중요해.</span></span></span></div></div></div>${ind()}`)],
+['대화방: 입력창의 초안', scr('blue', `${sb()}${tp(`${cb('back')}<span class="ax_who2">${lt('Ren',38,'#89b892')}<span><b>Ren ♥</b><small>연락처 보기 ›</small></span></span>`, kp)}
+<div class="ax_scroll ax_msgs"><div class="ax_tm"><b>오늘</b> 17:31</div>
+<div class="ax_bb ax_bt">Tut mir leid wegen vorhin<span class="ax_k">아까 일은 미안</span></div><i class="ax_gap"></i>
+<div class="ax_bb ax_bm tail">Schon gut. Ist mir egal.<span class="ax_k">됐어. 신경 안 써.</span></div><i class="ax_gap"></i>
+<div class="ax_bb ax_bt tail">Ich steh vor der Garage. Komm raus.<span class="ax_k">창고 앞이야. 나와.</span></div><i class="ax_gap"></i>
+<div class="ax_bb ax_bm tail">Fünf Minuten.<span class="ax_k">5분만.</span></div><div class="ax_read">읽음 17:40</div><i class="ax_pad big"></i></div>
+<div class="ax_draftbar"><span class="tx"><span class="lb">보내지 않음 · 17:39 <i>AI 재구성</i></span><p>Es tut mir auch leid. Ich hab gelogen…</p></span><span class="go">${ax('chev',16,'currentColor',2.4)}</span></div>${ind()}`)],
+['초안 펼침', scr('blue', `${sb()}${tp(cb('back'), kp)}<div class="ax_scroll ax_msgs" style="padding-top:20px">
+<div class="ax_tm"><b>보내지 않은 메시지</b> · Ren ♥에게</div>
+<div class="ax_bdraft">Es tut mir auch leid. Ich hab gelogen, es ist mir nicht egal. Ich weiß nur nicht, wie ich es sagen soll.<span class="k">나도 미안해. 거짓말했어, 상관없지 않아. 어떻게 말해야 할지 모르겠을 뿐이야.</span></div>
+<div class="ax_dmeta">17:39에 쓰다 멈춤 <i>AI 재구성</i></div>
+<div class="ax_note">AI가 그 순간을 보고 상상한 초안이에요. 원문에서 Mara가 이 말을 쓴 적은 없고, 롤플에도 들어가지 않아요.</div>
+<div class="ax_note st">원문에 나온 초안이면 이렇게 보여요 · 「원문 #58에서 쓰다 지운 문자」</div>
+</div>${ind()}`)],
+['초안이 없을 때', scr('blue', `${sb()}${tp(`${cb('back')}<span class="ax_who2">${lt('Ivo',38,'#8faed1')}<span><b>Ivo (Werkstatt)</b><small>연락처 보기 ›</small></span></span>`, kp)}
+<div class="ax_scroll ax_msgs"><div class="ax_tm"><b>오늘</b> 17:24</div><div class="ax_bb ax_bt tail">Ruf mich zurück. Wichtig.<span class="ax_k">다시 전화해. 중요해.</span></div><i class="ax_pad big"></i></div>
+<div class="ax_draftbar"><span class="tx"><span class="lb">${ax('lock',12,'currentColor')} 보기 전용</span><p style="font-style:normal;color:#8a929d">못 보낸 말이 있었을까?</p></span><span class="go" style="width:auto;padding:0 12px;border-radius:18px;font-size:12.5px;font-weight:600;gap:4px;display:flex">${ax('pen',14,'currentColor')} 떠올리기</span></div>${ind()}`)]]]);
+// ---------- 브라우저 ----------
+B.push(['브라우저', '검색 앱이 브라우저로 · 시작 화면 · 탭 · 페이지 · 북마크와 방문 기록', [
+['시작 화면', scr('sky', `${sb()}${tp(cb('back'), kp)}<div class="ax_scroll">${h1('검색')}
+<div class="ax_sec">즐겨찾기</div><div class="ax_card"><div class="ax_favs">
+<div class="ax_fav"><b style="background:#8faed1">D</b><span>Deutsche Bahn</span></div><div class="ax_fav"><b style="background:#d89f98">C</b><span>Chefkoch</span></div><div class="ax_fav"><b style="background:#89b892">V</b><span>Varo Wetter</span></div><div class="ax_fav"><b style="background:#a699c9">W</b><span>Wikipedia</span></div></div></div>
+<div class="ax_sec">최근 검색</div><div class="ax_card">
+<div class="ax_rw">${ax('clock',20,'#8faed1',1.9)}<span class="ax_tx"><b class="ax_n">Hochwasser Eastgate Straße gesperrt</b><span class="ax_p">Eastgate 홍수 도로 통제</span></span><small class="cg_num">13:02</small></div>
+<div class="ax_rw">${ax('clock',20,'#8faed1',1.9)}<span class="ax_tx"><b class="ax_n">Bus Varo Eastgate Fahrplan</b><span class="ax_p">Varo Eastgate 버스 시간표</span></span><small class="cg_num">12:40</small></div></div><i class="ax_pad big"></i></div>
+<div class="ax_tbar"><div class="addr">${ax('search',15,'#8a929d',2.2)}<small>검색어 또는 주소</small></div><div class="ic"><span>${ax('back',22,'currentColor',2.2)}</span><span>${ax('fwd',22,'#c7ccd3',2.2)}</span><span>${ax('share',21,'currentColor',2)}</span><span>${ax('book',21,'currentColor',2)}</span><span>${ax('tabs',21,'currentColor',2)}<b class="n">3</b></span></div></div>`)],
+['열린 탭', scr('sky', `${sb()}${tp('<span></span>', '')}<div class="ax_scroll">${h1('탭','3개')}<div class="ax_tabs">
+<div class="ax_tabc cur"><div class="hd"><i style="background:#8faed1"></i><span>Fahrplan Varo – Eastgate</span><b>${ax('x',10,'#4d5562',3)}</b></div><div class="bd"><strong>Bus 42: Fahrplan ab Varo</strong>Wegen Hochwasser fahren die Busse nur bis Westend. Letzte Abfahrt 21:10…</div></div>
+<div class="ax_tabc"><div class="hd"><i style="background:#d89f98"></i><span>Apfelkuchen wie bei Oma</span><b>${ax('x',10,'#4d5562',3)}</b></div><div class="bd"><strong>Apfelkuchen wie bei Oma</strong>Zutaten: 6 Äpfel, 200 g Butter, 200 g Zucker…</div></div>
+<div class="ax_tabc"><div class="hd"><i style="background:#89b892"></i><span>Wetter Varo, 10 Tage</span><b>${ax('x',10,'#4d5562',3)}</b></div><div class="bd"><strong>Varo: Regen bis Samstag</strong>Pegel der Varo steigt weiter…</div></div>
+</div><i class="ax_pad big"></i></div>
+<div class="ax_tabfoot"><span>${ax('plus',22,'currentColor',2.2)}</span><small>탭 3개</small><span>완료</span></div>`)],
+['페이지 (탭 하나)', scr('sky', `${sb()}${tp(cb('back'), kp)}<div class="ax_scroll"><div class="ax_page">
+<div class="site"><i style="background:#8faed1"></i>varo-verkehr.de · 버스 시간표</div>
+<h2>Bus 42: Fahrplan ab Varo</h2><div class="kt">42번 버스: Varo 출발 시간표</div>
+<p>Wegen Hochwasser fahren die Busse der Linie 42 bis auf Weiteres nur bis Westend. Letzte Abfahrt ab Varo: 21:10.</p>
+<div class="ko">홍수로 42번 버스는 당분간 Westend까지만 운행합니다. Varo 막차: 21:10.</div>
+<div class="ax_from">「Bus Varo Eastgate Fahrplan」 검색에서 열었어요 · 12:40</div></div></div>
+<div class="ax_tbar"><div class="addr">${ax('lock',13,'#8a929d',2)} varo-verkehr.de</div><div class="ic"><span>${ax('back',22,'currentColor',2.2)}</span><span>${ax('fwd',22,'#c7ccd3',2.2)}</span><span>${ax('share',21,'currentColor',2)}</span><span>${ax('bookmark',21,'currentColor',2,'currentColor')}</span><span>${ax('tabs',21,'currentColor',2)}<b class="n">3</b></span></div></div>`)],
+['북마크 · 방문 기록', scr('sky', `${sb()}${tp(cb('back'))}<div class="ax_scroll">${h1('북마크')}<div class="ax_seg2"><span class="on">북마크</span><span>방문 기록</span></div>
+<div class="ax_card"><div class="ax_rw"><span class="ax_fi" style="background:#8faed1">D</span><span class="ax_tx"><b class="ax_n">Deutsche Bahn</b><span class="ax_p">bahn.de</span></span></div>
+<div class="ax_rw"><span class="ax_fi" style="background:#d89f98">C</span><span class="ax_tx"><b class="ax_n">Apfelkuchen wie bei Oma</b><span class="ax_p">chefkoch.de</span></span></div>
+<div class="ax_rw"><span class="ax_fi" style="background:#89b892">V</span><span class="ax_tx"><b class="ax_n">Varo Wetter</b><span class="ax_p">wetter-varo.de</span></span></div></div>
+<div class="ax_note" style="background:#dde8f4;color:#3f6a9e">방문 기록 탭은 그동안 열어 본 페이지가 날짜별로 쌓여요. 검색한 모든 게 열린 탭이 되진 않아요.</div><i class="ax_pad"></i></div>${ind()}`)]]]);
+document.getElementById('out').innerHTML=B.map(([t,sub,scr],i)=>`<div class="bundle" id="b${i}"><div class="bt0">${i+1} · ${t}</div><div class="bs0">${sub}</div><div class="row">${scr.map(([n,h])=>`<div>${h}<div class="cap2">${n}</div></div>`).join('')}</div></div>`).join('');
+</script></body></html>

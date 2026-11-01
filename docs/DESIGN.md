@@ -389,6 +389,19 @@ node --test tests/*.test.mjs   # 지금 232개 통과
 
 ---
 
+### 지난 시안 보기
+- 이번까지의 시안 HTML과 실제 폰 확인 화면은 `docs/mockups/`에 있어요(목록은 `docs/mockups/README.md`).
+- claude.ai 아티팩트로 남은 시안(소망 계정)
+  - 서사 아카이브 UI 정리 시안 — https://claude.ai/artifact/2h3uXNreJvqRx7R15ydzba
+  - 서사 아카이브 새 기능 UI 시안 — https://claude.ai/artifact/KGTyWaF6YwRk99qNq4GGCK
+  - 압축 작업실 플랜 — https://claude.ai/artifact/KF5MdQoffetxtH3iqQ2AQt
+  - 클리어 글래스 폰 — https://claude.ai/artifact/RRnQjAZYQazFueCNUdgem9
+  - 글래스 폰 시안 — https://claude.ai/artifact/E3XbNxBS2Y8iRjzZ5SpcCH
+- 아티팩트는 Artifact 도구의 `read`로 읽어요(웹으로 받지 않아요). 다른 계정이면 소망이 공유를 켜 줘야 열려요.
+- 새 시안을 그리면 고른 것은 `docs/mockups/`에 넣어 두세요. 세션 임시 폴더는 세션이 끝나면 사라져요.
+
+---
+
 ## 10. 브랜치 · 버전 · 커밋
 - 작업은 세션에 정해진 브랜치에서 해요. **메인은 소망이 OK한 뒤에만** 올려요.
   ```bash
