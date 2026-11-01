@@ -9,7 +9,7 @@ HTML은 브라우저로 바로 열려요(Playwright로 찍을 때는 `file://` �
 | `panel-new/` | 새 기능 UI 시안 보드 47개(아티팩트 "서사 아카이브 새 기능 UI 시안"): 관계 온도 A~C · A+C 1~4, X-ray A · B, 인물 도감 A · B, 관계도 A · B, 이야기 달력, 이동 경로, 섹션 연결망, 말투 지문, 망각 곡선, 세계관 공유, 아카이브 A · B, 압축 탭, 설정, 압축 마법사 A · B, 원문 뽑기, 아카이브에 추가, 건강 점검, 이탈 감지, 누가 아는가 1~3, 대사 은행, 아카이브에 질문, 주입 미리보기, 분기, 숨김 해제, 키워드 연동, 두 버전 비교, 홈 1~8 |
 | `phone-glass/` | 클리어 글래스 폰 홈(아티팩트 "클리어 글래스 폰"): 화이트 그레이 `Main`, 컬러 젤 `Gel` |
 | `phone-home2-wx/` | 홈 2쪽 빈 날씨 위젯 시안 A~D(`sheet.png`, A 채택). `mock.cjs`가 실제 폰 홈 2쪽 위젯 자리에 시안을 끼워 찍어요(`node mock.cjs 출력폴더`, 로컬 SillyTavern 필요) |
-| `phone-confirm/` | 폰 안 확인 창 시안 A~D(`sheet.png`, B 채택): iOS 알림 · 액션 시트 · 바텀 시트 · 가운데 카드. `mock.cjs`가 실제 폰 설정 화면 위에 끼워 찍어요. B의 질감 시안 A~D는 `quality_*.png`(`quality.cjs`가 CSS를 덮어 찍어요) |
+| `phone-confirm/` | 폰 안 확인 창 시안 A~D(`sheet.png`, B 채택): iOS 알림 · 액션 시트 · 바텀 시트 · 가운데 카드. `mock.cjs`가 실제 폰 설정 화면 위에 끼워 찍어요. B의 질감 시안 A~D는 `quality_*.png`(A 채택)(`quality.cjs`가 CSS를 덮어 찍어요) |
 | `panel-s1` ~ `panel-s5`, `panel-worldmap` | 패널 하위 화면 시안 묶음 |
 | `phone-home/` | 홈 · 잠금(컬러 젤 · 화이트 그레이) |
 | `phone-life/` | 시계 · 건강 · 파일 · 날씨(`wx.html`) · 브라우저 등 생활 앱 첫 시안들 |
