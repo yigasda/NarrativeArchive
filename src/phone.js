@@ -25,6 +25,8 @@ import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './ph
 import { fillDelivery, fillLife } from './phonelife.js';
 import { alarmScreen, setStory, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, heartScreen, hereWidget, itemScreen, orderScreen, ordersScreen, payScreen, rateScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, waterScreen, weatherScreen, weightScreen, workScreen, worldScreen } from './phonelifeapps.js';
 import { openGlossary } from './translate.js';
+// 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
+const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
 import { confirm, esc } from './util.js';
 
 // other files keep importing these from here
@@ -562,8 +564,7 @@ export async function openPhone(who = null) {
         if (!p) return;
         if (kind === 'photo' && drawing.has(`${nameKey(p.owner)}:${i}`)) return toastr.info('그리는 중엔 지울 수 없어요', '캐릭터 휴대폰');
         const what = OTHER[kind] || RM[kind]?.what;
-        const josa = w => (((w.charCodeAt(w.length - 1) - 0xac00) % 28) ? '을' : '를');
-        if (!what || !await confirm(`이 ${what}${josa(what)} 지울까요?`, '지운 건 되돌릴 수 없어요.')) return;
+        if (!what || !await confirm(`이 ${what}${josa(what)} 지울까요?`, '되돌릴 수 없어요.', '지우기')) return;
         if (phone() !== p) return;
         if (kind === 'voice') { p.voice = (p.voice || []).filter(x => x.id !== i); view = 'voice'; }
         else if (kind === 'draft') { const t = p.threads[Number(i)]; if (t) delete t.draft; view = `thread:${i}`; }
@@ -752,7 +753,7 @@ export async function openPhone(who = null) {
         e.stopPropagation();
         if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
         const p = phone(), d = p.sync?.dropped?.[Number(this.dataset.k)];
-        if (!d || !await confirm(`대화 ${d.label}에서 넣은 일 빼기`, '그 일로 들어간 문자 · 일정 · 돈 기록을 폰에서 빼요. 뒤의 기록과 이어진 건 남겨요.')) return;
+        if (!d || !await confirm(`대화 ${d.label}에서 넣은 일을 뺄까요?`, '문자 · 일정 · 돈 기록이 빠져요.', '빼기')) return;
         const r = await dropStretch(m, p, Number(this.dataset.k));
         drawPhone();
         const did = [r.gone ? `일 ${r.gone}개` : '', r.items ? `앱 기록 ${r.items}개` : ''].filter(Boolean).join(' · ') || '뺄 것이 없어서 아무것도 안';
@@ -763,13 +764,13 @@ export async function openPhone(who = null) {
         e.stopPropagation();
         if (making) return;
         const p = phone(), n = p.syncLast?.checked || 0;
-        if (!await confirm('이 반영 되돌리기', `방금 넣은 문자 · 일정 · 돈 움직임을 빼고, 대화 ${n}개는 다시 안 읽은 상태가 돼요.`)) return;
+        if (!await confirm('방금 반영을 되돌릴까요?', `대화 ${n}개를 다시 읽게 돼요.`, '되돌리기')) return;
         try { const kept = await undoRound(m, p); drawPhone(); kept.length ? toastr.warning(`되돌렸어요. ${kept.join(', ')}은(는) 그 사이 바뀌어서 남겨뒀어요`, '캐릭터 휴대폰') : toastr.success('반영을 되돌렸어요', '캐릭터 휴대폰'); }
         catch (err) { toastr.error(String(err?.message || err), '되돌리기'); }
     });
     $root.on('click', '.na_sync_forget', async e => {
         e.stopPropagation();
-        if (!await confirm('반영 기록 지우기', '저장되지 않은 반영 기록을 지울까요? 폰은 지금 그대로예요.')) return;
+        if (!await confirm('반영 기록을 지울까요?', '폰은 그대로예요.', '지우기')) return;
         const { journalWrite } = await import('./phonesync.js'); journalWrite(phoneChatScope(ctx()), []); syncPending = 0; drawPhone();
     });
     // 날짜 및 시간: the year this phone's dates are in, or none
@@ -777,7 +778,7 @@ export async function openPhone(who = null) {
         const p = phone(), y = Math.round(Number(this.value));
         if (!p || !(y >= 1900 && y <= 2100) || y === p.year) { drawPhone(true); return; }
         // the bank's and investments' dates move with it (the whole chat's), so their order holds
-        if (p.year && hasDatedRecords(m) && !await confirm('연도 바꾸기', `${p.year}년 → ${y}년<br>은행 · 투자 기록의 날짜도 같이 옮겨요. 이 채팅의 다른 폰도 같은 연도가 돼요.`)) { drawPhone(true); return; }
+        if (p.year && hasDatedRecords(m) && !await confirm(`${y}년으로 바꿀까요?`, '기록 날짜와 다른 폰도 같이 바뀌어요.', '바꾸기')) { drawPhone(true); return; }
         setStoryYear(m, p, y);
         drawPhone(true); await saveMeta();
     });
@@ -800,7 +801,7 @@ export async function openPhone(who = null) {
         const target = phone(), targetOwner = owner, keep = target.inject;
         making = true;
         try {
-            if (!await confirm(whole ? '폰 전체를 다시 만들까요?' : `고른 앱 ${apps.length + more.length}개를 다시 만들까요?`, `${[...apps, ...more].map(k => APPS[k]).join(' · ')} 다시 만들기${more.includes('money') ? ' · 잔액·거래·주문 새로 만들기' : ''}`)) return;
+            if (!await confirm(whole ? '폰 전체를 다시 만들까요?' : apps.length + more.length === 1 ? `${APPS[[...apps, ...more][0]]}${josa(APPS[[...apps, ...more][0]])} 다시 만들까요?` : `앱 ${apps.length + more.length}개를 다시 만들까요?`, whole || apps.length + more.length === 1 ? '' : [...apps, ...more].map(k => APPS[k]).join(' · '), '다시 만들기')) return;
             if (phone() !== target || investing) {toastr.info('폰이나 진행 중인 작업이 바뀌었어요. 다시 눌러 주세요');return;}
             drawPhone(true);
             const p = apps.length ? await makePhone(m, targetOwner, whole ? {} : { apps }) : target;
@@ -817,14 +818,14 @@ export async function openPhone(who = null) {
         e.stopPropagation();
         if (making || investing || filling.size) return toastr.info('생성 중인 작업이 끝난 뒤 다시 시도해 주세요');
         const scope=phoneChatScope(ctx());
-        if (!await confirm('이 방의 폰을 새로 시작할까요?', '이 방의 모든 인물의 휴대폰·계좌·투자·재력 기준을 초기화해요. 아카이브와 다른 채팅방은 그대로예요.')) return;
+        if (!await confirm('이 방의 폰을 새로 시작할까요?', '모든 인물의 폰이 지워져요.', '새로 시작')) return;
         if(getMeta()!==m || phoneChatScope(ctx())!==scope || making || investing || filling.size) return;
         resetPhoneStory(m,scope);profileStates.clear();profileDrafts.clear();remake.clear();view='lock';
         await saveMeta();applyInjection();draw();
     });
     $root.on('click', '.na_ph_setdel', async e => {
         e.stopPropagation();
-        if (!await confirm('이 폰을 지울까요?', `${esc(owner)}의 폰 내용이 이 채팅에서 지워져요.`)) return;
+        if (!await confirm(`${esc(owner)}의 폰을 지울까요?`, '', '지우기')) return;
         const was = phone()?.inject;
         delete m.phones[nameKey(owner)];
         view = 'lock'; draw();
