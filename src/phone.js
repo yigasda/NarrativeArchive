@@ -134,6 +134,21 @@ export async function openPhone(who = null) {
           <button type="button" class="na_ph_pick na_ph_addp" title="인물 넣기"><span class="na_ph_addic">${ic('plus', 18, 2)}</span><span>넣기</span></button>`);
         $root.find('.na_ph_addrow').prop('hidden', !adding);
     };
+    // the phone's own confirm: an iOS action sheet inside the screen (message, the action, a separate 취소); it survives redraws
+    let ask = null;
+    const placeAsk = () => { if (ask) $root.find('.na_ph_frame .cg_canvas').first().append(ask.el); };
+    const askSheet = (title, text = '', ok = '확인', safe = false) => {
+        if (!$root.find('.na_ph_frame .cg_canvas').length) return confirm(esc(title), text, ok);
+        ask?.done(false);
+        return new Promise(done => {
+            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${text}</span>` : ''}</div><div role="button" tabindex="0" class="pcf_ok${safe ? ' safe' : ''}">${esc(ok)}</div></div><div role="button" tabindex="0" class="pcf_no">취소</div></div></div>`)[0];
+            ask = { el, done: v => { ask = null; el.remove(); done(v); } };
+            placeAsk();
+            el.querySelector('.pcf_no').focus({ preventScroll: true });
+        });
+    };
+    $root.on('click', '.pcf', function (e) { e.stopPropagation(); const b = e.target.closest('.pcf_ok, .pcf_no'); if (b) ask?.done(b.classList.contains('pcf_ok')); else if (e.target === this) ask?.done(false); });
+    $root.on('keydown', '.pcf_ok, .pcf_no', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ask?.done(this.classList.contains('pcf_ok')); } });
     const drawPhone = (keep = false) => {
         const p = phone();
         // nobody to show yet (no people in the archive, no phone in this chat): the picker opens instead of a blank phone
@@ -189,6 +204,7 @@ export async function openPhone(who = null) {
         }
         $root.find('.na_ph_frame').html(html);
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
+        placeAsk();
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
         if (making && view === 'setremake') $root.find('.na_ph_setremake .ax_n').html(`${busyHtml} 다시 만드는 중`);
         queueMicrotask(() => autoChart());
@@ -564,7 +580,7 @@ export async function openPhone(who = null) {
         if (!p) return;
         if (kind === 'photo' && drawing.has(`${nameKey(p.owner)}:${i}`)) return toastr.info('그리는 중엔 지울 수 없어요', '캐릭터 휴대폰');
         const what = OTHER[kind] || RM[kind]?.what;
-        if (!what || !await confirm(`이 ${what}${josa(what)} 지울까요?`, '되돌릴 수 없어요.', '지우기')) return;
+        if (!what || !await askSheet(`이 ${what}${josa(what)} 지울까요?`, '되돌릴 수 없어요.', '지우기')) return;
         if (phone() !== p) return;
         if (kind === 'voice') { p.voice = (p.voice || []).filter(x => x.id !== i); view = 'voice'; }
         else if (kind === 'draft') { const t = p.threads[Number(i)]; if (t) delete t.draft; view = `thread:${i}`; }
@@ -753,7 +769,7 @@ export async function openPhone(who = null) {
         e.stopPropagation();
         if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
         const p = phone(), d = p.sync?.dropped?.[Number(this.dataset.k)];
-        if (!d || !await confirm(`대화 ${d.label}에서 넣은 일을 뺄까요?`, '문자 · 일정 · 돈 기록이 빠져요.', '빼기')) return;
+        if (!d || !await askSheet(`대화 ${d.label}에서 넣은 일을 뺄까요?`, '문자 · 일정 · 돈 기록이 빠져요.', '빼기')) return;
         const r = await dropStretch(m, p, Number(this.dataset.k));
         drawPhone();
         const did = [r.gone ? `일 ${r.gone}개` : '', r.items ? `앱 기록 ${r.items}개` : ''].filter(Boolean).join(' · ') || '뺄 것이 없어서 아무것도 안';
@@ -764,13 +780,13 @@ export async function openPhone(who = null) {
         e.stopPropagation();
         if (making) return;
         const p = phone(), n = p.syncLast?.checked || 0;
-        if (!await confirm('방금 반영을 되돌릴까요?', `대화 ${n}개를 다시 읽게 돼요.`, '되돌리기')) return;
+        if (!await askSheet('방금 반영을 되돌릴까요?', `대화 ${n}개를 다시 읽게 돼요.`, '되돌리기')) return;
         try { const kept = await undoRound(m, p); drawPhone(); kept.length ? toastr.warning(`되돌렸어요. ${kept.join(', ')}은(는) 그 사이 바뀌어서 남겨뒀어요`, '캐릭터 휴대폰') : toastr.success('반영을 되돌렸어요', '캐릭터 휴대폰'); }
         catch (err) { toastr.error(String(err?.message || err), '되돌리기'); }
     });
     $root.on('click', '.na_sync_forget', async e => {
         e.stopPropagation();
-        if (!await confirm('반영 기록을 지울까요?', '폰은 그대로예요.', '지우기')) return;
+        if (!await askSheet('반영 기록을 지울까요?', '폰은 그대로예요.', '지우기')) return;
         const { journalWrite } = await import('./phonesync.js'); journalWrite(phoneChatScope(ctx()), []); syncPending = 0; drawPhone();
     });
     // 날짜 및 시간: the year this phone's dates are in, or none
@@ -778,7 +794,7 @@ export async function openPhone(who = null) {
         const p = phone(), y = Math.round(Number(this.value));
         if (!p || !(y >= 1900 && y <= 2100) || y === p.year) { drawPhone(true); return; }
         // the bank's and investments' dates move with it (the whole chat's), so their order holds
-        if (p.year && hasDatedRecords(m) && !await confirm(`${y}년으로 바꿀까요?`, '기록 날짜와 다른 폰도 같이 바뀌어요.', '바꾸기')) { drawPhone(true); return; }
+        if (p.year && hasDatedRecords(m) && !await askSheet(`${y}년으로 바꿀까요?`, '기록 날짜와 다른 폰도 같이 바뀌어요.', '바꾸기', true)) { drawPhone(true); return; }
         setStoryYear(m, p, y);
         drawPhone(true); await saveMeta();
     });
@@ -801,7 +817,7 @@ export async function openPhone(who = null) {
         const target = phone(), targetOwner = owner, keep = target.inject;
         making = true;
         try {
-            if (!await confirm(whole ? '폰 전체를 다시 만들까요?' : apps.length + more.length === 1 ? `${APPS[[...apps, ...more][0]]}${josa(APPS[[...apps, ...more][0]])} 다시 만들까요?` : `앱 ${apps.length + more.length}개를 다시 만들까요?`, whole || apps.length + more.length === 1 ? '' : [...apps, ...more].map(k => APPS[k]).join(' · '), '다시 만들기')) return;
+            if (!await askSheet(whole ? '폰 전체를 다시 만들까요?' : apps.length + more.length === 1 ? `${APPS[[...apps, ...more][0]]}${josa(APPS[[...apps, ...more][0]])} 다시 만들까요?` : `앱 ${apps.length + more.length}개를 다시 만들까요?`, whole || apps.length + more.length === 1 ? '' : [...apps, ...more].map(k => APPS[k]).join(' · '), '다시 만들기')) return;
             if (phone() !== target || investing) {toastr.info('폰이나 진행 중인 작업이 바뀌었어요. 다시 눌러 주세요');return;}
             drawPhone(true);
             const p = apps.length ? await makePhone(m, targetOwner, whole ? {} : { apps }) : target;
@@ -818,14 +834,14 @@ export async function openPhone(who = null) {
         e.stopPropagation();
         if (making || investing || filling.size) return toastr.info('생성 중인 작업이 끝난 뒤 다시 시도해 주세요');
         const scope=phoneChatScope(ctx());
-        if (!await confirm('이 방의 폰을 새로 시작할까요?', '모든 인물의 폰이 지워져요.', '새로 시작')) return;
+        if (!await askSheet('이 방의 폰을 새로 시작할까요?', '모든 인물의 폰이 지워져요.', '새로 시작')) return;
         if(getMeta()!==m || phoneChatScope(ctx())!==scope || making || investing || filling.size) return;
         resetPhoneStory(m,scope);profileStates.clear();profileDrafts.clear();remake.clear();view='lock';
         await saveMeta();applyInjection();draw();
     });
     $root.on('click', '.na_ph_setdel', async e => {
         e.stopPropagation();
-        if (!await confirm(`${esc(owner)}의 폰을 지울까요?`, '', '지우기')) return;
+        if (!await askSheet(`${owner}의 폰을 지울까요?`, '', '지우기')) return;
         const was = phone()?.inject;
         delete m.phones[nameKey(owner)];
         view = 'lock'; draw();
@@ -854,8 +870,8 @@ export async function openPhone(who = null) {
         // ✕, Esc, or a tap on the dark around the phone (the sheet closes first)
         $root.on('click', '.na_ph_quit', e => { e.stopPropagation(); close(); });
         $root.on('click', '.na_ph_wrap', e => { if (e.target === e.currentTarget) { if (sheetOpen) setSheet(false); else close(); } });
-        dlg.addEventListener('cancel', e => { e.preventDefault(); if (sheetOpen) setSheet(false); else close(); });
-        dlg.addEventListener('close', () => { phoneClosed = true; done(); }, { once: true });
+        dlg.addEventListener('cancel', e => { e.preventDefault(); if (ask) ask.done(false); else if (sheetOpen) setSheet(false); else close(); });
+        dlg.addEventListener('close', () => { phoneClosed = true; ask?.done(false); done(); }, { once: true });
     });
     ro.disconnect();
     const t = dlg.querySelector('#toast-container');
