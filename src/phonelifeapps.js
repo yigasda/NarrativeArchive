@@ -721,7 +721,7 @@ function scene(cond, phase) {
     if (q.moon) out.push(`<span class="mn" style="left: ${cond === 'clear' || cond === 'wind' ? 292 : 300}px; top: ${cond === 'clear' || cond === 'wind' ? 150 : 170}px"><i></i><b style="background: ${q.sky}"></b></span>`);
     if (q.puff) out.push(puffSvg(-40, phase === 'eve' ? 90 : 200, phase === 'eve' ? 200 : 170, q.puff, 2.5));
     if (cond === 'partly' && q.front) out.push(puffSvg(-60, 90, 200, q.cloud, 2.5) + puffSvg(258, 196, 130, q.front, 3.5));
-    else if (q.cloud && cond === 'wind') out.push(puffSvg(-60, 90, 240, q.cloud, 20) + puffSvg(200, 160, 200, q.cloud, 16));
+    else if (q.cloud && cond === 'wind') out.push(puffSvg(-60, 90, 240, q.cloud, 40) + puffSvg(200, 160, 200, q.cloud, 32));
     else if (q.cloud) out.push(puffSvg(-80, 70, 300, q.cloud, 2.5) + puffSvg(180, 40, 260, q.cloud, 2) + puffSvg(60, 200, 220, q.cloud, 3, 0.8) + (q.cloud2 ? puffSvg(-40, 300, 260, q.cloud2, 3.5) : ''));
     const drops = (n, cls, h0, hv, d0, dv) => Array.from({ length: n }, () => `<i class="${cls}" style="left: ${Math.round(-30 + r() * 450)}px; height: ${Math.round(h0 + r() * hv)}px; --d: ${(d0 + r() * dv).toFixed(2)}s; --dl: -${(r() * 3).toFixed(2)}s"></i>`).join('');
     const flakes = (n, big) => Array.from({ length: n }, () => { const z = ((big ? 5 : 3) + r() * 3).toFixed(1); return `<i class="sn" style="left: ${Math.round(-10 + r() * 410)}px; width: ${z}px; height: ${z}px; --d: ${(6 + r() * 5).toFixed(1)}s; --dl: -${(r() * 10).toFixed(1)}s; --s: ${Math.round(-30 + r() * 60)}px"></i>`; }).join('');
