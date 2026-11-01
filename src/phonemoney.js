@@ -488,20 +488,26 @@ function qr(seed) {
     }
     return o;
 }
+// the wallet as one deck: the member card, the cards, then the coming passes, the nearest in front and open; each one
+// behind shows its top edge. Past passes keep their own grey deck below, so a wallet with nothing coming still has something
 export function walletScreen(p, now) {
     const M = mo(p);
     if (!M) return emptyApp(p, now, '지갑', 'money', '아직 지갑이 비어 있어요. 채우면 은행 · 지갑 · 쇼핑이 함께 생겨요.');
     migrateBank(getMeta(),p);
-    const ps = [...M.passes].sort((a, b) => gapDays(p.now, a.date) - gapDays(p.now, b.date));
+    const today = String(storyNow(p) || p.now || '').slice(0, 5), past = x => gapDays(today, x.date) < 0 || /used|benutzt|abgelaufen|expired|사용|지난/i.test(x.status || '');
+    const ps = [...M.passes].sort((a, b) => gapDays(p.now, a.date) - gapDays(p.now, b.date)), up = ps.filter(x => !past(x)), old = ps.filter(past);
+    const t = bankTier(p).t, mc = t?.k === 'PRIVATE';
+    const items = [...(mc ? [`<button type="button" class="ax_wlb" data-go="bankmore">${memberCard(p, t, ' ax_mcw')}</button>`] : []),
+        ...M.cards.map((c, i) => `<button type="button" class="ax_wlb" data-go="card" data-i="${i}">${cardArt(p, c)}</button>`),
+        ...[...up].reverse().map(x => `<button type="button" class="ax_wlb" data-go="pass" data-i="${x.id}">${passArt(p, x, false)}</button>`)];
+    const next = up[0], gap = next ? gapDays(today, next.date) : null, where = next ? (next.to || next.title || next.by || '') : '';
+    const sub = next && gap !== null && gap >= 0 ? `다음 일정 · ${esc(where)}${gap === 0 ? ' 오늘' : gap === 1 ? ' 내일' : ` ${gap}일 뒤`}` : [M.cards.length ? `카드 ${M.cards.length}` : '', mc ? '멤버십 1' : '', ps.length ? `패스 ${ps.length}` : ''].filter(Boolean).join(' · ');
     return `${axBar(p, now)}
       ${axTop(axCb('home2'))}
       <div class="ax_scroll">
-        ${axH1('지갑', `카드 ${M.cards.length} · 패스 ${ps.length}`)}
-        ${(() => { const t = bankTier(p).t, mc = t?.k === 'PRIVATE' ? `<button type="button" class="ax_wlb" data-go="bankmore">${memberCard(p, t, ' ax_mcw')}</button>` : '';
-            return `${M.cards.length ? `<div class="ax_wl ax_ccstack">${M.cards.map((c, i) => `<button type="button" class="ax_wlb" data-go="card" data-i="${i}">${cardArt(p, c)}</button>`).join('')}</div>` : ''}${mc ? `<div class="ax_shd">멤버십<span>1개</span></div><div class="ax_wl">${mc}</div>` : ''}`; })()}
-        ${(() => { const today = String(storyNow(p) || p.now || '').slice(0, 5), past = x => gapDays(today, x.date) < 0 || /used|benutzt|abgelaufen|expired|사용|지난/i.test(x.status || ''), up = ps.filter(x => !past(x)), old = ps.filter(past).reverse();
-            const stack = (xs, cls) => `<div class="ax_wl ax_psstack ${cls}">${xs.map(x => `<button type="button" class="ax_wlb" data-go="pass" data-i="${x.id}">${passArt(p, x, false)}</button>`).join('')}</div>`;
-            return `${up.length ? `<div class="ax_shd">패스<span>${up.length}개</span></div>${stack(up, '')}` : ''}${old.length ? `<div class="ax_shd">지난 패스<span>${old.length}개</span></div>${stack(old, 'ax_psold')}` : ''}`; })()}
+        ${axH1('지갑', sub)}
+        ${items.length ? `<div class="ax_wl ax_deck">${items.join('')}</div>` : '<div class="ax_empty">지갑이 비어 있어요</div>'}
+        ${old.length ? `<div class="ax_shd ax_oldh">지난 패스<span>${old.length}개</span></div><div class="ax_wl ax_deck ax_psold">${old.map(x => `<button type="button" class="ax_wlb" data-go="pass" data-i="${x.id}">${passArt(p, x, false)}</button>`).join('')}</div>` : ''}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;

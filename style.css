@@ -5210,6 +5210,13 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .ax_wlb { --axbg: none; display: block; width: 100%; padding: 0; text-align: left; }
 .ax_ccstack .ax_wlb + .ax_wlb { margin-top: -178px; }
 .ax_psstack .ax_wlb + .ax_wlb { margin-top: -118px; }
+/* 지갑 덱: every one but the last shows only its top edge; the next lies over it with a soft shadow above */
+.ax_deck { display: flex; flex-direction: column; padding-bottom: 6px; }
+.ax_deck > .ax_wlb { position: relative; }
+.ax_deck > .ax_wlb:not(:last-child) { height: 60px; }
+.ax_deck > .ax_wlb + .ax_wlb > * { box-shadow: 0 -3px 12px rgba(22, 27, 34, 0.14), 0 10px 24px rgba(22, 27, 34, 0.16); }
+.ax_deck.ax_psold > .ax_wlb:not(:last-child) { height: 48px; }
+.ax_oldh { margin-top: 18px; }
 .ax_cc { position: relative; display: flex; flex-direction: column; width: 100%; aspect-ratio: 1.586; border-radius: 20px; color: #fff; overflow: hidden; box-shadow: 0 14px 28px rgba(22, 27, 34, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.18); box-sizing: border-box; padding: 20px 22px; }
 .ax_ccdeco { position: absolute; inset: 0; width: 100%; height: 100%; }
 .ax_cc > *:not(.ax_ccdeco) { position: relative; }
