@@ -2531,6 +2531,9 @@ body.na_darkui .na_ap3_ti.b { background: #2E3A4B; color: #9DBCE6; }
 .na_ap3_tt small { font-size: 12px; color: var(--na-sub, var(--na-dim)); opacity: 1; }
 .na_ap3_ar { color: var(--na-dim); font-size: 18px; }
 .na_ap3 .na_ap2_checks .na_grade_out, .na_ap3 .na_ap2_checks .na_conflict_out { margin: 0 14px 14px; }
+/* a line only between rows: the first row shown sits on the card's own top edge */
+.na_ap3 .na_ap2_checks > .na_check { border-top: 0 !important; }
+.na_ap3 .na_ap2_checks > :not([hidden]) ~ .na_check:not([hidden]) { border-top: 1px solid var(--na-line2, var(--na-line)) !important; }
 /* 취소 · 추가하기 */
 .na_ap3_bar { position: sticky; bottom: 0; z-index: 2; display: flex; gap: 8px; margin: 18px -2px 0; padding: 12px 2px 4px; background: linear-gradient(transparent, var(--na-pop-bg, #F0E4DB) 14px); }
 body.na_darkui .na_ap3_bar { background: linear-gradient(transparent, #2A221D 14px); }
