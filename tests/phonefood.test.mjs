@@ -176,4 +176,10 @@ test('shops\' own names and dishes in other tongues find their base', () => {
     };
     for (const [n, b] of Object.entries(want)) assert.equal(guessPic(n).base, b, n);
     assert.deepEqual(guessPic('통새우와퍼').with, ['shrimp', 'lettuce', 'tomato']);
+    // the ones the art side said to draw with what's there
+    const art = { '순두부찌개': 'soup-red', '육개장': 'soup-red', '똠얌꿍': 'soup-red', '갈비탕': 'soup-white', '설렁탕': 'soup-white', '해물파전': 'jeon', '쫄면': 'bibim-noodle',
+        '라볶이': 'tteokbokki', '깐풍기': 'dakgangjeong', '양꼬치': 'skewer', '마라샹궈': 'stirfry-red', '훠궈': 'hotpot', '샤브샤브': 'hotpot', '규동': 'donburi', '나시고랭': 'fried-rice',
+        '프렌치토스트': 'toast', '생크림케이크': 'cake', '쌀국수 비빔': 'bun-cha' };
+    for (const [n, b] of Object.entries(art)) assert.equal(guessPic(n).base, b, n);
+    assert.deepEqual(guessPic('나시고랭').with, ['fried-egg']);
 });

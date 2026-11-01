@@ -429,7 +429,7 @@ const GUESS = [
     [/인절미 ?설빙|설빙|かき氷/i, 'bingsu'],
     [/牛丼|규동|gyudon/i, 'donburi', ['beef', 'onion']], [/親子丼|오야코동|oyakodon/i, 'donburi', ['chicken', 'egg']], [/カツ丼|かつ丼|가츠동|katsudon/i, 'donburi', ['egg', 'onion']], [/天丼/i, 'tendon'],
     [/焼き鳥|やきとり|焼鳥|烤串|羊肉串|串/i, 'skewer'], [/焼き?餃子|餃子|饺子|锅贴|교자|gyoza/i, 'gunmandu'], [/小笼包|샤오롱바오|xiaolongbao|har ?gow|하가우/i, 'dimsum'],
-    [/火锅|しゃぶしゃぶ/i, 'hotpot'], [/麻婆豆腐/i, 'mapo-tofu'], [/锅包肉/i, 'guobaorou'], [/麻辣烫/i, 'malatang'], [/炒饭|チャーハン|chahan|나시 ?고렝|nasi goreng/i, 'fried-rice'],
+    [/火锅|しゃぶしゃぶ/i, 'hotpot'], [/麻婆豆腐/i, 'mapo-tofu'], [/锅包肉/i, 'guobaorou'], [/麻辣烫/i, 'malatang'], [/나시 ?고[렝랭]|nasi goreng/i, 'fried-rice', ['fried-egg']], [/炒饭|チャーハン|chahan/i, 'fried-rice'], [/쌀국수 ?비빔|비빔 ?쌀국수/i, 'bun-cha'],
     [/天ぷら/i, 'twigim'], [/とんかつ|トンカツ/i, 'tonkatsu'], [/ラーメン|拉面/i, 'ramen'], [/うどん/i, 'udon'], [/そば|蕎麦/i, 'soba'], [/寿司|すし|鮨/i, 'sushi'], [/刺身|모둠 ?회|광어 ?회|연어 ?회/i, 'sashimi'],
     [/カレー/i, 'curry'], [/弁当|한솥|본도시락/i, 'dosirak'], [/たこ焼き/i, 'takoyaki'], [/お好み焼き/i, 'okonomiyaki'], [/オムライス/i, 'omurice'], [/ハンバーグ|함박|hamburg steak/i, 'steak'],
     [/콘 ?도그|corn ?dog/i, 'hotdog'], [/焼肉|yakiniku/i, 'galbi'], [/phở/i, 'pho'], [/맥 ?앤 ?치즈|mac (and|&|n) cheese/i, 'pasta-cream', ['cheese']],
