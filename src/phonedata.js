@@ -162,7 +162,6 @@ ${life ? `
 LIFE
 - An alarm the owner sets, changes or switches on or off in these messages; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
 - An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".
-- A weekly alarm skipped for just one day stays as it is (no change to it); only one they stop for good is switched off.
 - A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.
 - Health: a row for every story day these messages move into.
   - A day these messages show goes in that event's "phone"."health", "from": "story". A day already in LIFE NOW that the story now shows is rewritten the same way.
@@ -183,7 +182,6 @@ MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - A card purchase goes on the card account; a refund is plus; paying the card off is a transfer from the bank.
 - No money is made up to cover a payment; a balance may go below zero.
 - A new paid ${paid} has its payment as a move in the same event.
-- A booking the story confirms (a ticket, a reservation mail, a hotel) is a pass in the wallet, also when someone else booked or paid it (then no move).
 - An order or ticket only moves forward. A cancelled order${delivery ? ' or delivery' : ''} moves no money; if it was already paid, its refund is a plus move.
 ${delivery ? `- A delivery paid in cash at the door has no move.
 - A delivery from a shop not in DELIVERY SHOPS also gives "newShop": that shop as the app would list it (a rating, reviews, delivery fee and minimum order that fit such a shop there), with 2 to 4 dishes: the one ordered and ones it would have, each with different ingredients or broth.
