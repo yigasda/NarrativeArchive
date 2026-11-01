@@ -294,3 +294,12 @@ test('a phone made with everyday records: they stay apart from the story (not se
     assert.equal(got.notes[1].src, undefined);
     assert.equal(got.searches[0].src, 'guess');
 });
+
+test('a model\'s JSON with a slip is mended: a bracket of the wrong kind, a trailing comma, a missing end', async () => {
+    const { mendJson, jsonOf } = await import('../src/phoneparse.js');
+    const bad = '{ "profile": { "handle": "mara", "followers": 142 ], "posts": [ { "text": "a ] b }" }, ], "x": 1 }';
+    assert.deepEqual(JSON.parse(mendJson(bad)), { profile: { handle: 'mara', followers: 142 }, posts: [{ text: 'a ] b }' }], x: 1 });
+    assert.deepEqual(jsonOf('```json\n{ "a": [1, 2 }\n```'), { a: [1, 2] });
+    assert.deepEqual(JSON.parse(mendJson('{ "a": { "b": "c"')), { a: { b: 'c' } });
+    assert.equal(jsonOf('no json here'), null);
+});

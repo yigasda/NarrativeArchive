@@ -1,6 +1,7 @@
 // Investment generation: private portfolios, shared public quotes. All invented records stay out of RP injection.
 import { wealthBlock, wealthCheck, investmentWealthRows } from './wealth.js';
 import { askDraft } from './ai.js';
+import { parseJson } from './phoneparse.js';
 import { ctx, saveMeta } from './core.js';
 import { sideRequest, storyNow, prepareWealth } from './phonedata.js';
 import { syncOf, makeMark, exclusive } from './phonesync.js';
@@ -80,7 +81,7 @@ ANSWER — one JSON object, nothing else:
 Empty lists are fine.`;
 const list = x => Array.isArray(x) ? x : [];
 const text = (s, n = 500) => String(s ?? '').trim().slice(0, n);
-const json = out => { const s = String(out).replace(/```(?:json)?/gi, ''); return JSON.parse(s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1)); };
+const json = out => { const s = String(out).replace(/```(?:json)?/gi, ''); return parseJson(s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1)); };
 export const validDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '') && !Number.isNaN(Date.parse(d)) && new Date(d).toISOString().slice(0, 10) === d;
 export function investmentDate(m, p) {
     if (validDate(p.investment?.date)) return p.investment.date;

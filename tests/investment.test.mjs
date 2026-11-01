@@ -12,7 +12,7 @@ const util=encoded(`export const esc=s=>String(s??'').replaceAll('&','&amp;').re
 const financeURL=pathToFileURL(new URL('../src/finance.js',import.meta.url).pathname).href;
 async function load(file, map) { map={'./phonesync.js':new URL('../src/phonesync.js',import.meta.url).href,'./phoneparse.js':new URL('../src/phoneparse.js',import.meta.url).href,'./phonesynclife.js':new URL('../src/phonesynclife.js',import.meta.url).href,'./phonesyncmoney.js':new URL('../src/phonesyncmoney.js',import.meta.url).href,'./phonestory.js':encoded(`export const phoneChatScope=()=>'test';`),...map}; const src=await readFile(new URL('../src/'+file,import.meta.url),'utf8');return import(encoded(src.replace(/from '([^']+)'/g,(all,k)=>`from '${map[k]||k}'`))); }
 const wealthSource=await readFile(new URL('../src/wealth.js',import.meta.url),'utf8');
-const wealthURL=encoded(wealthSource.replace("'./ai.js'",JSON.stringify(ai)).replace("'./core.js'",JSON.stringify(core)).replace("'./finance.js'",JSON.stringify(financeURL)));
+const wealthURL=encoded(wealthSource.replace("'./ai.js'",JSON.stringify(ai)).replace("'./core.js'",JSON.stringify(core)).replace("'./finance.js'",JSON.stringify(financeURL)).replace("'./phoneparse.js'",JSON.stringify(new URL('../src/phoneparse.js',import.meta.url).href)));
 const dataMod=await load('investdata.js',{'./wealth.js':wealthURL,'./ai.js':ai,'./core.js':core,'./phonedata.js':data,'./finance.js':financeURL});
 const dataURL=encoded(`export const investmentDate=(m,p)=>p.investment?.date||'2026-10-30';`);
 const fmtIn=encoded(`export const fmtIn=(p,n,c,signed)=>(signed&&n>0?'+':'')+new Intl.NumberFormat('ko-KR',{maximumFractionDigits:2}).format(n)+' '+(c||'');`);

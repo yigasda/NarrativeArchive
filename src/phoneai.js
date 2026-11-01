@@ -2,6 +2,7 @@
 
 import { ownerProfileBlock } from './phoneprofile.js';
 import { askAI } from './ai.js';
+import { parseJson } from './phoneparse.js';
 import { datedRows } from './anniv.js';
 import { calendars } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
@@ -209,7 +210,7 @@ export async function takePhoto(m, p) {
     const out = String(await askAI(prompt, { force: true, system: AI_SYS_SHOT, maxTokens: 1500 }) || '').replace(/```(?:json)?/gi, '');
     const a = out.indexOf('{'), b = out.lastIndexOf('}');
     let raw = null;
-    try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
+    try { raw = a >= 0 && b > a ? parseJson(out.slice(a, b + 1)) : null; } catch { raw = null; }
     const caption = line(raw?.caption, 200);
     if (!caption) throw new Error('모델 답에서 사진 설명을 찾지 못했어요');
     p.photos.push({ caption, ko: ko(raw?.ko), time: storyNow(p) || p.now || '', mood: pick(raw?.mood, MOODS, 'warm') });
@@ -250,7 +251,7 @@ export async function writeEntry(m, p, kind) {
     const out = String(await askAI(prompt, { force: true, system: AI_SYS_WRITE, maxTokens: 2500 }) || '').replace(/```(?:json)?/gi, '');
     const a = out.indexOf('{'), b = out.lastIndexOf('}');
     let raw = null;
-    try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
+    try { raw = a >= 0 && b > a ? parseJson(out.slice(a, b + 1)) : null; } catch { raw = null; }
     const text = str(raw?.text, 2000);
     if (!text) throw new Error(`모델 답에서 ${diary ? '일기' : '메모'}를 찾지 못했어요`);
     const now = storyNow(p) || p.now || '';
@@ -357,7 +358,7 @@ export async function makeDraft(m, p, i) {
     const out = String(await askAI(prompt, { force: true, system: AI_SYS_DRAFT, maxTokens: 1200 }) || '').replace(/```(?:json)?/gi, '');
     const a = out.indexOf('{'), b = out.lastIndexOf('}');
     let raw = null;
-    try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
+    try { raw = a >= 0 && b > a ? parseJson(out.slice(a, b + 1)) : null; } catch { raw = null; }
     const text = str(raw?.text, 600);
     if (!text) throw new Error('모델 답에서 초안을 찾지 못했어요');
     t.draft = { text, ko: ko(raw?.ko), time: storyNow(p) || p.now || '', src: 'guess' };
@@ -396,7 +397,7 @@ export async function recordVoice(m, p) {
     const out = String(await askAI(prompt, { force: true, system: AI_SYS_VOICE, maxTokens: 2000 }) || '').replace(/```(?:json)?/gi, '');
     const a = out.indexOf('{'), b = out.lastIndexOf('}');
     let raw = null;
-    try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
+    try { raw = a >= 0 && b > a ? parseJson(out.slice(a, b + 1)) : null; } catch { raw = null; }
     const text = str(raw?.text, 2000);
     if (!text) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
     p.voice = [...(p.voice || []), { title: line(raw?.title, 80), kt: line(raw?.kt, 80), text, ko: str(raw?.ko, 2000), time: storyNow(p) || p.now || '', sec: Math.max(3, Math.min(900, Math.round(Number(raw?.sec) || 30))), place: line(raw?.place, 60), src: 'guess', now: true }].slice(-CAP.voice);
@@ -426,7 +427,7 @@ export async function searchPage(m, p, k) {
     const out = String(await askAI(prompt, { force: true, system: AI_SYS_SEARCH, maxTokens: 4000 }) || '').replace(/```(?:json)?/gi, '');
     const a = out.indexOf('{'), b = out.lastIndexOf('}');
     let raw = null;
-    try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
+    try { raw = a >= 0 && b > a ? parseJson(out.slice(a, b + 1)) : null; } catch { raw = null; }
     const rs = arr(raw?.results).map(r => ({ site: line(r?.site, 60), url: line(r?.url, 120), path: line(r?.path, 120), color: hex(r?.color), kind: pick(r?.kind, KINDS, 'other'), title: line(r?.title, 160), kt: line(r?.kt, 160), date: line(r?.date, 10), text: line(r?.text, 400), ko: line(r?.ko, 400), bold: arr(r?.bold).map(w => line(w, 40)).filter(Boolean).slice(0, 4), links: arr(r?.links).map(w => line(w, 30)).filter(Boolean).slice(0, 3) })).filter(r => r.title).slice(0, 8);
     if (!rs.length) throw new Error('모델 답에서 검색 결과를 찾지 못했어요');
     x.results = rs;
@@ -451,7 +452,7 @@ export async function webPage(m, p, k, r) {
     const out = String(await askAI(prompt, { force: true, system: AI_SYS_PAGE, maxTokens: 5000 }) || '').replace(/```(?:json)?/gi, '');
     const a = out.indexOf('{'), b = out.lastIndexOf('}');
     let raw = null;
-    try { raw = a >= 0 && b > a ? JSON.parse(out.slice(a, b + 1)) : null; } catch { raw = null; }
+    try { raw = a >= 0 && b > a ? parseJson(out.slice(a, b + 1)) : null; } catch { raw = null; }
     const body = arr(raw?.body).map(v => txt(v, 1200)).filter(v => v.text).slice(0, 6);
     if (!raw || !(body.length || raw.title)) throw new Error('모델 답에서 페이지를 찾지 못했어요');
     const kind = KINDS.includes(res.kind) ? res.kind : 'other', o = raw[kind] && typeof raw[kind] === 'object' ? raw[kind] : {};

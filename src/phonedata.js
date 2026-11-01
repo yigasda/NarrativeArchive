@@ -17,7 +17,7 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
-import { arr, evOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+import { arr, evOf, hhmm, jsonOf, ko, parseJson, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 export { arr, hhmm, jsonOf, ko, last4, line, num, pad, pick, str, when, withEv };
 import { applyDays, applyLife, applyWeather, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
@@ -65,7 +65,8 @@ const PHONE_STYLE = `LANGUAGE
 - People write the way they talk in the archive and chat. Texts are short, like real texts.
 
 TIMES
-"MM-DD HH:MM" (24-hour), in story time, from the archive's dates. "now" is the newest moment of the story.`;
+"MM-DD HH:MM" (24-hour), in story time, from the archive's dates. "now" is the newest moment of the story.
+No year in any text unless the story gives one.`;
 const PHONE_TEST = `${PHONE_FACT}\n\n${PHONE_STYLE}`;
 const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how the owner saved them (a nickname, an emoji, or just the name) }],
   "threads": [{ "with": name, "messages": [{ "from": "me" or the sender's name, "text", "ko", "time" }],
@@ -225,7 +226,7 @@ export function parsePhone(out) {
     const a = s.indexOf('{'), b = s.lastIndexOf('}');
     if (a < 0 || b <= a) throw new Error('모델 답에서 폰 내용(JSON)을 찾지 못했어요');
     let raw;
-    try { raw = JSON.parse(s.slice(a, b + 1)); } catch { throw new Error('모델 답의 JSON이 깨져 있어요. 다시 해 보세요'); }
+    try { raw = parseJson(s.slice(a, b + 1)); } catch { throw new Error('모델 답의 JSON이 깨져 있어요. 다시 해 보세요'); }
     // an everyday record the model made up from the owner's habits stays apart from the story (재구성)
     const tag = (x, raw) => (raw?.everyday === true ? { ...withEv(x, raw), src: 'guess' } : withEv(x, raw));
     const msg = x => ({ from: line(x?.from, 40) || 'me', text: str(x?.text, 600), ko: ko(x?.ko), time: when(x?.time) });
