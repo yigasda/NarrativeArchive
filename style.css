@@ -5187,14 +5187,14 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax_sph { background: #2f7d74; color: #fff; padding-bottom: 40px; flex: none; }
 .ax_sphs { padding-bottom: 36px; }
 .ax_spr { display: flex; align-items: center; gap: 10px; padding: 6px 16px 0; }
-.ax_splogo { flex: 1; font: 800 22px 'Inter Tight', -apple-system, sans-serif; letter-spacing: -0.03em; } .ax_splogo i { font-style: normal; color: #bfe8e2; }
+.ax_splogo { flex: 1; font: 800 22px 'Inter Tight', -apple-system, sans-serif !important; letter-spacing: -0.03em; } .ax_splogo i { font-style: normal; color: #bfe8e2; }
 .ax_shopv .ax_bkt { flex: 1; }
 .ax_spsr { margin: 14px 16px 0; height: 44px; border-radius: 14px; background: #fff; color: #8a929d; display: flex; align-items: center; gap: 8px; padding: 0 14px; font-size: 14.5px; }
 .ax_sps { flex: 1; min-height: 0; margin-top: -26px; border-radius: 26px 26px 0 0; background: #f4f5f7; overflow: hidden; display: flex; flex-direction: column; padding-top: 16px; }
 .ax_spso { margin-top: -22px; }
 .ax_sphd { display: flex; justify-content: space-between; align-items: baseline; padding: 0 20px 10px; flex: none; } .ax_sphd b { font-size: 20px; font-weight: 700; } .ax_sphd span { font-size: 13px; color: #7c8592; }
 .ax_sptabs { display: flex; gap: 20px; padding: 0 20px; margin-bottom: 12px; border-bottom: 1px solid #e6e8ec; flex: none; }
-.ax .ax_sptabs > button { --axbg: none; padding: 0 0 10px; font-size: 14px; font-weight: 600; color: #9aa1ab; border-radius: 0; }
+.ax .ax_sptabs > button { --axbg: none; padding: 0 0 10px !important; font-size: 14px; font-weight: 600; color: #9aa1ab; border-radius: 0 !important; border: 0 !important; background: none !important; outline: 0; }
 .ax .ax_sptabs > button.on { --axsh: inset 0 -2.5px 0 #2f7d74; color: #161b22; }
 .ax_sptabs small { font: 600 11px 'Inter Tight', -apple-system, sans-serif; margin-left: 4px; color: #2f7d74; }
 .ax_oc { padding: 14px 16px; }
