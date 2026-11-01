@@ -239,7 +239,8 @@ const KO_T = { 딸기: 'strawberry', 망고: 'mango', 샤인머스캣: 'grape', 
     새우: 'shrimp', 전복: 'abalone', 오징어: 'squid', 홍합: 'mussel', 게살: 'crab', 꽃게: 'crab', 대게: 'crab', 크랩: 'crab', 연어: 'salmon', 광어: 'flatfish', 참치: 'tuna', 장어: 'eel', 날치알: 'roe', 명란: 'roe',
     계란: 'egg', 달걀: 'egg', 계란후라이: 'fried-egg', 계란프라이: 'fried-egg', 치즈: 'cheese', 눈꽃치즈: 'snow-cheese', '눈꽃 치즈': 'snow-cheese', 모짜렐라: 'mozzarella', 모차렐라: 'mozzarella', 대파: 'scallion', 쪽파: 'scallion',
     양파: 'onion', 버섯: 'mushroom', 당근: 'carrot', 애호박: 'zucchini', 옥수수: 'corn', 감자: 'potato', 김치: 'kimchi', 숙주: 'sprouts', 콩나물: 'sprouts', 깻잎: 'perilla', 고추: 'chili', 청양: 'chili', 할라피뇨: 'chili',
-    브로콜리: 'broccoli', 토마토: 'tomato', 아보카도: 'avocado', 김가루: 'seaweed', 미역: 'seaweed', 참깨: 'sesame', 떡사리: 'rice-cake', 어묵: 'fishcake', 오뎅: 'fishcake', 유부: 'tofu-skin', 빵가루: 'crumbs' };
+    브로콜리: 'broccoli', 토마토: 'tomato', 아보카도: 'avocado', 김가루: 'seaweed', 미역: 'seaweed', 참깨: 'sesame', 떡사리: 'rice-cake', 어묵: 'fishcake', 오뎅: 'fishcake', 유부: 'tofu-skin', 빵가루: 'crumbs',
+    포테이토: 'potato', 바지락: 'mussel', 조개: 'mussel', 해물: ['shrimp', 'squid', 'mussel'], 해산물: ['shrimp', 'squid', 'mussel'] };
 const KO_T1 = { 파: 'scallion', 김: 'seaweed', 깨: 'sesame', 햄: 'ham', 떡: 'rice-cake', 콘: 'corn', 게: 'crab', 팥: 'red-bean', 닭: 'chicken', 귤: 'tangerine' };
 const KO_S = { 감자튀김: 'fries', 감튀: 'fries', 콜라: 'cola', 제로콜라: 'cola', 사이다: 'soda', 맥주: 'beer', 소주: 'soju', 치즈볼: 'cheese-balls', 계란찜: 'egg-custard', 공기밥: 'rice', 미소국: 'miso', 단무지: 'danmuji', 생수: 'water' };
 // a base that is itself a side doesn't take that side again (콜라 단품 + 세트 콜라)
@@ -272,7 +273,7 @@ const read = (text, one = false) => {
     const out = [];
     for (const [, k, id, re, single] of LEX) {
         if (single && !one) continue;
-        s = s.replace(re, (m, at) => { out.push({ at, end: at + m.length, k, id }); return ' '.repeat(m.length); });
+        s = s.replace(re, (m, at) => { for (const one of [id].flat()) out.push({ at, end: at + m.length, k, id: one }); return ' '.repeat(m.length); });
     }
     return out.sort((a, b) => a.at - b.at);
 };

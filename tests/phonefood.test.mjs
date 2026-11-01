@@ -135,3 +135,12 @@ test('sizes and leaving out, as orders really say them', async () => {
     assert.equal(tops('새우 많이, 양파 빼주세요'), 'shrimp');
     assert.equal(tops('양파 넣어주세요'), 'onion');
 });
+
+test('포테이토 · 바지락 · 해물 read from a name', async () => {
+    const { dishPic } = await import('../src/phonefood.js');
+    const w = (base, name, option) => dishPic({ base }, { name, option }).with.join(',');
+    assert.equal(w('pizza', '포테이토 피자'), 'potato');
+    assert.equal(w('kalguksu', '바지락 칼국수'), 'mussel');
+    assert.equal(w('jjamppong', '해물짬뽕'), 'shrimp,squid,mussel');
+    assert.equal(w('jjamppong', '해물짬뽕', '오징어 빼고'), 'shrimp,mussel');
+});
