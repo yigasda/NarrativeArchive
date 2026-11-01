@@ -144,7 +144,6 @@ export async function openPhone(who = null) {
                       <input type="text" class="na_ph_addname" placeholder="인물 이름" enterkeyhint="done" autocomplete="off">
                       <button type="button" class="na_ph_makebtn na_ph_addok">이 인물의 폰 보기</button>
                     </div>
-                    <small>상태창에 나온 인물은 저절로 떠요</small>
                   </div>
                 </div></div>`);
             return;
