@@ -22,3 +22,11 @@ test('the picture takes a colour only when the item names one', () => {
     // colour words inside other words don't colour: Bluetooth isn't blue, Brot isn't red
     assert.match(prodSvg({ item: 'Bluetooth Lautsprecher' }), /#9aa3ae/);
 });
+test('Korean names, the update round\'s usual line, find their picture (and the near misses stay apart)', () => {
+    const k = ko => prodKind({ item: ko, ko });
+    const want = { '아이폰 15 케이스': 'phonecase', '갤럭시 S24': 'smartphone', '갤럭시 탭 S9': 'laptop', '노트북 가방': 'backpack', '롱패딩': 'jacket', '어그 부츠': 'boots', '카드지갑': 'wallet',
+        '피아노 악보': 'book', '책상': 'chair', '책가방': 'backpack', '수분크림': 'cosmetics', '아이스크림': 'snack', '쿠션': 'pillow', '쿠션팩트': 'cosmetics', '에어프라이어': 'pan', '막걸리': 'bottle',
+        '통기타': 'guitar', '닌텐도 스위치': 'gamepad', '극세사 이불': 'pillow', '요가 매트': 'mat', '유산균': 'pills', '강아지 사료': 'snack', '포스트잇': 'pen', '상품권': 'giftbox' };
+    for (const [ko, kind] of Object.entries(want)) assert.equal(k(ko), kind, ko);
+    assert.equal(k('자동차 방향제'), '');
+});
