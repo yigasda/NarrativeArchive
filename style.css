@@ -4241,11 +4241,30 @@ dialog.popup:has(.na_confirm) .na_confirm .na_confirm_text { margin-top: 6px; fo
 dialog.popup:has(.na_confirm) .na_confirm:not(:has(input)) :is(.na_v2_title, .na_confirm_text) { text-align: center; }
 dialog.popup:has(.na_confirm) .na_confirm:not(:has(input))::before { content: ""; display: block; width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 999px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B8541F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16.2v.1'/%3E%3C/svg%3E") center / 26px no-repeat, var(--na-accent-soft); }
 body.na_darkui dialog.popup:has(.na_confirm) .na_confirm:not(:has(input))::before { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23EE9A66' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16.2v.1'/%3E%3C/svg%3E") center / 26px no-repeat, var(--na-accent-soft); }
-dialog.popup:has(.na_confirm) .na_confirm label { display: flex !important; align-items: center; justify-content: center; margin-top: 8px; padding: 12px; border-radius: 999px; background: var(--na-card); font-size: 14.5px; font-weight: 600; color: var(--na-mute); cursor: pointer; }
-dialog.popup:has(.na_confirm) .na_confirm label:first-of-type { margin-top: 16px; }
-dialog.popup:has(.na_confirm) .na_confirm label:has(input:checked) { background: var(--na-fill); color: var(--na-onfill); }
-dialog.popup:has(.na_confirm) .na_confirm label input { position: absolute; opacity: 0; pointer-events: none; }
-dialog.popup:has(.na_confirm) .na_confirm label:has(input:focus-visible) { outline: 2px solid var(--na-accent); outline-offset: 2px; }
+dialog.popup:has(.na_confirm) .na_confirm > label { display: flex !important; align-items: center; justify-content: center; margin-top: 8px; padding: 12px; border-radius: 999px; background: var(--na-card); font-size: 14.5px; font-weight: 600; color: var(--na-mute); cursor: pointer; }
+dialog.popup:has(.na_confirm) .na_confirm > label:first-of-type { margin-top: 16px; }
+dialog.popup:has(.na_confirm) .na_confirm > label:has(input:checked) { background: var(--na-fill); color: var(--na-onfill); }
+dialog.popup:has(.na_confirm) .na_confirm > label input { position: absolute; opacity: 0; pointer-events: none; }
+dialog.popup:has(.na_confirm) .na_confirm > label:has(input:focus-visible) { outline: 2px solid var(--na-accent); outline-offset: 2px; }
+/* the story choice (같은 이야기인가요?): two tiles side by side, icon on top, the chosen one with an orange edge and a tick */
+dialog.popup:has(.na_confirm) .na_sc_tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+dialog.popup:has(.na_confirm) .na_sc_tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 8px 16px; border-radius: 20px; background: #FBF6F2; border: 1.5px solid transparent; text-align: center; cursor: pointer; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+body.na_darkui dialog.popup:has(.na_confirm) .na_sc_tile { background: var(--na-card); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 6px 16px rgba(0, 0, 0, 0.25); }
+dialog.popup:has(.na_confirm) .na_sc_tile:has(input:checked) { border-color: var(--na-accent); background: #FFF8F3; }
+body.na_darkui dialog.popup:has(.na_confirm) .na_sc_tile:has(input:checked) { background: #45332A; }
+dialog.popup:has(.na_confirm) .na_sc_tile:has(input:focus-visible) { outline: 2px solid var(--na-accent); outline-offset: 2px; }
+dialog.popup:has(.na_confirm) .na_sc_tile input { position: absolute; opacity: 0; pointer-events: none; }
+dialog.popup:has(.na_confirm) .na_sc_ic { width: 52px; height: 52px; margin-bottom: 6px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+dialog.popup:has(.na_confirm) .na_sc_ic.keep { background: #E7EEF6; color: #3D6FB6; }
+body.na_darkui dialog.popup:has(.na_confirm) .na_sc_ic.keep { background: #2E3A4B; color: #9DBCE6; }
+dialog.popup:has(.na_confirm) .na_sc_ic.new { background: var(--na-accent-soft); color: var(--na-accent); }
+dialog.popup:has(.na_confirm) .na_sc_tile b { font-size: 14.5px; font-weight: 700; color: var(--na-ink); white-space: nowrap; }
+dialog.popup:has(.na_confirm) .na_sc_tile small { font-size: 12.5px; color: var(--na-sub); opacity: 1; }
+dialog.popup:has(.na_confirm) .na_sc_rd { position: absolute; top: 10px; right: 10px; width: 20px; height: 20px; box-sizing: border-box; border-radius: 999px; border: 2px solid var(--na-line); display: flex; align-items: center; justify-content: center; }
+dialog.popup:has(.na_confirm) .na_sc_rd svg { display: none; }
+dialog.popup:has(.na_confirm) .na_sc_tile:has(input:checked) .na_sc_rd { border: 0; background: var(--na-accent); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+dialog.popup:has(.na_confirm) .na_sc_tile:has(input:checked) .na_sc_rd svg { display: block; }
+dialog.popup:has(.na_confirm) .na_sc_note { margin-top: 14px; font-size: 12.5px; color: var(--na-dim); text-align: center; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) .popup-controls.popup-controls { display: flex !important; gap: 8px; width: 100%; margin-top: 20px; padding: 0; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) .popup-controls.popup-controls .menu_button.menu_button { flex: 1 1 0 !important; width: auto !important; max-width: none !important; min-height: 46px; margin: 0 !important; padding: 0 12px !important; display: flex; align-items: center; justify-content: center; border-radius: 999px !important; font-size: 15px; font-weight: 600; filter: none !important; opacity: 1 !important; outline: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) .popup-controls.popup-controls .popup-button-cancel.popup-button-cancel { order: -1; background: var(--na-card) !important; border: 1px solid var(--na-line) !important; color: var(--na-ink) !important; box-shadow: none !important; }
