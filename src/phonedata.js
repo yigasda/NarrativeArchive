@@ -327,10 +327,19 @@ export const noArchive = m => !archiveFor(m, -1).text.trim();
 // the story's year: the phone's own (carried over New Year), else one written in a date in the archive, the newest status
 // lines or (no archive) the chat; none for a story that never dates itself (a fantasy calendar, an undated present)
 export function storyYear(m, p = null) {
+    // the owner's own choice in 날짜 및 시간: this year, or none
+    if (p?.noYear) return '';
     if (p?.year) return String(p.year);
     let tracks = '';
     try { tracks = recentTrackers(5).map(t => t.date || '').join('\n'); } catch { /* no status lines */ }
     return yearIn(m.text) || yearIn(tracks) || (noArchive(m) ? yearIn(recentForCheck(1e9).join('\n')) : '');
+}
+// a phone's year, once: one the story writes in a date, else none (설정 › 날짜 및 시간 changes it); true when it was set now
+export function ensureYear(m, p) {
+    if (!p || p.year || p.noYear) return false;
+    const y = Number(storyYear(m, p));
+    if (y) p.year = y; else p.noYear = true;
+    return true;
 }
 // what the model is told of the year: a year in any text is this one (nothing when it is unknown)
 const yearBlock = (m, p) => { const y = storyYear(m, p); return y ? `[STORY YEAR]\n${y}` : ''; };
@@ -475,6 +484,7 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         m.phones[key] = mergePhone(base, got);
     }
     const p = m.phones[key];
+    ensureYear(m, p);
     if(m.phoneProfiles) delete m.phoneProfiles[key];
     ensureIds(p);
     p.upto = lastEnd(m);
@@ -575,8 +585,8 @@ async function updatePhone(m, owner) {
         const trackDay = tracker ? when(tracker.date).slice(0, 5) : '';
         const askWeather = !!life && (!tracker || !!trackDay && trackDay !== life.weather?.date);
         // the year the phone's now is in: read once from the bank or the archive, then carried over New Year with the now
-        if (!p.year) { const y = Number(storyYear(m, p) || String(p.money?.asOf || p.investment?.date || '').slice(0, 4)); if (y > 1900) p.year = y; }
-        const known = p.year ? String(p.year) : '', year = known || String(new Date().getFullYear());
+        if (!p.year && !p.noYear) { const y = Number(storyYear(m, p) || String(p.money?.asOf || p.investment?.date || '').slice(0, 4)); if (y > 1900) p.year = y; }
+        const known = p.year && !p.noYear ? String(p.year) : '', year = known || String(new Date().getFullYear());
         const anchor = known && /^\d{2}-\d{2}/.test(p.now || '') ? `${known}-${p.now.slice(0, 5)}` : '';
         // the days ahead with their weekdays (only with a known year): "on Friday" is a date the model can look up
         const today = String(p.now || '').slice(0, 5), dayList = known && /^\d{2}-\d{2}$/.test(today) ? Array.from({ length: 14 }, (_, k) => {

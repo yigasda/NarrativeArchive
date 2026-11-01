@@ -6843,3 +6843,5 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame .na_ph_makeopts button:hover { background: rgba(255, 255, 255, 0.22) !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame .na_ph_maketip button { flex: none; margin: 0; padding: 8px 14px !important; border: 0 !important; border-radius: 999px !important; background: rgba(255, 255, 255, 0.9) !important; box-shadow: none !important; color: #2b2f63 !important; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame :is(.na_ph_makebtn, .na_ph_makeopts button, .na_ph_maketip button):focus { outline: none !important; box-shadow: none !important; }
+/* 설정 › 날짜 및 시간: the year sits at the row's end, like a value */
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame .na_ph_year { width: 90px; margin-left: auto; text-align: right; }

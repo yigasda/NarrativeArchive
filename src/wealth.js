@@ -42,7 +42,7 @@ export function wealthDate(m,p) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return date;
     // the year only from a date the archive writes (yearIn): a bare number may be money or the past
     const full=[...String(m.text || '').matchAll(/(?<!\d)((?:19|20)\d{2})[-/.](\d{2})[-/.](\d{2})(?!\d)/g)].at(-1);
-    const year=p.year ? String(p.year) : yearIn(m.text);
+    const year=p.noYear ? '' : p.year ? String(p.year) : yearIn(m.text);
     return year && /^\d{2}-\d{2}/.test(p.now || '') ? `${year}-${p.now.slice(0,5)}` : full ? `${full[1]}-${full[2]}-${full[3]}` : '';
 }
 export function addWealthFX(m,rows,date) {

@@ -86,7 +86,7 @@ export const validDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '') && !Number.isN
 export function investmentDate(m, p) {
     if (validDate(p.investment?.date)) return p.investment.date;
     // the year only from a date the archive writes, never a bare number (it may be money or the past)
-    const day = storyNow(p).slice(0, 5), year = p.year ? String(p.year) : yearIn(m.text);
+    const day = storyNow(p).slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : yearIn(m.text);
     const date = year && day ? `${year}-${day}` : '';
     return validDate(date) ? date : '';
 }
