@@ -310,6 +310,16 @@ function mergePhone(p, add, { keepAll = false } = {}) {
 const secEnd = s => { const mt = s.title.match(RANGE_HEAD); return mt ? Number(mt[4]) : -1; };
 const lastEnd = m => Math.max(-1, ...parseSections(String(m.text || '')).filter(s => !s.group).map(secEnd));
 const ARCHIVE_MAX = 120_000; // characters: the state at the end, and as many of the newest sections as fit
+// a chat with no archive yet: its own messages stand in for it, from the start, the newest kept when there are too many
+const CHAT_MAX = 70_000;
+function chatStory() {
+    const rows = recentForCheck(1e9), out = [];
+    for (let i = rows.length - 1, size = 0; i >= 0; i--) { if (out.length && size + rows[i].length > CHAT_MAX) break; out.unshift(rows[i]); size += rows[i].length + 2; }
+    return out.join('\n\n').slice(-CHAT_MAX);
+}
+const noArchive = m => !archiveFor(m, -1).text.trim();
+// the archive block, or the chat in its place (then no RECENT CHAT: it is in there)
+const archiveBlock = (m, ar, head = 'ARCHIVE') => (noArchive(m) ? `[${head} — none written yet: the chat so far is the story]\n${chatStory() || '(empty)'}` : `[${head}]\n${ar}`);
 function archiveFor(m, after = -1) {
     const [body, tail] = splitTail(String(m.text || ''));
     const secs = parseSections(body).filter(s => !s.group && (after < 0 || secEnd(s) > after));
@@ -374,10 +384,10 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '') 
     return [
         p ? `[PHONE NOW]\n${now}` : '',
         !p && m.phones?.[nameKey(owner)]?.device ? `[DEVICE — locked]\n${JSON.stringify(m.phones[nameKey(owner)].device)}` : '',
-        `[ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}]\n${ar.text || '(nothing new)'}`,
+        archiveBlock(m, ar.text || '(nothing new)', `ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}`),
         world ? `[WORLD]\n${world}` : '',
         lore ? `[LOREBOOK]\n${lore}` : '',
-        recent ? `[RECENT CHAT]\n${recent}` : '',
+        recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : '',
         `[OWNER]\n${owner}`,
         profile, blindBlock(m, owner),
         namesBlock(m),
@@ -1002,9 +1012,9 @@ export async function sideRequest(m, owner, blocks, { profile, money = false } =
     const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});
     const recent = recentForCheck(6).join('\n\n').slice(-6000);
     return [
-        `[ARCHIVE]\n${archiveFor(m, -1).text || '(empty)'}`,
+        archiveBlock(m, archiveFor(m, -1).text || '(empty)'),
         world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
-        recent ? `[RECENT CHAT]\n${recent}` : '',
+        recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : '',
         `[OWNER]\n${owner}`, profileText, blindBlock(m, owner), ...blocks, namesBlock(m),
     ].filter(Boolean).join('\n\n');
 }
