@@ -9,7 +9,7 @@ import { calendars } from './calendar.js';
 import { saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
-import { arr, CHAT_TOKENS, COUNTRIES, ensureIds, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
+import { arr, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, dayGap, fileOf, nightsToDays, parseWeather, weatherFrom } from './phonesynclife.js';
 import { exclusive } from './phonesync.js';
@@ -225,7 +225,7 @@ export function parseDelivery(raw, accounts = [], tx = []) {
             mode: pick(o?.mode, ['delivery', 'pickup'], 'delivery'), time: when(o?.time), arrived: when(o?.arrived), to: line(o?.to, 40) || 'home', address: line(o?.address, 80), left: line(o?.left, 60),
             noteShop: line(o?.noteShop, 120), noteShopKo: ko(o?.noteShopKo), noteRider: line(o?.noteRider, 120), noteRiderKo: ko(o?.noteRiderKo), noCutlery: yes(o?.noCutlery), for: int(o?.for, 1, 30) ?? 1,
             status: pick(o?.status, ['on the way', 'delivered', 'cancelled', 'refunded'], 'delivered'), account: acct(o?.account), ...paidOf(o?.paidBy), reviewed: yes(o?.reviewed), gift: line(o?.gift, 40) }, o)).filter(o => o.shop && o.items.length && o.time)
-            .sort((a, b) => a.time.localeCompare(b.time)).slice(-12),
+            .sort(byStory(p.now)).slice(-12),
         cart,
     };
 }
@@ -271,7 +271,7 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
     if (p.delivery) unpayOrders(m, p);
     // orders a reflection put in stay (their payments are the bank's own rows)
     const kept = (p.delivery?.orders || []).filter(o => o.sync);
-    p.delivery = { ...d, orders: [...d.orders, ...kept].sort((a, b) => String(a.time).localeCompare(String(b.time))), look: deliveryLook(p), at: storyNow(p) || p.now || '' };
+    p.delivery = { ...d, orders: [...d.orders, ...kept].sort(byStory(p.now)), look: deliveryLook(p), at: storyNow(p) || p.now || '' };
     if (p.sync?.marks) p.sync.marks.delivery = markNow();
     ensureIds(p);
     payDeliveries(m, p);

@@ -14,6 +14,7 @@
 import { cash, finance, finite, fx, migrateBank, positions, round } from './finance.js';
 import { boxAt, dayGap, lifeReplay, lifeRevert } from './phonesynclife.js';
 import { dishPic } from './phonefood.js';
+import { byStory } from './phoneparse.js';
 
 const STEP = { ordered: 0, shipped: 1, 'on the way': 2, delivered: 3 };
 const ORDER = ['ordered', 'shipped', 'on the way', 'delivered', 'unknown', 'cancelled', 'returning', 'returned', 'refunded'];
@@ -350,7 +351,7 @@ export function payOrders(m, p, year) {
         put(o, a, `${PAY}${o.id}`, -total, o.time, o.mode === 'pickup' ? 'Pickup' : 'Delivery');
         if (o.status === 'refunded') put(o, a, `${PAY}${o.id}-r`, total, o.arrived || o.time, 'Refund');
     }
-    tx.sort((a, b) => String(a.time).localeCompare(String(b.time)));
+    tx.sort(byStory(p.now));
     for (const a of p.money.bank.accounts) if (a.kind !== 'credit') { const L = f.accounts[`${a.id}:${a.currency}`]; if (L) a.balance = round(L.amount + Object.values(L.entries).reduce((s, x) => s + x.amount, 0)); }
     // the card's month counted again with the rows just added
     if (n) migrateBank(m, p);

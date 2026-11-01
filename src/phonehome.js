@@ -2,13 +2,13 @@
 
 import { nameKey } from './people.js';
 import { annivToday, APPS } from './phoneapps.js';
-import { ago, bigClock, fmtDate, fmtTime, koOn, lastTime, parts, savedName, upcoming } from './phonedata.js';
+import { ago, bigClock, byStory, fmtDate, fmtTime, gapDays, koOn, lastTime, parts, savedName, upcoming } from './phonedata.js';
 import { esc } from './util.js';
 
 function lockNotes(p, now) {
     const notes = [];
     const day = String(now).slice(0, 5);
-    for (const t of [...p.threads].sort((a, b) => lastTime(b).localeCompare(lastTime(a)))) {
+    for (const t of [...p.threads].sort(byStory(p.now, lastTime)).reverse()) {
         const x = t.messages[t.messages.length - 1];
         if (x && x.from !== 'me' && notes.length < 2) notes.push({ app: 'msg', title: savedName(p, t.with), text: x.text, ko: x.ko, time: x.time });
     }
@@ -122,7 +122,7 @@ const cgMini = (k, mono) => { const [c1, c2, g = '#ffffff'] = CG_GEL[k]; return 
 // the 2nd page's widget: the next pass in the wallet, and an order on its way (or a nudge to fill them)
 function walletW(p, now, mono) {
     const M = p.money, day = String(now).slice(0, 5), bars = mono ? ['#2a313b', 'rgba(22, 27, 34, 0.22)'] : ['#8b95aa', '#86bdb6'];
-    const next = M ? [...M.passes].filter(x => !x.date || x.date >= day).sort((a, b) => String(a.date).localeCompare(String(b.date)))[0] : null;
+    const next = M ? [...M.passes].filter(x => !x.date || gapDays(day, x.date) >= 0).sort((a, b) => gapDays(day, a.date) - gapDays(day, b.date))[0] : null;
     const ord = M ? M.orders.find(x => x.status !== 'delivered' && x.status !== 'unknown') : null;
     const route = next ? (next.from && next.to && next.kind !== 'hotel' ? `${next.from} → ${next.to}` : next.by) : '';
     return `<button type="button" class="cg_glass cg_wcal cg_wwal" data-go="wallet">

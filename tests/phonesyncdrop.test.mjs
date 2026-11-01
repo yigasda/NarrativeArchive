@@ -327,3 +327,15 @@ test('a new story year moves every dated record with it, in every phone of the c
     assert.equal(data.setStoryYear(q, q.phones.a, 2030), 0);
     assert.deepEqual([q.phones.a.year, q.phones.a.noYear, q.phones.a.money.asOf], [2030, false, '2026-01-01']);
 });
+
+test('story days sort and count across New Year, not as text', async () => {
+    const { byStory, gapDays, storyMin } = await import('../src/phoneparse.js');
+    assert.equal(gapDays('12-31', '01-01'), 1);
+    assert.equal(gapDays('01-02', '12-30'), -3);
+    const rows = [{ time: '01-02 09:00' }, { time: '12-30 22:00' }, { time: '12-31 08:00' }, { time: '01-01 00:10' }];
+    assert.deepEqual([...rows].sort(byStory('01-02 12:00')).map(r => r.time), ['12-30 22:00', '12-31 08:00', '01-01 00:10', '01-02 09:00']);
+    // an order due tomorrow stays ahead; something from March is last year's when now is February
+    assert.ok(storyMin('01-03 10:00', '01-02 12:00') > storyMin('01-02 09:00', '01-02 12:00'));
+    assert.ok(storyMin('03-10 10:00', '02-01 12:00') < storyMin('01-20 10:00', '02-01 12:00'));
+    assert.deepEqual([{ opened: '01-01 10:00' }, { opened: '12-31 10:00' }].sort(byStory('01-01 12:00', f => f.opened)).map(f => f.opened), ['12-31 10:00', '01-01 10:00']);
+});

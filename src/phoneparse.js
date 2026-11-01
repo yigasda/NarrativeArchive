@@ -17,6 +17,22 @@ export const pick = (v, list, dflt) => (list.includes(v) ? v : dflt);
 export const evOf = v => line(v, 40).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '');
 // a bare number (a model counting its items) is no tag
 export const withEv = (x, raw) => { const ev = evOf(raw?.ev); return ev && !/^\d+$/.test(ev) ? { ...x, ev } : x; };
+// story days ("MM-DD") carry no year: how many days from a to b, the short way round New Year (12-31 → 01-01 is 1, not
+// -364). Compare and sort story days with this, never as text
+const dnum = s => { const mt = /^(\d{2})-(\d{2})/.exec(String(s || '')); return mt ? Date.UTC(2001, mt[1] - 1, Number(mt[2])) / 864e5 : NaN; };
+export const gapDays = (a, b) => { let g = dnum(b) - dnum(a); if (!Number.isFinite(g)) return 0; if (g < -180) g += 365; if (g > 180) g -= 365; return g; };
+// a record's time ("MM-DD HH:MM") as minutes from the story's now, for sorting in story order across New Year. Records
+// are mostly behind now: up to a month ahead stays ahead (an order due, a booking), the rest of the year is behind
+export const storyMin = (t, now) => {
+    const s = String(t || ''), d = dnum(s), n = dnum(String(now || ''));
+    if (!Number.isFinite(d)) return -1e9;
+    let g = Number.isFinite(n) ? d - n : d;
+    if (Number.isFinite(n)) { if (g > 31) g -= 365; else if (g < -334) g += 365; }
+    const hm = /(\d{2}):(\d{2})/.exec(s.slice(5));
+    return g * 1440 + (hm ? hm[1] * 60 + Number(hm[2]) : 0);
+};
+// a sort comparator in story order (oldest first): byStory(p.now) or byStory(p.now, x => x.opened); flip a, b for newest
+export const byStory = (now, get = x => x?.time) => (a, b) => storyMin(get(a), now) - storyMin(get(b), now) || String(get(a) ?? '').localeCompare(String(get(b) ?? ''));
 // the story's year: only where it stands in a date ("2026-11-07", "2026.11.07", "2026년 11월", "Nov 7, 2026",
 // "7. November 2026"), the last one written. A bare number is never a year: 2050원 is money, "2019년에 헤어졌다" is the past,
 // a fantasy calendar's 1247 is its own

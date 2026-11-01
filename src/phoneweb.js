@@ -4,7 +4,7 @@
 
 import { fmtMoney } from './phonemoney.js';
 import { AX, ax, axBar, axCb, axDay, axH1, axInd, axKp, axTint, axTop, busyHtml } from './phoneapps.js';
-import { fmtDate, fmtTime, koOn, listTime } from './phonedata.js';
+import { byStory, fmtDate, fmtTime, koOn, listTime } from './phonedata.js';
 import { esc } from './util.js';
 
 Object.assign(AX, {
@@ -21,7 +21,7 @@ export function bookmarks(p) {
     p.searches.forEach((x, i) => { if (markedPage(x, -1)) out.push({ x, i, r: -1 }); for (const r of x.marks || []) if (r >= 0 && x.results?.[r]) out.push({ x, i, r }); });
     return out;
 }
-const newest = xs => xs.map((x, k) => [x, k]).sort((a, b) => String(b[0].time).localeCompare(String(a[0].time)));
+const newest = (xs, now) => { const c = byStory(now); return xs.map((x, k) => [x, k]).sort((a, b) => c(b[0], a[0])); };
 const host = r => String(r?.url || r?.site || '').replace(/^https?:\/\//, '').split('/')[0];
 // a site's colour (the model's, else one from its name) and the ink that reads on it
 const colorOf = r => r?.color || axTint(r?.site || r?.url || '?');
@@ -55,7 +55,7 @@ const wordmark = p => { const w = [...(WORD[p.country] || 'search')]; return `${
 // 최근 검색 · 방문 기록's ×: that search goes, with its pages
 const rqX = k => `<button type="button" class="na_ph_rm wb_rqx" data-kind="search" data-i="${k}" aria-label="검색 기록 지우기">${ax('x', 15, 'currentColor', 2.4)}</button>`;
 export function searchScreen(p, now) {
-    const ss = newest(p.searches).slice(0, 6), ts = tabsOpen(p), bm = bookmarks(p).slice(0, 6);
+    const ss = newest(p.searches, p.now).slice(0, 6), ts = tabsOpen(p), bm = bookmarks(p).slice(0, 6);
     return `${axBar(p, now)}
       ${axTop(axCb('home'), axKp(p))}
       <div class="ax_scroll">
@@ -238,7 +238,7 @@ export function tabsScreen(p, now) {
 
 // ---- 북마크 · 방문 기록 (the history: each search, and the pages opened from it)
 export function marksScreen(p, now, hist) {
-    const bm = bookmarks(p), ss = newest(p.searches);
+    const bm = bookmarks(p), ss = newest(p.searches, p.now);
     const days = [...new Set(ss.map(([x]) => String(x.time).slice(0, 5)))];
     const row = (go, i, icon, title, sub, time = '') => `<button type="button" class="wb_rw" data-go="${go}" data-i="${i}">${icon}<span class="wb_tx"><b>${esc(title)}</b><small>${esc(sub)}</small></span>${time ? `<small class="cg_num">${esc(time)}</small>` : ax('chev', 15, '#b7bdc6', 2.4)}</button>`;
     const sIc = `<span class="wb_ci">${ax('search', 14, 'currentColor', 2.5)}</span>`;

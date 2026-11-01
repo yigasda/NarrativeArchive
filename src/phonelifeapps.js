@@ -6,7 +6,7 @@
 
 import { AX, ax, axBar, axCb, axH1, axInd, axKp, axTint, axTop, busyHtml } from './phoneapps.js';
 import { filling } from './phoneai.js';
-import { fmtDate, koOn, pad, storyNow } from './phonedata.js';
+import { byStory, fmtDate, koOn, pad, storyNow } from './phonedata.js';
 import { shiftDay } from './phonelife.js';
 import { fmtMoney } from './phonemoney.js';
 import { nameKey } from './people.js';
@@ -187,7 +187,7 @@ Object.assign(AX, {
     flame: 'M12 21c-4 0-6-3-5-6.5C8 11 10 11 10 7c3 2 4.5 4.5 4.5 6 1-1 1.2-2.3 1-3.5C18 11.5 18 14 18 15.5 18 18.5 15.5 21 12 21z',
     cupH: 'M5 8h11v6a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5zM16 9h1.5a2.5 2.5 0 0 1 0 5H16M8 3v2M11 3v2', scaleH: 'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8.5 9a4 3 0 0 1 7 0M12 9l1.2-2',
 });
-const lastDays = (lf, n = 7, until = '') => { const ds = lf.health.days.filter(d => !until || d.date <= until); return ds.slice(-n); };
+const lastDays = (lf, n = 7, until = '') => { const ds = lf.health.days.filter(d => !until || dayGap(d.date, until) >= 0); return ds.slice(-n); };
 const sleepMin = d => { const a = toMin(d.sleep), b = toMin(d.wake); return a === null || b === null ? null : ((b - a) + 1440) % 1440; };
 const avg = xs => { const v = xs.filter(x => x !== null && x !== undefined && Number.isFinite(x)); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
 // bedtimes past midnight count as late (00:30 is later than 23:30)
@@ -265,7 +265,7 @@ function coffeeDay(p, d, u) {
 // weight: their usual, drifting a few hundred grams a day around it (seeded), the last 30 days
 function weightLine(lf, u, until) {
     if (!u.weight) return [];
-    const ds = lf.health.days.filter(d => d.date <= until).slice(-30);
+    const ds = lf.health.days.filter(d => dayGap(d.date, until) >= 0).slice(-30);
     let v = u.weight + (seeded(`${ds[0]?.date}:w0`)() - 0.5) * 0.8;
     return ds.map(d => { const r = seeded(`${d.date}:w`); v += (r() - 0.5) * 0.5 + (u.weight - v) * 0.15; return { date: d.date, kg: Math.round(v * 10) / 10 }; });
 }
@@ -284,7 +284,7 @@ export function healthScreen(p, now, pick = '') {
     if (!lf) return lifeEmpty(p, now, '건강', 'life');
     const ds = lf.health.days, d = ds.find(x => x.date === pick) || ds.at(-1), u = lf.health.usual || {};
     if (!d) return `${axBar(p, now)}${axTop(axCb('home2'))}<div class="ax_scroll">${axH1('건강')}<div class="lf_none">기록이 없어요</div></div>${axInd()}`;
-    const wk = lastDays(lf, 7, d.date), i = wk.indexOf(d), sm = sleepMin(d), us = usualSleep(u), lastRun = [...ds].reverse().find(x => x.workout && x.date <= d.date);
+    const wk = lastDays(lf, 7, d.date), i = wk.indexOf(d), sm = sleepMin(d), us = usualSleep(u), lastRun = [...ds].reverse().find(x => x.workout && dayGap(x.date, d.date) >= 0);
     const goalSteps = u.steps || 8000, goalWork = 30, wmin = d.workout?.min || 0, hl = highlight(lf, d, u), water = waterDay(d, u), cof = coffeeDay(p, d, u), wl = weightLine(lf, u, d.date);
     const rl = (c, n, v, s) => `<div class="lf_rl"><small style="color: ${c}">${n}</small><b class="cg_num">${v}</b><span>${s}</span></div>`;
     return `${axBar(p, now)}
@@ -485,7 +485,7 @@ const fileRow = (p, f) => `<button type="button" class="lf_fr" data-go="file" da
 export function filesScreen(p, now) {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '파일', 'life');
-    const fs = live(lf), recent = [...fs].filter(f => f.opened).sort((a, b) => b.opened.localeCompare(a.opened)).slice(0, 6), dl = fs.filter(f => f.folder === 'Downloads').length, trash = lf.files.items.filter(f => f.trashed).length, cl = lf.files.cloud || {};
+    const fs = live(lf), recent = [...fs].filter(f => f.opened).sort(byStory(p.now, f => f.opened)).reverse().slice(0, 6), dl = fs.filter(f => f.folder === 'Downloads').length, trash = lf.files.items.filter(f => f.trashed).length, cl = lf.files.cloud || {};
     const favs = lf.files.folders.filter(x => x.fav), others = lf.files.folders.filter(x => !x.fav);
     const fold = x => `<button type="button" class="lf_rw" data-go="folder" data-i="${encodeURIComponent(x.name)}">${ax('folder', 22, '#2f6fbf', 2, '#dfeaf8')}<span class="lf_tx"><b>${esc(x.name)}</b>${x.ko && koOn() ? `<small>${esc(x.ko)}</small>` : ''}</span><small>${x.count}</small>${ax('chev', 14, '#b7bdc6', 2.4)}</button>`;
     return `${axBar(p, now)}${axTop(axCb('home2'), axKp(p))}
@@ -504,7 +504,7 @@ export function filesScreen(p, now) {
 export function folderScreen(p, now, key) {
     const lf = L(p); if (!lf) return filesScreen(p, now);
     const name = decodeURIComponent(key || ''), trash = name === '~trash';
-    const fs = (trash ? lf.files.items.filter(f => f.trashed) : live(lf).filter(f => !name || f.folder === name)).sort((a, b) => String(b.time).localeCompare(String(a.time)));
+    const fs = (trash ? lf.files.items.filter(f => f.trashed) : live(lf).filter(f => !name || f.folder === name)).sort(byStory(p.now)).reverse();
     const title = trash ? '최근 삭제' : !name ? '내 폰' : name === 'Downloads' ? '다운로드' : name, fo = lf.files.folders.find(x => x.name === name);
     const grid = fs.some(f => f.kind === 'image' || f.kind === 'video') && !trash && name !== 'Downloads';
     return `${axBar(p, now)}${axTop(axCb('files'))}

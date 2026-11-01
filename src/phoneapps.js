@@ -6,7 +6,7 @@ import { investmentDate } from './investdata.js';
 import { profileChoices, phoneDataInfo } from './phoneprofile.js';
 import { faceHtml, nameKey, nameRe, peopleData, peopleList, personLine } from './people.js';
 import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './phoneai.js';
-import { bigClock, COUNTRIES, fmtDate, fmtTime, hasKo, koOn, lastTime, listTime, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName } from './phonedata.js';
+import { bigClock, byStory, COUNTRIES, fmtDate, fmtTime, gapDays, hasKo, koOn, lastTime, listTime, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName } from './phonedata.js';
 import { threadNew } from './phonehome.js';
 import { recentTrackers } from './scenes.js';
 import { sectionKey } from './sections.js';
@@ -210,13 +210,14 @@ export const axTop = (left, right = '') => `<div class="ax_top">${left}<span cla
 export const axH1 = (t, sub = '') => `<div class="ax_h1"><b>${esc(t)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}</div>`;
 export const axFind = (t = '검색') => `<div class="ax_find">${ax('search', 16, 'currentColor', 2.2)}${t}</div>`;
 export const axChev = ax('chev', 15, '#b7bdc6', 2.4);
-const axNewest = xs => xs.map((x, k) => [x, k]).sort((a, b) => String(b[0].time).localeCompare(String(a[0].time)));
+const axNewest = (xs, now) => { const c = byStory(now); return xs.map((x, k) => [x, k]).sort((a, b) => c(b[0], a[0])); };
 export const axDay = (p, now, v) => (String(v).slice(0, 5) === String(now).slice(0, 5) ? '오늘' : fmtDate(p, v));
 // days from b to a (both MM-DD), in one year; -1 when a is before b
-const axDays = (a, b) => { const x = parts(a), y = parts(b); return x && y ? Math.round((new Date(2000, x.mo - 1, x.d) - new Date(2000, y.mo - 1, y.d)) / 864e5) : -1; };
+// days from b back to a (now − then), the past side of New Year: 01-02 − 12-30 is 3, not −362
+const axDays = (a, b) => { const x = parts(a), y = parts(b); if (!x || !y) return -1; let g = Math.round((Date.UTC(2001, x.mo - 1, x.d) - Date.UTC(2001, y.mo - 1, y.d)) / 864e5); if (g < -31) g += 365; return g; };
 
 export function msgList(p, now, roster) {
-    const ts = [...p.threads].sort((a, b) => lastTime(b).localeCompare(lastTime(a)));
+    const ts = [...p.threads].sort(byStory(p.now, lastTime)).reverse();
     return `${axBar(p, now)}
       ${axTop(axCb('home'), axKp(p))}
       <div class="ax_scroll">
@@ -376,7 +377,7 @@ export function callWho(p, now, k, roster) {
 // 사진: the album by day; a photo with no picture yet has a 그리기 pill
 const axPic = (x, z) => (x.img ? `<img src="${esc(x.img)}" alt="" loading="lazy">` : ax('photo', z, '#fff', z > 40 ? 1.2 : 1.6));
 export function photoScreen(p, now) {
-    const ps = axNewest(p.photos);
+    const ps = axNewest(p.photos, p.now);
     const days = [...new Set(ps.map(([x]) => x.time.slice(0, 5)))];
     return `${axBar(p, now)}
       ${axTop(axCb('home'), `<button type="button" class="ax_kp on na_ph_looksbtn">${ax('user', 14, 'currentColor', 2.2)} 외모</button>${axKp(p)}`)}
@@ -418,7 +419,7 @@ export function photoView(p, now, k) {
 const NOTE_MARK = /^(\[x\]|✓|✔|\[ \]|[-*•])\s*/i;
 const writeBtn = (p, kind) => { const busy = writing.has(`${nameKey(p.owner)}:${kind}`); return `<button type="button" class="ax_write na_ph_write" data-k="${kind}" ${busy ? 'disabled' : ''}>${busy ? busyHtml : ax('compose', 15, 'currentColor', 2.2)}<span>${busy ? '쓰는 중' : kind === 'diary' ? '오늘 일기' : '새 메모'}</span></button>`; };
 export function noteScreen(p, now) {
-    const ns = axNewest(p.notes);
+    const ns = axNewest(p.notes, p.now);
     const label = t => { const n = axDays(now, t); return n === 0 ? '오늘' : n > 0 && n <= 7 ? '이전 7일' : n > 0 && n <= 30 ? '이전 30일' : `${parts(t)?.mo || ''}월`; };
     const groups = [];
     for (const [x, k] of ns) { const l = label(x.time), g = groups[groups.length - 1]; if (g && g.l === l) g.xs.push([x, k]); else groups.push({ l, xs: [[x, k]] }); }
@@ -471,9 +472,10 @@ export function calScreen(p, now, m, pick = '') {
     const grid = Array.from({ length: len }, (_, n) => { const d = `${pad(x0.mo)}-${pad(n + 1)}`; return dayBtn('cal', d, pick, `${d === (pick || day) ? 't' : ''} ${marked.has(d) ? 'e' : ''}`, n + 1); }).join('');
     const row = ({ e, k }, when = '') => `<button type="button" class="ax_ev" data-go="calone" data-i="${k}"><i style="background: ${AX_EVC[k % AX_EVC.length]}"></i><span class="ax_tx"><b>${esc(e.title)}</b>${e.ko && koOn() ? `<span class="ax_p">${esc(e.ko)}</span>` : ''}</span><small class="cg_num">${e.time ? esc(fmtTime(p, `${e.date} ${e.time}`)) : '하루 종일'}${when ? `<br>${esc(when)}` : ''}</small></button>`;
     const anRow = a => `<div class="ax_ev"><i style="background: #d494a7"></i><span class="ax_tx"><b>♥ ${esc(a.name)}</b><span class="ax_p">기념일 · 매년 ${esc(fmtDate(p, a.date))}</span></span></div>`;
-    const soon = [...new Set(evs.filter(x => x.e.date >= day).map(x => x.e.date))].sort();
+    // ahead or past the short way round New Year (an event on 01-02 is ahead of 12-30)
+    const soon = [...new Set(evs.filter(x => gapDays(day, x.e.date) >= 0).map(x => x.e.date))].sort((a, b) => gapDays(day, a) - gapDays(day, b));
     if (an.some(a => a.date === day) && !soon.includes(day)) soon.unshift(day);
-    const past = evs.filter(x => x.e.date < day).reverse();
+    const past = evs.filter(x => gapDays(day, x.e.date) < 0).sort((a, b) => gapDays(day, b.e.date) - gapDays(day, a.e.date));
     return `${axBar(p, now)}
       ${axTop(axCb('home'), axKp(p))}
       <div class="ax_scroll">

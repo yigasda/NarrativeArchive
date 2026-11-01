@@ -9,7 +9,7 @@ import { investmentDate } from './investdata.js';
 import { nameKey } from './people.js';
 import { filling, recording } from './phoneai.js';
 import { AX, ax, axBar, axCb, axDay, axFind, axH1, axInd, axKp, axLetter, axTint, axTop, busyHtml } from './phoneapps.js';
-import { fmtDate, fmtTime, koOn, listTime } from './phonedata.js';
+import { byStory, fmtDate, fmtTime, gapDays, koOn, listTime } from './phonedata.js';
 import { esc } from './util.js';
 
 Object.assign(AX, {
@@ -93,7 +93,7 @@ function emptyApp(p, now, title, kind, what) {
 // ---- 은행
 const tab = on => `<div class="ax_btab">${[['homeS', '홈', 'bank'], ['send2', '송금', ''], ['card', '카드', 'wallet'], ['menu', '더보기', '']].map(([k, l, go]) => (go ? `<button type="button" class="${k === on ? 'on' : ''}" data-go="${go}">${ax(k, 24, 'currentColor')}${l}</button>` : `<span>${ax(k, 24, 'currentColor')}${l}</span>`)).join('')}</div>`;
 const txRow = (p, x) => `<button type="button" class="ax_rw" data-go="tx" data-i="${x.id}">${fi(x.who, 38)}<span class="ax_tx"><b class="ax_n">${esc(x.who)}${x.pending ? '<span class="ax_pend">대기</span>' : ''}${x.ev && (mo(p).orders.some(o => o.ev === x.ev) || mo(p).passes.some(o => o.ev === x.ev)) ? `<span class="ax_lnk">${ax('link', 10, 'currentColor', 2.4)} ${mo(p).orders.some(o => o.ev === x.ev) ? '쇼핑' : '지갑'}</span>` : ''}</b><span class="ax_p">${esc(fmtDate(p, x.time, true))} · ${x.kind === 'card' ? '카드' : x.kind === 'transfer' ? '송금' : '입금'}${x.memo ? ` · ${esc(x.memo)}` : ''}</span></span><span class="ax_amt ${x.amount > 0 ? 'p' : ''} cg_num">${esc(txMoney(p, x, true))}</span></button>`;
-const newestTx = p => [...(mo(p)?.tx || [])].sort((a, b) => String(b.time).localeCompare(String(a.time)));
+const newestTx = p => [...(mo(p)?.tx || [])].sort(byStory(p.now)).reverse();
 export function bankHome(p, now) {
     const M = mo(p);
     if (!M) return emptyApp(p, now, '은행', 'money', '아직 계좌가 없어요. 채우면 은행 · 지갑 · 쇼핑이 함께 생겨요.');
@@ -197,7 +197,7 @@ export function walletScreen(p, now) {
     const M = mo(p);
     if (!M) return emptyApp(p, now, '지갑', 'money', '아직 지갑이 비어 있어요. 채우면 은행 · 지갑 · 쇼핑이 함께 생겨요.');
     migrateBank(getMeta(),p);
-    const ps = [...M.passes].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const ps = [...M.passes].sort((a, b) => gapDays(p.now, a.date) - gapDays(p.now, b.date));
     return `${axBar(p, now)}
       ${axTop(axCb('home2'))}
       <div class="ax_scroll">
@@ -261,7 +261,7 @@ const prodImg = x => `<span class="ax_pimg">${ax(itemIc(x), 30, '#7d8796', 1.7)}
 export function shopScreen(p, now, f = 'all') {
     const M = mo(p);
     if (!M) return emptyApp(p, now, '쇼핑', 'money', '아직 주문이 없어요. 채우면 은행 · 지갑 · 쇼핑이 함께 생겨요.');
-    const os = [...M.orders].sort((a, b) => String(b.time).localeCompare(String(a.time)));
+    const os = [...M.orders].sort(byStory(p.now)).reverse();
     const go = os.filter(x => x.status !== 'delivered' && x.status !== 'unknown'), ok = os.filter(x => x.status === 'delivered');
     const xs = f === 'go' ? go : f === 'ok' ? ok : os;
     const tb = (k, l, n) => `<button type="button" class="${f === k ? 'on' : ''}" data-go="shop" data-i="${k}">${l}<small>${n}</small></button>`;
@@ -314,7 +314,7 @@ const player = (x, n) => `<span class="ax_wave">${wave(x.id, n, Math.round(n * 0
   <span class="ax_wctl"><span>${ax('rew', 22, 'currentColor')}</span><span class="ax_wpp">${ax('play', 22, 'currentColor', 2, 'currentColor')}</span><span>${ax('ffw', 22, 'currentColor')}</span></span>
   <span class="ax_wmute">${ax('lock', 11, 'currentColor')} 소리 없음 · 글로 옮긴 기록이에요</span>`;
 export function voiceScreen(p, now, open = '') {
-    const vs = (p.voice || []).map((x, k) => [x, k]).sort((a, b) => String(b[0].time).localeCompare(String(a[0].time)));
+    const c = byStory(p.now), vs = (p.voice || []).map((x, k) => [x, k]).sort((a, b) => c(b[0], a[0]));
     const rec = recording.has(nameKey(p.owner));
     if (!vs.length && !p.voiceAt) return `${emptyApp(p, now, '음성 메모', 'voice', '아직 녹음이 없어요. 채우면 지난 순간들의 메모가 생겨요.').replace(`${axInd()}`, '')}${recBtn(rec)}${axInd()}`;
     return `${axBar(p, now)}

@@ -17,8 +17,8 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
-import { arr, evOf, hhmm, jsonOf, ko, parseJson, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
-export { arr, hhmm, jsonOf, ko, last4, line, num, pad, pick, str, when, withEv };
+import { arr, evOf, gapDays, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+export { arr, gapDays, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { applyDays, applyLife, applyWeather, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
 import { pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
@@ -296,7 +296,7 @@ function mergePhone(p, add, { keepAll = false } = {}) {
         if (old) { old.messages = keep([...old.messages, ...fresh('msg', old.messages, t.messages)], CAP.messages); if (t.draft) old.draft = t.draft; }
         else p.threads.push({ ...t, messages: keep(fresh('msg', [], t.messages), CAP.messages) });
     }
-    p.threads = keep([...p.threads].sort((a, b) => lastTime(a).localeCompare(lastTime(b))), CAP.threads);
+    p.threads = keep([...p.threads].sort(byStory(p.now, lastTime)), CAP.threads);
     joinComments(p.posts, add.posts, CAP.comments);
     for (const k of LISTS) p[k] = keep([...(p[k] || []), ...fresh(k, p[k] || [], add[k] || [])], CAP[k]);
     if (add.profile?.handle || add.profile?.bio) p.profile = { ...(p.profile || {}), ...Object.fromEntries(Object.entries(add.profile).filter(([, v]) => v)) };
@@ -886,7 +886,7 @@ export function phoneBlock(m) {
         const out = [];
         const saved = p.contacts.filter(c => c.saved && c.saved !== c.name).map(c => `${c.name} as "${c.saved}"`);
         if (saved.length) out.push(`Contacts saved: ${saved.join(', ')}`);
-        for (const t of [...p.threads].sort((a, b) => lastTime(b).localeCompare(lastTime(a))).slice(0, 4)) {
+        for (const t of [...p.threads].sort(byStory(p.now, lastTime)).reverse().slice(0, 4)) {
             out.push(`Texts with ${t.with}: ${t.messages.filter(x => !isGuess(x)).slice(-4).map(x => `${said(p, x)}: "${x.text}"`).join(' / ')}`);
         }
         const missed = p.calls.filter(c => c.type === 'missed' && !isGuess(c)).slice(-3);
@@ -930,7 +930,7 @@ export const ago = (p, v) => {
 };
 export const lastTime = t => t.messages[t.messages.length - 1]?.time || '';
 // still to come at `now`: a later day, or today at a time not yet passed (or all day)
-export const upcoming = (e, now) => { const day = String(now).slice(0, 5), hm = String(now).slice(6); return e.date > day || (e.date === day && (!e.time || !hm || e.time >= hm)); };
+export const upcoming = (e, now) => { const day = String(now).slice(0, 5), hm = String(now).slice(6), g = gapDays(day, e.date); return g > 0 || (g === 0 && (!e.time || !hm || e.time >= hm)); };
 
 // the story's now: the newest status window when it has a time, else what the phone was made with
 // a date's month and day, 1-based: "2026-10-26", "10/26", or a month name the calendars know (their months count from 0)
@@ -1070,9 +1070,11 @@ export async function sideRequest(m, owner, blocks, { profile, money = false, st
         yearBlock(m, m.phones?.[nameKey(owner)] || null), `[OWNER]\n${owner}`, profileText, blindBlock(m, owner), ...blocks, namesBlock(m),
     ].filter(Boolean).join('\n\n');
 }
-export function parseMoney(raw) {
+// an answer without a currency takes the owner's country's, not a guess at euros
+const HOME_CUR = { KR: 'KRW', US: 'USD', GB: 'GBP', DE: 'EUR', FR: 'EUR', IT: 'EUR', ES: 'EUR', JP: 'JPY', CN: 'CNY', TW: 'TWD', CA: 'CAD', AU: 'AUD', RU: 'RUB', BR: 'BRL' };
+export function parseMoney(raw, country = '') {
     if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 은행 · 지갑 · 쇼핑 내용(JSON)을 찾지 못했어요');
-    const cur = /^[A-Z]{3}$/.test(String(raw.currency || '').toUpperCase()) ? String(raw.currency).toUpperCase() : 'EUR';
+    const cur = /^[A-Z]{3}$/.test(String(raw.currency || '').toUpperCase()) ? String(raw.currency).toUpperCase() : HOME_CUR[country] || 'EUR';
     const accounts = arr(raw.bank?.accounts).map(a => ({ id: line(a?.id, 80), currency: /^[A-Z]{3}$/.test(a?.currency || '') ? a.currency : cur, kind: pick(a?.kind, ['checking', 'savings', 'credit'], 'checking'), name: line(a?.name, 40), last4: last4(a?.last4), balance: num(a?.balance) })).filter(a => a.last4).slice(0, 4);
     return {
         currency: cur, basis: str(raw.basis, 1500),
@@ -1102,7 +1104,7 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {
         const out = await askDraft(input+'\n'+correction,{force:true,system,maxTokens:12000});
-        const raw = jsonOf(out), next = parseMoney(raw);
+        const raw = jsonOf(out), next = parseMoney(raw, p.country);
         if (p.money !== old || accountState() !== before) throw new Error('생성 중 계좌가 변경됐어요. 다시 시도해 주세요');
         if (old) {
             if (rebuild) {
@@ -1165,7 +1167,7 @@ export async function fillVoice(m, p) {
     const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`], {story:CHAT_TOKENS.apps,profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });
     const memos = arr(jsonOf(out)?.memos).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: Math.max(3, Math.min(900, Math.round(Number(x?.sec) || 30))), place: line(x?.place, 60), src: 'guess' })).filter(x => x.text);
     if (!memos.length) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
-    p.voice = [...(p.voice || []).filter(x => x.src === 'story' || x.now), ...memos].sort((a, b) => String(a.time).localeCompare(String(b.time))).slice(-CAP.voice);
+    p.voice = [...(p.voice || []).filter(x => x.src === 'story' || x.now), ...memos].sort(byStory(p.now)).slice(-CAP.voice);
     p.voiceAt = Date.now();
     ensureIds(p);
     await saveMeta();
