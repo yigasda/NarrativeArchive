@@ -276,7 +276,7 @@ const read = (text, one = false) => {
     }
     return out.sort((a, b) => a.at - b.at);
 };
-const OUT_AFTER = /(?:^|[\s,·/])(?:을|를|은|는|만|도)?\s*(?:빼|제외|없이|대신|x(?![a-z0-9]|\s*\d)|out\b)/i, OUT_BEFORE = /(?:^|[^가-힣a-z])(?:노|no|without|hold(?: the)?|minus)\s*$/i;
+const OUT_AFTER = /(?:^|[\s,·/])(?:을|를|은|는|만|도)?\s*(?:빼|뺴|제외|없(?:이|음|게)|안 ?넣|넣지 ?마|알레르기|알러지|대신|x(?![a-z0-9]|\s*\d)|out\b)/i, OUT_BEFORE = /(?:^|[^가-힣a-z])(?:노|no|without|hold(?: the)?|minus)\s*$/i;
 const ADD_AFTER = /^\s*(?:을|를)?\s*(?:추가|더|많이|듬뿍|올려|넣어|extra\b|add)/i;
 // an option's words: what it leaves out, what it adds ("양파, 마늘 빼고" leaves out both, words it doesn't know between;
 // "치즈 빼고 새우 추가")
@@ -291,7 +291,8 @@ const readOption = text => {
     });
     return { out, add: [...add, ...wait] };
 };
-const BIG = /특대|곱빼기|대자|라지|(?<![a-z])(?:large|xl|big)(?![a-z])/i, BIG1 = /(?<![가-힣A-Za-z])(?:대|L)(?![가-힣A-Za-z])/;
+// 1.25L is a bottle, not a size; Big Mac is a name
+const BIG = /특대|곱빼기|대자|라지|(?<![a-z])(?:large|xl)(?![a-z])/i, BIG1 = /(?<![가-힣A-Za-z\d.]|[\d.]\s)(?:대|L)(?![가-힣A-Za-z])/;
 const hangul = s => /[가-힣]/.test(String(s || ''));
 // a menu item's picture: the model's (words from the update round, ids from a fill), then its name and option
 // fill in what the model left out. x: { name, ko, option, optionKo }

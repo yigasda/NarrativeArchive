@@ -124,3 +124,14 @@ test('감자튀김 · 감튀 draw fries, other 튀김 stay 튀김', async () => 
     for (const n of ['감자튀김', '감튀', 'french fries']) assert.equal(guessPic(n).base, 'fries', n);
     for (const n of ['새우튀김', '고구마튀김', '오징어튀김']) assert.equal(guessPic(n).base, 'twigim', n);
 });
+
+test('sizes and leaving out, as orders really say them', async () => {
+    const { dishPic } = await import('../src/phonefood.js');
+    const size = (name, option = '') => dishPic({ base: 'cola' }, { name, option }).size;
+    for (const n of ['콜라 1.25L', '콜라 1.25 L', '사이다 500ml', 'Big Mac']) assert.equal(size(n), 'regular', n);
+    for (const n of ['콜라 L', '치킨 (대)', 'Large fries']) assert.equal(size(n), 'large', n);
+    const tops = option => dishPic({ base: 'fried rice', with: [] }, { name: '볶음밥', option }).with.join(',');
+    for (const o of ['양파 넣지 마세요', '양파 안 넣어주세요', '양파 없음', '양파 없게', '양파 뺴주세요', '새우 알레르기 있어요', '새우 알러지', '새우, 양파 알레르기']) assert.equal(tops(o), '', o);
+    assert.equal(tops('새우 많이, 양파 빼주세요'), 'shrimp');
+    assert.equal(tops('양파 넣어주세요'), 'onion');
+});
