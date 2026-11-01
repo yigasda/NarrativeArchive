@@ -210,7 +210,7 @@ Items in "phone":
 {
 ${PHONE_ITEMS}${life ? `,
   "alarms": [{ "change": an id or "", "time", "label", "ko", "days": the weekdays it repeats or [], "date": "MM-DD" for a one-time alarm, "on", "wake", "then", "snooze" }],
-  "files": [{ "change": an id or "", "name", "kind", "folder", "size": KB, "time", "from", "preview", "ko", "opened", "deleted": true when removed }],
+  "files": [{ "change": an id or "", "name", "kind", "folder", "size": KB, "time", "from", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],
   "health": [{ "date", "bed", "sleep", "wake", "woke", "steps", "km", "floors", "workout": { "kind", "time", "min", "km" } or null, "hr": [low, high], "from": "story" }],
   "usual": { "weight": kg, "coffee": cups a day, "coffeeKind", "coffeeKo", "water": litres a day }` : ''}
 }

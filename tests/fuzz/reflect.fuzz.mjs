@@ -65,7 +65,7 @@ const BASE = {
                 deliveries: [{ shop: 'Pizza Mara', items: [{ name: 'Margherita', ko: '마르게리타', option: 'no basil', optionKo: '바질 빼고', qty: 1, price: 9, pic: { base: 'pizza', with: ['tomato'], size: 'large', set: ['cola'] } }], fee: 1.9, tip: 1, discount: 0, mode: 'delivery', time: '12-31 19:40', arrived: '20:15', to: 'home', for: 2, status: 'delivered', account: '1111', occurrence: 'new', already: '', newShop: null }] } },
         { id: 'run', at: 4, quote: 'I ran 5 km', summary: 'run', date: '01-01', time: '10:00',
             phone: { health: [{ date: '01-01', sleep: '01:30', wake: '09:00', steps: 9000, km: 6.2, workout: { kind: 'Run', time: '10:00', min: 32, km: 5 }, hr: [60, 165], from: 'story' }],
-                alarms: [{ change: 'a1', time: '06:40', label: 'Up', days: ['mon', 'tue'], on: true }], files: [{ name: 'ticket.pdf', kind: 'pdf', folder: 'Downloads', size: 220, time: '01-01 11:00' }],
+                alarms: [{ change: 'a1', time: '06:40', label: 'Up', days: ['mon', 'tue'], on: true }], files: [{ name: 'ticket.pdf', kind: 'pdf', folder: 'Downloads', size: 220, time: '01-01 11:00', look: 'receipt' }, { name: 'IMG_2041.jpg', kind: 'image', folder: 'Camera', size: 3100, time: '01-01 10:50', look: 'Snow' }],
                 events: [{ title: 'Flight to Seoul', date: '01-03', time: '10:20' }], diary: [{ date: '01-01', title: 'New year', text: 'ran.' }], voice: [{ title: 'memo', text: 'run felt good', time: '01-01 10:40', sec: 20 }] } },
         { id: 'air', at: 5, quote: 'airport', summary: 'airport plan', date: '01-02', time: '', phone: { calls: [{ with: 'Mara', type: 'in', time: '01-02 18:00', min: 4 }], mails: [{ from: 'LH', subject: 'Check-in', text: 'open', time: '01-02 10:00' }], searches: [{ q: 'BER terminal', time: '01-02 12:00' }], posts: [{ text: 'packing', time: '01-02 15:00', comments: [{ from: 'Mara', text: 'ㅋㅋ' }] }] } },
     ],
@@ -125,9 +125,9 @@ async function one(answer, path, v) {
 // the base answer must go through clean, with every part landing
 {
     const { m, p } = setup(); T.answers = [BASE]; await data.makePhone(m, 'Ren', { update: true });
-    const got = { failed: p.sync.failed, notes: p.syncLast?.notes, trades: p.investment.trades.length, tx: p.money.tx.length, orders: p.money.orders.length, passes: p.money.passes.length, dlv: p.delivery.orders.length, health: p.life.health.days.length, files: p.life.files.items.length, weight: p.life.health.usual.weight, now: p.now, year: p.year, weather: p.life.weather.here.cond, texts: p.threads.length, voice: p.voice.length, dlvAccount: p.delivery.orders[0]?.account };
+    const got = { failed: p.sync.failed, notes: p.syncLast?.notes, trades: p.investment.trades.length, tx: p.money.tx.length, orders: p.money.orders.length, passes: p.money.passes.length, dlv: p.delivery.orders.length, health: p.life.health.days.length, files: p.life.files.items.length, looks: p.life.files.items.map(f => f.look).join(','), weight: p.life.health.usual.weight, now: p.now, year: p.year, weather: p.life.weather.here.cond, texts: p.threads.length, voice: p.voice.length, dlvAccount: p.delivery.orders[0]?.account };
     if (process.env.SHOW) console.log(JSON.stringify(got));
-    if (Object.keys(got.failed || {}).length || got.trades !== 3 || got.dlv !== 1 || got.dlvAccount !== '1111' || got.notes?.length || got.now !== '01-02 21:10' || got.year !== 2027) console.log('BASE DID NOT LAND', JSON.stringify(got));
+    if (Object.keys(got.failed || {}).length || got.trades !== 3 || got.dlv !== 1 || got.dlvAccount !== '1111' || got.looks !== 'receipt,snow' || got.notes?.length || got.now !== '01-02 21:10' || got.year !== 2027) console.log('BASE DID NOT LAND', JSON.stringify(got));
 }
 await one(BASE, ['(base)'], null);
 for (const path of paths(BASE)) {

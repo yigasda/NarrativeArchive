@@ -123,7 +123,7 @@ export function applyLife(p, e, phone, on) {
         if (!x || typeof x !== 'object') return;
         const clean = fileOf(x), was = x.change && (L.files?.items || []).find(o => o.id === x.change);
         if (was) {
-            const vals = given(x, clean, ['name', 'folder', 'opened', 'preview', 'ko', 'tag']);
+            const vals = given(x, clean, ['name', 'folder', 'opened', 'preview', 'look', 'ko', 'tag']);
             if (x.deleted === true) vals.trashed = e.date;
             return change('life.files.items', was, vals, '파일');
         }
