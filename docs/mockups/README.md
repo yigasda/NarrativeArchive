@@ -13,6 +13,7 @@ HTML은 브라우저로 바로 열려요(Playwright로 찍을 때는 `file://` �
 | `ext-confirm/` | 확장 확인 창 시안 A~D(`choice.png` 고르기 창, `plain.png` 보통 확인 창, B 채택). `mock.cjs`가 실제 SillyTavern에 창을 띄우고 CSS를 덮어 찍어요. 확장의 확인 창 42개 전부를 찍은 건 `all_1~4.png`(`capture_all.cjs`) |
 | `ext-choice/` | "이 이야기의 휴대폰" 고르기 창 시안 A~D(`sheet.png`): 카드 두 장 · 나란히 타일 · 목록 카드 · 분할 버튼. B 모양 + C 질문을 섞은 안은 `sheet_BC.png` |
 | `ext-append/` | 아카이브에 추가 창: 적용한 실제 화면(`real_light.png`, `real_dark.png`), 바탕이 된 시안(`sheet19.png`, `mock19.html`), 예전 모양(`before.png`, `before_preview.png`) |
+| `ext-ask/` | 아카이브에 질문 창: 시안 A~C(`sheet.png`, `mock.html`, 처음엔 B · 질문하면 A 채택), 적용한 실제 화면(`real.png`) |
 | `panel-s1` ~ `panel-s5`, `panel-worldmap` | 패널 하위 화면 시안 묶음 |
 | `phone-home/` | 홈 · 잠금(컬러 젤 · 화이트 그레이) |
 | `phone-life/` | 시계 · 건강 · 파일 · 날씨(`wx.html`) · 브라우저 등 생활 앱 첫 시안들 |

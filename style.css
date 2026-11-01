@@ -7222,3 +7222,40 @@ body.na_darkui .na_sf_note { background: #2F2722; color: #F0CF8E; box-shadow: in
 /* light chats as 아카이브에 추가: my line peach with brown text, the model's 못 한 것 a yellow note */
 body:not(.na_darkui) .na_sf_bubble { background: #F6E1D3; color: #7A3410; }
 body:not(.na_darkui) .na_sf_note { background: #FFF4DC; color: #7A5200; }
+
+/* ============ 아카이브에 질문 v3 (docs/mockups/ext-ask): first a welcome with suggested questions; then a chat — my line
+   peach on the right, the answer a card with the sections it leaned on as rows under it; the input in a round field;
+   보낼 범위 as 맞는 섹션만 | 아카이브 전체 */
+.na_ask2.na_ask3_new .na_ask_log, .na_ask2:not(.na_ask3_new) .na_ask3_empty, .na_ask2.na_ask3_new .na_ask3_chips { display: none; }
+.na_ask3_empty { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.na_ask3_hello { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 24px 0; text-align: center; }
+.na_ask3_hello b { font-size: 15px; color: var(--na-ink); }
+.na_ask3_hello small { font-size: 12.5px; color: var(--na-dim); }
+.na_ask3_big { width: 52px; height: 52px; margin-bottom: 8px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: var(--na-accent-soft); color: var(--na-accent); }
+.na_ask3_sect { margin: 0 4px 8px; font-size: 12.5px; font-weight: 700; color: var(--na-dim); }
+.na_ask2 .na_ask3_sugs { padding: 0; overflow: hidden; display: flex; flex-direction: column; border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_ask2 .na_ask3_sugs button { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0; padding: 12px 14px; border: 0; border-radius: 0; background: transparent; color: var(--na-ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.na_ask2 .na_ask3_sugs button + button { border-top: 1px solid var(--na-line2, var(--na-line)); }
+.na_ask3_si { width: 30px; height: 30px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex: none; background: var(--na-accent-soft); color: var(--na-accent); }
+/* the answer card with its source rows */
+.na_ask2 .na_ask2_ans { gap: 0; border-radius: 18px 18px 18px 4px; overflow: hidden; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_ask2 .na_ask2_ans .na_ask_a { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.na_ask2 .na_ask2_cites { flex-direction: column; flex-wrap: nowrap; gap: 0; }
+.na_ask2 .na_ask2_cite.na_ask3_src { display: flex; align-items: stretch; gap: 10px; width: 100%; margin: 0; padding: 11px 14px; border: 0 !important; border-top: 1px solid var(--na-line2, var(--na-line)) !important; border-radius: 0; background: transparent !important; color: var(--na-mute) !important; font: inherit; text-align: left; cursor: pointer; }
+.na_ask3_src > i { width: 4px; border-radius: 3px; flex: none; background: #E6B79A; }
+body.na_darkui .na_ask3_src > i { background: #8A5A3C; }
+.na_ask3_src > span { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.na_ask3_src b { font-size: 13px; font-weight: 700; color: var(--na-ink); }
+.na_ask3_src small { font-size: 12.5px; line-height: 1.45; color: var(--na-sub, var(--na-dim)); opacity: 1; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.na_ask2 .na_ask2_cite.na_ask3_src.on b { color: var(--na-accent-ink); }
+.na_ask2 .na_ask2_ans .na_ask_src { margin: 0 14px 12px; }
+/* input and options */
+.na_popup.na_ask2 .na_ask2_input { border: 0; border-radius: 999px; padding: 5px 5px 5px 16px; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06), 0 4px 12px rgba(70, 52, 40, 0.06); }
+.na_popup.na_ask2 .na_ask_go { border-radius: 999px; }
+.na_ask3_opt { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: -4px; padding: 0 4px; }
+.na_ask3_opt .na_ask_info { min-width: 0; font-size: 12px; color: var(--na-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.na_ask3_seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--na-card2); flex: none; }
+.na_ask3_seg button { padding: 4px 10px; border: 0; border-radius: 999px; background: transparent; color: var(--na-mute); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+body:not(.na_darkui) .na_ask3_seg button.on { background: #FFFFFF; color: var(--na-accent-ink); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1); }
+body.na_darkui .na_ask3_seg button.on { background: #4A3D34; color: #F2B48A; }
+body.na_darkui .na_ask2 .na_ask2_ans { background: #27201B; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
