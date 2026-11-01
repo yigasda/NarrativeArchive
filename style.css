@@ -6500,6 +6500,8 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .dv_sheet { background: #fff; border-radius: 22px 22px 0 0; padding-top: 6px; }
 .ax .dv_tabs { display: flex; gap: 22px; padding: 12px 20px 0; font-size: 19px; font-weight: 800; border-bottom: 1px solid #eef0f2; color: #b0b4ba; }
 .ax .dv_tabs .on { color: var(--ink); border-bottom: 3px solid var(--ink); padding-bottom: 10px; }
+.ax .dv_tabs .dv_kpb { margin: -10px 0 0 auto !important;align-self: center !important;height: 26px !important;padding: 0 10px !important;border-radius: 13px !important;--axbg: #eef1f2 !important;color: #8a929d !important;font-size: 12px !important;font-weight: 700 !important;--axsh: none !important; box-shadow: none !important; }
+.ax .dv_tabs .dv_kpb.on { --axbg: #e6f8f6 !important;color: #1fa8a3 !important;--axsh: none !important; box-shadow: none !important; }
 .ax .dv_cats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px 6px; padding: 16px 12px 8px; text-align: center; font-size: 13px; }
 .ax .dv_cats > span > i { width: 60px; height: 60px; margin: 0 auto 5px; border-radius: 18px; background: #f3f4f6; display: grid; place-items: center; }
 .ax .dv_cats > span > i svg { width: 42px; height: 42px; }
@@ -6536,6 +6538,9 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .dv_uetop .a small { font-size: 12px; color: #6b7078; }
 .ax .dv_uetop .a b { font-size: 17px; display: flex; align-items: center; gap: 4px; }
 .ax .dv_uetop .r { margin-left: auto; display: flex; gap: 14px; align-items: center; }
+.ax .dv_uetop .r .dv_kpu { height: 32px !important;padding: 0 12px !important;margin-right: -4px !important;border-radius: 16px !important;--axbg: #f3f3f3 !important;color: #000 !important;font-size: 13px !important;font-weight: 600 !important;display: inline-flex !important;align-items: center !important;gap: 5px !important;--axsh: none !important; box-shadow: none !important; }
+.ax .dv_uetop .r .dv_kpu i { width: 7px !important;height: 7px !important;border-radius: 50% !important;background: #b8bcc2 !important; }
+.ax .dv_uetop .r .dv_kpu.on i { background: #06c167 !important; }
 .ax .dv_chips { display: flex; gap: 8px; padding: 8px 16px; overflow: hidden; flex: none; }
 .ax .dv_chips > span { height: 36px; padding: 0 14px; border-radius: 18px; border: 1.5px solid #dcdfe4; display: inline-flex; align-items: center; gap: 4px; font-size: 14px; background: #fff; white-space: nowrap; }
 .ax .dv_chips > span.on { background: var(--ink); color: #fff; border-color: var(--ink); }
