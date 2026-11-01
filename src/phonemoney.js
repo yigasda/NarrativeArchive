@@ -103,7 +103,7 @@ export function bankHome(p, now) {
       <div class="ax_bkh">${axBar(p, now, '#fff')}
         <div class="ax_bkr"><button type="button" class="ax_bkc" data-go="home2" aria-label="뒤로">${ax('back', 18, '#fff', 2.3)}</button><span class="ax_bkhi"><small>${esc(M.bank.name)}</small><b>안녕하세요, ${esc(p.owner)}</b></span><span class="ax_bkc">${ax('bell', 18, '#fff')}</span></div>
         <div class="ax_bktot"><small>${sum.complete ? '예금 잔액 · ' + esc(bankDisplayCurrency(p)) + ' 기준' : '환산 가능한 소계 · 환산 미완료'}</small><b class="cg_num">${esc(fmtIn(p, sum.value, bankDisplayCurrency(p)))}</b>${missingSum(p,sum)}<span>계좌 ${M.bank.accounts.length}개 · 환산 기준 ${esc(bankDate(p) || '날짜 미확정')}</span></div>
-        <div class="ax_bkacts"><span><b>${ax('send2', 20, '#fff', 2.2)}</b>송금</span><span><b>${ax('down2', 20, '#fff', 2.2)}</b>입금</span><span><b>${ax('swap', 20, '#fff', 2.2)}</b>이체</span><button type="button" data-go="wallet"><b>${ax('card', 20, '#fff')}</b>카드</button></div>
+        <div class="ax_bkacts"><span><b>${ax('send2', 20, '#fff', 2.2)}</b>송금</span><button type="button" data-go="fixed"><b>${ax('rep', 20, '#fff', 2.1)}</b>고정 지출</button><span><b>${ax('swap', 20, '#fff', 2.2)}</b>이체</span><button type="button" data-go="wallet"><b>${ax('card', 20, '#fff')}</b>카드</button></div>
       </div>
       <div class="ax_bks"><div class="ax_scroll">
         ${displayTools(p)}<div class="ax_shd">내 계좌</div>
@@ -152,6 +152,76 @@ export function bankTx(p, now, id) {
           <div class="ax_rln"><span>방식</span><span>${x.kind === 'card' ? '카드 결제' : x.kind === 'transfer' ? '송금' : '입금'}</span></div>
           ${x.memo ? `<div class="ax_rln"><span>메모</span><span>${esc(x.memo)}</span></div>` : ''}</div>
         ${relatedRows(p, x.ev, `tx:${x.id}`)}
+        <i class="ax_pad"></i>
+      </div></div>
+      ${tab('homeS')}</div>${axInd()}`;
+}
+
+// ---- 고정 지출: what leaves every month, found in the bank's own records (no field for the model): the same payee in two
+// months for about the same money, or a payee or memo that names rent, a phone bill, a subscription, insurance, a gym
+Object.assign(AX, {
+    rep: 'M4 11V9a3 3 0 0 1 3-3h12M16 3l3 3-3 3M20 13v2a3 3 0 0 1-3 3H5M8 21l-3-3 3-3', house: 'M4 11l8-7 8 7v9H4zM10 20v-5h4v5',
+    mobile: 'M7 3h10v18H7zM11 18h2', screen: 'M3 5h18v13H3zM10 9l5 2.5-5 2.5z', note8: 'M9 18V6l10-2v12M9 18a2.4 2.4 0 1 1-4.8 0 2.4 2.4 0 0 1 4.8 0zM19 16a2.4 2.4 0 1 1-4.8 0 2.4 2.4 0 0 1 4.8 0',
+    shield: 'M12 3L5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z', dumbbell: 'M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10',
+});
+const FIXED = [
+    [/\bmiete\b|\brent\b|월세|관리비|전세|nebenkosten|hausgeld|wohnung|家賃|房租|loyer|alquiler/i, 'house', '#e2e9f5', '#2c4a80', '집'],
+    [/telekom|vodafone|\bo2\b|verizon|t-mobile|at&t|\bkt\b|lg ?u\+|sk ?텔레콤|통신|휴대폰|핸드폰|인터넷|internet|mobilfunk|handyvertrag|携帯|ドコモ|softbank|话费|中国移动|orange|free mobile/i, 'mobile', '#f6e7e1', '#b8573a', '통신'],
+    [/netflix|disney|youtube|prime video|amazon prime|\bhbo\b|crunchyroll|wavve|티빙|tving|왓챠|watcha|쿠팡플레이|dazn|paramount|hulu|abema|爱奇艺|腾讯视频/i, 'screen', '#f3e1e3', '#b23a48', '구독'],
+    [/spotify|apple music|melon|멜론|지니뮤직|플로|deezer|tidal|soundcloud|youtube music|line music|qq音乐|网易云/i, 'note8', '#e3f1e8', '#2f7d4f', '구독'],
+    [/versicherung|insurance|보험|allianz|\baxa\b|krankenkasse|\btk\b|\baok\b|保険|保险|assurance|seguro/i, 'shield', '#e8e4f3', '#5a4a9a', '보험'],
+    [/\bgym\b|fitness|mcfit|urban sports|헬스|필라테스|요가|yoga|クラブ|健身/i, 'dumbbell', '#e4eef3', '#2f6f8f', '운동'],
+    [/\bstrom\b|stadtwerke|electric|energie|전기|가스요금|도시가스|수도|wasser|rundfunk|\bgez\b|utility|電気|电费/i, 'bolt', '#f5edd6', '#8a6a1f', '공과금'],
+    [/icloud|google one|dropbox|chatgpt|openai|adobe|microsoft 365|office 365|notion|patreon|\babo\b|abonnement|subscription|구독|정기결제|サブスク|订阅|game pass|playstation plus|nintendo online/i, 'rep', '#eceef2', '#3f4a5a', '구독'],
+    [/sparplan|적금|정기적금|savings plan|積立|定投/i, 'star', '#dcefdf', '#3f7d50', '저축'],
+];
+const PAYDAY = /\blohn\b|gehalt|salary|payroll|\bwage|월급|급여|給料|给料|工资|salaire|sueldo/i;
+const payee = x => String(x.who || '').toLowerCase().replace(/[^\p{L}\p{N}&+]+/gu, ' ').trim().split(' ').slice(0, 2).join(' ');
+const daysIn = (p, mm) => new Date(Date.UTC(Number(p.year) || 2025, Number(mm), 0)).getUTCDate();
+export function fixedCosts(p) {
+    const M = mo(p); if (!M) return [];
+    const groups = new Map();
+    for (const x of M.tx || []) if (x.amount < 0 && x.who) { const k = payee(x); if (k) groups.set(k, [...(groups.get(k) || []), x]); }
+    const out = [];
+    for (const [k, xs0] of groups) {
+        const xs = [...xs0].sort(byStory(p.now)).reverse(), last = xs[0], words = xs.map(x => `${x.who} ${x.memo || ''} ${x.ko || ''}`).join(' ');
+        const cat = FIXED.find(([re]) => re.test(words));
+        const months = [...new Set(xs.map(x => String(x.time).slice(0, 2)))];
+        // without a word: two months, the same amount (to within a few cents in a hundred) on about the same day, not a person
+        const dd = (a, b) => { const d = Math.abs(Number(String(a.time).slice(3, 5)) - Number(String(b.time).slice(3, 5))); return Math.min(d, 31 - d); };
+        const steady = months.length >= 2 && last.kind !== 'transfer' && Math.abs(xs[1].amount - last.amount) <= Math.abs(last.amount) * 0.03 && dd(xs[1], last) <= 3;
+        if (!cat && !steady) continue;
+        const [, icon, bg, fg, label] = cat || [null, 'rep', '#eceef2', '#3f4a5a', '매달'];
+        out.push({ key: k, who: last.who, ko: last.ko, amount: last.amount, account: last.account, currency: last.currency, day: Number(String(last.time).slice(3, 5)) || 1, icon, bg, fg, label, xs });
+    }
+    return out.sort((a, b) => a.day - b.day);
+}
+export function fixedScreen(p, now, key = '') {
+    const M = mo(p); if (!M) return bankHome(p, now);
+    const list = fixedCosts(p), today = String(storyNow(p) || p.now || ''), mm = today.slice(0, 2), td = Number(today.slice(3, 5)) || 1, dim = daysIn(p, mm);
+    const st = f => {
+        if (f.xs.some(x => String(x.time).slice(0, 2) === mm)) return ['나감', 'ok', 'p'];
+        if (f.day === td) return ['오늘', '', 'd'];
+        if (f.day > td) return [`D-${f.day - td}`, f.day - td <= 7 ? '' : 'g', 'd'];
+        return [`D-${dim - td + Math.min(f.day, daysIn(p, Number(mm) % 12 + 1))}`, 'g', ''];
+    };
+    const money = (f, n, signed) => fmtMoney({ ...p, money: { currency: f.currency || acctOf(p, f.account)?.currency || M.currency } }, n, signed);
+    const sum = list.reduce((s, f) => s + Math.abs(f.amount), 0), paid = list.filter(f => st(f)[1] === 'ok');
+    const pay = [...(M.tx || [])].filter(x => x.amount > 0 && PAYDAY.test(`${x.who} ${x.memo || ''} ${x.ko || ''}`)).sort(byStory(p.now)).pop();
+    const sel = list.find(f => f.key === key) || list[0];
+    const marks = new Map(); for (const f of list) { const s = st(f)[2]; if (s && f.day <= dim) marks.set(f.day, marks.get(f.day) === 'p' ? 'p' : s); }
+    const acct = f => { const a = acctOf(p, f.account); return a ? `${kindName[a.kind]} ${a.last4}` : ''; };
+    return `<div class="ax_bk">
+      <div class="ax_bkh ax_bkhs">${axBar(p, now, '#fff')}
+        <div class="ax_bkr"><button type="button" class="ax_bkc" data-go="bank" aria-label="뒤로">${ax('back', 18, '#fff', 2.3)}</button><span class="ax_bkt">고정 지출</span><span class="ax_bkc ax_ghost"></span></div>
+        <div class="ax_bktot ax_center"><small>매달 나가는 돈</small><b class="cg_num">${esc(fmtMoney(p, sum))}</b><span>${list.length ? pay ? `월급 ${esc(txMoney(p, pay))}의 ${Math.round(sum / pay.amount * 100)}%` : `${list.length}건 · 이번 달 ${paid.length}건 나감` : '아직 없어요'}</span></div>
+      </div>
+      <div class="ax_bks ax_bkso"><div class="ax_scroll">
+        ${list.length ? `<div class="ax_fxcal">${Array.from({ length: dim }, (_, k) => `<i class="${[marks.get(k + 1) || '', k + 1 === td ? 't' : ''].join(' ').trim()}">${k + 1}</i>`).join('')}</div>
+        <div class="ax_sec">${Number(mm) || ''}월</div>
+        <div class="ax_card">${list.map(f => { const [t, c] = st(f); return `<button type="button" class="ax_rw${f === sel ? ' on' : ''}" data-go="fixed" data-i="${esc(f.key)}"><span class="ax_fi" style="width: 38px; height: 38px; background: ${f.bg}; color: ${f.fg}">${ax(f.icon, 20, 'currentColor', 1.9)}</span><span class="ax_tx"><b class="ax_n">${esc(f.who)}<span class="ax_dd ${c}">${t}</span></b><span class="ax_p">매달 ${f.day}일${acct(f) ? ` · ${esc(acct(f))}` : ''}</span></span><span class="ax_fxv"><b class="ax_amt cg_num">${esc(money(f, f.amount, true))}</b><small>${f.label}</small></span></button>`; }).join('')}</div>
+        ${sel ? `<div class="ax_sec">지난 결제 · ${esc(sel.who)}</div><div class="ax_card">${sel.xs.map(x => txRow(p, x)).join('')}</div>` : ''}`
+        : '<div class="ax_card ax_fillc"><p>매달 나가는 돈이 아직 안 보여요.<br>월세 · 통신비 · 구독 같은 결제가 생기면 여기 모여요.</p></div>'}
         <i class="ax_pad"></i>
       </div></div>
       ${tab('homeS')}</div>${axInd()}`;

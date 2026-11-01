@@ -5145,6 +5145,16 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax_rch strong { font: 600 36px 'Inter Tight', -apple-system, sans-serif; letter-spacing: -0.02em; margin-top: 6px; }
 .ax_rok { margin-top: 8px; padding: 3px 10px; border-radius: 999px; background: #dcefdf; color: #3f7d50; font-size: 12px; font-weight: 700; } .ax_rok.pend { background: #f3e8c9; color: #7f6a22; }
 .ax_rln { display: flex; justify-content: space-between; gap: 12px; padding: 11px 18px; font-size: 14px; } .ax_rln span:first-child { color: #7c8592; flex: none; } .ax_rln span:last-child { text-align: right; }
+/* 은행 › 고정 지출: the month's paydays on a small calendar, then each payment with its day and how far off it is */
+.ax_bkc.ax_ghost { visibility: hidden; }
+.ax_fxcal { margin: 0 14px 14px; padding: 12px 10px 10px; border-radius: 22px; background: #fff; box-shadow: 0 1px 2px rgba(22, 27, 34, 0.04), 0 10px 26px rgba(22, 27, 34, 0.08); display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; flex: none; }
+.ax_fxcal i { height: 30px; border-radius: 9px; display: grid; place-items: center; font: 600 12px 'Inter Tight', -apple-system, sans-serif; font-style: normal; color: #a3aab4; }
+.ax_fxcal i.p { background: #1d3461; color: #fff; } .ax_fxcal i.d { background: #e2e9f5; color: #1d3461; }
+.ax_fxcal i.t { box-shadow: inset 0 0 0 1.5px #1d3461; color: #1d3461; } .ax_fxcal i.p.t { box-shadow: inset 0 0 0 1.5px #1d3461, inset 0 0 0 3px #fff; }
+.ax_dd { display: inline-block; padding: 1px 7px; border-radius: 999px; background: #fbe4df; color: #b8573a; font-size: 10.5px; font-weight: 700; margin-left: 6px; vertical-align: 1px; }
+.ax_dd.ok { background: #dcefdf; color: #3f7d50; } .ax_dd.g { background: #eceef2; color: #6b7380; }
+.ax_fxv { text-align: right; flex: none; display: flex; flex-direction: column; align-items: flex-end; } .ax .ax_fxv small { font-size: 11.5px; color: #8a929d; margin-top: 2px; align-self: flex-end; }
+.ax .ax_rw.on { --axbg: #f6f8fb; }
 /* 지갑: cards (the bank's), then passes, stacked */
 .ax_wl { padding: 0 16px; flex: none; width: 100%; box-sizing: border-box; min-width: 0; }
 .ax_wl > .ax_cc, .ax_wl > .ax_ps { width: 100%; }
