@@ -2444,6 +2444,7 @@ body.na_darkui .na_ap2 .na_append_ta { background: #2E2621 !important; border: 1
    크게 보기, AI로 고치기 as a small chat, the AI tools as a list, section labels, 취소 · 추가하기 at the bottom.
    The preview inside (.na_diff) keeps its own look. */
 .na_ap3_dlg .popup-controls { display: none !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_ap3_dlg:not(#na_x) { border-radius: 22px !important; overflow: hidden; }
 .na_ap3.na_v2 { gap: 0; }
 .na_ap3 > .na_v2_card { margin-top: 10px; }
 .na_ap3_sect { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 22px 4px 0; font-size: 12.5px; font-weight: 700; color: var(--na-dim); letter-spacing: 0.02em; }
