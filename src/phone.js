@@ -16,7 +16,7 @@ import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
 import { APPS, AXB, AXB_C, busyHtml, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
-import { dropStretch, ensureIds, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, markAfter, phoneLore, REMAKE, restoreRounds, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
+import { dropStretch, ensureIds, noArchive, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, markAfter, phoneLore, REMAKE, restoreRounds, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
@@ -160,7 +160,7 @@ export async function openPhone(who = null) {
                   <div class="na_ph_makecard">
                     <span class="na_ph_makeface">${faceHtml(owner, 64)}</span>
                     <b>${esc(owner)}의 폰</b>
-                    <p>아카이브를 읽고 폰을 채워요</p>
+                    ${noArchive(m) ? '<p>아카이브가 없어서 대화 본문을 읽어요.<br>압축을 먼저 하면 더 정확하고 싸요</p><span class="na_ph_makelinks"><button type="button" class="na_ph_gocompress">압축하러 가기</button></span>' : '<p>아카이브를 읽고 폰을 채워요</p>'}
                     <span class="na_ph_makelinks"><button type="button" class="na_ph_makeprofile">${m.phoneProfiles?.[nameKey(owner)] ? `연결된 인물 정보 · ${esc(m.phoneProfiles[nameKey(owner)].label)}` : '인물 정보 연결'}</button></span>
                     <button type="button" class="na_ph_makebtn">폰 만들기</button>
                     <span class="na_ph_makelinks"><button type="button" class="na_ph_makewho">인물 바꾸기</button><i>·</i><button type="button" class="na_ph_makelore">로어북 ${(n => (n ? `${n}권` : '없음'))(phoneLore(m).length)}</button></span>
@@ -390,6 +390,11 @@ export async function openPhone(who = null) {
         setSheet(false);
         await saveMeta();
     };
+    $root.on('click', '.na_ph_gocompress', async e => {
+        e.stopPropagation();
+        document.getElementById('na_phl')?.close();
+        try { const { showTab } = await import('./panel.js'); showTab('compress'); } catch (err) { console.error('[narrative-archive] compress tab', err); }
+    });
     $root.on('click', '.na_ph_addok', function (e) { e.stopPropagation(); addPerson(this); });
     $root.on('keydown', '.na_ph_addname', function (e) { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); addPerson(this); } });
     $root.on('click', '.na_ph_makelore', () => { loreOpen = true; drawCtrl(); setSheet(true); showOpened('.na_ph_lorelist'); });

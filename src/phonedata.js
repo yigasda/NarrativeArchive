@@ -309,17 +309,20 @@ function mergePhone(p, add, { keepAll = false } = {}) {
 // ---- the request
 const secEnd = s => { const mt = s.title.match(RANGE_HEAD); return mt ? Number(mt[4]) : -1; };
 const lastEnd = m => Math.max(-1, ...parseSections(String(m.text || '')).filter(s => !s.group).map(secEnd));
+// a reflection's background (the archive before its messages): the newest sections up to this, the rest is old news
+const BEFORE_MAX = 30_000;
 const ARCHIVE_MAX = 120_000; // characters: the state at the end, and as many of the newest sections as fit
 // a chat with no archive yet: its own messages stand in for it, from the start, the newest kept when there are too many
-const CHAT_MAX = 70_000;
-function chatStory() {
+// (tokens: making a phone reads up to 70,000, the everyday apps 20,000; the bank, investments and device keep the recent chat)
+export const CHAT_TOKENS = { phone: 70_000, apps: 20_000 };
+function chatStory(budget) {
     const rows = recentForCheck(1e9), out = [];
-    for (let i = rows.length - 1, size = 0; i >= 0; i--) { if (out.length && size + rows[i].length > CHAT_MAX) break; out.unshift(rows[i]); size += rows[i].length + 2; }
-    return out.join('\n\n').slice(-CHAT_MAX);
+    for (let i = rows.length - 1, size = 0; i >= 0; i--) { const t = estTok(rows[i]); if (out.length && size + t > budget) break; out.unshift(rows[i]); size += t; }
+    return out.join('\n\n');
 }
-const noArchive = m => !archiveFor(m, -1).text.trim();
-// the archive block, or the chat in its place (then no RECENT CHAT: it is in there)
-const archiveBlock = (m, ar, head = 'ARCHIVE') => (noArchive(m) ? `[${head} — none written yet: the chat so far is the story]\n${chatStory() || '(empty)'}` : `[${head}]\n${ar}`);
+export const noArchive = m => !archiveFor(m, -1).text.trim();
+// the archive block, or (budget) the chat in its place, then no RECENT CHAT: it is in there
+const archiveBlock = (m, ar, head, budget) => (budget && noArchive(m) ? `[${head} — none written yet: the chat so far is the story]\n${chatStory(budget) || '(empty)'}` : `[${head}]\n${ar}`);
 function archiveFor(m, after = -1) {
     const [body, tail] = splitTail(String(m.text || ''));
     const secs = parseSections(body).filter(s => !s.group && (after < 0 || secEnd(s) > after));
@@ -384,7 +387,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '') 
     return [
         p ? `[PHONE NOW]\n${now}` : '',
         !p && m.phones?.[nameKey(owner)]?.device ? `[DEVICE — locked]\n${JSON.stringify(m.phones[nameKey(owner)].device)}` : '',
-        archiveBlock(m, ar.text || '(nothing new)', `ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}`),
+        archiveBlock(m, ar.text || '(nothing new)', `ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}`, CHAT_TOKENS.phone),
         world ? `[WORLD]\n${world}` : '',
         lore ? `[LOREBOOK]\n${lore}` : '',
         recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : '',
@@ -547,7 +550,7 @@ async function updatePhone(m, owner) {
         const sections = parseSections(body).filter(x => !x.group && RANGE_HEAD.test(x.title)).map(x => { const mt = x.title.match(RANGE_HEAD); return { key: `${mt[2]}-${mt[4]}:${x.title.length}`, first: Number(mt[2]), last: Number(mt[4]), text: body.slice(x.start, x.end).trim() }; });
         const { evidence, background } = archiveRound(s, sections, rows, round.rows);
         const before = [];
-        for (let i = background.length - 1, size = 0; i >= 0 && size + background[i].text.length <= ARCHIVE_MAX; i--) { before.unshift(background[i].text); size += background[i].text.length; }
+        for (let i = background.length - 1, size = 0; i >= 0 && size + background[i].text.length <= BEFORE_MAX; i--) { before.unshift(background[i].text); size += background[i].text.length; }
         const events = Object.entries(s.events).slice(-40).map(([id, e]) => `- ${id}: ${e.summary} (#${e.at})`).join('\n');
         const world = worldText(m), lore = await loreFor(m, owner), profile = await ownerProfileBlock(ctx(), p.financeProfile, owner, { money: !!(p.money || p.investment) });
         if (p.money) migrateBank(m, p);
@@ -1007,14 +1010,15 @@ ANSWER — one JSON object, nothing else:
 { "memos": [{ "title": the name the phone would show, "kt", "text", "ko", "time": "MM-DD HH:MM", "sec": its length in seconds, "place": where, or "" }] }
 Oldest first.`;
 
-export async function sideRequest(m, owner, blocks, { profile, money = false } = {}) {
+// story: how many tokens of chat stand in for a missing archive (0: the recent chat only, as with an archive)
+export async function sideRequest(m, owner, blocks, { profile, money = false, story = 0 } = {}) {
     const world = worldText(m), lore = await loreFor(m, owner);
     const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});
     const recent = recentForCheck(6).join('\n\n').slice(-6000);
     return [
-        archiveBlock(m, archiveFor(m, -1).text || '(empty)'),
+        archiveBlock(m, archiveFor(m, -1).text || '(empty)', 'ARCHIVE', story),
         world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
-        recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : '',
+        recent && !(story && noArchive(m)) ? `[RECENT CHAT]\n${recent}` : '',
         `[OWNER]\n${owner}`, profileText, blindBlock(m, owner), ...blocks, namesBlock(m),
     ].filter(Boolean).join('\n\n');
 }
@@ -1110,7 +1114,7 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
 }
 export async function fillVoice(m, p) {
     const diary = (p.diary || []).slice(-6).map(d => `- ${d.date} ${d.title}`).join('\n');
-    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`], {profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });
+    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`], {story:CHAT_TOKENS.apps,profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });
     const memos = arr(jsonOf(out)?.memos).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: Math.max(3, Math.min(900, Math.round(Number(x?.sec) || 30))), place: line(x?.place, 60), src: 'guess' })).filter(x => x.text);
     if (!memos.length) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
     p.voice = [...(p.voice || []).filter(x => x.src === 'story' || x.now), ...memos].sort((a, b) => String(a.time).localeCompare(String(b.time))).slice(-CAP.voice);

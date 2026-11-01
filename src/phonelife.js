@@ -9,7 +9,7 @@ import { calendars } from './calendar.js';
 import { saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
-import { arr, COUNTRIES, ensureIds, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
+import { arr, CHAT_TOKENS, COUNTRIES, ensureIds, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, dayGap, fileOf, nightsToDays, parseWeather, weatherFrom } from './phonesynclife.js';
 import { exclusive } from './phonesync.js';
@@ -239,7 +239,7 @@ const later = (t, now) => { const g = dayGap(String(now).slice(0, 5), String(t).
 export const fillLife = (m, p) => exclusive('fill', async () => {
     const now = weatherNow(), days = storyDays(m, p);
     const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(days),
-        now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile });
+        now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps });
     const out = await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' });
     const life = parseLife(jsonOf(out), now, days.at(-1)?.day || '');
     // a booking the wallet holds is drawn from it: its file needs no line of its own
@@ -259,7 +259,7 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
     // the bank's own rows (not the ones this app put there): a meal already paid there is pointed at, not paid again
     const tx = (p.money?.tx || []).filter(t => !String(t.id).startsWith('dlv-') && !t.delivery);
     const money = accounts.length ? `[MONEY NOW]\n${JSON.stringify({ accounts: accounts.map(a => ({ last4: a.last4, kind: a.kind, name: a.name, currency: a.currency })), tx: tx.slice(-20).map(t => ({ id: t.id, account: t.account, time: t.time, who: t.who, amount: t.amount })) })}` : '';
-    const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(storyDays(m, p)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money], { profile: p.financeProfile });
+    const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(storyDays(m, p)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money], { profile: p.financeProfile, story: CHAT_TOKENS.apps });
     const out = await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 9000, effort: 'low' });
     const d = parseDelivery(jsonOf(out), accounts, tx), at = storyNow(p) || p.now || '';
     // nothing after the story's now
