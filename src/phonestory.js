@@ -24,7 +24,7 @@ export function adoptPhoneStory(m,scope) {
 }
 export function phoneStoryChoiceHtml(importing=false,hasSource=true) {
     return `<div class="na_popup na_v2 na_confirm"><div class="na_v2_title"><b>${importing?'아카이브와 휴대폰':'이 이야기의 휴대폰'}</b></div>
-      <div class="na_confirm_text">같은 이야기면 이어받고, 다른 이야기면 새로 시작해요.</div>
+      <div class="na_confirm_text">같은 이야기면 기존 폰을 이어받아요. 새로 시작하면 이 방의 폰 기록이 초기화돼요. 원래 방은 그대로예요.</div>
       <label><input type="radio" name="na_phone_story" value="keep" checked> ${importing&&hasSource?'휴대폰도 함께 가져오기':'기존 폰 이어받기'}</label><br>
       <label><input type="radio" name="na_phone_story" value="fresh"> 새 이야기로 시작</label></div>`;
 }

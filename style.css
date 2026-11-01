@@ -1999,7 +1999,7 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 
 /* ============ mockup palette (light themes). The mockups' cream / brown / orange, used as is.
    Dark themes (body.na_darkui) get the same rules with the colours darkened (each body.na_darkui twin follows its light rule). */
-body:not(.na_darkui) #na_settings, body:not(.na_darkui) .na_popup, body:not(.na_darkui) .na_v2 {
+body:not(.na_darkui) #na_settings, body:not(.na_darkui) .na_popup, body:not(.na_darkui) .na_v2, body:not(.na_darkui) dialog.popup:has(.na_confirm) {
     --na-accent: #B8541F;
     --na-accent-ink: #A84A17;
     --na-accent-soft: #F6E1D3;
@@ -2025,7 +2025,7 @@ body:not(.na_darkui) #na_settings, body:not(.na_darkui) .na_popup, body:not(.na_
     --na-warm: #C4521C; --na-warm-ink: #C4471A; --na-warm-soft: #FBE4D8;
     --na-cold: #3D6FB6; --na-cold-ink: #2F5F9E; --na-cold-soft: #E3ECF8;
 }
-body.na_darkui #na_settings, body.na_darkui .na_popup, body.na_darkui .na_v2 {
+body.na_darkui #na_settings, body.na_darkui .na_popup, body.na_darkui .na_v2, body.na_darkui dialog.popup:has(.na_confirm) {
     --na-accent: #D9733A;
     --na-accent-ink: #EE9A66;
     --na-accent-soft: #543627;
@@ -4229,6 +4229,27 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.na_wd_slot .text_pole, .na_wd_row .text_pole):focus { border-color: var(--na-accent) !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_wd_rename.text_pole { border-color: var(--na-line) !important; }
 .na_confirm_text { line-height: 1.6; }
+/* ============ confirm popups (util.confirm, the story choice): a rounded cream card with two shadows, a big title, half-and-half
+   취소 · action pills (action in orange with light on top). A plain question gets a round icon on top and is centred; a choice
+   (radios) is left-aligned and its options are pills (the chosen one dark). :not(#na_x) outranks the theme-proof rules above (they carry an id). */
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) { border: 0 !important; border-radius: 26px !important; padding: 26px 22px 18px !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06), 0 24px 60px rgba(70, 52, 40, 0.28) !important; }
+body.na_darkui dialog.popup:has(.na_confirm):not(#na_x) { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 24px 60px rgba(0, 0, 0, 0.5) !important; }
+dialog.popup:has(.na_confirm) .na_confirm { display: flex; flex-direction: column; align-items: stretch; }
+dialog.popup:has(.na_confirm) .na_confirm > br { display: none; }
+dialog.popup:has(.na_confirm) .na_confirm .na_v2_title b { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; color: var(--na-ink); }
+dialog.popup:has(.na_confirm) .na_confirm .na_confirm_text { margin-top: 6px; font-size: 14px; line-height: 1.55; color: var(--na-sub); }
+dialog.popup:has(.na_confirm) .na_confirm:not(:has(input)) :is(.na_v2_title, .na_confirm_text) { text-align: center; }
+dialog.popup:has(.na_confirm) .na_confirm:not(:has(input))::before { content: ""; display: block; width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 999px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B8541F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16.2v.1'/%3E%3C/svg%3E") center / 26px no-repeat, var(--na-accent-soft); }
+body.na_darkui dialog.popup:has(.na_confirm) .na_confirm:not(:has(input))::before { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23EE9A66' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16.2v.1'/%3E%3C/svg%3E") center / 26px no-repeat, var(--na-accent-soft); }
+dialog.popup:has(.na_confirm) .na_confirm label { display: flex !important; align-items: center; justify-content: center; margin-top: 8px; padding: 12px; border-radius: 999px; background: var(--na-card); font-size: 14.5px; font-weight: 600; color: var(--na-mute); cursor: pointer; }
+dialog.popup:has(.na_confirm) .na_confirm label:first-of-type { margin-top: 16px; }
+dialog.popup:has(.na_confirm) .na_confirm label:has(input:checked) { background: var(--na-fill); color: var(--na-onfill); }
+dialog.popup:has(.na_confirm) .na_confirm label input { position: absolute; opacity: 0; pointer-events: none; }
+dialog.popup:has(.na_confirm) .na_confirm label:has(input:focus-visible) { outline: 2px solid var(--na-accent); outline-offset: 2px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) .popup-controls.popup-controls { display: flex !important; gap: 8px; width: 100%; margin-top: 20px; padding: 0; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) .popup-controls.popup-controls .menu_button.menu_button { flex: 1 1 0 !important; width: auto !important; max-width: none !important; min-height: 46px; margin: 0 !important; padding: 0 12px !important; display: flex; align-items: center; justify-content: center; border-radius: 999px !important; font-size: 15px; font-weight: 600; filter: none !important; opacity: 1 !important; outline: none !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) .popup-controls.popup-controls .popup-button-cancel.popup-button-cancel { order: -1; background: var(--na-card) !important; border: 1px solid var(--na-line) !important; color: var(--na-ink) !important; box-shadow: none !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) .popup-controls.popup-controls .popup-button-ok.popup-button-ok { background: var(--na-accent) !important; border: 1px solid var(--na-accent) !important; color: #fff !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important; }
 
 /* ============ 캐릭터 휴대폰 (v3.107): the popup keeps the extension's palette; the phone inside has its own look —
    glass lock and home screens on a wallpaper, white (or black, dark) app screens. Ticks the owner strip on top. */

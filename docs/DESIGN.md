@@ -297,6 +297,7 @@ SillyTavern 테마는 `.menu_button`, `input`, `select`, `textarea`, `small`, �
 - **입력칸**: 검색칸 · 연결 설정칸은 겉 상자가 칸을 그리고, 안의 `input`은 납작하게 둬요(`/* the input itself is bare; the wrapper draws the field */`). 테마 padding이 글자를 아이콘 밑으로 밀지 못해요. `.text_pole`은 크림 칸(`#F2E9E2`) / 짙은 칸(`#2E2621`)으로 고정이에요.
 - **`<small>`**: SillyTavern의 `small { opacity: .7 }`이 새서, 패널 안 `small`은 `opacity: 1`에 우리 색이에요.
 - **확장 목록 머리줄**: 기본 그라데이션 대신 패널 바탕색으로 칠해 패널과 한 덩어리로 보여요.
+- **확인 창**(`util.confirm`, 이야기 고르기): 둥근 크림 카드에 그림자 두 겹, 큰 제목, "취소 · 실행" 알약 반반(실행은 주황 + 위쪽 빛)이에요. 그냥 묻는 창은 위에 주황 동그라미 아이콘 + 가운데 정렬, 고르기(라디오)가 있는 창은 왼쪽 정렬에 고르기가 알약(고른 쪽 진한 갈색)이에요(시안 `docs/mockups/ext-confirm` B). 기존 테마 방어 규칙에 id가 섞여 있어서(`:has(.na_popup, #na_settings)`) 이길 때는 `:not(#na_x)`를 붙여요. 팔레트 변수는 `.na_popup` 안에만 있어서 `dialog.popup:has(.na_confirm)`에도 걸어 뒀어요(버튼 줄이 `.na_popup` 바깥이에요).
 - 새 화면을 만들면 **아주 화려한 SillyTavern 테마**(버튼 · 입력칸을 `!important`로 칠하는 것)를 씌우고 한 번 확인해요. 소망 화면에서만 깨지는 일이 실제로 있었어요.
 
 ### 6-4. 코드 위치
