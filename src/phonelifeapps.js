@@ -32,6 +32,8 @@ const L = p => p.life || null;
 const k1 = (k, cls = 'lf_k') => (k && koOn() ? `<span class="${cls}">${esc(k)}</span>` : '');
 const now5 = p => String(storyNow(p) || p.now || '');
 const toMin = t => { const mt = String(t || '').match(/(\d{1,2}):(\d{2})/); return mt ? Number(mt[1]) * 60 + Number(mt[2]) : null; };
+// an order's arrival clock: "MM-DD HH:MM", or "HH:MM" alone (on the order's day)
+const arrHm = o => { const a = String(o.arrived || ''); return /^\d{2}:\d{2}$/.test(a) ? a : a.slice(6); };
 const hm = n => `${pad(Math.floor(((n % 1440) + 1440) % 1440 / 60))}:${pad(((n % 60) + 60) % 60)}`;
 const dur = min => (min >= 60 ? `${Math.floor(min / 60)}시간 ${min % 60}분` : `${min}분`);
 const durBig = min => `${Math.floor(min / 60)}<span>시간</span> ${min % 60}<span>분</span>`;
@@ -970,7 +972,7 @@ export function orderScreen(p, now, id) {
     const meta = [toLine(o, bm), o.address, o.left, o.for > 1 ? (bm ? `${o.for}인분` : `Für ${o.for}`) : '', o.noCutlery ? (bm ? '수저·포크 안 받음' : 'Ohne Besteck') : ''].filter(Boolean).map(esc).join(' · ');
     const stLine = o.status === 'cancelled' || o.status === 'refunded';
     if (bm) return `<div class="dv bm white">${axBar(p, now)}<div class="dv_bar">${axCb('dorders')}<b>주문상세</b><span>${I.cart}</span></div><div class="ax_scroll dv_sc">
-        <div class="dv_box"><div class="st"><b class="${stLine ? 'no' : ''}">${o.status === 'delivered' ? '배달이 완료됐어요' : ST_KO[o.status]}</b><small>주문일시 ${esc(fmtDate(p, o.time, true))} ${esc(o.time.slice(6))}${o.arrived ? `<br>도착 ${esc(o.arrived.slice(6))}` : ''}</small></div>
+        <div class="dv_box"><div class="st"><b class="${stLine ? 'no' : ''}">${o.status === 'delivered' ? '배달이 완료됐어요' : ST_KO[o.status]}</b><small>주문일시 ${esc(fmtDate(p, o.time, true))} ${esc(o.time.slice(6))}${o.arrived ? `<br>도착 ${esc(arrHm(o))}` : ''}</small></div>
           <button type="button" class="sh" ${s ? `data-go="dshop" data-i="${s.id}"` : ''}>${s ? pic(shopPic(s)) : ''}<b>${esc(o.shop)}</b>${I.chev}<i>${s?.fav ? I.heartF : I.heart}</i></button></div>
         <div class="dv_mh">주문 메뉴</div><div class="dv_box p">${lines}<div class="bt"><span class="l">같은 메뉴 담기</span><span class="m">바로 주문</span></div></div>
         <div class="dv_mh">결제 정보</div><div class="dv_box p">${kv}${bank}</div>
@@ -1023,7 +1025,7 @@ export function rateScreen(p, now, id) {
     const hit = tip ? pct.reduce((b, x) => (Math.abs(x[1] - tip) < Math.abs(b[1] - tip) ? x : b))[0] : 0;
     const up = c => `<svg width="22" height="22" viewBox="0 0 24 24"><path d="M7 10v10H4V10zM9 20h8.5a2 2 0 0 0 2-1.6l1.3-6A2 2 0 0 0 18.8 10H14l1-4.5A1.8 1.8 0 0 0 11.8 4L9 10z" fill="${c}"/></svg>`;
     return `<div class="dv ue">${axBar(p, now)}<div class="dv_bar">${axCb('dorders', 'x')}<span></span><span class="dv_help">Hilfe</span></div><div class="ax_scroll dv_sc">
-        <div class="dv_ur"><div class="hd"><span><h2>Bestellung bewerten</h2><small>${esc(o.shop)} · ${esc(fmtDate(p, o.time, true))} ${esc((o.arrived || o.time).slice(6))}</small></span><i>${I.my}</i></div>
+        <div class="dv_ur"><div class="hd"><span><h2>Bestellung bewerten</h2><small>${esc(o.shop)} · ${esc(fmtDate(p, o.time, true))} ${esc(o.arrived ? arrHm(o) : String(o.time).slice(6))}</small></span><i>${I.my}</i></div>
           <b class="t">Kurier bewerten</b><small>Wie war deine Lieferung?</small>
           <div class="th"><span class="dn">${up('#16181c')}</span><span class="${done ? 'on' : ''}">${up(done ? '#fff' : '#16181c')}</span></div>
           <div class="chips">${['Freundlich', 'Gute Kommunikation', 'Pünktlich', 'Sorgfältig'].map((t, k) => `<span class="${done && k < 2 ? 'on' : ''}">${t}</span>`).join('')}</div>

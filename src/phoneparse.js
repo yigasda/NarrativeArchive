@@ -1,17 +1,20 @@
 // 캐릭터 휴대폰: cleaning what a model sends back (text cut short, times in one shape, numbers read loosely).
 // No other imports, so the pure sync modules and the tests can use it alone.
-export const str = (v, n) => String(v ?? '').replace(/[ \t]+/g, ' ').trim().slice(0, n);
+// text from a model's answer: an object or list where text belongs is no text (never "[object Object]")
+export const str = (v, n) => (v !== null && typeof v === 'object' ? '' : String(v ?? '')).replace(/[ \t]+/g, ' ').trim().slice(0, n);
 export const line = (v, n) => str(v, n).replace(/\s*\n\s*/g, ' ');
 export const pad = x => String(x).padStart(2, '0');
 export const when = v => {
     // "10-25 21:00", or with the year in front ("2026-10-25 21:00", "2026/10/25T21:00")
     const mt = String(v || '').match(/(?:^|\D)(?:\d{4}[-/.])?(\d{1,2})[-/.](\d{1,2})(?:[ T]+(\d{1,2}):(\d{2}))?/);
-    if (!mt || Number(mt[1]) > 12 || Number(mt[2]) > 31) return '';
-    return `${pad(mt[1])}-${pad(mt[2])}${mt[3] ? ` ${pad(mt[3])}:${mt[4]}` : ''}`;
+    if (!mt || !(Number(mt[1]) >= 1 && Number(mt[1]) <= 12) || !(Number(mt[2]) >= 1 && Number(mt[2]) <= 31)) return '';
+    // a clock that can't be ("25:99") is dropped, the day stays
+    const ok = mt[3] && Number(mt[3]) < 24 && Number(mt[4]) < 60;
+    return `${pad(mt[1])}-${pad(mt[2])}${ok ? ` ${pad(mt[3])}:${mt[4]}` : ''}`;
 };
-export const hhmm = v => { const mt = String(v || '').match(/(\d{1,2}):(\d{2})/); return mt ? `${pad(mt[1])}:${mt[2]}` : ''; };
+export const hhmm = v => { const mt = String(v || '').match(/(\d{1,2}):(\d{2})/); return mt && Number(mt[1]) < 24 && Number(mt[2]) < 60 ? `${pad(mt[1])}:${mt[2]}` : ''; };
 export const ko = v => line(v, 400);
-export const arr = v => (Array.isArray(v) ? v : []);
+export const arr = v => (Array.isArray(v) ? v.filter(x => x !== null && x !== undefined) : []);
 export const pick = (v, list, dflt) => (list.includes(v) ? v : dflt);
 // an event tag, kept only when given: items from the same story event share it (links between apps)
 export const evOf = v => line(v, 40).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '');

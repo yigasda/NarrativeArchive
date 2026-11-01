@@ -14,12 +14,13 @@
 import { cash, finance, finite, fx, migrateBank, positions, round } from './finance.js';
 import { boxAt, dayGap, lifeReplay, lifeRevert } from './phonesynclife.js';
 import { dishPic } from './phonefood.js';
-import { byStory } from './phoneparse.js';
+import { byStory, hhmm, when } from './phoneparse.js';
 
 const STEP = { ordered: 0, shipped: 1, 'on the way': 2, delivered: 3 };
 const ORDER = ['ordered', 'shipped', 'on the way', 'delivered', 'unknown', 'cancelled', 'returning', 'returned', 'refunded'];
-const txt = (v, n = 80) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
-const list = v => (Array.isArray(v) ? v : []);
+const txt = (v, n = 80) => (v !== null && typeof v === 'object' ? '' : String(v ?? '')).replace(/\s+/g, ' ').trim().slice(0, n);
+// a model's list of records: a null or a bare word in it is no record
+const list = v => (Array.isArray(v) ? v.filter(x => x && typeof x === 'object' && !Array.isArray(x)) : []);
 const day = s => { const mt = /^(\d{2})-(\d{2})/.exec(String(s || '')); return mt ? Date.UTC(2001, mt[1] - 1, mt[2]) : NaN; };
 // days apart, across New Year too (12-31 and 01-01 are one day apart)
 const near = (a, b, days = 1) => { const d = Math.abs(day(a) - day(b)); return Math.min(d, 365 * 86400000 - d) <= days * 86400000; };
@@ -246,11 +247,11 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     records('orders', list(mo.orders), x => {
         const price = Number(x.price);
         if (!txt(x.item) || !txt(x.shop)) fail('주문의 가게나 물건을 확인하지 못했어요');
-        return { shop: txt(x.shop, 60), item: txt(x.item), ko: txt(x.ko), option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: txt(x.eta, 5), arrived: '', gift: x.gift === true ? '선물' : txt(x.gift, 40), ...(x.paid === false ? { paid: false } : {}), ...(guess ? { amountFrom: 'guess' } : {}) };
+        return { shop: txt(x.shop, 60), item: txt(x.item), ko: txt(x.ko), option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5), arrived: '', gift: x.gift === true ? '선물' : txt(x.gift, 40), ...(x.paid === false ? { paid: false } : {}), ...(guess ? { amountFrom: 'guess' } : {}) };
     }, (o, x) => samePlace(o.shop, x.shop) && samePlace(o.item, x.item) && near(o.time, date));
     records('passes', list(mo.passes), x => {
         if (!txt(x.by)) fail('티켓 정보를 확인하지 못했어요');
-        return { kind: ['flight', 'train', 'hotel', 'event', 'other'].includes(x.kind) ? x.kind : 'other', by: txt(x.by, 60), from: txt(x.from, 40), to: txt(x.to, 40), date: /^\d{2}-\d{2}$/.test(x.date || '') ? x.date : date, time: txt(x.time, 5), seat: txt(x.seat, 12), gate: txt(x.gate, 12), no: txt(x.no, 24), status: txt(x.status, 30) };
+        return { kind: ['flight', 'train', 'hotel', 'event', 'other'].includes(x.kind) ? x.kind : 'other', by: txt(x.by, 60), from: txt(x.from, 40), to: txt(x.to, 40), date: when(x.date).slice(0, 5) || date, time: hhmm(x.time), seat: txt(x.seat, 12), gate: txt(x.gate, 12), no: txt(x.no, 24), status: txt(x.status, 30) };
     }, (o, x) => samePlace(o.by, x.by) && o.kind === x.kind && (o.no && o.no === txt(x.no, 24) || o.date === (x.date || date)));
     // 배달: an order in the delivery app. Its payment is a move of the same event (the card or bank row it made, or one
     // already there), tied to it here; with no paying move it was paid in cash at the door
@@ -273,12 +274,14 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             return;
         }
         const time = /^\d{2}-\d{2}/.test(String(x.time || '')) ? txt(x.time, 11) : `${date}${e.time ? ` ${e.time}` : ''}`;
-        const row = { shop: txt(x.shop, 60), items, fee: money(x.fee), tip: money(x.tip), discount: money(x.discount), mode: x.mode === 'pickup' ? 'pickup' : 'delivery', time, arrived: txt(x.arrived, 11),
+        const row = { shop: txt(x.shop, 60), items, fee: money(x.fee), tip: money(x.tip), discount: money(x.discount), mode: x.mode === 'pickup' ? 'pickup' : 'delivery', time, arrived: when(x.arrived) || hhmm(x.arrived),
             to: txt(x.to, 40) || 'home', address: txt(x.address, 80), left: txt(x.left, 60), noteShop: txt(x.noteShop, 120), noteShopKo: txt(x.noteShopKo, 200), noteRider: txt(x.noteRider, 120), noteRiderKo: txt(x.noteRiderKo, 200),
             noCutlery: x.noCutlery === true, for: Math.max(1, Math.round(Number(x.for) || 1)), status, gift: txt(x.gift, 40), reviewed: false, account: 'cash',
             id: `sync:${e.id}:d${k}`, ev: e.id, storyEvent: e.id, sourceIndex: e.at, sync: true };
         // the row that paid it: made by this event, or one already in the bank this event pointed at
-        const made = out.effects.find(f => f.type === 'push' && f.path === 'money.tx' && Math.abs(f.item.amount + total) < 0.01 && !f.item.delivery);
+        // (the same amount, else a payment to the same shop in this event: a tip left out or a rounding is still this order's)
+        const paidHere = f => f.type === 'push' && f.path === 'money.tx' && !f.item.delivery && f.item.amount < 0;
+        const made = out.effects.find(f => paidHere(f) && Math.abs(f.item.amount + total) < 0.01) || out.effects.find(f => paidHere(f) && samePlace(f.item.who, row.shop));
         const kept = !made && out.legs.find(l => l.state === 'included' && Math.abs(l.amount + total) < 0.01 && p.money?.tx?.some(t => t.id === l.rec && !t.delivery));
         const t = made ? p.money.tx.find(r => r.id === made.item.id) : kept ? p.money.tx.find(r => r.id === kept.rec) : null;
         if (t) { t.delivery = row.id; row.account = t.account; if (made) made.item.delivery = row.id; }
@@ -326,6 +329,8 @@ export function unpayOrders(m, p) {
     for (const t of gone) for (const L of Object.values(f.accounts)) delete L.entries[t.id];
     p.money.tx = tx.filter(t => !gone.includes(t));
 }
+// when an order came: "21:30" alone is on the order's day
+const arrivedAt = o => { const a = String(o.arrived || ''); return /^\d{2}-\d{2}/.test(a) ? a : /^\d{2}:\d{2}$/.test(a) ? `${String(o.time || '').slice(0, 5)} ${a}` : o.time; };
 export function payOrders(m, p, year) {
     if (!p.money || !p.delivery) return 0;
     migrateBank(m, p);
@@ -345,13 +350,13 @@ export function payOrders(m, p, year) {
         if (o.status === 'cancelled' || o.sync) continue;
         // its payment is already in the bank (the bank was filled first): tie it, add none
         const paid = o.paidBy && tx.find(t => t.id === o.paidBy);
-        if (paid) { paid.delivery = o.id; if (o.ev) paid.ev ||= o.ev; if (o.status === 'refunded') { const a = payAccount(p, o); if (a) put(o, a, `${PAY}${o.id}-r`, dlvTotal(o), o.arrived || o.time, 'Refund'); } continue; }
+        if (paid) { paid.delivery = o.id; if (o.ev) paid.ev ||= o.ev; if (o.status === 'refunded') { const a = payAccount(p, o); if (a) put(o, a, `${PAY}${o.id}-r`, dlvTotal(o), arrivedAt(o), 'Refund'); } continue; }
         const a = payAccount(p, o);
         if (!a) continue;
         const total = dlvTotal(o);
         if (!(total > 0)) continue;
         put(o, a, `${PAY}${o.id}`, -total, o.time, o.mode === 'pickup' ? 'Pickup' : 'Delivery');
-        if (o.status === 'refunded') put(o, a, `${PAY}${o.id}-r`, total, o.arrived || o.time, 'Refund');
+        if (o.status === 'refunded') put(o, a, `${PAY}${o.id}-r`, total, arrivedAt(o), 'Refund');
     }
     tx.sort(byStory(p.now));
     for (const a of p.money.bank.accounts) if (a.kind !== 'credit') { const L = f.accounts[`${a.id}:${a.currency}`]; if (L) a.balance = round(L.amount + Object.values(L.entries).reduce((s, x) => s + x.amount, 0)); }

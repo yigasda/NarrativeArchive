@@ -704,7 +704,8 @@ async function updatePhone(m, owner) {
         // are read once more with it, so that content isn't lost
         settleRound(s, round.rows, failed, new Set(added.map(x => x.at)));
         for (const x of evidence) s.arch[x.key] = 1;
-        const nowAt = when(raw.now);
+        // a now without its time ("2026-12-31", "1/2"): that day at the round's last event time, else the time it was
+        const nowAt = (t => (/^\d{2}-\d{2}$/.test(t) ? `${t} ${arr(raw.events).map(e => [when(e?.date).slice(0, 5), hhmm(e?.time)]).filter(([d, h]) => d === t && /^\d{2}:\d{2}$/.test(h || '')).map(([, h]) => h).sort().at(-1) || (t === String(p.now || '').slice(0, 5) ? p.now.slice(6) : '') || '12:00'}`.trim() : t))(when(raw.now));
         // the phone's time only moves on, across New Year too (12-31 → 01-01 is a day later, not months back)
         const gap = nowAt && p.now ? dayGap(p.now.slice(0, 5), nowAt.slice(0, 5)) : 1;
         if (nowAt && (gap > 0 || gap === 0 && nowAt.slice(6) > p.now.slice(6))) {

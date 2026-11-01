@@ -79,8 +79,9 @@ RULES
 ANSWER — one JSON object, nothing else:
 {"quotes":[{"symbol":"exchange:symbol","date":"YYYY-MM-DD","time":"","value":100,"source":"guess|story","evidence":"exact words from the story, for story"}],"fx":[{"from":"USD","to":"EUR","date":"YYYY-MM-DD","time":"","value":0.9,"source":"guess|story","evidence":""}]}
 Empty lists are fine.`;
-const list = x => Array.isArray(x) ? x : [];
-const text = (s, n = 500) => String(s ?? '').trim().slice(0, n);
+// a model's list of records (a null or a bare word in it is none) and its text (an object where text belongs is none)
+const list = x => Array.isArray(x) ? x.filter(v => v && typeof v === 'object' && !Array.isArray(v)) : [];
+const text = (s, n = 500) => (s !== null && typeof s === 'object' ? '' : String(s ?? '')).trim().slice(0, n);
 const json = out => { const s = String(out).replace(/```(?:json)?/gi, ''); return parseJson(s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1)); };
 export const validDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '') && !Number.isNaN(Date.parse(d)) && new Date(d).toISOString().slice(0, 10) === d;
 export function investmentDate(m, p) {
