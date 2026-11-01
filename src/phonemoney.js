@@ -491,24 +491,26 @@ function qr(seed) {
 }
 // the wallet as one deck: the member card, the cards, then the coming passes, the nearest in front and open; each one
 // behind shows its top edge. Past passes keep their own grey deck below, so a wallet with nothing coming still has something
-export function walletScreen(p, now) {
+export function walletScreen(p, now, sel = '') {
     const M = mo(p);
     if (!M) return emptyApp(p, now, '지갑', 'money', '아직 지갑이 비어 있어요. 채우면 은행 · 지갑 · 쇼핑이 함께 생겨요.');
     migrateBank(getMeta(),p);
     const today = String(storyNow(p) || p.now || '').slice(0, 5), past = x => gapDays(today, x.date) < 0 || /used|benutzt|abgelaufen|expired|사용|지난/i.test(x.status || '');
     const ps = [...M.passes].sort((a, b) => gapDays(p.now, a.date) - gapDays(p.now, b.date)), up = ps.filter(x => !past(x)), old = ps.filter(past);
     const t = bankTier(p).t, mc = t?.k === 'PRIVATE';
-    const items = [...(mc ? [`<button type="button" class="ax_wlb" data-go="bankmore">${memberCard(p, t, ' ax_mcw')}</button>`] : []),
-        ...M.cards.map((c, i) => `<button type="button" class="ax_wlb" data-go="card" data-i="${i}">${cardArt(p, c)}</button>`),
-        ...[...up].reverse().map(x => `<button type="button" class="ax_wlb" data-go="pass" data-i="${x.id}">${passArt(p, x, false)}</button>`)];
+    // a tap on one lying behind brings it out whole; a tap on the open one opens it
+    const deck = list => { const open = list.some(o => o.k === sel) ? sel : list[list.length - 1]?.k; return list.map(o => o.k === open ? `<button type="button" class="ax_wlb on" data-go="${o.go}" data-i="${o.i}">${o.art}</button>` : `<button type="button" class="ax_wlb sh" data-go="wallet" data-i="${o.k}">${o.art}</button>`).join(''); };
+    const items = [...(mc ? [{ k: 'm', go: 'bankmore', i: '', art: memberCard(p, t, ' ax_mcw') }] : []),
+        ...M.cards.map((c, i) => ({ k: `c${i}`, go: 'card', i, art: cardArt(p, c) })),
+        ...[...up].reverse().map(x => ({ k: `p${x.id}`, go: 'pass', i: x.id, art: passArt(p, x, false) }))];
     const next = up[0], gap = next ? gapDays(today, next.date) : null, where = next ? (next.to || next.title || next.by || '') : '';
     const sub = next && gap !== null && gap >= 0 ? `다음 일정 · ${esc(where)}${gap === 0 ? ' 오늘' : gap === 1 ? ' 내일' : ` ${gap}일 뒤`}` : [M.cards.length ? `카드 ${M.cards.length}` : '', mc ? '멤버십 1' : '', ps.length ? `패스 ${ps.length}` : ''].filter(Boolean).join(' · ');
     return `${axBar(p, now)}
       ${axTop(axCb('home2'))}
       <div class="ax_scroll">
         ${axH1('지갑', sub)}
-        ${items.length ? `<div class="ax_wl ax_deck">${items.join('')}</div>` : '<div class="ax_empty">지갑이 비어 있어요</div>'}
-        ${old.length ? `<div class="ax_shd ax_oldh">지난 패스<span>${old.length}개</span></div><div class="ax_wl ax_deck ax_psold">${old.map(x => `<button type="button" class="ax_wlb" data-go="pass" data-i="${x.id}">${passArt(p, x, false)}</button>`).join('')}</div>` : ''}
+        ${items.length ? `<div class="ax_wl ax_deck">${deck(items)}</div>` : '<div class="ax_empty">지갑이 비어 있어요</div>'}
+        ${old.length ? `<div class="ax_shd ax_oldh">지난 패스<span>${old.length}개</span></div><div class="ax_wl ax_deck ax_psold">${deck(old.map(x => ({ k: `o${x.id}`, go: 'pass', i: x.id, art: passArt(p, x, false) })))}</div>` : ''}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
