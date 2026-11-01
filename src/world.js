@@ -130,7 +130,7 @@ export async function exportLorebook(w) {
     const c = ctx();
     const name = `${String(w.name || '세계관').trim()} · 서사 아카이브`.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
     const names = c.getWorldInfoNames?.() || [];
-    if (names.includes(name) && !await confirm('로어북 덮어쓰기', `"${esc(name)}" 로어북이 이미 있어요. 지금 세계관 내용으로 바꿀까요?`)) return '';
+    if (names.includes(name) && !await confirm('로어북 덮어쓰기', `"${esc(name)}" 로어북이 이미 있어요. 지금 세계관 내용으로 바꿀까요?`, '바꾸기')) return '';
     const { newWorldInfoEntryTemplate } = await import('/scripts/world-info.js');
     const data = { entries: {} };
     let uid = 0;
@@ -395,14 +395,14 @@ export async function openWorlds() {
         if (!name) return;
         toastr.success(`실리태번 월드 인포에서 캐릭터나 채팅에 붙여 주세요.`, `로어북 "${name}"을 만들었어요`, { timeOut: 8000 });
         // the same text would go in twice: from the lorebook and from here
-        if (worldIsOn(m, w) && await confirm('세계관 주입 끄기', `로어북을 붙이면 같은 내용이 두 번 들어가요. 이 채팅에서 "${esc(w.name || '세계관')}" 주입을 끌까요?`)) {
+        if (worldIsOn(m, w) && await confirm('세계관 주입 끄기', `로어북을 붙이면 같은 내용이 두 번 들어가요. 이 채팅에서 "${esc(w.name || '세계관')}" 주입을 끌까요?`, '끄기')) {
             m.worldOn = { ...(m.worldOn || {}), [w.id]: false };
             await save(); draw();
         }
     });
     $root.on('click', '.na_wd_del', async function () {
         const w = book(this);
-        if (!await confirm('세계관 지우기', `"${esc(w.name)}"을 지울까요? 이 세계관을 켠 모든 채팅에서 빠져요. 되돌릴 수 없어요.`)) return;
+        if (!await confirm('세계관 지우기', `"${esc(w.name)}"을 지울까요? 이 세계관을 켠 모든 채팅에서 빠져요. 되돌릴 수 없어요.`, '지우기', { danger: true })) return;
         g.worlds = worldBooks().filter(x => x !== w);
         await save(); draw();
     });

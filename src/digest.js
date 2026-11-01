@@ -227,7 +227,7 @@ export async function openDigest(group = null, keys = null) {
     });
     $root.on('click', '.na_dg_del', async function () {
         const i = Number($(this).closest('.na_dg_item').data('i'));
-        if (!await confirm('다이제스트 지우기', '이 다이제스트를 지울까요? 원본 섹션은 그대로예요.')) return;
+        if (!await confirm('다이제스트 지우기', '이 다이제스트를 지울까요? 원본 섹션은 그대로예요.', '지우기', { danger: true })) return;
         m.digests.splice(i, 1);
         await saveAndInject(); drawHave(); drawList();
     });

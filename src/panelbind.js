@@ -92,7 +92,7 @@ export function bindPanel() {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); $('#na_ed_save').trigger('click'); }
     });
     $('#na_ed_save').on('click', needChat(async () => {
-        if (editorBase !== null && getMeta().text !== editorBase && !await confirm('다른 곳에서 바뀌었어요', '편집칸을 연 뒤에 아카이브가 다른 곳(추가·섹션 카드 편집·마법사 등)에서 바뀌었어요. 지금 편집칸 내용으로 저장하면 그 변경이 사라져요. 그래도 저장할까요? 지금 내용은 복구 지점에 남아요.')) return;
+        if (editorBase !== null && getMeta().text !== editorBase && !await confirm('다른 곳에서 바뀌었어요', '편집칸을 연 뒤에 아카이브가 다른 곳(추가·섹션 카드 편집·마법사 등)에서 바뀌었어요. 지금 편집칸 내용으로 저장하면 그 변경이 사라져요. 그래도 저장할까요? 지금 내용은 복구 지점에 남아요.', '저장하기')) return;
         setEditorDirty(false);
         const changed = await commitText($ed.val(), '본문 저장 전');
         setEditorBase(getMeta().text);
@@ -376,7 +376,7 @@ export function bindPanel() {
         const n = [...m.text.matchAll(re)].length;
         if (!n) return;
         const to = $('#na_rp_to').val();
-        if (!await confirm('모두 바꾸기', `"${esc($('#na_rp_find').val())}" ${n}군데를 ${to ? `"${esc(to)}"(으)로 바꿀까요` : '지울까요'}? 지금 상태는 복구 지점에 남아요.`)) return;
+        if (!await confirm('모두 바꾸기', `"${esc($('#na_rp_find').val())}" ${n}군데를 ${to ? `"${esc(to)}"(으)로 바꿀까요` : '지울까요'}? 지금 상태는 복구 지점에 남아요.`, to ? '바꾸기' : '지우기')) return;
         await commitText(m.text.replace(re, () => to), `찾아 바꾸기 전: ${$('#na_rp_find').val().slice(0, 30)}`);
         renderReplace();
         toastr.success(`${n}군데 바꿨어요`);
@@ -417,7 +417,7 @@ export function bindPanel() {
     $('#na_clear').on('click', needChat(async () => {
         const m = getMeta();
         if (!m.text.trim()) return toastr.info('이미 비어 있어요.');
-        if (!await confirm('아카이브 비우기', '본문을 비울까요? 지금 내용은 복구 지점에 남아요.')) return;
+        if (!await confirm('아카이브 비우기', '본문을 비울까요? 지금 내용은 복구 지점에 남아요.', '비우기', { danger: true })) return;
         setEditorDirty(false);
         await commitText('', '비우기 전', { boundary: -1 });
         toastr.success('비웠어요');
@@ -454,7 +454,7 @@ export function bindPanel() {
             }
             if (json?.format !== 'narrative-archive' || typeof json.data?.text !== 'string') return toastr.error('서사 아카이브 백업 파일이 아니에요.');
         }
-        if (m.text.trim() && !await confirm('아카이브 덮어쓰기', '이 채팅의 기존 아카이브를 불러온 파일로 바꿀까요? 지금 내용은 복구 지점에 남아요.')) return;
+        if (m.text.trim() && !await confirm('아카이브 덮어쓰기', '이 채팅의 기존 아카이브를 불러온 파일로 바꿀까요? 지금 내용은 복구 지점에 남아요.', '바꾸기')) return;
         setEditorDirty(false);
         if (json) {
             const d = json.data;

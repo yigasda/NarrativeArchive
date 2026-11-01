@@ -187,7 +187,7 @@ export async function openCalendar() {
     $root.on('click', '.na_cal_jump', () => $root.find('.na_cal_item.warn')[0]?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
     $root.on('click', '.na_cal_av_find', async function () {
         const again = !!m.annivScan && !(datedRows(m).length - (Number(m.annivScan) || 0));
-        if (again && annivsOf(m).length && !await confirm('기념일 다시 찾기', '지금 목록을 지우고 처음부터 다시 찾을까요? 직접 넣은 것도 지워져요.')) return;
+        if (again && annivsOf(m).length && !await confirm('기념일 다시 찾기', '지금 목록을 지우고 처음부터 다시 찾을까요? 직접 넣은 것도 지워져요.', '다시 찾기', { danger: true })) return;
         const found = await withSpinner($(this), '찾는 중…', () => findAnnivs({ again, onProgress: (i, n) => { if (n > 40) $(this).html(`<i class="fa-solid fa-spinner fa-spin"></i> 찾는 중… ${i}/${n}`); } }));
         if (found) toastr.info(found.length ? found.map(a => a.name).join(' · ') : '새로 찾은 날이 없어요', `기념일 ${found.length}개`);
         draw();

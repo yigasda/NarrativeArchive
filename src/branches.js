@@ -84,7 +84,7 @@ export async function openBranches() {
     };
     $root.on('click', '.na_bn2_drop', async function () {
         const x = branchState(m).ahead[Number(this.dataset.i)];
-        if (!x || !await confirm('섹션 빼기', `"${esc(x.s.title)}"을 뺄까요? 지금 내용은 복구 지점에 남아요.`)) return;
+        if (!x || !await confirm('섹션 빼기', `"${esc(x.s.title)}"을 뺄까요? 지금 내용은 복구 지점에 남아요.`, '빼기', { danger: true })) return;
         await cutSections(new Set([x.s.start]), 1);
     });
     render();
@@ -98,13 +98,13 @@ export async function openBranches() {
     $root.on('click', '.na_br_cmp_parent', () => compareWith(branchState(m).parent, '원본 채팅'));
     $root.on('click', '.na_br_restore', async () => {
         const b = branchState(m);
-        if (!b.fit || !await confirm('복구 지점으로', `${timeLabel(b.fit.at)} · ${esc(b.fit.reason)} 버전으로 되돌릴까요? 지금 내용은 복구 지점에 남아요.`)) return;
+        if (!b.fit || !await confirm('복구 지점으로', `${timeLabel(b.fit.at)} · ${esc(b.fit.reason)} 버전으로 되돌릴까요? 지금 내용은 복구 지점에 남아요.`, '되돌리기')) return;
         await commitText(b.fit.text, '분기 정리 전', { boundary: Math.min(b.fit.boundary ?? -1, b.last) });
         toastr.success('되돌렸어요'); render();
     });
     $root.on('click', '.na_br_cut', async () => {
         const b = branchState(m);
-        if (!await confirm('섹션 빼기', `분기 지점 뒤의 섹션 ${b.ahead.length}개를 뺄까요? 지금 내용은 복구 지점에 남아요.`)) return;
+        if (!await confirm('섹션 빼기', `분기 지점 뒤의 섹션 ${b.ahead.length}개를 뺄까요? 지금 내용은 복구 지점에 남아요.`, '빼기', { danger: true })) return;
         await cutSections(new Set(b.ahead.map(x => x.s.start)), b.ahead.length);
     });
     $root.on('click', '.na_br_find', async function () {

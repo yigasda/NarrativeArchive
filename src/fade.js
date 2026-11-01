@@ -361,7 +361,7 @@ export async function openLayers(s) {
     const res = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '저장', cancelButton: '닫기' });
     if (res !== c.POPUP_RESULT.AFFIRMATIVE && res !== true) {
         // closed with changes not saved: ask instead of dropping them
-        if (!dirty() || !await confirm('저장 안 한 고침', '짧은 버전 · 요점을 고친 게 있어요. 저장할까요?')) return;
+        if (!dirty() || !await confirm('저장 안 한 고침', '짧은 버전 · 요점을 고친 게 있어요. 저장할까요?', '저장하기')) return;
     }
     await saveLayers(m, s, $root.find('.na_ly_short').val(), $root.find('.na_ly_line').val());
     toastr.success('섹션 버전을 저장했어요');
@@ -397,7 +397,7 @@ export async function fillFade($btn, only = null) {
     const pick = only && new Set(only);
     const todo = fadeMissing(m, true).filter(x => !pick || pick.has(sectionKey(x))), need = pick ? 0 : fadeMissing(m).length;
     if (!todo.length) return toastr.info('모든 섹션에 짧게 · 요점 버전이 있어요.');
-    if (!await confirm('초안 모델로 채우기', `짧게 · 요점 버전이 없는 섹션 ${todo.length}개를 초안 모델(${drLabel()})로 하나씩 만들까요?${need ? ` 지금 곡선에 필요한 ${need}개부터 해요.` : ''} 섹션마다 요청이 한 번씩 가요. 도중에 멈출 수 있어요.`)) return;
+    if (!await confirm('초안 모델로 채우기', `짧게 · 요점 버전이 없는 섹션 ${todo.length}개를 초안 모델(${drLabel()})로 하나씩 만들까요?${need ? ` 지금 곡선에 필요한 ${need}개부터 해요.` : ''} 섹션마다 요청이 한 번씩 가요. 도중에 멈출 수 있어요.`, '만들기')) return;
     fadeFilling = { stop: false };
     const html = $btn.html();
     let done = 0, failed = 0;

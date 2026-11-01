@@ -4230,17 +4230,17 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_wd_rename.text_pole { border-color: var(--na-line) !important; }
 .na_confirm_text { line-height: 1.6; }
 /* ============ confirm popups (util.confirm, the story choice): a rounded cream card with two shadows, a big title, half-and-half
-   취소 · action pills (action in orange with light on top). A plain question gets a round icon on top and is centred; a choice
-   (radios) is left-aligned and its options are pills (the chosen one dark). :not(#na_x) outranks the theme-proof rules above (they carry an id). */
+   취소 · action pills (action in orange with light on top). A deleting question (confirm(…, { danger: true })) gets a round icon on top and is centred;
+   the rest are left-aligned; a choice (radios) has its options as pills (the chosen one dark). :not(#na_x) outranks the theme-proof rules above (they carry an id). */
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) { border: 0 !important; border-radius: 26px !important; padding: 26px 22px 18px !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06), 0 24px 60px rgba(70, 52, 40, 0.28) !important; }
 body.na_darkui dialog.popup:has(.na_confirm):not(#na_x) { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 24px 60px rgba(0, 0, 0, 0.5) !important; }
 dialog.popup:has(.na_confirm) .na_confirm { display: flex; flex-direction: column; align-items: stretch; }
 dialog.popup:has(.na_confirm) .na_confirm > br { display: none; }
 dialog.popup:has(.na_confirm) .na_confirm .na_v2_title b { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; color: var(--na-ink); }
 dialog.popup:has(.na_confirm) .na_confirm .na_confirm_text { margin-top: 6px; font-size: 14px; line-height: 1.55; color: var(--na-sub); }
-dialog.popup:has(.na_confirm) .na_confirm:not(:has(input)) :is(.na_v2_title, .na_confirm_text) { text-align: center; }
-dialog.popup:has(.na_confirm) .na_confirm:not(:has(input))::before { content: ""; display: block; width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 999px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B8541F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16.2v.1'/%3E%3C/svg%3E") center / 26px no-repeat, var(--na-accent-soft); }
-body.na_darkui dialog.popup:has(.na_confirm) .na_confirm:not(:has(input))::before { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23EE9A66' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16.2v.1'/%3E%3C/svg%3E") center / 26px no-repeat, var(--na-accent-soft); }
+dialog.popup:has(.na_confirm) .na_confirm.danger :is(.na_v2_title, .na_confirm_text) { text-align: center; }
+dialog.popup:has(.na_confirm) .na_confirm.danger::before { content: ""; display: block; width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 999px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B8541F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16.2v.1'/%3E%3C/svg%3E") center / 26px no-repeat, var(--na-accent-soft); }
+body.na_darkui dialog.popup:has(.na_confirm) .na_confirm.danger::before { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23EE9A66' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16.2v.1'/%3E%3C/svg%3E") center / 26px no-repeat, var(--na-accent-soft); }
 dialog.popup:has(.na_confirm) .na_confirm > label { display: flex !important; align-items: center; justify-content: center; margin-top: 8px; padding: 12px; border-radius: 999px; background: var(--na-card); font-size: 14.5px; font-weight: 600; color: var(--na-mute); cursor: pointer; }
 dialog.popup:has(.na_confirm) .na_confirm > label:first-of-type { margin-top: 16px; }
 dialog.popup:has(.na_confirm) .na_confirm > label:has(input:checked) { background: var(--na-fill); color: var(--na-onfill); }

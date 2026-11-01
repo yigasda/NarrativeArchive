@@ -660,7 +660,7 @@ export async function openStudio() {
     $root.find('.na_st_reset').on('click', async () => {
         $menu.prop('hidden', true);
         if (busy) return toastr.info('답을 기다리는 중이에요.', '압축 작업실');
-        if (!await confirm('새로 시작', '이 작업실 대화와 받은 섹션을 지우고 처음부터 할까요?<br><small>아카이브에 이미 넣은 건 그대로예요.</small>')) return;
+        if (!await confirm('새로 시작', '이 작업실 대화와 받은 섹션을 지우고 처음부터 할까요?<br><small>아카이브에 이미 넣은 건 그대로예요.</small>', '새로 시작', { danger: true })) return;
         delete getMeta().studio; await saveMeta();
         $root.closest('dialog').find('.popup-button-ok').trigger('click');
         setTimeout(openStudio, 50);
@@ -728,7 +728,7 @@ async function setup() {
     const covered = lastRangeEnd(m.text);
     let keepUpTo = -1;
     if (covered !== null && covered < m.boundary && covered + 1 <= last) {
-        if (await confirm('빠진 구간', `경계선은 <b>#${m.boundary}</b>인데 아카이브 섹션은 <b>#${covered}</b>까지예요.<br>#${covered + 1}부터 할까요? (숨긴 메시지도 이 구간은 넣어요)<br><small>아니요를 누르면 경계선 다음(#${m.boundary + 1})부터 해요.</small>`)) {
+        if (await confirm('빠진 구간', `경계선은 <b>#${m.boundary}</b>인데 아카이브 섹션은 <b>#${covered}</b>까지예요.<br>#${covered + 1}부터 할까요? (숨긴 메시지도 이 구간은 넣어요)<br><small>아니요를 누르면 경계선 다음(#${m.boundary + 1})부터 해요.</small>`, '네', { no: '아니요' })) {
             from = covered + 1; after = covered; keepUpTo = m.boundary; to = Math.max(to, from);
         }
     }

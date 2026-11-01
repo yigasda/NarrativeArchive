@@ -240,7 +240,7 @@ export async function openKnowledge() {
         extraFoot: '<label class="checkbox_label na_kn_fresh"><input type="checkbox"><span>지금 표는 버리고 처음부터 만들기</span></label>',
         onGo: async (parts, step, stepDone) => {
             if ($root.find('.na_kn_fresh input').prop('checked')) {
-                if (knowledgeRows(m).length && !await confirm('처음부터 만들기', '지금 표를 지우고 고른 섹션으로 새로 만들까요?')) return;
+                if (knowledgeRows(m).length && !await confirm('처음부터 만들기', '지금 표를 지우고 고른 섹션으로 새로 만들까요?', '새로 만들기', { danger: true })) return;
                 m.knowledge = ''; m.knowMined = []; tr = null;
                 $root.find('.na_kn_fresh input').prop('checked', false);
             }
@@ -322,7 +322,7 @@ export async function openKnowledge() {
         await save();
     });
     $root.find('.na_kn_clear').on('click', async () => {
-        if (!await confirm('전체 삭제', '누가 아는가 표를 모두 지울까요? 되돌릴 수 없어요.')) return;
+        if (!await confirm('전체 삭제', '누가 아는가 표를 모두 지울까요? 되돌릴 수 없어요.', '지우기', { danger: true })) return;
         m.knowledge = ''; m.knowMined = []; tr = null;
         await save();
         toastr.success('누가 아는가 표를 비웠어요');

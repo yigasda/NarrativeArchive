@@ -430,7 +430,7 @@ export async function openQuotes() {
     });
     $root.on('click', '.na_vc_del', async function () {
         const who = String($(this).closest('.na_vc_card').data('who'));
-        if (!await confirm('말투 지문 지우기', `${esc(who)}의 말투 지문을 지울까요?`)) return;
+        if (!await confirm('말투 지문 지우기', `${esc(who)}의 말투 지문을 지울까요?`, '지우기', { danger: true })) return;
         delete m.voice[who]; await save();
     });
     $root.on('click', '.na_vc_make', async function () {
@@ -455,7 +455,7 @@ export async function openQuotes() {
     $root.on('change', '.na_qb_whoin', async function () { m.quotes[Number($(this).closest('.na_qb_row').data('i'))].who = this.value.trim() || '?'; await save(); });
     $root.on('click', '.na_qb_del', async function () { m.quotes.splice(Number($(this).closest('.na_qb_row').data('i')), 1); await save(); });
     $root.find('.na_qb_clear').on('click', async () => {
-        if (!await confirm('전체 삭제', `모은 대사 ${m.quotes.length}개를 모두 지울까요? 되돌릴 수 없어요. (아카이브 본문은 그대로예요)`)) return;
+        if (!await confirm('전체 삭제', `모은 대사 ${m.quotes.length}개를 모두 지울까요? 되돌릴 수 없어요. (아카이브 본문은 그대로예요)`, '지우기', { danger: true })) return;
         m.quotes = []; m.quoteMined = [];
         await save();
         toastr.success('대사 은행을 비웠어요');
@@ -519,13 +519,13 @@ export async function openQuotes() {
     });
     $root.on('click', '.na_qb_gexcl', async function () {
         const who = String($(this).closest('.na_qb_gbtns').data('who'));
-        if (!await confirm('인물 빼기', `${esc(who)}의 대사를 모두 지우고, 앞으로 모으거나 주입하지 않을까요? (위 "뺄 인물"에서 되돌릴 수 있어요)`)) return;
+        if (!await confirm('인물 빼기', `${esc(who)}의 대사를 모두 지우고, 앞으로 모으거나 주입하지 않을까요? (위 "뺄 인물"에서 되돌릴 수 있어요)`, '빼기', { danger: true })) return;
         await exclude(who);
     });
     $root.on('click', '.na_qb_gdel', async function () {
         const who = String($(this).closest('.na_qb_gbtns').data('who'));
         const n = m.quotes.filter(q => q.who === who).length;
-        if (!await confirm('대사 지우기', `${who === '?' ? '말한 사람 모름' : esc(who)} 대사 ${n}개를 모두 지울까요? 되돌릴 수 없어요.`)) return;
+        if (!await confirm('대사 지우기', `${who === '?' ? '말한 사람 모름' : esc(who)} 대사 ${n}개를 모두 지울까요? 되돌릴 수 없어요.`, '지우기', { danger: true })) return;
         m.quotes = m.quotes.filter(q => q.who !== who);
         await save();
     });

@@ -141,7 +141,7 @@ export async function openReader() {
         runTr(false);
     });
     $root.on('click', '.na_rd_retr', async () => {
-        if (!await confirm('다시 번역', '저장된 번역을 쓰지 않고 아카이브 전체를 새로 번역할까요? 토큰이 들어가요.')) return;
+        if (!await confirm('다시 번역', '저장된 번역을 쓰지 않고 아카이브 전체를 새로 번역할까요? 토큰이 들어가요.', '번역하기')) return;
         runTr(true);
     });
     $root.find('.na_rd_gloss').on('click', async () => { await openGlossary(); if (korean) runTr(false); });

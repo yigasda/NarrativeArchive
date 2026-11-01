@@ -22,7 +22,7 @@ export function rememberArchive() {
 
 export async function importArchive(src, label, fromChat = null) {
     const m = getMeta();
-    if (m.text.trim() && !await confirm('아카이브 가져오기', `이 채팅의 아카이브를 "${esc(label)}"의 것으로 바꿀까요? 지금 내용은 복구 지점에 남아요.`)) return false;
+    if (m.text.trim() && !await confirm('아카이브 가져오기', `이 채팅의 아카이브를 "${esc(label)}"의 것으로 바꿀까요? 지금 내용은 복구 지점에 남아요.`, '바꾸기')) return false;
     const scope=phoneChatScope(ctx());
     const hasSource=!!Object.keys(src.settings?.phones || {}).length || !!Object.keys(src.settings?.phoneProfiles || {}).length;
     const hasCurrent=!!Object.keys(m.phones || {}).length || !!Object.keys(m.phoneProfiles || {}).length || !!m.finance;

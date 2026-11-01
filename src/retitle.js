@@ -324,7 +324,7 @@ export async function openSectionFix(s) {
     draw();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
     // closed with a draft not applied: ask instead of dropping it
-    if (!applied && draft !== original && await confirm('적용 안 한 수정', '고친 내용을 아직 적용하지 않았어요. 적용할까요?')) await apply();
+    if (!applied && draft !== original && await confirm('적용 안 한 수정', '고친 내용을 아직 적용하지 않았어요. 적용할까요?', '적용하기')) await apply();
 }
 
 

@@ -420,7 +420,7 @@ export function renderSnapshots() {
             c.callGenericPopup($v, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, okButton: '닫기' });
         });
         $row.find('.na_snap_restore').on('click', async () => {
-            if (!await confirm('복원', `${timeLabel(s.at)} (${esc(s.reason)}) 상태로 되돌릴까요? 지금 내용도 복구 지점에 남아요.`)) return;
+            if (!await confirm('복원', `${timeLabel(s.at)} (${esc(s.reason)}) 상태로 되돌릴까요? 지금 내용도 복구 지점에 남아요.`, '되돌리기')) return;
             editorDirty = false;
             await commitText(s.text, '복원 전', { boundary: s.boundary });
             toastr.success('복원됨');

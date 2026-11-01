@@ -70,7 +70,7 @@ async function offerMainDivider(m) {
     if (/^#\s*──.*──\s*$/m.test(body) || hasAuDivider(m.text, a.name)) return;
     const first = parseSections(body).find(x => !x.group && RANGE_HEAD.test(x.title));
     if (!first) return;
-    if (!await confirm('본편 구분선', '아카이브의 본편 섹션 위에 <code># ── 본편 ──</code> 구분선을 넣을까요?<br><small>읽기·타임라인에서 본편과 AU가 두 묶음으로 나뉘어 보여요. 안 넣어도 AU 요약은 이어져요.</small>')) return;
+    if (!await confirm('본편 구분선', '아카이브의 본편 섹션 위에 <code># ── 본편 ──</code> 구분선을 넣을까요?<br><small>읽기·타임라인에서 본편과 AU가 두 묶음으로 나뉘어 보여요. 안 넣어도 AU 요약은 이어져요.</small>', '넣기')) return;
     await commitText(`${m.text.slice(0, first.start)}# ── 본편 ──\n\n${m.text.slice(first.start)}`, '본편 구분선 넣기 전');
     refreshStatus();
     toastr.success('본편 구분선을 넣었어요');
@@ -196,7 +196,7 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
         // answered in the wrong language (Korean for an English archive): ask before paying for another try
         if (!answerLangOk(shadow, out)) {
             const want = LANG_NAME[archiveLang(shadow)];
-            if (await confirm('답 언어가 달라요', `#${from}–#${to} 요약을 모델이 아카이브(${want})와 다른 언어로 썼어요.<br><b>${want}로 다시 받을까요?</b> (요청 1번 더)<br><small>아니요를 누르면 이 답 그대로 써요.</small>`)) {
+            if (await confirm('답 언어가 달라요', `#${from}–#${to} 요약을 모델이 아카이브(${want})와 다른 언어로 썼어요.<br><b>${want}로 다시 받을까요?</b> (요청 1번 더)<br><small>아니요를 누르면 이 답 그대로 써요.</small>`, '네', { no: '아니요' })) {
                 try { out = cleanDraft(await askCompress(`[Your previous answer to this request was not in ${want}. Answer in ${want} only.]\n\n${prompt}`, { system, keepSystem: !!system, guard: SECTION_GUARD })) || out; }
                 catch (e) { error = e; break; }
             }
@@ -258,7 +258,7 @@ export async function quickCompress() {
     const covered = lastRangeEnd(m.text);
     let gapTo = -1;
     if (covered !== null && covered < m.boundary && covered + 1 <= last) {
-        if (await confirm('빠진 구간', `경계선은 <b>#${m.boundary}</b>인데 아카이브 섹션은 <b>#${covered}</b>까지예요. <b>#${covered + 1}–#${m.boundary}</b>가 요약에 없어요.<br>#${covered + 1}부터 압축할까요? (숨긴 메시지도 이 구간은 넣어요)<br><small>아니요를 누르면 경계선 다음(#${m.boundary + 1})부터 해요.</small>`)) {
+        if (await confirm('빠진 구간', `경계선은 <b>#${m.boundary}</b>인데 아카이브 섹션은 <b>#${covered}</b>까지예요. <b>#${covered + 1}–#${m.boundary}</b>가 요약에 없어요.<br>#${covered + 1}부터 압축할까요? (숨긴 메시지도 이 구간은 넣어요)<br><small>아니요를 누르면 경계선 다음(#${m.boundary + 1})부터 해요.</small>`, '네', { no: '아니요' })) {
             from = covered + 1; after = covered; gapTo = m.boundary;
             to = Math.max(to, from);
         }
@@ -267,7 +267,7 @@ export async function quickCompress() {
     // a summary that came back but never went in (the tab slept, the window was closed): offer it before paying again
     const pend = m.pendingDraft;
     if (pend?.text && pend.from === from) {
-        if (await confirm('받아 둔 요약', `<b>#${pend.from}–#${pend.to}</b> 요약을 ${esc(timeLabel(pend.at))}에 받아 놓고 아직 안 넣었어요.<br><b>이걸로 아카이브에 추가 창을 열까요?</b><br><small>아니요를 누르면 새로 받아요 (초안 모델 1번)</small>`)) {
+        if (await confirm('받아 둔 요약', `<b>#${pend.from}–#${pend.to}</b> 요약을 ${esc(timeLabel(pend.at))}에 받아 놓고 아직 안 넣었어요.<br><b>이걸로 아카이브에 추가 창을 열까요?</b><br><small>아니요를 누르면 새로 받아요 (초안 모델 1번)</small>`, '네', { no: '아니요' })) {
             await openAppend({ text: pend.text, end: guessEndNumber(pend.text) ?? pend.to, expectTo: pend.to });
             if ((getMeta().boundary ?? -1) >= pend.to) { delete getMeta().pendingDraft; await saveMeta(); }
             return;
@@ -335,7 +335,7 @@ export async function quickCompress() {
         ${scenes ? `<label class="na_qc_sclabel">장면 나누기 <small>한 줄에 장면 하나 · 앞 번호(시작)만 봐요 · 줄을 추가하면 나누고, 지우면 앞 장면에 합쳐요</small></label>
         <textarea class="text_pole na_qc_scenes" rows="${Math.min(10, Math.max(3, n))}" spellcheck="false">${esc(sceneLines)}</textarea>` : ''}
         </details>
-      </div>`)) return;
+      </div>`, '압축하기')) return;
     // the scene list as the user left it: their starts, taken as given
     if (scenes && quickScenes !== null && quickScenes.trim() !== sceneLines.trim()) {
         const edited = chunksFromStarts(items, startsFromText(quickScenes), { exact: true });
@@ -515,7 +515,7 @@ export async function openWizard() {
         await build();
         if (!raw) return toastr.info('범위에 메시지가 없어요.');
         const $out = $root.find('.na_wz_out');
-        if ($out.val().trim() && !await confirm('초안 모델로 받기', '붙여넣은 내용을 새 초안으로 바꿀까요?')) return;
+        if ($out.val().trim() && !await confirm('초안 모델로 받기', '붙여넣은 내용을 새 초안으로 바꿀까요?', '바꾸기')) return;
         // long ranges go in parts, like 한 번에 압축
         const pid = $root.find('.na_wz_prompt').val();
         const p = g.prompts.find(x => x.id === pid) || activePrompt(g);
@@ -541,7 +541,7 @@ export async function openWizard() {
         const text = (await file.text()).replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').trim();
         if (!text) return toastr.warning('빈 파일이에요.');
         const $out = $root.find('.na_wz_out');
-        if ($out.val().trim() && !await confirm('불러오기', '붙여넣은 내용을 이 파일 내용으로 바꿀까요?')) return;
+        if ($out.val().trim() && !await confirm('불러오기', '붙여넣은 내용을 이 파일 내용으로 바꿀까요?', '바꾸기')) return;
         $out.val(text).trigger('input');
         toastr.success(`불러옴: ${file.name}`);
     });

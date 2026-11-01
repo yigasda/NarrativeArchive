@@ -604,7 +604,7 @@ export async function openPeople() {
         if (!pair) return;
         const all = this.dataset.all === '1';
         const secs = tempPoints(m, pair).filter(p => all || ((!p.t || p.stale) && !p.absent)).map(p => p.s);
-        if (all && !await confirm('전부 다시', `${esc(pair.a)} · ${esc(pair.b)}이 함께 나온 섹션 ${secs.length}개를 모두 다시 잴까요?`)) return;
+        if (all && !await confirm('전부 다시', `${esc(pair.a)} · ${esc(pair.b)}이 함께 나온 섹션 ${secs.length}개를 모두 다시 잴까요?`, '다시 재기')) return;
         busy = true;
         const $b = $(this);
         const got = await withSpinner($b, '재는 중…', () => rateTemps(m, pair, secs, (i, n) => n > 1 && $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> ${i}/${n}번째 읽는 중…`)));

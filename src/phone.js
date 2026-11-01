@@ -138,7 +138,7 @@ export async function openPhone(who = null) {
     let ask = null;
     const placeAsk = () => { if (ask) $root.find('.na_ph_frame .cg_canvas').first().append(ask.el); };
     const askSheet = (title, text = '', ok = '확인', safe = false) => {
-        if (!$root.find('.na_ph_frame .cg_canvas').length) return confirm(esc(title), text, ok);
+        if (!$root.find('.na_ph_frame .cg_canvas').length) return confirm(title, text, ok, { danger: !safe });
         ask?.done(false);
         return new Promise(done => {
             const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${text}</span>` : ''}</div><div role="button" tabindex="0" class="pcf_ok${safe ? ' safe' : ''}">${esc(ok)}</div></div><div role="button" tabindex="0" class="pcf_no">취소</div></div></div>`)[0];

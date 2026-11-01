@@ -97,7 +97,7 @@ export async function openAppend(prefill = {}) {
         const file = this.files?.[0];
         if (!file) return;
         const text = (await file.text()).replace(/\r\n/g, '\n').trim();
-        if ($ta.val().trim() && !await confirm('불러오기', '붙여넣은 내용을 이 파일 내용으로 바꿀까요?')) return;
+        if ($ta.val().trim() && !await confirm('불러오기', '붙여넣은 내용을 이 파일 내용으로 바꿀까요?', '바꾸기')) return;
         $ta.val(text).trigger('input');
         toastr.success(`불러옴: ${file.name}`);
     });
@@ -599,7 +599,7 @@ export async function openAppend(prefill = {}) {
         const whole = stripCites(String($ta.val() || '').replace(/\r\n/g, '\n').trim());
         const end = parseInt($end.val(), 10);
         const cut = cutSigns(m.text, whole);
-        if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.map(esc).join('<br>')}<br><br>그래도 바꿀까요?`)) return;
+        if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.map(esc).join('<br>')}<br><br>그래도 바꿀까요?`, '바꾸기')) return;
         if (!await confirmWhole(m.text, whole)) return;
         await commitText(whole, '통째로 바꾸기 전', Number.isFinite(end) && end >= 0 ? { boundary: end } : {});
         finishDraft();
@@ -613,13 +613,13 @@ export async function openAppend(prefill = {}) {
     const end = parseInt($root.find('.na_end').val(), 10);
     if (!Number.isFinite(end) || end < 0) return toastr.warning('끝 번호를 확인해 주세요.');
     const cut = cutSigns(m.text, add);
-    if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.map(esc).join('<br>')}<br><br>그래도 추가할까요?`)) return;
+    if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.map(esc).join('<br>')}<br><br>그래도 추가할까요?`, '추가하기')) return;
     const check = checkAppend(m, stripRewrites(m.text, add), last);
     check.issues.push(...shortOf(add));
     if (check.issues.length && !check.soft) {
-        if (!await confirm('번호 확인', `${check.issues.map(esc).join('<br>')}<br><br>그래도 추가할까요?`)) return;
+        if (!await confirm('번호 확인', `${check.issues.map(esc).join('<br>')}<br><br>그래도 추가할까요?`, '추가하기')) return;
     } else if (m.boundary >= 0 && end <= m.boundary) {
-        if (!await confirm('경계선 확인', `끝 번호 #${end}가 기존 경계선 #${m.boundary}보다 앞이에요. 그래도 저장할까요?`)) return;
+        if (!await confirm('경계선 확인', `끝 번호 #${end}가 기존 경계선 #${m.boundary}보다 앞이에요. 그래도 저장할까요?`, '저장하기')) return;
     }
 
     const plan = placeAppend(m.text, add, { renumber: $root.find('.na_do_renum').prop('checked'), rewrites: rwMode() });
