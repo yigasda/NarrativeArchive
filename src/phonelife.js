@@ -240,7 +240,7 @@ export const fillLife = (m, p) => exclusive('fill', async () => {
     const now = weatherNow(), days = storyDays(m, p);
     const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(days),
         now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile });
-    const out = await askDraft(input, { system: AI_SYS_LIFE, maxTokens: 16000 });
+    const out = await askDraft(input, { system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' });
     const life = parseLife(jsonOf(out), now, days.at(-1)?.day || '');
     // a booking the wallet holds is drawn from it: its file needs no line of its own
     const at = storyNow(p) || p.now || '';
@@ -260,7 +260,7 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
     const tx = (p.money?.tx || []).filter(t => !String(t.id).startsWith('dlv-') && !t.delivery);
     const money = accounts.length ? `[MONEY NOW]\n${JSON.stringify({ accounts: accounts.map(a => ({ last4: a.last4, kind: a.kind, name: a.name, currency: a.currency })), tx: tx.slice(-20).map(t => ({ id: t.id, account: t.account, time: t.time, who: t.who, amount: t.amount })) })}` : '';
     const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(storyDays(m, p)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money], { profile: p.financeProfile });
-    const out = await askDraft(input, { system: AI_SYS_DELIVERY, maxTokens: 9000 });
+    const out = await askDraft(input, { system: AI_SYS_DELIVERY, maxTokens: 9000, effort: 'low' });
     const d = parseDelivery(jsonOf(out), accounts, tx), at = storyNow(p) || p.now || '';
     // nothing after the story's now
     if (/^\d{2}-\d{2}/.test(at)) d.orders = d.orders.filter(o => !later(o.time, at));

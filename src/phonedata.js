@@ -1126,7 +1126,7 @@ export async function fillDevice(m,p) {
     const request=(async()=>{
         const binding=JSON.stringify(p.financeProfile);
         const input=await sideRequest(m,p.owner,[`[COUNTRY]\n${p.country || ''}`],{profile:p.financeProfile});
-        const out=await askDraft(input,{system:AI_SYS_DEVICE,maxTokens:4000});
+        const out=await askDraft(input,{system:AI_SYS_DEVICE,maxTokens:4000,effort:'low'});
         const device=readDeviceReply(out);
         if(!device) throw new Error('모델 답에서 기기 정보(JSON)를 찾지 못했어요');
         if(JSON.stringify(p.financeProfile)!==binding) throw new Error('인물 정보가 변경됐어요. 다시 불러와 주세요');
