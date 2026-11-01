@@ -481,7 +481,7 @@ const size = kb => (kb === null || kb === undefined ? '' : kb >= 1024 * 1024 ? `
 const live = lf => lf.files.items.filter(f => !f.trashed);
 // what a file shows: the model's "look", else a guess from its name, folder and preview (older phones have no look)
 const LOOK_IMG = ['sea', 'city', 'night', 'food', 'hills', 'pet', 'sunset', 'mountain', 'snow', 'flower', 'interior', 'concert', 'paper', 'screenshot', 'map'];
-const LOOK_DOC = ['receipt', 'invoice', 'cv', 'letter', 'certificate', 'sheet', 'slides', 'recipe', 'medical', 'menu', 'contract', 'notes'];
+const LOOK_DOC = ['ticket', 'receipt', 'invoice', 'cv', 'letter', 'certificate', 'sheet', 'slides', 'recipe', 'medical', 'menu', 'contract', 'notes'];
 const GUESS_IMG = [['screenshot', /screenshot|bildschirmfoto|capture|스크린샷|캡처/i], ['map', /\bmap\b|karte|route|standort|location|지도/i], ['paper', /scan|zettel|whiteboard|tafel|문서|종이|paper|page/i],
     ['concert', /concert|konzert|festival|gig|\blive\b|stage|bühne|공연|콘서트/i], ['pet', /\bcat\b|\bdog\b|katze|hund|kitty|puppy|\bpet\b|고양이|강아지|멍멍|냥/i], ['sunset', /sunset|sonnenuntergang|dusk|golden hour|abendrot|노을|석양/i],
     ['snow', /snow|schnee|\bski|winter|눈사람|눈 ?온|설경/i], ['mountain', /mountain|berg|alpen|alps|hike|wander|gipfel|peak|등산|산행/i], ['flower', /flower|blume|blüte|garden|garten|bloom|꽃|정원/i],
@@ -489,7 +489,7 @@ const GUESS_IMG = [['screenshot', /screenshot|bildschirmfoto|capture|스크린�
     ['sea', /sea|beach|strand|meer|plage|praia|ocean|lake|\bsee\b|fluss|river|바다|해변|강|호수|lisboa|lisbon|porto|island|insel/i],
     ['food', /food|essen|lunch|dinner|brunch|cafe|café|kaffee|coffee|cake|kuchen|pizza|pasta|ramen|음식|밥|카페|커피|케이크|맛집/i],
     ['city', /city|stadt|street|straße|strasse|tram|bus|bahn|station|bridge|brücke|building|dach|roof|garage|werkstatt|도시|거리|건물|역|다리|지붕/i]];
-const GUESS_DOC = [['receipt', /receipt|beleg|quittung|kassenbon|kassenzettel|영수증|\bbon\b/i], ['invoice', /rechnung|invoice|\bbill\b|facture|fattura|factura|청구서|인보이스|명세서/i],
+const GUESS_DOC = [['ticket', /boarding|bordkarte|e-?ticket|ticket|fahrkarte|flugschein|flight|flug|bahn|zugticket|탑승권|항공권|기차표|승차권|e티켓/i], ['receipt', /receipt|beleg|quittung|kassenbon|kassenzettel|영수증|\bbon\b/i], ['invoice', /rechnung|invoice|\bbill\b|facture|fattura|factura|청구서|인보이스|명세서/i],
     ['cv', /lebenslauf|\bcv\b|resume|résumé|이력서/i], ['medical', /arzt|befund|attest|krankmeldung|krankschreibung|prescription|diagnos|praxis|klinik|hospital|처방|진단|병원|소견서/i],
     ['recipe', /recipe|kochrezept|backrezept|레시피|요리법/i], ['certificate', /zertifikat|certificate|zeugnis|diploma|urkunde|bescheinigung|증명서|수료증|성적표|자격증/i],
     ['menu', /menu|speisekarte|메뉴/i], ['contract', /vertrag|contract|lease|agreement|vereinbarung|계약/i], ['letter', /brief|letter|lettre|anschreiben|bewerbung|편지|자기소개서/i],
@@ -552,6 +552,18 @@ function docSvg(f) {
         menu: `<rect width="120" height="160" fill="#2b2622"/>${T(60, 22, 8, 800, '#f3dcc0', 'middle')}${[40, 52, 64, 76, 88, 100, 112, 124, 136].map((y, j) => L(16, y, 46 + (r + j * 9) % 16, '#8a7a6a') + L(92, y, 12, '#f3dcc0')).join('')}`,
         contract: `${T(60, 18, 7, 800, '#161b22', 'middle')}${sub ? `<text x="60" y="27" font-size="5" fill="#6b7380" text-anchor="middle">${sub}</text>` : ''}${lines(38, 124, 7)}${L(10, 140, 36, '#8a929d', 1)}${L(74, 140, 36, '#8a929d', 1)}<path d="M14 136q6 -8 12 0q6 8 12 -2" stroke="#2c4a80" stroke-width="1.4" fill="none"/>`,
         notes: `<rect width="120" height="160" fill="#fdf6d8"/>${Array.from({ length: 14 }, (_, j) => `<path d="M0 ${20 + j * 10}h120" stroke="#ecdca0" stroke-width=".8"/>`).join('')}${T(10, 16, 7, 800, '#7f6a22')}${[32, 42, 52, 62, 72, 82].map(y => `<rect x="10" y="${y - 4}" width="5" height="5" rx="1" fill="none" stroke="#7f6a22"/>${L(19, y - 3, 50 + (r + y) % 36, '#c8b46a')}`).join('')}`,
+        ticket: (() => {
+            const all = `${f.name} ${f.preview || ''}`, train = /bahn|zug|train|\bice\b|\bic\b|ktx|srt|tgv|rail|eurostar|기차|열차|fahrkarte/i.test(all);
+            const m = String(f.preview || '').match(/([\p{L} .'-]{2,24}?)\s*(?:→|->|–|—|-|\bnach\b|\bto\b|→)\s*([\p{L} .'-]{2,24})/u), from = m ? m[1].trim() : '', to = m ? m[2].trim().split(/\s·|,/)[0] : '';
+            const code = x => esc(String(x).replace(/[^\p{L}]/gu, '').slice(0, 3).toUpperCase() || '—'), cc = train ? '#b8323a' : '#2c4a80';
+            const qr = Array.from({ length: 49 }, (_, j) => ((r >> (j % 9)) + j * 7) % 3 ? `<rect x="${78 + (j % 7) * 4}" y="${112 + Math.floor(j / 7) * 4}" width="4" height="4" fill="#161b22"/>` : '').join('');
+            const bars = Array.from({ length: 26 }, (_, j) => `<rect x="${12 + j * 3.6}" y="128" width="${1 + (r + j) % 2}" height="18" fill="#161b22"/>`).join('');
+            return `<rect width="120" height="160" fill="#f4f5f7"/><rect x="6" y="8" width="108" height="144" rx="6" fill="#fff" stroke="#dfe3e8"/><rect x="6" y="8" width="108" height="22" rx="6" fill="${cc}"/><rect x="6" y="24" width="108" height="6" fill="${cc}"/>${T(12, 22, 6.5, 800, '#fff')}<text x="108" y="22" font-size="4.6" fill="#fff" text-anchor="end" opacity=".85">${/[가-힣]/.test(all) ? (train ? '승차권' : '탑승권') : train ? 'TICKET' : 'BOARDING PASS'}</text>`
+                + (train ? `<text x="12" y="48" font-size="9" font-weight="800" fill="#161b22">${esc(from.slice(0, 14)) || '—'}</text><path d="M12 54v10" stroke="${cc}" stroke-width="1.4"/><circle cx="12" cy="52" r="1.8" fill="${cc}"/><circle cx="12" cy="66" r="1.8" fill="${cc}"/><text x="12" y="76" font-size="9" font-weight="800" fill="#161b22">${esc(to.slice(0, 14)) || '—'}</text>`
+                    : `<text x="12" y="58" font-size="17" font-weight="800" fill="#161b22">${code(from)}</text><text x="108" y="58" font-size="17" font-weight="800" fill="#161b22" text-anchor="end">${code(to)}</text><path d="M55 52h10M62 49l3 3l-3 3" stroke="#8a929d" stroke-width="1.4" fill="none"/><text x="12" y="66" font-size="4.6" fill="#6b7380">${esc(from.slice(0, 16))}</text><text x="108" y="66" font-size="4.6" fill="#6b7380" text-anchor="end">${esc(to.slice(0, 16))}</text>`)
+                + `<path d="M6 84h108" stroke="#dfe3e8" stroke-dasharray="3 2"/>${(/[가-힣]/.test(all) ? (train ? ['날짜', '시간', '호차', '좌석'] : ['날짜', '시간', '탑승구', '좌석']) : /[äöüß]|bahn|zug|fahrkarte|bordkarte|flug/i.test(all) ? (train ? ['DATUM', 'ZEIT', 'WAGEN', 'PLATZ'] : ['DATUM', 'ZEIT', 'GATE', 'SITZ']) : (train ? ['DATE', 'TIME', 'CAR', 'SEAT'] : ['DATE', 'TIME', 'GATE', 'SEAT'])).map((h, j) => `<text x="${12 + j * 26}" y="94" font-size="4.2" fill="#8a929d">${h}</text>${L(12 + j * 26, 98, 16, '#161b22', 4)}`).join('')}`
+                + (train ? `${L(12, 114, 50)}${L(12, 120, 40)}${qr}` : bars);
+        })(),
         plain: `${L(10, 10, 40, FK[f.kind]?.[1] || '#2c4a80', 5)}${T(10, 28, 7, 800, '#161b22')}${sub ? `<text x="10" y="37" font-size="5" fill="#6b7380">${sub}</text>` : ''}${lines(46, 80, 7)}${lines(90, 130, 7)}`,
     };
     return `<svg viewBox="0 0 120 160">${P[k] || P.plain}</svg>`;
