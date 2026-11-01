@@ -371,6 +371,13 @@ function acctNo(p, a) {
     if (['DE', 'AT', 'FR', 'IT', 'ES', 'NL', 'BE', 'CH', 'PT', 'IE'].includes(c) || mo(p).currency === 'EUR') return iban(c && c.length === 2 ? c : 'DE', { DE: 18, AT: 16, CH: 17, NL: 14, BE: 12, FR: 23, IT: 23, ES: 20, PT: 21, IE: 18 }[c] || 18);
     return `${h.slice(0, 4)} ${h2.slice(0, 4)} ${l4}`;
 }
+// the member card of a GOLD, PLATINUM or PRIVATE owner (더보기, and the wallet keeps the PRIVATE one)
+function memberCard(p, t, cls = '') {
+    const M = mo(p), pv = t.k === 'PRIVATE', sum = bankSum(p), cur = bankDisplayCurrency(p);
+    const no = `${t.k[0] + (pv ? 'X' : 'P')} · ${String(hashOf(`${M.bank.name}${p.owner}`)).padStart(8, '0').slice(0, 4)} ${String(M.bank.accounts[0]?.last4 || '0000')}`;
+    return `<div class="ax_mcard ${t.k.toLowerCase()}${cls}">${pv ? '<svg viewBox="0 0 358 150" preserveAspectRatio="none"><rect x="7" y="7" width="344" height="136" rx="12" fill="none" stroke="#c9a961" stroke-opacity=".6" stroke-width=".8"/><g fill="none" stroke="#c9a961" stroke-opacity=".18" stroke-width=".7">' + [0, 18, 36, 54, 72].map((r, k) => `<ellipse cx="290" cy="75" rx="${40 + k * 18}" ry="${90 - k * 10}" transform="rotate(${r} 290 75)"/>`).join('') + '</g></svg>' : t.k === 'PLATINUM' ? PAT.platinum.replace(/^/, '<svg viewBox="0 0 330 200" preserveAspectRatio="none">') + '</svg>' : `<svg viewBox="0 0 330 200" preserveAspectRatio="none">${PAT.guilloche}</svg>`}
+          <span class="nm">${esc(String(M.bank.name || '').split(/\s+/)[0].toUpperCase())} ${t.k}</span><span class="mb">MEMBER</span><span class="tl">고객 번호<b class="cg_num">${esc(no)}</b></span><span class="rt">예금 합계<b class="cg_num">${esc(fmtIn(p, sum.value, cur))}</b></span></div>`;
+}
 export function bankMore(p, now) {
     const M = mo(p); if (!M) return bankHome(p, now);
     const { t, has, next } = bankTier(p), sum = bankSum(p), cur = bankDisplayCurrency(p), owner = esc(p.owner), init = esc([...String(p.owner || '?')][0].toUpperCase());
@@ -378,8 +385,7 @@ export function bankMore(p, now) {
     const parts = M.bank.accounts.filter(a => a.kind !== 'credit' && Number(a.balance) > 0), tot = parts.reduce((n, a) => n + Number(a.balance) / (SCALE[a.currency] || 1), 0) || 1;
     const PC = { checking: '#1d3461', savings: '#7fae8a' };
     const head = `<div class="ax_bkpr"><span class="ax_bkav">${init}</span><span><b>${owner}${t ? `<i class="ax_tier ${t.k.toLowerCase()}">${t.k}</i>` : ''}</b><small>${esc(M.bank.name)} · ${t ? esc(t.sub) : '개인 고객'}</small></span></div>`;
-    const card = t ? `<div class="ax_mcard ${t.k.toLowerCase()}">${pv ? '<svg viewBox="0 0 358 150" preserveAspectRatio="none"><rect x="7" y="7" width="344" height="136" rx="12" fill="none" stroke="#c9a961" stroke-opacity=".6" stroke-width=".8"/><g fill="none" stroke="#c9a961" stroke-opacity=".18" stroke-width=".7">' + [0, 18, 36, 54, 72].map((r, k) => `<ellipse cx="290" cy="75" rx="${40 + k * 18}" ry="${90 - k * 10}" transform="rotate(${r} 290 75)"/>`).join('') + '</g></svg>' : t.k === 'PLATINUM' ? PAT.platinum.replace(/^/, '<svg viewBox="0 0 330 200" preserveAspectRatio="none">') + '</svg>' : `<svg viewBox="0 0 330 200" preserveAspectRatio="none">${PAT.guilloche}</svg>`}
-          <span class="nm">${esc(String(M.bank.name || '').split(/\s+/)[0].toUpperCase())} ${t.k}</span><span class="mb">MEMBER</span><span class="tl">고객 번호<b class="cg_num">${esc(no)}</b></span><span class="rt">예금 합계<b class="cg_num">${esc(fmtIn(p, sum.value, cur))}</b></span></div>` : '';
+    const card = t ? memberCard(p, t) : '';
     const ben = t ? `<div class="ax_sec">${t.k} 혜택</div>${pv ? `<div class="ax_card"><div class="ax_rw"><span class="ax_fi" style="width: 38px; height: 38px; background: #2a2c31; color: #c9a961">${ax('user', 19, 'currentColor', 1.9)}</span><span class="ax_tx"><b>전담 프라이빗 뱅커 배정됨</b><span class="ax_p">언제든 연락할 수 있어요</span></span></div></div>` : ''}<div class="ax_ben">${t.ben.filter((_, k) => !pv || k !== 1).map(([ic, b, s2], k) => `<div><i class="c${k}">${ax(ic, 17, 'currentColor', 1.9)}</i><b>${b}</b><small>${s2}</small></div>`).join('')}</div>` : '';
     const prog = next ? (() => { const need = (next.at - has) * (SCALE[M.currency] || 1); return `<div class="ax_prog">${next.k}까지 <b class="cg_num">${esc(fmtIn(p, need, M.currency))}</b> 남았어요<div class="bar"><i style="width: ${Math.max(3, Math.min(100, Math.round(has / next.at * 100)))}%"></i></div>예금 ${esc(fmtIn(p, next.at * (SCALE[M.currency] || 1), M.currency))} 이상이면 ${next.k} 고객</div>`; })() : '';
     return `<div class="ax_bk">${bankHead(p, now, 'bank', '더보기', false, head, pv)}
@@ -488,7 +494,8 @@ export function walletScreen(p, now) {
       ${axTop(axCb('home2'))}
       <div class="ax_scroll">
         ${axH1('지갑', `카드 ${M.cards.length} · 패스 ${ps.length}`)}
-        ${M.cards.length ? `<div class="ax_wl ax_ccstack">${M.cards.map((c, i) => `<button type="button" class="ax_wlb" data-go="card" data-i="${i}">${cardArt(p, c)}</button>`).join('')}</div>` : ''}
+        ${(() => { const t = bankTier(p).t, mc = t?.k === 'PRIVATE' ? `<button type="button" class="ax_wlb" data-go="bankmore">${memberCard(p, t, ' ax_mcw')}</button>` : '';
+            return M.cards.length || mc ? `<div class="ax_wl ax_ccstack">${mc}${M.cards.map((c, i) => `<button type="button" class="ax_wlb" data-go="card" data-i="${i}">${cardArt(p, c)}</button>`).join('')}</div>` : ''; })()}
         ${(() => { const today = String(storyNow(p) || p.now || '').slice(0, 5), past = x => gapDays(today, x.date) < 0 || /used|benutzt|abgelaufen|expired|사용|지난/i.test(x.status || ''), up = ps.filter(x => !past(x)), old = ps.filter(past).reverse();
             const stack = (xs, cls) => `<div class="ax_wl ax_psstack ${cls}">${xs.map(x => `<button type="button" class="ax_wlb" data-go="pass" data-i="${x.id}">${passArt(p, x, false)}</button>`).join('')}</div>`;
             return `${up.length ? `<div class="ax_shd">패스<span>${up.length}개</span></div>${stack(up, '')}` : ''}${old.length ? `<div class="ax_shd">지난 패스<span>${old.length}개</span></div>${stack(old, 'ax_psold')}` : ''}`; })()}
