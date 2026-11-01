@@ -2091,7 +2091,7 @@ input.na_toggle:checked + .na_tgl_ui::after { transform: translateX(16px); }
 /* "on" pills and selected tabs */
 body:not(.na_darkui) .na_br_filters button.on, body:not(.na_darkui) .na_v2_chips button.on { background: var(--na-fill); color: var(--na-onfill); border-color: transparent; }
 body.na_darkui .na_br_filters button.on, body.na_darkui .na_v2_chips button.on { background: var(--na-fill); color: var(--na-onfill); border-color: transparent; }
-body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on { background: var(--na-paper); }
+body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on { background: #FFFFFF; }
 body.na_darkui .na_v2_tabs button.on, body.na_darkui .na_v2_seg button.on { background: var(--na-paper); }
 body:not(.na_darkui) .na_v2_tabs button, body:not(.na_darkui) .na_v2_seg button { color: var(--na-mute); }
 body.na_darkui .na_v2_tabs button, body.na_darkui .na_v2_seg button { color: var(--na-mute); }
@@ -2117,7 +2117,7 @@ body:not(.na_darkui) #na_settings .na_seg { background: #EBDDD2; }
 body.na_darkui #na_settings .na_seg { background: #2E2621; }
 body:not(.na_darkui) #na_settings .na_seg_btn { opacity: 1; color: #6B5A50; }
 body.na_darkui #na_settings .na_seg_btn { opacity: 1; color: #CABBAE; }
-body:not(.na_darkui) #na_settings .na_seg_btn.active { background: #F7EEE7; color: #A84A17; }
+body:not(.na_darkui) #na_settings .na_seg_btn.active { background: #FFFFFF; color: #A84A17; }
 body.na_darkui #na_settings .na_seg_btn.active { background: #3A2F28; color: #EE9A66; }
 /* list ↔ timeline switch, moved to the end of the tabs */
 #na_settings .na_seg .na_br_view { padding: 0; gap: 0; background: transparent; border-radius: 10px; }
@@ -2754,7 +2754,7 @@ body.na_darkui .na_bn2_warn, body.na_darkui .na_uh2_warn { color: #F0CC80; }
 .na_ask2 .na_ask_log { gap: 14px; padding: 0; }
 .na_ask2 .na_ask_item { gap: 14px; }
 .na_ask2 .na_ask_qq { padding: 10px 14px; font-size: 14px; line-height: 1.5; }
-body:not(.na_darkui) .na_ask2 .na_ask_qq { background: var(--na-fill); color: #FFF6EF; }
+body:not(.na_darkui) .na_ask2 .na_ask_qq { background: #F6E1D3; color: #7A3410; }
 body.na_darkui .na_ask2 .na_ask_qq { background: var(--na-fill); color: #F7ECE2; }
 .na_ask2_ans { align-self: flex-start; max-width: 92%; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .na_ask2 .na_ask2_ans .na_ask_a { align-self: stretch; max-width: none; padding: 12px 14px; font-size: 14px; line-height: 1.6; }
@@ -7218,3 +7218,7 @@ body.na_darkui dialog.popup:has(.na_popup) .na_popup .text_pole { background-col
 body.na_darkui .na_ask2 .na_ask_qq, body.na_darkui .na_sf_bubble { background: #3A2F28; color: #F3E7DC; box-shadow: inset 0 0 0 1px rgba(217, 115, 58, 0.45); }
 body.na_darkui .na_ask2 .na_ask_a { background: #27201B; border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
 body.na_darkui .na_sf_note { background: #2F2722; color: #F0CF8E; box-shadow: inset 3px 0 0 #E8B45A; }
+
+/* light chats as 아카이브에 추가: my line peach with brown text, the model's 못 한 것 a yellow note */
+body:not(.na_darkui) .na_sf_bubble { background: #F6E1D3; color: #7A3410; }
+body:not(.na_darkui) .na_sf_note { background: #FFF4DC; color: #7A5200; }
