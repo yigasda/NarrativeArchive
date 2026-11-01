@@ -16,7 +16,11 @@ const tz = v => (/^[A-Za-z]+(?:\/[A-Za-z_+-]+){1,2}$/.test(String(v || '')) ? St
 // ---- cleaning one record
 export const alarmOf = a => withEv({ time: hhmm(a?.time), label: line(a?.label, 60), ko: ko(a?.ko), days: arr(a?.days).map(d => String(d).toLowerCase().slice(0, 3)).filter(d => DAYS.includes(d)), date: day5(a?.date),
     on: a?.on !== false, wake: yes(a?.wake), then: arr(a?.then).map(hhmm).filter(Boolean).slice(0, 10), snooze: int(a?.snooze, 0, 60) ?? 0, snoozeCount: int(a?.snoozeCount, 0, 20) ?? 0, sound: line(a?.sound, 30), made: day5(a?.made) }, a);
-export const fileOf = x => withEv({ name: line(x?.name, 80), kind: pick(x?.kind, FILE_KINDS, 'other'), folder: (f => (!f || /^(downloads?|download folder|다운로드|下载|ダウンロード|téléchargements|descargas|transferências|загрузки|scaricati)$/i.test(f) ? 'Downloads' : f))(line(x?.folder, 40)), size: num(x?.size), time: when(x?.time), from: line(x?.from, 60),
+// a file's kind: the model's, or what an extension says (it may write "png" for the kind, or leave it out)
+const EXT_KIND = [[/^(png|jpe?g|heic|gif|webp|bmp|tiff?|raw)$/i, 'image'], [/^(mp4|mov|avi|mkv|webm|m4v)$/i, 'video'], [/^(mp3|m4a|wav|aac|flac|ogg|amr)$/i, 'audio'],
+    [/^(zip|rar|7z|tar|gz)$/i, 'zip'], [/^(docx?|odt|rtf|txt|pages|hwp|hwpx)$/i, 'doc'], [/^(xlsx?|csv|ods|numbers)$/i, 'sheet'], [/^(pptx?|odp|key)$/i, 'slides'], [/^pdf$/i, 'pdf']];
+const kindOf = (k, name) => { if (FILE_KINDS.includes(k)) return k; for (const v of [k, (String(name || '').match(/\.([a-z0-9]{2,5})$/i) || [])[1]]) { const hit = EXT_KIND.find(([re]) => re.test(String(v || ''))); if (hit) return hit[1]; } return 'other'; };
+export const fileOf = x => withEv({ name: line(x?.name, 80), kind: kindOf(String(x?.kind || '').toLowerCase().replace(/^\./, ''), x?.name), folder: (f => (!f || /^(downloads?|download folder|다운로드|下载|ダウンロード|téléchargements|descargas|transferências|загрузки|scaricati)$/i.test(f) ? 'Downloads' : f))(line(x?.folder, 40)), size: num(x?.size), time: when(x?.time), from: line(x?.from, 60),
     pages: int(x?.pages, 0, 2000), length: line(x?.length, 8), tag: pick(x?.tag, ['red', 'orange'], ''), private: yes(x?.private), preview: yes(x?.private) ? '' : line(x?.preview, 160), look: line(x?.look, 20).toLowerCase(), ko: ko(x?.ko), opened: when(x?.opened), trashed: day5(x?.trashed) }, x);
 export const dayOf = d => withEv({ date: day5(d?.date), bed: hhmm(d?.bed), sleep: hhmm(d?.sleep), wake: hhmm(d?.wake), woke: int(d?.woke, 0, 30) ?? 0, steps: int(d?.steps, 0, 120000), km: num(d?.km), floors: int(d?.floors, 0, 400),
     workout: d?.workout && line(d.workout.kind, 30) ? { kind: line(d.workout.kind, 30), time: hhmm(d.workout.time), min: int(d.workout.min, 0, 600), km: num(d.workout.km) } : null,
@@ -237,6 +241,9 @@ export function fillDays(p, now, round) {
         const h = hash(day), j = n => ((h >> n) % 41 - 20) / 100, steps = finiteNum(u.steps) ? Math.round(u.steps * (1 + j(1) * 1.5)) : null;
         const row = { date: day, bed: shiftHm(u.bed || u.sleep, Math.round(j(3) * 100)), sleep: shiftHm(u.sleep, Math.round(j(5) * 100)), wake: shiftHm(u.wake, Math.round(j(7) * 60)), woke: h % 3,
             steps, km: steps === null ? null : Math.round(steps * 0.00072 * 10) / 10, floors: (h >> 9) % 9, workout: null, hr: u.rest ? [u.rest - 4 + h % 5, u.rest + 45 + (h >> 4) % 40] : [], from: 'pattern', id: `sync:${round}:g${k}` };
+        // to bed before asleep (each time is moved on its own; in bed 00:38 after asleep at 00:17 can't be)
+        const late = t => { const m = /^\d{2}:\d{2}$/.test(t || '') ? minutes(t) : null; return m === null ? null : m < 12 * 60 ? m + 1440 : m; };
+        if (row.bed && row.sleep && late(row.bed) > late(row.sleep)) row.bed = shiftHm(row.sleep, -(10 + h % 25));
         box.push(row);
         out.push({ type: 'push', path: 'life.health.days', item: structuredClone(row) });
     }

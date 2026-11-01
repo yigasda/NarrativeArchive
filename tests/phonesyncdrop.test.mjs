@@ -348,3 +348,16 @@ test('a gift field the model fills with false or "no" is no gift', async () => {
     assert.equal(giftOf(true), '선물');
     assert.equal(giftOf('Ren'), 'Ren');
 });
+
+test('run27: a quote with one word slipped in still counts; a file kind written as its extension; a Korean text gets no copy as ko', async () => {
+    const { quoted } = await import('../src/phonesync.js');
+    const t = 'Mara는 축하한다고 답하며 계약 연장 서류를 받은 이야기를 했다.';
+    assert.equal(quoted('집주인에게서 계약 연장 서류를 받은 이야기를 했다', t), true);
+    assert.equal(quoted('전혀 다른 문장으로 적어 둔 말', t), false);
+    assert.equal(quoted('이야기를 받은 서류를 연장 계약 했다', t), false, 'words out of order are not the quote');
+    const { fileOf } = await import('../src/phonesynclife.js');
+    assert.deepEqual(['png', '', 'xyz'].map((k, i) => fileOf({ name: ['shot.png', 'clip.MOV', 'notes'][i], kind: k }).kind), ['image', 'video', 'other']);
+    const ph = data.parsePhone(JSON.stringify({ notes: [{ title: '월요일 7시', text: '월요일 7시 한강', ko: '월요일 7시 한강', time: '01-30 21:35' }], threads: [{ with: 'Ren', messages: [{ from: 'me', text: 'Hi', ko: '안녕', time: '01-30 22:00' }] }] }));
+    assert.equal(ph.notes[0].ko, '');
+    assert.equal(ph.threads[0].messages[0].ko, '안녕');
+});

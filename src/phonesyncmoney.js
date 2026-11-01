@@ -172,7 +172,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         }
         const id = `sync:${e.id}:m${k}`;
         const row = { id, account: acct.last4, who: txt(x.who, 60), ko: txt(x.ko, 60), amount: round(amount), time: `${date}${e.time ? ` ${e.time}` : ''}`,
-            kind: acct.kind === 'credit' ? 'card' : ['card', 'transfer', 'deposit'].includes(x.kind) ? x.kind : amount > 0 ? 'deposit' : 'card', memo: txt(x.memo), pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at, ...(guess ? { amountFrom: 'guess' } : {}) };
+            kind: acct.kind === 'credit' ? 'card' : ['card', 'transfer', 'deposit', 'cash'].includes(x.kind) ? x.kind : amount > 0 ? 'deposit' : 'card', memo: txt(x.memo), pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at, ...(guess ? { amountFrom: 'guess' } : {}) };
         tx.push(row);
         out.effects.push({ type: 'push', path: 'money.tx', item: structuredClone(row) });
         if (acct.kind !== 'credit') {
