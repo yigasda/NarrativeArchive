@@ -183,7 +183,10 @@ const FIXED = [
     [/sparplan|적금|정기적금|savings plan|積立|定投/i, 'star', '#dcefdf', '#3f7d50', '저축'],
 ];
 const PAYDAY = /\blohn\b|gehalt|salary|payroll|\bwage|월급|급여|給料|给料|工资|salaire|sueldo/i;
-const payee = x => String(x.who || '').toLowerCase().replace(/[^\p{L}\p{N}&+]+/gu, ' ').trim().split(' ').slice(0, 2).join(' ');
+// one payee whatever language a record names it in: its Korean name when it has one ("Netflix" with ko "넷플릭스" is 넷플릭스)
+const payee = x => String(x.ko || x.who || '').toLowerCase().replace(/[^\p{L}\p{N}&+]+/gu, ' ').trim().split(' ').slice(0, 2).join(' ');
+// a record's year: the phone's, or the one before for a month past the story's now (December, read in January)
+const yearDot = (p, mm) => { if (!p.year || p.noYear) return ''; const n = Number(String(storyNow(p) || p.now || '').slice(0, 2)); return `${p.year - (n && Number(mm) > n ? 1 : 0)}.`; };
 const daysIn = (p, mm) => new Date(Date.UTC(Number(p.year) || 2025, Number(mm), 0)).getUTCDate();
 export function fixedCosts(p) {
     const M = mo(p); if (!M) return [];
@@ -304,14 +307,16 @@ export function bankStmt(p, now, arg = '') {
     const [ai0, m0] = String(arg).split('.'), from = ai0 !== '' && ai0 !== undefined;
     const ai = from ? Number(ai0) : Math.max(0, M.bank.accounts.findIndex(a => a.kind !== 'credit')), a = M.bank.accounts[ai];
     if (!a) return bankHome(p, now);
-    const all = newestTx(p).filter(x => x.account === a.last4 && !x.pending), months = [...new Set(all.map(x => String(x.time).slice(0, 2)))].sort();
-    const today = String(storyNow(p) || p.now || ''), mm = m0 || (months.includes(today.slice(0, 2)) ? today.slice(0, 2) : months[months.length - 1] || today.slice(0, 2));
-    const xs = all.filter(x => String(x.time).slice(0, 2) === mm), later = all.filter(x => String(x.time).slice(0, 2) > mm);
+    // months in story order, across New Year too: how many months back from the story's now (December is 1 back in January)
+    const today = String(storyNow(p) || p.now || ''), nowM = Number(today.slice(0, 2)) || 0, back = m => (nowM - Number(m) + 12) % 12;
+    const all = newestTx(p).filter(x => x.account === a.last4 && !x.pending), months = [...new Set(all.map(x => String(x.time).slice(0, 2)))].sort((x, y) => back(y) - back(x));
+    const mm = m0 || (months.includes(today.slice(0, 2)) ? today.slice(0, 2) : months[months.length - 1] || today.slice(0, 2));
+    const xs = all.filter(x => String(x.time).slice(0, 2) === mm), later = all.filter(x => back(String(x.time).slice(0, 2)) < back(mm));
     const credit = a.kind === 'credit', end = credit ? null : (Number(a.balance) || 0) - later.reduce((n, x) => n + x.amount, 0), start = credit ? null : end - xs.reduce((n, x) => n + x.amount, 0);
     const inn = xs.filter(x => x.amount > 0).reduce((n, x) => n + x.amount, 0), out = -xs.filter(x => x.amount < 0).reduce((n, x) => n + x.amount, 0);
     const cats = new Map(); for (const x of xs) if (x.amount < 0) cats.set(kindOf(x), (cats.get(kindOf(x)) || 0) - x.amount);
     const bars = [...cats].sort((x, y) => y[1] - x[1]).slice(0, 5), top = Math.max(1, ...bars.map(b => b[1]));
-    const last = xs.length ? Math.max(...xs.map(x => Number(String(x.time).slice(3, 5)) || 1)) : 1, yr = p.year && !p.noYear ? `${p.year}.` : '';
+    const last = xs.length ? Math.max(...xs.map(x => Number(String(x.time).slice(3, 5)) || 1)) : 1, yr = yearDot(p, mm);
     const mon = n => esc(acctMoney(p, a, n)), sgn = n => esc(acctMoney(p, a, n, true));
     return `<div class="ax_bk">${bankHead(p, now, from ? `acct:${ai}` : 'bank', `명세서 · ${esc(a.last4)}`, true)}
       <div class="ax_bks ax_bkso"><div class="ax_scroll">
@@ -330,7 +335,7 @@ export function bankStmt(p, now, arg = '') {
 export function txDoc(p, now, id) {
     const M = mo(p), x = M?.tx?.find(t => t.id === id); if (!x) return bankHome(p, now);
     const a = acctOf(p, x.account), card = x.kind === 'card' && x.amount < 0, inn = x.amount > 0, h = hashOf(`${x.id}${x.who}`);
-    const title = card ? '카드 매출전표' : inn ? '입금확인증' : '이체확인증', yr = p.year && !p.noYear ? `${p.year}.` : '';
+    const title = card ? '카드 매출전표' : inn ? '입금확인증' : '이체확인증', yr = yearDot(p, String(x.time).slice(0, 2));
     const when = `${yr}${String(x.time).slice(0, 5).replace('-', '.')} ${fmtTime(p, x.time)}`, mine = `${esc(p.owner)} · ${a ? `${kindName[a.kind]} •••• ${esc(a.last4)}` : ''}`;
     const ln = (k, v) => v ? `<div class="ax_dln"><span>${k}</span><span>${v}</span></div>` : '';
     const rows = card ? ln('가맹점', esc(x.who)) + ln('카드', a ? `•••• •••• •••• ${esc(a.last4)}` : '') + ln('승인 번호', `<span class="cg_num">${String(h % 100000000).padStart(8, '0')}</span>`) + ln('승인 일시', `<span class="cg_num">${esc(when)}</span>`) + ln('결과', x.pending ? '승인 대기' : '승인')
