@@ -45,7 +45,7 @@ HEALTH
 - The last day's "night" only when the story's now is already past it; else null.
 - A day the story shows, or its night, follows it: "from": "story" and its "ev". A long night out means short sleep, a day on foot means many steps.
 - Any other day: write it freely from the character, the archive and their life, "from": "pattern". It still follows that day's events and tickets in PHONE NOW.
-- "usual" is their normal week. Its water, coffee, weight and height fit the character (a coffee addict, an athlete, a student); the app draws each day's cups and the weight line from them.
+- "usual" is their normal week. Its water, coffee, weight and height fit the character.
 - Numbers only: no diagnosis, no mood, no reason.
 
 FILES
@@ -123,7 +123,7 @@ CART
 - Dishes put in the basket and not ordered, or null. No money moves for it.
 
 PICTURES
-- Every dish gets "pic"; the app draws it. "base": the closest of BASES. "with": up to 3 of TOPPINGS that set it apart from the shop's other dishes (abalone porridge: "juk" with ["abalone", "seaweed"]; salmon sushi: "sushi" with ["salmon"]). "size": "large" only for a large or extra size. "set": up to 2 of SIDES, only for a set or combo.
+- Every dish gets "pic"; the app draws it. "base": the closest of BASES. "with": up to 3 of TOPPINGS that set it apart from the shop's other dishes (salmon sushi: "sushi" with ["salmon"]). "size": "large" only for a large or extra size. "set": up to 2 of SIDES, only for a set or combo.
 - An ordered or basket dish from a shop's menu takes that dish's "pic".
 - BASES: ${FOOD_IDS.base.join(', ')}
 - TOPPINGS: ${FOOD_IDS.top.join(', ')}

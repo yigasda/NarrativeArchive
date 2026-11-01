@@ -16,7 +16,7 @@ const tz = v => (/^[A-Za-z]+(?:\/[A-Za-z_+-]+){1,2}$/.test(String(v || '')) ? St
 // ---- cleaning one record
 export const alarmOf = a => withEv({ time: hhmm(a?.time), label: line(a?.label, 60), ko: ko(a?.ko), days: arr(a?.days).map(d => String(d).toLowerCase().slice(0, 3)).filter(d => DAYS.includes(d)), date: day5(a?.date),
     on: a?.on !== false, wake: yes(a?.wake), then: arr(a?.then).map(hhmm).filter(Boolean).slice(0, 10), snooze: int(a?.snooze, 0, 60) ?? 0, snoozeCount: int(a?.snoozeCount, 0, 20) ?? 0, sound: line(a?.sound, 30), made: day5(a?.made) }, a);
-export const fileOf = x => withEv({ name: line(x?.name, 80), kind: pick(x?.kind, FILE_KINDS, 'other'), folder: (f => (!f || /^(downloads?|download folder|다운로드|下载|ダウンロード)$/i.test(f) ? 'Downloads' : f))(line(x?.folder, 40)), size: num(x?.size), time: when(x?.time), from: line(x?.from, 60),
+export const fileOf = x => withEv({ name: line(x?.name, 80), kind: pick(x?.kind, FILE_KINDS, 'other'), folder: (f => (!f || /^(downloads?|download folder|다운로드|下载|ダウンロード|téléchargements|descargas|transferências|загрузки|scaricati)$/i.test(f) ? 'Downloads' : f))(line(x?.folder, 40)), size: num(x?.size), time: when(x?.time), from: line(x?.from, 60),
     pages: int(x?.pages, 0, 2000), length: line(x?.length, 8), tag: pick(x?.tag, ['red', 'orange'], ''), private: yes(x?.private), preview: yes(x?.private) ? '' : line(x?.preview, 160), look: line(x?.look, 20).toLowerCase(), ko: ko(x?.ko), opened: when(x?.opened), trashed: day5(x?.trashed) }, x);
 export const dayOf = d => withEv({ date: day5(d?.date), bed: hhmm(d?.bed), sleep: hhmm(d?.sleep), wake: hhmm(d?.wake), woke: int(d?.woke, 0, 30) ?? 0, steps: int(d?.steps, 0, 120000), km: num(d?.km), floors: int(d?.floors, 0, 400),
     workout: d?.workout && line(d.workout.kind, 30) ? { kind: line(d.workout.kind, 30), time: hhmm(d.workout.time), min: int(d.workout.min, 0, 600), km: num(d.workout.km) } : null,
@@ -131,6 +131,9 @@ export function applyLife(p, e, phone, on) {
         }
         if (!clean.name || x.deleted === true) return;
         if ((L.files?.items || []).some(o => o.name === clean.name && o.folder === clean.folder && !o.trashed)) return;
+        // a folder the phone already has, written another way ("work" for "Work"), is that folder
+        const own = [...(L.files?.folders || []).map(f => f.name), ...(L.files?.items || []).map(f => f.folder)].find(n => n && n.toLowerCase() === clean.folder.toLowerCase());
+        if (own) clean.folder = own;
         push('life.files.items', tag({ ...clean, time: clean.time || `${e.date}${e.time ? ` ${e.time}` : ''}` }, k, 'f'), '파일');
     });
     // their usual that the story changed (lost weight, quit coffee): each field on its own, so 되돌리기 takes back just it
@@ -309,6 +312,7 @@ export function lifeNow(p) {
     if (!L) return null;
     return {
         alarms: (L.clock?.alarms || []).map(a => ({ id: a.id, time: a.time, label: a.label, days: a.days, date: a.date, on: a.on })),
+        folders: ['Downloads', ...(L.files?.folders || []).map(f => f.name).filter(Boolean)],
         files: (L.files?.items || []).filter(x => !x.trashed).slice(-12).map(x => ({ id: x.id, name: x.name, folder: x.folder, time: x.time })),
         health: (L.health?.days || []).slice(-3).map(d => ({ id: d.id, date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, from: d.from })),
         usual: (u => (u ? Object.fromEntries(['weight', 'coffee', 'coffeeKind', 'water'].filter(k => u[k] !== undefined && u[k] !== null && u[k] !== '').map(k => [k, u[k]])) : undefined))(L.health?.usual),

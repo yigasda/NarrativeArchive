@@ -151,7 +151,6 @@ WHAT IS NEW
 - MESSAGES READ BEFORE, NOW CHANGED were already put on the phone: give their events the ids listed there; a payment in them is that same payment, its amount corrected if it changed.
 - Small everyday things around an event are fine: how a text was worded, a photo of the place, a search they would make.
 - People: only people the story has.
-- A diary entry holds only what these messages show and what the owner felt about it; no new secrets, no new feelings.
 
 WHERE IT COMES FROM
 - "at": the number of the message the event happens in. For an archive section, the message in its range it belongs to.
@@ -184,7 +183,7 @@ MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - A new paid ${paid} has its payment as a move in the same event.
 - An order or ticket only moves forward. A cancelled order${delivery ? ' or delivery' : ''} moves no money; if it was already paid, its refund is a plus move.
 ${delivery ? `- A delivery paid in cash at the door has no move.
-- A delivery from a shop not in DELIVERY SHOPS also gives "newShop": that shop as the app would list it (a rating, reviews, delivery fee and minimum order that fit such a shop there), with 2 to 4 dishes: the one ordered and ones it would have, each with different ingredients or broth.
+- A delivery from a shop not in DELIVERY SHOPS also gives "newShop": that shop as the app would list it (a rating, reviews, delivery fee and minimum order that fit such a shop there), with 2 to 4 dishes: the one ordered and others it would have.
 ` : ''}` : ''}
 ${PHONE_STYLE}
 
@@ -194,7 +193,7 @@ ANSWER — one JSON object, nothing else:
                "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line",
                "phone": { only the app items this event puts on the phone }${money ? `,
                "money": { "amountFrom": "story" | "guess",
-                          "moves": [{ "account": a bank account's last 4 digits or "broker:EUR", "amount": minus for money out, "currency", "who", "ko", "memo": what it was for, like "decaf latte", "kind": "card" | "transfer" | "deposit", "fee": a transfer fee charged on top of "amount", on the sending move, "occurrence": "new" | "again", "already": "" }],
+                          "moves": [{ "account": a bank account's last 4 digits or "broker:EUR", "amount": minus for money out, "currency", "who", "ko", "memo": what it was for, "kind": "card" | "transfer" | "deposit", "fee": a transfer fee charged on top of "amount", on the sending move, "occurrence": "new" | "again", "already": "" }],
                           "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko", "currency", "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
                           "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returned" | "refunded", "eta": "MM-DD", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
                           "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }]${delivery ? `,
@@ -210,7 +209,7 @@ Items in "phone":
 {
 ${PHONE_ITEMS}${life ? `,
   "alarms": [{ "change": an id or "", "time", "label", "ko", "days": the weekdays it repeats or [], "date": "MM-DD" for a one-time alarm, "on", "wake", "then", "snooze" }],
-  "files": [{ "change": an id or "", "name", "kind", "folder", "size": KB, "time", "from", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],
+  "files": [{ "change": an id or "", "name", "kind", "folder": one of LIFE NOW's "folders" (downloads are "Downloads"), "size": KB, "time", "from", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],
   "health": [{ "date", "bed", "sleep", "wake", "woke", "steps", "km", "floors", "workout": { "kind", "time", "min", "km" } or null, "hr": [low, high], "from": "story" }],
   "usual": { "weight": kg, "coffee": cups a day, "coffeeKind", "coffeeKo", "water": litres a day }` : ''}
 }
