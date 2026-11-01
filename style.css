@@ -6482,8 +6482,8 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .lf_sc > * { position: absolute; }
 .ax .lf_sc .bd { left: 0; right: 0; bottom: 0; }
 .ax .lf_sc .land { left: 0; bottom: 0; width: 100%; height: 260px; z-index: 2; }
-.ax .lf_sc .cl { animation: lf_drift2 var(--d) ease-in-out infinite alternate; }
-@keyframes lf_drift2 { to { transform: translateX(var(--x)); } }
+.ax .lf_sc .cl { animation: lf_drift2 var(--d) linear var(--dl) infinite; }
+@keyframes lf_drift2 { from { transform: translateX(var(--a)); } to { transform: translateX(var(--b)); } }
 .ax .lf_sc .sun b { position: absolute; inset: 18%; border-radius: 50%; animation: lf_halo 5s ease-in-out infinite; }
 .ax .lf_sc .sun b.h2 { inset: 0; animation-delay: -2.5s; }
 .ax .lf_sc .sun i { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 50%; }
@@ -6505,8 +6505,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 @keyframes lf_fall2 { from { transform: translate(0, -60px) rotate(10deg); } to { transform: translate(-150px, 900px) rotate(10deg); } }
 .ax .lf_sc .sn { top: -20px; border-radius: 50%; background: #fff; animation: lf_snow2 var(--d) linear var(--dl) infinite; }
 @keyframes lf_snow2 { 0% { transform: translate(0, -30px); } 25% { transform: translate(var(--s), 220px); } 50% { transform: translate(0, 440px); } 75% { transform: translate(var(--s), 660px); } 100% { transform: translate(0, 880px); } }
-.ax .lf_sc .fg { height: 34px; border-radius: 17px; animation: lf_fog2 var(--d) ease-in-out infinite alternate; }
-@keyframes lf_fog2 { from { transform: translateX(-50px); } to { transform: translateX(60px); } }
+.ax .lf_sc .fg { height: 34px; border-radius: 17px; }
 .ax .lf_sc .bolt { left: 210px; top: 150px; width: 60px; height: 120px; opacity: 0; animation: lf_bolt 5s infinite; }
 .ax .lf_sc .fl { inset: 0; background: #fff; opacity: 0; animation: lf_flash2 5s infinite; }
 @keyframes lf_bolt { 0%, 58%, 66%, 100% { opacity: 0; } 60%, 64% { opacity: 1; } }

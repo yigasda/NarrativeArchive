@@ -707,7 +707,8 @@ function pal(cond, phase) {
 const shade = (hex, f) => { const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255]; const lum = (c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11) / 255; return `#${c.map(v => Math.round(lum < 0.25 ? v + (255 - v) * (1 - f) * 0.5 : v * f).toString(16).padStart(2, '0')).join('')}`; };
 // a fixed scatter per sky, so it doesn't jump between renders
 const rnd = seed => { let s = seed; return () => (s = (s * 9301 + 49297) % 233280) / 233280; };
-const puffSvg = (x, y, w, col, dx, d, op = 1) => `<svg class="cl" style="left: ${x}px; top: ${y}px; width: ${w}px; height: ${w / 2}px; --x: ${dx}px; --d: ${d}s${op < 1 ? `; opacity: ${op}` : ''}" viewBox="0 0 200 100"><g fill="${col}"><circle cx="60" cy="58" r="34"/><circle cx="104" cy="42" r="42"/><circle cx="148" cy="62" r="30"/><rect x="26" y="58" width="152" height="40" rx="20"/></g></svg>`;
+// a cloud drifts slowly to the right, off the edge and in again from the left; it starts where it is drawn (v: pixels a second)
+const puffSvg = (x, y, w, col, v, op = 1) => { const a = -(x + w + 10), b = 400 - x, d = (b - a) / v; return `<svg class="cl" style="left: ${x}px; top: ${y}px; width: ${w}px; height: ${w / 2}px; --a: ${a}px; --b: ${b}px; --d: ${d.toFixed(1)}s; --dl: -${(-a / v).toFixed(1)}s${op < 1 ? `; opacity: ${op}` : ''}" viewBox="0 0 200 100"><g fill="${col}"><circle cx="60" cy="58" r="34"/><circle cx="104" cy="42" r="42"/><circle cx="148" cy="62" r="30"/><rect x="26" y="58" width="152" height="40" rx="20"/></g></svg>`; };
 // the whole sky behind a weather screen: it moves (clouds drift, rain and snow fall, lightning, stars, the sun at dawn and dusk), and stands still with reduced motion
 function scene(cond, phase) {
     const q = pal(cond, phase), r = rnd(cond.length * 31 + phase.length * 7), out = [];
@@ -718,10 +719,10 @@ function scene(cond, phase) {
     if (q.sun === 'rise') out.push(sun(312, 262, 40, '#fbe6a6', 'rgba(246, 211, 154, 0.45)', 'rise'));
     if (q.sun === 'sink') out.push(sun(312, 250, 46, '#fbe08f', 'rgba(247, 200, 115, 0.4)', 'sink'));
     if (q.moon) out.push(`<span class="mn" style="left: ${cond === 'clear' || cond === 'wind' ? 292 : 300}px; top: ${cond === 'clear' || cond === 'wind' ? 150 : 170}px"><i></i><b style="background: ${q.sky}"></b></span>`);
-    if (q.puff) out.push(puffSvg(-40, phase === 'eve' ? 90 : 200, phase === 'eve' ? 200 : 170, q.puff, phase === 'eve' ? 50 : 70, 26));
-    if (cond === 'partly' && q.front) out.push(puffSvg(-60, 90, 200, q.cloud, 50, 24) + puffSvg(258, 196, 130, q.front, 24, 14));
-    else if (q.cloud && cond === 'wind') out.push(puffSvg(-60, 90, 240, q.cloud, 160, 9) + puffSvg(200, 160, 200, q.cloud, 160, 11));
-    else if (q.cloud) out.push(puffSvg(-80, 70, 300, q.cloud, 40, 22) + puffSvg(180, 40, 260, q.cloud, -50, 28) + puffSvg(60, 200, 220, q.cloud, 60, 30, 0.8) + (q.cloud2 ? puffSvg(-40, 300, 260, q.cloud2, 50, 20) : ''));
+    if (q.puff) out.push(puffSvg(-40, phase === 'eve' ? 90 : 200, phase === 'eve' ? 200 : 170, q.puff, 5));
+    if (cond === 'partly' && q.front) out.push(puffSvg(-60, 90, 200, q.cloud, 5) + puffSvg(258, 196, 130, q.front, 7));
+    else if (q.cloud && cond === 'wind') out.push(puffSvg(-60, 90, 240, q.cloud, 40) + puffSvg(200, 160, 200, q.cloud, 32));
+    else if (q.cloud) out.push(puffSvg(-80, 70, 300, q.cloud, 5) + puffSvg(180, 40, 260, q.cloud, 4) + puffSvg(60, 200, 220, q.cloud, 6, 0.8) + (q.cloud2 ? puffSvg(-40, 300, 260, q.cloud2, 7) : ''));
     const drops = (n, cls, h0, hv, d0, dv) => Array.from({ length: n }, () => `<i class="${cls}" style="left: ${Math.round(-30 + r() * 450)}px; height: ${Math.round(h0 + r() * hv)}px; --d: ${(d0 + r() * dv).toFixed(2)}s; --dl: -${(r() * 3).toFixed(2)}s"></i>`).join('');
     const flakes = (n, big) => Array.from({ length: n }, () => { const z = ((big ? 5 : 3) + r() * 3).toFixed(1); return `<i class="sn" style="left: ${Math.round(-10 + r() * 410)}px; width: ${z}px; height: ${z}px; --d: ${(6 + r() * 5).toFixed(1)}s; --dl: -${(r() * 10).toFixed(1)}s; --s: ${Math.round(-30 + r() * 60)}px"></i>`; }).join('');
     if (q.fall === 'rain') out.push(drops(70, 'rn', 14, 16, 1.2, 0.7));
@@ -729,7 +730,8 @@ function scene(cond, phase) {
     if (q.fall === 'heavy') out.push(drops(90, 'rn hv', 20, 18, 0.8, 0.4));
     if (q.fall === 'sleet') out.push(drops(40, 'rn', 14, 16, 1.2, 0.7) + flakes(30, false));
     if (q.fall === 'snow') out.push(flakes(60, true));
-    if (q.fog) out.push([[320, -60, 330, 18], [390, 90, 360, 24], [460, -20, 300, 20], [530, 120, 320, 26], [600, -40, 380, 22]].map(([t, l, w, d]) => `<i class="fg" style="top: ${t}px; left: ${l}px; width: ${w}px; background: ${q.fog}; --d: ${d}s"></i>`).join(''));
+    // fog: thin, faint wisps up high (to the right, clear of the place and the temperature), thicker banks lower down; fog stands still
+    if (q.fog) out.push([[88, 235, 190, 20, 0.55], [146, 100, 315, 26, 0.75], [236, 215, 260, 30, 0.9], [320, -60, 330], [390, 90, 360], [460, -20, 300], [530, 120, 320], [600, -40, 380]].map(([t, l, w, h, o]) => `<i class="fg" style="top: ${t}px; left: ${l}px; width: ${w}px; background: ${q.fog}${h ? `; height: ${h}px; border-radius: ${h / 2}px; opacity: ${o}` : ''}"></i>`).join(''));
     if (q.bolt) out.push('<svg class="bolt" viewBox="0 0 60 120"><path d="M34 0 L8 64 L28 64 L14 120 L56 46 L34 46 L46 0Z" fill="#f6d34a"/></svg><i class="fl"></i>');
     if (q.wind) out.push([[190, 120, 2.6, 0], [260, 90, 3.1, 1.2], [330, 150, 2.4, 0.6], [410, 110, 2.9, 2], [480, 130, 2.7, 1.5]].map(([t, w, d, dl]) => `<i class="wl" style="top: ${t}px; width: ${w}px; --d: ${d}s; --dl: -${dl}s"></i>`).join('')
         + (phase === 'night' ? '' : Array.from({ length: 10 }, () => `<i class="lv" style="top: ${Math.round(160 + r() * 400)}px; --d: ${(3 + r() * 2).toFixed(1)}s; --dl: -${(r() * 4).toFixed(1)}s"></i>`).join('') + '<svg class="tree" viewBox="0 0 60 110"><rect x="27" y="50" width="6" height="60" fill="#2c4a37"/><ellipse cx="30" cy="40" rx="24" ry="36" fill="#335c42"/></svg>'));
