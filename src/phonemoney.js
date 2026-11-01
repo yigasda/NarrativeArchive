@@ -405,7 +405,7 @@ const chip = '<span class="ax_ccchip"><i style="left: 0; right: 0; top: 11px; he
 const nfc = '<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".85"><path d="M8.5 8a6 6 0 0 1 0 8M12 5.5a10 10 0 0 1 0 13M15.5 3a14 14 0 0 1 0 18"/></svg>';
 const CC_BG = { checking: '#1d3461', credit: '#25272e', savings: '#2f5d50' };
 // each bank has its colour family (two shades) and each card a pattern; premium credit cards by how much the owner has
-const BANK_C = [['#2c4a80', '#1d2f55'], ['#b8323a', '#8e2730'], ['#2f6a5a', '#224f43'], ['#24505c', '#1a3c46'], ['#2f6f8f', '#225369'], ['#8a5a2e', '#6a431f'], ['#3f4a5a', '#2b333f']];
+const BANK_C = [['#2c4a80', '#1d2f55'], ['#b8323a', '#8e2730'], ['#2f6a5a', '#224f43'], ['#2f6f8f', '#225369'], ['#8a5a2e', '#6a431f'], ['#3f4a5a', '#2b333f']];
 const PAT = {
     waves: Array.from({ length: 6 }, (_, k) => `<path d="M-20 ${120 + k * 14} q80 -40 160 0 t160 0" stroke="#fff" stroke-opacity=".08" stroke-width="8" fill="none"/>`).join(''),
     circles: '<circle cx="250" cy="40" r="90" fill="#fff" fill-opacity=".07"/><circle cx="290" cy="150" r="70" fill="#fff" fill-opacity=".06"/>',
