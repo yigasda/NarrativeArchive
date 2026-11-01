@@ -318,7 +318,7 @@ const KO_T = { 딸기: 'strawberry', 망고: 'mango', 샤인머스캣: 'grape', 
     양파: 'onion', 버섯: 'mushroom', 당근: 'carrot', 애호박: 'zucchini', 옥수수: 'corn', 감자: 'potato', 김치: 'kimchi', 숙주: 'sprouts', 콩나물: 'sprouts', 깻잎: 'perilla', 고추: 'chili', 청양: 'chili', 할라피뇨: 'chili',
     브로콜리: 'broccoli', 토마토: 'tomato', 아보카도: 'avocado', 김가루: 'seaweed', 미역: 'seaweed', 참깨: 'sesame', 떡사리: 'rice-cake', 어묵: 'fishcake', 오뎅: 'fishcake', 유부: 'tofu-skin', 빵가루: 'crumbs',
     포테이토: 'potato', 바지락: 'clam', 조개: 'clam', 모시조개: 'clam', 해물: ['shrimp', 'squid', 'mussel'], 해산물: ['shrimp', 'squid', 'mussel'],
-    두부: 'tofu', 사리: 'noodles', 면사리: 'noodles', 라면사리: 'noodles', 우동사리: 'noodles', 마늘: 'garlic', 갈릭: 'garlic', 페퍼로니: 'pepperoni', 소시지: 'sausage', 소세지: 'sausage', 비엔나: 'sausage',
+    두부: 'tofu', 당면: 'noodles', 사리: 'noodles', 면사리: 'noodles', 라면사리: 'noodles', 우동사리: 'noodles', 마늘: 'garlic', 갈릭: 'garlic', 페퍼로니: 'pepperoni', 소시지: 'sausage', 소세지: 'sausage', 비엔나: 'sausage',
     양상추: 'lettuce', 상추: 'lettuce', 오이: 'cucumber', 문어: 'octopus', 낙지: 'octopus', 쭈꾸미: 'octopus', 주꾸미: 'octopus', 생크림: 'cream', 휘핑: 'cream', 아이스크림: 'ice-cream-scoop',
     파인애플: 'pineapple', 올리브: 'olive', 피망: 'bell-pepper', 파프리카: 'bell-pepper', 고구마: 'sweet-potato', 바나나: 'banana', 레몬: 'lemon',
     견과류: 'nuts', 아몬드: 'nuts', 호두: 'nuts', 피칸: 'nuts', 땅콩: 'nuts', 캐러멜: 'caramel', 카라멜: 'caramel', 시럽: 'caramel', 오레오: 'cookie-crumbs', 크럼블: 'cookie-crumbs' };
@@ -362,7 +362,7 @@ const read = (text, one = false) => {
     }
     return out.sort((a, b) => a.at - b.at);
 };
-const OUT_AFTER = /(?:^|[\s,·/])(?:을|를|은|는|만|도)?\s*(?:빼|뺴|제외|없(?:이|음|게)|안 ?넣|넣지 ?마|알레르기|알러지|대신|x(?![a-z0-9]|\s*\d)|out\b)/i, OUT_BEFORE = /(?:^|[^가-힣a-z])(?:노|no|without|hold(?: the)?|minus)\s*$/i;
+const OUT_AFTER = /(?:^|[\s,·/])(?:을|를|은|는|만|도)?\s*(?:빼|뺴|제외|없(?:이|음|게)|안 ?넣|넣지 ?마|알레르기|알러지|대신|에서|x(?![a-z0-9]|\s*\d)|out\b)|^\s*(?:→|->|=>|>)/i, OUT_BEFORE = /(?:^|[^가-힣a-z])(?:노|no|without|hold(?: the)?|minus)\s*$/i;
 const ADD_AFTER = /^\s*(?:을|를)?\s*(?:추가|더|많이|듬뿍|올려|넣어|extra\b|add)/i;
 // an option's words: what it leaves out, what it adds ("양파, 마늘 빼고" leaves out both, words it doesn't know between;
 // "치즈 빼고 새우 추가")
@@ -378,6 +378,7 @@ const readOption = text => {
     return { out, add: [...add, ...wait] };
 };
 // 1.25L is a bottle, not a size; Big Mac is a name
+const VOLUME = /\d\s*(?:l|ml|리터|oz)(?![a-z가-힣])/i;
 const BIG = /특대|곱빼기|대자|라지|(?<![a-z])(?:large|xl)(?![a-z])/i, BIG1 = /(?<![가-힣A-Za-z\d.]|[\d.]\s)(?:대|L)(?![가-힣A-Za-z])/;
 const hangul = s => /[가-힣]/.test(String(s || ''));
 // a menu item's picture: the model's (words from the update round, ids from a fill), then its name and option
@@ -394,6 +395,8 @@ export const dishPic = (v, x = {}, ids = false) => {
     const fromName = [], usual = [];
     // toppings from what's left once the base's own words are out; a side from the whole name unless all of it was the
     // base's (치킨무 stays though 치킨 went; fried rice's rice goes)
+    // a side named as the whole dish (주먹밥 on its own) is that dish, not a side to it
+    const alone = new Set(names.flatMap(t => { const w = read(t).filter(x => x.k === 's'); return w.length === 1 && !t.replace(t.slice(w[0].at, w[0].end), '').replace(/[\d\s()+.,x×개]/gi, '') ? [w[0].id] : []; }));
     for (const t of names) {
         const [s, keep] = blankBase(t, p.base);
         fromName.push(...read(t).filter(w => w.k === 's' && s.slice(w.at, w.end).trim()), ...read(s).filter(w => w.k === 't'));
@@ -402,9 +405,13 @@ export const dishPic = (v, x = {}, ids = false) => {
     const o = blind ? { out: [], add: [] } : readOption(opt);
     const gone = new Set(o.out.map(w => `${w.k}:${w.id}`)), cut = (k, list) => [...new Set(list)].filter(id => !gone.has(`${k}:${id}`));
     const of = (k, ws) => ws.filter(w => w.k === k).map(w => w.id);
-    const tops = blind ? p.with : cut('t', [...of('t', fromName), ...of('t', o.add), ...p.with, ...usual]);
-    const sides = (blind ? p.set : cut('s', [...of('s', fromName), ...of('s', o.add), ...p.set])).filter(id => id !== SELF_SIDE[p.base]);
-    const big = p.size === 'large' || [...names, opt].some(t => BIG.test(t) || BIG1.test(t));
+    const all = blind ? p.with : cut('t', [...of('t', fromName), ...of('t', o.add), ...p.with, ...usual]);
+    // a fried egg is the egg (김치볶음밥 + 계란후라이 추가 isn't two eggs)
+    const tops = all.includes('fried-egg') ? all.filter(t => t !== 'egg') : all;
+    const sides = (blind ? p.set : cut('s', [...of('s', fromName), ...of('s', o.add), ...p.set])).filter(id => id !== SELF_SIDE[p.base] && !alone.has(id));
+    // a size the words say wins; a bottle's volume (콜라 1.25L) says it's the usual one, whatever the model put
+    const said = [...names, opt].some(t => BIG.test(t) || BIG1.test(t)), bottle = [...names, opt].some(t => VOLUME.test(t));
+    const big = said || (p.size === 'large' && !bottle);
     return { base: p.base, with: tops.slice(0, 3), size: big ? 'large' : 'regular', set: sides.slice(0, 2) };
 };
 // plain words and a name (older callers): the same as dishPic with nothing more known

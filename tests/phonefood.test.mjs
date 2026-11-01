@@ -183,3 +183,16 @@ test('shops\' own names and dishes in other tongues find their base', () => {
     for (const [n, b] of Object.entries(art)) assert.equal(guessPic(n).base, b, n);
     assert.deepEqual(guessPic('나시고랭').with, ['fried-egg']);
 });
+
+test('Vertex run 21: a swapped drink, a bottle, a dish that is a side, two eggs', async () => {
+    const { dishPic } = await import('../src/phonefood.js');
+    const w = dishPic({ base: 'burger set', with: ['beef', 'shrimp'], set: ['fries', 'cider'] }, { name: '통새우와퍼 세트', option: '노 양파, 콜라→사이다 변경' });
+    assert.deepEqual(w.set, ['soda', 'fries']);
+    assert.deepEqual(dishPic({ base: 'burger' }, { name: '치즈버거 세트', option: '콜라에서 사이다로 변경' }).set, ['soda']);
+    assert.equal(dishPic({ base: 'cola bottle', size: 'large' }, { name: '코카콜라 1.25L' }).size, 'regular');
+    assert.equal(dishPic({ base: 'cola', size: 'large' }, { name: '콜라 (대)' }).size, 'large');
+    assert.deepEqual(dishPic({ base: 'rice ball', with: ['seaweed'] }, { name: '주먹밥' }).set, []);
+    assert.deepEqual(dishPic({ base: 'tteokbokki' }, { name: '떡볶이 + 주먹밥' }).set, ['jumeokbap']);
+    assert.deepEqual(dishPic({ base: 'kimchi fried rice', with: ['kimchi', 'egg'] }, { name: '김치볶음밥', option: '계란후라이 추가' }).with, ['kimchi', 'fried-egg']);
+    assert.deepEqual(dishPic({ base: 'tteokbokki', with: ['rice cake', 'cream', 'cheese'] }, { name: '로제떡볶이', option: '중간맛, 당면 추가, 치즈 추가' }).with, ['noodles', 'cheese', 'rice-cake']);
+});
