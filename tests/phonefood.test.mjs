@@ -162,3 +162,18 @@ test('the new dishes: their own words stay off, the ingredients in their names g
     for (const [n, w] of Object.entries(want)) assert.deepEqual(r(n), w, n);
     assert.equal(dishPic({ base: 'burger', with: ['lettuce', 'cucumber'] }, { name: '치킨버거', option: '노 오이' }).with.join(','), 'chicken,lettuce');
 });
+
+test('shops\' own names and dishes in other tongues find their base', () => {
+    const want = {
+        '뿌링클': 'fried-chicken', '황금올리브': 'fried-chicken', '허니콤보': 'fried-chicken', '고추바사삭': 'fried-chicken', '순살 후라이드': 'fried-chicken', 'Buffalo wings': 'fried-chicken', '炸鸡': 'fried-chicken',
+        '레드콤보': 'yangnyeom-chicken', '볼케이노': 'yangnyeom-chicken', '갈비천왕': 'yangnyeom-chicken', '唐揚げ': 'dakgangjeong', '순살 닭강정': 'dakgangjeong', '반반족발': 'jokbal',
+        '빅맥': 'burger', '콰트로치즈와퍼': 'burger', '싸이버거': 'burger', '쉐이크쉑 버거': 'burger', 'ハンバーガー': 'burger', '맥너겟': 'nuggets', '맥플러리': 'ice-cream',
+        '에그마요': 'sandwich', '이탈리안 BMT': 'sandwich', 'Philly cheesesteak': 'sandwich', '트위스터': 'burrito', '엽떡': 'tteokbokki',
+        '에스프레소': 'coffee', 'Cappuccino': 'coffee', '拿铁': 'coffee', '자바칩 프라푸치노': 'smoothie', '흑당밀크티': 'bubble-tea', '珍珠奶茶': 'bubble-tea', '인절미설빙': 'bingsu',
+        '牛丼': 'donburi', 'Gyudon': 'donburi', '天丼': 'tendon', '焼き鳥': 'skewer', '餃子': 'gunmandu', '小笼包': 'dimsum', '火锅': 'hotpot', '麻婆豆腐': 'mapo-tofu', 'チャーハン': 'fried-rice',
+        'ラーメン': 'ramen', 'うどん': 'udon', '寿司': 'sushi', '刺身': 'sashimi', 'カレー': 'curry', '弁当': 'dosirak', 'たこ焼き': 'takoyaki', 'ハンバーグ': 'steak', '焼肉': 'galbi',
+        'Mac and cheese': 'pasta-cream', '크림빵': 'croissant', 'Brezel': 'croissant', '레드벨벳': 'cake', '대창': 'gopchang', '목살': 'samgyeopsal', '비냉': 'naengmyeon', '바닐라 쉐이크': 'smoothie',
+    };
+    for (const [n, b] of Object.entries(want)) assert.equal(guessPic(n).base, b, n);
+    assert.deepEqual(guessPic('통새우와퍼').with, ['shrimp', 'lettuce', 'tomato']);
+});

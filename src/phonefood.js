@@ -410,7 +410,32 @@ export const dishPic = (v, x = {}, ids = false) => {
 // plain words and a name (older callers): the same as dishPic with nothing more known
 export const picFromWords = (v, name = '') => dishPic(v, { name });
 // words → a base, for dishes without a picture (older phones, the update round): first match wins
-const GUESS = [[/치킨 ?텐더|텐더|chicken (tenders?|strips?|fingers?)|tenders/i, 'chicken-tender'], [/닭강정|깐풍기|가라아게|karaage|kkanpung|dakgangjeong/i, 'dakgangjeong'],
+const GUESS = [
+    // shops' own names for their dishes (뿌링클, 와퍼) and the dishes in the other tongues a phone may be in; they go first,
+    // as they'd otherwise fall to a wrong word in them (콰트로치즈와퍼 → 콰트로 pizza, 에스프레소 → 스프 soup, Gyudon → udon)
+    [/스노윙|snowing/i, 'fried-chicken', ['snow-cheese']], [/고추 ?바사삭/i, 'fried-chicken', ['chili']], [/파닭/i, 'fried-chicken', ['scallion']], [/허니 ?갈릭|honey garlic/i, 'fried-chicken', ['garlic']],
+    [/레드 ?콤보|볼케이노|갈비 ?천왕|맛초킹|슈프림 ?양념|양념 ?반/i, 'yangnyeom-chicken'],
+    [/황금 ?올리브|허니 ?콤보|교촌 ?오리지널|골드킹|콜팝|핫 ?크리스피|hot crispy|(?:순살|반반|후라이드)(?!.*(?:강정|족발|보쌈|탕수|찜닭|닭갈비|감자|피자))|핫 ?윙|윙봉|(?<![a-z])wings?(?![a-z])|popcorn chicken|炸鸡|フライドチキン/i, 'fried-chicken'],
+    [/唐揚げ|から揚げ|からあげ|유린기/i, 'dakgangjeong'],
+    [/통새우 ?와퍼/i, 'burger', ['shrimp', 'lettuce', 'tomato']], [/와퍼|whopper/i, 'burger', ['beef', 'lettuce', 'tomato']], [/빅맥|big ?mac/i, 'burger', ['beef', 'cheese', 'lettuce']],
+    [/싸이 ?버거|딥치즈 ?싸이|징거|zinger|상하이 ?스파이시|맥스파이시|mcspicy/i, 'burger', ['chicken', 'lettuce']], [/1955|더블 ?불고기|モッツァレラ|인더버거/i, 'burger'], [/ハンバーガー|汉堡|hamburger|쉐이크 ?쉑|shake ?shack|쉑 ?버거|shackburger/i, 'burger'],
+    [/맥너겟|mcnugget/i, 'nuggets'], [/맥플러리|mcflurry|엄마는 ?외계인|배스킨|baskin/i, 'ice-cream', ['cookie-crumbs']],
+    [/에그 ?마요|egg ?mayo/i, 'sandwich', ['egg']], [/(?<![a-z])bmt(?![a-z])|써브웨이|서브웨이|subway|philly|cheesesteak|(?<![a-z])blt(?![a-z])|club sandwich|サンドイッチ|三明治/i, 'sandwich'],
+    [/트위스터|twister|(?<![a-z])wraps?(?![a-z])|랩 ?샌드/i, 'burrito'],
+    [/엽떡|엽기 ?떡볶이|배떡|신전 ?떡볶이/i, 'tteokbokki'],
+    [/에스프레소|espresso|카푸치노|cappuccino|플랫 ?화이트|flat white|모카|mocha|돌체|마키아토|macchiato|카페 ?라떼|カフェラテ|コーヒー|拿铁|咖啡|café au lait/i, 'coffee'],
+    [/자바칩|프라푸치노|frappuccino|밀크 ?쉐이크|milkshake|쉐이크(?!쉑)|(?<![a-z])shake(?![a-z])(?! ?shack)/i, 'smoothie'],
+    [/흑당|브라운 ?슈가|블랙 ?밀크티|珍珠奶茶|奶茶|タピオカ/i, 'bubble-tea'],
+    [/인절미 ?설빙|설빙|かき氷/i, 'bingsu'],
+    [/牛丼|규동|gyudon/i, 'donburi', ['beef', 'onion']], [/親子丼|오야코동|oyakodon/i, 'donburi', ['chicken', 'egg']], [/カツ丼|かつ丼|가츠동|katsudon/i, 'donburi', ['egg', 'onion']], [/天丼/i, 'tendon'],
+    [/焼き鳥|やきとり|焼鳥|烤串|羊肉串|串/i, 'skewer'], [/焼き?餃子|餃子|饺子|锅贴|교자|gyoza/i, 'gunmandu'], [/小笼包|샤오롱바오|xiaolongbao|har ?gow|하가우/i, 'dimsum'],
+    [/火锅|しゃぶしゃぶ/i, 'hotpot'], [/麻婆豆腐/i, 'mapo-tofu'], [/锅包肉/i, 'guobaorou'], [/麻辣烫/i, 'malatang'], [/炒饭|チャーハン|chahan|나시 ?고렝|nasi goreng/i, 'fried-rice'],
+    [/天ぷら/i, 'twigim'], [/とんかつ|トンカツ/i, 'tonkatsu'], [/ラーメン|拉面/i, 'ramen'], [/うどん/i, 'udon'], [/そば|蕎麦/i, 'soba'], [/寿司|すし|鮨/i, 'sushi'], [/刺身|모둠 ?회|광어 ?회|연어 ?회/i, 'sashimi'],
+    [/カレー/i, 'curry'], [/弁当|한솥|본도시락/i, 'dosirak'], [/たこ焼き/i, 'takoyaki'], [/お好み焼き/i, 'okonomiyaki'], [/オムライス/i, 'omurice'], [/ハンバーグ|함박|hamburg steak/i, 'steak'],
+    [/콘 ?도그|corn ?dog/i, 'hotdog'], [/焼肉|yakiniku/i, 'galbi'], [/phở/i, 'pho'], [/맥 ?앤 ?치즈|mac (and|&|n) cheese/i, 'pasta-cream', ['cheese']],
+    [/크림빵|단팥빵|소보로|식빵|프레첼|pretzel|brezel|모닝빵/i, 'croissant'], [/레드 ?벨벳|red velvet/i, 'cake'],
+    [/대창/i, 'gopchang'], [/오겹살|목살|항정살/i, 'samgyeopsal'], [/비냉|물냉|밀면/i, 'naengmyeon'],
+    [/치킨 ?텐더|텐더|chicken (tenders?|strips?|fingers?)|tenders/i, 'chicken-tender'], [/닭강정|깐풍기|가라아게|karaage|kkanpung|dakgangjeong/i, 'dakgangjeong'],
     [/육회(?! ?비빔)|yukhoe|tartare/i, 'yukhoe'], [/짬뽕밥/i, 'jjamppong-bap'], [/꿔바로우|궈바로우|guo ?bao ?rou/i, 'guobaorou'], [/텐동|tendon|ten-?don/i, 'tendon'], [/규동|가츠동|카츠동|오야코동|사케동|부타동/i, 'donburi'], [/tikka|masala|butter chicken|버터 ?치킨|빈달루|vindaloo/i, 'curry'], [/분짜|bún chả|bun ?cha|비빔 ?쌀국수|bun bo nam bo/i, 'bun-cha'], [/반미|bánh mì|banh ?mi/i, 'banh-mi'], [/베이글|bagel/i, 'bagel'],
     [/콩국수|kongguksu/i, 'kongguksu'], [/잔치 ?국수|멸치 ?국수|소면|somen|janchi/i, 'janchi-guksu'], [/수제비|sujebi/i, 'sujebi'], [/쫄면|비빔 ?국수|비빔면|막국수|bibim ?(noodles?|myeon|guksu)|jjolmyeon/i, 'bibim-noodle'],
     [/삼계탕|samgyetang/i, 'samgyetang'], [/갈비탕|설렁탕|곰탕|도가니탕|사골|seolleongtang|gomtang|galbitang/i, 'soup-white'], [/육개장|순두부|똠 ?얌|tom ?yum|sundubu|yukgaejang/i, 'soup-red'],
