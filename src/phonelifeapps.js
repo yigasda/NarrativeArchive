@@ -233,9 +233,14 @@ function waterDay(d, u) {
 }
 // coffee: their usual cups (the first soon after waking) and the coffee ordered for delivery that day, each its own row
 const COFFEE = /coffee|kaffee|latte|americano|espresso|cappuccino|flat white|커피|아메리카노|라떼|카푸치노|에스프레소|콜드브루|cold brew/i;
+const CAFE = /caf[eé]|coffee|kaffee|espresso|starbucks|스타벅스|카페|커피|이디야|투썸|메가 ?커피|빽다방|컴포즈|할리스|폴 ?바셋|블루보틀|blue bottle|costa|tim hortons|dunkin|tchibo|doutor|ドトール|スタバ|tully|peet/i;
 function coffeeDay(p, d, u) {
     const r = seeded(`${d.date}:coffee`), wake = toMin(d.wake) ?? 450, out = [];
-    const cups = u.coffee ? Math.max(0, Math.round(u.coffee + (r() - 0.45) * 1.4)) : 0;
+    // a coffee paid for at a café that day (the bank's own row, not a delivery's) stands in for one of the usual cups
+    const cafe = (p.money?.tx || []).filter(t => String(t.time).slice(0, 5) === d.date && t.amount < 0 && !t.delivery && CAFE.test(`${t.who || ''} ${t.ko || ''} ${t.memo || ''}`))
+        .map(t => ({ t: String(t.time).slice(6, 11) || hm(wake + 30), what: t.ko || t.who, mg: 150, from: '' }));
+    const cups = u.coffee ? Math.max(0, Math.round(u.coffee + (r() - 0.45) * 1.4) - cafe.length) : 0;
+    out.push(...cafe);
     for (let k = 0; k < cups; k++) out.push({ t: hm(k ? 780 + Math.round(r() * 200) + k * 20 : wake + 20 + Math.round(r() * 40)), what: u.coffeeKo || u.coffeeKind || '커피', mg: 120, from: '' });
     for (const o of p.delivery?.orders || []) {
         if (String(o.time).slice(0, 5) !== d.date || o.status === 'cancelled') continue;

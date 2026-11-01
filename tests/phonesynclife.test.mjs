@@ -390,3 +390,16 @@ test('a payment in January after a December now is booked in the next year; a de
     assert.equal(m.finance.accounts['chk:EUR'].entries['sync:dec:m0'].date, '2026-12-29');
     assert.throws(() => applyMoney(m, p, { id: 'x', at: 11, date: '', time: '', money: { deliveries: [{ shop: 'A', items: [{ name: 'B', qty: 1, price: 1 }] }] } }, opts), /날짜/);
 });
+
+test('the story changes their usual (lost weight, quit coffee): each field set on its own, and taken back', () => {
+    const { m, p } = setup();
+    p.life.health.usual = { ...p.life.health.usual, weight: 72, coffee: 3, water: 1.5 };
+    const r = applyLife(p, { id: 'diet', at: 9, date: '10-26', time: '20:00' }, { usual: { weight: 68.4, coffee: 0, water: 'lots', coffeeKind: '' } }, true);
+    assert.deepEqual([p.life.health.usual.weight, p.life.health.usual.coffee, p.life.health.usual.water], [68.4, 0, 1.5]);
+    assert.equal(r.effects.length, 2);
+    assert.ok(r.apps.has('건강'));
+    revertEffects(m, p, r.effects);
+    assert.deepEqual([p.life.health.usual.weight, p.life.health.usual.coffee], [72, 3]);
+    // nothing changed: nothing written
+    assert.equal(applyLife(p, { id: 'x', at: 10, date: '10-26' }, { usual: { weight: 72 } }, true).effects.length, 0);
+});

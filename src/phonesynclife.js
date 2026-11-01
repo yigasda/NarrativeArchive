@@ -131,6 +131,18 @@ export function applyLife(p, e, phone, on) {
         if ((L.files?.items || []).some(o => o.name === clean.name && o.folder === clean.folder && !o.trashed)) return;
         push('life.files.items', tag({ ...clean, time: clean.time || `${e.date}${e.time ? ` ${e.time}` : ''}` }, k, 'f'), '파일');
     });
+    // their usual that the story changed (lost weight, quit coffee): each field on its own, so 되돌리기 takes back just it
+    const uu = phone.usual && typeof phone.usual === 'object' ? phone.usual : null;
+    if (uu) {
+        const n = (v, lo, hi, d = 1) => { const x = Number(v); return Number.isFinite(x) && x >= lo && x <= hi ? Math.round(x * d) / d : undefined; };
+        const vals = { weight: n(uu.weight, 20, 300, 10), coffee: n(uu.coffee, 0, 15), water: n(uu.water, 0, 8, 10), coffeeKind: uu.coffeeKind ? line(uu.coffeeKind, 30) : undefined, coffeeKo: uu.coffeeKo ? ko(uu.coffeeKo) : undefined };
+        const u = (L.health ||= {}).usual ||= {};
+        for (const [k, v] of Object.entries(vals)) {
+            if (v === undefined || same(u[k] ?? null, v)) continue;
+            out.effects.push({ type: 'set', path: `life.health.usual.${k}`, from: u[k] ?? null, to: v });
+            u[k] = v; out.apps.add('건강');
+        }
+    }
     // a day the story shows: written over the day already there (a pattern day, or an earlier telling of it)
     arr(phone.health).forEach((d, k) => {
         const clean = dayOf({ ...d, from: 'story' });
@@ -295,6 +307,7 @@ export function lifeNow(p) {
         alarms: (L.clock?.alarms || []).map(a => ({ id: a.id, time: a.time, label: a.label, days: a.days, date: a.date, on: a.on })),
         files: (L.files?.items || []).filter(x => !x.trashed).slice(-12).map(x => ({ id: x.id, name: x.name, folder: x.folder, time: x.time })),
         health: (L.health?.days || []).slice(-3).map(d => ({ id: d.id, date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, from: d.from })),
+        usual: (u => (u ? Object.fromEntries(['weight', 'coffee', 'coffeeKind', 'water'].filter(k => u[k] !== undefined && u[k] !== null && u[k] !== '').map(k => [k, u[k]])) : undefined))(L.health?.usual),
         weather: L.weather?.here ? { place: L.weather.here.place, date: L.weather.here.date, time: L.weather.here.time, cond: L.weather.here.cond, temp: L.weather.here.temp, cities: (L.weather.cities || []).map(c => c.name) } : null,
     };
 }
