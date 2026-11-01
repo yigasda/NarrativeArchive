@@ -499,7 +499,13 @@ export function walletScreen(p, now, sel = '') {
     const ps = [...M.passes].sort((a, b) => gapDays(p.now, a.date) - gapDays(p.now, b.date)), up = ps.filter(x => !past(x)), old = ps.filter(past);
     const t = bankTier(p).t, mc = t?.k === 'PRIVATE';
     // a tap on one lying behind brings it out whole; a tap on the open one opens it
-    const deck = list => { const open = list.some(o => o.k === sel) ? sel : list[list.length - 1]?.k; return list.map(o => o.k === open ? `<button type="button" class="ax_wlb on" data-go="${o.go}" data-i="${o.i}">${o.art}</button>` : `<button type="button" class="ax_wlb sh" data-go="wallet" data-i="${o.k}">${o.art}</button>`).join(''); };
+    // those after the open one sit in a tail that cuts off whatever reaches past the last edge
+    const deck = list => {
+        const n = Math.max(0, list.findIndex(o => o.k === sel)), at = list.some(o => o.k === sel) ? n : list.length - 1;
+        const one = (o, k) => k === at ? `<button type="button" class="ax_wlb on" data-go="${o.go}" data-i="${o.i}">${o.art}</button>` : `<button type="button" class="ax_wlb sh" data-go="wallet" data-i="${o.k}">${o.art}</button>`;
+        const head = list.slice(0, at + 1).map(one).join(''), tail = list.slice(at + 1).map((o, k) => one(o, at + 1 + k)).join('');
+        return head + (tail ? `<div class="ax_dtail">${tail}</div>` : '');
+    };
     const items = [...(mc ? [{ k: 'm', go: 'bankmore', i: '', art: memberCard(p, t, ' ax_mcw') }] : []),
         ...M.cards.map((c, i) => ({ k: `c${i}`, go: 'card', i, art: cardArt(p, c) })),
         ...[...up].reverse().map(x => ({ k: `p${x.id}`, go: 'pass', i: x.id, art: passArt(p, x, false) }))];
