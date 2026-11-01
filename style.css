@@ -2443,6 +2443,12 @@ body.na_darkui .na_ap2 .na_append_ta { background: #2E2621 !important; border: 1
 .na_ap3_sect small { font-size: 11.5px; font-weight: 500; letter-spacing: 0; }
 .na_ap3_sect small:empty { display: none; }
 .na_ap3_part > .na_v2_card { margin-top: 10px; }
+/* cards as the mockup: a lighter paper than the window, no outline, a soft two-layer shadow (dark: the palette's card) */
+body:not(.na_darkui) .na_ap3 .na_v2_card { background: #FBF6F2; border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+body.na_darkui .na_ap3 .na_v2_card { border-color: transparent; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 6px 16px rgba(0, 0, 0, 0.22); }
+body:not(.na_darkui) .na_ap3 .na_ap3_seg button.on { background: #FBF6F2; }
+.na_ap3 .na_ap3_file.na_append_file_btn { background: transparent; border: 0; padding: 2px; }
+body:not(.na_darkui) .na_ap3 .na_ap3_fbody, body:not(.na_darkui) .na_ap3 .na_ap3_fdock { background: #FBF6F2; }
 /* the draft card */
 .na_ap3_sum { display: flex; flex-direction: column; gap: 10px; padding: 14px; margin-top: 14px; }
 .na_ap3_head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
