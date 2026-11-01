@@ -31,7 +31,7 @@ const CG_ALPHA = 'd9'; // clarity 0.85
 const CG_I = { invest: 'M3 20h18M5 16l5-6 4 3 6-9M15 4h5v5',
     clock: 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 8v4l2.5 2M5 3L2 6M19 3l3 3',
     health: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10zM5 12h3l2-3 3 6 2-3h4',
-    files: 'M3 6h7l2 2h9v11H3zM3 10h18',
+    files: 'M4.5 8.5a2 2 0 0 1 2-2h3.2a1.5 1.5 0 0 1 1.1.5l1.2 1.3h5.5a2 2 0 0 1 2 2v6.7a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2z',
     weather: 'M7 17a4 4 0 0 1 .5-8A5.5 5.5 0 0 1 18 11a3 3 0 0 1-.5 6zM15 4.5a3 3 0 0 1 3.5 2.5',
     delivery: 'M8 3c-1.8 0-3 1.9-3 4.2S6.2 11.4 8 11.4s3-1.9 3-4.2S9.8 3 8 3zM8 11.4V21M14 3v5a2.6 2.6 0 0 0 5.2 0V3M16.6 3v5M16.6 10.6V21',
     msg: 'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-5 4z',
@@ -51,9 +51,9 @@ const CG_I = { invest: 'M3 20h18M5 16l5-6 4 3 6-9M15 4h5v5',
     shop: 'M5 8h14l-1.2 11a1 1 0 0 1-1 .9H7.2a1 1 0 0 1-1-.9zM9 8V6a3 3 0 0 1 6 0v2',
     voice: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
 };
-const CG_GEL = { clock: ['#c9cbd2', '#3b3d45'], health: ['#f6c6d0', '#e0607b'], files: ['#c2d6ef', '#5b8fd1'], weather: ['#bcd7f2', '#5b9be0'], delivery: ['#b9ebe8', '#2ab3ae'], invest: ['#b7dfcc', '#4c9a80'], sns: ['#efc4d0', '#d494a7'], mail: ['#bfd3e9', '#8faed1'], diary: ['#d3cae9', '#a699c9'], set: ['#d1d4d9', '#a2a7af'], cam: ['#e2e4e8', '#aeb2b9', '#2a313b'], photo: ['#f0cbb5', '#d89f98'], cal: ['#f6f7f9', '#dcdfe5', '#b0564e'], note: ['#f4e5b5', '#dcc680', '#5a4a1f'], map: ['#c3dcc1', '#93ba97'], call: ['#bbddc0', '#89b892'], msg: ['#bbddc0', '#89b892'], search: ['#bfd3e9', '#8faed1'] , bank: ['#b8c6df', '#6f86b3'], wallet: ['#c7cdd9', '#8b95aa'], shop: ['#bfe0dc', '#86bdb6'], voice: ['#e8d3bb', '#c9a581'] };
+const CG_GEL = { clock: ['#d6d7db', '#8e929c'], health: ['#f4cfd3', '#dd9aa3'], files: ['#cad6f0', '#8ea6db'], weather: ['#cbe5f4', '#8cc3e3'], delivery: ['#c2ece8', '#7fcfc5'], invest: ['#cbe4d2', '#86bb98'], sns: ['#efc4d0', '#d494a7'], mail: ['#bfd3e9', '#8faed1'], diary: ['#d3cae9', '#a699c9'], set: ['#d1d4d9', '#a2a7af'], cam: ['#e2e4e8', '#aeb2b9', '#2a313b'], photo: ['#f0cbb5', '#d89f98'], cal: ['#f6f7f9', '#dcdfe5', '#b0564e'], note: ['#f4e5b5', '#dcc680', '#5a4a1f'], map: ['#c3dcc1', '#93ba97'], call: ['#bbddc0', '#89b892'], msg: ['#bbddc0', '#89b892'], search: ['#bfd3e9', '#8faed1'] , bank: ['#d9d2f0', '#a99ad8'], wallet: ['#f8f0d2', '#e6d48e'], shop: ['#ecd3e7', '#c596bc'], voice: ['#f3d9c2', '#dcaa7f'] };
 // the delivery app wears its look: Uber Eats in the same soft gel, green; Baemin keeps the mint
-const UE_GEL = ['#cfe8b4', '#62ad3c'];
+const UE_GEL = ['#dbeac4', '#a6c77c'];
 const cgIcon = (k, mono, badge = 0, ue = false) => {
     const [c1, c2, g = '#ffffff'] = ue && k === 'delivery' ? UE_GEL : CG_GEL[k];
     const svg = mono
@@ -78,7 +78,8 @@ function noteItems(n) {
 // so a new one from an update shows again)
 export const lastSig = t => { const x = t.messages[t.messages.length - 1]; return x ? `${x.time}|${x.text}` : ''; };
 export const threadNew = t => t.messages[t.messages.length - 1]?.from !== 'me' && t.seen !== lastSig(t);
-export function homeScreen(p, now, m, page = 1) {
+// wx: the weather widget for the second page, drawn by the weather app (passed in, so the home needs no app module)
+export function homeScreen(p, now, m, page = 1, wx = '') {
     const mono = p.theme === 'gray';
     const day = String(now).slice(0, 5), x = parts(now);
     const anniv = annivToday(m, now, p.owner);
@@ -97,7 +98,7 @@ export function homeScreen(p, now, m, page = 1) {
       <div class="cg_col">
         ${cgBar(p, now)}
         <div class="cg_top">
-          <div class="cg_widgets">${page === 2 ? walletW(p, now, mono) : `
+          <div class="cg_widgets">${page === 2 ? wx || walletW(p, now, mono) : `
             <button type="button" class="cg_glass cg_wcal" data-go="cal">
               <span class="cg_cap cg_capcal">${x ? `${x.mo}월` : '캘린더'}</span>
               <span class="cg_num cg_day">${x ? x.d : ''}</span>
