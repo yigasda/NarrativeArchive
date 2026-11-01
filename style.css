@@ -4377,6 +4377,13 @@ body.na_darkui .na_ph_mapart { background: linear-gradient(90deg, rgba(255, 255,
 .na_ph_makecard small { color: inherit; font-size: 11.5px; opacity: 0.7; }
 .na_ph_makebtn { margin-top: 6px !important; padding: 10px 26px !important; border-radius: 999px !important; background: #fff !important; color: #2b2f63 !important; font-weight: 700 !important; }
 .na_ph_makebtn:disabled { opacity: 0.7; }
+.na_ph_ownercard { width: min(250px, 78%); }
+.na_ph_noface { display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); border: 1.5px dashed rgba(255, 255, 255, 0.65); color: #fff; }
+.na_ph_owneradd { display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 100%; margin-top: 6px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame .na_ph_owneradd input { box-sizing: border-box; width: 100%; margin: 0; padding: 10px 14px; border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 14px; background: rgba(255, 255, 255, 0.16); color: #fff; font-size: 14px; text-align: center; outline: none; box-shadow: none; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame .na_ph_owneradd input::placeholder { color: rgba(255, 255, 255, 0.7); }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame .na_ph_owneradd input:focus { border-color: #fff; background: rgba(255, 255, 255, 0.24); }
+.na_ph_owneradd .na_ph_makebtn { margin-top: 0 !important; }
 /* under the phone */
 .na_ph_ctrl { display: flex; flex-direction: column; gap: 8px; }
 .na_ph_crow { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; background: var(--na-card2); cursor: pointer; }

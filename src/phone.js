@@ -133,9 +133,20 @@ export async function openPhone(who = null) {
         const p = phone();
         // nobody to show yet (no people in the archive, no phone in this chat): the picker opens instead of a blank phone
         if (!owner) {
-            $root.find('.na_ph_frame').html(`<div class="na_ph_scr glass w_dusk"><div class="na_ph_body na_ph_make"><div class="na_ph_makecard"><b>누구의 폰을 볼까요?</b><p>아래에서 인물을 고르거나, 넣기로 이름을 적어 주세요</p></div></div></div>`);
-            if (!names.length) { adding = true; $root.find('.na_ph_addrow').prop('hidden', false); }
-            setSheet(true);
+            $root.find('.na_ph_frame').html(`
+              <div class="na_ph_scr glass w_dusk"><div class="na_ph_sb"><span></span><i>${ic('sig', 15)}${ic('bat', 20, 1.6)}</i></div>
+                <div class="na_ph_body na_ph_make">
+                  <div class="na_ph_makecard na_ph_ownercard">
+                    <span class="na_ph_noface">${ic('user', 30, 1.8)}</span>
+                    <b>누구의 폰을 볼까요?</b>
+                    <p>이 채팅엔 아직 인물이 없어요.<br>폰 주인의 이름을 적어 주세요</p>
+                    <div class="na_ph_addbox na_ph_owneradd">
+                      <input type="text" class="na_ph_addname" placeholder="인물 이름" enterkeyhint="done" autocomplete="off">
+                      <button type="button" class="na_ph_makebtn na_ph_addok">이 인물의 폰 보기</button>
+                    </div>
+                    <small>상태창에 나온 인물은 저절로 떠요</small>
+                  </div>
+                </div></div>`);
             return;
         }
         if (!p && view==='setprofile') {
