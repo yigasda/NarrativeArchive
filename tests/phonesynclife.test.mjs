@@ -423,3 +423,11 @@ test('a file saved again takes the new time (a clock alone is that day), and an 
     assert.equal(p.life.files.items[0].time, '10-26 16:00');
     assert.equal(p.life.files.items[0].look, 'contract');
 });
+
+test('a story day told ahead of the day before it: the day between is filled too', () => {
+    const { p } = setup();
+    p.life.health.days = [{ id: 'h0', date: '01-11', sleep: '00:20', wake: '07:20', steps: 6000, from: 'pattern' }, { id: 'h2', date: '01-13', sleep: '03:00', wake: '10:00', steps: 1200, from: 'story' }];
+    fillDays(p, '01-13 15:05', 'r');
+    assert.deepEqual(p.life.health.days.map(d => d.date), ['01-11', '01-12', '01-13']);
+    assert.equal(p.life.health.days[2].from, 'story');
+});

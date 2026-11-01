@@ -16,7 +16,7 @@ const tz = v => (/^[A-Za-z]+(?:\/[A-Za-z_+-]+){1,2}$/.test(String(v || '')) ? St
 // ---- cleaning one record
 export const alarmOf = a => withEv({ time: hhmm(a?.time), label: line(a?.label, 60), ko: ko(a?.ko), days: arr(a?.days).map(d => String(d).toLowerCase().slice(0, 3)).filter(d => DAYS.includes(d)), date: day5(a?.date),
     on: a?.on !== false, wake: yes(a?.wake), then: arr(a?.then).map(hhmm).filter(Boolean).slice(0, 10), snooze: int(a?.snooze, 0, 60) ?? 0, snoozeCount: int(a?.snoozeCount, 0, 20) ?? 0, sound: line(a?.sound, 30), made: day5(a?.made) }, a);
-export const fileOf = x => withEv({ name: line(x?.name, 80), kind: pick(x?.kind, FILE_KINDS, 'other'), folder: line(x?.folder, 40) || 'Downloads', size: num(x?.size), time: when(x?.time), from: line(x?.from, 60),
+export const fileOf = x => withEv({ name: line(x?.name, 80), kind: pick(x?.kind, FILE_KINDS, 'other'), folder: (f => (!f || /^(downloads?|download folder|다운로드|下载|ダウンロード)$/i.test(f) ? 'Downloads' : f))(line(x?.folder, 40)), size: num(x?.size), time: when(x?.time), from: line(x?.from, 60),
     pages: int(x?.pages, 0, 2000), length: line(x?.length, 8), tag: pick(x?.tag, ['red', 'orange'], ''), private: yes(x?.private), preview: yes(x?.private) ? '' : line(x?.preview, 160), look: line(x?.look, 20).toLowerCase(), ko: ko(x?.ko), opened: when(x?.opened), trashed: day5(x?.trashed) }, x);
 export const dayOf = d => withEv({ date: day5(d?.date), bed: hhmm(d?.bed), sleep: hhmm(d?.sleep), wake: hhmm(d?.wake), woke: int(d?.woke, 0, 30) ?? 0, steps: int(d?.steps, 0, 120000), km: num(d?.km), floors: int(d?.floors, 0, 400),
     workout: d?.workout && line(d.workout.kind, 30) ? { kind: line(d.workout.kind, 30), time: hhmm(d.workout.time), min: int(d.workout.min, 0, 600), km: num(d.workout.km) } : null,
@@ -223,10 +223,12 @@ const plusDay = (day, n) => { const mt = /^(\d{2})-(\d{2})$/.exec(day); const d 
 export function fillDays(p, now, round) {
     const out = [], L = p.life, u = L?.health?.usual, today = String(now || '').slice(0, 5), hm = String(now || '').slice(6, 11);
     if (!u || !/^\d{2}-\d{2}$/.test(today)) return out;
-    const box = boxAt(p, 'life.health.days', true), last = box.length ? box.reduce((a, d) => (dayGap(a, d.date) > 0 ? d.date : a), box[0].date) : plusDay(today, -14);
+    const box = boxAt(p, 'life.health.days', true);
     const end = hm && u.wake && hm < u.wake ? plusDay(today, -1) : today;
+    // every day missing since the first one kept, gaps between days too (a story day told before the one between them);
     // a story that jumped ahead: only its last two weeks
-    const from = dayGap(last, today) > 14 ? plusDay(today, -13) : plusDay(last, 1);
+    const first = box.length ? box.reduce((a, d) => (dayGap(a, d.date) < 0 ? d.date : a), box[0].date) : plusDay(today, -14);
+    const from = box.length ? (dayGap(first, today) > 13 ? plusDay(today, -13) : first) : plusDay(first, 1);
     for (let day = from, k = 0; dayGap(day, end) >= 0 && k < 15; day = plusDay(day, 1), k++) {
         if (box.some(d => d.date === day)) continue;
         const h = hash(day), j = n => ((h >> n) % 41 - 20) / 100, steps = finiteNum(u.steps) ? Math.round(u.steps * (1 + j(1) * 1.5)) : null;
