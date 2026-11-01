@@ -540,6 +540,11 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_diff_del { background: color-mix(in srgb, #c4513f 15%, transparent); }
 .na_diff_same { opacity: 0.6; }
 .na_diff .na_diff_skip { justify-content: center; padding: 4px; font-size: 0.9em; opacity: 0.5; background: var(--na-softer); }
+/* dark: no murky tinted bands — a faint tint, a coloured bar on the left, and the + / − marks in colour */
+body.na_darkui .na_diff_add { background: rgba(124, 203, 154, 0.07); box-shadow: inset 3px 0 0 #5FA77C; }
+body.na_darkui .na_diff_del { background: rgba(236, 116, 104, 0.07); box-shadow: inset 3px 0 0 #C9655A; }
+body.na_darkui .na_diff_add > span:first-child { color: #8FD3A6; }
+body.na_darkui .na_diff_del > span:first-child { color: #F2948A; }
 
 /* ---------- chat picker */
 .na_pick_list { display: flex; flex-direction: column; }
@@ -871,6 +876,8 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_diff_hl { background: transparent; color: inherit; font-weight: 600; border-radius: 3px; padding: 0 1px; }
 .na_diff_add .na_diff_hl, .na_diff_tr_add .na_diff_hl { background: color-mix(in srgb, #3f9a5a 16%, transparent); }
 .na_diff_del .na_diff_hl, .na_diff_tr_del .na_diff_hl { background: color-mix(in srgb, #c4513f 15%, transparent); text-decoration: line-through; text-decoration-thickness: 1px; }
+body.na_darkui :is(.na_diff_add, .na_diff_tr_add) .na_diff_hl { background: rgba(124, 203, 154, 0.22); color: #DDF3E4; }
+body.na_darkui :is(.na_diff_del, .na_diff_tr_del) .na_diff_hl { background: rgba(236, 116, 104, 0.22); color: #F8D9D4; }
 .na_diff .na_dl { flex: 1; min-width: 0; }
 
 /* ---------- source jump */
@@ -2445,7 +2452,6 @@ body.na_darkui .na_ap2 .na_append_ta { background: #2E2621 !important; border: 1
 .na_ap3_part > .na_v2_card { margin-top: 10px; }
 /* cards in the palette's colour (--na-card), no outline, a soft two-layer shadow */
 body:not(.na_darkui) .na_ap3 .na_v2_card { border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
-body.na_darkui .na_ap3 .na_v2_card { border-color: transparent; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 6px 16px rgba(0, 0, 0, 0.22); }
 .na_ap3 .na_ap3_file.na_append_file_btn { background: transparent; border: 0; padding: 2px; }
 /* light: as the settings panel — the window stays cream, the cards a touch warmer than its white paper (#FCF6F1), the selected switch white */
 body:not(.na_darkui) .na_ap3 .na_v2_card { background: #FCF6F1; }
@@ -2484,15 +2490,10 @@ body:is(.na_darkui, :not(.na_darkui)) .na_ap3 .na_append_ta { height: 240px !imp
 .na_ap3_ai b span { margin-left: 4px; font-weight: 600; opacity: 0.8; }
 .na_ap3_ai div { margin-top: 3px; }
 body:not(.na_darkui) .na_ap3_me > span { background: #F6E1D3; color: #7A3410; }
-body.na_darkui .na_ap3_me > span { background: #543627; color: #F4D2BC; }
 body:not(.na_darkui) .na_ap3_ai { background: #E8F3EA; color: #24452C; }
-body.na_darkui .na_ap3_ai { background: #2D4134; color: #CFEAD7; }
 body:not(.na_darkui) .na_ap3_ai.note { background: #FFF4DC; color: #7A5200; }
-body.na_darkui .na_ap3_ai.note { background: #4A3B1F; color: #F2D9A6; }
 body:not(.na_darkui) .na_ap3_ai.note b { color: #1F6A40; }
-body.na_darkui .na_ap3_ai.note b { color: #7CCB9A; }
 body:not(.na_darkui) .na_ap3_ai.bad { background: #FBE7E2; color: #7A2A1E; }
-body.na_darkui .na_ap3_ai.bad { background: #4B2925; color: #F3C2BB; }
 .na_ap3_ai.bad b { color: var(--na-bad); }
 .na_ap3_ai.none { background: var(--na-card2) !important; color: var(--na-mute) !important; }
 /* the input: no outline, the chips' colour */
@@ -2505,7 +2506,6 @@ body:is(.na_darkui, :not(.na_darkui)) .na_ap3 .na_ap3_chip { flex: none; display
 .na_ap3 .na_ap3_chip b { font-size: 12.5px; font-weight: 700; line-height: 1.15; white-space: nowrap; }
 .na_ap3 .na_ap3_chip small { max-width: 100%; margin: 0; font-size: 11px; line-height: 1.2; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: inherit; }
 body:is(.na_darkui, :not(.na_darkui)) .na_ap3 .na_ap3_chip.on { background: var(--na-fill); color: var(--na-onfill); }
-body.na_darkui .na_ap3 .na_ap3_chip.on { background: #7A6457 !important; }
 .na_ap3 .na_apf_foot { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
 .na_ap3 .na_apf_foot small { flex: 1; min-width: 0; font-size: 12.5px; color: var(--na-sub, var(--na-dim)); }
 .na_ap3_raw { display: inline-flex !important; align-items: center; gap: 6px; margin: 0; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; background: var(--na-card2); color: var(--na-mute); }
@@ -2514,7 +2514,6 @@ body.na_darkui .na_ap3 .na_ap3_chip.on { background: #7A6457 !important; }
 .na_ap3_raw .na_ap3_tick { display: none; }
 .na_ap3_raw:has(input:checked) .na_ap3_tick { display: inline-flex; }
 body:not(.na_darkui) .na_ap3_raw:has(input:checked) { background: #E3F2E8; color: #1F6A40; }
-body.na_darkui .na_ap3_raw:has(input:checked) { background: #2D4134; color: #7CCB9A; }
 .na_ap3_raw:has(input:focus-visible) { outline: 2px solid var(--na-accent); outline-offset: 2px; }
 /* AI 도구 */
 .na_ap3_tools { padding: 0; overflow: hidden; }
@@ -2531,12 +2530,30 @@ body.na_darkui .na_ap3_ti.b { background: #2E3A4B; color: #9DBCE6; }
 .na_ap3_tt small { font-size: 12px; color: var(--na-sub, var(--na-dim)); opacity: 1; }
 .na_ap3_ar { color: var(--na-dim); font-size: 18px; }
 .na_ap3 .na_ap2_checks .na_grade_out, .na_ap3 .na_ap2_checks .na_conflict_out { margin: 0 14px 14px; }
+/* dark (시안 A): a near-black warm window, darker cards with a faint top light, no tinted fills — the parts are
+   neutral and the colour is in a thin line or the text: my request edged in orange, replies with a coloured bar */
+body.na_darkui dialog.popup.na_ap3_dlg:has(.na_ap3):not(#na_x) { background: #1C1714 !important; }
+body.na_darkui .na_ap3 .na_v2_card, body.na_darkui .na_ap3 :is(.na_ap3_fbody, .na_ap3_fdock) { background: #27201B; border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+body.na_darkui .na_ap3_bar { background: linear-gradient(rgba(28, 23, 20, 0), #1C1714 14px); }
+body.na_darkui .na_ap3 :is(.na_ly_ask, .na_ap3_seg, .na_ap3_raw) { background: #342B25; }
+body:is(.na_darkui) .na_ap3 .na_ap3_chip { background: #342B25 !important; }
+body.na_darkui .na_ap3 .na_ap3_chip.on { background: #7A6457 !important; color: #F7ECE2 !important; }
+body.na_darkui .na_ap3 .na_ap3_seg button.on { background: #4A3D34; color: #F2B48A; }
+body.na_darkui .na_ap3_raw:has(input:checked) { background: #342B25; color: #8FD3A6; }
+body.na_darkui .na_ap3 .na_append_ta { background: #211B17 !important; border-color: #3A3029 !important; }
+body.na_darkui .na_ap3_me > span { background: #3A2F28; color: #F3E7DC; box-shadow: inset 0 0 0 1px rgba(217, 115, 58, 0.45); }
+body.na_darkui .na_ap3_ai, body.na_darkui .na_ap3_ai.note, body.na_darkui .na_ap3_ai.bad { background: #2F2722; color: #E6D9CD; border-left: 3px solid #7CCB9A; border-radius: 6px 16px 16px 6px; }
+body.na_darkui .na_ap3_ai b { color: #8FD3A6; }
+body.na_darkui .na_ap3_ai.note { border-left-color: #E8B45A; }
+body.na_darkui .na_ap3_ai.note div { color: #F0CF8E; }
+body.na_darkui .na_ap3_ai.bad { border-left-color: #EC7468; }
+body.na_darkui .na_ap3_ai.bad b { color: #F2948A; }
+body.na_darkui .na_ap3_ai.none { border-left-color: #6E5D52; }
 /* a line only between rows: the first row shown sits on the card's own top edge */
 .na_ap3 .na_ap2_checks > .na_check { border-top: 0 !important; }
 .na_ap3 .na_ap2_checks > :not([hidden]) ~ .na_check:not([hidden]) { border-top: 1px solid var(--na-line2, var(--na-line)) !important; }
 /* 취소 · 추가하기 */
 .na_ap3_bar { position: sticky; bottom: 0; z-index: 2; display: flex; gap: 8px; margin: 18px -2px 0; padding: 12px 2px 4px; background: linear-gradient(transparent, var(--na-pop-bg, #F0E4DB) 14px); }
-body.na_darkui .na_ap3_bar { background: linear-gradient(transparent, #2A221D 14px); }
 .na_ap3_bar button { font: inherit; font-size: 15px; font-weight: 600; height: 46px; border-radius: 999px; cursor: pointer; }
 .na_ap3_bar .na_ap3_cancel { padding: 0 18px; border: 0; background: transparent; color: var(--na-mute); }
 .na_ap3_bar .na_ap2_go { flex: 1; border: 0; background: var(--na-accent); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
@@ -2944,11 +2961,11 @@ body.na_darkui .na_df2_counts .del, body.na_darkui .na_df2_badge.del { color: #F
 .na_df2 .na_df2_lines .na_diff_skip { font-size: 0.92em; padding: 6px 14px; }
 .na_df2 .na_df2_lines > .na_diff_tr { padding-top: 0; }
 body:not(.na_darkui) .na_df2 .na_df2_lines .na_diff_del { background: #FDF0EC; }
-body.na_darkui .na_df2 .na_df2_lines .na_diff_del { background: #4A2A26; }
+body.na_darkui .na_df2 .na_df2_lines .na_diff_del { background: rgba(236, 116, 104, 0.07); box-shadow: inset 3px 0 0 #C9655A; }
 body:not(.na_darkui) .na_df2 .na_df2_lines .na_diff_add { background: #EEF7F1; }
-body.na_darkui .na_df2 .na_df2_lines .na_diff_add { background: #2B3A30; }
+body.na_darkui .na_df2 .na_df2_lines .na_diff_add { background: rgba(124, 203, 154, 0.07); box-shadow: inset 3px 0 0 #5FA77C; }
 body:not(.na_darkui) .na_df2 .na_df2_lines .na_diff_add .na_diff_hl { background: #CDE9D7; font-weight: 600; }
-body.na_darkui .na_df2 .na_df2_lines .na_diff_add .na_diff_hl { background: #35503F; font-weight: 600; }
+body.na_darkui .na_df2 .na_df2_lines .na_diff_add .na_diff_hl { background: rgba(124, 203, 154, 0.22); color: #DDF3E4; font-weight: 600; }
 .na_df2_foot { display: flex; gap: 8px; margin-top: auto; }
 .na_df2_foot:empty { display: none; }
 .na_df2_foot > .na_v2_btn { flex: 1; min-width: 0; padding: 12px 0; border-radius: 14px; font-size: 0.964em; }
@@ -7186,3 +7203,18 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 @keyframes pcf_dim { from { background: rgba(15, 20, 28, 0); } }
 @keyframes pcf_up { from { transform: translateY(110%); } }
 @media (prefers-reduced-motion: reduce) { .pcf, .pcf_box { animation: none; } }
+
+/* ============ dark popups (시안 A, carried over from 아카이브에 추가): a near-black warm window, darker cards with no outline
+   and a faint top light, neutral parts with the colour kept to a thin line or the text. Tokens only, so every popup follows. */
+body.na_darkui dialog.popup:has(.na_popup):not(#na_x) { background: #1C1714 !important; }
+body.na_darkui dialog.popup:has(.na_popup) .na_popup {
+    --na-card: #27201B; --na-card2: #342B25; --na-paper: #27201B; --na-soft: #342B25; --na-softer: #2F2722;
+    --na-line: #3A3029; --na-line2: #312822; --na-fill: #5E4C41;
+}
+body.na_darkui dialog.popup:has(.na_popup) .na_popup .na_v2_card { border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+body.na_darkui dialog.popup:has(.na_popup):not(#na_x) .popup-controls .menu_button { background: #27201B !important; border-color: #3A3029 !important; }
+body.na_darkui dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #211B17 !important; border-color: #3A3029 !important; }
+/* chats: my line neutral with an orange edge, the answer a plain card */
+body.na_darkui .na_ask2 .na_ask_qq, body.na_darkui .na_sf_bubble { background: #3A2F28; color: #F3E7DC; box-shadow: inset 0 0 0 1px rgba(217, 115, 58, 0.45); }
+body.na_darkui .na_ask2 .na_ask_a { background: #27201B; border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
+body.na_darkui .na_sf_note { background: #2F2722; color: #F0CF8E; box-shadow: inset 3px 0 0 #E8B45A; }
