@@ -354,6 +354,7 @@ const TIERS = [
     { k: 'GOLD', at: 40000, re: /gold|골드/i, sub: '우수 고객', ben: [['card2', 'ATM 수수료 면제', '한 달 10회'], ['globe', '환율 우대 50%', '해외 결제 할인']] },
 ];
 export function bankTier(p) {
+    migrateBank(getMeta(), p); // the balances the ledger holds now (an update round may have moved them)
     const M = mo(p), names = [M.bank.name, ...M.bank.accounts.map(a => a.name)].join(' ');
     const has = M.bank.accounts.filter(x => x.kind !== 'credit').reduce((n, x) => n + Math.max(0, Number(x.balance) || 0) / (SCALE[x.currency] || 1), 0);
     const t = TIERS.find(t => t.re.test(names)) || TIERS.find(t => has >= t.at) || null;
