@@ -11,6 +11,7 @@ import { filling, recording } from './phoneai.js';
 import { AX, ax, axBar, axCb, axDay, axFind, axH1, axInd, axKp, axLetter, axTint, axTop, busyHtml } from './phoneapps.js';
 import { byStory, fmtDate, fmtTime, gapDays, koOn, listTime } from './phonedata.js';
 import { esc } from './util.js';
+import { prodSvg } from './phoneprod.js';
 
 Object.assign(AX, {
     plane: 'M2 13l20-6-3 4-8 3-3 6-2-5z', train: 'M6 4h12v11a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3zM6 10h12M9 21l1-3M15 21l-1-3', bed: 'M3 18v-9M3 13h18v5M7 13V9h6a4 4 0 0 1 4 4',
@@ -257,7 +258,7 @@ function statusPill(p, x) {
     return `<span class="ax_pill2 go">${ax('truck', 13, 'currentColor')} ${x.eta ? `${esc(fmtDate(p, x.eta, true))} 도착 예정` : x.status === 'ordered' ? '주문 완료' : '배송 중'}</span>`;
 }
 const shopTab = () => `<div class="ax_btab">${[['homeS', '홈'], ['grid4', '카테고리'], ['receipt', '주문'], ['user', '내 정보']].map(([k, l]) => `<span class="${k === 'receipt' ? 'on' : ''}">${ax(k, 24, 'currentColor')}${l}</span>`).join('')}</div>`;
-const prodImg = x => `<span class="ax_pimg">${ax(itemIc(x), 30, '#7d8796', 1.7)}${x.gift ? `<i>${ax('gift', 11, '#a2526b', 2.2)}</i>` : ''}</span>`;
+const prodImg = x => `<span class="ax_pimg">${prodSvg(x) || ax(itemIc(x), 30, '#7d8796', 1.7)}${x.gift ? `<i>${ax('gift', 11, '#a2526b', 2.2)}</i>` : ''}</span>`;
 export function shopScreen(p, now, f = 'all') {
     const M = mo(p);
     if (!M) return emptyApp(p, now, '쇼핑', 'money', '아직 주문이 없어요. 채우면 은행 · 지갑 · 쇼핑이 함께 생겨요.');
@@ -275,7 +276,7 @@ export function shopScreen(p, now, f = 'all') {
         <div class="ax_sptabs">${tb('all', '전체', os.length)}${tb('go', '배송 중', go.length)}${tb('ok', '배송 완료', ok.length)}</div>
         ${xs.map(x => `<div class="ax_card ax_oc"><div class="ax_och">${statusPill(p, x)}<small>${esc(fmtDate(p, x.time, true))} 주문</small></div>
           <div class="ax_ocr">${prodImg(x)}<span class="ax_tx"><small class="ax_ocsl">${esc(String(x.shop || '').toUpperCase())}</small><b>${esc(x.item)}</b>${x.ko && koOn() ? `<span class="ax_p">${esc(x.ko)}</span>` : ''}<span class="ax_ocpr cg_num">${esc(fmtMoney(p, x.price === null ? null : x.price * (x.qty || 1)))}<small>${x.qty || 1}개${x.gift ? ' · 선물' : ''}</small></span></span></div>
-          <div class="ax_ocb"><button type="button" data-go="order" data-i="${x.id}">주문 상세</button><button type="button" class="p" data-go="order" data-i="${x.id}">${x.status === 'delivered' ? '다시 보기' : '배송 조회'}</button></div></div>`).join('') || '<div class="ax_empty">주문이 없어요</div>'}
+          <div class="ax_ocb"><button type="button" data-go="order" data-i="${x.id}">주문 상세</button><button type="button" class="p" data-go="${STEP[x.status] === undefined ? 'order' : 'track'}" data-i="${x.id}">${x.status === 'delivered' ? '배송 기록' : STEP[x.status] === undefined ? '다시 보기' : '배송 조회'}</button></div></div>`).join('') || '<div class="ax_empty">주문이 없어요</div>'}
         <i class="ax_pad"></i>
       </div></div>
       ${shopTab()}</div>${axInd()}`;
@@ -298,6 +299,38 @@ export function orderView(p, now, id) {
           ${tx ? `<button type="button" class="ax_more" data-go="tx" data-i="${tx.id}">${ai >= 0 ? `${kindName[mo(p).bank.accounts[ai].kind]} •••• ${esc(tx.account)} · ` : ''}은행에서 보기 ${ax('chev', 14, 'currentColor', 2.4)}</button>` : ''}</div>
         <div class="ax_sec">주문 정보</div><div class="ax_card"><div class="ax_lr"><span>주문일</span><span class="cg_num">${esc(fmtDate(p, x.time))}</span></div>${x.gift ? `<div class="ax_lr"><span>받는 사람</span><span>${esc(x.gift)}</span></div>` : ''}</div>
         ${relatedRows(p, x.ev, `order:${x.id}`)}
+        <i class="ax_pad"></i>
+      </div></div>
+      ${shopTab()}</div>${axInd()}`;
+}
+
+// ---- 배송 조회: the carrier, a tracking number and the scans, all worked out from the order's dates and status
+const CARRIER = { KR: ['CJ대한통운', '한진택배', '롯데택배'], DE: ['DHL', 'Hermes', 'DPD'], AT: ['Post.at', 'DPD'], CH: ['Post CH', 'DPD'], US: ['UPS', 'USPS', 'FedEx'], GB: ['Royal Mail', 'Evri', 'DPD'], FR: ['Colissimo', 'Chronopost'], IT: ['Poste Italiane', 'BRT'], ES: ['Correos', 'SEUR'], JP: ['ヤマト運輸', '佐川急便'], CA: ['Canada Post', 'Purolator'], AU: ['Australia Post'] };
+const seedNum = s => [...String(s)].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 2147483647, 7);
+const addDay = (md, n) => { const m = String(md || '').match(/^(\d{2})-(\d{2})/); if (!m) return ''; const d = new Date(Date.UTC(2025, Number(m[1]) - 1, Number(m[2]) + n)); return `${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`; };
+function trackEvents(p, x) {
+    const st = STEP[x.status] ?? 0, t0 = String(x.time || ''), d0 = t0.slice(0, 5), h0 = t0.slice(6, 11) || '10:00', r = seedNum(x.id || x.item);
+    const end = String(x.arrived || x.eta || addDay(d0, 2)).slice(0, 5), mm = n => String(n).padStart(2, '0'), at = (d, h, m) => `${d} ${mm(h)}:${mm(m)}`;
+    const ev = [{ t: `${d0} ${h0}`, what: '주문 접수', where: '' }];
+    if (st >= 1) ev.push({ t: at(d0, 17 + r % 3, (r >> 3) % 60), what: '집하', where: x.shop || '' }, { t: at(addDay(d0, 1), 2 + r % 3, (r >> 5) % 60), what: '간선 상차', where: '물류 허브' });
+    if (st >= 2) ev.push({ t: at(addDay(end, -1), 21 + r % 2, (r >> 7) % 60), what: '배송센터 도착', where: '배송센터' }, { t: at(end, 7 + r % 2, (r >> 9) % 60), what: '배송 출발', where: '배송센터' });
+    if (st >= 3) ev.push({ t: x.arrived && String(x.arrived).length > 6 ? String(x.arrived) : at(end, 11 + r % 6, (r >> 11) % 60), what: '배송 완료', where: x.gift ? `${x.gift}에게` : '문 앞' });
+    return ev.reverse();
+}
+export function trackView(p, now, id) {
+    const x = mo(p)?.orders?.find(o => o.id === id);
+    if (!x || STEP[x.status] === undefined) return orderView(p, now, id);
+    const r = seedNum(x.id || x.item), cs = CARRIER[p.country] || ['DHL', 'UPS'], car = cs[r % cs.length];
+    const no = p.country === 'KR' ? `${5000 + r % 4000}${String(r).padStart(8, '0').slice(-8)}` : `00${String(r * 7919).padStart(12, '0').slice(-12)}`;
+    const ev = trackEvents(p, x), head = x.status === 'delivered' ? `${x.arrived ? `${fmtDate(p, x.arrived, true)} ` : ''}배송 완료` : x.eta ? `${fmtDate(p, x.eta, true)} 도착 예정` : '배송 준비 중';
+    return `<div class="ax_shopv">
+      <div class="ax_sph ax_sphs">${axBar(p, now, '#fff')}
+        <div class="ax_spr"><button type="button" class="ax_bkc" data-go="shop" aria-label="뒤로">${ax('back', 18, '#fff', 2.3)}</button><span class="ax_bkt">배송 조회</span><span class="ax_bkc">${ax('truck', 18, '#fff')}</span></div>
+      </div>
+      <div class="ax_sps ax_spso"><div class="ax_scroll">
+        <div class="ax_card ax_oc"><div class="ax_ocr">${prodImg(x)}<span class="ax_tx"><small class="ax_trh">${esc(head)}</small><b>${esc(x.item)}</b>${x.ko && koOn() ? `<span class="ax_p">${esc(x.ko)}</span>` : ''}<span class="ax_trn cg_num">${esc(car)} · ${esc(no.replace(/(\d{4})(?=\d)/g, '$1 '))}</span></span></div></div>
+        <div class="ax_card ax_trk">${ev.map((e, k) => `<div class="${k ? '' : 'on'}"><i></i><span><b>${esc(e.what)}</b><small class="cg_num">${esc(fmtDate(p, e.t, true))} ${esc(e.t.slice(6, 11))}${e.where ? ` · ${esc(e.where)}` : ''}</small></span></div>`).join('')}</div>
+        <button type="button" class="ax_more ax_trd" data-go="order" data-i="${x.id}">주문 상세 보기 ${ax('chev', 14, 'currentColor', 2.4)}</button>
         <i class="ax_pad"></i>
       </div></div>
       ${shopTab()}</div>${axInd()}`;
