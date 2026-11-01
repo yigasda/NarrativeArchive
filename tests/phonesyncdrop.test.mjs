@@ -341,3 +341,10 @@ test('story days sort and count across New Year, not as text', async () => {
     assert.ok(storyMin('03-10 10:00', '02-01 12:00') < storyMin('01-20 10:00', '02-01 12:00'));
     assert.deepEqual([{ opened: '01-01 10:00' }, { opened: '12-31 10:00' }].sort(byStory('01-01 12:00', f => f.opened)).map(f => f.opened), ['12-31 10:00', '01-01 10:00']);
 });
+
+test('a gift field the model fills with false or "no" is no gift', async () => {
+    const { giftOf } = await import('../src/phoneparse.js');
+    for (const v of [false, 'false', 'no', 'None', '', null, undefined, '없음', 'true']) assert.equal(giftOf(v), '', String(v));
+    assert.equal(giftOf(true), '선물');
+    assert.equal(giftOf('Ren'), 'Ren');
+});

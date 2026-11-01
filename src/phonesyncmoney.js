@@ -14,7 +14,7 @@
 import { cash, finance, finite, fx, migrateBank, positions, round } from './finance.js';
 import { boxAt, dayGap, lifeReplay, lifeRevert } from './phonesynclife.js';
 import { dishPic } from './phonefood.js';
-import { byStory, hhmm, when } from './phoneparse.js';
+import { byStory, giftOf, hhmm, when } from './phoneparse.js';
 
 const STEP = { ordered: 0, shipped: 1, 'on the way': 2, delivered: 3 };
 const ORDER = ['ordered', 'shipped', 'on the way', 'delivered', 'unknown', 'cancelled', 'returning', 'returned', 'refunded'];
@@ -247,7 +247,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     records('orders', list(mo.orders), x => {
         const price = Number(x.price);
         if (!txt(x.item) || !txt(x.shop)) fail('주문의 가게나 물건을 확인하지 못했어요');
-        return { shop: txt(x.shop, 60), item: txt(x.item), ko: txt(x.ko), option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5), arrived: '', gift: x.gift === true ? '선물' : txt(x.gift, 40), ...(x.paid === false ? { paid: false } : {}), ...(guess ? { amountFrom: 'guess' } : {}) };
+        return { shop: txt(x.shop, 60), item: txt(x.item), ko: txt(x.ko), option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5), arrived: '', gift: giftOf(x.gift), ...(x.paid === false ? { paid: false } : {}), ...(guess ? { amountFrom: 'guess' } : {}) };
     }, (o, x) => samePlace(o.shop, x.shop) && samePlace(o.item, x.item) && near(o.time, date));
     records('passes', list(mo.passes), x => {
         if (!txt(x.by)) fail('티켓 정보를 확인하지 못했어요');
@@ -276,7 +276,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const time = /^\d{2}-\d{2}/.test(String(x.time || '')) ? txt(x.time, 11) : `${date}${e.time ? ` ${e.time}` : ''}`;
         const row = { shop: txt(x.shop, 60), items, fee: money(x.fee), tip: money(x.tip), discount: money(x.discount), mode: x.mode === 'pickup' ? 'pickup' : 'delivery', time, arrived: when(x.arrived) || hhmm(x.arrived),
             to: txt(x.to, 40) || 'home', address: txt(x.address, 80), left: txt(x.left, 60), noteShop: txt(x.noteShop, 120), noteShopKo: txt(x.noteShopKo, 200), noteRider: txt(x.noteRider, 120), noteRiderKo: txt(x.noteRiderKo, 200),
-            noCutlery: x.noCutlery === true, for: Math.max(1, Math.round(Number(x.for) || 1)), status, gift: txt(x.gift, 40), reviewed: false, account: 'cash',
+            noCutlery: x.noCutlery === true, for: Math.max(1, Math.round(Number(x.for) || 1)), status, gift: giftOf(x.gift), reviewed: false, account: 'cash',
             id: `sync:${e.id}:d${k}`, ev: e.id, storyEvent: e.id, sourceIndex: e.at, sync: true };
         // the row that paid it: made by this event, or one already in the bank this event pointed at
         // (the same amount, else a payment to the same shop in this event: a tip left out or a rounding is still this order's)

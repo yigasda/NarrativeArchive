@@ -17,8 +17,8 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
-import { arr, evOf, gapDays, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
-export { arr, gapDays, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
+import { arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+export { arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { applyDays, applyLife, applyWeather, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
 import { pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
@@ -1092,7 +1092,7 @@ export function parseMoney(raw, country = '') {
         cards: arr(raw.cards).map(c => ({ account: last4(c?.account), exp: line(c?.exp, 5) })).filter(c => accounts.some(a => a.last4 === c.account)).slice(0, 4),
         tx: arr(raw.tx).map(x => withEv({ account: last4(x?.account), who: line(x?.who, 60), ko: ko(x?.ko), amount: num(x?.amount), time: when(x?.time), kind: pick(x?.kind, ['card', 'transfer', 'deposit'], 'card'), memo: line(x?.memo, 80), pending: !!x?.pending }, x)).filter(x => x.who && x.amount !== null).slice(-30),
         passes: arr(raw.passes).map(x => withEv({ kind: pick(x?.kind, ['flight', 'train', 'hotel', 'event', 'other'], 'other'), by: line(x?.by, 60), from: line(x?.from, 40), to: line(x?.to, 40), date: when(x?.date).slice(0, 5), time: hhmm(x?.time), seat: line(x?.seat, 12), gate: line(x?.gate, 12), no: line(x?.no, 24), status: line(x?.status, 30) }, x)).filter(x => x.by).slice(-8),
-        orders: arr(raw.orders).map(x => withEv({ shop: line(x?.shop, 60), item: line(x?.item, 80), ko: ko(x?.ko), option: line(x?.option, 60), qty: Math.max(1, Math.round(Number(x?.qty) || 1)), price: num(x?.price), time: when(x?.time), status: pick(x?.status, ['ordered', 'shipped', 'on the way', 'delivered', 'unknown'], 'unknown'), eta: when(x?.eta).slice(0, 5), arrived: when(x?.arrived).slice(0, 5), gift: line(x?.gift, 40) }, x)).filter(x => x.item).slice(-12),
+        orders: arr(raw.orders).map(x => withEv({ shop: line(x?.shop, 60), item: line(x?.item, 80), ko: ko(x?.ko), option: line(x?.option, 60), qty: Math.max(1, Math.round(Number(x?.qty) || 1)), price: num(x?.price), time: when(x?.time), status: pick(x?.status, ['ordered', 'shipped', 'on the way', 'delivered', 'unknown'], 'unknown'), eta: when(x?.eta).slice(0, 5), arrived: when(x?.arrived).slice(0, 5), gift: giftOf(x?.gift) }, x)).filter(x => x.item).slice(-12),
     };
 }
 // what the phone already holds, so the money side reuses its event tags

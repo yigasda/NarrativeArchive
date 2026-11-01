@@ -9,7 +9,7 @@ import { calendars } from './calendar.js';
 import { saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
-import { arr, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
+import { arr, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, dayGap, fileOf, nightsToDays, parseWeather, weatherFrom } from './phonesynclife.js';
 import { exclusive } from './phonesync.js';
@@ -224,7 +224,7 @@ export function parseDelivery(raw, accounts = [], tx = [], now = '') {
         orders: arr(raw.orders).map(o => withEv({ shop: line(o?.shop, 60), items: arr(o?.items).map(dish).filter(x => x.name).slice(0, 10), fee: num(o?.fee) ?? 0, tip: num(o?.tip) ?? 0, discount: Math.abs(num(o?.discount) ?? 0),
             mode: pick(o?.mode, ['delivery', 'pickup'], 'delivery'), time: when(o?.time), arrived: when(o?.arrived), to: line(o?.to, 40) || 'home', address: line(o?.address, 80), left: line(o?.left, 60),
             noteShop: line(o?.noteShop, 120), noteShopKo: ko(o?.noteShopKo), noteRider: line(o?.noteRider, 120), noteRiderKo: ko(o?.noteRiderKo), noCutlery: yes(o?.noCutlery), for: int(o?.for, 1, 30) ?? 1,
-            status: pick(o?.status, ['on the way', 'delivered', 'cancelled', 'refunded'], 'delivered'), account: acct(o?.account), ...paidOf(o?.paidBy), reviewed: yes(o?.reviewed), gift: line(o?.gift, 40) }, o)).filter(o => o.shop && o.items.length && o.time)
+            status: pick(o?.status, ['on the way', 'delivered', 'cancelled', 'refunded'], 'delivered'), account: acct(o?.account), ...paidOf(o?.paidBy), reviewed: yes(o?.reviewed), gift: giftOf(o?.gift) }, o)).filter(o => o.shop && o.items.length && o.time)
             .sort(byStory(now)).slice(-12),
         cart,
     };

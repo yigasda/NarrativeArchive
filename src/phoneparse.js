@@ -14,6 +14,8 @@ export const when = v => {
 };
 export const hhmm = v => { const mt = String(v || '').match(/(\d{1,2}):(\d{2})/); return mt && Number(mt[1]) < 24 && Number(mt[2]) < 60 ? `${pad(mt[1])}:${mt[2]}` : ''; };
 export const ko = v => line(v, 400);
+// who a gift went to: true is just "a gift"; false, "no", "none" and the like are no gift (never a person called "false")
+export const giftOf = v => (v === true ? '선물' : /^(false|true|no|none|null|nein|keine?|아니(요)?|없음|-)?$/i.test(line(v, 40)) ? '' : line(v, 40));
 export const arr = v => (Array.isArray(v) ? v.filter(x => x !== null && x !== undefined) : []);
 export const pick = (v, list, dflt) => (list.includes(v) ? v : dflt);
 // an event tag, kept only when given: items from the same story event share it (links between apps)
