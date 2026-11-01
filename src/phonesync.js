@@ -216,7 +216,18 @@ export const reachesEnd = (s, rows, round) => { const last = rows[rows.length - 
 // a quote counts when it is in the source word for word, ignoring only spacing, case and punctuation:
 // reworded text can turn "lent" into "borrowed", so it never counts
 const norm = t => String(t || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
-export const quoted = (quote, text) => { const q = norm(quote); return q.length >= 2 && norm(text).includes(q); };
+// the words are there as written; a quote with a word the model slipped in or changed ("집주인에게서 계약 연장 서류를…" for
+// "…계약 연장 서류를…") still counts when nearly all its words are in that message, in order
+export const quoted = (quote, text) => {
+    const q = norm(quote), t = norm(text);
+    if (q.length < 2) return false;
+    if (t.includes(q)) return true;
+    const ws = String(quote || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 2);
+    if (ws.length < 4) return false;
+    let at = 0, hit = 0;
+    for (const w of ws) { const i = t.indexOf(w, at); if (i >= 0) { hit++; at = i + w.length; } }
+    return hit / ws.length >= 0.75;
+};
 
 // 복구 기록: what each round added, kept in this browser per chat until the saved chat is seen to have it
 const jkey = scope => `narrativearchive:sync:${scope}`;

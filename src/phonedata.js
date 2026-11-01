@@ -184,7 +184,7 @@ MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - A new paid ${paid} has its payment as a move in the same event.
 - An order or ticket only moves forward. A cancelled order${delivery ? ' or delivery' : ''} moves no money; if it was already paid, its refund is a plus move.
 ${delivery ? `- A delivery paid in cash at the door has no move.
-- A delivery from a shop not in DELIVERY SHOPS also gives "newShop": that shop as the app would list it (a rating, reviews, delivery fee and minimum order that fit such a shop there), with 2 to 4 dishes: the one ordered and ones it would have, each with different ingredients or broth.
+- A delivery from a shop not in DELIVERY SHOPS also gives "newShop": that shop as the app would list it (a rating, reviews, delivery fee and minimum order that fit such a shop there), with 2 to 4 dishes: the one ordered and others it would have.
 ` : ''}` : ''}
 ${PHONE_STYLE}
 
@@ -194,9 +194,9 @@ ANSWER — one JSON object, nothing else:
                "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line",
                "phone": { only the app items this event puts on the phone }${money ? `,
                "money": { "amountFrom": "story" | "guess",
-                          "moves": [{ "account": a bank account's last 4 digits or "broker:EUR", "amount": minus for money out, "currency", "who", "ko", "memo": what it was for, like "decaf latte", "kind": "card" | "transfer" | "deposit", "fee": a transfer fee charged on top of "amount", on the sending move, "occurrence": "new" | "again", "already": "" }],
+                          "moves": [{ "account": a bank account's last 4 digits or "broker:EUR", "amount": minus for money out, "currency", "who", "ko", "memo": what it was for, "kind": "card" | "transfer" | "deposit" | "cash" (taken out as cash), "fee": a transfer fee charged on top of "amount", on the sending move, "occurrence": "new" | "again", "already": "" }],
                           "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko", "currency", "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
-                          "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returned" | "refunded", "eta": "MM-DD", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
+                          "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" (a return asked for) | "returned" | "refunded", "eta": "MM-DD", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
                           "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }]${delivery ? `,
                           "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients in English, like "beef", "shrimp"], "size": "regular" | "large", "set": [a set's sides or drinks, like "fries", "cola"] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "left", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery", "for": how many it feeds, "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
                                           "newShop": { "name": the same as "shop", "ko", "cuisine", "rating": like 4.7, "reviews": how many, "fee", "minOrder", "eta": like "25–35", "menu": [{ "name", "ko", "desc", "price", "top": true for its best-known dish, "pic": like the items' "pic" }] } or null }]` : ''} }` : ''} }]${life ? `,
@@ -210,7 +210,7 @@ Items in "phone":
 {
 ${PHONE_ITEMS}${life ? `,
   "alarms": [{ "change": an id or "", "time", "label", "ko", "days": the weekdays it repeats or [], "date": "MM-DD" for a one-time alarm, "on", "wake", "then", "snooze" }],
-  "files": [{ "change": an id or "", "name", "kind", "folder", "size": KB, "time", "from", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],
+  "files": [{ "change": an id or "", "name", "kind", "folder": one of LIFE NOW's "folders" (downloads are "Downloads"), "size": KB, "time", "from", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],
   "health": [{ "date", "bed", "sleep", "wake", "woke", "steps", "km", "floors", "workout": { "kind", "time", "min", "km" } or null, "hr": [low, high], "from": "story" }],
   "usual": { "weight": kg, "coffee": cups a day, "coffeeKind", "coffeeKo", "water": litres a day }` : ''}
 }
@@ -221,7 +221,15 @@ export const AI_SYS_PHONE_UPDATE = updateSystem();
 
 // ---- what the model sends back, cleaned: known keys only, text cut short, times in one shape
 
-export function parsePhone(out) {
+// a country as the model may write it: "DE", "DEU", "Germany", "독일"
+const ISO3 = { KOR: 'KR', USA: 'US', GBR: 'GB', DEU: 'DE', FRA: 'FR', ITA: 'IT', ESP: 'ES', JPN: 'JP', CHN: 'CN', TWN: 'TW', CAN: 'CA', AUS: 'AU', RUS: 'RU', BRA: 'BR' };
+const NAMED = { korea: 'KR', 'south korea': 'KR', 'united states': 'US', usa: 'US', america: 'US', 'united kingdom': 'GB', uk: 'GB', britain: 'GB', england: 'GB', germany: 'DE', deutschland: 'DE', france: 'FR', italy: 'IT', spain: 'ES', japan: 'JP', china: 'CN', taiwan: 'TW', canada: 'CA', australia: 'AU', russia: 'RU', brazil: 'BR' };
+export const countryOf = v => { const s = String(v || '').trim(), u = s.toUpperCase(); if (/^[A-Z]{2}$/.test(u)) return u; if (ISO3[u]) return ISO3[u]; return NAMED[s.toLowerCase()] || Object.entries(COUNTRIES).find(([, n]) => n === s)?.[0] || ''; };
+// a count as a profile writes it: 1200, "1.2k", "3.4만", "2M"
+const countOf = v => { const s = String(v ?? '').trim(), n = num(s); if (n === null) return 0; const k = /만/.test(s) ? 1e4 : /백만|\d\s*[mM]\b/.test(s) ? 1e6 : /\d\s*[kK]\b|천/.test(s) ? 1e3 : 1; return Math.max(0, Math.round(n * k)); };
+const truthy = v => v === true || /^(true|yes|ja|예|네)$/i.test(String(v ?? '').trim());
+// owner: whose phone it is (a message they wrote is "me", whatever name the model gives it; no thread or call with themselves)
+export function parsePhone(out, owner = '') {
     const s = String(out || '').replace(/```(?:json)?/gi, '');
     const a = s.indexOf('{'), b = s.lastIndexOf('}');
     if (a < 0 || b <= a) throw new Error('모델 답에서 폰 내용(JSON)을 찾지 못했어요');
@@ -229,27 +237,32 @@ export function parsePhone(out) {
     try { raw = parseJson(s.slice(a, b + 1)); } catch { throw new Error('모델 답의 JSON이 깨져 있어요. 다시 해 보세요'); }
     // an everyday record the model made up from the owner's habits stays apart from the story (재구성)
     const tag = (x, raw) => (raw?.everyday === true ? { ...withEv(x, raw), src: 'guess' } : withEv(x, raw));
-    const msg = x => ({ from: line(x?.from, 40) || 'me', text: str(x?.text, 600), ko: ko(x?.ko), time: when(x?.time) });
-    return {
+    const self = owner ? nameKey(owner) : '', mine = v => !!self && nameKey(line(v, 40)) === self;
+    const msg = x => ({ from: mine(x?.from) ? 'me' : line(x?.from, 40) || 'me', text: str(x?.text, 600), ko: ko(x?.ko), time: when(x?.time) });
+    // a translation that only repeats its text (a Korean text given the same "ko") is none: it would show twice
+    const same = (a, b) => !!a && !!b && a.replace(/\s+/g, ' ').trim() === b.replace(/\s+/g, ' ').trim();
+    const PAIRS = [['text', 'ko'], ['caption', 'ko'], ['q', 'ko'], ['title', 'ko'], ['title', 'kt'], ['subject', 'ks'], ['photo', 'pko'], ['bio', 'ko']];
+    const unko = o => { if (o && typeof o === 'object') { for (const [a, b] of PAIRS) if (same(o[a], o[b])) o[b] = ''; for (const v of Object.values(o)) if (v && typeof v === 'object') unko(v); } return o; };
+    return unko({
         device: parseDevice(raw.device),
-        country: /^[A-Z]{2}$/.test(String(raw.country || '').toUpperCase()) ? String(raw.country).toUpperCase() : '',
+        country: countryOf(raw.country),
         wall: pick(raw.wallpaper, WALLS, ''),
         accent: pick(raw.accent, ACCENTS, ''),
         now: when(raw.now),
-        contacts: arr(raw.contacts).map(x => ({ name: line(x?.name, 40), saved: line(x?.saved, 40) })).filter(x => x.name).slice(0, CAP.contacts),
-        threads: arr(raw.threads).map(t => { const d = t?.draft && str(t.draft.text, 600); return { with: line(t?.with, 40), messages: arr(t?.messages).map(msg).filter(x => x.text), ...(d ? { draft: { text: d, ko: ko(t.draft.ko), time: when(t.draft.time), src: 'story' } } : {}) }; }).filter(t => t.with && t.messages.length).slice(0, CAP.threads),
-        calls: arr(raw.calls).map(x => tag({ with: line(x?.with, 40), type: pick(x?.type, ['in', 'out', 'missed'], 'in'), time: when(x?.time), min: Math.max(0, Math.min(600, Math.round(Number(x?.min) || 0))) }, x)).filter(x => x.with),
+        contacts: arr(raw.contacts).map(x => ({ name: line(x?.name, 40), saved: line(x?.saved, 40) })).filter(x => x.name && !mine(x.name)).slice(0, CAP.contacts),
+        threads: arr(raw.threads).map(t => { const d = t?.draft && str(t.draft.text, 600); return { with: line(t?.with, 40), messages: arr(t?.messages).map(msg).filter(x => x.text), ...(d ? { draft: { text: d, ko: ko(t.draft.ko), time: when(t.draft.time), src: 'story' } } : {}) }; }).filter(t => t.with && !mine(t.with) && t.messages.length).slice(0, CAP.threads),
+        calls: arr(raw.calls).map(x => tag({ with: line(x?.with, 40), type: pick(x?.type, ['in', 'out', 'missed'], 'in'), time: when(x?.time), min: Math.max(0, Math.min(600, Math.round(num(x?.min) || 0))) }, x)).filter(x => x.with && !mine(x.with)),
         photos: arr(raw.photos).map(x => tag({ caption: line(x?.caption, 200), ko: ko(x?.ko), time: when(x?.time), mood: pick(x?.mood, MOODS, 'warm') }, x)).filter(x => x.caption),
         notes: arr(raw.notes).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 1500), ko: str(x?.ko, 1500), time: when(x?.time) }, x)).filter(x => x.title || x.text),
-        searches: arr(raw.searches).map(x => tag({ q: line(x?.q, 120), ko: ko(x?.ko), time: when(x?.time), ...(x?.tab ? { tab: true } : {}), ...(x?.mark ? { mark: true } : {}) }, x)).filter(x => x.q),
+        searches: arr(raw.searches).map(x => tag({ q: line(x?.q, 120), ko: ko(x?.ko), time: when(x?.time), ...(truthy(x?.tab) ? { tab: true } : {}), ...(truthy(x?.mark) ? { mark: true } : {}) }, x)).filter(x => x.q),
         events: arr(raw.events).map(x => tag({ title: line(x?.title, 80), ko: ko(x?.ko), date: when(x?.date).slice(0, 5), time: hhmm(x?.time) }, x)).filter(x => x.title && x.date),
-        profile: raw.profile && typeof raw.profile === 'object' ? { handle: line(raw.profile.handle, 40), bio: line(raw.profile.bio, 200), ko: ko(raw.profile.ko), followers: Math.max(0, Math.round(Number(raw.profile.followers) || 0)), following: Math.max(0, Math.round(Number(raw.profile.following) || 0)) } : null,
-        posts: arr(raw.posts).map(x => tag({ text: str(x?.text, 800), ko: str(x?.ko, 800), photo: line(x?.photo, 200), pko: ko(x?.pko), time: when(x?.time), likes: Math.max(0, Math.min(99999, Math.round(Number(x?.likes) || 0))),
+        profile: raw.profile && typeof raw.profile === 'object' ? { handle: line(raw.profile.handle, 40), bio: line(raw.profile.bio, 200), ko: ko(raw.profile.ko), followers: countOf(raw.profile.followers), following: countOf(raw.profile.following) } : null,
+        posts: arr(raw.posts).map(x => tag({ text: str(x?.text, 800), ko: str(x?.ko, 800), photo: line(x?.photo, 200), pko: ko(x?.pko), time: when(x?.time), likes: Math.min(99999, countOf(x?.likes)),
             comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) }, x)).filter(x => x.text || x.photo),
-        mails: arr(raw.mails).map(x => tag({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: !!x?.unread }, x)).filter(x => x.from && (x.subject || x.text)),
+        mails: arr(raw.mails).map(x => tag({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: truthy(x?.unread) }, x)).filter(x => x.from && (x.subject || x.text)),
         diary: arr(raw.diary).map(x => tag({ date: when(x?.date).slice(0, 5), title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000) }, x)).filter(x => x.date && x.text),
-        voice: arr(raw.voice).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: Math.max(3, Math.min(900, Math.round(Number(x?.sec) || 30))), place: line(x?.place, 60), src: 'story' }, x)).filter(x => x.text),
-    };
+        voice: arr(raw.voice).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'story' }, x)).filter(x => x.text),
+    });
 }
 
 // what makes two items the same, list by list: an update that repeats what the phone holds adds nothing
@@ -293,8 +306,9 @@ function mergePhone(p, add, { keepAll = false } = {}) {
     const keep = (list, n) => (keepAll ? list : list.slice(-n));
     for (const t of add.threads) {
         const old = p.threads.find(x => nameKey(x.with) === nameKey(t.with));
-        if (old) { old.messages = keep([...old.messages, ...fresh('msg', old.messages, t.messages)], CAP.messages); if (t.draft) old.draft = t.draft; }
-        else p.threads.push({ ...t, messages: keep(fresh('msg', [], t.messages), CAP.messages) });
+        // in story order: a later round can bring texts from before the ones there (an earlier stretch read late)
+        if (old) { old.messages = keep([...old.messages, ...fresh('msg', old.messages, t.messages)].sort(byStory(p.now)), CAP.messages); if (t.draft) old.draft = t.draft; }
+        else p.threads.push({ ...t, messages: keep(fresh('msg', [], t.messages).sort(byStory(p.now)), CAP.messages) });
     }
     p.threads = keep([...p.threads].sort(byStory(p.now, lastTime)), CAP.threads);
     joinComments(p.posts, add.posts, CAP.comments);
@@ -486,7 +500,7 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     const binding=structuredClone(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key]);
     const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner), part, await ownerProfileBlock(ctx(),binding,owner)), { force: true, system: old ? AI_SYS_PHONE_UPDATE : AI_SYS_PHONE, maxTokens: 16000 });
     if(JSON.stringify(binding)!==JSON.stringify(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key])) throw new Error('생성 중 연결한 인물 정보가 변경됐어요. 다시 시도해 주세요');
-    const got = parsePhone(out);
+    const got = parsePhone(out, owner);
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
     if (part) {
         const p = m.phones[key];
@@ -509,11 +523,14 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         if (was?.wealthPlan) base.wealthPlan = structuredClone(was.wealthPlan);
         if (was?.money) base.money = was.money;
         if (was?.investment) base.investment = was.investment;
+        // the apps filled on their own (clock · health · files · weather, delivery) stay like the bank, and so does what the
+        // owner set: the year, hidden contacts and places, where they live
+        for (const k of ['life', 'delivery', 'voiceAt', 'year', 'noYear', 'hiddenContacts', 'hiddenPlaces', 'lives']) if (was?.[k] !== undefined) base[k] = was[k];
         if (binding) base.financeProfile = structuredClone(binding);
         // the phone's own apps start reading again from here; the bank and investment keep their marks
         base.sync = newSync(phoneChatScope(ctx()));
         base.sync.marks.base = mark;
-        for (const g of ['money', 'invest']) if (was?.sync?.marks?.[g]) base.sync.marks[g] = was.sync.marks[g];
+        for (const g of ['money', 'invest', 'life', 'delivery']) if (was?.sync?.marks?.[g]) base.sync.marks[g] = was.sync.marks[g];
         m.phones[key] = mergePhone(base, got);
     }
     const p = m.phones[key];
@@ -608,19 +625,21 @@ async function updatePhone(m, owner) {
         const { evidence, background } = archiveRound(s, sections, rows, round.rows);
         const before = [];
         for (let i = background.length - 1, size = 0; i >= 0 && size + background[i].text.length <= BEFORE_MAX; i--) { before.unshift(background[i].text); size += background[i].text.length; }
-        const events = Object.entries(s.events).slice(-40).map(([id, e]) => `- ${id}: ${e.summary} (#${e.at})`).join('\n');
+        const events = Object.entries(s.events).slice(-40).map(([id, e]) => `- ${id}: ${e.summary}${e.at === null || e.at === undefined ? '' : ` (#${e.at})`}`).join('\n');
         const world = worldText(m), lore = await loreFor(m, owner), profile = await ownerProfileBlock(ctx(), p.financeProfile, owner, { money: !!(p.money || p.investment) });
         if (p.money) migrateBank(m, p);
         const money = moneyNow(p), invest = investNow(m, p), life = lifeNow(p);
         // the weather: a status line stands; the model writes it when there is none, or when the status line's day moved on
         let tracker = null;
-        try { tracker = weatherFrom(recentTrackers(1)[0]); } catch { /* no status lines */ }
+        try { tracker = trackerWeather(recentTrackers(1)[0]); } catch { /* no status lines */ }
         const trackDay = tracker ? when(tracker.date).slice(0, 5) : '';
         const askWeather = !!life && (!tracker || !!trackDay && trackDay !== life.weather?.date);
         // the year the phone's now is in: read once from the bank or the archive, then carried over New Year with the now
         if (!p.year && !p.noYear) { const y = Number(storyYear(m, p) || String(p.money?.asOf || p.investment?.date || '').slice(0, 4)); if (y > 1900) p.year = y; }
         const known = p.year && !p.noYear ? String(p.year) : '', year = known || String(new Date().getFullYear());
-        const anchor = known && /^\d{2}-\d{2}/.test(p.now || '') ? `${known}-${p.now.slice(0, 5)}` : '';
+        // the ledger's days are taken nearest the phone's now (a story with no year of its own too: then this year), so a round
+        // past New Year books January after December
+        const anchor = /^\d{2}-\d{2}/.test(p.now || '') ? `${year}-${p.now.slice(0, 5)}` : '';
         // the days ahead with their weekdays (only with a known year): "on Friday" is a date the model can look up
         const today = String(p.now || '').slice(0, 5), dayList = known && /^\d{2}-\d{2}$/.test(today) ? Array.from({ length: 14 }, (_, k) => {
             const d = new Date(Date.UTC(Number(known), Number(today.slice(0, 2)) - 1, Number(today.slice(3, 5)) + k));
@@ -660,26 +679,34 @@ async function updatePhone(m, owner) {
         const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map(p.threads.map(t => [t.id, t.messages.length]));
         const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, seen: s.seen }), now: p.now, year: p.year, moneyAt: p.money?.at, investAt: p.investment?.at,
             comments: (p.posts || []).filter(x => x.id).map(x => [x.id, x.comments?.length || 0]) };
-        for (const e of raw.events.slice(0, 40)) {
-            const at = Number(e?.at), sec = evidence.find(x => at >= x.first && at <= x.last);
+        // an event's day when the model leaves it out: the day of the event before it, else the answer's now
+        let lastDay = when(raw.now).slice(0, 5);
+        const used = new Set();
+        for (const e of arr(raw.events).slice(0, 40)) {
+            if (!e || typeof e !== 'object') continue;
+            // "#151" or "151" for the message number
+            const at = Number(String(e.at ?? '').replace(/^\s*#/, '')), sec = evidence.find(x => at >= x.first && at <= x.last);
             const fail = why => (inRound.has(at) ? (failed[at] ||= why) : loose.push(why));
             if (!Number.isInteger(at) || at <= start || (!inRound.has(at) && !sec)) { fail('읽는 범위 밖의 일이에요'); continue; }
             if (!quoted(e.quote, textAt.get(at) || '') && !(sec && quoted(e.quote, sec.text))) { fail('원문에서 근거를 찾지 못했어요'); continue; }
             let add;
-            const day = when(e.date).slice(0, 5), phone = e.phone && typeof e.phone === 'object' ? structuredClone(e.phone) : {};
+            const day = when(e.date).slice(0, 5) || lastDay, phone = e.phone && typeof e.phone === 'object' ? structuredClone(e.phone) : {};
             // a time without its day ("15:10") takes the event's day
             const dated = x => { if (x && typeof x === 'object' && /^\s*\d{1,2}:\d{2}\s*$/.test(String(x.time || '')) && day) x.time = `${day} ${hhmm(x.time)}`; };
             for (const k of [...LISTS, 'threads']) for (const x of arr(phone[k])) { dated(x); for (const msg of arr(x?.messages)) dated(msg); if (x?.draft) dated(x.draft); }
-            try { add = parsePhone(JSON.stringify(phone)); } catch { fail('앱 내용 형식이 잘못됐어요'); continue; }
+            try { add = parsePhone(JSON.stringify(phone), owner); } catch { fail('앱 내용 형식이 잘못됐어요'); continue; }
             // a bare number is no event id (a model counting its events would take an old event's number again)
             const tagOf = v => { const t = evOf(v); return /^\d+$/.test(t) ? '' : t; };
-            const id = tagOf(e.id) || tagOf(e.summary) || `ev-${at}`;
+            // one id for two new events in one answer would take the second for the first (its payment kept out as the same one)
+            const id0 = tagOf(e.id) || tagOf(e.summary) || `ev-${at}`, id = used.has(id0) && added.some(x => x.id === id0 && x.at !== at) ? `${id0}-${at}` : id0;
+            used.add(id);
             // a changed message already put its payments on the phone: only its own events may correct them
             if (reread.has(at) && e.money && !reread.get(at).some(x => x.id === id)) { notes.push(`#${at} 바뀐 대화의 결제는 새로 넣지 않았어요`); delete e.money; }
             // the money first, on its own: a payment that can't be placed leaves the whole event out
             const stage = structuredClone({ money: p.money, investment: p.investment, finance: m.finance, delivery: p.delivery });
             let paid;
-            try { paid = applyMoney(m, p, { id, at, date: when(e.date).slice(0, 5), time: hhmm(e.time), summary: line(e.summary, 160), money: e.money }, { year, anchor, marks: s.marks, legs: s.events[id]?.legs || [], span: s.failed[at]?.span || null, edited: reread.has(at) }); }
+            if (day) lastDay = day;
+            try { paid = applyMoney(m, p, { id, at, date: day, time: hhmm(e.time), summary: line(e.summary, 160), money: e.money }, { year, anchor, marks: s.marks, legs: s.events[id]?.legs || [], span: s.failed[at]?.span || null, edited: reread.has(at) }); }
             catch (err) { p.money = stage.money; p.investment = stage.investment; m.finance = stage.finance; if (p.delivery) p.delivery = Object.assign(p.delivery, stage.delivery); fail(String(err?.message || err)); continue; }
             for (const c of paid.changes) { apps.add(c.app); if (c.amount !== null) changes.push({ ...c, what: line(e.summary, 60) }); }
             notes.push(...paid.notes);
@@ -953,6 +980,8 @@ export function monthDay(text) {
 }
 // a dated row's day as the phone writes it ("10-25"), or '' when its calendar is not a 12-month one
 export const rowDay = r => (r?.date?.d && calendars()[r.date.cal]?.length === 12 ? `${pad(r.date.m + 1)}-${pad(r.date.d)}` : '');
+// the newest status line's weather, its date as "MM-DD" whatever shape the line writes it in ("1월 30일 (토)", "Jan 30")
+export const trackerWeather = t => { const w = weatherFrom(t); if (w) { const d = monthDay(w.date); w.date = d ? `${pad(d.mo)}-${pad(d.d)}` : when(w.date).slice(0, 5); } return w; };
 export function storyNow(p) {
     try {
         const t = recentTrackers(1)[0];
@@ -1028,7 +1057,7 @@ JSON (one object, nothing before or after it)
   "bank": { "name", "accounts": [{ "id": its id in EXISTING ACCOUNTS, or "", "kind": "checking" | "savings" | "credit", "name", "last4", "currency": three-letter code, "balance": number }] },
   "cards": [{ "account": last4, "exp": "MM/YY" }],
   "tx": [{ "account": last4, "who": merchant or person, "ko", "amount": number (minus for money out), "time": "MM-DD HH:MM",
-           "kind": "card" | "transfer" | "deposit", "memo", "pending": true or false, "ev" }],
+           "kind": "card" | "transfer" | "deposit" | "cash", "memo", "pending": true or false, "ev" }],
   "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by": airline, line, hotel or venue, "from", "to",
                "date": "MM-DD", "time": "HH:MM", "seat", "gate", "no", "status", "ev" }],
   "orders": [{ "shop", "item", "ko", "option", "qty", "price": number, "time", "status": "ordered" | "shipped" | "on the way" | "delivered" | "unknown",
@@ -1086,14 +1115,20 @@ const HOME_CUR = { KR: 'KRW', US: 'USD', GB: 'GBP', DE: 'EUR', FR: 'EUR', IT: 'E
 export function parseMoney(raw, country = '') {
     if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 은행 · 지갑 · 쇼핑 내용(JSON)을 찾지 못했어요');
     const cur = /^[A-Z]{3}$/.test(String(raw.currency || '').toUpperCase()) ? String(raw.currency).toUpperCase() : HOME_CUR[country] || 'EUR';
-    const accounts = arr(raw.bank?.accounts).map(a => ({ id: line(a?.id, 80), currency: /^[A-Z]{3}$/.test(a?.currency || '') ? a.currency : cur, kind: pick(a?.kind, ['checking', 'savings', 'credit'], 'checking'), name: line(a?.name, 40), last4: last4(a?.last4), balance: num(a?.balance) })).filter(a => a.last4).slice(0, 4);
+    const code = v => { const c = String(v || '').trim().toUpperCase(); return /^[A-Z]{3}$/.test(c) ? c : ''; };
+    const accounts = arr(raw.bank?.accounts).map(a => ({ id: line(a?.id, 80), currency: code(a?.currency) || cur, kind: pick(a?.kind, ['checking', 'savings', 'credit'], 'checking'), name: line(a?.name, 40), last4: last4(a?.last4), balance: num(a?.balance) })).filter(a => a.last4).slice(0, 4);
+    // two accounts the model gave the same last 4 digits: the second gets its own (records find their account by them)
+    const seen4 = new Set(); for (const a of accounts) { while (seen4.has(a.last4)) a.last4 = String((Number(a.last4) + 1) % 10000).padStart(4, '0'); seen4.add(a.last4); }
+    // a record's account as the model names it: its last 4 digits, else its name
+    const acctOf = v => { const d = last4(v); if (accounts.some(a => a.last4 === d)) return d; const w = String(v || '').toLowerCase().replace(/\s+/g, ''); return (w && accounts.find(a => a.name && a.name.toLowerCase().replace(/\s+/g, '') === w))?.last4 || ''; };
     return {
         currency: cur, basis: str(raw.basis, 1500),
         bank: { name: line(raw.bank?.name, 40) || 'Bank', accounts },
-        cards: arr(raw.cards).map(c => ({ account: last4(c?.account), exp: line(c?.exp, 5) })).filter(c => accounts.some(a => a.last4 === c.account)).slice(0, 6),
-        tx: arr(raw.tx).map(x => withEv({ account: last4(x?.account), who: line(x?.who, 60), ko: ko(x?.ko), amount: num(x?.amount), time: when(x?.time), kind: pick(x?.kind, ['card', 'transfer', 'deposit'], 'card'), memo: line(x?.memo, 80), pending: !!x?.pending }, x)).filter(x => x.who && x.amount !== null).slice(-30),
+        cards: arr(raw.cards).map(c => ({ account: acctOf(c?.account), exp: line(c?.exp, 5) })).filter(c => accounts.some(a => a.last4 === c.account)).slice(0, 6),
+        // a record on no account the bank has is shown nowhere: left out; money in with no kind is a deposit
+        tx: arr(raw.tx).map(x => withEv({ account: acctOf(x?.account), who: line(x?.who, 60), ko: ko(x?.ko), amount: num(x?.amount), time: when(x?.time), kind: pick(x?.kind, ['card', 'transfer', 'deposit', 'cash'], num(x?.amount) > 0 ? 'deposit' : 'card'), memo: line(x?.memo, 80), pending: x?.pending === true }, x)).filter(x => x.who && x.amount !== null && x.amount !== 0 && x.account).slice(-30),
         passes: arr(raw.passes).map(x => withEv({ kind: pick(x?.kind, ['flight', 'train', 'hotel', 'event', 'other'], 'other'), by: line(x?.by, 60), from: line(x?.from, 40), to: line(x?.to, 40), date: when(x?.date).slice(0, 5), time: hhmm(x?.time), seat: line(x?.seat, 12), gate: line(x?.gate, 12), no: line(x?.no, 24), status: line(x?.status, 30) }, x)).filter(x => x.by).slice(-10),
-        orders: arr(raw.orders).map(x => withEv({ shop: line(x?.shop, 60), item: line(x?.item, 80), ko: ko(x?.ko), option: line(x?.option, 60), qty: Math.max(1, Math.round(Number(x?.qty) || 1)), price: num(x?.price), time: when(x?.time), status: pick(x?.status, ['ordered', 'shipped', 'on the way', 'delivered', 'unknown'], 'unknown'), eta: when(x?.eta).slice(0, 5), arrived: when(x?.arrived).slice(0, 5), gift: giftOf(x?.gift) }, x)).filter(x => x.item).slice(-12),
+        orders: arr(raw.orders).map(x => withEv({ shop: line(x?.shop, 60), item: line(x?.item, 80), ko: ko(x?.ko), option: line(x?.option, 60), qty: Math.max(1, Math.round(num(x?.qty) || 1)), price: num(x?.price), time: when(x?.time), status: pick(x?.status, ['ordered', 'shipped', 'on the way', 'delivered', 'unknown', 'cancelled', 'returning', 'returned', 'refunded'], 'unknown'), eta: when(x?.eta).slice(0, 5), arrived: when(x?.arrived).slice(0, 5), gift: giftOf(x?.gift) }, x)).filter(x => x.item).slice(-12),
     };
 }
 // what the phone already holds, so the money side reuses its event tags
@@ -1122,12 +1157,12 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
                 const rows = raw?.bank?.accounts;
                 if (!Array.isArray(rows) || rows.length !== old.bank.accounts.length || old.bank.accounts.some(a => {
                     const matches = rows.filter(b=>b.id === a.id);
-                    return matches.length !== 1 || matches[0].currency !== a.currency || matches[0].kind !== a.kind || String(matches[0].last4) !== a.last4 || a.kind!=='credit' && (!finite(matches[0].balance) || matches[0].balance < 0);
+                    return matches.length !== 1 || String(matches[0].currency || '').toUpperCase() !== a.currency || matches[0].kind !== a.kind || last4(matches[0].last4) !== a.last4 || a.kind!=='credit' && (!finite(num(matches[0].balance)) || num(matches[0].balance) < 0);
                 })) throw new Error('새 계좌 잔액을 확인하지 못했어요. 기존 잔액은 유지돼요');
                 if (['cards','tx','passes','orders'].some(k=>!Array.isArray(raw[k])) || next.tx.some(t=>!old.bank.accounts.some(a=>a.last4===t.account))) throw new Error('새 거래 내역을 확인하지 못했어요. 기존 데이터는 유지돼요');
                 next.bank.accounts = old.bank.accounts.map(a => {
                     const b = rows.find(b=>b.id === a.id);
-                    return {...a,name:next.bank.accounts.find(b=>b.id === a.id)?.name || a.name,balance:a.kind==='credit'?0:b.balance};
+                    return {...a,name:next.bank.accounts.find(b=>b.id === a.id)?.name || a.name,balance:a.kind==='credit'?0:num(b.balance)};
                 });
             } else next.bank.accounts = old.bank.accounts.map(a => ({ ...a, name: next.bank.accounts.find(b => b.id === a.id)?.name || a.name }));
             next.currency = old.currency;
@@ -1173,10 +1208,12 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
         return p.money;
     }
 }
+// a recording's length: seconds, or "1:20"
+export const secOf = v => { const mt = String(v ?? '').match(/(\d{1,2}):(\d{2})/); const n = mt ? mt[1] * 60 + Number(mt[2]) : num(v); return Math.max(3, Math.min(900, Math.round(n || 30))); };
 export async function fillVoice(m, p) {
     const diary = (p.diary || []).slice(-6).map(d => `- ${d.date} ${d.title}`).join('\n');
     const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`], {story:CHAT_TOKENS.apps,profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });
-    const memos = arr(jsonOf(out)?.memos).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: Math.max(3, Math.min(900, Math.round(Number(x?.sec) || 30))), place: line(x?.place, 60), src: 'guess' })).filter(x => x.text);
+    const memos = arr(jsonOf(out)?.memos).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'guess' })).filter(x => x.text);
     if (!memos.length) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
     p.voice = [...(p.voice || []).filter(x => x.src === 'story' || x.now), ...memos].sort(byStory(p.now)).slice(-CAP.voice);
     p.voiceAt = Date.now();

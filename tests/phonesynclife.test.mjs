@@ -431,3 +431,31 @@ test('a story day told ahead of the day before it: the day between is filled too
     assert.deepEqual(p.life.health.days.map(d => d.date), ['01-11', '01-12', '01-13']);
     assert.equal(p.life.health.days[2].from, 'story');
 });
+
+test('line by line: day names, "false", sizes, degrees, twins without ids, units, bed before sleep, no Feb 29, cities, hours past midnight', async () => {
+    const { alarmOf, fileOf } = await import('../src/phonesynclife.js');
+    assert.deepEqual(alarmOf({ time: '07:00', days: ['월', '화', '수'] }).days, ['mon', 'tue', 'wed']);
+    assert.deepEqual(alarmOf({ time: '07:00', days: '평일' }).days, ['mon', 'tue', 'wed', 'thu', 'fri']);
+    assert.deepEqual(alarmOf({ time: '07:00', days: ['Mo', 'Fr'] }).days, ['mon', 'fri']);
+    assert.equal(alarmOf({ time: '07:00', on: 'false' }).on, false);
+    assert.deepEqual(['1.2 MB', '800 KB', 245, '2 GB'].map(v => fileOf({ name: 'a.pdf', size: v }).size), [1229, 800, 245, 2097152]);
+    const { p } = setup();
+    // the same alarm again without its id switches it off; the same file again without its id is that file
+    applyLife(p, { id: 'a', at: 5, date: '10-26' }, { alarms: [{ time: '06:10', label: 'Aufstehen', on: false }], files: [{ name: 'Mietvertrag.pdf', folder: 'Downloads', deleted: true }] }, true);
+    assert.equal(p.life.clock.alarms.length, 1);
+    assert.equal(p.life.clock.alarms[0].on, false);
+    assert.equal(p.life.files.items.length, 1);
+    assert.equal(p.life.files.items[0].trashed, '10-26');
+    applyLife(p, { id: 'b', at: 6, date: '10-27' }, { usual: { water: '2L', weight: '68 kg' }, health: [{ date: '10-27', sleep: '23:00', wake: '06:30' }] }, true);
+    assert.deepEqual([p.life.health.usual.water, p.life.health.usual.weight], [2, 68]);
+    const d = p.life.health.days.find(x => x.date === '10-27');
+    assert.ok(!d.bed || d.bed <= d.sleep || d.bed > '12:00', `in bed ${d.bed} before asleep ${d.sleep}`);
+    // a common year has no February 29
+    p.year = 2027; p.life.health.days = [{ id: 'x', date: '02-27', sleep: '00:30', wake: '07:30', from: 'pattern' }];
+    fillDays(p, '03-02 20:00', 'r');
+    assert.deepEqual(p.life.health.days.map(x => x.date), ['02-27', '02-28', '03-01', '03-02']);
+    // the forecast's hours after midnight are still to come
+    p.life.weather.here = { ...p.life.weather.here, date: '10-26', hours: [{ time: '22:00' }, { time: '00:00' }, { time: '02:00' }], days: [] };
+    lifeClock(p, '10-26 21:30');
+    assert.deepEqual(p.life.weather.here.hours.map(h => h.time), ['22:00', '00:00', '02:00']);
+});

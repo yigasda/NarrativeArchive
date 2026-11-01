@@ -360,3 +360,28 @@ test('a payment from a deleted message, taken up again by a new one, now names t
     assert.equal(p.money.tx.length, 1);
     assert.equal(p.money.tx[0].sourceIndex, 24);
 });
+
+test('line by line: amounts in words with commas, an account by its name, a currency in words, a zero move, a trade without currency, a pass date with its month name', async () => {
+    const { m, p, bank, broker } = setup();
+    p.money.passes = [];
+    applyMoney(m, p, ev('dinner', 5, '10-26', { moves: [{ account: 'Giro', amount: '-1,250.50', currency: '원', who: 'Trattoria' }, { account: 'Karte', amount: '−80', kind: 'card', who: 'Bar' }, { account: '1111', amount: 0, who: 'free' }],
+        trades: [{ kind: 'buy', symbol: 'XETRA:SAP', quantity: '2', price: '180,00', occurrence: 'new' }], passes: [{ kind: 'hotel', by: 'Haus am See', date: 'Oct 30', time: '15:00' }] }), opts());
+    migrateBank(m, p);
+    assert.equal(bank(), 1000 - 1250.5);
+    assert.equal(p.money.tx.find(t => t.who === 'Bar').account, '2222');
+    assert.equal(p.money.tx.find(t => t.who === 'Bar').amount, -80);
+    assert.ok(!p.money.tx.some(t => t.who === 'free'));
+    assert.equal(p.investment.trades.at(-1).currency, 'EUR');
+    assert.equal(broker(), 1000 - 360);
+    assert.equal(p.money.passes[0].date, '10-30');
+    const { when } = await import('../src/phoneparse.js');
+    assert.deepEqual(['1월 20일 15:00', 'January 20, 2027', '20. Januar', 'the 3 cats'].map(when), ['01-20 15:00', '01-20', '01-20', '']);
+});
+
+test('the card\'s month leaves out the same month a year ago', () => {
+    const { m, p } = setup();
+    p.now = '10-26 12:00'; p.year = 2027;
+    p.money.tx.push({ id: 'old', account: '2222', who: 'Old', amount: -50, time: '10-05 10:00', day: '2026-10-05', kind: 'card' }, { id: 'new', account: '2222', who: 'New', amount: -20, time: '10-06 10:00', day: '2027-10-06', kind: 'card' });
+    migrateBank(m, p);
+    assert.equal(p.money.bank.accounts[1].spent, 20);
+});

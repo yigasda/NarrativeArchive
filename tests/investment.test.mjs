@@ -210,7 +210,7 @@ test('explicit bank rebuild changes current cash once and preserves linked trans
 });
 test('malformed rebuilt balances leave every account and its ledger unchanged',async()=>{
  const {m,p}=euroWallet();finance.migrateBank(m,p);const before=JSON.stringify({money:p.money,finance:m.finance});
- for(const invalid of [null,-1,'1000']) {
+ for(const invalid of [null,-1,'lots']) {
  globalThis.__investTest.answer={bank:{accounts:[{id:'eur',last4:'1234',kind:'checking',currency:'EUR',balance:invalid},{id:'credit',last4:'5678',kind:'credit',currency:'EUR',balance:0}]}};
  await assert.rejects(phonedata.fillMoney(m,p,{regenerateBalances:true}),/잔액/);assert.equal(JSON.stringify({money:p.money,finance:m.finance}),before);
  }
@@ -445,7 +445,7 @@ test('unpriced holdings fail valuation rather than becoming zero',async()=>{
 });
 test('malformed wealth ranges are rejected before app generation',async()=>{
  const {readWealth}=await import(wealthURL);
- for(const plan of [{currency:'EUR',deposits:{min:100,max:1},investments:{min:0,max:0},basis:'x'},{currency:'EUR',deposits:{min:'1',max:2},investments:{min:0,max:0},basis:'x'}]) assert.throws(()=>readWealth(JSON.stringify(plan)),/재력 기준/);
+ for(const plan of [{currency:'EUR',deposits:{min:100,max:1},investments:{min:0,max:0},basis:'x'},{currency:'EUR',deposits:{min:'lots',max:2},investments:{min:0,max:0},basis:'x'}]) assert.throws(()=>readWealth(JSON.stringify(plan)),/재력 기준/);
 });
 test('first phone generation receives the preselected profile and keeps the binding',async()=>{
  const {m}=setup();const binding={type:'character',id:'a.png',label:'A'};m.phoneProfiles={a:binding,other:{type:'character',id:'b.png'}};
@@ -472,4 +472,21 @@ test('credit usage subtracts refunds but ignores repayments, other months and pe
  finance.migrateBank(m,p);assert.equal(a.spent,70);
  p.money.tx.push({account:'5678',kind:'card',amount:100,time:'10-23'});finance.migrateBank(m,p);assert.equal(a.spent,0);assert.equal(a.refundCredit,30);
  const html=moneyUI.bankAcct(p,'10-30','1');assert.match(html,/이번 달 순환급/);assert.equal(finance.creditAmount(a),30);
+});
+
+test('bank statement and slips across New Year: December read in January is last year, and January counts after it', () => {
+ const p={owner:'Mara',now:'01-05 12:00',year:2027,country:'KR',money:{currency:'KRW',bank:{name:'Bank',accounts:[{id:'chk',kind:'checking',name:'입출금',last4:'1111',currency:'KRW',balance:900}]},cards:[],orders:[],passes:[],
+  tx:[{id:'d1',account:'1111',who:'Rent',amount:-500,time:'12-28 10:00',kind:'transfer'},{id:'j1',account:'1111',who:'Shop',amount:-100,time:'01-03 10:00',kind:'card'}]}};
+ const dec=moneyUI.bankStmt(p,'01-05','0.12');
+ assert.match(dec,/2026\.12\.01/);
+ // the end of December is today's 900 before January's -100
+ assert.match(dec.replace(/<[^>]+>/g,' '),/끝 잔액\s+[^0-9]*1,000/);
+ assert.ok(dec.indexOf('>12월<')<dec.indexOf('>1월<'), 'December listed before January');
+ assert.match(moneyUI.txDoc(p,'01-05','d1'),/2026\.12\.28/);
+ assert.match(moneyUI.txDoc(p,'01-05','j1'),/2027\.01\.03/);
+});
+
+test('an investment or wealth answer that writes its numbers as text, codes in lower case, dates with slashes still goes in', async () => {
+ const {readWealth}=await import(wealthURL);
+ assert.deepEqual(readWealth(JSON.stringify({currency:'eur',deposits:{min:'10,000',max:'50000'},investments:{min:0,max:'1.200,50'},basis:'x'})).deposits,{min:10000,max:50000});
 });

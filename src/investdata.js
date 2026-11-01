@@ -1,7 +1,7 @@
 // Investment generation: private portfolios, shared public quotes. All invented records stay out of RP injection.
 import { wealthBlock, wealthCheck, investmentWealthRows } from './wealth.js';
 import { askDraft } from './ai.js';
-import { parseJson, yearIn } from './phoneparse.js';
+import { num, parseJson, yearIn } from './phoneparse.js';
 import { ctx, saveMeta } from './core.js';
 import { sideRequest, storyNow, prepareWealth } from './phonedata.js';
 import { syncOf, makeMark, exclusive } from './phonesync.js';
@@ -82,7 +82,21 @@ Empty lists are fine.`;
 // a model's list of records (a null or a bare word in it is none) and its text (an object where text belongs is none)
 const list = x => Array.isArray(x) ? x.filter(v => v && typeof v === 'object' && !Array.isArray(v)) : [];
 const text = (s, n = 500) => (s !== null && typeof s === 'object' ? '' : String(s ?? '')).trim().slice(0, n);
-const json = out => { const s = String(out).replace(/```(?:json)?/gi, ''); return parseJson(s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1)); };
+// a model's numbers, codes and dates in the shapes the checks below expect: "180.50" or "1,240" a number, "eur" a code,
+// "2027/01/05" a date (else a sound answer is turned down for how it wrote them)
+const NUMS = new Set(['value', 'amount', 'quantity', 'price', 'fee', 'percent', 'cash', 'min', 'max']), CODES = new Set(['base', 'currency', 'from', 'to']);
+const tidy = v => {
+    if (Array.isArray(v)) return v.map(tidy);
+    if (!v || typeof v !== 'object') return v;
+    for (const [k, x] of Object.entries(v)) {
+        if (typeof x === 'string' && NUMS.has(k)) { const n = num(x); if (n !== null) v[k] = n; }
+        else if (typeof x === 'string' && CODES.has(k) && /^\s*[a-z]{3}\s*$/i.test(x)) v[k] = x.trim().toUpperCase();
+        else if (typeof x === 'string' && k === 'date' && /^\s*\d{4}[/.]\d{1,2}[/.]\d{1,2}\s*$/.test(x)) { const [y, mo, d] = x.trim().split(/[/.]/); v[k] = `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`; }
+        else v[k] = tidy(x);
+    }
+    return v;
+};
+const json = out => { const s = String(out).replace(/```(?:json)?/gi, ''); return tidy(parseJson(s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1))); };
 export const validDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '') && !Number.isNaN(Date.parse(d)) && new Date(d).toISOString().slice(0, 10) === d;
 export function investmentDate(m, p) {
     if (validDate(p.investment?.date)) return p.investment.date;

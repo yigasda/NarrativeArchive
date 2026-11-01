@@ -101,7 +101,9 @@ export function creditUsage(p,a) {
         if(t.account!==a.last4 || t.kind!=='card' || t.pending) continue;
         const d=dateParts(t.time);
         if(!d) return {spent:null,refund:0};
-        if(d[2]!==now[2] || d[1]&&now[1]&&d[1]!==now[1] || Number(d[3])>Number(now[3])) continue;
+        // this month only: a record from that month a year ago has its full day ("day") to tell it apart
+        const yr = /^\d{4}/.exec(String(t.day || ''))?.[0], ny = p.year && !p.noYear ? String(p.year) : now[1];
+        if(d[2]!==now[2] || d[1]&&now[1]&&d[1]!==now[1] || yr&&ny&&yr!==ny || Number(d[3])>Number(now[3])) continue;
         if(!finite(t.amount)) return {spent:null,refund:0};
         net=round(net-t.amount);
     }

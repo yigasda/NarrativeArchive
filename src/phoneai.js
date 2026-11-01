@@ -2,13 +2,13 @@
 
 import { ownerProfileBlock } from './phoneprofile.js';
 import { askAI } from './ai.js';
-import { parseJson } from './phoneparse.js';
+import { num, parseJson } from './phoneparse.js';
 import { datedRows } from './anniv.js';
 import { calendars } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
 import { recentForCheck } from './drift.js';
 import { headingPlaces, nameKey, peopleList } from './people.js';
-import { arr, CAP, COUNTRIES, ensureIds, ko, line, MOODS, namesBlock, pad, parts, pick, rowDay, storyNow, str } from './phonedata.js';
+import { arr, CAP, COUNTRIES, ensureIds, secOf, ko, line, MOODS, namesBlock, pad, parts, pick, rowDay, storyNow, str } from './phonedata.js';
 
 // ---- 사진 그리기: the AI 기능 모델 turns a caption into image tags, one line for the picture and one per person. With
 // AutoPic in 직접 생성 mode the picture goes through AutoPic (its model, vibes, registered looks; only the people in the
@@ -400,7 +400,7 @@ export async function recordVoice(m, p) {
     try { raw = a >= 0 && b > a ? parseJson(out.slice(a, b + 1)) : null; } catch { raw = null; }
     const text = str(raw?.text, 2000);
     if (!text) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
-    p.voice = [...(p.voice || []), { title: line(raw?.title, 80), kt: line(raw?.kt, 80), text, ko: str(raw?.ko, 2000), time: storyNow(p) || p.now || '', sec: Math.max(3, Math.min(900, Math.round(Number(raw?.sec) || 30))), place: line(raw?.place, 60), src: 'guess', now: true }].slice(-CAP.voice);
+    p.voice = [...(p.voice || []), { title: line(raw?.title, 80), kt: line(raw?.kt, 80), text, ko: str(raw?.ko, 2000), time: storyNow(p) || p.now || '', sec: secOf(raw?.sec), place: line(raw?.place, 60), src: 'guess', now: true }].slice(-CAP.voice);
     ensureIds(p);
     p.generatedAt = Date.now();
     await saveMeta();
@@ -460,12 +460,12 @@ export async function webPage(m, p, k, r) {
     const extra = {
         news: () => ({ section: line(o.section, 30), ticker: line(o.ticker, 120), author: line(o.author, 40), date: line(o.date, 16), minutes: line(o.minutes, 6), photo: line(o.photo, 160), credit: line(o.credit, 80), quote: o.quote && line(o.quote.text, 200) ? { ...txt(o.quote, 200), who: line(o.quote.who, 60) } : null }),
         transit: () => ({ stop: line(o.stop, 50), alert: o.alert && line(o.alert.text, 300) ? { title: line(o.alert.title, 60), ...txt(o.alert, 300) } : null,
-            departures: arr(o.departures).map(d => ({ line: line(d?.line, 6), to: line(d?.to, 50), note: line(d?.note, 60), time: line(d?.time, 5), delay: Math.max(0, Math.min(180, Math.round(Number(d?.delay) || 0))), off: yes(d?.off) })).filter(d => d.to).slice(0, 6),
+            departures: arr(o.departures).map(d => ({ line: line(d?.line, 6), to: line(d?.to, 50), note: line(d?.note, 60), time: line(d?.time, 5), delay: Math.max(0, Math.min(180, Math.round((num(d?.delay) ?? NaN) || 0))), off: yes(d?.off) })).filter(d => d.to).slice(0, 6),
             route: arr(o.route).map(d => ({ stop: line(d?.stop, 50), time: line(d?.time, 5), off: yes(d?.off) })).filter(d => d.stop).slice(0, 7) }),
         forum: () => ({ board: line(o.board, 40), members: line(o.members, 12), online: line(o.online, 8), author: line(o.author, 30), ago: line(o.ago, 20), flair: line(o.flair, 20), votes: line(o.votes, 8),
             comments: arr(o.comments).map(c => ({ who: line(c?.who, 30), ago: line(c?.ago, 20), ...txt(c, 600), votes: line(c?.votes, 8), reply: yes(c?.reply), op: yes(c?.op) })).filter(c => c.text).slice(0, 7) }),
-        wiki: () => ({ note: line(o.note, 160), photo: line(o.photo, 120), facts: arr(o.facts).map(f => ({ k: line(f?.k, 30), v: line(f?.v, 60) })).filter(f => f.k && f.v).slice(0, 6), langs: Math.max(0, Math.min(300, Math.round(Number(o.langs) || 0))), sections: arr(o.sections).map(v => ({ h: line(v?.h, 60), ...txt(v, 1200) })).filter(v => v.h && v.text).slice(0, 3) }),
-        shop: () => ({ crumbs: arr(o.crumbs).map(c => line(c, 30)).filter(Boolean).slice(0, 3), brand: line(o.brand, 40), price: Number.isFinite(Number(o.price)) && o.price !== null && o.price !== '' ? Number(o.price) : null, old: Number.isFinite(Number(o.old)) && o.old !== null && o.old !== '' ? Number(o.old) : null, currency: line(o.currency, 3).toUpperCase(), rating: Math.max(0, Math.min(5, Number(o.rating) || 0)), reviews: line(o.reviews, 10), colors: arr(o.colors).map(hex).filter(Boolean).slice(0, 4), ship: line(o.ship, 140) }),
+        wiki: () => ({ note: line(o.note, 160), photo: line(o.photo, 120), facts: arr(o.facts).map(f => ({ k: line(f?.k, 30), v: line(f?.v, 60) })).filter(f => f.k && f.v).slice(0, 6), langs: Math.max(0, Math.min(300, Math.round((num(o.langs) ?? NaN) || 0))), sections: arr(o.sections).map(v => ({ h: line(v?.h, 60), ...txt(v, 1200) })).filter(v => v.h && v.text).slice(0, 3) }),
+        shop: () => ({ crumbs: arr(o.crumbs).map(c => line(c, 30)).filter(Boolean).slice(0, 3), brand: line(o.brand, 40), price: Number.isFinite((num(o.price) ?? NaN)) && o.price !== null && o.price !== '' ? (num(o.price) ?? NaN) : null, old: Number.isFinite((num(o.old) ?? NaN)) && o.old !== null && o.old !== '' ? (num(o.old) ?? NaN) : null, currency: line(o.currency, 3).toUpperCase(), rating: Math.max(0, Math.min(5, (num(o.rating) ?? NaN) || 0)), reviews: line(o.reviews, 10), colors: arr(o.colors).map(hex).filter(Boolean).slice(0, 4), ship: line(o.ship, 140) }),
         blog: () => ({ blog: line(o.blog, 40), category: line(o.category, 30), author: line(o.author, 40), date: line(o.date, 20), minutes: line(o.minutes, 6), photo: line(o.photo, 160), tags: arr(o.tags).map(t => line(t, 20)).filter(Boolean).slice(0, 4) }),
         official: () => ({ hours: arr(o.hours).map(h => ({ day: line(h?.day, 20), time: line(h?.time, 30) })).filter(h => h.day).slice(0, 7), address: line(o.address, 120), phone: line(o.phone, 30) }),
         other: () => ({}),

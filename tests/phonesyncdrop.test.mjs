@@ -89,7 +89,7 @@ test('빼기 leaves an item the user changed on the phone, and a record another 
     c.p.threads[0].messages.find(x => x.text.startsWith('E:')).text = 'E: 내일 카페에서 꼭 봐';
     await rewrite(c);
     await data.dropStretch(c.m, c.p, 0);
-    assert.deepEqual(texts(c.p), ['B: 응 샀어', 'E: 내일 카페에서 꼭 봐', 'C: 300쪽이야']);
+    assert.deepEqual(texts(c.p), ['B: 응 샀어', 'C: 300쪽이야', 'E: 내일 카페에서 꼭 봐']);
     // the book's payment belongs to the event the new talk took up again
     assert.equal(c.p.money.tx.length, 1);
     assert.equal(c.p.sync.events.book.at, 3);
@@ -347,4 +347,44 @@ test('a gift field the model fills with false or "no" is no gift', async () => {
     for (const v of [false, 'false', 'no', 'None', '', null, undefined, '없음', 'true']) assert.equal(giftOf(v), '', String(v));
     assert.equal(giftOf(true), '선물');
     assert.equal(giftOf('Ren'), 'Ren');
+});
+
+test('run27: a quote with one word slipped in still counts; a file kind written as its extension; a Korean text gets no copy as ko', async () => {
+    const { quoted } = await import('../src/phonesync.js');
+    const t = 'Mara는 축하한다고 답하며 계약 연장 서류를 받은 이야기를 했다.';
+    assert.equal(quoted('집주인에게서 계약 연장 서류를 받은 이야기를 했다', t), true);
+    assert.equal(quoted('전혀 다른 문장으로 적어 둔 말', t), false);
+    assert.equal(quoted('이야기를 받은 서류를 연장 계약 했다', t), false, 'words out of order are not the quote');
+    const { fileOf } = await import('../src/phonesynclife.js');
+    assert.deepEqual(['png', '', 'xyz'].map((k, i) => fileOf({ name: ['shot.png', 'clip.MOV', 'notes'][i], kind: k }).kind), ['image', 'video', 'other']);
+    const ph = data.parsePhone(JSON.stringify({ notes: [{ title: '월요일 7시', text: '월요일 7시 한강', ko: '월요일 7시 한강', time: '01-30 21:35' }], threads: [{ with: 'Ren', messages: [{ from: 'me', text: 'Hi', ko: '안녕', time: '01-30 22:00' }] }] }));
+    assert.equal(ph.notes[0].ko, '');
+    assert.equal(ph.threads[0].messages[0].ko, '안녕');
+});
+
+test('an answer giving two new events one id pays both; an event with no date takes the day before it; "#4" is message 4', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Mara', 'coffee at the kiosk'), say('Ren', 'and another coffee later'), say('Mara', 'paid the taxi')];
+    const c = setup(chat);
+    await run(c.m, { now: '10-26 18:00', events: [
+        { id: 'coffee', at: 2, quote: 'coffee at the kiosk', date: '10-26', time: '09:00', summary: 'coffee', money: { moves: [{ account: '1111', amount: -5000, who: 'Kiosk', occurrence: 'new' }] } },
+        { id: 'coffee', at: 3, quote: 'another coffee later', date: '10-26', time: '15:00', summary: 'coffee', money: { moves: [{ account: '1111', amount: -5000, who: 'Cafe', occurrence: 'new' }] } },
+        { id: 'taxi', at: '#4', quote: 'paid the taxi', summary: 'taxi', money: { moves: [{ account: '1111', amount: -12000, who: 'Taxi', occurrence: 'new' }] } },
+    ] });
+    assert.deepEqual(c.p.money.tx.map(t => [t.who, t.amount, t.time.slice(0, 5)]), [['Kiosk', -5000, '10-26'], ['Cafe', -5000, '10-26'], ['Taxi', -12000, '10-26']]);
+    assert.equal(c.bank(), 100000 - 22000);
+});
+
+test('making a phone: the owner by name is "me", a country by name, counts like "1.2k", flags written as words', () => {
+    const ph = data.parsePhone(JSON.stringify({ country: 'Germany', profile: { handle: 'ren', followers: '1.2k', following: '3.4만' },
+        threads: [{ with: 'Mara', messages: [{ from: 'Ren', text: 'hi', time: '10-26 10:00' }, { from: 'Mara', text: 'yo', time: '10-26 10:01' }] }, { with: 'Ren', messages: [{ from: 'Ren', text: 'note to self', time: '10-26 11:00' }] }],
+        calls: [{ with: 'Mara', type: 'in', time: '10-26 12:00', min: '4분' }], mails: [{ from: 'LH', subject: 'x', time: '10-26 09:00', unread: 'false' }],
+        searches: [{ q: 'snow', time: '10-26 08:00', tab: 'false', mark: 'true' }], posts: [{ text: 'snow', time: '10-26 08:30', likes: '2.5k' }] }), 'Ren');
+    assert.equal(ph.country, 'DE');
+    assert.deepEqual([ph.profile.followers, ph.profile.following], [1200, 34000]);
+    assert.deepEqual(ph.threads.map(t => t.with), ['Mara']);
+    assert.deepEqual(ph.threads[0].messages.map(x => x.from), ['me', 'Mara']);
+    assert.equal(ph.calls[0].min, 4);
+    assert.equal(ph.mails[0].unread, false);
+    assert.deepEqual([ph.searches[0].tab, ph.searches[0].mark], [undefined, true]);
+    assert.equal(ph.posts[0].likes, 2500);
 });

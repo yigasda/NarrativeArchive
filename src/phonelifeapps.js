@@ -208,6 +208,11 @@ const hbar = (f, c, bg, h = 6) => `<i class="lf_hbar" style="background: ${bg}; 
 
 // ---- what the numbers make
 const RUNS = /run|lauf|jog|달리|러닝|조깅/i, RIDES = /cycl|bike|rad|자전거|사이클/i, CALM = /yoga|pilates|stretch|요가|필라테스|스트레칭/i, SWIM = /swim|schwimm|수영/i;
+// a workout as the (Korean) health app names it; a kind it doesn't know shows as written
+const WORK_KO = [[/^(outdoor |indoor )?(run|running|jog|jogging|laufen|lauf|joggen|course|correr)$/i, '달리기'], [/^(walk|walking|spaziergang|gehen|marche)$/i, '걷기'], [/^(hike|hiking|wandern)$/i, '하이킹'],
+    [/^(cycl|cycling|bike|biking|ride|radfahren|rad)$/i, '사이클'], [/^(swim|swimming|schwimmen)$/i, '수영'], [/^yoga$/i, '요가'], [/^pilates$/i, '필라테스'],
+    [/^(strength|weights|gym|weight training|krafttraining|workout)$/i, '근력 운동'], [/^(hiit|crossfit)$/i, '고강도 운동'], [/^(stretch|stretching|dehnen)$/i, '스트레칭'], [/^(tennis)$/i, '테니스'], [/^(soccer|football|fußball)$/i, '축구']];
+const workName = k => { const v = String(k || '').trim(); return (WORK_KO.find(([re]) => re.test(v)) || [])[1] || v; };
 const kcalOf = d => Math.round((d.steps || 0) * 0.04 + (d.workout?.min || 0) * (d.workout ? (RUNS.test(d.workout.kind) ? 10 : RIDES.test(d.workout.kind) ? 8 : SWIM.test(d.workout.kind) ? 9 : CALM.test(d.workout.kind) ? 3.5 : 6) : 0));
 const workKcal = w => Math.round((w?.min || 0) * (RUNS.test(w?.kind) ? 10 : RIDES.test(w?.kind) ? 8 : SWIM.test(w?.kind) ? 9 : CALM.test(w?.kind) ? 3.5 : 6));
 // a day's steps over its hours: none asleep, a little on waking, more around noon and the evening, the workout's hour full
@@ -274,7 +279,7 @@ function weightLine(lf, u, until) {
 // one sentence for the day: the biggest thing the numbers say against the day before or the usual
 function highlight(lf, d, u) {
     const ds = lf.health.days, prev = ds[ds.indexOf(d) - 1], sm = sleepMin(d), us = usualSleep(u);
-    if (d.workout && !prev?.workout) return ['run', `${esc(d.workout.kind)} ${d.workout.min || ''}분을 했어요`, d.workout.km ? `${comma(d.workout.km)} km · ${d.workout.time || ''}` : (d.workout.time || '')];
+    if (d.workout && !prev?.workout) return ['run', `${esc(workName(d.workout.kind))} ${d.workout.min || ''}분을 했어요`, d.workout.km ? `${comma(d.workout.km)} km · ${d.workout.time || ''}` : (d.workout.time || '')];
     if (prev?.steps && d.steps && Math.abs(d.steps - prev.steps) >= 1500) return ['walk', `전날보다 ${n0(Math.abs(d.steps - prev.steps))}걸음 ${d.steps > prev.steps ? '더' : '덜'} 걸었어요`, `${n0(prev.steps)} → ${n0(d.steps)}`];
     if (sm !== null && us && Math.abs(sm - us) >= 60) return ['moon', `평소보다 ${dur(Math.abs(sm - us))} ${sm > us ? '더' : '덜'} 잤어요`, `${d.sleep} – ${d.wake}`];
     if (u.steps && d.steps && Math.abs(d.steps - u.steps) >= 1500) return ['walk', `평소보다 ${n0(Math.abs(d.steps - u.steps))}걸음 ${d.steps > u.steps ? '더' : '덜'} 걸었어요`, `평소 ${n0(u.steps)}`];
@@ -299,7 +304,7 @@ export function healthScreen(p, now, pick = '') {
         <div class="lf_hgrid">
           ${htile('hsteps', d.date, HC.steps, 'walk', '걸음', `<span class="lf_hv"><span><b class="cg_num">${n0(d.steps)}</b></span>${minis(wk.map(x => x.steps), HC.steps, i)}</span>`)}
           ${htile('hsleep', d.date, HC.sleep, 'moon', '수면', `<span class="lf_hv"><span>${sm === null ? '<b class="cg_num">—</b>' : `<b class="cg_num">${Math.floor(sm / 60)}</b>시간 <b class="cg_num">${sm % 60}</b>분`}<small>${d.sleep && d.wake ? `${d.sleep} – ${d.wake}` : ''}</small></span></span>`)}
-          ${htile(d.workout ? 'hwork' : '', d.date, HC.run, 'run', '운동', `<span class="lf_hv"><span><b class="cg_num">${wmin}</b>분${d.workout ? ` · ${esc(d.workout.kind)}` : ''}<small>${d.workout ? `${d.workout.km ? `${comma(d.workout.km)} km · ` : ''}${d.workout.time || ''}` : lastRun ? `마지막 ${esc(fmtDate(p, lastRun.date, true))}` : ''}</small></span></span>`)}
+          ${htile(d.workout ? 'hwork' : '', d.date, HC.run, 'run', '운동', `<span class="lf_hv"><span><b class="cg_num">${wmin}</b>분${d.workout ? ` · ${esc(workName(d.workout.kind))}` : ''}<small>${d.workout ? `${d.workout.km ? `${comma(d.workout.km)} km · ` : ''}${d.workout.time || ''}` : lastRun ? `마지막 ${esc(fmtDate(p, lastRun.date, true))}` : ''}</small></span></span>`)}
           ${htile(d.hr?.length === 2 ? 'hheart' : '', d.date, HC.hr, 'heartF', '심박수', `<span class="lf_hv"><span>${d.hr?.length === 2 ? `<b class="cg_num">${d.hr[0]}–${d.hr[1]}</b>BPM` : '<b class="cg_num">—</b>'}<small>${u.rest ? `안정 시 평소 ${u.rest}` : ''}</small></span></span>`)}
           ${htile('', '', HC.kcal, 'flame', '활동 칼로리', `<span class="lf_hv"><span><b class="cg_num">${n0(kcalOf(d))}</b>kcal${hbar(kcalOf(d) / 500, HC.kcal, HB.kcal)}</span></span>`)}
           ${water ? htile('hwater', d.date, HC.water, 'drop', '물', `<span class="lf_hv"><span><b class="cg_num">${comma((water.ml / 1000).toFixed(1))}</b>/ ${comma(u.water)} L<i class="lf_hcups">${Array.from({ length: 8 }, (_, k) => `<i style="background: ${k < Math.round(water.ml / 1000 / u.water * 8) ? HC.water : HB.water}"></i>`).join('')}</i></span></span>`) : ''}
@@ -399,7 +404,7 @@ export function workScreen(p, now, day) {
     const zones = [0.1 + r() * 0.15, 0.3 + r() * 0.2, 0.2 + r() * 0.15, r() * 0.1], zs = zones.reduce((s, x) => s + x, 0);
     const stat = (n, v, u2, c) => `<div><small>${n}</small><b class="cg_num" style="color: ${c}">${v}</b><span>${u2}</span></div>`;
     return `${axBar(p, now)}${axTop(axCb(`health:${d.date}`))}
-      <div class="ax_scroll"><div class="lf_hwh"><span style="background: ${HB.run}">${ax(ic, 26, HC.run, 2.2)}</span><div><b>${esc(w.kind)}</b><small>${esc(fmtDate(p, d.date))}${w.time ? ` · ${w.time}${end ? ` – ${end}` : ''}` : ''}</small></div></div>
+      <div class="ax_scroll"><div class="lf_hwh"><span style="background: ${HB.run}">${ax(ic, 26, HC.run, 2.2)}</span><div><b>${esc(workName(w.kind))}</b><small>${esc(fmtDate(p, d.date))}${w.time ? ` · ${w.time}${end ? ` – ${end}` : ''}` : ''}</small></div></div>
         ${moved ? `<div class="lf_hc lf_hmap"><svg viewBox="0 0 332 150"><rect width="332" height="150" fill="#eaf1ec"/><path d="M0 38H332M0 112H332M92 0V150M236 0V150" stroke="#f7faf6" stroke-width="10"/><path d="M0 70Q160 56 332 92" stroke="#d6e6f4" stroke-width="14" fill="none"/><path d="${path}" stroke="${HC.run}" stroke-width="5" fill="none" stroke-linejoin="round"/><circle cx="${pts[0][0].toFixed(0)}" cy="${pts[0][1].toFixed(0)}" r="6" fill="#fff" stroke="${HC.run}" stroke-width="3"/></svg></div>` : ''}
         <div class="lf_hc lf_hstat">${stat('운동 시간', w.min ? `${w.min}:00` : '—', '', HC.run)}${stat('거리', w.km ? comma(w.km) : '—', w.km ? 'km' : '', HC.water)}${pace ? stat('평균 페이스', `${Math.floor(pace)}′${pad(Math.round((pace % 1) * 60))}″`, '/km', '#161b22') : ''}${stat('활동 칼로리', workKcal(w), 'kcal', HC.kcal)}${avgHr ? stat('평균 심박수', avgHr, 'BPM', HC.hr) : ''}${d.hr?.[1] ? stat('최고 심박수', d.hr[1], 'BPM', HC.hr) : ''}</div>
         ${avgHr && w.min ? `<div class="lf_hc lf_hst"><span class="lf_hl" style="color: ${HC.hr}">${ax('heartF', 14, HC.hr, 2.2, HC.hr)}심박수 구간</span>${zones.map((z, k) => { const mn = Math.round(w.min * z / zs); return `<div><span>구간 ${k + 2}</span>${hbar(z / zs, ['#9fd3ef', '#9fd8b8', '#f6c98a', HC.hr][k], '#f0f1f3', 8)}<b class="cg_num">${mn}분</b></div>`; }).join('')}</div>` : ''}
@@ -414,7 +419,7 @@ export function heartScreen(p, now, day) {
     const rest = Math.round(avg(pts.filter(q => wake === null || q[0] < wake).map(q => q[1])) || d.hr[0]), walking = Math.round(avg(pts.filter(q => wake !== null && q[0] >= wake && (ws === null || q[0] < ws || q[0] > ws + (d.workout.min || 0) + 40)).map(q => q[1])) || 0);
     return `${axBar(p, now)}${axTop(axCb(`health:${d.date}`))}
       <div class="ax_scroll">${axH1('심박수')}${hhead('범위', `${d.hr[0]}–${d.hr[1]} <span>BPM</span>`, esc(fmtDate(p, d.date)))}
-        <div class="lf_hc"><svg class="lf_hsvg" viewBox="0 0 300 136">${wake !== null ? `<rect x="0" y="0" width="${X(wake).toFixed(1)}" height="134" fill="${HB.sleep}"/><text x="4" y="10" fill="${HC.sleep}">수면</text>` : ''}${ws !== null ? `<rect x="${X(ws).toFixed(1)}" y="0" width="${Math.max(3, X(d.workout.min || 30)).toFixed(1)}" height="134" fill="${HB.run}"/><text x="${(X(ws) + 3).toFixed(1)}" y="10" fill="${HC.run}">${esc(d.workout.kind)}</text>` : ''}
+        <div class="lf_hc"><svg class="lf_hsvg" viewBox="0 0 300 136">${wake !== null ? `<rect x="0" y="0" width="${X(wake).toFixed(1)}" height="134" fill="${HB.sleep}"/><text x="4" y="10" fill="${HC.sleep}">수면</text>` : ''}${ws !== null ? `<rect x="${X(ws).toFixed(1)}" y="0" width="${Math.max(3, X(d.workout.min || 30)).toFixed(1)}" height="134" fill="${HB.run}"/><text x="${(X(ws) + 3).toFixed(1)}" y="10" fill="${HC.run}">${esc(workName(d.workout.kind))}</text>` : ''}
           ${[60, 100, 140, 180].filter(b => b > lo && b < hi).map(b => `<line x1="0" x2="300" y1="${Y(b).toFixed(1)}" y2="${Y(b).toFixed(1)}" class="g"/><text x="298" y="${(Y(b) - 3).toFixed(1)}" text-anchor="end">${b}</text>`).join('')}
           <polyline points="${pts.map(q => `${X(q[0]).toFixed(1)},${Y(q[1]).toFixed(1)}`).join(' ')}" fill="none" stroke="${HC.hr}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
           <div class="lf_xl"><span>0시</span><span>6시</span><span>12시</span><span>18시</span><span>24시</span></div></div>
@@ -595,7 +600,11 @@ export function filesScreen(p, now) {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '파일', 'life');
     const fs = live(lf), recent = [...fs].filter(f => f.opened).sort(byStory(p.now, f => f.opened)).reverse().slice(0, 6), dl = fs.filter(f => f.folder === 'Downloads').length, trash = lf.files.items.filter(f => f.trashed).length, cl = lf.files.cloud || {};
-    const favs = lf.files.folders.filter(x => x.fav), others = lf.files.folders.filter(x => !x.fav);
+    // the folders as the files now stand: a file a reflection moved in counts there, and a folder only a file names is shown too
+    const inF = name => fs.filter(f => f.folder === name).length;
+    const folders = [...lf.files.folders.map(x => ({ ...x, count: Math.max(x.count || 0, inF(x.name)) })),
+        ...[...new Set(fs.map(f => f.folder))].filter(n => n && n !== 'Downloads' && !lf.files.folders.some(x => x.name === n)).map(name => ({ name, count: inF(name) }))];
+    const favs = folders.filter(x => x.fav), others = folders.filter(x => !x.fav);
     const FOLD_C = [['#2f6fbf', '#dfeaf8'], ['#2f9a8a', '#d9f1ec'], ['#d0812f', '#fbe9d6'], ['#7a62c8', '#e9e3f8'], ['#c8566e', '#f8e0e6']];
     const fold = x => { const [c, bg] = x.fav ? FOLD_C[[...x.name].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 97, 3) % FOLD_C.length] : FOLD_C[0]; return `<button type="button" class="lf_rw" data-go="folder" data-i="${encodeURIComponent(x.name)}">${ax('folder', 22, c, 2, bg)}<span class="lf_tx"><b>${esc(x.name)}</b>${x.ko && koOn() ? `<small>${esc(x.ko)}</small>` : ''}</span><small>${x.count}</small>${ax('chev', 14, '#b7bdc6', 2.4)}</button>`; };
     return `${axBar(p, now)}${axTop(axCb('home2'), axKp(p))}
