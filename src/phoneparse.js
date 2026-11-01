@@ -4,10 +4,19 @@
 export const str = (v, n) => (v !== null && typeof v === 'object' ? '' : String(v ?? '')).replace(/[ \t]+/g, ' ').trim().slice(0, n);
 export const line = (v, n) => str(v, n).replace(/\s*\n\s*/g, ' ');
 export const pad = x => String(x).padStart(2, '0');
+// a date written with its month's name or 월: "1월 20일 15:00", "Jan 20", "January 20, 2027", "20. Januar" (the clock after it, if any)
+const MONS = { jan: 1, feb: 2, mar: 3, mär: 3, apr: 4, may: 5, mai: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, okt: 10, nov: 11, dec: 12, dez: 12 };
+const named = v => {
+    const s = String(v || ''), ko = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/), en = s.match(/\b([a-zä]{3})[a-zä]*\.?\s+(\d{1,2})(?!\d)/i), de = s.match(/(?<!\d)(\d{1,2})\.?\s+([a-zä]{3})[a-zä]*/i);
+    const [mo, d] = ko ? [Number(ko[1]), Number(ko[2])] : en && MONS[en[1].toLowerCase()] ? [MONS[en[1].toLowerCase()], Number(en[2])] : de && MONS[de[2].toLowerCase()] ? [MONS[de[2].toLowerCase()], Number(de[1])] : [0, 0];
+    if (!(mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) return '';
+    const hm = s.match(/(\d{1,2}):(\d{2})/), ok = hm && Number(hm[1]) < 24 && Number(hm[2]) < 60;
+    return `${pad(mo)}-${pad(d)}${ok ? ` ${pad(hm[1])}:${hm[2]}` : ''}`;
+};
 export const when = v => {
     // "10-25 21:00", or with the year in front ("2026-10-25 21:00", "2026/10/25T21:00")
     const mt = String(v || '').match(/(?:^|\D)(?:\d{4}[-/.])?(\d{1,2})[-/.](\d{1,2})(?:[ T]+(\d{1,2}):(\d{2}))?/);
-    if (!mt || !(Number(mt[1]) >= 1 && Number(mt[1]) <= 12) || !(Number(mt[2]) >= 1 && Number(mt[2]) <= 31)) return '';
+    if (!mt || !(Number(mt[1]) >= 1 && Number(mt[1]) <= 12) || !(Number(mt[2]) >= 1 && Number(mt[2]) <= 31)) return named(v);
     // a clock that can't be ("25:99") is dropped, the day stays
     const ok = mt[3] && Number(mt[3]) < 24 && Number(mt[4]) < 60;
     return `${pad(mt[1])}-${pad(mt[2])}${ok ? ` ${pad(mt[3])}:${mt[4]}` : ''}`;
@@ -70,5 +79,5 @@ export function mendJson(t) {
 export const parseJson = s => { try { return JSON.parse(s); } catch { return JSON.parse(mendJson(s)); } };
 export const jsonOf = out => { const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}'); try { return a >= 0 && b > a ? parseJson(t.slice(a, b + 1)) : null; } catch { return null; } };
 // a number from a model's answer: "12,50", "€9.90", "1,200"; text with no digit in it ("lots", "free") is none, never 0
-export const num = v => { if (v === null || v === undefined || typeof v === 'object' || typeof v === 'boolean' || !/\d/.test(String(v))) return null; const n = Number(String(v ?? '').replace(/[^\d.,-]/g, '').replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '')); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
+export const num = v => { if (v === null || v === undefined || typeof v === 'object' || typeof v === 'boolean' || !/\d/.test(String(v))) return null; const n = Number(String(v ?? '').replace(/[−–]/g, '-').replace(/[^\d.,-]/g, '').replace(/,(?=\d{1,2}$)/, '.').replace(/,/g, '')); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
 export const last4 = v => String(v ?? '').replace(/\D/g, '').slice(-4);
