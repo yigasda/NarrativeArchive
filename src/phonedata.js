@@ -151,6 +151,7 @@ WHAT IS NEW
 - MESSAGES READ BEFORE, NOW CHANGED were already put on the phone: give their events the ids listed there; a payment in them is that same payment, its amount corrected if it changed.
 - Small everyday things around an event are fine: how a text was worded, a photo of the place, a search they would make.
 - People: only people the story has.
+- A diary entry holds only what these messages show and what the owner felt about it; no new secrets, no new feelings.
 
 WHERE IT COMES FROM
 - "at": the number of the message the event happens in. For an archive section, the message in its range it belongs to.
