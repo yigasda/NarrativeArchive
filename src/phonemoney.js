@@ -97,7 +97,7 @@ function emptyApp(p, now, title, kind, what) {
 }
 
 // ---- 은행
-const tab = on => `<div class="ax_btab">${[['homeS', '홈', 'bank'], ['send2', '송금', ''], ['card2', '카드', 'wallet'], ['menu', '더보기', '']].map(([k, l, go]) => (go ? `<button type="button" class="${k === on ? 'on' : ''}" data-go="${go}">${ax(k, 24, 'currentColor')}${l}</button>` : `<span>${ax(k, 24, 'currentColor')}${l}</span>`)).join('')}</div>`;
+const tab = on => `<div class="ax_btab">${[['homeS', '홈', 'bank'], ['send2', '송금', 'banksend'], ['card2', '카드', 'wallet'], ['menu', '더보기', 'bankmore']].map(([k, l, go]) => (go ? `<button type="button" class="${k === on ? 'on' : ''}" data-go="${go}">${ax(k, 24, 'currentColor')}${l}</button>` : `<span>${ax(k, 24, 'currentColor')}${l}</span>`)).join('')}</div>`;
 const txRow = (p, x) => `<button type="button" class="ax_rw" data-go="tx" data-i="${x.id}">${fi(x.who, 38)}<span class="ax_tx"><b class="ax_n">${esc(x.who)}${x.pending ? '<span class="ax_pend">대기</span>' : ''}${x.ev && (mo(p).orders.some(o => o.ev === x.ev) || mo(p).passes.some(o => o.ev === x.ev)) ? `<span class="ax_lnk">${ax('link', 10, 'currentColor', 2.4)} ${mo(p).orders.some(o => o.ev === x.ev) ? '쇼핑' : '지갑'}</span>` : ''}</b><span class="ax_p">${esc(fmtDate(p, x.time, true))} · ${x.kind === 'card' ? '카드' : x.kind === 'transfer' ? '송금' : '입금'}${x.memo ? ` · ${esc(x.memo)}` : ''}</span></span><span class="ax_amt ${x.amount > 0 ? 'p' : ''} cg_num">${esc(txMoney(p, x, true))}</span></button>`;
 const newestTx = p => [...(mo(p)?.tx || [])].sort(byStory(p.now)).reverse();
 export function bankHome(p, now) {
@@ -106,9 +106,9 @@ export function bankHome(p, now) {
     const sum = bankSum(p);
     return `<div class="ax_bk">
       <div class="ax_bkh">${axBar(p, now, '#fff')}
-        <div class="ax_bkr"><button type="button" class="ax_bkc" data-go="home2" aria-label="뒤로">${ax('back', 18, '#fff', 2.3)}</button><span class="ax_bkhi"><small>${esc(M.bank.name)}</small><b>안녕하세요, ${esc(p.owner)}</b></span><span class="ax_bkc">${ax('bell', 18, '#fff')}</span></div>
+        <div class="ax_bkr"><button type="button" class="ax_bkc" data-go="home2" aria-label="뒤로">${ax('back', 18, '#fff', 2.3)}</button><span class="ax_bkhi"><small>${esc(M.bank.name)}</small><b>안녕하세요, ${esc(p.owner)}</b></span><button type="button" class="ax_bkc" data-go="banknote" aria-label="알림">${ax('bell', 18, '#fff')}</button></div>
         <div class="ax_bktot"><small>${sum.complete ? '예금 잔액 · ' + esc(bankDisplayCurrency(p)) + ' 기준' : '환산 가능한 소계 · 환산 미완료'}</small><b class="cg_num">${esc(fmtIn(p, sum.value, bankDisplayCurrency(p)))}</b>${missingSum(p,sum)}<span>계좌 ${M.bank.accounts.length}개 · 환산 기준 ${esc(bankDate(p) || '날짜 미확정')}</span></div>
-        <div class="ax_bkacts"><span><b>${ax('send2', 20, '#fff', 2.2)}</b>송금</span><button type="button" data-go="fixed"><b>${ax('rep', 20, '#fff', 2.1)}</b>고정 지출</button><span><b>${ax('swap', 20, '#fff', 2.2)}</b>이체</span><button type="button" data-go="wallet"><b>${ax('card2', 20, '#fff', 1.9)}</b>카드</button></div>
+        <div class="ax_bkacts"><button type="button" data-go="banksend"><b>${ax('send2', 20, '#fff', 2.2)}</b>송금</button><button type="button" data-go="fixed"><b>${ax('rep', 20, '#fff', 2.1)}</b>고정 지출</button><button type="button" data-go="stmt"><b>${ax('doc', 20, '#fff')}</b>명세서</button><button type="button" data-go="wallet"><b>${ax('card2', 20, '#fff', 1.9)}</b>카드</button></div>
       </div>
       <div class="ax_bks"><div class="ax_scroll">
         ${displayTools(p)}<div class="ax_shd">내 계좌</div>
@@ -129,9 +129,9 @@ export function bankAcct(p, now, key) {
     const chip = (k, l) => `<button type="button" class="${f === k ? 'on' : ''}" data-go="acct" data-i="${i}.${k}">${l}</button>`;
     return `<div class="ax_bk">
       <div class="ax_bkh">${axBar(p, now, '#fff')}
-        <div class="ax_bkr"><button type="button" class="ax_bkc" data-go="bank" aria-label="뒤로">${ax('back', 18, '#fff', 2.3)}</button><span class="ax_bkt">${kindName[a.kind]} · ${esc(a.last4)}</span><span class="ax_bkc">${ax('search', 17, '#fff', 2.3)}</span></div>
+        <div class="ax_bkr"><button type="button" class="ax_bkc" data-go="bank" aria-label="뒤로">${ax('back', 18, '#fff', 2.3)}</button><span class="ax_bkt">${kindName[a.kind]} · ${esc(a.last4)}</span><span class="ax_bkc ax_ghost"></span></div>
         <div class="ax_bktot ax_center"><small>${a.kind === 'credit' ? creditLabel(a) : '사용 가능 잔액'}</small><b class="cg_num">${esc(fmtMoney({ ...p, money: { currency: a.currency || mo(p).currency } }, a.kind === 'credit' ? creditAmount(a) : a.balance))}</b>${converted(p,a) ? `<span>${converted(p,a)}</span>` : ''}<span>${pendSum ? `대기 중 ${esc(fmtMoney({ ...p, money: { currency: a.currency || mo(p).currency } }, pendSum, true))}` : esc(a.name || '')}</span></div>
-        <div class="ax_bkacts ax_three"><span><b>${ax('send2', 20, '#fff', 2.2)}</b>송금</span><span><b>${ax('swap', 20, '#fff', 2.2)}</b>이체</span><span><b>${ax('doc', 20, '#fff')}</b>명세서</span></div>
+        <div class="ax_bkacts ax_three"><button type="button" data-go="banksend" data-i="${i}~"><b>${ax('send2', 20, '#fff', 2.2)}</b>송금</button><button type="button" data-go="fixed" data-i="${i}~"><b>${ax('rep', 20, '#fff', 2.1)}</b>고정 지출</button><button type="button" data-go="stmt" data-i="${i}"><b>${ax('doc', 20, '#fff')}</b>명세서</button></div>
       </div>
       <div class="ax_bks"><div class="ax_scroll">
         <div class="ax_chips">${chip('all', '전체')}${chip('in', '입금')}${chip('out', '출금')}</div>
@@ -148,7 +148,7 @@ export function bankTx(p, now, id) {
     const a = acctOf(p, x.account), ai = mo(p).bank.accounts.indexOf(a);
     return `<div class="ax_bk">
       <div class="ax_bkh ax_bkhs">${axBar(p, now, '#fff')}
-        <div class="ax_bkr"><button type="button" class="ax_bkc" data-go="${ai >= 0 ? `acct:${ai}` : 'bank'}" aria-label="뒤로">${ax('back', 18, '#fff', 2.3)}</button><span class="ax_bkt">거래 상세</span><span class="ax_bkc">${ax('share', 17, '#fff')}</span></div>
+        <div class="ax_bkr"><button type="button" class="ax_bkc" data-go="${ai >= 0 ? `acct:${ai}` : 'bank'}" aria-label="뒤로">${ax('back', 18, '#fff', 2.3)}</button><span class="ax_bkt">거래 상세</span><button type="button" class="ax_bkc" data-go="txdoc" data-i="${x.id}" aria-label="확인증">${ax('share', 17, '#fff')}</button></div>
       </div>
       <div class="ax_bks ax_bkso"><div class="ax_scroll">
         <div class="ax_rcpt"><div class="ax_rch">${fi(x.who, 56, axTint(x.who), 18)}<b>${esc(x.who)}</b>${x.ko && koOn() ? `<small>${esc(x.ko)}</small>` : ''}<strong class="cg_num">${esc(txMoney(p, x, true))}</strong><span class="ax_rok ${x.pending ? 'pend' : ''}">${x.pending ? '대기 중' : '완료'}</span></div>
@@ -203,9 +203,11 @@ export function fixedCosts(p) {
     }
     return out.sort((a, b) => a.day - b.day);
 }
-export function fixedScreen(p, now, key = '') {
+export function fixedScreen(p, now, arg = '') {
     const M = mo(p); if (!M) return bankHome(p, now);
-    const list = fixedCosts(p), today = String(storyNow(p) || p.now || ''), mm = today.slice(0, 2), td = Number(today.slice(3, 5)) || 1, dim = daysIn(p, mm);
+    // 'a~key': a is the account (from its screen, only its payments), key the one opened
+    const [af, key] = String(arg).includes('~') ? String(arg).split('~') : ['', String(arg)], fa = af !== '' ? M.bank.accounts[Number(af)] : null;
+    const list = fixedCosts(p).filter(f => !fa || f.account === fa.last4), today = String(storyNow(p) || p.now || ''), mm = today.slice(0, 2), td = Number(today.slice(3, 5)) || 1, dim = daysIn(p, mm);
     const st = f => {
         if (f.xs.some(x => String(x.time).slice(0, 2) === mm)) return ['나감', 'ok', 'p'];
         if (f.day === td) return ['오늘', '', 'd'];
@@ -220,18 +222,171 @@ export function fixedScreen(p, now, key = '') {
     const acct = f => { const a = acctOf(p, f.account); return a ? `${kindName[a.kind]} ${a.last4}` : ''; };
     return `<div class="ax_bk">
       <div class="ax_bkh ax_bkhs">${axBar(p, now, '#fff')}
-        <div class="ax_bkr"><button type="button" class="ax_bkc" data-go="bank" aria-label="뒤로">${ax('back', 18, '#fff', 2.3)}</button><span class="ax_bkt">고정 지출</span><span class="ax_bkc ax_ghost"></span></div>
+        <div class="ax_bkr"><button type="button" class="ax_bkc" data-go="${fa ? `acct:${af}` : 'bank'}" aria-label="뒤로">${ax('back', 18, '#fff', 2.3)}</button><span class="ax_bkt">고정 지출${fa ? ` · ${esc(fa.last4)}` : ''}</span><span class="ax_bkc ax_ghost"></span></div>
         <div class="ax_bktot ax_center"><small>매달 나가는 돈</small><b class="cg_num">${esc(fmtMoney(p, sum))}</b><span>${list.length ? pay ? `월급 ${esc(txMoney(p, pay))}의 ${Math.round(sum / pay.amount * 100)}%` : `${list.length}건 · 이번 달 ${paid.length}건 나감` : '아직 없어요'}</span></div>
       </div>
       <div class="ax_bks ax_bkso"><div class="ax_scroll">
         ${list.length ? `<div class="ax_fxcal">${Array.from({ length: dim }, (_, k) => `<i class="${[marks.get(k + 1) || '', k + 1 === td ? 't' : ''].join(' ').trim()}">${k + 1}</i>`).join('')}</div>
         <div class="ax_sec">${Number(mm) || ''}월</div>
-        <div class="ax_card">${list.map(f => { const [t, c] = st(f); return `<button type="button" class="ax_rw${f === sel ? ' on' : ''}" data-go="fixed" data-i="${esc(f.key)}"><span class="ax_fi" style="width: 38px; height: 38px; background: ${f.bg}; color: ${f.fg}">${ax(f.icon, 20, 'currentColor', 1.9)}</span><span class="ax_tx"><b class="ax_n">${esc(f.who)}<span class="ax_dd ${c}">${t}</span></b><span class="ax_p">매달 ${f.day}일${acct(f) ? ` · ${esc(acct(f))}` : ''}</span></span><span class="ax_fxv"><b class="ax_amt cg_num">${esc(money(f, f.amount, true))}</b><small>${f.label}</small></span></button>`; }).join('')}</div>
+        <div class="ax_card">${list.map(f => { const [t, c] = st(f); return `<button type="button" class="ax_rw${f === sel ? ' on' : ''}" data-go="fixed" data-i="${esc(`${af}~${f.key}`)}"><span class="ax_fi" style="width: 38px; height: 38px; background: ${f.bg}; color: ${f.fg}">${ax(f.icon, 20, 'currentColor', 1.9)}</span><span class="ax_tx"><b class="ax_n">${esc(f.who)}<span class="ax_dd ${c}">${t}</span></b><span class="ax_p">매달 ${f.day}일${acct(f) ? ` · ${esc(acct(f))}` : ''}</span></span><span class="ax_fxv"><b class="ax_amt cg_num">${esc(money(f, f.amount, true))}</b><small>${f.label}</small></span></button>`; }).join('')}</div>
         ${sel ? `<div class="ax_sec">지난 결제 · ${esc(sel.who)}</div><div class="ax_card">${sel.xs.map(x => txRow(p, x)).join('')}</div>` : ''}`
         : '<div class="ax_card ax_fillc"><p>매달 나가는 돈이 아직 안 보여요.<br>월세 · 통신비 · 구독 같은 결제가 생기면 여기 모여요.</p></div>'}
         <i class="ax_pad"></i>
       </div></div>
       ${tab('homeS')}</div>${axInd()}`;
+}
+
+// ---- 은행의 나머지 화면: 알림 · 송금 · 명세서 · 확인증 · 더보기. All read from the records the bank already has.
+const bankHead = (p, now, back, title, tall = false, body = '', dark = false) => `<div class="ax_bkh${tall ? ' ax_bkhs' : ''}${dark ? ' ax_bkpv' : ''}">${axBar(p, now, '#fff')}
+        <div class="ax_bkr"><button type="button" class="ax_bkc" data-go="${back}" aria-label="뒤로">${ax('back', 18, '#fff', 2.3)}</button><span class="ax_bkt">${title}</span><span class="ax_bkc ax_ghost"></span></div>${body}</div>`;
+const acctMoney = (p, a, n, signed) => fmtMoney({ ...p, money: { currency: a?.currency || mo(p).currency } }, n, signed);
+// each record's balance just after it, walking back from today's balance (pending ones leave it alone)
+function balancesAfter(p) {
+    const out = new Map(), M = mo(p);
+    for (const a of M.bank.accounts) {
+        if (a.kind === 'credit') continue;
+        let bal = Number(a.balance) || 0;
+        for (const x of newestTx(p).filter(x => x.account === a.last4)) { if (x.pending) continue; out.set(x.id, bal); bal -= x.amount; }
+    }
+    return out;
+}
+const txWhat = x => x.amount > 0 ? '입금' : x.kind === 'card' ? (x.pending ? '승인 대기' : '승인') : x.kind === 'transfer' ? '보냄' : '출금';
+export function bankNotes(p, now) {
+    const M = mo(p); if (!M) return bankHome(p, now);
+    const bal = balancesAfter(p), xs = newestTx(p).slice(0, 24), today = String(storyNow(p) || p.now || ''), td = Number(today.slice(3, 5)) || 1;
+    const soon = fixedCosts(p).filter(f => !f.xs.some(x => String(x.time).slice(0, 2) === today.slice(0, 2)) && f.day >= td && f.day - td <= 7);
+    const days = [...new Set(xs.map(x => String(x.time).slice(0, 5)))];
+    const note = x => { const a = acctOf(p, x.account), b = bal.get(x.id); return `<div role="button" tabindex="0" class="ax_bn${x.amount > 0 ? ' in' : x.pending ? ' wait' : ''}" data-go="tx" data-i="${x.id}"><span class="ax_bnl">${x.amount > 0 ? '+' : x.pending ? '!' : esc([...String(M.bank.name || 'B')][0].toUpperCase())}</span><span class="ax_bnb"><span class="ax_bnh"><span>${esc(M.bank.name)} · ${a ? kindName[a.kind] : '계좌'}</span><span class="cg_num">${esc(fmtTime(p, x.time))}</span></span><b class="cg_num">${esc(txMoney(p, x))} ${txWhat(x)}</b> · ${esc(x.who)}<br>${[a ? `${kindName[a.kind]} ${esc(a.last4)}` : '', x.memo ? `메모 ${esc(x.memo)}` : '', b !== undefined ? `잔액 ${esc(acctMoney(p, a, b))}` : ''].filter(Boolean).join(' · ')}</span></div>`; };
+    return `<div class="ax_bk">${bankHead(p, now, 'bank', '알림')}
+      <div class="ax_bks"><div class="ax_scroll">
+        ${soon.length ? `<div class="ax_sec">곧 나가요</div>${soon.map(f => `<div role="button" tabindex="0" class="ax_bn fx" data-go="fixed" data-i="~${esc(f.key)}"><span class="ax_bnl">${ax('rep', 16, '#fff', 2.1)}</span><span class="ax_bnb"><span class="ax_bnh"><span>${esc(M.bank.name)} · 고정 지출</span><span>${f.day === td ? '오늘' : `${f.day - td}일 뒤`}</span></span><b class="cg_num">${esc(f.who)} ${esc(fmtMoney({ ...p, money: { currency: f.currency || acctOf(p, f.account)?.currency || M.currency } }, Math.abs(f.amount)))}</b> · 매달 ${f.day}일</span></div>`).join('')}` : ''}
+        ${days.map(d => `<div class="ax_sec">${esc(axDay(p, now, d))}</div>${xs.filter(x => String(x.time).slice(0, 5) === d).map(note).join('')}`).join('') || '<div class="ax_empty">알림이 없어요</div>'}
+        <i class="ax_pad"></i>
+      </div></div>
+      ${tab('homeS')}</div>${axInd()}`;
+}
+// 송금: who the owner sends money to and gets it from (rent and the like stay on 고정 지출)
+export function bankSend(p, now, arg = '') {
+    const M = mo(p); if (!M) return bankHome(p, now);
+    const [af, key] = String(arg).includes('~') ? String(arg).split('~') : ['', String(arg)], fa = af !== '' ? M.bank.accounts[Number(af)] : null;
+    const fixed = new Set(fixedCosts(p).map(f => f.key)), groups = new Map();
+    for (const x of newestTx(p)) {
+        if (fa && x.account !== fa.last4) continue;
+        if (!(x.kind === 'transfer' || (x.amount > 0 && x.kind !== 'card'))) continue;
+        const k = payee(x); if (!k || fixed.has(k)) continue;
+        groups.set(k, [...(groups.get(k) || []), x]);
+    }
+    const ppl = [...groups].map(([k, xs]) => ({ k, xs, who: xs[0].who, out: xs.filter(x => x.amount < 0), in: xs.filter(x => x.amount > 0) })).sort((a, b) => b.xs.length - a.xs.length || byStory(p.now)(b.xs[0], a.xs[0]));
+    const mm = String(storyNow(p) || p.now || '').slice(0, 2), month = [...groups.values()].flat().filter(x => String(x.time).slice(0, 2) === mm && !x.pending);
+    const sent = -month.filter(x => x.amount < 0).reduce((n, x) => n + x.amount, 0), got = month.filter(x => x.amount > 0).reduce((n, x) => n + x.amount, 0);
+    const sum = xs => xs.reduce((n, x) => n + Math.abs(x.amount), 0), sel = ppl.find(o => o.k === key);
+    const cur = fa?.currency || M.currency, money = n => fmtIn(p, n, cur);
+    return `<div class="ax_bk">${bankHead(p, now, fa ? `acct:${af}` : 'bank', `송금${fa ? ` · ${esc(fa.last4)}` : ''}`, false, `<div class="ax_bktot ax_center"><small>${Number(mm) || ''}월 보낸 돈</small><b class="cg_num">${esc(money(sent))}</b><span>받은 돈 ${esc(money(got))}</span></div>`)}
+      <div class="ax_bks"><div class="ax_scroll">
+        ${ppl.length ? `<div class="ax_sec">자주 주고받은 사람</div><div class="ax_ppl">${ppl.slice(0, 5).map(o => `<button type="button" data-go="banksend" data-i="${esc(`${af}~${o.k}`)}" class="${o === sel ? 'on' : ''}">${fi(o.who, 54, axTint(o.who), 27)}<span>${esc([...o.who].slice(0, 7).join(''))}</span></button>`).join('')}</div>
+        <div class="ax_sec">사람별</div><div class="ax_card">${ppl.map(o => `<button type="button" class="ax_rw${o === sel ? ' on' : ''}" data-go="banksend" data-i="${esc(`${af}~${o.k}`)}">${fi(o.who, 38)}<span class="ax_tx"><b class="ax_n">${esc(o.who)}</b><span class="ax_ppm">${o.out.length ? `<em>보냄 ${o.out.length}번 · ${esc(money(sum(o.out)))}</em>` : ''}${o.in.length ? `<u>받음 ${o.in.length}번 · ${esc(money(sum(o.in)))}</u>` : ''}</span></span><span class="ax_fxv"><b class="ax_amt cg_num ${o.xs[0].amount > 0 ? 'p' : ''}">${esc(txMoney(p, o.xs[0], true))}</b><small>${esc(fmtDate(p, o.xs[0].time, true))}${o.xs[0].memo ? ` ${esc(o.xs[0].memo)}` : ''}</small></span></button>`).join('')}</div>
+        ${sel ? `<div class="ax_sec">${esc(sel.who)}와 주고받은 돈</div><div class="ax_card">${sel.xs.map(x => txRow(p, x)).join('')}</div>` : ''}`
+        : '<div class="ax_card ax_fillc"><p>아직 주고받은 돈이 없어요.</p></div>'}
+        <i class="ax_pad"></i>
+      </div></div>
+      ${tab('send2')}</div>${axInd()}`;
+}
+// what kind of spending a record is, for the statement's bars
+const kindOf = x => { const w = `${x.who} ${x.memo || ''} ${x.ko || ''}`; const f = FIXED.find(([re]) => re.test(w)); if (f) return f[4]; const s2 = SPEND.find(([, , re]) => re.test(w)); return s2 ? s2[0] : '그 밖'; };
+// 명세서: one account, one month, on paper
+export function bankStmt(p, now, arg = '') {
+    const M = mo(p); if (!M) return bankHome(p, now);
+    const [ai0, m0] = String(arg).split('.'), from = ai0 !== '' && ai0 !== undefined;
+    const ai = from ? Number(ai0) : Math.max(0, M.bank.accounts.findIndex(a => a.kind !== 'credit')), a = M.bank.accounts[ai];
+    if (!a) return bankHome(p, now);
+    const all = newestTx(p).filter(x => x.account === a.last4 && !x.pending), months = [...new Set(all.map(x => String(x.time).slice(0, 2)))].sort();
+    const today = String(storyNow(p) || p.now || ''), mm = m0 || (months.includes(today.slice(0, 2)) ? today.slice(0, 2) : months[months.length - 1] || today.slice(0, 2));
+    const xs = all.filter(x => String(x.time).slice(0, 2) === mm), later = all.filter(x => String(x.time).slice(0, 2) > mm);
+    const credit = a.kind === 'credit', end = credit ? null : (Number(a.balance) || 0) - later.reduce((n, x) => n + x.amount, 0), start = credit ? null : end - xs.reduce((n, x) => n + x.amount, 0);
+    const inn = xs.filter(x => x.amount > 0).reduce((n, x) => n + x.amount, 0), out = -xs.filter(x => x.amount < 0).reduce((n, x) => n + x.amount, 0);
+    const cats = new Map(); for (const x of xs) if (x.amount < 0) cats.set(kindOf(x), (cats.get(kindOf(x)) || 0) - x.amount);
+    const bars = [...cats].sort((x, y) => y[1] - x[1]).slice(0, 5), top = Math.max(1, ...bars.map(b => b[1]));
+    const last = xs.length ? Math.max(...xs.map(x => Number(String(x.time).slice(3, 5)) || 1)) : 1, yr = p.year && !p.noYear ? `${p.year}.` : '';
+    const mon = n => esc(acctMoney(p, a, n)), sgn = n => esc(acctMoney(p, a, n, true));
+    return `<div class="ax_bk">${bankHead(p, now, from ? `acct:${ai}` : 'bank', `명세서 · ${esc(a.last4)}`, true)}
+      <div class="ax_bks ax_bkso"><div class="ax_scroll">
+        ${months.length > 1 ? `<div class="ax_chips ax_mch">${months.map(m => `<button type="button" class="${m === mm ? 'on' : ''}" data-go="stmt" data-i="${ai}.${m}">${Number(m)}월</button>`).join('')}</div>` : ''}
+        <div class="ax_stm">
+          <div class="ax_stt"><div><b>${esc(M.bank.name)}</b><small>${esc(p.owner)} · ${kindName[a.kind]} •••• ${esc(a.last4)}</small></div><div class="r"><b>${credit ? '카드 이용대금 명세서' : '거래명세서'}</b><small class="cg_num">${yr}${mm}.01 – ${mm}.${String(last).padStart(2, '0')}</small></div></div>
+          <div class="ax_sts">${credit ? '' : `<div><small>시작 잔액</small><b class="cg_num">${mon(start)}</b></div><div><small>끝 잔액</small><b class="cg_num">${mon(end)}</b></div>`}<div><small>들어온 돈</small><b class="cg_num p">${sgn(inn)}</b></div><div><small>${credit ? '쓴 돈' : '나간 돈'}</small><b class="cg_num">${sgn(-out)}</b></div></div>
+          ${bars.length ? `<div class="ax_stb">${bars.map(([n, v]) => `<div><span>${esc(n)}</span><i style="width: ${Math.max(3, Math.round(v / top * 100))}%"></i><em class="cg_num">${mon(v)}</em></div>`).join('')}</div>` : ''}
+          <table class="ax_stl">${xs.map(x => `<tr data-go="tx" data-i="${x.id}"><td class="cg_num">${esc(fmtDate(p, x.time, true))}</td><td>${esc(x.who)}</td><td class="cg_num${x.amount > 0 ? ' p' : ''}">${sgn(x.amount)}</td></tr>`).join('') || '<tr><td colspan="3">이 달 거래가 없어요</td></tr>'}</table>
+        </div>
+        <i class="ax_pad"></i>
+      </div></div>
+      ${tab('homeS')}</div>${axInd()}`;
+}
+// 공유: the paper that goes with a record (a transfer's confirmation, a card slip, a deposit note), with the bank's stamp
+export function txDoc(p, now, id) {
+    const M = mo(p), x = M?.tx?.find(t => t.id === id); if (!x) return bankHome(p, now);
+    const a = acctOf(p, x.account), card = x.kind === 'card' && x.amount < 0, inn = x.amount > 0, h = hashOf(`${x.id}${x.who}`);
+    const title = card ? '카드 매출전표' : inn ? '입금확인증' : '이체확인증', yr = p.year && !p.noYear ? `${p.year}.` : '';
+    const when = `${yr}${String(x.time).slice(0, 5).replace('-', '.')} ${fmtTime(p, x.time)}`, mine = `${esc(p.owner)} · ${a ? `${kindName[a.kind]} •••• ${esc(a.last4)}` : ''}`;
+    const ln = (k, v) => v ? `<div class="ax_dln"><span>${k}</span><span>${v}</span></div>` : '';
+    const rows = card ? ln('가맹점', esc(x.who)) + ln('카드', a ? `•••• •••• •••• ${esc(a.last4)}` : '') + ln('승인 번호', `<span class="cg_num">${String(h % 100000000).padStart(8, '0')}</span>`) + ln('승인 일시', `<span class="cg_num">${esc(when)}</span>`) + ln('결과', x.pending ? '승인 대기' : '승인')
+        : inn ? ln('보낸 분', esc(x.who)) + ln('받는 분', mine) + ln('받은 날', `<span class="cg_num">${esc(when)}</span>`) + ln('메모', esc(x.memo || '')) + ln('결과', '정상 입금')
+        : ln('보낸 분', mine) + ln('받는 분', esc(x.who)) + ln('보낸 날', `<span class="cg_num">${esc(when)}</span>`) + ln('메모', esc(x.memo || '')) + ln('결과', x.pending ? '처리 중' : '정상 처리');
+    const bank = String(M.bank.name || 'BANK').toUpperCase().split(/\s+/).slice(0, 2);
+    return `<div class="ax_bk">${bankHead(p, now, `tx:${x.id}`, title, true)}
+      <div class="ax_bks ax_bkso"><div class="ax_scroll">
+        <div class="ax_doc"><h3>${title}</h3><div class="no cg_num">No. ${esc(String(x.time).replace(/\D/g, ''))}-${esc(x.account || '0000')}-${h % 1000}</div>
+          <div class="big cg_num">${esc(txMoney(p, x))}</div>${rows}
+          <div class="ft">위 거래가 ${x.pending ? '접수' : '처리'}되었음을 확인합니다.<br>${esc(M.bank.name)}</div>
+          <div class="stamp">${bank.map(esc).join('<br>')}<br>확인</div></div>
+        <i class="ax_pad"></i>
+      </div></div>
+      ${tab('homeS')}</div>${axInd()}`;
+}
+// 더보기: who the owner is to the bank. The tier comes from what they hold (like the premium cards), or a name that says it
+const TIERS = [
+    { k: 'PRIVATE', at: 400000, re: /private|privat|프라이빗|\bpb\b|wealth|black|schwarz|블랙|centurion|infinite/i, sub: 'Private Banking', ben: [['star', '자산 관리', '분기마다 리포트'], ['user', '전담 프라이빗 뱅커', '24시간 컨시어지'], ['plane', '라운지 무제한', '동반 1인 포함'], ['globe', '환율 우대 90%', '모든 통화'], ['clock', '우선 창구', '기다리지 않아요']] },
+    { k: 'PLATINUM', at: 120000, re: /platin|플래티넘|premier|prestige|프레스티지|premium|프리미엄/i, sub: '프리미엄 고객', ben: [['card2', 'ATM 수수료 면제', '전 세계 무제한'], ['globe', '환율 우대 70%', '해외 결제 수수료 없음'], ['plane', '공항 라운지', '연 6회'], ['user', '전담 상담', '평일 9–18시']] },
+    { k: 'GOLD', at: 40000, re: /gold|골드/i, sub: '우수 고객', ben: [['card2', 'ATM 수수료 면제', '한 달 10회'], ['globe', '환율 우대 50%', '해외 결제 할인']] },
+];
+export function bankTier(p) {
+    const M = mo(p), names = [M.bank.name, ...M.bank.accounts.map(a => a.name)].join(' ');
+    const has = M.bank.accounts.filter(x => x.kind !== 'credit').reduce((n, x) => n + Math.max(0, Number(x.balance) || 0) / (SCALE[x.currency] || 1), 0);
+    const t = TIERS.find(t => t.re.test(names)) || TIERS.find(t => has >= t.at) || null;
+    return { t, has, next: t ? null : TIERS[TIERS.length - 1] };
+}
+// an account number in the shape the owner's country uses, always the same for the same account, ending in its last four
+function acctNo(p, a) {
+    const c = String(p.country || p.lives || '').toUpperCase(), h = String(hashOf(`${mo(p).bank.name}${a.last4}`)).padStart(10, '7'), h2 = String(hashOf(`${a.last4}${mo(p).bank.name}`)).padStart(10, '3'), l4 = String(a.last4 || '0000');
+    const iban = (cc, n) => { const body = (h + h2).replace(/\D/g, '').slice(0, n - 4) + l4; return `${cc}${String(10 + hashOf(body) % 89)}${body}`.replace(/(.{4})/g, '$1 ').trim(); };
+    if (c === 'KR') return `${h.slice(0, 3)}-${h.slice(3, 6)}-${h2.slice(0, 2)}${l4}`;
+    if (c === 'JP') return `店番 ${h.slice(0, 3)} · 普通 ${h2.slice(0, 3)}${l4}`;
+    if (c === 'US' || c === 'CA') return `${h.slice(0, 9)} · ${h2.slice(0, 6)}${l4}`;
+    if (c === 'GB') return `${h.slice(0, 2)}-${h.slice(2, 4)}-${h.slice(4, 6)} · ${h2.slice(0, 4)}${l4}`;
+    if (c === 'CN' || c === 'TW') return `${h}${h2.slice(0, 5)}${l4}`.replace(/(.{4})/g, '$1 ').trim();
+    if (['DE', 'AT', 'FR', 'IT', 'ES', 'NL', 'BE', 'CH', 'PT', 'IE'].includes(c) || mo(p).currency === 'EUR') return iban(c && c.length === 2 ? c : 'DE', { DE: 18, AT: 16, CH: 17, NL: 14, BE: 12, FR: 23, IT: 23, ES: 20, PT: 21, IE: 18 }[c] || 18);
+    return `${h.slice(0, 4)} ${h2.slice(0, 4)} ${l4}`;
+}
+export function bankMore(p, now) {
+    const M = mo(p); if (!M) return bankHome(p, now);
+    const { t, has, next } = bankTier(p), sum = bankSum(p), cur = bankDisplayCurrency(p), owner = esc(p.owner), init = esc([...String(p.owner || '?')][0].toUpperCase());
+    const pv = t?.k === 'PRIVATE', no = `${t ? t.k[0] + (pv ? 'X' : 'P') : 'C'} · ${String(hashOf(`${M.bank.name}${p.owner}`)).padStart(8, '0').slice(0, 4)} ${String(M.bank.accounts[0]?.last4 || '0000')}`;
+    const parts = M.bank.accounts.filter(a => a.kind !== 'credit' && Number(a.balance) > 0), tot = parts.reduce((n, a) => n + Number(a.balance) / (SCALE[a.currency] || 1), 0) || 1;
+    const PC = { checking: '#1d3461', savings: '#7fae8a' };
+    const head = `<div class="ax_bkpr"><span class="ax_bkav">${init}</span><span><b>${owner}${t ? `<i class="ax_tier ${t.k.toLowerCase()}">${t.k}</i>` : ''}</b><small>${esc(M.bank.name)} · ${t ? esc(t.sub) : '개인 고객'}</small></span></div>`;
+    const card = t ? `<div class="ax_mcard ${t.k.toLowerCase()}">${pv ? '<svg viewBox="0 0 358 150" preserveAspectRatio="none"><rect x="7" y="7" width="344" height="136" rx="12" fill="none" stroke="#c9a961" stroke-opacity=".6" stroke-width=".8"/><g fill="none" stroke="#c9a961" stroke-opacity=".18" stroke-width=".7">' + [0, 18, 36, 54, 72].map((r, k) => `<ellipse cx="290" cy="75" rx="${40 + k * 18}" ry="${90 - k * 10}" transform="rotate(${r} 290 75)"/>`).join('') + '</g></svg>' : t.k === 'PLATINUM' ? PAT.platinum.replace(/^/, '<svg viewBox="0 0 330 200" preserveAspectRatio="none">') + '</svg>' : `<svg viewBox="0 0 330 200" preserveAspectRatio="none">${PAT.guilloche}</svg>`}
+          <span class="nm">${esc(String(M.bank.name || '').split(/\s+/)[0].toUpperCase())} ${t.k}</span><span class="mb">MEMBER</span><span class="tl">고객 번호<b class="cg_num">${esc(no)}</b></span><span class="rt">예금 합계<b class="cg_num">${esc(fmtIn(p, sum.value, cur))}</b></span></div>` : '';
+    const ben = t ? `<div class="ax_sec">${t.k} 혜택</div>${pv ? `<div class="ax_card"><div class="ax_rw"><span class="ax_fi" style="width: 38px; height: 38px; background: #2a2c31; color: #c9a961">${ax('user', 19, 'currentColor', 1.9)}</span><span class="ax_tx"><b>전담 프라이빗 뱅커 배정됨</b><span class="ax_p">언제든 연락할 수 있어요</span></span></div></div>` : ''}<div class="ax_ben">${t.ben.filter((_, k) => !pv || k !== 1).map(([ic, b, s2], k) => `<div><i class="c${k}">${ax(ic, 17, 'currentColor', 1.9)}</i><b>${b}</b><small>${s2}</small></div>`).join('')}</div>` : '';
+    const prog = next ? (() => { const need = (next.at - has) * (SCALE[M.currency] || 1); return `<div class="ax_prog">${next.k}까지 <b class="cg_num">${esc(fmtIn(p, need, M.currency))}</b> 남았어요<div class="bar"><i style="width: ${Math.max(3, Math.min(100, Math.round(has / next.at * 100)))}%"></i></div>예금 ${esc(fmtIn(p, next.at * (SCALE[M.currency] || 1), M.currency))} 이상이면 ${next.k} 고객</div>`; })() : '';
+    return `<div class="ax_bk">${bankHead(p, now, 'bank', '더보기', false, head, pv)}
+      <div class="ax_bks"><div class="ax_scroll">
+        ${card}
+        ${t ? '' : `<div class="ax_sec">예금 합계</div><div class="ax_card ax_tot"><div class="h"><b class="cg_num">${esc(fmtIn(p, sum.value, cur))}</b><small>계좌 ${parts.length}개</small></div>${parts.length ? `<div class="bar">${parts.map(a => `<i style="flex: ${Number(a.balance) / (SCALE[a.currency] || 1)}; background: ${PC[a.kind] || '#9aa3ae'}"></i>`).join('')}</div><div class="lg">${parts.map(a => `<span style="color: ${PC[a.kind] || '#9aa3ae'}">● ${kindName[a.kind]} ${Math.round(Number(a.balance) / (SCALE[a.currency] || 1) / tot * 100)}%</span>`).join('')}</div>` : ''}</div>`}
+        ${prog}${ben}
+        <div class="ax_sec">계좌 정보</div>
+        <div class="ax_card ax_info">${M.bank.accounts.map(a => `<div class="ax_rw"><span class="ax_tx"><span class="k">${kindName[a.kind]}${a.name ? ` · ${esc(a.name)}` : ''}</span><b class="cg_num">${a.kind === 'credit' ? `•••• •••• •••• ${esc(a.last4)}` : esc(acctNo(p, a))}</b></span></div>`).join('')}</div>
+        <i class="ax_pad"></i>
+      </div></div>
+      ${tab('menu')}</div>${axInd()}`;
 }
 
 // ---- 지갑: the bank's cards on top, then the passes, stacked like a real wallet
