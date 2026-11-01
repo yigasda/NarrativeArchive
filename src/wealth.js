@@ -1,6 +1,6 @@
 // Shared, private generation budget. Refreshed only by an explicit financial rebuild.
 import { askDraft } from './ai.js';
-import { parseJson } from './phoneparse.js';
+import { parseJson, yearIn } from './phoneparse.js';
 import { saveMeta } from './core.js';
 import { currency, finite, fx, price, positions, cash, addPrice, finance, quoteKey } from './finance.js';
 
@@ -40,9 +40,10 @@ export const wealthBlock = (plan,kind) => `[FINANCIAL SCALE]\n${JSON.stringify({
 export function wealthDate(m,p) {
     const date=p.money?.fxDate || p.investment?.date;
     if (/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return date;
-    const full=[...String(m.text || '').matchAll(/\b(\d{4})[-/]\d{2}[-/]\d{2}\b/g)].at(-1)?.[0]?.replaceAll('/','-');
-    const year=full?.slice(0,4) || [...String(m.text || '').matchAll(/\b(20\d{2}|19\d{2})\b/g)].at(-1)?.[1];
-    return year && /^\d{2}-\d{2}/.test(p.now || '') ? `${year}-${p.now.slice(0,5)}` : full || '';
+    // the year only from a date the archive writes (yearIn): a bare number may be money or the past
+    const full=[...String(m.text || '').matchAll(/(?<!\d)((?:19|20)\d{2})[-/.](\d{2})[-/.](\d{2})(?!\d)/g)].at(-1);
+    const year=p.year ? String(p.year) : yearIn(m.text);
+    return year && /^\d{2}-\d{2}/.test(p.now || '') ? `${year}-${p.now.slice(0,5)}` : full ? `${full[1]}-${full[2]}-${full[3]}` : '';
 }
 export function addWealthFX(m,rows,date) {
     for(const x of (Array.isArray(rows)?rows:[]).slice(0,30)) {

@@ -303,3 +303,9 @@ test('a model\'s JSON with a slip is mended: a bracket of the wrong kind, a trai
     assert.deepEqual(JSON.parse(mendJson('{ "a": { "b": "c"')), { a: { b: 'c' } });
     assert.equal(jsonOf('no json here'), null);
 });
+
+test('the story\'s year comes only from a date, never from a bare number', async () => {
+    const { yearIn } = await import('../src/phoneparse.js');
+    for (const t of ['2050원짜리 커피', '2019년에 헤어졌다', '제국력 1247년', '2026년 겨울', '10-26 2026', 'price 2000-01']) assert.equal(yearIn(t), '', t);
+    for (const [t, y] of [['## #0–#3 (2026-11-07)', '2026'], ['2026년 11월 7일', '2026'], ['Nov 7, 2026', '2026'], ['7. November 2026', '2026'], ['2026.11.07', '2026'], ['2025-12-31 … 2026-01-02', '2026']]) assert.equal(yearIn(t), y, t);
+});

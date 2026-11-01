@@ -1,7 +1,7 @@
 // Investment generation: private portfolios, shared public quotes. All invented records stay out of RP injection.
 import { wealthBlock, wealthCheck, investmentWealthRows } from './wealth.js';
 import { askDraft } from './ai.js';
-import { parseJson } from './phoneparse.js';
+import { parseJson, yearIn } from './phoneparse.js';
 import { ctx, saveMeta } from './core.js';
 import { sideRequest, storyNow, prepareWealth } from './phonedata.js';
 import { syncOf, makeMark, exclusive } from './phonesync.js';
@@ -85,9 +85,8 @@ const json = out => { const s = String(out).replace(/```(?:json)?/gi, ''); retur
 export const validDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '') && !Number.isNaN(Date.parse(d)) && new Date(d).toISOString().slice(0, 10) === d;
 export function investmentDate(m, p) {
     if (validDate(p.investment?.date)) return p.investment.date;
-    const day = storyNow(p).slice(0, 5), dates = [...String(m.text || '').matchAll(/\b(\d{4})[-/]\d{2}[-/]\d{2}\b/g)];
-    const years = [...String(m.text || '').matchAll(/\b(20\d{2}|19\d{2})\b/g)];
-    const year = dates.at(-1)?.[1] || years.at(-1)?.[1];
+    // the year only from a date the archive writes, never a bare number (it may be money or the past)
+    const day = storyNow(p).slice(0, 5), year = p.year ? String(p.year) : yearIn(m.text);
     const date = year && day ? `${year}-${day}` : '';
     return validDate(date) ? date : '';
 }

@@ -41,7 +41,8 @@ let STORY = { year: new Date().getFullYear(), now: '', dot: false };
 // the phone being drawn: its year (carried over New Year by the reflection), its now and its number style
 export function setStory(p) {
     const y = Number(p?.year) || Number(String(p?.money?.asOf || p?.investment?.date || '').slice(0, 4)) || new Date().getFullYear();
-    STORY = { year: y, now: String(storyNow(p) || p?.now || '').slice(0, 5), dot: DOT_LANDS.has(String(p?.lives || p?.country || '').toUpperCase()) };
+    // known: the story dates itself (else weekdays aren't shown: a fantasy calendar or an undated story has none to show)
+    STORY = { year: y, known: !!(Number(p?.year) || /^\d{4}-/.test(String(p?.money?.asOf || p?.money?.fxDate || p?.investment?.date || ''))), now: String(storyNow(p) || p?.now || '').slice(0, 5), dot: DOT_LANDS.has(String(p?.lives || p?.country || '').toUpperCase()) };
 }
 const n0 = v => (v === null || v === undefined ? '—' : Number(v).toLocaleString(STORY.dot ? 'en-US' : 'de-DE'));
 const md = s => { const mt = String(s || '').match(/^(\d{2})-(\d{2})/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]) } : null; };
@@ -49,6 +50,8 @@ const md = s => { const mt = String(s || '').match(/^(\d{2})-(\d{2})/); return m
 const dayGap = (a, b) => { const A = md(a), B = md(b); if (!A || !B) return 0; let g = (Date.UTC(2001, B.mo - 1, B.d) - Date.UTC(2001, A.mo - 1, A.d)) / 864e5; if (g < -180) g += 365; if (g > 180) g -= 365; return g; };
 const realDate = (day, h = 0) => { const x = md(day), n = md(STORY.now); if (!x) return null; if (!n) return new Date(Date.UTC(STORY.year, x.mo - 1, x.d, h)); return new Date(Date.UTC(STORY.year, n.mo - 1, n.d + dayGap(STORY.now, day), h)); };
 const weekday = day => realDate(day)?.getUTCDay() ?? 0;
+// a day's weekday to show, or alt when the story's year is unknown
+const wdk = (day, alt = '') => (STORY.known ? WDK[WD[weekday(day)]] : alt);
 const WD = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'], WDK = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' };
 const daysLine = days => { const s = days.join(','); return s === 'mon,tue,wed,thu,fri' ? '평일' : s === 'sat,sun' ? '주말' : days.length === 7 ? '매일' : days.map(d => WDK[d]).join(' '); };
 const ampm = t => { const m = toMin(t); return m === null ? ['', ''] : [`${(Math.floor(m / 60) % 12) || 12}:${pad(m % 60)}`, m < 720 ? 'AM' : 'PM']; };
@@ -89,7 +92,7 @@ export function clockScreen(p, now) {
     return `${axBar(p, now, '#f2f2f4')}
       ${axTop(axCb('home2'), axKp(p))}
       <div class="ax_scroll">${axH1('알람', `켜짐 ${on} · 꺼짐 ${as.length - on}`)}
-        ${next ? `<div class="lf_next"><span>${ax('bell', 20, '#f5a524', 2.1)}</span><div><b>${next.r.min < 1440 && next.r.day === n.slice(0, 5) ? '오늘' : next.r.min < 2880 ? '내일' : `${WDK[WD[weekday(next.r.day)]]}요일`} ${ampm(next.a.time)[1] === 'AM' ? '오전' : '오후'} ${esc(ampm(next.a.time)[0])}</b><small>${esc(next.a.label || '알람')} · ${dur(next.r.min)} 뒤</small></div></div>` : ''}
+        ${next ? `<div class="lf_next"><span>${ax('bell', 20, '#f5a524', 2.1)}</span><div><b>${next.r.min < 1440 && next.r.day === n.slice(0, 5) ? '오늘' : next.r.min < 2880 ? '내일' : (wdk(next.r.day) ? `${wdk(next.r.day)}요일` : `${Number(next.r.day.slice(3))}일`)} ${ampm(next.a.time)[1] === 'AM' ? '오전' : '오후'} ${esc(ampm(next.a.time)[0])}</b><small>${esc(next.a.label || '알람')} · ${dur(next.r.min)} 뒤</small></div></div>` : ''}
         ${wake.length ? `<div class="lf_ch">수면 · 기상</div><div class="lf_dcard">${wake.map(a => alarmRow(p, a)).join('')}</div>` : ''}
         ${other.length ? `<div class="lf_ch">기타</div><div class="lf_dcard">${other.map(a => alarmRow(p, a)).join('')}</div>` : ''}
         ${as.length ? '' : '<div class="lf_none">알람이 없어요</div>'}
@@ -196,7 +199,7 @@ const comma = v => (STORY.dot ? String(v) : String(v).replace('.', ','));
 // a day's choice among 일 · 주 · 월, carried in data-i as "MM-DD|w"
 const pickOf = (i = '') => { const [day, mode] = String(i || '').split('|'); return { day: day || '', mode: mode || '' }; };
 const seg = (go, day, on, modes) => `<div class="lf_seg">${modes.map(([k, n]) => `<button type="button" data-go="${go}" data-i="${day}|${k}" class="${k === on ? 'on' : ''}">${n}</button>`).join('')}</div>`;
-const hdays = (lf, pick) => `<div class="lf_hdays">${lf.health.days.slice(-7).map(d => `<button type="button" data-go="health" data-i="${d.date}" class="${d.date === pick ? 'on' : ''}">${WDK[WD[weekday(d.date)]]}<b>${Number(d.date.slice(3))}</b></button>`).join('')}</div>`;
+const hdays = (lf, pick) => `<div class="lf_hdays">${lf.health.days.slice(-7).map(d => `<button type="button" data-go="health" data-i="${d.date}" class="${d.date === pick ? 'on' : ''}">${wdk(d.date)}<b>${Number(d.date.slice(3))}</b></button>`).join('')}</div>`;
 const ring = (r, f, c, bg) => { const C = 2 * Math.PI * r; return `<circle cx="62" cy="62" r="${r}" fill="none" stroke="${bg}" stroke-width="12"/>${f > 0 ? `<circle cx="62" cy="62" r="${r}" fill="none" stroke="${c}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${(C * Math.min(Math.max(f, 0), 1)).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 62 62)"/>` : ''}`; };
 const minis = (vals, col, hi) => { const m = Math.max(1, ...vals.map(v => v || 0)), w = 54 / vals.length; return `<svg width="54" height="26" class="lf_hsp">${vals.map((v, k) => { const h = Math.max(3, (v || 0) / m * 26); return `<rect x="${(k * w + 1).toFixed(1)}" y="${(26 - h).toFixed(1)}" width="${(w - 3).toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${k === hi ? col : '#eceef2'}"/>`; }).join('')}</svg>`; };
 const hbar = (f, c, bg, h = 6) => `<i class="lf_hbar" style="background: ${bg}; height: ${h}px"><i style="width: ${Math.round(Math.min(Math.max(f, 0), 1) * 100)}%; background: ${c}"></i></i>`;
@@ -325,7 +328,7 @@ export function stepsScreen(p, now, i) {
         chart = `<div class="lf_hc"><svg class="lf_hsvg" viewBox="0 0 300 124">${[0.5, 1].map(f => `<line x1="0" x2="300" y1="${y(top * f)}" y2="${y(top * f)}" class="g"/><text x="298" y="${y(top * f) - 3}" text-anchor="end">${n0(top * f)}</text>`).join('')}
           ${u.steps ? `<line x1="0" x2="300" y1="${y(u.steps)}" y2="${y(u.steps)}" class="av" stroke="${HC.steps}"/>` : ''}
           ${wk.map((x, k) => `<rect x="${(k * bw + bw * 0.18).toFixed(1)}" y="${y(x.steps || 0).toFixed(1)}" width="${(bw * 0.64).toFixed(1)}" height="${Math.max(2, 120 - y(x.steps || 0)).toFixed(1)}" rx="${Math.min(6, bw * 0.2).toFixed(1)}" fill="${x === d ? HC.steps : HB.steps}"/>`).join('')}</svg>
-          <div class="lf_xl">${m === 'w' ? wk.map(x => `<span class="${x === d ? 'on' : ''}">${WDK[WD[weekday(x.date)]]}</span>`).join('') : [wk[0], wk[Math.floor(wk.length / 2)], wk.at(-1)].filter(Boolean).map(x => `<span>${esc(fmtDate(p, x.date, true))}</span>`).join('')}</div>${u.steps ? `<div class="lf_hnote"><i style="border-color: ${HC.steps}"></i>평소 ${n0(u.steps)}걸음</div>` : ''}</div>`;
+          <div class="lf_xl">${m === 'w' ? wk.map(x => `<span class="${x === d ? 'on' : ''}">${wdk(x.date, String(Number(x.date.slice(3))))}</span>`).join('') : [wk[0], wk[Math.floor(wk.length / 2)], wk.at(-1)].filter(Boolean).map(x => `<span>${esc(fmtDate(p, x.date, true))}</span>`).join('')}</div>${u.steps ? `<div class="lf_hnote"><i style="border-color: ${HC.steps}"></i>평소 ${n0(u.steps)}걸음</div>` : ''}</div>`;
         rows = `<div><span>가장 많이 걸은 날</span><b>${(() => { const b = wk.reduce((x, y2) => ((y2.steps || 0) > (x.steps || 0) ? y2 : x), wk[0]); return b ? `${esc(fmtDate(p, b.date, true))} · ${n0(b.steps)}` : '—'; })()}</b></div><div><span>합계</span><b class="cg_num">${n0(wk.reduce((s, x) => s + (x.steps || 0), 0))}걸음</b></div>`;
     }
     return `${axBar(p, now)}${axTop(axCb(`health:${d.date}`))}
@@ -375,8 +378,8 @@ export function sleepScreen(p, now, i) {
           <div class="lf_hc"><svg class="lf_hsvg" viewBox="0 0 300 186">${ticks.map(t => `<line x1="30" x2="300" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}" class="g"/><text x="0" y="${(Y(t) + 4).toFixed(1)}">${hm(t + base)}</text>`).join('')}
             ${u.sleep ? `<line x1="30" x2="300" y1="${Y(off(u.sleep)).toFixed(1)}" y2="${Y(off(u.sleep)).toFixed(1)}" class="av" stroke="${HC.sleep}"/>` : ''}
             ${wk.map((x, k) => `<rect x="${(30 + k * bw + bw * 0.2).toFixed(1)}" y="${Y(off(x.sleep)).toFixed(1)}" width="${(bw * 0.6).toFixed(1)}" height="${Math.max(4, Y(off(x.wake)) - Y(off(x.sleep))).toFixed(1)}" rx="${Math.min(7, bw * 0.25).toFixed(1)}" fill="${x === d ? HC.sleep : HB.sleep}"/>`).join('')}</svg>
-            <div class="lf_xl" style="padding-left: 30px">${m === 'w' ? wk.map(x => `<span class="${x === d ? 'on' : ''}">${WDK[WD[weekday(x.date)]]}</span>`).join('') : [wk[0], wk.at(-1)].filter(Boolean).map(x => `<span>${esc(fmtDate(p, x.date, true))}</span>`).join('')}</div>${u.sleep ? `<div class="lf_hnote"><i style="border-color: ${HC.sleep}"></i>평소 잠드는 시각 ${u.sleep}</div>` : ''}</div>
-          <div class="lf_hc lf_rows"><div><span>평균 잠든 시각</span><b class="cg_num">${wk.length ? hm(Math.round(avg(wk.map(x => off(x.sleep)))) + base) : '—'}</b></div><div><span>평균 깬 시각</span><b class="cg_num">${wk.length ? hm(Math.round(avg(wk.map(x => off(x.wake)))) + base) : '—'}</b></div>${wk.length ? (() => { const l = wk.reduce((x, y2) => (off(y2.sleep) > off(x.sleep) ? y2 : x)); return `<div><span>가장 늦게 잔 날</span><b>${WDK[WD[weekday(l.date)]]} · ${l.sleep}</b></div>`; })() : ''}</div>`;
+            <div class="lf_xl" style="padding-left: 30px">${m === 'w' ? wk.map(x => `<span class="${x === d ? 'on' : ''}">${wdk(x.date, String(Number(x.date.slice(3))))}</span>`).join('') : [wk[0], wk.at(-1)].filter(Boolean).map(x => `<span>${esc(fmtDate(p, x.date, true))}</span>`).join('')}</div>${u.sleep ? `<div class="lf_hnote"><i style="border-color: ${HC.sleep}"></i>평소 잠드는 시각 ${u.sleep}</div>` : ''}</div>
+          <div class="lf_hc lf_rows"><div><span>평균 잠든 시각</span><b class="cg_num">${wk.length ? hm(Math.round(avg(wk.map(x => off(x.sleep)))) + base) : '—'}</b></div><div><span>평균 깬 시각</span><b class="cg_num">${wk.length ? hm(Math.round(avg(wk.map(x => off(x.wake)))) + base) : '—'}</b></div>${wk.length ? (() => { const l = wk.reduce((x, y2) => (off(y2.sleep) > off(x.sleep) ? y2 : x)); return `<div><span>가장 늦게 잔 날</span><b>${wdk(l.date, String(Number(l.date.slice(3))))} · ${l.sleep}</b></div>`; })() : ''}</div>`;
     }
     return `${axBar(p, now)}${axTop(axCb(`health:${d.date}`))}
       <div class="ax_scroll">${axH1('수면')}${seg('hsleep', d.date, m, [['d', '일'], ['w', '주'], ['m', '월']])}${body}<i class="lf_pad"></i></div>${axInd()}`;
@@ -722,7 +725,7 @@ function weatherBody(p, h, name, night, sub, source, tileCol, lead = '') {
     const lo = Math.min(...h.days.map(d => d.lo ?? 99), h.lo ?? 99), hi = Math.max(...h.days.map(d => d.hi ?? -99), h.hi ?? -99);
     return `<div class="lf_wtop">${sub ? `<small>${sub}</small>` : ''}<h2>${esc(name)}</h2><div class="t">${h.temp ?? '—'}°</div><div class="c">${esc(h.said || WX[h.cond] || '')}</div><div class="hl">최고:${h.hi ?? '—'}° 최저:${h.lo ?? '—'}°</div>${source}</div>
       ${h.hours.length ? `<div class="lf_wcard">${h.line ? `<div class="ln1">${esc(h.line)}${k1(h.ko, 'lf_wk')}</div>` : ''}<div class="lf_hrs">${h.hours.map((x, k) => `<div>${k ? esc(x.time.slice(0, 2)) + '시' : '지금'}<em>${x.rain >= 20 ? `${x.rain}%` : ''}</em>${wxIc(x.cond, 26, phaseOf(x.time, h.tiles.sunrise || h.sr, h.tiles.sunset || h.ss) === 'night')}<b class="cg_num">${x.temp ?? '—'}°</b></div>`).join('')}</div>${hourLine(h.hours)}</div>` : ''}
-      ${h.days.length ? `<div class="lf_wcard"><div class="hd">${h.days.length}일간의 일기예보</div>${h.days.map((d, k) => `<div class="lf_d10"><span>${k ? WDK[WD[weekday(d.day)]] : '오늘'}</span><span class="ic">${wxIc(d.cond, 22)}${d.rain >= 30 ? `<em>${d.rain}%</em>` : ''}</span><span class="lo cg_num">${d.lo ?? '—'}°</span>${tempBar(d, lo, hi, k ? null : h.temp)}<span class="hi cg_num">${d.hi ?? '—'}°</span></div>`).join('')}</div>` : ''}
+      ${h.days.length ? `<div class="lf_wcard"><div class="hd">${h.days.length}일간의 일기예보</div>${h.days.map((d, k) => `<div class="lf_d10"><span>${k ? wdk(d.day, `${Number(d.day.slice(3))}일`) : '오늘'}</span><span class="ic">${wxIc(d.cond, 22)}${d.rain >= 30 ? `<em>${d.rain}%</em>` : ''}</span><span class="lo cg_num">${d.lo ?? '—'}°</span>${tempBar(d, lo, hi, k ? null : h.temp)}<span class="hi cg_num">${d.hi ?? '—'}°</span></div>`).join('')}</div>` : ''}
       ${weatherTiles(h, tileCol, lead)}`;
 }
 // the screen's colours: the sky, and the one flat colour its cards and tiles sit in

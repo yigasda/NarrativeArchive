@@ -17,7 +17,7 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
-import { arr, evOf, hhmm, jsonOf, ko, parseJson, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+import { arr, evOf, hhmm, jsonOf, ko, parseJson, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 export { arr, hhmm, jsonOf, ko, last4, line, num, pad, pick, str, when, withEv };
 import { applyDays, applyLife, applyWeather, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
@@ -66,7 +66,7 @@ const PHONE_STYLE = `LANGUAGE
 
 TIMES
 "MM-DD HH:MM" (24-hour), in story time, from the archive's dates. "now" is the newest moment of the story.
-No year in any text unless the story gives one.`;
+STORY YEAR (sometimes): a year written in any text is that one. Without it, a year only as the story itself writes one (its own calendar); none: no year.`;
 const PHONE_TEST = `${PHONE_FACT}\n\n${PHONE_STYLE}`;
 const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how the owner saved them (a nickname, an emoji, or just the name) }],
   "threads": [{ "with": name, "messages": [{ "from": "me" or the sender's name, "text", "ko", "time" }],
@@ -324,6 +324,16 @@ function chatStory(budget) {
     return out.join('\n\n');
 }
 export const noArchive = m => !archiveFor(m, -1).text.trim();
+// the story's year: the phone's own (carried over New Year), else one written in a date in the archive, the newest status
+// lines or (no archive) the chat; none for a story that never dates itself (a fantasy calendar, an undated present)
+export function storyYear(m, p = null) {
+    if (p?.year) return String(p.year);
+    let tracks = '';
+    try { tracks = recentTrackers(5).map(t => t.date || '').join('\n'); } catch { /* no status lines */ }
+    return yearIn(m.text) || yearIn(tracks) || (noArchive(m) ? yearIn(recentForCheck(1e9).join('\n')) : '');
+}
+// what the model is told of the year: a year in any text is this one (nothing when it is unknown)
+const yearBlock = (m, p) => { const y = storyYear(m, p); return y ? `[STORY YEAR]\n${y}` : ''; };
 // the archive block, or (budget) the chat in its place, then no RECENT CHAT: it is in there
 const archiveBlock = (m, ar, head, budget) => (budget && noArchive(m) ? `[${head} — none written yet: the chat so far is the story]\n${chatStory(budget) || '(empty)'}` : `[${head}]\n${ar}`);
 function archiveFor(m, after = -1) {
@@ -394,6 +404,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '') 
         world ? `[WORLD]\n${world}` : '',
         lore ? `[LOREBOOK]\n${lore}` : '',
         recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : '',
+        yearBlock(m, p),
         `[OWNER]\n${owner}`,
         profile, blindBlock(m, owner),
         namesBlock(m),
@@ -564,7 +575,7 @@ async function updatePhone(m, owner) {
         const trackDay = tracker ? when(tracker.date).slice(0, 5) : '';
         const askWeather = !!life && (!tracker || !!trackDay && trackDay !== life.weather?.date);
         // the year the phone's now is in: read once from the bank or the archive, then carried over New Year with the now
-        if (!p.year) { const y = Number((wealthDate(m, p) || String(p.money?.asOf || p.investment?.date || '')).slice(0, 4)); if (y > 1900) p.year = y; }
+        if (!p.year) { const y = Number(storyYear(m, p) || String(p.money?.asOf || p.investment?.date || '').slice(0, 4)); if (y > 1900) p.year = y; }
         const known = p.year ? String(p.year) : '', year = known || String(new Date().getFullYear());
         const anchor = known && /^\d{2}-\d{2}/.test(p.now || '') ? `${known}-${p.now.slice(0, 5)}` : '';
         // the days ahead with their weekdays (only with a known year): "on Friday" is a date the model can look up
@@ -578,7 +589,7 @@ async function updatePhone(m, owner) {
             before.length ? `[ARCHIVE BEFORE]\n${before.join('\n\n')}` : '',
             reachesEnd(s, rows, round.rows) && tail.trim() ? `[STORY NOW]\n${tail.trim()}` : '',
             `[EVENTS ON THE PHONE]\n${events || '(none yet)'}`,
-            dayList.length ? `[DAYS]\n${dayList.join('\n')}` : '',
+            known ? `[STORY YEAR]\n${known}` : '', dayList.length ? `[DAYS]\n${dayList.join('\n')}` : '',
             reread.size ? `[MESSAGES READ BEFORE, NOW CHANGED]\n${[...reread].map(([at, evs]) => `- #${at}: ${evs.length ? evs.map(e => `${e.id} (${e.summary})`).join('; ') : 'nothing on the phone yet'}`).join('\n')}` : '',
             `[PHONE NOW]\n${JSON.stringify(phoneForModel(p))}`,
             money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
@@ -1022,7 +1033,7 @@ export async function sideRequest(m, owner, blocks, { profile, money = false, st
         archiveBlock(m, archiveFor(m, -1).text || '(empty)', 'ARCHIVE', story),
         world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
         recent && !(story && noArchive(m)) ? `[RECENT CHAT]\n${recent}` : '',
-        `[OWNER]\n${owner}`, profileText, blindBlock(m, owner), ...blocks, namesBlock(m),
+        yearBlock(m, m.phones?.[nameKey(owner)] || null), `[OWNER]\n${owner}`, profileText, blindBlock(m, owner), ...blocks, namesBlock(m),
     ].filter(Boolean).join('\n\n');
 }
 export function parseMoney(raw) {
