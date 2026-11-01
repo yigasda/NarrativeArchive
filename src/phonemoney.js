@@ -9,7 +9,7 @@ import { investmentDate } from './investdata.js';
 import { nameKey } from './people.js';
 import { filling, recording } from './phoneai.js';
 import { AX, ax, axBar, axCb, axDay, axFind, axH1, axInd, axKp, axLetter, axTint, axTop, busyHtml } from './phoneapps.js';
-import { byStory, fmtDate, fmtTime, gapDays, koOn, listTime } from './phonedata.js';
+import { byStory, fmtDate, fmtTime, gapDays, koOn, listTime, storyNow } from './phonedata.js';
 import { esc } from './util.js';
 import { prodSvg } from './phoneprod.js';
 
@@ -159,28 +159,76 @@ export function bankTx(p, now, id) {
 
 // ---- 지갑: the bank's cards on top, then the passes, stacked like a real wallet
 const chip = '<span class="ax_ccchip"><i style="left: 0; right: 0; top: 11px; height: 1px"></i><i style="left: 0; right: 0; top: 21px; height: 1px"></i><i style="top: 0; bottom: 0; left: 15px; width: 1px"></i><i style="top: 0; bottom: 0; left: 29px; width: 1px"></i></span>';
-const nfc = '<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".85"><path d="M8.5 8a6 6 0 0 1 0 8M12 5.5a10 10 0 0 1 0 13M15.5 3a14 14 0 0 1 0 18"/></svg>';
-const DECO = {
-    checking: '<svg class="ax_ccdeco" viewBox="0 0 358 226" preserveAspectRatio="none" aria-hidden="true"><path d="M0 128 C70 92 150 168 230 132 S330 96 358 112 V226 H0Z" fill="#fff" opacity=".07"/><path d="M0 170 C90 132 170 206 260 168 S340 150 358 160 V226 H0Z" fill="#fff" opacity=".07"/><circle cx="318" cy="18" r="86" fill="#fff" opacity=".05"/></svg>',
-    credit: '<svg class="ax_ccdeco" viewBox="0 0 358 226" preserveAspectRatio="none" aria-hidden="true"><circle cx="300" cy="190" r="120" fill="#fff" opacity=".05"/><circle cx="340" cy="120" r="70" fill="#fff" opacity=".05"/><path d="M0 0 H150 C110 60 60 90 0 96Z" fill="#fff" opacity=".04"/></svg>',
-};
+const nfc = '<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".85"><path d="M8.5 8a6 6 0 0 1 0 8M12 5.5a10 10 0 0 1 0 13M15.5 3a14 14 0 0 1 0 18"/></svg>';
 const CC_BG = { checking: '#1d3461', credit: '#25272e', savings: '#2f5d50' };
-function cardArt(p, c) {
-    const a = acctOf(p, c.account), kind = a?.kind || 'checking', [b1, ...b2] = String(mo(p).bank.name).split(' ');
-    return `<span class="ax_cc" style="background: ${CC_BG[kind]}">${DECO[kind] || DECO.checking}<span class="ax_cctop"><span class="ax_cclg"><b>${esc(b1)}</b> ${esc(b2.join(' '))}</span><span class="ax_cckd">${kind === 'credit' ? 'credit' : 'debit'}</span></span><span class="ax_ccmid">${chip}${nfc}</span><span class="ax_ccno cg_num">•••• •••• •••• ${esc(c.account)}</span><span class="ax_ccbot"><span><small>CARD HOLDER</small><b>${esc(String(p.owner).toUpperCase())}</b></span><span class="ax_r"><small>VALID THRU</small><b>${esc(c.exp || '—')}</b></span></span></span>`;
+// each bank has its colour family (two shades) and each card a pattern; premium credit cards by how much the owner has
+const BANK_C = [['#2c4a80', '#1d2f55'], ['#b8323a', '#8e2730'], ['#2f6a5a', '#224f43'], ['#4a3f7a', '#352c5a'], ['#2f6f8f', '#225369'], ['#8a5a2e', '#6a431f'], ['#3f4a5a', '#2b333f']];
+const PAT = {
+    waves: Array.from({ length: 6 }, (_, k) => `<path d="M-20 ${120 + k * 14} q80 -40 160 0 t160 0" stroke="#fff" stroke-opacity=".08" stroke-width="8" fill="none"/>`).join(''),
+    circles: '<circle cx="250" cy="40" r="90" fill="#fff" fill-opacity=".07"/><circle cx="290" cy="150" r="70" fill="#fff" fill-opacity=".06"/>',
+    lines: Array.from({ length: 10 }, (_, k) => `<path d="M${60 + k * 40} 0 L${-60 + k * 40} 200" stroke="#fff" stroke-opacity=".07" stroke-width="10"/>`).join(''),
+    dots: Array.from({ length: 11 * 14 }, (_, k) => `<circle cx="${180 + (k % 11) * 14}" cy="${10 + Math.floor(k / 11) * 14}" r="2" fill="#fff" fill-opacity=".12"/>`).join(''),
+    grid: Array.from({ length: 20 }, (_, k) => `<rect x="${200 + (k % 4) * 30}" y="${20 + Math.floor(k / 4) * 30}" width="24" height="24" rx="6" fill="#fff" fill-opacity="${(0.04 + (k % 3) * 0.03).toFixed(2)}"/>`).join(''),
+    stripe: '<path d="M230 0 L330 0 L330 200 L150 200z" fill="#1d2f55" fill-opacity=".06"/><path d="M250 0 L262 0 L182 200 L170 200z" fill="#1d2f55" fill-opacity=".08"/>',
+    brushed: Array.from({ length: 100 }, (_, k) => `<path d="M0 ${k * 2} H330" stroke="${k % 2 ? '#fff' : '#000'}" stroke-opacity="${k % 2 ? 0.05 : 0.03}" stroke-width=".7"/>`).join(''),
+    guilloche: Array.from({ length: 10 }, (_, k) => `<ellipse cx="260" cy="100" rx="${40 + k * 9}" ry="${90 - k * 4}" transform="rotate(${k * 12} 260 100)" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width=".8"/>`).join(''),
+    platinum: Array.from({ length: 100 }, (_, k) => `<path d="M0 ${k * 2} H330" stroke="${k % 2 ? '#fff' : '#000'}" stroke-opacity="${k % 2 ? 0.1 : 0.035}" stroke-width=".7"/>`).join('')
+        + '<defs><linearGradient id="axplsh" x1="0" y1="0" x2="1" y2="1"><stop offset=".3" stop-color="#fff" stop-opacity="0"/><stop offset=".48" stop-color="#fff" stop-opacity=".45"/><stop offset=".56" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><rect width="330" height="200" fill="url(#axplsh)"/><rect x="7" y="7" width="316" height="186" rx="12" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width=".8"/>',
+};
+const PATS = ['waves', 'circles', 'lines', 'dots', 'grid'];
+const hashOf = s => [...String(s || '')].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 2147483647, 7);
+// "how much they have" in the bank's money, scaled so the tiers mean about the same in won, yen or euros
+const SCALE = { KRW: 1300, JPY: 150, CNY: 7, TWD: 32, INR: 83, RUB: 90, BRL: 5, CAD: 1.35, AUD: 1.5, GBP: 0.8 };
+function cardLook(p, a, k) {
+    const name = String(a?.name || ''), bank = mo(p).bank.name || '', [c1, c2] = BANK_C[hashOf(bank) % BANK_C.length];
+    if (a?.kind === 'credit') {
+        const has = mo(p).bank.accounts.filter(x => x.kind !== 'credit').reduce((n, x) => n + Math.max(0, Number(x.balance) || 0) / (SCALE[x.currency] || 1), 0);
+        if (/black|schwarz|블랙|infinite|centurion/i.test(name) || has >= 400000) return { tier: 'BLACK', bg: '#17181b', ink: '#d9dbe0', pat: 'brushed', chipc: '#b8bcc4', mono: true };
+        if (/platin|플래티넘/i.test(name) || has >= 120000) return { tier: 'PLATINUM', bg: '#c9ccd2', ink: '#23272e', pat: 'platinum', chipc: '#dcd6c4' };
+        if (/gold|골드/i.test(name) || has >= 40000) return { tier: 'GOLD', bg: '#b8913a', ink: '#2b2210', pat: 'guilloche', chipc: '#efe0b0' };
+    }
+    if (/student|studi|jugend|youth|junior|학생|청소년|대학/i.test(name)) return { tier: '', bg: '#e9eef6', ink: '#1d2f55', pat: 'stripe', chipc: '#d8b45a' };
+    return { tier: '', bg: a?.kind === 'credit' ? c2 : c1, ink: '#fff', pat: PATS[(hashOf(`${bank}${a?.last4 || ''}`) + k) % PATS.length], chipc: '' };
 }
-const PASS = { flight: ['#1f2f4d', 'plane', '탑승'], train: ['#8f3a32', 'train', '열차'], hotel: ['#efe3cf', 'bed', '체크인'], event: ['#4b3a6b', 'ticket', '입장'], other: ['#3d4a66', 'ticket', '시간'] };
-const code = s => { const t = String(s || '').trim(); return /^[A-Z]{3}$/.test(t) ? t : t; };
+function cardArt(p, c) {
+    const a = acctOf(p, c.account), kind = a?.kind || 'checking', bank = String(mo(p).bank.name), [b1, ...b2] = bank.split(' '), L = cardLook(p, a, mo(p).cards.indexOf(c));
+    const prem = !!L.tier;
+    return `<span class="ax_cc${prem ? ' ax_ccpr' : ''}" style="background: ${L.bg}; color: ${L.ink}${L.chipc ? `; --chipc: ${L.chipc}` : ''}"><svg class="ax_ccdeco" viewBox="0 0 330 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${PAT[L.pat]}</svg>`
+        + `<span class="ax_cctop"><span class="ax_cclg">${prem ? `<b>${esc(bank.toUpperCase())}</b><small>${L.tier}</small>` : `<b>${esc(b1)}</b> ${esc(b2.join(' '))}`}</span><span class="ax_cckd">${kind === 'credit' ? 'credit' : 'debit'}</span></span>`
+        + `<span class="ax_ccmid">${chip}${nfc}</span><span class="ax_ccno cg_num">${L.mono ? '••••' : '•••• •••• ••••'} ${esc(c.account)}</span><span class="ax_ccbot"><span><small>CARD HOLDER</small><b>${esc(String(p.owner).toUpperCase())}</b></span><span class="ax_r"><small>VALID THRU</small><b>${esc(c.exp || '—')}</b></span></span></span>`;
+}
+// passes: the kind the bank gave (flight, train, hotel, event, other), and for an event or other ticket what its venue's name
+// says it is (a cinema, a match, a museum, a bus or ferry, else a concert or show); empty fields are left out
+const PASS = { flight: ['#2c4a80', 'plane', '탑승'], train: ['#8e3a33', 'train', '열차'], hotel: ['#efe2cf', 'bed', '체크인'], concert: ['#26304f', 'ticket', '입장'],
+    movie: ['#1d1d22', 'film', '상영'], match: ['#2f6a3a', 'ball', '킥오프'], museum: ['#f3ede4', 'museum', '관람'], bus: ['#2f6f8f', 'bus', '출발'], other: ['#3d4a66', 'ticket', '시간'] };
+const LIGHT = new Set(['hotel', 'museum']);
+Object.assign(AX, { film: 'M4 5h16v14H4zM8 5v14M16 5v14M4 9h4M4 15h4M16 9h4M16 15h4', ball: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7l4 3-1.5 5h-5L8 10z', museum: 'M3 9l9-5 9 5M5 9v9M9 9v9M15 9v9M19 9v9M3 20h18', bus: 'M6 4h12a2 2 0 0 1 2 2v10H4V6a2 2 0 0 1 2-2zM4 11h16M7 19v-3M17 19v-3M8 14h.01M16 14h.01' });
+const passKind = x => {
+    if (['flight', 'train', 'hotel'].includes(x.kind)) return x.kind;
+    const w = `${x.by || ''} ${x.to || ''} ${x.from || ''}`;
+    if (/kino|cinema|movie|film|영화|cgv|megabox|롯데시네마|映画|电影/i.test(w)) return 'movie';
+    if (/stadion|stadium|arena|park\b|match|spiel|fc\b|sv\b|경기|구장|스타디움|球場|体育/i.test(w)) return 'match';
+    if (/museum|galerie|gallery|ausstellung|exhibit|미술관|박물관|전시|美術館|博物馆/i.test(w)) return 'museum';
+    if (/bus|flixbus|fernbus|fähre|ferry|ship|schiff|버스|페리|여객선|フェリー|巴士|轮渡/i.test(w)) return 'bus';
+    return x.kind === 'event' ? 'concert' : 'other';
+};
+const nights = (a, b) => { const m = s => String(s || '').match(/^(\d{2})-(\d{2})/); const x = m(a), y = m(b); if (!x || !y) return null; const d = (Date.UTC(2025, y[1] - 1, y[2]) - Date.UTC(2025, x[1] - 1, x[2])) / 864e5; return d > 0 && d < 60 ? d : null; };
 function passArt(p, x, full) {
-    const [bg, icon, lab] = PASS[x.kind] || PASS.other, cream = x.kind === 'hotel';
-    const big = x.from && x.to && x.kind !== 'hotel' && x.kind !== 'event';
-    const small = s => (String(s).length > 4 ? ' ax_pbsm' : '');
-    return `<span class="ax_ps ${cream ? 'cream' : ''}" style="background: ${bg}">
-      <span class="ax_psh"><span class="ax_pslg">${ax(icon, 16, 'currentColor')}</span><span class="ax_psn">${esc(String(x.by || '').toUpperCase())}</span><span class="ax_pshr">${lab}<b class="cg_num">${esc(x.time || fmtDate(p, x.date, true) || '—')}</b></span></span>
-      ${big ? `<span class="ax_psrt"><span><b class="${small(x.from)}">${esc(code(x.from))}</b></span><span class="ax_pspl">${ax(x.kind === 'flight' ? 'plane' : 'chev', 24, 'currentColor', 1.6)}</span><span class="ax_r"><b class="${small(x.to)}">${esc(code(x.to))}</b></span></span>` : `<span class="ax_psrt"><span><b class="ax_pbsm">${esc(x.to || x.from || x.by)}</b></span></span>`}
-      <span class="ax_psfl"><span><small>날짜</small><b>${esc(fmtDate(p, x.date, true) || '—')}</b></span><span><small>${x.kind === 'flight' ? '좌석' : x.kind === 'hotel' ? '예약' : '좌석'}</small><b>${esc(x.kind === 'hotel' ? (x.no || '—') : (x.seat || '—'))}</b></span><span class="ax_r"><small>${x.kind === 'flight' ? '게이트' : '번호'}</small><b>${esc(x.kind === 'flight' ? (x.gate || '—') : (x.no || '—'))}</b></span>
-        <span><small>소유자</small><b>${esc(String(p.owner).toUpperCase())}</b></span><span><small>시간</small><b class="cg_num">${esc(x.time || '—')}</b></span><span class="ax_r"><small>${x.kind === 'flight' ? '편명' : '상태'}</small><b>${esc(x.kind === 'flight' ? (x.no || '—') : (x.status || '—'))}</b></span></span>
-      ${full ? `<span class="ax_psperf"></span><span class="ax_psqr">${qr(x.id)}</span>` : ''}</span>`;
+    const k = passKind(x), [bg, icon, lab] = PASS[k], light = LIGHT.has(k);
+    const f = (label, v) => (v === null || v === undefined || String(v).trim() === '' || v === '—' ? '' : `<span><small>${label}</small><b>${esc(String(v))}</b></span>`);
+    const route = (a, b, big) => `<span class="ax_psrt ${big ? '' : 'ln'}"><span><b class="${big && String(a).length <= 4 ? '' : 'ax_pbsm'}">${esc(a)}</b></span><span class="ax_pspl">${big ? ax('plane', 22, 'currentColor', 1.6) : '<i></i>'}</span><span class="ax_r"><b class="${big && String(b).length <= 4 ? '' : 'ax_pbsm'}">${esc(b)}</b></span></span>`;
+    const title = t => `<span class="ax_psti">${esc(t)}</span>`;
+    const date = fmtDate(p, x.date, true);
+    let mid = '', fields = '';
+    if (k === 'flight') { mid = x.from && x.to ? route(x.from, x.to, true) : title(x.to || x.from || ''); fields = f('날짜', date) + f('탑승구', x.gate) + f('좌석', x.seat) + f('편명', x.no); }
+    else if (k === 'train' || k === 'bus') { mid = x.from && x.to ? route(x.from, x.to, false) : title(x.to || x.from || ''); fields = f('날짜', date) + f('좌석', x.seat) + f(k === 'bus' ? '예약' : '번호', x.no) + f('소유자', String(p.owner).toUpperCase()); }
+    else if (k === 'hotel') { const n = nights(x.date, x.to && /^\d{2}-\d{2}/.test(x.to) ? x.to : ''); mid = title(x.to && !/^\d{2}-\d{2}/.test(x.to) ? x.to : x.from || ''); fields = f('체크인', date) + f('숙박', n ? `${n}박` : '') + f('예약', x.no) + f('객실', x.seat); }
+    else if (k === 'match') { const m = String(x.to || x.from || '').split(/\s+(?:vs\.?|gegen|대|–|-)\s+/i); mid = m.length === 2 ? `<span class="ax_psvs"><b>${esc(m[0])}</b><small>vs</small><b>${esc(m[1])}</b></span>` : title(x.to || x.from || ''); fields = f('날짜', date) + f('블록', x.gate) + f('좌석', x.seat) + f('번호', x.no); }
+    else { mid = title(x.to || x.from || ''); fields = f('날짜', date) + f(k === 'movie' ? '관' : k === 'museum' ? '입장권' : '구역', x.gate) + f('좌석', x.seat) + f('번호', x.no); }
+    return `<span class="ax_ps ax_ps_${k} ${light ? 'cream' : ''}" style="background: ${bg}">
+      <span class="ax_psh"><span class="ax_pslg">${ax(icon, 16, 'currentColor')}</span><span class="ax_psn">${esc(String(x.by || '').toUpperCase())}</span><span class="ax_pshr">${lab}<b class="cg_num">${esc(x.time || date || '')}</b></span></span>
+      ${mid}<span class="ax_psfl">${fields}</span>
+      ${full ? `<span class="ax_psperf"></span>${x.status ? `<span class="ax_psst">${esc(x.status)}</span>` : ''}<span class="ax_psqr">${qr(x.id)}</span>` : ''}</span>`;
 }
 // a QR-looking square (drawn, not a code)
 function qr(seed) {
@@ -209,6 +257,24 @@ export function walletScreen(p, now) {
       </div>
       ${axInd()}`;
 }
+// this month on the card: a bar per day and where the money went, sorted by the merchants' own words
+const SPEND = [['식비 · 카페', '#e0904a', /café|cafe|kaffee|coffee|bäck|bakery|restaurant|trattoria|osteria|ristorante|pizzeria|brasserie|taverna|grill|kitchen|küche|mensa|kantine|pizza|burger|imbiss|döner|sushi|ramen|bistro|bar\b|lieferando|wolt|uber ?eats|delivery|deliveroo|배달|카페|커피|식당|베이커리|치킨|분식|레스토랑|스타벅스|투썸/i],
+    ['장보기', '#6fae6f', /rewe|edeka|aldi|lidl|netto|penny|kaufland|supermarkt|supermarket|grocery|tesco|sainsbury|walmart|costco|마트|이마트|홈플러스|롯데마트|편의점|gs25|cu\b|세븐일레븐|コンビニ|スーパー|超市/i],
+    ['교통', '#5a8ac8', /bahn|\bdb\b|bvg|hvv|mvg|ubahn|u-bahn|metro|transit|uber\b|taxi|bolt|tank|shell|aral|esso|fuel|parking|parken|교통|지하철|버스|택시|주유|티머니|ktx|코레일|주차|suica|pasmo/i],
+    ['쇼핑', '#2f9a8a', /amazon|zalando|otto|ebay|shop|store|markt\b|buch|book|apple|ikea|h&m|zara|uniqlo|쿠팡|무신사|올리브영|쇼핑|다이소|11번가|g마켓|楽天|淘宝/i]];
+function spendMonth(p, all) {
+    const mm = String(storyNow(p) || p.now || '').slice(0, 2), xs = all.filter(x => String(x.time).slice(0, 2) === mm && x.amount < 0 && !x.pending);
+    if (xs.length < 2) return '';
+    const tot = xs.reduce((n, x) => n - x.amount, 0), cats = SPEND.map(([n, c, re]) => [n, c, xs.filter(x => re.test(`${x.who} ${x.ko || ''} ${x.memo || ''}`))]);
+    const other = xs.filter(x => !cats.some(([, , ys]) => ys.includes(x))), rows = [...cats, ['그 밖', '#9aa3ae', other]].map(([n, c, ys]) => [n, c, ys.reduce((m, x) => m - x.amount, 0)]).filter(r => r[2] > 0).sort((a, b) => b[2] - a[2]);
+    const last = Math.max(...xs.map(x => Number(String(x.time).slice(3, 5)) || 1)), days = Array.from({ length: last }, (_, d) => xs.filter(x => Number(String(x.time).slice(3, 5)) === d + 1).reduce((n, x) => n - x.amount, 0)), top = Math.max(...days, 1);
+    const cur = xs[0].currency || mo(p).currency;
+    return `<section class="cd_month"><div class="cd_mh"><span>${Number(mm)}월 결제</span><b class="cg_num">${esc(fmtIn(p, tot, cur))}</b></div>
+      <div class="cd_days">${days.map((v, d) => `<i style="height: ${Math.max(2, Math.round(v / top * 44))}px${d === last - 1 ? '; background: var(--cdk, #1d2f55)' : ''}"></i>`).join('')}</div>
+      <div class="cd_dx cg_num"><span>1일</span><span>${last}일</span></div>
+      <div class="cd_bar">${rows.map(([, c, v]) => `<i style="flex: ${v}; background: ${c}"></i>`).join('')}</div>
+      ${rows.map(([n, c, v]) => `<div class="cd_cat"><i style="background: ${c}"></i><span>${n}</span><b class="cg_num">${esc(fmtIn(p, v, cur))}</b><small>${Math.round(v / tot * 100)}%</small></div>`).join('')}</section>`;
+}
 export function cardView(p, now, i) {
     const c = mo(p)?.cards?.[Number(i)];
     if (!c) return walletScreen(p, now);
@@ -228,6 +294,7 @@ export function cardView(p, now, i) {
           ${conversion ? `<details class="cd_fx"><summary>${conversion}</summary><p>${converted(p,a)}</p></details>` : ''}
           ${ai >= 0 ? `<button type="button" class="cd_account" data-go="acct" data-i="${ai}"><span>${ax('card',16)} ${credit ? '카드 이용 내역' : '연결 계좌 보기'}</span><span>•••• ${esc(a.last4)} ${ax('chev',14)}</span></button>` : ''}
         </section>
+        ${spendMonth(p, all)}
         <div class="cd_section"><h2>최근 결제</h2>${ai >= 0 ? `<button type="button" data-go="acct" data-i="${ai}">전체 보기 ${ax('chev',12)}</button>` : ''}</div>
         <div class="cd_payments">${xs.map(payment).join('') || `<div class="cd_empty">${ax('receipt',25)}<b>아직 결제 내역이 없어요</b><span>이 카드의 결제 기록이 여기에 표시돼요.</span></div>`}</div>
         <i class="ax_pad"></i>

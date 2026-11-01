@@ -5158,7 +5158,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax_cclg { font: 600 17px 'Inter Tight', -apple-system, sans-serif; letter-spacing: -0.01em; } .ax_cclg b { font-weight: 800; }
 .ax_cckd { font: italic 800 19px 'Inter Tight', -apple-system, sans-serif; letter-spacing: 0.02em; }
 .ax_ccmid { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
-.ax_ccchip { width: 44px; height: 33px; border-radius: 7px; background: #e3c886; position: relative; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
+.ax_ccchip { width: 44px; height: 33px; border-radius: 7px; background: var(--chipc, #e3c886); position: relative; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
 .ax_ccchip i { position: absolute; background: rgba(90, 70, 20, 0.35); }
 .ax_ccno { margin-top: 16px; font-size: 20px; font-weight: 500; letter-spacing: 0.14em; white-space: nowrap; }
 .ax_ccbot { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; }
@@ -5175,8 +5175,20 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax_psrt b { display: block; font: 300 44px/1.05 'Inter Tight', -apple-system, sans-serif; letter-spacing: -0.02em; }
 .ax_psrt b.ax_pbsm { font-size: 26px; font-weight: 400; }
 .ax_pspl { align-self: center; opacity: 0.8; margin-bottom: 8px; }
-.ax_psfl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 16px; }
+.ax_psfl { display: grid; grid-template-columns: repeat(4, auto); justify-content: start; gap: 8px 22px; padding: 14px 16px 16px; }
 .ax_psfl small { display: block; font-size: 10px; letter-spacing: 0.06em; opacity: 0.7; font-weight: 600; } .ax_psfl b { font: 600 15px 'Inter Tight', -apple-system, sans-serif; overflow-wrap: anywhere; }
+.ax_ccpr .ax_cclg b { display: block; font-size: 15px; letter-spacing: 0.14em; }
+.ax_ccpr .ax_cclg small { display: block; font-size: 10px; letter-spacing: 0.38em; opacity: 0.8; margin-top: 3px; font-weight: 600; }
+.ax_psrt.ln { align-items: center; padding-bottom: 2px; }
+.ax_psrt.ln .ax_pspl { flex: 1; margin: 0 6px; }
+.ax_psrt.ln .ax_pspl i { display: block; border-top: 2px dotted currentColor; opacity: 0.5; }
+.ax_psti { display: block; padding: 4px 16px 0; font: 600 24px/1.2 'Inter Tight', -apple-system, sans-serif; letter-spacing: -0.01em; }
+.ax_ps_hotel .ax_psti, .ax_ps_museum .ax_psti { font-weight: 300; font-size: 30px; }
+.ax_ps_movie { color: #f6d27a; } .ax_ps_movie .ax_psti { color: #fff; }
+.ax_psvs { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 16px 0; font: 800 20px 'Inter Tight', -apple-system, sans-serif; }
+.ax_psvs small { font-size: 13px; opacity: 0.6; font-weight: 600; }
+.ax_psfl:empty { display: none; }
+.ax_psst { display: block; text-align: center; margin-top: 12px; font-size: 12px; font-weight: 700; opacity: 0.8; }
 .ax_psperf { display: block; border-top: 2px dashed rgba(255, 255, 255, 0.28); margin: 0 14px; }
 .ax_ps.cream .ax_psperf { border-color: rgba(59, 50, 38, 0.2); }
 .ax_psqr { display: grid; grid-template-columns: repeat(21, 1fr); width: 150px; height: 150px; margin: 18px auto; border-radius: 12px; background: #fff; padding: 10px; box-sizing: border-box; }
@@ -5765,6 +5777,13 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .cd_card { margin: 8px 38px 0; }
 .cd_card .ax_cc { border-radius: 18px; padding: 18px 20px; box-shadow: 0 14px 24px #1d294f25, inset 0 1px 0 #ffffff24; }
 .cd_card .ax_cclg { font-size: 15px; }
+.cd_month { margin: 12px 16px 0; padding: 14px 16px; border-radius: 18px; background: #fff; box-shadow: 0 1px 2px #161b220a, 0 8px 24px #161b220d; }
+.cd_mh { display: flex; flex-direction: column; } .cd_mh span { font-size: 12px; color: #8a929d; font-weight: 600; } .cd_mh b { font: 600 26px 'Inter Tight', -apple-system, sans-serif; letter-spacing: -0.02em; }
+.cd_days { display: flex; gap: 2px; align-items: flex-end; height: 46px; margin-top: 10px; } .cd_days i { flex: 1; border-radius: 2px; background: #c9d2e4; }
+.cd_dx { display: flex; justify-content: space-between; font-size: 11px; color: #8a929d; margin-top: 4px; }
+.cd_bar { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; margin: 12px 0 6px; } .cd_bar i { display: block; height: 100%; }
+.cd_cat { display: flex; align-items: center; gap: 10px; padding: 8px 0; font-size: 14px; } .cd_cat + .cd_cat { border-top: 1px solid #f0f1f3; }
+.cd_cat i { width: 10px; height: 10px; border-radius: 3px; flex: none; } .cd_cat span { flex: 1; } .cd_cat b { font-weight: 600; } .cd_cat small { width: 34px; text-align: right; color: #8a929d; }
 .cd_card .ax_cckd { font-size: 16px; }
 .cd_card .ax_ccmid { margin-top: 12px; }
 .cd_card .ax_ccchip { width: 36px; height: 27px; }
