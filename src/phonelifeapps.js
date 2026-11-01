@@ -479,26 +479,105 @@ const ext = f => (String(f.name).match(/\.([a-z0-9]{2,4})$/i)?.[1] || FK[f.kind]
 const fico = (f, s = '') => `<span class="lf_fico ${s}" style="background: ${FK[f.kind][1]}">${esc(ext(f))}</span>`;
 const size = kb => (kb === null || kb === undefined ? '' : kb >= 1024 * 1024 ? `${(kb / 1048576).toFixed(1)} GB` : kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${Math.round(kb)} KB`).replace('.', ',');
 const live = lf => lf.files.items.filter(f => !f.trashed);
-// a photo's thumbnail: a flat little scene picked from its name, folder and time (sea, city, night, food, or hills)
-const SCENE = [['night', /night|nacht|nuit|noche|밤|야경|abend|evening|party|bar\b|club/i], ['sea', /sea|beach|strand|meer|plage|mar\b|praia|ocean|lake|see\b|fluss|river|바다|해변|강|호수|lisboa|lisbon|porto|nice|island/i],
-    ['food', /food|essen|lunch|dinner|brunch|cafe|café|kaffee|coffee|cake|kuchen|pizza|pasta|ramen|음식|밥|카페|커피|케이크|맛집/i], ['city', /city|stadt|street|straße|strasse|tram|bus|bahn|station|bridge|brücke|building|haus|dach|roof|garage|werkstatt|도시|거리|건물|역|다리|지붕/i]];
+// what a file shows: the model's "look", else a guess from its name, folder and preview (older phones have no look)
+const LOOK_IMG = ['sea', 'city', 'night', 'food', 'hills', 'pet', 'sunset', 'mountain', 'snow', 'flower', 'interior', 'concert', 'paper', 'screenshot', 'map'];
+const LOOK_DOC = ['receipt', 'invoice', 'cv', 'letter', 'certificate', 'sheet', 'slides', 'recipe', 'medical', 'menu', 'contract', 'notes'];
+const GUESS_IMG = [['screenshot', /screenshot|bildschirmfoto|capture|스크린샷|캡처/i], ['map', /\bmap\b|karte|route|standort|location|지도/i], ['paper', /scan|zettel|whiteboard|tafel|문서|종이|paper|page/i],
+    ['concert', /concert|konzert|festival|gig|\blive\b|stage|bühne|공연|콘서트/i], ['pet', /\bcat\b|\bdog\b|katze|hund|kitty|puppy|\bpet\b|고양이|강아지|멍멍|냥/i], ['sunset', /sunset|sonnenuntergang|dusk|golden hour|abendrot|노을|석양/i],
+    ['snow', /snow|schnee|\bski|winter|눈사람|눈 ?온|설경/i], ['mountain', /mountain|berg|alpen|alps|hike|wander|gipfel|peak|등산|산행/i], ['flower', /flower|blume|blüte|garden|garten|bloom|꽃|정원/i],
+    ['interior', /room|zimmer|wohnung|apartment|\bbed\b|kitchen|küche|living|interior|방|거실|부엌|집들이/i], ['night', /night|nacht|nuit|noche|party|\bbar\b|club|야경|밤/i],
+    ['sea', /sea|beach|strand|meer|plage|praia|ocean|lake|\bsee\b|fluss|river|바다|해변|강|호수|lisboa|lisbon|porto|island|insel/i],
+    ['food', /food|essen|lunch|dinner|brunch|cafe|café|kaffee|coffee|cake|kuchen|pizza|pasta|ramen|음식|밥|카페|커피|케이크|맛집/i],
+    ['city', /city|stadt|street|straße|strasse|tram|bus|bahn|station|bridge|brücke|building|dach|roof|garage|werkstatt|도시|거리|건물|역|다리|지붕/i]];
+const GUESS_DOC = [['receipt', /receipt|beleg|quittung|kassenbon|kassenzettel|영수증|\bbon\b/i], ['invoice', /rechnung|invoice|\bbill\b|facture|fattura|factura|청구서|인보이스|명세서/i],
+    ['cv', /lebenslauf|\bcv\b|resume|résumé|이력서/i], ['medical', /arzt|befund|attest|krankmeldung|krankschreibung|prescription|diagnos|praxis|klinik|hospital|처방|진단|병원|소견서/i],
+    ['recipe', /recipe|kochrezept|backrezept|레시피|요리법/i], ['certificate', /zertifikat|certificate|zeugnis|diploma|urkunde|bescheinigung|증명서|수료증|성적표|자격증/i],
+    ['menu', /menu|speisekarte|메뉴/i], ['contract', /vertrag|contract|lease|agreement|vereinbarung|계약/i], ['letter', /brief|letter|lettre|anschreiben|bewerbung|편지|자기소개서/i],
+    ['notes', /notiz|notes|protokoll|meeting|memo|todo|liste|회의록|메모|할 ?일/i]];
+const lookOf = f => {
+    const lk = f.look || '', words = `${f.name} ${f.folder} ${f.preview || ''} ${f.ko || ''}`;
+    if (f.kind === 'image' || f.kind === 'video') {
+        if (LOOK_IMG.includes(lk)) return lk;
+        const g = GUESS_IMG.find(([, re]) => re.test(words));
+        if (g) return g[0];
+        const h = Number(String(f.time || '').slice(6, 8));
+        return h >= 20 || h < 5 ? 'night' : 'hills';
+    }
+    if (f.kind === 'audio') return lk === 'music' || lk === 'voice' ? lk : /\.(mp3|flac|wav|aac)$|song|track|musik|music|playlist|노래|음악/i.test(words) ? 'music' : 'voice';
+    if (f.kind === 'other') return ['event', 'contact', 'book'].includes(lk) ? lk : /\.ics$|invite|einladung|termin|일정|초대/i.test(f.name) ? 'event' : /\.vcf$|kontakt|contact|연락처/i.test(f.name) ? 'contact' : /\.(epub|mobi)$/i.test(f.name) ? 'book' : '';
+    if (f.kind === 'sheet') return 'sheet';
+    if (f.kind === 'slides') return 'slides';
+    if (f.kind === 'pdf' || f.kind === 'doc') return LOOK_DOC.includes(lk) ? lk : (GUESS_DOC.find(([, re]) => re.test(words)) || [])[0] || 'plain';
+    return '';
+};
+const seedOf = s => [...String(s)].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 997, 7);
+// ---- a picture: a flat little scene
 function photoScene(f) {
-    const words = `${f.name} ${f.folder} ${f.preview || ''} ${f.ko || ''}`, h = Number(String(f.time || '').slice(6, 8));
-    const k = (SCENE.find(([, re]) => re.test(words)) || [])[0] || (h >= 20 || h < 5 ? 'night' : 'hills');
-    const r = [...String(f.name)].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 997, 7) % 5;
+    const k = lookOf(f), r = seedOf(f.name) % 5, sky = c => `<rect width="100" height="100" fill="${c}"/>`;
     const S = {
-        sea: `<rect width="100" height="100" fill="#bfe0f2"/><circle cx="${70 + r * 3}" cy="26" r="9" fill="#fff6d6"/><rect y="52" width="100" height="22" fill="#5aa6d6"/><path d="M0 58h100M0 64h100" stroke="#8fc6e8" stroke-width="1.6" stroke-dasharray="8 6"/><path d="M0 74q50 -8 100 0v26H0z" fill="#efd9ad"/>`,
-        city: `<rect width="100" height="100" fill="#cfe1ee"/><circle cx="${20 + r * 8}" cy="22" r="8" fill="#fff4d0"/>${[[4, 46, 18], [22, 34, 16], [38, 52, 20], [58, 28, 18], [76, 44, 22]].map(([x, y, w]) => `<rect x="${x}" y="${y}" width="${w}" height="${100 - y}" fill="#7d93a8"/>${[0, 1, 2, 3].map(j => `<rect x="${x + 4}" y="${y + 6 + j * 11}" width="4" height="5" fill="#b9cad8"/><rect x="${x + w - 8}" y="${y + 6 + j * 11}" width="4" height="5" fill="#b9cad8"/>`).join('')}`).join('')}<rect y="88" width="100" height="12" fill="#5d6f80"/>`,
-        night: `<rect width="100" height="100" fill="#26304f"/><circle cx="${72 - r * 4}" cy="24" r="8" fill="#f4ecc8"/><circle cx="${69 - r * 4}" cy="22" r="7" fill="#26304f"/>${[[14, 18], [34, 10], [52, 30], [86, 14], [24, 36]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.2" fill="#fff"/>`).join('')}${[[0, 56, 22], [20, 44, 18], [40, 60, 24], [62, 40, 18], [80, 54, 20]].map(([x, y, w]) => `<rect x="${x}" y="${y}" width="${w}" height="${100 - y}" fill="#18203a"/>${[0, 1, 2].map(j => `<rect x="${x + 4 + (j % 2) * 8}" y="${y + 6 + j * 10}" width="4" height="5" fill="#f6d27a"/>`).join('')}`).join('')}`,
-        food: `<rect width="100" height="100" fill="#e9d2b4"/><path d="M0 70h100" stroke="#dcbf9c" stroke-width="2"/><circle cx="50" cy="52" r="32" fill="#fff"/><circle cx="50" cy="52" r="24" fill="#f6efe2"/><circle cx="${44 + r}" cy="48" r="9" fill="#e0904a"/><circle cx="58" cy="56" r="7" fill="#7fbf5a"/><circle cx="46" cy="60" r="6" fill="#e8463a"/><rect x="86" y="24" width="4" height="56" rx="2" fill="#c9ced4"/>`,
-        hills: `<rect width="100" height="100" fill="${['#cfe5d0', '#f3dcc0', '#d6e2f2', '#efd6dc', '#e2e8c8'][r]}"/><circle cx="72" cy="28" r="10" fill="#fffaf0"/><path d="M-10 78q30 -34 62 -6q22 -22 58 2V100H-10z" fill="${['#8cc28f', '#d8a46e', '#93add8', '#d79aa8', '#a9b96a'][r]}"/><path d="M-10 90q40 -20 120 -4V100H-10z" fill="${['#6aa66e', '#c08850', '#7592c4', '#c07a8a', '#8c9c4e'][r]}"/>`,
+        sea: `${sky('#bfe0f2')}<circle cx="${70 + r * 3}" cy="26" r="9" fill="#fff6d6"/><rect y="52" width="100" height="22" fill="#5aa6d6"/><path d="M0 58h100M0 64h100" stroke="#8fc6e8" stroke-width="1.6" stroke-dasharray="8 6"/><path d="M0 74q50 -8 100 0v26H0z" fill="#efd9ad"/>`,
+        city: `${sky('#cfe1ee')}<circle cx="${20 + r * 8}" cy="22" r="8" fill="#fff4d0"/>${[[4, 46, 18], [22, 34, 16], [38, 52, 20], [58, 28, 18], [76, 44, 22]].map(([x, y, w]) => `<rect x="${x}" y="${y}" width="${w}" height="${100 - y}" fill="#7d93a8"/>${[0, 1, 2, 3].map(j => `<rect x="${x + 4}" y="${y + 6 + j * 11}" width="4" height="5" fill="#b9cad8"/><rect x="${x + w - 8}" y="${y + 6 + j * 11}" width="4" height="5" fill="#b9cad8"/>`).join('')}`).join('')}<rect y="88" width="100" height="12" fill="#5d6f80"/>`,
+        night: `${sky('#26304f')}<circle cx="${72 - r * 4}" cy="24" r="8" fill="#f4ecc8"/><circle cx="${69 - r * 4}" cy="22" r="7" fill="#26304f"/>${[[14, 18], [34, 10], [52, 30], [86, 14], [24, 36]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.2" fill="#fff"/>`).join('')}${[[0, 56, 22], [20, 44, 18], [40, 60, 24], [62, 40, 18], [80, 54, 20]].map(([x, y, w]) => `<rect x="${x}" y="${y}" width="${w}" height="${100 - y}" fill="#18203a"/>${[0, 1, 2].map(j => `<rect x="${x + 4 + (j % 2) * 8}" y="${y + 6 + j * 10}" width="4" height="5" fill="#f6d27a"/>`).join('')}`).join('')}`,
+        food: `${sky('#e9d2b4')}<path d="M0 70h100" stroke="#dcbf9c" stroke-width="2"/><circle cx="50" cy="52" r="32" fill="#fff"/><circle cx="50" cy="52" r="24" fill="#f6efe2"/><circle cx="${44 + r}" cy="48" r="9" fill="#e0904a"/><circle cx="58" cy="56" r="7" fill="#7fbf5a"/><circle cx="46" cy="60" r="6" fill="#e8463a"/><rect x="86" y="24" width="4" height="56" rx="2" fill="#c9ced4"/>`,
+        hills: `${sky(['#cfe5d0', '#f3dcc0', '#d6e2f2', '#efd6dc', '#e2e8c8'][r])}<circle cx="72" cy="28" r="10" fill="#fffaf0"/><path d="M-10 78q30 -34 62 -6q22 -22 58 2V100H-10z" fill="${['#8cc28f', '#d8a46e', '#93add8', '#d79aa8', '#a9b96a'][r]}"/><path d="M-10 90q40 -20 120 -4V100H-10z" fill="${['#6aa66e', '#c08850', '#7592c4', '#c07a8a', '#8c9c4e'][r]}"/>`,
+        pet: `${sky('#f1e6d6')}<path d="M0 74h100v26H0z" fill="#d8c3a4"/><g transform="translate(50 62)"><ellipse cy="12" rx="26" ry="16" fill="${['#e0a25a', '#8a8f98', '#3a3330', '#f2efe8', '#c98a5a'][r]}"/><circle cy="-10" r="17" fill="${['#e8b06a', '#9aa0a8', '#4a423e', '#fbf8f2', '#d89a6a'][r]}"/>${r % 2 ? '<path d="M-17 -16q-8 6 -6 18q6 -2 8 -10z M17 -16q8 6 6 18q-6 -2 -8 -10z" fill="#6a4a2a"/>' : `<path d="M-15 -20l-4 -14l12 8z M15 -20l4 -14l-12 8z" fill="${['#e0a25a', '#8a8f98', '#3a3330', '#f2efe8', '#c98a5a'][r]}"/>`}<circle cx="-6" cy="-12" r="2.2" fill="${r === 2 ? '#f6d24a' : '#2b2422'}"/><circle cx="6" cy="-12" r="2.2" fill="${r === 2 ? '#f6d24a' : '#2b2422'}"/><path d="M-3 -5q3 3 6 0" stroke="#2b2422" stroke-width="1.6" fill="none"/></g>`,
+        sunset: `${sky('#f6b08a')}<rect width="100" height="40" fill="#e98a7a"/><rect y="40" width="100" height="16" fill="#f8c28a"/><circle cx="${42 + r * 4}" cy="64" r="16" fill="#fde2a0"/><rect y="64" width="100" height="36" fill="#6a5a8a"/><path d="M20 72h22M58 78h26M30 86h30" stroke="#f8c28a" stroke-width="2" stroke-linecap="round"/>`,
+        mountain: `${sky('#cfe3f0')}<path d="M-5 80L30 30L50 58L68 36L105 80z" fill="#7f95a8"/><path d="M30 30L22 42L30 40L36 44z M68 36L62 44L68 43L74 46z" fill="#fff"/><path d="M-5 100V78q30 -12 60 -2q30 -10 50 2V100z" fill="#6fa36f"/>`,
+        snow: `${sky('#dfe7ef')}${[[12, 14], [30, 26], [48, 10], [66, 22], [84, 12], [20, 40], [56, 36], [78, 44], [40, 52]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.6" fill="#fff"/>`).join('')}<path d="M-5 100V70q40 -14 110 0V100z" fill="#fbfdff"/><path d="M${54 + r * 4} 70v-26l-12 26z M${54 + r * 4} 44l12 26z" fill="#5a8a6a"/>`,
+        flower: `${sky('#e8f0dc')}${[[30, 40, '#f29eb0'], [66, 34, '#f6c0cc'], [48, 62, '#e87a96']].map(([x, y, c]) => `<path d="M${x} ${y + 6}v40" stroke="#6aa66e" stroke-width="2.4"/><g transform="translate(${x} ${y})">${[0, 72, 144, 216, 288].map(a => `<circle cx="${(6 * Math.cos(a / 57.3)).toFixed(1)}" cy="${(6 * Math.sin(a / 57.3)).toFixed(1)}" r="5" fill="${c}"/>`).join('')}<circle r="3.4" fill="#f6d24a"/></g>`).join('')}`,
+        interior: `${sky('#efe4d6')}<rect x="56" y="14" width="30" height="34" fill="#cfe3f0" stroke="#fff" stroke-width="3"/><path d="M71 14v34M56 31h30" stroke="#fff" stroke-width="2"/><rect y="78" width="100" height="22" fill="#c9a888"/><rect x="10" y="56" width="44" height="22" rx="6" fill="${['#8aa2c8', '#c88a8a', '#8ab8a2', '#c8b48a', '#a28ac8'][r]}"/><rect x="14" y="48" width="14" height="12" rx="3" fill="#f2c4a8"/><path d="M76 78v-16h-8l4 -10h8l4 10h-8" fill="#e8b46a"/>`,
+        concert: `${sky('#1d1630')}<path d="M20 0L36 70H4z" fill="#f6d27a" opacity=".35"/><path d="M80 0L96 70H64z" fill="#f29eb0" opacity=".35"/><path d="M50 0L64 70H36z" fill="#9fd3ef" opacity=".3"/><rect y="66" width="100" height="6" fill="#3a2f52"/>${[[10, 84], [28, 80], [46, 86], [64, 80], [84, 84]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="7" fill="#0f0b1c"/><rect x="${x - 8}" y="${y + 5}" width="16" height="30" rx="6" fill="#0f0b1c"/>`).join('')}<path d="M28 74l-4 -12M64 74l5 -14" stroke="#0f0b1c" stroke-width="4" stroke-linecap="round"/>`,
+        paper: `${sky('#b8a48a')}<path d="M18 10L84 14L80 92L14 88z" fill="#fbf8f0"/>${[24, 32, 40, 48, 56, 64, 72].map(y => `<path d="M24 ${y}L${74 - (y % 7)} ${y + 2}" stroke="#c8c2b4" stroke-width="2.4"/>`).join('')}<path d="M24 20L52 21" stroke="#5a5a62" stroke-width="3.6"/>`,
+        screenshot: `${sky('#f4f5f7')}<rect width="100" height="14" fill="#fff"/><circle cx="12" cy="7" r="4" fill="#c9ced4"/><rect x="20" y="5" width="26" height="4" rx="2" fill="#c9ced4"/><rect x="8" y="22" width="52" height="12" rx="6" fill="#e6e8ec"/><rect x="40" y="40" width="52" height="12" rx="6" fill="#2f6bff"/><rect x="8" y="58" width="40" height="12" rx="6" fill="#e6e8ec"/><rect x="34" y="76" width="58" height="12" rx="6" fill="#2f6bff"/>`,
+        map: `${sky('#eef0e6')}<path d="M0 30H100M0 70H100M30 0V100M74 0V100" stroke="#fff" stroke-width="6"/><path d="M0 52Q50 40 100 60" stroke="#cfe0f2" stroke-width="10" fill="none"/><rect x="40" y="10" width="24" height="14" fill="#d8e8cf"/><path d="M50 62c0 -10 -8 -12 -8 -20a8 8 0 0 1 16 0c0 8 -8 10 -8 20z" fill="#e8463a"/><circle cx="50" cy="42" r="3" fill="#fff"/>`,
     };
-    return `<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">${S[k]}</svg>`;
+    return `<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">${S[k] || S.hills}</svg>`;
+}
+// ---- a document's first page (120 × 160): drawn by its look, with its own words where a real one has them
+function docSvg(f) {
+    const k = lookOf(f), r = seedOf(f.name), [t0, ...rest] = String(f.preview || f.name.replace(/\.[a-z0-9]{2,4}$/i, '').replace(/[_-]+/g, ' ')).split(' · ');
+    const t = esc(t0.slice(0, 34)), sub = esc(rest.join(' · ').slice(0, 44)), L = (x, y, w, c = '#e3e6eb', h = 3) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5" fill="${c}"/>`;
+    const lines = (y0, y1, step, x = 10, w = 100) => { let o = ''; for (let y = y0, j = 0; y < y1; y += step, j++) o += L(x, y, w - ((r + j * 13) % 18)); return o; };
+    const sig = '<path d="M70 140q6 -8 12 0q6 8 12 -2" stroke="#2c4a80" stroke-width="1.4" fill="none"/>', T = (x, y, s, w, c, a = 'start') => `<text x="${x}" y="${y}" font-size="${s}" font-weight="${w}" fill="${c}" text-anchor="${a}">${t}</text>`;
+    const P = {
+        receipt: `<rect width="120" height="160" fill="#f4f1ea"/><rect x="28" y="6" width="64" height="146" fill="#fff"/><path d="M28 152l4 5l4 -5l4 5l4 -5l4 5l4 -5l4 5l4 -5l4 5l4 -5l4 5l4 -5l4 5l4 -5l4 5l4 -5z" fill="#fff"/>${T(60, 20, 6.5, 800, '#161b22', 'middle')}${[0, 1, 2, 3, 4].map(j => L(34, 32 + j * 9, 28 + (r + j) % 8) + L(76, 32 + j * 9, 10)).join('')}<path d="M34 80h52" stroke="#bbb" stroke-dasharray="2 2"/><text x="34" y="92" font-size="6.5" font-weight="800">TOTAL</text>${L(68, 87, 18, '#161b22', 4)}${Array.from({ length: 20 }, (_, j) => `<rect x="${37 + j * 2.3}" y="108" width="${1 + (r + j) % 2}" height="16" fill="#222"/>`).join('')}`,
+        invoice: `${L(10, 10, 40, '#2c4a80', 6)}${T(10, 28, 6.5, 800, '#161b22')}${L(10, 34, 36)}${L(10, 40, 30)}<rect x="10" y="48" width="100" height="10" fill="#eef2f8"/>${[0, 1, 2, 3, 4].map(j => L(14, 64 + j * 10, 44 + (r + j * 5) % 12) + L(90, 64 + j * 10, 16)).join('')}<path d="M60 120h50" stroke="#161b22"/>${L(84, 126, 26, '#161b22', 5)}`,
+        cv: `<rect x="10" y="10" width="26" height="32" rx="2" fill="#dfe5ee"/><circle cx="23" cy="22" r="6" fill="#b8c4d6"/><path d="M14 40q9 -10 18 0" fill="#b8c4d6"/>${T(44, 20, 7, 800, '#161b22')}${L(44, 28, 36)}${L(44, 34, 40)}${[54, 88, 122].map(y => L(10, y, 22, '#2f9a8a', 4) + L(10, y + 8, 100) + L(10, y + 14, 88) + L(10, y + 20, 70)).join('')}`,
+        letter: `${L(10, 12, 30, '#c8566e', 5)}${L(80, 12, 30)}${L(10, 34, 24)}${T(10, 50, 6.5, 700, '#161b22')}${lines(58, 128, 8)}${sig}`,
+        certificate: `<rect x="6" y="6" width="108" height="148" fill="none" stroke="#c8a24a" stroke-width="2"/><rect x="10" y="10" width="100" height="140" fill="none" stroke="#c8a24a" stroke-width=".8"/>${T(60, 34, 7.5, 800, '#7a5a1a', 'middle')}${L(30, 48, 60)}${L(24, 58, 72)}${L(36, 68, 48)}<circle cx="60" cy="112" r="14" fill="#e8463a" opacity=".85"/><circle cx="60" cy="112" r="10" fill="none" stroke="#fff" stroke-width="1.2"/>${L(18, 138, 30, '#8a929d', 1)}${L(72, 138, 30, '#8a929d', 1)}`,
+        sheet: `<rect x="6" y="10" width="108" height="10" fill="#2b7a4b"/>${Array.from({ length: 12 }, (_, row) => [0, 1, 2, 3].map(c => `<rect x="${6 + c * 27}" y="${20 + row * 10}" width="27" height="10" fill="${row % 2 ? '#eef6f0' : '#fff'}" stroke="#d8e2dc" stroke-width=".6"/>${L(9 + c * 27, 24 + row * 10, 10 + (r + row * c) % 12, '#b8c4bc', 2)}`).join('')).join('')}`,
+        slides: `<rect width="120" height="160" fill="#f4f5f7"/><rect x="4" y="40" width="112" height="72" fill="#fff" stroke="#e3e6eb"/><rect x="4" y="40" width="112" height="12" fill="#c2562b"/>${T(10, 66, 6.5, 800, '#161b22')}${[16, 26, 20, 36].map((h, j) => `<rect x="${66 + j * 11}" y="${104 - h}" width="8" height="${h}" fill="#c2562b" opacity="${(0.4 + j * 0.15).toFixed(2)}"/>`).join('')}${L(10, 76, 40)}${L(10, 84, 36)}${L(10, 92, 44)}`,
+        recipe: `${T(10, 17, 7, 800, '#161b22')}<rect x="10" y="24" width="100" height="40" rx="3" fill="#f3dcc0"/><circle cx="60" cy="44" r="14" fill="#fff"/><circle cx="56" cy="42" r="5" fill="#e0904a"/><circle cx="64" cy="47" r="4" fill="#7fbf5a"/>${[0, 1, 2, 3].map(j => `<circle cx="13" cy="${75 + j * 8}" r="1.6" fill="#c2562b"/>${L(18, 74 + j * 8, 34 + (r + j * 7) % 16)}`).join('')}${[0, 1, 2].map(j => `<text x="10" y="${118 + j * 12}" font-size="6" fill="#c2562b" font-weight="700">${j + 1}</text>${L(18, 114 + j * 12, 88)}`).join('')}`,
+        medical: `<rect x="10" y="10" width="12" height="12" fill="#2f9a8a"/><path d="M16 12v8M12 16h8" stroke="#fff" stroke-width="2.4"/>${T(28, 18, 6.5, 800, '#161b22')}${L(28, 22, 34)}<rect x="10" y="34" width="100" height="22" fill="#eef6f4"/>${L(14, 40, 40)}${L(14, 47, 60)}${[0, 1, 2, 3].map(j => L(14, 66 + j * 12, 62 + (r + j) % 12) + L(92, 66 + j * 12, 14, '#2f9a8a')).join('')}${sig}`,
+        menu: `<rect width="120" height="160" fill="#2b2622"/>${T(60, 22, 8, 800, '#f3dcc0', 'middle')}${[40, 52, 64, 76, 88, 100, 112, 124, 136].map((y, j) => L(16, y, 46 + (r + j * 9) % 16, '#8a7a6a') + L(92, y, 12, '#f3dcc0')).join('')}`,
+        contract: `${T(60, 18, 7, 800, '#161b22', 'middle')}${sub ? `<text x="60" y="27" font-size="5" fill="#6b7380" text-anchor="middle">${sub}</text>` : ''}${lines(38, 124, 7)}${L(10, 140, 36, '#8a929d', 1)}${L(74, 140, 36, '#8a929d', 1)}<path d="M14 136q6 -8 12 0q6 8 12 -2" stroke="#2c4a80" stroke-width="1.4" fill="none"/>`,
+        notes: `<rect width="120" height="160" fill="#fdf6d8"/>${Array.from({ length: 14 }, (_, j) => `<path d="M0 ${20 + j * 10}h120" stroke="#ecdca0" stroke-width=".8"/>`).join('')}${T(10, 16, 7, 800, '#7f6a22')}${[32, 42, 52, 62, 72, 82].map(y => `<rect x="10" y="${y - 4}" width="5" height="5" rx="1" fill="none" stroke="#7f6a22"/>${L(19, y - 3, 50 + (r + y) % 36, '#c8b46a')}`).join('')}`,
+        plain: `${L(10, 10, 40, FK[f.kind]?.[1] || '#2c4a80', 5)}${T(10, 28, 7, 800, '#161b22')}${sub ? `<text x="10" y="37" font-size="5" fill="#6b7380">${sub}</text>` : ''}${lines(46, 80, 7)}${lines(90, 130, 7)}`,
+    };
+    return `<svg viewBox="0 0 120 160">${P[k] || P.plain}</svg>`;
+}
+// ---- the other kinds: what's inside a zip, an invite, a contact card, a song, a book
+function otherCard(p, f, big = false) {
+    const k = f.kind === 'zip' ? 'zip' : lookOf(f), [t0, ...rest] = String(f.preview || f.name.replace(/\.[a-z0-9]{2,5}$/i, '').replace(/[_-]+/g, ' ')).split(' · '), sub = rest.join(' · ');
+    if (k === 'zip') {
+        const inside = (f.preview ? f.preview.split(/\s*[,·]\s*/) : ['IMG_0001.jpg', 'IMG_0002.jpg', 'notes.txt', 'scan.pdf']).filter(Boolean).slice(0, big ? 8 : 4);
+        const col = n => (/\.(jpe?g|png|heic)$/i.test(n) ? '#c98a2e' : /\.pdf$/i.test(n) ? '#d64545' : /\.(mp4|mov)$/i.test(n) ? '#3a3f4a' : /\.docx?$/i.test(n) ? '#2f6fbf' : '#8a929d');
+        return `<span class="lf_oc">${ax('folder', big ? 30 : 20, '#7b8290', 2, '#e6e8ec')}${inside.map(n => `<span class="r"><i style="background: ${col(n)}"></i>${esc(n)}</span>`).join('')}</span>`;
+    }
+    if (k === 'event') {
+        const t = (p.money?.passes || []).find(x => f.ev && x.ev === f.ev), d = md(t?.date || f.time);
+        return `<span class="lf_oc c"><span class="lf_ics"><b>${d ? `${d.mo}월` : ''}</b><span class="cg_num">${d ? d.d : ''}</span></span><span class="r b">${esc(t0)}</span>${sub || t ? `<span class="r">${esc(sub || [t?.time, t?.by].filter(Boolean).join(' · '))}</span>` : ''}</span>`;
+    }
+    if (k === 'contact') return `<span class="lf_oc c"><span class="lf_vcf" style="background: ${axTint(t0)}">${esc([...t0][0] || '?')}</span><span class="r b">${esc(t0)}</span>${sub ? `<span class="r">${esc(sub)}</span>` : ''}</span>`;
+    if (k === 'book') return `<span class="lf_oc c"><span class="lf_book" style="background: ${['#2c4a80', '#8a3a4a', '#2f6a5a', '#5a3a8a', '#a8642a'][seedOf(t0) % 5]}"><b>${esc(t0)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span></span>`;
+    if (k === 'music') { const h = seedOf(f.name); return `<span class="lf_oc c"><span class="lf_alb" style="background: linear-gradient(135deg, ${axTint(f.name)}, ${['#26304f', '#8a6ac8', '#c8566e', '#2f9a8a'][h % 4]})"></span><span class="r b">${esc(t0)}</span>${f.length ? `<span class="r cg_num">${esc(f.length)}</span>` : ''}</span>`; }
+    return '';
 }
 const thumb = (p, f) => f.private ? `<span class="lf_th lf_thp">${ax('eyeoff', 26, '#9aa0a8', 2)}</span>`
     : f.kind === 'image' ? `<span class="lf_th lf_thi">${photoScene(f)}</span>`
-    : f.kind === 'pdf' || f.kind === 'doc' ? `<span class="lf_th"><span class="lf_doc"><i class="h"></i><i></i><i></i><i style="width: 70%"></i><em style="background: ${FK[f.kind][1]}">${esc(ext(f))}</em></span></span>`
-    : f.kind === 'video' ? `<span class="lf_th lf_thi">${photoScene(f)}<span class="lf_play">${ax('play', 20, '#fff', 2, '#fff')}</span></span>` : `<span class="lf_th">${fico(f)}</span>`;
+    : f.kind === 'video' ? `<span class="lf_th lf_thi">${photoScene(f)}<span class="lf_play">${ax('play', 20, '#fff', 2, '#fff')}</span>${f.length ? `<em class="lf_du cg_num">${esc(f.length)}</em>` : ''}</span>`
+    : ['pdf', 'doc', 'sheet', 'slides'].includes(f.kind) ? `<span class="lf_th"><span class="lf_docs">${docSvg(f)}</span></span>`
+    : f.kind === 'zip' || (f.kind === 'audio' && lookOf(f) === 'music') || (f.kind === 'other' && lookOf(f)) ? `<span class="lf_th lf_tho">${otherCard(p, f)}</span>` : `<span class="lf_th">${fico(f)}</span>`;
 const fileRow = (p, f) => `<button type="button" class="lf_fr" data-go="file" data-i="${f.id}">${fico(f, 's')}<span class="lf_tx"><b>${esc(f.name)}</b><small>${esc(fmtDate(p, f.time, true))}${size(f.size) ? ` · ${size(f.size)}` : ''}${f.trashed ? ' · 휴지통' : ''}</small></span>${f.tag ? `<i class="lf_tagd" style="background: ${f.tag === 'red' ? '#d64545' : '#e8a317'}"></i>` : ''}</button>`;
 export function filesScreen(p, now) {
     const lf = L(p);
@@ -547,19 +626,15 @@ function ticketPage(p, f) {
         <svg class="bc" viewBox="0 0 ${String(t.no || t.by || f.name).length * 9} 40" preserveAspectRatio="none">${bc}</svg></div>
       <div class="lf_lines"><i style="width: 92%"></i><i style="width: 74%"></i><i style="width: 84%"></i></div></div>`;
 }
-// a document's first page: its preview as the title (split at " · "), the Korean under it, then paragraphs of grey lines
-function docPage(f) {
-    const [t, ...rest] = String(f.preview || f.name.replace(/\.[a-z0-9]{2,4}$/i, '').replace(/[_-]+/g, ' ')).split(' · ');
-    const r = [...String(f.name)].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 997, 7), block = (n, k) => `<div class="lf_lines">${Array.from({ length: n }, (_, j) => `<i style="width: ${j === n - 1 ? 40 + (r + k * 7) % 35 : 84 + (r + j * 13 + k) % 14}%"></i>`).join('')}</div>`;
-    return `<div class="lf_pv"><div class="lf_doc2"><i class="h" style="background: ${FK[f.kind][1]}"></i><h4>${esc(t)}</h4>${rest.length ? `<small>${esc(rest.join(' · '))}</small>` : ''}${k1(f.ko)}${block(3, 1)}${block(4, 2)}${f.kind === 'pdf' && (f.pages || 1) > 1 ? `${block(3, 3)}<div class="lf_sign"><i></i><i></i></div>` : block(2, 4)}</div></div>`;
-}
 export function fileScreen(p, now, id) {
     const lf = L(p), f = lf?.files.items.find(x => x.id === id);
     if (!f) return filesScreen(p, now);
     const page = f.private ? '' : ticketPage(p, f);
     const body = f.private ? `<div class="lf_lock">${ax('eyeoff', 30, '#8a929d', 2)}<span>미리보기 없음</span><small>${esc([FK[f.kind][0], f.length].filter(Boolean).join(' · '))}</small></div>`
-        : page || (f.kind === 'image' ? `<div class="lf_pvimg">${thumb(p, f)}</div>` : f.kind === 'audio' ? `<div class="lf_pvaud"><div class="lf_aud"><span class="pl">${ax('play', 22, '#fff', 2, '#fff')}</span><div class="lf_wave">${Array.from({ length: 34 }, (_, k) => `<i style="height: ${Math.round(22 + 60 * Math.abs(Math.sin((k + f.name.length) * 0.55)) * (0.55 + 0.45 * Math.abs(Math.sin(k * 0.21))))}%"></i>`).join('')}</div></div><div class="lf_audt cg_num"><span>0:00</span><span>${esc(f.length ? `−${f.length}` : '')}</span></div></div>`
-        : docPage(f));
+        : page || (f.kind === 'image' || f.kind === 'video' ? `<div class="lf_pvimg">${thumb(p, f)}</div>`
+        : f.kind === 'audio' && lookOf(f) !== 'music' ? `<div class="lf_pvaud"><div class="lf_aud"><span class="pl">${ax('play', 22, '#fff', 2, '#fff')}</span><div class="lf_wave">${Array.from({ length: 34 }, (_, k) => `<i style="height: ${Math.round(22 + 60 * Math.abs(Math.sin((k + f.name.length) * 0.55)) * (0.55 + 0.45 * Math.abs(Math.sin(k * 0.21))))}%"></i>`).join('')}</div></div><div class="lf_audt cg_num"><span>0:00</span><span>${esc(f.length ? `−${f.length}` : '')}</span></div></div>`
+        : ['pdf', 'doc', 'sheet', 'slides'].includes(f.kind) ? `<div class="lf_pv lf_pvs">${docSvg(f)}</div>${f.ko && koOn() ? `<div class="lf_sub" style="text-align: center">${esc(f.ko)}</div>` : ''}`
+        : otherCard(p, f, true) ? `<div class="lf_pvo">${otherCard(p, f, true)}</div>` : `<div class="lf_pvo"><span class="lf_oc c">${fico(f)}</span></div>`);
     return `${axBar(p, now)}
       <div class="ax_top">${axCb(f.trashed ? 'folder:~trash' : `folder:${encodeURIComponent(f.folder)}`)}<span class="lf_ttl">${esc(f.name)}</span><span class="ax_topr">${axKp(p)}</span></div>
       <div class="ax_scroll">${body}

@@ -6026,6 +6026,31 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .lf_hill { position: absolute; width: 150%; height: 70%; left: -25%; top: 55%; border-radius: 46%; background: rgba(0, 0, 0, 0.12); }
 .ax .lf_sunb { position: absolute; width: 22px; height: 22px; right: 16px; top: 16px; border-radius: 50%; background: rgba(255, 255, 255, 0.7); }
 .ax .lf_thi svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ax .lf_du { position: absolute; right: 6px; bottom: 5px; font-style: normal; font-size: 10.5px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+.ax .lf_docs { width: 66px; height: 88px; background: #fff; border-radius: 3px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18); overflow: hidden; }
+.ax .lf_docs svg, .ax .lf_pvs svg { display: block; width: 100%; height: 100%; font-family: 'Inter Tight', -apple-system, sans-serif; }
+.ax .lf_pv.lf_pvs { padding: 0; min-height: 0; aspect-ratio: 3 / 4; overflow: hidden; }
+.ax .lf_tho { background: #fff; }
+.ax .lf_oc { display: flex; flex-direction: column; gap: 4px; width: 100%; height: 100%; padding: 10px; box-sizing: border-box; font-size: 9.5px; color: #4d5562; text-align: left; }
+.ax .lf_oc.c { align-items: center; justify-content: center; text-align: center; }
+.ax .lf_oc .r { display: flex; gap: 5px; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.ax .lf_oc .r i { width: 7px; height: 9px; border-radius: 2px; flex: none; }
+.ax .lf_oc .r.b { font-weight: 700; color: #161b22; }
+.ax .lf_ics { width: 40px; border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15); margin-bottom: 2px; }
+.ax .lf_ics b { display: block; background: #e8463a; color: #fff; font-size: 8.5px; padding: 2px 0; }
+.ax .lf_ics span { display: block; font-size: 18px; font-weight: 700; color: #161b22; padding: 1px 0 3px; }
+.ax .lf_vcf { width: 42px; height: 42px; border-radius: 50%; color: #fff; font-size: 18px; font-weight: 700; display: grid; place-items: center; margin-bottom: 2px; }
+.ax .lf_book { width: 52px; height: 72px; border-radius: 2px 5px 5px 2px; color: #fff; padding: 7px 5px; box-sizing: border-box; box-shadow: inset 4px 0 0 rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.18); text-align: left; overflow: hidden; }
+.ax .lf_book b { display: block; font-size: 9px; line-height: 1.2; }
+.ax .lf_book small { display: block; font-size: 7px; opacity: 0.85; margin-top: 3px; }
+.ax .lf_alb { width: 54px; height: 54px; border-radius: 8px; margin-bottom: 2px; }
+.ax .lf_pvo { margin: 4px 22px 8px; height: 300px; border-radius: 18px; background: #fff; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08); display: flex; flex: none; overflow: hidden; }
+.ax .lf_pvo .lf_oc { font-size: 14px; gap: 8px; padding: 22px; }
+.ax .lf_pvo .lf_oc .r i { width: 11px; height: 14px; }
+.ax .lf_pvo .lf_ics { width: 76px; } .ax .lf_pvo .lf_ics b { font-size: 13px; } .ax .lf_pvo .lf_ics span { font-size: 34px; }
+.ax .lf_pvo .lf_vcf { width: 84px; height: 84px; font-size: 34px; }
+.ax .lf_pvo .lf_book { width: 120px; height: 168px; padding: 14px 10px; } .ax .lf_pvo .lf_book b { font-size: 16px; } .ax .lf_pvo .lf_book small { font-size: 11px; }
+.ax .lf_pvo .lf_alb { width: 150px; height: 150px; border-radius: 14px; }
 .ax .lf_play { position: relative; width: 38px; height: 38px; border-radius: 50%; background: rgba(0, 0, 0, 0.35); display: grid; place-items: center; }
 .ax .lf_ghost .lf_th { background: #eceef2 !important; box-shadow: none; }
 .ax .lf_ghost { pointer-events: none; }

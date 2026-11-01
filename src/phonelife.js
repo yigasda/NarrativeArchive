@@ -53,6 +53,7 @@ FILES
 - Folders they made, with how many files each holds; list only the files worth seeing, not every one.
 - How tidy they are shows in names and folders: "final_FINAL(2)", a duplicate download, "New folder (3)", or neat names.
 - A ticket or booking file carries the same "ev" as that record. Every document gets "preview": one line on what its first page shows (for a booking in PHONE NOW the app draws its own).
+- Every file gets "look", what it shows. A picture or video: "sea", "city", "night", "food", "hills", "pet", "sunset", "mountain", "snow", "flower", "interior", "concert", "paper" (a photo of a page), "screenshot", "map". A document: "receipt", "invoice", "cv", "letter", "certificate", "sheet", "slides", "recipe", "medical", "menu", "contract", "notes". Audio: "voice" or "music". Other: "event" (.ics), "contact" (.vcf), "book" (.epub). For a zip, "preview" lists a few names inside.
 - An adult may keep a private file: name, type and size only, with "private": true. Nothing explicit in the name.
 - No booking the story doesn't have (a hotel, a ticket, a reservation). A booking it has may show the details a real one would (a gate, a seat, a booking number), made up to fit.
 
@@ -82,7 +83,7 @@ JSON (one object, nothing before or after it)
   "files": { "folders": [{ "name", "ko", "count", "fav": true or false }],
              "items": [{ "name", "kind": "pdf" | "image" | "video" | "audio" | "zip" | "doc" | "sheet" | "slides" | "other",
                          "folder": a folder's name or "Downloads", "size": KB, "time": "MM-DD HH:MM", "from": where it came from, "pages", "length": "M:SS" for audio or video,
-                         "tag": "red" | "orange" | "", "private": true or false, "preview", "ko", "opened": "MM-DD HH:MM", "trashed": "MM-DD" only in the trash, "ev" }],
+                         "tag": "red" | "orange" | "", "private": true or false, "preview", "look", "ko", "opened": "MM-DD HH:MM", "trashed": "MM-DD" only in the trash, "ev" }],
              "cloud": { "used": GB, "total": GB } },
   "weather": { "here": { "place", "date": "MM-DD", "time": "HH:MM" (only without WEATHER NOW), "from": "tracker" | "chat" | "archive" | "guess",
                          "cond": "clear" | "partly" | "cloudy" | "drizzle" | "rain" | "sleet" | "snow" | "fog" | "storm" | "wind", "temp", "hi", "lo", "line": one sentence of forecast, "ko",
