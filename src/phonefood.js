@@ -318,7 +318,7 @@ const KO_T = { 딸기: 'strawberry', 망고: 'mango', 샤인머스캣: 'grape', 
     양파: 'onion', 버섯: 'mushroom', 당근: 'carrot', 애호박: 'zucchini', 옥수수: 'corn', 감자: 'potato', 김치: 'kimchi', 숙주: 'sprouts', 콩나물: 'sprouts', 깻잎: 'perilla', 고추: 'chili', 청양: 'chili', 할라피뇨: 'chili',
     브로콜리: 'broccoli', 토마토: 'tomato', 아보카도: 'avocado', 김가루: 'seaweed', 미역: 'seaweed', 참깨: 'sesame', 떡사리: 'rice-cake', 어묵: 'fishcake', 오뎅: 'fishcake', 유부: 'tofu-skin', 빵가루: 'crumbs',
     포테이토: 'potato', 바지락: 'clam', 조개: 'clam', 모시조개: 'clam', 해물: ['shrimp', 'squid', 'mussel'], 해산물: ['shrimp', 'squid', 'mussel'],
-    두부: 'tofu', 당면: 'noodles', 사리: 'noodles', 면사리: 'noodles', 라면사리: 'noodles', 우동사리: 'noodles', 마늘: 'garlic', 갈릭: 'garlic', 페퍼로니: 'pepperoni', 소시지: 'sausage', 소세지: 'sausage', 비엔나: 'sausage',
+    두부: 'tofu', 당면: 'noodles', 사리: 'noodles', 옥수수면: 'noodles', 메밀면: 'noodles', 쌀면: 'noodles', 소면: 'noodles', 중면: 'noodles', 감자면: 'noodles', 분모자: 'noodles', 면사리: 'noodles', 라면사리: 'noodles', 우동사리: 'noodles', 마늘: 'garlic', 갈릭: 'garlic', 페퍼로니: 'pepperoni', 소시지: 'sausage', 소세지: 'sausage', 비엔나: 'sausage',
     양상추: 'lettuce', 상추: 'lettuce', 오이: 'cucumber', 문어: 'octopus', 낙지: 'octopus', 쭈꾸미: 'octopus', 주꾸미: 'octopus', 생크림: 'cream', 휘핑: 'cream', 아이스크림: 'ice-cream-scoop',
     파인애플: 'pineapple', 올리브: 'olive', 피망: 'bell-pepper', 파프리카: 'bell-pepper', 고구마: 'sweet-potato', 바나나: 'banana', 레몬: 'lemon',
     견과류: 'nuts', 아몬드: 'nuts', 호두: 'nuts', 피칸: 'nuts', 땅콩: 'nuts', 캐러멜: 'caramel', 카라멜: 'caramel', 시럽: 'caramel', 오레오: 'cookie-crumbs', 크럼블: 'cookie-crumbs' };
@@ -378,6 +378,9 @@ const readOption = text => {
     return { out, add: [...add, ...wait] };
 };
 // 1.25L is a bottle, not a size; Big Mac is a name
+const FINER = { 'fried-egg': 'egg', 'beef-belly': 'beef' };
+// drinks: a volume in their name is the bottle, not a size
+const DRINKS = new Set(['cola', 'cider', 'beer', 'iced-americano', 'coffee', 'juice', 'bubble-tea', 'smoothie', 'iced-tea', 'wine', 'makgeolli']);
 const VOLUME = /\d\s*(?:l|ml|리터|oz)(?![a-z가-힣])/i;
 const BIG = /특대|곱빼기|대자|라지|(?<![a-z])(?:large|xl)(?![a-z])/i, BIG1 = /(?<![가-힣A-Za-z\d.]|[\d.]\s)(?:대|L)(?![가-힣A-Za-z])/;
 const hangul = s => /[가-힣]/.test(String(s || ''));
@@ -406,11 +409,12 @@ export const dishPic = (v, x = {}, ids = false) => {
     const gone = new Set(o.out.map(w => `${w.k}:${w.id}`)), cut = (k, list) => [...new Set(list)].filter(id => !gone.has(`${k}:${id}`));
     const of = (k, ws) => ws.filter(w => w.k === k).map(w => w.id);
     const all = blind ? p.with : cut('t', [...of('t', fromName), ...of('t', o.add), ...p.with, ...usual]);
-    // a fried egg is the egg (김치볶음밥 + 계란후라이 추가 isn't two eggs)
-    const tops = all.includes('fried-egg') ? all.filter(t => t !== 'egg') : all;
+    // the finer one is the same thing (김치볶음밥 + 계란후라이 추가 isn't two eggs; 차돌짬뽕's beef is the 차돌)
+    const tops = all.filter(t => !Object.entries(FINER).some(([f, c]) => c === t && all.includes(f)));
     const sides = (blind ? p.set : cut('s', [...of('s', fromName), ...of('s', o.add), ...p.set])).filter(id => id !== SELF_SIDE[p.base] && !alone.has(id));
-    // a size the words say wins; a bottle's volume (콜라 1.25L) says it's the usual one, whatever the model put
-    const said = [...names, opt].some(t => BIG.test(t) || BIG1.test(t)), bottle = [...names, opt].some(t => VOLUME.test(t));
+    // a size the words say wins; a drink's volume (콜라 1.25L) says it's the usual one, whatever the model put — a set's
+    // drink (콜라 500ml in 국물떡닭세트's option) says nothing of the dish's
+    const said = [...names, opt].some(t => BIG.test(t) || BIG1.test(t)), bottle = DRINKS.has(p.base) && [...names, opt].some(t => VOLUME.test(t));
     const big = said || (p.size === 'large' && !bottle);
     return { base: p.base, with: tops.slice(0, 3), size: big ? 'large' : 'regular', set: sides.slice(0, 2) };
 };

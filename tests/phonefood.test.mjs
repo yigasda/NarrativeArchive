@@ -196,3 +196,12 @@ test('Vertex run 21: a swapped drink, a bottle, a dish that is a side, two eggs'
     assert.deepEqual(dishPic({ base: 'kimchi fried rice', with: ['kimchi', 'egg'] }, { name: '김치볶음밥', option: '계란후라이 추가' }).with, ['kimchi', 'fried-egg']);
     assert.deepEqual(dishPic({ base: 'tteokbokki', with: ['rice cake', 'cream', 'cheese'] }, { name: '로제떡볶이', option: '중간맛, 당면 추가, 치즈 추가' }).with, ['noodles', 'cheese', 'rice-cake']);
 });
+
+test('fill 2: 차돌 is the beef, 옥수수면 is noodles, a set\'s drink doesn\'t size the dish', async () => {
+    const { dishPic } = await import('../src/phonefood.js');
+    assert.deepEqual(dishPic({ base: 'salad', with: ['beef', 'cucumber', 'noodles'] }, { name: '우삼겹 메밀면 샐러디' }, true).with, ['beef-belly', 'noodles', 'cucumber']);
+    assert.deepEqual(dishPic({ base: 'jjamppong', with: ['beef', 'squid', 'mussel'] }, { name: '차돌짬뽕' }, true).with, ['beef-belly', 'squid', 'mussel']);
+    assert.deepEqual(dishPic({ base: 'malatang', with: ['beef', 'tofu-skin', 'mushroom'] }, { name: '셀프 마라탕', option: '2단계 / 소고기 100g 추가 / 옥수수면 / 푸주 / 청경채' }, true).with, ['beef', 'noodles', 'tofu-skin']);
+    assert.equal(dishPic({ base: 'tteokbokki', with: ['rice-cake'], size: 'large', set: ['cola'] }, { name: '국물떡닭세트', option: '중간맛 / 순살치킨 / 콜라 500ml' }, true).size, 'large');
+    assert.equal(dishPic({ base: 'cola', size: 'large' }, { name: '콜라 500ml' }, true).size, 'regular');
+});
