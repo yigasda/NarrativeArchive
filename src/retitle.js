@@ -253,7 +253,7 @@ export async function openSectionFix(s) {
     const SF_DOC = svgA('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>', 13);
     const $root = $(`
       <div class="na_popup na_v2 na_sf na_sf3">
-        <div class="na_sf3_head"><div class="na_v2_title"><b>고쳐 달라고 하기</b><small>${esc(s.title)}</small></div><button type="button" class="na_sf3_x" aria-label="닫기">${svgA('M6 6l12 12M18 6L6 18', 16)}</button></div>
+        <div class="na_sf3_head"><div class="na_v2_title"><b>고쳐 달라고 하기</b><small>${esc(s.title)}</small></div></div>
         <div class="na_v2_card na_sf3_card">
           <div class="na_ap3_seg na_sf3_seg"><button type="button" class="on" data-v="old">원래</button><button type="button" data-v="new">바뀐 부분 <b class="na_sf3_add"></b><b class="na_sf3_del"></b></button></div>
           <div class="na_sf3_trrow"></div>
@@ -265,10 +265,11 @@ export async function openSectionFix(s) {
           <div class="na_ly_ask na_sf_ask"><input type="text" class="na_ly_askq na_sf_q" placeholder="고칠 것 (예: 소망 대사 원문 그대로)" aria-label="고칠 것" enterkeyhint="send"><button type="button" class="na_ly_askgo na_sf_go" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>
           <div class="na_sf3_foot">
             <button type="button" class="na_sf3_tool na_sf_style" title="문장 결만 아카이브처럼 다듬어요 · 내용 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 · AI 기능 모델">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>', 14)}문체 다듬기</button>
+            <button type="button" class="na_linkbtn na_sf3_reset na_sf_undo">처음으로</button>
             <label class="na_ap3_raw na_sf_raw ${src.raw ? '' : 'off'}" title="${src.raw ? `${esc(src.label)} · ${esc(src.from)} · 메시지 ${src.n}개 · 약 ${fmt(rawTok)} 토큰` : esc(src.why)}"><input type="checkbox" class="na_sf_rawon" ${src.raw ? 'checked' : 'disabled'}>${SF_DOC}원문 포함<span class="na_ap3_tick">${svgA(ICO_A.check, 11, 3.2)}</span></label>
           </div>
         </div>
-        <div class="na_ap3_bar na_sf3_bar"><button type="button" class="na_ap3_cancel na_sf_undo">처음으로</button><button type="button" class="na_ap2_go na_sf_apply">적용</button></div>
+        <div class="na_ap3_bar na_sf3_bar"><button type="button" class="na_ap3_cancel na_sf3_close">닫기</button><button type="button" class="na_ap2_go na_sf_apply">적용</button></div>
       </div>`);
     // the chat: each request and what came of it; ↶ 되돌리기 sits by the last request that changed the section
     const chat = [], steps = [];
@@ -303,7 +304,7 @@ export async function openSectionFix(s) {
         if (k >= 0) { const q = chat[k].q; chat.splice(k); const i2 = asked.lastIndexOf(q); if (i2 >= 0) asked.splice(i2, 1); }
         draw();
     });
-    $root.find('.na_sf3_x').on('click', () => $root.closest('dialog').find('.popup-button-ok').trigger('click'));
+    $root.find('.na_sf3_close').on('click', () => $root.closest('dialog').find('.popup-button-ok').trigger('click'));
     let busy = false;
     const send = async () => {
         const q = String($root.find('.na_sf_q').val() || '').trim();

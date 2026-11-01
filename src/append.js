@@ -99,7 +99,7 @@ export async function openAppend(prefill = {}) {
           <div class="na_ap3_fdock"></div>
         </div>
         <div class="na_ap3_bar na_ap2_btns">
-          <button type="button" class="na_ap3_cancel">취소</button>
+          <button type="button" class="na_ap3_cancel">닫기</button>
           <button type="button" class="na_ap2_go">추가하기</button>
         </div>
       </div>`);
@@ -180,7 +180,7 @@ export async function openAppend(prefill = {}) {
         $root.find('.na_apf_part').append($root.find('.na_apf'));
         $root.append($root.find('.na_ap3_bar'));
         $root.removeClass('na_ap3_isfull').find('.na_ap3_full').prop('hidden', true);
-        $root.find('.na_ap3_cancel').text('취소');
+        $root.find('.na_ap3_cancel').text('닫기');
         scrollBox().scrollTop = fullAt;
     };
     $root.find('.na_ap3_bigbtn').on('click', openFull);

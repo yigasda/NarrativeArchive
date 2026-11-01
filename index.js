@@ -14,6 +14,7 @@ import { onGenerationStarted, onMessageSent } from './src/router.js';
 import { linkedMap } from './src/sections.js';
 import { refreshStatusSoon } from './src/status.js';
 import { applyTheme, keepFieldsFlat } from './src/theme.js';
+import { watchPopups } from './src/popupchrome.js';
 import { xrayArm, xrayCapture, xrayWorldInfo } from './src/xray.js';
 
 (function init() {
@@ -30,6 +31,7 @@ import { xrayArm, xrayCapture, xrayWorldInfo } from './src/xray.js';
         keepFieldsFlat();
         addWandMenu();
         addPhoneMenu();
+        watchPopups();
         onChatChanged();
     };
 

@@ -7266,7 +7266,6 @@ body.na_darkui .na_ask2 .na_ask2_ans { background: #27201B; box-shadow: inset 0 
 .na_sf.na_sf3 { gap: 0; }
 .na_sf3_head { display: flex; align-items: flex-start; gap: 8px; }
 .na_sf3_head .na_v2_title { flex: 1; min-width: 0; }
-.na_sf3_x { flex: none; width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 999px; background: var(--na-card); color: var(--na-mute); cursor: pointer; }
 .na_sf3 > .na_v2_card { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 .na_sf3_card { margin-top: 14px; }
 .na_sf3_fix { margin-top: 10px; }
@@ -7293,3 +7292,16 @@ body.na_darkui .na_sf3 > .na_v2_card { box-shadow: inset 0 1px 0 rgba(255, 255, 
 body.na_darkui .na_sf3 :is(.na_ly_ask, .na_ap3_seg, .na_ap3_raw, .na_sf3_tool) { background: #342B25; }
 body.na_darkui .na_sf3 .na_ap3_seg button.on { background: #4A3D34; color: #F2B48A; }
 body.na_darkui .na_sf3 .na_ap3_raw:has(input:checked) { color: #8FD3A6; }
+
+/* ============ one way to close (src/popupchrome.js): a 닫기 at the bottom only. Look-only: one soft full-width pill;
+   doing something: 닫기 (text) · the action (orange pill). */
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_px:not(#na_x) .popup-controls.popup-controls { display: flex !important; gap: 8px; width: 100%; box-sizing: border-box; margin-top: 14px; padding: 0 0 4px; justify-content: stretch; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_px:not(#na_x) .popup-controls.popup-controls .menu_button.menu_button { min-height: 46px; margin: 0 !important; padding: 0 18px !important; display: flex; align-items: center; justify-content: center; border-radius: 999px !important; font-size: 15px; font-weight: 600; filter: none !important; opacity: 1 !important; outline: none !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_px_view:not(#na_x) .popup-controls.popup-controls .popup-button-ok.popup-button-ok { flex: 1 1 auto !important; width: auto !important; max-width: none !important; background: var(--na-card) !important; border: 0 !important; color: var(--na-ink) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06), 0 4px 12px rgba(70, 52, 40, 0.06) !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_px_act:not(#na_x) .popup-controls.popup-controls .popup-button-cancel.popup-button-cancel { order: -1; flex: none !important; background: transparent !important; border: 0 !important; color: var(--na-mute) !important; box-shadow: none !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_px_act:not(#na_x) .popup-controls.popup-controls .popup-button-ok.popup-button-ok { flex: 1 1 auto !important; width: auto !important; max-width: none !important; background: var(--na-accent) !important; border: 0 !important; color: #fff !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important; }
+body:not(.na_darkui) dialog.popup.na_px { --na-accent: #B8541F; --na-mute: #6B5A50; --na-card: #F7EEE7; --na-ink: #463428; }
+body.na_darkui dialog.popup.na_px { --na-accent: #D9733A; --na-mute: #CABBAE; --na-card: #27201B; --na-ink: #EFE3D8; }
+/* 고쳐 달라고 하기: 처음으로 sits by the tools now */
+.na_sf3_foot .na_sf3_reset { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--na-mute); }
+.na_sf3_foot .na_sf3_reset:disabled { opacity: 0.45; }
