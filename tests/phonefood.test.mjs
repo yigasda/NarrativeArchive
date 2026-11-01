@@ -117,7 +117,9 @@ test('a dish picture: the name and option fill in what the model left out', asyn
     assert.equal(p({ base: 'donburi' }, { name: '대패삼겹 덮밥' })[3], 'regular');
     // a fill's ids take the same rules
     assert.deepEqual(p({ base: 'fried-rice', with: ['cheese'] }, { name: '새우치즈볶음밥' }, true)[1], 'shrimp,cheese');
-    assert.equal(dishPic({ base: 'nonsense' }, { name: '새우볶음밥' }, true), null);
+    // a fill's base that isn't drawn falls back on the name, as an update's does
+    assert.equal(dishPic({ base: 'nonsense' }, { name: '새우볶음밥' }, true).base, 'fried-rice');
+    assert.equal(dishPic({ base: 'nonsense' }, { name: 'xyz' }, true).base, 'bowl');
 });
 
 test('감자튀김 · 감튀 draw fries, other 튀김 stay 튀김', async () => {
@@ -194,7 +196,7 @@ test('Vertex run 21: a swapped drink, a bottle, a dish that is a side, two eggs'
     assert.deepEqual(dishPic({ base: 'rice ball', with: ['seaweed'] }, { name: '주먹밥' }).set, []);
     assert.deepEqual(dishPic({ base: 'tteokbokki' }, { name: '떡볶이 + 주먹밥' }).set, ['jumeokbap']);
     assert.deepEqual(dishPic({ base: 'kimchi fried rice', with: ['kimchi', 'egg'] }, { name: '김치볶음밥', option: '계란후라이 추가' }).with, ['kimchi', 'fried-egg']);
-    assert.deepEqual(dishPic({ base: 'tteokbokki', with: ['rice cake', 'cream', 'cheese'] }, { name: '로제떡볶이', option: '중간맛, 당면 추가, 치즈 추가' }).with, ['noodles', 'cheese', 'rice-cake']);
+    assert.deepEqual(dishPic({ base: 'tteokbokki', with: ['rice cake', 'cream', 'cheese'] }, { name: '로제떡볶이', option: '중간맛, 당면 추가, 치즈 추가' }).with, ['noodles', 'cheese', 'cream']);
 });
 
 test('fill 2: 차돌 is the beef, 옥수수면 is noodles, a set\'s drink doesn\'t size the dish', async () => {
@@ -204,4 +206,32 @@ test('fill 2: 차돌 is the beef, 옥수수면 is noodles, a set\'s drink doesn\
     assert.deepEqual(dishPic({ base: 'malatang', with: ['beef', 'tofu-skin', 'mushroom'] }, { name: '셀프 마라탕', option: '2단계 / 소고기 100g 추가 / 옥수수면 / 푸주 / 청경채' }, true).with, ['beef', 'noodles', 'tofu-skin']);
     assert.equal(dishPic({ base: 'tteokbokki', with: ['rice-cake'], size: 'large', set: ['cola'] }, { name: '국물떡닭세트', option: '중간맛 / 순살치킨 / 콜라 500ml' }, true).size, 'large');
     assert.equal(dishPic({ base: 'cola', size: 'large' }, { name: '콜라 500ml' }, true).size, 'regular');
+});
+
+test('whole kinds of slips, not one menu at a time', async () => {
+    const { dishPic } = await import('../src/phonefood.js');
+    const d = (name, v, option = '', extra = {}) => dishPic(v, { name, option, ...extra });
+    // a topping the base already is
+    assert.deepEqual(d('후라이드 치킨', { base: 'fried chicken', with: ['chicken'] }).with, []);
+    assert.deepEqual(d('김치찌개', { base: 'kimchi stew', with: ['kimchi', 'pork', 'tofu'] }).with, ['pork', 'tofu']);
+    assert.deepEqual(d('치즈 떡볶이', { base: 'tteokbokki', with: ['rice cake', 'fish cake', 'cheese'] }).with, ['cheese', 'fishcake']);
+    assert.deepEqual(d('계란말이', { base: 'rolled omelette', with: ['egg', 'scallion'] }).with, ['scallion']);
+    // a plainer copy of another topping
+    assert.deepEqual(d('Margherita', { base: 'pizza', with: ['tomato', 'mozzarella', 'cheese'] }).with, ['tomato', 'mozzarella']);
+    // sizes the words say, small or middle as well as large
+    for (const [n, size] of [['감자탕 (중)', 'regular'], ['포테이토 피자 M', 'regular'], ['꿔바로우 소', 'regular'], ['카페라떼 톨', 'regular'], ['탕수육 (대)', 'large'], ['아이스 아메리카노 (벤티)', 'large']])
+        assert.equal(d(n, { base: 'pizza', size: 'large' }).size, size, n);
+    // a swap for the same thing keeps it
+    assert.deepEqual(d('치즈버거 세트', { base: 'burger', set: ['fries', 'cola'] }, '콜라 → 제로콜라').set, ['cola', 'fries']);
+    // an option of only numbers and sizes hides nothing, so the name still fills in
+    assert.deepEqual(d('새우볶음밥', { base: 'fried rice' }, '2 / L').with, ['shrimp']);
+    // the base from the name before the model's loose words, unless the name only says 밥 or 탕
+    assert.equal(d('닭강정', { base: 'fried chicken bites' }).base, 'dakgangjeong');
+    assert.equal(d('참치마요 삼각김밥', { base: 'rice ball' }).base, 'gimbap');
+    assert.equal(d('공기밥', { base: 'kimchi fried rice' }).base, 'fried-rice');
+    // a fill's id the app doesn't draw falls back on the name
+    assert.equal(dishPic({ base: 'mapo-tofu-rice' }, { name: '마파두부덮밥' }, true).base, 'mapo-tofu');
+    // an English sauce in a name is the dish's, not a dip
+    assert.deepEqual(d('Garlic Sauce Chicken', { base: 'fried chicken' }).set, []);
+    assert.deepEqual(d('엽기떡볶이', { base: 'tteokbokki' }, '메추리알 추가').with, ['egg']);
 });
