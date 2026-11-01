@@ -1,6 +1,6 @@
 // Shared, private generation budget. Refreshed only by an explicit financial rebuild.
 import { askDraft } from './ai.js';
-import { parseJson, yearIn } from './phoneparse.js';
+import { num, parseJson, yearIn } from './phoneparse.js';
 import { saveMeta } from './core.js';
 import { currency, finite, fx, price, positions, cash, addPrice, finance, quoteKey } from './finance.js';
 
@@ -20,6 +20,9 @@ ANSWER — one JSON object, nothing else:
 export function readWealth(out) {
     const s=String(out).replace(/```(?:json)?/gi,'');
     const x=parseJson(s.slice(s.indexOf('{'),s.lastIndexOf('}')+1));
+    // "50,000" or "eur" as the model may write them
+    if (typeof x?.currency === 'string') x.currency = x.currency.trim().toUpperCase();
+    for (const k of ['deposits','investments']) for (const e of ['min','max']) if (x?.[k] && typeof x[k][e] === 'string' && num(x[k][e]) !== null) x[k][e] = num(x[k][e]);
     if (!currency(x.currency) || !['deposits','investments'].every(k=>finite(x[k]?.min)&&finite(x[k]?.max)&&x[k].min>=0&&x[k].max>=x[k].min) || !String(x.basis || '').trim()) throw new Error('재력 기준을 받지 못했어요');
     return {currency:x.currency,deposits:{min:x.deposits.min,max:x.deposits.max},investments:{min:x.investments.min,max:x.investments.max},basis:String(x.basis).slice(0,1200)};
 }

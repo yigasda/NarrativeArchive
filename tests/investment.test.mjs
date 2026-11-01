@@ -445,7 +445,7 @@ test('unpriced holdings fail valuation rather than becoming zero',async()=>{
 });
 test('malformed wealth ranges are rejected before app generation',async()=>{
  const {readWealth}=await import(wealthURL);
- for(const plan of [{currency:'EUR',deposits:{min:100,max:1},investments:{min:0,max:0},basis:'x'},{currency:'EUR',deposits:{min:'1',max:2},investments:{min:0,max:0},basis:'x'}]) assert.throws(()=>readWealth(JSON.stringify(plan)),/재력 기준/);
+ for(const plan of [{currency:'EUR',deposits:{min:100,max:1},investments:{min:0,max:0},basis:'x'},{currency:'EUR',deposits:{min:'lots',max:2},investments:{min:0,max:0},basis:'x'}]) assert.throws(()=>readWealth(JSON.stringify(plan)),/재력 기준/);
 });
 test('first phone generation receives the preselected profile and keeps the binding',async()=>{
  const {m}=setup();const binding={type:'character',id:'a.png',label:'A'};m.phoneProfiles={a:binding,other:{type:'character',id:'b.png'}};
@@ -484,4 +484,9 @@ test('bank statement and slips across New Year: December read in January is last
  assert.ok(dec.indexOf('>12월<')<dec.indexOf('>1월<'), 'December listed before January');
  assert.match(moneyUI.txDoc(p,'01-05','d1'),/2026\.12\.28/);
  assert.match(moneyUI.txDoc(p,'01-05','j1'),/2027\.01\.03/);
+});
+
+test('an investment or wealth answer that writes its numbers as text, codes in lower case, dates with slashes still goes in', async () => {
+ const {readWealth}=await import(wealthURL);
+ assert.deepEqual(readWealth(JSON.stringify({currency:'eur',deposits:{min:'10,000',max:'50000'},investments:{min:0,max:'1.200,50'},basis:'x'})).deposits,{min:10000,max:50000});
 });
