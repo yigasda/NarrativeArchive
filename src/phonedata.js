@@ -221,7 +221,15 @@ export const AI_SYS_PHONE_UPDATE = updateSystem();
 
 // ---- what the model sends back, cleaned: known keys only, text cut short, times in one shape
 
-export function parsePhone(out) {
+// a country as the model may write it: "DE", "DEU", "Germany", "독일"
+const ISO3 = { KOR: 'KR', USA: 'US', GBR: 'GB', DEU: 'DE', FRA: 'FR', ITA: 'IT', ESP: 'ES', JPN: 'JP', CHN: 'CN', TWN: 'TW', CAN: 'CA', AUS: 'AU', RUS: 'RU', BRA: 'BR' };
+const NAMED = { korea: 'KR', 'south korea': 'KR', 'united states': 'US', usa: 'US', america: 'US', 'united kingdom': 'GB', uk: 'GB', britain: 'GB', england: 'GB', germany: 'DE', deutschland: 'DE', france: 'FR', italy: 'IT', spain: 'ES', japan: 'JP', china: 'CN', taiwan: 'TW', canada: 'CA', australia: 'AU', russia: 'RU', brazil: 'BR' };
+export const countryOf = v => { const s = String(v || '').trim(), u = s.toUpperCase(); if (/^[A-Z]{2}$/.test(u)) return u; if (ISO3[u]) return ISO3[u]; return NAMED[s.toLowerCase()] || Object.entries(COUNTRIES).find(([, n]) => n === s)?.[0] || ''; };
+// a count as a profile writes it: 1200, "1.2k", "3.4만", "2M"
+const countOf = v => { const s = String(v ?? '').trim(), n = num(s); if (n === null) return 0; const k = /만/.test(s) ? 1e4 : /백만|\d\s*[mM]\b/.test(s) ? 1e6 : /\d\s*[kK]\b|천/.test(s) ? 1e3 : 1; return Math.max(0, Math.round(n * k)); };
+const truthy = v => v === true || /^(true|yes|ja|예|네)$/i.test(String(v ?? '').trim());
+// owner: whose phone it is (a message they wrote is "me", whatever name the model gives it; no thread or call with themselves)
+export function parsePhone(out, owner = '') {
     const s = String(out || '').replace(/```(?:json)?/gi, '');
     const a = s.indexOf('{'), b = s.lastIndexOf('}');
     if (a < 0 || b <= a) throw new Error('모델 답에서 폰 내용(JSON)을 찾지 못했어요');
@@ -229,30 +237,31 @@ export function parsePhone(out) {
     try { raw = parseJson(s.slice(a, b + 1)); } catch { throw new Error('모델 답의 JSON이 깨져 있어요. 다시 해 보세요'); }
     // an everyday record the model made up from the owner's habits stays apart from the story (재구성)
     const tag = (x, raw) => (raw?.everyday === true ? { ...withEv(x, raw), src: 'guess' } : withEv(x, raw));
-    const msg = x => ({ from: line(x?.from, 40) || 'me', text: str(x?.text, 600), ko: ko(x?.ko), time: when(x?.time) });
+    const self = owner ? nameKey(owner) : '', mine = v => !!self && nameKey(line(v, 40)) === self;
+    const msg = x => ({ from: mine(x?.from) ? 'me' : line(x?.from, 40) || 'me', text: str(x?.text, 600), ko: ko(x?.ko), time: when(x?.time) });
     // a translation that only repeats its text (a Korean text given the same "ko") is none: it would show twice
     const same = (a, b) => !!a && !!b && a.replace(/\s+/g, ' ').trim() === b.replace(/\s+/g, ' ').trim();
     const PAIRS = [['text', 'ko'], ['caption', 'ko'], ['q', 'ko'], ['title', 'ko'], ['title', 'kt'], ['subject', 'ks'], ['photo', 'pko'], ['bio', 'ko']];
     const unko = o => { if (o && typeof o === 'object') { for (const [a, b] of PAIRS) if (same(o[a], o[b])) o[b] = ''; for (const v of Object.values(o)) if (v && typeof v === 'object') unko(v); } return o; };
     return unko({
         device: parseDevice(raw.device),
-        country: /^[A-Z]{2}$/.test(String(raw.country || '').toUpperCase()) ? String(raw.country).toUpperCase() : '',
+        country: countryOf(raw.country),
         wall: pick(raw.wallpaper, WALLS, ''),
         accent: pick(raw.accent, ACCENTS, ''),
         now: when(raw.now),
-        contacts: arr(raw.contacts).map(x => ({ name: line(x?.name, 40), saved: line(x?.saved, 40) })).filter(x => x.name).slice(0, CAP.contacts),
-        threads: arr(raw.threads).map(t => { const d = t?.draft && str(t.draft.text, 600); return { with: line(t?.with, 40), messages: arr(t?.messages).map(msg).filter(x => x.text), ...(d ? { draft: { text: d, ko: ko(t.draft.ko), time: when(t.draft.time), src: 'story' } } : {}) }; }).filter(t => t.with && t.messages.length).slice(0, CAP.threads),
-        calls: arr(raw.calls).map(x => tag({ with: line(x?.with, 40), type: pick(x?.type, ['in', 'out', 'missed'], 'in'), time: when(x?.time), min: Math.max(0, Math.min(600, Math.round(Number(x?.min) || 0))) }, x)).filter(x => x.with),
+        contacts: arr(raw.contacts).map(x => ({ name: line(x?.name, 40), saved: line(x?.saved, 40) })).filter(x => x.name && !mine(x.name)).slice(0, CAP.contacts),
+        threads: arr(raw.threads).map(t => { const d = t?.draft && str(t.draft.text, 600); return { with: line(t?.with, 40), messages: arr(t?.messages).map(msg).filter(x => x.text), ...(d ? { draft: { text: d, ko: ko(t.draft.ko), time: when(t.draft.time), src: 'story' } } : {}) }; }).filter(t => t.with && !mine(t.with) && t.messages.length).slice(0, CAP.threads),
+        calls: arr(raw.calls).map(x => tag({ with: line(x?.with, 40), type: pick(x?.type, ['in', 'out', 'missed'], 'in'), time: when(x?.time), min: Math.max(0, Math.min(600, Math.round(num(x?.min) || 0))) }, x)).filter(x => x.with && !mine(x.with)),
         photos: arr(raw.photos).map(x => tag({ caption: line(x?.caption, 200), ko: ko(x?.ko), time: when(x?.time), mood: pick(x?.mood, MOODS, 'warm') }, x)).filter(x => x.caption),
         notes: arr(raw.notes).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 1500), ko: str(x?.ko, 1500), time: when(x?.time) }, x)).filter(x => x.title || x.text),
-        searches: arr(raw.searches).map(x => tag({ q: line(x?.q, 120), ko: ko(x?.ko), time: when(x?.time), ...(x?.tab ? { tab: true } : {}), ...(x?.mark ? { mark: true } : {}) }, x)).filter(x => x.q),
+        searches: arr(raw.searches).map(x => tag({ q: line(x?.q, 120), ko: ko(x?.ko), time: when(x?.time), ...(truthy(x?.tab) ? { tab: true } : {}), ...(truthy(x?.mark) ? { mark: true } : {}) }, x)).filter(x => x.q),
         events: arr(raw.events).map(x => tag({ title: line(x?.title, 80), ko: ko(x?.ko), date: when(x?.date).slice(0, 5), time: hhmm(x?.time) }, x)).filter(x => x.title && x.date),
-        profile: raw.profile && typeof raw.profile === 'object' ? { handle: line(raw.profile.handle, 40), bio: line(raw.profile.bio, 200), ko: ko(raw.profile.ko), followers: Math.max(0, Math.round(Number(raw.profile.followers) || 0)), following: Math.max(0, Math.round(Number(raw.profile.following) || 0)) } : null,
-        posts: arr(raw.posts).map(x => tag({ text: str(x?.text, 800), ko: str(x?.ko, 800), photo: line(x?.photo, 200), pko: ko(x?.pko), time: when(x?.time), likes: Math.max(0, Math.min(99999, Math.round(Number(x?.likes) || 0))),
+        profile: raw.profile && typeof raw.profile === 'object' ? { handle: line(raw.profile.handle, 40), bio: line(raw.profile.bio, 200), ko: ko(raw.profile.ko), followers: countOf(raw.profile.followers), following: countOf(raw.profile.following) } : null,
+        posts: arr(raw.posts).map(x => tag({ text: str(x?.text, 800), ko: str(x?.ko, 800), photo: line(x?.photo, 200), pko: ko(x?.pko), time: when(x?.time), likes: Math.min(99999, countOf(x?.likes)),
             comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) }, x)).filter(x => x.text || x.photo),
-        mails: arr(raw.mails).map(x => tag({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: !!x?.unread }, x)).filter(x => x.from && (x.subject || x.text)),
+        mails: arr(raw.mails).map(x => tag({ from: line(x?.from, 60), subject: line(x?.subject, 120), ks: line(x?.ks, 120), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), unread: truthy(x?.unread) }, x)).filter(x => x.from && (x.subject || x.text)),
         diary: arr(raw.diary).map(x => tag({ date: when(x?.date).slice(0, 5), title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000) }, x)).filter(x => x.date && x.text),
-        voice: arr(raw.voice).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: Math.max(3, Math.min(900, Math.round(Number(x?.sec) || 30))), place: line(x?.place, 60), src: 'story' }, x)).filter(x => x.text),
+        voice: arr(raw.voice).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'story' }, x)).filter(x => x.text),
     });
 }
 
@@ -490,7 +499,7 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     const binding=structuredClone(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key]);
     const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner), part, await ownerProfileBlock(ctx(),binding,owner)), { force: true, system: old ? AI_SYS_PHONE_UPDATE : AI_SYS_PHONE, maxTokens: 16000 });
     if(JSON.stringify(binding)!==JSON.stringify(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key])) throw new Error('생성 중 연결한 인물 정보가 변경됐어요. 다시 시도해 주세요');
-    const got = parsePhone(out);
+    const got = parsePhone(out, owner);
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
     if (part) {
         const p = m.phones[key];
@@ -679,7 +688,7 @@ async function updatePhone(m, owner) {
             // a time without its day ("15:10") takes the event's day
             const dated = x => { if (x && typeof x === 'object' && /^\s*\d{1,2}:\d{2}\s*$/.test(String(x.time || '')) && day) x.time = `${day} ${hhmm(x.time)}`; };
             for (const k of [...LISTS, 'threads']) for (const x of arr(phone[k])) { dated(x); for (const msg of arr(x?.messages)) dated(msg); if (x?.draft) dated(x.draft); }
-            try { add = parsePhone(JSON.stringify(phone)); } catch { fail('앱 내용 형식이 잘못됐어요'); continue; }
+            try { add = parsePhone(JSON.stringify(phone), owner); } catch { fail('앱 내용 형식이 잘못됐어요'); continue; }
             // a bare number is no event id (a model counting its events would take an old event's number again)
             const tagOf = v => { const t = evOf(v); return /^\d+$/.test(t) ? '' : t; };
             // one id for two new events in one answer would take the second for the first (its payment kept out as the same one)

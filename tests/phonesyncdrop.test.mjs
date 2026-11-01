@@ -373,3 +373,18 @@ test('an answer giving two new events one id pays both; an event with no date ta
     assert.deepEqual(c.p.money.tx.map(t => [t.who, t.amount, t.time.slice(0, 5)]), [['Kiosk', -5000, '10-26'], ['Cafe', -5000, '10-26'], ['Taxi', -12000, '10-26']]);
     assert.equal(c.bank(), 100000 - 22000);
 });
+
+test('making a phone: the owner by name is "me", a country by name, counts like "1.2k", flags written as words', () => {
+    const ph = data.parsePhone(JSON.stringify({ country: 'Germany', profile: { handle: 'ren', followers: '1.2k', following: '3.4만' },
+        threads: [{ with: 'Mara', messages: [{ from: 'Ren', text: 'hi', time: '10-26 10:00' }, { from: 'Mara', text: 'yo', time: '10-26 10:01' }] }, { with: 'Ren', messages: [{ from: 'Ren', text: 'note to self', time: '10-26 11:00' }] }],
+        calls: [{ with: 'Mara', type: 'in', time: '10-26 12:00', min: '4분' }], mails: [{ from: 'LH', subject: 'x', time: '10-26 09:00', unread: 'false' }],
+        searches: [{ q: 'snow', time: '10-26 08:00', tab: 'false', mark: 'true' }], posts: [{ text: 'snow', time: '10-26 08:30', likes: '2.5k' }] }), 'Ren');
+    assert.equal(ph.country, 'DE');
+    assert.deepEqual([ph.profile.followers, ph.profile.following], [1200, 34000]);
+    assert.deepEqual(ph.threads.map(t => t.with), ['Mara']);
+    assert.deepEqual(ph.threads[0].messages.map(x => x.from), ['me', 'Mara']);
+    assert.equal(ph.calls[0].min, 4);
+    assert.equal(ph.mails[0].unread, false);
+    assert.deepEqual([ph.searches[0].tab, ph.searches[0].mark], [undefined, true]);
+    assert.equal(ph.posts[0].likes, 2500);
+});
