@@ -880,7 +880,7 @@ function fillTiles(h, seed, date) {
     if (T.humidity === null) T.humidity = Math.round(pick(...(c === 'fog' ? [92, 98] : WET[c] ? [85, 95] : c === 'snow' || c === 'sleet' ? [80, 90] : c === 'clear' ? [40, 60] : [60, 75])));
     if (T.dew === null) T.dew = Math.round(temp - (100 - T.humidity) / 5);
     if (T.feels === null) T.feels = Math.round(temp - (T.wind > 15 && temp < 15 ? T.wind / 10 : 0) + (T.humidity > 70 && temp > 24 ? 2 : 0));
-    if (T.visibility === null) { let v = pick(...(c === 'fog' ? [1.5, 4] : wet ? [5, 10] : [15, 25])); if (T.humidity >= 85 && c !== 'fog') v *= 0.7; T.visibility = Math.max(0.5, Math.round(v * 2) / 2); }
+    if (T.visibility === null) { let v = pick(...(c === 'fog' ? [1.5, 4] : wet ? [5, 10] : [15, 25])); if (T.humidity >= 85 && c !== 'fog') v *= 0.7; T.visibility = Math.max(1, Math.round(v)); }
     return T;
 }
 function weatherTiles(h, tileCol, lead = '') {
@@ -1001,6 +1001,8 @@ export function cityScreen(p, now, id) {
     const t = cityTime(p, lf, c), phase = phaseOf(t.time, c.sunrise, c.sunset), q = pal(c.cond, phase), tileCol = shade(q.sky, q.phase === 'day' && q.sky === '#4f8fd8' ? 0.62 : 0.8);
     const h = { temp: c.temp, hi: c.hi, lo: c.lo, cond: c.cond, time: t.time, sr: c.sunrise, ss: c.sunset, line: '', ko: '', hours: cityHours(c, t), days: [] };
     h.tiles = fillTiles({ ...h, tiles: { sunset: c.sunset || '', sunrise: c.sunrise || '', rain24: null, rainNext: c.rainNext ?? null, feels: c.feels ?? null, wind: c.wind ?? null, gust: c.gust ?? null, humidity: c.humidity ?? null, dew: c.dew ?? null, visibility: c.visibility ?? null, dir: c.dir || '' } }, `${c.name}:${now5(p).slice(0, 5)}`, now5(p));
+    // a city shows no visibility tile: its detail already carries today's temperatures, and seven tiles leave one alone
+    h.tiles.visibility = null;
     const lm = toMin(t.time), warm = (c.hi ?? 0) >= 15 ? '#f3c66b' : '#9fd6ec';
     // the city's own tiles first: its sunset and today's temperatures; no clock, the status bar and the list already tell the time
     const lead = `${sunsetTile(h.tiles.sunset, h.tiles.sunrise, t.time, tileCol)}${tile('오늘 기온', `${c.temp ?? '—'}°`, dayCurve(c, lm, warm), `최저 ${c.lo ?? '—'}° · 최고 ${c.hi ?? '—'}°`)}`;
