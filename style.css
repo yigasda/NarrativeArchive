@@ -7755,3 +7755,19 @@ body.na_darkui dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_chips butt
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_chips button, .na_pchip).on:not(#na_x) { border-color: transparent !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_card:not(.na_bn2_find):not(#na_x) { border-color: transparent !important; }
 body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_card:not(#na_x) { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+
+/* ============ every plain checkbox in the extension's windows is drawn by us (the picker's tick): rounded square, light edge,
+   lit = accent fill with a tick (white on orange, near black on dark cream). Hidden helper boxes keep opacity 0. */
+body:is(.na_darkui, :not(.na_darkui)) .na_popup input[type="checkbox"]:not(.na_toggle):not(#na_x) { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; min-width: 18px; margin: 0; flex: none; box-sizing: border-box; border-radius: 6px; border: 2px solid var(--na-line) !important; background: transparent !important; box-shadow: none !important; cursor: pointer; vertical-align: middle; position: relative; }
+body:not(.na_darkui) .na_popup input[type="checkbox"]:not(.na_toggle):not(#na_x) { border-color: #CDB8A8 !important; }
+body:is(.na_darkui, :not(.na_darkui)) .na_popup input[type="checkbox"]:not(.na_toggle):checked:not(#na_x) { border: 0 !important; background: var(--na-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center no-repeat !important; }
+body.na_darkui .na_popup input[type="checkbox"]:not(.na_toggle):checked:not(#na_x) { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%231B1B1F' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") !important; }
+body:is(.na_darkui, :not(.na_darkui)) .na_popup input[type="checkbox"]:not(.na_toggle)::before, body:is(.na_darkui, :not(.na_darkui)) .na_popup input[type="checkbox"]:not(.na_toggle)::after { display: none !important; content: none !important; }
+.na_popup input[type="checkbox"]:not(.na_toggle):disabled { opacity: 0.4; cursor: default; }
+.na_popup .checkbox_label { display: inline-flex; align-items: flex-start; gap: 8px; }
+.na_popup .checkbox_label > input[type="checkbox"] { margin-top: 2px; }
+.na_ss_row, .na_ss_row.on { border-color: transparent !important; }
+body:not(.na_darkui) .na_ss_row { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06); }
+body:not(.na_darkui) .na_ss_row.on { background: #F3E4D8; }
+body.na_darkui .na_ss_row.on { background: #34343B; }
+body:not(.na_darkui) .na_popup input[type="checkbox"]:not(.na_toggle):not(:checked):not(#na_x) { border-color: #BCA697 !important; }
