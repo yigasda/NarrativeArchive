@@ -458,7 +458,7 @@ export async function openWizard() {
           <button type="button" class="na_v2_btn primary na_wz2_next"></button>
         </div>
         <button type="button" class="na_linkbtn na_wz2_skip">채점 건너뛰고 바로 추가</button>
-        <button type="button" class="na_linkbtn na_wz3_back" hidden>‹ 이전</button>
+        <button type="button" class="na_linkbtn na_wz3_back" hidden>건너뛰고 추가 →</button>
       </div>`);
     // (docs/mockups/ext-wizard A) one orange button a step: 복사 copies and moves on, 채점 grades (then moves on); .txt and skipping are links
     const graded = () => !$root.find('.na_wz_gradeout').prop('hidden');
@@ -471,11 +471,11 @@ export async function openWizard() {
         const r0 = range();
         $root.find('.na_wz2_sub').text(step === 2 ? `#${r0.from}–#${r0.to}${josaA(r0.to)} 압축한 결과 · ${STEPS[step].sub}` : STEPS[step].sub);
         $root.find('.na_wz2_pane').each(function () { this.hidden = Number(this.dataset.s) !== step; });
-        // 채점 (not done yet): 건너뛰고 추가 sits beside the orange button as an equal, 이전 drops to a link under them
+        // 채점 (not done yet): 이전 | ✧ AI로 채점 like every other step, 건너뛰고 추가 as the link under them
         const skipPair = step === 3 && !graded();
-        $root.find('.na_wz2_prev').prop('hidden', step === 0).text(skipPair ? '건너뛰고 추가' : '이전');
+        $root.find('.na_wz2_prev').prop('hidden', step === 0).text('이전');
         $root.find('.na_wz3_back').prop('hidden', !skipPair);
-        $root.find('.na_wz2_nav').toggleClass('na_wz3_pair', skipPair);
+        $root.find('.na_wz2_nav').removeClass('na_wz3_pair');
         $root.find('.na_wz2_next').text(nextLabel());
         $root.find('.na_wz2_skip').prop('hidden', true); // 채점 has its own 건너뛰고 추가 button now
         if (step === 4) {
@@ -488,8 +488,8 @@ export async function openWizard() {
         step = Math.max(0, Math.min(STEPS.length - 1, to)); show();
     };
     $root.on('click', '.na_wz2_progress button', function () { go(Number(this.dataset.s)); });
-    $root.find('.na_wz2_prev').on('click', () => go(step === 3 && !graded() ? 4 : step - 1));
-    $root.find('.na_wz3_back').on('click', () => go(step - 1));
+    $root.find('.na_wz2_prev').on('click', () => go(step - 1));
+    $root.find('.na_wz3_back').on('click', () => go(4));
     $root.find('.na_wz2_next').on('click', async () => {
         if (step === STEPS.length - 1) return $root.find('.na_wz_add').trigger('click');
         if (step === 1) { if (await doCopy()) go(2); return; }
