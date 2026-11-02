@@ -7904,3 +7904,7 @@ body.na_darkui .na_wz2_range label > span:focus-within { box-shadow: 0 0 0 2px #
 .na_au3_lab { margin: 16px 4px 6px; font-size: 12px; font-weight: 700; color: var(--na-mute); }
 .na_au3 .na_au_name, .na_au3 .na_au_note { width: 100%; box-sizing: border-box; margin: 0; }
 .na_au3_note { margin: 12px 4px 0; font-size: 12px; line-height: 1.5; color: var(--na-dim); }
+/* 작업실 › 추가 button: a filled pill with no outline, whatever the theme draws on buttons (3.169.11) */
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st button.na_st_add:not(#na_x) { border: 0 !important; outline: none !important; box-shadow: none !important; }
+body:not(.na_darkui) dialog.popup .na_st button.na_st_add:not(#na_x) { background: #F6E1D3 !important; color: #A84A17 !important; }
+body.na_darkui dialog.popup .na_st button.na_st_add:not(#na_x) { background: #2E2E34 !important; color: #F0CF8E !important; }
