@@ -86,7 +86,8 @@ async function setArch(p, arch) {
         const core = await import(B + 'core.js'); const m = core.getMeta();
         delete m.studio; m.retitled = []; delete m.layers;
         if (arch === 'empty') { m.text = ''; await core.saveMeta(); }
-        else await core.commitText(A, 'harness', { boundary: 29 });
+        // the studio needs messages left after the archive, so its archive stops at #5; everything else is archived to the end
+        else await core.commitText(A, 'harness', { boundary: arch === 'studio' ? 5 : 29 });
     }, [B, ARCH, arch]);
     await p.waitForTimeout(300);
 }
