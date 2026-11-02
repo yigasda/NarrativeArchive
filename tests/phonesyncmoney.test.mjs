@@ -399,3 +399,17 @@ test('paying the card off through a reflection is a transfer onto the card, not 
     migrateBank(m, p);
     assert.equal(p.money.bank.accounts[1].spent, 50);
 });
+
+test('a pass told again with its status ("used", "checked in") takes it; the same words again change nothing', () => {
+    const { m, p } = setup();
+    const pass = status => ({ kind: 'flight', by: 'Lufthansa', from: 'FRA', to: 'BER', date: '12-28', time: '08:00', no: 'LH123', ...(status ? { status } : {}) });
+    applyMoney(m, p, ev('flight', 5, '12-22', { passes: [pass()] }), opts());
+    assert.equal(p.money.passes.length, 1);
+    const r = applyMoney(m, p, ev('flight', 7, '12-28', { passes: [pass('used')] }), opts());
+    assert.equal(p.money.passes[0].status, 'used');
+    assert.equal(r.effects.filter(x => x.type === 'status').length, 1);
+    const r2 = applyMoney(m, p, ev('flight', 8, '12-28', { passes: [pass('used')] }), opts());
+    assert.equal(r2.effects.length, 0);
+    revertEffects(m, p, r.effects);
+    assert.equal(p.money.passes[0].status, '');
+});

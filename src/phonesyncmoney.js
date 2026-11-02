@@ -251,11 +251,13 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const old = x.already && box.find(o => o.id === x.already) || box.find(o => same(o, x) && !fresh(x, o, e.at));
         if (!old && x.occurrence === 'again') return;
         if (old) {
-            if (x.status && ORDER.includes(x.status) && x.status !== old.status && later(old.status, x.status)) {
+            // an order's status only moves forward; a pass's is free text ("used", "checked in", "cancelled"): whatever it says now
+            const next = path === 'passes' ? txt(x.status, 30) : x.status;
+            if (next && next !== old.status && (path === 'passes' || ORDER.includes(next) && later(old.status, next))) {
                 const was = old.status;
-                old.status = x.status;
+                old.status = next;
                 if (path === 'orders' && x.status === 'delivered' && /^\d{2}-\d{2}$/.test(date || '')) old.arrived ||= date;
-                out.effects.push({ type: 'status', path: `money.${path}`, id: old.id, status: x.status, prev: was });
+                out.effects.push({ type: 'status', path: `money.${path}`, id: old.id, status: next, prev: was });
                 out.changes.push({ app: path === 'orders' ? '쇼핑' : '지갑', label: `${old.item || old.by} 상태`, amount: null });
             }
             return;
