@@ -82,13 +82,25 @@ export async function openAuSettings() {
     const $root = $(`
       <div class="na_popup na_v2 na_au_pop">
         <div class="na_v2_title"><b>AU 채팅</b><small>본편 아카이브를 들고 새 채팅에서 AU를 할 때 켜요</small></div>
-        <div class="na_v2_card na_au_box">
-          <label class="na_au_on"><span class="na_cp_txt"><span>이 채팅은 AU</span><small>요약이 본편 뒤에 AU 묶음으로 이어져요</small></span><input type="checkbox" class="na_toggle na_au_tg"></label>
-          <label><small>묶음 이름</small><input type="text" class="text_pole na_au_name" maxlength="12" placeholder="AU" spellcheck="false"></label>
-          <label><small>AU 설정 · 뭐가 다르고 뭘 기억하는지</small><textarea class="text_pole na_au_note" rows="3" placeholder="예: 현대 AU, 둘 다 대학생. 본편 기억은 그대로"></textarea></label>
+        <div class="na_au3">
+          <div class="na_v2_card na_au3_map"><div class="na_bn3_tl na_au3_tl"></div></div>
+          <label class="na_v2_card na_au3_on"><span>이 채팅은 AU</span><input type="checkbox" class="na_toggle na_au_tg"></label>
+          <div class="na_au3_lab">묶음 이름</div>
+          <input type="text" class="text_pole na_au_name" maxlength="12" placeholder="AU" spellcheck="false">
+          <div class="na_au3_lab">뭐가 다르고 뭘 기억하는지</div>
+          <textarea class="text_pole na_au_note" rows="3" placeholder="예: 현대 AU, 둘 다 대학생. 본편 기억은 그대로"></textarea>
+          <small class="na_au3_note">켜 두면 압축 지시문 맨 위에 AU 안내가 붙어요 · 다음 채팅에도 이어져요</small>
         </div>
-        <small class="na_v2_note">켜 두면 압축 지시문 맨 위에 AU 안내가 붙어요 · 다음 채팅에도 이어져요</small>
       </div>`);
+    // (docs/mockups/ext-au B) 본편 → AU as the branch window's timeline: the main story's numbers, then this chat's log
+    const drawMap = () => {
+        const on = $root.find('.na_au_tg').prop('checked');
+        const name = String($root.find('.na_au_name').val() || '').trim() || 'AU';
+        const main = headingRanges(m.text).filter(r => !r.prefix || r.prefix !== name);
+        const span = main.length ? `#${Math.min(...main.map(r => r.from))}–#${Math.max(...main.map(r => r.to))} · 아카이브 그대로` : '아카이브 그대로';
+        $root.find('.na_au3_tl').html(`<div><b>본편</b><small>${esc(span)}</small></div>
+            <div class="${on ? 'here' : 'dim'}"><b>${esc(name)}</b><small>${on ? '이 채팅부터 · 요약이 여기 이어져요' : '켜면 요약이 본편 뒤 여기로 이어져요'}</small></div>`);
+    };
     $root.find('.na_au_tg').prop('checked', a.on);
     $root.find('.na_au_name').val(m.au?.name || '');
     $root.find('.na_au_note').val(a.note);
@@ -96,8 +108,10 @@ export async function openAuSettings() {
         m.au = { on: $root.find('.na_au_tg').prop('checked'), name: String($root.find('.na_au_name').val() || '').trim().replace(/\s+/g, ''), note: String($root.find('.na_au_note').val() || '').trim() };
         await saveMeta();
     };
-    $root.find('.na_au_tg').on('change', async function () { await save(); if (this.checked) await offerMainDivider(m); });
+    $root.find('.na_au_tg').on('change', async function () { drawMap(); await save(); if (this.checked) await offerMainDivider(m); });
     $root.find('.na_au_name, .na_au_note').on('change', save);
+    $root.find('.na_au_name').on('input', drawMap);
+    drawMap();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: false, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
     await save();
     refreshStatus();

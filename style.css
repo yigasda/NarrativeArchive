@@ -7892,3 +7892,15 @@ body.na_darkui :is(dialog.popup:not(:has(.na_phone)) .na_popup, #na_settings) :i
 body.na_darkui :is(dialog.popup:not(:has(.na_phone)) .na_popup, #na_settings) :is(input, textarea, select):not([type="checkbox"]):not(.na_toggle):focus-visible:not(#na_x) { outline: none !important; border-color: transparent !important; box-shadow: 0 0 0 2px #45454D !important; }
 body:not(.na_darkui) .na_wz2_range label > span:focus-within { box-shadow: 0 0 0 2px #D9C9BD !important; }
 body.na_darkui .na_wz2_range label > span:focus-within { box-shadow: 0 0 0 2px #45454D !important; }
+
+/* ============ AU 채팅 (docs/mockups/ext-au B): 본편 → AU timeline on top, the switch on its own card, then the two fields outside
+   any card with bold labels; all of it centred in the window */
+.na_au_pop { display: flex; flex-direction: column; }
+.na_au3 { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 0; }
+.na_au3_map { padding: 12px 16px !important; }
+.na_au3_tl { margin: 0 !important; }
+.na_au3_on { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 14px !important; font-size: 14px; cursor: pointer; }
+.na_au3_on > span:first-child { flex: 1; }
+.na_au3_lab { margin: 16px 4px 6px; font-size: 12px; font-weight: 700; color: var(--na-mute); }
+.na_au3 .na_au_name, .na_au3 .na_au_note { width: 100%; box-sizing: border-box; margin: 0; }
+.na_au3_note { margin: 12px 4px 0; font-size: 12px; line-height: 1.5; color: var(--na-dim); }

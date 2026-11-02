@@ -29,6 +29,7 @@ HTML은 브라우저로 바로 열려요(Playwright로 찍을 때는 `file://` �
 | `ext-calendar/` | 이야기 달력: 지금 목록 그대로 + 위에 기념일 카드(다가오는 것 · 누른 날 것, 눌러서 전체) · 장면 있는 날 띠(누르면 그날로), 시안 `mock.html`, 실제 화면(`real.png`) |
 | `ext-kwtest/` | 키워드 테스트: 시안 B(`mock.html`, 불려 와요 · 안 불려 와요 숫자 두 개 + 목록, 열쇠 이모지 없음), 실제 화면(`real.png`) |
 | `ext-xray/` | 프롬프트 X-ray 기록 전 화면: 시안 A(`mock.html`, 흐린 예시 + 한 줄), 실제 화면(`real.png`, 키워드 테스트 숫자 머리글도 같이) |
+| `ext-au/` | AU 채팅: 시안 B(`mock.html`, 본편 → AU 타임라인 + 스위치 카드 + 굵은 이름의 칸 둘), 실제 화면(`real.png`) |
 | `ext-picker/` | 공용 섹션 고르기 칸(누가 아는가 · 제목 다시 짓기 · 다이제스트 · 합치기 · 대사 은행 등): 시안 A~C(`sheet.png`, `mock.html`, A 채택), 실제 화면(`real.png`) |
 | `panel-s1` ~ `panel-s5`, `panel-worldmap` | 패널 하위 화면 시안 묶음 |
 | `phone-home/` | 홈 · 잠금(컬러 젤 · 화이트 그레이) |
