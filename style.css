@@ -2938,6 +2938,61 @@ body.na_darkui .na_bn2_find { border-color: #55555E; }
 .na_bn2_findrow .na_cp_txt small { font-size: 11.5px; color: var(--na-dim); }
 .na_bn2 .na_br_find { flex: none; font-size: 12.5px; padding: 6px 12px; border-radius: 10px; line-height: 1.5; }
 
+/* 이탈 감지 · 분기 › empty (docs/mockups/ext-drift D+F): no card around it, a small picture on top (what a drift
+   looks like · a timeline that ends here), a title, one line, then the control */
+.na_dr3_hello, .na_bn3_hello { display: none; }
+.na_dr2.na_dr3_new > :is(.na_dr2_ctl, .na_dr2_out) { display: none !important; }
+.na_dr2.na_dr3_new .na_dr3_hello, .na_bn2.na_bn3_new .na_bn3_hello { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 14px 0 0; }
+:is(.na_dr3_hello, .na_bn3_hello) > b { margin-top: 14px; font-size: 16px; color: var(--na-ink); }
+:is(.na_dr3_hello, .na_bn3_hello) > small { font-size: 12.5px; line-height: 1.5; color: var(--na-sub, var(--na-dim)); }
+.na_dr3_cmp { align-self: stretch; padding: 2px 14px; border-radius: 16px; background: var(--na-card); text-align: left; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); opacity: 0.85; }
+.na_dr3_cmp > div { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; font-size: 13px; color: var(--na-ink); }
+.na_dr3_cmp > div + div { border-top: 1px solid var(--na-line2, var(--na-line)); }
+.na_dr3_cmp small { flex: none; width: 54px; font-size: 11px; font-weight: 700; color: var(--na-dim); }
+.na_dr3_cmp .x small { color: var(--na-accent-fg, var(--na-accent)); }
+.na_dr3_cmp .x span { color: var(--na-accent-ink); }
+.na_dr3_seg { display: flex; align-self: stretch; gap: 4px; margin-top: 16px; padding: 4px; border-radius: 999px; }
+body:not(.na_darkui) .na_dr3_seg { background: #E9DCD1; }
+body.na_darkui .na_dr3_seg { background: #2E2E34; }
+.na_dr3_seg > span { flex: 1.8; display: flex; align-items: center; justify-content: center; font-size: 12.5px; color: var(--na-dim); white-space: nowrap; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_dr3_seg > button:not(#na_x) { flex: 1; height: 32px; margin: 0; padding: 0; border: 0 !important; border-radius: 999px; background: transparent !important; box-shadow: none !important; color: var(--na-mute) !important; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_dr3_seg > button.on:not(#na_x) { background: var(--na-card) !important; color: var(--na-accent-ink) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1) !important; }
+.na_dr3_hello .na_dr3_go { margin-top: 12px; }
+.na_bn2.na_bn3_new .na_bn2_findrow { display: none !important; }
+.na_bn2.na_bn3_new .na_bn2_find { border: 0 !important; padding: 0 !important; }
+.na_bn3_tl { position: relative; align-self: stretch; margin: 0 28px; padding-left: 24px; text-align: left; }
+.na_bn3_tl > div { position: relative; padding: 6px 0; }
+.na_bn3_tl > div::before { content: ""; position: absolute; z-index: 1; left: -22px; top: 9px; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; border: 2px solid var(--na-line); background: var(--na-bg, #F0E4DB); }
+body.na_darkui .na_bn3_tl > div::before { background: #17171A; }
+.na_bn3_tl > div.here::before { border-color: var(--na-accent); background: var(--na-accent) !important; }
+.na_bn3_tl b { display: block; font-size: 13.5px; font-weight: 600; color: var(--na-ink); }
+.na_bn3_tl small { display: block; font-size: 11.5px; color: var(--na-dim); }
+.na_bn3_tl > div.dim > * { opacity: 0.55; }
+.na_bn3_tl > div.dim::before { border-color: var(--na-line2, var(--na-line)); }
+/* the line runs from one dot's centre to the next, under the dots */
+.na_bn3_tl > div:not(:last-child)::after { content: ""; position: absolute; left: -16px; top: 16px; bottom: -16px; width: 2px; background: var(--na-line); }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_bn3_find:not(#na_x) { align-self: stretch; height: 46px; margin: 14px 0 0; border: 1px solid var(--na-line) !important; border-radius: 999px; background: var(--na-card) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; color: var(--na-ink) !important; font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; }
+body:not(.na_darkui) .na_bn3_tl > div::before { border-color: #D3C1B4; }
+body:not(.na_darkui) .na_bn3_tl > div.dim::before { border-color: #DDCDC1; }
+body:not(.na_darkui) .na_bn3_tl > div:not(:last-child)::after { background: #D3C1B4; }
+body:not(.na_darkui) .na_bn3_tl > div.here::before { border-color: var(--na-accent); }
+/* the result screen's control card uses the same 최근 메시지 picker */
+.na_dr2_ctl .na_dr3_seg { margin-top: 0; }
+/* 최근 메시지 as − n + inside the same pill */
+.na_dr3_seg > span { flex: 1; justify-content: flex-start; padding-left: 12px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_dr3_seg > button[data-d]:not(#na_x) { flex: none; width: 32px; height: 32px; background: var(--na-card) !important; color: var(--na-ink) !important; font-size: 16px; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1) !important; }
+.na_dr3_n { width: 44px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: var(--na-accent-ink); font-variant-numeric: tabular-nums; }
+/* 이탈 감지 (never checked) in the big window: the example on top, 최근 메시지 + 검사하기 at the bottom like the wizard's buttons */
+.na_dr2.na_dr3_new { display: flex; flex-direction: column; }
+.na_dr2.na_dr3_new .na_dr3_hello { flex: 1; }
+.na_dr2.na_dr3_new .na_dr3_seg { margin-top: auto; }
+/* empty 이탈 감지 · 분기 sit in the middle of the 55% window (3.169.6): the example and its line centred above the controls at the bottom; the timeline, line and 찾기 centred */
+.na_dr2.na_dr3_new .na_dr3_hello > .na_dr3_cmp { margin-top: auto; }
+.na_dr2.na_dr3_new .na_dr3_hello > b { margin-top: 14px; }
+.na_dr2.na_dr3_new .na_dr3_hello > .na_dr3_seg { margin-top: auto; }
+.na_bn2.na_bn3_new { display: flex; flex-direction: column; }
+.na_bn2.na_bn3_new > .na_bn2_body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+
 /* unhide */
 .na_uh2 { gap: 14px; }
 .na_uh2_count b { font-size: 26px; }
@@ -7715,51 +7770,6 @@ body.na_darkui .na_vc3_ex { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
 .na_vc_body .na_vc_coreline { padding: 0; border-radius: 0; background: none; font-size: 13px; line-height: 1.5; color: var(--na-ink); }
 .na_vc_body .na_vc_core_view { gap: 2px; }
 
-/* ============ 이탈 감지 · 분기 › empty (docs/mockups/ext-drift D+F): no card around it, a small picture on top (what a drift
-   looks like · a timeline that ends here), a title, one line, then the control */
-.na_dr3_hello, .na_bn3_hello { display: none; }
-.na_dr2.na_dr3_new > :is(.na_dr2_ctl, .na_dr2_out) { display: none !important; }
-.na_dr2.na_dr3_new .na_dr3_hello, .na_bn2.na_bn3_new .na_bn3_hello { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 14px 0 0; }
-:is(.na_dr3_hello, .na_bn3_hello) > b { margin-top: 14px; font-size: 16px; color: var(--na-ink); }
-:is(.na_dr3_hello, .na_bn3_hello) > small { font-size: 12.5px; line-height: 1.5; color: var(--na-sub, var(--na-dim)); }
-.na_dr3_cmp { align-self: stretch; padding: 2px 14px; border-radius: 16px; background: var(--na-card); text-align: left; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); opacity: 0.85; }
-.na_dr3_cmp > div { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; font-size: 13px; color: var(--na-ink); }
-.na_dr3_cmp > div + div { border-top: 1px solid var(--na-line2, var(--na-line)); }
-.na_dr3_cmp small { flex: none; width: 54px; font-size: 11px; font-weight: 700; color: var(--na-dim); }
-.na_dr3_cmp .x small { color: var(--na-accent-fg, var(--na-accent)); }
-.na_dr3_cmp .x span { color: var(--na-accent-ink); }
-.na_dr3_seg { display: flex; align-self: stretch; gap: 4px; margin-top: 16px; padding: 4px; border-radius: 999px; }
-body:not(.na_darkui) .na_dr3_seg { background: #E9DCD1; }
-body.na_darkui .na_dr3_seg { background: #2E2E34; }
-.na_dr3_seg > span { flex: 1.8; display: flex; align-items: center; justify-content: center; font-size: 12.5px; color: var(--na-dim); white-space: nowrap; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_dr3_seg > button:not(#na_x) { flex: 1; height: 32px; margin: 0; padding: 0; border: 0 !important; border-radius: 999px; background: transparent !important; box-shadow: none !important; color: var(--na-mute) !important; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_dr3_seg > button.on:not(#na_x) { background: var(--na-card) !important; color: var(--na-accent-ink) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1) !important; }
-.na_dr3_hello .na_dr3_go { margin-top: 12px; }
-.na_bn2.na_bn3_new .na_bn2_findrow { display: none !important; }
-.na_bn2.na_bn3_new .na_bn2_find { border: 0 !important; padding: 0 !important; }
-.na_bn3_tl { position: relative; align-self: stretch; margin: 0 28px; padding-left: 24px; text-align: left; }
-.na_bn3_tl > div { position: relative; padding: 6px 0; }
-.na_bn3_tl > div::before { content: ""; position: absolute; z-index: 1; left: -22px; top: 9px; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; border: 2px solid var(--na-line); background: var(--na-bg, #F0E4DB); }
-body.na_darkui .na_bn3_tl > div::before { background: #17171A; }
-.na_bn3_tl > div.here::before { border-color: var(--na-accent); background: var(--na-accent) !important; }
-.na_bn3_tl b { display: block; font-size: 13.5px; font-weight: 600; color: var(--na-ink); }
-.na_bn3_tl small { display: block; font-size: 11.5px; color: var(--na-dim); }
-.na_bn3_tl > div.dim > * { opacity: 0.55; }
-.na_bn3_tl > div.dim::before { border-color: var(--na-line2, var(--na-line)); }
-/* the line runs from one dot's centre to the next, under the dots */
-.na_bn3_tl > div:not(:last-child)::after { content: ""; position: absolute; left: -16px; top: 16px; bottom: -16px; width: 2px; background: var(--na-line); }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_bn3_find:not(#na_x) { align-self: stretch; height: 46px; margin: 14px 0 0; border: 1px solid var(--na-line) !important; border-radius: 999px; background: var(--na-card) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; color: var(--na-ink) !important; font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; }
-body:not(.na_darkui) .na_bn3_tl > div::before { border-color: #D3C1B4; }
-body:not(.na_darkui) .na_bn3_tl > div.dim::before { border-color: #DDCDC1; }
-body:not(.na_darkui) .na_bn3_tl > div:not(:last-child)::after { background: #D3C1B4; }
-body:not(.na_darkui) .na_bn3_tl > div.here::before { border-color: var(--na-accent); }
-/* the result screen's control card uses the same 최근 메시지 picker */
-.na_dr2_ctl .na_dr3_seg { margin-top: 0; }
-/* 최근 메시지 as − n + inside the same pill */
-.na_dr3_seg > span { flex: 1; justify-content: flex-start; padding-left: 12px; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_dr3_seg > button[data-d]:not(#na_x) { flex: none; width: 32px; height: 32px; background: var(--na-card) !important; color: var(--na-ink) !important; font-size: 16px; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1) !important; }
-.na_dr3_n { width: 44px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: var(--na-accent-ink); font-variant-numeric: tabular-nums; }
-
 /* ============ dark = charcoal (3.168): neutral greys, cream for the big buttons and lit things, 짐작 gold for small accents.
    Anything sitting on the cream accent takes --na-onaccent (near black) instead of white. */
 body.na_darkui input.na_toggle:checked + .na_tgl_ui::after, body.na_darkui .na_sw.on::after { background: #1B1B1F; }
@@ -7849,25 +7859,11 @@ body:not(.na_darkui) .na_cal_item.na_cal3_hl { background: #F3E4D8; }
 body.na_darkui .na_cal_item.na_cal3_hl { background: #2E2E34; }
 .na_cal3_av.plain .na_cal3_avic { background: var(--na-card2) !important; color: var(--na-dim) !important; }
 .na_cal3_av.plain .na_cal3_avtx b { font-weight: 600; color: var(--na-mute); }
-/* 이탈 감지 (never checked) in the big window: the example on top, 최근 메시지 + 검사하기 at the bottom like the wizard's buttons */
-.na_dr2.na_dr3_new { display: flex; flex-direction: column; }
-.na_dr2.na_dr3_new .na_dr3_hello { flex: 1; }
-.na_dr2.na_dr3_new .na_dr3_seg { margin-top: auto; }
-
 /* ============ window size (3.169.5): every extension window fits its content but never opens shorter than about half the
    screen, so short ones don't look tiny and big ones don't sit empty; long ones grow to the screen and scroll inside.
    Confirms, the phone, the studio and 아카이브에 추가 keep their own sizing. */
 body dialog.popup:not(:has(.na_confirm, .na_phone, .na_st, .na_ap3)) .popup-content > .na_popup.na_v2,
 body dialog.popup:not(:has(.na_confirm, .na_phone, .na_st, .na_ap3)) .na_popup.na_v2:not(.na_popup .na_popup) { min-height: 55vh; box-sizing: border-box; }
-/* empty windows sit in the middle of the 55% window, not stuck to the top (3.169.6):
-   이탈 감지 before a check — the example and its line centred above the controls at the bottom;
-   분기 that is not a branch — the timeline, line and 찾기 button centred;
-   any window whose list is just the one "nothing yet" line — that line centred */
-.na_dr2.na_dr3_new .na_dr3_hello > .na_dr3_cmp { margin-top: auto; }
-.na_dr2.na_dr3_new .na_dr3_hello > b { margin-top: 14px; }
-.na_dr2.na_dr3_new .na_dr3_hello > .na_dr3_seg { margin-top: auto; }
-.na_bn2.na_bn3_new { display: flex; flex-direction: column; }
-.na_bn2.na_bn3_new > .na_bn2_body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
 .na_popup.na_v2 > :has(> .na_empty:only-child) { flex: 1; display: flex; flex-direction: column; justify-content: center; }
 
 /* ============ 키워드 테스트 (docs/mockups/ext-kwtest B): two counts, then the called sections (orange tick, the matched keyword
