@@ -61,7 +61,7 @@ function displayTools(p) {
       <button type="button" class="bank_fxrefresh" aria-label="환율 확인">${ax('again', 17, 'currentColor', 2.1)}</button></div>`;
 }
 const busyOf = (p, k) => filling.has(`${nameKey(p.owner)}:${k}`);
-const mo = p => p.money || null;
+const mo = p => { const M = p.money; if (!M) return null; M.tx ||= []; M.passes ||= []; M.orders ||= []; M.cards ||= []; (M.bank ||= {}).accounts ||= []; return M; };
 const acctOf = (p, last4) => mo(p)?.bank?.accounts?.find(a => a.last4 === last4);
 const txMoney = (p, x, signed = false) => fmtMoney({ ...p, money: { currency: x.currency || acctOf(p, x.account)?.currency || mo(p)?.currency } }, x.amount, signed);
 const kindName = { checking: '입출금', savings: '저축', credit: '신용카드' };

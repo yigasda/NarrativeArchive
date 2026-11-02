@@ -28,7 +28,21 @@ Object.assign(AX, {
 });
 
 // ---- shared bits
-const L = p => p.life || null;
+// the everyday apps' data, with every list and box it may lack (an older save, a thin answer) put in place once
+const L = p => {
+    const l = p.life; if (!l) return null;
+    const c = l.clock ||= {}; c.alarms ||= []; c.timers ||= []; c.running ||= null; for (const a of c.alarms) { a.days ||= []; a.then ||= []; }
+    const h = l.health ||= {}; h.days ||= []; h.usual ||= {};
+    const f = l.files ||= {}; f.folders ||= []; f.items ||= []; f.cloud ||= { used: null, total: null };
+    const w = l.weather ||= {}; w.cities ||= []; const h0 = w.here ||= { place: '', date: '', time: '', from: 'guess', cond: '', temp: null, hi: null, lo: null, line: '', ko: '' }; h0.hours ||= []; h0.days ||= []; h0.tiles ||= {};
+    // a number left out reads as none (the screens test for null, not undefined)
+    for (const x of h0.hours) { x.temp ??= null; x.rain ??= 0; }
+    for (const x of h0.days) { x.lo ??= null; x.hi ??= null; x.rain ??= 0; }
+    for (const k of ['rain24', 'rainNext', 'feels', 'wind', 'gust', 'humidity', 'dew', 'visibility']) h0.tiles[k] ??= null;
+    for (const k of ['temp', 'hi', 'lo']) h0[k] ??= null;
+    for (const x of w.cities) { x.hours ||= []; for (const k of ['temp', 'hi', 'lo', 'feels', 'humidity', 'dew', 'rainNext', 'wind', 'gust']) x[k] ??= null; }
+    return l;
+};
 const k1 = (k, cls = 'lf_k') => (k && koOn() ? `<span class="${cls}">${esc(k)}</span>` : '');
 const now5 = p => String(storyNow(p) || p.now || '');
 const toMin = t => { const mt = String(t || '').match(/(\d{1,2}):(\d{2})/); return mt ? Number(mt[1]) * 60 + Number(mt[2]) : null; };
@@ -124,7 +138,7 @@ export function timerScreen(p, now) {
     if (!lf) return lifeEmpty(p, now, '시계', 'life', 'home2', true);
     const r = lf.clock.running, ts = lf.clock.timers;
     // time left: what was left when the phone was filled, less the story time since
-    let left = r ? r.left : 0;
+    let left = r ? (Number(r.left) || 0) : 0;
     // (a timer from another story day has long run out)
     if (r && lf.at && now5(p)) left = lf.at.slice(0, 5) === now5(p).slice(0, 5) ? left - ((toMin(now5(p).slice(6)) ?? 0) - (toMin(lf.at.slice(6)) ?? 0)) * 60 : dayGap(lf.at.slice(0, 5), now5(p).slice(0, 5)) > 0 ? 0 : left;
     left = Math.max(0, left);
@@ -137,7 +151,7 @@ export function timerScreen(p, now) {
           ${left ? `<div class="lf_tend">끝나는 시각 <b class="cg_num">${hm(Number(ring))}</b></div>` : ''}
           <div class="lf_tbtn2"><span>${ax('x', 15, 'currentColor', 2.6)}취소</span><span class="a">${left ? `${ax('pause', 15, 'currentColor', 2.6)}일시정지` : `${ax('play', 15, 'currentColor', 2, 'currentColor')}다시`}</span></div>` : ''}
         <div class="lf_ch">저장된 타이머</div>
-        ${ts.length ? `<div class="lf_dcard lf_svl">${ts.map(t => `<div class="lf_sv"><b class="cg_num">${Math.floor(t.sec / 60)}:${pad(t.sec % 60)}</b><span class="lf_mq"><span>${esc(t.label)}${t.ko && koOn() ? ` <em>${esc(t.ko)}</em>` : ''}</span></span><small>${t.last ? esc(fmtDate(p, t.last, true)) : ''}</small><i>${ax('play', 13, '#f5a524', 2, '#f5a524')}</i></div>`).join('')}</div>` : '<div class="lf_none">저장된 타이머가 없어요</div>'}
+        ${ts.length ? `<div class="lf_dcard lf_svl">${ts.map(t => `<div class="lf_sv"><b class="cg_num">${Math.floor((t.sec || 0) / 60)}:${pad((t.sec || 0) % 60)}</b><span class="lf_mq"><span>${esc(t.label)}${t.ko && koOn() ? ` <em>${esc(t.ko)}</em>` : ''}</span></span><small>${t.last ? esc(fmtDate(p, t.last, true)) : ''}</small><i>${ax('play', 13, '#f5a524', 2, '#f5a524')}</i></div>`).join('')}</div>` : '<div class="lf_none">저장된 타이머가 없어요</div>'}
         <i class="lf_pad"></i></div>
       ${clockDock('timer')}${axInd('#f2f2f4')}`;
 }
@@ -958,7 +972,7 @@ export function cityList(p, now) {
 // ================= 배달 =================
 // two looks: 배달의민족 where the owner lives in Korea, Uber Eats elsewhere. Every dish is drawn (phonefood.js): the model names
 // a base, toppings, a size and sides; older records are guessed from their words. Nothing here is the model's prose but names and notes.
-const D = p => p.delivery || null;
+const D = p => { const d = p.delivery; if (!d) return null; d.shops ||= []; d.orders ||= []; if (!d.cart || !Array.isArray(d.cart.items)) d.cart = null; return d; };
 const CUR = { KR: 'KRW', US: 'USD', GB: 'GBP', JP: 'JPY', CH: 'CHF', CA: 'CAD', AU: 'AUD', CN: 'CNY', TW: 'TWD', BR: 'BRL', RU: 'RUB' };
 const money = (p, n) => fmtMoney({ ...p, money: { currency: p.money?.currency || CUR[p.lives || p.country] || 'EUR' } }, n);
 const shopOf = (d, name) => d.shops.find(s => s.name === name);
