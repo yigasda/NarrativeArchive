@@ -25,6 +25,7 @@ HTML은 브라우저로 바로 열려요(Playwright로 찍을 때는 `file://` �
 | `dark-charcoal/` | 다크 테마 차콜(3.168): 고른 안(`choice.png` 오른쪽 세 개 · 차콜 + 크림 버튼 + 짐작 금색), 실제 팝업 · 패널(`real_popups.png`, `real_panel.png`) |
 | `ext-merge/` | 제목 다시 짓기 · 섹션 합치기: 시안 C(`mock.html`, 체크칸 대신 켜지는 세로 띠 · 합치기는 고른 범위가 한 줄로 이어짐), 실제 화면 밝게 · 어둡게(`real.png`) |
 | `ext-wizard/` | 압축 마법사: 첫 단계 시안 B(`mock.html`, 범위의 처음 · 끝 메시지) + 꾹 누르면 원문 시트 가(`mock_sheet.html`), 복사 · 채점 단계 시안 A(`mock_steps.html`, 주황은 화면마다 버튼 하나 · 진행 막대는 원래 색), 실제 화면(`real.png`, `real_steps.png`) |
+| `ext-extract/` | 원문 뽑기: 시안 B(`mock.html`, 범위 카드 + 막대 + 복사될 글 미리보기, 테두리 없음 · 주황은 복사 버튼 하나), 실제 화면(`real.png`) |
 | `ext-picker/` | 공용 섹션 고르기 칸(누가 아는가 · 제목 다시 짓기 · 다이제스트 · 합치기 · 대사 은행 등): 시안 A~C(`sheet.png`, `mock.html`, A 채택), 실제 화면(`real.png`) |
 | `panel-s1` ~ `panel-s5`, `panel-worldmap` | 패널 하위 화면 시안 묶음 |
 | `phone-home/` | 홈 · 잠금(컬러 젤 · 화이트 그레이) |

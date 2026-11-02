@@ -7723,3 +7723,21 @@ body.na_darkui .na_wiz2 .na_wz2_nav .na_v2_btn:not(.primary) { background: #2E2E
 body:is(.na_darkui, :not(.na_darkui)) .na_wiz2 .na_wz2_pane .na_v2_btn:not(.primary) { border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); }
 body.na_darkui .na_wiz2 .na_wz2_pane .na_v2_btn:not(.primary) { background: #2E2E34 !important; box-shadow: none; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_wiz2 textarea.na_wz_out:is(*, :focus, :focus-visible):not(#na_x) { border-color: transparent !important; outline: none !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; }
+
+/* ============ 원문 뽑기 (docs/mockups/ext-extract B): range card with filled chips and a thin whole-chat bar, the text as it will be
+   copied right under it (fading out), options, then .txt | 전체 복사 — no outlines, one orange button */
+body:is(.na_darkui, :not(.na_darkui)) .na_ex2 .na_v2_chips button { border: 0 !important; padding: 6px 12px !important; border-radius: 999px; font-weight: 600; box-shadow: none !important; }
+body:not(.na_darkui) .na_ex2 .na_v2_chips button:not(.on) { background: #E9DCD1 !important; color: #6B5A50 !important; }
+body.na_darkui .na_ex2 .na_v2_chips button:not(.on) { background: #2E2E34 !important; color: #B9B7BD !important; }
+.na_ex2_card .na_cp_bar { height: 6px; gap: 2px; background: transparent; }
+.na_ex2_card .na_cp_bar > span { border-radius: 4px !important; }
+.na_ex2_preview { position: relative; height: 150px; border: 0 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+body:not(.na_darkui) .na_ex2_preview { background: #FBF7F3; }
+body.na_darkui .na_ex2_preview { background: #232328; box-shadow: none; }
+body:is(.na_darkui, :not(.na_darkui)) .na_ex2_btns .na_v2_btn:not(.primary) { border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); }
+body.na_darkui .na_ex2_btns .na_v2_btn:not(.primary) { background: #2E2E34 !important; box-shadow: none; }
+.na_ex2_btns .na_v2_btn { border-radius: 999px !important; }
+/* range number fields (원문 뽑기 · 마법사) without an outline, focus shown by a soft lift instead */
+.na_wz2_range label > span, .na_wz2_range label > span:focus-within { border-color: transparent !important; }
+body:not(.na_darkui) .na_wz2_range label > span { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06); }
+.na_wz2_range label > span:focus-within { box-shadow: 0 0 0 2px color-mix(in srgb, var(--na-accent) 35%, transparent); }

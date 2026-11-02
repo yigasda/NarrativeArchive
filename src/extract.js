@@ -95,12 +95,12 @@ export async function openExtract() {
           <div class="na_ex2_info na_ex_info"></div>
           <small class="na_v2_note na_lastex"><span class="na_lastex_text"></span></small>
         </div>
+        <pre class="na_ex2_preview"></pre>
         <div class="na_v2_card na_v2_list">
           <label class="na_cp_row"><span class="na_cp_txt"><span>지시문 붙이기</span><small>다른 모델에 그대로 붙여넣기용</small></span><input type="checkbox" class="na_toggle na_opt_prompt"></label>
           <div class="na_ex_prow"><span class="na_ex_pchips"></span><select class="text_pole na_psel_quick" hidden></select></div>
           <button type="button" class="na_cp_row na_ex_toset"><span class="na_cp_txt"><span>뽑기 옵션</span><small class="na_ex_optsum"></small></span>${svgA(ICO_A.right, 15, 2.2)}</button>
         </div>
-        <pre class="na_ex2_preview"></pre>
         <div class="na_v2_row2 na_ex2_btns">
           <button type="button" class="na_v2_btn na_save_txt">.txt 저장</button>
           <button type="button" class="na_v2_btn primary na_copy">${svgA('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', 16)}<span class="na_copy_label">전체 복사</span></button>
@@ -161,7 +161,7 @@ export async function openExtract() {
         $root.find('.na_lastex_again').toggleClass('on', !!lx && from === lx.from && to === Math.min(lx.to, last));
         const tot = Math.max(1, last + 1), a0 = Math.max(0, Math.min(from, last)), b0 = Math.max(a0, Math.min(to, last));
         $root.find('.na_ex2_b1').css('flex', a0).toggle(a0 > 0); $root.find('.na_ex2_b2').css('flex', b0 - a0 + 1); $root.find('.na_ex2_b3').css('flex', tot - b0 - 1).toggle(tot - b0 - 1 > 0);
-        $root.find('.na_ex2_preview').text(current ? current.split('\n').slice(0, 6).join('\n') + (current.split('\n').length > 6 ? '\n…' : '') : '').prop('hidden', !current);
+        $root.find('.na_ex2_preview').text(current ? current.split('\n').slice(0, 12).join('\n') : '').prop('hidden', !current);
     };
 
     $root.find('.na_from, .na_to').on('change', render);
@@ -204,7 +204,7 @@ export async function openExtract() {
     });
 
     await render();
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
 // Open the compress tab with its settings fold open
