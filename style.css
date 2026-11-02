@@ -7537,7 +7537,7 @@ body.na_darkui .na_kn3_tag.s { border-color: #B8964E !important; }
 .na_qb2.na_qb3_new { display: flex; flex-direction: column; }
 .na_qb2.na_qb3_new > .na_v2_row2, .na_qb2.na_qb3_new > .na_qb2_search, .na_qb2.na_qb3_new > .na_qb_clear { display: none !important; }
 .na_qb2.na_qb3_new > .na_qb_list { order: 1; }
-.na_qb2.na_qb3_new > .na_qb_excl { order: 2; margin: 22px 4px 10px; }
+.na_qb2.na_qb3_new > .na_qb_excl { order: 2; margin: 6px 4px 0; }
 .na_qb_root.na_qb3_picking .na_qb3_new > .na_qb_list { display: none; }
 .na_qb3_big { font: 700 34px/1 Georgia, 'Times New Roman', serif; padding-top: 14px; box-sizing: border-box; }
 .na_qb3_ex { display: flex; flex-direction: column; gap: 10px; margin: 2px 4px 0; }
