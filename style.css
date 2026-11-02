@@ -7774,3 +7774,8 @@ body:not(.na_darkui) .na_popup input[type="checkbox"]:not(.na_toggle):not(:check
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup :is(.na_v2_btn, .na_v2_pillbtn, .na_btn):is(.on, .active):not(.primary):not(#na_x) { border: 1px solid var(--na-accent) !important; }
 body:not(.na_darkui) dialog.popup .na_popup .na_v2_card.na_wd.on:not(#na_x) { border: 1px solid color-mix(in srgb, var(--na-accent) 45%, transparent) !important; }
 body.na_darkui dialog.popup .na_popup .na_v2_card.na_wd.on:not(#na_x) { border: 1px solid #8A7A55 !important; }
+/* no hard corners: every field in the extension's windows is rounded (one-line fields as soft pills of 12px, boxes 14px) */
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup :is(input.text_pole, select.text_pole, input[type="text"], input[type="number"], input[type="search"]):not(.na_toggle):not([type="checkbox"]):not(#na_x) { border-radius: 12px !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup textarea:not(#na_x) { border-radius: 14px !important; }
+body:is(.na_darkui, :not(.na_darkui)) #na_settings :is(input.text_pole, select.text_pole, input[type="text"], input[type="number"]):not(.na_toggle):not(#na_x) { border-radius: 12px !important; }
+body:is(.na_darkui, :not(.na_darkui)) #na_settings textarea:not(#na_x) { border-radius: 14px !important; }
