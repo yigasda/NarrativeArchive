@@ -7949,3 +7949,5 @@ body:not(.na_darkui) .na_st .na_st_seg span.on { background: #6E5D52; color: #F7
 body.na_darkui .na_st .na_st_seg span.d { background: #3A3A41; color: #ECEAE6; }
 body:not(.na_darkui) .na_st .na_st_me { background: #F6E1D3; color: #A84A17 !important; }
 body.na_darkui .na_st .na_st_me { background: #2E2E34; color: #F0CF8E !important; }
+/* on the cream accent in dark, lines and letters are near black, never white (작업실 icon, send, save) */
+body.na_darkui .na_st :is(.na_st_av, .na_st_send, .na_st_edsave) { color: #1B1B1F !important; }
