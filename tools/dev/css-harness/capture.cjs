@@ -1,0 +1,133 @@
+// Capture every scene (tools/dev/css-harness/scenes.cjs) as a screenshot + a computed-style dump, across the matrix
+//   extension theme: light · dark   ×   SillyTavern theme: default · Dark Lite · Cappuccino · hostile   ×   width: 412 · 1280
+// so two labels can be compared pixel for pixel and value for value (compare.cjs). CSS cleanup must leave both diffs at zero.
+//   node tools/dev/css-harness/capture.cjs <label> [--quick] [--only name,name] [--st default,hostile] [--w 412]
+//   --quick = light · dark × default ST theme × 412 only (about 4 minutes); the full matrix takes 25–35 minutes.
+// Output: tools/dev/css-harness/out/<label>/<scene>__<na>__<st>__<w>.png / .json  (gitignored)
+const fs = require('fs'), path = require('path'), net = require('net'), { spawn } = require('child_process');
+const { chromium } = require('playwright');
+const { SCENES, ARCH, answer, B } = require('./scenes.cjs');
+const ST = process.env.ST_URL || 'http://127.0.0.1:8000/';
+const ROOT = path.join(__dirname, '../../..');
+const args = process.argv.slice(2); const label = args.find(a => !a.startsWith('--')) || 'run';
+const opt = k => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
+const quick = args.includes('--quick');
+const NA = ['light', 'dark'];
+const STT = (opt('--st') || (quick ? 'default' : 'default,Dark Lite,Cappuccino,hostile')).split(',');
+const WIDTHS = (opt('--w') || (quick ? '412' : '412,1280')).split(',').map(Number);
+const only = opt('--only')?.split(',');
+const OUT = path.join(__dirname, 'out', label); fs.mkdirSync(OUT, { recursive: true });
+const HOSTILE = fs.readFileSync(path.join(__dirname, 'hostile.css'), 'utf8');
+// the computed properties we compare (no transitions/animations: those are frozen below and not part of the look)
+const PROPS = ['color', 'backgroundColor', 'backgroundImage', 'borderTopColor', 'borderTopWidth', 'borderTopStyle', 'borderRightColor', 'borderRightWidth', 'borderBottomColor', 'borderBottomWidth', 'borderLeftColor', 'borderLeftWidth', 'borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomRightRadius', 'borderBottomLeftRadius', 'boxShadow', 'opacity', 'fontSize', 'fontWeight', 'fontFamily', 'fontStyle', 'lineHeight', 'letterSpacing', 'textDecorationLine', 'textTransform', 'textAlign', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft', 'gap', 'display', 'visibility', 'outlineColor', 'outlineWidth', 'outlineStyle', 'accentColor', 'fill', 'stroke', 'filter', 'backdropFilter', 'minHeight', 'maxHeight'];
+const portOpen = port => new Promise(r => { const s = net.connect(port, '127.0.0.1'); s.once('connect', () => { s.end(); r(true); }); s.once('error', () => r(false)); });
+(async () => {
+    // the phone's fake model
+    let fake = null; if (!await portOpen(5555)) { fake = spawn('node', [path.join(ROOT, 'tools/dev/fakeph.mjs')], { stdio: 'ignore' }); await new Promise(r => setTimeout(r, 800)); }
+    const b = await chromium.launch(); const results = [];
+    try {
+        for (const width of WIDTHS) {
+            const ctx = await b.newContext({ viewport: { width, height: 870 }, deviceScaleFactor: 1 });
+            const p = await ctx.newPage(); await p.clock.setFixedTime(new Date('2026-10-26T12:00:00'));
+            p.on('pageerror', e => results.push({ error: String(e).slice(0, 160) }));
+            await p.goto(ST, { waitUntil: 'domcontentloaded' }); await p.waitForFunction(() => window.SillyTavern?.getContext?.().characters?.length > 0, null, { timeout: 60000 }); await p.waitForTimeout(1500);
+            await p.evaluate(async () => { await SillyTavern.getContext().selectCharacterById(0); }); await p.waitForTimeout(1000);
+            await p.evaluate(async () => { await SillyTavern.getContext().openCharacterChat('na_test'); }); await p.waitForTimeout(1500);
+            // freeze motion so timing never changes a pixel; the properties above do not include transitions
+            // (backdrop blur renders with noise in headless Chromium, so it is off for the pixels; the blur value itself is still compared in the JSON)
+            await p.addStyleTag({ content: '*, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; animation-delay: 0s !important; caret-color: transparent !important; backdrop-filter: none !important; }' });
+            await p.evaluate(async ([B]) => { const core = await import(B + 'core.js'); const g = core.globalSettings(); for (const k of ['draftConn', 'aiConn']) g[k] = { ...(g[k] || {}), mode: 'custom', url: 'http://127.0.0.1:5555/v1', model: 'fake', key: 'x', fmt: 'openai' }; g.faces = g.faces || {}; for (const n of ['mara', 'ren', 'ivo']) g.faces[n] = 'none'; }, [B]);
+            const origTheme = await p.evaluate(() => String($('#themes').val() || ''));
+            const stNames = await p.evaluate(() => [...document.querySelectorAll('#themes option')].map(o => o.value));
+            for (const st of STT) {
+                if (st !== 'default' && st !== 'hostile' && !stNames.includes(st)) { results.push({ error: `ST theme not installed: ${st}` }); continue; }
+                await p.evaluate(([st, orig]) => { $('#themes').val(st === 'default' || st === 'hostile' ? orig : st).trigger('change'); document.getElementById('na_hostile')?.remove(); }, [st, origTheme]).catch(() => {});
+                if (st === 'hostile') await p.evaluate(css => { const s = document.createElement('style'); s.id = 'na_hostile'; s.textContent = css; document.head.append(s); }, HOSTILE);
+                await p.waitForTimeout(500);
+                for (const na of NA) {
+                    await p.evaluate(t => document.body.classList.toggle('na_darkui', t === 'dark'), na);
+                    let archNow = null;
+                    for (const sc of SCENES) {
+                        if (only && !only.includes(sc.name)) continue;
+                        const tag = `${sc.name}__${na}__${st.replace(/\s+/g, '')}__${width}`;
+                        try {
+                            if (archNow !== sc.arch) { await setArch(p, sc.arch); archNow = sc.arch; }
+                            // window scenes answer from the in-page fake; the phone talks to tools/dev/fakeph.mjs
+                            await p.unroute('http://127.0.0.1:5555/**').catch(() => {});
+                            if (!sc.phone) await p.route('http://127.0.0.1:5555/**', async route => { const body = route.request().postData() || ''; const txt = answer(body); const isAnth = /anthropic|\/messages/.test(route.request().url()); await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(isAnth ? { content: [{ type: 'text', text: txt }] } : { choices: [{ message: { role: 'assistant', content: txt } }] }) }); });
+                            await sc.open(p, helpers);
+                            // every web font in, so glyphs are the same pixels run after run (the phone loads Noto Sans KR lazily)
+                            await p.evaluate(() => document.fonts.ready); await p.waitForFunction(() => [...document.fonts].every(f => f.status !== 'loading'), null, { timeout: 5000 }).catch(() => {});
+                            await p.waitForTimeout(500);
+                            const el = await p.$(sc.root); if (!el) throw new Error('root not found: ' + sc.root);
+                            if (sc.root.startsWith('dialog')) await p.screenshot({ path: path.join(OUT, tag + '.png'), animations: 'disabled', caret: 'hide' });
+                            else await el.screenshot({ path: path.join(OUT, tag + '.png'), animations: 'disabled', caret: 'hide' });
+                            const dump = await styleDump(p, sc.root);
+                            fs.writeFileSync(path.join(OUT, tag + '.json'), JSON.stringify(dump));
+                            results.push({ tag, n: dump.length });
+                        } catch (e) { results.push({ tag, error: String(e.message || e).slice(0, 200) }); }
+                        finally { if (sc.close) await sc.close(p).catch(() => {}); await p.evaluate(() => { document.querySelectorAll('dialog[open]').forEach(d => d.close()); }); await p.waitForTimeout(300); }
+                    }
+                }
+            }
+            await p.evaluate(orig => { document.getElementById('na_hostile')?.remove(); if (orig) $('#themes').val(orig).trigger('change'); }, origTheme).catch(() => {});
+            await p.waitForTimeout(600); await ctx.close();
+        }
+    } finally { await b.close(); if (fake) fake.kill(); }
+    const bad = results.filter(r => r.error);
+    fs.writeFileSync(path.join(OUT, '_index.json'), JSON.stringify(results, null, 1));
+    console.log(`${label}: ${results.filter(r => r.tag && !r.error).length} captures → ${OUT}`);
+    if (bad.length) { console.log('problems:'); for (const r of bad) console.log(' ', r.tag || '', r.error); }
+})();
+
+// --- the archive each scene expects ---
+async function setArch(p, arch) {
+    await p.evaluate(async ([B, A, arch]) => {
+        const core = await import(B + 'core.js'); const m = core.getMeta();
+        delete m.studio; m.retitled = []; delete m.layers;
+        if (arch === 'empty') { m.text = ''; await core.saveMeta(); }
+        else await core.commitText(A, 'harness', { boundary: 29 });
+    }, [B, ARCH, arch]);
+    await p.waitForTimeout(300);
+}
+// --- phone helpers (the same moves as tools/dev/probe.cjs) ---
+const helpers = {
+    phone: async p => {
+        await p.evaluate(async ([B]) => { const core = await import(B + 'core.js'); const m = core.getMeta(); delete m.phones; (await import(B + 'phone.js')).openPhone('Mara'); }, [B]);
+        await p.waitForTimeout(800); await p.click('.na_ph_makebtn'); await p.waitForSelector('.cg_lock', { timeout: 20000 }); await p.waitForTimeout(1200); await p.click('.cg_lkopen'); await p.waitForTimeout(500);
+    },
+    phoneTo: async (p, go) => { await p.evaluate(go => { const x = document.createElement('button'); x.dataset.go = go; x.style.display = 'none'; document.querySelector('.na_ph_frame .na_ph_scr').append(x); x.click(); x.remove(); }, go); await p.waitForTimeout(700); },
+    phoneMoney: async p => { const { SAMPLE_MONEY } = require('../probe.cjs'); await p.evaluate(async ([B, src]) => { const core = await import(B + 'core.js'), pd = await import(B + 'phonedata.js'), fin = await import(B + 'finance.js'); const m = core.getMeta(), ph = m.phones.mara; await (new Function('return ' + src)())({ ph, pd, fin, m }); await core.saveMeta(); }, [B, SAMPLE_MONEY.toString()]); await p.waitForTimeout(300); },
+};
+// --- every element inside the root: its path, classes and the computed look; interactive ones also hovered and focused ---
+async function styleDump(p, root) {
+    const cdp = await p.context().newCDPSession(p); await cdp.send('DOM.enable'); await cdp.send('CSS.enable');
+    const base = await p.evaluate(([root, PROPS]) => {
+        const R = document.querySelector(root); const out = []; let i = 0;
+        const pathOf = e => { const parts = []; while (e && e !== R) { let n = 0, s = e; while ((s = s.previousElementSibling)) n++; parts.unshift(n); e = e.parentElement; } return parts.join('/'); };
+        for (const e of [R, ...R.querySelectorAll('*')]) {
+            const cs = getComputedStyle(e); const r = e.getBoundingClientRect();
+            const rec = { path: pathOf(e), tag: e.tagName, cls: [...e.classList].sort().join(' '), w: Math.round(r.width), h: Math.round(r.height) };
+            for (const k of PROPS) rec[k] = cs[k];
+            for (const ps of ['::before', '::after']) { const q = getComputedStyle(e, ps); if (q.content && q.content !== 'none' && q.content !== 'normal') rec[ps] = [q.content, q.backgroundColor, q.color, q.borderTopColor, q.width, q.height, q.opacity].join('|'); }
+            if (e.matches('button, input, select, textarea, label, a, [role=button], [tabindex]') && i < 80) { rec.inter = true; e.setAttribute('data-na-h', i++); }
+            out.push(rec);
+        }
+        return out;
+    }, [root, PROPS]);
+    // forced :hover and :focus-visible on the interactive ones
+    const { root: doc } = await cdp.send('DOM.getDocument', { depth: -1 });
+    for (const rec of base.filter(r => r.inter)) {
+        const idx = base.indexOf(rec);
+        const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: doc.nodeId, selector: `${root} [data-na-h="${base.filter((r, j) => r.inter && j <= idx).length - 1}"]` }).catch(() => ({ nodeId: 0 }));
+        if (!nodeId) continue;
+        for (const [state, key] of [[['hover'], 'hover'], [['focus', 'focus-visible'], 'focus']]) {
+            await cdp.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: state });
+            rec[key] = await p.evaluate(([root, n, PROPS]) => { const e = document.querySelector(`${root} [data-na-h="${n}"]`); if (!e) return null; const cs = getComputedStyle(e); return ['color', 'backgroundColor', 'borderTopColor', 'boxShadow', 'outlineColor', 'outlineWidth', 'opacity', 'textDecorationLine'].map(k => cs[k]).join('|'); }, [root, base.filter((r, j) => r.inter && j <= idx).length - 1, PROPS]);
+        }
+        await cdp.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: [] });
+    }
+    await p.evaluate(root => document.querySelectorAll(`${root} [data-na-h]`).forEach(e => e.removeAttribute('data-na-h')), root);
+    await cdp.detach();
+    return base;
+}
