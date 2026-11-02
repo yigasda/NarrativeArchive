@@ -4022,17 +4022,20 @@ body.na_darkui .na_tag.dig { background: #2E2E34; color: #B9DDB0; }
 .na_qc .na_qc_scenes { width: 100%; box-sizing: border-box; margin: 0; font-family: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; line-height: 1.6; resize: vertical; text-align: left; }
 
 /* ============ 압축 작업실: a messenger. Answers are grey bubbles with section cards, the user's lines accent bubbles,
-   the next step a pill floating over the conversation */
+   the next step a pill floating over the conversation. One block: the 3.169.11 · 18 · 24 and answer-action blocks that used to sit at the end of the file live here. */
 .na_st {
-    --st-bg: #FCF8F5; --st-bub: #F2EAE3; --st-w: #FFFFFF; --st-ink: #2E241E; --st-dim: #9C8B80; --st-line: #F0E6DE; --st-seg: #F3EBE4;
+    --st-bg: #F0E4DB; --st-bub: #FCF6F1; --st-w: #FFFFFF; --st-ink: #2E241E; --st-dim: #9C8B80; --st-line: #EADBD0; --st-seg: #E9DCD1;
     --st-acc: #B8541F; --st-acc2: #CF6430; --st-accsoft: #FBE2D3; --st-ok: #2F6B47; --st-oksoft: #E2F1E7; --st-warn: #A86A12; --st-warnline: #F1DDBB; --st-q: #9A4416;
     display: flex; flex-direction: column; height: min(86dvh, 860px); margin: -4px; color: var(--st-ink); text-align: left; font-size: 14px;
 }
 body.na_darkui .na_st {
-    --st-bg: #17171A; --st-bub: #2E2E34; --st-w: #232328; --st-ink: #ECEAE6; --st-dim: #9A989F; --st-line: #3A3A41; --st-seg: #2E2E34;
+    --st-bg: #17171A; --st-bub: #232328; --st-w: #232328; --st-ink: #ECEAE6; --st-dim: #9A989F; --st-line: #3A3A41; --st-seg: #2E2E34;
     --st-acc: #E9DFCF; --st-acc2: #F0CF8E; --st-accsoft: #2E2E34; --st-ok: #6CC495; --st-oksoft: #2E2E34; --st-warn: #E3B058; --st-warnline: #5A5040; --st-q: #F0CF8E;
 }
 body.na_darkui dialog.popup:has(.na_st) { background: #17171A !important; }
+body:not(.na_darkui) dialog.popup:has(.na_st) { background: #F0E4DB !important; }
+/* on the cream accent in dark, lines and letters are near black, never white (작업실 icon, send, save) */
+body.na_darkui .na_st :is(.na_st_av, .na_st_send, .na_st_edsave) { color: #1B1B1F !important; }
 .na_st button { font: inherit; color: inherit; }
 .na_st_hd { padding: 4px 4px 10px; border-bottom: 1px solid var(--st-line); }
 .na_st_hrow { display: flex; align-items: center; gap: 10px; }
@@ -4041,6 +4044,10 @@ body.na_darkui dialog.popup:has(.na_st) { background: #17171A !important; }
 .na_st_ht b { font-size: 1.1em; }
 .na_st_ht small { font-size: 0.85em; color: var(--st-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .na_st_add { flex: none; border: 0; border-radius: 999px; padding: 8px 14px; background: var(--st-accsoft); color: var(--st-acc) !important; font-weight: 700 !important; font-size: 0.93em !important; cursor: pointer; }
+/* 추가: a filled pill with no outline, whatever the theme draws on buttons (3.169.11) */
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st button.na_st_add:not(#na_x) { border: 0 !important; outline: none !important; box-shadow: none !important; }
+body:not(.na_darkui) dialog.popup .na_st button.na_st_add:not(#na_x) { background: #F6E1D3 !important; color: #A84A17 !important; }
+body.na_darkui dialog.popup .na_st button.na_st_add:not(#na_x) { background: #2E2E34 !important; color: #F0CF8E !important; }
 .na_st_add:disabled { opacity: 0.45; cursor: default; }
 .na_st_x { flex: none; width: 34px; height: 34px; margin-right: -4px; border: 0; border-radius: 50%; background: none; color: var(--st-dim) !important; display: grid; place-items: center; cursor: pointer; }
 /* the header's × closes it; the popup's own button row would only take room from the conversation */
@@ -4049,14 +4056,20 @@ dialog.popup:has(.na_st) .popup-controls { display: none !important; }
 .na_st_seg::-webkit-scrollbar { display: none; }
 .na_st_seg span { flex: 1 0 30px; text-align: center; font-size: 0.78em; font-weight: 700; padding: 5px 0; border-radius: 8px; background: var(--st-seg); color: var(--st-dim); }
 .na_st_seg span.l { background: var(--st-oksoft); color: var(--st-ok); }
-.na_st_seg span.d { background: var(--st-accsoft); color: var(--st-acc); }
+.na_st_seg span.d { background: #DDCDC1; color: #5C4C42; }
+body.na_darkui .na_st_seg span.d { background: #3A3A41; color: #ECEAE6; }
 .na_st_seg span.on { background: var(--st-ink); color: var(--st-bg); }
+/* in light (3.169.18): to do = quiet tray colour, answered = soft apricot, this one = charcoal with cream text (dark keeps the variables above) */
+body:not(.na_darkui) .na_st .na_st_seg span.l { background: #E3EFE6; color: #2F6B47; }
+body:not(.na_darkui) .na_st .na_st_seg span.on { background: #6E5D52; color: #F7EEE7; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14); }
 .na_st_gap { margin-top: 6px; font-size: 0.8em; color: var(--st-warn); }
 .na_st_logwrap { position: relative; flex: 1; min-height: 0; }
 .na_st_log { height: 100%; overflow-y: auto; padding: 12px 2px 64px; display: flex; flex-direction: column; gap: 6px; }
 .na_st_mark { align-self: center; font-size: 0.78em; color: var(--st-dim); margin: 8px 0 4px; text-align: center; }
 .na_st_mark b { color: var(--st-ink); opacity: 0.75; }
 .na_st_bub { align-self: flex-start; max-width: 92%; background: var(--st-bub); border-radius: 20px 20px 20px 7px; padding: 12px 14px 10px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; font-size: 0.95em; }
+body:not(.na_darkui) .na_st .na_st_bub:not(.na_st_typing) { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+body.na_darkui .na_st .na_st_bub:not(.na_st_typing) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
 .na_st_bub:has(.na_st_card) { white-space: normal; }
 .na_st_bub hr { border: 0; border-top: 1px solid var(--st-line); margin: 10px 0; }
 .na_st_pre { font-size: 0.82em; font-family: ui-monospace, var(--monoFontFamily, monospace); }
@@ -4078,6 +4091,29 @@ dialog.popup:has(.na_st) .popup-controls { display: none !important; }
 /* the answer's small buttons: one line each, whatever the theme does to buttons (they wrapped into tall boxes) */
 .na_st_lks > button { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; min-height: 0 !important; height: auto !important; margin: 0 !important; padding: 4px 9px !important; line-height: 1.35 !important; white-space: nowrap !important; box-shadow: none; }
 .na_st_lks > .na_st_ib { display: inline-flex !important; align-items: center; padding: 4px 7px !important; }
+/* ============ 작업실 › answer actions (docs/mockups/ext-studio-acts B): one row under a hairline that never wraps — the check
+   as plain green text on the left, 한국어 and 확정 on the right, the rest behind ⋯ */
+.na_st3_bar { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--st-line, var(--na-line2)); }
+.na_st3_tags { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px 8px; }
+.na_st3_tags .na_st_tag { background: transparent !important; box-shadow: none !important; padding: 0 !important; font-size: 11.5px; }
+.na_st3_tags .na_st_tag.ok::before { content: "✓ "; }
+.na_st3_right { flex: none; display: flex; align-items: center; gap: 4px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_right > button.na_st_ko:not(#na_x) { margin: 0 !important; padding: 5px 6px !important; border: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--st-dim) !important; font-size: 12px !important; font-weight: 600 !important; white-space: nowrap; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_right > button.na_st_ko.on:not(#na_x) { color: var(--st-acc) !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_right > button.na_st_lk:not(#na_x) { margin: 0 !important; padding: 5px 11px !important; border: 0 !important; box-shadow: none !important; font-size: 12px !important; font-weight: 700 !important; white-space: nowrap; }
+body:not(.na_darkui) dialog.popup .na_st3_right > button.na_st_lk:not(.on):not(#na_x) { background: #F6E1D3 !important; color: #A84A17 !important; }
+body.na_darkui dialog.popup .na_st3_right > button.na_st_lk:not(.on):not(#na_x) { background: #2E2E34 !important; color: #F0CF8E !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_right > button.na_st_lk.on:not(#na_x) { background: var(--st-ok) !important; color: #fff !important; }
+body.na_darkui dialog.popup .na_st3_right > button.na_st_lk.on:not(#na_x) { color: #13261B !important; }
+.na_st_more { position: relative; display: inline-flex; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup button.na_st_dots:not(#na_x) { display: inline-flex !important; align-items: center; justify-content: center; width: 28px !important; height: 28px !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 999px !important; background: transparent !important; box-shadow: none !important; color: var(--st-dim) !important; cursor: pointer; }
+.na_st_amenu { position: absolute; right: -14px; top: calc(100% + 16px); z-index: 6; display: flex; flex-direction: column; min-width: 150px; padding: 4px; border-radius: 14px; box-shadow: 0 8px 24px rgba(70, 52, 40, 0.2); }
+.na_st_amenu[hidden] { display: none; }
+body:not(.na_darkui) .na_st_amenu { background: #FBF7F3; }
+body.na_darkui .na_st_amenu { background: #2E2E34; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st_amenu > button:not(#na_x) { display: flex !important; align-items: center; gap: 8px; width: 100% !important; min-height: 0 !important; height: auto !important; margin: 0 !important; padding: 9px 10px !important; border: 0 !important; border-radius: 10px !important; background: transparent !important; box-shadow: none !important; color: var(--na-ink, inherit) !important; font: inherit; font-size: 13px !important; font-weight: 500 !important; text-align: left; white-space: nowrap; cursor: pointer; }
+.na_st_amenu > button:hover { background: rgba(0, 0, 0, 0.04) !important; }
+.na_st_bub:has(.na_st_amenu:not([hidden])) { position: relative; z-index: 3; }
 .na_st_edit { padding: 10px !important; }
 .na_st_edta { width: 100%; box-sizing: border-box; min-height: 160px; font-size: 0.92em; line-height: 1.55; border-radius: 12px; padding: 10px 12px; resize: vertical; }
 .na_st_edhint { color: var(--st-dim); font-size: 0.74em; }
@@ -4092,7 +4128,8 @@ dialog.popup:has(.na_st) .popup-controls { display: none !important; }
 .na_st_unfix { color: var(--st-dim) !important; }
 .na_st_fix:disabled { opacity: 0.6; cursor: default; }
 body.na_darkui .na_st_lk.on { color: #13261B !important; }
-.na_st_me { align-self: flex-end; max-width: 80%; margin-top: 6px; padding: 9px 15px; border-radius: 20px 20px 7px 20px; background: linear-gradient(135deg, var(--st-acc2), var(--st-acc)); color: #fff; white-space: pre-wrap; word-break: break-word; line-height: 1.45; }
+.na_st_me { align-self: flex-end; max-width: 80%; margin-top: 6px; padding: 9px 15px; border-radius: 20px 20px 7px 20px; background: #F6E1D3; color: #A84A17 !important; white-space: pre-wrap; word-break: break-word; line-height: 1.45; }
+body.na_darkui .na_st_me { background: #2E2E34; color: #F0CF8E !important; }
 .na_st_tonote { align-self: flex-end; border: 0; background: none; padding: 0 4px; font-size: 0.75em !important; color: var(--st-dim) !important; cursor: pointer; margin-bottom: 4px; }
 .na_st_typing { display: flex; align-items: center; gap: 4px; white-space: normal; }
 .na_st_typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--st-dim); animation: na_st_dot 1.2s infinite ease-in-out; }
@@ -4128,6 +4165,12 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_st_mi[hidden] { display: none; }
 .na_st_mi > span:first-child { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
 .na_st_mi > :not(:first-child) { flex: none; }
+/* 작업실 + menu rows breathe like a phone menu: taller rows, regular-weight names, a hairline between them (3.169.24) */
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st .na_st_mi:not(#na_x) { min-height: 48px; padding: 12px 14px !important; border-radius: 0 !important; }
+.na_st .na_st_menu { padding: 4px 0 !important; overflow: hidden; }
+.na_st .na_st_mi small { margin-top: 2px; font-size: 11.5px; }
+.na_st .na_st_mi:first-child { border-radius: 14px 14px 0 0 !important; }
+.na_st .na_st_mi:last-child { border-radius: 0 0 14px 14px !important; }
 .na_st_mi b { font-size: 0.93em; }
 .na_st_mi small { font-size: 0.78em; color: var(--st-dim); }
 .na_st_reset b { color: var(--na-bad, #B3261E); }
@@ -7905,59 +7948,6 @@ body.na_darkui .na_wz2_range label > span:focus-within { box-shadow: 0 0 0 2px #
 .na_au3_lab { margin: 16px 4px 6px; font-size: 12px; font-weight: 700; color: var(--na-mute); }
 .na_au3 .na_au_name, .na_au3 .na_au_note { width: 100%; box-sizing: border-box; margin: 0; }
 .na_au3_note { margin: 12px 4px 0; font-size: 12px; line-height: 1.5; color: var(--na-dim); }
-/* 작업실 › 추가 button: a filled pill with no outline, whatever the theme draws on buttons (3.169.11) */
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st button.na_st_add:not(#na_x) { border: 0 !important; outline: none !important; box-shadow: none !important; }
-body:not(.na_darkui) dialog.popup .na_st button.na_st_add:not(#na_x) { background: #F6E1D3 !important; color: #A84A17 !important; }
-body.na_darkui dialog.popup .na_st button.na_st_add:not(#na_x) { background: #2E2E34 !important; color: #F0CF8E !important; }
-
-/* ============ 작업실 › answer actions (docs/mockups/ext-studio-acts B): one row under a hairline that never wraps — the check
-   as plain green text on the left, 한국어 and 확정 on the right, the rest behind ⋯ */
-.na_st3_bar { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--st-line, var(--na-line2)); }
-.na_st3_tags { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px 8px; }
-.na_st3_tags .na_st_tag { background: transparent !important; box-shadow: none !important; padding: 0 !important; font-size: 11.5px; }
-.na_st3_tags .na_st_tag.ok::before { content: "✓ "; }
-.na_st3_right { flex: none; display: flex; align-items: center; gap: 4px; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_right > button.na_st_ko:not(#na_x) { margin: 0 !important; padding: 5px 6px !important; border: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--st-dim) !important; font-size: 12px !important; font-weight: 600 !important; white-space: nowrap; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_right > button.na_st_ko.on:not(#na_x) { color: var(--st-acc) !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_right > button.na_st_lk:not(#na_x) { margin: 0 !important; padding: 5px 11px !important; border: 0 !important; box-shadow: none !important; font-size: 12px !important; font-weight: 700 !important; white-space: nowrap; }
-body:not(.na_darkui) dialog.popup .na_st3_right > button.na_st_lk:not(.on):not(#na_x) { background: #F6E1D3 !important; color: #A84A17 !important; }
-body.na_darkui dialog.popup .na_st3_right > button.na_st_lk:not(.on):not(#na_x) { background: #2E2E34 !important; color: #F0CF8E !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_right > button.na_st_lk.on:not(#na_x) { background: var(--st-ok) !important; color: #fff !important; }
-body.na_darkui dialog.popup .na_st3_right > button.na_st_lk.on:not(#na_x) { color: #13261B !important; }
-.na_st_more { position: relative; display: inline-flex; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup button.na_st_dots:not(#na_x) { display: inline-flex !important; align-items: center; justify-content: center; width: 28px !important; height: 28px !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 999px !important; background: transparent !important; box-shadow: none !important; color: var(--st-dim) !important; cursor: pointer; }
-.na_st_amenu { position: absolute; right: -14px; top: calc(100% + 16px); z-index: 6; display: flex; flex-direction: column; min-width: 150px; padding: 4px; border-radius: 14px; box-shadow: 0 8px 24px rgba(70, 52, 40, 0.2); }
-.na_st_amenu[hidden] { display: none; }
-body:not(.na_darkui) .na_st_amenu { background: #FBF7F3; }
-body.na_darkui .na_st_amenu { background: #2E2E34; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st_amenu > button:not(#na_x) { display: flex !important; align-items: center; gap: 8px; width: 100% !important; min-height: 0 !important; height: auto !important; margin: 0 !important; padding: 9px 10px !important; border: 0 !important; border-radius: 10px !important; background: transparent !important; box-shadow: none !important; color: var(--na-ink, inherit) !important; font: inherit; font-size: 13px !important; font-weight: 500 !important; text-align: left; white-space: nowrap; cursor: pointer; }
-.na_st_amenu > button:hover { background: rgba(0, 0, 0, 0.04) !important; }
-.na_st_bub:has(.na_st_amenu:not([hidden])) { position: relative; z-index: 3; }
-
-/* ============ 작업실 in 아카이브에 추가's colours (3.169.18): the cream window, answers as bright cream cards with a shadow,
-   the scene tabs as its 초안 | 추가 후 tray (this scene a white pill in orange, answered ones a small dot), my lines soft apricot */
-body:not(.na_darkui) .na_st { --st-bg: #F0E4DB; --st-bub: #FCF6F1; --st-line: #EADBD0; --st-seg: #E9DCD1; }
-body:not(.na_darkui) dialog.popup:has(.na_st) { background: #F0E4DB !important; }
-body:not(.na_darkui) .na_st .na_st_bub:not(.na_st_typing) { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
-body.na_darkui .na_st { --st-bub: #232328; }
-body.na_darkui .na_st .na_st_bub:not(.na_st_typing) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
-/* scene tabs keep their own shape (separate rounded blocks), only the colours change: to do = quiet tray colour, answered = soft
-   apricot with orange, this one = the orange (dark: grey / gold / cream). No dots. */
-body:not(.na_darkui) .na_st .na_st_seg span { background: #E9DCD1; color: #9C8B80; }
-body:not(.na_darkui) .na_st .na_st_seg span.d { background: #DDCDC1; color: #5C4C42; }
-body:not(.na_darkui) .na_st .na_st_seg span.l { background: #E3EFE6; color: #2F6B47; }
-body:not(.na_darkui) .na_st .na_st_seg span.on { background: #6E5D52; color: #F7EEE7; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14); }
-body.na_darkui .na_st .na_st_seg span.d { background: #3A3A41; color: #ECEAE6; }
-body:not(.na_darkui) .na_st .na_st_me { background: #F6E1D3; color: #A84A17 !important; }
-body.na_darkui .na_st .na_st_me { background: #2E2E34; color: #F0CF8E !important; }
-/* on the cream accent in dark, lines and letters are near black, never white (작업실 icon, send, save) */
-body.na_darkui .na_st :is(.na_st_av, .na_st_send, .na_st_edsave) { color: #1B1B1F !important; }
-/* 작업실 + menu rows breathe like a phone menu: taller rows, regular-weight names, a hairline between them (3.169.24) */
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st .na_st_mi:not(#na_x) { min-height: 48px; padding: 12px 14px !important; border-radius: 0 !important; }
-.na_st .na_st_menu { padding: 4px 0 !important; overflow: hidden; }
-.na_st .na_st_mi small { margin-top: 2px; font-size: 11.5px; }
-.na_st .na_st_mi:first-child { border-radius: 14px 14px 0 0 !important; }
-.na_st .na_st_mi:last-child { border-radius: 0 0 14px 14px !important; }
 
 /* 3.169.30: dark — text on the cream accent is always dark, also on ST's own popup buttons (outside .na_popup the var was missing, so it fell back to white) */
 body.na_darkui { --na-onaccent: #1B1B1F; }
