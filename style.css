@@ -7986,3 +7986,6 @@ body.na_darkui .na_layers .na_ly3_cards button.na_ly3_card.on:not(#na_x) { opaci
 .na_layers .na_ly3_cards button.na_ly3_card small { margin-left: 0 !important; font-size: 12px !important; color: var(--na-mute); white-space: normal; word-break: keep-all; }
 body:is(.na_darkui, :not(.na_darkui)) .na_ly3 .na_ly_askgo:not(#na_x) { background: var(--na-card2) !important; color: var(--na-mute) !important; box-shadow: none !important; }
 body:not(.na_darkui) .na_ly3 input.na_toggle:checked + .na_tgl_ui { background: #6E5D52; }
+
+/* 3.169.30: dark — text on the cream accent is always dark, also on ST's own popup buttons (outside .na_popup the var was missing, so it fell back to white) */
+body.na_darkui { --na-onaccent: #1B1B1F; }
