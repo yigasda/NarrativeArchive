@@ -8,6 +8,10 @@ const [A, Bl] = process.argv.slice(2).filter(a => !a.startsWith('--')); const wa
 if (!A || !Bl) { console.log('usage: compare.cjs <before> <after> [--diffs]'); process.exit(2); }
 const dirA = path.join(__dirname, 'out', A), dirB = path.join(__dirname, 'out', Bl);
 for (const d of [dirA, dirB]) if (!fs.existsSync(d)) { console.log('no such capture:', d); process.exit(2); }
+// the box a dialog sat in, from the label's _index.json (captures renamed from another theme column fall back to that column's entry)
+const indexes = new Map();
+const rectOf = (dir, tag) => { if (!indexes.has(dir)) { try { indexes.set(dir, JSON.parse(fs.readFileSync(path.join(dir, '_index.json'), 'utf8'))); } catch { indexes.set(dir, []); } }
+    const ix = indexes.get(dir); const hit = ix.find(r => r.tag === tag && r.rect) || ix.find(r => r.tag === tag.replace('__default__', '__DarkLite__') && r.rect); return hit ? hit.rect : null; };
 const tagsOf = d => new Set(fs.readdirSync(d).filter(f => /\.(png|json)$/.test(f) && !f.startsWith('_')).map(f => f.replace(/\.(png|json)$/, '')));
 const ta = tagsOf(dirA), tb = tagsOf(dirB);
 const tags = [...ta].filter(t => tb.has(t)).sort();
@@ -18,13 +22,14 @@ for (const tag of tags) {
     if (fs.existsSync(pa) && fs.existsSync(pb)) {
         pixDone++;
         // the phone's translucent gel icons and the panel's long run of shadowed cards rasterise with 1–2 levels of tile-seam noise that moves between
-        // runs (not a CSS effect; every value is still compared exactly in the JSON), so those get a 5% fuzz; every window stays at exact zero
-        const fuzz = /^(phone-|panel)/.test(tag) ? ['-fuzz', '5%'] : [];
-        let out = '0', code = 0;
-        try { execFileSync('compare', ['-metric', 'AE', ...fuzz, pa, pb, wantDiffs ? path.join(dirB, `_diff_${tag}.png`) : 'null:'], { stdio: ['ignore', 'ignore', 'pipe'] }); }
-        catch (e) { out = String(e.stderr || '').trim(); code = e.status; }
-        if (code === 2 || (!/^[\d.e+]+$/.test(out) && out !== '0')) { broken++; console.log(`SIZE    ${tag}: ${out.split('\n')[0]}`); }
-        else if (parseFloat(out) !== 0) { pix++; console.log(`PIXELS  ${tag}: ${out} px differ`); }
+        // runs (not a CSS effect; every value is still compared exactly in the JSON), so those tolerate 13/255 (5%); every window must be exact
+        const tol = /^(phone-|panel)/.test(tag) ? 13 : 0;
+        // a dialog is shot as the whole viewport: compare only its own box (the chat page behind it re-flows with the ST theme and is not ours)
+        const rect = tag.startsWith('phone-') || tag.startsWith('panel') ? null : (rectOf(dirA, tag) || rectOf(dirB, tag));
+        const argv = ['-I', path.join(__dirname, 'pixdiff.py'), pa, pb, String(tol), ...(rect ? rect.map(String) : []), ...(wantDiffs ? [path.join(dirB, `_diff_${tag}.png`)] : [])];
+        let out = ''; try { out = execFileSync('python3', argv, { stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim(); } catch (e) { out = 'ERR ' + String(e.stderr || e.message).slice(0, 80); }
+        if (out.startsWith('SIZE') || out.startsWith('ERR')) { broken++; console.log(`SIZE    ${tag}: ${out}`); }
+        else { const [n, peak] = out.split(' ').map(Number); if (n) { pix++; console.log(`PIXELS  ${tag}: ${n} px differ (max ${peak}/255)${rect ? ' inside the window' : ''}`); } }
     }
     const ja = path.join(dirA, tag + '.json'), jb = path.join(dirB, tag + '.json');
     if (fs.existsSync(ja) && fs.existsSync(jb)) {

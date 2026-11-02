@@ -32,7 +32,9 @@ if (require.main === module) (async () => {
     let fake = null; if (!await portOpen(5555)) { fake = spawn('node', [path.join(ROOT, 'tools/dev/fakeph.mjs')], { stdio: 'ignore' }); await new Promise(r => setTimeout(r, 800)); }
     const total = WIDTHS.length * STT.length * NA.length * SCENES.filter(sc => !only || only.includes(sc.name)).length;
     console.log(`${label}: ${total} captures planned (${WIDTHS.join('·')} × ${STT.join('·')} × ${NA.join('·')} × ${SCENES.filter(sc => !only || only.includes(sc.name)).length} scenes)`);
-    const b = await chromium.launch(); const results = []; let baseTheme = null; // the user's own ST theme, read once: 'default' means this one
+    // resuming: keep the earlier runs' entries (their rects are what compare.cjs crops dialogs with); entries re-captured now replace them
+    const prior = skipExisting && fs.existsSync(path.join(OUT, '_index.json')) ? JSON.parse(fs.readFileSync(path.join(OUT, '_index.json'), 'utf8')).filter(r => r.tag && !r.error) : [];
+    const b = await chromium.launch(); const results = [...prior]; let baseTheme = null; // the user's own ST theme, read once: 'default' means this one
     try {
         for (const width of WIDTHS) for (const st of STT) {
             const ctx = await b.newContext({ viewport: { width, height: 870 }, deviceScaleFactor: 1 });
@@ -62,6 +64,7 @@ if (require.main === module) (async () => {
                         if (only && !only.includes(sc.name)) continue;
                         const tag = `${sc.name}__${na}__${st.replace(/\s+/g, '')}__${width}`;
                         if (skipExisting && fs.existsSync(path.join(OUT, tag + '.json')) && (noPng || fs.existsSync(path.join(OUT, tag + '.png')))) { skipped++; continue; }
+                        for (let i = results.length - 1; i >= 0; i--) if (results[i].tag === tag) results.splice(i, 1);
                         const t0 = Date.now();
                         try {
                             if (archNow !== sc.arch) { await setArch(p, sc.arch); archNow = sc.arch; }

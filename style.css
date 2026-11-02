@@ -7315,8 +7315,9 @@ body.na_darkui dialog.popup.na_px { --na-accent: #E9DFCF; --na-mute: #B9B7BD; --
 /* every popup of the extension: the same round corners (22px) */
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup):not(#na_x) { border-radius: 22px !important; }
 
-/* ============ 섹션 버전 v3 (docs/mockups/ext-layers A): three version cards (the one read is outlined, the one going in
-   marked 넣는 중), 자동으로 고르기, then the text card with its tools, 고쳐 달라고 하기 and 초안 모델로 만들기 */
+/* ============ 섹션 버전 (docs/mockups/ext-layers2 C, 3.169.29): the three versions as floating tiles — the one being read white and
+   lifted, the others faded; 자동으로 고르기 on the right; the text card with 직접 고치기 · 한국어로 on a tone-darker fill; the ask field and
+   초안 모델로 만들기 under the card. One block: what 3.169.27 · 29 · 34 used to add at the end of the file now lives here. */
 .na_layers.na_ly3 { gap: 0; }
 .na_ly3 .na_v2_title b { font-size: 1.15em; letter-spacing: -0.01em; }
 .na_ly3 .na_v2_title small { display: block; margin-top: 2px; }
@@ -7325,27 +7326,37 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup):not(#na_x) { b
 .na_ly3 .na_xr_warn { margin-top: 8px; }
 .na_ly3_lbl { display: flex; align-items: center; justify-content: space-between; margin: 14px 4px 0; font-size: 12.5px; font-weight: 700; color: var(--na-dim); }
 .na_ly3_auto { display: inline-flex !important; align-items: center; gap: 8px; margin: 0; font-weight: 600; color: var(--na-mute); cursor: pointer; }
-.na_layers .na_ly3_cards button.na_ly3_card { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px 10px 10px; border: 1.5px solid transparent; border-radius: 16px; background: var(--na-card); color: var(--na-ink); font: inherit; text-align: left; cursor: pointer; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
-.na_layers .na_ly3_cards button.na_ly3_card.on { border-color: var(--na-accent); }
-body:not(.na_darkui) .na_layers .na_ly3_cards button.na_ly3_card.on { background: #FFF8F3; }
-body.na_darkui .na_layers .na_ly3_cards button.na_ly3_card.on { background: #2B2B31; }
+/* the three tiles */
+.na_ly3_cards.na_ly_tabs { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 8px !important; margin-top: 10px; padding: 0 !important; border-radius: 0 !important; overflow: visible !important; background: transparent !important; box-shadow: none !important; }
+.na_layers .na_ly3_cards button.na_ly3_card { position: relative; display: flex; color: var(--na-ink); font: inherit; text-align: left; cursor: pointer; }
+body:is(.na_darkui, :not(.na_darkui)) .na_layers .na_ly3_cards button.na_ly3_card:not(#na_x) { flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; min-width: 0; width: auto !important; margin: 0; padding: 11px 12px !important; border: 0 !important; border-radius: 16px !important; background: #FCF6F1 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 4px 12px rgba(70, 52, 40, 0.06) !important; opacity: 0.75; }
+body:not(.na_darkui) .na_layers .na_ly3_cards button.na_ly3_card.on:not(#na_x) { opacity: 1; background: #fff !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08), 0 8px 18px rgba(70, 52, 40, 0.12) !important; }
+body.na_darkui .na_layers .na_ly3_cards button.na_ly3_card:not(#na_x) { background: #232328 !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important; }
+body.na_darkui .na_layers .na_ly3_cards button.na_ly3_card.on:not(#na_x) { opacity: 1; background: #34343B !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.4) !important; }
+.na_layers .na_ly3_cards button.na_ly3_card b { font-size: 14.5px; font-weight: 700; color: var(--na-ink); }
 .na_layers .na_ly3_cards button.na_ly3_card.none b { color: var(--na-dim); }
-.na_ly3_in { position: absolute; top: 8px; right: 8px; display: none; padding: 1px 7px; border-radius: 999px; background: var(--na-accent); color: var(--na-onaccent, #fff); font-size: 10.5px; font-weight: 700; }
-.na_ly3_card.goes .na_ly3_in { display: inline-block; }
-.na_ly3_body { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; padding: 14px; border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
-body.na_darkui .na_ly3_body, body.na_darkui .na_layers .na_ly3_cards button.na_ly3_card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+.na_layers .na_ly3_cards button.na_ly3_card small { margin-left: 0 !important; font-size: 12px !important; color: var(--na-mute); white-space: normal; word-break: keep-all; }
+/* the text card and its tools (the pill rule carries .na_ly3 so it beats the outline sweep by specificity, wherever it sits in the file) */
+.na_ly3_body { display: flex; flex: 1; flex-direction: column; gap: 10px; margin-top: 12px; padding: 14px; border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+body.na_darkui .na_ly3_body { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
 .na_ly3 .na_ly_tools { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
 .na_ly3 .na_ly_tools .na_ly_trinfo { flex: 1; min-width: 0; font-size: 11.5px; color: var(--na-dim); }
+body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup.na_ly3 .na_ly_tools .na_v2_pillbtn.na_v2_pillbtn:not(.on):not(.active):not(#na_x) { background: #EFE4DB !important; border: 0 !important; box-shadow: none !important; color: var(--na-ink) !important; }
+body.na_darkui dialog.popup:not(:has(.na_phone)) .na_popup.na_ly3 .na_ly_tools .na_v2_pillbtn.na_v2_pillbtn:not(.on):not(.active):not(#na_x) { background: #3A3A41 !important; border: 0 !important; box-shadow: none !important; }
 .na_ly3 .na_ly_view { border: 0; padding: 0; font-size: 13px; }
-.na_ly3 .na_ly_ask { border: 0; background: var(--na-card2); border-radius: 999px; padding: 4px 4px 4px 14px; }
+/* the ask field and the draft link under the card */
+.na_ly3 .na_ly_ask { margin-top: 10px; border: 0; background: var(--na-card2); border-radius: 999px; padding: 4px 4px 4px 14px; }
+body:not(.na_darkui) .na_ly3 .na_ly_ask { background: #FCF6F1 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); }
 .na_ly3 .na_ly_ask:focus-within { box-shadow: 0 0 0 2px color-mix(in srgb, var(--na-accent) 35%, transparent); }
 .na_ly3 .na_ly_askgo { width: 34px; height: 34px; border-radius: 999px; }
+body:is(.na_darkui, :not(.na_darkui)) .na_ly3 .na_ly_askgo:not(#na_x) { background: var(--na-card2) !important; color: var(--na-mute) !important; box-shadow: none !important; }
 .na_ly3_foot { display: flex; align-items: center; gap: 8px; }
+.na_ly3 > .na_ly3_foot { justify-content: center; margin-top: 8px; }
 .na_ly3_foot small { flex: 1; min-width: 0; text-align: right; font-size: 11.5px; color: var(--na-dim); }
 .na_ly3_tool { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--na-card2); color: var(--na-ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .na_ly3_tool:disabled { opacity: 0.7; }
 body.na_darkui .na_ly3 :is(.na_ly_ask, .na_ly3_tool) { background: #2E2E34; }
-
+body:is(.na_darkui, :not(.na_darkui)) .na_ly3 > .na_ly3_foot button.na_ly3_tool:not(#na_x) { background: transparent !important; box-shadow: none !important; color: var(--na-mute) !important; font-weight: 600; }
 /* ============ 섹션별 버전 v3 (docs/mockups/ext-fadepick C): a bar of what goes in now, then each section with its version as a
    small menu; 꺼짐 rows dimmed. Colours: 원문 brown-grey, 짧게 orange, 요점 blue, 꺼짐 faint */
 .na_fp3 { gap: 0; }
@@ -7936,31 +7947,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st .na_st_mi:not(#na_x) {
 .na_st .na_st_mi:first-child { border-radius: 14px 14px 0 0 !important; }
 .na_st .na_st_mi:last-child { border-radius: 0 0 14px 14px !important; }
 
-/* ============ 섹션 버전 (docs/mockups/ext-layers2 B): the three versions as rows in one card (the one going in on a deeper
-   tone with a soft green 넣는 중), tokens and % on the right; the ask field and 초안 모델로 만들기 outside the text card */
-.na_ly3_cards.na_ly_tabs { display: flex !important; flex-direction: column; gap: 0 !important; margin-top: 10px; border-radius: 18px; overflow: hidden; background: var(--na-card) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
-body.na_darkui .na_ly3_cards.na_ly_tabs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
-body:is(.na_darkui, :not(.na_darkui)) .na_layers .na_ly3_cards button.na_ly3_card:not(#na_x) { flex-direction: row !important; align-items: center !important; gap: 8px !important; width: 100%; margin: 0; padding: 12px 14px !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }
-.na_layers .na_ly3_cards button.na_ly3_card + button.na_ly3_card { border-top: 1px solid var(--na-line2, var(--na-line)) !important; }
-.na_ly3_in { position: static !important; padding: 1px 8px !important; font-size: 11px !important; font-weight: 700; }
-body:not(.na_darkui) .na_ly3_in { background: #E3EFE6 !important; color: #2F6B47 !important; }
-body.na_darkui .na_ly3_in { background: #2E2E34 !important; color: #7CCB9A !important; }
-.na_ly3_body { flex: 1; }
-.na_ly3 > .na_ly_ask { margin-top: 10px; }
-body:not(.na_darkui) .na_ly3 > .na_ly_ask { background: #FCF6F1 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); }
-.na_ly3 > .na_ly3_foot { justify-content: center; margin-top: 8px; }
-body:is(.na_darkui, :not(.na_darkui)) .na_ly3 > .na_ly3_foot button.na_ly3_tool:not(#na_x) { background: transparent !important; box-shadow: none !important; color: var(--na-mute) !important; font-weight: 600; }
-/* 섹션 버전 (3.169.29): the versions as three floating tiles (C) — the picked one white and lifted, no 넣는 중 mark; the send button quiet grey, the 자동으로 고르기 switch in charcoal brown */
-.na_ly3_cards.na_ly_tabs { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 8px !important; padding: 0 !important; border-radius: 0 !important; overflow: visible !important; background: transparent !important; box-shadow: none !important; }
-body:is(.na_darkui, :not(.na_darkui)) .na_layers .na_ly3_cards button.na_ly3_card:not(#na_x) { flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; min-width: 0; width: auto !important; padding: 11px 12px !important; border: 0 !important; border-radius: 16px !important; background: #FCF6F1 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 4px 12px rgba(70, 52, 40, 0.06) !important; opacity: 0.75; text-align: left; }
-body:not(.na_darkui) .na_layers .na_ly3_cards button.na_ly3_card.on:not(#na_x) { opacity: 1; background: #fff !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08), 0 8px 18px rgba(70, 52, 40, 0.12) !important; }
-body.na_darkui .na_layers .na_ly3_cards button.na_ly3_card:not(#na_x) { background: #232328 !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important; }
-body.na_darkui .na_layers .na_ly3_cards button.na_ly3_card.on:not(#na_x) { opacity: 1; background: #34343B !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.4) !important; }
-.na_layers .na_ly3_cards button.na_ly3_card b { font-size: 14.5px; font-weight: 700; color: var(--na-ink); }
-.na_layers .na_ly3_cards button.na_ly3_card small { margin-left: 0 !important; font-size: 12px !important; color: var(--na-mute); white-space: normal; word-break: keep-all; }
-body:is(.na_darkui, :not(.na_darkui)) .na_ly3 .na_ly_askgo:not(#na_x) { background: var(--na-card2) !important; color: var(--na-mute) !important; box-shadow: none !important; }
-body:not(.na_darkui) .na_ly3 input.na_toggle:checked + .na_tgl_ui { background: var(--na-accent); }
-
 /* 3.169.30: dark — text on the cream accent is always dark, also on ST's own popup buttons (outside .na_popup the var was missing, so it fell back to white) */
 body.na_darkui { --na-onaccent: #1B1B1F; }
 
@@ -7995,6 +7981,3 @@ body.na_darkui .na_popup.na_rt .na_rt_row input.text_pole.na_rt_new:not(#na_x):f
 .na_rt .na_rt_apply:disabled { opacity: 0.5; cursor: default; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup.popup:has(.na_rt_res:not([hidden])):not(#na_x) .popup-controls.popup-controls { display: none !important; }
 
-/* 섹션 버전 (3.169.34): 직접 고치기 · 한국어로 get a fill one tone off the card (light #EFE4DB, dark #3A3A41) so they read as buttons */
-body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup .na_ly_tools .na_v2_pillbtn.na_v2_pillbtn:not(.on):not(.active):not(#na_x) { background: #EFE4DB !important; border: 0 !important; box-shadow: none !important; color: var(--na-ink) !important; }
-body.na_darkui dialog.popup:not(:has(.na_phone)) .na_popup .na_ly_tools .na_v2_pillbtn.na_v2_pillbtn:not(.on):not(.active):not(#na_x) { background: #3A3A41 !important; border: 0 !important; box-shadow: none !important; }
