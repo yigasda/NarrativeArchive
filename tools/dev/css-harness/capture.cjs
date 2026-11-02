@@ -66,7 +66,8 @@ const portOpen = port => new Promise(r => { const s = net.connect(port, '127.0.0
                             fs.writeFileSync(path.join(OUT, tag + '.json'), JSON.stringify(dump));
                             results.push({ tag, n: dump.length });
                         } catch (e) { results.push({ tag, error: String(e.message || e).slice(0, 200) }); }
-                        finally { if (sc.close) await sc.close(p).catch(() => {}); await p.evaluate(() => { document.querySelectorAll('dialog[open]').forEach(d => d.close()); }); await p.waitForTimeout(300); }
+                        finally { if (sc.close) await sc.close(p).catch(() => {}); await p.evaluate(() => { document.querySelectorAll('dialog[open]').forEach(d => d.close()); window.toastr?.clear?.(); }); await p.waitForTimeout(300);
+                            const stray = await p.evaluate(() => document.querySelectorAll('dialog[open], .na_ph_frame').length); if (stray) results.push({ tag, error: `left behind after close: ${stray} dialog/phone` }); }
                     }
                 }
             }
@@ -95,10 +96,10 @@ async function setArch(p, arch) {
 const helpers = {
     phone: async p => {
         await p.evaluate(async ([B]) => { const core = await import(B + 'core.js'); const m = core.getMeta(); delete m.phones; (await import(B + 'phone.js')).openPhone('Mara'); }, [B]);
-        await p.waitForTimeout(800); await p.click('.na_ph_makebtn'); await p.waitForSelector('.cg_lock', { timeout: 20000 }); await p.waitForTimeout(1200); await p.click('.cg_lkopen'); await p.waitForTimeout(500);
+        await p.waitForSelector('.na_ph_makebtn', { timeout: 8000 }); await p.$eval('.na_ph_makebtn', e => e.click()); await p.waitForSelector('.cg_lock', { timeout: 20000 }); await p.waitForTimeout(1200); await p.$eval('.cg_lkopen', e => e.click()); await p.waitForTimeout(500);
     },
     phoneTo: async (p, go) => { await p.evaluate(go => { const x = document.createElement('button'); x.dataset.go = go; x.style.display = 'none'; document.querySelector('.na_ph_frame .na_ph_scr').append(x); x.click(); x.remove(); }, go); await p.waitForTimeout(700); },
-    phoneMoney: async p => { const { SAMPLE_MONEY } = require('../probe.cjs'); await p.evaluate(async ([B, src]) => { const core = await import(B + 'core.js'), pd = await import(B + 'phonedata.js'), fin = await import(B + 'finance.js'); const m = core.getMeta(), ph = m.phones.mara; await (new Function('return ' + src)())({ ph, pd, fin, m }); await core.saveMeta(); }, [B, SAMPLE_MONEY.toString()]); await p.waitForTimeout(300); },
+    phoneMoney: async p => { const { SAMPLE_MONEY } = require('../probe.cjs'); await p.evaluate(async ([B, src]) => { const core = await import(B + 'core.js'), pd = await import(B + 'phonedata.js'), fin = await import(B + 'finance.js'); const m = core.getMeta(), ph = Object.values(m.phones || {})[0]; await (new Function('return ' + src)())({ ph, pd, fin, m }); await core.saveMeta(); }, [B, SAMPLE_MONEY.toString()]); await p.waitForTimeout(300); },
 };
 // --- every element inside the root: its path, classes and the computed look; interactive ones also hovered and focused ---
 async function styleDump(p, root) {
