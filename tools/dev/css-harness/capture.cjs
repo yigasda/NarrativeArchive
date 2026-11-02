@@ -16,6 +16,7 @@ const NA = ['light', 'dark'];
 const STT = (opt('--st') || (quick ? 'default' : 'default,Dark Lite,Cappuccino,hostile')).split(',');
 const WIDTHS = (opt('--w') || (quick ? '412' : '412,1280')).split(',').map(Number);
 const only = opt('--only')?.split(',');
+const skipExisting = args.includes('--skip-existing');
 const OUT = path.join(__dirname, 'out', label); fs.mkdirSync(OUT, { recursive: true });
 const HOSTILE = fs.readFileSync(path.join(__dirname, 'hostile.css'), 'utf8');
 // the computed properties we compare (no transitions/animations: those are frozen below and not part of the look)
@@ -24,9 +25,9 @@ const portOpen = port => new Promise(r => { const s = net.connect(port, '127.0.0
 (async () => {
     // the phone's fake model
     let fake = null; if (!await portOpen(5555)) { fake = spawn('node', [path.join(ROOT, 'tools/dev/fakeph.mjs')], { stdio: 'ignore' }); await new Promise(r => setTimeout(r, 800)); }
-    const b = await chromium.launch(); const results = [];
+    const b = await chromium.launch(); const results = []; let baseTheme = null; // the user's own ST theme, read once: 'default' means this one
     try {
-        for (const width of WIDTHS) {
+        for (const width of WIDTHS) for (const st of STT) {
             const ctx = await b.newContext({ viewport: { width, height: 870 }, deviceScaleFactor: 1 });
             const p = await ctx.newPage(); await p.clock.setFixedTime(new Date('2026-10-26T12:00:00'));
             p.on('pageerror', e => results.push({ error: String(e).slice(0, 160) }));
@@ -37,10 +38,11 @@ const portOpen = port => new Promise(r => { const s = net.connect(port, '127.0.0
             // (backdrop blur renders with noise in headless Chromium, so it is off for the pixels; the blur value itself is still compared in the JSON)
             await p.addStyleTag({ content: '*, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; animation-delay: 0s !important; caret-color: transparent !important; backdrop-filter: none !important; }' + (process.env.NA_HARNESS_CSS || '') });
             await p.evaluate(async ([B]) => { const core = await import(B + 'core.js'); const g = core.globalSettings(); for (const k of ['draftConn', 'aiConn']) g[k] = { ...(g[k] || {}), mode: 'custom', url: 'http://127.0.0.1:5555/v1', model: 'fake', key: 'x', fmt: 'openai' }; g.faces = g.faces || {}; for (const n of ['mara', 'ren', 'ivo']) g.faces[n] = 'none'; }, [B]);
-            const origTheme = await p.evaluate(() => String($('#themes').val() || ''));
+            if (baseTheme === null) baseTheme = await p.evaluate(() => String($('#themes').val() || ''));
+            const origTheme = baseTheme;
             const stNames = await p.evaluate(() => [...document.querySelectorAll('#themes option')].map(o => o.value));
-            for (const st of STT) {
-                if (st !== 'default' && st !== 'hostile' && !stNames.includes(st)) { results.push({ error: `ST theme not installed: ${st}` }); continue; }
+            {
+                if (st !== 'default' && st !== 'hostile' && !stNames.includes(st)) { results.push({ error: `ST theme not installed: ${st}` }); await ctx.close(); continue; }
                 await p.evaluate(([st, orig]) => { $('#themes').val(st === 'default' || st === 'hostile' ? orig : st).trigger('change'); document.getElementById('na_hostile')?.remove(); }, [st, origTheme]).catch(() => {});
                 if (st === 'hostile') await p.evaluate(css => { const s = document.createElement('style'); s.id = 'na_hostile'; s.textContent = css; document.head.append(s); }, HOSTILE);
                 await p.waitForTimeout(500);
@@ -50,6 +52,8 @@ const portOpen = port => new Promise(r => { const s = net.connect(port, '127.0.0
                     for (const sc of SCENES) {
                         if (only && !only.includes(sc.name)) continue;
                         const tag = `${sc.name}__${na}__${st.replace(/\s+/g, '')}__${width}`;
+                        if (skipExisting && fs.existsSync(path.join(OUT, tag + '.json')) && fs.existsSync(path.join(OUT, tag + '.png'))) continue;
+                        const t0 = Date.now();
                         try {
                             if (archNow !== sc.arch) { await setArch(p, sc.arch); archNow = sc.arch; }
                             // window scenes answer from the in-page fake; the phone talks to tools/dev/fakeph.mjs
@@ -66,15 +70,16 @@ const portOpen = port => new Promise(r => { const s = net.connect(port, '127.0.0
                             fs.writeFileSync(path.join(OUT, tag + '.json'), JSON.stringify(dump));
                             // where the root sat: a fractional offset rasterises gradients and shadows differently, so this is logged for diagnosis
                             const rect = await el.boundingBox();
-                            results.push({ tag, n: dump.length, rect: rect && [rect.x, rect.y, rect.width, rect.height].map(v => Math.round(v * 100) / 100) });
+                            results.push({ tag, n: dump.length, ms: Date.now() - t0, rect: rect && [rect.x, rect.y, rect.width, rect.height].map(v => Math.round(v * 100) / 100) });
+                            fs.writeFileSync(path.join(OUT, '_index.json'), JSON.stringify(results, null, 1));
                         } catch (e) { results.push({ tag, error: String(e.message || e).slice(0, 200) }); }
-                        finally { if (sc.close) await sc.close(p).catch(() => {}); await p.evaluate(() => { document.querySelectorAll('dialog[open]').forEach(d => d.close()); window.toastr?.clear?.(); }); await p.waitForTimeout(300);
+                        finally { if (sc.close) await sc.close(p).catch(() => {}); await p.evaluate(() => { document.querySelectorAll('dialog.popup').forEach(d => { try { d.close(); } catch {} d.remove(); }); window.toastr?.clear?.(); }); await p.waitForTimeout(300);
                             const stray = await p.evaluate(() => document.querySelectorAll('dialog[open], .na_ph_frame').length); if (stray) results.push({ tag, error: `left behind after close: ${stray} dialog/phone` }); }
                     }
                 }
             }
             await p.evaluate(orig => { document.getElementById('na_hostile')?.remove(); if (orig) $('#themes').val(orig).trigger('change'); }, origTheme).catch(() => {});
-            await p.waitForTimeout(600); await ctx.close();
+            await p.waitForTimeout(1500); await ctx.close(); // long enough for ST to save the restored theme
         }
     } finally { await b.close(); if (fake) fake.kill(); }
     const bad = results.filter(r => r.error);
@@ -109,6 +114,7 @@ const helpers = {
 async function styleDump(p, root) {
     const cdp = await p.context().newCDPSession(p); await cdp.send('DOM.enable'); await cdp.send('CSS.enable');
     const base = await p.evaluate(([root, PROPS]) => {
+        window.__naSigs = new Set();
         const R = document.querySelector(root); const out = []; let i = 0;
         const pathOf = e => { const parts = []; while (e && e !== R) { let n = 0, s = e; while ((s = s.previousElementSibling)) n++; parts.unshift(n); e = e.parentElement; } return parts.join('/'); };
         for (const e of [R, ...R.querySelectorAll('*')]) {
@@ -116,7 +122,7 @@ async function styleDump(p, root) {
             const rec = { path: pathOf(e), tag: e.tagName, cls: [...e.classList].sort().join(' '), w: Math.round(r.width), h: Math.round(r.height) };
             for (const k of PROPS) rec[k] = cs[k];
             for (const ps of ['::before', '::after']) { const q = getComputedStyle(e, ps); if (q.content && q.content !== 'none' && q.content !== 'normal') rec[ps] = [q.content, q.backgroundColor, q.color, q.borderTopColor, q.width, q.height, q.opacity].join('|'); }
-            if (e.matches('button, input, select, textarea, label, a, [role=button], [tabindex]') && i < 80) { rec.inter = true; e.setAttribute('data-na-h', i++); }
+            if (e.matches('button, input, select, textarea, label, a, [role=button], [tabindex]') && i < 40) { const sig = e.tagName + '|' + rec.cls + '|' + (e.disabled ? 'd' : ''); if (!window.__naSigs) window.__naSigs = new Set(); if (!window.__naSigs.has(sig)) { window.__naSigs.add(sig); rec.inter = true; e.setAttribute('data-na-h', i++); } }
             out.push(rec);
         }
         return out;
