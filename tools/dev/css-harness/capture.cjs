@@ -19,7 +19,7 @@ const only = opt('--only')?.split(',');
 const OUT = path.join(__dirname, 'out', label); fs.mkdirSync(OUT, { recursive: true });
 const HOSTILE = fs.readFileSync(path.join(__dirname, 'hostile.css'), 'utf8');
 // the computed properties we compare (no transitions/animations: those are frozen below and not part of the look)
-const PROPS = ['color', 'backgroundColor', 'backgroundImage', 'borderTopColor', 'borderTopWidth', 'borderTopStyle', 'borderRightColor', 'borderRightWidth', 'borderBottomColor', 'borderBottomWidth', 'borderLeftColor', 'borderLeftWidth', 'borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomRightRadius', 'borderBottomLeftRadius', 'boxShadow', 'opacity', 'fontSize', 'fontWeight', 'fontFamily', 'fontStyle', 'lineHeight', 'letterSpacing', 'textDecorationLine', 'textTransform', 'textAlign', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft', 'gap', 'display', 'visibility', 'outlineColor', 'outlineWidth', 'outlineStyle', 'accentColor', 'fill', 'stroke', 'filter', 'backdropFilter', 'minHeight', 'maxHeight'];
+const PROPS = ['color', 'backgroundColor', 'backgroundImage', 'borderTopColor', 'borderTopWidth', 'borderTopStyle', 'borderRightColor', 'borderRightWidth', 'borderBottomColor', 'borderBottomWidth', 'borderLeftColor', 'borderLeftWidth', 'borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomRightRadius', 'borderBottomLeftRadius', 'boxShadow', 'opacity', 'fontSize', 'fontWeight', 'fontFamily', 'fontStyle', 'lineHeight', 'letterSpacing', 'textDecorationLine', 'textTransform', 'textAlign', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft', 'gap', 'display', 'visibility', 'outlineColor', 'outlineWidth', 'outlineStyle', 'accentColor', 'fill', 'stroke', 'filter', 'backdropFilter', 'mixBlendMode', 'webkitMaskImage', 'minHeight', 'maxHeight'];
 const portOpen = port => new Promise(r => { const s = net.connect(port, '127.0.0.1'); s.once('connect', () => { s.end(); r(true); }); s.once('error', () => r(false)); });
 (async () => {
     // the phone's fake model
@@ -35,7 +35,7 @@ const portOpen = port => new Promise(r => { const s = net.connect(port, '127.0.0
             await p.evaluate(async () => { await SillyTavern.getContext().openCharacterChat('na_test'); }); await p.waitForTimeout(1500);
             // freeze motion so timing never changes a pixel; the properties above do not include transitions
             // (backdrop blur renders with noise in headless Chromium, so it is off for the pixels; the blur value itself is still compared in the JSON)
-            await p.addStyleTag({ content: '*, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; animation-delay: 0s !important; caret-color: transparent !important; backdrop-filter: none !important; }' });
+            await p.addStyleTag({ content: '*, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; animation-delay: 0s !important; caret-color: transparent !important; backdrop-filter: none !important; }' + (process.env.NA_HARNESS_CSS || '') });
             await p.evaluate(async ([B]) => { const core = await import(B + 'core.js'); const g = core.globalSettings(); for (const k of ['draftConn', 'aiConn']) g[k] = { ...(g[k] || {}), mode: 'custom', url: 'http://127.0.0.1:5555/v1', model: 'fake', key: 'x', fmt: 'openai' }; g.faces = g.faces || {}; for (const n of ['mara', 'ren', 'ivo']) g.faces[n] = 'none'; }, [B]);
             const origTheme = await p.evaluate(() => String($('#themes').val() || ''));
             const stNames = await p.evaluate(() => [...document.querySelectorAll('#themes option')].map(o => o.value));
@@ -64,7 +64,9 @@ const portOpen = port => new Promise(r => { const s = net.connect(port, '127.0.0
                             else await el.screenshot({ path: path.join(OUT, tag + '.png'), animations: 'disabled', caret: 'hide' });
                             const dump = await styleDump(p, sc.root);
                             fs.writeFileSync(path.join(OUT, tag + '.json'), JSON.stringify(dump));
-                            results.push({ tag, n: dump.length });
+                            // where the root sat: a fractional offset rasterises gradients and shadows differently, so this is logged for diagnosis
+                            const rect = await el.boundingBox();
+                            results.push({ tag, n: dump.length, rect: rect && [rect.x, rect.y, rect.width, rect.height].map(v => Math.round(v * 100) / 100) });
                         } catch (e) { results.push({ tag, error: String(e.message || e).slice(0, 200) }); }
                         finally { if (sc.close) await sc.close(p).catch(() => {}); await p.evaluate(() => { document.querySelectorAll('dialog[open]').forEach(d => d.close()); window.toastr?.clear?.(); }); await p.waitForTimeout(300);
                             const stray = await p.evaluate(() => document.querySelectorAll('dialog[open], .na_ph_frame').length); if (stray) results.push({ tag, error: `left behind after close: ${stray} dialog/phone` }); }
@@ -86,7 +88,9 @@ async function setArch(p, arch) {
     await p.evaluate(async ([B, A, arch]) => {
         const core = await import(B + 'core.js'); const m = core.getMeta();
         delete m.studio; m.retitled = []; delete m.layers;
-        if (arch === 'empty') { m.text = ''; await core.saveMeta(); }
+        // the panel's history tab lists every commit, so start from nothing each time: one entry, same delta, same (frozen) time
+        m.history = []; m.snapshots = []; m.text = '';
+        if (arch === 'empty') { await core.saveMeta(); }
         // the studio needs messages left after the archive, so its archive stops at #5; everything else is archived to the end
         else await core.commitText(A, 'harness', { boundary: arch === 'studio' ? 5 : 29 });
     }, [B, ARCH, arch]);
