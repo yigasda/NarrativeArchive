@@ -7598,12 +7598,18 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 .na_bn2.na_bn3_new .na_bn2_findrow { display: none !important; }
 .na_bn2.na_bn3_new .na_bn2_find { border: 0 !important; padding: 0 !important; }
 .na_bn3_tl { position: relative; align-self: stretch; margin: 0 28px; padding-left: 24px; text-align: left; }
-.na_bn3_tl::before { content: ""; position: absolute; left: 8px; top: 10px; bottom: 10px; width: 2px; background: var(--na-line); }
 .na_bn3_tl > div { position: relative; padding: 6px 0; }
-.na_bn3_tl > div::before { content: ""; position: absolute; left: -23px; top: 9px; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; border: 2px solid var(--na-line); background: var(--na-bg, #F0E4DB); }
+.na_bn3_tl > div::before { content: ""; position: absolute; z-index: 1; left: -22px; top: 9px; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; border: 2px solid var(--na-line); background: var(--na-bg, #F0E4DB); }
 body.na_darkui .na_bn3_tl > div::before { background: #1C1714; }
 .na_bn3_tl > div.here::before { border-color: var(--na-accent); background: var(--na-accent) !important; }
 .na_bn3_tl b { display: block; font-size: 13.5px; font-weight: 600; color: var(--na-ink); }
 .na_bn3_tl small { display: block; font-size: 11.5px; color: var(--na-dim); }
-.na_bn3_tl > div.dim { opacity: 0.55; }
+.na_bn3_tl > div.dim > * { opacity: 0.55; }
+.na_bn3_tl > div.dim::before { border-color: var(--na-line2, var(--na-line)); }
+/* the line runs from one dot's centre to the next, under the dots */
+.na_bn3_tl > div:not(:last-child)::after { content: ""; position: absolute; left: -16px; top: 16px; bottom: -16px; width: 2px; background: var(--na-line); }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_bn3_find:not(#na_x) { align-self: stretch; height: 46px; margin: 14px 0 0; border: 1px solid var(--na-line) !important; border-radius: 999px; background: var(--na-card) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; color: var(--na-ink) !important; font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; }
+body:not(.na_darkui) .na_bn3_tl > div::before { border-color: #D3C1B4; }
+body:not(.na_darkui) .na_bn3_tl > div.dim::before { border-color: #DDCDC1; }
+body:not(.na_darkui) .na_bn3_tl > div:not(:last-child)::after { background: #D3C1B4; }
+body:not(.na_darkui) .na_bn3_tl > div.here::before { border-color: var(--na-accent); }
