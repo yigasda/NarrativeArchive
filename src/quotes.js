@@ -390,7 +390,7 @@ export async function openQuotes() {
           ${rowsHtml(before)}${card}${rowsHtml(after)}
           ${!whos.length && !missing.length ? '<div class="na_empty">대사가 3개 이상인 인물이 없어요. "대사" 탭에서 대사를 모으거나, 채팅이 더 쌓이면 만들 수 있어요.</div>' : ''}
           ${missing.length > 1 ? `<button type="button" class="na_v2_btn primary wide na_vc_all"><i class="fa-solid fa-fingerprint"></i> 없는 지문 ${missing.length}개 한꺼번에 만들기</button>` : ''}
-          <small class="na_v2_foot">캐릭터 카드, 대사 은행, 그리고 아카이브 섹션마다 또는 장면마다 그 인물의 말 한두 곳을 숨긴 것까지 읽고 성격, 말버릇, 그대로 옮긴 대사를 정리해 조용히 주입해요 · 옮긴 대사는 채팅에 글자 그대로 있는 것만 남겨요 · AI 기능 모델 ${esc(aiLabel())}</small>`);
+          <small class="na_v2_foot">캐릭터 카드 · 대사 은행 · 아카이브를 읽고 만들어요 · 모델 ${esc(aiLabel())}</small>`);
         const blk = extraBlocks({ ...m, knowInject: false, voiceInject: true });
         if (blk) countTokens(blk).then(t => $b.find('.na_vc_tok').text(` · 약 ${fmt(t)} 토큰`));
     };
