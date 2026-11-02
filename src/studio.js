@@ -395,12 +395,12 @@ export async function openStudio() {
             </div>
           </div>
           <div class="na_st_menu" hidden>
-            <label class="na_st_mi"><span><b>자동 진행</b></span><input type="checkbox" class="na_toggle na_st_autotg"></label>
-            <label class="na_st_mi"><span><b>지시문</b></span><select class="text_pole na_st_psel"></select></label>
-            <button type="button" class="na_st_mi na_st_style"><span><b>문체 견본</b></span></button>
-            <button type="button" class="na_st_mi na_st_note"><span><b>작업 노트</b></span></button>
+            <label class="na_st_mi"><span><b>자동 진행</b><small>남은 장면을 알아서 끝까지 받아요</small></span><input type="checkbox" class="na_toggle na_st_autotg"></label>
+            <label class="na_st_mi"><span><b>지시문</b><small>장면을 어떻게 요약할지 정한 규칙이에요</small></span><select class="text_pole na_st_psel"></select></label>
+            <button type="button" class="na_st_mi na_st_style"><span><b>문체 견본</b><small>마음에 드는 섹션을 골라 그 말투로 쓰게 해요</small></span></button>
+            <button type="button" class="na_st_mi na_st_note"><span><b>작업 노트</b><small>매번 같이 보낼 메모예요 · 틀리면 안 되는 사실 등</small></span></button>
             <button type="button" class="na_st_mi na_st_state"><span><b>STATE 쪽지 받기</b><small>인물 · 떡밥이 어떻게 바뀌었는지 정리해 달라고 해요</small></span></button>
-            <button type="button" class="na_st_mi na_st_reset"><span><b>새로 시작</b></span></button>
+            <button type="button" class="na_st_mi na_st_reset"><span><b>새로 시작</b><small>이 작업실 대화와 받은 섹션을 지워요</small></span></button>
           </div>
         </div>
       </div>`);
