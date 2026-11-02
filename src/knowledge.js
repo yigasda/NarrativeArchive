@@ -202,8 +202,8 @@ export async function openKnowledge() {
     // Claude · Gemini · GPT, so nobody mistakes them for the story's own) as small dot-and-name tags
     const emptyHtml = () => {
         const [a, b, c2] = ['Claude', 'Gemini', 'GPT'];
-        // the same tags as the real list: who knows with a face, who suspects with ?, who doesn't by name
-        const tag = (n, k) => k === 'k' ? `<span class="na_kn2_k">${faceHtml(n, 22)}${esc(n)}</span>` : k === 's' ? `<span class="na_kn2_s">${esc(n)}<b>?</b></span>` : `<span class="na_kn2_u">${esc(n)}</span>`;
+        // a letter circle for everyone (green knows · yellow suspects · red doesn't), the real list's dashed ? for suspects, struck for doesn't
+        const tag = (n, k) => `<span class="na_kn3_tag ${k}"><i>${esc(n[0])}</i><em>${esc(n)}</em>${k === 's' ? '<b>?</b>' : ''}</span>`;
         return `<div class="na_v2_card na_kn3_hello"><span class="na_kn3_big"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/></svg></span>
             <b>아직 정리된 비밀이 없어요</b><small>아카이브를 읽고 비밀마다 아는 사람 · 모르는 사람을 정리해요</small>
             <button type="button" class="na_kn3_make">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/>', 15)}AI로 만들기</button>
@@ -212,7 +212,7 @@ export async function openKnowledge() {
           <div class="na_v2_card na_kn3_ex">
             <div><p>${esc(a)}, 그날 밤 있던 곳을 ${esc(b)}에게 숨김</p><span class="na_kn_people">${tag(a, 'k')}${tag(c2, 's')}${tag(b, 'u')}</span></div>
             <div><p>${esc(c2)}의 옛 이름</p><span class="na_kn_people">${tag(c2, 'k')}${tag(a, 'k')}${tag(b, 'u')}</span></div>
-            <div class="na_kn3_leg na_kn_people"><span class="na_kn2_k mini">알아요</span><span class="na_kn2_s mini">짐작<b>?</b></span><span class="na_kn2_u">몰라요</span></div>
+            <div class="na_kn3_leg"><span class="k"><i></i>알아요</span><span class="s"><i></i>짐작해요</span><span class="u"><i></i>몰라요</span></div>
           </div>`;
     };
     $root.on('click', '.na_kn3_make', () => $root.find('.na_kn_ai').trigger('click'));
