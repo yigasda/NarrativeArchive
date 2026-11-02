@@ -211,9 +211,9 @@ export async function openKnowledge() {
             <button type="button" class="na_linkbtn na_kn3_write">직접 쓰기</button></div>
           <div class="na_kn3_sect"><span>이렇게 정리돼요</span><small>예시</small></div>
           <div class="na_v2_card na_kn3_ex">
+            <div class="na_kn3_leg"><span class="k"><i></i>알아요</span><span class="s"><i></i>짐작해요</span><span class="u"><i></i>몰라요</span></div>
             <div><p>${esc(a)}, 그날 밤 있던 곳을 ${esc(b)}에게 숨김</p><span class="na_kn_people">${tag(a, 'k')}${tag(c2, 's')}${tag(b, 'u')}</span></div>
             <div><p>${esc(c2)}의 옛 이름</p><span class="na_kn_people">${tag(c2, 'k')}${tag(a, 'k')}${tag(b, 'u')}</span></div>
-            <div class="na_kn3_leg"><span class="k"><i></i>알아요</span><span class="s"><i></i>짐작해요</span><span class="u"><i></i>몰라요</span></div>
           </div>`;
     };
     $root.on('click', '.na_kn3_make', () => $root.find('.na_kn_ai').trigger('click'));
@@ -230,10 +230,10 @@ export async function openKnowledge() {
             ? `<i class="fa-solid fa-user-slash"></i><div class="na_kn_stale_txt">지금 이야기에 안 나오는 인물이 '모름'·'짐작'에 있어요: <b>${stale.map(esc).join(', ')}</b><small class="na_dim">STATE의 인물 제목과 최근 섹션 4개에 나오는 인물만 남겨요</small></div><button type="button" class="na_btn na_small na_kn_trim">빼기</button>` : '');
         $root.find('.na_kn_inject input').prop('checked', !!m.knowInject);
         // the same tags and legend as the empty window's example: green with a face (who knows), yellow dashed ? (suspects),
-        // grey struck (doesn't know); the legend sits under the list
+        // grey struck (doesn't know); the legend sits above the list
         const legend = '<div class="na_kn3_leg na_kn3_legbar"><span class="k"><i></i>알아요</span><span class="s"><i></i>짐작해요</span><span class="u"><i></i>몰라요</span></div>';
         const letter = n => `<i>${esc(String(n)[0] || '?')}</i>`;
-        $root.find('.na_kn_list').html(rows.length ? rows.map((r, i) => {
+        $root.find('.na_kn_list').html(rows.length ? legend + rows.map((r, i) => {
             const s = r.src ? findCited(secs(), r.src) : null;
             const k = r.knows.map(x => `<span class="na_kn3_tag k">${/<img/.test(faceHtml(x, 18)) ? faceHtml(x, 18) : letter(x)}<em>${esc(x)}</em></span>`).join('');
             const su = r.suspects.map(x => `<span class="na_kn3_tag s">${letter(x)}<em>${esc(x)}</em><b>?</b></span>`).join('');
@@ -248,7 +248,7 @@ export async function openKnowledge() {
                 <button type="button" class="na_kn_del" title="이 줄 삭제" aria-label="이 줄 삭제"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
               </div>
             </div>`;
-        }).join('') + legend
+        }).join('')
             : emptyHtml());
         // nothing yet: the welcome card leads, so the top buttons and the 더보기 row step aside
         $root.toggleClass('na_kn3_new', !rows.length);
