@@ -15,7 +15,17 @@ node tools/dev/css-harness/deadrules.cjs                   # 어디서도 값을
 ```
 
 - `--only layers,retitle-result` 로 장면을 고를 수 있어요. `--st default,hostile`, `--w 412` 도 돼요.
+- `--skip-existing` 은 이미 찍힌 캡처를 건너뛰어요. 끊긴 돌림을 이어 찍을 때 써요.
+- 10장마다 진행률과 남은 시간을 찍어요. 한 장이 평소의 5배 넘게 걸리면 `STOP`을 찍고 멈춰요(exit 3). 그러면 원인을 고치고 `--skip-existing`으로 이어요.
+- 비교는 두 라벨에 **둘 다 있는 캡처만** 해요. `--quick`으로 찍은 96장을 전체 기준의 같은 칸과 비교할 수 있어요.
 - 결과는 `out/<label>/` 에 쌓여요. git에는 안 올라가요(.gitignore).
+
+```
+node tools/dev/css-harness/prune.cjs            # deadrules의 safe 후보를 지우면 어떻게 되는지 (미리 보기)
+node tools/dev/css-harness/prune.cjs --write    # 실제로 지움 · 줄 번호와 셀렉터가 맞는 것만
+```
+
+`deadrules.cjs`는 후보를 다섯 칸으로 나눠요. **safe**(상태 · 미디어 아님, 소스에 클래스 없음)만 자동으로 지워요. **in-src**는 코드가 그 클래스를 쓰는 거라 도구가 못 여는 화면에서 필요할 수 있어서 손으로 봐요. **state**(호버 · 포커스 · `.on` 등)와 **media**, **pseudo**(`::before` 등)는 안 지워요.
 
 ## 무엇을 찍나 (scenes.cjs)
 
