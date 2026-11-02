@@ -98,6 +98,8 @@ function readTracker(text, re) {
     const parts = place.split(/\s*(?:→|->|>|\/|·)\s*/).filter(Boolean);
     // the weather: its own group, or any other field of the tracker that names a sky or a temperature
     let weather = String(gr.weather || '').replace(/\uFE0F/g, '').replace(/\s+/g, ' ').trim();
+    // the fourth field may be something else (a mood): then the weather is whichever field names a sky
+    if (weather && !ST_WEATHER.test(weather)) weather = '';
     if (!weather && mt) {
         const known = [gr.time, gr.date, gr.place].map(v => stClean(v)).filter(Boolean);
         // the fields of the whole tracker (a saved regex may stop at the place), to its closing tag or the end of its line

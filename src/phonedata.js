@@ -648,7 +648,10 @@ async function updatePhone(m, owner) {
         let tracker = null;
         try { tracker = trackerWeather(recentTrackers(1)[0]); } catch { /* no status lines */ }
         const trackDay = tracker ? when(tracker.date).slice(0, 5) : '';
-        const askWeather = !!life && (!tracker || !!trackDay && trackDay !== life.weather?.date);
+        // the model writes the weather when no status line gives it, when the status line has no date or its day moved on
+        // from the saved weather's, or when it puts the story somewhere else; a same-day, same-place line only stands over it
+        const placeKey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''), elsewhere = (a, b) => placeKey(a) && placeKey(b) && !placeKey(a).includes(placeKey(b)) && !placeKey(b).includes(placeKey(a));
+        const askWeather = !!life && (!tracker || !trackDay || trackDay !== life.weather?.date || elsewhere(tracker.place, life.weather?.place));
         // the year the phone's now is in: read once from the bank or the archive, then carried over New Year with the now
         if (!p.year && !p.noYear) { const y = Number(storyYear(m, p) || String(p.money?.asOf || p.investment?.date || '').slice(0, 4)); if (y > 1900) p.year = y; }
         const known = p.year && !p.noYear ? String(p.year) : '', year = known || String(new Date().getFullYear());

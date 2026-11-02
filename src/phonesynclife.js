@@ -330,9 +330,11 @@ export function applyWeather(p, w, now, { archive = true, today = '' } = {}) {
             if (!here.time) here.time = old.time;
         }
         if (old) {
-            if (!here.hours.length) here.hours = structuredClone(old.hours || []);
+            // yesterday's hours and rain are not today's; its forecast days are (the clock trims what is past)
+            const sameDay = old.date === here.date;
+            if (!here.hours.length && sameDay) here.hours = structuredClone(old.hours || []);
             if (!here.days.length) here.days = structuredClone(old.days || []);
-            for (const [k, v] of Object.entries(here.tiles)) if ((v === null || v === '') && old.tiles?.[k] !== undefined) here.tiles[k] = old.tiles[k];
+            for (const [k, v] of Object.entries(here.tiles)) if ((v === null || v === '') && old.tiles?.[k] !== undefined && (sameDay || k !== 'rain24' && k !== 'rainNext')) here.tiles[k] = old.tiles[k];
             for (const k of ['hi', 'lo']) if (here[k] === null && old[k] !== undefined) here[k] = old[k];
             fit(here);
         }
@@ -340,8 +342,11 @@ export function applyWeather(p, w, now, { archive = true, today = '' } = {}) {
         const cities = (was?.cities || []).map(c => { const key = v => line(v, 40).toLowerCase(), n = arr(w.cities).find(x => [c.name, c.ko].filter(Boolean).map(key).includes(key(x?.name))); if (!n) return c; const f = cityOf(n), out = { ...c, cond: condPick(n.cond, c.cond, { temp: f.temp }) }; for (const k of ['temp', 'hi', 'lo', 'sunrise', 'sunset', 'rainNext', 'wind', 'gust', 'dir', 'feels', 'humidity', 'dew', 'visibility']) if (f[k] !== null && f[k] !== '') out[k] = f[k]; return out; });
         next = { ...(was || {}), here, cities };
     } else if (now && was?.here) {
-        // only the status line: its words stand over the weather there was
-        next = { ...was, here: fit(overlay(structuredClone(was.here), now)) };
+        // only the status line: its words stand over the weather there was; on a later day, yesterday's hours, sentence
+        // and rain go with the day
+        const here = fit(overlay(structuredClone(was.here), now));
+        if (was.here.date && /^\d{2}-\d{2}$/.test(here.date) && dayGap(was.here.date, here.date) > 0) Object.assign(here, { hours: [], line: '', ko: '', tiles: { ...(here.tiles || {}), rain24: null, rainNext: null } });
+        next = { ...was, here };
     } else if (was?.here?.cond && was.here.date && /^\d{2}-\d{2}$/.test(today) && dayGap(was.here.date, today) > 0) {
         // the day moved on with nothing said about the sky: yesterday's carries over as a guess for today (not a stale date)
         // yesterday's sentence and rain don't describe today; the screen reads what it needs off the sky

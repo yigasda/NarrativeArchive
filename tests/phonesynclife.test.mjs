@@ -534,3 +534,14 @@ test('weather: a status line\'s afternoon time and its city alone, a line that o
     assert.equal(o.cond, 'snow'); assert.equal(o.temp, -4); assert.equal(o.tiles.feels, -6); assert.equal(o.lo, -4);
     assert.equal(p.life.weather.here.temp, 2);
 });
+
+test('weather: a new day from the model keeps no hours or rain of yesterday; a status line alone on a later day drops them too', () => {
+    const { p } = setup();
+    p.life.weather.here.line = '맑고 쌀쌀한 저녁'; p.life.weather.here.tiles = { rain24: 3, rainNext: 2, sunrise: '07:30', sunset: '17:30' };
+    applyWeather(p, { place: 'Varo', date: '10-27', time: '09:00', from: 'chat', cond: 'rain', temp: 8 }, null, { today: '10-27' });
+    let h = p.life.weather.here;
+    assert.equal(h.hours.length, 0); assert.equal(h.tiles.rain24, null); assert.equal(h.tiles.sunrise, '07:30'); assert.equal(h.days.length, 3);
+    applyWeather(p, null, { date: '10-28', time: '08:00', place: 'Varo', weather: '맑음, 5°C' });
+    h = p.life.weather.here;
+    assert.equal(h.date, '10-28'); assert.equal(h.cond, 'clear'); assert.equal(h.temp, 5); assert.equal(h.hours.length, 0); assert.equal(h.line, ''); assert.equal(h.tiles.rainNext, null);
+});

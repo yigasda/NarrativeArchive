@@ -51,3 +51,10 @@ test('a bracketed status line and label lines: every weather part is kept togeth
 test('the default regex still cuts at the old three fields', () => {
     assert.match('<tracker> 05:48 | 1월 30일 | 집 </tracker>', new RegExp(DEFAULT_TRACKER_RE, 's'));
 });
+test('a fourth field that is not the weather (a mood) is passed over for the field that names the sky', () => {
+    T.chat = [say('<tracker> 21:00 | 2월 2일 | 서울, 집 | 기분: 차분 | ☁ 흐림, -2°C </tracker>')];
+    const [t] = recentTrackers(1);
+    assert.equal(t.weather, '☁ 흐림, -2°C');
+    T.chat = [say('<tracker> 21:00 | 2월 2일 | 서울, 집 | 기분: 차분 </tracker>')];
+    assert.equal(recentTrackers(1)[0].weather, '');
+});
