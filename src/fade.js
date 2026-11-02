@@ -312,9 +312,9 @@ export async function openLayers(s) {
     };
     const tok = async () => {
         const [a, b, d] = await Promise.all([countTokens(full), countTokens($root.find('.na_ly_short').val()), countTokens($root.find('.na_ly_line').val())]);
-        $root.find('.na_ly_tok_long').text(`${fmt(a)} 토큰`);
-        $root.find('.na_ly_tok_short').text(b ? `${fmt(b)} 토큰 · ${Math.round(b / Math.max(1, a) * 100)}%` : '없음');
-        $root.find('.na_ly_tok_line').text(d ? `${fmt(d)} 토큰 · ${Math.round(d / Math.max(1, a) * 100)}%` : '없음');
+        $root.find('.na_ly_tok_long').text(`${fmt(a)}`);
+        $root.find('.na_ly_tok_short').text(b ? `${fmt(b)} · ${Math.round(b / Math.max(1, a) * 100)}%` : '없음');
+        $root.find('.na_ly_tok_line').text(d ? `${fmt(d)} · ${Math.round(d / Math.max(1, a) * 100)}%` : '없음');
         show();
     };
     show(); tok();

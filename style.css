@@ -7976,3 +7976,15 @@ body.na_darkui .na_ly3_in { background: #2E2E34 !important; color: #7CCB9A !impo
 body:not(.na_darkui) .na_ly3 > .na_ly_ask { background: #FCF6F1 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); }
 .na_ly3 > .na_ly3_foot { justify-content: center; margin-top: 8px; }
 body:is(.na_darkui, :not(.na_darkui)) .na_ly3 > .na_ly3_foot button.na_ly3_tool:not(#na_x) { background: transparent !important; box-shadow: none !important; color: var(--na-mute) !important; font-weight: 600; }
+/* 섹션 버전 (3.169.28): the versions as underline tabs (C), the send button quiet grey, the 자동으로 고르기 switch in charcoal brown */
+.na_ly3_cards.na_ly_tabs { flex-direction: row !important; gap: 18px !important; padding: 0 4px !important; border-radius: 0 !important; overflow: visible !important; background: transparent !important; box-shadow: none !important; border-bottom: 1px solid var(--na-line) !important; }
+body:is(.na_darkui, :not(.na_darkui)) .na_layers .na_ly3_cards button.na_ly3_card:not(#na_x) { position: relative; width: auto !important; flex: none; gap: 5px !important; padding: 8px 0 !important; background: transparent !important; border-top: 0 !important; }
+body:is(.na_darkui, :not(.na_darkui)) .na_layers .na_ly3_cards button.na_ly3_card.on:not(#na_x) { background: transparent !important; }
+.na_layers .na_ly3_cards button.na_ly3_card b { color: var(--na-dim); font-weight: 600; }
+.na_layers .na_ly3_cards button.na_ly3_card.on b { color: var(--na-ink); font-weight: 700; }
+.na_layers .na_ly3_cards button.na_ly3_card.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2.5px; border-radius: 3px; background: var(--na-fill); }
+body.na_darkui .na_layers .na_ly3_cards button.na_ly3_card.on::after { background: #ECEAE6; }
+.na_layers .na_ly3_cards button.na_ly3_card small { margin-left: 0 !important; font-size: 11px !important; }
+.na_ly3_in { padding: 0 6px !important; font-size: 10.5px !important; }
+body:is(.na_darkui, :not(.na_darkui)) .na_ly3 .na_ly_askgo:not(#na_x) { background: var(--na-card2) !important; color: var(--na-mute) !important; box-shadow: none !important; }
+body:not(.na_darkui) .na_ly3 input.na_toggle:checked + .na_tgl_ui { background: #6E5D52; }
