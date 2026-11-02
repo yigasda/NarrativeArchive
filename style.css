@@ -2079,8 +2079,8 @@ body.na_darkui #na_settings, body.na_darkui .na_popup, body.na_darkui .na_v2, bo
     --na-paper: #232328;
     --na-onfill: #F3F1ED;
     --na-sub: #A9A7AE;
-    --na-warm: #DE6E38; --na-warm-ink: #F08F5C; --na-warm-soft: #553426;
-    --na-cold: #7FA6E0; --na-cold-ink: #9ABCEE; --na-cold-soft: #2E3A4E;
+    --na-warm: #DE6E38; --na-warm-ink: #F08F5C; --na-warm-soft: #2E2E34;
+    --na-cold: #7FA6E0; --na-cold-ink: #9ABCEE; --na-cold-soft: #2E2E34;
 }
 body:not(.na_darkui) .na_v2, body:not(.na_darkui) #na_settings .na_tab_pane:where(:not([data-pane="home"])) { color: #463428; }
 body.na_darkui .na_v2, body.na_darkui #na_settings .na_tab_pane:where(:not([data-pane="home"])) { color: #ECEAE6; }
@@ -7779,3 +7779,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popu
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup textarea:not(#na_x) { border-radius: 14px !important; }
 body:is(.na_darkui, :not(.na_darkui)) #na_settings :is(input.text_pole, select.text_pole, input[type="text"], input[type="number"]):not(.na_toggle):not(#na_x) { border-radius: 12px !important; }
 body:is(.na_darkui, :not(.na_darkui)) #na_settings textarea:not(#na_x) { border-radius: 14px !important; }
+/* dark cellophane found by measuring (3.168.19): world icons sat on the warm tint, the injection preview on a brown code box */
+body.na_darkui :is(.na_wd_icon, .na_wd_slot_ico, .na_wd.on .na_wd_icon) { background: #2E2E34 !important; }
+body.na_darkui .na_wd.on .na_wd_icon, body.na_darkui .na_wd_slot_ico { color: var(--na-accent-fg) !important; }
+body.na_darkui .na_pv2_code { background: #232328 !important; color: #ECEAE6 !important; }
