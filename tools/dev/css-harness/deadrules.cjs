@@ -28,10 +28,10 @@ const args = process.argv.slice(2); const quick = args.includes('--quick'); cons
     if (!Object.values(sheets).some(u => /NarrativeArchive\/style\.css/.test(u))) { console.log('style.css not seen by CDP'); process.exit(1); }
     await p.route('http://127.0.0.1:5555/**', async route => { const txt = answer(route.request().postData() || ''); await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ choices: [{ message: { role: 'assistant', content: txt } }] }) }); });
     await p.evaluate(async ([B]) => { const core = await import(B + 'core.js'); const g = core.globalSettings(); for (const k of ['draftConn', 'aiConn']) g[k] = { ...(g[k] || {}), mode: 'custom', url: 'http://127.0.0.1:5555/v1', model: 'fake', key: 'x', fmt: 'openai' }; }, [B]);
-    const seen = new Map(), win = new Map(); const key = r => `${(r.style.range ? r.style.range.startLine + 1 : '?')}: ${r.selectorList.text}`;
+    const seen = new Map(), win = new Map(), hits = new Map(); let curSig = ''; const key = r => `${(r.style.range ? r.style.range.startLine + 1 : '?')}: ${r.selectorList.text}`;
     const tally = m => {
         const rules = (m.matchedCSSRules || []).map(x => x.rule).filter(r => r.origin === 'regular'); const best = {};
-        for (const r of rules) { const k = key(r); if (ours(r.styleSheetId)) seen.set(k, (seen.get(k) || 0) + 1);
+        for (const r of rules) { const k = key(r); if (ours(r.styleSheetId)) { seen.set(k, (seen.get(k) || 0) + 1); if (!hits.has(k)) hits.set(k, new Set()); hits.get(k).add(curSig); }
             for (const d of r.style.cssProperties || []) { if (d.disabled || !d.text) continue; const cur = best[d.name]; if (!cur || d.important || !cur.imp) best[d.name] = { k, imp: !!d.important, ours: ours(r.styleSheetId) }; } }
         for (const v of Object.values(best)) if (v.ours) win.set(v.k, (win.get(v.k) || 0) + 1);
         // pseudo-element rules (::before/::after) come separately; a declaration there counts as a win for its rule
@@ -40,10 +40,10 @@ const args = process.argv.slice(2); const quick = args.includes('--quick'); cons
     const scan = async root => {
         const { root: doc } = await cdp.send('DOM.getDocument', { depth: -1 }); const { nodeIds } = await cdp.send('DOM.querySelectorAll', { nodeId: doc.nodeId, selector: `${root}, ${root} *` });
         const sigs = new Set();
-        for (const nodeId of nodeIds) { let m; try { m = await cdp.send('CSS.getMatchedStylesForNode', { nodeId }); } catch { continue; } tally(m);
+        for (const nodeId of nodeIds) { const desc = await cdp.send('DOM.describeNode', { nodeId }).catch(() => null); const node = desc?.node; if (!node) continue;
+            const attrs = node.attributes || []; const cls = attrs.indexOf('class') >= 0 ? attrs[attrs.indexOf('class') + 1] : ''; const tag = node.nodeName; curSig = tag + '.' + cls.split(/\s+/).filter(Boolean).sort().join('.');
+            let m; try { m = await cdp.send('CSS.getMatchedStylesForNode', { nodeId }); } catch { continue; } tally(m);
             // interactive: one of each tag+class signature also with hover and focus forced
-            const desc = await cdp.send('DOM.describeNode', { nodeId }).catch(() => null); const node = desc?.node; if (!node) continue;
-            const attrs = node.attributes || []; const cls = attrs[attrs.indexOf('class') + 1] || ''; const tag = node.nodeName;
             if (!/^(BUTTON|INPUT|SELECT|TEXTAREA|LABEL|A)$/.test(tag) && !/role="?button/.test(attrs.join(' '))) continue;
             const sig = tag + '|' + cls; if (sigs.has(sig) || sigs.size > 60) continue; sigs.add(sig);
             for (const st of [['hover'], ['focus', 'focus-visible'], ['active']]) { await cdp.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: st }); const mm = await cdp.send('CSS.getMatchedStylesForNode', { nodeId }).catch(() => null); if (mm) tally(mm); }
@@ -70,7 +70,10 @@ const args = process.argv.slice(2); const quick = args.includes('--quick'); cons
         else { const classes = [...sel.matchAll(/\.([A-Za-z0-9_-]+)/g)].map(x => x[1]); const used = classes.filter(c => new RegExp('\\b' + c.replace(/[-]/g, '\\-') + '\\b').test(src)); (used.length ? bins['in-src'] : bins.safe).push(k); }
     }
     fs.mkdirSync(path.join(__dirname, 'out'), { recursive: true });
-    fs.writeFileSync(path.join(__dirname, 'out', 'deadrules.json'), JSON.stringify({ scenes: n, matched: seen.size, winning: win.size, bins }, null, 1));
+    const bySet = new Map(); for (const [k, set] of hits) { const id = [...set].sort().join(' '); if (!bySet.has(id)) bySet.set(id, []); bySet.get(id).push(k); }
+    const targets = [...bySet.entries()].filter(([, ks]) => ks.length > 1).map(([id, ks]) => ({ elements: id.split(' ').slice(0, 6), rules: ks.sort((a, b) => parseInt(a) - parseInt(b)) })).sort((a, b) => parseInt(a.rules[0]) - parseInt(b.rules[0]));
+    fs.writeFileSync(path.join(__dirname, 'out', 'deadrules.json'), JSON.stringify({ scenes: n, matched: seen.size, winning: win.size, bins, targets }, null, 1));
+    console.log(`${targets.length} groups of rules that hit exactly the same elements (merge map for step 4-2, in out/deadrules.json → targets)`);
     console.log(`\n${n} scene openings · rules reached: ${seen.size} · decide something: ${win.size} · never decide anything: ${seen.size - win.size}`);
     for (const [bin, list] of Object.entries(bins)) console.log(`  ${bin.padEnd(7)} ${String(list.length).padStart(4)}`);
     console.log('\nsafe to delete (never win, no state, not in media, classes not in src):'); console.log(bins.safe.join('\n') || '  (none)');
