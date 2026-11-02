@@ -911,7 +911,6 @@ body.na_darkui :is(.na_diff_del, .na_diff_tr_del) .na_diff_hl { background: rgba
 .na_kwt_key.hit { opacity: 1; border-color: #3f9a5a; color: #3f9a5a; font-weight: 600; }
 .na_kwt_where { margin-top: 4px; font-size: 0.85em; opacity: 0.8; }
 .na_kwt_where mark { background: color-mix(in srgb, #3f9a5a 25%, transparent); color: inherit; border-radius: 3px; }
-.na_kwt_warn { color: var(--na-warn); font-size: 0.92em; white-space: nowrap; }
 
 /* ---------- keyword popup */
 .na_pchip small { opacity: 0.6; font-size: 0.85em; margin-left: 3px; }
@@ -3069,6 +3068,27 @@ body.na_darkui .na_kw2_words { color: #E6D9CD; }
 .na_kw2_acts .na_kw2_save { flex: 2; border: 0; }
 dialog:has(.na_kw2_save) .popup-button-ok { display: none; }
 
+/* 키워드 테스트 (docs/mockups/ext-kwtest B): the counts in the list heads, then the called sections (orange tick, the matched keyword
+   as an orange pill, the sentence with it marked), then the ones not called, faded */
+.na_kwt3 .na_kwt_in { min-height: 0; }
+.na_kwt3_list { padding: 0 !important; overflow: hidden; gap: 0 !important; }
+.na_kwt3_row { display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; background: transparent !important; }
+.na_kwt3_row + .na_kwt3_row { border-top: 1px solid var(--na-line2, var(--na-line)); }
+.na_kwt3_st { width: 22px; height: 22px; flex: none; margin-top: 1px; border-radius: 999px; display: grid; place-items: center; background: var(--na-card2); color: var(--na-dim); }
+.na_kwt3_row.on .na_kwt3_st { background: var(--na-accent); color: var(--na-onaccent, #fff); }
+.na_kwt3_row:not(.on) { opacity: 0.6; }
+.na_kwt3_row .na_kwt_main b { font-size: 13.5px; font-weight: 600; }
+.na_kwt3_row .na_kwt_main small { margin-left: 6px; font-size: 11.5px; color: var(--na-dim); }
+.na_kwt3 .na_kwt_key { border: 0 !important; opacity: 1; padding: 2px 9px; background: var(--na-card2); color: var(--na-dim); }
+.na_kwt3 .na_kwt_key.hit { background: var(--na-accent); color: var(--na-onaccent, #fff); }
+.na_kwt3 .na_kwt_where { margin-top: 6px; font-size: 12px; opacity: 1; color: var(--na-mute); }
+.na_kwt3 .na_kwt_where mark { background: var(--na-accent-soft); color: var(--na-accent-ink); padding: 0 2px; border-radius: 4px; }
+body.na_darkui .na_kwt3 .na_kwt_where mark { background: #3A3A41; }
+.na_kwt3_lbl { display: flex; align-items: baseline; gap: 6px; margin: 4px 4px -4px; }
+.na_kwt3_lbl b { font-weight: 700; color: var(--na-dim); }
+.na_kwt3_lbl b.on { color: var(--na-accent-fg, var(--na-accent)); }
+.na_kwt_warn { color: var(--na-warn); font-size: 0.92em; white-space: nowrap; }
+
 /* --- end audit C --- */
 
 /* --- audit D: diff, who knows, worlds, versions, calendar --- */
@@ -3415,6 +3435,30 @@ body:not(.na_darkui) .na_xray .na_xr_sep { color: #9A8B80; }
 body.na_darkui .na_xray .na_xr_sep { color: #A09FA6; }
 body:not(.na_darkui) .na_xray .na_xr_dup q { color: #4A3D35; }
 body.na_darkui .na_xray .na_xr_dup q { color: #E6D9CD; }
+
+/* X-ray before anything is recorded (docs/mockups/ext-xray A): a faded example, then the one line, centred */
+.na_xray:has(.na_xr3_hello) { display: flex; flex-direction: column; }
+.na_xray_body:has(.na_xr3_hello) { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.na_xr3_hello { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+.na_xr3_hello > b { margin-top: 14px; font-size: 16px; color: var(--na-ink); }
+.na_xr3_hello > small { font-size: 12.5px; line-height: 1.5; color: var(--na-sub, var(--na-dim)); }
+.na_xr3_ex { align-self: stretch; padding: 14px !important; gap: 0 !important; text-align: left; opacity: 0.6; }
+.na_xr3_exh { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--na-dim); }
+.na_xr3_tag { font-weight: 700; color: var(--na-accent-ink); }
+.na_xr3_tot { display: flex; align-items: baseline; gap: 6px; margin-top: 6px; }
+.na_xr3_tot b { font-size: 24px; letter-spacing: -0.02em; }
+.na_xr3_tot small { font-size: 12px; color: var(--na-dim); }
+.na_xr3_bar { display: flex; gap: 2px; height: 8px; margin-top: 8px; border-radius: 8px; overflow: hidden; }
+.na_xr3_bar i:nth-child(1), .na_xr3_chips span:nth-child(1) i { background: var(--na-accent); }
+.na_xr3_bar i:nth-child(2), .na_xr3_chips span:nth-child(2) i { background: #CDB8A8; }
+.na_xr3_bar i:nth-child(3), .na_xr3_chips span:nth-child(3) i { background: #9A8A80; }
+.na_xr3_bar i:nth-child(4) { background: #6E5D52; }
+body.na_darkui .na_xr3_bar i:nth-child(2), body.na_darkui .na_xr3_chips span:nth-child(2) i { background: #6A6A73; }
+body.na_darkui .na_xr3_bar i:nth-child(3), body.na_darkui .na_xr3_chips span:nth-child(3) i { background: #4C4C55; }
+body.na_darkui .na_xr3_bar i:nth-child(4) { background: #3A3A41; }
+.na_xr3_chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.na_xr3_chips span { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; background: var(--na-card2); color: var(--na-mute); }
+.na_xr3_chips i { width: 8px; height: 8px; border-radius: 3px; }
 
 /* people: top tabs (도감 · 관계도 · 온도) */
 .na_people_tabs { gap: 4px; }
@@ -3795,6 +3839,23 @@ body.na_darkui #na_settings {
 #na_settings .na_tab_pane[data-pane="home"] .na_qbtn > span { font-size: 1em !important; white-space: nowrap; }
 #na_settings .na_tab_pane[data-pane="home"] .na_qbtn .na_svg { flex: none; color: var(--hm-acc); }
 #na_settings .na_tab_pane[data-pane="home"] .na_qbtn:hover { border-color: var(--hm-acc); }
+
+/* 대사 은행 › empty (docs/mockups/ext-quotes A+C): 누가 아는가's welcome card, faded speech bubbles as the example,
+   빼는 인물 under them with room to breathe; no search and no top buttons while there is nothing */
+.na_qb2.na_qb3_new { display: flex; flex-direction: column; }
+.na_qb2.na_qb3_new > .na_v2_row2, .na_qb2.na_qb3_new > .na_qb2_search, .na_qb2.na_qb3_new > .na_qb_clear { display: none !important; }
+.na_qb2.na_qb3_new > .na_qb_list { order: 1; }
+.na_qb2.na_qb3_new > .na_qb_excl { order: 2; margin: 6px 4px 0; }
+.na_qb_root.na_qb3_picking .na_qb3_new > .na_qb_list { display: none; }
+.na_qb3_big { font: 700 34px/1 Georgia, 'Times New Roman', serif; padding-top: 14px; box-sizing: border-box; }
+.na_qb3_ex { display: flex; flex-direction: column; gap: 10px; margin: 2px 4px 0; }
+.na_qb3_bub { display: flex; align-items: flex-end; gap: 8px; }
+.na_qb3_bub.r { flex-direction: row-reverse; }
+.na_qb3_bub > div { max-width: 78%; padding: 9px 13px; border-radius: 16px 16px 16px 4px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 4px 12px rgba(70, 52, 40, 0.06); }
+.na_qb3_bub.r > div { border-radius: 16px 16px 4px 16px; }
+.na_qb3_bub > div > span { display: block; font-size: 13.5px; line-height: 1.45; color: var(--na-ink); opacity: 0.8; }
+.na_qb3_bub > div > small { display: block; margin-top: 2px; font-size: 11px; color: var(--na-dim); }
+body.na_darkui .na_qb3_bub > div { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 16px rgba(0, 0, 0, 0.3); }
 #na_settings .na_ai_row3 { display: flex; flex-direction: column; gap: 8px; }
 #na_settings .na_ai_head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 6px 0; }
 #na_settings .na_ai_head > b { font-size: 1.07em !important; font-weight: 700; }
@@ -4393,6 +4454,31 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st .na_st_mi:not(#na_x) {
 .na_diff_head .na_src_check { margin-left: auto; }
 .na_src_checkout { margin: 8px 0; }
 
+/* 말투 지문 › empty (docs/mockups/ext-voice B+D): the 대사 tab's welcome card; people with enough lines as chips
+   that switch off and on over one 만들기 button, a faded Claude card as the example */
+.na_vc3_chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip:not(#na_x) { display: inline-flex; align-items: center; gap: 6px; height: 30px; margin: 0; padding: 0 11px 0 3px; border-radius: 999px; border: 1px dashed var(--na-line) !important; background: transparent !important; box-shadow: none !important; color: var(--na-dim) !important; font: inherit; font-size: 12.5px; cursor: pointer; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { border: 1px solid transparent !important; color: var(--na-ink) !important; }
+body:not(.na_darkui) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { background: #EADCD0 !important; }
+body.na_darkui dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { background: #232328 !important; }
+.na_vc3_chip em { font-style: normal; font-weight: 600; }
+.na_vc3_chip small { font-size: 11.5px; color: var(--na-dim); font-variant-numeric: tabular-nums; }
+.na_vc3_chip:not(.on) .na_face { filter: grayscale(1); opacity: 0.5; }
+.na_vc3_chip:not(.on) em { text-decoration: line-through; }
+.na_kn3_make.na_vc3_go[disabled] { opacity: 0.45; cursor: default; }
+.na_vc3_ex { padding: 14px !important; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_vc3_ex > * { opacity: 0.62; }
+body.na_darkui .na_vc3_ex { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+/* the example as drawn in the mockup: 사람됨 as plain text, tight steps, 예시 in orange */
+.na_vc_body .na_vc_card.na_vc3_ex { gap: 0; }
+.na_vc3_ex .na_vc_head { margin-bottom: 4px; }
+.na_vc3_ex .na_vc_sub { margin: 10px 0 2px; font-size: 11px; }
+.na_vc3_ex .na_vc3_core { font-size: 13px; line-height: 1.45; color: var(--na-ink); }
+.na_vc3_ex .na_vc_rules { margin-top: 4px; }
+/* 성격 lines as plain text, like the empty window's example */
+.na_vc_body .na_vc_coreline { padding: 0; border-radius: 0; background: none; font-size: 13px; line-height: 1.5; color: var(--na-ink); }
+.na_vc_body .na_vc_core_view { gap: 2px; }
+
 .na_src_kept { font-size: 0.8em; color: var(--na-accent-fg, var(--na-accent)); }
 
 .na_ap2 .na_ap_tools .na_v2_btn { flex: 1; }
@@ -4614,6 +4700,38 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 /* a little more room: title ↔ heart, heart ↔ name */
 .na_cal_av_badge { margin-left: 5px; }
 .na_cal_av_badge .na_heart { margin-right: 1px; }
+
+/* 이야기 달력 (docs/mockups/ext-calendar): the list stays as it was; on top, one anniversary card (the next one, or the
+   picked day's; tap to see and edit all) and a strip of the days that have scenes (tap one to jump there, tap again to let go) */
+.na_cal3_av { padding: 0 !important; overflow: hidden; gap: 0 !important; }
+.na_cal3_avtop { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; }
+.na_cal3_avic { width: 34px; height: 34px; flex: none; border-radius: 11px; display: grid; place-items: center; background: var(--na-accent-soft); color: var(--av, var(--na-accent)); }
+body.na_darkui .na_cal3_avic { background: #2E2E34; color: var(--na-accent-fg); }
+.na_cal3_avtx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.na_cal3_avtx b { font-size: 14px; }
+.na_cal3_avtx small { font-size: 11.5px; color: var(--na-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.na_cal3_avmore { flex: none; display: inline-flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--na-mute); }
+.na_cal3_av.open .na_cal3_avmore svg { transform: rotate(90deg); }
+.na_cal3_av .na_cal_av_head, .na_cal3_av .na_cal_av_new, .na_cal3_av .na_cal_av_row { margin: 0 14px; }
+.na_cal3_av .na_cal_av_head { padding-bottom: 6px; }
+.na_cal3_av .na_cal_av_row:last-child { margin-bottom: 10px; }
+.na_cal3_strip { display: flex; align-items: stretch; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
+.na_cal3_strip::-webkit-scrollbar { display: none; }
+.na_cal3_sm { flex: none; align-self: center; padding: 0 4px; font-size: 11.5px; font-weight: 700; color: var(--na-dim); white-space: nowrap; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup button.na_cal3_day:not(#na_x) { flex: none; width: 52px; margin: 0; padding: 7px 0 6px; border: 0 !important; border-radius: 14px; display: flex; flex-direction: column; align-items: center; gap: 1px; font: inherit; cursor: pointer; color: var(--na-ink) !important; }
+body:not(.na_darkui) dialog.popup .na_popup button.na_cal3_day:not(#na_x) { background: #F7EEE7 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08) !important; }
+body.na_darkui dialog.popup .na_popup button.na_cal3_day:not(#na_x) { background: #232328 !important; box-shadow: none !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup button.na_cal3_day.on:not(#na_x) { background: var(--na-accent) !important; color: var(--na-onaccent, #fff) !important; }
+.na_cal3_day small { font-size: 10.5px; color: var(--na-dim); white-space: nowrap; max-width: 46px; overflow: hidden; text-overflow: ellipsis; }
+.na_cal3_day.on small { color: inherit; opacity: 0.8; }
+.na_cal3_day b { font-size: 17px; line-height: 1.2; }
+.na_cal3_day i { display: flex; gap: 2px; height: 4px; }
+.na_cal3_day u { width: 4px; height: 4px; border-radius: 9px; background: var(--na-accent-fg, var(--na-accent)); }
+.na_cal3_day.on u { background: currentColor; }
+body:not(.na_darkui) .na_cal_item.na_cal3_hl { background: #F3E4D8; }
+body.na_darkui .na_cal_item.na_cal3_hl { background: #2E2E34; }
+.na_cal3_av.plain .na_cal3_avic { background: var(--na-card2) !important; color: var(--na-dim) !important; }
+.na_cal3_av.plain .na_cal3_avtx b { font-weight: 600; color: var(--na-mute); }
 
 /* 세계관 카드 아래: one row — the bind chip (cut short if it has to), 로어북 and a trash button (v3.101.6) */
 .na_wd_foot { flex-wrap: nowrap !important; gap: 6px !important; }
@@ -7728,48 +7846,6 @@ button.na_cp3_sect { cursor: pointer; width: calc(100% - 8px); }
 .na_cp3_note { display: block; margin: 12px 4px 0; font-size: 12px; color: var(--na-dim); }
 dialog.popup:has(.na_cp3) .popup-button-ok.disabled { opacity: 0.5 !important; pointer-events: none; }
 
-/* ============ 대사 은행 › empty (docs/mockups/ext-quotes A+C): 누가 아는가's welcome card, faded speech bubbles as the example,
-   빼는 인물 under them with room to breathe; no search and no top buttons while there is nothing */
-.na_qb2.na_qb3_new { display: flex; flex-direction: column; }
-.na_qb2.na_qb3_new > .na_v2_row2, .na_qb2.na_qb3_new > .na_qb2_search, .na_qb2.na_qb3_new > .na_qb_clear { display: none !important; }
-.na_qb2.na_qb3_new > .na_qb_list { order: 1; }
-.na_qb2.na_qb3_new > .na_qb_excl { order: 2; margin: 6px 4px 0; }
-.na_qb_root.na_qb3_picking .na_qb3_new > .na_qb_list { display: none; }
-.na_qb3_big { font: 700 34px/1 Georgia, 'Times New Roman', serif; padding-top: 14px; box-sizing: border-box; }
-.na_qb3_ex { display: flex; flex-direction: column; gap: 10px; margin: 2px 4px 0; }
-.na_qb3_bub { display: flex; align-items: flex-end; gap: 8px; }
-.na_qb3_bub.r { flex-direction: row-reverse; }
-.na_qb3_bub > div { max-width: 78%; padding: 9px 13px; border-radius: 16px 16px 16px 4px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 4px 12px rgba(70, 52, 40, 0.06); }
-.na_qb3_bub.r > div { border-radius: 16px 16px 4px 16px; }
-.na_qb3_bub > div > span { display: block; font-size: 13.5px; line-height: 1.45; color: var(--na-ink); opacity: 0.8; }
-.na_qb3_bub > div > small { display: block; margin-top: 2px; font-size: 11px; color: var(--na-dim); }
-body.na_darkui .na_qb3_bub > div { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 16px rgba(0, 0, 0, 0.3); }
-
-/* ============ 말투 지문 › empty (docs/mockups/ext-voice B+D): the 대사 tab's welcome card; people with enough lines as chips
-   that switch off and on over one 만들기 button, a faded Claude card as the example */
-.na_vc3_chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip:not(#na_x) { display: inline-flex; align-items: center; gap: 6px; height: 30px; margin: 0; padding: 0 11px 0 3px; border-radius: 999px; border: 1px dashed var(--na-line) !important; background: transparent !important; box-shadow: none !important; color: var(--na-dim) !important; font: inherit; font-size: 12.5px; cursor: pointer; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { border: 1px solid transparent !important; color: var(--na-ink) !important; }
-body:not(.na_darkui) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { background: #EADCD0 !important; }
-body.na_darkui dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { background: #232328 !important; }
-.na_vc3_chip em { font-style: normal; font-weight: 600; }
-.na_vc3_chip small { font-size: 11.5px; color: var(--na-dim); font-variant-numeric: tabular-nums; }
-.na_vc3_chip:not(.on) .na_face { filter: grayscale(1); opacity: 0.5; }
-.na_vc3_chip:not(.on) em { text-decoration: line-through; }
-.na_kn3_make.na_vc3_go[disabled] { opacity: 0.45; cursor: default; }
-.na_vc3_ex { padding: 14px !important; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
-.na_vc3_ex > * { opacity: 0.62; }
-body.na_darkui .na_vc3_ex { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
-/* the example as drawn in the mockup: 사람됨 as plain text, tight steps, 예시 in orange */
-.na_vc_body .na_vc_card.na_vc3_ex { gap: 0; }
-.na_vc3_ex .na_vc_head { margin-bottom: 4px; }
-.na_vc3_ex .na_vc_sub { margin: 10px 0 2px; font-size: 11px; }
-.na_vc3_ex .na_vc3_core { font-size: 13px; line-height: 1.45; color: var(--na-ink); }
-.na_vc3_ex .na_vc_rules { margin-top: 4px; }
-/* 성격 lines as plain text, like the empty window's example */
-.na_vc_body .na_vc_coreline { padding: 0; border-radius: 0; background: none; font-size: 13px; line-height: 1.5; color: var(--na-ink); }
-.na_vc_body .na_vc_core_view { gap: 2px; }
-
 /* ============ dark = charcoal (3.168): neutral greys, cream for the big buttons and lit things, 짐작 gold for small accents.
    Anything sitting on the cream accent takes --na-onaccent (near black) instead of white. */
 body.na_darkui input.na_toggle:checked + .na_tgl_ui::after, body.na_darkui .na_sw.on::after { background: #1B1B1F; }
@@ -7828,37 +7904,6 @@ body.na_darkui :is(.na_wd_icon, .na_wd_slot_ico, .na_wd.on .na_wd_icon) { backgr
 body.na_darkui .na_wd.on .na_wd_icon, body.na_darkui .na_wd_slot_ico { color: var(--na-accent-fg) !important; }
 body.na_darkui .na_pv2_code { background: #232328 !important; color: #ECEAE6 !important; }
 
-/* ============ 이야기 달력 (docs/mockups/ext-calendar): the list stays as it was; on top, one anniversary card (the next one, or the
-   picked day's; tap to see and edit all) and a strip of the days that have scenes (tap one to jump there, tap again to let go) */
-.na_cal3_av { padding: 0 !important; overflow: hidden; gap: 0 !important; }
-.na_cal3_avtop { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; }
-.na_cal3_avic { width: 34px; height: 34px; flex: none; border-radius: 11px; display: grid; place-items: center; background: var(--na-accent-soft); color: var(--av, var(--na-accent)); }
-body.na_darkui .na_cal3_avic { background: #2E2E34; color: var(--na-accent-fg); }
-.na_cal3_avtx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.na_cal3_avtx b { font-size: 14px; }
-.na_cal3_avtx small { font-size: 11.5px; color: var(--na-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.na_cal3_avmore { flex: none; display: inline-flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--na-mute); }
-.na_cal3_av.open .na_cal3_avmore svg { transform: rotate(90deg); }
-.na_cal3_av .na_cal_av_head, .na_cal3_av .na_cal_av_new, .na_cal3_av .na_cal_av_row { margin: 0 14px; }
-.na_cal3_av .na_cal_av_head { padding-bottom: 6px; }
-.na_cal3_av .na_cal_av_row:last-child { margin-bottom: 10px; }
-.na_cal3_strip { display: flex; align-items: stretch; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
-.na_cal3_strip::-webkit-scrollbar { display: none; }
-.na_cal3_sm { flex: none; align-self: center; padding: 0 4px; font-size: 11.5px; font-weight: 700; color: var(--na-dim); white-space: nowrap; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup button.na_cal3_day:not(#na_x) { flex: none; width: 52px; margin: 0; padding: 7px 0 6px; border: 0 !important; border-radius: 14px; display: flex; flex-direction: column; align-items: center; gap: 1px; font: inherit; cursor: pointer; color: var(--na-ink) !important; }
-body:not(.na_darkui) dialog.popup .na_popup button.na_cal3_day:not(#na_x) { background: #F7EEE7 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08) !important; }
-body.na_darkui dialog.popup .na_popup button.na_cal3_day:not(#na_x) { background: #232328 !important; box-shadow: none !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup button.na_cal3_day.on:not(#na_x) { background: var(--na-accent) !important; color: var(--na-onaccent, #fff) !important; }
-.na_cal3_day small { font-size: 10.5px; color: var(--na-dim); white-space: nowrap; max-width: 46px; overflow: hidden; text-overflow: ellipsis; }
-.na_cal3_day.on small { color: inherit; opacity: 0.8; }
-.na_cal3_day b { font-size: 17px; line-height: 1.2; }
-.na_cal3_day i { display: flex; gap: 2px; height: 4px; }
-.na_cal3_day u { width: 4px; height: 4px; border-radius: 9px; background: var(--na-accent-fg, var(--na-accent)); }
-.na_cal3_day.on u { background: currentColor; }
-body:not(.na_darkui) .na_cal_item.na_cal3_hl { background: #F3E4D8; }
-body.na_darkui .na_cal_item.na_cal3_hl { background: #2E2E34; }
-.na_cal3_av.plain .na_cal3_avic { background: var(--na-card2) !important; color: var(--na-dim) !important; }
-.na_cal3_av.plain .na_cal3_avtx b { font-weight: 600; color: var(--na-mute); }
 /* ============ window size (3.169.5): every extension window fits its content but never opens shorter than about half the
    screen, so short ones don't look tiny and big ones don't sit empty; long ones grow to the screen and scroll inside.
    Confirms, the phone, the studio and 아카이브에 추가 keep their own sizing. */
@@ -7866,58 +7911,6 @@ body dialog.popup:not(:has(.na_confirm, .na_phone, .na_st, .na_ap3)) .popup-cont
 body dialog.popup:not(:has(.na_confirm, .na_phone, .na_st, .na_ap3)) .na_popup.na_v2:not(.na_popup .na_popup) { min-height: 55vh; box-sizing: border-box; }
 .na_popup.na_v2 > :has(> .na_empty:only-child) { flex: 1; display: flex; flex-direction: column; justify-content: center; }
 
-/* ============ 키워드 테스트 (docs/mockups/ext-kwtest B): two counts, then the called sections (orange tick, the matched keyword
-   as an orange pill, the sentence with it marked), then the ones not called, faded */
-.na_kwt3 .na_kwt_in { min-height: 0; }
-.na_kwt3_sum { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.na_kwt3_sum > div { display: flex; flex-direction: column; align-items: center; padding: 12px; border-radius: 16px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
-body.na_darkui .na_kwt3_sum > div { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 6px 16px rgba(0, 0, 0, 0.3); }
-.na_kwt3_sum b { font-size: 24px; line-height: 1.2; color: var(--na-ink); }
-.na_kwt3_sum .on b { color: var(--na-accent-fg, var(--na-accent)); }
-.na_kwt3_sum small { font-size: 11.5px; color: var(--na-dim); }
-.na_kwt3_list { padding: 0 !important; overflow: hidden; gap: 0 !important; }
-.na_kwt3_row { display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; background: transparent !important; }
-.na_kwt3_row + .na_kwt3_row { border-top: 1px solid var(--na-line2, var(--na-line)); }
-.na_kwt3_st { width: 22px; height: 22px; flex: none; margin-top: 1px; border-radius: 999px; display: grid; place-items: center; background: var(--na-card2); color: var(--na-dim); }
-.na_kwt3_row.on .na_kwt3_st { background: var(--na-accent); color: var(--na-onaccent, #fff); }
-.na_kwt3_row:not(.on) { opacity: 0.6; }
-.na_kwt3_row .na_kwt_main b { font-size: 13.5px; font-weight: 600; }
-.na_kwt3_row .na_kwt_main small { margin-left: 6px; font-size: 11.5px; color: var(--na-dim); }
-.na_kwt3 .na_kwt_key { border: 0 !important; opacity: 1; padding: 2px 9px; background: var(--na-card2); color: var(--na-dim); }
-.na_kwt3 .na_kwt_key.hit { background: var(--na-accent); color: var(--na-onaccent, #fff); }
-.na_kwt3 .na_kwt_where { margin-top: 6px; font-size: 12px; opacity: 1; color: var(--na-mute); }
-.na_kwt3 .na_kwt_where mark { background: var(--na-accent-soft); color: var(--na-accent-ink); padding: 0 2px; border-radius: 4px; }
-body.na_darkui .na_kwt3 .na_kwt_where mark { background: #3A3A41; }
-/* 키워드 테스트: the counts sit in the list heads (no tiles) */
-.na_kwt3_sum { display: none; }
-.na_kwt3_lbl { display: flex; align-items: baseline; gap: 6px; margin: 4px 4px -4px; }
-.na_kwt3_lbl b { font-weight: 700; color: var(--na-dim); }
-.na_kwt3_lbl b.on { color: var(--na-accent-fg, var(--na-accent)); }
-
-/* ============ X-ray before anything is recorded (docs/mockups/ext-xray A): a faded example, then the one line, centred */
-.na_xray:has(.na_xr3_hello) { display: flex; flex-direction: column; }
-.na_xray_body:has(.na_xr3_hello) { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-.na_xr3_hello { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
-.na_xr3_hello > b { margin-top: 14px; font-size: 16px; color: var(--na-ink); }
-.na_xr3_hello > small { font-size: 12.5px; line-height: 1.5; color: var(--na-sub, var(--na-dim)); }
-.na_xr3_ex { align-self: stretch; padding: 14px !important; gap: 0 !important; text-align: left; opacity: 0.6; }
-.na_xr3_exh { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--na-dim); }
-.na_xr3_tag { font-weight: 700; color: var(--na-accent-ink); }
-.na_xr3_tot { display: flex; align-items: baseline; gap: 6px; margin-top: 6px; }
-.na_xr3_tot b { font-size: 24px; letter-spacing: -0.02em; }
-.na_xr3_tot small { font-size: 12px; color: var(--na-dim); }
-.na_xr3_bar { display: flex; gap: 2px; height: 8px; margin-top: 8px; border-radius: 8px; overflow: hidden; }
-.na_xr3_bar i:nth-child(1), .na_xr3_chips span:nth-child(1) i { background: var(--na-accent); }
-.na_xr3_bar i:nth-child(2), .na_xr3_chips span:nth-child(2) i { background: #CDB8A8; }
-.na_xr3_bar i:nth-child(3), .na_xr3_chips span:nth-child(3) i { background: #9A8A80; }
-.na_xr3_bar i:nth-child(4) { background: #6E5D52; }
-body.na_darkui .na_xr3_bar i:nth-child(2), body.na_darkui .na_xr3_chips span:nth-child(2) i { background: #6A6A73; }
-body.na_darkui .na_xr3_bar i:nth-child(3), body.na_darkui .na_xr3_chips span:nth-child(3) i { background: #4C4C55; }
-body.na_darkui .na_xr3_bar i:nth-child(4) { background: #3A3A41; }
-.na_xr3_chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.na_xr3_chips span { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; background: var(--na-card2); color: var(--na-mute); }
-.na_xr3_chips i { width: 8px; height: 8px; border-radius: 3px; }
-/* typing in a field never lights it orange: the focus ring is a quiet grey in every extension window (3.169.9) */
 body:not(.na_darkui) :is(dialog.popup:not(:has(.na_phone)) .na_popup, #na_settings) :is(input, textarea, select):not([type="checkbox"]):not(.na_toggle):focus:not(#na_x),
 body:not(.na_darkui) :is(dialog.popup:not(:has(.na_phone)) .na_popup, #na_settings) :is(input, textarea, select):not([type="checkbox"]):not(.na_toggle):focus-visible:not(#na_x) { outline: none !important; border-color: transparent !important; box-shadow: 0 0 0 2px #D9C9BD !important; }
 body.na_darkui :is(dialog.popup:not(:has(.na_phone)) .na_popup, #na_settings) :is(input, textarea, select):not([type="checkbox"]):not(.na_toggle):focus:not(#na_x),
