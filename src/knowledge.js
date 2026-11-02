@@ -204,14 +204,14 @@ export async function openKnowledge() {
     const emptyHtml = () => {
         const [a, b, c2] = ['Claude', 'Gemini', 'GPT'];
         // a letter circle for everyone (green knows · yellow suspects · red doesn't), the real list's dashed ? for suspects, struck for doesn't
-        const tag = (n, k) => `<span class="na_kn3_tag ${k}"><i>${esc(n[0])}</i><em>${esc(n)}</em>${k === 's' ? '<b>?</b>' : ''}</span>`;
+        const tag = (n, k) => `<span class="na_kn3_tag ${k}">${k === 'k' ? `<i>${esc(n[0])}</i>` : ''}<em>${esc(n)}</em>${k === 's' ? '<b>?</b>' : ''}</span>`;
         return `<div class="na_v2_card na_kn3_hello"><span class="na_kn3_big"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/></svg></span>
             <b>아직 정리된 비밀이 없어요</b><small>아카이브를 읽고 비밀마다 아는 사람 · 모르는 사람을 정리해요</small>
             <button type="button" class="na_kn3_make">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/>', 15)}AI로 만들기</button>
             <button type="button" class="na_linkbtn na_kn3_write">직접 쓰기</button></div>
           <div class="na_kn3_sect"><span>이렇게 정리돼요</span><small>예시</small></div>
           <div class="na_v2_card na_kn3_ex">
-            <div class="na_kn3_leg"><span class="k"><i></i>알아요</span><span class="s"><i></i>짐작해요</span><span class="u"><i></i>몰라요</span></div>
+            <div class="na_kn3_leg"><span class="na_kn3_tag k"><i></i><em>알아요</em></span><span class="na_kn3_tag s"><em>짐작</em><b>?</b></span><span class="na_kn3_tag u"><em>몰라요</em></span></div>
             <div><p>${esc(a)}, 그날 밤 있던 곳을 ${esc(b)}에게 숨김</p><span class="na_kn_people">${tag(a, 'k')}${tag(c2, 's')}${tag(b, 'u')}</span></div>
             <div><p>${esc(c2)}의 옛 이름</p><span class="na_kn_people">${tag(c2, 'k')}${tag(a, 'k')}${tag(b, 'u')}</span></div>
           </div>`;
@@ -231,13 +231,13 @@ export async function openKnowledge() {
         $root.find('.na_kn_inject input').prop('checked', !!m.knowInject);
         // the same tags and legend as the empty window's example: green with a face (who knows), yellow dashed ? (suspects),
         // grey struck (doesn't know); the legend sits above the list
-        const legend = '<div class="na_kn3_leg na_kn3_legbar"><span class="k"><i></i>알아요</span><span class="s"><i></i>짐작해요</span><span class="u"><i></i>몰라요</span></div>';
+        const legend = '<div class="na_kn3_leg na_kn3_legbar"><span class="na_kn3_tag k"><i></i><em>알아요</em></span><span class="na_kn3_tag s"><em>짐작</em><b>?</b></span><span class="na_kn3_tag u"><em>몰라요</em></span></div>';
         const letter = n => `<i>${esc(String(n)[0] || '?')}</i>`;
         $root.find('.na_kn_list').html(rows.length ? legend + rows.map((r, i) => {
             const s = r.src ? findCited(secs(), r.src) : null;
             const k = r.knows.map(x => `<span class="na_kn3_tag k">${/<img/.test(faceHtml(x, 18)) ? faceHtml(x, 18) : letter(x)}<em>${esc(x)}</em></span>`).join('');
-            const su = r.suspects.map(x => `<span class="na_kn3_tag s">${letter(x)}<em>${esc(x)}</em><b>?</b></span>`).join('');
-            const u = r.unaware.map(x => `<span class="na_kn3_tag u">${letter(x)}<em>${esc(x)}</em></span>`).join('');
+            const su = r.suspects.map(x => `<span class="na_kn3_tag s"><em>${esc(x)}</em><b>?</b></span>`).join('');
+            const u = r.unaware.map(x => `<span class="na_kn3_tag u"><em>${esc(x)}</em></span>`).join('');
             const secret = r.unaware.length > 0;
             return `<div class="na_kn_row na_kn2_card ${secret ? 'secret' : ''}" data-i="${i}">
               <div class="na_kn_fact">${esc(r.fact)}${tr?.[i] ? `<div class="na_kn_tr">${esc(tr[i])}</div>` : ''}</div>

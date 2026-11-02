@@ -7519,3 +7519,9 @@ body.na_darkui .na_kn3_tag.k { background: #3A2A21 !important; color: #F2B48A !i
 .na_kn3_tag.s i, .na_kn3_leg span.s i { background: #E8C878 !important; }
 body.na_darkui :is(.na_kn3_tag.s i, .na_kn3_leg span.s i) { background: #B8964E !important; }
 .na_kn3_tag.s { border-color: #E2C27A !important; }
+/* 누가 아는가: only who knows has a circle; 짐작 and 몰라요 are plain tags; the legend is the same three tags, small */
+.na_kn3_tag.s, .na_kn3_tag.u { padding: 0 10px !important; }
+.na_kn3_leg .na_kn3_tag { height: 22px; font-size: 11px; }
+.na_kn3_leg .na_kn3_tag.k { padding: 0 9px 0 4px !important; }
+.na_kn3_leg .na_kn3_tag.k i { width: 12px; height: 12px; }
+.na_kn3_leg { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
