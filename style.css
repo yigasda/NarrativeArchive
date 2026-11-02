@@ -7476,3 +7476,7 @@ body.na_darkui :is(.na_kn3_hello, .na_kn3_ex, .na_kn2.na_kn3_new .na_kn_inject) 
 .na_kn3_tag em { font-style: normal; }
 .na_kn3_tag.s b { margin-left: 1px; }
 .na_kn3_tag.u em { text-decoration: line-through; text-decoration-thickness: 1px; }
+/* 몰라요: no colour — no fill, a grey circle, the name struck in grey */
+body:is(.na_darkui, :not(.na_darkui)) .na_kn3_tag.u { background: transparent !important; color: var(--na-dim) !important; }
+.na_kn3_tag.u i, .na_kn3_leg span.u i { background: #B8ABA1 !important; }
+body.na_darkui :is(.na_kn3_tag.u i, .na_kn3_leg span.u i) { background: #6E5D52 !important; }
