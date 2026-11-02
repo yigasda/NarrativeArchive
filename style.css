@@ -7925,7 +7925,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_right > button.na_st_
 body.na_darkui dialog.popup .na_st3_right > button.na_st_lk.on:not(#na_x) { color: #13261B !important; }
 .na_st_more { position: relative; display: inline-flex; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup button.na_st_dots:not(#na_x) { display: inline-flex !important; align-items: center; justify-content: center; width: 28px !important; height: 28px !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 999px !important; background: transparent !important; box-shadow: none !important; color: var(--st-dim) !important; cursor: pointer; }
-.na_st_amenu { position: absolute; right: -14px; top: calc(100% + 22px); z-index: 6; display: flex; flex-direction: column; min-width: 150px; padding: 4px; border-radius: 14px; box-shadow: 0 8px 24px rgba(70, 52, 40, 0.2); }
+.na_st_amenu { position: absolute; right: -14px; top: calc(100% + 16px); z-index: 6; display: flex; flex-direction: column; min-width: 150px; padding: 4px; border-radius: 14px; box-shadow: 0 8px 24px rgba(70, 52, 40, 0.2); }
 .na_st_amenu[hidden] { display: none; }
 body:not(.na_darkui) .na_st_amenu { background: #FBF7F3; }
 body.na_darkui .na_st_amenu { background: #2E2E34; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
