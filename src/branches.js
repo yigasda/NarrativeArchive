@@ -30,7 +30,7 @@ export async function openBranches() {
     const c = ctx();
     const m = getMeta();
     const here = currentChatId();
-    const $root = $(`<div class="na_popup na_v2 na_bn2"><div class="na_v2_title"><b>분기</b><small>갈라질 때 아카이브도 같이 복사돼요. 분기 지점 뒤 섹션을 정리해요</small></div><div class="na_bn2_body"></div></div>`);
+    const $root = $(`<div class="na_popup na_v2 na_bn2"><div class="na_v2_title"><b>분기</b><small>갈라질 때 복사된 아카이브를 정리해요</small></div><div class="na_bn2_body"></div></div>`);
     const icon = (cls, svg) => `<span class="na_bn2_icon ${cls}">${svg}</span>`;
     const SVG = d => `<svg class="na_c_svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
     const ICON_CHAT = SVG('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>');
@@ -45,6 +45,8 @@ export async function openBranches() {
         const name = x => esc(x.s.title.replace(RANGE_HEAD, '$5').replace(/^\s*[—–-]\s*/, '').trim() || x.s.title);
         const hereName = String(here || '').replace(/\s*-\s*\d{4}-\d{1,2}-\d{1,2}.*$/, '') || String(here || '');
         const fitTo = b.fit ? (headingRanges(b.fit.text).filter(x => x.prefix === b.cur).pop()?.to ?? b.last) : b.last;
+        // not a branch (docs/mockups/ext-drift D+F): a centred timeline ending here, one 찾기 button; results land below it
+        $root.toggleClass('na_bn3_new', !b.parent);
         $root.find('.na_bn2_body').html(`
           ${b.parent ? `
           <div class="na_v2_card na_bn2_map">
@@ -56,7 +58,16 @@ export async function openBranches() {
             ${b.ahead.length ? `<div class="na_bn2_warn">${ICON_WARN}<span>분기 뒤 이야기가 섹션 ${b.ahead.length}개에 섞여 있어요 · 이 채팅에선 없던 일이에요</span></div>`
               : `<div class="na_bn2_ok">${ICON_OK}<span>분기 지점 뒤에 쓴 섹션이 없어요.</span></div>`}
             <button type="button" class="na_v2_pillbtn na_br_cmp_parent" title="원본 채팅의 아카이브와 나란히 비교해요">원본(${parentName}) 아카이브와 비교</button>
-          </div>` : '<div class="na_v2_card na_v2_note">이 채팅은 분기가 아니에요 (원본 채팅 정보가 없어요).</div>'}
+          </div>` : `
+          <div class="na_bn3_hello">
+            <div class="na_bn3_tl">
+              <div><b>#0–#${Math.max(0, b.last - 1)}</b><small>지금까지 쓴 이야기</small></div>
+              <div class="here"><b>#${b.last} · 이 채팅</b><small>여기가 끝이에요 · 갈라진 적 없음</small></div>
+              <div class="dim"><b>분기</b><small>여기서 갈라진 채팅이 있으면 이어서 보여요</small></div>
+            </div>
+            <b>이 채팅은 분기가 아니에요</b><small>여기서 갈라진 분기가 있으면<br>아카이브를 나란히 비교할 수 있어요</small>
+            <button type="button" class="na_bn3_find">갈라진 분기 찾기</button>
+          </div>`}
           ${b.ahead.length ? `
           <div class="na_v2_label">#${b.last} 뒤에 쓴 섹션</div>
           <div class="na_v2_card na_v2_list">${b.ahead.map((x, i) => `
@@ -124,7 +135,8 @@ export async function openBranches() {
         } catch (e) { $kids.html('<div class="na_dim">채팅 목록을 못 불러왔어요.</div>'); }
         $(this).prop('disabled', false);
     });
+    $root.on('click', '.na_bn3_find', () => $root.find('.na_br_find').trigger('click'));
     $root.on('click', '.na_br_cmp', function () { compareWith(String(this.dataset.id), '분기'); });
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
     syncPanel();
 }

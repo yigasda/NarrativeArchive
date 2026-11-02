@@ -7574,3 +7574,36 @@ body.na_darkui .na_vc3_ex { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
 /* 성격 lines as plain text, like the empty window's example */
 .na_vc_body .na_vc_coreline { padding: 0; border-radius: 0; background: none; font-size: 13px; line-height: 1.5; color: var(--na-ink); }
 .na_vc_body .na_vc_core_view { gap: 2px; }
+
+/* ============ 이탈 감지 · 분기 › empty (docs/mockups/ext-drift D+F): no card around it, a small picture on top (what a drift
+   looks like · a timeline that ends here), a title, one line, then the control */
+.na_dr3_hello, .na_bn3_hello { display: none; }
+.na_dr2.na_dr3_new > :is(.na_dr2_ctl, .na_dr2_out) { display: none !important; }
+.na_dr2.na_dr3_new .na_dr3_hello, .na_bn2.na_bn3_new .na_bn3_hello { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 14px 0 0; }
+:is(.na_dr3_hello, .na_bn3_hello) > b { margin-top: 14px; font-size: 16px; color: var(--na-ink); }
+:is(.na_dr3_hello, .na_bn3_hello) > small { font-size: 12.5px; line-height: 1.5; color: var(--na-sub, var(--na-dim)); }
+.na_dr3_cmp { align-self: stretch; padding: 2px 14px; border-radius: 16px; background: var(--na-card); text-align: left; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); opacity: 0.85; }
+.na_dr3_cmp > div { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; font-size: 13px; color: var(--na-ink); }
+.na_dr3_cmp > div + div { border-top: 1px solid var(--na-line2, var(--na-line)); }
+.na_dr3_cmp small { flex: none; width: 54px; font-size: 11px; font-weight: 700; color: var(--na-dim); }
+.na_dr3_cmp .x small { color: var(--na-accent); }
+.na_dr3_cmp .x span { color: var(--na-accent-ink); }
+.na_dr3_seg { display: flex; align-self: stretch; gap: 4px; margin-top: 16px; padding: 4px; border-radius: 999px; }
+body:not(.na_darkui) .na_dr3_seg { background: #E9DCD1; }
+body.na_darkui .na_dr3_seg { background: #342B25; }
+.na_dr3_seg > span { flex: 1.8; display: flex; align-items: center; justify-content: center; font-size: 12.5px; color: var(--na-dim); white-space: nowrap; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_dr3_seg > button:not(#na_x) { flex: 1; height: 32px; margin: 0; padding: 0; border: 0 !important; border-radius: 999px; background: transparent !important; box-shadow: none !important; color: var(--na-mute) !important; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_dr3_seg > button.on:not(#na_x) { background: var(--na-card) !important; color: var(--na-accent-ink) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1) !important; }
+.na_dr3_hello .na_dr3_go { margin-top: 12px; }
+.na_bn2.na_bn3_new .na_bn2_findrow { display: none !important; }
+.na_bn2.na_bn3_new .na_bn2_find { border: 0 !important; padding: 0 !important; }
+.na_bn3_tl { position: relative; align-self: stretch; margin: 0 28px; padding-left: 24px; text-align: left; }
+.na_bn3_tl::before { content: ""; position: absolute; left: 8px; top: 10px; bottom: 10px; width: 2px; background: var(--na-line); }
+.na_bn3_tl > div { position: relative; padding: 6px 0; }
+.na_bn3_tl > div::before { content: ""; position: absolute; left: -23px; top: 9px; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; border: 2px solid var(--na-line); background: var(--na-bg, #F0E4DB); }
+body.na_darkui .na_bn3_tl > div::before { background: #1C1714; }
+.na_bn3_tl > div.here::before { border-color: var(--na-accent); background: var(--na-accent) !important; }
+.na_bn3_tl b { display: block; font-size: 13.5px; font-weight: 600; color: var(--na-ink); }
+.na_bn3_tl small { display: block; font-size: 11.5px; color: var(--na-dim); }
+.na_bn3_tl > div.dim { opacity: 0.55; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_bn3_find:not(#na_x) { align-self: stretch; height: 46px; margin: 14px 0 0; border: 1px solid var(--na-line) !important; border-radius: 999px; background: var(--na-card) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; color: var(--na-ink) !important; font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; }

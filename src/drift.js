@@ -225,7 +225,20 @@ export async function openDrift() {
           <small class="na_v2_note na_dr_info"></small>
         </div>
         <div class="na_dr_out na_dr2_out"></div>
+        <div class="na_dr3_hello">
+          <div class="na_dr3_cmp"><div><small>아카이브</small><span>열쇠는 Gemini가 가져갔어요</span></div><div class="x"><small>#57 GPT</small><span>“열쇠? 내 주머니에 있지.”</span></div></div>
+          <b>아직 검사하지 않았어요</b><small>최근 대화에서 이렇게 어긋난 곳을 찾아요</small>
+          <div class="na_dr3_seg" role="radiogroup"><span>최근 메시지</span>${[6, 12, 24, 48].map(n => `<button type="button" data-n="${n}" class="${n === 12 ? 'on' : ''}">${n}</button>`).join('')}</div>
+          <button type="button" class="na_kn3_make na_dr3_go">검사하기</button>
+        </div>
       </div>`);
+    // never checked (docs/mockups/ext-drift D+F): a centred example of what it finds, how many recent messages, one button
+    $root.toggleClass('na_dr3_new', !m.driftLast);
+    $root.on('click', '.na_dr3_seg button', function () {
+        $root.find('.na_dr3_seg button').removeClass('on'); $(this).addClass('on');
+        $root.find('.na_dr_n').val(this.dataset.n);
+    });
+    $root.on('click', '.na_dr3_go', () => $root.find('.na_dr_go').trigger('click'));
     const show = d => {
         if (!d) return;
         const lines = d.none ? [] : String(d.text).split('\n').filter(l => /^\s*[-*•]/.test(l));
@@ -248,8 +261,9 @@ export async function openDrift() {
     show(m.driftLast);
     $root.find('.na_dr_go').on('click', async function () {
         const n = Math.min(60, Math.max(2, parseInt($root.find('.na_dr_n').val(), 10) || 12));
-        const d = await withSpinner($(this), '검사하는 중…', () => runDrift(m, n));
-        if (d) show(d);
+        const $b = $root.hasClass('na_dr3_new') ? $root.find('.na_dr3_go') : $(this);
+        const d = await withSpinner($b, '검사하는 중…', () => runDrift(m, n));
+        if (d) { $root.removeClass('na_dr3_new'); show(d); }
     });
     $root.on('click', '.na_cite_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
     $root.on('click', '.na_cite[data-start]', function () {
@@ -257,7 +271,7 @@ export async function openDrift() {
         $root.closest('dialog').find('.popup-button-ok').trigger('click');
         gotoSection(start);
     });
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
 // every N AI replies, check quietly; only speak up when something is off
