@@ -7985,7 +7985,7 @@ body.na_darkui .na_layers .na_ly3_cards button.na_ly3_card.on:not(#na_x) { opaci
 .na_layers .na_ly3_cards button.na_ly3_card b { font-size: 14.5px; font-weight: 700; color: var(--na-ink); }
 .na_layers .na_ly3_cards button.na_ly3_card small { margin-left: 0 !important; font-size: 12px !important; color: var(--na-mute); white-space: normal; word-break: keep-all; }
 body:is(.na_darkui, :not(.na_darkui)) .na_ly3 .na_ly_askgo:not(#na_x) { background: var(--na-card2) !important; color: var(--na-mute) !important; box-shadow: none !important; }
-body:not(.na_darkui) .na_ly3 input.na_toggle:checked + .na_tgl_ui { background: #6E5D52; }
+body:not(.na_darkui) .na_ly3 input.na_toggle:checked + .na_tgl_ui { background: var(--na-accent); }
 
 /* 3.169.30: dark — text on the cream accent is always dark, also on ST's own popup buttons (outside .na_popup the var was missing, so it fell back to white) */
 body.na_darkui { --na-onaccent: #1B1B1F; }
@@ -7996,7 +7996,7 @@ body.na_darkui { --na-onaccent: #1B1B1F; }
 .na_rt .na_sp_bar .na_sp_s .na_sp_ck { display: grid !important; }
 .na_rt .na_sp_bar .na_sp_s .na_sp_tt b { font-weight: 600 !important; color: var(--na-ink) !important; }
 .na_rt :is(.na_sp_ck, .na_rt_ck) { width: 20px; height: 20px; border: 0 !important; border-radius: 7px; background: var(--na-field, #E9DCD1); }
-body:not(.na_darkui) .na_rt .na_sp_ck:is(.on, .part), body:not(.na_darkui) .na_rt input:checked + .na_rt_ck { background: #6E5D52 !important; color: #F7EEE7; }
+body:not(.na_darkui) .na_rt .na_sp_ck:is(.on, .part), body:not(.na_darkui) .na_rt input:checked + .na_rt_ck { background: var(--na-accent) !important; color: var(--na-onaccent, #fff); }
 body.na_darkui .na_rt :is(.na_sp_ck, .na_rt_ck) { background: #2E2E34; }
 body.na_darkui .na_rt .na_sp_ck:is(.on, .part), body.na_darkui .na_rt input:checked + .na_rt_ck { background: #E9DFCF !important; color: #1B1B1F; }
 body:is(.na_darkui, :not(.na_darkui)) .na_rt button.na_sp_go:not(#na_x) { background: var(--na-field, #E9DCD1) !important; color: var(--na-ink) !important; box-shadow: none !important; height: 38px; padding: 0 16px; font-size: 13.5px; }
