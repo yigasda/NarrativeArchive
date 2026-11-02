@@ -7,7 +7,7 @@ const css = readFileSync(new URL('../style.css', import.meta.url), 'utf8');
 const budget = JSON.parse(readFileSync(new URL('./css.budget.json', import.meta.url), 'utf8'));
 const count = re => (css.match(re) || []).length;
 const now = {
-    lines: css.split('\n').length,
+    lines: css.split('\n').length - (css.endsWith('\n') ? 1 : 0), // what wc -l counts
     important: count(/!important/g),
     notx: count(/:not\(#na_x\)/g),
     bothThemes: count(/body:is\(\.na_darkui, :not\(\.na_darkui\)\)/g),
