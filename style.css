@@ -7823,3 +7823,13 @@ body.na_darkui .na_cal_item.na_cal3_hl { background: #2E2E34; }
    Confirms, the phone, the studio and 아카이브에 추가 keep their own sizing. */
 body dialog.popup:not(:has(.na_confirm, .na_phone, .na_st, .na_ap3)) .popup-content > .na_popup.na_v2,
 body dialog.popup:not(:has(.na_confirm, .na_phone, .na_st, .na_ap3)) .na_popup.na_v2:not(.na_popup .na_popup) { min-height: 55vh; box-sizing: border-box; }
+/* empty windows sit in the middle of the 55% window, not stuck to the top (3.169.6):
+   이탈 감지 before a check — the example and its line centred above the controls at the bottom;
+   분기 that is not a branch — the timeline, line and 찾기 button centred;
+   any window whose list is just the one "nothing yet" line — that line centred */
+.na_dr2.na_dr3_new .na_dr3_hello > .na_dr3_cmp { margin-top: auto; }
+.na_dr2.na_dr3_new .na_dr3_hello > b { margin-top: 14px; }
+.na_dr2.na_dr3_new .na_dr3_hello > .na_dr3_seg { margin-top: auto; }
+.na_bn2.na_bn3_new { display: flex; flex-direction: column; }
+.na_bn2.na_bn3_new > .na_bn2_body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.na_popup.na_v2 > :has(> .na_empty:only-child) { flex: 1; display: flex; flex-direction: column; justify-content: center; }
