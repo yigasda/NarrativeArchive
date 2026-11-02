@@ -427,3 +427,15 @@ test('an event told again from a later message (its order delivered) stays where
     assert.equal(c.p.money.tx.length, 0);
     assert.equal(c.bank(), 100000);
 });
+
+test('the whole phone made again with its bank kept: a message the bank had not read yet is still read on the next round', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'ok'), say('Mara', 'coffee 4500 on the card'), say('Ren', 'and'), say('Mara', 'bread 3000 on the card')];
+    const c = setup(chat); c.p.sync.limit = 2; c.p.sync.marks.money = { ...c.p.sync.marks.base };
+    await run(c.m, { now: '10-26 10:00', events: [{ id: 'coffee', at: 3, quote: 'coffee 4500', summary: '커피', date: '10-26', time: '09:00', phone: {}, money: { moves: [{ account: '1111', amount: -4500, who: '카페', occurrence: 'new' }] } }] });
+    T.answers.push({ country: 'KR', now: '10-26 10:00', threads: [], calls: [], photos: [], notes: [], events: [], posts: [], mails: [], diary: [] });
+    const q = await data.makePhone(c.m, 'Ren');
+    assert.equal(q.money.tx.length, 1);
+    await run(c.m, { now: '10-26 11:00', events: [{ id: 'bread', at: 5, quote: 'bread 3000', summary: '빵', date: '10-26', time: '10:30', phone: {}, money: { moves: [{ account: '1111', amount: -3000, who: '빵집', occurrence: 'new' }] } }] });
+    assert.equal(q.money.tx.length, 2);
+    assert.equal(c.bank(), 92500);
+});

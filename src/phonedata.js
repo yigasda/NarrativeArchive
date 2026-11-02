@@ -529,10 +529,11 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         // owner set: the year, hidden contacts and places, where they live
         for (const k of ['life', 'delivery', 'voiceAt', 'year', 'noYear', 'hiddenContacts', 'hiddenPlaces', 'lives']) if (was?.[k] !== undefined) base[k] = was[k];
         if (binding) base.financeProfile = structuredClone(binding);
-        // the phone's own apps start reading again from here; the bank and investment keep their marks
-        base.sync = newSync(phoneChatScope(ctx()));
-        base.sync.marks.base = mark;
-        for (const g of ['money', 'invest', 'life', 'delivery']) if (was?.sync?.marks?.[g]) base.sync.marks[g] = was.sync.marks[g];
+        // the phone's own apps start reading again from here. With a bank, investments or the everyday apps kept (they
+        // weren't made again), the reading state stays as it was: messages they haven't read yet are still theirs to read
+        // (the phone's own items from those messages are told apart by their words, so nothing doubles)
+        if (was?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => was.sync.marks[g])) base.sync = was.sync;
+        else { base.sync = newSync(phoneChatScope(ctx())); base.sync.marks.base = mark; }
         m.phones[key] = mergePhone(base, got);
     }
     const p = m.phones[key];
