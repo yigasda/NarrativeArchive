@@ -409,3 +409,21 @@ test('a memo length written in minutes ("1분 20초", "2 min", "1m30s") is read 
     assert.equal(secOf('45s'), 45);
     assert.equal(secOf(90), 90);
 });
+
+test('an event told again from a later message (its order delivered) stays where it happened: deleting that message offers all it gave', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'ok'), say('Mara', 'I ordered a lamp for 30000 won'), say('Ren', 'nice'), say('Mara', 'the lamp arrived today')];
+    const c = setup(chat); c.p.sync.limit = 2;
+    const order = (status, occurrence) => ({ shop: '램프샵', item: 'Lamp', price: 30000, qty: 1, status, occurrence });
+    await run(c.m, { now: '10-26 10:00', events: [{ id: 'lamp', at: 3, quote: 'ordered a lamp', summary: '램프 주문', date: '10-26', time: '09:00', phone: {}, money: { moves: [{ account: '1111', amount: -30000, who: '램프샵', occurrence: 'new' }], orders: [order('ordered', 'new')] } }] });
+    await run(c.m, { now: '10-27 10:00', events: [{ id: 'lamp', at: 5, quote: 'lamp arrived', summary: '램프 도착', date: '10-27', time: '09:00', phone: {}, money: { orders: [order('delivered', 'again')] } }] });
+    assert.equal(c.p.sync.events.lamp.at, 3);
+    assert.equal(c.p.money.orders[0].status, 'delivered');
+    T.chat.splice(3, 1);
+    await run(c.m, { now: '10-27 10:00', events: [] });
+    assert.equal(c.p.sync.dropped.length, 1);
+    const r = await data.dropStretch(c.m, c.p, c.p.sync.dropped[0].key);
+    assert.equal(r.gone, 1);
+    assert.equal(c.p.money.orders.length, 0);
+    assert.equal(c.p.money.tx.length, 0);
+    assert.equal(c.bank(), 100000);
+});

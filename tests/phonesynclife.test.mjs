@@ -459,3 +459,17 @@ test('line by line: day names, "false", sizes, degrees, twins without ids, units
     lifeClock(p, '10-26 21:30');
     assert.deepEqual(p.life.weather.here.hours.map(h => h.time), ['22:00', '00:00', '02:00']);
 });
+
+test('a night told on the evening of 12-31 for the 01-01 row: waking stays empty until the clock gets there; a pattern day the model half writes takes their usual', () => {
+    const { p } = setup();
+    applyLife(p, { id: 'nye', at: 9, date: '12-31', time: '20:00' }, { health: [{ date: '01-01', sleep: '01:00', steps: 3000, from: 'story' }] }, true);
+    const row = p.life.health.days.find(d => d.date === '01-01');
+    assert.equal(row.sleep, '01:00');
+    assert.equal(row.wake, '');
+    lifeClock(p, '01-01 09:00');
+    assert.equal(row.wake, '06:30');
+    applyDays(p, [{ date: '12-31', steps: 7000, from: 'pattern' }], 'r9');
+    const day = p.life.health.days.find(d => d.date === '12-31');
+    assert.equal(day.sleep, '23:30');
+    assert.equal(day.wake, '06:30');
+});

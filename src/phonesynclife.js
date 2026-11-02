@@ -181,8 +181,9 @@ export function applyLife(p, e, phone, on) {
         if (was?.from === 'story') return change('life.health.days', was, { ...given(d, clean, ['bed', 'sleep', 'wake', 'woke', 'steps', 'km', 'floors', 'workout', 'hr']), ev: e.id }, '건강');
         // what the story doesn't say is their usual
         const u = L.health?.usual || {};
-        // waking: not before it happens (a night still going keeps it empty; the clock fills it once its time is past)
-        const awake = !(clean.date === e.date && e.time && u.wake && e.time < u.wake);
+        // waking: not before it happens (a night still going keeps it empty; the clock fills it once its time is past):
+        // the event's own day before their usual waking time, or a row for the day after the event (asleep past midnight)
+        const awake = !(e.time && u.wake && (clean.date === e.date && e.time < u.wake || dayGap(e.date, clean.date) > 0));
         for (const k of ['bed', 'sleep', 'wake']) if (!clean[k] && u[k] && (k !== 'wake' || awake)) clean[k] = u[k];
         if (clean.steps === null && finiteNum(u.steps) && awake) clean.steps = u.steps;
         bedFirst(clean);
@@ -233,6 +234,10 @@ export function applyDays(p, days, round) {
         const clean = dayOf({ ...d, from: 'pattern' });
         if (!clean.date || box.some(o => o.date === clean.date)) return;
         delete clean.ev;
+        // what the model leaves off a pattern day is their usual (a day is never half told)
+        const u = p.life.health?.usual || {};
+        for (const k of ['bed', 'sleep', 'wake']) if (!clean[k] && u[k]) clean[k] = u[k];
+        if (clean.steps === null && finiteNum(u.steps)) clean.steps = u.steps;
         bedFirst(clean);
         const row = { ...clean, id: `sync:${round}:d${k}` };
         box.push(row);
