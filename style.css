@@ -7833,3 +7833,26 @@ body dialog.popup:not(:has(.na_confirm, .na_phone, .na_st, .na_ap3)) .na_popup.n
 .na_bn2.na_bn3_new { display: flex; flex-direction: column; }
 .na_bn2.na_bn3_new > .na_bn2_body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
 .na_popup.na_v2 > :has(> .na_empty:only-child) { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+
+/* ============ 키워드 테스트 (docs/mockups/ext-kwtest B): two counts, then the called sections (orange tick, the matched keyword
+   as an orange pill, the sentence with it marked), then the ones not called, faded */
+.na_kwt3 .na_kwt_in { min-height: 0; }
+.na_kwt3_sum { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.na_kwt3_sum > div { display: flex; flex-direction: column; align-items: center; padding: 12px; border-radius: 16px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+body.na_darkui .na_kwt3_sum > div { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 6px 16px rgba(0, 0, 0, 0.3); }
+.na_kwt3_sum b { font-size: 24px; line-height: 1.2; color: var(--na-ink); }
+.na_kwt3_sum .on b { color: var(--na-accent-fg, var(--na-accent)); }
+.na_kwt3_sum small { font-size: 11.5px; color: var(--na-dim); }
+.na_kwt3_list { padding: 0 !important; overflow: hidden; gap: 0 !important; }
+.na_kwt3_row { display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; background: transparent !important; }
+.na_kwt3_row + .na_kwt3_row { border-top: 1px solid var(--na-line2, var(--na-line)); }
+.na_kwt3_st { width: 22px; height: 22px; flex: none; margin-top: 1px; border-radius: 999px; display: grid; place-items: center; background: var(--na-card2); color: var(--na-dim); }
+.na_kwt3_row.on .na_kwt3_st { background: var(--na-accent); color: var(--na-onaccent, #fff); }
+.na_kwt3_row:not(.on) { opacity: 0.6; }
+.na_kwt3_row .na_kwt_main b { font-size: 13.5px; font-weight: 600; }
+.na_kwt3_row .na_kwt_main small { margin-left: 6px; font-size: 11.5px; color: var(--na-dim); }
+.na_kwt3 .na_kwt_key { border: 0 !important; opacity: 1; padding: 2px 9px; background: var(--na-card2); color: var(--na-dim); }
+.na_kwt3 .na_kwt_key.hit { background: var(--na-accent); color: var(--na-onaccent, #fff); }
+.na_kwt3 .na_kwt_where { margin-top: 6px; font-size: 12px; opacity: 1; color: var(--na-mute); }
+.na_kwt3 .na_kwt_where mark { background: var(--na-accent-soft); color: var(--na-accent-ink); padding: 0 2px; border-radius: 4px; }
+body.na_darkui .na_kwt3 .na_kwt_where mark { background: #3A3A41; }

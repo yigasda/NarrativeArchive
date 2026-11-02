@@ -27,6 +27,7 @@ HTML은 브라우저로 바로 열려요(Playwright로 찍을 때는 `file://` �
 | `ext-wizard/` | 압축 마법사: 첫 단계 시안 B(`mock.html`, 범위의 처음 · 끝 메시지) + 꾹 누르면 원문 시트 가(`mock_sheet.html`), 복사 · 채점 단계 시안 A(`mock_steps.html`, 주황은 화면마다 버튼 하나 · 진행 막대는 원래 색), 실제 화면(`real.png`, `real_steps.png`) |
 | `ext-extract/` | 원문 뽑기: 시안 B(`mock.html`, 범위 카드 + 막대 + 복사될 글 미리보기, 테두리 없음 · 주황은 복사 버튼 하나), 실제 화면(`real.png`) |
 | `ext-calendar/` | 이야기 달력: 지금 목록 그대로 + 위에 기념일 카드(다가오는 것 · 누른 날 것, 눌러서 전체) · 장면 있는 날 띠(누르면 그날로), 시안 `mock.html`, 실제 화면(`real.png`) |
+| `ext-kwtest/` | 키워드 테스트: 시안 B(`mock.html`, 불려 와요 · 안 불려 와요 숫자 두 개 + 목록, 열쇠 이모지 없음), 실제 화면(`real.png`) |
 | `ext-picker/` | 공용 섹션 고르기 칸(누가 아는가 · 제목 다시 짓기 · 다이제스트 · 합치기 · 대사 은행 등): 시안 A~C(`sheet.png`, `mock.html`, A 채택), 실제 화면(`real.png`) |
 | `panel-s1` ~ `panel-s5`, `panel-worldmap` | 패널 하위 화면 시안 묶음 |
 | `phone-home/` | 홈 · 잠금(컬러 젤 · 화이트 그레이) |
