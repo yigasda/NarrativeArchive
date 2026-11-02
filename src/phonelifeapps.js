@@ -125,7 +125,8 @@ export function timerScreen(p, now) {
     const r = lf.clock.running, ts = lf.clock.timers;
     // time left: what was left when the phone was filled, less the story time since
     let left = r ? r.left : 0;
-    if (r && lf.at && now5(p) && lf.at.slice(0, 5) === now5(p).slice(0, 5)) left -= ((toMin(now5(p).slice(6)) ?? 0) - (toMin(lf.at.slice(6)) ?? 0)) * 60;
+    // (a timer from another story day has long run out)
+    if (r && lf.at && now5(p)) left = lf.at.slice(0, 5) === now5(p).slice(0, 5) ? left - ((toMin(now5(p).slice(6)) ?? 0) - (toMin(lf.at.slice(6)) ?? 0)) * 60 : dayGap(lf.at.slice(0, 5), now5(p).slice(0, 5)) > 0 ? 0 : left;
     left = Math.max(0, left);
     const C = 2 * Math.PI * 115, frac = r ? left / r.sec : 0, ring = r ? `${(toMin(now5(p).slice(6)) ?? 0) + Math.ceil(left / 60)}` : '';
     return `${axBar(p, now, '#f2f2f4')}
