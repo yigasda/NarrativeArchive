@@ -7940,12 +7940,12 @@ body:not(.na_darkui) dialog.popup:has(.na_st) { background: #F0E4DB !important; 
 body:not(.na_darkui) .na_st .na_st_bub:not(.na_st_typing) { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 body.na_darkui .na_st { --st-bub: #232328; }
 body.na_darkui .na_st .na_st_bub:not(.na_st_typing) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
-.na_st .na_st_seg { gap: 3px; padding: 3px; border-radius: 999px; background: var(--st-seg); }
-.na_st .na_st_seg span, .na_st .na_st_seg span.l, .na_st .na_st_seg span.d { flex: 1 0 34px; padding: 6px 0; border-radius: 999px; background: transparent; color: var(--st-dim); font-size: 12px; }
-.na_st .na_st_seg span.l { color: var(--st-ok); }
-.na_st .na_st_seg span.d::after { content: ""; display: inline-block; width: 5px; height: 5px; margin-left: 4px; vertical-align: middle; border-radius: 9px; background: var(--st-acc); opacity: 0.7; }
-body:not(.na_darkui) .na_st .na_st_seg span.on { background: #FFFFFF; color: #A84A17; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08), 0 4px 10px rgba(70, 52, 40, 0.08); }
-body.na_darkui .na_st .na_st_seg span.on { background: #414148; color: #F0CF8E; }
-body.na_darkui .na_st .na_st_seg span.d::after { background: #F0CF8E; }
+/* scene tabs keep their own shape (separate rounded blocks), only the colours change: to do = quiet tray colour, answered = soft
+   apricot with orange, this one = the orange (dark: grey / gold / cream). No dots. */
+body:not(.na_darkui) .na_st .na_st_seg span { background: #E9DCD1; color: #9C8B80; }
+body:not(.na_darkui) .na_st .na_st_seg span.d { background: #F6E1D3; color: #A84A17; }
+body:not(.na_darkui) .na_st .na_st_seg span.l { background: #E3EFE6; color: #2F6B47; }
+body:not(.na_darkui) .na_st .na_st_seg span.on { background: #B8541F; color: #FFFFFF; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+body.na_darkui .na_st .na_st_seg span.d { color: #F0CF8E; }
 body:not(.na_darkui) .na_st .na_st_me { background: #F6E1D3; color: #A84A17 !important; }
 body.na_darkui .na_st .na_st_me { background: #2E2E34; color: #F0CF8E !important; }
