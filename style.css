@@ -8014,7 +8014,7 @@ body:is(.na_darkui, :not(.na_darkui)) .na_popup.na_rt .na_rt_row input.text_pole
 body:is(.na_darkui, :not(.na_darkui)) .na_popup.na_rt .na_rt_row input.text_pole.na_rt_new:not(#na_x):focus { background: var(--na-field, #E9DCD1) !important; outline: none; }
 body.na_darkui .na_popup.na_rt .na_rt_row input.text_pole.na_rt_new:not(#na_x):focus { background: #2E2E34 !important; }
 .na_rt .na_rt_row.same { opacity: 0.55; }
-.na_rt .na_rt_nav { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-top: 6px; }
+.na_rt .na_rt_nav { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-top: 6px; margin-bottom: 10px; }
 .na_rt .na_rt_nav button { height: 46px; border: 0; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
 .na_rt .na_rt_close { background: transparent; color: var(--na-dim); }
 .na_rt .na_rt_apply { background: var(--na-accent); color: var(--na-onaccent, #fff); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
