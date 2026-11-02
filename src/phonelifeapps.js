@@ -128,12 +128,12 @@ export function timerScreen(p, now) {
     // (a timer from another story day has long run out)
     if (r && lf.at && now5(p)) left = lf.at.slice(0, 5) === now5(p).slice(0, 5) ? left - ((toMin(now5(p).slice(6)) ?? 0) - (toMin(lf.at.slice(6)) ?? 0)) * 60 : dayGap(lf.at.slice(0, 5), now5(p).slice(0, 5)) > 0 ? 0 : left;
     left = Math.max(0, left);
-    const C = 2 * Math.PI * 115, frac = r ? left / r.sec : 0, ring = r ? `${(toMin(now5(p).slice(6)) ?? 0) + Math.ceil(left / 60)}` : '';
+    const C = 2 * Math.PI * 115, frac = r && r.sec > 0 ? Math.min(1, left / r.sec) : 0, ring = r ? `${(toMin(now5(p).slice(6)) ?? 0) + Math.ceil(left / 60)}` : '';
     return `${axBar(p, now, '#f2f2f4')}
       ${axTop(axCb('home2'))}
       <div class="ax_scroll">${axH1('타이머')}
         ${r ? `<div class="lf_ring"><svg viewBox="0 0 250 250">${ticks(frac)}<circle cx="125" cy="125" r="115" fill="none" stroke="#2b2c31" stroke-width="6"/><circle cx="125" cy="125" r="115" fill="none" stroke="#f5a524" stroke-width="6" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - frac)).toFixed(1)}" transform="rotate(-90 125 125)"/>${frac > 0 ? `<circle cx="${(125 + 115 * Math.sin(frac * 2 * Math.PI)).toFixed(1)}" cy="${(125 - 115 * Math.cos(frac * 2 * Math.PI)).toFixed(1)}" r="8" fill="#f5a524" stroke="#17181b" stroke-width="3"/>` : ''}</svg>
-          <div>${left ? `<b class="cg_num lf_dig"><span>${pad(Math.floor(left / 60))}</span><i>:</i><em>${pad(left % 60)}</em></b>` : '<b class="lf_dig">끝</b>'}<span>${esc(r.label || '타이머')} · ${Math.round(r.sec / 60)}분</span></div></div>
+          <div>${left ? `<b class="cg_num lf_dig"><span>${pad(Math.floor(left / 60))}</span><i>:</i><em>${pad(left % 60)}</em></b>` : '<b class="lf_dig">끝</b>'}<span>${esc(r.label || '타이머')} · ${Math.round((r.sec || 0) / 60)}분</span></div></div>
           ${left ? `<div class="lf_tend">끝나는 시각 <b class="cg_num">${hm(Number(ring))}</b></div>` : ''}
           <div class="lf_tbtn2"><span>${ax('x', 15, 'currentColor', 2.6)}취소</span><span class="a">${left ? `${ax('pause', 15, 'currentColor', 2.6)}일시정지` : `${ax('play', 15, 'currentColor', 2, 'currentColor')}다시`}</span></div>` : ''}
         <div class="lf_ch">저장된 타이머</div>
@@ -678,7 +678,10 @@ function phaseOf(time, sunrise, sunset) {
 }
 const WET = { drizzle: 1, rain: 1, sleet: 1 };
 // one palette per sky and part of the day: flat layers only (sky, bands, three hills, clouds), no gradients
+// a sky the app doesn't know (an older save, a blank) is drawn as cloudy
+const condOk = c => (Object.hasOwn(WX, c) ? c : 'cloudy');
 function pal(cond, phase) {
+    cond = condOk(cond);
     const D = {
         clear: { sky: '#4f8fd8', hills: ['#3f78bd', '#3569a6', '#2d5b92'], sun: 'day', puff: '#6ca1de' },
         partly: { sky: '#5b93cf', hills: ['#4a80bb', '#3f72a9', '#356496'], sun: 'day', front: '#e9f0f8', cloud: '#84aedb' },
@@ -721,6 +724,7 @@ const rnd = seed => { let s = seed; return () => (s = (s * 9301 + 49297) % 23328
 const puffSvg = (x, y, w, col, v, op = 1) => { const a = -(x + w + 10), b = 400 - x, d = (b - a) / v; return `<svg class="cl" style="left: ${x}px; top: ${y}px; width: ${w}px; height: ${w / 2}px; --a: ${a}px; --b: ${b}px; --d: ${d.toFixed(1)}s; --dl: -${(-a / v).toFixed(1)}s${op < 1 ? `; opacity: ${op}` : ''}" viewBox="0 0 200 100"><g fill="${col}"><circle cx="60" cy="58" r="34"/><circle cx="104" cy="42" r="42"/><circle cx="148" cy="62" r="30"/><rect x="26" y="58" width="152" height="40" rx="20"/></g></svg>`; };
 // the whole sky behind a weather screen: it moves (clouds drift, rain and snow fall, lightning, stars, the sun at dawn and dusk), and stands still with reduced motion
 function scene(cond, phase) {
+    cond = condOk(cond);
     const q = pal(cond, phase), r = rnd(cond.length * 31 + phase.length * 7), out = [];
     for (const [y, c] of q.bands || []) out.push(`<i class="bd" style="top: ${y}px; background: ${c}"></i>`);
     if (q.stars) out.push(Array.from({ length: q.stars }, () => `<i class="st${phase === 'dawn' ? ' fd' : ''}" style="left: ${Math.round(10 + r() * 370)}px; top: ${Math.round(60 + r() * 360)}px; --d: ${(2 + r() * 3).toFixed(1)}s; --dl: -${(r() * 4).toFixed(1)}s"></i>`).join(''));
@@ -751,6 +755,7 @@ function scene(cond, phase) {
 }
 // the same sky, small, for a card in the city list (358 by 118, drawn to fit any width)
 function cardSky(cond, phase) {
+    cond = condOk(cond);
     const q = pal(cond, phase), W = 358, out = [`<rect width="${W}" height="118" fill="${q.sky}"/>`];
     for (const [y, c] of q.cb || []) out.push(`<rect y="${y}" width="${W}" height="118" fill="${c}"/>`);
     if (q.stars) out.push(`<g fill="#fff"${phase === 'dawn' ? ' opacity=".7"' : ''}><circle cx="140" cy="18" r="1.2"/><circle cx="190" cy="44" r="1"/><circle cx="258" cy="62" r="1.4"/><circle cx="120" cy="56" r="1"/><circle cx="168" cy="72" r="1.1"/><circle cx="270" cy="12" r="1"/></g>`);
@@ -778,6 +783,7 @@ function cardSky(cond, phase) {
 // the home widget's sky: the same palette as the cards, the picture kept to the middle so the place, the temperature and the
 // line under them stay clear (340 × 150)
 function widgetSky(cond, phase) {
+    cond = condOk(cond);
     const q = pal(cond, phase), W = 340, H = 150, k = H / 118, out = [`<rect width="${W}" height="${H}" fill="${q.sky}"/>`];
     for (const [y, c] of q.cb || []) out.push(`<rect y="${(y * k).toFixed(1)}" width="${W}" height="${H}" fill="${c}"/>`);
     if (q.stars) out.push(`<g fill="#fff"${phase === 'dawn' ? ' opacity=".7"' : ''}>${[[132, 22], [214, 16], [250, 44], [118, 58], [196, 70], [150, 36], [236, 80]].map(([x, y], j) => `<circle cx="${x}" cy="${y}" r="${j % 2 ? 1 : 1.4}"/>`).join('')}</g>`);

@@ -141,7 +141,7 @@ export function snsPost(p, now, k) {
         <div class="ax_posth"><span class="ax_ring ax_ring_s">${axFace(p.owner, 30)}</span><div><b>${esc(pr.handle || p.owner)}</b></div><button type="button" class="ax_postmore" data-k="${k}" aria-label="더 보기">${ax('more', 22, '#111', 3)}</button></div>
         ${x.photo ? postPic(p, x, k) : ''}
         <div class="ax_postact">${ax('heart', 26, '#ed4956', 2, '#ed4956')}${ax('cmt', 25, '#111', 1.9)}${ax('send', 24, '#111', 1.9)}<span class="ax_sp"></span>${x.img ? `<button type="button" class="ax_presssave ax_postsave" data-src="post" data-k="${k}" aria-label="사진 저장">${ax('save', 24, '#111', 1.9)}</button>` : ax('save', 24, '#111', 1.9)}</div>
-        <div class="ax_postbody"><b>좋아요 ${x.likes.toLocaleString()}개</b></div>
+        <div class="ax_postbody"><b>좋아요 ${(Number(x.likes) || 0).toLocaleString()}개</b></div>
         ${x.text ? `<div class="ax_postbody"><b>${esc(pr.handle || p.owner)}</b> ${axKo(x.text, x.ko)}</div>` : ''}
         ${x.comments.map(c => `<div class="ax_cmt"><b>${esc(savedName(p, c.from))}</b> ${axKo(c.text, c.ko)}</div>`).join('')}
         <div class="ax_postt">${esc(fmtDate(p, x.time))}</div>
