@@ -7885,3 +7885,10 @@ body.na_darkui .na_xr3_bar i:nth-child(4) { background: #3A3A41; }
 .na_xr3_chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .na_xr3_chips span { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; background: var(--na-card2); color: var(--na-mute); }
 .na_xr3_chips i { width: 8px; height: 8px; border-radius: 3px; }
+/* typing in a field never lights it orange: the focus ring is a quiet grey in every extension window (3.169.9) */
+body:not(.na_darkui) :is(dialog.popup:not(:has(.na_phone)) .na_popup, #na_settings) :is(input, textarea, select):not([type="checkbox"]):not(.na_toggle):focus:not(#na_x),
+body:not(.na_darkui) :is(dialog.popup:not(:has(.na_phone)) .na_popup, #na_settings) :is(input, textarea, select):not([type="checkbox"]):not(.na_toggle):focus-visible:not(#na_x) { outline: none !important; border-color: transparent !important; box-shadow: 0 0 0 2px #D9C9BD !important; }
+body.na_darkui :is(dialog.popup:not(:has(.na_phone)) .na_popup, #na_settings) :is(input, textarea, select):not([type="checkbox"]):not(.na_toggle):focus:not(#na_x),
+body.na_darkui :is(dialog.popup:not(:has(.na_phone)) .na_popup, #na_settings) :is(input, textarea, select):not([type="checkbox"]):not(.na_toggle):focus-visible:not(#na_x) { outline: none !important; border-color: transparent !important; box-shadow: 0 0 0 2px #45454D !important; }
+body:not(.na_darkui) .na_wz2_range label > span:focus-within { box-shadow: 0 0 0 2px #D9C9BD !important; }
+body.na_darkui .na_wz2_range label > span:focus-within { box-shadow: 0 0 0 2px #45454D !important; }
