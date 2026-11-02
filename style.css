@@ -7564,3 +7564,10 @@ body.na_darkui dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#
 .na_vc3_ex { padding: 14px !important; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 .na_vc3_ex > * { opacity: 0.62; }
 body.na_darkui .na_vc3_ex { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+/* the example as drawn in the mockup: 사람됨 as plain text, tight steps, 예시 in orange */
+.na_vc_body .na_vc_card.na_vc3_ex { gap: 0; }
+.na_vc3_ex .na_vc_head { margin-bottom: 4px; }
+.na_vc3_ex .na_vc_sub { margin: 10px 0 2px; font-size: 11px; }
+.na_vc3_ex .na_vc3_core { font-size: 13px; line-height: 1.45; color: var(--na-ink); }
+.na_vc3_ex .na_vc_rules { margin-top: 4px; }
+.na_kn3_sect.na_vc3_sect small { font-weight: 600; color: var(--na-accent-ink); }

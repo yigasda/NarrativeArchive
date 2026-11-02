@@ -331,7 +331,6 @@ export async function openQuotes() {
       </div>`);
     // ---- 말투 지문 pane: one open card, the rest as rows; characters with enough lines but no fingerprint as dashed rows
     let vOpen = null, vEdit = null, vSkip = new Set();
-    const SPARK = '<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/>';
     const FP_ICON = '<path d="M12 11v4M8.5 8.5A5 5 0 0 1 17 12v2M7 12c0 2 .5 4 1.5 5.5M12 6.5a5.5 5.5 0 0 0-2 .4M15.5 16.5c-.3 1-.7 1.8-1.2 2.5M4.5 9A8 8 0 0 1 19 7.5M20 12v1"/>';
     const parseRule = l => {
         let t = l.replace(/^[-*•]\s*/, '').trim();
@@ -373,16 +372,16 @@ export async function openQuotes() {
                 ${missing.length
                     ? `<small>모은 대사로 인물마다 말버릇을 정리해서<br>RP 모델이 그 말투를 따라 하게 해요</small>
                        <div class="na_vc3_chips">${missing.map(w => `<button type="button" class="na_vc3_chip${vSkip.has(w) ? '' : ' on'}" data-who="${esc(w)}" aria-pressed="${!vSkip.has(w)}">${faceHtml(w, 24)}<em>${esc(w)}</em><small>${counts.get(w)}</small></button>`).join('')}</div>
-                       <button type="button" class="na_kn3_make na_vc3_go" ${pick.length ? '' : 'disabled'}>${svgA(SPARK, 15)}지문 ${pick.length}개 만들기</button>`
+                       <button type="button" class="na_kn3_make na_vc3_go" ${pick.length ? '' : 'disabled'}>✧ 지문 ${pick.length}개 만들기</button>`
                     : `<small>대사가 3개 넘게 모인 인물부터 만들 수 있어요</small>
                        <button type="button" class="na_kn3_make na_vc3_toq">대사 모으러 가기</button>`}</div>
-              <div class="na_kn3_sect"><span>이렇게 정리돼요</span><small>예시</small></div>
+              <div class="na_kn3_sect na_vc3_sect"><span>이렇게 정리돼요</span><small>예시</small></div>
               <div class="na_v2_card na_vc_card na_vc3_ex">
-                <div class="na_vc_head">${exFace('Claude', 40)}<span class="na_vc_who"><b>Claude</b><small>대사 12개로 만듦</small></span></div>
-                <div class="na_vc_core_view"><span class="na_vc_sub">사람됨</span><div class="na_vc_coreline">조심스럽지만 솔직해요</div></div>
+                <div class="na_vc_head">${exFace('Claude', 40)}<span class="na_vc_who"><b>Claude</b><small>예시 · 대사 12개로 만듦</small></span></div>
+                <span class="na_vc_sub">사람됨</span><div class="na_vc3_core">조심스럽지만 솔직해요</div>
                 <span class="na_vc_sub">말버릇</span>
-                <div class="na_vc_rules"><div class="na_vc_rule"><span class="na_vc_tag">말끝</span><span><span>“~요”로 부드럽게 끝내요.</span><i>“확인해 볼게요.”</i></span></div>
-                  <div class="na_vc_rule"><span class="na_vc_tag">습관</span><span><span>틀릴 수 있다고 먼저 말해요.</span><i>“틀렸으면 말해 줘요.”</i></span></div></div>
+                <div class="na_vc_rules"><div class="na_vc_rule"><span class="na_vc_tag">말끝</span><span><span>“~요”로 부드럽게 끝내요</span><i>“확인해 볼게요.”</i></span></div>
+                  <div class="na_vc_rule"><span class="na_vc_tag">습관</span><span><span>틀릴 수 있다고 먼저 말해요</span><i>“틀렸으면 말해 줘요.”</i></span></div></div>
               </div>`);
             return;
         }
