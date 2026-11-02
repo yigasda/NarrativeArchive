@@ -19,7 +19,7 @@ const WIDTHS = (opt('--w') || (quick ? '412' : '412,1280')).split(',').map(Numbe
 const owner = opt('--owner');
 const only = opt('--only')?.split(',') || (owner ? (OWNERS[owner] || (() => { console.log('unknown --owner; one of: ' + Object.keys(OWNERS).join(' · ')); process.exit(2); })()) : null);
 const noPng = args.includes('--nopng'), noStates = args.includes('--nostates'); // --fast = both: values only, about a third of the time
-const skipExisting = args.includes('--skip-existing');
+const skipExisting = args.includes('--skip-existing'); let skipped = 0;
 const OUT = path.join(__dirname, 'out', label);
 const HOSTILE = fs.readFileSync(path.join(__dirname, 'hostile.css'), 'utf8');
 // the computed properties we compare (no transitions/animations: those are frozen below and not part of the look)
@@ -59,7 +59,7 @@ if (require.main === module) (async () => {
                     for (const sc of SCENES) {
                         if (only && !only.includes(sc.name)) continue;
                         const tag = `${sc.name}__${na}__${st.replace(/\s+/g, '')}__${width}`;
-                        if (skipExisting && fs.existsSync(path.join(OUT, tag + '.json')) && (noPng || fs.existsSync(path.join(OUT, tag + '.png')))) continue;
+                        if (skipExisting && fs.existsSync(path.join(OUT, tag + '.json')) && (noPng || fs.existsSync(path.join(OUT, tag + '.png')))) { skipped++; continue; }
                         const t0 = Date.now();
                         try {
                             if (archNow !== sc.arch) { await setArch(p, sc.arch); archNow = sc.arch; }
@@ -82,7 +82,7 @@ if (require.main === module) (async () => {
                             fs.writeFileSync(path.join(OUT, '_index.json'), JSON.stringify(results, null, 1));
                             // watch the pace: a line every 10 captures with the time left, and a hard stop when one capture takes 5x the usual (something is piling up — fix it, then resume with --skip-existing)
                             const done = results.filter(r => r.ms); const n = done.length; const avg = done.reduce((a, r) => a + r.ms, 0) / n;
-                            if (n % 10 === 0) console.log(`${n}/${total} · ${(avg / 1000).toFixed(1)} s each · about ${Math.round((total - n) * avg / 60000)} min left`);
+                            if (n % 10 === 0) console.log(`${n + skipped}/${total} · ${(avg / 1000).toFixed(1)} s each · about ${Math.round((total - n - skipped) * avg / 60000)} min left`);
                             if (n > 10 && Date.now() - t0 > 5 * avg) { console.log(`STOP: ${tag} took ${((Date.now() - t0) / 1000).toFixed(0)} s, usual is ${(avg / 1000).toFixed(1)} s. Something is slowing the page down.`); process.exitCode = 3; throw new Error('pace'); }
                         } catch (e) { if (e.message === 'pace') throw e; results.push({ tag, error: String(e.message || e).slice(0, 200) });
                             if (results.slice(-3).every(r => r.error)) { let up = true; try { await fetch(ST); } catch { up = false; } if (!up) { console.log('STOP: SillyTavern stopped answering. Start it again and resume with --skip-existing'); process.exitCode = 4; throw new Error('pace'); } } }
