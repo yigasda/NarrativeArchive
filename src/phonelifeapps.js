@@ -916,15 +916,18 @@ function hourLine(hours) {
 }
 // the forecast from the phone's day: days already past drop off, only the phone's own day reads "오늘" (and carries the
 // dot for the temperature now), the next one "내일" when the week isn't known, the rest by weekday
-function dayRows(days, today) {
+// when the saved forecast starts after the phone's day, today's row is drawn from the header (its sky, high and low)
+function dayRows(days, today, h = {}) {
     if (!/^\d{2}-\d{2}$/.test(today || '')) return days.map((d, k) => ({ d, name: k ? wdk(d.day, `${Number(d.day.slice(3))}일`) : '오늘', now: !k }));
+    const dated = d => /^\d{2}-\d{2}$/.test(d.day || '');
+    if (days.length && h.date === today && !days.some(d => dated(d) && dayGap(today, d.day) === 0)) days = [{ day: today, cond: h.cond, lo: h.lo ?? null, hi: h.hi ?? null, rain: 0 }, ...days];
     return days.filter(d => !/^\d{2}-\d{2}$/.test(d.day || '') || dayGap(today, d.day) >= 0).map(d => {
         const g = /^\d{2}-\d{2}$/.test(d.day || '') ? dayGap(today, d.day) : null;
         return { d, name: g === 0 ? '오늘' : g === 1 && !STORY.known ? '내일' : wdk(d.day, `${Number(String(d.day).slice(3))}일`), now: g === 0 };
     });
 }
 function weatherBody(p, h, name, night, sub, source, tileCol, lead = '') {
-    const rows = dayRows(h.days, h.today);
+    const rows = dayRows(h.days, h.today, h);
     h = { ...h, days: rows.map(x => x.d) };
     const lo =Math.min(...h.days.map(d => d.lo ?? 99), h.lo ?? 99), hi = Math.max(...h.days.map(d => d.hi ?? -99), h.hi ?? -99);
     return `<div class="lf_wtop">${sub ? `<small>${sub}</small>` : ''}<h2>${esc(name)}</h2><div class="t">${h.temp ?? '—'}°</div><div class="c">${esc(h.said || WX[h.cond] || '')}</div><div class="hl">최고:${h.hi ?? '—'}° 최저:${h.lo ?? '—'}°</div>${source}</div>
