@@ -7231,7 +7231,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 /* ============ dark popups (시안 A, carried over from 아카이브에 추가): a near-black warm window, darker cards with no outline
    and a faint top light, neutral parts with the colour kept to a thin line or the text. Tokens only, so every popup follows. */
 body.na_darkui dialog.popup:has(.na_popup):not(#na_x) { background: #17171A !important; }
-body.na_darkui dialog.popup:has(.na_popup) .na_popup {
+body.na_darkui dialog.popup:has(.na_popup) :is(.na_popup, .na_popup .na_v2), body.na_darkui dialog.popup:has(.na_confirm) .na_confirm {
     --na-card: #232328; --na-card2: #2E2E34; --na-paper: #232328; --na-soft: #2E2E34; --na-softer: #2B2B31;
     --na-line: #3A3A41; --na-line2: #2E2E34; --na-fill: #4A4A52;
 }
