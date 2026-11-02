@@ -624,7 +624,7 @@ body.na_darkui .na_diff_del > span:first-child { color: #F2948A; }
     border-radius: 999px;
     cursor: pointer;
 }
-.na_pchip.on { background: var(--na-accent); border-color: transparent; color: #fff; font-weight: 600; }
+.na_pchip.on { background: var(--na-accent); border-color: transparent; color: var(--na-onaccent, #fff); font-weight: 600; }
 .na_prow { display: flex; align-items: center; gap: 2px; padding: 8px 12px 0; }
 .na_psel { flex: 1; min-width: 0; margin: 0 4px 0 0 !important; }
 .na_prow .na_icon:disabled { opacity: 0.25; pointer-events: none; }
@@ -1059,7 +1059,7 @@ body.na_darkui :is(.na_diff_del, .na_diff_tr_del) .na_diff_hl { background: rgba
 body:is(.na_darkui, :not(.na_darkui)) .na_sp_quick .na_pchip { height: 28px; padding: 0 11px; border: 0; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--na-card2) !important; color: var(--na-mute) !important; }
 body:is(.na_darkui, :not(.na_darkui)) .na_sp_quick .na_pchip:hover { background: var(--na-fill); color: var(--na-onfill); }
 body:not(.na_darkui) .na_sp_quick .na_pchip.na_pchip { background: #E6D6CA !important; }
-body.na_darkui .na_sp_quick .na_pchip.na_pchip { background: #342B25 !important; }
+body.na_darkui .na_sp_quick .na_pchip.na_pchip { background: #2E2E34 !important; }
 body:is(.na_darkui, :not(.na_darkui)) .na_sp_quick .na_pchip.na_pchip.on { background: var(--na-fill) !important; color: var(--na-onfill) !important; }
 .na_sp_secs { display: flex; flex-direction: column; max-height: 46vh; overflow-y: auto; overscroll-behavior: contain; border-radius: 18px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
@@ -1075,7 +1075,7 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_sp_s + .na_sp_s, .na_sp_g + .na_sp_s { border-top: 1px solid var(--na-line2, var(--na-line)); }
 .na_sp_s:hover { background: color-mix(in srgb, var(--na-accent) 5%, transparent); }
 .na_sp :is(.na_sp_s, .na_sp_gl) input { position: absolute; opacity: 0; pointer-events: none; }
-.na_sp_ck { width: 20px; height: 20px; box-sizing: border-box; flex: none; border-radius: 6px; border: 2px solid var(--na-line); display: grid; place-items: center; color: #fff; }
+.na_sp_ck { width: 20px; height: 20px; box-sizing: border-box; flex: none; border-radius: 6px; border: 2px solid var(--na-line); display: grid; place-items: center; color: var(--na-onaccent, #fff); }
 .na_sp_ck.on, .na_sp_ck.part { border: 0; background: var(--na-accent); }
 .na_sp_ck.part::after { content: ""; width: 9px; height: 2.5px; border-radius: 2px; background: #fff; }
 .na_sp :is(.na_sp_s, .na_sp_gl) input:focus-visible + .na_sp_ck { outline: 2px solid var(--na-accent); outline-offset: 2px; }
@@ -1085,7 +1085,7 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_sp_done { flex: none; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--na-ok-soft); color: var(--na-ok); }
 .na_sp_foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .na_sp_info { flex: 1; min-width: 0; font-size: 12px; color: var(--na-dim); }
-.na_sp_go { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 42px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--na-accent); color: #fff; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+.na_sp_go { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 42px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--na-accent); color: var(--na-onaccent, #fff); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
 .na_sp_go:disabled { opacity: 0.5; cursor: default; }
 .na_sp > .checkbox_label { display: flex !important; align-items: center; gap: 8px; margin: 0 4px; font-size: 12.5px; color: var(--na-mute); cursor: pointer; }
 .na_sp > .checkbox_label input { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; margin: 0; flex: none; border-radius: 6px; border: 2px solid var(--na-line); background: transparent !important; box-shadow: none !important; cursor: pointer; }
@@ -1126,7 +1126,7 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_ref_grp { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; }
 .na_ref_grp > i { opacity: 0.5; font-size: 0.9em; }
 .na_ref_chip { border: 1px solid color-mix(in srgb, var(--na-accent) 40%, transparent); background: var(--na-accent-soft); color: inherit; font: inherit; padding: 0 8px; border-radius: 999px; cursor: pointer; line-height: 1.75; }
-.na_ref_chip:hover { background: var(--na-accent); color: #fff; }
+.na_ref_chip:hover { background: var(--na-accent); color: var(--na-onaccent, #fff); }
 
 /* faces */
 .na_face { flex: none; display: inline-grid; place-items: center; width: var(--s); height: var(--s); border-radius: 50%; overflow: hidden; background: hsl(var(--h) 38% 46%); color: #fff; font-weight: 700; font-size: calc(var(--s) * 0.42); line-height: 1; }
@@ -1172,7 +1172,7 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_v2_under button.on { border-bottom-color: currentColor; color: inherit; font-weight: 600; }
 .na_v2_btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--na-line); background: var(--na-card); color: inherit; font: inherit; font-size: 0.9em; padding: 9px 12px; border-radius: 12px; cursor: pointer; }
 .na_v2_btn:hover { border-color: var(--na-accent); }
-.na_v2_btn.primary { background: var(--na-accent); border-color: var(--na-accent); color: #fff; font-weight: 600; }
+.na_v2_btn.primary { background: var(--na-accent); border-color: var(--na-accent); color: var(--na-onaccent, #fff); font-weight: 600; }
 .na_v2_btn.danger { background: var(--na-bad); border-color: var(--na-bad); color: #fff; font-weight: 600; }
 .na_v2_btn.wide { width: 100%; }
 .na_v2_btn:disabled { opacity: 0.6; cursor: default; }
@@ -1508,7 +1508,7 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_card_tags:empty { display: none; }
 .na_tag { font-size: 0.7em; padding: 1px 8px; border-radius: 999px; white-space: nowrap; line-height: 1.6; }
 .na_tag.pin { background: var(--na-accent-soft); color: var(--na-accent); }
-.na_tag.hit { background: var(--na-accent); color: #fff; }
+.na_tag.hit { background: var(--na-accent); color: var(--na-onaccent, #fff); }
 .na_browser .na_card_head .na_tok { font-size: 0.72em; color: var(--na-dim); flex: none; text-align: right; font-variant-numeric: tabular-nums; }
 .na_browser .na_card_body { padding: 0 14px 0; }
 .na_browser .na_card_actions { margin: 10px -14px 0; padding: 4px 8px; border-top: 1px solid var(--na-line); background: var(--na-card2); }
@@ -1634,7 +1634,7 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_cp_bar span { border-radius: 4px; }
 .na_cp_bar .hid { background: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 18%, transparent); }
 .na_cp_bar .raw { background: color-mix(in srgb, var(--na-accent) 60%, transparent); }
-.na_cp_wiz { display: flex; align-items: center; gap: 12px; border: 0; background: var(--na-accent); color: #fff; font: inherit; text-align: left; border-radius: 16px; cursor: pointer; }
+.na_cp_wiz { display: flex; align-items: center; gap: 12px; border: 0; background: var(--na-accent); color: var(--na-onaccent, #fff); font: inherit; text-align: left; border-radius: 16px; cursor: pointer; }
 .na_cp_wiz > i:first-child { font-size: 1.25em; }
 .na_cp_wiz > span { flex: 1; display: flex; flex-direction: column; line-height: 1.3; }
 .na_cp_wiz small { opacity: 0.85; font-size: 0.8em; }
@@ -1759,7 +1759,7 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_ask2_sugg button { font-size: 0.82em; }
 .na_ask2_input { display: flex; align-items: flex-end; gap: 8px; padding: 6px 6px 6px 12px; border-radius: 20px; background: var(--na-card); border: 1px solid var(--na-line); }
 .na_ask2_input textarea { flex: 1; min-width: 0; margin: 0; border: 0 !important; background: transparent !important; resize: none; min-height: 36px; max-height: 30vh; field-sizing: content; padding: 7px 0; box-shadow: none !important; }
-.na_ask2 .na_ask_go { flex: none; border: 0; border-radius: 14px; background: var(--na-accent); color: #fff; display: grid; place-items: center; cursor: pointer; padding: 0; }
+.na_ask2 .na_ask_go { flex: none; border: 0; border-radius: 14px; background: var(--na-accent); color: var(--na-onaccent, #fff); display: grid; place-items: center; cursor: pointer; padding: 0; }
 
 /* ============ injection preview v2 */
 .na_pv2_stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
@@ -1907,7 +1907,7 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_kn2_card .na_kn_del { top: 8px; right: 8px; }
 .na_kn2 .na_kn_people { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 /* knows: the strongest mark, filled in the theme's accent */
-.na_kn2_k { display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px 3px 3px; border-radius: 999px; background: var(--na-accent); color: #fff; font-weight: 600; line-height: 1.3; }
+.na_kn2_k { display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px 3px 3px; border-radius: 999px; background: var(--na-accent); color: var(--na-onaccent, #fff); font-weight: 600; line-height: 1.3; }
 .na_kn2_k .na_face { --s: 22px; box-shadow: 0 0 0 1.5px var(--na-accent); }
 .na_kn2_k.mini { padding: 0 8px; font-size: 0.8em; }
 /* suspects: an outline only */
@@ -1939,22 +1939,22 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
     color: var(--tl-ink);
 }
 .na_tl.na_darkui {
-    --tl-bg: #3A2F28; --tl-line: #54463D; --tl-soft: #44382F; --tl-ink: #EFE3D8; --tl-dim: #B3A396; --tl-dim2: #8F7F73; --tl-mute: #CABBAE;
-    --tl-acc: #D9733A; --tl-acc-ink: #EE9A66; --tl-rail: #5C4C42;
+    --tl-bg: #34343B; --tl-line: #45454D; --tl-soft: #3A3A41; --tl-ink: #ECEAE6; --tl-dim: #9A989F; --tl-dim2: #8A8A93; --tl-mute: #B9B7BD;
+    --tl-acc: #E9DFCF; --tl-acc-ink: #F0CF8E; --tl-rail: #4C4C55;
     color: var(--tl-ink);
 }
 .na_tl:not(.na_darkui) .st-long { --dot: #B8541F; }
-.na_tl.na_darkui .st-long { --dot: #D9733A; }
+.na_tl.na_darkui .st-long { --dot: #E9DFCF; }
 .na_tl:not(.na_darkui) .st-short { --dot: #E8A27C; }
-.na_tl.na_darkui .st-short { --dot: #B8724A; }
+.na_tl.na_darkui .st-short { --dot: #B8964E; }
 .na_tl:not(.na_darkui) .st-line { --dot: #F2CDB6; }
 .na_tl.na_darkui .st-line { --dot: #7A5039; }
 .na_tl:not(.na_darkui) .st-pin { --dot: #7E3610; }
-.na_tl.na_darkui .st-pin { --dot: #E89A68; }
+.na_tl.na_darkui .st-pin { --dot: #F0CF8E; }
 .na_tl:not(.na_darkui) .st-key { --dot: transparent; --dotb: 2px solid #C99A1E; }
 .na_tl.na_darkui .st-key { --dot: transparent; --dotb: 2px solid #D9AE3E; }
 .na_tl:not(.na_darkui) .st-off { --dot: #D9C8BC; }
-.na_tl.na_darkui .st-off { --dot: #6E5D51; }
+.na_tl.na_darkui .st-off { --dot: #5E5E66; }
 .na_tl:not(.na_darkui) .na_search_wrap, .na_tl:not(.na_darkui) .na_tlb_sq { background: var(--tl-bg); border: 1px solid var(--tl-line); color: var(--tl-mute); }
 .na_tl.na_darkui .na_search_wrap, .na_tl.na_darkui .na_tlb_sq { background: var(--tl-bg); border: 1px solid var(--tl-line); color: var(--tl-mute); }
 .na_tl:not(.na_darkui) .na_search_wrap { color: var(--tl-dim); }
@@ -1962,9 +1962,9 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_tl:not(.na_darkui) .na_search_wrap input.na_search { color: var(--tl-ink); }
 .na_tl.na_darkui .na_search_wrap input.na_search { color: var(--tl-ink); }
 .na_tl:not(.na_darkui) .na_search_wrap input.na_search::placeholder { color: #A99C92; opacity: 1; }
-.na_tl.na_darkui .na_search_wrap input.na_search::placeholder { color: #8C7C70; opacity: 1; }
+.na_tl.na_darkui .na_search_wrap input.na_search::placeholder { color: #85858E; opacity: 1; }
 .na_tl:not(.na_darkui) .na_tlb_sq.on { color: var(--tl-acc); border-color: #D9A887; }
-.na_tl.na_darkui .na_tlb_sq.on { color: var(--tl-acc); border-color: #9C6A4A; }
+.na_tl.na_darkui .na_tlb_sq.on { color: var(--tl-acc); border-color: #8A7A55; }
 .na_tl:not(.na_darkui) .na_tl_legend { color: var(--tl-mute); }
 .na_tl.na_darkui .na_tl_legend { color: var(--tl-mute); }
 .na_tl:not(.na_darkui) .na_group_head { background: var(--tl-bg); border-color: var(--tl-line); color: var(--tl-ink); }
@@ -1972,9 +1972,9 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_tl:not(.na_darkui) .na_group_head .na_group_meta, .na_tl:not(.na_darkui) .na_group_head .na_group_chev { color: var(--tl-dim); opacity: 1; }
 .na_tl.na_darkui .na_group_head .na_group_meta, .na_tl.na_darkui .na_group_head .na_group_chev { color: var(--tl-dim); opacity: 1; }
 .na_tl:not(.na_darkui) .na_g_open > .na_group_head { background: var(--na-fill); color: #FFF6EF; border-color: transparent; }
-.na_tl.na_darkui .na_g_open > .na_group_head { background: var(--na-fill); color: #F7ECE2; border-color: transparent; }
+.na_tl.na_darkui .na_g_open > .na_group_head { background: var(--na-fill); color: #F3F1ED; border-color: transparent; }
 .na_tl:not(.na_darkui) .na_g_open > .na_group_head .na_group_meta, .na_tl:not(.na_darkui) .na_g_open > .na_group_head .na_group_chev { color: #CDBDB2; opacity: 1; }
-.na_tl.na_darkui .na_g_open > .na_group_head .na_group_meta, .na_tl.na_darkui .na_g_open > .na_group_head .na_group_chev { color: #CDBDB2; opacity: 1; }
+.na_tl.na_darkui .na_g_open > .na_group_head .na_group_meta, .na_tl.na_darkui .na_g_open > .na_group_head .na_group_chev { color: #BEBCC2; opacity: 1; }
 .na_tl:not(.na_darkui) .na_group .na_group .na_group_head { background: var(--tl-soft); color: var(--tl-ink); }
 .na_tl.na_darkui .na_group .na_group .na_group_head { background: var(--tl-soft); color: var(--tl-ink); }
 .na_tl:not(.na_darkui) .na_rail { color: var(--tl-dim); }
@@ -1994,7 +1994,7 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_tl:not(.na_darkui) .na_tlb_box { background: var(--tl-bg); border-color: var(--tl-line); }
 .na_tl.na_darkui .na_tlb_box { background: var(--tl-bg); border-color: var(--tl-line); }
 .na_tl:not(.na_darkui) .na_card.open .na_tlb_box { border: 1.5px solid #D9A887; }
-.na_tl.na_darkui .na_card.open .na_tlb_box { border: 1.5px solid #9C6A4A; }
+.na_tl.na_darkui .na_card.open .na_tlb_box { border: 1.5px solid #8A7A55; }
 .na_tl:not(.na_darkui) .na_card_title { color: var(--tl-ink); }
 .na_tl.na_darkui .na_card_title { color: var(--tl-ink); }
 .na_tl:not(.na_darkui) .na_tlb_meta { color: var(--tl-dim); }
@@ -2006,25 +2006,25 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_tl:not(.na_darkui) .na_tlb_chip.key { background: #FFF1D6; color: #8A5A00; }
 .na_tl.na_darkui .na_tlb_chip.key { background: #4A3B1F; color: #E8B45A; }
 .na_tl:not(.na_darkui) .na_tlb_chip.pin { background: #F6E1D3; color: #8A3A12; }
-.na_tl.na_darkui .na_tlb_chip.pin { background: #543627; color: #F2B48C; }
+.na_tl.na_darkui .na_tlb_chip.pin { background: #3A3222; color: #F0CF8E; }
 .na_tl:not(.na_darkui) .na_tlb_chips .na_ref_chip { background: #FBEDE3; color: #7E3610; }
-.na_tl.na_darkui .na_tlb_chips .na_ref_chip { background: #4A3226; color: #E89A68; }
+.na_tl.na_darkui .na_tlb_chips .na_ref_chip { background: #3A3222; color: #F0CF8E; }
 .na_tl:not(.na_darkui) .na_tlb_text, .na_tl:not(.na_darkui) .na_tlb_full { color: #463428; }
-.na_tl.na_darkui .na_tlb_text, .na_tl.na_darkui .na_tlb_full { color: #EFE3D8; }
+.na_tl.na_darkui .na_tlb_text, .na_tl.na_darkui .na_tlb_full { color: #ECEAE6; }
 .na_tl:not(.na_darkui) .na_tlb_tools { border-top-color: var(--tl-soft); }
 .na_tl.na_darkui .na_tlb_tools { border-top-color: var(--tl-soft); }
 .na_tl:not(.na_darkui) .na_tlb_tools button { color: var(--tl-mute); border-right-color: var(--tl-soft); }
 .na_tl.na_darkui .na_tlb_tools button { color: var(--tl-mute); border-right-color: var(--tl-soft); }
 .na_tl:not(.na_darkui) .na_tlb_extra { background: #F2E7DF; border-top-color: var(--tl-soft); }
-.na_tl.na_darkui .na_tlb_extra { background: #41352D; border-top-color: var(--tl-soft); }
+.na_tl.na_darkui .na_tlb_extra { background: #38383F; border-top-color: var(--tl-soft); }
 .na_tl:not(.na_darkui) .na_sw { background: #D9C8BC; }
-.na_tl.na_darkui .na_sw { background: #6E5D51; }
+.na_tl.na_darkui .na_sw { background: #5E5E66; }
 .na_tl:not(.na_darkui) .na_sw.on { background: var(--tl-acc); }
 .na_tl.na_darkui .na_sw.on { background: var(--tl-acc); }
 .na_tl:not(.na_darkui) .na_br_filters button { background: var(--tl-bg); border-color: var(--tl-line); }
 .na_tl.na_darkui .na_br_filters button { background: var(--tl-bg); border-color: var(--tl-line); }
 .na_tl:not(.na_darkui) .na_br_filters button.on { background: var(--na-fill); color: #FFF6EF; }
-.na_tl.na_darkui .na_br_filters button.on { background: var(--na-fill); color: #F7ECE2; }
+.na_tl.na_darkui .na_br_filters button.on { background: var(--na-fill); color: #F3F1ED; }
 
 /* ============ mockup palette (light themes). The mockups' cream / brown / orange, used as is.
    Dark themes (body.na_darkui) get the same rules with the colours darkened (each body.na_darkui twin follows its light rule). */
@@ -2055,33 +2055,34 @@ body:not(.na_darkui) #na_settings, body:not(.na_darkui) .na_popup, body:not(.na_
     --na-cold: #3D6FB6; --na-cold-ink: #2F5F9E; --na-cold-soft: #E3ECF8;
 }
 body.na_darkui #na_settings, body.na_darkui .na_popup, body.na_darkui .na_v2, body.na_darkui dialog.popup:has(.na_confirm) {
-    --na-accent: #D9733A;
-    --na-accent-ink: #EE9A66;
-    --na-accent-soft: #543627;
-    --na-line: #54463D;
-    --na-line2: #44382F;
-    --na-card: #3A2F28;
-    --na-card2: #44382F;
-    --na-soft: #44382F;
-    --na-softer: #41352D;
-    --na-dim: #B3A396;
-    --na-mute: #CABBAE;
-    --na-raw: #6E5D51;
+    --na-accent: #E9DFCF;
+    --na-onaccent: #1B1B1F;
+    --na-accent-ink: #F0CF8E;
+    --na-accent-soft: #3A3222;
+    --na-line: #45454D;
+    --na-line2: #3A3A41;
+    --na-card: #34343B;
+    --na-card2: #3A3A41;
+    --na-soft: #3A3A41;
+    --na-softer: #38383F;
+    --na-dim: #9A989F;
+    --na-mute: #B9B7BD;
+    --na-raw: #5E5E66;
     --na-warn: #E0A245;
     --na-bad: #EC7468; --na-bad-soft: #4B2925;
     --na-ok: #7CCB9A; --na-ok-soft: #2D4134;
     --na-amber: #E8B45A; --na-amber-soft: #4A3B1F;
     --na-purple: #BBA6EE; --na-purple-soft: #3C3350;
-    --na-ink: #EFE3D8;
-    --na-fill: #5E4C41;
-    --na-paper: #3A2F28;
-    --na-onfill: #F7ECE2;
-    --na-sub: #BFB0A3;
+    --na-ink: #ECEAE6;
+    --na-fill: #4A4A52;
+    --na-paper: #34343B;
+    --na-onfill: #F3F1ED;
+    --na-sub: #A9A7AE;
     --na-warm: #DE6E38; --na-warm-ink: #F08F5C; --na-warm-soft: #553426;
     --na-cold: #7FA6E0; --na-cold-ink: #9ABCEE; --na-cold-soft: #2E3A4E;
 }
 body:not(.na_darkui) .na_v2, body:not(.na_darkui) #na_settings .na_tab_pane:where(:not([data-pane="home"])) { color: #463428; }
-body.na_darkui .na_v2, body.na_darkui #na_settings .na_tab_pane:where(:not([data-pane="home"])) { color: #EFE3D8; }
+body.na_darkui .na_v2, body.na_darkui #na_settings .na_tab_pane:where(:not([data-pane="home"])) { color: #ECEAE6; }
 
 /* ============ shared fixes from the mockup audit (all screens) */
 /* SillyTavern's small { opacity: .7; color: body } leaks in: captions keep our own colours, fully opaque */
@@ -2121,11 +2122,11 @@ body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg butt
 body.na_darkui .na_v2_tabs button.on, body.na_darkui .na_v2_seg button.on { color: var(--na-accent-ink); }
 /* text inputs inside the redesigned screens */
 body:not(.na_darkui) :is(.na_v2, #na_settings) .text_pole { background: #F2E9E2; border: 1px solid var(--na-line); color: var(--na-ink); border-radius: 12px; }
-body.na_darkui :is(.na_v2, #na_settings) .text_pole { background: #2E2621; border: 1px solid var(--na-line); color: var(--na-ink); border-radius: 12px; }
+body.na_darkui :is(.na_v2, #na_settings) .text_pole { background: #2A2A30; border: 1px solid var(--na-line); color: var(--na-ink); border-radius: 12px; }
 body:not(.na_darkui) :is(.na_v2, #na_settings) textarea.text_pole { padding: 10px 12px; }
 body.na_darkui :is(.na_v2, #na_settings) textarea.text_pole { padding: 10px 12px; }
 body:not(.na_darkui) :is(.na_v2, #na_settings) .text_pole::placeholder { color: #A99C92; opacity: 1; }
-body.na_darkui :is(.na_v2, #na_settings) .text_pole::placeholder { color: #8C7C70; opacity: 1; }
+body.na_darkui :is(.na_v2, #na_settings) .text_pole::placeholder { color: #85858E; opacity: 1; }
 
 /* ============ per-screen fixes from the mockup audit. Each group keeps to its own block. */
 /* --- audit A: archive list, compress tab, settings tab, wizard, extract --- */
@@ -2136,11 +2137,11 @@ body.na_darkui :is(.na_v2, #na_settings) .text_pole::placeholder { color: #8C7C7
 #na_settings .na_seg_btn { font-size: 0.929em; line-height: 1.5; padding: 8px 0; border-radius: 10px; }
 #na_settings .na_seg_btn.active { box-shadow: 0 1px 2px rgba(60, 30, 10, 0.12); }
 body:not(.na_darkui) #na_settings .na_seg { background: #EBDDD2; }
-body.na_darkui #na_settings .na_seg { background: #2E2621; }
+body.na_darkui #na_settings .na_seg { background: #2A2A30; }
 body:not(.na_darkui) #na_settings .na_seg_btn { opacity: 1; color: #6B5A50; }
-body.na_darkui #na_settings .na_seg_btn { opacity: 1; color: #CABBAE; }
+body.na_darkui #na_settings .na_seg_btn { opacity: 1; color: #B9B7BD; }
 body:not(.na_darkui) #na_settings .na_seg_btn.active { background: #FFFFFF; color: #A84A17; }
-body.na_darkui #na_settings .na_seg_btn.active { background: #3A2F28; color: #EE9A66; }
+body.na_darkui #na_settings .na_seg_btn.active { background: #34343B; color: #F0CF8E; }
 /* list ↔ timeline switch, moved to the end of the tabs */
 #na_settings .na_seg .na_br_view { padding: 0; gap: 0; background: transparent; border-radius: 10px; }
 #na_settings .na_seg .na_br_view button { width: 34px; height: 100%; display: grid; place-items: center; padding: 0; border-radius: 10px; color: var(--na-dim); }
@@ -2157,7 +2158,7 @@ body.na_darkui #na_settings .na_seg_btn.active { background: #3A2F28; color: #EE
 .na_browser:not(.na_tl) .na_tlb_mag { display: block; color: var(--na-dim); }
 .na_browser:not(.na_tl) .na_search_wrap input.na_search { padding: 0 !important; height: auto; min-height: 0; font-size: 0.964em; line-height: 1.5; }
 body:not(.na_darkui) .na_browser:not(.na_tl) .na_search_wrap input.na_search::placeholder { color: #A99C92; opacity: 1; }
-body.na_darkui .na_browser:not(.na_tl) .na_search_wrap input.na_search::placeholder { color: #8C7C70; opacity: 1; }
+body.na_darkui .na_browser:not(.na_tl) .na_search_wrap input.na_search::placeholder { color: #85858E; opacity: 1; }
 .na_browser:not(.na_tl) .na_rp_open { display: inline-block; flex: none; border: 0; background: var(--na-card2); color: var(--na-mute, inherit); font: inherit; font-size: 0.857em; line-height: 1.5; padding: 3px 10px; border-radius: 999px; cursor: pointer; }
 .na_browser .na_arch_tools > details:not([open]), .na_browser .na_arch_tools:not(:has(> details[open])) { display: none; }
 /* filter chips + heading check at the end */
@@ -2165,7 +2166,7 @@ body.na_darkui .na_browser:not(.na_tl) .na_search_wrap input.na_search::placehol
 .na_browser:not(.na_tl) .na_br_filters button[data-f] { font-size: 0.893em; line-height: 1.5; padding: 4px 12px; }
 .na_browser:not(.na_tl) .na_br_filters button[data-f].on { padding: 5px 12px; border: 0; }
 body:not(.na_darkui) .na_browser:not(.na_tl) .na_br_filters button[data-f]:not(.on) { color: #463428; }
-body.na_darkui .na_browser:not(.na_tl) .na_br_filters button[data-f]:not(.on) { color: #EFE3D8; }
+body.na_darkui .na_browser:not(.na_tl) .na_br_filters button[data-f]:not(.on) { color: #ECEAE6; }
 .na_br_filters .na_hc_status { display: inline-flex; align-items: center; gap: 4px; border: 0; background: transparent; padding: 0; font: inherit; font-size: 0.857em; line-height: 1.5; cursor: pointer; color: color-mix(in srgb, #2e8b57 75%, var(--SmartThemeBodyColor, #888)); }
 body:not(.na_darkui) .na_br_filters .na_hc_status.ok { color: #2E7D4F; }
 body.na_darkui .na_br_filters .na_hc_status.ok { color: #74C292; }
@@ -2180,14 +2181,14 @@ body.na_darkui .na_br_filters .na_hc_status.ok { color: #74C292; }
 .na_browser:not(.na_tl) .na_group_chev { display: grid; place-items: center; width: 14px; opacity: 1; color: var(--na-accent-ink, var(--na-accent)); }
 .na_browser:not(.na_tl) .na_group_head .na_pin { width: 24px; height: 24px; }
 body:not(.na_darkui) .na_browser:not(.na_tl) .na_group_head .na_pin:not(.on) { opacity: 1; color: #C9B9AD; }
-body.na_darkui .na_browser:not(.na_tl) .na_group_head .na_pin:not(.on) { opacity: 1; color: #7A6A5E; }
+body.na_darkui .na_browser:not(.na_tl) .na_group_head .na_pin:not(.on) { opacity: 1; color: #6A6A73; }
 .na_group_bar { display: none; }
 .na_browser:not(.na_tl) .na_g_open > .na_group_bar { display: block; height: 4px; margin: 0 4px 4px; border-radius: 2px; overflow: hidden; background: var(--na-card2); }
 .na_group_bar i { display: block; width: 0; height: 100%; background: color-mix(in srgb, var(--na-accent) 55%, transparent); transition: width 0.3s; }
 body:not(.na_darkui) .na_browser:not(.na_tl) .na_g_open > .na_group_bar { background: #EBDDD2; }
-body.na_darkui .na_browser:not(.na_tl) .na_g_open > .na_group_bar { background: #2E2621; }
+body.na_darkui .na_browser:not(.na_tl) .na_g_open > .na_group_bar { background: #2A2A30; }
 body:not(.na_darkui) .na_group_bar i { background: #E8A27C; }
-body.na_darkui .na_group_bar i { background: #B8724A; }
+body.na_darkui .na_group_bar i { background: #B8964E; }
 /* folded cards next to each other share one box with thin lines between rows */
 .na_browser:not(.na_tl) .na_group_items { gap: 0; padding-top: 0; }
 .na_browser:not(.na_tl) .na_group_items > * + * { margin-top: 6px; }
@@ -2212,7 +2213,7 @@ body.na_darkui .na_group_bar i { background: #B8724A; }
 .na_tag.fade { background: var(--na-purple-soft, color-mix(in srgb, #7b5bc4 16%, transparent)); color: var(--na-purple, color-mix(in srgb, #7b5bc4 80%, var(--SmartThemeBodyColor, #222))); }
 .na_tag.key { background: var(--na-amber-soft, color-mix(in srgb, #c99a1e 18%, transparent)); color: var(--na-amber, color-mix(in srgb, #9a7000 85%, var(--SmartThemeBodyColor, #222))); }
 body:not(.na_darkui) .na_tag.pin { background: #F6E1D3; color: #8A3A12; }
-body.na_darkui .na_tag.pin { background: #543627; color: #F2B48C; }
+body.na_darkui .na_tag.pin { background: #3A3222; color: #F0CF8E; }
 .na_browser:not(.na_tl) .na_waiting > .na_card_head .na_card_title { opacity: 1; }
 .na_browser:not(.na_tl) .na_card.na_waiting { border-left-style: solid !important; }
 /* off: the whole row fades, no strike-through */
@@ -2223,13 +2224,13 @@ body.na_darkui .na_tag.pin { background: #543627; color: #F2B48C; }
 .na_browser:not(.na_tl) .na_card:has(> .na_card_body:not([hidden])) > .na_card_head { padding: 12px 12px 8px 14px; }
 .na_browser:not(.na_tl) .na_card:has(> .na_card_body:not([hidden])) .na_card_title { font-size: 1.036em; }
 body:not(.na_darkui) .na_browser:not(.na_tl) .na_card:has(> .na_card_body:not([hidden])) { border: 1.5px solid #D9A887; box-shadow: 0 6px 18px rgba(120, 60, 20, 0.08); }
-body.na_darkui .na_browser:not(.na_tl) .na_card:has(> .na_card_body:not([hidden])) { border: 1.5px solid #9C6A4A; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25); }
+body.na_darkui .na_browser:not(.na_tl) .na_card:has(> .na_card_body:not([hidden])) { border: 1.5px solid #8A7A55; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25); }
 .na_browser:not(.na_tl) .na_card > .na_card_body { padding: 0; }
 .na_browser:not(.na_tl) .na_card > .na_card_body > .na_sec_edit { display: block; margin: 0 14px; width: calc(100% - 28px); box-sizing: border-box; }
 .na_browser:not(.na_tl) .na_lc_prev, .na_browser:not(.na_tl) .na_lc_full { padding: 0 14px 10px; font-size: 0.929em; line-height: 1.6; cursor: pointer; }
 .na_browser:not(.na_tl) .na_lc_prev { white-space: normal; }
 body:not(.na_darkui) .na_browser:not(.na_tl) .na_card_text { color: #463428; }
-body.na_darkui .na_browser:not(.na_tl) .na_card_text { color: #EFE3D8; }
+body.na_darkui .na_browser:not(.na_tl) .na_card_text { color: #ECEAE6; }
 .na_lbl { display: block; font-size: 0.885em; font-weight: 700; letter-spacing: 0.04em; color: var(--na-dim); }
 .na_lc_txt { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 /* links to other sections */
@@ -2239,9 +2240,9 @@ body.na_darkui .na_browser:not(.na_tl) .na_card_text { color: #EFE3D8; }
 .na_tlb_chips .na_ref_arr { display: none; }
 .na_browser:not(.na_tl) .na_ref_chip { font-size: 0.857em; line-height: 1.5; padding: 0 9px; }
 body:not(.na_darkui) .na_browser:not(.na_tl) .na_ref_chip { border-color: #EBCDB9; background: #FBEDE3; color: #463428; }
-body.na_darkui .na_browser:not(.na_tl) .na_ref_chip { border-color: #6E4A35; background: #4A3226; color: #EFE3D8; }
+body.na_darkui .na_browser:not(.na_tl) .na_ref_chip { border-color: #5A5040; background: #3A3222; color: #ECEAE6; }
 body:not(.na_darkui) .na_browser:not(.na_tl) .na_ref_chip:hover { background: #B8541F; color: #fff; }
-body.na_darkui .na_browser:not(.na_tl) .na_ref_chip:hover { background: #D9733A; color: #FFF; }
+body.na_darkui .na_browser:not(.na_tl) .na_ref_chip:hover { background: #E9DFCF; color: #1B1B1F; }
 /* tools under the open card */
 .na_browser:not(.na_tl) .na_card_actions { margin: 0; padding: 6px 8px; gap: 2px; background: var(--na-softer); border-top: 1px solid var(--na-line2, var(--na-line)); }
 .na_browser:not(.na_tl) .na_card_actions .na_icon { width: 36px; height: 34px; border-radius: 10px; opacity: 1; color: var(--na-mute, inherit); }
@@ -2263,9 +2264,9 @@ body.na_darkui .na_browser:not(.na_tl) .na_ref_chip:hover { background: #D9733A;
 .na_cp_bar .hid:first-child { border-radius: 4px 0 0 4px; }
 .na_cp_bar .raw:last-child { border-radius: 0 4px 4px 0; }
 body:not(.na_darkui) .na_cp_bar .hid { background: #D9C8BC; }
-body.na_darkui .na_cp_bar .hid { background: #6E5D51; }
+body.na_darkui .na_cp_bar .hid { background: #5E5E66; }
 body:not(.na_darkui) .na_cp_bar .raw { background: #E8A27C; }
-body.na_darkui .na_cp_bar .raw { background: #B8724A; }
+body.na_darkui .na_cp_bar .raw { background: #B8964E; }
 .na_cp_wiz { padding: 14px 16px; }
 .na_cp_wiz b { font-size: 1.107em; }
 .na_cp_wiz small, #na_settings .na_tab_pane .na_cp_wiz small { color: #fff; opacity: 0.85; font-size: 0.857em; }
@@ -2276,7 +2277,7 @@ body.na_darkui .na_cp_bar .raw { background: #B8724A; }
 .na_cp .na_v2_label { font-size: 0.929em; margin: 4px 2px -4px; }
 .na_cp_num { font-size: 0.893em; }
 body:not(.na_darkui) .na_cp_num { color: #8A3A12; }
-body.na_darkui .na_cp_num { color: #F2B48C; }
+body.na_darkui .na_cp_num { color: #F0CF8E; }
 .na_cp_row > .na_svg, .na_cp_chev { color: var(--na-dim); }
 .na_cp_chev { display: grid; place-items: center; transition: transform 0.15s; }
 .na_cp_fold[open] > summary .na_cp_chev { transform: rotate(90deg); }
@@ -2357,7 +2358,7 @@ body.na_darkui .na_cp_num { color: #F2B48C; }
 .na_wz2_progress button { gap: 8px; font-size: 0.821em; }
 .na_wz2_progress button.on { color: var(--na-accent-ink, var(--na-accent)); }
 body:not(.na_darkui) .na_wz2_progress button:not(.on):not(.done) i { background: #E3D3C7; }
-body.na_darkui .na_wz2_progress button:not(.on):not(.done) i { background: #5C4C42; }
+body.na_darkui .na_wz2_progress button:not(.on):not(.done) i { background: #4C4C55; }
 .na_wz2_title { font-size: 1.571em; }
 .na_wz2_sub, .na_v2 .na_wz2_sub { font-size: 0.929em; color: var(--na-sub, var(--na-dim)); }
 .na_wz2_pane textarea.na_wz_out { height: 300px; min-height: 0; padding: 14px !important; border-radius: 18px !important; font-size: 0.857em; line-height: 1.65; }
@@ -2378,12 +2379,12 @@ body.na_darkui .na_wz2_pane textarea.na_wz_out { color: #E6D9CD; }
 .na_wz2_range label small, .na_v2 .na_wz2_range label small { font-size: 0.821em; color: var(--na-dim); }
 .na_wz2_range label > span { padding: 8px 12px; border-radius: 12px; font-size: 1.214em; line-height: 1.5; color: var(--na-dim); }
 body:not(.na_darkui) .na_wz2_range label > span { background: #F2E9E2; color: #B8A99E; }
-body.na_darkui .na_wz2_range label > span { background: #2E2621; color: #8F7F73; }
+body.na_darkui .na_wz2_range label > span { background: #2A2A30; color: #8A8A93; }
 .na_wz2_range label > span:focus-within { border-color: var(--na-accent); }
 .na_v2 .na_wz2_range input, body:not(.na_darkui) .na_v2 .na_wz2_range input { padding: 0 !important; height: auto; min-height: 0; line-height: 1.5; border: 0 !important; background: transparent !important; color: var(--na-ink, var(--SmartThemeBodyColor, inherit)); font-size: 1em; }
 .na_wz2_arr { flex: none; display: grid; place-items: center; margin-top: 18px; color: var(--na-dim); }
 body:not(.na_darkui) .na_wz2_arr { color: #B8A99E; }
-body.na_darkui .na_wz2_arr { color: #8F7F73; }
+body.na_darkui .na_wz2_arr { color: #8A8A93; }
 .na_v2_btn > .na_svg { flex: none; }
 .na_wz2_pane select.na_wz_prompt, body:not(.na_darkui) .na_wz2_pane select.na_wz_prompt { font: inherit; font-size: 0.964em; line-height: 1.5; height: auto; min-height: 0; padding: 9px 12px; border-radius: 14px; }
 
@@ -2395,9 +2396,9 @@ body.na_darkui .na_wz2_arr { color: #8F7F73; }
 .na_ex2_card .na_cp_bar { border-radius: 4px; overflow: hidden; }
 .na_ex2_card .na_cp_bar > span { border-radius: 0; }
 body:not(.na_darkui) .na_ex2_card .na_cp_bar .hid { background: #E3D3C7; }
-body.na_darkui .na_ex2_card .na_cp_bar .hid { background: #5C4C42; }
+body.na_darkui .na_ex2_card .na_cp_bar .hid { background: #4C4C55; }
 body:not(.na_darkui) .na_ex2_card .na_cp_bar .raw { background: #B8541F; }
-body.na_darkui .na_ex2_card .na_cp_bar .raw { background: #D9733A; }
+body.na_darkui .na_ex2_card .na_cp_bar .raw { background: #E9DFCF; }
 .na_ex2_card .na_cp_bar .raw { background: var(--na-accent); }
 .na_ex2_info { font-size: 0.857em; }
 .na_ex2_info b { color: var(--na-ink, var(--SmartThemeBodyColor, inherit)); }
@@ -2406,20 +2407,20 @@ body.na_darkui .na_ex2_card .na_cp_bar .raw { background: #D9733A; }
 .na_ex_prow { display: flex; flex-direction: column; gap: 8px; padding: 0 14px 12px; }
 .na_ex_pchips { display: flex; flex-wrap: wrap; gap: 6px; }
 .na_ex_pchip { border: 1px solid var(--na-line); background: var(--na-card); color: var(--na-ink, inherit); font: inherit; font-size: 0.857em; line-height: 1.5; padding: 3px 11px; border-radius: 999px; cursor: pointer; }
-.na_ex_pchip.on { border-color: transparent; background: var(--na-accent); color: #fff; font-weight: 600; padding: 4px 11px; }
+.na_ex_pchip.on { border-color: transparent; background: var(--na-accent); color: var(--na-onaccent, #fff); font-weight: 600; padding: 4px 11px; }
 .na_ex_pchip.open { border-color: var(--na-accent); }
 .na_ex2 .na_ex_prow select { max-width: 100%; width: 100%; margin: 0; }
 .na_ex_toset > .na_svg { color: var(--na-dim); }
 .na_ex2_preview { height: 96px; max-height: none; box-sizing: border-box; padding: 10px 12px; border-radius: 16px; font-size: 0.821em; line-height: 1.6; color: var(--na-mute, var(--na-dim)); }
 body:not(.na_darkui) .na_ex2_preview { background: #F2E9E2; }
-body.na_darkui .na_ex2_preview { background: #2E2621; }
+body.na_darkui .na_ex2_preview { background: #2A2A30; }
 .na_ex2_btns .na_v2_btn { padding: 12px 0; border-radius: 14px; font-size: 0.964em; line-height: 1.5; }
 /* settings: the group icons, and boxes toned toward the theme instead of paper white */
 .na_cfg_label i { margin-right: 4px; opacity: 0.8; }
 body:not(.na_darkui) .na_cfg_box, body:not(.na_darkui) .na_cfg_back, body:not(.na_darkui) .na_cfg_pill { background: #F7EEE7; border-color: #E6D6CA; }
-body.na_darkui .na_cfg_box, body.na_darkui .na_cfg_back, body.na_darkui .na_cfg_pill { background: #3A2F28; border-color: #54463D; }
+body.na_darkui .na_cfg_box, body.na_darkui .na_cfg_back, body.na_darkui .na_cfg_pill { background: #34343B; border-color: #45454D; }
 body:not(.na_darkui) .na_tab_pane[data-pane="config"] .na_cfg_box .na_cfg_sub, body:not(.na_darkui) .na_cfg_box .na_router_opts { background: #F2E7DF; }
-body.na_darkui .na_tab_pane[data-pane="config"] .na_cfg_box .na_cfg_sub, body.na_darkui .na_cfg_box .na_router_opts { background: #41352D; }
+body.na_darkui .na_tab_pane[data-pane="config"] .na_cfg_box .na_cfg_sub, body.na_darkui .na_cfg_box .na_router_opts { background: #38383F; }
 /* --- end audit A --- */
 
 /* --- audit B: append, health, drift, quotes, voice --- */
@@ -2438,7 +2439,7 @@ body.na_darkui .na_tab_pane[data-pane="config"] .na_cfg_box .na_cfg_sub, body.na
 .na_ap2 .na_append_file_btn { padding: 6px 11px; font-size: 12px; line-height: 1.5; background: var(--na-card); }
 .na_ap2 .na_append_ta { height: 300px !important; min-height: 120px; padding: 12px 14px !important; border-radius: 18px !important; font-family: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; line-height: 1.65; resize: vertical; }
 body:not(.na_darkui) .na_ap2 .na_append_ta { background: #F2E9E2 !important; border: 1px solid var(--na-line) !important; color: #4A3D35 !important; }
-body.na_darkui .na_ap2 .na_append_ta { background: #2E2621 !important; border: 1px solid var(--na-line) !important; color: #E6D9CD !important; }
+body.na_darkui .na_ap2 .na_append_ta { background: #2A2A30 !important; border: 1px solid var(--na-line) !important; color: #E6D9CD !important; }
 .na_ap2 .na_ap2_label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 600; color: var(--na-dim); padding: 10px 14px 4px; }
 .na_ap2 .na_ap2_label .na_append_info { font-size: 11.5px; font-weight: 400; color: var(--na-dim); }
 .na_ap2_checks .na_check { align-items: center; gap: 10px; padding: 9px 14px; border-top-color: var(--na-line2, var(--na-line)); color: inherit; background: transparent; opacity: 1; font-size: 1em; line-height: 1.3; }
@@ -2460,7 +2461,7 @@ body.na_darkui .na_ap2 .na_append_ta { background: #2E2621 !important; border: 1
 .na_ap2_btns button { font: inherit; font-size: 13.5px; line-height: 1.5; padding: 12px 0; border-radius: 14px; cursor: pointer; }
 .na_ap2_pv { flex: 1; border: 1px solid var(--na-line); background: var(--na-card); color: inherit; }
 .na_ap2_pv:hover { border-color: var(--na-accent); }
-.na_ap2_btns .na_ap2_go { flex: 2; border: 0; background: var(--na-accent); color: #fff; font-weight: 600; }
+.na_ap2_btns .na_ap2_go { flex: 2; border: 0; background: var(--na-accent); color: var(--na-onaccent, #fff); font-weight: 600; }
 .popup-button-ok.na_ap2_okhide { display: none !important; }
 /* ============ 아카이브에 추가 v3 (docs/mockups/ext-append): the draft card with 초안 | 추가 후 and the preview in a scroll box,
    크게 보기, AI로 고치기 as a small chat, the AI tools as a list, section labels, 취소 · 추가하기 at the bottom.
@@ -2555,17 +2556,17 @@ body.na_darkui .na_ap3_ti.b { background: #2E3A4B; color: #9DBCE6; }
 .na_ap3 .na_ap2_checks .na_grade_out, .na_ap3 .na_ap2_checks .na_conflict_out { margin: 0 14px 14px; }
 /* dark (시안 A): a near-black warm window, darker cards with a faint top light, no tinted fills — the parts are
    neutral and the colour is in a thin line or the text: my request edged in orange, replies with a coloured bar */
-body.na_darkui dialog.popup.na_ap3_dlg:has(.na_ap3):not(#na_x) { background: #1C1714 !important; }
-body.na_darkui .na_ap3 .na_v2_card, body.na_darkui .na_ap3 :is(.na_ap3_fbody, .na_ap3_fdock) { background: #27201B; border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
-body.na_darkui .na_ap3_bar { background: linear-gradient(rgba(28, 23, 20, 0), #1C1714 14px); }
-body.na_darkui .na_ap3 :is(.na_ly_ask, .na_ap3_seg, .na_ap3_raw) { background: #342B25; }
-body:is(.na_darkui) .na_ap3 .na_ap3_chip { background: #342B25 !important; }
-body.na_darkui .na_ap3 .na_ap3_chip.on { background: #7A6457 !important; color: #F7ECE2 !important; }
-body.na_darkui .na_ap3 .na_ap3_seg button.on { background: #4A3D34; color: #F2B48A; }
-body.na_darkui .na_ap3_raw:has(input:checked) { background: #342B25; color: #8FD3A6; }
-body.na_darkui .na_ap3 .na_append_ta { background: #211B17 !important; border-color: #3A3029 !important; }
-body.na_darkui .na_ap3_me > span { background: #3A2F28; color: #F3E7DC; box-shadow: inset 0 0 0 1px rgba(217, 115, 58, 0.45); }
-body.na_darkui .na_ap3_ai, body.na_darkui .na_ap3_ai.note, body.na_darkui .na_ap3_ai.bad { background: #2F2722; color: #E6D9CD; border-left: 3px solid #7CCB9A; border-radius: 6px 16px 16px 6px; }
+body.na_darkui dialog.popup.na_ap3_dlg:has(.na_ap3):not(#na_x) { background: #17171A !important; }
+body.na_darkui .na_ap3 .na_v2_card, body.na_darkui .na_ap3 :is(.na_ap3_fbody, .na_ap3_fdock) { background: #232328; border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+body.na_darkui .na_ap3_bar { background: linear-gradient(rgba(28, 23, 20, 0), #17171A 14px); }
+body.na_darkui .na_ap3 :is(.na_ly_ask, .na_ap3_seg, .na_ap3_raw) { background: #2E2E34; }
+body:is(.na_darkui) .na_ap3 .na_ap3_chip { background: #2E2E34 !important; }
+body.na_darkui .na_ap3 .na_ap3_chip.on { background: #7A6457 !important; color: #F3F1ED !important; }
+body.na_darkui .na_ap3 .na_ap3_seg button.on { background: #414148; color: #F0CF8E; }
+body.na_darkui .na_ap3_raw:has(input:checked) { background: #2E2E34; color: #8FD3A6; }
+body.na_darkui .na_ap3 .na_append_ta { background: #1D1D21 !important; border-color: #3A3A41 !important; }
+body.na_darkui .na_ap3_me > span { background: #34343B; color: #F3E7DC; box-shadow: inset 0 0 0 1px rgba(217, 115, 58, 0.45); }
+body.na_darkui .na_ap3_ai, body.na_darkui .na_ap3_ai.note, body.na_darkui .na_ap3_ai.bad { background: #2B2B31; color: #E6D9CD; border-left: 3px solid #7CCB9A; border-radius: 6px 16px 16px 6px; }
 body.na_darkui .na_ap3_ai b { color: #8FD3A6; }
 body.na_darkui .na_ap3_ai.note { border-left-color: #E8B45A; }
 body.na_darkui .na_ap3_ai.note div { color: #F0CF8E; }
@@ -2579,7 +2580,7 @@ body.na_darkui .na_ap3_ai.none { border-left-color: #6E5D52; }
 .na_ap3_bar { position: sticky; bottom: 0; z-index: 2; display: flex; gap: 8px; margin: 18px -2px 0; padding: 12px 2px 10px; background: linear-gradient(transparent, var(--na-pop-bg, #F0E4DB) 14px); }
 .na_ap3_bar button { font: inherit; font-size: 15px; font-weight: 600; height: 46px; border-radius: 999px; cursor: pointer; }
 .na_ap3_bar .na_ap3_cancel { padding: 0 18px; border: 0; background: transparent; color: var(--na-mute); }
-.na_ap3_bar .na_ap2_go { flex: 1; border: 0; background: var(--na-accent); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+.na_ap3_bar .na_ap2_go { flex: 1; border: 0; background: var(--na-accent); color: var(--na-onaccent, #fff); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
 /* 크게 보기 */
 .na_ap3.na_ap3_isfull > :not(.na_ap3_full) { display: none !important; }
 .na_ap3_full { display: flex; flex-direction: column; min-height: 0; }
@@ -2602,7 +2603,7 @@ body.na_darkui .na_ap3_ai.none { border-left-color: #6E5D52; }
 .na_hl2 .na_health_body { gap: 14px; }
 .na_hl2_top { padding: 18px; }
 body:not(.na_darkui) .na_hl2_ring .bg { stroke: #EFE3DA; }
-body.na_darkui .na_hl2_ring .bg { stroke: #4A3D34; }
+body.na_darkui .na_hl2_ring .bg { stroke: #414148; }
 .na_hl2_ring.good .fg { stroke: #2E8B57; }
 .na_hl2_ring b { font-size: 28px; }
 .na_hl2_ring.good b { color: var(--na-ok, #3fae6e); }
@@ -2647,7 +2648,7 @@ body.na_darkui .na_hl2_main .na_v2_btn.danger { background: #C4473B; }
 .na_dr2_head b { font-size: 13.5px; }
 .na_dr2 .na_dr2_msg { border: 0 !important; padding: 2px 9px !important; font-size: 12px; font-weight: 600; line-height: 1.5; margin: 0; }
 body:not(.na_darkui) .na_dr2 .na_dr2_msg { background: var(--na-fill) !important; color: #FFFAF6 !important; }
-body.na_darkui .na_dr2 .na_dr2_msg { background: var(--na-fill) !important; color: #F7ECE2 !important; }
+body.na_darkui .na_dr2 .na_dr2_msg { background: var(--na-fill) !important; color: #F3F1ED !important; }
 .na_dr2_kind { font-size: 11.5px; line-height: 1.5; padding: 1px 8px; border-radius: 999px; white-space: nowrap; background: var(--na-bad-soft); color: #ec7d72; }
 body:not(.na_darkui) .na_dr2_kind.bad { color: #8C1D18; }
 body.na_darkui .na_dr2_kind.bad { color: #F29A90; }
@@ -2667,7 +2668,7 @@ body.na_darkui .na_dr2_kind.bad { color: #F29A90; }
 .na_qb_root.na_v2 { gap: 12px; }
 .na_qb_root .na_qb_tabs { gap: 4px; margin: 0; }
 body:not(.na_darkui) .na_qb_root .na_qb_tabs { background: #EBDDD2; }
-body.na_darkui .na_qb_root .na_qb_tabs { background: #2E2621; }
+body.na_darkui .na_qb_root .na_qb_tabs { background: #2A2A30; }
 .na_qb_root .na_qb_tabs button { font-size: 13px; line-height: 1.5; padding: 9px 0; }
 body:not(.na_darkui) .na_qb_root .na_qb_tabs button.on { box-shadow: 0 1px 2px rgba(60, 30, 10, 0.12); }
 body.na_darkui .na_qb_root .na_qb_tabs button.on { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
@@ -2681,7 +2682,7 @@ body.na_darkui .na_qb_root .na_qb_tabs button.on { box-shadow: 0 1px 2px rgba(0,
 .na_qb2 .na_qb2_search input.na_search { font-size: 13.5px; line-height: 1.5; padding: 8px 0 !important; }
 .na_qb2 .na_qb2_search input.na_search::placeholder { color: var(--na-dim); opacity: 0.8; }
 body:not(.na_darkui) .na_qb2 .na_qb2_search input.na_search::placeholder { color: #A99C92; opacity: 1; }
-body.na_darkui .na_qb2 .na_qb2_search input.na_search::placeholder { color: #8C7C70; opacity: 1; }
+body.na_darkui .na_qb2 .na_qb2_search input.na_search::placeholder { color: #85858E; opacity: 1; }
 .na_qb2 .na_qb_excl { gap: 6px; font-size: 12px; }
 .na_qb2 .na_qb_excl_label { color: var(--na-dim); opacity: 1; }
 .na_qb2 .na_qb_excl_chips { gap: 6px; }
@@ -2689,12 +2690,12 @@ body.na_darkui .na_qb2 .na_qb2_search input.na_search::placeholder { color: #8C7
 .na_qb2 .na_qb_exchip { gap: 4px; padding: 2px 4px 2px 10px; border: 0; border-radius: 999px; background: var(--na-card2); font-size: 12px; line-height: 1.5; }
 /* #F1E6DD (mockup) vanishes on the popup background, which is darker than the mockup page */
 body:not(.na_darkui) .na_qb2 .na_qb_exchip { background: #EBDDD2; }
-body.na_darkui .na_qb2 .na_qb_exchip { background: #2E2621; }
+body.na_darkui .na_qb2 .na_qb_exchip { background: #2A2A30; }
 .na_qb2 .na_qb_unex { width: 18px; height: 18px; padding: 0; display: grid; place-items: center; color: var(--na-dim); opacity: 1; line-height: 1; }
 .na_qb2 .na_qb_unex:hover { color: var(--na-bad); }
 .na_qb_excl_plus { border: 1px dashed var(--na-line); background: transparent; color: var(--na-mute, var(--na-dim)); font: inherit; font-size: 12px; line-height: 1.5; padding: 2px 10px; border-radius: 999px; cursor: pointer; }
 body:not(.na_darkui) .na_qb_excl_plus { border-color: #CDBBAE; }
-body.na_darkui .na_qb_excl_plus { border-color: #7A6A5E; }
+body.na_darkui .na_qb_excl_plus { border-color: #6A6A73; }
 .na_qb_excl_plus:hover { border-color: var(--na-accent); color: var(--na-accent-ink, var(--na-accent)); }
 .na_qb2 .na_qb_excl_in { flex: 0 1 9em; width: 9em; min-width: 6em; border-radius: 999px !important; padding: 2px 10px !important; font-size: 12px; }
 .na_qb2 .na_qb_excl_add { font-size: 12px; padding: 2px 10px; }
@@ -2707,11 +2708,11 @@ body.na_darkui .na_qb_excl_plus { border-color: #7A6A5E; }
 .na_qb2 .na_qb_awaytag { margin: 0; font-size: 11px; white-space: nowrap; }
 .na_qb2 .na_qb_fp { font-size: 11.5px; font-weight: 400; line-height: 1.5; padding: 1px 8px; white-space: nowrap; background: var(--na-accent-soft); color: var(--na-accent); }
 body:not(.na_darkui) .na_qb2 .na_qb_fp { color: #8A3A12; }
-body.na_darkui .na_qb2 .na_qb_fp { color: #F2B48C; }
+body.na_darkui .na_qb2 .na_qb_fp { color: #F0CF8E; }
 .na_qb2 .na_qb_gbtns { margin-left: 0; gap: 0; }
 .na_qb2 .na_qb_gbtns .na_icon, .na_qb2 .na_qb_del { opacity: 1; color: var(--na-dim); }
 body:not(.na_darkui) .na_qb2 .na_qb_gbtns .na_icon, body:not(.na_darkui) .na_qb2 .na_qb_del { color: #B8A99E; }
-body.na_darkui .na_qb2 .na_qb_gbtns .na_icon, body.na_darkui .na_qb2 .na_qb_del { color: #8F7F73; }
+body.na_darkui .na_qb2 .na_qb_gbtns .na_icon, body.na_darkui .na_qb2 .na_qb_del { color: #8A8A93; }
 .na_qb2 .na_qb_gbtns .na_icon:hover, .na_qb2 .na_qb_del:hover { color: var(--na-bad); }
 .na_qb2 .na_qb_rows { border-radius: 16px; }
 .na_qb2 .na_qb_row { gap: 10px; padding: 10px 12px; font-size: 1em; border-top-color: var(--na-line2, var(--na-line)); }
@@ -2721,7 +2722,7 @@ body.na_darkui .na_qb2 .na_qb_gbtns .na_icon, body.na_darkui .na_qb2 .na_qb_del 
 .na_qb2 .na_qb_del { width: 22px; height: 22px; flex: none; }
 .na_qb2 .na_qb_unkrow { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; border: 1px dashed var(--na-line); font-size: 12.5px; color: var(--na-mute, var(--na-dim)); cursor: pointer; }
 body:not(.na_darkui) .na_qb2 .na_qb_unkrow { border-color: #D3C1B4; }
-body.na_darkui .na_qb2 .na_qb_unkrow { border-color: #66564B; }
+body.na_darkui .na_qb2 .na_qb_unkrow { border-color: #55555E; }
 .na_qb2 .na_qb_unkrow:hover { border-color: var(--na-accent); }
 .na_qb2 .na_qb_unkrow > span:first-child { flex: 1; min-width: 0; }
 .na_qb2 .na_qb_unkchev { color: var(--na-dim); transition: transform 0.15s; }
@@ -2745,7 +2746,7 @@ body.na_darkui .na_qb2 .na_qb_unkrow { border-color: #66564B; }
 .na_vc_row > svg { color: var(--na-dim); }
 .na_vc_body .na_vc_row.dashed { border: 1.5px dashed var(--na-line); cursor: pointer; }
 body:not(.na_darkui) .na_vc_body .na_vc_row.dashed { border-color: #D3C1B4; }
-body.na_darkui .na_vc_body .na_vc_row.dashed { border-color: #66564B; }
+body.na_darkui .na_vc_body .na_vc_row.dashed { border-color: #55555E; }
 .na_vc_mk { border: 0; background: transparent; padding: 0; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--na-accent-ink, var(--na-accent)); cursor: pointer; }
 .na_vc_body .na_vc_card { padding: 14px; gap: 12px; border-radius: 20px; }
 .na_vc_head .na_vc_who b { font-size: 15px; }
@@ -2755,7 +2756,7 @@ body.na_darkui .na_vc_body .na_vc_row.dashed { border-color: #66564B; }
 .na_vc_body .na_vc_rule i { font-size: 12px; }
 .na_vc_body .na_vc_tag { font-size: 11px; font-weight: 700; line-height: 1.5; }
 body:not(.na_darkui) .na_vc_body .na_vc_tag { color: #8A3A12; }
-body.na_darkui .na_vc_body .na_vc_tag { color: #F2B48C; }
+body.na_darkui .na_vc_body .na_vc_tag { color: #F0CF8E; }
 .na_vc_body .na_vc_foot { align-items: baseline; font-size: 1em; }
 .na_vc_body .na_vc_edit { font-size: 12.5px; color: var(--na-accent-ink, var(--na-accent)); opacity: 1; padding: 0; }
 .na_vc_body .na_vc_del { font-size: 12px; color: var(--na-dim); opacity: 1; padding: 0; }
@@ -2778,20 +2779,20 @@ body.na_darkui .na_bn2_warn, body.na_darkui .na_uh2_warn { color: #F0CC80; }
 .na_ask2 .na_ask_item { gap: 14px; }
 .na_ask2 .na_ask_qq { padding: 10px 14px; font-size: 14px; line-height: 1.5; }
 body:not(.na_darkui) .na_ask2 .na_ask_qq { background: #F6E1D3; color: #7A3410; }
-body.na_darkui .na_ask2 .na_ask_qq { background: var(--na-fill); color: #F7ECE2; }
+body.na_darkui .na_ask2 .na_ask_qq { background: var(--na-fill); color: #F3F1ED; }
 .na_ask2_ans { align-self: flex-start; max-width: 92%; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .na_ask2 .na_ask2_ans .na_ask_a { align-self: stretch; max-width: none; padding: 12px 14px; font-size: 14px; line-height: 1.6; }
 .na_ask2_cites { display: flex; flex-wrap: wrap; gap: 6px; }
 .na_ask2 .na_ask2_cite { display: flex; align-items: center; gap: 4px; margin: 0; padding: 2px 10px; border-radius: 999px; font-size: 12px; line-height: 1.5; color: var(--na-accent-ink, var(--na-accent)); }
 .na_ask2 .na_ask2_cite svg { display: block; flex: none; }
 body:not(.na_darkui) .na_ask2 .na_ask2_cite { border: 1px solid #EBCDB9; background: #FBEDE3; color: #7E3610; }
-body.na_darkui .na_ask2 .na_ask2_cite { border: 1px solid #6E4A35; background: #4A3226; color: #E89A68; }
+body.na_darkui .na_ask2 .na_ask2_cite { border: 1px solid #5A5040; background: #3A3222; color: #F0CF8E; }
 body:not(.na_darkui) .na_ask2 .na_ask2_cite.on { border-color: #E8A27C; }
-body.na_darkui .na_ask2 .na_ask2_cite.on { border-color: #B8724A; }
+body.na_darkui .na_ask2 .na_ask2_cite.on { border-color: #B8964E; }
 .na_ask2 .na_ask2_cite.na_cite_miss { background: transparent; border-style: dashed; }
 .na_ask2 .na_ask2_ans .na_ask_src { align-self: stretch; max-width: none; margin: 0; background: none; border-radius: 0; border-left: 2px solid var(--na-accent); padding: 2px 0 2px 10px; font-size: 12px; line-height: 1.55; color: var(--na-mute, var(--na-dim)); }
 body:not(.na_darkui) .na_ask2 .na_ask2_ans .na_ask_src { border-left-color: #E8A27C; }
-body.na_darkui .na_ask2 .na_ask2_ans .na_ask_src { border-left-color: #B8724A; }
+body.na_darkui .na_ask2 .na_ask2_ans .na_ask_src { border-left-color: #B8964E; }
 .na_ask2_ex { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; cursor: pointer; }
 .na_ask2 .na_ask_src .na_ask_src_body { display: none; max-height: 30vh; line-height: 1.55; }
 .na_ask2 .na_ask_src.open .na_ask_src_body { display: block; }
@@ -2805,11 +2806,11 @@ body.na_darkui .na_ask2 .na_ask2_ans .na_ask_src { border-left-color: #B8724A; }
 .na_ask2_dots { display: flex; gap: 3px; }
 .na_ask2_dots i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.6; animation: na_ask2_dot 1.2s infinite; margin: 0 !important; }
 body:not(.na_darkui) .na_ask2_dots i { opacity: 1; background: #CDBBAE; }
-body.na_darkui .na_ask2_dots i { opacity: 1; background: #7A6A5E; }
+body.na_darkui .na_ask2_dots i { opacity: 1; background: #6A6A73; }
 body:not(.na_darkui) .na_ask2_dots i:nth-child(2) { background: #B8A99E; }
-body.na_darkui .na_ask2_dots i:nth-child(2) { background: #8F7F73; }
+body.na_darkui .na_ask2_dots i:nth-child(2) { background: #8A8A93; }
 body:not(.na_darkui) .na_ask2_dots i:nth-child(3) { background: #A99C92; }
-body.na_darkui .na_ask2_dots i:nth-child(3) { background: #8C7C70; }
+body.na_darkui .na_ask2_dots i:nth-child(3) { background: #85858E; }
 .na_ask2_dots i:nth-child(2) { animation-delay: 0.2s; } .na_ask2_dots i:nth-child(3) { animation-delay: 0.4s; }
 @keyframes na_ask2_dot { 50% { opacity: 0.35; } }
 .na_ask2 .na_ask2_sugg button { font-size: 12px; padding: 4px 11px; line-height: 1.5; background: var(--na-card); border-color: var(--na-line); color: var(--na-mute, inherit); }
@@ -2853,7 +2854,7 @@ body:not(.na_darkui) .na_pv2_code { background: var(--na-fill); color: #EDE2D9; 
 .na_bn2_link { gap: 2px; }
 .na_bn2_link b { font-size: 11.5px; font-weight: 700; line-height: 1.5; color: var(--na-accent-ink, var(--na-accent)); }
 body:not(.na_darkui) .na_bn2_link span { background: repeating-linear-gradient(90deg, #D9A887 0 6px, transparent 6px 10px); }
-body.na_darkui .na_bn2_link span { background: repeating-linear-gradient(90deg, #9C6A4A 0 6px, transparent 6px 10px); }
+body.na_darkui .na_bn2_link span { background: repeating-linear-gradient(90deg, #8A7A55 0 6px, transparent 6px 10px); }
 .na_bn2_ok { font-size: 12.5px; line-height: 1.45; }
 .na_bn2_ok > svg { flex: none; margin-top: 1px; }
 .na_bn2 .na_br_cmp_parent { align-self: flex-start; font-size: 12px; padding: 3px 11px; line-height: 1.5; color: var(--na-mute, inherit); margin-top: -4px; }
@@ -2867,7 +2868,7 @@ body.na_darkui .na_bn2_link span { background: repeating-linear-gradient(90deg, 
 .na_bn2_note { font-size: 11.5px; color: var(--na-dim); margin: -6px 2px 0; line-height: 1.45; }
 .na_bn2_find { padding: 12px 14px; border-radius: 16px; }
 body:not(.na_darkui) .na_bn2_find { border-color: #D3C1B4; }
-body.na_darkui .na_bn2_find { border-color: #66564B; }
+body.na_darkui .na_bn2_find { border-color: #55555E; }
 .na_bn2_findrow .na_cp_txt { line-height: 1.3; }
 .na_bn2_findrow .na_cp_txt b { font-size: 13.5px; font-weight: 700; }
 .na_bn2_findrow .na_cp_txt small { font-size: 11.5px; color: var(--na-dim); }
@@ -2881,7 +2882,7 @@ body.na_darkui .na_bn2_find { border-color: #66564B; }
 .na_uh2_track span { background: var(--na-raw, color-mix(in srgb, var(--SmartThemeBodyColor, #888) 30%, transparent)); box-shadow: 2px 0 0 var(--na-card), -2px 0 0 var(--na-card); }
 .na_uh2_range > .na_uh2_arrow { flex: none; margin-top: 18px; color: var(--na-dim); }
 body:not(.na_darkui) .na_uh2_range > .na_uh2_arrow, body:not(.na_darkui) .na_uh2_range label > span i { color: #B8A99E; }
-body.na_darkui .na_uh2_range > .na_uh2_arrow, body.na_darkui .na_uh2_range label > span i { color: #8F7F73; }
+body.na_darkui .na_uh2_range > .na_uh2_arrow, body.na_darkui .na_uh2_range label > span i { color: #8A8A93; }
 .na_uh2_range small { font-size: 11.5px; color: var(--na-dim); }
 .na_uh2_range input { font-size: 16px; font-weight: 600; line-height: 1.5; padding: 8px 12px 8px 0; }
 .na_uh2 .na_uh2_quick button { font-size: 12px; padding: 3px 11px; line-height: 1.5; background: var(--na-card); border-color: var(--na-line); }
@@ -2897,7 +2898,7 @@ body:not(.na_darkui) .na_kw2_key { background: var(--na-fill); color: var(--na-o
 body.na_darkui .na_kw2_key { background: var(--na-fill); color: var(--na-onfill); }
 .na_kw2_x { width: 18px; height: 18px; font-size: 14px; }
 body:not(.na_darkui) .na_kw2_x { color: #CDBDB2; opacity: 1; }
-body.na_darkui .na_kw2_x { color: #CDBDB2; opacity: 1; }
+body.na_darkui .na_kw2_x { color: #BEBCC2; opacity: 1; }
 body:not(.na_darkui) .na_kw2_x:hover { color: #fff; }
 body.na_darkui .na_kw2_x:hover { color: #FFF; }
 .na_kw2_add { font-size: 13px; line-height: 1.5; min-width: 90px; }
@@ -2921,7 +2922,7 @@ body.na_darkui .na_kw2_add::placeholder { color: var(--na-dim); }
 .na_kw2 .na_kw_broad { opacity: 0.55; }
 .na_kw2 .na_pchip_broad { opacity: 1; background: none; border: 1px dashed var(--na-line); font-size: 12.5px; padding: 3px 11px; color: inherit; }
 body:not(.na_darkui) .na_kw2 .na_pchip_broad { border-color: #CDBBAE; }
-body.na_darkui .na_kw2 .na_pchip_broad { border-color: #7A6A5E; }
+body.na_darkui .na_kw2 .na_pchip_broad { border-color: #6A6A73; }
 .na_kw2 .na_pchip_broad { gap: 4px; }
 .na_kw2 .na_pchip_broad small { font-size: 1em; color: inherit; }
 .na_kw2 .na_pchip_broad.on { opacity: 1; border-style: solid; border-color: var(--na-accent); }
@@ -2930,7 +2931,7 @@ body.na_darkui .na_kw2 .na_pchip_broad { border-color: #7A6A5E; }
 .na_kw2_aihead .na_v2_note { flex: none; font-size: 11.5px; color: var(--na-dim); }
 .na_kw2 .na_kw_ai, .na_kw2 .na_kw_addall { flex: none; border: 0; background: var(--na-accent-soft); color: var(--na-accent-ink, var(--na-accent)); font: inherit; font-size: 11.5px; font-weight: 600; line-height: 1.5; padding: 2px 10px; border-radius: 999px; cursor: pointer; }
 body:not(.na_darkui) .na_kw2 .na_kw_ai, body:not(.na_darkui) .na_kw2 .na_kw_addall { color: #8A3A12; }
-body.na_darkui .na_kw2 .na_kw_ai, body.na_darkui .na_kw2 .na_kw_addall { color: #F2B48C; }
+body.na_darkui .na_kw2 .na_kw_ai, body.na_darkui .na_kw2 .na_kw_addall { color: #F0CF8E; }
 .na_kw2 .na_kw_aiout { gap: 0; }
 .na_kw2 .na_kw_concept { gap: 5px; padding: 8px 0; background: none; border-radius: 0; border-top: 1px solid var(--na-line2, var(--na-line)); }
 .na_kw2 .na_kw_concept:last-child { padding-bottom: 0; }
@@ -2955,7 +2956,7 @@ dialog:has(.na_kw2_save) .popup-button-ok { display: none; }
 /* Diff / compare */
 .na_df2_arrow { display: grid; place-items: center; color: var(--na-dim); flex: none; }
 body:not(.na_darkui) .na_df2_arrow { color: #B8A99E; }
-body.na_darkui .na_df2_arrow { color: #8F7F73; }
+body.na_darkui .na_df2_arrow { color: #8A8A93; }
 .na_df2_side small { font-size: 0.786em; }
 .na_df2_side.new small { color: var(--na-ok, #2f8a55); }
 .na_df2_side b { font-size: 0.929em; }
@@ -3016,7 +3017,7 @@ body:not(.na_darkui) .na_kn2_s { color: var(--na-amber); }
 body.na_darkui .na_kn2_s { color: var(--na-amber); }
 .na_kn2_u { font-size: 0.857em; }
 body:not(.na_darkui) .na_kn2_u { color: #A99C92; opacity: 1; }
-body.na_darkui .na_kn2_u { color: #8C7C70; opacity: 1; }
+body.na_darkui .na_kn2_u { color: #85858E; opacity: 1; }
 .na_kn2_legend .na_kn2_u { font-size: 0.917em; }
 .na_kn2_foot .na_cite { margin: 0; color: var(--na-accent-ink, var(--na-accent)); font-size: 0.821em; line-height: 1.5; }
 .na_kn2_foot small { font-size: 0.821em; }
@@ -3052,7 +3053,7 @@ body.na_darkui .na_wd.on .na_wd_icon { background: var(--na-warm-soft); }
 :is(.na_v2, #na_settings) .na_wd_rename.text_pole.text_pole:focus { border-bottom: 1px solid var(--na-accent); outline: none; }
 :is(.na_v2, #na_settings) .na_wd_text.text_pole.text_pole { padding: 10px 12px; border: 1px solid var(--na-line); border-radius: 12px; font-size: 0.893em; line-height: 1.6; field-sizing: content; min-height: 6.5em; max-height: 60vh; }
 body:not(.na_darkui) :is(.na_v2, #na_settings) .na_wd_text.text_pole.text_pole { background: transparent; color: #463428; }
-body.na_darkui :is(.na_v2, #na_settings) .na_wd_text.text_pole.text_pole { background: transparent; color: #EFE3D8; }
+body.na_darkui :is(.na_v2, #na_settings) .na_wd_text.text_pole.text_pole { background: transparent; color: #ECEAE6; }
 .na_wd_foot { font-size: 0.857em; gap: 6px 8px; }
 .na_wd_bindchip { padding: 3px 10px 3px 3px; }
 .na_wd_bindchip .na_face { font-size: 10px; }
@@ -3123,7 +3124,7 @@ body.na_darkui .na_layers .na_ly_tabs button.on { color: var(--na-ink); }
 .na_ly_full { background: transparent; max-height: 40vh; overflow: auto; white-space: pre-wrap; }
 :is(.na_v2, #na_settings) .na_ly_pane textarea.text_pole.text_pole { field-sizing: content; max-height: 50vh; }
 body:not(.na_darkui) :is(.na_v2, #na_settings) .na_ly_pane textarea.text_pole.text_pole, body:not(.na_darkui) .na_ly_full { background: transparent; color: #463428; }
-body.na_darkui :is(.na_v2, #na_settings) .na_ly_pane textarea.text_pole.text_pole, body.na_darkui .na_ly_full { background: transparent; color: #EFE3D8; }
+body.na_darkui :is(.na_v2, #na_settings) .na_ly_pane textarea.text_pole.text_pole, body.na_darkui .na_ly_full { background: transparent; color: #ECEAE6; }
 .na_ly_btns > .na_v2_btn { font-size: 0.929em; padding: 9px 0; border-radius: 10px; }
 .na_ly_btns > .na_ly_save { background: var(--na-fill, var(--SmartThemeBodyColor)); border-color: transparent; color: var(--na-onfill, var(--SmartThemeBlurTintColor, #fff)); font-weight: 600; }
 .na_layers .na_xr_warn .na_warn_svg { flex: none; color: var(--na-bad); }
@@ -3138,11 +3139,11 @@ body.na_darkui .na_fd_pct { background: var(--na-ok-soft); color: #74C292; }
 .na_fd_strip { gap: 2px; height: 36px; }
 .na_fd_strip .line { height: 22%; }
 body:not(.na_darkui) .na_fd_strip .short, body:not(.na_darkui) .na_fd_level > i.short { background: #E8A27C; }
-body.na_darkui .na_fd_strip .short, body.na_darkui .na_fd_level > i.short { background: #B8724A; }
+body.na_darkui .na_fd_strip .short, body.na_darkui .na_fd_level > i.short { background: #B8964E; }
 body:not(.na_darkui) .na_fd_strip .line, body:not(.na_darkui) .na_fd_level > i.line { background: #F2CDB6; }
 body.na_darkui .na_fd_strip .line, body.na_darkui .na_fd_level > i.line { background: #7A5039; }
 body:not(.na_darkui) .na_fd_strip .pin { background: #7E3610; }
-body.na_darkui .na_fd_strip .pin { background: #E89A68; }
+body.na_darkui .na_fd_strip .pin { background: #F0CF8E; }
 body:not(.na_darkui) .na_fd_strip .miss { background: var(--na-raw); }
 body.na_darkui .na_fd_strip .miss { background: var(--na-raw); }
 .na_fd_ends { font-size: 0.786em; margin-top: -6px; }
@@ -3171,14 +3172,14 @@ body.na_darkui .na_cal .na_xr_warn > .na_cal_warntxt { color: #F0B8AE; }
 .na_cal .na_xr_warn .na_cal_jump { font-size: 0.929em; font-weight: 600; color: var(--na-bad); opacity: 1; padding: 0; }
 .na_cal .na_cal_logs { gap: 4px; border-radius: 10px; }
 body:not(.na_darkui) .na_cal .na_cal_logs { background: #EBDDD2; }
-body.na_darkui .na_cal .na_cal_logs { background: #2E2621; }
+body.na_darkui .na_cal .na_cal_logs { background: #2A2A30; }
 .na_cal .na_cal_logs button { flex: none; padding: 4px 10px; font-size: 0.893em; line-height: 1.5; }
 .na_cal .na_cal_logs button.on { box-shadow: none; }
 body:not(.na_darkui) .na_cal .na_cal_logs button.on { color: var(--na-ink); }
 body.na_darkui .na_cal .na_cal_logs button.on { color: var(--na-ink); }
 .na_cal_gap2 { font-size: 0.857em; padding: 2px 0; margin-bottom: -8px; }
 body:not(.na_darkui) .na_cal_gap2::before, body:not(.na_darkui) .na_cal_gap2::after { border-top-color: #D3C1B4; }
-body.na_darkui .na_cal_gap2::before, body.na_darkui .na_cal_gap2::after { border-top-color: #66564B; }
+body.na_darkui .na_cal_gap2::before, body.na_darkui .na_cal_gap2::after { border-top-color: #55555E; }
 .na_cal_month { margin: 0 0 -8px; }
 .na_cal_month b { font-size: 1.071em; }
 .na_cal_month small { font-size: 0.857em; }
@@ -3232,11 +3233,11 @@ body.na_darkui .na_xr_dupwarn .na_xr_warntxt span { color: #D8BBB4; }
 .na_xray .na_xr_sep { flex: none; color: var(--na-dim); }
 .na_xray .na_xr_dup q { font-size: 0.9286em; line-height: 1.5; }
 body:not(.na_darkui) .na_xray .na_xr_place.arc { color: #8A3A12; }
-body.na_darkui .na_xray .na_xr_place.arc { color: #F2B48C; }
+body.na_darkui .na_xray .na_xr_place.arc { color: #F0CF8E; }
 body:not(.na_darkui) .na_xray .na_xr_place.wi { background: #ECE5F7; color: var(--na-purple); }
 body.na_darkui .na_xray .na_xr_place.wi { background: #3C3350; color: var(--na-purple); }
 body:not(.na_darkui) .na_xray .na_xr_sep { color: #9A8B80; }
-body.na_darkui .na_xray .na_xr_sep { color: #A69689; }
+body.na_darkui .na_xray .na_xr_sep { color: #A09FA6; }
 body:not(.na_darkui) .na_xray .na_xr_dup q { color: #4A3D35; }
 body.na_darkui .na_xray .na_xr_dup q { color: #E6D9CD; }
 
@@ -3244,7 +3245,7 @@ body.na_darkui .na_xray .na_xr_dup q { color: #E6D9CD; }
 .na_people_tabs { gap: 4px; }
 .na_people_tabs button { font-size: 0.9286em; padding: 9px 0; }
 body:not(.na_darkui) .na_people_tabs { background: #EBDDD2; }
-body.na_darkui .na_people_tabs { background: #2E2621; }
+body.na_darkui .na_people_tabs { background: #2A2A30; }
 body:not(.na_darkui) .na_people_tabs button.on { box-shadow: 0 1px 2px rgba(60, 30, 10, 0.12); }
 body.na_darkui .na_people_tabs button.on { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
 .na_people .na_face { background: hsl(var(--h) 34% 42%); }
@@ -3258,7 +3259,7 @@ body.na_darkui .na_people_tabs button.on { box-shadow: 0 1px 2px rgba(0, 0, 0, 0
 .na_people .na_pb_pick.on .na_face { box-shadow: 0 0 0 3px var(--SmartThemeBlurTintColor, #fff), 0 0 0 5px var(--na-fill, var(--SmartThemeBodyColor, #222)); }
 .na_people .na_pb_addbtn { display: grid; place-items: center; padding: 0; }
 body:not(.na_darkui) .na_people .na_pb_addbtn { border-color: #CDBBAE; }
-body.na_darkui .na_people .na_pb_addbtn { border-color: #7A6A5E; }
+body.na_darkui .na_people .na_pb_addbtn { border-color: #6A6A73; }
 /* 도감: profile card */
 .na_people .na_pb_card { border-radius: 24px; }
 .na_people .na_pb_cover { height: 76px; background: var(--cover, hsl(var(--h) 36% 36%)); }
@@ -3277,20 +3278,20 @@ body.na_darkui .na_face_cam { color: #FFF; }
 .na_people .na_v2_under button { font-size: 1em; }
 .na_people .na_v2_under button.on { color: var(--na-ink, inherit); }
 body:not(.na_darkui) .na_people .na_v2_under { border-bottom-color: #E3D3C7; }
-body.na_darkui .na_people .na_v2_under { border-bottom-color: #5C4C42; }
+body.na_darkui .na_people .na_v2_under { border-bottom-color: #4C4C55; }
 .na_people .na_pb_list { font-size: 0.9643em; }
 .na_people .na_pb_list li { padding: 11px 13px; }
 .na_people .na_pb_list li::before { font-size: 0.8519em; background: var(--na-card2); }
 body:not(.na_darkui) .na_people .na_pb_list li { border-color: #EADBD0; color: #463428; }
-body.na_darkui .na_people .na_pb_list li { border-color: #54463D; color: #EFE3D8; }
+body.na_darkui .na_people .na_pb_list li { border-color: #45454D; color: #ECEAE6; }
 body:not(.na_darkui) .na_people .na_pb_list li::before { color: #8A3A12; }
-body.na_darkui .na_people .na_pb_list li::before { color: #F2B48C; }
+body.na_darkui .na_people .na_pb_list li::before { color: #F0CF8E; }
 .na_people_body[data-view="book"] > .na_v2_row2 .na_v2_btn { font-size: 0.9286em; padding: 10px 0; }
 
 /* 관계도 */
 .na_people .na_ego { margin: 0 auto; max-width: 350px; border-radius: 50%; background: var(--na-card); }
 body:not(.na_darkui) .na_people .na_ego { background: #F2E7DF; }
-body.na_darkui .na_people .na_ego { background: #41352D; }
+body.na_darkui .na_people .na_ego { background: #38383F; }
 .na_people .na_ego .ring { vector-effect: non-scaling-stroke; stroke-width: 1px; stroke-dasharray: 3 4; }
 .na_people .na_ego line { vector-effect: non-scaling-stroke; stroke-width: 1.5px; }
 .na_people .na_ego line.hot { stroke-width: 2.5px; }
@@ -3298,7 +3299,7 @@ body.na_darkui .na_people .na_ego { background: #41352D; }
 .na_people .na_ego line.warm.hot { stroke: var(--na-warm); }
 .na_people .na_ego line.cold.hot { stroke: var(--na-cold); }
 body:not(.na_darkui) .na_people .na_ego .ring { stroke: #DCCBBE; }
-body.na_darkui .na_people .na_ego .ring { stroke: #5C4C42; }
+body.na_darkui .na_people .na_ego .ring { stroke: #4C4C55; }
 body:not(.na_darkui) .na_people .na_ego .ring.warm { fill: rgba(251, 228, 216, 0.7); stroke: #EBC2AA; }
 body.na_darkui .na_people .na_ego .ring.warm { fill: rgba(168, 96, 58, 0.22); stroke: #8A5A40; }
 body:not(.na_darkui) .na_people .na_ego .ring.cold { stroke: #C9D6E8; }
@@ -3306,9 +3307,9 @@ body.na_darkui .na_people .na_ego .ring.cold { stroke: #3C4A60; }
 body:not(.na_darkui) .na_people .na_ego line.warm.hot { stroke: #D9662F; }
 body.na_darkui .na_people .na_ego line.warm.hot { stroke: #E8804A; }
 body:not(.na_darkui) .na_people .na_ego line.warm { stroke: #E6A27E; }
-body.na_darkui .na_people .na_ego line.warm { stroke: #B8724A; }
+body.na_darkui .na_people .na_ego line.warm { stroke: #B8964E; }
 body:not(.na_darkui) .na_people .na_ego line.mid { stroke: #B8AAA0; }
-body.na_darkui .na_people .na_ego line.mid { stroke: #8F7F73; }
+body.na_darkui .na_people .na_ego line.mid { stroke: #8A8A93; }
 body:not(.na_darkui) .na_people .na_ego line.cold { stroke: #7FA3D6; }
 body.na_darkui .na_people .na_ego line.cold { stroke: #6A8DC0; }
 body:not(.na_darkui) .na_people .na_ego line.cold.hot { stroke: #3D6FB6; }
@@ -3336,7 +3337,7 @@ body.na_darkui .na_people .na_ego_lbl.cold { color: var(--na-cold); }
 .na_people .na_ego_detail > ul > li { margin: 0; }
 .na_people .na_ego_detail > ul > li + li { margin-top: 4px; }
 body:not(.na_darkui) .na_people .na_ego_detail > ul { color: #463428; }
-body.na_darkui .na_people .na_ego_detail > ul { color: #EFE3D8; }
+body.na_darkui .na_people .na_ego_detail > ul { color: #ECEAE6; }
 .na_people .na_ego_detail .na_v2_btn { font-size: 0.9286em; padding: 9px 0; border-radius: 10px; }
 .na_people .na_ego_detail .na_v2_btn.primary { border: 0; }
 
@@ -3369,7 +3370,7 @@ body.na_darkui .na_people .na_tp_now > span.cold { color: var(--na-cold); }
 body:not(.na_darkui) .na_people .na_temp_svg .band { fill: var(--na-softer); }
 body.na_darkui .na_people .na_temp_svg .band { fill: var(--na-softer); }
 body:not(.na_darkui) .na_people .na_temp_svg .zero { stroke: #DCCBBE; }
-body.na_darkui .na_people .na_temp_svg .zero { stroke: #5C4C42; }
+body.na_darkui .na_people .na_temp_svg .zero { stroke: #4C4C55; }
 body:not(.na_darkui) .na_people .na_temp_svg .area.warm { fill: #F3B497; fill-opacity: 0.45; }
 body.na_darkui .na_people .na_temp_svg .area.warm { fill: #A8603A; fill-opacity: 0.45; }
 body:not(.na_darkui) .na_people .na_temp_svg .area.cold { fill: #9DBCE3; fill-opacity: 0.5; }
@@ -3380,7 +3381,7 @@ body.na_darkui .na_people .na_temp_svg .area.cold { fill: #4D6A92; fill-opacity:
 .na_people .na_temp_svg .halo { fill: var(--na-warm); fill-opacity: 0.18; }
 .na_people .na_temp_bands { font-size: 0.8214em; margin-top: 8px; }
 body:not(.na_darkui) .na_people .na_temp_bands { color: #9A8B80; }
-body.na_darkui .na_people .na_temp_bands { color: #A69689; }
+body.na_darkui .na_people .na_temp_bands { color: #A09FA6; }
 /* hottest / coldest tiles */
 .na_people .na_tp_tile { padding: 12px; }
 .na_people .na_tp_tlabel { font-size: 0.8214em; }
@@ -3402,7 +3403,7 @@ body.na_darkui .na_people .na_tp_jump.cold { color: #8AB0E8; }
 .na_people_body > .na_v2_row2 .na_v2_btn.primary { border: 0; }
 .na_people .na_v2_foot { font-size: 0.8214em; margin-top: -6px; }
 body:not(.na_darkui) .na_people .na_v2_foot { color: #9A8B80; }
-body.na_darkui .na_people .na_v2_foot { color: #A69689; }
+body.na_darkui .na_people .na_v2_foot { color: #A09FA6; }
 /* --- end audit E --- */
 
 /* ============ home tab: keeps the original theme-based look (it was not part of the mockup redesign).
@@ -3423,16 +3424,16 @@ body:not(.na_darkui) #na_settings :is(.inline-drawer-header, #na_meter, .na_nav,
     --na-ok: initial; --na-ok-soft: initial; --na-amber: initial; --na-amber-soft: initial; --na-purple: initial; --na-purple-soft: initial;
 }
 body.na_darkui #na_settings :is(.inline-drawer-header, #na_meter, .na_nav, .na_tab_pane[data-pane="home"]) {
-    --na-accent: #D9733A;
-    --na-line: color-mix(in srgb, #EFE3D8 15%, transparent);
-    --na-soft: color-mix(in srgb, #EFE3D8 7%, transparent);
-    --na-softer: color-mix(in srgb, #EFE3D8 4%, transparent);
+    --na-accent: #E9DFCF;
+    --na-line: color-mix(in srgb, #ECEAE6 15%, transparent);
+    --na-soft: color-mix(in srgb, #ECEAE6 7%, transparent);
+    --na-softer: color-mix(in srgb, #ECEAE6 4%, transparent);
     --na-accent-soft: color-mix(in srgb, var(--na-accent) 16%, transparent);
-    --na-raw: color-mix(in srgb, #EFE3D8 38%, transparent);
+    --na-raw: color-mix(in srgb, #ECEAE6 38%, transparent);
     --na-warn: #E0A245;
-    --na-card: color-mix(in srgb, #EFE3D8 5%, transparent);
-    --na-card2: color-mix(in srgb, #EFE3D8 9%, transparent);
-    --na-dim: color-mix(in srgb, #EFE3D8 64%, transparent);
+    --na-card: color-mix(in srgb, #ECEAE6 5%, transparent);
+    --na-card2: color-mix(in srgb, #ECEAE6 9%, transparent);
+    --na-dim: color-mix(in srgb, #ECEAE6 64%, transparent);
     --na-bad: #C4473B; --na-bad-soft: color-mix(in srgb, #C4473B 13%, transparent);
     --na-accent-ink: initial; --na-line2: initial; --na-mute: initial; --na-sub: initial; --na-ink: initial; --na-paper: initial;
     --na-ok: initial; --na-ok-soft: initial; --na-amber: initial; --na-amber-soft: initial; --na-purple: initial; --na-purple-soft: initial;
@@ -3441,7 +3442,7 @@ body:not(.na_darkui) #na_settings :is(.inline-drawer-header, #na_meter, .na_nav,
     --na-line: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 14%, transparent);
 }
 body.na_darkui #na_settings :is(.inline-drawer-header, #na_meter, .na_nav, .na_tab_pane[data-pane="home"]) .na_v2 {
-    --na-line: color-mix(in srgb, #EFE3D8 14%, transparent);
+    --na-line: color-mix(in srgb, #ECEAE6 14%, transparent);
 }
 
 /* ============ timeline ⋯ menu: one row of equal pills (list view · find & replace · heading check), chips below */
@@ -3472,13 +3473,13 @@ body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inlin
     padding: 6px 12px; box-shadow: none; color: #463428;
 }
 body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header {
-    background: #2A221D; background-image: none; border: 1px solid #2A221D; border-radius: 14px;
-    padding: 6px 12px; box-shadow: none; color: #EFE3D8;
+    background: #1C1C20; background-image: none; border: 1px solid #1C1C20; border-radius: 14px;
+    padding: 6px 12px; box-shadow: none; color: #ECEAE6;
 }
 body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header:hover { filter: none; background: #EADCD1; border-color: #EADCD1; }
 body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header:hover { filter: none; background: #332A24; border-color: #332A24; }
 body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header .inline-drawer-icon { color: #8A7A70; }
-body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header .inline-drawer-icon { color: #B3A396; }
+body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header .inline-drawer-icon { color: #9A989F; }
 /* open (SillyTavern flips the icon to .up): the bar sits flush on the panel, no 5px gap, square lower corners,
    and the panel's top corners square too, so there are no notches at either end */
 #na_settings > .inline-drawer:has(> .inline-drawer-header .inline-drawer-icon.up) > .inline-drawer-toggle.inline-drawer-header { margin-bottom: 0; border-radius: 14px 14px 0 0; }
@@ -3489,15 +3490,15 @@ body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-draw
    The panel and popups sit on a warm dark base so the cards read as one family with the light look. */
 /* the theme's own page and text colours, warmed, for the rules that borrow them (active tabs, face rings, sticky bars) */
 body.na_darkui :is(#na_settings, dialog.popup:has(.na_popup, #na_settings)) {
-    --SmartThemeBodyColor: #EAE0D6; --SmartThemeEmColor: #B3A396; --SmartThemeQuoteColor: #D9733A;
-    --SmartThemeBlurTintColor: #2A221D; --SmartThemeChatTintColor: #2E2621; --SmartThemeBorderColor: rgba(239, 227, 216, 0.18);
-    --SmartThemeShadowColor: rgba(0, 0, 0, 0.4); --SmartThemeCheckboxTickColor: #2A221D; color: var(--SmartThemeBodyColor);
+    --SmartThemeBodyColor: #E8E6E2; --SmartThemeEmColor: #9A989F; --SmartThemeQuoteColor: #E9DFCF;
+    --SmartThemeBlurTintColor: #1C1C20; --SmartThemeChatTintColor: #2A2A30; --SmartThemeBorderColor: rgba(239, 227, 216, 0.18);
+    --SmartThemeShadowColor: rgba(0, 0, 0, 0.4); --SmartThemeCheckboxTickColor: #1C1C20; color: var(--SmartThemeBodyColor);
 }
-body.na_darkui #na_settings > .inline-drawer > .inline-drawer-content { background: #2A221D; border-radius: 0 0 14px 14px; }
-body.na_darkui dialog.popup:has(.na_popup, #na_settings) { background: #2A221D; color: #EFE3D8; }
+body.na_darkui #na_settings > .inline-drawer > .inline-drawer-content { background: #1C1C20; border-radius: 0 0 14px 14px; }
+body.na_darkui dialog.popup:has(.na_popup, #na_settings) { background: #1C1C20; color: #ECEAE6; }
 body.na_darkui .na_face_btn > i { background: var(--na-fill); color: var(--na-onfill); }
-body.na_darkui dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #3A2F28; border: 1px solid #54463D; color: #EFE3D8; }
-body.na_darkui .na_popup :where(.text_pole) { background: #2E2621; border: 1px solid #54463D; color: #EFE3D8; }
+body.na_darkui dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #34343B; border: 1px solid #45454D; color: #ECEAE6; }
+body.na_darkui .na_popup :where(.text_pole) { background: #2A2A30; border: 1px solid #45454D; color: #ECEAE6; }
 
 /* ============ the extension's own theme (설정 › 테마), whatever SillyTavern's theme is. Inside the panel and its popups
    the theme colours SillyTavern's rules read are swapped for the chosen palette's, and both sit on their own base. */
@@ -3517,7 +3518,7 @@ body:not(.na_darkui) .na_popup :where(.text_pole) { background: #F2E9E2; border:
 .na_theme_opt input { position: absolute; opacity: 0; pointer-events: none; }
 .na_theme_sw { flex: none; width: 30px; height: 30px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12); }
 .na_theme_sw.light { background: linear-gradient(135deg, #F7EEE7 0 50%, #B8541F 50% 100%); }
-.na_theme_sw.dark { background: linear-gradient(135deg, #3A2F28 0 50%, #D9733A 50% 100%); }
+.na_theme_sw.dark { background: linear-gradient(135deg, #232328 0 50%, #E9DFCF 50% 100%); }
 .na_theme_txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
 .na_theme_txt b { font-weight: 600; }
 .na_theme_txt small { color: var(--na-dim); font-size: 0.8em; }
@@ -3560,7 +3561,7 @@ button.na_pb_quote:hover { background: var(--na-card2); }
 .na_cc_hint[hidden] { display: none; }
 .na_cc_eye { flex: none; width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--na-dim); cursor: pointer; }
 .na_cc_eye:hover { color: inherit; background: var(--na-card); }
-.na_cc_load { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 11px; border: 0; border-radius: 999px; background: var(--na-accent); color: #fff; font: inherit; font-size: 0.8em; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.na_cc_load { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 11px; border: 0; border-radius: 999px; background: var(--na-accent); color: var(--na-onaccent, #fff); font: inherit; font-size: 0.8em; font-weight: 600; white-space: nowrap; cursor: pointer; }
 .na_cc_load:disabled { opacity: 0.75; cursor: wait; }
 .na_cc_models { max-height: 240px; overflow-y: auto; padding: 4px; border: 1px solid var(--na-line); border-radius: 14px; background: var(--na-card); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
 .na_cc_models[hidden] { display: none; }
@@ -3580,8 +3581,8 @@ body:not(.na_darkui) #na_settings {
     --hm-pur: #5B3FA0; --hm-pur-soft: #EAE3F5; --hm-amb: #8A5A00; --hm-amb-soft: #FFF1D6; --hm-shadow: rgba(120, 60, 20, 0.12);
 }
 body.na_darkui #na_settings {
-    --hm-card: #3A2F28; --hm-line: #54463D; --hm-tile: #41352D; --hm-track: #2E2621; --hm-ink: #EFE3D8; --hm-dim: #B3A396; --hm-mute: #CABBAE;
-    --hm-acc: #D9733A; --hm-acc-ink: #EE9A66; --hm-acc-soft: #543627; --hm-ok: #7CCB9A; --hm-ok-soft: #2D4134;
+    --hm-card: #34343B; --hm-line: #45454D; --hm-tile: #38383F; --hm-track: #2A2A30; --hm-ink: #ECEAE6; --hm-dim: #9A989F; --hm-mute: #B9B7BD;
+    --hm-acc: #E9DFCF; --hm-acc-ink: #F0CF8E; --hm-acc-soft: #3A3222; --hm-ok: #7CCB9A; --hm-ok-soft: #2D4134;
     --hm-warn: #E8B45A; --hm-warn-soft: #4A3B1F; --hm-bad: #EC7468; --hm-bad-soft: #4B2925;
     --hm-pur: #BBA6EE; --hm-pur-soft: #3C3350; --hm-amb: #E8B45A; --hm-amb-soft: #4A3B1F; --hm-shadow: rgba(0, 0, 0, 0.3);
 }
@@ -3675,9 +3676,9 @@ body.na_darkui #na_settings #na_next .na_next_card .na_btn.na_primary:hover { fi
 /* a theme's own !important rules (backgrounds, select colours) must not break the panel, in the extension list or
    shown from the wand menu: the base colours and the setting values are pinned */
 body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-content { background: #F0E4DB !important; }
-body.na_darkui #na_settings > .inline-drawer > .inline-drawer-content { background: #2A221D !important; }
+body.na_darkui #na_settings > .inline-drawer > .inline-drawer-content { background: #1C1C20 !important; }
 body:not(.na_darkui) dialog.popup:has(#na_settings) { background: #F0E4DB !important; color: #463428 !important; }
-body.na_darkui dialog.popup:has(#na_settings) { background: #2A221D !important; color: #EFE3D8 !important; }
+body.na_darkui dialog.popup:has(#na_settings) { background: #1C1C20 !important; color: #ECEAE6 !important; }
 #na_settings .na_tab_pane[data-pane="config"] .na_cfg_val :is(select, input) { color: var(--hm-mute) !important; }
 #na_settings .na_tab_pane[data-pane="config"] .na_cfg_val select option { color: #463428; background: #F7EEE7; }
 #na_settings .na_cfg_head b { color: var(--hm-ink) !important; }
@@ -3707,7 +3708,7 @@ body.na_darkui dialog.popup:has(#na_settings) { background: #2A221D !important; 
 .na_launch .na_launch_tab:hover { background: var(--na-card); color: var(--na-accent-ink, var(--na-accent)); }
 
 body:not(.na_darkui) .na_launch_tabs { background: #E6D6CA; }
-body.na_darkui .na_launch_tabs { background: #3A2F28; }
+body.na_darkui .na_launch_tabs { background: #34343B; }
 
 /* 아카이브에 질문, as drawn: the conversation fills the window, suggestions and the input sit at the bottom,
    the input is one pill (no box of its own inside, whatever a theme does to textareas) */
@@ -3809,7 +3810,7 @@ body.na_darkui .na_launch_tabs { background: #3A2F28; }
     background: transparent !important; background-image: none !important; box-shadow: none !important; color: inherit !important; font: inherit; font-size: 14px !important;
 }
 .na_popup .na_ly_ask input.na_ly_askq::placeholder { color: var(--na-dim) !important; opacity: 1 !important; }
-.na_ly_askgo { flex: none; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 13px; background: var(--na-accent); color: #fff; cursor: pointer; }
+.na_ly_askgo { flex: none; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 13px; background: var(--na-accent); color: var(--na-onaccent, #fff); cursor: pointer; }
 .na_ly_askgo:disabled { opacity: 0.7; cursor: wait; }
 
 
@@ -3993,8 +3994,8 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
     display: flex; flex-direction: column; height: min(86dvh, 860px); margin: -4px; color: var(--st-ink); text-align: left; font-size: 14px;
 }
 body.na_darkui .na_st {
-    --st-bg: #241C18; --st-bub: #31271F; --st-w: #3A2F28; --st-ink: #EDE1D6; --st-dim: #A8978A; --st-line: #3A2F29; --st-seg: #31271F;
-    --st-acc: #D9733A; --st-acc2: #E8844C; --st-accsoft: #4A2E20; --st-ok: #6CC495; --st-oksoft: #1F3328; --st-warn: #E3B058; --st-warnline: #5A4527; --st-q: #F2A777;
+    --st-bg: #241C18; --st-bub: #31271F; --st-w: #34343B; --st-ink: #EDE1D6; --st-dim: #A8978A; --st-line: #3A2F29; --st-seg: #31271F;
+    --st-acc: #E9DFCF; --st-acc2: #E8844C; --st-accsoft: #4A2E20; --st-ok: #6CC495; --st-oksoft: #1F3328; --st-warn: #E3B058; --st-warnline: #5A4527; --st-q: #F2A777;
 }
 body:not(.na_darkui) dialog.popup:has(.na_st) { background: #FCF8F5 !important; }
 body.na_darkui dialog.popup:has(.na_st) { background: #241C18 !important; }
@@ -4200,7 +4201,7 @@ body:not(.na_darkui) #na_settings .na_cfg_tabbtn.on { background: #FFFFFF; }
 
 /* ============ ⚙ 설정 묶음 화면 = 시안 L+M 그대로 (v3.80.1): cream sheet, white list cards, orange values */
 body:not(.na_darkui) #na_settings { --sv-page: #FFFAF6; --sv-card: #FFFFFF; --sv-line: #EEE2D8; --sv-tile: #F7EEE7; --sv-seg: #F1E6DD; --sv-segon: #FFFFFF; --sv-val: #A84A17; --sv-acc: #B8541F; --sv-dim: #8A7A70; --sv-ink: #463428; }
-body.na_darkui #na_settings { --sv-page: #2F2621; --sv-card: #3A2F28; --sv-line: #4C3F36; --sv-tile: #45382F; --sv-seg: #261F1B; --sv-segon: #4A3C33; --sv-val: #EE9A66; --sv-acc: #D9733A; --sv-dim: #B3A396; --sv-ink: #EFE3D8; }
+body.na_darkui #na_settings { --sv-page: #2F2621; --sv-card: #34343B; --sv-line: #4C3F36; --sv-tile: #45382F; --sv-seg: #261F1B; --sv-segon: #4A3C33; --sv-val: #F0CF8E; --sv-acc: #E9DFCF; --sv-dim: #9A989F; --sv-ink: #ECEAE6; }
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one { background: var(--sv-page); border-radius: 18px; padding: 18px 16px; gap: 14px; color: var(--sv-ink); }
 #na_settings .na_cfg_one .na_cfg_search { display: none; }
 #na_settings .na_cfg_one .na_cfg_head { gap: 8px; }
@@ -4367,7 +4368,7 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 .na_ck { position: relative; flex: none; display: grid; place-items: center; width: 18px; height: 18px; margin: 0 5px; box-sizing: border-box; border: 1.6px solid color-mix(in srgb, var(--na-dim) 70%, transparent); border-radius: 5px; color: transparent; cursor: pointer; }
 .na_ck input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
 .na_ck .na_ck_p { display: none; }
-.na_ck:has(input:checked) { background: var(--na-accent); border-color: var(--na-accent); color: #fff; }
+.na_ck:has(input:checked) { background: var(--na-accent); border-color: var(--na-accent); color: var(--na-onaccent, #fff); }
 .na_ck.part { background: color-mix(in srgb, var(--na-accent) 18%, transparent); border-color: var(--na-accent); color: var(--na-accent); }
 .na_ck.part .na_ck_v { display: none; }
 .na_ck.part .na_ck_p { display: inline; }
@@ -4378,14 +4379,14 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 /* ============ SillyTavern themes that force their own colours (!important) on popups, buttons and inputs:
    inside the extension's popups the extension's palette wins. Inputs drawn see-through on purpose stay see-through. */
 body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) { background: #F0E4DB !important; background-image: none !important; color: #463428 !important; }
-body.na_darkui dialog.popup:has(.na_popup, #na_settings) { background: #2A221D !important; background-image: none !important; color: #EFE3D8 !important; }
+body.na_darkui dialog.popup:has(.na_popup, #na_settings) { background: #1C1C20 !important; background-image: none !important; color: #ECEAE6 !important; }
 body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #F7EEE7 !important; background-image: none !important; border: 1px solid #E5D5C9 !important; color: #463428 !important; box-shadow: none !important; }
-body.na_darkui dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #3A2F28 !important; background-image: none !important; border: 1px solid #54463D !important; color: #EFE3D8 !important; box-shadow: none !important; }
+body.na_darkui dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #34343B !important; background-image: none !important; border: 1px solid #45454D !important; color: #ECEAE6 !important; box-shadow: none !important; }
 body:not(.na_darkui) dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #F2E9E2 !important; background-image: none !important; border-color: #E5D5C9 !important; color: #463428 !important; }
-body.na_darkui dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #2E2621 !important; background-image: none !important; border-color: #54463D !important; color: #EFE3D8 !important; }
+body.na_darkui dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #2A2A30 !important; background-image: none !important; border-color: #45454D !important; color: #ECEAE6 !important; }
 /* the popup's own input row (이름 짓기) */
 body:not(.na_darkui) dialog.popup:has(.na_popup) .popup-input { background-color: #F2E9E2 !important; border-color: #E5D5C9 !important; color: #463428 !important; }
-body.na_darkui dialog.popup:has(.na_popup) .popup-input { background-color: #2E2621 !important; border-color: #54463D !important; color: #EFE3D8 !important; }
+body.na_darkui dialog.popup:has(.na_popup) .popup-input { background-color: #2A2A30 !important; border-color: #45454D !important; color: #ECEAE6 !important; }
 /* inputs the extension draws on a card (세계관 칸) or see-through (inside a pill, a stepper, a dashed name line):
    stronger than the fill above, so a forced theme colour doesn't box them in */
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.na_wd_slot .text_pole) { background-color: var(--na-card2) !important; background-image: none !important; border-color: transparent !important; }
@@ -4404,7 +4405,7 @@ dialog.popup:has(.na_confirm) .na_confirm .na_v2_title b { font-size: 19px; font
 dialog.popup:has(.na_confirm) .na_confirm .na_confirm_text { margin-top: 6px; font-size: 14px; line-height: 1.55; color: var(--na-sub); }
 dialog.popup:has(.na_confirm) .na_confirm.danger :is(.na_v2_title, .na_confirm_text) { text-align: center; }
 dialog.popup:has(.na_confirm) .na_confirm.danger::before { content: ""; display: block; width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 999px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B8541F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16.2v.1'/%3E%3C/svg%3E") center / 26px no-repeat, var(--na-accent-soft); }
-body.na_darkui dialog.popup:has(.na_confirm) .na_confirm.danger::before { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23EE9A66' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16.2v.1'/%3E%3C/svg%3E") center / 26px no-repeat, var(--na-accent-soft); }
+body.na_darkui dialog.popup:has(.na_confirm) .na_confirm.danger::before { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23F0CF8E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16.2v.1'/%3E%3C/svg%3E") center / 26px no-repeat, var(--na-accent-soft); }
 dialog.popup:has(.na_confirm) .na_confirm > label { display: flex !important; align-items: center; justify-content: center; margin-top: 8px; padding: 12px; border-radius: 999px; background: var(--na-card); font-size: 14.5px; font-weight: 600; color: var(--na-mute); cursor: pointer; }
 dialog.popup:has(.na_confirm) .na_confirm > label:first-of-type { margin-top: 16px; }
 dialog.popup:has(.na_confirm) .na_confirm > label:has(input:checked) { background: var(--na-fill); color: var(--na-onfill); }
@@ -4432,7 +4433,7 @@ dialog.popup:has(.na_confirm) .na_sc_note { margin-top: 14px; font-size: 12.5px;
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) .popup-controls.popup-controls { display: flex !important; gap: 8px; width: 100%; margin-top: 20px; padding: 0; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) .popup-controls.popup-controls .menu_button.menu_button { flex: 1 1 0 !important; width: auto !important; max-width: none !important; min-height: 46px; margin: 0 !important; padding: 0 12px !important; display: flex; align-items: center; justify-content: center; border-radius: 999px !important; font-size: 15px; font-weight: 600; filter: none !important; opacity: 1 !important; outline: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) .popup-controls.popup-controls .popup-button-cancel.popup-button-cancel { order: -1; background: var(--na-card) !important; border: 1px solid var(--na-line) !important; color: var(--na-ink) !important; box-shadow: none !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) .popup-controls.popup-controls .popup-button-ok.popup-button-ok { background: var(--na-accent) !important; border: 1px solid var(--na-accent) !important; color: #fff !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) .popup-controls.popup-controls .popup-button-ok.popup-button-ok { background: var(--na-accent) !important; border: 1px solid var(--na-accent) !important; color: var(--na-onaccent, #fff) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important; }
 
 /* ============ 캐릭터 휴대폰 (v3.107): the popup keeps the extension's palette; the phone inside has its own look —
    glass lock and home screens on a wallpaper, white (or black, dark) app screens. Ticks the owner strip on top. */
@@ -5157,7 +5158,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_top .na
 .na_phl_shade { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); }
 .na_phl_sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 72dvh; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 8px 16px max(16px, env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3); animation: na_phl_up 0.18s ease-out; }
 body:not(.na_darkui) .na_phl_sheet { background: #F0E4DB; color: #463428; }
-body.na_darkui .na_phl_sheet { background: #2A221D; color: #EFE3D8; }
+body.na_darkui .na_phl_sheet { background: #1C1C20; color: #ECEAE6; }
 .na_phl_grab { width: 40px; height: 4px; margin: 0 auto 2px; border-radius: 2px; background: var(--na-line); }
 .na_phl_sheethead { display: flex; align-items: baseline; gap: 8px; }
 .na_phl_sheethead small { color: var(--na-dim); font-size: 0.8em; }
@@ -5215,7 +5216,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 /* 도구 › 이야기: 캐릭터 휴대폰이 맨 위 큰 카드 */
 .na_toolrow.na_toolhero { margin-bottom: 6px; padding: 14px 14px; border-radius: 16px; border: 1px solid var(--na-line); background: linear-gradient(135deg, var(--na-soft), var(--na-softer)); }
 .na_toolrow.na_toolhero:hover { border-color: var(--na-accent); }
-.na_toolhero_ic { flex: none !important; width: 44px; height: 44px; display: grid !important; place-items: center; border-radius: 13px; background: var(--na-accent); color: #fff; font-size: 1.25em; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+.na_toolhero_ic { flex: none !important; width: 44px; height: 44px; display: grid !important; place-items: center; border-radius: 13px; background: var(--na-accent); color: var(--na-onaccent, #fff); font-size: 1.25em; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
 .na_toolhero > span:nth-child(2) b { font-size: 1.05em; }
 /* the board's big numbers hold against a theme that sizes every span in a popup */
 /* 잠금화면 시계: frosted ink — a see-through dark clock with a light edge on top and a wide soft shadow; the date in a glass pill over it */
@@ -7229,18 +7230,18 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 
 /* ============ dark popups (시안 A, carried over from 아카이브에 추가): a near-black warm window, darker cards with no outline
    and a faint top light, neutral parts with the colour kept to a thin line or the text. Tokens only, so every popup follows. */
-body.na_darkui dialog.popup:has(.na_popup):not(#na_x) { background: #1C1714 !important; }
+body.na_darkui dialog.popup:has(.na_popup):not(#na_x) { background: #17171A !important; }
 body.na_darkui dialog.popup:has(.na_popup) .na_popup {
-    --na-card: #27201B; --na-card2: #342B25; --na-paper: #27201B; --na-soft: #342B25; --na-softer: #2F2722;
-    --na-line: #3A3029; --na-line2: #312822; --na-fill: #5E4C41;
+    --na-card: #232328; --na-card2: #2E2E34; --na-paper: #232328; --na-soft: #2E2E34; --na-softer: #2B2B31;
+    --na-line: #3A3A41; --na-line2: #2E2E34; --na-fill: #4A4A52;
 }
 body.na_darkui dialog.popup:has(.na_popup) .na_popup .na_v2_card { border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
-body.na_darkui dialog.popup:has(.na_popup):not(#na_x) .popup-controls .menu_button { background: #27201B !important; border-color: #3A3029 !important; }
-body.na_darkui dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #211B17 !important; border-color: #3A3029 !important; }
+body.na_darkui dialog.popup:has(.na_popup):not(#na_x) .popup-controls .menu_button { background: #232328 !important; border-color: #3A3A41 !important; }
+body.na_darkui dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #1D1D21 !important; border-color: #3A3A41 !important; }
 /* chats: my line neutral with an orange edge, the answer a plain card */
-body.na_darkui .na_ask2 .na_ask_qq, body.na_darkui .na_sf_bubble { background: #3A2F28; color: #F3E7DC; box-shadow: inset 0 0 0 1px rgba(217, 115, 58, 0.45); }
-body.na_darkui .na_ask2 .na_ask_a { background: #27201B; border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
-body.na_darkui .na_sf_note { background: #2F2722; color: #F0CF8E; box-shadow: inset 3px 0 0 #E8B45A; }
+body.na_darkui .na_ask2 .na_ask_qq, body.na_darkui .na_sf_bubble { background: #34343B; color: #F3E7DC; box-shadow: inset 0 0 0 1px rgba(217, 115, 58, 0.45); }
+body.na_darkui .na_ask2 .na_ask_a { background: #232328; border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
+body.na_darkui .na_sf_note { background: #2B2B31; color: #F0CF8E; box-shadow: inset 3px 0 0 #E8B45A; }
 
 /* light chats as 아카이브에 추가: my line peach with brown text, the model's 못 한 것 a yellow note */
 body:not(.na_darkui) .na_sf_bubble { background: #F6E1D3; color: #7A3410; }
@@ -7280,8 +7281,8 @@ body.na_darkui .na_ask3_src > i { background: #8A5A3C; }
 .na_ask3_seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--na-card2); flex: none; }
 .na_ask3_seg button { padding: 4px 10px; border: 0; border-radius: 999px; background: transparent; color: var(--na-mute); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 body:not(.na_darkui) .na_ask3_seg button.on { background: #FFFFFF; color: var(--na-accent-ink); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1); }
-body.na_darkui .na_ask3_seg button.on { background: #4A3D34; color: #F2B48A; }
-body.na_darkui .na_ask2 .na_ask2_ans { background: #27201B; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+body.na_darkui .na_ask3_seg button.on { background: #414148; color: #F0CF8E; }
+body.na_darkui .na_ask2 .na_ask2_ans { background: #232328; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
 
 /* ============ 고쳐 달라고 하기 v3 (one section; same parts as 아카이브에 추가): the section card with 원래 | 바뀐 부분 and
    한국어로 보기, AI로 고치기 as a small chat (the bubbles are .na_ap3_me / .na_ap3_ai), 처음으로 · 적용 at the bottom */
@@ -7311,8 +7312,8 @@ body.na_darkui .na_ask2 .na_ask2_ans { background: #27201B; box-shadow: inset 0 
 .na_sf3_bar { margin-top: 12px; }
 .na_sf3_bar button:disabled { opacity: 0.45; cursor: default; }
 body.na_darkui .na_sf3 > .na_v2_card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
-body.na_darkui .na_sf3 :is(.na_ly_ask, .na_ap3_seg, .na_ap3_raw, .na_sf3_tool) { background: #342B25; }
-body.na_darkui .na_sf3 .na_ap3_seg button.on { background: #4A3D34; color: #F2B48A; }
+body.na_darkui .na_sf3 :is(.na_ly_ask, .na_ap3_seg, .na_ap3_raw, .na_sf3_tool) { background: #2E2E34; }
+body.na_darkui .na_sf3 .na_ap3_seg button.on { background: #414148; color: #F0CF8E; }
 body.na_darkui .na_sf3 .na_ap3_raw:has(input:checked) { color: #8FD3A6; }
 
 /* ============ one way to close (src/popupchrome.js): a 닫기 at the bottom only. Look-only: one soft full-width pill;
@@ -7322,9 +7323,9 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_px:not(#na_x) .popup-contr
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_px_view:not(#na_x) .popup-controls.popup-controls { justify-content: center; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_px_view:not(#na_x) .popup-controls.popup-controls .popup-button-ok.popup-button-ok { flex: none !important; width: auto !important; min-height: 34px; padding: 0 18px !important; font-size: 13.5px; background: var(--na-card) !important; border: 0 !important; color: var(--na-ink) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_px_act:not(#na_x) .popup-controls.popup-controls .popup-button-cancel.popup-button-cancel { order: -1; flex: none !important; background: transparent !important; border: 0 !important; color: var(--na-mute) !important; box-shadow: none !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_px_act:not(#na_x) .popup-controls.popup-controls .popup-button-ok.popup-button-ok { flex: 1 1 auto !important; width: auto !important; max-width: none !important; background: var(--na-accent) !important; border: 0 !important; color: #fff !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_px_act:not(#na_x) .popup-controls.popup-controls .popup-button-ok.popup-button-ok { flex: 1 1 auto !important; width: auto !important; max-width: none !important; background: var(--na-accent) !important; border: 0 !important; color: var(--na-onaccent, #fff) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important; }
 body:not(.na_darkui) dialog.popup.na_px { --na-accent: #B8541F; --na-mute: #6B5A50; --na-card: #F7EEE7; --na-ink: #463428; }
-body.na_darkui dialog.popup.na_px { --na-accent: #D9733A; --na-mute: #CABBAE; --na-card: #27201B; --na-ink: #EFE3D8; }
+body.na_darkui dialog.popup.na_px { --na-accent: #E9DFCF; --na-mute: #B9B7BD; --na-card: #232328; --na-ink: #ECEAE6; }
 /* 고쳐 달라고 하기: 처음으로 sits by the tools now */
 .na_sf3_foot .na_sf3_reset { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--na-mute); }
 .na_sf3_foot .na_sf3_reset:disabled { opacity: 0.45; }
@@ -7348,9 +7349,9 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup):not(#na_x) { b
 .na_layers .na_ly3_cards button.na_ly3_card small { font-size: 12px; color: var(--na-sub, var(--na-dim)); }
 .na_layers .na_ly3_cards button.na_ly3_card.on { border-color: var(--na-accent); }
 body:not(.na_darkui) .na_layers .na_ly3_cards button.na_ly3_card.on { background: #FFF8F3; }
-body.na_darkui .na_layers .na_ly3_cards button.na_ly3_card.on { background: #2F2722; }
+body.na_darkui .na_layers .na_ly3_cards button.na_ly3_card.on { background: #2B2B31; }
 .na_layers .na_ly3_cards button.na_ly3_card.none b { color: var(--na-dim); }
-.na_ly3_in { position: absolute; top: 8px; right: 8px; display: none; padding: 1px 7px; border-radius: 999px; background: var(--na-accent); color: #fff; font-size: 10.5px; font-weight: 700; }
+.na_ly3_in { position: absolute; top: 8px; right: 8px; display: none; padding: 1px 7px; border-radius: 999px; background: var(--na-accent); color: var(--na-onaccent, #fff); font-size: 10.5px; font-weight: 700; }
 .na_ly3_card.goes .na_ly3_in { display: inline-block; }
 .na_ly3_body { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; padding: 14px; border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 body.na_darkui .na_ly3_body, body.na_darkui .na_layers .na_ly3_cards button.na_ly3_card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
@@ -7364,13 +7365,13 @@ body.na_darkui .na_ly3_body, body.na_darkui .na_layers .na_ly3_cards button.na_l
 .na_ly3_foot small { flex: 1; min-width: 0; text-align: right; font-size: 11.5px; color: var(--na-dim); }
 .na_ly3_tool { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--na-card2); color: var(--na-ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .na_ly3_tool:disabled { opacity: 0.7; }
-body.na_darkui .na_ly3 :is(.na_ly_ask, .na_ly3_tool) { background: #342B25; }
+body.na_darkui .na_ly3 :is(.na_ly_ask, .na_ly3_tool) { background: #2E2E34; }
 
 /* ============ 섹션별 버전 v3 (docs/mockups/ext-fadepick C): a bar of what goes in now, then each section with its version as a
    small menu; 꺼짐 rows dimmed. Colours: 원문 brown-grey, 짧게 orange, 요점 blue, 꺼짐 faint */
 .na_fp3 { gap: 0; }
 .na_fp3 { --u-long: #8A7A70; --u-short: #D9733A; --u-line: #6E9BD6; --u-off: #E5D5C9; }
-body.na_darkui .na_fp3 { --u-long: #B3A396; --u-short: #E08A55; --u-line: #8DB2E4; --u-off: #4A3D34; }
+body.na_darkui .na_fp3 { --u-long: #9A989F; --u-short: #E08A55; --u-line: #8DB2E4; --u-off: #414148; }
 .na_fp3 > .na_v2_card, .na_fp3_card { border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 body.na_darkui .na_fp3 > .na_v2_card, body.na_darkui .na_fp3_card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
 .na_fp3_sum { margin-top: 14px; padding: 14px; }
@@ -7403,7 +7404,7 @@ body.na_darkui .na_fp3 > .na_v2_card, body.na_darkui .na_fp3_card { box-shadow: 
 .na_fp3_menu button small { font-size: 10px; font-weight: 500; opacity: 0.7; }
 .na_fp3_menu button[data-miss] { color: var(--na-dim); }
 body:not(.na_darkui) .na_fp3_menu button.on { background: #FFFFFF; color: var(--na-accent-ink); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1); }
-body.na_darkui .na_fp3_menu button.on { background: #4A3D34; color: #F2B48A; }
+body.na_darkui .na_fp3_menu button.on { background: #414148; color: #F0CF8E; }
 .na_fp3_more { display: flex; margin-top: 10px; }
 .na_fp3_more:has(.na_fp_make[hidden]) { display: none; }
 .na_fp3_tool { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--na-card2) !important; color: var(--na-ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
@@ -7426,7 +7427,7 @@ body.na_darkui .na_fp3_bulk { box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45); }
 .na_fp3_bh small { font-size: 12px; color: var(--na-dim); }
 .na_fp3_set { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .na_fp3_set button { height: 38px; border: 0; border-radius: 999px; background: var(--na-card2); color: var(--na-ink); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
-.na_fp3_set button:not(:disabled):hover { background: var(--na-accent); color: #fff; }
+.na_fp3_set button:not(:disabled):hover { background: var(--na-accent); color: var(--na-onaccent, #fff); }
 .na_fp3_set button:disabled { opacity: 0.45; cursor: default; }
 
 /* ============ 다른 채팅에서 가져오기 v3 (docs/mockups/ext-chatpick B): checked on open, archive chats first, the picked one
@@ -7467,7 +7468,7 @@ dialog.popup:has(.na_cp3) .popup-button-ok.disabled { opacity: 0.5 !important; p
 .na_kn3_big { width: 56px; height: 56px; margin-bottom: 8px; border-radius: 999px; display: grid; place-items: center; background: var(--na-accent-soft); color: var(--na-accent); }
 .na_kn3_hello b { font-size: 15px; color: var(--na-ink); }
 .na_kn3_hello small { font-size: 12.5px; line-height: 1.5; color: var(--na-sub, var(--na-dim)); }
-.na_kn3_make { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 46px; margin-top: 14px; border: 0; border-radius: 999px; background: var(--na-accent); color: #fff; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+.na_kn3_make { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 46px; margin-top: 14px; border: 0; border-radius: 999px; background: var(--na-accent); color: var(--na-onaccent, #fff); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
 .na_kn3_write, .na_qb3_find { margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--na-accent-ink); }
 .na_kn3_sect { display: flex; justify-content: space-between; margin: 18px 4px 8px; font-size: 12.5px; font-weight: 700; color: var(--na-dim); }
 .na_kn3_sect small { font-weight: 600; }
@@ -7482,7 +7483,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 .na_kn3_tag { padding: 0 10px 0 3px !important; }
 .na_kn3_tag i { width: 18px; height: 18px; border-radius: 99px; display: grid; place-items: center; font-size: 10px; font-weight: 700; font-style: normal; color: #fff; }
 .na_kn3_tag.k { background: #E3F2E8; color: #1F6A40; } .na_kn3_tag.u { background: #FBE7E2; color: #7A2A1E; } .na_kn3_tag.s { background: #FFF1D6; color: #7A5200; }
-body.na_darkui .na_kn3_tag.k { background: #2F2722; color: #8FD3A6; } body.na_darkui .na_kn3_tag.u { background: #2F2722; color: #F2948A; } body.na_darkui .na_kn3_tag.s { background: #2F2722; color: #F0CF8E; }
+body.na_darkui .na_kn3_tag.k { background: #2B2B31; color: #8FD3A6; } body.na_darkui .na_kn3_tag.u { background: #2B2B31; color: #F2948A; } body.na_darkui .na_kn3_tag.s { background: #2B2B31; color: #F0CF8E; }
 :is(.na_kn3_tag, .na_kn3_leg span).k i { background: #5FA77C; } :is(.na_kn3_tag, .na_kn3_leg span).u i { background: #C9655A; } :is(.na_kn3_tag, .na_kn3_leg span).s i { background: #D4A23C; }
 .na_kn3_ex > .na_kn3_leg { display: flex; gap: 14px; padding: 9px 14px; opacity: 1; font-size: 11.5px; color: var(--na-mute); }
 .na_kn3_leg span { display: inline-flex; align-items: center; gap: 5px; }
@@ -7511,7 +7512,7 @@ body.na_darkui .na_kn2 .na_kn_inject { box-shadow: inset 0 1px 0 rgba(255, 255, 
 .na_kn3_legbar span { display: inline-flex; align-items: center; gap: 5px; }
 /* 누가 아는가: 알아요 in the extension's orange (example and list), so it doesn't fight the orange around it */
 body:not(.na_darkui) .na_kn3_tag.k { background: #F6E1D3 !important; color: #A84A17 !important; }
-body.na_darkui .na_kn3_tag.k { background: #3A2A21 !important; color: #F2B48A !important; }
+body.na_darkui .na_kn3_tag.k { background: #3A2A21 !important; color: #F0CF8E !important; }
 .na_kn3_tag.k i, .na_kn3_leg span.k i { background: #D9733A !important; }
 /* 누가 아는가: legend above the list; 짐작 in a softer yellow */
 .na_kn3_legbar { justify-content: flex-start; margin: 0 4px 2px; }
@@ -7527,7 +7528,7 @@ body.na_darkui :is(.na_kn3_tag.s i, .na_kn3_leg span.s i) { background: #B8964E 
 .na_kn3_leg .na_kn3_tag.k i { width: 12px; height: 12px; }
 .na_kn3_leg { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 /* 누가 아는가: 알아요 as the original solid orange pill with the person's face; 짐작's dashed line a little stronger */
-body:is(.na_darkui, :not(.na_darkui)) .na_kn3_tag.k { background: var(--na-accent) !important; color: #fff !important; padding: 0 10px 0 3px !important; }
+body:is(.na_darkui, :not(.na_darkui)) .na_kn3_tag.k { background: var(--na-accent) !important; color: var(--na-onaccent, #fff) !important; padding: 0 10px 0 3px !important; }
 .na_kn3_tag.k .na_face { --s: 18px; box-shadow: 0 0 0 1.5px var(--na-accent); }
 .na_kn3_leg .na_kn3_tag.k i { background: #fff !important; opacity: 0.85; }
 body:not(.na_darkui) .na_kn3_tag.s { border-color: #C9A24A !important; }
@@ -7556,7 +7557,7 @@ body.na_darkui .na_qb3_bub > div { box-shadow: inset 0 1px 0 rgba(255, 255, 255,
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip:not(#na_x) { display: inline-flex; align-items: center; gap: 6px; height: 30px; margin: 0; padding: 0 11px 0 3px; border-radius: 999px; border: 1px dashed var(--na-line) !important; background: transparent !important; box-shadow: none !important; color: var(--na-dim) !important; font: inherit; font-size: 12.5px; cursor: pointer; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { border: 1px solid transparent !important; color: var(--na-ink) !important; }
 body:not(.na_darkui) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { background: #EADCD0 !important; }
-body.na_darkui dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { background: #3A2F28 !important; }
+body.na_darkui dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { background: #34343B !important; }
 .na_vc3_chip em { font-style: normal; font-weight: 600; }
 .na_vc3_chip small { font-size: 11.5px; color: var(--na-dim); font-variant-numeric: tabular-nums; }
 .na_vc3_chip:not(.on) .na_face { filter: grayscale(1); opacity: 0.5; }
@@ -7590,7 +7591,7 @@ body.na_darkui .na_vc3_ex { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
 .na_dr3_cmp .x span { color: var(--na-accent-ink); }
 .na_dr3_seg { display: flex; align-self: stretch; gap: 4px; margin-top: 16px; padding: 4px; border-radius: 999px; }
 body:not(.na_darkui) .na_dr3_seg { background: #E9DCD1; }
-body.na_darkui .na_dr3_seg { background: #342B25; }
+body.na_darkui .na_dr3_seg { background: #2E2E34; }
 .na_dr3_seg > span { flex: 1.8; display: flex; align-items: center; justify-content: center; font-size: 12.5px; color: var(--na-dim); white-space: nowrap; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_dr3_seg > button:not(#na_x) { flex: 1; height: 32px; margin: 0; padding: 0; border: 0 !important; border-radius: 999px; background: transparent !important; box-shadow: none !important; color: var(--na-mute) !important; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_dr3_seg > button.on:not(#na_x) { background: var(--na-card) !important; color: var(--na-accent-ink) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1) !important; }
@@ -7600,7 +7601,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 .na_bn3_tl { position: relative; align-self: stretch; margin: 0 28px; padding-left: 24px; text-align: left; }
 .na_bn3_tl > div { position: relative; padding: 6px 0; }
 .na_bn3_tl > div::before { content: ""; position: absolute; z-index: 1; left: -22px; top: 9px; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; border: 2px solid var(--na-line); background: var(--na-bg, #F0E4DB); }
-body.na_darkui .na_bn3_tl > div::before { background: #1C1714; }
+body.na_darkui .na_bn3_tl > div::before { background: #17171A; }
 .na_bn3_tl > div.here::before { border-color: var(--na-accent); background: var(--na-accent) !important; }
 .na_bn3_tl b { display: block; font-size: 13.5px; font-weight: 600; color: var(--na-ink); }
 .na_bn3_tl small { display: block; font-size: 11.5px; color: var(--na-dim); }
@@ -7619,3 +7620,11 @@ body:not(.na_darkui) .na_bn3_tl > div.here::before { border-color: var(--na-acce
 .na_dr3_seg > span { flex: 1; justify-content: flex-start; padding-left: 12px; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_dr3_seg > button[data-d]:not(#na_x) { flex: none; width: 32px; height: 32px; background: var(--na-card) !important; color: var(--na-ink) !important; font-size: 16px; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1) !important; }
 .na_dr3_n { width: 44px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: var(--na-accent-ink); font-variant-numeric: tabular-nums; }
+
+/* ============ dark = charcoal (3.168): neutral greys, cream for the big buttons and lit things, 짐작 gold for small accents.
+   Anything sitting on the cream accent takes --na-onaccent (near black) instead of white. */
+body.na_darkui input.na_toggle:checked + .na_tgl_ui::after, body.na_darkui .na_sw.on::after { background: #1B1B1F; }
+body.na_darkui dialog.popup:has(.na_popup):not(#na_x) { background: #17171A !important; }
+body.na_darkui dialog.popup:has(.na_popup) .na_popup .na_v2_card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.35); }
+body.na_darkui .na_kn3_tag.k i, body.na_darkui .na_kn3_leg span.k i { background: #1B1B1F !important; }
+body.na_darkui .na_sw.on span { background: #1B1B1F; }

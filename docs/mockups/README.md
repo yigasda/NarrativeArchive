@@ -22,6 +22,7 @@ HTML은 브라우저로 바로 열려요(Playwright로 찍을 때는 `file://` �
 | `ext-quotes/` | 대사 은행(비어 있을 때): 시안 A+C(`mock.html`, 누가 아는가 환영 카드 + 말풍선 예시 · 예시 인물은 Claude · GPT · Gemini), 실제 화면 밝게 · 어둡게 · 섹션 고르기(`real.png`) |
 | `ext-voice/` | 말투 지문(비어 있을 때): 시안 B+D(`mock.html`, 환영 카드 + 끄고 켜는 인물 칩 + 만들기 하나 · 만들 인물이 없으면 대사 모으러 가기, 예시는 Claude), 실제 화면(`real.png`: 밝게 · 칩 하나 끔 · 인물 없음 · 어둡게 둘) |
 | `ext-drift/` | 이탈 감지 · 분기(비어 있을 때): 시안 D+F(`mock.html`, 카드 없이 가운데 · 위에 작은 그림(어긋남 비교 · 여기서 끝나는 타임라인)), 실제 화면 밝게 · 어둡게(`real.png`) |
+| `dark-charcoal/` | 다크 테마 차콜(3.168): 고른 안(`choice.png` 오른쪽 세 개 · 차콜 + 크림 버튼 + 짐작 금색), 실제 팝업 · 패널(`real_popups.png`, `real_panel.png`) |
 | `ext-picker/` | 공용 섹션 고르기 칸(누가 아는가 · 제목 다시 짓기 · 다이제스트 · 합치기 · 대사 은행 등): 시안 A~C(`sheet.png`, `mock.html`, A 채택), 실제 화면(`real.png`) |
 | `panel-s1` ~ `panel-s5`, `panel-worldmap` | 패널 하위 화면 시안 묶음 |
 | `phone-home/` | 홈 · 잠금(컬러 젤 · 화이트 그레이) |
