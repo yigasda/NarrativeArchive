@@ -361,7 +361,7 @@ export async function openLayers(s) {
     };
     $root.on('click', '.na_ly_askgo', askRevise);
     $root.on('keydown', '.na_ly_askq', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); askRevise(); } });
-    const res = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '저장', cancelButton: '닫기' });
+    const res = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '저장', cancelButton: '닫기' });
     if (res !== c.POPUP_RESULT.AFFIRMATIVE && res !== true) {
         // closed with changes not saved: ask instead of dropping them
         if (!dirty() || !await confirm('저장 안 한 고침', '짧은 버전 · 요점을 고친 게 있어요. 저장할까요?', '저장하기')) return;

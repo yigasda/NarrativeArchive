@@ -7813,3 +7813,7 @@ body:not(.na_darkui) .na_cal_item.na_cal3_hl { background: #F3E4D8; }
 body.na_darkui .na_cal_item.na_cal3_hl { background: #2E2E34; }
 .na_cal3_av.plain .na_cal3_avic { background: var(--na-card2) !important; color: var(--na-dim) !important; }
 .na_cal3_av.plain .na_cal3_avtx b { font-weight: 600; color: var(--na-mute); }
+/* 이탈 감지 (never checked) in the big window: the example on top, 최근 메시지 + 검사하기 at the bottom like the wizard's buttons */
+.na_dr2.na_dr3_new { min-height: 60vh; display: flex; flex-direction: column; }
+.na_dr2.na_dr3_new .na_dr3_hello { flex: 1; }
+.na_dr2.na_dr3_new .na_dr3_seg { margin-top: auto; }
