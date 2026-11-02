@@ -13,7 +13,7 @@ import { offstageSet } from './recall.js';
 import { mountSectionPicker } from './picker.js';
 import { headingRanges, parseSections, sectionKey, splitTail } from './sections.js';
 import { sceneChunks } from './scenes.js';
-import { SVG_B, svgB } from './theme.js';
+import { SVG_B, svgA, svgB } from './theme.js';
 import { confirm, countTokens, esc, fmt } from './util.js';
 
 // who says the quote that follows `before`: "Name:" → Name; "Name said/told …" → Name;
@@ -398,7 +398,18 @@ export async function openQuotes() {
           <div class="na_qb_group ${!inCast(cast, who) ? 'na_qb_away' : ''}"><div class="na_qb_who">${faceHtml(who, 26)}<b>${esc(who)}</b><span class="na_qb_n">대사 ${xs.length}개</span>${!inCast(cast, who) ? '<span class="na_qb_awaytag" title="STATE의 인물 제목과 최근 섹션 4개에 안 나와요. 다시 나오면 말투 지문이 자동으로 들어가요">지금 안 나옴</span>' : ''}${m.voice?.[who] ? '<span class="na_qb_fp">지문 있음</span>' : ''}
             ${gbtns(who, xs)}</div>
             ${rows(xs)}</div>`);
-        $root.find('.na_qb_list').html(by.size ? [...by].sort((a, b) => (a[0] === '?') - (b[0] === '?') || b[1].length - a[1].length).map(group).join('') : '<div class="na_empty">아직 없어요. "아카이브에서 모으기"를 눌러 보세요.</div>');
+        // nothing gathered yet (docs/mockups/ext-quotes A+C): the welcome card like 누가 아는가, and faded speech bubbles as the
+        // example (played by Claude · GPT · Gemini, so nobody takes them for the story's own lines)
+        const none = !m.quotes.length;
+        $root.find('.na_qb2').toggleClass('na_qb3_new', none);
+        if (none) return $root.find('.na_qb_list').html(`<div class="na_v2_card na_kn3_hello"><span class="na_kn3_big na_qb3_big">&ldquo;</span>
+            <b>아직 모은 대사가 없어요</b><small>아카이브를 읽고 인물마다 한 말을 모아요<br>모은 대사로 말투 지문을 만들어요</small>
+            <button type="button" class="na_kn3_make na_qb3_make">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/>', 15)}AI로 모으기</button>
+            <button type="button" class="na_linkbtn na_qb3_find">AI 없이 아카이브에서 모으기</button></div>
+          <div class="na_kn3_sect"><span>이렇게 모여요</span><small>예시</small></div>
+          <div class="na_qb3_ex">${[['Claude', '그건 제가 확인해 볼게요.', '#1–#12'], ['GPT', '물론이죠! 바로 해 볼게요.', '#13–#29'], ['Gemini', '흥미로운 질문이네요.', '#13–#29']]
+              .map(([w, t, at], i) => `<div class="na_qb3_bub${i % 2 ? ' r' : ''}">${faceHtml(w, 26)}<div><span>“${esc(t)}”</span><small>${esc(w)} · ${at}</small></div></div>`).join('')}</div>`);
+        $root.find('.na_qb_list').html(by.size ? [...by].sort((a, b) => (a[0] === '?') - (b[0] === '?') || b[1].length - a[1].length).map(group).join('') : '<div class="na_empty">찾는 대사가 없어요</div>');
     };
     let qbUnkOpen = false;
     $root.on('click', '.na_qb_unkrow', function (e) { if ($(e.target).closest('.na_qb_gbtns').length) return; qbUnkOpen = !$(this).closest('.na_qb_group').hasClass('open'); render(); });
@@ -559,6 +570,8 @@ export async function openQuotes() {
             }
         },
     });
-    $root.find('.na_qb_ai').on('click', function () { $(this).toggleClass('active', picker.toggle()); });
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    $root.find('.na_qb_ai').on('click', function () { const open = picker.toggle(); $(this).toggleClass('active', open); $root.toggleClass('na_qb3_picking', open); });
+    $root.on('click', '.na_qb3_make', () => $root.find('.na_qb_ai').trigger('click'));
+    $root.on('click', '.na_qb3_find', () => $root.find('.na_qb_find').trigger('click'));
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }

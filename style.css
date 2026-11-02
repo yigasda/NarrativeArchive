@@ -7468,7 +7468,7 @@ dialog.popup:has(.na_cp3) .popup-button-ok.disabled { opacity: 0.5 !important; p
 .na_kn3_hello b { font-size: 15px; color: var(--na-ink); }
 .na_kn3_hello small { font-size: 12.5px; line-height: 1.5; color: var(--na-sub, var(--na-dim)); }
 .na_kn3_make { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 46px; margin-top: 14px; border: 0; border-radius: 999px; background: var(--na-accent); color: #fff; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
-.na_kn3_write { margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--na-accent-ink); }
+.na_kn3_write, .na_qb3_find { margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--na-accent-ink); }
 .na_kn3_sect { display: flex; justify-content: space-between; margin: 18px 4px 8px; font-size: 12.5px; font-weight: 700; color: var(--na-dim); }
 .na_kn3_sect small { font-weight: 500; }
 .na_kn3_ex { padding: 0 !important; overflow: hidden; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
@@ -7531,3 +7531,20 @@ body:is(.na_darkui, :not(.na_darkui)) .na_kn3_tag.k { background: var(--na-accen
 .na_kn3_leg .na_kn3_tag.k i { background: #fff !important; opacity: 0.85; }
 body:not(.na_darkui) .na_kn3_tag.s { border-color: #C9A24A !important; }
 body.na_darkui .na_kn3_tag.s { border-color: #B8964E !important; }
+
+/* ============ 대사 은행 › empty (docs/mockups/ext-quotes A+C): 누가 아는가's welcome card, faded speech bubbles as the example,
+   빼는 인물 under them with room to breathe; no search and no top buttons while there is nothing */
+.na_qb2.na_qb3_new { display: flex; flex-direction: column; }
+.na_qb2.na_qb3_new > .na_v2_row2, .na_qb2.na_qb3_new > .na_qb2_search, .na_qb2.na_qb3_new > .na_qb_clear { display: none !important; }
+.na_qb2.na_qb3_new > .na_qb_list { order: 1; }
+.na_qb2.na_qb3_new > .na_qb_excl { order: 2; margin: 22px 4px 10px; }
+.na_qb_root.na_qb3_picking .na_qb3_new > .na_qb_list { display: none; }
+.na_qb3_big { font: 700 34px/1 Georgia, 'Times New Roman', serif; padding-top: 14px; box-sizing: border-box; }
+.na_qb3_ex { display: flex; flex-direction: column; gap: 10px; margin: 2px 4px 0; }
+.na_qb3_bub { display: flex; align-items: flex-end; gap: 8px; }
+.na_qb3_bub.r { flex-direction: row-reverse; }
+.na_qb3_bub > div { max-width: 78%; padding: 9px 13px; border-radius: 16px 16px 16px 4px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 4px 12px rgba(70, 52, 40, 0.06); }
+.na_qb3_bub.r > div { border-radius: 16px 16px 4px 16px; }
+.na_qb3_bub > div > span { display: block; font-size: 13.5px; line-height: 1.45; color: var(--na-ink); opacity: 0.8; }
+.na_qb3_bub > div > small { display: block; margin-top: 2px; font-size: 11px; color: var(--na-dim); }
+body.na_darkui .na_qb3_bub > div { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 16px rgba(0, 0, 0, 0.3); }
