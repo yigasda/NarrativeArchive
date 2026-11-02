@@ -173,11 +173,15 @@ export async function openCalendar() {
         const ahead = x => (((ord(x.r) - ord(last)) % 520) + 520) % 520; // days into the coming year, today = 0
         const upcoming = last ? [...avRows].sort((x, y) => ahead(x) - ahead(y))[0] : avRows[0];
         const shown = daySel ? avRows.find(x => dkey(x.r) === daySel) : upcoming;
+        // a picked day that is not an anniversary: the card stays, greyed, and names the next one after that day
+        const picked = daySel ? dayRows.get(daySel)?.[0] : null;
+        const after = picked && !shown && avRows.length ? [...avRows].sort((x, y) => (((ord(x.r) - ord(picked)) % 520) + 520) % 520 - ((((ord(y.r) - ord(picked)) % 520) + 520) % 520))[0] : null;
+        const plain = !!daySel && !shown;
         const isToday = !!shown && !!last && shown.r.date.m === last.date.m && shown.r.date.d === last.date.d;
-        const annivCard = (daySel && !shown && !avOpen) ? '' : `
-          <div class="na_v2_card na_cal_anniv na_cal3_av${avOpen ? ' open' : ''}">
+        const annivCard = `
+          <div class="na_v2_card na_cal_anniv na_cal3_av${avOpen ? ' open' : ''}${plain && !avOpen ? ' plain' : ''}">
             <div class="na_cal3_avtop" role="button" tabindex="0"><span class="na_cal3_avic"><svg class="na_heart" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 20.5s-7.8-4.7-9.7-9.5C1 7.6 3.2 4.5 6.6 4.5c2.2 0 3.8 1.2 5.4 3.1 1.6-1.9 3.2-3.1 5.4-3.1 3.4 0 5.6 3.1 4.3 6.5-1.9 4.8-9.7 9.5-9.7 9.5z"/></svg></span>
-              <span class="na_cal3_avtx"><b>${shown ? esc(shown.a.name) : '기념일'}</b><small>${shown ? `${esc(dateOf(shown.r))} · ${esc(strip(shown.r.s.title))}${isToday ? ' · 오늘이 그날이에요' : ''}` : drows.length ? '아직 없어요 · 그날이 돌아오면 홈에 알려 줘요' : '날짜가 있는 섹션이 필요해요'}</small></span>
+              <span class="na_cal3_avtx"><b>${shown ? esc(shown.a.name) : plain ? '이날은 기념일이 아니에요' : '기념일'}</b><small>${plain ? (after ? `다음은 ${esc(after.a.name)} (${esc(dateOf(after.r))})` : '아직 기념일이 없어요') : shown ? `${esc(dateOf(shown.r))} · ${esc(strip(shown.r.s.title))}${isToday ? ' · 오늘이 그날이에요' : ''}` : drows.length ? '아직 없어요 · 그날이 돌아오면 홈에 알려 줘요' : '날짜가 있는 섹션이 필요해요'}</small></span>
               <span class="na_cal3_avmore">${avOpen ? '접기' : av.length ? `${av.length}개` : '찾기'}${svgA(ICO_A.right, 13, 2.4)}</span></div>
             ${avOpen ? `<div class="na_cal_av_head"><span class="na_spacer"></span>
               ${drows.length ? `<button type="button" class="na_v2_btn na_cal_av_find" title="AI 기능 모델이 섹션을 읽고 첫 만남 · 고백한 날 같은 날을 찾아요">${!m.annivScan ? '기념일 찾기' : left ? `새 섹션에서 찾기 (${left})` : '처음부터 다시 찾기'}</button>` : ''}

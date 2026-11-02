@@ -7813,3 +7813,5 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup button.na_cal3_day.
 .na_cal3_day.on u { background: currentColor; }
 body:not(.na_darkui) .na_cal_item.na_cal3_hl { background: #F3E4D8; }
 body.na_darkui .na_cal_item.na_cal3_hl { background: #2E2E34; }
+.na_cal3_av.plain .na_cal3_avic { background: var(--na-card2) !important; color: var(--na-dim) !important; }
+.na_cal3_av.plain .na_cal3_avtx b { font-weight: 600; color: var(--na-mute); }
