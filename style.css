@@ -7615,3 +7615,7 @@ body:not(.na_darkui) .na_bn3_tl > div:not(:last-child)::after { background: #D3C
 body:not(.na_darkui) .na_bn3_tl > div.here::before { border-color: var(--na-accent); }
 /* the result screen's control card uses the same 최근 메시지 picker */
 .na_dr2_ctl .na_dr3_seg { margin-top: 0; }
+/* 최근 메시지 as − n + inside the same pill */
+.na_dr3_seg > span { flex: 1; justify-content: flex-start; padding-left: 12px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_dr3_seg > button[data-d]:not(#na_x) { flex: none; width: 32px; height: 32px; background: var(--na-card) !important; color: var(--na-ink) !important; font-size: 16px; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1) !important; }
+.na_dr3_n { width: 44px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: var(--na-accent-ink); font-variant-numeric: tabular-nums; }

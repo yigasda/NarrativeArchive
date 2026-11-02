@@ -221,7 +221,7 @@ export async function openDrift() {
         <div class="na_v2_title"><b>이탈 감지</b><small title="참고용이고 아무것도 바꾸지 않아요">RP 모델이 정해진 사실과 어긋나게 쓴 곳 · 참고용</small></div>
         <div class="na_v2_card na_dr2_ctl">
           <input type="hidden" class="na_dr_n" value="12">
-          <div class="na_dr3_seg" role="radiogroup"><span>최근 메시지</span>${[6, 12, 24, 48].map(n => `<button type="button" data-n="${n}" class="${n === 12 ? 'on' : ''}">${n}</button>`).join('')}</div>
+          <div class="na_dr3_seg"><span>최근 메시지</span><button type="button" data-d="-2" aria-label="줄이기">−</button><b class="na_dr3_n">12</b><button type="button" data-d="2" aria-label="늘리기">+</button></div>
           <button type="button" class="na_v2_btn primary wide na_dr_go">검사하기</button>
           <small class="na_v2_note na_dr_info"></small>
         </div>
@@ -229,16 +229,17 @@ export async function openDrift() {
         <div class="na_dr3_hello">
           <div class="na_dr3_cmp"><div><small>아카이브</small><span>열쇠는 Gemini가 가져갔어요</span></div><div class="x"><small>#57 GPT</small><span>“열쇠? 내 주머니에 있지.”</span></div></div>
           <b>아직 검사하지 않았어요</b><small>최근 대화에서 이렇게 어긋난 곳을 찾아요</small>
-          <div class="na_dr3_seg" role="radiogroup"><span>최근 메시지</span>${[6, 12, 24, 48].map(n => `<button type="button" data-n="${n}" class="${n === 12 ? 'on' : ''}">${n}</button>`).join('')}</div>
+          <div class="na_dr3_seg"><span>최근 메시지</span><button type="button" data-d="-2" aria-label="줄이기">−</button><b class="na_dr3_n">12</b><button type="button" data-d="2" aria-label="늘리기">+</button></div>
           <button type="button" class="na_kn3_make na_dr3_go">검사하기</button>
         </div>
       </div>`);
     // never checked (docs/mockups/ext-drift D+F): a centred example of what it finds, how many recent messages, one button
     $root.toggleClass('na_dr3_new', !m.driftLast);
+    // 최근 메시지: 2–60 by twos, the same pill on the empty screen and over the results
     $root.on('click', '.na_dr3_seg button', function () {
-        const n = this.dataset.n;
-        $root.find('.na_dr3_seg button').each(function () { $(this).toggleClass('on', this.dataset.n === n); });
-        $root.find('.na_dr_n').val(n);
+        const $n = $root.find('.na_dr_n');
+        const n = Math.min(60, Math.max(2, (parseInt($n.val(), 10) || 12) + Number(this.dataset.d)));
+        $n.val(n); $root.find('.na_dr3_n').text(n);
     });
     $root.on('click', '.na_dr3_go', () => $root.find('.na_dr_go').trigger('click'));
     const show = d => {
