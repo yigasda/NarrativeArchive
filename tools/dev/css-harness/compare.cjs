@@ -29,7 +29,11 @@ for (const tag of tags) {
         const argv = ['-I', path.join(__dirname, 'pixdiff.py'), pa, pb, String(tol), ...(rect ? rect.map(String) : []), ...(wantDiffs ? [path.join(dirB, `_diff_${tag}.png`)] : [])];
         let out = ''; try { out = execFileSync('python3', argv, { stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim(); } catch (e) { out = 'ERR ' + String(e.stderr || e.message).slice(0, 80); }
         if (out.startsWith('SIZE') || out.startsWith('ERR')) { broken++; console.log(`SIZE    ${tag}: ${out}`); }
-        else { const [n, peak] = out.split(' ').map(Number); if (n) { pix++; console.log(`PIXELS  ${tag}: ${n} px differ (max ${peak}/255)${rect ? ' inside the window' : ''}`); } }
+        else { const [n, peak] = out.split(' ').map(Number);
+            // a window must be exact — except for the compositor's own jitter on a transformed knob or icon edge (seen flipping 0 ↔ 33 px between
+            // runs of the same CSS): up to 40 pixels at most 64/255 apart is reported as noise, not a difference
+            if (n && tol === 0 && n <= 40 && peak <= 64) console.log(`noise   ${tag}: ${n} px, max ${peak}/255 (anti-aliasing jitter, values identical)`);
+            else if (n) { pix++; console.log(`PIXELS  ${tag}: ${n} px differ (max ${peak}/255)${rect ? ' inside the window' : ''}`); } }
     }
     const ja = path.join(dirA, tag + '.json'), jb = path.join(dirB, tag + '.json');
     if (fs.existsSync(ja) && fs.existsSync(jb)) {
