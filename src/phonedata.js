@@ -767,7 +767,7 @@ async function updatePhone(m, owner) {
             msgs: p.threads.filter(t => msgs.has(t.id)).map(t => [t.id, t.messages.map(msgSig).filter(sg => !msgs.get(t.id).has(sg))]).filter(([, xs]) => xs.length),
             effects: [...added.flatMap(x => x.effects || []), ...roundFx], byEvent: added.map(x => [x.id, x.effects || []]) };
         // kept in this browser until the saved chat shows it: 복구 can add it back if the save didn't land
-        journalAdd(scope, { round: id, owner, at: Date.now(), events: added, done: [...inRound], seen: round.rows.map(r => [r.index, bodyMark(r.text)]), failed: Object.fromEntries([...inRound].filter(i => s.failed[i]).map(i => [i, s.failed[i]])), arch: evidence.map(x => x.key), life: roundFx });
+        journalAdd(scope, { round: id, owner, at: Date.now(), now: p.now, year: p.year, events: added, done: [...inRound], seen: round.rows.map(r => [r.index, bodyMark(r.text)]), failed: Object.fromEntries([...inRound].filter(i => s.failed[i]).map(i => [i, s.failed[i]])), arch: evidence.map(x => x.key), life: roundFx });
         await saveMeta();
         if (p.inject) applyInjection();
         return p;
@@ -799,6 +799,8 @@ export async function restoreRounds(m, scope) {
             s.events[e.id] ||= { at: e.at, quote: '', summary: e.id };
         }
         replayEffects(m, p, r.life || []);
+        // the story's clock as the round left it (and the year it carried over New Year)
+        if (r.now && (!p.now || gapDays(String(p.now).slice(0, 5), String(r.now).slice(0, 5)) >= 0)) { p.now = r.now; if (r.year) p.year = r.year; }
         addDone(s, r.done);
         s.seen ||= {};
         for (const [i, f] of r.seen || []) s.seen[i] = f;

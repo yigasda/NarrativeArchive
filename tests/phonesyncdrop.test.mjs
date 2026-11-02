@@ -439,3 +439,17 @@ test('the whole phone made again with its bank kept: a message the bank had not 
     assert.equal(q.money.tx.length, 2);
     assert.equal(c.bank(), 92500);
 });
+
+test('복구 brings back the story clock the lost round had moved on, with its year across New Year', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'ok'), say('Mara', 'coffee 4500 on the card')];
+    const { journalWrite } = await import('../src/phonesync.js'); journalWrite('test', []);
+    const c = setup(chat); c.p.now = '12-31 20:00'; c.p.year = 2026;
+    const was = structuredClone(c.p);
+    await run(c.m, { now: '01-01 10:00', events: [{ id: 'coffee', at: 3, quote: 'coffee 4500', summary: '커피', date: '01-01', time: '09:00', phone: {}, money: { moves: [{ account: '1111', amount: -4500, who: '카페', occurrence: 'new' }] } }] });
+    assert.equal(c.p.now, '01-01 10:00'); assert.equal(c.p.year, 2027);
+    c.m.phones.ren = was; c.m.finance = structuredClone(c.m.finance);
+    const perf = globalThis.performance; globalThis.performance = { timeOrigin: Date.now() + 1e6 };
+    try { assert.equal(await data.restoreRounds(c.m, 'test'), 1); } finally { globalThis.performance = perf; }
+    assert.equal(was.now, '01-01 10:00'); assert.equal(was.year, 2027);
+    assert.equal(was.money.tx.length, 1);
+});
