@@ -2388,6 +2388,59 @@ body:not(.na_darkui) .na_wz2_arr { color: #B8A99E; }
 body.na_darkui .na_wz2_arr { color: #8A8A93; }
 .na_v2_btn > .na_svg { flex: none; }
 .na_wz2_pane select.na_wz_prompt, body:not(.na_darkui) .na_wz2_pane select.na_wz_prompt { font: inherit; font-size: 0.964em; line-height: 1.5; height: auto; min-height: 0; padding: 9px 12px; border-radius: 14px; }
+/* 압축 마법사 v3 (docs/mockups/ext-wizard B + 가): as tall as its content; the range's first and last message
+   above the numbers (hold one to read it whole in a sheet from the bottom) — was at the end of the file, lives with the wizard now */
+.na_wz3_msgs { display: flex; flex-direction: column; margin-bottom: 12px; }
+.na_wz3_msgs:empty { display: none; }
+.na_wz3_msg { padding: 10px 12px; border-radius: 14px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 4px 12px rgba(70, 52, 40, 0.05); cursor: pointer; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+body.na_darkui .na_wz3_msg { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 6px 16px rgba(0, 0, 0, 0.3); }
+.na_wz3_msg b { display: block; margin-bottom: 2px; font-size: 11.5px; font-weight: 700; color: var(--na-accent-fg, var(--na-accent)); }
+.na_wz3_msg span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 12.5px; line-height: 1.5; color: var(--na-mute); }
+.na_wz3_msg:active { transform: scale(0.985); }
+.na_wz3_gap { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 3px 0; font-size: 11.5px; color: var(--na-dim); }
+.na_wz3_gap i { width: 0; height: 8px; border-left: 1.5px dashed var(--na-line); }
+.na_wz3_cover { position: absolute; inset: 0; z-index: 50; display: flex; align-items: flex-end; padding: 10px; background: rgba(30, 20, 14, 0.45); border-radius: inherit; box-sizing: border-box; }
+body.na_darkui .na_wz3_cover { background: rgba(0, 0, 0, 0.55); }
+.na_wz3_sheet { text-align: left; width: 100%; max-height: 80%; display: flex; flex-direction: column; padding: 12px 16px 16px; border-radius: 22px; box-sizing: border-box; background: var(--na-card, #F7EEE7); color: var(--na-ink); box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.25); }
+body:not(.na_darkui) .na_wz3_sheet { background: #F7EEE7; color: #463428; }
+body.na_darkui .na_wz3_sheet { background: #232328; color: #ECEAE6; }
+.na_wz3_grip { width: 36px; height: 4px; margin: 0 auto 12px; border-radius: 4px; background: var(--na-line, #D9C8BC); }
+.na_wz3_shead { display: flex; align-items: baseline; justify-content: space-between; }
+.na_wz3_shead b { font-size: 15px; }
+.na_wz3_shead small { font-size: 11.5px; color: var(--na-dim, #9A8A80); }
+.na_wz3_sbody { flex: 1; min-height: 0; overflow-y: auto; margin-top: 10px; font-size: 13.5px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup button.na_wz3_sclose:not(#na_x) { flex: none; height: 42px; margin: 14px 0 0; border: 0 !important; border-radius: 999px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; box-shadow: none !important; }
+body:not(.na_darkui) dialog.popup button.na_wz3_sclose:not(#na_x) { background: #EADCD0 !important; color: #463428 !important; }
+body.na_darkui dialog.popup button.na_wz3_sclose:not(#na_x) { background: #2E2E34 !important; color: #ECEAE6 !important; }
+/* 마법사 2 · 4단계 (docs/mockups/ext-wizard A): what goes over as a small table, what grading looks for as a list; the step's one
+   action is the orange button below, .txt and skipping are links */
+.na_wiz2 .na_wz3_hide { display: none !important; }
+.na_wz3_pk { padding: 2px 14px !important; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_wz3_pk > div { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 10px 0; font-size: 13.5px; }
+.na_wz3_pk > div + div { border-top: 1px solid var(--na-line2, var(--na-line)); }
+.na_wz3_pk small { font-size: 12px; color: var(--na-dim); text-align: right; }
+.na_wz3_pk b { font-size: 13.5px; }
+.na_wz3_chk { padding: 0 !important; overflow: hidden; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_wz3_chk > div { display: flex; align-items: flex-start; gap: 12px; padding: 11px 14px; }
+.na_wz3_chk > div + div { border-top: 1px solid var(--na-line2, var(--na-line)); }
+.na_wz3_chk b { display: block; font-size: 13.5px; font-weight: 600; }
+.na_wz3_chk small { display: block; font-size: 11.5px; color: var(--na-dim); }
+.na_wz3_ic { width: 28px; height: 28px; flex: none; border-radius: 9px; display: grid; place-items: center; background: var(--na-card2); color: var(--na-mute); }
+body.na_darkui :is(.na_wz3_pk, .na_wz3_chk) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.35); }
+.na_wiz2 .na_wz3_txt { align-self: center; font-size: 13px; font-weight: 600; color: var(--na-mute); }
+.na_wiz2 .na_wz_gradeout { margin-top: 10px; }
+.na_wiz2 .na_wz3_back { display: inline-flex; align-items: center; gap: 2px; align-self: center; font-size: 14px; font-weight: 600; color: var(--na-ink) !important; opacity: 1; }
+.na_wz2_nav.na_wz3_pair .na_wz2_prev { flex: 1; } .na_wz2_nav.na_wz3_pair .na_wz2_next { flex: 1; }
+/* the wizard's plain buttons (이전 · 건너뛰고 추가) as in the mockup: a filled cream pill, no outline */
+body:is(.na_darkui, :not(.na_darkui)) .na_wiz2 .na_wz2_nav .na_v2_btn:not(.primary) { border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); }
+body.na_darkui .na_wiz2 .na_wz2_nav .na_v2_btn:not(.primary) { background: #2E2E34 !important; box-shadow: none; }
+body:is(.na_darkui, :not(.na_darkui)) .na_wiz2 .na_wz2_pane .na_v2_btn:not(.primary) { border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); }
+body.na_darkui .na_wiz2 .na_wz2_pane .na_v2_btn:not(.primary) { background: #2E2E34 !important; box-shadow: none; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_wiz2 textarea.na_wz_out:is(*, :focus, :focus-visible):not(#na_x) { border-color: transparent !important; outline: none !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; }
+/* range number fields (원문 뽑기 · 마법사) without an outline, focus shown by a soft lift instead */
+.na_wz2_range label > span, .na_wz2_range label > span:focus-within { border-color: transparent !important; }
+body:not(.na_darkui) .na_wz2_range label > span { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06); }
+.na_wz2_range label > span:focus-within { box-shadow: 0 0 0 2px color-mix(in srgb, var(--na-accent) 35%, transparent); }
 
 /* ---- Extract */
 .na_ex2 { gap: 14px; }
@@ -2413,6 +2466,19 @@ body.na_darkui .na_ex2_card .na_cp_bar .raw { background: #E9DFCF; }
 .na_ex_toset > .na_svg { color: var(--na-dim); }
 .na_ex2_preview { height: 96px; max-height: none; box-sizing: border-box; padding: 10px 12px; border-radius: 16px; font-size: 0.821em; line-height: 1.6; color: var(--na-mute, var(--na-dim)); }
 .na_ex2_btns .na_v2_btn { padding: 12px 0; border-radius: 14px; font-size: 0.964em; line-height: 1.5; }
+/* 원문 뽑기 v3 (docs/mockups/ext-extract B): range card with filled chips and a thin whole-chat bar, the text as it will be
+   copied right under it (fading out), options, then .txt | 전체 복사 — no outlines, one orange button */
+body:is(.na_darkui, :not(.na_darkui)) .na_ex2 .na_v2_chips button { border: 0 !important; padding: 6px 12px !important; border-radius: 999px; font-weight: 600; box-shadow: none !important; }
+body:not(.na_darkui) .na_ex2 .na_v2_chips button:not(.on) { background: #E9DCD1 !important; color: #6B5A50 !important; }
+body.na_darkui .na_ex2 .na_v2_chips button:not(.on) { background: #2E2E34 !important; color: #B9B7BD !important; }
+.na_ex2_card .na_cp_bar { height: 6px; gap: 2px; background: transparent; }
+.na_ex2_card .na_cp_bar > span { border-radius: 4px !important; }
+.na_ex2_preview { position: relative; height: 150px; border: 0 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+body:not(.na_darkui) .na_ex2_preview { background: #FBF7F3; }
+body.na_darkui .na_ex2_preview { background: #232328; box-shadow: none; }
+body:is(.na_darkui, :not(.na_darkui)) .na_ex2_btns .na_v2_btn:not(.primary) { border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); }
+body.na_darkui .na_ex2_btns .na_v2_btn:not(.primary) { background: #2E2E34 !important; box-shadow: none; }
+.na_ex2_btns .na_v2_btn { border-radius: 999px !important; }
 /* settings: the group icons, and boxes toned toward the theme instead of paper white */
 .na_cfg_label i { margin-right: 4px; opacity: 0.8; }
 body:not(.na_darkui) .na_cfg_box, body:not(.na_darkui) .na_cfg_back, body:not(.na_darkui) .na_cfg_pill { background: #F7EEE7; border-color: #E6D6CA; }
@@ -3871,6 +3937,17 @@ body.na_darkui .na_launch_tabs { background: #232328; }
 .na_au_box .text_pole { margin: 0; width: 100%; box-sizing: border-box; }
 .na_au_box textarea { resize: vertical; min-height: 3.2em; }
 .na_wz_austate { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+/* AU 채팅 v3 (docs/mockups/ext-au B): 본편 → AU timeline on top, the switch on its own card, then the two fields outside
+   any card with bold labels; all of it centred in the window */
+.na_au_pop { display: flex; flex-direction: column; }
+.na_au3 { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 0; }
+.na_au3_map { padding: 12px 16px !important; }
+.na_au3_tl { margin: 0 !important; }
+.na_au3_on { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 14px !important; font-size: 14px; cursor: pointer; }
+.na_au3_on > span:first-child { flex: 1; }
+.na_au3_lab { margin: 16px 4px 6px; font-size: 12px; font-weight: 700; color: var(--na-mute); }
+.na_au3 .na_au_name, .na_au3 .na_au_note { width: 100%; box-sizing: border-box; margin: 0; }
+.na_au3_note { margin: 12px 4px 0; font-size: 12px; line-height: 1.5; color: var(--na-dim); }
 
 /* ============ 제목 다시 짓기 (docs/mockups/ext-retitle2 D, 3.169.31): charcoal/orange tick boxes, a quiet AI로 짓기, the results as a
    지금 | 새 제목 table, 닫기 | N개 바꾸기 at the bottom. .na_rt_list · .na_rt_head · .na_rt_quick · .na_rt_txt are shared with 요약 받기
@@ -7699,74 +7776,6 @@ body.na_darkui .na_next_card.warn { border-color: #3A3A41 !important; }
 body.na_darkui :is(.na_whole, .na_fp3_row.picked, .na_cp3_row.on, .na_ck.part) { background: #2E2E34 !important; }
 body.na_darkui .na_sp_s:hover, body.na_darkui .na_cc_row:focus-within { background: #2B2B31 !important; }
 
-/* ============ 압축 마법사 (docs/mockups/ext-wizard B + 가): as tall as its content; the range's first and last message
-   above the numbers (hold one to read it whole in a sheet from the bottom) */
-.na_wz3_msgs { display: flex; flex-direction: column; margin-bottom: 12px; }
-.na_wz3_msgs:empty { display: none; }
-.na_wz3_msg { padding: 10px 12px; border-radius: 14px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 4px 12px rgba(70, 52, 40, 0.05); cursor: pointer; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
-body.na_darkui .na_wz3_msg { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 6px 16px rgba(0, 0, 0, 0.3); }
-.na_wz3_msg b { display: block; margin-bottom: 2px; font-size: 11.5px; font-weight: 700; color: var(--na-accent-fg, var(--na-accent)); }
-.na_wz3_msg span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 12.5px; line-height: 1.5; color: var(--na-mute); }
-.na_wz3_msg:active { transform: scale(0.985); }
-.na_wz3_gap { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 3px 0; font-size: 11.5px; color: var(--na-dim); }
-.na_wz3_gap i { width: 0; height: 8px; border-left: 1.5px dashed var(--na-line); }
-.na_wz3_cover { position: absolute; inset: 0; z-index: 50; display: flex; align-items: flex-end; padding: 10px; background: rgba(30, 20, 14, 0.45); border-radius: inherit; box-sizing: border-box; }
-body.na_darkui .na_wz3_cover { background: rgba(0, 0, 0, 0.55); }
-.na_wz3_sheet { text-align: left; width: 100%; max-height: 80%; display: flex; flex-direction: column; padding: 12px 16px 16px; border-radius: 22px; box-sizing: border-box; background: var(--na-card, #F7EEE7); color: var(--na-ink); box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.25); }
-body:not(.na_darkui) .na_wz3_sheet { background: #F7EEE7; color: #463428; }
-body.na_darkui .na_wz3_sheet { background: #232328; color: #ECEAE6; }
-.na_wz3_grip { width: 36px; height: 4px; margin: 0 auto 12px; border-radius: 4px; background: var(--na-line, #D9C8BC); }
-.na_wz3_shead { display: flex; align-items: baseline; justify-content: space-between; }
-.na_wz3_shead b { font-size: 15px; }
-.na_wz3_shead small { font-size: 11.5px; color: var(--na-dim, #9A8A80); }
-.na_wz3_sbody { flex: 1; min-height: 0; overflow-y: auto; margin-top: 10px; font-size: 13.5px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup button.na_wz3_sclose:not(#na_x) { flex: none; height: 42px; margin: 14px 0 0; border: 0 !important; border-radius: 999px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; box-shadow: none !important; }
-body:not(.na_darkui) dialog.popup button.na_wz3_sclose:not(#na_x) { background: #EADCD0 !important; color: #463428 !important; }
-body.na_darkui dialog.popup button.na_wz3_sclose:not(#na_x) { background: #2E2E34 !important; color: #ECEAE6 !important; }
-/* 마법사 2 · 4단계 (docs/mockups/ext-wizard A): what goes over as a small table, what grading looks for as a list; the step's one
-   action is the orange button below, .txt and skipping are links */
-.na_wiz2 .na_wz3_hide { display: none !important; }
-.na_wz3_pk { padding: 2px 14px !important; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
-.na_wz3_pk > div { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 10px 0; font-size: 13.5px; }
-.na_wz3_pk > div + div { border-top: 1px solid var(--na-line2, var(--na-line)); }
-.na_wz3_pk small { font-size: 12px; color: var(--na-dim); text-align: right; }
-.na_wz3_pk b { font-size: 13.5px; }
-.na_wz3_chk { padding: 0 !important; overflow: hidden; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
-.na_wz3_chk > div { display: flex; align-items: flex-start; gap: 12px; padding: 11px 14px; }
-.na_wz3_chk > div + div { border-top: 1px solid var(--na-line2, var(--na-line)); }
-.na_wz3_chk b { display: block; font-size: 13.5px; font-weight: 600; }
-.na_wz3_chk small { display: block; font-size: 11.5px; color: var(--na-dim); }
-.na_wz3_ic { width: 28px; height: 28px; flex: none; border-radius: 9px; display: grid; place-items: center; background: var(--na-card2); color: var(--na-mute); }
-body.na_darkui :is(.na_wz3_pk, .na_wz3_chk) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.35); }
-.na_wiz2 .na_wz3_txt { align-self: center; font-size: 13px; font-weight: 600; color: var(--na-mute); }
-.na_wiz2 .na_wz_gradeout { margin-top: 10px; }
-.na_wiz2 .na_wz3_back { display: inline-flex; align-items: center; gap: 2px; align-self: center; font-size: 14px; font-weight: 600; color: var(--na-ink) !important; opacity: 1; }
-.na_wz2_nav.na_wz3_pair .na_wz2_prev { flex: 1; } .na_wz2_nav.na_wz3_pair .na_wz2_next { flex: 1; }
-/* the wizard's plain buttons (이전 · 건너뛰고 추가) as in the mockup: a filled cream pill, no outline */
-body:is(.na_darkui, :not(.na_darkui)) .na_wiz2 .na_wz2_nav .na_v2_btn:not(.primary) { border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); }
-body.na_darkui .na_wiz2 .na_wz2_nav .na_v2_btn:not(.primary) { background: #2E2E34 !important; box-shadow: none; }
-body:is(.na_darkui, :not(.na_darkui)) .na_wiz2 .na_wz2_pane .na_v2_btn:not(.primary) { border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); }
-body.na_darkui .na_wiz2 .na_wz2_pane .na_v2_btn:not(.primary) { background: #2E2E34 !important; box-shadow: none; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_wiz2 textarea.na_wz_out:is(*, :focus, :focus-visible):not(#na_x) { border-color: transparent !important; outline: none !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; }
-
-/* ============ 원문 뽑기 (docs/mockups/ext-extract B): range card with filled chips and a thin whole-chat bar, the text as it will be
-   copied right under it (fading out), options, then .txt | 전체 복사 — no outlines, one orange button */
-body:is(.na_darkui, :not(.na_darkui)) .na_ex2 .na_v2_chips button { border: 0 !important; padding: 6px 12px !important; border-radius: 999px; font-weight: 600; box-shadow: none !important; }
-body:not(.na_darkui) .na_ex2 .na_v2_chips button:not(.on) { background: #E9DCD1 !important; color: #6B5A50 !important; }
-body.na_darkui .na_ex2 .na_v2_chips button:not(.on) { background: #2E2E34 !important; color: #B9B7BD !important; }
-.na_ex2_card .na_cp_bar { height: 6px; gap: 2px; background: transparent; }
-.na_ex2_card .na_cp_bar > span { border-radius: 4px !important; }
-.na_ex2_preview { position: relative; height: 150px; border: 0 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
-body:not(.na_darkui) .na_ex2_preview { background: #FBF7F3; }
-body.na_darkui .na_ex2_preview { background: #232328; box-shadow: none; }
-body:is(.na_darkui, :not(.na_darkui)) .na_ex2_btns .na_v2_btn:not(.primary) { border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); }
-body.na_darkui .na_ex2_btns .na_v2_btn:not(.primary) { background: #2E2E34 !important; box-shadow: none; }
-.na_ex2_btns .na_v2_btn { border-radius: 999px !important; }
-/* range number fields (원문 뽑기 · 마법사) without an outline, focus shown by a soft lift instead */
-.na_wz2_range label > span, .na_wz2_range label > span:focus-within { border-color: transparent !important; }
-body:not(.na_darkui) .na_wz2_range label > span { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06); }
-.na_wz2_range label > span:focus-within { box-shadow: 0 0 0 2px color-mix(in srgb, var(--na-accent) 35%, transparent); }
-
 /* ============ no outlines in the extension's windows (2025 sweep): plain buttons, fields and chips are filled shapes lifted by a
    soft shadow, never a 1px line. The phone keeps its own look. */
 body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_btn:not(.primary):not(.danger), .na_v2_pillbtn:not(.danger), .na_btn:not(.na_primary)):not(.on):not(.active):not(#na_x) { border-color: transparent !important; background: #F7EEE7 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1) !important; }
@@ -7919,18 +7928,6 @@ body.na_darkui :is(dialog.popup:not(:has(.na_phone)) .na_popup, #na_settings) :i
 body.na_darkui :is(dialog.popup:not(:has(.na_phone)) .na_popup, #na_settings) :is(input, textarea, select):not([type="checkbox"]):not(.na_toggle):focus-visible:not(#na_x) { outline: none !important; border-color: transparent !important; box-shadow: 0 0 0 2px #45454D !important; }
 body:not(.na_darkui) .na_wz2_range label > span:focus-within { box-shadow: 0 0 0 2px #D9C9BD !important; }
 body.na_darkui .na_wz2_range label > span:focus-within { box-shadow: 0 0 0 2px #45454D !important; }
-
-/* ============ AU 채팅 (docs/mockups/ext-au B): 본편 → AU timeline on top, the switch on its own card, then the two fields outside
-   any card with bold labels; all of it centred in the window */
-.na_au_pop { display: flex; flex-direction: column; }
-.na_au3 { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 0; }
-.na_au3_map { padding: 12px 16px !important; }
-.na_au3_tl { margin: 0 !important; }
-.na_au3_on { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 14px !important; font-size: 14px; cursor: pointer; }
-.na_au3_on > span:first-child { flex: 1; }
-.na_au3_lab { margin: 16px 4px 6px; font-size: 12px; font-weight: 700; color: var(--na-mute); }
-.na_au3 .na_au_name, .na_au3 .na_au_note { width: 100%; box-sizing: border-box; margin: 0; }
-.na_au3_note { margin: 12px 4px 0; font-size: 12px; line-height: 1.5; color: var(--na-dim); }
 
 /* 3.169.30: dark — text on the cream accent is always dark, also on ST's own popup buttons (outside .na_popup the var was missing, so it fell back to white) */
 body.na_darkui { --na-onaccent: #1B1B1F; }
