@@ -198,11 +198,10 @@ export async function openKnowledge() {
       </div>`);
     const secs = () => parseSections(m.text);
     let tr = null;
-    // the empty window (docs/mockups/ext-knowledge A): what this is in one line, 만들기, and two faded example rows with the
-    // story's own people (else plain 인물 A · B · C) as small dot-and-name tags
+    // the empty window (docs/mockups/ext-knowledge A): what this is in one line, 만들기, and two faded example rows (played by
+    // Claude · Gemini · GPT, so nobody mistakes them for the story's own) as small dot-and-name tags
     const emptyHtml = () => {
-        const cast = [...(currentCast(m) || [])].slice(0, 3);
-        const [a, b, c2] = [cast[0] || '인물 A', cast[1] || '인물 B', cast[2] || '인물 C'];
+        const [a, b, c2] = ['Claude', 'Gemini', 'GPT'];
         const tag = (n, k) => `<span class="na_kn3_tag ${k}"><i></i>${esc(n)}</span>`;
         return `<div class="na_v2_card na_kn3_hello"><span class="na_kn3_big"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/></svg></span>
             <b>아직 정리된 비밀이 없어요</b><small>아카이브를 읽고 비밀마다 아는 사람 · 모르는 사람을 정리해요</small>
@@ -211,7 +210,7 @@ export async function openKnowledge() {
           <div class="na_kn3_sect"><span>이렇게 정리돼요</span><small>예시</small></div>
           <div class="na_v2_card na_kn3_ex">
             <div><p>${esc(a)}, 그날 밤 있던 곳을 ${esc(b)}에게 숨김</p><span>${tag(a, 'k')}${tag(b, 'u')}${tag(c2, 's')}</span></div>
-            <div><p>${esc(a)}의 옛 이름</p><span>${tag(c2, 'k')}${tag(a, 'k')}${tag(b, 'u')}</span></div>
+            <div><p>${esc(c2)}의 옛 이름</p><span>${tag(c2, 'k')}${tag(a, 'k')}${tag(b, 'u')}</span></div>
             <div class="na_kn3_leg"><span class="k"><i></i>알아요</span><span class="u"><i></i>몰라요</span><span class="s"><i></i>짐작해요</span></div>
           </div>`;
     };
