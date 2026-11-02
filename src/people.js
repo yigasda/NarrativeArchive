@@ -70,6 +70,13 @@ export function faceHtml(name, size = 40) {
     return `<span class="na_face" style="--s:${size}px;--h:${h}" title="${esc(name)}">${url ? `<img src="${esc(url)}"${fb && fb !== url ? ` data-fb="${esc(fb)}"` : ''} alt="" loading="lazy" decoding="async">` : esc([...String(name).trim()][0] || '?')}</span>`;
 }
 
+// the example people in empty windows (누가 아는가, 대사 은행) always look the same: Claude orange, GPT charcoal, Gemini calm navy,
+// as letters, never a real avatar that happens to share the name
+const EX_FACE = { Claude: '#D97757', GPT: '#3A3A3C', Gemini: '#3E5683' };
+export function exFace(name, size = 26) {
+    return `<span class="na_face" style="--s:${size}px;background:${EX_FACE[name] || '#8A7A70'}" title="${esc(name)}">${esc(name[0])}</span>`;
+}
+
 // an avatar that fails to load (renamed card, deleted persona) tries its thumbnail, then falls back to the letter
 document.addEventListener('error', e => {
     const img = e.target;
@@ -517,7 +524,7 @@ export async function openPeople() {
             ${scored.length ? `<button type="button" class="na_v2_btn na_tp_listbtn">섹션별 점수 ${scored.length}개</button>` : ''}
             ${todo ? `<button type="button" class="na_v2_btn primary na_temp_run" data-all="0">${scored.length ? `안 잰 섹션 ${todo}개 재기` : `섹션 ${todo}개 재기`}</button>` : `<button type="button" class="na_v2_btn na_temp_run" data-all="1">전부 다시 재기</button>`}
           </div>
-          <small class="na_v2_foot">AI 기능 모델(${esc(aiLabel())})이 섹션마다 −5(차가움) ~ +5(따뜻함)으로 매겨요</small>`;
+          <small class="na_v2_foot">섹션마다 −5(차가움) ~ +5(따뜻함) · 모델 ${esc(aiLabel())}</small>`;
         if (!scored.length) return `${picker}<div class="na_v2_card na_tp_empty"><i class="fa-solid fa-temperature-half"></i><b>아직 안 쟀어요</b><small>두 사람이 함께 나온 섹션 ${shared}개를 AI가 읽고 온도를 매겨요</small></div>${runBtns}`;
         const now = [...scored].pop().t.s;
         const vals = scored.map(p => p.t.s);
@@ -604,7 +611,7 @@ export async function openPeople() {
         if (!pair) return;
         const all = this.dataset.all === '1';
         const secs = tempPoints(m, pair).filter(p => all || ((!p.t || p.stale) && !p.absent)).map(p => p.s);
-        if (all && !await confirm('전부 다시', `${esc(pair.a)} · ${esc(pair.b)}이 함께 나온 섹션 ${secs.length}개를 모두 다시 잴까요?`)) return;
+        if (all && !await confirm('전부 다시', `${esc(pair.a)} · ${esc(pair.b)}이 함께 나온 섹션 ${secs.length}개를 모두 다시 잴까요?`, '다시 재기')) return;
         busy = true;
         const $b = $(this);
         const got = await withSpinner($b, '재는 중…', () => rateTemps(m, pair, secs, (i, n) => n > 1 && $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> ${i}/${n}번째 읽는 중…`)));
@@ -668,5 +675,5 @@ export async function openPeople() {
     $root.on('click', '.na_people_addbtn', add);
     $root.on('keydown', '.na_people_name', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); add(); } });
     draw();
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }

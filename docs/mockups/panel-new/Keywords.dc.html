@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>키워드 연동</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 390px; height: 1000px; box-sizing: border-box; padding: 22px 18px 24px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 14px">
+
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <span style="font-size: 12px; color: #8A7A70">키워드 연동 · 평소엔 빼 두고, 최근 4개 메시지에 나올 때만</span>
+    <b style="font-size: 17px; line-height: 1.35">#124–#216 — Menen, Behedet, and the tribunal</b>
+  </div>
+
+  <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 18px; padding: 12px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center">
+      <sc-for list="{{keys}}" as="k" hint-placeholder-count="3">
+        <span style="display: flex; align-items: center; gap: 4px; padding: 3px 4px 3px 11px; border-radius: 999px; background: #2A211C; color: #FFFAF6; font-size: 13px">{{k}}<button aria-label="빼기" style="width: 18px; height: 18px; border: 0; background: transparent; color: #CDBDB2; padding: 0">×</button></span>
+      </sc-for>
+      <span style="flex: 1; min-width: 90px; color: #A99C92; font-size: 13px; padding: 3px 4px">키워드 입력</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; padding-top: 10px; border-top: 1px solid #F1E6DD">
+      <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3"><span style="font-size: 12px; color: #8A7A70">지금까지 메시지 기준</span><b class="num" style="font-size: 14px">약 9%에서 켜졌을 거예요</b></span>
+      <span style="width: 90px; height: 8px; border-radius: 4px; background: #F1E6DD; overflow: hidden"><span style="display: block; width: 9%; height: 100%; background: #B8541F"></span></span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <span style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: #6B5A50">이 섹션에서 두드러지는 말<span style="font-weight: 400; font-size: 11.5px; color: #8A7A70">섹션 수 · 메시지 %</span></span>
+    <div style="display: flex; gap: 6px; flex-wrap: wrap">
+      <sc-for list="{{sugg}}" as="s" hint-placeholder-count="6">
+        <button style="display: flex; align-items: baseline; gap: 6px; border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13px; padding: 4px 11px; border-radius: 999px">+ {{s.w}}<span class="num" style="font-size: 11px; color: #8A7A70">{{s.n}}</span></button>
+      </sc-for>
+    </div>
+    <span style="font-size: 12px; color: #8A7A70">너무 넓은 말 · 넣으면 거의 늘 켜져요</span>
+    <div style="display: flex; gap: 6px; flex-wrap: wrap; opacity: 0.55">
+      <span style="font-size: 12.5px; padding: 3px 11px; border-radius: 999px; border: 1px dashed #CDBBAE">Set 98%</span>
+      <span style="font-size: 12.5px; padding: 3px 11px; border-radius: 999px; border: 1px dashed #CDBBAE">Horus 81%</span>
+      <span style="font-size: 12.5px; padding: 3px 11px; border-radius: 999px; border: 1px dashed #CDBBAE">temple 44%</span>
+    </div>
+  </div>
+
+  <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <b style="flex: 1; font-size: 13.5px">AI 제안</b>
+      <span style="font-size: 11.5px; color: #8A7A70">사건·주제별</span>
+    </div>
+    <sc-for list="{{ai}}" as="a" hint-placeholder-count="2">
+      <div style="display: flex; flex-direction: column; gap: 5px; padding: 8px 0; border-top: 1px solid #F1E6DD">
+        <div style="display: flex; align-items: center; gap: 8px"><b style="flex: 1; font-size: 13px">{{a.topic}}</b><button style="border: 0; background: #F6E1D3; color: #8A3A12; font: inherit; font-size: 11.5px; font-weight: 600; padding: 2px 10px; border-radius: 999px">모두</button></div>
+        <span style="font-size: 12.5px; color: #4A3D35">{{a.words}}</span>
+        <span style="font-size: 11.5px; color: #8A7A70">{{a.why}}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <span style="flex: 1"></span>
+  <div style="display: flex; gap: 8px">
+    <button style="flex: 1; border: 1px solid #E5D5C9; background: #FFFAF6; color: #B3261E; font: inherit; font-size: 13.5px; padding: 12px 0; border-radius: 14px">연동 풀기</button>
+    <button style="flex: 2; border: 0; background: #B8541F; color: #fff; font: inherit; font-size: 13.5px; font-weight: 600; padding: 12px 0; border-radius: 14px">저장</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      keys: ['Menen', 'tribunal', '재판'],
+      sugg: [['Behedet', '2 · 3%'], ['chained', '1 · 2%'], ['Pharaoh', '3 · 5%'], ['verdict', '1 · 1%'], ['oath', '4 · 6%'], ['Edfu', '1 · 2%']].map(([w, n]) => ({ w, n })),
+      ai: [
+        { topic: '재판과 판결', words: 'tribunal, verdict, judg-, 재판, 판결', why: '신들 앞에서 세트가 심판받은 장면' },
+        { topic: '쇠사슬 굴욕', words: 'chain-, humiliat-, 쇠사슬', why: '나중 섹션이 이 장면을 다시 불러요' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

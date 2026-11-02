@@ -25,6 +25,8 @@ import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './ph
 import { fillDelivery, fillLife } from './phonelife.js';
 import { alarmScreen, setStory, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, heartScreen, hereWidget, itemScreen, orderScreen, ordersScreen, payScreen, rateScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, waterScreen, weatherScreen, weightScreen, workScreen, worldScreen } from './phonelifeapps.js';
 import { openGlossary } from './translate.js';
+// 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
+const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
 import { confirm, esc } from './util.js';
 
 // other files keep importing these from here
@@ -132,6 +134,21 @@ export async function openPhone(who = null) {
           <button type="button" class="na_ph_pick na_ph_addp" title="인물 넣기"><span class="na_ph_addic">${ic('plus', 18, 2)}</span><span>넣기</span></button>`);
         $root.find('.na_ph_addrow').prop('hidden', !adding);
     };
+    // the phone's own confirm: an iOS action sheet inside the screen (message, the action, a separate 취소); it survives redraws
+    let ask = null;
+    const placeAsk = () => { if (ask) $root.find('.na_ph_frame .cg_canvas').first().append(ask.el); };
+    const askSheet = (title, text = '', ok = '확인', safe = false) => {
+        if (!$root.find('.na_ph_frame .cg_canvas').length) return confirm(title, text, ok, { danger: !safe });
+        ask?.done(false);
+        return new Promise(done => {
+            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${text}</span>` : ''}</div><div role="button" tabindex="0" class="pcf_ok${safe ? ' safe' : ''}">${esc(ok)}</div></div><div role="button" tabindex="0" class="pcf_no">취소</div></div></div>`)[0];
+            ask = { el, done: v => { ask = null; el.remove(); done(v); } };
+            placeAsk();
+            el.querySelector('.pcf_no').focus({ preventScroll: true });
+        });
+    };
+    $root.on('click', '.pcf', function (e) { e.stopPropagation(); const b = e.target.closest('.pcf_ok, .pcf_no'); if (b) ask?.done(b.classList.contains('pcf_ok')); else if (e.target === this) ask?.done(false); });
+    $root.on('keydown', '.pcf_ok, .pcf_no', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ask?.done(this.classList.contains('pcf_ok')); } });
     const drawPhone = (keep = false) => {
         const p = phone();
         // nobody to show yet (no people in the archive, no phone in this chat): the picker opens instead of a blank phone
@@ -187,6 +204,7 @@ export async function openPhone(who = null) {
         }
         $root.find('.na_ph_frame').html(html);
         if (sheet && (view === 'photo' || view === 'set')) $root.find('.na_ph_scr').append(looksSheet(m));
+        placeAsk();
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
         if (making && view === 'setremake') $root.find('.na_ph_setremake .ax_n').html(`${busyHtml} 다시 만드는 중`);
         queueMicrotask(() => autoChart());
@@ -562,8 +580,7 @@ export async function openPhone(who = null) {
         if (!p) return;
         if (kind === 'photo' && drawing.has(`${nameKey(p.owner)}:${i}`)) return toastr.info('그리는 중엔 지울 수 없어요', '캐릭터 휴대폰');
         const what = OTHER[kind] || RM[kind]?.what;
-        const josa = w => (((w.charCodeAt(w.length - 1) - 0xac00) % 28) ? '을' : '를');
-        if (!what || !await confirm(`이 ${what}${josa(what)} 지울까요?`, '지운 건 되돌릴 수 없어요.')) return;
+        if (!what || !await askSheet(`이 ${what}${josa(what)} 지울까요?`, '되돌릴 수 없어요.', '지우기')) return;
         if (phone() !== p) return;
         if (kind === 'voice') { p.voice = (p.voice || []).filter(x => x.id !== i); view = 'voice'; }
         else if (kind === 'draft') { const t = p.threads[Number(i)]; if (t) delete t.draft; view = `thread:${i}`; }
@@ -752,7 +769,7 @@ export async function openPhone(who = null) {
         e.stopPropagation();
         if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
         const p = phone(), d = p.sync?.dropped?.[Number(this.dataset.k)];
-        if (!d || !await confirm(`대화 ${d.label}에서 넣은 일 빼기`, '그 일로 들어간 문자 · 일정 · 돈 기록을 폰에서 빼요. 뒤의 기록과 이어진 건 남겨요.')) return;
+        if (!d || !await askSheet(`대화 ${d.label}에서 넣은 일을 뺄까요?`, '문자 · 일정 · 돈 기록이 빠져요.', '빼기')) return;
         if (making || busy.sync || busy.fill) return;
         const r = await dropStretch(m, p, d.key);
         drawPhone();
@@ -765,14 +782,14 @@ export async function openPhone(who = null) {
         // not while a reflection or a fill writes the same records
         if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
         const p = phone(), n = p.syncLast?.checked || 0;
-        if (!await confirm('이 반영 되돌리기', `방금 넣은 문자 · 일정 · 돈 움직임을 빼고, 대화 ${n}개는 다시 안 읽은 상태가 돼요.`)) return;
+        if (!await askSheet('방금 반영을 되돌릴까요?', `대화 ${n}개를 다시 읽게 돼요.`, '되돌리기')) return;
         if (making || busy.sync || busy.fill || phone() !== p) return;
         try { const kept = await undoRound(m, p); drawPhone(); kept.length ? toastr.warning(`되돌렸어요. ${kept.join(', ')}은(는) 그 사이 바뀌어서 남겨뒀어요`, '캐릭터 휴대폰') : toastr.success('반영을 되돌렸어요', '캐릭터 휴대폰'); }
         catch (err) { toastr.error(String(err?.message || err), '되돌리기'); }
     });
     $root.on('click', '.na_sync_forget', async e => {
         e.stopPropagation();
-        if (!await confirm('반영 기록 지우기', '저장되지 않은 반영 기록을 지울까요? 폰은 지금 그대로예요.')) return;
+        if (!await askSheet('반영 기록을 지울까요?', '폰은 그대로예요.', '지우기')) return;
         const { journalWrite } = await import('./phonesync.js'); journalWrite(phoneChatScope(ctx()), []); syncPending = 0; drawPhone();
     });
     // 날짜 및 시간: the year this phone's dates are in, or none
@@ -780,7 +797,7 @@ export async function openPhone(who = null) {
         const p = phone(), y = Math.round(Number(this.value));
         if (!p || !(y >= 1900 && y <= 2100) || y === p.year) { drawPhone(true); return; }
         // the bank's and investments' dates move with it (the whole chat's), so their order holds
-        if (p.year && hasDatedRecords(m) && !await confirm('연도 바꾸기', `${p.year}년 → ${y}년<br>은행 · 투자 기록의 날짜도 같이 옮겨요. 이 채팅의 다른 폰도 같은 연도가 돼요.`)) { drawPhone(true); return; }
+        if (p.year && hasDatedRecords(m) && !await askSheet(`${y}년으로 바꿀까요?`, '기록 날짜와 다른 폰도 같이 바뀌어요.', '바꾸기', true)) { drawPhone(true); return; }
         setStoryYear(m, p, y);
         drawPhone(true); await saveMeta();
     });
@@ -803,7 +820,7 @@ export async function openPhone(who = null) {
         const target = phone(), targetOwner = owner, keep = target.inject;
         making = true;
         try {
-            if (!await confirm(whole ? '폰 전체를 다시 만들까요?' : `고른 앱 ${apps.length + more.length}개를 다시 만들까요?`, `${[...apps, ...more].map(k => APPS[k]).join(' · ')} 다시 만들기${more.includes('money') ? ' · 잔액·거래·주문 새로 만들기' : ''}`)) return;
+            if (!await askSheet(whole ? '폰 전체를 다시 만들까요?' : apps.length + more.length === 1 ? `${APPS[[...apps, ...more][0]]}${josa(APPS[[...apps, ...more][0]])} 다시 만들까요?` : `앱 ${apps.length + more.length}개를 다시 만들까요?`, whole || apps.length + more.length === 1 ? '' : [...apps, ...more].map(k => APPS[k]).join(' · '), '다시 만들기')) return;
             if (phone() !== target || investing) {toastr.info('폰이나 진행 중인 작업이 바뀌었어요. 다시 눌러 주세요');return;}
             drawPhone(true);
             const p = apps.length ? await makePhone(m, targetOwner, whole ? {} : { apps }) : target;
@@ -820,14 +837,14 @@ export async function openPhone(who = null) {
         e.stopPropagation();
         if (making || investing || filling.size) return toastr.info('생성 중인 작업이 끝난 뒤 다시 시도해 주세요');
         const scope=phoneChatScope(ctx());
-        if (!await confirm('이 방의 폰을 새로 시작할까요?', '이 방의 모든 인물의 휴대폰·계좌·투자·재력 기준을 초기화해요. 아카이브와 다른 채팅방은 그대로예요.')) return;
+        if (!await askSheet('이 방의 폰을 새로 시작할까요?', '모든 인물의 폰이 지워져요.', '새로 시작')) return;
         if(getMeta()!==m || phoneChatScope(ctx())!==scope || making || investing || filling.size) return;
         resetPhoneStory(m,scope);profileStates.clear();profileDrafts.clear();remake.clear();view='lock';
         await saveMeta();applyInjection();draw();
     });
     $root.on('click', '.na_ph_setdel', async e => {
         e.stopPropagation();
-        if (!await confirm('이 폰을 지울까요?', `${esc(owner)}의 폰 내용이 이 채팅에서 지워져요.`)) return;
+        if (!await askSheet(`${owner}의 폰을 지울까요?`, '', '지우기')) return;
         const was = phone()?.inject;
         delete m.phones[nameKey(owner)];
         view = 'lock'; draw();
@@ -856,8 +873,8 @@ export async function openPhone(who = null) {
         // ✕, Esc, or a tap on the dark around the phone (the sheet closes first)
         $root.on('click', '.na_ph_quit', e => { e.stopPropagation(); close(); });
         $root.on('click', '.na_ph_wrap', e => { if (e.target === e.currentTarget) { if (sheetOpen) setSheet(false); else close(); } });
-        dlg.addEventListener('cancel', e => { e.preventDefault(); if (sheetOpen) setSheet(false); else close(); });
-        dlg.addEventListener('close', () => { phoneClosed = true; done(); }, { once: true });
+        dlg.addEventListener('cancel', e => { e.preventDefault(); if (ask) ask.done(false); else if (sheetOpen) setSheet(false); else close(); });
+        dlg.addEventListener('close', () => { phoneClosed = true; ask?.done(false); done(); }, { once: true });
     });
     ro.disconnect();
     const t = dlg.querySelector('#toast-container');

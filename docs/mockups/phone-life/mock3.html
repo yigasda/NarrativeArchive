@@ -1,0 +1,211 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@200;300;400;500;600&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:28px 34px;background:#e9e5e1;font-family:-apple-system,'SF Pro Text','Noto Sans KR',sans-serif;color:#161b22}
+.bundle{margin-bottom:60px;padding:12px 14px}.bt{font:700 26px 'Noto Sans KR',sans-serif;color:#3a332c;margin:0 0 4px 4px}.bs{font:400 14px 'Noto Sans KR',sans-serif;color:#7a6f66;margin:0 0 18px 4px}
+.row{display:flex;gap:40px}.cap2{font:600 14px 'Noto Sans KR',sans-serif;color:#6b625b;text-align:center;margin-top:14px}
+.ph{width:390px;height:844px;border-radius:48px;overflow:hidden;position:relative;box-shadow:0 0 0 10px #16130f,0 20px 50px rgba(0,0,0,.22);display:flex;flex-direction:column;
+  background:radial-gradient(130% 34% at 50% 0%,var(--c1) 0%,transparent 72%),#f4f5f7;font-family:'Noto Sans KR',-apple-system,sans-serif}
+.sb{height:54px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:4px 30px 0 36px;font:600 16px 'Inter Tight',-apple-system,sans-serif}
+.sb .ic3{display:flex;gap:6px;align-items:center}
+.num{font-family:'Inter Tight',-apple-system,sans-serif;font-variant-numeric:tabular-nums}
+.ind{position:absolute;left:50%;bottom:8px;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:#161b22;z-index:9}
+.ind.w{background:#fff}
+svg{flex:none}
+.ko{display:block;color:#7c8592;font-size:.86em;margin-top:2px;font-weight:400}
+.dim{color:#7c8592}
+/* glass bits (the home's) */
+.gl{background:rgba(255,255,255,.62);box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 0 0 .5px rgba(22,27,34,.06),0 4px 14px rgba(22,27,34,.06);backdrop-filter:blur(18px) saturate(120%)}
+.top{height:50px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+.top .r{display:flex;gap:8px;align-items:center}
+.cb{width:38px;height:38px;border-radius:50%;display:grid;place-items:center}
+.kp{height:32px;padding:0 12px;border-radius:16px;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--d)}
+.kp.off{color:#8a929d}
+.h1{padding:4px 22px 12px;display:flex;align-items:baseline;gap:8px}.h1 b{font-size:27px;font-weight:600;letter-spacing:-.02em}.h1 span{font-size:13.5px;color:#6b7380}
+.find{margin:0 16px 14px;height:40px;border-radius:14px;display:flex;align-items:center;gap:7px;padding:0 13px;color:#8a929d;font-size:15px}
+.card{margin:0 14px 12px;border-radius:22px;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05);overflow:hidden}
+.sec{margin:6px 26px 8px;font-size:12.5px;font-weight:600;color:#6b7380;letter-spacing:.02em}
+.rw{display:flex;gap:12px;align-items:center;padding:12px 14px 12px 18px;position:relative}
+.rw + .rw::before{content:'';position:absolute;top:0;left:var(--ln,70px);right:14px;border-top:1px solid #eef0f3}
+.rw > .tx{flex:1;min-width:0}.rw b{font-size:15.5px;font-weight:600}.rw p{margin:2px 0 0;font-size:13.5px;color:#7c8592;line-height:1.38;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rw small{font-size:12.5px;color:#8a929d;align-self:flex-start;margin-top:3px}
+.rw .h{display:flex;align-items:baseline;gap:6px}.rw .h b{flex:1}
+.av{border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:600;flex:none;font-family:'Inter Tight',sans-serif;box-shadow:inset 0 1px 1px rgba(255,255,255,.6)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--d);flex:none;box-shadow:0 0 0 3px var(--c2)}
+.dock{position:absolute;left:50%;transform:translateX(-50%);bottom:26px;height:60px;border-radius:30px;display:flex;align-items:center;gap:4px;padding:0 7px;z-index:5}
+.dock span{height:46px;min-width:46px;padding:0 15px;border-radius:23px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13.5px;font-weight:600;color:#4d5562}
+.dock span.on{background:var(--c2);color:var(--d);box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+.pad{height:100px;flex:none}
+/* messages */
+.th{display:flex;align-items:center;gap:10px;padding:6px 14px 10px}
+.th .who{flex:1;display:flex;align-items:center;gap:10px}.th .who b{font-size:16px;font-weight:600;display:block}.th .who small{font-size:12px;color:#7c8592}
+.msgs{flex:1;display:flex;flex-direction:column;gap:4px;padding:6px 14px}
+.tm{align-self:center;font-size:11.5px;color:#7c8592;margin:6px 0 8px;padding:4px 10px;border-radius:10px;background:rgba(255,255,255,.7)}.tm b{color:#4d5562;font-weight:600}
+.bb{max-width:76%;padding:9px 14px;border-radius:20px;font-size:15.5px;line-height:1.38}
+.bb .k{display:block;font-size:12.5px;margin-top:5px;padding-top:5px}
+.bth{align-self:flex-start;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.05),0 4px 12px rgba(22,27,34,.04)}.bth .k{border-top:1px solid #eef0f3;color:#7c8592}
+.bm{align-self:flex-end;background:linear-gradient(160deg,#d3ecd7,#bfe0c5);color:#1d3324}.bm .k{border-top:1px solid rgba(29,51,36,.12);color:#4c6b54}
+.bth.tail{border-bottom-left-radius:7px}.bm.tail{border-bottom-right-radius:7px}
+.gap{height:6px}
+.read{align-self:flex-end;font-size:11px;color:#8a929d;margin:2px 4px 0}
+.ibar{position:absolute;left:14px;right:14px;bottom:26px;height:50px;border-radius:25px;display:flex;align-items:center;gap:8px;padding:0 8px 0 16px;color:#8a929d;font-size:14.5px}
+.ibar .mi{margin-left:auto;width:36px;height:36px;border-radius:50%;background:var(--c2);display:grid;place-items:center}
+/* phone */
+.ci{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:none}
+.rw b.m{color:#b0564e}
+.ptop{display:flex;flex-direction:column;align-items:center;padding:4px 0 18px}
+.ring{padding:4px;border-radius:50%;background:linear-gradient(160deg,var(--c1),var(--c3));box-shadow:0 8px 24px rgba(22,27,34,.08)}
+.ring .av{border:3px solid #fff}
+.ptop h2{margin:12px 0 2px;font-size:24px;font-weight:600}.ptop p{margin:0;font-size:13px;color:#7c8592}
+.acts{display:flex;gap:10px;padding:0 18px 16px;justify-content:center}
+.acts span{width:74px;height:66px;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11.5px;font-weight:600;color:var(--d)}
+.acts span.no{opacity:.4;color:#4d5562}
+.lr{display:flex;justify-content:space-between;padding:10px 16px;font-size:14.5px}.lr + .lr{border-top:1px solid #eef0f3}.lr .m{color:#b0564e}
+.hd{padding:12px 16px 4px;font-size:12.5px;font-weight:600;color:#6b7380}
+/* photos */
+.pday{padding:10px 22px 8px;font-size:15px;font-weight:600;display:flex;align-items:baseline;gap:6px}.pday small{font-size:12.5px;color:#8a929d;font-weight:500}
+.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:0 14px 8px}
+.pq{aspect-ratio:1;border-radius:14px;display:grid;place-items:center;position:relative;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.pq .dr{position:absolute;right:6px;bottom:6px;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.72);font-size:10.5px;font-weight:700;color:#8a4a40;backdrop-filter:blur(8px)}
+.pv{background:#0e1013!important;color:#fff}
+.pv .cb{background:rgba(255,255,255,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.pvimg{margin:4px 14px 0;height:420px;border-radius:26px;display:grid;place-items:center}
+.pvcap{margin:12px 14px 0;padding:14px 16px;border-radius:22px;background:rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+.pvcap p{margin:0;font-size:15.5px;line-height:1.45}.pvcap .k{display:block;font-size:13.5px;color:rgba(255,255,255,.62);margin-top:3px}
+.pvcap .tags{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1);font-size:11.5px;color:rgba(255,255,255,.48);line-height:1.5}
+.pvb{display:flex;gap:8px;padding:12px 14px}.pvb span{flex:1;text-align:center;padding:13px 0;border-radius:18px;font-size:14.5px;font-weight:600;background:rgba(255,255,255,.1)}
+.pvb span.p{background:linear-gradient(160deg,#f0cbb5,#d89f98);color:#4a2420;box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+/* notes */
+.chk{display:flex;gap:11px;align-items:flex-start;padding:6px 22px;font-size:16px;line-height:1.4}
+.chk i{flex:none;width:22px;height:22px;border-radius:50%;border:1.6px solid #d3c79e;margin-top:1px;display:grid;place-items:center}
+.chk.d i{border:0;background:linear-gradient(160deg,#f4e5b5,#dcc680)}.chk.d span{color:#9a917a;text-decoration:line-through}
+.nko{margin:14px 16px 0;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.7);font-size:14px;line-height:1.55;color:#5c6470}
+/* calendar */
+.cal7{display:grid;grid-template-columns:repeat(7,1fr);padding:10px 6px 12px;row-gap:2px;text-align:center}
+.cal7 b{display:grid;place-items:center;width:40px;height:40px;margin:0 auto;font:400 17px 'Inter Tight',sans-serif;border-radius:50%;position:relative;color:#2a313b}
+.cal7 b.t{background:linear-gradient(160deg,#e3a097,#b0564e);color:#fff;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 4px 10px rgba(176,86,78,.25)}
+.cal7 b.e::after{content:'';position:absolute;bottom:3px;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:#c9a39d}.cal7 b.t.e::after{background:#fff}
+.ev{display:flex;gap:12px;padding:12px 14px;align-items:flex-start}.ev + .ev{border-top:1px solid #eef0f3}
+.ev i{width:5px;align-self:stretch;border-radius:3px;flex:none}
+.ev > div{flex:1}.ev b{display:block;font-size:15.5px;font-weight:600}.ev p{margin:2px 0 0;font-size:13px;color:#7c8592}.ev small{font-size:13px;color:#8a929d;text-align:right;line-height:1.35}
+/* sns */
+.prof{display:flex;align-items:center;gap:20px;padding:4px 20px 0}
+.stats{flex:1;display:flex;justify-content:space-around;text-align:center}.stats b{display:block;font:600 18px 'Inter Tight',sans-serif}.stats span{font-size:12.5px;color:#6b7380}
+.bio{padding:12px 20px 12px;font-size:14px;line-height:1.5}.bio b{font-weight:600}
+.seg{display:flex;margin:0 16px 12px;padding:4px;border-radius:16px}
+.seg span{flex:1;height:36px;border-radius:12px;display:grid;place-items:center;color:#8a929d}.seg span.on{background:#fff;color:var(--d);box-shadow:0 1px 3px rgba(22,27,34,.08)}
+.tile{aspect-ratio:3/4;border-radius:14px;position:relative;display:grid;place-items:center;overflow:hidden}
+.tile .cap{position:absolute;left:8px;right:8px;bottom:7px;font-size:10.5px;line-height:1.3;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.3)}
+.tile.t{background:#fff;color:#2a313b;padding:12px;font-size:12px;line-height:1.45;place-items:start;font-weight:500;box-shadow:0 1px 2px rgba(22,27,34,.05)}
+/* settings */
+.si{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;flex:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+.sw{width:50px;height:30px;border-radius:15px;background:linear-gradient(160deg,#bbddc0,#89b892);position:relative;flex:none;box-shadow:inset 0 1px 1px rgba(255,255,255,.5)}.sw::after{content:'';position:absolute;right:2px;top:2px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.15)}
+.v{font-size:14.5px;color:#7c8592}
+.foot{margin:-4px 28px 16px;font-size:12.5px;color:#8a929d;line-height:1.45}
+/* camera */
+.cam{background:#0b0c0e!important;color:#fff}
+.camtop{height:46px;display:flex;justify-content:space-between;align-items:center;padding:0 18px}
+.camtop .pill{padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.12);font-size:12px;font-weight:600}
+.vf{position:relative;height:520px;margin:0 10px;border-radius:28px;overflow:hidden}
+.vf .scene{position:absolute;inset:-20px;background:radial-gradient(60% 50% at 30% 35%,#f2c08f 0,transparent 60%),radial-gradient(50% 45% at 75% 60%,#8a5a7a 0,transparent 65%),linear-gradient(170deg,#e7a36e,#9c5469 60%,#3b2a3f);filter:blur(6px)}
+.vf .gli{position:absolute;background:rgba(255,255,255,.2)}
+.focus{position:absolute;left:150px;top:200px;width:80px;height:80px;border-radius:18px;border:1.5px solid rgba(255,255,255,.9)}
+.zoom{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:6px;padding:4px;border-radius:999px;background:rgba(0,0,0,.3);backdrop-filter:blur(10px)}
+.zoom span{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font:600 12px 'Inter Tight',sans-serif}.zoom span.on{background:rgba(255,255,255,.9);color:#161b22}
+.modes{display:flex;justify-content:center;gap:8px;padding:16px 0 12px}.modes span{padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600;color:rgba(255,255,255,.55)}.modes span.on{background:rgba(255,255,255,.14);color:#fff}
+.cbar{display:flex;align-items:center;justify-content:space-between;padding:4px 34px 0}
+.cthumb{width:50px;height:50px;border-radius:14px;background:linear-gradient(160deg,#c3dcc1,#93ba97);border:1.5px solid rgba(255,255,255,.7)}
+.shut{width:78px;height:78px;border-radius:50%;border:3px solid rgba(255,255,255,.9);padding:5px}.shut span{display:block;width:100%;height:100%;border-radius:50%;background:linear-gradient(160deg,#fff,#e8eaee)}
+.flip{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center}
+/* mail */
+.mrw .tx .s{font-size:14.5px;font-weight:600;margin-top:1px}
+</style></head><body><div id="out"></div>
+<script>
+const P={back:'M15 5l-7 7 7 7',chev:'M9 6l6 6-6 6',search:'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',compose:'M4 20h4L19 9l-4-4L4 16zM14 6l4 4',plus:'M12 5v14M5 12h14',mic:'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',lock:'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3',in:'M17 7L7 17M15 17H7V9',out:'M7 17L17 7M9 7h8v8',missed:'M4 7l6 6 4-4 6 6',clock:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2',user:'M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 21a8 8 0 0 1 16 0',msg:'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-5 4z',call:'M6 3h3l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v3a2 2 0 0 1-2 2A17 17 0 0 1 4 5a2 2 0 0 1 2-2z',video:'M3 7h12v10H3zM15 10l6-3v10l-6-3',mail:'M3 6h18v12H3zM3 7l9 6 9-6',photo:'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 16l5-5 4 4 3-3 6 6M15 9h.01',heart:'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',share:'M12 3v12M7 8l5-5 5 5M5 14v6h14v-6',more:'M5 12h.01M12 12h.01M19 12h.01',check:'M5 12.5l4.5 4.5L19 7.5',grid:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',tag:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',cmt:'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z',send:'M22 3L11 13M22 3l-7 18-4-8-8-4z',palette:'M12 3a9 9 0 0 0 0 18c1 0 1.5-.6 1.5-1.4 0-.9-.7-1.3-.7-2.1 0-.8.6-1.5 1.5-1.5H17a4 4 0 0 0 4-4c0-5-4-9-9-9zM7.5 11h.01M10 7h.01M14.5 7h.01',lang:'M4 6h9M8.5 4v2M6 6c0 4 3 7 6 8M11 6c0 3-3 7-7 8M14 20l4-9 4 9M15.5 17h5',globe:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18',info:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v5M12 8h.01',bolt:'M13 2L4 14h7l-1 8 9-12h-7z',flip:'M20 12a8 8 0 0 1-14 5M4 12a8 8 0 0 1 14-5M18 3v4h-4M6 21v-4h4',down:'M6 9l6 6 6-6',x:'M6 6l12 12M18 6L6 18',inbox:'M3 13l3-8h12l3 8v6H3zM3 13h5l1 3h6l1-3h5'};
+const s=(k,z=22,c='currentColor',w=2,f='none')=>`<svg width="${z}" height="${z}" viewBox="0 0 24 24" fill="${f}" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="${P[k]}"/></svg>`;
+const sb=(c='#161b22')=>`<div class="sb" style="color:${c}"><span>17:42</span><span class="ic3"><svg width="18" height="12" viewBox="0 0 18 12" fill="${c}"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round"><path d="M1.5 4.2a9.5 9.5 0 0 1 13 0"/><path d="M4 7a6 6 0 0 1 8 0"/><circle cx="8" cy="10" r="1" fill="${c}" stroke="none"/></svg><svg width="27" height="13" viewBox="0 0 27 13" fill="none"><rect x="0.5" y="0.5" width="23" height="12" rx="3.8" stroke="${c}" stroke-opacity="0.4"/><rect x="2.5" y="2.5" width="16" height="8" rx="2" fill="${c}"/></svg></span></div>`;
+// each app's gel colour from the home (light glow, chip, deep text, second gel stop)
+const A={msg:['rgba(187,221,192,.55)','#dcefdf','#3f7d50','#89b892'],call:['rgba(187,221,192,.55)','#dcefdf','#3f7d50','#89b892'],photo:['rgba(240,203,181,.6)','#f7e3d7','#a65a4e','#d89f98'],note:['rgba(244,229,181,.7)','#f6edcf','#7f6a22','#dcc680'],search:['rgba(191,211,233,.6)','#dde8f4','#3f6a9e','#8faed1'],mail:['rgba(191,211,233,.6)','#dde8f4','#3f6a9e','#8faed1'],cal:['rgba(230,200,196,.55)','#f3dcd9','#a14a42','#dcdfe5'],sns:['rgba(239,196,208,.6)','#f6dde5','#a2526b','#d494a7'],set:['rgba(209,212,217,.7)','#e6e8ec','#454d5a','#a2a7af']};
+const V=k=>`--c1:${A[k][0]};--c2:${A[k][1]};--d:${A[k][2]};--c3:${A[k][3]}`;
+const GEL={mint:'#bbddc0,#89b892',sky:'#bfd3e9,#8faed1',lav:'#d3cae9,#a699c9',apri:'#f0cbb5,#d89f98',pink:'#efc4d0,#d494a7',slate:'#d1d4d9,#a2a7af',butter:'#f4e5b5,#dcc680'};
+const av=(l,z,g)=>`<span class="av" style="width:${z}px;height:${z}px;font-size:${Math.round(z*.4)}px;background:linear-gradient(160deg,${GEL[g]})">${l}</span>`;
+const cb=(k,c='#2a313b',w=2.3)=>`<span class="cb gl">${s(k,18,c,w)}</span>`;
+const kp=(on=true)=>`<span class="kp gl ${on?'':'off'}">가 한국어</span>`;
+const ph=(app,inner,cls='')=>`<div class="ph ${cls}" style="${V(app)}">${inner}<div class="ind ${cls.includes('pv')||cls.includes('cam')?'w':''}"></div></div>`;
+const PG={warm:'#f0b38a,#c66a6f',cool:'#9fbadb,#5f7fa8',green:'#b9d4b0,#6f9a76',pink:'#f2bfcd,#cf7f98'};
+const B=[];
+B.push(['메시지 · 전화','파란색 대신 민트 젤 · 글래스 버튼 · 바닥은 홈 독 같은 알약',[
+['메시지',ph('msg',`${sb()}<div class="top">${cb('back')}<span class="r">${kp()}${cb('compose')}</span></div><div class="h1"><b>메시지</b><span>2개 대화</span></div><div class="find gl">${s('search',16,'#8a929d',2.2)}검색</div>
+<div class="card"><div class="rw"><span class="dot" style="position:absolute;left:5px;top:50%;margin-top:-4px"></span>${av('R',48,'sky')}<div class="tx"><div class="h"><b>Ren ♥</b><small class="num">17:40</small></div><p>Fünf Minuten.<span class="ko" style="display:inline;margin-left:4px">5분만.</span></p></div></div>
+<div class="rw"><span class="dot" style="position:absolute;left:5px;top:50%;margin-top:-4px"></span>${av('I',48,'lav')}<div class="tx"><div class="h"><b>Ivo (Werkstatt)</b><small class="num">17:30</small></div><p>Ruf mich zurück. Wichtig.<span class="ko" style="display:inline;margin-left:4px">다시 전화해. 중요해.</span></p></div></div>
+<div class="rw">${av('A',48,'apri')}<div class="tx"><div class="h"><b>Anja</b><small class="num">23.10.</small></div><p>Mal sehen.<span class="ko" style="display:inline;margin-left:4px">글쎄.</span></p></div></div></div>`)],
+['대화방',ph('msg',`${sb()}<div class="th">${cb('back')}<span class="who">${av('R',38,'sky')}<span><b>Ren ♥</b><small>휴대전화</small></span></span>${kp()}</div>
+<div class="msgs"><div class="tm"><b>오늘</b> 17:31</div>
+<div class="bb bth">Tut mir leid wegen vorhin<span class="k">아까 일은 미안</span></div><div class="gap"></div>
+<div class="bb bm tail">Schon gut. Ist mir egal.<span class="k">됐어. 신경 안 써.</span></div><div class="gap"></div>
+<div class="bb bth">Lügnerin<span class="k">거짓말</span></div>
+<div class="bb bth tail">Ich steh vor der Garage. Komm raus.<span class="k">창고 앞이야. 나와.</span></div><div class="gap"></div>
+<div class="bb bm tail">Fünf Minuten.<span class="k">5분만.</span></div><div class="read">읽음 17:40</div></div>
+<div class="ibar gl">${s('lock',14,'#8a929d',2)}보기 전용<span class="mi">${s('mic',17,'#3f7d50',2)}</span></div>`)],
+['전화',ph('call',`${sb()}<div class="top">${cb('back')}<span class="r"></span></div><div class="h1"><b>최근 기록</b><span>3통</span></div>
+<div class="sec">오늘</div><div class="card" style="--ln:66px"><div class="rw"><span class="ci" style="background:#f3dcd9">${s('missed',18,'#a14a42',2.2)}</span><div class="tx"><b class="m">Ivo (Werkstatt) (2)</b><p>부재중</p></div><small class="num">17:28</small></div></div>
+<div class="sec">이전</div><div class="card" style="--ln:66px"><div class="rw"><span class="ci" style="background:#dcefdf">${s('out',17,'#3f7d50',2.2)}</span><div class="tx"><b>Ren ♥</b><p>발신 · 14분</p></div><small class="num">어제</small></div>
+<div class="rw"><span class="ci" style="background:#dde8f4">${s('in',17,'#3f6a9e',2.2)}</span><div class="tx"><b>Anja</b><p>수신 · 3분</p></div><small class="num">22.10.</small></div></div>
+<div class="dock gl"><span class="on">전체</span><span>부재중</span></div>`)],
+['사람',ph('call',`${sb()}<div class="top">${cb('back')}<span class="r"></span></div>
+<div class="ptop"><span class="ring" style="--c1:#c4b6e2;--c3:#9483c4">${av('I',88,'lav')}</span><h2>Ivo (Werkstatt)</h2><p>저장된 이름 · Ivo</p></div>
+<div class="acts"><span class="gl">${s('msg',21,'#3f7d50',2)}메시지</span><span class="gl no">${s('call',21,'#4d5562',2)}전화</span><span class="gl no">${s('video',21,'#4d5562',2)}영상</span><span class="gl no">${s('mail',21,'#4d5562',2)}메일</span></div>
+<div class="card"><div class="hd">오늘</div><div class="lr"><span class="m">부재중 전화</span><span class="num dim">17:28</span></div><div class="lr"><span class="m">부재중 전화</span><span class="num dim">17:24</span></div></div>
+<div class="card"><div class="hd">21.10.</div><div class="lr"><span>발신 전화 · 2분</span><span class="num dim">09:10</span></div></div>`)]]]);
+B.push(['사진 · 메모','살구 젤 · 버터 젤 · 둥근 사진 칸',[
+['사진',ph('photo',`${sb()}<div class="top">${cb('back')}<span class="r"><span class="kp gl">${s('user',14,'#a65a4e',2.2)}&nbsp;외모</span>${kp()}</span></div><div class="h1"><b>사진</b><span>5장</span></div>
+<div class="pday">24.10.<small>1장</small></div><div class="pg"><div class="pq" style="background:linear-gradient(160deg,${PG.warm})">${s('photo',24,'#fff',1.6)}</div></div>
+<div class="pday">22.10.<small>2장</small></div><div class="pg"><div class="pq" style="background:linear-gradient(160deg,${PG.cool})">${s('photo',24,'#fff',1.6)}<span class="dr">그리기</span></div><div class="pq" style="background:linear-gradient(160deg,${PG.pink})">${s('photo',24,'#fff',1.6)}<span class="dr">그리기</span></div></div>
+<div class="pday">19.10.<small>2장</small></div><div class="pg"><div class="pq" style="background:linear-gradient(160deg,${PG.green})">${s('photo',24,'#fff',1.6)}<span class="dr">그리기</span></div><div class="pq" style="background:linear-gradient(160deg,#f6dd8f,#e5a85a)">${s('photo',24,'#fff',1.6)}<span class="dr">그리기</span></div></div>`)],
+['사진 한 장',ph('photo',`${sb('#fff')}<div class="top">${cb('back','#fff')}<span style="text-align:center;font-size:14.5px;font-weight:600">24.10.<small class="num" style="display:block;font-size:11.5px;color:rgba(255,255,255,.6);font-weight:500">18:12</small></span>${cb('heart','#fff')}</div>
+<div class="pvimg" style="background:linear-gradient(170deg,#e7a36e,#9c5469 60%,#3b2a3f)">${s('photo',60,'rgba(255,255,255,.75)',1.2)}</div>
+<div class="pvcap"><p>Sonnenuntergang hinter der Garage, verwackelt<span class="k">창고 뒤 노을, 흔들림</span></p><div class="tags">그린 태그 · 1girl, sunset, garage, warm light, blurry</div></div>
+<div class="pvb"><span class="p">다시 그리기</span><span>사진</span></div>`,'pv')],
+['메모',ph('note',`${sb()}<div class="top">${cb('back')}<span class="r">${kp()}</span></div><div class="h1"><b>메모</b><span>3개</span></div><div class="find gl">${s('search',16,'#8a929d',2.2)}검색</div>
+<div class="sec">이전 7일</div><div class="card" style="--ln:14px"><div class="rw"><div class="tx"><b>Nicht vergessen</b><span class="ko">잊지 말 것</span><p><span class="num" style="color:#4d5562;margin-right:6px">23.10.</span>Schlüssel an Ivo (Samstag) · Ren nicht anrufen</p></div></div>
+<div class="rw"><div class="tx"><b>Fähre</b><p><span class="num" style="color:#4d5562;margin-right:6px">22.10.</span>Letzte Fähre 21:10 ab Varo</p></div></div></div>
+<div class="sec">10월</div><div class="card" style="--ln:14px"><div class="rw"><div class="tx"><b>Für Anja</b><p><span class="num" style="color:#4d5562;margin-right:6px">12.10.</span>Buch zurück · Kuchen mitbringen</p></div></div></div>`)],
+['메모 한 장',ph('note',`${sb()}<div class="top">${cb('back')}<span class="r">${kp()}${cb('share')}</span></div>
+<div style="padding:2px 22px 12px"><div class="num" style="font-size:12.5px;color:#8a929d;margin-bottom:6px">23.10. 23:51</div><b style="font-size:25px;font-weight:600;letter-spacing:-.02em">Nicht vergessen</b><span class="ko" style="font-size:14.5px">잊지 말 것</span></div>
+<div class="card" style="padding:8px 0"><div class="chk d"><i>${s('check',13,'#5a4a1f',3.2)}</i><span>Ren antworten</span></div><div class="chk"><i></i><span>Schlüssel an Ivo (Samstag)</span></div><div class="chk"><i></i><span>Ren nicht anrufen</span></div></div>
+<div class="nko">- Ren한테 답장<br>- 열쇠 Ivo한테 (토요일)<br>- Ren한테 전화하지 말기</div>`)]]]);
+B.push(['검색 · 캘린더 · SNS · 메일','하늘 젤 · 벽돌 젤 · 인스타 무지개 링 대신 핑크 젤',[
+['검색',ph('search',`${sb()}<div class="top">${cb('back')}<span class="r">${kp()}</span></div><div class="h1"><b>검색</b></div>
+<div class="find gl" style="height:48px;font-size:15.5px;border-radius:24px">${s('search',18,'#3f6a9e',2.2)}검색어 또는 주소</div>
+<div class="sec">최근 검색</div><div class="card" style="--ln:52px"><div class="rw">${s('clock',20,'#8faed1',1.9)}<div class="tx"><b style="font-weight:500">Hochwasser Eastgate Straße gesperrt</b><p>Eastgate 홍수 도로 통제</p></div><small class="num">13:02</small></div>
+<div class="rw">${s('clock',20,'#8faed1',1.9)}<div class="tx"><b style="font-weight:500">Bus Varo Eastgate Fahrplan</b><p>Varo Eastgate 버스 시간표</p></div><small class="num">12:40</small></div>
+<div class="rw">${s('clock',20,'#8faed1',1.9)}<div class="tx"><b style="font-weight:500">Fähre Varo letzte Abfahrt</b><p>Varo 페리 막차</p></div><small class="num">22.10.</small></div></div>`)],
+['캘린더',ph('cal',`${sb()}<div class="top">${cb('back')}<span class="r">${kp()}</span></div><div class="h1"><b>10월</b><span>일정 3</span></div>
+<div class="card"><div class="cal7">${Array.from({length:31},(_,i)=>i+1).map(d=>`<b class="${d===25?'t':''} ${[21,25,27].includes(d)?'e':''}">${d}</b>`).join('')}</div></div>
+<div class="sec">25.10. · 오늘</div><div class="card"><div class="ev"><i style="background:linear-gradient(180deg,#e3a097,#b0564e)"></i><div><b>Schlüssel zurückgeben</b><p>열쇠 돌려주기</p></div><small>하루 종일</small></div></div>
+<div class="sec">27.10.</div><div class="card"><div class="ev"><i style="background:linear-gradient(180deg,#bfd3e9,#8faed1)"></i><div><b>Werkstatt – Ivo</b><p>정비소 – Ivo</p></div><small class="num">10:00</small></div></div>`)],
+['SNS',ph('sns',`${sb()}<div class="top">${cb('back')}<b style="font-size:16px;font-weight:600">mara.varo</b>${cb('plus')}</div>
+<div class="prof"><span class="ring" style="--c1:#efc4d0;--c3:#d494a7">${av('M',78,'apri')}</span><div class="stats"><div><b>4</b><span>게시물</span></div><div><b>318</b><span>팔로워</span></div><div><b>201</b><span>팔로잉</span></div></div></div>
+<div class="bio"><b>Mara</b><br>Fluss, Regen, Kaffee.<span class="ko">강, 비, 커피.</span></div>
+<div class="seg gl"><span class="on">${s('grid',19,'currentColor',2)}</span><span>${s('tag',19,'currentColor',2)}</span></div>
+<div class="pg"><div class="tile" style="background:linear-gradient(160deg,${PG.warm})">${s('photo',24,'#fff',1.6)}<span class="cap">Zwei Kaffeebecher</span></div><div class="tile t">Straße gesperrt. Natürlich.<span class="ko" style="font-size:10.5px">도로 통제. 역시나.</span></div><div class="tile" style="background:linear-gradient(160deg,${PG.green})">${s('photo',24,'#fff',1.6)}<span class="cap">Die Bank am Fluss</span></div><div class="tile" style="background:linear-gradient(160deg,${PG.cool})">${s('photo',24,'#fff',1.6)}<span class="cap">Regentropfen</span></div></div>`)],
+['메일',ph('mail',`${sb()}<div class="top">${cb('back')}<span class="r">${kp()}</span></div><div class="h1"><b>받은편지함</b><span>안 읽음 1</span></div><div class="find gl">${s('search',16,'#8a929d',2.2)}검색</div>
+<div class="card mrw"><div class="rw"><span class="dot" style="position:absolute;left:5px;top:50%;margin-top:-4px"></span>${av('I',42,'lav')}<div class="tx"><div class="h"><b>Ivo</b><small class="num">어제</small></div><div class="s">Schlüssel</div><p>Brauche ihn bis Samstag. Danke.<span class="ko" style="display:inline;margin-left:4px">토요일까지 필요해. 고마워.</span></p></div></div>
+<div class="rw">${av('S',42,'slate')}<div class="tx"><div class="h"><b>Stadtwerke Varo</b><small class="num">21.10.</small></div><div class="s" style="font-weight:500">Ihre Rechnung Oktober</div><p>Sehr geehrte Frau Mara, anbei Ihre Rechnung für Oktober.</p></div></div>
+<div class="rw">${av('A',42,'apri')}<div class="tx"><div class="h"><b>Anja</b><small class="num">19.10.</small></div><div class="s" style="font-weight:500">Sonntag?</div><p>Kommst du Sonntag zum Essen?</p></div></div></div>`)]]]);
+B.push(['설정 · 카메라','설정 아이콘을 홈 아이콘 젤로 · 카메라 노란색 빼기',[
+['설정',ph('set',`${sb()}<div class="top">${cb('back')}<span></span></div><div class="h1"><b>설정</b></div>
+<div class="card"><div class="rw" style="padding:14px">${av('M',56,'apri')}<div class="tx"><b style="font-size:18px">Mara</b><p>mara.varo · 독일</p></div></div></div>
+<div class="sec">화면</div><div class="card" style="--ln:60px"><div class="rw"><span class="si" style="background:linear-gradient(160deg,${GEL.lav})">${s('palette',17,'#fff',2)}</span><div class="tx"><b style="font-weight:500">테마</b></div><span class="v">컬러 젤</span>${s('chev',15,'#b7bdc6',2.4)}</div>
+<div class="rw"><span class="si" style="background:linear-gradient(160deg,${GEL.mint})">${s('lang',17,'#fff',2)}</span><div class="tx"><b style="font-weight:500">한국어 보기</b></div><span class="sw"></span></div></div>
+<div class="foot">외국어로 된 문자 · 메모 · 글 밑에 한국어를 붙여요.</div>
+<div class="sec">일반</div><div class="card" style="--ln:60px"><div class="rw"><span class="si" style="background:linear-gradient(160deg,${GEL.sky})">${s('globe',17,'#fff',2)}</span><div class="tx"><b style="font-weight:500">국적</b></div><span class="v">독일</span>${s('chev',15,'#b7bdc6',2.4)}</div>
+<div class="rw"><span class="si" style="background:linear-gradient(160deg,${GEL.apri})">${s('user',17,'#fff',2)}</span><div class="tx"><b style="font-weight:500">외모</b></div><span class="v">2명</span>${s('chev',15,'#b7bdc6',2.4)}</div>
+<div class="rw"><span class="si" style="background:linear-gradient(160deg,${GEL.slate})">${s('info',17,'#fff',2)}</span><div class="tx"><b style="font-weight:500">이 폰에 대해</b></div><span class="v num">#25까지</span></div></div>`)],
+['카메라',ph('set',`${sb('#fff')}<div class="camtop">${s('bolt',22,'#fff',2)}<span class="pill">지금 장면 · 25.10. 17:42</span>${s('x',22,'#fff',2.4)}</div>
+<div class="vf"><div class="scene"></div><i class="gli" style="left:33.3%;top:0;bottom:0;width:1px"></i><i class="gli" style="left:66.6%;top:0;bottom:0;width:1px"></i><i class="gli" style="top:33.3%;left:0;right:0;height:1px"></i><i class="gli" style="top:66.6%;left:0;right:0;height:1px"></i><span class="focus"></span><div class="zoom"><span>.5</span><span class="on">1×</span><span>2</span></div></div>
+<div class="modes"><span>동영상</span><span class="on">사진</span><span>인물</span></div>
+<div class="cbar"><span class="cthumb"></span><span class="shut"><span></span></span><span class="flip">${s('flip',22,'#fff',2)}</span></div>`,'cam')]]]);
+document.getElementById('out').innerHTML=B.map(([t,sub,scr],i)=>`<div class="bundle" id="b${i}"><div class="bt">${i+1} · ${t}</div><div class="bs">${sub}</div><div class="row">${scr.map(([n,h])=>`<div>${h}<div class="cap2">${n}</div></div>`).join('')}</div></div>`).join('');
+</script></body></html>

@@ -1,0 +1,114 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@200;300;400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:28px;background:#e9e5e1;font-family:'Noto Sans KR',sans-serif}
+.row{display:flex;gap:40px;padding:14px}
+.cap{font:600 15px 'Noto Sans KR';color:#4a423b;text-align:center;margin-top:14px;width:390px}
+.cap small{display:block;font-weight:400;color:#8a7f76;font-size:13px;margin-top:3px}
+.ph{width:390px;height:844px;border-radius:48px;overflow:hidden;position:relative;box-shadow:0 0 0 10px #16130f,0 20px 50px rgba(0,0,0,.22);background:#17181b;color:#f2f2f4}
+.sb{height:54px;display:flex;justify-content:space-between;align-items:center;padding:4px 30px 0 36px;font:600 16px 'Inter Tight',-apple-system,sans-serif}
+.top{height:50px;display:flex;align-items:center;padding:0 16px}
+.cb{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center}
+.h1{padding:4px 22px 14px;font-size:27px;font-weight:600;letter-spacing:-.02em}
+.sec{margin:18px 26px 8px;font-size:12.5px;font-weight:600;color:#8b8f98}
+.card{margin:0 14px 12px;border-radius:22px;background:#222327;overflow:hidden}
+.n{font-family:'Inter Tight',-apple-system,sans-serif;font-variant-numeric:tabular-nums}
+.dock{position:absolute;left:28px;right:28px;bottom:22px;height:50px;border-radius:25px;background:rgba(40,41,46,.9);display:flex;justify-content:space-around;align-items:center;font-size:13.5px;font-weight:600;color:#a3a7af}
+.dock span{height:40px;padding:0 14px;border-radius:20px;display:flex;align-items:center}
+.dock span.on{background:rgba(245,165,36,.16);color:#f5a524}
+.ind{position:absolute;left:50%;bottom:8px;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:#f2f2f4}
+.play{width:34px;height:34px;border-radius:50%;background:rgba(245,165,36,.16);display:grid;place-items:center;flex:none}
+/* A */
+.a-ring{width:260px;height:260px;margin:4px auto 0;position:relative;display:grid;place-items:center}
+.a-ring svg{position:absolute;inset:0}
+.a-ring b{display:block;font:200 62px/1 'Inter Tight',-apple-system,sans-serif;letter-spacing:-.02em;text-align:center}
+.a-ring span{display:block;text-align:center;font-size:14px;color:#8b8f98;margin-top:8px}
+.a-btns{display:flex;gap:10px;padding:22px 22px 0}
+.a-btns span{flex:1;height:52px;border-radius:26px;display:grid;place-items:center;font-size:15.5px;font-weight:600}
+.a-end{display:flex;justify-content:center;gap:6px;font-size:13px;color:#8b8f98;margin-top:14px}
+.a-end b{color:#f5a524;font-weight:600}
+.sv{display:flex;align-items:center;gap:14px;padding:12px 16px 12px 20px;position:relative}
+.sv+.sv::before{content:'';position:absolute;top:0;left:20px;right:0;border-top:1px solid #303136}
+.sv>b{font:300 30px/1 'Inter Tight',-apple-system,sans-serif;width:92px}
+.sv .t{flex:1;font-size:14.5px}.sv .t small{display:block;font-size:12px;color:#8b8f98}
+/* B */
+.b-live{margin:0 14px;border-radius:26px;background:#222327;padding:22px 22px 20px}
+.b-live .l{display:flex;justify-content:space-between;font-size:14px;color:#8b8f98}
+.b-live .l b{color:#f2f2f4;font-weight:600}
+.b-live .big{font:200 84px/1 'Inter Tight',-apple-system,sans-serif;letter-spacing:-.03em;margin:14px 0 18px}
+.bar{height:6px;border-radius:3px;background:#2f3035;position:relative}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#f5a524}
+.b-meta{display:flex;justify-content:space-between;font-size:12.5px;color:#8b8f98;margin-top:8px}
+.b-btns{display:flex;gap:10px;margin-top:20px}
+.b-btns span{flex:1;height:48px;border-radius:16px;display:grid;place-items:center;font-size:15px;font-weight:600}
+/* C */
+.c-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px}
+.tile{border-radius:22px;background:#222327;padding:16px;height:150px;position:relative}
+.tile b{display:block;font:300 36px/1 'Inter Tight',-apple-system,sans-serif}
+.tile .t{font-size:14.5px;margin-top:8px}.tile small{display:block;font-size:12px;color:#8b8f98;margin-top:2px}
+.tile .play{position:absolute;right:14px;bottom:14px}
+.tile.on{background:#f5a524;color:#17181b}
+.tile.on small{color:rgba(23,24,27,.6)}
+.tile.on .mini{position:absolute;left:16px;right:16px;bottom:18px;height:5px;border-radius:3px;background:rgba(23,24,27,.18)}
+.tile.on .mini i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#17181b}
+.c-head{margin:0 14px 12px;border-radius:22px;background:#222327;padding:16px 18px;display:flex;align-items:center;gap:14px}
+.c-head .ring{width:56px;height:56px;flex:none}
+.c-head b{display:block;font:300 34px/1 'Inter Tight',-apple-system,sans-serif}
+.c-head small{font-size:13px;color:#8b8f98}
+.c-head .x{margin-left:auto;display:flex;gap:8px}
+.c-head .x span{width:40px;height:40px;border-radius:50%;display:grid;place-items:center}
+</style></head><body>
+<div class="row">
+
+<!-- A -->
+<div><div class="ph">
+ <div class="sb"><span>17:42</span><span></span></div>
+ <div class="top"><span class="cb">‹</span></div>
+ <div class="h1">타이머</div>
+ <div class="a-ring"><svg viewBox="0 0 260 260"><circle cx="130" cy="130" r="122" fill="none" stroke="#2b2c31" stroke-width="6"/><circle cx="130" cy="130" r="122" fill="none" stroke="#f5a524" stroke-width="6" stroke-linecap="round" stroke-dasharray="766.5" stroke-dashoffset="460" transform="rotate(-90 130 130)"/></svg><div><b class="n">03:12</b><span>Pasta · 8분</span></div></div>
+ <div class="a-end">끝나는 시각 <b class="n">17:46</b></div>
+ <div class="a-btns"><span style="background:#2b2c31">취소</span><span style="background:#f5a524;color:#17181b">일시정지</span></div>
+ <div class="sec">저장된 타이머</div>
+ <div class="card">
+  <div class="sv"><b class="n">8:00</b><span class="t">Pasta<small>파스타 · 24.10.</small></span><span class="play">▶</span></div>
+  <div class="sv"><b class="n">4:00</b><span class="t">Tee ziehen lassen<small>차 우리기 · 22.10.</small></span><span class="play">▶</span></div>
+ </div>
+ <div class="dock"><span>알람</span><span class="on">타이머</span><span>세계 시계</span></div><div class="ind"></div>
+</div><div class="cap">A · 링 + 알약 버튼<small>동그라미 버튼 대신 나란한 알약 두 개 · 링은 얇게 · 끝나는 시각은 아래 한 줄</small></div></div>
+
+<!-- B -->
+<div><div class="ph">
+ <div class="sb"><span>17:42</span><span></span></div>
+ <div class="top"><span class="cb">‹</span></div>
+ <div class="h1">타이머</div>
+ <div class="b-live">
+  <div class="l"><b>Pasta</b><span>8분 타이머</span></div>
+  <div class="big n">03:12</div>
+  <div class="bar"><i style="width:60%"></i></div>
+  <div class="b-meta"><span>4분 48초 지남</span><span class="n">17:46에 끝나요</span></div>
+  <div class="b-btns"><span style="background:#2f3035">취소</span><span style="background:#f5a524;color:#17181b">일시정지</span></div>
+ </div>
+ <div class="sec">저장된 타이머</div>
+ <div class="card">
+  <div class="sv"><b class="n">8:00</b><span class="t">Pasta<small>파스타 · 24.10.</small></span><span class="play">▶</span></div>
+  <div class="sv"><b class="n">4:00</b><span class="t">Tee ziehen lassen<small>차 우리기 · 22.10.</small></span><span class="play">▶</span></div>
+ </div>
+ <div class="dock"><span>알람</span><span class="on">타이머</span><span>세계 시계</span></div><div class="ind"></div>
+</div><div class="cap">B · 돌고 있는 타이머 카드<small>링 없이 큰 숫자 + 진행 막대 · 지난 시간 / 끝나는 시각 · 버튼은 카드 안</small></div></div>
+
+<!-- C -->
+<div><div class="ph">
+ <div class="sb"><span>17:42</span><span></span></div>
+ <div class="top"><span class="cb">‹</span></div>
+ <div class="h1">타이머</div>
+ <div class="c-grid">
+  <div class="tile on"><b class="n">03:12</b><div class="t">Pasta</div><small>8분 · 17:46에 끝나요</small><span class="mini"><i style="width:60%"></i></span></div>
+  <div class="tile"><b class="n">4:00</b><div class="t">Tee ziehen lassen</div><small>차 우리기 · 22.10.</small><span class="play">▶</span></div>
+  <div class="tile"><b class="n">25:00</b><div class="t">Lernen</div><small>2주 전</small><span class="play">▶</span></div>
+  <div class="tile" style="display:grid;place-items:center;color:#8b8f98;font-size:28px">+</div>
+ </div>
+ <div class="dock"><span>알람</span><span class="on">타이머</span><span>세계 시계</span></div><div class="ind"></div>
+</div><div class="cap">C · 타일 모음<small>저장된 타이머가 타일 · 돌고 있는 건 호박색으로 채운 타일 · 버튼 없음</small></div></div>
+
+</div></body></html>

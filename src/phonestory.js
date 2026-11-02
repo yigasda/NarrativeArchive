@@ -22,11 +22,18 @@ export function adoptPhoneStory(m,scope) {
     for(const k of PHONE_STORY_KEYS) if(k!=='phoneStoryScope' && Object.hasOwn(m,k)) m[k]=structuredClone(m[k]);
     m.phoneStoryScope=scope;
 }
+// two tiles answering one question (같은 이야기인가요?): keep the phone, or start this room's phone records afresh
+const SC_SV=d=>`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const SC_KEEP='<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M9.5 9.5h5M9.5 12.5h5M9.5 15.5h3"/>';
+const SC_NEW='<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>';
+const SC_CHK='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 export function phoneStoryChoiceHtml(importing=false,hasSource=true) {
-    return `<div class="na_popup na_v2 na_confirm"><div class="na_v2_title"><b>${importing?'아카이브와 휴대폰':'이 이야기의 휴대폰'}</b></div>
-      <div class="na_confirm_text">같은 이야기를 이어가면 기존 폰을 사용하고, 다른 이야기라면 새로 시작하세요. 새로 시작하면 이 방의 모든 인물의 폰과 금융 데이터가 초기화됩니다. 원래 방은 바뀌지 않아요.</div>
-      <label><input type="radio" name="na_phone_story" value="keep" checked> ${importing&&hasSource?'휴대폰도 함께 가져오기':'기존 폰 이어받기'}</label><br>
-      <label><input type="radio" name="na_phone_story" value="fresh"> 새 이야기로 시작</label></div>`;
+    const bring=importing&&hasSource;
+    const tile=(v,on,ic,cls,name,sub)=>`<label class="na_sc_tile"><input type="radio" name="na_phone_story" value="${v}"${on?' checked':''}><span class="na_sc_rd">${SC_CHK}</span><span class="na_sc_ic ${cls}">${SC_SV(ic)}</span><b>${name}</b><small>${sub}</small></label>`;
+    return `<div class="na_popup na_v2 na_confirm na_sc"><div class="na_v2_title"><b>${importing?'아카이브와 휴대폰':'이 이야기의 휴대폰'}</b></div>
+      <div class="na_confirm_text">${bring?'휴대폰도 함께 가져올까요?':'같은 이야기인가요?'}</div>
+      <div class="na_sc_tiles">${tile('keep',true,SC_KEEP,'keep',bring?'네, 가져오기':'네, 이어서','폰 기록 그대로')}${tile('fresh',false,SC_NEW,'new','아니요, 새 이야기','폰 기록 비우기')}</div>
+      <div class="na_sc_note">원래 방은 바뀌지 않아요</div></div>`;
 }
 export async function choosePhoneStory({importing=false,hasSource=true}={}) {
     const c=ctx(),$body=$(phoneStoryChoiceHtml(importing,hasSource));

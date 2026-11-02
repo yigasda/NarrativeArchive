@@ -175,9 +175,15 @@ export async function openXray() {
     const $root = $(`
       <div class="na_popup na_v2 na_xray">
         <div class="na_v2_title"><b>프롬프트 X-ray</b><small>${x ? `마지막으로 보낸 프롬프트 · ${esc(timeLabel(x.at))}` : '마지막으로 보낸 프롬프트'}</small></div>
-        <div class="na_xray_body">${x ? '<div class="na_empty">살펴보는 중…</div>' : '<div class="na_empty">아직 기록된 프롬프트가 없어요. 이 채팅에서 응답을 한 번 받으면 여기 보여요. (실리태번을 새로 고치면 기록이 지워져요)</div>'}</div>
+        <div class="na_xray_body">${x ? '<div class="na_empty">살펴보는 중…</div>' : `<div class="na_xr3_hello">
+          <div class="na_v2_card na_xr3_ex"><div class="na_xr3_exh"><span>이렇게 보여요</span><span class="na_xr3_tag">예시</span></div>
+            <div class="na_xr3_tot"><b>3,420</b><small>토큰</small></div>
+            <div class="na_xr3_bar"><i style="flex:40"></i><i style="flex:30"></i><i style="flex:20"></i><i style="flex:10"></i></div>
+            <div class="na_xr3_chips"><span><i></i>서사 아카이브 40%</span><span><i></i>대화 기록 30%</span><span><i></i>캐릭터 카드 20%</span></div></div>
+          <b>아직 기록된 프롬프트가 없어요</b><small>응답을 한 번 받으면 무엇이 몇 토큰씩 들어갔는지 보여줘요<br>새로 고치면 기록이 지워져요</small>
+        </div>`}</div>
       </div>`);
-    const popup = c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    const popup = c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
     const m = getMeta();
     $root.append('<div class="na_v2 na_xr_kwhost"></div>');
     keywordBlock(m).then(html => $root.find('.na_xr_kwhost').html(html));

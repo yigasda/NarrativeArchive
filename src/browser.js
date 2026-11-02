@@ -150,7 +150,7 @@ export function mountSectionBrowser($host) {
         } else if (act === 'pin' || act === 'unpin') {
             const set = pinnedSet(m); keys.forEach(k => (act === 'pin' ? set.add(k) : set.delete(k))); m.pinned = [...set];
         } else if (act === 'delete') {
-            if (!await confirm('섹션 삭제', `고른 섹션 ${secs.length}개를 지울까요?<br><small>${secs.slice(0, 6).map(x => esc(x.title)).join('<br>')}${secs.length > 6 ? `<br>… 외 ${secs.length - 6}개` : ''}</small><br>지우기 전 상태는 도구 탭 복구 지점에 남아요.`)) return;
+            if (!await confirm('섹션 삭제', `고른 섹션 ${secs.length}개를 지울까요?<br><small>${secs.slice(0, 6).map(x => esc(x.title)).join('<br>')}${secs.length > 6 ? `<br>… 외 ${secs.length - 6}개` : ''}</small><br>지우기 전 상태는 도구 탭 복구 지점에 남아요.`, '지우기', { danger: true })) return;
             let next = m.text;
             for (const x of [...secs].sort((a, b) => b.start - a.start)) {
                 const before = next.slice(0, x.start), after = next.slice(x.end);
@@ -226,7 +226,7 @@ export function mountSectionBrowser($host) {
     };
 
     const remove = async s => {
-        if (!await confirm('섹션 삭제', `<b>${esc(s.title)}</b><br>이 섹션을 지울까요? 지우기 전 상태는 도구 탭 복구 지점에 남아요.`)) return;
+        if (!await confirm('섹션 삭제', `<b>${esc(s.title)}</b><br>이 섹션을 지울까요? 지우기 전 상태는 도구 탭 복구 지점에 남아요.`, '지우기', { danger: true })) return;
         const cur = getMeta();
         if (!parseSections(cur.text).some(x => x.start === s.start && x.end === s.end && sectionKey(x) === sectionKey(s))) {
             toastr.warning('아카이브가 그사이 바뀌어서 지우지 않았어요. 다시 해 주세요.');

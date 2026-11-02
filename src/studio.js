@@ -365,6 +365,8 @@ export async function openStudio() {
     if (!st && !await setup()) return;
     // sections read again from the answers, so a reading fix reaches answers that came in before it
     st = sessionOf(getMeta());
+    // 개요 먼저 is retired: an old run that had it on goes straight to sections from here (an outline already waiting still gets its section)
+    if (st?.outline) { st.outline = false; await saveMeta(); }
     if (st?.turns.length) { const re = rebuildSecs(st); if (JSON.stringify(re) !== JSON.stringify(st.secs)) { st.secs = re; await saveMeta(); } }
     let toAppend = false;
     const $root = $(`
@@ -393,13 +395,12 @@ export async function openStudio() {
             </div>
           </div>
           <div class="na_st_menu" hidden>
-            <label class="na_st_mi"><span><b>자동 진행</b><small>남은 장면을 끝까지 쭉 · 마지막에 STATE 쪽지</small></span><input type="checkbox" class="na_toggle na_st_autotg"></label>
-            <label class="na_st_mi"><span><b>개요 먼저</b><small>흐름을 먼저 보고 본문 · 장면마다 1번 더</small></span><input type="checkbox" class="na_toggle na_st_outtg"></label>
-            <label class="na_st_mi"><span><b>지시문</b><small>다음 턴부터 이걸로 · 상세는 규칙 전부</small></span><select class="text_pole na_st_psel"></select></label>
-            <button type="button" class="na_st_mi na_st_style"><span><b>문체 견본</b><small class="na_st_stylesub"></small></span></button>
-            <button type="button" class="na_st_mi na_st_note"><span><b>작업 노트</b><small>매 턴 같이 가요</small></span></button>
-            <button type="button" class="na_st_mi na_st_state"><span><b>STATE 쪽지 받기</b><small>지금까지 쓴 섹션으로</small></span></button>
-            <button type="button" class="na_st_mi na_st_reset"><span><b>새로 시작</b><small>이 대화와 받은 섹션을 지워요</small></span></button>
+            <label class="na_st_mi"><span><b>자동 진행</b><small>남은 장면을 알아서 끝까지 받아요</small></span><input type="checkbox" class="na_toggle na_st_autotg"></label>
+            <label class="na_st_mi"><span><b>지시문</b><small>장면을 어떻게 요약할지 정한 규칙이에요</small></span><select class="text_pole na_st_psel"></select></label>
+            <button type="button" class="na_st_mi na_st_style"><span><b>문체 견본</b><small>마음에 드는 섹션을 골라 그 말투로 쓰게 해요</small></span></button>
+            <button type="button" class="na_st_mi na_st_note"><span><b>작업 노트</b><small>매번 같이 보낼 메모예요 · 틀리면 안 되는 사실 등</small></span></button>
+            <button type="button" class="na_st_mi na_st_state"><span><b>STATE 쪽지 받기</b><small>인물 · 떡밥이 어떻게 바뀌었는지 정리해 달라고 해요</small></span></button>
+            <button type="button" class="na_st_mi na_st_reset"><span><b>새로 시작</b><small>이 작업실 대화와 받은 섹션을 지워요</small></span></button>
           </div>
         </div>
       </div>`);
@@ -454,7 +455,16 @@ export async function openStudio() {
             const free = !(t.scene !== undefined && locked.has(t.scene)) && blocks.some(x => x.a !== null);
             const styleBtn = free && !fixBusy.has(i) ? `<button type="button" class="na_st_fix na_st_polish" data-i="${i}" title="문체 다듬기 · 문장 결만 아카이브처럼 · 내용 · 출처 번호 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 · AI 기능 모델">다듬기</button>` : '';
             const backBtn = t.before && !fixBusy.has(i) ? `<button type="button" class="na_st_unfix na_st_ib" data-i="${i}" title="고치기 전 답으로" aria-label="고치기 전으로">${svgA(ICO.back, 13, 2.4)}</button>` : '';
-            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st_tags">${tags}<span class="na_st_lks">${fixBtn}${styleBtn}${backBtn}<button type="button" class="na_st_pen na_st_ib" data-i="${i}" title="직접 고치기 (답을 세 번 터치해도 돼요)" aria-label="직접 고치기">${svgA(ICO.pen, 13, 2.2)}</button><button type="button" class="na_st_copy na_st_ib" data-i="${i}" title="이 답의 섹션을 아카이브 모양으로 복사 (출처 번호는 빼고)" aria-label="복사">${svgA(ICO.copy, 13, 2.2)}</button>${koBtn}${locks}</span></div></div>`;
+            // (docs/mockups/ext-studio-acts B) under a hairline: the check (or what it found) on the left; 한국어 and 확정 on the
+            // right, everything else (다듬기 · 고치기 · 복사, and 고쳐 받기 / 되돌리기 when they apply) behind ⋯ so the row never wraps
+            const ic = d => svgA(d, 14, 2.2);
+            const polish = styleBtn ? styleBtn.replace('>다듬기</button>', `>${ic('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/>')}문체 다듬기</button>`) : '';
+            const fixM = fixBtn.replace('>고치기</button>', `>${ic('<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>')}고쳐 받기</button>`);
+            const backM = backBtn ? `<button type="button" class="na_st_unfix" data-i="${i}">${svgA(ICO.back, 14, 2.2)}고치기 전으로</button>` : '';
+            const pen = `<button type="button" class="na_st_pen" data-i="${i}" title="직접 고치기 (답을 세 번 터치해도 돼요)">${svgA(ICO.pen, 14, 2.2)}직접 고치기</button>`;
+            const copy = `<button type="button" class="na_st_copy" data-i="${i}" title="이 답의 섹션을 아카이브 모양으로 복사 (출처 번호는 빼고)">${svgA(ICO.copy, 14, 2.2)}복사</button>`;
+            const more = `<span class="na_st_more"><button type="button" class="na_st_dots" aria-label="더 보기" title="더 보기">${svgA('<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>', 16, 2.8)}</button><span class="na_st_amenu" hidden>${fixM}${backM}${polish}${pen}${copy}</span></span>`;
+            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st3_bar"><span class="na_st3_tags">${tags}</span><span class="na_st3_right">${koBtn}${locks}${more}</span></div></div>`;
         }).join('') + (busy ? '<div class="na_st_bub na_st_typing"><i></i><i></i><i></i><small>쓰는 중 · 이 탭에 있어야 받아요</small></div>' : '');
         const $log = $root.find('.na_st_log');
         const atEnd = $log[0] ? $log[0].scrollHeight - $log[0].scrollTop - $log[0].clientHeight < 80 : true;
@@ -634,6 +644,10 @@ export async function openStudio() {
         if (ta) { ta.style.height = `${Math.min(ta.scrollHeight + 4, 520)}px`; ta.focus(); }
     };
     $root.on('click', '.na_st_pen', function () { startEdit(Number(this.dataset.i)); });
+    // ⋯ opens the answer's small menu (upward, right-aligned); any other tap, or picking from it, closes it
+    $root.on('click', '.na_st_dots', function (e) { e.stopPropagation(); const $m = $(this).next('.na_st_amenu'), open = $m.prop('hidden'); $root.find('.na_st_amenu').prop('hidden', true); $m.prop('hidden', !open); });
+    $root.on('click', e => { if (!$(e.target).closest('.na_st_more').length) $root.find('.na_st_amenu').prop('hidden', true); });
+    $root.on('click', '.na_st_amenu button', () => setTimeout(() => $root.find('.na_st_amenu').prop('hidden', true), 0));
     // three quick taps on an answer open it too (not on its buttons, numbers or quotes)
     $root.on('click', '.na_st_bub', function (e) {
         if (e.detail !== 3 || $(e.target).closest('button, a, textarea, .na_st_tags').length) return;
@@ -660,7 +674,7 @@ export async function openStudio() {
     $root.find('.na_st_reset').on('click', async () => {
         $menu.prop('hidden', true);
         if (busy) return toastr.info('답을 기다리는 중이에요.', '압축 작업실');
-        if (!await confirm('새로 시작', '이 작업실 대화와 받은 섹션을 지우고 처음부터 할까요?<br><small>아카이브에 이미 넣은 건 그대로예요.</small>')) return;
+        if (!await confirm('새로 시작', '이 작업실 대화와 받은 섹션을 지우고 처음부터 할까요?<br><small>아카이브에 이미 넣은 건 그대로예요.</small>', '새로 시작', { danger: true })) return;
         delete getMeta().studio; await saveMeta();
         $root.closest('dialog').find('.popup-button-ok').trigger('click');
         setTimeout(openStudio, 50);
@@ -728,7 +742,7 @@ async function setup() {
     const covered = lastRangeEnd(m.text);
     let keepUpTo = -1;
     if (covered !== null && covered < m.boundary && covered + 1 <= last) {
-        if (await confirm('빠진 구간', `경계선은 <b>#${m.boundary}</b>인데 아카이브 섹션은 <b>#${covered}</b>까지예요.<br>#${covered + 1}부터 할까요? (숨긴 메시지도 이 구간은 넣어요)<br><small>아니요를 누르면 경계선 다음(#${m.boundary + 1})부터 해요.</small>`)) {
+        if (await confirm('빠진 구간', `경계선은 <b>#${m.boundary}</b>인데 아카이브 섹션은 <b>#${covered}</b>까지예요.<br>#${covered + 1}부터 할까요? (숨긴 메시지도 이 구간은 넣어요)<br><small>아니요를 누르면 경계선 다음(#${m.boundary + 1})부터 해요.</small>`, '네', { no: '아니요' })) {
             from = covered + 1; after = covered; keepUpTo = m.boundary; to = Math.max(to, from);
         }
     }
@@ -745,7 +759,7 @@ async function setup() {
     const note = String(m.workNote || '').trim();
     const $d = $(`<div class="na_popup na_qc">
         <div class="na_qc_head"><b>#${from} – #${to}</b><small>메시지 ${items.length}개 · 장면 ${list.length}개 · ${by === 'ai' ? `${esc(short(aiLabel()))}가 나눔` : '트래커·메시지 수로 나눔'}</small></div>
-        <small class="na_qc_note">장면마다 ${esc(short(drLabel()))}에게 한 번씩 보내요. 답을 보고 고칠 점을 말하면, 그 말은 뒤 장면까지 따라가요. 고치는 말도 한 번에 1번이에요.${note ? '' : ' 작업 노트가 비어 있어요.'}</small>
+        <small class="na_qc_note">장면마다 ${esc(short(drLabel()))}에게 보내요 · 고칠 점은 뒤 장면까지 따라가요${note ? '' : ' · 작업 노트가 비어 있어요'}</small>
         <label class="na_qc_sclabel">장면 나누기 <small>한 줄에 장면 하나 · 앞 번호(시작)만 봐요 · 줄을 추가하면 나누고, 지우면 앞 장면에 합쳐요</small></label>
         <textarea class="text_pole na_st_scenes" rows="${Math.min(10, Math.max(3, list.length))}" spellcheck="false">${esc(lines)}</textarea>
         <label class="checkbox_label na_qc_check"><input type="checkbox" class="na_st_auto0"><span>자동 진행<small>첫 장면부터 끝까지 쭉 · 창에서 언제든 끌 수 있어요</small></span></label>

@@ -70,7 +70,7 @@ async function offerMainDivider(m) {
     if (/^#\s*──.*──\s*$/m.test(body) || hasAuDivider(m.text, a.name)) return;
     const first = parseSections(body).find(x => !x.group && RANGE_HEAD.test(x.title));
     if (!first) return;
-    if (!await confirm('본편 구분선', '아카이브의 본편 섹션 위에 <code># ── 본편 ──</code> 구분선을 넣을까요?<br><small>읽기·타임라인에서 본편과 AU가 두 묶음으로 나뉘어 보여요. 안 넣어도 AU 요약은 이어져요.</small>')) return;
+    if (!await confirm('본편 구분선', '아카이브의 본편 섹션 위에 <code># ── 본편 ──</code> 구분선을 넣을까요?<br><small>읽기·타임라인에서 본편과 AU가 두 묶음으로 나뉘어 보여요. 안 넣어도 AU 요약은 이어져요.</small>', '넣기')) return;
     await commitText(`${m.text.slice(0, first.start)}# ── 본편 ──\n\n${m.text.slice(first.start)}`, '본편 구분선 넣기 전');
     refreshStatus();
     toastr.success('본편 구분선을 넣었어요');
@@ -82,13 +82,25 @@ export async function openAuSettings() {
     const $root = $(`
       <div class="na_popup na_v2 na_au_pop">
         <div class="na_v2_title"><b>AU 채팅</b><small>본편 아카이브를 들고 새 채팅에서 AU를 할 때 켜요</small></div>
-        <div class="na_v2_card na_au_box">
-          <label class="na_au_on"><span class="na_cp_txt"><span>이 채팅은 AU</span><small>요약이 본편 뒤에 AU 묶음으로 이어져요</small></span><input type="checkbox" class="na_toggle na_au_tg"></label>
-          <label><small>묶음 이름</small><input type="text" class="text_pole na_au_name" maxlength="12" placeholder="AU" spellcheck="false"></label>
-          <label><small>AU 설정 · 뭐가 다르고 뭘 기억하는지</small><textarea class="text_pole na_au_note" rows="3" placeholder="예: 현대 AU, 둘 다 대학생. 본편 기억은 그대로"></textarea></label>
+        <div class="na_au3">
+          <div class="na_v2_card na_au3_map"><div class="na_bn3_tl na_au3_tl"></div></div>
+          <label class="na_v2_card na_au3_on"><span>이 채팅은 AU</span><input type="checkbox" class="na_toggle na_au_tg"></label>
+          <div class="na_au3_lab">묶음 이름</div>
+          <input type="text" class="text_pole na_au_name" maxlength="12" placeholder="AU" spellcheck="false">
+          <div class="na_au3_lab">뭐가 다르고 뭘 기억하는지</div>
+          <textarea class="text_pole na_au_note" rows="3" placeholder="예: 현대 AU, 둘 다 대학생. 본편 기억은 그대로"></textarea>
+          <small class="na_au3_note">켜 두면 압축 지시문 맨 위에 AU 안내가 붙어요 · 다음 채팅에도 이어져요</small>
         </div>
-        <small class="na_v2_note">켜 두면 압축할 때(한 번에 압축 · 마법사 · 원문 뽑기) 지시문 맨 위에 AU 안내가 붙어요. STATE·OPEN은 AU 기준으로 다시 쓰고, 모델이 AU 표시를 빼먹으면 아카이브에 추가할 때 붙여요. 다음 채팅으로 이어가면 이 설정도 같이 가요.</small>
       </div>`);
+    // (docs/mockups/ext-au B) 본편 → AU as the branch window's timeline: the main story's numbers, then this chat's log
+    const drawMap = () => {
+        const on = $root.find('.na_au_tg').prop('checked');
+        const name = String($root.find('.na_au_name').val() || '').trim() || 'AU';
+        const main = headingRanges(m.text).filter(r => !r.prefix || r.prefix !== name);
+        const span = main.length ? `#${Math.min(...main.map(r => r.from))}–#${Math.max(...main.map(r => r.to))} · 아카이브 그대로` : '아카이브 그대로';
+        $root.find('.na_au3_tl').html(`<div><b>본편</b><small>${esc(span)}</small></div>
+            <div class="${on ? 'here' : 'dim'}"><b>${esc(name)}</b><small>${on ? '이 채팅부터 · 요약이 여기 이어져요' : '켜면 요약이 본편 뒤 여기로 이어져요'}</small></div>`);
+    };
     $root.find('.na_au_tg').prop('checked', a.on);
     $root.find('.na_au_name').val(m.au?.name || '');
     $root.find('.na_au_note').val(a.note);
@@ -96,8 +108,10 @@ export async function openAuSettings() {
         m.au = { on: $root.find('.na_au_tg').prop('checked'), name: String($root.find('.na_au_name').val() || '').trim().replace(/\s+/g, ''), note: String($root.find('.na_au_note').val() || '').trim() };
         await saveMeta();
     };
-    $root.find('.na_au_tg').on('change', async function () { await save(); if (this.checked) await offerMainDivider(m); });
+    $root.find('.na_au_tg').on('change', async function () { drawMap(); await save(); if (this.checked) await offerMainDivider(m); });
     $root.find('.na_au_name, .na_au_note').on('change', save);
+    $root.find('.na_au_name').on('input', drawMap);
+    drawMap();
     await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: false, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
     await save();
     refreshStatus();
@@ -196,7 +210,7 @@ export async function draftCompress({ m, g, p, items, onStep = () => {}, grade =
         // answered in the wrong language (Korean for an English archive): ask before paying for another try
         if (!answerLangOk(shadow, out)) {
             const want = LANG_NAME[archiveLang(shadow)];
-            if (await confirm('답 언어가 달라요', `#${from}–#${to} 요약을 모델이 아카이브(${want})와 다른 언어로 썼어요.<br><b>${want}로 다시 받을까요?</b> (요청 1번 더)<br><small>아니요를 누르면 이 답 그대로 써요.</small>`)) {
+            if (await confirm('답 언어가 달라요', `#${from}–#${to} 요약을 모델이 아카이브(${want})와 다른 언어로 썼어요.<br><b>${want}로 다시 받을까요?</b> (요청 1번 더)<br><small>아니요를 누르면 이 답 그대로 써요.</small>`, '네', { no: '아니요' })) {
                 try { out = cleanDraft(await askCompress(`[Your previous answer to this request was not in ${want}. Answer in ${want} only.]\n\n${prompt}`, { system, keepSystem: !!system, guard: SECTION_GUARD })) || out; }
                 catch (e) { error = e; break; }
             }
@@ -258,7 +272,7 @@ export async function quickCompress() {
     const covered = lastRangeEnd(m.text);
     let gapTo = -1;
     if (covered !== null && covered < m.boundary && covered + 1 <= last) {
-        if (await confirm('빠진 구간', `경계선은 <b>#${m.boundary}</b>인데 아카이브 섹션은 <b>#${covered}</b>까지예요. <b>#${covered + 1}–#${m.boundary}</b>가 요약에 없어요.<br>#${covered + 1}부터 압축할까요? (숨긴 메시지도 이 구간은 넣어요)<br><small>아니요를 누르면 경계선 다음(#${m.boundary + 1})부터 해요.</small>`)) {
+        if (await confirm('빠진 구간', `경계선은 <b>#${m.boundary}</b>인데 아카이브 섹션은 <b>#${covered}</b>까지예요. <b>#${covered + 1}–#${m.boundary}</b>가 요약에 없어요.<br>#${covered + 1}부터 압축할까요? (숨긴 메시지도 이 구간은 넣어요)<br><small>아니요를 누르면 경계선 다음(#${m.boundary + 1})부터 해요.</small>`, '네', { no: '아니요' })) {
             from = covered + 1; after = covered; gapTo = m.boundary;
             to = Math.max(to, from);
         }
@@ -267,7 +281,7 @@ export async function quickCompress() {
     // a summary that came back but never went in (the tab slept, the window was closed): offer it before paying again
     const pend = m.pendingDraft;
     if (pend?.text && pend.from === from) {
-        if (await confirm('받아 둔 요약', `<b>#${pend.from}–#${pend.to}</b> 요약을 ${esc(timeLabel(pend.at))}에 받아 놓고 아직 안 넣었어요.<br><b>이걸로 아카이브에 추가 창을 열까요?</b><br><small>아니요를 누르면 새로 받아요 (초안 모델 1번)</small>`)) {
+        if (await confirm('받아 둔 요약', `<b>#${pend.from}–#${pend.to}</b> 요약을 ${esc(timeLabel(pend.at))}에 받아 놓고 아직 안 넣었어요.<br><b>이걸로 아카이브에 추가 창을 열까요?</b><br><small>아니요를 누르면 새로 받아요 (초안 모델 1번)</small>`, '네', { no: '아니요' })) {
             await openAppend({ text: pend.text, end: guessEndNumber(pend.text) ?? pend.to, expectTo: pend.to });
             if ((getMeta().boundary ?? -1) >= pend.to) { delete getMeta().pendingDraft; await saveMeta(); }
             return;
@@ -335,7 +349,7 @@ export async function quickCompress() {
         ${scenes ? `<label class="na_qc_sclabel">장면 나누기 <small>한 줄에 장면 하나 · 앞 번호(시작)만 봐요 · 줄을 추가하면 나누고, 지우면 앞 장면에 합쳐요</small></label>
         <textarea class="text_pole na_qc_scenes" rows="${Math.min(10, Math.max(3, n))}" spellcheck="false">${esc(sceneLines)}</textarea>` : ''}
         </details>
-      </div>`)) return;
+      </div>`, '압축하기')) return;
     // the scene list as the user left it: their starts, taken as given
     if (scenes && quickScenes !== null && quickScenes.trim() !== sceneLines.trim()) {
         const edited = chunksFromStarts(items, startsFromText(quickScenes), { exact: true });
@@ -404,7 +418,7 @@ export async function openWizard() {
         { name: '범위', title: '어디부터 어디까지<br>압축할까요?', sub: '경계선 다음부터 자동으로 채웠어요' },
         { name: '복사', title: '압축할 모델에<br>넘겨 주세요', sub: '지시문과 함께 복사하거나 .txt로 저장해요' },
         { name: '붙여넣기', title: '모델이 준 섹션을<br>붙여넣어 주세요', sub: '파일(.txt·.md)도 돼요' },
-        { name: '채점', title: '원문과 맞는지<br>볼까요?', sub: '선택 · 지어낸 것·빠진 것·틀린 것을 찾아요' },
+        { name: '채점', title: '원문과 맞는지<br>볼까요?', sub: '선택 · 안 해도 돼요' },
         { name: '추가', title: '검사하고<br>아카이브에 넣어요', sub: '번호 검사 · 미리보기를 거쳐 추가하고 끝 번호까지 숨겨요' },
     ];
     let step = 0;
@@ -414,6 +428,7 @@ export async function openWizard() {
         <div class="na_wz2_progress">${STEPS.map((x, i) => `<button type="button" data-s="${i}"><i></i><span>${x.name}</span></button>`).join('')}</div>
         <div class="na_wz2_head"><b class="na_wz2_title"></b><small class="na_wz2_sub"></small></div>
         <div class="na_wz2_pane" data-s="0">
+          <div class="na_wz3_msgs"></div>
           <div class="na_wz2_range">
             <label><small>부터</small><span>#<input type="number" class="text_pole na_wz_from" min="0" max="${last}" value="${defFrom}"></span></label>
             <span class="na_wz2_arr">${svgA('M5 12h14M13 6l6 6-6 6', 18)}</span>
@@ -425,8 +440,10 @@ export async function openWizard() {
         </div>
         <div class="na_wz2_pane" data-s="1">
           <select class="text_pole na_wz_prompt"></select>
-          <div class="na_v2_row2"><button type="button" class="na_v2_btn na_wz_save">.txt 저장</button><button type="button" class="na_v2_btn primary na_wz_copy">${svgA('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', 16)}<span>복사</span></button></div>
+          <div class="na_v2_card na_wz3_pk"></div>
+          <div class="na_v2_row2 na_wz3_hide"><button type="button" class="na_v2_btn na_wz_save">.txt 저장</button><button type="button" class="na_v2_btn primary na_wz_copy">${svgA('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', 16)}<span>복사</span></button></div>
           <small class="na_v2_note na_wz_copied"></small>
+          <button type="button" class="na_linkbtn na_wz3_txt">.txt로 저장</button>
         </div>
         <div class="na_wz2_pane" data-s="2">
           <textarea class="text_pole na_wz_out" rows="10" spellcheck="false" placeholder="## #시작–#끝 — 제목 (날짜, 장소)&#10;PLOT:&#10;- …"></textarea>
@@ -438,7 +455,12 @@ export async function openWizard() {
           <input type="file" class="na_wz_file" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden>
         </div>
         <div class="na_wz2_pane" data-s="3">
-          <button type="button" class="na_v2_btn wide na_wz_grade">${svgA('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14l2 2 4-4"/>', 16)}AI로 채점</button>
+          <div class="na_v2_card na_wz3_chk">
+            <div><span class="na_wz3_ic">${svgA('M12 5v14M5 12h14', 15)}</span><span><b>지어낸 것</b><small>원문에 없는 사건 · 대사</small></span></div>
+            <div><span class="na_wz3_ic">${svgA('<circle cx="12" cy="12" r="8"/>', 15)}</span><span><b>빠진 것</b><small>원문에 있는데 요약에 없는 일</small></span></div>
+            <div><span class="na_wz3_ic">${svgA('M6 6l12 12M18 6L6 18', 15)}</span><span><b>틀린 것</b><small>누가 · 언제 · 어디가 다른 곳</small></span></div>
+          </div>
+          <button type="button" class="na_v2_btn wide na_wz_grade na_wz3_hide">${svgA('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14l2 2 4-4"/>', 16)}AI로 채점</button>
           <div class="na_ai_box na_wz_gradeout" hidden></div>
         </div>
         <div class="na_wz2_pane" data-s="4">
@@ -450,8 +472,11 @@ export async function openWizard() {
           <button type="button" class="na_v2_btn primary na_wz2_next"></button>
         </div>
         <button type="button" class="na_linkbtn na_wz2_skip">채점 건너뛰고 바로 추가</button>
+        <button type="button" class="na_linkbtn na_wz3_back" hidden>건너뛰고 추가${svgA(ICO_A.right, 15, 2.2)}</button>
       </div>`);
-    const nextLabel = ['다음 · 복사', '다음 · 붙여넣기', '다음 · 채점', '다음 · 추가', '아카이브에 추가 창 열기'];
+    // (docs/mockups/ext-wizard A) one orange button a step: 복사 copies and moves on, 채점 grades (then moves on); .txt and skipping are links
+    const graded = () => !$root.find('.na_wz_gradeout').prop('hidden');
+    const nextLabel = () => ['다음 · 복사', '복사하고 다음', '다음 · 채점', graded() ? '다음 · 추가' : '✧ AI로 채점', '아카이브에 추가 창 열기'][step];
     const show = () => {
         $root.find('.na_wz2_count').text(`${step + 1} / ${STEPS.length}`);
         $root.find('.na_wz2_progress button').each(function () { const i = Number(this.dataset.s); $(this).toggleClass('done', i < step).toggleClass('on', i === step); });
@@ -460,9 +485,13 @@ export async function openWizard() {
         const r0 = range();
         $root.find('.na_wz2_sub').text(step === 2 ? `#${r0.from}–#${r0.to}${josaA(r0.to)} 압축한 결과 · ${STEPS[step].sub}` : STEPS[step].sub);
         $root.find('.na_wz2_pane').each(function () { this.hidden = Number(this.dataset.s) !== step; });
-        $root.find('.na_wz2_prev').prop('hidden', step === 0);
-        $root.find('.na_wz2_next').text(nextLabel[step]);
-        $root.find('.na_wz2_skip').prop('hidden', step !== 2 && step !== 3);
+        // 채점 (not done yet): 이전 | ✧ AI로 채점 like every other step, 건너뛰고 추가 as the link under them
+        const skipPair = step === 3 && !graded();
+        $root.find('.na_wz2_prev').prop('hidden', step === 0).text('이전');
+        $root.find('.na_wz3_back').prop('hidden', !skipPair);
+        $root.find('.na_wz2_nav').removeClass('na_wz3_pair');
+        $root.find('.na_wz2_next').text(nextLabel());
+        $root.find('.na_wz2_skip').prop('hidden', true); // 채점 has its own 건너뛰고 추가 button now
         if (step === 4) {
             const v = $root.find('.na_wz_out').val().trim(), n = guessEndNumber(v), r = range();
             $root.find('.na_wz2_sum').html(`<div class="na_wz2_sumrow"><span>범위</span><b>#${r.from} – #${r.to}</b></div><div class="na_wz2_sumrow"><span>새 섹션</span><b>${parseSections(v).filter(x => !x.group && !/^(?:STATE|OPEN)\b/.test(x.title)).length}개</b></div><div class="na_wz2_sumrow"><span>끝 번호</span><b>${n !== null ? `#${n}` : '추가 창에서 정해요'}</b></div>`);
@@ -474,7 +503,13 @@ export async function openWizard() {
     };
     $root.on('click', '.na_wz2_progress button', function () { go(Number(this.dataset.s)); });
     $root.find('.na_wz2_prev').on('click', () => go(step - 1));
-    $root.find('.na_wz2_next').on('click', () => { if (step === STEPS.length - 1) $root.find('.na_wz_add').trigger('click'); else go(step + 1); });
+    $root.find('.na_wz3_back').on('click', () => go(4));
+    $root.find('.na_wz2_next').on('click', async () => {
+        if (step === STEPS.length - 1) return $root.find('.na_wz_add').trigger('click');
+        if (step === 1) { if (await doCopy()) go(2); return; }
+        if (step === 3 && !graded()) return grade($root.find('.na_wz2_next'));
+        go(step + 1);
+    });
     $root.find('.na_wz2_skip').on('click', () => go(4));
     $root.append('<button type="button" class="na_wz_add" hidden></button>');
     // last choice is remembered; "__none" copies the raw log only
@@ -500,22 +535,52 @@ export async function openWizard() {
         const p = pid === '__none' ? null : (g.prompts.find(x => x.id === pid) || activePrompt(g));
         full = p ? compressPrompt(p.text, vars(), m) : raw;
         $root.find('.na_wz_copy span').text(p ? '지시문과 함께 복사' : '원문만 복사');
-        $root.find('.na_wz_info').text(items.length ? `메시지 ${items.length}개${hiddenOut ? ` (숨긴 ${hiddenOut}개 뺌)` : ''} · 원문 약 ${fmt(await countTokens(raw))} 토큰${p ? ` · 지시문까지 약 ${fmt(await countTokens(full))} 토큰` : ''}` : '이 범위에 메시지가 없어요.');
+        // the first and last message of the range, a line each; held down they open in full (docs/mockups/ext-wizard B + 가)
+        const card = (x, k) => `<div class="na_wz3_msg" data-i="${x.i}" role="button" tabindex="0" title="꾹 누르면 전체 원문"><b>#${x.i} · ${esc(x.name)}</b><span>${esc(x.text.replace(/\s+/g, ' ').slice(0, 140))}</span></div>`;
+        $root.find('.na_wz3_msgs').html(!items.length ? '' : items.length === 1 ? card(items[0])
+            : `${card(items[0])}<div class="na_wz3_gap"><i></i><span>${items.length > 2 ? `메시지 ${items.length - 2}개` : '바로 다음'}</span><i></i></div>${card(items[items.length - 1])}`);
+        const rt = await countTokens(raw), ft = p ? await countTokens(full) : rt;
+        $root.find('.na_wz_info').text(items.length ? `메시지 ${items.length}개${hiddenOut ? ` (숨긴 ${hiddenOut}개 뺌)` : ''} · 원문 약 ${fmt(rt)} 토큰${p ? ` · 지시문까지 약 ${fmt(ft)} 토큰` : ''}` : '이 범위에 메시지가 없어요.');
+        // what goes over: the messages, the instruction, both together
+        $root.find('.na_wz3_pk').html(items.length ? `<div><span>원문 메시지</span><small>#${from}–#${to} · ${items.length}개 · ${fmt(rt)} 토큰</small></div>
+            <div><span>지시문</span><small>${p ? `${fmt(Math.max(0, ft - rt))} 토큰` : '없음'}</small></div>
+            <div><span>모두</span><b>약 ${fmt(ft)} 토큰</b></div>` : '<div><span>이 범위에 메시지가 없어요</span></div>');
     };
+    // hold a message card: the whole message in a sheet from the bottom of the window
+    const openMsg = i => {
+        const msg = c.chat[i];
+        if (!msg) return;
+        const $dlg = $root.closest('dialog');
+        $dlg.find('.na_wz3_cover').remove();
+        const $cv = $(`<div class="na_wz3_cover"><div class="na_wz3_sheet" role="dialog" aria-label="원문"><i class="na_wz3_grip"></i>
+            <div class="na_wz3_shead"><b>#${i} · ${esc(msg.name || '')}</b><small>원문</small></div>
+            <div class="na_wz3_sbody">${esc(String(msg.mes ?? '').trim())}</div>
+            <button type="button" class="na_wz3_sclose">닫기</button></div></div>`);
+        $cv.on('click', e => { if (e.target === e.currentTarget || $(e.target).closest('.na_wz3_sclose').length) $cv.remove(); });
+        $dlg.append($cv);
+    };
+    let holdT = null;
+    $root.on('pointerdown', '.na_wz3_msg', function () { const i = Number(this.dataset.i); clearTimeout(holdT); holdT = setTimeout(() => openMsg(i), 450); });
+    $root.on('pointerup pointerleave pointercancel', '.na_wz3_msg', () => clearTimeout(holdT));
+    $root.on('contextmenu', '.na_wz3_msg', e => e.preventDefault());
+    $root.on('keydown', '.na_wz3_msg', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMsg(Number(this.dataset.i)); } });
     let t;
     $root.find('.na_wz_from, .na_wz_to, .na_wz_prompt').on('input change', () => { clearTimeout(t); t = setTimeout(build, 250); });
     const remember = async how => { const { from, to } = range(); m.lastExport = { from, to, at: Date.now(), how }; await saveMeta(); refreshStatus(); };
-    $root.find('.na_wz_copy').on('click', async () => {
+    const doCopy = async () => {
         await build();
-        if (!raw) return toastr.info('범위에 메시지가 없어요.');
+        if (!raw) { toastr.info('범위에 메시지가 없어요.'); return false; }
         const ok = await copyText(full, $root.find('.na_wz_out')[0]);
         if (ok) { await remember('copy'); $root.find('.na_wz_copied').text(`복사했어요 · ${timeLabel(Date.now())}`); toastr.success('복사됨 · 압축할 모델에 붙여넣으세요'); } else toastr.warning('복사가 막혀 있어요. .txt 저장을 써 주세요.');
-    });
+        return ok;
+    };
+    $root.find('.na_wz_copy').on('click', doCopy);
+    $root.find('.na_wz3_txt').on('click', () => $root.find('.na_wz_save').trigger('click'));
     $root.find('.na_wz_draftbtn').on('click', async function () {
         await build();
         if (!raw) return toastr.info('범위에 메시지가 없어요.');
         const $out = $root.find('.na_wz_out');
-        if ($out.val().trim() && !await confirm('초안 모델로 받기', '붙여넣은 내용을 새 초안으로 바꿀까요?')) return;
+        if ($out.val().trim() && !await confirm('초안 모델로 받기', '붙여넣은 내용을 새 초안으로 바꿀까요?', '바꾸기')) return;
         // long ranges go in parts, like 한 번에 압축
         const pid = $root.find('.na_wz_prompt').val();
         const p = g.prompts.find(x => x.id === pid) || activePrompt(g);
@@ -541,7 +606,7 @@ export async function openWizard() {
         const text = (await file.text()).replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').trim();
         if (!text) return toastr.warning('빈 파일이에요.');
         const $out = $root.find('.na_wz_out');
-        if ($out.val().trim() && !await confirm('불러오기', '붙여넣은 내용을 이 파일 내용으로 바꿀까요?')) return;
+        if ($out.val().trim() && !await confirm('불러오기', '붙여넣은 내용을 이 파일 내용으로 바꿀까요?', '바꾸기')) return;
         $out.val(text).trigger('input');
         toastr.success(`불러옴: ${file.name}`);
     });
@@ -558,16 +623,18 @@ export async function openWizard() {
         countTokens(v).then(tk => $root.find('.na_wz_outinfo').html(v ? `<span class="${ok ? 'ok' : secsN ? 'warn' : ''}">${ok ? chk : ''}섹션 ${secsN}개${span}</span>${hasState ? `<span class="ok">${chk}STATE·OPEN</span>` : ''}<span>${fmt(tk)} 토큰</span>` : ''));
         $root.find('.na_wz_gradeout').prop('hidden', true);
     });
-    $root.find('.na_wz_grade').on('click', async function () {
+    const grade = async $b => {
         const sum = $root.find('.na_wz_out').val().trim();
         if (!sum) return toastr.info('먼저 결과를 붙여넣어 주세요.');
         await build();
-        const out = await withSpinner($(this), '채점하는 중…', () => askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${sum}`, { system: AI_SYS_GRADE, maxTokens: 6000 }));
+        const out = await withSpinner($b, '채점하는 중…', () => askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${sum}`, { system: AI_SYS_GRADE, maxTokens: 6000 }));
         if (out === null) return;
         const ok = /^\s*문제 없음\.?\s*$/.test(out);
         $root.find('.na_wz_gradeout').prop('hidden', false).toggleClass('na_ai_ok', ok)
             .html(ok ? '<i class="fa-solid fa-circle-check"></i> 원문과 잘 맞아요' : `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 채점 <span class="na_dim">· 참고용</span></div>${driftHtml(out, m)}`);
-    });
+        show();
+    };
+    $root.find('.na_wz_grade').on('click', function () { grade($(this)); });
     $root.on('click', '.na_cite_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
     $root.find('.na_wz_add').on('click', () => {
         const text = $root.find('.na_wz_out').val().trim();
@@ -578,7 +645,7 @@ export async function openWizard() {
     });
     show();
     await build();
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
 // 쌓이면 알려 주기: after a reply, when the messages waiting to be compressed reach the set number, one note that opens

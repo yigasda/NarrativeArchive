@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>이야기 달력</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 390px; height: 920px; box-sizing: border-box; padding: 22px 20px 28px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 14px">
+
+  <div style="display: flex; align-items: flex-end; justify-content: space-between">
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <h1 style="margin: 0; font-size: 20px; letter-spacing: -0.01em">이야기 달력</h1>
+      <span style="font-size: 12.5px; color: #7A6A60">Y2 · 섹션 27개 · 날짜 25개</span>
+    </div>
+    <div style="display: flex; gap: 4px; padding: 3px; border-radius: 10px; background: #EBDDD2">
+      <button style="border: 0; background: transparent; font: inherit; font-size: 12.5px; color: #6B5A50; padding: 4px 10px; border-radius: 8px">Y1</button>
+      <button style="border: 0; background: #FFFAF6; font: inherit; font-size: 12.5px; font-weight: 600; color: #2A211C; padding: 4px 10px; border-radius: 8px">Y2</button>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 10px; background: #FBE7E2; border: 1px solid #F0C6BC; border-radius: 14px; padding: 10px 12px">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B3261E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+    <span style="flex: 1; font-size: 13px; color: #6B2A23">날짜가 거꾸로 가는 곳 1개</span>
+    <button style="border: 0; background: transparent; font: inherit; font-size: 13px; font-weight: 600; color: #B3261E; padding: 0">보기</button>
+  </div>
+
+  <sc-for list="{{months}}" as="mo" hint-placeholder-count="3">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <sc-if value="{{mo.gap}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: #8A7A70; padding: 2px 0">
+          <span style="flex: 1; border-top: 1px dashed #D3C1B4"></span>{{mo.gap}}<span style="flex: 1; border-top: 1px dashed #D3C1B4"></span>
+        </div>
+      </sc-if>
+      <div style="display: flex; align-items: baseline; gap: 8px">
+        <b style="font-size: 15px">{{mo.name}}</b><span style="font-size: 12px; color: #8A7A70">{{mo.count}}</span>
+      </div>
+      <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden">
+        <sc-for list="{{mo.rows}}" as="r" hint-placeholder-count="3">
+          <button style="display: flex; align-items: center; gap: 12px; border: 0; border-top: 1px solid #F1E6DD; background: {{r.bg}}; padding: 9px 12px; font: inherit; color: inherit; text-align: left">
+            <span style="flex: none; width: 44px; display: flex; flex-direction: column; align-items: center; line-height: 1.15">
+              <b class="num" style="font-size: 19px; color: {{r.dayc}}">{{r.day}}</b>
+              <span style="font-size: 10.5px; color: #8A7A70">{{r.time}}</span>
+            </span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35">
+              <span style="font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.title}}</span>
+              <span style="font-size: 11.5px; color: {{r.subc}}">{{r.sub}}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":920}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const row = (day, time, title, sub, warn) => ({ day, time, title, sub: warn || sub, subc: warn ? '#B3261E' : '#8A7A70', dayc: warn ? '#B3261E' : '#2A211C', bg: warn ? '#FDF1EE' : 'transparent' });
+    return {
+      months: [
+        { name: 'Pharmouthi', count: '섹션 6', gap: '', rows: [
+          row('3', '낮', 'A wife without memory', 'Y2 #370–#387 · Ombos'),
+          row('3', '밤', 'What the hand remembered', 'Y2 #398–#407'),
+          row('3', '밤', 'The stars, and everything back', 'Y2 #428–#437 · 열주 계단'),
+          row('1', '밤', 'Sending Chaewon away', '', 'Y2 #438–#447 · 3일 다음에 1일이에요'),
+        ] },
+        { name: 'Thoth', count: '섹션 2', gap: '다섯 달쯤 지남', rows: [
+          row('16', '', 'Snow', 'Y2 #448–#464 · Ombos'),
+          row('17', '새벽', 'The hunt', 'Y2 #465–#482 · 강가'),
+        ] },
+        { name: 'Phaophi', count: '섹션 3', gap: '', rows: [
+          row('16', '', 'Britain', 'Y2 #483–#491 · 남쪽 항구'),
+          row('18', '밤', 'The cliff', 'Y2 #492–#499'),
+          row('18', '', '“How must I let you go”', 'Y2 #500–#509 · 바다 동굴'),
+        ] },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

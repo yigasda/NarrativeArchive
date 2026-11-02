@@ -563,7 +563,7 @@ export function bindPromptSettings() {
     $h.find('.na_pdel').on('click', async () => {
         const p = activePrompt(g());
         if (BUILTIN_PROMPTS.has(p.id)) return;
-        if (!await confirm('지시문 삭제', `"${esc(p.name)}"을(를) 지울까요? 되돌릴 수 없어요.`)) return;
+        if (!await confirm('지시문 삭제', `"${esc(p.name)}"을(를) 지울까요? 되돌릴 수 없어요.`, '지우기', { danger: true })) return;
         g().prompts = g().prompts.filter(x => x.id !== p.id);
         pick(g().prompts[0].id);
     });

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>관계 온도 C</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 390px; height: 1000px; box-sizing: border-box; padding: 22px 20px 28px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 14px">
+
+  <div style="display: flex; gap: 6px; overflow: hidden">
+    <button style="flex: none; display: flex; align-items: center; gap: 6px; border: 0; background: #2A211C; color: #FFFAF6; font: inherit; font-size: 13px; padding: 6px 12px 6px 6px; border-radius: 999px"><span style="width: 22px; height: 22px; border-radius: 50%; background: #8E3B2E; display: grid; place-items: center; font-size: 11px; font-weight: 700">S</span>Somang · Set</button>
+    <button style="flex: none; display: flex; align-items: center; gap: 6px; border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13px; padding: 5px 12px 5px 5px; border-radius: 999px"><span style="width: 22px; height: 22px; border-radius: 50%; background: #5E7F3A; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 700">H</span>Somang · Horus</button>
+    <button style="flex: none; display: flex; align-items: center; gap: 6px; border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13px; padding: 5px 12px 5px 5px; border-radius: 999px"><span style="width: 22px; height: 22px; border-radius: 50%; background: #5E7F3A; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 700">H</span>Set · Horus</button>
+  </div>
+
+  <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 20px; padding: 16px 14px 12px; display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; align-items: baseline; justify-content: space-between">
+      <b style="font-size: 15px">섹션별 온도</b>
+      <span style="font-size: 12px; color: #7A6A60">막대를 누르면 아래에 떠요</span>
+    </div>
+    <div style="display: flex; gap: 6px">
+      <div style="display: flex; flex-direction: column; justify-content: space-between; font-size: 10.5px; color: #9A8B80; height: 170px; text-align: right; width: 18px">
+        <span>+5</span><span>0</span><span>−5</span>
+      </div>
+      <div style="flex: 1; display: flex; gap: 3px; height: 170px; position: relative">
+        <span style="position: absolute; left: 0; right: 0; top: 85px; border-top: 1px dashed #CDBBAE"></span>
+        <span style="position: absolute; left: {{divPct}}%; top: 0; bottom: 0; border-left: 1px solid #E3D3C7"></span>
+        <sc-for list="{{bars}}" as="b" hint-placeholder-count="26">
+          <span style="flex: 1; display: flex; flex-direction: column">
+            <span style="height: 85px; display: flex; align-items: flex-end"><span style="width: 100%; height: {{b.up}}px; border-radius: 4px 4px 1px 1px; background: {{b.warm}}"></span></span>
+            <span style="height: 85px; display: flex; align-items: flex-start"><span style="width: 100%; height: {{b.down}}px; border-radius: 1px 1px 4px 4px; background: {{b.cold}}"></span></span>
+          </span>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #9A8B80; padding-left: 24px">
+      <span>Y1 #0</span><span>Y2 #0</span><span>Y2 #604</span>
+    </div>
+  </div>
+
+  <div style="background: #2A211C; color: #FFF6EF; border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <span class="num" style="font-size: 26px; font-weight: 700; color: #F59A6B; line-height: 1">+5</span>
+      <span style="display: flex; flex-direction: column; line-height: 1.3; min-width: 0">
+        <b style="font-size: 14px">떠나보내려다 끝내 붙잡음</b>
+        <span style="font-size: 12px; color: #CDBDB2">Y2 #500–#509 · “How must I let you go”</span>
+      </span>
+    </div>
+    <div style="display: flex; gap: 8px">
+      <button style="flex: 1; border: 0; background: #FFF6EF; color: #2A211C; font: inherit; font-size: 13px; font-weight: 600; padding: 9px 0; border-radius: 10px">섹션 보기</button>
+      <button style="flex: 1; border: 1px solid #5A4A40; background: transparent; color: #FFF6EF; font: inherit; font-size: 13px; padding: 9px 0; border-radius: 10px">이 섹션만 다시 재기</button>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+    <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 11.5px; color: #7A6A60">가장 따뜻했던 때</span>
+      <b style="font-size: 13.5px">Y2 #500–#509</b>
+      <span class="num" style="font-size: 12px; color: #C4471A">+5 · 떠나보내려다 붙잡음</span>
+    </div>
+    <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 11.5px; color: #7A6A60">가장 차가웠던 때</span>
+      <b style="font-size: 13.5px">Y2 #354–#365</b>
+      <span class="num" style="font-size: 12px; color: #2F5F9E">−5 · “벌레”라는 말</span>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 10px; background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 14px; padding: 10px 12px">
+    <span style="flex: 1; font-size: 12.5px; color: #6B5A50">26섹션 중 <b style="color: #2A211C">24</b>개 잼 · 새로 생긴 섹션 2개</span>
+    <button style="border: 0; background: #B8541F; color: #fff; font: inherit; font-size: 12.5px; font-weight: 600; padding: 8px 12px; border-radius: 10px">2개 재기</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = [2, 4, 4, 1, -2, 0, 3, 2, 3, -3, 1, 3, 3, 2, -1, -3, -5, 1, -1, -4, 2, 4, 5, 4, null, null];
+    const sel = 22;
+    return {
+      divPct: (12 / 26) * 100,
+      bars: s.map((v, i) => {
+        const dim = i !== sel;
+        if (v === null) return { up: 3, down: 3, warm: '#D9CBBF', cold: '#D9CBBF' };
+        return {
+          up: v > 0 ? v * 16 : v === 0 ? 2 : 0,
+          down: v < 0 ? -v * 16 : v === 0 ? 2 : 0,
+          warm: v === 0 ? '#BFB1A6' : dim ? '#F0A27B' : '#C4471A',
+          cold: v === 0 ? '#BFB1A6' : '#7FA6D8',
+        };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>

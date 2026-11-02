@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>아카이브에 추가</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+.sw{width:40px;height:24px;border-radius:999px;background:#B8541F;position:relative;flex:none}
+.sw::after{content:'';position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff}
+</style>
+</helmet>
+<div style="width: 390px; height: 1100px; box-sizing: border-box; padding: 22px 18px 28px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 14px">
+
+  <div style="display: flex; align-items: flex-end; justify-content: space-between">
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <b style="font-size: 20px; letter-spacing: -0.01em">아카이브에 추가</b>
+      <span style="font-size: 12.5px; color: #7A6A60">STATE·OPEN 앞에 넣고, 새 STATE로 바꿔요</span>
+    </div>
+    <button style="display: flex; align-items: center; gap: 5px; border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 12px; padding: 6px 11px; border-radius: 999px">.txt</button>
+  </div>
+
+  <div style="height: 230px; border: 1px solid #E5D5C9; border-radius: 18px; background: #FFFCF9; padding: 12px 14px; font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.65; color: #4A3D35; overflow: hidden">## Y2 #35–#50 — “I won’t choose” (Mekhir 18)<br>PLOT:<br>- Set asked her to choose between the two rooms…<br><br>## Y2 #51–#58 — The lamp (Mekhir 18, night)<br>…<br><br># STATE AT Y2 #58 (Mekhir 18, night)<br>…</div>
+
+  <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 18px; overflow: hidden">
+    <span style="display: block; font-size: 12px; font-weight: 600; color: #8A7A70; padding: 10px 14px 4px">붙여넣은 글 검사</span>
+    <sc-for list="{{checks}}" as="k" hint-placeholder-count="4">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-top: 1px solid #F1E6DD">
+        <span style="width: 22px; height: 22px; border-radius: 50%; background: {{k.bg}}; color: {{k.fg}}; display: grid; place-items: center; flex: none; font-size: 12px; font-weight: 700">{{k.icon}}</span>
+        <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3"><span style="font-size: 13px">{{k.text}}</span><span style="font-size: 11.5px; color: #8A7A70">{{k.sub}}</span></span>
+        <sc-if value="{{k.btn}}" hint-placeholder-val="{{ false }}"><button style="border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px">{{k.btn}}</button></sc-if>
+      </div>
+    </sc-for>
+    <button style="width: 100%; display: flex; align-items: center; gap: 8px; border: 0; border-top: 1px solid #F1E6DD; background: transparent; color: #A84A17; font: inherit; font-size: 12.5px; padding: 10px 14px; text-align: left">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6l-5 3.6 1.9-5.8L4 8.8h6.1z"/></svg>
+      AI로 충돌 검사 · 날짜·사실·해결된 떡밥
+    </button>
+  </div>
+
+  <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 18px; overflow: hidden">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px">
+      <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3"><span style="font-size: 13.5px">이번에 압축한 끝 번호</span><span style="font-size: 11.5px; color: #8A7A70">붙여넣은 마지막 제목에서 읽었어요</span></span>
+      <span class="num" style="min-width: 64px; text-align: center; border: 1px solid #E5D5C9; border-radius: 10px; padding: 5px 10px; background: #FBF4EE; font-weight: 600">#58</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid #F1E6DD">
+      <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3"><span style="font-size: 13.5px">추가한 뒤 숨기기</span><span class="num" style="font-size: 11.5px; color: #8A7A70">#0 – #57 숨김 · 마지막 1개 남김</span></span>
+      <span class="sw"></span>
+    </div>
+  </div>
+
+  <span style="flex: 1"></span>
+  <div style="display: flex; gap: 8px">
+    <button style="flex: 1; border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13.5px; padding: 12px 0; border-radius: 14px">미리보기</button>
+    <button style="flex: 2; border: 0; background: #B8541F; color: #fff; font: inherit; font-size: 13.5px; font-weight: 600; padding: 12px 0; border-radius: 14px">추가하기</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const ok = ['#E3F2E8', '#1F6A40', '✓'], warn = ['#FFF1D6', '#8A5A00', '!'];
+    const k = ([bg, fg, icon], text, sub, btn = '') => ({ bg, fg, icon, text, sub, btn });
+    return {
+      checks: [
+        k(ok, '번호가 이어져요', '경계선 #34 다음 #35부터 #58까지 빈틈 없음'),
+        k(ok, 'STATE · OPEN이 있어요', '기존 STATE AT #34를 바꿔요'),
+        k(warn, '철자가 비슷한 이름 1개', 'Nepthys ↔ Nephthys', '고치기'),
+        k(ok, '마지막 줄이 끊기지 않았어요', ''),
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

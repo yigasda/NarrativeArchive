@@ -99,6 +99,8 @@ export function renderAnswer(text, secs) {
 }
 
 export const ASK_SVG_BOOKMARK = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+const ASK_SVG_FIND = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>';
+const ASK_SUGS = ['둘이 처음 만난 곳?', '아직 안 풀린 떡밥?', '최근에 한 약속?'];
 export const ASK_SVG_SEND = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>';
 
 // Ask's answer: the text without the [[...]] markers, plus a row of bookmark chips under the bubble
@@ -125,6 +127,19 @@ export function askAnswerHtml(text, secs) {
     body = body.split(/(<[^>]+>)/).map(part => (part.startsWith('<') ? part : part.replace(/(^|[^\w&#])#(\d{1,6})\b/g, '$1<button type="button" class="na_cite na_cite_msg" data-msg="$2" title="원문 메시지 #$2 보기">#$2</button>'))).join('');
     return `<div class="na_ask2_ans"><div class="na_ask_a">${body}</div>${chips.length ? `<div class="na_ask2_cites">${chips.join('')}</div>` : ''}</div>`;
 }
+// the sections an answer leaned on, as rows under it: the number and name, then the section's first line
+function askSourceRows(html, secs, text) {
+    const $a = $('<div>').html(html);
+    $a.find('.na_ask2_cite[data-start]').each(function () {
+        const sec = secs.find(x => x.start === Number(this.dataset.start));
+        if (!sec) return;
+        const [num, ...rest] = sec.title.split(' — ');
+        const name = rest.join(' — ').replace(/\s*\([^)]*\)\s*$/, '');
+        const first = text.slice(sec.start, sec.end).split('\n').slice(1).map(l => l.replace(/^\s*[-*•]\s*/, '').trim()).find(l => l && !/^[A-Z][A-Z ]*:$/.test(l)) || '';
+        $(this).addClass('na_ask3_src').html(`<i></i><span><b>${esc(num)}${name ? ` · ${esc(name)}` : ''}</b>${first ? `<small>${esc(first)}</small>` : ''}</span>`);
+    });
+    return $a.html();
+}
 
 export async function openAsk() {
     const c = ctx();
@@ -137,15 +152,17 @@ export async function openAsk() {
       <div class="na_popup na_v2 na_ask na_ask2">
         <div class="na_v2_title"><b>아카이브에 질문</b><small>아카이브와 원문에서 찾은 것만 근거로 답해요</small></div>
         <div class="na_ask_log"></div>
-        <div class="na_v2_chips na_ask2_sugg">
-          <button type="button">둘이 처음 만난 곳?</button>
-          <button type="button">아직 안 풀린 떡밥?</button>
+        <div class="na_ask3_empty">
+          <div class="na_ask3_hello"><span class="na_ask3_big">${ASK_SVG_FIND}</span><b>무엇이든 물어보세요</b><small>찾은 섹션과 원문 번호를 같이 보여줘요</small></div>
+          <div class="na_ask3_sect">이런 걸 물어볼 수 있어요</div>
+          <div class="na_v2_card na_ask3_sugs na_ask2_sugg">${ASK_SUGS.map(x => `<button type="button"><span class="na_ask3_si">${ASK_SVG_FIND}</span><span>${x}</span></button>`).join('')}</div>
         </div>
+        <div class="na_v2_chips na_ask2_sugg na_ask3_chips">${ASK_SUGS.slice(0, 2).map(x => `<button type="button">${x}</button>`).join('')}</div>
         <div class="na_ask2_input">
           <textarea class="na_ask_q" rows="1" placeholder="질문을 적어 주세요" aria-label="질문"></textarea>
           <button type="button" class="na_ask_go" aria-label="물어보기" title="물어보기 (Ctrl+Enter)">${ASK_SVG_SEND}</button>
         </div>
-        <small class="na_v2_foot na_ask_info"></small>
+        <div class="na_ask3_opt"><small class="na_ask_info"></small><span class="na_ask3_seg" role="radiogroup" aria-label="보낼 범위"><button type="button" data-v="sec">맞는 섹션만</button><button type="button" data-v="all">아카이브 전체</button></span></div>
       </div>`);
     const $log = $root.find('.na_ask_log');
     const secs = parseSections(m.text);
@@ -153,8 +170,9 @@ export async function openAsk() {
     const waitHtml = q => `<div class="na_ask_item"><div class="na_ask_qq">${esc(q)}</div><div class="na_ask_a na_ask2_wait"><span class="na_ask2_dots"><i></i><i></i><i></i></span>아카이브를 읽는 중</div></div>`;
     const draw = () => {
         $log.html(log.length || pending
-            ? log.map(x => `<div class="na_ask_item"><div class="na_ask_qq">${esc(x.q)}</div>${askAnswerHtml(x.a, secs)}</div>`).join('') + (pending ? waitHtml(pending) : '')
-            : '<div class="na_empty">물어본 게 아직 없어요.</div>');
+            ? log.map(x => `<div class="na_ask_item"><div class="na_ask_qq">${esc(x.q)}</div>${askSourceRows(askAnswerHtml(x.a, secs), secs, m.text)}</div>`).join('') + (pending ? waitHtml(pending) : '')
+            : '');
+        $root.toggleClass('na_ask3_new', !log.length && !pending);
         $log.scrollTop($log[0].scrollHeight);
     };
     $log.on('click', '.na_cite[data-start]', function () {
@@ -184,10 +202,11 @@ export async function openAsk() {
     const info = async last => {
         const whole = !!g.askWhole;
         const n = whole ? await countTokens(m.text) : last;
-        $root.find('.na_ask_info').html(`${whole ? `질문마다 아카이브 전체, 약 ${fmt(n)} 토큰을 보내요` : `질문에 맞는 섹션과 원문만 찾아 보내요${last ? ` · 지난번 약 ${fmt(last)} 토큰` : ''}`} · <label class="na_ask2_whole"><input type="checkbox" ${whole ? 'checked' : ''}> 전체 보내기</label>`).attr('title', `지금 연결: ${aiLabel()}`);
+        $root.find('.na_ask_info').text(whole ? `질문마다 약 ${fmt(n)} 토큰` : last ? `지난번 약 ${fmt(last)} 토큰` : '').attr('title', `지금 연결: ${aiLabel()}`);
+        $root.find('.na_ask3_seg button').removeClass('on').filter(`[data-v="${whole ? 'all' : 'sec'}"]`).addClass('on');
     };
     info(0);
-    $root.on('change', '.na_ask2_whole input', function () { g.askWhole = this.checked; saveGlobal(); info(0); });
+    $root.on('click', '.na_ask3_seg button', function () { g.askWhole = this.dataset.v === 'all'; saveGlobal(); info(0); });
     $log.on('click', '.na_cite_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
     const $q = $root.find('.na_ask_q');
     const go = async () => {
@@ -207,10 +226,10 @@ export async function openAsk() {
         draw();
     };
     $root.find('.na_ask_go').on('click', go);
-    $root.on('click', '.na_ask2_sugg button', function () { $q.val(this.textContent); go(); });
+    $root.on('click', '.na_ask2_sugg button', function () { $q.val(this.textContent.trim()); go(); });
     $q.on('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); go(); } });
     draw();
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
 // Open the sections tab on one section

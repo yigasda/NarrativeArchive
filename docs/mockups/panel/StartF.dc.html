@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>시작 F</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B8541F}a:hover{color:#8F3F14}
+.card{background:#F7EEE7;border-radius:18px}
+.row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid #E5D5C9}
+.row:first-child{border-top:none}
+.sub{font-size:12px;color:#7A6A60;line-height:1.45}
+.nm{font-size:14px;display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.pill{margin-left:auto;flex:none;background:#F6E1D3;color:#A84A17;border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700}
+.sw{margin-left:auto;width:40px;height:24px;border-radius:12px;background:#B8541F;flex:none}
+.sw.off{background:#D9C8BC}
+.chip{border:1px solid #E5D5C9;border-radius:999px;padding:6px 12px;font-size:13px;color:#6B5A50;background:#FFFAF6}
+.chip.on{background:#B8541F;border-color:#B8541F;color:#FFF7F0;font-weight:700}
+.ic{width:30px;height:30px;border-radius:9px;background:#F6E1D3;color:#B8541F;display:flex;align-items:center;justify-content:center;flex:none}
+.u{color:#A84A17;font-weight:700;border-bottom:2px solid #E9B898}
+
+
+</style>
+</helmet>
+<div style="width: 400px; height: 530px; box-sizing: border-box; padding: 16px; background: #F0E4DB; font-family: 'Noto Sans KR', sans-serif; color: #463428; display: flex; flex-direction: column; gap: 12px">
+  <div style="background:#F7EEE7;border:1px solid #E5D5C9;border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#8A7A70"><span>지금 주입</span><span>🩺 —</span></div>
+    <div style="display:flex;align-items:baseline;gap:8px"><b style="font-size:28px">0</b><span style="font-size:12px;color:#8A7A70">토큰 · 아카이브 없음</span></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px;color:#8A7A70">
+      <div style="background:#F2E7DF;border-radius:12px;padding:8px 10px">아카이브<br><b style="color:#463428">0</b></div><div style="background:#F2E7DF;border-radius:12px;padding:8px 10px">원문<br><b style="color:#463428">3,120</b></div><div style="background:#F2E7DF;border-radius:12px;padding:8px 10px">키워드 대기<br><b style="color:#463428">0</b></div>
+    </div>
+  </div>
+  <div style="background:#FFFFFF;border:1px solid #EEE2D8;border-radius:18px;padding:14px 16px 16px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:center;gap:8px"><b style="font-size:15px">시작하기</b><span style="font-size:12px;color:#A84A17;font-weight:700">2 / 4</span><span style="margin-left:auto;font-size:12px;color:#8A7A70">숨기기</span></div>
+    <div style="display:flex;position:relative"><span style="position:absolute;left:12%;right:12%;top:14px;height:2px;background:linear-gradient(90deg,#B8541F 0 50%,#E6D6CA 50% 100%)"></span><div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;position:relative;z-index:1"><span style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:#B8541F;color:#fff"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></span><span style="font-size:12px;color:#8A7A70">모델</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;position:relative;z-index:1"><span style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:#B8541F;color:#fff"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></span><span style="font-size:12px;color:#8A7A70">첫 압축</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;position:relative;z-index:1"><span style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:#F6E1D3;color:#A84A17;box-shadow:0 0 0 2px #B8541F">3</span><span style="font-size:12px;font-weight:700">경계선</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;position:relative;z-index:1"><span style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:#F2E7DF;color:#8A7A70">4</span><span style="font-size:12px;color:#8A7A70">주입</span></div></div>
+    <div style="display:flex;flex-direction:column;gap:4px;padding-top:2px"><b style="font-size:17px">경계선 확인</b><span style="font-size:13px;color:#6B5A50;line-height:1.55">아카이브가 어디까지 담았는지 표시해요. 그 앞 메시지는 숨겨서 AI가 같은 내용을 두 번 읽지 않게 해요.</span></div>
+    <span style="background:#B8541F;color:#FFF7F0;border-radius:14px;padding:13px;text-align:center;font-weight:700;font-size:15px">경계선 보러 가기</span>
+  </div>
+  <div style="display:flex;gap:8px;opacity:.55"><span style="flex:1;text-align:center;background:#F7EEE7;border:1px solid #E5D5C9;border-radius:12px;padding:9px 0;font-size:13px">읽기</span><span style="flex:1;text-align:center;background:#F7EEE7;border:1px solid #E5D5C9;border-radius:12px;padding:9px 0;font-size:13px">질문</span><span style="flex:1;text-align:center;background:#F7EEE7;border:1px solid #E5D5C9;border-radius:12px;padding:9px 0;font-size:13px">압축</span><span style="flex:1;text-align:center;background:#F7EEE7;border:1px solid #E5D5C9;border-radius:12px;padding:9px 0;font-size:13px">미리보기</span></div>
+  <div style="font-size:12px;color:#8A7A70;text-align:center">… 그 아래 AI 도구는 그대로</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":400,"height":530}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

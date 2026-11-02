@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>홈 8 · 여백과 글자</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+button{font:inherit}
+</style>
+</helmet>
+<div style="width: 390px; height: 900px; box-sizing: border-box; padding: 14px 20px 24px; background: #F0E4DB; color: #463428; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 16px">
+
+  <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B8541F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 12.2A6 6 0 0 0 11.8 3.8L5 10.6V19h8.4z"/><path d="M16 8L2 22M17.5 15H9"/></svg>
+    <b style="font-size: 16px">서사 아카이브</b>
+    <span style="flex: 1"></span>
+    <button aria-label="건강 점검 100점" style="border: 0; background: none; color: #1F6A40; font-size: 13px; font-weight: 600; padding: 0">건강 100</button>
+    <button aria-label="설정" style="width: 32px; height: 32px; display: grid; place-items: center; border: 0; background: none; color: #8A7A70; padding: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3.1 14H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 20.9 10H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 4px">
+    <span style="color: #8A7A70; font-size: 13px">다음 답에 들어가는 양</span>
+    <div style="display: flex; align-items: baseline; gap: 8px"><span style="font-family: 'Noto Serif KR', serif; font-size: 46px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.05">21,548</span><span style="color: #6B5A50; font-size: 15px">토큰</span></div>
+    <div style="height: 3px; margin-top: 8px; border-radius: 999px; background: #E3D3C7; overflow: hidden; display: flex"><span style="width: 100%; background: #B8541F"></span></div>
+  </div>
+
+  <div style="display: flex; flex-direction: column">
+    <div style="display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid #E3D3C7"><span style="color: #6B5A50">아카이브</span><b>21,548</b></div>
+    <div style="display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid #E3D3C7"><span style="color: #6B5A50">#604 이후 원문</span><b>0 <span style="font-weight: 400; color: #8A7A70">· 0개</span></b></div>
+    <div style="display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid #E3D3C7"><span style="color: #6B5A50">키워드 대기 · 라우터</span><span>6개 · 답할 때 골라요</span></div>
+    <div style="display: flex; justify-content: space-between; padding: 9px 0"><span style="color: #6B5A50">할 일</span><span style="color: #1F6A40; font-weight: 600">없어요</span></div>
+  </div>
+
+  <div style="display: flex; gap: 22px; border-bottom: 1px solid #E3D3C7">
+    <button style="padding: 8px 0; border: 0; border-bottom: 2px solid #B8541F; margin-bottom: -1px; background: none; color: #A84A17; font-weight: 700">홈</button>
+    <button style="padding: 8px 0; border: 0; background: none; color: #8A7A70">아카이브</button>
+    <button style="padding: 8px 0; border: 0; background: none; color: #8A7A70">압축</button>
+    <button style="padding: 8px 0; border: 0; background: none; color: #8A7A70">도구</button>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+    <button style="height: 46px; border: 0; border-radius: 14px; background: #463428; color: #F7ECE2; font-weight: 600">압축하기</button>
+    <button style="height: 46px; border: 1px solid #CDBBAE; border-radius: 14px; background: none; color: #463428">아카이브 읽기</button>
+    <button style="height: 46px; border: 1px solid #CDBBAE; border-radius: 14px; background: none; color: #463428">질문하기</button>
+    <button style="height: 46px; border: 1px solid #CDBBAE; border-radius: 14px; background: none; color: #463428">주입 미리보기</button>
+  </div>
+
+  <div style="display: flex; flex-direction: column">
+    <span style="padding-bottom: 4px; font-family: 'Noto Serif KR', serif; font-size: 17px; font-weight: 700">AI 도구</span>
+    <button style="display: flex; align-items: baseline; gap: 10px; padding: 12px 0; border: 0; border-bottom: 1px solid #E3D3C7; background: none; color: inherit; text-align: left"><b style="font-size: 15px; font-weight: 600">이탈 감지</b><span style="flex: 1; color: #8A7A70; font-size: 12.5px">오늘 02:55 · 어긋남 없음</span><span style="color: #B8541F">→</span></button>
+    <button style="display: flex; align-items: baseline; gap: 10px; padding: 12px 0; border: 0; border-bottom: 1px solid #E3D3C7; background: none; color: inherit; text-align: left"><b style="font-size: 15px; font-weight: 600">누가 아는가</b><span style="flex: 1; color: #8A7A70; font-size: 12.5px">비밀 1개</span><span style="color: #B8541F">→</span></button>
+    <button style="display: flex; align-items: baseline; gap: 10px; padding: 12px 0; border: 0; background: none; color: inherit; text-align: left"><b style="font-size: 15px; font-weight: 600">대사 은행</b><span style="flex: 1; color: #8A7A70; font-size: 12.5px">대사 62개 · 지문 1</span><span style="color: #B8541F">→</span></button>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

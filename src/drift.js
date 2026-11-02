@@ -2,7 +2,7 @@
 
 import { tokenize } from './recall.js';
 import { loreBlock } from './lore.js';
-import { aiLabel, askAI, withSpinner } from './ai.js';
+import { askAI, withSpinner } from './ai.js';
 import { gotoSection, renderAnswer } from './ask.js';
 import { currentChatId } from './chats.js';
 import { ctx, getMeta, globalSettings, hasChat, saveMeta } from './core.js';
@@ -220,12 +220,28 @@ export async function openDrift() {
       <div class="na_popup na_v2 na_dr2">
         <div class="na_v2_title"><b>이탈 감지</b><small title="참고용이고 아무것도 바꾸지 않아요">RP 모델이 정해진 사실과 어긋나게 쓴 곳 · 참고용</small></div>
         <div class="na_v2_card na_dr2_ctl">
-          <div class="na_dr2_row"><span>최근 메시지</span><span class="na_fd_step"><button type="button" class="na_fd_btn na_dr2_dec" aria-label="줄이기">−</button><input type="number" class="text_pole na_dr_n" min="2" max="60" value="12"><button type="button" class="na_fd_btn na_dr2_inc" aria-label="늘리기">+</button></span><span>개</span></div>
+          <input type="hidden" class="na_dr_n" value="12">
+          <div class="na_dr3_seg"><span>최근 메시지</span><button type="button" data-d="-2" aria-label="줄이기">−</button><b class="na_dr3_n">12</b><button type="button" data-d="2" aria-label="늘리기">+</button></div>
           <button type="button" class="na_v2_btn primary wide na_dr_go">검사하기</button>
           <small class="na_v2_note na_dr_info"></small>
         </div>
         <div class="na_dr_out na_dr2_out"></div>
+        <div class="na_dr3_hello">
+          <div class="na_dr3_cmp"><div><small>아카이브</small><span>열쇠는 Gemini가 가져갔어요</span></div><div class="x"><small>#57 GPT</small><span>“열쇠? 내 주머니에 있지.”</span></div></div>
+          <b>아직 검사하지 않았어요</b><small>최근 대화에서 이렇게 어긋난 곳을 찾아요</small>
+          <div class="na_dr3_seg"><span>최근 메시지</span><button type="button" data-d="-2" aria-label="줄이기">−</button><b class="na_dr3_n">12</b><button type="button" data-d="2" aria-label="늘리기">+</button></div>
+          <button type="button" class="na_kn3_make na_dr3_go">검사하기</button>
+        </div>
       </div>`);
+    // never checked (docs/mockups/ext-drift D+F): a centred example of what it finds, how many recent messages, one button
+    $root.toggleClass('na_dr3_new', !m.driftLast);
+    // 최근 메시지: 2–60 by twos, the same pill on the empty screen and over the results
+    $root.on('click', '.na_dr3_seg button', function () {
+        const $n = $root.find('.na_dr_n');
+        const n = Math.min(60, Math.max(2, (parseInt($n.val(), 10) || 12) + Number(this.dataset.d)));
+        $n.val(n); $root.find('.na_dr3_n').text(n);
+    });
+    $root.on('click', '.na_dr3_go', () => $root.find('.na_dr_go').trigger('click'));
     const show = d => {
         if (!d) return;
         const lines = d.none ? [] : String(d.text).split('\n').filter(l => /^\s*[-*•]/.test(l));
@@ -239,17 +255,17 @@ export async function openDrift() {
             ? `<div class="na_v2_label"><span>검사 결과</span><small>${meta}</small></div>${okBar(`검사한 ${d.count}개 메시지 모두 아카이브와 맞아요`)}`
             : `<div class="na_v2_label"><span>어긋난 곳${d.checked ? ` ${d.n}개` : n ? ` ${n}개` : ''}</span><small>${meta}</small></div>${driftCards(d.text, m, { check: !!d.checked, kept: d.kept || [] })}${flagged && rest > 0 ? okBar(`나머지 ${rest}개 메시지는 아카이브와 맞아요`) : ''}`);
     };
-    $root.find('.na_dr2_dec, .na_dr2_inc').on('click', function () { const $n = $root.find('.na_dr_n'); $n.val(Math.min(60, Math.max(2, (parseInt($n.val(), 10) || 12) + ($(this).hasClass('na_dr2_inc') ? 2 : -2)))); });
     countTokens(m.text).then(t => {
         const auto = Number(globalSettings().driftAuto) || 0;
-        $root.find('.na_dr_info').text(`아카이브 약 ${fmt(t)} 토큰 + 최근 대화를 ${aiLabel()}에 보내요 · ${auto ? `답 ${auto}개마다 자동 감지` : '자동 감지 꺼짐'}`);
+        $root.find('.na_dr_info').text(`약 ${fmt(t)} 토큰 · ${auto ? `답 ${auto}개마다 자동 감지` : '자동 감지 꺼짐'}`);
     });
 
     show(m.driftLast);
     $root.find('.na_dr_go').on('click', async function () {
         const n = Math.min(60, Math.max(2, parseInt($root.find('.na_dr_n').val(), 10) || 12));
-        const d = await withSpinner($(this), '검사하는 중…', () => runDrift(m, n));
-        if (d) show(d);
+        const $b = $root.hasClass('na_dr3_new') ? $root.find('.na_dr3_go') : $(this);
+        const d = await withSpinner($b, '검사하는 중…', () => runDrift(m, n));
+        if (d) { $root.removeClass('na_dr3_new'); show(d); }
     });
     $root.on('click', '.na_cite_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
     $root.on('click', '.na_cite[data-start]', function () {
@@ -257,7 +273,7 @@ export async function openDrift() {
         $root.closest('dialog').find('.popup-button-ok').trigger('click');
         gotoSection(start);
     });
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
 // every N AI replies, check quietly; only speak up when something is off

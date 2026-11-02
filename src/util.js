@@ -37,10 +37,11 @@ export async function copyText(text, fallbackEl) {
 }
 
 // in the extension's own box, so the popup takes the extension's colours rather than the SillyTavern theme's
-export async function confirm(title, text) {
+// ok: the action's name (지우기, 바꾸기 …); danger: a deleting question (round icon on top, centred); no: the cancel button's word when it means 아니요
+export async function confirm(title, text = '', ok = '확인', { danger = false, no = '취소' } = {}) {
     const c = ctx();
-    const $b = $(`<div class="na_popup na_v2 na_confirm"><div class="na_v2_title"><b>${esc(title)}</b></div><div class="na_confirm_text">${text}</div></div>`);
-    const r = await c.callGenericPopup($b, c.POPUP_TYPE.CONFIRM, '', { okButton: '확인', cancelButton: '취소' });
+    const $b = $(`<div class="na_popup na_v2 na_confirm${danger ? ' danger' : ''}"><div class="na_v2_title"><b>${esc(title)}</b></div>${text ? `<div class="na_confirm_text">${text}</div>` : ''}</div>`);
+    const r = await c.callGenericPopup($b, c.POPUP_TYPE.CONFIRM, '', { okButton: ok, cancelButton: no });
     return r === c.POPUP_RESULT.AFFIRMATIVE || r === true;
 }
 

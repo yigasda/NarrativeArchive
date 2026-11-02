@@ -1,0 +1,791 @@
+<style>
+.big{font-family:'Inter Tight',sans-serif;font-variant-numeric:tabular-nums}
+.k2{display:block;color:#7c8592;font-size:.84em;font-weight:400;margin-top:2px}
+/* ================= 시계 (charcoal) ================= */
+.ck{background:#17181b;color:#f2f2f4}
+.ck .cb{background:rgba(255,255,255,.1);box-shadow:none}
+.ck .kp{background:rgba(255,255,255,.1);box-shadow:none;color:#f5a524}
+.ck .h1 span{color:#8b8f98}
+.ck .dock{background:rgba(40,41,46,.86);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 8px 26px rgba(0,0,0,.4)}
+.ck .dock.lab span{color:#a3a7af}
+.ck .dock.lab span.on{background:rgba(245,165,36,.16);color:#f5a524}
+.ck .ind{background:#f2f2f4}
+.cks{margin:0 14px 12px;border-radius:22px;background:#222327;overflow:hidden}
+.ckh{font-size:12.5px;font-weight:600;color:#8b8f98;margin:14px 26px 8px;letter-spacing:.02em}
+.al2{display:flex;align-items:center;gap:12px;padding:12px 16px 12px 20px;position:relative}
+.al2 + .al2::before{content:'';position:absolute;top:0;left:20px;right:0;border-top:1px solid #303136}
+.al2 .t{flex:1;min-width:0}
+.al2 .t b{display:flex;align-items:baseline;gap:3px;font:200 50px/1 'Inter Tight',sans-serif;letter-spacing:-.03em}
+.al2 .t b small{font-size:18px;font-weight:400;letter-spacing:0}
+.al2 .t span{display:block;font-size:13.5px;color:#d5d7dc;margin-top:4px}
+.al2 .t span em{font-style:normal;color:#8b8f98}
+.al2.off .t b,.al2.off .t span,.al2.off .t span em{color:#5c5f66}
+.tg2{width:51px;height:31px;border-radius:16px;background:#3a3b40;position:relative;flex:none}
+.tg2::after{content:'';position:absolute;left:2px;top:2px;width:27px;height:27px;border-radius:50%;background:#fff}
+.tg2.on{background:#f5a524}.tg2.on::after{left:22px}
+.snz{display:flex;gap:6px;padding:0 16px 14px 20px;margin-top:-2px;flex-wrap:wrap}
+.snz span{font:500 13px 'Inter Tight',sans-serif;color:#f5a524;background:rgba(245,165,36,.13);border-radius:8px;padding:4px 8px}
+.snz span.o{color:#5c5f66;background:#2b2c31}
+.nx{margin:0 14px 12px;border-radius:22px;background:#222327;padding:14px 18px;display:flex;align-items:center;gap:14px}
+.nx .ic0{width:42px;height:42px;border-radius:50%;background:rgba(245,165,36,.16);display:grid;place-items:center;flex:none}
+.nx b{display:block;font-size:15px;font-weight:600}
+.nx span{font-size:13px;color:#8b8f98}
+.ring2{width:250px;height:250px;margin:6px auto 18px;position:relative;display:grid;place-items:center}
+.ring2 svg{position:absolute;inset:0}
+.ring2 b{font:200 58px/1 'Inter Tight',sans-serif;letter-spacing:-.02em;display:block;text-align:center}
+.ring2 span{display:block;text-align:center;font-size:13.5px;color:#8b8f98;margin-top:6px}
+.ring2 em{display:flex;align-items:center;justify-content:center;gap:5px;font-style:normal;font-size:13px;color:#f5a524;margin-top:8px}
+.tb2{display:flex;justify-content:space-between;padding:0 34px 16px}
+.tb2 span{width:78px;height:78px;border-radius:50%;display:grid;place-items:center;font-size:15px;font-weight:500;box-shadow:0 0 0 2px #17181b,0 0 0 4px currentColor}
+.sv2{display:flex;align-items:center;gap:14px;padding:11px 16px 11px 20px;position:relative}
+.sv2 + .sv2::before{content:'';position:absolute;top:0;left:20px;right:0;border-top:1px solid #303136}
+.sv2 b{font:300 30px/1 'Inter Tight',sans-serif;width:96px}
+.sv2 .tx{flex:1}.sv2 .tx span{display:block;font-size:14.5px}.sv2 .tx small{font-size:12px;color:#8b8f98}
+.sv2 i{width:34px;height:34px;border-radius:50%;background:rgba(245,165,36,.16);display:grid;place-items:center}
+.wc{display:flex;align-items:center;padding:14px 18px 14px 20px;position:relative}
+.wc + .wc::before{content:'';position:absolute;top:0;left:20px;right:0;border-top:1px solid #303136}
+.wc .tx{flex:1}.wc .tx small{display:block;font-size:12.5px;color:#8b8f98}.wc .tx b{font-size:22px;font-weight:500}
+.wc > b{font:200 44px/1 'Inter Tight',sans-serif}
+.wc .face{width:44px;height:44px;border-radius:50%;margin-right:14px;position:relative;flex:none}
+.wc .face i{position:absolute;left:50%;bottom:50%;width:2px;margin-left:-1px;border-radius:1px;transform-origin:bottom center}
+.sheet2{position:absolute;left:0;right:0;top:60px;bottom:0;border-radius:14px 14px 0 0;background:#1d1e22;z-index:6}
+.shh2{display:flex;justify-content:space-between;align-items:center;padding:16px 18px 6px;font-size:16px}
+.shh2 span{color:#f5a524}.shh2 b{font-weight:600}
+.wheel{display:flex;justify-content:center;gap:26px;margin:18px 0 22px;font:300 34px 'Inter Tight',sans-serif}
+.wheel div{display:flex;flex-direction:column;align-items:center;gap:8px;color:#4c4f56}
+.wheel div b{font-weight:300;color:#fff;font-size:40px;background:#2b2c31;border-radius:10px;padding:2px 14px}
+.opt2 .rw{color:#f2f2f4}.opt2 .rw small{color:#8b8f98;align-self:center}
+.opt2 .rw + .rw::before{border-color:#303136}
+.days7{display:flex;justify-content:center;gap:6px;padding:0 20px 14px}
+.days7 span{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:13.5px;font-weight:600;background:#2b2c31;color:#8b8f98}
+.days7 span.on{background:#f5a524;color:#17181b}
+
+/* ================= 건강 ================= */
+.hl2{--d:#e0405f;--c:#fbe3e8}
+.hlab{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.hlab small{margin-left:auto;font-size:12px;color:#8a929d;font-weight:500;display:flex;align-items:center;gap:3px}
+.hcard{margin:0 14px 10px;border-radius:20px;background:#fff;padding:13px 15px;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05)}
+.hrow{display:flex;align-items:flex-end;justify-content:space-between;margin-top:8px}
+.hrow .v b{font:600 30px/1 'Inter Tight',sans-serif;letter-spacing:-.02em}
+.hrow .v span{font-size:13px;color:#6b7380;margin-left:3px}
+.mini{display:flex;align-items:flex-end;gap:4px;height:40px}
+.mini i{width:7px;border-radius:3px;background:#eceef2}
+.ringrow{display:flex;gap:16px;align-items:center}
+.seg3{display:flex;margin:0 16px 12px;padding:3px;border-radius:12px;background:rgba(22,27,34,.06)}
+.seg3 span{flex:1;height:30px;border-radius:9px;display:grid;place-items:center;font-size:13px;font-weight:600;color:#6b7380}
+.seg3 span.on{background:#fff;color:#161b22;box-shadow:0 1px 3px rgba(22,27,34,.1)}
+.chart{position:relative;height:200px;margin:8px 0 4px;display:flex;align-items:flex-end;gap:10px;padding-right:34px}
+.chart i{flex:1;border-radius:6px 6px 3px 3px;background:var(--k);opacity:.35}
+.chart i.on{opacity:1}
+.chart .ax{position:absolute;right:0;font-size:10.5px;color:#8a929d;transform:translateY(50%)}
+.chart .gl{position:absolute;left:0;right:34px;border-top:1px solid #eef0f3}
+.chart .av{position:absolute;left:0;right:34px;border-top:2px dashed #8a929d}
+.chart .av span{position:absolute;left:0;top:-20px;font-size:11px;color:#6b7380;background:#fff;padding:0 4px}
+.xl{display:flex;gap:10px;padding-right:34px}.xl span{flex:1;text-align:center;font-size:11px;color:#8a929d}
+.bigstat{padding:0 22px 4px}
+.bigstat small{font-size:12.5px;color:#8a929d;font-weight:600}
+.bigstat b{display:block;font:600 34px/1.1 'Inter Tight',sans-serif;letter-spacing:-.02em}
+.bigstat b span{font-size:15px;color:#6b7380;font-weight:500}
+.bigstat em{font-style:normal;font-size:13px;color:#6b7380}
+.hyp{position:relative;height:150px;margin-top:10px}
+.hyp .lv{position:absolute;left:0;font-size:10.5px;color:#8a929d}
+.hyp .bk{position:absolute;height:20px;border-radius:5px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:#6b7380;margin-top:10px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:4px}
+.stg{display:flex;justify-content:space-between;padding:9px 0;font-size:14px}
+.stg + .stg{border-top:1px solid #eef0f3}
+.stg b{font-family:'Inter Tight',sans-serif}
+.trend{display:flex;gap:12px;align-items:center}
+.trend .arr{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none}
+.trend b{display:block;font-size:14.5px}
+.trend span{font-size:12.5px;color:#6b7380}
+
+/* ================= 파일 ================= */
+.fl2{--d:#2f6fbf;--c:#dfeaf8}
+.fq{margin:0 16px 12px;height:38px;border-radius:12px;background:rgba(22,27,34,.06);display:flex;align-items:center;gap:7px;padding:0 12px;color:#8a929d;font-size:15px}
+.rec2{display:flex;gap:12px;padding:0 16px;overflow:hidden}
+.rc2{width:104px;flex:none}
+.rc2 .th{height:104px;border-radius:14px;background:#fff;display:grid;place-items:center;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(22,27,34,.05),0 6px 16px rgba(22,27,34,.07)}
+.rc2 b{display:block;font-size:12px;font-weight:500;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc2 small{font-size:11px;color:#8a929d}
+.doc{width:62px;height:80px;border-radius:4px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.18);padding:8px 7px;position:relative}
+.doc i{display:block;height:3px;border-radius:2px;background:#e3e6eb;margin-bottom:4px}
+.doc i.h{background:#2c4a80;height:5px;width:60%}
+.doc em{position:absolute;left:4px;bottom:4px;font:800 7px 'Inter Tight',sans-serif;color:#fff;background:#d64545;border-radius:2px;padding:1px 3px;font-style:normal}
+.fico2{width:38px;height:46px;border-radius:6px;position:relative;display:grid;place-items:end center;padding-bottom:6px;font:800 8.5px 'Inter Tight',sans-serif;color:#fff;flex:none}
+.fico2::before{content:'';position:absolute;right:0;top:0;width:11px;height:11px;background:rgba(255,255,255,.45);border-bottom-left-radius:5px}
+.fico2.s{width:34px;height:42px}
+.fr2{display:flex;gap:12px;align-items:center;padding:10px 16px;position:relative}
+.fr2 + .fr2::before{content:'';position:absolute;top:0;left:62px;right:14px;border-top:1px solid #eef0f3}
+.fr2 .tx{flex:1;min-width:0}
+.fr2 .tx b{display:block;font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr2 .tx > span{font-size:12.5px;color:#8a929d}
+.fr2 .tg{width:9px;height:9px;border-radius:50%;flex:none}
+.locrow .rw{--ln:56px}
+.fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 10px;padding:4px 16px 0}
+.fgrid div{text-align:center;font-size:12px;line-height:1.3}
+.fgrid div .th{height:100px;border-radius:12px;display:grid;place-items:center;margin-bottom:6px;overflow:hidden;position:relative}
+.fgrid div small{display:block;font-size:10.5px;color:#8a929d}
+.pv2{margin:4px 26px 0;background:#fff;border-radius:4px;box-shadow:0 4px 18px rgba(0,0,0,.14);padding:20px 18px;height:440px;font-family:'Inter Tight',sans-serif;position:relative}
+.bpass{border-radius:12px;overflow:hidden;border:1px solid #dfe3e8}
+.bpass .h{background:#2c4a80;color:#fff;display:flex;justify-content:space-between;padding:10px 12px;font-size:11.5px;font-weight:700;letter-spacing:.04em}
+.bpass .r{display:flex;justify-content:space-between;align-items:flex-end;padding:12px 12px 4px}
+.bpass .r b{font-size:30px;font-weight:800;letter-spacing:-.02em;display:block;line-height:1}
+.bpass .r small{font-size:10px;color:#6b7380}
+.bpass .g{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 12px 12px;font-size:9px;color:#6b7380}
+.bpass .g b{display:block;font-size:14px;color:#161b22}
+.bpass .bc{height:46px;margin:0 12px 12px}
+.pvt{display:flex;justify-content:center;gap:6px;margin-top:12px}
+.pvt i{width:34px;height:44px;border-radius:3px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.pvt i.on{box-shadow:0 0 0 2px var(--d)}
+.actbar{position:absolute;left:12px;right:12px;bottom:24px;height:50px;border-radius:25px;background:rgba(255,255,255,.86);box-shadow:inset 0 1px 0 #fff,0 0 0 .5px rgba(22,27,34,.07),0 8px 26px rgba(22,27,34,.14);display:flex;justify-content:space-around;align-items:center;color:#2f6fbf;z-index:5}
+
+/* ================= 날씨 ================= */
+.wx2{color:#fff;font-family:-apple-system,'Noto Sans KR',sans-serif}
+.sky{position:absolute;inset:0;overflow:hidden}
+.sky i{position:absolute;border-radius:50%}
+.sky .rn{position:absolute;width:1.5px;border-radius:1px;background:rgba(255,255,255,.28);transform:rotate(14deg)}
+.wtop{position:relative;z-index:2;text-align:center;padding-top:6px}
+.wtop small{font-size:12.5px;font-weight:600;letter-spacing:.06em;display:flex;align-items:center;justify-content:center;gap:5px;opacity:.9}
+.wtop h2{margin:2px 0 0;font-size:32px;font-weight:500}
+.wtop .t{font:200 98px/1 'Inter Tight',sans-serif;margin-left:22px;letter-spacing:-.03em}
+.wtop .c{font-size:19px;font-weight:600;opacity:.9}
+.wtop .hl{font-size:17px;font-weight:600;margin-top:2px}
+.wsrc{display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-size:11.5px;background:rgba(255,255,255,.16);border-radius:12px;padding:4px 10px}
+.wcard{position:relative;z-index:2;margin:0 16px 10px;border-radius:16px;background:rgba(255,255,255,.14);backdrop-filter:blur(14px) saturate(110%);padding:11px 14px}
+.wcard .hd{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;letter-spacing:.04em;opacity:.7;text-transform:uppercase;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.22)}
+.wcard .ln1{font-size:14.5px;font-weight:500;padding:2px 0 9px;border-bottom:1px solid rgba(255,255,255,.22);line-height:1.4}
+.hr2{display:flex;justify-content:space-between;padding-top:10px}
+.hr2 div{width:46px;text-align:center;font-size:13.5px;font-weight:600}
+.hr2 div svg{margin:9px auto 2px}
+.hr2 div em{display:block;font-style:normal;font-size:11px;color:#9fd6ff;height:14px;font-weight:700}
+.hr2 div b{display:block;font:500 18px 'Inter Tight',sans-serif;margin-top:2px}
+.d10{display:flex;align-items:center;gap:8px;padding:9px 0;font-size:16px;font-weight:600}
+.d10 + .d10{border-top:1px solid rgba(255,255,255,.18)}
+.d10 > span:first-child{width:42px}
+.d10 .ic{width:44px;display:flex;flex-direction:column;align-items:center}
+.d10 .ic em{font-style:normal;font-size:10.5px;color:#9fd6ff;font-weight:700}
+.d10 .lo{width:30px;text-align:right;opacity:.6;font-family:'Inter Tight',sans-serif;font-weight:500}
+.d10 .hi{width:30px;font-family:'Inter Tight',sans-serif;font-weight:500}
+.d10 .bar{flex:1;height:5px;border-radius:3px;background:rgba(0,0,0,.18);position:relative}
+.d10 .bar i{position:absolute;top:0;bottom:0;border-radius:3px}
+.d10 .bar b{position:absolute;top:-2.5px;width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.25)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 16px}
+.tile{border-radius:16px;background:rgba(255,255,255,.14);padding:11px 13px;height:150px;position:relative;overflow:hidden}
+.tile .hd{font-size:11px;font-weight:600;letter-spacing:.05em;opacity:.7;display:flex;align-items:center;gap:5px;text-transform:uppercase}
+.tile b{display:block;font:400 30px 'Inter Tight',sans-serif;margin-top:6px}
+.tile b small{font-size:16px}
+.tile p{margin:0;position:absolute;left:13px;right:13px;bottom:11px;font-size:12.5px;line-height:1.35;font-weight:500}
+.cmp2{width:72px;height:72px;border-radius:50%;border:1.5px solid rgba(255,255,255,.4);position:absolute;right:12px;top:40px;display:grid;place-items:center;font-size:10px}
+.cmp2 i{position:absolute;width:3px;height:34px;left:50%;top:50%;margin:-17px 0 0 -1.5px;background:#fff;border-radius:2px;transform:rotate(225deg)}
+.arc{position:absolute;left:13px;right:13px;top:58px;height:46px}
+.cl2{position:relative;margin:0 14px 10px;border-radius:22px;padding:14px 16px;color:#fff;display:flex;justify-content:space-between;overflow:hidden;height:112px}
+.cl2 .l{position:relative;z-index:2;display:flex;flex-direction:column}
+.cl2 .l b{font-size:22px;font-weight:700}
+.cl2 .l small{font-size:13px;font-weight:600;opacity:.9}
+.cl2 .l span{margin-top:auto;font-size:13px;font-weight:600;opacity:.9}
+.cl2 .r{position:relative;z-index:2;text-align:right;display:flex;flex-direction:column}
+.cl2 .r b{font:300 48px/1 'Inter Tight',sans-serif}
+.cl2 .r span{margin-top:auto;font-size:13px;font-weight:600;opacity:.9}
+.cl2 i{position:absolute;border-radius:50%}
+.wsearch{margin:0 16px 14px;height:38px;border-radius:12px;background:rgba(22,27,34,.07);display:flex;align-items:center;gap:7px;padding:0 12px;color:#8a929d;font-size:15px}
+
+/* ================= 배달의민족 ================= */
+.bm2{--m:#2ac1bc;background:#f5f6f8;font-family:'Noto Sans KR',-apple-system,sans-serif;color:#222}
+.bmh{background:var(--m);color:#fff;padding:0 16px 14px}
+.bmh .r1{display:flex;align-items:center;justify-content:space-between;height:46px}
+.bmh .r1 b{font-size:18px;font-weight:800;display:flex;align-items:center;gap:3px;letter-spacing:-.02em}
+.bmh .r1 span{display:flex;gap:16px;position:relative}
+.bmh .badge{position:absolute;right:-6px;top:-4px;width:16px;height:16px;border-radius:50%;background:#fff;color:var(--m);font-size:10px;font-weight:800;display:grid;place-items:center}
+.bmh .q{height:46px;border-radius:10px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 14px;color:#9aa0a6;font-size:15px}
+.bmtabs{display:flex;gap:18px;background:#fff;padding:14px 18px 0;font-size:15px;font-weight:700;color:#9aa0a6;border-bottom:1px solid #eef0f2}
+.bmtabs span{padding-bottom:11px}
+.bmtabs span.on{color:#222;box-shadow:inset 0 -2.5px 0 #222}
+.cat2{display:grid;grid-template-columns:repeat(5,1fr);gap:14px 0;background:#fff;padding:16px 8px 16px}
+.cat2 div{text-align:center;font-size:12px;font-weight:500;color:#333}
+.cat2 div span{display:grid;place-items:center;width:52px;height:52px;margin:0 auto 6px;border-radius:50%;font-size:26px}
+.bnr{margin:12px 16px 0;border-radius:14px;height:86px;padding:14px 16px;position:relative;overflow:hidden;color:#fff}
+.bnr b{font-size:17px;font-weight:800;display:block;letter-spacing:-.02em}
+.bnr small{font-size:12.5px;opacity:.9}
+.bnr i{position:absolute;border-radius:50%}
+.bnr em{position:absolute;right:12px;bottom:10px;font-style:normal;font-size:11px;background:rgba(0,0,0,.2);border-radius:9px;padding:2px 7px}
+.bmsec2{display:flex;justify-content:space-between;align-items:baseline;padding:20px 16px 10px;font-size:18px;font-weight:800;letter-spacing:-.02em}
+.bmsec2 small{font-size:13px;font-weight:500;color:#9aa0a6}
+.st2{display:flex;gap:10px;padding:0 16px;overflow:hidden}
+.stc{width:156px;flex:none}
+.stc .im{height:104px;border-radius:12px;overflow:hidden;position:relative}
+.stc b{display:block;font-size:14.5px;margin-top:7px;font-weight:700}
+.stc span{display:block;font-size:12.5px;color:#666;margin-top:1px}
+.stc span em{font-style:normal;color:#ff9f1a;font-weight:700}
+.club{display:inline-block;font-size:10.5px;font-weight:800;color:var(--m);border:1px solid var(--m);border-radius:4px;padding:0 4px;margin-left:4px;vertical-align:1px}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:84px;background:#fff;border-top:1px solid #eceef1;display:flex;justify-content:space-around;padding-top:8px;font-size:10.5px;color:#9aa0a6;z-index:4}
+.tabbar div{text-align:center;width:60px}.tabbar div.on{color:#222;font-weight:700}
+.tabbar svg{margin:0 auto 3px}
+.hero{height:210px;position:relative;overflow:hidden}
+.herob{position:absolute;top:58px;left:16px;right:16px;display:flex;justify-content:space-between;z-index:3}
+.herob span{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.92);display:grid;place-items:center}
+.sinfo{background:#fff;border-radius:18px 18px 0 0;margin-top:-18px;position:relative;padding:18px 18px 12px;text-align:center}
+.sinfo h2{margin:0;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.sinfo .rt{font-size:14px;margin-top:4px;color:#333}
+.sinfo .rt em{font-style:normal;color:#ff9f1a;letter-spacing:1px}
+.sinfo .meta{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;text-align:left;font-size:13px;margin-top:14px;padding-top:14px;border-top:1px solid #f0f1f3}
+.sinfo .meta span:nth-child(odd){color:#9aa0a6}
+.mtabs{display:flex;background:#fff;border-bottom:1px solid #eef0f2;font-size:14.5px;font-weight:700;color:#9aa0a6}
+.mtabs span{flex:1;text-align:center;padding:12px 0}
+.mtabs span.on{color:#222;box-shadow:inset 0 -2.5px 0 #222}
+.mi{display:flex;gap:12px;padding:14px 16px;background:#fff;position:relative}
+.mi + .mi{border-top:1px solid #f0f1f3}
+.mi .tx{flex:1;min-width:0}
+.mi b{display:block;font-size:15.5px;font-weight:700}
+.mi p{margin:4px 0 6px;font-size:12.5px;color:#888;line-height:1.4}
+.mi strong{font-size:15px;font-weight:700}
+.mi .im{width:84px;height:84px;border-radius:10px;overflow:hidden;flex:none;position:relative}
+.rep{font-size:10.5px;font-weight:800;color:#fff;background:#ff6b6b;border-radius:4px;padding:1px 5px;margin-right:5px;vertical-align:2px}
+.cta2{position:absolute;left:14px;right:14px;bottom:26px;height:54px;border-radius:10px;background:var(--m);color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:16px;z-index:5}
+.cta2 em{font-style:normal;background:#fff;color:var(--m);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px}
+.cart{background:#fff;margin-bottom:10px}
+.cart .sh{display:flex;align-items:center;gap:10px;padding:14px 16px;font-size:15.5px;font-weight:800;border-bottom:1px solid #f0f1f3}
+.cit{display:flex;gap:12px;padding:14px 16px}
+.cit + .cit{border-top:1px solid #f0f1f3}
+.cit .im{width:64px;height:64px;border-radius:8px;overflow:hidden;position:relative;flex:none}
+.cit .tx{flex:1}
+.cit b{font-size:15px;display:block}
+.cit small{font-size:12px;color:#888;display:block;margin:2px 0 6px}
+.cit .q{display:flex;justify-content:space-between;align-items:center}
+.cit .q strong{font-size:15px}
+.step{display:flex;align-items:center;border:1px solid #e2e4e8;border-radius:8px;height:32px}
+.step span{width:30px;text-align:center;font-size:16px;color:#888}
+.step b{width:24px;text-align:center;font-size:14px}
+.req{background:#fff;padding:14px 16px;margin-bottom:10px}
+.req h4{margin:0 0 10px;font-size:15.5px;font-weight:800}
+.req .bx{border:1px solid #e2e4e8;border-radius:10px;padding:11px 12px;font-size:14px;margin-bottom:8px}
+.req .bx small{display:block;font-size:11.5px;color:#9aa0a6;margin-bottom:3px}
+.req .chk2{display:flex;align-items:center;gap:8px;font-size:13.5px;color:#444}
+.req .chk2 i{width:20px;height:20px;border-radius:5px;background:var(--m);display:grid;place-items:center}
+.sum{background:#fff;padding:14px 16px}
+.sum div{display:flex;justify-content:space-between;font-size:14px;padding:4px 0;color:#555}
+.sum div.t{font-size:16px;font-weight:800;color:#222;border-top:1px solid #f0f1f3;margin-top:6px;padding-top:10px}
+.oc{background:#fff;margin:0 0 10px;padding:14px 16px}
+.oc .hd{display:flex;justify-content:space-between;font-size:12.5px;color:#9aa0a6}
+.oc .hd b{color:#222;font-weight:700}
+.oc .bd{display:flex;gap:12px;margin-top:10px;align-items:center}
+.oc .bd .im{width:60px;height:60px;border-radius:10px;overflow:hidden;position:relative;flex:none}
+.oc .bd b{font-size:16px;font-weight:800;display:block}
+.oc .bd span{font-size:13px;color:#666}
+.oc .bt2{display:flex;gap:8px;margin-top:12px}
+.oc .bt2 span{flex:1;height:40px;border-radius:8px;border:1px solid #e2e4e8;display:grid;place-items:center;font-size:14px;font-weight:700}
+.oc .bt2 span.m{border-color:var(--m);color:var(--m)}
+.gift{display:inline-block;font-size:11px;font-weight:700;color:#d1477a;background:#fde7ef;border-radius:5px;padding:1px 6px;margin-left:6px}
+
+/* ================= Uber Eats ================= */
+.ue2{background:#fff;color:#000;font-family:'Inter Tight','Noto Sans KR',sans-serif}
+.ue2 .top2{padding:0 16px}
+.dnow{display:flex;justify-content:space-between;align-items:center;height:50px}
+.dnow div small{display:block;font-size:12px;color:#5e5e5e;font-weight:500}
+.dnow div b{font-size:16px;font-weight:700;display:flex;align-items:center;gap:4px}
+.dnow > span{width:40px;height:40px;border-radius:50%;background:#f3f3f3;display:grid;place-items:center;position:relative}
+.dnow > span em{position:absolute;right:-2px;top:-2px;width:17px;height:17px;border-radius:50%;background:#06c167;color:#fff;font-style:normal;font-size:10px;font-weight:800;display:grid;place-items:center}
+.ueq2{height:46px;border-radius:23px;background:#f3f3f3;display:flex;align-items:center;gap:10px;padding:0 16px;color:#5e5e5e;font-size:15.5px;margin:6px 0 4px}
+.uecat{display:flex;gap:4px;padding:12px 10px 4px;overflow:hidden}
+.uecat div{width:70px;flex:none;text-align:center;font-size:12px;font-weight:500}
+.uecat span{display:grid;place-items:center;width:56px;height:56px;margin:0 auto 5px;border-radius:50%;background:#f6f6f6;font-size:27px}
+.ueh2{padding:18px 16px 10px;font-size:21px;font-weight:700;display:flex;justify-content:space-between;align-items:center;letter-spacing:-.01em}
+.ueh2 span{width:34px;height:34px;border-radius:50%;background:#f3f3f3;display:grid;place-items:center}
+.again{display:flex;gap:12px;padding:0 16px;overflow:hidden}
+.again div{width:96px;flex:none}
+.again .im{width:96px;height:96px;border-radius:10px;overflow:hidden;position:relative}
+.again b{display:block;font-size:13.5px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.again small{font-size:12px;color:#5e5e5e}
+.sc{padding:0 16px 16px}
+.sc .im{height:150px;border-radius:12px;overflow:hidden;position:relative}
+.sc .im em{position:absolute;left:10px;top:10px;font-style:normal;font-size:12px;font-weight:700;background:#06c167;color:#fff;border-radius:6px;padding:3px 8px}
+.sc .im .hrt{position:absolute;right:10px;top:10px}
+.sc .r{display:flex;justify-content:space-between;align-items:flex-start;margin-top:8px}
+.sc .r b{font-size:16px;font-weight:700;display:block}
+.sc .r small{font-size:13px;color:#5e5e5e}
+.sc .r .rt{width:30px;height:30px;border-radius:50%;background:#eee;display:grid;place-items:center;font-size:12px;font-weight:700}
+.uetab2{position:absolute;left:0;right:0;bottom:0;height:84px;background:#fff;border-top:1px solid #eee;display:flex;justify-content:space-around;padding-top:8px;font-size:10.5px;color:#757575;z-index:4}
+.uetab2 div{text-align:center;width:66px}.uetab2 div.on{color:#000;font-weight:700}
+.uetab2 svg{margin:0 auto 3px}
+.uehero{height:200px;position:relative;overflow:hidden}
+.ueinfo{padding:16px}
+.ueinfo h2{margin:0;font-size:26px;font-weight:700;letter-spacing:-.02em}
+.ueinfo .m{font-size:13.5px;color:#5e5e5e;margin-top:4px}
+.ueinfo .m b{color:#000}
+.tog{display:flex;background:#f3f3f3;border-radius:22px;padding:3px;margin-top:14px;width:220px}
+.tog span{flex:1;height:34px;border-radius:18px;display:grid;place-items:center;font-size:14px;font-weight:600}
+.tog span.on{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.pop{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px}
+.pop div .im{height:120px;border-radius:10px;overflow:hidden;position:relative}
+.pop div .im span{position:absolute;right:8px;bottom:8px;width:32px;height:32px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.pop b{display:block;font-size:14px;margin-top:6px}
+.pop small{font-size:13px;color:#5e5e5e}
+.vc{position:absolute;left:14px;right:14px;bottom:28px;height:54px;border-radius:10px;background:#000;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-size:16px;font-weight:700;z-index:5}
+.vc em{font-style:normal;background:#fff;color:#000;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px}
+.otab{display:flex;gap:22px;padding:0 16px;border-bottom:1px solid #eee;font-size:15px;font-weight:600;color:#757575}
+.otab span{padding:10px 0}
+.otab span.on{color:#000;box-shadow:inset 0 -2px 0 #000}
+.or{display:flex;gap:12px;padding:14px 16px;align-items:flex-start;border-bottom:1px solid #f3f3f3}
+.or .im{width:64px;height:64px;border-radius:8px;overflow:hidden;position:relative;flex:none}
+.or .tx{flex:1;min-width:0}
+.or b{display:block;font-size:16px;font-weight:700}
+.or span{display:block;font-size:13.5px;color:#5e5e5e;margin-top:2px}
+.or a{display:inline-block;margin-top:8px;font-size:13.5px;font-weight:700;color:#000;text-decoration:underline}
+.or em{font-style:normal;height:36px;padding:0 14px;border-radius:18px;background:#f3f3f3;font-size:14px;font-weight:700;display:flex;align-items:center;flex:none}
+.map{height:250px;position:relative;overflow:hidden;background:#eef0ea}
+.map .rd{position:absolute;background:#fff}
+.map .blk{position:absolute;background:#e2e6dc;border-radius:4px}
+.map .pk{position:absolute;background:#cfe6c8;border-radius:30px}
+.map svg{position:absolute;inset:0}
+.pin{position:absolute;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.od{padding:16px}
+.od .st{display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid #eee}
+.od .st i{width:42px;height:42px;border-radius:50%;background:#06c167;display:grid;place-items:center}
+.od .st b{font-size:18px;display:block}
+.od .st span{font-size:13px;color:#5e5e5e}
+.od .ln{display:flex;justify-content:space-between;padding:7px 0;font-size:15px}
+.od .ln em{font-style:normal;display:inline-grid;place-items:center;width:22px;height:22px;border-radius:4px;background:#f3f3f3;font-size:12px;font-weight:700;margin-right:8px}
+.od .ln.g{color:#5e5e5e}
+.od .ln.t{font-weight:700;border-top:1px solid #eee;margin-top:6px;padding-top:12px}
+.od .note{margin:12px 0;border-radius:10px;background:#f6f6f6;padding:11px 13px;font-size:14px;line-height:1.5}
+.od .note small{display:block;font-size:12px;color:#5e5e5e;font-weight:600;margin-bottom:2px}
+.od .pay{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid #eee;font-size:14.5px}
+.od .pay a{margin-left:auto;color:#06c167;font-weight:700;font-size:13.5px}
+
+/* weather motion: rain falls, clouds drift, the sun's halo breathes (off for reduced motion) */
+.sky .rn{top:-40px;animation:wxfall var(--d,1s) linear infinite;animation-delay:var(--dl,0s)}
+@keyframes wxfall{from{transform:translate(0,0) rotate(14deg)}to{transform:translate(-210px,900px) rotate(14deg)}}
+.sky i.cl{animation:wxdrift var(--d,26s) ease-in-out infinite alternate}
+@keyframes wxdrift{from{transform:translateX(0)}to{transform:translateX(var(--x,40px))}}
+.sky i.sn{animation:wxglow 4.5s ease-in-out infinite alternate}
+.sky i.sn2{animation:wxglow 4.5s ease-in-out infinite alternate;animation-delay:-2.2s}
+@keyframes wxglow{from{transform:scale(1);opacity:1}to{transform:scale(1.08);opacity:.7}}
+.cl2 i.cl{animation:wxdrift 18s ease-in-out infinite alternate}
+@media (prefers-reduced-motion: reduce){.sky .rn,.sky i,.cl2 i{animation:none!important}}
+</style>
+
+<div class="bt">새 앱 다섯 개 — 2차 시안</div>
+<div class="bs">시계는 차콜 바탕 · 건강 · 파일은 우리 앱 틀을 더 다듬고 · 날씨는 하늘 그림 · 배달은 실제 앱 흐름(홈 → 가게 → 장바구니 → 주문). 그라데이션 없음, 사진 자리는 납작한 그림.</div>
+
+<!-- ============ 시계 ============ -->
+<div class="row">
+ <div><div class="ph ck">
+  <div class="sb" style="color:#f2f2f4"><span>17:42</span><span class="i">SIGW</span></div>
+  <div class="top"><span class="cb">BACKW</span><span class="kp">+ 추가</span></div>
+  <div class="h1"><b>알람</b><span>켜짐 4 · 꺼짐 2</span></div>
+  <div class="nx"><span class="ic0">BELLA</span><div><b>내일 오전 6:10</b><span>Mara 깨우기 · 12시간 28분 뒤</span></div></div>
+  <div class="ckh">수면 · 기상</div>
+  <div class="cks">
+   <div class="al2"><div class="t"><b>6:10<small>AM</small></b><span>Mara 깨우기 <em>· 평일</em></span></div><span class="tg2 on"></span></div>
+   <div class="al2"><div class="t"><b>6:15<small>AM</small></b><span>이번엔 진짜 일어나 <em>· 평일</em></span></div><span class="tg2 on"></span></div>
+   <div class="snz"><span>6:20</span><span>6:25</span><span>6:30</span><span>6:35</span><span class="o">6:40</span></div>
+  </div>
+  <div class="ckh">기타</div>
+  <div class="cks">
+   <div class="al2"><div class="t"><b>9:00<small>PM</small></b><span>Tabletten <em>· 매일</em></span></div><span class="tg2 on"></span></div>
+   <div class="al2 off"><div class="t"><b>4:30<small>AM</small></b><span>Flughafen · VA231 <em>· 10월 30일 한 번</em></span></div><span class="tg2"></span></div>
+  </div>
+  <div class="dock lab"><span class="on">ALM 알람</span><span>TMR 타이머</span><span>WRL 세계 시계</span></div>
+  <div class="ind"></div>
+ </div><div class="cap">시계 · 알람<small>다음 알람 · 5분 간격 무리 · 꺼진 공항 알람 · 차콜 바탕, 강조는 호박색</small></div></div>
+
+ <div><div class="ph ck">
+  <div class="sb" style="color:#f2f2f4"><span>17:42</span><span class="i">SIGW</span></div>
+  <div class="top"><span class="cb">BACKW</span><span></span></div>
+  <div class="h1"><b>타이머</b></div>
+  <div class="ring2"><svg viewBox="0 0 250 250"><circle cx="125" cy="125" r="115" fill="none" stroke="#2b2c31" stroke-width="9"/><circle cx="125" cy="125" r="115" fill="none" stroke="#f5a524" stroke-width="9" stroke-linecap="round" stroke-dasharray="722" stroke-dashoffset="433" transform="rotate(-90 125 125)"/></svg><div><b>03:12</b><span>Pasta · 8분</span><em>BELLA 17:45</em></div></div>
+  <div class="tb2"><span style="color:#3a3b40;background:#3a3b40"><b style="color:#f2f2f4;font-weight:500">취소</b></span><span style="color:rgba(245,165,36,.25);background:rgba(245,165,36,.25)"><b style="color:#f5a524;font-weight:500">일시정지</b></span></div>
+  <div class="ckh">저장된 타이머</div>
+  <div class="cks">
+   <div class="sv2"><b>8:00</b><span class="tx"><span>Pasta</span><small>어제</small></span><i>PLAYA</i></div>
+   <div class="sv2"><b>4:00</b><span class="tx"><span>Tee ziehen lassen</span><small>3일 전</small></span><i>PLAYA</i></div>
+   <div class="sv2"><b>25:00</b><span class="tx"><span>Lernen</span><small>2주 전</small></span><i>PLAYA</i></div>
+  </div>
+  <div class="dock lab"><span>ALM 알람</span><span class="on">TMR 타이머</span><span>WRL 세계 시계</span></div>
+  <div class="ind"></div>
+ </div><div class="cap">시계 · 타이머<small>이야기 시점에 돌던 타이머(있을 때만) · 저장된 타이머 · 마지막으로 쓴 날</small></div></div>
+
+ <div><div class="ph ck">
+  <div class="sb" style="color:#f2f2f4"><span>17:42</span><span class="i">SIGW</span></div>
+  <div class="top"><span class="cb">BACKW</span><span class="kp">편집</span></div>
+  <div class="h1"><b>세계 시계</b></div>
+  <div class="cks">
+   <div class="wc"><span class="face" style="background:#2b2c31"><i style="height:13px;background:#fff;transform:rotate(155deg)"></i><i style="height:18px;background:#fff;transform:rotate(252deg)"></i></span><span class="tx"><small>오늘, +0시간</small><b>Varo</b></span><b>17:42</b></div>
+   <div class="wc"><span class="face" style="background:#2b2c31"><i style="height:13px;background:#fff;transform:rotate(185deg)"></i><i style="height:18px;background:#fff;transform:rotate(252deg)"></i></span><span class="tx"><small>오늘, +1시간</small><b>Westend</b></span><b>18:42</b></div>
+   <div class="wc"><span class="face" style="background:#e9e9ec"><i style="height:13px;background:#17181b;transform:rotate(125deg)"></i><i style="height:18px;background:#17181b;transform:rotate(252deg)"></i></span><span class="tx"><small>오늘, −1시간 · 지난 여행</small><b style="color:#d5d7dc">Lisboa</b></span><b style="color:#d5d7dc">16:42</b></div>
+  </div>
+  <div class="dock lab"><span>ALM 알람</span><span>TMR 타이머</span><span class="on">WRL 세계 시계</span></div>
+  <div class="ind"></div>
+ </div><div class="cap">시계 · 세계 시계<small>저장한 도시 · 날씨 앱 도시와 같은 목록에서</small></div></div>
+
+ <div><div class="ph ck">
+  <div class="sb" style="color:#f2f2f4"><span>17:42</span><span class="i">SIGW</span></div>
+  <div class="h1" style="opacity:.3"><b>알람</b></div>
+  <div class="sheet2">
+   <div class="shh2"><span>닫기</span><b>알람</b><span></span></div>
+   <div class="wheel"><div>5<b>6</b>7</div><div>14<b>15</b>16</div><div>&nbsp;<b>AM</b>PM</div></div>
+   <div class="days7"><span class="on">월</span><span class="on">화</span><span class="on">수</span><span class="on">목</span><span class="on">금</span><span>토</span><span>일</span></div>
+   <div class="cks opt2" style="background:#26272c">
+    <div class="rw"><span class="tx"><b style="font-weight:400">레이블</b></span><small>이번엔 진짜 일어나</small></div>
+    <div class="rw"><span class="tx"><b style="font-weight:400">사운드</b></span><small>공습 사이렌 ›</small></div>
+    <div class="rw"><span class="tx"><b style="font-weight:400">다시 알림</b></span><small>5분 · 5번</small></div>
+   </div>
+   <div style="font-size:12px;color:#8b8f98;padding:0 30px">만든 날 9월 2일 · 마지막으로 끈 날 오늘 06:41</div>
+  </div>
+  <div class="ind"></div>
+ </div><div class="cap">시계 · 알람 하나<small>반복 요일 · 레이블 · 사운드 · 다시 알림 · 마지막으로 끈 시각</small></div></div>
+</div>
+
+<!-- ============ 건강 ============ -->
+<div class="row">
+ <div><div class="ph hl2">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="top"><span class="cb">BACK</span><span class="kp" style="color:#e0405f">평소와 비교</span></div>
+  <div class="h1"><b>요약</b><span>10월 24일 금요일</span></div>
+  <div class="hcard"><div class="hlab"><span style="color:#f08a3c">WALKO</span><span style="color:#f08a3c">걸음</span><small>23:58 CHV</small></div>
+   <div class="hrow"><div class="v"><b>18,412</b><span>걸음</span></div><div class="mini"><i style="height:30%"></i><i style="height:38%"></i><i style="height:34%"></i><i style="height:28%"></i><i style="height:100%;background:#f08a3c"></i></div></div></div>
+  <div class="hcard"><div class="hlab"><span style="color:#6c63d9">MOONP</span><span style="color:#6c63d9">수면</span><small>04:54 CHV</small></div>
+   <div class="hrow"><div class="v"><b>2</b><span>시간</span> <b>14</b><span>분</span></div><div class="mini"><i style="height:90%"></i><i style="height:84%"></i><i style="height:66%"></i><i style="height:52%"></i><i style="height:26%;background:#6c63d9"></i></div></div></div>
+  <div class="hcard"><div class="hlab"><span style="color:#2fa36b">RUNG</span><span style="color:#2fa36b">운동</span><small>10월 17일 CHV</small></div>
+   <div class="hrow"><div class="v"><b>0</b><span>분 · 이번 주</span></div><span style="font-size:12.5px;color:#6b7380">마지막: 새벽 러닝 5.2 km</span></div></div>
+  <div class="hcard"><div class="hlab"><span style="color:#e0405f">HEARTR</span><span style="color:#e0405f">심박수</span><small>23:40 CHV</small></div>
+   <div class="hrow"><div class="v"><b>64–131</b><span>BPM</span></div><svg width="110" height="36"><path d="M2 26 L20 24 L34 25 L44 12 L52 20 L66 6 L78 18 L92 22 L108 21" fill="none" stroke="#e0405f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  <div class="ind"></div>
+ </div><div class="cap">건강 · 요약<small>그날 카드마다 마지막 기록 시각 · 작은 차트 · 해석 문장 없음</small></div></div>
+
+ <div><div class="ph hl2">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="top"><span class="cb">BACK</span><span></span></div>
+  <div class="h1"><b>걸음</b></div>
+  <div class="seg3"><span>일</span><span class="on">주</span><span>월</span><span>6개월</span></div>
+  <div class="bigstat"><small>평균</small><b>9,870 <span>걸음</span></b><em>10월 20–26일</em></div>
+  <div class="hcard" style="--k:#f08a3c;padding-top:16px">
+   <div class="chart"><span class="gl" style="bottom:100%"></span><span class="ax" style="bottom:100%">20,000</span><span class="gl" style="bottom:50%"></span><span class="ax" style="bottom:50%">10,000</span><span class="av" style="bottom:31%"><span>평소 6,200</span></span>
+    <i style="height:30%"></i><i style="height:38%"></i><i style="height:34%"></i><i style="height:28%"></i><i class="on" style="height:92%"></i><i style="height:41%"></i><i style="height:4%"></i></div>
+   <div class="xl"><span>월</span><span>화</span><span>수</span><span>목</span><span style="color:#161b22;font-weight:700">금</span><span>토</span><span>일</span></div></div>
+  <div class="hcard"><div class="stg"><span>10월 24일 금</span><b>18,412걸음</b></div><div class="stg"><span>거리</span><b>12.9 km</b></div><div class="stg"><span>오른 층수</span><b>14층</b></div></div>
+  <div class="ind"></div>
+ </div><div class="cap">건강 · 걸음<small>일 · 주 · 월 · 평소 점선 · 튀는 날 하나가 진하게</small></div></div>
+
+ <div><div class="ph hl2">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="top"><span class="cb">BACK</span><span></span></div>
+  <div class="h1"><b>수면</b></div>
+  <div class="seg3"><span class="on">일</span><span>주</span><span>월</span><span>6개월</span></div>
+  <div class="bigstat"><small>수면 시간</small><b>2<span>시간</span> 14<span>분</span></b><em>10월 24일 02:40 – 04:54</em></div>
+  <div class="hcard">
+   <div class="hyp"><span class="lv" style="top:4px">깸</span><span class="lv" style="top:40px">렘</span><span class="lv" style="top:76px">코어</span><span class="lv" style="top:112px">깊은</span>
+    <span class="bk" style="left:40px;width:20px;top:74px;background:#5a8ff0"></span><span class="bk" style="left:60px;width:34px;top:110px;background:#3a3fb0"></span><span class="bk" style="left:94px;width:40px;top:74px;background:#5a8ff0"></span><span class="bk" style="left:134px;width:14px;top:2px;background:#f2994a"></span><span class="bk" style="left:148px;width:44px;top:38px;background:#58c8f0"></span><span class="bk" style="left:192px;width:30px;top:74px;background:#5a8ff0"></span><span class="bk" style="left:222px;width:12px;top:2px;background:#f2994a"></span><span class="bk" style="left:234px;width:56px;top:74px;background:#5a8ff0"></span></div>
+   <div class="xl" style="padding:0 0 0 40px"><span>02:40</span><span>03:30</span><span>04:20</span><span>04:54</span></div>
+   <div class="legend"><span><i style="background:#f2994a"></i>깸 2번 · 9분</span><span><i style="background:#58c8f0"></i>렘 32분</span><span><i style="background:#5a8ff0"></i>코어 1시간 18분</span><span><i style="background:#3a3fb0"></i>깊은 24분</span></div></div>
+  <div class="hcard"><div class="stg"><span>침대에 누운 시간</span><b>01:55</b></div><div class="stg"><span>평소 잠든 시각</span><b>23:30</b></div></div>
+  <div class="ind"></div>
+ </div><div class="cap">건강 · 수면<small>단계 그래프 · 깬 횟수 · 누운 시각 · 평소 잠든 시각</small></div></div>
+
+ <div><div class="ph hl2">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="top"><span class="cb">BACK</span><span></span></div>
+  <div class="h1"><b>평소와 비교</b></div>
+  <div style="padding:0 22px 12px;font-size:13px;color:#6b7380">최근 7일 평균 · 지난 4주 평균</div>
+  <div class="hcard"><div class="trend"><span class="arr" style="background:#fdebdc">UPO</span><div><b>걸음이 평소보다 많아요</b><span>9,870 · 평소 6,200</span></div></div></div>
+  <div class="hcard"><div class="trend"><span class="arr" style="background:#e6e4fb">DNP</span><div><b>수면이 평소보다 짧아요</b><span>4시간 52분 · 평소 7시간 10분</span></div></div></div>
+  <div class="hcard"><div class="trend"><span class="arr" style="background:#e6e4fb">DNP</span><div><b>잠드는 시각이 늦어요</b><span>02:10 · 평소 23:30</span></div></div></div>
+  <div class="hcard"><div class="trend"><span class="arr" style="background:#dff3e8">DNG</span><div><b>운동이 끊겼어요</b><span>이번 주 0회 · 평소 주 3회 · 마지막 10월 17일</span></div></div></div>
+  <div class="hcard"><div class="trend"><span class="arr" style="background:#f1f2f4">EQ</span><div><b>심박수는 평소와 비슷해요</b><span>안정 시 62 · 평소 61</span></div></div></div>
+  <div class="ind"></div>
+ </div><div class="cap">건강 · 평소와 비교<small>"많아요 · 짧아요 · 끊겼어요"까지만 — 이유는 안 붙임</small></div></div>
+</div>
+
+<!-- ============ 파일 ============ -->
+<div class="row">
+ <div><div class="ph fl2">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="top"><span class="cb">BACK</span><span class="kp" style="color:#2f6fbf">⋯</span></div>
+  <div class="h1"><b>파일</b></div>
+  <div class="fq">SRCHG 검색</div>
+  <div class="sec"><span>최근</span><a>더 보기</a></div>
+  <div class="rec2">
+   <div class="rc2"><div class="th"><div class="doc"><i class="h"></i><i></i><i></i><i style="width:70%"></i><i></i><em>PDF</em></div></div><b>Bordkarte_VA231.pdf</b><small>어제 · 다운로드</small></div>
+   <div class="rc2"><div class="th" style="background:#c9b49a"><i style="position:absolute;width:150px;height:90px;left:-20px;top:56px;border-radius:46%;background:#b39b7f"></i><i style="position:absolute;width:26px;height:26px;right:16px;top:16px;border-radius:50%;background:#e9dccb"></i></div><b>IMG_4021 (1).jpg</b><small>10월 24일 · Reisen</small></div>
+   <div class="rc2"><div class="th"><span class="fico2" style="background:#7b8290">ZIP</span></div><b>archiv_alt.zip</b><small>10월 20일 · 다운로드</small></div>
+  </div>
+  <div class="sec"><span>위치</span></div>
+  <div class="card locrow">
+   <div class="rw">PHONEB<span class="tx"><b>내 폰</b></span>CHEV</div>
+   <div class="rw">CLOUDB<span class="tx"><b>클라우드</b><span style="font-size:12px;color:#8a929d">4.2 GB / 5 GB</span></span>CHEV</div>
+   <div class="rw">DLB<span class="tx"><b>다운로드</b></span><small style="align-self:center">48</small>CHEV</div>
+   <div class="rw">TRASHB<span class="tx"><b>최근 삭제</b></span><small style="align-self:center">3</small>CHEV</div>
+  </div>
+  <div class="sec"><span>즐겨찾기</span></div>
+  <div class="card locrow">
+   <div class="rw">FOLDS<span class="tx"><b>Arbeit</b></span><small style="align-self:center">23</small>CHEV</div>
+   <div class="rw">FOLDS<span class="tx"><b>Neuer Ordner (3)</b></span><small style="align-self:center">1</small>CHEV</div>
+  </div>
+  <div class="ind"></div>
+ </div><div class="cap">파일 · 둘러보기<small>최근(어디 있는지까지) · 위치 · 클라우드 용량 · 즐겨찾기 폴더</small></div></div>
+
+ <div><div class="ph fl2">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="top"><span class="cb">BACK</span><span class="kp" style="color:#2f6fbf">⋯</span></div>
+  <div class="h1"><b>다운로드</b><span>48개</span></div>
+  <div class="sortb" style="display:flex;justify-content:space-between;padding:0 22px 10px;font-size:13px;color:#6b7380"><span>날짜순 ▾</span><span style="color:#2f6fbf;font-weight:600">LISTB GRIDG</span></div>
+  <div class="card">
+   <div class="fr2"><span class="fico2 s" style="background:#d64545">PDF</span><span class="tx"><b>Bordkarte_VA231.pdf</b><span>10월 25일 · 212 KB</span></span><span class="tg" style="background:#e8a317"></span></div>
+   <div class="fr2"><span class="fico2 s" style="background:#d64545">PDF</span><span class="tx"><b>Mietvertrag_final_FINAL(2).pdf</b><span>10월 22일 · 1.4 MB</span></span></div>
+   <div class="fr2"><span class="fico2 s" style="background:#d64545">PDF</span><span class="tx"><b>Mietvertrag_final_FINAL.pdf</b><span>10월 22일 · 1.4 MB</span></span></div>
+   <div class="fr2"><span class="fico2 s" style="background:#7b8290">ZIP</span><span class="tx"><b>archiv_alt.zip</b><span>10월 20일 · 88 MB</span></span></div>
+   <div class="fr2"><span class="fico2 s" style="background:#3a3f4a">MP4</span><span class="tx"><b>clip_0193.mp4</b><span>10월 18일 · 412 MB</span></span></div>
+   <div class="fr2"><span class="fico2 s" style="background:#8a5a2e">M4A</span><span class="tx"><b>Neue Aufnahme 7.m4a</b><span>10월 16일 · 2.1 MB</span></span></div>
+   <div class="fr2"><span class="fico2 s" style="background:#2b7a4b">XLSX</span><span class="tx"><b>Schichtplan_Okt.xlsx</b><span>10월 2일 · 48 KB</span></span><span class="tg" style="background:#d64545"></span></div>
+   <div class="fr2"><span class="fico2 s" style="background:#2f6fbf">DOCX</span><span class="tx"><b>Lebenslauf_Mara_2025.docx</b><span>9월 29일 · 96 KB</span></span></div>
+  </div>
+  <div class="ind"></div>
+ </div><div class="cap">파일 · 다운로드<small>최종_진짜최종 · 중복 · 정체 모를 압축 · 태그 점</small></div></div>
+
+ <div><div class="ph fl2">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="top"><span class="cb">BACK</span><span class="kp" style="color:#2f6fbf">선택</span></div>
+  <div class="h1"><b>Reisen</b><span>9개</span></div>
+  <div class="fgrid">
+   <div><div class="th" style="background:#f4f5f7"><div class="doc"><i class="h"></i><i></i><i></i><i style="width:70%"></i><em>PDF</em></div></div>Bordkarte_VA231<small>212 KB</small></div>
+   <div><div class="th" style="background:#f4f5f7"><div class="doc"><i class="h" style="background:#2f7d74"></i><i></i><i></i><i></i><em>PDF</em></div></div>Hotel_Bestätigung<small>88 KB</small></div>
+   <div><div class="th" style="background:#c9b49a"><i style="position:absolute;width:150px;height:80px;left:-24px;top:54px;border-radius:46%;background:#b39b7f"></i></div>IMG_4021<small>3.1 MB</small></div>
+   <div><div class="th" style="background:#9fb3c8"><i style="position:absolute;width:150px;height:80px;left:-20px;top:56px;border-radius:46%;background:#7f97ae"></i><i style="position:absolute;width:22px;height:22px;right:14px;top:14px;border-radius:50%;background:#e9eef3"></i></div>IMG_4022<small>2.8 MB</small></div>
+   <div><div class="th" style="background:#3a3f4a;color:#fff">PLAYW</div>Lisboa_Tram<small>0:42 · 61 MB</small></div>
+   <div><div class="th" style="background:#f4f5f7"><span class="fico2" style="background:#8a5a2e">M4A</span></div>Fado am Abend<small>3:12 · 4 MB</small></div>
+  </div>
+  <div class="ind"></div>
+ </div><div class="cap">파일 · 폴더 (아이콘 보기)<small>사진은 썸네일 · 문서는 첫 장 · 영상 · 음성</small></div></div>
+
+ <div><div class="ph fl2" style="background:#eceef1">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="top"><span class="cb">BACK</span><span style="font-size:14.5px;font-weight:600">Bordkarte_VA231.pdf</span><span class="cb">MOREB</span></div>
+  <div class="pv2">
+   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><b style="font-size:18px;color:#2c4a80;letter-spacing:.02em">VARO AIR</b><span style="font-size:9.5px;color:#8a929d;letter-spacing:.08em">BOARDING PASS</span></div>
+   <div class="bpass"><div class="h"><span>K / MARA</span><span>ECONOMY</span></div>
+    <div class="r"><div><small>Varo</small><b>VAR</b></div><span style="color:#8a929d;margin-bottom:6px">PLANEG</span><div style="text-align:right"><small>Lisboa</small><b>LIS</b></div></div>
+    <div class="g"><div>FLIGHT<b>VA 231</b></div><div>DATE<b>30 OCT</b></div><div>BOARD<b>04:55</b></div><div>SEAT<b>14C</b></div></div>
+    <svg class="bc" viewBox="0 0 250 46" preserveAspectRatio="none" style="display:block;width:calc(100% - 24px)"><rect x="0" y="0" width="1" height="46" fill="#161b22"/><rect x="3" y="0" width="2" height="46" fill="#161b22"/><rect x="8" y="0" width="1" height="46" fill="#161b22"/><rect x="10" y="0" width="3" height="46" fill="#161b22"/><rect x="15" y="0" width="1" height="46" fill="#161b22"/><rect x="18" y="0" width="3" height="46" fill="#161b22"/><rect x="24" y="0" width="3" height="46" fill="#161b22"/><rect x="29" y="0" width="1" height="46" fill="#161b22"/><rect x="32" y="0" width="3" height="46" fill="#161b22"/><rect x="36" y="0" width="1" height="46" fill="#161b22"/><rect x="39" y="0" width="1" height="46" fill="#161b22"/><rect x="42" y="0" width="1" height="46" fill="#161b22"/><rect x="45" y="0" width="3" height="46" fill="#161b22"/><rect x="51" y="0" width="3" height="46" fill="#161b22"/><rect x="57" y="0" width="3" height="46" fill="#161b22"/><rect x="62" y="0" width="2" height="46" fill="#161b22"/><rect x="65" y="0" width="1" height="46" fill="#161b22"/><rect x="68" y="0" width="3" height="46" fill="#161b22"/><rect x="73" y="0" width="2" height="46" fill="#161b22"/><rect x="78" y="0" width="2" height="46" fill="#161b22"/><rect x="83" y="0" width="3" height="46" fill="#161b22"/><rect x="88" y="0" width="3" height="46" fill="#161b22"/><rect x="93" y="0" width="2" height="46" fill="#161b22"/><rect x="96" y="0" width="2" height="46" fill="#161b22"/><rect x="100" y="0" width="2" height="46" fill="#161b22"/><rect x="103" y="0" width="1" height="46" fill="#161b22"/><rect x="106" y="0" width="2" height="46" fill="#161b22"/><rect x="109" y="0" width="1" height="46" fill="#161b22"/><rect x="113" y="0" width="3" height="46" fill="#161b22"/><rect x="117" y="0" width="2" height="46" fill="#161b22"/><rect x="120" y="0" width="3" height="46" fill="#161b22"/><rect x="125" y="0" width="1" height="46" fill="#161b22"/><rect x="128" y="0" width="3" height="46" fill="#161b22"/><rect x="134" y="0" width="1" height="46" fill="#161b22"/><rect x="136" y="0" width="1" height="46" fill="#161b22"/><rect x="140" y="0" width="2" height="46" fill="#161b22"/><rect x="144" y="0" width="1" height="46" fill="#161b22"/><rect x="146" y="0" width="2" height="46" fill="#161b22"/><rect x="149" y="0" width="1" height="46" fill="#161b22"/><rect x="151" y="0" width="1" height="46" fill="#161b22"/><rect x="154" y="0" width="3" height="46" fill="#161b22"/><rect x="159" y="0" width="2" height="46" fill="#161b22"/><rect x="163" y="0" width="1" height="46" fill="#161b22"/><rect x="166" y="0" width="2" height="46" fill="#161b22"/><rect x="170" y="0" width="1" height="46" fill="#161b22"/><rect x="174" y="0" width="3" height="46" fill="#161b22"/><rect x="180" y="0" width="3" height="46" fill="#161b22"/><rect x="184" y="0" width="2" height="46" fill="#161b22"/><rect x="189" y="0" width="1" height="46" fill="#161b22"/><rect x="192" y="0" width="3" height="46" fill="#161b22"/><rect x="197" y="0" width="2" height="46" fill="#161b22"/><rect x="201" y="0" width="1" height="46" fill="#161b22"/><rect x="205" y="0" width="2" height="46" fill="#161b22"/><rect x="208" y="0" width="3" height="46" fill="#161b22"/><rect x="213" y="0" width="1" height="46" fill="#161b22"/><rect x="216" y="0" width="3" height="46" fill="#161b22"/><rect x="221" y="0" width="2" height="46" fill="#161b22"/><rect x="225" y="0" width="3" height="46" fill="#161b22"/><rect x="229" y="0" width="1" height="46" fill="#161b22"/><rect x="231" y="0" width="2" height="46" fill="#161b22"/><rect x="235" y="0" width="3" height="46" fill="#161b22"/><rect x="240" y="0" width="2" height="46" fill="#161b22"/><rect x="244" y="0" width="2" height="46" fill="#161b22"/><rect x="248" y="0" width="2" height="46" fill="#161b22"/></svg></div>
+   <div style="margin-top:14px"><i style="display:block;height:6px;border-radius:3px;background:#eceef2;width:92%;margin-bottom:8px"></i><i style="display:block;height:6px;border-radius:3px;background:#eceef2;width:74%;margin-bottom:8px"></i><i style="display:block;height:6px;border-radius:3px;background:#eceef2;width:84%"></i></div>
+  </div>
+  <div class="pvt"><i class="on"></i><i></i></div>
+  <div style="text-align:center;font-size:12px;color:#6b7380;margin-top:8px">2쪽 중 1쪽 · 받은 곳: 메일 · Varo Air</div>
+  <div class="actbar">SHRB STARB TRASHB INFOB</div>
+  <div class="ind"></div>
+ </div><div class="cap">파일 · 미리보기<small>종류에 맞는 첫 장 · 쪽 넘김 · 받은 곳(메일과 이어짐) · 사적인 파일은 미리보기 없음</small></div></div>
+</div>
+
+<!-- ============ 날씨 ============ -->
+<div class="row">
+ <div><div class="ph wx2" style="background:#5d6f84">
+  <div class="sky"><i class="cl" style="--x:46px;--d:22s;width:380px;height:200px;left:-120px;top:40px;background:#6a7c90"></i><i class="cl" style="--x:-40px;--d:30s;width:300px;height:170px;right:-110px;top:20px;background:#718397"></i><i class="cl" style="--x:30px;--d:18s;width:260px;height:150px;left:90px;top:-60px;background:#677a8e"></i>RAIN</div>
+  <div class="sb" style="color:#fff;position:relative"><span>17:42</span><span class="i">SIGW</span></div>
+  <div class="wtop"><small>NAVW 현재 위치</small><h2>Varo</h2><div class="t">11°</div><div class="c">비</div><div class="hl">최고:13° 최저:8°</div><div class="wsrc">TRKW 상태창 · 10월 25일 17:40 · Rathaus</div></div>
+  <div style="height:16px"></div>
+  <div class="wcard"><div class="ln1">22시쯤 비가 그쳐요. 내일 아침은 흐리고 바람이 약해요.</div>
+   <div class="hr2"><div>지금<em>90%</em>RAINI<b>11°</b></div><div>18시<em>80%</em>RAINI<b>10°</b></div><div>19시<em>70%</em>RAINI<b>10°</b></div><div>20시<em>40%</em>CLDI<b>9°</b></div><div>21시<em></em>CLDI<b>9°</b></div><div>22시<em></em>MOONI<b>8°</b></div></div></div>
+  <div class="wcard"><div class="hd">CALW 10일간의 일기예보</div>
+   <div class="d10"><span>오늘</span><span class="ic">RAINI<em>90%</em></span><span class="lo">8°</span><span class="bar"><i style="left:22%;right:34%;background:#8fd0e6"></i><b style="left:40%"></b></span><span class="hi">13°</span></div>
+   <div class="d10"><span>일</span><span class="ic">CLDI</span><span class="lo">7°</span><span class="bar"><i style="left:14%;right:28%;background:#8fd0e6"></i></span><span class="hi">14°</span></div>
+   <div class="d10"><span>월</span><span class="ic">SUNI</span><span class="lo">6°</span><span class="bar"><i style="left:8%;right:14%;background:#f3c66b"></i></span><span class="hi">16°</span></div>
+   <div class="d10"><span>화</span><span class="ic">SUNI</span><span class="lo">7°</span><span class="bar"><i style="left:12%;right:10%;background:#f3c66b"></i></span><span class="hi">17°</span></div>
+  </div>
+  <div class="ind" style="background:#fff"></div>
+ </div><div class="cap">날씨 · 지금 (비)<small>하늘 그림이 날씨 따라 · 상태창 기준 표시 · 시간별 강수 확률 · 10일 기온 막대</small></div></div>
+
+ <div><div class="ph wx2" style="background:#5d6f84">
+  <div class="sky"><i class="cl" style="--x:50px;width:380px;height:200px;left:-120px;top:-60px;background:#6a7c90"></i>RAIN</div>
+  <div class="sb" style="color:#fff;position:relative"><span>17:42</span><span class="i">SIGW</span></div>
+  <div style="position:relative;text-align:center;padding:4px 0 14px"><b style="font-size:20px">Varo</b><div style="font-size:14px;opacity:.9">11° | 비</div></div>
+  <div class="tiles" style="position:relative">
+   <div class="tile"><div class="hd">DROPW 강수량</div><b>4 <small>mm</small></b><div style="font-size:12.5px;font-weight:500">지난 24시간</div><p>내일까지 1 mm 더 와요.</p></div>
+   <div class="tile"><div class="hd">THERMW 체감 온도</div><b>9°</b><p>바람 때문에 더 춥게 느껴져요.</p></div>
+   <div class="tile"><div class="hd">WINDW 바람</div><b>14 <small>km/h</small></b><div style="font-size:12.5px">돌풍 31 km/h</div><span class="cmp2"><i></i></span><p>남서풍</p></div>
+   <div class="tile"><div class="hd">HUMW 습도</div><b>93%</b><p>이슬점이 지금 10°예요.</p></div>
+   <div class="tile"><div class="hd">SUNW 일몰</div><b>17:58</b><svg class="arc" viewBox="0 0 150 46"><path d="M4 42 Q75 -12 146 42" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2"/><line x1="0" y1="34" x2="150" y2="34" stroke="rgba(255,255,255,.3)"/><circle cx="128" cy="27" r="5" fill="#fff"/></svg><p>일출: 07:21</p></div>
+   <div class="tile"><div class="hd">EYEW 가시거리</div><b>6 <small>km</small></b><p>빗속이라 평소보다 짧아요.</p></div>
+  </div>
+  <div class="ind" style="background:#fff"></div>
+ </div><div class="cap">날씨 · 아래로 내리면<small>강수량 · 체감 · 바람 나침반 · 습도 · 일출·일몰 · 가시거리</small></div></div>
+
+ <div><div class="ph wx2" style="background:#3f86d6">
+  <div class="sky"><i style="width:120px;height:120px;right:-58px;top:150px;background:#f6c94a"></i><i class="sn" style="width:180px;height:180px;right:-88px;top:120px;background:rgba(246,201,74,.2)"></i><i class="sn2" style="width:250px;height:250px;right:-123px;top:85px;background:rgba(246,201,74,.09)"></i><i class="cl" style="--x:60px;--d:24s;width:200px;height:60px;left:-60px;top:250px;background:rgba(255,255,255,.14)"></i><i style="width:300px;height:120px;left:-80px;top:300px;background:#4d93dd"></i></div>
+  <div class="sb" style="color:#fff;position:relative"><span>18:42</span><span class="i">SIGW</span></div>
+  <div class="wtop"><small>Westend</small><h2>Westend</h2><div class="t">19°</div><div class="c">맑음</div><div class="hl">최고:21° 최저:12°</div></div>
+  <div style="height:22px"></div>
+  <div class="wcard"><div class="ln1">밤까지 맑아요. 일몰은 18:51이에요.</div>
+   <div class="hr2"><div>지금<em></em>SUNI<b>19°</b></div><div>19시<em></em>SUNI<b>18°</b></div><div>19:51<em></em>SETI<b style="font-size:13px;margin-top:6px">일몰</b></div><div>20시<em></em>MOONI<b>16°</b></div><div>21시<em></em>MOONI<b>15°</b></div><div>22시<em></em>MOONI<b>14°</b></div></div></div>
+  <div class="wcard"><div class="hd">CALW 10일간의 일기예보</div>
+   <div class="d10"><span>오늘</span><span class="ic">SUNI</span><span class="lo">12°</span><span class="bar"><i style="left:30%;right:8%;background:#f3c66b"></i><b style="left:70%"></b></span><span class="hi">21°</span></div>
+   <div class="d10"><span>일</span><span class="ic">SUNI</span><span class="lo">13°</span><span class="bar"><i style="left:34%;right:6%;background:#f3a24f"></i></span><span class="hi">22°</span></div>
+  </div>
+  <div class="ind" style="background:#fff"></div>
+ </div><div class="cap">날씨 · 저장한 도시 (맑음)<small>맑은 날은 파란 하늘 · 해 · 그 도시의 현지 시각</small></div></div>
+
+ <div><div class="ph" style="background:#f4f5f7">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="top"><span class="cb">BACK</span><span class="kp" style="color:#3f6a9e">편집</span></div>
+  <div class="h1"><b>날씨</b></div>
+  <div class="wsearch">SRCHG 도시 또는 공항 검색</div>
+  <div class="cl2" style="background:#5d6f84"><i class="cl" style="width:220px;height:120px;right:-50px;top:-30px;background:#6a7c90"></i><div class="l"><b>현재 위치</b><small>Varo</small><span>비</span></div><div class="r"><b>11°</b><span>최고:13° 최저:8°</span></div></div>
+  <div class="cl2" style="background:#3f86d6"><i style="width:64px;height:64px;left:150px;top:-26px;background:#f6c94a"></i><div class="l"><b>Westend</b><small>18:42</small><span>맑음</span></div><div class="r"><b>19°</b><span>최고:21° 최저:12°</span></div></div>
+  <div class="cl2" style="background:#6b7f9c"><i class="cl" style="width:220px;height:110px;right:-60px;top:-20px;background:#7a8daa"></i><div class="l"><b>Eastgate</b><small>17:42</small><span>흐림 · 도로 통제</span></div><div class="r"><b>10°</b><span>최고:12° 최저:7°</span></div></div>
+  <div class="cl2" style="background:#28324a"><i style="width:34px;height:34px;left:150px;top:14px;background:#e9e4cf"></i><i style="width:34px;height:34px;left:159px;top:8px;background:#28324a"></i><div class="l"><b>Lisboa</b><small>16:42</small><span>맑은 밤</span></div><div class="r"><b>17°</b><span>최고:22° 최저:15°</span></div></div>
+  <div class="ind"></div>
+ </div><div class="cap">날씨 · 도시 목록<small>주인이 정한 순서 · 카드 색이 그 도시 날씨 · 끝난 여행지도 남음</small></div></div>
+</div>
+
+<!-- ============ 배달의민족 ============ -->
+<div class="row">
+ <div><div class="ph bm2">
+  <div class="bmh"><div class="sb" style="color:#fff;margin:0 -16px"><span>17:42</span><span class="i">SIGW</span></div>
+   <div class="r1"><b>우리집 CHEVDW</b><span>BELLW<span style="position:relative">CARTW<i class="badge">2</i></span></span></div>
+   <div class="q">SRCHG 찾는 메뉴가 뭐예요?</div></div>
+  <div class="bmtabs"><span class="on">배달</span><span>픽업</span><span>장보기·쇼핑</span><span>선물하기</span></div>
+  <div class="cat2"><div><span style="background:#fff3e3">🍚</span>한식</div><div><span style="background:#ffeceb">🍢</span>분식</div><div><span style="background:#f3efe9">☕</span>카페·디저트</div><div><span style="background:#fff0e0">🍗</span>치킨</div><div><span style="background:#fff7dc">🍕</span>피자</div><div><span style="background:#ffeceb">🥟</span>중식</div><div><span style="background:#f2f7ec">🥗</span>샐러드</div><div><span style="background:#e9f3fb">🍲</span>죽</div><div><span style="background:#f4eefa">🌙</span>야식</div><div><span style="background:#f1f2f4">⋯</span>전체</div></div>
+  <div class="bnr" style="background:#3a6ee8"><i style="width:120px;height:120px;right:-20px;top:-10px;background:#5585ee"></i><i style="width:70px;height:70px;right:40px;top:30px;background:#ffd34d"></i><b>비 오는 날엔 따뜻한 국물</b><small>죽 · 국밥 · 칼국수 모아보기</small><em>1 / 6</em></div>
+  <div class="bmsec2">자주 시킨 가게<small>전체보기 ›</small></div>
+  <div class="st2">
+   <div class="stc"><div class="im" data-food="juk"></div><b>골목죽집 본점<span class="club">배민클럽</span></b><span><em>★ 4.9</em> (1,203) · 25~35분</span></div>
+   <div class="stc"><div class="im" data-food="mala"></div><b>마라공방</b><span><em>★ 4.8</em> (842) · 30~40분</span></div>
+  </div>
+  <div class="tabbar"><div class="on">HOMEB<br>홈</div><div>SRCHB<br>검색</div><div>HEARTB<br>찜</div><div>RCPB<br>주문내역</div><div>USERB<br>my배민</div></div>
+ </div><div class="cap">배민 · 홈<small>주소 · 검색 · 배달/픽업 탭 · 카테고리 · 날씨 따라 바뀌는 배너 · 자주 시킨 가게</small></div></div>
+
+ <div><div class="ph bm2" style="background:#fff">
+  <div class="hero" data-food="jukbig"></div><div class="sb" style="position:absolute;left:0;right:0;top:0;z-index:4;color:#161b22"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="herob"><span>BACK</span><span style="display:flex;gap:8px;width:auto;background:none"><span>HEARTB</span><span>SHRB</span></span></div>
+  <div class="sinfo"><h2>골목죽집 본점</h2><div class="rt"><em>★★★★★</em> 4.9 · 리뷰 1,203</div>
+   <div class="meta"><span>최소주문</span><span>12,000원</span><span>배달팁</span><span>0원 ~ 2,000원</span><span>배달시간</span><span>25~35분 소요 · 비 오는 날 +10분</span></div></div>
+  <div class="mtabs"><span class="on">메뉴</span><span>정보</span><span>리뷰 1,203</span></div>
+  <div class="mi"><div class="tx"><b><span class="rep">대표</span>전복죽</b><p>국내산 전복 · 참기름 · 김가루</p><strong>13,500원</strong></div><div class="im" data-food="juk"></div></div>
+  <div class="mi"><div class="tx"><b>소고기야채죽</b><p>한우 다짐육 · 당근 · 애호박</p><strong>11,000원</strong></div><div class="im" data-food="juk2"></div></div>
+  <div class="mi"><div class="tx"><b>동치미 (소)</b><p>시원한 국물</p><strong>3,000원</strong></div><div class="im" data-food="soup"></div></div>
+  <div class="cta2"><em>2</em>24,500원 장바구니 보기</div>
+ </div><div class="cap">배민 · 가게<small>대표 메뉴 · 최소주문 · 배달팁 · 리뷰 수 · 장바구니 띠</small></div></div>
+
+ <div><div class="ph bm2">
+  <div class="sb" style="background:#fff"><span>17:42</span><span class="i">SIG</span></div>
+  <div style="background:#fff;display:flex;align-items:center;justify-content:space-between;padding:6px 16px 12px"><span>BACK</span><b style="font-size:17px">장바구니</b><span style="width:22px"></span></div>
+  <div class="cart"><div class="sh">STOREB 마라공방</div>
+   <div class="cit"><div class="im" data-food="mala"></div><div class="tx"><b>마라탕 (1인)</b><small>맵기: 1단계 · 옥수수면 추가</small><div class="q"><strong>12,000원</strong><span class="step"><span>−</span><b>1</b><span>+</span></span></div></div></div>
+   <div class="cit"><div class="im" data-food="guo"></div><div class="tx"><b>꿔바로우 (소)</b><small>기본</small><div class="q"><strong>11,000원</strong><span class="step"><span>−</span><b>1</b><span>+</span></span></div></div></div></div>
+  <div class="req"><h4>요청사항</h4><div class="bx"><small>가게 사장님께</small>맵기 1단계로 덜 맵게 해주세요</div><div class="bx"><small>배달 기사님께</small>문 앞에 놓고 벨 누르지 말아주세요</div><div class="chk2"><i>CHKW</i>일회용 수저·포크 안 받기</div></div>
+  <div class="sum"><div><span>주문금액</span><span>23,000원</span></div><div><span>배달팁</span><span>0원</span></div><div class="t"><span>결제예정금액</span><span>23,000원</span></div></div>
+  <div class="cta2" style="bottom:26px">23,000원 배달 주문하기</div>
+ </div><div class="cap">배민 · 장바구니 (아직 주문 안 함)<small>담아만 둔 메뉴 · 요청사항 · 결제 전이라 은행엔 안 들어감</small></div></div>
+
+ <div><div class="ph bm2">
+  <div class="sb" style="background:#fff"><span>17:42</span><span class="i">SIG</span></div>
+  <div style="background:#fff;padding:6px 16px 12px;font-size:21px;font-weight:800;display:flex;justify-content:space-between;align-items:center">주문내역<span>SRCHB</span></div>
+  <div class="oc"><div class="hd"><span><b>배달완료</b> · 10. 24. (금) 23:48</span><span>주문상세 ›</span></div>
+   <div class="bd"><div class="im" data-food="juk"></div><div><b>골목죽집 본점 ›</b><span>전복죽 1개 외 1개 · 2인분</span><br><span>21,500원 · 우리집</span></div></div>
+   <div class="bt2"><span>리뷰 쓰기</span><span class="m">같은 메뉴 담기</span></div></div>
+  <div class="oc"><div class="hd"><span><b>배달완료</b> · 10. 21. (화) 21:10<span class="gift">선물</span></span><span>주문상세 ›</span></div>
+   <div class="bd"><div class="im" data-food="soup"></div><div><b>골목죽집 본점 ›</b><span>소고기야채죽 1개 · Ren 집으로</span><br><span>13,000원</span></div></div>
+   <div class="bt2"><span>리뷰 작성 완료</span><span class="m">같은 메뉴 담기</span></div></div>
+  <div class="oc"><div class="hd"><span><b>배달완료</b> · 10. 18. (토) 13:02</span><span>주문상세 ›</span></div>
+   <div class="bd"><div class="im" data-food="mala"></div><div><b>마라공방 ›</b><span>마라탕 1개 · 1인분</span><br><span>12,000원 · 회사</span></div></div></div>
+  <div class="tabbar"><div>HOMEB<br>홈</div><div>SRCHB<br>검색</div><div>HEARTB<br>찜</div><div class="on">RCPB<br>주문내역</div><div>USERB<br>my배민</div></div>
+ </div><div class="cap">배민 · 주문내역<small>1인분 → 2인분 · 선물로 보낸 주문 · 집/회사 주소 · 리뷰 흔적</small></div></div>
+</div>
+
+<!-- ============ Uber Eats ============ -->
+<div class="row">
+ <div><div class="ph ue2">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="top2">
+   <div class="dnow"><div><small>Jetzt liefern</small><b>Brückenstr. 4 CHEVDB</b></div><span>CARTB<em>2</em></span></div>
+   <div class="ueq2">SRCHG Essen, Geschäfte, Getränke</div></div>
+  <div class="uecat"><div><span>🍕</span>Pizza</div><div><span>🍣</span>Sushi</div><div><span>🍔</span>Burger</div><div><span>🍜</span>Asiatisch</div><div><span>🥗</span>Gesund</div></div>
+  <div class="ueh2">Erneut bestellen<span>ARRB</span></div>
+  <div class="again"><div><div class="im" data-food="pasta"></div><b>Pasta Nostra</b><small>25–35 Min.</small></div><div><div class="im" data-food="soup"></div><b>Suppenküche</b><small>20–30 Min.</small></div><div><div class="im" data-food="sushi"></div><b>Kumo Sushi</b><small>35–45 Min.</small></div></div>
+  <div class="ueh2">Beliebt in deiner Nähe<span>ARRB</span></div>
+  <div class="sc"><div class="im" data-food="pizzabig"><em>Kaufe 1, erhalte 1 gratis</em><span class="hrt">HEARTW</span></div><div class="r"><div><b>Forno Westend</b><small>0,99 € Liefergebühr · 25–35 Min.</small></div><span class="rt">4.7</span></div></div>
+  <div class="uetab2"><div class="on">HOMEB<br>Startseite</div><div>BAGB<br>Lebensmittel</div><div>SRCHB<br>Suchen</div><div>RCPB<br>Bestellungen</div><div>USERB<br>Konto</div></div>
+ </div><div class="cap">Uber Eats · 홈<small>배달 주소 · 카테고리 · 다시 주문 · 근처 인기 · 장바구니 배지</small></div></div>
+
+ <div><div class="ph ue2">
+  <div class="uehero" data-food="pastabig"></div><div class="sb" style="position:absolute;left:0;right:0;top:0;z-index:4;color:#161b22"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="herob"><span>BACK</span><span style="display:flex;gap:8px;width:auto;background:none"><span>HEARTB</span><span>SHRB</span></span></div>
+  <div class="ueinfo"><h2>Pasta Nostra</h2><div class="m"><b>4.8 ★</b> (500+) · Italienisch · €€</div><div class="m">1,99 € Liefergebühr · 25–35 Min.</div>
+   <div class="tog"><span class="on">Lieferung</span><span>Abholung</span></div></div>
+  <div style="padding:6px 16px 10px;font-size:19px;font-weight:700">Beliebt</div>
+  <div class="pop"><div><div class="im" data-food="pasta"><span>PLUSB</span></div><b>Tagliatelle al ragù</b><small>13,90 € · #1 meistbestellt</small></div><div><div class="im" data-food="pasta2"><span>PLUSB</span></div><b>Penne arrabbiata</b><small>11,50 €</small></div></div>
+  <div class="vc"><span style="display:flex;align-items:center;gap:10px"><em>2</em>Warenkorb ansehen</span><span>25,40 €</span></div>
+ </div><div class="cap">Uber Eats · 가게<small>평점 · 배달비 · 배달/픽업 · 인기 메뉴 · 장바구니 보기(결제 전)</small></div></div>
+
+ <div><div class="ph ue2">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div style="padding:8px 16px 12px;font-size:28px;font-weight:700">Bestellungen</div>
+  <div class="otab"><span class="on">Vergangene</span><span>Laufende</span></div>
+  <div class="or"><div class="im" data-food="pasta"></div><div class="tx"><b>Pasta Nostra</b><span>2 Artikel · 24,80 € · 25. Okt. 20:14</span><span>Zugestellt · Zuhause</span><a>Beleg ansehen</a></div><em>Erneut</em></div>
+  <div class="or"><div class="im" data-food="soup"></div><div class="tx"><b>Suppenküche Westend</b><span>1 Artikel · 9,40 € · 22. Okt.</span><span>Zugestellt · an Ren, Westend</span><a>Beleg ansehen</a></div><em>Erneut</em></div>
+  <div class="or"><div class="im" data-food="pasta2"></div><div class="tx"><b>Pasta Nostra</b><span>1 Artikel · 12,40 € · 18. Okt.</span><span>Zugestellt · Arbeit</span><a>Beleg ansehen</a></div><em>Erneut</em></div>
+  <div class="or"><div class="im" data-food="sushi"></div><div class="tx"><b>Kumo Sushi</b><span>1 Artikel · 15,20 € · 9. Okt.</span><span style="color:#c0392b">Storniert · erstattet</span><a>Beleg ansehen</a></div></div>
+  <div class="uetab2"><div>HOMEB<br>Startseite</div><div>BAGB<br>Lebensmittel</div><div>SRCHB<br>Suchen</div><div class="on">RCPB<br>Bestellungen</div><div>USERB<br>Konto</div></div>
+ </div><div class="cap">Uber Eats · 주문<small>어디로 보냈는지 · 다시 주문 · 취소·환불 흔적</small></div></div>
+
+ <div><div class="ph ue2">
+  <div class="map"><div class="sb" style="position:absolute;left:0;right:0;top:0;z-index:4;color:#161b22"><span>17:42</span><span class="i">SIG</span></div><span class="blk" style="left:20px;top:20px;width:120px;height:80px"></span><span class="blk" style="left:170px;top:30px;width:150px;height:60px"></span><span class="blk" style="left:30px;top:140px;width:90px;height:90px"></span><span class="pk" style="left:220px;top:130px;width:150px;height:90px"></span><span class="rd" style="left:0;right:0;top:110px;height:14px"></span><span class="rd" style="left:150px;top:0;bottom:0;width:14px"></span><span class="rd" style="left:0;right:0;top:232px;height:10px"></span>
+   <svg viewBox="0 0 390 250"><path d="M60 230 L60 117 L157 117 L157 60 L300 60" fill="none" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg>
+   <span class="pin" style="left:45px;top:216px;background:#000">STOREW</span><span class="pin" style="left:286px;top:45px;background:#06c167">HOMEW</span>
+   <div class="herob" style="top:54px"><span>BACK</span><span style="background:none"></span></div></div>
+  <div class="od">
+   <div class="st"><i>CHKW</i><div><b>Zugestellt · 20:51</b><span>Pasta Nostra · 25. Okt. · Vor der Tür abgelegt</span></div></div>
+   <div class="ln"><span><em>1</em>Tagliatelle al ragù</span><span>13,90 €</span></div>
+   <div class="ln"><span><em>1</em>Penne arrabbiata</span><span>11,50 €</span></div>
+   <div class="ln g"><span>Liefergebühr</span><span>1,99 €</span></div>
+   <div class="ln g"><span>Rabatt</span><span style="color:#06c167">−2,59 €</span></div>
+   <div class="ln t"><span>Gesamt</span><span>24,80 €</span></div>
+   <div class="note"><small>Hinweis für den Kurier</small>Bitte vor die Tür stellen. Nicht klingeln.<span class="k2">문 앞에 놓아 주세요. 벨 누르지 마세요.</span></div>
+   <div class="pay">CARDB Visa •••• 7710<a>은행에서 보기 ›</a></div>
+  </div>
+ </div><div class="cap">Uber Eats · 주문 상세<small>배달 경로 지도 · 영수증 · 요청 사항 · 결제 카드 → 은행의 같은 거래</small></div></div>
+</div>
+
+<script>
+(() => {
+const I = (d, z = 20, c = 'currentColor', w = 2.2, f = 'none') => `<svg width="${z}" height="${z}" viewBox="0 0 24 24" fill="${f}" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+const P = { alm: 'M12 6a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM12 9v4l2 2M5 3L2 6M19 3l3 3', tmr: 'M12 7a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM12 10v4M10 3h4', wrl: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
+ bell: 'M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0', play: 'M8 5v14l11-7z', walk: 'M13 4a1.5 1.5 0 1 0 0 .1M10 21l2-6 3 3v3M9 12l2-4 4 1 2 3M12 15l-2-3', moon: 'M20 14A8 8 0 1 1 10 4a6 6 0 0 0 10 10z', run: 'M14 4a1.5 1.5 0 1 0 0 .1M6 20l4-5 3 2 1 4M8 11l3-3 4 1 2 4h3M11 8l-2 6', heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
+ chv: 'M9 6l6 6-6 6', up: 'M12 19V5M6 11l6-6 6 6', dn: 'M12 5v14M6 13l6 6 6-6', eq: 'M5 10h14M5 14h14', srch: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5',
+ phone: 'M7 2h10v20H7zM11 18h2', cloud: 'M7 17a4 4 0 0 1 .5-8A5.5 5.5 0 0 1 18 11a3 3 0 0 1-.5 6z', dl: 'M12 4v11M7 10l5 5 5-5M5 20h14', trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13', fold: 'M3 6h7l2 2h9v11H3z', list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01', grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', more: 'M5 12h.01M12 12h.01M19 12h.01',
+ shr: 'M12 3v12M7 8l5-5 5 5M5 14v6h14v-6', star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z', info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v6M12 7.5v.5', plane: 'M2 13l20-6-3 4-8 3-3 6-2-5z',
+ nav: 'M12 2l7 19-7-4-7 4z', trk: 'M4 6h16v12H4zM8 10h8M8 14h5', cal: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4', rain: 'M7 15a4 4 0 0 1 .5-8A5.5 5.5 0 0 1 18 9a3.5 3.5 0 0 1-.5 6M9 18l-1 2M13 18l-1 2M17 18l-1 2', sun: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.4 1.4M17.6 17.6L19 19M5 19l1.4-1.4M17.6 6.4L19 5', set: 'M12 9a4 4 0 0 1 4 4H8a4 4 0 0 1 4-4zM3 13h2M19 13h2M12 3v3M5.6 6.6l1.4 1.4M18.4 6.6L17 8M4 17h16',
+ drop: 'M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z', therm: 'M10 14V5a2 2 0 0 1 4 0v9a4 4 0 1 1-4 0z', wind: 'M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8', eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+ home: 'M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z', rcp: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', user: 'M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 21a8 8 0 0 1 16 0', cart: 'M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8L20 8H6M9 20h.01M17 20h.01', bag: 'M5 8h14l-1.2 11a1 1 0 0 1-1 .9H7.2a1 1 0 0 1-1-.9zM9 8V6a3 3 0 0 1 6 0v2', store: 'M4 9l1.5-5h13L20 9M4 9v11h16V9M4 9h16', chk: 'M5 12l5 5 9-10', card: 'M3 6h18v12H3zM3 10h18', arr: 'M5 12h14M13 6l6 6-6 6', plus: 'M12 5v14M5 12h14', cdn: 'M6 9l6 6 6-6' };
+const T = {
+ ALM: I(P.alm, 17), TMR: I(P.tmr, 17), WRL: I(P.wrl, 17), BACKW: I('M15 5l-7 7 7 7', 18, '#f2f2f4', 2.4), BELLA: I(P.bell, 20, '#f5a524', 2.1), PLAYA: I(P.play, 14, '#f5a524', 2, '#f5a524'),
+ WALKO: I(P.walk, 15, '#f08a3c', 2.2), MOONP: I(P.moon, 15, '#6c63d9', 2.2), RUNG: I(P.run, 15, '#2fa36b', 2.2), HEARTR: I(P.heart, 15, '#e0405f', 2.2, '#e0405f'), CHV: I(P.chv, 12, '#b7bdc6', 2.6),
+ UPO: I(P.up, 18, '#f08a3c', 2.4), DNP: I(P.dn, 18, '#6c63d9', 2.4), DNG: I(P.dn, 18, '#2fa36b', 2.4), EQ: I(P.eq, 18, '#8a929d', 2.4),
+ SRCHG: I(P.srch, 16, '#8a929d', 2.4), PHONEB: I(P.phone, 22, '#2f6fbf'), CLOUDB: I(P.cloud, 22, '#2f6fbf'), DLB: I(P.dl, 22, '#2f6fbf'), TRASHB: I(P.trash, 21, '#2f6fbf'), FOLDS: I(P.fold, 22, '#2f6fbf', 2, '#dfeaf8'), LISTB: I(P.list, 17, '#2f6fbf', 2.2), GRIDG: I(P.grid, 17, '#b7bdc6', 2), MOREB: I(P.more, 18, '#2a313b', 3), PLAYW: I(P.play, 28, '#fff', 2, '#fff'),
+ SHRB: I(P.shr, 21, 'currentColor', 2.1), STARB: I(P.star, 21, 'currentColor', 2), INFOB: I(P.info, 21, 'currentColor', 2.1), PLANEG: I(P.plane, 18, '#8a929d', 2),
+ NAVW: I(P.nav, 11, '#fff', 2.6, '#fff'), TRKW: I(P.trk, 12, '#fff', 2), CALW: I(P.cal, 12, '#fff', 2.2), RAINI: I(P.rain, 24, '#fff', 1.9), CLDI: I(P.cloud, 24, '#fff', 1.9, '#fff'), MOONI: I(P.moon, 22, '#fff', 1.9, '#fff'), SUNI: I(P.sun, 24, '#f6c94a', 2, '#f6c94a'), SETI: I(P.set, 24, '#f6c94a', 2),
+ DROPW: I(P.drop, 12, '#fff', 2.2), THERMW: I(P.therm, 12, '#fff', 2.2), WINDW: I(P.wind, 12, '#fff', 2.2), HUMW: I(P.drop, 12, '#fff', 2.2), SUNW: I(P.sun, 12, '#fff', 2.2), EYEW: I(P.eye, 12, '#fff', 2.2),
+ BELLW: I(P.bell, 22, '#fff', 2), CARTW: I(P.cart, 22, '#fff', 2), CHEVDW: I(P.cdn, 16, '#fff', 2.8), CHEVDB: I(P.cdn, 14, '#000', 2.8), CARTB: I(P.cart, 20, '#000', 2.1), BACK: I('M15 5l-7 7 7 7', 18, '#161b22', 2.4), HEARTB: I(P.heart, 18, '#161b22', 2.1), HEARTW: I(P.heart, 22, '#fff', 2.2), STOREB: I(P.store, 18, '#222', 2.1), SRCHB: I(P.srch, 22, 'currentColor', 2.1),
+ HOMEB: I(P.home, 22, 'currentColor', 2), RCPB: I(P.rcp, 22, 'currentColor', 2), USERB: I(P.user, 22, 'currentColor', 2), BAGB: I(P.bag, 22, 'currentColor', 2), CHKW: I(P.chk, 18, '#fff', 3), CARDB: I(P.card, 20, '#000', 2), ARRB: I(P.arr, 16, '#000', 2.4), PLUSB: I(P.plus, 18, '#000', 2.6),
+ STOREW: I(P.store, 16, '#fff', 2.2), HOMEW: I(P.home, 16, '#fff', 2.2),
+};
+const RX = new RegExp('\\b(' + Object.keys(T).sort((a, b) => b.length - a.length).join('|') + ')\\b', 'g');
+const walk = n => { for (const c of [...n.childNodes]) { if (c.nodeType === 3) { if (RX.test(c.textContent)) { RX.lastIndex = 0; const s = document.createElement('span'); s.style.display = 'contents'; s.innerHTML = c.textContent.replace(RX, m => T[m]); c.replaceWith(s); } RX.lastIndex = 0; } else if (c.nodeType === 1 && !['SCRIPT', 'STYLE'].includes(c.tagName)) walk(c); } };
+walk(document.body);
+// rain streaks
+document.querySelectorAll('.sky').forEach(s => { if (!s.textContent.includes('RAIN')) return; s.innerHTML = s.innerHTML.replace('RAIN', ''); for (let k = 0; k < 60; k++) { const r = document.createElement('span'); r.className = 'rn'; r.style.left = (k * 37 % 600) + 'px'; r.style.height = (14 + k * 7 % 16) + 'px'; r.style.setProperty('--d', (1.35 + (k * 13 % 10) / 14) + 's'); r.style.setProperty('--dl', (-(k * 17 % 100) / 100 * 2) + 's'); s.append(r); } });
+// flat food pictures
+const F = {
+ juk: ['#f3e7d3', `<circle cx="50" cy="56" r="40" fill="#fff"/><circle cx="50" cy="56" r="34" fill="#efe1c3"/><circle cx="50" cy="56" r="30" fill="#e7d3a8"/><circle cx="40" cy="50" r="4" fill="#5d7f3a"/><circle cx="58" cy="60" r="3.5" fill="#5d7f3a"/><circle cx="52" cy="46" r="5" fill="#3b3a36"/><circle cx="46" cy="64" r="3" fill="#b48a52"/>`],
+ juk2: ['#efe3cf', `<circle cx="50" cy="56" r="40" fill="#fff"/><circle cx="50" cy="56" r="33" fill="#ead8b6"/><circle cx="42" cy="52" r="4" fill="#e08a3c"/><circle cx="58" cy="58" r="4" fill="#7aa356"/><circle cx="50" cy="64" r="3.5" fill="#8a5a3c"/>`],
+ jukbig: ['#e9dcc6', `<rect x="-10" y="70" width="140" height="60" fill="#d8c6a6"/><circle cx="60" cy="58" r="42" fill="#fff"/><circle cx="60" cy="58" r="35" fill="#efe1c3"/><circle cx="48" cy="52" r="4" fill="#5d7f3a"/><circle cx="68" cy="62" r="4" fill="#5d7f3a"/><circle cx="62" cy="46" r="5.5" fill="#3b3a36"/><circle cx="25" cy="22" r="10" fill="#c9b08a"/><circle cx="100" cy="88" r="12" fill="#f4efe6"/><circle cx="100" cy="88" r="8" fill="#e35d4f"/>`, '0 0 120 100'],
+ mala: ['#f6dfd6', `<circle cx="50" cy="56" r="40" fill="#fff"/><circle cx="50" cy="56" r="34" fill="#c8402e"/><circle cx="50" cy="56" r="28" fill="#d9573c"/><rect x="34" y="44" width="14" height="5" rx="2" fill="#f2d6a2"/><rect x="52" y="58" width="16" height="5" rx="2" fill="#f2d6a2"/><circle cx="44" cy="64" r="4" fill="#6b9a3e"/><circle cx="60" cy="46" r="3" fill="#2b2b2b"/>`],
+ guo: ['#f7ecd9', `<ellipse cx="50" cy="60" rx="42" ry="30" fill="#fff"/><ellipse cx="38" cy="56" rx="14" ry="10" fill="#e6b45c"/><ellipse cx="60" cy="54" rx="15" ry="10" fill="#dca24a"/><ellipse cx="50" cy="68" rx="14" ry="9" fill="#e9bd6a"/><rect x="60" y="62" width="14" height="3" rx="1.5" fill="#e07a3a"/>`],
+ soup: ['#e6efe0', `<circle cx="50" cy="56" r="40" fill="#fff"/><circle cx="50" cy="56" r="33" fill="#f1e9d2"/><circle cx="40" cy="52" r="6" fill="#f4f1ea"/><circle cx="60" cy="60" r="7" fill="#f4f1ea"/><rect x="44" y="40" width="20" height="4" rx="2" fill="#7aa356"/>`],
+ pasta: ['#f2e3d0', `<circle cx="50" cy="56" r="40" fill="#fff"/><circle cx="50" cy="56" r="28" fill="#e9b75c"/><path d="M30 56c6-10 14 10 20 0s14 10 20 0M32 64c6-8 12 8 18 0s12 8 18 0" stroke="#d99a3a" stroke-width="3" fill="none"/><circle cx="50" cy="52" r="11" fill="#a8432f"/><circle cx="56" cy="47" r="3" fill="#6b9a3e"/>`],
+ pasta2: ['#f3ddd2', `<circle cx="50" cy="56" r="40" fill="#fff"/><circle cx="50" cy="56" r="29" fill="#d6573d"/><rect x="34" y="46" width="12" height="5" rx="2.5" fill="#efc77a" transform="rotate(-20 40 48)"/><rect x="54" y="52" width="12" height="5" rx="2.5" fill="#efc77a" transform="rotate(25 60 54)"/><rect x="42" y="62" width="12" height="5" rx="2.5" fill="#efc77a"/><circle cx="60" cy="44" r="3" fill="#6b9a3e"/>`],
+ pastabig: ['#e9d3bb', `<rect x="-10" y="64" width="140" height="60" fill="#c99d74"/><circle cx="60" cy="56" r="44" fill="#fff"/><circle cx="60" cy="56" r="31" fill="#e9b75c"/><path d="M36 56c7-11 16 11 24 0s16 11 24 0M38 66c7-9 14 9 22 0s14 9 22 0" stroke="#d99a3a" stroke-width="3.4" fill="none"/><circle cx="60" cy="52" r="13" fill="#a8432f"/><circle cx="66" cy="46" r="3.5" fill="#6b9a3e"/><circle cx="18" cy="24" r="9" fill="#7aa356"/><circle cx="104" cy="86" r="10" fill="#efe7da"/>`, '0 0 120 100'],
+ sushi: ['#e3e9ef', `<rect x="14" y="40" width="72" height="34" rx="6" fill="#2b2b2b"/><circle cx="32" cy="57" r="11" fill="#f4f1ea"/><circle cx="32" cy="57" r="5" fill="#f08a5d"/><circle cx="56" cy="57" r="11" fill="#f4f1ea"/><circle cx="56" cy="57" r="5" fill="#6b9a3e"/><circle cx="78" cy="57" r="8" fill="#f4f1ea"/>`],
+ pizzabig: ['#f0d9b5', `<rect x="-10" y="70" width="140" height="50" fill="#c79a66"/><circle cx="60" cy="54" r="40" fill="#e4a64c"/><circle cx="60" cy="54" r="34" fill="#d6502f"/><circle cx="60" cy="54" r="31" fill="#f1d27a"/><circle cx="48" cy="44" r="6" fill="#b5352a"/><circle cx="70" cy="48" r="6" fill="#b5352a"/><circle cx="58" cy="66" r="6" fill="#b5352a"/><circle cx="76" cy="64" r="3" fill="#5d7f3a"/><circle cx="44" cy="60" r="3" fill="#5d7f3a"/>`, '0 0 120 100'],
+};
+document.querySelectorAll('[data-food]').forEach(e => { const f = F[e.dataset.food]; if (!f) return; const vb = f[2] || '0 0 100 100'; e.style.background = f[0]; e.insertAdjacentHTML('afterbegin', `<svg viewBox="${vb}" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%">${f[1]}</svg>`); });
+})();
+</script>

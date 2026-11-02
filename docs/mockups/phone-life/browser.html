@@ -1,0 +1,399 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif:wght@400;600;700&family=Source+Serif+4:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:28px 34px;background:#e9e5e1;font-family:-apple-system,'SF Pro Text','Noto Sans KR',sans-serif;color:#161b22}
+.bt{font:700 26px 'Noto Sans KR',sans-serif;color:#3a332c;margin:0 0 4px 4px}.bs{font:400 14px 'Noto Sans KR',sans-serif;color:#7a6f66;margin:0 0 18px 4px}
+.row{display:flex;gap:40px;margin-bottom:56px;align-items:flex-start;padding:14px 14px 4px}
+.cap{font:600 14px 'Noto Sans KR',sans-serif;color:#6b625b;text-align:center;margin-top:16px;width:390px}
+.cap small{display:block;font-weight:400;color:#8a7f76;margin-top:3px}
+.ph{width:390px;height:844px;border-radius:48px;overflow:hidden;position:relative;box-shadow:0 0 0 10px #16130f,0 20px 50px rgba(0,0,0,.22);display:flex;flex-direction:column;background:#fff;font-family:'Noto Sans KR',-apple-system,sans-serif}
+.sb{height:54px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:4px 30px 0 36px;font:600 16px 'Inter Tight',-apple-system,sans-serif;position:relative;z-index:3}
+.sb.w{color:#fff}
+.sb .i{display:flex;gap:6px;align-items:center}
+.ind{position:absolute;left:50%;bottom:8px;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:#161b22;z-index:9}
+.scroll{flex:1;overflow:hidden;position:relative}
+.k{display:block;color:#7c8592;font-family:'Noto Sans KR',sans-serif;font-size:.84em;font-weight:400;margin-top:3px;line-height:1.5;letter-spacing:0}
+.num{font-family:'Inter Tight',-apple-system,sans-serif;font-variant-numeric:tabular-nums}
+svg{flex:none;display:block}
+
+/* ---- Safari chrome: bottom bar */
+.sf{position:absolute;left:0;right:0;bottom:0;z-index:6;padding:8px 12px 30px;background:rgba(246,246,248,.94);backdrop-filter:blur(20px) saturate(120%);box-shadow:0 -.5px 0 rgba(0,0,0,.12)}
+.sf.dk{background:rgba(28,28,30,.94);box-shadow:0 -.5px 0 rgba(255,255,255,.1);color:#fff}
+.addr{height:46px;border-radius:14px;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px;box-shadow:0 1px 3px rgba(0,0,0,.08),0 0 0 .5px rgba(0,0,0,.06)}
+.addr .aa{font:600 15px 'Inter Tight',sans-serif;color:#161b22;letter-spacing:-.04em;width:26px}
+.addr .aa small{font-size:11px}
+.addr .u{flex:1;text-align:center;font-size:15.5px;color:#161b22;display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;overflow:hidden}
+.addr .u.ph2{color:#8a8a8e}
+.tb{display:flex;justify-content:space-between;align-items:center;padding:12px 14px 0;color:#2f6bff}
+.tb .off{color:#c3c6cc}
+/* compact bar after scrolling */
+.sfmini{position:absolute;left:0;right:0;bottom:0;z-index:6;height:62px;padding-top:6px;text-align:center;font-size:12.5px;color:#161b22;background:rgba(246,246,248,.94);backdrop-filter:blur(20px);box-shadow:0 -.5px 0 rgba(0,0,0,.12)}
+.sfmini span{display:inline-flex;align-items:center;gap:4px}
+
+/* ---- start page */
+.start{background:#f2f2f7;padding:6px 20px 0}
+.sh{font-size:21px;font-weight:700;letter-spacing:-.02em;margin:14px 0 14px;display:flex;justify-content:space-between;align-items:baseline}
+.sh small{font-size:14px;font-weight:500;color:#2f6bff}
+.favs{display:grid;grid-template-columns:repeat(4,1fr);gap:18px 10px}
+.fav{display:flex;flex-direction:column;align-items:center;gap:7px;font-size:11.5px;color:#3a3a3c;text-align:center;line-height:1.25}
+.fav i{width:66px;height:66px;border-radius:15px;display:grid;place-items:center;font:700 26px 'Inter Tight',sans-serif;color:#fff;font-style:normal;box-shadow:0 .5px 0 rgba(0,0,0,.06)}
+.fav i.lt{background:#fff;color:#161b22}
+.freq{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.fq{border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 0 0 .5px rgba(0,0,0,.06)}
+.fq .th{height:104px;overflow:hidden;position:relative;border-bottom:.5px solid #e5e5ea}
+.fq .th > div{position:absolute;left:0;top:0;width:390px;transform:scale(.425);transform-origin:0 0;pointer-events:none}
+.fq p{margin:0;padding:8px 10px 9px;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fq p small{display:block;font-weight:400;color:#8a8a8e;font-size:11.5px}
+.rl{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 0 0 .5px rgba(0,0,0,.06)}
+.rlr{display:flex;gap:12px;align-items:center;padding:11px 12px}
+.rlr + .rlr{border-top:.5px solid #e5e5ea}
+.rlr .im{width:54px;height:54px;border-radius:9px;flex:none;position:relative;overflow:hidden}
+.rlr b{font-size:14.5px;font-weight:600;display:block;line-height:1.3}
+.rlr span{font-size:12.5px;color:#8a8a8e}
+
+/* ---- site 1: news */
+.nw{font-family:'Source Serif 4','Noto Serif',serif;color:#1b1b1b;background:#fff}
+.nwtop{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 8px;border-bottom:1px solid #1b1b1b}
+.nwlogo{font:700 25px 'Source Serif 4',serif;letter-spacing:-.02em}
+.nwlogo span{color:#b3261e}
+.nwnav{display:flex;gap:16px;padding:9px 16px;font:600 13px 'Inter Tight','Noto Sans KR',sans-serif;color:#555;border-bottom:1px solid #e6e6e6;white-space:nowrap;overflow:hidden}
+.nwnav .on{color:#b3261e}
+.nwbody{padding:16px 18px 120px}
+.kick{font:700 12px 'Inter Tight',sans-serif;color:#b3261e;letter-spacing:.06em;text-transform:uppercase}
+.nw h1{font-size:27px;line-height:1.18;margin:8px 0 10px;font-weight:700;letter-spacing:-.01em}
+.nw h1 .k{font-size:15px;font-weight:500;margin-top:6px}
+.lede{font-size:17px;line-height:1.5;color:#333;margin:0 0 14px}
+.by{display:flex;align-items:center;gap:9px;font:500 12.5px 'Inter Tight','Noto Sans KR',sans-serif;color:#666;padding:10px 0;border-top:1px solid #eee;border-bottom:1px solid #eee;margin-bottom:16px}
+.by i{width:28px;height:28px;border-radius:50%;background:#d8c7b4;display:block}
+.by b{color:#1b1b1b}
+.hero{height:212px;border-radius:2px;position:relative;overflow:hidden;background:#7d8f99;margin:0 -18px 6px}
+.cr{font:400 11.5px 'Inter Tight','Noto Sans KR',sans-serif;color:#777;margin-bottom:16px}
+.nw p.t{font-size:17px;line-height:1.6;margin:0 0 14px}
+.nw p.t .k{font-size:14px}
+
+/* ---- site 2: transit */
+.tr{background:#f4f5f2;font-family:'Inter Tight','Noto Sans KR',sans-serif;color:#1d2a20}
+.trtop{background:#1f6b45;color:#fff;padding:12px 16px 14px}
+.trrow{display:flex;justify-content:space-between;align-items:center}
+.trlogo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:18px;letter-spacing:-.01em}
+.trlogo i{width:30px;height:30px;border-radius:8px;background:#f6c344;color:#1f6b45;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:15px}
+.trq{margin-top:12px;background:#fff;border-radius:12px;color:#1d2a20;padding:4px 0}
+.trq div{display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:15px;font-weight:500}
+.trq div + div{border-top:1px solid #eef0ec}
+.trq em{font-style:normal;color:#7a857c;font-size:12.5px;width:28px}
+.alert{margin:12px 14px 0;background:#fff4d6;border-radius:12px;padding:11px 13px;display:flex;gap:10px;font-size:13.5px;line-height:1.45;color:#5a4410}
+.alert b{display:block;font-size:14px;color:#3d2e08}
+.trsec{margin:16px 18px 8px;font-size:13px;font-weight:600;color:#6b766d;display:flex;justify-content:space-between}
+.dep{margin:0 14px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.dr{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.dr + .dr{border-top:1px solid #eef0ec}
+.ln{min-width:38px;height:26px;border-radius:6px;background:#1f6b45;color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px}
+.ln.b{background:#c0392b}
+.dr .to{flex:1;font-size:15px;font-weight:600}
+.dr .to small{display:block;font-size:12.5px;font-weight:400;color:#7a857c;margin-top:1px}
+.dr .t{text-align:right;font-weight:700;font-size:16px}
+.dr .t small{display:block;font-size:11.5px;font-weight:600;color:#c0392b}
+.dr .t small.ok{color:#1f6b45}
+.dr.x .to,.dr.x .t{color:#a9b0aa;text-decoration:line-through}
+
+/* ---- site 3: forum */
+.fo{background:#dae0e6;font-family:'Inter Tight','Noto Sans KR',sans-serif;color:#1a1a1b}
+.fotop{background:#fff;display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #edeff1}
+.fotop .lg{width:32px;height:32px;border-radius:50%;background:#e8590c;color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px}
+.fotop b{font-size:16px;flex:1}
+.fotop .jn{height:30px;padding:0 14px;border-radius:15px;background:#0b5394;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center}
+.post{background:#fff;margin-top:8px;padding:12px 14px}
+.pmeta{font-size:12px;color:#787c7e;display:flex;gap:6px;align-items:center}
+.pmeta b{color:#1a1a1b}
+.post h2{font-size:19px;line-height:1.3;margin:6px 0 8px;font-weight:600}
+.post h2 .k{font-size:13.5px}
+.flair{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:10px;background:#e3eefb;color:#0b5394;margin-bottom:8px}
+.post p{font-size:15px;line-height:1.5;margin:0 0 10px}
+.acts{display:flex;gap:8px;font-size:12.5px;font-weight:700;color:#787c7e}
+.acts span{display:flex;align-items:center;gap:5px;height:30px;padding:0 10px;border-radius:15px;background:#f6f7f8}
+.cmts{background:#fff;margin-top:8px;padding:6px 14px 120px}
+.cm{padding:10px 0 4px;position:relative}
+.cm.r{margin-left:16px;padding-left:12px;border-left:2px solid #edeff1}
+.cm .pmeta i{width:22px;height:22px;border-radius:50%;display:block}
+.cm p{margin:5px 0 6px;font-size:14.5px;line-height:1.45}
+.cm .acts{font-size:12px}
+.cm .acts span{background:none;padding:0;height:auto}
+
+/* ---- site 4: wiki */
+.wk{background:#fff;font-family:'Inter Tight','Noto Sans KR',sans-serif;color:#202122}
+.wktop{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid #eaecf0}
+.wklogo{font:600 19px 'Noto Serif',serif;letter-spacing:.02em;flex:1}
+.wklogo small{display:block;font:400 10px 'Inter Tight',sans-serif;letter-spacing:.04em;color:#54595d}
+.wkbody{padding:14px 16px 120px}
+.wk h1{font:400 28px 'Noto Serif',serif;margin:0 0 4px;padding-bottom:6px;border-bottom:1px solid #a2a9b1}
+.wkfrom{font-size:12.5px;color:#54595d;margin-bottom:12px}
+.ibox{background:#f8f9fa;border:1px solid #a2a9b1;margin-bottom:14px;font-size:13px}
+.ibox .ih{background:#cee0f2;text-align:center;font-weight:700;padding:6px;font-size:14px}
+.ibox .im{height:120px;background:#9fb3a3;position:relative;overflow:hidden}
+.ibox table{width:100%;border-collapse:collapse}
+.ibox td{padding:5px 8px;border-top:1px solid #eaecf0;vertical-align:top}
+.ibox td:first-child{font-weight:700;width:42%}
+.wk p{font-size:15.5px;line-height:1.6;margin:0 0 12px}
+.wk a{color:#3366cc;text-decoration:none}
+.toc{border:1px solid #a2a9b1;background:#f8f9fa;padding:10px 14px;font-size:14px;margin-bottom:14px}
+.toc b{display:block;text-align:center;margin-bottom:6px}
+.toc div{padding:2px 0;color:#3366cc}
+.toc div span{color:#202122;margin-right:6px}
+.wk h2{font:400 21px 'Noto Serif',serif;margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid #a2a9b1}
+
+/* ---- aA menu */
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.18);z-index:5}
+.menu{position:absolute;left:12px;bottom:152px;width:270px;border-radius:14px;background:rgba(246,246,248,.97);backdrop-filter:blur(30px);box-shadow:0 12px 40px rgba(0,0,0,.25);z-index:7;overflow:hidden;font-size:16px}
+.mz{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:.5px solid #d1d1d6}
+.mz span{font:500 14px 'Inter Tight',sans-serif;color:#2f6bff}
+.mz b{font:600 15px 'Inter Tight',sans-serif}
+.mi{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:.5px solid #d1d1d6}
+.mi:last-child{border:0}
+.mi.on{color:#2f6bff}
+.mgap{height:7px;background:rgba(0,0,0,.06)}
+
+/* ---- tabs grid */
+.tabs{background:#e9e9ee;padding:8px 18px 0}
+.tg{display:grid;grid-template-columns:repeat(2,1fr);gap:22px 16px}
+.tc .tt{border-radius:14px;height:228px;overflow:hidden;position:relative;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.12)}
+.tc .tt > div{position:absolute;left:0;top:0;width:390px;transform:scale(.4);transform-origin:0 0;pointer-events:none}
+.tc .tt .x{position:absolute;right:7px;top:7px;width:24px;height:24px;border-radius:50%;background:rgba(60,60,67,.5);display:grid;place-items:center;z-index:2}
+.tc.on .tt{box-shadow:0 0 0 3px #2f6bff,0 2px 10px rgba(0,0,0,.12)}
+.tc p{margin:7px 0 0;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:5px;justify-content:center;white-space:nowrap;overflow:hidden}
+.tc p i{width:15px;height:15px;border-radius:4px;flex:none;display:grid;place-items:center;font:700 9px 'Inter Tight',sans-serif;color:#fff;font-style:normal}
+.tbar{position:absolute;left:0;right:0;bottom:0;padding:12px 20px 34px;background:rgba(233,233,238,.94);backdrop-filter:blur(20px);display:flex;justify-content:space-between;align-items:center;font-size:16.5px;color:#2f6bff;z-index:4}
+.tbar .seg{display:flex;background:rgba(118,118,128,.14);border-radius:9px;padding:2px;font-size:13px;color:#161b22}
+.tbar .seg span{padding:5px 12px;border-radius:7px}
+.tbar .seg span.on{background:#fff;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+
+/* ---- bookmark sheet */
+.sheet{position:absolute;left:0;right:0;top:66px;bottom:0;border-radius:12px 12px 0 0;background:#f2f2f7;z-index:7;box-shadow:0 -4px 30px rgba(0,0,0,.2);display:flex;flex-direction:column}
+.under{position:absolute;left:0;right:0;top:50px;bottom:0;transform:scale(.92);border-radius:14px;overflow:hidden;filter:brightness(.55);transform-origin:50% 0;background:#fff}
+.shh{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px}
+.shh .seg3{flex:1;margin:0 14px;display:flex;background:rgba(118,118,128,.12);border-radius:9px;padding:2px}
+.shh .seg3 span{flex:1;height:30px;display:grid;place-items:center;border-radius:7px;color:#3c3c43}
+.shh .seg3 span.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.shh .dn{color:#2f6bff;font-weight:600;font-size:16px}
+.sht{font-size:28px;font-weight:700;letter-spacing:-.02em;padding:4px 16px 10px}
+.srch{margin:0 16px 14px;height:36px;border-radius:10px;background:rgba(118,118,128,.12);display:flex;align-items:center;gap:6px;padding:0 9px;color:#8a8a8e;font-size:16px}
+.grp{margin:0 16px 18px;background:#fff;border-radius:12px;overflow:hidden}
+.gr{display:flex;align-items:center;gap:12px;padding:10px 14px;font-size:16px;position:relative}
+.gr + .gr::before{content:'';position:absolute;top:0;left:56px;right:0;border-top:.5px solid #d1d1d6}
+.gr .fv{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;font:700 14px 'Inter Tight',sans-serif;color:#fff;flex:none}
+.gr .tx{flex:1;min-width:0}
+.gr .tx b{font-weight:400;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gr .tx small{font-size:13px;color:#8a8a8e;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gr .tm{font-size:13px;color:#8a8a8e}
+.gh{font-size:13px;color:#6d6d72;padding:0 30px 6px;text-transform:uppercase;letter-spacing:.02em}
+.shb{position:absolute;left:0;right:0;bottom:0;padding:12px 18px 34px;display:flex;justify-content:flex-end;color:#2f6bff;font-size:16px;background:#f2f2f7}
+
+/* flat layered art (no gradients) */
+.art{position:absolute;border-radius:50%}
+</style></head><body>
+
+<div class="bt">브라우저 — 진짜 사파리처럼</div>
+<div class="bs">페이지는 사이트 종류마다 다른 웹사이트로 그려요 (사이트 색 하나 · 그라데이션 없음). 한국어는 aA 메뉴의 “한국어로 보기”로 켜고 꺼요.</div>
+
+<div class="row">
+ <div><div class="ph" id="start">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="scroll start">
+   <div class="sh">즐겨찾기 <small>더 보기</small></div>
+   <div class="favs">
+    <div class="fav"><i style="background:#1f6b45">V</i>Varo Verkehr</div>
+    <div class="fav"><i class="lt" style="font-family:'Source Serif 4',serif;color:#b3261e">T</i>Tagblatt</div>
+    <div class="fav"><i class="lt" style="font-family:'Noto Serif',serif">W</i>Wikipedia</div>
+    <div class="fav"><i style="background:#e8590c">v</i>Varo-Forum</div>
+    <div class="fav"><i style="background:#2f7d74">m</i>markt.</div>
+    <div class="fav"><i style="background:#3d6fb4">☀</i>Wetter Varo</div>
+    <div class="fav"><i style="background:#c0392b">DB</i>Nordbahn</div>
+    <div class="fav"><i style="background:#2c4a80">V</i>Varo Bank</div>
+   </div>
+   <div class="sh" style="margin-top:26px">자주 방문한 사이트</div>
+   <div class="freq">
+    <div class="fq"><div class="th"><div data-clone="trpage"></div></div><p>Linie 42 · Fahrplan<small>varo-verkehr.de</small></p></div>
+    <div class="fq"><div class="th"><div data-clone="nwpage"></div></div><p>Hochwasser: Straße gesperrt<small>tagblatt-varo.de</small></p></div>
+   </div>
+   <div class="sh" style="margin-top:26px">읽기 목록</div>
+   <div class="rl">
+    <div class="rlr"><span class="im" style="background:#9fb3a3"><i class="art" style="width:60px;height:60px;left:-10px;top:24px;background:#7f9784"></i></span><div><b>Eastgate</b><span>de.wikipedia.org · 3분</span></div></div>
+   </div>
+  </div>
+  <div class="sf"><div class="addr"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a8a8e" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span class="u ph2" style="justify-content:flex-start">검색 또는 웹사이트 이름 입력</span><svg width="16" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a8a8e" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>TOOLBAR</div>
+  <div class="ind"></div>
+ </div><div class="cap">시작 페이지<small>즐겨찾기 아이콘 · 자주 방문한 사이트(페이지 썸네일) · 읽기 목록</small></div></div>
+
+ <div><div class="ph" id="nw">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="scroll"><div id="nwpage" class="nw">
+   <div class="nwtop"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1b1b1b" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><div class="nwlogo">Varoer <span>Tagblatt</span></div><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#1b1b1b" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>
+   <div class="nwnav"><span class="on">Lokales</span><span>Politik</span><span>Wetter</span><span>Sport</span><span>Kultur</span><span>Meinung</span></div>
+   <div class="nwbody">
+    <div class="kick">Hochwasser</div>
+    <h1>Straße nach Eastgate bis Montag gesperrt<span class="k">이스트게이트 가는 도로, 월요일까지 통제</span></h1>
+    <p class="lede">Nach dem Starkregen steht die Landstraße unter Wasser. Busse fahren nur bis Westend.</p>
+    <div class="by"><i></i><span>Von <b>Sela Brandt</b> · <span class="num">25.10. 11:48</span></span></div>
+    <div class="hero"><i class="art" style="width:520px;height:300px;left:-90px;top:120px;background:#6a7d87;border-radius:46%"></i><i class="art" style="width:420px;height:200px;left:60px;top:150px;background:#58696f;border-radius:44%"></i><i class="art" style="width:70px;height:70px;left:290px;top:28px;background:#b9c3c7"></i></div>
+    <div class="cr">Die Landstraße bei Eastgate am Samstagmorgen. Foto: Tagblatt</div>
+    <p class="t">Die Feuerwehr hat die Strecke zwischen Varo und Eastgate am Samstag gesperrt. <span class="k">소방 당국은 토요일 바로와 이스트게이트 사이 구간을 막았다.</span></p>
+    <p class="t">Die Linie 42 endet bis auf Weiteres in Westend. Die letzte Abfahrt ist um 21:10 Uhr.</p>
+   </div>
+  </div></div>
+  <div class="sf"><div class="addr"><span class="aa">a<small>A</small></span><span class="u"><svg width="11" height="13" viewBox="0 0 24 24" fill="#161b22"><path d="M6 10V8a6 6 0 0 1 12 0v2h1v12H5V10zm3 0h6V8a3 3 0 0 0-6 0z"/></svg>tagblatt-varo.de</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#161b22" stroke-width="2.2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg></div>TOOLBAR</div>
+  <div class="ind"></div>
+ </div><div class="cap">페이지 · 뉴스 기사<small>신문 로고 · 섹션 메뉴 · 제목 · 기자 · 사진 · 본문 (한국어는 문단마다 아래)</small></div></div>
+
+ <div><div class="ph" id="tr">
+  <div class="sb w" style="background:#1f6b45"><span>17:42</span><span class="i">SIGW</span></div>
+  <div class="scroll"><div id="trpage" class="tr">
+   <div class="trtop"><div class="trrow"><div class="trlogo"><i>V</i>Varo Verkehr</div><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></div>
+    <div class="trq"><div><em>Von</em>Varo, Rathaus</div><div><em>Nach</em>Eastgate, Bahnhof</div></div></div>
+   <div class="alert"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b07a00" stroke-width="2.2" stroke-linecap="round"><path d="M12 3l10 18H2zM12 10v5M12 18v.5"/></svg><div><b>Störung: Hochwasser</b>Linie 42 fährt nur bis Westend. Ersatzverkehr ab Westend.<span class="k">42번은 웨스트엔드까지만 운행. 웨스트엔드부터 대체 버스.</span></div></div>
+   <div class="trsec"><span>Abfahrten · Rathaus</span><span class="num">Sa, 25.10.</span></div>
+   <div class="dep">
+    <div class="dr"><span class="ln num">42</span><span class="to">Westend<small>Steig B · statt Eastgate</small></span><span class="t num">20:40<small>+5</small></span></div>
+    <div class="dr"><span class="ln b num">E42</span><span class="to">Eastgate, Bahnhof<small>Ersatzbus ab Westend</small></span><span class="t num">20:55<small class="ok">pünktlich</small></span></div>
+    <div class="dr"><span class="ln num">42</span><span class="to">Westend<small>Letzte Fahrt</small></span><span class="t num">21:10<small class="ok">pünktlich</small></span></div>
+    <div class="dr x"><span class="ln num">42</span><span class="to">Eastgate, Bahnhof<small>fällt aus</small></span><span class="t num">21:40</span></div>
+   </div>
+   <div style="height:120px"></div>
+  </div></div>
+  <div class="sf"><div class="addr"><span class="aa">a<small>A</small></span><span class="u"><svg width="11" height="13" viewBox="0 0 24 24" fill="#161b22"><path d="M6 10V8a6 6 0 0 1 12 0v2h1v12H5V10zm3 0h6V8a3 3 0 0 0-6 0z"/></svg>varo-verkehr.de</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#161b22" stroke-width="2.2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg></div>TOOLBAR</div>
+  <div class="ind"></div>
+ </div><div class="cap">페이지 · 교통 / 시간표<small>운행 안내 배너 · 출발 시각표 · 지연 · 운행 취소</small></div></div>
+
+ <div><div class="ph" id="fo">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="scroll"><div class="fo">
+   <div class="fotop"><span class="lg">v</span><b>v/Westend</b><span class="jn">Beitreten</span></div>
+   <div class="post">
+    <div class="pmeta"><b>u/schraube_ivo</b>· vor 3 Std.</div>
+    <h2>Gute Werkstatt in Westend? Mein Schlüssel ist weg<span class="k">웨스트엔드에 괜찮은 정비소? 열쇠가 없어졌어요</span></h2>
+    <span class="flair">Frage</span>
+    <p>Hab meinen Werkstattschlüssel verliehen und warte seit Tagen. Kennt jemand einen Schlüsseldienst, der samstags offen hat?</p>
+    <div class="acts"><span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l7 8h-4v8H9v-8H5z"/></svg>24<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20l7-8h-4V4H9v8H5z"/></svg></span><span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 5h16v11H9l-5 4z"/></svg>7</span><span>Teilen</span></div>
+   </div>
+   <div class="cmts">
+    <div class="cm"><div class="pmeta"><i style="background:#a699c9"></i><b>anja_w</b>· vor 2 Std.</div><p>Schlüsseldienst Kramer am Westend-Platz, Sa bis 14 Uhr.<span class="k">웨스트엔드 광장 크라머 열쇠집, 토요일 2시까지.</span></p><div class="acts"><span>▲ 11 ▼</span><span>Antworten</span></div></div>
+    <div class="cm r"><div class="pmeta"><i style="background:#8faed1"></i><b>schraube_ivo</b><span style="color:#0b5394;font-weight:700">OP</span>· vor 1 Std.</div><p>Danke! Hoffe, ich krieg ihn bis Samstag zurück.</p><div class="acts"><span>▲ 3 ▼</span><span>Antworten</span></div></div>
+    <div class="cm"><div class="pmeta"><i style="background:#89b892"></i><b>renn3r</b>· vor 40 Min.</div><p>Wer hat ihn denn? 👀</p><div class="acts"><span>▲ 5 ▼</span><span>Antworten</span></div></div>
+   </div>
+  </div></div>
+  <div class="sfmini"><span><svg width="9" height="11" viewBox="0 0 24 24" fill="#161b22"><path d="M6 10V8a6 6 0 0 1 12 0v2h1v12H5V10zm3 0h6V8a3 3 0 0 0-6 0z"/></svg>varo-forum.de</span></div>
+  <div class="ind"></div>
+ </div><div class="cap">페이지 · 커뮤니티 / 포럼<small>글 · 투표 · 댓글 · 답글 · 스크롤하면 주소창이 작아져요</small></div></div>
+</div>
+
+<div class="row">
+ <div><div class="ph" id="wk">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="scroll"><div id="wkpage" class="wk">
+   <div class="wktop"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#202122" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><div class="wklogo">WIKIPEDIA<small>Die freie Enzyklopädie</small></div><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#202122" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>
+   <div class="wkbody">
+    <h1>Eastgate</h1>
+    <div class="wkfrom">aus Wikipedia, der freien Enzyklopädie</div>
+    <div class="ibox"><div class="ih">Eastgate</div><div class="im"><i class="art" style="width:300px;height:160px;left:-40px;top:60px;background:#879c8b;border-radius:45%"></i><i class="art" style="width:240px;height:120px;left:120px;top:78px;background:#71877a;border-radius:42%"></i></div>
+     <table><tr><td>Land</td><td>Varo-Tal</td></tr><tr><td>Einwohner</td><td class="num">8.412</td></tr><tr><td>Verkehr</td><td>Linie 42, Nordbahn</td></tr></table></div>
+    <p><b>Eastgate</b> ist eine Kleinstadt östlich von <a>Varo</a>, bekannt für ihre alte <a>Flussbrücke</a> und den Bahnhof der <a>Nordbahn</a>.<span class="k">이스트게이트는 바로 동쪽의 작은 도시로, 오래된 강 다리와 노르트반 역으로 알려져 있다.</span></p>
+    <div class="toc"><b>Inhaltsverzeichnis</b><div><span>1</span>Geschichte</div><div><span>2</span>Hochwasser</div><div><span>3</span>Verkehr</div></div>
+    <h2>Geschichte</h2>
+    <p>Die Siedlung entstand im 14. Jahrhundert an einer Furt über den Fluss.</p>
+   </div>
+  </div></div>
+  <div class="sf"><div class="addr"><span class="aa">a<small>A</small></span><span class="u"><svg width="11" height="13" viewBox="0 0 24 24" fill="#161b22"><path d="M6 10V8a6 6 0 0 1 12 0v2h1v12H5V10zm3 0h6V8a3 3 0 0 0-6 0z"/></svg>de.wikipedia.org</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#161b22" stroke-width="2.2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg></div>TOOLBAR</div>
+  <div class="ind"></div>
+ </div><div class="cap">페이지 · 위키 / 백과<small>정보 상자 · 목차 · 파란 링크</small></div></div>
+
+ <div><div class="ph" id="aa">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="scroll"><div data-clone="nwpage"></div></div>
+  <div class="dim"></div>
+  <div class="menu">
+   <div class="mz"><span>A</span><b class="num">100%</b><span style="font-size:19px">A</span></div>
+   <div class="mi on">한국어로 보기<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2f6bff" stroke-width="2" stroke-linecap="round"><path d="M4 5h9M8.5 3v2M6 5c1 4 4 7 7 8M11 5c-1 4-4 7-7 8M13 21l4-10 4 10M14.5 17h5"/></svg></div>
+   <div class="mgap"></div>
+   <div class="mi">북마크에 추가<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#161b22" stroke-width="2" stroke-linecap="round"><path d="M5 4h14v17l-7-5-7 5z"/></svg></div>
+   <div class="mi">읽기 목록에 추가<svg width="22" height="20" viewBox="0 0 24 24" fill="none" stroke="#161b22" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="14" r="4"/><circle cx="18" cy="14" r="4"/><path d="M10 14h4"/></svg></div>
+   <div class="mi">검색 결과로 돌아가기<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#161b22" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>
+  </div>
+  <div class="sf"><div class="addr"><span class="aa" style="color:#2f6bff">a<small>A</small></span><span class="u"><svg width="11" height="13" viewBox="0 0 24 24" fill="#161b22"><path d="M6 10V8a6 6 0 0 1 12 0v2h1v12H5V10zm3 0h6V8a3 3 0 0 0-6 0z"/></svg>tagblatt-varo.de</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#161b22" stroke-width="2.2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg></div>TOOLBAR</div>
+  <div class="ind"></div>
+ </div><div class="cap">aA 메뉴<small>한국어로 보기 (지금의 “가 한국어”) · 북마크 · 읽기 목록</small></div></div>
+
+ <div><div class="ph" id="tabs">
+  <div class="sb"><span>17:42</span><span class="i">SIG</span></div>
+  <div class="scroll tabs">
+   <div class="tg">
+    <div class="tc"><div class="tt"><span class="x"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span><div data-clone="trpage"></div></div><p><i style="background:#1f6b45">V</i>Linie 42 · Fahrplan</p></div>
+    <div class="tc on"><div class="tt"><span class="x"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span><div data-clone="nwpage"></div></div><p><i style="background:#b3261e">T</i>Straße nach Eastgate…</p></div>
+    <div class="tc"><div class="tt"><span class="x"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span><div data-clone="wkpage"></div></div><p><i style="background:#54595d">W</i>Eastgate – Wikipedia</p></div>
+    <div class="tc"><div class="tt"><span class="x"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span><div data-clone="srpage"></div></div><p><i style="background:#8a929d">G</i>Bus Varo Eastgate…</p></div>
+   </div>
+  </div>
+  <div class="tbar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2f6bff" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="seg"><span>개인정보 보호</span><span class="on">탭 4개</span></span><b style="font-weight:600">완료</b></div>
+  <div class="ind"></div>
+ </div><div class="cap">탭<small>열린 페이지를 줄인 썸네일 격자 · 지금 탭은 파란 테두리</small></div></div>
+
+ <div><div class="ph" id="bm" style="background:#000">
+  <div class="sb w" style="z-index:8"><span>17:42</span><span class="i">SIGW</span></div>
+  <div class="under"><div data-clone="nwpage"></div></div>
+  <div class="sheet">
+   <div class="shh"><span style="width:44px"></span><span class="seg3"><span class="on"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#161b22" stroke-width="2" stroke-linecap="round"><path d="M4 5c3-1 6-1 8 1v14c-2-2-5-2-8-1zM20 5c-3-1-6-1-8 1v14c2-2 5-2 8-1z"/></svg></span><span><svg width="22" height="20" viewBox="0 0 24 24" fill="none" stroke="#3c3c43" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="14" r="4"/><circle cx="18" cy="14" r="4"/><path d="M10 14h4"/></svg></span><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3c3c43" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span></span><span class="dn">완료</span></div>
+   <div class="sht">북마크</div>
+   <div class="grp">
+    <div class="gr"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#2f6bff" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l2.8 5.8 6.2.9-4.5 4.3 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.7l6.2-.9z"/></svg><span class="tx"><b>즐겨찾기</b></span><svg width="9" height="15" viewBox="0 0 10 16" fill="none" stroke="#c4c4c7" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l6 6-6 6"/></svg></div>
+    <div class="gr"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#2f6bff" stroke-width="1.8" stroke-linejoin="round"><path d="M3 6h7l2 2h9v11H3z"/></svg><span class="tx"><b>Werkstatt</b></span><span class="tm num">3</span><svg width="9" height="15" viewBox="0 0 10 16" fill="none" stroke="#c4c4c7" stroke-width="2.2" stroke-linecap="round"><path d="M2 2l6 6-6 6"/></svg></div>
+   </div>
+   <div class="grp">
+    <div class="gr"><span class="fv" style="background:#1f6b45">V</span><span class="tx"><b>Linie 42 · Fahrplan</b><small>varo-verkehr.de/linie-42</small></span></div>
+    <div class="gr"><span class="fv" style="background:#b3261e;font-family:'Source Serif 4',serif">T</span><span class="tx"><b>Straße nach Eastgate gesperrt</b><small>tagblatt-varo.de</small></span></div>
+    <div class="gr"><span class="fv" style="background:#e8590c">v</span><span class="tx"><b>Gute Werkstatt in Westend?</b><small>varo-forum.de</small></span></div>
+   </div>
+  </div>
+  <div class="ind"></div>
+ </div><div class="cap">북마크 시트<small>위 아이콘: 북마크 · 읽기 목록 · 방문 기록</small></div></div>
+</div>
+
+<div class="row">
+ <div><div class="ph" id="hi" style="background:#000">
+  <div class="sb w" style="z-index:8"><span>17:42</span><span class="i">SIGW</span></div>
+  <div class="under"><div data-clone="trpage"></div></div>
+  <div class="sheet">
+   <div class="shh"><span style="width:44px"></span><span class="seg3"><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3c3c43" stroke-width="2" stroke-linecap="round"><path d="M4 5c3-1 6-1 8 1v14c-2-2-5-2-8-1zM20 5c-3-1-6-1-8 1v14c2-2 5-2 8-1z"/></svg></span><span><svg width="22" height="20" viewBox="0 0 24 24" fill="none" stroke="#3c3c43" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="14" r="4"/><circle cx="18" cy="14" r="4"/><path d="M10 14h4"/></svg></span><span class="on"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#161b22" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span></span><span class="dn">완료</span></div>
+   <div class="sht">방문 기록</div>
+   <div class="srch"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a8a8e" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>방문 기록 검색</div>
+   <div class="gh">오늘</div>
+   <div class="grp">
+    <div class="gr"><span class="fv" style="background:#e8590c">v</span><span class="tx"><b>Gute Werkstatt in Westend?</b><small>varo-forum.de</small></span><span class="tm num">13:20</span></div>
+    <div class="gr"><span class="fv" style="background:#b3261e;font-family:'Source Serif 4',serif">T</span><span class="tx"><b>Straße nach Eastgate gesperrt</b><small>tagblatt-varo.de</small></span><span class="tm num">13:04</span></div>
+    <div class="gr"><span class="fv" style="background:#8a929d">G</span><span class="tx"><b>Hochwasser Eastgate Straße gesperrt</b><small>검색</small></span><span class="tm num">13:02</span></div>
+   </div>
+   <div class="gh">어제</div>
+   <div class="grp">
+    <div class="gr"><span class="fv" style="background:#1f6b45">V</span><span class="tx"><b>Linie 42 · Fahrplan</b><small>varo-verkehr.de</small></span><span class="tm num">12:41</span></div>
+    <div class="gr"><span class="fv" style="background:#54595d;font-family:'Noto Serif',serif">W</span><span class="tx"><b>Eastgate – Wikipedia</b><small>de.wikipedia.org</small></span><span class="tm num">12:30</span></div>
+   </div>
+  </div>
+  <div class="ind"></div>
+ </div><div class="cap">방문 기록<small>같은 시트 · 날짜별 · 검색 · 시각</small></div></div>
+
+ <div style="width:390px;padding-top:40px;font:400 15px/1.7 'Noto Sans KR',sans-serif;color:#4a423b">
+  <b style="font-size:17px;color:#3a332c">페이지 종류 (AI가 고름)</b><br>
+  뉴스 · 교통 / 시간표 · 커뮤니티 / 포럼 · 위키 / 백과 · 쇼핑 · 블로그 · 공식 홈페이지 · 그 밖(기본 웹페이지)<br><br>
+  <b style="font-size:17px;color:#3a332c">그대로 두는 것</b><br>
+  검색 결과 화면 (주소창 · 툴바만 사파리 모양으로)<br><br>
+  <b style="font-size:17px;color:#3a332c">사이트 색</b><br>
+  AI가 사이트마다 색 하나를 정해요. 로고 · 상단 바 · 링크에만 써요.
+ </div>
+ <div style="display:none"><div id="srpage" style="background:#f4f5f7;padding:14px;font-family:'Noto Sans KR',sans-serif"><div style="height:40px;border-radius:14px;background:#fff;margin-bottom:14px;display:flex;align-items:center;padding:0 12px;font-size:15px">Bus Varo Eastgate Fahrplan</div><div style="background:#fff;border-radius:18px;padding:14px;margin-bottom:12px"><b style="color:#3f6a9e;font-size:17px">Bus 42: Fahrplan ab Varo</b><p style="font-size:14px;color:#555">Wegen Hochwasser fahren die Busse nur bis Westend.</p></div><div style="background:#fff;border-radius:18px;padding:14px"><b style="color:#3f6a9e;font-size:17px">Verbindungen Varo – Eastgate</b><p style="font-size:14px;color:#555">Ersatzverkehr eingerichtet.</p></div></div></div>
+</div>
+
+<script>
+const SIG = c => `<svg width="18" height="12" viewBox="0 0 18 12" fill="${c}"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="${c}" stroke-width="1.9" stroke-linecap="round"><path d="M1.5 4.5a9.5 9.5 0 0 1 13 0M4 7.3a6 6 0 0 1 8 0M6.6 10a2.2 2.2 0 0 1 2.8 0"/></svg><svg width="27" height="13" viewBox="0 0 27 13" fill="none"><rect x=".5" y=".5" width="23" height="12" rx="3.5" stroke="${c}" opacity=".45"/><rect x="2.5" y="2.5" width="19" height="8" rx="2" fill="${c}"/><path d="M25 4.5v4" stroke="${c}" stroke-width="1.5" stroke-linecap="round" opacity=".45"/></svg>`;
+document.querySelectorAll('.sb .i').forEach(e => { e.innerHTML = SIG(e.textContent === 'SIGW' ? '#fff' : '#161b22'); });
+const TB = `<div class="tb"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg><svg class="off" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 12v8h14v-8"/></svg><svg width="24" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5c3-1 6-1 8 1v14c-2-2-5-2-8-1zM20 5c-3-1-6-1-8 1v14c2-2 5-2 8-1z"/></svg><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="7" width="13" height="13" rx="2.5"/><path d="M8 7V5.5A2.5 2.5 0 0 1 10.5 3H18.5A2.5 2.5 0 0 1 21 5.5v8a2.5 2.5 0 0 1-2.5 2.5H16"/></svg></div>`;
+document.querySelectorAll('.sf').forEach(e => { e.innerHTML = e.innerHTML.replace('TOOLBAR', TB); });
+document.querySelectorAll('[data-clone]').forEach(e => { e.innerHTML = document.getElementById(e.dataset.clone).outerHTML.replace(/ id="[^"]*"/, ''); });
+</script>
+</body></html>

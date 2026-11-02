@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>분기</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 390px; height: 900px; box-sizing: border-box; padding: 22px 18px 28px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 14px">
+
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <b style="font-size: 20px; letter-spacing: -0.01em">분기</b>
+    <span style="font-size: 12.5px; color: #7A6A60">갈라질 때 아카이브도 같이 복사돼요. 분기 지점 뒤 섹션을 정리해요</span>
+  </div>
+
+  <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; align-items: center; gap: 0">
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center">
+        <span style="width: 40px; height: 40px; border-radius: 12px; background: #F1E6DD; display: grid; place-items: center; color: #6B5A50"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+        <b style="font-size: 12.5px">원본</b>
+        <span style="font-size: 11px; color: #8A7A70; line-height: 1.3">Set – 2026-09-30</span>
+      </div>
+      <div style="flex: 1.2; display: flex; flex-direction: column; align-items: center; gap: 2px">
+        <span class="num" style="font-size: 11.5px; color: #A84A17; font-weight: 700">#120에서 갈라짐</span>
+        <span style="width: 100%; height: 2px; background: repeating-linear-gradient(90deg, #D9A887 0 6px, transparent 6px 10px)"></span>
+      </div>
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center">
+        <span style="width: 40px; height: 40px; border-radius: 12px; background: #B8541F; display: grid; place-items: center; color: #fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="9" r="3"/><path d="M6 9v6M18 12c0 4-6 3-9 6"/></svg></span>
+        <b style="font-size: 12.5px">이 채팅</b>
+        <span style="font-size: 11px; color: #8A7A70; line-height: 1.3">Branch #120</span>
+      </div>
+    </div>
+    <div style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 14px; background: #FFF1D6">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A5A00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 2px"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+      <span style="font-size: 12.5px; color: #5C4200; line-height: 1.45">분기 지점 뒤 이야기가 섹션 2개에 섞여 있어요. 이 채팅에선 일어나지 않은 일이에요.</span>
+    </div>
+  </div>
+
+  <span style="font-size: 13px; font-weight: 600; color: #6B5A50; margin: 0 2px -6px">#120 뒤에 쓴 섹션</span>
+  <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 18px; overflow: hidden">
+    <sc-for list="{{secs}}" as="s" hint-placeholder-count="2">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-top: {{s.line}}">
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3">
+          <span class="num" style="font-size: 11px; color: #8A7A70">{{s.range}}</span>
+          <b style="font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.title}}</b>
+        </span>
+        <button style="border: 1px solid #E5D5C9; background: #FFFAF6; color: #B3261E; font: inherit; font-size: 12px; padding: 4px 11px; border-radius: 999px">빼기</button>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <button style="border: 0; background: #B8541F; color: #fff; font: inherit; font-size: 13.5px; font-weight: 600; padding: 12px 0; border-radius: 14px">두 섹션 빼고 #120까지로 맞추기</button>
+    <button style="border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13.5px; padding: 11px 0; border-radius: 14px">#120 무렵 복구 지점으로 되돌리기</button>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; border: 1px dashed #D3C1B4">
+    <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3"><b style="font-size: 13.5px">이 채팅에서 갈라진 분기</b><span style="font-size: 11.5px; color: #8A7A70">같은 캐릭터 채팅을 열어 찾아요</span></span>
+    <button style="border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 12.5px; padding: 6px 12px; border-radius: 10px">찾기</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      secs: [
+        { range: '#124–#216', title: 'Menen, Behedet, and the tribunal', line: '0' },
+        { range: '#217–#236', title: 'Bread, and the charge he conceded', line: '1px solid #F1E6DD' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>압축 마법사 B</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 390px; height: 1000px; box-sizing: border-box; padding: 22px 18px 24px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 16px">
+
+  <div style="display: flex; align-items: center; justify-content: space-between">
+    <b style="font-size: 20px; letter-spacing: -0.01em">압축 마법사</b>
+    <span class="num" style="font-size: 12.5px; color: #8A7A70">3 / 5</span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; gap: 4px">
+      <span style="flex: 1; height: 5px; border-radius: 3px; background: #B8541F"></span>
+      <span style="flex: 1; height: 5px; border-radius: 3px; background: #B8541F"></span>
+      <span style="flex: 1; height: 5px; border-radius: 3px; background: #B8541F"></span>
+      <span style="flex: 1; height: 5px; border-radius: 3px; background: #E3D3C7"></span>
+      <span style="flex: 1; height: 5px; border-radius: 3px; background: #E3D3C7"></span>
+    </div>
+    <div style="display: flex; font-size: 11.5px; color: #8A7A70">
+      <span style="flex: 1">범위</span><span style="flex: 1">복사</span><span style="flex: 1; color: #A84A17; font-weight: 700">붙여넣기</span><span style="flex: 1">채점</span><span style="flex: 1">추가</span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px">
+    <b style="font-size: 22px; letter-spacing: -0.01em; line-height: 1.3">모델이 준 섹션을<br>붙여넣어 주세요</b>
+    <span style="font-size: 13px; color: #7A6A60">#35–#58을 압축한 결과 · 파일(.txt·.md)도 돼요</span>
+  </div>
+
+  <div style="flex: none; height: 300px; border: 1px solid #E5D5C9; border-radius: 18px; background: #FFFCF9; padding: 14px; font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.65; color: #4A3D35; overflow: hidden">## Y2 #35–#50 — “I won’t choose” (Mekhir 18)<br>PLOT:<br>- Set asked her to choose between the two rooms; she refused and said she would not be divided.<br>- Horus stayed silent but left the lamp burning by the west door.<br><br>## Y2 #51–#58 — The lamp (Mekhir 18, night)<br>PLOT:<br>- …</div>
+
+  <div style="display: flex; gap: 6px; flex-wrap: wrap">
+    <span class="num" style="display: flex; align-items: center; gap: 4px; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: #E3F2E8; color: #1F6A40"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>섹션 2개 · #35–#58 이어짐</span>
+    <span style="display: flex; align-items: center; gap: 4px; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: #E3F2E8; color: #1F6A40"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>STATE·OPEN</span>
+    <span class="num" style="font-size: 12px; padding: 3px 10px; border-radius: 999px; background: #F1E6DD; color: #6B5A50">812 토큰</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+    <button style="display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13px; padding: 10px 0; border-radius: 14px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>파일 불러오기</button>
+    <button style="display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13px; padding: 10px 0; border-radius: 14px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>초안 모델로 받기</button>
+  </div>
+
+  <span style="flex: 1"></span>
+
+  <div style="display: flex; gap: 8px">
+    <button style="flex: 1; border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 14px; padding: 13px 0; border-radius: 16px">이전</button>
+    <button style="flex: 2; border: 0; background: #B8541F; color: #fff; font: inherit; font-size: 14px; font-weight: 600; padding: 13px 0; border-radius: 16px">다음 · 채점</button>
+  </div>
+  <button style="align-self: center; border: 0; background: transparent; color: #8A7A70; font: inherit; font-size: 12.5px; padding: 0">채점 건너뛰고 바로 추가</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

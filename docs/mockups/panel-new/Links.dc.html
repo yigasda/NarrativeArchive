@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>섹션 연결망</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 390px; height: 880px; box-sizing: border-box; padding: 22px 20px 28px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 14px">
+
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <h1 style="margin: 0; font-size: 20px; letter-spacing: -0.01em">섹션 연결망</h1>
+    <span style="font-size: 12.5px; color: #7A6A60">본문에 적힌 “#217–#236” 같은 번호로 이어진 섹션 · 연결 17개</span>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 10px; background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 14px; padding: 10px 12px">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B8541F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none"><circle cx="12" cy="12" r="10"/><path d="M16.2 7.8l-2.1 6.3-6.3 2.1 2.1-6.3z"/></svg>
+    <span style="flex: 1; font-size: 12.5px; color: #4A3D35">AI 라우터가 고른 섹션이 가리키는 섹션도 같이 넣어요</span>
+    <span style="font-size: 12px; font-weight: 600; color: #B8541F">켜짐</span>
+  </div>
+
+  <span style="font-size: 13px; font-weight: 600; color: #6B5A50">많이 불리는 섹션</span>
+
+  <sc-for list="{{hubs}}" as="h" hint-placeholder-count="4">
+    <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+      <button style="display: flex; align-items: center; gap: 12px; border: 0; background: transparent; padding: 0; font: inherit; color: inherit; text-align: left">
+        <span class="num" style="flex: none; width: 40px; height: 40px; border-radius: 12px; background: {{h.bg}}; color: {{h.fg}}; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1">
+          <b style="font-size: 17px">{{h.n}}</b><span style="font-size: 9.5px; margin-top: 2px">곳</span>
+        </span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3">
+          <b style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{h.title}}</b>
+          <span class="num" style="font-size: 12px; color: #8A7A70">{{h.range}}</span>
+        </span>
+      </button>
+      <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap">
+        <span style="font-size: 11.5px; color: #8A7A70; margin-right: 2px">여기서 불러요</span>
+        <sc-for list="{{h.from}}" as="f" hint-placeholder-count="2">
+          <button style="border: 1px solid #EBCDB9; background: #FBEDE3; color: #7E3610; font: inherit; font-size: 12px; padding: 1px 9px; border-radius: 999px">{{f}}</button>
+        </sc-for>
+      </div>
+    </div>
+  </sc-for>
+
+  <button style="border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13px; padding: 10px 0; border-radius: 12px">한 곳에서만 불리는 섹션 13개 보기</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":880}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const H = [
+      [4, 'Current household', 'STATE', ['#347–#401', '#345–#346', '#402–#475', '#48–#63']],
+      [3, '“How must I let you go”', 'Y2 #500–#509', ['Somang', 'Set', 'Horus']],
+      [2, 'Bread, and the charge he conceded', '#217–#236', ['Y2 #424–#427', 'Horus']],
+      [1, 'Ombos, half a year in', '#0–#47', ['Y2 #398–#407']],
+    ];
+    return {
+      hubs: H.map(([n, title, range, from]) => ({ n, title, range, from, bg: n >= 3 ? '#B8541F' : '#F1E6DD', fg: n >= 3 ? '#fff' : '#6B5A50' })),
+    };
+  }
+}
+</script>
+</body>
+</html>

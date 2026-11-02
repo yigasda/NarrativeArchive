@@ -8,6 +8,7 @@ import { WARN_SVG } from './fade.js';
 import { headingPlaces } from './people.js';
 import { RANGE_HEAD, parseSections, sectionKey } from './sections.js';
 import { confirm, esc, escRe } from './util.js';
+import { ICO_A, svgA } from './theme.js';
 
 // Reads the date in each numbered heading ("(Mekhir 18, night, Ombos)", "(Phaophi 18 – Hathyr 4)", "(the next day)")
 // and lays the sections out on a time line, per log (Y1, Y2…). No AI.
@@ -114,13 +115,15 @@ export async function openCalendar() {
     const m = getMeta();
     let logSel = null;
     let adding = false;
+    // (docs/mockups/ext-calendar) the date strip's pick ("cal:m:d:year") and whether the anniversary card is opened to all of them
+    let daySel = null, avOpen = false;
     const $root = $(`
       <div class="na_popup na_v2 na_cal">
         <div class="na_v2_titlebar"><div class="na_v2_title"><b>이야기 달력</b><small class="na_cal_sum"></small></div><div class="na_v2_seg na_cal_logs"></div></div>
         <div class="na_cal_body"></div>
         <details class="na_v2_card na_v2_more na_cal_cfg">
           <summary><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> 달 이름 바꾸기</summary>
-          <small class="na_v2_note">한 줄에 달력 하나, 달은 순서대로 쉼표로, 다른 표기는 / 로 (예: Mekhir/Mechir). 비우면 기본값(이집트·영어·한국어 달).</small>
+          <small class="na_v2_note">한 줄에 달력 하나 · 달은 쉼표로, 다른 표기는 / (예: Mekhir/Mechir) · 비우면 기본값</small>
           <textarea class="text_pole na_cal_ta" rows="4" spellcheck="false"></textarea>
         </details>
       </div>`);
@@ -159,35 +162,66 @@ export async function openCalendar() {
         const left = drows.length - Math.min(Number(m.annivScan) || 0, drows.length);
         const dateOf = r => `${cals[r.date.cal][r.date.m][0]} ${r.date.d}`;
         const avRows = av.map(a => ({ a, r: drows.find(x => sectionKey(x.s) === a.key) })).filter(x => x.r);
+        // the day key of a dated row; the strip lists each day once with a dot per section
+        const dkey = r => r.date?.d ? `${r.date.cal}:${r.date.m}:${r.date.d}:${r.year}` : null;
+        const dayRows = new Map();
+        for (const r of l.rows) { const k = dkey(r); if (!k) continue; if (!dayRows.has(k)) dayRows.set(k, []); dayRows.get(k).push(r); }
+        if (daySel && !dayRows.has(daySel)) daySel = null;
+        // the anniversary shown on top: the picked day's (or nothing), else the next one after the story's latest day
+        const last = [...drows].pop();
+        const ord = r => r.date.m * 40 + r.date.d;
+        const ahead = x => (((ord(x.r) - ord(last)) % 520) + 520) % 520; // days into the coming year, today = 0
+        const upcoming = last ? [...avRows].sort((x, y) => ahead(x) - ahead(y))[0] : avRows[0];
+        const shown = daySel ? avRows.find(x => dkey(x.r) === daySel) : upcoming;
+        // a picked day that is not an anniversary: the card stays, greyed, and names the next one after that day
+        const picked = daySel ? dayRows.get(daySel)?.[0] : null;
+        const after = picked && !shown && avRows.length ? [...avRows].sort((x, y) => (((ord(x.r) - ord(picked)) % 520) + 520) % 520 - ((((ord(y.r) - ord(picked)) % 520) + 520) % 520))[0] : null;
+        const plain = !!daySel && !shown;
+        const isToday = !!shown && !!last && shown.r.date.m === last.date.m && shown.r.date.d === last.date.d;
         const annivCard = `
-          <div class="na_v2_card na_cal_anniv">
-            <div class="na_cal_av_head"><b>기념일</b>${av.length ? `<small>${av.length}개</small>` : ''}<span class="na_spacer"></span>
+          <div class="na_v2_card na_cal_anniv na_cal3_av${avOpen ? ' open' : ''}${plain && !avOpen ? ' plain' : ''}">
+            <div class="na_cal3_avtop" role="button" tabindex="0"><span class="na_cal3_avic"><svg class="na_heart" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 20.5s-7.8-4.7-9.7-9.5C1 7.6 3.2 4.5 6.6 4.5c2.2 0 3.8 1.2 5.4 3.1 1.6-1.9 3.2-3.1 5.4-3.1 3.4 0 5.6 3.1 4.3 6.5-1.9 4.8-9.7 9.5-9.7 9.5z"/></svg></span>
+              <span class="na_cal3_avtx"><b>${shown ? esc(shown.a.name) : plain ? '이날은 기념일이 아니에요' : '기념일'}</b><small>${plain ? (after ? `다음은 ${esc(after.a.name)} (${esc(dateOf(after.r))})` : '아직 기념일이 없어요') : shown ? `${esc(dateOf(shown.r))} · ${esc(strip(shown.r.s.title))}${isToday ? ' · 오늘이 그날이에요' : ''}` : drows.length ? '아직 없어요 · 그날이 돌아오면 홈에 알려 줘요' : '날짜가 있는 섹션이 필요해요'}</small></span>
+              <span class="na_cal3_avmore">${avOpen ? '접기' : av.length ? `${av.length}개` : '찾기'}${svgA(ICO_A.right, 13, 2.4)}</span></div>
+            ${avOpen ? `<div class="na_cal_av_head"><span class="na_spacer"></span>
               ${drows.length ? `<button type="button" class="na_v2_btn na_cal_av_find" title="AI 기능 모델이 섹션을 읽고 첫 만남 · 고백한 날 같은 날을 찾아요">${!m.annivScan ? '기념일 찾기' : left ? `새 섹션에서 찾기 (${left})` : '처음부터 다시 찾기'}</button>` : ''}
               <button type="button" class="na_cal_av_add" title="직접 추가" aria-label="직접 추가">+</button></div>
             ${adding ? `<div class="na_cal_av_new"><select class="text_pole na_cal_av_sec">${drows.map(r => `<option value="${esc(sectionKey(r.s))}">${esc(dateOf(r))} · ${esc(strip(r.s.title))}</option>`).join('')}</select><input type="text" class="text_pole na_cal_av_nm" placeholder="이름 (예: 첫 여행)"><button type="button" class="na_v2_btn primary na_cal_av_ok">추가</button></div>` : ''}
-            ${avRows.length ? avRows.map(({ a, r }) => `
-              <div class="na_cal_av_row" data-k="${esc(a.key)}"><span class="na_cal_av_dot"><svg class="na_heart" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 20.5s-7.8-4.7-9.7-9.5C1 7.6 3.2 4.5 6.6 4.5c2.2 0 3.8 1.2 5.4 3.1 1.6-1.9 3.2-3.1 5.4-3.1 3.4 0 5.6 3.1 4.3 6.5-1.9 4.8-9.7 9.5-9.7 9.5z"/></svg></span><input type="text" class="text_pole na_cal_av_name" value="${esc(a.name)}" aria-label="기념일 이름"><small>${esc(dateOf(r))} · ${esc(strip(r.s.title))}</small><button type="button" class="na_cal_av_x" title="빼기" aria-label="빼기">✕</button></div>`).join('')
-                : `<small class="na_v2_note">${drows.length ? '아직 없어요. 찾기를 누르거나 + 로 직접 넣어요.' : '날짜가 있는 섹션이 있어야 해요.'} 이야기 속 날짜가 그날로 돌아오면 홈에 한 줄로 알려 줘요.</small>`}
+            ${avRows.map(({ a, r }) => `
+              <div class="na_cal_av_row" data-k="${esc(a.key)}"><span class="na_cal_av_dot"><svg class="na_heart" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 20.5s-7.8-4.7-9.7-9.5C1 7.6 3.2 4.5 6.6 4.5c2.2 0 3.8 1.2 5.4 3.1 1.6-1.9 3.2-3.1 5.4-3.1 3.4 0 5.6 3.1 4.3 6.5-1.9 4.8-9.7 9.5-9.7 9.5z"/></svg></span><input type="text" class="text_pole na_cal_av_name" value="${esc(a.name)}" aria-label="기념일 이름"><small>${esc(dateOf(r))} · ${esc(strip(r.s.title))}</small><button type="button" class="na_cal_av_x" title="빼기" aria-label="빼기">✕</button></div>`).join('')}` : ''}
           </div>`;
+        let pm = null;
+        const stripHtml = dayRows.size > 1 ? `<div class="na_cal3_strip">${[...dayRows].map(([k, rs]) => {
+            const r = rs[0], mHead = r.date.m !== pm; pm = r.date.m;
+            return `${mHead ? `<span class="na_cal3_sm">${esc(cals[r.date.cal][r.date.m][0])}</span>` : ''}<button type="button" class="na_cal3_day${k === daySel ? ' on' : ''}" data-k="${esc(k)}"><small>${esc(r.time || '·')}</small><b>${r.date.d}</b><i>${'<u></u>'.repeat(Math.min(3, rs.length))}</i></button>`;
+          }).join('')}</div>` : '';
         $root.find('.na_cal_body').html(`
           ${annivCard}
-          ${dated ? '' : '<div class="na_v2_card na_v2_note">제목에서 날짜를 못 찾았어요. 아래 "달 이름 바꾸기"에 이야기 속 달력을 적어 주세요.</div>'}
+          ${stripHtml}
+          ${dated ? '' : '<div class="na_v2_card na_v2_note">제목에서 날짜를 못 찾았어요 · 아래 "달 이름 바꾸기"에 달력을 적어 주세요</div>'}
           ${l.warnings ? `<div class="na_xr_warn slim">${WARN_SVG}<div class="na_cal_warntxt">날짜가 거꾸로 가는 곳 ${l.warnings}개</div><button type="button" class="na_linkbtn na_cal_jump">보기</button></div>` : ''}
           ${groups.map(gr => `
             ${gr.gap ? `<div class="na_cal_gap2"><span>${esc(/개월$/.test(gr.gap) ? `${gr.gap} 지남` : gr.gap)}</span></div>` : ''}
             <div class="na_cal_month"><b>${esc(gr.name)}</b><small>섹션 ${gr.rows.length}${gr.year > 1 ? ` · ${gr.year}년째` : ''}</small></div>
             <div class="na_v2_card na_v2_list">${gr.rows.map(r => `
-              <button type="button" class="na_cal_item ${r.warn ? 'warn' : ''}" data-start="${r.s.start}">
+              <button type="button" class="na_cal_item ${r.warn ? 'warn' : ''}${daySel && dkey(r) === daySel ? ' na_cal3_hl' : ''}" data-start="${r.s.start}">
                 <span class="na_cal_day"><b>${esc(day(r))}</b><small>${esc(sub(r))}</small></span>
                 <span class="na_cal_txt"><span>${esc(strip(r.s.title))}${avBy.has(sectionKey(r.s)) ? ` <em class="na_cal_av_badge"><svg class="na_heart" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 20.5s-7.8-4.7-9.7-9.5C1 7.6 3.2 4.5 6.6 4.5c2.2 0 3.8 1.2 5.4 3.1 1.6-1.9 3.2-3.1 5.4-3.1 3.4 0 5.6 3.1 4.3 6.5-1.9 4.8-9.7 9.5-9.7 9.5z"/></svg> ${esc(avBy.get(sectionKey(r.s)))}</em>` : ''}</span><small>${esc(r.warn || [(r.s.title.match(/^(?:\S{1,12}\s)?#\d+\s*[–—~-]\s*#?\d+/) || [''])[0], place(r), r.note].filter(Boolean).join(' · '))}</small></span>
               </button>`).join('')}
             </div>`).join('')}`);
     };
+    $root.on('click', '.na_cal3_day', function () {
+        const k = String(this.dataset.k);
+        daySel = daySel === k ? null : k; avOpen = false; draw();
+        if (daySel) $root.find('.na_cal3_hl')[0]?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    });
+    $root.on('click', '.na_cal3_avtop', () => { avOpen = !avOpen; draw(); });
+    $root.on('keydown', '.na_cal3_avtop', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); avOpen = !avOpen; draw(); } });
     $root.on('click', '.na_cal_logs button', function () { logSel = String($(this).data('p')); draw(); });
     $root.on('click', '.na_cal_jump', () => $root.find('.na_cal_item.warn')[0]?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
     $root.on('click', '.na_cal_av_find', async function () {
         const again = !!m.annivScan && !(datedRows(m).length - (Number(m.annivScan) || 0));
-        if (again && annivsOf(m).length && !await confirm('기념일 다시 찾기', '지금 목록을 지우고 처음부터 다시 찾을까요? 직접 넣은 것도 지워져요.')) return;
+        if (again && annivsOf(m).length && !await confirm('기념일 다시 찾기', '지금 목록을 지우고 처음부터 다시 찾을까요? 직접 넣은 것도 지워져요.', '다시 찾기', { danger: true })) return;
         const found = await withSpinner($(this), '찾는 중…', () => findAnnivs({ again, onProgress: (i, n) => { if (n > 40) $(this).html(`<i class="fa-solid fa-spinner fa-spin"></i> 찾는 중… ${i}/${n}`); } }));
         if (found) toastr.info(found.length ? found.map(a => a.name).join(' · ') : '새로 찾은 날이 없어요', `기념일 ${found.length}개`);
         draw();
@@ -212,5 +246,5 @@ export async function openCalendar() {
     });
     $root.on('click', '.na_cal_item', function () { const st = Number(this.dataset.start); $root.closest('dialog').find('.popup-button-ok').trigger('click'); gotoSection(st); });
     draw();
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }

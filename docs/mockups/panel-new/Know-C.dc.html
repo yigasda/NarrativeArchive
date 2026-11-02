@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>누가 아는가 3</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#A84A17}a:hover{color:#7E3610}
+.num{font-variant-numeric:tabular-nums}
+.sw{width:40px;height:24px;border-radius:999px;background:#B8541F;position:relative;flex:none}
+.sw::after{content:'';position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff}
+</style>
+</helmet>
+<div style="width: 390px; height: 1000px; box-sizing: border-box; padding: 22px 18px 28px; background: #F6EDE6; color: #2A211C; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 12px">
+
+  <div style="display: flex; flex-direction: column; gap: 2px">
+    <b style="font-size: 20px; letter-spacing: -0.01em">누가 아는가</b>
+    <span style="font-size: 12.5px; color: #7A6A60">비밀 7개 · 지금 인물 3명 기준</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+    <button style="border: 0; background: #B8541F; color: #fff; font: inherit; font-size: 13px; font-weight: 600; padding: 10px 0; border-radius: 14px">AI로 더하기 · 고치기</button>
+    <button style="border: 1px solid #E5D5C9; background: #FFFAF6; color: #2A211C; font: inherit; font-size: 13px; padding: 10px 0; border-radius: 14px">AI로 다듬기</button>
+  </div>
+  <div style="display: flex; align-items: center; gap: 10px; background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 16px; padding: 10px 14px">
+    <span style="flex: 1; display: flex; flex-direction: column; line-height: 1.3"><b style="font-size: 13.5px">주입하기</b><span class="num" style="font-size: 11.5px; color: #8A7A70">모르는 걸 아는 척하지 않게 · 약 310 토큰</span></span>
+    <span class="sw"></span>
+  </div>
+
+  <div style="background: #FFFAF6; border: 1px solid #E5D5C9; border-radius: 18px; overflow: hidden">
+    <div style="display: grid; grid-template-columns: 1fr 40px 40px 40px; align-items: center; padding: 10px 12px 8px 14px; border-bottom: 1px solid #F1E6DD">
+      <span style="font-size: 12px; color: #8A7A70">비밀</span>
+      <sc-for list="{{people}}" as="p" hint-placeholder-count="3"><span style="justify-self: center; width: 28px; height: 28px; border-radius: 50%; background: {{p.c}}; color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 700" title="{{p.n}}">{{p.i}}</span></sc-for>
+    </div>
+    <sc-for list="{{facts}}" as="f" hint-placeholder-count="5">
+      <div style="display: grid; grid-template-columns: 1fr 40px 40px 40px; align-items: center; padding: 10px 12px 10px 14px; border-top: {{f.line}}">
+        <span style="display: flex; flex-direction: column; line-height: 1.4; padding-right: 6px">
+          <span style="font-size: 13px">{{f.text}}</span>
+          <span style="font-size: 11px; color: #A84A17">{{f.src}}</span>
+        </span>
+        <sc-for list="{{f.cells}}" as="c" hint-placeholder-count="3">
+          <span style="justify-self: center; width: 18px; height: 18px; border-radius: 50%; box-sizing: border-box; background: {{c.bg}}; border: {{c.border}}; display: grid; place-items: center; font-size: 10px; font-weight: 700; color: #8A5A00">{{c.t}}</span>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; justify-content: center; gap: 14px; font-size: 12px; color: #6B5A50">
+    <span style="display: flex; align-items: center; gap: 5px"><span style="width: 14px; height: 14px; border-radius: 50%; background: #2A211C"></span>알아요</span>
+    <span style="display: flex; align-items: center; gap: 5px"><span style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid #C98A2E; box-sizing: border-box; display: grid; place-items: center; font-size: 8px; color: #8A5A00">?</span>짐작</span>
+    <span style="display: flex; align-items: center; gap: 5px"><span style="width: 14px; height: 14px; border-radius: 50%; border: 1.5px dashed #CDBBAE; box-sizing: border-box"></span>몰라요</span>
+  </div>
+  <span style="font-size: 11.5px; color: #8A7A70; text-align: center">줄을 누르면 고치거나 지울 수 있어요</span>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const people = [['Set', '#8E3B2E'], ['Horus', '#5E7F3A'], ['Somang', '#B5645A']].map(([n, c]) => ({ n, c, i: n[0] }));
+    const cell = k => k === 'k' ? { bg: '#2A211C', border: '0', t: '' } : k === 's' ? { bg: 'transparent', border: '2px solid #C98A2E', t: '?' } : { bg: 'transparent', border: '1.5px dashed #CDBBAE', t: '' };
+    const F = [
+      ['Set listened through the wind to Somang', '#245–#263', 'ksu'],
+      ['Horus kept Set’s chained humiliation to himself', 'Y2 #500', 'kku'],
+      ['Chaewon crossed over the same way Somang did', 'Y2 #438', 'uus'],
+      ['The apothecary tent was not only an emergency', '#402–#475', 'skk'],
+      ['Somang’s mother may have heard her message', 'OPEN', 'uuu'],
+    ];
+    return {
+      people,
+      facts: F.map(([text, src, ks], i) => ({ text, src, line: i ? '1px solid #F1E6DD' : '0', cells: [...ks].map(cell) })),
+    };
+  }
+}
+</script>
+</body>
+</html>

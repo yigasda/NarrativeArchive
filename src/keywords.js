@@ -37,7 +37,7 @@ export async function openKeywords(s, body, current) {
           <summary>키워드 테스트 <small>문장을 넣으면 이 섹션이 불려 오는지 보여 줘요</small></summary>
           <div class="na_kw_testbox">
             <textarea class="text_pole na_kw_tin" rows="2" placeholder="예: 그 지도 아직 갖고 있어?"></textarea>
-            <label class="checkbox_label na_kw_trecent"><input type="checkbox"><span>최근 메시지 ${Math.max(0, depthN - 1)}개도 같이 (다음 메시지로 보낸다고 치기)</span></label>
+            <label class="checkbox_label na_kw_trecent"><input type="checkbox"><span>최근 메시지 ${Math.max(0, depthN - 1)}개도 같이 넣어 보기</span></label>
             <div class="na_kw_tout"></div>
           </div>
         </details>
@@ -183,20 +183,17 @@ export async function openKeywordTest() {
     const m = getMeta();
     const depth = Math.max(1, Number(m.linkDepth) || 4);
     const $root = $(`
-      <div class="na_popup">
-        <div class="na_block_head"><div>
-          <h4>키워드 테스트</h4>
-          <p>문장을 넣으면 🔑 키워드 연동한 섹션 중 어떤 게 불려 오는지 보여 줘요. 실제 주입은 바뀌지 않아요.</p>
-        </div></div>
-        <textarea class="text_pole na_kwt_in" rows="3" placeholder="예: 그 지도 아직 갖고 있어?"></textarea>
-        <label class="checkbox_label"><input type="checkbox" class="na_kwt_recent"><span>최근 메시지 ${depth - 1}개도 같이 (이 문장을 다음 메시지로 보낸다고 치기)</span></label>
+      <div class="na_popup na_v2 na_kwt3">
+        <div class="na_v2_title"><b>키워드 테스트</b><small>문장을 넣으면 키워드 섹션 중 무엇이 불려 오는지 보여 줘요 · 주입은 안 바뀌어요</small></div>
+        <textarea class="text_pole na_kwt_in" rows="2" placeholder="예: 그 지도 아직 갖고 있어?"></textarea>
+        <label class="checkbox_label"><input type="checkbox" class="na_kwt_recent"><span>최근 메시지 ${depth - 1}개도 같이 보내 보기</span></label>
         <div class="na_kwt_out"></div>
       </div>`);
     const linked = Object.entries(linkedMap(m)).filter(([, k]) => Array.isArray(k) && k.length);
     const keys = new Set(parseSections(m.text).map(sectionKey));
     const muted = mutedSet(m);
     const render = () => {
-        if (!linked.length) return $root.find('.na_kwt_out').html('<div class="na_empty">키워드 연동한 섹션이 없어요. 아카이브 탭의 섹션 카드에서 카드를 펼쳐 🔑를 눌러 키워드를 정하세요.</div>');
+        if (!linked.length) return $root.find('.na_kwt_out').html('<div class="na_empty">키워드 연동한 섹션이 없어요 · 섹션 카드에서 키워드를 정해요</div>');
         const text = $root.find('.na_kwt_in').val();
         const withRecent = $root.find('.na_kwt_recent').prop('checked');
         const hay = `${text}\n${withRecent && depth > 1 ? recentChatText(m, depth - 1) : ''}`.toLowerCase();
@@ -209,15 +206,21 @@ export async function openKeywordTest() {
         const label = { on: '호출됨', wait: '호출 안 됨', off: '스위치 꺼짐', gone: '섹션 없음' };
         const icon = { on: 'fa-circle-check', wait: 'fa-circle', off: 'fa-power-off', gone: 'fa-circle-question' };
         const where = w => kwSnippet(`${text}\n${withRecent && depth > 1 ? recentChatText(m, depth - 1) : ''}`, w);
-        $root.find('.na_kwt_out').html(rows.map(r => `
-            <div class="na_kwt_row na_kwt_${r.state}">
-              <i class="fa-solid ${icon[r.state]}"></i>
+        // (docs/mockups/ext-kwtest B, counts as list heads) the called sections under "불려 와요 n", the rest under "안 불려 와요 n"
+        const row = r => `
+            <div class="na_kwt3_row ${r.state}">
+              <span class="na_kwt3_st">${r.state === 'on' ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ''}</span>
               <div class="na_kwt_main">
-                <div><b>${label[r.state]}</b> · ${esc(keyLabel(r.key))}</div>
+                <b>${esc(keyLabel(r.key))}</b>${r.state === 'off' || r.state === 'gone' ? `<small>${label[r.state]}</small>` : ''}
                 <div class="na_kwt_keys">${r.ks.map(w => `<span class="na_kwt_key ${r.hits.includes(w) ? 'hit' : ''}">${esc(w)}</span>`).join('')}</div>
                 ${r.state === 'on' ? `<div class="na_kwt_where">${r.hits.map(w => `<div>${where(w)}</div>`).join('')}</div>` : ''}
               </div>
-            </div>`).join(''));
+            </div>`;
+        const on = rows.filter(r => r.state === 'on'), rest = rows.filter(r => r.state !== 'on');
+        $root.find('.na_kwt_out').html(`
+            <div class="na_v2_label na_kwt3_lbl"><span>불려 와요</span><b class="on">${on.length}</b></div>
+            ${on.length ? `<div class="na_v2_card na_kwt3_list">${on.map(row).join('')}</div>` : ''}
+            ${rest.length ? `<div class="na_v2_label na_kwt3_lbl"><span>안 불려 와요</span><b>${rest.length}</b></div><div class="na_v2_card na_kwt3_list">${rest.map(row).join('')}</div>` : ''}`);
     };
     let t;
     $root.find('.na_kwt_in').on('input', () => { clearTimeout(t); t = setTimeout(render, 150); });

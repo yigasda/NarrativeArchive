@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>압축 C</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B8541F}a:hover{color:#8F3F14}
+.card{background:#F7EEE7;border-radius:18px;padding:14px 16px}
+.row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid #E5D5C9}
+.row:first-child{border-top:none}
+.sub{font-size:12px;color:#7A6A60}
+.lab{font-size:12px;font-weight:700;color:#6B5A50;margin:4px 4px 0}
+.chev{margin-left:auto;color:#8A7A70;font-size:13px}
+.tab{flex:1;border:none;background:transparent;font-family:inherit;font-size:14px;padding:10px 0;color:#8A7A70;border-bottom:2px solid transparent}
+.tab.on{color:#463428;font-weight:700;border-bottom-color:#B8541F}
+</style>
+</helmet>
+<div style="width: 400px; height: 1060px; box-sizing: border-box; padding: 16px; background: #FFFAF6; font-family: 'Noto Sans KR', sans-serif; color: #463428; display: flex; flex-direction: column; gap: 14px">
+  <div style="display: flex; border-bottom: 1px solid #E5D5C9">
+    <button type="button" class="tab on">압축</button>
+    <button type="button" class="tab">압축 설정</button>
+  </div>
+  <div class="card" style="display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #6B5A50"><span>경계선 #19 뒤에 쌓인 원문</span><span>마지막 #29</span></div>
+    <div style="display: flex; align-items: baseline; gap: 8px"><b style="font-size: 30px">297</b><span class="sub">토큰 · 메시지 10개</span></div>
+    <div style="height: 8px; border-radius: 4px; background: #D9C8BC; display: flex; overflow: hidden"><div style="width: 66%; background: #8A7A70"></div><div style="flex: 1; background: #B8541F"></div></div>
+  </div>
+  <button type="button" style="border: none; border-radius: 18px; background: #B8541F; color: #FFF7F0; padding: 18px; display: flex; align-items: center; gap: 12px; text-align: left; font-family: inherit">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>
+    <span style="display: flex; flex-direction: column; gap: 2px"><b style="font-size: 17px">한 번에 압축</b><span style="font-size: 12px; opacity: .9">#20–#28 · 바로 넣기 켬</span></span>
+    <span style="margin-left: auto; font-size: 18px">›</span>
+  </button>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+    <div class="card"><b style="font-size: 14px">압축 작업실</b><div class="sub">장면마다 대화하며</div></div>
+    <div class="card"><b style="font-size: 14px">압축 마법사</b><div class="sub">뽑기 → 붙여넣기</div></div>
+  </div>
+  <div class="lab">숨기기</div>
+  <div class="card" style="padding: 0">
+    <div class="row"><b style="font-size: 14px">숨기기 다시 적용</b><span class="sub">경계선 앞만</span><span class="chev">›</span></div>
+    <div class="row"><b style="font-size: 14px">숨김 해제</b><span class="sub">19개</span><span class="chev">›</span></div>
+  </div>
+  <div class="lab">따로 하기</div>
+  <div class="card" style="padding: 0">
+    <div class="row"><b style="font-size: 14px">원문 뽑기</b><span class="chev">›</span></div>
+    <div class="row"><b style="font-size: 14px">아카이브에 추가</b><span class="chev">›</span></div>
+    <div class="row"><b style="font-size: 14px">꼭 남길 장면</b><span class="sub">3개</span><span class="chev">›</span></div>
+  </div>
+  <div style="margin-top: 10px; border-top: 1px dashed #D9C8BC; padding-top: 14px; display: flex; flex-direction: column; gap: 10px">
+    <div class="sub" style="text-align: center">↓ 압축 설정 탭을 누르면</div>
+    <div class="card" style="padding: 0">
+      <div class="row"><span style="font-size: 14px">바로 넣기</span><span style="margin-left: auto; width: 40px; height: 24px; border-radius: 12px; background: #B8541F"></span></div>
+      <div class="row"><span style="font-size: 14px">쌓이면 알려 주기</span><span class="chev">60개마다 ›</span></div>
+      <div class="row"><span style="font-size: 14px">방식</span><span class="chev">2단계 ›</span></div>
+      <div class="row"><span style="font-size: 14px">원문 손질 · 지시문 · 경계선</span><span class="chev">▸</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":400,"height":1060}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

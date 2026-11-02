@@ -302,7 +302,7 @@ export function renameKeys(m, from, to) {
 
 // "[[## Y2 #48–#63 — …]]" → the section it names (exact heading, then same range)
 export function findCited(secs, raw) {
-    const n = raw.replace(/^#+\s*/, '').trim();
+    const n = raw.replace(/^#{1,6}\s+/, '').trim(); // a markdown heading mark only: a title may itself start with #1–#12
     const rangeOf = t => (t.match(/(?:\b[A-Za-z]+\d*\s+)?#\d+\s*[–—~-]\s*#?\d+/) || [''])[0].replace(/\s*[–—~-]\s*#?/, '–#').replace(/\s+/g, ' ');
     return secs.find(s => s.title === n)
         || secs.find(s => s.title.startsWith(n) || n.startsWith(s.title))

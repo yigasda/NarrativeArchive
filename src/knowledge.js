@@ -6,7 +6,7 @@ import { ctx, getMeta, saveMeta } from './core.js';
 import { applyInjection, extraBlocks } from './inject.js';
 import { capWords } from './keywords.js';
 import { syncPanel } from './panel.js';
-import { faceHtml } from './people.js';
+import { exFace, faceHtml } from './people.js';
 import { mountSectionPicker } from './picker.js';
 import { RANGE_HEAD, findCited, parseSections, sectionKey, splitTail, tailBlocks } from './sections.js';
 import { translateLines } from './translate.js';
@@ -173,17 +173,18 @@ export async function openKnowledge() {
     const $root = $(`
       <div class="na_popup na_v2 na_kn2">
         <div class="na_v2_title"><b>누가 아는가</b><small class="na_kn2_sub"></small></div>
-        <div class="na_kn2_main">
-          <button type="button" class="na_v2_btn primary na_kn_ai"><span>AI로 만들기</span></button>
-          <button type="button" class="na_v2_btn na_kn_tidy" title="겹치는 줄 합치기 · 끝 시점 기준으로 고치기 · 필요 없는 줄 빼기">AI로 다듬기</button>
-        </div>
+        <!-- 주입하기 · 경고 · 목록(비면 안내) · AI 버튼과 고르기 칸 · 더보기 줄 -->
         <label class="na_v2_card na_kn2_inject na_kn_inject">
           <span class="na_cp_txt"><b>주입하기</b><small>모르는 걸 아는 척하지 않게<span class="na_kn_tok"></span></small></span>
           <input type="checkbox" class="na_toggle">
         </label>
-        <div class="na_kn_pickhost"></div>
         <div class="na_check na_check_soft na_kn_stale" hidden></div>
         <div class="na_kn_list"></div>
+        <div class="na_kn2_main">
+          <button type="button" class="na_v2_btn primary na_kn_ai"><span>AI로 만들기</span></button>
+          <button type="button" class="na_v2_btn na_kn_tidy" title="겹치는 줄 합치기 · 끝 시점 기준으로 고치기 · 필요 없는 줄 빼기">AI로 다듬기</button>
+        </div>
+        <div class="na_kn_pickhost"></div>
         <div class="na_kn2_more">
           <button type="button" class="na_linkbtn na_kn_edit">직접 고치기</button>
           <button type="button" class="na_linkbtn na_kn_trbtn">한국어로 보기</button>
@@ -197,6 +198,25 @@ export async function openKnowledge() {
       </div>`);
     const secs = () => parseSections(m.text);
     let tr = null;
+    // the empty window (docs/mockups/ext-knowledge A): what this is in one line, 만들기, and two faded example rows (played by
+    // Claude · Gemini · GPT, so nobody mistakes them for the story's own) as small dot-and-name tags
+    const emptyHtml = () => {
+        const [a, b, c2] = ['Claude', 'Gemini', 'GPT'];
+        // a letter circle for everyone (green knows · yellow suspects · red doesn't), the real list's dashed ? for suspects, struck for doesn't
+        const tag = (n, k) => `<span class="na_kn3_tag ${k}">${k === 'k' ? exFace(n, 18) : ''}<em>${esc(n)}</em>${k === 's' ? '<b>?</b>' : ''}</span>`;
+        return `<div class="na_v2_card na_kn3_hello"><span class="na_kn3_big"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/></svg></span>
+            <b>아직 정리된 비밀이 없어요</b><small>아카이브를 읽고 비밀마다 아는 사람 · 모르는 사람을 정리해요</small>
+            <button type="button" class="na_kn3_make">✧ AI로 만들기</button>
+            <button type="button" class="na_linkbtn na_kn3_write">직접 쓰기</button></div>
+          <div class="na_kn3_sect"><span>이렇게 정리돼요</span><small>예시</small></div>
+          <div class="na_v2_card na_kn3_ex">
+            <div class="na_kn3_leg"><span class="na_kn3_tag k"><i></i><em>알아요</em></span><span class="na_kn3_tag s"><em>짐작</em><b>?</b></span><span class="na_kn3_tag u"><em>몰라요</em></span></div>
+            <div><p>${esc(a)}, 그날 밤 있던 곳을 ${esc(b)}에게 숨김</p><span class="na_kn_people">${tag(a, 'k')}${tag(c2, 's')}${tag(b, 'u')}</span></div>
+            <div><p>${esc(c2)}의 옛 이름</p><span class="na_kn_people">${tag(c2, 'k')}${tag(a, 'k')}${tag(b, 'u')}</span></div>
+          </div>`;
+    };
+    $root.on('click', '.na_kn3_make', () => $root.find('.na_kn_ai').trigger('click'));
+    $root.on('click', '.na_kn3_write', () => $root.find('.na_kn_edit').trigger('click'));
     const render = () => {
         const rows = knowledgeRows(m);
         $root.find('.na_kn_ai span').text(rows.length ? 'AI로 더하기 · 고치기' : 'AI로 만들기');
@@ -208,12 +228,15 @@ export async function openKnowledge() {
         $root.find('.na_kn_stale').prop('hidden', !stale.length).html(stale.length
             ? `<i class="fa-solid fa-user-slash"></i><div class="na_kn_stale_txt">지금 이야기에 안 나오는 인물이 '모름'·'짐작'에 있어요: <b>${stale.map(esc).join(', ')}</b><small class="na_dim">STATE의 인물 제목과 최근 섹션 4개에 나오는 인물만 남겨요</small></div><button type="button" class="na_btn na_small na_kn_trim">빼기</button>` : '');
         $root.find('.na_kn_inject input').prop('checked', !!m.knowInject);
-        const legend = '<div class="na_kn2_legend"><span><span class="na_kn2_k mini">S</span>알아요</span><span><span class="na_kn2_s mini">S<b>?</b></span>짐작</span><span><span class="na_kn2_u">S</span>몰라요</span></div>';
+        // the same tags and legend as the empty window's example: green with a face (who knows), yellow dashed ? (suspects),
+        // grey struck (doesn't know); the legend sits above the list
+        const legend = '<div class="na_kn3_leg na_kn3_legbar"><span class="na_kn3_tag k"><i></i><em>알아요</em></span><span class="na_kn3_tag s"><em>짐작</em><b>?</b></span><span class="na_kn3_tag u"><em>몰라요</em></span></div>';
+        const letter = n => `<i>${esc(String(n)[0] || '?')}</i>`;
         $root.find('.na_kn_list').html(rows.length ? legend + rows.map((r, i) => {
             const s = r.src ? findCited(secs(), r.src) : null;
-            const k = r.knows.map(x => `<span class="na_kn2_k">${faceHtml(x, 22)}${esc(x)}</span>`).join('');
-            const su = r.suspects.map(x => `<span class="na_kn2_s">${esc(x)}<b>?</b></span>`).join('');
-            const u = r.unaware.map(x => `<span class="na_kn2_u">${esc(x)}</span>`).join('');
+            const k = r.knows.map(x => `<span class="na_kn3_tag k">${faceHtml(x, 18)}<em>${esc(x)}</em></span>`).join('');
+            const su = r.suspects.map(x => `<span class="na_kn3_tag s"><em>${esc(x)}</em><b>?</b></span>`).join('');
+            const u = r.unaware.map(x => `<span class="na_kn3_tag u"><em>${esc(x)}</em></span>`).join('');
             const secret = r.unaware.length > 0;
             return `<div class="na_kn_row na_kn2_card ${secret ? 'secret' : ''}" data-i="${i}">
               <div class="na_kn_fact">${esc(r.fact)}${tr?.[i] ? `<div class="na_kn_tr">${esc(tr[i])}</div>` : ''}</div>
@@ -225,7 +248,11 @@ export async function openKnowledge() {
               </div>
             </div>`;
         }).join('')
-            : '<div class="na_empty">아직 없어요. AI로 만들거나 직접 적어 주세요.</div>');
+            : emptyHtml());
+        // nothing yet: the welcome card leads, so the top buttons and the 더보기 row step aside
+        $root.toggleClass('na_kn3_new', !rows.length);
+        $root.find('.na_kn_inject input').prop('disabled', !rows.length);
+        $root.find('.na_kn_inject small').contents().first()[0].textContent = rows.length ? '모르는 걸 아는 척하지 않게' : '비밀을 만들면 켤 수 있어요';
         const blk = extraBlocks({ ...m, knowInject: true, voiceInject: false });
         if (blk) countTokens(blk).then(t => $root.find('.na_kn_tok').text(` · 약 ${fmt(t)} 토큰`)); else $root.find('.na_kn_tok').text('');
     };
@@ -240,7 +267,7 @@ export async function openKnowledge() {
         extraFoot: '<label class="checkbox_label na_kn_fresh"><input type="checkbox"><span>지금 표는 버리고 처음부터 만들기</span></label>',
         onGo: async (parts, step, stepDone) => {
             if ($root.find('.na_kn_fresh input').prop('checked')) {
-                if (knowledgeRows(m).length && !await confirm('처음부터 만들기', '지금 표를 지우고 고른 섹션으로 새로 만들까요?')) return;
+                if (knowledgeRows(m).length && !await confirm('처음부터 만들기', '지금 표를 지우고 고른 섹션으로 새로 만들까요?', '새로 만들기', { danger: true })) return;
                 m.knowledge = ''; m.knowMined = []; tr = null;
                 $root.find('.na_kn_fresh input').prop('checked', false);
             }
@@ -290,7 +317,7 @@ export async function openKnowledge() {
             toastr.success(`새로 ${added}개${updated ? ` · 고친 줄 ${updated}개` : ''} · 다듬기: 합침 ${t.merged} · 뺌 ${t.dropped} → 지금 표 ${knowledgeRows(m).length}개. 틀린 건 직접 고쳐 주세요.`);
         },
     });
-    $root.find('.na_kn_ai').on('click', function () { $(this).toggleClass('active', picker.toggle()); });
+    $root.find('.na_kn_ai').on('click', function () { const open = picker.toggle(); $(this).toggleClass('active', open); $root.toggleClass('na_kn3_picking', open); });
     $root.find('.na_kn_tidy').on('click', async function () {
         const t = await withSpinner($(this), '다듬는 중…', () => tidyKnowledge(m));
         if (!t) return;
@@ -322,10 +349,10 @@ export async function openKnowledge() {
         await save();
     });
     $root.find('.na_kn_clear').on('click', async () => {
-        if (!await confirm('전체 삭제', '누가 아는가 표를 모두 지울까요? 되돌릴 수 없어요.')) return;
+        if (!await confirm('전체 삭제', '누가 아는가 표를 모두 지울까요? 되돌릴 수 없어요.', '지우기', { danger: true })) return;
         m.knowledge = ''; m.knowMined = []; tr = null;
         await save();
         toastr.success('누가 아는가 표를 비웠어요');
     });
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }

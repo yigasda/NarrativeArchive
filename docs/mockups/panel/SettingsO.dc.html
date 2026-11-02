@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>설정 O</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B8541F}a:hover{color:#8F3F14}
+.card{background:#F7EEE7;border-radius:18px}
+.row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid #E5D5C9}
+.row:first-child{border-top:none}
+.sub{font-size:12px;color:#7A6A60;line-height:1.45}
+.nm{font-size:14px;display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.pill{margin-left:auto;flex:none;background:#F6E1D3;color:#A84A17;border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700}
+.sw{margin-left:auto;width:40px;height:24px;border-radius:12px;background:#B8541F;flex:none}
+.sw.off{background:#D9C8BC}
+.chip{border:1px solid #E5D5C9;border-radius:999px;padding:6px 12px;font-size:13px;color:#6B5A50;background:#FFFAF6}
+.chip.on{background:#B8541F;border-color:#B8541F;color:#FFF7F0;font-weight:700}
+.ic{width:30px;height:30px;border-radius:9px;background:#F6E1D3;color:#B8541F;display:flex;align-items:center;justify-content:center;flex:none}
+.u{color:#A84A17;font-weight:700;border-bottom:2px solid #E9B898}
+
+
+</style>
+</helmet>
+<div style="width: 400px; height: 780px; box-sizing: border-box; padding: 20px 16px; background: #FFFAF6; font-family: 'Noto Sans KR', sans-serif; color: #463428; display: flex; flex-direction: column; gap: 14px">
+  <div style="display: flex; align-items: center; gap: 10px"><span style="color: #B8541F; font-size: 20px">‹</span><b style="font-size: 20px">AI 모델</b><span style="margin-left: auto; font-size: 12px; color: #6B5A50; border: 1px solid #E5D5C9; border-radius: 999px; padding: 6px 12px">미리보기</span></div>
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+    <div style="background:#F7EEE7;border:1px solid transparent;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:4px;min-height:92px;box-sizing:border-box"><span style="font-size:12px;color:#8A7A70">AI 기능 모델</span><b style="font-size:19px;color:#463428">커스텀</b><span style="font-size:12px;color:#8A7A70;margin-top:auto">gemini-2.5-flash</span></div><div style="background:#F7EEE7;border:1px solid transparent;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:4px;min-height:92px;box-sizing:border-box"><span style="font-size:12px;color:#8A7A70">초안 모델</span><b style="font-size:19px;color:#463428">Vertex</b><span style="font-size:12px;color:#8A7A70;margin-top:auto">claude-opus</span></div>
+    <div style="background:#FFFFFF;border:1px solid #EEE2D8;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:4px;min-height:92px;box-sizing:border-box"><span style="font-size:12px;color:#8A7A70">번역 모델</span><b style="font-size:19px;color:#8A7A70">같이</b><span style="font-size:12px;color:#8A7A70;margin-top:auto">AI 기능 모델</span></div><div style="background:#F7EEE7;border:1px solid transparent;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:4px;min-height:92px;box-sizing:border-box"><span style="font-size:12px;color:#8A7A70">뜻으로 찾기</span><b style="font-size:19px;color:#463428">실리태번</b><span style="font-size:12px;color:#8A7A70;margin-top:auto">섹션 120 · 원문 900</span></div>
+  </div>
+  <div style="display:flex;gap:4px;background:#F1E6DD;border-radius:14px;padding:4px;margin-top:4px"><span style="flex:1;text-align:center;padding:9px 0;border-radius:11px;font-size:14px;color:#8A7A70">AI 기능</span><span style="flex:1;text-align:center;padding:9px 0;border-radius:11px;font-size:14px;background:#FFFFFF;font-weight:700;color:#463428;box-shadow:0 1px 3px rgba(70,52,40,.12)">초안</span><span style="flex:1;text-align:center;padding:9px 0;border-radius:11px;font-size:14px;color:#8A7A70">번역</span><span style="flex:1;text-align:center;padding:9px 0;border-radius:11px;font-size:14px;color:#8A7A70">뜻 찾기</span></div>
+  <div style="background:#FFFFFF;border:1px solid #EEE2D8;border-radius:16px;overflow:hidden"><div style="display:flex;align-items:center;gap:12px;padding:15px 16px;"><span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:15px">초안 모델</span><span style="font-size:12px;color:#8A7A70">압축 초안 · 섹션 짧은 버전</span></span><span style="margin-left:auto;display:flex;align-items:center;gap:4px;color:#A84A17;font-size:14px;flex:none">Vertex AI<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></div><div style="display:flex;align-items:center;gap:12px;padding:15px 16px;border-top:1px solid #EEE2D8"><span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:15px">모델</span></span><span style="margin-left:auto;display:flex;align-items:center;gap:4px;color:#A84A17;font-size:14px;flex:none">claude-opus<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></div><div style="display:flex;align-items:center;gap:12px;padding:15px 16px;border-top:1px solid #EEE2D8"><span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:15px">지역</span></span><span style="margin-left:auto;display:flex;align-items:center;gap:4px;color:#A84A17;font-size:14px;flex:none">global<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></div><div style="display:flex;align-items:center;gap:12px;padding:15px 16px;border-top:1px solid #EEE2D8"><span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:15px">압축할 때 생각</span></span><span style="margin-left:auto;display:flex;align-items:center;gap:4px;color:#A84A17;font-size:14px;flex:none">높게<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></div><div style="display:flex;align-items:center;gap:12px;padding:15px 16px;border-top:1px solid #EEE2D8"><span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:15px">초안 최대 길이</span><span style="font-size:12px;color:#8A7A70">끊기면 늘려 주세요</span></span><span style="margin-left:auto;display:flex;align-items:center;gap:4px;color:#A84A17;font-size:14px;flex:none">32,000<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></div><div style="display:flex;align-items:center;gap:12px;padding:15px 16px;border-top:1px solid #EEE2D8"><span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:15px">연결 테스트</span></span><span style="margin-left:auto;display:flex;align-items:center;gap:4px;color:#A84A17;font-size:14px;flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":400,"height":780}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

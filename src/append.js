@@ -28,57 +28,78 @@ export async function openAppend(prefill = {}) {
     try { recovery=appendDraftStore(c,pre.text); } catch(err) {toastr.warning(String(err?.message || err),'임시 저장을 사용할 수 없어요');}
     const restored=recovery?.saved;
 
+    // 아카이브에 추가 (v3): one card holds the draft and, switched to 추가 후, the preview in a scroll box (크게 보기 fills the
+    // window with it, the fix box docked below); AI로 고치기 is a small chat whose replies the code writes; then the AI tools,
+    // the checks, the settings, and 취소 · 추가하기 at the bottom
+    const EYE = svgA('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', 15);
     const $root = $(`
-      <div class="na_popup na_v2 na_ap2">
+      <div class="na_popup na_v2 na_ap2 na_ap3">
         <div class="na_v2_titlebar">
           <div class="na_v2_title"><b>아카이브에 추가</b><small>STATE·OPEN 앞에 넣고, 새 STATE로 바꿔요</small></div>
         </div>
-        <textarea class="text_pole na_append_ta" spellcheck="false" placeholder="## Y2 #574–#600 — 제목 (날짜, 장소)&#10;PLOT:&#10;- …"></textarea>
-        <div class="na_wz2_chips na_ap_outinfo"></div>
-        <div class="na_v2_row2 na_ap_tools">
-          <button type="button" class="na_v2_btn na_append_file_btn">${svgA('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>', 15)}파일 불러오기</button>
-          <button type="button" class="na_v2_btn na_ap_style" title="문장 결만 아카이브처럼 다듬어요 · 내용 · 출처 번호 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 보내요 · AI 기능 모델">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>', 15)}문체 다듬기</button>
-          ${(pre.grade || pre.gradeLater) && !restored ? '' : `<button type="button" class="na_v2_btn na_ap_grade" title="붙여넣은 섹션을 그 번호의 원문과 맞춰 봐요 · AI 기능 모델">${svgA('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14l2 2 4-4"/>', 15)}원문 대조</button>`}
+        <div class="na_v2_card na_ap3_sum">
+          <div class="na_ap3_head na_ap_outinfo"></div>
+          <div class="na_ap3_seg" role="tablist"><button type="button" class="on" data-v="draft">초안</button><button type="button" data-v="after">${EYE}추가 후 <b class="na_ap_add"></b><b class="na_ap_del"></b></button></div>
+          <textarea class="text_pole na_append_ta" spellcheck="false" placeholder="## Y2 #574–#600 — 제목 (날짜, 장소)&#10;PLOT:&#10;- …"></textarea>
+          <div class="na_ap_preview" hidden>
+            <div class="na_ap3_pvbody"><div class="na_ap3_pvbar"><span class="na_ap_tr_row"></span><button type="button" class="na_btn na_small na_ap3_bigbtn">${svgA('<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/>', 13)} 크게 보기</button></div>
+            <div class="na_ap3_box"><div class="na_diff na_ap_diff"></div></div></div>
+          </div>
+          <button type="button" class="na_linkbtn na_ap3_file na_append_file_btn">${svgA('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>', 15)}파일 불러오기</button>
         </div>
         <input type="file" class="na_append_file" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden>
-        ${true ? `<div class="na_apf" hidden>
-          <div class="na_sf_log na_apf_log"></div>
-          <div class="na_sf_note na_apf_note" hidden></div>
-          <div class="na_apf_scope"><div class="na_apf_chips" role="group" aria-label="고칠 섹션"></div></div>
-          <div class="na_ly_ask"><input type="text" class="na_ly_askq na_apf_q" placeholder="초안 고쳐 달라고 하기 (예: #60 이후 더 줄여줘)" aria-label="초안 고쳐 달라고 하기" enterkeyhint="send"><button type="button" class="na_ly_askgo na_apf_go" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>
-          <div class="na_apf_foot"><label class="checkbox_label"><input type="checkbox" class="na_apf_raw" checked><span>원문 같이 보내기 <small class="na_apf_rawinfo"></small></span></label><button type="button" class="na_linkbtn na_apf_undo" hidden>되돌리기</button></div>
-        </div>` : ''}
-        <div class="na_v2_card na_v2_list na_ap2_checks">
-          <div class="na_ap2_label"><span>붙여넣은 글 검사</span><small class="na_append_info"></small></div>
-          <div class="na_check na_aucheck" hidden></div>
-          <div class="na_check na_numcheck" hidden></div>
-          <div class="na_check na_statecheck" hidden></div>
-          <div class="na_check na_check_warn na_statelost" hidden></div>
-          <div class="na_stchg" hidden></div>
-          <div class="na_check na_cites" hidden></div>
-          <div class="na_check na_check_warn na_bullets" hidden></div>
-          <div class="na_check na_check_warn na_whole" hidden><span class="na_ck_ic">!</span><div>
-            <b>아카이브 전체본 같아요</b> — 이미 있는 섹션이 거의 다 들어 있어요. 새 섹션만 붙이려면 그대로 <b>추가</b>, 이 내용으로 아카이브를 바꾸려면:
-            <div class="na_whole_row"><button type="button" class="na_btn na_small na_whole_btn"><i class="fa-solid fa-right-left"></i> 통째로 바꾸기</button></div>
-          </div></div>
-          <div class="na_check na_check_warn na_rw" hidden></div>
-          <div class="na_check na_check_warn na_names" hidden></div>
-          <div class="na_check na_cut" hidden></div>
-          <div class="na_ai_box na_grade_out" hidden></div>
-          <button type="button" class="na_cp_row na_ai_conflict" title="기존 아카이브와 어긋나는 이름·날짜·사실·해결된 떡밥을 AI가 찾아요">${svgB(SVG_B.star, 14)} AI로 충돌 검사 · 날짜·사실·해결된 떡밥</button>
-          <div class="na_ai_box na_conflict_out" hidden></div>
+        <div class="na_ap3_part na_apf_part" hidden>
+          <div class="na_ap3_sect">AI로 고치기</div>
+          <div class="na_v2_card na_apf">
+            <div class="na_ap3_log na_apf_log"></div>
+            <div class="na_ly_ask"><input type="text" class="na_ly_askq na_apf_q" placeholder="고쳐 달라고 하기 (예: #38 더 자세히)" aria-label="초안 고쳐 달라고 하기" enterkeyhint="send"><button type="button" class="na_ly_askgo na_apf_go" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>
+            <div class="na_apf_scope"><div class="na_apf_chips" role="group" aria-label="고칠 섹션"></div></div>
+            <div class="na_apf_foot"><small class="na_apf_rawinfo"></small><label class="na_ap3_raw" title="고칠 때 그 번호의 원문도 같이 보내요"><input type="checkbox" class="na_apf_raw" checked>${svgA('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>', 13)}원문 포함<span class="na_ap3_tick">${svgA(ICO_A.check, 11, 3.2)}</span></label></div>
+          </div>
         </div>
+        <div class="na_ap3_part na_ap3_toolpart" hidden>
+          <div class="na_ap3_sect">AI 도구</div>
+          <div class="na_v2_card na_ap3_tools">
+            <button type="button" class="na_ap3_tool na_ap_style" title="문장 결만 아카이브처럼 다듬어요 · 내용 · 출처 번호 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 보내요 · AI 기능 모델"><span class="na_ap3_ti a">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>', 17)}</span><span class="na_ap3_tt"><b>문체 다듬기</b><small>내용은 그대로, 문장 결만 아카이브처럼</small></span><span class="na_ap3_ar">›</span></button>
+            ${(pre.grade || pre.gradeLater) && !restored ? '' : `<button type="button" class="na_ap3_tool na_ap_grade" title="붙여넣은 섹션을 그 번호의 원문과 맞춰 봐요 · AI 기능 모델"><span class="na_ap3_ti b">${svgA('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14l2 2 4-4"/>', 17)}</span><span class="na_ap3_tt"><b>원문 대조</b><small>이 번호의 원문과 맞는지 AI가 봐요</small></span><span class="na_ap3_ar">›</span></button>`}
+            <button type="button" class="na_ap3_tool na_ai_conflict" title="기존 아카이브와 어긋나는 이름·날짜·사실·해결된 떡밥을 AI가 찾아요"><span class="na_ap3_ti c">${svgB(SVG_B.star, 17)}</span><span class="na_ap3_tt"><b>충돌 검사</b><small>이름 · 날짜 · 사실 · 해결된 떡밥이 어긋나는지</small></span><span class="na_ap3_ar">›</span></button>
+          </div>
+        </div>
+        <div class="na_ap3_part na_ap3_checkpart" hidden>
+          <div class="na_ap3_sect">검사 <small class="na_append_info"></small></div>
+          <div class="na_v2_card na_v2_list na_ap2_checks">
+            <div class="na_check na_aucheck" hidden></div>
+            <div class="na_check na_numcheck" hidden></div>
+            <div class="na_check na_statecheck" hidden></div>
+            <div class="na_check na_check_warn na_statelost" hidden></div>
+            <div class="na_stchg" hidden></div>
+            <div class="na_check na_cites" hidden></div>
+            <div class="na_check na_check_warn na_bullets" hidden></div>
+            <div class="na_check na_check_warn na_whole" hidden><span class="na_ck_ic">!</span><div>
+              <b>아카이브 전체본 같아요</b> — 이미 있는 섹션이 거의 다 들어 있어요. 새 섹션만 붙이려면 그대로 <b>추가</b>, 이 내용으로 아카이브를 바꾸려면:
+              <div class="na_whole_row"><button type="button" class="na_btn na_small na_whole_btn"><i class="fa-solid fa-right-left"></i> 통째로 바꾸기</button></div>
+            </div></div>
+            <div class="na_check na_check_warn na_rw" hidden></div>
+            <div class="na_check na_check_warn na_names" hidden></div>
+            <div class="na_check na_cut" hidden></div>
+            <div class="na_ai_box na_grade_out" hidden></div>
+            <div class="na_ai_box na_conflict_out" hidden></div>
+          </div>
+        </div>
+        <div class="na_ap3_sect">넣을 때</div>
         <div class="na_v2_card na_v2_list">
           <label class="na_cp_row"><span class="na_cp_txt"><span>이번에 압축한 끝 번호</span><small class="na_end_hint"></small></span><span class="na_ap2_end">#<input type="number" class="na_end" min="0" max="${last}" value="${Math.max(0, last)}"></span></label>
           <label class="na_cp_row"><span class="na_cp_txt"><span>추가한 뒤 숨기기</span><small class="na_hide_hint">마지막 ${m.keep}개는 남겨요</small></span><input type="checkbox" class="na_toggle na_do_hide" checked></label>
           <label class="na_cp_row na_renum_row"><span class="na_cp_txt"><span class="na_renum_label">제목·안내문의 끝 번호도 바꾸기</span></span><input type="checkbox" class="na_toggle na_do_renum" checked></label>
         </div>
-        <details class="na_v2_card na_v2_more na_ap_preview" hidden>
-          <summary>추가하면 바뀌는 부분 <span class="na_chip na_chip_add na_ap_add"></span><span class="na_chip na_chip_del na_ap_del"></span></summary>
-          <div><div class="na_ap_tr_row"></div><div class="na_diff na_ap_diff"></div></div>
-        </details>
-        <div class="na_ap2_btns">
-          <button type="button" class="na_ap2_pv">미리보기</button>
+        <div class="na_ap3_full" hidden>
+          <div class="na_ap3_fnav"><button type="button" class="na_ap3_back">${svgA('M15 5l-7 7 7 7', 17)}돌아가기</button><span class="na_ap3_ftr"></span></div>
+          <div class="na_ap3_fhead"><b>추가하면 이렇게 돼요 <span class="na_ap3_fcount"></span></b><small class="na_ap3_fsub"></small></div>
+          <div class="na_ap3_fbody"></div>
+          <div class="na_ap3_fdock"></div>
+        </div>
+        <div class="na_ap3_bar na_ap2_btns">
+          <button type="button" class="na_ap3_cancel">닫기</button>
           <button type="button" class="na_ap2_go">추가하기</button>
         </div>
       </div>`);
@@ -97,7 +118,7 @@ export async function openAppend(prefill = {}) {
         const file = this.files?.[0];
         if (!file) return;
         const text = (await file.text()).replace(/\r\n/g, '\n').trim();
-        if ($ta.val().trim() && !await confirm('불러오기', '붙여넣은 내용을 이 파일 내용으로 바꿀까요?')) return;
+        if ($ta.val().trim() && !await confirm('불러오기', '붙여넣은 내용을 이 파일 내용으로 바꿀까요?', '바꾸기')) return;
         $ta.val(text).trigger('input');
         toastr.success(`불러옴: ${file.name}`);
     });
@@ -107,27 +128,64 @@ export async function openAppend(prefill = {}) {
     const $pv = $root.find('.na_ap_preview');
     const apTr = translateButton($root.find('.na_ap_diff'));
     $root.find('.na_ap_tr_row').append(apTr);
-    let pvWanted = false; // the preview card shows once 미리보기 is pressed
+    // 초안 | 추가 후: the same card shows the draft, or the archive after adding it (the diff) in a scroll box
+    let pvWanted = false;
+    const $seg = $root.find('.na_ap3_seg button');
+    const setMode = after => {
+        if (after && !$ta.val().trim()) return toastr.info('먼저 추가할 내용을 붙여넣어 주세요.');
+        pvWanted = !!after;
+        $seg.removeClass('on').filter(`[data-v="${after ? 'after' : 'draft'}"]`).addClass('on');
+        $ta.prop('hidden', !!after);
+        renderPreview(lastPlan || ($ta.val().trim() ? placeAppend(m.text, stripCites(auFix($ta.val(), m)), { renumber: $root.find('.na_do_renum').prop('checked'), rewrites: rwMode() }) : null));
+    };
     function renderPreview(plan) {
         lastPlan = plan;
-        if (!plan || !$ta.val().trim() || !pvWanted) { $pv.prop('hidden', true); return; }
-        const rows = lineDiff(m.text, plan.text);
+        const has = !!(plan && $ta.val().trim());
+        const rows = has ? lineDiff(m.text, plan.text) : [];
         const add = rows.filter(r => r.t === '+').length, del = rows.filter(r => r.t === '-').length;
+        $root.find('.na_ap_add').text(has ? `+${fmt(add)}줄` : '');
+        $root.find('.na_ap_del').text(`−${fmt(del)}줄`).toggle(has && !!del);
+        $root.find('.na_ap3_fcount').text(has ? `+${fmt(add)}줄${del ? ` −${fmt(del)}줄` : ''}` : '');
+        if (!has || !pvWanted) { $pv.prop('hidden', true); if (!has && pvWanted) setMode(false); return; }
         $pv.prop('hidden', false);
-        $root.find('.na_ap_add').text(`+${fmt(add)}줄`);
-        $root.find('.na_ap_del').text(`−${fmt(del)}줄`).toggle(!!del);
         apTr.reset();
-        if ($pv.prop('open')) $root.find('.na_ap_diff').html(add || del ? renderDiff(rows) : '<div class="na_empty">바뀌는 게 없어요.</div>');
-        else $root.find('.na_ap_diff').empty();
+        $root.find('.na_ap_diff').html(add || del ? renderDiff(rows) : '<div class="na_empty">바뀌는 게 없어요.</div>');
     }
-    $pv.on('toggle', () => renderPreview(lastPlan));
-    $root.find('.na_ap2_pv').on('click', () => {
-        if (!$ta.val().trim()) return toastr.info('먼저 추가할 내용을 붙여넣어 주세요.');
-        pvWanted = true;
-        $pv.prop('open', true);
-        renderPreview(lastPlan || placeAppend(m.text, stripCites(auFix($ta.val(), m)), { renumber: $root.find('.na_do_renum').prop('checked'), rewrites: rwMode() }));
-        $pv[0].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    });
+    $seg.on('click', function () { setMode(this.dataset.v === 'after'); });
+    // 크게 보기: the preview and the fix box move into a page that fills the window; 돌아가기 puts them back where they were
+    const scrollBox = () => { let e = $root[0].parentElement; while (e && e !== document.body) { if (/(auto|scroll)/.test(getComputedStyle(e).overflowY) && e.scrollHeight > e.clientHeight) return e; e = e.parentElement; } return $root[0].parentElement; };
+    let fullAt = 0;
+    const fullSub = () => {
+        const r = headingRanges(splitTail(auFix(String($ta.val() || ''), m))[0]), end = parseInt($end.val(), 10);
+        const span = r.length ? `#${Math.min(...r.map(x => Math.min(x.from, x.to)))}–#${Math.max(...r.map(x => Math.max(x.from, x.to)))}` : '';
+        return [span, Number.isFinite(end) ? `끝 번호 ${m.boundary >= 0 ? `#${m.boundary} → ` : ''}#${end}` : '', $root.find('.na_do_hide').prop('checked') ? $root.find('.na_hide_hint').text().split(' · ')[0] : ''].filter(Boolean).join(' · ');
+    };
+    const openFull = () => {
+        const sc = scrollBox();
+        fullAt = sc.scrollTop;
+        $root.find('.na_ap3_fsub').text(fullSub());
+        $root.find('.na_ap3_ftr').append($root.find('.na_ap_tr_row'));
+        $root.find('.na_ap3_fbody').append($root.find('.na_ap_diff'));
+        $root.find('.na_ap3_fdock').append($root.find('.na_apf'), $root.find('.na_ap3_bar'));
+        $root.addClass('na_ap3_isfull').find('.na_ap3_full').prop('hidden', false);
+        $root.find('.na_ap3_cancel').text('돌아가기');
+        sc.scrollTop = 0;
+        $root.find('.na_ap3_full').css('height', `${Math.max(360, sc.clientHeight - 8)}px`);
+        logToEnd();
+    };
+    const closeFull = () => {
+        if (!$root.hasClass('na_ap3_isfull')) return;
+        $root.find('.na_ap3_pvbar').prepend($root.find('.na_ap_tr_row'));
+        $root.find('.na_ap3_box').append($root.find('.na_ap_diff'));
+        $root.find('.na_apf_part').append($root.find('.na_apf'));
+        $root.append($root.find('.na_ap3_bar'));
+        $root.removeClass('na_ap3_isfull').find('.na_ap3_full').prop('hidden', true);
+        $root.find('.na_ap3_cancel').text('닫기');
+        scrollBox().scrollTop = fullAt;
+    };
+    $root.find('.na_ap3_bigbtn').on('click', openFull);
+    $root.find('.na_ap3_back').on('click', closeFull);
+    $root.find('.na_ap3_cancel').on('click', () => { if ($root.hasClass('na_ap3_isfull')) closeFull(); else $root.closest('dialog').find('.popup-button-cancel').trigger('click'); });
     $root.find('.na_ap2_go').on('click', () => $root.closest('dialog').find('.popup-button-ok').trigger('click'));
     // one check row: round ✓ / ! mark, title, sub line, optional button
     const ckRow = ($el, tone, title, sub = '', btn = '') => $el.prop('hidden', false)
@@ -184,12 +242,12 @@ export async function openAppend(prefill = {}) {
             const rs = headingRanges(out);
             if (!rs.length) throw new Error('모델이 섹션 형태로 답하지 않았어요');
             if (rs[0].from !== gp.before.from || rs[rs.length - 1].to !== gp.to) throw new Error(`받은 섹션이 #${rs[0].from}–#${rs[rs.length - 1].to}라서 넣지 않았어요 (#${gp.before.from}–#${gp.to}여야 해요)`);
-            if (apf.original === null) apf.original = String($ta.val() || '');
-            apf.steps.push(String($ta.val() || ''));
-            $root.find('.na_apf_undo').prop('hidden', false);
+            const was = String($ta.val() || '');
+            if (apf.original === null) apf.original = was;
+            apf.steps.push(was);
             const rest = v.slice(s.start + before.length);
             $ta.val(`${v.slice(0, s.start)}${out}${/^\s*\n/.test(rest) ? '' : '\n\n'}${rest}`).trigger('input');
-            toastr.success(`${label}를 넣었어요 · 섹션 ${rs.length === 1 ? '앞 섹션에 합침' : `${rs.length - 1}개 새로`}`, '빠진 구간');
+            addChat(`${label} 요약 받기`, { ok: true, what: [label, `섹션 ${rs.length === 1 ? '앞 섹션에 합침' : `${rs.length - 1}개 새로`}`, changeCount(was, String($ta.val() || ''))].filter(Boolean).join(' · ') }, false);
         } catch (e) {
             console.error('[NarrativeArchive] gap fill', e);
             toastr.error(String(e?.message || e), '빠진 구간');
@@ -357,11 +415,11 @@ export async function openAppend(prefill = {}) {
             const rs = headingRanges(body).map(x => ({ a: Math.min(x.from, x.to), b: Math.max(x.from, x.to) })).sort((x, y) => x.a - y.a);
             const joined = rs.length && rs.every((x, i) => !i || x.a === rs[i - 1].b + 1);
             const okc = secsN && (!rs.length || joined);
-            const chk = svgA(ICO_A.check, 12, 3);
-            $root.find('.na_ap_outinfo').html(has ? `<span class="${okc ? 'ok' : secsN ? 'warn' : ''}">${okc ? chk : ''}섹션 ${secsN}개${rs.length ? ` · #${rs[0].a}–#${Math.max(...rs.map(x => x.b))}${joined ? ' 이어짐' : ` · ${rangeIssues(rs)}`}` : ''}</span>${tl.trim() ? `<span class="ok">${chk}STATE·OPEN</span>` : ''}<span>${fmt(all)} 토큰</span>` : '');
-            $root.find('.na_apf').prop('hidden', !has);
+            // the card's head: the range in big numbers, then sections · tokens (and what is off when the numbers don't follow on)
+            $root.find('.na_ap_outinfo').html(has ? `<span class="na_ap3_big">${rs.length ? `#${rs[0].a} – #${Math.max(...rs.map(x => x.b))}` : `섹션 ${secsN}개`}</span><small class="${okc ? '' : 'warn'}">${rs.length ? `섹션 ${secsN}개 · ` : ''}${fmt(all)} 토큰${rs.length && !joined ? ` · ${rangeIssues(rs)}` : ''}</small>` : '');
+            $root.find('.na_ap3_part').prop('hidden', !has);
             drawApfChips();
-            if (apf.raw) apfRawInfo();
+            apfRawInfo();
             persistDraft();
         }, 400);
     });
@@ -376,12 +434,32 @@ export async function openAppend(prefill = {}) {
             .html(none ? '<i class="fa-solid fa-circle-check"></i> AI가 찾은 충돌 없음' : `<div class="na_ai_box_head"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 충돌 검사 <span class="na_dim">· 참고용이에요</span></div>${aiHtml(out)}`);
     });
     // 이어서 고치기: the whole draft revised by the draft model, with the raw log of its range when it can be found
-    const apf = { original: null, asked: [], steps: [], rawKey: '', raw: null, busy: false, pick: new Set() };
+    const apf = { original: null, asked: [], steps: [], rawKey: '', raw: null, busy: false, pick: new Set(), chat: [], all: false };
+    // the fix box as a small chat: each request (right) and what came of it (left), written by the code, not the model —
+    // ✓ what changed (sections, lines added and taken out), ✕ why nothing changed, and the model's 못 한 것 note
+    const changeCount = (a, b) => {
+        const rows = lineDiff(String(a || ''), String(b || '')), add = rows.filter(r => r.t === '+').length, del = rows.filter(r => r.t === '-').length;
+        return add || del ? [add && `+${fmt(add)}줄`, del && `−${fmt(del)}줄`].filter(Boolean).join(' ') : '';
+    };
+    const SHOWN = 2;
+    const drawLog = () => {
+        const ch = apf.chat, lastOk = ch.map(x => x.r?.ok && x.step).lastIndexOf(true);
+        const from = apf.all ? 0 : Math.max(0, ch.length - SHOWN);
+        const pair = (x, k) => `<div class="na_ap3_me${k === lastOk ? ' last' : ''}">${k === lastOk ? '<button type="button" class="na_linkbtn na_apf_undo">↶ 되돌리기</button>' : ''}<span>${esc(x.q)}</span></div>${!x.r ? '' : x.r.ok
+            ? `<div class="na_ap3_ai${x.r.note || x.r.more ? ' note' : ''}"><b>✓ 고쳤어요${x.r.what ? ` <span>${esc(x.r.what)}</span>` : ''}</b>${x.r.note ? `<div>못 한 것: ${esc(x.r.note)}</div>` : ''}${x.r.more ? `<div>${esc(x.r.more)}</div>` : ''}</div>`
+            : x.r.none ? `<div class="na_ap3_ai none"><b>바뀐 게 없어요</b>${x.r.why ? `<div>${esc(x.r.why)}</div>` : ''}</div>`
+            : `<div class="na_ap3_ai bad"><b>✕ 못 고쳤어요</b><div>${esc(x.r.why)}</div></div>`}`;
+        $root.find('.na_apf_log').html(ch.length ? `${from ? `<button type="button" class="na_ap3_older">이전 요청 ${from}개 ▾</button>` : apf.all && ch.length > SHOWN ? '<button type="button" class="na_ap3_older">접기 ▴</button>' : ''}${ch.slice(from).map((x, i) => pair(x, i + from)).join('')}` : '');
+        logToEnd();
+    };
+    const logToEnd = () => { const l = $root.find('.na_apf_log')[0]; if (l) l.scrollTop = l.scrollHeight; };
+    const addChat = (q, r, ask = true) => { apf.chat.push({ q, r, step: !!r?.ok, ask }); drawLog(); persistDraft(); };
+    $root.on('click', '.na_ap3_older', () => { apf.all = !apf.all; drawLog(); });
     const persistDraft = () => {
         if(!recovery || draftFinished) return;
         try {
             recovery.save({text:String($ta.val() || ''),end:$end.val(),endTouched,expectTo:pre.expectTo,
-                original:apf.original,asked:apf.asked,steps:apf.steps,pick:[...apf.pick],q:String($root.find('.na_apf_q').val() || ''),
+                original:apf.original,asked:apf.asked,steps:apf.steps,chat:apf.chat.slice(-20),pick:[...apf.pick],q:String($root.find('.na_apf_q').val() || ''),
                 doHide:$root.find('.na_do_hide').prop('checked'),doRenum:$root.find('.na_do_renum').prop('checked'),rwReplace});
         } catch(err) {if(!saveWarned){saveWarned=true;toastr.error('브라우저 임시 저장에 실패했어요. 현재 내용을 복사해 두세요.','초안 저장 실패');}}
     };
@@ -403,14 +481,18 @@ export async function openAppend(prefill = {}) {
     const drawApfChips = () => {
         const secs = draftSecs();
         apf.pick = new Set([...apf.pick].filter(k => secs.some(x => x.key === k)));
-        $root.find('.na_apf_chips').html(secs.length > 1 ? secs.map(x => `<button type="button" class="na_pchip${apf.pick.has(x.key) ? ' on' : ''}" data-k="${esc(x.key)}">${esc(`${x.pre ? `${x.pre} ` : ''}#${x.from}–#${x.to}`)}</button>`).join('') : '');
+        // number on top, the section's name under it (the date and place in brackets left off); 전체 when none is picked
+        const nameOf = x => { const t = (x.text.split('\n')[0].split(' — ')[1] || '').replace(/\s*\([^)]*\)\s*$/, '').trim(); return t; };
+        $root.find('.na_apf_chips').html(secs.length > 1 ? `<button type="button" class="na_ap3_chip na_ap3_all${apf.pick.size ? '' : ' on'}"><b>전체</b><small>${secs.length}개</small></button>${secs.map(x => `<button type="button" class="na_ap3_chip na_pchip${apf.pick.has(x.key) ? ' on' : ''}" data-k="${esc(x.key)}" title="${esc(x.text.split('\n')[0].replace(/^#+\s*/, ''))}"><b>${esc(`${x.pre ? `${x.pre} ` : ''}#${x.from}–#${x.to}`)}</b>${nameOf(x) ? `<small>${esc(nameOf(x))}</small>` : ''}</button>`).join('')}` : '');
     };
     $root.on('click', '.na_apf_chips .na_pchip', function () {
         const k = this.dataset.k;
         apf.pick.has(k) ? apf.pick.delete(k) : apf.pick.add(k);
         $(this).toggleClass('on', apf.pick.has(k));
+        $root.find('.na_ap3_all').toggleClass('on', !apf.pick.size);
         apfRawInfo();
     });
+    $root.on('click', '.na_apf_chips .na_ap3_all', () => { apf.pick.clear(); $root.find('.na_apf_chips .na_ap3_chip').removeClass('on'); $root.find('.na_ap3_all').addClass('on'); apfRawInfo(); });
     // the sections a request names: "#40" → the one holding it, "#40–#55" → the ones it overlaps, "#60 이후" → from there on
     const namedSecs = (q, secs) => {
         const out = new Set();
@@ -428,13 +510,13 @@ export async function openAppend(prefill = {}) {
     };
     const loadApfRaw = async () => {
         const r = draftRange();
-        if (!r) { $root.find('.na_apf_rawinfo').text('· 제목에 #번호가 없어요'); apf.raw = null; apf.rawKey = ''; return null; }
+        if (!r) { $root.find('.na_apf_rawinfo').text('제목에 #번호가 없어요'); apf.raw = null; apf.rawKey = ''; return null; }
         if (apf.rawKey === r.key && apf.raw) return apf.raw;
         apf.rawKey = r.key;
-        $root.find('.na_apf_rawinfo').text('· 원문 찾는 중…');
+        $root.find('.na_apf_rawinfo').text('원문 찾는 중…');
         const got = await rawFor(m, { title: `${r.prefix ? `${r.prefix} ` : ''}#${r.from}–#${r.to} — draft` }, { here: true });
         apf.raw = got.raw ? { ...got, tok: await countTokens(got.raw) } : got;
-        $root.find('.na_apf_rawinfo').text(apf.raw.raw ? `· ${apf.raw.label} · 메시지 ${apf.raw.n}개 · 약 ${fmt(apf.raw.tok)} 토큰` : `· ${apf.raw.why}`);
+        $root.find('.na_apf_rawinfo').text(apf.raw.raw ? `전체 · 약 ${fmt(apf.raw.tok)} 토큰` : apf.raw.why);
         return apf.raw;
     };
     // the sections this request goes to: the picked chips and the numbers it names ([] = the whole draft)
@@ -452,11 +534,11 @@ export async function openAppend(prefill = {}) {
         const full = await loadApfRaw();
         const part = apfPart(String($root.find('.na_apf_q').val() || ''));
         if (seq !== infoSeq || !full?.raw) return;
-        if (!part) { $root.find('.na_apf_rawinfo').text(`· ${full.label} · 메시지 ${full.n}개 · 약 ${fmt(full.tok)} 토큰`); return; }
+        if (!part) { $root.find('.na_apf_rawinfo').text(`전체 · 약 ${fmt(full.tok)} 토큰`).attr('title', `${full.label} · 메시지 ${full.n}개`); return; }
         const blocks = partRaw(full.raw, part);
         const tok = await countTokens(blocks.join('\n\n'));
         if (seq !== infoSeq) return;
-        $root.find('.na_apf_rawinfo').text(`· 고른 섹션 ${part.length}개 · ${part.map(x => `#${x.from}–#${x.to}`).join(', ')} · 메시지 ${blocks.length}개 · 약 ${fmt(tok)} 토큰`);
+        $root.find('.na_apf_rawinfo').text(`${part.length}개 고름 · 약 ${fmt(tok)} 토큰`).attr('title', `${part.map(x => `#${x.from}–#${x.to}`).join(', ')} · 메시지 ${blocks.length}개`);
     };
     let infoT = null;
     $root.find('.na_apf_q').one('focus', () => { apfRawInfo(); }).on('input', () => { clearTimeout(infoT); infoT = setTimeout(apfRawInfo, 300); });
@@ -483,31 +565,33 @@ export async function openAppend(prefill = {}) {
             // nothing usable, or an answer that would wipe the draft: the draft stays exactly as it was
             if (!next) throw new Error('모델 답에서 고친 섹션을 못 찾았어요 · 초안은 그대로예요');
             if (next.refused) throw new Error(`${next.refused} · 초안은 그대로예요`);
+            const said = part ? `[${part.map(x => `#${x.from}–#${x.to}`).join(', ')}] ${q}` : q;
+            $root.find('.na_apf_q').val('');
+            if (next === draft) { addChat(said, { ok: false, none: true, why: note ? `못 한 것: ${note}` : '' }); return; }
             if (apf.original === null) apf.original = draft;
             apf.steps.push(draft);
-            apf.asked.push(part ? `[${part.map(x => `#${x.from}–#${x.to}`).join(', ')}] ${q}` : q);
+            apf.asked.push(said);
             $ta.val(next).trigger('input');
-            $root.find('.na_apf_q').val('');
-            persistDraft();
-            $root.find('.na_apf_log').html(apf.asked.map(x => `<div class="na_sf_bubble">${esc(x)}</div>`).join(''));
-            $root.find('.na_apf_note').prop('hidden', !note).text(note ? `못 한 것: ${note}` : '');
-            $root.find('.na_apf_undo').prop('hidden', false);
-            toastr.success('초안을 고쳤어요 · 아래 검사를 다시 봐 주세요', '이어서 고치기');
+            addChat(said, { ok: true, what: [part ? part.map(x => `#${x.from}–#${x.to}`).join(', ') : '', changeCount(draft, next)].filter(Boolean).join(' · '), note });
         } catch (e) {
             console.error('[NarrativeArchive] draft fix', e);
-            toastr.error(String(e?.message || e), '이어서 고치기');
+            addChat(q, { ok: false, why: String(e?.message || e) });
         } finally { apf.busy = false; $b.prop('disabled', false).html(svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)); }
     };
     $root.find('.na_apf_go').on('click', apfSend);
     $root.find('.na_apf_q').on('keydown', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); apfSend(); } });
-    $root.find('.na_apf_undo').on('click', () => {
+    // ↶ 되돌리기 (next to the last request that changed the draft): one step back each press
+    $root.on('click', '.na_apf_undo', () => {
         if (apf.original === null) return;
-        // one step back each press; the first press after one change is the original
         const back = apf.steps.pop();
-        if (back !== undefined && apf.steps.length) { $ta.val(back).trigger('input'); apf.asked.pop(); $root.find('.na_apf_log').html(apf.asked.map(x => `<div class="na_sf_bubble">${esc(x)}</div>`).join('')); persistDraft();toastr.info('한 단계 되돌렸어요'); return; }
+        const k = apf.chat.map(x => x.step).lastIndexOf(true);
+        const gone = k >= 0 ? apf.chat[k] : null;
+        if (k >= 0) apf.chat = apf.chat.slice(0, k);
+        if (gone?.ask) apf.asked.pop();
+        if (back !== undefined && apf.steps.length) { $ta.val(back).trigger('input'); drawLog(); persistDraft(); return; }
         $ta.val(apf.original).trigger('input');
-        apf.original = null; apf.asked = []; apf.steps = [];persistDraft();
-        $root.find('.na_apf_log').empty(); $root.find('.na_apf_note').prop('hidden', true); $root.find('.na_apf_undo').prop('hidden', true);
+        apf.original = null; apf.asked = []; apf.steps = []; apf.chat = [];
+        drawLog(); persistDraft();
     });
     // 문체 다듬기: the sentences only; a section that comes back with other bullets, numbers or quotes stays as it was
     $root.find('.na_ap_style').on('click', async function () {
@@ -520,17 +604,15 @@ export async function openAppend(prefill = {}) {
             const r = await withSpinner($(this), '다듬는 중', () => polishStyle(draft, m));
             if (!r) return;
             const why = keptSummary(r);
-            if (!r.changed) return toastr.info(`바꾼 섹션이 없어요${why}`, '문체 다듬기', { timeOut: 6000 });
+            if (!r.changed) return addChat('문체 다듬기', { ok: false, none: true, why: why.replace(/^\s*·\s*/, '') }, false);
             if (apf.original === null) apf.original = draft;
             apf.steps.push(draft);
             apf.asked.push('문체 다듬기');
             $ta.val(r.text).trigger('input');
-            $root.find('.na_apf_log').html(apf.asked.map(x => `<div class="na_sf_bubble">${esc(x)}</div>`).join(''));
-            $root.find('.na_apf_undo').prop('hidden', false);
-            toastr.success(`섹션 ${r.changed}개를 다듬었어요${styleSummary(r)}${r.countFixed ? ` · 세는 규칙 ${r.countFixed}개 다시 맞춤` : ''}${why} · 되돌리기로 앞 모양으로`, '문체 다듬기', { timeOut: 9000 });
+            addChat('문체 다듬기', { ok: true, what: [`섹션 ${r.changed}개`, changeCount(draft, r.text), r.countFixed ? `세는 규칙 ${r.countFixed}개 다시 맞춤` : ''].filter(Boolean).join(' · '), more: [styleSummary(r), why].join('').replace(/^\s*·\s*/, '') });
         } catch (e) {
             console.error('[NarrativeArchive] style pass', e);
-            toastr.error(String(e?.message || e), '문체 다듬기');
+            addChat('문체 다듬기', { ok: false, why: String(e?.message || e) }, false);
         } finally { apf.busy = false; persistDraft(); }
     });
     // [이대로 고쳐 줘] under a verdict with problems: the problems go to 초안 고쳐 달라고 하기 as the request
@@ -579,8 +661,10 @@ export async function openAppend(prefill = {}) {
         endTouched=!!restored.endTouched;$end.val(restored.end);rwReplace=!!restored.rwReplace;
         $root.find('.na_do_hide').prop('checked',!!restored.doHide);$root.find('.na_do_renum').prop('checked',!!restored.doRenum);
         $root.find('.na_apf_q').val(restored.q || '');
-        $root.find('.na_apf_log').html(apf.asked.map(x=>`<div class="na_sf_bubble">${esc(x)}</div>`).join(''));
-        $root.find('.na_apf_undo').prop('hidden',apf.original===null || apf.original===undefined);
+        if (apf.original === undefined) apf.original = null;
+        // older saves kept only the requests: each one shown as done
+        apf.chat = Array.isArray(restored.chat) ? restored.chat : apf.asked.map(q => ({ q, r: { ok: true }, step: true, ask: true }));
+        drawLog();
         $ta.val(restored.text).trigger('input');
         toastr.info('마지막으로 수정한 초안을 불러왔어요');
     } else if (pre.text) {
@@ -588,7 +672,7 @@ export async function openAppend(prefill = {}) {
         $ta.val(pre.text).trigger('input');
     }
     // 추가하기 sits in the page (mockup); the popup's own OK button would repeat it
-    setTimeout(() => $root.closest('dialog').find('.popup-button-ok').addClass('na_ap2_okhide'), 0);
+    setTimeout(() => { const $d = $root.closest('dialog'); $d.addClass('na_ap3_dlg').find('.popup-button-ok').addClass('na_ap2_okhide'); }, 0);
     const result = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', {
         wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '추가하기', cancelButton: '취소',
     });
@@ -599,7 +683,7 @@ export async function openAppend(prefill = {}) {
         const whole = stripCites(String($ta.val() || '').replace(/\r\n/g, '\n').trim());
         const end = parseInt($end.val(), 10);
         const cut = cutSigns(m.text, whole);
-        if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.map(esc).join('<br>')}<br><br>그래도 바꿀까요?`)) return;
+        if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.map(esc).join('<br>')}<br><br>그래도 바꿀까요?`, '바꾸기')) return;
         if (!await confirmWhole(m.text, whole)) return;
         await commitText(whole, '통째로 바꾸기 전', Number.isFinite(end) && end >= 0 ? { boundary: end } : {});
         finishDraft();
@@ -613,13 +697,13 @@ export async function openAppend(prefill = {}) {
     const end = parseInt($root.find('.na_end').val(), 10);
     if (!Number.isFinite(end) || end < 0) return toastr.warning('끝 번호를 확인해 주세요.');
     const cut = cutSigns(m.text, add);
-    if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.map(esc).join('<br>')}<br><br>그래도 추가할까요?`)) return;
+    if (cut.length && !await confirm('답이 끊긴 것 같아요', `${cut.map(esc).join('<br>')}<br><br>그래도 추가할까요?`, '추가하기')) return;
     const check = checkAppend(m, stripRewrites(m.text, add), last);
     check.issues.push(...shortOf(add));
     if (check.issues.length && !check.soft) {
-        if (!await confirm('번호 확인', `${check.issues.map(esc).join('<br>')}<br><br>그래도 추가할까요?`)) return;
+        if (!await confirm('번호 확인', `${check.issues.map(esc).join('<br>')}<br><br>그래도 추가할까요?`, '추가하기')) return;
     } else if (m.boundary >= 0 && end <= m.boundary) {
-        if (!await confirm('경계선 확인', `끝 번호 #${end}가 기존 경계선 #${m.boundary}보다 앞이에요. 그래도 저장할까요?`)) return;
+        if (!await confirm('경계선 확인', `끝 번호 #${end}가 기존 경계선 #${m.boundary}보다 앞이에요. 그래도 저장할까요?`, '저장하기')) return;
     }
 
     const plan = placeAppend(m.text, add, { renumber: $root.find('.na_do_renum').prop('checked'), rewrites: rwMode() });

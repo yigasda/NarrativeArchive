@@ -8,12 +8,12 @@ import { KW_STOP } from './keywords.js';
 import { castNames, currentCast, inCast } from './knowledge.js';
 import { syncPanel } from './panel.js';
 import { cleanMessage } from './extract.js';
-import { faceHtml, nameKey, peopleList } from './people.js';
+import { exFace, faceHtml, nameKey, peopleList } from './people.js';
 import { offstageSet } from './recall.js';
 import { mountSectionPicker } from './picker.js';
 import { headingRanges, parseSections, sectionKey, splitTail } from './sections.js';
 import { sceneChunks } from './scenes.js';
-import { SVG_B, svgB } from './theme.js';
+import { SVG_B, svgA, svgB } from './theme.js';
 import { confirm, countTokens, esc, fmt } from './util.js';
 
 // who says the quote that follows `before`: "Name:" → Name; "Name said/told …" → Name;
@@ -330,7 +330,8 @@ export async function openQuotes() {
         </div>
       </div>`);
     // ---- 말투 지문 pane: one open card, the rest as rows; characters with enough lines but no fingerprint as dashed rows
-    let vOpen = null, vEdit = null;
+    let vOpen = null, vEdit = null, vSkip = new Set();
+    const FP_ICON = '<path d="M12 11v4M8.5 8.5A5 5 0 0 1 17 12v2M7 12c0 2 .5 4 1.5 5.5M12 6.5a5.5 5.5 0 0 0-2 .4M15.5 16.5c-.3 1-.7 1.8-1.2 2.5M4.5 9A8 8 0 0 1 19 7.5M20 12v1"/>';
     const parseRule = l => {
         let t = l.replace(/^[-*•]\s*/, '').trim();
         const tag = (t.match(/^\[([^\]\n]{1,10})\]\s*/) || [, ''])[1];
@@ -353,19 +354,42 @@ export async function openQuotes() {
             if (who !== vOpen) { (card ? after : before).push(`<button type="button" class="na_v2_card na_vc_row" data-who="${esc(who)}">${faceHtml(who, 32)}<span class="na_vc_who1">${esc(who)} <small>· 규칙 ${rules.length}개</small></span>${svgB(SVG_B.right, 16)}</button>`); return; }
             card = `
             <div class="na_v2_card na_vc_card" data-who="${esc(who)}">
-              <div class="na_vc_head">${faceHtml(who, 40)}<span class="na_vc_who"><b>${esc(who)}</b><small>${v.chat !== undefined ? `${v.card ? '캐릭터 카드, ' : ''}${v.parts ? `이야기 ${v.parts}부분의 ` : '채팅 '}${v.chat}곳${v.n ? `, 대사 은행 ${v.n}줄` : ''}로 만듦` : `대사 ${v.n || '?'}개로 만듦 · 다시 만들면 사람됨과 옮긴 대사도 넣어요`}</small></span><button type="button" class="na_v2_pillbtn na_vc_make" ${n >= 3 ? '' : 'disabled'}>${svgB(SVG_B.redo, 13)}다시</button></div>
+              <div class="na_vc_head">${faceHtml(who, 40)}<span class="na_vc_who"><b>${esc(who)}</b><small>${v.chat !== undefined ? `${v.card ? '캐릭터 카드, ' : ''}${v.parts ? `이야기 ${v.parts}부분의 ` : '채팅 '}${v.chat}곳${v.n ? `, 대사 은행 ${v.n}줄` : ''}로 만듦` : `대사 ${v.n || '?'}개로 만듦 · 다시 만들면 성격과 옮긴 대사도 넣어요`}</small></span><button type="button" class="na_v2_pillbtn na_vc_make" ${n >= 3 ? '' : 'disabled'}>${svgB(SVG_B.redo, 13)}다시</button></div>
               ${vEdit === who
-                ? `<small class="na_v2_note">사람됨 · 한 줄에 하나</small><textarea class="text_pole na_vc_core" rows="${Math.min(8, String(v.core || '').split('\n').length + 1)}" spellcheck="false">${esc(v.core || '')}</textarea><small class="na_v2_note">말버릇 · 한 줄에 규칙 하나 · 앞의 [태그]는 화면에만 보이고 주입할 땐 빠져요</small><textarea class="text_pole na_vc_text" rows="${Math.min(10, rules.length + 2)}" spellcheck="false">${esc(v.text)}</textarea>`
-                : `${String(v.core || '').trim() ? `<div class="na_vc_core_view"><span class="na_vc_sub">사람됨</span>${String(v.core).split('\n').map(l => l.replace(/^[-*•]\s*/, '').trim()).filter(Boolean).map(l => `<div class="na_vc_coreline">${esc(l)}</div>`).join('')}</div><span class="na_vc_sub">말버릇</span>` : ''}<div class="na_vc_rules">${rules.map(l => { const r = parseRule(l); return `<div class="na_vc_rule">${r.tag ? `<span class="na_vc_tag">${esc(r.tag)}</span>` : ''}<span><span>${esc(r.rule)}</span>${r.ex ? `<i>${esc(r.ex)}</i>` : ''}</span></div>`; }).join('')}</div>${v.samples?.length ? `<span class="na_vc_sub">그대로 옮긴 대사</span><div class="na_vc_samples">${v.samples.map(q => `<i>“${esc(q)}”</i>`).join('')}</div>` : ''}`}
+                ? `<small class="na_v2_note">성격 · 한 줄에 하나</small><textarea class="text_pole na_vc_core" rows="${Math.min(8, String(v.core || '').split('\n').length + 1)}" spellcheck="false">${esc(v.core || '')}</textarea><small class="na_v2_note">말버릇 · 한 줄에 규칙 하나 · [태그]는 주입할 땐 빠져요</small><textarea class="text_pole na_vc_text" rows="${Math.min(10, rules.length + 2)}" spellcheck="false">${esc(v.text)}</textarea>`
+                : `${String(v.core || '').trim() ? `<div class="na_vc_core_view"><span class="na_vc_sub">성격</span>${String(v.core).split('\n').map(l => l.replace(/^[-*•]\s*/, '').trim()).filter(Boolean).map(l => `<div class="na_vc_coreline">${esc(l)}</div>`).join('')}</div><span class="na_vc_sub">말버릇</span>` : ''}<div class="na_vc_rules">${rules.map(l => { const r = parseRule(l); return `<div class="na_vc_rule">${r.tag ? `<span class="na_vc_tag">${esc(r.tag)}</span>` : ''}<span><span>${esc(r.rule)}</span>${r.ex ? `<i>${esc(r.ex)}</i>` : ''}</span></div>`; }).join('')}</div>${v.samples?.length ? `<span class="na_vc_sub">그대로 옮긴 대사</span><div class="na_vc_samples">${v.samples.map(q => `<i>“${esc(q)}”</i>`).join('')}</div>` : ''}`}
               <div class="na_vc_foot"><button type="button" class="na_linkbtn na_vc_edit">${vEdit === who ? '그만 고치기' : '직접 고치기'}</button><button type="button" class="na_linkbtn na_danger na_vc_del">지우기</button></div>
             </div>`; });
         after.push(...missing.map(who => `<div class="na_v2_card na_vc_row dashed" data-who="${esc(who)}" title="대사 ${counts.get(who)}개">${faceHtml(who, 32)}<span class="na_vc_who1">${esc(who)} <small>· 아직 없음</small></span><button type="button" class="na_vc_make na_vc_mk">만들기</button></div>`));
+        // no fingerprint yet (docs/mockups/ext-voice B+D): a welcome card like the 대사 tab's. People with enough lines are chips
+        // (tap to leave one out) over one 만들기 button; with nobody to make it from, the button goes to the 대사 tab instead.
+        // A faded Claude card shows what comes out. The switch and the long note wait until there is something to inject.
+        if (!whos.length) {
+            vSkip = new Set([...vSkip].filter(w => missing.includes(w)));
+            const pick = missing.filter(w => !vSkip.has(w));
+            $b.html(`<div class="na_v2_card na_kn3_hello"><span class="na_kn3_big">${svgA(FP_ICON, 26, 1.8)}</span>
+                <b>아직 말투 지문이 없어요</b>
+                ${missing.length
+                    ? `<small>모은 대사로 인물마다 말버릇을 정리해서<br>RP 모델이 그 말투를 따라 하게 해요</small>
+                       <div class="na_vc3_chips">${missing.map(w => `<button type="button" class="na_vc3_chip${vSkip.has(w) ? '' : ' on'}" data-who="${esc(w)}" aria-pressed="${!vSkip.has(w)}">${faceHtml(w, 24)}<em>${esc(w)}</em><small>${counts.get(w)}</small></button>`).join('')}</div>
+                       <button type="button" class="na_kn3_make na_vc3_go" ${pick.length ? '' : 'disabled'}>✧ 지문 ${pick.length}개 만들기</button>`
+                    : `<small>대사가 3개 넘게 모인 인물부터 만들 수 있어요</small>
+                       <button type="button" class="na_kn3_make na_vc3_toq">대사 모으러 가기</button>`}</div>
+              <div class="na_kn3_sect"><span>이렇게 정리돼요</span><small>예시</small></div>
+              <div class="na_v2_card na_vc_card na_vc3_ex">
+                <div class="na_vc_head">${exFace('Claude', 40)}<span class="na_vc_who"><b>Claude</b><small>예시 · 대사 12개로 만듦</small></span></div>
+                <span class="na_vc_sub">성격</span><div class="na_vc3_core">조심스럽지만 솔직해요</div>
+                <span class="na_vc_sub">말버릇</span>
+                <div class="na_vc_rules"><div class="na_vc_rule"><span class="na_vc_tag">말끝</span><span><span>“~요”로 부드럽게 끝내요</span><i>“확인해 볼게요.”</i></span></div>
+                  <div class="na_vc_rule"><span class="na_vc_tag">습관</span><span><span>틀릴 수 있다고 먼저 말해요</span><i>“틀렸으면 말해 줘요.”</i></span></div></div>
+              </div>`);
+            return;
+        }
         $b.html(`
           <label class="na_v2_card na_v2_switchrow"><span class="na_vc_sw"><b>조용히 주입</b><small>“본문에서 언급하지 말 것”을 붙여 보내요<span class="na_vc_tok"></span></small></span><input type="checkbox" class="na_toggle na_vc_inject" ${m.voiceInject ? 'checked' : ''}></label>
           ${rowsHtml(before)}${card}${rowsHtml(after)}
-          ${!whos.length && !missing.length ? '<div class="na_empty">대사가 3개 이상인 인물이 없어요. "대사" 탭에서 대사를 모으거나, 채팅이 더 쌓이면 만들 수 있어요.</div>' : ''}
           ${missing.length > 1 ? `<button type="button" class="na_v2_btn primary wide na_vc_all"><i class="fa-solid fa-fingerprint"></i> 없는 지문 ${missing.length}개 한꺼번에 만들기</button>` : ''}
-          <small class="na_v2_foot">캐릭터 카드, 대사 은행, 그리고 아카이브 섹션마다 또는 장면마다 그 인물의 말 한두 곳을 숨긴 것까지 읽고 사람됨, 말버릇, 그대로 옮긴 대사를 정리해 조용히 주입해요 · 옮긴 대사는 채팅에 글자 그대로 있는 것만 남겨요 · AI 기능 모델 ${esc(aiLabel())}</small>`);
+          <small class="na_v2_foot">캐릭터 카드 · 대사 은행 · 아카이브를 읽고 만들어요 · 모델 ${esc(aiLabel())}</small>`);
         const blk = extraBlocks({ ...m, knowInject: false, voiceInject: true });
         if (blk) countTokens(blk).then(t => $b.find('.na_vc_tok').text(` · 약 ${fmt(t)} 토큰`));
     };
@@ -398,7 +422,18 @@ export async function openQuotes() {
           <div class="na_qb_group ${!inCast(cast, who) ? 'na_qb_away' : ''}"><div class="na_qb_who">${faceHtml(who, 26)}<b>${esc(who)}</b><span class="na_qb_n">대사 ${xs.length}개</span>${!inCast(cast, who) ? '<span class="na_qb_awaytag" title="STATE의 인물 제목과 최근 섹션 4개에 안 나와요. 다시 나오면 말투 지문이 자동으로 들어가요">지금 안 나옴</span>' : ''}${m.voice?.[who] ? '<span class="na_qb_fp">지문 있음</span>' : ''}
             ${gbtns(who, xs)}</div>
             ${rows(xs)}</div>`);
-        $root.find('.na_qb_list').html(by.size ? [...by].sort((a, b) => (a[0] === '?') - (b[0] === '?') || b[1].length - a[1].length).map(group).join('') : '<div class="na_empty">아직 없어요. "아카이브에서 모으기"를 눌러 보세요.</div>');
+        // nothing gathered yet (docs/mockups/ext-quotes A+C): the welcome card like 누가 아는가, and faded speech bubbles as the
+        // example (played by Claude · GPT · Gemini, so nobody takes them for the story's own lines)
+        const none = !m.quotes.length;
+        $root.find('.na_qb2').toggleClass('na_qb3_new', none);
+        if (none) return $root.find('.na_qb_list').html(`<div class="na_v2_card na_kn3_hello"><span class="na_kn3_big na_qb3_big">&ldquo;</span>
+            <b>아직 모은 대사가 없어요</b><small>아카이브를 읽고 인물마다 한 말을 모아요<br>모은 대사로 말투 지문을 만들어요</small>
+            <button type="button" class="na_kn3_make na_qb3_make">✧ AI로 모으기</button>
+            <button type="button" class="na_linkbtn na_qb3_find">AI 없이 아카이브에서 모으기</button></div>
+          <div class="na_kn3_sect"><span>이렇게 모여요</span><small>예시</small></div>
+          <div class="na_qb3_ex">${[['Claude', '그건 제가 확인해 볼게요.', '#1–#12'], ['GPT', '물론이죠! 바로 해 볼게요.', '#13–#29'], ['Gemini', '흥미로운 질문이네요.', '#13–#29']]
+              .map(([w, t, at], i) => `<div class="na_qb3_bub${i % 2 ? ' r' : ''}">${exFace(w, 26)}<div><span>“${esc(t)}”</span><small>${esc(w)} · ${at}</small></div></div>`).join('')}</div>`);
+        $root.find('.na_qb_list').html(by.size ? [...by].sort((a, b) => (a[0] === '?') - (b[0] === '?') || b[1].length - a[1].length).map(group).join('') : '<div class="na_empty">찾는 대사가 없어요</div>');
     };
     let qbUnkOpen = false;
     $root.on('click', '.na_qb_unkrow', function (e) { if ($(e.target).closest('.na_qb_gbtns').length) return; qbUnkOpen = !$(this).closest('.na_qb_group').hasClass('open'); render(); });
@@ -430,7 +465,7 @@ export async function openQuotes() {
     });
     $root.on('click', '.na_vc_del', async function () {
         const who = String($(this).closest('.na_vc_card').data('who'));
-        if (!await confirm('말투 지문 지우기', `${esc(who)}의 말투 지문을 지울까요?`)) return;
+        if (!await confirm('말투 지문 지우기', `${esc(who)}의 말투 지문을 지울까요?`, '지우기', { danger: true })) return;
         delete m.voice[who]; await save();
     });
     $root.on('click', '.na_vc_make', async function () {
@@ -438,24 +473,37 @@ export async function openQuotes() {
         const ok = await withSpinner($(this), '만드는 중…', async () => { await makeVoice(m, who); return true; });
         if (ok) { vOpen = who; await save(); toastr.success(`${who}: 말투 지문을 만들었어요${m.voiceInject ? '' : '. "조용히 주입"을 켜면 RP 모델에 들어가요'}`); }
     });
-    $root.on('click', '.na_vc_all', async function () {
-        const counts = voiceSources(m);
-        const voice = m.voice || {};
-        // only the missing ones
-        const todo = [...counts].filter(([who, n]) => n >= 3 && !voice[who]).map(([who]) => who);
-        if (!todo.length) return toastr.info(counts.size ? '새로 만들 지문이 없어요. 인물 카드의 "다시"로 하나씩 다시 만들 수 있어요.' : '대사가 3개 이상인 인물이 없어요.');
-        const $b = $(this);
+    const makeMany = async ($b, todo) => {
         let done = 0;
         await withSpinner($b, '만드는 중…', async () => {
             for (const who of todo) { $b.html(`<i class="fa-solid fa-spinner fa-spin"></i> ${esc(who)} (${done + 1}/${todo.length})`); await makeVoice(m, who); done++; await saveMeta(); }
         });
         await save();
         if (done) toastr.success(`말투 지문 ${done}개를 만들었어요${m.voiceInject ? '' : '. "조용히 주입"을 켜면 RP 모델에 들어가요'}`);
+    };
+    $root.on('click', '.na_vc3_chip', function () {
+        const who = String($(this).data('who'));
+        if (vSkip.has(who)) vSkip.delete(who); else vSkip.add(who);
+        renderVoice();
+    });
+    $root.on('click', '.na_vc3_go', async function () {
+        const counts = voiceSources(m), voice = m.voice || {};
+        const todo = [...counts].filter(([who, n]) => n >= 3 && !voice[who] && !vSkip.has(who)).map(([who]) => who);
+        if (todo.length) await makeMany($(this), todo);
+    });
+    $root.on('click', '.na_vc3_toq', () => $root.find('.na_qb_tabs [data-p=quotes]').trigger('click'));
+    $root.on('click', '.na_vc_all', async function () {
+        const counts = voiceSources(m);
+        const voice = m.voice || {};
+        // only the missing ones
+        const todo = [...counts].filter(([who, n]) => n >= 3 && !voice[who]).map(([who]) => who);
+        if (!todo.length) return toastr.info(counts.size ? '새로 만들 지문이 없어요. 인물 카드의 "다시"로 하나씩 다시 만들 수 있어요.' : '대사가 3개 이상인 인물이 없어요.');
+        await makeMany($(this), todo);
     });
     $root.on('change', '.na_qb_whoin', async function () { m.quotes[Number($(this).closest('.na_qb_row').data('i'))].who = this.value.trim() || '?'; await save(); });
     $root.on('click', '.na_qb_del', async function () { m.quotes.splice(Number($(this).closest('.na_qb_row').data('i')), 1); await save(); });
     $root.find('.na_qb_clear').on('click', async () => {
-        if (!await confirm('전체 삭제', `모은 대사 ${m.quotes.length}개를 모두 지울까요? 되돌릴 수 없어요. (아카이브 본문은 그대로예요)`)) return;
+        if (!await confirm('전체 삭제', `모은 대사 ${m.quotes.length}개를 모두 지울까요? 되돌릴 수 없어요. (아카이브 본문은 그대로예요)`, '지우기', { danger: true })) return;
         m.quotes = []; m.quoteMined = [];
         await save();
         toastr.success('대사 은행을 비웠어요');
@@ -519,13 +567,13 @@ export async function openQuotes() {
     });
     $root.on('click', '.na_qb_gexcl', async function () {
         const who = String($(this).closest('.na_qb_gbtns').data('who'));
-        if (!await confirm('인물 빼기', `${esc(who)}의 대사를 모두 지우고, 앞으로 모으거나 주입하지 않을까요? (위 "뺄 인물"에서 되돌릴 수 있어요)`)) return;
+        if (!await confirm('인물 빼기', `${esc(who)}의 대사를 모두 지우고, 앞으로 모으거나 주입하지 않을까요? (위 "뺄 인물"에서 되돌릴 수 있어요)`, '빼기', { danger: true })) return;
         await exclude(who);
     });
     $root.on('click', '.na_qb_gdel', async function () {
         const who = String($(this).closest('.na_qb_gbtns').data('who'));
         const n = m.quotes.filter(q => q.who === who).length;
-        if (!await confirm('대사 지우기', `${who === '?' ? '말한 사람 모름' : esc(who)} 대사 ${n}개를 모두 지울까요? 되돌릴 수 없어요.`)) return;
+        if (!await confirm('대사 지우기', `${who === '?' ? '말한 사람 모름' : esc(who)} 대사 ${n}개를 모두 지울까요? 되돌릴 수 없어요.`, '지우기', { danger: true })) return;
         m.quotes = m.quotes.filter(q => q.who !== who);
         await save();
     });
@@ -559,6 +607,8 @@ export async function openQuotes() {
             }
         },
     });
-    $root.find('.na_qb_ai').on('click', function () { $(this).toggleClass('active', picker.toggle()); });
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    $root.find('.na_qb_ai').on('click', function () { const open = picker.toggle(); $(this).toggleClass('active', open); $root.toggleClass('na_qb3_picking', open); });
+    $root.on('click', '.na_qb3_make', () => $root.find('.na_qb_ai').trigger('click'));
+    $root.on('click', '.na_qb3_find', () => $root.find('.na_qb_find').trigger('click'));
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
