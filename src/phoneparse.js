@@ -26,7 +26,15 @@ export const when = v => {
     const ok = mt[3] && Number(mt[3]) < 24 && Number(mt[4]) < 60;
     return `${pad(mt[1])}-${pad(mt[2])}${ok ? ` ${pad(mt[3])}:${mt[4]}` : ''}`;
 };
-export const hhmm = v => { const mt = String(v || '').match(/(\d{1,2}):(\d{2})/); return mt && Number(mt[1]) < 24 && Number(mt[2]) < 60 ? `${pad(mt[1])}:${mt[2]}` : ''; };
+// "HH:MM", and the ways a model or a status line may write a clock: "7:00 PM", "오후 7:00", "7pm", "19시", "19시 30분"
+export const hhmm = v => {
+    const s = String(v || ''), mt = s.match(/(\d{1,2})\s*:\s*(\d{2})/) || s.match(/(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/) || s.match(/(\d{1,2})\s*(?=[ap]\.?m\b)/i);
+    if (!mt) return '';
+    let h = Number(mt[1]);
+    const m = Number(mt[2] || 0), pm = /(?<![a-z])[pP]\.?[mM]\b|오후|저녁|밤/.test(s), am = /(?<![a-z])[aA]\.?[mM]\b|오전|새벽|아침/.test(s);
+    if (pm && h < 12) h += 12; else if (am && h === 12) h = 0;
+    return h < 24 && m < 60 ? `${pad(h)}:${pad(m)}` : '';
+};
 export const ko = v => line(v, 400);
 // who a gift went to: true is just "a gift"; false, "no", "none" and the like are no gift (never a person called "false")
 export const giftOf = v => (v === true ? '선물' : /^(false|true|no|none|null|nein|keine?|아니(요)?|없음|-)?$/i.test(line(v, 40)) ? '' : line(v, 40));

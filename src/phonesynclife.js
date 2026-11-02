@@ -106,6 +106,10 @@ function overlay(here, now, fresh = false) {
 const unko = h => { if (h.ko && h.line && h.ko.replace(/\s+/g, ' ').trim() === h.line.replace(/\s+/g, ' ').trim()) h.ko = ''; return unline(h); };
 // a "line" that is no more than the sky's name ("흐림", "Cloudy") says what the header already says
 const unline = h => { const l = String(h.line || '').trim(); if (l && l.length <= 8 && condOf(l) === h.cond) { h.line = ''; h.ko = ''; } return h; };
+// the saved city a place names (by its name or its Korean name): two places in two different saved cities are apart,
+// and the status line (the scene's) doesn't stand over an owner the model puts in the other
+const cityAt = (place, cities) => { const k = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''), pk = k(place); return pk ? arr(cities).find(c => [c?.name, c?.ko].map(k).filter(Boolean).some(n => pk.includes(n) || n.includes(pk))) || null : null; };
+export const apart = (a, b, cities) => { const x = cityAt(a, cities), y = cityAt(b, cities); return !!(x && y && x !== y); };
 // the newest status line over the saved weather, for the screen alone (nothing is saved): a day or hours later than it
 export const overlayNow = (here, now) => fit(unline(overlay(structuredClone(here), now)));
 export function parseWeather(w, now) {
@@ -320,7 +324,7 @@ export function applyWeather(p, w, now, { archive = true, today = '' } = {}) {
     const was = p.life.weather || null;
     let next;
     if (w && typeof w === 'object') {
-        const here = fit(unko(overlay(hereOf(w), now, true)));
+        const raw = hereOf(w), here = fit(unko(apart(raw.place, now?.place, was?.cities || arr(w.cities).map(cityOf)) ? raw : overlay(raw, now, true)));
         if (here.from === 'archive' && !archive) here.from = 'chat';
         // a forecast or a tile the model left out stays as it was (the clock trims what is past)
         const old = was?.here;
@@ -341,7 +345,7 @@ export function applyWeather(p, w, now, { archive = true, today = '' } = {}) {
         // the cities keep what the model leaves out (their time zone, their note)
         const cities = (was?.cities || []).map(c => { const key = v => line(v, 40).toLowerCase(), n = arr(w.cities).find(x => [c.name, c.ko].filter(Boolean).map(key).includes(key(x?.name))); if (!n) return c; const f = cityOf(n), out = { ...c, cond: condPick(n.cond, c.cond, { temp: f.temp }) }; for (const k of ['temp', 'hi', 'lo', 'sunrise', 'sunset', 'rainNext', 'wind', 'gust', 'dir', 'feels', 'humidity', 'dew', 'visibility']) if (f[k] !== null && f[k] !== '') out[k] = f[k]; return out; });
         next = { ...(was || {}), here, cities };
-    } else if (now && was?.here) {
+    } else if (now && was?.here && !apart(was.here.place, now.place, was.cities)) {
         // only the status line: its words stand over the weather there was; on a later day, yesterday's hours, sentence
         // and rain go with the day
         const here = fit(overlay(structuredClone(was.here), now));

@@ -8,7 +8,7 @@ import { AX, ax, axBar, axCb, axH1, axInd, axKp, axTint, axTop, busyHtml } from 
 import { filling } from './phoneai.js';
 import { byStory, fmtDate, koOn, pad, storyNow } from './phonedata.js';
 import { shiftDay, weatherNow } from './phonelife.js';
-import { overlayNow } from './phonesynclife.js';
+import { apart, overlayNow } from './phonesynclife.js';
 import { fmtMoney } from './phonemoney.js';
 import { nameKey } from './people.js';
 import { esc } from './util.js';
@@ -877,7 +877,7 @@ function hereNow(lf) {
     const h = lf.weather.here;
     let t = null;
     try { t = weatherNow(); } catch { t = null; }
-    if (!t || !/^\d{2}-\d{2}$/.test(t.date || '') || !h.date) return h;
+    if (!t || !/^\d{2}-\d{2}$/.test(t.date || '') || !h.date || apart(h.place, t.place, lf.weather.cities)) return h;
     const gap = dayGap(h.date, t.date);
     if (gap < 0 || gap === 0 && !(t.time && (!h.time || t.time > h.time))) return h;
     const out = overlayNow(h, t);

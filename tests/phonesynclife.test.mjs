@@ -545,3 +545,20 @@ test('weather: a new day from the model keeps no hours or rain of yesterday; a s
     h = p.life.weather.here;
     assert.equal(h.date, '10-28'); assert.equal(h.cond, 'clear'); assert.equal(h.temp, 5); assert.equal(h.hours.length, 0); assert.equal(h.line, ''); assert.equal(h.tiles.rainNext, null);
 });
+
+test('weather: the status line is the scene\'s; an owner the model puts in another saved city keeps their own weather', async () => {
+    const { apart } = await import('../src/phonesynclife.js');
+    const { p } = setup();
+    p.life.weather.cities = [{ name: 'Seoul', ko: '서울', tz: 'Asia/Seoul', cond: 'snow', temp: -2 }, { name: 'Berlin', ko: '베를린', tz: 'Europe/Berlin', cond: 'rain', temp: 6 }];
+    assert.equal(apart('Berlin', '서울', p.life.weather.cities), true);
+    assert.equal(apart('Rathaus', '서울', p.life.weather.cities), false);
+    const now = { date: '02-02', time: '19:00', place: '서울', weather: '🌨 눈 / -2°C' };
+    applyWeather(p, { place: 'Berlin', date: '02-02', time: '12:00', from: 'chat', cond: 'rain', temp: 6, hi: 8, lo: 3 }, now);
+    let h = p.life.weather.here;
+    assert.equal(h.place, 'Berlin'); assert.equal(h.cond, 'rain'); assert.equal(h.temp, 6); assert.equal(h.from, 'chat');
+    assert.equal(applyWeather(p, null, { ...now, time: '21:00', weather: '눈 / -4°C' }).length, 0);
+    // the owner in the scene: the status line stands
+    applyWeather(p, { place: 'Seoul', date: '02-02', time: '19:00', from: 'chat', cond: 'cloudy', temp: 1 }, now);
+    h = p.life.weather.here;
+    assert.equal(h.cond, 'snow'); assert.equal(h.temp, -2); assert.equal(h.from, 'tracker');
+});
