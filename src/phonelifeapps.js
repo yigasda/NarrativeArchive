@@ -906,14 +906,30 @@ function weatherBody(p, h, name, night, sub, source, tileCol, lead = '') {
 }
 // the screen's colours: the sky, and the one flat colour its cards and tiles sit in
 const wxVars = q => `background: ${q.sky}; --wcard: ${shade(q.sky, 0.9)}; --wtile: ${shade(q.sky, q.phase === 'day' && q.sky === '#4f8fd8' ? 0.62 : 0.8)}`;
+// the hourly row at the story's clock: "now" is the sky in the header, then the saved hours still ahead, and when the
+// clock has run past most of them the row is carried on with the last one's sky along the day's temperature curve
+function hereHours(h, time) {
+    const n = toMin(time), saved = h.hours || [];
+    if (n === null) return saved;
+    const ahead = m => (m - n + 1440) % 1440;
+    const later = saved.filter(x => { const m = toMin(x.time); return m !== null && ahead(m) >= 30 && ahead(m) <= 12 * 60; }).sort((a, b) => ahead(toMin(a.time)) - ahead(toMin(b.time)));
+    const out = [{ time: hm(n), cond: h.cond, temp: h.temp, rain: later[0]?.rain ?? 0 }, ...later].slice(0, 6);
+    const lo = h.lo ?? (h.temp ?? 10) - 4, hi = h.hi ?? (h.temp ?? 10) + 4;
+    while (out.length < 6) {
+        const last = out[out.length - 1], m = (toMin(last.time) + 60) % 1440, f = Math.cos(((m / 60 - 15) / 24) * 2 * Math.PI);
+        out.push({ time: hm(m), cond: last.cond, temp: Math.round(lo + (hi - lo) * (f + 1) / 2), rain: last.rain });
+    }
+    return out;
+}
 export function weatherScreen(p, now) {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '날씨', 'life');
-    const h = lf.weather.here, time = h.time || now5(p).slice(6), phase = phaseOf(time, h.tiles?.sunrise, h.tiles?.sunset), q = pal(h.cond, phase);
+    // the phone's own clock (the weather's time is when it was last told, often hours before)
+    const h = lf.weather.here, time = now5(p).slice(6) || h.time, phase = phaseOf(time, h.tiles?.sunrise, h.tiles?.sunset), q = pal(h.cond, phase);
     return `<div class="lf_wx" style="${wxVars(q)}">${scene(h.cond, phase)}
       ${axBar(p, now, '#fff')}
       <div class="ax_top lf_wbar">${axCb('home2')}<button type="button" class="lf_pill wx" data-go="wlist">도시 ${lf.weather.cities.length}</button></div>
-      <div class="ax_scroll">${weatherBody(p, { ...h, time }, h.place || '현재 위치', phase === 'night', '현재 위치', '<div class="lf_wgap"></div>', shade(q.sky, 0.8))}<i class="lf_pad"></i></div>
+      <div class="ax_scroll">${weatherBody(p, { ...h, time, hours: hereHours(h, time) }, h.place || '현재 위치', phase === 'night', '현재 위치', '<div class="lf_wgap"></div>', shade(q.sky, 0.8))}<i class="lf_pad"></i></div>
       ${axInd('#fff')}</div>`;
 }
 // a saved city: only its temperature, highs and lows and sky are the model's; its hours are drawn between them

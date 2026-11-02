@@ -88,8 +88,10 @@ function overlay(here, now) {
     here.said = line(now.weather, 60);
     return here;
 }
+// a Korean copy that only repeats the line (a Korean line given the same "ko") would show twice
+const unko = h => { if (h.ko && h.line && h.ko.replace(/\s+/g, ' ').trim() === h.line.replace(/\s+/g, ' ').trim()) h.ko = ''; return h; };
 export function parseWeather(w, now) {
-    return { here: overlay(hereOf(w?.here || {}), now), cities: arr(w?.cities).map(cityOf).filter(c => c.name).slice(0, 5) };
+    return { here: unko(overlay(hereOf(w?.here || {}), now)), cities: arr(w?.cities).map(cityOf).filter(c => c.name).slice(0, 5) };
 }
 
 // ---- story days: "MM-DD" without a year; a gap across New Year is taken the short way round
@@ -300,7 +302,7 @@ export function applyWeather(p, w, now, { archive = true, today = '' } = {}) {
     const was = p.life.weather || null;
     let next;
     if (w && typeof w === 'object') {
-        const here = overlay(hereOf(w), now);
+        const here = unko(overlay(hereOf(w), now));
         if (here.from === 'archive' && !archive) here.from = 'chat';
         // a forecast or a tile the model left out stays as it was (the clock trims what is past)
         const old = was?.here;
