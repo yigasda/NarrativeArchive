@@ -67,8 +67,10 @@ test('a day the story shows is written over the pattern day; new days nobody tol
 test('weather: the status line stands over the model; nothing to go on keeps it; a city keeps its time zone', () => {
     const { p } = setup();
     assert.deepEqual(applyWeather(p, null, null), []);
-    const fx = applyWeather(p, { place: 'Varo', date: '10-27', cond: 'clear', temp: 18, hi: 19, lo: 9, from: 'guess', cities: [{ name: 'Lisboa', cond: 'rain', temp: 16 }] }, { date: '10-27', time: '17:40', place: 'Rathaus', weather: '비, 11°' });
+    const fx = applyWeather(p, { place: 'Varo', date: '10-27', cond: 'clear', temp: 18, hi: 19, lo: 9, from: 'guess', cities: [{ name: 'Lisboa', cond: 'rain', temp: 16, visibility: 6, sunrise: '07:20', sunset: '18:05' }] }, { date: '10-27', time: '17:40', place: 'Rathaus', weather: '비, 11°' });
     assert.equal(fx.length, 1);
+    assert.equal(p.life.weather.cities[0].visibility, 6);
+    assert.equal(p.life.weather.cities[0].sunset, '18:05');
     assert.equal(p.life.weather.here.cond, 'rain');
     assert.equal(p.life.weather.here.temp, 11);
     assert.equal(p.life.weather.here.place, 'Rathaus');
