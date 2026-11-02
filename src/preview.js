@@ -89,5 +89,5 @@ export async function openPreview() {
         const ok = await copyText(b.text, $root.find('.na_pv2_copybuf')[0]);
         ok ? toastr.success('복사됨') : toastr.warning('복사가 막혀 있어요.');
     });
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }

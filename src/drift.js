@@ -273,7 +273,7 @@ export async function openDrift() {
         $root.closest('dialog').find('.popup-button-ok').trigger('click');
         gotoSection(start);
     });
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
 // every N AI replies, check quietly; only speak up when something is off
