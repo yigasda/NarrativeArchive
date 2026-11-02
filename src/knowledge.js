@@ -314,7 +314,7 @@ export async function openKnowledge() {
             toastr.success(`새로 ${added}개${updated ? ` · 고친 줄 ${updated}개` : ''} · 다듬기: 합침 ${t.merged} · 뺌 ${t.dropped} → 지금 표 ${knowledgeRows(m).length}개. 틀린 건 직접 고쳐 주세요.`);
         },
     });
-    $root.find('.na_kn_ai').on('click', function () { $(this).toggleClass('active', picker.toggle()); });
+    $root.find('.na_kn_ai').on('click', function () { const open = picker.toggle(); $(this).toggleClass('active', open); $root.toggleClass('na_kn3_picking', open); });
     $root.find('.na_kn_tidy').on('click', async function () {
         const t = await withSpinner($(this), '다듬는 중…', () => tidyKnowledge(m));
         if (!t) return;
