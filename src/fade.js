@@ -270,7 +270,7 @@ export async function openLayers(s) {
         <div class="na_v2_note na_ly_note">${noteHtml(plan, use)}</div>
         ${stale ? '<div class="na_xr_warn slim">' + WARN_SVG + '<div>버전을 만든 뒤에 원문이 바뀌었어요. 저장할 때까지 원문으로 들어가요.</div></div>' : ''}
         <div class="na_ly3_lbl"><span>넣을 버전</span><label class="na_ly3_auto">자동으로 고르기<input type="checkbox" class="na_toggle na_ly3_autoon"${forced() === 'auto' ? ' checked' : ''}></label></div>
-        <div class="na_ly3_cards na_ly_tabs">${[['long', '원문'], ['short', '짧게'], ['line', '요점']].map(([t, l]) => `<button type="button" class="na_ly3_card" data-t="${t}"><b>${l}</b><span class="na_ly3_in">넣는 중</span><small class="na_ly_tok_${t}"></small></button>`).join('')}</div>
+        <div class="na_ly3_cards na_ly_tabs">${[['long', '원문'], ['short', '짧게'], ['line', '요점']].map(([t, l]) => `<button type="button" class="na_ly3_card" data-t="${t}"><b>${l}</b><small class="na_ly_tok_${t}"></small></button>`).join('')}</div>
         <div class="na_v2_card na_ly3_body">
           <div class="na_ly_tools">
             <small class="na_ly_trinfo"></small>
@@ -312,9 +312,9 @@ export async function openLayers(s) {
     };
     const tok = async () => {
         const [a, b, d] = await Promise.all([countTokens(full), countTokens($root.find('.na_ly_short').val()), countTokens($root.find('.na_ly_line').val())]);
-        $root.find('.na_ly_tok_long').text(`${fmt(a)}`);
-        $root.find('.na_ly_tok_short').text(b ? `${fmt(b)} · ${Math.round(b / Math.max(1, a) * 100)}%` : '없음');
-        $root.find('.na_ly_tok_line').text(d ? `${fmt(d)} · ${Math.round(d / Math.max(1, a) * 100)}%` : '없음');
+        $root.find('.na_ly_tok_long').text(`${fmt(a)} 토큰`);
+        $root.find('.na_ly_tok_short').text(b ? `${fmt(b)} 토큰 · ${Math.round(b / Math.max(1, a) * 100)}%` : '없음');
+        $root.find('.na_ly_tok_line').text(d ? `${fmt(d)} 토큰 · ${Math.round(d / Math.max(1, a) * 100)}%` : '없음');
         show();
     };
     show(); tok();
