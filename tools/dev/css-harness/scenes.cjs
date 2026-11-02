@@ -59,9 +59,9 @@ const SCENES = [
     { name: 'confirm', arch: 'full', root: DLG, open: async p => { p.evaluate(async ([B]) => { (await import(B + 'util.js')).confirm('저장 안 한 고침', '짧은 버전 · 요점을 고친 게 있어요. 저장할까요?', '저장하기'); }, [B]).catch(() => {}); await p.waitForSelector(DLG); await p.waitForTimeout(600); } },
     { name: 'confirm-danger', arch: 'full', root: DLG, open: async p => { p.evaluate(async ([B]) => { (await import(B + 'util.js')).confirm('새로 시작', '이 작업실 대화와 받은 섹션을 지워요.', '지우기', { danger: true }); }, [B]).catch(() => {}); await p.waitForSelector(DLG); await p.waitForTimeout(600); } },
     // --- the extension panel, unfolded ---
-    { name: 'panel', arch: 'panel', root: '#na_settings', open: async p => { await tap(p, '#extensions-settings-button .drawer-icon'); await p.waitForTimeout(1200); await p.evaluate(() => { const d = document.querySelector('#na_settings .inline-drawer-toggle'); if (d && !document.querySelector('#na_settings .inline-drawer-content')?.offsetHeight) d.click(); document.querySelector('#na_settings')?.scrollIntoView(); }); await p.waitForTimeout(600);
-        // the section list was drawn at page load from whatever was on disk: switch the view away and back so it redraws from the archive set just now
-        await p.evaluate(() => { const b = v => document.querySelector(`#na_settings .na_seg_btn[data-view="${v}"]`); b('editor')?.click(); b('cards')?.click(); }); await p.waitForTimeout(600); }, close: async p => { await tap(p, '#extensions-settings-button .drawer-icon'); await p.waitForTimeout(600); } },
+    // --- the extension panel, unfolded: the drawer is taller than a phone screen, so it is shot as the viewport at two scroll positions ---
+    { name: 'panel', arch: 'panel', root: '#na_settings', shot: 'page', open: (p, h) => h.panel(p, 0), close: p => tap(p, '#extensions-settings-button .drawer-icon') },
+    { name: 'panel-2', arch: 'panel', root: '#na_settings', shot: 'page', open: (p, h) => h.panel(p, 800), close: p => tap(p, '#extensions-settings-button .drawer-icon') },
     // --- the phone (needs tools/dev/fakeph.mjs on :5555; the window scenes intercept that port, the phone talks to the real fake) ---
     { name: 'phone-home', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); } },
     { name: 'phone-home2', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'home2'); } },

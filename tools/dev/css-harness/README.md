@@ -27,6 +27,19 @@ node tools/dev/css-harness/prune.cjs --write    # 실제로 지움 · 줄 번호
 
 `deadrules.cjs`는 후보를 다섯 칸으로 나눠요. **safe**(상태 · 미디어 아님, 소스에 클래스 없음)만 자동으로 지워요. **in-src**는 코드가 그 클래스를 쓰는 거라 도구가 못 여는 화면에서 필요할 수 있어서 손으로 봐요. **state**(호버 · 포커스 · `.on` 등)와 **media**, **pseudo**(`::before` 등)는 안 지워요.
 
+## 나머지 도구
+
+```
+tools/dev/css-harness/check.sh step41 [--only a,b]   # ST에 복사 → quick 캡처 → 기준과 비교, 한 번에 (BASE=라벨 로 기준 바꾸기)
+node tools/dev/css-harness/leak.cjs                  # 못된 테마가 새는 요소 목록 (방패 만들 때 할 일 → 끝나면 비어야 하는 테스트)
+node tools/dev/css-harness/dupes.cjs --from 7232     # 같은 셀렉터가 두 번 이상 쓰인 곳 (4-2)
+node tools/dev/css-harness/vars.cjs [--name accent]  # --na-* 변수가 어디서 정의되고 몇 번 쓰이는지 (4-4)
+node tools/dev/css-harness/blocks.cjs [--from 7232]  # 주석 블록별 줄 범위 · 길이 · 어느 창 것인지 (4-5)
+node tools/dev/css-harness/relax.cjs --range A-B --what important|notx|both   # 구간의 억지 우선순위 떼기 (4-3), 되돌리기는 git checkout
+node tools/dev/css-harness/sheet.cjs baseline step41 [--scenes a,b]           # 정리 전 | 정리 후 캡처 시트 한 장
+node --test tests/css.test.mjs                       # style.css가 tests/css.budget.json 예산(줄 수 · !important · :not(#na_x))을 넘지 않는지
+```
+
 ## 무엇을 찍나 (scenes.cjs)
 
 - 창 22개의 처음 화면, 빈 화면 6개, 결과 · 다음 단계 화면(섹션 버전, 제목 다시 짓기 결과, 섹션 합치기 결과, 마법사 2 · 3 · 채점, 아카이브에 질문 답, 작업실 시작 전 · 2 · 3 · 4 · ⋯ 메뉴 · + 메뉴), 확인 팝업 2종, 확장 패널, 폰 4화면.

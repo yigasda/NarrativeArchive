@@ -17,12 +17,13 @@ const STT = (opt('--st') || (quick ? 'default' : 'default,Dark Lite,Cappuccino,h
 const WIDTHS = (opt('--w') || (quick ? '412' : '412,1280')).split(',').map(Number);
 const only = opt('--only')?.split(',');
 const skipExisting = args.includes('--skip-existing');
-const OUT = path.join(__dirname, 'out', label); fs.mkdirSync(OUT, { recursive: true });
+const OUT = path.join(__dirname, 'out', label);
 const HOSTILE = fs.readFileSync(path.join(__dirname, 'hostile.css'), 'utf8');
 // the computed properties we compare (no transitions/animations: those are frozen below and not part of the look)
 const PROPS = ['color', 'backgroundColor', 'backgroundImage', 'borderTopColor', 'borderTopWidth', 'borderTopStyle', 'borderRightColor', 'borderRightWidth', 'borderBottomColor', 'borderBottomWidth', 'borderLeftColor', 'borderLeftWidth', 'borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomRightRadius', 'borderBottomLeftRadius', 'boxShadow', 'opacity', 'fontSize', 'fontWeight', 'fontFamily', 'fontStyle', 'lineHeight', 'letterSpacing', 'textDecorationLine', 'textTransform', 'textAlign', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft', 'gap', 'display', 'visibility', 'outlineColor', 'outlineWidth', 'outlineStyle', 'accentColor', 'fill', 'stroke', 'filter', 'backdropFilter', 'mixBlendMode', 'webkitMaskImage', 'minHeight', 'maxHeight'];
 const portOpen = port => new Promise(r => { const s = net.connect(port, '127.0.0.1'); s.once('connect', () => { s.end(); r(true); }); s.once('error', () => r(false)); });
-(async () => {
+if (require.main === module) (async () => {
+    fs.mkdirSync(OUT, { recursive: true });
     try { await fetch(ST); } catch { console.log('SillyTavern is not answering at ' + ST + ' — start it first (docs/DESIGN.md › 실제 폰에서 확인)'); process.exit(2); }
     // the phone's fake model
     let fake = null; if (!await portOpen(5555)) { fake = spawn('node', [path.join(ROOT, 'tools/dev/fakeph.mjs')], { stdio: 'ignore' }); await new Promise(r => setTimeout(r, 800)); }
@@ -67,7 +68,7 @@ const portOpen = port => new Promise(r => { const s = net.connect(port, '127.0.0
                             await p.evaluate(() => document.fonts.ready); await p.waitForFunction(() => [...document.fonts].every(f => f.status !== 'loading'), null, { timeout: 5000 }).catch(() => {});
                             await p.waitForTimeout(500);
                             const el = await p.$(sc.root); if (!el) throw new Error('root not found: ' + sc.root);
-                            if (sc.root.startsWith('dialog')) await p.screenshot({ path: path.join(OUT, tag + '.png'), animations: 'disabled', caret: 'hide' });
+                            if (sc.root.startsWith('dialog') || sc.shot === 'page') await p.screenshot({ path: path.join(OUT, tag + '.png'), animations: 'disabled', caret: 'hide' });
                             else await el.screenshot({ path: path.join(OUT, tag + '.png'), animations: 'disabled', caret: 'hide' });
                             const dump = await styleDump(p, sc.root);
                             fs.writeFileSync(path.join(OUT, tag + '.json'), JSON.stringify(dump));
@@ -110,6 +111,16 @@ async function setArch(p, arch) {
 }
 // --- phone helpers (the same moves as tools/dev/probe.cjs) ---
 const helpers = {
+    panel: async (p, scrollY) => {
+        await p.$eval('#extensions-settings-button .drawer-icon', e => e.click()); await p.waitForTimeout(1000);
+        await p.evaluate(() => { const c = document.querySelector('#na_settings .inline-drawer-content'); const t = document.querySelector('#na_settings .inline-drawer-toggle'); if (c && t && getComputedStyle(c).display === 'none') t.click(); });
+        await p.waitForTimeout(600);
+        const h = await p.$eval('#na_settings', e => e.getBoundingClientRect().height); if (h < 400) throw new Error(`panel not unfolded (height ${Math.round(h)})`);
+        // the section list was drawn at page load from what was on disk: switch the view away and back so it redraws from the archive set just now
+        await p.evaluate(() => { const b = v => document.querySelector(`#na_settings .na_seg_btn[data-view="${v}"]`); b('editor')?.click(); b('cards')?.click(); });
+        await p.evaluate(y => { const el = document.querySelector('#na_settings'); el.scrollIntoView({ block: 'start' }); const sc = el.closest('.scrollableInner, #extensions_settings, .drawer-content') || el.parentElement; if (sc) sc.scrollTop += y; }, scrollY);
+        await p.waitForTimeout(600);
+    },
     phone: async p => {
         await p.evaluate(async ([B]) => { const core = await import(B + 'core.js'); const m = core.getMeta(); delete m.phones; (await import(B + 'phone.js')).openPhone('Mara'); }, [B]);
         await p.waitForSelector('.na_ph_makebtn', { timeout: 8000 }); await p.$eval('.na_ph_makebtn', e => e.click()); await p.waitForSelector('.cg_lock', { timeout: 20000 }); await p.waitForTimeout(1200); await p.$eval('.cg_lkopen', e => e.click()); await p.waitForTimeout(500);
@@ -150,3 +161,4 @@ async function styleDump(p, root) {
     await cdp.detach();
     return base;
 }
+module.exports = { helpers, styleDump, PROPS };
