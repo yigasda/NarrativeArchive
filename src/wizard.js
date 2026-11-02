@@ -404,7 +404,7 @@ export async function openWizard() {
         { name: '범위', title: '어디부터 어디까지<br>압축할까요?', sub: '경계선 다음부터 자동으로 채웠어요' },
         { name: '복사', title: '압축할 모델에<br>넘겨 주세요', sub: '지시문과 함께 복사하거나 .txt로 저장해요' },
         { name: '붙여넣기', title: '모델이 준 섹션을<br>붙여넣어 주세요', sub: '파일(.txt·.md)도 돼요' },
-        { name: '채점', title: '원문과 맞는지<br>볼까요?', sub: '선택 · 지어낸 것·빠진 것·틀린 것을 찾아요' },
+        { name: '채점', title: '원문과 맞는지<br>볼까요?', sub: '선택 · 안 해도 돼요' },
         { name: '추가', title: '검사하고<br>아카이브에 넣어요', sub: '번호 검사 · 미리보기를 거쳐 추가하고 끝 번호까지 숨겨요' },
     ];
     let step = 0;
@@ -426,8 +426,10 @@ export async function openWizard() {
         </div>
         <div class="na_wz2_pane" data-s="1">
           <select class="text_pole na_wz_prompt"></select>
-          <div class="na_v2_row2"><button type="button" class="na_v2_btn na_wz_save">.txt 저장</button><button type="button" class="na_v2_btn primary na_wz_copy">${svgA('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', 16)}<span>복사</span></button></div>
+          <div class="na_v2_card na_wz3_pk"></div>
+          <div class="na_v2_row2 na_wz3_hide"><button type="button" class="na_v2_btn na_wz_save">.txt 저장</button><button type="button" class="na_v2_btn primary na_wz_copy">${svgA('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', 16)}<span>복사</span></button></div>
           <small class="na_v2_note na_wz_copied"></small>
+          <button type="button" class="na_linkbtn na_wz3_txt">.txt로 저장</button>
         </div>
         <div class="na_wz2_pane" data-s="2">
           <textarea class="text_pole na_wz_out" rows="10" spellcheck="false" placeholder="## #시작–#끝 — 제목 (날짜, 장소)&#10;PLOT:&#10;- …"></textarea>
@@ -439,7 +441,12 @@ export async function openWizard() {
           <input type="file" class="na_wz_file" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden>
         </div>
         <div class="na_wz2_pane" data-s="3">
-          <button type="button" class="na_v2_btn wide na_wz_grade">${svgA('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14l2 2 4-4"/>', 16)}AI로 채점</button>
+          <div class="na_v2_card na_wz3_chk">
+            <div><span class="na_wz3_ic">${svgA('M12 5v14M5 12h14', 15)}</span><span><b>지어낸 것</b><small>원문에 없는 사건 · 대사</small></span></div>
+            <div><span class="na_wz3_ic">${svgA('<circle cx="12" cy="12" r="8"/>', 15)}</span><span><b>빠진 것</b><small>원문에 있는데 요약에 없는 일</small></span></div>
+            <div><span class="na_wz3_ic">${svgA('M6 6l12 12M18 6L6 18', 15)}</span><span><b>틀린 것</b><small>누가 · 언제 · 어디가 다른 곳</small></span></div>
+          </div>
+          <button type="button" class="na_v2_btn wide na_wz_grade na_wz3_hide">${svgA('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 14l2 2 4-4"/>', 16)}AI로 채점</button>
           <div class="na_ai_box na_wz_gradeout" hidden></div>
         </div>
         <div class="na_wz2_pane" data-s="4">
@@ -452,7 +459,9 @@ export async function openWizard() {
         </div>
         <button type="button" class="na_linkbtn na_wz2_skip">채점 건너뛰고 바로 추가</button>
       </div>`);
-    const nextLabel = ['다음 · 복사', '다음 · 붙여넣기', '다음 · 채점', '다음 · 추가', '아카이브에 추가 창 열기'];
+    // (docs/mockups/ext-wizard A) one orange button a step: 복사 copies and moves on, 채점 grades (then moves on); .txt and skipping are links
+    const graded = () => !$root.find('.na_wz_gradeout').prop('hidden');
+    const nextLabel = () => ['다음 · 복사', '복사하고 다음', '다음 · 채점', graded() ? '다음 · 추가' : '✧ AI로 채점', '아카이브에 추가 창 열기'][step];
     const show = () => {
         $root.find('.na_wz2_count').text(`${step + 1} / ${STEPS.length}`);
         $root.find('.na_wz2_progress button').each(function () { const i = Number(this.dataset.s); $(this).toggleClass('done', i < step).toggleClass('on', i === step); });
@@ -462,8 +471,8 @@ export async function openWizard() {
         $root.find('.na_wz2_sub').text(step === 2 ? `#${r0.from}–#${r0.to}${josaA(r0.to)} 압축한 결과 · ${STEPS[step].sub}` : STEPS[step].sub);
         $root.find('.na_wz2_pane').each(function () { this.hidden = Number(this.dataset.s) !== step; });
         $root.find('.na_wz2_prev').prop('hidden', step === 0);
-        $root.find('.na_wz2_next').text(nextLabel[step]);
-        $root.find('.na_wz2_skip').prop('hidden', step !== 2 && step !== 3);
+        $root.find('.na_wz2_next').text(nextLabel());
+        $root.find('.na_wz2_skip').prop('hidden', step !== 2 && !(step === 3 && !graded())).text(step === 3 ? '건너뛰고 추가 →' : '채점 건너뛰고 바로 추가');
         if (step === 4) {
             const v = $root.find('.na_wz_out').val().trim(), n = guessEndNumber(v), r = range();
             $root.find('.na_wz2_sum').html(`<div class="na_wz2_sumrow"><span>범위</span><b>#${r.from} – #${r.to}</b></div><div class="na_wz2_sumrow"><span>새 섹션</span><b>${parseSections(v).filter(x => !x.group && !/^(?:STATE|OPEN)\b/.test(x.title)).length}개</b></div><div class="na_wz2_sumrow"><span>끝 번호</span><b>${n !== null ? `#${n}` : '추가 창에서 정해요'}</b></div>`);
@@ -475,7 +484,12 @@ export async function openWizard() {
     };
     $root.on('click', '.na_wz2_progress button', function () { go(Number(this.dataset.s)); });
     $root.find('.na_wz2_prev').on('click', () => go(step - 1));
-    $root.find('.na_wz2_next').on('click', () => { if (step === STEPS.length - 1) $root.find('.na_wz_add').trigger('click'); else go(step + 1); });
+    $root.find('.na_wz2_next').on('click', async () => {
+        if (step === STEPS.length - 1) return $root.find('.na_wz_add').trigger('click');
+        if (step === 1) { if (await doCopy()) go(2); return; }
+        if (step === 3 && !graded()) return grade($root.find('.na_wz2_next'));
+        go(step + 1);
+    });
     $root.find('.na_wz2_skip').on('click', () => go(4));
     $root.append('<button type="button" class="na_wz_add" hidden></button>');
     // last choice is remembered; "__none" copies the raw log only
@@ -505,7 +519,12 @@ export async function openWizard() {
         const card = (x, k) => `<div class="na_wz3_msg" data-i="${x.i}" role="button" tabindex="0" title="꾹 누르면 전체 원문"><b>#${x.i} · ${esc(x.name)}</b><span>${esc(x.text.replace(/\s+/g, ' ').slice(0, 140))}</span></div>`;
         $root.find('.na_wz3_msgs').html(!items.length ? '' : items.length === 1 ? card(items[0])
             : `${card(items[0])}<div class="na_wz3_gap"><i></i><span>${items.length > 2 ? `메시지 ${items.length - 2}개` : '바로 다음'}</span><i></i></div>${card(items[items.length - 1])}`);
-        $root.find('.na_wz_info').text(items.length ? `메시지 ${items.length}개${hiddenOut ? ` (숨긴 ${hiddenOut}개 뺌)` : ''} · 원문 약 ${fmt(await countTokens(raw))} 토큰${p ? ` · 지시문까지 약 ${fmt(await countTokens(full))} 토큰` : ''}` : '이 범위에 메시지가 없어요.');
+        const rt = await countTokens(raw), ft = p ? await countTokens(full) : rt;
+        $root.find('.na_wz_info').text(items.length ? `메시지 ${items.length}개${hiddenOut ? ` (숨긴 ${hiddenOut}개 뺌)` : ''} · 원문 약 ${fmt(rt)} 토큰${p ? ` · 지시문까지 약 ${fmt(ft)} 토큰` : ''}` : '이 범위에 메시지가 없어요.');
+        // what goes over: the messages, the instruction, both together
+        $root.find('.na_wz3_pk').html(items.length ? `<div><span>원문 메시지</span><small>#${from}–#${to} · ${items.length}개 · ${fmt(rt)} 토큰</small></div>
+            <div><span>지시문</span><small>${p ? `${fmt(Math.max(0, ft - rt))} 토큰` : '없음'}</small></div>
+            <div><span>모두</span><b>약 ${fmt(ft)} 토큰</b></div>` : '<div><span>이 범위에 메시지가 없어요</span></div>');
     };
     // hold a message card: the whole message in a sheet from the bottom of the window
     const openMsg = i => {
@@ -528,12 +547,15 @@ export async function openWizard() {
     let t;
     $root.find('.na_wz_from, .na_wz_to, .na_wz_prompt').on('input change', () => { clearTimeout(t); t = setTimeout(build, 250); });
     const remember = async how => { const { from, to } = range(); m.lastExport = { from, to, at: Date.now(), how }; await saveMeta(); refreshStatus(); };
-    $root.find('.na_wz_copy').on('click', async () => {
+    const doCopy = async () => {
         await build();
-        if (!raw) return toastr.info('범위에 메시지가 없어요.');
+        if (!raw) { toastr.info('범위에 메시지가 없어요.'); return false; }
         const ok = await copyText(full, $root.find('.na_wz_out')[0]);
         if (ok) { await remember('copy'); $root.find('.na_wz_copied').text(`복사했어요 · ${timeLabel(Date.now())}`); toastr.success('복사됨 · 압축할 모델에 붙여넣으세요'); } else toastr.warning('복사가 막혀 있어요. .txt 저장을 써 주세요.');
-    });
+        return ok;
+    };
+    $root.find('.na_wz_copy').on('click', doCopy);
+    $root.find('.na_wz3_txt').on('click', () => $root.find('.na_wz_save').trigger('click'));
     $root.find('.na_wz_draftbtn').on('click', async function () {
         await build();
         if (!raw) return toastr.info('범위에 메시지가 없어요.');
@@ -581,16 +603,18 @@ export async function openWizard() {
         countTokens(v).then(tk => $root.find('.na_wz_outinfo').html(v ? `<span class="${ok ? 'ok' : secsN ? 'warn' : ''}">${ok ? chk : ''}섹션 ${secsN}개${span}</span>${hasState ? `<span class="ok">${chk}STATE·OPEN</span>` : ''}<span>${fmt(tk)} 토큰</span>` : ''));
         $root.find('.na_wz_gradeout').prop('hidden', true);
     });
-    $root.find('.na_wz_grade').on('click', async function () {
+    const grade = async $b => {
         const sum = $root.find('.na_wz_out').val().trim();
         if (!sum) return toastr.info('먼저 결과를 붙여넣어 주세요.');
         await build();
-        const out = await withSpinner($(this), '채점하는 중…', () => askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${sum}`, { system: AI_SYS_GRADE, maxTokens: 6000 }));
+        const out = await withSpinner($b, '채점하는 중…', () => askAI(`[RAW LOG]\n${raw}\n\n[SUMMARY]\n${sum}`, { system: AI_SYS_GRADE, maxTokens: 6000 }));
         if (out === null) return;
         const ok = /^\s*문제 없음\.?\s*$/.test(out);
         $root.find('.na_wz_gradeout').prop('hidden', false).toggleClass('na_ai_ok', ok)
             .html(ok ? '<i class="fa-solid fa-circle-check"></i> 원문과 잘 맞아요' : `<div class="na_ai_box_head"><i class="fa-solid fa-clipboard-check"></i> 채점 <span class="na_dim">· 참고용</span></div>${driftHtml(out, m)}`);
-    });
+        show();
+    };
+    $root.find('.na_wz_grade').on('click', function () { grade($(this)); });
     $root.on('click', '.na_cite_msg', function () { const n = Number(this.dataset.msg); openSource(n, n, `#${n}`); });
     $root.find('.na_wz_add').on('click', () => {
         const text = $root.find('.na_wz_out').val().trim();

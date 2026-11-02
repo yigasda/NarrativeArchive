@@ -7698,3 +7698,20 @@ body.na_darkui .na_wz3_sheet { background: #232328; color: #ECEAE6; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup button.na_wz3_sclose:not(#na_x) { flex: none; height: 42px; margin: 14px 0 0; border: 0 !important; border-radius: 999px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; box-shadow: none !important; }
 body:not(.na_darkui) dialog.popup button.na_wz3_sclose:not(#na_x) { background: #EADCD0 !important; color: #463428 !important; }
 body.na_darkui dialog.popup button.na_wz3_sclose:not(#na_x) { background: #2E2E34 !important; color: #ECEAE6 !important; }
+/* 마법사 2 · 4단계 (docs/mockups/ext-wizard A): what goes over as a small table, what grading looks for as a list; the step's one
+   action is the orange button below, .txt and skipping are links */
+.na_wiz2 .na_wz3_hide { display: none !important; }
+.na_wz3_pk { padding: 2px 14px !important; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_wz3_pk > div { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 10px 0; font-size: 13.5px; }
+.na_wz3_pk > div + div { border-top: 1px solid var(--na-line2, var(--na-line)); }
+.na_wz3_pk small { font-size: 12px; color: var(--na-dim); text-align: right; }
+.na_wz3_pk b { font-size: 13.5px; }
+.na_wz3_chk { padding: 0 !important; overflow: hidden; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_wz3_chk > div { display: flex; align-items: flex-start; gap: 12px; padding: 11px 14px; }
+.na_wz3_chk > div + div { border-top: 1px solid var(--na-line2, var(--na-line)); }
+.na_wz3_chk b { display: block; font-size: 13.5px; font-weight: 600; }
+.na_wz3_chk small { display: block; font-size: 11.5px; color: var(--na-dim); }
+.na_wz3_ic { width: 28px; height: 28px; flex: none; border-radius: 9px; display: grid; place-items: center; background: var(--na-card2); color: var(--na-mute); }
+body.na_darkui :is(.na_wz3_pk, .na_wz3_chk) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.35); }
+.na_wiz2 .na_wz3_txt { align-self: center; font-size: 13px; font-weight: 600; color: var(--na-mute); }
+.na_wiz2 .na_wz_gradeout { margin-top: 10px; }
