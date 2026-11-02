@@ -2,7 +2,7 @@
 
 import { nameKey } from './people.js';
 import { annivToday, APPS } from './phoneapps.js';
-import { ago, bigClock, byStory, fmtDate, fmtTime, gapDays, koOn, lastTime, parts, savedName, upcoming } from './phonedata.js';
+import { ago, bigClock, byStory, fmtDate, fmtTime, koOn, lastTime, parts, savedName, upcoming } from './phonedata.js';
 import { esc } from './util.js';
 
 function lockNotes(p, now) {
@@ -98,7 +98,7 @@ export function homeScreen(p, now, m, page = 1, wx = '') {
       <div class="cg_col">
         ${cgBar(p, now)}
         <div class="cg_top">
-          <div class="cg_widgets">${page === 2 ? wx || walletW(p, now, mono) : `
+          <div class="cg_widgets">${page === 2 ? wx : `
             <button type="button" class="cg_glass cg_wcal" data-go="cal">
               <span class="cg_cap cg_capcal">${x ? `${x.mo}월` : '캘린더'}</span>
               <span class="cg_num cg_day">${x ? x.d : ''}</span>
@@ -120,21 +120,6 @@ export function homeScreen(p, now, m, page = 1, wx = '') {
 
 // 잠금화면 · 클리어 글래스: the home's ground and glass, a thin big clock, the notes as glass cards
 const cgMini = (k, mono) => { const [c1, c2, g = '#ffffff'] = CG_GEL[k]; return `<span class="cg_ic cg_mini"${mono ? '' : ` style="--c1: ${c1}${CG_ALPHA}; --c2: ${c2}${CG_ALPHA}"`}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${mono ? '#2a313b' : g}" stroke-width="${mono ? 1.75 : 2}" stroke-linecap="round" stroke-linejoin="round"><path d="${CG_I[k]}"/></svg></span>`; };
-// the 2nd page's widget: the next pass in the wallet, and an order on its way (or a nudge to fill them)
-function walletW(p, now, mono) {
-    const M = p.money, day = String(now).slice(0, 5), bars = mono ? ['#2a313b', 'rgba(22, 27, 34, 0.22)'] : ['#8b95aa', '#86bdb6'];
-    const next = M ? [...M.passes].filter(x => !x.date || gapDays(day, x.date) >= 0).sort((a, b) => gapDays(day, a.date) - gapDays(day, b.date))[0] : null;
-    // the newest order still on its way (a cancelled or returned one is not)
-    const ord = M ? [...M.orders].sort(byStory(now)).reverse().find(x => ['ordered', 'shipped', 'on the way'].includes(x.status)) : null;
-    const route = next ? (next.from && next.to && next.kind !== 'hotel' ? `${next.from} → ${next.to}` : next.by) : '';
-    return `<button type="button" class="cg_glass cg_wcal cg_wwal" data-go="wallet">
-      <span class="cg_wh"><span class="cg_cap">지갑</span><span class="cg_evw cg_num">${M ? `카드 ${M.cards.length} · 패스 ${M.passes.length}` : ''}</span></span>
-      ${route ? `<span class="cg_wroute cg_num">${esc(route)}</span>` : `<span class="cg_wroute cg_wroute2">${M ? '예정된 패스 없음' : '눌러서 채우기'}</span>`}
-      <span class="cg_fill"></span>
-      <span class="cg_evs">${next ? `<span class="cg_ev"><span class="cg_evbar" style="background: ${bars[0]}"></span><span class="cg_evtx"><span class="cg_evt">${esc(next.by)} · ${esc(fmtDate(p, next.date, true))}</span><span class="cg_num cg_evw">${esc(next.time || '')}</span></span></span>` : ''}
-        ${ord ? `<span class="cg_ev"><span class="cg_evbar" style="background: ${bars[1]}"></span><span class="cg_evtx"><span class="cg_evt">쇼핑 · ${esc(ord.item)}</span><span class="cg_evw">${ord.eta ? `${esc(fmtDate(p, ord.eta, true))} 도착 예정` : '배송 중'}</span></span></span>` : ''}</span>
-    </button>`;
-}
 export function lockScreen(p, now) {
     const mono = p.theme === 'gray';
     return `
