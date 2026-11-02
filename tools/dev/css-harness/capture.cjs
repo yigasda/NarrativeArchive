@@ -13,7 +13,8 @@ const args = process.argv.slice(2); const label = args.find(a => !a.startsWith('
 const opt = k => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
 const quick = args.includes('--quick'); if (args.includes('--fast')) args.push('--nopng', '--nostates');
 const NA = ['light', 'dark'];
-const STT = (opt('--st') || (quick ? 'default' : 'default,Dark Lite,Cappuccino,hostile')).split(',');
+// 'default' is the theme the user has set in SillyTavern (Dark Lite here); the other two are real themes with very different colours; 'hostile' is hostile.css on top of the default
+const STT = (opt('--st') || (quick ? 'default' : 'default,Cappuccino,Celestial Macaron,hostile')).split(',');
 const WIDTHS = (opt('--w') || (quick ? '412' : '412,1280')).split(',').map(Number);
 const owner = opt('--owner');
 const only = opt('--only')?.split(',') || (owner ? (OWNERS[owner] || (() => { console.log('unknown --owner; one of: ' + Object.keys(OWNERS).join(' · ')); process.exit(2); })()) : null);
