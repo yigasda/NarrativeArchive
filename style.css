@@ -7715,7 +7715,7 @@ body.na_darkui dialog.popup button.na_wz3_sclose:not(#na_x) { background: #2E2E3
 body.na_darkui :is(.na_wz3_pk, .na_wz3_chk) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.35); }
 .na_wiz2 .na_wz3_txt { align-self: center; font-size: 13px; font-weight: 600; color: var(--na-mute); }
 .na_wiz2 .na_wz_gradeout { margin-top: 10px; }
-.na_wiz2 .na_wz3_back { align-self: center; font-size: 13px; font-weight: 600; color: var(--na-dim); }
+.na_wiz2 .na_wz3_back { align-self: center; font-size: 14px; font-weight: 600; color: var(--na-ink) !important; opacity: 1; }
 .na_wz2_nav.na_wz3_pair .na_wz2_prev { flex: 1; } .na_wz2_nav.na_wz3_pair .na_wz2_next { flex: 1; }
 /* the wizard's plain buttons (이전 · 건너뛰고 추가) as in the mockup: a filled cream pill, no outline */
 body:is(.na_darkui, :not(.na_darkui)) .na_wiz2 .na_wz2_nav .na_v2_btn:not(.primary) { border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); }
