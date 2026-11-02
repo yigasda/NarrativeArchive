@@ -78,7 +78,7 @@ export async function openBranches() {
             <button type="button" class="na_v2_btn primary na_br_cut">${nWord(b.ahead.length)} 빼고 #${b.last}까지로 맞추기</button>
             ${b.fit ? `<button type="button" class="na_v2_btn na_br_restore" title="${esc(timeLabel(b.fit.at))} · ${esc(b.fit.reason)}">#${fitTo} 무렵 복구 지점으로 되돌리기</button>` : ''}
           </div>
-          <div class="na_v2_note na_bn2_note">STATE·OPEN도 원본의 마지막 시점 기준일 수 있어요. 맞추고 나서 확인해 주세요.</div>` : ''}
+          <div class="na_v2_note na_bn2_note">맞춘 뒤 STATE · OPEN도 확인해 주세요</div>` : ''}
           <div class="na_bn2_find">
             <div class="na_bn2_findrow"><span class="na_cp_txt"><b>이 채팅에서 갈라진 분기</b><small>같은 캐릭터 채팅을 열어 찾아요</small></span>
               <button type="button" class="na_v2_btn na_br_find">찾기</button></div>

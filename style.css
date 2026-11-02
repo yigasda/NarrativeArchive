@@ -7613,3 +7613,5 @@ body:not(.na_darkui) .na_bn3_tl > div::before { border-color: #D3C1B4; }
 body:not(.na_darkui) .na_bn3_tl > div.dim::before { border-color: #DDCDC1; }
 body:not(.na_darkui) .na_bn3_tl > div:not(:last-child)::after { background: #D3C1B4; }
 body:not(.na_darkui) .na_bn3_tl > div.here::before { border-color: var(--na-accent); }
+/* the result screen's control card uses the same 최근 메시지 picker */
+.na_dr2_ctl .na_dr3_seg { margin-top: 0; }
