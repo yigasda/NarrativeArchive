@@ -505,3 +505,17 @@ test('weather guessed again for the same day keeps the sky there was (its words 
     assert.equal(p.life.weather.here.date, '10-28'); assert.equal(p.life.weather.here.cond, 'rain'); assert.equal(p.life.weather.here.from, 'guess'); assert.equal(p.life.weather.here.hours.length, 0);
     assert.equal(applyWeather(p, null, null, { today: '10-28' }).length, 0);
 });
+
+test('weather: a Fahrenheit status line is read in Celsius, the high and low hold the temperature now, a carried-over day drops yesterday\'s sentence and rain', () => {
+    const { p } = setup();
+    applyWeather(p, { place: 'Varo', date: '10-26', time: '15:00', from: 'chat', cond: 'clear', temp: 20, hi: 9, lo: 4, line: 'Sunny all day', tiles: { rain24: 4, rainNext: 2 }, days: [{ day: '10-26', cond: 'clear', lo: 4, hi: 9 }] }, { date: '10-26', time: '15:00', place: 'Varo', weather: 'Sunny, 72°F' });
+    const h = p.life.weather.here;
+    assert.equal(h.temp, 22); assert.equal(h.hi, 22); assert.equal(h.lo, 4); assert.equal(h.days.find(d => d.day === '10-26').hi, 22);
+    assert.equal(h.line, 'Sunny all day'); assert.equal(h.tiles.rain24, 4);
+    applyWeather(p, null, null, { today: '10-27' });
+    const n = p.life.weather.here;
+    assert.equal(n.date, '10-27'); assert.equal(n.cond, 'clear'); assert.equal(n.line, ''); assert.equal(n.tiles.rain24, null); assert.equal(n.tiles.rainNext, null);
+    // a status line alone: its temperature still fits the high and low
+    applyWeather(p, null, { date: '10-27', time: '09:00', place: 'Varo', weather: '영하 3도, 눈' });
+    assert.equal(p.life.weather.here.temp, -3); assert.equal(p.life.weather.here.lo, -3); assert.equal(p.life.weather.here.cond, 'snow');
+});

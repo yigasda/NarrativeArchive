@@ -63,7 +63,10 @@ export const condGuess = (temp, rain = null) => {
     return temp >= 24 ? 'clear' : temp >= 12 ? 'partly' : 'cloudy';
 };
 export const condPick = (v, dflt = 'cloudy', { temp = null, rain = null } = {}) => (CONDS.includes(v) ? v : condOf(v) || condGuess(temp, rain) || dflt);
-const tempOf = text => { const s = String(text || ''), mt = s.match(/(영하\s*)?([-−]?\d{1,2}(?:[.,]\d)?)\s*(?:°|℃|도(?![가-힣]))/); if (!mt) return null; const n = Math.round(Number(mt[2].replace('−', '-').replace(',', '.'))); return mt[1] ? -Math.abs(n) : n; };
+// "3°C", "-2°", "영하 2도", "11도"; "72°F" and "72℉" are Fahrenheit, kept in Celsius
+const tempOf = text => { const s = String(text || ''), mt = s.match(/(영하\s*)?([-−]?\d{1,3}(?:[.,]\d)?)\s*(?:°\s*([CF])?|(℃)|(℉)|도(?![가-힣]))/i); if (!mt) return null; let n = Number(mt[2].replace('−', '-').replace(',', '.')); if (mt[5] || String(mt[3] || '').toUpperCase() === 'F') n = (n - 32) * 5 / 9; n = Math.round(n); return mt[1] ? -Math.abs(n) : n; };
+// the day's high and low hold the temperature now (a status line's 11° over a model's high of 9°)
+const fit = h => { if (Number.isFinite(h.temp)) { if (!Number.isFinite(h.hi) || h.hi < h.temp) h.hi = h.temp; if (!Number.isFinite(h.lo) || h.lo > h.temp) h.lo = h.temp; for (const d of h.days || []) if (d.day === h.date) { if (Number.isFinite(d.hi) && d.hi < h.temp) d.hi = h.temp; if (Number.isFinite(d.lo) && d.lo > h.temp) d.lo = h.temp; } } return h; };
 // a status line (scenes.js recentTrackers) as the weather it gives, or null
 export function weatherFrom(t) {
     return t && (t.place || t.weather) ? { date: t.date || '', time: t.time || (Number.isFinite(t.min) ? `${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}` : ''), place: t.place || '', weather: t.weather || '' } : null;
@@ -91,7 +94,7 @@ function overlay(here, now) {
 // a Korean copy that only repeats the line (a Korean line given the same "ko") would show twice
 const unko = h => { if (h.ko && h.line && h.ko.replace(/\s+/g, ' ').trim() === h.line.replace(/\s+/g, ' ').trim()) h.ko = ''; return h; };
 export function parseWeather(w, now) {
-    return { here: unko(overlay(hereOf(w?.here || {}), now)), cities: arr(w?.cities).map(cityOf).filter(c => c.name).slice(0, 5) };
+    return { here: fit(unko(overlay(hereOf(w?.here || {}), now))), cities: arr(w?.cities).map(cityOf).filter(c => c.name).slice(0, 5) };
 }
 
 // ---- story days: "MM-DD" without a year; a gap across New Year is taken the short way round
@@ -302,7 +305,7 @@ export function applyWeather(p, w, now, { archive = true, today = '' } = {}) {
     const was = p.life.weather || null;
     let next;
     if (w && typeof w === 'object') {
-        const here = unko(overlay(hereOf(w), now));
+        const here = fit(unko(overlay(hereOf(w), now)));
         if (here.from === 'archive' && !archive) here.from = 'chat';
         // a forecast or a tile the model left out stays as it was (the clock trims what is past)
         const old = was?.here;
@@ -316,16 +319,18 @@ export function applyWeather(p, w, now, { archive = true, today = '' } = {}) {
             if (!here.days.length) here.days = structuredClone(old.days || []);
             for (const [k, v] of Object.entries(here.tiles)) if ((v === null || v === '') && old.tiles?.[k] !== undefined) here.tiles[k] = old.tiles[k];
             for (const k of ['hi', 'lo']) if (here[k] === null && old[k] !== undefined) here[k] = old[k];
+            fit(here);
         }
         // the cities keep what the model leaves out (their time zone, their note)
         const cities = (was?.cities || []).map(c => { const key = v => line(v, 40).toLowerCase(), n = arr(w.cities).find(x => [c.name, c.ko].filter(Boolean).map(key).includes(key(x?.name))); if (!n) return c; const f = cityOf(n), out = { ...c, cond: condPick(n.cond, c.cond, { temp: f.temp }) }; for (const k of ['temp', 'hi', 'lo', 'sunrise', 'sunset', 'rainNext', 'wind', 'gust', 'dir', 'feels', 'humidity', 'dew', 'visibility']) if (f[k] !== null && f[k] !== '') out[k] = f[k]; return out; });
         next = { ...(was || {}), here, cities };
     } else if (now && was?.here) {
         // only the status line: its words stand over the weather there was
-        next = { ...was, here: overlay(structuredClone(was.here), now) };
+        next = { ...was, here: fit(overlay(structuredClone(was.here), now)) };
     } else if (was?.here?.cond && was.here.date && /^\d{2}-\d{2}$/.test(today) && dayGap(was.here.date, today) > 0) {
         // the day moved on with nothing said about the sky: yesterday's carries over as a guess for today (not a stale date)
-        next = { ...was, here: { ...structuredClone(was.here), date: today, time: '', from: 'guess', said: '', hours: [] } };
+        // yesterday's sentence and rain don't describe today; the screen reads what it needs off the sky
+        next = { ...was, here: { ...structuredClone(was.here), date: today, time: '', from: 'guess', said: '', line: '', ko: '', hours: [], tiles: { ...(was.here.tiles || {}), rain24: null, rainNext: null } } };
     } else return [];
     if (same(was, next)) return [];
     p.life.weather = next;
