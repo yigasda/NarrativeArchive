@@ -7503,3 +7503,8 @@ body.na_darkui :is(.na_kn3_tag.u i, .na_kn3_leg span.u i) { background: #6E5D52 
 .na_kn2 .na_kn_inject { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 body.na_darkui .na_kn2 .na_kn_inject { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
 .na_kn2 .na_kn2_more { justify-content: center; }
+/* 누가 아는가 list: the example's tags and legend (a face picture fits the circle when there is one) */
+.na_kn2 .na_kn_people .na_kn3_tag { height: 26px; font-size: 12px; }
+.na_kn3_tag .na_face { --s: 18px; flex: none; }
+.na_kn3_legbar { display: flex; justify-content: center; gap: 14px; margin: 2px 0 4px; font-size: 11.5px; color: var(--na-mute); }
+.na_kn3_legbar span { display: inline-flex; align-items: center; gap: 5px; }
