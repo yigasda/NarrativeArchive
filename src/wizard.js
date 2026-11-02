@@ -631,7 +631,7 @@ export async function openWizard() {
     });
     show();
     await build();
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
 // 쌓이면 알려 주기: after a reply, when the messages waiting to be compressed reach the set number, one note that opens

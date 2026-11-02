@@ -610,5 +610,5 @@ export async function openQuotes() {
     $root.find('.na_qb_ai').on('click', function () { const open = picker.toggle(); $(this).toggleClass('active', open); $root.toggleClass('na_qb3_picking', open); });
     $root.on('click', '.na_qb3_make', () => $root.find('.na_qb_ai').trigger('click'));
     $root.on('click', '.na_qb3_find', () => $root.find('.na_qb_find').trigger('click'));
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }

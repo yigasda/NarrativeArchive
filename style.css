@@ -1590,7 +1590,7 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_browser .na_card_actions { flex-wrap: wrap; }
 
 /* ============ compress wizard: one step at a time */
-.na_wiz2 { min-height: 60vh; }
+.na_wiz2 { min-height: 0; }
 .na_wz2_top { display: flex; align-items: center; justify-content: space-between; }
 .na_wz2_count { color: var(--na-dim); }
 .na_wz2_progress { display: flex; gap: 4px; }
@@ -3713,7 +3713,7 @@ body.na_darkui .na_launch_tabs { background: #232328; }
 
 /* 아카이브에 질문, as drawn: the conversation fills the window, suggestions and the input sit at the bottom,
    the input is one pill (no box of its own inside, whatever a theme does to textareas) */
-.na_popup.na_ask2 { min-height: min(72vh, 720px); }
+.na_popup.na_ask2 { min-height: 0; }
 .na_popup.na_ask2 .na_ask_log { flex: 1 1 auto; min-height: 0; }
 .na_popup.na_ask2 .na_ask2_input textarea.na_ask_q,
 .na_popup.na_ask2 .na_ask2_input textarea.na_ask_q:is(:focus, :hover) {
@@ -7814,6 +7814,12 @@ body.na_darkui .na_cal_item.na_cal3_hl { background: #2E2E34; }
 .na_cal3_av.plain .na_cal3_avic { background: var(--na-card2) !important; color: var(--na-dim) !important; }
 .na_cal3_av.plain .na_cal3_avtx b { font-weight: 600; color: var(--na-mute); }
 /* 이탈 감지 (never checked) in the big window: the example on top, 최근 메시지 + 검사하기 at the bottom like the wizard's buttons */
-.na_dr2.na_dr3_new { min-height: 60vh; display: flex; flex-direction: column; }
+.na_dr2.na_dr3_new { display: flex; flex-direction: column; }
 .na_dr2.na_dr3_new .na_dr3_hello { flex: 1; }
 .na_dr2.na_dr3_new .na_dr3_seg { margin-top: auto; }
+
+/* ============ window size (3.169.5): every extension window fits its content but never opens shorter than about half the
+   screen, so short ones don't look tiny and big ones don't sit empty; long ones grow to the screen and scroll inside.
+   Confirms, the phone, the studio and 아카이브에 추가 keep their own sizing. */
+body dialog.popup:not(:has(.na_confirm, .na_phone, .na_st, .na_ap3)) .popup-content > .na_popup.na_v2,
+body dialog.popup:not(:has(.na_confirm, .na_phone, .na_st, .na_ap3)) .na_popup.na_v2:not(.na_popup .na_popup) { min-height: 55vh; box-sizing: border-box; }

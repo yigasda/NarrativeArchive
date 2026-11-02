@@ -115,7 +115,7 @@ export async function pickOtherChat(title, desc) {
         <input type="search" class="text_pole na_pc_q" placeholder="채팅 이름으로 찾기">
         <div class="na_pick_list"><div class="na_empty">불러오는 중…</div></div>
       </div>`);
-    const popup = c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    const popup = c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
     try {
         const chats = await listOtherChats();
         const render = () => {
