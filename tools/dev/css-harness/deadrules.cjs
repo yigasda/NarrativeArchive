@@ -12,10 +12,12 @@
 const fs = require('fs'), path = require('path');
 const { chromium } = require('playwright');
 const { SCENES, ARCH, answer, B } = require('./scenes.cjs');
+const { helpers } = require('./capture.cjs');
 const ST = process.env.ST_URL || 'http://127.0.0.1:8000/';
 const ROOT = path.join(__dirname, '../../..');
-const args = process.argv.slice(2); const quick = args.includes('--quick'); const oi = args.indexOf('--only'); const only = oi >= 0 ? args[oi + 1].split(',') : null;
+const args = process.argv.slice(2); const quick = args.includes('--quick'); const rebin = args.includes('--rebin'); const oi = args.indexOf('--only'); const only = oi >= 0 ? args[oi + 1].split(',') : null;
 (async () => {
+    if (rebin) { const old = JSON.parse(fs.readFileSync(path.join(__dirname, 'out', 'deadrules.json'), 'utf8')); const dead = Object.values(old.bins).flat(); const out = sortBins(dead); fs.writeFileSync(path.join(__dirname, 'out', 'deadrules.json'), JSON.stringify({ ...old, bins: out }, null, 1)); report(old.scenes, old.matched, old.winning, out, old.targets || []); return; }
     try { await fetch(ST); } catch { console.log('SillyTavern is not answering at ' + ST); process.exit(2); }
     const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 412, height: 870 } });
     const cdp = await p.context().newCDPSession(p); const sheets = {};
@@ -53,28 +55,41 @@ const args = process.argv.slice(2); const quick = args.includes('--quick'); cons
     for (const na of quick ? ['light'] : ['light', 'dark']) { await p.evaluate(t => document.body.classList.toggle('na_darkui', t === 'dark'), na);
         for (const sc of SCENES) { if (sc.phone || (only && !only.includes(sc.name))) continue;
             try { if (archNow !== sc.arch) { await p.evaluate(async ([B, A, arch]) => { const core = await import(B + 'core.js'); const m = core.getMeta(); delete m.studio; m.retitled = []; delete m.layers; m.history = []; m.snapshots = []; m.text = ''; if (arch === 'empty') await core.saveMeta(); else await core.commitText(A, 'harness', { boundary: arch === 'studio' ? 5 : 29 }); }, [B, ARCH, sc.arch]); archNow = sc.arch; }
-                await sc.open(p, {}); await scan(sc.root); n++; if (n % 10 === 0) console.log(`${n} scenes · ${((Date.now() - t0) / 60000).toFixed(1)} min`); }
+                await sc.open(p, helpers); await scan(sc.root); n++; if (n % 10 === 0) console.log(`${n} scenes · ${((Date.now() - t0) / 60000).toFixed(1)} min`); }
             catch (e) { console.log('skip', sc.name, na, String(e.message).slice(0, 80)); }
             finally { if (sc.close) await sc.close(p).catch(() => {}); await p.evaluate(() => { document.querySelectorAll('dialog.popup').forEach(d => { try { d.close(); } catch {} d.remove(); }); window.toastr?.clear?.(); }); await p.waitForTimeout(250); } } }
     await b.close();
-    // --- sort the candidates ---
-    const css = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8').split('\n');
-    const src = fs.readdirSync(path.join(ROOT, 'src')).filter(f => f.endsWith('.js')).map(f => fs.readFileSync(path.join(ROOT, 'src', f), 'utf8')).join('\n') + fs.readFileSync(path.join(ROOT, 'index.js'), 'utf8');
-    const inMedia = line => { let depth = 0; for (let i = 0; i < line - 1; i++) { const l = css[i]; if (/^\s*@(media|supports|container)\b/.test(l)) depth++; if (depth && /^\}\s*$/.test(l)) depth--; } return depth > 0; };
-    const bins = { safe: [], 'in-src': [], state: [], media: [], pseudo: [] };
-    for (const k of [...seen.keys()].filter(k => !win.has(k)).sort((a, b) => parseInt(a) - parseInt(b))) {
-        const line = parseInt(k); const sel = k.slice(k.indexOf(':') + 2);
-        if (/::|:-webkit-|:placeholder/.test(sel)) bins.pseudo.push(k);
-        else if (/:(hover|focus|focus-visible|focus-within|active|disabled|checked|indeterminate|empty|has\(|not\(|is\(|where\()|\[hidden\]|\[disabled\]|\[aria-|\.on\b|\.active\b|\.open\b|\.goes\b|\.none\b|\.same\b|\.part\b|\.busy\b|\.sel\b|\.off\b/.test(sel)) bins.state.push(k);
-        else if (!Number.isNaN(line) && inMedia(line)) bins.media.push(k);
-        else { const classes = [...sel.matchAll(/\.([A-Za-z0-9_-]+)/g)].map(x => x[1]); const used = classes.filter(c => new RegExp('\\b' + c.replace(/[-]/g, '\\-') + '\\b').test(src)); (used.length ? bins['in-src'] : bins.safe).push(k); }
-    }
-    fs.mkdirSync(path.join(__dirname, 'out'), { recursive: true });
+    const dead = [...seen.keys()].filter(k => !win.has(k)).sort((a, b) => parseInt(a) - parseInt(b));
     const bySet = new Map(); for (const [k, set] of hits) { const id = [...set].sort().join(' '); if (!bySet.has(id)) bySet.set(id, []); bySet.get(id).push(k); }
     const targets = [...bySet.entries()].filter(([, ks]) => ks.length > 1).map(([id, ks]) => ({ elements: id.split(' ').slice(0, 6), rules: ks.sort((a, b) => parseInt(a) - parseInt(b)) })).sort((a, b) => parseInt(a.rules[0]) - parseInt(b.rules[0]));
+    const bins = sortBins(dead);
+    fs.mkdirSync(path.join(__dirname, 'out'), { recursive: true });
     fs.writeFileSync(path.join(__dirname, 'out', 'deadrules.json'), JSON.stringify({ scenes: n, matched: seen.size, winning: win.size, bins, targets }, null, 1));
+    report(n, seen.size, win.size, bins, targets);
+})();
+
+// --- sorting the never-winning rules into bins ---
+function sortBins(dead) {
+    const css = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8').split('\n');
+    const src = fs.readdirSync(path.join(ROOT, 'src')).filter(f => f.endsWith('.js')).map(f => fs.readFileSync(path.join(ROOT, 'src', f), 'utf8')).join('\n') + fs.readFileSync(path.join(ROOT, 'index.js'), 'utf8');
+    // which lines sit inside an @media / @supports / @container block (brace depth, one-line blocks included)
+    const inAt = new Array(css.length).fill(false); let depth = 0, atDepth = -1;
+    css.forEach((l, i) => { const opens = (l.match(/\{/g) || []).length, closes = (l.match(/\}/g) || []).length; if (/^\s*@(media|supports|container)\b/.test(l) && atDepth < 0) atDepth = depth; inAt[i] = atDepth >= 0; depth += opens - closes; if (atDepth >= 0 && depth <= atDepth) { atDepth = -1; } });
+    // a state is something the page gets into: hover/focus/active/disabled/checked/empty/[hidden]/our own .on .active … — not the theme switch or :is/:where grouping
+    const STATE = /:(hover|focus|focus-visible|focus-within|active|disabled|checked|indeterminate|empty|placeholder-shown)\b|\[hidden\]|\[disabled\]|\[aria-|\.(on|active|open|goes|none|same|part|busy|sel|off|hid|raw|k|s|u|d|l)\b|:has\([^)]*:(checked|hover|focus|disabled)/;
+    const bins = { safe: [], 'in-src': [], state: [], media: [], pseudo: [] };
+    for (const k of dead) {
+        const line = parseInt(k); const sel = k.slice(k.indexOf(':') + 2);
+        if (/::|:-webkit-|:placeholder/.test(sel)) bins.pseudo.push(k);
+        else if (STATE.test(sel.replace(/:not\(\.na_darkui\)/g, '').replace(/body\.na_darkui/g, ''))) bins.state.push(k);
+        else if (!Number.isNaN(line) && inAt[line - 1]) bins.media.push(k);
+        else { const classes = [...sel.matchAll(/\.([A-Za-z0-9_-]+)/g)].map(x => x[1]).filter(c => c !== 'na_darkui'); const used = classes.filter(c => new RegExp('\\b' + c.replace(/-/g, '\\-') + '\\b').test(src)); (used.length ? bins['in-src'] : bins.safe).push(k); }
+    }
+    return bins;
+}
+function report(n, matched, winning, bins, targets) {
     console.log(`${targets.length} groups of rules that hit exactly the same elements (merge map for step 4-2, in out/deadrules.json → targets)`);
-    console.log(`\n${n} scene openings · rules reached: ${seen.size} · decide something: ${win.size} · never decide anything: ${seen.size - win.size}`);
+    console.log(`\n${n} scene openings · rules reached: ${matched} · decide something: ${winning} · never decide anything: ${matched - winning}`);
     for (const [bin, list] of Object.entries(bins)) console.log(`  ${bin.padEnd(7)} ${String(list.length).padStart(4)}`);
     console.log('\nsafe to delete (never win, no state, not in media, classes not in src):'); console.log(bins.safe.join('\n') || '  (none)');
-})();
+}

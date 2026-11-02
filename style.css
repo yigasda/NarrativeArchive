@@ -1676,7 +1676,6 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 /* ============ extract v2 */
 .na_ex2_card { display: flex; flex-direction: column; border-radius: 20px; }
 .na_ex2_info { display: flex; justify-content: space-between; color: var(--na-dim); }
-.na_ex2_card .na_cp_bar { height: 8px; }
 .na_ex2_card .na_v2_chips:empty { display: none; }
 .na_ex2_card .na_lastex:empty, .na_ex2_card .na_lastex[hidden] { display: none; }
 .na_ex2_preview { margin: 0; border: 1px solid var(--na-line); background: var(--na-card); white-space: pre-wrap; word-break: break-word; overflow: hidden; }
@@ -2395,7 +2394,6 @@ body.na_darkui .na_wz2_arr { color: #8A8A93; }
 .na_ex2 .na_v2_chips button { font-size: 0.857em; line-height: 1.5; padding: 3px 11px; }
 .na_ex2 .na_v2_chips button.on { padding: 4px 11px; }
 .na_ex2_card .na_cp_bar { border-radius: 4px; overflow: hidden; }
-.na_ex2_card .na_cp_bar > span { border-radius: 0; }
 body:not(.na_darkui) .na_ex2_card .na_cp_bar .hid { background: #E3D3C7; }
 body.na_darkui .na_ex2_card .na_cp_bar .hid { background: #4C4C55; }
 body:not(.na_darkui) .na_ex2_card .na_cp_bar .raw { background: #B8541F; }
@@ -2413,8 +2411,6 @@ body.na_darkui .na_ex2_card .na_cp_bar .raw { background: #E9DFCF; }
 .na_ex2 .na_ex_prow select { max-width: 100%; width: 100%; margin: 0; }
 .na_ex_toset > .na_svg { color: var(--na-dim); }
 .na_ex2_preview { height: 96px; max-height: none; box-sizing: border-box; padding: 10px 12px; border-radius: 16px; font-size: 0.821em; line-height: 1.6; color: var(--na-mute, var(--na-dim)); }
-body:not(.na_darkui) .na_ex2_preview { background: #F2E9E2; }
-body.na_darkui .na_ex2_preview { background: #2A2A30; }
 .na_ex2_btns .na_v2_btn { padding: 12px 0; border-radius: 14px; font-size: 0.964em; line-height: 1.5; }
 /* settings: the group icons, and boxes toned toward the theme instead of paper white */
 .na_cfg_label i { margin-right: 4px; opacity: 0.8; }
@@ -3355,8 +3351,6 @@ body.na_darkui .na_people .na_ego_detail > ul { color: #ECEAE6; }
 .na_people .na_tp_icon.warm { color: var(--na-warm); }
 .na_people .na_tp_icon.cold { color: var(--na-cold); }
 .na_people .na_tp_icon svg { display: block; }
-.na_people .na_tp_now small { font-size: 0.857em; }
-.na_people .na_tp_now > span { font-size: 1em; }
 .na_people .na_tp_now b { font-size: 2.1429em; font-weight: 700; }
 body:not(.na_darkui) .na_people .na_tp_now > span.warm { color: var(--na-warm); }
 body.na_darkui .na_people .na_tp_now > span.warm { color: var(--na-warm); }
@@ -3365,7 +3359,6 @@ body.na_darkui .na_people .na_tp_now > span.cold { color: var(--na-cold); }
 /* 평균 · 최고 · 최저, as in TempAC-3 */
 .na_people .na_tp_stats > span { padding: 5px 10px; line-height: 1.25; }
 .na_people .na_tp_stats small { font-size: 0.75em; color: var(--na-dim); }
-.na_people .na_tp_stats b { font-size: 1em; }
 .na_people .na_tp_stats > span:first-child b { color: var(--na-ink, inherit); }
 /* chart */
 body:not(.na_darkui) .na_people .na_temp_svg .band { fill: var(--na-softer); }
@@ -3496,9 +3489,7 @@ body.na_darkui :is(#na_settings, dialog.popup:has(.na_popup, #na_settings)) {
     --SmartThemeShadowColor: rgba(0, 0, 0, 0.4); --SmartThemeCheckboxTickColor: #17171A; color: var(--SmartThemeBodyColor);
 }
 body.na_darkui #na_settings > .inline-drawer > .inline-drawer-content { background: #17171A; border-radius: 0 0 14px 14px; }
-body.na_darkui dialog.popup:has(.na_popup, #na_settings) { background: #17171A; color: #ECEAE6; }
 body.na_darkui .na_face_btn > i { background: var(--na-fill); color: var(--na-onfill); }
-body.na_darkui dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #232328; border: 1px solid #45454D; color: #ECEAE6; }
 body.na_darkui .na_popup :where(.text_pole) { background: #2A2A30; border: 1px solid #45454D; color: #ECEAE6; }
 
 /* ============ the extension's own theme (설정 › 테마), whatever SillyTavern's theme is. Inside the panel and its popups
@@ -3509,8 +3500,6 @@ body:not(.na_darkui) :is(#na_settings, dialog.popup:has(.na_popup, #na_settings)
     --SmartThemeShadowColor: rgba(0, 0, 0, 0.1); --SmartThemeCheckboxTickColor: #F7EEE7; color: var(--SmartThemeBodyColor);
 }
 body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-content { background: #F0E4DB; border-radius: 0 0 14px 14px; }
-body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) { background: #F0E4DB; color: #463428; }
-body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #F7EEE7; border: 1px solid #E5D5C9; color: #463428; }
 body:not(.na_darkui) .na_popup :where(.text_pole) { background: #F2E9E2; border: 1px solid #E5D5C9; color: #463428; }
 
 /* 설정 › 테마: two round swatches */
@@ -3659,7 +3648,6 @@ body.na_darkui #na_settings {
 #na_settings #na_next .na_next_main span { font-size: 0.82em !important; opacity: 1; color: var(--hm-dim); }
 
 /* dark: the next-step card stays a brown card like the tool rows; the tone shows in a thin edge, the icon disc and a soft button */
-body.na_darkui #na_settings #na_next .na_next_card.warn, body.na_darkui #na_settings #na_next .na_next_card.bad { background: var(--hm-card); }
 body.na_darkui #na_settings #na_next .na_next_card.warn { border-color: rgba(232, 180, 90, 0.3); }
 body.na_darkui #na_settings #na_next .na_next_card.bad { border-color: rgba(236, 116, 104, 0.3); }
 body.na_darkui #na_settings #na_next .na_next_card.warn > i { background: var(--hm-warn-soft); color: var(--hm-warn); }
@@ -3998,7 +3986,6 @@ body.na_darkui .na_st {
     --st-bg: #17171A; --st-bub: #2E2E34; --st-w: #232328; --st-ink: #ECEAE6; --st-dim: #9A989F; --st-line: #3A3A41; --st-seg: #2E2E34;
     --st-acc: #E9DFCF; --st-acc2: #F0CF8E; --st-accsoft: #2E2E34; --st-ok: #6CC495; --st-oksoft: #2E2E34; --st-warn: #E3B058; --st-warnline: #5A5040; --st-q: #F0CF8E;
 }
-body:not(.na_darkui) dialog.popup:has(.na_st) { background: #FCF8F5 !important; }
 body.na_darkui dialog.popup:has(.na_st) { background: #17171A !important; }
 .na_st button { font: inherit; color: inherit; }
 .na_st_hd { padding: 4px 4px 10px; border-bottom: 1px solid var(--st-line); }
@@ -4916,7 +4903,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .ax .ax_dcard { --axbg: #fff; --axsh: 0 1px 0 #efe7da, 0 6px 18px rgba(120, 90, 50, 0.07); margin: 0 14px 12px; padding: 16px; border-radius: 20px; display: flex; gap: 14px; flex: none; }
 .ax_dd { flex: none; width: 44px; text-align: center; font-size: 11.5px; color: #a48f78; font-weight: 600; display: flex; flex-direction: column; }
 .ax_dd b { font: 300 34px/1 'Inter Tight', -apple-system, sans-serif; color: #3d3127; }
-.ax_dtx { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .ax_dh { margin: 2px 0 4px; font: 600 16px 'Noto Serif KR', serif; color: #3d3127; }
 .ax_dh small { font: 400 12.5px 'Noto Sans KR', sans-serif; color: #a48f78; margin-left: 6px; }
 .ax_dp { font-size: 13.5px; line-height: 1.55; color: #6f5f50; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -5154,7 +5140,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_btn.on 
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_top .na_ph_pick.on { background: rgba(255, 255, 255, 0.14) !important; }
 /* the phone as tall as the screen allows */
 .na_phl .na_ph_wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0 10px; }
-.na_phl .na_ph_frame { width: min(calc(100vw - 20px), calc((100dvh - 84px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 390 / 844 + 14px), 470px); }
 /* the sheet: everything that was under the phone */
 .na_phl_shade { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); }
 .na_phl_sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 72dvh; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 8px 16px max(16px, env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3); animation: na_phl_up 0.18s ease-out; }
@@ -5173,7 +5158,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_top .na
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_sheet .na_ph_pick { border: 0 !important; box-shadow: none !important; outline: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_sheet .na_ph_pick:not(.on) { background: transparent !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_sheet .na_ph_pick.on { background: var(--na-card2) !important; }
-.na_phl .na_ph_frame { width: min(calc(100vw - 20px), calc((100dvh - 74px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 390 / 844 + 14px), 470px); }
 
 /* 캐릭터 휴대폰 · 설정 앱의 아카이브 칸 (로어북 · 롤플에 넣기 · 반영 · 다시 만들기 · 지우기) */
 .ax_n.ax_blue { color: #2f6bff; }
@@ -6220,7 +6204,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .lf_wct { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .ax .lf_wct small { font-size: 12.5px; color: #8b8f98; }
 .ax .lf_wct b { font-size: 22px; font-weight: 500; }
-.ax .lf_wc > b { font: 200 44px/1 'Inter Tight', sans-serif; }
 .ax .lf_face { width: 44px; height: 44px; border-radius: 50%; margin-right: 14px; position: relative; flex: none; background: #2b2c31; }
 .ax .lf_face.day { background: #e9e9ec; }
 .ax .lf_face i { position: absolute; left: 50%; bottom: 50%; width: 2px; margin-left: -1px; border-radius: 1px; transform-origin: bottom center; background: #fff; }
@@ -7016,7 +6999,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .dv_ci .dv_pic { width: 72px; height: 72px; border-radius: 10px; }
 .ax .dv_ci .ctl { grid-column: 1 / 3; display: flex; justify-content: flex-end; gap: 8px; }
 .ax .dv_ci .ob { height: 40px; padding: 0 14px; border: 1.5px solid #dcdfe4; border-radius: 10px; display: flex; align-items: center; font-size: 14.5px; }
-.ax .dv_add { text-align: center; padding: 16px; font-size: 16px; font-weight: 700; }
 .ax .dv_ct { padding: 12px 18px 10px; font-size: 18px; font-weight: 800; }
 .ax .dv_more { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0f1f3; width: 100%; }
 .ax .dv_more:last-child { border-bottom: 0; }
@@ -7231,7 +7213,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 
 /* ============ dark popups (시안 A, carried over from 아카이브에 추가): a near-black warm window, darker cards with no outline
    and a faint top light, neutral parts with the colour kept to a thin line or the text. Tokens only, so every popup follows. */
-body.na_darkui dialog.popup:has(.na_popup):not(#na_x) { background: #17171A !important; }
 body.na_darkui dialog.popup:has(.na_popup) :is(.na_popup, .na_popup .na_v2), body.na_darkui dialog.popup:has(.na_confirm) .na_confirm {
     --na-card: #232328; --na-card2: #2E2E34; --na-paper: #232328; --na-soft: #2E2E34; --na-softer: #2B2B31;
     --na-line: #3A3A41; --na-line2: #2E2E34; --na-fill: #4A4A52;
@@ -7344,10 +7325,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup):not(#na_x) { b
 .na_ly3 .na_xr_warn { margin-top: 8px; }
 .na_ly3_lbl { display: flex; align-items: center; justify-content: space-between; margin: 14px 4px 0; font-size: 12.5px; font-weight: 700; color: var(--na-dim); }
 .na_ly3_auto { display: inline-flex !important; align-items: center; gap: 8px; margin: 0; font-weight: 600; color: var(--na-mute); cursor: pointer; }
-.na_ly3_cards.na_ly_tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; padding: 0; background: transparent !important; }
 .na_layers .na_ly3_cards button.na_ly3_card { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px 10px 10px; border: 1.5px solid transparent; border-radius: 16px; background: var(--na-card); color: var(--na-ink); font: inherit; text-align: left; cursor: pointer; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
-.na_layers .na_ly3_cards button.na_ly3_card b { font-size: 14px; font-weight: 700; }
-.na_layers .na_ly3_cards button.na_ly3_card small { font-size: 12px; color: var(--na-sub, var(--na-dim)); }
 .na_layers .na_ly3_cards button.na_ly3_card.on { border-color: var(--na-accent); }
 body:not(.na_darkui) .na_layers .na_ly3_cards button.na_ly3_card.on { background: #FFF8F3; }
 body.na_darkui .na_layers .na_ly3_cards button.na_ly3_card.on { background: #2B2B31; }
@@ -7964,10 +7942,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st .na_st_mi:not(#na_x) {
 body.na_darkui .na_ly3_cards.na_ly_tabs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
 body:is(.na_darkui, :not(.na_darkui)) .na_layers .na_ly3_cards button.na_ly3_card:not(#na_x) { flex-direction: row !important; align-items: center !important; gap: 8px !important; width: 100%; margin: 0; padding: 12px 14px !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }
 .na_layers .na_ly3_cards button.na_ly3_card + button.na_ly3_card { border-top: 1px solid var(--na-line2, var(--na-line)) !important; }
-body:not(.na_darkui) .na_layers .na_ly3_cards button.na_ly3_card.on:not(#na_x) { background: #F3E4D8 !important; }
-body.na_darkui .na_layers .na_ly3_cards button.na_ly3_card.on:not(#na_x) { background: #2E2E34 !important; }
-.na_layers .na_ly3_cards button.na_ly3_card b { font-size: 14px; font-weight: 600; }
-.na_layers .na_ly3_cards button.na_ly3_card small { margin-left: auto; }
 .na_ly3_in { position: static !important; padding: 1px 8px !important; font-size: 11px !important; font-weight: 700; }
 body:not(.na_darkui) .na_ly3_in { background: #E3EFE6 !important; color: #2F6B47 !important; }
 body.na_darkui .na_ly3_in { background: #2E2E34 !important; color: #7CCB9A !important; }
