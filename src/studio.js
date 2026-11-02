@@ -454,14 +454,16 @@ export async function openStudio() {
             const free = !(t.scene !== undefined && locked.has(t.scene)) && blocks.some(x => x.a !== null);
             const styleBtn = free && !fixBusy.has(i) ? `<button type="button" class="na_st_fix na_st_polish" data-i="${i}" title="문체 다듬기 · 문장 결만 아카이브처럼 · 내용 · 출처 번호 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 · AI 기능 모델">다듬기</button>` : '';
             const backBtn = t.before && !fixBusy.has(i) ? `<button type="button" class="na_st_unfix na_st_ib" data-i="${i}" title="고치기 전 답으로" aria-label="고치기 전으로">${svgA(ICO.back, 13, 2.4)}</button>` : '';
-            // (docs/mockups/ext-studio-acts C) the check above a hairline; under it 다듬기 · 고치기 · 복사 · 한국어 as icon + word
-            // and 확정 as the one soft orange pill; 고쳐 받기 / 되돌리기 join the row when they apply
+            // (docs/mockups/ext-studio-acts B) under a hairline: the check (or what it found) on the left; 한국어 and 확정 on the
+            // right, everything else (다듬기 · 고치기 · 복사, and 고쳐 받기 / 되돌리기 when they apply) behind ⋯ so the row never wraps
             const ic = d => svgA(d, 14, 2.2);
-            const polish = styleBtn ? styleBtn.replace('>다듬기</button>', `>${ic('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/>')}다듬기</button>`) : '';
-            const pen = `<button type="button" class="na_st_pen" data-i="${i}" title="직접 고치기 (답을 세 번 터치해도 돼요)">${svgA(ICO.pen, 14, 2.2)}고치기</button>`;
+            const polish = styleBtn ? styleBtn.replace('>다듬기</button>', `>${ic('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/>')}문체 다듬기</button>`) : '';
+            const fixM = fixBtn.replace('>고치기</button>', `>${ic('<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>')}고쳐 받기</button>`);
+            const backM = backBtn ? `<button type="button" class="na_st_unfix" data-i="${i}">${svgA(ICO.back, 14, 2.2)}고치기 전으로</button>` : '';
+            const pen = `<button type="button" class="na_st_pen" data-i="${i}" title="직접 고치기 (답을 세 번 터치해도 돼요)">${svgA(ICO.pen, 14, 2.2)}직접 고치기</button>`;
             const copy = `<button type="button" class="na_st_copy" data-i="${i}" title="이 답의 섹션을 아카이브 모양으로 복사 (출처 번호는 빼고)">${svgA(ICO.copy, 14, 2.2)}복사</button>`;
-            const koC = koBtn.replace(/>([^<>]*)<\/button>$/, `>${ic('<path d="M4 5h8M8 3v2M5 9c1.5 3 4 5 7 6M11 5c-1 4-3 7-6 9M13 21l4-9 4 9M14.5 18h5"/>')}$1</button>`);
-            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st_tags na_st3_tags">${tags}</div><div class="na_st3_row">${fixBtn}${backBtn}${polish}${pen}${copy}${koC}${locks}</div></div>`;
+            const more = `<span class="na_st_more"><button type="button" class="na_st_dots" aria-label="더 보기" title="더 보기">${svgA('<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>', 16, 2.8)}</button><span class="na_st_amenu" hidden>${fixM}${backM}${polish}${pen}${copy}</span></span>`;
+            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st3_bar"><span class="na_st3_tags">${tags}</span><span class="na_st3_right">${koBtn}${locks}${more}</span></div></div>`;
         }).join('') + (busy ? '<div class="na_st_bub na_st_typing"><i></i><i></i><i></i><small>쓰는 중 · 이 탭에 있어야 받아요</small></div>' : '');
         const $log = $root.find('.na_st_log');
         const atEnd = $log[0] ? $log[0].scrollHeight - $log[0].scrollTop - $log[0].clientHeight < 80 : true;
@@ -641,6 +643,10 @@ export async function openStudio() {
         if (ta) { ta.style.height = `${Math.min(ta.scrollHeight + 4, 520)}px`; ta.focus(); }
     };
     $root.on('click', '.na_st_pen', function () { startEdit(Number(this.dataset.i)); });
+    // ⋯ opens the answer's small menu (upward, right-aligned); any other tap, or picking from it, closes it
+    $root.on('click', '.na_st_dots', function (e) { e.stopPropagation(); const $m = $(this).next('.na_st_amenu'), open = $m.prop('hidden'); $root.find('.na_st_amenu').prop('hidden', true); $m.prop('hidden', !open); });
+    $root.on('click', e => { if (!$(e.target).closest('.na_st_more').length) $root.find('.na_st_amenu').prop('hidden', true); });
+    $root.on('click', '.na_st_amenu button', () => setTimeout(() => $root.find('.na_st_amenu').prop('hidden', true), 0));
     // three quick taps on an answer open it too (not on its buttons, numbers or quotes)
     $root.on('click', '.na_st_bub', function (e) {
         if (e.detail !== 3 || $(e.target).closest('button, a, textarea, .na_st_tags').length) return;
