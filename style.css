@@ -7856,3 +7856,32 @@ body.na_darkui .na_kwt3_sum > div { box-shadow: inset 0 1px 0 rgba(255, 255, 255
 .na_kwt3 .na_kwt_where { margin-top: 6px; font-size: 12px; opacity: 1; color: var(--na-mute); }
 .na_kwt3 .na_kwt_where mark { background: var(--na-accent-soft); color: var(--na-accent-ink); padding: 0 2px; border-radius: 4px; }
 body.na_darkui .na_kwt3 .na_kwt_where mark { background: #3A3A41; }
+/* 키워드 테스트: the counts sit in the list heads (no tiles) */
+.na_kwt3_sum { display: none; }
+.na_kwt3_lbl { display: flex; align-items: baseline; gap: 6px; margin: 4px 4px -4px; }
+.na_kwt3_lbl b { font-weight: 700; color: var(--na-dim); }
+.na_kwt3_lbl b.on { color: var(--na-accent-fg, var(--na-accent)); }
+
+/* ============ X-ray before anything is recorded (docs/mockups/ext-xray A): a faded example, then the one line, centred */
+.na_xray:has(.na_xr3_hello) { display: flex; flex-direction: column; }
+.na_xray_body:has(.na_xr3_hello) { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.na_xr3_hello { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+.na_xr3_hello > b { margin-top: 14px; font-size: 16px; color: var(--na-ink); }
+.na_xr3_hello > small { font-size: 12.5px; line-height: 1.5; color: var(--na-sub, var(--na-dim)); }
+.na_xr3_ex { align-self: stretch; padding: 14px !important; gap: 0 !important; text-align: left; opacity: 0.6; }
+.na_xr3_exh { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--na-dim); }
+.na_xr3_tag { font-weight: 700; color: var(--na-accent-ink); }
+.na_xr3_tot { display: flex; align-items: baseline; gap: 6px; margin-top: 6px; }
+.na_xr3_tot b { font-size: 24px; letter-spacing: -0.02em; }
+.na_xr3_tot small { font-size: 12px; color: var(--na-dim); }
+.na_xr3_bar { display: flex; gap: 2px; height: 8px; margin-top: 8px; border-radius: 8px; overflow: hidden; }
+.na_xr3_bar i:nth-child(1), .na_xr3_chips span:nth-child(1) i { background: var(--na-accent); }
+.na_xr3_bar i:nth-child(2), .na_xr3_chips span:nth-child(2) i { background: #CDB8A8; }
+.na_xr3_bar i:nth-child(3), .na_xr3_chips span:nth-child(3) i { background: #9A8A80; }
+.na_xr3_bar i:nth-child(4) { background: #6E5D52; }
+body.na_darkui .na_xr3_bar i:nth-child(2), body.na_darkui .na_xr3_chips span:nth-child(2) i { background: #6A6A73; }
+body.na_darkui .na_xr3_bar i:nth-child(3), body.na_darkui .na_xr3_chips span:nth-child(3) i { background: #4C4C55; }
+body.na_darkui .na_xr3_bar i:nth-child(4) { background: #3A3A41; }
+.na_xr3_chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.na_xr3_chips span { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; background: var(--na-card2); color: var(--na-mute); }
+.na_xr3_chips i { width: 8px; height: 8px; border-radius: 3px; }

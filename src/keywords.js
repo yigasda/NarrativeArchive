@@ -206,7 +206,7 @@ export async function openKeywordTest() {
         const label = { on: '호출됨', wait: '호출 안 됨', off: '스위치 꺼짐', gone: '섹션 없음' };
         const icon = { on: 'fa-circle-check', wait: 'fa-circle', off: 'fa-power-off', gone: 'fa-circle-question' };
         const where = w => kwSnippet(`${text}\n${withRecent && depth > 1 ? recentChatText(m, depth - 1) : ''}`, w);
-        // (docs/mockups/ext-kwtest B) two counts first, then the called sections, then the rest
+        // (docs/mockups/ext-kwtest B, counts as list heads) the called sections under "불려 와요 n", the rest under "안 불려 와요 n"
         const row = r => `
             <div class="na_kwt3_row ${r.state}">
               <span class="na_kwt3_st">${r.state === 'on' ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' : ''}</span>
@@ -218,9 +218,9 @@ export async function openKeywordTest() {
             </div>`;
         const on = rows.filter(r => r.state === 'on'), rest = rows.filter(r => r.state !== 'on');
         $root.find('.na_kwt_out').html(`
-            <div class="na_kwt3_sum"><div class="on"><b>${on.length}</b><small>불려 와요</small></div><div><b>${rest.length}</b><small>안 불려 와요</small></div></div>
+            <div class="na_v2_label na_kwt3_lbl"><span>불려 와요</span><b class="on">${on.length}</b></div>
             ${on.length ? `<div class="na_v2_card na_kwt3_list">${on.map(row).join('')}</div>` : ''}
-            ${rest.length ? `<div class="na_v2_label">안 불려 와요</div><div class="na_v2_card na_kwt3_list">${rest.map(row).join('')}</div>` : ''}`);
+            ${rest.length ? `<div class="na_v2_label na_kwt3_lbl"><span>안 불려 와요</span><b>${rest.length}</b></div><div class="na_v2_card na_kwt3_list">${rest.map(row).join('')}</div>` : ''}`);
     };
     let t;
     $root.find('.na_kwt_in').on('input', () => { clearTimeout(t); t = setTimeout(render, 150); });
