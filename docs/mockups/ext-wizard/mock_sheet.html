@@ -1,0 +1,69 @@
+<style>
+.mk_wrap{display:flex;gap:22px;padding:24px;background:#141210;font-family:-apple-system,'Noto Sans KR',sans-serif;align-items:flex-start}
+.mk_col{display:flex;flex-direction:column;gap:10px;align-items:center}.mk_lab{color:#ff6fa3;font:700 15px sans-serif}
+.pop{width:390px;background:#F0E4DB;border-radius:22px;box-shadow:0 24px 60px rgba(0,0,0,.4);display:flex;flex-direction:column;color:#463428;padding:16px 16px 14px;box-sizing:border-box}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:999px;background:#E9DCD1}
+.tabs span{height:34px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:600;color:#6B5A50}
+.tabs span.on{background:#F7EEE7;color:#A84A17;box-shadow:0 1px 2px rgba(70,52,40,.1)}
+.card{background:#F7EEE7;border-radius:18px;box-shadow:0 1px 2px rgba(70,52,40,.05),0 6px 16px rgba(70,52,40,.07)}
+.btn{height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:14.5px;font-weight:700}
+.pri{background:#B8541F;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 4px 10px rgba(184,84,31,.25)}
+.sec{background:#F7EEE7;color:#6B5A50;box-shadow:inset 0 0 0 1px #E5D5C9}
+.lnk{font-size:13px;font-weight:600;color:#A84A17;text-align:center}
+.ic{width:52px;height:52px;border-radius:999px;background:#F6E1D3;color:#B8541F;display:flex;align-items:center;justify-content:center}
+.ttl{font-size:16px;font-weight:700;text-align:center}.ds{font-size:12.5px;color:#7A6A60;text-align:center;line-height:1.5}
+.sect{font-size:12.5px;font-weight:700;color:#8A7A70;margin:16px 4px 8px;display:flex;justify-content:space-between}
+.sect small{font-weight:600;color:#A84A17;font-size:11.5px}
+.face{width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex:none}
+.who{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;padding:12px 14px 6px}
+.who small{font-weight:500;color:#8A7A70;font-size:12px}
+.q{padding:4px 14px 4px 46px;font-size:13.5px;line-height:1.5;color:#463428}
+.q i{display:block;font-style:normal;font-size:11.5px;color:#9A8A80;margin-top:1px}
+.hr{height:1px;background:#EADBD0;margin:8px 14px 0}
+.excl{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#8A7A70;margin-top:12px;padding:0 4px}
+.plus{border:1px dashed #CDB8A8;border-radius:999px;padding:2px 9px;font-size:12px;color:#7A6A60}
+.close{align-self:center;margin-top:14px;padding:7px 18px;border-radius:999px;background:#F7EEE7;font-size:13px;font-weight:600;color:#6B5A50;box-shadow:0 1px 2px rgba(70,52,40,.08)}
+.dim{opacity:.55}
+.tile{display:flex;gap:12px;padding:14px;align-items:flex-start}
+.tile .ti{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none}
+.tile b{display:block;font-size:14.5px;margin-bottom:3px}.tile span.t{font-size:12.5px;color:#7A6A60;line-height:1.5}
+.tile .go{margin-left:auto;align-self:center;color:#B8541F}
+.bub{display:flex;gap:8px;align-items:flex-end}
+.bub .b{background:#F7EEE7;border-radius:16px 16px 16px 4px;padding:9px 12px;font-size:13.5px;line-height:1.45;box-shadow:0 1px 2px rgba(70,52,40,.05),0 4px 12px rgba(70,52,40,.06)}
+.bub.r{flex-direction:row-reverse}.bub.r .b{border-radius:16px 16px 4px 16px}
+.bub .b small{display:block;font-size:11px;color:#9A8A80;margin-top:2px}
+.step{display:flex;gap:12px;align-items:flex-start;padding:12px 14px}
+.step .n{width:24px;height:24px;border-radius:999px;background:#B8541F;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px}
+.step .n.g{background:#E2D3C7;color:#7A6A60}
+.step b{display:block;font-size:14px}.step span.t{font-size:12.5px;color:#7A6A60;line-height:1.5}
+.fp{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}.fp span{font-size:11.5px;padding:2px 8px;border-radius:999px;background:#F6E1D3;color:#A84A17;font-weight:600}
+.ex{font-size:11px;font-weight:700;color:#A84A17;background:#F6E1D3;border-radius:999px;padding:1px 7px;margin-left:auto}
+</style>
+<style>
+.top{display:flex;justify-content:space-between;align-items:baseline}.top b{font-size:20px}.top span{font-size:12px;color:#8A7A70}
+.prog{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:10px}.prog i{height:4px;border-radius:4px;background:#E2D3C7}.prog i.on{background:#B8541F}
+.plab{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:5px;font-size:11px;color:#9A8A80}.plab span.on{color:#A84A17;font-weight:700}
+.h2{font-size:19px;font-weight:700;line-height:1.35;margin-top:18px}.s2{font-size:12.5px;color:#7A6A60;margin-top:4px}
+.rng{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end;margin-top:14px}
+.rng label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:#9A8A80}
+.rng .f{height:44px;border-radius:12px;background:#F7EEE7;display:flex;align-items:center;padding:0 12px;font-size:17px;font-weight:700;box-shadow:0 1px 2px rgba(70,52,40,.06)}
+.rng .f em{font-style:normal;color:#B5A598;margin-right:4px;font-weight:500}
+.sw{display:flex;align-items:center;padding:12px 14px;font-size:13.5px}.tg{margin-left:auto;width:40px;height:24px;border-radius:999px;background:#E2D3C7;position:relative}.tg:after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:999px;background:#fff}
+.nav{display:flex;gap:8px;margin-top:16px}.nav .p{flex:1;height:46px;border-radius:999px;background:#B8541F;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.stat{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px}
+.stat div{border-radius:14px;background:#F7EEE7;padding:10px 12px;box-shadow:0 1px 2px rgba(70,52,40,.05),0 4px 12px rgba(70,52,40,.05)}
+.stat small{display:block;font-size:11px;color:#9A8A80}.stat b{font-size:17px}
+.msg{border-radius:14px;background:#F7EEE7;padding:10px 12px;font-size:12.5px;line-height:1.5;color:#6B5A50;box-shadow:0 1px 2px rgba(70,52,40,.05),0 4px 12px rgba(70,52,40,.05)}
+.msg b{color:#A84A17;font-size:11.5px;display:block;margin-bottom:2px}
+.ladder{display:flex;flex-direction:column;align-items:center;color:#B5A598;font-size:11.5px;padding:4px 0}
+.bar{position:relative;height:44px;margin-top:14px}
+.bar .t{position:absolute;left:0;right:0;top:18px;height:8px;border-radius:8px;background:#E6D6CA}
+.bar .d{position:absolute;top:18px;height:8px;border-radius:8px 0 0 8px;background:#CDB8A8}
+.bar .s{position:absolute;top:14px;height:16px;border-radius:6px;background:#B8541F;box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.bar .h{position:absolute;top:10px;width:24px;height:24px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);margin-left:-12px}
+.bar .lb{position:absolute;top:36px;font-size:11px;color:#9A8A80;transform:translateX(-50%)}
+.st{display:flex;gap:12px;padding:11px 14px;align-items:center;font-size:13.5px}
+.st + .st{border-top:1px solid #EADBD0}
+.st i{width:24px;height:24px;border-radius:999px;background:#E2D3C7;color:#7A6A60;font-style:normal;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+.st.on i{background:#B8541F;color:#fff}.st.dim{color:#B5A598}
+</style><div class="mk_wrap"><div class="mk_col"><div class="mk_lab">가. 아래서 올라오는 시트</div><div class="pop" style="position:relative"><div class="top"><b>압축 마법사</b><span>1 / 5</span></div><div class="prog"><i class="on"></i><i></i><i></i><i></i><i></i></div><div class="plab"><span class="on">범위</span><span>복사</span><span>붙여넣기</span><span>채점</span><span>추가</span></div><div class="h2">어디부터 어디까지<br>압축할까요?</div><div class="s2">경계선 다음부터 자동으로 채웠어요</div><div style="margin-top:14px"><div class="msg"><b>#13 · Mara</b>“열쇠? 내 주머니에 있지.” 그녀는 차고 문을 밀어 열었다…</div><div class="ladder">┆<span>메시지 14개</span>┆</div><div class="msg"><b>#28 · Ren</b>Ren은 다리 위에서 걸음을 멈췄다. “여기서부터는 걸어가.”</div></div><div class="rng"><label>부터<span class="f"><em>#</em>13</span></label><span style="padding-bottom:12px;color:#B5A598">→</span><label>까지<span class="f"><em>#</em>28</span></label></div><div class="s2" style="margin-top:8px;text-align:center">메시지 16개 · 약 4,200 토큰</div><div class="card sw" style="margin-top:10px">숨긴 메시지 빼기<span class="tg"></span></div><div class="nav"><span class="p">다음 · 복사</span></div><div class="close">닫기</div><div style="position:absolute;inset:0;background:rgba(30,20,14,.45);border-radius:26px"></div><div style="position:absolute;left:10px;right:10px;bottom:10px;border-radius:22px;background:#F7EEE7;padding:16px;box-shadow:0 -10px 30px rgba(0,0,0,.25)"><div style="width:36px;height:4px;border-radius:4px;background:#D9C8BC;margin:0 auto 12px"></div><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:15px">#13 · Mara</b><small style="font-size:11.5px;color:#9A8A80">10월 24일 · 원문</small></div><div style="margin-top:10px;max-height:300px;overflow:hidden;font-size:13.5px;line-height:1.65;color:#463428;user-select:none">“열쇠? 내 주머니에 있지.” 그녀는 차고 문을 밀어 열었다. 녹슨 경첩이 길게 울었고, 안쪽에서 기름 냄새가 훅 끼쳐 왔다.<br><br>Ren은 대답 대신 손전등을 켰다. 빛이 벽을 따라 미끄러지다 작업대 위에서 멈췄다. 거기엔 누군가 급히 두고 간 듯한 지도 한 장이 펼쳐져 있었다.<br><br>“이거… 네가 그린 거야?”<br>Mara는 고개를 저었다.</div><div style="margin-top:14px;height:42px;border-radius:999px;background:#EADCD0;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13.5px">닫기</div></div></div></div>

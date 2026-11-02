@@ -414,6 +414,7 @@ export async function openWizard() {
         <div class="na_wz2_progress">${STEPS.map((x, i) => `<button type="button" data-s="${i}"><i></i><span>${x.name}</span></button>`).join('')}</div>
         <div class="na_wz2_head"><b class="na_wz2_title"></b><small class="na_wz2_sub"></small></div>
         <div class="na_wz2_pane" data-s="0">
+          <div class="na_wz3_msgs"></div>
           <div class="na_wz2_range">
             <label><small>부터</small><span>#<input type="number" class="text_pole na_wz_from" min="0" max="${last}" value="${defFrom}"></span></label>
             <span class="na_wz2_arr">${svgA('M5 12h14M13 6l6 6-6 6', 18)}</span>
@@ -500,8 +501,30 @@ export async function openWizard() {
         const p = pid === '__none' ? null : (g.prompts.find(x => x.id === pid) || activePrompt(g));
         full = p ? compressPrompt(p.text, vars(), m) : raw;
         $root.find('.na_wz_copy span').text(p ? '지시문과 함께 복사' : '원문만 복사');
+        // the first and last message of the range, a line each; held down they open in full (docs/mockups/ext-wizard B + 가)
+        const card = (x, k) => `<div class="na_wz3_msg" data-i="${x.i}" role="button" tabindex="0" title="꾹 누르면 전체 원문"><b>#${x.i} · ${esc(x.name)}</b><span>${esc(x.text.replace(/\s+/g, ' ').slice(0, 140))}</span></div>`;
+        $root.find('.na_wz3_msgs').html(!items.length ? '' : items.length === 1 ? card(items[0])
+            : `${card(items[0])}<div class="na_wz3_gap"><i></i><span>${items.length > 2 ? `메시지 ${items.length - 2}개` : '바로 다음'}</span><i></i></div>${card(items[items.length - 1])}`);
         $root.find('.na_wz_info').text(items.length ? `메시지 ${items.length}개${hiddenOut ? ` (숨긴 ${hiddenOut}개 뺌)` : ''} · 원문 약 ${fmt(await countTokens(raw))} 토큰${p ? ` · 지시문까지 약 ${fmt(await countTokens(full))} 토큰` : ''}` : '이 범위에 메시지가 없어요.');
     };
+    // hold a message card: the whole message in a sheet from the bottom of the window
+    const openMsg = i => {
+        const msg = c.chat[i];
+        if (!msg) return;
+        const $dlg = $root.closest('dialog');
+        $dlg.find('.na_wz3_cover').remove();
+        const $cv = $(`<div class="na_wz3_cover"><div class="na_wz3_sheet" role="dialog" aria-label="원문"><i class="na_wz3_grip"></i>
+            <div class="na_wz3_shead"><b>#${i} · ${esc(msg.name || '')}</b><small>원문</small></div>
+            <div class="na_wz3_sbody">${esc(String(msg.mes ?? '').trim())}</div>
+            <button type="button" class="na_wz3_sclose">닫기</button></div></div>`);
+        $cv.on('click', e => { if (e.target === e.currentTarget || $(e.target).closest('.na_wz3_sclose').length) $cv.remove(); });
+        $dlg.append($cv);
+    };
+    let holdT = null;
+    $root.on('pointerdown', '.na_wz3_msg', function () { const i = Number(this.dataset.i); clearTimeout(holdT); holdT = setTimeout(() => openMsg(i), 450); });
+    $root.on('pointerup pointerleave pointercancel', '.na_wz3_msg', () => clearTimeout(holdT));
+    $root.on('contextmenu', '.na_wz3_msg', e => e.preventDefault());
+    $root.on('keydown', '.na_wz3_msg', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMsg(Number(this.dataset.i)); } });
     let t;
     $root.find('.na_wz_from, .na_wz_to, .na_wz_prompt').on('input change', () => { clearTimeout(t); t = setTimeout(build, 250); });
     const remember = async how => { const { from, to } = range(); m.lastExport = { from, to, at: Date.now(), how }; await saveMeta(); refreshStatus(); };
@@ -578,7 +601,7 @@ export async function openWizard() {
     });
     show();
     await build();
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
 // 쌓이면 알려 주기: after a reply, when the messages waiting to be compressed reach the set number, one note that opens

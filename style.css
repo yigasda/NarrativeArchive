@@ -7671,3 +7671,30 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup butt
 /* ticks on the cream accent in dark */
 .na_sp_ck.part::after { background: var(--na-onaccent, #fff); }
 body.na_darkui .na_sp > .checkbox_label input:checked { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%231B1B1F' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") !important; }
+
+/* ============ 압축 마법사 (docs/mockups/ext-wizard B + 가): as tall as its content; the range's first and last message
+   above the numbers (hold one to read it whole in a sheet from the bottom) */
+.na_wiz2.na_wiz2 { min-height: 0; }
+.na_wiz2 .na_wz2_fill { display: none; }
+.na_wz3_msgs { display: flex; flex-direction: column; margin-bottom: 12px; }
+.na_wz3_msgs:empty { display: none; }
+.na_wz3_msg { padding: 10px 12px; border-radius: 14px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 4px 12px rgba(70, 52, 40, 0.05); cursor: pointer; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+body.na_darkui .na_wz3_msg { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 6px 16px rgba(0, 0, 0, 0.3); }
+.na_wz3_msg b { display: block; margin-bottom: 2px; font-size: 11.5px; font-weight: 700; color: var(--na-accent-fg, var(--na-accent)); }
+.na_wz3_msg span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 12.5px; line-height: 1.5; color: var(--na-mute); }
+.na_wz3_msg:active { transform: scale(0.985); }
+.na_wz3_gap { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 3px 0; font-size: 11.5px; color: var(--na-dim); }
+.na_wz3_gap i { width: 0; height: 8px; border-left: 1.5px dashed var(--na-line); }
+.na_wz3_cover { position: absolute; inset: 0; z-index: 50; display: flex; align-items: flex-end; padding: 10px; background: rgba(30, 20, 14, 0.45); border-radius: inherit; box-sizing: border-box; }
+body.na_darkui .na_wz3_cover { background: rgba(0, 0, 0, 0.55); }
+.na_wz3_sheet { text-align: left; width: 100%; max-height: 80%; display: flex; flex-direction: column; padding: 12px 16px 16px; border-radius: 22px; box-sizing: border-box; background: var(--na-card, #F7EEE7); color: var(--na-ink); box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.25); }
+body:not(.na_darkui) .na_wz3_sheet { background: #F7EEE7; color: #463428; }
+body.na_darkui .na_wz3_sheet { background: #232328; color: #ECEAE6; }
+.na_wz3_grip { width: 36px; height: 4px; margin: 0 auto 12px; border-radius: 4px; background: var(--na-line, #D9C8BC); }
+.na_wz3_shead { display: flex; align-items: baseline; justify-content: space-between; }
+.na_wz3_shead b { font-size: 15px; }
+.na_wz3_shead small { font-size: 11.5px; color: var(--na-dim, #9A8A80); }
+.na_wz3_sbody { flex: 1; min-height: 0; overflow-y: auto; margin-top: 10px; font-size: 13.5px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup button.na_wz3_sclose:not(#na_x) { flex: none; height: 42px; margin: 14px 0 0; border: 0 !important; border-radius: 999px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; box-shadow: none !important; }
+body:not(.na_darkui) dialog.popup button.na_wz3_sclose:not(#na_x) { background: #EADCD0 !important; color: #463428 !important; }
+body.na_darkui dialog.popup button.na_wz3_sclose:not(#na_x) { background: #2E2E34 !important; color: #ECEAE6 !important; }
