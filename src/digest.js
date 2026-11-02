@@ -120,7 +120,7 @@ export async function openDigest(group = null, keys = null) {
     let gi = group ? Math.max(0, gs.findIndex(g => g.start === group.start)) : Math.max(0, gs.length - 1);
     const $root = $(`
       <div class="na_popup na_v2 na_dg">
-        <div class="na_v2_title"><b>다이제스트</b><small>이어진 섹션을 짧은 섹션 하나로 · 원본은 그대로 두고, 켜져 있는 동안 주입에는 다이제스트만 들어가요</small></div>
+        <div class="na_v2_title"><b>다이제스트</b><small>이어진 섹션을 짧게 하나로 · 켜 두면 주입엔 이것만 들어가요</small></div>
         <div class="na_dg_have"></div>
         <div class="na_v2_label">새로 만들기</div>
         ${gs.length ? `<select class="text_pole na_mg_group na_dg_group">${gs.map((g, i) => `<option value="${i}">${esc(g.label)} · 섹션 ${g.secs.length}개</option>`).join('')}</select>` : '<small class="na_v2_note">번호가 있는 섹션이 없어요</small>'}

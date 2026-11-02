@@ -235,7 +235,7 @@ export function renderPanel() {
               <details class="na_block na_details na_fold">
                 <summary>복구 지점 · 변경 내역 <span class="na_chip" id="na_snap_n">0</span></summary>
                 <div>
-                  <p class="na_dim na_fold_desc">바꾸기 직전 상태를 자동으로 남기고(최근 ${SNAPSHOT_MAX}개), 그 뒤 어떤 섹션이 바뀌었는지 같이 보여 줘요.</p>
+                  <p class="na_dim na_fold_desc">바꾸기 전 상태를 최근 ${SNAPSHOT_MAX}개까지 남겨요</p>
                   <div class="na_row">
                     <button type="button" class="na_btn na_small" id="na_snap_now"><i class="fa-solid fa-bookmark"></i> 지금 보관</button>
                     <button type="button" class="na_btn na_small" id="na_compare"><i class="fa-solid fa-code-compare"></i> 두 버전 비교</button>
@@ -356,7 +356,7 @@ export function renderPanel() {
                 <div class="na_set_list">
                   <label class="na_set_row" title="답이 잘리면 늘려 주세요"><span>답 최대 길이</span><span class="na_cfg_val"><input type="number" id="na_ai_max" class="text_pole" min="256" step="256"><span class="na_cfg_unit">&nbsp;토큰</span>${svgA(ICO_A.right, 15, 2.2)}</span></label>
                 </div>
-                <small class="na_dim na_conn_note" id="na_conn_note" hidden>키는 이 기기의 실리태번 설정에만 저장돼요. Vertex는 실리태번에 저장한 서비스 계정 JSON을 써요. 아카이브 백업에는 안 들어가요.</small>
+                <small class="na_dim na_conn_note" id="na_conn_note" hidden>키는 이 기기에만 저장되고 백업에는 안 들어가요</small>
                 </div>
               </div>
               <div class="na_cfg_grp" data-g="aitask" title="AI 기능 모델이 하는 일 · 막혔을 때 · 로어북 · 이탈 감지 · 용어집">

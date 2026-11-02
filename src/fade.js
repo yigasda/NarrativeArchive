@@ -302,7 +302,7 @@ export async function openLayers(s) {
         const raw = text(tab);
         $pane.find('textarea').prop('hidden', !editing);
         $pane.find('.na_ly_view').prop('hidden', editing)
-            .html(raw.trim() ? mdBlock(korean ? withLineTr(raw, trMap) : raw) : `<span class="na_ly_empty">${tab === 'line' ? '요점이 아직 없어요' : '짧은 버전이 아직 없어요'} · 직접 고치기로 쓰거나 초안 모델로 만들어요</span>`);
+            .html(raw.trim() ? mdBlock(korean ? withLineTr(raw, trMap) : raw) : `<span class="na_ly_empty">${tab === 'line' ? '요점이 아직 없어요' : '짧은 버전이 아직 없어요'} · 직접 쓰거나 초안 모델로 만들어요</span>`);
         $root.find('.na_ly_edit').prop('hidden', tab === 'long').find('span').text(editing ? '다 고쳤어요' : '직접 고치기');
         $root.find('.na_ly_edit').toggleClass('on', editing);
         $root.find('.na_ly_tr').prop('disabled', editing || !raw.trim()).toggleClass('on', korean).find('span').text(korean ? '원문으로' : '한국어로');

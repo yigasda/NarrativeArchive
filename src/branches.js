@@ -53,7 +53,7 @@ export async function openBranches() {
               <div class="na_bn2_link"><b>#${b.last}에서 갈라짐</b><span></span></div>
               <div class="na_bn2_node">${icon('here', ICON_BRANCH)}<b>이 채팅</b><small title="${esc(String(here || ''))} · 메시지 ${fmt(b.last + 1)}개">${esc(hereName) || `메시지 ${fmt(b.last + 1)}개`}</small></div>
             </div>
-            ${b.ahead.length ? `<div class="na_bn2_warn">${ICON_WARN}<span>분기 지점 뒤 이야기가 섹션 ${b.ahead.length}개에 섞여 있어요. 이 채팅에선 일어나지 않은 일이에요.</span></div>`
+            ${b.ahead.length ? `<div class="na_bn2_warn">${ICON_WARN}<span>분기 뒤 이야기가 섹션 ${b.ahead.length}개에 섞여 있어요 · 이 채팅에선 없던 일이에요</span></div>`
               : `<div class="na_bn2_ok">${ICON_OK}<span>분기 지점 뒤에 쓴 섹션이 없어요.</span></div>`}
             <button type="button" class="na_v2_pillbtn na_br_cmp_parent" title="원본 채팅의 아카이브와 나란히 비교해요">원본(${parentName}) 아카이브와 비교</button>
           </div>` : '<div class="na_v2_card na_v2_note">이 채팅은 분기가 아니에요 (원본 채팅 정보가 없어요).</div>'}

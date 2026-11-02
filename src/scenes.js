@@ -388,7 +388,7 @@ export async function openStyleSamples() {
     const picked = new Set(styleSamples(m).map(x => x.title));
     const $root = $(`
       <div class="na_popup na_v2 na_ss">
-        <div class="na_v2_title"><b>문체 견본</b><small>마음에 드는 섹션을 ${STYLE_MAX}개까지 · 압축할 때마다 "이 목소리로" 같이 보내요 · 새 요약이 쌓여도 안 바뀌어요</small></div>
+        <div class="na_v2_title"><b>문체 견본</b><small>마음에 드는 섹션 ${STYLE_MAX}개까지 · 압축할 때 이 목소리로 쓰게 해요</small></div>
         <input type="search" class="text_pole na_ss_find" placeholder="제목으로 찾기">
         <div class="na_ss_list"></div>
         <small class="na_v2_note na_ss_info"></small>

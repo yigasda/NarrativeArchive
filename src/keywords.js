@@ -37,7 +37,7 @@ export async function openKeywords(s, body, current) {
           <summary>키워드 테스트 <small>문장을 넣으면 이 섹션이 불려 오는지 보여 줘요</small></summary>
           <div class="na_kw_testbox">
             <textarea class="text_pole na_kw_tin" rows="2" placeholder="예: 그 지도 아직 갖고 있어?"></textarea>
-            <label class="checkbox_label na_kw_trecent"><input type="checkbox"><span>최근 메시지 ${Math.max(0, depthN - 1)}개도 같이 (다음 메시지로 보낸다고 치기)</span></label>
+            <label class="checkbox_label na_kw_trecent"><input type="checkbox"><span>최근 메시지 ${Math.max(0, depthN - 1)}개도 같이 넣어 보기</span></label>
             <div class="na_kw_tout"></div>
           </div>
         </details>
@@ -186,7 +186,7 @@ export async function openKeywordTest() {
       <div class="na_popup">
         <div class="na_block_head"><div>
           <h4>키워드 테스트</h4>
-          <p>문장을 넣으면 🔑 키워드 연동한 섹션 중 어떤 게 불려 오는지 보여 줘요. 실제 주입은 바뀌지 않아요.</p>
+          <p>문장을 넣으면 🔑 섹션 중 무엇이 불려 오는지 보여 줘요 · 주입은 안 바뀌어요</p>
         </div></div>
         <textarea class="text_pole na_kwt_in" rows="3" placeholder="예: 그 지도 아직 갖고 있어?"></textarea>
         <label class="checkbox_label"><input type="checkbox" class="na_kwt_recent"><span>최근 메시지 ${depth - 1}개도 같이 (이 문장을 다음 메시지로 보낸다고 치기)</span></label>
@@ -196,7 +196,7 @@ export async function openKeywordTest() {
     const keys = new Set(parseSections(m.text).map(sectionKey));
     const muted = mutedSet(m);
     const render = () => {
-        if (!linked.length) return $root.find('.na_kwt_out').html('<div class="na_empty">키워드 연동한 섹션이 없어요. 아카이브 탭의 섹션 카드에서 카드를 펼쳐 🔑를 눌러 키워드를 정하세요.</div>');
+        if (!linked.length) return $root.find('.na_kwt_out').html('<div class="na_empty">키워드 연동한 섹션이 없어요 · 섹션 카드의 🔑로 정해요</div>');
         const text = $root.find('.na_kwt_in').val();
         const withRecent = $root.find('.na_kwt_recent').prop('checked');
         const hay = `${text}\n${withRecent && depth > 1 ? recentChatText(m, depth - 1) : ''}`.toLowerCase();

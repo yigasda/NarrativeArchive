@@ -29,7 +29,7 @@ export async function openPreview() {
         return pinned.has(k) ? '<span class="na_pv2_tag pin">고정</span>' : '';
     };
     const code = headsOnly => {
-        if (!text.trim()) return `<span class="na_pv2_dimline">${m.enabled ? '들어갈 내용이 없어요.' : '주입이 꺼져 있어요. 켜면 여기 보이는 대로 들어가요.'}</span>`;
+        if (!text.trim()) return `<span class="na_pv2_dimline">${m.enabled ? '들어갈 내용이 없어요' : '주입이 꺼져 있어요'}</span>`;
         const heads = new Map(parseSections(text).filter(s => !/^\((?:머리말|제목 없음)\)$/.test(s.title)).map(s => [s.start, s]));
         let pos = 0;
         return text.split('\n').map(line => {

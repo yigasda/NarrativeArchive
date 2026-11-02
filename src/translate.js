@@ -152,7 +152,7 @@ export async function openGlossary() {
       <div class="na_popup">
         <div class="na_block_head"><div>
           <h4>번역 용어집</h4>
-          <p>한 줄에 하나씩 <code>영어 = 한국어</code>로 적어요. 번역할 때 그 줄에 나오는 이름만 골라 모델에 같이 보내요. 이 채팅에만 저장되고, 다른 채팅에서 가져오기를 하면 같이 따라가요.</p>
+          <p>한 줄에 하나씩 <code>영어 = 한국어</code> · 번역할 때 나오는 이름만 같이 보내요</p>
         </div></div>
         <textarea class="text_pole na_gl_ta" rows="12" spellcheck="false" placeholder="Avalon = 아발론&#10;Lighthouse Keeper = 등대지기"></textarea>
         <div class="na_row_btns na_gl_btns">

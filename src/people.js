@@ -524,7 +524,7 @@ export async function openPeople() {
             ${scored.length ? `<button type="button" class="na_v2_btn na_tp_listbtn">섹션별 점수 ${scored.length}개</button>` : ''}
             ${todo ? `<button type="button" class="na_v2_btn primary na_temp_run" data-all="0">${scored.length ? `안 잰 섹션 ${todo}개 재기` : `섹션 ${todo}개 재기`}</button>` : `<button type="button" class="na_v2_btn na_temp_run" data-all="1">전부 다시 재기</button>`}
           </div>
-          <small class="na_v2_foot">AI 기능 모델(${esc(aiLabel())})이 섹션마다 −5(차가움) ~ +5(따뜻함)으로 매겨요</small>`;
+          <small class="na_v2_foot">섹션마다 −5(차가움) ~ +5(따뜻함) · 모델 ${esc(aiLabel())}</small>`;
         if (!scored.length) return `${picker}<div class="na_v2_card na_tp_empty"><i class="fa-solid fa-temperature-half"></i><b>아직 안 쟀어요</b><small>두 사람이 함께 나온 섹션 ${shared}개를 AI가 읽고 온도를 매겨요</small></div>${runBtns}`;
         const now = [...scored].pop().t.s;
         const vals = scored.map(p => p.t.s);

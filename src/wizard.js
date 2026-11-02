@@ -87,7 +87,7 @@ export async function openAuSettings() {
           <label><small>묶음 이름</small><input type="text" class="text_pole na_au_name" maxlength="12" placeholder="AU" spellcheck="false"></label>
           <label><small>AU 설정 · 뭐가 다르고 뭘 기억하는지</small><textarea class="text_pole na_au_note" rows="3" placeholder="예: 현대 AU, 둘 다 대학생. 본편 기억은 그대로"></textarea></label>
         </div>
-        <small class="na_v2_note">켜 두면 압축할 때(한 번에 압축 · 마법사 · 원문 뽑기) 지시문 맨 위에 AU 안내가 붙어요. STATE·OPEN은 AU 기준으로 다시 쓰고, 모델이 AU 표시를 빼먹으면 아카이브에 추가할 때 붙여요. 다음 채팅으로 이어가면 이 설정도 같이 가요.</small>
+        <small class="na_v2_note">켜 두면 압축 지시문 맨 위에 AU 안내가 붙어요 · 다음 채팅에도 이어져요</small>
       </div>`);
     $root.find('.na_au_tg').prop('checked', a.on);
     $root.find('.na_au_name').val(m.au?.name || '');

@@ -530,7 +530,7 @@ export async function openMerge(group = null, keys = null) {
     // the raw log as it will be sent (tags stripped by 압축 → 설정), to see what the model reads
     $root.find('.na_mg_rawview').on('click', () => {
         if (!rawSrc?.raw) return;
-        c.callGenericPopup($(`<div class="na_popup na_v2"><div class="na_v2_title"><b>보낼 원문</b><small>${esc(rawSrc.label)} · 메시지 ${rawSrc.n}개 · 태그는 지우고, 압축 → 설정의 지울 태그 목록(scene_plan 등)을 따라요</small></div><pre class="na_mg_rawpre">${esc(rawSrc.raw)}</pre></div>`), c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+        c.callGenericPopup($(`<div class="na_popup na_v2"><div class="na_v2_title"><b>보낼 원문</b><small>${esc(rawSrc.label)} · 메시지 ${rawSrc.n}개 · 태그는 지워요</small></div><pre class="na_mg_rawpre">${esc(rawSrc.raw)}</pre></div>`), c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
     });
     $root.find('.na_mg_raw').on('change', () => { result = null; $root.find('.na_mg_res').prop('hidden', true); $root.find('.na_mg_q').attr('placeholder', rewrite() ? '요청 (선택 · 예: 세트가 들어온 건 끝난 뒤야)' : '요청 (선택 · 예: 3개 정도로, 장면 단위로)'); drawList(); });
     $root.find('.na_mg_group').on('change', function () { gi = Number(this.value); picked = new Set(); result = null; $root.find('.na_mg_res').prop('hidden', true); drawList(); });
