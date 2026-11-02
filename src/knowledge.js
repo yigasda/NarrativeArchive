@@ -9,7 +9,6 @@ import { syncPanel } from './panel.js';
 import { exFace, faceHtml } from './people.js';
 import { mountSectionPicker } from './picker.js';
 import { RANGE_HEAD, findCited, parseSections, sectionKey, splitTail, tailBlocks } from './sections.js';
-import { svgA } from './theme.js';
 import { translateLines } from './translate.js';
 import { confirm, countTokens, esc, fmt } from './util.js';
 
@@ -207,7 +206,7 @@ export async function openKnowledge() {
         const tag = (n, k) => `<span class="na_kn3_tag ${k}">${k === 'k' ? exFace(n, 18) : ''}<em>${esc(n)}</em>${k === 's' ? '<b>?</b>' : ''}</span>`;
         return `<div class="na_v2_card na_kn3_hello"><span class="na_kn3_big"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/></svg></span>
             <b>아직 정리된 비밀이 없어요</b><small>아카이브를 읽고 비밀마다 아는 사람 · 모르는 사람을 정리해요</small>
-            <button type="button" class="na_kn3_make">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/>', 15)}AI로 만들기</button>
+            <button type="button" class="na_kn3_make">✧ AI로 만들기</button>
             <button type="button" class="na_linkbtn na_kn3_write">직접 쓰기</button></div>
           <div class="na_kn3_sect"><span>이렇게 정리돼요</span><small>예시</small></div>
           <div class="na_v2_card na_kn3_ex">

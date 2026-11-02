@@ -375,7 +375,7 @@ export async function openQuotes() {
                        <button type="button" class="na_kn3_make na_vc3_go" ${pick.length ? '' : 'disabled'}>✧ 지문 ${pick.length}개 만들기</button>`
                     : `<small>대사가 3개 넘게 모인 인물부터 만들 수 있어요</small>
                        <button type="button" class="na_kn3_make na_vc3_toq">대사 모으러 가기</button>`}</div>
-              <div class="na_kn3_sect na_vc3_sect"><span>이렇게 정리돼요</span><small>예시</small></div>
+              <div class="na_kn3_sect"><span>이렇게 정리돼요</span><small>예시</small></div>
               <div class="na_v2_card na_vc_card na_vc3_ex">
                 <div class="na_vc_head">${exFace('Claude', 40)}<span class="na_vc_who"><b>Claude</b><small>예시 · 대사 12개로 만듦</small></span></div>
                 <span class="na_vc_sub">사람됨</span><div class="na_vc3_core">조심스럽지만 솔직해요</div>
@@ -429,7 +429,7 @@ export async function openQuotes() {
         $root.find('.na_qb2').toggleClass('na_qb3_new', none);
         if (none) return $root.find('.na_qb_list').html(`<div class="na_v2_card na_kn3_hello"><span class="na_kn3_big na_qb3_big">&ldquo;</span>
             <b>아직 모은 대사가 없어요</b><small>아카이브를 읽고 인물마다 한 말을 모아요<br>모은 대사로 말투 지문을 만들어요</small>
-            <button type="button" class="na_kn3_make na_qb3_make">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/>', 15)}AI로 모으기</button>
+            <button type="button" class="na_kn3_make na_qb3_make">✧ AI로 모으기</button>
             <button type="button" class="na_linkbtn na_qb3_find">AI 없이 아카이브에서 모으기</button></div>
           <div class="na_kn3_sect"><span>이렇게 모여요</span><small>예시</small></div>
           <div class="na_qb3_ex">${[['Claude', '그건 제가 확인해 볼게요.', '#1–#12'], ['GPT', '물론이죠! 바로 해 볼게요.', '#13–#29'], ['Gemini', '흥미로운 질문이네요.', '#13–#29']]
