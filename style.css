@@ -7908,3 +7908,25 @@ body.na_darkui .na_wz2_range label > span:focus-within { box-shadow: 0 0 0 2px #
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st button.na_st_add:not(#na_x) { border: 0 !important; outline: none !important; box-shadow: none !important; }
 body:not(.na_darkui) dialog.popup .na_st button.na_st_add:not(#na_x) { background: #F6E1D3 !important; color: #A84A17 !important; }
 body.na_darkui dialog.popup .na_st button.na_st_add:not(#na_x) { background: #2E2E34 !important; color: #F0CF8E !important; }
+
+/* ============ 작업실 › answer actions (docs/mockups/ext-studio-acts C): the check as plain green text above a hairline; under
+   it 다듬기 · 고치기 · 복사 · 한국어 as icon + word, 확정 as the one soft orange pill */
+.na_st3_tags { margin-top: 10px !important; }
+.na_st3_tags .na_st_tag { background: transparent !important; box-shadow: none !important; padding: 0 !important; font-size: 11.5px; }
+.na_st3_tags .na_st_tag.ok::before { content: "✓ "; }
+.na_st3_row { display: flex; align-items: center; gap: 2px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--st-line, var(--na-line2)); flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.na_st3_row::-webkit-scrollbar { display: none; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_row > button:not(#na_x) { flex: none; display: inline-flex !important; align-items: center; gap: 4px; width: auto !important; min-height: 0 !important; height: auto !important; margin: 0 !important; padding: 5px 6px !important; border: 0 !important; border-radius: 999px !important; background: transparent !important; box-shadow: none !important; color: var(--st-dim) !important; font: inherit; font-size: 12px !important; font-weight: 600 !important; white-space: nowrap; cursor: pointer; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_row > button.na_st_ko.on:not(#na_x), body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_row > button.na_st_fix:not(.na_st_polish):not(#na_x) { color: var(--st-acc) !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_row > button.na_st_lk:not(#na_x) { padding: 5px 12px !important; font-weight: 700 !important; }
+body:not(.na_darkui) dialog.popup .na_st3_row > button.na_st_lk:not(.on):not(#na_x) { background: #F6E1D3 !important; color: #A84A17 !important; }
+body.na_darkui dialog.popup .na_st3_row > button.na_st_lk:not(.on):not(#na_x) { background: #2E2E34 !important; color: #F0CF8E !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_row > button.na_st_lk.on:not(#na_x) { background: var(--st-ok) !important; color: #fff !important; }
+body.na_darkui dialog.popup .na_st3_row > button.na_st_lk.on:not(#na_x) { color: #13261B !important; }
+.na_st_bub:has(.na_st3_row) { max-width: 100%; align-self: stretch; }
+.na_st3_row { flex-wrap: wrap; overflow: visible; row-gap: 4px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_row > button:not(#na_x) { padding: 5px 5px !important; gap: 3px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_row > button.na_st_lk:first-of-type:not(#na_x) { margin-left: auto !important; }
+.na_st3_row { gap: 0; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_row > button:not(.na_st_lk):not(#na_x) { padding: 5px 4px !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_row > button.na_st_lk:not(#na_x) { padding: 5px 10px !important; }

@@ -454,7 +454,14 @@ export async function openStudio() {
             const free = !(t.scene !== undefined && locked.has(t.scene)) && blocks.some(x => x.a !== null);
             const styleBtn = free && !fixBusy.has(i) ? `<button type="button" class="na_st_fix na_st_polish" data-i="${i}" title="문체 다듬기 · 문장 결만 아카이브처럼 · 내용 · 출처 번호 · 인용 · 불릿 수는 그대로 · 원문 없이 섹션만 · AI 기능 모델">다듬기</button>` : '';
             const backBtn = t.before && !fixBusy.has(i) ? `<button type="button" class="na_st_unfix na_st_ib" data-i="${i}" title="고치기 전 답으로" aria-label="고치기 전으로">${svgA(ICO.back, 13, 2.4)}</button>` : '';
-            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st_tags">${tags}<span class="na_st_lks">${fixBtn}${styleBtn}${backBtn}<button type="button" class="na_st_pen na_st_ib" data-i="${i}" title="직접 고치기 (답을 세 번 터치해도 돼요)" aria-label="직접 고치기">${svgA(ICO.pen, 13, 2.2)}</button><button type="button" class="na_st_copy na_st_ib" data-i="${i}" title="이 답의 섹션을 아카이브 모양으로 복사 (출처 번호는 빼고)" aria-label="복사">${svgA(ICO.copy, 13, 2.2)}</button>${koBtn}${locks}</span></div></div>`;
+            // (docs/mockups/ext-studio-acts C) the check above a hairline; under it 다듬기 · 고치기 · 복사 · 한국어 as icon + word
+            // and 확정 as the one soft orange pill; 고쳐 받기 / 되돌리기 join the row when they apply
+            const ic = d => svgA(d, 14, 2.2);
+            const polish = styleBtn ? styleBtn.replace('>다듬기</button>', `>${ic('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/>')}다듬기</button>`) : '';
+            const pen = `<button type="button" class="na_st_pen" data-i="${i}" title="직접 고치기 (답을 세 번 터치해도 돼요)">${svgA(ICO.pen, 14, 2.2)}고치기</button>`;
+            const copy = `<button type="button" class="na_st_copy" data-i="${i}" title="이 답의 섹션을 아카이브 모양으로 복사 (출처 번호는 빼고)">${svgA(ICO.copy, 14, 2.2)}복사</button>`;
+            const koC = koBtn.replace(/>([^<>]*)<\/button>$/, `>${ic('<path d="M4 5h8M8 3v2M5 9c1.5 3 4 5 7 6M11 5c-1 4-3 7-6 9M13 21l4-9 4 9M14.5 18h5"/>')}$1</button>`);
+            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st_tags na_st3_tags">${tags}</div><div class="na_st3_row">${fixBtn}${backBtn}${polish}${pen}${copy}${koC}${locks}</div></div>`;
         }).join('') + (busy ? '<div class="na_st_bub na_st_typing"><i></i><i></i><i></i><small>쓰는 중 · 이 탭에 있어야 받아요</small></div>' : '');
         const $log = $root.find('.na_st_log');
         const atEnd = $log[0] ? $log[0].scrollHeight - $log[0].scrollTop - $log[0].clientHeight < 80 : true;
