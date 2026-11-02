@@ -462,10 +462,8 @@ export async function openStudio() {
             const backM = backBtn ? `<button type="button" class="na_st_unfix" data-i="${i}">${svgA(ICO.back, 14, 2.2)}고치기 전으로</button>` : '';
             const pen = `<button type="button" class="na_st_pen" data-i="${i}" title="직접 고치기 (답을 세 번 터치해도 돼요)">${svgA(ICO.pen, 14, 2.2)}직접 고치기</button>`;
             const copy = `<button type="button" class="na_st_copy" data-i="${i}" title="이 답의 섹션을 아카이브 모양으로 복사 (출처 번호는 빼고)">${svgA(ICO.copy, 14, 2.2)}복사</button>`;
-            const more = `<span class="na_st_more"><button type="button" class="na_st_dots" aria-label="더 보기" title="더 보기">${svgA('<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>', 16, 2.8)}</button></span>`;
-            // ⋯ opens these inside the card, under the row, pushing nothing out of place
-            const menuRow = `<div class="na_st_amenu" hidden>${fixM}${backM}${polish}${pen}${copy}</div>`;
-            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st3_bar"><span class="na_st3_tags">${tags}</span><span class="na_st3_right">${koBtn}${locks}${more}</span></div>${menuRow}</div>`;
+            const more = `<span class="na_st_more"><button type="button" class="na_st_dots" aria-label="더 보기" title="더 보기">${svgA('<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>', 16, 2.8)}</button><span class="na_st_amenu" hidden>${fixM}${backM}${polish}${pen}${copy}</span></span>`;
+            return `<div class="na_st_bub">${blocks.map(x => cardHtml(x, ko ? koMap : null)).join('<hr>')}<div class="na_st3_bar"><span class="na_st3_tags">${tags}</span><span class="na_st3_right">${koBtn}${locks}${more}</span></div></div>`;
         }).join('') + (busy ? '<div class="na_st_bub na_st_typing"><i></i><i></i><i></i><small>쓰는 중 · 이 탭에 있어야 받아요</small></div>' : '');
         const $log = $root.find('.na_st_log');
         const atEnd = $log[0] ? $log[0].scrollHeight - $log[0].scrollTop - $log[0].clientHeight < 80 : true;
@@ -646,8 +644,8 @@ export async function openStudio() {
     };
     $root.on('click', '.na_st_pen', function () { startEdit(Number(this.dataset.i)); });
     // ⋯ opens the answer's small menu (upward, right-aligned); any other tap, or picking from it, closes it
-    $root.on('click', '.na_st_dots', function (e) { e.stopPropagation(); const $m = $(this).closest('.na_st_bub').find('.na_st_amenu'), open = $m.prop('hidden'); $root.find('.na_st_amenu').prop('hidden', true); $m.prop('hidden', !open); });
-    $root.on('click', e => { if (!$(e.target).closest('.na_st_more, .na_st_amenu').length) $root.find('.na_st_amenu').prop('hidden', true); });
+    $root.on('click', '.na_st_dots', function (e) { e.stopPropagation(); const $m = $(this).next('.na_st_amenu'), open = $m.prop('hidden'); $root.find('.na_st_amenu').prop('hidden', true); $m.prop('hidden', !open); });
+    $root.on('click', e => { if (!$(e.target).closest('.na_st_more').length) $root.find('.na_st_amenu').prop('hidden', true); });
     $root.on('click', '.na_st_amenu button', () => setTimeout(() => $root.find('.na_st_amenu').prop('hidden', true), 0));
     // three quick taps on an answer open it too (not on its buttons, numbers or quotes)
     $root.on('click', '.na_st_bub', function (e) {
