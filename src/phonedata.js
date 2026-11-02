@@ -1216,7 +1216,12 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
     }
 }
 // a recording's length: seconds, or "1:20"
-export const secOf = v => { const mt = String(v ?? '').match(/(\d{1,2}):(\d{2})/); const n = mt ? mt[1] * 60 + Number(mt[2]) : num(v); return Math.max(3, Math.min(900, Math.round(n || 30))); };
+// a recording's length: seconds, "1:20", "1분 20초", "2 min", "1m30s"
+export const secOf = v => {
+    const s = String(v ?? ''), mt = s.match(/(\d{1,2}):(\d{2})/), mn = !mt && s.match(/(\d+)\s*(?:min(?:ute)?s?|분|m)(?![a-z])(?:\s*(\d+)\s*(?:s(?:ec(?:onds?)?)?|초))?/i);
+    const n = mt ? mt[1] * 60 + Number(mt[2]) : mn ? mn[1] * 60 + Number(mn[2] || 0) : num(v);
+    return Math.max(3, Math.min(900, Math.round(n || 30)));
+};
 export async function fillVoice(m, p) {
     const diary = (p.diary || []).slice(-6).map(d => `- ${d.date} ${d.title}`).join('\n');
     const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`], {story:CHAT_TOKENS.apps,profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });

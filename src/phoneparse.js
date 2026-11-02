@@ -6,16 +6,19 @@ export const line = (v, n) => str(v, n).replace(/\s*\n\s*/g, ' ');
 export const pad = x => String(x).padStart(2, '0');
 // a date written with its month's name or 월: "1월 20일 15:00", "Jan 20", "January 20, 2027", "20. Januar" (the clock after it, if any)
 const MONS = { jan: 1, feb: 2, mar: 3, mär: 3, apr: 4, may: 5, mai: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, okt: 10, nov: 11, dec: 12, dez: 12 };
+// the whole word must be a month's name or the start of one ("Mar", "March", "März"; not "Mara", "Marco")
+const FULL = ['january', 'february', 'march', 'märz', 'april', 'may', 'mai', 'june', 'juni', 'july', 'juli', 'august', 'september', 'sept', 'october', 'oktober', 'november', 'december', 'dezember'];
+const month = w => { const s = String(w || '').toLowerCase(); return s.length >= 3 && FULL.some(f => f.startsWith(s)) ? MONS[s.slice(0, 3)] || 0 : 0; };
 const named = v => {
-    const s = String(v || ''), ko = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/), en = s.match(/\b([a-zä]{3})[a-zä]*\.?\s+(\d{1,2})(?!\d)/i), de = s.match(/(?<!\d)(\d{1,2})\.?\s+([a-zä]{3})[a-zä]*/i);
-    const [mo, d] = ko ? [Number(ko[1]), Number(ko[2])] : en && MONS[en[1].toLowerCase()] ? [MONS[en[1].toLowerCase()], Number(en[2])] : de && MONS[de[2].toLowerCase()] ? [MONS[de[2].toLowerCase()], Number(de[1])] : [0, 0];
+    const s = String(v || ''), ko = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/), en = s.match(/\b([a-zä]{3,9})\.?\s+(\d{1,2})(?!\d)/i), de = s.match(/(?<!\d)(\d{1,2})\.?\s+([a-zä]{3,9})\b/i);
+    const [mo, d] = ko ? [Number(ko[1]), Number(ko[2])] : en && month(en[1]) ? [month(en[1]), Number(en[2])] : de && month(de[2]) ? [month(de[2]), Number(de[1])] : [0, 0];
     if (!(mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) return '';
     const hm = s.match(/(\d{1,2}):(\d{2})/), ok = hm && Number(hm[1]) < 24 && Number(hm[2]) < 60;
     return `${pad(mo)}-${pad(d)}${ok ? ` ${pad(hm[1])}:${hm[2]}` : ''}`;
 };
 export const when = v => {
-    // "10-25 21:00", or with the year in front ("2026-10-25 21:00", "2026/10/25T21:00")
-    const mt = String(v || '').match(/(?:^|\D)(?:\d{4}[-/.])?(\d{1,2})[-/.](\d{1,2})(?:[ T]+(\d{1,2}):(\d{2}))?/);
+    // "10-25 21:00", or with the year in front ("2026-10-25 21:00", "2026/10/25T21:00") or after ("25.10.2026 21:00", "10/25/2026 9:00")
+    const mt = String(v || '').match(/(?:^|\D)(?:\d{4}[-/.])?(\d{1,2})[-/.](\d{1,2})(?:[-/.]\s?\d{4})?(?:[ T]+(\d{1,2}):(\d{2}))?/);
     // the day first where the month can't come first ("26.10.", "26/10/2026"), unless a year led ("2026-10-26")
     if (mt && !/^\d{4}/.test(mt[0].replace(/^\D/, '')) && Number(mt[1]) > 12 && Number(mt[2]) <= 12) [mt[1], mt[2]] = [mt[2], mt[1]];
     if (!mt || !(Number(mt[1]) >= 1 && Number(mt[1]) <= 12) || !(Number(mt[2]) >= 1 && Number(mt[2]) <= 31)) return named(v);

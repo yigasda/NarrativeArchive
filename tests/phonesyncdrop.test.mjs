@@ -388,3 +388,24 @@ test('making a phone: the owner by name is "me", a country by name, counts like 
     assert.deepEqual([ph.searches[0].tab, ph.searches[0].mark], [undefined, true]);
     assert.equal(ph.posts[0].likes, 2500);
 });
+
+test('dates with a month name: only a real month ("Mar 3", "Sept 5", "5. Mai"), never a name that starts like one ("Mara 3"); a year after the day keeps the clock', async () => {
+    const { when } = await import('../src/phoneparse.js');
+    assert.equal(when('Mara 3'), '');
+    assert.equal(when('Flight 12'), '');
+    assert.equal(when('Mar 3 15:00'), '03-03 15:00');
+    assert.equal(when('Sept 5'), '09-05');
+    assert.equal(when('5. Mai 2027 09:30'), '05-05 09:30');
+    assert.equal(when('25.10.2026 21:00'), '10-25 21:00');
+    assert.equal(when('10/25/2026 9:05'), '10-25 09:05');
+    assert.equal(when('2026-10-25 21:00'), '10-25 21:00');
+});
+test('a memo length written in minutes ("1분 20초", "2 min", "1m30s") is read as seconds', async () => {
+    const { secOf } = data;
+    assert.equal(secOf('1:20'), 80);
+    assert.equal(secOf('1분 20초'), 80);
+    assert.equal(secOf('2 min'), 120);
+    assert.equal(secOf('1m30s'), 90);
+    assert.equal(secOf('45s'), 45);
+    assert.equal(secOf(90), 90);
+});
