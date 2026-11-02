@@ -175,7 +175,7 @@ export async function openXray() {
     const $root = $(`
       <div class="na_popup na_v2 na_xray">
         <div class="na_v2_title"><b>프롬프트 X-ray</b><small>${x ? `마지막으로 보낸 프롬프트 · ${esc(timeLabel(x.at))}` : '마지막으로 보낸 프롬프트'}</small></div>
-        <div class="na_xray_body">${x ? '<div class="na_empty">살펴보는 중…</div>' : '<div class="na_empty">아직 기록된 프롬프트가 없어요 · 응답을 한 번 받으면 보여요</div>'}</div>
+        <div class="na_xray_body">${x ? '<div class="na_empty">살펴보는 중…</div>' : '<div class="na_empty">아직 기록된 프롬프트가 없어요 · 응답을 한 번 받으면 보여요 · 새로 고치면 기록이 지워져요</div>'}</div>
       </div>`);
     const popup = c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
     const m = getMeta();
