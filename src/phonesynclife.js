@@ -53,7 +53,7 @@ const COND_RE = [['storm', /storm|thunder|lightning|[⛈🌩]|뇌우|천둥|번�
     ['wind', /gale|gust|strong wind|windy|[💨🌬]|강풍|돌풍|바람이? ?(?:세|강|많|쌩)|sturm|stürmisch|windig|venteux|ventoso|強風|大风|强风/iu], ['partly', /partly|some clouds|mostly sunny|sun and clouds|[🌤⛅🌥]|구름 ?(?:조금|약간)|대체로 맑|teils|heiter|wolkig mit sonne|éclaircies|parcialmente|晴れ時々|晴时多云|多云转晴|晴間/iu],
     ['cloudy', /cloud|overcast|grey sky|gray sky|[☁]|흐림|흐린|흐려|흐리|구름|잔뜩|구름 ?많|bewölkt|wolk|bedeckt|nuageux|couvert|nublado|曇|阴|多云/iu], ['clear', /clear|sunn?y|sunshine|fine|bright|[☀🌞🌝]|맑|화창|쾌청|햇살|햇빛|햇볕|쨍쨍|sonnig|klar|ensoleillé|soleil|despejado|soleado|晴|快晴/iu]];
 // weather that has passed ("비가 그치고 맑음", "after the rain", "雨上がり") doesn't name the sky now
-const OVER = /(?:비|눈)[가이]?\s*(?:그치|그쳤|멈추|멎)[^,.;·]*|(?:rain|snow)(?:ing)?\s*(?:has\s+)?(?:stopped|cleared|ended|is over)|after\s+the\s+(?:rain|snow|storm)|雨上がり|雨が(?:止|やん)|雨停/giu;
+const OVER = /(?:비|눈)[가이]?\s*(?:그치|그쳤|그침|그쳐|멈추|멈췄|멎)[^,.;· ]*|(?:rain|snow)(?:ing)?\s*(?:has\s+)?(?:stopped|cleared|ended|is over)|after\s+the\s+(?:rain|snow|storm)|雨上がり|雨が(?:止|やん)|雨停/giu;
 export const condOf = text => { const s = String(text || ''), t = s.replace(OVER, ' '); return COND_RE.find(([, re]) => re.test(t))?.[0] || (t !== s ? 'partly' : ''); };
 // a sky the model names outside the list ("sunny", "맑고 쌀쌀", "小雨"): read like a status line; else what the numbers say,
 // else cloudy. temp and rain (a chance of rain, %) are optional
