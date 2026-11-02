@@ -7953,7 +7953,6 @@ body.na_darkui .na_st .na_st_me { background: #2E2E34; color: #F0CF8E !important
 body.na_darkui .na_st :is(.na_st_av, .na_st_send, .na_st_edsave) { color: #1B1B1F !important; }
 /* 작업실 + menu rows breathe like a phone menu: taller rows, regular-weight names, a hairline between them (3.169.24) */
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st .na_st_mi:not(#na_x) { min-height: 48px; padding: 12px 14px !important; border-radius: 0 !important; }
-.na_st .na_st_menu .na_st_mi + .na_st_mi { border-top: 1px solid var(--st-line); }
 .na_st .na_st_menu { padding: 4px 0 !important; overflow: hidden; }
 .na_st .na_st_mi b { font-size: 14.5px; font-weight: 500; }
 .na_st .na_st_mi small { margin-top: 2px; font-size: 11.5px; }
