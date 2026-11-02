@@ -2002,13 +2002,13 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_tl:not(.na_darkui) .na_tlb_chip { background: var(--tl-soft); color: var(--tl-mute); }
 .na_tl.na_darkui .na_tlb_chip { background: var(--tl-soft); color: var(--tl-mute); }
 .na_tl:not(.na_darkui) .na_tlb_chip.fade { background: #EAE3F5; color: #5B3FA0; }
-.na_tl.na_darkui .na_tlb_chip.fade { background: #3C3350; color: #BBA6EE; }
+.na_tl.na_darkui .na_tlb_chip.fade { background: #2E2E34; color: #BBA6EE; }
 .na_tl:not(.na_darkui) .na_tlb_chip.key { background: #FFF1D6; color: #8A5A00; }
-.na_tl.na_darkui .na_tlb_chip.key { background: #4A3B1F; color: #E8B45A; }
+.na_tl.na_darkui .na_tlb_chip.key { background: #2E2E34; color: #E8B45A; }
 .na_tl:not(.na_darkui) .na_tlb_chip.pin { background: #F6E1D3; color: #8A3A12; }
-.na_tl.na_darkui .na_tlb_chip.pin { background: #3A3222; color: #F0CF8E; }
+.na_tl.na_darkui .na_tlb_chip.pin { background: #2E2E34; color: #F0CF8E; }
 .na_tl:not(.na_darkui) .na_tlb_chips .na_ref_chip { background: #FBEDE3; color: #7E3610; }
-.na_tl.na_darkui .na_tlb_chips .na_ref_chip { background: #3A3222; color: #F0CF8E; }
+.na_tl.na_darkui .na_tlb_chips .na_ref_chip { background: #2E2E34; color: #F0CF8E; }
 .na_tl:not(.na_darkui) .na_tlb_text, .na_tl:not(.na_darkui) .na_tlb_full { color: #463428; }
 .na_tl.na_darkui .na_tlb_text, .na_tl.na_darkui .na_tlb_full { color: #ECEAE6; }
 .na_tl:not(.na_darkui) .na_tlb_tools { border-top-color: var(--tl-soft); }
@@ -2059,7 +2059,7 @@ body.na_darkui #na_settings, body.na_darkui .na_popup, body.na_darkui .na_v2, bo
     --na-onaccent: #1B1B1F;
     --na-accent-fg: #E2B65C;
     --na-accent-ink: #F0CF8E;
-    --na-accent-soft: #3A3222;
+    --na-accent-soft: #2E2E34;
     --na-line: #3A3A41;
     --na-line2: #2E2E34;
     --na-card: #232328;
@@ -2070,10 +2070,10 @@ body.na_darkui #na_settings, body.na_darkui .na_popup, body.na_darkui .na_v2, bo
     --na-mute: #B9B7BD;
     --na-raw: #5E5E66;
     --na-warn: #E0A245;
-    --na-bad: #EC7468; --na-bad-soft: #4B2925;
-    --na-ok: #7CCB9A; --na-ok-soft: #2D4134;
-    --na-amber: #E8B45A; --na-amber-soft: #4A3B1F;
-    --na-purple: #BBA6EE; --na-purple-soft: #3C3350;
+    --na-bad: #EC7468; --na-bad-soft: #2E2E34;
+    --na-ok: #7CCB9A; --na-ok-soft: #2E2E34;
+    --na-amber: #E8B45A; --na-amber-soft: #2E2E34;
+    --na-purple: #BBA6EE; --na-purple-soft: #2E2E34;
     --na-ink: #ECEAE6;
     --na-fill: #4A4A52;
     --na-paper: #232328;
@@ -2214,7 +2214,7 @@ body.na_darkui .na_group_bar i { background: #B8964E; }
 .na_tag.fade { background: var(--na-purple-soft, color-mix(in srgb, #7b5bc4 16%, transparent)); color: var(--na-purple, color-mix(in srgb, #7b5bc4 80%, var(--SmartThemeBodyColor, #222))); }
 .na_tag.key { background: var(--na-amber-soft, color-mix(in srgb, #c99a1e 18%, transparent)); color: var(--na-amber, color-mix(in srgb, #9a7000 85%, var(--SmartThemeBodyColor, #222))); }
 body:not(.na_darkui) .na_tag.pin { background: #F6E1D3; color: #8A3A12; }
-body.na_darkui .na_tag.pin { background: #3A3222; color: #F0CF8E; }
+body.na_darkui .na_tag.pin { background: #2E2E34; color: #F0CF8E; }
 .na_browser:not(.na_tl) .na_waiting > .na_card_head .na_card_title { opacity: 1; }
 .na_browser:not(.na_tl) .na_card.na_waiting { border-left-style: solid !important; }
 /* off: the whole row fades, no strike-through */
@@ -2241,7 +2241,7 @@ body.na_darkui .na_browser:not(.na_tl) .na_card_text { color: #ECEAE6; }
 .na_tlb_chips .na_ref_arr { display: none; }
 .na_browser:not(.na_tl) .na_ref_chip { font-size: 0.857em; line-height: 1.5; padding: 0 9px; }
 body:not(.na_darkui) .na_browser:not(.na_tl) .na_ref_chip { border-color: #EBCDB9; background: #FBEDE3; color: #463428; }
-body.na_darkui .na_browser:not(.na_tl) .na_ref_chip { border-color: #5A5040; background: #3A3222; color: #ECEAE6; }
+body.na_darkui .na_browser:not(.na_tl) .na_ref_chip { border-color: #5A5040; background: #2E2E34; color: #ECEAE6; }
 body:not(.na_darkui) .na_browser:not(.na_tl) .na_ref_chip:hover { background: #B8541F; color: #fff; }
 body.na_darkui .na_browser:not(.na_tl) .na_ref_chip:hover { background: #E9DFCF; color: #1B1B1F; }
 /* tools under the open card */
@@ -2548,7 +2548,7 @@ body:not(.na_darkui) .na_ap3_raw:has(input:checked) { background: #E3F2E8; color
 .na_ap3_ti { width: 36px; height: 36px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex: none; }
 .na_ap3_ti.a { background: var(--na-accent-soft); color: var(--na-accent-fg, var(--na-accent)); }
 body:not(.na_darkui) .na_ap3_ti.b { background: #E7EEF6; color: #3D6FB6; }
-body.na_darkui .na_ap3_ti.b { background: #2E3A4B; color: #9DBCE6; }
+body.na_darkui .na_ap3_ti.b { background: #2E2E34; color: #9DBCE6; }
 .na_ap3_ti.c { background: var(--na-amber-soft); color: var(--na-amber); }
 .na_ap3_tt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .na_ap3_tt b { font-size: 14.5px; font-weight: 700; }
@@ -2787,7 +2787,7 @@ body.na_darkui .na_ask2 .na_ask_qq { background: var(--na-fill); color: #F3F1ED;
 .na_ask2 .na_ask2_cite { display: flex; align-items: center; gap: 4px; margin: 0; padding: 2px 10px; border-radius: 999px; font-size: 12px; line-height: 1.5; color: var(--na-accent-ink, var(--na-accent)); }
 .na_ask2 .na_ask2_cite svg { display: block; flex: none; }
 body:not(.na_darkui) .na_ask2 .na_ask2_cite { border: 1px solid #EBCDB9; background: #FBEDE3; color: #7E3610; }
-body.na_darkui .na_ask2 .na_ask2_cite { border: 1px solid #5A5040; background: #3A3222; color: #F0CF8E; }
+body.na_darkui .na_ask2 .na_ask2_cite { border: 1px solid #5A5040; background: #2E2E34; color: #F0CF8E; }
 body:not(.na_darkui) .na_ask2 .na_ask2_cite.on { border-color: #E8A27C; }
 body.na_darkui .na_ask2 .na_ask2_cite.on { border-color: #B8964E; }
 .na_ask2 .na_ask2_cite.na_cite_miss { background: transparent; border-style: dashed; }
@@ -2851,7 +2851,7 @@ body:not(.na_darkui) .na_pv2_code { background: var(--na-fill); color: #EDE2D9; 
 .na_bn2_node b { font-size: 12.5px; line-height: 1.5; }
 .na_bn2_node small { font-size: 11px; line-height: 1.3; color: var(--na-dim); }
 .na_bn2_icon { color: var(--na-mute, var(--na-dim)); }
-.na_bn2_icon.here { color: #fff; }
+.na_bn2_icon.here { color: var(--na-onaccent, #fff); }
 .na_bn2_link { gap: 2px; }
 .na_bn2_link b { font-size: 11.5px; font-weight: 700; line-height: 1.5; color: var(--na-accent-ink, var(--na-accent)); }
 body:not(.na_darkui) .na_bn2_link span { background: repeating-linear-gradient(90deg, #D9A887 0 6px, transparent 6px 10px); }
@@ -3186,7 +3186,7 @@ body.na_darkui .na_cal_gap2::before, body.na_darkui .na_cal_gap2::after { border
 .na_cal_month small { font-size: 0.857em; }
 .na_cal_item { border-top-color: var(--na-line2, var(--na-line)); }
 body:not(.na_darkui) .na_cal_item.warn { background: #FDF1EE; }
-body.na_darkui .na_cal_item.warn { background: #4A2A26; }
+body.na_darkui .na_cal_item.warn { background: #2E2E34; }
 .na_cal_day { width: 44px; }
 .na_cal_day b { font-size: 1.357em; }
 .na_cal_day small { font-size: 0.75em; }
@@ -3236,7 +3236,7 @@ body.na_darkui .na_xr_dupwarn .na_xr_warntxt span { color: #D8BBB4; }
 body:not(.na_darkui) .na_xray .na_xr_place.arc { color: #8A3A12; }
 body.na_darkui .na_xray .na_xr_place.arc { color: #F0CF8E; }
 body:not(.na_darkui) .na_xray .na_xr_place.wi { background: #ECE5F7; color: var(--na-purple); }
-body.na_darkui .na_xray .na_xr_place.wi { background: #3C3350; color: var(--na-purple); }
+body.na_darkui .na_xray .na_xr_place.wi { background: #2E2E34; color: var(--na-purple); }
 body:not(.na_darkui) .na_xray .na_xr_sep { color: #9A8B80; }
 body.na_darkui .na_xray .na_xr_sep { color: #A09FA6; }
 body:not(.na_darkui) .na_xray .na_xr_dup q { color: #4A3D35; }
@@ -3429,13 +3429,13 @@ body.na_darkui #na_settings :is(.inline-drawer-header, #na_meter, .na_nav, .na_t
     --na-line: color-mix(in srgb, #ECEAE6 15%, transparent);
     --na-soft: color-mix(in srgb, #ECEAE6 7%, transparent);
     --na-softer: color-mix(in srgb, #ECEAE6 4%, transparent);
-    --na-accent-soft: color-mix(in srgb, var(--na-accent) 16%, transparent);
+    --na-accent-soft: #2E2E34;
     --na-raw: color-mix(in srgb, #ECEAE6 38%, transparent);
     --na-warn: #E0A245;
     --na-card: color-mix(in srgb, #ECEAE6 5%, transparent);
     --na-card2: color-mix(in srgb, #ECEAE6 9%, transparent);
     --na-dim: color-mix(in srgb, #ECEAE6 64%, transparent);
-    --na-bad: #C4473B; --na-bad-soft: color-mix(in srgb, #C4473B 13%, transparent);
+    --na-bad: #C4473B; --na-bad-soft: #2E2E34;
     --na-accent-ink: initial; --na-line2: initial; --na-mute: initial; --na-sub: initial; --na-ink: initial; --na-paper: initial;
     --na-ok: initial; --na-ok-soft: initial; --na-amber: initial; --na-amber-soft: initial; --na-purple: initial; --na-purple-soft: initial;
 }
@@ -3583,9 +3583,9 @@ body:not(.na_darkui) #na_settings {
 }
 body.na_darkui #na_settings {
     --hm-card: #232328; --hm-line: #3A3A41; --hm-tile: #2E2E34; --hm-track: #2E2E34; --hm-ink: #ECEAE6; --hm-dim: #9A989F; --hm-mute: #B9B7BD;
-    --hm-acc: #E2B65C; --hm-acc-ink: #F0CF8E; --hm-acc-soft: #3A3222; --hm-ok: #7CCB9A; --hm-ok-soft: #2D4134;
-    --hm-warn: #E8B45A; --hm-warn-soft: #4A3B1F; --hm-bad: #EC7468; --hm-bad-soft: #4B2925;
-    --hm-pur: #BBA6EE; --hm-pur-soft: #3C3350; --hm-amb: #E8B45A; --hm-amb-soft: #4A3B1F; --hm-shadow: rgba(0, 0, 0, 0.3);
+    --hm-acc: #E2B65C; --hm-acc-ink: #F0CF8E; --hm-acc-soft: #2E2E34; --hm-ok: #7CCB9A; --hm-ok-soft: #2E2E34;
+    --hm-warn: #E8B45A; --hm-warn-soft: #2E2E34; --hm-bad: #EC7468; --hm-bad-soft: #2E2E34;
+    --hm-pur: #BBA6EE; --hm-pur-soft: #2E2E34; --hm-amb: #E8B45A; --hm-amb-soft: #2E2E34; --hm-shadow: rgba(0, 0, 0, 0.3);
 }
 
 /* meter */
@@ -3887,7 +3887,7 @@ body.na_darkui .na_launch_tabs { background: #232328; }
 /* 다이제스트 */
 .na_tag.dig { cursor: pointer; }
 body:not(.na_darkui) .na_tag.dig { background: #E4EEDF; color: #3D6B35; }
-body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
+body.na_darkui .na_tag.dig { background: #2E2E34; color: #B9DDB0; }
 .na_dg { display: flex; flex-direction: column; gap: 10px; }
 .na_dg_have:empty { display: none; }
 .na_dg_have { display: flex; flex-direction: column; gap: 6px; }
@@ -3996,7 +3996,7 @@ body.na_darkui .na_tag.dig { background: #33452F; color: #B9DDB0; }
 }
 body.na_darkui .na_st {
     --st-bg: #17171A; --st-bub: #2E2E34; --st-w: #232328; --st-ink: #ECEAE6; --st-dim: #9A989F; --st-line: #3A3A41; --st-seg: #2E2E34;
-    --st-acc: #E9DFCF; --st-acc2: #F0CF8E; --st-accsoft: #3A3222; --st-ok: #6CC495; --st-oksoft: #1F3328; --st-warn: #E3B058; --st-warnline: #5A5040; --st-q: #F0CF8E;
+    --st-acc: #E9DFCF; --st-acc2: #F0CF8E; --st-accsoft: #2E2E34; --st-ok: #6CC495; --st-oksoft: #2E2E34; --st-warn: #E3B058; --st-warnline: #5A5040; --st-q: #F0CF8E;
 }
 body:not(.na_darkui) dialog.popup:has(.na_st) { background: #FCF8F5 !important; }
 body.na_darkui dialog.popup:has(.na_st) { background: #17171A !important; }
@@ -4417,12 +4417,12 @@ dialog.popup:has(.na_confirm) .na_sc_tiles { display: grid; grid-template-column
 dialog.popup:has(.na_confirm) .na_sc_tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 8px 16px; border-radius: 20px; background: #FBF6F2; border: 1.5px solid transparent; text-align: center; cursor: pointer; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 body.na_darkui dialog.popup:has(.na_confirm) .na_sc_tile { background: var(--na-card); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 6px 16px rgba(0, 0, 0, 0.25); }
 dialog.popup:has(.na_confirm) .na_sc_tile:has(input:checked) { border-color: var(--na-accent); background: #FFF8F3; }
-body.na_darkui dialog.popup:has(.na_confirm) .na_sc_tile:has(input:checked) { background: #3A3222; }
+body.na_darkui dialog.popup:has(.na_confirm) .na_sc_tile:has(input:checked) { background: #3A3A41; }
 dialog.popup:has(.na_confirm) .na_sc_tile:has(input:focus-visible) { outline: 2px solid var(--na-accent); outline-offset: 2px; }
 dialog.popup:has(.na_confirm) .na_sc_tile input { position: absolute; opacity: 0; pointer-events: none; }
 dialog.popup:has(.na_confirm) .na_sc_ic { width: 52px; height: 52px; margin-bottom: 6px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
 dialog.popup:has(.na_confirm) .na_sc_ic.keep { background: #E7EEF6; color: #3D6FB6; }
-body.na_darkui dialog.popup:has(.na_confirm) .na_sc_ic.keep { background: #2E3A4B; color: #9DBCE6; }
+body.na_darkui dialog.popup:has(.na_confirm) .na_sc_ic.keep { background: #2E2E34; color: #9DBCE6; }
 dialog.popup:has(.na_confirm) .na_sc_ic.new { background: var(--na-accent-soft); color: var(--na-accent-fg, var(--na-accent)); }
 dialog.popup:has(.na_confirm) .na_sc_tile b { font-size: 14.5px; font-weight: 700; color: var(--na-ink); white-space: nowrap; }
 dialog.popup:has(.na_confirm) .na_sc_tile small { font-size: 12.5px; color: var(--na-sub); opacity: 1; }
@@ -7513,7 +7513,7 @@ body.na_darkui .na_kn2 .na_kn_inject { box-shadow: inset 0 1px 0 rgba(255, 255, 
 .na_kn3_legbar span { display: inline-flex; align-items: center; gap: 5px; }
 /* 누가 아는가: 알아요 in the extension's orange (example and list), so it doesn't fight the orange around it */
 body:not(.na_darkui) .na_kn3_tag.k { background: #F6E1D3 !important; color: #A84A17 !important; }
-body.na_darkui .na_kn3_tag.k { background: #3A3222 !important; color: #F0CF8E !important; }
+body.na_darkui .na_kn3_tag.k { background: #2E2E34 !important; color: #F0CF8E !important; }
 .na_kn3_tag.k i, .na_kn3_leg span.k i { background: #D9733A !important; }
 /* 누가 아는가: legend above the list; 짐작 in a softer yellow */
 .na_kn3_legbar { justify-content: flex-start; margin: 0 4px 2px; }
@@ -7631,3 +7631,9 @@ body.na_darkui .na_kn3_tag.k i, body.na_darkui .na_kn3_leg span.k i { background
 body.na_darkui .na_sw.on span { background: #1B1B1F; }
 /* the panel in charcoal has the popups' depth: cards lifted off the near-black base with a faint top light */
 body.na_darkui #na_settings :is(.na_v2_card, .na_card, .na_hrow, .na_cfg_box) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 6px 16px rgba(0, 0, 0, 0.3); }
+/* no dark "cellophane": tinted see-through fills become the neutral field; the colour stays in the text, icon or a thin edge */
+body.na_darkui :is(.na_chip_warn, .na_check_warn, .na_br_filters .na_hc_status.bad) { background: #2E2E34 !important; }
+body.na_darkui #na_settings #na_next .na_next_card.warn, body.na_darkui #na_settings #na_next .na_next_card.bad { background: #232328 !important; }
+body.na_darkui .na_next_card.warn { border-color: #3A3A41 !important; }
+body.na_darkui :is(.na_whole, .na_fp3_row.picked, .na_cp3_row.on, .na_ck.part) { background: #2E2E34 !important; }
+body.na_darkui .na_sp_s:hover, body.na_darkui .na_cc_row:focus-within { background: #2B2B31 !important; }
