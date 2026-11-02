@@ -7487,7 +7487,7 @@ body.na_darkui .na_kn3_tag.k { background: #2F2722; color: #8FD3A6; } body.na_da
 .na_kn3_ex > .na_kn3_leg { display: flex; gap: 14px; padding: 9px 14px; opacity: 1; font-size: 11.5px; color: var(--na-mute); }
 .na_kn3_leg span { display: inline-flex; align-items: center; gap: 5px; }
 .na_kn2 .na_kn_inject { border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
-.na_kn2.na_kn3_new .na_kn_inject:has(input:disabled) { opacity: 0.75; }
+.na_kn2.na_kn3_new .na_kn_inject { display: none !important; }
 body.na_darkui :is(.na_kn3_hello, .na_kn3_ex, .na_kn2.na_kn3_new .na_kn_inject) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
 
 /* 누가 아는가 example tags: circles for everyone, dashed + ? for suspects, struck for doesn't know */

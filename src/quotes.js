@@ -354,10 +354,10 @@ export async function openQuotes() {
             if (who !== vOpen) { (card ? after : before).push(`<button type="button" class="na_v2_card na_vc_row" data-who="${esc(who)}">${faceHtml(who, 32)}<span class="na_vc_who1">${esc(who)} <small>· 규칙 ${rules.length}개</small></span>${svgB(SVG_B.right, 16)}</button>`); return; }
             card = `
             <div class="na_v2_card na_vc_card" data-who="${esc(who)}">
-              <div class="na_vc_head">${faceHtml(who, 40)}<span class="na_vc_who"><b>${esc(who)}</b><small>${v.chat !== undefined ? `${v.card ? '캐릭터 카드, ' : ''}${v.parts ? `이야기 ${v.parts}부분의 ` : '채팅 '}${v.chat}곳${v.n ? `, 대사 은행 ${v.n}줄` : ''}로 만듦` : `대사 ${v.n || '?'}개로 만듦 · 다시 만들면 사람됨과 옮긴 대사도 넣어요`}</small></span><button type="button" class="na_v2_pillbtn na_vc_make" ${n >= 3 ? '' : 'disabled'}>${svgB(SVG_B.redo, 13)}다시</button></div>
+              <div class="na_vc_head">${faceHtml(who, 40)}<span class="na_vc_who"><b>${esc(who)}</b><small>${v.chat !== undefined ? `${v.card ? '캐릭터 카드, ' : ''}${v.parts ? `이야기 ${v.parts}부분의 ` : '채팅 '}${v.chat}곳${v.n ? `, 대사 은행 ${v.n}줄` : ''}로 만듦` : `대사 ${v.n || '?'}개로 만듦 · 다시 만들면 성격과 옮긴 대사도 넣어요`}</small></span><button type="button" class="na_v2_pillbtn na_vc_make" ${n >= 3 ? '' : 'disabled'}>${svgB(SVG_B.redo, 13)}다시</button></div>
               ${vEdit === who
-                ? `<small class="na_v2_note">사람됨 · 한 줄에 하나</small><textarea class="text_pole na_vc_core" rows="${Math.min(8, String(v.core || '').split('\n').length + 1)}" spellcheck="false">${esc(v.core || '')}</textarea><small class="na_v2_note">말버릇 · 한 줄에 규칙 하나 · 앞의 [태그]는 화면에만 보이고 주입할 땐 빠져요</small><textarea class="text_pole na_vc_text" rows="${Math.min(10, rules.length + 2)}" spellcheck="false">${esc(v.text)}</textarea>`
-                : `${String(v.core || '').trim() ? `<div class="na_vc_core_view"><span class="na_vc_sub">사람됨</span>${String(v.core).split('\n').map(l => l.replace(/^[-*•]\s*/, '').trim()).filter(Boolean).map(l => `<div class="na_vc_coreline">${esc(l)}</div>`).join('')}</div><span class="na_vc_sub">말버릇</span>` : ''}<div class="na_vc_rules">${rules.map(l => { const r = parseRule(l); return `<div class="na_vc_rule">${r.tag ? `<span class="na_vc_tag">${esc(r.tag)}</span>` : ''}<span><span>${esc(r.rule)}</span>${r.ex ? `<i>${esc(r.ex)}</i>` : ''}</span></div>`; }).join('')}</div>${v.samples?.length ? `<span class="na_vc_sub">그대로 옮긴 대사</span><div class="na_vc_samples">${v.samples.map(q => `<i>“${esc(q)}”</i>`).join('')}</div>` : ''}`}
+                ? `<small class="na_v2_note">성격 · 한 줄에 하나</small><textarea class="text_pole na_vc_core" rows="${Math.min(8, String(v.core || '').split('\n').length + 1)}" spellcheck="false">${esc(v.core || '')}</textarea><small class="na_v2_note">말버릇 · 한 줄에 규칙 하나 · 앞의 [태그]는 화면에만 보이고 주입할 땐 빠져요</small><textarea class="text_pole na_vc_text" rows="${Math.min(10, rules.length + 2)}" spellcheck="false">${esc(v.text)}</textarea>`
+                : `${String(v.core || '').trim() ? `<div class="na_vc_core_view"><span class="na_vc_sub">성격</span>${String(v.core).split('\n').map(l => l.replace(/^[-*•]\s*/, '').trim()).filter(Boolean).map(l => `<div class="na_vc_coreline">${esc(l)}</div>`).join('')}</div><span class="na_vc_sub">말버릇</span>` : ''}<div class="na_vc_rules">${rules.map(l => { const r = parseRule(l); return `<div class="na_vc_rule">${r.tag ? `<span class="na_vc_tag">${esc(r.tag)}</span>` : ''}<span><span>${esc(r.rule)}</span>${r.ex ? `<i>${esc(r.ex)}</i>` : ''}</span></div>`; }).join('')}</div>${v.samples?.length ? `<span class="na_vc_sub">그대로 옮긴 대사</span><div class="na_vc_samples">${v.samples.map(q => `<i>“${esc(q)}”</i>`).join('')}</div>` : ''}`}
               <div class="na_vc_foot"><button type="button" class="na_linkbtn na_vc_edit">${vEdit === who ? '그만 고치기' : '직접 고치기'}</button><button type="button" class="na_linkbtn na_danger na_vc_del">지우기</button></div>
             </div>`; });
         after.push(...missing.map(who => `<div class="na_v2_card na_vc_row dashed" data-who="${esc(who)}" title="대사 ${counts.get(who)}개">${faceHtml(who, 32)}<span class="na_vc_who1">${esc(who)} <small>· 아직 없음</small></span><button type="button" class="na_vc_make na_vc_mk">만들기</button></div>`));
@@ -378,7 +378,7 @@ export async function openQuotes() {
               <div class="na_kn3_sect"><span>이렇게 정리돼요</span><small>예시</small></div>
               <div class="na_v2_card na_vc_card na_vc3_ex">
                 <div class="na_vc_head">${exFace('Claude', 40)}<span class="na_vc_who"><b>Claude</b><small>예시 · 대사 12개로 만듦</small></span></div>
-                <span class="na_vc_sub">사람됨</span><div class="na_vc3_core">조심스럽지만 솔직해요</div>
+                <span class="na_vc_sub">성격</span><div class="na_vc3_core">조심스럽지만 솔직해요</div>
                 <span class="na_vc_sub">말버릇</span>
                 <div class="na_vc_rules"><div class="na_vc_rule"><span class="na_vc_tag">말끝</span><span><span>“~요”로 부드럽게 끝내요</span><i>“확인해 볼게요.”</i></span></div>
                   <div class="na_vc_rule"><span class="na_vc_tag">습관</span><span><span>틀릴 수 있다고 먼저 말해요</span><i>“틀렸으면 말해 줘요.”</i></span></div></div>
@@ -390,7 +390,7 @@ export async function openQuotes() {
           ${rowsHtml(before)}${card}${rowsHtml(after)}
           ${!whos.length && !missing.length ? '<div class="na_empty">대사가 3개 이상인 인물이 없어요. "대사" 탭에서 대사를 모으거나, 채팅이 더 쌓이면 만들 수 있어요.</div>' : ''}
           ${missing.length > 1 ? `<button type="button" class="na_v2_btn primary wide na_vc_all"><i class="fa-solid fa-fingerprint"></i> 없는 지문 ${missing.length}개 한꺼번에 만들기</button>` : ''}
-          <small class="na_v2_foot">캐릭터 카드, 대사 은행, 그리고 아카이브 섹션마다 또는 장면마다 그 인물의 말 한두 곳을 숨긴 것까지 읽고 사람됨, 말버릇, 그대로 옮긴 대사를 정리해 조용히 주입해요 · 옮긴 대사는 채팅에 글자 그대로 있는 것만 남겨요 · AI 기능 모델 ${esc(aiLabel())}</small>`);
+          <small class="na_v2_foot">캐릭터 카드, 대사 은행, 그리고 아카이브 섹션마다 또는 장면마다 그 인물의 말 한두 곳을 숨긴 것까지 읽고 성격, 말버릇, 그대로 옮긴 대사를 정리해 조용히 주입해요 · 옮긴 대사는 채팅에 글자 그대로 있는 것만 남겨요 · AI 기능 모델 ${esc(aiLabel())}</small>`);
         const blk = extraBlocks({ ...m, knowInject: false, voiceInject: true });
         if (blk) countTokens(blk).then(t => $b.find('.na_vc_tok').text(` · 약 ${fmt(t)} 토큰`));
     };
