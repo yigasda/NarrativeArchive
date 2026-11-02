@@ -914,10 +914,14 @@ function hereHours(h, time) {
     const ahead = m => (m - n + 1440) % 1440;
     const later = saved.filter(x => { const m = toMin(x.time); return m !== null && ahead(m) >= 30 && ahead(m) <= 12 * 60; }).sort((a, b) => ahead(toMin(a.time)) - ahead(toMin(b.time)));
     const out = [{ time: hm(n), cond: h.cond, temp: h.temp, rain: later[0]?.rain ?? 0 }, ...later].slice(0, 6);
-    const lo = h.lo ?? (h.temp ?? 10) - 4, hi = h.hi ?? (h.temp ?? 10) + 4;
+    // the carried-on hours drift toward the day's curve with a little seeded wobble, the way real hourly readings move
+    // (a flat −5 −5 −5 reads as made up); they may dip one degree past the day's low near dawn
+    const lo = h.lo ?? (h.temp ?? 10) - 4, hi = h.hi ?? (h.temp ?? 10) + 4, r = seeded(`${h.date}:${h.place}:hrs`);
+    let v = out[out.length - 1].temp ?? (lo + hi) / 2;
     while (out.length < 6) {
-        const last = out[out.length - 1], m = (toMin(last.time) + 60) % 1440, f = Math.cos(((m / 60 - 15) / 24) * 2 * Math.PI);
-        out.push({ time: hm(m), cond: last.cond, temp: Math.round(lo + (hi - lo) * (f + 1) / 2), rain: last.rain });
+        const last = out[out.length - 1], m = (toMin(last.time) + 60) % 1440, f = Math.cos(((m / 60 - 15) / 24) * 2 * Math.PI), target = (lo - 1.5) + (hi - lo + 1.5) * (f + 1) / 2;
+        v += (target - v) * 0.4 + (r() - 0.5) * 2;
+        out.push({ time: hm(m), cond: last.cond, temp: Math.max(lo - 2, Math.min(hi + 1, Math.round(v))), rain: last.rain });
     }
     return out;
 }
