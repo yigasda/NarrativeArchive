@@ -62,6 +62,10 @@ export function mountSectionPicker($host, { m, title, doneKeys, doneLabel = '읽
             this.checked = n === keys.length; this.indeterminate = n > 0 && n < keys.length;
             $(this).next('.na_sp_ck').toggleClass('part', this.indeterminate);
         });
+        // the quick pick that matches what is ticked now is lit; a hand-picked set lights none
+        const all = allSecs().map(sectionKey), dn = doneKeys(), same = ks => ks.length === chosen.size && ks.every(k => chosen.has(k));
+        const lit = !chosen.size ? 'none' : same(all) ? 'all' : same(all.filter(k => !dn.has(k))) ? 'new' : '';
+        $p.find('.na_sp_quick .na_pchip').each(function () { $(this).toggleClass('on', $(this).data('sel') === lit); });
         $p.find('.na_sp_ck').each(function () { const on = $(this).prev('input').prop('checked'); $(this).toggleClass('on', on).html(on ? SP_TICK : ''); });
     };
     const draw = () => {
