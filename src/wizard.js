@@ -458,7 +458,7 @@ export async function openWizard() {
           <button type="button" class="na_v2_btn primary na_wz2_next"></button>
         </div>
         <button type="button" class="na_linkbtn na_wz2_skip">채점 건너뛰고 바로 추가</button>
-        <button type="button" class="na_linkbtn na_wz3_back" hidden>건너뛰고 추가 →</button>
+        <button type="button" class="na_linkbtn na_wz3_back" hidden>건너뛰고 추가${svgA(ICO_A.right, 15, 2.2)}</button>
       </div>`);
     // (docs/mockups/ext-wizard A) one orange button a step: 복사 copies and moves on, 채점 grades (then moves on); .txt and skipping are links
     const graded = () => !$root.find('.na_wz_gradeout').prop('hidden');
