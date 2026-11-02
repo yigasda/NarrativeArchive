@@ -866,14 +866,22 @@ function sunsetTile(sunset, sunrise, now, tileCol) {
     return tile('일몰', sunset, `<svg class="pic sunset" viewBox="0 0 160 62" preserveAspectRatio="none"><circle cx="80" cy="46" r="34" fill="#f6c94a" opacity=".14"/><circle cx="80" cy="46" r="22" fill="#f6c94a" opacity=".26"/><circle cx="80" cy="46" r="13" fill="#f6c94a"/><rect x="0" y="46" width="160" height="16" fill="${a}"/><path d="M0 46 Q40 40 80 46 T160 44 V62 H0Z" fill="${b}"/><line x1="0" y1="46" x2="160" y2="46" stroke="rgba(255,255,255,.5)" stroke-width="1"/></svg>`,
         past ? (sunrise ? `일출 ${sunrise}` : '해가 졌어요.') : lm !== null && ss !== null ? `${dur(ss - lm)} 뒤` : '');
 }
-// a visibility the model didn't give, from the sky and the air: fog a few km, rain and snow under ten, otherwise far, and
-// shorter in damp air; seeded by place and day so it holds between redraws
-function visGuess(h, seed) {
-    const r = seeded(`${seed}:vis`)(), c = h.cond, hum = h.tiles?.humidity ?? h.humidity ?? null;
-    const [a, b] = c === 'fog' ? [1.5, 4] : WET[c] || c === 'snow' || c === 'storm' ? [5, 10] : [15, 25];
-    let v = a + (b - a) * r;
-    if (hum !== null && hum >= 85 && c !== 'fog') v *= 0.7;
-    return Math.max(0.5, Math.round(v * 2) / 2);
+// every tile is always drawn: what the model didn't give is read off the sky, the temperature and the month, seeded by
+// place and day so it holds between redraws. Fog: a few km and damp air; rain: wet, windier, short sight; a clear day: far
+const SUN = [['07:45', '17:35'], ['07:25', '18:05'], ['06:50', '18:35'], ['06:05', '19:00'], ['05:30', '19:25'], ['05:15', '19:50'], ['05:25', '19:50'], ['05:50', '19:25'], ['06:15', '18:45'], ['06:40', '18:05'], ['07:10', '17:30'], ['07:35', '17:20']];
+function fillTiles(h, seed, date) {
+    const T = { ...h.tiles }, c = h.cond, r = seeded(`${seed}:tiles`), pick = (a, b) => a + (b - a) * r(), temp = h.temp ?? ((h.lo ?? 10) + (h.hi ?? 10)) / 2;
+    const wet = WET[c] || c === 'storm' || c === 'snow';
+    if (!T.sunset || !T.sunrise) { const m = Number(String(date || '').slice(0, 2)), s = SUN[m - 1] || SUN[5]; T.sunrise ||= s[0]; T.sunset ||= s[1]; }
+    if (T.rain24 === null && T.rainNext === null) T.rainNext = Math.round(pick(...({ storm: [8, 15], rain: [3, 8], sleet: [2, 5], snow: [1, 4], drizzle: [0.5, 2] }[c] || [0, 0])) * 2) / 2;
+    if (T.wind === null) T.wind = Math.round(pick(...(c === 'wind' ? [30, 50] : c === 'storm' ? [25, 45] : WET[c] ? [12, 25] : c === 'clear' ? [5, 15] : [8, 20])));
+    if (T.gust === null) T.gust = Math.round(T.wind * pick(1.3, 1.7));
+    if (!T.dir) T.dir = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.floor(r() * 8)];
+    if (T.humidity === null) T.humidity = Math.round(pick(...(c === 'fog' ? [92, 98] : WET[c] ? [85, 95] : c === 'snow' || c === 'sleet' ? [80, 90] : c === 'clear' ? [40, 60] : [60, 75])));
+    if (T.dew === null) T.dew = Math.round(temp - (100 - T.humidity) / 5);
+    if (T.feels === null) T.feels = Math.round(temp - (T.wind > 15 && temp < 15 ? T.wind / 10 : 0) + (T.humidity > 70 && temp > 24 ? 2 : 0));
+    if (T.visibility === null) { let v = pick(...(c === 'fog' ? [1.5, 4] : wet ? [5, 10] : [15, 25])); if (T.humidity >= 85 && c !== 'fog') v *= 0.7; T.visibility = Math.max(0.5, Math.round(v * 2) / 2); }
+    return T;
 }
 function weatherTiles(h, tileCol, lead = '') {
     const T = h.tiles, t = tileLines(h), out = [lead];
@@ -933,7 +941,7 @@ export function weatherScreen(p, now) {
     return `<div class="lf_wx" style="${wxVars(q)}">${scene(h.cond, phase)}
       ${axBar(p, now, '#fff')}
       <div class="ax_top lf_wbar">${axCb('home2')}<button type="button" class="lf_pill wx" data-go="wlist">도시 ${lf.weather.cities.length}</button></div>
-      <div class="ax_scroll">${weatherBody(p, { ...h, time, hours: hereHours(h, time), tiles: { ...h.tiles, visibility: h.tiles.visibility ?? visGuess(h, `${h.date}:${h.place}`) } }, h.place || '현재 위치', phase === 'night', '현재 위치', '<div class="lf_wgap"></div>', shade(q.sky, 0.8))}<i class="lf_pad"></i></div>
+      <div class="ax_scroll">${weatherBody(p, { ...h, time, hours: hereHours(h, time), tiles: fillTiles(h, `${h.date}:${h.place}`, h.date || now5(p)) }, h.place || '현재 위치', phase === 'night', '현재 위치', '<div class="lf_wgap"></div>', shade(q.sky, 0.8))}<i class="lf_pad"></i></div>
       ${axInd('#fff')}</div>`;
 }
 // a saved city: only its temperature, highs and lows and sky are the model's; its hours are drawn between them
@@ -967,11 +975,11 @@ export function cityScreen(p, now, id) {
     const lf = L(p), c = lf?.weather.cities.find(x => x.id === id);
     if (!c) return weatherScreen(p, now);
     const t = cityTime(p, lf, c), phase = phaseOf(t.time, c.sunrise, c.sunset), q = pal(c.cond, phase), tileCol = shade(q.sky, q.phase === 'day' && q.sky === '#4f8fd8' ? 0.62 : 0.8);
-    const h = { temp: c.temp, hi: c.hi, lo: c.lo, cond: c.cond, time: t.time, sr: c.sunrise, ss: c.sunset, line: '', ko: '', hours: cityHours(c, t), days: [],
-        tiles: { sunset: '', sunrise: '', rain24: null, rainNext: c.rainNext ?? null, feels: c.feels ?? null, wind: c.wind ?? null, gust: c.gust ?? null, humidity: c.humidity ?? null, dew: c.dew ?? null, visibility: c.visibility ?? visGuess(c, `${c.name}:${now5(p).slice(0, 5)}`), dir: c.dir || '' } };
+    const h = { temp: c.temp, hi: c.hi, lo: c.lo, cond: c.cond, time: t.time, sr: c.sunrise, ss: c.sunset, line: '', ko: '', hours: cityHours(c, t), days: [] };
+    h.tiles = fillTiles({ ...h, tiles: { sunset: c.sunset || '', sunrise: c.sunrise || '', rain24: null, rainNext: c.rainNext ?? null, feels: c.feels ?? null, wind: c.wind ?? null, gust: c.gust ?? null, humidity: c.humidity ?? null, dew: c.dew ?? null, visibility: c.visibility ?? null, dir: c.dir || '' } }, `${c.name}:${now5(p).slice(0, 5)}`, now5(p));
     const lm = toMin(t.time), warm = (c.hi ?? 0) >= 15 ? '#f3c66b' : '#9fd6ec';
     // the city's own tiles first: its sunset and today's temperatures; no clock, the status bar and the list already tell the time
-    const lead = `${c.sunset ? sunsetTile(c.sunset, c.sunrise, t.time, tileCol) : ''}${tile('오늘 기온', `${c.temp ?? '—'}°`, dayCurve(c, lm, warm), `최저 ${c.lo ?? '—'}° · 최고 ${c.hi ?? '—'}°`)}`;
+    const lead = `${sunsetTile(h.tiles.sunset, h.tiles.sunrise, t.time, tileCol)}${tile('오늘 기온', `${c.temp ?? '—'}°`, dayCurve(c, lm, warm), `최저 ${c.lo ?? '—'}° · 최고 ${c.hi ?? '—'}°`)}`;
     return `<div class="lf_wx" style="${wxVars(q)}">${scene(c.cond, phase)}
       ${axBar(p, now, '#fff')}
       <div class="ax_top lf_wbar">${axCb('wlist')}<span></span></div>
