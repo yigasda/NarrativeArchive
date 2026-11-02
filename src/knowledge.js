@@ -202,7 +202,7 @@ export async function openKnowledge() {
     // Claude · Gemini · GPT, so nobody mistakes them for the story's own) as small dot-and-name tags
     const emptyHtml = () => {
         const [a, b, c2] = ['Claude', 'Gemini', 'GPT'];
-        const tag = (n, k) => `<span class="na_kn3_tag ${k}"><i></i>${esc(n)}</span>`;
+        const tag = (n, k) => `<span class="na_kn3_tag ${k}"><i>${esc(n[0])}</i>${esc(n)}</span>`;
         return `<div class="na_v2_card na_kn3_hello"><span class="na_kn3_big"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/></svg></span>
             <b>아직 정리된 비밀이 없어요</b><small>아카이브를 읽고 비밀마다 아는 사람 · 모르는 사람을 정리해요</small>
             <button type="button" class="na_kn3_make">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/>', 15)}AI로 만들기</button>

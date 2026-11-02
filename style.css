@@ -7459,7 +7459,9 @@ dialog.popup:has(.na_cp3) .popup-button-ok.disabled { opacity: 0.5 !important; p
 .na_kn3_ex p { margin: 0 0 7px; font-size: 13px; color: var(--na-ink); }
 .na_kn3_ex > div > span { display: flex; flex-wrap: wrap; gap: 6px; }
 .na_kn3_tag { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
-.na_kn3_tag i, .na_kn3_leg i { width: 7px; height: 7px; border-radius: 99px; }
+.na_kn3_leg i { width: 7px; height: 7px; border-radius: 99px; }
+.na_kn3_tag { padding: 0 10px 0 3px !important; }
+.na_kn3_tag i { width: 18px; height: 18px; border-radius: 99px; display: grid; place-items: center; font-size: 10px; font-weight: 700; font-style: normal; color: #fff; }
 .na_kn3_tag.k { background: #E3F2E8; color: #1F6A40; } .na_kn3_tag.u { background: #FBE7E2; color: #7A2A1E; } .na_kn3_tag.s { background: #FFF1D6; color: #7A5200; }
 body.na_darkui .na_kn3_tag.k { background: #2F2722; color: #8FD3A6; } body.na_darkui .na_kn3_tag.u { background: #2F2722; color: #F2948A; } body.na_darkui .na_kn3_tag.s { background: #2F2722; color: #F0CF8E; }
 :is(.na_kn3_tag, .na_kn3_leg span).k i { background: #5FA77C; } :is(.na_kn3_tag, .na_kn3_leg span).u i { background: #C9655A; } :is(.na_kn3_tag, .na_kn3_leg span).s i { background: #D4A23C; }
