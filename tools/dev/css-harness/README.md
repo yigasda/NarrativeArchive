@@ -16,6 +16,9 @@ node tools/dev/css-harness/deadrules.cjs                   # 어디서도 값을
 
 - `--only layers,retitle-result` 로 장면을 고를 수 있어요. `--st default,hostile`, `--w 412` 도 돼요.
 - `--skip-existing` 은 이미 찍힌 캡처를 건너뛰어요. 끊긴 돌림을 이어 찍을 때 써요.
+- `--owner 섹션 버전` 은 그 창(블록 주인)의 장면만 찍어요. 이름은 `blocks.cjs`가 쓰는 것과 같아요(`scenes.cjs`의 `OWNERS`).
+- `--fast` 는 PNG 없이, 호버 · 포커스 강제 없이 계산된 값(JSON)만 떠요. 한 장 1~2초라 ST 테마 4개를 다 돌려도 창 하나면 1~2분이에요. 4-3에서 써요. `--nopng` · `--nostates`로 따로 켤 수도 있어요.
+- 다 끝나면 `_done.json`이 생겨요. 없으면 중간에 죽은 거예요(2시간 제한 등). 연속 3장 실패하면 ST에 핑을 쳐 보고 죽어 있으면 `STOP`으로 멈춰요(exit 4).
 - 10장마다 진행률과 남은 시간을 찍어요. 한 장이 평소의 5배 넘게 걸리면 `STOP`을 찍고 멈춰요(exit 3). 그러면 원인을 고치고 `--skip-existing`으로 이어요.
 - 비교는 두 라벨에 **둘 다 있는 캡처만** 해요. `--quick`으로 찍은 96장을 전체 기준의 같은 칸과 비교할 수 있어요.
 - 결과는 `out/<label>/` 에 쌓여요. git에는 안 올라가요(.gitignore).

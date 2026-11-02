@@ -68,4 +68,13 @@ const SCENES = [
     { name: 'phone-bank', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneMoney(p); await h.phoneTo(p, 'bank'); } },
     { name: 'phone-wallet', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneMoney(p); await h.phoneTo(p, 'wallet'); } },
 ];
-module.exports = { SCENES, ARCH, answer, B, DLG };
+// block owner (as tools/dev/css-harness/blocks.cjs names them) → the scenes that show it; `capture.cjs --owner 섹션 버전` expands to these
+const OWNERS = {
+    '섹션 버전': ['layers'], '제목 다시 짓기 · 합치기': ['retitle', 'merge', 'retitle-result', 'merge-result'], '작업실': ['studio-setup', 'studio-2', 'studio-3', 'studio-4', 'studio-menu', 'studio-plus'],
+    '압축 마법사 · AU': ['wizard', 'wizard-2', 'wizard-3', 'wizard-grade', 'au'], '원문 뽑기': ['extract'], '누가 아는가': ['knowledge', 'knowledge-empty'], '대사 은행': ['quotes', 'quotes-empty'],
+    '말투 지문 · 인물': ['people', 'people-empty'], '이탈 감지 · 분기': ['drift', 'branches', 'drift-empty', 'branches-empty'], 'X-ray': ['xray', 'xray-empty'], '이야기 달력': ['calendar'], '키워드': ['kwtest'],
+    '아카이브에 질문 · 고쳐 달라고': ['ask', 'ask-answer'], '요약 받기': ['digest'], '세계관': ['worlds'], '건강': ['health'], '미리보기': ['preview'], '섹션 고르기(공통)': ['quotes', 'knowledge', 'retitle'],
+    '확인 팝업': ['confirm', 'confirm-danger'], '확장 패널': ['panel', 'panel-2'], '휴대폰': ['phone-home', 'phone-home2', 'phone-bank', 'phone-wallet'],
+    '공통 부품': ['quotes', 'layers', 'retitle-result', 'wizard-2', 'extract', 'glossary', 'worknote', 'stylesamples', 'unhide', 'confirm', 'panel'],
+};
+module.exports = { SCENES, ARCH, answer, B, DLG, OWNERS };
