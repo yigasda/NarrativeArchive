@@ -7343,3 +7343,45 @@ body.na_darkui .na_ly3_body, body.na_darkui .na_layers .na_ly3_cards button.na_l
 .na_ly3_tool { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--na-card2); color: var(--na-ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .na_ly3_tool:disabled { opacity: 0.7; }
 body.na_darkui .na_ly3 :is(.na_ly_ask, .na_ly3_tool) { background: #342B25; }
+
+/* ============ 섹션별 버전 v3 (docs/mockups/ext-fadepick C): a bar of what goes in now, then each section with its version as a
+   small menu; 꺼짐 rows dimmed. Colours: 원문 brown-grey, 짧게 orange, 요점 blue, 꺼짐 faint */
+.na_fp3 { gap: 0; }
+.na_fp3 { --u-long: #8A7A70; --u-short: #D9733A; --u-line: #6E9BD6; --u-off: #E5D5C9; }
+body.na_darkui .na_fp3 { --u-long: #B3A396; --u-short: #E08A55; --u-line: #8DB2E4; --u-off: #4A3D34; }
+.na_fp3 > .na_v2_card, .na_fp3_card { border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+body.na_darkui .na_fp3 > .na_v2_card, body.na_darkui .na_fp3_card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+.na_fp3_sum { margin-top: 14px; padding: 14px; }
+.na_fp3_sh { display: flex; justify-content: space-between; align-items: baseline; }
+.na_fp3_sh b { font-size: 13px; } .na_fp3_sh small { font-size: 12px; color: var(--na-dim); }
+.na_fp3_bar { display: flex; gap: 2px; height: 10px; margin-top: 10px; border-radius: 999px; overflow: hidden; background: var(--u-off); }
+.na_fp3_bar i { display: block; }
+.na_fp3_leg { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: 11.5px; color: var(--na-mute); }
+.na_fp3_leg span { display: inline-flex; align-items: center; gap: 5px; }
+.na_fp3_leg i { width: 9px; height: 9px; border-radius: 3px; }
+:is(.na_fp3_bar, .na_fp3_leg) .u_long, .na_fp3_leg .u_long i { background: var(--u-long); }
+:is(.na_fp3_bar, .na_fp3_leg) .u_short, .na_fp3_leg .u_short i { background: var(--u-short); }
+:is(.na_fp3_bar, .na_fp3_leg) .u_line, .na_fp3_leg .u_line i { background: var(--u-line); }
+:is(.na_fp3_bar, .na_fp3_leg) .u_off, .na_fp3_leg .u_off i { background: var(--u-off); }
+.na_fp3_leg span[class] { background: none !important; }
+.na_fp3 .na_fp_filters { margin-top: 14px; }
+.na_fp3 .na_fp_group { margin: 16px 4px 8px; font-size: 12px; font-weight: 700; color: var(--na-dim); }
+.na_fp3_card { padding: 0; overflow: hidden; }
+.na_fp3_row { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+.na_fp3_row + .na_fp3_row, .na_fp3_menu + .na_fp3_row { border-top: 1px solid var(--na-line2, var(--na-line)); }
+.na_fp3_row.off { opacity: 0.5; }
+.na_fp3_tt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.na_fp3_tt b { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.na_fp3_tt small { font-size: 11.5px; color: var(--na-dim); }
+.na_fp3_pick { flex: none; height: 28px; padding: 0 11px; border: 0; border-radius: 999px; background: var(--na-card2); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; }
+.na_fp3_pick.u_long { color: var(--u-long); } .na_fp3_pick.u_short { color: var(--u-short); } .na_fp3_pick.u_line { color: var(--u-line); }
+.na_fp3_pick.off { background: transparent; color: var(--na-dim); cursor: default; }
+.na_fp3_menu { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 0 14px 12px; padding: 4px; border-radius: 999px; background: var(--na-card2); }
+.na_fp3_menu button { height: 32px; border: 0; border-radius: 999px; background: transparent; color: var(--na-mute); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
+.na_fp3_menu button small { font-size: 10px; font-weight: 500; opacity: 0.7; }
+.na_fp3_menu button[data-miss] { color: var(--na-dim); }
+body:not(.na_darkui) .na_fp3_menu button.on { background: #FFFFFF; color: var(--na-accent-ink); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1); }
+body.na_darkui .na_fp3_menu button.on { background: #4A3D34; color: #F2B48A; }
+.na_fp3_more { display: flex; margin-top: 10px; }
+.na_fp3_more:has(.na_fp_make[hidden]) { display: none; }
+.na_fp3_tool { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--na-card2) !important; color: var(--na-ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }

@@ -16,6 +16,7 @@ HTML은 브라우저로 바로 열려요(Playwright로 찍을 때는 `file://` �
 | `ext-ask/` | 아카이브에 질문 창: 시안 A~C(`sheet.png`, `mock.html`, 처음엔 B · 질문하면 A 채택), 적용한 실제 화면(`real.png`) |
 | `ext-secfix/` | 고쳐 달라고 하기(섹션 하나) 창: 시안 A~C(`sheet.png`, `mock.html`, A 채택), 적용한 실제 화면(`real.png`) |
 | `ext-layers/` | 섹션 버전(망각 곡선) 창: 시안 A~C(`sheet.png`, `mock.html`, A 채택), 적용한 실제 화면(`real.png`) |
+| `ext-fadepick/` | 섹션별 버전(망각 곡선 고르기) 창: 시안 A~C(`sheet.png`, `mock.html`, C 채택 · 줄의 점은 빼고 꺼짐은 흐리게), 적용한 실제 화면(`real.png`) |
 | `panel-s1` ~ `panel-s5`, `panel-worldmap` | 패널 하위 화면 시안 묶음 |
 | `phone-home/` | 홈 · 잠금(컬러 젤 · 화이트 그레이) |
 | `phone-life/` | 시계 · 건강 · 파일 · 날씨(`wx.html`) · 브라우저 등 생활 앱 첫 시안들 |
