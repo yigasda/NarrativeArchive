@@ -411,7 +411,7 @@ export async function openStyleSamples() {
         draw();
     });
     draw();
-    const r = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, large: true, allowVerticalScrolling: true, okButton: '저장', cancelButton: '취소' });
+    const r = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, large: false, allowVerticalScrolling: true, okButton: '저장', cancelButton: '취소' });
     if (!(r === c.POPUP_RESULT.AFFIRMATIVE || r === true)) return;
     // the old sample's text stays when its section is no longer in the archive
     const old = new Map(styleSamples(m).map(x => [x.title, x.text]));
@@ -492,7 +492,7 @@ export async function openWorkNote() {
     });
     $root.find('.na_wn_clear').on('click', () => { set(cur, ''); show(cur); info(); });
     show(cur); info();
-    const r = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, large: true, allowVerticalScrolling: true, okButton: '저장', cancelButton: '취소' });
+    const r = await c.callGenericPopup($root, c.POPUP_TYPE.CONFIRM, '', { wide: true, large: false, allowVerticalScrolling: true, okButton: '저장', cancelButton: '취소' });
     if (!(r === c.POPUP_RESULT.AFFIRMATIVE || r === true)) return;
     const v = noteJoin(note).trim();
     getMeta().workNote = v;
