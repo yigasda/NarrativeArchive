@@ -130,29 +130,26 @@ export async function openRetitle(group = null, keys = null) {
         <div class="na_v2_title"><b>제목 다시 짓기</b><small>책 목차처럼 짧고 구체적인 제목으로 · 번호·날짜·장소는 그대로</small></div>
         <div class="na_rt_pick"></div>
         <div class="na_rt_res" hidden>
-          <div class="na_rt_head"><b>바뀌는 제목</b><span class="na_rt_quick"><button type="button" class="na_pchip" data-all="1">모두</button><button type="button" class="na_pchip" data-all="0">비우기</button></span></div>
           <div class="na_rt_list"></div>
-          <button type="button" class="na_v2_btn primary wide na_rt_apply"></button>
+          <div class="na_rt_nav"><button type="button" class="na_rt_close">닫기</button><button type="button" class="na_rt_apply"></button></div>
         </div>
       </div>`);
     let results = []; // [{ key, start, old, next }]
     const drawResults = () => {
         $root.find('.na_rt_res').prop('hidden', !results.length);
-        $root.find('.na_rt_list').html(results.map((x, i) => `
-          <label class="na_rt_row ${x.same ? 'same' : ''}">
-            <input type="checkbox" data-i="${i}" ${x.on ? 'checked' : ''} ${x.same ? 'disabled' : ''}>
-            <span class="na_rt_txt">
-              <small>${esc(x.range)}${x.same ? ' · 그대로' : ''}</small>
-              <s class="na_rt_old">${esc(x.old)}</s>
-              <input type="text" class="text_pole na_rt_new" data-i="${i}" value="${esc(x.next)}" spellcheck="false">
-            </span>
+        // D: a two-column table · 지금 | 새 제목 (the new title stays editable in place)
+        $root.find('.na_rt_list').html(`<div class="na_rt_th"><span></span><span>지금</span><span>새 제목</span></div>` + results.map((x, i) => `
+          <label class="na_rt_row ${x.same ? 'same' : ''}" title="${esc(x.range)}${x.same ? ' · 그대로' : ''}">
+            <input type="checkbox" data-i="${i}" ${x.on ? 'checked' : ''} ${x.same ? 'disabled' : ''}><span class="na_rt_ck"></span>
+            <span class="na_rt_old">${esc(x.old)}</span>
+            <input type="text" class="text_pole na_rt_new" data-i="${i}" value="${esc(x.next)}" spellcheck="false">
           </label>`).join(''));
         const n = results.filter(x => x.on && !x.same).length;
         $root.find('.na_rt_apply').text(n ? `${n}개 바꾸기` : '바꿀 제목을 골라 주세요').prop('disabled', !n);
     };
     $root.on('change', '.na_rt_row input[type=checkbox]', function () { results[this.dataset.i].on = this.checked; drawResults(); });
     $root.on('input', '.na_rt_new', function () { const x = results[this.dataset.i]; x.next = this.value; x.on = !!this.value.trim(); $root.find(`.na_rt_row input[type=checkbox][data-i="${this.dataset.i}"]`).prop('checked', x.on); const n = results.filter(y => y.on && !y.same).length; $root.find('.na_rt_apply').text(n ? `${n}개 바꾸기` : '바꿀 제목을 골라 주세요').prop('disabled', !n); });
-    $root.on('click', '.na_rt_quick .na_pchip', function () { const on = this.dataset.all === '1'; results.forEach(x => { if (!x.same) x.on = on; }); drawResults(); });
+    $root.on('click', '.na_rt_close', function () { $(this).closest('dialog').find('.popup-button-ok').trigger('click'); });
     const picker = mountSectionPicker($root.find('.na_rt_pick'), {
         m, title: '다시 지을 섹션', goLabel: `AI로 짓기`, doneLabel: '다시 지음', newLabel: '안 한 것', look: 'bar',
         filter: ranged, initial: keys ? () => keys : startKeys,
