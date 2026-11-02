@@ -520,3 +520,17 @@ test('weather: a Fahrenheit status line is read in Celsius, the high and low hol
     applyWeather(p, null, { date: '10-27', time: '09:00', place: 'Varo', weather: '영하 3도, 눈' });
     assert.equal(p.life.weather.here.temp, -3); assert.equal(p.life.weather.here.lo, -3); assert.equal(p.life.weather.here.cond, 'snow');
 });
+
+test('weather: a status line\'s afternoon time and its city alone, a line that only names the sky, and the screen overlay', async () => {
+    const { weatherFrom, overlayNow } = await import('../src/phonesynclife.js');
+    const w = weatherFrom({ date: '02-02', time: '오후 7:00', min: 19 * 60, place: '서울, Mara의 집', city: '서울, Mara의 집', room: '', weather: '☁ 흐림 / 2°C' });
+    assert.equal(w.time, '19:00'); assert.equal(w.place, '서울');
+    const { p } = setup();
+    applyWeather(p, { place: 'Seoul', date: '02-02', time: '19:00', from: 'chat', cond: 'cloudy', temp: 2, hi: 2, lo: -3, line: '흐림', ko: '흐림', tiles: { feels: 0 } }, w);
+    const h = p.life.weather.here;
+    assert.equal(h.time, '19:00'); assert.equal(h.place, '서울'); assert.equal(h.line, ''); assert.equal(h.ko, '');
+    // the next day's status line on the screen: nothing saved, the felt temperature follows
+    const o = overlayNow(h, { date: '02-03', time: '08:00', place: '서울', weather: '🌨 눈 / -4°C' });
+    assert.equal(o.cond, 'snow'); assert.equal(o.temp, -4); assert.equal(o.tiles.feels, -6); assert.equal(o.lo, -4);
+    assert.equal(p.life.weather.here.temp, 2);
+});

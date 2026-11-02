@@ -68,8 +68,11 @@ const tempOf = text => { const s = String(text || ''), mt = s.match(/(영하\s*)
 // the day's high and low hold the temperature now (a status line's 11° over a model's high of 9°)
 const fit = h => { if (Number.isFinite(h.temp)) { if (!Number.isFinite(h.hi) || h.hi < h.temp) h.hi = h.temp; if (!Number.isFinite(h.lo) || h.lo > h.temp) h.lo = h.temp; for (const d of h.days || []) if (d.day === h.date) { if (Number.isFinite(d.hi) && d.hi < h.temp) d.hi = h.temp; if (Number.isFinite(d.lo) && d.lo > h.temp) d.lo = h.temp; } } return h; };
 // a status line (scenes.js recentTrackers) as the weather it gives, or null
+// its time from the minutes the reader worked out ("오후 7:00" is 19:00); its place the city alone ("서울, Mara의 집" is 서울)
 export function weatherFrom(t) {
-    return t && (t.place || t.weather) ? { date: t.date || '', time: t.time || (Number.isFinite(t.min) ? `${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}` : ''), place: t.place || '', weather: t.weather || '' } : null;
+    if (!t || !(t.place || t.weather)) return null;
+    const time = Number.isFinite(t.min) ? `${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}` : hhmm(t.time);
+    return { date: t.date || '', time, place: String(t.city || t.place || '').split(/\s*[,，→>/·]\s*/)[0].trim(), weather: t.weather || '' };
 }
 const hereOf = h => ({
     place: line(h.place, 60), date: day5(h.date), time: hhmm(h.time), from: pick(h.from, ['tracker', 'chat', 'archive', 'guess'], 'guess'),
@@ -100,7 +103,11 @@ function overlay(here, now, fresh = false) {
     return here;
 }
 // a Korean copy that only repeats the line (a Korean line given the same "ko") would show twice
-const unko = h => { if (h.ko && h.line && h.ko.replace(/\s+/g, ' ').trim() === h.line.replace(/\s+/g, ' ').trim()) h.ko = ''; return h; };
+const unko = h => { if (h.ko && h.line && h.ko.replace(/\s+/g, ' ').trim() === h.line.replace(/\s+/g, ' ').trim()) h.ko = ''; return unline(h); };
+// a "line" that is no more than the sky's name ("흐림", "Cloudy") says what the header already says
+const unline = h => { const l = String(h.line || '').trim(); if (l && l.length <= 8 && condOf(l) === h.cond) { h.line = ''; h.ko = ''; } return h; };
+// the newest status line over the saved weather, for the screen alone (nothing is saved): a day or hours later than it
+export const overlayNow = (here, now) => fit(unline(overlay(structuredClone(here), now)));
 export function parseWeather(w, now) {
     return { here: fit(unko(overlay(hereOf(w?.here || {}), now, true))), cities: arr(w?.cities).map(cityOf).filter(c => c.name).slice(0, 5) };
 }

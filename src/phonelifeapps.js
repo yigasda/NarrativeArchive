@@ -7,7 +7,8 @@
 import { AX, ax, axBar, axCb, axH1, axInd, axKp, axTint, axTop, busyHtml } from './phoneapps.js';
 import { filling } from './phoneai.js';
 import { byStory, fmtDate, koOn, pad, storyNow } from './phonedata.js';
-import { shiftDay } from './phonelife.js';
+import { shiftDay, weatherNow } from './phonelife.js';
+import { overlayNow } from './phonesynclife.js';
 import { fmtMoney } from './phonemoney.js';
 import { nameKey } from './people.js';
 import { esc } from './util.js';
@@ -52,13 +53,14 @@ const hm = n => `${pad(Math.floor(((n % 1440) + 1440) % 1440 / 60))}:${pad(((n %
 const dur = min => (min >= 60 ? `${Math.floor(min / 60)}시간 ${min % 60}분` : `${min}분`);
 const durBig = min => `${Math.floor(min / 60)}<span>시간</span> ${min % 60}<span>분</span>`;
 // numbers as the phone's country writes them: 6,000 · 2.0 in Korea, the US, Japan…; 6.000 · 2,0 in Germany and most of Europe
+// (no country known: the dot, as the money app's fallback writes it)
 const DOT_LANDS = new Set(['KR', 'US', 'GB', 'JP', 'CN', 'TW', 'HK', 'CA', 'AU', 'NZ', 'IE', 'IN', 'SG', 'PH', 'MY', 'TH', 'IL', 'MX']);
 let STORY = { year: new Date().getFullYear(), now: '', dot: false };
 // the phone being drawn: its year (carried over New Year by the reflection), its now and its number style
 export function setStory(p) {
     const y = Number(p?.year) || Number(String(p?.money?.asOf || p?.investment?.date || '').slice(0, 4)) || new Date().getFullYear();
     // known: the story dates itself (else weekdays aren't shown: a fantasy calendar or an undated story has none to show)
-    STORY = { year: y, known: !p?.noYear && !!(Number(p?.year) || /^\d{4}-/.test(String(p?.money?.asOf || p?.money?.fxDate || p?.investment?.date || ''))), now: String(storyNow(p) || p?.now || '').slice(0, 5), dot: DOT_LANDS.has(String(p?.lives || p?.country || '').toUpperCase()) };
+    STORY = { year: y, known: !p?.noYear && !!(Number(p?.year) || /^\d{4}-/.test(String(p?.money?.asOf || p?.money?.fxDate || p?.investment?.date || ''))), now: String(storyNow(p) || p?.now || '').slice(0, 5), dot: (c => !c || DOT_LANDS.has(c))(String(p?.lives || p?.country || '').toUpperCase()) };
 }
 const n0 = v => (v === null || v === undefined ? '—' : Number(v).toLocaleString(STORY.dot ? 'en-US' : 'de-DE'));
 const md = s => { const mt = String(s || '').match(/^(\d{2})-(\d{2})/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]) } : null; };
@@ -868,9 +870,21 @@ function wxIc(c, z = 24, night = false) {
     return `<svg width="${z}" height="${z}" viewBox="0 0 24 24">${g}</svg>`;
 }
 // the status line's words as the sky's name: its temperature is dropped (the big number already says it)
-const saidOf = h => String(h.said || '').replace(/(영하\s*)?[-−]?\d{1,3}(?:[.,]\d)?\s*(?:°\s*[CF]?|℃|℉|도(?![가-힣]))/gi, '').replace(/\s*[/|·,~-]+\s*$|^\s*[/|·,~-]+\s*/g, '').trim() || WX[h.cond] || '';
+const saidOf = h => String(h.said || '').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/(영하\s*)?[-−]?\d{1,3}(?:[.,]\d)?\s*(?:°\s*[CF]?|℃|℉|도(?![가-힣]))/gi, '').replace(/\s*[/|·,~-]+\s*$|^\s*[/|·,~-]+\s*/g, '').trim() || WX[h.cond] || '';
 // the here weather with every tile filled (sunrise and sunset from the story's zone), for the sky and the tiles alike
-const hereFull = (p, lf) => { const h = lf.weather.here; return { ...h, tiles: fillTiles(h, `${h.date}:${h.place}`, h.date || now5(p), hereZone(lf, p)) }; };
+// a status line newer than the saved weather (a day on, or later the same day) shows over it until the next reflection
+function hereNow(lf) {
+    const h = lf.weather.here;
+    let t = null;
+    try { t = weatherNow(); } catch { t = null; }
+    if (!t || !/^\d{2}-\d{2}$/.test(t.date || '') || !h.date) return h;
+    const gap = dayGap(h.date, t.date);
+    if (gap < 0 || gap === 0 && !(t.time && (!h.time || t.time > h.time))) return h;
+    const out = overlayNow(h, t);
+    if (gap > 0) { out.hours = []; out.line = ''; out.ko = ''; out.tiles = { ...(out.tiles || {}), rain24: null, rainNext: null }; }
+    return out;
+}
+const hereFull = (p, lf) => { const h = hereNow(lf); return { ...h, tiles: fillTiles(h, `${h.date}:${h.place}`, h.date || now5(p), hereZone(lf, p)) }; };
 // what the tiles say, from their numbers
 const tileLines = (h) => ({
     rain: h.tiles.rainNext ? `내일까지 ${mm(h.tiles.rainNext)} mm 더 와요` : '내일까지 비 소식 없어요',
@@ -878,8 +892,9 @@ const tileLines = (h) => ({
     humidity: h.tiles.dew === null ? '' : `이슬점 ${h.tiles.dew}°`,
     vis: h.tiles.visibility === null ? '' : h.tiles.visibility < 8 ? (h.cond === 'fog' ? '안개 때문에 멀리 안 보여요.' : WET[h.cond] || h.cond === 'storm' ? '빗속이라 평소보다 짧아요.' : '평소보다 짧아요.') : '멀리까지 잘 보여요.',
 });
-const DIRS = { N: 0, NE: 45, E: 90, SE: 135, S: 180, SW: 225, W: 270, NW: 315, 북: 0, 북동: 45, 동: 90, 남동: 135, 남: 180, 남서: 225, 서: 270, 북서: 315 };
-const DIR_KO = { N: '북풍', NE: '북동풍', E: '동풍', SE: '남동풍', S: '남풍', SW: '남서풍', W: '서풍', NW: '북서풍' };
+const DIRS = { N: 0, NNE: 22.5, NE: 45, ENE: 67.5, E: 90, ESE: 112.5, SE: 135, SSE: 157.5, S: 180, SSW: 202.5, SW: 225, WSW: 247.5, W: 270, WNW: 292.5, NW: 315, NNW: 337.5,
+    북: 0, 북북동: 22.5, 북동: 45, 동북동: 67.5, 동: 90, 동남동: 112.5, 남동: 135, 남남동: 157.5, 남: 180, 남남서: 202.5, 남서: 225, 서남서: 247.5, 서: 270, 서북서: 292.5, 북서: 315, 북북서: 337.5 };
+const DIR_KO = { N: '북풍', NNE: '북북동풍', NE: '북동풍', ENE: '동북동풍', E: '동풍', ESE: '동남동풍', SE: '남동풍', SSE: '남남동풍', S: '남풍', SSW: '남남서풍', SW: '남서풍', WSW: '서남서풍', W: '서풍', WNW: '서북서풍', NW: '북서풍', NNW: '북북서풍' };
 const TICKS = Array.from({ length: 36 }, (_, k) => { const a = k * 10 * Math.PI / 180, r1 = k % 9 ? 31 : 28; return `<line x1="${(41 + r1 * Math.sin(a)).toFixed(1)}" y1="${(41 - r1 * Math.cos(a)).toFixed(1)}" x2="${(41 + 35 * Math.sin(a)).toFixed(1)}" y2="${(41 - 35 * Math.cos(a)).toFixed(1)}" stroke="rgba(255,255,255,${k % 9 ? 0.4 : 0.9})" stroke-width="${k % 9 ? 1 : 1.6}"/>`; }).join('');
 // one tile: a label, a big number, a flat picture, a line
 const tile = (label, big, pic, line) => `<div class="lf_tile"><div class="hd">${label}</div><b>${big}</b>${pic}${line ? `<p>${line}</p>` : ''}</div>`;
@@ -915,8 +930,8 @@ function weatherTiles(h, tileCol, lead = '') {
         const bars = v ? hs.map((x, k) => `<rect x="${2 + k * 20}" y="${42 - Math.max(2, Math.round(x * f))}" width="14" height="${Math.max(2, Math.round(x * f))}" rx="3" opacity="${[1, 1, 1, 0.6, 0.45, 0.35, 0.3][k]}"/>`).join('') : hs.map((_, k) => `<rect x="${2 + k * 20}" y="38" width="14" height="4" rx="2" opacity=".35"/>`).join('');
         out.push(tile('강수량', `${mm(v)} <small>mm</small>`, `<svg class="pic bars" viewBox="0 0 140 42"><g fill="#a9dcff">${bars}</g></svg>`, t.rain));
     }
-    if (T.wind !== null) out.push(tile('바람', `${T.wind} <small>km/h</small>`, `<svg class="pic cmp" viewBox="0 0 82 82"><circle cx="41" cy="41" r="36" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>${TICKS}<text x="41" y="13" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">N</text><g transform="rotate(${DIRS[T.dir] ?? 225} 41 41)"><path d="M41 12 L46 41 L41 36 L36 41Z" fill="#fff"/><path d="M41 70 L45 41 L37 41Z" fill="rgba(255,255,255,.45)"/></g><circle cx="41" cy="41" r="3" fill="#fff"/></svg>`,
-        [T.gust ? `돌풍 ${T.gust} km/h` : '', DIR_KO[T.dir] || T.dir].filter(Boolean).join(' · ')));
+    if (T.wind !== null) out.push(tile('바람', `${T.wind} <small>km/h</small>`, `<svg class="pic cmp" viewBox="0 0 82 82"><circle cx="41" cy="41" r="36" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>${TICKS}<text x="41" y="13" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">N</text><g transform="rotate(${DIRS[String(T.dir || '').toUpperCase().replace(/풍$/, '')] ?? 225} 41 41)"><path d="M41 12 L46 41 L41 36 L36 41Z" fill="#fff"/><path d="M41 70 L45 41 L37 41Z" fill="rgba(255,255,255,.45)"/></g><circle cx="41" cy="41" r="3" fill="#fff"/></svg>`,
+        [T.gust ? `돌풍 ${T.gust} km/h` : '', DIR_KO[String(T.dir || '').toUpperCase()] || (/^[가-힣]+$/.test(T.dir || '') && !/풍$/.test(T.dir) ? `${T.dir}풍` : T.dir)].filter(Boolean).join(' · ')));
     if (T.feels !== null) {
         const real = h.temp ?? T.feels, lo = Math.min(real, T.feels) - 10, span = Math.max(real, T.feels) + 10 - lo, x = v => ((v - lo) / span * 140).toFixed(1);
         const a = Math.min(x(real), x(T.feels)), b = Math.max(x(real), x(T.feels));
@@ -1006,7 +1021,7 @@ function walkHours(first, c, seed, fixed = [], next = null) {
         const hr = m / 60, up = hr >= 5 && hr <= 15;
         off *= 0.8;
         // climbing: along the curve; falling: most of the drop early in the evening, levelling off toward dawn's low
-        let d = up ? (curve(m) + off - v) * 0.7 + r() * 0.6 : (lo - v) * 0.22 - r() * 0.4;
+        let d = up ? (curve(m) + off - v) * 0.7 + r() * 0.6 : (lo - v) * 0.12 - r() * 0.3;
         d = up ? Math.max(0, d) : Math.min(0, d);
         // a "now" already outside the day's range isn't pulled back in one jump
         v = Math.max(Math.min(lo, v), Math.min(Math.max(hi, v), v + d));
