@@ -449,14 +449,19 @@ export async function openFadePicker() {
     // menu (자동 · 원문 · 짧게 · 요점; a version not made yet is greyed); 꺼짐 rows are dimmed
     const c = ctx();
     const name = { long: '원문', short: '짧게', line: '요점', off: '꺼짐' };
-    let filter = 'all', open = '';
+    let filter = 'all', open = '', multi = false;
+    const picked = new Set();
     const $root = $(`
       <div class="na_popup na_v2 na_fp na_fp3">
         <div class="na_v2_title"><b>섹션별 버전</b><small>섹션마다 원문 · 짧게 · 요점 중 무엇을 넣을지</small></div>
         <div class="na_v2_card na_fp3_sum"></div>
-        <div class="na_v2_chips na_fp_filters"></div>
+        <div class="na_fp3_fl"><div class="na_v2_chips na_fp_filters"></div><button type="button" class="na_linkbtn na_fp3_multi">여러 개 바꾸기</button></div>
         <div class="na_fp_list"></div>
         <div class="na_fp3_more"><button type="button" class="na_fp3_tool na_fp_make" hidden></button></div>
+        <div class="na_fp3_bulk" hidden>
+          <div class="na_fp3_bh"><label class="na_fp3_allp"><input type="checkbox" class="na_fp3_allbox"><span class="na_fp3_ck na_fp3_allck"></span><span class="na_fp3_n">0개 고름</span></label><small>넣을 버전</small></div>
+          <div class="na_fp3_set">${[['auto', '자동'], ['long', '원문'], ['short', '짧게'], ['line', '요점']].map(([v, l]) => `<button type="button" data-v="${v}">${l}</button>`).join('')}</div>
+        </div>
       </div>`);
     const rows = () => {
         const m = getMeta();
@@ -482,7 +487,7 @@ export async function openFadePicker() {
         $root.find('.na_fp3_sum').html(`<div class="na_fp3_sh"><b>지금 들어가는 것</b><small>${all.length}개 섹션</small></div>
           <div class="na_fp3_bar">${['long', 'short', 'line', 'off'].map(u => cnt[u] ? `<i class="u_${u}" style="flex:${cnt[u]}"></i>` : '').join('')}</div>
           <div class="na_fp3_leg">${['long', 'short', 'line', 'off'].map(u => `<span class="u_${u}"><i></i>${name[u]} ${cnt[u]}</span>`).join('')}</div>`);
-        $root.find('.na_fp_filters').html([['all', `전체 ${all.length}`], ['manual', `직접 고른 것 ${manualN}`], ['miss', `버전 없음 ${missN}`]].map(([f, l]) => `<button type="button" data-f="${f}" class="${filter === f ? 'on' : ''}">${l}</button>`).join(''));
+        $root.find('.na_fp_filters').html([['all', `전체 ${all.length}`], ['manual', `직접 ${manualN}`], ['miss', `버전 없음 ${missN}`]].map(([f, l]) => `<button type="button" data-f="${f}" class="${filter === f ? 'on' : ''}">${l}</button>`).join(''));
         const show = all.filter(r => filter === 'all' || (filter === 'manual' ? r.force : !r.muted && (!r.has.short || !r.has.line)));
         let lastGroup = null;
         $root.find('.na_fp_list').html(show.length ? show.map(r => {
@@ -491,13 +496,33 @@ export async function openFadePicker() {
             const [num, ...rest] = r.s.title.split(' — ');
             const nm = rest.join(' — ').replace(/\s*\([^)]*\)\s*$/, '');
             const why = r.muted ? '꺼짐 · 망각 곡선 밖' : [name[r.use], r.force ? '직접' : r.p?.why === 'pin' ? '고정' : r.p?.why === 'called' ? '불려 옴' : '자동', !r.has.short && !r.has.line ? '버전 없음' : ''].filter(Boolean).join(' · ');
-            const menu = open === r.k && !r.muted ? `<div class="na_fp3_menu">${[['auto', '자동'], ['long', '원문'], ['short', '짧게'], ['line', '요점']].map(([v, l]) => `<button type="button" data-v="${v}" class="${(r.force || 'auto') === v ? 'on' : ''}"${(v === 'short' && !r.has.short) || (v === 'line' && !r.has.line) ? ' data-miss="1"' : ''}>${l}${(v === 'short' && !r.has.short) || (v === 'line' && !r.has.line) ? '<small>없음</small>' : ''}</button>`).join('')}</div>` : '';
-            return `${head}<div class="na_fp3_row${r.muted ? ' off' : ''}" data-k="${esc(r.k)}"><span class="na_fp3_tt"><b>${esc(num)}${nm ? ` · ${esc(nm)}` : ''}</b><small>${esc(why)}</small></span>${r.muted ? `<span class="na_fp3_pick off">꺼짐</span>` : `<button type="button" class="na_fp3_pick u_${r.use}">${name[r.use]} ▾</button>`}</div>${menu}`;
+            const menu = !multi && open === r.k && !r.muted ? `<div class="na_fp3_menu">${[['auto', '자동'], ['long', '원문'], ['short', '짧게'], ['line', '요점']].map(([v, l]) => `<button type="button" data-v="${v}" class="${(r.force || 'auto') === v ? 'on' : ''}"${(v === 'short' && !r.has.short) || (v === 'line' && !r.has.line) ? ' data-miss="1"' : ''}>${l}${(v === 'short' && !r.has.short) || (v === 'line' && !r.has.line) ? '<small>없음</small>' : ''}</button>`).join('')}</div>` : '';
+            const ck = multi ? `<span class="na_fp3_ck${picked.has(r.k) ? ' on' : ''}">${picked.has(r.k) ? svgA(ICO_A.check, 11, 3.4) : ''}</span>` : '';
+            return `${head}<div class="na_fp3_row${r.muted ? ' off' : ''}${multi ? ' pickable' : ''}${picked.has(r.k) ? ' picked' : ''}" data-k="${esc(r.k)}">${ck}<span class="na_fp3_tt"><b>${esc(num)}${nm ? ` · ${esc(nm)}` : ''}</b><small>${esc(why)}</small></span>${r.muted ? `<span class="na_fp3_pick off">꺼짐</span>` : `<button type="button" class="na_fp3_pick u_${r.use}">${name[r.use]} ▾</button>`}</div>${menu}`;
         }).join('') + '</div>' : '<div class="na_empty">해당하는 섹션이 없어요.</div>');
         $root.find('.na_fp_make').prop('hidden', !missN || !draftReady()).text(`버전 없는 ${missN}개 초안 모델로 만들기`);
+        const vis = show.map(r => r.k);
+        $root.find('.na_fp3_multi').text(multi ? '그만 고르기' : '여러 개 바꾸기');
+        $root.find('.na_fp3_bulk').prop('hidden', !multi);
+        $root.find('.na_fp3_n').text(`${picked.size}개 고름`);
+        $root.find('.na_fp3_allbox').prop('checked', vis.length > 0 && vis.every(k => picked.has(k))).prop('indeterminate', picked.size > 0 && !vis.every(k => picked.has(k)));
+        $root.find('.na_fp3_set button').prop('disabled', !picked.size);
+        const allOn = vis.length > 0 && vis.every(k => picked.has(k));
+        $root.find('.na_fp3_allck').toggleClass('on', allOn).html(allOn ? svgA(ICO_A.check, 11, 3.4) : picked.size ? '<i></i>' : '');
     };
+    $root.on('click', '.na_fp3_multi', () => { multi = !multi; open = ''; if (!multi) picked.clear(); draw(); });
+    $root.on('click', '.na_fp3_row.pickable', function () { const k = String($(this).data('k')); picked.has(k) ? picked.delete(k) : picked.add(k); draw(); });
+    $root.on('change', '.na_fp3_allbox', function () { $root.find('.na_fp3_row').each((i, el) => { const k = String($(el).data('k')); this.checked ? picked.add(k) : picked.delete(k); }); draw(); });
+    $root.on('click', '.na_fp3_set button', async function () {
+        const v = this.dataset.v, keys = [...picked];
+        if (!keys.length) return;
+        await setFadeForce(keys, v);
+        const left = v === 'short' || v === 'line' ? rows().filter(r => picked.has(r.k) && r.p && fadeUse(getMeta(), getMeta().text, r.p.s, v) !== v).length : 0;
+        toastr.success(`${keys.length}개를 ${v === 'auto' ? '자동(망각 곡선)' : name[v]}으로 정했어요${left ? ` · ${left}개는 그 버전이 없어서 더 긴 걸로 들어가요` : ''}`);
+        picked.clear(); multi = false; draw();
+    });
     $root.on('click', '.na_fp_filters button', function () { filter = this.dataset.f; open = ''; draw(); });
-    $root.on('click', '.na_fp3_pick:not(.off)', function () { const k = String($(this).closest('.na_fp3_row').data('k')); open = open === k ? '' : k; draw(); });
+    $root.on('click', '.na_fp3_row:not(.pickable) .na_fp3_pick:not(.off)', function () { const k = String($(this).closest('.na_fp3_row').data('k')); open = open === k ? '' : k; draw(); });
     $root.on('click', '.na_fp3_menu button', async function () {
         const k = open, v = this.dataset.v;
         await setFadeForce([k], v);
