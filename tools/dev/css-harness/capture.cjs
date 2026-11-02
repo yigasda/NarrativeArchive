@@ -25,6 +25,8 @@ const portOpen = port => new Promise(r => { const s = net.connect(port, '127.0.0
 (async () => {
     // the phone's fake model
     let fake = null; if (!await portOpen(5555)) { fake = spawn('node', [path.join(ROOT, 'tools/dev/fakeph.mjs')], { stdio: 'ignore' }); await new Promise(r => setTimeout(r, 800)); }
+    const total = WIDTHS.length * STT.length * NA.length * SCENES.filter(sc => !only || only.includes(sc.name)).length;
+    console.log(`${label}: ${total} captures planned (${WIDTHS.join('·')} × ${STT.join('·')} × ${NA.join('·')} × ${SCENES.filter(sc => !only || only.includes(sc.name)).length} scenes)`);
     const b = await chromium.launch(); const results = []; let baseTheme = null; // the user's own ST theme, read once: 'default' means this one
     try {
         for (const width of WIDTHS) for (const st of STT) {
@@ -72,7 +74,11 @@ const portOpen = port => new Promise(r => { const s = net.connect(port, '127.0.0
                             const rect = await el.boundingBox();
                             results.push({ tag, n: dump.length, ms: Date.now() - t0, rect: rect && [rect.x, rect.y, rect.width, rect.height].map(v => Math.round(v * 100) / 100) });
                             fs.writeFileSync(path.join(OUT, '_index.json'), JSON.stringify(results, null, 1));
-                        } catch (e) { results.push({ tag, error: String(e.message || e).slice(0, 200) }); }
+                            // watch the pace: a line every 10 captures with the time left, and a hard stop when one capture takes 5x the usual (something is piling up — fix it, then resume with --skip-existing)
+                            const done = results.filter(r => r.ms); const n = done.length; const avg = done.reduce((a, r) => a + r.ms, 0) / n;
+                            if (n % 10 === 0) console.log(`${n}/${total} · ${(avg / 1000).toFixed(1)} s each · about ${Math.round((total - n) * avg / 60000)} min left`);
+                            if (n > 10 && Date.now() - t0 > 5 * avg) { console.log(`STOP: ${tag} took ${((Date.now() - t0) / 1000).toFixed(0)} s, usual is ${(avg / 1000).toFixed(1)} s. Something is slowing the page down.`); process.exitCode = 3; throw new Error('pace'); }
+                        } catch (e) { if (e.message === 'pace') throw e; results.push({ tag, error: String(e.message || e).slice(0, 200) }); }
                         finally { if (sc.close) await sc.close(p).catch(() => {}); await p.evaluate(() => { document.querySelectorAll('dialog.popup').forEach(d => { try { d.close(); } catch {} d.remove(); }); window.toastr?.clear?.(); }); await p.waitForTimeout(300);
                             const stray = await p.evaluate(() => document.querySelectorAll('dialog[open], .na_ph_frame').length); if (stray) results.push({ tag, error: `left behind after close: ${stray} dialog/phone` }); }
                     }
