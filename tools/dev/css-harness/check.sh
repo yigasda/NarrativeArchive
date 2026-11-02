@@ -7,6 +7,7 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"; ROOT="$(cd "$HERE/../../.." && pwd)"
 LABEL="${1:?label}"; shift || true
+case "$LABEL" in baseline|base*) echo "refusing to overwrite a baseline label ($LABEL)"; exit 2;; esac
 BASE="${BASE:-baseline}"
 ST_EXT="${ST_EXT:-$HOME/sillytavern/data/default-user/extensions/NarrativeArchive}"
 [ -d "$ST_EXT" ] || { echo "no SillyTavern extension dir at $ST_EXT"; exit 2; }
