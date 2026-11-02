@@ -90,7 +90,7 @@ export function homeScreen(p, now, m, page = 1, wx = '') {
         ...p.events.filter(e => upcoming(e, now)).map(e => ({ title: e.title, when: `${e.date === day ? '' : `${fmtDate(p, e.date, true)} `}${e.time ? fmtTime(p, `${e.date} ${e.time}`) : e.date === day ? '하루 종일' : ''}`.trim() }))].slice(0, 2);
     const note = p.notes[p.notes.length - 1], items = noteItems(note);
     // SNS: comments from others on today's posts; 메일: unread
-    const badges = { sns: (p.posts || []).filter(x => !x.seen && x.time.slice(0, 5) === day).reduce((n, x) => n + x.comments.filter(c => nameKey(c.from) !== nameKey(p.owner)).length, 0), mail: (p.mails || []).filter(x => x.unread).length };
+    const badges = { sns: (p.posts || []).filter(x => !x.seen && x.time.slice(0, 5) === day).reduce((n, x) => n + (x.comments || []).filter(c => nameKey(c.from) !== nameKey(p.owner)).length, 0), mail: (p.mails || []).filter(x => x.unread).length };
     const ue = (p.delivery?.look || ((p.lives || p.country) === 'KR' ? 'baemin' : 'ubereats')) === 'ubereats';
     return `
       <div class="cg_bg1" aria-hidden="true"></div><div class="cg_bg2" aria-hidden="true"></div>

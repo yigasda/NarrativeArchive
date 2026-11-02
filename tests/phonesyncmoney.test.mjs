@@ -385,3 +385,17 @@ test('the card\'s month leaves out the same month a year ago', () => {
     migrateBank(m, p);
     assert.equal(p.money.bank.accounts[1].spent, 20);
 });
+
+test('paying the card off through a reflection is a transfer onto the card, not a refund: the month\'s spending stays', () => {
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('dinner', 5, '10-20', { moves: [{ account: '2222', amount: -80, who: 'Trattoria', kind: 'card' }] }), opts());
+    applyMoney(m, p, ev('payoff', 6, '10-25', { moves: [{ account: '1111', amount: -80, who: 'Karte', kind: 'transfer' }, { account: '2222', amount: 80, who: 'Giro', kind: 'transfer' }] }), opts());
+    migrateBank(m, p);
+    assert.equal(bank(), 920);
+    assert.equal(p.money.tx.find(t => t.account === '2222' && t.amount > 0).kind, 'transfer');
+    assert.equal(p.money.bank.accounts[1].spent, 80);
+    // a refund stays a card row and does lower it
+    applyMoney(m, p, ev('refund', 7, '10-26', { moves: [{ account: '2222', amount: 30, who: 'Trattoria', kind: 'card' }] }), opts());
+    migrateBank(m, p);
+    assert.equal(p.money.bank.accounts[1].spent, 50);
+});

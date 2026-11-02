@@ -312,6 +312,8 @@ function mergePhone(p, add, { keepAll = false } = {}) {
     }
     p.threads = keep([...p.threads].sort(byStory(p.now, lastTime)), CAP.threads);
     joinComments(p.posts, add.posts, CAP.comments);
+    // a plan told again with its time now ("dinner 11-03" then "dinner 11-03 19:00"): the same event, given its time
+    for (const e of add.events || []) { const o = (p.events || []).find(x => !x.time && e.time && x.date === e.date && x.title.toLowerCase() === e.title.toLowerCase()); if (o) o.time = e.time; }
     for (const k of LISTS) p[k] = keep([...(p[k] || []), ...fresh(k, p[k] || [], add[k] || [])], CAP[k]);
     if (add.profile?.handle || add.profile?.bio) p.profile = { ...(p.profile || {}), ...Object.fromEntries(Object.entries(add.profile).filter(([, v]) => v)) };
     for (const c of add.contacts) {

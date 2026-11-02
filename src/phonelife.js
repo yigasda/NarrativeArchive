@@ -270,9 +270,11 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
     // nothing after the story's now
     if (/^\d{2}-\d{2}/.test(at)) d.orders = d.orders.filter(o => !later(o.time, at));
     if (p.delivery) unpayOrders(m, p);
-    // orders a reflection put in stay (their payments are the bank's own rows)
-    const kept = (p.delivery?.orders || []).filter(o => o.sync);
-    p.delivery = { ...d, orders: [...d.orders, ...kept].sort(byStory(p.now)), look: deliveryLook(p), at: storyNow(p) || p.now || '' };
+    // orders a reflection put in stay (their payments are the bank's own rows); the fill's own telling of the same
+    // order (the same shop on the same day, or the same story event) is that one, not a second
+    const kept = (p.delivery?.orders || []).filter(o => o.sync), plain = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+    const twin = o => kept.some(k => (o.ev && k.ev === o.ev) || (plain(k.shop) === plain(o.shop) && dayGap(String(k.time).slice(0, 5), String(o.time).slice(0, 5)) === 0));
+    p.delivery = { ...d, orders: [...d.orders.filter(o => !twin(o)), ...kept].sort(byStory(p.now)), look: deliveryLook(p), at: storyNow(p) || p.now || '' };
     if (p.sync?.marks) p.sync.marks.delivery = markNow();
     ensureIds(p);
     payDeliveries(m, p);
