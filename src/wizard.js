@@ -477,7 +477,7 @@ export async function openWizard() {
         $root.find('.na_wz3_back').prop('hidden', !skipPair);
         $root.find('.na_wz2_nav').toggleClass('na_wz3_pair', skipPair);
         $root.find('.na_wz2_next').text(nextLabel());
-        $root.find('.na_wz2_skip').prop('hidden', step !== 2);
+        $root.find('.na_wz2_skip').prop('hidden', true); // 채점 has its own 건너뛰고 추가 button now
         if (step === 4) {
             const v = $root.find('.na_wz_out').val().trim(), n = guessEndNumber(v), r = range();
             $root.find('.na_wz2_sum').html(`<div class="na_wz2_sumrow"><span>범위</span><b>#${r.from} – #${r.to}</b></div><div class="na_wz2_sumrow"><span>새 섹션</span><b>${parseSections(v).filter(x => !x.group && !/^(?:STATE|OPEN)\b/.test(x.title)).length}개</b></div><div class="na_wz2_sumrow"><span>끝 번호</span><b>${n !== null ? `#${n}` : '추가 창에서 정해요'}</b></div>`);
