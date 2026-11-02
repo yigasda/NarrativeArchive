@@ -413,3 +413,13 @@ test('a pass told again with its status ("used", "checked in") takes it; the sam
     revertEffects(m, p, r.effects);
     assert.equal(p.money.passes[0].status, '');
 });
+
+test('an event told again with another payment on the same account (a refund, a second shop) gets it; a retold payment to the same payee still keeps its first amount', () => {
+    const { m, p } = setup();
+    const r1 = applyMoney(m, p, ev('night', 5, '10-26', { moves: [{ account: '2222', amount: -80, who: 'Trattoria', occurrence: 'new' }] }), opts());
+    const r2 = applyMoney(m, p, ev('night', 7, '10-27', { moves: [{ account: '2222', amount: 30, who: 'Trattoria', occurrence: 'new' }, { account: '2222', amount: -12, who: 'Taxi', occurrence: 'new' }] }), opts({ legs: r1.legs }));
+    assert.deepEqual(p.money.tx.map(t => t.amount), [-80, 30, -12]);
+    const r3 = applyMoney(m, p, ev('night', 8, '10-27', { moves: [{ account: '2222', amount: -85, who: 'Trattoria', occurrence: 'again' }] }), opts({ legs: [...r1.legs, ...r2.legs] }));
+    assert.equal(p.money.tx.length, 3);
+    assert.ok(r3.notes.some(n => n.includes('그대로')));
+});

@@ -157,7 +157,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         if (broker) {
             const cur = String(x.account).slice(7).toUpperCase(), a = p.investment.accounts.find(y => y.currency === cur), L = a && f.accounts[a.key];
             if (!L) fail('증권 계좌를 찾지 못했어요');
-            const key = `broker:${cur}`;
+            const key = `broker:${cur}:${amount < 0 ? '-' : '+'}`;
             if (keep(key, amount, rec => { const line = L.entries[rec]; if (!line) return; out.effects.push({ type: 'amendEntry', key: a.key, id: rec, from: line.amount, to: round(amount) }); out.notes.push(`증권 ${cur}: 추정 ${line.amount} → 실제 ${round(amount)}로 고쳤어요`); out.changes.push({ app: '투자', label: `증권 ${cur}`, amount: round(amount - line.amount), currency: cur }); line.amount = round(amount); })) return;
             const twin = Object.entries(L.entries).find(([, v]) => Math.abs(v.amount - amount) < 0.01 && near(String(v.date).slice(5), date, 0) && !fresh(x, v, e.at));
             if (!twin && x.occurrence === 'again') { out.legs.push({ key, amount: round(amount), state: 'again' }); return; }
@@ -173,7 +173,9 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         if (!acct) fail('계좌를 찾지 못했어요');
         const xc = String(x.currency || '').trim().toUpperCase();
         if (/^[A-Z]{3}$/.test(xc) && xc !== acct.currency) fail('계좌 통화와 금액 통화가 달라요');
-        const key = `bank:${acct.id}`, lk = acct.kind === 'credit' ? '' : `${acct.id}:${acct.currency}`, label = `${acct.name || ''} ••••${acct.last4}`.trim();
+        // one leg per account, direction and payee: the same event told again may carry another payment on the same account
+        // (its refund, a second shop), which is not the first one with another amount
+        const key = `bank:${acct.id}:${amount < 0 ? '-' : '+'}:${plain(x.who)}`, lk = acct.kind === 'credit' ? '' : `${acct.id}:${acct.currency}`, label = `${acct.name || ''} ••••${acct.last4}`.trim();
         const tx = p.money.tx ||= [];
         if (keep(key, amount, rec => { const t = tx.find(r => r.id === rec); if (t) amend(t, amount, lk, label, acct); })) return;
         const pointed = x.already && tx.find(t => t.id === x.already);
