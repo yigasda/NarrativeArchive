@@ -293,7 +293,9 @@ export function fillDays(p, now, round) {
 }
 // w: the model's "weather" (null: keep it); now: the status line's (it stands over the model's)
 // archive: the request carried archive sections (else the weather can't have come from there: it came from the chat)
-export function applyWeather(p, w, now, { archive = true } = {}) {
+// today: the story's day after the round ("MM-DD"), for the weather carried over a day nobody described
+const samePlace = (a, b) => { const k = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''); return !k(a) || !k(b) || k(a) === k(b); };
+export function applyWeather(p, w, now, { archive = true, today = '' } = {}) {
     if (!p.life) return [];
     const was = p.life.weather || null;
     let next;
@@ -302,6 +304,11 @@ export function applyWeather(p, w, now, { archive = true } = {}) {
         if (here.from === 'archive' && !archive) here.from = 'chat';
         // a forecast or a tile the model left out stays as it was (the clock trims what is past)
         const old = was?.here;
+        // the same day and place guessed again: the sky doesn't flip within a day on a guess; the story's own words do change it
+        if (old?.cond && here.from === 'guess' && old.date && here.date === old.date && samePlace(old.place, here.place)) {
+            for (const k of ['cond', 'temp', 'hi', 'lo', 'line', 'ko', 'said', 'from']) if (old[k] !== undefined) here[k] = old[k];
+            if (!here.time) here.time = old.time;
+        }
         if (old) {
             if (!here.hours.length) here.hours = structuredClone(old.hours || []);
             if (!here.days.length) here.days = structuredClone(old.days || []);
@@ -314,6 +321,9 @@ export function applyWeather(p, w, now, { archive = true } = {}) {
     } else if (now && was?.here) {
         // only the status line: its words stand over the weather there was
         next = { ...was, here: overlay(structuredClone(was.here), now) };
+    } else if (was?.here?.cond && was.here.date && /^\d{2}-\d{2}$/.test(today) && dayGap(was.here.date, today) > 0) {
+        // the day moved on with nothing said about the sky: yesterday's carries over as a guess for today (not a stale date)
+        next = { ...was, here: { ...structuredClone(was.here), date: today, time: '', from: 'guess', said: '', hours: [] } };
     } else return [];
     if (same(was, next)) return [];
     p.life.weather = next;

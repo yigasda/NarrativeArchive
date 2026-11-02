@@ -489,3 +489,17 @@ test('the sky in any words: emoji, a word\'s forms, six languages; weather that 
     const w = parseWeather({ here: { place: 'Seoul', cond: 'Sunny and warm', temp: 26, hours: [{ time: '15:00', cond: 'showers', temp: 22 }], days: [{ day: '10-27', cond: 'overcast', hi: 18 }, { day: '10-28', cond: '', hi: 30, rain: 0 }] }, cities: [{ name: 'Tokyo', cond: '晴れ', temp: 20 }] }, null);
     assert.equal(w.here.cond, 'clear'); assert.equal(w.here.hours[0].cond, 'rain'); assert.deepEqual(w.here.days.map(d => d.cond), ['cloudy', 'clear']); assert.equal(w.cities[0].cond, 'clear');
 });
+
+test('weather guessed again for the same day keeps the sky there was (its words do change it); a day nobody described carries yesterday over as today\'s guess', () => {
+    const { p } = setup();
+    const was = p.life.weather.here.cond;
+    applyWeather(p, { place: 'Varo', date: '10-26', time: '15:00', from: 'guess', cond: 'rain', temp: 9, hours: [{ time: '16:00', cond: 'rain', temp: 9 }] }, null, { today: '10-26' });
+    assert.equal(p.life.weather.here.cond, was);
+    assert.equal(p.life.weather.here.hours[0].cond, 'rain');
+    applyWeather(p, { place: 'Varo', date: '10-26', time: '16:00', from: 'chat', cond: 'rain', temp: 9 }, null, { today: '10-26' });
+    assert.equal(p.life.weather.here.cond, 'rain');
+    const fx = applyWeather(p, null, null, { today: '10-28' });
+    assert.equal(fx.length, 1);
+    assert.equal(p.life.weather.here.date, '10-28'); assert.equal(p.life.weather.here.cond, 'rain'); assert.equal(p.life.weather.here.from, 'guess'); assert.equal(p.life.weather.here.hours.length, 0);
+    assert.equal(applyWeather(p, null, null, { today: '10-28' }).length, 0);
+});
