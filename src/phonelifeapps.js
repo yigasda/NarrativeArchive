@@ -914,16 +914,7 @@ function hereHours(h, time) {
     const ahead = m => (m - n + 1440) % 1440;
     const later = saved.filter(x => { const m = toMin(x.time); return m !== null && ahead(m) >= 30 && ahead(m) <= 12 * 60; }).sort((a, b) => ahead(toMin(a.time)) - ahead(toMin(b.time)));
     const out = [{ time: hm(n), cond: h.cond, temp: h.temp, rain: later[0]?.rain ?? 0 }, ...later].slice(0, 6);
-    // the carried-on hours drift toward the day's curve with a little seeded wobble, the way real hourly readings move
-    // (a flat −5 −5 −5 reads as made up); they may dip one degree past the day's low near dawn
-    const lo = h.lo ?? (h.temp ?? 10) - 4, hi = h.hi ?? (h.temp ?? 10) + 4, r = seeded(`${h.date}:${h.place}:hrs`);
-    let v = out[out.length - 1].temp ?? (lo + hi) / 2;
-    while (out.length < 6) {
-        const last = out[out.length - 1], m = (toMin(last.time) + 60) % 1440, f = Math.cos(((m / 60 - 15) / 24) * 2 * Math.PI), target = (lo - 1.5) + (hi - lo + 1.5) * (f + 1) / 2;
-        v += (target - v) * 0.4 + (r() - 0.5) * 2;
-        out.push({ time: hm(m), cond: last.cond, temp: Math.max(lo - 2, Math.min(hi + 1, Math.round(v))), rain: last.rain });
-    }
-    return out;
+    return walkHours(out[0], h, `${h.date}:${h.place}:hrs`, out);
 }
 export function weatherScreen(p, now) {
     const lf = L(p);
@@ -937,9 +928,23 @@ export function weatherScreen(p, now) {
       ${axInd('#fff')}</div>`;
 }
 // a saved city: only its temperature, highs and lows and sky are the model's; its hours are drawn between them
+// the hours ahead for a city: from its clock, along the day's curve, the same way the current place's row is carried on
 function cityHours(c, t) {
-    const base = toMin(t.time) ?? 12 * 60, lo = c.lo ?? (c.temp ?? 10) - 4, hi = c.hi ?? (c.temp ?? 10) + 4;
-    return Array.from({ length: 6 }, (_, k) => { const m = base + k * 60, f = Math.cos(((m / 60 - 15) / 24) * 2 * Math.PI); return { time: hm(m), cond: c.cond, temp: k ? Math.round(lo + (hi - lo) * (f + 1) / 2) : c.temp, rain: c.cond === 'rain' ? 60 : c.cond === 'storm' ? 70 : c.cond === 'drizzle' || c.cond === 'sleet' ? 40 : 0 }; });
+    const base = toMin(t.time) ?? 12 * 60;
+    return walkHours({ time: hm(base), cond: c.cond, temp: c.temp, rain: c.cond === 'rain' ? 60 : c.cond === 'storm' ? 70 : c.cond === 'drizzle' || c.cond === 'sleet' ? 40 : 0 }, c, `${c.name}:${t.time}:hrs`);
+}
+// one rule for every hourly row: from the first entry on, each hour drifts toward the day's temperature curve (coldest
+// before dawn, a degree or two under the day's low; warmest mid-afternoon) with a small wobble seeded by the place and
+// day, the way real hourly readings move. A flat −5 −5 −5 reads as made up
+function walkHours(first, c, seed, out = [first]) {
+    const lo = c.lo ?? (c.temp ?? 10) - 4, hi = c.hi ?? (c.temp ?? 10) + 4, r = seeded(seed);
+    let v = out[out.length - 1].temp ?? (lo + hi) / 2;
+    while (out.length < 6) {
+        const last = out[out.length - 1], m = (toMin(last.time) + 60) % 1440, f = Math.cos(((m / 60 - 15) / 24) * 2 * Math.PI), target = (lo - 1.5) + (hi - lo + 1.5) * (f + 1) / 2;
+        v += (target - v) * 0.4 + (r() - 0.5) * 2;
+        out.push({ time: hm(m), cond: last.cond, temp: Math.max(lo - 2, Math.min(hi + 1, Math.round(v))), rain: last.rain });
+    }
+    return out;
 }
 // today's temperatures as a curve (coldest before dawn, warmest mid-afternoon), with a dot at the city's hour
 function dayCurve(c, lm, col) {
