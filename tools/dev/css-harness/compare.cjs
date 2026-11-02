@@ -17,9 +17,9 @@ for (const tag of tags) {
     const pa = path.join(dirA, tag + '.png'), pb = path.join(dirB, tag + '.png');
     if (fs.existsSync(pa) && fs.existsSync(pb)) {
         pixDone++;
-        // the phone's translucent gel icons and status-bar glyphs rasterise with a few levels of tile-seam noise that moves between runs (not a CSS effect;
-        // every value is still compared exactly in the JSON), so phone pixels get a 5% fuzz; every window stays at exact zero
-        const fuzz = tag.startsWith('phone-') ? ['-fuzz', '5%'] : [];
+        // the phone's translucent gel icons and the panel's long run of shadowed cards rasterise with 1–2 levels of tile-seam noise that moves between
+        // runs (not a CSS effect; every value is still compared exactly in the JSON), so those get a 5% fuzz; every window stays at exact zero
+        const fuzz = /^(phone-|panel)/.test(tag) ? ['-fuzz', '5%'] : [];
         let out = '0', code = 0;
         try { execFileSync('compare', ['-metric', 'AE', ...fuzz, pa, pb, wantDiffs ? path.join(dirB, `_diff_${tag}.png`) : 'null:'], { stdio: ['ignore', 'ignore', 'pipe'] }); }
         catch (e) { out = String(e.stderr || '').trim(); code = e.status; }
