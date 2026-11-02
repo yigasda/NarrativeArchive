@@ -147,7 +147,7 @@ async function makeInvestment(m, p, date, {regenerate = false, wealthPlan = null
         if (!currency(raw.base)) throw new Error('기준 통화를 확인하지 못했어요');
         const securities = list(raw.securities).slice(0, 10).map(s => ({ symbol: text(s.symbol, 80), name: text(s.name, 100), ko: text(s.ko, 100), currency: currency(s.currency) })).filter(s => s.symbol && s.name && s.currency);
         if (new Set(securities.map(s => s.symbol)).size !== securities.length) throw new Error('중복 종목이 있어요');
-        const trades = list(raw.trades).slice(0, 30).map(t => ({ id: uid(), kind: t.kind, symbol: text(t.symbol, 80), currency: t.currency, date: t.date, quantity: t.quantity, price: t.price, fee: t.fee, amount: t.amount, source: 'guess' })).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+        const trades = list(raw.trades).slice(0, 30).map(t => ({ id: uid(), kind: t.kind, symbol: text(t.symbol, 80), currency: t.currency, date: t.date, quantity: t.quantity, price: t.price, fee: finite(t.fee) ? t.fee : t.kind === 'dividend' ? undefined : 0, amount: t.amount, source: 'guess' })).sort((a, b) => String(a.date).localeCompare(String(b.date)));
         for (const t of trades) if (!validDate(t.date) || t.date > date || !securities.some(s => s.symbol === t.symbol && s.currency === t.currency)) throw new Error('거래 날짜나 종목 통화가 맞지 않아요');
         positions(trades); // rejects overselling before any mutation
         const starting = list(raw.cash).slice(0, 8);

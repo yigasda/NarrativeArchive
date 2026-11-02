@@ -121,7 +121,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     // bank ↔ brokerage always pairs; bank ↔ bank only when the event has just one out and one in. A fee on the out leg
     // ("fee") is what goes missing on the way.
     const own = list(mo.moves).filter(x => x.occurrence !== 'again' && !x.already);
-    const cur = x => (/^broker:/i.test(String(x.account || '')) ? String(x.account).slice(7).toUpperCase() : p.money?.bank.accounts.find(a => a.last4 === String(x.account ?? '').replace(/\D/g, '').slice(-4))?.currency);
+    const cur = x => (/^broker:/i.test(String(x.account || '')) ? String(x.account).slice(7).toUpperCase() : accountOf(p, x)?.currency);
     // "amount" is what is sent and "fee" comes on top; an amount that already has the fee in it is taken as it is
     const feeOf = x => (finite(Number(x.fee)) && Number(x.fee) > 0 ? Number(x.fee) : 0);
     const sent = x => -Number(x.amount) - (x.withFee ? feeOf(x) : 0);

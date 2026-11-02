@@ -676,7 +676,8 @@ async function updatePhone(m, owner) {
         const rid = Math.random().toString(36).slice(2, 10), rowText = new Map(rows.map(r => [r.index, r.text]));
         const failed = {}, loose = [], added = [], apps = new Set(), changes = [], notes = [...swiped];
         // for 되돌리기: what was there before this round (ids and message counts), and the reading state
-        const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map(p.threads.map(t => [t.id, t.messages.length]));
+        const msgSig = x => JSON.stringify([x.from, x.text, x.time]);
+        const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map(p.threads.map(t => [t.id, new Set(t.messages.map(msgSig))]));
         const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, seen: s.seen }), now: p.now, year: p.year, moneyAt: p.money?.at, investAt: p.investment?.at,
             comments: (p.posts || []).filter(x => x.id).map(x => [x.id, x.comments?.length || 0]) };
         // an event's day when the model leaves it out: the day of the event before it, else the answer's now
@@ -734,8 +735,10 @@ async function updatePhone(m, owner) {
         // a now without its time ("2026-12-31", "1/2"): that day at the round's last event time, else the time it was
         const nowAt = (t => (/^\d{2}-\d{2}$/.test(t) ? `${t} ${arr(raw.events).map(e => [when(e?.date).slice(0, 5), hhmm(e?.time)]).filter(([d, h]) => d === t && /^\d{2}:\d{2}$/.test(h || '')).map(([, h]) => h).sort().at(-1) || (t === String(p.now || '').slice(0, 5) ? p.now.slice(6) : '') || '12:00'}`.trim() : t))(when(raw.now));
         // the phone's time only moves on, across New Year too (12-31 → 01-01 is a day later, not months back)
+        // (a day or a few behind is the model slipping and is ignored; two months or more behind is a story that skipped far
+        // ahead, past the half year the dates alone can tell: half a year later)
         const gap = nowAt && p.now ? dayGap(p.now.slice(0, 5), nowAt.slice(0, 5)) : 1;
-        if (nowAt && (gap > 0 || gap === 0 && nowAt.slice(6) > p.now.slice(6))) {
+        if (nowAt && (gap > 0 || gap < -60 || gap === 0 && nowAt.slice(6) > p.now.slice(6))) {
             if (p.year && p.now && nowAt.slice(0, 5) < p.now.slice(0, 5)) p.year++;
             p.now = nowAt;
         }
@@ -755,7 +758,7 @@ async function updatePhone(m, owner) {
         p.syncLast.notes = p.syncLast.notes.filter(n => !n.endsWith('뺄 수 있어요') || s.dropped.some(d => n.startsWith(`대화 ${d.label}가`)));
         p.syncUndo = { ...undo, round: id, read: [...inRound], readFp: round.rows.map(r => bodyMark(r.text)), comments: undo.comments,
             items: ITEM_KEYS.flatMap(k => (p[k] || []).filter(x => x.id && !had.has(x.id)).map(x => [k, x.id])),
-            msgs: p.threads.filter(t => msgs.has(t.id) && t.messages.length > msgs.get(t.id)).map(t => [t.id, t.messages.slice(msgs.get(t.id)).map(x => JSON.stringify([x.from, x.text, x.time]))]),
+            msgs: p.threads.filter(t => msgs.has(t.id)).map(t => [t.id, t.messages.map(msgSig).filter(sg => !msgs.get(t.id).has(sg))]).filter(([, xs]) => xs.length),
             effects: [...added.flatMap(x => x.effects || []), ...roundFx], byEvent: added.map(x => [x.id, x.effects || []]) };
         // kept in this browser until the saved chat shows it: 복구 can add it back if the save didn't land
         journalAdd(scope, { round: id, owner, at: Date.now(), events: added, done: [...inRound], seen: round.rows.map(r => [r.index, bodyMark(r.text)]), failed: Object.fromEntries([...inRound].filter(i => s.failed[i]).map(i => [i, s.failed[i]])), arch: evidence.map(x => x.key), life: roundFx });
@@ -930,7 +933,7 @@ export function phoneBlock(m) {
         }
         const missed = p.calls.filter(c => c.type === 'missed' && !isGuess(c)).slice(-3);
         if (missed.length) out.push(`Missed calls: ${missed.map(c => `${c.with} (${c.time})`).join(', ')}`);
-        const soon = p.events.filter(e => !isGuess(e) && (!p.now || upcoming(e, p.now))).slice(0, 3);
+        const soon = p.events.filter(e => !isGuess(e) && (!p.now || upcoming(e, p.now))).sort((a, b) => gapDays(p.now, a.date) - gapDays(p.now, b.date)).slice(0, 3);
         if (soon.length) out.push(`Calendar: ${soon.map(e => `${e.date}${e.time ? ` ${e.time}` : ''} ${e.title}`).join('; ')}`);
         const notes = p.notes.filter(n => !isGuess(n));
         if (notes.length) out.push(`Notes: ${notes.slice(-3).map(n => n.title || n.text.slice(0, 40)).join('; ')}`);

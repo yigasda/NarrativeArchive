@@ -8,7 +8,7 @@ import { calendars } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
 import { recentForCheck } from './drift.js';
 import { headingPlaces, nameKey, peopleList } from './people.js';
-import { arr, CAP, COUNTRIES, ensureIds, secOf, ko, line, MOODS, namesBlock, pad, parts, pick, rowDay, storyNow, str } from './phonedata.js';
+import { arr, CAP, COUNTRIES, ensureIds, gapDays, secOf, ko, line, MOODS, namesBlock, pad, parts, pick, rowDay, storyNow, str } from './phonedata.js';
 
 // ---- 사진 그리기: the AI 기능 모델 turns a caption into image tags, one line for the picture and one per person. With
 // AutoPic in 직접 생성 mode the picture goes through AutoPic (its model, vibes, registered looks; only the people in the
@@ -68,7 +68,7 @@ export const drawing = new Set(); // 'owner key:photo index' being drawn now
 function storyAround(m, time) {
     const rows = datedRows(m).filter(r => rowDay(r)), x = parts(time), day = x ? `${pad(x.mo)}-${pad(x.d)}` : '';
     let hit = day ? rows.filter(r => rowDay(r) === day) : [];
-    if (!hit.length && day) hit = rows.filter(r => rowDay(r) <= day).slice(-1);
+    if (!hit.length && day) hit = rows.filter(r => gapDays(rowDay(r), day) >= 0).slice(-1);
     if (!hit.length) hit = rows.slice(-1);
     return hit.slice(-2).map(r => m.text.slice(r.s.start, r.s.end).trim()).join('\n\n').slice(0, 6000);
 }
@@ -412,7 +412,7 @@ export const searching = new Set(); // "owner:index" of searches whose page is b
 function placesThatDay(m, time) {
     const cals = calendars(), rows = datedRows(m).filter(r => rowDay(r)), x = parts(time), day = x ? `${pad(x.mo)}-${pad(x.d)}` : '';
     let hit = day ? rows.filter(r => rowDay(r) === day) : [];
-    if (!hit.length && day) hit = rows.filter(r => rowDay(r) <= day).slice(-1);
+    if (!hit.length && day) hit = rows.filter(r => gapDays(rowDay(r), day) >= 0).slice(-1);
     if (!hit.length) hit = rows.slice(-1);
     return [...new Set(hit.flatMap(r => headingPlaces(r.s.title, cals)))].slice(0, 6);
 }

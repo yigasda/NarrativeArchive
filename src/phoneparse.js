@@ -16,6 +16,8 @@ const named = v => {
 export const when = v => {
     // "10-25 21:00", or with the year in front ("2026-10-25 21:00", "2026/10/25T21:00")
     const mt = String(v || '').match(/(?:^|\D)(?:\d{4}[-/.])?(\d{1,2})[-/.](\d{1,2})(?:[ T]+(\d{1,2}):(\d{2}))?/);
+    // the day first where the month can't come first ("26.10.", "26/10/2026"), unless a year led ("2026-10-26")
+    if (mt && !/^\d{4}/.test(mt[0].replace(/^\D/, '')) && Number(mt[1]) > 12 && Number(mt[2]) <= 12) [mt[1], mt[2]] = [mt[2], mt[1]];
     if (!mt || !(Number(mt[1]) >= 1 && Number(mt[1]) <= 12) || !(Number(mt[2]) >= 1 && Number(mt[2]) <= 31)) return named(v);
     // a clock that can't be ("25:99") is dropped, the day stays
     const ok = mt[3] && Number(mt[3]) < 24 && Number(mt[4]) < 60;
