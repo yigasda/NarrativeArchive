@@ -7943,9 +7943,9 @@ body.na_darkui .na_st .na_st_bub:not(.na_st_typing) { box-shadow: inset 0 1px 0 
 /* scene tabs keep their own shape (separate rounded blocks), only the colours change: to do = quiet tray colour, answered = soft
    apricot with orange, this one = the orange (dark: grey / gold / cream). No dots. */
 body:not(.na_darkui) .na_st .na_st_seg span { background: #E9DCD1; color: #9C8B80; }
-body:not(.na_darkui) .na_st .na_st_seg span.d { background: #F6E1D3; color: #A84A17; }
+body:not(.na_darkui) .na_st .na_st_seg span.d { background: #DDCDC1; color: #5C4C42; }
 body:not(.na_darkui) .na_st .na_st_seg span.l { background: #E3EFE6; color: #2F6B47; }
-body:not(.na_darkui) .na_st .na_st_seg span.on { background: #B8541F; color: #FFFFFF; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
-body.na_darkui .na_st .na_st_seg span.d { color: #F0CF8E; }
+body:not(.na_darkui) .na_st .na_st_seg span.on { background: #6E5D52; color: #F7EEE7; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14); }
+body.na_darkui .na_st .na_st_seg span.d { background: #3A3A41; color: #ECEAE6; }
 body:not(.na_darkui) .na_st .na_st_me { background: #F6E1D3; color: #A84A17 !important; }
 body.na_darkui .na_st .na_st_me { background: #2E2E34; color: #F0CF8E !important; }
