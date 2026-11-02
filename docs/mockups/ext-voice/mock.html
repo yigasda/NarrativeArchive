@@ -1,0 +1,82 @@
+<style>
+.mk_wrap{display:flex;gap:22px;padding:24px;background:#141210;font-family:-apple-system,'Noto Sans KR',sans-serif;align-items:flex-start}
+.mk_col{display:flex;flex-direction:column;gap:10px;align-items:center}.mk_lab{color:#ff6fa3;font:700 15px sans-serif}
+.pop{width:390px;background:#F0E4DB;border-radius:22px;box-shadow:0 24px 60px rgba(0,0,0,.4);display:flex;flex-direction:column;color:#463428;padding:16px 16px 14px;box-sizing:border-box}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:999px;background:#E9DCD1}
+.tabs span{height:34px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:600;color:#6B5A50}
+.tabs span.on{background:#F7EEE7;color:#A84A17;box-shadow:0 1px 2px rgba(70,52,40,.1)}
+.card{background:#F7EEE7;border-radius:18px;box-shadow:0 1px 2px rgba(70,52,40,.05),0 6px 16px rgba(70,52,40,.07)}
+.btn{height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:14.5px;font-weight:700}
+.pri{background:#B8541F;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 4px 10px rgba(184,84,31,.25)}
+.sec{background:#F7EEE7;color:#6B5A50;box-shadow:inset 0 0 0 1px #E5D5C9}
+.lnk{font-size:13px;font-weight:600;color:#A84A17;text-align:center}
+.ic{width:52px;height:52px;border-radius:999px;background:#F6E1D3;color:#B8541F;display:flex;align-items:center;justify-content:center}
+.ttl{font-size:16px;font-weight:700;text-align:center}.ds{font-size:12.5px;color:#7A6A60;text-align:center;line-height:1.5}
+.sect{font-size:12.5px;font-weight:700;color:#8A7A70;margin:16px 4px 8px;display:flex;justify-content:space-between}
+.sect small{font-weight:600;color:#A84A17;font-size:11.5px}
+.face{width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex:none}
+.who{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;padding:12px 14px 6px}
+.who small{font-weight:500;color:#8A7A70;font-size:12px}
+.q{padding:4px 14px 4px 46px;font-size:13.5px;line-height:1.5;color:#463428}
+.q i{display:block;font-style:normal;font-size:11.5px;color:#9A8A80;margin-top:1px}
+.hr{height:1px;background:#EADBD0;margin:8px 14px 0}
+.excl{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#8A7A70;margin-top:12px;padding:0 4px}
+.plus{border:1px dashed #CDB8A8;border-radius:999px;padding:2px 9px;font-size:12px;color:#7A6A60}
+.close{align-self:center;margin-top:14px;padding:7px 18px;border-radius:999px;background:#F7EEE7;font-size:13px;font-weight:600;color:#6B5A50;box-shadow:0 1px 2px rgba(70,52,40,.08)}
+.dim{opacity:.55}
+.tile{display:flex;gap:12px;padding:14px;align-items:flex-start}
+.tile .ti{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none}
+.tile b{display:block;font-size:14.5px;margin-bottom:3px}.tile span.t{font-size:12.5px;color:#7A6A60;line-height:1.5}
+.tile .go{margin-left:auto;align-self:center;color:#B8541F}
+.bub{display:flex;gap:8px;align-items:flex-end}
+.bub .b{background:#F7EEE7;border-radius:16px 16px 16px 4px;padding:9px 12px;font-size:13.5px;line-height:1.45;box-shadow:0 1px 2px rgba(70,52,40,.05),0 4px 12px rgba(70,52,40,.06)}
+.bub.r{flex-direction:row-reverse}.bub.r .b{border-radius:16px 16px 4px 16px}
+.bub .b small{display:block;font-size:11px;color:#9A8A80;margin-top:2px}
+.step{display:flex;gap:12px;align-items:flex-start;padding:12px 14px}
+.step .n{width:24px;height:24px;border-radius:999px;background:#B8541F;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px}
+.step .n.g{background:#E2D3C7;color:#7A6A60}
+.step b{display:block;font-size:14px}.step span.t{font-size:12.5px;color:#7A6A60;line-height:1.5}
+.fp{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}.fp span{font-size:11.5px;padding:2px 8px;border-radius:999px;background:#F6E1D3;color:#A84A17;font-weight:600}
+.ex{font-size:11px;font-weight:700;color:#A84A17;background:#F6E1D3;border-radius:999px;padding:1px 7px;margin-left:auto}
+</style>
+<style>
+.vrule{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border-radius:12px;background:#F1E6DD;font-size:13px;line-height:1.45;margin-top:6px}
+.vrule em{font-style:normal;flex:none;font-size:11px;font-weight:700;padding:1px 7px;border-radius:6px;background:#F6E1D3;color:#8A3A12;margin-top:1px}
+.vrule i{display:block;color:#8A7A70;font-size:12px}
+.vsub{display:block;font-size:11px;font-weight:700;color:#8A7A70;margin:10px 0 2px}
+.vcard{padding:14px}
+.vh{display:flex;align-items:center;gap:10px}.vh b{font-size:14.5px}.vh small{display:block;font-size:11.5px;color:#8A7A70;font-weight:500}
+.cand{display:flex;align-items:center;gap:10px;padding:11px 14px;font-size:14px}
+.cand + .cand{border-top:1px solid #EADBD0}
+.cand small{color:#8A7A70;font-size:12px;margin-left:4px}
+.mk{margin-left:auto;font-size:12.5px;font-weight:700;color:#fff;background:#B8541F;border-radius:999px;padding:5px 12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.mk.o{background:#F6E1D3;color:#A84A17;box-shadow:none}
+.foot{font-size:11.5px;color:#9A8A80;text-align:center;margin-top:12px}
+.rib{position:absolute;top:12px;right:12px;font-size:11px;font-weight:700;color:#A84A17;background:#F6E1D3;border-radius:999px;padding:2px 8px}
+.fpbig{width:52px;height:52px;border-radius:999px;background:#F6E1D3;color:#B8541F;display:flex;align-items:center;justify-content:center}
+</style><div class="mk_wrap"><div class="mk_col"><div class="mk_lab">B. 큰 버튼 하나 + 만들 인물 칩</div><div class="pop"><div class="tabs"><span>대사 <b style="color:#A84A17;font-size:12px">17</b></span><span class="on">말투 지문</span></div>
+ <div class="card" style="margin-top:12px;padding:20px 16px 16px;display:flex;flex-direction:column;align-items:center;gap:6px">
+  <div class="fpbig"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 11v4M8.5 8.5A5 5 0 0 1 17 12v2M7 12c0 2 .5 4 1.5 5.5M12 6.5a5.5 5.5 0 0 0-2 .4M15.5 16.5c-.3 1-.7 1.8-1.2 2.5M4.5 9A8 8 0 0 1 19 7.5M20 12v1"/></svg></div><div class="ttl">아직 말투 지문이 없어요</div>
+  <div class="ds">모은 대사로 인물마다 말버릇을 정리해서<br>RP 모델이 그 말투를 따라 하게 해요</div>
+  <div style="display:flex;gap:6px;margin-top:10px"><span class="chip" style="height:30px;border-radius:999px;display:flex;align-items:center;gap:6px;padding:0 10px 0 3px;background:#F1E6DD;font-size:12.5px"><span class="face" style="background:#8B6A52;width:24px;height:24px">M</span>Mara 12</span><span class="chip" style="height:30px;border-radius:999px;display:flex;align-items:center;gap:6px;padding:0 10px 0 3px;background:#F1E6DD;font-size:12.5px"><span class="face" style="background:#5E8A7A;width:24px;height:24px">R</span>Ren 5</span></div>
+  <div class="btn pri" style="width:100%;margin-top:10px">✧ 지문 2개 만들기</div>
+ </div>
+ <div class="sect">이렇게 정리돼요<small>예시</small></div><div class="card vcard dim" style="opacity:.62">
+  <div class="vh"><span class="face" style="background:#D97757;width:32px;height:32px">C</span><span><b>Claude</b><small>예시 · 대사 12개로 만듦</small></span></div>
+  <span class="vsub">사람됨</span><div style="font-size:13px">조심스럽지만 솔직해요</div>
+  <span class="vsub">말버릇</span>
+  <div class="vrule"><em>말끝</em><span>“~요”로 부드럽게 끝내요<i>“확인해 볼게요.”</i></span></div>
+  <div class="vrule"><em>습관</em><span>틀릴 수 있다고 먼저 말해요<i>“틀렸으면 말해 줘요.”</i></span></div>
+ </div><div class="close">닫기</div></div></div><div class="mk_col"><div class="mk_lab">D. 만들 인물도 없을 때 (A~C 공통)</div><div class="pop"><div class="tabs"><span>대사</span><span class="on">말투 지문</span></div>
+ <div class="card" style="margin-top:12px;padding:20px 16px 16px;display:flex;flex-direction:column;align-items:center;gap:6px">
+  <div class="fpbig"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 11v4M8.5 8.5A5 5 0 0 1 17 12v2M7 12c0 2 .5 4 1.5 5.5M12 6.5a5.5 5.5 0 0 0-2 .4M15.5 16.5c-.3 1-.7 1.8-1.2 2.5M4.5 9A8 8 0 0 1 19 7.5M20 12v1"/></svg></div><div class="ttl">아직 말투 지문이 없어요</div>
+  <div class="ds">대사가 3개 넘게 모인 인물부터 만들 수 있어요</div>
+  <div class="btn pri" style="width:100%;margin-top:10px">대사 모으러 가기</div>
+ </div>
+ <div class="sect">이렇게 정리돼요<small>예시</small></div><div class="card vcard dim" style="opacity:.62">
+  <div class="vh"><span class="face" style="background:#D97757;width:32px;height:32px">C</span><span><b>Claude</b><small>예시 · 대사 12개로 만듦</small></span></div>
+  <span class="vsub">사람됨</span><div style="font-size:13px">조심스럽지만 솔직해요</div>
+  <span class="vsub">말버릇</span>
+  <div class="vrule"><em>말끝</em><span>“~요”로 부드럽게 끝내요<i>“확인해 볼게요.”</i></span></div>
+  <div class="vrule"><em>습관</em><span>틀릴 수 있다고 먼저 말해요<i>“틀렸으면 말해 줘요.”</i></span></div>
+ </div><div class="close">닫기</div></div></div></div>

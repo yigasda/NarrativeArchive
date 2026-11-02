@@ -20,6 +20,7 @@ HTML은 브라우저로 바로 열려요(Playwright로 찍을 때는 `file://` �
 | `ext-chatpick/` | 다른 채팅에서 가져오기 창: 시안 A~C(`sheet.png`, `mock.html`, B 채택), 적용한 실제 화면(`real.png`) |
 | `ext-knowledge/` | 누가 아는가(비어 있을 때): 시안 A~C(`sheet.png`, `mock.html`, A 채택 · 예시 인물은 Claude · Gemini · GPT, 점 이름표), 실제 화면(`real.png`) |
 | `ext-quotes/` | 대사 은행(비어 있을 때): 시안 A+C(`mock.html`, 누가 아는가 환영 카드 + 말풍선 예시 · 예시 인물은 Claude · GPT · Gemini), 실제 화면 밝게 · 어둡게 · 섹션 고르기(`real.png`) |
+| `ext-voice/` | 말투 지문(비어 있을 때): 시안 B+D(`mock.html`, 환영 카드 + 끄고 켜는 인물 칩 + 만들기 하나 · 만들 인물이 없으면 대사 모으러 가기, 예시는 Claude), 실제 화면(`real.png`: 밝게 · 칩 하나 끔 · 인물 없음 · 어둡게 둘) |
 | `ext-picker/` | 공용 섹션 고르기 칸(누가 아는가 · 제목 다시 짓기 · 다이제스트 · 합치기 · 대사 은행 등): 시안 A~C(`sheet.png`, `mock.html`, A 채택), 실제 화면(`real.png`) |
 | `panel-s1` ~ `panel-s5`, `panel-worldmap` | 패널 하위 화면 시안 묶음 |
 | `phone-home/` | 홈 · 잠금(컬러 젤 · 화이트 그레이) |

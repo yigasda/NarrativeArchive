@@ -7548,3 +7548,19 @@ body.na_darkui .na_kn3_tag.s { border-color: #B8964E !important; }
 .na_qb3_bub > div > span { display: block; font-size: 13.5px; line-height: 1.45; color: var(--na-ink); opacity: 0.8; }
 .na_qb3_bub > div > small { display: block; margin-top: 2px; font-size: 11px; color: var(--na-dim); }
 body.na_darkui .na_qb3_bub > div { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 16px rgba(0, 0, 0, 0.3); }
+
+/* ============ 말투 지문 › empty (docs/mockups/ext-voice B+D): the 대사 tab's welcome card; people with enough lines as chips
+   that switch off and on over one 만들기 button, a faded Claude card as the example */
+.na_vc3_chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip:not(#na_x) { display: inline-flex; align-items: center; gap: 6px; height: 30px; margin: 0; padding: 0 11px 0 3px; border-radius: 999px; border: 1px dashed var(--na-line) !important; background: transparent !important; box-shadow: none !important; color: var(--na-dim) !important; font: inherit; font-size: 12.5px; cursor: pointer; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { border: 1px solid transparent !important; color: var(--na-ink) !important; }
+body:not(.na_darkui) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { background: #EADCD0 !important; }
+body.na_darkui dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { background: #3A2F28 !important; }
+.na_vc3_chip em { font-style: normal; font-weight: 600; }
+.na_vc3_chip small { font-size: 11.5px; color: var(--na-dim); font-variant-numeric: tabular-nums; }
+.na_vc3_chip:not(.on) .na_face { filter: grayscale(1); opacity: 0.5; }
+.na_vc3_chip:not(.on) em { text-decoration: line-through; }
+.na_kn3_make.na_vc3_go[disabled] { opacity: 0.45; cursor: default; }
+.na_vc3_ex { padding: 14px !important; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_vc3_ex > * { opacity: 0.62; }
+body.na_darkui .na_vc3_ex { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
