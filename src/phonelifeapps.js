@@ -914,24 +914,35 @@ function hourLine(hours) {
     const pts = hours.map((x, k) => x.temp === null ? null : [(step / 2 + k * step).toFixed(1), (6 + (1 - (x.temp - lo) / span) * 28).toFixed(1)]).filter(Boolean);
     return `<svg class="lf_tl" viewBox="0 0 330 40" preserveAspectRatio="none"><polyline points="${pts.map(p => p.join(',')).join(' ')}" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" opacity=".6"/>${pts.map((p, k) => `<circle cx="${p[0]}" cy="${p[1]}" r="${k ? 2.4 : 3}" fill="#fff"/>`).join('')}</svg>`;
 }
+// the forecast from the phone's day: days already past drop off, only the phone's own day reads "오늘" (and carries the
+// dot for the temperature now), the next one "내일" when the week isn't known, the rest by weekday
+function dayRows(days, today) {
+    if (!/^\d{2}-\d{2}$/.test(today || '')) return days.map((d, k) => ({ d, name: k ? wdk(d.day, `${Number(d.day.slice(3))}일`) : '오늘', now: !k }));
+    return days.filter(d => !/^\d{2}-\d{2}$/.test(d.day || '') || dayGap(today, d.day) >= 0).map(d => {
+        const g = /^\d{2}-\d{2}$/.test(d.day || '') ? dayGap(today, d.day) : null;
+        return { d, name: g === 0 ? '오늘' : g === 1 && !STORY.known ? '내일' : wdk(d.day, `${Number(String(d.day).slice(3))}일`), now: g === 0 };
+    });
+}
 function weatherBody(p, h, name, night, sub, source, tileCol, lead = '') {
-    const lo = Math.min(...h.days.map(d => d.lo ?? 99), h.lo ?? 99), hi = Math.max(...h.days.map(d => d.hi ?? -99), h.hi ?? -99);
+    const rows = dayRows(h.days, h.today);
+    h = { ...h, days: rows.map(x => x.d) };
+    const lo =Math.min(...h.days.map(d => d.lo ?? 99), h.lo ?? 99), hi = Math.max(...h.days.map(d => d.hi ?? -99), h.hi ?? -99);
     return `<div class="lf_wtop">${sub ? `<small>${sub}</small>` : ''}<h2>${esc(name)}</h2><div class="t">${h.temp ?? '—'}°</div><div class="c">${esc(h.said || WX[h.cond] || '')}</div><div class="hl">최고:${h.hi ?? '—'}° 최저:${h.lo ?? '—'}°</div>${source}</div>
       ${h.hours.length ? `<div class="lf_wcard">${h.line ? `<div class="ln1">${esc(h.line)}${k1(h.ko, 'lf_wk')}</div>` : ''}<div class="lf_hrs">${h.hours.map((x, k) => `<div>${k ? esc(x.time.slice(0, 2)) + '시' : '지금'}<em>${x.rain >= 20 ? `${x.rain}%` : ''}</em>${wxIc(x.cond, 26, phaseOf(x.time, h.tiles.sunrise || h.sr, h.tiles.sunset || h.ss) === 'night')}<b class="cg_num">${x.temp ?? '—'}°</b></div>`).join('')}</div>${hourLine(h.hours)}</div>` : ''}
-      ${h.days.length ? `<div class="lf_wcard"><div class="hd">${h.days.length}일간의 일기예보</div>${h.days.map((d, k) => `<div class="lf_d10"><span>${k ? wdk(d.day, `${Number(d.day.slice(3))}일`) : '오늘'}</span><span class="ic">${wxIc(d.cond, 22)}${d.rain >= 30 ? `<em>${d.rain}%</em>` : ''}</span><span class="lo cg_num">${d.lo ?? '—'}°</span>${tempBar(d, lo, hi, k ? null : h.temp)}<span class="hi cg_num">${d.hi ?? '—'}°</span></div>`).join('')}</div>` : ''}
+      ${h.days.length ? `<div class="lf_wcard"><div class="hd">${h.days.length}일간의 일기예보</div>${rows.map(({ d, name: dn, now: isNow }) => `<div class="lf_d10"><span>${dn}</span><span class="ic">${wxIc(d.cond, 22)}${d.rain >= 30 ? `<em>${d.rain}%</em>` : ''}</span><span class="lo cg_num">${d.lo ?? '—'}°</span>${tempBar(d, lo, hi, isNow ? h.temp : null)}<span class="hi cg_num">${d.hi ?? '—'}°</span></div>`).join('')}</div>` : ''}
       ${weatherTiles(h, tileCol, lead)}`;
 }
 // the screen's colours: the sky, and the one flat colour its cards and tiles sit in
 const wxVars = q => `background: ${q.sky}; --wcard: ${shade(q.sky, 0.9)}; --wtile: ${shade(q.sky, q.phase === 'day' && q.sky === '#4f8fd8' ? 0.62 : 0.8)}`;
-// the hourly row at the story's clock: "now" is the sky in the header, then the saved hours still ahead, and when the
-// clock has run past most of them the row is carried on with the last one's sky along the day's temperature curve
+// the hourly row at the story's clock: "now" is the sky in the header, then the next five whole hours; an hour the
+// model saved is shown as saved, the others are carried on along the day's temperature curve
 function hereHours(h, time) {
     const n = toMin(time), saved = h.hours || [];
     if (n === null) return saved;
-    const ahead = m => (m - n + 1440) % 1440;
-    const later = saved.filter(x => { const m = toMin(x.time); return m !== null && ahead(m) >= 30 && ahead(m) <= 12 * 60; }).sort((a, b) => ahead(toMin(a.time)) - ahead(toMin(b.time)));
-    const out = [{ time: hm(n), cond: h.cond, temp: h.temp, rain: later[0]?.rain ?? 0 }, ...later].slice(0, 6);
-    return walkHours(out[0], h, `${h.date}:${h.place}:hrs`, out);
+    const at = m => saved.find(x => { const s = toMin(x.time); return s !== null && Math.min((s - m + 1440) % 1440, (m - s + 1440) % 1440) <= 10; });
+    const first = Math.floor(n / 60) * 60 + 60, slots = [0, 1, 2, 3, 4].map(k => (first + k * 60) % 1440);
+    const today = h.today || h.date, next = /^\d{2}-\d{2}$/.test(today || '') ? (h.days || []).find(d => /^\d{2}-\d{2}$/.test(d.day || '') && dayGap(today, d.day) === 1) : null;
+    return walkHours({ time: hm(n), cond: h.cond, temp: h.temp, rain: at(first)?.rain ?? 0 }, h, `${h.date}:${h.place}:hrs`, slots.map(at), next);
 }
 export function weatherScreen(p, now) {
     const lf = L(p);
@@ -941,7 +952,7 @@ export function weatherScreen(p, now) {
     return `<div class="lf_wx" style="${wxVars(q)}">${scene(h.cond, phase)}
       ${axBar(p, now, '#fff')}
       <div class="ax_top lf_wbar">${axCb('home2')}<button type="button" class="lf_pill wx" data-go="wlist">도시 ${lf.weather.cities.length}</button></div>
-      <div class="ax_scroll">${weatherBody(p, { ...h, time, hours: hereHours(h, time), tiles: fillTiles(h, `${h.date}:${h.place}`, h.date || now5(p)) }, h.place || '현재 위치', phase === 'night', '현재 위치', '<div class="lf_wgap"></div>', shade(q.sky, 0.8))}<i class="lf_pad"></i></div>
+      <div class="ax_scroll">${weatherBody(p, { ...h, time, today: now5(p).slice(0, 5), hours: hereHours({ ...h, today: now5(p).slice(0, 5) }, time), tiles: fillTiles(h, `${h.date}:${h.place}`, h.date || now5(p)) }, h.place || '현재 위치', phase === 'night', '현재 위치', '<div class="lf_wgap"></div>', shade(q.sky, 0.8))}<i class="lf_pad"></i></div>
       ${axInd('#fff')}</div>`;
 }
 // a saved city: only its temperature, highs and lows and sky are the model's; its hours are drawn between them
@@ -950,16 +961,29 @@ function cityHours(c, t) {
     const base = toMin(t.time) ?? 12 * 60;
     return walkHours({ time: hm(base), cond: c.cond, temp: c.temp, rain: c.cond === 'rain' ? 60 : c.cond === 'storm' ? 70 : c.cond === 'drizzle' || c.cond === 'sleet' ? 40 : 0 }, c, `${c.name}:${t.time}:hrs`);
 }
-// one rule for every hourly row: from the first entry on, each hour drifts toward the day's temperature curve (coldest
-// before dawn, a degree or two under the day's low; warmest mid-afternoon) with a small wobble seeded by the place and
-// day, the way real hourly readings move. A flat −5 −5 −5 reads as made up
-function walkHours(first, c, seed, out = [first]) {
-    const lo = c.lo ?? (c.temp ?? 10) - 4, hi = c.hi ?? (c.temp ?? 10) + 4, r = seeded(seed);
-    let v = out[out.length - 1].temp ?? (lo + hi) / 2;
-    while (out.length < 6) {
-        const last = out[out.length - 1], m = (toMin(last.time) + 60) % 1440, f = Math.cos(((m / 60 - 15) / 24) * 2 * Math.PI), target = (lo - 1.5) + (hi - lo + 1.5) * (f + 1) / 2;
-        v += (target - v) * 0.4 + (r() - 0.5) * 2;
-        out.push({ time: hm(m), cond: last.cond, temp: Math.max(lo - 2, Math.min(hi + 1, Math.round(v))), rain: last.rain });
+// one rule for every hourly row: from the first entry on, each hour follows the day's temperature curve (coldest
+// before dawn at the day's low, warmest mid-afternoon at its high), never past the low or the high. It only climbs
+// from dawn to mid-afternoon and only falls after; a small wobble seeded by place and day sets how much, the way real
+// readings move. A saved hour (fixed[k]) is shown as is and the walk goes on from it
+function walkHours(first, c, seed, fixed = [], next = null) {
+    const range = d => { const lo = Math.min(d.lo ?? (c.temp ?? 10) - 4, d.hi ?? Infinity); return [lo, Math.max(d.hi ?? (c.temp ?? 10) + 4, lo)]; };
+    let [lo, hi] = range(c), v = first.temp ?? (lo + hi) / 2;
+    const r = seeded(seed), out = [first], curve = mins => lo + (hi - lo) * (Math.cos(((mins / 60 - 15) / 24) * 2 * Math.PI) + 1) / 2;
+    // how far the reading sits off the curve; it fades hour by hour, so a cold evening keeps falling from where it is
+    let off = v - curve(toMin(first.time) ?? 720);
+    for (let k = 0; out.length < 6; k++) {
+        const last = out[out.length - 1], m = (Math.floor(toMin(last.time) / 60) * 60 + 60) % 1440, x = fixed[k];
+        // past midnight the hours are the next day's, with its own low and high when the forecast has them
+        if (m === 0 && next) [lo, hi] = range(next);
+        if (x) { out.push(x); if (x.temp !== null && x.temp !== undefined) { v = x.temp; off = v - curve(m); } continue; }
+        const hr = m / 60, up = hr >= 5 && hr <= 15;
+        off *= 0.8;
+        // climbing: along the curve; falling: most of the drop early in the evening, levelling off toward dawn's low
+        let d = up ? (curve(m) + off - v) * 0.7 + r() * 0.6 : (lo - v) * 0.22 - r() * 0.4;
+        d = up ? Math.max(0, d) : Math.min(0, d);
+        // a "now" already outside the day's range isn't pulled back in one jump
+        v = Math.max(Math.min(lo, v), Math.min(Math.max(hi, v), v + d));
+        out.push({ time: hm(m), cond: last.cond, temp: Math.round(v), rain: last.rain });
     }
     return out;
 }
