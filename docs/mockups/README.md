@@ -31,6 +31,7 @@ HTML은 브라우저로 바로 열려요(Playwright로 찍을 때는 `file://` �
 | `ext-xray/` | 프롬프트 X-ray 기록 전 화면: 시안 A(`mock.html`, 흐린 예시 + 한 줄), 실제 화면(`real.png`, 키워드 테스트 숫자 머리글도 같이) |
 | `ext-au/` | AU 채팅: 시안 B(`mock.html`, 본편 → AU 타임라인 + 스위치 카드 + 굵은 이름의 칸 둘), 실제 화면(`real.png`) |
 | `ext-studio-acts/` | 작업실 답 카드 아래 줄: 시안 B(`mock.html`, 선 아래 한 줄 · 검사 통과는 초록 글자 · 한국어 + 확정 알약 + ⋯ 메뉴(다듬기 · 직접 고치기 · 복사 · 고쳐 받기 · 되돌리기)), 실제 화면(`real.png`) |
+| `ext-layers2/` | 섹션 버전(요점 · 짧은 버전): 시안 B(`mock.html`, 원문 · 짧게 · 요점을 줄 목록 + 옅은 초록 넣는 중 + 토큰 · %), 실제 화면(`real.png`) |
 | `ext-picker/` | 공용 섹션 고르기 칸(누가 아는가 · 제목 다시 짓기 · 다이제스트 · 합치기 · 대사 은행 등): 시안 A~C(`sheet.png`, `mock.html`, A 채택), 실제 화면(`real.png`) |
 | `panel-s1` ~ `panel-s5`, `panel-worldmap` | 패널 하위 화면 시안 묶음 |
 | `phone-home/` | 홈 · 잠금(컬러 젤 · 화이트 그레이) |

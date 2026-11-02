@@ -7957,3 +7957,22 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st .na_st_mi:not(#na_x) {
 .na_st .na_st_mi small { margin-top: 2px; font-size: 11.5px; }
 .na_st .na_st_mi:first-child { border-radius: 14px 14px 0 0 !important; }
 .na_st .na_st_mi:last-child { border-radius: 0 0 14px 14px !important; }
+
+/* ============ 섹션 버전 (docs/mockups/ext-layers2 B): the three versions as rows in one card (the one going in on a deeper
+   tone with a soft green 넣는 중), tokens and % on the right; the ask field and 초안 모델로 만들기 outside the text card */
+.na_ly3_cards.na_ly_tabs { display: flex !important; flex-direction: column; gap: 0 !important; margin-top: 10px; border-radius: 18px; overflow: hidden; background: var(--na-card) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+body.na_darkui .na_ly3_cards.na_ly_tabs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+body:is(.na_darkui, :not(.na_darkui)) .na_layers .na_ly3_cards button.na_ly3_card:not(#na_x) { flex-direction: row !important; align-items: center !important; gap: 8px !important; width: 100%; margin: 0; padding: 12px 14px !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }
+.na_layers .na_ly3_cards button.na_ly3_card + button.na_ly3_card { border-top: 1px solid var(--na-line2, var(--na-line)) !important; }
+body:not(.na_darkui) .na_layers .na_ly3_cards button.na_ly3_card.on:not(#na_x) { background: #F3E4D8 !important; }
+body.na_darkui .na_layers .na_ly3_cards button.na_ly3_card.on:not(#na_x) { background: #2E2E34 !important; }
+.na_layers .na_ly3_cards button.na_ly3_card b { font-size: 14px; font-weight: 600; }
+.na_layers .na_ly3_cards button.na_ly3_card small { margin-left: auto; }
+.na_ly3_in { position: static !important; padding: 1px 8px !important; font-size: 11px !important; font-weight: 700; }
+body:not(.na_darkui) .na_ly3_in { background: #E3EFE6 !important; color: #2F6B47 !important; }
+body.na_darkui .na_ly3_in { background: #2E2E34 !important; color: #7CCB9A !important; }
+.na_ly3_body { flex: 1; }
+.na_ly3 > .na_ly_ask { margin-top: 10px; }
+body:not(.na_darkui) .na_ly3 > .na_ly_ask { background: #FCF6F1 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); }
+.na_ly3 > .na_ly3_foot { justify-content: center; margin-top: 8px; }
+body:is(.na_darkui, :not(.na_darkui)) .na_ly3 > .na_ly3_foot button.na_ly3_tool:not(#na_x) { background: transparent !important; box-shadow: none !important; color: var(--na-mute) !important; font-weight: 600; }

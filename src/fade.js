@@ -270,7 +270,7 @@ export async function openLayers(s) {
         <div class="na_v2_note na_ly_note">${noteHtml(plan, use)}</div>
         ${stale ? '<div class="na_xr_warn slim">' + WARN_SVG + '<div>버전을 만든 뒤에 원문이 바뀌었어요. 저장할 때까지 원문으로 들어가요.</div></div>' : ''}
         <div class="na_ly3_lbl"><span>넣을 버전</span><label class="na_ly3_auto">자동으로 고르기<input type="checkbox" class="na_toggle na_ly3_autoon"${forced() === 'auto' ? ' checked' : ''}></label></div>
-        <div class="na_ly3_cards na_ly_tabs">${[['long', '원문'], ['short', '짧게'], ['line', '요점']].map(([t, l]) => `<button type="button" class="na_ly3_card" data-t="${t}"><span class="na_ly3_in">넣는 중</span><b>${l}</b><small class="na_ly_tok_${t}"></small></button>`).join('')}</div>
+        <div class="na_ly3_cards na_ly_tabs">${[['long', '원문'], ['short', '짧게'], ['line', '요점']].map(([t, l]) => `<button type="button" class="na_ly3_card" data-t="${t}"><b>${l}</b><span class="na_ly3_in">넣는 중</span><small class="na_ly_tok_${t}"></small></button>`).join('')}</div>
         <div class="na_v2_card na_ly3_body">
           <div class="na_ly_tools">
             <small class="na_ly_trinfo"></small>
@@ -280,9 +280,9 @@ export async function openLayers(s) {
           <div class="na_ly_pane" data-t="long"><div class="na_ly_view na_ly_full"></div></div>
           <div class="na_ly_pane" data-t="short"><div class="na_ly_view"></div><textarea class="text_pole na_ly_short" rows="8" spellcheck="false" hidden placeholder="원문을 1/3쯤으로 줄인 것. 직접 쓰거나 초안 모델로 만들어요."></textarea></div>
           <div class="na_ly_pane" data-t="line"><div class="na_ly_view"></div><textarea class="text_pole na_ly_line" rows="5" spellcheck="false" hidden placeholder="- 누가 무엇을 했고, 무엇이 바뀌었는지 (불릿 2~4개)"></textarea></div>
+        </div>
           ${draftReady() ? `<div class="na_ly_ask"><input type="text" class="na_ly_askq" placeholder="고쳐 달라고 하기 (예: 소망 대사는 원문 그대로)" aria-label="고쳐 달라고 하기" enterkeyhint="send"><button type="button" class="na_ly_askgo" aria-label="보내기" title="초안 모델에게 보내기">${svgA('M22 2L11 13M22 2l-7 20-4-9-9-4z', 17)}</button></div>` : ''}
           ${draftReady() ? `<div class="na_ly3_foot"><button type="button" class="na_ly3_tool na_ly_draft">${svgA('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/>', 13)}초안 모델로 ${L.short || L.line ? '다시 ' : ''}만들기</button></div>` : '<small class="na_v2_foot">⚙ 설정 → AI 모델 → 초안 모델을 정하면 여기서 바로 만들 수 있어요</small>'}
-        </div>
       </div>`);
     const startShort = L.short ? withTopLabel(m.text.slice(s.start, s.end), L.short) : '', startLine = L.line || '';
     $root.find('.na_ly_short').val(startShort);
@@ -314,7 +314,7 @@ export async function openLayers(s) {
         const [a, b, d] = await Promise.all([countTokens(full), countTokens($root.find('.na_ly_short').val()), countTokens($root.find('.na_ly_line').val())]);
         $root.find('.na_ly_tok_long').text(`${fmt(a)} 토큰`);
         $root.find('.na_ly_tok_short').text(b ? `${fmt(b)} 토큰 · ${Math.round(b / Math.max(1, a) * 100)}%` : '없음');
-        $root.find('.na_ly_tok_line').text(d ? `${fmt(d)} 토큰` : '없음');
+        $root.find('.na_ly_tok_line').text(d ? `${fmt(d)} 토큰 · ${Math.round(d / Math.max(1, a) * 100)}%` : '없음');
         show();
     };
     show(); tok();
