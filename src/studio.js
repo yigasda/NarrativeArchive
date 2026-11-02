@@ -365,6 +365,8 @@ export async function openStudio() {
     if (!st && !await setup()) return;
     // sections read again from the answers, so a reading fix reaches answers that came in before it
     st = sessionOf(getMeta());
+    // 개요 먼저 is retired: an old run that had it on goes straight to sections from here (an outline already waiting still gets its section)
+    if (st?.outline) { st.outline = false; await saveMeta(); }
     if (st?.turns.length) { const re = rebuildSecs(st); if (JSON.stringify(re) !== JSON.stringify(st.secs)) { st.secs = re; await saveMeta(); } }
     let toAppend = false;
     const $root = $(`
@@ -394,7 +396,6 @@ export async function openStudio() {
           </div>
           <div class="na_st_menu" hidden>
             <label class="na_st_mi"><span><b>자동 진행</b><small>남은 장면을 끝까지 쭉 · 마지막에 STATE 쪽지</small></span><input type="checkbox" class="na_toggle na_st_autotg"></label>
-            <label class="na_st_mi"><span><b>개요 먼저</b><small>흐름을 먼저 보고 본문 · 장면마다 1번 더</small></span><input type="checkbox" class="na_toggle na_st_outtg"></label>
             <label class="na_st_mi"><span><b>지시문</b><small>다음 턴부터 이걸로 · 상세는 규칙 전부</small></span><select class="text_pole na_st_psel"></select></label>
             <button type="button" class="na_st_mi na_st_style"><span><b>문체 견본</b><small class="na_st_stylesub"></small></span></button>
             <button type="button" class="na_st_mi na_st_note"><span><b>작업 노트</b><small>매 턴 같이 가요</small></span></button>
