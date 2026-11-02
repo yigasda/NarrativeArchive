@@ -510,7 +510,8 @@ test('weather: a Fahrenheit status line is read in Celsius, the high and low hol
     const { p } = setup();
     applyWeather(p, { place: 'Varo', date: '10-26', time: '15:00', from: 'chat', cond: 'clear', temp: 20, hi: 9, lo: 4, line: 'Sunny all day', tiles: { rain24: 4, rainNext: 2 }, days: [{ day: '10-26', cond: 'clear', lo: 4, hi: 9 }] }, { date: '10-26', time: '15:00', place: 'Varo', weather: 'Sunny, 72°F' });
     const h = p.life.weather.here;
-    assert.equal(h.temp, 22); assert.equal(h.hi, 22); assert.equal(h.lo, 4); assert.equal(h.days.find(d => d.day === '10-26').hi, 22);
+    // the model shaped its day around 20°: the status line's 22° moves the low with it, the high holds the temperature now
+    assert.equal(h.temp, 22); assert.equal(h.hi, 22); assert.equal(h.lo, 6); assert.equal(h.days.find(d => d.day === '10-26').hi, 22);
     assert.equal(h.line, 'Sunny all day'); assert.equal(h.tiles.rain24, 4);
     applyWeather(p, null, null, { today: '10-27' });
     const n = p.life.weather.here;

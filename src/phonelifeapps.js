@@ -180,7 +180,7 @@ function cityTime(p, lf, c) {
     const off = a !== null && b !== null ? Math.round((a - b) / 60) : 0, t = toMin(n.slice(6)) ?? toMin(lf.weather.here.time) ?? 12 * 60;
     const sun = c.sunrise && c.sunset ? [c.sunrise, c.sunset] : sunOf(n.slice(0, 5), c.tz) || [];
     const local = t + off * 60, night = (() => { const ss = toMin(sun[1]) ?? 18 * 60, sr = toMin(sun[0]) ?? 6 * 60 + 30; const l = ((local % 1440) + 1440) % 1440; return l >= ss || l < sr; })();
-    return { off, time: hm(local), night, dayShift: local >= 1440 ? '내일' : local < 0 ? '어제' : '오늘' };
+    return { off, time: hm(local), night, date: n.slice(0, 5), dayShift: local >= 1440 ? '내일' : local < 0 ? '어제' : '오늘' };
 }
 // the world map card: grid paper, the land, tonight's shadow (from the story's date and time), a pin per saved city
 const geo = (lat, lon) => [((lon + 180) / 360 * MAP_W), ((MAP_TOP - lat) / (MAP_TOP - MAP_BOT) * MAP_H)];
@@ -701,8 +701,11 @@ export function fileScreen(p, now, id) {
 const WX = { clear: '맑음', partly: '구름 조금', cloudy: '흐림', drizzle: '이슬비', rain: '비', sleet: '진눈깨비', snow: '눈', fog: '안개', storm: '뇌우', wind: '강풍' };
 // the part of the day a sky is drawn for: dawn and evening are the hour around sunrise and sunset
 function phaseOf(time, sunrise, sunset) {
-    const t = toMin(time), sr = toMin(sunrise) ?? 6 * 60 + 30, ss = toMin(sunset) ?? 18 * 60;
+    let t = toMin(time), ss = toMin(sunset) ?? 18 * 60;
+    const sr = toMin(sunrise) ?? 6 * 60 + 30;
     if (t === null) return 'day';
+    // a sunset past midnight (a far northern summer): the day runs on past the clock's wrap
+    if (ss < sr) { ss += 1440; if (t < sr - 45) t += 1440; }
     if (t >= sr - 45 && t <= sr + 45) return 'dawn';
     if (t >= ss - 50 && t <= ss + 30) return 'eve';
     return t > ss + 30 || t < sr - 45 ? 'night' : 'day';
@@ -983,7 +986,7 @@ export function weatherScreen(p, now) {
 // the hours ahead for a city: from its clock, along the day's curve, the same way the current place's row is carried on
 function cityHours(c, t) {
     const base = toMin(t.time) ?? 12 * 60;
-    return walkHours({ time: hm(base), cond: c.cond, temp: c.temp, rain: c.cond === 'rain' ? 60 : c.cond === 'storm' ? 70 : c.cond === 'drizzle' || c.cond === 'sleet' ? 40 : 0 }, c, `${c.name}:${t.time}:hrs`);
+    return walkHours({ time: hm(base), cond: c.cond, temp: c.temp, rain: c.cond === 'rain' ? 60 : c.cond === 'storm' ? 70 : c.cond === 'drizzle' || c.cond === 'sleet' ? 40 : 0 }, c, `${c.name}:${t.date}:hrs`);
 }
 // one rule for every hourly row: from the first entry on, each hour follows the day's temperature curve (coldest
 // before dawn at the day's low, warmest mid-afternoon at its high), never past the low or the high. It only climbs

@@ -73,28 +73,36 @@ export function weatherFrom(t) {
 }
 const hereOf = h => ({
     place: line(h.place, 60), date: day5(h.date), time: hhmm(h.time), from: pick(h.from, ['tracker', 'chat', 'archive', 'guess'], 'guess'),
-    cond: condPick(h.cond, 'cloudy', { temp: int(h.temp, -60, 60), rain: num(h.tiles?.rainNext) }), temp: int(h.temp, -60, 60), hi: int(h.hi, -60, 60), lo: int(h.lo, -60, 60), line: line(h.line, 160), ko: ko(h.ko),
+    cond: condPick(h.cond, 'cloudy', { temp: int(h.temp, -60, 60), rain: int(arr(h.hours)[0]?.rain, 0, 100) }), temp: int(h.temp, -60, 60), hi: int(h.hi, -60, 60), lo: int(h.lo, -60, 60), line: line(h.line, 160), ko: ko(h.ko),
     hours: arr(h.hours).map(x => ({ time: hhmm(x?.time), cond: condPick(x?.cond, 'cloudy', { temp: int(x?.temp, -60, 60), rain: int(x?.rain, 0, 100) }), temp: int(x?.temp, -60, 60), rain: int(x?.rain, 0, 100) ?? 0 })).filter(x => x.time).slice(0, 6),
     days: arr(h.days).map(x => ({ day: day5(x?.day), cond: condPick(x?.cond, 'cloudy', { temp: int(x?.hi, -60, 60), rain: int(x?.rain, 0, 100) }), lo: int(x?.lo, -60, 60), hi: int(x?.hi, -60, 60), rain: int(x?.rain, 0, 100) ?? 0 })).filter(x => x.day).slice(0, 10),
     tiles: Object.fromEntries(['rain24', 'rainNext', 'feels', 'wind', 'gust', 'humidity', 'dew', 'visibility'].map(k => [k, num(h.tiles?.[k])]).concat([['dir', line(h.tiles?.dir, 12)], ['sunrise', hhmm(h.tiles?.sunrise)], ['sunset', hhmm(h.tiles?.sunset)]])),
 });
 // the status line over a weather "here": its date, time, place and weather stand
-function overlay(here, now) {
+// fresh: the model's own answer, whose whole forecast was shaped around its temperature; a status line's other reading
+// moves that shape with it (the high, the low, the hours, today's row). Either way the felt temperature and the dew point
+// follow the temperature now
+function overlay(here, now, fresh = false) {
     if (!now) return here;
     here.from = 'tracker';
     if (now.place) here.place = line(now.place, 60);
     if (/^\d{2}-\d{2}/.test(when(now.date))) here.date = day5(now.date);
     if (now.time) here.time = hhmm(now.time);
-    const c = condOf(now.weather), t = tempOf(now.weather);
+    const c = condOf(now.weather), t = tempOf(now.weather), t0 = here.temp;
     if (c) here.cond = c;
-    if (t !== null) here.temp = t;
+    if (t !== null) {
+        here.temp = t;
+        const d = Number.isFinite(t0) ? t - t0 : 0, mv = (o, k) => { if (Number.isFinite(o?.[k])) o[k] = o[k] + d; };
+        if (d && here.tiles) { mv(here.tiles, 'feels'); mv(here.tiles, 'dew'); }
+        if (d && fresh) { mv(here, 'hi'); mv(here, 'lo'); for (const x of here.hours || []) mv(x, 'temp'); for (const x of here.days || []) if (x.day === here.date) { mv(x, 'hi'); mv(x, 'lo'); } }
+    }
     here.said = line(now.weather, 60);
     return here;
 }
 // a Korean copy that only repeats the line (a Korean line given the same "ko") would show twice
 const unko = h => { if (h.ko && h.line && h.ko.replace(/\s+/g, ' ').trim() === h.line.replace(/\s+/g, ' ').trim()) h.ko = ''; return h; };
 export function parseWeather(w, now) {
-    return { here: fit(unko(overlay(hereOf(w?.here || {}), now))), cities: arr(w?.cities).map(cityOf).filter(c => c.name).slice(0, 5) };
+    return { here: fit(unko(overlay(hereOf(w?.here || {}), now, true))), cities: arr(w?.cities).map(cityOf).filter(c => c.name).slice(0, 5) };
 }
 
 // ---- story days: "MM-DD" without a year; a gap across New Year is taken the short way round
@@ -305,7 +313,7 @@ export function applyWeather(p, w, now, { archive = true, today = '' } = {}) {
     const was = p.life.weather || null;
     let next;
     if (w && typeof w === 'object') {
-        const here = fit(unko(overlay(hereOf(w), now)));
+        const here = fit(unko(overlay(hereOf(w), now, true)));
         if (here.from === 'archive' && !archive) here.from = 'chat';
         // a forecast or a tile the model left out stays as it was (the clock trims what is past)
         const old = was?.here;
