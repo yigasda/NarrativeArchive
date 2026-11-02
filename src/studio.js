@@ -395,12 +395,12 @@ export async function openStudio() {
             </div>
           </div>
           <div class="na_st_menu" hidden>
-            <label class="na_st_mi"><span><b>자동 진행</b><small>남은 장면을 끝까지 쭉 · 마지막에 STATE 쪽지</small></span><input type="checkbox" class="na_toggle na_st_autotg"></label>
-            <label class="na_st_mi"><span><b>지시문</b><small>다음 턴부터 이걸로 · 상세는 규칙 전부</small></span><select class="text_pole na_st_psel"></select></label>
-            <button type="button" class="na_st_mi na_st_style"><span><b>문체 견본</b><small class="na_st_stylesub"></small></span></button>
-            <button type="button" class="na_st_mi na_st_note"><span><b>작업 노트</b><small>매 턴 같이 가요</small></span></button>
-            <button type="button" class="na_st_mi na_st_state"><span><b>STATE 쪽지 받기</b><small>지금까지 쓴 섹션으로</small></span></button>
-            <button type="button" class="na_st_mi na_st_reset"><span><b>새로 시작</b><small>이 대화와 받은 섹션을 지워요</small></span></button>
+            <label class="na_st_mi"><span><b>자동 진행</b></span><input type="checkbox" class="na_toggle na_st_autotg"></label>
+            <label class="na_st_mi"><span><b>지시문</b></span><select class="text_pole na_st_psel"></select></label>
+            <button type="button" class="na_st_mi na_st_style"><span><b>문체 견본</b></span></button>
+            <button type="button" class="na_st_mi na_st_note"><span><b>작업 노트</b></span></button>
+            <button type="button" class="na_st_mi na_st_state"><span><b>STATE 쪽지 받기</b><small>인물 · 떡밥이 어떻게 바뀌었는지 정리해 달라고 해요</small></span></button>
+            <button type="button" class="na_st_mi na_st_reset"><span><b>새로 시작</b></span></button>
           </div>
         </div>
       </div>`);
