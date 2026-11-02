@@ -8021,6 +8021,6 @@ body.na_darkui .na_popup.na_rt .na_rt_row input.text_pole.na_rt_new:not(#na_x):f
 .na_rt .na_rt_apply:disabled { opacity: 0.5; cursor: default; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup.popup:has(.na_rt_res:not([hidden])):not(#na_x) .popup-controls.popup-controls { display: none !important; }
 
-/* 섹션 버전 (3.169.34): 직접 고치기 · 한국어로 get a fill one tone off the card (light #E9DCD1, dark #3A3A41) so they read as buttons */
-body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup .na_ly_tools .na_v2_pillbtn.na_v2_pillbtn:not(.on):not(.active):not(#na_x) { background: #E9DCD1 !important; border: 0 !important; box-shadow: none !important; color: var(--na-ink) !important; }
+/* 섹션 버전 (3.169.34): 직접 고치기 · 한국어로 get a fill one tone off the card (light #EFE4DB, dark #3A3A41) so they read as buttons */
+body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup .na_ly_tools .na_v2_pillbtn.na_v2_pillbtn:not(.on):not(.active):not(#na_x) { background: #EFE4DB !important; border: 0 !important; box-shadow: none !important; color: var(--na-ink) !important; }
 body.na_darkui dialog.popup:not(:has(.na_phone)) .na_popup .na_ly_tools .na_v2_pillbtn.na_v2_pillbtn:not(.on):not(.active):not(#na_x) { background: #3A3A41 !important; border: 0 !important; box-shadow: none !important; }
