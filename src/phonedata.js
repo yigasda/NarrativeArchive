@@ -861,6 +861,7 @@ export async function dropStretch(m, p, k) {
     const keep = k => x => { if (!goes(k, x)) return true; items++; return false; };
     for (const key of LISTS) if (Array.isArray(p[key])) p[key] = p[key].filter(keep(key));
     for (const t of p.threads) t.messages = t.messages.filter(keep('msg'));
+    p.threads = p.threads.filter(t => t.messages.length); // a thread with nothing left in it goes too
     for (const x of p.posts || []) if (x.comments) x.comments = x.comments.filter(keep('comment'));
     s.dropped.splice(s.dropped.indexOf(d), 1);
     if (p.money) migrateBank(m, p);
@@ -895,6 +896,7 @@ export async function undoRound(m, p) {
         const t = p.threads.find(x => x.id === tid);
         if (t) { const drop = new Set(sigs); t.messages = t.messages.filter(x => !drop.delete(JSON.stringify([x.from, x.text, x.time]))); }
     }
+    p.threads = p.threads.filter(t => t.messages.length);
     for (const [pid, n] of u.comments || []) { const x = (p.posts || []).find(y => y.id === pid); if (x?.comments?.length > n) x.comments = x.comments.slice(0, n); }
     // items that were there before the round forget it as a source
     for (const { x } of phoneItems(p)) if (x.froms) x.froms = x.froms.filter(f => f.r !== u.round);

@@ -161,7 +161,8 @@ export function diaryScreen(p, now, pick = '') {
     const have = new Set((p.diary || []).map(d => d.date));
     // the week up to the story's today (no weekday names: the story's dates carry no year)
     const days = [];
-    if (x0) for (let n = 6; n >= 0; n--) { const d = new Date(2001, x0.mo - 1, x0.d - n); days.push(`${pad(d.getMonth() + 1)}-${pad(d.getDate())}`); }
+    const yr = (!p.noYear && Number(p.year)) || 2001; // the story's year when it has one, so a leap day counts
+    if (x0) for (let n = 6; n >= 0; n--) { const d = new Date(yr, x0.mo - 1, x0.d - n); days.push(`${pad(d.getMonth() + 1)}-${pad(d.getDate())}`); }
     return `${axBar(p, now, '#3d3127')}
       <div class="ax_dytop"><button type="button" class="ax_back" data-go="home">${ax('back', 22, '#8a6d4a', 2.4)}</button>${ax('search', 22, '#8a6d4a')}</div>
       <div class="ax_scroll">
@@ -225,8 +226,8 @@ export function msgList(p, now, roster) {
         ${axFind()}
         ${ts.length ? `<div class="ax_card">${ts.map(t => { const x = t.messages[t.messages.length - 1]; return swipeRow('thread', p.threads.indexOf(t), `
           <button type="button" class="ax_rw" data-go="thread" data-i="${p.threads.indexOf(t)}">${threadNew(t) ? '<i class="ax_dot"></i>' : ''}${axAv(t.with, 48, roster)}<span class="ax_tx">
-            <span class="ax_h"><b>${esc(savedName(p, t.with))}</b><small class="cg_num">${esc(listTime(p, x.time))}</small></span>
-            <span class="ax_p">${t.draft ? `<span class="ax_draftw">초안</span>${esc(t.draft.text)}` : `${esc(x.text)}${x.ko && koOn() ? `<span class="ax_ko">${esc(x.ko)}</span>` : ''}`}</span></span></button>`); }).join('')}</div>` : '<div class="ax_empty">메시지가 없어요</div>'}
+            <span class="ax_h"><b>${esc(savedName(p, t.with))}</b><small class="cg_num">${esc(listTime(p, x?.time || ''))}</small></span>
+            <span class="ax_p">${t.draft ? `<span class="ax_draftw">초안</span>${esc(t.draft.text)}` : `${esc(x?.text || '')}${x?.ko && koOn() ? `<span class="ax_ko">${esc(x.ko)}</span>` : ''}`}</span></span></button>`); }).join('')}</div>` : '<div class="ax_empty">메시지가 없어요</div>'}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
@@ -468,7 +469,7 @@ export function calScreen(p, now, m, pick = '') {
     const an = annivList(m, p.owner);
     const evs = p.events.map((e, k) => ({ e, k }));
     const marked = new Set([...p.events.map(e => e.date), ...an.map(a => a.date)]);
-    const len = new Date(2000, x0.mo, 0).getDate();
+    const len = new Date((!p.noYear && Number(p.year)) || 2000, x0.mo, 0).getDate(); // February: 29 days unless the story's year says 28
     const grid = Array.from({ length: len }, (_, n) => { const d = `${pad(x0.mo)}-${pad(n + 1)}`; return dayBtn('cal', d, pick, `${d === (pick || day) ? 't' : ''} ${marked.has(d) ? 'e' : ''}`, n + 1); }).join('');
     const row = ({ e, k }, when = '') => `<button type="button" class="ax_ev" data-go="calone" data-i="${k}"><i style="background: ${AX_EVC[k % AX_EVC.length]}"></i><span class="ax_tx"><b>${esc(e.title)}</b>${e.ko && koOn() ? `<span class="ax_p">${esc(e.ko)}</span>` : ''}</span><small class="cg_num">${e.time ? esc(fmtTime(p, `${e.date} ${e.time}`)) : '하루 종일'}${when ? `<br>${esc(when)}` : ''}</small></button>`;
     const anRow = a => `<div class="ax_ev"><i style="background: #d494a7"></i><span class="ax_tx"><b>♥ ${esc(a.name)}</b><span class="ax_p">기념일 · 매년 ${esc(fmtDate(p, a.date))}</span></span></div>`;

@@ -124,7 +124,8 @@ const cgMini = (k, mono) => { const [c1, c2, g = '#ffffff'] = CG_GEL[k]; return 
 function walletW(p, now, mono) {
     const M = p.money, day = String(now).slice(0, 5), bars = mono ? ['#2a313b', 'rgba(22, 27, 34, 0.22)'] : ['#8b95aa', '#86bdb6'];
     const next = M ? [...M.passes].filter(x => !x.date || gapDays(day, x.date) >= 0).sort((a, b) => gapDays(day, a.date) - gapDays(day, b.date))[0] : null;
-    const ord = M ? M.orders.find(x => x.status !== 'delivered' && x.status !== 'unknown') : null;
+    // the newest order still on its way (a cancelled or returned one is not)
+    const ord = M ? [...M.orders].sort(byStory(now)).reverse().find(x => ['ordered', 'shipped', 'on the way'].includes(x.status)) : null;
     const route = next ? (next.from && next.to && next.kind !== 'hotel' ? `${next.from} → ${next.to}` : next.by) : '';
     return `<button type="button" class="cg_glass cg_wcal cg_wwal" data-go="wallet">
       <span class="cg_wh"><span class="cg_cap">지갑</span><span class="cg_evw cg_num">${M ? `카드 ${M.cards.length} · 패스 ${M.passes.length}` : ''}</span></span>
