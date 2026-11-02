@@ -7674,8 +7674,6 @@ body.na_darkui .na_sp > .checkbox_label input:checked { background-image: url("d
 
 /* ============ 압축 마법사 (docs/mockups/ext-wizard B + 가): as tall as its content; the range's first and last message
    above the numbers (hold one to read it whole in a sheet from the bottom) */
-.na_wiz2.na_wiz2 { min-height: 0; }
-.na_wiz2 .na_wz2_fill { display: none; }
 .na_wz3_msgs { display: flex; flex-direction: column; margin-bottom: 12px; }
 .na_wz3_msgs:empty { display: none; }
 .na_wz3_msg { padding: 10px 12px; border-radius: 14px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 4px 12px rgba(70, 52, 40, 0.05); cursor: pointer; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
