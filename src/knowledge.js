@@ -174,17 +174,18 @@ export async function openKnowledge() {
     const $root = $(`
       <div class="na_popup na_v2 na_kn2">
         <div class="na_v2_title"><b>누가 아는가</b><small class="na_kn2_sub"></small></div>
-        <div class="na_kn2_main">
-          <button type="button" class="na_v2_btn primary na_kn_ai"><span>AI로 만들기</span></button>
-          <button type="button" class="na_v2_btn na_kn_tidy" title="겹치는 줄 합치기 · 끝 시점 기준으로 고치기 · 필요 없는 줄 빼기">AI로 다듬기</button>
-        </div>
+        <!-- 주입하기 · 경고 · 목록(비면 안내) · AI 버튼과 고르기 칸 · 더보기 줄 -->
         <label class="na_v2_card na_kn2_inject na_kn_inject">
           <span class="na_cp_txt"><b>주입하기</b><small>모르는 걸 아는 척하지 않게<span class="na_kn_tok"></span></small></span>
           <input type="checkbox" class="na_toggle">
         </label>
-        <div class="na_kn_pickhost"></div>
         <div class="na_check na_check_soft na_kn_stale" hidden></div>
         <div class="na_kn_list"></div>
+        <div class="na_kn2_main">
+          <button type="button" class="na_v2_btn primary na_kn_ai"><span>AI로 만들기</span></button>
+          <button type="button" class="na_v2_btn na_kn_tidy" title="겹치는 줄 합치기 · 끝 시점 기준으로 고치기 · 필요 없는 줄 빼기">AI로 다듬기</button>
+        </div>
+        <div class="na_kn_pickhost"></div>
         <div class="na_kn2_more">
           <button type="button" class="na_linkbtn na_kn_edit">직접 고치기</button>
           <button type="button" class="na_linkbtn na_kn_trbtn">한국어로 보기</button>
@@ -351,5 +352,5 @@ export async function openKnowledge() {
         await save();
         toastr.success('누가 아는가 표를 비웠어요');
     });
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }

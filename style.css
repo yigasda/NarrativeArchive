@@ -7463,10 +7463,6 @@ dialog.popup:has(.na_cp3) .popup-button-ok.disabled { opacity: 0.5 !important; p
 /* ============ 누가 아는가 › empty (docs/mockups/ext-knowledge A): a welcome card with 만들기, faded example rows using the
    story's own people as dot-and-name tags (green 알아요 · red 몰라요 · yellow 짐작) */
 .na_kn2.na_kn3_new :is(.na_kn2_main, .na_kn2_more) { display: none !important; }
-.na_kn2.na_kn3_new .na_kn_inject { order: 9; }
-.na_kn2.na_kn3_new { display: flex; flex-direction: column; }
-.na_kn2.na_kn3_new .na_kn_list { order: 5; }
-.na_kn2.na_kn3_new .na_kn_pickhost { order: 6; }
 .na_kn3_hello { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 16px 14px !important; text-align: center; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 .na_kn3_big { width: 56px; height: 56px; margin-bottom: 8px; border-radius: 999px; display: grid; place-items: center; background: var(--na-accent-soft); color: var(--na-accent); }
 .na_kn3_hello b { font-size: 15px; color: var(--na-ink); }
@@ -7489,7 +7485,7 @@ body.na_darkui .na_kn3_tag.k { background: #2F2722; color: #8FD3A6; } body.na_da
 :is(.na_kn3_tag, .na_kn3_leg span).k i { background: #5FA77C; } :is(.na_kn3_tag, .na_kn3_leg span).u i { background: #C9655A; } :is(.na_kn3_tag, .na_kn3_leg span).s i { background: #D4A23C; }
 .na_kn3_ex > .na_kn3_leg { display: flex; gap: 14px; padding: 9px 14px; opacity: 1; font-size: 11.5px; color: var(--na-mute); }
 .na_kn3_leg span { display: inline-flex; align-items: center; gap: 5px; }
-.na_kn2.na_kn3_new .na_kn_inject { margin-top: 12px; border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_kn2 .na_kn_inject { border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 .na_kn2.na_kn3_new .na_kn_inject:has(input:disabled) { opacity: 0.75; }
 body.na_darkui :is(.na_kn3_hello, .na_kn3_ex, .na_kn2.na_kn3_new .na_kn_inject) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
 
@@ -7502,3 +7498,8 @@ body.na_darkui :is(.na_kn3_hello, .na_kn3_ex, .na_kn2.na_kn3_new .na_kn_inject) 
 body:is(.na_darkui, :not(.na_darkui)) .na_kn3_tag.u { background: transparent !important; color: var(--na-dim) !important; }
 .na_kn3_tag.u i, .na_kn3_leg span.u i { background: #B8ABA1 !important; }
 body.na_darkui :is(.na_kn3_tag.u i, .na_kn3_leg span.u i) { background: #6E5D52 !important; }
+
+/* 누가 아는가 order: 주입하기 on top, then the list (or the welcome), the AI buttons with the picker under them, the small links */
+.na_kn2 .na_kn_inject { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+body.na_darkui .na_kn2 .na_kn_inject { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+.na_kn2 .na_kn2_more { justify-content: center; }
