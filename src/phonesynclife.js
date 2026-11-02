@@ -38,19 +38,31 @@ export const fileOf = x => withEv({ name: line(x?.name, 80), kind: kindOf(String
 export const dayOf = d => withEv({ date: day5(d?.date), bed: hhmm(d?.bed), sleep: hhmm(d?.sleep), wake: hhmm(d?.wake), woke: int(d?.woke, 0, 30) ?? 0, steps: int(d?.steps, 0, 120000), km: num(d?.km), floors: int(d?.floors, 0, 400),
     workout: d?.workout && line(d.workout.kind, 30) ? { kind: line(d.workout.kind, 30), time: hhmm(d.workout.time), min: int(d.workout.min, 0, 600), km: num(d.workout.km) } : null,
     hr: arr(d?.hr).map(x => int(x, 30, 220)).filter(x => x !== null).slice(0, 2), from: pick(d?.from, ['story', 'pattern'], 'pattern') }, d);
-const cityOf = c => ({ name: line(c?.name, 40), ko: ko(c?.ko), tz: tz(c?.tz), cond: pick(c?.cond, CONDS, 'cloudy'), temp: int(c?.temp, -60, 60), hi: int(c?.hi, -60, 60), lo: int(c?.lo, -60, 60), sunrise: hhmm(c?.sunrise), sunset: hhmm(c?.sunset),
+const cityOf = c => ({ name: line(c?.name, 40), ko: ko(c?.ko), tz: tz(c?.tz), cond: condPick(c?.cond, 'cloudy', { temp: int(c?.temp, -60, 60) }), temp: int(c?.temp, -60, 60), hi: int(c?.hi, -60, 60), lo: int(c?.lo, -60, 60), sunrise: hhmm(c?.sunrise), sunset: hhmm(c?.sunset),
     rainNext: num(c?.rainNext), wind: num(c?.wind), gust: num(c?.gust), dir: line(c?.dir, 12), feels: int(c?.feels, -60, 60), humidity: int(c?.humidity, 0, 100), dew: int(c?.dew, -60, 60), note: line(c?.note, 40), noteKo: ko(c?.noteKo) });
 
 // ---- 날씨: the chat's status line stands; the model's numbers only fill what it doesn't say
 // Korean "비" (rain) and "눈" (snow) count only as a word of their own ("비", "비 옴", "비가", "눈이 내림"), never inside
 // another word ("비행기", "눈부신")
 const RAIN_KO = '(?<![가-힣])비(?:(?![가-힣])|(?=[가옴와]))', SNOW_KO = '(?<![가-힣])눈(?:(?![가-힣])|(?=[이옴발]))';
-const COND_RE = [['storm', /storm|thunder|뇌우|천둥|번개|gewitter|雷/i], ['sleet', /sleet|진눈깨비|schneeregen|霙|みぞれ/i],
-    ['snow', new RegExp(`snow|폭설|함박눈|눈보라|${SNOW_KO}|schnee|雪`, 'i')], ['drizzle', /drizzle|이슬비|가랑비|nieselregen|霧雨/i],
-    ['rain', new RegExp(`rain|shower|소나기|장대비|폭우|호우|${RAIN_KO}|regen|雨`, 'i')], ['fog', /fog|mist|안개|nebel|霧/i],
-    ['wind', /gale|strong wind|windy|강풍|바람이 (?:세|강)|sturm|stürmisch|強風/i], ['partly', /partly|some clouds|구름 조금|구름 약간|teils|heiter|晴れ時々/i],
-    ['cloudy', /cloud|overcast|흐림|구름|bewölkt|wolk|曇/i], ['clear', /clear|sun|맑|화창|햇살|햇빛|sonnig|klar|晴/i]];
-export const condOf = text => COND_RE.find(([, re]) => re.test(String(text || '')))?.[0] || '';
+// the sky in any words a status line or a model may use: emoji, a word's forms ("rainy", "흐린", "bewölkt"), Korean,
+// English, German, French, Spanish, Japanese, Chinese. The worst weather named wins ("흐리고 비" is rain)
+const COND_RE = [['storm', /storm|thunder|lightning|[⛈🌩]|뇌우|천둥|번개|gewitter|orage|tormenta|雷/iu], ['sleet', /sleet|freezing rain|진눈깨비|어는 ?비|schneeregen|霙|みぞれ|雨夹雪|雨雪/iu],
+    ['snow', new RegExp(`snow|blizzard|[❄🌨☃⛄]|폭설|함박눈|눈보라|눈송이|${SNOW_KO}|schnee|neige|nieve|雪`, 'iu')], ['drizzle', /drizzl|light rain|이슬비|가랑비|보슬비|부슬비|nieselregen|bruine|llovizna|霧雨|小雨|细雨/iu],
+    ['rain', new RegExp(`rain|shower|downpour|[🌧☔]|소나기|장대비|폭우|호우|장마|빗방울|빗줄기|${RAIN_KO}|regen|pluie|lluvia|雨`, 'iu')], ['fog', /fog|mist|haz[ey]|[🌫]|안개|연무|박무|nebel|brouillard|niebla|霧|雾|霞/iu],
+    ['wind', /gale|gust|strong wind|windy|[💨🌬]|강풍|돌풍|바람이? ?(?:세|강|많|쌩)|sturm|stürmisch|windig|venteux|ventoso|強風|大风|强风/iu], ['partly', /partly|some clouds|mostly sunny|sun and clouds|[🌤⛅🌥]|구름 ?(?:조금|약간)|대체로 맑|teils|heiter|wolkig mit sonne|éclaircies|parcialmente|晴れ時々|晴时多云|多云转晴|晴間/iu],
+    ['cloudy', /cloud|overcast|grey sky|gray sky|[☁]|흐림|흐린|흐려|흐리|구름|잔뜩|구름 ?많|bewölkt|wolk|bedeckt|nuageux|couvert|nublado|曇|阴|多云/iu], ['clear', /clear|sunn?y|sunshine|fine|bright|[☀🌞🌝]|맑|화창|쾌청|햇살|햇빛|햇볕|쨍쨍|sonnig|klar|ensoleillé|soleil|despejado|soleado|晴|快晴/iu]];
+// weather that has passed ("비가 그치고 맑음", "after the rain", "雨上がり") doesn't name the sky now
+const OVER = /(?:비|눈)[가이]?\s*(?:그치|그쳤|멈추|멎)[^,.;·]*|(?:rain|snow)(?:ing)?\s*(?:has\s+)?(?:stopped|cleared|ended|is over)|after\s+the\s+(?:rain|snow|storm)|雨上がり|雨が(?:止|やん)|雨停/giu;
+export const condOf = text => { const s = String(text || ''), t = s.replace(OVER, ' '); return COND_RE.find(([, re]) => re.test(t))?.[0] || (t !== s ? 'partly' : ''); };
+// a sky the model names outside the list ("sunny", "맑고 쌀쌀", "小雨"): read like a status line; else what the numbers say,
+// else cloudy. temp and rain (a chance of rain, %) are optional
+export const condGuess = (temp, rain = null) => {
+    if (!Number.isFinite(temp)) return '';
+    if (Number.isFinite(rain) && rain >= 50) return temp <= 1 ? 'snow' : 'rain';
+    return temp >= 24 ? 'clear' : temp >= 12 ? 'partly' : 'cloudy';
+};
+export const condPick = (v, dflt = 'cloudy', { temp = null, rain = null } = {}) => (CONDS.includes(v) ? v : condOf(v) || condGuess(temp, rain) || dflt);
 const tempOf = text => { const s = String(text || ''), mt = s.match(/(영하\s*)?([-−]?\d{1,2}(?:[.,]\d)?)\s*(?:°|℃|도(?![가-힣]))/); if (!mt) return null; const n = Math.round(Number(mt[2].replace('−', '-').replace(',', '.'))); return mt[1] ? -Math.abs(n) : n; };
 // a status line (scenes.js recentTrackers) as the weather it gives, or null
 export function weatherFrom(t) {
@@ -58,9 +70,9 @@ export function weatherFrom(t) {
 }
 const hereOf = h => ({
     place: line(h.place, 60), date: day5(h.date), time: hhmm(h.time), from: pick(h.from, ['tracker', 'chat', 'archive', 'guess'], 'guess'),
-    cond: pick(h.cond, CONDS, 'cloudy'), temp: int(h.temp, -60, 60), hi: int(h.hi, -60, 60), lo: int(h.lo, -60, 60), line: line(h.line, 160), ko: ko(h.ko),
-    hours: arr(h.hours).map(x => ({ time: hhmm(x?.time), cond: pick(x?.cond, CONDS, 'cloudy'), temp: int(x?.temp, -60, 60), rain: int(x?.rain, 0, 100) ?? 0 })).filter(x => x.time).slice(0, 6),
-    days: arr(h.days).map(x => ({ day: day5(x?.day), cond: pick(x?.cond, CONDS, 'cloudy'), lo: int(x?.lo, -60, 60), hi: int(x?.hi, -60, 60), rain: int(x?.rain, 0, 100) ?? 0 })).filter(x => x.day).slice(0, 10),
+    cond: condPick(h.cond, 'cloudy', { temp: int(h.temp, -60, 60), rain: num(h.tiles?.rainNext) }), temp: int(h.temp, -60, 60), hi: int(h.hi, -60, 60), lo: int(h.lo, -60, 60), line: line(h.line, 160), ko: ko(h.ko),
+    hours: arr(h.hours).map(x => ({ time: hhmm(x?.time), cond: condPick(x?.cond, 'cloudy', { temp: int(x?.temp, -60, 60), rain: int(x?.rain, 0, 100) }), temp: int(x?.temp, -60, 60), rain: int(x?.rain, 0, 100) ?? 0 })).filter(x => x.time).slice(0, 6),
+    days: arr(h.days).map(x => ({ day: day5(x?.day), cond: condPick(x?.cond, 'cloudy', { temp: int(x?.hi, -60, 60), rain: int(x?.rain, 0, 100) }), lo: int(x?.lo, -60, 60), hi: int(x?.hi, -60, 60), rain: int(x?.rain, 0, 100) ?? 0 })).filter(x => x.day).slice(0, 10),
     tiles: Object.fromEntries(['rain24', 'rainNext', 'feels', 'wind', 'gust', 'humidity', 'dew', 'visibility'].map(k => [k, num(h.tiles?.[k])]).concat([['dir', line(h.tiles?.dir, 12)], ['sunrise', hhmm(h.tiles?.sunrise)], ['sunset', hhmm(h.tiles?.sunset)]])),
 });
 // the status line over a weather "here": its date, time, place and weather stand
@@ -297,7 +309,7 @@ export function applyWeather(p, w, now, { archive = true } = {}) {
             for (const k of ['hi', 'lo']) if (here[k] === null && old[k] !== undefined) here[k] = old[k];
         }
         // the cities keep what the model leaves out (their time zone, their note)
-        const cities = (was?.cities || []).map(c => { const key = v => line(v, 40).toLowerCase(), n = arr(w.cities).find(x => [c.name, c.ko].filter(Boolean).map(key).includes(key(x?.name))); if (!n) return c; const f = cityOf(n), out = { ...c, cond: pick(n.cond, CONDS, c.cond) }; for (const k of ['temp', 'hi', 'lo', 'rainNext', 'wind', 'gust', 'dir', 'feels', 'humidity', 'dew']) if (f[k] !== null && f[k] !== '') out[k] = f[k]; return out; });
+        const cities = (was?.cities || []).map(c => { const key = v => line(v, 40).toLowerCase(), n = arr(w.cities).find(x => [c.name, c.ko].filter(Boolean).map(key).includes(key(x?.name))); if (!n) return c; const f = cityOf(n), out = { ...c, cond: condPick(n.cond, c.cond, { temp: f.temp }) }; for (const k of ['temp', 'hi', 'lo', 'rainNext', 'wind', 'gust', 'dir', 'feels', 'humidity', 'dew']) if (f[k] !== null && f[k] !== '') out[k] = f[k]; return out; });
         next = { ...(was || {}), here, cities };
     } else if (now && was?.here) {
         // only the status line: its words stand over the weather there was

@@ -473,3 +473,19 @@ test('a night told on the evening of 12-31 for the 01-01 row: waking stays empty
     assert.equal(day.sleep, '23:30');
     assert.equal(day.wake, '06:30');
 });
+
+test('the sky in any words: emoji, a word\'s forms, six languages; weather that has passed; a sky outside the list read from its words, else from the numbers', async () => {
+    const { condOf, condPick, condGuess } = await import('../src/phonesynclife.js');
+    const want = { '☀️ 23°C': 'clear', '🌧 비 옴': 'rain', '흐리고 비': 'rain', '흐린 날': 'cloudy', 'sunny': 'clear', 'light rain': 'drizzle', 'Bewölkt, 8°': 'cloudy', 'partly cloudy': 'partly', '구름 많음': 'cloudy', '⛈ thunderstorm': 'storm', '눈발 날림': 'snow', '안개 짙음': 'fog', '바람이 세다': 'wind', '晴れ': 'clear', '小雨': 'drizzle', '비행기 타고 눈부신 햇살': 'clear', 'cold and grey sky': 'cloudy', '서울 · 오후 3시': '', '비가 그치고 맑음': 'clear', '비 그침': 'partly', 'after the rain, clouds': 'cloudy' };
+    for (const [t, c] of Object.entries(want)) assert.equal(condOf(t), c, t);
+    assert.equal(condPick('rain'), 'rain');
+    assert.equal(condPick('맑고 쌀쌀', 'cloudy', { temp: 3 }), 'clear');
+    assert.equal(condPick('???', 'cloudy', { temp: 28 }), 'clear');
+    assert.equal(condPick('', 'cloudy', { temp: -2, rain: 70 }), 'snow');
+    assert.equal(condPick('', 'cloudy', { temp: 8, rain: 70 }), 'rain');
+    assert.equal(condPick(undefined, 'cloudy'), 'cloudy');
+    assert.equal(condGuess(15), 'partly');
+    const { parseWeather } = await import('../src/phonesynclife.js');
+    const w = parseWeather({ here: { place: 'Seoul', cond: 'Sunny and warm', temp: 26, hours: [{ time: '15:00', cond: 'showers', temp: 22 }], days: [{ day: '10-27', cond: 'overcast', hi: 18 }, { day: '10-28', cond: '', hi: 30, rain: 0 }] }, cities: [{ name: 'Tokyo', cond: '晴れ', temp: 20 }] }, null);
+    assert.equal(w.here.cond, 'clear'); assert.equal(w.here.hours[0].cond, 'rain'); assert.deepEqual(w.here.days.map(d => d.cond), ['cloudy', 'clear']); assert.equal(w.cities[0].cond, 'clear');
+});
