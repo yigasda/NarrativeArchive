@@ -8,7 +8,7 @@ import { KW_STOP } from './keywords.js';
 import { castNames, currentCast, inCast } from './knowledge.js';
 import { syncPanel } from './panel.js';
 import { cleanMessage } from './extract.js';
-import { faceHtml, nameKey, peopleList } from './people.js';
+import { exFace, faceHtml, nameKey, peopleList } from './people.js';
 import { offstageSet } from './recall.js';
 import { mountSectionPicker } from './picker.js';
 import { headingRanges, parseSections, sectionKey, splitTail } from './sections.js';
@@ -408,7 +408,7 @@ export async function openQuotes() {
             <button type="button" class="na_linkbtn na_qb3_find">AI 없이 아카이브에서 모으기</button></div>
           <div class="na_kn3_sect"><span>이렇게 모여요</span><small>예시</small></div>
           <div class="na_qb3_ex">${[['Claude', '그건 제가 확인해 볼게요.', '#1–#12'], ['GPT', '물론이죠! 바로 해 볼게요.', '#13–#29'], ['Gemini', '흥미로운 질문이네요.', '#13–#29']]
-              .map(([w, t, at], i) => `<div class="na_qb3_bub${i % 2 ? ' r' : ''}">${faceHtml(w, 26)}<div><span>“${esc(t)}”</span><small>${esc(w)} · ${at}</small></div></div>`).join('')}</div>`);
+              .map(([w, t, at], i) => `<div class="na_qb3_bub${i % 2 ? ' r' : ''}">${exFace(w, 26)}<div><span>“${esc(t)}”</span><small>${esc(w)} · ${at}</small></div></div>`).join('')}</div>`);
         $root.find('.na_qb_list').html(by.size ? [...by].sort((a, b) => (a[0] === '?') - (b[0] === '?') || b[1].length - a[1].length).map(group).join('') : '<div class="na_empty">찾는 대사가 없어요</div>');
     };
     let qbUnkOpen = false;

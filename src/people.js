@@ -70,6 +70,13 @@ export function faceHtml(name, size = 40) {
     return `<span class="na_face" style="--s:${size}px;--h:${h}" title="${esc(name)}">${url ? `<img src="${esc(url)}"${fb && fb !== url ? ` data-fb="${esc(fb)}"` : ''} alt="" loading="lazy" decoding="async">` : esc([...String(name).trim()][0] || '?')}</span>`;
 }
 
+// the example people in empty windows (누가 아는가, 대사 은행) always look the same: Claude orange, GPT charcoal, Gemini calm navy,
+// as letters, never a real avatar that happens to share the name
+const EX_FACE = { Claude: '#D97757', GPT: '#3A3A3C', Gemini: '#3E5683' };
+export function exFace(name, size = 26) {
+    return `<span class="na_face" style="--s:${size}px;background:${EX_FACE[name] || '#8A7A70'}" title="${esc(name)}">${esc(name[0])}</span>`;
+}
+
 // an avatar that fails to load (renamed card, deleted persona) tries its thumbnail, then falls back to the letter
 document.addEventListener('error', e => {
     const img = e.target;
