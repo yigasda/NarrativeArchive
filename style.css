@@ -7932,3 +7932,20 @@ body.na_darkui .na_st_amenu { background: #2E2E34; box-shadow: 0 8px 24px rgba(0
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st_amenu > button:not(#na_x) { display: flex !important; align-items: center; gap: 8px; width: 100% !important; min-height: 0 !important; height: auto !important; margin: 0 !important; padding: 9px 10px !important; border: 0 !important; border-radius: 10px !important; background: transparent !important; box-shadow: none !important; color: var(--na-ink, inherit) !important; font: inherit; font-size: 13px !important; font-weight: 500 !important; text-align: left; white-space: nowrap; cursor: pointer; }
 .na_st_amenu > button:hover { background: rgba(0, 0, 0, 0.04) !important; }
 .na_st_bub:has(.na_st_amenu:not([hidden])) { position: relative; z-index: 3; }
+
+/* ============ 작업실 in 아카이브에 추가's colours (3.169.18): the cream window, answers as bright cream cards with a shadow,
+   the scene tabs as its 초안 | 추가 후 tray (this scene a white pill in orange, answered ones a small dot), my lines soft apricot */
+body:not(.na_darkui) .na_st { --st-bg: #F0E4DB; --st-bub: #FCF6F1; --st-line: #EADBD0; --st-seg: #E9DCD1; }
+body:not(.na_darkui) dialog.popup:has(.na_st) { background: #F0E4DB !important; }
+body:not(.na_darkui) .na_st .na_st_bub:not(.na_st_typing) { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+body.na_darkui .na_st { --st-bub: #232328; }
+body.na_darkui .na_st .na_st_bub:not(.na_st_typing) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+.na_st .na_st_seg { gap: 3px; padding: 3px; border-radius: 999px; background: var(--st-seg); }
+.na_st .na_st_seg span, .na_st .na_st_seg span.l, .na_st .na_st_seg span.d { flex: 1 0 34px; padding: 6px 0; border-radius: 999px; background: transparent; color: var(--st-dim); font-size: 12px; }
+.na_st .na_st_seg span.l { color: var(--st-ok); }
+.na_st .na_st_seg span.d::after { content: ""; display: inline-block; width: 5px; height: 5px; margin-left: 4px; vertical-align: middle; border-radius: 9px; background: var(--st-acc); opacity: 0.7; }
+body:not(.na_darkui) .na_st .na_st_seg span.on { background: #FFFFFF; color: #A84A17; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08), 0 4px 10px rgba(70, 52, 40, 0.08); }
+body.na_darkui .na_st .na_st_seg span.on { background: #414148; color: #F0CF8E; }
+body.na_darkui .na_st .na_st_seg span.d::after { background: #F0CF8E; }
+body:not(.na_darkui) .na_st .na_st_me { background: #F6E1D3; color: #A84A17 !important; }
+body.na_darkui .na_st .na_st_me { background: #2E2E34; color: #F0CF8E !important; }
