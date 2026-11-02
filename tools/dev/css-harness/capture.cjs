@@ -41,6 +41,8 @@ if (require.main === module) (async () => {
             await p.goto(ST, { waitUntil: 'domcontentloaded' }); await p.waitForFunction(() => window.SillyTavern?.getContext?.().characters?.length > 0, null, { timeout: 60000 }); await p.waitForTimeout(1500);
             await p.evaluate(async () => { await SillyTavern.getContext().selectCharacterById(0); }); await p.waitForTimeout(1000);
             await p.evaluate(async () => { await SillyTavern.getContext().openCharacterChat('na_test'); }); await p.waitForTimeout(1500);
+            // the clock is frozen above, so jQuery animations (ST's drawers slide open with jQuery) would never finish: make them instant
+            await p.evaluate(() => { if (window.jQuery) window.jQuery.fx.off = true; });
             // freeze motion so timing never changes a pixel; the properties above do not include transitions
             // (backdrop blur renders with noise in headless Chromium, so it is off for the pixels; the blur value itself is still compared in the JSON)
             await p.addStyleTag({ content: '*, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; animation-delay: 0s !important; caret-color: transparent !important; backdrop-filter: none !important; }' + (process.env.NA_HARNESS_CSS || '') });
@@ -119,7 +121,8 @@ async function setArch(p, arch) {
 const helpers = {
     panel: async (p, scrollY) => {
         await p.$eval('#extensions-settings-button .drawer-icon', e => e.click()); await p.waitForTimeout(1000);
-        await p.evaluate(() => { const c = document.querySelector('#na_settings .inline-drawer-content'); const t = document.querySelector('#na_settings .inline-drawer-toggle'); if (c && t && getComputedStyle(c).display === 'none') t.click(); });
+        // the drawer slides open with a jQuery animation that reads the (frozen) clock and never finishes: jump it to its end state
+        await p.evaluate(() => { const c = document.querySelector('#na_settings .inline-drawer-content'); const t = document.querySelector('#na_settings .inline-drawer-toggle'); if (c && t && getComputedStyle(c).display === 'none') t.click(); if (c && window.jQuery) { window.jQuery(c).stop(true, true); } if (c) { c.style.cssText = ''; c.style.display = 'block'; } });
         await p.waitForTimeout(600);
         const h = await p.$eval('#na_settings', e => e.getBoundingClientRect().height); if (h < 400) throw new Error(`panel not unfolded (height ${Math.round(h)})`);
         // the section list was drawn at page load from what was on disk: switch the view away and back so it redraws from the archive set just now
