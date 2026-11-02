@@ -1,7 +1,7 @@
 // Asking the draft model to rework archive sections: new titles for many sections at once,
 // and one section rewritten the way the user asks (with its raw messages when they can be found).
 
-import { aiLabel, askCompress, askDraft, askFix, drLabel, draftReady, draftSettings, stripThink, withSpinner } from './ai.js';
+import { askCompress, askDraft, askFix, drLabel, draftReady, draftSettings, stripThink, withSpinner } from './ai.js';
 import { fetchOtherChat } from './chats.js';
 import { commitText, ctx, getMeta, globalSettings, saveMeta } from './core.js';
 import { lineDiff, renderDiff } from './diff.js';
@@ -154,7 +154,7 @@ export async function openRetitle(group = null, keys = null) {
     $root.on('input', '.na_rt_new', function () { const x = results[this.dataset.i]; x.next = this.value; x.on = !!this.value.trim(); $root.find(`.na_rt_row input[type=checkbox][data-i="${this.dataset.i}"]`).prop('checked', x.on); const n = results.filter(y => y.on && !y.same).length; $root.find('.na_rt_apply').text(n ? `${n}개 바꾸기` : '바꿀 제목을 골라 주세요').prop('disabled', !n); });
     $root.on('click', '.na_rt_quick .na_pchip', function () { const on = this.dataset.all === '1'; results.forEach(x => { if (!x.same) x.on = on; }); drawResults(); });
     const picker = mountSectionPicker($root.find('.na_rt_pick'), {
-        m, title: '다시 지을 섹션', goLabel: `AI로 짓기`, doneLabel: '다시 지음', newLabel: '안 한 것',
+        m, title: '다시 지을 섹션', goLabel: `AI로 짓기`, doneLabel: '다시 지음', newLabel: '안 한 것', look: 'bar',
         filter: ranged, initial: keys ? () => keys : startKeys,
         doneKeys: () => new Set(m.retitled),
         onGo: async (parts, step) => {
@@ -211,7 +211,7 @@ export async function openRetitle(group = null, keys = null) {
         toastr.success(`제목 ${pick.length}개를 바꿨어요`, '제목 다시 짓기');
         results = []; drawResults(); picker.toggle(true);
     });
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }
 
 // ---- 고쳐 달라고 하기: one section, a request, the raw messages when we can find them, a diff to apply
@@ -438,14 +438,14 @@ export async function openMerge(group = null, keys = null) {
     let gi = group ? Math.max(0, gs.findIndex(g => g.start === group.start)) : gs.length - 1;
     const $root = $(`
       <div class="na_popup na_v2 na_mg">
-        <div class="na_v2_title"><b>섹션 합치기</b><small>이어진 섹션을 고르면 AI가 어디서 끊을지 정해서 합쳐요 · 요약이 아니라 합치기</small></div>
+        <div class="na_v2_title"><b>섹션 합치기</b><small>이어진 섹션을 골라 AI가 합쳐요 · 요약이 아니라 합치기</small></div>
         <select class="text_pole na_mg_group">${gs.map((g, i) => `<option value="${i}">${esc(g.label)} · 섹션 ${g.secs.length}개</option>`).join('')}</select>
-        <div class="na_mg_pickhead"><small class="na_dim">두 섹션을 누르면 그 사이가 모두 골라져요</small><span class="na_rt_quick"><button type="button" class="na_pchip" data-all="1">전체</button><button type="button" class="na_pchip" data-all="0">비우기</button></span></div>
+        <div class="na_mg_pickhead"><b>합칠 범위 · 처음과 끝을 누르기</b><span class="na_rt_quick"><button type="button" class="na_pchip" data-all="0">비우기</button></span></div>
         <div class="na_mg_list"></div>
-        <small class="na_v2_note na_mg_info"></small>
+        <input type="text" class="na_mg_q" placeholder="요청 (선택 · 예: 3개 정도로, 장면 단위로)" aria-label="요청" enterkeyhint="go">
         <label class="na_v2_card na_v2_switchrow na_mg_rawrow"><span class="na_cp_txt"><span>원문 보고 다시 쓰기</span><small class="na_mg_rawinfo">순서나 번호가 틀렸을 때 · 고른 범위의 원문으로 처음부터 다시 써요</small></span><input type="checkbox" class="na_toggle na_mg_raw"></label>
         <button type="button" class="na_linkbtn na_mg_rawview" hidden>보낼 원문 보기 · 모델이 읽는 그대로</button>
-        <div class="na_ly_ask na_mg_ask"><input type="text" class="na_ly_askq na_mg_q" placeholder="요청 (선택 · 예: 3개 정도로, 장면 단위로)" aria-label="요청" enterkeyhint="go"><button type="button" class="na_ly_askgo na_mg_go" aria-label="합치기" title="초안 모델로 합치기">${svgA(ICO_A.check, 17, 2.4)}</button></div>
+        <div class="na_mg_foot"><small class="na_mg_info"></small><button type="button" class="na_mg_go" title="초안 모델로 합치기">✧ AI로 합치기</button></div>
         <div class="na_mg_res" hidden>
           <div class="na_rt_head"><b class="na_mg_restitle"></b></div>
           <div class="na_mg_warn" hidden></div>
@@ -491,8 +491,10 @@ export async function openMerge(group = null, keys = null) {
     const drawList = () => {
         $root.find('.na_mg_list').html(secsNow().map((x, i) => {
             const r = rangeOf(x.title), sp = splitTitle(headLine(m.text, x));
-            return `<label class="na_mg_row ${picked.has(i) ? 'on' : ''}"><input type="checkbox" data-i="${i}" ${picked.has(i) ? 'checked' : ''}>
-              <span class="na_rt_txt"><small>${esc(`${r.prefix ? `${r.prefix} ` : ''}#${r.from}–#${r.to}`)}${sp?.tail ? ` · ${esc(sp.tail.trim().replace(/^\(|\)$/g, ''))}` : ''}</small><span>${esc(sp?.name || x.title)}</span></span></label>`;
+            // the picked run reads as one bar: rounded only at its two ends (docs/mockups/ext-merge C)
+            const on = picked.has(i), cls = on ? ` on${picked.has(i - 1) ? '' : ' first'}${picked.has(i + 1) ? '' : ' last'}` : '';
+            return `<label class="na_mg_row${cls}"><input type="checkbox" data-i="${i}" ${on ? 'checked' : ''}>
+              <span class="na_rt_txt"><span>${esc(sp?.name || x.title)}</span><small>${esc(`${r.prefix ? `${r.prefix} ` : ''}#${r.from}–#${r.to}`)}${sp?.tail ? ` · ${esc(sp.tail.trim().replace(/^\(|\)$/g, ''))}` : ''}</small></span></label>`;
         }).join(''));
         const sel = [...picked].map(i => secsNow()[i]);
         const tok = sel.reduce((a, x) => a + tokOf(x), 0);
@@ -505,11 +507,12 @@ export async function openMerge(group = null, keys = null) {
         $root.find('.na_mg_rawrow').toggleClass('warn', rw && !!rawSrc && (!rawSrc.raw || rawSrc.tok > 30000));
         $root.find('.na_mg_rawview').prop('hidden', !(rw && rawSrc?.raw));
         $root.find('.na_mg_go').attr('title', rw ? 'AI로 원문 보고 다시 쓰기' : 'AI로 합치기');
+        if (!busy) $root.find('.na_mg_go').text(rw ? '✧ AI로 다시 쓰기' : '✧ AI로 합치기');
         if (rw && picked.size && contiguous()) loadRaw();
         $root.find('.na_mg_info').text(picked.size < need ? (rw ? '다시 쓸 섹션을 골라 주세요' : '이어진 섹션을 두 개 이상 골라 주세요')
             : !contiguous() ? '골라진 섹션 사이에 빠진 섹션이 있어요 · 이어진 섹션만 합칠 수 있어요'
             : tok > MERGE_MAX_TOK ? `너무 많아요 (약 ${fmt(tok)} 토큰) · 약 ${fmt(MERGE_MAX_TOK)} 토큰까지 한 번에 합쳐요`
-            : `섹션 ${picked.size}개 · 약 ${fmt(tok)} 토큰 · ${esc(aiLabel())}`).toggleClass('warn', picked.size >= need && !ok && !(rw && !rawSrc));
+            : `${pickedRange()?.label} · 섹션 ${picked.size}개 · 약 ${fmt(tok)} 토큰`).toggleClass('warn', picked.size >= need && !ok && !(rw && !rawSrc));
         $root.find('.na_mg_go').prop('disabled', !ok);
     };
     $root.on('change', '.na_mg_row input', function () {
@@ -605,7 +608,7 @@ Output only the section blocks. No "---", no STATE, no OPEN.
         } catch (e) {
             console.error('[NarrativeArchive] merge', e);
             toastr.error(String(e?.message || e), '섹션 합치기');
-        } finally { busy = false; $b.html(svgA(ICO_A.check, 17, 2.4)); drawList(); }
+        } finally { busy = false; drawList(); }
     };
     $root.find('.na_mg_go').on('click', go);
     $root.find('.na_mg_q').on('keydown', e => { if (e.key === 'Enter' && !e.originalEvent?.isComposing && e.keyCode !== 229) { e.preventDefault(); go(); } });
@@ -648,5 +651,5 @@ Output only the section blocks. No "---", no STATE, no OPEN.
         drawResult(); drawList();
     });
     drawList();
-    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
+    await c.callGenericPopup($root, c.POPUP_TYPE.TEXT, '', { wide: true, large: false, allowVerticalScrolling: true, leftAlign: true, okButton: '닫기' });
 }

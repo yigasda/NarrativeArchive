@@ -16,9 +16,10 @@ const spParts = t => { const [num, ...rest] = String(t).split(' — '); const r 
 export const estTok = t => Math.ceil(String(t).length / 3.6);
 
 // filter: which sections can be picked · initial: what is ticked when it first opens · newLabel: the "not done yet" chip
-export function mountSectionPicker($host, { m, title, doneKeys, doneLabel = '읽음', goLabel, extraFoot = '', onGo, filter = null, initial = null, newLabel = '안 읽은 것' }) {
+// look: 'bar' draws each section as a name with a side bar that lights up instead of a tick box (제목 다시 짓기, docs/mockups/ext-merge C)
+export function mountSectionPicker($host, { m, title, doneKeys, doneLabel = '읽음', goLabel, extraFoot = '', onGo, filter = null, initial = null, newLabel = '안 읽은 것', look = '' }) {
     const $p = $(`
-      <div class="na_sp" hidden>
+      <div class="na_sp${look === 'bar' ? ' na_sp_bar' : ''}" hidden>
         <div class="na_sp_head">
           <b>${esc(title)}</b>
           <span class="na_sp_quick">
@@ -86,7 +87,7 @@ export function mountSectionPicker($host, { m, title, doneKeys, doneLabel = '읽
           <div class="na_sp_sg${folded.has(g.label) ? ' folded' : ''}">
             ${g.label ? `<div class="na_sp_g"><label class="na_sp_gl"><input type="checkbox" data-keys="${esc(g.items.map(sectionKey).join('\u0002'))}"><span class="na_sp_ck"></span><b>${esc(g.label)}</b><small>${g.items.length}개</small></label><button type="button" class="na_sp_fold" data-g="${esc(g.label)}" aria-label="접기">${folded.has(g.label) ? '▸' : '▾'}</button></div>` : ''}
             ${g.items.map(x => { const [num, name, when] = spParts(x.title); return `<label class="na_sp_s ${g.label ? '' : 'na_sp_s_top'}"><input type="checkbox" data-k="${esc(sectionKey(x))}" ${chosen.has(sectionKey(x)) ? 'checked' : ''}><span class="na_sp_ck"></span>
-              <span class="na_sp_tt"><b>${esc(num)}${name ? ` · ${esc(name)}` : ''}</b>${when ? `<small>${esc(when)}</small>` : ''}</span>${done.has(sectionKey(x)) ? `<small class="na_sp_done">${esc(doneLabel)}</small>` : ''}</label>`; }).join('')}
+              <span class="na_sp_tt">${look === 'bar' && name ? `<b>${esc(name)}</b><small>${esc(num)}${when ? ` · ${esc(when)}` : ''}</small>` : `<b>${esc(num)}${name ? ` · ${esc(name)}` : ''}</b>${when ? `<small>${esc(when)}</small>` : ''}`}</span>${done.has(sectionKey(x)) ? `<small class="na_sp_done">${esc(doneLabel)}</small>` : ''}</label>`; }).join('')}
           </div>`).join(''));
         info();
     };

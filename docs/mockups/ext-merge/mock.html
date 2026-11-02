@@ -1,0 +1,74 @@
+<style>
+.mk_wrap{display:flex;gap:22px;padding:24px;background:#141210;font-family:-apple-system,'Noto Sans KR',sans-serif;align-items:flex-start}
+.mk_col{display:flex;flex-direction:column;gap:10px;align-items:center}.mk_lab{color:#ff6fa3;font:700 15px sans-serif}
+.pop{width:390px;background:#F0E4DB;border-radius:22px;box-shadow:0 24px 60px rgba(0,0,0,.4);display:flex;flex-direction:column;color:#463428;padding:16px 16px 14px;box-sizing:border-box}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:999px;background:#E9DCD1}
+.tabs span{height:34px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:600;color:#6B5A50}
+.tabs span.on{background:#F7EEE7;color:#A84A17;box-shadow:0 1px 2px rgba(70,52,40,.1)}
+.card{background:#F7EEE7;border-radius:18px;box-shadow:0 1px 2px rgba(70,52,40,.05),0 6px 16px rgba(70,52,40,.07)}
+.btn{height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:14.5px;font-weight:700}
+.pri{background:#B8541F;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 4px 10px rgba(184,84,31,.25)}
+.sec{background:#F7EEE7;color:#6B5A50;box-shadow:inset 0 0 0 1px #E5D5C9}
+.lnk{font-size:13px;font-weight:600;color:#A84A17;text-align:center}
+.ic{width:52px;height:52px;border-radius:999px;background:#F6E1D3;color:#B8541F;display:flex;align-items:center;justify-content:center}
+.ttl{font-size:16px;font-weight:700;text-align:center}.ds{font-size:12.5px;color:#7A6A60;text-align:center;line-height:1.5}
+.sect{font-size:12.5px;font-weight:700;color:#8A7A70;margin:16px 4px 8px;display:flex;justify-content:space-between}
+.sect small{font-weight:600;color:#A84A17;font-size:11.5px}
+.face{width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex:none}
+.who{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;padding:12px 14px 6px}
+.who small{font-weight:500;color:#8A7A70;font-size:12px}
+.q{padding:4px 14px 4px 46px;font-size:13.5px;line-height:1.5;color:#463428}
+.q i{display:block;font-style:normal;font-size:11.5px;color:#9A8A80;margin-top:1px}
+.hr{height:1px;background:#EADBD0;margin:8px 14px 0}
+.excl{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#8A7A70;margin-top:12px;padding:0 4px}
+.plus{border:1px dashed #CDB8A8;border-radius:999px;padding:2px 9px;font-size:12px;color:#7A6A60}
+.close{align-self:center;margin-top:14px;padding:7px 18px;border-radius:999px;background:#F7EEE7;font-size:13px;font-weight:600;color:#6B5A50;box-shadow:0 1px 2px rgba(70,52,40,.08)}
+.dim{opacity:.55}
+.tile{display:flex;gap:12px;padding:14px;align-items:flex-start}
+.tile .ti{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none}
+.tile b{display:block;font-size:14.5px;margin-bottom:3px}.tile span.t{font-size:12.5px;color:#7A6A60;line-height:1.5}
+.tile .go{margin-left:auto;align-self:center;color:#B8541F}
+.bub{display:flex;gap:8px;align-items:flex-end}
+.bub .b{background:#F7EEE7;border-radius:16px 16px 16px 4px;padding:9px 12px;font-size:13.5px;line-height:1.45;box-shadow:0 1px 2px rgba(70,52,40,.05),0 4px 12px rgba(70,52,40,.06)}
+.bub.r{flex-direction:row-reverse}.bub.r .b{border-radius:16px 16px 4px 16px}
+.bub .b small{display:block;font-size:11px;color:#9A8A80;margin-top:2px}
+.step{display:flex;gap:12px;align-items:flex-start;padding:12px 14px}
+.step .n{width:24px;height:24px;border-radius:999px;background:#B8541F;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px}
+.step .n.g{background:#E2D3C7;color:#7A6A60}
+.step b{display:block;font-size:14px}.step span.t{font-size:12.5px;color:#7A6A60;line-height:1.5}
+.fp{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}.fp span{font-size:11.5px;padding:2px 8px;border-radius:999px;background:#F6E1D3;color:#A84A17;font-weight:600}
+.ex{font-size:11px;font-weight:700;color:#A84A17;background:#F6E1D3;border-radius:999px;padding:1px 7px;margin-left:auto}
+</style>
+<style>
+.mk_wrap{flex-wrap:wrap;width:1720px}
+.ph{font-size:20px;font-weight:700;letter-spacing:-.02em}.phs{font-size:12.5px;color:#7A6A60;margin-top:3px}
+.pair{display:flex;gap:14px}
+.ck{width:20px;height:20px;border-radius:6px;border:2px solid #D3C1B4;box-sizing:border-box;flex:none;display:flex;align-items:center;justify-content:center}
+.ck.on{border:0;background:#B8541F;color:#fff}
+.row{display:flex;align-items:center;gap:11px;padding:10px 14px}
+.row + .row{border-top:1px solid #EADBD0}
+.row small{display:block;font-size:11.5px;color:#9A8A80}.row b{font-size:14px;font-weight:600}
+.row.on{background:#F3E4D8}
+.ttl2{font-size:12.5px;font-weight:700;color:#8A7A70;margin:14px 4px 8px;display:flex;justify-content:space-between;align-items:center}
+.qc{display:flex;gap:4px}.qc span{font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:#E9DCD1;color:#6B5A50}.qc span.on{background:#6E5D52;color:#F7EEE7}
+.foot2{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+.foot2 small{font-size:12px;color:#8A7A70}
+.go{padding:10px 18px;border-radius:999px;background:#B8541F;color:#fff;font-weight:700;font-size:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.sel{display:flex;align-items:center;justify-content:space-between;height:40px;border-radius:12px;background:#F7EEE7;padding:0 14px;font-size:13.5px;box-shadow:0 1px 2px rgba(70,52,40,.06)}
+.req{display:flex;align-items:center;height:44px;border-radius:999px;background:#F7EEE7;padding:0 5px 0 14px;font-size:13px;color:#9A8A80;box-shadow:0 1px 2px rgba(70,52,40,.06)}
+.req span{flex:1}.req i{width:34px;height:34px;border-radius:999px;background:#B8541F;color:#fff;display:flex;align-items:center;justify-content:center;font-style:normal}
+.sw{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.sw b{font-size:13.5px}.sw small{display:block;font-size:11.5px;color:#9A8A80}
+.tg{margin-left:auto;width:40px;height:24px;border-radius:999px;background:#E2D3C7;position:relative;flex:none}.tg:after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:999px;background:#fff}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:999px;background:#E9DCD1;margin-top:12px}
+.seg span{height:34px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:600;color:#6B5A50}.seg span.on{background:#F7EEE7;color:#A84A17;box-shadow:0 1px 2px rgba(70,52,40,.1)}
+.rail{display:flex;gap:6px;overflow:hidden;margin-top:10px}
+.blk{flex:none;width:86px;padding:9px 10px;border-radius:14px;background:#F7EEE7;font-size:11px;color:#9A8A80;box-shadow:0 1px 2px rgba(70,52,40,.06),0 4px 10px rgba(70,52,40,.05)}
+.blk b{display:block;font-size:12.5px;color:#463428;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk.on{background:#B8541F;color:#F6E1D3}.blk.on b{color:#fff}
+.br{position:relative}
+.tl3{display:flex;flex-direction:column}
+.tl3 .r{display:flex;gap:12px;align-items:stretch}
+.tl3 .bar{width:4px;border-radius:4px;background:#E2D3C7;flex:none;margin:2px 0}
+.tl3 .bar.on{background:#B8541F}
+</style><div class="mk_wrap"><div class="mk_col"><div class="mk_lab">C. 세로 띠로 고르기 (합치기는 범위 괄호)</div><div class="pair"><div class="pop"><div class="ph">제목 다시 짓기</div><div class="phs">책 목차처럼 짧고 구체적인 제목으로</div><div class="ttl2"><span>다시 지을 섹션 · 눌러서 고르기</span><span class="qc"><span>안 한 것</span><span class="on">전체</span><span>비우기</span></span></div><div class="card" style="padding:10px 14px"><div class="tl3"><div class="r"><span class="bar on" style=""></span><span style="padding:8px 0;flex:1"><b style="font-size:14px;font-weight:600;color:#463428">The garage</b><small style="display:block;font-size:11.5px;color:#9A8A80">#1–#12 · Oct 24, evening</small></span></div><div class="r"><span class="bar on" style=""></span><span style="padding:8px 0;flex:1"><b style="font-size:14px;font-weight:600;color:#463428">The flooded road</b><small style="display:block;font-size:11.5px;color:#9A8A80">#13–#29 · Oct 25, afternoon</small></span></div><div class="r"><span class="bar on" style=""></span><span style="padding:8px 0;flex:1"><b style="font-size:14px;font-weight:600;color:#463428">The bridge</b><small style="display:block;font-size:11.5px;color:#9A8A80">#30–#41 · Oct 26</small></span></div><div class="r"><span class="bar on" style=""></span><span style="padding:8px 0;flex:1"><b style="font-size:14px;font-weight:600;color:#463428">Ivo calls</b><small style="display:block;font-size:11.5px;color:#9A8A80">#42–#53 · Oct 27</small></span></div><div class="r"><span class="bar on" style=""></span><span style="padding:8px 0;flex:1"><b style="font-size:14px;font-weight:600;color:#463428">Night ridge</b><small style="display:block;font-size:11.5px;color:#9A8A80">#54–#66 · Oct 28</small></span></div><div class="r"><span class="bar on" style=""></span><span style="padding:8px 0;flex:1"><b style="font-size:14px;font-weight:600;color:#463428">The station</b><small style="display:block;font-size:11.5px;color:#9A8A80">#67–#80 · Oct 29</small></span></div></div></div><div class="foot2"><small>섹션 6개 · 약 188 토큰</small><span class="go">✧ AI로 짓기</span></div><div class="close">닫기</div></div><div class="pop"><div class="ph">섹션 합치기</div><div class="phs">이어진 섹션을 골라 AI가 합쳐요</div><div class="sel" style="margin-top:14px"><span>(묶음 밖) · 섹션 6개</span><span>▾</span></div><div class="ttl2"><span>합칠 범위 · 처음과 끝을 누르기</span><span class="qc"><span>비우기</span></span></div><div class="card" style="padding:10px 14px"><div class="tl3"><div class="r"><span class="bar" style=""></span><span style="padding:8px 0;flex:1"><b style="font-size:14px;font-weight:500;color:#9A8A80">The garage</b><small style="display:block;font-size:11.5px;color:#9A8A80">#1–#12 · Oct 24, evening</small></span></div><div class="r"><span class="bar on" style="border-radius:4px 4px 0 0;margin-bottom:0;"></span><span style="padding:8px 0;flex:1"><b style="font-size:14px;font-weight:600;color:#463428">The flooded road</b><small style="display:block;font-size:11.5px;color:#9A8A80">#13–#29 · Oct 25, afternoon</small></span></div><div class="r"><span class="bar on" style="border-radius:0;margin:0;"></span><span style="padding:8px 0;flex:1"><b style="font-size:14px;font-weight:600;color:#463428">The bridge</b><small style="display:block;font-size:11.5px;color:#9A8A80">#30–#41 · Oct 26</small></span></div><div class="r"><span class="bar on" style="border-radius:0 0 4px 4px;margin-top:0;"></span><span style="padding:8px 0;flex:1"><b style="font-size:14px;font-weight:600;color:#463428">Ivo calls</b><small style="display:block;font-size:11.5px;color:#9A8A80">#42–#53 · Oct 27</small></span></div><div class="r"><span class="bar" style=""></span><span style="padding:8px 0;flex:1"><b style="font-size:14px;font-weight:500;color:#9A8A80">Night ridge</b><small style="display:block;font-size:11.5px;color:#9A8A80">#54–#66 · Oct 28</small></span></div><div class="r"><span class="bar" style=""></span><span style="padding:8px 0;flex:1"><b style="font-size:14px;font-weight:500;color:#9A8A80">The station</b><small style="display:block;font-size:11.5px;color:#9A8A80">#67–#80 · Oct 29</small></span></div></div></div><div class="req" style="margin-top:12px"><span>요청 (선택 · 예: 3개 정도로)</span></div><div class="foot2"><small>#13–#53 · 섹션 3개</small><span class="go">✧ AI로 합치기</span></div><div class="close">닫기</div></div></div></div>
