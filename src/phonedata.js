@@ -272,7 +272,19 @@ const SIG = {
     mails: x => [x.from, x.subject, x.time], diary: x => [x.date, x.title, x.text], voice: x => [x.title, x.time],
 };
 const sigOf = (k, x) => JSON.stringify(SIG[k](x)).toLowerCase();
-const fresh = (k, old, add) => { const seen = new Set(old.map(x => sigOf(k, x))); return add.filter(x => !seen.has(sigOf(k, x)) && seen.add(sigOf(k, x))); };
+// the same record told again with its clock a little off ("21:00" then "21:02"): the one there, not a second
+// (a short text like "ㅋㅋ" or "ok" may really come twice, so only a longer one is matched this way)
+const NEAR = { msg: x => [nameKey(x.from), x.text], calls: x => [nameKey(x.with), x.type], photos: x => [x.caption], mails: x => [x.from, x.subject], searches: x => [x.q], voice: x => [x.title] };
+// how far the clock may be off, in minutes, before it is another record (a call back an hour later is a second call)
+const NEAR_MIN = { msg: 15, calls: 10, photos: 30, mails: 120, searches: 15, voice: 30 };
+const nearMin = t => { const x = parts(t); return x && x.h !== null ? storyMin(t, '') : null; };
+const twinOf = (k, list, a) => {
+    const sig = sigOf(k, a), exact = list.find(x => sigOf(k, x) === sig);
+    if (exact || !NEAR[k] || (k === 'msg' && String(a.text || '').trim().length < 6)) return exact || null;
+    const key = JSON.stringify(NEAR[k](a)).toLowerCase(), t = nearMin(a.time);
+    return t === null ? null : list.find(x => JSON.stringify(NEAR[k](x)).toLowerCase() === key && nearMin(x.time) !== null && Math.abs(nearMin(x.time) - t) <= NEAR_MIN[k]) || null;
+};
+const fresh = (k, old, add) => { const out = []; for (const x of add) if (!twinOf(k, old, x) && !twinOf(k, out, x)) out.push(x); return out; };
 // an update's new items go after the old ones; every list keeps its newest, the threads the ones written in last
 // every record gets the app's own id (not the model's): links between apps point at it, and it survives trimming and 다시 만들기.
 // Phones saved before ids get theirs when next opened or made
@@ -591,8 +603,8 @@ function tagItems(p, add, src) {
         x.made ||= itemMark(k, x);
         for (const f of src ? [src] : a?.froms || []) { addFrom(x, f); if (src && x !== a) addFrom(a, f); }
     };
-    for (const k of LISTS) for (const a of add[k] || []) tag(k, (p[k] || []).find(x => sigOf(k, x) === sigOf(k, a)), a);
-    for (const t of add.threads || []) { const own = p.threads.find(x => nameKey(x.with) === nameKey(t.with)); for (const a of t.messages) tag('msg', own?.messages.find(x => sigOf('msg', x) === sigOf('msg', a)), a); }
+    for (const k of LISTS) for (const a of add[k] || []) tag(k, twinOf(k, p[k] || [], a), a);
+    for (const t of add.threads || []) { const own = p.threads.find(x => nameKey(x.with) === nameKey(t.with)); for (const a of t.messages) tag('msg', own ? twinOf('msg', own.messages, a) : null, a); }
     for (const a of add.posts || []) {
         const own = (p.posts || []).find(o => o.text && o.text === a.text || o.photo && o.photo === a.photo && o.time === a.time);
         for (const c of a.comments || []) tag('comment', own?.comments?.find(x => ckey(x) === ckey(c)), c);

@@ -453,3 +453,15 @@ test('복구 brings back the story clock the lost round had moved on, with its y
     assert.equal(was.now, '01-01 10:00'); assert.equal(was.year, 2027);
     assert.equal(was.money.tx.length, 1);
 });
+
+test('a record told again with its clock a little off is the one there (a text at 21:00 then 21:02, a call, a mail); a call back an hour later is a second call', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'hi'), say('Mara', 'texted mum, called her'), say('Ren', 'ok'), say('Mara', 'she replied; called again an hour later')];
+    const c = setup(chat); c.p.sync.limit = 2;
+    const ph = (t1, t2, more = []) => ({ threads: [{ with: 'Mum', messages: [{ from: 'me', text: 'coming home late tonight, dont wait up', time: t1 }, ...more] }], calls: [{ with: 'Mum', type: 'out', time: t2, min: 5 }], mails: [{ from: 'Bank', subject: 'Statement', text: 'x', time: '10-26 09:00' }] });
+    await run(c.m, { now: '10-26 22:00', events: [{ id: 'late', at: 2, quote: 'texted mum', summary: '문자', date: '10-26', time: '21:00', phone: ph('10-26 21:00', '10-26 21:05') }] });
+    await run(c.m, { now: '10-26 23:00', events: [{ id: 'late', at: 4, quote: 'she replied', summary: '답장', date: '10-26', time: '22:30', phone: { ...ph('10-26 21:02', '10-26 21:07', [{ from: 'Mum', text: 'ok sweetie', time: '10-26 21:10' }]), calls: [{ with: 'Mum', type: 'out', time: '10-26 21:07', min: 5 }, { with: 'Mum', type: 'out', time: '10-26 22:10', min: 2 }], mails: [{ from: 'Bank', subject: 'Statement', text: 'x', time: '10-26 09:30' }] } }] });
+    const t = c.p.threads.find(x => x.with === 'Mum');
+    assert.deepEqual(t.messages.map(x => x.text), ['coming home late tonight, dont wait up', 'ok sweetie']);
+    assert.deepEqual(c.p.calls.map(x => x.time), ['10-26 21:05', '10-26 22:10']);
+    assert.equal(c.p.mails.length, 1);
+});
