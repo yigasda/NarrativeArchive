@@ -1077,7 +1077,7 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_sp :is(.na_sp_s, .na_sp_gl) input { position: absolute; opacity: 0; pointer-events: none; }
 .na_sp_ck { width: 20px; height: 20px; box-sizing: border-box; flex: none; border-radius: 6px; border: 2px solid var(--na-line); display: grid; place-items: center; color: var(--na-onaccent, #fff); }
 .na_sp_ck.on, .na_sp_ck.part { border: 0; background: var(--na-accent); }
-.na_sp_ck.part::after { content: ""; width: 9px; height: 2.5px; border-radius: 2px; background: #fff; }
+.na_sp_ck.part::after { content: ""; width: 9px; height: 2.5px; border-radius: 2px; background: var(--na-onaccent, #fff); }
 .na_sp :is(.na_sp_s, .na_sp_gl) input:focus-visible + .na_sp_ck { outline: 2px solid var(--na-accent); outline-offset: 2px; }
 .na_sp_tt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .na_sp_tt b { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--na-ink); }
@@ -1090,6 +1090,7 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_sp > .checkbox_label { display: flex !important; align-items: center; gap: 8px; margin: 0 4px; font-size: 12.5px; color: var(--na-mute); cursor: pointer; }
 .na_sp > .checkbox_label input { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; margin: 0; flex: none; border-radius: 6px; border: 2px solid var(--na-line); background: transparent !important; box-shadow: none !important; cursor: pointer; }
 .na_sp > .checkbox_label input:checked { border: 0; background: var(--na-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center no-repeat !important; }
+body.na_darkui .na_sp > .checkbox_label input:checked { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%231B1B1F' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") !important; }
 /* 누가 아는가: while picking, the picker takes the welcome card's place */
 .na_kn2.na_kn3_new.na_kn3_picking .na_kn_list { display: none; }
 .na_kn2.na_kn3_new .na_kn_pickhost { margin-top: 4px; }
@@ -3815,22 +3816,52 @@ body.na_darkui .na_launch_tabs { background: #232328; }
 .na_au_box textarea { resize: vertical; min-height: 3.2em; }
 .na_wz_austate { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 
-/* 제목 다시 짓기 */
+/* ============ 제목 다시 짓기 (docs/mockups/ext-retitle2 D, 3.169.31): charcoal/orange tick boxes, a quiet AI로 짓기, the results as a
+   지금 | 새 제목 table, 닫기 | N개 바꾸기 at the bottom. .na_rt_list · .na_rt_head · .na_rt_quick · .na_rt_txt are shared with 요약 받기
+   (digest.js), so their plain rules stay as they were and the retitle look is scoped with .na_rt. One block: the picker-bar rules of
+   docs/mockups/ext-merge C and the 3.169.31 block that used to sit at the end of the file live here. */
 .na_rt { display: flex; flex-direction: column; gap: 12px; }
 .na_rt_res { display: flex; flex-direction: column; gap: 8px; }
 .na_rt_head { display: flex; align-items: center; gap: 8px; }
 .na_rt_head b { flex: 1; }
 .na_rt_quick { display: flex; gap: 4px; }
 .na_rt_list { display: flex; flex-direction: column; border: 1px solid var(--na-line); border-radius: 14px; background: var(--na-card); overflow: hidden; }
-.na_rt_row { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 10px 12px; cursor: pointer; }
-.na_rt_row + .na_rt_row { border-top: 1px solid var(--na-line); }
-.na_rt_row > input[type=checkbox] { margin-top: 3px; flex: none; }
-.na_rt_row.same { opacity: 0.6; }
 .na_rt_txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .na_rt_txt small { color: var(--na-dim); font-size: 0.82em; }
-.na_rt_old { color: var(--na-dim); font-size: 0.88em; line-height: 1.4; }
-.na_rt_row.same .na_rt_old { text-decoration: none; }
-.na_popup .na_rt_new { margin: 0; width: 100%; box-sizing: border-box; font-weight: 600; }
+/* the section picker (picker.js look: 'bar'): rows without the hairline, the side bar kept but not shown, names in the normal weight, tick boxes on */
+.na_sp_bar .na_sp_s { position: relative; gap: 12px; padding: 9px 14px; border-top: 0 !important; }
+.na_sp_bar .na_sp_s::before { content: ""; position: absolute; left: 14px; top: 4px; bottom: 4px; width: 4px; border-radius: 4px; background: var(--na-line); display: none; }
+.na_sp_bar .na_sp_s:has(input:checked)::before { background: var(--na-accent-fg, var(--na-accent)); }
+.na_sp_bar .na_sp_s .na_sp_tt b { font-weight: 600; color: var(--na-ink); }
+.na_sp_bar .na_sp_secs { padding: 6px 0; }
+.na_sp_bar .na_sp_head b { font-weight: 600; }
+.na_rt :is(.na_sp_ck, .na_rt_ck) { width: 20px; height: 20px; border: 0 !important; border-radius: 7px; background: var(--na-field, #E9DCD1); }
+body:not(.na_darkui) .na_rt .na_sp_ck:is(.on, .part), body:not(.na_darkui) .na_rt input:checked + .na_rt_ck { background: var(--na-accent) !important; color: var(--na-onaccent, #fff); }
+body.na_darkui .na_rt :is(.na_sp_ck, .na_rt_ck) { background: #2E2E34; }
+body.na_darkui .na_rt .na_sp_ck:is(.on, .part), body.na_darkui .na_rt input:checked + .na_rt_ck { background: #E9DFCF !important; color: #1B1B1F; }
+body:is(.na_darkui, :not(.na_darkui)) .na_rt button.na_sp_go:not(#na_x) { background: var(--na-field, #E9DCD1) !important; color: var(--na-ink) !important; box-shadow: none !important; height: 38px; padding: 0 16px; font-size: 13.5px; }
+body.na_darkui .na_rt button.na_sp_go:not(#na_x) { background: #2E2E34 !important; }
+/* the results: a 지금 | 새 제목 table in a floating card, then 닫기 | N개 바꾸기 */
+.na_rt .na_rt_list { display: block; border: 0 !important; border-radius: 18px; background: #FCF6F1; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); padding: 4px 0 6px; overflow: visible; }
+body.na_darkui .na_rt .na_rt_list { background: #232328; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+.na_rt_th, .na_rt_row { display: grid; grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1.3fr); gap: 0 10px; align-items: center; margin: 0; padding: 8px 14px; }
+.na_rt_row { cursor: pointer; }
+.na_rt_th { padding: 8px 14px 2px; font-size: 11.5px; font-weight: 700; color: var(--na-mute); }
+.na_rt_row > input[type=checkbox] { margin-top: 3px; flex: none; }
+body:is(.na_darkui, :not(.na_darkui)) .na_rt :is(.na_rt_row, .na_sp_s, .na_sp_gl) > input[type=checkbox]:not(#na_x) { display: none !important; }
+.na_rt .na_rt_ck { position: relative; display: block; }
+.na_rt input:checked + .na_rt_ck::after { content: ""; position: absolute; left: 7px; top: 3.5px; width: 5px; height: 10px; border: solid currentColor; border-width: 0 2.2px 2.2px 0; transform: rotate(45deg); }
+.na_rt_old { font-size: 13px; line-height: 1.4; color: var(--na-mute); text-decoration: none; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body:is(.na_darkui, :not(.na_darkui)) .na_popup.na_rt .na_rt_row input.text_pole.na_rt_new:not(#na_x) { width: 100%; box-sizing: border-box; min-width: 0; height: auto; min-height: 0; margin: 0 0 0 -6px; padding: 3px 6px; border: 0 !important; border-radius: 8px; background: transparent !important; box-shadow: none !important; font-size: 13.5px; font-weight: 700; color: var(--na-ink); }
+body:is(.na_darkui, :not(.na_darkui)) .na_popup.na_rt .na_rt_row input.text_pole.na_rt_new:not(#na_x):focus { background: var(--na-field, #E9DCD1) !important; outline: none; }
+body.na_darkui .na_popup.na_rt .na_rt_row input.text_pole.na_rt_new:not(#na_x):focus { background: #2E2E34 !important; }
+.na_rt_row.same { opacity: 0.55; }
+.na_rt .na_rt_nav { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-top: 6px; margin-bottom: 10px; }
+.na_rt .na_rt_nav button { height: 46px; border: 0; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.na_rt .na_rt_close { background: transparent; color: var(--na-dim); }
+.na_rt .na_rt_apply { background: var(--na-accent); color: var(--na-onaccent, #fff); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+.na_rt .na_rt_apply:disabled { opacity: 0.5; cursor: default; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup.popup:has(.na_rt_res:not([hidden])):not(#na_x) .popup-controls.popup-controls { display: none !important; }
 
 /* 고쳐 달라고 하기 (섹션 하나) */
 .na_sf { display: flex; flex-direction: column; gap: 10px; }
@@ -3844,17 +3875,31 @@ body.na_darkui .na_launch_tabs { background: #232328; }
 .na_sf_bubble { max-width: 85%; padding: 7px 12px; border-radius: 14px 14px 4px 14px; background: var(--na-soft); font-size: 0.9em; line-height: 1.45; }
 .na_sf_note { padding: 8px 12px; border-radius: 12px; background: var(--na-softer); color: var(--na-dim); font-size: 0.88em; }
 
-/* 섹션 합치기 */
+/* ============ 섹션 합치기 (docs/mockups/ext-merge C): the picked run of sections as one unbroken side bar (rounded only at its ends),
+   so "only touching sections" shows; the result card as before. One block: ext-merge C's rules live here, not at the end of the file. */
 .na_mg { display: flex; flex-direction: column; gap: 10px; }
 .na_popup .na_mg_group { margin: 0; width: 100%; }
-.na_mg_pickhead { display: flex; align-items: center; gap: 8px; }
+.na_mg_pickhead { display: flex; align-items: center; gap: 8px; margin: 2px 4px 0; }
+.na_mg_pickhead b { flex: 1; font-size: 12.5px; font-weight: 600; color: var(--na-dim); }
 .na_mg_pickhead small { flex: 1; }
-.na_mg_list { display: flex; flex-direction: column; max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--na-line); border-radius: 14px; background: var(--na-card); }
-.na_mg_row { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 9px 12px; cursor: pointer; }
-.na_mg_row + .na_mg_row { border-top: 1px solid var(--na-line); }
-.na_mg_row.on { background: var(--na-soft); }
-.na_mg_row > input { margin-top: 3px; flex: none; }
-.na_mg_row .na_rt_txt > span { font-size: 0.92em; line-height: 1.4; }
+.na_mg_list { display: flex; flex-direction: column; max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; padding: 6px 0; border: 0 !important; border-radius: 18px !important; background: var(--na-card) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+body.na_darkui .na_mg_list { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.35); }
+.na_mg_row { position: relative; display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 9px 14px 9px 28px !important; border-top: 0 !important; background: transparent !important; cursor: pointer; }
+.na_mg_row > input { position: absolute; margin-top: 3px; flex: none; opacity: 0; pointer-events: none; }
+.na_mg_row::before { content: ""; position: absolute; left: 14px; top: 4px; bottom: 4px; width: 4px; border-radius: 4px; background: var(--na-line); }
+.na_mg_row.on::before { top: 0; bottom: 0; border-radius: 0; background: var(--na-accent-fg, var(--na-accent)); }
+.na_mg_row.on.first::before { top: 4px; border-radius: 4px 4px 0 0; }
+.na_mg_row.on.last::before { bottom: 4px; border-radius: 0 0 4px 4px; }
+.na_mg_row.on.first.last::before { border-radius: 4px; }
+.na_mg_row .na_rt_txt { gap: 1px; }
+.na_mg_row .na_rt_txt > span { font-size: 14px; line-height: 1.4; font-weight: 500; color: var(--na-dim); }
+.na_mg_row.on .na_rt_txt > span { font-weight: 600; color: var(--na-ink); }
+.na_mg_row .na_rt_txt small { font-size: 11.5px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup input.na_mg_q:not(#na_x) { width: 100%; box-sizing: border-box; height: 44px; margin: 0; padding: 0 16px; border: 0 !important; border-radius: 999px; background: var(--na-card) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; color: var(--na-ink) !important; font: inherit; font-size: 13.5px; }
+.na_mg_foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.na_mg_foot .na_mg_info { flex: 1; min-width: 0; font-size: 12px; color: var(--na-dim); }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_mg_go:not(#na_x) { flex: none; height: 42px; margin: 0; padding: 0 18px; border: 0 !important; border-radius: 999px; background: var(--na-accent) !important; color: var(--na-onaccent, #fff) !important; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_mg_go:disabled:not(#na_x) { opacity: 0.5; cursor: default; }
 .na_mg_info.warn { color: var(--na-accent-fg, var(--na-accent)); }
 .na_mg_res { display: flex; flex-direction: column; gap: 8px; }
 .na_mg_warn { display: flex; flex-direction: column; gap: 3px; padding: 9px 12px; border-radius: 12px; background: var(--na-softer); border: 1px solid var(--na-accent); color: var(--na-accent-fg, var(--na-accent)); font-size: 0.86em; line-height: 1.45; }
@@ -7627,40 +7672,6 @@ body.na_darkui .na_next_card.warn { border-color: #3A3A41 !important; }
 body.na_darkui :is(.na_whole, .na_fp3_row.picked, .na_cp3_row.on, .na_ck.part) { background: #2E2E34 !important; }
 body.na_darkui .na_sp_s:hover, body.na_darkui .na_cc_row:focus-within { background: #2B2B31 !important; }
 
-/* ============ 제목 다시 짓기 · 섹션 합치기 (docs/mockups/ext-merge C): sections as names with a side bar that lights up instead of
-   tick boxes; in 합치기 the picked run is one unbroken bar (rounded only at its ends), so "only touching sections" shows */
-.na_sp_bar .na_sp_s .na_sp_ck { display: none; }
-.na_sp_bar .na_sp_s { position: relative; padding: 9px 14px 9px 28px; border-top: 0 !important; }
-.na_sp_bar .na_sp_s::before { content: ""; position: absolute; left: 14px; top: 4px; bottom: 4px; width: 4px; border-radius: 4px; background: var(--na-line); }
-.na_sp_bar .na_sp_s:has(input:checked)::before { background: var(--na-accent-fg, var(--na-accent)); }
-.na_sp_bar .na_sp_s .na_sp_tt b { font-weight: 500; color: var(--na-dim); }
-.na_sp_bar .na_sp_s:has(input:checked) .na_sp_tt b { font-weight: 600; color: var(--na-ink); }
-.na_sp_bar .na_sp_secs { padding: 6px 0; }
-.na_sp_bar .na_sp_head b { font-weight: 600; }
-.na_mg_pickhead { margin: 2px 4px 0; }
-.na_mg_pickhead b { flex: 1; font-size: 12.5px; font-weight: 600; color: var(--na-dim); }
-.na_mg_list { padding: 6px 0; border: 0 !important; border-radius: 18px !important; background: var(--na-card) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
-body.na_darkui .na_mg_list { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.35); }
-.na_mg_row { position: relative; padding: 9px 14px 9px 28px !important; border-top: 0 !important; background: transparent !important; }
-.na_mg_row > input { position: absolute; opacity: 0; pointer-events: none; }
-.na_mg_row::before { content: ""; position: absolute; left: 14px; top: 4px; bottom: 4px; width: 4px; border-radius: 4px; background: var(--na-line); }
-.na_mg_row.on::before { top: 0; bottom: 0; border-radius: 0; background: var(--na-accent-fg, var(--na-accent)); }
-.na_mg_row.on.first::before { top: 4px; border-radius: 4px 4px 0 0; }
-.na_mg_row.on.last::before { bottom: 4px; border-radius: 0 0 4px 4px; }
-.na_mg_row.on.first.last::before { border-radius: 4px; }
-.na_mg_row .na_rt_txt { gap: 1px; }
-.na_mg_row .na_rt_txt > span { font-size: 14px; font-weight: 500; color: var(--na-dim); }
-.na_mg_row.on .na_rt_txt > span { font-weight: 600; color: var(--na-ink); }
-.na_mg_row .na_rt_txt small { font-size: 11.5px; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup input.na_mg_q:not(#na_x) { width: 100%; box-sizing: border-box; height: 44px; margin: 0; padding: 0 16px; border: 0 !important; border-radius: 999px; background: var(--na-card) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; color: var(--na-ink) !important; font: inherit; font-size: 13.5px; }
-.na_mg_foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.na_mg_foot .na_mg_info { flex: 1; min-width: 0; font-size: 12px; color: var(--na-dim); }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_mg_go:not(#na_x) { flex: none; height: 42px; margin: 0; padding: 0 18px; border: 0 !important; border-radius: 999px; background: var(--na-accent) !important; color: var(--na-onaccent, #fff) !important; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_mg_go:disabled:not(#na_x) { opacity: 0.5; cursor: default; }
-/* ticks on the cream accent in dark */
-.na_sp_ck.part::after { background: var(--na-onaccent, #fff); }
-body.na_darkui .na_sp > .checkbox_label input:checked { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%231B1B1F' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") !important; }
-
 /* ============ 압축 마법사 (docs/mockups/ext-wizard B + 가): as tall as its content; the range's first and last message
    above the numbers (hold one to read it whole in a sheet from the bottom) */
 .na_wz3_msgs { display: flex; flex-direction: column; margin-bottom: 12px; }
@@ -7950,34 +7961,4 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st .na_st_mi:not(#na_x) {
 /* 3.169.30: dark — text on the cream accent is always dark, also on ST's own popup buttons (outside .na_popup the var was missing, so it fell back to white) */
 body.na_darkui { --na-onaccent: #1B1B1F; }
 
-/* 제목 다시 짓기 (3.169.31, mockup D): charcoal tick boxes, quiet AI로 짓기, results as a 지금 | 새 제목 table, 닫기 | N개 바꾸기 at the bottom */
-.na_rt .na_sp_bar .na_sp_s { padding: 9px 14px !important; gap: 12px; }
-.na_rt .na_sp_bar .na_sp_s::before { display: none !important; }
-.na_rt .na_sp_bar .na_sp_s .na_sp_ck { display: grid !important; }
-.na_rt .na_sp_bar .na_sp_s .na_sp_tt b { font-weight: 600 !important; color: var(--na-ink) !important; }
-.na_rt :is(.na_sp_ck, .na_rt_ck) { width: 20px; height: 20px; border: 0 !important; border-radius: 7px; background: var(--na-field, #E9DCD1); }
-body:not(.na_darkui) .na_rt .na_sp_ck:is(.on, .part), body:not(.na_darkui) .na_rt input:checked + .na_rt_ck { background: var(--na-accent) !important; color: var(--na-onaccent, #fff); }
-body.na_darkui .na_rt :is(.na_sp_ck, .na_rt_ck) { background: #2E2E34; }
-body.na_darkui .na_rt .na_sp_ck:is(.on, .part), body.na_darkui .na_rt input:checked + .na_rt_ck { background: #E9DFCF !important; color: #1B1B1F; }
-body:is(.na_darkui, :not(.na_darkui)) .na_rt button.na_sp_go:not(#na_x) { background: var(--na-field, #E9DCD1) !important; color: var(--na-ink) !important; box-shadow: none !important; height: 38px; padding: 0 16px; font-size: 13.5px; }
-body.na_darkui .na_rt button.na_sp_go:not(#na_x) { background: #2E2E34 !important; }
-.na_rt .na_rt_list { display: block; border: 0 !important; border-radius: 18px; background: #FCF6F1; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); padding: 4px 0 6px; overflow: visible; }
-body.na_darkui .na_rt .na_rt_list { background: #232328; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
-.na_rt .na_rt_th, .na_rt .na_rt_row { display: grid !important; grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1.3fr); gap: 0 10px; align-items: center; padding: 8px 14px; margin: 0; }
-.na_rt .na_rt_th { padding: 8px 14px 2px; font-size: 11.5px; font-weight: 700; color: var(--na-mute); }
-.na_rt .na_rt_row + .na_rt_row { border-top: 0 !important; }
-body:is(.na_darkui, :not(.na_darkui)) .na_rt :is(.na_rt_row, .na_sp_s, .na_sp_gl) > input[type=checkbox]:not(#na_x) { display: none !important; }
-.na_rt .na_rt_ck { position: relative; display: block; }
-.na_rt input:checked + .na_rt_ck::after { content: ""; position: absolute; left: 7px; top: 3.5px; width: 5px; height: 10px; border: solid currentColor; border-width: 0 2.2px 2.2px 0; transform: rotate(45deg); }
-.na_rt .na_rt_old { font-size: 13px; color: var(--na-mute); text-decoration: none; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-body:is(.na_darkui, :not(.na_darkui)) .na_popup.na_rt .na_rt_row input.text_pole.na_rt_new:not(#na_x) { width: 100%; box-sizing: border-box; min-width: 0; height: auto; min-height: 0; margin: 0 0 0 -6px; padding: 3px 6px; border: 0 !important; border-radius: 8px; background: transparent !important; box-shadow: none !important; font-size: 13.5px; font-weight: 700; color: var(--na-ink); }
-body:is(.na_darkui, :not(.na_darkui)) .na_popup.na_rt .na_rt_row input.text_pole.na_rt_new:not(#na_x):focus { background: var(--na-field, #E9DCD1) !important; outline: none; }
-body.na_darkui .na_popup.na_rt .na_rt_row input.text_pole.na_rt_new:not(#na_x):focus { background: #2E2E34 !important; }
-.na_rt .na_rt_row.same { opacity: 0.55; }
-.na_rt .na_rt_nav { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-top: 6px; margin-bottom: 10px; }
-.na_rt .na_rt_nav button { height: 46px; border: 0; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
-.na_rt .na_rt_close { background: transparent; color: var(--na-dim); }
-.na_rt .na_rt_apply { background: var(--na-accent); color: var(--na-onaccent, #fff); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
-.na_rt .na_rt_apply:disabled { opacity: 0.5; cursor: default; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup.popup:has(.na_rt_res:not([hidden])):not(#na_x) .popup-controls.popup-controls { display: none !important; }
 

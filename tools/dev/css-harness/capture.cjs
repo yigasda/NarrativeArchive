@@ -74,6 +74,8 @@ if (require.main === module) (async () => {
                             await sc.open(p, helpers);
                             // every web font in, so glyphs are the same pixels run after run (the phone loads Noto Sans KR lazily)
                             await p.evaluate(() => document.fonts.ready); await p.waitForFunction(() => [...document.fonts].every(f => f.status !== 'loading'), null, { timeout: 5000 }).catch(() => {});
+                            // SillyTavern's toasts (saved, made, copied…) are not ours and drift with timing: none in a capture
+                            await p.evaluate(() => { window.toastr?.clear?.(); document.querySelectorAll('#toast-container .toast').forEach(e => e.remove()); });
                             await p.waitForTimeout(500);
                             const el = await p.$(sc.root); if (!el) throw new Error('root not found: ' + sc.root);
                             if (noPng) { /* values only */ }
@@ -148,6 +150,7 @@ async function styleDump(p, root, { states = true } = {}) {
         const R = document.querySelector(root); const out = []; let i = 0;
         const pathOf = e => { const parts = []; while (e && e !== R) { let n = 0, s = e; while ((s = s.previousElementSibling)) n++; parts.unshift(n); e = e.parentElement; } return parts.join('/'); };
         for (const e of [R, ...R.querySelectorAll('*')]) {
+            if (e.closest('#toast-container')) continue; // SillyTavern's toasts, not ours
             const cs = getComputedStyle(e); const r = e.getBoundingClientRect();
             const rec = { path: pathOf(e), tag: e.tagName, cls: [...e.classList].sort().join(' '), w: Math.round(r.width), h: Math.round(r.height) };
             for (const k of PROPS) rec[k] = cs[k];

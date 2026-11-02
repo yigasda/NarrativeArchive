@@ -34,7 +34,8 @@ for (const tag of tags) {
     const ja = path.join(dirA, tag + '.json'), jb = path.join(dirB, tag + '.json');
     if (fs.existsSync(ja) && fs.existsSync(jb)) {
         valDone++;
-        const a = JSON.parse(fs.readFileSync(ja)), b = JSON.parse(fs.readFileSync(jb));
+        const noToast = r => !/(^|\s)toast(\s|-|$)|toast-container/.test(r.cls || '') && !(r.tag === 'DIV' && r.cls === 'toast-top-center');
+        const a = JSON.parse(fs.readFileSync(ja)).filter(noToast), b = JSON.parse(fs.readFileSync(jb)).filter(noToast);
         const byPath = new Map(b.map(r => [r.path, r])); const diffs = [];
         for (const ra of a) { const rb = byPath.get(ra.path); if (!rb) { diffs.push(`${ra.path} <${ra.tag}.${ra.cls}> gone`); continue; }
             for (const k of Object.keys(ra)) { if (k === 'path' || k === 'inter') continue; if ((k === 'hover' || k === 'focus') && (!(k in ra) || !(k in rb))) continue; if (String(ra[k]) !== String(rb[k])) diffs.push(`${ra.path} <${ra.tag}${ra.cls ? '.' + ra.cls.split(' ')[0] : ''}> ${k}: ${ra[k]} → ${rb[k]}`); } }
