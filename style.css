@@ -7744,16 +7744,16 @@ body:not(.na_darkui) .na_wz2_range label > span { box-shadow: 0 1px 2px rgba(70,
 
 /* ============ no outlines in the extension's windows (2025 sweep): plain buttons, fields and chips are filled shapes lifted by a
    soft shadow, never a 1px line. The phone keeps its own look. */
-body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_btn:not(.primary):not(.danger), .na_v2_pillbtn:not(.danger), .na_btn:not(.na_primary)):not(#na_x) { border-color: transparent !important; background: #F7EEE7 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1) !important; }
-body.na_darkui dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_btn:not(.primary):not(.danger), .na_v2_pillbtn:not(.danger), .na_btn:not(.na_primary)):not(#na_x) { border-color: transparent !important; background: #2E2E34 !important; box-shadow: none !important; }
+body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_btn:not(.primary):not(.danger), .na_v2_pillbtn:not(.danger), .na_btn:not(.na_primary)):not(.on):not(.active):not(#na_x) { border-color: transparent !important; background: #F7EEE7 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1) !important; }
+body.na_darkui dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_btn:not(.primary):not(.danger), .na_v2_pillbtn:not(.danger), .na_btn:not(.na_primary)):not(.on):not(.active):not(#na_x) { border-color: transparent !important; background: #2E2E34 !important; box-shadow: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_pillbtn.danger:not(#na_x) { border-color: transparent !important; }
 body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup :is(input.text_pole, textarea.text_pole, select.text_pole):not(#na_x) { border-color: transparent !important; background-color: #FBF7F3 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08) !important; outline: none; }
 body.na_darkui dialog.popup:not(:has(.na_phone)) .na_popup :is(input.text_pole, textarea.text_pole, select.text_pole):not(#na_x) { border-color: transparent !important; background-color: #2E2E34 !important; box-shadow: none !important; outline: none; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup :is(input.text_pole, textarea.text_pole, select.text_pole):focus:not(#na_x) { box-shadow: 0 0 0 2px color-mix(in srgb, var(--na-accent) 35%, transparent) !important; }
 body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_chips button, .na_pchip):not(.on):not(#na_x) { border-color: transparent !important; background: #E9DCD1 !important; color: #6B5A50 !important; }
 body.na_darkui dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_chips button, .na_pchip):not(.on):not(#na_x) { border-color: transparent !important; background: #2E2E34 !important; color: #B9B7BD !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_chips button, .na_pchip).on:not(#na_x) { border-color: transparent !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_card:not(.na_bn2_find):not(#na_x) { border-color: transparent !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_chips button, .na_pchip).on:not(.na_pchip_broad):not(#na_x) { border-color: transparent !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_card:not(.na_bn2_find):not(.on):not(.active):not(#na_x) { border-color: transparent !important; }
 body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_card:not(#na_x) { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 
 /* ============ every plain checkbox in the extension's windows is drawn by us (the picker's tick): rounded square, light edge,
@@ -7766,8 +7766,11 @@ body:is(.na_darkui, :not(.na_darkui)) .na_popup input[type="checkbox"]:not(.na_t
 .na_popup input[type="checkbox"]:not(.na_toggle):disabled { opacity: 0.4; cursor: default; }
 .na_popup .checkbox_label { display: inline-flex; align-items: flex-start; gap: 8px; }
 .na_popup .checkbox_label > input[type="checkbox"] { margin-top: 2px; }
-.na_ss_row, .na_ss_row.on { border-color: transparent !important; }
+.na_ss_row:not(.on) { border-color: transparent !important; }
 body:not(.na_darkui) .na_ss_row { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06); }
-body:not(.na_darkui) .na_ss_row.on { background: #F3E4D8; }
-body.na_darkui .na_ss_row.on { background: #34343B; }
 body:not(.na_darkui) .na_popup input[type="checkbox"]:not(.na_toggle):not(:checked):not(#na_x) { border-color: #BCA697 !important; }
+
+/* picked / switched-on things keep their accent edge (the outline sweep above only flattens the resting look) */
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup :is(.na_v2_btn, .na_v2_pillbtn, .na_btn):is(.on, .active):not(.primary):not(#na_x) { border: 1px solid var(--na-accent) !important; }
+body:not(.na_darkui) dialog.popup .na_popup .na_v2_card.na_wd.on:not(#na_x) { border: 1px solid color-mix(in srgb, var(--na-accent) 45%, transparent) !important; }
+body.na_darkui dialog.popup .na_popup .na_v2_card.na_wd.on:not(#na_x) { border: 1px solid #8A7A55 !important; }
