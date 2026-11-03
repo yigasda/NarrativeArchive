@@ -4074,7 +4074,7 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_st_float small { color: inherit !important; font-weight: 500; opacity: 0.6; }
 .na_st_float[hidden] { display: none; }
 .na_st_dock { position: relative; padding: 10px 0 2px; border-top: 1px solid var(--st-line); }
-.na_st_quick { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-bottom: 10px; padding: 2px; }
+.na_st_quick { display: flex; flex-wrap: wrap; gap: 6px; overflow: visible; scrollbar-width: none; margin-bottom: 10px; padding: 2px; } /* chips wrap to a second line instead of running off the edge (3.169.73) */
 .na_st_quick::-webkit-scrollbar { display: none; }
 .na_st_qk { flex: none; border: 0; border-radius: 999px; padding: 6px 12px; background: var(--st-w); color: var(--st-ink) !important; font-size: 0.86em !important; white-space: nowrap; box-shadow: 0 1px 3px rgba(46, 36, 30, 0.08), inset 0 0 0 1px var(--st-line); cursor: pointer; }
 .na_st_qk:disabled { opacity: 0.45; cursor: default; }
@@ -4090,6 +4090,7 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
     color: var(--st-ink) !important; font: inherit; font-size: 0.95em; line-height: 1.4; resize: none; overflow-y: auto; scrollbar-width: none; }
 .na_st .na_st_field textarea.na_st_q::-webkit-scrollbar { display: none; }
 .na_st .na_st_field textarea.na_st_q::placeholder { color: var(--st-dim) !important; opacity: 1; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup.na_st .na_st_field textarea.na_st_q:is(*, :hover, :focus, :focus-visible, :disabled):not(#na_x) { background: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: none !important; } /* the field pill is the only box: no theme fill or edge inside it (3.169.73) */
 .na_st_send { flex: none; width: 30px; height: 30px; border: 0; border-radius: 50%; background: var(--st-acc); color: #fff !important; display: grid; place-items: center; cursor: pointer; }
 .na_st_send:disabled { opacity: 0.5; cursor: wait; }
 .na_st_menu { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 5; width: min(300px, 100%); padding: 6px; border-radius: 16px; background: var(--st-w); box-shadow: 0 12px 32px rgba(46, 36, 30, 0.22), inset 0 0 0 1px var(--st-line); display: flex; flex-direction: column; }
