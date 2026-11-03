@@ -315,12 +315,22 @@ function mergePhone(p, add, { keepAll = false } = {}) {
     if (!p.device && add.device) p.device = add.device;
     const keep = (list, n) => (keepAll ? list : list.slice(-n));
     const lk = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+    // the same text, written a little differently: equal letters, or one holding the other when the shorter has 3 letters or more and they are
+    // close in length. A text of emoji or marks alone ("👍") has no letters: only the very same text is it (an empty key
+    // would sit inside every text), and a short "응" inside a long text is not that text
+    const sameText = (a, b) => {
+        const x = lk(a), y = lk(b);
+        if (!x || !y) return !x && !y && String(a || '').trim() === String(b || '').trim() && !!String(a || '').trim();
+        if (x === y) return true;
+        const [s, l] = x.length <= y.length ? [x, y] : [y, x];
+        return s.length >= 3 && s.length / l.length >= 0.6 && l.includes(s);
+    };
     for (const t of add.threads) {
         const old = p.threads.find(x => nameKey(x.with) === nameKey(t.with));
         // a text the owner deleted: the one there is marked (it stays for 되돌리기), never added again
         // (one the phone never had, a thread new in this round too, goes in marked, so the data holds it)
         const gone = t.messages.filter(x => x.deleted), matched = new Set();
-        if (gone.length && old) for (const g of gone) { const o = [...old.messages].reverse().find(x => !x.deleted && (lk(x.text) === lk(g.text) || lk(x.text).includes(lk(g.text)) || lk(g.text).includes(lk(x.text)))); if (o) { o.deleted = true; matched.add(g); } }
+        if (gone.length && old) for (const g of gone) { const o = [...old.messages].reverse().find(x => !x.deleted && sameText(x.text, g.text)); if (o) { o.deleted = true; matched.add(g); } }
         t.messages = t.messages.filter(x => !matched.has(x));
         // in story order: a later round can bring texts from before the ones there (an earlier stretch read late)
         if (old) { old.messages = keep([...old.messages, ...fresh('msg', old.messages, t.messages)].sort(byStory(p.now)), CAP.messages); if (t.draft) old.draft = t.draft; }
