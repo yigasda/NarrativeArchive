@@ -1,0 +1,87 @@
+/* ============ window size (3.169.5): every extension window fits its content but never opens shorter than about half the
+   screen, so short ones don't look tiny and big ones don't sit empty; long ones grow to the screen and scroll inside.
+   Confirms, the phone, the studio and 아카이브에 추가 keep their own sizing. */
+body dialog.popup:not(:has(.na_confirm, .na_phone, .na_st, .na_ap3)) .popup-content > .na_popup.na_v2,
+body dialog.popup:not(:has(.na_confirm, .na_phone, .na_st, .na_ap3)) .na_popup.na_v2:not(.na_popup .na_popup) { min-height: 55vh; box-sizing: border-box; }
+/* empty windows sit in the middle of the 55% window, not stuck to the top (3.169.6):
+   이탈 감지 before a check — the example and its line centred above the controls at the bottom;
+   분기 that is not a branch — the timeline, line and 찾기 button centred;
+   any window whose list is just the one "nothing yet" line — that line centred */
+.na_dr2.na_dr3_new .na_dr3_hello > .na_dr3_cmp { margin-top: auto; }
+.na_dr2.na_dr3_new .na_dr3_hello > b { margin-top: 14px; }
+.na_dr2.na_dr3_new .na_dr3_hello > .na_dr3_seg { margin-top: auto; }
+.na_bn2.na_bn3_new { display: flex; flex-direction: column; }
+.na_bn2.na_bn3_new > .na_bn2_body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.na_popup.na_v2 > :has(> .na_empty:only-child) { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+
+/* ============ 키워드 테스트 (docs/mockups/ext-kwtest B): two counts, then the called sections (orange tick, the matched keyword
+   as an orange pill, the sentence with it marked), then the ones not called, faded */
+.na_kwt3 .na_kwt_in { min-height: 0; }
+.na_kwt3_sum { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.na_kwt3_sum > div { display: flex; flex-direction: column; align-items: center; padding: 12px; border-radius: 16px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+body.na_darkui .na_kwt3_sum > div { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 6px 16px rgba(0, 0, 0, 0.3); }
+.na_kwt3_sum b { font-size: 24px; line-height: 1.2; color: var(--na-ink); }
+.na_kwt3_sum .on b { color: var(--na-accent-fg, var(--na-accent)); }
+.na_kwt3_sum small { font-size: 11.5px; color: var(--na-dim); }
+.na_kwt3_list { padding: 0 !important; overflow: hidden; gap: 0 !important; }
+.na_kwt3_row { display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; background: transparent !important; }
+.na_kwt3_row + .na_kwt3_row { border-top: 1px solid var(--na-line2, var(--na-line)); }
+.na_kwt3_st { width: 22px; height: 22px; flex: none; margin-top: 1px; border-radius: 999px; display: grid; place-items: center; background: var(--na-card2); color: var(--na-dim); }
+.na_kwt3_row.on .na_kwt3_st { background: var(--na-accent); color: var(--na-onaccent, #fff); }
+.na_kwt3_row:not(.on) { opacity: 0.6; }
+.na_kwt3_row .na_kwt_main b { font-size: 13.5px; font-weight: 600; }
+.na_kwt3_row .na_kwt_main small { margin-left: 6px; font-size: 11.5px; color: var(--na-dim); }
+.na_kwt3 .na_kwt_key { border: 0 !important; opacity: 1; padding: 2px 9px; background: var(--na-card2); color: var(--na-dim); }
+.na_kwt3 .na_kwt_key.hit { background: var(--na-accent); color: var(--na-onaccent, #fff); }
+.na_kwt3 .na_kwt_where { margin-top: 6px; font-size: 12px; opacity: 1; color: var(--na-mute); }
+.na_kwt3 .na_kwt_where mark { background: var(--na-accent-soft); color: var(--na-accent-ink); padding: 0 2px; border-radius: 4px; }
+body.na_darkui .na_kwt3 .na_kwt_where mark { background: #3A3A41; }
+/* 키워드 테스트: the counts sit in the list heads (no tiles) */
+.na_kwt3_sum { display: none; }
+.na_kwt3_lbl { display: flex; align-items: baseline; gap: 6px; margin: 4px 4px -4px; }
+.na_kwt3_lbl b { font-weight: 700; color: var(--na-dim); }
+.na_kwt3_lbl b.on { color: var(--na-accent-fg, var(--na-accent)); }
+
+/* ============ X-ray before anything is recorded (docs/mockups/ext-xray A): a faded example, then the one line, centred */
+.na_xray:has(.na_xr3_hello) { display: flex; flex-direction: column; }
+.na_xray_body:has(.na_xr3_hello) { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.na_xr3_hello { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+.na_xr3_hello > b { margin-top: 14px; font-size: 16px; color: var(--na-ink); }
+.na_xr3_hello > small { font-size: 12.5px; line-height: 1.5; color: var(--na-sub, var(--na-dim)); }
+.na_xr3_ex { align-self: stretch; padding: 14px !important; gap: 0 !important; text-align: left; opacity: 0.6; }
+.na_xr3_exh { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--na-dim); }
+.na_xr3_tag { font-weight: 700; color: var(--na-accent-ink); }
+.na_xr3_tot { display: flex; align-items: baseline; gap: 6px; margin-top: 6px; }
+.na_xr3_tot b { font-size: 24px; letter-spacing: -0.02em; }
+.na_xr3_tot small { font-size: 12px; color: var(--na-dim); }
+.na_xr3_bar { display: flex; gap: 2px; height: 8px; margin-top: 8px; border-radius: 8px; overflow: hidden; }
+.na_xr3_bar i:nth-child(1), .na_xr3_chips span:nth-child(1) i { background: var(--na-accent); }
+.na_xr3_bar i:nth-child(2), .na_xr3_chips span:nth-child(2) i { background: #CDB8A8; }
+.na_xr3_bar i:nth-child(3), .na_xr3_chips span:nth-child(3) i { background: #9A8A80; }
+.na_xr3_bar i:nth-child(4) { background: #6E5D52; }
+body.na_darkui .na_xr3_bar i:nth-child(2), body.na_darkui .na_xr3_chips span:nth-child(2) i { background: #6A6A73; }
+body.na_darkui .na_xr3_bar i:nth-child(3), body.na_darkui .na_xr3_chips span:nth-child(3) i { background: #4C4C55; }
+body.na_darkui .na_xr3_bar i:nth-child(4) { background: #3A3A41; }
+.na_xr3_chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.na_xr3_chips span { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; background: var(--na-card2); color: var(--na-mute); }
+.na_xr3_chips i { width: 8px; height: 8px; border-radius: 3px; }
+/* typing in a field never lights it orange: the focus ring is a quiet grey in every extension window (3.169.9) */
+body:not(.na_darkui) :is(dialog.popup:not(:has(.na_phone)) .na_popup, #na_settings) :is(input, textarea, select):not([type="checkbox"]):not(.na_toggle):focus:not(#na_x),
+body:not(.na_darkui) :is(dialog.popup:not(:has(.na_phone)) .na_popup, #na_settings) :is(input, textarea, select):not([type="checkbox"]):not(.na_toggle):focus-visible:not(#na_x) { outline: none !important; border-color: transparent !important; box-shadow: 0 0 0 2px #D9C9BD !important; }
+body.na_darkui :is(dialog.popup:not(:has(.na_phone)) .na_popup, #na_settings) :is(input, textarea, select):not([type="checkbox"]):not(.na_toggle):focus:not(#na_x),
+body.na_darkui :is(dialog.popup:not(:has(.na_phone)) .na_popup, #na_settings) :is(input, textarea, select):not([type="checkbox"]):not(.na_toggle):focus-visible:not(#na_x) { outline: none !important; border-color: transparent !important; box-shadow: 0 0 0 2px #45454D !important; }
+body:not(.na_darkui) .na_wz2_range label > span:focus-within { box-shadow: 0 0 0 2px #D9C9BD !important; }
+body.na_darkui .na_wz2_range label > span:focus-within { box-shadow: 0 0 0 2px #45454D !important; }
+
+/* ============ AU 채팅 (docs/mockups/ext-au B): 본편 → AU timeline on top, the switch on its own card, then the two fields outside
+   any card with bold labels; all of it centred in the window */
+.na_au_pop { display: flex; flex-direction: column; }
+.na_au3 { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 0; }
+.na_au3_map { padding: 12px 16px !important; }
+.na_au3_tl { margin: 0 !important; }
+.na_au3_on { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 14px !important; font-size: 14px; cursor: pointer; }
+.na_au3_on > span:first-child { flex: 1; }
+.na_au3_lab { margin: 16px 4px 6px; font-size: 12px; font-weight: 700; color: var(--na-mute); }
+.na_au3 .na_au_name, .na_au3 .na_au_note { width: 100%; box-sizing: border-box; margin: 0; }
+.na_au3_note { margin: 12px 4px 0; font-size: 12px; line-height: 1.5; color: var(--na-dim); }
+

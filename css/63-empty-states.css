@@ -1,0 +1,160 @@
+/* ============ 누가 아는가 › empty (docs/mockups/ext-knowledge A): a welcome card with 만들기, faded example rows using the
+   story's own people as dot-and-name tags (green 알아요 · red 몰라요 · yellow 짐작) */
+.na_kn2.na_kn3_new :is(.na_kn2_main, .na_kn2_more) { display: none !important; }
+.na_kn3_hello { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 16px 14px !important; text-align: center; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_kn3_big { width: 56px; height: 56px; margin-bottom: 8px; border-radius: 999px; display: grid; place-items: center; background: var(--na-accent-soft); color: var(--na-accent-fg, var(--na-accent)); }
+.na_kn3_hello b { font-size: 15px; color: var(--na-ink); }
+.na_kn3_hello small { font-size: 12.5px; line-height: 1.5; color: var(--na-sub, var(--na-dim)); }
+.na_kn3_make { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 46px; margin-top: 14px; border: 0; border-radius: 999px; background: var(--na-accent); color: var(--na-onaccent, #fff); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+.na_kn3_write, .na_qb3_find { margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--na-accent-ink); }
+.na_kn3_sect { display: flex; justify-content: space-between; margin: 18px 4px 8px; font-size: 12.5px; font-weight: 700; color: var(--na-dim); }
+.na_kn3_sect small { font-weight: 600; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_kn3_sect small:not(#na_x) { color: var(--na-accent-ink) !important; }
+.na_kn3_ex { padding: 0 !important; overflow: hidden; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_kn3_ex > div { padding: 12px 14px; opacity: 0.6; }
+.na_kn3_ex > div + div { border-top: 1px solid var(--na-line2, var(--na-line)); }
+.na_kn3_ex p { margin: 0 0 7px; font-size: 13px; color: var(--na-ink); }
+.na_kn3_ex > div > span { display: flex; flex-wrap: wrap; gap: 6px; }
+.na_kn3_tag { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
+.na_kn3_leg i { width: 7px; height: 7px; border-radius: 99px; }
+.na_kn3_tag { padding: 0 10px 0 3px !important; }
+.na_kn3_tag i { width: 18px; height: 18px; border-radius: 99px; display: grid; place-items: center; font-size: 10px; font-weight: 700; font-style: normal; color: #fff; }
+.na_kn3_tag.k { background: #E3F2E8; color: #1F6A40; } .na_kn3_tag.u { background: #FBE7E2; color: #7A2A1E; } .na_kn3_tag.s { background: #FFF1D6; color: #7A5200; }
+body.na_darkui .na_kn3_tag.k { background: #2B2B31; color: #8FD3A6; } body.na_darkui .na_kn3_tag.u { background: #2B2B31; color: #F2948A; } body.na_darkui .na_kn3_tag.s { background: #2B2B31; color: #F0CF8E; }
+:is(.na_kn3_tag, .na_kn3_leg span).k i { background: #5FA77C; } :is(.na_kn3_tag, .na_kn3_leg span).u i { background: #C9655A; } :is(.na_kn3_tag, .na_kn3_leg span).s i { background: #D4A23C; }
+.na_kn3_ex > .na_kn3_leg { display: flex; gap: 14px; padding: 9px 14px; opacity: 1; font-size: 11.5px; color: var(--na-mute); }
+.na_kn3_leg span { display: inline-flex; align-items: center; gap: 5px; }
+.na_kn2 .na_kn_inject { border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_kn2.na_kn3_new .na_kn_inject { display: none !important; }
+body.na_darkui :is(.na_kn3_hello, .na_kn3_ex, .na_kn2.na_kn3_new .na_kn_inject) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+
+/* 누가 아는가 example tags: circles for everyone, dashed + ? for suspects, struck for doesn't know */
+.na_kn3_tag.s { background: transparent !important; border: 1.5px dashed #D4A23C; box-sizing: border-box; }
+.na_kn3_tag em { font-style: normal; }
+.na_kn3_tag.s b { margin-left: 1px; }
+.na_kn3_tag.u em { text-decoration: line-through; text-decoration-thickness: 1px; }
+/* 몰라요: no colour — no fill, a grey circle, the name struck in grey */
+body:is(.na_darkui, :not(.na_darkui)) .na_kn3_tag.u { background: transparent !important; color: var(--na-dim) !important; }
+.na_kn3_tag.u i, .na_kn3_leg span.u i { background: #B8ABA1 !important; }
+body.na_darkui :is(.na_kn3_tag.u i, .na_kn3_leg span.u i) { background: #5E5E66 !important; }
+
+/* 누가 아는가 order: 주입하기 on top, then the list (or the welcome), the AI buttons with the picker under them, the small links */
+.na_kn2 .na_kn_inject { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+body.na_darkui .na_kn2 .na_kn_inject { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+.na_kn2 .na_kn2_more { justify-content: center; }
+/* 누가 아는가 list: the example's tags and legend (a face picture fits the circle when there is one) */
+.na_kn2 .na_kn_people .na_kn3_tag { height: 26px; font-size: 12px; }
+.na_kn3_tag .na_face { --s: 18px; flex: none; }
+.na_kn3_legbar { display: flex; justify-content: center; gap: 14px; margin: 2px 0 4px; font-size: 11.5px; color: var(--na-mute); }
+.na_kn3_legbar span { display: inline-flex; align-items: center; gap: 5px; }
+/* 누가 아는가: 알아요 in the extension's orange (example and list), so it doesn't fight the orange around it */
+body:not(.na_darkui) .na_kn3_tag.k { background: #F6E1D3 !important; color: #A84A17 !important; }
+body.na_darkui .na_kn3_tag.k { background: #2E2E34 !important; color: #F0CF8E !important; }
+.na_kn3_tag.k i, .na_kn3_leg span.k i { background: #D9733A !important; }
+/* 누가 아는가: legend above the list; 짐작 in a softer yellow */
+.na_kn3_legbar { justify-content: flex-start; margin: 0 4px 2px; }
+.na_kn3_ex > .na_kn3_leg { border-bottom: 1px solid var(--na-line2, var(--na-line)); }
+.na_kn3_ex > .na_kn3_leg + div { border-top: 0 !important; }
+.na_kn3_tag.s i, .na_kn3_leg span.s i { background: #E8C878 !important; }
+body.na_darkui :is(.na_kn3_tag.s i, .na_kn3_leg span.s i) { background: #B8964E !important; }
+.na_kn3_tag.s { border-color: #E2C27A !important; }
+/* 누가 아는가: only who knows has a circle; 짐작 and 몰라요 are plain tags; the legend is the same three tags, small */
+.na_kn3_tag.s, .na_kn3_tag.u { padding: 0 10px !important; }
+.na_kn3_leg .na_kn3_tag { height: 22px; font-size: 11px; }
+.na_kn3_leg .na_kn3_tag.k { padding: 0 9px 0 4px !important; }
+.na_kn3_leg .na_kn3_tag.k i { width: 12px; height: 12px; }
+.na_kn3_leg { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+/* 누가 아는가: 알아요 as the original solid orange pill with the person's face; 짐작's dashed line a little stronger */
+body:is(.na_darkui, :not(.na_darkui)) .na_kn3_tag.k { background: var(--na-accent) !important; color: var(--na-onaccent, #fff) !important; padding: 0 10px 0 3px !important; }
+.na_kn3_tag.k .na_face { --s: 18px; box-shadow: 0 0 0 1.5px var(--na-accent); }
+.na_kn3_leg .na_kn3_tag.k i { background: #fff !important; opacity: 0.85; }
+body:not(.na_darkui) .na_kn3_tag.s { border-color: #C9A24A !important; }
+body.na_darkui .na_kn3_tag.s { border-color: #B8964E !important; }
+
+/* ============ 대사 은행 › empty (docs/mockups/ext-quotes A+C): 누가 아는가's welcome card, faded speech bubbles as the example,
+   빼는 인물 under them with room to breathe; no search and no top buttons while there is nothing */
+.na_qb2.na_qb3_new { display: flex; flex-direction: column; }
+.na_qb2.na_qb3_new > .na_v2_row2, .na_qb2.na_qb3_new > .na_qb2_search, .na_qb2.na_qb3_new > .na_qb_clear { display: none !important; }
+.na_qb2.na_qb3_new > .na_qb_list { order: 1; }
+.na_qb2.na_qb3_new > .na_qb_excl { order: 2; margin: 6px 4px 0; }
+.na_qb_root.na_qb3_picking .na_qb3_new > .na_qb_list { display: none; }
+.na_qb3_big { font: 700 34px/1 Georgia, 'Times New Roman', serif; padding-top: 14px; box-sizing: border-box; }
+.na_qb3_ex { display: flex; flex-direction: column; gap: 10px; margin: 2px 4px 0; }
+.na_qb3_bub { display: flex; align-items: flex-end; gap: 8px; }
+.na_qb3_bub.r { flex-direction: row-reverse; }
+.na_qb3_bub > div { max-width: 78%; padding: 9px 13px; border-radius: 16px 16px 16px 4px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 4px 12px rgba(70, 52, 40, 0.06); }
+.na_qb3_bub.r > div { border-radius: 16px 16px 4px 16px; }
+.na_qb3_bub > div > span { display: block; font-size: 13.5px; line-height: 1.45; color: var(--na-ink); opacity: 0.8; }
+.na_qb3_bub > div > small { display: block; margin-top: 2px; font-size: 11px; color: var(--na-dim); }
+body.na_darkui .na_qb3_bub > div { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 16px rgba(0, 0, 0, 0.3); }
+
+/* ============ 말투 지문 › empty (docs/mockups/ext-voice B+D): the 대사 tab's welcome card; people with enough lines as chips
+   that switch off and on over one 만들기 button, a faded Claude card as the example */
+.na_vc3_chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip:not(#na_x) { display: inline-flex; align-items: center; gap: 6px; height: 30px; margin: 0; padding: 0 11px 0 3px; border-radius: 999px; border: 1px dashed var(--na-line) !important; background: transparent !important; box-shadow: none !important; color: var(--na-dim) !important; font: inherit; font-size: 12.5px; cursor: pointer; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { border: 1px solid transparent !important; color: var(--na-ink) !important; }
+body:not(.na_darkui) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { background: #EADCD0 !important; }
+body.na_darkui dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { background: #232328 !important; }
+.na_vc3_chip em { font-style: normal; font-weight: 600; }
+.na_vc3_chip small { font-size: 11.5px; color: var(--na-dim); font-variant-numeric: tabular-nums; }
+.na_vc3_chip:not(.on) .na_face { filter: grayscale(1); opacity: 0.5; }
+.na_vc3_chip:not(.on) em { text-decoration: line-through; }
+.na_kn3_make.na_vc3_go[disabled] { opacity: 0.45; cursor: default; }
+.na_vc3_ex { padding: 14px !important; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_vc3_ex > * { opacity: 0.62; }
+body.na_darkui .na_vc3_ex { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+/* the example as drawn in the mockup: 사람됨 as plain text, tight steps, 예시 in orange */
+.na_vc_body .na_vc_card.na_vc3_ex { gap: 0; }
+.na_vc3_ex .na_vc_head { margin-bottom: 4px; }
+.na_vc3_ex .na_vc_sub { margin: 10px 0 2px; font-size: 11px; }
+.na_vc3_ex .na_vc3_core { font-size: 13px; line-height: 1.45; color: var(--na-ink); }
+.na_vc3_ex .na_vc_rules { margin-top: 4px; }
+/* 성격 lines as plain text, like the empty window's example */
+.na_vc_body .na_vc_coreline { padding: 0; border-radius: 0; background: none; font-size: 13px; line-height: 1.5; color: var(--na-ink); }
+.na_vc_body .na_vc_core_view { gap: 2px; }
+
+/* ============ 이탈 감지 · 분기 › empty (docs/mockups/ext-drift D+F): no card around it, a small picture on top (what a drift
+   looks like · a timeline that ends here), a title, one line, then the control */
+.na_dr3_hello, .na_bn3_hello { display: none; }
+.na_dr2.na_dr3_new > :is(.na_dr2_ctl, .na_dr2_out) { display: none !important; }
+.na_dr2.na_dr3_new .na_dr3_hello, .na_bn2.na_bn3_new .na_bn3_hello { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 14px 0 0; }
+:is(.na_dr3_hello, .na_bn3_hello) > b { margin-top: 14px; font-size: 16px; color: var(--na-ink); }
+:is(.na_dr3_hello, .na_bn3_hello) > small { font-size: 12.5px; line-height: 1.5; color: var(--na-sub, var(--na-dim)); }
+.na_dr3_cmp { align-self: stretch; padding: 2px 14px; border-radius: 16px; background: var(--na-card); text-align: left; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); opacity: 0.85; }
+.na_dr3_cmp > div { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; font-size: 13px; color: var(--na-ink); }
+.na_dr3_cmp > div + div { border-top: 1px solid var(--na-line2, var(--na-line)); }
+.na_dr3_cmp small { flex: none; width: 54px; font-size: 11px; font-weight: 700; color: var(--na-dim); }
+.na_dr3_cmp .x small { color: var(--na-accent-fg, var(--na-accent)); }
+.na_dr3_cmp .x span { color: var(--na-accent-ink); }
+.na_dr3_seg { display: flex; align-self: stretch; gap: 4px; margin-top: 16px; padding: 4px; border-radius: 999px; }
+body:not(.na_darkui) .na_dr3_seg { background: #E9DCD1; }
+body.na_darkui .na_dr3_seg { background: #2E2E34; }
+.na_dr3_seg > span { flex: 1.8; display: flex; align-items: center; justify-content: center; font-size: 12.5px; color: var(--na-dim); white-space: nowrap; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_dr3_seg > button:not(#na_x) { flex: 1; height: 32px; margin: 0; padding: 0; border: 0 !important; border-radius: 999px; background: transparent !important; box-shadow: none !important; color: var(--na-mute) !important; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_dr3_seg > button.on:not(#na_x) { background: var(--na-card) !important; color: var(--na-accent-ink) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1) !important; }
+.na_dr3_hello .na_dr3_go { margin-top: 12px; }
+.na_bn2.na_bn3_new .na_bn2_findrow { display: none !important; }
+.na_bn2.na_bn3_new .na_bn2_find { border: 0 !important; padding: 0 !important; }
+.na_bn3_tl { position: relative; align-self: stretch; margin: 0 28px; padding-left: 24px; text-align: left; }
+.na_bn3_tl > div { position: relative; padding: 6px 0; }
+.na_bn3_tl > div::before { content: ""; position: absolute; z-index: 1; left: -22px; top: 9px; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; border: 2px solid var(--na-line); background: var(--na-bg, #F0E4DB); }
+body.na_darkui .na_bn3_tl > div::before { background: #17171A; }
+.na_bn3_tl > div.here::before { border-color: var(--na-accent); background: var(--na-accent) !important; }
+.na_bn3_tl b { display: block; font-size: 13.5px; font-weight: 600; color: var(--na-ink); }
+.na_bn3_tl small { display: block; font-size: 11.5px; color: var(--na-dim); }
+.na_bn3_tl > div.dim > * { opacity: 0.55; }
+.na_bn3_tl > div.dim::before { border-color: var(--na-line2, var(--na-line)); }
+/* the line runs from one dot's centre to the next, under the dots */
+.na_bn3_tl > div:not(:last-child)::after { content: ""; position: absolute; left: -16px; top: 16px; bottom: -16px; width: 2px; background: var(--na-line); }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_bn3_find:not(#na_x) { align-self: stretch; height: 46px; margin: 14px 0 0; border: 1px solid var(--na-line) !important; border-radius: 999px; background: var(--na-card) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; color: var(--na-ink) !important; font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; }
+body:not(.na_darkui) .na_bn3_tl > div::before { border-color: #D3C1B4; }
+body:not(.na_darkui) .na_bn3_tl > div.dim::before { border-color: #DDCDC1; }
+body:not(.na_darkui) .na_bn3_tl > div:not(:last-child)::after { background: #D3C1B4; }
+body:not(.na_darkui) .na_bn3_tl > div.here::before { border-color: var(--na-accent); }
+/* the result screen's control card uses the same 최근 메시지 picker */
+.na_dr2_ctl .na_dr3_seg { margin-top: 0; }
+/* 최근 메시지 as − n + inside the same pill */
+.na_dr3_seg > span { flex: 1; justify-content: flex-start; padding-left: 12px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_dr3_seg > button[data-d]:not(#na_x) { flex: none; width: 32px; height: 32px; background: var(--na-card) !important; color: var(--na-ink) !important; font-size: 16px; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1) !important; }
+.na_dr3_n { width: 44px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: var(--na-accent-ink); font-variant-numeric: tabular-nums; }
+

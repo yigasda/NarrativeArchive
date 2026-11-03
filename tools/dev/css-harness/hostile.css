@@ -1,0 +1,15 @@
+/* A deliberately hostile SillyTavern "theme": paints every control the way a loud theme would, all !important.
+   Used as one more column in the capture matrix (before/after must still match), and later as the leak test:
+   none of this may show inside the extension's windows or the phone. */
+button, label, input, select, textarea, .menu_button, .text_pole, [role="button"] {
+  background: #ff00ff !important;
+  background-image: linear-gradient(#ff00ff, #00ffff) !important;
+  color: #00ff00 !important;
+  border: 6px dashed #0000ff !important;
+  border-radius: 0 !important;
+  box-shadow: 0 0 0 4px #ffff00 !important;
+  font-family: "Comic Sans MS", cursive !important;
+  letter-spacing: 3px !important;
+  text-transform: uppercase !important;
+}
+input[type="checkbox"], input[type="radio"] { accent-color: #ff00ff !important; }

@@ -1,0 +1,19 @@
+/* ============ dark popups (시안 A, carried over from 아카이브에 추가): a near-black warm window, darker cards with no outline
+   and a faint top light, neutral parts with the colour kept to a thin line or the text. Tokens only, so every popup follows. */
+body.na_darkui dialog.popup:has(.na_popup):not(#na_x) { background: #17171A !important; }
+body.na_darkui dialog.popup:has(.na_popup) :is(.na_popup, .na_popup .na_v2), body.na_darkui dialog.popup:has(.na_confirm) .na_confirm {
+    --na-card: #232328; --na-card2: #2E2E34; --na-paper: #232328; --na-soft: #2E2E34; --na-softer: #2B2B31;
+    --na-line: #3A3A41; --na-line2: #2E2E34; --na-fill: #4A4A52;
+}
+body.na_darkui dialog.popup:has(.na_popup) .na_popup .na_v2_card { border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+body.na_darkui dialog.popup:has(.na_popup):not(#na_x) .popup-controls .menu_button { background: #232328 !important; border-color: #3A3A41 !important; }
+body.na_darkui dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #1D1D21 !important; border-color: #3A3A41 !important; }
+/* chats: my line neutral with an orange edge, the answer a plain card */
+body.na_darkui .na_ask2 .na_ask_qq, body.na_darkui .na_sf_bubble { background: #232328; color: #F3E7DC; box-shadow: inset 0 0 0 1px rgba(217, 115, 58, 0.45); }
+body.na_darkui .na_ask2 .na_ask_a { background: #232328; border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
+body.na_darkui .na_sf_note { background: #2B2B31; color: #F0CF8E; box-shadow: inset 3px 0 0 #E8B45A; }
+
+/* light chats as 아카이브에 추가: my line peach with brown text, the model's 못 한 것 a yellow note */
+body:not(.na_darkui) .na_sf_bubble { background: #F6E1D3; color: #7A3410; }
+body:not(.na_darkui) .na_sf_note { background: #FFF4DC; color: #7A5200; }
+

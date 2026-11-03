@@ -1,0 +1,416 @@
+/* ============ home (mockup 홈 7): meter card with three number tiles, icon tabs, a row of quick buttons,
+   AI tools as cards with a status badge. Two ids on the size rules so a theme's blanket `span { font-size }`
+   can't flatten them. Colours: --hm-* below, light and dark. */
+body:not(.na_darkui) #na_settings {
+    --hm-card: #F7EEE7; --hm-line: #E5D5C9; --hm-tile: #F2E7DF; --hm-track: #E6D6CA; --hm-ink: #463428; --hm-dim: #8A7A70; --hm-mute: #6B5A50;
+    --hm-acc: #B8541F; --hm-acc-ink: #A84A17; --hm-acc-soft: #F6E1D3; --hm-ok: #1F6A40; --hm-ok-soft: #E3F2E8;
+    --hm-warn: #8A5A00; --hm-warn-soft: #FFF1D6; --hm-bad: #B3261E; --hm-bad-soft: #FBE7E2;
+    --hm-pur: #5B3FA0; --hm-pur-soft: #EAE3F5; --hm-amb: #8A5A00; --hm-amb-soft: #FFF1D6; --hm-shadow: rgba(120, 60, 20, 0.12);
+}
+body.na_darkui #na_settings {
+    --hm-card: #232328; --hm-line: #3A3A41; --hm-tile: #2E2E34; --hm-track: #2E2E34; --hm-ink: #ECEAE6; --hm-dim: #9A989F; --hm-mute: #B9B7BD;
+    --hm-acc: #E2B65C; --hm-acc-ink: #F0CF8E; --hm-acc-soft: #2E2E34; --hm-ok: #7CCB9A; --hm-ok-soft: #2E2E34;
+    --hm-warn: #E8B45A; --hm-warn-soft: #2E2E34; --hm-bad: #EC7468; --hm-bad-soft: #2E2E34;
+    --hm-pur: #BBA6EE; --hm-pur-soft: #2E2E34; --hm-amb: #E8B45A; --hm-amb-soft: #2E2E34; --hm-shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* meter */
+#na_settings #na_meter { gap: 10px; padding: 14px 16px; border-radius: 18px; background: var(--hm-card); border: 1px solid var(--hm-line); color: var(--hm-ink); }
+#na_settings #na_meter .na_meter_top { flex-wrap: nowrap; align-items: center; gap: 8px; }
+#na_settings #na_meter .na_meter_total { font-size: 2.1em !important; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; white-space: nowrap; }
+#na_settings #na_meter .na_meter_state { display: flex; flex-direction: column; font-size: 0.8em !important; line-height: 1.25; color: var(--hm-dim); white-space: nowrap; }
+#na_settings #na_meter .na_meter_state > * { font-size: 1em !important; }
+#na_settings #na_meter .na_meter_state b { font-weight: 600; }
+#na_settings #na_meter .na_meter_state b.on { color: var(--hm-acc-ink); }
+#na_settings #na_meter .na_meter_state b.warn { color: var(--hm-warn); }
+#na_settings #na_meter .na_meter_state b.off { color: var(--hm-dim); }
+#na_settings #na_meter .na_hchip { height: 30px; padding: 0 11px; gap: 4px; border: 0; border-radius: 999px; font-size: 0.86em !important; font-weight: 600; background: var(--hm-ok-soft); color: var(--hm-ok); }
+#na_settings #na_meter .na_hchip > span { font-size: 1em !important; }
+#na_settings #na_meter .na_hchip.na_health_warn { background: var(--hm-warn-soft); color: var(--hm-warn); }
+#na_settings #na_meter #na_gear { width: 30px; height: 30px; opacity: 1; color: var(--hm-dim); }
+#na_settings #na_meter .na_meter_bar { display: none; }
+#na_settings #na_meter .na_meter_stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+#na_settings #na_meter .na_meter_stats:empty { display: none; }
+#na_settings #na_meter .na_meter_stats > div { display: flex; flex-direction: column; min-width: 0; padding: 8px 10px; border-radius: 12px; background: var(--hm-tile); line-height: 1.25; }
+#na_settings #na_meter .na_meter_stats span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.76em !important; color: var(--hm-dim); }
+#na_settings #na_meter .na_meter_stats b { font-size: 1em !important; font-weight: 700; font-variant-numeric: tabular-nums; }
+#na_settings #na_meter .na_meter_legend { gap: 2px 12px; font-size: 0.78em !important; line-height: 1.5; opacity: 1; color: var(--hm-dim); }
+#na_settings #na_meter .na_meter_legend:not(:has(span, button)) { display: none; }
+#na_settings #na_meter .na_meter_legend > span { font-size: 1em !important; }
+#na_settings #na_meter .na_router_st { display: inline-flex; align-items: center; gap: 5px; }
+#na_settings #na_meter .na_router_st .na_svg { flex: none; }
+
+/* icon tabs */
+#na_settings .na_body > .na_nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; border-radius: 18px; background: var(--hm-track); }
+#na_settings .na_body > .na_nav .na_nav_btn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 7px 0 5px; border-radius: 14px; font-size: 0.8em !important; line-height: 1.2; opacity: 1; color: var(--hm-mute); }
+#na_settings .na_body > .na_nav .na_nav_btn > span { font-size: 1em !important; }
+#na_settings .na_body > .na_nav .na_nav_btn.active { background: var(--hm-card); color: var(--hm-acc-ink); font-weight: 600; box-shadow: 0 1px 3px var(--hm-shadow); }
+
+/* home pane */
+#na_settings .na_tab_pane[data-pane="home"] { gap: 12px; color: var(--hm-ink); }
+#na_settings #na_next:empty { display: none; }
+#na_settings .na_tab_pane[data-pane="home"] .na_quick { display: flex; gap: 8px; }
+#na_settings .na_tab_pane[data-pane="home"] .na_qbtn { flex: 1; min-width: 0; display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; height: 42px; padding: 0 6px; border: 1px solid var(--hm-line); border-radius: 14px; background: var(--hm-card); color: var(--hm-ink); font-size: 0.86em !important; }
+#na_settings .na_tab_pane[data-pane="home"] .na_qbtn > span { font-size: 1em !important; white-space: nowrap; }
+#na_settings .na_tab_pane[data-pane="home"] .na_qbtn .na_svg { flex: none; color: var(--hm-acc); }
+#na_settings .na_tab_pane[data-pane="home"] .na_qbtn:hover { border-color: var(--hm-acc); }
+#na_settings .na_ai_row3 { display: flex; flex-direction: column; gap: 8px; }
+#na_settings .na_ai_head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 6px 0; }
+#na_settings .na_ai_head > b { font-size: 1.07em !important; font-weight: 700; }
+#na_settings .na_ai_status { display: inline-flex; align-items: center; gap: 5px; font-size: 0.82em !important; color: var(--hm-ok); }
+#na_settings .na_ai_status > i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+#na_settings .na_hrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px 14px; border: 0; border-radius: 16px; background: var(--hm-card); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+#na_settings .na_hrow:hover { box-shadow: inset 0 0 0 1px var(--hm-line); }
+#na_settings .na_hrow_ic { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; }
+#na_settings .na_hrow_ic.drift { background: var(--hm-acc-soft); color: var(--hm-acc); }
+#na_settings .na_hrow_ic.know { background: var(--hm-pur-soft); color: var(--hm-pur); }
+#na_settings .na_hrow_ic.quote { background: var(--hm-amb-soft); color: var(--hm-amb); }
+#na_settings .na_hrow_txt { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.35; }
+#na_settings .na_hrow_txt b { font-size: 1.07em !important; font-weight: 700; }
+#na_settings .na_hrow_txt small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.82em !important; opacity: 1; color: var(--hm-dim); }
+#na_settings .na_hrow_badge { flex: none; padding: 2px 9px; border-radius: 999px; font-size: 0.8em !important; font-weight: 600; white-space: nowrap; }
+#na_settings .na_hrow_badge[hidden] { display: none; }
+#na_settings .na_hrow_badge.drift { background: var(--hm-ok-soft); color: var(--hm-ok); }
+#na_settings .na_hrow_badge.drift.warn { background: var(--hm-warn-soft); color: var(--hm-warn); }
+#na_settings .na_hrow_badge.know { background: var(--hm-pur-soft); color: var(--hm-pur); }
+#na_settings .na_hrow_badge.quote { background: var(--hm-amb-soft); color: var(--hm-amb); }
+/* the next-step card, when there is one */
+#na_settings #na_next .na_next_card { padding: 13px 14px; border-radius: 16px; border: 1px solid var(--hm-line); background: var(--hm-card); opacity: 1; }
+#na_settings #na_next .na_next_card > i { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; font-size: 1.05em !important; background: var(--hm-acc-soft); color: var(--hm-acc); }
+#na_settings #na_next .na_next_card.warn { background: var(--hm-warn-soft); border-color: transparent; }
+#na_settings #na_next .na_next_card.warn > i { background: var(--hm-card); color: var(--hm-warn); }
+#na_settings #na_next .na_next_card.bad { background: var(--hm-bad-soft); border-color: transparent; }
+#na_settings #na_next .na_next_card.bad > i { background: var(--hm-card); color: var(--hm-bad); }
+#na_settings #na_next .na_next_main b { font-size: 1.07em !important; }
+#na_settings #na_next .na_next_main span { font-size: 0.82em !important; opacity: 1; color: var(--hm-dim); }
+
+/* dark: the next-step card stays a brown card like the tool rows; the tone shows in a thin edge, the icon disc and a soft button */
+body.na_darkui #na_settings #na_next .na_next_card.warn, body.na_darkui #na_settings #na_next .na_next_card.bad { background: var(--hm-card); }
+body.na_darkui #na_settings #na_next .na_next_card.warn { border-color: rgba(232, 180, 90, 0.3); }
+body.na_darkui #na_settings #na_next .na_next_card.bad { border-color: rgba(236, 116, 104, 0.3); }
+body.na_darkui #na_settings #na_next .na_next_card.warn > i { background: var(--hm-warn-soft); color: var(--hm-warn); }
+body.na_darkui #na_settings #na_next .na_next_card.bad > i { background: var(--hm-bad-soft); color: var(--hm-bad); }
+body.na_darkui #na_settings #na_next .na_next_card .na_btn.na_primary { height: 34px; padding: 0 14px; border: 0; border-radius: 12px; font-weight: 600; box-shadow: none; }
+body.na_darkui #na_settings #na_next .na_next_card.warn .na_btn.na_primary { background: var(--hm-warn-soft); color: #F0CC80; }
+body.na_darkui #na_settings #na_next .na_next_card.bad .na_btn.na_primary { background: var(--hm-bad-soft); color: #F29A90; }
+body.na_darkui #na_settings #na_next .na_next_card .na_btn.na_primary:hover { filter: brightness(1.15); }
+
+/* the panel shown from the wand menu: no fold-out header, always open */
+#na_settings.na_in_popup > .inline-drawer > .inline-drawer-header { display: none; }
+#na_settings.na_in_popup > .inline-drawer > .inline-drawer-content { display: block !important; height: auto !important; border-radius: 14px; }
+.na_panelpop { text-align: left; }
+
+/* a theme's own !important rules (backgrounds, select colours) must not break the panel, in the extension list or
+   shown from the wand menu: the base colours and the setting values are pinned */
+body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-content { background: #F0E4DB !important; }
+body.na_darkui #na_settings > .inline-drawer > .inline-drawer-content { background: #17171A !important; }
+body:not(.na_darkui) dialog.popup:has(#na_settings) { background: #F0E4DB !important; color: #463428 !important; }
+body.na_darkui dialog.popup:has(#na_settings) { background: #17171A !important; color: #ECEAE6 !important; }
+#na_settings .na_tab_pane[data-pane="config"] .na_cfg_val :is(select, input) { color: var(--hm-mute) !important; }
+#na_settings .na_tab_pane[data-pane="config"] .na_cfg_val select option { color: #463428; background: #F7EEE7; }
+#na_settings .na_cfg_head b { color: var(--hm-ink) !important; }
+
+/* the same pins for the settings rows and the theme picker (labels and values are spans) */
+#na_settings .na_tab_pane[data-pane="config"] .na_cfg_box .na_set_row > span:first-child { font-size: 0.964em !important; }
+#na_settings .na_tab_pane[data-pane="config"] .na_cfg_box .na_set_row > span:first-child > span { font-size: 1em !important; }
+#na_settings .na_tab_pane[data-pane="config"] .na_set_row > .na_cfg_val { font-size: 0.929em !important; }
+#na_settings .na_tab_pane[data-pane="config"] .na_set_row > .na_cfg_val span { font-size: 1em !important; }
+#na_settings .na_tab_pane[data-pane="config"] .na_set_row > span:not(.na_cfg_val):not(:first-child) { font-size: 1em !important; }
+#na_settings .na_theme_txt, #na_settings .na_theme_txt b { font-size: 1em !important; }
+#na_settings .na_theme_txt small { font-size: 0.8em !important; }
+
+/* wand menu launcher: every tool in four small groups, then a row that jumps to a panel tab */
+.na_launch { gap: 14px; }
+.na_launch_grp { display: flex; flex-direction: column; gap: 6px; }
+.na_launch .na_launch_lbl { padding: 0 2px; font-size: 0.8em !important; font-weight: 600; color: var(--na-dim); }
+.na_launch_grid { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 8px; }
+.na_launch .na_launch_btn { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; padding: 12px 6px 10px; border: 1px solid var(--na-line); border-radius: 16px; background: var(--na-card); color: inherit; font: inherit; font-size: 0.86em !important; line-height: 1.25; text-align: center; cursor: pointer; }
+.na_launch .na_launch_btn > span:last-child { font-size: 1em !important; }
+.na_launch .na_launch_btn:hover:not(:disabled) { border-color: var(--na-accent); }
+.na_launch .na_launch_btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.na_launch .na_launch_ic { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; background: var(--na-accent-soft); color: var(--na-accent-fg, var(--na-accent)); }
+.na_launch_tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 16px; background: var(--na-softer, var(--na-card2)); }
+.na_launch .na_launch_tab { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 7px 0 5px; border: 0; border-radius: 12px; background: none; color: var(--na-mute, inherit); font: inherit; font-size: 0.78em !important; line-height: 1.2; cursor: pointer; }
+.na_launch .na_launch_tab > span { font-size: 1em !important; }
+.na_launch .na_launch_tab:hover { background: var(--na-card); color: var(--na-accent-ink, var(--na-accent)); }
+
+body:not(.na_darkui) .na_launch_tabs { background: #E6D6CA; }
+body.na_darkui .na_launch_tabs { background: #232328; }
+
+/* 아카이브에 질문, as drawn: the conversation fills the window, suggestions and the input sit at the bottom,
+   the input is one pill (no box of its own inside, whatever a theme does to textareas) */
+.na_popup.na_ask2 { min-height: 0; }
+.na_popup.na_ask2 .na_ask_log { flex: 1 1 auto; min-height: 0; }
+.na_popup.na_ask2 .na_ask2_input textarea.na_ask_q,
+.na_popup.na_ask2 .na_ask2_input textarea.na_ask_q:is(:focus, :hover) {
+    flex: 1; min-width: 0; margin: 0 !important; padding: 8px 0 !important; border: 0 !important; border-radius: 0 !important; outline: none !important;
+    background: transparent !important; background-color: transparent !important; background-image: none !important; box-shadow: none !important;
+    color: inherit !important; font: inherit; font-size: 14px !important; line-height: 1.5 !important; -webkit-appearance: none; appearance: none;
+}
+.na_popup.na_ask2 .na_ask2_input textarea.na_ask_q::placeholder { color: var(--na-dim) !important; opacity: 1 !important; }
+.na_popup.na_ask2 .na_ask2_input { align-items: center; }
+.na_popup.na_ask2 .na_ask_go { width: 40px; height: 40px; }
+/* captions keep the palette's colour even when a theme recolours <small> */
+.na_popup.na_v2 .na_v2_title small, .na_popup.na_v2 small.na_v2_foot { color: var(--na-sub, var(--na-dim)) !important; }
+
+/* 섹션별 버전: pick sections, then set 자동 · 원문 · 짧게 · 한 줄 for all of them */
+.na_fp { gap: 12px; }
+.na_fp_list { display: flex; flex-direction: column; gap: 4px; max-height: 52vh; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+.na_fp_group { padding: 8px 4px 2px; font-size: 0.8em; font-weight: 700; color: var(--na-dim); }
+.na_fp_row { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px 10px; border: 1px solid var(--na-line); border-radius: 12px; background: var(--na-card); cursor: pointer; }
+.na_fp_row.on { border-color: var(--na-accent); background: var(--na-accent-soft); }
+.na_fp_row input { flex: none; margin: 0; accent-color: var(--na-accent); }
+.na_fp .na_fp_title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.88em !important; }
+.na_fp_has { flex: none; display: inline-flex; gap: 3px; }
+.na_fp .na_fp_has i { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 6px; font-style: normal; font-size: 0.68em !important; color: var(--na-dim); background: var(--na-card2); opacity: 0.55; }
+.na_fp .na_fp_has i.y { opacity: 1; color: var(--na-ok, #2E7D4F); background: var(--na-ok-soft, var(--na-card2)); }
+.na_fp .na_fp_why { flex: none; padding: 1px 6px; border-radius: 999px; font-size: 0.7em !important; color: var(--na-accent-ink, var(--na-accent)); background: var(--na-accent-soft); }
+.na_fp .na_fp_use { flex: none; min-width: 3.4em; padding: 2px 8px; border-radius: 999px; text-align: center; font-size: 0.74em !important; font-weight: 600; background: var(--na-card2); color: var(--na-mute, inherit); }
+.na_fp .na_fp_use.short { background: var(--na-purple-soft, var(--na-card2)); color: var(--na-purple, inherit); }
+.na_fp .na_fp_use.line { background: var(--na-amber-soft, var(--na-card2)); color: var(--na-amber, inherit); }
+.na_fp .na_fp_use.off { opacity: 0.6; }
+.na_fp_bar { position: sticky; bottom: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--na-line); border-radius: 16px; background: var(--na-card); }
+.na_fp_barhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.na_fp_all { display: inline-flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; }
+.na_fp_all input { margin: 0; accent-color: var(--na-accent); }
+.na_fp .na_fp_n { font-size: 0.86em !important; font-weight: 600; }
+.na_fp_make { font-size: 0.82em; color: var(--na-accent-ink, var(--na-accent)); }
+.na_fp_set button:disabled { opacity: 0.45; cursor: not-allowed; }
+/* one section's version window: which version goes in */
+.na_ly_force { display: flex; align-items: center; gap: 10px; }
+.na_ly_force > span { flex: none; font-size: 0.82em; color: var(--na-dim); }
+.na_ly_force .na_v2_seg { flex: 1; }
+
+/* 온도: the number never breaks ("+2", not "+" over "2"); the three-number box stays compact */
+.na_people .na_tp_now b { white-space: nowrap; }
+.na_people .na_tp_now > span { flex-wrap: wrap; column-gap: 6px; font-size: 1em !important; }
+.na_people .na_tp_now small { font-size: 0.857em !important; }
+.na_people .na_tp_stats { flex: none; }
+.na_people .na_tp_stats > span { padding: 4px 8px; font-size: 0.86em !important; }
+.na_people .na_tp_stats small { font-size: 0.75em !important; white-space: nowrap; }
+.na_people .na_tp_stats b { font-size: 1.05em !important; white-space: nowrap; }
+
+/* a section shown in place */
+.na_peek { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--na-accent-soft); border-radius: 16px; background: var(--na-card); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06); }
+.na_peek_head { display: flex; align-items: flex-start; gap: 8px; }
+.na_peek_head b { flex: 1; min-width: 0; font-size: 0.9em; line-height: 1.4; }
+.na_peek_x { flex: none; width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--na-dim); font-size: 0.85em; cursor: pointer; }
+.na_peek_x:hover { background: var(--na-card2); }
+.na_peek_body { max-height: 42vh; overflow-y: auto; overscroll-behavior: contain; font-size: 0.88em; line-height: 1.6; }
+.na_peek_body p, .na_peek_body ul { margin: 0 0 6px; }
+.na_peek_body ul { padding-left: 1.1em; }
+.na_peek_foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.na_peek_foot .na_linkbtn { font-size: 0.82em; color: var(--na-accent-ink, var(--na-accent)); }
+.na_peek_foot .na_peek_go { margin-left: auto; color: var(--na-dim); }
+.na_peek_info { font-size: 0.76em; color: var(--na-dim); }
+.na_people :is(.na_tp_tile, .na_tp_turn, .na_tp_row).on { outline: 2px solid var(--na-accent); outline-offset: -2px; }
+
+/* face crop: a square frame, the picture moves and zooms under a round window */
+.na_crop { align-items: center; gap: 14px; }
+.na_crop .na_v2_title { align-self: stretch; }
+.na_crop_stage { position: relative; width: var(--v); height: var(--v); max-width: 100%; overflow: hidden; border-radius: 16px; background: #222; touch-action: none; cursor: grab; user-select: none; }
+.na_crop_stage:active { cursor: grabbing; }
+.na_crop_img { position: absolute; left: 0; top: 0; max-width: none !important; transform-origin: 0 0; pointer-events: none; }
+.na_crop_ring { position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.5); outline: 2px solid rgba(255, 255, 255, 0.85); outline-offset: -2px; pointer-events: none; }
+.na_crop_zoom { display: flex; align-items: center; gap: 10px; width: min(100%, 280px); margin: 0; }
+.na_crop .na_crop_zoom span { flex: none; font-size: 0.78em !important; color: var(--na-dim); }
+.na_crop_range { flex: 1; accent-color: var(--na-accent); }
+
+/* section versions: each tab reads as text; "직접 고치기" swaps in the editor, "한국어로" shows it translated */
+.na_ly_tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.na_ly_tools .na_v2_pillbtn { gap: 5px; }
+.na_ly_tools .na_v2_pillbtn.on { border-color: var(--na-accent); color: var(--na-accent-ink, var(--na-accent)); background: var(--na-accent-soft); }
+.na_ly_tools .na_v2_pillbtn:disabled { opacity: 0.45; cursor: not-allowed; }
+.na_ly_tools .na_ly_trinfo { margin-left: auto; font-size: 0.76em; color: var(--na-dim); }
+.na_ly_view { box-sizing: border-box; max-height: 50vh; overflow-y: auto; padding: 10px 12px; border: 1px solid var(--na-line); border-radius: 12px; font-size: 0.9em; line-height: 1.6; }
+.na_ly_view[hidden] { display: none; }
+.na_ly_view p, .na_ly_view ul { margin: 0 0 6px; }
+.na_ly_view ul { padding-left: 1.1em; }
+.na_ly_empty { color: var(--na-dim); font-size: 0.92em; }
+.na_ly_pane textarea[hidden] { display: none !important; }
+
+/* section versions: "고쳐 달라고 하기" — one pill, the input never draws its own box */
+.na_ly_ask { display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 14px; border: 1px solid var(--na-line); border-radius: 18px; background: var(--na-card); }
+.na_ly_ask:focus-within { border-color: var(--na-accent); }
+.na_popup .na_ly_ask input.na_ly_askq, .na_popup .na_ly_ask input.na_ly_askq:is(:focus, :hover) {
+    flex: 1; min-width: 0; height: 36px; margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; outline: none !important;
+    background: transparent !important; background-image: none !important; box-shadow: none !important; color: inherit !important; font: inherit; font-size: 14px !important;
+}
+.na_popup .na_ly_ask input.na_ly_askq::placeholder { color: var(--na-dim) !important; opacity: 1 !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ly_ask input.na_ly_askq:is(*, :hover, :focus, :focus-visible):not(#na_x) { background: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: none !important; } /* the pill is the only box (3.169.69) */
+.na_ly_askgo { flex: none; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 13px; background: var(--na-accent); color: var(--na-onaccent, #fff); cursor: pointer; }
+.na_ly_askgo:disabled { opacity: 0.7; cursor: wait; }
+
+
+/* AU chat settings (도구 → AU 채팅) */
+.na_au_pop { display: flex; flex-direction: column; gap: 10px; }
+.na_au_pop .na_au_box { padding: 12px; }
+.na_au_box { display: flex; flex-direction: column; gap: 8px; }
+.na_au_box > label { display: flex; flex-direction: column; gap: 3px; }
+.na_au_box > label.na_au_on { flex-direction: row; align-items: center; gap: 10px; cursor: pointer; }
+.na_au_box > label.na_au_on .na_cp_txt { flex: 1; min-width: 0; }
+.na_au_box > label > small { color: var(--na-dim); font-size: 0.857em; }
+.na_au_box .text_pole { margin: 0; width: 100%; box-sizing: border-box; }
+.na_au_box textarea { resize: vertical; min-height: 3.2em; }
+.na_wz_austate { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+
+/* 제목 다시 짓기 */
+.na_rt { display: flex; flex-direction: column; gap: 12px; }
+.na_rt_res { display: flex; flex-direction: column; gap: 8px; }
+.na_rt_head { display: flex; align-items: center; gap: 8px; }
+.na_rt_head b { flex: 1; }
+.na_rt_quick { display: flex; gap: 4px; }
+.na_rt_list { display: flex; flex-direction: column; border: 1px solid var(--na-line); border-radius: 14px; background: var(--na-card); overflow: hidden; }
+.na_rt_row { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 10px 12px; cursor: pointer; }
+.na_rt_row + .na_rt_row { border-top: 1px solid var(--na-line); }
+.na_rt_row > input[type=checkbox] { margin-top: 3px; flex: none; }
+.na_rt_row.same { opacity: 0.6; }
+.na_rt_txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.na_rt_txt small { color: var(--na-dim); font-size: 0.82em; }
+.na_rt_old { color: var(--na-dim); font-size: 0.88em; line-height: 1.4; }
+.na_rt_row.same .na_rt_old { text-decoration: none; }
+.na_popup .na_rt_new { margin: 0; width: 100%; box-sizing: border-box; font-weight: 600; }
+
+/* 고쳐 달라고 하기 (섹션 하나) */
+.na_sf { display: flex; flex-direction: column; gap: 10px; }
+.na_sf_raw.off { opacity: 0.75; }
+.na_sf_raw .na_cp_txt { display: flex; flex-direction: column; gap: 2px; }
+.na_sf_raw .na_cp_txt small { color: var(--na-dim); font-size: 0.857em; line-height: 1.45; }
+.na_sf_view { padding: 10px 12px; max-height: 46vh; overflow-y: auto; overscroll-behavior: contain; }
+.na_sf_plain { white-space: pre-wrap; font-size: 0.9em; line-height: 1.55; }
+.na_sf_log { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.na_sf_log:empty { display: none; }
+.na_sf_bubble { max-width: 85%; padding: 7px 12px; border-radius: 14px 14px 4px 14px; background: var(--na-soft); font-size: 0.9em; line-height: 1.45; }
+.na_sf_note { padding: 8px 12px; border-radius: 12px; background: var(--na-softer); color: var(--na-dim); font-size: 0.88em; }
+
+/* 섹션 합치기 */
+.na_mg { display: flex; flex-direction: column; gap: 10px; }
+.na_popup .na_mg_group { margin: 0; width: 100%; }
+.na_mg_pickhead { display: flex; align-items: center; gap: 8px; }
+.na_mg_pickhead small { flex: 1; }
+.na_mg_list { display: flex; flex-direction: column; max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--na-line); border-radius: 14px; background: var(--na-card); }
+.na_mg_row { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 9px 12px; cursor: pointer; }
+.na_mg_row + .na_mg_row { border-top: 1px solid var(--na-line); }
+.na_mg_row.on { background: var(--na-soft); }
+.na_mg_row > input { margin-top: 3px; flex: none; }
+.na_mg_row .na_rt_txt > span { font-size: 0.92em; line-height: 1.4; }
+.na_mg_info.warn { color: var(--na-accent-fg, var(--na-accent)); }
+.na_mg_res { display: flex; flex-direction: column; gap: 8px; }
+.na_mg_warn { display: flex; flex-direction: column; gap: 3px; padding: 9px 12px; border-radius: 12px; background: var(--na-softer); border: 1px solid var(--na-accent); color: var(--na-accent-fg, var(--na-accent)); font-size: 0.86em; line-height: 1.45; }
+.na_mg_out { display: flex; flex-direction: column; gap: 6px; }
+.na_mg_card { border: 1px solid var(--na-line); border-radius: 14px; background: var(--na-card); overflow: hidden; }
+.na_mg_card > summary { list-style: none; cursor: pointer; padding: 10px 12px; }
+.na_mg_card > summary::-webkit-details-marker { display: none; }
+.na_mg_members { color: var(--na-accent-fg, var(--na-accent)) !important; }
+.na_mg_body { white-space: pre-wrap; padding: 0 12px 12px; font-size: 0.88em; line-height: 1.55; }
+.na_mg_rawrow .na_cp_txt { display: flex; flex-direction: column; gap: 2px; }
+.na_mg_rawrow .na_cp_txt small { color: var(--na-dim); font-size: 0.857em; line-height: 1.45; }
+.na_mg_rawrow.warn .na_cp_txt small { color: var(--na-accent-fg, var(--na-accent)); }
+.na_qc_gradebox { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; text-align: left; line-height: 1.45; }
+.na_qc_gradebox small { color: var(--na-dim, inherit); opacity: 0.85; }
+.na_mg_rawview { align-self: flex-start; margin-top: -4px; font-size: 0.86em; }
+.na_mg_rawpre { white-space: pre-wrap; word-break: break-word; font-size: 0.82em; line-height: 1.5; margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--na-softer); border: 1px solid var(--na-line); }
+
+/* 다이제스트 */
+.na_tag.dig { cursor: pointer; }
+body:not(.na_darkui) .na_tag.dig { background: #E4EEDF; color: #3D6B35; }
+body.na_darkui .na_tag.dig { background: #2E2E34; color: #B9DDB0; }
+.na_dg { display: flex; flex-direction: column; gap: 10px; }
+.na_dg_have:empty { display: none; }
+.na_dg_have { display: flex; flex-direction: column; gap: 6px; }
+.na_dg_item { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; }
+.na_dg_item + .na_dg_item { border-top: 1px solid var(--na-line); }
+.na_dg_item.stale { opacity: 0.65; }
+.na_dg_ihead { display: flex; align-items: center; gap: 10px; }
+.na_dg_ihead .na_rt_txt b { font-size: 0.95em; line-height: 1.4; }
+.na_dg_iact { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.86em; }
+.na_popup .na_dg_edit, .na_popup .na_dg_out { margin: 0; width: 100%; box-sizing: border-box; font-size: 0.88em; line-height: 1.55; resize: vertical; }
+.na_dg_target .na_cp_txt { display: flex; flex-direction: column; gap: 2px; }
+.na_dg_target .na_cp_txt small { color: var(--na-dim); font-size: 0.857em; }
+.na_dg_tok { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.na_popup .na_dg_tokin { width: 84px; margin: 0; text-align: right; }
+.na_dg_res { display: flex; flex-direction: column; gap: 8px; }
+
+/* 이번 압축 메모 · 추가 창에서 이어서 고치기 */
+.na_qc_memo { display: block; width: 100%; box-sizing: border-box; margin: 12px 0 0; min-height: 3.4em; resize: vertical; font-size: 0.9em; text-align: left; }
+.na_apf { display: flex; flex-direction: column; gap: 6px; }
+.na_apf_foot { display: flex; align-items: center; gap: 10px; font-size: 0.86em; }
+.na_apf_foot label { flex: 1; min-width: 0; margin: 0; }
+.na_apf_foot small { color: var(--na-dim); }
+
+/* 여러 섹션 고르기 */
+.na_sel_toggle.na_sel_active, #na_settings .na_seg .na_br_view button.na_sel_toggle.na_sel_active { color: var(--na-accent-fg, var(--na-accent)) !important; background: var(--na-accent-soft, var(--na-soft)) !important; }
+.na_sel_cb { flex: none; width: 18px; height: 18px; margin: 0 10px 0 0 !important; pointer-events: none; accent-color: var(--na-accent); }
+.na_selecting .na_card_head, .na_selecting .na_group_head { cursor: pointer; }
+.na_selecting .na_card.na_sel_on { box-shadow: inset 3px 0 0 var(--na-accent); background: var(--na-accent-soft, var(--na-soft)); }
+.na_selbar { position: sticky; bottom: 0; z-index: 5; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--na-line); border-radius: 16px; background: var(--na-card); box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.12); }
+.na_selbar_top { display: flex; align-items: center; gap: 12px; font-size: 0.9em; }
+.na_selbar_acts { display: flex; gap: 6px; overflow-x: auto; overscroll-behavior: contain; padding-bottom: 2px; scrollbar-width: none; }
+.na_selbar_acts::-webkit-scrollbar { display: none; }
+.na_selbar_acts > * { flex: none; white-space: nowrap; }
+.na_selbar_acts .na_sel_ver { width: auto; margin: 0; height: 32px; padding: 0 8px; font-size: 0.86em; border-radius: 999px; }
+.na_selbar_acts button:disabled, .na_selbar_acts select:disabled { opacity: 0.45; }
+.na_selbar_acts .na_danger { color: var(--na-danger, #b3261e); }
+.na_dg_kotext { white-space: pre-wrap; padding: 10px 12px; border-radius: 12px; background: var(--na-softer); border: 1px solid var(--na-line); font-size: 0.88em; line-height: 1.6; }
+.na_dg_res .na_rt_head .na_dg_resko { flex: none; font-size: 0.86em; }
+
+/* 추가 창: STATE에서 사라진 줄 */
+.na_sl_list { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 2px; max-height: 32vh; overflow-y: auto; overscroll-behavior: contain; }
+.na_sl_row { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 0.92em; line-height: 1.45; cursor: pointer; }
+.na_sl_row > input { margin-top: 3px; flex: none; }
+.na_sl_row small { display: block; color: var(--na-dim); font-size: 0.82em; }
+.na_cp_row .na_cp_sel { flex: none; width: auto; max-width: 52%; margin: 0; }
+
+/* 아카이브에 추가: the window itself is the one scroller; a list that holds the swipe (overscroll contain) stalls it on phones */
+.na_ap2 .na_sl_list { max-height: none; overflow: visible; overscroll-behavior: auto; }
+.na_ap2 .na_append_ta { overscroll-behavior: auto; }
+/* two fix buttons under the numbering warning, not squeezed beside it */
+.na_ap2_checks .na_check:has(.na_ck_btns) { flex-wrap: wrap; }
+.na_ck_btns { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; padding-left: 32px; box-sizing: border-box; }
+/* 2단계 압축: step 1's list, folded, in the append window */
+/* 한 번에 압축 confirm: range on top, then what runs where, as label · value rows */
+.na_qc { --na-line: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 14%, transparent); --na-dim: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 62%, transparent); --na-card: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 5%, transparent); text-align: left; display: flex; flex-direction: column; gap: 10px; }
+.na_qc_head { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.na_qc_head b { font-size: 1.25em; letter-spacing: 0.01em; }
+.na_qc_head small, .na_qc_note { color: var(--na-dim); font-size: 0.85em; }
+.na_qc_note { text-align: center; }
+.na_qc_rows { border: 1px solid var(--na-line); border-radius: 14px; background: var(--na-card); overflow: hidden; }
+.na_qc_row { display: flex; align-items: baseline; gap: 12px; padding: 8px 12px; font-size: 0.92em; }
+.na_qc_row + .na_qc_row { border-top: 1px solid var(--na-line); }
+.na_qc_row > span { flex: none; width: 5.2em; color: var(--na-dim); }
+.na_qc_row > b { flex: 1; min-width: 0; font-weight: 600; word-break: break-all; }
+.na_qc_row > b small { margin-left: 6px; font-weight: 400; color: var(--na-dim); word-break: keep-all; }
+.na_qc .na_qc_memo { margin: 0; }
+.na_qc_check { display: flex; align-items: flex-start; gap: 8px; margin: 0; line-height: 1.4; }
+.na_qc_check span { display: flex; flex-direction: column; }
+.na_qc_check small { color: var(--na-dim); font-size: 0.85em; }
+/* STATE · OPEN changes the model listed, to tick */
+.na_chg_head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 2px; }
+.na_chg_head b { font-size: 13px; }
+.na_chg_head small { color: var(--na-dim); font-size: 11.5px; line-height: 1.4; }
+.na_chg_row { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 7px 9px; border-radius: 10px; background: var(--na-soft); font-size: 12.5px; line-height: 1.45; cursor: pointer; }
+.na_chg_row.off { opacity: 0.72; }
+.na_chg_row input { margin-top: 3px; flex: none; }
+.na_chg_txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; word-break: break-word; }
+.na_chg_meta { font-size: 11.5px; color: var(--na-dim); }
+.na_chg_meta i { font-style: normal; color: #b06a10; }
+.na_chg_op { display: inline-block; margin-right: 4px; padding: 0 6px; border-radius: 6px; font-size: 11px; color: #fff; }
+.na_chg_add { background: #3f9a5a; }
+.na_chg_edit { background: #c9814b; }
+.na_chg_drop { background: #b5523b; }
+.na_chg_txt s { color: var(--na-dim); }
+.na_qc_warn { color: #b06a10; }
+/* 장면별 압축: tracker pattern and the work note */
+.na_trk_row .na_cp_txt { width: 100%; }
+.na_trk_re { width: 100%; box-sizing: border-box; margin-top: 6px; font-family: ui-monospace, var(--monoFontFamily, monospace); font-size: 11.5px; min-height: 3.2em; resize: vertical; }
+.na_trk_btns { display: flex; gap: 10px; align-items: baseline; margin-top: 4px; }
+.na_wn { gap: 10px; }
+.na_wn_ta { width: 100%; box-sizing: border-box; min-height: 24vh; font-size: 13px; line-height: 1.6; resize: vertical; }
+.na_wn .na_wn_ta, .na_wn .na_wn_ta:is(:focus, :hover) { background: var(--na-paper) !important; border: 1px solid var(--na-line) !important; border-radius: 12px !important; box-shadow: none !important; color: var(--na-ink) !important; padding: 10px 12px; }
+.na_wn .na_wn_ta::placeholder { color: var(--na-dim) !important; opacity: 1; }
+.na_wn_seg button { flex: 1; min-width: 0; flex-direction: row; justify-content: center; gap: 4px; padding: 6px 4px; }
+.na_wn_seg button small { font-size: 0.78em; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.na_qc_sclabel { display: flex; flex-direction: column; gap: 2px; font-size: 0.92em; font-weight: 600; margin: 0; }
+.na_qc_sclabel small { font-weight: 400; color: var(--na-dim); font-size: 0.85em; }
+.na_qc .na_qc_scenes { width: 100%; box-sizing: border-box; margin: 0; font-family: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; line-height: 1.6; resize: vertical; text-align: left; }
+
