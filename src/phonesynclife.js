@@ -278,8 +278,8 @@ export function applyLife(p, e, phone, on) {
         const hd = hash(clean.date);
         if (clean.steps === null && finiteNum(clean.km) && clean.km > 0) clean.steps = Math.round(clean.km / 0.00072);
         if (clean.km === null && finiteNum(clean.steps)) clean.km = Math.round(clean.steps * 0.00072 * 10) / 10;
-        if (clean.floors === null) clean.floors = (hd >> 9) % 9;
-        if (!clean.hr.length && u.rest) clean.hr = [u.rest - 4 + hd % 5, u.rest + 45 + (hd >> 4) % 40];
+        if (clean.floors === null) clean.floors = (hd >>> 9) % 9;
+        if (!clean.hr.length && u.rest) clean.hr = [u.rest - 4 + hd % 5, u.rest + 45 + (hd >>> 4) % 40];
         bedFirst(clean);
         const vals = { ...clean, ev: e.id };
         if (was) return change('life.health.days', was, vals, '건강');
@@ -346,7 +346,9 @@ export function applyDays(p, days, round) {
 const lateMin = t => { const m = /^\d{2}:\d{2}$/.test(t || '') ? minutes(t) : null; return m === null ? null : m < 12 * 60 ? m + 1440 : m; };
 const bedFirst = r => { if (r.bed && r.sleep && lateMin(r.bed) > lateMin(r.sleep)) r.bed = r.sleep; return r; };
 const finiteNum = v => typeof v === 'number' && Number.isFinite(v);
-const hash = s => { let h = 7; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
+// a day's hash with its bits mixed: "10-23" and "10-24" must land far apart (a plain h*31+c leaves neighbouring days a
+// few bits apart, and nine days in a row got the same bedtime)
+const hash = s => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0; h ^= h >>> 15; h = Math.imul(h, 2246822507) >>> 0; h ^= h >>> 13; h = Math.imul(h, 3266489909) >>> 0; return (h ^ (h >>> 16)) >>> 0; };
 const shiftHm = (t, min) => { const mt = /^(\d{2}):(\d{2})$/.exec(t || ''); if (!mt) return ''; const v = ((mt[1] * 60 + Number(mt[2]) + min) % 1440 + 1440) % 1440; return `${pad(Math.floor(v / 60))}:${pad(v % 60)}`; };
 // year: the story's (a leap year has its February 29), else a common year
 const plusDay0 = (day, n, year = 2001) => { const mt = /^(\d{2})-(\d{2})$/.exec(day); const d = new Date(Date.UTC(Number(year) || 2001, mt[1] - 1, Number(mt[2]) + n)); return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
@@ -362,9 +364,9 @@ export function fillDays(p, now, round) {
     const from = box.length ? (dayGap(first, today) > 13 ? plusDay(today, -13) : first) : plusDay(first, 1);
     for (let day = from, k = 0; dayGap(day, end) >= 0 && k < 15; day = plusDay(day, 1), k++) {
         if (box.some(d => d.date === day)) continue;
-        const h = hash(day), j = n => ((h >> n) % 41 - 20) / 100, steps = finiteNum(u.steps) && day !== today ? Math.round(u.steps * (1 + j(1) * 1.5)) : null;
+        const h = hash(day), j = n => ((h >>> n) % 41 - 20) / 100, steps = finiteNum(u.steps) && day !== today ? Math.round(u.steps * (1 + j(1) * 1.5)) : null;
         const row = { date: day, bed: shiftHm(u.bed || u.sleep, Math.round(j(3) * 100)), sleep: shiftHm(u.sleep, Math.round(j(5) * 100)), wake: shiftHm(u.wake, Math.round(j(7) * 60)), woke: h % 3,
-            steps, km: steps === null ? null : Math.round(steps * 0.00072 * 10) / 10, floors: (h >> 9) % 9, workout: null, hr: u.rest ? [u.rest - 4 + h % 5, u.rest + 45 + (h >> 4) % 40] : [], from: 'pattern', id: `sync:${round}:g${k}` };
+            steps, km: steps === null ? null : Math.round(steps * 0.00072 * 10) / 10, floors: (h >>> 9) % 9, workout: null, hr: u.rest ? [u.rest - 4 + h % 5, u.rest + 45 + (h >>> 4) % 40] : [], from: 'pattern', id: `sync:${round}:g${k}` };
         // to bed before asleep (each time is moved on its own; in bed 00:38 after asleep at 00:17 can't be)
         if (row.bed && row.sleep && lateMin(row.bed) > lateMin(row.sleep)) row.bed = shiftHm(row.sleep, -(10 + h % 25));
         box.push(row);
