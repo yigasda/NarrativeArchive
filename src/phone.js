@@ -22,7 +22,7 @@ import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
 import { bankDisplayCurrency, bankAcct, bankHome, bankTx, fixedScreen, bankNotes, bankSend, bankStmt, txDoc, bankMore, cardView, orderView, passView, trackView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
 import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './phoneweb.js';
-import { fillDelivery, fillLife } from './phonelife.js';
+import { fillDelivery, fillLife, fillShopMenu, menuWanted } from './phonelife.js';
 import { alarmScreen, setStory, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, heartScreen, hereWidget, itemScreen, orderScreen, ordersScreen, payScreen, rateScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, waterScreen, weatherScreen, weightScreen, workScreen, worldScreen } from './phonelifeapps.js';
 import { openGlossary } from './translate.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
@@ -208,7 +208,7 @@ export async function openPhone(who = null) {
         placeAsk();
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
         if (making && view === 'setremake') $root.find('.na_ph_setremake .ax_n').html(`${busyHtml} 다시 만드는 중`);
-        queueMicrotask(() => autoChart());
+        queueMicrotask(() => { autoChart(); autoMenu(); });
     };
     // 참고 로어북: each book with its switch; › opens its entries, each with its own (a book with some left out shows −)
     const LCK = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path class="na_ck_v" d="M5 12.5l4.5 4.5L19 7.5"/><path class="na_ck_p" d="M6 12h12"/></svg>';
@@ -280,6 +280,17 @@ export async function openPhone(who = null) {
         finally { investing = false; if (phone() === p) drawPhone(true); }
     });
     let chartAttempt = '', phoneClosed = false;
+    // 동네 가게: its menu, asked for the first time the shop is opened (once: a failed ask isn't repeated on every draw)
+    const menuTried = new Set();
+    const autoMenu = async () => {
+        if (phoneClosed || making || !view.startsWith('dshop:')) return;
+        const p = phone(), id = view.slice(6), s = p?.delivery?.shops?.find(x => x.id === id);
+        if (!menuWanted(s) || menuTried.has(`${owner}|${id}`)) return;
+        menuTried.add(`${owner}|${id}`);
+        toastr.info(`${s.name} 메뉴를 불러와요`, '배달');
+        try { if (await fillShopMenu(m, p, id) && !phoneClosed && phone() === p && view === `dshop:${id}`) drawPhone(true); }
+        catch (err) { if (!phoneClosed && phone() === p) toastr.error(String(err?.message || err), '배달 메뉴'); }
+    };
     const autoChart = async () => {
         if (phoneClosed || making || investing || !view.startsWith('stock:')) return;
         const p = phone(); if (!p?.investment) return;

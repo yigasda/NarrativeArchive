@@ -215,6 +215,8 @@ const dish = x => {
     return pic ? { ...d, pic } : d;
 };
 // tx: the bank's rows the model may point at ("paidBy": this order's payment is already there)
+// a shop's dishes as the model writes them, each with its picture
+const menuOf = (xs, n) => arr(xs).map(x => { const m = { name: line(x?.name, 60), ko: ko(x?.ko), desc: line(x?.desc, 100), price: num(x?.price) ?? 0, top: yes(x?.top) }, pic = dishPic(x?.pic, m, true); return pic ? { ...m, pic } : m; }).filter(x => x.name).slice(0, n);
 export function parseDelivery(raw, accounts = [], tx = [], now = '') {
     if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 배달 내용(JSON)을 찾지 못했어요');
     // a bank row it points at: that row is the payment, and its account is the order's
@@ -223,7 +225,7 @@ export function parseDelivery(raw, accounts = [], tx = [], now = '') {
     const cart = raw.cart && arr(raw.cart.items).length ? { shop: line(raw.cart.shop, 60), items: arr(raw.cart.items).map(dish).filter(x => x.name).slice(0, 8), noteShop: line(raw.cart.noteShop, 120), noteShopKo: ko(raw.cart.noteShopKo), noteRider: line(raw.cart.noteRider, 120), noteRiderKo: ko(raw.cart.noteRiderKo) } : null;
     return {
         shops: arr(raw.shops).map(s => ({ name: line(s?.name, 60), ko: ko(s?.ko), cuisine: line(s?.cuisine, 30), rating: num(s?.rating), reviews: int(s?.reviews, 0, 999999), fee: num(s?.fee) ?? 0, minOrder: num(s?.minOrder), eta: line(s?.eta, 12), fav: yes(s?.fav),
-            menu: arr(s?.menu).map(x => { const m = { name: line(x?.name, 60), ko: ko(x?.ko), desc: line(x?.desc, 100), price: num(x?.price) ?? 0, top: yes(x?.top) }, pic = dishPic(x?.pic, m, true); return pic ? { ...m, pic } : m; }).filter(x => x.name).slice(0, 4) })).filter(s => s.name).slice(0, 5),
+            menu: menuOf(s?.menu, 4) })).filter(s => s.name).slice(0, 5),
         orders: arr(raw.orders).map(o => withEv({ shop: line(o?.shop, 60), items: arr(o?.items).map(dish).filter(x => x.name).slice(0, 10), fee: num(o?.fee) ?? 0, tip: num(o?.tip) ?? 0, discount: Math.abs(num(o?.discount) ?? 0),
             mode: pick(o?.mode, ['delivery', 'pickup'], 'delivery'), time: when(o?.time), arrived: when(o?.arrived) || hhmm(o?.arrived), to: line(o?.to, 40) || 'home', address: line(o?.address, 80), left: line(o?.left, 60),
             noteShop: line(o?.noteShop, 120), noteShopKo: ko(o?.noteShopKo), noteRider: line(o?.noteRider, 120), noteRiderKo: ko(o?.noteRiderKo), noCutlery: yes(o?.noCutlery), for: int(o?.for, 1, 30) ?? 1,
@@ -243,6 +245,48 @@ export function nearbyShops(raw, shops, won) {
         const st = shopStats(name, won);
         return { name, ko: ko(s?.ko), cuisine: line(s?.cuisine, 30), rating: st.rating, reviews: st.reviews, fee: st.fee, minOrder: st.minOrder, eta: st.eta, fav: false, nearby: true, menu: m.name ? [pic ? { ...m, pic } : m] : [] };
     }).filter(Boolean).slice(0, 8);
+}
+// 동네 가게 메뉴: a shop nearby comes with the one dish it is known for; the first time it is opened its menu is asked
+// for, on its own (the shop alone, no story: it costs one short request, and only for a shop someone opens)
+export const AI_SYS_SHOP_MENU = `GOAL
+Write the menu of one food delivery shop on a character's phone in a long role-play, the way the delivery app shows it.
+
+YOU GET
+- SHOP: its name, its cuisine and the dish it is known for.
+- LIVES IN and CURRENCY: where the shop is and the money its prices are in.
+
+MENU
+- 4 to 6 dishes the shop would really sell, the known dish first with "top": true, each priced as it would be there, with a short "desc".
+- Every dish gets "pic"; the app draws it. "base": the closest of BASES. "with": up to 3 of TOPPINGS that set it apart from the shop's other dishes. "size": "large" only for a large or extra size. "set": up to 2 of SIDES, only for a set.
+- BASES: ${FOOD_IDS.base.join(', ')}
+- TOPPINGS: ${FOOD_IDS.top.join(', ')}
+- SIDES: ${FOOD_IDS.side.join(', ')}
+
+LANGUAGE
+Dish names in the language they really have there. A name not in Korean gets "ko"; a Korean one gets none.
+
+JSON (one object, nothing before or after it)
+{ "menu": [{ "name", "ko", "desc", "price", "top": true or false, "pic": { "base", "with": [], "size": "regular" | "large", "set": [] } }] }
+Numbers are plain JSON numbers.`;
+export const menuWanted = s => !!(s?.nearby && !s.menuAt && (s.menu || []).length < 2);
+export async function fillShopMenu(m, p, id) {
+    const s0 = p.delivery?.shops?.find(x => x.id === id);
+    if (!menuWanted(s0)) return false;
+    const cur = p.money?.currency || p.money?.bank?.accounts?.[0]?.currency || (livesIn(p) === 'KR' ? 'KRW' : 'EUR');
+    const input = [`[SHOP]\n${JSON.stringify({ name: s0.name, cuisine: s0.cuisine, known: s0.menu?.[0] ? { name: s0.menu[0].name, price: s0.menu[0].price } : null })}`,
+        `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, `[CURRENCY]\n${cur}`].join('\n\n');
+    const out = await askDraft(input, { force: true, system: AI_SYS_SHOP_MENU, maxTokens: 3000, effort: 'low' });
+    // the shop may have gone (the app made again) while it was asked
+    const s = p.delivery?.shops?.find(x => x.id === id);
+    if (!s || !menuWanted(s)) return false;
+    const got = menuOf(jsonOf(out)?.menu, 6);
+    if (!got.length) throw new Error('모델 답에서 메뉴를 찾지 못했어요');
+    // the dish it is known for stays first, as it was
+    const known = s.menu?.[0], plain = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+    s.menu = known ? [{ ...known, top: true }, ...got.filter(x => plain(x.name) !== plain(known.name)).map(x => ({ ...x, top: false }))].slice(0, 6) : got;
+    s.menuAt = Date.now();
+    await saveMeta();
+    return true;
 }
 // what an order came to (the model never writes it)
 export const orderTotal = dlvTotal;
