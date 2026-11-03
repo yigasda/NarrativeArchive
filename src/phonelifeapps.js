@@ -1228,14 +1228,15 @@ export function dlvScreen(p, now) {
             ${rest.length ? `<div class="dv_sec"><b>우리 동네 인기 가게</b><span>전체보기 ${I.chev}</span></div>${rest.map(row).join('')}` : ''}
             <i class="lf_pad"></i></div>${bmTab('dlv')}</div>`;
     }
-    const big = (rest[0] || shops[0]);
+    // 동네 가게: every shop nearby, one big card under another (none yet: the one they order from most)
+    const bigs = rest.length ? rest : shops.slice(0, 1);
     return `<div class="dv ue">${axBar(p, now)}
         <div class="dv_uetop">${axCb('home2')}<span class="a"><small>Jetzt liefern</small><b>${esc(recent[0]?.address || 'Zuhause')} ${I.down}</b></span><span class="r">${dvKp(d, 'dv_kpu')}${I.bell}${d.cart ? `<button type="button" data-go="dcart" class="dv_cartb">${I.cart}<em>${cartCount(d)}</em></button>` : `<span class="dv_cartb">${I.cart}</span>`}</span></div>
         <div class="dv_q">${I.search}Essen, Geschäfte, Getränke</div>
         <div class="ax_scroll dv_sc"><div class="dv_cats ue">${UE_CATS.map(([k, t]) => `<span><i>${CAT[k]}</i>${t}</span>`).join('')}</div>
           <div class="dv_chips"><span>Abholung</span><span>Angebote</span><span class="on">Liefergebühr unter 2 € ${I.down}</span></div>
-          ${used.length ? `<div class="dv_h">Erneut bestellen</div><div class="dv_again">${used.slice(0, 4).map(s => `<button type="button" data-go="dshop" data-i="${s.id}">${pic(shopPic(s))}<b>${esc(s.name)}</b><small>${esc(s.eta || '')} Min.</small></button>`).join('')}</div>` : ''}
-          ${big ? `<div class="dv_h">Beliebt in deiner Nähe</div><button type="button" class="dv_big" data-go="dshop" data-i="${big.id}">${pic(shopPic(big), 'wide', 'hero')}<span class="r"><span><b>${esc(big.name)}</b><small>${esc(money(p, big.fee))} Liefergebühr${big.eta ? ` · ${esc(big.eta)} Min.` : ''}</small></span>${big.rating ? `<em>${comma(rate(big.rating))}</em>` : ''}</span></button>` : ''}
+          ${used.length ? `<div class="dv_h">Erneut bestellen</div><div class="dv_again">${used.map(s => `<button type="button" data-go="dshop" data-i="${s.id}">${pic(shopPic(s))}<b>${esc(s.name)}</b><small>${esc(s.eta || '')} Min.</small></button>`).join('')}</div>` : ''}
+          ${bigs.length ? `<div class="dv_h">Beliebt in deiner Nähe</div>${bigs.map(big => `<button type="button" class="dv_big" data-go="dshop" data-i="${big.id}">${pic(shopPic(big), 'wide', 'hero')}<span class="r"><span><b>${esc(big.name)}</b><small>${esc(money(p, big.fee))} Liefergebühr${big.eta ? ` · ${esc(big.eta)} Min.` : ''}</small></span>${big.rating ? `<em>${comma(rate(big.rating))}</em>` : ''}</span></button>`).join('')}` : ''}
           <i class="lf_pad"></i></div>${ueTab('dlv')}</div>`;
 }
 export function shopScreen2(p, now, id) {
