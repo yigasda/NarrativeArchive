@@ -264,7 +264,6 @@ body.na_darkui .na_wz2_arr { color: #8A8A93; }
 .na_ex2 .na_v2_chips button { font-size: 0.857em; line-height: 1.5; padding: 3px 11px; }
 .na_ex2 .na_v2_chips button.on { padding: 4px 11px; }
 .na_ex2_card .na_cp_bar { border-radius: 4px; overflow: hidden; }
-.na_ex2_card .na_cp_bar > span { border-radius: 0; }
 body:not(.na_darkui) .na_ex2_card .na_cp_bar .hid { background: #E3D3C7; }
 body.na_darkui .na_ex2_card .na_cp_bar .hid { background: #4C4C55; }
 body:not(.na_darkui) .na_ex2_card .na_cp_bar .raw { background: #B8541F; }
@@ -281,10 +280,8 @@ body.na_darkui .na_ex2_card .na_cp_bar .raw { background: #E9DFCF; }
 .na_ex_pchip.open { border-color: var(--na-accent); }
 .na_ex2 .na_ex_prow select { max-width: 100%; width: 100%; margin: 0; }
 .na_ex_toset > .na_svg { color: var(--na-dim); }
-.na_ex2_preview { height: 96px; max-height: none; box-sizing: border-box; padding: 10px 12px; border-radius: 16px; font-size: 0.821em; line-height: 1.6; color: var(--na-mute, var(--na-dim)); }
-body:not(.na_darkui) .na_ex2_preview { background: #F2E9E2; }
-body.na_darkui .na_ex2_preview { background: #2A2A30; }
-.na_ex2_btns .na_v2_btn { padding: 12px 0; border-radius: 14px; font-size: 0.964em; line-height: 1.5; }
+.na_ex2_preview { max-height: none; box-sizing: border-box; padding: 10px 12px; border-radius: 16px; font-size: 0.821em; line-height: 1.6; color: var(--na-mute, var(--na-dim)); }
+.na_ex2_btns .na_v2_btn { padding: 12px 0; font-size: 0.964em; line-height: 1.5; }
 /* settings: the group icons, and boxes toned toward the theme instead of paper white */
 .na_cfg_label i { margin-right: 4px; opacity: 0.8; }
 body:not(.na_darkui) .na_cfg_box, body:not(.na_darkui) .na_cfg_back, body:not(.na_darkui) .na_cfg_pill { background: #F7EEE7; border-color: #E6D6CA; }

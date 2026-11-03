@@ -188,11 +188,11 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 #na_settings .na_anniv_x { width: auto; margin: 0; padding: 4px 6px; border: 0; background: transparent; color: var(--sv-dim); cursor: pointer; }
 /* 기념일: a small filled heart instead of the double circle */
 .na_cal_av_dot, #na_settings .na_anniv_dot { display: inline-flex; align-items: center; }
-.na_cal_av_badge { display: inline-flex; align-items: center; gap: 3px; vertical-align: 1px; }
+.na_cal_av_badge { align-items: center; gap: 3px; }
 .na_heart { flex: none; }
 /* the badge sits on the title's baseline: plain inline text, the heart nudged down to the letters */
 .na_cal_av_badge { display: inline; vertical-align: baseline; }
-.na_cal_av_badge .na_heart { vertical-align: -0.08em; margin-right: 2px; }
+.na_cal_av_badge .na_heart { vertical-align: -0.08em; }
 /* a little more room: title ↔ heart, heart ↔ name */
 .na_cal_av_badge { margin-left: 5px; }
 .na_cal_av_badge .na_heart { margin-right: 1px; }

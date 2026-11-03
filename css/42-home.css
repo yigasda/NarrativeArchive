@@ -85,7 +85,6 @@ body.na_darkui #na_settings {
 #na_settings #na_next .na_next_main span { font-size: 0.82em !important; opacity: 1; color: var(--hm-dim); }
 
 /* dark: the next-step card stays a brown card like the tool rows; the tone shows in a thin edge, the icon disc and a soft button */
-body.na_darkui #na_settings #na_next .na_next_card.warn, body.na_darkui #na_settings #na_next .na_next_card.bad { background: var(--hm-card); }
 body.na_darkui #na_settings #na_next .na_next_card.warn { border-color: rgba(232, 180, 90, 0.3); }
 body.na_darkui #na_settings #na_next .na_next_card.bad { border-color: rgba(236, 116, 104, 0.3); }
 body.na_darkui #na_settings #na_next .na_next_card.warn > i { background: var(--hm-warn-soft); color: var(--hm-warn); }
@@ -227,7 +226,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 
 
 /* AU chat settings (도구 → AU 채팅) */
-.na_au_pop { display: flex; flex-direction: column; gap: 10px; }
+.na_au_pop { gap: 10px; }
 .na_au_pop .na_au_box { padding: 12px; }
 .na_au_box { display: flex; flex-direction: column; gap: 8px; }
 .na_au_box > label { display: flex; flex-direction: column; gap: 3px; }
@@ -272,12 +271,12 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 .na_popup .na_mg_group { margin: 0; width: 100%; }
 .na_mg_pickhead { display: flex; align-items: center; gap: 8px; }
 .na_mg_pickhead small { flex: 1; }
-.na_mg_list { display: flex; flex-direction: column; max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--na-line); border-radius: 14px; background: var(--na-card); }
-.na_mg_row { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 9px 12px; cursor: pointer; }
+.na_mg_list { display: flex; flex-direction: column; max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; }
+.na_mg_row { display: flex; align-items: flex-start; gap: 10px; margin: 0; cursor: pointer; }
 .na_mg_row + .na_mg_row { border-top: 1px solid var(--na-line); }
 .na_mg_row.on { background: var(--na-soft); }
 .na_mg_row > input { margin-top: 3px; flex: none; }
-.na_mg_row .na_rt_txt > span { font-size: 0.92em; line-height: 1.4; }
+.na_mg_row .na_rt_txt > span { line-height: 1.4; }
 .na_mg_info.warn { color: var(--na-accent-fg, var(--na-accent)); }
 .na_mg_res { display: flex; flex-direction: column; gap: 8px; }
 .na_mg_warn { display: flex; flex-direction: column; gap: 3px; padding: 9px 12px; border-radius: 12px; background: var(--na-softer); border: 1px solid var(--na-accent); color: var(--na-accent-fg, var(--na-accent)); font-size: 0.86em; line-height: 1.45; }

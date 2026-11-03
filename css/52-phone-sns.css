@@ -69,7 +69,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .ax .ax_dcard { --axbg: #fff; --axsh: 0 1px 0 #efe7da, 0 6px 18px rgba(120, 90, 50, 0.07); margin: 0 14px 12px; padding: 16px; border-radius: 20px; display: flex; gap: 14px; flex: none; }
 .ax_dd { flex: none; width: 44px; text-align: center; font-size: 11.5px; color: #a48f78; font-weight: 600; display: flex; flex-direction: column; }
 .ax_dd b { font: 300 34px/1 'Inter Tight', -apple-system, sans-serif; color: #3d3127; }
-.ax_dtx { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .ax_dh { margin: 2px 0 4px; font: 600 16px 'Noto Serif KR', serif; color: #3d3127; }
 .ax_dh small { font: 400 12.5px 'Noto Sans KR', sans-serif; color: #a48f78; margin-left: 6px; }
 .ax_dp { font-size: 13.5px; line-height: 1.55; color: #6f5f50; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }

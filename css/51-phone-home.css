@@ -54,7 +54,7 @@
 .cg_mono .cg_ic svg { position: relative; z-index: 1; filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.8)); }
 .cg_badge { position: absolute; top: -5px; right: -5px; z-index: 2; min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box; border-radius: 10px; color: #ffffff; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9); }
 .cg_gel .cg_badge { background: #e5484d; } .cg_mono .cg_badge { background: #ff3b30; }
-.cg_dots { display: flex; justify-content: center; gap: 7px; padding-bottom: 16px; }
+.cg_dots { display: flex; justify-content: center; }
 .cg_dots span { width: 7px; height: 7px; border-radius: 50%; background: rgba(22, 27, 34, 0.25); }
 .cg_dots span.on { background: #161b22; }
 .cg_dockwrap { padding: 0 14px; }
