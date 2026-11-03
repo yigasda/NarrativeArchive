@@ -7,15 +7,16 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax :is(.ax_tile, .ax_cthumb) { background: var(--axbg) !important; }
 /* text and corners of phone buttons, labels and spans: a theme may set colour, font, size, spacing, case or corners on every
    button / label / span with !important (the user's sizes every span). They come only from these variables, which no theme sets:
-   --axfg (colour) · --axff (font) · --axfs (size) · --axls (letter spacing) · --axtt (case) · --axr (corners). Not inherited. */
+   --axfg (colour) · --axff (font) · --axfs (size) · --axls (letter spacing) · --axtt (case) · --axr (corners). Not inherited.
+   Two ids so a theme rule that carries an id (the user's span sizing does) still loses. */
 @property --axfg { syntax: "*"; inherits: false; }
 @property --axff { syntax: "*"; inherits: false; }
 @property --axfs { syntax: "*"; inherits: false; }
 @property --axls { syntax: "*"; inherits: false; }
 @property --axtt { syntax: "*"; inherits: false; }
 @property --axr { syntax: "*"; inherits: false; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.ax, .cg) :is(button, label) { color: var(--axfg, inherit) !important; font-family: var(--axff, inherit) !important; font-size: var(--axfs, inherit) !important; letter-spacing: var(--axls, normal) !important; text-transform: var(--axtt, none) !important; border-radius: var(--axr, 0) !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.ax, .cg) span { font-size: var(--axfs, inherit) !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.ax, .cg) :is(button, label):not(#na_x):not(#na_y) { color: var(--axfg, inherit) !important; font-family: var(--axff, inherit) !important; font-size: var(--axfs, inherit) !important; letter-spacing: var(--axls, normal) !important; text-transform: var(--axtt, none) !important; border-radius: var(--axr, 0) !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.ax, .cg) span:not(#na_x):not(#na_y) { font-size: var(--axfs, inherit) !important; } /* two ids: some themes size spans with an id in the selector */
 .ax svg { flex: none; }
 .ax_scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; display: flex; flex-direction: column; }
 .ax_scroll::-webkit-scrollbar { display: none; }
