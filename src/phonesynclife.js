@@ -276,6 +276,7 @@ export function applyLife(p, e, phone, on) {
         if (clean.steps === null && finiteNum(u.steps) && awake && dayGap(clean.date, e.date) > 0) clean.steps = u.steps;
         // what the model no longer writes is worked out: distance from the steps, floors and the heart range from their usual
         const hd = hash(clean.date);
+        if (clean.steps === null && finiteNum(clean.km) && clean.km > 0) clean.steps = Math.round(clean.km / 0.00072);
         if (clean.km === null && finiteNum(clean.steps)) clean.km = Math.round(clean.steps * 0.00072 * 10) / 10;
         if (clean.floors === null) clean.floors = (hd >> 9) % 9;
         if (!clean.hr.length && u.rest) clean.hr = [u.rest - 4 + hd % 5, u.rest + 45 + (hd >> 4) % 40];
