@@ -165,7 +165,7 @@ LIFE
 - Health: a row for every story day these messages move into. A day these messages show goes in that event's "phone"."health"; a day already in LIFE NOW that the story now shows is rewritten the same way. Every other new day goes in the top-level "days", written freely from the character and their life (a lazy Sunday, a day on their feet, a sleepless night), still following that day's events and tickets.
 - A lasting change to their habits or body these messages state (they lost weight, quit coffee, drink more water, get up earlier now): that event's "phone"."usual" with only what changed. Nothing said: no "usual".
 ${weather ? `- "weather": ${tracker ? 'WEATHER NOW stands for an owner in that scene (its date, time, place and weather); write the rest of the forecast to agree with it, "from": "chat". An owner elsewhere gets the weather where they are.' : 'what these messages describe, else the archive. If the story\'s day or place changed with nothing to go on, what fits the season and place, "from": "guess". If neither changed and nothing describes it: null (the app keeps the last weather).'}
-- With new weather, also write each saved city's "cond", "temp", "hi" and "lo". A city the story now gives the owner reason to save (a trip planned, a move) is added: "added": true with its "tz" and a "note".
+- With new weather, also write each saved city's "cond", "temp", "hi" and "lo".
 ` : ''}` : ''}${money ? `
 MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - A payment, transfer, refund, order, ticket or trade that happens in these messages goes in the event's "money".
@@ -198,7 +198,7 @@ ANSWER — one JSON object, nothing else:
   "weather": { "place", "date", "time", "from": "chat" | "archive" | "guess", "cond": "clear" | "partly" | "cloudy" | "drizzle" | "rain" | "sleet" | "snow" | "fog" | "storm" | "wind", "temp", "hi", "lo", "line", "ko",
                "hours": [6 of { "time", "cond", "temp", "rain": percent }] (the hours ahead when the sky will change, else []), "days": [10 of { "day", "cond", "lo", "hi", "rain": percent }],
                "tiles": { "rain24": mm today, "rainNext": mm by tomorrow, "wind": km/h, "dir", "humidity", "feels": only when the story gives it },
-               "cities": [{ "name", "cond", "temp", "hi", "lo" }, and a new one: { "name", "ko", "tz", "cond", "temp", "hi", "lo", "note", "added": true }] } or null` : ''} }
+               "cities": [{ "name", "cond", "temp", "hi", "lo" }, a city newly saved (a trip planned, a move) also "tz", "note", "added": true] } or null` : ''} }
 ${money ? `"money" only when money moves or an order or ticket changes.` : ''}
 Also in "money" when these messages show them: "newAccount": { "kind": "checking" | "savings" | "credit", "name", "last4", "currency", "balance" } (an account or card the owner opens), "newCard": { "account": last4, "exp": "MM/YY" }${delivery ? `, "cart": { "shop", "items": [like a delivery's] } (dishes put in the basket and not ordered)` : ''}, "watch": [{ "symbol", "name", "currency", "note", "ko" }] (a share they start watching), "quotes": [{ "symbol", "date", "value", "evidence": exact words }] (a price the story gives), "stakes": [{ "company", "listed", "percent", "holder", "voter", "beneficiary", "restriction", "value", "currency", "evidence": exact words }] (a stake the story says they now hold).
 In "events", a plan moved or called off is its item again with "was": the date it had, or "cancelled": true. In "threads", a text the owner deleted is { "text", "deleted": true }.
