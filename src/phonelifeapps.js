@@ -288,7 +288,8 @@ function hrDay(d, next) {
         pts.push([m, Math.min(hi, Math.max(lo, Math.round(v)))]);
     }
     if (ws === null) { const k = pts.reduce((b, p, i) => (p[1] > pts[b][1] ? i : b), 0); pts[k][1] = hi; }
-    return pts;
+    // today: the line stops at now
+    return Number.isFinite(d.upTo) ? pts.filter(q => q[0] <= d.upTo) : pts;
 }
 // water: their usual liters a day, a little more or less, drunk from soon after waking to the evening
 function waterDay(d, u) {
