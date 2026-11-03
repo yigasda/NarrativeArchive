@@ -15,8 +15,8 @@ const wealthSource=await readFile(new URL('../src/wealth.js',import.meta.url),'u
 const wealthURL=encoded(wealthSource.replace("'./ai.js'",JSON.stringify(ai)).replace("'./core.js'",JSON.stringify(core)).replace("'./finance.js'",JSON.stringify(financeURL)).replace("'./phoneparse.js'",JSON.stringify(new URL('../src/phoneparse.js',import.meta.url).href)));
 const dataMod=await load('investdata.js',{'./wealth.js':wealthURL,'./ai.js':ai,'./core.js':core,'./phonedata.js':data,'./finance.js':financeURL});
 const dataURL=encoded(`export const investmentDate=(m,p)=>p.investment?.date||'2026-10-30';`);
-const fmtIn=encoded(`export const fmtIn=(p,n,c,signed)=>(signed&&n>0?'+':'')+new Intl.NumberFormat('ko-KR',{maximumFractionDigits:2}).format(n)+' '+(c||'');`);
-const ui=await load('investui.js',{'./phoneapps.js':apps,'./util.js':util,'./finance.js':financeURL,'./investdata.js':dataURL,'./phonemoney.js':fmtIn});
+const fmtIn=encoded(`export const fmtIn=(p,n,c,signed)=>(signed&&n>0?'+':'')+new Intl.NumberFormat('ko-KR',{maximumFractionDigits:2}).format(n)+' '+(c||'');export const localeOf=()=>'en-US';export const decimalOf=()=>'.';`);
+const ui=await load('investui.js',{'./phoneapps.js':apps,'./util.js':util,'./finance.js':financeURL,'./investdata.js':dataURL,'./phonemoney.js':fmtIn,'./phonedata.js':data});
 const moneyUI=await load('phonemoney.js',{'./phoneprod.js':new URL('../src/phoneprod.js',import.meta.url).href,'./core.js':core,'./finance.js':financeURL,'./investdata.js':dataURL,'./people.js':encoded(`export const nameKey=s=>s;`),'./phoneai.js':encoded(`export const filling=new Set(),recording=new Set();`),'./phoneapps.js':apps,'./phonedata.js':data,'./util.js':util});
 function setup() {
  const m={text:'October 30, 2026. Public company X trades at 110 USD.'},p={owner:'A',now:'10-30',country:'US',searches:[],threads:[],photos:[],events:[]};

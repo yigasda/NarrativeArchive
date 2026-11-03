@@ -1,7 +1,8 @@
 // 투자 (kurs.): a broker app of its own — a light page, the portfolio's line on top, holdings with sparklines,
 // a stock page with a big chart. The figures all come from finance.js; nothing here is guessed.
 import { AX, ax, axBar, axInd, axTint } from './phoneapps.js';
-import { fmtIn } from './phonemoney.js';
+import { decimalOf, fmtIn, localeOf } from './phonemoney.js';
+import { fmtDate } from './phonedata.js';
 import { esc } from './util.js';
 import { baseCosts, cash, finance, finite, fx, positions, price, total } from './finance.js';
 import { investmentDate } from './investdata.js';
@@ -13,8 +14,7 @@ const UPRED = new Set(['KR', 'JP', 'CN', 'TW']);
 const tone = (p, n) => (!finite(n) || Math.abs(n) < 1e-9 ? 'iv_flat' : n > 0 ? 'iv_up' : 'iv_dn');
 const money = (p, n, c, signed = false) => (finite(n) ? esc(fmtIn(p, n, c, signed)) : '—');
 // numbers as the phone's country writes them: 2.5 in Korea, the US, Japan…; 2,5 in most of Europe (set per screen)
-const DOT_LANDS = new Set(['KR', 'US', 'GB', 'JP', 'CN', 'TW', 'HK', 'CA', 'AU', 'NZ', 'IE', 'IN', 'SG', 'PH', 'MY', 'TH', 'IL', 'MX']);
-let DOT = true;
+let DOT = true, LOC = 'en-US';
 const dec = s => (DOT ? s : String(s).replace(/[.,]/g, c => (c === '.' ? ',' : '.')));
 const pct = n => (finite(n) ? dec(`${n > 0 ? '+' : ''}${n.toFixed(2)}%`) : '—');
 const arrow = n => (finite(n) && Math.abs(n) > 1e-9 ? (n > 0 ? '▲' : '▼') : '');
@@ -22,9 +22,8 @@ const KIND = { buy: '매수', sell: '매도', dividend: '배당' };
 const RANGES = [['1w', '1주', 7], ['1m', '1개월', 31], ['3m', '3개월', 92], ['all', '전체', 1e5]];
 const dayMs = 864e5;
 const daysBack = (date, n) => new Date(Date.parse(date) - n * dayMs).toISOString().slice(0, 10);
-// a short day as the phone's country writes it: "1. 30." in Korea, Japan and China, "1/30" in the US, "30.1." in most of Europe
-const DOT_MD = new Set(['KR', 'JP', 'CN', 'TW', 'HK']), SLASH_MD = new Set(['US', 'CA', 'PH']);
-const shortDay = (d, p = null) => { const c = String(p?.lives || p?.country || '').toUpperCase(), m = Number(d.slice(5, 7)), dd = Number(d.slice(8)); return DOT_MD.has(c) || !c ? `${m}. ${dd}.` : SLASH_MD.has(c) ? `${m}/${dd}` : `${dd}.${m}.`; };
+// a short day as every app on the phone writes it (Korea "10. 30.", the US and Japan "10/30", Germany "30.10.")
+const shortDay = (d, p = null) => fmtDate(p, String(d).slice(5), true);
 // a ticker's tile: two letters on a colour of its own
 const logo = (s, z = 40) => { const code = String((s?.symbol || '').split(':').pop() || s?.name || '?').replace(/[^A-Za-z0-9가-힣]/g, '').slice(0, 4).toUpperCase() || '?'; return `<span class="iv_logo" style="width: ${z}px; height: ${z}px; background: ${axTint(code)}; font-size: ${Math.round(z * (code.length > 3 ? 0.24 : code.length > 2 ? 0.28 : 0.34))}px">${esc(code)}</span>`; };
 
@@ -51,7 +50,7 @@ function candles(m, p, sym, date, from, cur, busy = false) {
     const top = hi + padv, bot = lo - padv, y = v => T + (top - v) / (top - bot) * ph;
     const step = pw / show.length, cw = Math.max(2, Math.min(12, step * 0.62)), x = k => 8 + step * (k + 0.5);
     const up = UPRED.has(p.country) ? '#e5484d' : '#12a26b', dn = UPRED.has(p.country) ? '#3b6fe0' : '#e5484d';
-    const nice = v => dec(Math.abs(v) >= 1000 ? v.toLocaleString('en-US', { maximumFractionDigits: 0 }) : v.toFixed(2));
+    const nice = v => (Math.abs(v) >= 1000 ? v.toLocaleString(LOC, { maximumFractionDigits: 0 }) : dec(v.toFixed(2)));
     // a scale number under the price tag on the right is left out (the tag says the price there)
     const tagY = y(rows.filter(x => x.d >= from).at(-1)?.c ?? bot);
     const grid = Array.from({ length: 5 }, (_, k) => bot + (top - bot) * k / 4).map(v => `<line x1="8" x2="${8 + pw}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="iv_gl"/>${Math.abs(y(v) - tagY) < 13 ? '' : `<text x="${W - 4}" y="${(y(v) + 3.5).toFixed(1)}" class="iv_yl" text-anchor="end">${nice(v)}</text>`}`).join('');
@@ -88,7 +87,7 @@ const card = (s, cls = '') => `<div class="iv_card ${cls}">${s}</div>`;
 const hd = (t, right = '') => `<div class="iv_hd"><b>${t}</b>${right}</div>`;
 
 export function investmentScreen(m, p, now, view, key, busy) {
-    DOT = (c => !c || DOT_LANDS.has(c))(String(p?.lives || p?.country || '').toUpperCase());
+    DOT = decimalOf(p) === '.'; LOC = localeOf(p);
     const inv = p.investment;
     if (!inv) {
         return frame(p, now, { back: 'home2', body: `<div class="iv_empty"><span class="iv_emptyic">${ax('chart', 30, 'currentColor', 2)}</span><b>아직 투자 계좌가 없어요</b></div>${tools(m, p, busy)}` });

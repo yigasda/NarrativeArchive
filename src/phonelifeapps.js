@@ -9,7 +9,7 @@ import { filling } from './phoneai.js';
 import { byStory, fmtDate, koOn, pad, storyNow } from './phonedata.js';
 import { shiftDay, weatherNow } from './phonelife.js';
 import { apart, cityAt as cityOfPlace, mirrorHome, overlayNow } from './phonesynclife.js';
-import { fmtMoney } from './phonemoney.js';
+import { decimalOf, fmtMoney, localeOf } from './phonemoney.js';
 import { nameKey } from './people.js';
 import { esc } from './util.js';
 import { DOT_C, DOT_R, DOTS, MAP_BOT, MAP_H, MAP_TOP, MAP_W, TZ_AT } from './worldmap.js';
@@ -64,15 +64,14 @@ const dur = min => (min >= 60 ? `${Math.floor(min / 60)}시간 ${min % 60}분` :
 const durBig = min => `${Math.floor(min / 60)}<span>시간</span> ${min % 60}<span>분</span>`;
 // numbers as the phone's country writes them: 6,000 · 2.0 in Korea, the US, Japan…; 6.000 · 2,0 in Germany and most of Europe
 // (no country known: the dot, as the money app's fallback writes it)
-const DOT_LANDS = new Set(['KR', 'US', 'GB', 'JP', 'CN', 'TW', 'HK', 'CA', 'AU', 'NZ', 'IE', 'IN', 'SG', 'PH', 'MY', 'TH', 'IL', 'MX']);
 let STORY = { year: new Date().getFullYear(), now: '', dot: false };
 // the phone being drawn: its year (carried over New Year by the reflection), its now and its number style
 export function setStory(p) {
     const y = Number(p?.year) || Number(String(p?.money?.asOf || p?.investment?.date || '').slice(0, 4)) || new Date().getFullYear();
     // known: the story dates itself (else weekdays aren't shown: a fantasy calendar or an undated story has none to show)
-    STORY = { year: y, known: !p?.noYear && !!(Number(p?.year) || /^\d{4}-/.test(String(p?.money?.asOf || p?.money?.fxDate || p?.investment?.date || ''))), now: String(storyNow(p) || p?.now || '').slice(0, 5), dot: (c => !c || DOT_LANDS.has(c))(String(p?.lives || p?.country || '').toUpperCase()) };
+    STORY = { year: y, known: !p?.noYear && !!(Number(p?.year) || /^\d{4}-/.test(String(p?.money?.asOf || p?.money?.fxDate || p?.investment?.date || ''))), now: String(storyNow(p) || p?.now || '').slice(0, 5), dot: decimalOf(p) === '.', loc: localeOf(p) };
 }
-const n0 = v => (v === null || v === undefined ? '—' : Number(v).toLocaleString(STORY.dot ? 'en-US' : 'de-DE'));
+const n0 = v => (v === null || v === undefined ? '—' : Number(v).toLocaleString(STORY.loc || 'en-US'));
 const md = s => { const mt = String(s || '').match(/^(\d{2})-(\d{2})/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]) } : null; };
 // a story day as a real date: the story's year, and a day across New Year from its now in the year before or after
 const dayGap = (a, b) => { const A = md(a), B = md(b); if (!A || !B) return 0; let g = (Date.UTC(2001, B.mo - 1, B.d) - Date.UTC(2001, A.mo - 1, A.d)) / 864e5; if (g < -180) g += 365; if (g > 180) g -= 365; return g; };

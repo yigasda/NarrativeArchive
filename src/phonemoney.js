@@ -25,10 +25,14 @@ Object.assign(AX, {
 
 // money as the owner's phone writes it (1.284,17 € in Germany, $1,284.17 in the US)
 const LOCALE = { KR: 'ko-KR', US: 'en-US', GB: 'en-GB', DE: 'de-DE', FR: 'fr-FR', IT: 'it-IT', ES: 'es-ES', JP: 'ja-JP', CN: 'zh-CN', TW: 'zh-TW', CA: 'en-CA', AU: 'en-AU', RU: 'ru-RU', BR: 'pt-BR', AT: 'de-AT', CH: 'de-CH' };
+// the phone's number style: its country's own language there (a country not in the list: Intl works it out from the
+// region, so Poland writes 2,5 and Switzerland 2.5), else the US one. Every app reads numbers through this one
+export const localeOf = p => { const c = String(p?.country || p?.lives || '').toUpperCase(); if (LOCALE[c]) return LOCALE[c]; try { return /^[A-Z]{2}$/.test(c) ? new Intl.Locale('und', { region: c }).maximize().baseName : 'en-US'; } catch { return 'en-US'; } };
+export const decimalOf = p => { try { return new Intl.NumberFormat(localeOf(p)).formatToParts(1.5).find(x => x.type === 'decimal')?.value || '.'; } catch { return '.'; } };
 export function fmtMoney(p, n, signed = false) {
     if (n === null || n === undefined || !Number.isFinite(Number(n))) return '—';
     let s;
-    try { s = new Intl.NumberFormat(LOCALE[p.country] || 'en-US', { style: 'currency', currency: p.money?.currency || 'EUR' }).format(Number(n)); } catch { s = `${Number(n).toFixed(2)} ${p.money?.currency || ''}`; }
+    try { s = new Intl.NumberFormat(localeOf(p), { style: 'currency', currency: p.money?.currency || 'EUR' }).format(Number(n)); } catch { s = `${Number(n).toFixed(2)} ${p.money?.currency || ''}`; }
     return signed && n > 0 ? `+${s}` : s;
 }
 // the same, in a currency of its own (the investment app holds several)
