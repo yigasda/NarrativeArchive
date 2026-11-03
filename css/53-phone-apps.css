@@ -166,6 +166,47 @@
 .ax_mini .d { position: absolute; left: 8px; right: 8px; bottom: 12px; height: 28px; border-radius: 12px; background: rgba(255, 255, 255, 0.3); box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.9); }
 .ax_radio { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid #c7ccd3; display: grid; place-items: center; box-sizing: border-box; }
 .ax_radio.on { border: 0; background: var(--axd); }
+/* 설정 › 스크린타임 (sc_): 일평균 · 7일 쌓은 막대 · 종류 셋 · 새벽 · 집어든 횟수 · 많이 쓴 앱 */
+.sc_head { padding: 16px 16px 0; }
+.sc_top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+.sc_lbl { font-size: 12px; color: #7b818c; }
+.sc_big { font-family: 'Inter Tight', 'Inter', sans-serif; font-size: 36px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; margin-top: 3px; }
+.sc_big u, .sc_pkn u { text-decoration: none; font-family: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; font-size: 21px; margin: 0 5px 0 2px; letter-spacing: 0; }
+.sc_big u:last-child { margin-right: 0; }
+.sc_pr { text-align: right; margin-top: 2px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.sc_pill { display: inline-block; padding: 3px 8px 3px 7px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #fde8e2; color: #c85a3e; }
+.sc_pill.dn { background: #e3f0e6; color: #3f7d50; }
+.sc_pill.g { background: #eef0f3; color: #5c626c; }
+.sc_pl { font-size: 11px; color: #7b818c; }
+.sc_chart { position: relative; }
+.sc_chart svg { display: block; overflow: visible; }
+.sc_axl { font-size: 10px; fill: #a3a8b0; font-family: 'Inter', sans-serif; }
+.sc_avg { fill: #3a6fd0; font-weight: 600; font-family: -apple-system, 'Noto Sans KR', sans-serif; }
+.sc_xl { font-size: 11px; font-weight: 500; fill: #8a909a; font-family: 'Inter', 'Noto Sans KR', sans-serif; }
+.sc_xl.td { fill: #161b22; font-weight: 650; }
+.sc_xl.on { fill: #fff; font-weight: 650; }
+.ax .sc_hit { position: absolute; top: 0; bottom: 0; padding: 0; border: 0; cursor: pointer; }
+.sc_lgd { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 12px 0; margin-top: 12px; border-top: 1px solid #eef0f3; }
+.sc_lgd span { font-size: 11.5px; font-weight: 600; }
+.sc_lgd b { display: block; font-size: 13px; font-weight: 500; margin-top: 2px; }
+.sc_note { display: flex; gap: 8px; align-items: center; margin: 0 -16px; padding: 11px 16px 13px; border-top: 1px solid #eef0f3; font-size: 12.5px; color: #4d535d; }
+.sc_note b { color: #161b22; font-weight: 600; }
+.sc_pick { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+.sc_pki { width: 40px; height: 40px; border-radius: 12px; background: #e2eaf6; display: grid; place-items: center; flex: none; }
+.sc_pkt { flex: 1; min-width: 0; }
+.sc_pkt b { display: block; font-size: 15px; font-weight: 600; margin-top: 2px; }
+.sc_pkn { text-align: right; }
+.sc_pkn > div { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+.sc_pkn u { font-size: 13px; margin: 0 0 0 1px; }
+.sc_lvl { display: flex; gap: 3px; justify-content: flex-end; margin-top: 4px; }
+.sc_lvl i { width: 12px; height: 4px; border-radius: 2px; background: #e3e6ea; }
+.sc_lvl i.on { background: #3a6fd0; }
+.sc_ic { border-radius: 9px; flex: none; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08); }
+.sc_apps .sc_rw + .sc_rw::before { left: 62px; }
+.sc_bar { display: block; height: 5px; border-radius: 5px; margin-top: 7px; background: #f0f1f4; overflow: hidden; }
+.sc_bar i { display: block; height: 100%; border-radius: 5px; background: #c9ced6; }
+.sc_m { font-size: 14px; color: #4d535d; flex: none; margin-left: 6px; }
+.sc_empty { padding: 18px; font-size: 14px; color: #6b7380; }
 /* 카메라 */
 .ax_cam .ax_canvas { background: #0b0c0e; color: #fff; }
 .ax_camtop { height: 46px; flex: none; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; }

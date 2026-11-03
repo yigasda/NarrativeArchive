@@ -256,6 +256,7 @@
   - 상품 그림은 `phoneprod.js` 실루엣이에요. 로고 · 탭은 테마 방지가 돼 있어요.
   - 맨 위 종 · 장바구니 아이콘은 아직 **눌러도 아무것도 안 돼요**(남은 일).
 - **배달:** 배달의민족(한국 거주) / Uber Eats(그 외) 두 모양이에요. 한국어 알약은 `dvKp`예요. 음식은 전부 `phonefood.js` 그림이에요.
+- **스크린타임**(설정 › 스크린타임, `src/phonestime.js`, 경로 `stime[:MM-DD]`): 일평균 · 7일 쌓은 막대(종류마다 맑은 색 하나, 평균 점선, 오늘은 빗금) · 종류 셋 · 새벽 한 줄 · 집어든 횟수 카드(문장 + 4칸 눈금) · 많이 쓴 앱. 막대를 누르면 그 자리에서 그날로 바뀌어요. 앱 아이콘은 `src/phoneicons.js`(지금 아이콘을 닮게, 똑같지 않게. 키는 `phonescreen.js`의 CATALOG id), 표에 없는 앱은 종류별 타일(색은 이름으로). 시안 `docs/mockups/phone-screentime`.
 - **홈 2쪽:** 아이콘 색은 `CG_GEL`이고, 맨 위 위젯은 지금 있는 곳의 날씨예요(`hereWidget`). 날씨를 안 채웠으면 하늘 그림 없는 유리 카드(`.cg_wxe`, 시안 A)에 회색 구름 · "아직 날씨가 없어요" · "눌러서 채우기"가 뜨고, 누르면 날씨 앱의 채우기로 가요. 하늘을 그려 두면 채운 것처럼 보여서 뺐어요. 예전 지갑 위젯은 지웠어요.
 
 ---
@@ -356,9 +357,10 @@ SillyTavern 테마는 `.menu_button`, `input`, `select`, `textarea`, `small`, �
 2. 확장을 넣어요(바꿀 때마다 다시 복사).
    ```bash
    mkdir -p ~/sillytavern/data/default-user/extensions/NarrativeArchive
-   cp -r manifest.json index.js src style.css assets ~/sillytavern/data/default-user/extensions/NarrativeArchive/
+   cp -r manifest.json index.js src style.css css assets ~/sillytavern/data/default-user/extensions/NarrativeArchive/
    ```
-   `src`랑 `style.css`만 바뀌었으면 그 둘만 복사해요. 브라우저를 새로 열면 반영돼요.
+   `style.css`는 `css/` 파일들을 `@import`로 불러요. `css`를 빼먹으면 스타일이 하나도 안 먹어요(콘솔에 `Refused to apply style … MIME type ('text/plain')`).
+   `src` · `style.css` · `css`만 바뀌었으면 그 셋만 복사해요. 브라우저를 새로 열면 반영돼요.
 3. 테스트 채팅을 넣어요. 기본 캐릭터 Seraphina가 0번이어야 해요.
    ```bash
    mkdir -p ~/sillytavern/data/default-user/chats/default_Seraphina
