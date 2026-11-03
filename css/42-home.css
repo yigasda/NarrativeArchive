@@ -26,7 +26,7 @@ body.na_darkui #na_settings {
 #na_settings #na_meter .na_meter_state b.off { color: var(--hm-dim); }
 #na_settings #na_meter .na_hchip { height: 30px; padding: 0 11px; gap: 4px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; font-size: 0.86em !important; font-weight: 600; --c-bg: var(--hm-ok-soft); --c-fg: var(--hm-ok); }
 #na_settings #na_meter .na_hchip > span { font-size: 1em !important; }
-#na_settings #na_meter .na_hchip.na_health_warn { --c-bg: var(--hm-warn-soft); --c-fg: var(--hm-warn); }
+#na_settings #na_meter .na_hchip.na_health_warn { --c-bg: var(--hm-warn-soft); --c-fg: var(--na-warn); }
 #na_settings #na_meter #na_gear { width: 30px; height: 30px; opacity: 1; --c-fg: var(--hm-dim); }
 #na_settings #na_meter .na_meter_bar { display: none; }
 #na_settings #na_meter .na_meter_stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -105,7 +105,7 @@ body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-content { ba
 body.na_darkui #na_settings > .inline-drawer > .inline-drawer-content { background: #17171A !important; }
 body:not(.na_darkui) dialog.popup:has(#na_settings) { background: #F0E4DB !important; color: #463428 !important; }
 body.na_darkui dialog.popup:has(#na_settings) { background: #17171A !important; color: #ECEAE6 !important; }
-#na_settings .na_tab_pane[data-pane="config"] .na_cfg_val :is(select, input) { --c-fg: var(--hm-mute) !important; }
+#na_settings .na_tab_pane[data-pane="config"] .na_cfg_val :is(select, input) { --c-fg: var(--hm-mute); }
 #na_settings .na_tab_pane[data-pane="config"] .na_cfg_val select option { color: #463428; background: #F7EEE7; }
 #na_settings .na_cfg_head b { color: var(--hm-ink) !important; }
 
@@ -146,24 +146,24 @@ body.na_darkui .na_launch_tabs { background: #232328; }
     margin: 0 !important;
     padding: 8px 0 !important;
     border: 0 !important;
-    --c-bw: 0 !important;
-    --c-bs: none !important;
-    --c-bc: currentcolor !important;
-    --c-bwt: 0 !important;
-    --c-bst: none !important;
-    --c-bct: currentcolor !important;
+    --c-bw: 0;
+    --c-bs: none;
+    --c-bc: currentcolor;
+    --c-bwt: 0;
+    --c-bst: none;
+    --c-bct: currentcolor;
     border-radius: 0 !important;
-    --c-r: 0 !important;
+    --c-r: 0;
     outline: none !important;
     background: transparent !important;
-    --c-bg: transparent !important;
+    --c-bg: transparent;
     background-color: transparent !important;
-    --c-bg: transparent !important;
+    --c-bg: transparent;
     background-image: none !important;
     box-shadow: none !important;
-    --c-sh: none !important;
+    --c-sh: none;
     color: inherit !important;
-    --c-fg: inherit !important;
+    --c-fg: inherit;
     font: inherit;
     font-size: 14px !important;
     line-height: 1.5 !important;
@@ -246,27 +246,27 @@ body.na_darkui .na_launch_tabs { background: #232328; }
     margin: 0 !important;
     padding: 0 !important;
     border: 0 !important;
-    --c-bw: 0 !important;
-    --c-bs: none !important;
-    --c-bc: currentcolor !important;
-    --c-bwt: 0 !important;
-    --c-bst: none !important;
-    --c-bct: currentcolor !important;
+    --c-bw: 0;
+    --c-bs: none;
+    --c-bc: currentcolor;
+    --c-bwt: 0;
+    --c-bst: none;
+    --c-bct: currentcolor;
     border-radius: 0 !important;
-    --c-r: 0 !important;
+    --c-r: 0;
     outline: none !important;
     background: transparent !important;
-    --c-bg: transparent !important;
+    --c-bg: transparent;
     background-image: none !important;
     box-shadow: none !important;
-    --c-sh: none !important;
+    --c-sh: none;
     color: inherit !important;
-    --c-fg: inherit !important;
+    --c-fg: inherit;
     font: inherit;
     font-size: 14px !important;
 }
 .na_popup .na_ly_ask input.na_ly_askq::placeholder { color: var(--na-dim) !important; opacity: 1 !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ly_ask input.na_ly_askq:is(*, :hover, :focus, :focus-visible):not(#na_x) { background: transparent !important; --c-bg: transparent !important; border: 0 !important; --c-bw: 0 !important; --c-bs: none !important; --c-bc: currentcolor !important; --c-bwt: 0 !important; --c-bst: none !important; --c-bct: currentcolor !important; border-radius: 0 !important; --c-r: 0 !important; box-shadow: none !important; --c-sh: none !important; outline: none !important; } /* the pill is the only box (3.169.69) */
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ly_ask input.na_ly_askq:is(*, :hover, :focus, :focus-visible):not(#na_x) { background: transparent !important; --c-bg: transparent; border: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 0 !important; --c-r: 0; box-shadow: none !important; --c-sh: none; outline: none !important; } /* the pill is the only box (3.169.69) */
 .na_ly_askgo { flex: none; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 13px; --c-bg: var(--na-accent); --c-fg: var(--na-onaccent, #fff); cursor: pointer; }
 .na_ly_askgo:disabled { opacity: 0.7; cursor: wait; }
 
@@ -319,8 +319,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 .na_mg_pickhead small { flex: 1; }
 .na_mg_list { display: flex; flex-direction: column; max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; }
 .na_mg_row { display: flex; align-items: flex-start; gap: 10px; margin: 0; cursor: pointer; }
-.na_mg_row + .na_mg_row { --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); }
-.na_mg_row.on { background: var(--na-soft); --c-bg: var(--na-soft); }
 .na_mg_row > input { margin-top: 3px; flex: none; }
 .na_mg_row .na_rt_txt > span { line-height: 1.4; }
 .na_mg_info.warn { color: var(--na-accent-fg, var(--na-accent)); }
@@ -368,8 +366,8 @@ body.na_darkui .na_tag.dig { background: #2E2E34; color: #B9DDB0; }
 .na_apf_foot small { color: var(--na-dim); }
 
 /* 여러 섹션 고르기 */
-.na_sel_toggle.na_sel_active { --c-fg: var(--na-accent-fg, var(--na-accent)) !important; --c-bg: var(--na-accent-soft, var(--na-soft)) !important; }
-#na_settings .na_seg .na_br_view button.na_sel_toggle.na_sel_active { --c-fg: var(--na-accent-fg, var(--na-accent)) !important; --c-bg: var(--na-accent-soft, var(--na-soft)) !important; }
+.na_sel_toggle.na_sel_active { --c-fg: var(--na-accent-fg, var(--na-accent)); --c-bg: var(--na-accent-soft, var(--na-soft)); }
+#na_settings .na_seg .na_br_view button.na_sel_toggle.na_sel_active { --c-fg: var(--na-accent-fg, var(--na-accent)); --c-bg: var(--na-accent-soft, var(--na-soft)); }
 .na_sel_cb { flex: none; width: 18px; height: 18px; margin: 0 10px 0 0 !important; pointer-events: none; accent-color: var(--na-accent); }
 .na_selecting .na_card_head, .na_selecting .na_group_head { cursor: pointer; }
 .na_selecting .na_card.na_sel_on { box-shadow: inset 3px 0 0 var(--na-accent); background: var(--na-accent-soft, var(--na-soft)); }
@@ -436,7 +434,7 @@ body.na_darkui .na_tag.dig { background: #2E2E34; color: #B9DDB0; }
 .na_trk_btns { display: flex; gap: 10px; align-items: baseline; margin-top: 4px; }
 .na_wn { gap: 10px; }
 .na_wn_ta { width: 100%; box-sizing: border-box; min-height: 24vh; font-size: 13px; line-height: 1.6; resize: vertical; }
-.na_wn .na_wn_ta, .na_wn .na_wn_ta:is(:focus, :hover) { --c-bg: var(--na-paper) !important; --c-bw: 1px !important; --c-bs: solid !important; --c-bc: var(--na-line) !important; --c-bwt: 1px !important; --c-bst: solid !important; --c-bct: var(--na-line) !important; --c-r: 12px !important; --c-sh: none !important; --c-fg: var(--na-ink) !important; padding: 10px 12px; }
+.na_wn .na_wn_ta, .na_wn .na_wn_ta:is(:focus, :hover) { --c-bg: var(--na-paper); --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-r: 12px; --c-sh: none; --c-fg: var(--na-ink); padding: 10px 12px; }
 .na_wn .na_wn_ta::placeholder { color: var(--na-dim) !important; opacity: 1; }
 .na_wn_seg button { flex: 1; min-width: 0; flex-direction: row; justify-content: center; gap: 4px; padding: 6px 4px; }
 .na_wn_seg button small { font-size: 0.78em; opacity: 0.7; font-variant-numeric: tabular-nums; }

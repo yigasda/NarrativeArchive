@@ -16,7 +16,7 @@ dialog.popup.na_phl::backdrop { background: transparent; }
 .na_phl_btn { flex: none; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.14); color: #fff; cursor: pointer; }
 .na_phl_btn.on { background: #fff; --c-bg: #fff; color: #16130f; --c-fg: #16130f; }
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_btn { background: rgba(255, 255, 255, 0.14) !important; color: #fff !important; border: 0 !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_btn.on { background: #fff !important; --c-bg: #fff !important; color: #16130f !important; --c-fg: #16130f !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_btn.on { background: #fff !important; --c-bg: #fff; color: #16130f !important; --c-fg: #16130f; }
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_top .na_ph_pick.on { background: rgba(255, 255, 255, 0.14) !important; }
 /* the phone as tall as the screen allows */
 .na_phl .na_ph_wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0 10px; }

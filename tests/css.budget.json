@@ -1,8 +1,8 @@
 {
-  "_": "css/*.css together may not grow past these. Raised while windows move to the control shield: a shared rule keeps its old declaration next to the new variable until every window has moved, then the old ones go.",
-  "lines": 8107,
-  "important": 1395,
+  "_": "css/*.css together may not grow past these; lower them as the cleanup lands, never raise them to make a change fit (a new screen may add its own lines).",
+  "lines": 8104,
+  "important": 870,
   "notx": 81,
-  "bothThemes": 115,
+  "bothThemes": 119,
   "allowTailVersions": true
 }

@@ -215,15 +215,15 @@
     width: auto !important;
     margin: 0 !important;
     padding: 7px 0 !important;
-    --c-bw: 0 !important;
-    --c-bs: none !important;
-    --c-bc: currentcolor !important;
-    --c-bwt: 0 !important;
-    --c-bst: none !important;
-    --c-bct: currentcolor !important;
+    --c-bw: 0;
+    --c-bs: none;
+    --c-bc: currentcolor;
+    --c-bwt: 0;
+    --c-bst: none;
+    --c-bct: currentcolor;
     outline: 0 !important;
-    --c-sh: none !important;
-    --c-bg: transparent !important;
+    --c-sh: none;
+    --c-bg: transparent;
 }
 .na_find_info { font-size: 0.78em; opacity: 0.7; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .na_find_info.na_find_none { color: var(--na-warn); opacity: 1; }
@@ -275,7 +275,7 @@
     font-size: 0.84em;
     line-height: 1.6;
     resize: vertical;
-    --c-r: 10px !important;
+    --c-r: 10px;
     padding: 10px 12px !important;
 }
 
@@ -487,15 +487,15 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
     width: auto !important;
     margin: 0 !important;
     padding: 8px 0 !important;
-    --c-bw: 0 !important;
-    --c-bs: none !important;
-    --c-bc: currentcolor !important;
-    --c-bwt: 0 !important;
-    --c-bst: none !important;
-    --c-bct: currentcolor !important;
+    --c-bw: 0;
+    --c-bs: none;
+    --c-bc: currentcolor;
+    --c-bwt: 0;
+    --c-bst: none;
+    --c-bct: currentcolor;
     outline: 0 !important;
-    --c-sh: none !important;
-    --c-bg: transparent !important;
+    --c-sh: none;
+    --c-bg: transparent;
 }
 .na_search_info { font-size: 0.8em; padding-left: 4px; opacity: 0.7; }
 .na_list { display: flex; flex-direction: column; gap: 6px; }
@@ -851,7 +851,7 @@ body.na_darkui .na_diff_del > span:first-child { color: #F2948A; }
 .na_editor_marks mark { color: transparent; background: color-mix(in srgb, #f2c94c 55%, transparent); border-radius: 2px; }
 .na_editor_marks mark.na_cur { background: color-mix(in srgb, var(--na-accent) 65%, transparent); }
 .na_editor_wrap .na_editor { position: relative; z-index: 1; }
-.na_editor_wrap.na_marking .na_editor { --c-bg: transparent !important; }
+.na_editor_wrap.na_marking .na_editor { --c-bg: transparent; }
 .na_editor_wrap.na_marking { background: var(--na-softer); border-radius: 10px; }
 
 /* ---------- find & replace (sections tab) */
@@ -1070,7 +1070,7 @@ body.na_darkui :is(.na_diff_del, .na_diff_tr_del) .na_diff_hl { background: rgba
 .na_gl_info { font-size: 0.78em; }
 
 /* ---------- health check, token report */
-.na_health_warn { color: var(--na-warn) !important; --c-fg: var(--na-warn) !important; opacity: 1 !important; }
+.na_health_warn { color: var(--na-warn) !important; --c-fg: var(--na-warn); opacity: 1 !important; }
 .na_health_fix { flex-shrink: 0; }
 
 /* ---------- branches, linked logs */
@@ -1231,11 +1231,11 @@ body.na_darkui :is(.na_diff_del, .na_diff_tr_del) .na_diff_hl { background: rgba
 .na_sp_head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin: 4px 4px 0; }
 .na_sp_head b { font-size: 12.5px; font-weight: 700; color: var(--na-dim); }
 .na_sp_quick { display: flex; gap: 4px; flex-wrap: wrap; }
-body:is(.na_darkui, :not(.na_darkui)) .na_sp_quick .na_pchip { height: 28px; padding: 0 11px; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 999px; --c-r: 999px; font-size: 12px; font-weight: 600; background: var(--na-card2) !important; --c-bg: var(--na-card2) !important; color: var(--na-mute) !important; --c-fg: var(--na-mute) !important; }
+body:is(.na_darkui, :not(.na_darkui)) .na_sp_quick .na_pchip { height: 28px; padding: 0 11px; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 999px; --c-r: 999px; font-size: 12px; font-weight: 600; background: var(--na-card2) !important; --c-bg: var(--na-card2); color: var(--na-mute) !important; --c-fg: var(--na-mute); }
 body:is(.na_darkui, :not(.na_darkui)) .na_sp_quick .na_pchip:hover { background: var(--na-fill); --c-bg: var(--na-fill); color: var(--na-onfill); --c-fg: var(--na-onfill); }
-body:not(.na_darkui) .na_sp_quick .na_pchip.na_pchip { background: #E6D6CA !important; --c-bg: #E6D6CA !important; }
-body.na_darkui .na_sp_quick .na_pchip.na_pchip { background: #2E2E34 !important; --c-bg: #2E2E34 !important; }
-body:is(.na_darkui, :not(.na_darkui)) .na_sp_quick .na_pchip.na_pchip.on { background: var(--na-fill) !important; --c-bg: var(--na-fill) !important; color: var(--na-onfill) !important; --c-fg: var(--na-onfill) !important; }
+body:not(.na_darkui) .na_sp_quick .na_pchip.na_pchip { background: #E6D6CA !important; --c-bg: #E6D6CA; }
+body.na_darkui .na_sp_quick .na_pchip.na_pchip { background: #2E2E34 !important; --c-bg: #2E2E34; }
+body:is(.na_darkui, :not(.na_darkui)) .na_sp_quick .na_pchip.na_pchip.on { background: var(--na-fill) !important; --c-bg: var(--na-fill); color: var(--na-onfill) !important; --c-fg: var(--na-onfill); }
 .na_sp_secs { display: flex; flex-direction: column; max-height: 46vh; overflow-y: auto; overscroll-behavior: contain; border-radius: 18px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
 .na_sp_sg { display: flex; flex-direction: column; }
@@ -1264,8 +1264,8 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_sp_go { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 42px; padding: 0 18px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; --c-bg: var(--na-accent); --c-fg: var(--na-onaccent, #fff); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; --c-sh: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
 .na_sp_go:disabled { opacity: 0.5; cursor: default; }
 .na_sp > .checkbox_label { display: flex !important; align-items: center; gap: 8px; margin: 0 4px; font-size: 12.5px; --c-fg: var(--na-mute); cursor: pointer; }
-.na_sp > .checkbox_label input { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; margin: 0; flex: none; --c-r: 6px; --c-bw: 2px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 2px; --c-bst: solid; --c-bct: var(--na-line); --c-bg: transparent !important; --c-sh: none !important; cursor: pointer; }
-.na_sp > .checkbox_label input:checked { --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: var(--na-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center no-repeat !important; }
+.na_sp > .checkbox_label input { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; margin: 0; flex: none; --c-r: 6px; --c-bw: 2px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 2px; --c-bst: solid; --c-bct: var(--na-line); --c-bg: transparent; --c-sh: none; cursor: pointer; }
+.na_sp > .checkbox_label input:checked { --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: var(--na-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center no-repeat; }
 /* 누가 아는가: while picking, the picker takes the welcome card's place */
 .na_kn2.na_kn3_new.na_kn3_picking .na_kn_list { display: none; }
 .na_kn2.na_kn3_new .na_kn_pickhost { margin-top: 4px; }

@@ -470,7 +470,7 @@
 .na_wz2_range label { flex: 1; display: flex; flex-direction: column; }
 .na_wz2_range label small { color: var(--na-dim); }
 .na_wz2_range label > span { display: flex; align-items: center; gap: 4px; border: 1px solid var(--na-line); background: var(--na-card); font-weight: 600; }
-.na_wz2_range input { flex: 1; min-width: 0; margin: 0; --c-bw: 0 !important; --c-bs: none !important; --c-bc: currentcolor !important; --c-bwt: 0 !important; --c-bst: none !important; --c-bct: currentcolor !important; --c-bg: transparent !important; font: inherit; font-weight: 600; --c-fg: var(--SmartThemeBodyColor, inherit); padding: 4px 0; }
+.na_wz2_range input { flex: 1; min-width: 0; margin: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; font: inherit; font-weight: 600; --c-fg: var(--SmartThemeBodyColor, inherit); padding: 4px 0; }
 .na_wz2_pane select { width: 100%; margin: 0; }
 .na_wz2_pane textarea.na_wz_out { width: 100%; box-sizing: border-box; margin: 0; --c-ff: var(--monoFontFamily, ui-monospace, monospace); resize: vertical; }
 .na_wz2_chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -530,7 +530,7 @@
 .na_tab_pane[data-pane="config"] .na_fold_desc { padding: 8px 0 4px; color: var(--na-dim); font-size: 0.78em; }
 .na_tab_pane[data-pane="config"] .na_set_row { min-height: 48px; padding: 6px 0; font-size: 0.9em; }
 .na_tab_pane[data-pane="config"] .na_set_row > span small { color: var(--na-dim); opacity: 1; font-size: 0.8em; line-height: 1.35; }
-.na_tab_pane[data-pane="config"] .na_set_row input[type="number"], .na_tab_pane[data-pane="config"] .na_set_row select, .na_tab_pane[data-pane="config"] .na_set_row input[type="text"] { --c-r: 10px !important; --c-bw: 1px !important; --c-bs: solid !important; --c-bc: var(--na-line) !important; --c-bwt: 1px !important; --c-bst: solid !important; --c-bct: var(--na-line) !important; --c-bg: var(--na-card2) !important; min-height: 32px; padding: 4px 10px; font-size: 0.95em; }
+.na_tab_pane[data-pane="config"] .na_set_row input[type="number"], .na_tab_pane[data-pane="config"] .na_set_row select, .na_tab_pane[data-pane="config"] .na_set_row input[type="text"] { --c-r: 10px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-bg: var(--na-card2); min-height: 32px; padding: 4px 10px; font-size: 0.95em; }
 .na_tab_pane[data-pane="config"] .na_set_row select { max-width: 52%; }
 .na_tab_pane[data-pane="config"] .na_set_row .na_btn { --c-r: 10px; }
 
@@ -587,7 +587,7 @@
 .na_dr2_out:empty { display: none; }
 .na_dr2_item { display: flex; flex-direction: column; gap: 8px; border-radius: 18px; }
 .na_dr2_head { display: flex; align-items: center; gap: 8px; }
-.na_dr2_msg { --c-bg: var(--SmartThemeBodyColor, #222) !important; --c-fg: var(--SmartThemeBlurTintColor, #fff) !important; --c-r: 8px !important; font-weight: 600; padding: 1px 9px !important; }
+.na_dr2_msg { --c-bg: var(--SmartThemeBodyColor, #222); --c-fg: var(--SmartThemeBlurTintColor, #fff); --c-r: 8px; font-weight: 600; padding: 1px 9px !important; }
 .na_dr2_ev { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 12px; }
 .na_dr2_ev > i { color: var(--na-dim); margin-top: 3px; }
 
@@ -618,7 +618,7 @@
 @keyframes na_blink { 50% { opacity: 1; } }
 .na_ask2_sugg button { font-size: 0.82em; }
 .na_ask2_input { display: flex; align-items: flex-end; gap: 8px; padding: 6px 6px 6px 12px; border-radius: 20px; background: var(--na-card); border: 1px solid var(--na-line); }
-.na_ask2_input textarea { flex: 1; min-width: 0; margin: 0; --c-bw: 0 !important; --c-bs: none !important; --c-bc: currentcolor !important; --c-bwt: 0 !important; --c-bst: none !important; --c-bct: currentcolor !important; --c-bg: transparent !important; resize: none; min-height: 36px; max-height: 30vh; field-sizing: content; padding: 7px 0; --c-sh: none !important; }
+.na_ask2_input textarea { flex: 1; min-width: 0; margin: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; resize: none; min-height: 36px; max-height: 30vh; field-sizing: content; padding: 7px 0; --c-sh: none; }
 .na_ask2 .na_ask_go { flex: none; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 14px; --c-bg: var(--na-accent); --c-fg: var(--na-onaccent, #fff); display: grid; place-items: center; cursor: pointer; padding: 0; }
 
 /* ============ injection preview v2 */
@@ -681,7 +681,7 @@
 .na_uh2_range label { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; margin: 0; }
 .na_uh2_range label > span { display: flex; align-items: center; gap: 2px; border: 1px solid var(--na-line); border-radius: 12px; padding: 0 0 0 12px; background: var(--na-card); }
 .na_uh2_range label > span i { font-style: normal; color: var(--na-dim); font-weight: 600; }
-.na_uh2_range input { flex: 1; min-width: 0; margin: 0; --c-bw: 0 !important; --c-bs: none !important; --c-bc: currentcolor !important; --c-bwt: 0 !important; --c-bst: none !important; --c-bct: currentcolor !important; --c-bg: transparent !important; --c-sh: none !important; }
+body:is(.na_darkui, :not(.na_darkui)) .na_v2 .na_uh2_range input { flex: 1; min-width: 0; margin: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-sh: none; }
 .na_uh2_warn { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 14px; font-size: 0.88em; line-height: 1.45; background: color-mix(in srgb, #d49a1f 18%, transparent); color: color-mix(in srgb, #8a5a00 75%, var(--SmartThemeBodyColor, #222)); }
 .na_uh2_warn i { margin-top: 3px; }
 .na_uh2 .na_uh2_go { padding: 13px 0; --c-r: 16px; }
@@ -714,7 +714,7 @@
 .na_kw2 .na_kw_concept small { color: var(--na-dim); }
 .na_kw2_test summary small { color: var(--na-dim); font-weight: 400; margin-left: 4px; }
 .na_kw2_test .na_kw_testbox { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; }
-.na_kw2_unlink { --c-fg: var(--na-bad) !important; }
+.na_kw2_unlink { --c-fg: var(--na-bad); }
 .na_kw2 .na_kw_title { white-space: normal; overflow: visible; }
 .na_kw2 .na_pchip_broad, .na_kw2 .na_pchip_broad small { text-decoration: none; }
 

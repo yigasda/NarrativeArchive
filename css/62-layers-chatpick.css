@@ -33,9 +33,9 @@ body.na_darkui .na_ly3_body { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04
 /* 직접 고치기 · 한국어로: a fill one tone off the card so they read as buttons; the one that is on gets the accent edge */
 .na_ly3 .na_ly_tools .na_v2_pillbtn { gap: 5px; }
 /* the pills paint over the shared pill sweep (it carries an id), so these carry two */
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup.na_ly3 .na_ly_tools .na_v2_pillbtn:not(#na_x):not(#na_y) { --c-bg: #EFE4DB !important; --c-fg: var(--na-ink); --c-r: 999px; --c-sh: none !important; --c-bw: 0 !important; --c-bs: none !important; --c-bc: currentcolor !important; --c-bwt: 0 !important; --c-bst: none !important; --c-bct: currentcolor !important; }
-body.na_darkui dialog.popup .na_popup.na_ly3 .na_ly_tools .na_v2_pillbtn:not(.on):not(#na_x):not(#na_y) { --c-bg: #3A3A41 !important; --c-bc: currentcolor !important; --c-bct: currentcolor !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup.na_ly3 .na_ly_tools .na_v2_pillbtn.on:not(#na_x):not(#na_y) { --c-bg: var(--na-accent-soft) !important; --c-fg: var(--na-accent-ink, var(--na-accent)); --c-bw: 1px !important; --c-bs: solid !important; --c-bc: var(--na-accent) !important; --c-bwt: 1px !important; --c-bst: solid !important; --c-bct: var(--na-accent) !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup.na_ly3 .na_ly_tools .na_v2_pillbtn:not(#na_x):not(#na_y) { --c-bg: #EFE4DB; --c-fg: var(--na-ink); --c-r: 999px; --c-sh: none; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; }
+body.na_darkui dialog.popup .na_popup.na_ly3 .na_ly_tools .na_v2_pillbtn:not(.on):not(#na_x):not(#na_y) { --c-bg: #3A3A41; --c-bc: currentcolor; --c-bct: currentcolor; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup.na_ly3 .na_ly_tools .na_v2_pillbtn.on:not(#na_x):not(#na_y) { --c-bg: var(--na-accent-soft); --c-fg: var(--na-accent-ink, var(--na-accent)); --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-accent); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-accent); }
 .na_ly_tools .na_v2_pillbtn:disabled { opacity: 0.45; cursor: not-allowed; }
 .na_ly3 .na_ly_tools .na_ly_trinfo { flex: 1; min-width: 0; margin-left: auto; font-size: 11.5px; color: var(--na-dim); }
 .na_ly_full { display: block; width: 100%; box-sizing: border-box; margin: 0; padding: 10px 12px; border: 1px solid var(--na-line); border-radius: 12px; font-size: 0.929em; line-height: 1.55; min-height: 96px; }
@@ -110,7 +110,7 @@ body:not(.na_darkui) .na_fp3_menu button.on { background: #FFFFFF; --c-bg: #FFFF
 body.na_darkui .na_fp3_menu button.on { background: #414148; --c-bg: #414148; color: #F0CF8E; --c-fg: #F0CF8E; }
 .na_fp3_more { display: flex; margin-top: 10px; }
 .na_fp3_more:has(.na_fp_make[hidden]) { display: none; }
-.na_fp3_tool { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; --c-bg: var(--na-card2) !important; --c-fg: var(--na-ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.na_fp3_tool { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; --c-bg: var(--na-card2); --c-fg: var(--na-ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
 /* 섹션별 버전 › 여러 개 바꾸기: rows get a tick, a sheet at the bottom sets the picked ones at once */
 .na_fp3_fl { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; }
 .na_fp3 .na_fp3_fl .na_fp_filters { margin-top: 0; flex-wrap: nowrap; min-width: 0; }

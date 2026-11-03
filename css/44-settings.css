@@ -52,9 +52,9 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one { background: var(--sv-page); border-radius: 18px; padding: 18px 16px; gap: 14px; color: var(--sv-ink); }
 #na_settings .na_cfg_one .na_cfg_search { display: none; }
 #na_settings .na_cfg_one .na_cfg_head { gap: 8px; }
-#na_settings .na_cfg_one .na_cfg_back { width: auto; height: auto; padding: 0 2px; --c-bw: 0 !important; --c-bs: none !important; --c-bc: currentcolor !important; --c-bwt: 0 !important; --c-bst: none !important; --c-bct: currentcolor !important; --c-bg: transparent !important; --c-fg: var(--sv-acc); }
+#na_settings .na_cfg_one .na_cfg_back { width: auto; height: auto; padding: 0 2px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: var(--sv-acc); }
 #na_settings .na_cfg_one .na_cfg_head b { font-size: 1.43em; color: var(--sv-ink) !important; }
-#na_settings .na_cfg_one .na_cfg_pill { --c-bg: transparent !important; --c-bw: 1px !important; --c-bs: solid !important; --c-bc: var(--sv-line) !important; --c-bwt: 1px !important; --c-bst: solid !important; --c-bct: var(--sv-line) !important; --c-fg: var(--sv-dim); font-size: 0.857em; padding: 6px 12px; }
+#na_settings .na_cfg_one .na_cfg_pill { --c-bg: transparent; --c-bw: 1px; --c-bs: solid; --c-bc: var(--sv-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--sv-line); --c-fg: var(--sv-dim); font-size: 0.857em; padding: 6px 12px; }
 /* tiles: on = cream, off = white with a line */
 #na_settings .na_cfg_one .na_cfg_tile { --c-bg: var(--sv-card); --c-bw: 1px; --c-bs: solid; --c-bc: var(--sv-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--sv-line); --c-r: 18px; padding: 14px; gap: 4px; }
 #na_settings .na_cfg_one .na_cfg_tile.on { --c-bg: var(--sv-tile); --c-bc: transparent; --c-bct: transparent; }
@@ -63,14 +63,14 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
 #na_settings .na_cfg_one .na_cfg_tile:not(.on) b { color: var(--sv-dim); }
 #na_settings .na_cfg_one .na_cfg_tabs { background: var(--sv-seg); margin-top: 4px; }
 #na_settings .na_cfg_one .na_cfg_tabbtn { --c-fg: var(--sv-dim); font-size: 1em; }
-#na_settings .na_cfg_one .na_cfg_tabbtn.on { --c-bg: var(--sv-segon) !important; --c-fg: var(--sv-ink); --c-sh: 0 1px 3px rgba(70, 52, 40, 0.12); }
+#na_settings .na_cfg_one .na_cfg_tabbtn.on { --c-bg: var(--sv-segon); --c-fg: var(--sv-ink); --c-sh: 0 1px 3px rgba(70, 52, 40, 0.12); }
 /* list cards */
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box { background: var(--sv-card) !important; border: 1px solid var(--sv-line) !important; border-radius: 16px; }
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row { padding: 15px 16px; border-top-color: var(--sv-line); --c-bct: var(--sv-line); }
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row > span:first-child { font-size: 1.071em !important; gap: 3px; }
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row > span small { font-size: 0.8em !important; color: var(--sv-dim); }
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_set_row > .na_cfg_val { color: var(--sv-val); font-size: 1em !important; }
-#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val :is(select, input) { --c-fg: var(--sv-val) !important; }
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val :is(select, input) { --c-fg: var(--sv-val); }
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_go > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_chev { color: var(--sv-val); }
 .na_cc_note { flex: 1; min-width: 0; font-size: 0.86em; color: var(--na-dim); line-height: 1.4; }
 
@@ -86,62 +86,62 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
 #na_settings .na_cc .na_cc_box .na_cc_row input.text_pole, #na_settings .na_cc .na_cc_box .na_cc_row input.text_pole:is(:hover, :focus, :read-only, :disabled, :autofill) {
     -webkit-appearance: none !important;
     appearance: none !important;
-    --c-bg: transparent !important;
-    --c-bg: transparent !important;
+    --c-bg: transparent;
+    --c-bg: transparent;
     background-image: none !important;
-    --c-bw: 0 !important;
-    --c-bs: none !important;
-    --c-bc: currentcolor !important;
-    --c-bwt: 0 !important;
-    --c-bst: none !important;
-    --c-bct: currentcolor !important;
+    --c-bw: 0;
+    --c-bs: none;
+    --c-bc: currentcolor;
+    --c-bwt: 0;
+    --c-bst: none;
+    --c-bct: currentcolor;
     outline: none !important;
-    --c-sh: none !important;
-    --c-r: 0 !important;
+    --c-sh: none;
+    --c-r: 0;
     margin: 0 !important;
     padding: 0 !important;
     height: 40px !important;
     min-height: 0 !important;
-    --c-fg: inherit !important;
+    --c-fg: inherit;
 }
 #na_settings .na_cc .na_cc_box .na_cc_row input.text_pole:autofill { -webkit-text-fill-color: currentColor; transition: background-color 9999s; }
 
 /* ---- 3.82.1: the same for every field in a connection box — select boxes (형식 · 생각) and anything a theme restyles */
 #na_settings .na_cc .na_cc_box .na_cc_row :is(input, select, textarea):is(:hover, :focus, :focus-visible, :read-only, :disabled) {
     background-color: transparent !important;
-    --c-bg: transparent !important;
+    --c-bg: transparent;
     border: 0 !important;
-    --c-bw: 0 !important;
-    --c-bs: none !important;
-    --c-bc: currentcolor !important;
-    --c-bwt: 0 !important;
-    --c-bst: none !important;
-    --c-bct: currentcolor !important;
+    --c-bw: 0;
+    --c-bs: none;
+    --c-bc: currentcolor;
+    --c-bwt: 0;
+    --c-bst: none;
+    --c-bct: currentcolor;
     outline: none !important;
     box-shadow: none !important;
-    --c-sh: none !important;
+    --c-sh: none;
     border-radius: 0 !important;
-    --c-r: 0 !important;
+    --c-r: 0;
     margin: 0 !important;
     min-height: 0 !important;
     color: inherit !important;
-    --c-fg: inherit !important;
+    --c-fg: inherit;
     filter: none !important;
 }
 #na_settings .na_cc .na_cc_box .na_cc_row :is(input, select, textarea) {
-    --c-bg: transparent !important;
-    --c-bw: 0 !important;
-    --c-bs: none !important;
-    --c-bc: currentcolor !important;
-    --c-bwt: 0 !important;
-    --c-bst: none !important;
-    --c-bct: currentcolor !important;
+    --c-bg: transparent;
+    --c-bw: 0;
+    --c-bs: none;
+    --c-bc: currentcolor;
+    --c-bwt: 0;
+    --c-bst: none;
+    --c-bct: currentcolor;
     outline: none !important;
-    --c-sh: none !important;
-    --c-r: 0 !important;
+    --c-sh: none;
+    --c-r: 0;
     margin: 0 !important;
     min-height: 0 !important;
-    --c-fg: inherit !important;
+    --c-fg: inherit;
     filter: none !important;
 }
 #na_settings .na_cc .na_cc_box .na_cc_row select.na_cc_sel {
@@ -154,22 +154,22 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
 /* ---- 3.82.2: search boxes are one rounded field — the input inside sits flat, whatever a theme does to inputs */
 :is(#na_settings, .na_v2, .na_popup) .na_search_wrap input, :is(#na_settings, .na_v2, .na_popup) .na_search_wrap input:is(:hover, :focus, :focus-visible), :is(#na_settings, .na_v2, .na_popup) input:is(.na_pc_q, .na_ss_find, #na_find_q), :is(#na_settings, .na_v2, .na_popup) input:is(.na_pc_q, .na_ss_find, #na_find_q):is(:hover, :focus, :focus-visible) {
     background: transparent !important;
-    --c-bg: transparent !important;
+    --c-bg: transparent;
     background-color: transparent !important;
-    --c-bg: transparent !important;
+    --c-bg: transparent;
     background-image: none !important;
     border: 0 !important;
-    --c-bw: 0 !important;
-    --c-bs: none !important;
-    --c-bc: currentcolor !important;
-    --c-bwt: 0 !important;
-    --c-bst: none !important;
-    --c-bct: currentcolor !important;
+    --c-bw: 0;
+    --c-bs: none;
+    --c-bc: currentcolor;
+    --c-bwt: 0;
+    --c-bst: none;
+    --c-bct: currentcolor;
     outline: none !important;
     box-shadow: none !important;
-    --c-sh: none !important;
+    --c-sh: none;
     border-radius: 0 !important;
-    --c-r: 0 !important;
+    --c-r: 0;
     filter: none !important;
 }
 :is(#na_settings, .na_v2, .na_popup) .na_search_wrap input::-webkit-search-decoration { -webkit-appearance: none; }
@@ -232,7 +232,7 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 .na_cal_av_row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "dot name x" "dot sub x"; column-gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--na-line); }
 .na_cal_av_row:first-of-type { border-top: 0; }
 .na_cal_av_dot { grid-area: dot; color: var(--av); font-size: 1.1em; }
-.na_cal_av_row .na_cal_av_name { grid-area: name; margin: 0; padding: 2px 0; --c-bw: 0 !important; --c-bs: none !important; --c-bc: currentcolor !important; --c-bwt: 0 !important; --c-bst: none !important; --c-bct: currentcolor !important; --c-bg: transparent !important; font-weight: 700; min-height: 0; }
+.na_cal_av_row .na_cal_av_name { grid-area: name; margin: 0; padding: 2px 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; font-weight: 700; min-height: 0; }
 .na_cal_av_row small { grid-area: sub; color: var(--na-dim); font-size: 0.82em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .na_cal_av_x { grid-area: x; width: auto; margin: 0; padding: 4px 6px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: var(--na-dim); cursor: pointer; }
 .na_cal_av_new { display: flex; flex-wrap: wrap; gap: 6px; }
