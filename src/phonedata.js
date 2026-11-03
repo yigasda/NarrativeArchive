@@ -149,7 +149,7 @@ WHAT IS NEW
 - Each message's own replies, orders and payments belong to the event in that message, not folded into an earlier one.
 - An event in EVENTS ON THE PHONE keeps its id; add only what the phone doesn't hold yet.
 - MESSAGES READ BEFORE, NOW CHANGED were already put on the phone: give their events the ids listed there${split ? '' : '; a payment in them is that same payment, its amount corrected if it changed'}.
-${split ? '- A scene where only money moves (a taxi, paying the bill) is still an event, with "apps": ["money"].\n' : ''}- Small everyday things around an event are fine: how a text was worded, a photo of the place, a search they would make.
+${split ? '- A scene that only touches the money apps (a taxi paid, a basket filled, a share price mentioned) is still an event, with "apps": ["money"].\n' : ''}- Small everyday things around an event are fine: how a text was worded, a photo of the place, a search they would make.
 - People: only people the story has. A relationship word (girlfriend, ex, husband, boss) only if the messages or archive use it for them.
 - A diary entry holds only what these messages show and what the owner felt about it; no new secrets, no new feelings.
 
@@ -158,7 +158,7 @@ WHERE IT COMES FROM
 - "quote": a few words copied exactly as written in that message or section, not reworded.
 - "date" and "time": when it happens in that message ("MM-DD", "HH:MM" if known). A plan for later happens when it is made; its later day goes only on the calendar item.
 - "now": the moment of the newest message, never a time something is only planned for.
-${split ? '- "apps": ["money"] when the event has a payment, transfer, refund, order, ticket, booking, delivery or trade, else []. When unsure, include it.\n' : ''}${life ? `
+${split ? '- "apps": ["money"] when the event has anything for the bank, cards, orders, tickets, the delivery app (its basket too) or the brokerage (a trade, a share price the story gives, a share they start watching, a stake), else []. When unsure, include it.\n' : ''}${life ? `
 LIFE
 - An alarm the owner sets, changes or switches on or off in these messages; a timer they set; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
 - An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".

@@ -517,7 +517,9 @@ test('reflection in two steps: core keeps the life apps and marks money; money h
     assert.equal(core.split('\n')[0], 'STAGE: core');
     assert.equal(money.split('\n')[0], 'STAGE: money');
     assert.match(core, /"apps": \[\] or \["money"\]/);
-    assert.match(core, /only money moves .* is still an event/);
+    assert.match(core, /only touches the money apps .* is still an event/);
+    assert.match(core, /its basket too/);
+    assert.match(core, /a share price the story gives, a share they start watching, a stake/);
     for (const k of ['"alarms"', '"health"', '"days"', '"weather"', '"cities"', 'LIFE NOW']) assert.ok(core.includes(k), `core lacks ${k}`);
     for (const k of ['"moves"', '"deliveries"', 'MONEY NOW', 'a payment in them is that same payment']) assert.ok(!core.includes(k), `core holds ${k}`);
     for (const k of ['"moves"', '"deliveries"', '"newShop"', '"stakes"']) assert.ok(money.includes(k), `money lacks ${k}`);
