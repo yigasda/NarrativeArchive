@@ -1,15 +1,15 @@
 /* ============ 압축 탭: method picker + one 압축하기 button (v3.77) */
-#na_settings .na_cp_meth { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--hm-tile); }
-#na_settings .na_cp_mbtn { flex: 1; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 11px; padding: 9px 4px; margin: 0; font: inherit; font-size: 0.929em; --c-bg: transparent; --c-fg: var(--hm-mute); cursor: pointer; }
+#na_settings .na_cp_meth { display: flex; gap: 4px; padding: 4px; border-radius: 14px; --axr: 14px; background: var(--hm-tile)}
+#na_settings .na_cp_mbtn { flex: 1; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 11px; padding: 9px 4px; margin: 0; font: inherit; --axfs: inherit; --axff: inherit; font-size: 0.929em; --axfs: 0.929em; --c-bg: transparent; --c-fg: var(--hm-mute); cursor: pointer}
 #na_settings .na_cp_mbtn.on { --c-bg: var(--hm-card); --c-fg: var(--hm-ink); font-weight: 700; --c-sh: 0 1px 3px var(--hm-shadow); }
 body:not(.na_darkui) #na_settings .na_cp_mbtn.on { --c-bg: #FFFAF6; }
-#na_settings .na_cp_desc { font-size: 0.857em; line-height: 1.45; color: var(--hm-dim); padding: 0 2px; }
+#na_settings .na_cp_desc { font-size: 0.857em; --axfs: 0.857em; line-height: 1.45; color: var(--hm-dim); --axfg: var(--hm-dim); padding: 0 2px}
 #na_settings .na_cp_go { justify-content: center; text-align: center; padding: 15px 16px; }
 #na_settings .na_cp_go > span { flex: 0 1 auto; }
 #na_settings .na_cp_go b { font-size: 1.143em; }
 #na_settings .na_cp_flags { display: flex; flex-wrap: wrap; gap: 6px; }
 #na_settings .na_cp_flags[hidden] { display: none; }
-#na_settings .na_cp_flag { width: auto; margin: 0; --c-bw: 1px; --c-bs: solid; --c-bc: var(--hm-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--hm-line); --c-bg: transparent; --c-fg: var(--hm-dim); --c-r: 999px; padding: 4px 12px; font: inherit; font-size: 0.857em; cursor: pointer; }
+#na_settings .na_cp_flag { width: auto; margin: 0; --c-bw: 1px; --c-bs: solid; --c-bc: var(--hm-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--hm-line); --c-bg: transparent; --c-fg: var(--hm-dim); --c-r: 999px; padding: 4px 12px; font: inherit; --axfs: inherit; --axff: inherit; font-size: 0.857em; --axfs: 0.857em; cursor: pointer}
 #na_settings .na_cp_flag b { font-weight: 600; }
 #na_settings .na_cp_flag.on { --c-bg: var(--hm-acc-soft); --c-bc: transparent; --c-bct: transparent; --c-fg: var(--hm-acc-ink); }
 #na_settings .na_cp_for { font-weight: 400; opacity: 0.8; }
@@ -18,11 +18,11 @@ body:not(.na_darkui) #na_settings .na_cp_mbtn.on { --c-bg: #FFFAF6; }
 /* ============ ⚙ 설정: card index, one group at a time (v3.77) */
 #na_settings .na_cfg_index { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 4px; }
 #na_settings .na_cfg_index[hidden] { display: none; }
-#na_settings .na_cfg_card { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-height: 100px; width: auto; margin: 0; padding: 14px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--hm-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--hm-line); --c-r: 18px; --c-bg: var(--hm-card); --c-fg: var(--hm-ink); font: inherit; text-align: left; cursor: pointer; }
+#na_settings .na_cfg_card { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-height: 100px; width: auto; margin: 0; padding: 14px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--hm-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--hm-line); --c-r: 18px; --c-bg: var(--hm-card); --c-fg: var(--hm-ink); font: inherit; --axfs: inherit; --axff: inherit; text-align: left; cursor: pointer}
 #na_settings .na_cfg_card:hover { --c-bc: var(--hm-acc); --c-bct: var(--hm-acc); }
 #na_settings .na_cfg_card b { font-size: 1.036em; line-height: 1.3; }
 #na_settings .na_cfg_card small { font-size: 0.821em; line-height: 1.45; color: var(--hm-dim); }
-#na_settings .na_cfg_ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--hm-acc-soft); color: var(--hm-acc); }
+#na_settings .na_cfg_ico { width: 34px; height: 34px; border-radius: 10px; --axr: 10px; display: grid; place-items: center; background: var(--hm-acc-soft); color: var(--hm-acc); --axfg: var(--hm-acc)}
 #na_settings .na_cfg_grp.na_cfg_off { display: none; }
 #na_settings .na_cfg_one .na_cfg_grp:not(.na_cfg_keeplab) .na_cfg_label { display: none; }
 
@@ -32,15 +32,15 @@ body:not(.na_darkui) #na_settings .na_cp_mbtn.on { --c-bg: #FFFAF6; }
 /* ============ ⚙ 설정 묶음 안: tiles on top, tabs, one tab's rows (v3.80) */
 #na_settings .na_cfg_tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 4px; }
 #na_settings .na_cfg_tiles[hidden], #na_settings .na_cfg_tabs[hidden] { display: none; }
-#na_settings .na_cfg_tile { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-height: 92px; width: auto; margin: 0; padding: 13px 14px; box-sizing: border-box; --c-bw: 1px; --c-bs: solid; --c-bc: var(--hm-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--hm-line); --c-r: 18px; --c-bg: transparent; --c-fg: var(--hm-dim); font: inherit; text-align: left; cursor: pointer; min-width: 0; }
+#na_settings .na_cfg_tile { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-height: 92px; width: auto; margin: 0; padding: 13px 14px; box-sizing: border-box; --c-bw: 1px; --c-bs: solid; --c-bc: var(--hm-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--hm-line); --c-r: 18px; --c-bg: transparent; --c-fg: var(--hm-dim); font: inherit; --axfs: inherit; --axff: inherit; text-align: left; cursor: pointer; min-width: 0}
 #na_settings .na_cfg_tile.on { --c-bg: var(--hm-card); --c-bc: transparent; --c-bct: transparent; --c-fg: var(--hm-ink); }
 #na_settings .na_cfg_tile:last-child:nth-child(odd) { grid-column: 1 / -1; min-height: 0; }
 #na_settings .na_cfg_tile small { font-size: 0.857em; color: var(--hm-dim); }
 #na_settings .na_cfg_tile b { font-size: 1.32em; font-weight: 700; line-height: 1.3; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #na_settings .na_cfg_tile:not(.on) b { color: var(--hm-dim); }
-#na_settings .na_cfg_tile span { margin-top: auto; font-size: 0.857em; color: var(--hm-dim); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#na_settings .na_cfg_tabs { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--hm-tile); margin-top: 2px; }
-#na_settings .na_cfg_tabbtn { flex: 1; min-width: 0; width: auto; margin: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 11px; padding: 9px 2px; font: inherit; font-size: 0.929em; --c-bg: transparent; --c-fg: var(--hm-dim); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#na_settings .na_cfg_tile span { margin-top: auto; font-size: 0.857em; --axfs: 0.857em; color: var(--hm-dim); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap}
+#na_settings .na_cfg_tabs { display: flex; gap: 4px; padding: 4px; border-radius: 14px; --axr: 14px; background: var(--hm-tile); margin-top: 2px}
+#na_settings .na_cfg_tabbtn { flex: 1; min-width: 0; width: auto; margin: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 11px; padding: 9px 2px; font: inherit; --axfs: inherit; --axff: inherit; font-size: 0.929em; --axfs: 0.929em; --c-bg: transparent; --c-fg: var(--hm-dim); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
 #na_settings .na_cfg_tabbtn.on { --c-bg: var(--hm-card); --c-fg: var(--hm-ink); font-weight: 700; --c-sh: 0 1px 3px var(--hm-shadow); }
 body:not(.na_darkui) #na_settings .na_cfg_tabbtn.on { --c-bg: #FFFFFF; }
 #na_settings .na_tab_pane[data-pane="config"] .na_tab_off, #na_settings .na_tab_pane[data-pane="config"] .na_tab_empty { display: none !important; }
@@ -49,30 +49,30 @@ body:not(.na_darkui) #na_settings .na_cfg_tabbtn.on { --c-bg: #FFFFFF; }
 /* ============ ⚙ 설정 묶음 화면 = 시안 L+M 그대로 (v3.80.1): cream sheet, white list cards, orange values */
 body:not(.na_darkui) #na_settings { --sv-page: #FFFAF6; --sv-card: #FFFFFF; --sv-line: #EEE2D8; --sv-tile: #F7EEE7; --sv-seg: #F1E6DD; --sv-segon: #FFFFFF; --sv-val: #A84A17; --sv-acc: #B8541F; --sv-dim: #8A7A70; --sv-ink: #463428; }
 body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line: #3A3A41; --sv-tile: #2E2E34; --sv-seg: #1D1D21; --sv-segon: #3A3A41; --sv-val: #F0CF8E; --sv-acc: #E9DFCF; --sv-dim: #9A989F; --sv-ink: #ECEAE6; }
-#na_settings .na_tab_pane[data-pane="config"].na_cfg_one { background: var(--sv-page); border-radius: 18px; padding: 18px 16px; gap: 14px; color: var(--sv-ink); }
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one { background: var(--sv-page); border-radius: 18px; --axr: 18px; padding: 18px 16px; gap: 14px; color: var(--sv-ink); --axfg: var(--sv-ink)}
 #na_settings .na_cfg_one .na_cfg_search { display: none; }
 #na_settings .na_cfg_one .na_cfg_head { gap: 8px; }
 #na_settings .na_cfg_one .na_cfg_back { width: auto; height: auto; padding: 0 2px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: var(--sv-acc); }
 #na_settings .na_cfg_one .na_cfg_head b { font-size: 1.43em; color: var(--sv-ink) !important; }
-#na_settings .na_cfg_one .na_cfg_pill { --c-bg: transparent; --c-bw: 1px; --c-bs: solid; --c-bc: var(--sv-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--sv-line); --c-fg: var(--sv-dim); font-size: 0.857em; padding: 6px 12px; }
+#na_settings .na_cfg_one .na_cfg_pill { --c-bg: transparent; --c-bw: 1px; --c-bs: solid; --c-bc: var(--sv-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--sv-line); --c-fg: var(--sv-dim); font-size: 0.857em; --axfs: 0.857em; padding: 6px 12px}
 /* tiles: on = cream, off = white with a line */
 #na_settings .na_cfg_one .na_cfg_tile { --c-bg: var(--sv-card); --c-bw: 1px; --c-bs: solid; --c-bc: var(--sv-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--sv-line); --c-r: 18px; padding: 14px; gap: 4px; }
 #na_settings .na_cfg_one .na_cfg_tile.on { --c-bg: var(--sv-tile); --c-bc: transparent; --c-bct: transparent; }
-#na_settings .na_cfg_one .na_cfg_tile small, #na_settings .na_cfg_one .na_cfg_tile span { font-size: 0.857em; color: var(--sv-dim); }
+#na_settings .na_cfg_one .na_cfg_tile small, #na_settings .na_cfg_one .na_cfg_tile span { font-size: 0.857em; --axfs: 0.857em; color: var(--sv-dim)}
 #na_settings .na_cfg_one .na_cfg_tile b { font-size: 1.357em; color: var(--sv-ink); }
 #na_settings .na_cfg_one .na_cfg_tile:not(.on) b { color: var(--sv-dim); }
 #na_settings .na_cfg_one .na_cfg_tabs { background: var(--sv-seg); margin-top: 4px; }
-#na_settings .na_cfg_one .na_cfg_tabbtn { --c-fg: var(--sv-dim); font-size: 1em; }
+#na_settings .na_cfg_one .na_cfg_tabbtn { --c-fg: var(--sv-dim); font-size: 1em; --axfs: 1em}
 #na_settings .na_cfg_one .na_cfg_tabbtn.on { --c-bg: var(--sv-segon); --c-fg: var(--sv-ink); --c-sh: 0 1px 3px rgba(70, 52, 40, 0.12); }
 /* list cards */
-#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box { background: var(--sv-card) !important; border: 1px solid var(--sv-line) !important; border-radius: 16px; }
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box { background: var(--sv-card) !important; border: 1px solid var(--sv-line) !important; border-radius: 16px; --axr: 16px}
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row { padding: 15px 16px; border-top-color: var(--sv-line); --c-bct: var(--sv-line); }
-#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row > span:first-child { font-size: 1.071em !important; gap: 3px; }
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row > span:first-child { font-size: 1.071em !important; --axfs: 1.071em !important; gap: 3px}
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row > span small { font-size: 0.8em !important; color: var(--sv-dim); }
-#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_set_row > .na_cfg_val { color: var(--sv-val); font-size: 1em !important; }
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_set_row > .na_cfg_val { color: var(--sv-val); --axfg: var(--sv-val); font-size: 1em !important; --axfs: 1em !important}
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val :is(select, input) { --c-fg: var(--sv-val); }
-#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_go > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_chev { color: var(--sv-val); }
-.na_cc_note { flex: 1; min-width: 0; font-size: 0.86em; color: var(--na-dim); line-height: 1.4; }
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_go > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_chev { color: var(--sv-val); --axfg: var(--sv-val)}
+.na_cc_note { flex: 1; min-width: 0; font-size: 0.86em; --axfs: 0.86em; color: var(--na-dim); --axfg: var(--na-dim); line-height: 1.4}
 
 /* ---- 3.81.8: popups don't squeeze their cards (rows were cut off in 아카이브에 추가) */
 .na_v2 > * { flex-shrink: 0; }
@@ -175,7 +175,7 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
 :is(#na_settings, .na_v2, .na_popup) .na_search_wrap input::-webkit-search-decoration { -webkit-appearance: none; }
 
 /* the 도구 tab's group boxes in the same card colour as the settings cards */
-#na_settings .na_tab_pane[data-pane="tools"] > .na_block { background: var(--hm-card); border: 1px solid var(--hm-line); border-radius: 18px; }
+#na_settings .na_tab_pane[data-pane="tools"] > .na_block { background: var(--hm-card); border: 1px solid var(--hm-line); border-radius: 18px; --axr: 18px}
 
 /* 아카이브에 추가: sections come in finished, so the writing checks stay out of sight; the ones that keep the archive whole
    (numbering, STATE, sections already there) still show */
@@ -190,37 +190,37 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
 
 /* ---- 3.96.3: 상태창 줄 */
 .na_trk_list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-.na_trk_item { display: flex; gap: 10px; align-items: baseline; padding: 8px 10px; border-radius: 10px; background: var(--na-softer); }
+.na_trk_item { display: flex; gap: 10px; align-items: baseline; padding: 8px 10px; border-radius: 10px; --axr: 10px; background: var(--na-softer)}
 .na_trk_item b { flex: none; font-variant-numeric: tabular-nums; opacity: 0.75; }
 
 /* ============ 홈 · 시작하기 (v3.97): steps in a row, the picked one explained, one big button */
-#na_settings .na_start { display: flex; flex-direction: column; gap: 14px; padding: 14px 16px 16px; border-radius: 18px; background: var(--sv-card); border: 1px solid var(--sv-line); color: var(--sv-ink); }
+#na_settings .na_start { display: flex; flex-direction: column; gap: 14px; padding: 14px 16px 16px; border-radius: 18px; --axr: 18px; background: var(--sv-card); border: 1px solid var(--sv-line); color: var(--sv-ink); --axfg: var(--sv-ink)}
 #na_settings .na_start[hidden] { display: none; }
 #na_settings .na_start_head { display: flex; align-items: center; gap: 8px; }
 #na_settings .na_start_head b { font-size: 1.07em; }
-#na_settings .na_start_n { font-size: 0.857em; font-weight: 700; color: var(--sv-val); }
-#na_settings .na_start_hide { margin: 0 0 0 auto; width: auto; padding: 2px 4px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: var(--sv-dim); font: inherit; font-size: 0.857em; cursor: pointer; }
+#na_settings .na_start_n { font-size: 0.857em; --axfs: 0.857em; font-weight: 700; color: var(--sv-val); --axfg: var(--sv-val)}
+#na_settings .na_start_hide { margin: 0 0 0 auto; width: auto; padding: 2px 4px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: var(--sv-dim); font: inherit; --axfs: inherit; --axff: inherit; font-size: 0.857em; --axfs: 0.857em; cursor: pointer}
 #na_settings .na_start_steps { position: relative; display: flex; }
 #na_settings .na_start_steps::before, #na_settings .na_start_steps::after { content: ''; position: absolute; top: 14px; left: calc(50% / var(--n, 4)); height: 2px; border-radius: 1px; }
 #na_settings .na_start_steps::before { right: calc(50% / var(--n, 4)); background: var(--hm-track); }
 #na_settings .na_start_steps::after { width: calc((100% - 100% / var(--n, 4)) * var(--fill)); background: var(--sv-acc); }
-#na_settings .na_start_step { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; width: auto; margin: 0; padding: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: var(--sv-dim); font: inherit; font-size: 0.857em; cursor: pointer; }
-#na_settings .na_start_dot { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; background: var(--hm-tile); color: var(--sv-dim); }
-#na_settings .na_start_step.done .na_start_dot { background: var(--sv-acc); color: #fff; }
-#na_settings .na_start_step.cur .na_start_lab { color: var(--sv-ink); font-weight: 700; }
-#na_settings .na_start_step.cur:not(.done) .na_start_dot { background: var(--hm-acc-soft); color: var(--sv-val); box-shadow: 0 0 0 2px var(--sv-acc); }
+#na_settings .na_start_step { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; width: auto; margin: 0; padding: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: var(--sv-dim); font: inherit; --axfs: inherit; --axff: inherit; font-size: 0.857em; --axfs: 0.857em; cursor: pointer}
+#na_settings .na_start_dot { width: 30px; height: 30px; border-radius: 50%; --axr: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; background: var(--hm-tile); color: var(--sv-dim); --axfg: var(--sv-dim)}
+#na_settings .na_start_step.done .na_start_dot { background: var(--sv-acc); color: #fff; --axfg: #fff}
+#na_settings .na_start_step.cur .na_start_lab { color: var(--sv-ink); --axfg: var(--sv-ink); font-weight: 700}
+#na_settings .na_start_step.cur:not(.done) .na_start_dot { background: var(--hm-acc-soft); color: var(--sv-val); --axfg: var(--sv-val); box-shadow: 0 0 0 2px var(--sv-acc)}
 #na_settings .na_start_step.cur.done .na_start_dot { box-shadow: 0 0 0 2px var(--sv-card), 0 0 0 4px var(--sv-acc); }
 #na_settings .na_start_body { display: flex; flex-direction: column; gap: 4px; }
 #na_settings .na_start_body b { font-size: 1.21em; }
 #na_settings .na_start_body b small { font-size: 0.65em; font-weight: 400; color: var(--sv-dim); }
-#na_settings .na_start_body span { font-size: 0.93em; line-height: 1.55; color: var(--hm-mute); }
-#na_settings .na_start_go { width: 100%; margin: 0; padding: 13px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 14px; --c-bg: var(--sv-acc); --c-fg: #FFF7F0; font: inherit; font-size: 1.07em; font-weight: 700; cursor: pointer; }
+#na_settings .na_start_body span { font-size: 0.93em; --axfs: 0.93em; line-height: 1.55; color: var(--hm-mute)}
+#na_settings .na_start_go { width: 100%; margin: 0; padding: 13px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 14px; --c-bg: var(--sv-acc); --c-fg: #FFF7F0; font: inherit; --axfs: inherit; --axff: inherit; font-size: 1.07em; --axfs: 1.07em; font-weight: 700; cursor: pointer}
 #na_settings .na_start_go.done { --c-bg: transparent; --c-fg: var(--sv-val); --c-sh: inset 0 0 0 1px var(--sv-line); font-weight: 600; }
 /* 시작하기: in the light theme a cream a shade off white, so the card sits softer on the page */
 body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 
 /* ---- 3.98: 원문으로 불러옴 (라우터 · AI 없이 빠르게) */
-#na_settings .na_router_more { --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: none; --c-fg: inherit; font: inherit; padding: 0; margin: 0; cursor: pointer; text-align: left; text-decoration: underline dotted; text-underline-offset: 3px; }
+#na_settings .na_router_more { --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: none; --c-fg: inherit; font: inherit; --axfs: inherit; --axff: inherit; padding: 0; margin: 0; cursor: pointer; text-align: left; text-decoration: underline dotted; text-underline-offset: 3px}
 
 /* ============ 이야기 속 기념일 (v3.101): a card at the top of the calendar, a badge on the section, one line on home */
 #na_settings .na_anniv_now, .na_popup .na_cal_anniv { --av: var(--sv-acc, #B8541F); }
@@ -228,21 +228,21 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 .na_cal_av_head { display: flex; align-items: center; gap: 8px; }
 .na_cal_av_head b { font-size: 1.02em; }
 .na_cal_av_head small { color: var(--na-dim); }
-.na_cal_av_add { width: 30px; height: 30px; margin: 0; padding: 0; --c-r: 9px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-bg: transparent; --c-fg: var(--av); font-size: 1.2em; line-height: 1; cursor: pointer; }
+.na_cal_av_add { width: 30px; height: 30px; margin: 0; padding: 0; --c-r: 9px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-bg: transparent; --c-fg: var(--av); font-size: 1.2em; --axfs: 1.2em; line-height: 1; cursor: pointer}
 .na_cal_av_row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "dot name x" "dot sub x"; column-gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--na-line); }
 .na_cal_av_row:first-of-type { border-top: 0; }
-.na_cal_av_dot { grid-area: dot; color: var(--av); font-size: 1.1em; }
+.na_cal_av_dot { grid-area: dot; color: var(--av); --axfg: var(--av); font-size: 1.1em; --axfs: 1.1em}
 .na_cal_av_row .na_cal_av_name { grid-area: name; margin: 0; padding: 2px 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; font-weight: 700; min-height: 0; }
 .na_cal_av_row small { grid-area: sub; color: var(--na-dim); font-size: 0.82em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .na_cal_av_x { grid-area: x; width: auto; margin: 0; padding: 4px 6px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: var(--na-dim); cursor: pointer; }
 .na_cal_av_new { display: flex; flex-wrap: wrap; gap: 6px; }
 .na_cal_av_new select { flex: 1 1 100%; margin: 0; }
 .na_cal_av_new input { flex: 1; min-width: 0; margin: 0; }
-.na_cal_av_badge { font-style: normal; font-size: 0.82em; font-weight: 700; color: var(--av, #B8541F); white-space: nowrap; }
-#na_settings .na_anniv_now { display: flex; align-items: center; gap: 4px; padding: 10px 12px 10px 14px; border-radius: 14px; background: var(--hm-acc-soft); color: var(--sv-ink); }
+.na_cal_av_badge { font-style: normal; font-size: 0.82em; --axfs: 0.82em; font-weight: 700; color: var(--av, #B8541F); --axfg: var(--av, #B8541F); white-space: nowrap}
+#na_settings .na_anniv_now { display: flex; align-items: center; gap: 4px; padding: 10px 12px 10px 14px; border-radius: 14px; --axr: 14px; background: var(--hm-acc-soft); color: var(--sv-ink); --axfg: var(--sv-ink)}
 #na_settings .na_anniv_now[hidden] { display: none; }
-#na_settings .na_anniv_go { flex: 1; display: flex; align-items: center; gap: 8px; width: auto; margin: 0; padding: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: inherit; font: inherit; text-align: left; cursor: pointer; }
-#na_settings .na_anniv_dot { color: var(--av); font-size: 1.1em; }
+#na_settings .na_anniv_go { flex: 1; display: flex; align-items: center; gap: 8px; width: auto; margin: 0; padding: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: inherit; font: inherit; --axfs: inherit; --axff: inherit; text-align: left; cursor: pointer}
+#na_settings .na_anniv_dot { color: var(--av); --axfg: var(--av); font-size: 1.1em; --axfs: 1.1em}
 #na_settings .na_anniv_go b { color: var(--sv-val); }
 #na_settings .na_anniv_x { width: auto; margin: 0; padding: 4px 6px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: var(--sv-dim); cursor: pointer; }
 /* 기념일: a small filled heart instead of the double circle */
@@ -271,11 +271,11 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 
 /* 세계관 끄기 (v3.102): a small switch on each part and each row; what is off fades */
 /* 세계관 줄 · 칸 체크: a ticked row goes in; the part's box shows − when only some are */
-.na_ck { position: relative; flex: none; display: grid; place-items: center; width: 18px; height: 18px; margin: 0 5px; box-sizing: border-box; border: 1.6px solid color-mix(in srgb, var(--na-dim) 70%, transparent); --c-bw: 1.6px; --c-bs: solid; --c-bc: color-mix(in srgb, var(--na-dim) 70%, transparent); --c-bwt: 1.6px; --c-bst: solid; --c-bct: color-mix(in srgb, var(--na-dim) 70%, transparent); border-radius: 5px; --c-r: 5px; color: transparent; --c-fg: transparent; cursor: pointer; }
+.na_ck { position: relative; flex: none; display: grid; place-items: center; width: 18px; height: 18px; margin: 0 5px; box-sizing: border-box; border: 1.6px solid color-mix(in srgb, var(--na-dim) 70%, transparent); --c-bw: 1.6px; --c-bs: solid; --c-bc: color-mix(in srgb, var(--na-dim) 70%, transparent); --c-bwt: 1.6px; --c-bst: solid; --c-bct: color-mix(in srgb, var(--na-dim) 70%, transparent); border-radius: 5px; --axr: 5px; --c-r: 5px; color: transparent; --axfg: transparent; --c-fg: transparent; cursor: pointer}
 .na_ck input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
 .na_ck .na_ck_p { display: none; }
-.na_ck:has(input:checked) { background: var(--na-accent); --c-bg: var(--na-accent); border-color: var(--na-accent); --c-bc: var(--na-accent); --c-bct: var(--na-accent); color: var(--na-onaccent, #fff); --c-fg: var(--na-onaccent, #fff); }
-.na_ck.part { background: color-mix(in srgb, var(--na-accent) 18%, transparent); --c-bg: color-mix(in srgb, var(--na-accent) 18%, transparent); border-color: var(--na-accent); --c-bc: var(--na-accent); --c-bct: var(--na-accent); color: var(--na-accent-fg, var(--na-accent)); --c-fg: var(--na-accent-fg, var(--na-accent)); }
+.na_ck:has(input:checked) { background: var(--na-accent); --c-bg: var(--na-accent); border-color: var(--na-accent); --c-bc: var(--na-accent); --c-bct: var(--na-accent); color: var(--na-onaccent, #fff); --axfg: var(--na-onaccent, #fff); --c-fg: var(--na-onaccent, #fff)}
+.na_ck.part { background: color-mix(in srgb, var(--na-accent) 18%, transparent); --c-bg: color-mix(in srgb, var(--na-accent) 18%, transparent); border-color: var(--na-accent); --c-bc: var(--na-accent); --c-bct: var(--na-accent); color: var(--na-accent-fg, var(--na-accent)); --axfg: var(--na-accent-fg, var(--na-accent)); --c-fg: var(--na-accent-fg, var(--na-accent))}
 .na_ck.part .na_ck_v { display: none; }
 .na_ck.part .na_ck_p { display: inline; }
 .na_ck:has(input:focus-visible) { outline: 2px solid var(--na-accent); outline-offset: 2px; }

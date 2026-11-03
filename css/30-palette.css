@@ -54,8 +54,8 @@ body.na_darkui #na_settings, body.na_darkui .na_popup, body.na_darkui .na_v2, bo
     --na-warm: #DE6E38; --na-warm-ink: #F08F5C; --na-warm-soft: #2E2E34;
     --na-cold: #7FA6E0; --na-cold-ink: #9ABCEE; --na-cold-soft: #2E2E34;
 }
-body:not(.na_darkui) .na_v2, body:not(.na_darkui) #na_settings .na_tab_pane:where(:not([data-pane="home"])) { color: #463428; }
-body.na_darkui .na_v2, body.na_darkui #na_settings .na_tab_pane:where(:not([data-pane="home"])) { color: #ECEAE6; }
+body:not(.na_darkui) .na_v2, body:not(.na_darkui) #na_settings .na_tab_pane:where(:not([data-pane="home"])) { color: #463428; --axfg: #463428}
+body.na_darkui .na_v2, body.na_darkui #na_settings .na_tab_pane:where(:not([data-pane="home"])) { color: #ECEAE6; --axfg: #ECEAE6}
 
 /* ============ shared fixes from the mockup audit (all screens) */
 /* SillyTavern's small { opacity: .7; color: body } leaks in: captions keep our own colours, fully opaque */
@@ -63,13 +63,13 @@ body.na_darkui .na_v2, body.na_darkui #na_settings .na_tab_pane:where(:not([data
 .na_v2 small:not([class]), #na_settings .na_tab_pane:where(:not([data-pane="home"])) small:not([class]) { color: var(--na-dim); }
 .na_v2_label small { color: var(--na-dim); font-weight: 400; }
 /* mockups are drawn at 14px */
-.na_popup.na_v2, #na_settings .na_tab_pane:where(:not([data-pane="home"])) { font-size: 0.9333em; }
+.na_popup.na_v2, #na_settings .na_tab_pane:where(:not([data-pane="home"])) { font-size: 0.9333em; --axfs: 0.9333em}
 .na_v2_title { gap: 2px; }
 .na_v2_title b { font-size: 1.4286em; font-weight: 700; letter-spacing: -0.01em; }
 .na_v2_title small, .na_v2 .na_v2_title small:not([class]) { font-size: 0.893em; color: var(--na-sub, var(--na-dim)); }
 /* buttons take line-height: normal through font: inherit and come out a few px short of the mockups */
 .na_v2 button, #na_settings .na_tab_pane:where(:not([data-pane="home"])) button { line-height: 1.5; }
-.na_v2_label { font-size: 0.929em; font-weight: 600; color: var(--na-mute, var(--na-dim)); margin: 2px 2px -6px; }
+.na_v2_label { font-size: 0.929em; --axfs: 0.929em; font-weight: 600; color: var(--na-mute, var(--na-dim)); --axfg: var(--na-mute, var(--na-dim)); margin: 2px 2px -6px}
 /* switches: 40×24, 18px knob, no shadow */
 .na_sw { width: 40px; height: 24px; }
 .na_sw span { top: 3px; left: 3px; width: 18px; height: 18px; }
@@ -82,19 +82,19 @@ input.na_toggle:checked + .na_tgl_ui::after { transform: translateX(16px); }
 .na_wz2_sumrow { border-color: var(--na-line2, var(--na-line)); }
 .na_set_row { border-color: var(--na-line2, var(--na-line)); --c-bc: var(--na-line2, var(--na-line)); --c-bct: var(--na-line2, var(--na-line)); }
 .na_browser .na_card_actions { border-top-color: var(--na-line2, var(--na-line)); }
-.na_cp_txt > :first-child { font-size: 0.964em; }
+.na_cp_txt > :first-child { font-size: 0.964em; --axfs: 0.964em}
 .na_cp_txt small { font-size: 0.82em; }
-.na_v2_list { border-radius: 18px; }
-.na_v2_card.na_v2_list { border-radius: 18px; --c-r: 18px; }
+.na_v2_list { border-radius: 18px; --axr: 18px}
+.na_v2_card.na_v2_list { border-radius: 18px; --axr: 18px; --c-r: 18px}
 /* "on" pills and selected tabs */
-body:not(.na_darkui) .na_br_filters button.on, body:not(.na_darkui) .na_v2_chips button.on { background: var(--na-fill); --c-bg: var(--na-fill); color: var(--na-onfill); --c-fg: var(--na-onfill); border-color: transparent; --c-bc: transparent; --c-bct: transparent; }
-body.na_darkui .na_br_filters button.on, body.na_darkui .na_v2_chips button.on { background: var(--na-fill); --c-bg: var(--na-fill); color: var(--na-onfill); --c-fg: var(--na-onfill); border-color: transparent; --c-bc: transparent; --c-bct: transparent; }
+body:not(.na_darkui) .na_br_filters button.on, body:not(.na_darkui) .na_v2_chips button.on { background: var(--na-fill); --c-bg: var(--na-fill); color: var(--na-onfill); --axfg: var(--na-onfill); --c-fg: var(--na-onfill); border-color: transparent; --c-bc: transparent; --c-bct: transparent}
+body.na_darkui .na_br_filters button.on, body.na_darkui .na_v2_chips button.on { background: var(--na-fill); --c-bg: var(--na-fill); color: var(--na-onfill); --axfg: var(--na-onfill); --c-fg: var(--na-onfill); border-color: transparent; --c-bc: transparent; --c-bct: transparent}
 body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on { background: #FFFFFF; --c-bg: #FFFFFF; }
 body.na_darkui .na_v2_tabs button.on, body.na_darkui .na_v2_seg button.on { background: var(--na-paper); --c-bg: var(--na-paper); }
 body:not(.na_darkui) .na_v2_tabs button, body:not(.na_darkui) .na_v2_seg button { --c-fg: var(--na-mute); }
 body.na_darkui .na_v2_tabs button, body.na_darkui .na_v2_seg button { --c-fg: var(--na-mute); }
-body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on { color: var(--na-accent-ink); --c-fg: var(--na-accent-ink); }
-body.na_darkui .na_v2_tabs button.on, body.na_darkui .na_v2_seg button.on { color: var(--na-accent-ink); --c-fg: var(--na-accent-ink); }
+body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on { color: var(--na-accent-ink); --axfg: var(--na-accent-ink); --c-fg: var(--na-accent-ink)}
+body.na_darkui .na_v2_tabs button.on, body.na_darkui .na_v2_seg button.on { color: var(--na-accent-ink); --axfg: var(--na-accent-ink); --c-fg: var(--na-accent-ink)}
 /* text inputs inside the redesigned screens */
 body:not(.na_darkui) .na_v2 .text_pole, body:not(.na_darkui) #na_settings .text_pole { --c-bg: #F2E9E2; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-fg: var(--na-ink); --c-r: 12px; }
 body.na_darkui .na_v2 .text_pole, body.na_darkui #na_settings .text_pole { --c-bg: #2A2A30; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-fg: var(--na-ink); --c-r: 12px; }
