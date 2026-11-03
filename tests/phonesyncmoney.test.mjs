@@ -445,3 +445,15 @@ test('a reflection opens an account and a card, fills and empties the basket, an
     revertEffects(m, p, r1.effects);
     assert.equal(p.money.bank.accounts.length, 2); assert.equal(p.money.cards.length, 0); assert.equal(p.investment.watch.length, 0); assert.equal(p.investment.stakes.length, 0);
 });
+
+test('a payment in another currency is booked in the account\'s at the day\'s rate, its memo keeping the original; an order without an eta gets one', async () => {
+    const { addPrice } = await import('../src/finance.js');
+    const { m, p, bank } = setup();
+    addPrice(m, 'FX:USD/EUR', '2026-10-26', { value: 0.9, source: 'guess' });
+    applyMoney(m, p, ev('nyc', 5, '10-26', { moves: [{ account: '1111', amount: -100, currency: 'USD', who: 'Deli' }], orders: [{ shop: 'Amazon', item: 'Kabel', qty: 1, price: 12 }] }), opts());
+    migrateBank(m, p);
+    assert.equal(bank(), 910);
+    assert.equal(p.money.tx[0].amount, -90); assert.match(p.money.tx[0].memo, /USD 100/);
+    assert.match(p.money.orders[0].eta, /^10-(28|29|30)$/);
+    assert.throws(() => applyMoney(m, p, ev('tokyo', 6, '10-26', { moves: [{ account: '1111', amount: -5000, currency: 'JPY', who: 'Konbini' }] }), opts()), /환율/);
+});

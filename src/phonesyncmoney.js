@@ -48,6 +48,8 @@ function accountOf(p, x) {
     if (x.kind === 'card' || /card|karte|카드|credit/i.test(raw)) return pick1(as.filter(a => a.kind === 'credit'));
     return pick1(as.filter(a => a.kind === 'checking')) || pick1(as);
 }
+// a story day n days on ("MM-DD", a leap February assumed)
+const plusDays = (day, n) => { const mt = /^(\d{2})-(\d{2})$/.exec(day || ''); if (!mt) return ''; const d = new Date(Date.UTC(2000, mt[1] - 1, Number(mt[2]) + n)); return `${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`; };
 const fullDay = (year, anchor, date) => {
     const a = /^(\d{4})-(\d{2})-(\d{2})$/.exec(anchor || '');
     if (!a || !/^\d{2}-\d{2}$/.test(date || '')) return `${year}-${date}`;
@@ -150,7 +152,8 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         out.notes.push(`${txt(o.item, 40)}: 취소된 주문이라 결제${back >= 0 ? '·환불' : ''}을 넣지 않았어요`);
     }
     list(mo.moves).forEach((x, k) => {
-        const amount = Number(x.amount), broker = /^broker:/i.test(String(x.account || ''));
+        let amount = Number(x.amount);
+        const broker = /^broker:/i.test(String(x.account || ''));
         if (voided.has(k)) { out.legs.push({ key: `void:${k}`, amount, state: 'cancelled' }); return; }
         if (amount === 0) { out.legs.push({ key: `zero:${k}`, amount: 0, state: 'zero' }); return; }
         if (!finite(amount)) fail('금액을 확인하지 못했어요');
@@ -172,8 +175,14 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         }
         const acct = accountOf(p, x);
         if (!acct) fail('계좌를 찾지 못했어요');
+        // an amount in another currency (€20 on a KRW card abroad) is booked in the account's, at the day's rate; the memo keeps the original
         const xc = String(x.currency || '').trim().toUpperCase();
-        if (/^[A-Z]{3}$/.test(xc) && xc !== acct.currency) fail('계좌 통화와 금액 통화가 달라요');
+        if (/^[A-Z]{3}$/.test(xc) && xc !== acct.currency) {
+            const rate = fx(m, xc, acct.currency, full);
+            if (rate === null) fail(`${xc}→${acct.currency} 환율이 없어서 ${xc} 결제를 적지 못했어요`);
+            const orig = amount; amount = round(amount * rate);
+            x.memo = [txt(x.memo), `${xc} ${Math.abs(orig)}`].filter(Boolean).join(' · ');
+        }
         // one leg per account, direction and payee: the same event told again may carry another payment on the same account
         // (its refund, a second shop), which is not the first one with another amount
         const key = `bank:${acct.id}:${amount < 0 ? '-' : '+'}:${plain(x.who)}`, lk = acct.kind === 'credit' ? '' : `${acct.id}:${acct.currency}`, label = `${acct.name || ''} ••••${acct.last4}`.trim();
@@ -274,7 +283,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     records('orders', list(mo.orders), x => {
         const price = Number(x.price);
         if (!txt(x.item) || !txt(x.shop)) fail('주문의 가게나 물건을 확인하지 못했어요');
-        return { shop: txt(x.shop, 60), item: txt(x.item), ko: txt(x.ko), option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5), arrived: '', gift: giftOf(x.gift), ...(x.paid === false ? { paid: false } : {}), ...(guess ? { amountFrom: 'guess' } : {}) };
+        return { shop: txt(x.shop, 60), item: txt(x.item), ko: txt(x.ko), option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5) || (['ordered', 'shipped', 'on the way'].includes(x.status) || !ORDER.includes(x.status) ? plusDays(date, 2 + [...txt(x.shop)].reduce((n, c) => (n + c.charCodeAt(0)) % 3, 0)) : ''), arrived: '', gift: giftOf(x.gift), ...(x.paid === false ? { paid: false } : {}), ...(guess ? { amountFrom: 'guess' } : {}) };
     }, (o, x) => samePlace(o.shop, x.shop) && samePlace(o.item, x.item) && near(o.time, date));
     records('passes', list(mo.passes), x => {
         if (!txt(x.by)) fail('티켓 정보를 확인하지 못했어요');

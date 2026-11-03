@@ -65,8 +65,7 @@ const PHONE_STYLE = `LANGUAGE
 - People write the way they talk in the archive and chat. Texts are short, like real texts.
 
 TIMES
-"MM-DD HH:MM" (24-hour), in story time, from the archive's dates. "now" is the newest moment of the story.
-STORY YEAR (sometimes): a year written in any text is that one. Without it, a year only as the story itself writes one (its own calendar); none: no year.`;
+"MM-DD HH:MM" in story time; "now" is the newest moment of the story. A year only as STORY YEAR or the story itself gives one.`;
 const PHONE_TEST = `${PHONE_FACT}\n\n${PHONE_STYLE}`;
 const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how the owner saved them (a nickname, an emoji, or just the name) }],
   "threads": [{ "with": name, "messages": [{ "from": "me" or the sender's name, "text", "ko", "time" }],
@@ -190,14 +189,14 @@ ANSWER — one JSON object, nothing else:
                "phone": { only the app items this event puts on the phone }${money ? `,
                "money": { "amountFrom": "story" | "guess",
                           "moves": [{ "account": a bank account's last 4 digits or "broker:EUR", "amount": minus for money out, "currency", "who", "ko", "memo": what it was for, "kind": "card" | "transfer" | "deposit" | "cash" (taken out as cash), "fee": a transfer fee charged on top of "amount", on the sending move, "occurrence": "new" | "again", "already": "" }],
-                          "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko", "currency", "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
-                          "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" (a return asked for) | "returned" | "refunded", "eta": "MM-DD", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
+                          "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko" and "currency" (a share not in INVESTMENTS NOW), "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
+                          "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" (the default) | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD" or "", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
                           "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }]${delivery ? `,
-                          "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients, like "beef"], "size": "regular" | "large", "set": [a set's sides or drinks] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "noteShop", "noteShopKo", "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
+                          "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients, like "beef"], "size": "regular" | "large", "set": [a set's sides or drinks] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
                                           "newShop": { "name": the same as "shop", "ko", "cuisine", "menu": [{ "name", "ko", "price", "pic" }] } or null }]` : ''} }` : ''} }]${life && weather ? `,
   "weather": { "place", "date", "time", "from": "chat" | "archive" | "guess", "cond": "clear" | "partly" | "cloudy" | "drizzle" | "rain" | "sleet" | "snow" | "fog" | "storm" | "wind", "temp", "hi", "lo", "line", "ko",
                "hours": [6 of { "time", "cond", "temp", "rain": percent }] (the hours ahead when the sky will change, else []), "days": [10 of { "day", "cond", "lo", "hi", "rain": percent }],
-               "tiles": { "rain24": mm today, "rainNext": mm by tomorrow, "wind": km/h, "dir", "humidity" },
+               "tiles": { "rain24": mm today, "rainNext": mm by tomorrow, "wind": km/h, "dir", "humidity", "feels": only when the story gives it },
                "cities": [{ "name", "cond", "temp", "hi", "lo" }] } or null` : ''} }
 ${money ? `"money" only when money moves or an order or ticket changes.` : ''}
 Also in "money" when these messages show them: "newAccount": { "kind": "checking" | "savings" | "credit", "name", "last4", "currency", "balance" } (an account or card the owner opens), "newCard": { "account": last4, "exp": "MM/YY" }${delivery ? `, "cart": { "shop", "items": [like a delivery's] } (dishes put in the basket and not ordered)` : ''}, "watch": [{ "symbol", "name", "currency", "note", "ko" }] (a share they start watching), "quotes": [{ "symbol", "date", "value", "evidence": exact words }] (a price the story gives), "stakes": [{ "company", "listed", "percent", "holder", "voter", "beneficiary", "restriction", "value", "currency", "evidence": exact words }] (a stake the story says they now hold).
@@ -207,7 +206,7 @@ Items in "phone":
 ${PHONE_ITEMS}${life ? `,
   "alarms": [{ "change": an id or "", "time", "label", "ko", "days": the weekdays it repeats or [], "date": "MM-DD" for a one-time alarm, "on", "wake", "then", "snooze" }],
   "files": [{ "change": an id or "", "name", "kind", "folder": one of LIFE NOW's "folders" (downloads are "Downloads"), "size": KB, "time", "from", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],
-  "health": [{ "date": the day they woke, "sleep", "wake", "steps", "workout": { "kind", "time", "min", "km" } or null }],
+  "health": [{ "date": the day they woke, "sleep", "wake", "woke": times awake in the night, "steps", "workout": { "kind", "time", "min", "km" } or null }],
   "timers": [{ "label", "ko", "sec" }],
   "usual": { "weight": kg, "coffee": cups a day, "coffeeKind", "coffeeKo", "water": litres a day, "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": a week, "rest": resting heart rate, "height": cm }` : ''}
 }
