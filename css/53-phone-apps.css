@@ -173,11 +173,6 @@
 .sc_big { font-family: 'Inter Tight', 'Inter', sans-serif; font-size: 36px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; margin-top: 3px; }
 .sc_big u, .sc_pkn u { text-decoration: none; font-family: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; font-size: 21px; margin: 0 5px 0 2px; letter-spacing: 0; }
 .sc_big u:last-child { margin-right: 0; } .sc_big .cg_num { font-size: 36px; } .sc_note span { font-size: inherit; }
-.sc_pr { text-align: right; margin-top: 2px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.sc_pill { display: inline-block; padding: 3px 8px 3px 7px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #fde8e2; color: #c85a3e; }
-.sc_pill.dn { background: #e3f0e6; color: #3f7d50; }
-.sc_pill.g { background: #eef0f3; color: #5c626c; }
-.sc_pl { font-size: 11px; color: #7b818c; }
 .sc_chart { position: relative; }
 .sc_chart svg { display: block; overflow: visible; }
 .sc_axl { font-size: 10px; fill: #a3a8b0; font-family: 'Inter', sans-serif; }

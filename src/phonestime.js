@@ -67,10 +67,6 @@ export function screenTimeScreen(p, now, i = '') {
     }
     const days = v.days.slice(-7), d = i ? days.find(x => x.date === i) : null, sel = d ? days.indexOf(d) : -1;
     const total = d ? d.total : v.avg;
-    // the pill: change against last week; a picked day has none (today says it is still counting)
-    const pill = d?.today ? `<span class="sc_pill g">지금까지</span>`
-        : d ? ''
-            : v.pct !== null ? `<span class="sc_pill ${v.pct > 0 ? 'up' : 'dn'}">${v.pct > 0 ? '▲' : '▼'} ${Math.abs(v.pct)}%</span><span class="sc_pl">지난주보다</span>` : '';
     const label = d ? (d.today ? '오늘 사용 시간' : `${fmtDate(p, d.date)} 사용 시간`) : '일평균 · 최근 7일';
     // the week's three biggest kinds keep their colours on every day; the legend gives the week's average or that day's
     const full = days.filter(x => !x.today), wk = ORDER.reduce((o, k) => ({ ...o, [k]: Math.round(full.reduce((n, x) => n + (x.byKind[k] || 0), 0) / Math.max(1, full.length)) }), {});
@@ -82,7 +78,7 @@ export function screenTimeScreen(p, now, i = '') {
         : (y?.late && yl !== null && yl < 5 * 60 ? `어제 새벽 <b class="cg_num">${esc(clockNum(p, y.late))}</b>까지 폰을 봤어요` : '');
     const note = night ? `<div class="sc_note">${ax('scmoon', 15, '#6e7480', 2)}<span>${night}</span></div>` : '';
     const head = `<div class="ax_card sc_head">
-        <div class="sc_top"><div><div class="sc_lbl">${esc(label)}</div><div class="sc_big">${total !== null ? durBig(total) : '<span class="cg_num">–</span>'}</div></div><div class="sc_pr">${pill}</div></div>
+        <div class="sc_top"><div><div class="sc_lbl">${esc(label)}</div><div class="sc_big">${total !== null ? durBig(total) : '<span class="cg_num">–</span>'}</div></div></div>
         ${chart(days, v.avg, sel, top3)}${legend}${note}</div>`;
     // how often they picked it up: a number, the code's sentence, four steps
     const pk = d ? d.pickups : v.pickupsAvg;
