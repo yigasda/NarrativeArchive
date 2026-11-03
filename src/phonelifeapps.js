@@ -163,7 +163,7 @@ const COUNTRY_TZ = { KR: 'Asia/Seoul', JP: 'Asia/Tokyo', CN: 'Asia/Shanghai', TW
     GB: 'Europe/London', IE: 'Europe/Dublin', PT: 'Europe/Lisbon', ES: 'Europe/Madrid', FR: 'Europe/Paris', BE: 'Europe/Brussels', NL: 'Europe/Amsterdam', DE: 'Europe/Berlin', CH: 'Europe/Zurich', AT: 'Europe/Vienna', IT: 'Europe/Rome', CZ: 'Europe/Prague', PL: 'Europe/Warsaw', DK: 'Europe/Copenhagen', SE: 'Europe/Stockholm', NO: 'Europe/Oslo', FI: 'Europe/Helsinki', GR: 'Europe/Athens', UA: 'Europe/Kyiv', IS: 'Atlantic/Reykjavik',
     EG: 'Africa/Cairo', NG: 'Africa/Lagos', KE: 'Africa/Nairobi', ZA: 'Africa/Johannesburg', MA: 'Africa/Casablanca', US: 'America/New_York', CA: 'America/Toronto', MX: 'America/Mexico_City', CO: 'America/Bogota', PE: 'America/Lima', BR: 'America/Sao_Paulo', AR: 'America/Buenos_Aires', CL: 'America/Santiago', AU: 'Australia/Sydney', NZ: 'Pacific/Auckland' };
 // the time zone the story is in: a saved city its place names, else the owner's country (home), else the first saved city
-const hereZone = (lf, p = null) => { const pl = String(lf.weather.here.place || '').toLowerCase(); return lf.weather.cities.find(c => c.tz && pl && (pl.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(pl.split(/[ ,]/)[0])))?.tz || COUNTRY_TZ[String(p?.lives || p?.country || '').toUpperCase()] || lf.weather.cities.find(c => c.tz)?.tz || ''; };
+const hereZone = (lf, p = null, place = hereNow(lf).place) => { const pl = String(place || '').toLowerCase(); return lf.weather.cities.find(c => c.tz && pl && (pl.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(pl.split(/[ ,]/)[0])))?.tz || COUNTRY_TZ[String(p?.lives || p?.country || '').toUpperCase()] || lf.weather.cities.find(c => c.tz)?.tz || ''; };
 // sunrise and sunset for a day at a time zone's city (NOAA's equations on the zone's latitude and longitude), local "HH:MM"
 function sunOf(date, tz) {
     const at = TZ_AT[tz], d = realDate(date, 12);
@@ -203,7 +203,7 @@ const face = (min, night) => { const h = (min % 720) / 720 * 360, m = (min % 60)
 export function worldScreen(p, now) {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '시계', 'life', 'home2', true);
-    const here = { name: lf.weather.here.place || '현재 위치', tz: hereZone(lf, p), sunset: lf.weather.here.tiles?.sunset || '', note: '' };
+    const hn = hereNow(lf), here = { name: hn.place || '현재 위치', tz: hereZone(lf, p, hn.place), sunset: hn.tiles?.sunset || '', note: '' };
     const rows = [here, ...lf.weather.cities.filter(c => c.name !== here.name)].map(c => ({ c, t: cityTime(p, lf, c) }));
     return `${axBar(p, now, '#f2f2f4')}
       ${axTop(axCb('home2'))}
@@ -884,7 +884,7 @@ function hereNow(lf) {
     if (gap > 0) { out.hours = []; out.line = ''; out.ko = ''; out.tiles = { ...(out.tiles || {}), rain24: null, rainNext: null }; }
     return out;
 }
-const hereFull = (p, lf) => { const h = hereNow(lf); return { ...h, tiles: fillTiles(h, `${h.date}:${h.place}`, h.date || now5(p), hereZone(lf, p)) }; };
+const hereFull = (p, lf) => { const h = hereNow(lf); return { ...h, tiles: fillTiles(h, `${h.date}:${h.place}`, h.date || now5(p), hereZone(lf, p, h.place)) }; };
 // what the tiles say, from their numbers
 const tileLines = (h) => ({
     rain: h.tiles.rainNext ? `내일까지 ${mm(h.tiles.rainNext)} mm 더 와요` : '내일까지 비 소식 없어요',
@@ -1061,9 +1061,10 @@ export function hereWidget(p, now) {
       <span class="cg_wh"><span class="cg_cap">날씨</span><span class="cg_evw">현재 위치</span></span>
       <span class="cg_wxeb"><svg aria-hidden="true" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#8a929d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17a4 4 0 0 1 .5-8A5.5 5.5 0 0 1 18 11a3 3 0 0 1-.5 6zM15 4.5a3 3 0 0 1 3.5 2.5"/></svg><b>아직 날씨가 없어요</b><small>눌러서 채우기</small></span>
     </button>`;
-    const f = hereFull(p, L(p)), ph = phaseOf(now5(p).slice(6) || h.time, f.tiles.sunrise, f.tiles.sunset);
-    return `<button type="button" class="lf_city cg_wx" data-go="weather" style="--axbg: ${pal(h.cond, ph).sky}">${widgetSky(h.cond, ph)}
-      <span class="l"><b>${esc(h.place || '현재 위치')}</b><small><svg width="11" height="11" viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z" fill="#fff"/></svg> 현재 위치</small><span>${esc(saidOf(h))}</span></span><span class="r"><b>${h.temp ?? '—'}°</b><span>최고 ${h.hi ?? '—'}° 최저 ${h.lo ?? '—'}°</span></span></button>`;
+    // the same weather the app shows: a newer status line already over the saved one
+    const f = hereFull(p, L(p)), ph = phaseOf(now5(p).slice(6) || f.time, f.tiles.sunrise, f.tiles.sunset);
+    return `<button type="button" class="lf_city cg_wx" data-go="weather" style="--axbg: ${pal(f.cond, ph).sky}">${widgetSky(f.cond, ph)}
+      <span class="l"><b>${esc(f.place || '현재 위치')}</b><small><svg width="11" height="11" viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z" fill="#fff"/></svg> 현재 위치</small><span>${esc(saidOf(f))}</span></span><span class="r"><b>${f.temp ?? '—'}°</b><span>최고 ${f.hi ?? '—'}° 최저 ${f.lo ?? '—'}°</span></span></button>`;
 }
 export function cityList(p, now) {
     const lf = L(p); if (!lf) return weatherScreen(p, now);
