@@ -222,6 +222,8 @@ export function applyLife(p, e, phone, on) {
         // a folder the phone already has, written another way ("work" for "Work"), is that folder
         const own = [...(L.files?.folders || []).map(f => f.name), ...(L.files?.items || []).map(f => f.folder)].find(n => n && n.toLowerCase() === clean.folder.toLowerCase());
         if (own) clean.folder = own;
+        // a folder the story makes (a new "Wohnung" for the flat's papers) is added to the folders
+        else if (clean.folder && clean.folder !== 'Downloads') push('life.files.folders', tag({ name: clean.folder, ko: '', count: 0, fav: false }, k, 'd'), '파일');
         push('life.files.items', tag({ ...clean, time: clean.time || `${e.date}${e.time ? ` ${e.time}` : ''}` }, k, 'f'), '파일');
     });
     // a timer saved (the same label again: its seconds and day), and one running at the newest message (from its event's time)
@@ -410,8 +412,25 @@ export function applyWeather(p, w, now, { archive = true, today = '' } = {}) {
             for (const k of ['hi', 'lo']) if (here[k] === null && old[k] !== undefined) here[k] = old[k];
             fit(here);
         }
-        // the cities keep what the model leaves out (their time zone, their note)
-        const cities = (was?.cities || []).map(c => { const key = v => line(v, 40).toLowerCase(), n = arr(w.cities).find(x => [c.name, c.ko].filter(Boolean).map(key).includes(key(x?.name))); if (!n) return c; const f = cityOf(n), out = { ...c, cond: condPick(n.cond, c.cond, { temp: f.temp }) }; for (const k of ['temp', 'hi', 'lo', 'sunrise', 'sunset', 'rainNext', 'wind', 'gust', 'dir', 'feels', 'humidity', 'dew', 'visibility']) if (f[k] !== null && f[k] !== '') out[k] = f[k]; return out; });
+        // the cities keep what the model leaves out (their time zone, their note). A sky or temperature that changed takes
+        // the tiles with it: feels and dew move by the same degrees, and a new sky's rain, wind, humidity and visibility are
+        // the screen's to work out again (not the old day's "5 mm more by tomorrow" under a clear sky)
+        const key = v => line(v, 40).toLowerCase();
+        const cities = (was?.cities || []).map(c => {
+            const n = arr(w.cities).find(x => [c.name, c.ko].filter(Boolean).map(key).includes(key(x?.name))); if (!n) return c;
+            const f = cityOf(n), out = { ...c, cond: condPick(n.cond, c.cond, { temp: f.temp }) };
+            if (out.cond !== c.cond) for (const k of ['rainNext', 'wind', 'gust', 'dir', 'humidity', 'visibility']) out[k] = k === 'dir' ? '' : null;
+            if (Number.isFinite(f.temp) && Number.isFinite(c.temp) && f.temp !== c.temp) for (const k of ['feels', 'dew']) if (Number.isFinite(c[k])) out[k] = c[k] + f.temp - c.temp;
+            for (const k of ['temp', 'hi', 'lo', 'sunrise', 'sunset', 'rainNext', 'wind', 'gust', 'dir', 'feels', 'humidity', 'dew', 'visibility']) if (f[k] !== null && f[k] !== '') out[k] = f[k];
+            return out;
+        });
+        // a city the story gives the owner reason to save now (a trip planned, a move): added at the end, up to 8
+        for (const n of arr(w.cities)) {
+            if (cities.length >= 8 || n?.added !== true) continue;
+            const f = cityOf(n);
+            if (!f.name || cities.some(c => [c.name, c.ko].filter(Boolean).map(key).includes(key(f.name)))) continue;
+            cities.push({ ...f, note: line(n?.note, 40), noteKo: ko(n?.noteKo) });
+        }
         next = { ...(was || {}), here, cities };
     } else if (now && was?.here && !apart(was.here.place, now.place, was.cities)) {
         // only the status line: its words stand over the weather there was; on a later day, yesterday's hours, sentence

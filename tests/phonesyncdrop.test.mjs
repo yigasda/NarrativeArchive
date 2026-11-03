@@ -493,3 +493,17 @@ test('a plan moved with its title reworded is the one on its old day; a deleted 
     const t = c.p.threads.find(x => x.with === 'Mara');
     assert.equal(t.messages.length, 2); assert.equal(t.messages.find(x => x.deleted)?.text, '사실 힘들어');
 });
+
+test('a Korean line that only says its original again is not drawn twice; a real translation stays', () => {
+    const p = { delivery: { orders: [{ noteShop: '케이크 흐트러지지 않게 조심히 배달 부탁드려요♡', noteShopKo: '케이크 흐트러지지 않게 조심히 배달 부탁드려요♡', noteRider: 'Bitte klingeln', noteRiderKo: '벨 눌러 주세요' }] },
+        threads: [{ messages: [{ who: 'Mara', text: 'See you soon!', ko: 'See you soon' }, { who: 'Mara', text: 'Bis gleich', ko: '곧 봐' }] }],
+        notes: [{ title: '장보기', kt: '장 보기 목록', text: 'Milch, Brot', ko: '우유, 빵' }], events: [{ title: '치과 예약', ko: '치과 예약 (오후)' }] };
+    data.tidyKo(p);
+    const o = p.delivery.orders[0];
+    assert.equal(o.noteShopKo, '');
+    assert.equal(o.noteRiderKo, '벨 눌러 주세요');
+    assert.deepEqual(p.threads[0].messages.map(x => x.ko), ['', '곧 봐']);
+    assert.equal(p.notes[0].kt, '');
+    assert.equal(p.notes[0].ko, '우유, 빵');
+    assert.equal(p.events[0].ko, '');
+});

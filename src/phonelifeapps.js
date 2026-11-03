@@ -6,11 +6,12 @@
 
 import { AX, ax, axBar, axCb, axH1, axInd, axKp, axTint, axTop, busyHtml } from './phoneapps.js';
 import { filling } from './phoneai.js';
-import { byStory, fmtDate, koOn, pad, storyNow } from './phonedata.js';
+import { byStory, clockNum, clockOf, fmtDate, halfOf, hourOf, koOn, pad, storyNow } from './phonedata.js';
 import { shiftDay, weatherNow } from './phonelife.js';
 import { apart, cityAt as cityOfPlace, mirrorHome, overlayNow } from './phonesynclife.js';
-import { fmtMoney } from './phonemoney.js';
+import { decimalOf, fmtMoney, localeOf } from './phonemoney.js';
 import { nameKey } from './people.js';
+import { getMeta } from './core.js';
 import { esc } from './util.js';
 import { DOT_C, DOT_R, DOTS, MAP_BOT, MAP_H, MAP_TOP, MAP_W, TZ_AT } from './worldmap.js';
 import { CAT, dishSvg, guessPic } from './phonefood.js';
@@ -30,6 +31,8 @@ Object.assign(AX, {
 
 // ---- shared bits
 // the everyday apps' data, with every list and box it may lack (an older save, a thin answer) put in place once
+// whose phone a life view is (L's answer), so the here weather can look at the other phones in the same city
+const OWNER = new WeakMap();
 const L = p => {
     const l = p.life; if (!l) return null;
     const c = l.clock ||= {}; c.alarms ||= []; c.timers ||= []; c.running ||= null; for (const a of c.alarms) { a.days ||= []; a.then ||= []; }
@@ -52,7 +55,9 @@ const L = p => {
     for (const x of w.cities) { x.hours ||= []; for (const k of ['temp', 'hi', 'lo', 'feels', 'humidity', 'dew', 'rainNext', 'wind', 'gust']) x[k] ??= null; }
     // the screens read a view: today's row counted up, nothing written back to the save
     // (and it carries the minute now, so what the day still holds, water and coffee later on, isn't counted yet)
-    return h.days.some(d => d && d.date === today) ? { ...l, health: { ...h, days: h.days.map(d => (d && d.date === today ? { ...soFar(d), ...(nowMin === null ? {} : { upTo: nowMin }) } : d)) } } : l;
+    const view = h.days.some(d => d && d.date === today) ? { ...l, health: { ...h, days: h.days.map(d => (d && d.date === today ? { ...soFar(d), ...(nowMin === null ? {} : { upTo: nowMin }) } : d)) } } : l;
+    OWNER.set(view, p);
+    return view;
 };
 const k1 = (k, cls = 'lf_k') => (k && koOn() ? `<span class="${cls}">${esc(k)}</span>` : '');
 const now5 = p => String(storyNow(p) || p.now || '');
@@ -64,15 +69,14 @@ const dur = min => (min >= 60 ? `${Math.floor(min / 60)}시간 ${min % 60}분` :
 const durBig = min => `${Math.floor(min / 60)}<span>시간</span> ${min % 60}<span>분</span>`;
 // numbers as the phone's country writes them: 6,000 · 2.0 in Korea, the US, Japan…; 6.000 · 2,0 in Germany and most of Europe
 // (no country known: the dot, as the money app's fallback writes it)
-const DOT_LANDS = new Set(['KR', 'US', 'GB', 'JP', 'CN', 'TW', 'HK', 'CA', 'AU', 'NZ', 'IE', 'IN', 'SG', 'PH', 'MY', 'TH', 'IL', 'MX']);
 let STORY = { year: new Date().getFullYear(), now: '', dot: false };
 // the phone being drawn: its year (carried over New Year by the reflection), its now and its number style
 export function setStory(p) {
     const y = Number(p?.year) || Number(String(p?.money?.asOf || p?.investment?.date || '').slice(0, 4)) || new Date().getFullYear();
     // known: the story dates itself (else weekdays aren't shown: a fantasy calendar or an undated story has none to show)
-    STORY = { year: y, known: !p?.noYear && !!(Number(p?.year) || /^\d{4}-/.test(String(p?.money?.asOf || p?.money?.fxDate || p?.investment?.date || ''))), now: String(storyNow(p) || p?.now || '').slice(0, 5), dot: (c => !c || DOT_LANDS.has(c))(String(p?.lives || p?.country || '').toUpperCase()) };
+    STORY = { year: y, known: !p?.noYear && !!(Number(p?.year) || /^\d{4}-/.test(String(p?.money?.asOf || p?.money?.fxDate || p?.investment?.date || ''))), now: String(storyNow(p) || p?.now || '').slice(0, 5), dot: decimalOf(p) === '.', loc: localeOf(p), p };
 }
-const n0 = v => (v === null || v === undefined ? '—' : Number(v).toLocaleString(STORY.dot ? 'en-US' : 'de-DE'));
+const n0 = v => (v === null || v === undefined ? '—' : Number(v).toLocaleString(STORY.loc || 'en-US'));
 const md = s => { const mt = String(s || '').match(/^(\d{2})-(\d{2})/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]) } : null; };
 // a story day as a real date: the story's year, and a day across New Year from its now in the year before or after
 const dayGap = (a, b) => { const A = md(a), B = md(b); if (!A || !B) return 0; let g = (Date.UTC(2001, B.mo - 1, B.d) - Date.UTC(2001, A.mo - 1, A.d)) / 864e5; if (g < -180) g += 365; if (g > 180) g -= 365; return g; };
@@ -82,7 +86,8 @@ const weekday = day => realDate(day)?.getUTCDay() ?? 0;
 const wdk = (day, alt = '') => (STORY.known ? WDK[WD[weekday(day)]] : alt);
 const WD = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'], WDK = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' };
 const daysLine = days => { const s = days.join(','); return s === 'mon,tue,wed,thu,fri' ? '평일' : s === 'sat,sun' ? '주말' : days.length === 7 ? '매일' : days.map(d => WDK[d]).join(' '); };
-const ampm = t => { const m = toMin(t); return m === null ? ['', ''] : [`${(Math.floor(m / 60) % 12) || 12}:${pad(m % 60)}`, m < 720 ? 'AM' : 'PM']; };
+// an alarm's time as the phone writes it: the number, and 오전/오후 · AM/PM beside it ('' on a 24-hour phone)
+const ampm = (p, t) => { const m = toMin(t); return m === null ? ['', ''] : [clockNum(p, m), halfOf(p, m)]; };
 export const lifeEmpty = (p, now, title, kind, back = 'home2', dark = false) => {
     const busy = filling.has(`${nameKey(p.owner)}:${kind}`);
     return `${axBar(p, now, dark ? '#f2f2f4' : '#111')}
@@ -108,9 +113,9 @@ function nextRing(a, now) {
     return null;
 }
 const alarmRow = (p, a) => {
-    const [t, ap] = ampm(a.time);
+    const [t, ap] = ampm(p, a.time);
     return `<button type="button" class="lf_al ${a.on ? '' : 'off'}" data-go="alarm" data-i="${a.id}"><span class="lf_alt"><b>${t}<small>${ap}</small></b><span>${esc(a.label || '알람')}${a.ko && koOn() ? ` <em>${esc(a.ko)}</em>` : ''} <em>· ${a.days.length ? daysLine(a.days) : a.date ? `${esc(fmtDate(p, a.date, true))} 한 번` : '한 번'}</em></span></span><span class="lf_tg ${a.on ? 'on' : ''}"></span></button>
-      ${a.then.length ? `<div class="lf_snz">${a.then.map(x => `<span class="${a.on ? '' : 'o'}">${esc(ampm(x)[0])}</span>`).join('')}</div>` : ''}`;
+      ${a.then.length ? `<div class="lf_snz">${a.then.map(x => `<span class="${a.on ? '' : 'o'}">${esc(ampm(p, x)[0])}</span>`).join('')}</div>` : ''}`;
 };
 export function clockScreen(p, now) {
     const lf = L(p);
@@ -120,7 +125,7 @@ export function clockScreen(p, now) {
     return `${axBar(p, now, '#f2f2f4')}
       ${axTop(axCb('home2'), axKp(p))}
       <div class="ax_scroll">${axH1('알람', `켜짐 ${on} · 꺼짐 ${as.length - on}`)}
-        ${next ? `<div class="lf_next"><span>${ax('bell', 20, '#f5a524', 2.1)}</span><div><b>${next.r.min < 1440 && next.r.day === n.slice(0, 5) ? '오늘' : next.r.min < 2880 ? '내일' : (wdk(next.r.day) ? `${wdk(next.r.day)}요일` : `${Number(next.r.day.slice(3))}일`)} ${ampm(next.a.time)[1] === 'AM' ? '오전' : '오후'} ${esc(ampm(next.a.time)[0])}</b><small>${esc(next.a.label || '알람')} · ${dur(next.r.min)} 뒤</small></div></div>` : ''}
+        ${next ? `<div class="lf_next"><span>${ax('bell', 20, '#f5a524', 2.1)}</span><div><b>${next.r.min < 1440 && next.r.day === n.slice(0, 5) ? '오늘' : next.r.min < 2880 ? '내일' : (wdk(next.r.day) ? `${wdk(next.r.day)}요일` : `${Number(next.r.day.slice(3))}일`)} ${esc(clockOf(p, next.a.time))}</b><small>${esc(next.a.label || '알람')} · ${dur(next.r.min)} 뒤</small></div></div>` : ''}
         ${wake.length ? `<div class="lf_ch">수면 · 기상</div><div class="lf_dcard">${wake.map(a => alarmRow(p, a)).join('')}</div>` : ''}
         ${other.length ? `<div class="lf_ch">기타</div><div class="lf_dcard">${other.map(a => alarmRow(p, a)).join('')}</div>` : ''}
         ${as.length ? '' : '<div class="lf_none">알람이 없어요</div>'}
@@ -130,13 +135,13 @@ export function clockScreen(p, now) {
 export function alarmScreen(p, now, id) {
     const lf = L(p), a = lf?.clock.alarms.find(x => x.id === id);
     if (!a) return clockScreen(p, now);
-    const m = toMin(a.time), h = Math.floor(m / 60), mi = m % 60, h12 = (h % 12) || 12;
+    const m = toMin(a.time), h = Math.floor(m / 60), mi = m % 60, h12 = (h % 12) || 12, half = halfOf(p, m);
     // when it was last switched off: the morning they woke, from health (a wake-up alarm on that day only)
     const today = (lf.health.days || []).find(d => d.date === now5(p).slice(0, 5));
-    const off = a.wake && a.on && today?.wake ? `오늘 ${today.wake}` : '';
+    const off = a.wake && a.on && today?.wake ? `오늘 ${clockOf(p, today.wake)}` : '';
     return `${axBar(p, now, '#f2f2f4')}
       <div class="lf_sheet"><div class="lf_shh"><button type="button" data-go="clock">닫기</button><b>알람</b><span></span></div>
-        <div class="lf_wheel"><div>${(h12 + 10) % 12 + 1}<b>${h12}</b>${h12 % 12 + 1}</div><div>${pad((mi + 59) % 60)}<b>${pad(mi)}</b>${pad((mi + 1) % 60)}</div><div>&nbsp;<b>${h < 12 ? 'AM' : 'PM'}</b>${h < 12 ? 'PM' : '&nbsp;'}</div></div>
+        <div class="lf_wheel">${half ? `<div>${(h12 + 10) % 12 + 1}<b>${h12}</b>${h12 % 12 + 1}</div>` : `<div>${pad((h + 23) % 24)}<b>${pad(h)}</b>${pad((h + 1) % 24)}</div>`}<div>${pad((mi + 59) % 60)}<b>${pad(mi)}</b>${pad((mi + 1) % 60)}</div><div>&nbsp;<b>${half || '&nbsp;'}</b>${half ? (h < 12 ? halfOf(p, 720) : '&nbsp;') : '&nbsp;'}</div></div>
         <div class="lf_days7">${['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map(d => `<span class="${a.days.includes(d) ? 'on' : ''}">${WDK[d]}</span>`).join('')}</div>
         <div class="lf_dcard lf_opts"><div><span>레이블</span><small>${esc(a.label || '알람')}</small></div><div><span>사운드</span><small>${esc(a.sound || '기본')} ›</small></div><div><span>다시 알림</span><small>${a.snooze ? `${a.snooze}분${a.snoozeCount ? ` · ${a.snoozeCount}번` : ''}` : '끔'}</small></div></div>
         ${a.ko && koOn() ? `<div class="lf_mini">${esc(a.ko)}</div>` : ''}
@@ -161,7 +166,7 @@ export function timerScreen(p, now) {
       <div class="ax_scroll">${axH1('타이머')}
         ${r ? `<div class="lf_ring"><svg viewBox="0 0 250 250">${ticks(frac)}<circle cx="125" cy="125" r="115" fill="none" stroke="#2b2c31" stroke-width="6"/><circle cx="125" cy="125" r="115" fill="none" stroke="#f5a524" stroke-width="6" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - frac)).toFixed(1)}" transform="rotate(-90 125 125)"/>${frac > 0 ? `<circle cx="${(125 + 115 * Math.sin(frac * 2 * Math.PI)).toFixed(1)}" cy="${(125 - 115 * Math.cos(frac * 2 * Math.PI)).toFixed(1)}" r="8" fill="#f5a524" stroke="#17181b" stroke-width="3"/>` : ''}</svg>
           <div>${left ? `<b class="cg_num lf_dig"><span>${pad(Math.floor(left / 60))}</span><i>:</i><em>${pad(left % 60)}</em></b>` : '<b class="lf_dig">끝</b>'}<span>${esc(r.label || '타이머')} · ${Math.round((r.sec || 0) / 60)}분</span></div></div>
-          ${left ? `<div class="lf_tend">끝나는 시각 <b class="cg_num">${hm(Number(ring))}</b></div>` : ''}
+          ${left ? `<div class="lf_tend">끝나는 시각 <b class="cg_num">${esc(clockOf(p, Number(ring)))}</b></div>` : ''}
           <div class="lf_tbtn2"><span>${ax('x', 15, 'currentColor', 2.6)}취소</span><span class="a">${left ? `${ax('pause', 15, 'currentColor', 2.6)}일시정지` : `${ax('play', 15, 'currentColor', 2, 'currentColor')}다시`}</span></div>` : ''}
         <div class="lf_ch">저장된 타이머</div>
         ${ts.length ? `<div class="lf_dcard lf_svl">${ts.map(t => `<div class="lf_sv"><b class="cg_num">${Math.floor((t.sec || 0) / 60)}:${pad((t.sec || 0) % 60)}</b><span class="lf_mq"><span>${esc(t.label)}${t.ko && koOn() ? ` <em>${esc(t.ko)}</em>` : ''}</span></span><small>${t.last ? esc(fmtDate(p, t.last, true)) : ''}</small><i>${ax('play', 13, '#f5a524', 2, '#f5a524')}</i></div>`).join('')}</div>` : '<div class="lf_none">저장된 타이머가 없어요</div>'}
@@ -214,13 +219,14 @@ const face = (min, night) => { const h = (min % 720) / 720 * 360, m = (min % 60)
 export function worldScreen(p, now) {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '시계', 'life', 'home2', true);
-    const hn = hereNow(lf), here = { name: hn.place || '현재 위치', tz: hereZone(lf, p, hn.place), sunset: hn.tiles?.sunset || '', note: '' };
-    const rows = [here, ...lf.weather.cities.filter(c => c.name !== here.name)].map(c => ({ c, t: cityTime(p, lf, c) }));
+    // the saved city the owner is in is the 현재 위치 row (its note, like 우리 집, goes with it), not a second row
+    const hn = hereNow(lf), same = cityOfPlace(hn.place, lf.weather.cities), here = { name: hn.place || '현재 위치', tz: hereZone(lf, p, hn.place), sunset: hn.tiles?.sunset || '', note: same?.note || '' };
+    const rows = [here, ...lf.weather.cities.filter(c => c !== same && c.name !== here.name)].map(c => ({ c, t: cityTime(p, lf, c) }));
     return `${axBar(p, now, '#f2f2f4')}
       ${axTop(axCb('home2'))}
       <div class="ax_scroll">${axH1('세계 시계')}
         ${worldMap(p, lf, rows)}
-        <div class="lf_dcard">${rows.map(({ c, t }, k) => `<div class="lf_wc">${face(toMin(t.time), t.night)}<span class="lf_wct"><small>${k ? `${t.dayShift}, ${t.off >= 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '현재 위치'}${c.note ? ` · ${esc(c.note)}` : ''}</small><b>${esc(c.name)}</b></span><b class="cg_num">${t.time}</b></div>`).join('')}</div>
+        <div class="lf_dcard">${rows.map(({ c, t }, k) => `<div class="lf_wc">${face(toMin(t.time), t.night)}<span class="lf_wct"><small>${k ? `${t.dayShift}, ${t.off >= 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '현재 위치'}${c.note ? ` · ${esc(c.note)}` : ''}</small><b>${esc(c.name)}</b></span><b class="cg_num">${esc(clockNum(p, t.time))}</b></div>`).join('')}</div>
         <i class="lf_pad"></i></div>
       ${clockDock('wclock')}${axInd('#f2f2f4')}`;
 }
@@ -339,13 +345,13 @@ function weightLine(lf, u, until) {
 const stepsBy = (d, min) => { const hs = hourSteps(d), h = Math.floor(min / 60); return Math.round(hs.slice(0, h).reduce((s, x) => s + x, 0) + (hs[h] || 0) * (min % 60) / 60); };
 // yday: yesterday's own line, shown when today has nothing to say yet (only against their usual, said as "어제")
 function highlight(lf, d, u, yday = false) {
-    const ds = lf.health.days, prev = ds[ds.indexOf(d) - 1], sm = sleepMin(d), us = usualSleep(u), Y = yday ? '어제 ' : '';
-    if (d.workout && (yday || !prev?.workout)) return ['run', `${Y}${esc(workName(d.workout.kind))} ${d.workout.min || ''}분을 했어요`, d.workout.km ? `${comma(d.workout.km)} km · ${d.workout.time || ''}` : (d.workout.time || '')];
+    const p = STORY.p, ds = lf.health.days, prev = ds[ds.indexOf(d) - 1], sm = sleepMin(d), us = usualSleep(u), Y = yday ? '어제 ' : '';
+    if (d.workout && (yday || !prev?.workout)) return ['run', `${Y}${esc(workName(d.workout.kind))} ${d.workout.min || ''}분을 했어요`, d.workout.km ? `${comma(d.workout.km)} km · ${clockOf(p, d.workout.time)}` : clockOf(p, d.workout.time)];
     // a day still going is set against yesterday by this same time, not a whole day ("어제 이맘때보다")
     const going = Number.isFinite(d.upTo);
     if (going && prev?.steps && d.steps !== null && d.steps !== undefined) { const was = stepsBy(prev, d.upTo); if (Math.abs(d.steps - was) >= 1500) return ['walk', `어제 이맘때보다 ${n0(Math.abs(d.steps - was))}걸음 ${d.steps > was ? '더' : '덜'} 걸었어요`, `${n0(was)} → ${n0(d.steps)}`]; }
     if (!yday && !going && prev?.steps && d.steps && Math.abs(d.steps - prev.steps) >= 1500) return ['walk', `전날보다 ${n0(Math.abs(d.steps - prev.steps))}걸음 ${d.steps > prev.steps ? '더' : '덜'} 걸었어요`, `${n0(prev.steps)} → ${n0(d.steps)}`];
-    if (sm !== null && us && Math.abs(sm - us) >= 60) return ['moon', `${Y}평소보다 ${dur(Math.abs(sm - us))} ${sm > us ? '더' : '덜'} 잤어요`, `${d.sleep} – ${d.wake}`];
+    if (sm !== null && us && Math.abs(sm - us) >= 60) return ['moon', `${Y}평소보다 ${dur(Math.abs(sm - us))} ${sm > us ? '더' : '덜'} 잤어요`, `${clockOf(p, d.sleep)} – ${clockOf(p, d.wake)}`];
     if (!going && u.steps && d.steps && Math.abs(d.steps - u.steps) >= 1500) return ['walk', `${Y}평소보다 ${n0(Math.abs(d.steps - u.steps))}걸음 ${d.steps > u.steps ? '더' : '덜'} 걸었어요`, `평소 ${n0(u.steps)}`];
     return null;
 }
@@ -370,12 +376,12 @@ export function healthScreen(p, now, pick = '') {
         ${hl ? `<div class="lf_hc lf_hhi"><span style="background: ${HB[hl[0] === 'run' ? 'run' : hl[0] === 'moon' ? 'sleep' : 'steps']}">${ax(hl[0], 16, HC[hl[0] === 'run' ? 'run' : hl[0] === 'moon' ? 'sleep' : 'steps'], 2.2)}</span><div><b>${hl[1]}</b><small>${hl[2]}</small></div></div>` : ''}
         <div class="lf_hgrid">
           ${htile('hsteps', d.date, HC.steps, 'walk', '걸음', `<span class="lf_hv"><span><b class="cg_num">${n0(d.steps)}</b></span>${minis(wk.map(x => x.steps), HC.steps, i)}</span>`)}
-          ${htile('hsleep', d.date, HC.sleep, 'moon', '수면', `<span class="lf_hv"><span>${sm === null ? '<b class="cg_num">—</b>' : `<b class="cg_num">${Math.floor(sm / 60)}</b>시간 <b class="cg_num">${sm % 60}</b>분`}<small>${d.sleep && d.wake ? `${d.sleep} – ${d.wake}` : ''}</small></span></span>`)}
-          ${htile(d.workout ? 'hwork' : '', d.date, HC.run, 'run', '운동', `<span class="lf_hv"><span><b class="cg_num">${wmin}</b>분${d.workout ? ` · ${esc(workName(d.workout.kind))}` : ''}<small>${d.workout ? `${d.workout.km ? `${comma(d.workout.km)} km · ` : ''}${d.workout.time || ''}` : lastRun ? `마지막 ${esc(fmtDate(p, lastRun.date, true))}` : ''}</small></span></span>`)}
+          ${htile('hsleep', d.date, HC.sleep, 'moon', '수면', `<span class="lf_hv"><span>${sm === null ? '<b class="cg_num">—</b>' : `<b class="cg_num">${Math.floor(sm / 60)}</b>시간 <b class="cg_num">${sm % 60}</b>분`}<small>${d.sleep && d.wake ? `${clockOf(p, d.sleep)} – ${clockOf(p, d.wake)}` : ''}</small></span></span>`)}
+          ${htile(d.workout ? 'hwork' : '', d.date, HC.run, 'run', '운동', `<span class="lf_hv"><span><b class="cg_num">${wmin}</b>분${d.workout ? ` · ${esc(workName(d.workout.kind))}` : ''}<small>${d.workout ? `${d.workout.km ? `${comma(d.workout.km)} km · ` : ''}${clockOf(p, d.workout.time)}` : lastRun ? `마지막 ${esc(fmtDate(p, lastRun.date, true))}` : ''}</small></span></span>`)}
           ${htile(d.hr?.length === 2 ? 'hheart' : '', d.date, HC.hr, 'heartF', '심박수', `<span class="lf_hv"><span>${d.hr?.length === 2 ? `<b class="cg_num">${d.hr[0]}–${d.hr[1]}</b>BPM` : '<b class="cg_num">—</b>'}<small>${u.rest ? `안정 시 평소 ${u.rest}` : ''}</small></span></span>`)}
           ${htile('', '', HC.kcal, 'flame', '활동 칼로리', `<span class="lf_hv"><span><b class="cg_num">${n0(kcalOf(d))}</b>kcal${hbar(kcalOf(d) / 500, HC.kcal, HB.kcal)}</span></span>`)}
           ${water ? htile('hwater', d.date, HC.water, 'drop', '물', `<span class="lf_hv"><span><b class="cg_num">${comma((water.ml / 1000).toFixed(1))}</b>/ ${comma(u.water)} L<i class="lf_hcups">${Array.from({ length: 8 }, (_, k) => `<i style="background: ${k < Math.round(water.ml / 1000 / u.water * 8) ? HC.water : HB.water}"></i>`).join('')}</i>${ywater?.ml ? `<small>어제 ${comma((ywater.ml / 1000).toFixed(1))} L</small>` : ''}</span></span>`) : ''}
-          ${u.coffee !== undefined && u.coffee !== null || cof.length ? htile('hwater', d.date, HC.caf, 'cupH', '카페인', `<span class="lf_hv"><span><b class="cg_num">${cof.length}</b>잔 · ${cof.reduce((s, x) => s + x.mg, 0)} mg<small>${cof.length ? `마지막 ${cof.at(-1).t} ${esc(cof.at(-1).what)}` : ycof.length ? `어제 ${ycof.length}잔 · 마지막 ${ycof.at(-1).t} ${esc(ycof.at(-1).what)}` : '오늘은 안 마셨어요'}</small></span></span>`) : ''}
+          ${u.coffee !== undefined && u.coffee !== null || cof.length ? htile('hwater', d.date, HC.caf, 'cupH', '카페인', `<span class="lf_hv"><span><b class="cg_num">${cof.length}</b>잔 · ${cof.reduce((s, x) => s + x.mg, 0)} mg<small>${cof.length ? `마지막 ${esc(clockOf(p, cof.at(-1).t))} ${esc(cof.at(-1).what)}` : ycof.length ? `어제 ${ycof.length}잔 · 마지막 ${esc(clockOf(p, ycof.at(-1).t))} ${esc(ycof.at(-1).what)}` : '오늘은 안 마셨어요'}</small></span></span>`) : ''}
           ${wl.length ? htile('hweight', d.date, HC.w, 'scaleH', '체중', `<span class="lf_hv"><span><b class="cg_num">${comma(wl.at(-1).kg.toFixed(1))}</b>kg<small>${wl.length > 1 ? `${wl.at(-1).kg <= wl[0].kg ? '▼' : '▲'} ${comma(Math.abs(wl.at(-1).kg - wl[0].kg).toFixed(1))} · ${wl.length}일` : ''}</small></span></span>`) : ''}
         </div>
         <i class="lf_pad"></i></div>
@@ -437,11 +443,11 @@ export function sleepScreen(p, now, i) {
         const total = sleepMin(d), st = stages(d), sum = k => st.filter(x => x.lvl === k).reduce((n, x) => n + x.b - x.a, 0), X0 = 34, W = 300, H = 34;
         const x = t => X0 + (W - X0) * t / (total || 1), y = l => 8 + ST[l][2] * H;
         const hyp = st.map((s, k) => `${k ? `<line x1="${x(s.a).toFixed(1)}" x2="${x(s.a).toFixed(1)}" y1="${Math.min(y(s.lvl), y(st[k - 1].lvl)) + 8}" y2="${Math.max(y(s.lvl), y(st[k - 1].lvl)) + 8}" class="cn"/>` : ''}<rect x="${x(s.a).toFixed(1)}" y="${y(s.lvl)}" width="${Math.max(2, x(s.b) - x(s.a)).toFixed(1)}" height="16" rx="6" fill="${ST[s.lvl][1]}"/>`).join('');
-        body = `${hhead('수면 시간', total === null ? '—' : durBig(total), `${esc(fmtDate(p, d.date))} · ${d.sleep || ''} – ${d.wake || ''}`)}
+        body = `${hhead('수면 시간', total === null ? '—' : durBig(total), `${esc(fmtDate(p, d.date))} · ${clockOf(p, d.sleep)} – ${clockOf(p, d.wake)}`)}
           ${total ? `<div class="lf_hc"><svg class="lf_hsvg" viewBox="0 0 300 146">${Object.values(ST).map(([n, , l]) => `<line x1="${X0}" x2="${W}" y1="${16 + l * H}" y2="${16 + l * H}" class="g" stroke-dasharray="2 3"/><text x="0" y="${20 + l * H}">${n}</text>`).join('')}${hyp}</svg>
-            <div class="lf_xl" style="padding-left: 34px">${[0, 1, 2, 3].map(k => `<span>${hm((toMin(d.sleep) ?? 0) + Math.round(total * k / 3))}</span>`).join('')}</div></div>
+            <div class="lf_xl" style="padding-left: 34px">${[0, 1, 2, 3].map(k => `<span>${clockNum(p, (toMin(d.sleep) ?? 0) + Math.round(total * k / 3))}</span>`).join('')}</div></div>
           <div class="lf_hc lf_hst">${Object.entries(ST).map(([k, [n, c]]) => `<div><span>${n}</span>${hbar(sum(k) / total, c, '#f0f1f3', 8)}<b class="cg_num">${k === 'awake' ? `${d.woke || 0}번 · ` : ''}${dur(sum(k))}</b></div>`).join('')}</div>` : ''}
-          <div class="lf_hc lf_rows"><div><span>침대에 누운 시간</span><b class="cg_num">${d.bed || '—'}</b></div>${d.bed && d.sleep ? `<div><span>잠들기까지</span><b class="cg_num">${dur(((toMin(d.sleep) - toMin(d.bed)) + 1440) % 1440)}</b></div>` : ''}${u.sleep ? `<div><span>평소 잠든 시각</span><b class="cg_num">${u.sleep}</b></div>` : ''}</div>`;
+          <div class="lf_hc lf_rows"><div><span>침대에 누운 시간</span><b class="cg_num">${clockOf(p, d.bed) || '—'}</b></div>${d.bed && d.sleep ? `<div><span>잠들기까지</span><b class="cg_num">${dur(((toMin(d.sleep) - toMin(d.bed)) + 1440) % 1440)}</b></div>` : ''}${u.sleep ? `<div><span>평소 잠든 시각</span><b class="cg_num">${clockOf(p, u.sleep)}</b></div>` : ''}</div>`;
     } else {
         const wk = lastDays(lf, m === 'w' ? 7 : 30, d.date).filter(x => x.sleep && x.wake), base = 20 * 60;
         const off = t => { const v = toMin(t); return v === null ? 0 : ((v - base) + 1440) % 1440; }, lo = Math.min(...wk.map(x => off(x.sleep)), 120), hi = Math.max(...wk.map(x => off(x.wake)), lo + 420);
@@ -449,11 +455,11 @@ export function sleepScreen(p, now, i) {
         const ticks = []; for (let t = top; t <= bot; t += Math.max(60, Math.round((bot - top) / 4 / 60) * 60)) ticks.push(t);
         const a = avg(wk.map(sleepMin));
         body = `${hhead('평균 수면', a === null ? '—' : durBig(Math.round(a)), wk.length ? `${esc(fmtDate(p, wk[0].date, true))} – ${esc(fmtDate(p, wk.at(-1).date, true))}` : '')}
-          <div class="lf_hc"><svg class="lf_hsvg" viewBox="0 0 300 186">${ticks.map(t => `<line x1="30" x2="300" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}" class="g"/><text x="0" y="${(Y(t) + 4).toFixed(1)}">${hm(t + base)}</text>`).join('')}
+          <div class="lf_hc"><svg class="lf_hsvg" viewBox="0 0 300 186">${ticks.map(t => `<line x1="30" x2="300" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}" class="g"/><text x="0" y="${(Y(t) + 4).toFixed(1)}">${clockNum(p, t + base)}</text>`).join('')}
             ${u.sleep ? `<line x1="30" x2="300" y1="${Y(off(u.sleep)).toFixed(1)}" y2="${Y(off(u.sleep)).toFixed(1)}" class="av" stroke="${HC.sleep}"/>` : ''}
             ${wk.map((x, k) => `<rect x="${(30 + k * bw + bw * 0.2).toFixed(1)}" y="${Y(off(x.sleep)).toFixed(1)}" width="${(bw * 0.6).toFixed(1)}" height="${Math.max(4, Y(off(x.wake)) - Y(off(x.sleep))).toFixed(1)}" rx="${Math.min(7, bw * 0.25).toFixed(1)}" fill="${x === d ? HC.sleep : HB.sleep}"/>`).join('')}</svg>
-            <div class="lf_xl" style="padding-left: 30px">${m === 'w' ? wk.map(x => `<span class="${x === d ? 'on' : ''}">${wdk(x.date, String(Number(x.date.slice(3))))}</span>`).join('') : [wk[0], wk.at(-1)].filter(Boolean).map(x => `<span>${esc(fmtDate(p, x.date, true))}</span>`).join('')}</div>${u.sleep ? `<div class="lf_hnote"><i style="border-color: ${HC.sleep}"></i>평소 잠드는 시각 ${u.sleep}</div>` : ''}</div>
-          <div class="lf_hc lf_rows"><div><span>평균 잠든 시각</span><b class="cg_num">${wk.length ? hm(Math.round(avg(wk.map(x => off(x.sleep)))) + base) : '—'}</b></div><div><span>평균 깬 시각</span><b class="cg_num">${wk.length ? hm(Math.round(avg(wk.map(x => off(x.wake)))) + base) : '—'}</b></div>${wk.length ? (() => { const l = wk.reduce((x, y2) => (off(y2.sleep) > off(x.sleep) ? y2 : x)); return `<div><span>가장 늦게 잔 날</span><b>${wdk(l.date, String(Number(l.date.slice(3))))} · ${l.sleep}</b></div>`; })() : ''}</div>`;
+            <div class="lf_xl" style="padding-left: 30px">${m === 'w' ? wk.map(x => `<span class="${x === d ? 'on' : ''}">${wdk(x.date, String(Number(x.date.slice(3))))}</span>`).join('') : [wk[0], wk.at(-1)].filter(Boolean).map(x => `<span>${esc(fmtDate(p, x.date, true))}</span>`).join('')}</div>${u.sleep ? `<div class="lf_hnote"><i style="border-color: ${HC.sleep}"></i>평소 잠드는 시각 ${clockOf(p, u.sleep)}</div>` : ''}</div>
+          <div class="lf_hc lf_rows"><div><span>평균 잠든 시각</span><b class="cg_num">${wk.length ? clockOf(p, Math.round(avg(wk.map(x => off(x.sleep)))) + base) : '—'}</b></div><div><span>평균 깬 시각</span><b class="cg_num">${wk.length ? clockOf(p, Math.round(avg(wk.map(x => off(x.wake)))) + base) : '—'}</b></div>${wk.length ? (() => { const l = wk.reduce((x, y2) => (off(y2.sleep) > off(x.sleep) ? y2 : x)); return `<div><span>가장 늦게 잔 날</span><b>${wdk(l.date, String(Number(l.date.slice(3))))} · ${clockOf(p, l.sleep)}</b></div>`; })() : ''}</div>`;
     }
     return `${axBar(p, now)}${axTop(axCb(`health:${d.date}`))}
       <div class="ax_scroll">${axH1('수면')}${seg('hsleep', d.date, m, [['d', '일'], ['w', '주'], ['m', '월']])}${body}<i class="lf_pad"></i></div>${axInd()}`;
@@ -471,7 +477,7 @@ export function workScreen(p, now, day) {
     const zones = [0.1 + r() * 0.15, 0.3 + r() * 0.2, 0.2 + r() * 0.15, r() * 0.1], zs = zones.reduce((s, x) => s + x, 0);
     const stat = (n, v, u2, c) => `<div><small>${n}</small><b class="cg_num" style="color: ${c}">${v}</b><span>${u2}</span></div>`;
     return `${axBar(p, now)}${axTop(axCb(`health:${d.date}`))}
-      <div class="ax_scroll"><div class="lf_hwh"><span style="background: ${HB.run}">${ax(ic, 26, HC.run, 2.2)}</span><div><b>${esc(workName(w.kind))}</b><small>${esc(fmtDate(p, d.date))}${w.time ? ` · ${w.time}${end ? ` – ${end}` : ''}` : ''}</small></div></div>
+      <div class="ax_scroll"><div class="lf_hwh"><span style="background: ${HB.run}">${ax(ic, 26, HC.run, 2.2)}</span><div><b>${esc(workName(w.kind))}</b><small>${esc(fmtDate(p, d.date))}${w.time ? ` · ${clockOf(p, w.time)}${end ? ` – ${clockOf(p, end)}` : ''}` : ''}</small></div></div>
         ${moved ? `<div class="lf_hc lf_hmap"><svg viewBox="0 0 332 150"><rect width="332" height="150" fill="#eaf1ec"/><path d="M0 38H332M0 112H332M92 0V150M236 0V150" stroke="#f7faf6" stroke-width="10"/><path d="M0 70Q160 56 332 92" stroke="#d6e6f4" stroke-width="14" fill="none"/><path d="${path}" stroke="${HC.run}" stroke-width="5" fill="none" stroke-linejoin="round"/><circle cx="${pts[0][0].toFixed(0)}" cy="${pts[0][1].toFixed(0)}" r="6" fill="#fff" stroke="${HC.run}" stroke-width="3"/></svg></div>` : ''}
         <div class="lf_hc lf_hstat">${stat('운동 시간', w.min ? `${w.min}:00` : '—', '', HC.run)}${stat('거리', w.km ? comma(w.km) : '—', w.km ? 'km' : '', HC.water)}${pace ? stat('평균 페이스', `${Math.floor(pace)}′${pad(Math.round((pace % 1) * 60))}″`, '/km', '#161b22') : ''}${stat('활동 칼로리', workKcal(w), 'kcal', HC.kcal)}${avgHr ? stat('평균 심박수', avgHr, 'BPM', HC.hr) : ''}${d.hr?.[1] ? stat('최고 심박수', d.hr[1], 'BPM', HC.hr) : ''}</div>
         ${avgHr && w.min ? `<div class="lf_hc lf_hst"><span class="lf_hl" style="color: ${HC.hr}">${ax('heartF', 14, HC.hr, 2.2, HC.hr)}심박수 구간</span>${zones.map((z, k) => { const mn = Math.round(w.min * z / zs); return `<div><span>구간 ${k + 2}</span>${hbar(z / zs, ['#9fd3ef', '#9fd8b8', '#f6c98a', HC.hr][k], '#f0f1f3', 8)}<b class="cg_num">${mn}분</b></div>`; }).join('')}</div>` : ''}
@@ -504,10 +510,10 @@ export function waterScreen(p, now, day) {
         ${wt ? `<div class="lf_hc"><span class="lf_hl" style="color: ${HC.water}">${ax('drop', 14, HC.water, 2.2, HC.water)}물<small>평소 ${comma(u.water)} L</small></span>
           <div class="lf_hbig"><b class="cg_num">${comma((wt.ml / 1000).toFixed(1))}</b>L · ${wt.log.length}잔</div>
           <div class="lf_hcupr">${Array.from({ length: Math.max(8, wt.log.length) }, (_, k) => cup(k < wt.log.length)).join('')}</div>
-          <div class="lf_rows">${wt.log.map(x => `<div><span class="cg_num">${x.t}</span><b class="cg_num">${x.ml} ml</b></div>`).join('')}</div></div>` : ''}
+          <div class="lf_rows">${wt.log.map(x => `<div><span class="cg_num">${esc(clockOf(p, x.t))}</span><b class="cg_num">${x.ml} ml</b></div>`).join('')}</div></div>` : ''}
         <div class="lf_hc"><span class="lf_hl" style="color: ${HC.caf}">${ax('cupH', 14, HC.caf, 2.2)}카페인<small>하루 400 mg까지</small></span>
           <div class="lf_hbig"><b class="cg_num">${mg}</b>mg · ${cof.length}잔</div>${hbar(mg / 400, HC.caf, HB.caf, 8)}
-          ${cof.length ? `<div class="lf_rows">${cof.map(x => `<div><span><span class="cg_num">${x.t}</span> · ${esc(x.what)}${x.from ? `<small>배달 · ${esc(x.from)}</small>` : ''}</span><b class="cg_num">${x.mg} mg</b></div>`).join('')}</div>` : '<div class="lf_hnote">오늘은 안 마셨어요</div>'}
+          ${cof.length ? `<div class="lf_rows">${cof.map(x => `<div><span><span class="cg_num">${esc(clockOf(p, x.t))}</span> · ${esc(x.what)}${x.from ? `<small>배달 · ${esc(x.from)}</small>` : ''}</span><b class="cg_num">${x.mg} mg</b></div>`).join('')}</div>` : '<div class="lf_hnote">오늘은 안 마셨어요</div>'}
           ${u.coffee ? `<div class="lf_hnote">평소 하루 ${u.coffee}잔${cof.length > u.coffee ? ` · 오늘은 ${cof.length - u.coffee}잔 더` : ''}</div>` : ''}</div>
         <i class="lf_pad"></i></div>${axInd()}`;
 }
@@ -537,7 +543,7 @@ export function compareScreen(p, now) {
     const row = (dir, [color, bg], title, sub) => rows.push(`<div class="lf_hc lf_tr"><span style="background: ${bg}">${ax(dir, 18, color, 2.4)}</span><div><b>${title}</b><small>${sub}</small></div></div>`);
     if (st !== null && u.steps) { const r = st / u.steps; row(r > 1.15 ? 'up' : r < 0.85 ? 'down' : 'eq', r > 1.15 || r < 0.85 ? [HC.steps, HB.steps] : grey, r > 1.15 ? '걸음이 평소보다 많아요' : r < 0.85 ? '걸음이 평소보다 적어요' : '걸음은 평소와 비슷해요', `${n0(Math.round(st))} · 평소 ${n0(u.steps)}`); }
     if (sl !== null && us) { const df = sl - us; row(df > 30 ? 'up' : df < -30 ? 'down' : 'eq', Math.abs(df) > 30 ? [HC.sleep, HB.sleep] : grey, df > 30 ? '수면이 평소보다 길어요' : df < -30 ? '수면이 평소보다 짧아요' : '수면은 평소와 비슷해요', `${dur(Math.round(sl))} · 평소 ${dur(us)}`); }
-    if (bed !== null && u.sleep) { const df = bed - lateMin(u.sleep); if (Math.abs(df) > 40) row(df > 0 ? 'down' : 'up', [HC.sleep, HB.sleep], df > 0 ? '잠드는 시각이 늦어요' : '잠드는 시각이 빨라요', `${hm(Math.round(bed))} · 평소 ${u.sleep}`); }
+    if (bed !== null && u.sleep) { const df = bed - lateMin(u.sleep); if (Math.abs(df) > 40) row(df > 0 ? 'down' : 'up', [HC.sleep, HB.sleep], df > 0 ? '잠드는 시각이 늦어요' : '잠드는 시각이 빨라요', `${clockOf(p, Math.round(bed))} · 평소 ${clockOf(p, u.sleep)}`); }
     if (u.workouts) row(runs ? 'eq' : 'down', runs ? grey : [HC.run, HB.run], runs ? `운동은 이번 주 ${runs}회예요` : '운동이 끊겼어요', `이번 주 ${runs}회 · 평소 주 ${u.workouts}회${last ? ` · 마지막 ${esc(fmtDate(p, last.date, true))}` : ''}`);
     const rest = avg(wk.map(x => x.hr?.[0]));
     if (rest !== null && u.rest) row(Math.abs(rest - u.rest) > 6 ? (rest > u.rest ? 'up' : 'down') : 'eq', Math.abs(rest - u.rest) > 6 ? [HC.hr, HB.hr] : grey, Math.abs(rest - u.rest) > 6 ? (rest > u.rest ? '안정 시 심박이 평소보다 높아요' : '안정 시 심박이 평소보다 낮아요') : '심박수는 평소와 비슷해요', `${Math.round(rest)} · 평소 ${u.rest}`);
@@ -668,7 +674,10 @@ const fileRow = (p, f) => `<button type="button" class="lf_fr" data-go="file" da
 export function filesScreen(p, now) {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '파일', 'life');
-    const fs = live(lf), recent = [...fs].filter(f => f.opened).sort(byStory(p.now, f => f.opened)).reverse().slice(0, 6), dl = fs.filter(f => f.folder === 'Downloads').length, trash = lf.files.items.filter(f => f.trashed).length, cl = lf.files.cloud || {};
+    const fs = live(lf), recent = [...fs].filter(f => f.opened).sort(byStory(p.now, f => f.opened)).reverse().slice(0, 6), dl = fs.filter(f => f.folder === 'Downloads').length, trash = lf.files.items.filter(f => f.trashed).length, cl0 = lf.files.cloud || {};
+    // the cloud the fill gave, plus the files the story saved since (reflection's own, still kept), never more than the whole
+    const added = lf.files.items.filter(f => String(f.id || '').startsWith('sync:') && !f.trashed).reduce((n, f) => n + (Number(f.size) || 0), 0) / 1048576;
+    const cl = Number.isFinite(Number(cl0.used)) && cl0.used !== null && added ? { ...cl0, used: Math.min(Number(cl0.total) || Infinity, Math.round((Number(cl0.used) + added) * 10) / 10) } : cl0;
     // the folders as the files now stand: a file a reflection moved in counts there, and a folder only a file names is shown too
     const inF = name => fs.filter(f => f.folder === name).length;
     const folders = [...lf.files.folders.map(x => ({ ...x, count: Math.max(x.count || 0, inF(x.name)) })),
@@ -729,7 +738,7 @@ export function fileScreen(p, now, id) {
       <div class="ax_top">${axCb(f.trashed ? 'folder:~trash' : `folder:${encodeURIComponent(f.folder)}`)}<span class="lf_ttl">${esc(f.name)}</span><span class="ax_topr">${axKp(p)}</span></div>
       <div class="ax_scroll">${body}
         <div class="lf_sub" style="text-align: center">${esc([f.pages ? `${f.pages}쪽` : '', FK[f.kind][0], size(f.size)].filter(Boolean).join(' · '))}</div>
-        <div class="lf_card lf_rows"><div><span>위치</span><b>${esc(f.trashed ? '최근 삭제' : f.folder === 'Downloads' ? '다운로드' : f.folder)}</b></div>${f.from ? `<div><span>받은 곳</span><b>${esc(f.from)}</b></div>` : ''}<div><span>만든 날</span><b class="cg_num">${esc(fmtDate(p, f.time))} ${esc(String(f.time).slice(6))}</b></div>${f.opened ? `<div><span>마지막으로 연 날</span><b class="cg_num">${esc(fmtDate(p, f.opened, true))}</b></div>` : ''}</div>
+        <div class="lf_card lf_rows"><div><span>위치</span><b>${esc(f.trashed ? '최근 삭제' : f.folder === 'Downloads' ? '다운로드' : f.folder)}</b></div>${f.from ? `<div><span>받은 곳</span><b>${esc(f.from)}</b></div>` : ''}<div><span>만든 날</span><b class="cg_num">${esc(fmtDate(p, f.time))} ${esc(clockOf(p, String(f.time).slice(6)))}</b></div>${f.opened ? `<div><span>마지막으로 연 날</span><b class="cg_num">${esc(fmtDate(p, f.opened, true))}</b></div>` : ''}</div>
         <i class="lf_pad"></i></div>${axInd()}`;
 }
 
@@ -908,7 +917,18 @@ function wxIc(c, z = 24, night = false) {
 const saidOf = h => String(h.said || '').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/(영하\s*)?[-−]?\d{1,3}(?:[.,]\d)?\s*(?:°\s*[CF]?|℃|℉|도(?![가-힣]))/gi, '').replace(/\s*[/|·,~-]+\s*$|^\s*[/|·,~-]+\s*/g, '').trim() || WX[h.cond] || '';
 // the here weather with every tile filled (sunrise and sunset from the story's zone), for the sky and the tiles alike
 // a status line newer than the saved weather (a day on, or later the same day) shows over it until the next reflection
+// the here weather the screens show: the phone's own, unless another phone in the same city, on the same day, was told it
+// later (the newest reflection is the city's weather for every phone there; nothing is written, each keeps its own)
 function hereNow(lf) {
+    const h = hereOwn(lf), p = OWNER.get(lf);
+    if (!p || !h.place || !h.date) return h;
+    let others = [];
+    try { others = Object.values(getMeta()?.phones || {}).filter(o => o && o !== p && o.owner !== p.owner && o.life?.weather); } catch { others = []; }
+    const at = x => `${x.date || ''} ${x.time || ''}`, same = (a, b) => !!cityOfPlace(a, [{ name: b }]);
+    const best = others.map(o => hereOwn(L(o))).filter(x => x.place && x.date === h.date && same(h.place, x.place) && at(x) > at(h)).sort((a, b) => at(b).localeCompare(at(a)))[0];
+    return best ? { ...best, place: h.place } : h;
+}
+function hereOwn(lf) {
     const h = lf.weather.here;
     let t = null;
     try { t = weatherNow(); } catch { t = null; }
@@ -922,9 +942,27 @@ function hereNow(lf) {
 // a saved city as the screens draw it: the one the owner is in carries the "here" weather (a newer status line included)
 function cityView(p, lf, c) {
     const h = hereNow(lf);
-    if (cityOfPlace(h.place, lf.weather.cities) !== c) return c;
+    if (cityOfPlace(h.place, lf.weather.cities) !== c) return shared(p, lf, c);
     const w = mirrorHome({ here: h, cities: [structuredClone(c)] });
     return w.cities[0];
+}
+// the same city on another phone in this chat: one weather for it, not two guesses.
+// Another phone whose owner is in the city (its 현재 위치 names it) lends its whole weather (hours, days, tiles), when that
+// weather is the city's today; else the phone whose weather was told last lends its saved city's numbers. Nothing is
+// written: each phone keeps its own, and the next reflection of either one shows at once
+const stamp = l => `${l.weather.here.date || ''} ${l.weather.here.time || ''}`;
+function shared(p, lf, c) {
+    let others = [];
+    try { others = Object.values(getMeta()?.phones || {}).filter(o => o && o !== p && o.owner !== p.owner && o.life?.weather); } catch { others = []; }
+    if (!others.length) return c;
+    const t = cityTime(p, lf, c), day = t.dayShift === '내일' ? shiftDay(t.date, 1) : t.dayShift === '어제' ? shiftDay(t.date, -1) : t.date;
+    const there = others.map(o => ({ o, l: L(o) })).map(x => ({ ...x, h: hereOwn(x.l) })).filter(x => x.h.place && cityOfPlace(x.h.place, [c]) && x.h.date === day).sort((a, b) => stamp(b.l).localeCompare(stamp(a.l)))[0];
+    if (there) { const w = mirrorHome({ here: there.h, cities: [structuredClone(c)] }); return { ...w.cities[0], src: { p: there.o, h: there.h, l: there.l } }; }
+    const mine = stamp(lf), saved = others.map(o => ({ l: L(o) })).map(x => ({ ...x, c2: x.l.weather.cities.find(y => cityOfPlace(y.name, [c]) || cityOfPlace(c.name, [y])) })).filter(x => x.c2 && stamp(x.l) > mine).sort((a, b) => stamp(b.l).localeCompare(stamp(a.l)))[0];
+    if (!saved) return c;
+    const out = structuredClone(c);
+    for (const k of ['cond', 'temp', 'hi', 'lo', 'feels', 'humidity', 'dew', 'rainNext', 'wind', 'gust', 'dir', 'sunrise', 'sunset', 'visibility']) if (saved.c2[k] !== null && saved.c2[k] !== undefined && saved.c2[k] !== '') out[k] = saved.c2[k];
+    return out;
 }
 const hereFull = (p, lf) => { const h = hereNow(lf); return { ...h, tiles: fillTiles(h, `${h.date}:${h.place}`, h.date || now5(p), hereZone(lf, p, h.place)) }; };
 // what the tiles say, from their numbers
@@ -944,8 +982,8 @@ const mm = v => String(v).replace('.', STORY.dot ? '.' : ',');
 function sunsetTile(sunset, sunrise, now, tileCol) {
     const lm = toMin(now), ss = toMin(sunset), past = lm !== null && ss !== null && (lm >= ss || lm < (toMin(sunrise) ?? 6 * 60 + 30));
     const a = shade(tileCol, 0.92), b = shade(tileCol, 0.85);
-    return tile('일몰', sunset, `<svg class="pic sunset" viewBox="0 0 160 62" preserveAspectRatio="none"><circle cx="80" cy="46" r="34" fill="#f6c94a" opacity=".14"/><circle cx="80" cy="46" r="22" fill="#f6c94a" opacity=".26"/><circle cx="80" cy="46" r="13" fill="#f6c94a"/><rect x="0" y="46" width="160" height="16" fill="${a}"/><path d="M0 46 Q40 40 80 46 T160 44 V62 H0Z" fill="${b}"/><line x1="0" y1="46" x2="160" y2="46" stroke="rgba(255,255,255,.5)" stroke-width="1"/></svg>`,
-        past ? (sunrise ? `일출 ${sunrise}` : '해가 졌어요.') : lm !== null && ss !== null ? `${dur(ss - lm)} 뒤` : '');
+    return tile('일몰', clockOf(STORY.p, sunset), `<svg class="pic sunset" viewBox="0 0 160 62" preserveAspectRatio="none"><circle cx="80" cy="46" r="34" fill="#f6c94a" opacity=".14"/><circle cx="80" cy="46" r="22" fill="#f6c94a" opacity=".26"/><circle cx="80" cy="46" r="13" fill="#f6c94a"/><rect x="0" y="46" width="160" height="16" fill="${a}"/><path d="M0 46 Q40 40 80 46 T160 44 V62 H0Z" fill="${b}"/><line x1="0" y1="46" x2="160" y2="46" stroke="rgba(255,255,255,.5)" stroke-width="1"/></svg>`,
+        past ? (sunrise ? `일출 ${clockOf(STORY.p, sunrise)}` : '해가 졌어요.') : lm !== null && ss !== null ? `${dur(ss - lm)} 뒤` : '');
 }
 // every tile is always drawn: what the model didn't give is read off the sky, the temperature and the month, seeded by
 // place and day so it holds between redraws. Fog: a few km and damp air; rain: wet, windier, short sight; a clear day: far
@@ -1012,7 +1050,7 @@ function weatherBody(p, h, name, night, sub, source, tileCol, lead = '') {
     h = { ...h, days: rows.map(x => x.d) };
     const lo =Math.min(...h.days.map(d => d.lo ?? 99), h.lo ?? 99), hi = Math.max(...h.days.map(d => d.hi ?? -99), h.hi ?? -99);
     return `<div class="lf_wtop">${sub ? `<small>${sub}</small>` : ''}<h2>${esc(name)}</h2><div class="t">${h.temp ?? '—'}°</div><div class="c">${esc(saidOf(h))}</div><div class="hl">최고:${h.hi ?? '—'}° 최저:${h.lo ?? '—'}°</div>${source}</div>
-      ${h.hours.length ? `<div class="lf_wcard">${h.line ? `<div class="ln1">${esc(h.line)}${k1(h.ko, 'lf_wk')}</div>` : ''}<div class="lf_hrs">${h.hours.map((x, k) => `<div>${k ? esc(x.time.slice(0, 2)) + '시' : '지금'}<em>${x.rain >= 20 ? `${x.rain}%` : ''}</em>${wxIc(x.cond, 26, phaseOf(x.time, h.tiles.sunrise || h.sr, h.tiles.sunset || h.ss) === 'night')}<b class="cg_num">${x.temp ?? '—'}°</b></div>`).join('')}</div>${hourLine(h.hours)}</div>` : ''}
+      ${h.hours.length ? `<div class="lf_wcard">${h.line ? `<div class="ln1">${esc(h.line)}${k1(h.ko, 'lf_wk')}</div>` : ''}<div class="lf_hrs">${h.hours.map((x, k) => `<div>${k ? esc(hourOf(p, x.time)) : '지금'}<em>${x.rain >= 20 ? `${x.rain}%` : ''}</em>${wxIc(x.cond, 26, phaseOf(x.time, h.tiles.sunrise || h.sr, h.tiles.sunset || h.ss) === 'night')}<b class="cg_num">${x.temp ?? '—'}°</b></div>`).join('')}</div>${hourLine(h.hours)}</div>` : ''}
       ${h.days.length ? `<div class="lf_wcard"><div class="hd">${h.days.length}일간의 일기예보</div>${rows.map(({ d, name: dn, now: isNow }) => `<div class="lf_d10"><span>${dn}</span><span class="ic">${wxIc(d.cond, 22)}${d.rain >= 30 ? `<em>${d.rain}%</em>` : ''}</span><span class="lo cg_num">${d.lo ?? '—'}°</span>${tempBar(d, lo, hi, isNow ? h.temp : null)}<span class="hi cg_num">${d.hi ?? '—'}°</span></div>`).join('')}</div>` : ''}
       ${weatherTiles(h, tileCol, lead)}`;
 }
@@ -1035,7 +1073,7 @@ export function weatherScreen(p, now) {
     const h = hereFull(p, lf), time = now5(p).slice(6) || h.time, phase = phaseOf(time, h.tiles.sunrise, h.tiles.sunset), q = pal(h.cond, phase);
     return `<div class="lf_wx" style="${wxVars(q)}">${scene(h.cond, phase)}
       ${axBar(p, now, '#fff')}
-      <div class="ax_top lf_wbar">${axCb('home2')}<button type="button" class="lf_pill wx" data-go="wlist">도시 ${lf.weather.cities.length}</button></div>
+      <div class="ax_top lf_wbar">${axCb('home2')}<button type="button" class="lf_pill wx" data-go="wlist">도시 ${lf.weather.cities.filter(c => c !== cityOfPlace(h.place, lf.weather.cities)).length}</button></div>
       <div class="ax_scroll">${weatherBody(p, { ...h, time, today: now5(p).slice(0, 5), hours: hereHours({ ...h, today: now5(p).slice(0, 5) }, time) }, h.place || '현재 위치', phase === 'night', '현재 위치', '<div class="lf_wgap"></div>', shade(q.sky, 0.8))}<i class="lf_pad"></i></div>
       ${axInd('#fff')}</div>`;
 }
@@ -1082,7 +1120,8 @@ function dayCurve(c, lm, col) {
 export function cityScreen(p, now, id) {
     const lf = L(p), c0 = lf?.weather.cities.find(x => x.id === id), c = c0 && cityView(p, lf, c0);
     if (!c) return weatherScreen(p, now);
-    const t = cityTime(p, lf, c), h = { temp: c.temp, hi: c.hi, lo: c.lo, cond: c.cond, time: t.time, line: '', ko: '', hours: cityHours(c, t), days: [] };
+    const t = cityTime(p, lf, c), src = c.src, today = src ? now5(src.p).slice(0, 5) : '';
+    const h = src ? { ...src.h, temp: c.temp, hi: c.hi, lo: c.lo, cond: c.cond, time: t.time, today, hours: hereHours({ ...src.h, today }, t.time) } : { temp: c.temp, hi: c.hi, lo: c.lo, cond: c.cond, time: t.time, line: '', ko: '', hours: cityHours(c, t), days: [] };
     h.tiles = fillTiles({ ...h, tiles: { sunset: c.sunset || '', sunrise: c.sunrise || '', rain24: null, rainNext: c.rainNext ?? null, feels: c.feels ?? null, wind: c.wind ?? null, gust: c.gust ?? null, humidity: c.humidity ?? null, dew: c.dew ?? null, visibility: c.visibility ?? null, dir: c.dir || '' } }, `${c.name}:${now5(p).slice(0, 5)}`, now5(p), c.tz);
     // a city shows no visibility tile: its detail already carries today's temperatures, and seven tiles leave one alone
     h.tiles.visibility = null;
@@ -1110,15 +1149,16 @@ export function hereWidget(p, now) {
 }
 export function cityList(p, now) {
     const lf = L(p); if (!lf) return weatherScreen(p, now);
-    const h = hereFull(p, lf), ht = now5(p).slice(6) || h.time;
+    // the saved city the owner is in is the 현재 위치 card (its note goes with it), not a second card
+    const h = hereFull(p, lf), ht = now5(p).slice(6) || h.time, same = cityOfPlace(h.place, lf.weather.cities);
     const nav = '<svg width="11" height="11" viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z" fill="#fff"/></svg>';
     const card = (go, i, name, sub, cond, phase, temp, hi, lo, foot) => `<button type="button" class="lf_city" data-go="${go}"${i ? ` data-i="${i}"` : ''} style="--axbg: ${pal(cond, phase).sky}">${cardSky(cond, phase)}
       <span class="l"><b>${esc(name)}</b><small>${sub}</small><span>${esc(foot)}</span></span><span class="r"><b>${temp ?? '—'}°</b><span>최고 ${hi ?? '—'}° 최저 ${lo ?? '—'}°</span></span></button>`;
     return `${axBar(p, now)}${axTop(axCb('weather'), axKp(p))}
       <div class="ax_scroll">${axH1('날씨')}
         <div class="lf_q">${ax('search', 16, '#8a929d', 2.4)}도시 또는 공항 검색</div>
-        ${card('weather', '', h.place || '현재 위치', `${nav} 현재 위치`, h.cond, phaseOf(ht, h.tiles.sunrise, h.tiles.sunset), h.temp, h.hi, h.lo, saidOf(h))}
-        ${lf.weather.cities.map(c0 => { const c = cityView(p, lf, c0), t = cityTime(p, lf, c), sun = c.sunrise && c.sunset ? [c.sunrise, c.sunset] : sunOf(now5(p).slice(0, 5), c.tz) || []; return card('wcity', c.id, c.name, t.off ? `${t.time} · ${t.off > 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '', c.cond, phaseOf(t.time, sun[0], sun[1]), c.temp, c.hi, c.lo, [WX[c.cond], c.note].filter(Boolean).join(' · ')); }).join('')}
+        ${card('weather', '', h.place || '현재 위치', `${nav} 현재 위치`, h.cond, phaseOf(ht, h.tiles.sunrise, h.tiles.sunset), h.temp, h.hi, h.lo, [saidOf(h), same?.note].filter(Boolean).join(' · '))}
+        ${lf.weather.cities.filter(c0 => c0 !== same).map(c0 => { const c = cityView(p, lf, c0), t = cityTime(p, lf, c), sun = c.sunrise && c.sunset ? [c.sunrise, c.sunset] : sunOf(now5(p).slice(0, 5), c.tz) || []; return card('wcity', c.id, c.name, t.off ? `${clockOf(p, t.time)} · ${t.off > 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '', c.cond, phaseOf(t.time, sun[0], sun[1]), c.temp, c.hi, c.lo, [WX[c.cond], c.note].filter(Boolean).join(' · ')); }).join('')}
         <i class="lf_pad"></i></div>${axInd()}`;
 }
 
@@ -1176,8 +1216,8 @@ export function dlvScreen(p, now) {
     const used = shops.filter(s => d.orders.some(o => o.shop === s.name)), rest = shops.filter(s => !used.includes(s));
     if (bm) {
         const addr = recent[0]?.to === 'home' || !recent[0] ? '우리집' : recent[0].to === 'work' ? '회사' : recent[0].to;
-        const card = s => `<button type="button" class="dv_fav" data-go="dshop" data-i="${s.id}"><span class="ph">${pic(shopPic(s))}${s.eta ? `<em>${esc(s.eta.replace('–', '~'))}분</em>` : ''}</span><b>${esc(s.name)}</b>${kk(s)}<small>${s.rating ? `${I.star}<strong>${rate(s.rating)}</strong>` : ''}${s.reviews ? `<span>(${n0(s.reviews).replace(/\./g, ',')})</span>` : ''}</small><small class="m">배달팁 ${esc(money(p, s.fee))}</small></button>`;
-        const row = s => `<button type="button" class="dv_near" data-go="dshop" data-i="${s.id}">${pic(shopPic(s))}<span><b>${esc(s.name)}</b><small>${s.rating ? `${I.star}<strong>${rate(s.rating)}</strong>` : ''}${s.reviews ? ` (${n0(s.reviews).replace(/\./g, ',')})` : ''}${s.eta ? ` · ${esc(s.eta.replace('–', '~'))}분` : ''}</small><span class="tags">${s.minOrder ? `<i>최소주문 ${esc(money(p, s.minOrder))}</i>` : ''}<i>배달팁 ${esc(money(p, s.fee))}</i></span></span></button>`;
+        const card = s => `<button type="button" class="dv_fav" data-go="dshop" data-i="${s.id}"><span class="ph">${pic(shopPic(s))}${s.eta ? `<em>${esc(s.eta.replace('–', '~'))}분</em>` : ''}</span><b>${esc(s.name)}</b>${kk(s)}<small>${s.rating ? `${I.star}<strong>${comma(rate(s.rating))}</strong>` : ''}${s.reviews ? `<span>(${n0(s.reviews)})</span>` : ''}</small><small class="m">배달팁 ${esc(money(p, s.fee))}</small></button>`;
+        const row = s => `<button type="button" class="dv_near" data-go="dshop" data-i="${s.id}">${pic(shopPic(s))}<span><b>${esc(s.name)}</b><small>${s.rating ? `${I.star}<strong>${comma(rate(s.rating))}</strong>` : ''}${s.reviews ? ` (${n0(s.reviews)})` : ''}${s.eta ? ` · ${esc(s.eta.replace('–', '~'))}분` : ''}</small><span class="tags">${s.minOrder ? `<i>최소주문 ${esc(money(p, s.minOrder))}</i>` : ''}<i>배달팁 ${esc(money(p, s.fee))}</i></span></span></button>`;
         return `<div class="dv bm"><div class="dv_bmh">${axBar(p, now)}
             <div class="dv_bmtop">${axCb('home2')}<b>${esc(addr)} ${I.down}</b><span class="r">${I.bell}${d.cart ? `<button type="button" data-go="dcart" class="dv_cartb">${I.cart}<em>${cartCount(d)}</em></button>` : `<span class="dv_cartb">${I.cart}</span>`}</span></div>
             <div class="dv_q">${I.search}야식 뭐 먹지?</div></div>
@@ -1195,7 +1235,7 @@ export function dlvScreen(p, now) {
         <div class="ax_scroll dv_sc"><div class="dv_cats ue">${UE_CATS.map(([k, t]) => `<span><i>${CAT[k]}</i>${t}</span>`).join('')}</div>
           <div class="dv_chips"><span>Abholung</span><span>Angebote</span><span class="on">Liefergebühr unter 2 € ${I.down}</span></div>
           ${used.length ? `<div class="dv_h">Erneut bestellen</div><div class="dv_again">${used.slice(0, 4).map(s => `<button type="button" data-go="dshop" data-i="${s.id}">${pic(shopPic(s))}<b>${esc(s.name)}</b><small>${esc(s.eta || '')} Min.</small></button>`).join('')}</div>` : ''}
-          ${big ? `<div class="dv_h">Beliebt in deiner Nähe</div><button type="button" class="dv_big" data-go="dshop" data-i="${big.id}">${pic(shopPic(big), 'wide', 'hero')}<span class="r"><span><b>${esc(big.name)}</b><small>${esc(money(p, big.fee))} Liefergebühr${big.eta ? ` · ${esc(big.eta)} Min.` : ''}</small></span>${big.rating ? `<em>${rate(big.rating).replace('.', ',')}</em>` : ''}</span></button>` : ''}
+          ${big ? `<div class="dv_h">Beliebt in deiner Nähe</div><button type="button" class="dv_big" data-go="dshop" data-i="${big.id}">${pic(shopPic(big), 'wide', 'hero')}<span class="r"><span><b>${esc(big.name)}</b><small>${esc(money(p, big.fee))} Liefergebühr${big.eta ? ` · ${esc(big.eta)} Min.` : ''}</small></span>${big.rating ? `<em>${comma(rate(big.rating))}</em>` : ''}</span></button>` : ''}
           <i class="lf_pad"></i></div>${ueTab('dlv')}</div>`;
 }
 export function shopScreen2(p, now, id) {
@@ -1207,11 +1247,11 @@ export function shopScreen2(p, now, id) {
     const cta = inCart ? (bm ? `<div class="dv_bot"><span class="sum"><b>${esc(money(p, cartSum(d)))}</b><small>바로 주문할 수 있어요</small></span><button type="button" class="dv_btn" data-go="dcart"><em>${cartCount(d)}</em>장바구니 보기</button></div>`
         : `<div class="dv_bot"><button type="button" class="dv_btn" data-go="dcart"><em>${cartCount(d)}</em>Warenkorb ansehen · ${esc(money(p, cartSum(d)))}</button></div>`) : '';
     if (bm) return `<div class="dv bm white">${head}<div class="ax_scroll dv_sc top">
-        <div class="dv_shead"><div class="n"><h2>${esc(s.name)}</h2>${s.fav ? I.heartF : I.heart}</div>${kk(s)}<div class="r"><span>${s.rating ? `${I.star}<b>${rate(s.rating)}</b>` : ''}${s.reviews ? ` (${n0(s.reviews).replace(/\./g, ',')})` : ''} ${I.chev}</span><em>가게정보·원산지</em></div></div>
+        <div class="dv_shead"><div class="n"><h2>${esc(s.name)}</h2>${s.fav ? I.heartF : I.heart}</div>${kk(s)}<div class="r"><span>${s.rating ? `${I.star}<b>${comma(rate(s.rating))}</b>` : ''}${s.reviews ? ` (${n0(s.reviews)})` : ''} ${I.chev}</span><em>가게정보·원산지</em></div></div>
         <div class="dv_info"><div class="sw"><span class="on">배달</span><span>픽업${s.eta ? ` 약 ${esc(s.eta.split(/[–-]/)[0])}분` : ''}</span></div><div class="kv"><span>최소주문</span><b>${s.minOrder ? esc(money(p, s.minOrder)) : '없음'}</b><span>배달시간</span><b>${esc((s.eta || '').replace('–', '~'))}분</b><span>배달팁</span><b>${esc(money(p, s.fee))}</b></div></div>
         <div class="dv_mh">대표 메뉴</div>${s.menu.map(dish).join('')}<i class="lf_pad"></i></div>${cta}</div>`;
     return `<div class="dv ue">${head}<div class="ax_scroll dv_sc top">
-        <div class="dv_shead ue"><h2>${esc(s.name)}</h2>${kk(s)}<div class="r">${s.rating ? `${I.starK}<b>${rate(s.rating).replace('.', ',')}</b>` : ''}${s.reviews ? `<span>(${n0(s.reviews)})</span>` : ''}${s.cuisine ? `<span>· ${esc(s.cuisine)}</span>` : ''}</div></div>
+        <div class="dv_shead ue"><h2>${esc(s.name)}</h2>${kk(s)}<div class="r">${s.rating ? `${I.starK}<b>${comma(rate(s.rating))}</b>` : ''}${s.reviews ? `<span>(${n0(s.reviews)})</span>` : ''}${s.cuisine ? `<span>· ${esc(s.cuisine)}</span>` : ''}</div></div>
         <div class="dv_uebox"><span><b>${esc(money(p, s.fee))}</b><small>Liefergebühr</small></span><span><b>${esc(s.eta || '—')}</b><small>Min.</small></span></div>
         <div class="dv_mtabs"><span class="on">Beliebt</span><span>Speisekarte</span><span>Info</span></div>${s.menu.map(dish).join('')}<i class="lf_pad"></i></div>${cta}</div>`;
 }
@@ -1310,7 +1350,7 @@ export function orderScreen(p, now, id) {
     const meta = [toLine(o, bm), o.address, o.left, o.for > 1 ? (bm ? `${o.for}인분` : `Für ${o.for}`) : '', o.noCutlery ? (bm ? '수저·포크 안 받음' : 'Ohne Besteck') : ''].filter(Boolean).map(esc).join(' · ');
     const stLine = o.status === 'cancelled' || o.status === 'refunded';
     if (bm) return `<div class="dv bm white">${axBar(p, now)}<div class="dv_bar">${axCb('dorders')}<b>주문상세</b><span>${I.cart}</span></div><div class="ax_scroll dv_sc">
-        <div class="dv_box"><div class="st"><b class="${stLine ? 'no' : ''}">${o.status === 'delivered' ? '배달이 완료됐어요' : ST_KO[o.status]}</b><small>주문일시 ${esc(fmtDate(p, o.time, true))} ${esc(o.time.slice(6))}${o.arrived ? `<br>도착 ${esc(arrHm(o))}` : ''}</small></div>
+        <div class="dv_box"><div class="st"><b class="${stLine ? 'no' : ''}">${o.status === 'delivered' ? '배달이 완료됐어요' : ST_KO[o.status]}</b><small>주문일시 ${esc(fmtDate(p, o.time, true))} ${esc(clockOf(p, o.time.slice(6)))}${o.arrived ? `<br>도착 ${esc(clockOf(p, arrHm(o)))}` : ''}</small></div>
           <button type="button" class="sh" ${s ? `data-go="dshop" data-i="${s.id}"` : ''}>${s ? pic(shopPic(s)) : ''}<b>${esc(o.shop)}</b>${I.chev}<i>${s?.fav ? I.heartF : I.heart}</i></button></div>
         <div class="dv_mh">주문 메뉴</div><div class="dv_box p">${lines}<div class="bt"><span class="l">같은 메뉴 담기</span><span class="m">바로 주문</span></div></div>
         <div class="dv_mh">결제 정보</div><div class="dv_box p">${kv}${bank}</div>
@@ -1363,7 +1403,7 @@ export function rateScreen(p, now, id) {
     const hit = tip ? pct.reduce((b, x) => (Math.abs(x[1] - tip) < Math.abs(b[1] - tip) ? x : b))[0] : 0;
     const up = c => `<svg width="22" height="22" viewBox="0 0 24 24"><path d="M7 10v10H4V10zM9 20h8.5a2 2 0 0 0 2-1.6l1.3-6A2 2 0 0 0 18.8 10H14l1-4.5A1.8 1.8 0 0 0 11.8 4L9 10z" fill="${c}"/></svg>`;
     return `<div class="dv ue">${axBar(p, now)}<div class="dv_bar">${axCb('dorders', 'x')}<span></span><span class="dv_help">Hilfe</span></div><div class="ax_scroll dv_sc">
-        <div class="dv_ur"><div class="hd"><span><h2>Bestellung bewerten</h2><small>${esc(o.shop)} · ${esc(fmtDate(p, o.time, true))} ${esc(o.arrived ? arrHm(o) : String(o.time).slice(6))}</small></span><i>${I.my}</i></div>
+        <div class="dv_ur"><div class="hd"><span><h2>Bestellung bewerten</h2><small>${esc(o.shop)} · ${esc(fmtDate(p, o.time, true))} ${esc(clockOf(p, o.arrived ? arrHm(o) : String(o.time).slice(6)))}</small></span><i>${I.my}</i></div>
           <b class="t">Kurier bewerten</b><small>Wie war deine Lieferung?</small>
           <div class="th"><span class="dn">${up('#16181c')}</span><span class="${done ? 'on' : ''}">${up(done ? '#fff' : '#16181c')}</span></div>
           <div class="chips">${['Freundlich', 'Gute Kommunikation', 'Pünktlich', 'Sorgfältig'].map((t, k) => `<span class="${done && k < 2 ? 'on' : ''}">${t}</span>`).join('')}</div>

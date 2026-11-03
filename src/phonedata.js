@@ -17,8 +17,8 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
-import { arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
-export { arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
+import { tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { applyDays, applyLife, applyWeather, apart, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
 import { pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
@@ -192,21 +192,21 @@ ANSWER — one JSON object, nothing else:
                           "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko" and "currency" (a share not in INVESTMENTS NOW), "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
                           "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" (the default) | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD" or "", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
                           "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }]${delivery ? `,
-                          "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients, like "beef"], "size": "regular" | "large", "set": [a set's sides or drinks] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
-                                          "newShop": { "name": the same as "shop", "ko", "cuisine", "menu": [{ "name", "ko", "price", "pic" }] } or null }]` : ''} }` : ''} }]${life ? `,
+                          "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients, like "beef"], "size": "regular" | "large", "set": [a set's sides or drinks] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "left": where the courier left it, or "", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery", "for": how many people, "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
+                                          "newShop": { "name": the same as "shop", "ko", "cuisine", "menu": [{ "name", "ko", "desc", "price", "top": true for its best-known dish, "pic" }] } or null }]` : ''} }` : ''} }]${life ? `,
   "days": [{ the same fields as "health" }]` : ''}${life && weather ? `,
   "weather": { "place", "date", "time", "from": "chat" | "archive" | "guess", "cond": "clear" | "partly" | "cloudy" | "drizzle" | "rain" | "sleet" | "snow" | "fog" | "storm" | "wind", "temp", "hi", "lo", "line", "ko",
                "hours": [6 of { "time", "cond", "temp", "rain": percent }] (the hours ahead when the sky will change, else []), "days": [10 of { "day", "cond", "lo", "hi", "rain": percent }],
                "tiles": { "rain24": mm today, "rainNext": mm by tomorrow, "wind": km/h, "dir", "humidity", "feels": only when the story gives it },
-               "cities": [{ "name", "cond", "temp", "hi", "lo" }] } or null` : ''} }
+               "cities": [{ "name", "cond", "temp", "hi", "lo" }, a city newly saved (home, work, family, a trip) also "tz", "note": a few words, "added": true] } or null` : ''} }
 ${money ? `"money" only when money moves or an order or ticket changes.` : ''}
 Also in "money" when these messages show them: "newAccount": { "kind": "checking" | "savings" | "credit", "name", "last4", "currency", "balance" } (an account or card the owner opens), "newCard": { "account": last4, "exp": "MM/YY" }${delivery ? `, "cart": { "shop", "items": [like a delivery's] } (dishes put in the basket and not ordered)` : ''}, "watch": [{ "symbol", "name", "currency", "note", "ko" }] (a share they start watching), "quotes": [{ "symbol", "date", "value", "evidence": exact words }] (a price the story gives), "stakes": [{ "company", "listed", "percent", "holder", "voter", "beneficiary", "restriction", "value", "currency", "evidence": exact words }] (a stake the story says they now hold).
 In "events", a plan moved or called off is its item again with "was": the date it had, or "cancelled": true. In "threads", a text the owner deleted is { "text", "deleted": true }.
 Items in "phone":
 {
 ${PHONE_ITEMS}${life ? `,
-  "alarms": [{ "change": an id or "", "time", "label", "ko", "days": the weekdays it repeats or [], "date": "MM-DD" for a one-time alarm, "on", "wake", "then", "snooze" }],
-  "files": [{ "change": an id or "", "name", "kind", "folder": one of LIFE NOW's "folders" (downloads are "Downloads"), "size": KB, "time", "from", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],
+  "alarms": [{ "change": an id or "", "time", "label", "ko", "days": the weekdays it repeats or [], "date": "MM-DD" for a one-time alarm, "on", "wake", "then", "snooze", "snoozeCount", "sound" }],
+  "files": [{ "change": an id or "", "name", "kind", "folder": one of LIFE NOW's "folders" (downloads are "Downloads"), or a new one the story makes, "size": KB, "time", "from", "pages", "length": "M:SS" for audio or video, "tag": "red" | "orange" | "", "private", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],
   "health": [{ "date": the day they woke, "sleep", "wake", "woke": times awake in the night, "steps", "km", "floors", "hr": [low, high], "workout": { "kind", "time", "min", "km" } or null, "coffee": cups, "coffeeKind", "water": litres, "weight": kg only when they weighed }],
   "timers": [{ "label", "ko", "sec" }],
   "usual": { "weight": kg, "coffee": cups a day, "coffeeKind", "coffeeKo", "water": litres a day, "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": a week, "rest": resting heart rate, "height": cm }` : ''}
@@ -986,20 +986,40 @@ export function phoneBlock(m) {
     }).join('\n')}`;
 }
 
-// ---- dates and times as the owner's phone shows them
-const FMT = {
-    KR: { d: (mo, d) => `${mo}월 ${d}일`, s: (mo, d) => `${mo}. ${d}.`, h12: true, t: (h, mi) => `${h < 12 ? '오전' : '오후'} ${h % 12 || 12}:${mi}` },
-    US: { d: (mo, d) => `${mo}/${d}`, s: (mo, d) => `${mo}/${d}`, h12: true, t: (h, mi) => `${h % 12 || 12}:${mi} ${h < 12 ? 'AM' : 'PM'}` },
-    JP: { d: (mo, d) => `${mo}月${d}日`, s: (mo, d) => `${mo}/${d}` },
-    DE: { d: (mo, d) => `${pad(d)}.${pad(mo)}.`, s: (mo, d) => `${pad(d)}.${pad(mo)}.` },
-    _: { d: (mo, d) => `${pad(d)}/${pad(mo)}`, s: (mo, d) => `${pad(d)}/${pad(mo)}` },
+// ---- dates, times and numbers as the owner's phone shows them: one way for each of 한국 · 일본 · 중국 · 미국 · 영국 · 호주 · 유럽
+// (a country outside them writes the European way). Every app reads its notation from here
+const GROUP = { KR: 'KR', KP: 'KR', JP: 'JP', CN: 'CN', TW: 'CN', HK: 'CN', MO: 'CN', US: 'US', CA: 'US', PH: 'US', PR: 'US', GB: 'GB', IE: 'GB', AU: 'AU', NZ: 'AU' };
+export const notationOf = p => { const c = String(p?.country || p?.lives || '').toUpperCase(); return c ? GROUP[c] || 'EU' : 'KR'; };
+const H12 = {
+    KR: (h, mi) => `${h < 12 ? '오전' : '오후'} ${h % 12 || 12}:${mi}`,
+    US: (h, mi) => `${h % 12 || 12}:${mi} ${h < 12 ? 'AM' : 'PM'}`,
+    AU: (h, mi) => `${h % 12 || 12}:${mi} ${h < 12 ? 'am' : 'pm'}`,
 };
-for (const k of ['CN', 'TW']) FMT[k] = FMT.JP;
-for (const k of ['AT', 'CH', 'RU', 'PL', 'CZ', 'FI', 'NO', 'DK']) FMT[k] = FMT.DE;
-FMT.PH = FMT.US;
-const fmtOf = p => FMT[p?.country] || FMT._;
+const FMT = {
+    KR: { loc: 'ko-KR', d: (mo, d) => `${mo}월 ${d}일`, s: (mo, d) => `${mo}. ${d}.`, y: (y, mo, d) => `${y}. ${mo}. ${d}.`, t: H12.KR, half: h => (h < 12 ? '오전' : '오후') },
+    US: { loc: 'en-US', d: (mo, d) => `${mo}/${d}`, s: (mo, d) => `${mo}/${d}`, y: (y, mo, d) => `${mo}/${d}/${y}`, t: H12.US, hr: h => `${h % 12 || 12}${h < 12 ? 'AM' : 'PM'}`, half: h => (h < 12 ? 'AM' : 'PM') },
+    JP: { loc: 'ja-JP', d: (mo, d) => `${mo}月${d}日`, s: (mo, d) => `${mo}/${d}`, y: (y, mo, d) => `${y}/${pad(mo)}/${pad(d)}` },
+    CN: { loc: 'zh-CN', d: (mo, d) => `${mo}月${d}日`, s: (mo, d) => `${mo}/${d}`, y: (y, mo, d) => `${y}/${pad(mo)}/${pad(d)}` },
+    GB: { loc: 'en-GB', d: (mo, d) => `${pad(d)}/${pad(mo)}`, s: (mo, d) => `${pad(d)}/${pad(mo)}`, y: (y, mo, d) => `${pad(d)}/${pad(mo)}/${y}` },
+    AU: { loc: 'en-AU', d: (mo, d) => `${d}/${mo}`, s: (mo, d) => `${d}/${mo}`, y: (y, mo, d) => `${d}/${mo}/${y}`, t: H12.AU, hr: h => `${h % 12 || 12}${h < 12 ? 'am' : 'pm'}`, half: h => (h < 12 ? 'am' : 'pm') },
+    EU: { loc: 'de-DE', d: (mo, d) => `${pad(d)}.${pad(mo)}.`, s: (mo, d) => `${pad(d)}.${pad(mo)}.`, y: (y, mo, d) => `${pad(d)}.${pad(mo)}.${y}` },
+};
+const fmtOf = p => FMT[notationOf(p)];
+// the locale the phone's numbers and money are written in (1,234.5 or 1.234,5)
+export const localeOf = p => fmtOf(p).loc;
 export const parts = v => { const mt = String(v || '').match(/^(\d{2})-(\d{2})(?: (\d{2}):(\d{2}))?/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]), h: mt[3] ? Number(mt[3]) : null, mi: mt[4] || '' } : null; };
 const tOf = (p, h, mi) => { const f = fmtOf(p); return f.t ? f.t(h, mi) : `${pad(h)}:${mi}`; };
+// a clock in minutes of the day ("HH:MM" or a number), as the phone writes it: 오후 3:05 · 3:05 PM · 15:05
+const minOf = v => { if (typeof v === 'number') return Number.isFinite(v) ? ((Math.round(v) % 1440) + 1440) % 1440 : null; const mt = String(v ?? '').match(/(\d{1,2}):(\d{2})/); return mt ? (Number(mt[1]) % 24) * 60 + Number(mt[2]) : null; };
+export const clockOf = (p, v) => { const m = minOf(v); return m === null ? '' : tOf(p, Math.floor(m / 60), pad(m % 60)); };
+// the same without 오전/오후 (a big number, a chart's axis): 3:05 on a 12-hour phone, 15:05 on the others
+export const clockNum = (p, v) => { const m = minOf(v); if (m === null) return ''; const h = Math.floor(m / 60); return fmtOf(p).t ? `${h % 12 || 12}:${pad(m % 60)}` : `${pad(h)}:${pad(m % 60)}`; };
+// 오전/오후 · AM/PM alone, '' on a 24-hour phone
+export const halfOf = (p, v) => { const m = minOf(v); const f = fmtOf(p); return m === null || !f.half ? '' : f.half(Math.floor(m / 60)); };
+// an hour mark (the weather's hours): 3PM · 3pm, else 15시 (오후 3시 does not fit the hour's narrow column)
+export const hourOf = (p, v) => { const m = minOf(v); if (m === null) return ''; const h = Math.floor(m / 60), f = fmtOf(p); return f.hr ? f.hr(h) : `${h}시`; };
+// a date with its year (a receipt, a statement): 2026. 10. 30. · 10/30/2026 · 2026/10/30 · 30.10.2026
+export const fullDate = (p, v) => { const mt = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return mt ? fmtOf(p).y(mt[1], Number(mt[2]), Number(mt[3])) : ''; };
 export function fmtDate(p, v, short = false) { const x = parts(v); if (!x) return ''; const f = fmtOf(p); return short ? f.s(x.mo, x.d) : f.d(x.mo, x.d); }
 export function fmtTime(p, v) { const x = parts(v); return x && x.h !== null ? tOf(p, x.h, x.mi) : ''; }
 // a list's time: the clock on the phone's today, the short date before it
@@ -1008,7 +1028,7 @@ let shownNow = '';
 export const showNow = v => { shownNow = v; }; // the window sets the story's now it is showing
 const nowOf = p => shownNow || p.now || '';
 export const listTime = (p, v) => (String(v).slice(0, 5) === String(nowOf(p)).slice(0, 5) ? fmtTime(p, v) : fmtDate(p, v, true));
-export const bigClock = (p, v) => { const x = parts(v); if (!x || x.h === null) return ''; return fmtOf(p).h12 ? `${x.h % 12 || 12}:${x.mi}` : `${pad(x.h)}:${x.mi}`; };
+export const bigClock = (p, v) => { const x = parts(v); if (!x || x.h === null) return ''; return fmtOf(p).t ? `${x.h % 12 || 12}:${x.mi}` : `${pad(x.h)}:${x.mi}`; };
 const minsOf = v => { const x = parts(v); return x ? ((x.mo * 31 + x.d) * 24 + (x.h ?? 0)) * 60 + (Number(x.mi) || 0) : 0; };
 export const ago = (p, v) => {
     const d = minsOf(nowOf(p)) - minsOf(v);
@@ -1103,7 +1123,7 @@ ONE THING, ONE AMOUNT
 A purchase is in "orders" or "passes" and once in "tx", with the same amount, date and "ev".
 
 LANGUAGE
-Banks, shops, merchants and items named as they would be in the owner's country. A name not in Korean gets "ko".
+Banks, shops, merchants and items named as they would be in the owner's country. A name not in Korean gets "ko"; a Korean one gets none.
 
 JSON (one object, nothing before or after it)
 {
@@ -1146,7 +1166,7 @@ RULES
 - 3 or 4 memos, each at a moment the archive has where the owner could plausibly talk into their phone alone: after a fight, on the way somewhere, late at night. Not the days the diary already covers, where possible.
 - Spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences. Not a diary entry.
 - Only what the archive shows happened and what the owner felt about it; no new events, no new secrets.
-- In the owner's own language. Speech not in Korean gets "ko".
+- In the owner's own language. Speech not in Korean gets "ko"; Korean speech gets none.
 - 20 to 90 seconds of speech each.
 
 ANSWER — one JSON object, nothing else:

@@ -429,6 +429,8 @@ export function unpayOrders(m, p) {
     p.money.tx = tx.filter(t => !gone.includes(t));
 }
 // when an order came: "21:30" alone is on the order's day
+// the delivery app a phone pays through, by the look its delivery app has (else by where the owner lives)
+export const dlvApp = p => ((p.delivery?.look || (String(p.lives || p.country || '').toUpperCase() === 'KR' ? 'baemin' : '')) === 'baemin' ? '배달의민족' : 'Uber Eats');
 const arrivedAt = o => { const a = String(o.arrived || ''); return /^\d{2}-\d{2}/.test(a) ? a : /^\d{2}:\d{2}$/.test(a) ? `${String(o.time || '').slice(0, 5)} ${a}` : o.time; };
 export function payOrders(m, p, year) {
     if (!p.money || !p.delivery) return 0;
@@ -437,6 +439,8 @@ export function payOrders(m, p, year) {
     // year is the one the phone's now is in: an order from last December goes in the year before
     const now5 = String(p.now || '').slice(0, 5), ny = p.year && !p.noYear ? String(p.year) : year, anchor = /^\d{2}-\d{2}$/.test(now5) ? `${ny}-${now5}` : '';
     let n = 0;
+    // the memo names the app it was paid through (the phone's delivery app: 배달의민족 in Korea, Uber Eats elsewhere)
+    const app = dlvApp(p);
     const put = (o, a, id, amount, time, memo) => {
         if (tx.some(t => t.id === id)) return;
         tx.push({ id, account: a.last4, who: o.shop, ko: o.ko || '', amount, time, day: fullDay(ny, anchor, String(time).slice(0, 5)), kind: 'card', memo, pending: false, ...(o.ev ? { ev: o.ev } : {}), delivery: o.id });
@@ -449,13 +453,13 @@ export function payOrders(m, p, year) {
         if (o.status === 'cancelled' || o.sync) continue;
         // its payment is already in the bank (the bank was filled first): tie it, add none
         const paid = o.paidBy && tx.find(t => t.id === o.paidBy);
-        if (paid) { paid.delivery = o.id; if (o.ev) paid.ev ||= o.ev; if (o.status === 'refunded') { const a = payAccount(p, o); if (a) put(o, a, `${PAY}${o.id}-r`, dlvTotal(o), arrivedAt(o), 'Refund'); } continue; }
+        if (paid) { paid.delivery = o.id; if (o.ev) paid.ev ||= o.ev; if (o.status === 'refunded') { const a = payAccount(p, o); if (a) put(o, a, `${PAY}${o.id}-r`, dlvTotal(o), arrivedAt(o), `${app} 환불`); } continue; }
         const a = payAccount(p, o);
         if (!a) continue;
         const total = dlvTotal(o);
         if (!(total > 0)) continue;
-        put(o, a, `${PAY}${o.id}`, -total, o.time, o.mode === 'pickup' ? 'Pickup' : 'Delivery');
-        if (o.status === 'refunded') put(o, a, `${PAY}${o.id}-r`, total, arrivedAt(o), 'Refund');
+        put(o, a, `${PAY}${o.id}`, -total, o.time, o.mode === 'pickup' ? `${app} ${app === '배달의민족' ? '포장' : '픽업'}` : app);
+        if (o.status === 'refunded') put(o, a, `${PAY}${o.id}-r`, total, arrivedAt(o), `${app} 환불`);
     }
     tx.sort(byStory(p.now));
     for (const a of p.money.bank.accounts) if (a.kind !== 'credit') { const L = f.accounts[`${a.id}:${a.currency}`]; if (L) a.balance = round(L.amount + Object.values(L.entries).reduce((s, x) => s + x.amount, 0)); }

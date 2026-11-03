@@ -1,7 +1,8 @@
 // 투자 (kurs.): a broker app of its own — a light page, the portfolio's line on top, holdings with sparklines,
 // a stock page with a big chart. The figures all come from finance.js; nothing here is guessed.
 import { AX, ax, axBar, axInd, axTint } from './phoneapps.js';
-import { fmtIn } from './phonemoney.js';
+import { decimalOf, fmtIn, localeOf } from './phonemoney.js';
+import { fmtDate } from './phonedata.js';
 import { esc } from './util.js';
 import { baseCosts, cash, finance, finite, fx, positions, price, total } from './finance.js';
 import { investmentDate } from './investdata.js';
@@ -12,15 +13,17 @@ Object.assign(AX, { chart: 'M3 20h18M5 16l5-6 4 3 6-9M15 4h5v5' });
 const UPRED = new Set(['KR', 'JP', 'CN', 'TW']);
 const tone = (p, n) => (!finite(n) || Math.abs(n) < 1e-9 ? 'iv_flat' : n > 0 ? 'iv_up' : 'iv_dn');
 const money = (p, n, c, signed = false) => (finite(n) ? esc(fmtIn(p, n, c, signed)) : '—');
-const pct = n => (finite(n) ? `${n > 0 ? '+' : ''}${n.toFixed(2)}%` : '—');
+// numbers as the phone's country writes them: 2.5 in Korea, the US, Japan…; 2,5 in most of Europe (set per screen)
+let DOT = true, LOC = 'en-US';
+const dec = s => (DOT ? s : String(s).replace(/[.,]/g, c => (c === '.' ? ',' : '.')));
+const pct = n => (finite(n) ? dec(`${n > 0 ? '+' : ''}${n.toFixed(2)}%`) : '—');
 const arrow = n => (finite(n) && Math.abs(n) > 1e-9 ? (n > 0 ? '▲' : '▼') : '');
 const KIND = { buy: '매수', sell: '매도', dividend: '배당' };
 const RANGES = [['1w', '1주', 7], ['1m', '1개월', 31], ['3m', '3개월', 92], ['all', '전체', 1e5]];
 const dayMs = 864e5;
 const daysBack = (date, n) => new Date(Date.parse(date) - n * dayMs).toISOString().slice(0, 10);
-// a short day as the phone's country writes it: "1. 30." in Korea, Japan and China, "1/30" in the US, "30.1." in most of Europe
-const DOT_MD = new Set(['KR', 'JP', 'CN', 'TW', 'HK']), SLASH_MD = new Set(['US', 'CA', 'PH']);
-const shortDay = (d, p = null) => { const c = String(p?.lives || p?.country || '').toUpperCase(), m = Number(d.slice(5, 7)), dd = Number(d.slice(8)); return DOT_MD.has(c) || !c ? `${m}. ${dd}.` : SLASH_MD.has(c) ? `${m}/${dd}` : `${dd}.${m}.`; };
+// a short day as every app on the phone writes it (Korea "10. 30.", the US and Japan "10/30", Germany "30.10.")
+const shortDay = (d, p = null) => fmtDate(p, String(d).slice(5), true);
 // a ticker's tile: two letters on a colour of its own
 const logo = (s, z = 40) => { const code = String((s?.symbol || '').split(':').pop() || s?.name || '?').replace(/[^A-Za-z0-9가-힣]/g, '').slice(0, 4).toUpperCase() || '?'; return `<span class="iv_logo" style="width: ${z}px; height: ${z}px; background: ${axTint(code)}; font-size: ${Math.round(z * (code.length > 3 ? 0.24 : code.length > 2 ? 0.28 : 0.34))}px">${esc(code)}</span>`; };
 
@@ -34,9 +37,12 @@ function line(vals, w, h, pad = 4) {
 // 종목 차트: a candle a day like a real broker's — open is the day before's close, the wick spans every price saved
 // that day (one price a day leaves no wick: nothing is made up); the scale on the right
 function candles(m, p, sym, date, from, cur, busy = false) {
-    const book = finance(m).prices[`STOCK:${sym}`] || {}, all = Object.keys(book).filter(d => d <= date).sort();
-    const close = d => price(m, `STOCK:${sym}`, d)?.value;
-    const rows = all.map((d, i) => { const c = close(d), o = i ? close(all[i - 1]) : c, vs = [o, c, ...(book[d].rows || []).map(r => r.value)].filter(finite); return { d, o, c, h: Math.max(...vs), l: Math.min(...vs), i }; }).filter(x => finite(x.c));
+    // a day the owner bought or sold at a price is a price that day too (their own record, nothing made up)
+    const paid = new Map();
+    for (const t of p.investment?.trades || []) if (t.symbol === sym && (t.kind === 'buy' || t.kind === 'sell') && finite(t.price) && t.price > 0 && /^\d{4}-\d{2}-\d{2}$/.test(t.date || '')) (paid.get(t.date) || paid.set(t.date, []).get(t.date)).push(t.price);
+    const book = finance(m).prices[`STOCK:${sym}`] || {}, all = [...new Set([...Object.keys(book), ...paid.keys()])].filter(d => d <= date).sort();
+    const close = d => (book[d] ? price(m, `STOCK:${sym}`, d)?.value : paid.has(d) ? paid.get(d).reduce((a, b) => a + b, 0) / paid.get(d).length : undefined);
+    const rows = all.map((d, i) => { const c = close(d), o = i ? close(all[i - 1]) : c, vs = [o, c, ...(book[d]?.rows || []).map(r => r.value), ...(paid.get(d) || [])].filter(finite); return { d, o, c, h: Math.max(...vs), l: Math.min(...vs), i }; }).filter(x => finite(x.c));
     const show = rows.filter(x => x.d >= from);
     if (show.length < 2) return `<div class="iv_chart iv_nochart">${busy ? '시세 불러오는 중…' : '선택 기간의 기록 부족'}</div>`;
     const W = 358, H = 236, R = 50, T = 26, B = 22, pw = W - R - 8, ph = H - T - B;
@@ -44,11 +50,13 @@ function candles(m, p, sym, date, from, cur, busy = false) {
     const top = hi + padv, bot = lo - padv, y = v => T + (top - v) / (top - bot) * ph;
     const step = pw / show.length, cw = Math.max(2, Math.min(12, step * 0.62)), x = k => 8 + step * (k + 0.5);
     const up = UPRED.has(p.country) ? '#e5484d' : '#12a26b', dn = UPRED.has(p.country) ? '#3b6fe0' : '#e5484d';
-    const nice = v => (Math.abs(v) >= 1000 ? v.toLocaleString('en-US', { maximumFractionDigits: 0 }) : v.toFixed(2));
-    const grid = Array.from({ length: 5 }, (_, k) => bot + (top - bot) * k / 4).map(v => `<line x1="8" x2="${8 + pw}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="iv_gl"/><text x="${W - 4}" y="${(y(v) + 3.5).toFixed(1)}" class="iv_yl" text-anchor="end">${nice(v)}</text>`).join('');
+    const nice = v => (Math.abs(v) >= 1000 ? v.toLocaleString(LOC, { maximumFractionDigits: 0 }) : dec(v.toFixed(2)));
+    // a scale number under the price tag on the right is left out (the tag says the price there)
+    const tagY = y(rows.filter(x => x.d >= from).at(-1)?.c ?? bot);
+    const grid = Array.from({ length: 5 }, (_, k) => bot + (top - bot) * k / 4).map(v => `<line x1="8" x2="${8 + pw}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="iv_gl"/>${Math.abs(y(v) - tagY) < 13 ? '' : `<text x="${W - 4}" y="${(y(v) + 3.5).toFixed(1)}" class="iv_yl" text-anchor="end">${nice(v)}</text>`}`).join('');
     const bars = show.map((r, k) => { const col = r.c >= r.o ? up : dn, yo = y(r.o), yc = y(r.c), bt = Math.min(yo, yc), bh = Math.max(1.2, Math.abs(yc - yo)); return `<line x1="${x(k).toFixed(1)}" x2="${x(k).toFixed(1)}" y1="${y(r.h).toFixed(1)}" y2="${y(r.l).toFixed(1)}" stroke="${col}" stroke-width="1"/><rect x="${(x(k) - cw / 2).toFixed(1)}" y="${bt.toFixed(1)}" width="${cw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}" rx="${cw > 6 ? 1.2 : 0.6}"/>`; }).join('');
     const last = show[show.length - 1], ih = show.reduce((a, r, k) => (r.h > show[a].h ? k : a), 0), il = show.reduce((a, r, k) => (r.l < show[a].l ? k : a), 0);
-    const mark = (k, v, below) => { const right = x(k) < pw * 0.55, tx = right ? x(k) + 8 : x(k) - 8, ty = below ? y(v) + 13 : y(v) - 6, chg = (last.c / v - 1) * 100; return `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" class="iv_mk ${below ? 'lo' : 'hi'}" text-anchor="${right ? 'start' : 'end'}">${right ? '← ' : ''}${nice(v)} (${chg > 0 ? '+' : ''}${chg.toFixed(2)}%, ${shortDay(show[k].d, p)})${right ? '' : ' →'}</text>`; };
+    const mark = (k, v, below) => { const right = x(k) < pw * 0.55, tx = right ? x(k) + 8 : x(k) - 8, ty = below ? y(v) + 13 : y(v) - 6, chg = (last.c / v - 1) * 100; return `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" class="iv_mk ${below ? 'lo' : 'hi'}" text-anchor="${right ? 'start' : 'end'}">${right ? '← ' : ''}${nice(v)} (${pct(chg)}, ${shortDay(show[k].d, p)})${right ? '' : ' →'}</text>`; };
     const ly = y(last.c), tagCol = last.c >= last.o ? up : dn;
     const dates = [0, Math.floor((show.length - 1) / 2), show.length - 1].filter((v, i, a) => a.indexOf(v) === i).map(k => `<text x="${x(k).toFixed(1)}" y="${H - 6}" class="iv_xl" text-anchor="${k === 0 ? 'start' : k === show.length - 1 ? 'end' : 'middle'}">${shortDay(show[k].d, p)}</text>`).join('');
     return `<div class="iv_cd"><div class="iv_leg"><span>${esc(cur)} · 하루 한 봉</span></div>
@@ -79,6 +87,7 @@ const card = (s, cls = '') => `<div class="iv_card ${cls}">${s}</div>`;
 const hd = (t, right = '') => `<div class="iv_hd"><b>${t}</b>${right}</div>`;
 
 export function investmentScreen(m, p, now, view, key, busy) {
+    DOT = decimalOf(p) === '.'; LOC = localeOf(p);
     const inv = p.investment;
     if (!inv) {
         return frame(p, now, { back: 'home2', body: `<div class="iv_empty"><span class="iv_emptyic">${ax('chart', 30, 'currentColor', 2)}</span><b>아직 투자 계좌가 없어요</b></div>${tools(m, p, busy)}` });
@@ -141,7 +150,7 @@ export function investmentScreen(m, p, now, view, key, busy) {
             back: 'invest', title: ' ', right: `<button type="button" class="iv_ib iv_news" data-symbol="${esc(sym)}" aria-label="관련 뉴스">${ax('search', 18, 'currentColor', 2.3)}</button>`,
             body: `<div class="iv_quote">${logo(s, 46)}<span class="iv_qn"><b>${esc(s.ko || s.name)}</b><small>${esc(s.name)} · ${esc(s.symbol)}</small></span></div>
               <div class="iv_big cg_num">${money(p, q?.value, s.currency)}</div>
-              <div class="iv_chg ${tone(p, change)}">${finite(change) && prev ? `${arrow(change)} ${money(p, q.value - prev.value, s.currency, true)} (${pct(change)}) <small>${esc(shortDay(prev.date))} 대비</small>` : `<small>${q ? (q.stale ? `${esc(shortDay(q.date, p))} 마지막 시세` : '이전 시세가 없어요') : '아직 평가 전이에요'}</small>`}</div>
+              <div class="iv_chg ${tone(p, change)}">${finite(change) && prev ? `${arrow(change)} ${money(p, q.value - prev.value, s.currency, true)} (${pct(change)}) <small>${esc(shortDay(prev.date, p))} 대비</small>` : `<small>${q ? (q.stale ? `${esc(shortDay(q.date, p))} 마지막 시세` : '이전 시세가 없어요') : '아직 평가 전이에요'}</small>`}</div>
               <div class="iv_src">${q ? `${esc(shortDay(q.date, p))} ${esc(q.time || '시각 모름')} · 시세${q.stale ? ' · 이전 시세' : ''}` : ''}${q?.conflict ? ` · <button type="button" class="iv_link" data-go="ivprices" data-i="${esc(`STOCK:${sym}`)}">가격 확인 필요</button>` : ''}</div>
               ${candles(m, p, sym, date, daysBack(date, days), s.currency, busy)}${chips('stock', sym, rg)}
               ${mine}

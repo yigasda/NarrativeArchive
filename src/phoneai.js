@@ -194,7 +194,7 @@ YOU GET
 RULES
 - Only what is really in front of the owner at this moment; nothing RECENT CHAT has not shown.
 - One short caption, the way a photo is described: who or what is in it, where, the light.
-- In the language of PHOTOS SO FAR (the owner's own). A caption that is not Korean gets "ko", a Korean translation.
+- In the language of PHOTOS SO FAR (the owner's own). A caption that is not Korean gets "ko", a Korean translation; a Korean one gets none.
 
 ANSWER — one JSON object, nothing else:
 { "caption", "ko", "mood": one of ${MOODS.join(', ')} }`;
@@ -233,7 +233,7 @@ YOU GET
 
 RULES
 - Only what RECENT CHAT shows happened, and what the owner felt about it. Nothing it does not show.
-- In the owner's own language, as in SO FAR. A title or text not in Korean gets "kt" and "ko", its Korean.
+- In the owner's own language, as in SO FAR. A title or text not in Korean gets "kt" and "ko", its Korean; a Korean one gets none.
 - A note is short, the way people jot things on a phone: a list, a reminder, a line or two. A diary entry is a few short paragraphs in the owner's voice.
 
 ANSWER — one JSON object, nothing else:
@@ -276,7 +276,7 @@ YOU GET
 RULES
 - The results are what the web of the story's world would show for this query: sites, articles, shops, places, forums.
 - The web knows only what is public. The owner and the people around them are not on it, unless the story makes them public.
-- Each result in the language a site for this query would use. A text not in Korean gets "ko" (a title gets "kt").
+- Each result in the language a site for this query would use. A text not in Korean gets "ko" (a title gets "kt"); a Korean one gets none.
 - Each result is a different site with something different to say. A shop or item in SHOPS keeps its name there.
 - 4 to 6 results. "answer" only when a search engine would show one box on top (a timetable, the weather, opening hours, a short fact); else null.
 - "news" only when the query is about something in the news; "questions" and "related" are what other people searched.
@@ -304,7 +304,7 @@ YOU GET
 RULES
 - The page says what the snippet promised, in more detail, and nothing the story contradicts.
 - The web knows only what is public: the owner and the people around them are not on it, unless the story makes them public.
-- In the site's language. Each text not in Korean gets "ko" (a title gets "kt").
+- In the site's language. Each text not in Korean gets "ko" (a title gets "kt"); a Korean one gets none.
 - Write it like the real kind of site: a news article reads like news, a forum thread has people talking, a wiki is neutral.
 - Keep the site's name, address and colour from RESULT.
 - Fill only the part for this "kind"; leave the others out.
@@ -339,7 +339,7 @@ YOU GET
 RULES
 - What the owner might have typed and held back, given THREAD and RECENT CHAT: nearer to what they mean than what they sent. No new events, nothing the chat does not support.
 - In the language and voice of the owner's own texts in THREAD. Short like a text; it may break off mid-sentence.
-- A text not in Korean gets "ko": a natural Korean translation.
+- A text not in Korean gets "ko": a natural Korean translation; a Korean one gets none.
 
 ANSWER — one JSON object, nothing else:
 { "text", "ko" }`;
@@ -379,7 +379,7 @@ YOU GET
 RULES
 - Spoken, not written: the way the owner talks in the chat, with pauses (…), restarts and half sentences. Not a diary entry.
 - Only what RECENT CHAT shows happened and what the owner felt about it; nothing it doesn't support.
-- In the owner's own language. Speech not in Korean gets "ko".
+- In the owner's own language. Speech not in Korean gets "ko"; Korean speech gets none.
 - 20 to 90 seconds of speech.
 
 ANSWER — one JSON object, nothing else:

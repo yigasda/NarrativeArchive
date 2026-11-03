@@ -64,7 +64,7 @@ WEATHER
 - Never today's real-world weather.
 
 LANGUAGE
-Labels, file names and folder names in the language the owner really uses on their phone. A text not in Korean gets "ko".
+Labels, file names and folder names in the language the owner really uses on their phone. A text not in Korean gets "ko"; a Korean one gets none.
 
 SIZE
 Up to 8 alarms, 4 timers, 6 folders, 18 files and 5 cities.
@@ -130,7 +130,7 @@ PICTURES
 - SIDES: ${FOOD_IDS.side.join(', ')}
 
 LANGUAGE
-Shop names, dishes and notes in the language they really have there. A text not in Korean gets "ko".
+Shop names, dishes and notes in the language they really have there. A text not in Korean gets "ko"; a Korean one gets none.
 
 JSON (one object, nothing before or after it)
 {

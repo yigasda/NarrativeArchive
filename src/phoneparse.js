@@ -89,7 +89,26 @@ export function mendJson(t) {
     return out;
 }
 // the JSON in a model's answer; one that doesn't parse is mended once
-export const parseJson = s => { try { return JSON.parse(s); } catch { return JSON.parse(mendJson(s)); } };
+// a Korean line that only says its original again ("케이크 흐트러지지 않게…" under the same words): no second line.
+// Every translation field (ko, kt, pko, noteKo, optionKo…) is dropped when it matches any other text on the same record
+// (spaces, marks and emoji aside), or when the words it translates are Korean already; the rest stay. Every model answer goes through it (parseJson), and the phone runs it again before it is drawn, for phones saved before
+const KO_KEY = /^(ko|kt|pko|[a-z][A-Za-z]*Ko)$/, bare = v => String(v).toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+// the words a translation is of, when the record says for sure: noteKo is note's, kt the title's, ko the one text the record has
+const MAIN = ['text', 'caption', 'item', 'label', 'name', 'who', 'title'];
+const origOf = (o, k) => { if (k === 'kt') return o.title; if (k !== 'ko' && k !== 'pko' && k.endsWith('Ko')) return o[k.slice(0, -2)]; if (k !== 'ko') return ''; const has = MAIN.filter(x => typeof o[x] === 'string' && o[x]); return has.length === 1 ? o[has[0]] : ''; };
+// written in Korean already: most of its letters are Hangul
+const korean = v => { const t = String(v || '').replace(/[^\p{L}]/gu, ''); return t.length > 0 && (t.match(/\p{Script=Hangul}/gu) || []).length / t.length > 0.5; };
+export function tidyKo(o, seen = new Set()) {
+    if (!o || typeof o !== 'object' || seen.has(o)) return;
+    seen.add(o);
+    if (Array.isArray(o)) { for (const x of o) tidyKo(x, seen); return; }
+    const own = Object.entries(o).filter(([k, v]) => typeof v === 'string' && v && !KO_KEY.test(k)).map(([, v]) => bare(v)).filter(Boolean);
+    for (const [k, v] of Object.entries(o)) {
+        if (KO_KEY.test(k) && typeof v === 'string') { if (v && (own.includes(bare(v)) || korean(origOf(o, k)))) o[k] = ''; }
+        else if (v && typeof v === 'object') tidyKo(v, seen);
+    }
+}
+export const parseJson = s => { let o; try { o = JSON.parse(s); } catch { o = JSON.parse(mendJson(s)); } tidyKo(o); return o; };
 export const jsonOf = out => { const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}'); try { return a >= 0 && b > a ? parseJson(t.slice(a, b + 1)) : null; } catch { return null; } };
 // a number from a model's answer: "12,50", "€9.90", "1,200"; text with no digit in it ("lots", "free") is none, never 0
 export const num = v => {
