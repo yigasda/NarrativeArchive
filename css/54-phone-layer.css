@@ -14,9 +14,9 @@ dialog.popup.na_phl::backdrop { background: transparent; }
 .na_phl_top .na_ph_pick i { box-shadow: 0 0 0 2px #1e1915; }
 .na_phl_top .na_ph_addic { color: rgba(255, 255, 255, 0.75); border-color: rgba(255, 255, 255, 0.35); }
 .na_phl_btn { flex: none; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.14); color: #fff; cursor: pointer; }
-.na_phl_btn.on { background: #fff; color: #16130f; }
+.na_phl_btn.on { background: #fff; --c-bg: #fff; color: #16130f; --c-fg: #16130f; }
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_btn { background: rgba(255, 255, 255, 0.14) !important; color: #fff !important; border: 0 !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_btn.on { background: #fff !important; color: #16130f !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_btn.on { background: #fff !important; --c-bg: #fff !important; color: #16130f !important; --c-fg: #16130f !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog#na_phl.popup.na_phl .na_phl_top .na_ph_pick.on { background: rgba(255, 255, 255, 0.14) !important; }
 /* the phone as tall as the screen allows */
 .na_phl .na_ph_wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0 10px; }
@@ -79,8 +79,8 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .cg .cg_ind.na_ph_quit { height: 38px; flex-direction: column; gap: 4px; justify-content: flex-end; padding-bottom: 9px; cursor: pointer; }
 .cg_ind.na_ph_quit small { font-size: 11px; font-weight: 600; color: rgba(22, 27, 34, 0.55); letter-spacing: 0.04em; }
 /* 도구 › 이야기: 캐릭터 휴대폰이 맨 위 큰 카드 */
-.na_toolrow.na_toolhero { margin-bottom: 6px; padding: 14px 14px; border-radius: 16px; border: 1px solid var(--na-line); background: linear-gradient(135deg, var(--na-soft), var(--na-softer)); }
-.na_toolrow.na_toolhero:hover { border-color: var(--na-accent); }
+.na_toolrow.na_toolhero { margin-bottom: 6px; padding: 14px 14px; border-radius: 16px; --c-r: 16px; border: 1px solid var(--na-line); --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); background: linear-gradient(135deg, var(--na-soft), var(--na-softer)); --c-bg: linear-gradient(135deg, var(--na-soft), var(--na-softer)); }
+.na_toolrow.na_toolhero:hover { border-color: var(--na-accent); --c-bc: var(--na-accent); --c-bct: var(--na-accent); }
 .na_toolhero_ic { flex: none !important; width: 44px; height: 44px; display: grid !important; place-items: center; border-radius: 13px; background: var(--na-accent); color: var(--na-onaccent, #fff); font-size: 1.25em; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
 .na_toolhero > span:nth-child(2) b { font-size: 1.05em; }
 /* the board's big numbers hold against a theme that sizes every span in a popup */

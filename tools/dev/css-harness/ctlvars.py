@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(__file__)); from rules import walk, split_top
 SCOPE = sys.argv[sys.argv.index('--scope') + 1] if '--scope' in sys.argv else None
 C = json.load(open(sys.argv[-1])); ONLY, MIXED, NON, IDS = set(C['only']), set(C['mixed']), set(C.get('non', [])), set(C.get('ids', []))
 CTL_TAGS = ('button', 'label', 'input', 'textarea', 'select')
-PHONE = re.compile(r'\.(ax|axb|cg|na_ph\w*|lf_\w+|iv_\w+|ir_\w+|na_phone|pcf|dv_\w+|wb_\w+)(?![\w-])|:has\(\.na_phone\)(?!\))')
+PHONE = re.compile(r'\.(ax|axb|cg|pcf|na_phone)(?![\w-])|\.(ax|cg|cd|dv|lf|iv|ir|wb|na_ph)_[\w-]*|:has\(\.na_phone\)(?!\))')
 WIDTH = re.compile(r'^(0|thin|medium|thick|[\d.]+(px|em|rem|%))$')
 STYLES = {'none','hidden','dotted','dashed','solid','double','groove','ridge','inset','outset'}
 def kind_compound(base):
@@ -72,7 +72,6 @@ def to_vars(prop, val):
 write = '--write' in sys.argv; stats = {'rules': 0, 'decls': 0, 'kept': 0, 'skipped': []}
 edits = {}
 for f, a, b, ctx, sel, body, t in walk():
-    if '/5' in f.replace('\\', '/').split('/css/')[-1][:2] or os.path.basename(f)[0] == '5': continue
     if '@keyframes' in ctx: continue
     parts = split_top(sel.strip(), ',')
     kinds = [kind(p) if not PHONE.search(re.sub(r':not\(:has\(\.na_phone\)\)', '', p)) else None for p in parts]

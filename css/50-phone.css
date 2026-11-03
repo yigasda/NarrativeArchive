@@ -173,8 +173,8 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 .na_ph_menubtns { display: flex; flex-wrap: wrap; gap: 6px; }
 .na_ph_menubtns .na_ph_del { color: var(--na-bad); }
 /* 인물 도감: the phone from a profile */
-.na_pb_phonebtn { position: absolute; top: 10px; left: 10px; z-index: 1; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 11px 0 9px; border: 0; border-radius: 15px; background: rgba(0, 0, 0, 0.22); color: #fff; font: inherit; font-size: 0.8em; font-weight: 600; cursor: pointer; }
-.na_pb_phonebtn:hover { background: rgba(0, 0, 0, 0.4); }
+.na_pb_phonebtn { position: absolute; top: 10px; left: 10px; z-index: 1; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 11px 0 9px; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 15px; --c-r: 15px; background: rgba(0, 0, 0, 0.22); --c-bg: rgba(0, 0, 0, 0.22); color: #fff; --c-fg: #fff; font: inherit; font-size: 0.8em; font-weight: 600; cursor: pointer; }
+.na_pb_phonebtn:hover { background: rgba(0, 0, 0, 0.4); --c-bg: rgba(0, 0, 0, 0.4); }
 /* 캐릭터 휴대폰 under a theme that paints every button: the phone's buttons keep their own (see-through) look */
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame button:not(.na_ph_widget, .na_ph_kochip, .na_ph_makebtn, .na_ph_makelinks button, .na_ph_makeopts button, .na_ph_maketip button, .na_ph_bar, .na_ph_thumb, .na_ph_draw, .cg_wcal, .cg_wnote, .cg_ic, .cg_nt, .na_ph_camthumb, .ax button, .cg_dots button),
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_pick:not(.on) { background: transparent !important; background-image: none !important; border-color: transparent !important; box-shadow: none !important; }

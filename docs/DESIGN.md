@@ -270,7 +270,7 @@
 - **카드와 둥근 칩**: 내용은 둥근(14~16px) 카드(`--na-card`)에 담고, 고르기는 둥근 알약 칩 · 분할 탭(`.na_v2_tabs`, `.na_v2_seg`, `.na_v2_chips`)이에요. 선택된 탭은 종이색(`--na-paper`) 알약 + 주황 글자, 선택된 칩은 진한 갈색(`--na-fill`) + 크림 글자예요.
 - **숫자는 고정폭**(`font-variant-numeric: tabular-nums`), 편집칸 · 원문은 SillyTavern 고정폭 글꼴(`--monoFontFamily`)이에요.
 - **아이콘**: 새 화면은 선 아이콘 `svgA(ICO_A.이름)`(`src/theme.js`)을 써요. 예전 화면(홈 탭, 일부 버튼)에는 Font Awesome `<i class="fa-solid …">`이 남아 있어요.
-- **홈 탭만 예외**: 홈 탭(미터, 다음 할 일 카드, 빠른 버튼)은 시안 개편에 들어가지 않아서 SillyTavern 테마 색을 그대로 따라요(`/* home tab: keeps the original theme-based look */`). 바꾸려면 소망에게 먼저 물어봐요.
+- **홈 탭도 우리 팔레트예요**: 홈 탭(미터, 다음 할 일 카드, 빠른 버튼)도 나중에 시안(홈 7)대로 다시 그려져서 다른 탭과 같은 크림 · 차콜 팔레트예요. `css/41-home-theme.css`의 옛 "테마를 따라간다" 블록은 그 뒤 블록(`css/42-home.css`)에 덮여 있어요.
 
 ### 6-2. 색 토큰 (`style.css` › `/* mockup palette */`)
 밝게(`body:not(.na_darkui)`) / 어둡게(`body.na_darkui`) 두 벌이 `#na_settings, .na_popup, .na_v2`에 걸려 있어요.
