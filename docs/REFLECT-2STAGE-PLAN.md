@@ -6,6 +6,16 @@
 - 시작 기준: 메인 3.169.89 (`0f3ad7d`), 작업 브랜치 `ccr-7895cb93-30ms96`
 - 진행 규칙: 소망이 "ㄱㄱ"를 주면 작업 2번(지시문 나누기)부터 시작해요. 메인은 허락받고 올려요.
 
+> **설계 변경 (2026-11-03, 소망 확정): 생활은 core에 남기고 돈만 떼요.**
+> 처음 설계는 life도 따로 떼는 거였어요. 그런데 날짜는 거의 매 반영마다 넘어가서(run28~32) life 요청이 거의 매번 가요.
+> 게다가 life는 본문 전체가 필요해서(테스트 세션 1번), 본문이 core와 life에 두 번 들어가요. 그러면 평소 반영이 지금보다 무거워져요.
+> 그래서 생활(알람·타이머·파일·건강·날씨)은 core에 그대로 두고, **돈(은행·카드·주문·티켓·투자·배달)만 2단계로 떼요.**
+> 아래에서 "life 요청", "생활 다시 읽기", `s.owed.life`, `STAGE: life`가 나오면 **없는 걸로** 읽어요. 빚은 `s.owed.money`만 있어요.
+>
+> 실측 (3.169.90 작업 브랜치): 옛 반영 3,813 · core(생활+날씨) 2,626 · core(생활, 날씨 없음) 2,318 · core(생활 없는 폰) 1,562 · money(배달 포함) 1,582 · money(배달 없음) 1,201토큰.
+> 돈 없는 반영은 약 1,200토큰 가벼워지고, 돈 있는 반영은 core + money = 약 4,200(옛보다 +400)이에요. money 머리말(GOAL·YOU GET)을 줄이면 더 내려갈 수 있어요.
+> 코드: `coreSystem(opts)`는 `updateSystem({ ...opts, money: false, split: true })`예요. `split`이면 첫 줄 `STAGE: core`, money 표시(`"apps": [] or ["money"]`), 돈만 오가는 장면도 이벤트라는 줄이 붙어요. `moneySystem({ delivery })`는 따로 있어요.
+
 ---
 
 ## 1. 왜 하나
@@ -164,7 +174,7 @@
 ## 6. 작업 순서
 
 1. ~~설계 확정~~ (끝)
-2. **지시문 셋으로 나누기** — 끝 (`coreSystem`, `moneySystem`, `lifeSystem`이 `updateSystem` 바로 아래에 있어요. 아직 연결 안 함. 실측: core 약 1,599 · money(배달 포함) 1,582 · life(날씨 포함) 1,419 · life(날씨 없음) 1,107토큰, 옛 반영 3,813)
+2. **지시문 나누기** — 끝 (설계 변경 뒤: `coreSystem`(생활 포함, money 표시)과 `moneySystem`. 아직 `updatePhone`에 연결 안 함. 실측은 맨 위 상자)
    - `coreSystem()`, `moneySystem({ delivery, invest })`, `lifeSystem({ weather, tracker })`
    - 문장은 지금 것을 옮겨요. 새로 쓰는 건 최소로 하고, 3장의 새 문장 두 개(apps 표시, 돈만 오가는 일)만 추가해요.
    - 각 지시문 첫 줄에 `STAGE: core|money|life`
