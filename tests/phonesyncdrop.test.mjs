@@ -507,3 +507,19 @@ test('a Korean line that only says its original again is not drawn twice; a real
     assert.equal(p.notes[0].ko, '우유, 빵');
     assert.equal(p.events[0].ko, '');
 });
+
+test('run35: a deleted text is not matched to an emoji-only text, nor to a short one inside it; the very same emoji is', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'hi'), say('Mara', 'thumbs')]);
+    await run(c.m, { now: '10-26 15:00', events: [{ id: 'thumbs', at: 2, quote: 'thumbs', summary: '답장', date: '10-26', time: '15:00',
+        phone: { threads: [{ with: 'Mara', messages: [msg('👍', '10-26 15:02'), msg('응', '10-26 15:03')] }] } }] });
+    T.chat.push(say('Ren', 'late talk'), say('Ren', 'deleted it'));
+    await run(c.m, { now: '10-26 22:00', events: [{ id: 'gone', at: 4, quote: 'deleted it', summary: '삭제', date: '10-26', time: '22:00',
+        phone: { threads: [{ with: 'Mara', messages: [{ from: 'me', text: '오늘 치킨 고마워. 근데 나 사실 새 회사 너무 힘들어, 응', deleted: true }, { from: 'Mara', text: '👍', deleted: true }] }] } }] });
+    const ms = c.p.threads.find(t => t.with === 'Mara').messages;
+    // the long text was never on the phone: it goes in marked, and "응" stays as it was
+    assert.equal(ms.find(x => x.text === '응').deleted, undefined);
+    assert.equal(ms.find(x => x.text.startsWith('오늘 치킨')).deleted, true);
+    // the very same 👍 is the one deleted
+    assert.equal(ms.filter(x => x.text === '👍').length, 1);
+    assert.equal(ms.find(x => x.text === '👍').deleted, true);
+});
