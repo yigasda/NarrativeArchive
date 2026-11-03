@@ -51,7 +51,8 @@ const L = p => {
     for (const k of ['temp', 'hi', 'lo']) h0[k] ??= null;
     for (const x of w.cities) { x.hours ||= []; for (const k of ['temp', 'hi', 'lo', 'feels', 'humidity', 'dew', 'rainNext', 'wind', 'gust']) x[k] ??= null; }
     // the screens read a view: today's row counted up, nothing written back to the save
-    return h.days.some(d => d && d.date === today) ? { ...l, health: { ...h, days: h.days.map(d => (d && d.date === today ? soFar(d) : d)) } } : l;
+    // (and it carries the minute now, so what the day still holds, water and coffee later on, isn't counted yet)
+    return h.days.some(d => d && d.date === today) ? { ...l, health: { ...h, days: h.days.map(d => (d && d.date === today ? { ...soFar(d), ...(nowMin === null ? {} : { upTo: nowMin }) } : d)) } } : l;
 };
 const k1 = (k, cls = 'lf_k') => (k && koOn() ? `<span class="${cls}">${esc(k)}</span>` : '');
 const now5 = p => String(storyNow(p) || p.now || '');
@@ -293,7 +294,9 @@ function hrDay(d, next) {
 function waterDay(d, u) {
     if (!u.water) return null;
     const r = seeded(`${d.date}:water`), cups = Math.max(1, Math.round(u.water * 4 * (0.7 + r() * 0.55))), wake = toMin(d.wake) ?? 450, span = Math.max(240, 1290 - wake - 60);
-    const log = Array.from({ length: cups }, (_, k) => ({ t: hm(wake + 45 + Math.round(span * (k + r() * 0.6) / cups)), ml: [200, 250, 250, 300][Math.floor(r() * 4)] }));
+    const all = Array.from({ length: cups }, (_, k) => ({ t: hm(wake + 45 + Math.round(span * (k + r() * 0.6) / cups)), ml: [200, 250, 250, 300][Math.floor(r() * 4)] }));
+    // today: only the glasses drunk by now
+    const log = Number.isFinite(d.upTo) ? all.filter(x => toMin(x.t) <= d.upTo) : all;
     return { ml: log.reduce((s, x) => s + x.ml, 0), log };
 }
 // coffee: their usual cups (the first soon after waking) and the coffee ordered for delivery that day, each its own row
@@ -312,7 +315,8 @@ function coffeeDay(p, d, u) {
         if (String(o.time).slice(0, 5) !== d.date || o.status === 'cancelled') continue;
         for (const x of o.items || []) if (['coffee', 'iced-americano'].includes(x.pic?.base) || COFFEE.test(`${x.name} ${x.ko || ''}`)) for (let q = 0; q < (x.qty || 1); q++) out.push({ t: String(o.time).slice(6, 11), what: x.ko || x.name, mg: DECAF.test(`${x.name} ${x.ko || ''} ${x.option || ''} ${x.optionKo || ''}`) ? 5 : 150, from: o.shop });
     }
-    return out.sort((a, b) => toMin(a.t) - toMin(b.t));
+    // today: only the cups had by now
+    return out.filter(x => !Number.isFinite(d.upTo) || (toMin(x.t) ?? 0) <= d.upTo).sort((a, b) => toMin(a.t) - toMin(b.t));
 }
 // weight: their usual, drifting a few hundred grams a day around it (seeded), the last 30 days
 function weightLine(lf, u, until) {
@@ -325,9 +329,11 @@ function weightLine(lf, u, until) {
 function highlight(lf, d, u) {
     const ds = lf.health.days, prev = ds[ds.indexOf(d) - 1], sm = sleepMin(d), us = usualSleep(u);
     if (d.workout && !prev?.workout) return ['run', `${esc(workName(d.workout.kind))} ${d.workout.min || ''}분을 했어요`, d.workout.km ? `${comma(d.workout.km)} km · ${d.workout.time || ''}` : (d.workout.time || '')];
-    if (prev?.steps && d.steps && Math.abs(d.steps - prev.steps) >= 1500) return ['walk', `전날보다 ${n0(Math.abs(d.steps - prev.steps))}걸음 ${d.steps > prev.steps ? '더' : '덜'} 걸었어요`, `${n0(prev.steps)} → ${n0(d.steps)}`];
+    // a day still going isn't set against a whole one: no step comparison until it is over
+    const going = Number.isFinite(d.upTo);
+    if (!going && prev?.steps && d.steps && Math.abs(d.steps - prev.steps) >= 1500) return ['walk', `전날보다 ${n0(Math.abs(d.steps - prev.steps))}걸음 ${d.steps > prev.steps ? '더' : '덜'} 걸었어요`, `${n0(prev.steps)} → ${n0(d.steps)}`];
     if (sm !== null && us && Math.abs(sm - us) >= 60) return ['moon', `평소보다 ${dur(Math.abs(sm - us))} ${sm > us ? '더' : '덜'} 잤어요`, `${d.sleep} – ${d.wake}`];
-    if (u.steps && d.steps && Math.abs(d.steps - u.steps) >= 1500) return ['walk', `평소보다 ${n0(Math.abs(d.steps - u.steps))}걸음 ${d.steps > u.steps ? '더' : '덜'} 걸었어요`, `평소 ${n0(u.steps)}`];
+    if (!going && u.steps && d.steps && Math.abs(d.steps - u.steps) >= 1500) return ['walk', `평소보다 ${n0(Math.abs(d.steps - u.steps))}걸음 ${d.steps > u.steps ? '더' : '덜'} 걸었어요`, `평소 ${n0(u.steps)}`];
     return null;
 }
 const htile = (go, i, c, ic, name, body) => `<button type="button" class="lf_hc lf_ht" ${go ? `data-go="${go}" data-i="${i}"` : ''}><span class="lf_hl" style="color: ${c}">${ax(ic, 14, c, 2.2, ic === 'heartF' || ic === 'flame' || ic === 'drop' ? c : 'none')}${name}</span>${body}</button>`;
@@ -508,7 +514,9 @@ export function weightScreen(p, now, day) {
 export function compareScreen(p, now) {
     const lf = L(p); if (!lf) return healthScreen(p, now);
     const u = lf.health.usual || {}, wk = lastDays(lf, 7), rows = [];
-    const st = avg(wk.map(x => x.steps)), sl = avg(wk.map(sleepMin)), bed = avg(wk.map(x => lateMin(x.sleep))), runs = wk.filter(x => x.workout).length, last = [...lf.health.days].reverse().find(x => x.workout);
+    // the day still going stays out of the step and coffee averages (it isn't over)
+    const done = wk.filter(x => !Number.isFinite(x.upTo));
+    const st = avg(done.map(x => x.steps)), sl = avg(wk.map(sleepMin)), bed = avg(wk.map(x => lateMin(x.sleep))), runs = wk.filter(x => x.workout).length, last = [...lf.health.days].reverse().find(x => x.workout);
     const us = usualSleep(u), grey = ['#8a929d', '#f1f2f4'];
     const row = (dir, [color, bg], title, sub) => rows.push(`<div class="lf_hc lf_tr"><span style="background: ${bg}">${ax(dir, 18, color, 2.4)}</span><div><b>${title}</b><small>${sub}</small></div></div>`);
     if (st !== null && u.steps) { const r = st / u.steps; row(r > 1.15 ? 'up' : r < 0.85 ? 'down' : 'eq', r > 1.15 || r < 0.85 ? [HC.steps, HB.steps] : grey, r > 1.15 ? '걸음이 평소보다 많아요' : r < 0.85 ? '걸음이 평소보다 적어요' : '걸음은 평소와 비슷해요', `${n0(Math.round(st))} · 평소 ${n0(u.steps)}`); }
@@ -517,7 +525,7 @@ export function compareScreen(p, now) {
     if (u.workouts) row(runs ? 'eq' : 'down', runs ? grey : [HC.run, HB.run], runs ? `운동은 이번 주 ${runs}회예요` : '운동이 끊겼어요', `이번 주 ${runs}회 · 평소 주 ${u.workouts}회${last ? ` · 마지막 ${esc(fmtDate(p, last.date, true))}` : ''}`);
     const rest = avg(wk.map(x => x.hr?.[0]));
     if (rest !== null && u.rest) row(Math.abs(rest - u.rest) > 6 ? (rest > u.rest ? 'up' : 'down') : 'eq', Math.abs(rest - u.rest) > 6 ? [HC.hr, HB.hr] : grey, Math.abs(rest - u.rest) > 6 ? (rest > u.rest ? '안정 시 심박이 평소보다 높아요' : '안정 시 심박이 평소보다 낮아요') : '심박수는 평소와 비슷해요', `${Math.round(rest)} · 평소 ${u.rest}`);
-    if (u.coffee) { const c = avg(wk.map(x => coffeeDay(p, x, u).length)); if (c !== null) row(c > u.coffee + 0.7 ? 'up' : c < u.coffee - 0.7 ? 'down' : 'eq', Math.abs(c - u.coffee) > 0.7 ? [HC.caf, HB.caf] : grey, c > u.coffee + 0.7 ? '커피를 평소보다 많이 마셔요' : c < u.coffee - 0.7 ? '커피를 평소보다 덜 마셔요' : '커피는 평소와 비슷해요', `하루 ${comma(c.toFixed(1))}잔 · 평소 ${u.coffee}잔`); }
+    if (u.coffee) { const c = avg(done.map(x => coffeeDay(p, x, u).length)); if (c !== null) row(c > u.coffee + 0.7 ? 'up' : c < u.coffee - 0.7 ? 'down' : 'eq', Math.abs(c - u.coffee) > 0.7 ? [HC.caf, HB.caf] : grey, c > u.coffee + 0.7 ? '커피를 평소보다 많이 마셔요' : c < u.coffee - 0.7 ? '커피를 평소보다 덜 마셔요' : '커피는 평소와 비슷해요', `하루 ${comma(c.toFixed(1))}잔 · 평소 ${u.coffee}잔`); }
     return `${axBar(p, now)}${axTop(axCb('health'))}
       <div class="ax_scroll">${axH1('평소와 비교')}<div class="lf_sub">최근 7일 평균 · 평소</div>
         ${rows.join('') || '<div class="lf_none">비교할 기록이 없어요</div>'}<i class="lf_pad"></i></div>${axInd()}`;

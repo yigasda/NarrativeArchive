@@ -332,6 +332,11 @@ export function applyDays(p, days, round) {
         const u = p.life.health?.usual || {};
         for (const k of ['bed', 'sleep', 'wake']) if (!clean[k] && u[k]) clean[k] = u[k];
         if (clean.steps === null && finiteNum(u.steps) && clean.date !== String(p.now || '').slice(0, 5)) clean.steps = u.steps;
+        const hd = hash(clean.date);
+        if (clean.steps === null && finiteNum(clean.km) && clean.km > 0) clean.steps = Math.round(clean.km / 0.00072);
+        if (clean.km === null && finiteNum(clean.steps)) clean.km = Math.round(clean.steps * 0.00072 * 10) / 10;
+        if (clean.floors === null) clean.floors = (hd >>> 9) % 9;
+        if (!clean.hr.length && u.rest) clean.hr = [u.rest - 4 + hd % 5, u.rest + 45 + (hd >>> 4) % 40];
         bedFirst(clean);
         const row = { ...clean, id: `sync:${round}:d${k}` };
         box.push(row);
