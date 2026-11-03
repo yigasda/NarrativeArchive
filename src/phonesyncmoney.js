@@ -73,6 +73,7 @@ export function investNow(m, p) {
         accounts: inv.accounts.map(a => ({ account: `broker:${a.currency}`, currency: a.currency, cash: f.accounts[a.key] ? cash(f.accounts[a.key]) : null })),
         holdings: positions(inv.trades || []).filter(h => h.quantity > 0).map(h => ({ symbol: h.symbol, name: inv.securities.find(s => s.symbol === h.symbol)?.name || '', quantity: h.quantity, currency: h.currency })),
         trades: (inv.trades || []).slice(-10).map(t => ({ id: t.id, date: t.date, kind: t.kind, symbol: t.symbol, quantity: t.quantity, price: t.price })),
+        watch: (inv.watch || []).map(w => ({ symbol: w.symbol, name: inv.securities.find(s => s.symbol === w.symbol)?.name || '' })),
     };
 }
 
@@ -338,7 +339,9 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     // 장바구니: dishes put in the basket and not ordered (null empties it); an order from that shop empties it too
     const setCart = (to, label) => { const was = p.delivery.cart ?? null; if (JSON.stringify(was) === JSON.stringify(to)) return; out.effects.push({ type: 'set', path: 'delivery.cart', from: structuredClone(was), to: structuredClone(to) }); p.delivery.cart = to; out.changes.push({ app: '배달', label, amount: null }); };
     if (dlvOn && mo.cart !== undefined && (mo.cart === null || typeof mo.cart === 'object')) {
-        const c = mo.cart, items = c ? list(c.items).map(d => { const optionKo = txt(d?.optionKo, 60), pic = dishPic(d?.pic, { name: txt(d?.name, 60), ko: txt(d?.ko, 60), option: txt(d?.option, 60), optionKo }); return { name: txt(d?.name, 60), ko: txt(d?.ko, 60), option: txt(d?.option, 60), ...(optionKo ? { optionKo } : {}), qty: Math.max(1, Math.round(Number(d?.qty) || 1)), price: finite(Number(d?.price)) ? Number(d.price) : 0, ...(pic ? { pic } : {}) }; }).filter(d => d.name).slice(0, 8) : [];
+        // a dish on the shop's menu costs what the menu says (the basket carries no story amount)
+        const c = mo.cart, menu = c ? (p.delivery.shops || []).find(sh => samePlace(sh.name, c.shop))?.menu || [] : [];
+        const items = c ? list(c.items).map(d => { const optionKo = txt(d?.optionKo, 60), name = txt(d?.name, 60), mi = menu.find(x => samePlace(x.name, name) || x.ko && samePlace(x.ko, name)), pic = dishPic(d?.pic || mi?.pic, { name, ko: txt(d?.ko, 60) || mi?.ko || '', option: txt(d?.option, 60), optionKo }); return { name, ko: txt(d?.ko, 60) || mi?.ko || '', option: txt(d?.option, 60), ...(optionKo ? { optionKo } : {}), qty: Math.max(1, Math.round(Number(d?.qty) || 1)), price: mi && finite(Number(mi.price)) ? Number(mi.price) : finite(Number(d?.price)) ? Number(d.price) : 0, ...(pic ? { pic } : {}) }; }).filter(d => d.name).slice(0, 8) : [];
         if (!c || !txt(c.shop) || !items.length) setCart(null, '장바구니 비움');
         else setCart({ shop: txt(c.shop, 60), items, noteShop: txt(c.noteShop, 120), noteShopKo: txt(c.noteShopKo, 120), noteRider: txt(c.noteRider, 120), noteRiderKo: txt(c.noteRiderKo, 120) }, `${txt(c.shop, 60)} 장바구니`);
     }
@@ -350,7 +353,8 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         if (!/^\d{4}$/.test(last4) || !currency(cur)) fail('새 계좌의 끝 4자리나 통화를 확인하지 못했어요');
         if (!accts.some(x => x.last4 === last4)) {
             const acct = { id: uid(), kind, name: txt(a.name, 60) || (kind === 'savings' ? '적금' : kind === 'credit' ? '카드' : '입출금'), last4, currency: cur, balance: bal, ev: e.id, sourceIndex: e.at };
-            if (kind !== 'credit') baseline(m, acct.id, cur, bal, full, p.owner);
+            // the ledger opens empty on the event's day; what it holds is its first row (an opening deposit the owner can see)
+            if (kind !== 'credit') { const L = baseline(m, acct.id, cur, 0, full, p.owner); if (bal > 0) { const id = `sync:${e.id}:open`, row = { id, account: last4, who: txt(a.name, 60) || acct.name, ko: '', amount: round(bal), time: `${date}${e.time ? ` ${e.time}` : ''}`, day: full, kind: 'deposit', memo: '개설 입금', pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at }; (p.money.tx ||= []).push(row); L.entries[id] = { amount: round(bal), date: full, sourceIndex: e.at }; out.effects.push({ type: 'push', path: 'money.tx', item: structuredClone(row) }, { type: 'entry', key: `${acct.id}:${cur}`, id, amount: round(bal), date: full, sourceIndex: e.at }); } }
             accts.push(acct);
             out.effects.push({ type: 'push', path: 'money.bank.accounts', item: structuredClone(acct) });
             out.changes.push({ app: '은행', label: `${acct.name} 계좌 개설`, amount: null });
@@ -380,7 +384,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         for (const q of list(mo.quotes)) {
             const symbol = txt(q.symbol, 80), value = Number(q.value), d = /^\d{4}-\d{2}-\d{2}$/.test(String(q.date || '')) ? String(q.date) : fullDay(year, anchor, when(q.date).slice(0, 5) || date);
             if (!inv.securities.some(x => x.symbol === symbol) || !finite(value) || value <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(d || '')) continue;
-            try { addPrice(m, `STOCK:${symbol}`, d, { value, source: 'story', ref: txt(q.evidence, 200) }); out.changes.push({ app: '투자', label: `${inv.securities.find(x => x.symbol === symbol)?.name || symbol} 시세`, amount: null }); } catch { /* a price the ledger refuses */ }
+            try { addPrice(m, `STOCK:${symbol}`, d, { value, source: 'story', ref: txt(q.evidence, 200) }); if (d > (inv.date || '')) inv.date = d; out.changes.push({ app: '투자', label: `${inv.securities.find(x => x.symbol === symbol)?.name || symbol} 시세`, amount: null }); } catch { /* a price the ledger refuses */ }
         }
         for (const st of list(mo.stakes)) {
             const company = txt(st.company, 100), evidence = txt(st.evidence, 300);

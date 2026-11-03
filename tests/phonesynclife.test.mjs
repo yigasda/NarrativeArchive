@@ -621,3 +621,13 @@ test('life: a changed habit moves the usual waking time and steps too', () => {
     revertEffects({}, p, r.effects);
     assert.equal(p.life.health.usual.wake, '06:30'); assert.equal(p.life.health.usual.steps, 7000);
 });
+
+test('life: a timer first told in an event runs from that event even when the model writes no "running"', () => {
+    const { p } = setup();
+    applyLife(p, { id: 'ev10', at: 10, date: '10-26', time: '18:00' }, { timers: [{ label: '파스타 9분', sec: 540, last: '10-26' }] }, true);
+    assert.equal(p.life.clock.running?.sec, 540); assert.equal(p.life.clock.running?.at, '10-26 18:00');
+    // told again a day later as a saved timer: not started again
+    p.life.clock.running = null;
+    applyLife(p, { id: 'ev11', at: 11, date: '10-27', time: '09:00' }, { timers: [{ label: '파스타 9분', sec: 540, last: '10-26' }] }, true);
+    assert.equal(p.life.clock.running, null);
+});

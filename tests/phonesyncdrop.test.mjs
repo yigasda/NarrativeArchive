@@ -483,3 +483,13 @@ test('a plan moved or called off changes the item there; a text the owner delete
     assert.equal(t.messages.length, 2); assert.equal(t.messages.filter(x => x.deleted).length, 1);
     assert.equal(data.lastTime(t), '10-26 12:01');
 });
+
+test('a plan moved with its title reworded is the one on its old day; a deleted text in a thread new this round is kept, marked', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'dinner saturday?'), say('Ren', 'sure')]);
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'plan', at: 2, quote: 'sure', summary: '약속', date: '10-26', time: '12:00', phone: { events: [{ title: '토요일 저녁 약속 — 루체, Ren', date: '10-31', time: '19:00' }] } }] });
+    T.chat.push(say('Mara', 'make it sunday'), say('Ren', 'deleted that text'));
+    await run(c.m, { now: '10-26 14:00', events: [{ id: 'moved', at: 3, quote: 'sunday', summary: '옮김', date: '10-26', time: '13:00', phone: { events: [{ title: '일요일 저녁 약속 — 루체, Ren', date: '11-01', time: '19:00', was: '10-31' }], threads: [{ with: 'Mara', messages: [msg('A: 내일 봐', '10-26 13:01'), { from: 'me', text: '사실 힘들어', time: '10-26 13:02', deleted: true }] }] } }] });
+    assert.equal(c.p.events.length, 1); assert.equal(c.p.events[0].date, '11-01'); assert.equal(c.p.events[0].title, '일요일 저녁 약속 — 루체, Ren');
+    const t = c.p.threads.find(x => x.with === 'Mara');
+    assert.equal(t.messages.length, 2); assert.equal(t.messages.find(x => x.deleted)?.text, '사실 힘들어');
+});

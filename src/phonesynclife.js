@@ -224,6 +224,7 @@ export function applyLife(p, e, phone, on) {
     // a timer saved (the same label again: its seconds and day), and one running at the newest message (from its event's time)
     const lk = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
     const timerOf = t => ({ label: line(t?.label, 40), ko: ko(t?.ko), sec: int(t?.sec, 1, 86400), last: day5(t?.last) || e.date });
+    let started = null;
     arr(phone.timers).forEach((t, k) => {
         if (!t || typeof t !== 'object') return;
         const clean = timerOf(t);
@@ -231,9 +232,12 @@ export function applyLife(p, e, phone, on) {
         const twin = (L.clock?.timers || []).find(o => lk(o.label) && lk(clean.label) && (lk(o.label).includes(lk(clean.label)) || lk(clean.label).includes(lk(o.label))) || o.sec === clean.sec && (!lk(o.label) || !lk(clean.label)));
         if (twin) return change('life.clock.timers', twin, { sec: clean.sec, last: clean.last, ...(clean.ko ? { ko: clean.ko } : {}) }, '시계');
         push('life.clock.timers', tag(clean, k, 't'), '시계');
+        // a timer first told in this event was set then: it runs from the event's time (the model seldom writes "running" on its own)
+        if (!phone.running && clean.last === e.date && !started) started = { label: clean.label, ko: clean.ko, sec: clean.sec, left: clean.sec };
     });
-    if (phone.running && typeof phone.running === 'object') {
-        const r = phone.running, sec = int(r.sec, 1, 86400);
+    const running = phone.running && typeof phone.running === 'object' ? phone.running : started;
+    if (running) {
+        const r = running, sec = int(r.sec, 1, 86400);
         if (sec) {
             const to = { label: line(r.label, 40), ko: ko(r.ko), sec, left: Math.min(sec, int(r.left, 0, 86400) ?? sec), at: `${e.date}${e.time ? ` ${e.time}` : ''}` };
             const c = (L.clock ||= {});
@@ -456,7 +460,7 @@ export function lifeNow(p) {
         folders: ['Downloads', ...(L.files?.folders || []).map(f => f.name).filter(Boolean)],
         files: (L.files?.items || []).filter(x => !x.trashed).slice(-12).map(x => ({ id: x.id, name: x.name, folder: x.folder, time: x.time })),
         health: (L.health?.days || []).slice(-3).map(d => ({ id: d.id, date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, from: d.from })),
-        usual: (u => (u ? Object.fromEntries(['weight', 'coffee', 'coffeeKind', 'water'].filter(k => u[k] !== undefined && u[k] !== null && u[k] !== '').map(k => [k, u[k]])) : undefined))(L.health?.usual),
+        usual: (u => (u ? Object.fromEntries(['bed', 'sleep', 'wake', 'steps', 'workouts', 'rest', 'weight', 'coffee', 'coffeeKind', 'water'].filter(k => u[k] !== undefined && u[k] !== null && u[k] !== '').map(k => [k, u[k]])) : undefined))(L.health?.usual),
         weather: L.weather?.here ? { place: L.weather.here.place, date: L.weather.here.date, time: L.weather.here.time, cond: L.weather.here.cond, temp: L.weather.here.temp, cities: (L.weather.cities || []).map(c => c.name) } : null,
     };
 }

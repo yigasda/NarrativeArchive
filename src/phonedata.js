@@ -323,9 +323,10 @@ function mergePhone(p, add, { keepAll = false } = {}) {
     for (const t of add.threads) {
         const old = p.threads.find(x => nameKey(x.with) === nameKey(t.with));
         // a text the owner deleted: the one there is marked (it stays for 되돌리기), never added again
-        const gone = t.messages.filter(x => x.deleted);
-        if (gone.length && old) for (const g of gone) { const o = [...old.messages].reverse().find(x => !x.deleted && (lk(x.text) === lk(g.text) || lk(x.text).includes(lk(g.text)) || lk(g.text).includes(lk(x.text)))); if (o) o.deleted = true; }
-        t.messages = t.messages.filter(x => !x.deleted);
+        // (one the phone never had, a thread new in this round too, goes in marked, so the data holds it)
+        const gone = t.messages.filter(x => x.deleted), matched = new Set();
+        if (gone.length && old) for (const g of gone) { const o = [...old.messages].reverse().find(x => !x.deleted && (lk(x.text) === lk(g.text) || lk(x.text).includes(lk(g.text)) || lk(g.text).includes(lk(x.text)))); if (o) { o.deleted = true; matched.add(g); } }
+        t.messages = t.messages.filter(x => !matched.has(x));
         // in story order: a later round can bring texts from before the ones there (an earlier stretch read late)
         if (old) { old.messages = keep([...old.messages, ...fresh('msg', old.messages, t.messages)].sort(byStory(p.now)), CAP.messages); if (t.draft) old.draft = t.draft; }
         else p.threads.push({ ...t, messages: keep(fresh('msg', [], t.messages).sort(byStory(p.now)), CAP.messages) });
@@ -337,8 +338,14 @@ function mergePhone(p, add, { keepAll = false } = {}) {
     // a plan moved ("was": its old date) or called off ("cancelled"): the item there changes, nothing is added
     add.events = (add.events || []).filter(e => {
         if (!e.was && !e.cancelled) return true;
-        const o = (p.events || []).find(x => !x.cancelled && (lk(x.title) === lk(e.title) || lk(x.title).includes(lk(e.title)) || lk(e.title).includes(lk(x.title))) && (x.date === e.was || x.date === e.date || !e.was));
+        // the plan it means: the same title, or (moved) the one on its old day whose words mostly match ("토요일 저녁 약속" → "일요일 저녁 약속")
+        const words = v => new Set(String(v || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 2));
+        const alike = (a, b) => { const A = words(a), B = words(b), n = [...A].filter(w => B.has(w)).length; return n >= Math.ceil(Math.min(A.size, B.size) * 0.5) && n > 0; };
+        const live = (p.events || []).filter(x => !x.cancelled);
+        const o = live.find(x => (lk(x.title) === lk(e.title) || lk(x.title).includes(lk(e.title)) || lk(e.title).includes(lk(x.title))) && (x.date === e.was || x.date === e.date || !e.was))
+            || (e.was ? live.filter(x => x.date === e.was).find(x => alike(x.title, e.title)) || (live.filter(x => x.date === e.was).length === 1 ? live.find(x => x.date === e.was) : null) : live.find(x => alike(x.title, e.title) && x.date === e.date));
         if (!o) return !e.cancelled && !!e.date;
+        if (e.title && !e.cancelled) { o.title = e.title; if (e.ko) o.ko = e.ko; }
         if (e.cancelled) o.cancelled = true; else { if (e.date) o.date = e.date; if (e.time) o.time = e.time; }
         return false;
     });
@@ -689,7 +696,7 @@ async function updatePhone(m, owner) {
             reread.size ? `[MESSAGES READ BEFORE, NOW CHANGED]\n${[...reread].map(([at, evs]) => `- #${at}: ${evs.length ? evs.map(e => `${e.id} (${e.summary})`).join('; ') : 'nothing on the phone yet'}`).join('\n')}` : '',
             `[PHONE NOW]\n${JSON.stringify(phoneForModel(p))}`,
             money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
-            money && p.delivery ? `[DELIVERY SHOPS]\n${(p.delivery.shops || []).map(x => x.name).join('\n') || '(none yet)'}` : '',
+            money && p.delivery ? `[DELIVERY SHOPS]\n${(p.delivery.shops || []).map(x => x.name).join('\n') || '(none yet)'}${p.delivery.cart?.items?.length ? `\nCART (in the basket, not ordered): ${p.delivery.cart.shop}: ${p.delivery.cart.items.map(x => `${x.name} ×${x.qty}`).join(', ')}` : ''}` : '',
             life ? `[LIFE NOW]\n${JSON.stringify(life)}` : '', askWeather && tracker ? `[WEATHER NOW]\n${JSON.stringify(tracker)}` : '',
             (money || invest) && p.wealthPlan ? `[WEALTH]\n${JSON.stringify({ currency: p.wealthPlan.currency, deposits: p.wealthPlan.deposits, investments: p.wealthPlan.investments, basis: p.wealthPlan.basis })}` : '',
             world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',

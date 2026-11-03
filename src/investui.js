@@ -18,7 +18,9 @@ const KIND = { buy: '매수', sell: '매도', dividend: '배당' };
 const RANGES = [['1w', '1주', 7], ['1m', '1개월', 31], ['3m', '3개월', 92], ['all', '전체', 1e5]];
 const dayMs = 864e5;
 const daysBack = (date, n) => new Date(Date.parse(date) - n * dayMs).toISOString().slice(0, 10);
-const shortDay = d => `${Number(d.slice(8))}.${Number(d.slice(5, 7))}.`;
+// a short day as the phone's country writes it: "1. 30." in Korea, Japan and China, "1/30" in the US, "30.1." in most of Europe
+const DOT_MD = new Set(['KR', 'JP', 'CN', 'TW', 'HK']), SLASH_MD = new Set(['US', 'CA', 'PH']);
+const shortDay = (d, p = null) => { const c = String(p?.lives || p?.country || '').toUpperCase(), m = Number(d.slice(5, 7)), dd = Number(d.slice(8)); return DOT_MD.has(c) || !c ? `${m}. ${dd}.` : SLASH_MD.has(c) ? `${m}/${dd}` : `${dd}.${m}.`; };
 // a ticker's tile: two letters on a colour of its own
 const logo = (s, z = 40) => { const code = String((s?.symbol || '').split(':').pop() || s?.name || '?').replace(/[^A-Za-z0-9가-힣]/g, '').slice(0, 4).toUpperCase() || '?'; return `<span class="iv_logo" style="width: ${z}px; height: ${z}px; background: ${axTint(code)}; font-size: ${Math.round(z * (code.length > 3 ? 0.24 : code.length > 2 ? 0.28 : 0.34))}px">${esc(code)}</span>`; };
 
@@ -46,9 +48,9 @@ function candles(m, p, sym, date, from, cur, busy = false) {
     const grid = Array.from({ length: 5 }, (_, k) => bot + (top - bot) * k / 4).map(v => `<line x1="8" x2="${8 + pw}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="iv_gl"/><text x="${W - 4}" y="${(y(v) + 3.5).toFixed(1)}" class="iv_yl" text-anchor="end">${nice(v)}</text>`).join('');
     const bars = show.map((r, k) => { const col = r.c >= r.o ? up : dn, yo = y(r.o), yc = y(r.c), bt = Math.min(yo, yc), bh = Math.max(1.2, Math.abs(yc - yo)); return `<line x1="${x(k).toFixed(1)}" x2="${x(k).toFixed(1)}" y1="${y(r.h).toFixed(1)}" y2="${y(r.l).toFixed(1)}" stroke="${col}" stroke-width="1"/><rect x="${(x(k) - cw / 2).toFixed(1)}" y="${bt.toFixed(1)}" width="${cw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}" rx="${cw > 6 ? 1.2 : 0.6}"/>`; }).join('');
     const last = show[show.length - 1], ih = show.reduce((a, r, k) => (r.h > show[a].h ? k : a), 0), il = show.reduce((a, r, k) => (r.l < show[a].l ? k : a), 0);
-    const mark = (k, v, below) => { const right = x(k) < pw * 0.55, tx = right ? x(k) + 8 : x(k) - 8, ty = below ? y(v) + 13 : y(v) - 6, chg = (last.c / v - 1) * 100; return `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" class="iv_mk ${below ? 'lo' : 'hi'}" text-anchor="${right ? 'start' : 'end'}">${right ? '← ' : ''}${nice(v)} (${chg > 0 ? '+' : ''}${chg.toFixed(2)}%, ${shortDay(show[k].d)})${right ? '' : ' →'}</text>`; };
+    const mark = (k, v, below) => { const right = x(k) < pw * 0.55, tx = right ? x(k) + 8 : x(k) - 8, ty = below ? y(v) + 13 : y(v) - 6, chg = (last.c / v - 1) * 100; return `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" class="iv_mk ${below ? 'lo' : 'hi'}" text-anchor="${right ? 'start' : 'end'}">${right ? '← ' : ''}${nice(v)} (${chg > 0 ? '+' : ''}${chg.toFixed(2)}%, ${shortDay(show[k].d, p)})${right ? '' : ' →'}</text>`; };
     const ly = y(last.c), tagCol = last.c >= last.o ? up : dn;
-    const dates = [0, Math.floor((show.length - 1) / 2), show.length - 1].filter((v, i, a) => a.indexOf(v) === i).map(k => `<text x="${x(k).toFixed(1)}" y="${H - 6}" class="iv_xl" text-anchor="${k === 0 ? 'start' : k === show.length - 1 ? 'end' : 'middle'}">${shortDay(show[k].d)}</text>`).join('');
+    const dates = [0, Math.floor((show.length - 1) / 2), show.length - 1].filter((v, i, a) => a.indexOf(v) === i).map(k => `<text x="${x(k).toFixed(1)}" y="${H - 6}" class="iv_xl" text-anchor="${k === 0 ? 'start' : k === show.length - 1 ? 'end' : 'middle'}">${shortDay(show[k].d, p)}</text>`).join('');
     return `<div class="iv_cd"><div class="iv_leg"><span>${esc(cur)} · 하루 한 봉</span></div>
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="일봉 차트">${grid}${bars}
         <line x1="8" x2="${8 + pw}" y1="${ly.toFixed(1)}" y2="${ly.toFixed(1)}" stroke="${tagCol}" stroke-width="0.8" stroke-dasharray="2 3"/>
@@ -139,8 +141,8 @@ export function investmentScreen(m, p, now, view, key, busy) {
             back: 'invest', title: ' ', right: `<button type="button" class="iv_ib iv_news" data-symbol="${esc(sym)}" aria-label="관련 뉴스">${ax('search', 18, 'currentColor', 2.3)}</button>`,
             body: `<div class="iv_quote">${logo(s, 46)}<span class="iv_qn"><b>${esc(s.ko || s.name)}</b><small>${esc(s.name)} · ${esc(s.symbol)}</small></span></div>
               <div class="iv_big cg_num">${money(p, q?.value, s.currency)}</div>
-              <div class="iv_chg ${tone(p, change)}">${finite(change) && prev ? `${arrow(change)} ${money(p, q.value - prev.value, s.currency, true)} (${pct(change)}) <small>${esc(shortDay(prev.date))} 대비</small>` : `<small>${q ? (q.stale ? `${esc(shortDay(q.date))} 마지막 시세` : '이전 시세가 없어요') : '아직 평가 전이에요'}</small>`}</div>
-              <div class="iv_src">${q ? `${esc(shortDay(q.date))} ${esc(q.time || '시각 모름')} · 시세${q.stale ? ' · 이전 시세' : ''}` : ''}${q?.conflict ? ` · <button type="button" class="iv_link" data-go="ivprices" data-i="${esc(`STOCK:${sym}`)}">가격 확인 필요</button>` : ''}</div>
+              <div class="iv_chg ${tone(p, change)}">${finite(change) && prev ? `${arrow(change)} ${money(p, q.value - prev.value, s.currency, true)} (${pct(change)}) <small>${esc(shortDay(prev.date))} 대비</small>` : `<small>${q ? (q.stale ? `${esc(shortDay(q.date, p))} 마지막 시세` : '이전 시세가 없어요') : '아직 평가 전이에요'}</small>`}</div>
+              <div class="iv_src">${q ? `${esc(shortDay(q.date, p))} ${esc(q.time || '시각 모름')} · 시세${q.stale ? ' · 이전 시세' : ''}` : ''}${q?.conflict ? ` · <button type="button" class="iv_link" data-go="ivprices" data-i="${esc(`STOCK:${sym}`)}">가격 확인 필요</button>` : ''}</div>
               ${candles(m, p, sym, date, daysBack(date, days), s.currency, busy)}${chips('stock', sym, rg)}
               ${mine}
               ${watch ? `${hd('관심 메모')}${card(`<p>${esc(watch.note)}</p>${watch.ko ? `<p class="iv_ko">${esc(watch.ko)}</p>` : ''}`)}` : ''}
@@ -214,7 +216,7 @@ export function investmentScreen(m, p, now, view, key, busy) {
         body: `<div class="iv_hero"><small>${sum.complete ? '총 투자자산' : '환산 가능한 소계 · 평가 미완료'}</small>
             <div class="iv_big cg_num">${money(p, sum.value, inv.base)}</div>
             <div class="iv_chg ${tone(p, dayD)}">${finite(dayD) ? `${arrow(dayD)} ${money(p, dayD, inv.base, true)} (${pct((today / prior - 1) * 100)}) <small>오늘 · 주식</small>` : '<small>오늘 변동 · 아직 다 계산되지 않았어요</small>'}</div>
-            <div class="iv_src">${esc(shortDay(date))} 기준 · ${esc(inv.base)}로 환산</div>
+            <div class="iv_src">${esc(shortDay(date, p))} 기준 · ${esc(inv.base)}로 환산</div>
             ${sum.missing.map(x => `<div class="iv_miss">${esc(x.label)} · ${finite(x.amount) ? `${money(p, x.amount, x.currency)} 환산 대기` : '가격 확인 필요'}</div>`).join('')}
             <div class="iv_herog">${kv('평가손익', gainComplete ? money(p, unrealized, inv.base, true) : '미완료', gainComplete ? tone(p, unrealized) : '')}${kv('수익률', gainComplete && basis > 0 ? pct(unrealized / basis * 100) : '—', gainComplete ? tone(p, unrealized) : '')}</div>
             ${mix}</div>
@@ -228,5 +230,5 @@ export function investmentScreen(m, p, now, view, key, busy) {
 // one trade as a row: what, how many, at what
 function trow(p, t, s, named = false) {
     const amt = t.kind === 'dividend' ? t.amount : t.kind === 'buy' ? -(t.quantity * t.price + (t.fee || 0)) : t.quantity * t.price - (t.fee || 0);
-    return `<div class="iv_tr"><span class="iv_kind ${t.kind}">${KIND[t.kind] || esc(t.kind)}</span><span class="iv_hn"><b>${named ? esc(s?.ko || s?.name || t.symbol) : esc(shortDay(t.date))}</b><small class="cg_num">${named ? `${esc(shortDay(t.date))} · ` : ''}${t.kind === 'dividend' ? '배당금' : `${t.quantity}주 × ${money(p, t.price, t.currency)}`}</small></span><b class="cg_num ${amt > 0 ? 'iv_in' : ''}">${money(p, amt, t.currency, true)}</b></div>`;
+    return `<div class="iv_tr"><span class="iv_kind ${t.kind}">${KIND[t.kind] || esc(t.kind)}</span><span class="iv_hn"><b>${named ? esc(s?.ko || s?.name || t.symbol) : esc(shortDay(t.date, p))}</b><small class="cg_num">${named ? `${esc(shortDay(t.date))} · ` : ''}${t.kind === 'dividend' ? '배당금' : `${t.quantity}주 × ${money(p, t.price, t.currency)}`}</small></span><b class="cg_num ${amt > 0 ? 'iv_in' : ''}">${money(p, amt, t.currency, true)}</b></div>`;
 }
