@@ -6,7 +6,7 @@ import { investmentDate } from './investdata.js';
 import { profileChoices, phoneDataInfo } from './phoneprofile.js';
 import { faceHtml, nameKey, nameRe, peopleData, peopleList, personLine } from './people.js';
 import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './phoneai.js';
-import { bigClock, byStory, COUNTRIES, fmtDate, fmtTime, gapDays, hasKo, koOn, lastTime, listTime, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName } from './phonedata.js';
+import { bigClock, byStory, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName } from './phonedata.js';
 import { threadNew } from './phonehome.js';
 import { recentTrackers } from './scenes.js';
 import { sectionKey } from './sections.js';
@@ -109,7 +109,7 @@ const axFace = (n, z) => `<span class="ax_face" style="width: ${z}px; height: ${
 
 export function snsScreen(p, now) {
     const pr = p.profile || {}, posts = (p.posts || []).map((x, k) => [x, k]).reverse();
-    const n = v => (Number(v) || 0).toLocaleString();
+    const n = v => (Number(v) || 0).toLocaleString(localeOf(p));
     return `${axBar(p, now)}
       <div class="ax_igtop"><button type="button" class="ax_back ax_igback" data-go="home" aria-label="홈으로">${ax('back', 26, '#111', 2.2)}</button><b>${esc(pr.handle || p.owner)} ${ax('down', 18, '#111', 2.4)}</b><span class="ax_sp"></span><span>${ax('plus', 24, '#111')}${ax('menu', 24, '#111')}</span></div>
       <div class="ax_scroll">
@@ -141,7 +141,7 @@ export function snsPost(p, now, k) {
         <div class="ax_posth"><span class="ax_ring ax_ring_s">${axFace(p.owner, 30)}</span><div><b>${esc(pr.handle || p.owner)}</b></div><button type="button" class="ax_postmore" data-k="${k}" aria-label="더 보기">${ax('more', 22, '#111', 3)}</button></div>
         ${x.photo ? postPic(p, x, k) : ''}
         <div class="ax_postact">${ax('heart', 26, '#ed4956', 2, '#ed4956')}${ax('cmt', 25, '#111', 1.9)}${ax('send', 24, '#111', 1.9)}<span class="ax_sp"></span>${x.img ? `<button type="button" class="ax_presssave ax_postsave" data-src="post" data-k="${k}" aria-label="사진 저장">${ax('save', 24, '#111', 1.9)}</button>` : ax('save', 24, '#111', 1.9)}</div>
-        <div class="ax_postbody"><b>좋아요 ${(Number(x.likes) || 0).toLocaleString()}개</b></div>
+        <div class="ax_postbody"><b>좋아요 ${(Number(x.likes) || 0).toLocaleString(localeOf(p))}개</b></div>
         ${x.text ? `<div class="ax_postbody"><b>${esc(pr.handle || p.owner)}</b> ${axKo(x.text, x.ko)}</div>` : ''}
         ${x.comments.map(c => `<div class="ax_cmt"><b>${esc(savedName(p, c.from))}</b> ${axKo(c.text, c.ko)}</div>`).join('')}
         <div class="ax_postt">${esc(fmtDate(p, x.time))}</div>
@@ -582,12 +582,12 @@ const dateLabel = (p, now, long = false) => {
     const mt = /^(\d{2})-(\d{2})/.exec(String(now || p.now || ''));
     if (!mt) return '';
     const y = !p.noYear && Number(p.year), d = y ? new Date(Date.UTC(y, mt[1] - 1, Number(mt[2]))) : null;
-    return `${y ? `${y}년 ` : ''}${Number(mt[1])}월 ${Number(mt[2])}일${long && d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}`;
+    return `${y ? fullDate(p, `${y}-${mt[1]}-${mt[2]}`) : fmtDate(p, `${mt[1]}-${mt[2]}`)}${long && d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}`;
 };
 export function setDate(p, now) {
     const on = !p.noYear, mt = /^(\d{2})-(\d{2})/.exec(String(now || p.now || ''));
     const y = on && Number(p.year), d = y && mt ? new Date(Date.UTC(y, mt[1] - 1, Number(mt[2]))) : null;
-    const day = mt ? `${Number(mt[1])}월 ${Number(mt[2])}일${d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}` : '';
+    const day = mt ? `${fmtDate(p, `${mt[1]}-${mt[2]}`)}${d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}` : '';
     const row = (n, v, tag = 'div') => `<${tag} class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">${n}</span></span>${v}</${tag}>`;
     return `${axBar(p, now)}
       ${axTop(axCb('set'))}
@@ -595,7 +595,7 @@ export function setDate(p, now) {
         <div class="ax_card">
           ${on ? row('연도', `<input type="number" class="ax_in na_ph_year cg_num" min="1900" max="2100" inputmode="numeric" aria-label="연도" value="${esc(String(p.year || ''))}">${axChev}`, 'label') : ''}
           ${row('날짜', `<span class="ax_v cg_num">${esc(day)}</span>`)}
-          ${row('시간', `<span class="ax_v cg_num">${esc(String(now || p.now || '').slice(6, 11))}</span>`)}
+          ${row('시간', `<span class="ax_v cg_num">${esc(clockOf(p, String(now || p.now || '').slice(6, 11)))}</span>`)}
         </div>
         <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_yearshow"><span class="ax_tx"><span class="ax_n">연도 표시</span></span><span class="ax_sw ${on ? 'on' : ''}"></span></button></div>
         <div class="ax_foot">끄면 날짜에 연도와 요일이 나오지 않아요.</div>

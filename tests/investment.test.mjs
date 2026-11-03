@@ -6,7 +6,7 @@ import * as finance from '../src/finance.js';
 const encoded = s => 'data:text/javascript;base64,'+Buffer.from(s).toString('base64');
 const core = encoded(`export const saveMeta=async()=>{globalThis.__investTest.saved++}; export const getMeta=()=>globalThis.__investTest.meta; export const ctx=()=>globalThis.__investTest.context||{};`);
 const ai = encoded(`export const askDraft=async(input, options)=>{if(options.system.includes('Set a compact personal financial scale')){(globalThis.__investTest.wealthInputs ||= []).push(input);return JSON.stringify({currency:'EUR',deposits:{min:0,max:1e15},investments:{min:0,max:1e15},basis:'fixture'})}globalThis.__investTest.inputs.push({input,...options}); if(globalThis.__investTest.error)throw Error('network'); return JSON.stringify(globalThis.__investTest.answers?.length ? globalThis.__investTest.answers.shift() : globalThis.__investTest.answer)};`);
-const data = encoded(`export const sideRequest=async(m,owner,blocks)=>m.text+'\\n'+blocks.join('\\n'); export const prepareWealth=async()=>({currency:'EUR',deposits:{min:0,max:1e15},investments:{min:0,max:1e15},basis:'fixture'}); export const storyNow=p=>p.now||''; export const fmtDate=(p,v)=>v; export const fmtTime=(p,v)=>v; export const koOn=()=>true; export const listTime=(p,v)=>v; export { byStory, gapDays, giftOf } from '${new URL('../src/phoneparse.js',import.meta.url).href}';`);
+const data = encoded(`export const sideRequest=async(m,owner,blocks)=>m.text+'\\n'+blocks.join('\\n'); export const prepareWealth=async()=>({currency:'EUR',deposits:{min:0,max:1e15},investments:{min:0,max:1e15},basis:'fixture'}); export const storyNow=p=>p.now||''; export const fmtDate=(p,v)=>v; export const fmtTime=(p,v)=>v; export const koOn=()=>true; export const listTime=(p,v)=>v; export const fullDate=(p,v)=>{const [y,mo,d]=String(v).split('-');return y+'. '+Number(mo)+'. '+Number(d)+'.';}; export const localeOf=()=>'en-US'; export { byStory, gapDays, giftOf } from '${new URL('../src/phoneparse.js',import.meta.url).href}';`);
 const apps = encoded(`export const AX={}; export const ax=()=>''; export const axBar=()=>'';export const axCb=()=>'';export const axH1=t=>'<h1>'+t+'</h1>';export const axInd=()=>'';export const axTop=()=>'';export const axDay=(p,n,d)=>d;export const axFind=()=>'';export const axKp=()=>'';export const axLetter=()=>'';export const axTint=()=> '#ffffff';export const busyHtml='';`);
 const util=encoded(`export const esc=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');`);
 const financeURL=pathToFileURL(new URL('../src/finance.js',import.meta.url).pathname).href;
@@ -478,12 +478,12 @@ test('bank statement and slips across New Year: December read in January is last
  const p={owner:'Mara',now:'01-05 12:00',year:2027,country:'KR',money:{currency:'KRW',bank:{name:'Bank',accounts:[{id:'chk',kind:'checking',name:'입출금',last4:'1111',currency:'KRW',balance:900}]},cards:[],orders:[],passes:[],
   tx:[{id:'d1',account:'1111',who:'Rent',amount:-500,time:'12-28 10:00',kind:'transfer'},{id:'j1',account:'1111',who:'Shop',amount:-100,time:'01-03 10:00',kind:'card'}]}};
  const dec=moneyUI.bankStmt(p,'01-05','0.12');
- assert.match(dec,/2026\.12\.01/);
+ assert.match(dec,/2026\. 12\. 1\./);
  // the end of December is today's 900 before January's -100
  assert.match(dec.replace(/<[^>]+>/g,' '),/끝 잔액\s+[^0-9]*1,000/);
  assert.ok(dec.indexOf('>12월<')<dec.indexOf('>1월<'), 'December listed before January');
- assert.match(moneyUI.txDoc(p,'01-05','d1'),/2026\.12\.28/);
- assert.match(moneyUI.txDoc(p,'01-05','j1'),/2027\.01\.03/);
+ assert.match(moneyUI.txDoc(p,'01-05','d1'),/2026\. 12\. 28\./);
+ assert.match(moneyUI.txDoc(p,'01-05','j1'),/2027\. 1\. 3\./);
 });
 
 test('an investment or wealth answer that writes its numbers as text, codes in lower case, dates with slashes still goes in', async () => {

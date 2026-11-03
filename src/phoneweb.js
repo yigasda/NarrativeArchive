@@ -4,7 +4,7 @@
 
 import { fmtMoney } from './phonemoney.js';
 import { AX, ax, axBar, axCb, axDay, axH1, axInd, axKp, axTint, axTop, busyHtml } from './phoneapps.js';
-import { byStory, fmtDate, fmtTime, koOn, listTime } from './phonedata.js';
+import { byStory, clockOf, fmtDate, fmtTime, koOn, listTime } from './phonedata.js';
 import { esc } from './util.js';
 
 Object.assign(AX, {
@@ -123,7 +123,7 @@ const KIND_DRAW = {
             <div class="wb_crumb"><b style="color: ${c}">${esc(o.section || pg.nav?.[0] || '')}</b>${o.minutes ? `<span>· ${esc(o.minutes)} Min.</span>` : ''}</div>
             <h1>${esc(pg.title)}${k1(pg.kt)}</h1>
             ${pg.lede ? `<p class="wb_lede">${esc(pg.lede.text)}${k1(pg.lede.ko)}</p>` : ''}
-            ${o.author || o.date ? `<div class="wb_by"><i></i><span><b>${esc(o.author)}</b>${o.date ? `<span class="cg_num">${esc(fmtDate(p, o.date))} ${esc(String(o.date).slice(6))}</span>` : ''}</span><span class="wb_bysh">${ax('share', 15, '#555', 2)}</span></div>` : ''}
+            ${o.author || o.date ? `<div class="wb_by"><i></i><span><b>${esc(o.author)}</b>${o.date ? `<span class="cg_num">${esc(fmtDate(p, o.date))} ${esc(clockOf(p, String(o.date).slice(6)))}</span>` : ''}</span><span class="wb_bysh">${ax('share', 15, '#555', 2)}</span></div>` : ''}
             ${o.photo ? `${art(o.photo, 220, 'wb_bleed')}<div class="wb_cap">${esc(o.photo)}${o.credit ? ` · ${esc(o.credit)}` : ''}</div>` : ''}
             ${pg.body.map((b, i) => `${para(b, i, 'wb_t')}${i === 0 && o.quote ? `<div class="wb_pq" style="border-color: ${c}">„${esc(o.quote.text)}“${k1(o.quote.ko)}<small>— ${esc(o.quote.who)}</small></div>` : ''}`).join('')}
           </div>`;

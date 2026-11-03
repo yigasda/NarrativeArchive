@@ -986,20 +986,37 @@ export function phoneBlock(m) {
     }).join('\n')}`;
 }
 
-// ---- dates and times as the owner's phone shows them
-const FMT = {
-    KR: { d: (mo, d) => `${mo}월 ${d}일`, s: (mo, d) => `${mo}. ${d}.`, h12: true, t: (h, mi) => `${h < 12 ? '오전' : '오후'} ${h % 12 || 12}:${mi}` },
-    US: { d: (mo, d) => `${mo}/${d}`, s: (mo, d) => `${mo}/${d}`, h12: true, t: (h, mi) => `${h % 12 || 12}:${mi} ${h < 12 ? 'AM' : 'PM'}` },
-    JP: { d: (mo, d) => `${mo}月${d}日`, s: (mo, d) => `${mo}/${d}` },
-    DE: { d: (mo, d) => `${pad(d)}.${pad(mo)}.`, s: (mo, d) => `${pad(d)}.${pad(mo)}.` },
-    _: { d: (mo, d) => `${pad(d)}/${pad(mo)}`, s: (mo, d) => `${pad(d)}/${pad(mo)}` },
+// ---- dates, times and numbers as the owner's phone shows them: five ways, one for each of 한국 · 일본 · 중국 · 미국 · 유럽
+// (a country outside them writes the European way). Every app reads its notation from here
+const GROUP = { KR: 'KR', KP: 'KR', JP: 'JP', CN: 'CN', TW: 'CN', HK: 'CN', MO: 'CN', US: 'US', CA: 'US', PH: 'US', PR: 'US' };
+export const notationOf = p => { const c = String(p?.country || p?.lives || '').toUpperCase(); return c ? GROUP[c] || 'EU' : 'KR'; };
+const H12 = {
+    KR: (h, mi) => `${h < 12 ? '오전' : '오후'} ${h % 12 || 12}:${mi}`,
+    US: (h, mi) => `${h % 12 || 12}:${mi} ${h < 12 ? 'AM' : 'PM'}`,
 };
-for (const k of ['CN', 'TW']) FMT[k] = FMT.JP;
-for (const k of ['AT', 'CH', 'RU', 'PL', 'CZ', 'FI', 'NO', 'DK']) FMT[k] = FMT.DE;
-FMT.PH = FMT.US;
-const fmtOf = p => FMT[p?.country] || FMT._;
+const FMT = {
+    KR: { loc: 'ko-KR', d: (mo, d) => `${mo}월 ${d}일`, s: (mo, d) => `${mo}. ${d}.`, y: (y, mo, d) => `${y}. ${mo}. ${d}.`, t: H12.KR, hr: h => `${h < 12 ? '오전' : '오후'} ${h % 12 || 12}시`, half: h => (h < 12 ? '오전' : '오후') },
+    US: { loc: 'en-US', d: (mo, d) => `${mo}/${d}`, s: (mo, d) => `${mo}/${d}`, y: (y, mo, d) => `${mo}/${d}/${y}`, t: H12.US, hr: h => `${h % 12 || 12}${h < 12 ? 'AM' : 'PM'}`, half: h => (h < 12 ? 'AM' : 'PM') },
+    JP: { loc: 'ja-JP', d: (mo, d) => `${mo}月${d}日`, s: (mo, d) => `${mo}/${d}`, y: (y, mo, d) => `${y}/${pad(mo)}/${pad(d)}` },
+    CN: { loc: 'zh-CN', d: (mo, d) => `${mo}月${d}日`, s: (mo, d) => `${mo}/${d}`, y: (y, mo, d) => `${y}/${pad(mo)}/${pad(d)}` },
+    EU: { loc: 'de-DE', d: (mo, d) => `${pad(d)}.${pad(mo)}.`, s: (mo, d) => `${pad(d)}.${pad(mo)}.`, y: (y, mo, d) => `${pad(d)}.${pad(mo)}.${y}` },
+};
+const fmtOf = p => FMT[notationOf(p)];
+// the locale the phone's numbers and money are written in (1,234.5 or 1.234,5)
+export const localeOf = p => fmtOf(p).loc;
 export const parts = v => { const mt = String(v || '').match(/^(\d{2})-(\d{2})(?: (\d{2}):(\d{2}))?/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]), h: mt[3] ? Number(mt[3]) : null, mi: mt[4] || '' } : null; };
 const tOf = (p, h, mi) => { const f = fmtOf(p); return f.t ? f.t(h, mi) : `${pad(h)}:${mi}`; };
+// a clock in minutes of the day ("HH:MM" or a number), as the phone writes it: 오후 3:05 · 3:05 PM · 15:05
+const minOf = v => { if (typeof v === 'number') return Number.isFinite(v) ? ((Math.round(v) % 1440) + 1440) % 1440 : null; const mt = String(v ?? '').match(/(\d{1,2}):(\d{2})/); return mt ? (Number(mt[1]) % 24) * 60 + Number(mt[2]) : null; };
+export const clockOf = (p, v) => { const m = minOf(v); return m === null ? '' : tOf(p, Math.floor(m / 60), pad(m % 60)); };
+// the same without 오전/오후 (a big number, a chart's axis): 3:05 on a 12-hour phone, 15:05 on the others
+export const clockNum = (p, v) => { const m = minOf(v); if (m === null) return ''; const h = Math.floor(m / 60); return fmtOf(p).t ? `${h % 12 || 12}:${pad(m % 60)}` : `${pad(h)}:${pad(m % 60)}`; };
+// 오전/오후 · AM/PM alone, '' on a 24-hour phone
+export const halfOf = (p, v) => { const m = minOf(v); const f = fmtOf(p); return m === null || !f.half ? '' : f.half(Math.floor(m / 60)); };
+// an hour mark (the weather's hours): 오후 3시 · 3PM · 15시
+export const hourOf = (p, v) => { const m = minOf(v); if (m === null) return ''; const h = Math.floor(m / 60), f = fmtOf(p); return f.hr ? f.hr(h) : `${h}시`; };
+// a date with its year (a receipt, a statement): 2026. 10. 30. · 10/30/2026 · 2026/10/30 · 30.10.2026
+export const fullDate = (p, v) => { const mt = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return mt ? fmtOf(p).y(mt[1], Number(mt[2]), Number(mt[3])) : ''; };
 export function fmtDate(p, v, short = false) { const x = parts(v); if (!x) return ''; const f = fmtOf(p); return short ? f.s(x.mo, x.d) : f.d(x.mo, x.d); }
 export function fmtTime(p, v) { const x = parts(v); return x && x.h !== null ? tOf(p, x.h, x.mi) : ''; }
 // a list's time: the clock on the phone's today, the short date before it
@@ -1008,7 +1025,7 @@ let shownNow = '';
 export const showNow = v => { shownNow = v; }; // the window sets the story's now it is showing
 const nowOf = p => shownNow || p.now || '';
 export const listTime = (p, v) => (String(v).slice(0, 5) === String(nowOf(p)).slice(0, 5) ? fmtTime(p, v) : fmtDate(p, v, true));
-export const bigClock = (p, v) => { const x = parts(v); if (!x || x.h === null) return ''; return fmtOf(p).h12 ? `${x.h % 12 || 12}:${x.mi}` : `${pad(x.h)}:${x.mi}`; };
+export const bigClock = (p, v) => { const x = parts(v); if (!x || x.h === null) return ''; return fmtOf(p).t ? `${x.h % 12 || 12}:${x.mi}` : `${pad(x.h)}:${x.mi}`; };
 const minsOf = v => { const x = parts(v); return x ? ((x.mo * 31 + x.d) * 24 + (x.h ?? 0)) * 60 + (Number(x.mi) || 0) : 0; };
 export const ago = (p, v) => {
     const d = minsOf(nowOf(p)) - minsOf(v);

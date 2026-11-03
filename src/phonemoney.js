@@ -9,7 +9,7 @@ import { investmentDate } from './investdata.js';
 import { nameKey } from './people.js';
 import { filling, recording } from './phoneai.js';
 import { AX, ax, axBar, axCb, axDay, axFind, axH1, axInd, axKp, axLetter, axTint, axTop, busyHtml } from './phoneapps.js';
-import { byStory, fmtDate, fmtTime, gapDays, koOn, listTime, storyNow } from './phonedata.js';
+import { byStory, clockOf, fmtDate, fmtTime, fullDate, gapDays, koOn, listTime, localeOf, storyNow } from './phonedata.js';
 import { esc } from './util.js';
 import { prodSvg } from './phoneprod.js';
 
@@ -24,10 +24,8 @@ Object.assign(AX, {
 });
 
 // money as the owner's phone writes it (1.284,17 € in Germany, $1,284.17 in the US)
-const LOCALE = { KR: 'ko-KR', US: 'en-US', GB: 'en-GB', DE: 'de-DE', FR: 'fr-FR', IT: 'it-IT', ES: 'es-ES', JP: 'ja-JP', CN: 'zh-CN', TW: 'zh-TW', CA: 'en-CA', AU: 'en-AU', RU: 'ru-RU', BR: 'pt-BR', AT: 'de-AT', CH: 'de-CH' };
-// the phone's number style: its country's own language there (a country not in the list: Intl works it out from the
-// region, so Poland writes 2,5 and Switzerland 2.5), else the US one. Every app reads numbers through this one
-export const localeOf = p => { const c = String(p?.country || p?.lives || '').toUpperCase(); if (LOCALE[c]) return LOCALE[c]; try { return /^[A-Z]{2}$/.test(c) ? new Intl.Locale('und', { region: c }).maximize().baseName : 'en-US'; } catch { return 'en-US'; } };
+// the phone's number style comes from its notation (phonedata: 한국 · 일본 · 중국 · 미국 · 유럽); every app reads numbers through it
+export { localeOf };
 export const decimalOf = p => { try { return new Intl.NumberFormat(localeOf(p)).formatToParts(1.5).find(x => x.type === 'decimal')?.value || '.'; } catch { return '.'; } };
 export function fmtMoney(p, n, signed = false) {
     if (n === null || n === undefined || !Number.isFinite(Number(n))) return '—';
@@ -58,7 +56,7 @@ const missingSum = (p,sum) => sum.missing.length ? `<span class="ax_fxwait">${su
 // 표시 통화 · 환산 날짜 · 환율 확인 in one white strip: each half shows its value, the real picker lies over it unseen
 function displayTools(p) {
     const selected = bankDisplayCurrency(p), options = [...new Set([selected,...Object.values(LOCAL_CURRENCY),p.money.currency].filter(Boolean))];
-    const d = String(bankDate(p) || '').match(/^(\d{4})-(\d{2})-(\d{2})/), day = d ? `${Number(d[2])}월 ${Number(d[3])}일` : '날짜 정하기';
+    const d = String(bankDate(p) || '').match(/^(\d{4})-(\d{2})-(\d{2})/), day = d ? fmtDate(p, `${d[2]}-${d[3]}`) : '날짜 정하기';
     return `<div class="ax_fx_tools">
       <label class="ax_fxs">${ax('globe', 17, 'currentColor', 1.9)}<span><small>표시 통화</small><b>${esc(selected)}</b></span>${ax('chev', 12, '#a3aab4', 2.4)}<select class="bank_display" aria-label="표시 통화">${options.map(c=>`<option value="${esc(c)}" ${c === selected ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
       <label class="ax_fxs">${ax('cal', 17, 'currentColor', 1.9)}<span><small>환산 날짜</small><b class="cg_num">${esc(day)}</b></span>${ax('chev', 12, '#a3aab4', 2.4)}<input type="date" class="bank_fxdate" aria-label="환산 날짜" value="${esc(bankDate(p))}"></label>
@@ -190,7 +188,9 @@ const PAYDAY = /\blohn\b|gehalt|salary|payroll|\bwage|월급|급여|給料|给�
 // one payee whatever language a record names it in: its Korean name when it has one ("Netflix" with ko "넷플릭스" is 넷플릭스)
 const payee = x => String(x.ko || x.who || '').toLowerCase().replace(/[^\p{L}\p{N}&+]+/gu, ' ').trim().split(' ').slice(0, 2).join(' ');
 // a record's year: the phone's, or the one before for a month past the story's now (December, read in January)
-const yearDot = (p, mm) => { if (!p.year || p.noYear) return ''; const n = Number(String(storyNow(p) || p.now || '').slice(0, 2)); return `${p.year - (n && Number(mm) > n ? 1 : 0)}.`; };
+const yearOf = (p, mm) => { if (!p.year || p.noYear) return null; const n = Number(String(storyNow(p) || p.now || '').slice(0, 2)); return p.year - (n && Number(mm) > n ? 1 : 0); };
+// a paper's day: with its year when the story has one (2026. 10. 30. · 10/30/2026 · 30.10.2026), else the short date
+const paperDay = (p, mm, dd) => { const y = yearOf(p, mm), md = `${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`; return y ? fullDate(p, `${y}-${md}`) : fmtDate(p, md, true); };
 const daysIn = (p, mm) => new Date(Date.UTC(Number(p.year) || 2025, Number(mm), 0)).getUTCDate();
 export function fixedCosts(p) {
     const M = mo(p); if (!M) return [];
@@ -327,13 +327,13 @@ export function bankStmt(p, now, arg = '') {
     const inn = xs.filter(x => x.amount > 0).reduce((n, x) => n + x.amount, 0), out = -xs.filter(x => x.amount < 0).reduce((n, x) => n + x.amount, 0);
     const cats = new Map(); for (const x of xs) if (x.amount < 0) cats.set(kindOf(x), (cats.get(kindOf(x)) || 0) - x.amount);
     const bars = [...cats].sort((x, y) => y[1] - x[1]).slice(0, 5), top = Math.max(1, ...bars.map(b => b[1]));
-    const last = xs.length ? Math.max(...xs.map(x => Number(String(x.time).slice(3, 5)) || 1)) : 1, yr = yearDot(p, mm);
+    const last = xs.length ? Math.max(...xs.map(x => Number(String(x.time).slice(3, 5)) || 1)) : 1;
     const mon = n => esc(acctMoney(p, a, n)), sgn = n => esc(acctMoney(p, a, n, true));
     return `<div class="ax_bk">${bankHead(p, now, from ? `acct:${ai}` : 'bank', `명세서 · ${esc(a.last4)}`, true)}
       <div class="ax_bks ax_bkso"><div class="ax_scroll">
         ${months.length > 1 ? `<div class="ax_chips ax_mch">${months.map(m => `<button type="button" class="${m === mm ? 'on' : ''}" data-go="stmt" data-i="${ai}.${m}">${Number(m)}월</button>`).join('')}</div>` : ''}
         <div class="ax_stm">
-          <div class="ax_stt"><div><b>${esc(M.bank.name)}</b><small>${esc(p.owner)} · ${kindName[a.kind]} •••• ${esc(a.last4)}</small></div><div class="r"><b>${credit ? '카드 이용대금 명세서' : '거래명세서'}</b><small class="cg_num">${yr}${mm}.01 – ${mm}.${String(last).padStart(2, '0')}</small></div></div>
+          <div class="ax_stt"><div><b>${esc(M.bank.name)}</b><small>${esc(p.owner)} · ${kindName[a.kind]} •••• ${esc(a.last4)}</small></div><div class="r"><b>${credit ? '카드 이용대금 명세서' : '거래명세서'}</b><small class="cg_num">${esc(paperDay(p, mm, 1))} – ${esc(fmtDate(p, `${mm}-${String(last).padStart(2, '0')}`, true))}</small></div></div>
           <div class="ax_sts">${credit ? '' : `<div><small>시작 잔액</small><b class="cg_num">${mon(start)}</b></div><div><small>끝 잔액</small><b class="cg_num">${mon(end)}</b></div>`}<div><small>들어온 돈</small><b class="cg_num p">${sgn(inn)}</b></div><div><small>${credit ? '쓴 돈' : '나간 돈'}</small><b class="cg_num">${sgn(-out)}</b></div></div>
           ${bars.length ? `<div class="ax_stb">${bars.map(([n, v]) => `<div><span>${esc(n)}</span><i style="width: ${Math.max(3, Math.round(v / top * 100))}%"></i><em class="cg_num">${mon(v)}</em></div>`).join('')}</div>` : ''}
           <table class="ax_stl">${xs.map(x => `<tr data-go="tx" data-i="${x.id}"><td class="cg_num">${esc(fmtDate(p, x.time, true))}</td><td>${esc(x.who)}</td><td class="cg_num${x.amount > 0 ? ' p' : ''}">${sgn(x.amount)}</td></tr>`).join('') || '<tr><td colspan="3">이 달 거래가 없어요</td></tr>'}</table>
@@ -346,8 +346,8 @@ export function bankStmt(p, now, arg = '') {
 export function txDoc(p, now, id) {
     const M = mo(p), x = M?.tx?.find(t => t.id === id); if (!x) return bankHome(p, now);
     const a = acctOf(p, x.account), card = x.kind === 'card' && x.amount < 0, inn = x.amount > 0, h = hashOf(`${x.id}${x.who}`);
-    const title = card ? '카드 매출전표' : inn ? '입금확인증' : '이체확인증', yr = yearDot(p, String(x.time).slice(0, 2));
-    const when = `${yr}${String(x.time).slice(0, 5).replace('-', '.')} ${fmtTime(p, x.time)}`, mine = `${esc(p.owner)} · ${a ? `${kindName[a.kind]} •••• ${esc(a.last4)}` : ''}`;
+    const title = card ? '카드 매출전표' : inn ? '입금확인증' : '이체확인증';
+    const when = `${paperDay(p, String(x.time).slice(0, 2), String(x.time).slice(3, 5))} ${fmtTime(p, x.time)}`, mine = `${esc(p.owner)} · ${a ? `${kindName[a.kind]} •••• ${esc(a.last4)}` : ''}`;
     const ln = (k, v) => v ? `<div class="ax_dln"><span>${k}</span><span>${v}</span></div>` : '';
     const rows = card ? ln('가맹점', esc(x.who)) + ln('카드', a ? `•••• •••• •••• ${esc(a.last4)}` : '') + ln('승인 번호', `<span class="cg_num">${String(h % 100000000).padStart(8, '0')}</span>`) + ln('승인 일시', `<span class="cg_num">${esc(when)}</span>`) + ln('결과', x.pending ? '승인 대기' : '승인')
         : inn ? ln('보낸 분', esc(x.who)) + ln('받는 분', mine) + ln('받은 날', `<span class="cg_num">${esc(when)}</span>`) + ln('메모', esc(x.memo || '')) + ln('결과', '정상 입금')
@@ -491,7 +491,7 @@ function passArt(p, x, full) {
     else if (k === 'match') { const m = String(x.to || x.from || '').split(/\s+(?:vs\.?|gegen|대|–|-)\s+/i); mid = m.length === 2 ? `<span class="ax_psvs"><b>${esc(m[0])}</b><small>vs</small><b>${esc(m[1])}</b></span>` : title(x.to || x.from || ''); fields = f('날짜', date) + f('블록', x.gate) + f('좌석', x.seat) + f('번호', x.no); }
     else { mid = title(x.to || x.from || ''); fields = f('날짜', date) + f(k === 'movie' ? '관' : k === 'museum' ? '입장권' : '구역', x.gate) + f('좌석', x.seat) + f('번호', x.no); }
     return `<span class="ax_ps ax_ps_${k} ${light ? 'cream' : ''}" style="background: ${bg}">
-      <span class="ax_psh"><span class="ax_pslg">${ax(icon, 16, 'currentColor')}</span><span class="ax_psn">${esc(String(x.by || '').toUpperCase())}</span><span class="ax_pshr">${lab}<b class="cg_num">${esc(x.time || date || '')}</b></span></span>
+      <span class="ax_psh"><span class="ax_pslg">${ax(icon, 16, 'currentColor')}</span><span class="ax_psn">${esc(String(x.by || '').toUpperCase())}</span><span class="ax_pshr">${lab}<b class="cg_num">${esc(x.time ? clockOf(p, x.time) : date || '')}</b></span></span>
       ${mid}<span class="ax_psfl">${fields}</span>
       ${full ? `<span class="ax_psperf"></span>${x.status ? `<span class="ax_psst">${esc(x.status)}</span>` : ''}<span class="ax_psqr">${qr(x.id)}</span>` : ''}</span>`;
 }
@@ -680,7 +680,7 @@ export function trackView(p, now, id) {
       </div>
       <div class="ax_sps ax_spso"><div class="ax_scroll">
         <div class="ax_card ax_oc"><div class="ax_ocr">${prodImg(x)}<span class="ax_tx"><small class="ax_trh">${esc(head)}</small><b>${esc(x.item)}</b>${x.ko && koOn() ? `<span class="ax_p">${esc(x.ko)}</span>` : ''}<span class="ax_trn cg_num">${esc(car)} · ${esc(no.replace(/(\d{4})(?=\d)/g, '$1 '))}</span></span></div></div>
-        <div class="ax_card ax_trk">${ev.map((e, k) => `<div class="${k ? '' : 'on'}"><i></i><span><b>${esc(e.what)}</b><small class="cg_num">${esc(fmtDate(p, e.t, true))} ${esc(e.t.slice(6, 11))}${e.where ? ` · ${esc(e.where)}` : ''}</small></span></div>`).join('')}</div>
+        <div class="ax_card ax_trk">${ev.map((e, k) => `<div class="${k ? '' : 'on'}"><i></i><span><b>${esc(e.what)}</b><small class="cg_num">${esc(fmtDate(p, e.t, true))} ${esc(clockOf(p, e.t.slice(6, 11)))}${e.where ? ` · ${esc(e.where)}` : ''}</small></span></div>`).join('')}</div>
         <button type="button" class="ax_more ax_trd" data-go="order" data-i="${x.id}">주문 상세 보기 ${ax('chev', 14, 'currentColor', 2.4)}</button>
         <i class="ax_pad"></i>
       </div></div>
