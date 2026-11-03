@@ -11,7 +11,7 @@ import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
 import { arr, trackerWeather, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
-import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, parseWeather, usualScreenOf, weatherFrom } from './phonesynclife.js';
+import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, parseWeather, screenOf, usualScreenOf, weatherFrom } from './phonesynclife.js';
 import { SCREEN_LIST } from './phonescreen.js';
 import { exclusive } from './phonesync.js';
 import { recentTrackers } from './scenes.js';
@@ -404,6 +404,49 @@ export const fillLife = (m, p) => exclusive('fill', async () => {
     ensureIds(p);
     await saveMeta();
     return p.life;
+});
+// ---- 스크린타임만 채우기: a phone filled before the screen time was there (its health days stay as they are). Their usual
+// use and each recent day's, from the character and the story; one short request, once
+export const AI_SYS_SCREEN = `GOAL
+Write the screen time on a character's phone in a long role-play: the apps they use and for how long, the way the phone's Screen Time shows it.
+
+YOU GET
+- The character, their profile and the story so far.
+- DAYS: their last days from the health app (when they slept and woke, their steps; "ev" when the story shows that day).
+- PHONE COUNTRY.
+
+SCREEN TIME
+- It shows who they really are, habits they'd never admit (a game they can't put down, texting all night, barely touching the phone): from their character, not their polite profile.
+- "usual" is their normal day, 4 to 10 apps.
+- Each of DAYS follows what happened that day and how they felt (a fight: hours of texting late into the night; a day out with friends: barely any), and how they slept.
+- Their apps, named exactly as here (another real app when none fits them):
+${SCREEN_LIST}
+- Numbers only: no diagnosis, no mood, no reason.
+
+JSON (one object, nothing before or after it)
+{ "usual": { "apps": [{ "app", "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "other", "min": minutes a day }], "pickups": a day, "late": "HH:MM" they usually last look at it },
+  "days": [{ "date": "MM-DD" as in DAYS, "apps": { app name: minutes }, "pickups", "late": "HH:MM" }] }
+Numbers are plain JSON numbers.`;
+export const fillScreen = (m, p) => exclusive('fill', async () => {
+    const h = p.life?.health;
+    if (!h) throw new Error('건강 앱을 먼저 채워 주세요');
+    // the last week before today (today is counted as it goes, from their usual)
+    const today = String(storyNow(p) || p.now || '').slice(0, 5);
+    const days = (h.days || []).filter(d => d.date && d.date !== today && !d.screen && (!today || dayGap(d.date, today) > 0)).sort((a, b) => dayGap(b.date, a.date)).slice(-7);
+    const input = await sideRequest(m, p.owner, [`[DAYS]\n${JSON.stringify(days.map(d => ({ date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, ...(d.ev ? { ev: d.ev } : {}) })))}`,
+        p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps });
+    const out = await askDraft(input, { force: true, system: AI_SYS_SCREEN, maxTokens: 6000, effort: 'low' });
+    const raw = jsonOf(out), usual = usualScreenOf(raw?.usual);
+    let n = 0;
+    // a phone the reflection already gave a usual keeps it; a day already told keeps its own
+    if (usual && !h.usual?.screen) { (h.usual ||= {}).screen = usual; n++; }
+    for (const x of arr(raw?.days)) {
+        const d = days.find(y => y.date === String(x?.date || '').slice(0, 5)), sc = screenOf(x);
+        if (d && sc && !d.screen) { d.screen = sc; n++; }
+    }
+    if (!n) throw new Error('모델 답에서 스크린타임을 찾지 못했어요');
+    await saveMeta();
+    return n;
 });
 export const fillDelivery = (m, p) => exclusive('fill', async () => {
     const accounts = p.money?.bank?.accounts || [];

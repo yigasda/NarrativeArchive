@@ -107,3 +107,22 @@ test('nearby shops when the owner is in another saved city: that city\'s shops, 
     assert.deepEqual(names.sort(), ['Curry 36', 'Mustafa', 'Pasta Nostra']);
     assert.equal(p.delivery.city, 'Berlin');
 });
+
+test('스크린타임만 채우기: the usual and the last days without one; health days untouched, a told day kept', async () => {
+    const p = { owner: 'Ren', country: 'DE', now: '10-26 12:00', life: { health: { usual: { sleep: '23:30' }, days: [
+        { date: '10-23', sleep: '23:40', wake: '07:00', steps: 5000 }, { date: '10-24', sleep: '01:10', wake: '07:00', steps: 3000, ev: 'fight' },
+        { date: '10-25', sleep: '23:00', wake: '07:00', screen: { apps: { Signal: 20 } } }, { date: '10-26', sleep: '23:00', wake: '07:00' }] } } };
+    globalThis.__menu.answer = JSON.stringify({ usual: { apps: [{ app: '인스타', kind: 'social', min: 80 }, { app: 'Signal', kind: 'chat', min: 40 }], pickups: 90, late: '00:20' },
+        days: [{ date: '10-23', apps: { Instagram: 70 }, pickups: 80 }, { date: '10-24', apps: { Signal: 200 }, late: '01:05' }, { date: '10-25', apps: { Signal: 999 } }, { date: '10-26', apps: { X: 1 } }] });
+    assert.equal(await life.fillScreen({}, p), 3);
+    const h = p.life.health;
+    assert.deepEqual(h.usual.screen.apps.map(a => a.app), ['Instagram', 'Signal']);
+    assert.equal(h.usual.sleep, '23:30');
+    assert.deepEqual(h.days.map(d => d.screen || null), [{ apps: { Instagram: 70 }, pickups: 80 }, { apps: { Signal: 200 }, late: '01:05' }, { apps: { Signal: 20 } }, null]);
+    assert.equal(h.days[1].steps, 3000);
+    // only the days without one, today left to count as it goes
+    assert.match(globalThis.__menu.input, /\[DAYS\]\n\[\{"date":"10-23".*"ev":"fight"\}\]/);
+    assert.ok(globalThis.__menu.sys.includes('game: Brawl Stars'));
+    globalThis.__menu.answer = '{}';
+    await assert.rejects(life.fillScreen({}, p), /스크린타임/);
+});

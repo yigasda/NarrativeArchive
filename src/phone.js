@@ -22,7 +22,7 @@ import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
 import { bankDisplayCurrency, bankAcct, bankHome, bankTx, fixedScreen, bankNotes, bankSend, bankStmt, txDoc, bankMore, cardView, orderView, passView, trackView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
 import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './phoneweb.js';
-import { fillDelivery, fillLife, fillShopMenus, menuWanted, refreshNearby } from './phonelife.js';
+import { fillDelivery, fillLife, fillScreen, fillShopMenus, menuWanted, refreshNearby } from './phonelife.js';
 import { alarmScreen, setStory, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, heartScreen, hereWidget, itemScreen, orderScreen, ordersScreen, payScreen, rateScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, waterScreen, weatherScreen, weightScreen, workScreen, worldScreen } from './phonelifeapps.js';
 import { screenTimeScreen } from './phonestime.js';
 import { openGlossary } from './translate.js';
@@ -650,7 +650,7 @@ export async function openPhone(who = null) {
         const p = phone(), k = this.dataset.k, id = `${nameKey(p.owner)}:${k}`;
         if (filling.has(id)) return;
         filling.add(id); drawPhone(true);
-        try { await ({ money: fillMoney, life: fillLife, delivery: fillDelivery }[k] || fillVoice)(m, p); toastr.success(`${{ money: '은행 · 지갑 · 쇼핑', life: '시계 · 건강 · 파일 · 날씨', delivery: '배달' }[k] || '음성 메모'}을 채웠어요`, '캐릭터 휴대폰'); }
+        try { await ({ money: fillMoney, life: fillLife, delivery: fillDelivery, screen: fillScreen }[k] || fillVoice)(m, p); toastr.success(`${{ money: '은행 · 지갑 · 쇼핑', life: '시계 · 건강 · 파일 · 날씨', delivery: '배달', screen: '스크린타임' }[k] || '음성 메모'}을 채웠어요`, '캐릭터 휴대폰'); }
         catch (err) { console.error('[narrative-archive] fill', err); toastr.error(String(err?.message || err), '채우기 실패'); }
         finally { filling.delete(id); if (phone() === p) drawPhone(true); }
     });
