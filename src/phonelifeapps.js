@@ -536,7 +536,7 @@ export function weightScreen(p, now, day) {
 // usual vs the last 7 days: a sentence only for what the numbers say (more, less, later, stopped, about the same)
 export function compareScreen(p, now) {
     const lf = L(p); if (!lf) return healthScreen(p, now);
-    const u = lf.health.usual || {}, wk = lastDays(lf, 7), groups = { avg: [], phone: [], odd: [] };
+    const u = lf.health.usual || {}, wk = lastDays(lf, 7), groups = { avg: [], odd: [] };
     let rows = groups.avg;
     // the day still going stays out of the step and coffee averages (it isn't over)
     const done = wk.filter(x => !Number.isFinite(x.upTo));
@@ -556,11 +556,10 @@ export function compareScreen(p, now) {
     const rest = avg(wk.map(x => x.hr?.[0]));
     if (rest !== null && u.rest) grade(rest - u.rest, 2, 6, [HC.hr, HB.hr], ['안정 시 심박이 평소보다 ', '높아요', '낮아요', '심박수는 평소와 비슷해요'], `${Math.round(rest)} · 평소 ${u.rest}`);
     if (u.coffee) { const c = avg(done.map(x => coffeeDay(p, x, u).length)); if (c !== null) grade(c - u.coffee, 0.2, 0.7, [HC.caf, HB.caf], ['커피를 평소보다 ', '많이 마셔요', '덜 마셔요', '커피는 평소와 비슷해요'], `하루 ${comma(c.toFixed(1))}잔 · 평소 ${u.coffee}잔`); }
-    // the phone: how much they look at it against their usual, and the nights it kept them up (screen time's sky)
-    rows = groups.phone;
+    // the nights the phone kept them up (how much they look at it lives in screen time itself): a day that stands out, in screen time's sky
+    rows = groups.odd;
     const SKY = ['#3f8fd8', '#e3f1fd'];
-    const sv = screenView(p, now), uTot = (sv?.usual?.apps || []).reduce((n, a) => n + a.min, 0);
-    if (sv?.avg != null && uTot) { const r = sv.avg / uTot; grade(r - 1, 0.05, 0.2, SKY, ['폰을 평소보다 ', '많이 봐요', '덜 봐요', '폰은 평소만큼 봐요'], `하루 ${dur(sv.avg)} · 평소 ${dur(uTot)}`, pct(r)); }
+    const sv = screenView(p, now);
     // a night past midnight and an hour past their usual last look (an owner who always looks till 00:30 isn't up late at 00:40)
     const lateBar = Math.max(1440 + 60, (lateMin(sv?.usual?.late || u.sleep || '23:30') ?? 1410) + 60);
     const nights = (sv?.days || []).filter(d => !d.today).slice(-7).filter(d => d.late && toMin(d.late) < 6 * 60 && lateMin(d.late) >= lateBar);
@@ -575,10 +574,9 @@ export function compareScreen(p, now) {
     if (us && slept && sleepMin(slept) < us - 90) odd.push([us / Math.max(30, sleepMin(slept)), 'down', [HC.sleep, HB.sleep], `가장 짧게 잔 날 ${dur(sleepMin(slept))}`, `${esc(fmtDate(p, slept.date, true))} · ${clockOf(p, slept.sleep)}에 잠듦`]);
     const lateD = wk.filter(x => lateMin(x.sleep) !== null).sort((a, b) => lateMin(b.sleep) - lateMin(a.sleep))[0];
     if (u.sleep && lateD && lateD !== slept && lateMin(lateD.sleep) - lateMin(u.sleep) > 90) odd.push([1 + (lateMin(lateD.sleep) - lateMin(u.sleep)) / 120, 'down', [HC.sleep, HB.sleep], `가장 늦게 잔 날 ${clockOf(p, lateD.sleep)}`, `${esc(fmtDate(p, lateD.date, true))} · 평소 ${clockOf(p, u.sleep)}`]);
-    rows = groups.odd;
     for (const [, ...a] of odd.sort((x, y) => y[0] - x[0]).slice(0, 2)) row(...a);
-    // three short groups read easier than ten rows in one run
-    const body = groups.avg.join('') + [['폰', groups.phone], ['눈에 띈 날', groups.odd]].filter(([, g]) => g.length).map(([t, g]) => `<div class="ax_sec">${t}</div>${g.join('')}`).join('');
+    // the averages, then the days that stood out under their own heading
+    const body = groups.avg.join('') + [['눈에 띈 날', groups.odd]].filter(([, g]) => g.length).map(([t, g]) => `<div class="ax_sec">${t}</div>${g.join('')}`).join('');
     return `${axBar(p, now)}${axTop(axCb('health'))}
       <div class="ax_scroll">${axH1('평소와 비교')}<div class="lf_sub">최근 7일 평균 · 평소</div>
         ${body || '<div class="lf_none">비교할 기록이 없어요</div>'}<i class="lf_pad"></i></div>${axInd()}`;
