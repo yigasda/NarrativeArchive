@@ -40,7 +40,10 @@ export const fileOf = x => withEv({ name: line(x?.name, 80), kind: kindOf(String
     pages: int(x?.pages, 0, 2000), length: line(x?.length, 8), tag: pick(x?.tag, ['red', 'orange'], ''), private: yes(x?.private), preview: yes(x?.private) ? '' : line(x?.preview, 160), look: line(x?.look, 20).toLowerCase(), ko: ko(x?.ko), opened: when(x?.opened), trashed: day5(x?.trashed) }, x);
 export const dayOf = d => withEv({ date: day5(d?.date), bed: hhmm(d?.bed), sleep: hhmm(d?.sleep), wake: hhmm(d?.wake), woke: int(d?.woke, 0, 30) ?? 0, steps: int(d?.steps, 0, 120000), km: num(d?.km), floors: int(d?.floors, 0, 400),
     workout: d?.workout && line(d.workout.kind, 30) ? { kind: line(d.workout.kind, 30), time: hhmm(d.workout.time), min: int(d.workout.min, 0, 600), km: num(d.workout.km) } : null,
-    hr: arr(d?.hr).map(x => int(x, 30, 220)).filter(x => x !== null).slice(0, 2), from: pick(d?.from, ['story', 'pattern'], 'pattern') }, d);
+    hr: arr(d?.hr).map(x => int(x, 30, 220)).filter(x => x !== null).slice(0, 2), from: pick(d?.from, ['story', 'pattern'], 'pattern'),
+    // that day's coffee, water and weight when the model gives them (else the screens use their usual)
+    ...dayExtras(d) }, d);
+const dayExtras = d => { const o = {}, c = int(d?.coffee, 0, 15), w = num(d?.water), kg = num(d?.weight); if (c !== null) o.coffee = c; const ck = line(d?.coffeeKind, 30); if (ck) o.coffeeKind = ck; if (w !== null && w > 0 && w <= 8) o.water = Math.round(w * 10) / 10; if (kg !== null && kg >= 25 && kg <= 300) o.weight = Math.round(kg * 10) / 10; return o; };
 // a chance of rain in percent; a model writing millimetres (0.4, 1.2) is read as a chance: a trace may rain, a millimetre will
 const rainPct = v => { const n = num(v); if (n === null) return null; if (!Number.isInteger(n) && n < 10) return n <= 0 ? 0 : n < 1 ? 40 : 70; return Math.max(0, Math.min(100, Math.round(n))); };
 const cityOf = c => ({ name: line(c?.name, 40), ko: ko(c?.ko), tz: tz(c?.tz), cond: condPick(c?.cond, 'cloudy', { temp: int(c?.temp, -60, 60) }), temp: int(c?.temp, -60, 60), hi: int(c?.hi, -60, 60), lo: int(c?.lo, -60, 60), sunrise: hhmm(c?.sunrise), sunset: hhmm(c?.sunset),
@@ -265,7 +268,7 @@ export function applyLife(p, e, phone, on) {
         if (clean.sleep && clean.sleep < '12:00' && e.date && dayGap(clean.date, e.date) === 1) clean.date = e.date;
         const was = (L.health?.days || []).find(o => o.date === clean.date);
         // a day the story already told: this telling changes only what it says
-        if (was?.from === 'story') return change('life.health.days', was, { ...given(d, clean, ['bed', 'sleep', 'wake', 'woke', 'steps', 'km', 'floors', 'workout', 'hr']), ev: e.id }, '건강');
+        if (was?.from === 'story') return change('life.health.days', was, { ...given(d, clean, ['bed', 'sleep', 'wake', 'woke', 'steps', 'km', 'floors', 'workout', 'hr', 'coffee', 'coffeeKind', 'water', 'weight']), ev: e.id }, '건강');
         // what the story doesn't say is their usual
         const u = L.health?.usual || {};
         // waking: not before it happens (a night still going keeps it empty; the clock fills it once its time is past):
@@ -304,7 +307,7 @@ export function nightsToDays(rows, { usual = {}, lastDay = '' } = {}) {
             if (d.night === undefined && (d.sleep || d.wake)) { Object.assign(at(date), dayOf(d)); continue; }
         }
         const day = dayOf({ ...d, bed: '', sleep: '', wake: '', woke: 0 }), r = at(date);
-        for (const k of ['steps', 'km', 'floors', 'workout', 'hr']) r[k] = day[k];
+        for (const k of ['steps', 'km', 'floors', 'workout', 'hr', 'coffee', 'coffeeKind', 'water', 'weight']) if (day[k] !== undefined) r[k] = day[k];
         if (story) { r.from = 'story'; if (day.ev) r.ev ||= day.ev; }
         if (d.night && typeof d.night === 'object') {
             const n = dayOf(d.night), w = at(plusDay(date, 1));
@@ -332,6 +335,11 @@ export function applyDays(p, days, round) {
         const u = p.life.health?.usual || {};
         for (const k of ['bed', 'sleep', 'wake']) if (!clean[k] && u[k]) clean[k] = u[k];
         if (clean.steps === null && finiteNum(u.steps) && clean.date !== String(p.now || '').slice(0, 5)) clean.steps = u.steps;
+        const hd = hash(clean.date);
+        if (clean.steps === null && finiteNum(clean.km) && clean.km > 0) clean.steps = Math.round(clean.km / 0.00072);
+        if (clean.km === null && finiteNum(clean.steps)) clean.km = Math.round(clean.steps * 0.00072 * 10) / 10;
+        if (clean.floors === null) clean.floors = (hd >>> 9) % 9;
+        if (!clean.hr.length && u.rest) clean.hr = [u.rest - 4 + hd % 5, u.rest + 45 + (hd >>> 4) % 40];
         bedFirst(clean);
         const row = { ...clean, id: `sync:${round}:d${k}` };
         box.push(row);

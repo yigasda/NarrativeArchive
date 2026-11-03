@@ -631,3 +631,13 @@ test('life: a timer first told in an event runs from that event even when the mo
     applyLife(p, { id: 'ev11', at: 11, date: '10-27', time: '09:00' }, { timers: [{ label: '파스타 9분', sec: 540, last: '10-26' }] }, true);
     assert.equal(p.life.clock.running, null);
 });
+
+test('life: a day\'s own coffee, drink, water and weight are kept from the fill and from a reflection', () => {
+    const rows = nightsToDays([{ date: '10-25', steps: 9000, coffee: 5, coffeeKind: 'Latte', water: 3.2, weight: 71.4, night: { sleep: '01:00', wake: '07:00' } }], { usual: {} });
+    const d25 = rows.find(r => r.date === '10-25');
+    assert.equal(d25.coffee, 5); assert.equal(d25.coffeeKind, 'Latte'); assert.equal(d25.water, 3.2); assert.equal(d25.weight, 71.4);
+    const { p } = setup();
+    applyLife(p, { id: 'ev12', at: 12, date: '10-26', time: '22:00' }, { health: [{ date: '10-26', sleep: '00:30', wake: '07:10', coffee: 4, coffeeKind: '아메리카노', weight: 70.2 }] }, true);
+    const d26 = p.life.health.days.find(d => d.date === '10-26');
+    assert.equal(d26.coffee, 4); assert.equal(d26.coffeeKind, '아메리카노'); assert.equal(d26.weight, 70.2);
+});
