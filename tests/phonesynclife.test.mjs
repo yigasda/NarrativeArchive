@@ -651,3 +651,30 @@ test('a delivery payment names the app it went through: Uber Eats abroad, 배달
     payOrders(m, p, '2026');
     assert.deepEqual(p.money.tx.filter(x => x.delivery).map(x => x.memo).sort(), ['배달의민족 포장', '배달의민족 환불']);
 });
+
+test('reflection weather: a saved city whose sky and temperature change takes its tiles along; a city the story adds is saved', () => {
+    const p = { life: { weather: { here: { place: 'Varo', date: '04-10', cond: 'clear', temp: 15, hi: 18, lo: 8, hours: [], days: [], tiles: {} },
+        cities: [{ id: 'c1', name: 'Lisboa', tz: 'Europe/Lisbon', cond: 'rain', temp: 2, hi: 4, lo: -1, feels: -3, dew: -1, rainNext: 5, wind: 30, humidity: 90, note: 'home' }] } } };
+    applyWeather(p, { place: 'Varo', date: '04-11', cond: 'clear', temp: 16, hi: 19, lo: 9, from: 'guess',
+        cities: [{ name: 'Lisboa', cond: 'clear', temp: 18, hi: 20, lo: 10 }, { name: 'Tokyo', ko: '도쿄', tz: 'Asia/Tokyo', cond: 'cloudy', temp: 14, hi: 17, lo: 9, note: 'trip in May', added: true }, { name: 'Osaka', cond: 'clear', temp: 15 }] }, null);
+    const [lis, tok, osa] = p.life.weather.cities;
+    assert.equal(lis.temp, 18);
+    assert.equal(lis.feels, 13);
+    assert.equal(lis.dew, 15);
+    assert.equal(lis.rainNext, null);
+    assert.equal(lis.wind, null);
+    assert.equal(lis.note, 'home');
+    assert.equal(tok.name, 'Tokyo');
+    assert.equal(tok.tz, 'Asia/Tokyo');
+    assert.equal(tok.note, 'trip in May');
+    assert.equal(osa, undefined);
+});
+
+test('reflection files: a folder the story makes is added once, with the voice memo length kept', () => {
+    const { p } = setup();
+    const before = (p.life.files.folders || []).length;
+    applyLife(p, ev('flat', 6, '10-26'), { files: [{ name: 'Mietvertrag.pdf', kind: 'pdf', folder: 'Wohnung', size: 800, pages: 4 }, { name: 'Besichtigung.m4a', kind: 'audio', folder: 'Wohnung', size: 1200, length: '3:05' }] }, true);
+    assert.equal(p.life.files.folders.length, before + 1);
+    assert.equal(p.life.files.folders.at(-1).name, 'Wohnung');
+    assert.equal(p.life.files.items.find(f => f.name === 'Besichtigung.m4a').length, '3:05');
+});

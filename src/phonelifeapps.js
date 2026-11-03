@@ -674,7 +674,10 @@ const fileRow = (p, f) => `<button type="button" class="lf_fr" data-go="file" da
 export function filesScreen(p, now) {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '파일', 'life');
-    const fs = live(lf), recent = [...fs].filter(f => f.opened).sort(byStory(p.now, f => f.opened)).reverse().slice(0, 6), dl = fs.filter(f => f.folder === 'Downloads').length, trash = lf.files.items.filter(f => f.trashed).length, cl = lf.files.cloud || {};
+    const fs = live(lf), recent = [...fs].filter(f => f.opened).sort(byStory(p.now, f => f.opened)).reverse().slice(0, 6), dl = fs.filter(f => f.folder === 'Downloads').length, trash = lf.files.items.filter(f => f.trashed).length, cl0 = lf.files.cloud || {};
+    // the cloud the fill gave, plus the files the story saved since (reflection's own, still kept), never more than the whole
+    const added = lf.files.items.filter(f => String(f.id || '').startsWith('sync:') && !f.trashed).reduce((n, f) => n + (Number(f.size) || 0), 0) / 1048576;
+    const cl = Number.isFinite(Number(cl0.used)) && cl0.used !== null && added ? { ...cl0, used: Math.min(Number(cl0.total) || Infinity, Math.round((Number(cl0.used) + added) * 10) / 10) } : cl0;
     // the folders as the files now stand: a file a reflection moved in counts there, and a folder only a file names is shown too
     const inF = name => fs.filter(f => f.folder === name).length;
     const folders = [...lf.files.folders.map(x => ({ ...x, count: Math.max(x.count || 0, inF(x.name)) })),
