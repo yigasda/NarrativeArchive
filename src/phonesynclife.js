@@ -21,7 +21,10 @@ const daysOf = v => {
     if (/^(daily|every ?day|매일|täglich|毎日)$/.test(one)) return [...DAYS];
     if (/^(weekdays?|평일|werktags|wochentags|平日)$/.test(one)) return DAYS.slice(0, 5);
     if (/^(weekends?|주말|wochenende|週末)$/.test(one)) return DAYS.slice(5);
-    const out = arr(Array.isArray(v) ? v : String(v || '').split(/[\s,·/]+/)).map(d => { const s = String(d).trim().toLowerCase(); return DAYS.includes(s.slice(0, 3)) ? s.slice(0, 3) : DAY_WORD[s.replace(/요일$|曜日?$/, '').slice(0, 2)] || DAY_WORD[s.slice(0, 1)]; }).filter(Boolean);
+    // a range ("mon-fri", "월~금", "Mo bis Fr") is every day from the one to the other
+    const tok = d => { const s = String(d).trim().toLowerCase(); return DAYS.includes(s.slice(0, 3)) ? s.slice(0, 3) : DAY_WORD[s.replace(/요일$|曜日?$/, '').slice(0, 2)] || DAY_WORD[s.slice(0, 1)] || ''; };
+    const ranged = String(Array.isArray(v) ? v.join(',') : v || '').replace(/([^\s,·/~\-–—]+)\s*(?:-|~|–|—|\bto\b|\bbis\b|부터)\s*([^\s,·/~\-–—]+)/g, (m, a, b) => { const i = DAYS.indexOf(tok(a)), j = DAYS.indexOf(tok(b)); return i < 0 || j < 0 ? m : (i <= j ? DAYS.slice(i, j + 1) : [...DAYS.slice(i), ...DAYS.slice(0, j + 1)]).join(','); });
+    const out = arr(ranged.split(/[\s,·/]+/)).map(d => { const s = String(d).trim().toLowerCase(); return DAYS.includes(s.slice(0, 3)) ? s.slice(0, 3) : DAY_WORD[s.replace(/요일$|曜日?$/, '').slice(0, 2)] || DAY_WORD[s.slice(0, 1)]; }).filter(Boolean);
     return DAYS.filter(d => out.includes(d));
 };
 const off = v => v === false || /^(false|off|no|aus|꺼짐|끔)$/i.test(String(v ?? '').trim());
@@ -194,7 +197,8 @@ export function applyLife(p, e, phone, on) {
         if (was) return change('life.clock.alarms', was, given(a, clean, ['time', 'label', 'ko', 'days', 'date', 'on', 'wake', 'then', 'snooze']), '시계');
         if (!clean.time) return;
         // the same alarm written again without its id: that alarm, changed (switched off, its days)
-        const twin = (L.clock?.alarms || []).find(o => o.time === clean.time && o.label === clean.label && o.date === clean.date);
+        const lk = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+        const twin = (L.clock?.alarms || []).find(o => o.time === clean.time && o.date === clean.date && (!lk(o.label) || !lk(clean.label) || lk(o.label).includes(lk(clean.label)) || lk(clean.label).includes(lk(o.label))));
         if (twin) return change('life.clock.alarms', twin, given(a, clean, ['ko', 'days', 'on', 'wake', 'then', 'snooze']), '시계');
         push('life.clock.alarms', tag({ ...clean, made: clean.made || e.date }, k, 'a'), '시계');
     });
@@ -244,7 +248,8 @@ export function applyLife(p, e, phone, on) {
         // the event's own day before their usual waking time, or a row for the day after the event (asleep past midnight)
         const awake = !(e.time && u.wake && (clean.date === e.date && e.time < u.wake || dayGap(e.date, clean.date) > 0));
         for (const k of ['bed', 'sleep', 'wake']) if (!clean[k] && u[k] && (k !== 'wake' || awake)) clean[k] = u[k];
-        if (clean.steps === null && finiteNum(u.steps) && awake) clean.steps = u.steps;
+        // a day already over gets their usual steps; today's stay open (the screen counts them up, the clock fills them after)
+        if (clean.steps === null && finiteNum(u.steps) && awake && dayGap(clean.date, e.date) > 0) clean.steps = u.steps;
         bedFirst(clean);
         const vals = { ...clean, ev: e.id };
         if (was) return change('life.health.days', was, vals, '건강');
@@ -296,7 +301,7 @@ export function applyDays(p, days, round) {
         // what the model leaves off a pattern day is their usual (a day is never half told)
         const u = p.life.health?.usual || {};
         for (const k of ['bed', 'sleep', 'wake']) if (!clean[k] && u[k]) clean[k] = u[k];
-        if (clean.steps === null && finiteNum(u.steps)) clean.steps = u.steps;
+        if (clean.steps === null && finiteNum(u.steps) && clean.date !== String(p.now || '').slice(0, 5)) clean.steps = u.steps;
         bedFirst(clean);
         const row = { ...clean, id: `sync:${round}:d${k}` };
         box.push(row);
@@ -327,7 +332,7 @@ export function fillDays(p, now, round) {
     const from = box.length ? (dayGap(first, today) > 13 ? plusDay(today, -13) : first) : plusDay(first, 1);
     for (let day = from, k = 0; dayGap(day, end) >= 0 && k < 15; day = plusDay(day, 1), k++) {
         if (box.some(d => d.date === day)) continue;
-        const h = hash(day), j = n => ((h >> n) % 41 - 20) / 100, steps = finiteNum(u.steps) ? Math.round(u.steps * (1 + j(1) * 1.5)) : null;
+        const h = hash(day), j = n => ((h >> n) % 41 - 20) / 100, steps = finiteNum(u.steps) && day !== today ? Math.round(u.steps * (1 + j(1) * 1.5)) : null;
         const row = { date: day, bed: shiftHm(u.bed || u.sleep, Math.round(j(3) * 100)), sleep: shiftHm(u.sleep, Math.round(j(5) * 100)), wake: shiftHm(u.wake, Math.round(j(7) * 60)), woke: h % 3,
             steps, km: steps === null ? null : Math.round(steps * 0.00072 * 10) / 10, floors: (h >> 9) % 9, workout: null, hr: u.rest ? [u.rest - 4 + h % 5, u.rest + 45 + (h >> 4) % 40] : [], from: 'pattern', id: `sync:${round}:g${k}` };
         // to bed before asleep (each time is moved on its own; in bed 00:38 after asleep at 00:17 can't be)

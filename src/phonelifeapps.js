@@ -34,6 +34,14 @@ const L = p => {
     const l = p.life; if (!l) return null;
     const c = l.clock ||= {}; c.alarms ||= []; c.timers ||= []; c.running ||= null; for (const a of c.alarms) { a.days ||= []; a.then ||= []; }
     const h = l.health ||= {}; h.days ||= []; h.usual ||= {};
+    // today's steps so far: the row holds none until the day is over; the screen counts from waking to now
+    const today = now5(p).slice(0, 5), nowMin = toMin(now5(p).slice(6));
+    const soFar = d => {
+        if (d.date !== today || (d.steps !== null && d.steps !== undefined) || !Number.isFinite(h.usual.steps) || nowMin === null) return d;
+        const wake = toMin(d.wake) ?? toMin(h.usual.wake) ?? 7 * 60, f = Math.max(0, Math.min(1, (nowMin - wake) / Math.max(60, 22 * 60 - wake)));
+        const r = seeded(`${d.date}:sofar`)(), steps = Math.round(h.usual.steps * f * (0.85 + r * 0.3));
+        return { ...d, steps, km: Math.round(steps * 0.00072 * 10) / 10, partial: true, until: Math.floor(nowMin / 60) };
+    };
     const f = l.files ||= {}; f.folders ||= []; f.items ||= []; f.cloud ||= { used: null, total: null };
     const w = l.weather ||= {}; w.cities ||= []; const h0 = w.here ||= { place: '', date: '', time: '', from: 'guess', cond: '', temp: null, hi: null, lo: null, line: '', ko: '' }; h0.hours ||= []; h0.days ||= []; h0.tiles ||= {};
     // a number left out reads as none (the screens test for null, not undefined)
@@ -42,7 +50,8 @@ const L = p => {
     for (const k of ['rain24', 'rainNext', 'feels', 'wind', 'gust', 'humidity', 'dew', 'visibility']) h0.tiles[k] ??= null;
     for (const k of ['temp', 'hi', 'lo']) h0[k] ??= null;
     for (const x of w.cities) { x.hours ||= []; for (const k of ['temp', 'hi', 'lo', 'feels', 'humidity', 'dew', 'rainNext', 'wind', 'gust']) x[k] ??= null; }
-    return l;
+    // the screens read a view: today's row counted up, nothing written back to the save
+    return h.days.some(d => d && d.date === today) ? { ...l, health: { ...h, days: h.days.map(d => (d && d.date === today ? soFar(d) : d)) } } : l;
 };
 const k1 = (k, cls = 'lf_k') => (k && koOn() ? `<span class="${cls}">${esc(k)}</span>` : '');
 const now5 = p => String(storyNow(p) || p.now || '');
@@ -253,7 +262,8 @@ const workKcal = w => Math.round((w?.min || 0) * (RUNS.test(w?.kind) ? 10 : RIDE
 function hourSteps(d) {
     const out = Array(24).fill(0), total = d.steps || 0;
     if (!total) return out;
-    const r = seeded(`${d.date}:steps`), wake = Math.floor((toMin(d.wake) ?? 420) / 60), sleep = toMin(d.sleep), end = 23;
+    // a day still going: its steps lie in the hours up to now
+    const r = seeded(`${d.date}:steps`), wake = Math.floor((toMin(d.wake) ?? 420) / 60), sleep = toMin(d.sleep), end = d.partial && Number.isFinite(d.until) ? Math.max(wake, d.until) : 23;
     const wt = d.workout ? Math.floor((toMin(d.workout.time) ?? -60) / 60) : -1, wSteps = wt >= 0 && /walk|run|lauf|hike|걷|달리|러닝|산책|등산|조깅/i.test(d.workout.kind) ? Math.min(total * 0.6, (d.workout.km || d.workout.min / 10) * 1300) : 0;
     const w = out.map((_, h) => (h < wake || h > end ? 0 : h === wt ? 0 : (h === wake ? 0.5 : 1) * (0.4 + r() * 0.9) * ([8, 12, 13, 18, 19].includes(h) ? 2.2 : h >= 22 ? 0.3 : 1)));
     const sw = w.reduce((s, x) => s + x, 0) || 1;
@@ -516,7 +526,7 @@ export function compareScreen(p, now) {
 const FK = { pdf: ['PDF', '#d64545'], image: ['JPG', '#c98a2e'], video: ['MP4', '#3a3f4a'], audio: ['M4A', '#8a5a2e'], zip: ['ZIP', '#7b8290'], doc: ['DOCX', '#2f6fbf'], sheet: ['XLSX', '#2b7a4b'], slides: ['PPTX', '#c2562b'], other: ['FILE', '#8a929d'] };
 const ext = f => (String(f.name).match(/\.([a-z0-9]{2,4})$/i)?.[1] || FK[f.kind][0]).toUpperCase();
 const fico = (f, s = '') => `<span class="lf_fico ${s}" style="background: ${FK[f.kind][1]}">${esc(ext(f))}</span>`;
-const size = kb => (kb === null || kb === undefined ? '' : kb >= 1024 * 1024 ? `${(kb / 1048576).toFixed(1)} GB` : kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${Math.round(kb)} KB`).replace('.', ',');
+const size = kb => comma(kb === null || kb === undefined ? '' : kb >= 1024 * 1024 ? `${(kb / 1048576).toFixed(1)} GB` : kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${Math.round(kb)} KB`);
 const live = lf => lf.files.items.filter(f => !f.trashed);
 // what a file shows: the model's "look", else a guess from its name, folder and preview (older phones have no look)
 const LOOK_IMG = ['sea', 'city', 'night', 'food', 'hills', 'pet', 'sunset', 'mountain', 'snow', 'flower', 'interior', 'concert', 'paper', 'screenshot', 'map'];
@@ -647,7 +657,7 @@ export function filesScreen(p, now) {
         <div class="lf_sec">위치</div>
         <div class="lf_card">
           <button type="button" class="lf_rw" data-go="folder" data-i="">${ax('phoneS', 22, '#2f6fbf')}<span class="lf_tx"><b>내 폰</b></span><small>${fs.length}</small>${ax('chev', 14, '#b7bdc6', 2.4)}</button>
-          ${cl.total ? `<div class="lf_rw">${ax('cloudF', 22, '#2f6fbf')}<span class="lf_tx"><b>클라우드</b><small>${String(cl.used ?? '?').replace('.', ',')} GB / ${String(cl.total).replace('.', ',')} GB</small></span></div>` : ''}
+          ${cl.total ? `<div class="lf_rw">${ax('cloudF', 22, '#2f6fbf')}<span class="lf_tx"><b>클라우드</b><small>${comma(String(cl.used ?? '?'))} GB / ${comma(String(cl.total))} GB</small></span></div>` : ''}
           <button type="button" class="lf_rw" data-go="folder" data-i="Downloads">${ax('dl', 22, '#2f6fbf')}<span class="lf_tx"><b>다운로드</b></span><small>${dl}</small>${ax('chev', 14, '#b7bdc6', 2.4)}</button>
           <button type="button" class="lf_rw" data-go="folder" data-i="~trash">${ax('trash', 21, '#2f6fbf')}<span class="lf_tx"><b>최근 삭제</b></span><small>${trash}</small>${ax('chev', 14, '#b7bdc6', 2.4)}</button></div>
         ${favs.length ? `<div class="lf_sec">즐겨찾기</div><div class="lf_card">${favs.map(fold).join('')}</div>` : ''}

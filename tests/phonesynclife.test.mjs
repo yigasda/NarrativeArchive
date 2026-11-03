@@ -2,7 +2,7 @@
 // their payments; every change can be taken back and put back
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyDays, applyLife, applyWeather, dlvClock, fillDays, lifeClock } from '../src/phonesynclife.js';
+import { alarmOf, applyDays, applyLife, applyWeather, dlvClock, fillDays, lifeClock } from '../src/phonesynclife.js';
 import { applyMoney, payOrders, replayEffects, revertEffects } from '../src/phonesyncmoney.js';
 import { cash, migrateBank } from '../src/finance.js';
 
@@ -583,4 +583,19 @@ test('weather: rain in millimetres reads as a chance, a status line that changes
     assert.equal(zoneShift('02-02 03:00', 'Asia/Seoul', 'Europe/Berlin', 2027), '02-01 19:00');
     assert.equal(zoneShift('07-15 12:00', 'Europe/Berlin', 'Asia/Seoul', 2027), '07-15 19:00');
     assert.equal(mirrorHome({ here: { place: 'Rathaus', cond: 'fog' }, cities: [{ name: 'Berlin' }] }).cities[0].cond, undefined);
+});
+
+test('life: repeat days as a range, an alarm told again with a longer label, and today\'s steps left open until the day is over', () => {
+    assert.deepEqual(alarmOf({ time: '06:30', days: 'mon-fri' }).days, ['mon', 'tue', 'wed', 'thu', 'fri']);
+    assert.deepEqual(alarmOf({ time: '06:30', days: '월~금' }).days, ['mon', 'tue', 'wed', 'thu', 'fri']);
+    assert.deepEqual(alarmOf({ time: '06:30', days: ['sat', 'sun'] }).days, ['sat', 'sun']);
+    assert.deepEqual(alarmOf({ time: '06:30', days: 'Fr bis Mo' }).days, ['mon', 'fri', 'sat', 'sun']);
+    const { p } = setup();
+    const e = { id: 'ev1', at: 5, date: '10-26', time: '09:30' };
+    applyLife(p, e, { alarms: [{ time: '06:10', label: 'Aufstehen Alarm', days: ['mon', 'tue', 'wed', 'thu', 'fri'], on: false }], health: [{ date: '10-26', sleep: '00:10', wake: '07:40' }, { date: '10-24', sleep: '23:30', wake: '06:30' }] }, true);
+    assert.equal(p.life.clock.alarms.length, 1); assert.equal(p.life.clock.alarms[0].on, false);
+    const d26 = p.life.health.days.find(d => d.date === '10-26'), d24 = p.life.health.days.find(d => d.date === '10-24');
+    assert.equal(d26.steps, null); assert.equal(d24.steps, 7000);
+    const fx = lifeClock(p, '10-27 09:00');
+    assert.equal(p.life.health.days.find(d => d.date === '10-26').steps, 7000); assert.ok(fx.length);
 });
