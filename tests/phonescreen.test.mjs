@@ -88,3 +88,11 @@ test('screenView: the pickups a day, on average', () => {
     const p = phone([{ date: '10-24', screen: { apps: { Signal: 10 }, pickups: 60 } }, { date: '10-25', screen: { apps: { Signal: 10 }, pickups: 100 } }]);
     assert.equal(screenView(p, '10-26 12:00').pickupsAvg, 80);
 });
+
+test('screenView: a short sleeper is not up late every night, only on a night shorter than their own', () => {
+    const p = phone([{ date: '10-23', sleep: '00:15', wake: '05:30' }, { date: '10-24', sleep: '03:10', wake: '05:30' }, { date: '10-25', sleep: '00:10', wake: '05:30' }]);
+    p.life.health.usual = { sleep: '00:15', wake: '05:30', screen: { ...usual, late: '00:10' } };
+    const late = Object.fromEntries(screenView(p, '10-26 12:00').days.filter(d => !d.today).map(d => [d.date, d.late]));
+    assert.ok(late['10-23'] < '01:00' && late['10-25'] < '01:00', JSON.stringify(late));
+    assert.ok(late['10-24'] >= '01:00', JSON.stringify(late));
+});

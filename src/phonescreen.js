@@ -75,7 +75,9 @@ function workedOut(p, day, usual, sleepDay) {
     if (rec.calls) apps['전화'] = (apps['전화'] || 0) + rec.calls;
     if (rec.photos) apps['카메라'] = (apps['카메라'] || 0) + rec.photos * 2;
     // a short night: they were up with the phone
-    const slept = sleepDay ? ((toMin(sleepDay.wake) ?? 0) - (toMin(sleepDay.sleep) ?? 0) + 1440) % 1440 : null, short = slept !== null && slept < 6 * 60;
+    // shorter than their own usual night (an owner who always sleeps five hours isn't up late every night)
+    const span = d => (d && toMin(d.sleep) !== null && toMin(d.wake) !== null ? ((toMin(d.wake) - toMin(d.sleep)) + 1440) % 1440 : null);
+    const slept = span(sleepDay), norm = span(p.life?.health?.usual) ?? 7 * 60, short = slept !== null && slept < norm - 90;
     const lateBase = toMin(usual.late) ?? 23 * 60 + 30, late = hm(lateBase + Math.round((r() - 0.4) * 50) + (short ? 70 : 0));
     const pickups = usual.pickups ? Math.round(usual.pickups * (0.8 + r() * 0.4) + rec.texts * 0.5) : null;
     return { apps, ...(pickups !== null ? { pickups } : {}), late, worked: true };
