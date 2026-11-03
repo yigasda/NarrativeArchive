@@ -1207,13 +1207,17 @@ const dvKo = d => [...d.shops, ...d.shops.flatMap(s => s.menu || []), ...d.order
 const dvKp = (d, cls) => (dvKo(d) ? `<button type="button" class="na_ph_kochip ${cls} ${koOn() ? 'on' : ''}">${cls === 'dv_kpu' ? '<i></i>한국어' : '가 한국어'}</button>` : '');
 const BM_CATS = [['rice', '한그릇'], ['chinese', '중식'], ['sushi', '돈까스·회'], ['pizza', '피자'], ['burger', '패스트푸드'], ['stew', '찜·탕'], ['jokbal', '족발·보쌈'], ['snack', '분식'], ['cafe', '카페'], ['chicken', '치킨']];
 const UE_CATS = [['pizza', 'Pizza'], ['sushi', 'Sushi'], ['burger', 'Burger'], ['asian', 'Asiatisch'], ['salad', 'Gesund']];
-const shopsByUse = d => [...d.shops].sort((a, b) => d.orders.filter(o => o.shop === b.name).length - d.orders.filter(o => o.shop === a.name).length);
+// 자주 시킨 가게: the shops ordered from in the story's last 30 days, the most often first. A shop not ordered from
+// since drops back among the shops nearby (its orders stay in the history; ordering again brings it back up)
+const RECENT_DAYS = 30;
+const recentOrders = (p, d) => { const today = now5(p).slice(0, 5); return /^\d{2}-\d{2}$/.test(today) ? d.orders.filter(o => { const g = dayGap(String(o.time || '').slice(0, 5), today); return g >= 0 && g <= RECENT_DAYS; }) : d.orders; };
+const shopsByUse = (p, d) => { const n = name => recentOrders(p, d).filter(o => o.shop === name).length; return [...d.shops].sort((a, b) => n(b.name) - n(a.name)); };
 const rate = r => String(r).replace(',', '.');
 export function dlvScreen(p, now) {
     const d = D(p);
     if (!d) return lifeEmpty(p, now, '배달', 'delivery');
-    const shops = shopsByUse(d), recent = [...d.orders].reverse(), bm = d.look === 'baemin';
-    const used = shops.filter(s => d.orders.some(o => o.shop === s.name)), rest = shops.filter(s => !used.includes(s));
+    const shops = shopsByUse(p, d), recent = [...d.orders].reverse(), bm = d.look === 'baemin', lately = recentOrders(p, d);
+    const used = shops.filter(s => lately.some(o => o.shop === s.name)), rest = shops.filter(s => !used.includes(s));
     if (bm) {
         const addr = recent[0]?.to === 'home' || !recent[0] ? '우리집' : recent[0].to === 'work' ? '회사' : recent[0].to;
         const card = s => `<button type="button" class="dv_fav" data-go="dshop" data-i="${s.id}"><span class="ph">${pic(shopPic(s))}${s.eta ? `<em>${esc(s.eta.replace('–', '~'))}분</em>` : ''}</span><b>${esc(s.name)}</b>${kk(s)}<small>${s.rating ? `${I.star}<strong>${comma(rate(s.rating))}</strong>` : ''}${s.reviews ? `<span>(${n0(s.reviews)})</span>` : ''}</small><small class="m">배달팁 ${esc(money(p, s.fee))}</small></button>`;
