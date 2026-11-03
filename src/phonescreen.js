@@ -68,8 +68,9 @@ for (const [id, name, kind, also] of [...CATALOG, ...MORE]) for (const k of [nam
 // a bank's own app ("Sparkasse", "신한 SOL", "Chase") is the bank icon under its own name
 const BANK = /bank|banking|뱅크|은행|뱅킹|sparkasse|volksbank|commerzbank|deutschebank|\bing\b|chase|barclays|santander|hsbc|wellsfargo|wells fargo|citi\b|monzo|revolut|n26|신한|국민|우리|하나|농협|\bsol\b|쏠/i;
 export const appOf = name => BY_NAME.get(norm(name)) || (BANK.test(String(name || '')) ? { id: 'bank', name: String(name).trim(), kind: 'other' } : null);
-// the list the fill picks from, a line for each kind (phone and camera come from the phone itself)
-export const SCREEN_LIST = KINDS.map(k => [k, CATALOG.filter(a => a[2] === k && a[0] !== 'phone' && a[0] !== 'camera').map(a => a[1])]).filter(([, xs]) => xs.length).map(([k, xs]) => `${k}: ${xs.join(', ')}`).join('\n');
+// the list the screen time fill picks from, a line for each kind (the phone's own apps come from the phone itself)
+const OWN = new Set(['phone', 'camera', 'messages', 'notes', 'maps', 'calendar', 'photos', 'clock', 'weather', 'health', 'files', 'wallet', 'bank', 'voicememo', 'settings']);
+export const SCREEN_LIST = KINDS.map(k => [k, [...CATALOG, ...MORE].filter(a => a[2] === k && !OWN.has(a[0])).map(a => a[1])]).filter(([, xs]) => xs.length).map(([k, xs]) => `${k}: ${xs.join(', ')}`).join('\n');
 // an app the catalog doesn't know: its kind from its name
 const GUESS = [
     ['chat', /kakao|카카오톡|카톡|whatsapp|line\b|telegram|signal|messenger|wechat|imessage|메시지|문자|discord|slack/i],

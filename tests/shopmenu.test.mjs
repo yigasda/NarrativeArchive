@@ -148,3 +148,8 @@ test('스크린타임 다시 만들기: the usual and the week anew, a day a ref
     await assert.rejects(life.fillScreen({}, p, { again: true }));
     assert.deepEqual(h.days.find(d => d.date === '10-25').screen, { apps: { TikTok: 70 } });
 });
+
+test('생활 채우기 asks no screen time; the screen time fill follows on its own request', async () => {
+    assert.ok(!life.AI_SYS_LIFE.includes('"screen"') && !life.AI_SYS_LIFE.includes('Brawl Stars'));
+    assert.ok(life.AI_SYS_SCREEN.includes('Google Maps') && life.AI_SYS_SCREEN.includes('4 to 8'));
+});

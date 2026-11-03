@@ -132,6 +132,6 @@ test('apps known by name and icon beyond the fill list: the phone\'s own, a day\
     assert.equal(appOf('TikTok').id, 'tiktok');
     assert.deepEqual(appOf('Sparkasse'), { id: 'bank', name: 'Sparkasse', kind: 'other' });
     assert.equal(appOf('Blue Archive'), null);
-    assert.ok(!SCREEN_LIST.includes('Google Maps') && !SCREEN_LIST.includes('메모'));
+    assert.ok(SCREEN_LIST.includes('Google Maps') && !SCREEN_LIST.includes('메모') && !SCREEN_LIST.includes('은행'));
     assert.deepEqual(screenOf({ apps: { '스벅': 5, Starbucks: 3 } }), { apps: { Starbucks: 8 } });
 });
