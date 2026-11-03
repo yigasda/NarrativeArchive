@@ -124,3 +124,14 @@ test('apps they open now and then: kept apart, on some days only; one they now u
     assert.deepEqual(ch.sometimes.map(a => a.app), ['DB Navigator']);
     assert.deepEqual(screenChange(u, { drop: ['DB Navigator'] }).sometimes.map(a => a.app), ['Zalando']);
 });
+
+test('apps known by name and icon beyond the fill list: the phone\'s own, a day\'s, a bank under its own name', () => {
+    assert.deepEqual(appOf('Notes'), { id: 'notes', name: '메모', kind: 'other' });
+    assert.equal(appOf('구글맵').id, 'googlemaps');
+    assert.equal(appOf('抖音').id, 'douyin');
+    assert.equal(appOf('TikTok').id, 'tiktok');
+    assert.deepEqual(appOf('Sparkasse'), { id: 'bank', name: 'Sparkasse', kind: 'other' });
+    assert.equal(appOf('Blue Archive'), null);
+    assert.ok(!SCREEN_LIST.includes('Google Maps') && !SCREEN_LIST.includes('메모'));
+    assert.deepEqual(screenOf({ apps: { '스벅': 5, Starbucks: 3 } }), { apps: { Starbucks: 8 } });
+});

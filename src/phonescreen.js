@@ -10,7 +10,7 @@ const CATALOG = [
     ['kakaotalk', 'KakaoTalk', 'chat', '카카오톡 카톡 kakao'], ['whatsapp', 'WhatsApp', 'chat', '왓츠앱 왓츠앱'], ['line', 'LINE', 'chat', '라인'], ['telegram', 'Telegram', 'chat', '텔레그램'],
     ['signal', 'Signal', 'chat', '시그널'], ['messenger', 'Messenger', 'chat', 'facebookmessenger 메신저 페북메신저'], ['discord', 'Discord', 'chat', '디스코드'],
     ['messages', '메시지', 'chat', 'messages message imessage sms 문자 메세지 nachrichten'], ['wechat', 'WeChat', 'chat', '微信 위챗'],
-    ['instagram', 'Instagram', 'social', 'insta 인스타 인스타그램'], ['x', 'X', 'social', 'twitter 트위터 엑스'], ['threads', 'Threads', 'social', '스레드 쓰레드'], ['tiktok', 'TikTok', 'social', '틱톡 抖音'],
+    ['instagram', 'Instagram', 'social', 'insta 인스타 인스타그램'], ['x', 'X', 'social', 'twitter 트위터 엑스'], ['threads', 'Threads', 'social', '스레드 쓰레드'], ['tiktok', 'TikTok', 'social', '틱톡'],
     ['facebook', 'Facebook', 'social', '페이스북 페북'], ['snapchat', 'Snapchat', 'social', '스냅챗'], ['reddit', 'Reddit', 'social', '레딧'], ['pinterest', 'Pinterest', 'social', '핀터레스트'], ['bereal', 'BeReal.', 'social', '비리얼'],
     ['youtube', 'YouTube', 'video', '유튜브 유툽'], ['netflix', 'Netflix', 'video', '넷플릭스 넷플'], ['disney', 'Disney+', 'video', 'disneyplus 디즈니 디즈니플러스'], ['primevideo', 'Prime Video', 'video', 'amazonprime amazonprimevideo 프라임비디오'],
     ['twitch', 'Twitch', 'video', '트위치'], ['tving', 'TVING', 'video', '티빙'], ['coupangplay', '쿠팡플레이', 'video', 'coupangplay 쿠플'],
@@ -27,11 +27,47 @@ const CATALOG = [
     ['coupang', 'Coupang', 'shopping', '쿠팡'], ['amazon', 'Amazon', 'shopping', '아마존'], ['zalando', 'Zalando', 'shopping', '잘란도'], ['musinsa', '무신사', 'shopping', 'musinsa'],
     ['baemin', '배달의민족', 'shopping', 'baemin 배민 배달의민족'], ['ubereats', 'Uber Eats', 'shopping', '우버이츠'], ['temu', 'Temu', 'shopping', '테무'], ['aliexpress', 'AliExpress', 'shopping', '알리 알리익스프레스'],
 ];
+// the apps the phone knows by name and icon but the fill isn't offered (its list stays short): the phone's own apps, and
+// ones a day calls for (a trip, a payment, a date). A bank's app goes by any name (see appOf)
+const MORE = [
+    ['notes', '메모', 'other', 'notes memo memos notizen 노트'], ['maps', '지도', 'other', 'maps map karten'], ['calendar', '캘린더', 'work', 'calendar kalender 달력'],
+    ['photos', '사진', 'other', 'photos gallery 갤러리 fotos'], ['clock', '시계', 'other', 'clock uhr 알람'], ['weather', '날씨', 'other', 'weather wetter'],
+    ['health', '건강', 'other', 'health 헬스 gesundheit'], ['files', '파일', 'other', 'files dateien'], ['wallet', '지갑', 'other', 'wallet 월렛'],
+    ['bank', '은행', 'other', 'bank banking'], ['voicememo', '음성 메모', 'other', 'voicememos voicememo 녹음 음성메모 sprachmemos'], ['settings', '설정', 'other', 'settings einstellungen'],
+    ['googlemaps', 'Google Maps', 'other', '구글맵 구글지도'], ['applemaps', 'Apple 지도', 'other', 'applemaps 애플지도'], ['navermap', '네이버 지도', 'other', 'navermap navermaps 네이버맵'], ['kakaomap', '카카오맵', 'other', 'kakaomap 카카오지도'],
+    ['papago', 'Papago', 'other', '파파고'], ['googletranslate', 'Google 번역', 'other', 'googletranslate 구글번역 translate 번역'], ['deepl', 'DeepL', 'other', '딥엘'], ['duolingo', 'Duolingo', 'reading', '듀오링고'],
+    ['kakaot', '카카오 T', 'other', 'kakaot 카카오택시 카카오t'], ['uber', 'Uber', 'other', '우버'], ['grab', 'Grab', 'other', '그랩'], ['didi', 'DiDi', 'other', '滴滴 디디'], ['korail', '코레일톡', 'other', 'korail korailtalk 코레일'],
+    ['trainline', 'Trainline', 'other', ''], ['flixbus', 'FlixBus', 'other', '플릭스버스'], ['bvg', 'BVG', 'other', 'bvgfahrinfo'], ['tfl', 'TfL Go', 'other', 'tfl tflgo'],
+    ['airbnb', 'Airbnb', 'other', '에어비앤비'], ['booking', 'Booking.com', 'other', 'booking 부킹닷컴'], ['agoda', 'Agoda', 'other', '아고다'], ['expedia', 'Expedia', 'other', '익스피디아'],
+    ['skyscanner', 'Skyscanner', 'other', '스카이스캐너'], ['lufthansa', 'Lufthansa', 'other', '루프트한자'], ['koreanair', '대한항공', 'other', 'koreanair'],
+    ['toss', '토스', 'other', 'toss'], ['kakaopay', '카카오페이', 'other', 'kakaopay'], ['paypal', 'PayPal', 'other', '페이팔'], ['venmo', 'Venmo', 'other', ''], ['alipay', 'Alipay', 'other', '支付宝 알리페이'],
+    ['paypay', 'PayPay', 'other', '페이페이'], ['applepay', 'Apple Wallet', 'other', 'applepay 애플페이 애플월렛'],
+    ['robinhood', 'Robinhood', 'other', '로빈후드'], ['upbit', '업비트', 'other', 'upbit'], ['binance', 'Binance', 'other', '바이낸스'],
+    ['doordash', 'DoorDash', 'shopping', '도어대시'], ['deliveroo', 'Deliveroo', 'shopping', ''], ['lieferando', 'Lieferando', 'shopping', ''], ['meituan', '美团', 'shopping', 'meituan 메이퇀'],
+    ['starbucks', 'Starbucks', 'shopping', '스타벅스 스벅'], ['mcdonalds', "McDonald's", 'shopping', '맥도날드 맥날'],
+    ['ebay', 'eBay', 'shopping', '이베이'], ['shein', 'SHEIN', 'shopping', '쉬인'], ['ikea', 'IKEA', 'shopping', '이케아'], ['oliveyoung', '올리브영', 'shopping', 'oliveyoung 올영'], ['kurly', '컬리', 'shopping', 'kurly 마켓컬리'],
+    ['danggeun', '당근', 'shopping', 'danggeun karrot 당근마켓'], ['vinted', 'Vinted', 'shopping', ''], ['taobao', '淘宝', 'shopping', 'taobao 타오바오'], ['rakuten', '楽天', 'shopping', 'rakuten 라쿠텐'], ['mercari', 'メルカリ', 'shopping', 'mercari 메루카리'], ['asos', 'ASOS', 'shopping', ''],
+    ['linkedin', 'LinkedIn', 'social', '링크드인'], ['weibo', '微博', 'social', 'weibo 웨이보'], ['xiaohongshu', '小红书', 'social', 'xiaohongshu rednote 샤오홍슈'], ['douyin', '抖音', 'social', 'douyin 더우인'],
+    ['everytime', '에브리타임', 'social', 'everytime 에타'], ['blind', '블라인드', 'social', 'blind'],
+    ['tinder', 'Tinder', 'social', '틴더'], ['hinge', 'Hinge', 'social', '힌지'], ['grindr', 'Grindr', 'social', '그라인더'],
+    ['hbomax', 'Max', 'video', 'hbomax hbo 맥스'], ['hulu', 'Hulu', 'video', '훌루'], ['crunchyroll', 'Crunchyroll', 'video', '크런치롤'], ['chzzk', '치지직', 'video', 'chzzk'], ['bilibili', 'bilibili', 'video', '哔哩哔哩 빌리빌리'], ['appletv', 'Apple TV', 'video', 'appletv 애플tv'],
+    ['podcasts', '팟캐스트', 'music', 'podcasts podcast applepodcasts'],
+    ['kakaowebtoon', '카카오웹툰', 'reading', 'kakaowebtoon'], ['millie', '밀리의 서재', 'reading', 'millie 밀리'], ['wattpad', 'Wattpad', 'reading', '왓패드'], ['nytimes', 'NYT', 'reading', 'nytimes newyorktimes'],
+    ['bbc', 'BBC News', 'reading', 'bbc bbcnews'], ['yahoo', 'Yahoo! ニュース', 'reading', 'yahoo yahoonews yahoojapan 야후'], ['daum', 'Daum', 'reading', '다음'],
+    ['myfitnesspal', 'MyFitnessPal', 'other', '마이피트니스팔'], ['flo_health', 'Flo', 'other', 'flohealth flo생리 플로'],
+    ['outlook', 'Outlook', 'work', '아웃룩'], ['googledrive', 'Google Drive', 'work', 'drive 구글드라이브'], ['word', 'Word', 'work', 'microsoftword 워드'], ['powerpoint', 'PowerPoint', 'work', 'ppt 파워포인트'],
+    ['lightroom', 'Lightroom', 'other', '라이트룸'], ['capcut', 'CapCut', 'other', '캡컷'],
+    ['amongus', 'Among Us', 'game', '어몽어스'], ['umamusume', '우마무스메', 'game', 'umamusume ウマ娘 우마'], ['fgo', 'Fate/GO', 'game', 'fgo fategrandorder 페그오'], ['cookierun', '쿠키런', 'game', 'cookierun 쿠키런킹덤 cookierunkingdom'],
+    ['honkaistarrail', '붕괴: 스타레일', 'game', 'honkaistarrail starrail 스타레일 붕스'], ['zzz', '젠레스 존 제로', 'game', 'zenlesszonezero 젠존제 zzz'],
+    ['facetime', 'FaceTime', 'chat', '페이스타임'],
+];
 const norm = s => String(s || '').normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 const BY_NAME = new Map();
-for (const [id, name, kind, also] of CATALOG) for (const k of [name, id, ...also.split(' ')]) if (!BY_NAME.has(norm(k))) BY_NAME.set(norm(k), { id, name, kind });
+for (const [id, name, kind, also] of [...CATALOG, ...MORE]) for (const k of [name, id, ...also.split(' ').filter(Boolean)]) if (!BY_NAME.has(norm(k))) BY_NAME.set(norm(k), { id, name, kind });
 // the app a name is ({ id for its icon, the name to show, kind }), or null for one the phone doesn't know
-export const appOf = name => BY_NAME.get(norm(name)) || null;
+// a bank's own app ("Sparkasse", "신한 SOL", "Chase") is the bank icon under its own name
+const BANK = /bank|banking|뱅크|은행|뱅킹|sparkasse|volksbank|commerzbank|deutschebank|\bing\b|chase|barclays|santander|hsbc|wellsfargo|wells fargo|citi\b|monzo|revolut|n26|신한|국민|우리|하나|농협|\bsol\b|쏠/i;
+export const appOf = name => BY_NAME.get(norm(name)) || (BANK.test(String(name || '')) ? { id: 'bank', name: String(name).trim(), kind: 'other' } : null);
 // the list the fill picks from, a line for each kind (phone and camera come from the phone itself)
 export const SCREEN_LIST = KINDS.map(k => [k, CATALOG.filter(a => a[2] === k && a[0] !== 'phone' && a[0] !== 'camera').map(a => a[1])]).filter(([, xs]) => xs.length).map(([k, xs]) => `${k}: ${xs.join(', ')}`).join('\n');
 // an app the catalog doesn't know: its kind from its name
