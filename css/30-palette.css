@@ -91,8 +91,8 @@ body:not(.na_darkui) .na_br_filters button.on, body:not(.na_darkui) .na_v2_chips
 body.na_darkui .na_br_filters button.on, body.na_darkui .na_v2_chips button.on { background: var(--na-fill); --c-bg: var(--na-fill); color: var(--na-onfill); --c-fg: var(--na-onfill); border-color: transparent; --c-bc: transparent; --c-bct: transparent; }
 body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on { background: #FFFFFF; --c-bg: #FFFFFF; }
 body.na_darkui .na_v2_tabs button.on, body.na_darkui .na_v2_seg button.on { background: var(--na-paper); --c-bg: var(--na-paper); }
-body:not(.na_darkui) .na_v2_tabs button, body:not(.na_darkui) .na_v2_seg button { color: var(--na-mute); --c-fg: var(--na-mute); }
-body.na_darkui .na_v2_tabs button, body.na_darkui .na_v2_seg button { color: var(--na-mute); --c-fg: var(--na-mute); }
+body:not(.na_darkui) .na_v2_tabs button, body:not(.na_darkui) .na_v2_seg button { --c-fg: var(--na-mute); }
+body.na_darkui .na_v2_tabs button, body.na_darkui .na_v2_seg button { --c-fg: var(--na-mute); }
 body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on { color: var(--na-accent-ink); --c-fg: var(--na-accent-ink); }
 body.na_darkui .na_v2_tabs button.on, body.na_darkui .na_v2_seg button.on { color: var(--na-accent-ink); --c-fg: var(--na-accent-ink); }
 /* text inputs inside the redesigned screens */

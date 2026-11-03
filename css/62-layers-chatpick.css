@@ -103,20 +103,20 @@ body.na_darkui .na_fp3 > .na_v2_card { box-shadow: inset 0 1px 0 rgba(255, 255, 
 .na_fp3_pick.u_long { color: var(--u-long); --c-fg: var(--u-long); } .na_fp3_pick.u_short { color: var(--u-short); --c-fg: var(--u-short); } .na_fp3_pick.u_line { color: var(--u-line); --c-fg: var(--u-line); }
 .na_fp3_pick.off { background: transparent; --c-bg: transparent; color: var(--na-dim); --c-fg: var(--na-dim); cursor: default; }
 .na_fp3_menu { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 0 14px 12px; padding: 4px; border-radius: 999px; background: var(--na-card2); }
-.na_fp3_menu button { height: 32px; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 999px; --c-r: 999px; background: transparent; --c-bg: transparent; color: var(--na-mute); --c-fg: var(--na-mute); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
+.na_fp3_menu button { height: 32px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; --c-bg: transparent; --c-fg: var(--na-mute); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
 .na_fp3_menu button small { font-size: 10px; font-weight: 500; opacity: 0.7; }
-.na_fp3_menu button[data-miss] { color: var(--na-dim); --c-fg: var(--na-dim); }
+.na_fp3_menu button[data-miss] { --c-fg: var(--na-dim); }
 body:not(.na_darkui) .na_fp3_menu button.on { background: #FFFFFF; --c-bg: #FFFFFF; color: var(--na-accent-ink); --c-fg: var(--na-accent-ink); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1); --c-sh: 0 1px 2px rgba(70, 52, 40, 0.1); }
 body.na_darkui .na_fp3_menu button.on { background: #414148; --c-bg: #414148; color: #F0CF8E; --c-fg: #F0CF8E; }
 .na_fp3_more { display: flex; margin-top: 10px; }
 .na_fp3_more:has(.na_fp_make[hidden]) { display: none; }
-.na_fp3_tool { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 999px; --c-r: 999px; background: var(--na-card2) !important; --c-bg: var(--na-card2) !important; color: var(--na-ink); --c-fg: var(--na-ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.na_fp3_tool { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; --c-bg: var(--na-card2) !important; --c-fg: var(--na-ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
 /* 섹션별 버전 › 여러 개 바꾸기: rows get a tick, a sheet at the bottom sets the picked ones at once */
 .na_fp3_fl { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; }
 .na_fp3 .na_fp3_fl .na_fp_filters { margin-top: 0; flex-wrap: nowrap; min-width: 0; }
 .na_fp3_allp input { position: absolute; opacity: 0; pointer-events: none; }
 .na_fp3_allck i { width: 9px; height: 2.5px; border-radius: 2px; background: var(--na-accent); }
-.na_fp3_multi { flex: none; font-size: 12.5px; font-weight: 700; color: var(--na-accent-ink); --c-fg: var(--na-accent-ink); }
+.na_fp3_multi { flex: none; font-size: 12.5px; font-weight: 700; --c-fg: var(--na-accent-ink); }
 .na_fp3_row.pickable { cursor: pointer; }
 .na_fp3_row.pickable .na_fp3_pick { pointer-events: none; }
 .na_fp3_row.picked { background: color-mix(in srgb, var(--na-accent) 7%, transparent); }
@@ -129,8 +129,8 @@ body.na_darkui .na_fp3_bulk { box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45); }
 .na_fp3_allp { display: inline-flex !important; align-items: center; gap: 8px; margin: 0; font-size: 13px; font-weight: 700; cursor: pointer; }
 .na_fp3_bh small { font-size: 12px; color: var(--na-dim); }
 .na_fp3_set { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.na_fp3_set button { height: 38px; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 999px; --c-r: 999px; background: var(--na-card2); --c-bg: var(--na-card2); color: var(--na-ink); --c-fg: var(--na-ink); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
-.na_fp3_set button:not(:disabled):hover { background: var(--na-accent); --c-bg: var(--na-accent); color: var(--na-onaccent, #fff); --c-fg: var(--na-onaccent, #fff); }
+.na_fp3_set button { height: 38px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; --c-bg: var(--na-card2); --c-fg: var(--na-ink); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.na_fp3_set button:not(:disabled):hover { --c-bg: var(--na-accent); --c-fg: var(--na-onaccent, #fff); }
 .na_fp3_set button:disabled { opacity: 0.45; cursor: default; }
 
 /* ============ 다른 채팅에서 가져오기 v3 (docs/mockups/ext-chatpick B): checked on open, archive chats first, the picked one

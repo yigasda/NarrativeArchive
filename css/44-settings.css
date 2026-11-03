@@ -228,13 +228,13 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 .na_cal_av_head { display: flex; align-items: center; gap: 8px; }
 .na_cal_av_head b { font-size: 1.02em; }
 .na_cal_av_head small { color: var(--na-dim); }
-.na_cal_av_add { width: 30px; height: 30px; margin: 0; padding: 0; border-radius: 9px; --c-r: 9px; border: 1px solid var(--na-line); --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); background: transparent; --c-bg: transparent; color: var(--av); --c-fg: var(--av); font-size: 1.2em; line-height: 1; cursor: pointer; }
+.na_cal_av_add { width: 30px; height: 30px; margin: 0; padding: 0; --c-r: 9px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-bg: transparent; --c-fg: var(--av); font-size: 1.2em; line-height: 1; cursor: pointer; }
 .na_cal_av_row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "dot name x" "dot sub x"; column-gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--na-line); }
 .na_cal_av_row:first-of-type { border-top: 0; }
 .na_cal_av_dot { grid-area: dot; color: var(--av); font-size: 1.1em; }
-.na_cal_av_row .na_cal_av_name { grid-area: name; margin: 0; padding: 2px 0; border: 0 !important; --c-bw: 0 !important; --c-bs: none !important; --c-bc: currentcolor !important; --c-bwt: 0 !important; --c-bst: none !important; --c-bct: currentcolor !important; background: transparent !important; --c-bg: transparent !important; font-weight: 700; min-height: 0; }
+.na_cal_av_row .na_cal_av_name { grid-area: name; margin: 0; padding: 2px 0; --c-bw: 0 !important; --c-bs: none !important; --c-bc: currentcolor !important; --c-bwt: 0 !important; --c-bst: none !important; --c-bct: currentcolor !important; --c-bg: transparent !important; font-weight: 700; min-height: 0; }
 .na_cal_av_row small { grid-area: sub; color: var(--na-dim); font-size: 0.82em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.na_cal_av_x { grid-area: x; width: auto; margin: 0; padding: 4px 6px; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; background: transparent; --c-bg: transparent; color: var(--na-dim); --c-fg: var(--na-dim); cursor: pointer; }
+.na_cal_av_x { grid-area: x; width: auto; margin: 0; padding: 4px 6px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: var(--na-dim); cursor: pointer; }
 .na_cal_av_new { display: flex; flex-wrap: wrap; gap: 6px; }
 .na_cal_av_new select { flex: 1 1 100%; margin: 0; }
 .na_cal_av_new input { flex: 1; min-width: 0; margin: 0; }
@@ -261,9 +261,9 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 .na_wd_foot .na_wd_bindchip { min-width: 0; flex: 0 1 auto; margin-right: auto; }
 .na_wd_foot .na_wd_bindchip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .na_wd_foot .na_spacer { flex: 1; }
-.na_wd_foot :is(.na_wd_lore, .na_wd_del) { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 34px; margin: 0; padding: 0 10px; border-radius: 10px; --c-r: 10px; border: 1px solid var(--sv-line, var(--na-line)); --c-bw: 1px; --c-bs: solid; --c-bc: var(--sv-line, var(--na-line)); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--sv-line, var(--na-line)); background: var(--sv-page, transparent); --c-bg: var(--sv-page, transparent); font: inherit; font-size: 1em; cursor: pointer; white-space: nowrap; }
-.na_wd_foot .na_wd_lore { color: var(--sv-val, var(--na-accent)); --c-fg: var(--sv-val, var(--na-accent)); }
-.na_wd_foot .na_wd_del { width: 34px; padding: 0; color: var(--na-bad); --c-fg: var(--na-bad); }
+.na_wd_foot :is(.na_wd_lore, .na_wd_del) { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 34px; margin: 0; padding: 0 10px; --c-r: 10px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--sv-line, var(--na-line)); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--sv-line, var(--na-line)); --c-bg: var(--sv-page, transparent); font: inherit; font-size: 1em; cursor: pointer; white-space: nowrap; }
+.na_wd_foot .na_wd_lore { --c-fg: var(--sv-val, var(--na-accent)); }
+.na_wd_foot .na_wd_del { width: 34px; padding: 0; --c-fg: var(--na-bad); }
 .na_wd_foot .na_wd_del:hover { text-decoration: none; filter: brightness(0.95); }
 /* 캐릭터 연동: the same words on and off, so on shows in colour (face in colour, accent text) and off stays grey */
 .na_wd_foot .na_wd_bindchip.on > span { color: var(--sv-val, var(--na-accent)); font-weight: 600; }

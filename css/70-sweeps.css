@@ -25,8 +25,8 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup button.na_cal3_day.
 .na_cal3_day i { display: flex; gap: 2px; height: 4px; }
 .na_cal3_day u { width: 4px; height: 4px; border-radius: 9px; background: var(--na-accent-fg, var(--na-accent)); }
 .na_cal3_day.on u { background: currentColor; }
-body:not(.na_darkui) .na_cal_item.na_cal3_hl { background: #F3E4D8; --c-bg: #F3E4D8; }
-body.na_darkui .na_cal_item.na_cal3_hl { background: #2E2E34; --c-bg: #2E2E34; }
+body:not(.na_darkui) .na_cal_item.na_cal3_hl { --c-bg: #F3E4D8; }
+body.na_darkui .na_cal_item.na_cal3_hl { --c-bg: #2E2E34; }
 .na_cal3_av.plain .na_cal3_avic { background: var(--na-card2) !important; color: var(--na-dim) !important; }
 .na_cal3_av.plain .na_cal3_avtx b { font-weight: 600; color: var(--na-mute); }
 /* 이탈 감지 (never checked) in the big window: the example on top, 최근 메시지 + 검사하기 at the bottom like the wizard's buttons */
