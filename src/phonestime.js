@@ -56,10 +56,9 @@ export function screenTimeScreen(p, now, i = '') {
     if (!v || !v.days.length) return wrap(`<div class="ax_card sc_empty">아직 스크린타임이 없어요. 건강 앱을 채우면 여기 모여요.</div>`);
     const days = v.days.slice(-7), d = i ? days.find(x => x.date === i) : null, sel = d ? days.indexOf(d) : -1;
     const total = d ? d.total : v.avg;
-    // the pill: change against last week, or against the average for a picked day (today is still counting)
-    const diff = d && v.avg !== null ? d.total - v.avg : null;
+    // the pill: change against last week; a picked day has none (today says it is still counting)
     const pill = d?.today ? `<span class="sc_pill g">지금까지</span>`
-        : d ? (diff !== null ? `<span class="sc_pill ${diff > 0 ? 'up' : 'dn'}">${diff > 0 ? '▲' : '▼'} ${durKo(Math.abs(diff))}</span><span class="sc_pl">평균보다</span>` : '')
+        : d ? ''
             : v.pct !== null ? `<span class="sc_pill ${v.pct > 0 ? 'up' : 'dn'}">${v.pct > 0 ? '▲' : '▼'} ${Math.abs(v.pct)}%</span><span class="sc_pl">지난주보다</span>` : '';
     const label = d ? (d.today ? '오늘 사용 시간' : `${fmtDate(p, d.date)} 사용 시간`) : '일평균 · 최근 7일';
     // the week's (or the day's) three biggest kinds, in their colours
