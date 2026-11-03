@@ -4,20 +4,20 @@
 /* ---- the window: a forced theme colour loses inside our windows; dark windows get the charcoal tokens */
 body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) { background: #F0E4DB !important; background-image: none !important; color: #463428 !important; }
 body.na_darkui dialog.popup:has(.na_popup, #na_settings) { background: #17171A !important; background-image: none !important; color: #ECEAE6 !important; }
-body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #F7EEE7 !important; background-image: none !important; border: 1px solid #E5D5C9 !important; color: #463428 !important; box-shadow: none !important; }
-body.na_darkui dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #232328 !important; background-image: none !important; border: 1px solid #45454D !important; color: #ECEAE6 !important; box-shadow: none !important; }
+body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #F7EEE7 !important; background-image: none !important; border: 1px solid #E5D5C9 !important; color: #463428 !important; --axfg: #463428 !important; box-shadow: none !important}
+body.na_darkui dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #232328 !important; background-image: none !important; border: 1px solid #45454D !important; color: #ECEAE6 !important; --axfg: #ECEAE6 !important; box-shadow: none !important}
 body.na_darkui dialog.popup:has(.na_popup) :is(.na_popup, .na_popup .na_v2), body.na_darkui dialog.popup:has(.na_confirm) .na_confirm {
     --na-card: #232328; --na-card2: #2E2E34; --na-paper: #232328; --na-soft: #2E2E34; --na-softer: #2B2B31;
     --na-line: #3A3A41; --na-line2: #2E2E34; --na-fill: #4A4A52;
 }
 body.na_darkui dialog.popup:has(.na_popup):not(#na_x) .popup-controls .menu_button { background: #232328 !important; border-color: #3A3A41 !important; }
 /* the popup's own input row (이름 짓기) */
-body:not(.na_darkui) dialog.popup:has(.na_popup) .popup-input { background-color: #F2E9E2 !important; border-color: #E5D5C9 !important; color: #463428 !important; }
-body.na_darkui dialog.popup:has(.na_popup) .popup-input { background-color: #2A2A30 !important; border-color: #45454D !important; color: #ECEAE6 !important; }
+body:not(.na_darkui) dialog.popup:has(.na_popup) .popup-input { background-color: #F2E9E2 !important; border-color: #E5D5C9 !important; color: #463428 !important; --axfg: #463428 !important}
+body.na_darkui dialog.popup:has(.na_popup) .popup-input { background-color: #2A2A30 !important; border-color: #45454D !important; color: #ECEAE6 !important; --axfg: #ECEAE6 !important}
 
 /* ---- fields: one fill, no edge, rounded corners; fields drawn on a card or see-through stay that way */
-body:not(.na_darkui) dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #F2E9E2 !important; --c-bg: #F2E9E2; background-image: none !important; border-color: #E5D5C9 !important; --c-bc: #E5D5C9; --c-bct: #E5D5C9; color: #463428 !important; --c-fg: #463428; }
-body.na_darkui dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #1D1D21 !important; --c-bg: #1D1D21; background-image: none !important; border-color: #3A3A41 !important; --c-bc: #3A3A41; --c-bct: #3A3A41; color: #ECEAE6 !important; --c-fg: #ECEAE6; }
+body:not(.na_darkui) dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #F2E9E2 !important; --c-bg: #F2E9E2; background-image: none !important; border-color: #E5D5C9 !important; --c-bc: #E5D5C9; --c-bct: #E5D5C9; color: #463428 !important; --axfg: #463428 !important; --c-fg: #463428}
+body.na_darkui dialog.popup:has(.na_popup) .na_popup .text_pole { background-color: #1D1D21 !important; --c-bg: #1D1D21; background-image: none !important; border-color: #3A3A41 !important; --c-bc: #3A3A41; --c-bct: #3A3A41; color: #ECEAE6 !important; --axfg: #ECEAE6 !important; --c-fg: #ECEAE6}
 /* inputs the extension draws on a card (세계관 칸) or see-through (inside a pill, a stepper, a dashed name line):
    stronger than the fill above, so a forced theme colour doesn't box them in */
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.na_wd_slot .text_pole) { background-color: var(--na-card2) !important; --c-bg: var(--na-card2); background-image: none !important; border-color: transparent !important; --c-bc: transparent; --c-bct: transparent; }
@@ -74,13 +74,12 @@ body:is(.na_darkui, :not(.na_darkui)) :is(
     dialog.popup:not(:has(.na_phone)) .na_popup :is(button, label, textarea, select, input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"])),
     #na_settings :is(button, label, textarea, select, input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]))
 ):not(#na_x):not(#na_y) {
-    background: var(--c-bg, transparent) !important; color: var(--c-fg, inherit) !important;
+    background: var(--c-bg, transparent) !important; color: var(--c-fg, inherit) !important; --axfg: var(--c-fg, inherit) !important;
     border-width: var(--c-bw, 0) !important; border-style: var(--c-bs, none) !important; border-color: var(--c-bc, currentcolor) !important;
     border-top-width: var(--c-bwt, var(--c-bw, 0)) !important; border-top-style: var(--c-bst, var(--c-bs, none)) !important; border-top-color: var(--c-bct, var(--c-bc, currentcolor)) !important;
     border-bottom-width: var(--c-bwb, var(--c-bw, 0)) !important; border-bottom-style: var(--c-bsb, var(--c-bs, none)) !important; border-bottom-color: var(--c-bcb, var(--c-bc, currentcolor)) !important;
-    border-radius: var(--c-r, 0) !important; box-shadow: var(--c-sh, none) !important;
-    font-family: var(--c-ff, inherit) !important; letter-spacing: var(--c-ls, inherit) !important; text-transform: var(--c-tt, inherit) !important;
-}
+    border-radius: var(--c-r, 0) !important; --axr: var(--c-r, 0) !important; box-shadow: var(--c-sh, none) !important;
+    font-family: var(--c-ff, inherit) !important; --axff: var(--c-ff, inherit) !important; letter-spacing: var(--c-ls, inherit) !important; --axls: var(--c-ls, inherit) !important; text-transform: var(--c-tt, inherit) !important; --axtt: var(--c-tt, inherit) !important}
 
 /* SillyTavern's own field look (1px edge in its border colour, 5px corners), at the lowest weight: any rule of ours wins over it */
 :where(dialog.popup .na_popup, #na_settings) :where(textarea, .text_pole) { --c-bw: 1px; --c-bs: solid; --c-bc: var(--SmartThemeBorderColor); --c-r: 5px; }
@@ -112,5 +111,5 @@ body.na_darkui .na_next_card.warn { border-color: #3A3A41 !important; }
 body.na_darkui :is(.na_whole, .na_fp3_row.picked, .na_cp3_row.on, .na_ck.part) { background: #2E2E34 !important; --c-bg: #2E2E34; }
 body.na_darkui .na_sp_s:hover, body.na_darkui .na_cc_row:focus-within { background: #2B2B31 !important; --c-bg: #2B2B31; }
 body.na_darkui :is(.na_wd_icon, .na_wd_slot_ico, .na_wd.on .na_wd_icon) { background: #2E2E34 !important; }
-body.na_darkui .na_wd.on .na_wd_icon, body.na_darkui .na_wd_slot_ico { color: var(--na-accent-fg) !important; }
-body.na_darkui .na_pv2_code { background: #232328 !important; color: #ECEAE6 !important; }
+body.na_darkui .na_wd.on .na_wd_icon, body.na_darkui .na_wd_slot_ico { color: var(--na-accent-fg) !important; --axfg: var(--na-accent-fg) !important}
+body.na_darkui .na_pv2_code { background: #232328 !important; color: #ECEAE6 !important; --axfg: #ECEAE6 !important}
