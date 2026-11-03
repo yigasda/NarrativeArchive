@@ -542,20 +542,24 @@ export function compareScreen(p, now) {
     const done = wk.filter(x => !Number.isFinite(x.upTo));
     const st = avg(done.map(x => x.steps)), sl = avg(wk.map(sleepMin)), bed = avg(wk.map(x => lateMin(x.sleep))), runs = wk.filter(x => x.workout).length, last = [...lf.health.days].reverse().find(x => x.workout);
     const us = usualSleep(u), grey = ['#8a929d', '#f1f2f4'];
-    const row = (dir, [color, bg], title, sub) => rows.push(`<div class="lf_hc lf_tr"><span style="background: ${bg}">${ax(dir, 18, color, 2.4)}</span><div><b>${title}</b><small>${sub}</small></div></div>`);
-    // how far from usual: about the same (grey, =), a little (grey, the arrow and how much), clearly (the app's colour)
-    const grade = (df, near, far, colors, words, sub, more = '') => {
+    // a big change keeps the same soft icon as a small one; its title takes the app colour (a full colour circle looked loud)
+    const row = (dir, [color, bg], title, sub, strong = false) => rows.push(`<div class="lf_hc lf_tr"><span style="background: ${bg}">${ax(dir, 18, color, 2.4)}</span><div><b${strong ? ` style="color: color-mix(in srgb, ${color} 75%, #000)"` : ''}>${title}</b><small>${sub}</small></div></div>`);
+    // how far from usual: a little (the app's colour on its pale ground), clearly (white on the app's colour); about the same
+    // goes into one line at the end ("심박 · 커피는 평소와 비슷해요"), so what changed comes first
+    const same = [];
+    const grade = (df, near, far, colors, words, name, sub, val) => {
         const k = Math.abs(df) <= near ? 0 : Math.abs(df) <= far ? 1 : 2, up = df > 0;
-        row(k ? (up ? 'up' : 'down') : 'eq', k === 2 ? colors : grey, k ? `${words[0]}${k === 1 ? '조금 ' : ''}${up ? words[1] : words[2]}` : words[3], `${sub}${k && more ? ` · ${more}` : ''}`);
+        if (!k) return same.push([name, val, sub]);
+        row(up ? 'up' : 'down', colors, `${words[0]}${k === 1 ? '조금 ' : ''}${up ? words[1] : words[2]}`, sub, k === 2);
     };
-    const pct = r => `${r > 1 ? '+' : '−'}${Math.round(Math.abs(r - 1) * 100)}%`;
-    if (st !== null && u.steps) { const r = st / u.steps; grade(r - 1, 0.03, 0.15, [HC.steps, HB.steps], ['걸음이 평소보다 ', '많아요', '적어요', '걸음은 평소와 비슷해요'], `${n0(Math.round(st))} · 평소 ${n0(u.steps)}`, pct(r)); }
-    if (sl !== null && us) { const df = sl - us; grade(df, 10, 30, [HC.sleep, HB.sleep], ['수면이 평소보다 ', '길어요', '짧아요', '수면은 평소와 비슷해요'], `${dur(Math.round(sl))} · 평소 ${dur(us)}`, `${df > 0 ? '+' : '−'}${dur(Math.round(Math.abs(df)))}`); }
+    if (st !== null && u.steps) { const r = st / u.steps; grade(r - 1, 0.03, 0.15, [HC.steps, HB.steps], ['걸음이 평소보다 ', '많아요', '적어요'], '걸음', `${n0(Math.round(st))} · 평소 ${n0(u.steps)}`, n0(Math.round(st))); }
+    if (sl !== null && us) { const df = sl - us; grade(df, 10, 30, [HC.sleep, HB.sleep], ['수면이 평소보다 ', '길어요', '짧아요'], '수면', `${dur(Math.round(sl))} · 평소 ${dur(us)}`, dur(Math.round(sl))); }
     if (bed !== null && u.sleep) { const df = bed - lateMin(u.sleep); if (Math.abs(df) > 40) row(df > 0 ? 'down' : 'up', [HC.sleep, HB.sleep], df > 0 ? '잠드는 시각이 늦어요' : '잠드는 시각이 빨라요', `${clockOf(p, Math.round(bed))} · 평소 ${clockOf(p, u.sleep)}`); }
-    if (u.workouts) row(runs ? 'eq' : 'down', runs ? grey : [HC.run, HB.run], runs ? `운동은 이번 주 ${runs}회예요` : '운동이 끊겼어요', `이번 주 ${runs}회 · 평소 주 ${u.workouts}회${last ? ` · 마지막 ${esc(fmtDate(p, last.date, true))}` : ''}`);
+    if (u.workouts) { const sub = `이번 주 ${runs}회 · 평소 주 ${u.workouts}회${last ? ` · 마지막 ${esc(fmtDate(p, last.date, true))}` : ''}`; if (!runs) row('down', [HC.run, HB.run], '운동이 끊겼어요', sub, true); else grade(runs - u.workouts, 0.5, 2, [HC.run, HB.run], ['운동이 평소보다 ', '많아요', '적어요'], '운동', sub, `주 ${runs}회`); }
     const rest = avg(wk.map(x => x.hr?.[0]));
-    if (rest !== null && u.rest) grade(rest - u.rest, 2, 6, [HC.hr, HB.hr], ['안정 시 심박이 평소보다 ', '높아요', '낮아요', '심박수는 평소와 비슷해요'], `${Math.round(rest)} · 평소 ${u.rest}`);
-    if (u.coffee) { const c = avg(done.map(x => coffeeDay(p, x, u).length)); if (c !== null) grade(c - u.coffee, 0.2, 0.7, [HC.caf, HB.caf], ['커피를 평소보다 ', '많이 마셔요', '덜 마셔요', '커피는 평소와 비슷해요'], `하루 ${comma(c.toFixed(1))}잔 · 평소 ${u.coffee}잔`); }
+    if (rest !== null && u.rest) grade(rest - u.rest, 2, 6, [HC.hr, HB.hr], ['안정 시 심박이 평소보다 ', '높아요', '낮아요'], '심박', `${Math.round(rest)} · 평소 ${u.rest}`, String(Math.round(rest)));
+    if (u.coffee) { const c = avg(done.map(x => coffeeDay(p, x, u).length)); if (c !== null) grade(c - u.coffee, 0.2, 0.7, [HC.caf, HB.caf], ['커피를 평소보다 ', '많이 마셔요', '덜 마셔요'], '커피', `하루 ${comma(c.toFixed(1))}잔 · 평소 ${u.coffee}잔`, `하루 ${comma(c.toFixed(1))}잔`); }
+    if (same.length) { const w = same.at(-1)[0], jong = (w.charCodeAt(w.length - 1) - 0xac00) % 28 > 0; row('eq', grey, `${same.map(x => x[0]).join(' · ')}${jong ? '은' : '는'} 평소와 비슷해요`, same.length === 1 ? same[0][2] : same.map(([n, v]) => `${n} ${v}`).join(' · ')); }
     // the nights the phone kept them up (how much they look at it lives in screen time itself): a day that stands out, in screen time's sky
     rows = groups.odd;
     const SKY = ['#3f8fd8', '#e3f1fd'];

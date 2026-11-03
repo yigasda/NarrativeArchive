@@ -47,9 +47,6 @@ HEALTH
 - A day the story shows, or its night, follows it: "from": "story" and its "ev". A long night out means short sleep, a day on foot means many steps.
 - Any other day: write it freely from the character, the archive and their life, "from": "pattern". It still follows that day's events and tickets in PHONE NOW.
 - "usual" is their normal week. Its water, coffee, weight and height fit the character.
-- Screen time shows who they really are, habits they'd never admit (a game they can't put down, texting all night, barely touching the phone): from their character, not their polite profile. Each day's "screen" follows what happened that day.
-- Their apps, named exactly as here (another real app when none fits them):
-${SCREEN_LIST}
 - Numbers only: no diagnosis, no mood, no reason.
 
 FILES
@@ -81,9 +78,8 @@ JSON (one object, nothing before or after it)
              "running": { "label", "ko", "sec", "left": seconds } or null },
   "health": { "usual": { "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": per week, "rest": resting heart rate,
                          "water": liters a day, "coffee": cups of coffee a day (0 if none), "coffeeKind": what they usually drink, like "Cappuccino", "coffeeKo",
-                         "weight": kg, "height": cm,
-                         "screen": { "apps": [{ "app", "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "other", "min": minutes a day }], "pickups": a day, "late": "HH:MM" they usually last look at it } },
-              "days": [{ "date": "MM-DD", "steps", "km", "floors", "workout": { "kind", "time": "HH:MM", "min", "km" } or null, "hr": [low, high], "coffee": cups, "coffeeKind", "water": litres, "weight": kg only when they weighed, "screen": { "apps": { app name: minutes }, "pickups", "late": "HH:MM" },
+                         "weight": kg, "height": cm },
+              "days": [{ "date": "MM-DD", "steps", "km", "floors", "workout": { "kind", "time": "HH:MM", "min", "km" } or null, "hr": [low, high], "coffee": cups, "coffeeKind", "water": litres, "weight": kg only when they weighed,
                          "night": { "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "woke": times awake } or null, "from": "story" | "pattern", "ev" }] },
   "files": { "folders": [{ "name", "ko", "count", "fav": true or false }],
              "items": [{ "name", "kind": "pdf" | "image" | "video" | "audio" | "zip" | "doc" | "sheet" | "slides" | "other",
@@ -390,7 +386,7 @@ const later = (t, now) => { const g = dayGap(String(now).slice(0, 5), String(t).
 export const fillLife = (m, p) => exclusive('fill', async () => {
     const now = weatherNow(), days = storyDays(m, p);
     const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(days),
-        now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps });
+        now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.life });
     const out = await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' });
     const life = parseLife(jsonOf(out), now, days.at(-1)?.day || '');
     // a booking the wallet holds is drawn from it: its file needs no line of its own
@@ -403,10 +399,14 @@ export const fillLife = (m, p) => exclusive('fill', async () => {
     if (p.sync?.marks) p.sync.marks.life = markNow();
     ensureIds(p);
     await saveMeta();
+    // the screen time is its own request right after (its long app list stays out of this one); one that failed leaves
+    // 설정 › 스크린타임 with its 채우기 button
+    try { await fillScreen(m, p); } catch (err) { console.warn('[narrative-archive] screen time', err); }
     return p.life;
 });
-// ---- 스크린타임만 채우기: a phone filled before the screen time was there (its health days stay as they are). Their usual
-// use and each recent day's, from the character and the story; one short request, once
+// ---- 스크린타임 채우기: right after the life fill, or on its own for a phone filled before it (its health days stay as
+// they are). Their usual use and each recent day's, from the character and the story; its own request, so the long app
+// list never weighs on the life fill
 export const AI_SYS_SCREEN = `GOAL
 Write the screen time on a character's phone in a long role-play: the apps they use and for how long, the way the phone's Screen Time shows it.
 
@@ -417,34 +417,38 @@ YOU GET
 
 SCREEN TIME
 - It shows who they really are, habits they'd never admit (a game they can't put down, texting all night, barely touching the phone): from their character, not their polite profile.
-- "usual" is their normal day, 4 to 10 apps.
+- "usual" is their normal day, 4 to 10 apps, and 4 to 8 they open now and then (a bank, a shop, a game they go back to, an app they'd rather nobody saw).
 - Each of DAYS follows what happened that day and how they felt (a fight: hours of texting late into the night; a day out with friends: barely any), and how they slept.
 - Their apps, named exactly as here (another real app when none fits them):
 ${SCREEN_LIST}
 - Numbers only: no diagnosis, no mood, no reason.
 
 JSON (one object, nothing before or after it)
-{ "usual": { "apps": [{ "app", "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "other", "min": minutes a day }], "pickups": a day, "late": "HH:MM" they usually last look at it },
+{ "usual": { "apps": [{ "app", "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "other", "min": minutes a day }], "sometimes": [the same, apps they open now and then, "min" on a day they do], "pickups": a day, "late": "HH:MM" they usually last look at it },
   "days": [{ "date": "MM-DD" as in DAYS, "apps": { app name: minutes }, "pickups", "late": "HH:MM" }] }
 Numbers are plain JSON numbers.`;
-export const fillScreen = (m, p) => exclusive('fill', async () => {
+// again (다시 만들기 › 스크린타임): their usual and the last week made anew, except a day a reflection wrote (its own row,
+// "sync:…": the story's day as told stays). Nothing is cleared before the answer is in, so a failed call loses nothing
+export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', async () => {
     const h = p.life?.health;
     if (!h) throw new Error('건강 앱을 먼저 채워 주세요');
     // the last week before today (today is counted as it goes, from their usual)
-    const today = String(storyNow(p) || p.now || '').slice(0, 5);
-    const days = (h.days || []).filter(d => d.date && d.date !== today && !d.screen && (!today || dayGap(d.date, today) > 0)).sort((a, b) => dayGap(b.date, a.date)).slice(-7);
+    const today = String(storyNow(p) || p.now || '').slice(0, 5), told = d => String(d.id || '').startsWith('sync:') && !!d.screen;
+    const days = (h.days || []).filter(d => d.date && d.date !== today && (again ? !told(d) : !d.screen) && (!today || dayGap(d.date, today) > 0 && dayGap(d.date, today) <= 7)).sort((a, b) => dayGap(b.date, a.date)).slice(-7);
     const input = await sideRequest(m, p.owner, [`[DAYS]\n${JSON.stringify(days.map(d => ({ date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, ...(d.ev ? { ev: d.ev } : {}) })))}`,
         p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps });
     const out = await askDraft(input, { force: true, system: AI_SYS_SCREEN, maxTokens: 6000, effort: 'low' });
     const raw = jsonOf(out), usual = usualScreenOf(raw?.usual);
     let n = 0;
-    // a phone the reflection already gave a usual keeps it; a day already told keeps its own
-    if (usual && !h.usual?.screen) { (h.usual ||= {}).screen = usual; n++; }
+    // a phone the reflection already gave a usual keeps it (unless made again); a day already told keeps its own
+    if (usual && (again || !h.usual?.screen)) { (h.usual ||= {}).screen = usual; n++; }
     for (const x of arr(raw?.days)) {
         const d = days.find(y => y.date === String(x?.date || '').slice(0, 5)), sc = screenOf(x);
-        if (d && sc && !d.screen) { d.screen = sc; n++; }
+        if (d && sc && (again || !d.screen)) { d.screen = sc; n++; }
     }
     if (!n) throw new Error('모델 답에서 스크린타임을 찾지 못했어요');
+    // made again: an older week's screen the fill wrote goes too (the code works those days out from the new usual)
+    if (again) for (const d of h.days || []) if (d.screen && !told(d) && !days.includes(d)) delete d.screen;
     await saveMeta();
     return n;
 });

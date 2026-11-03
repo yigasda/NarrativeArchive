@@ -126,3 +126,30 @@ test('스크린타임만 채우기: the usual and the last days without one; hea
     globalThis.__menu.answer = '{}';
     await assert.rejects(life.fillScreen({}, p), /스크린타임/);
 });
+
+test('스크린타임 다시 만들기: the usual and the week anew, a day a reflection wrote kept', async () => {
+    const p = { owner: 'Ren', country: 'DE', now: '10-26 12:00', life: { health: { usual: { screen: { apps: [{ app: 'Signal', kind: 'chat', min: 60 }] } }, days: [
+        { id: 'h1', date: '10-10', sleep: '23:00', wake: '07:00', screen: { apps: { Signal: 50 } } },
+        { id: 'h2', date: '10-23', sleep: '23:00', wake: '07:00', screen: { apps: { Signal: 55 } } },
+        { id: 'sync:fight:h0', date: '10-24', sleep: '03:00', wake: '07:00', ev: 'fight', screen: { apps: { Signal: 240 }, late: '02:55' } },
+        { id: 'h4', date: '10-25', sleep: '23:00', wake: '07:00' }] } } };
+    globalThis.__menu.answer = JSON.stringify({ usual: { apps: [{ app: 'TikTok', kind: 'social', min: 90 }] }, days: [{ date: '10-23', apps: { TikTok: 80 } }, { date: '10-24', apps: { TikTok: 1 } }, { date: '10-25', apps: { TikTok: 70 } }] });
+    await life.fillScreen({}, p, { again: true });
+    const h = p.life.health, by = Object.fromEntries(h.days.map(d => [d.date, d.screen || null]));
+    assert.deepEqual(h.usual.screen.apps.map(a => a.app), ['TikTok']);
+    assert.deepEqual(by['10-23'], { apps: { TikTok: 80 } });
+    assert.deepEqual(by['10-24'], { apps: { Signal: 240 }, late: '02:55' });
+    assert.deepEqual(by['10-25'], { apps: { TikTok: 70 } });
+    assert.ok(!globalThis.__menu.input.includes('"10-24"'));
+    // the week before the asked days: written by the fill, worked out from the new usual now
+    assert.equal(by['10-10'], null);
+    // a failed call changes nothing
+    globalThis.__menu.answer = '{}';
+    await assert.rejects(life.fillScreen({}, p, { again: true }));
+    assert.deepEqual(h.days.find(d => d.date === '10-25').screen, { apps: { TikTok: 70 } });
+});
+
+test('생활 채우기 asks no screen time; the screen time fill follows on its own request', async () => {
+    assert.ok(!life.AI_SYS_LIFE.includes('"screen"') && !life.AI_SYS_LIFE.includes('Brawl Stars'));
+    assert.ok(life.AI_SYS_SCREEN.includes('Google Maps') && life.AI_SYS_SCREEN.includes('4 to 8'));
+});
