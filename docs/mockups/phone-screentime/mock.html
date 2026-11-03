@@ -1,0 +1,158 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>스크린타임 A 색 시안</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#d9d6d2;font-family:-apple-system,'SF Pro Text','Noto Sans KR',sans-serif;color:#15181d;padding:28px;-webkit-font-smoothing:antialiased}
+.row{display:flex;gap:28px;align-items:flex-start;margin-bottom:44px}
+.lab{font:700 22px 'Noto Sans KR',sans-serif;margin:0 0 14px 4px;color:#3a2f28}
+.lab small{font-weight:500;font-size:15px;color:#6b5a50;margin-left:10px}
+.wrap{position:relative;padding-top:30px}
+.cap{position:absolute;top:4px;left:8px;font:600 13px 'Noto Sans KR',sans-serif;color:#6b5a50}
+.ph{width:390px;height:844px;border-radius:44px;border:9px solid #16130f;background:#f2f3f5;overflow:hidden;position:relative;flex:none}
+.bar{height:46px;display:flex;justify-content:space-between;align-items:center;padding:0 28px 0 34px;font:600 15px 'Inter',sans-serif}
+.top{height:46px;padding:0 14px;display:flex;align-items:center}
+.cb{width:36px;height:36px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.05),0 4px 12px rgba(22,27,34,.08);display:grid;place-items:center}
+.h1{font:700 27px 'Noto Sans KR',sans-serif;padding:6px 18px 12px;letter-spacing:-.01em}
+.scr{height:690px;overflow:hidden}
+.card{background:#fff;margin:0 14px 12px;border-radius:22px;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05)}
+.sec{font:600 12.5px 'Noto Sans KR',sans-serif;color:#6e7480;padding:6px 30px 7px}
+.num{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums}
+.ind{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:132px;height:5px;border-radius:9px;background:#15181d}
+.lbl{font-size:12px;color:#7b818c}
+.big{font:600 36px 'Inter',sans-serif;letter-spacing:-.02em;line-height:1.1}
+.big u{text-decoration:none;font:600 21px 'Noto Sans KR',sans-serif;margin:0 5px 0 2px;letter-spacing:0}
+.big u:last-child{margin-right:0}
+.rw{display:flex;align-items:center;gap:12px;padding:11px 16px;position:relative}
+.rw+.rw::before{content:'';position:absolute;top:0;left:60px;right:0;height:1px;background:#eef0f3}
+.ic{width:32px;height:32px;border-radius:11px;display:grid;place-items:center;flex:none}
+.tx{flex:1;min-width:0}
+.tx b{display:block;font:500 14.5px 'Inter','Noto Sans KR',sans-serif}
+.tx span{display:block;font-size:12px;color:#7b818c;margin-top:1px}
+.v{font:500 14px 'Inter','Noto Sans KR',sans-serif;color:#4d535d;white-space:nowrap}
+.mini{height:5px;border-radius:5px;margin-top:7px;overflow:hidden;background:#f0f1f4}
+.mini i{display:block;height:100%;border-radius:5px}
+.pill{display:inline-flex;align-items:center;gap:3px;padding:3px 8px 3px 6px;border-radius:999px;font:600 12px 'Inter','Noto Sans KR',sans-serif}
+.lgd{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding-top:12px;margin-top:12px;border-top:1px solid #eef0f3}
+.lgd div{font-size:11.5px;font-weight:600}
+.lgd b{display:block;font:500 13px 'Inter','Noto Sans KR',sans-serif;color:#15181d;margin-top:2px}
+.hd{display:flex;align-items:baseline;justify-content:space-between;padding:14px 16px 0}
+.hd b{font:600 15px 'Noto Sans KR',sans-serif}
+.note+.note{border-top:none!important;padding-top:0!important}.note{display:flex;gap:8px;align-items:center;font-size:12.5px;color:#4d535d;padding:11px 16px 13px;border-top:1px solid #eef0f3}
+</style></head><body><div id="out"></div>
+<script src="icons.js"></script><script>
+// ---- sample data (Mara, DE, today 25.10. 17:42)
+const KIND_KO={chat:'메신저',social:'소셜',game:'게임',video:'동영상',music:'음악',work:'업무',reading:'읽기',shopping:'쇼핑',other:'기타'};
+const APP={WhatsApp:'chat',Instagram:'social',YouTube:'video','Brawl Stars':'game',Spotify:'music',Gmail:'work',Kindle:'reading',Zalando:'shopping','전화':'other','DB Navigator':'other'};
+const base={WhatsApp:62,Instagram:78,YouTube:52,'Brawl Stars':24,Spotify:34,Gmail:18,Kindle:14,Zalando:9,'DB Navigator':6};
+const dates=['10-19','10-20','10-21','10-22','10-23','10-24','10-25'];
+const f=[[.9,1.1,.8,1.4,1,.9,1.1,.5,1],[1,1,1,.6,1,1.4,.7,1,1.2],[1.2,.8,1.3,1,.8,1,1,2,1],[1.1,1.3,1.2,1.5,1.2,.4,.4,1,.6],[1.3,1.4,1.5,1.6,1,.3,1.2,.4,0],[.9,1,1,1,1,1,1.6,1,1],[.55,.6,.4,.3,.6,.2,0,.8,0]];
+const days=dates.map((d,i)=>{const apps=Object.entries(base).map(([a,m],j)=>[a,Math.round(m*f[i][j])]).filter(x=>x[1]>0);if(i===3)apps.push(['전화',23]);apps.sort((a,b)=>b[1]-a[1]);
+ const byKind={};for(const k in KIND_KO)byKind[k]=0;for(const[a,m]of apps)byKind[APP[a]]+=m;
+ return{date:d,total:apps.reduce((n,x)=>n+x[1],0),byKind,apps,pickups:[74,81,69,96,112,78,41][i],late:['23:48','00:12','23:30','01:40','03:05','00:35',''][i],today:i===6}});
+const done=days.slice(0,6),avg=Math.round(done.reduce((n,d)=>n+d.total,0)/6),pct=18,pavg=Math.round(done.reduce((n,d)=>n+d.pickups,0)/6);
+const tot={};for(const d of done)for(const[a,m]of d.apps)tot[a]=(tot[a]||0)+m;
+const TOPS=Object.entries(tot).sort((a,b)=>b[1]-a[1]).map(([app,m])=>({app,kind:APP[app],avg:Math.round(m/6)}));
+const wk={};for(const k in KIND_KO)wk[k]=Math.round(done.reduce((n,d)=>n+d.byKind[k],0)/6);
+const top3=Object.entries(wk).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]); // the week's three biggest kinds get colours; the rest is 기타
+const dur=n=>`${Math.floor(n/60)?`${Math.floor(n/60)}시간 `:''}${n%60}분`;
+const durH=n=>`${Math.floor(n/60)?`<span class="num">${Math.floor(n/60)}</span><u>시간</u>`:''}<span class="num">${n%60}</span><u>분</u>`;
+const dlab=d=>`${d.date.slice(3)}.${d.date.slice(0,2)}.`;
+const dnum=d=>d.today?'오늘':String(Number(d.date.slice(3)));
+const max=Math.max(...days.map(d=>d.total));
+const group=bk=>{const g={};for(const k of top3)g[k]=bk[k]||0;g.rest=Object.entries(bk).filter(([k])=>!top3.includes(k)).reduce((n,[,v])=>n+v,0);return g};
+// icons
+const KI={chat:'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z',social:'M12 20.5s-7.8-4.7-9.7-9.5C1 7.6 3.2 4.5 6.6 4.5c2.2 0 3.8 1.2 5.4 3.1 1.6-1.9 3.2-3.1 5.4-3.1 3.4 0 5.6 3.1 4.3 6.5-1.9 4.8-9.7 9.5-9.7 9.5z',
+ video:'M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM10 9.5l4.5 2.5-4.5 2.5z',game:'M7 8h10a4 4 0 0 1 4 4v1a3 3 0 0 1-5.4 1.8L14.5 14h-5l-1.1 1.8A3 3 0 0 1 3 13v-1a4 4 0 0 1 4-4zM8 10.5v3M6.5 12h3M15.5 11h.01M17.5 13h.01',
+ music:'M9 18V6l11-2v12M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM20 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',work:'M4 8h16v11H4zM9 8V5h6v3M4 13h16',reading:'M3 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H3zM21 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7z',
+ shopping:'M5 8h14l-1 12H6zM9 8a3 3 0 0 1 6 0',other:'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z'};
+const KT={chat:['#e2e9f5','#2c4a80'],social:['#f7e3d7','#a65a4e'],video:['#f3dcd9','#a14a42'],game:['#dcefdf','#3f7d50'],music:['#f6edcf','#7f6a22'],work:['#e6e8ec','#454d5a'],reading:['#f2e7d6','#8a5a2e'],shopping:['#d9efec','#2f7d74'],other:['#eceef1','#5c626c']};
+const line=(d,s=18,c='currentColor',w=1.9)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+const appIc=a=>{const hit=ICONS.find(x=>x[0]===a);if(hit)return`<svg width="32" height="32" viewBox="0 0 60 60" style="border-radius:9px;flex:none;box-shadow:0 0 0 .5px rgba(0,0,0,.08)">${hit[2]}</svg>`;const k=APP[a];return`<span class="ic" style="background:${KT[k][0]}">${line(KI[k],18,KT[k][1])}</span>`};
+const sbar=`<svg width="70" height="13" viewBox="0 0 70 13"><g fill="#15181d"><rect x="0" y="8" width="3.2" height="4" rx="1"/><rect x="4.8" y="6" width="3.2" height="6" rx="1"/><rect x="9.6" y="3.5" width="3.2" height="8.5" rx="1"/><rect x="14.4" y="1" width="3.2" height="11" rx="1"/></g><path d="M25 5.2a9 9 0 0 1 12 0M27.4 7.8a5.4 5.4 0 0 1 7.2 0M31 11.2l.01 0" fill="none" stroke="#15181d" stroke-width="1.9" stroke-linecap="round"/><rect x="44" y="1.5" width="22" height="10" rx="3" fill="none" stroke="#15181d" stroke-opacity=".45"/><rect x="46" y="3.5" width="16" height="6" rx="1.6" fill="#15181d"/><rect x="67.3" y="4.8" width="1.8" height="3.6" rx=".9" fill="#15181d" fill-opacity=".45"/></svg>`;
+const frame=(cap,body,dy=0)=>`<div class="wrap"><span class="cap">${cap}</span><div class="ph"><div class="bar"><span>17:42</span>${sbar}</div><div class="top"><span class="cb"><svg width="10" height="16" viewBox="0 0 10 16"><path d="M8 2L2 8l6 6" fill="none" stroke="#15181d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div><div class="h1">스크린타임</div><div class="scr"><div style="transform:translateY(${-dy}px)">${body}</div></div><i class="ind"></i></div></div>`;
+const topPath=(x,y,w,h,r)=>{r=Math.min(r,h,w/2);return`M${x},${y+h}V${y+r}Q${x},${y} ${x+r},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+h}Z`};
+
+// ---- the chart: one function, colour scheme S decides the look
+function chart(S,sel){
+ const W=326,H=150,AX=30,n=7,gap=16,bw=(W-AX-gap*(n-1))/n,topv=Math.ceil(max/120)*120,sc=H/topv;let s='';
+ for(let t=0;t<=topv;t+=120){const y=H-t*sc;s+=`<line x1="0" x2="${W-AX+4}" y1="${y}" y2="${y}" stroke="${t?'#eef0f3':'#e3e6ea'}" stroke-width="1"/><text x="${W-AX+10}" y="${y+3.5}" font-size="10" fill="#a3a8b0" font-family="Inter">${t/60}h</text>`}
+ days.forEach((d,i)=>{const x=i*(bw+gap),dim=sel!=null&&sel!==i,gp=S.mono?{all:d.total}:group(d.byKind);let y=H,segs='';
+  const keys=S.mono?['all']:[...top3,'rest'];
+  keys.forEach(k=>{const v=gp[k];if(!v)return;const hh=v*sc;y-=hh;segs+=`<rect x="${x}" y="${y}" width="${bw}" height="${hh+.5}" fill="${S.mono?(sel===i?S.on:S.c.all):S.c[k]}"/>`;if(S.split&&k!=='rest')segs+=`<line x1="${x}" x2="${x+bw}" y1="${y}" y2="${y}" stroke="#fff" stroke-width="1.2"/>`});
+  const th=d.total*sc;
+  s+=`<clipPath id="k${S.id}${sel}${i}"><path d="${topPath(x,H-th,bw,th,S.r)}"/></clipPath><g clip-path="url(#k${S.id}${sel}${i})" opacity="${dim?.28:1}">${segs}${d.today?`<rect x="${x}" y="${H-th}" width="${bw}" height="${th}" fill="url(#hatch)" />`:''}</g>`;
+  const on=sel===i;
+  if(on)s+=`<rect x="${x+bw/2-15}" y="${H+6}" width="30" height="19" rx="9.5" fill="${S.pill}"/><line x1="${x+bw/2-8}" x2="${x+bw/2+8}" y1="${H+6.6}" y2="${H+6.6}" stroke="rgba(255,255,255,.3)"/>`;
+  s+=`<text x="${x+bw/2}" y="${H+19.5}" text-anchor="middle" font-size="11" font-weight="${on||d.today?650:500}" fill="${on?'#fff':d.today?'#15181d':'#8a909a'}" font-family="Inter,Noto Sans KR">${dnum(d)}</text>`});
+ const ay=H-avg*sc;
+ s+=`<line x1="0" x2="${W-AX+4}" y1="${ay}" y2="${ay}" stroke="${S.avg}" stroke-width="1.3" stroke-dasharray="3 3"/><text x="${W-AX+10}" y="${ay+3.5}" font-size="10" font-weight="600" fill="${S.avg}" font-family="Noto Sans KR">평균</text>`;
+ return`<svg width="${W}" height="${H+28}" viewBox="0 0 ${W} ${H+28}" style="display:block;overflow:visible"><defs><pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.2" height="5" fill="rgba(255,255,255,.45)"/></pattern></defs>${s}</svg>`}
+function legend(S,bk){if(S.mono){const ks=Object.entries(bk).filter(x=>x[1]).sort((a,b)=>b[1]-a[1]).slice(0,3);const tot=Object.values(bk).reduce((a,b)=>a+b,0);
+  return`<div style="margin-top:14px;padding-top:12px;border-top:1px solid #eef0f3">${ks.map(([k,v])=>`<div style="display:flex;align-items:center;gap:10px;padding:4px 0"><span style="width:52px;font-size:12px;color:#4d535d">${KIND_KO[k]}</span><span style="flex:1;height:6px;border-radius:6px;background:#f0f1f4;overflow:hidden"><i style="display:block;height:100%;width:${v/ks[0][1]*100}%;background:${S.c.all};border-radius:6px"></i></span><span class="num" style="width:74px;text-align:right;font-size:12.5px;font-weight:500">${dur(v)}</span></div>`).join('')}</div>`}
+ const g=group(bk);return`<div class="lgd">${[...top3,'rest'].map(k=>`<div style="color:${S.t[k]}">${k==='rest'?'그 밖':KIND_KO[k]}<b class="num">${dur(g[k])}</b></div>`).join('')}</div>`}
+function head(S,d){const t=d?d.total:avg,diff=d?d.total-avg:0;
+ return`<div class="card" style="padding:16px 16px 14px">
+ <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="lbl">${d?(d.today?'오늘 사용 시간':`${dlab(d)} 사용 시간`):'일평균 · 최근 7일'}</div><div class="big" style="margin-top:3px">${durH(t)}</div></div>
+ <div style="text-align:right;margin-top:2px">${d&&d.today?`<span class="pill" style="background:#eef0f3;color:#5c626c">지금까지</span>`:d?`<span class="pill" style="background:${diff>0?'#f7e7df':'#e3f0e6'};color:${diff>0?'#a24d31':'#3f7d50'}">${diff>0?'▲':'▼'} ${dur(Math.abs(diff))}</span><div class="lbl" style="margin-top:4px;font-size:11px">평균보다</div>`:`<span class="pill" style="background:#f7e7df;color:#a24d31">▲ ${pct}%</span><div class="lbl" style="margin-top:4px;font-size:11px">지난주보다</div>`}</div></div>
+ <div style="margin-top:18px">${chart(S,d?days.indexOf(d):null)}</div>${legend(S,d?d.byKind:wk)}</div>`}
+const mini=(S,k)=>'#c9ced6';
+const topCard=S=>`<div class="sec">많이 쓴 앱 · 하루 평균</div><div class="card">${TOPS.slice(0,3).map(t=>`<div class="rw">${appIc(t.app)}<div class="tx"><b>${t.app}</b><div class="mini"><i style="width:${t.avg/TOPS[0].avg*100}%;background:${mini(S,t.kind)}"></i></div></div><span class="v num" style="margin-left:6px">${dur(t.avg)}</span></div>`).join('')}</div>`;
+const moon='M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z';
+const pickCard=(S,d)=>{const pm=Math.max(...days.map(x=>x.pickups));
+ return`<div class="sec">집어든 횟수</div><div class="card"><div style="display:flex;align-items:flex-end;gap:14px;padding:14px 16px 12px"><div style="flex:none"><div class="lbl">${d?dlab(d):'하루 평균'}</div><div class="num" style="font:600 26px Inter;letter-spacing:-.02em;margin-top:2px">${d?d.pickups:pavg}<span style="font:600 14px 'Noto Sans KR';margin-left:2px">번</span></div></div>
+ <div style="flex:1;display:flex;align-items:flex-end;gap:7px;height:46px;justify-content:flex-end">${days.map((x,i)=>`<i style="width:12px;height:${x.pickups/pm*44}px;border-radius:4px 4px 2px 2px;background:${d?(x===d?S.pk:'#e6e8ec'):x.today?'#e6e8ec':S.pk}"></i>`).join('')}</div></div>
+ ${(d?d.late:'00:35')?`<div class="note">${line(moon,15,'#6e7480',2)}<span>${d?`마지막으로 본 시각 <b class="num" style="color:#15181d">${d.late}</b>`:'어제 새벽 <b class="num" style="color:#15181d">00:35</b>까지 폰을 봤어요'}</span></div>`:''}</div>`};
+const dayApps=d=>`<div class="sec">이날 쓴 앱</div><div class="card">${d.apps.slice(0,3).map(([a,m])=>`<div class="rw">${appIc(a)}<div class="tx"><b>${a}</b><span>${KIND_KO[APP[a]]}</span></div><span class="v num">${dur(m)}</span></div>`).join('')}</div>`;
+const d5=days[4];
+
+// ---- one palette: every kind has its own clear colour (taken from 1 · 3 · 4), same saturation
+const KC={chat:'#4a7fe0',social:'#f4a3bd',video:'#ff9478',game:'#7fd6c9',music:'#ffad5c',work:'#2f5fb8',reading:'#93bdf2',shopping:'#3fb3a3',other:'#d3d7de'};
+const KTX={chat:'#3a6fd0',social:'#d9708f',video:'#e8735a',game:'#2fa597',music:'#e08a2a',work:'#2f5fb8',reading:'#4e8fd6',shopping:'#2f9a8c',other:'#8a909a'};
+const ORDER=['chat','social','video','game','music','work','reading','shopping','other'];
+const S={id:9,avg:'#3a6fd0',pill:'#3a6fd0',r:5};
+function chart9(sel){
+ const W=326,H=150,AX=30,n=7,gap=16,bw=(W-AX-gap*(n-1))/n,topv=Math.ceil(max/120)*120,sc=H/topv;let s='';
+ for(let t=0;t<=topv;t+=120){const y=H-t*sc;s+=`<line x1="0" x2="${W-AX+4}" y1="${y}" y2="${y}" stroke="${t?'#eef0f3':'#e3e6ea'}"/><text x="${W-AX+10}" y="${y+3.5}" font-size="10" fill="#a3a8b0" font-family="Inter">${t/60}h</text>`}
+ days.forEach((d,i)=>{const x=i*(bw+gap),dim=sel!=null&&sel!==i;let y=H,segs='';
+  ORDER.forEach(k=>{const v=d.byKind[k];if(!v)return;const hh=v*sc;y-=hh;segs+=`<rect x="${x}" y="${y}" width="${bw}" height="${hh+.5}" fill="${KC[k]}"/><line x1="${x}" x2="${x+bw}" y1="${y}" y2="${y}" stroke="#fff" stroke-width="1.2"/>`});
+  const th=d.total*sc;
+  s+=`<clipPath id="q${sel}${i}"><path d="${topPath(x,H-th,bw,th,5)}"/></clipPath><g clip-path="url(#q${sel}${i})" opacity="${dim?.28:1}">${segs}${d.today?`<rect x="${x}" y="${H-th}" width="${bw}" height="${th}" fill="url(#hatch)"/>`:''}</g>`;
+  const on=sel===i;
+  if(on)s+=`<rect x="${x+bw/2-15}" y="${H+6}" width="30" height="19" rx="9.5" fill="${S.pill}"/><line x1="${x+bw/2-8}" x2="${x+bw/2+8}" y1="${H+6.6}" y2="${H+6.6}" stroke="rgba(255,255,255,.3)"/>`;
+  s+=`<text x="${x+bw/2}" y="${H+19.5}" text-anchor="middle" font-size="11" font-weight="${on||d.today?650:500}" fill="${on?'#fff':d.today?'#15181d':'#8a909a'}" font-family="Inter,Noto Sans KR">${dnum(d)}</text>`});
+ const ay=H-avg*sc;
+ s+=`<line x1="0" x2="${W-AX+4}" y1="${ay}" y2="${ay}" stroke="${S.avg}" stroke-width="1.3" stroke-dasharray="3 3"/><text x="${W-AX+10}" y="${ay+3.5}" font-size="10" font-weight="600" fill="${S.avg}" font-family="Noto Sans KR">평균</text>`;
+ return`<svg width="${W}" height="${H+28}" viewBox="0 0 ${W} ${H+28}" style="display:block;overflow:visible"><defs><pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.2" height="5" fill="rgba(255,255,255,.45)"/></pattern></defs>${s}</svg>`}
+const leg9=bk=>{const ks=Object.entries(bk).filter(x=>x[1]).sort((a,b)=>b[1]-a[1]).slice(0,3);return`<div class="lgd" style="grid-template-columns:repeat(3,1fr)">${ks.map(([k,v])=>`<div style="color:${KTX[k]}">${KIND_KO[k]}<b class="num">${dur(v)}</b></div>`).join('')}</div>`};
+const lateRow=d=>{const t=d?d.late:'00:35';return t?`<div class="note" style="margin:12px -16px -14px">${line(moon,15,'#6e7480',2)}<span>${d?`마지막으로 본 시각 <b class="num" style="color:#15181d">${t}</b>`:`어제 새벽 <b class="num" style="color:#15181d">${t}</b>까지 폰을 봤어요`}</span></div>`:''};
+function head9(d){const t=d?d.total:avg,diff=d?d.total-avg:0;
+ return`<div class="card" style="padding:16px 16px 14px">
+ <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="lbl">${d?(d.today?'오늘 사용 시간':`${dlab(d)} 사용 시간`):'일평균 · 최근 7일'}</div><div class="big" style="margin-top:3px">${durH(t)}</div></div>
+ <div style="text-align:right;margin-top:2px">${d&&d.today?`<span class="pill" style="background:#eef0f3;color:#5c626c">지금까지</span>`:d?`<span class="pill" style="background:${diff>0?'#fde8e2':'#e3f0e6'};color:${diff>0?'#c85a3e':'#3f7d50'}">${diff>0?'▲':'▼'} ${dur(Math.abs(diff))}</span><div class="lbl" style="margin-top:4px;font-size:11px">평균보다</div>`:`<span class="pill" style="background:#fde8e2;color:#c85a3e">▲ ${pct}%</span><div class="lbl" style="margin-top:4px;font-size:11px">지난주보다</div>`}</div></div>
+ <div style="margin-top:18px">${chart9(d?days.indexOf(d):null)}</div>${leg9(d?d.byKind:wk)}${window.PL?pickLine(d):''}${lateRow(d)}</div>`}
+const topC=`<div class="sec">많이 쓴 앱 · 하루 평균</div><div class="card">${TOPS.slice(0,8).map(t=>`<div class="rw">${appIc(t.app)}<div class="tx"><b>${t.app}</b><div class="mini"><i style="width:${t.avg/TOPS[0].avg*100}%;background:#c9ced6"></i></div></div><span class="v num" style="margin-left:6px">${dur(t.avg)}</span></div>`).join('')}</div>`;
+const dayC=d=>`<div class="sec">이날 쓴 앱</div><div class="card">${d.apps.slice(0,5).map(([a,m])=>`<div class="rw">${appIc(a)}<div class="tx"><b>${a}</b><span>${KIND_KO[APP[a]]}</span></div><span class="v num">${dur(m)}</span></div>`).join('')}</div>`;
+
+// ---- 집어든 횟수: dots, one per pickup, loosely scattered (same seed → same picture), + a sentence the code picks
+const seeded=seed=>{let h=2166136261;for(const c of String(seed))h=Math.imul(h^c.charCodeAt(0),16777619)>>>0;return()=>{h^=h<<13;h>>>=0;h^=h>>>17;h^=h<<5;h>>>=0;return(h%10000)/10000}};
+const feel=n=>n>=100?'거의 손에서 안 놔요':n>=70?'자주 손이 가요':n>=40?'틈틈이 꺼내 봐요':'가끔 꺼내 봐요';
+function dots(n,seed){const r=seeded(seed),W=326,step=13,cols=Math.floor(W/step),rows=Math.ceil(n/cols);let s='';
+ for(let i=0;i<n;i++){const cx=(i%cols)*step+step/2+(r()-.5)*5,cy=Math.floor(i/cols)*step+step/2+(r()-.5)*5,rad=2.3+r()*1.6,dark=r()<.35;
+  s+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${rad.toFixed(1)}" fill="${dark?'#3a6fd0':'#93bdf2'}" opacity="${(.75+r()*.25).toFixed(2)}"/>`}
+ return`<svg width="${W}" height="${rows*step+2}" style="display:block">${s}</svg>`}
+const phoneI='M8 2.5h8a1.5 1.5 0 0 1 1.5 1.5v16a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 20V4A1.5 1.5 0 0 1 8 2.5zM11 18.5h2';
+const lvl=n=>n>=100?4:n>=70?3:n>=40?2:1;
+// A: no card — two short lines at the bottom of the chart card (phone + moon)
+const pickLine=d=>{const n=d?d.pickups:pavg;return n==null?'':`<div class="note" style="margin:12px -16px 0;border-top:1px solid #eef0f3">${line(phoneI,15,'#6e7480',2)}<span>${d?'':'하루 '}<b class="num" style="color:#15181d">${n}번</b> 집어들어요 · <span style="color:#3a6fd0;font-weight:600">${feel(n)}</span></span></div>`};
+// B: small card — icon tile, number, sentence, a 4-step meter (no dots)
+const pickC=d=>{const n=d?d.pickups:pavg;if(n==null)return'';const L=lvl(n);
+ return`<div class="card" style="display:flex;align-items:center;gap:12px;padding:14px 16px"><span class="ic" style="width:40px;height:40px;border-radius:12px;background:#e2eaf6">${line(phoneI,20,'#3a6fd0',1.9)}</span><div style="flex:1"><div class="lbl">${d?(d.today?'오늘 지금까지':dlab(d)):'하루 평균'} 집어든 횟수</div><div style="font:600 15px 'Noto Sans KR';margin-top:2px">${feel(n)}</div></div><div style="text-align:right"><div class="num" style="font:600 22px Inter;letter-spacing:-.02em">${n}<span style="font:600 13px 'Noto Sans KR';margin-left:1px">번</span></div><div style="display:flex;gap:3px;justify-content:flex-end;margin-top:4px">${[1,2,3,4].map(k=>`<i style="width:12px;height:4px;border-radius:2px;background:${k<=L?'#3a6fd0':'#e3e6ea'}"></i>`).join('')}</div></div></div>`};
+const sw=`<div style="display:flex;flex-wrap:wrap;gap:8px 14px;width:390px;margin:8px 0 0 4px">${ORDER.map(k=>`<span style="font-size:13px;color:#3a2f28"><i style="display:inline-block;width:12px;height:12px;border-radius:4px;background:${KC[k]};vertical-align:-1px;margin-right:5px"></i>${KIND_KO[k]}</span>`).join('')}</div>`;
+const out=[];
+// a Korean owner too, to show the icons' range
+const KR=[['카카오톡','KakaoTalk',94],['Instagram','Instagram',71],['YouTube','YouTube',58],['Brawl Stars','Brawl Stars',41],['Melon','Melon',33],['WEBTOON','WEBTOON',27],['NAVER','NAVER',19],['Coupang','Coupang',14],['배달의민족','배달의민족',9],['Netflix','Netflix',52]].sort((a,b)=>b[2]-a[2]);
+const icOf=n=>{const h=ICONS.find(x=>x[0]===n);return`<svg width="32" height="32" viewBox="0 0 60 60" style="border-radius:9px;flex:none;box-shadow:0 0 0 .5px rgba(0,0,0,.08)">${h[2]}</svg>`};
+const krList=`<div class="sec">많이 쓴 앱 · 하루 평균</div><div class="card">${KR.map(([n,ic,m])=>`<div class="rw">${icOf(ic)}<div class="tx"><b>${n}</b><div class="mini"><i style="width:${m/KR[0][2]*100}%;background:#c9ced6"></i></div></div><span class="v num" style="margin-left:6px">${dur(m)}</span></div>`).join('')}</div>`;
+out.push(`<div class="lab">나 + 앱 아이콘<small>독일 Mara (위 · 스크롤) · 한국 인물 예시</small></div><div class="row">`);
+out.push(frame('Mara · 이번 주',head9()+pickC()+topC)+frame('Mara · 아래로 스크롤',head9()+pickC()+topC,500)+frame('한국 인물 · 아래로 스크롤',head9()+pickC()+krList,500));out.push('</div>');
+document.getElementById('out').innerHTML=out.join('');
+</script></body></html>

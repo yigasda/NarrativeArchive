@@ -9,6 +9,7 @@ HTML은 브라우저로 바로 열려요(Playwright로 찍을 때는 `file://` �
 | `panel-new/` | 새 기능 UI 시안 보드 47개(아티팩트 "서사 아카이브 새 기능 UI 시안"): 관계 온도 A~C · A+C 1~4, X-ray A · B, 인물 도감 A · B, 관계도 A · B, 이야기 달력, 이동 경로, 섹션 연결망, 말투 지문, 망각 곡선, 세계관 공유, 아카이브 A · B, 압축 탭, 설정, 압축 마법사 A · B, 원문 뽑기, 아카이브에 추가, 건강 점검, 이탈 감지, 누가 아는가 1~3, 대사 은행, 아카이브에 질문, 주입 미리보기, 분기, 숨김 해제, 키워드 연동, 두 버전 비교, 홈 1~8 |
 | `phone-glass/` | 클리어 글래스 폰 홈(아티팩트 "클리어 글래스 폰"): 화이트 그레이 `Main`, 컬러 젤 `Gel` |
 | `phone-home2-wx/` | 홈 2쪽 빈 날씨 위젯 시안 A~D(`sheet.png`, A 채택). `mock.cjs`가 실제 폰 홈 2쪽 위젯 자리에 시안을 끼워 찍어요(`node mock.cjs 출력폴더`, 로컬 SillyTavern 필요) |
+| `phone-screentime/` | 설정 › 스크린타임: 시안 A(`mock.html`, 막대 색은 `colors.png`의 1 · 3 · 4를 섞음), 집어든 횟수 가 · 나(`pickups.png`, 나 채택), 앱 아이콘 표(`icons.png`, `sheet.html` + `icons.js`), 표에 없는 앱의 종류별 아이콘(`icons_kind.png`, `fb.html`), 적용한 실제 화면(`real_light.png`, `real_dark.png`) |
 | `phone-confirm/` | 폰 안 확인 창 시안 A~D(`sheet.png`, B 채택): iOS 알림 · 액션 시트 · 바텀 시트 · 가운데 카드. `mock.cjs`가 실제 폰 설정 화면 위에 끼워 찍어요. B의 질감 시안 A~D는 `quality_*.png`(A 채택)(`quality.cjs`가 CSS를 덮어 찍어요) |
 | `ext-confirm/` | 확장 확인 창 시안 A~D(`choice.png` 고르기 창, `plain.png` 보통 확인 창, B 채택). `mock.cjs`가 실제 SillyTavern에 창을 띄우고 CSS를 덮어 찍어요. 확장의 확인 창 42개 전부를 찍은 건 `all_1~4.png`(`capture_all.cjs`) |
 | `ext-choice/` | "이 이야기의 휴대폰" 고르기 창 시안 A~D(`sheet.png`): 카드 두 장 · 나란히 타일 · 목록 카드 · 분할 버튼. B 모양 + C 질문을 섞은 안은 `sheet_BC.png` |

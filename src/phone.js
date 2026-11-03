@@ -24,6 +24,7 @@ import { bankDisplayCurrency, bankAcct, bankHome, bankTx, fixedScreen, bankNotes
 import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './phoneweb.js';
 import { fillDelivery, fillLife, fillShopMenus, menuWanted, refreshNearby } from './phonelife.js';
 import { alarmScreen, setStory, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, heartScreen, hereWidget, itemScreen, orderScreen, ordersScreen, payScreen, rateScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, waterScreen, weatherScreen, weightScreen, workScreen, worldScreen } from './phonelifeapps.js';
+import { screenTimeScreen } from './phonestime.js';
 import { openGlossary } from './translate.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
 const josa = w => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? '을' : '를'; };
@@ -48,7 +49,7 @@ function screen(p, view, m, roster, ui) {
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
         : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, now, m)
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
-        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'settheme' ? setTheme(p, now) : v === 'setdate' ? setDate(p, now) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
+        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setdate' ? setDate(p, now) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app: drawn at the boards' size too, each its own app look
@@ -486,8 +487,8 @@ export async function openPhone(who = null) {
         // a person's card goes back where it was opened from
         if (go === 'contact' && !view.startsWith('contact')) contactBack = view;
         // picking another payment on 고정 지출 keeps the list where it was
-        const stay = ['fixed', 'banksend', 'stmt', 'wallet'].includes(go) && view.split(':')[0] === go ? $root.find('.ax_scroll').scrollTop() : null;
-        view = ['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices', 'thread', 'draft', 'page', 'acct', 'tx', 'txdoc', 'card', 'pass', 'order', 'track', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost', 'alarm', 'hsteps', 'hsleep', 'hwork', 'hheart', 'hwater', 'hweight', 'folder', 'file', 'wcity', 'dshop', 'dorder', 'ditem', 'drate'].includes(go) || (['cal', 'diary', 'shop', 'voice', 'invest', 'health', 'fixed', 'banksend', 'stmt', 'wallet'].includes(go) && this.dataset.i) ? `${go}:${['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices'].includes(go) ? encodeURIComponent(this.dataset.i || '') : this.dataset.i}` : go;
+        const stay = ['fixed', 'banksend', 'stmt', 'wallet', 'stime'].includes(go) && view.split(':')[0] === go ? $root.find('.ax_scroll').scrollTop() : null;
+        view = ['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices', 'thread', 'draft', 'page', 'acct', 'tx', 'txdoc', 'card', 'pass', 'order', 'track', 'voiceone', 'callwho', 'contact', 'noteone', 'photoone', 'searchone', 'calone', 'mailone', 'diaryone', 'snspost', 'alarm', 'hsteps', 'hsleep', 'hwork', 'hheart', 'hwater', 'hweight', 'folder', 'file', 'wcity', 'dshop', 'dorder', 'ditem', 'drate'].includes(go) || (['cal', 'diary', 'shop', 'voice', 'invest', 'health', 'fixed', 'banksend', 'stmt', 'wallet', 'stime'].includes(go) && this.dataset.i) ? `${go}:${['ivnotes', 'ivschedule', 'ivhistory', 'stock', 'ivprices'].includes(go) ? encodeURIComponent(this.dataset.i || '') : this.dataset.i}` : go;
         const mail = go === 'mailone' ? phone()?.mails?.[Number(this.dataset.i)] : null;
         if (mail?.unread) { mail.unread = false; saveMeta(); }
         const p0 = phone();

@@ -1,0 +1,13 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>
+body{margin:0;background:#d9d6d2;font-family:-apple-system,'Noto Sans KR',sans-serif;padding:28px;width:1240px}
+h1{font:700 22px 'Noto Sans KR';color:#3a2f28;margin:0 0 6px}p{margin:0 0 18px;color:#6b5a50;font-size:14px}
+.grp{background:#f2f3f5;border-radius:22px;padding:16px 18px 6px;margin-bottom:14px;box-shadow:0 1px 2px rgba(22,27,34,.05),0 8px 24px rgba(22,27,34,.08)}
+.grp b{display:block;font:600 13px 'Noto Sans KR';color:#6e7480;margin-bottom:10px}
+.ics{display:flex;flex-wrap:wrap;gap:14px 10px}.it{width:76px;text-align:center;font:500 11px 'Inter','Noto Sans KR';color:#3a3f47}
+.it svg{display:block;margin:0 auto 6px;border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.08),0 3px 8px rgba(0,0,0,.08)}
+</style></head><body><h1>앱 아이콘 · 지금 아이콘 닮게(똑같지 않게)</h1><p>색 · 모양 · 마크는 지금 아이콘에서, 글자 · 비율 · 세부는 살짝 다르게</p><div id="o"></div>
+<script src="icons.js"></script><script>
+const K={chat:'메신저',social:'SNS',video:'동영상',music:'음악',game:'게임',other:'인터넷 · 기본 앱',reading:'읽기 · 포털',work:'업무',shopping:'쇼핑 · 배달'};
+const AI=['GitHub','ChatGPT','Claude','Gemini'];const order=['ai','chat','social','video','music','game','other','reading','work','shopping'];K.ai='AI · 개발 (새로)';
+document.getElementById('o').innerHTML=order.map(k=>`<div class="grp"><b>${K[k]}</b><div class="ics">${ICONS.filter(x=>k==='ai'?AI.includes(x[0]):x[1]===k&&!AI.includes(x[0])).map(([n,,svg])=>`<div class="it"><svg width="60" height="60" viewBox="0 0 60 60">${svg}</svg>${n}</div>`).join('')}</div></div>`).join('');
+</script></body></html>

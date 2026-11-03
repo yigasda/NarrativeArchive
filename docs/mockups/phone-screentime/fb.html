@@ -1,0 +1,49 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>
+body{margin:0;background:#d9d6d2;font-family:-apple-system,'Noto Sans KR',sans-serif;padding:28px;width:1240px}
+h1{font:700 22px 'Noto Sans KR';color:#3a2f28;margin:0 0 6px}p{margin:0 0 18px;color:#6b5a50;font-size:14px}
+.wrapx{display:flex;gap:24px;align-items:flex-start}
+.grp{background:#f2f3f5;border-radius:22px;padding:16px 18px 8px;margin-bottom:12px;box-shadow:0 1px 2px rgba(22,27,34,.05),0 8px 24px rgba(22,27,34,.08)}
+.grp b{display:block;font:600 13px 'Noto Sans KR';color:#6e7480;margin-bottom:10px}
+.ics{display:flex;flex-wrap:wrap;gap:12px 8px}.it{width:76px;text-align:center;font:500 11px 'Inter','Noto Sans KR';color:#3a3f47}
+.it svg{display:block;margin:0 auto 6px;border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.08),0 3px 8px rgba(0,0,0,.08)}
+.ph{width:390px;height:844px;border-radius:44px;border:9px solid #16130f;background:#f2f3f5;overflow:hidden;flex:none;position:relative}
+.sec{font:600 12.5px 'Noto Sans KR';color:#6e7480;padding:6px 30px 7px}
+.card{background:#fff;margin:0 14px 12px;border-radius:22px;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05)}
+.rw{display:flex;align-items:center;gap:12px;padding:11px 16px;position:relative}.rw+.rw::before{content:'';position:absolute;top:0;left:60px;right:0;height:1px;background:#eef0f3}
+.tx{flex:1}.tx b{display:block;font:500 14.5px 'Inter','Noto Sans KR'}.mini{height:5px;border-radius:5px;margin-top:7px;background:#f0f1f4}.mini i{display:block;height:100%;border-radius:5px;background:#c9ced6}
+.v{font:500 14px 'Inter','Noto Sans KR';color:#4d535d}
+.tag{display:inline-block;font:600 10px 'Noto Sans KR';color:#8a909a;background:#eef0f3;border-radius:999px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+</style></head><body><h1>표에 없는 앱 · 종류별 기본 아이콘</h1><p>꽉 찬 색 바탕 + 흰 그림. 바탕색은 그 종류의 색 몇 개 중에서 앱 이름으로 골라요(같은 이름은 늘 같은 색)</p><div class="wrapx"><div id="o" style="flex:1"></div><div id="l"></div></div>
+<script src="icons.js"></script><script>
+const hash=s=>{let h=2166136261;for(const c of s)h=Math.imul(h^c.charCodeAt(0),16777619)>>>0;h^=h>>>15;h=Math.imul(h,2246822507)>>>0;h^=h>>>13;h=Math.imul(h,3266489909)>>>0;h^=h>>>16;return h>>>0};
+const PAL={chat:[['#2f8cff','#58a8ff'],['#13b3c2','#3fd0dc'],['#ff6a55','#ff8f7a']],
+ social:[['#ff4f7e','#ff8a5c'],['#16171a','#33363c'],['#3b82f6','#62a0ff']],
+ video:[['#ff2d3d','#ff5a5a'],['#16171a','#2a2c31','#ff2d3d'],['#1d2f6b','#34509e']],
+ music:[['#1fca63','#4fdc86'],['#fa3a5a','#ff6a80'],['#ff7a1a','#ffa04a']],
+ game:[['#ff8a00','#ffb03a'],['#12b5a6','#3fd0c2'],['#3456e0','#5f7cf0'],['#ef3b4f','#ff6b6b'],['#2e2f36','#4a4c56','#ffcc2e'],['#18a957','#3fcf7a']],
+ work:[['#2e6be6','#5a8cf0'],['#ffffff','#f4f5f7','#2e6be6'],['#24262b','#3b3e45']],
+ reading:[['#11c26b','#3fd98a'],['#13213d','#24375f'],['#f2652d','#ff8a52']],
+ shopping:[['#ff6a13','#ff8f45'],['#18c2b0','#45d8c8'],['#ef3b4f','#ff6676']],
+ other:[['#8e949e','#b7bcc4'],['#2f8cff','#58a8ff']]};
+const GL={
+ chat:(c,b)=>`<path d="M30 14c-10.5 0-18.5 6.9-18.5 15.4 0 4.7 2.5 8.9 6.4 11.7-.3 2.4-1.5 4.6-3.4 6 4.3.2 7.6-1.2 9.8-3.1 1.8.5 3.7.7 5.7.7 10.5 0 18.5-6.9 18.5-15.3S40.5 14 30 14z" fill="${c}"/><circle cx="22.5" cy="29.5" r="2.6" fill="${b}"/><circle cx="30" cy="29.5" r="2.6" fill="${b}"/><circle cx="37.5" cy="29.5" r="2.6" fill="${b}"/>`,
+ social:c=>`<path d="M30 46s-15.5-9.2-15.5-20.2c0-5.1 3.8-9.3 8.9-9.3 3 0 5.3 1.4 6.6 3.6 1.3-2.2 3.6-3.6 6.6-3.6 5.1 0 8.9 4.2 8.9 9.3C45.5 36.8 30 46 30 46z" fill="${c}"/>`,
+ video:c=>`<rect x="11.5" y="17" width="37" height="26" rx="7" fill="none" stroke="${c}" stroke-width="3.6"/><path d="M26 23.5v13l11-6.5z" fill="${c}"/>`,
+ music:c=>`<path d="M24 40V19.5l17-3.5v19.5" fill="none" stroke="${c}" stroke-width="3.6" stroke-linejoin="round"/><ellipse cx="19.5" cy="40.5" rx="5.6" ry="4.6" fill="${c}"/><ellipse cx="36.5" cy="36.2" rx="5.6" ry="4.6" fill="${c}"/>`,
+ game:(c,b)=>`<path d="M20 21h20c6 0 10 4.5 10.5 11l.6 6.5c.4 4.5-4.8 7.2-8.2 4.2L37.5 38h-15l-5.4 4.7c-3.4 3-8.6.3-8.2-4.2l.6-6.5C10 25.5 14 21 20 21z" fill="${c}"/><path d="M20.5 27v8M16.5 31h8" stroke="${b}" stroke-width="3" stroke-linecap="round"/><circle cx="38" cy="28.5" r="2.4" fill="${b}"/><circle cx="42.5" cy="33" r="2.4" fill="${b}"/>`,
+ work:c=>`<rect x="12" y="21" width="36" height="24" rx="5" fill="${c}"/><path d="M23 21v-3.5a2.5 2.5 0 0 1 2.5-2.5h9a2.5 2.5 0 0 1 2.5 2.5V21" fill="none" stroke="${c}" stroke-width="3.4"/>`,
+ reading:c=>`<path d="M30 20c-4-3-10-4-17-3v25c7-1 13 0 17 3 4-3 10-4 17-3V17c-7-1-13 0-17 3z" fill="${c}"/><path d="M30 20v25" stroke="rgba(0,0,0,.18)" stroke-width="2"/>`,
+ shopping:(c,b)=>`<path d="M15 22h30l-2.4 22a3 3 0 0 1-3 2.6H20.4a3 3 0 0 1-3-2.6z" fill="${c}"/><path d="M23.5 27v-5a6.5 6.5 0 0 1 13 0v5" fill="none" stroke="${b}" stroke-width="3" stroke-linecap="round"/>`,
+ other:c=>[[17,17],[33,17],[17,33],[33,33]].map(([x,y])=>`<rect x="${x}" y="${y}" width="11" height="11" rx="3.4" fill="${c}"/>`).join('')};
+function fallback(name,kind){const p=PAL[kind]||PAL.other,[a,b,g]=p[hash(name)%p.length],id='f'+hash(name+kind),fg=g||'#fff';
+ return`<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${b}"/><stop offset="1" stop-color="${a}"/></linearGradient></defs><rect width="60" height="60" fill="url(#${id})"/>${GL[kind](fg,a)}`}
+const SAMP={chat:['Chatterly','톡톡','Plauder','Wavechat'],social:['Pixly','Momento','Kreis'],video:['StreamBox','Flixa','Kino+'],music:['Tunebay','멜로디온','Klangwerk'],
+ game:['Brawl Arena','Dragon Saga','Puzzle Pop','Kart Rush','Star Knights','Farm Days'],work:['Taskly','Mailbox Pro','Teamraum'],reading:['Pageturn','News Daily','Lesezeit'],
+ shopping:['ShopNow','한빛마트','Kaufhaus'],other:['Sparkasse','Wetter']};
+const KK={chat:'메신저',social:'SNS',video:'동영상',music:'음악',game:'게임',work:'업무',reading:'읽기',shopping:'쇼핑',other:'기타'};
+const sv=(body,s=60)=>`<svg width="${s}" height="${s}" viewBox="0 0 60 60">${body}</svg>`;
+document.getElementById('o').innerHTML=Object.keys(SAMP).map(k=>`<div class="grp"><b>${KK[k]}</b><div class="ics">${SAMP[k].map(n=>`<div class="it">${sv(fallback(n,k))}${n}</div>`).join('')}</div></div>`).join('');
+const real=n=>ICONS.find(x=>x[0]===n)[2];
+const L=[['Instagram',null,92],['Brawl Arena','game',74],['WhatsApp',null,66],['Flixa','video',51],['YouTube',null,44],['Tunebay','music',31],['Spotify',null,22],['Pageturn','reading',15],['Kaufhaus','shopping',9]];
+document.getElementById('l').innerHTML=`<div style="font:600 13px 'Noto Sans KR';color:#6b5a50;margin:0 0 8px 6px">진짜 앱 사이에 섞인 모습</div><div class="ph"><div style="height:60px"></div><div class="sec">많이 쓴 앱 · 하루 평균</div><div class="card">${L.map(([n,k,m])=>`<div class="rw"><svg width="32" height="32" viewBox="0 0 60 60" style="border-radius:9px;flex:none;box-shadow:0 0 0 .5px rgba(0,0,0,.08)">${k?fallback(n,k):real(n)}</svg><div class="tx"><b>${n}${k?'<span class="tag">표에 없음</span>':''}</b><div class="mini"><i style="width:${m/92*100}%"></i></div></div><span class="v">${m>=60?`${Math.floor(m/60)}시간 ${m%60}분`:`${m}분`}</span></div>`).join('')}</div></div>`;
+</script></body></html>
