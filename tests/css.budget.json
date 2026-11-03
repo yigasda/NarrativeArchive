@@ -1,8 +1,8 @@
 {
   "_": "style.css may not grow past these; lower them as the cleanup lands (docs/CSS-CLEANUP-PLAN.md 4-6). Counts are whole-file greps.",
-  "lines": 7921,
-  "important": 874,
-  "notx": 88,
+  "lines": 7795,
+  "important": 856,
+  "notx": 87,
   "bothThemes": 120,
   "allowTailVersions": true
 }

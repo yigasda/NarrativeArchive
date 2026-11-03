@@ -27,6 +27,9 @@ const PROPS = ['color', 'backgroundColor', 'backgroundImage', 'borderTopColor', 
 const portOpen = port => new Promise(r => { const s = net.connect(port, '127.0.0.1'); s.once('connect', () => { s.end(); r(true); }); s.once('error', () => r(false)); });
 if (require.main === module) (async () => {
     fs.mkdirSync(OUT, { recursive: true });
+    // the saved ST theme must be the one every capture is relative to (a run that died mid-theme leaves another one behind: it happened twice)
+    const SETTINGS = path.join(process.env.HOME, 'sillytavern/data/default-user/settings.json'); const BASE_THEME = process.env.NA_BASE_THEME || 'Dark Lite';
+    try { const saved = JSON.parse(fs.readFileSync(SETTINGS, 'utf8')).power_user.theme; if (saved !== BASE_THEME) { console.log(`STOP: SillyTavern's saved theme is "${saved}", the baseline was taken on "${BASE_THEME}". Set it back first (settings.json power_user.theme or the UI).`); process.exit(5); } } catch (e) { console.log('could not read the saved ST theme:', e.message); }
     try { await fetch(ST); } catch { console.log('SillyTavern is not answering at ' + ST + ' — start it first (docs/DESIGN.md › 실제 폰에서 확인)'); process.exit(2); }
     // the phone's fake model
     let fake = null; if (!await portOpen(5555)) { fake = spawn('node', [path.join(ROOT, 'tools/dev/fakeph.mjs')], { stdio: 'ignore' }); await new Promise(r => setTimeout(r, 800)); }

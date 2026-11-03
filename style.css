@@ -183,8 +183,8 @@
 .na_find_field:focus-within { border-color: var(--na-accent); }
 .na_find_field > i { opacity: 0.45; font-size: 0.85em; flex-shrink: 0; }
 .na_find_field input#na_find_q, .na_find_field input#na_find_q:focus {
-    flex: 1; min-width: 0; width: auto !important; margin: 0 !important; padding: 7px 0 !important;
-    border: 0 !important; outline: 0 !important; box-shadow: none !important; background: transparent !important;
+    flex: 1; min-width: 0; width: auto; margin: 0; padding: 7px 0;
+    border: 0; outline: 0; box-shadow: none; background: transparent;
 }
 .na_find_info { font-size: 0.78em; opacity: 0.7; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .na_find_info.na_find_none { color: var(--na-warn); opacity: 1; }
@@ -223,16 +223,16 @@
 .na_toc_group:first-child { margin-top: 0; }
 .na_editor {
     width: 100%;
-    height: 38vh !important;
-    min-height: 192px !important;
-    max-height: none !important;
-    margin: 0 !important;
+    height: 38vh;
+    min-height: 192px;
+    max-height: none;
+    margin: 0;
     font-family: var(--monoFontFamily, ui-monospace, monospace);
     font-size: 0.84em;
     line-height: 1.6;
     resize: vertical;
-    border-radius: 10px !important;
-    padding: 10px 12px !important;
+    border-radius: 10px;
+    padding: 10px 12px;
 }
 
 /* ---------- buttons (own, so theme menu_button rules don't leak in) */
@@ -286,7 +286,7 @@
 .na_set_row:first-child { border-top: 0; }
 .na_set_row > span { display: flex; flex-direction: column; gap: 1px; }
 .na_set_row > span small { font-size: 0.8em; opacity: 0.6; }
-.na_set_row input[type="number"] { width: 6.5em; margin: 0 !important; text-align: right; }
+.na_set_row input[type="number"] { width: 6.5em; margin: 0; text-align: right; }
 .na_set_row select { width: auto; max-width: 60%; margin: 0; }
 .na_set_row.na_disabled { opacity: 0.4; pointer-events: none; }
 /* switches: the checkbox is hidden (skinToggles) and .na_tgl_ui draws the switch, so theme checkbox CSS can't break it */
@@ -923,8 +923,7 @@ body.na_darkui :is(.na_diff_del, .na_diff_tr_del) .na_diff_hl { background: rgba
 .na_kw_aiout { display: flex; flex-direction: column; gap: 8px; }
 .na_kw_aiout:empty { display: none; }
 .na_kw_concept { display: flex; flex-direction: column; gap: 3px; padding: 6px 8px; border-radius: 10px; background: var(--na-softer); }
-.na_kw_concept small { font-size: 0.78em; }
-.na_kw_addall { font-size: 0.78em; }
+.na_kw_concept small, .na_kw_addall { font-size: 0.78em; }
 .na_src_btn.na_btn[disabled] { opacity: 0.35; }
 .na_kw_tin { width: 100%; margin: 0; box-sizing: border-box; resize: vertical; }
 .na_kw_trecent { font-size: 0.8em; }
@@ -965,10 +964,9 @@ body.na_darkui :is(.na_diff_del, .na_diff_tr_del) .na_diff_hl { background: rgba
 .na_qb_src { font-size: 0.85em; }
 .na_qb_whoin { width: 7em; min-width: 0; margin: 0; font-size: 0.9em; padding: 2px 6px; }
 .na_cite_msg { font-variant-numeric: tabular-nums; }
-.na_kn_editbox[hidden], .na_kn_list[hidden] { display: none; }
+.na_kn_editbox[hidden], .na_kn_list[hidden], .na_router_opts[hidden] { display: none; }
 
 /* ---------- router, wizard */
-.na_router_opts[hidden] { display: none; }
 .na_wz_out { width: 100% !important; box-sizing: border-box; resize: vertical; font-size: 0.85em; }
 .na_wz_info, .na_wz_outinfo { font-size: 0.78em; }
 
@@ -1372,8 +1370,7 @@ body.na_darkui .na_sp > .checkbox_label input:checked { background-image: url("d
 .na_vc_sw small { color: var(--na-dim); }
 .na_vc_row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; color: inherit; font: inherit; cursor: pointer; padding: 9px 12px; }
 .na_vc_who { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
-.na_vc_who small { color: var(--na-dim); }
-.na_vc_row > i { color: var(--na-dim); }
+.na_vc_who small, .na_vc_row > i { color: var(--na-dim); }
 .na_vc_row.dashed { background: transparent; border-style: dashed; cursor: default; }
 .na_vc_card { display: flex; flex-direction: column; gap: 10px; border-radius: 20px; }
 .na_vc_head { display: flex; align-items: center; gap: 10px; }
@@ -1517,8 +1514,7 @@ body.na_darkui .na_sp > .checkbox_label input:checked { background-image: url("d
 .na_cr_range + .na_cr_paren::before { content: ' · '; }
 
 /* timeline (mockup B) */
-.na_tlb_sq, .na_tlb_menu { display: none; }
-.na_tl .na_br_view { display: none; }
+.na_tlb_sq, .na_tlb_menu, .na_tl .na_br_view { display: none; }
 .na_tl .na_tlb_sq { display: grid; place-items: center; flex: none; width: 42px; height: 42px; padding: 0; border-radius: 14px; border: 1px solid var(--na-line); background: var(--na-card); color: var(--na-dim); cursor: pointer; }
 .na_tl .na_tlb_sq.on { color: var(--na-accent-fg, var(--na-accent)); border-color: color-mix(in srgb, var(--na-accent) 45%, transparent); }
 .na_tl .na_br_top .na_search_wrap { padding-top: 2px; padding-bottom: 2px; min-height: 42px; box-sizing: border-box; }
@@ -1675,8 +1671,7 @@ body.na_darkui .na_sp > .checkbox_label input:checked { background-image: url("d
 /* ============ extract v2 */
 .na_ex2_card { display: flex; flex-direction: column; border-radius: 20px; }
 .na_ex2_info { display: flex; justify-content: space-between; color: var(--na-dim); }
-.na_ex2_card .na_v2_chips:empty { display: none; }
-.na_ex2_card .na_lastex:empty, .na_ex2_card .na_lastex[hidden] { display: none; }
+.na_ex2_card .na_v2_chips:empty, .na_ex2_card .na_lastex:empty, .na_ex2_card .na_lastex[hidden] { display: none; }
 .na_ex2_preview { margin: 0; border: 1px solid var(--na-line); background: var(--na-card); white-space: pre-wrap; word-break: break-word; overflow: hidden; }
 .na_ex2_btns .na_save_txt { flex: 1; }
 .na_ex2_btns .na_copy { flex: 2; }
@@ -1926,8 +1921,7 @@ body.na_darkui .na_sp > .checkbox_label input:checked { background-image: url("d
 .na_tl .na_tlb_mag { display: block; }
 .na_tl .na_search_wrap > i.fa-magnifying-glass { display: none; }
 .na_tl .na_tlb_full { padding: 0; margin: 0 12px 10px; font-size: 0.89em; line-height: 1.6; cursor: pointer; }
-.na_tl .na_tlb_tools button { color: inherit; }
-.na_tl .na_tlb_tools button.active { color: inherit; }
+.na_tl .na_tlb_tools button, .na_tl .na_tlb_tools button.active { color: inherit; }
 .na_tl .na_sw { width: 40px; height: 24px; }
 .na_tl .na_sw span { top: 3px; left: 3px; width: 18px; height: 18px; }
 .na_tl .na_sw.on span { transform: translateX(16px); }
@@ -1953,52 +1947,36 @@ body.na_darkui .na_sp > .checkbox_label input:checked { background-image: url("d
 .na_tl.na_darkui .st-key { --dot: transparent; --dotb: 2px solid #D9AE3E; }
 .na_tl:not(.na_darkui) .st-off { --dot: #D9C8BC; }
 .na_tl.na_darkui .st-off { --dot: #5E5E66; }
-.na_tl:not(.na_darkui) .na_search_wrap, .na_tl:not(.na_darkui) .na_tlb_sq { background: var(--tl-bg); border: 1px solid var(--tl-line); color: var(--tl-mute); }
-.na_tl.na_darkui .na_search_wrap, .na_tl.na_darkui .na_tlb_sq { background: var(--tl-bg); border: 1px solid var(--tl-line); color: var(--tl-mute); }
-.na_tl:not(.na_darkui) .na_search_wrap { color: var(--tl-dim); }
-.na_tl.na_darkui .na_search_wrap { color: var(--tl-dim); }
-.na_tl:not(.na_darkui) .na_search_wrap input.na_search { color: var(--tl-ink); }
-.na_tl.na_darkui .na_search_wrap input.na_search { color: var(--tl-ink); }
+.na_tl:not(.na_darkui) .na_search_wrap, .na_tl:not(.na_darkui) .na_tlb_sq, .na_tl.na_darkui .na_search_wrap, .na_tl.na_darkui .na_tlb_sq { background: var(--tl-bg); border: 1px solid var(--tl-line); color: var(--tl-mute); }
+.na_tl:not(.na_darkui) .na_search_wrap, .na_tl.na_darkui .na_search_wrap { color: var(--tl-dim); }
+.na_tl:not(.na_darkui) .na_search_wrap input.na_search, .na_tl.na_darkui .na_search_wrap input.na_search { color: var(--tl-ink); }
 .na_tl:not(.na_darkui) .na_search_wrap input.na_search::placeholder { color: #A99C92; opacity: 1; }
 .na_tl.na_darkui .na_search_wrap input.na_search::placeholder { color: #85858E; opacity: 1; }
 .na_tl:not(.na_darkui) .na_tlb_sq.on { color: var(--tl-acc); border-color: #D9A887; }
 .na_tl.na_darkui .na_tlb_sq.on { color: var(--tl-acc); border-color: #8A7A55; }
-.na_tl:not(.na_darkui) .na_tl_legend { color: var(--tl-mute); }
-.na_tl.na_darkui .na_tl_legend { color: var(--tl-mute); }
-.na_tl:not(.na_darkui) .na_group_head { background: var(--tl-bg); border-color: var(--tl-line); color: var(--tl-ink); }
-.na_tl.na_darkui .na_group_head { background: var(--tl-bg); border-color: var(--tl-line); color: var(--tl-ink); }
+.na_tl:not(.na_darkui) .na_tl_legend, .na_tl.na_darkui .na_tl_legend { color: var(--tl-mute); }
+.na_tl:not(.na_darkui) .na_group_head, .na_tl.na_darkui .na_group_head { background: var(--tl-bg); border-color: var(--tl-line); color: var(--tl-ink); }
 .na_tl:not(.na_darkui) .na_group_head .na_group_meta, .na_tl:not(.na_darkui) .na_group_head .na_group_chev { color: var(--tl-dim); opacity: 1; }
 .na_tl.na_darkui .na_group_head .na_group_meta, .na_tl.na_darkui .na_group_head .na_group_chev { color: var(--tl-dim); opacity: 1; }
 .na_tl:not(.na_darkui) .na_g_open > .na_group_head { background: var(--na-fill); color: #FFF6EF; border-color: transparent; }
 .na_tl.na_darkui .na_g_open > .na_group_head { background: var(--na-fill); color: #F3F1ED; border-color: transparent; }
 .na_tl:not(.na_darkui) .na_g_open > .na_group_head .na_group_meta, .na_tl:not(.na_darkui) .na_g_open > .na_group_head .na_group_chev { color: #CDBDB2; opacity: 1; }
 .na_tl.na_darkui .na_g_open > .na_group_head .na_group_meta, .na_tl.na_darkui .na_g_open > .na_group_head .na_group_chev { color: #BEBCC2; opacity: 1; }
-.na_tl:not(.na_darkui) .na_group .na_group .na_group_head { background: var(--tl-soft); color: var(--tl-ink); }
-.na_tl.na_darkui .na_group .na_group .na_group_head { background: var(--tl-soft); color: var(--tl-ink); }
-.na_tl:not(.na_darkui) .na_rail { color: var(--tl-dim); }
-.na_tl.na_darkui .na_rail { color: var(--tl-dim); }
-.na_tl:not(.na_darkui) .na_rail span + span { color: var(--tl-dim2); opacity: 1; }
-.na_tl.na_darkui .na_rail span + span { color: var(--tl-dim2); opacity: 1; }
-.na_tl:not(.na_darkui) .na_dot::before { background: linear-gradient(var(--tl-rail) 0 12px, transparent 12px 28px, var(--tl-rail) 28px); }
-.na_tl.na_darkui .na_dot::before { background: linear-gradient(var(--tl-rail) 0 12px, transparent 12px 28px, var(--tl-rail) 28px); }
-.na_tl:not(.na_darkui) .na_card.open .na_dot::before { background: linear-gradient(var(--tl-rail) 0 9px, transparent 9px 33px, var(--tl-rail) 33px); }
-.na_tl.na_darkui .na_card.open .na_dot::before { background: linear-gradient(var(--tl-rail) 0 9px, transparent 9px 33px, var(--tl-rail) 33px); }
+.na_tl:not(.na_darkui) .na_group .na_group .na_group_head, .na_tl.na_darkui .na_group .na_group .na_group_head { background: var(--tl-soft); color: var(--tl-ink); }
+.na_tl:not(.na_darkui) .na_rail, .na_tl.na_darkui .na_rail { color: var(--tl-dim); }
+.na_tl:not(.na_darkui) .na_rail span + span, .na_tl.na_darkui .na_rail span + span { color: var(--tl-dim2); opacity: 1; }
+.na_tl:not(.na_darkui) .na_dot::before, .na_tl.na_darkui .na_dot::before { background: linear-gradient(var(--tl-rail) 0 12px, transparent 12px 28px, var(--tl-rail) 28px); }
+.na_tl:not(.na_darkui) .na_card.open .na_dot::before, .na_tl.na_darkui .na_card.open .na_dot::before { background: linear-gradient(var(--tl-rail) 0 9px, transparent 9px 33px, var(--tl-rail) 33px); }
 .na_tl:not(.na_darkui) .na_card.open .na_dot::after { box-shadow: 0 0 0 4px #F6D7C4; }
 .na_tl.na_darkui .na_card.open .na_dot::after { box-shadow: 0 0 0 4px #3A3222; }
-.na_tl:not(.na_darkui) .na_card.open .na_rail span:first-child { color: var(--tl-acc-ink); }
-.na_tl.na_darkui .na_card.open .na_rail span:first-child { color: var(--tl-acc-ink); }
-.na_tl:not(.na_darkui) .na_card.open .na_rail span + span { color: #C98A66; }
-.na_tl.na_darkui .na_card.open .na_rail span + span { color: #C98A66; }
-.na_tl:not(.na_darkui) .na_tlb_box { background: var(--tl-bg); border-color: var(--tl-line); }
-.na_tl.na_darkui .na_tlb_box { background: var(--tl-bg); border-color: var(--tl-line); }
+.na_tl:not(.na_darkui) .na_card.open .na_rail span:first-child, .na_tl.na_darkui .na_card.open .na_rail span:first-child { color: var(--tl-acc-ink); }
+.na_tl:not(.na_darkui) .na_card.open .na_rail span + span, .na_tl.na_darkui .na_card.open .na_rail span + span { color: #C98A66; }
+.na_tl:not(.na_darkui) .na_tlb_box, .na_tl.na_darkui .na_tlb_box { background: var(--tl-bg); border-color: var(--tl-line); }
 .na_tl:not(.na_darkui) .na_card.open .na_tlb_box { border: 1.5px solid #D9A887; }
 .na_tl.na_darkui .na_card.open .na_tlb_box { border: 1.5px solid #8A7A55; }
-.na_tl:not(.na_darkui) .na_card_title { color: var(--tl-ink); }
-.na_tl.na_darkui .na_card_title { color: var(--tl-ink); }
-.na_tl:not(.na_darkui) .na_tlb_meta { color: var(--tl-dim); }
-.na_tl.na_darkui .na_tlb_meta { color: var(--tl-dim); }
-.na_tl:not(.na_darkui) .na_tlb_chip { background: var(--tl-soft); color: var(--tl-mute); }
-.na_tl.na_darkui .na_tlb_chip { background: var(--tl-soft); color: var(--tl-mute); }
+.na_tl:not(.na_darkui) .na_card_title, .na_tl.na_darkui .na_card_title { color: var(--tl-ink); }
+.na_tl:not(.na_darkui) .na_tlb_meta, .na_tl.na_darkui .na_tlb_meta { color: var(--tl-dim); }
+.na_tl:not(.na_darkui) .na_tlb_chip, .na_tl.na_darkui .na_tlb_chip { background: var(--tl-soft); color: var(--tl-mute); }
 .na_tl:not(.na_darkui) .na_tlb_chip.fade { background: #EAE3F5; color: #5B3FA0; }
 .na_tl.na_darkui .na_tlb_chip.fade { background: #2E2E34; color: #BBA6EE; }
 .na_tl:not(.na_darkui) .na_tlb_chip.key { background: #FFF1D6; color: #8A5A00; }
@@ -2009,23 +1987,18 @@ body.na_darkui .na_sp > .checkbox_label input:checked { background-image: url("d
 .na_tl.na_darkui .na_tlb_chips .na_ref_chip { background: #2E2E34; color: #F0CF8E; }
 .na_tl:not(.na_darkui) .na_tlb_text, .na_tl:not(.na_darkui) .na_tlb_full { color: #463428; }
 .na_tl.na_darkui .na_tlb_text, .na_tl.na_darkui .na_tlb_full { color: #ECEAE6; }
-.na_tl:not(.na_darkui) .na_tlb_tools { border-top-color: var(--tl-soft); }
-.na_tl.na_darkui .na_tlb_tools { border-top-color: var(--tl-soft); }
-.na_tl:not(.na_darkui) .na_tlb_tools button { color: var(--tl-mute); border-right-color: var(--tl-soft); }
-.na_tl.na_darkui .na_tlb_tools button { color: var(--tl-mute); border-right-color: var(--tl-soft); }
+.na_tl:not(.na_darkui) .na_tlb_tools, .na_tl.na_darkui .na_tlb_tools { border-top-color: var(--tl-soft); }
+.na_tl:not(.na_darkui) .na_tlb_tools button, .na_tl.na_darkui .na_tlb_tools button { color: var(--tl-mute); border-right-color: var(--tl-soft); }
 .na_tl:not(.na_darkui) .na_tlb_extra { background: #F2E7DF; border-top-color: var(--tl-soft); }
 .na_tl.na_darkui .na_tlb_extra { background: #38383F; border-top-color: var(--tl-soft); }
 .na_tl:not(.na_darkui) .na_sw { background: #D9C8BC; }
 .na_tl.na_darkui .na_sw { background: #5E5E66; }
-.na_tl:not(.na_darkui) .na_sw.on { background: var(--tl-acc); }
-.na_tl.na_darkui .na_sw.on { background: var(--tl-acc); }
-.na_tl:not(.na_darkui) .na_br_filters button { background: var(--tl-bg); border-color: var(--tl-line); }
-.na_tl.na_darkui .na_br_filters button { background: var(--tl-bg); border-color: var(--tl-line); }
+.na_tl:not(.na_darkui) .na_sw.on, .na_tl.na_darkui .na_sw.on { background: var(--tl-acc); }
+.na_tl:not(.na_darkui) .na_br_filters button, .na_tl.na_darkui .na_br_filters button { background: var(--tl-bg); border-color: var(--tl-line); }
 .na_tl:not(.na_darkui) .na_br_filters button.on { background: var(--na-fill); color: #FFF6EF; }
 .na_tl.na_darkui .na_br_filters button.on { background: var(--na-fill); color: #F3F1ED; }
 
-/* ============ mockup palette (light themes). The mockups' cream / brown / orange, used as is.
-   Dark themes (body.na_darkui) get the same rules with the colours darkened (each body.na_darkui twin follows its light rule). */
+/* ============ mockup palette (light themes). */
 body:not(.na_darkui) #na_settings, body:not(.na_darkui) .na_popup, body:not(.na_darkui) .na_v2, body:not(.na_darkui) dialog.popup:has(.na_confirm) {
     --na-accent: #B8541F;
     --na-accent-ink: #A84A17;
@@ -2111,19 +2084,15 @@ input.na_toggle:checked + .na_tgl_ui::after { transform: translateX(16px); }
 .na_cp_txt small { font-size: 0.82em; }
 .na_v2_list, .na_v2_card.na_v2_list { border-radius: 18px; }
 /* "on" pills and selected tabs */
-body:not(.na_darkui) .na_br_filters button.on, body:not(.na_darkui) .na_v2_chips button.on { background: var(--na-fill); color: var(--na-onfill); border-color: transparent; }
-body.na_darkui .na_br_filters button.on, body.na_darkui .na_v2_chips button.on { background: var(--na-fill); color: var(--na-onfill); border-color: transparent; }
+body:not(.na_darkui) .na_br_filters button.on, body:not(.na_darkui) .na_v2_chips button.on, body.na_darkui .na_br_filters button.on, body.na_darkui .na_v2_chips button.on { background: var(--na-fill); color: var(--na-onfill); border-color: transparent; }
 body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on { background: #FFFFFF; }
 body.na_darkui .na_v2_tabs button.on, body.na_darkui .na_v2_seg button.on { background: var(--na-paper); }
-body:not(.na_darkui) .na_v2_tabs button, body:not(.na_darkui) .na_v2_seg button { color: var(--na-mute); }
-body.na_darkui .na_v2_tabs button, body.na_darkui .na_v2_seg button { color: var(--na-mute); }
-body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on { color: var(--na-accent-ink); }
-body.na_darkui .na_v2_tabs button.on, body.na_darkui .na_v2_seg button.on { color: var(--na-accent-ink); }
+body:not(.na_darkui) .na_v2_tabs button, body:not(.na_darkui) .na_v2_seg button, body.na_darkui .na_v2_tabs button, body.na_darkui .na_v2_seg button { color: var(--na-mute); }
+body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on, body.na_darkui .na_v2_tabs button.on, body.na_darkui .na_v2_seg button.on { color: var(--na-accent-ink); }
 /* text inputs inside the redesigned screens */
 body:not(.na_darkui) :is(.na_v2, #na_settings) .text_pole { background: #F2E9E2; border: 1px solid var(--na-line); color: var(--na-ink); border-radius: 12px; }
 body.na_darkui :is(.na_v2, #na_settings) .text_pole { background: #2A2A30; border: 1px solid var(--na-line); color: var(--na-ink); border-radius: 12px; }
-body:not(.na_darkui) :is(.na_v2, #na_settings) textarea.text_pole { padding: 10px 12px; }
-body.na_darkui :is(.na_v2, #na_settings) textarea.text_pole { padding: 10px 12px; }
+body:not(.na_darkui) :is(.na_v2, #na_settings) textarea.text_pole, body.na_darkui :is(.na_v2, #na_settings) textarea.text_pole { padding: 10px 12px; }
 body:not(.na_darkui) :is(.na_v2, #na_settings) .text_pole::placeholder { color: #A99C92; opacity: 1; }
 body.na_darkui :is(.na_v2, #na_settings) .text_pole::placeholder { color: #85858E; opacity: 1; }
 
@@ -2145,8 +2114,7 @@ body.na_darkui #na_settings .na_seg_btn.active { background: #232328; color: #F0
 #na_settings .na_seg .na_br_view { padding: 0; gap: 0; background: transparent; border-radius: 10px; }
 #na_settings .na_seg .na_br_view button { width: 34px; height: 100%; display: grid; place-items: center; padding: 0; border-radius: 10px; color: var(--na-dim); }
 #na_settings .na_seg .na_br_view button:hover { color: var(--na-accent-fg, var(--na-accent)); }
-#na_settings .na_seg .na_br_view button.on { display: none; }
-#na_settings .na_tab_pane:has(#na_view_cards[hidden]) .na_seg .na_br_view { display: none; }
+#na_settings .na_seg .na_br_view button.on, #na_settings .na_tab_pane:has(#na_view_cards[hidden]) .na_seg .na_br_view { display: none; }
 /* no box around the card view: search, chips and cards sit right on the page */
 #na_view_cards:not(:has(.na_tl)) { border: 0; padding: 0; gap: 12px; border-radius: 0; }
 .na_browser:not(.na_tl) { gap: 12px; }
@@ -2252,9 +2220,7 @@ body.na_darkui .na_browser:not(.na_tl) .na_ref_chip:hover { background: #E9DFCF;
 .na_browser:not(.na_tl) .na_card_actions .na_src_btn > i { display: none; }
 
 /* ---- Compress tab */
-.na_cp { gap: 12px; }
-.na_cp_hero { gap: 12px; }
-.na_cp_hero #na_since { gap: 12px; }
+.na_cp, .na_cp_hero, .na_cp_hero #na_since { gap: 12px; }
 .na_cp_hhead { font-size: 0.893em; }
 .na_cp_hhead > span + span { font-size: 0.96em; }
 .na_cp_hhead small { font-size: 0.88em; color: var(--na-dim); }
@@ -2345,9 +2311,7 @@ body.na_darkui .na_cp_num { color: #F0CF8E; }
 .na_cfg_fold[open] .na_cfg_chev { transform: rotate(90deg); }
 .na_tab_pane[data-pane="config"] .na_cfg_box .na_cfg_sub { background: var(--na-softer); }
 /* connection fields and notes inside the boxes */
-.na_cfg_box .na_tr_cfg { padding: 0 14px 10px; }
-.na_cfg_box .na_tr_test_row { padding: 0 14px 10px; }
-.na_cfg_box .na_conn_note { padding: 0 14px 10px; }
+.na_cfg_box .na_tr_cfg, .na_cfg_box .na_tr_test_row, .na_cfg_box .na_conn_note { padding: 0 14px 10px; }
 .na_cfg_box .na_tr_cfg + .na_set_list, .na_cfg_box .na_tr_test_row + .na_set_list { margin-top: 0; }
 
 /* ---- Compress wizard */
@@ -2386,8 +2350,7 @@ body:not(.na_darkui) .na_wz2_arr { color: #B8A99E; }
 body.na_darkui .na_wz2_arr { color: #8A8A93; }
 .na_v2_btn > .na_svg { flex: none; }
 .na_wz2_pane select.na_wz_prompt, body:not(.na_darkui) .na_wz2_pane select.na_wz_prompt { font: inherit; font-size: 0.964em; line-height: 1.5; height: auto; min-height: 0; padding: 9px 12px; border-radius: 14px; }
-/* 압축 마법사 v3 (docs/mockups/ext-wizard B + 가): as tall as its content; the range's first and last message
-   above the numbers (hold one to read it whole in a sheet from the bottom) — was at the end of the file, lives with the wizard now */
+/* 압축 마법사 v3 (docs/mockups/ext-wizard B + 가): */
 .na_wz3_msgs { display: flex; flex-direction: column; margin-bottom: 12px; }
 .na_wz3_msgs:empty { display: none; }
 .na_wz3_msg { padding: 10px 12px; border-radius: 14px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 4px 12px rgba(70, 52, 40, 0.05); cursor: pointer; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
@@ -2410,8 +2373,7 @@ body.na_darkui .na_wz3_sheet { background: #232328; color: #ECEAE6; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup button.na_wz3_sclose:not(#na_x) { flex: none; height: 42px; margin: 14px 0 0; border: 0 !important; border-radius: 999px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; box-shadow: none !important; }
 body:not(.na_darkui) dialog.popup button.na_wz3_sclose:not(#na_x) { background: #EADCD0 !important; color: #463428 !important; }
 body.na_darkui dialog.popup button.na_wz3_sclose:not(#na_x) { background: #2E2E34 !important; color: #ECEAE6 !important; }
-/* 마법사 2 · 4단계 (docs/mockups/ext-wizard A): what goes over as a small table, what grading looks for as a list; the step's one
-   action is the orange button below, .txt and skipping are links */
+/* 마법사 2 · 4단계 (docs/mockups/ext-wizard A): */
 .na_wiz2 .na_wz3_hide { display: none; }
 .na_wz3_pk { padding: 2px 14px; border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 .na_wz3_pk > div { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 10px 0; font-size: 13.5px; }
@@ -2464,8 +2426,7 @@ body.na_darkui .na_ex2_card .na_cp_bar .raw { background: #E9DFCF; }
 .na_ex_toset > .na_svg { color: var(--na-dim); }
 .na_ex2_preview { height: 96px; max-height: none; box-sizing: border-box; padding: 10px 12px; border-radius: 16px; font-size: 0.821em; line-height: 1.6; color: var(--na-mute, var(--na-dim)); }
 .na_ex2_btns .na_v2_btn { padding: 12px 0; border-radius: 14px; font-size: 0.964em; line-height: 1.5; }
-/* 원문 뽑기 v3 (docs/mockups/ext-extract B): range card with filled chips and a thin whole-chat bar, the text as it will be
-   copied right under it (fading out), options, then .txt | 전체 복사 — no outlines, one orange button */
+/* 원문 뽑기 v3 (docs/mockups/ext-extract B): */
 body:is(.na_darkui, :not(.na_darkui)) .na_ex2 .na_v2_chips button { border: 0 !important; padding: 6px 12px !important; border-radius: 999px; font-weight: 600; box-shadow: none !important; }
 body:not(.na_darkui) .na_ex2 .na_v2_chips button:not(.on) { background: #E9DCD1 !important; color: #6B5A50 !important; }
 body.na_darkui .na_ex2 .na_v2_chips button:not(.on) { background: #2E2E34 !important; color: #B9B7BD !important; }
@@ -2524,11 +2485,8 @@ body.na_darkui .na_ap2 .na_append_ta { background: #2A2A30; border: 1px solid va
 .na_ap2_pv { flex: 1; border: 1px solid var(--na-line); background: var(--na-card); color: inherit; }
 .na_ap2_pv:hover { border-color: var(--na-accent); }
 .na_ap2_btns .na_ap2_go { flex: 2; border: 0; background: var(--na-accent); color: var(--na-onaccent, #fff); font-weight: 600; }
-.popup-button-ok.na_ap2_okhide { display: none !important; }
-/* ============ 아카이브에 추가 v3 (docs/mockups/ext-append): the draft card with 초안 | 추가 후 and the preview in a scroll box,
-   크게 보기, AI로 고치기 as a small chat, the AI tools as a list, section labels, 취소 · 추가하기 at the bottom.
-   The preview inside (.na_diff) keeps its own look. */
-.na_ap3_dlg .popup-controls { display: none !important; }
+.popup-button-ok.na_ap2_okhide, .na_ap3_dlg .popup-controls { display: none !important; }
+/* ============ 아카이브에 추가 v3 (docs/mockups/ext-append): */
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_ap3_dlg:not(#na_x) { border-radius: 22px !important; overflow: hidden; }
 .na_ap3.na_v2 { gap: 0; }
 .na_ap3 > .na_v2_card { margin-top: 10px; }
@@ -2616,13 +2574,11 @@ body.na_darkui .na_ap3_ti.b { background: #2E2E34; color: #9DBCE6; }
 .na_ap3_tt small { font-size: 12px; color: var(--na-sub, var(--na-dim)); opacity: 1; }
 .na_ap3_ar { color: var(--na-dim); font-size: 18px; }
 .na_ap3 .na_ap2_checks .na_grade_out, .na_ap3 .na_ap2_checks .na_conflict_out { margin: 0 14px 14px; }
-/* dark (시안 A): a near-black warm window, darker cards with a faint top light, no tinted fills — the parts are
-   neutral and the colour is in a thin line or the text: my request edged in orange, replies with a coloured bar */
+/* dark (시안 A): */
 body.na_darkui dialog.popup.na_ap3_dlg:has(.na_ap3):not(#na_x) { background: #17171A !important; }
 body.na_darkui .na_ap3 .na_v2_card, body.na_darkui .na_ap3 :is(.na_ap3_fbody, .na_ap3_fdock) { background: #232328; border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
 body.na_darkui .na_ap3_bar { background: linear-gradient(rgba(28, 23, 20, 0), #17171A 14px); }
-body.na_darkui .na_ap3 :is(.na_ly_ask, .na_ap3_seg, .na_ap3_raw) { background: #2E2E34; }
-body:is(.na_darkui) .na_ap3 .na_ap3_chip { background: #2E2E34; }
+body.na_darkui .na_ap3 :is(.na_ly_ask, .na_ap3_seg, .na_ap3_raw), body:is(.na_darkui) .na_ap3 .na_ap3_chip { background: #2E2E34; }
 body.na_darkui .na_ap3 .na_ap3_chip.on { background: #7A6457; color: #F3F1ED; }
 body.na_darkui .na_ap3 .na_ap3_seg button.on { background: #414148; color: #F0CF8E; }
 body.na_darkui .na_ap3_raw:has(input:checked) { background: #2E2E34; color: #8FD3A6; }
@@ -2892,12 +2848,9 @@ body.na_darkui .na_ask2 .na_ask2_input textarea::placeholder { color: var(--na-d
 .na_pv2_stats > div:nth-child(n+2) b { font-size: 13px; }
 .na_pv2_chips { font-size: 12px; }
 .na_pv2_chips span { padding: 2px 10px; line-height: 1.5; }
-body:not(.na_darkui) .na_pv2_chips .world { background: var(--na-ok-soft); color: var(--na-ok); }
-body.na_darkui .na_pv2_chips .world { background: var(--na-ok-soft); color: var(--na-ok); }
-body:not(.na_darkui) .na_pv2_chips .fade { background: var(--na-purple-soft); color: var(--na-purple); }
-body.na_darkui .na_pv2_chips .fade { background: var(--na-purple-soft); color: var(--na-purple); }
-body:not(.na_darkui) .na_pv2_chips .wait { background: var(--na-amber-soft); color: var(--na-amber); }
-body.na_darkui .na_pv2_chips .wait { background: var(--na-amber-soft); color: var(--na-amber); }
+body:not(.na_darkui) .na_pv2_chips .world, body.na_darkui .na_pv2_chips .world { background: var(--na-ok-soft); color: var(--na-ok); }
+body:not(.na_darkui) .na_pv2_chips .fade, body.na_darkui .na_pv2_chips .fade { background: var(--na-purple-soft); color: var(--na-purple); }
+body:not(.na_darkui) .na_pv2_chips .wait, body.na_darkui .na_pv2_chips .wait { background: var(--na-amber-soft); color: var(--na-amber); }
 .na_pv2_chips .off { color: var(--na-mute, var(--na-dim)); }
 .na_pv2_code { border-radius: 18px; font-size: 11.5px; line-height: 1.7; }
 body:not(.na_darkui) .na_pv2_code { background: var(--na-fill); color: #EDE2D9; }
@@ -2936,10 +2889,8 @@ body.na_darkui .na_bn2_find { border-color: #55555E; }
 .na_bn2_findrow .na_cp_txt small { font-size: 11.5px; color: var(--na-dim); }
 .na_bn2 .na_br_find { flex: none; font-size: 12.5px; padding: 6px 12px; border-radius: 10px; line-height: 1.5; }
 
-/* 이탈 감지 · 분기 › empty (docs/mockups/ext-drift D+F): no card around it, a small picture on top (what a drift
-   looks like · a timeline that ends here), a title, one line, then the control */
-.na_dr3_hello, .na_bn3_hello { display: none; }
-.na_dr2.na_dr3_new > :is(.na_dr2_ctl, .na_dr2_out) { display: none; }
+/* 이탈 감지 · 분기 › empty (docs/mockups/ext-drift D+F): */
+.na_dr3_hello, .na_bn3_hello, .na_dr2.na_dr3_new > :is(.na_dr2_ctl, .na_dr2_out) { display: none; }
 .na_dr2.na_dr3_new .na_dr3_hello, .na_bn2.na_bn3_new .na_bn3_hello { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 14px 0 0; }
 :is(.na_dr3_hello, .na_bn3_hello) > b { margin-top: 14px; font-size: 16px; color: var(--na-ink); }
 :is(.na_dr3_hello, .na_bn3_hello) > small { font-size: 12.5px; line-height: 1.5; color: var(--na-sub, var(--na-dim)); }
@@ -2983,9 +2934,8 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 /* 이탈 감지 (never checked) in the big window: the example on top, 최근 메시지 + 검사하기 at the bottom like the wizard's buttons */
 .na_dr2.na_dr3_new { display: flex; flex-direction: column; }
 .na_dr2.na_dr3_new .na_dr3_hello { flex: 1; }
-.na_dr2.na_dr3_new .na_dr3_seg { margin-top: auto; }
+.na_dr2.na_dr3_new .na_dr3_seg, .na_dr2.na_dr3_new .na_dr3_hello > .na_dr3_cmp { margin-top: auto; }
 /* empty 이탈 감지 · 분기 sit in the middle of the 55% window (3.169.6): the example and its line centred above the controls at the bottom; the timeline, line and 찾기 centred */
-.na_dr2.na_dr3_new .na_dr3_hello > .na_dr3_cmp { margin-top: auto; }
 .na_dr2.na_dr3_new .na_dr3_hello > b { margin-top: 14px; }
 .na_dr2.na_dr3_new .na_dr3_hello > .na_dr3_seg { margin-top: auto; }
 .na_bn2.na_bn3_new { display: flex; flex-direction: column; }
@@ -3011,8 +2961,7 @@ body.na_darkui .na_uh2_range > .na_uh2_arrow, body.na_darkui .na_uh2_range label
 .na_kw2_head small { font-size: 12px; color: var(--na-dim); }
 .na_kw2_head b { font-size: 17px; line-height: 1.35; }
 .na_kw2_key { gap: 4px; font-size: 13px; line-height: 1.5; }
-body:not(.na_darkui) .na_kw2_key { background: var(--na-fill); color: var(--na-onfill); }
-body.na_darkui .na_kw2_key { background: var(--na-fill); color: var(--na-onfill); }
+body:not(.na_darkui) .na_kw2_key, body.na_darkui .na_kw2_key { background: var(--na-fill); color: var(--na-onfill); }
 .na_kw2_x { width: 18px; height: 18px; font-size: 14px; }
 body:not(.na_darkui) .na_kw2_x { color: #CDBDB2; opacity: 1; }
 body.na_darkui .na_kw2_x { color: #BEBCC2; opacity: 1; }
@@ -3067,8 +3016,7 @@ body.na_darkui .na_kw2_words { color: #E6D9CD; }
 .na_kw2_acts .na_kw2_save { flex: 2; border: 0; }
 dialog:has(.na_kw2_save) .popup-button-ok { display: none; }
 
-/* 키워드 테스트 (docs/mockups/ext-kwtest B): the counts in the list heads, then the called sections (orange tick, the matched keyword
-   as an orange pill, the sentence with it marked), then the ones not called, faded */
+/* 키워드 테스트 (docs/mockups/ext-kwtest B): */
 .na_kwt3 .na_kwt_in { min-height: 0; }
 .na_kwt3_list { padding: 0; overflow: hidden; gap: 0; }
 .na_kwt3_row { display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; background: transparent; }
@@ -3102,10 +3050,8 @@ body.na_darkui .na_df2_arrow { color: #8A8A93; }
 .na_df2_body { flex: 1 0 auto; gap: 12px; }
 .na_df2_cards { gap: 12px; }
 .na_df2_counts { font-size: 0.857em; }
-body:not(.na_darkui) .na_df2_counts .add, body:not(.na_darkui) .na_df2_badge.add { background: var(--na-ok-soft); color: var(--na-ok); }
-body.na_darkui .na_df2_counts .add, body.na_darkui .na_df2_badge.add { background: var(--na-ok-soft); color: var(--na-ok); }
-body:not(.na_darkui) .na_df2_counts .mod, body:not(.na_darkui) .na_df2_badge.mod { background: var(--na-amber-soft); color: var(--na-amber); }
-body.na_darkui .na_df2_counts .mod, body.na_darkui .na_df2_badge.mod { background: var(--na-amber-soft); color: var(--na-amber); }
+body:not(.na_darkui) .na_df2_counts .add, body:not(.na_darkui) .na_df2_badge.add, body.na_darkui .na_df2_counts .add, body.na_darkui .na_df2_badge.add { background: var(--na-ok-soft); color: var(--na-ok); }
+body:not(.na_darkui) .na_df2_counts .mod, body:not(.na_darkui) .na_df2_badge.mod, body.na_darkui .na_df2_counts .mod, body.na_darkui .na_df2_badge.mod { background: var(--na-amber-soft); color: var(--na-amber); }
 body:not(.na_darkui) .na_df2_counts .del, body:not(.na_darkui) .na_df2_badge.del { color: #8C1D18; }
 body.na_darkui .na_df2_counts .del, body.na_darkui .na_df2_badge.del { color: #F29A90; }
 .na_df2_tr .na_tr_btn { display: none; }
@@ -3146,13 +3092,11 @@ body.na_darkui .na_df2 .na_df2_lines .na_diff_add .na_diff_hl { background: rgba
 .na_kn2_card.secret::before { background: var(--na-accent); }
 .na_kn2_card .na_kn_fact { font-size: 0.964em; }
 .na_kn2_k { font-size: 0.929em; }
-body:not(.na_darkui) .na_kn2_k { color: var(--na-onfill); }
-body.na_darkui .na_kn2_k { color: var(--na-onfill); }
+body:not(.na_darkui) .na_kn2_k, body.na_darkui .na_kn2_k { color: var(--na-onfill); }
 .na_kn2_k .na_face { font-size: 10.5px; }
 .na_kn2_k.mini, .na_kn2_s.mini { font-size: 0.917em; }
 .na_kn2_s { font-size: 0.893em; }
-body:not(.na_darkui) .na_kn2_s { color: var(--na-amber); }
-body.na_darkui .na_kn2_s { color: var(--na-amber); }
+body:not(.na_darkui) .na_kn2_s, body.na_darkui .na_kn2_s { color: var(--na-amber); }
 .na_kn2_u { font-size: 0.857em; }
 body:not(.na_darkui) .na_kn2_u { color: #A99C92; opacity: 1; }
 body.na_darkui .na_kn2_u { color: #85858E; opacity: 1; }
@@ -3167,10 +3111,7 @@ body.na_darkui .na_kn2_u { color: #85858E; opacity: 1; }
 .na_kn2 .na_kn2_more .na_linkbtn.danger { color: var(--na-bad); }
 .na_kn2 .na_kn2_more .na_kn_clear { margin-left: 0; font-size: 0.857em; }
 
-/* ============ 누가 아는가 › welcome + example tags (docs/mockups/ext-knowledge A): a welcome card with 만들기 when there is nothing
-   yet, faded example rows using the story's own people as tags — 알아요 the solid accent pill with the face, 짐작 a dashed outline,
-   몰라요 a plain struck name — and the same three tags, small, as the legend above the list. One block: the nine passes that used to
-   sit at the end of the file are folded to their final values here. */
+/* ============ 누가 아는가 › welcome + example tags (docs/mockups/ext-knowledge A): */
 .na_kn2.na_kn3_new :is(.na_kn2_main, .na_kn2_more) { display: none !important; }
 .na_kn2.na_kn3_new .na_kn_inject { display: none; }
 .na_kn3_hello { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 16px 14px; text-align: center; border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
@@ -3233,8 +3174,7 @@ body.na_darkui :is(.na_kn3_tag.u i, .na_kn3_leg span.u i) { background: #5E5E66;
 .na_wd.on { border-width: 1.5px; padding: 11.5px 13.5px; }
 body:not(.na_darkui) .na_wd.on { border-color: #E2B597; }
 body.na_darkui .na_wd.on { border-color: #8A7A55; }
-body:not(.na_darkui) .na_wd.on .na_wd_icon { background: var(--na-warm-soft); }
-body.na_darkui .na_wd.on .na_wd_icon { background: var(--na-warm-soft); }
+body:not(.na_darkui) .na_wd.on .na_wd_icon, body.na_darkui .na_wd.on .na_wd_icon { background: var(--na-warm-soft); }
 .na_wd_icon { font-size: 1em; }
 .na_wd_name b { font-size: 1.036em; }
 .na_wd_name small { font-size: 0.857em; }
@@ -3312,8 +3252,7 @@ body.na_darkui :is(.na_v2, #na_settings) .na_wd_text.text_pole.text_pole { backg
 .na_layers .na_ly_tabs button small { font-size: 0.88em; color: var(--na-mute, var(--na-dim)); }
 .na_layers .na_ly_tabs button.on { font-weight: 600; box-shadow: 0 1px 2px rgba(60, 30, 10, 0.12); }
 .na_layers .na_ly_tabs button.on small { font-weight: 400; color: var(--na-dim); }
-body:not(.na_darkui) .na_layers .na_ly_tabs button.on { color: var(--na-ink); }
-body.na_darkui .na_layers .na_ly_tabs button.on { color: var(--na-ink); }
+body:not(.na_darkui) .na_layers .na_ly_tabs button.on, body.na_darkui .na_layers .na_ly_tabs button.on { color: var(--na-ink); }
 :is(.na_v2, #na_settings) .na_ly_pane textarea.text_pole.text_pole, .na_ly_full { display: block; width: 100%; box-sizing: border-box; margin: 0; padding: 10px 12px; border: 1px solid var(--na-line); border-radius: 12px; font-size: 0.929em; line-height: 1.55; min-height: 96px; }
 .na_ly_full { background: transparent; max-height: 40vh; overflow: auto; white-space: pre-wrap; }
 :is(.na_v2, #na_settings) .na_ly_pane textarea.text_pole.text_pole { field-sizing: content; max-height: 50vh; }
@@ -3338,8 +3277,7 @@ body:not(.na_darkui) .na_fd_strip .line, body:not(.na_darkui) .na_fd_level > i.l
 body.na_darkui .na_fd_strip .line, body.na_darkui .na_fd_level > i.line { background: #8A7A55; }
 body:not(.na_darkui) .na_fd_strip .pin { background: #7E3610; }
 body.na_darkui .na_fd_strip .pin { background: #F0CF8E; }
-body:not(.na_darkui) .na_fd_strip .miss { background: var(--na-raw); }
-body.na_darkui .na_fd_strip .miss { background: var(--na-raw); }
+body:not(.na_darkui) .na_fd_strip .miss, body.na_darkui .na_fd_strip .miss { background: var(--na-raw); }
 .na_fd_ends { font-size: 0.786em; margin-top: -6px; }
 .na_fd_level { padding: 8px 0 0; border-top-color: var(--na-line2, var(--na-line)); font-size: 1em; }
 .na_fd_level > span:nth-child(2) > span { font-size: 0.964em; }
@@ -3354,8 +3292,7 @@ body.na_darkui .na_fd_fill > span { color: #E6D9CD; }
 .na_fd_fill .na_v2_btn .fa-feather-pointed { display: none; }
 
 /* Calendar */
-.na_cal { gap: 14px; }
-.na_cal .na_cal_body { gap: 14px; }
+.na_cal, .na_cal .na_cal_body { gap: 14px; }
 .na_cal .na_xr_warn { gap: 10px; padding: 10px 12px; border-radius: 14px; }
 body:not(.na_darkui) .na_cal .na_xr_warn { border-color: #F0C6BC; }
 body.na_darkui .na_cal .na_xr_warn { border-color: #6A3A36; }
@@ -3369,8 +3306,7 @@ body:not(.na_darkui) .na_cal .na_cal_logs { background: #EBDDD2; }
 body.na_darkui .na_cal .na_cal_logs { background: #2A2A30; }
 .na_cal .na_cal_logs button { flex: none; padding: 4px 10px; font-size: 0.893em; line-height: 1.5; }
 .na_cal .na_cal_logs button.on { box-shadow: none; }
-body:not(.na_darkui) .na_cal .na_cal_logs button.on { color: var(--na-ink); }
-body.na_darkui .na_cal .na_cal_logs button.on { color: var(--na-ink); }
+body:not(.na_darkui) .na_cal .na_cal_logs button.on, body.na_darkui .na_cal .na_cal_logs button.on { color: var(--na-ink); }
 .na_cal_gap2 { font-size: 0.857em; padding: 2px 0; margin-bottom: -8px; }
 body:not(.na_darkui) .na_cal_gap2::before, body:not(.na_darkui) .na_cal_gap2::after { border-top-color: #D3C1B4; }
 body.na_darkui .na_cal_gap2::before, body.na_darkui .na_cal_gap2::after { border-top-color: #55555E; }
@@ -3534,10 +3470,8 @@ body:not(.na_darkui) .na_people .na_ego line.cold.hot { stroke: #3D6FB6; }
 body.na_darkui .na_people .na_ego line.cold.hot { stroke: #7FA6E0; }
 .na_people .na_ego_lbl { font-size: 0.75em; line-height: 1.5; }
 .na_people .na_ego_lbl.cold { color: var(--na-cold-ink); }
-body:not(.na_darkui) .na_people .na_ego_lbl.warm { color: var(--na-accent-fg, var(--na-accent)); }
-body.na_darkui .na_people .na_ego_lbl.warm { color: var(--na-accent-fg, var(--na-accent)); }
-body:not(.na_darkui) .na_people .na_ego_lbl.cold { color: var(--na-cold); }
-body.na_darkui .na_people .na_ego_lbl.cold { color: var(--na-cold); }
+body:not(.na_darkui) .na_people .na_ego_lbl.warm, body.na_darkui .na_people .na_ego_lbl.warm { color: var(--na-accent-fg, var(--na-accent)); }
+body:not(.na_darkui) .na_people .na_ego_lbl.cold, body.na_darkui .na_people .na_ego_lbl.cold { color: var(--na-cold); }
 .na_people .na_ego_me .na_face { font-size: 28px; box-shadow: 0 0 0 4px var(--na-paper, var(--SmartThemeBlurTintColor, #fff)), 0 4px 14px rgba(120, 50, 20, 0.25); }
 .na_people .na_ego_node .na_face { font-size: 15px; box-shadow: 0 0 0 3px var(--na-paper, var(--SmartThemeBlurTintColor, #fff)); }
 .na_people .na_ego_node.on .na_face { box-shadow: 0 0 0 3px var(--na-paper, var(--SmartThemeBlurTintColor, #fff)), 0 0 0 5px var(--na-fill, var(--SmartThemeBodyColor, #222)); }
@@ -3573,17 +3507,14 @@ body.na_darkui .na_people .na_ego_detail > ul { color: #ECEAE6; }
 .na_people .na_tp_icon.cold { color: var(--na-cold); }
 .na_people .na_tp_icon svg { display: block; }
 .na_people .na_tp_now b { font-size: 2.1429em; font-weight: 700; }
-body:not(.na_darkui) .na_people .na_tp_now > span.warm { color: var(--na-warm); }
-body.na_darkui .na_people .na_tp_now > span.warm { color: var(--na-warm); }
-body:not(.na_darkui) .na_people .na_tp_now > span.cold { color: var(--na-cold); }
-body.na_darkui .na_people .na_tp_now > span.cold { color: var(--na-cold); }
+body:not(.na_darkui) .na_people .na_tp_now > span.warm, body.na_darkui .na_people .na_tp_now > span.warm { color: var(--na-warm); }
+body:not(.na_darkui) .na_people .na_tp_now > span.cold, body.na_darkui .na_people .na_tp_now > span.cold { color: var(--na-cold); }
 /* 평균 · 최고 · 최저, as in TempAC-3 */
 .na_people .na_tp_stats > span { padding: 5px 10px; line-height: 1.25; }
 .na_people .na_tp_stats small { font-size: 0.75em; color: var(--na-dim); }
 .na_people .na_tp_stats > span:first-child b { color: var(--na-ink, inherit); }
 /* chart */
-body:not(.na_darkui) .na_people .na_temp_svg .band { fill: var(--na-softer); }
-body.na_darkui .na_people .na_temp_svg .band { fill: var(--na-softer); }
+body:not(.na_darkui) .na_people .na_temp_svg .band, body.na_darkui .na_people .na_temp_svg .band { fill: var(--na-softer); }
 body:not(.na_darkui) .na_people .na_temp_svg .zero { stroke: #DCCBBE; }
 body.na_darkui .na_people .na_temp_svg .zero { stroke: #4C4C55; }
 body:not(.na_darkui) .na_people .na_temp_svg .area.warm { fill: #F3B497; fill-opacity: 0.45; }
@@ -3621,8 +3552,7 @@ body:not(.na_darkui) .na_people .na_v2_foot { color: #9A8B80; }
 body.na_darkui .na_people .na_v2_foot { color: #A09FA6; }
 /* --- end audit E --- */
 
-/* ============ home tab: keeps the original theme-based look (it was not part of the mockup redesign).
-   The light-theme mockup palette is undone here; the shared fixes above skip the home pane with :where(). */
+/* ============ home tab: */
 body:not(.na_darkui) #na_settings :is(.inline-drawer-header, #na_meter, .na_nav, .na_tab_pane[data-pane="home"]) {
     --na-accent: var(--SmartThemeQuoteColor, #c9814b);
     --na-line: color-mix(in srgb, var(--SmartThemeBodyColor, #888) 15%, transparent);
@@ -3669,11 +3599,9 @@ body.na_darkui .na_tlb_menu .na_hc_status.ok { color: #74C292; }
 .na_tlb_menu .na_hc_status.bad { color: var(--na-warn); border-color: color-mix(in srgb, var(--na-warn) 40%, transparent); font-weight: 600; }
 .na_tlb_hc:empty { display: none; }
 .na_tlb_hc { display: contents; }
-.na_tl:not(.na_darkui) .na_tlb_menu .na_v2_pillbtn, .na_tl:not(.na_darkui) .na_tlb_menu .na_hc_status { background: var(--tl-bg); border-color: var(--tl-line); }
-.na_tl.na_darkui .na_tlb_menu .na_v2_pillbtn, .na_tl.na_darkui .na_tlb_menu .na_hc_status { background: var(--tl-bg); border-color: var(--tl-line); }
+.na_tl:not(.na_darkui) .na_tlb_menu .na_v2_pillbtn, .na_tl:not(.na_darkui) .na_tlb_menu .na_hc_status, .na_tl.na_darkui .na_tlb_menu .na_v2_pillbtn, .na_tl.na_darkui .na_tlb_menu .na_hc_status { background: var(--tl-bg); border-color: var(--tl-line); }
 /* the search field's own input never draws a box of its own (theme text_pole styles) */
-/* every search field (archive cards, quote bank, editor find bar): the wrap is the box,
-   the input inside stays see-through even when a theme or theme extension paints inputs */
+/* every search field (archive cards, quote bank, editor find bar): */
 :is(#na_settings, .na_popup) :is(.na_search_wrap, .na_find_field) input,
 :is(#na_settings, .na_popup) :is(.na_search_wrap, .na_find_field) input:is(:focus, :hover) {
     background: transparent !important; background-color: transparent !important; background-image: none !important;
@@ -3681,8 +3609,7 @@ body.na_darkui .na_tlb_menu .na_hc_status.ok { color: #74C292; }
 }
 :is(#na_settings, .na_popup) :is(.na_search_wrap, .na_find_field) input::-webkit-search-decoration { -webkit-appearance: none; }
 
-/* ============ the extension's own header bar in SillyTavern's extension list: the panel's base colour
-   (the same as under the tool boxes) instead of the stock gradient, so bar and panel read as one piece */
+/* ============ the extension's own header bar in SillyTavern's extension list: */
 body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header {
     background: #F0E4DB; background-image: none; border: 1px solid #F0E4DB; border-radius: 14px;
     padding: 6px 12px; box-shadow: none; color: #463428;
@@ -3695,14 +3622,11 @@ body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inlin
 body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header:hover { filter: none; background: #232328; border-color: #232328; }
 body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header .inline-drawer-icon { color: #8A7A70; }
 body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header .inline-drawer-icon { color: #9A989F; }
-/* open (SillyTavern flips the icon to .up): the bar sits flush on the panel, no 5px gap, square lower corners,
-   and the panel's top corners square too, so there are no notches at either end */
+/* open (SillyTavern flips the icon to .up): */
 #na_settings > .inline-drawer:has(> .inline-drawer-header .inline-drawer-icon.up) > .inline-drawer-toggle.inline-drawer-header { margin-bottom: 0; border-radius: 14px 14px 0 0; }
 #na_settings > .inline-drawer:has(> .inline-drawer-header .inline-drawer-icon.up) > .inline-drawer-content { margin-top: 0; border-radius: 0 0 14px 14px; }
 
-/* ============ dark themes: the light mockup palette, darkened. Every light-only rule above has a body.na_darkui twin
-   right after it with the colours mapped (cream → warm dark brown, brown ink → cream, accents brighter).
-   The panel and popups sit on a warm dark base so the cards read as one family with the light look. */
+/* ============ dark themes: */
 /* the theme's own page and text colours, warmed, for the rules that borrow them (active tabs, face rings, sticky bars) */
 body.na_darkui :is(#na_settings, dialog.popup:has(.na_popup, #na_settings)) {
     --SmartThemeBodyColor: #E8E6E2; --SmartThemeEmColor: #9A989F; --SmartThemeQuoteColor: #E9DFCF;
@@ -3713,8 +3637,7 @@ body.na_darkui #na_settings > .inline-drawer > .inline-drawer-content { backgrou
 body.na_darkui .na_face_btn > i { background: var(--na-fill); color: var(--na-onfill); }
 body.na_darkui .na_popup :where(.text_pole) { background: #2A2A30; border: 1px solid #45454D; color: #ECEAE6; }
 
-/* ============ the extension's own theme (설정 › 테마), whatever SillyTavern's theme is. Inside the panel and its popups
-   the theme colours SillyTavern's rules read are swapped for the chosen palette's, and both sit on their own base. */
+/* ============ the extension's own theme (설정 › 테마), whatever SillyTavern's theme is. */
 body:not(.na_darkui) :is(#na_settings, dialog.popup:has(.na_popup, #na_settings)) {
     --SmartThemeBodyColor: #463428; --SmartThemeEmColor: #786455; --SmartThemeQuoteColor: #B85C1E;
     --SmartThemeBlurTintColor: #F0E4DB; --SmartThemeChatTintColor: #ECE0D6; --SmartThemeBorderColor: rgba(120, 90, 60, 0.25);
@@ -3781,9 +3704,7 @@ button.na_pb_quote:hover { background: var(--na-card2); }
 .na_cc_opt.on { background: var(--na-accent-soft); color: var(--na-accent-ink, var(--na-accent)); font-weight: 600; }
 .na_cc_none { padding: 10px; font-size: 0.82em; color: var(--na-dim); }
 
-/* ============ home (mockup 홈 7): meter card with three number tiles, icon tabs, a row of quick buttons,
-   AI tools as cards with a status badge. Two ids on the size rules so a theme's blanket `span { font-size }`
-   can't flatten them. Colours: --hm-* below, light and dark. */
+/* ============ home (mockup 홈 7): */
 body:not(.na_darkui) #na_settings {
     --hm-card: #F7EEE7; --hm-line: #E5D5C9; --hm-tile: #F2E7DF; --hm-track: #E6D6CA; --hm-ink: #463428; --hm-dim: #8A7A70; --hm-mute: #6B5A50;
     --hm-acc: #B8541F; --hm-acc-ink: #A84A17; --hm-acc-soft: #F6E1D3; --hm-ok: #1F6A40; --hm-ok-soft: #E3F2E8;
@@ -3838,8 +3759,7 @@ body.na_darkui #na_settings {
 #na_settings .na_tab_pane[data-pane="home"] .na_qbtn .na_svg { flex: none; color: var(--hm-acc); }
 #na_settings .na_tab_pane[data-pane="home"] .na_qbtn:hover { border-color: var(--hm-acc); }
 
-/* 대사 은행 › empty (docs/mockups/ext-quotes A+C): 누가 아는가's welcome card, faded speech bubbles as the example,
-   빼는 인물 under them with room to breathe; no search and no top buttons while there is nothing */
+/* 대사 은행 › empty (docs/mockups/ext-quotes A+C): */
 .na_qb2.na_qb3_new { display: flex; flex-direction: column; }
 .na_qb2.na_qb3_new > .na_v2_row2, .na_qb2.na_qb3_new > .na_qb2_search, .na_qb2.na_qb3_new > .na_qb_clear { display: none; }
 .na_qb2.na_qb3_new > .na_qb_list { order: 1; }
@@ -3899,8 +3819,7 @@ body.na_darkui #na_settings #na_next .na_next_card .na_btn.na_primary:hover { fi
 #na_settings.na_in_popup > .inline-drawer > .inline-drawer-content { display: block; height: auto; border-radius: 14px; }
 .na_panelpop { text-align: left; }
 
-/* a theme's own !important rules (backgrounds, select colours) must not break the panel, in the extension list or
-   shown from the wand menu: the base colours and the setting values are pinned */
+/* a theme's own !important rules (backgrounds, select colours) must not break the panel, in the extension list or shown from the wand menu: */
 body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-content { background: #F0E4DB; }
 body.na_darkui #na_settings > .inline-drawer > .inline-drawer-content { background: #17171A; }
 body:not(.na_darkui) dialog.popup:has(#na_settings) { background: #F0E4DB !important; color: #463428 !important; }
@@ -3913,8 +3832,7 @@ body.na_darkui dialog.popup:has(#na_settings) { background: #17171A !important; 
 #na_settings .na_tab_pane[data-pane="config"] .na_cfg_box .na_set_row > span:first-child { font-size: 0.964em !important; }
 #na_settings .na_tab_pane[data-pane="config"] .na_cfg_box .na_set_row > span:first-child > span { font-size: 1em !important; }
 #na_settings .na_tab_pane[data-pane="config"] .na_set_row > .na_cfg_val { font-size: 0.929em !important; }
-#na_settings .na_tab_pane[data-pane="config"] .na_set_row > .na_cfg_val span { font-size: 1em !important; }
-#na_settings .na_tab_pane[data-pane="config"] .na_set_row > span:not(.na_cfg_val):not(:first-child) { font-size: 1em !important; }
+#na_settings .na_tab_pane[data-pane="config"] .na_set_row > .na_cfg_val span, #na_settings .na_tab_pane[data-pane="config"] .na_set_row > span:not(.na_cfg_val):not(:first-child) { font-size: 1em !important; }
 #na_settings .na_theme_txt, #na_settings .na_theme_txt b { font-size: 1em; }
 #na_settings .na_theme_txt small { font-size: 0.8em; }
 
@@ -3936,8 +3854,7 @@ body.na_darkui dialog.popup:has(#na_settings) { background: #17171A !important; 
 body:not(.na_darkui) .na_launch_tabs { background: #E6D6CA; }
 body.na_darkui .na_launch_tabs { background: #232328; }
 
-/* 아카이브에 질문, as drawn: the conversation fills the window, suggestions and the input sit at the bottom,
-   the input is one pill (no box of its own inside, whatever a theme does to textareas) */
+/* 아카이브에 질문, as drawn: */
 .na_popup.na_ask2 { min-height: 0; }
 .na_popup.na_ask2 .na_ask_log { flex: 1 1 auto; min-height: 0; }
 .na_popup.na_ask2 .na_ask2_input textarea.na_ask_q,
@@ -4039,9 +3956,7 @@ body.na_darkui .na_launch_tabs { background: #232328; }
 .na_ly_askgo { flex: none; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 13px; background: var(--na-accent); color: var(--na-onaccent, #fff); cursor: pointer; }
 .na_ly_askgo:disabled { opacity: 0.7; cursor: wait; }
 
-/* 섹션 버전 (docs/mockups/ext-layers2 C, 3.169.29): the three versions as floating tiles — the one being read white and
-   lifted, the others faded; 자동으로 고르기 on the right; the text card with 직접 고치기 · 한국어로 on a tone-darker fill; the ask field and
-   초안 모델로 만들기 under the card. One block: what 3.169.27 · 29 · 34 used to add at the end of the file now lives here. */
+/* 섹션 버전 (docs/mockups/ext-layers2 C, 3.169.29): */
 .na_layers.na_ly3 { gap: 0; }
 .na_ly3 .na_v2_title b { font-size: 1.15em; letter-spacing: -0.01em; }
 .na_ly3 .na_v2_title small { display: block; margin-top: 2px; }
@@ -4093,8 +4008,7 @@ body:is(.na_darkui, :not(.na_darkui)) .na_ly3 > .na_ly3_foot button.na_ly3_tool:
 .na_au_box .text_pole { margin: 0; width: 100%; box-sizing: border-box; }
 .na_au_box textarea { resize: vertical; min-height: 3.2em; }
 .na_wz_austate { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-/* AU 채팅 v3 (docs/mockups/ext-au B): 본편 → AU timeline on top, the switch on its own card, then the two fields outside
-   any card with bold labels; all of it centred in the window */
+/* AU 채팅 v3 (docs/mockups/ext-au B): */
 .na_au_pop { display: flex; flex-direction: column; }
 .na_au3 { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 0; }
 .na_au3_map { padding: 12px 16px; }
@@ -4105,10 +4019,7 @@ body:is(.na_darkui, :not(.na_darkui)) .na_ly3 > .na_ly3_foot button.na_ly3_tool:
 .na_au3 .na_au_name, .na_au3 .na_au_note { width: 100%; box-sizing: border-box; margin: 0; }
 .na_au3_note { margin: 12px 4px 0; font-size: 12px; line-height: 1.5; color: var(--na-dim); }
 
-/* ============ 제목 다시 짓기 (docs/mockups/ext-retitle2 D, 3.169.31): charcoal/orange tick boxes, a quiet AI로 짓기, the results as a
-   지금 | 새 제목 table, 닫기 | N개 바꾸기 at the bottom. .na_rt_list · .na_rt_head · .na_rt_quick · .na_rt_txt are shared with 요약 받기
-   (digest.js), so their plain rules stay as they were and the retitle look is scoped with .na_rt. One block: the picker-bar rules of
-   docs/mockups/ext-merge C and the 3.169.31 block that used to sit at the end of the file live here. */
+/* ============ 제목 다시 짓기 (docs/mockups/ext-retitle2 D, 3.169.31): */
 .na_rt { display: flex; flex-direction: column; gap: 12px; }
 .na_rt_res { display: flex; flex-direction: column; gap: 8px; }
 .na_rt_head { display: flex; align-items: center; gap: 8px; }
@@ -4165,8 +4076,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup.popup:has(.na_rt_res:not([hid
 .na_sf_bubble { max-width: 85%; padding: 7px 12px; border-radius: 14px 14px 4px 14px; background: var(--na-soft); font-size: 0.9em; line-height: 1.45; }
 .na_sf_note { padding: 8px 12px; border-radius: 12px; background: var(--na-softer); color: var(--na-dim); font-size: 0.88em; }
 
-/* ============ 섹션 합치기 (docs/mockups/ext-merge C): the picked run of sections as one unbroken side bar (rounded only at its ends),
-   so "only touching sections" shows; the result card as before. One block: ext-merge C's rules live here, not at the end of the file. */
+/* ============ 섹션 합치기 (docs/mockups/ext-merge C): */
 .na_mg { display: flex; flex-direction: column; gap: 10px; }
 .na_popup .na_mg_group { margin: 0; width: 100%; }
 .na_mg_pickhead { display: flex; align-items: center; gap: 8px; margin: 2px 4px 0; }
@@ -4310,8 +4220,7 @@ body.na_darkui .na_tag.dig { background: #2E2E34; color: #B9DDB0; }
 .na_qc_sclabel small { font-weight: 400; color: var(--na-dim); font-size: 0.85em; }
 .na_qc .na_qc_scenes { width: 100%; box-sizing: border-box; margin: 0; font-family: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; line-height: 1.6; resize: vertical; text-align: left; }
 
-/* ============ 압축 작업실: a messenger. Answers are grey bubbles with section cards, the user's lines accent bubbles,
-   the next step a pill floating over the conversation. One block: the 3.169.11 · 18 · 24 and answer-action blocks that used to sit at the end of the file live here. */
+/* ============ 압축 작업실: */
 .na_st {
     --st-bg: #F0E4DB; --st-bub: #FCF6F1; --st-w: #FFFFFF; --st-ink: #2E241E; --st-dim: #9C8B80; --st-line: #EADBD0; --st-seg: #E9DCD1;
     --st-acc: #B8541F; --st-acc2: #CF6430; --st-accsoft: #FBE2D3; --st-ok: #2F6B47; --st-oksoft: #E2F1E7; --st-warn: #A86A12; --st-warnline: #F1DDBB; --st-q: #9A4416;
@@ -4380,8 +4289,7 @@ body.na_darkui .na_st .na_st_bub:not(.na_st_typing) { box-shadow: inset 0 1px 0 
 /* the answer's small buttons: one line each, whatever the theme does to buttons (they wrapped into tall boxes) */
 .na_st_lks > button { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; min-height: 0 !important; height: auto !important; margin: 0 !important; padding: 4px 9px !important; line-height: 1.35 !important; white-space: nowrap !important; box-shadow: none; }
 .na_st_lks > .na_st_ib { display: inline-flex; align-items: center; padding: 4px 7px; }
-/* ============ 작업실 › answer actions (docs/mockups/ext-studio-acts B): one row under a hairline that never wraps — the check
-   as plain green text on the left, 한국어 and 확정 on the right, the rest behind ⋯ */
+/* ============ 작업실 › answer actions (docs/mockups/ext-studio-acts B): */
 .na_st3_bar { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--st-line, var(--na-line2)); }
 .na_st3_tags { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px 8px; }
 .na_st3_tags .na_st_tag { background: transparent !important; box-shadow: none !important; padding: 0 !important; font-size: 11.5px; }
@@ -4494,8 +4402,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st .na_st_mi { min-height
 .na_diff_head .na_src_check { margin-left: auto; }
 .na_src_checkout { margin: 8px 0; }
 
-/* 말투 지문 › empty (docs/mockups/ext-voice B+D): the 대사 tab's welcome card; people with enough lines as chips
-   that switch off and on over one 만들기 button, a faded Claude card as the example */
+/* 말투 지문 › empty (docs/mockups/ext-voice B+D): */
 .na_vc3_chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 12px; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip:not(#na_x) { display: inline-flex; align-items: center; gap: 6px; height: 30px; margin: 0; padding: 0 11px 0 3px; border-radius: 999px; border: 1px dashed var(--na-line) !important; background: transparent !important; box-shadow: none !important; color: var(--na-dim) !important; font: inherit; font-size: 12.5px; cursor: pointer; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_vc3_chip.on:not(#na_x) { border: 1px solid transparent !important; color: var(--na-ink) !important; }
@@ -4567,8 +4474,7 @@ body:not(.na_darkui) #na_settings .na_cp_mbtn.on { background: #FFFAF6; }
 #na_settings .na_cfg_card b { font-size: 1.036em; line-height: 1.3; }
 #na_settings .na_cfg_card small { font-size: 0.821em; line-height: 1.45; color: var(--hm-dim); }
 #na_settings .na_cfg_ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--hm-acc-soft); color: var(--hm-acc); }
-#na_settings .na_cfg_grp.na_cfg_off { display: none; }
-#na_settings .na_cfg_one .na_cfg_grp:not(.na_cfg_keeplab) .na_cfg_label { display: none; }
+#na_settings .na_cfg_grp.na_cfg_off, #na_settings .na_cfg_one .na_cfg_grp:not(.na_cfg_keeplab) .na_cfg_label { display: none; }
 
 /* 뜻으로 찾기: model name and address read like the other values, right-aligned (v3.79.1) */
 #na_settings .na_tab_pane[data-pane="config"] .na_set_row .na_cfg_val input[type="text"] { width: 11em; max-width: 100%; min-width: 0; cursor: text; text-overflow: ellipsis; }
@@ -4662,15 +4568,13 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
 /* the 도구 tab's group boxes in the same card colour as the settings cards */
 #na_settings .na_tab_pane[data-pane="tools"] > .na_block { background: var(--hm-card); border: 1px solid var(--hm-line); border-radius: 18px; }
 
-/* 아카이브에 추가: sections come in finished, so the writing checks stay out of sight; the ones that keep the archive whole
-   (numbering, STATE, sections already there) still show */
+/* 아카이브에 추가: */
 .na_ap2 .na_cites, .na_ap2 .na_bullets, .na_ap2 .na_names, .na_ap2 .na_cut { display: none; }
 
 /* ---- 3.96: 이어서 고치기, 고칠 섹션 칩 */
 #na_settings .na_apf_scope, .na_apf_scope { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 6px; }
 .na_apf_chips { display: flex; gap: 6px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
-.na_apf_chips::-webkit-scrollbar { display: none; }
-.na_apf_chips:empty { display: none; }
+.na_apf_chips::-webkit-scrollbar, .na_apf_chips:empty { display: none; }
 .na_apf_chips .na_pchip { flex: none; }
 
 /* ---- 3.96.3: 상태창 줄 */
@@ -4741,8 +4645,7 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 .na_cal_av_badge { margin-left: 5px; }
 .na_cal_av_badge .na_heart { margin-right: 1px; }
 
-/* 이야기 달력 (docs/mockups/ext-calendar): the list stays as it was; on top, one anniversary card (the next one, or the
-   picked day's; tap to see and edit all) and a strip of the days that have scenes (tap one to jump there, tap again to let go) */
+/* 이야기 달력 (docs/mockups/ext-calendar): */
 .na_cal3_av { padding: 0; overflow: hidden; gap: 0; }
 .na_cal3_avtop { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; }
 .na_cal3_avic { width: 34px; height: 34px; flex: none; border-radius: 11px; display: grid; place-items: center; background: var(--na-accent-soft); color: var(--av, var(--na-accent)); }
@@ -4799,8 +4702,7 @@ body.na_darkui .na_cal_item.na_cal3_hl { background: #2E2E34; }
 .na_wd_row > .na_ck { grid-area: c; margin: 0 2px 0 4px; }
 .na_wd_row.off :is(.na_wd_en, .na_wd_ed, .na_wd_ko) { opacity: 0.45; }
 
-/* ============ SillyTavern themes that force their own colours (!important) on popups, buttons and inputs:
-   inside the extension's popups the extension's palette wins. Inputs drawn see-through on purpose stay see-through. */
+/* ============ SillyTavern themes that force their own colours (!important) on popups, buttons and inputs: */
 body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) { background: #F0E4DB !important; background-image: none !important; color: #463428 !important; }
 body.na_darkui dialog.popup:has(.na_popup, #na_settings) { background: #17171A !important; background-image: none !important; color: #ECEAE6 !important; }
 body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #F7EEE7 !important; background-image: none !important; border: 1px solid #E5D5C9 !important; color: #463428 !important; box-shadow: none !important; }
@@ -4810,16 +4712,13 @@ body.na_darkui dialog.popup:has(.na_popup) .na_popup .text_pole { background-col
 /* the popup's own input row (이름 짓기) */
 body:not(.na_darkui) dialog.popup:has(.na_popup) .popup-input { background-color: #F2E9E2 !important; border-color: #E5D5C9 !important; color: #463428 !important; }
 body.na_darkui dialog.popup:has(.na_popup) .popup-input { background-color: #2A2A30 !important; border-color: #45454D !important; color: #ECEAE6 !important; }
-/* inputs the extension draws on a card (세계관 칸) or see-through (inside a pill, a stepper, a dashed name line):
-   stronger than the fill above, so a forced theme colour doesn't box them in */
+/* inputs the extension draws on a card (세계관 칸) or see-through (inside a pill, a stepper, a dashed name line): */
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.na_wd_slot .text_pole) { background-color: var(--na-card2) !important; background-image: none !important; border-color: transparent !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.na_wd_rename, .na_wd_text, .na_wd_row .text_pole, .na_ly_pane textarea, .na_ask2_input textarea, .na_wz2_range input, .na_uh2_range input, .na_fd_step input, .na_ap2_end input, .na_ly_ask input.na_ly_askq, .na_st_field textarea.na_st_q) { background-color: transparent !important; background-image: none !important; box-shadow: none !important; border-color: transparent !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup :is(.na_wd_slot .text_pole, .na_wd_row .text_pole):focus { border-color: var(--na-accent) !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_wd_rename.text_pole { border-color: var(--na-line) !important; }
 .na_confirm_text { line-height: 1.6; }
-/* ============ confirm popups (util.confirm, the story choice): a rounded cream card with two shadows, a big title, half-and-half
-   취소 · action pills (action in orange with light on top). A deleting question (confirm(…, { danger: true })) gets a round icon on top and is centred;
-   the rest are left-aligned; a choice (radios) has its options as pills (the chosen one dark). :not(#na_x) outranks the theme-proof rules above (they carry an id). */
+/* ============ confirm popups (util.confirm, the story choice): */
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) { border: 0 !important; border-radius: 22px !important; padding: 22px 22px 22px !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06), 0 24px 60px rgba(70, 52, 40, 0.28) !important; }
 body.na_darkui dialog.popup:has(.na_confirm):not(#na_x) { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 24px 60px rgba(0, 0, 0, 0.5) !important; }
 dialog.popup:has(.na_confirm) .na_confirm { display: flex; flex-direction: column; align-items: stretch; }
@@ -4858,8 +4757,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) .
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) .popup-controls.popup-controls .popup-button-cancel.popup-button-cancel { order: -1; background: var(--na-card) !important; border: 1px solid var(--na-line) !important; color: var(--na-ink) !important; box-shadow: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_confirm):not(#na_x) .popup-controls.popup-controls .popup-button-ok.popup-button-ok { background: var(--na-accent) !important; border: 1px solid var(--na-accent) !important; color: var(--na-onaccent, #fff) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important; }
 
-/* ============ 캐릭터 휴대폰 (v3.107): the popup keeps the extension's palette; the phone inside has its own look —
-   glass lock and home screens on a wallpaper, white (or black, dark) app screens. Ticks the owner strip on top. */
+/* ============ 캐릭터 휴대폰 (v3.107): */
 .na_phone { --ph-blue: #2f6bff; --ph-green: #1fa855; --ph-orange: #f26b1d; --ph-pink: #f0457f; --ph-purple: #7558f5; --ph-red: #ef3b32; }
 .na_ph_owners { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: none; }
 .na_ph_owners::-webkit-scrollbar { display: none; }
@@ -5129,9 +5027,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup butt
 .na_phone.na_ph_full .na_ph_fullx { position: absolute; top: max(4px, env(safe-area-inset-top)); right: 8px; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.14); color: #fff; cursor: pointer; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_fullx { background: rgba(255, 255, 255, 0.14) !important; color: #fff !important; border-color: transparent !important; }
 
-/* ============ 휴대폰 홈 · 클리어 글래스 (v3.113): the user's two boards as two themes — 컬러 젤 (Gel.dc.html, .cg_gel) and
-   화이트 그레이 (Main.dc.html, .cg_mono) — values as drawn there.
-   Drawn at 390 × 844 and scaled by --k (the screen's width / 390). */
+/* ============ 휴대폰 홈 · 클리어 글래스 (v3.113): */
 .na_ph_scr.cg { display: block; background: #eceef1; color: #161b22; font-family: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; letter-spacing: normal; line-height: normal; font-size: 16px; }
 .cg_canvas { position: absolute; left: 0; top: 0; width: 390px; height: 844px; overflow: hidden; transform-origin: 0 0; transform: scale(var(--k, 0.81)); }
 .cg :where(button) { font: inherit; color: inherit; cursor: pointer; padding: 0; border: 0; background: none; text-align: left; margin: 0; width: auto; height: auto; min-height: 0; box-shadow: none; }
@@ -5176,8 +5072,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 .cg .cg_ic { position: relative; width: 62px; height: 62px; border-radius: 18px; display: flex; align-items: center; justify-content: center; flex: none; }
 .cg_gel .cg_ic { background: linear-gradient(180deg, var(--c1), var(--c2)); backdrop-filter: blur(18px) saturate(120%); -webkit-backdrop-filter: blur(18px) saturate(120%); box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, 0.8), inset 0 -3px 6px rgba(40, 40, 60, 0.14), 0 1px 1px rgba(40, 50, 70, 0.08), 0 8px 20px rgba(40, 50, 70, 0.16); }
 .cg_gel .cg_ic::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.25) 35%, rgba(255, 255, 255, 0.05) 62%, rgba(255, 255, 255, 0.55)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
-/* the boards' gloss and white fill sit on a {{tweak}} inside their style block, which the canvas leaves unfilled:
-   as the canvas paints them, 컬러 젤 has no gloss and 화이트 그레이 has no fill */
+/* the boards' gloss and white fill sit on a {{tweak}} inside their style block, which the canvas leaves unfilled: */
 .cg_gel .cg_ic svg { position: relative; z-index: 1; filter: drop-shadow(0 1px 1px rgba(40, 40, 60, 0.18)); }
 .cg_mono .cg_ic { backdrop-filter: blur(20px) saturate(120%); -webkit-backdrop-filter: blur(20px) saturate(120%); box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, 0.95), inset 0 -2px 4px rgba(70, 80, 100, 0.12), 0 1px 1px rgba(40, 50, 70, 0.06), 0 8px 20px rgba(40, 50, 70, 0.12); }
 .cg_mono .cg_ic::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(160deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.3) 35%, rgba(255, 255, 255, 0.1) 62%, rgba(255, 255, 255, 0.75)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
@@ -5195,8 +5090,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 /* themes that paint every button: the board's own surfaces stay */
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg :is(.cg_wcal, .cg_wnote) { background: rgba(255, 255, 255, 0.32) !important; border-color: transparent !important; color: #161b22 !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg_gel .cg_ic { background: linear-gradient(180deg, var(--c1), var(--c2)) !important; border-color: transparent !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg_mono .cg_ic { background: transparent !important; border-color: transparent !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg .cg_ind { background: transparent !important; border-color: transparent !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg_mono .cg_ic, body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg .cg_ind { background: transparent !important; border-color: transparent !important; }
 /* the 테마 switch in ⋯ */
 .na_ph_seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--na-card2); }
 .na_ph_seg button { padding: 4px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--na-dim); font: inherit; font-size: 0.86em; cursor: pointer; }
@@ -5267,8 +5161,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_camthumb.m_warm { background: linear-gradient(160deg, #f6a35b, #c2557a) !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_shutter { background: transparent !important; }
 
-/* ============ 휴대폰 SNS · 메일 · 일기 · 설정 · 카메라 (v3.116): the approved boards, drawn at 390 × 844 and scaled by --k.
-   Buttons take their fill from --axbg / --axsh so a theme that paints every button can't cover them. */
+/* ============ 휴대폰 SNS · 메일 · 일기 · 설정 · 카메라 (v3.116): */
 .na_ph_scr.ax { display: block; background: #fff; }
 .ax_canvas { display: flex; flex-direction: column; background: #fff; color: #111; font-family: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; font-size: 16px; line-height: normal; letter-spacing: normal; }
 .ax :where(button, label) { font: inherit; color: inherit; cursor: pointer; padding: 0; margin: 0; border: 0; background: var(--axbg, none); box-shadow: var(--axsh, none); text-align: left; width: auto; height: auto; min-height: 0; }
@@ -5350,8 +5243,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .ax_pkt { font-size: 14px; color: #a48f78; }
 .ax_paper p { margin: 18px 0 0; font: 400 17px/34px 'Noto Serif KR', serif; color: #3d3127; white-space: pre-wrap; background: repeating-linear-gradient(transparent 0 33px, #ece3d4 33px 34px); user-select: text; -webkit-user-select: text; }
 .ax_pko { margin-top: 16px; padding: 12px 14px; border-radius: 14px; background: rgba(243, 237, 227, 0.9); font: 400 14.5px/1.65 'Noto Sans KR', sans-serif; color: #6f5f50; white-space: pre-wrap; }
-/* ============ 휴대폰 메시지 · 전화 · 사진 · 메모 · 검색 · 캘린더 · 메일 · 설정 · 카메라 (v3.118): the boards' layout in the home's
-   flat look — one colour per app (--axd deep, --axc light), round glass buttons, white cards, no gradients */
+/* ============ 휴대폰 메시지 · 전화 · 사진 · 메모 · 검색 · 캘린더 · 메일 · 설정 · 카메라 (v3.118): */
 .axb .ax_canvas { background: #f4f5f7; color: #161b22; font-family: 'Noto Sans KR', -apple-system, sans-serif; }
 .axb .ax_ko { color: #7c8592; font-size: 0.86em; }
 .axb .ax_empty { color: #8a929d; }
@@ -5839,8 +5731,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .ax_wlb { --axbg: none; display: block; width: 100%; padding: 0; text-align: left; }
 .ax_ccstack .ax_wlb + .ax_wlb { margin-top: -178px; }
 .ax_psstack .ax_wlb + .ax_wlb { margin-top: -118px; }
-/* 지갑 덱: every one but the open one shows only its top edge, the next lying over it; those after the open one sit in a
-   tail cut off at the last edge. A tap on one behind brings it out whole */
+/* 지갑 덱: */
 .ax_deck { display: flex; flex-direction: column; padding-bottom: 6px; }
 .ax_deck .ax_wlb { position: relative; flex: none; }
 .ax_deck .ax_wlb.sh { height: 60px; }
@@ -6264,8 +6155,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .wb_lab button.on { --axbg: var(--axc); }
 .ax .wb_seg button.on { --axbg: #fff; --axsh: 0 1px 3px rgba(22, 27, 34, 0.1); }
 
-/* ============ 투자 (kurs.): a broker app of its own — a light page, the line on top, quiet white cards; up/down by the
-   owner's country (iv_good / iv_bad), the brand green only for the brand and the active tab */
+/* ============ 투자 (kurs.): */
 .iv_app { --iv-ink: #0f1a17; --iv-mut: #7b8784; --iv-line: #e9edeb; --iv-brand: #1f8f6a; --iv-up: #12a26b; --iv-dn: #e5484d;
   position: absolute; inset: 0; display: flex; flex-direction: column; background: #f5f7f6; color: var(--iv-ink); }
 .iv_app .ax_scroll { flex: 1; min-height: 0; }
@@ -6534,8 +6424,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .fp_screen .fp_preview { margin: 0 18px; padding: 14px 0 18px; color: #626d7d; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13.5px; line-height: 1.8; }
 .fp_screen .fp_details .fp_preview { border-top: 1px solid #edf0f4; }
 .fp_screen .fp_preview strong { color: #293240; font-weight: 600; }
-/* 지우기 — each app its own way: 메모 a toolbar at the bottom, 일기 a quiet icon on the paper's top bar, 사진 a fourth tool,
-   음성 메모 the trash under the player, 초안 a red line under the bubble, 검색 a round button like the others on its top bar */
+/* 지우기 — each app its own way: */
 .ax_ntool { position: absolute; left: 14px; right: 14px; bottom: 30px; z-index: 6; height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; border-radius: 26px; background: rgba(255, 255, 255, 0.86); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: 0 1px 2px rgba(22, 27, 34, 0.06), 0 10px 26px rgba(22, 27, 34, 0.1); color: var(--axd); }
 .ax .ax_ntb { --axbg: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--axd); }
 .ax .ax_ntb:disabled { opacity: 0.5; }
@@ -6592,8 +6481,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 /* 시계: charcoal, amber */
 .ax:is(.v_clock, .v_timer, .v_wclock, .v_alarm) .ax_canvas { background: #17181b; color: #f2f2f4; }
 .ax:is(.v_clock, .v_timer, .v_wclock, .v_alarm) .ax_cb { --axbg: rgba(255, 255, 255, 0.1); --axsh: none; color: #f2f2f4; }
-.ax:is(.v_clock, .v_timer, .v_wclock, .v_alarm) .ax_h1 span { color: #8b8f98; }
-.ax:is(.v_clock, .v_timer, .v_wclock, .v_alarm) .lf_none { color: #8b8f98; }
+.ax:is(.v_clock, .v_timer, .v_wclock, .v_alarm) .ax_h1 span, .ax:is(.v_clock, .v_timer, .v_wclock, .v_alarm) .lf_none { color: #8b8f98; }
 .ax .lf_dock.lf_dark { background: rgba(40, 41, 46, 0.88); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 8px 26px rgba(0, 0, 0, 0.4); }
 .ax .lf_dark button { color: #a3a7af; }
 .ax .lf_dark button.on { --axbg: rgba(245, 165, 36, 0.16); color: #f5a524; }
@@ -7625,8 +7513,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .na_ph_year::-webkit-outer-spin-button, .na_ph_year::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax .ax_in.na_ph_year:focus { color: #161b22 !important; }
 
-/* 폰 확인 창 › iOS action sheet inside the screen (board px): grey message + the action, a separate 취소 below. Opaque, not blurred
-   (SillyTavern's no-blur setting turns backdrop-filter off, and a see-through sheet looked flat); glass edge, light on top, two shadows */
+/* 폰 확인 창 › iOS action sheet inside the screen (board px): */
 .pcf { position: absolute; inset: 0; z-index: 80; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 10px 30px; background: rgba(15, 20, 28, 0.34); font-family: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; letter-spacing: normal; line-height: normal; text-align: center; animation: pcf_dim 0.2s ease-out; }
 .pcf_box { display: flex; flex-direction: column; gap: 10px; animation: pcf_up 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .pcf_card, .pcf_no { position: relative; border-radius: 20px; }
@@ -7646,8 +7533,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 @keyframes pcf_up { from { transform: translateY(110%); } }
 @media (prefers-reduced-motion: reduce) { .pcf, .pcf_box { animation: none; } }
 
-/* ============ dark popups (시안 A, carried over from 아카이브에 추가): a near-black warm window, darker cards with no outline
-   and a faint top light, neutral parts with the colour kept to a thin line or the text. Tokens only, so every popup follows. */
+/* ============ dark popups (시안 A, carried over from 아카이브에 추가): */
 body.na_darkui dialog.popup:has(.na_popup) :is(.na_popup, .na_popup .na_v2), body.na_darkui dialog.popup:has(.na_confirm) .na_confirm {
     --na-card: #232328; --na-card2: #2E2E34; --na-paper: #232328; --na-soft: #2E2E34; --na-softer: #2B2B31;
     --na-line: #3A3A41; --na-line2: #2E2E34; --na-fill: #4A4A52;
@@ -7664,9 +7550,7 @@ body.na_darkui .na_sf_note { background: #2B2B31; color: #F0CF8E; box-shadow: in
 body:not(.na_darkui) .na_sf_bubble { background: #F6E1D3; color: #7A3410; }
 body:not(.na_darkui) .na_sf_note { background: #FFF4DC; color: #7A5200; }
 
-/* ============ 아카이브에 질문 v3 (docs/mockups/ext-ask): first a welcome with suggested questions; then a chat — my line
-   peach on the right, the answer a card with the sections it leaned on as rows under it; the input in a round field;
-   보낼 범위 as 맞는 섹션만 | 아카이브 전체 */
+/* ============ 아카이브에 질문 v3 (docs/mockups/ext-ask): */
 .na_ask2.na_ask3_new .na_ask_log, .na_ask2:not(.na_ask3_new) .na_ask3_empty, .na_ask2.na_ask3_new .na_ask3_chips { display: none; }
 .na_ask3_empty { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .na_ask3_hello { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 24px 0; text-align: center; }
@@ -7701,8 +7585,7 @@ body:not(.na_darkui) .na_ask3_seg button.on { background: #FFFFFF; color: var(--
 body.na_darkui .na_ask3_seg button.on { background: #414148; color: #F0CF8E; }
 body.na_darkui .na_ask2 .na_ask2_ans { background: #232328; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
 
-/* ============ 고쳐 달라고 하기 v3 (one section; same parts as 아카이브에 추가): the section card with 원래 | 바뀐 부분 and
-   한국어로 보기, AI로 고치기 as a small chat (the bubbles are .na_ap3_me / .na_ap3_ai), 처음으로 · 적용 at the bottom */
+/* ============ 고쳐 달라고 하기 v3 (one section; */
 .na_sf.na_sf3 { gap: 0; }
 .na_sf3_head { display: flex; align-items: flex-start; gap: 8px; }
 .na_sf3_head .na_v2_title { flex: 1; min-width: 0; }
@@ -7733,8 +7616,7 @@ body.na_darkui .na_sf3 :is(.na_ly_ask, .na_ap3_seg, .na_ap3_raw, .na_sf3_tool) {
 body.na_darkui .na_sf3 .na_ap3_seg button.on { background: #414148; color: #F0CF8E; }
 body.na_darkui .na_sf3 .na_ap3_raw:has(input:checked) { color: #8FD3A6; }
 
-/* ============ one way to close (src/popupchrome.js): a 닫기 at the bottom only. Look-only: one soft full-width pill;
-   doing something: 닫기 (text) · the action (orange pill). Look-only: a small 닫기 in the middle. */
+/* ============ one way to close (src/popupchrome.js): */
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_px:not(#na_x) .popup-controls.popup-controls { display: flex !important; gap: 8px; width: 100%; box-sizing: border-box; margin-top: 14px; padding: 0 0 10px; justify-content: stretch; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_px:not(#na_x) .popup-controls.popup-controls .menu_button.menu_button { min-height: 46px; margin: 0 !important; padding: 0 18px !important; display: flex; align-items: center; justify-content: center; border-radius: 999px !important; font-size: 15px; font-weight: 600; filter: none !important; opacity: 1 !important; outline: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_px_view:not(#na_x) .popup-controls.popup-controls { justify-content: center; }
@@ -7750,8 +7632,7 @@ body.na_darkui dialog.popup.na_px { --na-accent: #E9DFCF; --na-mute: #B9B7BD; --
 /* every popup of the extension: the same round corners (22px) */
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup):not(#na_x) { border-radius: 22px !important; }
 
-/* ============ 섹션별 버전 v3 (docs/mockups/ext-fadepick C): a bar of what goes in now, then each section with its version as a
-   small menu; 꺼짐 rows dimmed. Colours: 원문 brown-grey, 짧게 orange, 요점 blue, 꺼짐 faint */
+/* ============ 섹션별 버전 v3 (docs/mockups/ext-fadepick C): */
 .na_fp3 { gap: 0; }
 .na_fp3 { --u-long: #8A7A70; --u-short: #D9733A; --u-line: #6E9BD6; --u-off: #E5D5C9; }
 body.na_darkui .na_fp3 { --u-long: #9A989F; --u-short: #E08A55; --u-line: #8DB2E4; --u-off: #414148; }
@@ -7813,8 +7694,7 @@ body.na_darkui .na_fp3_bulk { box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45); }
 .na_fp3_set button:not(:disabled):hover { background: var(--na-accent); color: var(--na-onaccent, #fff); }
 .na_fp3_set button:disabled { opacity: 0.45; cursor: default; }
 
-/* ============ 다른 채팅에서 가져오기 v3 (docs/mockups/ext-chatpick B): checked on open, archive chats first, the picked one
-   shown with its numbers and last section, the bottom button brings it in */
+/* ============ 다른 채팅에서 가져오기 v3 (docs/mockups/ext-chatpick B): */
 .na_cp3 { gap: 0; }
 .na_cp3 > .na_v2_card { border-color: transparent; padding: 0; overflow: hidden; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 body.na_darkui .na_cp3 > .na_v2_card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
@@ -7844,13 +7724,11 @@ button.na_cp3_sect { cursor: pointer; width: calc(100% - 8px); }
 .na_cp3_note { display: block; margin: 12px 4px 0; font-size: 12px; color: var(--na-dim); }
 dialog.popup:has(.na_cp3) .popup-button-ok.disabled { opacity: 0.5 !important; pointer-events: none; }
 
-/* ============ dark = charcoal (3.168): neutral greys, cream for the big buttons and lit things, 짐작 gold for small accents.
-   Anything sitting on the cream accent takes --na-onaccent (near black) instead of white. */
+/* ============ dark = charcoal (3.168): */
 body.na_darkui input.na_toggle:checked + .na_tgl_ui::after, body.na_darkui .na_sw.on::after { background: #1B1B1F; }
 body.na_darkui dialog.popup:has(.na_popup):not(#na_x) { background: #17171A !important; }
 body.na_darkui dialog.popup:has(.na_popup) .na_popup .na_v2_card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.35); }
-body.na_darkui .na_kn3_tag.k i, body.na_darkui .na_kn3_leg span.k i { background: #1B1B1F; }
-body.na_darkui .na_sw.on span { background: #1B1B1F; }
+body.na_darkui .na_kn3_tag.k i, body.na_darkui .na_kn3_leg span.k i, body.na_darkui .na_sw.on span { background: #1B1B1F; }
 /* the panel in charcoal has the popups' depth: cards lifted off the near-black base with a faint top light */
 body.na_darkui #na_settings :is(.na_v2_card, .na_card, .na_hrow, .na_cfg_box) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 6px 16px rgba(0, 0, 0, 0.3); }
 /* no dark "cellophane": tinted see-through fills become the neutral field; the colour stays in the text, icon or a thin edge */
@@ -7860,8 +7738,7 @@ body.na_darkui .na_next_card.warn { border-color: #3A3A41 !important; }
 body.na_darkui :is(.na_whole, .na_fp3_row.picked, .na_cp3_row.on, .na_ck.part) { background: #2E2E34; }
 body.na_darkui .na_sp_s:hover, body.na_darkui .na_cc_row:focus-within { background: #2B2B31 !important; }
 
-/* ============ no outlines in the extension's windows (2025 sweep): plain buttons, fields and chips are filled shapes lifted by a
-   soft shadow, never a 1px line. The phone keeps its own look. */
+/* ============ no outlines in the extension's windows (2025 sweep): */
 body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_btn:not(.primary):not(.danger), .na_v2_pillbtn:not(.danger), .na_btn:not(.na_primary)):not(.on):not(.active):not(#na_x) { border-color: transparent !important; background: #F7EEE7 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1) !important; }
 body.na_darkui dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_btn:not(.primary):not(.danger), .na_v2_pillbtn:not(.danger), .na_btn:not(.na_primary)):not(.on):not(.active):not(#na_x) { border-color: transparent !important; background: #2E2E34 !important; box-shadow: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_pillbtn.danger:not(#na_x) { border-color: transparent !important; }
@@ -7874,8 +7751,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popu
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_card:not(.na_bn2_find):not(.on):not(.active):not(#na_x) { border-color: transparent !important; }
 body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_card:not(#na_x) { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 
-/* ============ every plain checkbox in the extension's windows is drawn by us (the picker's tick): rounded square, light edge,
-   lit = accent fill with a tick (white on orange, near black on dark cream). Hidden helper boxes keep opacity 0. */
+/* ============ every plain checkbox in the extension's windows is drawn by us (the picker's tick): */
 body:is(.na_darkui, :not(.na_darkui)) .na_popup input[type="checkbox"]:not(.na_toggle):not(#na_x) { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; min-width: 18px; margin: 0; flex: none; box-sizing: border-box; border-radius: 6px; border: 2px solid var(--na-line) !important; background: transparent !important; box-shadow: none !important; cursor: pointer; vertical-align: middle; position: relative; }
 body:not(.na_darkui) .na_popup input[type="checkbox"]:not(.na_toggle):not(#na_x) { border-color: #CDB8A8 !important; }
 body:is(.na_darkui, :not(.na_darkui)) .na_popup input[type="checkbox"]:not(.na_toggle):checked:not(#na_x) { border: 0 !important; background: var(--na-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center no-repeat !important; }
@@ -7902,9 +7778,7 @@ body.na_darkui :is(.na_wd_icon, .na_wd_slot_ico, .na_wd.on .na_wd_icon) { backgr
 body.na_darkui .na_wd.on .na_wd_icon, body.na_darkui .na_wd_slot_ico { color: var(--na-accent-fg); }
 body.na_darkui .na_pv2_code { background: #232328; color: #ECEAE6; }
 
-/* ============ window size (3.169.5): every extension window fits its content but never opens shorter than about half the
-   screen, so short ones don't look tiny and big ones don't sit empty; long ones grow to the screen and scroll inside.
-   Confirms, the phone, the studio and 아카이브에 추가 keep their own sizing. */
+/* ============ window size (3.169.5): */
 body dialog.popup:not(:has(.na_confirm, .na_phone, .na_st, .na_ap3)) .popup-content > .na_popup.na_v2,
 body dialog.popup:not(:has(.na_confirm, .na_phone, .na_st, .na_ap3)) .na_popup.na_v2:not(.na_popup .na_popup) { min-height: 55vh; box-sizing: border-box; }
 .na_popup.na_v2 > :has(> .na_empty:only-child) { flex: 1; display: flex; flex-direction: column; justify-content: center; }
