@@ -170,7 +170,7 @@ LIFE
   - "date" is the day they woke up: asleep 10-26 at 23:40 or 10-27 at 02:15 → "10-27".
   - A night still going (they fell asleep, not yet woken): its row now, with "sleep"; "wake" stays empty.
 - A lasting change to their habits or body these messages state (they lost weight, quit coffee, drink more water): that event's "phone"."usual" with only what changed. Nothing said: no "usual".
-${weather ? `- "weather": ${tracker ? 'WEATHER NOW stands (its date, time, place and weather); write the rest of the forecast to agree with it, "from": "chat".' : 'what these messages describe, else the archive. If the story\'s day or place changed with nothing to go on, what fits the season and place, "from": "guess". If neither changed and nothing describes it: null (the app keeps the last weather).'}
+${weather ? `- "weather": ${tracker ? 'WEATHER NOW stands for an owner in that scene (its date, time, place and weather); write the rest of the forecast to agree with it, "from": "chat". An owner elsewhere gets the weather where they are.' : 'what these messages describe, else the archive. If the story\'s day or place changed with nothing to go on, what fits the season and place, "from": "guess". If neither changed and nothing describes it: null (the app keeps the last weather).'}
 - With new weather, also write each saved city's weather: "cond", "temp", "hi", "lo", rain, wind, "feels", "humidity" and "dew".
 ` : ''}` : ''}${money ? `
 MONEY (only with MONEY NOW or INVESTMENTS NOW)

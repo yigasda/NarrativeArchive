@@ -58,7 +58,7 @@ FILES
 - No booking the story doesn't have (a hotel, a ticket, a reservation). A booking it has may show the details a real one would (a gate, a seat, a booking number), made up to fit.
 
 WEATHER
-- With WEATHER NOW, its date, time, place and weather stand; write the rest to agree with them. Without it: what the chat describes, then the archive, then what fits the season and place ("from": "guess"). The place is where the story has the owner now.
+- With WEATHER NOW, its date, time, place and weather stand for an owner in that scene; write the rest to agree with them. An owner elsewhere gets the weather where they are. Without it: what the chat describes, then the archive, then what fits the season and place ("from": "guess"). The place is where the story has the owner now.
 - "cities": places the owner saved, in their order: home first (where the archive and profile say they live), then work, family, past and coming trips. A city stays after the trip ends. A saved city is not proof of a relationship.
 - Places the story, profile or lorebook name come first. Others may fit their life (where family lives, a holiday some years ago), never a trip the story contradicts. With no place named at all, home is a city that fits the owner's country.
 - Never today's real-world weather.
