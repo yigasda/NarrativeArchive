@@ -599,3 +599,17 @@ test('life: repeat days as a range, an alarm told again with a longer label, and
     const fx = lifeClock(p, '10-27 09:00');
     assert.equal(p.life.health.days.find(d => d.date === '10-26').steps, 7000); assert.ok(fx.length);
 });
+
+test('life: a reflection saves a timer and starts one, counted from its event; 되돌리기 takes it back', () => {
+    const { p } = setup();
+    const e = { id: 'ev2', at: 6, date: '10-26', time: '18:00' };
+    const r = applyLife(p, e, { timers: [{ label: '파스타', sec: 540 }], running: { label: '파스타', sec: 540, left: 300 } }, true);
+    assert.equal(p.life.clock.timers.length, 1); assert.equal(p.life.clock.timers[0].last, '10-26');
+    assert.equal(p.life.clock.running.left, 300); assert.equal(p.life.clock.running.at, '10-26 18:00');
+    const r2 = applyLife(p, { ...e, id: 'ev3', at: 7 }, { timers: [{ label: '파스타 타이머', sec: 600 }] }, true);
+    assert.equal(p.life.clock.timers.length, 1); assert.equal(p.life.clock.timers[0].sec, 600);
+    assert.ok(lifeClock(p, '10-26 18:06').some(x => x.path === 'life.clock.running')); assert.equal(p.life.clock.running, null);
+    revertEffects({}, p, r2.effects); assert.equal(p.life.clock.timers[0].sec, 540);
+    revertEffects({}, p, r.effects);
+    assert.equal(p.life.clock.timers.length, 0);
+});

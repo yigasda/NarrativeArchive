@@ -160,7 +160,7 @@ WHERE IT COMES FROM
 - "now": the moment of the newest message, never a time something is only planned for.
 ${life ? `
 LIFE
-- An alarm the owner sets, changes or switches on or off in these messages; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
+- An alarm the owner sets, changes or switches on or off in these messages; a timer they start ("running", with the seconds left at the newest message) or save; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
 - An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".
 - A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.
 - Health: a row for every story day these messages move into.
@@ -212,6 +212,7 @@ ${PHONE_ITEMS}${life ? `,
   "alarms": [{ "change": an id or "", "time", "label", "ko", "days": the weekdays it repeats or [], "date": "MM-DD" for a one-time alarm, "on", "wake", "then", "snooze" }],
   "files": [{ "change": an id or "", "name", "kind", "folder": one of LIFE NOW's "folders" (downloads are "Downloads"), "size": KB, "time", "from", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],
   "health": [{ "date", "bed", "sleep", "wake", "woke", "steps", "km", "floors", "workout": { "kind", "time", "min", "km" } or null, "hr": [low, high], "from": "story" }],
+  "timers": [{ "label", "ko", "sec", "last": "MM-DD" }], "running": { "label", "ko", "sec", "left": seconds } or null,
   "usual": { "weight": kg, "coffee": cups a day, "coffeeKind", "coffeeKo", "water": litres a day }` : ''}
 }
 Fewer is fine. No new events: "events": [].

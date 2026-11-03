@@ -221,6 +221,25 @@ export function applyLife(p, e, phone, on) {
         if (own) clean.folder = own;
         push('life.files.items', tag({ ...clean, time: clean.time || `${e.date}${e.time ? ` ${e.time}` : ''}` }, k, 'f'), '파일');
     });
+    // a timer saved (the same label again: its seconds and day), and one running at the newest message (from its event's time)
+    const lk = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+    const timerOf = t => ({ label: line(t?.label, 40), ko: ko(t?.ko), sec: int(t?.sec, 1, 86400), last: day5(t?.last) || e.date });
+    arr(phone.timers).forEach((t, k) => {
+        if (!t || typeof t !== 'object') return;
+        const clean = timerOf(t);
+        if (!clean.sec) return;
+        const twin = (L.clock?.timers || []).find(o => lk(o.label) && lk(clean.label) && (lk(o.label).includes(lk(clean.label)) || lk(clean.label).includes(lk(o.label))) || o.sec === clean.sec && (!lk(o.label) || !lk(clean.label)));
+        if (twin) return change('life.clock.timers', twin, { sec: clean.sec, last: clean.last, ...(clean.ko ? { ko: clean.ko } : {}) }, '시계');
+        push('life.clock.timers', tag(clean, k, 't'), '시계');
+    });
+    if (phone.running && typeof phone.running === 'object') {
+        const r = phone.running, sec = int(r.sec, 1, 86400);
+        if (sec) {
+            const to = { label: line(r.label, 40), ko: ko(r.ko), sec, left: Math.min(sec, int(r.left, 0, 86400) ?? sec), at: `${e.date}${e.time ? ` ${e.time}` : ''}` };
+            const c = (L.clock ||= {});
+            if (!same(c.running ?? null, to)) { out.effects.push({ type: 'set', path: 'life.clock.running', from: c.running ?? null, to: structuredClone(to) }); c.running = to; out.apps.add('시계'); }
+        }
+    }
     // their usual that the story changed (lost weight, quit coffee): each field on its own, so 되돌리기 takes back just it
     const uu = phone.usual && typeof phone.usual === 'object' ? phone.usual : null;
     if (uu) {
@@ -402,7 +421,7 @@ export function lifeClock(p, now) {
     const change = (path, r, vals) => { const keys = Object.keys(vals).filter(k => !same(r[k] ?? null, vals[k])); if (!keys.length) return; const fx = { type: 'change', path, id: r.id, from: fields(r, keys), to: fields(vals, keys) }; setFields(r, fx.to); out.push(fx); };
     for (const a of L.clock?.alarms || []) if (a.on && a.date && !a.days?.length && (dayGap(a.date, today) > 0 || a.date === today && hm && a.time && hm > a.time)) change('life.clock.alarms', a, { on: false });
     if (L.clock?.running) {
-        const at = String(L.at || ''), gone = at.slice(0, 5) !== today || (hm && at.slice(6, 11) && minutes(hm) - minutes(at.slice(6, 11)) >= (L.clock.running.left || 0) / 60);
+        const at = String(L.clock.running.at || L.at || ''), gone = at.slice(0, 5) !== today || (hm && at.slice(6, 11) && minutes(hm) - minutes(at.slice(6, 11)) >= (L.clock.running.left || 0) / 60);
         if (gone) { out.push({ type: 'set', path: 'life.clock.running', from: structuredClone(L.clock.running), to: null }); L.clock.running = null; }
     }
     // a night told while it went on: its waking is their usual, once that time has come
@@ -432,6 +451,7 @@ export function lifeNow(p) {
     if (!L) return null;
     return {
         alarms: (L.clock?.alarms || []).map(a => ({ id: a.id, time: a.time, label: a.label, days: a.days, date: a.date, on: a.on })),
+        timers: (L.clock?.timers || []).map(t => ({ label: t.label, sec: t.sec })), running: L.clock?.running ? { label: L.clock.running.label, sec: L.clock.running.sec } : null,
         folders: ['Downloads', ...(L.files?.folders || []).map(f => f.name).filter(Boolean)],
         files: (L.files?.items || []).filter(x => !x.trashed).slice(-12).map(x => ({ id: x.id, name: x.name, folder: x.folder, time: x.time })),
         health: (L.health?.days || []).slice(-3).map(d => ({ id: d.id, date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, from: d.from })),
