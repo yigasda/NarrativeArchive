@@ -82,7 +82,7 @@ JSON (one object, nothing before or after it)
   "health": { "usual": { "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": per week, "rest": resting heart rate,
                          "water": liters a day, "coffee": cups of coffee a day (0 if none), "coffeeKind": what they usually drink, like "Cappuccino", "coffeeKo",
                          "weight": kg, "height": cm,
-                         "screen": { "apps": [{ "app", "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "other", "min": minutes a day }], "pickups": a day, "late": "HH:MM" they usually last look at it } },
+                         "screen": { "apps": [{ "app", "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "other", "min": minutes a day }], "sometimes": [the same, apps they open now and then, "min" on a day they do], "pickups": a day, "late": "HH:MM" they usually last look at it } },
               "days": [{ "date": "MM-DD", "steps", "km", "floors", "workout": { "kind", "time": "HH:MM", "min", "km" } or null, "hr": [low, high], "coffee": cups, "coffeeKind", "water": litres, "weight": kg only when they weighed, "screen": { "apps": { app name: minutes }, "pickups", "late": "HH:MM" },
                          "night": { "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "woke": times awake } or null, "from": "story" | "pattern", "ev" }] },
   "files": { "folders": [{ "name", "ko", "count", "fav": true or false }],
@@ -417,14 +417,14 @@ YOU GET
 
 SCREEN TIME
 - It shows who they really are, habits they'd never admit (a game they can't put down, texting all night, barely touching the phone): from their character, not their polite profile.
-- "usual" is their normal day, 4 to 10 apps.
+- "usual" is their normal day, 4 to 10 apps, and 3 to 6 they open now and then.
 - Each of DAYS follows what happened that day and how they felt (a fight: hours of texting late into the night; a day out with friends: barely any), and how they slept.
 - Their apps, named exactly as here (another real app when none fits them):
 ${SCREEN_LIST}
 - Numbers only: no diagnosis, no mood, no reason.
 
 JSON (one object, nothing before or after it)
-{ "usual": { "apps": [{ "app", "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "other", "min": minutes a day }], "pickups": a day, "late": "HH:MM" they usually last look at it },
+{ "usual": { "apps": [{ "app", "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "other", "min": minutes a day }], "sometimes": [the same, apps they open now and then, "min" on a day they do], "pickups": a day, "late": "HH:MM" they usually last look at it },
   "days": [{ "date": "MM-DD" as in DAYS, "apps": { app name: minutes }, "pickups", "late": "HH:MM" }] }
 Numbers are plain JSON numbers.`;
 export const fillScreen = (m, p) => exclusive('fill', async () => {

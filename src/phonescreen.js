@@ -53,27 +53,36 @@ const seeded = seed => { let h = 2166136261; for (const c of String(seed)) h = M
 const toMin = t => { const mt = String(t || '').match(/(\d{1,2}):(\d{2})/); return mt ? Number(mt[1]) * 60 + Number(mt[2]) : null; };
 const hm = n => `${String(Math.floor(((n % 1440) + 1440) % 1440 / 60)).padStart(2, '0')}:${String(((n % 60) + 60) % 60).padStart(2, '0')}`;
 
-// what the phone holds on a day: texts the owner wrote, minutes on calls, photos taken
-function records(p, day) {
-    const on = t => String(t || '').slice(0, 5) === day;
-    const texts = (p.threads || []).reduce((n, t) => n + (t.messages || []).filter(x => on(x.time)).length, 0);
-    const calls = (p.calls || []).filter(c => on(c.time)).reduce((n, c) => n + (Number(c.min) || 0), 0);
-    const photos = (p.photos || []).filter(x => on(x.time)).length;
-    return { texts, calls, photos };
+// what the phone holds on a day, as the apps it was done in: texts the owner wrote (their chat app), calls, photos, searches,
+// mails, posts, notes, delivery orders. A story the reflection writes into the phone shows in screen time with no word of its own
+function recordApps(p, day, usual) {
+    const on = t => String(t || '').slice(0, 5) === day, n = xs => (xs || []).filter(x => on(x.time)).length, all = [...(usual.apps || []), ...(usual.sometimes || [])];
+    const own = (kind, re, fallback) => all.find(a => a.kind === kind && (!re || re.test(a.app)))?.app || fallback;
+    const kr = (p.lives || p.country) === 'KR', texts = (p.threads || []).reduce((k, t) => k + (t.messages || []).filter(x => on(x.time)).length, 0);
+    const calls = (p.calls || []).filter(c => on(c.time)).reduce((k, c) => k + (Number(c.min) || 0), 0), apps = {};
+    const put = (app, m) => { if (m > 0) apps[app] = (apps[app] || 0) + Math.round(m); };
+    put(own('chat', null, '메시지'), texts * 2);
+    put('전화', calls);
+    put('카메라', n(p.photos) * 2);
+    put(own('other', /chrome|safari|google|naver/i, kr ? 'NAVER' : 'Google'), Math.min(30, n(p.searches) * 3));
+    put(own('work', /mail|outlook/i, 'Gmail'), Math.min(20, n(p.mails) * 2));
+    put(own('social', null, 'Instagram'), n(p.posts) * 10);
+    put('메모', n(p.notes) * 3);
+    put((p.delivery?.look || (kr ? 'baemin' : 'ubereats')) === 'baemin' ? '배달의민족' : 'Uber Eats', n(p.delivery?.orders) * 8);
+    return { apps, texts };
 }
 // a day the model left out: their usual, a little more or less as days go, with what that day holds on top
 function workedOut(p, day, usual, sleepDay) {
-    const r = seeded(`${p.owner}:${day}:screen`), rec = records(p, day), apps = {};
+    const r = seeded(`${p.owner}:${day}:screen`), rec = recordApps(p, day, usual), apps = {};
     const wd = (() => { const x = md(day); return x ? new Date(Date.UTC(2001, x.mo - 1, x.d)).getUTCDay() : 3; })(), weekend = wd === 0 || wd === 6;
     for (const a of usual.apps || []) {
         const f = (0.7 + r() * 0.6) * (weekend && ['game', 'video', 'social'].includes(a.kind) ? 1.25 : weekend && a.kind === 'work' ? 0.3 : 1);
         const m = Math.round(a.min * f);
         if (m > 0) apps[a.app] = m;
     }
-    const chat = (usual.apps || []).find(a => a.kind === 'chat')?.app;
-    if (chat && rec.texts) apps[chat] = (apps[chat] || 0) + rec.texts * 2;
-    if (rec.calls) apps['전화'] = (apps['전화'] || 0) + rec.calls;
-    if (rec.photos) apps['카메라'] = (apps['카메라'] || 0) + rec.photos * 2;
+    // the apps they open now and then: on some days, for a while
+    for (const a of usual.sometimes || []) if (r() < 0.3) apps[a.app] = (apps[a.app] || 0) + Math.max(1, Math.round(a.min * (0.5 + r())));
+    for (const [k, m] of Object.entries(rec.apps)) apps[k] = (apps[k] || 0) + m;
     // a short night: they were up with the phone
     // shorter than their own usual night (an owner who always sleeps five hours isn't up late every night)
     const span = d => (d && toMin(d.sleep) !== null && toMin(d.wake) !== null ? ((toMin(d.wake) - toMin(d.sleep)) + 1440) % 1440 : null);
@@ -88,12 +97,15 @@ export function screenView(p, today) {
     if (!h || (!usual && !(h.days || []).some(d => d.screen))) return null;
     const u = usual || { apps: [] }, rows = (h.days || []).filter(d => md(d.date) && (!today || gap(d.date, today) >= 0)).sort((a, b) => gap(b.date, a.date));
     const nowMin = toMin(String(today || '').slice(6)) ?? null, day0 = String(today || '').slice(0, 5);
+    const known = [...(u.apps || []), ...(u.sometimes || [])];
     const days = rows.map(d => {
         const s = d.screen ? { ...d.screen, apps: { ...(d.screen.apps || {}) } } : workedOut(p, d.date, u, d);
+        // a told day: what the phone holds that day that the model didn't name (an app it named keeps its own minutes)
+        if (d.screen) for (const [k, m] of Object.entries(recordApps(p, d.date, u).apps)) if (!(k in s.apps)) s.apps[k] = m;
         // today so far: the day's hours up to now
         if (d.date === day0 && nowMin !== null && !d.screen) { const f = Math.max(0.05, Math.min(1, nowMin / (22 * 60))); for (const k of Object.keys(s.apps)) s.apps[k] = Math.round(s.apps[k] * f); if (s.pickups) s.pickups = Math.round(s.pickups * f); delete s.late; }
         const byKind = Object.fromEntries(KINDS.map(k => [k, 0]));
-        for (const [app, m] of Object.entries(s.apps || {})) byKind[app === '전화' || app === '카메라' ? 'other' : kindOfApp(app, u.apps)] += m;
+        for (const [app, m] of Object.entries(s.apps || {})) byKind[app === '전화' || app === '카메라' ? 'other' : kindOfApp(app, known)] += m;
         const total = Object.values(s.apps || {}).reduce((a, b) => a + b, 0);
         return { date: d.date, total, byKind, apps: Object.entries(s.apps || {}).sort((a, b) => b[1] - a[1]), pickups: s.pickups ?? null, late: s.late || '', from: d.screen ? 'story' : 'worked', today: d.date === day0 };
     });
@@ -102,7 +114,7 @@ export function screenView(p, today) {
     const a = avg(week), b = avg(before), pct = a !== null && b ? Math.round((a - b) / b * 100) : null;
     const apps = {};
     for (const d of week) for (const [k, m] of d.apps) apps[k] = (apps[k] || 0) + m;
-    const top = Object.entries(apps).sort((x, y) => y[1] - x[1]).map(([app, m]) => ({ app, icon: appOf(app)?.id || '', kind: kindOfApp(app, u.apps), avg: Math.round(m / Math.max(1, week.length)) }));
+    const top = Object.entries(apps).sort((x, y) => y[1] - x[1]).map(([app, m]) => ({ app, icon: appOf(app)?.id || '', kind: kindOfApp(app, known), avg: Math.round(m / Math.max(1, week.length)) }));
     const dur = n => `${Math.floor(n / 60) ? `${Math.floor(n / 60)}시간 ` : ''}${n % 60}분`.trim();
     const lines = [];
     if (a !== null) lines.push(`일평균 ${dur(a)}${pct !== null && Math.abs(pct) >= 5 ? `, 지난주보다 ${Math.abs(pct)}% ${pct > 0 ? '늘었어요' : '줄었어요'}` : ''}`);

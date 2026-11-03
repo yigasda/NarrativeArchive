@@ -96,3 +96,31 @@ test('screenView: a short sleeper is not up late every night, only on a night sh
     assert.ok(late['10-23'] < '01:00' && late['10-25'] < '01:00', JSON.stringify(late));
     assert.ok(late['10-24'] >= '01:00', JSON.stringify(late));
 });
+
+test('what the phone holds that day shows as its apps: a told day keeps its own minutes, the rest is added', () => {
+    const p = phone([{ date: '10-24', sleep: '23:40', wake: '07:00' }, { date: '10-25', sleep: '23:40', wake: '07:00', screen: { apps: { Signal: 100, 'Uber Eats': 30 } } }]);
+    p.lives = 'DE';
+    p.delivery = { look: 'ubereats', orders: [{ time: '10-24 20:00' }, { time: '10-25 19:00' }] };
+    p.mails = [{ time: '10-25 09:00' }, { time: '10-25 10:00' }];
+    p.searches = [{ time: '10-24 11:00' }];
+    const [d24, d25] = screenView(p, '10-26 12:00').days;
+    const a24 = Object.fromEntries(d24.apps), a25 = Object.fromEntries(d25.apps);
+    assert.equal(a24['Uber Eats'], 8);
+    assert.equal(a24.Google, 3);
+    assert.equal(a25['Uber Eats'], 30);
+    assert.equal(a25.Mail, 4); // their own mail app, not Gmail
+    assert.equal(a25.Signal, 100);
+});
+
+test('apps they open now and then: kept apart, on some days only; one they now use daily moves up', () => {
+    const u = usualScreenOf({ apps: [{ app: 'Signal', kind: 'chat', min: 60 }], sometimes: [{ app: 'DB Navigator', min: 10 }, { app: 'Signal', min: 5 }, { app: 'Zalando', min: 15 }] });
+    assert.deepEqual(u.sometimes.map(a => [a.app, a.kind]), [['Zalando', 'shopping'], ['DB Navigator', 'other']]);
+    const days = Array.from({ length: 20 }, (_, k) => ({ date: `10-${String(k + 1).padStart(2, '0')}`, sleep: '23:30', wake: '07:00' }));
+    const p = phone(days); p.life.health.usual.screen = u;
+    const seen = screenView(p, '10-26 12:00').days.filter(d => d.apps.some(([a]) => a === 'Zalando')).length;
+    assert.ok(seen > 0 && seen < 20, String(seen));
+    const ch = screenChange(u, { add: [{ app: 'Zalando', min: 40 }] });
+    assert.deepEqual(ch.apps.map(a => a.app), ['Signal', 'Zalando']);
+    assert.deepEqual(ch.sometimes.map(a => a.app), ['DB Navigator']);
+    assert.deepEqual(screenChange(u, { drop: ['DB Navigator'] }).sometimes.map(a => a.app), ['Zalando']);
+});
