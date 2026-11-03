@@ -11,10 +11,9 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_ap3_dlg:not(#na_x) { borde
 .na_ap3_part > .na_v2_card { margin-top: 10px; }
 /* cards in the palette's colour (--na-card), no outline, a soft two-layer shadow */
 body:not(.na_darkui) .na_ap3 .na_v2_card { border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
-.na_ap3 .na_ap3_file.na_append_file_btn { background: transparent; border: 0; padding: 2px; }
+.na_ap3 .na_ap3_file.na_append_file_btn { padding: 2px; }
 /* light: as the settings panel — the window stays cream, the cards a touch warmer than its white paper (#FCF6F1), the selected switch white */
 body:not(.na_darkui) .na_ap3 .na_v2_card { background: #FCF6F1; }
-body:not(.na_darkui) .na_ap3 .na_ap3_seg button.on { background: #FFFFFF; }
 body:not(.na_darkui) .na_ap3 .na_ap3_fbody { background: #FCF6F1; }
 /* the draft card */
 .na_ap3_sum { display: flex; flex-direction: column; gap: 10px; padding: 14px; margin-top: 14px; }
@@ -24,8 +23,9 @@ body:not(.na_darkui) .na_ap3 .na_ap3_fbody { background: #FCF6F1; }
 .na_ap3_head small { font-size: 13px; color: var(--na-sub, var(--na-dim)); }
 .na_ap3_head small.warn { color: var(--na-warn); }
 .na_ap3_seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 999px; background: var(--na-card2); }
-.na_ap3_seg button { display: flex; align-items: center; justify-content: center; gap: 5px; height: 34px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent; color: var(--na-mute); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-.na_ap3_seg button.on { background: var(--na-paper); color: var(--na-accent-ink); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08), 0 4px 10px rgba(70, 52, 40, 0.08); }
+.na_ap3_seg button { display: flex; align-items: center; justify-content: center; gap: 5px; height: 34px; padding: 0 8px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; --c-fg: var(--na-mute); --c-r: 999px; }
+.na_ap3_seg button.on { --c-bg: #FFFFFF; --c-fg: var(--na-accent-ink); --c-sh: 0 1px 2px rgba(70, 52, 40, 0.08), 0 4px 10px rgba(70, 52, 40, 0.08); }
+body.na_darkui .na_ap3 .na_ap3_seg button.on { --c-bg: #414148; --c-fg: #F0CF8E; }
 .na_ap3_seg button b { font-size: 12px; font-weight: 700; color: var(--na-ok); }
 .na_ap3_seg button b + b { color: var(--na-bad); }
 .na_ap3_seg button b:empty { display: none; }
@@ -35,12 +35,12 @@ body:is(.na_darkui, :not(.na_darkui)) .na_ap3 .na_append_ta { height: 240px !imp
 .na_ap3_pvbar .na_ap_tr_row { margin: 0; }
 .na_ap3_bigbtn { display: inline-flex; align-items: center; gap: 4px; }
 .na_ap3_box { max-height: min(52vh, 460px); overflow-y: auto; overscroll-behavior: contain; border-radius: 10px; }
-.na_ap3_file { align-self: flex-start; display: inline-flex; align-items: center; gap: 5px; padding: 2px 2px; font-size: 13px; font-weight: 600; color: var(--na-accent-ink); }
+.na_ap3_file { align-self: flex-start; display: inline-flex; align-items: center; gap: 5px; padding: 2px 2px; font-size: 13px; font-weight: 600; --c-fg: var(--na-accent-ink); }
 /* AI로 고치기 */
 .na_ap3 .na_apf { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
 .na_ap3_log { display: flex; flex-direction: column; gap: 6px; }
 .na_ap3_log:empty { display: none; }
-.na_ap3_older { align-self: center; padding: 2px 10px; border: 0; border-radius: 999px; background: transparent; color: var(--na-dim); font: inherit; font-size: 12px; cursor: pointer; }
+.na_ap3_older { align-self: center; padding: 2px 10px; font: inherit; font-size: 12px; cursor: pointer; --c-fg: var(--na-dim); --c-r: 999px; }
 .na_ap3_me { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
 .na_ap3_me > span { max-width: 82%; padding: 8px 12px; border-radius: 16px 16px 4px 16px; font-size: 13px; line-height: 1.45; word-break: break-word; }
 .na_ap3_me .na_apf_undo { flex: none; font-size: 12px; font-weight: 600; color: var(--na-accent-ink); white-space: nowrap; }
@@ -54,31 +54,31 @@ body:not(.na_darkui) .na_ap3_ai.note { background: #FFF4DC; color: #7A5200; }
 body:not(.na_darkui) .na_ap3_ai.note b { color: #1F6A40; }
 body:not(.na_darkui) .na_ap3_ai.bad { background: #FBE7E2; color: #7A2A1E; }
 .na_ap3_ai.bad b { color: var(--na-bad); }
-.na_ap3_ai.none { background: var(--na-card2) !important; color: var(--na-mute) !important; }
+body .na_ap3 .na_ap3_ai.none { background: var(--na-card2); color: var(--na-mute); }
 /* the input: no outline, the chips' colour */
 .na_ap3 .na_ly_ask { border: 0; background: var(--na-card2); border-radius: 999px; padding: 4px 4px 4px 14px; }
 .na_ap3 .na_ly_ask:focus-within { box-shadow: 0 0 0 2px color-mix(in srgb, var(--na-accent) 35%, transparent); }
-.na_ap3 .na_ly_askgo { width: 34px; height: 34px; border-radius: 999px; }
+.na_ap3 .na_ly_askgo { width: 34px; height: 34px; --c-bg: var(--na-accent); --c-fg: var(--na-onaccent, #fff); --c-r: 999px; }
 .na_ap3 .na_apf_scope { margin: 0; }
 .na_ap3 .na_apf_chips { -webkit-mask: linear-gradient(90deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0.35)); mask: linear-gradient(90deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0.35)); }
-body:is(.na_darkui, :not(.na_darkui)) .na_ap3 .na_ap3_chip { flex: none; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; height: 40px; max-width: 150px; padding: 0 12px; border: 0; border-radius: 14px; background: var(--na-card2); color: var(--na-mute); font: inherit; text-align: left; cursor: pointer; }
+.na_ap3 .na_ap3_chip { flex: none; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; height: 40px; max-width: 150px; padding: 0 12px; font: inherit; text-align: left; cursor: pointer; --c-bg: var(--na-card2); --c-fg: var(--na-mute); --c-r: 14px; }
 .na_ap3 .na_ap3_chip b { font-size: 12.5px; font-weight: 700; line-height: 1.15; white-space: nowrap; }
 .na_ap3 .na_ap3_chip small { max-width: 100%; margin: 0; font-size: 11px; line-height: 1.2; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: inherit; }
-body:is(.na_darkui, :not(.na_darkui)) .na_ap3 .na_ap3_chip.on { background: var(--na-fill); color: var(--na-onfill); }
+.na_ap3 .na_ap3_chip.on { --c-bg: var(--na-fill); --c-fg: var(--na-onfill); }
 .na_ap3 .na_apf_foot { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
 .na_ap3 .na_apf_foot small { flex: 1; min-width: 0; font-size: 12.5px; color: var(--na-sub, var(--na-dim)); }
-.na_ap3_raw { display: inline-flex !important; align-items: center; gap: 6px; margin: 0; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; background: var(--na-card2); color: var(--na-mute); }
+.na_ap3 .na_ap3_raw { display: inline-flex; align-items: center; gap: 6px; margin: 0; height: 34px; padding: 0 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; --c-bg: var(--na-card2); --c-fg: var(--na-mute); --c-r: 999px; }
 .na_ap3_raw input { position: absolute; opacity: 0; pointer-events: none; }
 .na_ap3_raw { position: relative; }
 .na_ap3 .na_apf_foot .na_ap3_raw { flex: none; }
 .na_ap3_raw .na_ap3_tick { display: none; }
 .na_ap3_raw:has(input:checked) .na_ap3_tick { display: inline-flex; }
-body:not(.na_darkui) .na_ap3_raw:has(input:checked) { background: #E3F2E8; color: #1F6A40; }
+body:not(.na_darkui) .na_ap3_raw:has(input:checked) { --c-bg: #E3F2E8; --c-fg: #1F6A40; }
 .na_ap3_raw:has(input:focus-visible) { outline: 2px solid var(--na-accent); outline-offset: 2px; }
 /* AI 도구 */
 .na_ap3_tools { padding: 0; overflow: hidden; }
-.na_ap3_tool { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.na_ap3_tool + .na_ap3_tool { border-top: 1px solid var(--na-line2, var(--na-line)); }
+.na_ap3_tool { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; font: inherit; text-align: left; cursor: pointer; }
+.na_ap3_tool + .na_ap3_tool { --c-bdt: 1px solid var(--na-line2, var(--na-line)); }
 .na_ap3_tool:disabled { opacity: 0.7; }
 .na_ap3_ti { width: 36px; height: 36px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex: none; }
 .na_ap3_ti.a { background: var(--na-accent-soft); color: var(--na-accent-fg, var(--na-accent)); }
@@ -95,12 +95,11 @@ body.na_darkui .na_ap3_ti.b { background: #2E2E34; color: #9DBCE6; }
 body.na_darkui dialog.popup.na_ap3_dlg:has(.na_ap3):not(#na_x) { background: #17171A !important; }
 body.na_darkui .na_ap3 .na_v2_card, body.na_darkui .na_ap3 .na_ap3_fbody { background: #232328; border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
 body.na_darkui .na_ap3_bar { background: linear-gradient(rgba(28, 23, 20, 0), #17171A 14px); }
-body.na_darkui .na_ap3 :is(.na_ly_ask, .na_ap3_seg, .na_ap3_raw) { background: #2E2E34; }
-body:is(.na_darkui) .na_ap3 .na_ap3_chip { background: #2E2E34 !important; }
-body.na_darkui .na_ap3 .na_ap3_chip.on { background: #7A6457 !important; color: #F3F1ED !important; }
-body.na_darkui .na_ap3 .na_ap3_seg button.on { background: #414148; color: #F0CF8E; }
-body.na_darkui .na_ap3_raw:has(input:checked) { background: #2E2E34; color: #8FD3A6; }
-body.na_darkui .na_ap3 .na_append_ta { background: #1D1D21 !important; border-color: #3A3A41 !important; }
+body.na_darkui .na_ap3 :is(.na_ly_ask, .na_ap3_seg) { background: #2E2E34; }
+body.na_darkui .na_ap3 .na_ap3_raw { --c-bg: #2E2E34; }
+body.na_darkui .na_ap3 .na_ap3_chip { --c-bg: #2E2E34; }
+body.na_darkui .na_ap3 .na_ap3_chip.on { --c-bg: #7A6457; --c-fg: #F3F1ED; }
+body.na_darkui .na_ap3 .na_ap3_raw:has(input:checked) { --c-fg: #8FD3A6; }
 body.na_darkui .na_ap3_me > span { background: #232328; color: #F3E7DC; box-shadow: inset 0 0 0 1px rgba(217, 115, 58, 0.45); }
 body.na_darkui .na_ap3_ai, body.na_darkui .na_ap3_ai.note, body.na_darkui .na_ap3_ai.bad { background: #2B2B31; color: #E6D9CD; border-left: 3px solid #7CCB9A; border-radius: 6px 16px 16px 6px; }
 body.na_darkui .na_ap3_ai b { color: #8FD3A6; }
@@ -114,15 +113,15 @@ body.na_darkui .na_ap3_ai.none { border-left-color: #5E5E66; }
 .na_ap3 .na_ap2_checks > :not([hidden]) ~ .na_check:not([hidden]) { border-top: 1px solid var(--na-line2, var(--na-line)) !important; }
 /* 취소 · 추가하기 */
 .na_ap3_bar { position: sticky; bottom: 0; z-index: 2; display: flex; gap: 8px; margin: 18px -2px 0; padding: 12px 2px 10px; background: linear-gradient(transparent, var(--na-pop-bg, #F0E4DB) 14px); }
-.na_ap3_bar button { font: inherit; font-size: 15px; font-weight: 600; height: 46px; border-radius: 999px; cursor: pointer; }
-.na_ap3_bar .na_ap3_cancel { padding: 0 18px; border: 0; background: transparent; color: var(--na-mute); }
-.na_ap3_bar .na_ap2_go { flex: 1; border: 0; background: var(--na-accent); color: var(--na-onaccent, #fff); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+.na_ap3_bar button { font: inherit; font-size: 15px; font-weight: 600; height: 46px; cursor: pointer; --c-r: 999px; }
+.na_ap3_bar .na_ap3_cancel { padding: 0 18px; --c-fg: var(--na-mute); }
+.na_ap3_bar .na_ap2_go { flex: 1; --c-bg: var(--na-accent); --c-fg: var(--na-onaccent, #fff); --c-sh: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
 /* 크게 보기 */
 .na_ap3.na_ap3_isfull > :not(.na_ap3_full) { display: none !important; }
 .na_ap3_full { display: flex; flex-direction: column; min-height: 0; }
 .na_ap3_full[hidden] { display: none; }
 .na_ap3_fnav { display: flex; align-items: center; gap: 8px; }
-.na_ap3_back { display: inline-flex; align-items: center; gap: 2px; padding: 4px 2px; border: 0; background: transparent; color: var(--na-accent-ink); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.na_ap3_back { display: inline-flex; align-items: center; gap: 2px; padding: 4px 2px; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; --c-fg: var(--na-accent-ink); }
 .na_ap3_ftr { margin-left: auto; }
 .na_ap3_ftr .na_ap_tr_row { margin: 0; }
 .na_ap3_fhead { display: flex; flex-direction: column; gap: 3px; margin: 10px 2px 10px; }
