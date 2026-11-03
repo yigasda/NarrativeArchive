@@ -463,3 +463,20 @@ test('a payment in another currency is booked in the account\'s at the day\'s ra
     assert.match(p.money.orders[0].eta, /^10-(28|29|30)$/);
     assert.throws(() => applyMoney(m, p, ev('tokyo', 6, '10-26', { moves: [{ account: '1111', amount: -5000, currency: 'JPY', who: 'Konbini' }] }), opts()), /환율/);
 });
+
+test('run34B: an account opened with money moved into it in the same event: the move lands on it, no second opening deposit', () => {
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('savings', 5, '10-26', { moves: [{ account: '1111', amount: -300, who: 'Sparplan', kind: 'transfer', occurrence: 'new' }, { account: '4455', amount: 300, who: 'Giro', kind: 'transfer', occurrence: 'new' }],
+        newAccount: { kind: 'savings', name: 'Sparplan', last4: '4455', currency: 'EUR', balance: 300 } }), opts());
+    migrateBank(m, p);
+    assert.equal(bank(), 700);
+    assert.equal(cash(m.finance.accounts[`${p.money.bank.accounts.find(a => a.last4 === '4455').id}:EUR`]), 300);
+    assert.equal(p.money.tx.filter(t => t.account === '1111' && t.amount > 0).length, 0);
+    assert.equal(p.money.tx.filter(t => t.memo === '개설 입금').length, 0);
+    // opened with money and no move: the opening deposit is the whole balance
+    const b = setup();
+    applyMoney(b.m, b.p, ev('open', 5, '10-26', { newAccount: { kind: 'savings', name: 'Tagesgeld', last4: '7788', currency: 'EUR', balance: 500 } }), opts());
+    migrateBank(b.m, b.p);
+    assert.equal(b.p.money.tx.find(t => t.memo === '개설 입금').amount, 500);
+    assert.equal(b.bank(), 1000);
+});
