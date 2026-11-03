@@ -5361,9 +5361,8 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax_fxcal i { height: 30px; border-radius: 9px; display: grid; place-items: center; font: 600 12px 'Inter Tight', -apple-system, sans-serif; font-style: normal; color: #a3aab4; }
 .ax_fxcal i.p { background: #1d3461; color: #fff; } .ax_fxcal i.d { background: #e2e9f5; color: #1d3461; }
 .ax_fxcal i.t { box-shadow: inset 0 0 0 1.5px #1d3461; color: #1d3461; } .ax_fxcal i.p.t { box-shadow: inset 0 0 0 1.5px #1d3461, inset 0 0 0 3px #fff; }
-/* 고정 지출 status pill — scoped to the bank row: the bare .ax_dd is the diary's date column (they clashed, 3.169.64) */
-.ax_rw .ax_dd { display: inline-block; padding: 1px 7px; border-radius: 999px; background: #fbe4df; color: #b8573a; font-size: 10.5px; font-weight: 700; margin-left: 6px; vertical-align: 1px; }
-.ax_rw .ax_dd.ok { background: #dcefdf; color: #3f7d50; } .ax_rw .ax_dd.g { background: #eceef2; color: #6b7380; }
+.ax_dd { display: inline-block; padding: 1px 7px; border-radius: 999px; background: #fbe4df; color: #b8573a; font-size: 10.5px; font-weight: 700; margin-left: 6px; vertical-align: 1px; }
+.ax_dd.ok { background: #dcefdf; color: #3f7d50; } .ax_dd.g { background: #eceef2; color: #6b7380; }
 .ax_fxv { text-align: right; flex: none; display: flex; flex-direction: column; align-items: flex-end; } .ax .ax_fxv small { font-size: 11.5px; color: #8a929d; margin-top: 2px; align-self: flex-end; }
 .ax .ax_rw.on { --axbg: #f6f8fb; }
 /* 은행 › 알림 · 송금 · 명세서 · 확인증 · 더보기 */
@@ -6578,6 +6577,19 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .lf_sum { background: #fff; padding: 14px 16px; margin-bottom: 10px; }
 .ax .lf_sum div { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; color: #555; }
 .ax .lf_sum div.t { font-size: 16px; font-weight: 800; color: #222; border-top: 1px solid #f0f1f3; margin-top: 6px; padding-top: 10px; }
+.ax .lf_oc { background: #fff; margin-bottom: 10px; padding: 14px 16px; }
+.ax .lf_oc .hd { display: flex; justify-content: space-between; font-size: 12.5px; color: #9aa0a6; }
+.ax .lf_oc .hd b { color: #222; font-weight: 700; }
+.ax .lf_oc .hd button { color: #9aa0a6; font-size: 12.5px; }
+.ax .lf_oc .gift { font-size: 11px; font-weight: 700; color: #d1477a; background: #fde7ef; border-radius: 5px; padding: 1px 6px; margin-left: 6px; }
+.ax .lf_oc .bd { width: 100%; display: flex; gap: 12px; margin-top: 10px; align-items: center; text-align: left; }
+.ax .lf_oc .bd .lf_food { width: 60px; height: 60px; }
+.ax .lf_oc .bd > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.ax .lf_oc .bd b { font-size: 16px; font-weight: 800; }
+.ax .lf_oc .bd small { font-size: 13px; color: #666; }
+.ax .lf_oc .bt { display: flex; gap: 8px; margin-top: 12px; }
+.ax .lf_oc .bt span { flex: 1; height: 40px; border-radius: 8px; border: 1px solid #e2e4e8; display: grid; place-items: center; font-size: 14px; font-weight: 700; }
+.ax .lf_oc .bt span.m { border-color: var(--m); color: var(--m); }
 .ax .lf_bmsc { padding-bottom: 60px; }
 /* 배달 — Uber Eats */
 .ax .lf_ue { --m: #000; position: absolute; inset: 0; display: flex; flex-direction: column; background: #fff; color: #000; font-family: 'Inter Tight', -apple-system, 'Noto Sans KR', sans-serif; }
@@ -6598,6 +6610,12 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .lf_again .lf_food { width: 96px; height: 96px; }
 .ax .lf_again b { display: block; font-size: 13.5px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ax .lf_again small { font-size: 12px; color: #5e5e5e; }
+.ax .lf_sc { display: block; width: 100%; padding: 0 16px 16px; text-align: left; box-sizing: border-box; }
+.ax .lf_sc .r { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 8px; }
+.ax .lf_sc .r > span { display: flex; flex-direction: column; }
+.ax .lf_sc .r b { font-size: 16px; }
+.ax .lf_sc .r small { font-size: 13px; color: #5e5e5e; }
+.ax .lf_sc .r i { width: 30px; height: 30px; border-radius: 50%; background: #eee; display: grid; place-items: center; font: 700 12px 'Inter Tight', sans-serif; font-style: normal; flex: none; }
 .ax .lf_uecta { position: absolute; left: 14px; right: 14px; bottom: 96px; height: 54px; border-radius: 10px; --axbg: #000; color: #fff; display: flex; align-items: center; gap: 10px; padding: 0 18px; font-size: 16px; font-weight: 700; z-index: 5; box-sizing: border-box; }
 .ax .lf_uecta span { margin-left: auto; }
 .ax .lf_otab { display: flex; gap: 22px; padding: 0 16px; border-bottom: 1px solid #eee; font-size: 15px; font-weight: 600; color: #757575; flex: none; }
@@ -7738,7 +7756,7 @@ body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_card:not
 
 /* ============ every plain checkbox in the extension's windows is drawn by us (the picker's tick): rounded square, light edge,
    lit = accent fill with a tick (white on orange, near black on dark cream). Hidden helper boxes keep opacity 0. */
-body:is(.na_darkui, :not(.na_darkui)) .na_popup input[type="checkbox"]:not(.na_toggle):not(#na_x) { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; min-width: 18px; margin: 0; flex: none; box-sizing: border-box; border-radius: 6px; border: 2px solid var(--na-line) !important; background: transparent !important; box-shadow: none !important; cursor: pointer; vertical-align: middle; } /* no position here: hidden helper inputs (.na_ck, pickers) sit absolute over their drawn box (3.169.64) */
+body:is(.na_darkui, :not(.na_darkui)) .na_popup input[type="checkbox"]:not(.na_toggle):not(#na_x) { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; min-width: 18px; margin: 0; flex: none; box-sizing: border-box; border-radius: 6px; border: 2px solid var(--na-line) !important; background: transparent !important; box-shadow: none !important; cursor: pointer; vertical-align: middle; position: relative; }
 body:not(.na_darkui) .na_popup input[type="checkbox"]:not(.na_toggle):not(#na_x) { border-color: #CDB8A8 !important; }
 body:is(.na_darkui, :not(.na_darkui)) .na_popup input[type="checkbox"]:not(.na_toggle):checked:not(#na_x) { border: 0 !important; background: var(--na-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center no-repeat !important; }
 body.na_darkui .na_popup input[type="checkbox"]:not(.na_toggle):checked:not(#na_x) { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%231B1B1F' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") !important; }
