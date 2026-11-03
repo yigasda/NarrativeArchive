@@ -11,7 +11,7 @@ import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
 import { arr, trackerWeather, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
-import { alarmOf, dayGap, fileOf, nightsToDays, parseWeather, weatherFrom } from './phonesynclife.js';
+import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, parseWeather, weatherFrom } from './phonesynclife.js';
 import { exclusive } from './phonesync.js';
 import { recentTrackers } from './scenes.js';
 import { wealthDate } from './wealth.js';
@@ -107,11 +107,11 @@ YOU GET
 - MONEY NOW (sometimes): the owner's bank accounts and cards, by their last 4 digits, and the bank's recent transactions with their ids.
 
 SHOPS
-- Up to 5 shops the owner orders from, the kind found where they live, named as they would be there. 3 or 4 dishes each.
+- 5 to 7 shops the owner orders from, the kind found where they live, named as they would be there. 3 or 4 dishes each.
 - "nearby": 5 to 8 more shops around them they haven't ordered from, each with only the one dish it is known for. The app works out their ratings, fees and times.
 
 ORDERS
-- A delivery the story shows or a scene plainly implies gets its "ev". Besides those, 4 to 8 everyday orders from the last weeks, the character's own: late and alone, the same dish again, food for two.
+- A delivery the story shows or a scene plainly implies gets its "ev". Besides those, 4 to 8 everyday orders from the last weeks, spread over those shops (a favourite or two more often), the character's own: late and alone, the same dish again, food for two.
 - Never an order to explain a scene, and no big event (a party, a guest, a move) the story doesn't have.
 - People: only people the story has. No order later than the story's now.
 - The same place always has the same address. "tip" only where tipping is the custom; elsewhere 0.
@@ -225,7 +225,7 @@ export function parseDelivery(raw, accounts = [], tx = [], now = '') {
     const cart = raw.cart && arr(raw.cart.items).length ? { shop: line(raw.cart.shop, 60), items: arr(raw.cart.items).map(dish).filter(x => x.name).slice(0, 8), noteShop: line(raw.cart.noteShop, 120), noteShopKo: ko(raw.cart.noteShopKo), noteRider: line(raw.cart.noteRider, 120), noteRiderKo: ko(raw.cart.noteRiderKo) } : null;
     return {
         shops: arr(raw.shops).map(s => ({ name: line(s?.name, 60), ko: ko(s?.ko), cuisine: line(s?.cuisine, 30), rating: num(s?.rating), reviews: int(s?.reviews, 0, 999999), fee: num(s?.fee) ?? 0, minOrder: num(s?.minOrder), eta: line(s?.eta, 12), fav: yes(s?.fav),
-            menu: menuOf(s?.menu, 4) })).filter(s => s.name).slice(0, 5),
+            menu: menuOf(s?.menu, 4) })).filter(s => s.name).slice(0, 7),
         orders: arr(raw.orders).map(o => withEv({ shop: line(o?.shop, 60), items: arr(o?.items).map(dish).filter(x => x.name).slice(0, 10), fee: num(o?.fee) ?? 0, tip: num(o?.tip) ?? 0, discount: Math.abs(num(o?.discount) ?? 0),
             mode: pick(o?.mode, ['delivery', 'pickup'], 'delivery'), time: when(o?.time), arrived: when(o?.arrived) || hhmm(o?.arrived), to: line(o?.to, 40) || 'home', address: line(o?.address, 80), left: line(o?.left, 60),
             noteShop: line(o?.noteShop, 120), noteShopKo: ko(o?.noteShopKo), noteRider: line(o?.noteRider, 120), noteRiderKo: ko(o?.noteRiderKo), noCutlery: yes(o?.noCutlery), for: int(o?.for, 1, 30) ?? 1,
@@ -293,6 +293,83 @@ export async function fillShopMenus(m, p) {
     await saveMeta();
     return n;
 }
+// ---- 동네 가게 새로 고침: as the story's days go by, shops nearby open and close and the list reorders, the way the real
+// apps' do. Every 3 story days and 3 reflections both (asked after a reflection: a story that skips days at every
+// reflection still asks at most every third one), 1 or 2 shops open and 1 or 2 of the
+// ones nearby go; the owner moving to another of their saved cities makes it that city's shops. One short request of its
+// own, the shops alone with their menus (no story)
+const NEARBY_DAYS = 3, NEARBY_ROUNDS = 3, NEARBY_MAX = 8;
+// the saved city the owner is in now (the weather's place read against the saved cities), or ''
+const homeCity = p => cityAt(p.life?.weather?.here?.place || '', p.life?.weather?.cities || [])?.name || '';
+export const AI_SYS_NEARBY = `GOAL
+Keep the shops near one character up to date on the food delivery app of their phone in a long role-play, as the days go by.
+
+YOU GET
+- PLACE: the city they are in now. MOVED: true when they are in another city than before.
+- CURRENCY: the money prices are in.
+- NEARBY: the shops near them they haven't ordered from lately. ORDERED: the shops they order from.
+
+CHANGES
+- Without MOVED: 1 or 2 new shops open near them ("new"), and 1 or 2 of NEARBY close or drop out ("gone", their names as given).
+- With MOVED: 5 to 7 shops of that city ("new"), and every shop of NEARBY is "gone".
+- A new shop is the kind found there, named as it would be, not one of ORDERED or NEARBY. 4 to 6 dishes each, its best-known first with "top": true, each with a short "desc", priced as it would be there.
+- Every dish gets "pic"; the app draws it. "base": the closest of BASES. "with": up to 3 of TOPPINGS. "size": "large" only for a large or extra size. "set": up to 2 of SIDES, only for a set.
+- BASES: ${FOOD_IDS.base.join(', ')}
+- TOPPINGS: ${FOOD_IDS.top.join(', ')}
+- SIDES: ${FOOD_IDS.side.join(', ')}
+
+LANGUAGE
+Shop and dish names in the language they really have there. A name not in Korean gets "ko"; a Korean one gets none.
+
+JSON (one object, nothing before or after it)
+{ "new": [{ "name", "ko", "cuisine", "menu": [{ "name", "ko", "desc", "price", "top": true or false, "pic": { "base", "with": [], "size": "regular" | "large", "set": [] } }] }], "gone": ["a name from NEARBY"] }
+Numbers are plain JSON numbers.`;
+// the shops nearby: not ordered from in the story's last 30 days (the 자주 시킨 가게 line's own rule)
+const lately = (p, d, name) => { const today = String(storyNow(p) || p.now || '').slice(0, 5); return d.orders.some(o => o.shop === name && /^\d{2}-\d{2}$/.test(today) && dayGap(String(o.time || '').slice(0, 5), today) >= 0 && dayGap(String(o.time || '').slice(0, 5), today) <= 30); };
+export function nearbyDue(p) {
+    const d = p.delivery, today = String(storyNow(p) || p.now || '').slice(0, 5);
+    if (!d?.shops?.length || !/^\d{2}-\d{2}$/.test(today)) return '';
+    const city = homeCity(p);
+    if (city && d.city && city !== d.city) return 'moved';
+    if (!/^\d{2}-\d{2}$/.test(d.nearbyAt || '')) return '';
+    return dayGap(d.nearbyAt, today) >= NEARBY_DAYS && (d.nearbyRounds || 0) >= NEARBY_ROUNDS ? 'days' : '';
+}
+// read: a reflection that read messages (it counts toward the 3)
+export async function refreshNearby(m, p, { read = false } = {}) {
+    const d = p.delivery, today = String(storyNow(p) || p.now || '').slice(0, 5);
+    if (d && read) d.nearbyRounds = (d.nearbyRounds || 0) + 1;
+    const why = nearbyDue(p);
+    // a phone filled before this kept no day: it starts counting now
+    if (d && !d.nearbyAt && /^\d{2}-\d{2}$/.test(today)) { d.nearbyAt = today; d.city ||= homeCity(p); await saveMeta(); return 0; }
+    if (!why) return 0;
+    const moved = why === 'moved', near = d.shops.filter(s => !lately(p, d, s.name)), ordered = d.shops.filter(s => lately(p, d, s.name));
+    const cur = p.money?.currency || p.money?.bank?.accounts?.[0]?.currency || (livesIn(p) === 'KR' ? 'KRW' : 'EUR');
+    const input = [`[PLACE]\n${homeCity(p) || COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}${moved ? '\n[MOVED]\ntrue' : ''}`, `[CURRENCY]\n${cur}`,
+        `[NEARBY]\n${JSON.stringify(near.map(s => ({ name: s.name, cuisine: s.cuisine })))}`, `[ORDERED]\n${JSON.stringify(ordered.map(s => s.name))}`].join('\n\n');
+    const out = await askDraft(input, { force: true, system: AI_SYS_NEARBY, maxTokens: 9000, effort: 'low' });
+    const raw = jsonOf(out);
+    if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 동네 가게를 찾지 못했어요');
+    // the phone may have changed while it was asked (the app made again)
+    if (p.delivery !== d) return 0;
+    const plain = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+    const gone = new Set(moved ? near.map(s => plain(s.name)) : arr(raw.gone).map(plain));
+    const have = new Set(d.shops.map(s => plain(s.name)));
+    const won = cur === 'KRW', fresh = arr(raw.new).map(x => {
+        const name = line(x?.name, 60); if (!name || have.has(plain(name))) return null; have.add(plain(name));
+        const st = shopStats(name, won), menu = menuOf(x?.menu, 6);
+        return { name, ko: ko(x?.ko), cuisine: line(x?.cuisine, 30), rating: st.rating, reviews: st.reviews, fee: st.fee, minOrder: st.minOrder, eta: st.eta, fav: false, nearby: true, menu, ...(menu.length > 1 ? { menuAt: Date.now() } : {}) };
+    }).filter(Boolean).slice(0, moved ? 7 : 2);
+    // a shop nearby goes (never one ordered from lately); the rest reorder; the new ones come first, as the app shows what opened
+    const kept = d.shops.filter(s => lately(p, d, s.name) || !gone.has(plain(s.name)));
+    const mix = v => [...`${today}:${v}`].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0, 2166136261);
+    const stay = kept.filter(s => !lately(p, d, s.name)).sort((a, b) => mix(a.name) - mix(b.name));
+    const nearby = [...fresh, ...stay].slice(0, NEARBY_MAX);
+    d.shops = [...kept.filter(s => lately(p, d, s.name)), ...nearby];
+    d.nearbyAt = today; d.nearbyRounds = 0; d.city = homeCity(p) || d.city || '';
+    ensureIds(p);
+    await saveMeta();
+    return fresh.length;
+}
 // what an order came to (the model never writes it)
 export const orderTotal = dlvTotal;
 
@@ -339,7 +416,7 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
     // order (the same shop on the same day, or the same story event) is that one, not a second
     const kept = (p.delivery?.orders || []).filter(o => o.sync), plain = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
     const twin = o => kept.some(k => (o.ev && k.ev === o.ev) || (plain(k.shop) === plain(o.shop) && dayGap(String(k.time).slice(0, 5), String(o.time).slice(0, 5)) === 0));
-    p.delivery = { ...d, orders: [...d.orders.filter(o => !twin(o)), ...kept].sort(byStory(p.now)), look: deliveryLook(p), at: storyNow(p) || p.now || '' };
+    p.delivery = { ...d, orders: [...d.orders.filter(o => !twin(o)), ...kept].sort(byStory(p.now)), look: deliveryLook(p), at: storyNow(p) || p.now || '', nearbyAt: String(storyNow(p) || p.now || '').slice(0, 5), city: homeCity(p) };
     if (p.sync?.marks) p.sync.marks.delivery = markNow();
     ensureIds(p);
     payDeliveries(m, p);

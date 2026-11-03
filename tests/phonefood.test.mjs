@@ -262,3 +262,9 @@ test('second look: the same kind told apart by the name, Korean words from the m
     for (const [n, b] of [['宫保鸡丁', 'stirfry-red'], ['불고기 정식', 'galbi'], ['불고기버거', 'burger'], ['짜파게티', 'jajangmyeon'], ['sweet and sour pork', 'tangsuyuk'], ['깐쇼새우', 'dakgangjeong'], ['오뎅', 'soup-white'], ['핫바', 'skewer'], ['생선까스', 'tonkatsu'], ['paella', 'risotto'], ['quiche', 'pie'], ['춘권', 'twigim']])
         assert.equal(guessPic(n).base, b, n);
 });
+
+test('a pastry or a cake called a roll is not sushi; a sushi roll still is', () => {
+    for (const [n, b] of [['Zimtschnecke', 'croissant'], ['유기농 시나몬 롤', 'croissant'], ['Schoko-Zimtschnecke', 'croissant'], ['Cinnamon Roll', 'croissant'], ['Kanelbulle', 'croissant'],
+        ['롤케이크', 'cake'], ['Biskuitrolle', 'cake'], ['Sausage Roll', 'hotdog'], ['연어 롤', 'maki'], ['캘리포니아 롤', 'maki'], ['California Roll', 'maki']])
+        assert.equal(guessPic(n).base, b, n);
+});
