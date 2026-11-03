@@ -427,24 +427,28 @@ JSON (one object, nothing before or after it)
 { "usual": { "apps": [{ "app", "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "other", "min": minutes a day }], "sometimes": [the same, apps they open now and then, "min" on a day they do], "pickups": a day, "late": "HH:MM" they usually last look at it },
   "days": [{ "date": "MM-DD" as in DAYS, "apps": { app name: minutes }, "pickups", "late": "HH:MM" }] }
 Numbers are plain JSON numbers.`;
-export const fillScreen = (m, p) => exclusive('fill', async () => {
+// again (다시 만들기 › 스크린타임): their usual and the last week made anew, except a day a reflection wrote (its own row,
+// "sync:…": the story's day as told stays). Nothing is cleared before the answer is in, so a failed call loses nothing
+export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', async () => {
     const h = p.life?.health;
     if (!h) throw new Error('건강 앱을 먼저 채워 주세요');
     // the last week before today (today is counted as it goes, from their usual)
-    const today = String(storyNow(p) || p.now || '').slice(0, 5);
-    const days = (h.days || []).filter(d => d.date && d.date !== today && !d.screen && (!today || dayGap(d.date, today) > 0)).sort((a, b) => dayGap(b.date, a.date)).slice(-7);
+    const today = String(storyNow(p) || p.now || '').slice(0, 5), told = d => String(d.id || '').startsWith('sync:') && !!d.screen;
+    const days = (h.days || []).filter(d => d.date && d.date !== today && (again ? !told(d) : !d.screen) && (!today || dayGap(d.date, today) > 0 && dayGap(d.date, today) <= 7)).sort((a, b) => dayGap(b.date, a.date)).slice(-7);
     const input = await sideRequest(m, p.owner, [`[DAYS]\n${JSON.stringify(days.map(d => ({ date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, ...(d.ev ? { ev: d.ev } : {}) })))}`,
         p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps });
     const out = await askDraft(input, { force: true, system: AI_SYS_SCREEN, maxTokens: 6000, effort: 'low' });
     const raw = jsonOf(out), usual = usualScreenOf(raw?.usual);
     let n = 0;
-    // a phone the reflection already gave a usual keeps it; a day already told keeps its own
-    if (usual && !h.usual?.screen) { (h.usual ||= {}).screen = usual; n++; }
+    // a phone the reflection already gave a usual keeps it (unless made again); a day already told keeps its own
+    if (usual && (again || !h.usual?.screen)) { (h.usual ||= {}).screen = usual; n++; }
     for (const x of arr(raw?.days)) {
         const d = days.find(y => y.date === String(x?.date || '').slice(0, 5)), sc = screenOf(x);
-        if (d && sc && !d.screen) { d.screen = sc; n++; }
+        if (d && sc && (again || !d.screen)) { d.screen = sc; n++; }
     }
     if (!n) throw new Error('모델 답에서 스크린타임을 찾지 못했어요');
+    // made again: an older week's screen the fill wrote goes too (the code works those days out from the new usual)
+    if (again) for (const d of h.days || []) if (d.screen && !told(d) && !days.includes(d)) delete d.screen;
     await saveMeta();
     return n;
 });
