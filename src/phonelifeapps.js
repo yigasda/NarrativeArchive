@@ -214,13 +214,14 @@ const face = (min, night) => { const h = (min % 720) / 720 * 360, m = (min % 60)
 export function worldScreen(p, now) {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '시계', 'life', 'home2', true);
-    const hn = hereNow(lf), here = { name: hn.place || '현재 위치', tz: hereZone(lf, p, hn.place), sunset: hn.tiles?.sunset || '', note: '' };
-    const rows = [here, ...lf.weather.cities.filter(c => c.name !== here.name)].map(c => ({ c, t: cityTime(p, lf, c) }));
+    // the saved city the owner is in is the 현재 위치 row (its note, like 우리 집, goes with it), not a second row
+    const hn = hereNow(lf), same = cityOfPlace(hn.place, lf.weather.cities), here = { name: hn.place || '현재 위치', tz: hereZone(lf, p, hn.place), sunset: hn.tiles?.sunset || '', note: same?.note || '' };
+    const rows = [here, ...lf.weather.cities.filter(c => c !== same && c.name !== here.name)].map(c => ({ c, t: cityTime(p, lf, c) }));
     return `${axBar(p, now, '#f2f2f4')}
       ${axTop(axCb('home2'))}
       <div class="ax_scroll">${axH1('세계 시계')}
         ${worldMap(p, lf, rows)}
-        <div class="lf_dcard">${rows.map(({ c, t }, k) => `<div class="lf_wc">${face(toMin(t.time), t.night)}<span class="lf_wct"><small>${k ? `${t.dayShift}, ${t.off >= 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '현재 위치'}${c.note ? ` · ${esc(c.note)}` : ''}</small><b>${esc(c.name)}</b></span><b class="cg_num">${esc(clockOf(p, t.time))}</b></div>`).join('')}</div>
+        <div class="lf_dcard">${rows.map(({ c, t }, k) => `<div class="lf_wc">${face(toMin(t.time), t.night)}<span class="lf_wct"><small>${halfOf(p, t.time) ? `${halfOf(p, t.time)} · ` : ''}${k ? `${t.dayShift}, ${t.off >= 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '현재 위치'}${c.note ? ` · ${esc(c.note)}` : ''}</small><b>${esc(c.name)}</b></span><b class="cg_num">${esc(clockNum(p, t.time))}</b></div>`).join('')}</div>
         <i class="lf_pad"></i></div>
       ${clockDock('wclock')}${axInd('#f2f2f4')}`;
 }
@@ -1035,7 +1036,7 @@ export function weatherScreen(p, now) {
     const h = hereFull(p, lf), time = now5(p).slice(6) || h.time, phase = phaseOf(time, h.tiles.sunrise, h.tiles.sunset), q = pal(h.cond, phase);
     return `<div class="lf_wx" style="${wxVars(q)}">${scene(h.cond, phase)}
       ${axBar(p, now, '#fff')}
-      <div class="ax_top lf_wbar">${axCb('home2')}<button type="button" class="lf_pill wx" data-go="wlist">도시 ${lf.weather.cities.length}</button></div>
+      <div class="ax_top lf_wbar">${axCb('home2')}<button type="button" class="lf_pill wx" data-go="wlist">도시 ${lf.weather.cities.filter(c => c !== cityOfPlace(h.place, lf.weather.cities)).length}</button></div>
       <div class="ax_scroll">${weatherBody(p, { ...h, time, today: now5(p).slice(0, 5), hours: hereHours({ ...h, today: now5(p).slice(0, 5) }, time) }, h.place || '현재 위치', phase === 'night', '현재 위치', '<div class="lf_wgap"></div>', shade(q.sky, 0.8))}<i class="lf_pad"></i></div>
       ${axInd('#fff')}</div>`;
 }
@@ -1110,15 +1111,16 @@ export function hereWidget(p, now) {
 }
 export function cityList(p, now) {
     const lf = L(p); if (!lf) return weatherScreen(p, now);
-    const h = hereFull(p, lf), ht = now5(p).slice(6) || h.time;
+    // the saved city the owner is in is the 현재 위치 card (its note goes with it), not a second card
+    const h = hereFull(p, lf), ht = now5(p).slice(6) || h.time, same = cityOfPlace(h.place, lf.weather.cities);
     const nav = '<svg width="11" height="11" viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z" fill="#fff"/></svg>';
     const card = (go, i, name, sub, cond, phase, temp, hi, lo, foot) => `<button type="button" class="lf_city" data-go="${go}"${i ? ` data-i="${i}"` : ''} style="--axbg: ${pal(cond, phase).sky}">${cardSky(cond, phase)}
       <span class="l"><b>${esc(name)}</b><small>${sub}</small><span>${esc(foot)}</span></span><span class="r"><b>${temp ?? '—'}°</b><span>최고 ${hi ?? '—'}° 최저 ${lo ?? '—'}°</span></span></button>`;
     return `${axBar(p, now)}${axTop(axCb('weather'), axKp(p))}
       <div class="ax_scroll">${axH1('날씨')}
         <div class="lf_q">${ax('search', 16, '#8a929d', 2.4)}도시 또는 공항 검색</div>
-        ${card('weather', '', h.place || '현재 위치', `${nav} 현재 위치`, h.cond, phaseOf(ht, h.tiles.sunrise, h.tiles.sunset), h.temp, h.hi, h.lo, saidOf(h))}
-        ${lf.weather.cities.map(c0 => { const c = cityView(p, lf, c0), t = cityTime(p, lf, c), sun = c.sunrise && c.sunset ? [c.sunrise, c.sunset] : sunOf(now5(p).slice(0, 5), c.tz) || []; return card('wcity', c.id, c.name, t.off ? `${clockOf(p, t.time)} · ${t.off > 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '', c.cond, phaseOf(t.time, sun[0], sun[1]), c.temp, c.hi, c.lo, [WX[c.cond], c.note].filter(Boolean).join(' · ')); }).join('')}
+        ${card('weather', '', h.place || '현재 위치', `${nav} 현재 위치`, h.cond, phaseOf(ht, h.tiles.sunrise, h.tiles.sunset), h.temp, h.hi, h.lo, [saidOf(h), same?.note].filter(Boolean).join(' · '))}
+        ${lf.weather.cities.filter(c0 => c0 !== same).map(c0 => { const c = cityView(p, lf, c0), t = cityTime(p, lf, c), sun = c.sunrise && c.sunset ? [c.sunrise, c.sunset] : sunOf(now5(p).slice(0, 5), c.tz) || []; return card('wcity', c.id, c.name, t.off ? `${clockOf(p, t.time)} · ${t.off > 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '', c.cond, phaseOf(t.time, sun[0], sun[1]), c.temp, c.hi, c.lo, [WX[c.cond], c.note].filter(Boolean).join(' · ')); }).join('')}
         <i class="lf_pad"></i></div>${axInd()}`;
 }
 
