@@ -126,7 +126,7 @@ ${PHONE_LAST}`;
 // life: 시계 · 건강 · 파일 (and 날씨 only when no status line gives it: weather)
 // weather: the model writes the weather (no status line gives it, or the day moved on); tracker: a status line gives some
 // split: the first of two steps (core): no money, each event marked "money" when it touches it (moneySystem writes it after)
-export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false } = {}) {
+export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false } = {}) {
     const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
     return `${split ? 'STAGE: core\n' : ''}GOAL
 Add to one character's phone what a few new chat messages put on it, in a long role-play. The user opens the phone to peek at the story from the phone's side.
@@ -149,7 +149,7 @@ WHAT IS NEW
 - Each message's own replies, orders and payments belong to the event in that message, not folded into an earlier one.
 - An event in EVENTS ON THE PHONE keeps its id; add only what the phone doesn't hold yet.
 - MESSAGES READ BEFORE, NOW CHANGED were already put on the phone: give their events the ids listed there${split ? '' : '; a payment in them is that same payment, its amount corrected if it changed'}.
-${split ? '- A scene that only touches the money apps (a taxi paid, a basket filled, a share price mentioned) is still an event, with "apps": ["money"].\n' : ''}- Small everyday things around an event are fine: how a text was worded, a photo of the place, a search they would make.
+${split ? `- A scene that only touches these apps (a taxi paid, a basket filled${invest ? ', a share price mentioned' : ''}) is still an event, with its "apps".\n` : ''}- Small everyday things around an event are fine: how a text was worded, a photo of the place, a search they would make.
 - People: only people the story has. A relationship word (girlfriend, ex, husband, boss) only if the messages or archive use it for them.
 - A diary entry holds only what these messages show and what the owner felt about it; no new secrets, no new feelings.
 
@@ -158,7 +158,7 @@ WHERE IT COMES FROM
 - "quote": a few words copied exactly as written in that message or section, not reworded.
 - "date" and "time": when it happens in that message ("MM-DD", "HH:MM" if known). A plan for later happens when it is made; its later day goes only on the calendar item.
 - "now": the moment of the newest message, never a time something is only planned for.
-${split ? '- "apps": ["money"] when the event has anything for the bank, cards, orders, tickets, the delivery app (its basket too) or the brokerage (a trade, a share price the story gives, a share they start watching, a stake), else []. When unsure, include it.\n' : ''}${life ? `
+${split ? `- "apps": "money" when the event has anything for the bank, cards, orders, tickets or the delivery app (its basket too)${invest ? '; "invest" for the brokerage (a trade, a share price the story gives, a share they start watching, a stake)' : ''}; else []. When unsure, include it.\n` : ''}${life ? `
 LIFE
 - An alarm the owner sets, changes or switches on or off in these messages; a timer they set; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
 - An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".
@@ -187,7 +187,7 @@ ${PHONE_STYLE.replace('; "now" is the newest moment of the story.', '.')}
 ANSWER — one JSON object, nothing else:
 { "now": "MM-DD HH:MM",
   "events": [{ "id": an id from EVENTS ON THE PHONE, or a short new tag like "berlin-flight", "at": 123, "quote": "exact words",
-               "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line",${split ? ' "apps": [] or ["money"],' : ''}
+               "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line",${split ? ` "apps": [] or ["money"${invest ? ', "invest"' : ''}],` : ''}
                "phone": { only the app items this event puts on the phone }${money ? `,
                "money": { "amountFrom": "story" | "guess",
                           "moves": [{ "account": a bank account's last 4 digits or "broker:EUR", "amount": minus for money out, "currency", "who", "ko", "memo": what it was for, "kind": "card" | "transfer" | "deposit" | "cash" (taken out as cash), "fee": a transfer fee charged on top of "amount", on the sending move, "occurrence": "new" | "again", "already": "" }],
@@ -223,26 +223,27 @@ export const AI_SYS_PHONE_UPDATE = updateSystem();
 // line names the step (the test harness files each answer under it)
 // core: the old one-step instructions without money (life, files, health and the weather stay: they read the whole
 // messages anyway), with each event marked "money" when it touches it
-export const coreSystem = ({ life = false, weather = false, tracker = false } = {}) => updateSystem({ money: false, delivery: false, life, weather, tracker, split: true });
+export const coreSystem = ({ life = false, weather = false, tracker = false, invest = false } = {}) => updateSystem({ money: false, delivery: false, life, weather, tracker, split: true, invest });
 // delivery: the phone has the delivery app
-export function moneySystem({ delivery = false } = {}) {
+// invest: an event touches the brokerage (trades, prices, watched shares, stakes); else none of it is asked or sent
+export function moneySystem({ delivery = false, invest = false } = {}) {
     const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
     return `STAGE: money
 GOAL
-Write the money of story events already read from a few new chat messages in a long role-play: payments, transfers, refunds, orders, tickets and trades${delivery ? ', and food deliveries' : ''}. An app adds your JSON to the phone's bank, wallet, orders${delivery ? ', delivery app' : ''} and brokerage.
+Write the money of story events already read from a few new chat messages in a long role-play: payments, transfers, refunds, orders and tickets${invest ? ', trades' : ''}${delivery ? ', and food deliveries' : ''}. An app adds your JSON to the phone's bank, wallet, orders${delivery ? ', delivery app' : ''}${invest ? ' and brokerage' : ''}.
 
 YOU GET
 - EVENTS: the story events to write money for, each with its id, message number, date, time, summary and quote. An event marked "changed" was read before and its message edited since.
 - MESSAGES: the messages those events come from, with the ones next to them. ARCHIVE FOR THESE MESSAGES (sometimes): summary sections covering them.
-- MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.
+- MONEY NOW${invest ? ' and INVESTMENTS NOW (sometimes)' : ''}: the bank, card, orders${invest ? ', tickets and brokerage' : ' and tickets'}, with record ids. WEALTH (sometimes): how much the owner has.
 ${delivery ? `- DELIVERY SHOPS: the shops the delivery app already has, and the basket.\n` : ''}- DAYS and STORY YEAR (sometimes), OWNER, and sometimes OWNER PROFILE.
 
 MONEY
-- A payment, transfer, refund, order, ticket or trade that happens in an event goes in that event's "money", under its id. An event with no money is left out.
+- A payment, transfer, refund, order${invest ? ', ticket or trade' : ' or ticket'} that happens in an event goes in that event's "money", under its id. An event with no money is left out.
 - An amount the story gives stays as it is. A real one with no amount gets a plausible amount for the owner, the place and MONEY NOW: "amountFrom": "guess".
 - A payment the scene plainly implies (eating out, a taxi ride) counts; one someone else may have paid does not. Never invent a payment the scene doesn't show or imply.
-- Every move, trade and order says "occurrence": "new" when it happens in this message, "again" when the message only talks about one made before.
-- Already in MONEY NOW or INVESTMENTS NOW: its id as "already"; it is not paid again. A "changed" event's payment is that same payment, its amount corrected if it changed.
+- Every move${invest ? ', trade' : ''} and order says "occurrence": "new" when it happens in this message, "again" when the message only talks about one made before.
+- Already in MONEY NOW${invest ? ' or INVESTMENTS NOW' : ''}: its id as "already"; it is not paid again. A "changed" event's payment is that same payment, its amount corrected if it changed.
 - A card purchase goes on the card account; a refund is plus; paying the card off is a transfer from the bank.
 - No money is made up to cover a payment; a balance may go below zero.
 - Company money, family money and an inheritance still to come are not the owner's cash.
@@ -259,13 +260,13 @@ Banks, shops, merchants and items named as they would be in the owner's country.
 ANSWER — one JSON object, nothing else:
 { "events": [{ "id": an id from EVENTS,
                "money": { "amountFrom": "story" | "guess",
-                          "moves": [{ "account": a bank account's last 4 digits or "broker:EUR", "amount": minus for money out, "currency", "who", "ko", "memo": what it was for, "kind": "card" | "transfer" | "deposit" | "cash" (taken out as cash), "fee": a transfer fee charged on top of "amount", on the sending move, "occurrence": "new" | "again", "already": "" }],
-                          "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko" and "currency" (a share not in INVESTMENTS NOW), "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
-                          "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" (the default) | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD" or "", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
+                          "moves": [{ "account": a bank account's last 4 digits${invest ? ' or "broker:EUR"' : ''}, "amount": minus for money out, "currency", "who", "ko", "memo": what it was for, "kind": "card" | "transfer" | "deposit" | "cash" (taken out as cash), "fee": a transfer fee charged on top of "amount", on the sending move, "occurrence": "new" | "again", "already": "" }],
+${invest ? `                          "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko" and "currency" (a share not in INVESTMENTS NOW), "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
+` : ''}                          "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" (the default) | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD" or "", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
                           "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }]${delivery ? `,
                           "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients, like "beef"], "size": "regular" | "large", "set": [a set's sides or drinks] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "left": where the courier left it, or "", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery", "for": how many people, "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
                                           "newShop": { "name": the same as "shop", "ko", "cuisine", "menu": [{ "name", "ko", "desc", "price", "top": true for its best-known dish, "pic" }] } or null }]` : ''} } }] }
-Also in "money" when the messages show them: "newAccount": { "kind": "checking" | "savings" | "credit", "name", "last4", "currency", "balance" } (an account or card the owner opens), "newCard": { "account": last4, "exp": "MM/YY" }${delivery ? `, "cart": { "shop", "items": [like a delivery's] } (dishes put in the basket and not ordered)` : ''}, "watch": [{ "symbol", "name", "currency", "note", "ko" }] (a share they start watching), "quotes": [{ "symbol", "date", "value", "evidence": exact words }] (a price the story gives), "stakes": [{ "company", "listed", "percent", "holder", "voter", "beneficiary", "restriction", "value", "currency", "evidence": exact words }] (a stake the story says they now hold).
+Also in "money" when the messages show them: "newAccount": { "kind": "checking" | "savings" | "credit", "name", "last4", "currency", "balance" } (an account or card the owner opens), "newCard": { "account": last4, "exp": "MM/YY" }${delivery ? `, "cart": { "shop", "items": [like a delivery's] } (dishes put in the basket and not ordered)` : ''}${invest ? `, "watch": [{ "symbol", "name", "currency", "note", "ko" }] (a share they start watching), "quotes": [{ "symbol", "date", "value", "evidence": exact words }] (a price the story gives), "stakes": [{ "company", "listed", "percent", "holder", "voter", "beneficiary", "restriction", "value", "currency", "evidence": exact words }] (a stake the story says they now hold).` : '.'}
 No money anywhere: "events": [].`;
 }
 
@@ -705,13 +706,14 @@ async function moneyStage(m, p, owner, targets, c) {
     const owe = (t, why) => {
         const tries = (t.tries || 0) + 1;
         if (tries >= OWED_TRIES) out.notes.push(`${t.summary || t.id}: 결제를 두 번 못 넣어서 건너뛰었어요 (${why})`);
-        else { out.owed.push({ id: t.id, at: t.at, date: t.date, time: t.time, tries }); out.notes.push(`${t.summary || t.id}: 결제는 다음 반영 때 다시 넣어요 (${why})`); }
+        else { out.owed.push({ id: t.id, at: t.at, date: t.date, time: t.time, tries, ...(t.invest ? { invest: true } : {}) }); out.notes.push(`${t.summary || t.id}: 결제는 다음 반영 때 다시 넣어요 (${why})`); }
     };
     const text = new Map(c.rows.map(r => [r.index, r.text])), near = new Set();
     for (const t of targets) for (const i of [t.at - 1, t.at, t.at + 1]) if (text.has(i)) near.add(i);
     const archive = (c.sections || []).filter(x => targets.some(t => t.at >= x.first && t.at <= x.last)).map(x => x.text);
     if (p.money) migrateBank(m, p);
-    const money = moneyNow(p), invest = investNow(m, p), today = String(p.now || '').slice(0, 5);
+    // the brokerage only when an event touches it (most money scenes are a meal, a taxi, a parcel)
+    const money = moneyNow(p), invest = targets.some(t => t.invest) ? investNow(m, p) : null, today = String(p.now || '').slice(0, 5);
     const dayList = c.year && /^\d{2}-\d{2}$/.test(today) ? Array.from({ length: 14 }, (_, k) => {
         const d = new Date(Date.UTC(Number(c.year), Number(today.slice(0, 2)) - 1, Number(today.slice(3, 5)) + k - 7));
         return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()]}`;
@@ -728,7 +730,7 @@ async function moneyStage(m, p, owner, targets, c) {
     ].filter(Boolean).join('\n\n');
     let raw = null, why = '';
     try {
-        const ans = await askDraft(input, { force: true, system: moneySystem({ delivery: !!(money && p.delivery) }), maxTokens: 8000, effort: 'low' });
+        const ans = await askDraft(input, { force: true, system: moneySystem({ delivery: !!(money && p.delivery), invest: !!invest }), maxTokens: 8000, effort: 'low' });
         why = c.check?.() || '';
         raw = why ? null : jsonOf(ans);
         if (!why && (!raw || !Array.isArray(raw.events))) why = '모델 답에서 결제를 찾지 못했어요';
@@ -829,7 +831,7 @@ async function updatePhone(m, owner) {
         ].filter(Boolean).join('\n\n');
         const made = { money: p.money?.at, invest: p.investment?.at, life: p.life, delivery: p.delivery };
         // low thinking: tested against medium on Vertex, the same payments, ids and amounts, without the thinking cost
-        const out = await askDraft(input, { force: true, system: split ? coreSystem({ life: !!life, weather: askWeather, tracker: !!tracker }) : updateSystem({ money: false, life: !!life, weather: askWeather, tracker: !!tracker }), maxTokens: 16000, effort: 'low' });
+        const out = await askDraft(input, { force: true, system: split ? coreSystem({ life: !!life, weather: askWeather, tracker: !!tracker, invest: !!invest }) : updateSystem({ money: false, life: !!life, weather: askWeather, tracker: !!tracker }), maxTokens: 16000, effort: 'low' });
         // the answer is for the chat and messages it was asked about
         if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p) throw new Error('반영하는 사이 채팅이나 폰이 바뀌었어요. 다시 해 주세요');
         if (p.money?.at !== made.money || p.investment?.at !== made.invest) throw new Error('반영하는 사이 은행이나 투자가 새로 만들어졌어요. 다시 해 주세요');
@@ -868,7 +870,7 @@ async function updatePhone(m, owner) {
             const id0 = tagOf(e.id) || tagOf(e.summary) || `ev-${at}`, id = used.has(id0) && added.some(x => x.id === id0 && x.at !== at) ? `${id0}-${at}` : id0;
             used.add(id);
             // core marks the events money touches; their money is asked for after (a money left in core's answer is asked again)
-            if (split) { if (arr(e.apps).map(x => String(x).toLowerCase()).includes('money') || e.money) wants.set(id, { id, at, date: day, time: hhmm(e.time), summary: line(e.summary, 160), quote: line(e.quote, 200), changed: reread.has(at) }); delete e.money; }
+            if (split) { const ap = arr(e.apps).map(x => String(x).toLowerCase()), inv = ap.includes('invest') || ['trades', 'watch', 'quotes', 'stakes'].some(k => arr(e.money?.[k]).length); if (ap.includes('money') || inv || e.money) wants.set(id, { id, at, date: day, time: hhmm(e.time), summary: line(e.summary, 160), quote: line(e.quote, 200), changed: reread.has(at), invest: inv }); delete e.money; }
             // a changed message already put its payments on the phone: only its own events may correct them
             if (reread.has(at) && e.money && !reread.get(at).some(x => x.id === id)) { notes.push(`#${at} 바뀐 대화의 결제는 새로 넣지 않았어요`); delete e.money; }
             // the money first, on its own: a payment that can't be placed leaves the whole event out
@@ -903,7 +905,7 @@ async function updatePhone(m, owner) {
         if (split) {
             const owedBefore = arr(s.owed?.money), targets = [...wants.values()];
             for (const t of targets) t.tries = owedBefore.find(o => o.id === t.id)?.tries || 0;
-            for (const o of owedBefore) { const e0 = s.events[o.id]; if (!wants.has(o.id) && e0 && Number.isInteger(e0.at)) targets.push({ id: o.id, at: e0.at, date: o.date || '', time: o.time || '', summary: e0.summary || o.id, quote: e0.quote || '', changed: false, tries: o.tries || 0 }); }
+            for (const o of owedBefore) { const e0 = s.events[o.id]; if (!wants.has(o.id) && e0 && Number.isInteger(e0.at)) targets.push({ id: o.id, at: e0.at, date: o.date || '', time: o.time || '', summary: e0.summary || o.id, quote: e0.quote || '', changed: false, tries: o.tries || 0, invest: !!o.invest }); }
             const check = () => (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p ? '반영하는 사이 채팅이나 폰이 바뀌었어요' : p.money?.at !== made.money || p.investment?.at !== made.invest ? '반영하는 사이 은행이나 투자가 새로 만들어졌어요' : '');
             const st = await moneyStage(m, p, owner, targets, { rows, sections, reread, year, anchor, profile, check });
             s.owed = { ...(s.owed || {}), money: st.owed };
@@ -1120,7 +1122,7 @@ export async function retryMoney(m, owner) {
         if (!canRetryMoney(p)) throw new Error('다시 읽을 결제가 없어요');
         const s = p.sync, u = p.syncUndo, made = { money: p.money?.at, invest: p.investment?.at };
         const targets = arr(s.owed.money).map(o => ({ o, e0: s.events[o.id] })).filter(x => x.e0 && Number.isInteger(x.e0.at))
-            .map(({ o, e0 }) => ({ id: o.id, at: e0.at, date: o.date || '', time: o.time || '', summary: e0.summary || o.id, quote: e0.quote || '', changed: false, tries: o.tries || 0 }));
+            .map(({ o, e0 }) => ({ id: o.id, at: e0.at, date: o.date || '', time: o.time || '', summary: e0.summary || o.id, quote: e0.quote || '', changed: false, tries: o.tries || 0, invest: !!o.invest }));
         const [body] = splitTail(String(m.text || ''));
         const sections = parseSections(body).filter(x => !x.group && RANGE_HEAD.test(x.title)).map(x => { const mt = x.title.match(RANGE_HEAD); return { key: `${mt[2]}-${mt[4]}:${x.title.length}`, first: Number(mt[2]), last: Number(mt[4]), text: body.slice(x.start, x.end).trim() }; });
         const year = p.year && !p.noYear ? String(p.year) : String(new Date().getFullYear()), anchor = /^\d{2}-\d{2}/.test(p.now || '') ? `${year}-${p.now.slice(0, 5)}` : '';
