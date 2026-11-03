@@ -48,6 +48,16 @@ body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_card:not
 body:not(.na_darkui) dialog.popup .na_popup .na_v2_card.na_wd.on:not(#na_x) { border: 1px solid color-mix(in srgb, var(--na-accent) 45%, transparent) !important; }
 body.na_darkui dialog.popup .na_popup .na_v2_card.na_wd.on:not(#na_x) { border: 1px solid #8A7A55 !important; }
 
+/* ---- control shield (opt-in per window, listed in :is()): a theme may paint button / label / textarea with !important. Inside these
+   windows a control takes its paint only from its own --c-bg / --c-fg / --c-bd / --c-r / --c-sh (not inherited), so window rules stay plain.
+   Fields that still carry SillyTavern's .text_pole keep the field rules above. */
+@property --c-bg { syntax: "*"; inherits: false; }
+@property --c-fg { syntax: "*"; inherits: false; }
+@property --c-bd { syntax: "*"; inherits: false; }
+@property --c-r { syntax: "*"; inherits: false; }
+@property --c-sh { syntax: "*"; inherits: false; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup:is(.na_st) :is(button, label, textarea:not(.text_pole)):not(#na_x) { background: var(--c-bg, transparent) !important; color: var(--c-fg, inherit) !important; border: var(--c-bd, 0) !important; border-radius: var(--c-r, 0) !important; box-shadow: var(--c-sh, none) !important; font-family: inherit !important; letter-spacing: inherit !important; text-transform: inherit !important; }
+
 /* ---- checkboxes: drawn by us — rounded square, light edge; lit = accent fill with a tick (near black on the dark cream) */
 body:is(.na_darkui, :not(.na_darkui)) .na_popup input[type="checkbox"]:not(.na_toggle):not(#na_x) { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; min-width: 18px; margin: 0; flex: none; box-sizing: border-box; border-radius: 6px; border: 2px solid var(--na-line) !important; background: transparent !important; box-shadow: none !important; cursor: pointer; vertical-align: middle; position: relative; }
 body:is(.na_darkui, :not(.na_darkui)) .na_popup .na_ap3_raw > input[type="checkbox"]:not(#na_x) { position: absolute; width: 1px; height: 1px; min-width: 0; margin: 0; } /* takes no room in the chip (the checkbox sweep made it 18px wide, 3.169.70) */
