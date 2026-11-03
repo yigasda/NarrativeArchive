@@ -12,6 +12,7 @@ import { FOOD_IDS, dishPic } from './phonefood.js';
 import { arr, trackerWeather, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, parseWeather, usualScreenOf, weatherFrom } from './phonesynclife.js';
+import { SCREEN_LIST } from './phonescreen.js';
 import { exclusive } from './phonesync.js';
 import { recentTrackers } from './scenes.js';
 import { wealthDate } from './wealth.js';
@@ -47,6 +48,8 @@ HEALTH
 - Any other day: write it freely from the character, the archive and their life, "from": "pattern". It still follows that day's events and tickets in PHONE NOW.
 - "usual" is their normal week. Its water, coffee, weight and height fit the character.
 - Screen time shows who they really are, habits they'd never admit (a game they can't put down, texting all night, barely touching the phone): from their character, not their polite profile. Each day's "screen" follows what happened that day.
+- Their apps, named exactly as here (another real app when none fits them):
+${SCREEN_LIST}
 - Numbers only: no diagnosis, no mood, no reason.
 
 FILES
@@ -79,7 +82,7 @@ JSON (one object, nothing before or after it)
   "health": { "usual": { "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": per week, "rest": resting heart rate,
                          "water": liters a day, "coffee": cups of coffee a day (0 if none), "coffeeKind": what they usually drink, like "Cappuccino", "coffeeKo",
                          "weight": kg, "height": cm,
-                         "screen": { "apps": [{ "app": as named on their phone, "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "other", "min": minutes a day }], "pickups": a day, "late": "HH:MM" they usually last look at it } },
+                         "screen": { "apps": [{ "app", "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "other", "min": minutes a day }], "pickups": a day, "late": "HH:MM" they usually last look at it } },
               "days": [{ "date": "MM-DD", "steps", "km", "floors", "workout": { "kind", "time": "HH:MM", "min", "km" } or null, "hr": [low, high], "coffee": cups, "coffeeKind", "water": litres, "weight": kg only when they weighed, "screen": { "apps": { app name: minutes }, "pickups", "late": "HH:MM" },
                          "night": { "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "woke": times awake } or null, "from": "story" | "pattern", "ev" }] },
   "files": { "folders": [{ "name", "ko", "count", "fav": true or false }],

@@ -4,6 +4,7 @@
 // changed since stays as it is.
 // The model's records are cleaned here too, for the first fill (phonelife.js) and for a reflection alike.
 import { arr, hhmm, ko, line, num, pad, pick, when, withEv } from './phoneparse.js';
+import { appOf, kindOfApp } from './phonescreen.js';
 
 export const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 export const CONDS = ['clear', 'partly', 'cloudy', 'drizzle', 'rain', 'sleet', 'snow', 'fog', 'storm', 'wind'];
@@ -45,7 +46,7 @@ export function screenOf(v) {
     if (!v || typeof v !== 'object') return null;
     const pairs = Array.isArray(v.apps) ? v.apps.map(x => [x?.app ?? x?.name, x?.min]) : v.apps && typeof v.apps === 'object' ? Object.entries(v.apps) : [];
     const apps = {};
-    for (const [k, m] of pairs) { const name = line(k, 40), n = int(m, 0, 1440); if (name && n !== null && n > 0) apps[name] = (apps[name] || 0) + n; }
+    for (const [k, m] of pairs) { const name = appName(k), n = int(m, 0, 1440); if (name && n !== null && n > 0) apps[name] = (apps[name] || 0) + n; }
     const total = Object.values(apps).reduce((a, b) => a + b, 0);
     if (total > 1440) for (const k of Object.keys(apps)) apps[k] = Math.round(apps[k] * 1440 / total);
     const o = {};
@@ -55,10 +56,28 @@ export function screenOf(v) {
     if (late) o.late = late;
     return Object.keys(o).length ? o : null;
 }
+// an app's name as the phone shows it ("인스타" is Instagram), so its icon and its minutes are one app
+const appName = v => { const n = line(v, 40); return n ? appOf(n)?.name || n : ''; };
+// the reflection's change to their usual: apps put in or used more or less ("add"; 0 minutes is gone), apps they deleted
+// ("drop"), the rest as it was. A whole list ("apps") is taken as adds too, so an app it left out is never lost
+export function screenChange(was, ch) {
+    if (!ch || typeof ch !== 'object') return null;
+    const apps = new Map((was?.apps || []).map(a => [a.app, { ...a }]));
+    for (const x of [...arr(ch.apps), ...arr(ch.add)]) {
+        const app = appName(x?.app ?? x?.name), m = int(x?.min, 0, 1440);
+        if (!app) continue;
+        if (m === 0) { apps.delete(app); continue; }
+        const k = String(x?.kind || '').toLowerCase(), old = apps.get(app);
+        apps.set(app, { app, kind: SCREEN_KINDS.includes(k) ? k : old?.kind || kindOfApp(app), min: m ?? old?.min ?? 30 });
+    }
+    for (const d of arr(ch.drop)) apps.delete(appName(typeof d === 'string' ? d : d?.app ?? d?.name));
+    return usualScreenOf({ apps: [...apps.values()], pickups: ch.pickups ?? was?.pickups, late: ch.late || was?.late });
+}
 // their usual phone use: each app with its kind and minutes a day, pickups, the time they usually last look at it
 export function usualScreenOf(v) {
     if (!v || typeof v !== 'object') return null;
-    const apps = arr(v.apps).map(x => ({ app: line(x?.app ?? x?.name, 40), kind: pick(String(x?.kind || '').toLowerCase(), SCREEN_KINDS, 'other'), min: int(x?.min, 0, 1440) })).filter(x => x.app && x.min !== null).slice(0, 12);
+    const seen = new Set(), apps = arr(v.apps).map(x => { const app = appName(x?.app ?? x?.name); return { app, kind: pick(String(x?.kind || '').toLowerCase(), SCREEN_KINDS, kindOfApp(app)), min: int(x?.min, 0, 1440) }; })
+        .filter(x => x.app && x.min !== null && x.min > 0 && !seen.has(x.app) && seen.add(x.app)).sort((a, b) => b.min - a.min).slice(0, 12);
     const pk = int(v.pickups, 0, 1000), late = hhmm(v.late);
     return apps.length || pk !== null || late ? { apps, ...(pk !== null ? { pickups: pk } : {}), ...(late ? { late } : {}) } : null;
 }
@@ -280,7 +299,7 @@ export function applyLife(p, e, phone, on) {
         const vals = { weight: n(uu.weight, 20, 300, 10), coffee: n(uu.coffee, 0, 15), water: n(uu.water, 0, 8, 10), coffeeKind: uu.coffeeKind ? line(uu.coffeeKind, 30) : undefined, coffeeKo: uu.coffeeKo ? ko(uu.coffeeKo) : undefined,
             bed: hhmm(uu.bed) || undefined, sleep: hhmm(uu.sleep) || undefined, wake: hhmm(uu.wake) || undefined, steps: n(uu.steps, 0, 80000), workouts: n(uu.workouts, 0, 21), rest: n(uu.rest, 30, 140), height: n(uu.height, 100, 230),
             // a habit with the phone the story changes (they quit the game, they're glued to it lately): the whole usual use again
-            screen: uu.screen ? usualScreenOf({ ...(L.health?.usual?.screen || {}), ...uu.screen }) || undefined : undefined };
+            screen: uu.screen ? screenChange(L.health?.usual?.screen, uu.screen) || undefined : undefined };
         const u = (L.health ||= {}).usual ||= {};
         for (const [k, v] of Object.entries(vals)) {
             if (v === undefined || same(u[k] ?? null, v)) continue;

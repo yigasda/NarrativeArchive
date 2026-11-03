@@ -1,8 +1,8 @@
 // 스크린타임: the model's numbers cleaned, a day it left out worked out, and the story changing their usual
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyLife, screenOf, usualScreenOf } from '../src/phonesynclife.js';
-import { kindOfApp, screenView } from '../src/phonescreen.js';
+import { applyLife, screenChange, screenOf, usualScreenOf } from '../src/phonesynclife.js';
+import { appOf, kindOfApp, SCREEN_LIST, screenView } from '../src/phonescreen.js';
 
 const usual = { apps: [{ app: 'Signal', kind: 'chat', min: 60 }, { app: 'Brawl Arena', kind: 'game', min: 90 }, { app: 'Mail', kind: 'work', min: 40 }], pickups: 80, late: '00:30' };
 function phone(days) {
@@ -60,15 +60,31 @@ test('screenView: no screen anywhere is nothing to show', () => {
     assert.equal(screenView(p, '10-26 12:00'), null);
 });
 
-test('reflection: the story changes their usual phone use, and it can be taken back', () => {
+test('a name written another way is the same app, with its icon', () => {
+    assert.deepEqual(screenOf({ apps: { 인스타: 30, Instagram: 20, 카톡: 10 } }), { apps: { Instagram: 50, KakaoTalk: 10 } });
+    assert.deepEqual(usualScreenOf({ apps: [{ app: '포켓몬 고', min: 40 }] }).apps, [{ app: 'Pokémon GO', kind: 'game', min: 40 }]);
+    assert.equal(appOf('YouTube Music').id, 'youtubemusic');
+    assert.equal(appOf('Some Indie Game'), null);
+    assert.ok(SCREEN_LIST.includes('game: Brawl Stars') && !SCREEN_LIST.includes('전화'));
+});
+
+test('reflection: only the apps that changed, the rest kept, and it can be taken back', () => {
     const p = phone([]);
-    const r = applyLife(p, { id: 'quit-game', at: 3, date: '10-26', time: '20:00' }, { usual: { screen: { apps: [{ app: 'Signal', kind: 'chat', min: 70 }, { app: 'Kindle', kind: 'reading', min: 50 }] } } }, true);
+    const r = applyLife(p, { id: 'new-game', at: 3, date: '10-26', time: '20:00' }, { usual: { screen: { add: [{ app: 'Genshin', min: 120 }, { app: 'Signal', min: 30 }], drop: ['Mail'] } } }, true);
     const s = p.life.health.usual.screen;
-    assert.deepEqual(s.apps.map(a => a.app), ['Signal', 'Kindle']);
+    assert.deepEqual(s.apps.map(a => [a.app, a.kind, a.min]), [['Genshin Impact', 'game', 120], ['Brawl Arena', 'game', 90], ['Signal', 'chat', 30]]);
     assert.equal(s.pickups, 80);
-    const fx = r.effects.find(e => e.path === 'life.health.usual.screen');
-    assert.equal(fx.from.apps[1].app, 'Brawl Arena');
+    assert.equal(r.effects.find(e => e.path === 'life.health.usual.screen').from.apps.length, 3);
+    // a whole list written anyway: what it left out stays
+    applyLife(p, { id: 'quit', at: 4, date: '10-26', time: '21:00' }, { usual: { screen: { apps: [{ app: 'Brawl Arena', kind: 'game', min: 0 }] } } }, true);
+    assert.deepEqual(p.life.health.usual.screen.apps.map(a => a.app), ['Genshin Impact', 'Signal']);
+    assert.deepEqual(screenChange(null, { add: [{ app: 'Kindle', min: 20 }] }).apps, [{ app: 'Kindle', kind: 'reading', min: 20 }]);
     // a story day with its screen
-    applyLife(p, { id: 'fight', at: 4, date: '10-26', time: '23:00' }, { health: [{ date: '10-26', sleep: '02:30', wake: '08:00', screen: { apps: { Signal: 240 }, late: '02:25' } }] }, true);
+    applyLife(p, { id: 'fight', at: 5, date: '10-26', time: '23:00' }, { health: [{ date: '10-26', sleep: '02:30', wake: '08:00', screen: { apps: { Signal: 240 }, late: '02:25' } }] }, true);
     assert.deepEqual(p.life.health.days.find(d => d.date === '10-26').screen, { apps: { Signal: 240 }, late: '02:25' });
+});
+
+test('screenView: the pickups a day, on average', () => {
+    const p = phone([{ date: '10-24', screen: { apps: { Signal: 10 }, pickups: 60 } }, { date: '10-25', screen: { apps: { Signal: 10 }, pickups: 100 } }]);
+    assert.equal(screenView(p, '10-26 12:00').pickupsAvg, 80);
 });
