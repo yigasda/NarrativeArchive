@@ -16,11 +16,11 @@ Object.assign(AX, {
     scmoon: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z',
 });
 
-// like the real screen time: the week's three biggest kinds in the phone's own system colours (blue · sky · orange,
-// first to third), everything else one grey; text a shade darker for white cards. The average is green.
+// the week's three biggest kinds, first to third: sky · pink · tangerine, everything else one grey. Every bar wears
+// them pale; the picked day wears them full. Text a shade darker for white cards; the average is a sky dashed line.
 const ORDER = ['chat', 'social', 'video', 'game', 'music', 'work', 'reading', 'shopping', 'other'];
-const RANK = ['#3478f6', '#5ac8fa', '#ff9f0a'], RANK_T = ['#3478f6', '#1f9fd6', '#e88a00'], REST = '#e3e5ea';
-const ACC = '#3478f6', AVG = '#34c759';
+const RANK = ['#6cb4f5', '#f4a3bd', '#ffad5c'], RANK_PALE = ['#d3e8fc', '#fcdce7', '#ffe5c6'], RANK_T = ['#3f8fd8', '#d9708f', '#e08a2a'];
+const REST = '#e6e8ec', REST_PALE = '#eef0f3', ACC = '#3f8fd8', AVG = '#3f8fd8';
 
 export const durKo = n => { n = Math.max(0, Math.round(n || 0)); const h = Math.floor(n / 60); return h && !(n % 60) ? `${h}시간` : `${h ? `${h}시간 ` : ''}${n % 60}분`; };
 const durBig = n => { n = Math.max(0, Math.round(n || 0)); const h = Math.floor(n / 60); return `${h ? `<span class="cg_num">${h}</span><u>시간</u>` : ''}${h && !(n % 60) ? '' : `<span class="cg_num">${n % 60}</span><u>분</u>`}`; };
@@ -39,13 +39,13 @@ function chart(days, avg, sel, top3) {
     const ay = avg ? H - avg * sc : null;
     for (let t = 0; t <= top; t += 120) { const y = H - t * sc; s += `<line x1="0" x2="${W - AXW + 4}" y1="${y}" y2="${y}" stroke="${t ? '#eef0f3' : '#e3e6ea'}"/>${ay !== null && Math.abs(y - ay) < 11 ? '' : `<text x="${W - AXW + 10}" y="${y + 3.5}" class="sc_axl">${t / 60}h</text>`}`; }
     days.forEach((d, i) => {
-        const x = i * (bw + gap), th = d.total * sc, r = Math.min(4, th, bw / 2), dim = sel >= 0 && sel !== i;
+        const x = i * (bw + gap), th = d.total * sc, r = Math.min(5, th, bw / 2), full = sel === i;
         let y = H, segs = '';
         // first to third from the bottom, then the rest as one grey block
         const rest = ORDER.filter(k => !top3.includes(k)).reduce((n, k) => n + (d.byKind[k] || 0), 0);
-        for (const [v, c] of [...top3.map((k, j) => [d.byKind[k] || 0, RANK[j]]), [rest, REST]]) { if (!v) continue; const hh = v * sc; y -= hh; segs += `<rect x="${x}" y="${y}" width="${bw}" height="${hh + 0.5}" fill="${c}"/>`; }
+        for (const [v, c] of [...top3.map((k, j) => [d.byKind[k] || 0, (full ? RANK : RANK_PALE)[j]]), [rest, full ? REST : REST_PALE]]) { if (!v) continue; const hh = v * sc; y -= hh; segs += `<rect x="${x}" y="${y}" width="${bw}" height="${hh + 0.5}" fill="${c}"/>`; }
         const clip = `M${x},${H}V${H - th + r}Q${x},${H - th} ${x + r},${H - th}H${x + bw - r}Q${x + bw},${H - th} ${x + bw},${H - th + r}V${H}Z`;
-        if (th > 0) s += `<clipPath id="sc_c${i}"><path d="${clip}"/></clipPath><g clip-path="url(#sc_c${i})" opacity="${dim ? 0.3 : 1}">${segs}${d.today ? `<rect x="${x}" y="${H - th}" width="${bw}" height="${th}" fill="url(#sc_hatch)"/>` : ''}</g>`;
+        if (th > 0) s += `<clipPath id="sc_c${i}"><path d="${clip}"/></clipPath><g clip-path="url(#sc_c${i})">${segs}${d.today ? `<rect x="${x}" y="${H - th}" width="${bw}" height="${th}" fill="url(#sc_hatch)"/>` : ''}</g>`;
         const on = sel === i, cx = x + bw / 2;
         if (on) s += `<rect x="${cx - 15}" y="${H + 6}" width="30" height="19" rx="9.5" fill="${ACC}"/><line x1="${cx - 8}" x2="${cx + 8}" y1="${H + 6.6}" y2="${H + 6.6}" stroke="rgba(255,255,255,.3)"/>`;
         s += `<text x="${cx}" y="${H + 19.5}" text-anchor="middle" class="sc_xl${on ? ' on' : d.today ? ' td' : ''}">${d.today ? '오늘' : Number(d.date.slice(3))}</text>`;
