@@ -16,9 +16,9 @@ Object.assign(AX, {
 
 // every kind its own clear colour, the same weight (the board's 1 · 3 · 4 mix); text a shade darker for white cards
 const ORDER = ['chat', 'social', 'video', 'game', 'music', 'work', 'reading', 'shopping', 'other'];
-const KC = { chat: '#4a7fe0', social: '#f4a3bd', video: '#ff9478', game: '#7fd6c9', music: '#ffad5c', work: '#2f5fb8', reading: '#93bdf2', shopping: '#3fb3a3', other: '#d3d7de' };
-const KT = { chat: '#3a6fd0', social: '#d9708f', video: '#e8735a', game: '#2fa597', music: '#e08a2a', work: '#2f5fb8', reading: '#4e8fd6', shopping: '#2f9a8c', other: '#8a909a' };
-const ACC = '#3a6fd0';
+const KC = { chat: '#6cb4f5', social: '#f4a3bd', video: '#ff9478', game: '#7fd6c9', music: '#ffad5c', work: '#b4a7f5', reading: '#5cc27a', shopping: '#3fb3a3', other: '#d3d7de' };
+const KT = { chat: '#3f8fd8', social: '#d9708f', video: '#e8735a', game: '#2fa597', music: '#e08a2a', work: '#8a78e6', reading: '#3a9e5c', shopping: '#2f9a8c', other: '#8a909a' };
+const ACC = '#3f8fd8';
 
 export const durKo = n => { n = Math.max(0, Math.round(n || 0)); const h = Math.floor(n / 60); return h && !(n % 60) ? `${h}시간` : `${h ? `${h}시간 ` : ''}${n % 60}분`; };
 const durBig = n => { n = Math.max(0, Math.round(n || 0)); const h = Math.floor(n / 60); return `${h ? `<span class="cg_num">${h}</span><u>시간</u>` : ''}${h && !(n % 60) ? '' : `<span class="cg_num">${n % 60}</span><u>분</u>`}`; };

@@ -181,7 +181,7 @@
 .sc_chart { position: relative; }
 .sc_chart svg { display: block; overflow: visible; }
 .sc_axl { font-size: 10px; fill: #a3a8b0; font-family: 'Inter', sans-serif; }
-.sc_avg { fill: #3a6fd0; font-weight: 600; font-family: -apple-system, 'Noto Sans KR', sans-serif; }
+.sc_avg { fill: #3f8fd8; font-weight: 600; font-family: -apple-system, 'Noto Sans KR', sans-serif; }
 .sc_xl { font-size: 11px; font-weight: 500; fill: #8a909a; font-family: 'Inter', 'Noto Sans KR', sans-serif; }
 .sc_xl.td { fill: #161b22; font-weight: 650; }
 .sc_xl.on { fill: #fff; font-weight: 650; }
@@ -192,7 +192,7 @@
 .sc_note { display: flex; gap: 8px; align-items: center; margin: 0 -16px; padding: 11px 16px 13px; border-top: 1px solid #eef0f3; font-size: 12.5px; color: #4d535d; }
 .sc_note b { color: #161b22; font-weight: 600; }
 .sc_pick { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
-.sc_pki { width: 40px; height: 40px; border-radius: 12px; background: #e2eaf6; display: grid; place-items: center; flex: none; }
+.sc_pki { width: 40px; height: 40px; border-radius: 12px; background: #e3f1fd; display: grid; place-items: center; flex: none; }
 .sc_pkt { flex: 1; min-width: 0; }
 .sc_pkt b { display: block; font-size: 15px; font-weight: 600; margin-top: 2px; }
 .sc_pkn { text-align: right; }
@@ -200,7 +200,7 @@
 .sc_pkn u { font-size: 13px; margin: 0 0 0 1px; }
 .sc_lvl { display: flex; gap: 3px; justify-content: flex-end; margin-top: 4px; }
 .sc_lvl i { width: 12px; height: 4px; border-radius: 2px; background: #e3e6ea; }
-.sc_lvl i.on { background: #3a6fd0; }
+.sc_lvl i.on { background: #3f8fd8; }
 .sc_ic { border-radius: 9px; flex: none; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08); }
 .sc_apps .sc_rw + .sc_rw::before { left: 62px; }
 .sc_bar { display: block; height: 5px; border-radius: 5px; margin-top: 7px; background: #f0f1f4; overflow: hidden; }
