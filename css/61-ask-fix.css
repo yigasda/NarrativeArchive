@@ -9,14 +9,14 @@
 .na_ask3_big { width: 52px; height: 52px; margin-bottom: 8px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: var(--na-accent-soft); color: var(--na-accent-fg, var(--na-accent)); }
 .na_ask3_sect { margin: 0 4px 8px; font-size: 12.5px; font-weight: 700; color: var(--na-dim); }
 .na_ask2 .na_ask3_sugs { padding: 0; overflow: hidden; display: flex; flex-direction: column; border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
-.na_ask2 .na_ask3_sugs button { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0; padding: 12px 14px; border: 0; border-radius: 0; background: transparent; color: var(--na-ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
-.na_ask2 .na_ask3_sugs button + button { border-top: 1px solid var(--na-line2, var(--na-line)); }
+.na_ask2 .na_ask3_sugs button { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0; padding: 12px 14px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 0; --c-bg: transparent; --c-fg: var(--na-ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.na_ask2 .na_ask3_sugs button + button { --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line2, var(--na-line)); }
 .na_ask3_si { width: 30px; height: 30px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex: none; background: var(--na-accent-soft); color: var(--na-accent-fg, var(--na-accent)); }
 /* the answer card with its source rows */
 .na_ask2 .na_ask2_ans { gap: 0; border-radius: 18px 18px 18px 4px; overflow: hidden; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 .na_ask2 .na_ask2_ans .na_ask_a { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .na_ask2 .na_ask2_cites { flex-direction: column; flex-wrap: nowrap; gap: 0; }
-.na_ask2 .na_ask2_cite.na_ask3_src { display: flex; align-items: stretch; gap: 10px; width: 100%; margin: 0; padding: 11px 14px; border: 0 !important; border-top: 1px solid var(--na-line2, var(--na-line)) !important; border-radius: 0; background: transparent !important; color: var(--na-mute) !important; font: inherit; text-align: left; cursor: pointer; }
+.na_ask2 .na_ask2_cite.na_ask3_src { display: flex; align-items: stretch; gap: 10px; width: 100%; margin: 0; padding: 11px 14px; border: 0 !important; --c-bw: 0 !important; --c-bs: none !important; --c-bc: currentcolor !important; --c-bwt: 0 !important; --c-bst: none !important; --c-bct: currentcolor !important; border-top: 1px solid var(--na-line2, var(--na-line)) !important; --c-bwt: 1px !important; --c-bst: solid !important; --c-bct: var(--na-line2, var(--na-line)) !important; border-radius: 0; --c-r: 0; background: transparent !important; --c-bg: transparent !important; color: var(--na-mute) !important; --c-fg: var(--na-mute) !important; font: inherit; text-align: left; cursor: pointer; }
 .na_ask3_src > i { width: 4px; border-radius: 3px; flex: none; background: #E6B79A; }
 body.na_darkui .na_ask3_src > i { background: #8A7A55; }
 .na_ask3_src > span { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -26,13 +26,13 @@ body.na_darkui .na_ask3_src > i { background: #8A7A55; }
 .na_ask2 .na_ask2_ans .na_ask_src { margin: 0 14px 12px; }
 /* input and options */
 .na_popup.na_ask2 .na_ask2_input { border: 0; border-radius: 999px; padding: 5px 5px 5px 16px; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06), 0 4px 12px rgba(70, 52, 40, 0.06); }
-.na_popup.na_ask2 .na_ask_go { border-radius: 999px; }
+.na_popup.na_ask2 .na_ask_go { --c-r: 999px; }
 .na_ask3_opt { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: -4px; padding: 0 4px; }
 .na_ask3_opt .na_ask_info { min-width: 0; font-size: 12px; color: var(--na-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .na_ask3_seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--na-card2); flex: none; }
-.na_ask3_seg button { padding: 4px 10px; border: 0; border-radius: 999px; background: transparent; color: var(--na-mute); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
-body:not(.na_darkui) .na_ask3_seg button.on { background: #FFFFFF; color: var(--na-accent-ink); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1); }
-body.na_darkui .na_ask3_seg button.on { background: #414148; color: #F0CF8E; }
+.na_ask3_seg button { padding: 4px 10px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; --c-bg: transparent; --c-fg: var(--na-mute); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+body:not(.na_darkui) .na_ask3_seg button.on { --c-bg: #FFFFFF; --c-fg: var(--na-accent-ink); --c-sh: 0 1px 2px rgba(70, 52, 40, 0.1); }
+body.na_darkui .na_ask3_seg button.on { --c-bg: #414148; --c-fg: #F0CF8E; }
 body.na_darkui .na_ask2 .na_ask2_ans { background: #232328; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
 
 /* ============ 고쳐 달라고 하기 v3 (one section; same parts as 아카이브에 추가): the section card with 원래 | 바뀐 부분 and
@@ -40,7 +40,7 @@ body.na_darkui .na_ask2 .na_ask2_ans { background: #232328; box-shadow: inset 0 
 .na_sf.na_sf3 { gap: 0; }
 .na_sf3_head { display: flex; align-items: flex-start; gap: 8px; }
 .na_sf3_head .na_v2_title { flex: 1; min-width: 0; }
-.na_sf3 > .na_v2_card { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_sf3 > .na_v2_card { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-color: transparent; --c-bc: transparent; --c-bct: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); --c-sh: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 .na_sf3_card { margin-top: 14px; }
 .na_sf3_fix { margin-top: 10px; }
 .na_sf3_seg { display: grid !important; grid-template-columns: 1fr 1fr; }
@@ -55,17 +55,17 @@ body.na_darkui .na_ask2 .na_ask2_ans { background: #232328; box-shadow: inset 0 
 .na_sf3 .na_sf_log { align-items: stretch; }
 .na_sf3 .na_ly_ask { border: 0; background: var(--na-card2); border-radius: 999px; padding: 4px 4px 4px 14px; }
 .na_sf3 .na_ly_ask:focus-within { box-shadow: 0 0 0 2px color-mix(in srgb, var(--na-accent) 35%, transparent); }
-.na_sf3 .na_ly_askgo { width: 34px; height: 34px; border-radius: 999px; }
+.na_sf3 .na_ly_askgo { width: 34px; height: 34px; --c-r: 999px; }
 .na_sf3_foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.na_sf3_tool { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--na-card2); color: var(--na-ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.na_sf3_tool { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; --c-bg: var(--na-card2); --c-fg: var(--na-ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
 .na_sf3_tool:disabled { opacity: 0.7; }
 .na_sf3 .na_sf_raw.off { opacity: 0.55; }
 .na_sf3_bar { margin-top: 12px; }
 .na_sf3_bar button:disabled { opacity: 0.45; cursor: default; }
-body.na_darkui .na_sf3 > .na_v2_card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
-body.na_darkui .na_sf3 :is(.na_ly_ask, .na_ap3_seg, .na_ap3_raw, .na_sf3_tool) { background: #2E2E34; }
-body.na_darkui .na_sf3 .na_ap3_seg button.on { background: #414148; color: #F0CF8E; }
-body.na_darkui .na_sf3 .na_ap3_raw:has(input:checked) { color: #8FD3A6; }
+body.na_darkui .na_sf3 > .na_v2_card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); --c-sh: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+body.na_darkui .na_sf3 :is(.na_ly_ask, .na_ap3_seg, .na_ap3_raw, .na_sf3_tool) { background: #2E2E34; --c-bg: #2E2E34; }
+body.na_darkui .na_sf3 .na_ap3_seg button.on { --c-bg: #414148; --c-fg: #F0CF8E; }
+body.na_darkui .na_sf3 .na_ap3_raw:has(input:checked) { --c-fg: #8FD3A6; }
 
 /* ============ one way to close (src/popupchrome.js): a 닫기 at the bottom only. Look-only: one soft full-width pill;
    doing something: 닫기 (text) · the action (orange pill). Look-only: a small 닫기 in the middle. */
@@ -78,7 +78,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup.na_px_act:not(#na_x) .popup-c
 body:not(.na_darkui) dialog.popup.na_px { --na-accent: #B8541F; --na-mute: #6B5A50; --na-card: #F7EEE7; --na-ink: #463428; }
 body.na_darkui dialog.popup.na_px { --na-accent: #E9DFCF; --na-mute: #B9B7BD; --na-card: #232328; --na-ink: #ECEAE6; }
 /* 고쳐 달라고 하기: 처음으로 sits by the tools now */
-.na_sf3_foot .na_sf3_reset { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--na-mute); }
+.na_sf3_foot .na_sf3_reset { margin-left: auto; font-size: 12.5px; font-weight: 600; --c-fg: var(--na-mute); }
 .na_sf3_foot .na_sf3_reset:disabled { opacity: 0.45; }
 
 /* every popup of the extension: the same round corners (22px) */
