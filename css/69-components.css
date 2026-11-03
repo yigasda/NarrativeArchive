@@ -29,8 +29,8 @@ body.na_darkui dialog.popup:not(:has(.na_phone)) .na_popup :is(input.text_pole, 
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup :is(input.text_pole, textarea.text_pole, select.text_pole):focus:not(#na_x) { box-shadow: 0 0 0 2px color-mix(in srgb, var(--na-accent) 35%, transparent) !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup :is(input.text_pole, select.text_pole, input[type="text"], input[type="number"], input[type="search"]):not(.na_toggle):not([type="checkbox"]):not(#na_x) { border-radius: 12px !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:not(:has(.na_phone)) .na_popup textarea:not(#na_x) { border-radius: 14px !important; }
-body:is(.na_darkui, :not(.na_darkui)) #na_settings :is(input.text_pole, select.text_pole, input[type="text"], input[type="number"]):not(.na_toggle):not(#na_x) { border-radius: 12px !important; }
-body:is(.na_darkui, :not(.na_darkui)) #na_settings textarea:not(#na_x) { border-radius: 14px !important; }
+body:is(.na_darkui, :not(.na_darkui)) #na_settings :is(input.text_pole, select.text_pole, input[type="text"], input[type="number"]):not(.na_toggle):not(#na_x) { --c-r: 12px !important; }
+body:is(.na_darkui, :not(.na_darkui)) #na_settings textarea:not(#na_x) { --c-r: 14px !important; }
 
 /* ---- buttons and chips: filled shapes with a soft shadow, never a 1px line; picked ones keep their accent edge */
 body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup :is(.na_v2_btn:not(.primary):not(.danger), .na_v2_pillbtn:not(.danger), .na_btn:not(.na_primary)):not(.on):not(.active):not(#na_x) { border-color: transparent !important; background: #F7EEE7 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1) !important; }
@@ -48,17 +48,37 @@ body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_card:not
 body:not(.na_darkui) dialog.popup .na_popup .na_v2_card.na_wd.on:not(#na_x) { border: 1px solid color-mix(in srgb, var(--na-accent) 45%, transparent) !important; }
 body.na_darkui dialog.popup .na_popup .na_v2_card.na_wd.on:not(#na_x) { border: 1px solid #8A7A55 !important; }
 
-/* ---- control shield (opt-in per window, listed in :is(); two ids so it outranks every shared sweep): a theme may paint button / label / textarea with !important. Inside these
-   windows a control takes its paint only from its own --c-bg / --c-fg / --c-bd (--c-bdt: top edge only) / --c-r / --c-sh (not inherited), so window rules stay plain.
-   Fields that still carry SillyTavern's .text_pole keep the field rules above. */
+/* ---- control shield: a theme may paint button / label / input / select / textarea with !important (the user's theme does).
+   In the windows listed here a control takes its paint only from its own variables, which no theme sets:
+   --c-bg (background) · --c-fg (text) · --c-bw / --c-bs / --c-bc (border width, style, colour) · --c-bwt / --c-bst / --c-bct (top edge)
+   · --c-r (corners) · --c-sh (shadow) · --c-ff / --c-ls / --c-tt (font, letter spacing, case). Not inherited.
+   Window rules set the variables like any other property; this is the one place that needs !important (two ids: above every sweep).
+   Windows join one at a time: 작업실 · 섹션 버전 (whole window), 아카이브에 추가 (its own controls), the extension panel.
+   Fields in the popups that still carry SillyTavern's .text_pole keep the field rules above. */
 @property --c-bg { syntax: "*"; inherits: false; }
 @property --c-fg { syntax: "*"; inherits: false; }
-@property --c-bd { syntax: "*"; inherits: false; }
-@property --c-bdt { syntax: "*"; inherits: false; }
+@property --c-bw { syntax: "*"; inherits: false; }
+@property --c-bs { syntax: "*"; inherits: false; }
+@property --c-bc { syntax: "*"; inherits: false; }
+@property --c-bwt { syntax: "*"; inherits: false; }
+@property --c-bst { syntax: "*"; inherits: false; }
+@property --c-bct { syntax: "*"; inherits: false; }
 @property --c-r { syntax: "*"; inherits: false; }
 @property --c-sh { syntax: "*"; inherits: false; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup :is(:is(.na_st, .na_ly3) :is(button, label, textarea:not(.text_pole)),
-    .na_ap3 :is(.na_ap3_seg button, .na_ap3_raw, .na_ap3_tool, .na_ap3_chip, .na_ap3_older, .na_ap3_file, .na_ap3_back, .na_ap3_bar button, .na_apf_go)):not(#na_x):not(#na_y) { background: var(--c-bg, transparent) !important; color: var(--c-fg, inherit) !important; border: var(--c-bd, 0) !important; border-top: var(--c-bdt, var(--c-bd, 0)) !important; border-radius: var(--c-r, 0) !important; box-shadow: var(--c-sh, none) !important; font-family: inherit !important; letter-spacing: inherit !important; text-transform: inherit !important; }
+@property --c-ff { syntax: "*"; inherits: false; }
+@property --c-ls { syntax: "*"; inherits: false; }
+@property --c-tt { syntax: "*"; inherits: false; }
+body:is(.na_darkui, :not(.na_darkui)) :is(
+    dialog.popup .na_popup:is(.na_st, .na_ly3) :is(button, label, textarea:not(.text_pole)),
+    dialog.popup .na_popup.na_ap3 :is(.na_ap3_seg button, .na_ap3_raw, .na_ap3_tool, .na_ap3_chip, .na_ap3_older, .na_ap3_file, .na_ap3_back, .na_ap3_bar button, .na_apf_go),
+    #na_settings :is(button, label, textarea, select, input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]))
+):not(#na_x):not(#na_y) {
+    background: var(--c-bg, transparent) !important; color: var(--c-fg, inherit) !important;
+    border-width: var(--c-bw, 0) !important; border-style: var(--c-bs, none) !important; border-color: var(--c-bc, currentcolor) !important;
+    border-top-width: var(--c-bwt, var(--c-bw, 0)) !important; border-top-style: var(--c-bst, var(--c-bs, none)) !important; border-top-color: var(--c-bct, var(--c-bc, currentcolor)) !important;
+    border-radius: var(--c-r, 0) !important; box-shadow: var(--c-sh, none) !important;
+    font-family: var(--c-ff, inherit) !important; letter-spacing: var(--c-ls, inherit) !important; text-transform: var(--c-tt, inherit) !important;
+}
 
 /* ---- checkboxes: drawn by us — rounded square, light edge; lit = accent fill with a tick (near black on the dark cream) */
 body:is(.na_darkui, :not(.na_darkui)) .na_popup input[type="checkbox"]:not(.na_toggle):not(#na_x) { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; min-width: 18px; margin: 0; flex: none; box-sizing: border-box; border-radius: 6px; border: 2px solid var(--na-line) !important; background: transparent !important; box-shadow: none !important; cursor: pointer; vertical-align: middle; position: relative; }
@@ -78,13 +98,14 @@ body.na_darkui input.na_toggle:checked + .na_tgl_ui::after, body.na_darkui .na_s
 body.na_darkui .na_kn3_tag.k i, body.na_darkui .na_kn3_leg span.k i { background: #1B1B1F !important; }
 body.na_darkui .na_sw.on span { background: #1B1B1F; }
 /* the panel in charcoal has the popups' depth: cards lifted off the near-black base with a faint top light */
-body.na_darkui #na_settings :is(.na_v2_card, .na_card, .na_hrow, .na_cfg_box) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 6px 16px rgba(0, 0, 0, 0.3); }
+body.na_darkui #na_settings :is(.na_v2_card, .na_card, .na_hrow, .na_cfg_box) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 6px 16px rgba(0, 0, 0, 0.3); --c-sh: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 6px 16px rgba(0, 0, 0, 0.3); }
 /* no dark "cellophane": tinted see-through fills become the neutral field; the colour stays in the text, icon or a thin edge */
-body.na_darkui :is(.na_chip_warn, .na_check_warn, .na_br_filters .na_hc_status.bad) { background: #2E2E34 !important; }
-body.na_darkui #na_settings #na_next .na_next_card.warn, body.na_darkui #na_settings #na_next .na_next_card.bad { background: #232328 !important; }
+body.na_darkui :is(.na_chip_warn, .na_check_warn, .na_br_filters .na_hc_status.bad) { background: #2E2E34 !important; --c-bg: #2E2E34 !important; }
+body.na_darkui #na_settings #na_next .na_next_card.warn { background: #232328 !important; }
+body.na_darkui #na_settings #na_next .na_next_card.bad { background: #232328 !important; --c-bg: #232328 !important; }
 body.na_darkui .na_next_card.warn { border-color: #3A3A41 !important; }
-body.na_darkui :is(.na_whole, .na_fp3_row.picked, .na_cp3_row.on, .na_ck.part) { background: #2E2E34 !important; }
-body.na_darkui .na_sp_s:hover, body.na_darkui .na_cc_row:focus-within { background: #2B2B31 !important; }
+body.na_darkui :is(.na_whole, .na_fp3_row.picked, .na_cp3_row.on, .na_ck.part) { background: #2E2E34 !important; --c-bg: #2E2E34 !important; }
+body.na_darkui .na_sp_s:hover, body.na_darkui .na_cc_row:focus-within { background: #2B2B31 !important; --c-bg: #2B2B31 !important; }
 body.na_darkui :is(.na_wd_icon, .na_wd_slot_ico, .na_wd.on .na_wd_icon) { background: #2E2E34 !important; }
 body.na_darkui .na_wd.on .na_wd_icon, body.na_darkui .na_wd_slot_ico { color: var(--na-accent-fg) !important; }
 body.na_darkui .na_pv2_code { background: #232328 !important; color: #ECEAE6 !important; }

@@ -5,7 +5,8 @@
 # Phone rules are left alone. Usage: python3 tools/dev/css-harness/ctlvars.py [--write] <ctlclasses.json>
 import re, sys, os, json
 sys.path.insert(0, os.path.dirname(__file__)); from rules import walk, split_top, subject
-C = json.load(open(sys.argv[-1])); ONLY, MIXED, NON = set(C['only']), set(C['mixed']), set(C.get('non', []))
+SCOPE = sys.argv[sys.argv.index('--scope') + 1] if '--scope' in sys.argv else None
+C = json.load(open(sys.argv[-1])); ONLY, MIXED, NON, IDS = set(C['only']), set(C['mixed']), set(C.get('non', [])), set(C.get('ids', []))
 CTL_TAGS = ('button', 'label', 'input', 'textarea', 'select')
 PHONE = re.compile(r'\.(ax|axb|cg|na_ph\w*|lf_\w+|iv_\w+|ir_\w+|na_phone|pcf|dv_\w+|wb_\w+)(?![\w-])|:has\(\.na_phone\)(?!\))')
 WIDTH = re.compile(r'^(0|thin|medium|thick|[\d.]+(px|em|rem|%))$')
@@ -18,6 +19,7 @@ def kind_compound(base):
     if tag and tag not in CTL_TAGS: return None
     if any(c in ONLY for c in classes): return 'ctl'
     if any(c in MIXED for c in classes): return 'mixed'
+    if any(i in IDS for i in re.findall(r'#([A-Za-z_][\w-]*)', base)): return 'ctl'
     return None
 def kind(part):
     sj = subject(part)
@@ -74,6 +76,12 @@ for f, a, b, ctx, sel, body, t in walk():
     if '@keyframes' in ctx: continue
     parts = split_top(sel.strip(), ',')
     kinds = [kind(p) if not PHONE.search(re.sub(r':not\(:has\(\.na_phone\)\)', '', p)) else None for p in parts]
+    if SCOPE == 'panel':
+        def pk(p, k):
+            if not k: return None
+            if re.search(r'dialog\.popup|\.na_popup|na_ap3_dlg|:has\(\.na_', p): return None
+            return 'ctl' if '#na_settings' in p and k == 'ctl' else 'mixed'
+        kinds = [pk(p, k) for p, k in zip(parts, kinds)]
     if not any(kinds): continue
     if 'var(--c-' in body and '!important' in body and '--c-bg, transparent' in body: continue  # the shield itself
     if re.search(r'(^|;)\s*--c-', body): continue  # already moved
