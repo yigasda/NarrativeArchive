@@ -19,7 +19,7 @@ import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
 import { tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
-import { applyDays, applyLife, applyWeather, apart, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
+import { applyDays, applyLife, applyWeather, apart, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
 import { pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
@@ -175,6 +175,7 @@ MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - Already in MONEY NOW or INVESTMENTS NOW: its id as "already"; it is not paid again.
 - A card purchase goes on the card account; a refund is plus; paying the card off is a transfer from the bank.
 - No money is made up to cover a payment; a balance may go below zero.
+- Company money, family money and an inheritance still to come are not the owner's cash.
 - A new paid ${paid} has its payment as a move in the same event.
 - A cancelled order${delivery ? ' or delivery' : ''} moves no money; if it was already paid, its refund is a plus move.
 ${delivery ? `- A delivery paid in cash at the door has no move. "tip" only where tipping is the custom; elsewhere 0.
@@ -787,7 +788,7 @@ async function updatePhone(m, owner) {
         const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = applyWeather(p, askWeather ? raw.weather : null, tracker, { archive: evidence.length + before.length > 0, today: String(p.now || '').slice(0, 5) });
         if (days.length) apps.add('건강');
         if (sky.length) apps.add('날씨');
-        const roundFx = [...days, ...sky, ...lifeClock(p, p.now), ...dlvClock(p, p.now)];
+        const roundFx = [...days, ...sky, ...lifeClock(p, p.now), ...dlvClock(p, p.now), ...cardClock(p, p.now)];
         // after the clock moves: the card's month is counted up to the story's now
         if (p.money) migrateBank(m, p);
         const id = rid;

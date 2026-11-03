@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { applyMoney, replayEffects, revertEffects } from '../src/phonesyncmoney.js';
+import { cardClock } from '../src/phonesynclife.js';
 import { baseline, cash, migrateBank, positions } from '../src/finance.js';
 
 function setup({ tx = [], trades = [] } = {}) {
@@ -24,6 +25,11 @@ test('a debit payment lowers the balance; a card purchase only goes on the card'
     applyMoney(m, p, ev('dinner', 6, '10-26', { moves: [{ account: '2222', amount: -80, who: 'Trattoria' }] }), opts());
     migrateBank(m, p);
     assert.equal(bank(), 975);
+    // the card payment waits through its day ("승인 대기"), then counts in the card's month
+    assert.equal(p.money.tx.at(-1).pending, true);
+    assert.equal(p.money.bank.accounts[1].spent, 0);
+    cardClock(p, '10-27 09:00'); migrateBank(m, p);
+    assert.equal(p.money.tx.at(-1).pending, false);
     assert.equal(p.money.bank.accounts[1].spent, 80);
     assert.equal(p.money.tx.length, 2);
 });
@@ -74,7 +80,7 @@ test('the real amount found under another event id still corrects the guess, not
     const { m, p } = setup();
     applyMoney(m, p, ev('dinner-30', 30, '10-26', { amountFrom: 'guess', moves: [{ account: '2222', amount: -86.5, who: 'Trattoria da Ivo' }] }), opts());
     applyMoney(m, p, ev('the-bill', 41, '10-26', { amountFrom: 'story', moves: [{ account: '2222', amount: -112, who: 'Trattoria da Ivo' }] }), opts());
-    migrateBank(m, p);
+    cardClock(p, '10-27 09:00'); migrateBank(m, p);
     assert.equal(p.money.tx.length, 1);
     assert.equal(p.money.bank.accounts[1].spent, 112);
 });
