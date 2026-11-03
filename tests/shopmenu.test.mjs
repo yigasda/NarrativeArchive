@@ -29,24 +29,30 @@ const life = await import(encoded(await rewrite('phonelife.js')));
 
 
 globalThis.__menu = {};
-const shop = () => ({ id: 's1', name: '발산 마라탕', cuisine: '마라탕', nearby: true, menu: [{ name: '마라탕', ko: '', desc: '', price: 9000, top: true, pic: { base: 'soup' } }] });
-const phone = () => ({ owner: 'Ren', country: 'KR', lives: 'KR', money: { currency: 'KRW' }, delivery: { shops: [shop()], orders: [] } });
+const shop = (id, name, dish) => ({ id, name, cuisine: 'x', nearby: true, menu: [{ name: dish, ko: '', desc: '', price: 9000, top: true, pic: { base: 'soup' } }] });
+const phone = () => ({ owner: 'Ren', country: 'KR', lives: 'KR', money: { currency: 'KRW' }, delivery: { shops: [shop('s1', '발산 마라탕', '마라탕'), shop('s2', '곱창 이야기', '곱창'), { id: 's0', name: '단골집', menu: [{ name: 'a' }, { name: 'b' }] }], orders: [] } });
 
-test('a shop nearby: its menu is asked the first time, with only the shop (no story), its known dish kept first; not again', async () => {
+test('the shops nearby get all their menus in one request (only the shops, no story), each known dish kept first; not asked again', async () => {
     const p = phone();
-    assert.equal(life.menuWanted(p.delivery.shops[0]), true);
-    globalThis.__menu.answer = JSON.stringify({ menu: [{ name: '꿔바로우', price: 18000, top: true, desc: '찹쌀 탕수육', pic: { base: 'fried' } }, { name: '마라탕', price: 9500, top: true }, { name: '마라샹궈', price: 22000, desc: '볶음', pic: { base: 'stirfry' } }] });
-    assert.equal(await life.fillShopMenu({}, p, 's1'), true);
-    const s = p.delivery.shops[0];
-    assert.deepEqual(s.menu.map(x => [x.name, x.top]), [['마라탕', true], ['꿔바로우', false], ['마라샹궈', false]]);
-    assert.equal(s.menu[0].price, 9000);
-    assert.match(globalThis.__menu.input, /\[SHOP\]/);
+    globalThis.__menu.answer = JSON.stringify({ shops: [
+        { name: '발산 마라탕', menu: [{ name: '꿔바로우', price: 18000, top: true, desc: '찹쌀 탕수육', pic: { base: 'fried' } }, { name: '마라탕', price: 9500, top: true }, { name: '마라샹궈', price: 22000 }] },
+        { name: '곱창 이야기', menu: [{ name: '막창', price: 16000 }, { name: '곱창전골', price: 28000 }] },
+        { name: '모르는 가게', menu: [{ name: 'x', price: 1 }] }] });
+    assert.equal(await life.fillShopMenus({}, p), 2);
+    const [a, b, c] = p.delivery.shops;
+    assert.deepEqual(a.menu.map(x => [x.name, x.top]), [['마라탕', true], ['꿔바로우', false], ['마라샹궈', false]]);
+    assert.equal(a.menu[0].price, 9000);
+    assert.deepEqual(b.menu.map(x => x.name), ['곱창', '막창', '곱창전골']);
+    assert.equal(c.menu.length, 2);
+    assert.match(globalThis.__menu.input, /\[SHOPS\]/);
+    assert.ok(globalThis.__menu.input.includes('발산 마라탕') && globalThis.__menu.input.includes('곱창 이야기') && !globalThis.__menu.input.includes('단골집'));
     assert.match(globalThis.__menu.input, /\[CURRENCY\]\nKRW/);
     assert.ok(!/ARCHIVE|RECENT CHAT/.test(globalThis.__menu.input));
-    assert.equal(life.menuWanted(s), false);
-    assert.equal(await life.fillShopMenu({}, p, 's1'), false);
+    assert.equal(await life.fillShopMenus({}, p), 0);
 });
-test('a shop the user orders from, or one already asked, is never asked', () => {
-    assert.equal(life.menuWanted({ ...shop(), nearby: false }), false);
-    assert.equal(life.menuWanted({ ...shop(), menuAt: 1 }), false);
+test('a shop the user orders from, or one already asked, is never asked; an answer with no menus is an error', async () => {
+    assert.equal(life.menuWanted({ ...shop('s', 'n', 'd'), nearby: false }), false);
+    assert.equal(life.menuWanted({ ...shop('s', 'n', 'd'), menuAt: 1 }), false);
+    globalThis.__menu.answer = '{}';
+    await assert.rejects(life.fillShopMenus({}, phone()));
 });

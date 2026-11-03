@@ -246,17 +246,18 @@ export function nearbyShops(raw, shops, won) {
         return { name, ko: ko(s?.ko), cuisine: line(s?.cuisine, 30), rating: st.rating, reviews: st.reviews, fee: st.fee, minOrder: st.minOrder, eta: st.eta, fav: false, nearby: true, menu: m.name ? [pic ? { ...m, pic } : m] : [] };
     }).filter(Boolean).slice(0, 8);
 }
-// 동네 가게 메뉴: a shop nearby comes with the one dish it is known for; the first time it is opened its menu is asked
-// for, on its own (the shop alone, no story: it costs one short request, and only for a shop someone opens)
+// 동네 가게 메뉴: a shop nearby comes with the one dish it is known for; right after the delivery app is filled, the
+// menus of all of them are asked in one more request of their own (the shops alone, no story, so it stays light);
+// one that failed is asked again when the app is opened
 export const AI_SYS_SHOP_MENU = `GOAL
-Write the menu of one food delivery shop on a character's phone in a long role-play, the way the delivery app shows it.
+Write the menus of a few food delivery shops on a character's phone in a long role-play, the way the delivery app shows them.
 
 YOU GET
-- SHOP: its name, its cuisine and the dish it is known for.
-- LIVES IN and CURRENCY: where the shop is and the money its prices are in.
+- SHOPS: each shop's name, its cuisine and the dish it is known for.
+- LIVES IN and CURRENCY: where the shops are and the money their prices are in.
 
 MENU
-- 4 to 6 dishes the shop would really sell, the known dish first with "top": true, each priced as it would be there, with a short "desc".
+- For each shop, 4 to 6 dishes it would really sell, the known dish first with "top": true, each priced as it would be there, with a short "desc".
 - Every dish gets "pic"; the app draws it. "base": the closest of BASES. "with": up to 3 of TOPPINGS that set it apart from the shop's other dishes. "size": "large" only for a large or extra size. "set": up to 2 of SIDES, only for a set.
 - BASES: ${FOOD_IDS.base.join(', ')}
 - TOPPINGS: ${FOOD_IDS.top.join(', ')}
@@ -266,27 +267,31 @@ LANGUAGE
 Dish names in the language they really have there. A name not in Korean gets "ko"; a Korean one gets none.
 
 JSON (one object, nothing before or after it)
-{ "menu": [{ "name", "ko", "desc", "price", "top": true or false, "pic": { "base", "with": [], "size": "regular" | "large", "set": [] } }] }
+{ "shops": [{ "name": as in SHOPS, "menu": [{ "name", "ko", "desc", "price", "top": true or false, "pic": { "base", "with": [], "size": "regular" | "large", "set": [] } }] }] }
 Numbers are plain JSON numbers.`;
 export const menuWanted = s => !!(s?.nearby && !s.menuAt && (s.menu || []).length < 2);
-export async function fillShopMenu(m, p, id) {
-    const s0 = p.delivery?.shops?.find(x => x.id === id);
-    if (!menuWanted(s0)) return false;
+export async function fillShopMenus(m, p) {
+    const want = (p.delivery?.shops || []).filter(menuWanted);
+    if (!want.length) return 0;
     const cur = p.money?.currency || p.money?.bank?.accounts?.[0]?.currency || (livesIn(p) === 'KR' ? 'KRW' : 'EUR');
-    const input = [`[SHOP]\n${JSON.stringify({ name: s0.name, cuisine: s0.cuisine, known: s0.menu?.[0] ? { name: s0.menu[0].name, price: s0.menu[0].price } : null })}`,
+    const input = [`[SHOPS]\n${JSON.stringify(want.map(s => ({ name: s.name, cuisine: s.cuisine, known: s.menu?.[0] ? { name: s.menu[0].name, price: s.menu[0].price } : null })))}`,
         `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, `[CURRENCY]\n${cur}`].join('\n\n');
-    const out = await askDraft(input, { force: true, system: AI_SYS_SHOP_MENU, maxTokens: 3000, effort: 'low' });
-    // the shop may have gone (the app made again) while it was asked
-    const s = p.delivery?.shops?.find(x => x.id === id);
-    if (!s || !menuWanted(s)) return false;
-    const got = menuOf(jsonOf(out)?.menu, 6);
-    if (!got.length) throw new Error('모델 답에서 메뉴를 찾지 못했어요');
-    // the dish it is known for stays first, as it was
-    const known = s.menu?.[0], plain = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
-    s.menu = known ? [{ ...known, top: true }, ...got.filter(x => plain(x.name) !== plain(known.name)).map(x => ({ ...x, top: false }))].slice(0, 6) : got;
-    s.menuAt = Date.now();
+    const out = await askDraft(input, { force: true, system: AI_SYS_SHOP_MENU, maxTokens: 9000, effort: 'low' });
+    const plain = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+    const got = new Map(arr(jsonOf(out)?.shops).filter(x => x && typeof x === 'object').map(x => [plain(x.name), menuOf(x.menu, 6)]));
+    let n = 0;
+    // a shop gone while it was asked (the app made again) is left; the dish each is known for stays first, as it was
+    for (const w of want) {
+        const s = (p.delivery?.shops || []).find(x => x.id === w.id), menu = got.get(plain(w.name));
+        if (!s || !menuWanted(s) || !menu?.length) continue;
+        const known = s.menu?.[0];
+        s.menu = known ? [{ ...known, top: true }, ...menu.filter(x => plain(x.name) !== plain(known.name)).map(x => ({ ...x, top: false }))].slice(0, 6) : menu;
+        s.menuAt = Date.now();
+        n++;
+    }
+    if (!n) throw new Error('모델 답에서 가게 메뉴를 찾지 못했어요');
     await saveMeta();
-    return true;
+    return n;
 }
 // what an order came to (the model never writes it)
 export const orderTotal = dlvTotal;
@@ -339,5 +344,7 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
     ensureIds(p);
     payDeliveries(m, p);
     await saveMeta();
+    // the shops nearby get their menus straight after, in a request of their own (a failure here leaves the app as filled)
+    try { await fillShopMenus(m, p); } catch { /* asked again when the app is opened */ }
     return p.delivery;
 });

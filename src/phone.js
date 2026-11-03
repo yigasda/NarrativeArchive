@@ -22,7 +22,7 @@ import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
 import { bankDisplayCurrency, bankAcct, bankHome, bankTx, fixedScreen, bankNotes, bankSend, bankStmt, txDoc, bankMore, cardView, orderView, passView, trackView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
 import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './phoneweb.js';
-import { fillDelivery, fillLife, fillShopMenu, menuWanted } from './phonelife.js';
+import { fillDelivery, fillLife, fillShopMenus, menuWanted } from './phonelife.js';
 import { alarmScreen, setStory, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, heartScreen, hereWidget, itemScreen, orderScreen, ordersScreen, payScreen, rateScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, waterScreen, weatherScreen, weightScreen, workScreen, worldScreen } from './phonelifeapps.js';
 import { openGlossary } from './translate.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
@@ -280,15 +280,14 @@ export async function openPhone(who = null) {
         finally { investing = false; if (phone() === p) drawPhone(true); }
     });
     let chartAttempt = '', phoneClosed = false;
-    // 동네 가게: its menu, asked for the first time the shop is opened (once: a failed ask isn't repeated on every draw)
+    // 동네 가게 메뉴: normally filled right after the delivery app; one that failed is asked once more when the app is opened
     const menuTried = new Set();
     const autoMenu = async () => {
-        if (phoneClosed || making || !view.startsWith('dshop:')) return;
-        const p = phone(), id = view.slice(6), s = p?.delivery?.shops?.find(x => x.id === id);
-        if (!menuWanted(s) || menuTried.has(`${owner}|${id}`)) return;
-        menuTried.add(`${owner}|${id}`);
-        toastr.info(`${s.name} 메뉴를 불러와요`, '배달');
-        try { if (await fillShopMenu(m, p, id) && !phoneClosed && phone() === p && view === `dshop:${id}`) drawPhone(true); }
+        if (phoneClosed || making || !/^(dlv|delivery|dshop:)/.test(view)) return;
+        const p = phone();
+        if (!(p?.delivery?.shops || []).some(menuWanted) || menuTried.has(owner)) return;
+        menuTried.add(owner);
+        try { if (await fillShopMenus(m, p) && !phoneClosed && phone() === p) drawPhone(true); }
         catch (err) { if (!phoneClosed && phone() === p) toastr.error(String(err?.message || err), '배달 메뉴'); }
     };
     const autoChart = async () => {
