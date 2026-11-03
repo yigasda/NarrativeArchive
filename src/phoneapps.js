@@ -36,7 +36,7 @@ const ICO = {
     redo: '<path d="M21 4v6h-6"/><path d="M20.5 10A8.5 8.5 0 1 0 19 16.5"/>',
 };
 export const ic = (k, s = 18, w = 2) => `<svg class="na_ph_i" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]}</svg>`;
-export const APPS = { msg: '메시지', call: '전화', photo: '사진', note: '메모', search: '검색', cal: '캘린더', map: '지도', sns: 'SNS', mail: '메일', diary: '일기', set: '설정', cam: '카메라', bank: '은행', wallet: '지갑', shop: '쇼핑', voice: '음성 메모', invest: '투자', clock: '시계', health: '건강', files: '파일', weather: '날씨', delivery: '배달', money: '은행 · 지갑 · 쇼핑', life: '시계 · 건강 · 파일 · 날씨' };
+export const APPS = { screen: '스크린타임', msg: '메시지', call: '전화', photo: '사진', note: '메모', search: '검색', cal: '캘린더', map: '지도', sns: 'SNS', mail: '메일', diary: '일기', set: '설정', cam: '카메라', bank: '은행', wallet: '지갑', shop: '쇼핑', voice: '음성 메모', invest: '투자', clock: '시계', health: '건강', files: '파일', weather: '날씨', delivery: '배달', money: '은행 · 지갑 · 쇼핑', life: '시계 · 건강 · 파일 · 날씨' };
 export function statusBar(p, now) {
     return `<div class="na_ph_sb"><span>${esc(fmtTime(p, now) || '')}</span><i>${ic('sig', 15)}${ic('bat', 20, 1.6)}</i></div>`;
 }
@@ -614,8 +614,8 @@ export function setTheme(p, now) {
 }
 // 다시 만들기: the apps ticked are made again from the whole story; the rest stay
 // apps made by their own request (채우기), offered alongside
-export const REMAKE_MORE = ['money', 'voice', 'invest', 'life', 'delivery'];
-const REMAKE_IC = { life: ['#3b4a8f', 'clock'], delivery: ['#2ac1bc', 'save'], invest: ['#73998a', 'card'], money: ['#6f86b3', 'card'], voice: ['#c9a581', 'mic'], msg: ['#89b892', 'cmt'], call: ['#89b892', 'call'], photo: ['#d89f98', 'photo'], note: ['#dcc680', 'pen'], search: ['#8faed1', 'search'], cal: ['#d494a7', 'cal'], sns: ['#d494a7', 'heart'], mail: ['#8faed1', 'mail'], diary: ['#a699c9', 'compose'] };
+export const REMAKE_MORE = ['money', 'voice', 'invest', 'life', 'delivery', 'screen'];
+const REMAKE_IC = { screen: ['#7f9cd6', 'sandglass'], life: ['#3b4a8f', 'clock'], delivery: ['#2ac1bc', 'save'], invest: ['#73998a', 'card'], money: ['#6f86b3', 'card'], voice: ['#c9a581', 'mic'], msg: ['#89b892', 'cmt'], call: ['#89b892', 'call'], photo: ['#d89f98', 'photo'], note: ['#dcc680', 'pen'], search: ['#8faed1', 'search'], cal: ['#d494a7', 'cal'], sns: ['#d494a7', 'heart'], mail: ['#8faed1', 'mail'], diary: ['#a699c9', 'compose'] };
 export function setRemake(p, now, ui, mForRemake = {}) {
     const all = [...Object.keys(REMAKE), ...REMAKE_MORE], n = ui.remake.size;
     return `${axBar(p, now)}

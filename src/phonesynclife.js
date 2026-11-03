@@ -62,24 +62,27 @@ const appName = v => { const n = line(v, 40); return n ? appOf(n)?.name || n : '
 // ("drop"), the rest as it was. A whole list ("apps") is taken as adds too, so an app it left out is never lost
 export function screenChange(was, ch) {
     if (!ch || typeof ch !== 'object') return null;
-    const apps = new Map((was?.apps || []).map(a => [a.app, { ...a }]));
+    const apps = new Map((was?.apps || []).map(a => [a.app, { ...a }])), now = new Map((was?.sometimes || []).map(a => [a.app, { ...a }]));
     for (const x of [...arr(ch.apps), ...arr(ch.add)]) {
         const app = appName(x?.app ?? x?.name), m = int(x?.min, 0, 1440);
         if (!app) continue;
-        if (m === 0) { apps.delete(app); continue; }
-        const k = String(x?.kind || '').toLowerCase(), old = apps.get(app);
+        if (m === 0) { apps.delete(app); now.delete(app); continue; }
+        // an app they opened now and then that they now use every day moves up
+        const k = String(x?.kind || '').toLowerCase(), old = apps.get(app) || now.get(app);
+        now.delete(app);
         apps.set(app, { app, kind: SCREEN_KINDS.includes(k) ? k : old?.kind || kindOfApp(app), min: m ?? old?.min ?? 30 });
     }
-    for (const d of arr(ch.drop)) apps.delete(appName(typeof d === 'string' ? d : d?.app ?? d?.name));
-    return usualScreenOf({ apps: [...apps.values()], pickups: ch.pickups ?? was?.pickups, late: ch.late || was?.late });
+    for (const d of arr(ch.drop)) { const app = appName(typeof d === 'string' ? d : d?.app ?? d?.name); apps.delete(app); now.delete(app); }
+    return usualScreenOf({ apps: [...apps.values()], sometimes: [...now.values()], pickups: ch.pickups ?? was?.pickups, late: ch.late || was?.late });
 }
 // their usual phone use: each app with its kind and minutes a day, pickups, the time they usually last look at it
 export function usualScreenOf(v) {
     if (!v || typeof v !== 'object') return null;
-    const seen = new Set(), apps = arr(v.apps).map(x => { const app = appName(x?.app ?? x?.name); return { app, kind: pick(String(x?.kind || '').toLowerCase(), SCREEN_KINDS, kindOfApp(app)), min: int(x?.min, 0, 1440) }; })
-        .filter(x => x.app && x.min !== null && x.min > 0 && !seen.has(x.app) && seen.add(x.app)).sort((a, b) => b.min - a.min).slice(0, 12);
-    const pk = int(v.pickups, 0, 1000), late = hhmm(v.late);
-    return apps.length || pk !== null || late ? { apps, ...(pk !== null ? { pickups: pk } : {}), ...(late ? { late } : {}) } : null;
+    const seen = new Set(), list = (xs, max) => arr(xs).map(x => { const app = appName(x?.app ?? x?.name); return { app, kind: pick(String(x?.kind || '').toLowerCase(), SCREEN_KINDS, kindOfApp(app)), min: int(x?.min, 0, 1440) }; })
+        .filter(x => x.app && x.min !== null && x.min > 0 && !seen.has(x.app) && seen.add(x.app)).sort((a, b) => b.min - a.min).slice(0, max);
+    // every day's apps, then the ones they open now and then (minutes on a day they do)
+    const apps = list(v.apps, 12), sometimes = list(v.sometimes, 8), pk = int(v.pickups, 0, 1000), late = hhmm(v.late);
+    return apps.length || pk !== null || late ? { apps, ...(sometimes.length ? { sometimes } : {}), ...(pk !== null ? { pickups: pk } : {}), ...(late ? { late } : {}) } : null;
 }
 export const dayOf = d => withEv({ date: day5(d?.date), bed: hhmm(d?.bed), sleep: hhmm(d?.sleep), wake: hhmm(d?.wake), woke: int(d?.woke, 0, 30) ?? 0, steps: int(d?.steps, 0, 120000), km: num(d?.km), floors: int(d?.floors, 0, 400),
     workout: d?.workout && line(d.workout.kind, 30) ? { kind: line(d.workout.kind, 30), time: hhmm(d.workout.time), min: int(d.workout.min, 0, 600), km: num(d.workout.km) } : null,

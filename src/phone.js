@@ -852,7 +852,7 @@ export async function openPhone(who = null) {
             const p = apps.length ? await makePhone(m, targetOwner, whole ? {} : { apps }) : target;
             if (!p) throw new Error('생성 결과를 받지 못했어요. 다시 시도해 주세요');
             const wealthPlan = more.some(k=>k==='money'||k==='invest') ? await prepareWealth(m,p,true) : null;
-            for (const k of more) await (k === 'money' ? fillMoney(m,p,{regenerateBalances:true,wealthPlan}) : k === 'invest' ? fillInvestment(m,p,date,{regenerate:true,wealthPlan}) : k === 'life' ? fillLife(m,p) : k === 'delivery' ? fillDelivery(m,p) : fillVoice(m,p));
+            for (const k of more) await (k === 'money' ? fillMoney(m,p,{regenerateBalances:true,wealthPlan}) : k === 'invest' ? fillInvestment(m,p,date,{regenerate:true,wealthPlan}) : k === 'life' ? fillLife(m,p) : k === 'delivery' ? fillDelivery(m,p) : k === 'screen' ? fillScreen(m,p,{again:true}) : fillVoice(m,p));
             if (whole && keep) { p.inject = true; await saveMeta(); applyInjection(); }
             if (phone() === p && !phoneClosed) {remake.clear(); view = whole ? 'lock' : 'set'; draw();}
             toastr.success(whole ? `${targetOwner}의 폰을 다시 만들었어요` : '고른 앱을 다시 만들었어요', '캐릭터 휴대폰');

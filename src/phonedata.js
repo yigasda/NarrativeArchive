@@ -164,7 +164,7 @@ LIFE
 - An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".
 - A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.
 - Health: a row for every story day these messages move into. A day these messages show goes in that event's "phone"."health"; a day already in LIFE NOW that the story now shows is rewritten the same way. Every other new day goes in the top-level "days", written freely from the character and their life (a lazy Sunday, a day on their feet, a sleepless night), still following that day's events and tickets.
-- "screen" on each day: that day's phone use, from what happened and how they felt (a fight: hours of texting late into the night; a day out with friends: barely any), in their own habits (LIFE NOW's usual).
+- "screen" on each day: that day's phone use, from what happened and how they felt (a fight: hours of texting late into the night; a day out with friends: barely any), in their own habits (LIFE NOW's usual), plus any other app that day called for, by its real name (a trip: maps, a translator).
 - A lasting change to their habits or body these messages state (they lost weight, quit coffee, drink more water, get up earlier now, quit a game, glued to the phone lately): that event's "phone"."usual" with only what changed. Nothing said: no "usual".
 ${weather ? `- "weather": ${tracker ? 'WEATHER NOW stands for an owner in that scene (its date, time, place and weather); write the rest of the forecast to agree with it, "from": "chat". An owner elsewhere gets the weather where they are.' : 'what these messages describe, else the archive. If the story\'s day or place changed with nothing to go on, what fits the season and place, "from": "guess". If neither changed and nothing describes it: null (the app keeps the last weather).'}
 - With new weather, also write each saved city's "cond", "temp", "hi" and "lo".
@@ -434,8 +434,9 @@ const lastEnd = m => Math.max(-1, ...parseSections(String(m.text || '')).filter(
 const BEFORE_MAX = 30_000;
 const ARCHIVE_MAX = 120_000; // characters: the state at the end, and as many of the newest sections as fit
 // a chat with no archive yet: its own messages stand in for it, from the start, the newest kept when there are too many
-// (tokens: making a phone reads up to 70,000, the everyday apps 20,000; the bank, investments and device keep the recent chat)
-export const CHAT_TOKENS = { phone: 70_000, apps: 20_000 };
+// (tokens: making a phone reads up to 70,000; the life fill 50,000, its files and saved cities reaching far back; the other
+// everyday apps 30,000; the bank, investments and device keep the recent chat)
+export const CHAT_TOKENS = { phone: 70_000, life: 50_000, apps: 30_000 };
 function chatStory(budget) {
     const rows = recentForCheck(1e9), out = [];
     for (let i = rows.length - 1, size = 0; i >= 0; i--) { const t = estTok(rows[i]); if (out.length && size + t > budget) break; out.unshift(rows[i]); size += t; }
