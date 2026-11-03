@@ -326,8 +326,11 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             // what the model leaves out is made up from the shop's name (the same each time): a rating, reviews, a minimum order
             let h = 7; for (const c of row.shop) h = (h * 31 + c.charCodeAt(0)) >>> 0;
             const won = (p.money?.currency || p.money?.bank?.accounts?.[0]?.currency) === 'KRW', num = (v, lo, hi) => { const n = Number(v); return finite(n) && n >= lo && n <= hi ? n : null; };
-            const shop = { name: row.shop, ko: txt(ns.ko, 60), cuisine: txt(ns.cuisine, 30), rating: num(ns.rating, 1, 5) ?? Math.round((4.3 + (h % 7) / 10) * 10) / 10,
-                reviews: Math.round(num(ns.reviews, 0, 999999) ?? 40 + h % 1400), fee: finite(Number(ns.fee)) ? Math.abs(Number(ns.fee)) : row.fee,
+            // reviews and a rating as the app's lists really run: most shops tens to a thousand or so, one in five a big
+            // name with thousands; a small shop may still hold a 5.0, a big one sits at 4.5–4.9 (never the model's: a 9.6 or a 4544 would show)
+            const reviews = h % 5 === 0 ? 2000 + (h >> 3) % 6001 : 30 + (h >> 3) % 1470;
+            const rating = Math.round((reviews < 100 ? 4.4 + (h >> 7) % 7 / 10 : reviews < 2000 ? 4.3 + (h >> 7) % 7 / 10 : 4.5 + (h >> 7) % 5 / 10) * 10) / 10;
+            const shop = { name: row.shop, ko: txt(ns.ko, 60), cuisine: txt(ns.cuisine, 30), rating, reviews, fee: finite(Number(ns.fee)) ? Math.abs(Number(ns.fee)) : row.fee,
                 minOrder: num(ns.minOrder, 0, 1e7) ?? (won ? 10000 + (h % 3) * 2500 : 10 + (h % 3) * 2.5), eta: txt(ns.eta, 12) || `${20 + (h % 3) * 5}–${30 + (h % 3) * 5}`, fav: false, menu,
                 id: `sync:${e.id}:s${k}`, ev: e.id, sourceIndex: e.at };
             shops.push(shop);

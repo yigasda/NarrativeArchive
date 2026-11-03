@@ -274,6 +274,11 @@ export function applyLife(p, e, phone, on) {
         for (const k of ['bed', 'sleep', 'wake']) if (!clean[k] && u[k] && (k !== 'wake' || awake)) clean[k] = u[k];
         // a day already over gets their usual steps; today's stay open (the screen counts them up, the clock fills them after)
         if (clean.steps === null && finiteNum(u.steps) && awake && dayGap(clean.date, e.date) > 0) clean.steps = u.steps;
+        // what the model no longer writes is worked out: distance from the steps, floors and the heart range from their usual
+        const hd = hash(clean.date);
+        if (clean.km === null && finiteNum(clean.steps)) clean.km = Math.round(clean.steps * 0.00072 * 10) / 10;
+        if (clean.floors === null) clean.floors = (hd >> 9) % 9;
+        if (!clean.hr.length && u.rest) clean.hr = [u.rest - 4 + hd % 5, u.rest + 45 + (hd >> 4) % 40];
         bedFirst(clean);
         const vals = { ...clean, ev: e.id };
         if (was) return change('life.health.days', was, vals, '건강');
@@ -433,7 +438,7 @@ export function lifeClock(p, now) {
     const u = L.health?.usual;
     if (u?.wake) for (const d of L.health?.days || []) if (!d.wake && (dayGap(d.date, today) > 0 || d.date === today && hm && hm >= u.wake)) change('life.health.days', d, { wake: u.wake });
     // and its steps, once that day is over
-    if (finiteNum(u?.steps)) for (const d of L.health?.days || []) if ((d.steps === null || d.steps === undefined) && dayGap(d.date, today) > 0) change('life.health.days', d, { steps: u.steps });
+    if (finiteNum(u?.steps)) for (const d of L.health?.days || []) if ((d.steps === null || d.steps === undefined) && dayGap(d.date, today) > 0) change('life.health.days', d, { steps: u.steps, km: Math.round(u.steps * 0.00072 * 10) / 10 });
     const files = L.files?.items || [];
     for (const x of [...files]) if (x.trashed && dayGap(x.trashed, today) > 30) { files.splice(files.indexOf(x), 1); out.push({ type: 'drop', path: 'life.files.items', item: structuredClone(x) }); }
     const days = L.health?.days || [];

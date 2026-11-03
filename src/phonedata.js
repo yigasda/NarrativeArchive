@@ -160,18 +160,13 @@ WHERE IT COMES FROM
 - "now": the moment of the newest message, never a time something is only planned for.
 ${life ? `
 LIFE
-- An alarm the owner sets, changes or switches on or off in these messages; a timer they start ("running", with the seconds left at the newest message) or save; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
+- An alarm the owner sets, changes or switches on or off in these messages; a timer they set; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
 - An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".
 - A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.
-- Health: a row for every story day these messages move into.
-  - A day these messages show goes in that event's "phone"."health", "from": "story". A day already in LIFE NOW that the story now shows is rewritten the same way.
-  - Every other new day goes in the top-level "days", "from": "pattern", written freely from the character and their life, still following that day's events and tickets.
-  - No new story day: "days": [].
-  - "date" is the day they woke up: asleep 10-26 at 23:40 or 10-27 at 02:15 → "10-27".
-  - A night still going (they fell asleep, not yet woken): its row now, with "sleep"; "wake" stays empty.
+- Health: a day these messages show (its sleep, steps, a workout) goes in that event's "phone"."health"; a day already in LIFE NOW that the story now shows is rewritten the same way. The app fills the days nobody tells.
 - A lasting change to their habits or body these messages state (they lost weight, quit coffee, drink more water, get up earlier now): that event's "phone"."usual" with only what changed. Nothing said: no "usual".
 ${weather ? `- "weather": ${tracker ? 'WEATHER NOW stands for an owner in that scene (its date, time, place and weather); write the rest of the forecast to agree with it, "from": "chat". An owner elsewhere gets the weather where they are.' : 'what these messages describe, else the archive. If the story\'s day or place changed with nothing to go on, what fits the season and place, "from": "guess". If neither changed and nothing describes it: null (the app keeps the last weather).'}
-- With new weather, also write each saved city's weather: "cond", "temp", "hi", "lo", rain, wind, "feels", "humidity" and "dew".
+- With new weather, also write each saved city's "cond", "temp", "hi" and "lo".
 ` : ''}` : ''}${money ? `
 MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - A payment, transfer, refund, order, ticket or trade that happens in these messages goes in the event's "money".
@@ -182,9 +177,9 @@ MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - A card purchase goes on the card account; a refund is plus; paying the card off is a transfer from the bank.
 - No money is made up to cover a payment; a balance may go below zero.
 - A new paid ${paid} has its payment as a move in the same event.
-- An order or ticket only moves forward. A cancelled order${delivery ? ' or delivery' : ''} moves no money; if it was already paid, its refund is a plus move.
+- A cancelled order${delivery ? ' or delivery' : ''} moves no money; if it was already paid, its refund is a plus move.
 ${delivery ? `- A delivery paid in cash at the door has no move.
-- A delivery from a shop not in DELIVERY SHOPS also gives "newShop": that shop as the app would list it (a rating, reviews, delivery fee and minimum order that fit such a shop there), with 2 to 4 dishes: the one ordered and others it would have.
+- A delivery from a shop not in DELIVERY SHOPS also gives "newShop" with 2 to 4 dishes: the one ordered and others it would have.
 ` : ''}` : ''}
 ${PHONE_STYLE}
 
@@ -198,14 +193,13 @@ ANSWER — one JSON object, nothing else:
                           "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko", "currency", "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
                           "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" (a return asked for) | "returned" | "refunded", "eta": "MM-DD", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
                           "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }]${delivery ? `,
-                          "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients in English, like "beef", "shrimp"], "size": "regular" | "large", "set": [a set's sides or drinks, like "fries", "cola"] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "left", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery", "for": how many it feeds, "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
-                                          "newShop": { "name": the same as "shop", "ko", "cuisine", "rating": like 4.7, "reviews": how many, "fee", "minOrder", "eta": like "25–35", "menu": [{ "name", "ko", "desc", "price", "top": true for its best-known dish, "pic": like the items' "pic" }] } or null }]` : ''} }` : ''} }]${life ? `,
-  "days": [{ the same fields as "health", "from": "pattern" }]${weather ? `,
+                          "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients, like "beef"], "size": "regular" | "large", "set": [a set's sides or drinks] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "noteShop", "noteShopKo", "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
+                                          "newShop": { "name": the same as "shop", "ko", "cuisine", "menu": [{ "name", "ko", "price", "pic" }] } or null }]` : ''} }` : ''} }]${life && weather ? `,
   "weather": { "place", "date", "time", "from": "chat" | "archive" | "guess", "cond": "clear" | "partly" | "cloudy" | "drizzle" | "rain" | "sleet" | "snow" | "fog" | "storm" | "wind", "temp", "hi", "lo", "line", "ko",
-               "hours": [6 of { "time", "cond", "temp", "rain" }], "days": [10 of { "day", "cond", "lo", "hi", "rain" }],
-               "tiles": { "rain24", "rainNext", "feels", "wind", "gust", "dir", "humidity", "dew", "sunrise", "sunset", "visibility" },
-               "cities": [{ "name", "cond", "temp", "hi", "lo", "rainNext": mm, "wind": km/h, "gust", "dir", "feels", "humidity", "dew" }] } or null` : ''}` : ''} }
-${money ? `"money" only when money moves or an order or ticket changes. ` : ''}Numbers are plain JSON numbers.
+               "days": [10 of { "day", "cond", "lo", "hi", "rain": percent }],
+               "tiles": { "rain24": mm today, "rainNext": mm by tomorrow, "wind": km/h, "dir", "humidity" },
+               "cities": [{ "name", "cond", "temp", "hi", "lo" }] } or null` : ''} }
+${money ? `"money" only when money moves or an order or ticket changes.` : ''}
 Also in "money" when these messages show them: "newAccount": { "kind": "checking" | "savings" | "credit", "name", "last4", "currency", "balance" } (an account or card the owner opens), "newCard": { "account": last4, "exp": "MM/YY" }${delivery ? `, "cart": { "shop", "items": [like a delivery's] } (dishes put in the basket and not ordered)` : ''}, "watch": [{ "symbol", "name", "currency", "note", "ko" }] (a share they start watching), "quotes": [{ "symbol", "date", "value", "evidence": exact words }] (a price the story gives), "stakes": [{ "company", "listed", "percent", "holder", "voter", "beneficiary", "restriction", "value", "currency", "evidence": exact words }] (a stake the story says they now hold).
 In "events", a plan moved or called off is its item again with "was": the date it had, or "cancelled": true. In "threads", a text the owner deleted is { "text", "deleted": true }.
 Items in "phone":
@@ -213,8 +207,8 @@ Items in "phone":
 ${PHONE_ITEMS}${life ? `,
   "alarms": [{ "change": an id or "", "time", "label", "ko", "days": the weekdays it repeats or [], "date": "MM-DD" for a one-time alarm, "on", "wake", "then", "snooze" }],
   "files": [{ "change": an id or "", "name", "kind", "folder": one of LIFE NOW's "folders" (downloads are "Downloads"), "size": KB, "time", "from", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],
-  "health": [{ "date", "bed", "sleep", "wake", "woke", "steps", "km", "floors", "workout": { "kind", "time", "min", "km" } or null, "hr": [low, high], "from": "story" }],
-  "timers": [{ "label", "ko", "sec", "last": "MM-DD" }], "running": { "label", "ko", "sec", "left": seconds } or null,
+  "health": [{ "date": the day they woke, "sleep", "wake", "steps", "workout": { "kind", "time", "min", "km" } or null }],
+  "timers": [{ "label", "ko", "sec" }],
   "usual": { "weight": kg, "coffee": cups a day, "coffeeKind", "coffeeKo", "water": litres a day, "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": a week, "rest": resting heart rate, "height": cm }` : ''}
 }
 Fewer is fine. No new events: "events": [].
