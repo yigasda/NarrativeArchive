@@ -56,7 +56,7 @@ if (process.env.INVEST_PREVIEW) {
  p.investment.notes=[{id:'note',target:'stock:NYSE:X',date:'2026-10-30',text:'Do not sell just because today was difficult.',ko:'오늘 힘들었다고 팔지는 말 것.',source:'guess'}];
  p.investment.schedules=[{id:'event',target:'stake:family',kind:'delegation',date:'2026-11-10',title:'의결권 위임 만료',status:'scheduled',evidence:'The voting delegation expires on November 10, 2026.',ref:'#120'}];
  p.investment.history=[{id:'history',target:'stake:family',field:'voter',date:'2026-10-20',before:'Ren',after:'Mara',evidence:'Ren delegated his voting rights to Mara.',ref:'#118'}];
- const css=await readFile(new URL('../style.css',import.meta.url),'utf8');
+ const css=(await import('./cssfiles.mjs')).allCss();
  for(const view of ['ivnotes','ivschedule','ivhistory','invest','stock','ivactivity','ivwatch','ivstakes','ivcash','ivprices']) await writeFile(`${process.env.INVEST_PREVIEW}/${view}.html`,`<!doctype html><html lang="ko"><meta charset="UTF-8"><style>${css}\nbody{margin:0;background:#edf1ee}.cg_canvas{position:relative;transform:none}.na_phone{width:390px;margin:12px auto}.ax_canvas{height:844px}.iv_scroll{overflow:auto}</style><div class="na_phone"><div class="na_ph_scr app ax axb"><div class="cg_canvas ax_canvas">${ui.investmentScreen(m,p,'10-30',view,view==='stock'?'NYSE:X':'',false)}</div></div></div></html>`);
 }
 
