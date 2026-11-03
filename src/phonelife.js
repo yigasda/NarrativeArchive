@@ -294,10 +294,11 @@ export async function fillShopMenus(m, p) {
     return n;
 }
 // ---- 동네 가게 새로 고침: as the story's days go by, shops nearby open and close and the list reorders, the way the real
-// apps' do. Every 3 story days (asked after a reflection, never on every one), 1 or 2 shops open and 1 or 2 of the
+// apps' do. Every 3 story days and 3 reflections both (asked after a reflection: a story that skips days at every
+// reflection still asks at most every third one), 1 or 2 shops open and 1 or 2 of the
 // ones nearby go; the owner moving to another of their saved cities makes it that city's shops. One short request of its
 // own, the shops alone with their menus (no story)
-const NEARBY_DAYS = 3, NEARBY_MAX = 8;
+const NEARBY_DAYS = 3, NEARBY_ROUNDS = 3, NEARBY_MAX = 8;
 // the saved city the owner is in now (the weather's place read against the saved cities), or ''
 const homeCity = p => cityAt(p.life?.weather?.here?.place || '', p.life?.weather?.cities || [])?.name || '';
 export const AI_SYS_NEARBY = `GOAL
@@ -331,10 +332,13 @@ export function nearbyDue(p) {
     const city = homeCity(p);
     if (city && d.city && city !== d.city) return 'moved';
     if (!/^\d{2}-\d{2}$/.test(d.nearbyAt || '')) return '';
-    return dayGap(d.nearbyAt, today) >= NEARBY_DAYS ? 'days' : '';
+    return dayGap(d.nearbyAt, today) >= NEARBY_DAYS && (d.nearbyRounds || 0) >= NEARBY_ROUNDS ? 'days' : '';
 }
-export async function refreshNearby(m, p) {
-    const why = nearbyDue(p), d = p.delivery, today = String(storyNow(p) || p.now || '').slice(0, 5);
+// read: a reflection that read messages (it counts toward the 3)
+export async function refreshNearby(m, p, { read = false } = {}) {
+    const d = p.delivery, today = String(storyNow(p) || p.now || '').slice(0, 5);
+    if (d && read) d.nearbyRounds = (d.nearbyRounds || 0) + 1;
+    const why = nearbyDue(p);
     // a phone filled before this kept no day: it starts counting now
     if (d && !d.nearbyAt && /^\d{2}-\d{2}$/.test(today)) { d.nearbyAt = today; d.city ||= homeCity(p); await saveMeta(); return 0; }
     if (!why) return 0;
@@ -361,7 +365,7 @@ export async function refreshNearby(m, p) {
     const stay = kept.filter(s => !lately(p, d, s.name)).sort((a, b) => mix(a.name) - mix(b.name));
     const nearby = [...fresh, ...stay].slice(0, NEARBY_MAX);
     d.shops = [...kept.filter(s => lately(p, d, s.name)), ...nearby];
-    d.nearbyAt = today; d.city = homeCity(p) || d.city || '';
+    d.nearbyAt = today; d.nearbyRounds = 0; d.city = homeCity(p) || d.city || '';
     ensureIds(p);
     await saveMeta();
     return fresh.length;

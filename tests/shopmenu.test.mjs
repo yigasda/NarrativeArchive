@@ -60,7 +60,7 @@ test('a shop the user orders from, or one already asked, is never asked; an answ
 // ---- 동네 가게 새로 고침
 const dlvPhone = () => ({ owner: 'Ren', country: 'DE', lives: 'DE', now: '10-26 20:00', money: { currency: 'EUR' },
     life: { weather: { here: { place: 'Frankfurt, Westend' }, cities: [{ name: 'Frankfurt' }, { name: 'Berlin' }] } },
-    delivery: { nearbyAt: '10-23', city: 'Frankfurt', orders: [{ shop: 'Pasta Nostra', time: '10-20 19:00' }, { shop: 'Old Diner', time: '08-01 19:00' }],
+    delivery: { nearbyAt: '10-23', nearbyRounds: 3, city: 'Frankfurt', orders: [{ shop: 'Pasta Nostra', time: '10-20 19:00' }, { shop: 'Old Diner', time: '08-01 19:00' }],
         shops: [{ id: 'a', name: 'Pasta Nostra', menu: [] }, { id: 'b', name: 'Old Diner', menu: [] }, { id: 'c', name: 'Sushi Ya', nearby: true, menu: [] }, { id: 'd', name: 'Döner Eck', nearby: true, menu: [] }] } });
 const newShop = name => ({ name, cuisine: 'x', menu: [{ name: `${name} dish`, price: 9, top: true, pic: { base: 'pizza' } }, { name: `${name} 2`, price: 10 }] });
 
@@ -70,6 +70,15 @@ test('nearby shops: a phone with no day kept starts counting, nothing asked', as
     assert.equal(await life.refreshNearby({}, p), 0);
     assert.equal(p.delivery.nearbyAt, '10-26');
     assert.equal(globalThis.__menu.input, '');
+});
+test('nearby shops wait for 3 story days and 3 reflections both', async () => {
+    const p = dlvPhone(); p.delivery.nearbyRounds = 1;
+    globalThis.__menu.input = '';
+    assert.equal(await life.refreshNearby({}, p, { read: true }), 0);
+    assert.equal(p.delivery.nearbyRounds, 2);
+    assert.equal(globalThis.__menu.input, '');
+    p.delivery.nearbyAt = '10-25'; p.delivery.nearbyRounds = 9;
+    assert.equal(life.nearbyDue(p), '');
 });
 test('nearby shops after 3 story days: new ones open, a nearby one goes, a shop ordered from lately never goes', async () => {
     const p = dlvPhone();
@@ -85,6 +94,7 @@ test('nearby shops after 3 story days: new ones open, a nearby one goes, a shop 
     assert.match(globalThis.__menu.input, /Old Diner/);
     assert.ok(!/\[NEARBY\][^[]*Pasta Nostra/.test(globalThis.__menu.input));
     assert.equal(p.delivery.nearbyAt, '10-26');
+    assert.equal(p.delivery.nearbyRounds, 0);
     assert.equal(life.nearbyDue(p), '');
 });
 test('nearby shops when the owner is in another saved city: that city\'s shops, the old nearby ones all gone', async () => {

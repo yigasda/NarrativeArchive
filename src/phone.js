@@ -246,8 +246,8 @@ export async function openPhone(who = null) {
         draw();
         if (!update) return toastr.success(`${owner}의 폰을 만들었어요`, '캐릭터 휴대폰');
         const r = p.syncLast;
-        // the shops nearby, every 3 story days (or a move to another saved city): on their own, after the reflection
-        refreshNearby(m, p).then(n => { if (n && !phoneClosed && phone() === p && /^(dlv|delivery)/.test(view)) drawPhone(true); }).catch(err => toastr.warning(String(err?.message || err), '동네 가게'));
+        // the shops nearby, every 3 story days and 3 reflections (or at once on a move to another saved city): on their own, after the reflection
+        refreshNearby(m, p, { read: !!r?.checked }).then(n => { if (n && !phoneClosed && phone() === p && /^(dlv|delivery)/.test(view)) drawPhone(true); }).catch(err => toastr.warning(String(err?.message || err), '동네 가게'));
         if (!r?.checked) return toastr.info('새로 읽을 대화가 없어요', '캐릭터 휴대폰');
         const head = `${r.checked}개 확인 · 남은 ${r.remaining}개`;
         const owed = p.sync?.owed?.money?.length || 0;
