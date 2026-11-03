@@ -56,7 +56,7 @@ Could this be on the owner's phone, given what the archive, lorebook and chat sh
 - The lorebook counts as fact like the archive; where the two disagree, the archive wins.
 - Events (a meeting, a fight, a confession, a trip, a loss) only if the archive or lorebook has them.
 - Small everyday things around those events are fine: how a text was worded, a photo of a place they were, a search they would make.
-- People: only people the story has. A relationship word (girlfriend, ex, husband, boss) only if the archive uses it for them.
+- People: only people the story has. A relationship word (girlfriend, ex, husband, boss) only if the archive or chat uses it for them.
 - Nothing later than the newest moment of the story.
 - The diary holds only what the archive shows happened and what the owner felt about it; no new secrets, no new feelings.`;
 const PHONE_STYLE = `LANGUAGE
@@ -149,7 +149,7 @@ WHAT IS NEW
 - An event in EVENTS ON THE PHONE keeps its id; add only what the phone doesn't hold yet.
 - MESSAGES READ BEFORE, NOW CHANGED were already put on the phone: give their events the ids listed there; a payment in them is that same payment, its amount corrected if it changed.
 - Small everyday things around an event are fine: how a text was worded, a photo of the place, a search they would make.
-- People: only people the story has.
+- People: only people the story has. A relationship word (girlfriend, ex, husband, boss) only if the messages or archive use it for them.
 - A diary entry holds only what these messages show and what the owner felt about it; no new secrets, no new feelings.
 
 WHERE IT COMES FROM
