@@ -161,3 +161,10 @@ test('no two worked days alike: some days an app is left alone, some days binged
     assert.ok(ratio.some(x => x === 0), JSON.stringify(ratio));
     assert.ok(ratio.some(x => x >= 1.9), JSON.stringify(ratio));
 });
+
+test('the reflection reads their usual phone use short: names and minutes', async () => {
+    const { screenLine } = await import('../src/phonesynclife.js');
+    assert.equal(screenLine({ apps: [{ app: 'WhatsApp', kind: 'chat', min: 48 }, { app: 'Gmail', kind: 'work', min: 62 }], sometimes: [{ app: 'Tinder', kind: 'social', min: 14 }], pickups: 84, late: '23:55' }),
+        'WhatsApp 48, Gmail 62 · sometimes: Tinder 14 · pickups 84 · late 23:55');
+    assert.equal(screenLine({ apps: [{ app: 'Signal', min: 30 }] }), 'Signal 30');
+});

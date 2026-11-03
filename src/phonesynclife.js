@@ -75,13 +75,17 @@ export function screenChange(was, ch) {
     for (const d of arr(ch.drop)) { const app = appName(typeof d === 'string' ? d : d?.app ?? d?.name); apps.delete(app); now.delete(app); }
     return usualScreenOf({ apps: [...apps.values()], sometimes: [...now.values()], pickups: ch.pickups ?? was?.pickups, late: ch.late || was?.late });
 }
+// their usual phone use as the reflection reads it: names and minutes only, short ("WhatsApp 48, Gmail 62 · sometimes:
+// Tinder 14 · pickups 84 · late 23:55"); thirty apps cost what a dozen did as JSON, and the kinds are the code's to know
+export const screenLine = v => (v && typeof v === 'object' ? [(v.apps || []).map(a => `${a.app} ${a.min}`).join(', '), v.sometimes?.length ? `sometimes: ${v.sometimes.map(a => `${a.app} ${a.min}`).join(', ')}` : '',
+    v.pickups != null ? `pickups ${v.pickups}` : '', v.late ? `late ${v.late}` : ''].filter(Boolean).join(' · ') : v);
 // their usual phone use: each app with its kind and minutes a day, pickups, the time they usually last look at it
 export function usualScreenOf(v) {
     if (!v || typeof v !== 'object') return null;
     const seen = new Set(), list = (xs, max) => arr(xs).map(x => { const app = appName(x?.app ?? x?.name); return { app, kind: pick(String(x?.kind || '').toLowerCase(), SCREEN_KINDS, kindOfApp(app)), min: int(x?.min, 0, 1440) }; })
         .filter(x => x.app && x.min !== null && x.min > 0 && !seen.has(x.app) && seen.add(x.app)).sort((a, b) => b.min - a.min).slice(0, max);
     // every day's apps, then the ones they open now and then (minutes on a day they do)
-    const apps = list(v.apps, 12), sometimes = list(v.sometimes, 8), pk = int(v.pickups, 0, 1000), late = hhmm(v.late);
+    const apps = list(v.apps, 16), sometimes = list(v.sometimes, 18), pk = int(v.pickups, 0, 1000), late = hhmm(v.late);
     return apps.length || pk !== null || late ? { apps, ...(sometimes.length ? { sometimes } : {}), ...(pk !== null ? { pickups: pk } : {}), ...(late ? { late } : {}) } : null;
 }
 export const dayOf = d => withEv({ date: day5(d?.date), bed: hhmm(d?.bed), sleep: hhmm(d?.sleep), wake: hhmm(d?.wake), woke: int(d?.woke, 0, 30) ?? 0, steps: int(d?.steps, 0, 120000), km: num(d?.km), floors: int(d?.floors, 0, 400),
@@ -543,7 +547,7 @@ export function lifeNow(p) {
         folders: ['Downloads', ...(L.files?.folders || []).map(f => f.name).filter(Boolean)],
         files: (L.files?.items || []).filter(x => !x.trashed).slice(-12).map(x => ({ id: x.id, name: x.name, folder: x.folder, time: x.time })),
         health: (L.health?.days || []).slice(-3).map(d => ({ id: d.id, date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, from: d.from })),
-        usual: (u => (u ? Object.fromEntries(['bed', 'sleep', 'wake', 'steps', 'workouts', 'rest', 'weight', 'coffee', 'coffeeKind', 'water', 'screen'].filter(k => u[k] !== undefined && u[k] !== null && u[k] !== '').map(k => [k, u[k]])) : undefined))(L.health?.usual),
+        usual: (u => (u ? Object.fromEntries(['bed', 'sleep', 'wake', 'steps', 'workouts', 'rest', 'weight', 'coffee', 'coffeeKind', 'water', 'screen'].filter(k => u[k] !== undefined && u[k] !== null && u[k] !== '').map(k => [k, k === 'screen' ? screenLine(u[k]) : u[k]])) : undefined))(L.health?.usual),
         weather: L.weather?.here ? { place: L.weather.here.place, date: L.weather.here.date, time: L.weather.here.time, cond: L.weather.here.cond, temp: L.weather.here.temp, cities: (L.weather.cities || []).map(c => c.name) } : null,
     };
 }
