@@ -120,6 +120,22 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     };
     const from = guess ? 'guess' : 'story';
 
+    // an account the owner opens comes first, so a move into it in the same event lands there (not on the one current
+    // account), and its opening deposit is only what those moves don't already bring in
+    if (bankOn && mo.newAccount && typeof mo.newAccount === 'object') {
+        const a = mo.newAccount, accts = p.money.bank.accounts, kind = ['checking', 'savings', 'credit'].includes(a.kind) ? a.kind : 'checking', last4 = String(a.last4 || '').replace(/\D/g, '').slice(-4), cur = String(a.currency || p.money.currency || '').toUpperCase();
+        const bal = kind === 'credit' ? 0 : (finite(Number(a.balance)) ? Number(a.balance) : 0);
+        if (!/^\d{4}$/.test(last4) || !currency(cur)) fail('새 계좌의 끝 4자리나 통화를 확인하지 못했어요');
+        if (!accts.some(x => x.last4 === last4)) {
+            const acct = { id: uid(), kind, name: txt(a.name, 60) || (kind === 'savings' ? '적금' : kind === 'credit' ? '카드' : '입출금'), last4, currency: cur, balance: bal, ev: e.id, sourceIndex: e.at };
+            // the ledger opens empty on the event's day; what it holds is its first row (an opening deposit the owner can see)
+            if (kind !== 'credit') { const L = baseline(m, acct.id, cur, 0, full, p.owner); const into = list(mo.moves).filter(x => x.occurrence !== 'again' && !x.already && Number(x.amount) > 0 && String(x.account ?? '').replace(/\D/g, '').slice(-4) === last4).reduce((n, x) => n + Number(x.amount), 0), open = round(bal - into);
+                if (open > 0.01) { const id = `sync:${e.id}:open`, row = { id, account: last4, who: txt(a.name, 60) || acct.name, ko: '', amount: open, time: `${date}${e.time ? ` ${e.time}` : ''}`, day: full, kind: 'deposit', memo: '개설 입금', pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at }; (p.money.tx ||= []).push(row); L.entries[id] = { amount: open, date: full, sourceIndex: e.at }; out.effects.push({ type: 'push', path: 'money.tx', item: structuredClone(row) }, { type: 'entry', key: `${acct.id}:${cur}`, id, amount: open, date: full, sourceIndex: e.at }); } }
+            accts.push(acct);
+            out.effects.push({ type: 'push', path: 'money.bank.accounts', item: structuredClone(acct) });
+            out.changes.push({ app: '은행', label: `${acct.name} 계좌 개설`, amount: null });
+        }
+    }
     // money between the owner's own accounts: each pair compared on its own (other spending in the event aside).
     // bank ↔ brokerage always pairs; bank ↔ bank only when the event has just one out and one in. A fee on the out leg
     // ("fee") is what goes missing on the way.
@@ -365,19 +381,6 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     }
     if (dlvOn && p.delivery.cart && list(mo.deliveries).some(x => samePlace(x.shop, p.delivery.cart.shop) && x.occurrence !== 'again')) setCart(null, '장바구니 비움');
     // a new account or card (opened in these messages): the bank's list grows, its ledger starts at the event's day
-    if (bankOn && mo.newAccount && typeof mo.newAccount === 'object') {
-        const a = mo.newAccount, accts = p.money.bank.accounts, kind = ['checking', 'savings', 'credit'].includes(a.kind) ? a.kind : 'checking', last4 = String(a.last4 || '').replace(/\D/g, '').slice(-4), cur = String(a.currency || p.money.currency || '').toUpperCase();
-        const bal = kind === 'credit' ? 0 : (finite(Number(a.balance)) ? Number(a.balance) : 0);
-        if (!/^\d{4}$/.test(last4) || !currency(cur)) fail('새 계좌의 끝 4자리나 통화를 확인하지 못했어요');
-        if (!accts.some(x => x.last4 === last4)) {
-            const acct = { id: uid(), kind, name: txt(a.name, 60) || (kind === 'savings' ? '적금' : kind === 'credit' ? '카드' : '입출금'), last4, currency: cur, balance: bal, ev: e.id, sourceIndex: e.at };
-            // the ledger opens empty on the event's day; what it holds is its first row (an opening deposit the owner can see)
-            if (kind !== 'credit') { const L = baseline(m, acct.id, cur, 0, full, p.owner); if (bal > 0) { const id = `sync:${e.id}:open`, row = { id, account: last4, who: txt(a.name, 60) || acct.name, ko: '', amount: round(bal), time: `${date}${e.time ? ` ${e.time}` : ''}`, day: full, kind: 'deposit', memo: '개설 입금', pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at }; (p.money.tx ||= []).push(row); L.entries[id] = { amount: round(bal), date: full, sourceIndex: e.at }; out.effects.push({ type: 'push', path: 'money.tx', item: structuredClone(row) }, { type: 'entry', key: `${acct.id}:${cur}`, id, amount: round(bal), date: full, sourceIndex: e.at }); } }
-            accts.push(acct);
-            out.effects.push({ type: 'push', path: 'money.bank.accounts', item: structuredClone(acct) });
-            out.changes.push({ app: '은행', label: `${acct.name} 계좌 개설`, amount: null });
-        }
-    }
     if (bankOn && mo.newCard && typeof mo.newCard === 'object') {
         const c = mo.newCard, last4 = String(c.account || '').replace(/\D/g, '').slice(-4), cards = p.money.cards ||= [];
         if (p.money.bank.accounts.some(x => x.last4 === last4) && !cards.some(x => x.account === last4)) {
