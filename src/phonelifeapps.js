@@ -31,6 +31,8 @@ Object.assign(AX, {
 
 // ---- shared bits
 // the everyday apps' data, with every list and box it may lack (an older save, a thin answer) put in place once
+// whose phone a life view is (L's answer), so the here weather can look at the other phones in the same city
+const OWNER = new WeakMap();
 const L = p => {
     const l = p.life; if (!l) return null;
     const c = l.clock ||= {}; c.alarms ||= []; c.timers ||= []; c.running ||= null; for (const a of c.alarms) { a.days ||= []; a.then ||= []; }
@@ -53,7 +55,9 @@ const L = p => {
     for (const x of w.cities) { x.hours ||= []; for (const k of ['temp', 'hi', 'lo', 'feels', 'humidity', 'dew', 'rainNext', 'wind', 'gust']) x[k] ??= null; }
     // the screens read a view: today's row counted up, nothing written back to the save
     // (and it carries the minute now, so what the day still holds, water and coffee later on, isn't counted yet)
-    return h.days.some(d => d && d.date === today) ? { ...l, health: { ...h, days: h.days.map(d => (d && d.date === today ? { ...soFar(d), ...(nowMin === null ? {} : { upTo: nowMin }) } : d)) } } : l;
+    const view = h.days.some(d => d && d.date === today) ? { ...l, health: { ...h, days: h.days.map(d => (d && d.date === today ? { ...soFar(d), ...(nowMin === null ? {} : { upTo: nowMin }) } : d)) } } : l;
+    OWNER.set(view, p);
+    return view;
 };
 const k1 = (k, cls = 'lf_k') => (k && koOn() ? `<span class="${cls}">${esc(k)}</span>` : '');
 const now5 = p => String(storyNow(p) || p.now || '');
@@ -910,7 +914,18 @@ function wxIc(c, z = 24, night = false) {
 const saidOf = h => String(h.said || '').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/(영하\s*)?[-−]?\d{1,3}(?:[.,]\d)?\s*(?:°\s*[CF]?|℃|℉|도(?![가-힣]))/gi, '').replace(/\s*[/|·,~-]+\s*$|^\s*[/|·,~-]+\s*/g, '').trim() || WX[h.cond] || '';
 // the here weather with every tile filled (sunrise and sunset from the story's zone), for the sky and the tiles alike
 // a status line newer than the saved weather (a day on, or later the same day) shows over it until the next reflection
+// the here weather the screens show: the phone's own, unless another phone in the same city, on the same day, was told it
+// later (the newest reflection is the city's weather for every phone there; nothing is written, each keeps its own)
 function hereNow(lf) {
+    const h = hereOwn(lf), p = OWNER.get(lf);
+    if (!p || !h.place || !h.date) return h;
+    let others = [];
+    try { others = Object.values(getMeta()?.phones || {}).filter(o => o && o !== p && o.owner !== p.owner && o.life?.weather); } catch { others = []; }
+    const at = x => `${x.date || ''} ${x.time || ''}`, same = (a, b) => !!cityOfPlace(a, [{ name: b }]);
+    const best = others.map(o => hereOwn(L(o))).filter(x => x.place && x.date === h.date && same(h.place, x.place) && at(x) > at(h)).sort((a, b) => at(b).localeCompare(at(a)))[0];
+    return best ? { ...best, place: h.place } : h;
+}
+function hereOwn(lf) {
     const h = lf.weather.here;
     let t = null;
     try { t = weatherNow(); } catch { t = null; }
@@ -938,7 +953,7 @@ function shared(p, lf, c) {
     try { others = Object.values(getMeta()?.phones || {}).filter(o => o && o !== p && o.owner !== p.owner && o.life?.weather); } catch { others = []; }
     if (!others.length) return c;
     const t = cityTime(p, lf, c), day = t.dayShift === '내일' ? shiftDay(t.date, 1) : t.dayShift === '어제' ? shiftDay(t.date, -1) : t.date;
-    const there = others.map(o => ({ o, l: L(o) })).map(x => ({ ...x, h: hereNow(x.l) })).filter(x => x.h.place && cityOfPlace(x.h.place, [c]) && x.h.date === day).sort((a, b) => stamp(b.l).localeCompare(stamp(a.l)))[0];
+    const there = others.map(o => ({ o, l: L(o) })).map(x => ({ ...x, h: hereOwn(x.l) })).filter(x => x.h.place && cityOfPlace(x.h.place, [c]) && x.h.date === day).sort((a, b) => stamp(b.l).localeCompare(stamp(a.l)))[0];
     if (there) { const w = mirrorHome({ here: there.h, cities: [structuredClone(c)] }); return { ...w.cities[0], src: { p: there.o, h: there.h, l: there.l } }; }
     const mine = stamp(lf), saved = others.map(o => ({ l: L(o) })).map(x => ({ ...x, c2: x.l.weather.cities.find(y => cityOfPlace(y.name, [c]) || cityOfPlace(c.name, [y])) })).filter(x => x.c2 && stamp(x.l) > mine).sort((a, b) => stamp(b.l).localeCompare(stamp(a.l)))[0];
     if (!saved) return c;
