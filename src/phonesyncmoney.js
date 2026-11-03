@@ -356,15 +356,10 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             const dish = (d, k) => { const pic = dishPic(d?.pic, { name: txt(d?.name, 60), ko: txt(d?.ko, 60) }); return { name: txt(d?.name, 60), ko: txt(d?.ko, 60), desc: txt(d?.desc, 100), price: finite(Number(d?.price)) ? Number(d.price) : 0, top: d?.top === true || (!list(ns.menu).some(y => y?.top === true) && k === 0), ...(pic ? { pic } : {}) }; };
             let menu = list(ns.menu).map(dish).filter(d => d.name).slice(0, 4);
             if (!menu.length) menu = items.slice(0, 4).map((d, k) => ({ name: d.name, ko: d.ko, desc: '', price: d.price, top: k === 0, ...(d.pic ? { pic: d.pic } : {}) }));
-            // what the model leaves out is made up from the shop's name (the same each time): a rating, reviews, a minimum order
-            let h = 7; for (const c of row.shop) h = (h * 31 + c.charCodeAt(0)) >>> 0;
             const won = (p.money?.currency || p.money?.bank?.accounts?.[0]?.currency) === 'KRW', num = (v, lo, hi) => { const n = Number(v); return finite(n) && n >= lo && n <= hi ? n : null; };
-            // reviews and a rating as the app's lists really run: most shops tens to a thousand or so, one in five a big
-            // name with thousands; a small shop may still hold a 5.0, a big one sits at 4.5–4.9 (never the model's: a 9.6 or a 4544 would show)
-            const h3 = (h >>> 3), h7 = (h >>> 7), reviews = h % 5 === 0 ? 2000 + h3 % 6001 : 30 + h3 % 1470;
-            const rating = Math.round((reviews < 100 ? 4.4 + h7 % 7 / 10 : reviews < 2000 ? 4.3 + h7 % 7 / 10 : 4.5 + h7 % 5 / 10) * 10) / 10;
-            const shop = { name: row.shop, ko: txt(ns.ko, 60), cuisine: txt(ns.cuisine, 30), rating, reviews, fee: finite(Number(ns.fee)) ? Math.abs(Number(ns.fee)) : row.fee,
-                minOrder: num(ns.minOrder, 0, 1e7) ?? (won ? 10000 + (h % 3) * 2500 : 10 + (h % 3) * 2.5), eta: txt(ns.eta, 12) || `${20 + (h % 3) * 5}–${30 + (h % 3) * 5}`, fav: false, menu,
+            const st = shopStats(row.shop, won);
+            const shop = { name: row.shop, ko: txt(ns.ko, 60), cuisine: txt(ns.cuisine, 30), rating: st.rating, reviews: st.reviews, fee: finite(Number(ns.fee)) ? Math.abs(Number(ns.fee)) : row.fee,
+                minOrder: num(ns.minOrder, 0, 1e7) ?? st.minOrder, eta: txt(ns.eta, 12) || st.eta, fav: false, menu,
                 id: `sync:${e.id}:s${k}`, ev: e.id, sourceIndex: e.at };
             shops.push(shop);
             out.effects.push({ type: 'push', path: 'delivery.shops', item: structuredClone(shop) });
@@ -442,6 +437,15 @@ export function unpayOrders(m, p) {
 // when an order came: "21:30" alone is on the order's day
 // the delivery app a phone pays through, by the look its delivery app has (else by where the owner lives)
 export const dlvApp = p => ((p.delivery?.look || (String(p.lives || p.country || '').toUpperCase() === 'KR' ? 'baemin' : '')) === 'baemin' ? '배달의민족' : 'Uber Eats');
+// a shop's numbers the model doesn't write, made up from its name (the same each time): reviews and a rating as the app's
+// lists really run (most shops tens to a thousand or so, one in five a big name with thousands; a small shop may still
+// hold a 5.0, a big one sits at 4.5–4.9: never the model's 9.6 or 4544), a minimum order, a fee and a time
+export function shopStats(name, won) {
+    let h = 7; for (const c of String(name || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    const h3 = (h >>> 3), h7 = (h >>> 7), reviews = h % 5 === 0 ? 2000 + h3 % 6001 : 30 + h3 % 1470;
+    const rating = Math.round((reviews < 100 ? 4.4 + h7 % 7 / 10 : reviews < 2000 ? 4.3 + h7 % 7 / 10 : 4.5 + h7 % 5 / 10) * 10) / 10;
+    return { rating, reviews, minOrder: won ? 10000 + (h % 3) * 2500 : 10 + (h % 3) * 2.5, fee: won ? [0, 1500, 2500, 3000, 3500][h % 5] : [0, 0.99, 1.49, 1.99, 2.49][h % 5], eta: `${20 + (h % 3) * 5}–${30 + (h % 3) * 5}` };
+}
 const arrivedAt = o => { const a = String(o.arrived || ''); return /^\d{2}-\d{2}/.test(a) ? a : /^\d{2}:\d{2}$/.test(a) ? `${String(o.time || '').slice(0, 5)} ${a}` : o.time; };
 export function payOrders(m, p, year) {
     if (!p.money || !p.delivery) return 0;

@@ -10,7 +10,7 @@ import { saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
 import { arr, trackerWeather, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
-import { dlvTotal, payOrders, unpayOrders } from './phonesyncmoney.js';
+import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, dayGap, fileOf, nightsToDays, parseWeather, weatherFrom } from './phonesynclife.js';
 import { exclusive } from './phonesync.js';
 import { recentTrackers } from './scenes.js';
@@ -108,9 +108,10 @@ YOU GET
 
 SHOPS
 - Up to 5 shops the owner orders from, the kind found where they live, named as they would be there. 3 or 4 dishes each.
+- "nearby": 5 to 8 more shops around them they haven't ordered from, each with only the one dish it is known for. The app works out their ratings, fees and times.
 
 ORDERS
-- A delivery the story shows or a scene plainly implies gets its "ev". Besides those, 2 to 5 everyday orders from the last weeks, the character's own: late and alone, the same dish again, food for two.
+- A delivery the story shows or a scene plainly implies gets its "ev". Besides those, 4 to 8 everyday orders from the last weeks, the character's own: late and alone, the same dish again, food for two.
 - Never an order to explain a scene, and no big event (a party, a guest, a move) the story doesn't have.
 - People: only people the story has. No order later than the story's now.
 - The same place always has the same address. "tip" only where tipping is the custom; elsewhere 0.
@@ -136,6 +137,7 @@ JSON (one object, nothing before or after it)
 {
   "shops": [{ "name", "ko", "cuisine", "rating", "reviews", "fee", "minOrder", "eta": like "25–35", "fav": true or false,
               "menu": [{ "name", "ko", "desc", "price", "top": true for the shop's best-known dish, "pic": { "base", "with": [], "size": "regular" | "large", "set": [] } }] }],
+  "nearby": [{ "name", "ko", "cuisine", "dish": { "name", "ko", "price", "pic" } }],
   "orders": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic" }], "fee", "tip", "discount",
                "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address": short,
                "left": where the courier left it, or "", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery": true or false, "for": how many people,
@@ -230,6 +232,18 @@ export function parseDelivery(raw, accounts = [], tx = [], now = '') {
         cart,
     };
 }
+// 동네 가게: shops nearby the owner hasn't ordered from, the one dish each is known for; their numbers are the app's
+export function nearbyShops(raw, shops, won) {
+    const have = new Set(shops.map(s => s.name.toLowerCase()));
+    return arr(raw?.nearby).map(s => {
+        const name = line(s?.name, 60);
+        if (!name || have.has(name.toLowerCase())) return null;
+        have.add(name.toLowerCase());
+        const d = s?.dish && typeof s.dish === 'object' ? s.dish : {}, m = { name: line(d.name, 60), ko: ko(d.ko), desc: '', price: num(d.price) ?? 0, top: true }, pic = m.name ? dishPic(d.pic, m, true) : null;
+        const st = shopStats(name, won);
+        return { name, ko: ko(s?.ko), cuisine: line(s?.cuisine, 30), rating: st.rating, reviews: st.reviews, fee: st.fee, minOrder: st.minOrder, eta: st.eta, fav: false, nearby: true, menu: m.name ? [pic ? { ...m, pic } : m] : [] };
+    }).filter(Boolean).slice(0, 8);
+}
 // what an order came to (the model never writes it)
 export const orderTotal = dlvTotal;
 
@@ -265,8 +279,10 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
     const tx = (p.money?.tx || []).filter(t => !String(t.id).startsWith('dlv-') && !t.delivery);
     const money = accounts.length ? `[MONEY NOW]\n${JSON.stringify({ accounts: accounts.map(a => ({ last4: a.last4, kind: a.kind, name: a.name, currency: a.currency })), tx: tx.slice(-20).map(t => ({ id: t.id, account: t.account, time: t.time, who: t.who, amount: t.amount })) })}` : '';
     const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(storyDays(m, p)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money], { profile: p.financeProfile, story: CHAT_TOKENS.apps });
-    const out = await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 9000, effort: 'low' });
-    const d = parseDelivery(jsonOf(out), accounts, tx, storyNow(p) || p.now || ''), at = storyNow(p) || p.now || '';
+    const out = await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 12000, effort: 'low' });
+    const raw = jsonOf(out), d = parseDelivery(raw, accounts, tx, storyNow(p) || p.now || ''), at = storyNow(p) || p.now || '';
+    // the shops nearby go after the ones they order from (the app's 동네 인기 가게)
+    d.shops = [...d.shops, ...nearbyShops(raw, d.shops, (p.money?.currency || accounts[0]?.currency) === 'KRW')];
     // nothing after the story's now
     if (/^\d{2}-\d{2}/.test(at)) d.orders = d.orders.filter(o => !later(o.time, at));
     if (p.delivery) unpayOrders(m, p);
