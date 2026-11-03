@@ -386,7 +386,7 @@ const later = (t, now) => { const g = dayGap(String(now).slice(0, 5), String(t).
 export const fillLife = (m, p) => exclusive('fill', async () => {
     const now = weatherNow(), days = storyDays(m, p);
     const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(days),
-        now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps });
+        now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.life });
     const out = await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' });
     const life = parseLife(jsonOf(out), now, days.at(-1)?.day || '');
     // a booking the wallet holds is drawn from it: its file needs no line of its own

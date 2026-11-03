@@ -434,8 +434,9 @@ const lastEnd = m => Math.max(-1, ...parseSections(String(m.text || '')).filter(
 const BEFORE_MAX = 30_000;
 const ARCHIVE_MAX = 120_000; // characters: the state at the end, and as many of the newest sections as fit
 // a chat with no archive yet: its own messages stand in for it, from the start, the newest kept when there are too many
-// (tokens: making a phone reads up to 70,000, the everyday apps 20,000; the bank, investments and device keep the recent chat)
-export const CHAT_TOKENS = { phone: 70_000, apps: 20_000 };
+// (tokens: making a phone reads up to 70,000; the life fill 50,000, its files and saved cities reaching far back; the other
+// everyday apps 30,000; the bank, investments and device keep the recent chat)
+export const CHAT_TOKENS = { phone: 70_000, life: 50_000, apps: 30_000 };
 function chatStory(budget) {
     const rows = recentForCheck(1e9), out = [];
     for (let i = rows.length - 1, size = 0; i >= 0; i--) { const t = estTok(rows[i]); if (out.length && size + t > budget) break; out.unshift(rows[i]); size += t; }
