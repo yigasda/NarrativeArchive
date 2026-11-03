@@ -276,10 +276,12 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         out.legs.push({ key, amount: size, state: 'applied', rec: id });
     });
 
+    // two orders or tickets in one answer are two (two scarves, two seats), never the second taken for the first
+    const madeNow = new Set();
     const records = (path, rows, make, same) => rows.forEach((x, k) => {
         if (!bankOn) return;
         const box = p.money[path] ||= [];
-        const old = x.already && box.find(o => o.id === x.already) || box.find(o => same(o, x) && !fresh(x, o, e.at));
+        const old = x.already && box.find(o => o.id === x.already) || box.find(o => !madeNow.has(o) && same(o, x) && !fresh(x, o, e.at));
         if (!old && x.occurrence === 'again') return;
         if (old) {
             // an order's status only moves forward; a pass's is free text ("used", "checked in", "cancelled"): whatever it says now
@@ -295,7 +297,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         }
         const row = { ...make(x), id: `sync:${e.id}:${path[0]}${k}`, ev: e.id, storyEvent: e.id, sourceIndex: e.at };
         if (path === 'orders' && row.status !== 'cancelled' && row.price && x.paid !== false && !x.gift && !list(mo.moves).some(y => Number(y.amount) < 0)) out.notes.push(`${row.item}: 주문은 넣었지만 결제가 없었어요`);
-        box.push(row);
+        box.push(row); madeNow.add(row);
         out.effects.push({ type: 'push', path: `money.${path}`, item: structuredClone(row) });
         out.changes.push({ app: path === 'orders' ? '쇼핑' : '지갑', label: row.item || row.by, amount: null });
     });
@@ -303,7 +305,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const price = Number(x.price);
         if (!txt(x.item) || !txt(x.shop)) fail('주문의 가게나 물건을 확인하지 못했어요');
         return { shop: txt(x.shop, 60), item: txt(x.item), ko: txt(x.ko), option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5) || (['ordered', 'shipped', 'on the way'].includes(x.status) || !ORDER.includes(x.status) ? plusDays(date, 2 + [...txt(x.shop)].reduce((n, c) => (n + c.charCodeAt(0)) % 3, 0)) : ''), arrived: '', gift: giftOf(x.gift), ...(x.paid === false ? { paid: false } : {}), ...(guess ? { amountFrom: 'guess' } : {}) };
-    }, (o, x) => samePlace(o.shop, x.shop) && samePlace(o.item, x.item) && near(o.time, date));
+    }, (o, x) => samePlace(o.shop, x.shop) && samePlace(o.item, x.item) && near(o.time, date) && !(o.option && txt(x.option, 60) && !samePlace(o.option, txt(x.option, 60))));
     records('passes', list(mo.passes), x => {
         if (!txt(x.by)) fail('티켓 정보를 확인하지 못했어요');
         return { kind: ['flight', 'train', 'hotel', 'event', 'other'].includes(x.kind) ? x.kind : 'other', by: txt(x.by, 60), from: txt(x.from, 40), to: txt(x.to, 40), date: when(x.date).slice(0, 5) || date, time: hhmm(x.time), seat: txt(x.seat, 12), gate: txt(x.gate, 12), no: txt(x.no, 24), status: txt(x.status, 30) };

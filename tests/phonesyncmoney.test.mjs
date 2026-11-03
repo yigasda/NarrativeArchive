@@ -480,3 +480,15 @@ test('run34B: an account opened with money moved into it in the same event: the 
     assert.equal(b.p.money.tx.find(t => t.memo === '개설 입금').amount, 500);
     assert.equal(b.bank(), 1000);
 });
+
+test('run36: two orders of the same item in one answer (two scarves, two colours) are two orders; a different option is another order later too', () => {
+    const { m, p } = setup();
+    p.money.orders = [];
+    applyMoney(m, p, ev('scarves', 5, '10-26', { moves: [{ account: '2222', amount: -2850, who: 'Hermès', kind: 'card', occurrence: 'new' }],
+        orders: [{ shop: 'Hermès', item: 'Seidentuch', option: 'Bordeaux', qty: 1, price: 950, occurrence: 'new' }, { shop: 'Hermès', item: 'Seidentuch', option: 'Camel', qty: 1, price: 950, occurrence: 'new' }] }), opts());
+    assert.deepEqual(p.money.orders.map(o => o.option), ['Bordeaux', 'Camel']);
+    // told again from a later message: still the same two, not four
+    applyMoney(m, p, ev('scarves-2', 7, '10-26', { orders: [{ shop: 'Hermès', item: 'Seidentuch', option: 'Camel', qty: 1, price: 950, status: 'shipped', occurrence: 'again' }] }), opts());
+    assert.equal(p.money.orders.length, 2);
+    assert.equal(p.money.orders[1].status, 'shipped');
+});
