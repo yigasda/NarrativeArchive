@@ -1,7 +1,7 @@
 {
   "_": "css/*.css together may not grow past these; lower them as each window is rewritten.",
-  "lines": 7965,
-  "important": 1102,
+  "lines": 7727,
+  "important": 1101,
   "notx": 98,
   "bothThemes": 127,
   "allowTailVersions": true

@@ -46,12 +46,6 @@
 .na_ph_swipe { margin-top: 12px; font-size: 12px; opacity: 0.7; }
 /* app icons */
 .na_ph_app { position: relative; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; flex: none; color: #fff; }
-.na_ph_app.a_msg, .na_ph_app.a_call { background: linear-gradient(#5bd96a, #22b14c); }
-.na_ph_app.a_photo { background: linear-gradient(135deg, #ffb84d, #ff5f8a 55%, #7b6cff); }
-.na_ph_app.a_note { background: linear-gradient(#ffe27a, #ffc93c); color: #8a5a00; }
-.na_ph_app.a_search { background: linear-gradient(#5aa8ff, #2f6bff); }
-.na_ph_app.a_cal { background: #fff; color: #ef3b32; }
-.na_ph_app.a_map { background: linear-gradient(135deg, #7ee0a1, #3fb3e8); }
 .na_ph_app em { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: #ff3b30; color: #fff; font-style: normal; font-size: 11.5px; font-weight: 600; line-height: 20px; text-align: center; }
 /* home */
 .na_ph_home { min-height: 100%; display: flex; flex-direction: column; padding: 18px 18px 0; }
