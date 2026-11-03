@@ -11,6 +11,7 @@ import { shiftDay, weatherNow } from './phonelife.js';
 import { apart, cityAt as cityOfPlace, mirrorHome, overlayNow } from './phonesynclife.js';
 import { decimalOf, fmtMoney, localeOf } from './phonemoney.js';
 import { nameKey } from './people.js';
+import { getMeta } from './core.js';
 import { esc } from './util.js';
 import { DOT_C, DOT_R, DOTS, MAP_BOT, MAP_H, MAP_TOP, MAP_W, TZ_AT } from './worldmap.js';
 import { CAT, dishSvg, guessPic } from './phonefood.js';
@@ -923,9 +924,27 @@ function hereNow(lf) {
 // a saved city as the screens draw it: the one the owner is in carries the "here" weather (a newer status line included)
 function cityView(p, lf, c) {
     const h = hereNow(lf);
-    if (cityOfPlace(h.place, lf.weather.cities) !== c) return c;
+    if (cityOfPlace(h.place, lf.weather.cities) !== c) return shared(p, lf, c);
     const w = mirrorHome({ here: h, cities: [structuredClone(c)] });
     return w.cities[0];
+}
+// the same city on another phone in this chat: one weather for it, not two guesses.
+// Another phone whose owner is in the city (its 현재 위치 names it) lends its whole weather (hours, days, tiles), when that
+// weather is the city's today; else the phone whose weather was told last lends its saved city's numbers. Nothing is
+// written: each phone keeps its own, and the next reflection of either one shows at once
+const stamp = l => `${l.weather.here.date || ''} ${l.weather.here.time || ''}`;
+function shared(p, lf, c) {
+    let others = [];
+    try { others = Object.values(getMeta()?.phones || {}).filter(o => o && o !== p && o.owner !== p.owner && o.life?.weather); } catch { others = []; }
+    if (!others.length) return c;
+    const t = cityTime(p, lf, c), day = t.dayShift === '내일' ? shiftDay(t.date, 1) : t.dayShift === '어제' ? shiftDay(t.date, -1) : t.date;
+    const there = others.map(o => ({ o, l: L(o) })).map(x => ({ ...x, h: hereNow(x.l) })).filter(x => x.h.place && cityOfPlace(x.h.place, [c]) && x.h.date === day).sort((a, b) => stamp(b.l).localeCompare(stamp(a.l)))[0];
+    if (there) { const w = mirrorHome({ here: there.h, cities: [structuredClone(c)] }); return { ...w.cities[0], src: { p: there.o, h: there.h, l: there.l } }; }
+    const mine = stamp(lf), saved = others.map(o => ({ l: L(o) })).map(x => ({ ...x, c2: x.l.weather.cities.find(y => cityOfPlace(y.name, [c]) || cityOfPlace(c.name, [y])) })).filter(x => x.c2 && stamp(x.l) > mine).sort((a, b) => stamp(b.l).localeCompare(stamp(a.l)))[0];
+    if (!saved) return c;
+    const out = structuredClone(c);
+    for (const k of ['cond', 'temp', 'hi', 'lo', 'feels', 'humidity', 'dew', 'rainNext', 'wind', 'gust', 'dir', 'sunrise', 'sunset', 'visibility']) if (saved.c2[k] !== null && saved.c2[k] !== undefined && saved.c2[k] !== '') out[k] = saved.c2[k];
+    return out;
 }
 const hereFull = (p, lf) => { const h = hereNow(lf); return { ...h, tiles: fillTiles(h, `${h.date}:${h.place}`, h.date || now5(p), hereZone(lf, p, h.place)) }; };
 // what the tiles say, from their numbers
@@ -1083,7 +1102,8 @@ function dayCurve(c, lm, col) {
 export function cityScreen(p, now, id) {
     const lf = L(p), c0 = lf?.weather.cities.find(x => x.id === id), c = c0 && cityView(p, lf, c0);
     if (!c) return weatherScreen(p, now);
-    const t = cityTime(p, lf, c), h = { temp: c.temp, hi: c.hi, lo: c.lo, cond: c.cond, time: t.time, line: '', ko: '', hours: cityHours(c, t), days: [] };
+    const t = cityTime(p, lf, c), src = c.src, today = src ? now5(src.p).slice(0, 5) : '';
+    const h = src ? { ...src.h, temp: c.temp, hi: c.hi, lo: c.lo, cond: c.cond, time: t.time, today, hours: hereHours({ ...src.h, today }, t.time) } : { temp: c.temp, hi: c.hi, lo: c.lo, cond: c.cond, time: t.time, line: '', ko: '', hours: cityHours(c, t), days: [] };
     h.tiles = fillTiles({ ...h, tiles: { sunset: c.sunset || '', sunrise: c.sunrise || '', rain24: null, rainNext: c.rainNext ?? null, feels: c.feels ?? null, wind: c.wind ?? null, gust: c.gust ?? null, humidity: c.humidity ?? null, dew: c.dew ?? null, visibility: c.visibility ?? null, dir: c.dir || '' } }, `${c.name}:${now5(p).slice(0, 5)}`, now5(p), c.tz);
     // a city shows no visibility tile: its detail already carries today's temperatures, and seven tiles leave one alone
     h.tiles.visibility = null;
