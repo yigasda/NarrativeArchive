@@ -32,6 +32,7 @@ def scenes_for(body):
     return ','.join(n for n in names if not n.startswith('phone-')) or ALL
 def run(cmd, **kw): return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, **kw)
 state = json.load(open(STATE)) if os.path.exists(STATE) else {}
+lines = open(CSS).read().split('\n')
 def strip(block): return [l if (PH.search(l) or l.startswith('/*')) else l.replace(' !important', '').replace('!important', '').replace(':not(#na_x)', '') for l in block]
 def verify(label, scenes):
     open(CSS, 'w').write('\n'.join(lines)); open(ST_EXT, 'w').write('\n'.join(lines)); run(['rm', '-rf', os.path.join(OUT, label)])
@@ -67,7 +68,6 @@ if grouped:
         json.dump(state, open(STATE, 'w'), ensure_ascii=False, indent=1); open(CSS, 'w').write('\n'.join(lines)); open(ST_EXT, 'w').write('\n'.join(lines))
     for owner in order: settle(owner, groups[owner])
     print('done; !important now', open(CSS).read().count('!important'), '· :not(#na_x)', open(CSS).read().count(':not(#na_x)')); sys.exit(0)
-lines = open(CSS).read().split('\n')
 heads = [i for i, l in enumerate(lines) if l.startswith('/*')] + [len(lines)]
 done = 0
 for h in range(len(heads) - 1):
