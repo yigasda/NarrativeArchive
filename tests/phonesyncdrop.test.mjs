@@ -523,3 +523,14 @@ test('run35: a deleted text is not matched to an emoji-only text, nor to a short
     assert.equal(ms.filter(x => x.text === '👍').length, 1);
     assert.equal(ms.find(x => x.text === '👍').deleted, true);
 });
+
+test('run35: a plan written as called off with the same plan new on another day is one plan moved', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'dinner saturday 7?'), say('Ren', 'sure')]);
+    await run(c.m, { now: '02-01 13:00', events: [{ id: 'plan', at: 2, quote: 'dinner saturday', summary: '약속', date: '02-01', time: '12:00', phone: { events: [{ title: '루미 저녁', date: '02-06', time: '19:00' }] } }] });
+    T.chat.push(say('Mara', 'can we do sunday instead'));
+    await run(c.m, { now: '02-02 09:00', events: [{ id: 'move', at: 3, quote: 'sunday instead', summary: '옮김', date: '02-02', time: '08:00',
+        phone: { events: [{ title: '루미 저녁', date: '02-06', cancelled: true }, { title: '루미에서 저녁', date: '02-07', time: '19:00' }] } }] });
+    const live = c.p.events.filter(e => !e.cancelled);
+    assert.equal(c.p.events.length, 1);
+    assert.deepEqual(live.map(e => [e.date, e.time]), [['02-07', '19:00']]);
+});

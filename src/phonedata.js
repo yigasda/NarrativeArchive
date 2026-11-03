@@ -341,11 +341,19 @@ function mergePhone(p, add, { keepAll = false } = {}) {
     // a plan told again with its time now ("dinner 11-03" then "dinner 11-03 19:00"): the same event, given its time
     for (const e of add.events || []) { const o = (p.events || []).find(x => !x.time && e.time && x.date === e.date && x.title.toLowerCase() === e.title.toLowerCase()); if (o) o.time = e.time; }
     // a plan moved ("was": its old date) or called off ("cancelled"): the item there changes, nothing is added
-    add.events = (add.events || []).filter(e => {
+    // the plan it means: the same title, or (moved) the one on its old day whose words mostly match ("토요일 저녁 약속" → "일요일 저녁 약속")
+    const words = v => new Set(String(v || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 2));
+    const alike = (a, b) => { const A = words(a), B = words(b), n = [...A].filter(w => B.has(w)).length; return n >= Math.ceil(Math.min(A.size, B.size) * 0.5) && n > 0; };
+    const sameTitle = (a, b) => lk(a) === lk(b) || lk(a).includes(lk(b)) || lk(b).includes(lk(a)) || alike(a, b);
+    // a plan written as called off and, alongside it, the same plan on another day (run35: Saturday off, Sunday new):
+    // one plan moved, not one gone and a second made
+    for (const c of (add.events || []).filter(e => e.cancelled)) {
+        const n = (add.events || []).find(e => !e.cancelled && !e.was && e.date && e.date !== c.date && sameTitle(e.title, c.title));
+        const old = c.date || (p.events || []).find(x => !x.cancelled && sameTitle(x.title, c.title))?.date || '';
+        if (n && old && (p.events || []).some(x => !x.cancelled && x.date === old)) { n.was = old; c.dropped = true; }
+    }
+    add.events = (add.events || []).filter(e => !e.dropped).filter(e => {
         if (!e.was && !e.cancelled) return true;
-        // the plan it means: the same title, or (moved) the one on its old day whose words mostly match ("토요일 저녁 약속" → "일요일 저녁 약속")
-        const words = v => new Set(String(v || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 2));
-        const alike = (a, b) => { const A = words(a), B = words(b), n = [...A].filter(w => B.has(w)).length; return n >= Math.ceil(Math.min(A.size, B.size) * 0.5) && n > 0; };
         const live = (p.events || []).filter(x => !x.cancelled);
         const o = live.find(x => (lk(x.title) === lk(e.title) || lk(x.title).includes(lk(e.title)) || lk(e.title).includes(lk(x.title))) && (x.date === e.was || x.date === e.date || !e.was))
             || (e.was ? live.filter(x => x.date === e.was).find(x => alike(x.title, e.title)) || (live.filter(x => x.date === e.was).length === 1 ? live.find(x => x.date === e.was) : null) : live.find(x => alike(x.title, e.title) && x.date === e.date));
