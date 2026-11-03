@@ -22,7 +22,7 @@ def kind_compound(base):
 def kind(part):
     sj = subject(part)
     if '::' in sj: return None
-    if re.search(r'type="?(checkbox|radio)', sj): return None
+    if re.search(r'type="?(checkbox|radio)', re.sub(r':not\((?:[^()]|\([^()]*\))*\)', '', sj)): return None
     inner = []
     for m in re.finditer(r':is\(', sj):
         depth, i = 1, m.end()
@@ -73,9 +73,10 @@ for f, a, b, ctx, sel, body, t in walk():
     if '/5' in f.replace('\\', '/').split('/css/')[-1][:2] or os.path.basename(f)[0] == '5': continue
     if '@keyframes' in ctx: continue
     parts = split_top(sel.strip(), ',')
-    kinds = [kind(p) if not PHONE.search(p) else None for p in parts]
+    kinds = [kind(p) if not PHONE.search(re.sub(r':not\(:has\(\.na_phone\)\)', '', p)) else None for p in parts]
     if not any(kinds): continue
     if 'var(--c-' in body and '!important' in body and '--c-bg, transparent' in body: continue  # the shield itself
+    if re.search(r'(^|;)\s*--c-', body): continue  # already moved
     decls = split_top(body, ';')
     conv = []; touched = False
     for d in decls:
