@@ -107,11 +107,11 @@ YOU GET
 - MONEY NOW (sometimes): the owner's bank accounts and cards, by their last 4 digits, and the bank's recent transactions with their ids.
 
 SHOPS
-- Up to 5 shops the owner orders from, the kind found where they live, named as they would be there. 3 or 4 dishes each.
+- 5 to 7 shops the owner orders from, the kind found where they live, named as they would be there. 3 or 4 dishes each.
 - "nearby": 5 to 8 more shops around them they haven't ordered from, each with only the one dish it is known for. The app works out their ratings, fees and times.
 
 ORDERS
-- A delivery the story shows or a scene plainly implies gets its "ev". Besides those, 4 to 8 everyday orders from the last weeks, the character's own: late and alone, the same dish again, food for two.
+- A delivery the story shows or a scene plainly implies gets its "ev". Besides those, 4 to 8 everyday orders from the last weeks, spread over those shops (a favourite or two more often), the character's own: late and alone, the same dish again, food for two.
 - Never an order to explain a scene, and no big event (a party, a guest, a move) the story doesn't have.
 - People: only people the story has. No order later than the story's now.
 - The same place always has the same address. "tip" only where tipping is the custom; elsewhere 0.
@@ -225,7 +225,7 @@ export function parseDelivery(raw, accounts = [], tx = [], now = '') {
     const cart = raw.cart && arr(raw.cart.items).length ? { shop: line(raw.cart.shop, 60), items: arr(raw.cart.items).map(dish).filter(x => x.name).slice(0, 8), noteShop: line(raw.cart.noteShop, 120), noteShopKo: ko(raw.cart.noteShopKo), noteRider: line(raw.cart.noteRider, 120), noteRiderKo: ko(raw.cart.noteRiderKo) } : null;
     return {
         shops: arr(raw.shops).map(s => ({ name: line(s?.name, 60), ko: ko(s?.ko), cuisine: line(s?.cuisine, 30), rating: num(s?.rating), reviews: int(s?.reviews, 0, 999999), fee: num(s?.fee) ?? 0, minOrder: num(s?.minOrder), eta: line(s?.eta, 12), fav: yes(s?.fav),
-            menu: menuOf(s?.menu, 4) })).filter(s => s.name).slice(0, 5),
+            menu: menuOf(s?.menu, 4) })).filter(s => s.name).slice(0, 7),
         orders: arr(raw.orders).map(o => withEv({ shop: line(o?.shop, 60), items: arr(o?.items).map(dish).filter(x => x.name).slice(0, 10), fee: num(o?.fee) ?? 0, tip: num(o?.tip) ?? 0, discount: Math.abs(num(o?.discount) ?? 0),
             mode: pick(o?.mode, ['delivery', 'pickup'], 'delivery'), time: when(o?.time), arrived: when(o?.arrived) || hhmm(o?.arrived), to: line(o?.to, 40) || 'home', address: line(o?.address, 80), left: line(o?.left, 60),
             noteShop: line(o?.noteShop, 120), noteShopKo: ko(o?.noteShopKo), noteRider: line(o?.noteRider, 120), noteRiderKo: ko(o?.noteRiderKo), noCutlery: yes(o?.noCutlery), for: int(o?.for, 1, 30) ?? 1,
