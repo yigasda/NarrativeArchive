@@ -2481,7 +2481,7 @@ body:not(.na_darkui) .na_ap3 .na_v2_card { border-color: transparent; box-shadow
 /* light: as the settings panel — the window stays cream, the cards a touch warmer than its white paper (#FCF6F1), the selected switch white */
 body:not(.na_darkui) .na_ap3 .na_v2_card { background: #FCF6F1; }
 body:not(.na_darkui) .na_ap3 .na_ap3_seg button.on { background: #FFFFFF; }
-body:not(.na_darkui) .na_ap3 :is(.na_ap3_fbody, .na_ap3_fdock) { background: #FCF6F1; }
+body:not(.na_darkui) .na_ap3 .na_ap3_fbody { background: #FCF6F1; }
 /* the draft card */
 .na_ap3_sum { display: flex; flex-direction: column; gap: 10px; padding: 14px; margin-top: 14px; }
 .na_ap3_head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
@@ -2535,6 +2535,7 @@ body:is(.na_darkui, :not(.na_darkui)) .na_ap3 .na_ap3_chip.on { background: var(
 .na_ap3 .na_apf_foot small { flex: 1; min-width: 0; font-size: 12.5px; color: var(--na-sub, var(--na-dim)); }
 .na_ap3_raw { display: inline-flex !important; align-items: center; gap: 6px; margin: 0; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; background: var(--na-card2); color: var(--na-mute); }
 .na_ap3_raw input { position: absolute; opacity: 0; pointer-events: none; }
+.na_ap3_raw { position: relative; }
 .na_ap3 .na_apf_foot .na_ap3_raw { flex: none; }
 .na_ap3_raw .na_ap3_tick { display: none; }
 .na_ap3_raw:has(input:checked) .na_ap3_tick { display: inline-flex; }
@@ -2558,7 +2559,7 @@ body.na_darkui .na_ap3_ti.b { background: #2E2E34; color: #9DBCE6; }
 /* dark (시안 A): a near-black warm window, darker cards with a faint top light, no tinted fills — the parts are
    neutral and the colour is in a thin line or the text: my request edged in orange, replies with a coloured bar */
 body.na_darkui dialog.popup.na_ap3_dlg:has(.na_ap3):not(#na_x) { background: #17171A !important; }
-body.na_darkui .na_ap3 .na_v2_card, body.na_darkui .na_ap3 :is(.na_ap3_fbody, .na_ap3_fdock) { background: #232328; border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+body.na_darkui .na_ap3 .na_v2_card, body.na_darkui .na_ap3 .na_ap3_fbody { background: #232328; border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
 body.na_darkui .na_ap3_bar { background: linear-gradient(rgba(28, 23, 20, 0), #17171A 14px); }
 body.na_darkui .na_ap3 :is(.na_ly_ask, .na_ap3_seg, .na_ap3_raw) { background: #2E2E34; }
 body:is(.na_darkui) .na_ap3 .na_ap3_chip { background: #2E2E34 !important; }
@@ -2595,10 +2596,12 @@ body.na_darkui .na_ap3_ai.none { border-left-color: #5E5E66; }
 .na_ap3_fhead b span { margin-left: 6px; padding: 2px 9px; border-radius: 999px; font-size: 12px; vertical-align: middle; background: var(--na-ok-soft); color: var(--na-ok); }
 .na_ap3_fhead small { font-size: 12.5px; color: var(--na-sub, var(--na-dim)); }
 .na_ap3_fbody { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 10px; border-radius: 18px; background: var(--na-card); }
-.na_ap3_fdock { margin: 10px -4px 0; padding: 12px 12px 0; border-radius: 22px 22px 0 0; background: var(--na-card); box-shadow: 0 -10px 24px rgba(70, 52, 40, 0.08); }
-.na_ap3_fdock .na_apf { padding: 0; background: transparent; box-shadow: none; border: 0; margin: 0; }
+.na_ap3_fdock { margin: 12px 0 0; padding: 0; background: transparent; } /* no sheet: the pill, chips and buttons sit on the window (3.169.69) */
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_ap3 .na_ap3_fdock .na_apf.na_v2_card:not(#na_x) { padding: 0; background: transparent; box-shadow: none; border: 0; margin: 0; }
 .na_ap3_fdock .na_ap3_log { max-height: 128px; overflow-y: auto; }
+body:not(.na_darkui) .na_ap3 .na_ap3_fdock .na_ly_ask { background: #FCF6F1; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); } /* on the window itself, the pill needs its own light (as 섹션 버전's) */
 .na_ap3_fdock .na_ap3_bar { position: static; margin: 10px 0 0; padding: 0 0 12px; background: none; }
+.na_ap3_fdock .na_ap3_bar .na_ap3_cancel { padding: 0 18px 0 0; justify-content: flex-start; text-align: left; } /* 돌아가기 글자를 위 줄 왼쪽 끝에 맞춤 (3.169.71) */
 
 /* health */
 .na_hl2 .na_health_body { gap: 14px; }
@@ -3811,6 +3814,7 @@ body.na_darkui .na_launch_tabs { background: #232328; }
     background: transparent !important; background-image: none !important; box-shadow: none !important; color: inherit !important; font: inherit; font-size: 14px !important;
 }
 .na_popup .na_ly_ask input.na_ly_askq::placeholder { color: var(--na-dim) !important; opacity: 1 !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ly_ask input.na_ly_askq:is(*, :hover, :focus, :focus-visible):not(#na_x) { background: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: none !important; } /* the pill is the only box (3.169.69) */
 .na_ly_askgo { flex: none; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 13px; background: var(--na-accent); color: var(--na-onaccent, #fff); cursor: pointer; }
 .na_ly_askgo:disabled { opacity: 0.7; cursor: wait; }
 
@@ -4074,7 +4078,7 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_st_quick::-webkit-scrollbar { display: none; }
 .na_st_qk { flex: none; border: 0; border-radius: 999px; padding: 6px 12px; background: var(--st-w); color: var(--st-ink) !important; font-size: 0.86em !important; white-space: nowrap; box-shadow: 0 1px 3px rgba(46, 36, 30, 0.08), inset 0 0 0 1px var(--st-line); cursor: pointer; }
 .na_st_qk:disabled { opacity: 0.45; cursor: default; }
-.na_st_inrow { display: flex; align-items: flex-end; gap: 8px; }
+.na_st_inrow { display: flex; align-items: flex-end; gap: 8px; padding: 0 2px; } /* same 2px inset as the chip row, so the + and the field's ends don't touch the window's clip edge (3.169.73) */
 .na_st_plus { position: relative; flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--st-bub); color: var(--st-ink) !important; display: grid; place-items: center; cursor: pointer; }
 .na_st_plus i { position: absolute; top: 1px; right: 1px; width: 10px; height: 10px; border-radius: 50%; background: var(--st-acc2); border: 2px solid var(--st-bg); }
 .na_st_plus i[hidden] { display: none; }
@@ -4086,6 +4090,7 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
     color: var(--st-ink) !important; font: inherit; font-size: 0.95em; line-height: 1.4; resize: none; overflow-y: auto; scrollbar-width: none; }
 .na_st .na_st_field textarea.na_st_q::-webkit-scrollbar { display: none; }
 .na_st .na_st_field textarea.na_st_q::placeholder { color: var(--st-dim) !important; opacity: 1; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup.na_st .na_st_field textarea.na_st_q:is(*, :hover, :focus, :focus-visible, :disabled):not(#na_x) { background: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: none !important; } /* the field pill is the only box: no theme fill or edge inside it (3.169.73) */
 .na_st_send { flex: none; width: 30px; height: 30px; border: 0; border-radius: 50%; background: var(--st-acc); color: #fff !important; display: grid; place-items: center; cursor: pointer; }
 .na_st_send:disabled { opacity: 0.5; cursor: wait; }
 .na_st_menu { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 5; width: min(300px, 100%); padding: 6px; border-radius: 16px; background: var(--st-w); box-shadow: 0 12px 32px rgba(46, 36, 30, 0.22), inset 0 0 0 1px var(--st-line); display: flex; flex-direction: column; }
@@ -5361,8 +5366,8 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax_fxcal i { height: 30px; border-radius: 9px; display: grid; place-items: center; font: 600 12px 'Inter Tight', -apple-system, sans-serif; font-style: normal; color: #a3aab4; }
 .ax_fxcal i.p { background: #1d3461; color: #fff; } .ax_fxcal i.d { background: #e2e9f5; color: #1d3461; }
 .ax_fxcal i.t { box-shadow: inset 0 0 0 1.5px #1d3461; color: #1d3461; } .ax_fxcal i.p.t { box-shadow: inset 0 0 0 1.5px #1d3461, inset 0 0 0 3px #fff; }
-.ax_dd { display: inline-block; padding: 1px 7px; border-radius: 999px; background: #fbe4df; color: #b8573a; font-size: 10.5px; font-weight: 700; margin-left: 6px; vertical-align: 1px; }
-.ax_dd.ok { background: #dcefdf; color: #3f7d50; } .ax_dd.g { background: #eceef2; color: #6b7380; }
+.ax_rw .ax_dd { display: inline-block; padding: 1px 7px; border-radius: 999px; background: #fbe4df; color: #b8573a; font-size: 10.5px; font-weight: 700; margin-left: 6px; vertical-align: 1px; }
+.ax_rw .ax_dd.ok { background: #dcefdf; color: #3f7d50; } .ax_rw .ax_dd.g { background: #eceef2; color: #6b7380; }
 .ax_fxv { text-align: right; flex: none; display: flex; flex-direction: column; align-items: flex-end; } .ax .ax_fxv small { font-size: 11.5px; color: #8a929d; margin-top: 2px; align-self: flex-end; }
 .ax .ax_rw.on { --axbg: #f6f8fb; }
 /* 은행 › 알림 · 송금 · 명세서 · 확인증 · 더보기 */
@@ -6577,19 +6582,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .lf_sum { background: #fff; padding: 14px 16px; margin-bottom: 10px; }
 .ax .lf_sum div { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; color: #555; }
 .ax .lf_sum div.t { font-size: 16px; font-weight: 800; color: #222; border-top: 1px solid #f0f1f3; margin-top: 6px; padding-top: 10px; }
-.ax .lf_oc { background: #fff; margin-bottom: 10px; padding: 14px 16px; }
-.ax .lf_oc .hd { display: flex; justify-content: space-between; font-size: 12.5px; color: #9aa0a6; }
-.ax .lf_oc .hd b { color: #222; font-weight: 700; }
-.ax .lf_oc .hd button { color: #9aa0a6; font-size: 12.5px; }
-.ax .lf_oc .gift { font-size: 11px; font-weight: 700; color: #d1477a; background: #fde7ef; border-radius: 5px; padding: 1px 6px; margin-left: 6px; }
-.ax .lf_oc .bd { width: 100%; display: flex; gap: 12px; margin-top: 10px; align-items: center; text-align: left; }
-.ax .lf_oc .bd .lf_food { width: 60px; height: 60px; }
-.ax .lf_oc .bd > span:last-child { display: flex; flex-direction: column; min-width: 0; }
-.ax .lf_oc .bd b { font-size: 16px; font-weight: 800; }
-.ax .lf_oc .bd small { font-size: 13px; color: #666; }
-.ax .lf_oc .bt { display: flex; gap: 8px; margin-top: 12px; }
-.ax .lf_oc .bt span { flex: 1; height: 40px; border-radius: 8px; border: 1px solid #e2e4e8; display: grid; place-items: center; font-size: 14px; font-weight: 700; }
-.ax .lf_oc .bt span.m { border-color: var(--m); color: var(--m); }
 .ax .lf_bmsc { padding-bottom: 60px; }
 /* 배달 — Uber Eats */
 .ax .lf_ue { --m: #000; position: absolute; inset: 0; display: flex; flex-direction: column; background: #fff; color: #000; font-family: 'Inter Tight', -apple-system, 'Noto Sans KR', sans-serif; }
@@ -6610,12 +6602,6 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .cg 
 .ax .lf_again .lf_food { width: 96px; height: 96px; }
 .ax .lf_again b { display: block; font-size: 13.5px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ax .lf_again small { font-size: 12px; color: #5e5e5e; }
-.ax .lf_sc { display: block; width: 100%; padding: 0 16px 16px; text-align: left; box-sizing: border-box; }
-.ax .lf_sc .r { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 8px; }
-.ax .lf_sc .r > span { display: flex; flex-direction: column; }
-.ax .lf_sc .r b { font-size: 16px; }
-.ax .lf_sc .r small { font-size: 13px; color: #5e5e5e; }
-.ax .lf_sc .r i { width: 30px; height: 30px; border-radius: 50%; background: #eee; display: grid; place-items: center; font: 700 12px 'Inter Tight', sans-serif; font-style: normal; flex: none; }
 .ax .lf_uecta { position: absolute; left: 14px; right: 14px; bottom: 96px; height: 54px; border-radius: 10px; --axbg: #000; color: #fff; display: flex; align-items: center; gap: 10px; padding: 0 18px; font-size: 16px; font-weight: 700; z-index: 5; box-sizing: border-box; }
 .ax .lf_uecta span { margin-left: auto; }
 .ax .lf_otab { display: flex; gap: 22px; padding: 0 16px; border-bottom: 1px solid #eee; font-size: 15px; font-weight: 600; color: #757575; flex: none; }
@@ -7757,6 +7743,8 @@ body:not(.na_darkui) dialog.popup:not(:has(.na_phone)) .na_popup .na_v2_card:not
 /* ============ every plain checkbox in the extension's windows is drawn by us (the picker's tick): rounded square, light edge,
    lit = accent fill with a tick (white on orange, near black on dark cream). Hidden helper boxes keep opacity 0. */
 body:is(.na_darkui, :not(.na_darkui)) .na_popup input[type="checkbox"]:not(.na_toggle):not(#na_x) { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; min-width: 18px; margin: 0; flex: none; box-sizing: border-box; border-radius: 6px; border: 2px solid var(--na-line) !important; background: transparent !important; box-shadow: none !important; cursor: pointer; vertical-align: middle; position: relative; }
+body:is(.na_darkui, :not(.na_darkui)) .na_popup .na_ap3_raw > input[type="checkbox"]:not(#na_x) { position: absolute; width: 1px; height: 1px; min-width: 0; margin: 0; } /* takes no room in the chip (the checkbox sweep made it 18px wide, 3.169.70) */
+body:is(.na_darkui, :not(.na_darkui)) .na_popup .na_ck > input[type="checkbox"]:not(#na_x) { position: absolute; inset: 0; width: 100%; height: 100%; } /* .na_ck draws the box; its input is the invisible click layer (3.169.67) */
 body:not(.na_darkui) .na_popup input[type="checkbox"]:not(.na_toggle):not(#na_x) { border-color: #CDB8A8 !important; }
 body:is(.na_darkui, :not(.na_darkui)) .na_popup input[type="checkbox"]:not(.na_toggle):checked:not(#na_x) { border: 0 !important; background: var(--na-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center no-repeat !important; }
 body.na_darkui .na_popup input[type="checkbox"]:not(.na_toggle):checked:not(#na_x) { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%231B1B1F' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") !important; }
