@@ -16,7 +16,7 @@ import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
 import { APPS, AXB, AXB_C, busyHtml, setDate, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
-import { dropStretch, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
+import { dropStretch, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
@@ -788,6 +788,17 @@ export async function openPhone(who = null) {
         if (making || busy.sync || busy.fill || phone() !== p) return;
         try { const kept = await undoRound(m, p); drawPhone(); kept.length ? toastr.warning(`되돌렸어요. ${kept.join(', ')}은(는) 그 사이 바뀌어서 남겨뒀어요`, '캐릭터 휴대폰') : toastr.success('반영을 되돌렸어요', '캐릭터 휴대폰'); }
         catch (err) { toastr.error(String(err?.message || err), '되돌리기'); }
+    });
+    // 결제 다시 읽기: the money the last round couldn't put in, asked again and put on that round
+    $root.on('click', '.na_sync_money', async e => {
+        e.stopPropagation();
+        if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+        const p = phone();
+        try {
+            const r = await withSpinner($(e.currentTarget), '결제 읽는 중', () => retryMoney(m, owner));
+            if (phone() === p) drawPhone();
+            r.owed ? toastr.warning(`결제 ${r.paid}개를 넣었어요. ${r.owed}개는 다음 반영 때 다시 해요`, '캐릭터 휴대폰') : toastr.success(r.paid ? `결제 ${r.paid}개를 넣었어요` : '넣을 결제가 없었어요', '캐릭터 휴대폰');
+        } catch (err) { toastr.error(String(err?.message || err), '결제 다시 읽기'); }
     });
     $root.on('click', '.na_sync_forget', async e => {
         e.stopPropagation();
