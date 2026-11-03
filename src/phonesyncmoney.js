@@ -328,8 +328,8 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             const won = (p.money?.currency || p.money?.bank?.accounts?.[0]?.currency) === 'KRW', num = (v, lo, hi) => { const n = Number(v); return finite(n) && n >= lo && n <= hi ? n : null; };
             // reviews and a rating as the app's lists really run: most shops tens to a thousand or so, one in five a big
             // name with thousands; a small shop may still hold a 5.0, a big one sits at 4.5–4.9 (never the model's: a 9.6 or a 4544 would show)
-            const reviews = h % 5 === 0 ? 2000 + (h >> 3) % 6001 : 30 + (h >> 3) % 1470;
-            const rating = Math.round((reviews < 100 ? 4.4 + (h >> 7) % 7 / 10 : reviews < 2000 ? 4.3 + (h >> 7) % 7 / 10 : 4.5 + (h >> 7) % 5 / 10) * 10) / 10;
+            const h3 = (h >>> 3), h7 = (h >>> 7), reviews = h % 5 === 0 ? 2000 + h3 % 6001 : 30 + h3 % 1470;
+            const rating = Math.round((reviews < 100 ? 4.4 + h7 % 7 / 10 : reviews < 2000 ? 4.3 + h7 % 7 / 10 : 4.5 + h7 % 5 / 10) * 10) / 10;
             const shop = { name: row.shop, ko: txt(ns.ko, 60), cuisine: txt(ns.cuisine, 30), rating, reviews, fee: finite(Number(ns.fee)) ? Math.abs(Number(ns.fee)) : row.fee,
                 minOrder: num(ns.minOrder, 0, 1e7) ?? (won ? 10000 + (h % 3) * 2500 : 10 + (h % 3) * 2.5), eta: txt(ns.eta, 12) || `${20 + (h % 3) * 5}–${30 + (h % 3) * 5}`, fav: false, menu,
                 id: `sync:${e.id}:s${k}`, ev: e.id, sourceIndex: e.at };
