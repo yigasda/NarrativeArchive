@@ -646,26 +646,6 @@ body.na_darkui :is(.na_v2, #na_settings) .na_wd_text.text_pole.text_pole { backg
 .na_wd_ko:empty { display: none; }
 .na_wd_row .na_wd_ko { grid-column: 1 / -1; }
 
-/* Versions (section layers) */
-.na_layers { gap: 10px; }
-.na_layers .na_v2_title small { font-size: 0.821em; color: var(--na-dim); }
-.na_layers .na_v2_title b { font-size: 1em; letter-spacing: 0; }
-.na_ly_note { font-size: 0.821em; }
-.na_layers .na_ly_tabs { gap: 4px; border-radius: 12px; background: var(--na-card2); }
-.na_layers .na_ly_tabs button { padding: 6px 0; border-radius: 9px; font-size: 0.893em; line-height: 1.2; white-space: normal; }
-.na_layers .na_ly_tabs button small { font-size: 0.88em; color: var(--na-mute, var(--na-dim)); }
-.na_layers .na_ly_tabs button.on { font-weight: 600; box-shadow: 0 1px 2px rgba(60, 30, 10, 0.12); }
-.na_layers .na_ly_tabs button.on small { font-weight: 400; color: var(--na-dim); }
-body:not(.na_darkui) .na_layers .na_ly_tabs button.on { color: var(--na-ink); }
-body.na_darkui .na_layers .na_ly_tabs button.on { color: var(--na-ink); }
-:is(.na_v2, #na_settings) .na_ly_pane textarea.text_pole.text_pole, .na_ly_full { display: block; width: 100%; box-sizing: border-box; margin: 0; padding: 10px 12px; border: 1px solid var(--na-line); border-radius: 12px; font-size: 0.929em; line-height: 1.55; min-height: 96px; }
-.na_ly_full { background: transparent; max-height: 40vh; overflow: auto; white-space: pre-wrap; }
-:is(.na_v2, #na_settings) .na_ly_pane textarea.text_pole.text_pole { field-sizing: content; max-height: 50vh; }
-body:not(.na_darkui) :is(.na_v2, #na_settings) .na_ly_pane textarea.text_pole.text_pole, body:not(.na_darkui) .na_ly_full { background: transparent; color: #463428; }
-body.na_darkui :is(.na_v2, #na_settings) .na_ly_pane textarea.text_pole.text_pole, body.na_darkui .na_ly_full { background: transparent; color: #ECEAE6; }
-.na_ly_btns > .na_v2_btn { font-size: 0.929em; padding: 9px 0; border-radius: 10px; }
-.na_ly_btns > .na_ly_save { background: var(--na-fill, var(--SmartThemeBodyColor)); border-color: transparent; color: var(--na-onfill, var(--SmartThemeBlurTintColor, #fff)); font-weight: 600; }
-.na_layers .na_xr_warn .na_warn_svg { flex: none; color: var(--na-bad); }
 /* forgetting-curve card (settings → #na_fade_opts), CSS only: its markup belongs to the settings panel */
 .na_fd { gap: 12px; padding: 16px 14px; border-radius: 20px; }
 .na_fd_save > span:first-child { font-size: 0.893em; }
@@ -731,8 +711,6 @@ body.na_darkui .na_cal_item.warn { background: #2E2E34; }
 .na_cal_txt small { font-size: 0.821em; }
 .na_cal_cfg > summary svg { vertical-align: -2px; color: var(--na-dim); }
 
-/* the in-content 저장 stands in for the dialog's own */
-dialog:has(.na_ly_save) .popup-button-ok { display: none; }
 /* --- end audit D --- */
 
 /* --- audit E: x-ray, people, map, temperature --- */

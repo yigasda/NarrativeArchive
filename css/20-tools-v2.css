@@ -281,10 +281,6 @@
 .na_fd_fill { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; border-radius: 12px; }
 .na_fd_fill .na_v2_btn { padding: 7px 12px; }
 
-/* 섹션 버전 */
-.na_ly_tabs button { padding: 6px 4px; }
-.na_ly_pane textarea { width: 100%; box-sizing: border-box; resize: vertical; font-size: 0.9em; margin: 0; }
-.na_ly_full { font-size: 0.88em; line-height: 1.55; }
 
 /* 세계관 공유 */
 .na_wd_sum { display: flex; justify-content: space-between; }
