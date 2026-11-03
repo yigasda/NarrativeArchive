@@ -293,9 +293,12 @@ function hrDay(d, next) {
 }
 // water: their usual liters a day, a little more or less, drunk from soon after waking to the evening
 function waterDay(d, u) {
-    if (!u.water) return null;
-    const r = seeded(`${d.date}:water`), cups = Math.max(1, Math.round(u.water * 4 * (0.7 + r() * 0.55))), wake = toMin(d.wake) ?? 450, span = Math.max(240, 1290 - wake - 60);
+    if (!u.water && !d.water) return null;
+    // the day's own litres when the model gave them, else their usual a little more or less
+    const r = seeded(`${d.date}:water`), cups = Math.max(1, Math.round(d.water ? d.water * 4 : u.water * 4 * (0.7 + r() * 0.55))), wake = toMin(d.wake) ?? 450, span = Math.max(240, 1290 - wake - 60);
     const all = Array.from({ length: cups }, (_, k) => ({ t: hm(wake + 45 + Math.round(span * (k + r() * 0.6) / cups)), ml: [200, 250, 250, 300][Math.floor(r() * 4)] }));
+    // the day's own litres add up exactly: the glasses are scaled to them, the last one takes the rounding
+    if (d.water) { const sum = all.reduce((n, x) => n + x.ml, 0), want = Math.round(d.water * 1000); all.forEach(x => { x.ml = Math.round(x.ml * want / sum / 10) * 10; }); all.at(-1).ml += want - all.reduce((n, x) => n + x.ml, 0); }
     // today: only the glasses drunk by now
     const log = Number.isFinite(d.upTo) ? all.filter(x => toMin(x.t) <= d.upTo) : all;
     return { ml: log.reduce((s, x) => s + x.ml, 0), log };
@@ -309,9 +312,12 @@ function coffeeDay(p, d, u) {
     // a coffee paid for at a café that day (the bank's own row, not a delivery's) stands in for one of the usual cups
     const cafe = (p.money?.tx || []).filter(t => String(t.time).slice(0, 5) === d.date && t.amount < 0 && !t.delivery && CAFE.test(`${t.who || ''} ${t.ko || ''} ${t.memo || ''}`))
         .map(t => { const decaf = DECAF.test(`${t.who || ''} ${t.ko || ''} ${t.memo || ''}`); return { t: String(t.time).slice(6, 11) || hm(wake + 30), what: [t.ko || t.who, decaf ? '디카페인' : ''].filter(Boolean).join(' · '), mg: decaf ? 5 : 150, from: '' }; });
-    const cups = u.coffee ? Math.max(0, Math.round(u.coffee + (r() - 0.45) * 1.4) - cafe.length) : 0;
+    // the day's own cups and drink when the model gave them, else their usual a little more or less
+    const own = Number.isFinite(d.coffee), cups = own ? Math.max(0, d.coffee - cafe.length) : u.coffee ? Math.max(0, Math.round(u.coffee + (r() - 0.45) * 1.4) - cafe.length) : 0;
     out.push(...cafe);
-    for (let k = 0; k < cups; k++) out.push({ t: hm(k ? 780 + Math.round(r() * 200) + k * 20 : wake + 20 + Math.round(r() * 40)), what: u.coffeeKo || u.coffeeKind || '커피', mg: 120, from: '' });
+    const what = d.coffeeKind || u.coffeeKo || u.coffeeKind || '커피', decaf = DECAF.test(what);
+    // spread over the waking day: the first soon after waking, the rest through the afternoon and, for many, the evening
+    for (let k = 0; k < cups; k++) out.push({ t: hm(k ? Math.min(1380, 660 + Math.round(r() * 120) + k * Math.round(560 / Math.max(1, cups))) : wake + 20 + Math.round(r() * 40)), what, mg: decaf ? 5 : 120, from: '' });
     for (const o of p.delivery?.orders || []) {
         if (String(o.time).slice(0, 5) !== d.date || o.status === 'cancelled') continue;
         for (const x of o.items || []) if (['coffee', 'iced-americano'].includes(x.pic?.base) || COFFEE.test(`${x.name} ${x.ko || ''}`)) for (let q = 0; q < (x.qty || 1); q++) out.push({ t: String(o.time).slice(6, 11), what: x.ko || x.name, mg: DECAF.test(`${x.name} ${x.ko || ''} ${x.option || ''} ${x.optionKo || ''}`) ? 5 : 150, from: o.shop });
@@ -321,10 +327,12 @@ function coffeeDay(p, d, u) {
 }
 // weight: their usual, drifting a few hundred grams a day around it (seeded), the last 30 days
 function weightLine(lf, u, until) {
-    if (!u.weight) return [];
+    if (!u.weight && !lf.health.days.some(d => Number.isFinite(d.weight))) return [];
     const ds = lf.health.days.filter(d => dayGap(d.date, until) >= 0).slice(-30);
-    let v = u.weight + (seeded(`${ds[0]?.date}:w0`)() - 0.5) * 0.8;
-    return ds.map(d => { const r = seeded(`${d.date}:w`); v += (r() - 0.5) * 0.5 + (u.weight - v) * 0.15; return { date: d.date, kg: Math.round(v * 10) / 10 }; });
+    // a day they weighed stands as written; the days between drift from the last one weighed toward their usual
+    const base = u.weight || ds.find(d => Number.isFinite(d.weight))?.weight;
+    let v = ds[0]?.weight ?? base + (seeded(`${ds[0]?.date}:w0`)() - 0.5) * 0.8, anchor = null;
+    return ds.map(d => { if (Number.isFinite(d.weight)) { v = d.weight; anchor = d.weight; return { date: d.date, kg: d.weight }; } const r = seeded(`${d.date}:w`), target = anchor ?? base; v += (r() - 0.5) * 0.5 + (target - v) * 0.15; return { date: d.date, kg: Math.round(v * 10) / 10 }; });
 }
 // one sentence for the day: the biggest thing the numbers say against the day before or the usual
 // steps up to a minute of the day, from the day's hours
