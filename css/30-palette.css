@@ -78,26 +78,24 @@ body.na_darkui .na_v2, body.na_darkui #na_settings .na_tab_pane:where(:not([data
 .na_tgl_ui::after { box-shadow: none; }
 input.na_toggle:checked + .na_tgl_ui::after { transform: translateX(16px); }
 /* list rows */
-.na_cp_row { padding: 12px 14px; border-top-color: var(--na-line2, var(--na-line)); --c-bct: var(--na-line2, var(--na-line)); }
-.na_wz2_sumrow { border-color: var(--na-line2, var(--na-line)); }
-.na_set_row { border-color: var(--na-line2, var(--na-line)); --c-bc: var(--na-line2, var(--na-line)); --c-bct: var(--na-line2, var(--na-line)); }
+.na_cp_row { padding: 12px 14px; border-top-color: var(--na-line2, var(--na-line)); }
+.na_set_row, .na_wz2_sumrow { border-color: var(--na-line2, var(--na-line)); }
 .na_browser .na_card_actions { border-top-color: var(--na-line2, var(--na-line)); }
 .na_cp_txt > :first-child { font-size: 0.964em; }
 .na_cp_txt small { font-size: 0.82em; }
-.na_v2_list { border-radius: 18px; }
-.na_v2_card.na_v2_list { border-radius: 18px; --c-r: 18px; }
+.na_v2_list, .na_v2_card.na_v2_list { border-radius: 18px; }
 /* "on" pills and selected tabs */
-body:not(.na_darkui) .na_br_filters button.on, body:not(.na_darkui) .na_v2_chips button.on { --c-bg: var(--na-fill); --c-fg: var(--na-onfill); --c-bc: transparent; --c-bct: transparent; }
-body.na_darkui .na_br_filters button.on, body.na_darkui .na_v2_chips button.on { --c-bg: var(--na-fill); --c-fg: var(--na-onfill); --c-bc: transparent; --c-bct: transparent; }
-body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on { --c-bg: #FFFFFF; }
-body.na_darkui .na_v2_tabs button.on, body.na_darkui .na_v2_seg button.on { --c-bg: var(--na-paper); }
-body:not(.na_darkui) .na_v2_tabs button, body:not(.na_darkui) .na_v2_seg button { --c-fg: var(--na-mute); }
-body.na_darkui .na_v2_tabs button, body.na_darkui .na_v2_seg button { --c-fg: var(--na-mute); }
-body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on { --c-fg: var(--na-accent-ink); }
-body.na_darkui .na_v2_tabs button.on, body.na_darkui .na_v2_seg button.on { --c-fg: var(--na-accent-ink); }
+body:not(.na_darkui) .na_br_filters button.on, body:not(.na_darkui) .na_v2_chips button.on { background: var(--na-fill); color: var(--na-onfill); border-color: transparent; }
+body.na_darkui .na_br_filters button.on, body.na_darkui .na_v2_chips button.on { background: var(--na-fill); color: var(--na-onfill); border-color: transparent; }
+body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on { background: #FFFFFF; }
+body.na_darkui .na_v2_tabs button.on, body.na_darkui .na_v2_seg button.on { background: var(--na-paper); }
+body:not(.na_darkui) .na_v2_tabs button, body:not(.na_darkui) .na_v2_seg button { color: var(--na-mute); }
+body.na_darkui .na_v2_tabs button, body.na_darkui .na_v2_seg button { color: var(--na-mute); }
+body:not(.na_darkui) .na_v2_tabs button.on, body:not(.na_darkui) .na_v2_seg button.on { color: var(--na-accent-ink); }
+body.na_darkui .na_v2_tabs button.on, body.na_darkui .na_v2_seg button.on { color: var(--na-accent-ink); }
 /* text inputs inside the redesigned screens */
-body:not(.na_darkui) :is(.na_v2, #na_settings) .text_pole { --c-bg: #F2E9E2; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-fg: var(--na-ink); --c-r: 12px; }
-body.na_darkui :is(.na_v2, #na_settings) .text_pole { --c-bg: #2A2A30; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-fg: var(--na-ink); --c-r: 12px; }
+body:not(.na_darkui) :is(.na_v2, #na_settings) .text_pole { background: #F2E9E2; border: 1px solid var(--na-line); color: var(--na-ink); border-radius: 12px; }
+body.na_darkui :is(.na_v2, #na_settings) .text_pole { background: #2A2A30; border: 1px solid var(--na-line); color: var(--na-ink); border-radius: 12px; }
 body:not(.na_darkui) :is(.na_v2, #na_settings) textarea.text_pole { padding: 10px 12px; }
 body.na_darkui :is(.na_v2, #na_settings) textarea.text_pole { padding: 10px 12px; }
 body:not(.na_darkui) :is(.na_v2, #na_settings) .text_pole::placeholder { color: #A99C92; opacity: 1; }

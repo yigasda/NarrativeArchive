@@ -1,25 +1,25 @@
 /* ============ 압축 탭: method picker + one 압축하기 button (v3.77) */
 #na_settings .na_cp_meth { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--hm-tile); }
-#na_settings .na_cp_mbtn { flex: 1; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 11px; padding: 9px 4px; margin: 0; font: inherit; font-size: 0.929em; --c-bg: transparent; --c-fg: var(--hm-mute); cursor: pointer; }
-#na_settings .na_cp_mbtn.on { --c-bg: var(--hm-card); --c-fg: var(--hm-ink); font-weight: 700; --c-sh: 0 1px 3px var(--hm-shadow); }
-body:not(.na_darkui) #na_settings .na_cp_mbtn.on { --c-bg: #FFFAF6; }
+#na_settings .na_cp_mbtn { flex: 1; border: 0; border-radius: 11px; padding: 9px 4px; margin: 0; font: inherit; font-size: 0.929em; background: transparent; color: var(--hm-mute); cursor: pointer; }
+#na_settings .na_cp_mbtn.on { background: var(--hm-card); color: var(--hm-ink); font-weight: 700; box-shadow: 0 1px 3px var(--hm-shadow); }
+body:not(.na_darkui) #na_settings .na_cp_mbtn.on { background: #FFFAF6; }
 #na_settings .na_cp_desc { font-size: 0.857em; line-height: 1.45; color: var(--hm-dim); padding: 0 2px; }
 #na_settings .na_cp_go { justify-content: center; text-align: center; padding: 15px 16px; }
 #na_settings .na_cp_go > span { flex: 0 1 auto; }
 #na_settings .na_cp_go b { font-size: 1.143em; }
 #na_settings .na_cp_flags { display: flex; flex-wrap: wrap; gap: 6px; }
 #na_settings .na_cp_flags[hidden] { display: none; }
-#na_settings .na_cp_flag { width: auto; margin: 0; --c-bw: 1px; --c-bs: solid; --c-bc: var(--hm-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--hm-line); --c-bg: transparent; --c-fg: var(--hm-dim); --c-r: 999px; padding: 4px 12px; font: inherit; font-size: 0.857em; cursor: pointer; }
+#na_settings .na_cp_flag { width: auto; margin: 0; border: 1px solid var(--hm-line); background: transparent; color: var(--hm-dim); border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 0.857em; cursor: pointer; }
 #na_settings .na_cp_flag b { font-weight: 600; }
-#na_settings .na_cp_flag.on { --c-bg: var(--hm-acc-soft); --c-bc: transparent; --c-bct: transparent; --c-fg: var(--hm-acc-ink); }
+#na_settings .na_cp_flag.on { background: var(--hm-acc-soft); border-color: transparent; color: var(--hm-acc-ink); }
 #na_settings .na_cp_for { font-weight: 400; opacity: 0.8; }
-#na_settings .na_cp_more_fold > .na_cp_row:not(summary) { border-top: 1px solid var(--hm-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--hm-line); }
+#na_settings .na_cp_more_fold > .na_cp_row:not(summary) { border-top: 1px solid var(--hm-line); }
 
 /* ============ ⚙ 설정: card index, one group at a time (v3.77) */
 #na_settings .na_cfg_index { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 4px; }
 #na_settings .na_cfg_index[hidden] { display: none; }
-#na_settings .na_cfg_card { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-height: 100px; width: auto; margin: 0; padding: 14px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--hm-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--hm-line); --c-r: 18px; --c-bg: var(--hm-card); --c-fg: var(--hm-ink); font: inherit; text-align: left; cursor: pointer; }
-#na_settings .na_cfg_card:hover { --c-bc: var(--hm-acc); --c-bct: var(--hm-acc); }
+#na_settings .na_cfg_card { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-height: 100px; width: auto; margin: 0; padding: 14px; border: 1px solid var(--hm-line); border-radius: 18px; background: var(--hm-card); color: var(--hm-ink); font: inherit; text-align: left; cursor: pointer; }
+#na_settings .na_cfg_card:hover { border-color: var(--hm-acc); }
 #na_settings .na_cfg_card b { font-size: 1.036em; line-height: 1.3; }
 #na_settings .na_cfg_card small { font-size: 0.821em; line-height: 1.45; color: var(--hm-dim); }
 #na_settings .na_cfg_ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--hm-acc-soft); color: var(--hm-acc); }
@@ -32,17 +32,17 @@ body:not(.na_darkui) #na_settings .na_cp_mbtn.on { --c-bg: #FFFAF6; }
 /* ============ ⚙ 설정 묶음 안: tiles on top, tabs, one tab's rows (v3.80) */
 #na_settings .na_cfg_tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 4px; }
 #na_settings .na_cfg_tiles[hidden], #na_settings .na_cfg_tabs[hidden] { display: none; }
-#na_settings .na_cfg_tile { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-height: 92px; width: auto; margin: 0; padding: 13px 14px; box-sizing: border-box; --c-bw: 1px; --c-bs: solid; --c-bc: var(--hm-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--hm-line); --c-r: 18px; --c-bg: transparent; --c-fg: var(--hm-dim); font: inherit; text-align: left; cursor: pointer; min-width: 0; }
-#na_settings .na_cfg_tile.on { --c-bg: var(--hm-card); --c-bc: transparent; --c-bct: transparent; --c-fg: var(--hm-ink); }
+#na_settings .na_cfg_tile { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-height: 92px; width: auto; margin: 0; padding: 13px 14px; box-sizing: border-box; border: 1px solid var(--hm-line); border-radius: 18px; background: transparent; color: var(--hm-dim); font: inherit; text-align: left; cursor: pointer; min-width: 0; }
+#na_settings .na_cfg_tile.on { background: var(--hm-card); border-color: transparent; color: var(--hm-ink); }
 #na_settings .na_cfg_tile:last-child:nth-child(odd) { grid-column: 1 / -1; min-height: 0; }
 #na_settings .na_cfg_tile small { font-size: 0.857em; color: var(--hm-dim); }
 #na_settings .na_cfg_tile b { font-size: 1.32em; font-weight: 700; line-height: 1.3; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #na_settings .na_cfg_tile:not(.on) b { color: var(--hm-dim); }
 #na_settings .na_cfg_tile span { margin-top: auto; font-size: 0.857em; color: var(--hm-dim); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #na_settings .na_cfg_tabs { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--hm-tile); margin-top: 2px; }
-#na_settings .na_cfg_tabbtn { flex: 1; min-width: 0; width: auto; margin: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 11px; padding: 9px 2px; font: inherit; font-size: 0.929em; --c-bg: transparent; --c-fg: var(--hm-dim); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#na_settings .na_cfg_tabbtn.on { --c-bg: var(--hm-card); --c-fg: var(--hm-ink); font-weight: 700; --c-sh: 0 1px 3px var(--hm-shadow); }
-body:not(.na_darkui) #na_settings .na_cfg_tabbtn.on { --c-bg: #FFFFFF; }
+#na_settings .na_cfg_tabbtn { flex: 1; min-width: 0; width: auto; margin: 0; border: 0; border-radius: 11px; padding: 9px 2px; font: inherit; font-size: 0.929em; background: transparent; color: var(--hm-dim); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#na_settings .na_cfg_tabbtn.on { background: var(--hm-card); color: var(--hm-ink); font-weight: 700; box-shadow: 0 1px 3px var(--hm-shadow); }
+body:not(.na_darkui) #na_settings .na_cfg_tabbtn.on { background: #FFFFFF; }
 #na_settings .na_tab_pane[data-pane="config"] .na_tab_off, #na_settings .na_tab_pane[data-pane="config"] .na_tab_empty { display: none !important; }
 #na_settings .na_cfg_one .na_cfg_label { display: none; }
 
@@ -52,25 +52,25 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one { background: var(--sv-page); border-radius: 18px; padding: 18px 16px; gap: 14px; color: var(--sv-ink); }
 #na_settings .na_cfg_one .na_cfg_search { display: none; }
 #na_settings .na_cfg_one .na_cfg_head { gap: 8px; }
-#na_settings .na_cfg_one .na_cfg_back { width: auto; height: auto; padding: 0 2px; --c-bw: 0 !important; --c-bs: none !important; --c-bc: currentcolor !important; --c-bwt: 0 !important; --c-bst: none !important; --c-bct: currentcolor !important; --c-bg: transparent !important; --c-fg: var(--sv-acc); }
+#na_settings .na_cfg_one .na_cfg_back { width: auto; height: auto; padding: 0 2px; border: 0 !important; background: transparent !important; color: var(--sv-acc); }
 #na_settings .na_cfg_one .na_cfg_head b { font-size: 1.43em; color: var(--sv-ink) !important; }
-#na_settings .na_cfg_one .na_cfg_pill { --c-bg: transparent !important; --c-bw: 1px !important; --c-bs: solid !important; --c-bc: var(--sv-line) !important; --c-bwt: 1px !important; --c-bst: solid !important; --c-bct: var(--sv-line) !important; --c-fg: var(--sv-dim); font-size: 0.857em; padding: 6px 12px; }
+#na_settings .na_cfg_one .na_cfg_pill { background: transparent !important; border: 1px solid var(--sv-line) !important; color: var(--sv-dim); font-size: 0.857em; padding: 6px 12px; }
 /* tiles: on = cream, off = white with a line */
-#na_settings .na_cfg_one .na_cfg_tile { --c-bg: var(--sv-card); --c-bw: 1px; --c-bs: solid; --c-bc: var(--sv-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--sv-line); --c-r: 18px; padding: 14px; gap: 4px; }
-#na_settings .na_cfg_one .na_cfg_tile.on { --c-bg: var(--sv-tile); --c-bc: transparent; --c-bct: transparent; }
+#na_settings .na_cfg_one .na_cfg_tile { background: var(--sv-card); border: 1px solid var(--sv-line); border-radius: 18px; padding: 14px; gap: 4px; }
+#na_settings .na_cfg_one .na_cfg_tile.on { background: var(--sv-tile); border-color: transparent; }
 #na_settings .na_cfg_one .na_cfg_tile small, #na_settings .na_cfg_one .na_cfg_tile span { font-size: 0.857em; color: var(--sv-dim); }
 #na_settings .na_cfg_one .na_cfg_tile b { font-size: 1.357em; color: var(--sv-ink); }
 #na_settings .na_cfg_one .na_cfg_tile:not(.on) b { color: var(--sv-dim); }
 #na_settings .na_cfg_one .na_cfg_tabs { background: var(--sv-seg); margin-top: 4px; }
-#na_settings .na_cfg_one .na_cfg_tabbtn { --c-fg: var(--sv-dim); font-size: 1em; }
-#na_settings .na_cfg_one .na_cfg_tabbtn.on { --c-bg: var(--sv-segon) !important; --c-fg: var(--sv-ink); --c-sh: 0 1px 3px rgba(70, 52, 40, 0.12); }
+#na_settings .na_cfg_one .na_cfg_tabbtn { color: var(--sv-dim); font-size: 1em; }
+#na_settings .na_cfg_one .na_cfg_tabbtn.on { background: var(--sv-segon) !important; color: var(--sv-ink); box-shadow: 0 1px 3px rgba(70, 52, 40, 0.12); }
 /* list cards */
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box { background: var(--sv-card) !important; border: 1px solid var(--sv-line) !important; border-radius: 16px; }
-#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row { padding: 15px 16px; border-top-color: var(--sv-line); --c-bct: var(--sv-line); }
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row { padding: 15px 16px; border-top-color: var(--sv-line); }
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row > span:first-child { font-size: 1.071em !important; gap: 3px; }
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row > span small { font-size: 0.8em !important; color: var(--sv-dim); }
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_set_row > .na_cfg_val { color: var(--sv-val); font-size: 1em !important; }
-#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val :is(select, input) { --c-fg: var(--sv-val) !important; }
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val :is(select, input) { color: var(--sv-val) !important; }
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_go > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_chev { color: var(--sv-val); }
 .na_cc_note { flex: 1; min-width: 0; font-size: 0.86em; color: var(--na-dim); line-height: 1.4; }
 
@@ -83,66 +83,20 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
 #na_settings .na_tab_pane[data-pane="config"] .na_set_row .na_cfg_val #na_position { field-sizing: content; }
 
 /* connection boxes (custom API, Vertex): the fields sit flat in the box whatever a theme does to inputs */
-#na_settings .na_cc .na_cc_box .na_cc_row input.text_pole, #na_settings .na_cc .na_cc_box .na_cc_row input.text_pole:is(:hover, :focus, :read-only, :disabled, :autofill) {
-    -webkit-appearance: none !important;
-    appearance: none !important;
-    --c-bg: transparent !important;
-    --c-bg: transparent !important;
-    background-image: none !important;
-    --c-bw: 0 !important;
-    --c-bs: none !important;
-    --c-bc: currentcolor !important;
-    --c-bwt: 0 !important;
-    --c-bst: none !important;
-    --c-bct: currentcolor !important;
-    outline: none !important;
-    --c-sh: none !important;
-    --c-r: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    height: 40px !important;
-    min-height: 0 !important;
-    --c-fg: inherit !important;
+#na_settings .na_cc .na_cc_box .na_cc_row input.text_pole,
+#na_settings .na_cc .na_cc_box .na_cc_row input.text_pole:is(:hover, :focus, :read-only, :disabled, :autofill) {
+    -webkit-appearance: none !important; appearance: none !important;
+    background: transparent !important; background-color: transparent !important; background-image: none !important;
+    border: 0 !important; outline: none !important; box-shadow: none !important; border-radius: 0 !important;
+    margin: 0 !important; padding: 0 !important; height: 40px !important; min-height: 0 !important; color: inherit !important;
 }
 #na_settings .na_cc .na_cc_box .na_cc_row input.text_pole:autofill { -webkit-text-fill-color: currentColor; transition: background-color 9999s; }
 
 /* ---- 3.82.1: the same for every field in a connection box — select boxes (형식 · 생각) and anything a theme restyles */
+#na_settings .na_cc .na_cc_box .na_cc_row :is(input, select, textarea),
 #na_settings .na_cc .na_cc_box .na_cc_row :is(input, select, textarea):is(:hover, :focus, :focus-visible, :read-only, :disabled) {
-    background-color: transparent !important;
-    --c-bg: transparent !important;
-    border: 0 !important;
-    --c-bw: 0 !important;
-    --c-bs: none !important;
-    --c-bc: currentcolor !important;
-    --c-bwt: 0 !important;
-    --c-bst: none !important;
-    --c-bct: currentcolor !important;
-    outline: none !important;
-    box-shadow: none !important;
-    --c-sh: none !important;
-    border-radius: 0 !important;
-    --c-r: 0 !important;
-    margin: 0 !important;
-    min-height: 0 !important;
-    color: inherit !important;
-    --c-fg: inherit !important;
-    filter: none !important;
-}
-#na_settings .na_cc .na_cc_box .na_cc_row :is(input, select, textarea) {
-    --c-bg: transparent !important;
-    --c-bw: 0 !important;
-    --c-bs: none !important;
-    --c-bc: currentcolor !important;
-    --c-bwt: 0 !important;
-    --c-bst: none !important;
-    --c-bct: currentcolor !important;
-    outline: none !important;
-    --c-sh: none !important;
-    --c-r: 0 !important;
-    margin: 0 !important;
-    min-height: 0 !important;
-    --c-fg: inherit !important;
-    filter: none !important;
+    background-color: transparent !important; border: 0 !important; outline: none !important; box-shadow: none !important;
+    border-radius: 0 !important; margin: 0 !important; min-height: 0 !important; color: inherit !important; filter: none !important;
 }
 #na_settings .na_cc .na_cc_box .na_cc_row select.na_cc_sel {
     flex: 1; width: auto !important; min-width: 0; height: 40px !important; padding: 0 22px 0 0 !important; font: inherit; font-size: 0.9em;
@@ -152,20 +106,12 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
 }
 
 /* ---- 3.82.2: search boxes are one rounded field — the input inside sits flat, whatever a theme does to inputs */
-:is(#na_settings, .na_v2, .na_popup) .na_search_wrap input, :is(#na_settings, .na_v2, .na_popup) .na_search_wrap input:is(:hover, :focus, :focus-visible), :is(#na_settings, .na_v2, .na_popup) input:is(.na_pc_q, .na_ss_find, #na_find_q), :is(#na_settings, .na_v2, .na_popup) input:is(.na_pc_q, .na_ss_find, #na_find_q):is(:hover, :focus, :focus-visible) {
-    --c-bg: transparent !important;
-    --c-bg: transparent !important;
-    background-image: none !important;
-    --c-bw: 0 !important;
-    --c-bs: none !important;
-    --c-bc: currentcolor !important;
-    --c-bwt: 0 !important;
-    --c-bst: none !important;
-    --c-bct: currentcolor !important;
-    outline: none !important;
-    --c-sh: none !important;
-    --c-r: 0 !important;
-    filter: none !important;
+:is(#na_settings, .na_v2, .na_popup) .na_search_wrap input,
+:is(#na_settings, .na_v2, .na_popup) .na_search_wrap input:is(:hover, :focus, :focus-visible),
+:is(#na_settings, .na_v2, .na_popup) input:is(.na_pc_q, .na_ss_find, #na_find_q),
+:is(#na_settings, .na_v2, .na_popup) input:is(.na_pc_q, .na_ss_find, #na_find_q):is(:hover, :focus, :focus-visible) {
+    background: transparent !important; background-color: transparent !important; background-image: none !important;
+    border: 0 !important; outline: none !important; box-shadow: none !important; border-radius: 0 !important; filter: none !important;
 }
 :is(#na_settings, .na_v2, .na_popup) .na_search_wrap input::-webkit-search-decoration { -webkit-appearance: none; }
 
@@ -194,12 +140,12 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
 #na_settings .na_start_head { display: flex; align-items: center; gap: 8px; }
 #na_settings .na_start_head b { font-size: 1.07em; }
 #na_settings .na_start_n { font-size: 0.857em; font-weight: 700; color: var(--sv-val); }
-#na_settings .na_start_hide { margin: 0 0 0 auto; width: auto; padding: 2px 4px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: var(--sv-dim); font: inherit; font-size: 0.857em; cursor: pointer; }
+#na_settings .na_start_hide { margin: 0 0 0 auto; width: auto; padding: 2px 4px; border: 0; background: transparent; color: var(--sv-dim); font: inherit; font-size: 0.857em; cursor: pointer; }
 #na_settings .na_start_steps { position: relative; display: flex; }
 #na_settings .na_start_steps::before, #na_settings .na_start_steps::after { content: ''; position: absolute; top: 14px; left: calc(50% / var(--n, 4)); height: 2px; border-radius: 1px; }
 #na_settings .na_start_steps::before { right: calc(50% / var(--n, 4)); background: var(--hm-track); }
 #na_settings .na_start_steps::after { width: calc((100% - 100% / var(--n, 4)) * var(--fill)); background: var(--sv-acc); }
-#na_settings .na_start_step { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; width: auto; margin: 0; padding: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: var(--sv-dim); font: inherit; font-size: 0.857em; cursor: pointer; }
+#na_settings .na_start_step { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; width: auto; margin: 0; padding: 0; border: 0; background: transparent; color: var(--sv-dim); font: inherit; font-size: 0.857em; cursor: pointer; }
 #na_settings .na_start_dot { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; background: var(--hm-tile); color: var(--sv-dim); }
 #na_settings .na_start_step.done .na_start_dot { background: var(--sv-acc); color: #fff; }
 #na_settings .na_start_step.cur .na_start_lab { color: var(--sv-ink); font-weight: 700; }
@@ -209,13 +155,13 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
 #na_settings .na_start_body b { font-size: 1.21em; }
 #na_settings .na_start_body b small { font-size: 0.65em; font-weight: 400; color: var(--sv-dim); }
 #na_settings .na_start_body span { font-size: 0.93em; line-height: 1.55; color: var(--hm-mute); }
-#na_settings .na_start_go { width: 100%; margin: 0; padding: 13px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 14px; --c-bg: var(--sv-acc); --c-fg: #FFF7F0; font: inherit; font-size: 1.07em; font-weight: 700; cursor: pointer; }
-#na_settings .na_start_go.done { --c-bg: transparent; --c-fg: var(--sv-val); --c-sh: inset 0 0 0 1px var(--sv-line); font-weight: 600; }
+#na_settings .na_start_go { width: 100%; margin: 0; padding: 13px; border: 0; border-radius: 14px; background: var(--sv-acc); color: #FFF7F0; font: inherit; font-size: 1.07em; font-weight: 700; cursor: pointer; }
+#na_settings .na_start_go.done { background: transparent; color: var(--sv-val); box-shadow: inset 0 0 0 1px var(--sv-line); font-weight: 600; }
 /* 시작하기: in the light theme a cream a shade off white, so the card sits softer on the page */
 body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 
 /* ---- 3.98: 원문으로 불러옴 (라우터 · AI 없이 빠르게) */
-#na_settings .na_router_more { --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: none; --c-fg: inherit; font: inherit; padding: 0; margin: 0; cursor: pointer; text-align: left; text-decoration: underline dotted; text-underline-offset: 3px; }
+#na_settings .na_router_more { border: 0; background: none; color: inherit; font: inherit; padding: 0; margin: 0; cursor: pointer; text-align: left; text-decoration: underline dotted; text-underline-offset: 3px; }
 
 /* ============ 이야기 속 기념일 (v3.101): a card at the top of the calendar, a badge on the section, one line on home */
 #na_settings .na_anniv_now, .na_popup .na_cal_anniv { --av: var(--sv-acc, #B8541F); }
@@ -223,23 +169,23 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 .na_cal_av_head { display: flex; align-items: center; gap: 8px; }
 .na_cal_av_head b { font-size: 1.02em; }
 .na_cal_av_head small { color: var(--na-dim); }
-.na_cal_av_add { width: 30px; height: 30px; margin: 0; padding: 0; --c-r: 9px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-bg: transparent; --c-fg: var(--av); font-size: 1.2em; line-height: 1; cursor: pointer; }
+.na_cal_av_add { width: 30px; height: 30px; margin: 0; padding: 0; border-radius: 9px; border: 1px solid var(--na-line); background: transparent; color: var(--av); font-size: 1.2em; line-height: 1; cursor: pointer; }
 .na_cal_av_row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "dot name x" "dot sub x"; column-gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--na-line); }
 .na_cal_av_row:first-of-type { border-top: 0; }
 .na_cal_av_dot { grid-area: dot; color: var(--av); font-size: 1.1em; }
-.na_cal_av_row .na_cal_av_name { grid-area: name; margin: 0; padding: 2px 0; --c-bw: 0 !important; --c-bs: none !important; --c-bc: currentcolor !important; --c-bwt: 0 !important; --c-bst: none !important; --c-bct: currentcolor !important; --c-bg: transparent !important; font-weight: 700; min-height: 0; }
+.na_cal_av_row .na_cal_av_name { grid-area: name; margin: 0; padding: 2px 0; border: 0 !important; background: transparent !important; font-weight: 700; min-height: 0; }
 .na_cal_av_row small { grid-area: sub; color: var(--na-dim); font-size: 0.82em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.na_cal_av_x { grid-area: x; width: auto; margin: 0; padding: 4px 6px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: var(--na-dim); cursor: pointer; }
+.na_cal_av_x { grid-area: x; width: auto; margin: 0; padding: 4px 6px; border: 0; background: transparent; color: var(--na-dim); cursor: pointer; }
 .na_cal_av_new { display: flex; flex-wrap: wrap; gap: 6px; }
 .na_cal_av_new select { flex: 1 1 100%; margin: 0; }
 .na_cal_av_new input { flex: 1; min-width: 0; margin: 0; }
 .na_cal_av_badge { font-style: normal; font-size: 0.82em; font-weight: 700; color: var(--av, #B8541F); white-space: nowrap; }
 #na_settings .na_anniv_now { display: flex; align-items: center; gap: 4px; padding: 10px 12px 10px 14px; border-radius: 14px; background: var(--hm-acc-soft); color: var(--sv-ink); }
 #na_settings .na_anniv_now[hidden] { display: none; }
-#na_settings .na_anniv_go { flex: 1; display: flex; align-items: center; gap: 8px; width: auto; margin: 0; padding: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: inherit; font: inherit; text-align: left; cursor: pointer; }
+#na_settings .na_anniv_go { flex: 1; display: flex; align-items: center; gap: 8px; width: auto; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 #na_settings .na_anniv_dot { color: var(--av); font-size: 1.1em; }
 #na_settings .na_anniv_go b { color: var(--sv-val); }
-#na_settings .na_anniv_x { width: auto; margin: 0; padding: 4px 6px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: var(--sv-dim); cursor: pointer; }
+#na_settings .na_anniv_x { width: auto; margin: 0; padding: 4px 6px; border: 0; background: transparent; color: var(--sv-dim); cursor: pointer; }
 /* 기념일: a small filled heart instead of the double circle */
 .na_cal_av_dot, #na_settings .na_anniv_dot { display: inline-flex; align-items: center; }
 .na_cal_av_badge { align-items: center; gap: 3px; }
@@ -256,9 +202,9 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 .na_wd_foot .na_wd_bindchip { min-width: 0; flex: 0 1 auto; margin-right: auto; }
 .na_wd_foot .na_wd_bindchip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .na_wd_foot .na_spacer { flex: 1; }
-.na_wd_foot :is(.na_wd_lore, .na_wd_del) { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 34px; margin: 0; padding: 0 10px; --c-r: 10px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--sv-line, var(--na-line)); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--sv-line, var(--na-line)); --c-bg: var(--sv-page, transparent); font: inherit; font-size: 1em; cursor: pointer; white-space: nowrap; }
-.na_wd_foot .na_wd_lore { --c-fg: var(--sv-val, var(--na-accent)); }
-.na_wd_foot .na_wd_del { width: 34px; padding: 0; --c-fg: var(--na-bad); }
+.na_wd_foot :is(.na_wd_lore, .na_wd_del) { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 34px; margin: 0; padding: 0 10px; border-radius: 10px; border: 1px solid var(--sv-line, var(--na-line)); background: var(--sv-page, transparent); font: inherit; font-size: 1em; cursor: pointer; white-space: nowrap; }
+.na_wd_foot .na_wd_lore { color: var(--sv-val, var(--na-accent)); }
+.na_wd_foot .na_wd_del { width: 34px; padding: 0; color: var(--na-bad); }
 .na_wd_foot .na_wd_del:hover { text-decoration: none; filter: brightness(0.95); }
 /* 캐릭터 연동: the same words on and off, so on shows in colour (face in colour, accent text) and off stays grey */
 .na_wd_foot .na_wd_bindchip.on > span { color: var(--sv-val, var(--na-accent)); font-weight: 600; }
@@ -266,11 +212,11 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 
 /* 세계관 끄기 (v3.102): a small switch on each part and each row; what is off fades */
 /* 세계관 줄 · 칸 체크: a ticked row goes in; the part's box shows − when only some are */
-.na_ck { position: relative; flex: none; display: grid; place-items: center; width: 18px; height: 18px; margin: 0 5px; box-sizing: border-box; border: 1.6px solid color-mix(in srgb, var(--na-dim) 70%, transparent); --c-bw: 1.6px; --c-bs: solid; --c-bc: color-mix(in srgb, var(--na-dim) 70%, transparent); --c-bwt: 1.6px; --c-bst: solid; --c-bct: color-mix(in srgb, var(--na-dim) 70%, transparent); border-radius: 5px; --c-r: 5px; color: transparent; --c-fg: transparent; cursor: pointer; }
+.na_ck { position: relative; flex: none; display: grid; place-items: center; width: 18px; height: 18px; margin: 0 5px; box-sizing: border-box; border: 1.6px solid color-mix(in srgb, var(--na-dim) 70%, transparent); border-radius: 5px; color: transparent; cursor: pointer; }
 .na_ck input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
 .na_ck .na_ck_p { display: none; }
-.na_ck:has(input:checked) { background: var(--na-accent); --c-bg: var(--na-accent); border-color: var(--na-accent); --c-bc: var(--na-accent); --c-bct: var(--na-accent); color: var(--na-onaccent, #fff); --c-fg: var(--na-onaccent, #fff); }
-.na_ck.part { background: color-mix(in srgb, var(--na-accent) 18%, transparent); --c-bg: color-mix(in srgb, var(--na-accent) 18%, transparent); border-color: var(--na-accent); --c-bc: var(--na-accent); --c-bct: var(--na-accent); color: var(--na-accent-fg, var(--na-accent)); --c-fg: var(--na-accent-fg, var(--na-accent)); }
+.na_ck:has(input:checked) { background: var(--na-accent); border-color: var(--na-accent); color: var(--na-onaccent, #fff); }
+.na_ck.part { background: color-mix(in srgb, var(--na-accent) 18%, transparent); border-color: var(--na-accent); color: var(--na-accent-fg, var(--na-accent)); }
 .na_ck.part .na_ck_v { display: none; }
 .na_ck.part .na_ck_p { display: inline; }
 .na_ck:has(input:focus-visible) { outline: 2px solid var(--na-accent); outline-offset: 2px; }
