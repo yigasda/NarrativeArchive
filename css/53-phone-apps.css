@@ -172,7 +172,10 @@
 .sc_lbl { font-size: 12px; color: #7b818c; }
 .sc_big { font-family: 'Inter Tight', 'Inter', sans-serif; font-size: 36px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; margin-top: 3px; }
 .sc_big u, .sc_pkn u { text-decoration: none; font-family: -apple-system, 'SF Pro Text', 'Noto Sans KR', sans-serif; font-size: 21px; margin: 0 5px 0 2px; letter-spacing: 0; }
-.sc_big u:last-child { margin-right: 0; } .sc_big .cg_num { font-size: 36px; } .sc_note span { font-size: inherit; }
+.sc_big u:last-child { margin-right: 0; }
+/* themes that size every span with !important (the user's does) would shrink the big number: pinned until the phone shield covers type size */
+body:is(.na_darkui, :not(.na_darkui)) .ax .sc_big .cg_num:not(#na_x) { font-size: 36px !important; }
+body:is(.na_darkui, :not(.na_darkui)) .ax .sc_note span:not(#na_x) { font-size: inherit !important; }
 .sc_chart { position: relative; }
 .sc_chart svg { display: block; overflow: visible; }
 .sc_axl { font-size: 10px; fill: #a3a8b0; font-family: 'Inter', sans-serif; }

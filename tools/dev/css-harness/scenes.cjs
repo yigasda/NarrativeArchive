@@ -79,6 +79,25 @@ const SCENES = [
     { name: 'phone-home2', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'home2'); } },
     { name: 'phone-bank', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneMoney(p); await h.phoneTo(p, 'bank'); } },
     { name: 'phone-wallet', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneMoney(p); await h.phoneTo(p, 'wallet'); } },
+    { name: 'phone-msg', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'msg'); } },
+    { name: 'phone-call', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'call'); } },
+    { name: 'phone-photo', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'photo'); } },
+    { name: 'phone-note', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'note'); } },
+    { name: 'phone-cal', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'cal'); } },
+    { name: 'phone-mail', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'mail'); } },
+    { name: 'phone-sns', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'sns'); } },
+    { name: 'phone-diary', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'diary'); } },
+    { name: 'phone-search', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'search'); } },
+    { name: 'phone-set', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'set'); } },
+    { name: 'phone-contacts', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'contacts'); } },
+    { name: 'phone-voice', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'voice'); } },
+    { name: 'phone-shop', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneTo(p, 'shop'); } },
+    { name: 'phone-clock', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneFill(p, 'life', 'clock'); await h.phoneTo(p, 'clock'); } },
+    { name: 'phone-health', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneFill(p, 'life', 'clock'); await h.phoneTo(p, 'health'); } },
+    { name: 'phone-weather', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneFill(p, 'life', 'clock'); await h.phoneTo(p, 'weather'); } },
+    { name: 'phone-files', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneFill(p, 'life', 'clock'); await h.phoneTo(p, 'files'); } },
+    { name: 'phone-stime', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneFill(p, 'life', 'clock'); await h.phoneTo(p, 'stime'); } },
+    { name: 'phone-dlv', arch: 'full', root: '.na_ph_frame', phone: true, open: async (p, h) => { await h.phone(p); await h.phoneFill(p, 'delivery', 'dlv'); } },
 ];
 // block owner (as tools/dev/css-harness/blocks.cjs names them) → the scenes that show it; `capture.cjs --owner 섹션 버전` expands to these
 const OWNERS = {
@@ -86,7 +105,7 @@ const OWNERS = {
     '압축 마법사 · AU': ['wizard', 'wizard-2', 'wizard-3', 'wizard-grade', 'au'], '원문 뽑기': ['extract'], '누가 아는가': ['knowledge', 'knowledge-empty'], '대사 은행': ['quotes', 'quotes-empty'],
     '말투 지문 · 인물': ['people', 'people-empty'], '이탈 감지 · 분기': ['drift', 'branches', 'drift-empty', 'branches-empty'], 'X-ray': ['xray', 'xray-empty'], '이야기 달력': ['calendar'], '키워드': ['kwtest'],
     '아카이브에 질문 · 고쳐 달라고': ['ask', 'ask-answer'], '아카이브에 추가': ['append', 'append-after', 'append-full'], '요약 받기': ['digest'], '세계관': ['worlds'], '건강': ['health'], '미리보기': ['preview'], '섹션 고르기(공통)': ['quotes', 'knowledge', 'retitle'],
-    '확인 팝업': ['confirm', 'confirm-danger'], '확장 패널': ['panel', 'panel-2'], '확장 패널 탭': ['panel-archive', 'panel-compress', 'panel-tools', 'panel-config', 'panel-config-grp'], '휴대폰': ['phone-home', 'phone-home2', 'phone-bank', 'phone-wallet'],
+    '확인 팝업': ['confirm', 'confirm-danger'], '확장 패널': ['panel', 'panel-2'], '확장 패널 탭': ['panel-archive', 'panel-compress', 'panel-tools', 'panel-config', 'panel-config-grp'], '휴대폰': ['phone-home', 'phone-home2', 'phone-bank', 'phone-wallet'], '휴대폰 앱': ['phone-msg', 'phone-call', 'phone-photo', 'phone-note', 'phone-cal', 'phone-mail', 'phone-sns', 'phone-diary', 'phone-search', 'phone-set', 'phone-contacts', 'phone-voice', 'phone-shop', 'phone-clock', 'phone-health', 'phone-weather', 'phone-files', 'phone-stime', 'phone-dlv'],
     '공통 부품': ['quotes', 'layers', 'retitle-result', 'wizard-2', 'extract', 'glossary', 'worknote', 'stylesamples', 'unhide', 'confirm', 'panel'],
 };
 module.exports = { SCENES, ARCH, answer, B, DLG, OWNERS };
