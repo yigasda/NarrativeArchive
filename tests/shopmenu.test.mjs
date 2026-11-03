@@ -153,3 +153,12 @@ test('생활 채우기 asks no screen time; the screen time fill follows on its 
     assert.ok(!life.AI_SYS_LIFE.includes('"screen"') && !life.AI_SYS_LIFE.includes('Brawl Stars'));
     assert.ok(life.AI_SYS_SCREEN.includes('Google Maps') && life.AI_SYS_SCREEN.includes('4 to 8'));
 });
+
+test('생활 다시 만들기: the body the phone shows goes along, to keep unless the story changed it', async () => {
+    const p = { owner: 'Ren', country: 'DE', now: '10-26 12:00', life: { health: { usual: { height: 187, weight: 81.5 }, days: [] } } };
+    const seen = [], menu = globalThis.__menu;
+    globalThis.__menu = { answer: '{}', set input(v) { seen.push(v); }, get input() { return seen.at(-1); } };
+    try { await life.fillLife({}, p); } catch { /* the answer is empty; only the request matters here */ } finally { globalThis.__menu = menu; }
+    // the life fill's own request (the screen time fill follows it)
+    assert.match(seen[0], /\[BODY ON THE PHONE NOW — keep it unless the story changed it\]\n\{"height":187,"weight":81\.5\}/);
+});

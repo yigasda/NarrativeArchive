@@ -385,7 +385,10 @@ const later = (t, now) => { const g = dayGap(String(now).slice(0, 5), String(t).
 // ---- the fills
 export const fillLife = (m, p) => exclusive('fill', async () => {
     const now = weatherNow(), days = storyDays(m, p);
+    // made again: the body the phone already shows stays, unless the story changed it (a child who grew, a diet)
+    const was = p.life?.health?.usual || {}, body = Object.fromEntries(['height', 'weight'].filter(k => Number.isFinite(was[k])).map(k => [k, was[k]]));
     const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(days),
+        Object.keys(body).length ? `[BODY ON THE PHONE NOW — keep it unless the story changed it]\n${JSON.stringify(body)}` : '',
         now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.life });
     const out = await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' });
     const life = parseLife(jsonOf(out), now, days.at(-1)?.day || '');
