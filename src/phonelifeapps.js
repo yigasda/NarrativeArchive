@@ -221,7 +221,7 @@ export function worldScreen(p, now) {
       ${axTop(axCb('home2'))}
       <div class="ax_scroll">${axH1('세계 시계')}
         ${worldMap(p, lf, rows)}
-        <div class="lf_dcard">${rows.map(({ c, t }, k) => `<div class="lf_wc">${face(toMin(t.time), t.night)}<span class="lf_wct"><small>${halfOf(p, t.time) ? `${halfOf(p, t.time)} · ` : ''}${k ? `${t.dayShift}, ${t.off >= 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '현재 위치'}${c.note ? ` · ${esc(c.note)}` : ''}</small><b>${esc(c.name)}</b></span><b class="cg_num">${esc(clockNum(p, t.time))}</b></div>`).join('')}</div>
+        <div class="lf_dcard">${rows.map(({ c, t }, k) => `<div class="lf_wc">${face(toMin(t.time), t.night)}<span class="lf_wct"><small>${k ? `${t.dayShift}, ${t.off >= 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '현재 위치'}${c.note ? ` · ${esc(c.note)}` : ''}</small><b>${esc(c.name)}</b></span><b class="cg_num">${esc(clockNum(p, t.time))}</b></div>`).join('')}</div>
         <i class="lf_pad"></i></div>
       ${clockDock('wclock')}${axInd('#f2f2f4')}`;
 }
