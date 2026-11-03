@@ -356,9 +356,10 @@ SillyTavern 테마는 `.menu_button`, `input`, `select`, `textarea`, `small`, �
 2. 확장을 넣어요(바꿀 때마다 다시 복사).
    ```bash
    mkdir -p ~/sillytavern/data/default-user/extensions/NarrativeArchive
-   cp -r manifest.json index.js src style.css assets ~/sillytavern/data/default-user/extensions/NarrativeArchive/
+   cp -r manifest.json index.js src style.css css assets ~/sillytavern/data/default-user/extensions/NarrativeArchive/
    ```
-   `src`랑 `style.css`만 바뀌었으면 그 둘만 복사해요. 브라우저를 새로 열면 반영돼요.
+   `style.css`는 `css/` 파일들을 `@import`로 불러요. `css`를 빼먹으면 스타일이 하나도 안 먹어요(콘솔에 `Refused to apply style … MIME type ('text/plain')`).
+   `src` · `style.css` · `css`만 바뀌었으면 그 셋만 복사해요. 브라우저를 새로 열면 반영돼요.
 3. 테스트 채팅을 넣어요. 기본 캐릭터 Seraphina가 0번이어야 해요.
    ```bash
    mkdir -p ~/sillytavern/data/default-user/chats/default_Seraphina
