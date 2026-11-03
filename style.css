@@ -4074,7 +4074,7 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_st_float small { color: inherit !important; font-weight: 500; opacity: 0.6; }
 .na_st_float[hidden] { display: none; }
 .na_st_dock { position: relative; padding: 10px 0 2px; border-top: 1px solid var(--st-line); }
-.na_st_quick { display: flex; flex-wrap: wrap; gap: 6px; overflow: visible; scrollbar-width: none; margin-bottom: 10px; padding: 2px; } /* chips wrap to a second line instead of running off the edge (3.169.73) */
+.na_st_quick { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-bottom: 10px; padding: 2px; }
 .na_st_quick::-webkit-scrollbar { display: none; }
 .na_st_qk { flex: none; border: 0; border-radius: 999px; padding: 6px 12px; background: var(--st-w); color: var(--st-ink) !important; font-size: 0.86em !important; white-space: nowrap; box-shadow: 0 1px 3px rgba(46, 36, 30, 0.08), inset 0 0 0 1px var(--st-line); cursor: pointer; }
 .na_st_qk:disabled { opacity: 0.45; cursor: default; }
