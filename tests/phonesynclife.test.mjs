@@ -562,3 +562,25 @@ test('weather: the status line is the scene\'s; an owner the model puts in anoth
     h = p.life.weather.here;
     assert.equal(h.cond, 'snow'); assert.equal(h.temp, -2); assert.equal(h.from, 'tracker');
 });
+
+test('weather: rain in millimetres reads as a chance, a status line that changes the sky retires the sentence, the city the owner is in mirrors here, a clock read in another zone', async () => {
+    const { zoneShift, mirrorHome } = await import('../src/phonesynclife.js');
+    const { p } = setup();
+    p.life.weather.cities = [{ name: 'Seoul', ko: '서울', tz: 'Asia/Seoul', cond: 'clear', temp: 9 }, { name: 'Berlin', ko: '베를린', tz: 'Europe/Berlin', cond: 'rain', temp: 6 }];
+    applyWeather(p, { place: '서울', date: '02-02', time: '19:00', from: 'chat', cond: 'cloudy', temp: 2, hi: 3, lo: -4, line: '흐림, 기온 2°C', ko: '흐림', hours: [{ time: '20:00', cond: 'rain', temp: 1, rain: 0.4 }, { time: '21:00', cond: 'rain', temp: 1, rain: 1.2 }, { time: '22:00', cond: 'cloudy', temp: 0, rain: 0 }], days: [{ day: '02-02', cond: 'snow', lo: -4, hi: 3, rain: 60 }], tiles: { feels: 0, dew: -4, sunrise: '07:32', sunset: '17:58' } }, { date: '02-02', time: '19:00', place: '서울', weather: '☁ 흐림 / 2°C' });
+    let h = p.life.weather.here;
+    assert.deepEqual(h.hours.map(x => x.rain), [40, 70, 0]);
+    assert.equal(h.line, '');
+    const seoul = p.life.weather.cities[0];
+    assert.equal(seoul.cond, 'cloudy'); assert.equal(seoul.temp, 2); assert.equal(seoul.sunset, '17:58');
+    // the same day, snow now: the sentence a model wrote for the cloud goes
+    p.life.weather.here.line = '구름이 낮게 깔린 저녁';
+    const fx = applyWeather(p, null, { date: '02-02', time: '21:30', place: '서울', weather: '🌨 눈 / -1°C' });
+    h = p.life.weather.here;
+    assert.equal(h.cond, 'snow'); assert.equal(h.line, ''); assert.equal(p.life.weather.cities[0].cond, 'snow'); assert.equal(p.life.weather.cities[0].temp, -1);
+    assert.equal(fx[0].from.cities[0].cond, 'cloudy');
+    assert.equal(zoneShift('02-02 19:00', 'Asia/Seoul', 'Europe/Berlin', 2027), '02-02 11:00');
+    assert.equal(zoneShift('02-02 03:00', 'Asia/Seoul', 'Europe/Berlin', 2027), '02-01 19:00');
+    assert.equal(zoneShift('07-15 12:00', 'Europe/Berlin', 'Asia/Seoul', 2027), '07-15 19:00');
+    assert.equal(mirrorHome({ here: { place: 'Rathaus', cond: 'fog' }, cities: [{ name: 'Berlin' }] }).cities[0].cond, undefined);
+});

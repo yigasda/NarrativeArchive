@@ -8,7 +8,7 @@ import { AX, ax, axBar, axCb, axH1, axInd, axKp, axTint, axTop, busyHtml } from 
 import { filling } from './phoneai.js';
 import { byStory, fmtDate, koOn, pad, storyNow } from './phonedata.js';
 import { shiftDay, weatherNow } from './phonelife.js';
-import { apart, overlayNow } from './phonesynclife.js';
+import { apart, cityAt as cityOfPlace, mirrorHome, overlayNow } from './phonesynclife.js';
 import { fmtMoney } from './phonemoney.js';
 import { nameKey } from './people.js';
 import { esc } from './util.js';
@@ -884,6 +884,13 @@ function hereNow(lf) {
     if (gap > 0) { out.hours = []; out.line = ''; out.ko = ''; out.tiles = { ...(out.tiles || {}), rain24: null, rainNext: null }; }
     return out;
 }
+// a saved city as the screens draw it: the one the owner is in carries the "here" weather (a newer status line included)
+function cityView(p, lf, c) {
+    const h = hereNow(lf);
+    if (cityOfPlace(h.place, lf.weather.cities) !== c) return c;
+    const w = mirrorHome({ here: h, cities: [structuredClone(c)] });
+    return w.cities[0];
+}
 const hereFull = (p, lf) => { const h = hereNow(lf); return { ...h, tiles: fillTiles(h, `${h.date}:${h.place}`, h.date || now5(p), hereZone(lf, p, h.place)) }; };
 // what the tiles say, from their numbers
 const tileLines = (h) => ({
@@ -1038,7 +1045,7 @@ function dayCurve(c, lm, col) {
     return `<svg class="pic curve" viewBox="0 0 140 58" preserveAspectRatio="none"><polyline points="${pts.join(' ')} 140,58 0,58" fill="${col}" opacity=".16" stroke="none"/><polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="2.4" stroke-linecap="round"/><circle cx="${(nowH / 24 * 140).toFixed(1)}" cy="${y(nowH)}" r="5" fill="#fff" stroke="${col}" stroke-width="2.5"/></svg>`;
 }
 export function cityScreen(p, now, id) {
-    const lf = L(p), c = lf?.weather.cities.find(x => x.id === id);
+    const lf = L(p), c0 = lf?.weather.cities.find(x => x.id === id), c = c0 && cityView(p, lf, c0);
     if (!c) return weatherScreen(p, now);
     const t = cityTime(p, lf, c), h = { temp: c.temp, hi: c.hi, lo: c.lo, cond: c.cond, time: t.time, line: '', ko: '', hours: cityHours(c, t), days: [] };
     h.tiles = fillTiles({ ...h, tiles: { sunset: c.sunset || '', sunrise: c.sunrise || '', rain24: null, rainNext: c.rainNext ?? null, feels: c.feels ?? null, wind: c.wind ?? null, gust: c.gust ?? null, humidity: c.humidity ?? null, dew: c.dew ?? null, visibility: c.visibility ?? null, dir: c.dir || '' } }, `${c.name}:${now5(p).slice(0, 5)}`, now5(p), c.tz);
@@ -1076,7 +1083,7 @@ export function cityList(p, now) {
       <div class="ax_scroll">${axH1('날씨')}
         <div class="lf_q">${ax('search', 16, '#8a929d', 2.4)}도시 또는 공항 검색</div>
         ${card('weather', '', h.place || '현재 위치', `${nav} 현재 위치`, h.cond, phaseOf(ht, h.tiles.sunrise, h.tiles.sunset), h.temp, h.hi, h.lo, saidOf(h))}
-        ${lf.weather.cities.map(c => { const t = cityTime(p, lf, c), sun = c.sunrise && c.sunset ? [c.sunrise, c.sunset] : sunOf(now5(p).slice(0, 5), c.tz) || []; return card('wcity', c.id, c.name, t.off ? `${t.time} · ${t.off > 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '', c.cond, phaseOf(t.time, sun[0], sun[1]), c.temp, c.hi, c.lo, [WX[c.cond], c.note].filter(Boolean).join(' · ')); }).join('')}
+        ${lf.weather.cities.map(c0 => { const c = cityView(p, lf, c0), t = cityTime(p, lf, c), sun = c.sunrise && c.sunset ? [c.sunrise, c.sunset] : sunOf(now5(p).slice(0, 5), c.tz) || []; return card('wcity', c.id, c.name, t.off ? `${t.time} · ${t.off > 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '', c.cond, phaseOf(t.time, sun[0], sun[1]), c.temp, c.hi, c.lo, [WX[c.cond], c.note].filter(Boolean).join(' · ')); }).join('')}
         <i class="lf_pad"></i></div>${axInd()}`;
 }
 

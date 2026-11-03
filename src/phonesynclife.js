@@ -38,6 +38,8 @@ export const fileOf = x => withEv({ name: line(x?.name, 80), kind: kindOf(String
 export const dayOf = d => withEv({ date: day5(d?.date), bed: hhmm(d?.bed), sleep: hhmm(d?.sleep), wake: hhmm(d?.wake), woke: int(d?.woke, 0, 30) ?? 0, steps: int(d?.steps, 0, 120000), km: num(d?.km), floors: int(d?.floors, 0, 400),
     workout: d?.workout && line(d.workout.kind, 30) ? { kind: line(d.workout.kind, 30), time: hhmm(d.workout.time), min: int(d.workout.min, 0, 600), km: num(d.workout.km) } : null,
     hr: arr(d?.hr).map(x => int(x, 30, 220)).filter(x => x !== null).slice(0, 2), from: pick(d?.from, ['story', 'pattern'], 'pattern') }, d);
+// a chance of rain in percent; a model writing millimetres (0.4, 1.2) is read as a chance: a trace may rain, a millimetre will
+const rainPct = v => { const n = num(v); if (n === null) return null; if (!Number.isInteger(n) && n < 10) return n <= 0 ? 0 : n < 1 ? 40 : 70; return Math.max(0, Math.min(100, Math.round(n))); };
 const cityOf = c => ({ name: line(c?.name, 40), ko: ko(c?.ko), tz: tz(c?.tz), cond: condPick(c?.cond, 'cloudy', { temp: int(c?.temp, -60, 60) }), temp: int(c?.temp, -60, 60), hi: int(c?.hi, -60, 60), lo: int(c?.lo, -60, 60), sunrise: hhmm(c?.sunrise), sunset: hhmm(c?.sunset),
     rainNext: num(c?.rainNext), wind: num(c?.wind), gust: num(c?.gust), dir: line(c?.dir, 12), feels: int(c?.feels, -60, 60), humidity: int(c?.humidity, 0, 100), dew: int(c?.dew, -60, 60), visibility: num(c?.visibility), note: line(c?.note, 40), noteKo: ko(c?.noteKo) });
 
@@ -77,8 +79,8 @@ export function weatherFrom(t) {
 const hereOf = h => ({
     place: line(h.place, 60), date: day5(h.date), time: hhmm(h.time), from: pick(h.from, ['tracker', 'chat', 'archive', 'guess'], 'guess'),
     cond: condPick(h.cond, 'cloudy', { temp: int(h.temp, -60, 60), rain: int(arr(h.hours)[0]?.rain, 0, 100) }), temp: int(h.temp, -60, 60), hi: int(h.hi, -60, 60), lo: int(h.lo, -60, 60), line: line(h.line, 160), ko: ko(h.ko),
-    hours: arr(h.hours).map(x => ({ time: hhmm(x?.time), cond: condPick(x?.cond, 'cloudy', { temp: int(x?.temp, -60, 60), rain: int(x?.rain, 0, 100) }), temp: int(x?.temp, -60, 60), rain: int(x?.rain, 0, 100) ?? 0 })).filter(x => x.time).slice(0, 6),
-    days: arr(h.days).map(x => ({ day: day5(x?.day), cond: condPick(x?.cond, 'cloudy', { temp: int(x?.hi, -60, 60), rain: int(x?.rain, 0, 100) }), lo: int(x?.lo, -60, 60), hi: int(x?.hi, -60, 60), rain: int(x?.rain, 0, 100) ?? 0 })).filter(x => x.day).slice(0, 10),
+    hours: arr(h.hours).map(x => ({ time: hhmm(x?.time), cond: condPick(x?.cond, 'cloudy', { temp: int(x?.temp, -60, 60), rain: rainPct(x?.rain) }), temp: int(x?.temp, -60, 60), rain: rainPct(x?.rain) ?? 0 })).filter(x => x.time).slice(0, 6),
+    days: arr(h.days).map(x => ({ day: day5(x?.day), cond: condPick(x?.cond, 'cloudy', { temp: int(x?.hi, -60, 60), rain: rainPct(x?.rain) }), lo: int(x?.lo, -60, 60), hi: int(x?.hi, -60, 60), rain: rainPct(x?.rain) ?? 0 })).filter(x => x.day).slice(0, 10),
     tiles: Object.fromEntries(['rain24', 'rainNext', 'feels', 'wind', 'gust', 'humidity', 'dew', 'visibility'].map(k => [k, num(h.tiles?.[k])]).concat([['dir', line(h.tiles?.dir, 12)], ['sunrise', hhmm(h.tiles?.sunrise)], ['sunset', hhmm(h.tiles?.sunset)]])),
 });
 // the status line over a weather "here": its date, time, place and weather stand
@@ -91,8 +93,10 @@ function overlay(here, now, fresh = false) {
     if (now.place) here.place = line(now.place, 60);
     if (/^\d{2}-\d{2}/.test(when(now.date))) here.date = day5(now.date);
     if (now.time) here.time = hhmm(now.time);
-    const c = condOf(now.weather), t = tempOf(now.weather), t0 = here.temp;
+    const c = condOf(now.weather), t = tempOf(now.weather), t0 = here.temp, c0 = here.cond;
     if (c) here.cond = c;
+    // a sentence written for another sky or temperature no longer describes this one
+    if (c && c !== c0 || t !== null && Number.isFinite(t0) && Math.abs(t - t0) >= 4) { here.line = ''; here.ko = ''; }
     if (t !== null) {
         here.temp = t;
         const d = Number.isFinite(t0) ? t - t0 : 0, mv = (o, k) => { if (Number.isFinite(o?.[k])) o[k] = o[k] + d; };
@@ -105,11 +109,30 @@ function overlay(here, now, fresh = false) {
 // a Korean copy that only repeats the line (a Korean line given the same "ko") would show twice
 const unko = h => { if (h.ko && h.line && h.ko.replace(/\s+/g, ' ').trim() === h.line.replace(/\s+/g, ' ').trim()) h.ko = ''; return unline(h); };
 // a "line" that is no more than the sky's name ("흐림", "Cloudy") says what the header already says
-const unline = h => { const l = String(h.line || '').trim(); if (l && l.length <= 8 && condOf(l) === h.cond) { h.line = ''; h.ko = ''; } return h; };
+const unline = h => { const l = String(h.line || '').replace(/(영하\s*)?[-−]?\d{1,3}(?:[.,]\d)?\s*(?:°\s*[CF]?|℃|℉|도(?![가-힣]))/gi, '').replace(/기온|temperature|temp\b|현재|지금|now|currently/gi, '').replace(/[\s,.·/|()~-]+/g, ' ').trim(); if (l && l.length <= 8 && condOf(l) === h.cond) { h.line = ''; h.ko = ''; } return h; };
 // the saved city a place names (by its name or its Korean name): two places in two different saved cities are apart,
 // and the status line (the scene's) doesn't stand over an owner the model puts in the other
-const cityAt = (place, cities) => { const k = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''), pk = k(place); return pk ? arr(cities).find(c => [c?.name, c?.ko].map(k).filter(Boolean).some(n => pk.includes(n) || n.includes(pk))) || null : null; };
+export const cityAt = (place, cities) => { const k = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''), pk = k(place); return pk ? arr(cities).find(c => [c?.name, c?.ko].map(k).filter(Boolean).some(n => pk.includes(n) || n.includes(pk))) || null : null; };
+// the saved city the owner is in carries the same weather as "here" (the model may leave it as it was)
+export function mirrorHome(w) {
+    const h = w?.here, c = h && cityAt(h.place, w.cities);
+    if (!c) return w;
+    for (const k of ['cond', 'temp', 'hi', 'lo']) if (h[k] !== null && h[k] !== undefined && h[k] !== '') c[k] = h[k];
+    for (const k of ['sunrise', 'sunset', 'rainNext', 'wind', 'gust', 'dir', 'feels', 'humidity', 'dew', 'visibility']) { const v = h.tiles?.[k]; if (v !== null && v !== undefined && v !== '') c[k] = v; }
+    return w;
+}
 export const apart = (a, b, cities) => { const x = cityAt(a, cities), y = cityAt(b, cities); return !!(x && y && x !== y); };
+// a "MM-DD HH:MM" of one zone in another (Intl knows the rules; the year is the phone's, else this one)
+export function zoneShift(at, from, to, year = new Date().getFullYear()) {
+    const mt = /^(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(String(at || ''));
+    if (!mt || !from || !to || from === to) return at;
+    try {
+        const parts = (tz, d) => { const f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(d), g = k => Number(f.find(x => x.type === k)?.value); return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour') % 24, g('minute')); };
+        const guess = new Date(Date.UTC(year, mt[1] - 1, mt[2], mt[3], mt[4]));
+        const utc = guess.getTime() - (parts(from, guess) - guess.getTime()), local = new Date(parts(to, new Date(utc)));
+        return `${pad(local.getUTCMonth() + 1)}-${pad(local.getUTCDate())} ${pad(local.getUTCHours())}:${pad(local.getUTCMinutes())}`;
+    } catch { return at; }
+}
 // the newest status line over the saved weather, for the screen alone (nothing is saved): a day or hours later than it
 export const overlayNow = (here, now) => fit(unline(overlay(structuredClone(here), now)));
 export function parseWeather(w, now) {
@@ -356,6 +379,9 @@ export function applyWeather(p, w, now, { archive = true, today = '' } = {}) {
         // yesterday's sentence and rain don't describe today; the screen reads what it needs off the sky
         next = { ...was, here: { ...structuredClone(was.here), date: today, time: '', from: 'guess', said: '', line: '', ko: '', hours: [], tiles: { ...(was.here.tiles || {}), rain24: null, rainNext: null } } };
     } else return [];
+    // the cities are the next state's own (an effect's "from" must hold what was)
+    next.cities = structuredClone(next.cities || []);
+    mirrorHome(next);
     if (same(was, next)) return [];
     p.life.weather = next;
     return [{ type: 'set', path: 'life.weather', from: structuredClone(was), to: structuredClone(next) }];

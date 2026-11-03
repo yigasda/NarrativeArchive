@@ -19,7 +19,7 @@ import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
 import { arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 export { arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
-import { applyDays, applyLife, applyWeather, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom } from './phonesynclife.js';
+import { applyDays, applyLife, applyWeather, apart, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
 import { pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
@@ -754,10 +754,13 @@ async function updatePhone(m, owner) {
         settleRound(s, round.rows, failed, new Set(added.map(x => x.at)));
         for (const x of evidence) s.arch[x.key] = 1;
         // a now without its time ("2026-12-31", "1/2"): that day at the round's last event time, else the time it was
-        const nowAt = (t => (/^\d{2}-\d{2}$/.test(t) ? `${t} ${arr(raw.events).map(e => [when(e?.date).slice(0, 5), hhmm(e?.time)]).filter(([d, h]) => d === t && /^\d{2}:\d{2}$/.test(h || '')).map(([, h]) => h).sort().at(-1) || (t === String(p.now || '').slice(0, 5) ? p.now.slice(6) : '') || '12:00'}`.trim() : t))(when(raw.now));
+        let nowAt = (t => (/^\d{2}-\d{2}$/.test(t) ? `${t} ${arr(raw.events).map(e => [when(e?.date).slice(0, 5), hhmm(e?.time)]).filter(([d, h]) => d === t && /^\d{2}:\d{2}$/.test(h || '')).map(([, h]) => h).sort().at(-1) || (t === String(p.now || '').slice(0, 5) ? p.now.slice(6) : '') || '12:00'}`.trim() : t))(when(raw.now));
         // the phone's time only moves on, across New Year too (12-31 → 01-01 is a day later, not months back)
         // (a day or a few behind is the model slipping and is ignored; two months or more behind is a story that skipped far
         // ahead, past the half year the dates alone can tell: half a year later)
+        // the status line's own clock caps the model's (a "23:55" written over a line that says 21:30)
+        const trkNow = storyNow({ ...p, now: '' });
+        if (trkNow && nowAt && nowAt.slice(0, 5) === trkNow.slice(0, 5) && nowAt.slice(6) > trkNow.slice(6)) nowAt = trkNow;
         const gap = nowAt && p.now ? dayGap(p.now.slice(0, 5), nowAt.slice(0, 5)) : 1;
         if (nowAt && (gap > 0 || gap < -60 || gap === 0 && nowAt.slice(6) > p.now.slice(6))) {
             if (p.year && p.now && nowAt.slice(0, 5) < p.now.slice(0, 5)) p.year++;
@@ -1012,11 +1015,16 @@ export function monthDay(text) {
 export const rowDay = r => (r?.date?.d && calendars()[r.date.cal]?.length === 12 ? `${pad(r.date.m + 1)}-${pad(r.date.d)}` : '');
 // the newest status line's weather, its date as "MM-DD" whatever shape the line writes it in ("1월 30일 (토)", "Jan 30")
 export const trackerWeather = t => { const w = weatherFrom(t); if (w) { const d = monthDay(w.date); w.date = d ? `${pad(d.mo)}-${pad(d.d)}` : when(w.date).slice(0, 5); } return w; };
+// the scene's clock from the newest status line; an owner in another saved city (their phone's "here") reads it in their zone
 export function storyNow(p) {
     try {
         const t = recentTrackers(1)[0];
         const d = t?.date ? monthDay(t.date) : null;
-        if (t && Number.isFinite(t.min) && d) return `${pad(d.mo)}-${pad(d.d)} ${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}`;
+        if (t && Number.isFinite(t.min) && d) {
+            const at = `${pad(d.mo)}-${pad(d.d)} ${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}`, w = p?.life?.weather, here = w?.here?.place, scene = String(t.city || t.place || '').split(/\s*[,，→>/·]\s*/)[0];
+            if (w && apart(here, scene, w.cities)) { const a = cityAt(scene, w.cities), b = cityAt(here, w.cities); if (a?.tz && b?.tz) return zoneShift(at, a.tz, b.tz, Number(p.year) || undefined); }
+            return at;
+        }
     } catch { /* no status window */ }
     return p.now || '';
 }
