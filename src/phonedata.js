@@ -177,7 +177,7 @@ MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - No money is made up to cover a payment; a balance may go below zero.
 - A new paid ${paid} has its payment as a move in the same event.
 - A cancelled order${delivery ? ' or delivery' : ''} moves no money; if it was already paid, its refund is a plus move.
-${delivery ? `- A delivery paid in cash at the door has no move.
+${delivery ? `- A delivery paid in cash at the door has no move. "tip" only where tipping is the custom; elsewhere 0.
 - A delivery from a shop not in DELIVERY SHOPS also gives "newShop" with 2 to 4 dishes: the one ordered and others it would have.
 ` : ''}` : ''}
 ${PHONE_STYLE.replace('; "now" is the newest moment of the story.', '.')}

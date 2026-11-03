@@ -314,6 +314,9 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             to: txt(x.to, 40) || 'home', address: txt(x.address, 80), left: txt(x.left, 60), noteShop: txt(x.noteShop, 120), noteShopKo: txt(x.noteShopKo, 200), noteRider: txt(x.noteRider, 120), noteRiderKo: txt(x.noteRiderKo, 200),
             noCutlery: x.noCutlery === true, for: Math.max(1, Math.round(Number(x.for) || 1)), status, gift: giftOf(x.gift), reviewed: false, account: 'cash',
             id: `sync:${e.id}:d${k}`, ev: e.id, storyEvent: e.id, sourceIndex: e.at, sync: true };
+        // the same place always has the same address: home or work (or a person's) as the earlier orders wrote it
+        const before = [...box].reverse().find(o => o.to === row.to && o.address);
+        if (before) row.address = before.address;
         // the row that paid it: made by this event, or one already in the bank this event pointed at
         // (the same amount, else a payment to the same shop in this event: a tip left out or a rounding is still this order's)
         const paidHere = f => f.type === 'push' && f.path === 'money.tx' && !f.item.delivery && f.item.amount < 0;

@@ -678,3 +678,14 @@ test('reflection files: a folder the story makes is added once, with the voice m
     assert.equal(p.life.files.folders.at(-1).name, 'Wohnung');
     assert.equal(p.life.files.items.find(f => f.name === 'Besichtigung.m4a').length, '3:05');
 });
+
+test('a delivery from the story goes to the address home already has, whatever the model wrote', () => {
+    const { m, p } = setup();
+    Object.assign(p.delivery.orders[0], { to: 'home', address: 'Lindenstr. 4' });
+    applyMoney(m, p, { ...ev('sushi', 12, '10-26'), money: { moves: [{ account: '2222', amount: -18, who: 'Sushi Ya', kind: 'card', occurrence: 'new' }],
+        deliveries: [{ shop: 'Sushi Ya', items: [{ name: 'Maki', qty: 1, price: 16 }], fee: 2, to: 'home', address: 'Lindenstraße 4, 2. OG', left: 'Tür', noCutlery: true, occurrence: 'new' }] } }, opts);
+    const o = p.delivery.orders.at(-1);
+    assert.equal(o.address, 'Lindenstr. 4');
+    assert.equal(o.left, 'Tür');
+    assert.equal(o.noCutlery, true);
+});
