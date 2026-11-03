@@ -43,7 +43,7 @@ PRICES
 
 DATES AND LANGUAGE
 - Full "YYYY-MM-DD", in story time, never after DATE.
-- Names and notes in the owner's language, the Korean in "ko". "query": a search for public business news about the company, never private family matters.
+- Names and notes in the owner's language, the Korean in "ko" (none when they are Korean already). "query": a search for public business news about the company, never private family matters.
 
 ANSWER — one JSON object, nothing else:
 {"base":"EUR","basis":"what the story gave and what you invented",
@@ -215,7 +215,7 @@ YOU GET
 RULES
 - An invented reason is "source": "guess". "story" only when the story itself gives the reason: the exact words from the story as "evidence", more than the company's name, and the message or section numbers as "ref".
 - No family secrets, rights or relationships the story doesn't have. Nothing the owner doesn't know shows as known.
-- Names as they are, in the owner's language, the Korean in "ko".
+- Names as they are, in the owner's language, the Korean in "ko" (none when they are Korean already).
 
 ANSWER — one JSON object, nothing else:
 {"notes":[{"target":"the TARGETS key","text":"short note","ko":"번역","source":"guess|story","evidence":"exact words from the story, for story; otherwise empty","ref":""}]}

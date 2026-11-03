@@ -17,8 +17,8 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
-import { arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
-export { arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
+import { tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { applyDays, applyLife, applyWeather, apart, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
 import { pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
@@ -1087,25 +1087,6 @@ export function placesOf(m, owner) {
 }
 
 export const koOn = () => globalSettings().phoneKo !== false;
-// a Korean line that only says its original again ("케이크 흐트러지지 않게…" under the same words): no second line.
-// Every translation field (ko, kt, pko, noteKo, optionKo…) is dropped when it matches any other text on the same record
-// (spaces, marks and emoji aside), or when the words it translates are Korean already; the rest stay. Run before the phone is drawn, so every app and every saved phone gets it
-const KO_KEY = /^(ko|kt|pko|[a-z][A-Za-z]*Ko)$/, bare = v => String(v).toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
-// the words a translation is of, when the record says for sure: noteKo is note's, kt the title's, ko the one text the record has
-const MAIN = ['text', 'caption', 'item', 'label', 'name', 'who', 'title'];
-const origOf = (o, k) => { if (k === 'kt') return o.title; if (k !== 'ko' && k !== 'pko' && k.endsWith('Ko')) return o[k.slice(0, -2)]; if (k !== 'ko') return ''; const has = MAIN.filter(x => typeof o[x] === 'string' && o[x]); return has.length === 1 ? o[has[0]] : ''; };
-// written in Korean already: most of its letters are Hangul
-const korean = v => { const t = String(v || '').replace(/[^\p{L}]/gu, ''); return t.length > 0 && (t.match(/\p{Script=Hangul}/gu) || []).length / t.length > 0.5; };
-export function tidyKo(o, seen = new Set()) {
-    if (!o || typeof o !== 'object' || seen.has(o)) return;
-    seen.add(o);
-    if (Array.isArray(o)) { for (const x of o) tidyKo(x, seen); return; }
-    const own = Object.entries(o).filter(([k, v]) => typeof v === 'string' && v && !KO_KEY.test(k)).map(([, v]) => bare(v)).filter(Boolean);
-    for (const [k, v] of Object.entries(o)) {
-        if (KO_KEY.test(k) && typeof v === 'string') { if (v && (own.includes(bare(v)) || korean(origOf(o, k)))) o[k] = ''; }
-        else if (v && typeof v === 'object') tidyKo(v, seen);
-    }
-}
 export const savedName = (p, n) => p.contacts.find(c => nameKey(c.name) === nameKey(n))?.saved || n;
 export const hasKo = p => [...p.threads.flatMap(t => t.messages), ...p.photos, ...p.notes, ...p.searches, ...p.events, ...(p.posts || []), ...(p.mails || []), ...(p.diary || [])].some(x => x.ko);
 
@@ -1142,7 +1123,7 @@ ONE THING, ONE AMOUNT
 A purchase is in "orders" or "passes" and once in "tx", with the same amount, date and "ev".
 
 LANGUAGE
-Banks, shops, merchants and items named as they would be in the owner's country. A name not in Korean gets "ko".
+Banks, shops, merchants and items named as they would be in the owner's country. A name not in Korean gets "ko"; a Korean one gets none.
 
 JSON (one object, nothing before or after it)
 {
@@ -1185,7 +1166,7 @@ RULES
 - 3 or 4 memos, each at a moment the archive has where the owner could plausibly talk into their phone alone: after a fight, on the way somewhere, late at night. Not the days the diary already covers, where possible.
 - Spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences. Not a diary entry.
 - Only what the archive shows happened and what the owner felt about it; no new events, no new secrets.
-- In the owner's own language. Speech not in Korean gets "ko".
+- In the owner's own language. Speech not in Korean gets "ko"; Korean speech gets none.
 - 20 to 90 seconds of speech each.
 
 ANSWER — one JSON object, nothing else:
