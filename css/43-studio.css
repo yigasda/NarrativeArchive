@@ -1,49 +1,46 @@
 /* ============ 압축 작업실: a messenger in 아카이브에 추가's colours. Answers are cream cards with a shadow, my lines soft apricot,
    the scene tabs separate rounded blocks, the next step a pill floating over the conversation, the ask field and + menu at the bottom.
-   One place per part. Parts that SillyTavern themes paint (buttons, the field) are pinned with the window shield
-   `body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st … :not(#na_x)`, the strength the shared sweeps use. */
+   Controls are painted through --c-bg / --c-fg / --c-r / --c-sh (the control shield in 69-components.css applies them over any theme),
+   so nothing here needs !important. Control rules start with .na_st to outrank `.na_st button { font: inherit }`. */
 
 /* ---- colours */
 .na_st {
     --st-bg: #F0E4DB; --st-bub: #FCF6F1; --st-w: #FFFFFF; --st-ink: #2E241E; --st-dim: #9C8B80; --st-line: #EADBD0; --st-seg: #E9DCD1;
     --st-acc: #B8541F; --st-acc2: #CF6430; --st-accsoft: #FBE2D3; --st-ok: #2F6B47; --st-oksoft: #E2F1E7; --st-warn: #A86A12; --st-warnline: #F1DDBB; --st-q: #9A4416;
+    --st-soft: #F6E1D3; --st-softink: #A84A17; --st-onacc: #fff; --st-onok: #fff;
     display: flex; flex-direction: column; height: min(86dvh, 860px); margin: -4px; color: var(--st-ink); text-align: left; font-size: 14px;
 }
 body.na_darkui .na_st {
     --st-bg: #17171A; --st-bub: #232328; --st-w: #232328; --st-ink: #ECEAE6; --st-dim: #9A989F; --st-line: #3A3A41; --st-seg: #2E2E34;
     --st-acc: #E9DFCF; --st-acc2: #F0CF8E; --st-accsoft: #2E2E34; --st-ok: #6CC495; --st-oksoft: #2E2E34; --st-warn: #E3B058; --st-warnline: #5A5040; --st-q: #F0CF8E;
+    --st-soft: #2E2E34; --st-softink: #F0CF8E; --st-onacc: #1B1B1F; --st-onok: #13261B;
 }
-body:not(.na_darkui) dialog.popup:has(.na_st) { background: #F0E4DB !important; }
-body.na_darkui dialog.popup:has(.na_st) { background: #17171A !important; }
 /* the header's × closes it; the popup's own button row would only take room from the conversation */
-dialog.popup:has(.na_st) .popup-controls { display: none !important; }
+dialog.popup:has(.na_st) .popup-controls { display: none; }
 .na_st button { font: inherit; color: inherit; }
 
 /* ---- header: icon, title, 추가하기, × */
 .na_st_hd { padding: 4px 4px 10px; border-bottom: 1px solid var(--st-line); }
 .na_st_hrow { display: flex; align-items: center; gap: 10px; }
-.na_st_av { width: 38px; height: 38px; flex: none; border-radius: 12px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, var(--st-acc2), var(--st-acc)); }
+.na_st_av { width: 38px; height: 38px; flex: none; border-radius: 12px; display: grid; place-items: center; color: var(--st-onacc); background: linear-gradient(135deg, var(--st-acc2), var(--st-acc)); }
 .na_st_ht { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
 .na_st_ht b { font-size: 1.1em; }
 .na_st_ht small { font-size: 0.85em; color: var(--st-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.na_st_add { flex: none; border-radius: 999px; padding: 8px 14px; font-weight: 700 !important; font-size: 0.93em !important; cursor: pointer; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st button.na_st_add:not(#na_x) { border: 0 !important; outline: none !important; box-shadow: none !important; background: #F6E1D3 !important; color: #A84A17 !important; }
-body.na_darkui dialog.popup .na_st button.na_st_add:not(#na_x) { background: #2E2E34 !important; color: #F0CF8E !important; }
-.na_st_add:disabled { opacity: 0.45; cursor: default; }
-.na_st_x { flex: none; width: 34px; height: 34px; margin-right: -4px; border: 0; border-radius: 50%; background: none; color: var(--st-dim) !important; display: grid; place-items: center; cursor: pointer; }
+.na_st .na_st_add { flex: none; padding: 8px 14px; font-weight: 700; font-size: 0.93em; cursor: pointer; outline: none; --c-bg: var(--st-soft); --c-fg: var(--st-softink); --c-r: 999px; }
+.na_st .na_st_add:disabled { opacity: 0.45; cursor: default; }
+.na_st .na_st_x { flex: none; width: 34px; height: 34px; margin-right: -4px; display: grid; place-items: center; cursor: pointer; --c-fg: var(--st-dim); --c-r: 50%; }
 
 /* ---- scene tabs: to do = tray colour, answered = deeper tray, locked = green, this one = brown (dark: grey / cream) */
 .na_st_seg { display: flex; gap: 4px; margin-top: 12px; overflow-x: auto; scrollbar-width: none; }
 .na_st_seg::-webkit-scrollbar { display: none; }
-.na_st_seg span { flex: 1 0 30px; text-align: center; font-size: 0.78em; font-weight: 700; padding: 5px 0; border-radius: 8px; background: var(--st-seg); color: var(--st-dim); }
-.na_st_seg span.l { background: var(--st-oksoft); color: var(--st-ok); }
-.na_st_seg span.d { background: var(--st-accsoft); color: var(--st-acc); }
-.na_st_seg span.on { background: var(--st-ink); color: var(--st-bg); }
-body:not(.na_darkui) .na_st .na_st_seg span { background: #E9DCD1; color: #9C8B80; }
-body:not(.na_darkui) .na_st .na_st_seg span.d { background: #DDCDC1; color: #5C4C42; }
-body:not(.na_darkui) .na_st .na_st_seg span.l { background: #E3EFE6; color: #2F6B47; }
-body:not(.na_darkui) .na_st .na_st_seg span.on { background: #6E5D52; color: #F7EEE7; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14); }
-body.na_darkui .na_st .na_st_seg span.d { background: #3A3A41; color: #ECEAE6; }
+.na_st_seg span { flex: 1 0 30px; text-align: center; font-size: 0.78em; font-weight: 700; padding: 5px 0; border-radius: 8px; background: #E9DCD1; color: #9C8B80; }
+.na_st_seg span.l { background: #E3EFE6; color: #2F6B47; }
+.na_st_seg span.d { background: #DDCDC1; color: #5C4C42; }
+.na_st_seg span.on { background: #6E5D52; color: #F7EEE7; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14); }
+body.na_darkui .na_st_seg span { background: var(--st-seg); color: var(--st-dim); }
+body.na_darkui .na_st_seg span.l { background: var(--st-oksoft); color: var(--st-ok); }
+body.na_darkui .na_st_seg span.d { background: #3A3A41; color: #ECEAE6; }
+body.na_darkui .na_st_seg span.on { background: var(--st-ink); color: var(--st-bg); box-shadow: none; }
 .na_st_gap { margin-top: 6px; font-size: 0.8em; color: var(--st-warn); }
 
 /* ---- conversation */
@@ -51,17 +48,16 @@ body.na_darkui .na_st .na_st_seg span.d { background: #3A3A41; color: #ECEAE6; }
 .na_st_log { height: 100%; overflow-y: auto; padding: 12px 2px 64px; display: flex; flex-direction: column; gap: 6px; }
 .na_st_mark { align-self: center; font-size: 0.78em; color: var(--st-dim); margin: 8px 0 4px; text-align: center; }
 .na_st_mark b { color: var(--st-ink); opacity: 0.75; }
-.na_st_bub { align-self: flex-start; max-width: 92%; background: var(--st-bub); border-radius: 20px 20px 20px 7px; padding: 12px 14px 10px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; font-size: 0.95em; }
-body:not(.na_darkui) .na_st .na_st_bub:not(.na_st_typing) { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
-body.na_darkui .na_st .na_st_bub:not(.na_st_typing) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+.na_st_bub { align-self: flex-start; max-width: 92%; background: var(--st-bub); border-radius: 20px 20px 20px 7px; padding: 12px 14px 10px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; font-size: 0.95em; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+body.na_darkui .na_st_bub { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+.na_st .na_st_bub.na_st_typing { box-shadow: none; }
 .na_st_bub:has(.na_st_card) { white-space: normal; }
 .na_st_bub:has(.na_st_amenu:not([hidden])) { position: relative; z-index: 3; }
 .na_st_bub hr { border: 0; border-top: 1px solid var(--st-line); margin: 10px 0; }
+.na_st_bub.na_st_edit { padding: 10px; }
 .na_st_pre { font-size: 0.82em; font-family: ui-monospace, var(--monoFontFamily, monospace); }
-.na_st_me { align-self: flex-end; max-width: 80%; margin-top: 6px; padding: 9px 15px; border-radius: 20px 20px 7px 20px; white-space: pre-wrap; word-break: break-word; line-height: 1.45; }
-body:not(.na_darkui) .na_st .na_st_me { background: #F6E1D3; color: #A84A17 !important; }
-body.na_darkui .na_st .na_st_me { background: #2E2E34; color: #F0CF8E !important; }
-.na_st_tonote { align-self: flex-end; border: 0; background: none; padding: 0 4px; font-size: 0.75em !important; color: var(--st-dim) !important; cursor: pointer; margin-bottom: 4px; }
+.na_st_me { align-self: flex-end; max-width: 80%; margin-top: 6px; padding: 9px 15px; border-radius: 20px 20px 7px 20px; background: var(--st-soft); color: var(--st-softink); white-space: pre-wrap; word-break: break-word; line-height: 1.45; }
+.na_st .na_st_tonote { align-self: flex-end; padding: 0 4px; font-size: 0.75em; cursor: pointer; margin-bottom: 4px; --c-fg: var(--st-dim); }
 .na_st_typing { display: flex; align-items: center; gap: 4px; white-space: normal; }
 .na_st_typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--st-dim); animation: na_st_dot 1.2s infinite ease-in-out; }
 .na_st_typing i:nth-child(2) { animation-delay: 0.15s; } .na_st_typing i:nth-child(3) { animation-delay: 0.3s; }
@@ -78,85 +74,72 @@ body.na_darkui .na_st .na_st_me { background: #2E2E34; color: #F0CF8E !important
 .na_st_card li::marker { color: var(--st-dim); }
 .na_st_qt { color: var(--st-q); font-weight: 500; }
 .na_st_cite { font-size: 0.75em; color: var(--st-dim); }
-.na_st_msg { display: inline; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-decoration: underline dotted; text-underline-offset: 2px; cursor: pointer; }
+.na_st .na_st_msg { display: inline; padding: 0; text-decoration: underline dotted; text-underline-offset: 2px; cursor: pointer; }
 .na_st_tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 9px; }
 .na_st_tag { font-size: 0.76em; font-weight: 500; padding: 3px 9px; border-radius: 999px; background: var(--st-w); color: var(--st-warn); box-shadow: inset 0 0 0 1px var(--st-warnline); }
 .na_st_tag.ok { color: var(--st-ok); box-shadow: inset 0 0 0 1px var(--st-oksoft); }
 .na_st_lks { margin-left: auto; display: flex; flex-wrap: nowrap; gap: 5px; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .na_st_lks::-webkit-scrollbar { display: none; }
-/* the answer's small buttons: one line each, whatever the theme does to buttons (they wrapped into tall boxes) */
-.na_st_lks > button { flex: 0 0 auto !important; width: auto !important; min-width: 0 !important; min-height: 0 !important; height: auto !important; margin: 0 !important; padding: 4px 9px !important; line-height: 1.35 !important; white-space: nowrap !important; box-shadow: none; }
-.na_st_lks > .na_st_ib { display: inline-flex !important; align-items: center; padding: 4px 7px !important; }
-.na_st_edit { padding: 10px !important; }
+/* the answer's small buttons: one line each */
+.na_st .na_st_lks > button { flex: 0 0 auto; width: auto; min-width: 0; min-height: 0; height: auto; margin: 0; padding: 4px 9px; line-height: 1.35; white-space: nowrap; }
+.na_st .na_st_lks > .na_st_ib { display: inline-flex; align-items: center; padding: 4px 7px; }
 .na_st_edta { width: 100%; box-sizing: border-box; min-height: 160px; font-size: 0.92em; line-height: 1.55; border-radius: 12px; padding: 10px 12px; resize: vertical; }
 .na_st_edhint { color: var(--st-dim); font-size: 0.74em; }
-.na_st_pen, .na_st_edcancel, .na_st_edsave, .na_st_copy, .na_st_ko, .na_st_lk, .na_st_fix, .na_st_unfix { border: 0; border-radius: 999px; background: var(--st-w); color: var(--st-dim) !important; font-size: 0.8em !important; font-weight: 700 !important; cursor: pointer; }
-.na_st_edsave { background: var(--st-acc); color: #fff !important; }
-body.na_darkui .na_st :is(.na_st_av, .na_st_send, .na_st_edsave) { color: #1B1B1F !important; }
-.na_st_ko, .na_st_lk, .na_st_fix, .na_st_unfix { padding: 4px 10px; }
-.na_st_lk { display: inline-flex; align-items: center; gap: 5px; }
-.na_st_lk.on { background: var(--st-ok); color: #fff !important; }
-body.na_darkui .na_st_lk.on { color: #13261B !important; }
-.na_st_ko.on { color: var(--st-acc) !important; }
-.na_st_fix { color: var(--st-acc) !important; }
-.na_st_fix:disabled { opacity: 0.6; cursor: default; }
+.na_st :is(.na_st_pen, .na_st_edcancel, .na_st_edsave, .na_st_copy, .na_st_ko, .na_st_lk, .na_st_fix, .na_st_unfix) { font-size: 0.8em; font-weight: 700; cursor: pointer; --c-bg: var(--st-w); --c-fg: var(--st-dim); --c-r: 999px; }
+.na_st :is(.na_st_ko, .na_st_lk, .na_st_fix, .na_st_unfix) { padding: 4px 10px; }
+.na_st .na_st_edsave { --c-bg: var(--st-acc); --c-fg: var(--st-onacc); }
+.na_st .na_st_lk { display: inline-flex; align-items: center; gap: 5px; }
+.na_st .na_st_lk.on { --c-bg: var(--st-ok); --c-fg: var(--st-onok); }
+.na_st .na_st_ko.on, .na_st .na_st_fix { --c-fg: var(--st-acc); }
+.na_st .na_st_fix:disabled { opacity: 0.6; cursor: default; }
 
 /* ---- the answer's action row (docs/mockups/ext-studio-acts B): one line under a hairline — the check as plain text on the left,
    한국어 and 확정 on the right, the rest behind ⋯ */
 .na_st3_bar { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--st-line, var(--na-line2)); }
 .na_st3_tags { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px 8px; }
-.na_st3_tags .na_st_tag { background: transparent !important; box-shadow: none !important; padding: 0 !important; font-size: 11.5px; }
+.na_st3_tags .na_st_tag { background: transparent; box-shadow: none; padding: 0; font-size: 11.5px; }
 .na_st3_tags .na_st_tag.ok::before { content: "✓ "; }
 .na_st3_right { flex: none; display: flex; align-items: center; gap: 4px; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_right > button.na_st_ko:not(#na_x) { margin: 0 !important; padding: 5px 6px !important; border: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--st-dim) !important; font-size: 12px !important; font-weight: 600 !important; white-space: nowrap; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_right > button.na_st_ko.on:not(#na_x) { color: var(--st-acc) !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_right > button.na_st_lk:not(#na_x) { margin: 0 !important; padding: 5px 11px !important; border: 0 !important; box-shadow: none !important; font-size: 12px !important; font-weight: 700 !important; white-space: nowrap; }
-body:not(.na_darkui) dialog.popup .na_st3_right > button.na_st_lk:not(.on):not(#na_x) { background: #F6E1D3 !important; color: #A84A17 !important; }
-body.na_darkui dialog.popup .na_st3_right > button.na_st_lk:not(.on):not(#na_x) { background: #2E2E34 !important; color: #F0CF8E !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st3_right > button.na_st_lk.on:not(#na_x) { background: var(--st-ok) !important; color: #fff !important; }
-body.na_darkui dialog.popup .na_st3_right > button.na_st_lk.on:not(#na_x) { color: #13261B !important; }
+.na_st .na_st3_right > .na_st_ko { margin: 0; padding: 5px 6px; font-size: 12px; font-weight: 600; white-space: nowrap; --c-bg: transparent; }
+.na_st .na_st3_right > .na_st_lk { margin: 0; padding: 5px 11px; font-size: 12px; font-weight: 700; white-space: nowrap; --c-bg: var(--st-soft); --c-fg: var(--st-softink); }
+.na_st .na_st3_right > .na_st_lk.on { --c-bg: var(--st-ok); --c-fg: var(--st-onok); }
 .na_st_more { position: relative; display: inline-flex; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup button.na_st_dots:not(#na_x) { display: inline-flex !important; align-items: center; justify-content: center; width: 28px !important; height: 28px !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 999px !important; background: transparent !important; box-shadow: none !important; color: var(--st-dim) !important; cursor: pointer; }
+.na_st .na_st_dots { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; min-height: 0; margin: 0; padding: 0; cursor: pointer; --c-fg: var(--st-dim); --c-r: 999px; }
 .na_st_amenu { position: absolute; right: -14px; top: calc(100% + 16px); z-index: 6; display: flex; flex-direction: column; min-width: 150px; padding: 4px; border-radius: 14px; background: #FBF7F3; box-shadow: 0 8px 24px rgba(70, 52, 40, 0.2); }
 body.na_darkui .na_st_amenu { background: #2E2E34; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
 .na_st_amenu[hidden] { display: none; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st_amenu > button:not(#na_x) { display: flex !important; align-items: center; gap: 8px; width: 100% !important; min-height: 0 !important; height: auto !important; margin: 0 !important; padding: 9px 10px !important; border: 0 !important; border-radius: 10px !important; background: transparent !important; box-shadow: none !important; color: var(--na-ink, inherit) !important; font: inherit; font-size: 13px !important; font-weight: 500 !important; text-align: left; white-space: nowrap; cursor: pointer; }
-.na_st_amenu > button:hover { background: rgba(0, 0, 0, 0.04) !important; }
+.na_st .na_st_amenu > button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 0; height: auto; margin: 0; padding: 9px 10px; font: inherit; font-size: 13px; font-weight: 500; text-align: left; white-space: nowrap; cursor: pointer; --c-bg: transparent; --c-fg: var(--na-ink, inherit); --c-r: 10px; }
 
 /* ---- next scene pill */
-.na_st_float { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; border: 0; border-radius: 999px; padding: 10px 16px 10px 18px; background: var(--st-ink); color: var(--st-bg) !important; font-weight: 700 !important; font-size: 0.93em !important; white-space: nowrap; box-shadow: 0 8px 22px rgba(46, 36, 30, 0.28); cursor: pointer; }
-.na_st_float small { color: inherit !important; font-weight: 500; opacity: 0.6; }
-.na_st_float[hidden] { display: none; }
+.na_st .na_st_float { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 10px 16px 10px 18px; font-weight: 700; font-size: 0.93em; white-space: nowrap; cursor: pointer; --c-bg: var(--st-ink); --c-fg: var(--st-bg); --c-r: 999px; --c-sh: 0 8px 22px rgba(46, 36, 30, 0.28); }
+.na_st_float small { color: inherit; font-weight: 500; opacity: 0.6; }
+.na_st .na_st_float[hidden] { display: none; }
 
-/* ---- bottom: quick chips, then + and the ask field (the field pill is the only box: no theme fill or edge inside it) */
+/* ---- bottom: quick chips, then + and the ask field (the field pill is the only box) */
 .na_st_dock { position: relative; padding: 10px 0 2px; border-top: 1px solid var(--st-line); }
 .na_st_quick { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-bottom: 10px; padding: 2px; }
 .na_st_quick::-webkit-scrollbar { display: none; }
-.na_st_qk { flex: none; border: 0; border-radius: 999px; padding: 6px 12px; background: var(--st-w); color: var(--st-ink) !important; font-size: 0.86em !important; white-space: nowrap; box-shadow: 0 1px 3px rgba(46, 36, 30, 0.08), inset 0 0 0 1px var(--st-line); cursor: pointer; }
-.na_st_qk:disabled { opacity: 0.45; cursor: default; }
+.na_st .na_st_qk { flex: none; padding: 6px 12px; font-size: 0.86em; white-space: nowrap; cursor: pointer; --c-bg: var(--st-w); --c-fg: var(--st-ink); --c-r: 999px; --c-sh: 0 1px 3px rgba(46, 36, 30, 0.08), inset 0 0 0 1px var(--st-line); }
+.na_st .na_st_qk:disabled { opacity: 0.45; cursor: default; }
 /* same 2px inset as the chip row, so the + and the field's ends don't touch the window's clip edge */
 .na_st_inrow { display: flex; align-items: flex-end; gap: 8px; padding: 0 2px; }
-.na_st_plus { position: relative; flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--st-bub); color: var(--st-ink) !important; display: grid; place-items: center; cursor: pointer; }
+.na_st .na_st_plus { position: relative; flex: none; width: 40px; height: 40px; display: grid; place-items: center; cursor: pointer; --c-bg: var(--st-bub); --c-fg: var(--st-ink); --c-r: 50%; }
 .na_st_plus i { position: absolute; top: 1px; right: 1px; width: 10px; height: 10px; border-radius: 50%; background: var(--st-acc2); border: 2px solid var(--st-bg); }
 .na_st_plus i[hidden] { display: none; }
 .na_st_field { flex: 1; min-width: 0; display: flex; align-items: flex-end; gap: 6px; min-height: 40px; padding: 5px 5px 5px 15px; border-radius: 20px; background: var(--st-w); box-shadow: inset 0 0 0 1px var(--st-line); }
 .na_st_field:focus-within { box-shadow: inset 0 0 0 1.5px var(--st-acc); }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup.na_st .na_st_field textarea.na_st_q:is(*, :hover, :focus, :focus-visible, :disabled):not(#na_x) {
-    flex: 1; min-width: 0; height: 30px; min-height: 0; max-height: 120px; margin: 0; padding: 5px 0; border: 0 !important; border-radius: 0 !important; outline: none !important;
-    background: transparent !important; box-shadow: none !important; -webkit-appearance: none; appearance: none;
-    color: var(--st-ink) !important; font: inherit; font-size: 0.95em; line-height: 1.4; resize: none; overflow-y: auto; scrollbar-width: none; }
-.na_st .na_st_field textarea.na_st_q::-webkit-scrollbar { display: none; }
-.na_st .na_st_field textarea.na_st_q::placeholder { color: var(--st-dim) !important; opacity: 1; }
-.na_st_send { flex: none; width: 30px; height: 30px; border: 0; border-radius: 50%; background: var(--st-acc); color: #fff !important; display: grid; place-items: center; cursor: pointer; }
-.na_st_send:disabled { opacity: 0.5; cursor: wait; }
+.na_st .na_st_field .na_st_q { flex: 1; min-width: 0; height: 30px; min-height: 0; max-height: 120px; margin: 0; padding: 5px 0; outline: none; -webkit-appearance: none; appearance: none; font: inherit; font-size: 0.95em; line-height: 1.4; resize: none; overflow-y: auto; scrollbar-width: none; --c-fg: var(--st-ink); }
+.na_st .na_st_field .na_st_q::-webkit-scrollbar { display: none; }
+.na_st .na_st_field .na_st_q::placeholder { color: var(--st-dim); opacity: 1; }
+.na_st .na_st_send { flex: none; width: 30px; height: 30px; display: grid; place-items: center; cursor: pointer; --c-bg: var(--st-acc); --c-fg: var(--st-onacc); --c-r: 50%; }
+.na_st .na_st_send:disabled { opacity: 0.5; cursor: wait; }
 
-/* ---- + menu: phone-menu rows (tall, regular names, rounded ends) */
-.na_st_menu { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 5; width: min(300px, 100%); padding: 4px 0 !important; overflow: hidden; border-radius: 16px; background: var(--st-w); box-shadow: 0 12px 32px rgba(46, 36, 30, 0.22), inset 0 0 0 1px var(--st-line); display: flex; flex-direction: column; }
+/* ---- + menu: phone-menu rows (tall, regular names) */
+.na_st_menu { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 5; width: min(300px, 100%); padding: 4px 0; overflow: hidden; border-radius: 16px; background: var(--st-w); box-shadow: 0 12px 32px rgba(46, 36, 30, 0.22), inset 0 0 0 1px var(--st-line); display: flex; flex-direction: column; }
 .na_st_menu[hidden] { display: none; }
-.na_st_mi { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0; border: 0; background: none; text-align: left; cursor: pointer; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_st .na_st_mi:not(#na_x) { min-height: 48px; padding: 12px 14px !important; border-radius: 0 !important; }
-.na_st_mi:hover { background: var(--st-bub); }
-.na_st_mi[hidden] { display: none; }
+.na_st .na_st_mi { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; margin: 0; padding: 12px 14px; text-align: left; cursor: pointer; }
+.na_st .na_st_mi:hover { --c-bg: var(--st-bub); }
+.na_st .na_st_mi[hidden] { display: none; }
 .na_st_mi > span:first-child { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
 .na_st_mi > :not(:first-child) { flex: none; }
 .na_st_mi b { font-size: 0.93em; }
