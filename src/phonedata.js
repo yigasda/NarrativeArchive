@@ -19,7 +19,7 @@ import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
 import { tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
-import { applyDays, applyLife, applyWeather, apart, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
+import { applyDays, applyLife, applyWeather, apart, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
 import { pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
@@ -56,7 +56,7 @@ Could this be on the owner's phone, given what the archive, lorebook and chat sh
 - The lorebook counts as fact like the archive; where the two disagree, the archive wins.
 - Events (a meeting, a fight, a confession, a trip, a loss) only if the archive or lorebook has them.
 - Small everyday things around those events are fine: how a text was worded, a photo of a place they were, a search they would make.
-- People: only people the story has. A relationship word (girlfriend, ex, husband, boss) only if the archive uses it for them.
+- People: only people the story has. A relationship word (girlfriend, ex, husband, boss) only if the archive or chat uses it for them.
 - Nothing later than the newest moment of the story.
 - The diary holds only what the archive shows happened and what the owner felt about it; no new secrets, no new feelings.`;
 const PHONE_STYLE = `LANGUAGE
@@ -149,7 +149,7 @@ WHAT IS NEW
 - An event in EVENTS ON THE PHONE keeps its id; add only what the phone doesn't hold yet.
 - MESSAGES READ BEFORE, NOW CHANGED were already put on the phone: give their events the ids listed there; a payment in them is that same payment, its amount corrected if it changed.
 - Small everyday things around an event are fine: how a text was worded, a photo of the place, a search they would make.
-- People: only people the story has.
+- People: only people the story has. A relationship word (girlfriend, ex, husband, boss) only if the messages or archive use it for them.
 - A diary entry holds only what these messages show and what the owner felt about it; no new secrets, no new feelings.
 
 WHERE IT COMES FROM
@@ -175,12 +175,13 @@ MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - Already in MONEY NOW or INVESTMENTS NOW: its id as "already"; it is not paid again.
 - A card purchase goes on the card account; a refund is plus; paying the card off is a transfer from the bank.
 - No money is made up to cover a payment; a balance may go below zero.
+- Company money, family money and an inheritance still to come are not the owner's cash.
 - A new paid ${paid} has its payment as a move in the same event.
 - A cancelled order${delivery ? ' or delivery' : ''} moves no money; if it was already paid, its refund is a plus move.
-${delivery ? `- A delivery paid in cash at the door has no move.
+${delivery ? `- A delivery paid in cash at the door has no move. "tip" only where tipping is the custom; elsewhere 0.
 - A delivery from a shop not in DELIVERY SHOPS also gives "newShop" with 2 to 4 dishes: the one ordered and others it would have.
 ` : ''}` : ''}
-${PHONE_STYLE}
+${PHONE_STYLE.replace('; "now" is the newest moment of the story.', '.')}
 
 ANSWER — one JSON object, nothing else:
 { "now": "MM-DD HH:MM",
@@ -200,8 +201,8 @@ ANSWER — one JSON object, nothing else:
                "tiles": { "rain24": mm today, "rainNext": mm by tomorrow, "wind": km/h, "dir", "humidity", "feels": only when the story gives it },
                "cities": [{ "name", "cond", "temp", "hi", "lo" }, a city newly saved (home, work, family, a trip) also "tz", "note": a few words, "added": true] } or null` : ''} }
 ${money ? `"money" only when money moves or an order or ticket changes.` : ''}
-Also in "money" when these messages show them: "newAccount": { "kind": "checking" | "savings" | "credit", "name", "last4", "currency", "balance" } (an account or card the owner opens), "newCard": { "account": last4, "exp": "MM/YY" }${delivery ? `, "cart": { "shop", "items": [like a delivery's] } (dishes put in the basket and not ordered)` : ''}, "watch": [{ "symbol", "name", "currency", "note", "ko" }] (a share they start watching), "quotes": [{ "symbol", "date", "value", "evidence": exact words }] (a price the story gives), "stakes": [{ "company", "listed", "percent", "holder", "voter", "beneficiary", "restriction", "value", "currency", "evidence": exact words }] (a stake the story says they now hold).
-In "events", a plan moved or called off is its item again with "was": the date it had, or "cancelled": true. In "threads", a text the owner deleted is { "text", "deleted": true }.
+${money ? `Also in "money" when these messages show them: "newAccount": { "kind": "checking" | "savings" | "credit", "name", "last4", "currency", "balance" } (an account or card the owner opens), "newCard": { "account": last4, "exp": "MM/YY" }${delivery ? `, "cart": { "shop", "items": [like a delivery's] } (dishes put in the basket and not ordered)` : ''}, "watch": [{ "symbol", "name", "currency", "note", "ko" }] (a share they start watching), "quotes": [{ "symbol", "date", "value", "evidence": exact words }] (a price the story gives), "stakes": [{ "company", "listed", "percent", "holder", "voter", "beneficiary", "restriction", "value", "currency", "evidence": exact words }] (a stake the story says they now hold).
+` : ''}In "events", a plan moved or called off is its item again with "was": the date it had, or "cancelled": true. In "threads", a text the owner deleted is { "text", "deleted": true }.
 Items in "phone":
 {
 ${PHONE_ITEMS}${life ? `,
@@ -787,7 +788,7 @@ async function updatePhone(m, owner) {
         const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = applyWeather(p, askWeather ? raw.weather : null, tracker, { archive: evidence.length + before.length > 0, today: String(p.now || '').slice(0, 5) });
         if (days.length) apps.add('건강');
         if (sky.length) apps.add('날씨');
-        const roundFx = [...days, ...sky, ...lifeClock(p, p.now), ...dlvClock(p, p.now)];
+        const roundFx = [...days, ...sky, ...lifeClock(p, p.now), ...dlvClock(p, p.now), ...cardClock(p, p.now)];
         // after the clock moves: the card's month is counted up to the story's now
         if (p.money) migrateBank(m, p);
         const id = rid;

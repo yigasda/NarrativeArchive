@@ -500,6 +500,17 @@ export function lifeNow(p) {
     };
 }
 // a delivery still on the way an hour and a half after it was due (or ordered) has arrived by now
+// a card payment waits ("승인 대기") through its own day and goes through once the story's day moves on
+export function cardClock(p, now) {
+    const out = [], today = String(now || '').slice(0, 5);
+    if (!/^\d{2}-\d{2}$/.test(today)) return out;
+    for (const t of p.money?.tx || []) {
+        if (!t.pending || t.kind !== 'card' || !/^\d{2}-\d{2}/.test(String(t.time || '')) || dayGap(String(t.time).slice(0, 5), today) <= 0) continue;
+        out.push({ type: 'change', path: 'money.tx', id: t.id, from: { pending: true }, to: { pending: false } });
+        t.pending = false;
+    }
+    return out;
+}
 export function dlvClock(p, now) {
     const out = [], today = String(now || '').slice(0, 5), hm = String(now || '').slice(6, 11);
     if (!p.delivery || !/^\d{2}-\d{2}$/.test(today)) return out;

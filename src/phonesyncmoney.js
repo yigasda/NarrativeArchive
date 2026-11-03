@@ -207,6 +207,9 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const row = { id, account: acct.last4, who: txt(x.who, 60), ko: txt(x.ko, 60), amount: round(amount), time: `${date}${e.time ? ` ${e.time}` : ''}`, day: full,
             // on the card everything is a card row (a refund is plus), except paying the card off: a transfer, which the month's count leaves out
             kind: acct.kind === 'credit' ? (x.kind === 'transfer' ? 'transfer' : 'card') : ['card', 'transfer', 'deposit', 'cash'].includes(x.kind) ? x.kind : amount > 0 ? 'deposit' : 'card', memo: txt(x.memo), pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at, ...(guess ? { amountFrom: 'guess' } : {}) };
+        // a card payment just made waits for approval through its day (the clock settles it the next)
+        const nowDay = String(p.now || '').slice(0, 5);
+        row.pending = row.kind === 'card' && row.amount < 0 && !(/^\d{2}-\d{2}$/.test(nowDay) && /^\d{2}-\d{2}$/.test(date) && dayGap(date, nowDay) > 0);
         tx.push(row);
         out.effects.push({ type: 'push', path: 'money.tx', item: structuredClone(row) });
         if (acct.kind !== 'credit') {
@@ -314,6 +317,9 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             to: txt(x.to, 40) || 'home', address: txt(x.address, 80), left: txt(x.left, 60), noteShop: txt(x.noteShop, 120), noteShopKo: txt(x.noteShopKo, 200), noteRider: txt(x.noteRider, 120), noteRiderKo: txt(x.noteRiderKo, 200),
             noCutlery: x.noCutlery === true, for: Math.max(1, Math.round(Number(x.for) || 1)), status, gift: giftOf(x.gift), reviewed: false, account: 'cash',
             id: `sync:${e.id}:d${k}`, ev: e.id, storyEvent: e.id, sourceIndex: e.at, sync: true };
+        // the same place always has the same address: home or work (or a person's) as the earlier orders wrote it
+        const before = [...box].reverse().find(o => o.to === row.to && o.address);
+        if (before) row.address = before.address;
         // the row that paid it: made by this event, or one already in the bank this event pointed at
         // (the same amount, else a payment to the same shop in this event: a tip left out or a rounding is still this order's)
         const paidHere = f => f.type === 'push' && f.path === 'money.tx' && !f.item.delivery && f.item.amount < 0;
