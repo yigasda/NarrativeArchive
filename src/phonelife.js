@@ -11,7 +11,8 @@ import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
 import { arr, trackerWeather, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
-import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, parseWeather, weatherFrom } from './phonesynclife.js';
+import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, parseWeather, usualScreenOf, weatherFrom } from './phonesynclife.js';
+import { SCREEN_LIST } from './phonescreen.js';
 import { exclusive } from './phonesync.js';
 import { recentTrackers } from './scenes.js';
 import { wealthDate } from './wealth.js';
@@ -46,6 +47,9 @@ HEALTH
 - A day the story shows, or its night, follows it: "from": "story" and its "ev". A long night out means short sleep, a day on foot means many steps.
 - Any other day: write it freely from the character, the archive and their life, "from": "pattern". It still follows that day's events and tickets in PHONE NOW.
 - "usual" is their normal week. Its water, coffee, weight and height fit the character.
+- Screen time shows who they really are, habits they'd never admit (a game they can't put down, texting all night, barely touching the phone): from their character, not their polite profile. Each day's "screen" follows what happened that day.
+- Their apps, named exactly as here (another real app when none fits them):
+${SCREEN_LIST}
 - Numbers only: no diagnosis, no mood, no reason.
 
 FILES
@@ -77,8 +81,9 @@ JSON (one object, nothing before or after it)
              "running": { "label", "ko", "sec", "left": seconds } or null },
   "health": { "usual": { "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": per week, "rest": resting heart rate,
                          "water": liters a day, "coffee": cups of coffee a day (0 if none), "coffeeKind": what they usually drink, like "Cappuccino", "coffeeKo",
-                         "weight": kg, "height": cm },
-              "days": [{ "date": "MM-DD", "steps", "km", "floors", "workout": { "kind", "time": "HH:MM", "min", "km" } or null, "hr": [low, high], "coffee": cups, "coffeeKind", "water": litres, "weight": kg only when they weighed,
+                         "weight": kg, "height": cm,
+                         "screen": { "apps": [{ "app", "kind": "chat" | "social" | "game" | "video" | "music" | "work" | "reading" | "shopping" | "other", "min": minutes a day }], "pickups": a day, "late": "HH:MM" they usually last look at it } },
+              "days": [{ "date": "MM-DD", "steps", "km", "floors", "workout": { "kind", "time": "HH:MM", "min", "km" } or null, "hr": [low, high], "coffee": cups, "coffeeKind", "water": litres, "weight": kg only when they weighed, "screen": { "apps": { app name: minutes }, "pickups", "late": "HH:MM" },
                          "night": { "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "woke": times awake } or null, "from": "story" | "pattern", "ev" }] },
   "files": { "folders": [{ "name", "ko", "count", "fav": true or false }],
              "items": [{ "name", "kind": "pdf" | "image" | "video" | "audio" | "zip" | "doc" | "sheet" | "slides" | "other",
@@ -194,7 +199,8 @@ export function parseLife(raw, now, lastDay = '') {
         health: {
             usual: { bed: hhmm(h.usual?.bed), sleep: hhmm(h.usual?.sleep), wake: hhmm(h.usual?.wake), steps: int(h.usual?.steps, 0, 80000), workouts: int(h.usual?.workouts, 0, 21), rest: int(h.usual?.rest, 30, 140),
                 water: num(h.usual?.water) > 0 && num(h.usual?.water) <= 8 ? num(h.usual.water) : null, coffee: int(h.usual?.coffee, 0, 12), coffeeKind: line(h.usual?.coffeeKind, 30), coffeeKo: ko(h.usual?.coffeeKo),
-                weight: num(h.usual?.weight) >= 25 && num(h.usual?.weight) <= 250 ? num(h.usual.weight) : null, height: int(h.usual?.height, 100, 230) },
+                weight: num(h.usual?.weight) >= 25 && num(h.usual?.weight) <= 250 ? num(h.usual.weight) : null, height: int(h.usual?.height, 100, 230),
+                ...(usualScreenOf(h.usual?.screen) ? { screen: usualScreenOf(h.usual.screen) } : {}) },
             // the model writes a day and the night after it; the app keeps a row per waking day
             days: nightsToDays(h.days, { usual: { bed: hhmm(h.usual?.bed), sleep: hhmm(h.usual?.sleep), wake: hhmm(h.usual?.wake) }, lastDay }),
         },
