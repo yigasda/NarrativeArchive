@@ -128,7 +128,8 @@ body.na_darkui .na_st_amenu { background: #2E2E34; box-shadow: 0 8px 24px rgba(0
 .na_st_plus i[hidden] { display: none; }
 .na_st_field { flex: 1; min-width: 0; display: flex; align-items: flex-end; gap: 6px; min-height: 40px; padding: 5px 5px 5px 15px; border-radius: 20px; background: var(--st-w); box-shadow: inset 0 0 0 1px var(--st-line); }
 .na_st_field:focus-within { box-shadow: inset 0 0 0 1.5px var(--st-acc); }
-.na_st .na_st_field .na_st_q { flex: 1; min-width: 0; height: 30px; min-height: 0; max-height: 120px; margin: 0; padding: 5px 0; outline: none; -webkit-appearance: none; appearance: none; font: inherit; font-size: 0.95em; line-height: 1.4; resize: none; overflow-y: auto; scrollbar-width: none; --c-fg: var(--st-ink); }
+.na_st .na_st_field .na_st_q { flex: 1; min-width: 0; height: 30px; min-height: 0; max-height: 120px; margin: 0; padding: 5px 0; outline: none; -webkit-appearance: none; appearance: none; font: inherit; font-size: 0.95em; line-height: 1.4; resize: none; overflow-y: auto; scrollbar-width: none; --c-fg: var(--st-ink); --c-bw: 0; --c-bs: none; --c-bc: currentcolor; }
+.na_st .na_st_field .na_st_q:not(#na_x):not(#na_y) { --c-r: 0 !important; } /* square inside the pill, over the shared field-corner sweep (it carries an id) */
 .na_st .na_st_field .na_st_q::-webkit-scrollbar { display: none; }
 .na_st .na_st_field .na_st_q::placeholder { color: var(--st-dim); opacity: 1; }
 .na_st .na_st_send { flex: none; width: 30px; height: 30px; display: grid; place-items: center; cursor: pointer; --c-bg: var(--st-acc); --c-fg: var(--st-onacc); --c-r: 50%; }

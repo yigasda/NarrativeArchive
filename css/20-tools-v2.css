@@ -34,8 +34,8 @@
 .na_v2_seg button.on { background: var(--SmartThemeBlurTintColor, rgba(255, 255, 255, 0.6)); --c-bg: var(--SmartThemeBlurTintColor, rgba(255, 255, 255, 0.6)); color: inherit; --c-fg: inherit; font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); --c-sh: 0 1px 3px rgba(0, 0, 0, 0.12); }
 .na_v2_seg button small { font-weight: 400; color: var(--na-dim); }
 .na_v2_under { display: flex; gap: 18px; border-bottom: 1px solid var(--na-line); padding: 0 4px; }
-.na_v2_under button { border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-bottom: 2px solid transparent; background: transparent; --c-bg: transparent; color: var(--na-dim); --c-fg: var(--na-dim); font: inherit; padding: 0 2px 8px; cursor: pointer; }
-.na_v2_under button.on { border-bottom-color: currentColor; color: inherit; --c-fg: inherit; font-weight: 600; }
+.na_v2_under button { border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-bottom: 2px solid transparent; --c-bwb: 2px; --c-bsb: solid; --c-bcb: transparent; background: transparent; --c-bg: transparent; color: var(--na-dim); --c-fg: var(--na-dim); font: inherit; padding: 0 2px 8px; cursor: pointer}
+.na_v2_under button.on { border-bottom-color: currentColor; --c-bcb: currentColor; color: inherit; --c-fg: inherit; font-weight: 600}
 .na_v2_btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--na-line); --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); background: var(--na-card); --c-bg: var(--na-card); color: inherit; --c-fg: inherit; font: inherit; font-size: 0.9em; padding: 9px 12px; border-radius: 12px; --c-r: 12px; cursor: pointer; }
 .na_v2_btn:hover { border-color: var(--na-accent); --c-bc: var(--na-accent); --c-bct: var(--na-accent); }
 .na_v2_btn.primary { background: var(--na-accent); --c-bg: var(--na-accent); border-color: var(--na-accent); --c-bc: var(--na-accent); --c-bct: var(--na-accent); color: var(--na-onaccent, #fff); --c-fg: var(--na-onaccent, #fff); font-weight: 600; }

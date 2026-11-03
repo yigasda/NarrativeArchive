@@ -75,6 +75,8 @@ for f, a, b, ctx, sel, body, t in walk():
     if '@keyframes' in ctx: continue
     parts = split_top(sel.strip(), ',')
     kinds = [kind(p) if not PHONE.search(re.sub(r':not\(:has\(\.na_phone\)\)', '', p)) else None for p in parts]
+    if SCOPE == 'all':
+        kinds = ['mixed' if k else None for k in kinds]
     if SCOPE == 'panel':
         def pk(p, k):
             if not k: return None

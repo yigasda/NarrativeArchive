@@ -132,7 +132,7 @@ body.na_darkui .na_ap3_ai.none { border-left-color: #5E5E66; }
 .na_ap3_fhead small { font-size: 12.5px; color: var(--na-sub, var(--na-dim)); }
 .na_ap3_fbody { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 10px; border-radius: 18px; background: var(--na-card); }
 .na_ap3_fdock { margin: 12px 0 0; padding: 0; background: transparent; } /* no sheet: the pill, chips and buttons sit on the window (3.169.69) */
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_ap3 .na_ap3_fdock .na_apf.na_v2_card:not(#na_x) { padding: 0; background: transparent; box-shadow: none; border: 0; margin: 0; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_ap3 .na_ap3_fdock .na_apf.na_v2_card:not(#na_x) { padding: 0; background: transparent; --c-bg: transparent; box-shadow: none; --c-sh: none; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; margin: 0; }
 .na_ap3_fdock .na_ap3_log { max-height: 128px; overflow-y: auto; }
 body:not(.na_darkui) .na_ap3 .na_ap3_fdock .na_ly_ask { background: #FCF6F1; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); } /* on the window itself, the pill needs its own light (as 섹션 버전's) */
 .na_ap3_fdock .na_ap3_bar { position: static; margin: 10px 0 0; padding: 0 0 12px; background: none; }
@@ -588,7 +588,7 @@ body.na_darkui .na_wd.on .na_wd_icon { background: var(--na-warm-soft); }
 .na_wd_head .na_tgl_ui::after { width: 20px; height: 20px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); }
 .na_wd_head input.na_toggle:checked + .na_tgl_ui::after { transform: translateX(18px); }
 .na_wd_body { gap: 8px; }
-:is(.na_v2, #na_settings) .na_wd_rename.text_pole.text_pole { margin: 0; padding: 2px 2px 4px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-bottom: 1px dashed var(--na-line); --c-r: 0; --c-bg: transparent; font-size: 0.929em; font-weight: 600; --c-fg: inherit; }
+:is(.na_v2, #na_settings) .na_wd_rename.text_pole.text_pole { margin: 0; padding: 2px 2px 4px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-bottom: 1px dashed var(--na-line); --c-bwb: 1px; --c-bsb: dashed; --c-bcb: var(--na-line); --c-r: 0; --c-bg: transparent; font-size: 0.929em; font-weight: 600; --c-fg: inherit}
 :is(.na_v2, #na_settings) .na_wd_rename.text_pole.text_pole:focus { border-bottom: 1px solid var(--na-accent); outline: none; }
 :is(.na_v2, #na_settings) .na_wd_text.text_pole.text_pole { padding: 10px 12px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-r: 12px; font-size: 0.893em; line-height: 1.6; field-sizing: content; min-height: 6.5em; max-height: 60vh; }
 body:not(.na_darkui) :is(.na_v2, #na_settings) .na_wd_text.text_pole.text_pole { --c-bg: transparent; --c-fg: #463428; }

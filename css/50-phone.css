@@ -179,7 +179,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_frame button:not(.na_ph_widget, .na_ph_kochip, .na_ph_makebtn, .na_ph_makelinks button, .na_ph_makeopts button, .na_ph_maketip button, .na_ph_bar, .na_ph_thumb, .na_ph_draw, .cg_wcal, .cg_wnote, .cg_ic, .cg_nt, .na_ph_camthumb, .ax button, .cg_dots button),
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_pick:not(.on) { background: transparent !important; background-image: none !important; border-color: transparent !important; box-shadow: none !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ph_pick.on { background: var(--na-card2) !important; border-color: transparent !important; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_pb_phonebtn { background: rgba(0, 0, 0, 0.22) !important; border-color: transparent !important; color: #fff !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_pb_phonebtn { background: rgba(0, 0, 0, 0.22) !important; --c-bg: rgba(0, 0, 0, 0.22) !important; border-color: transparent !important; --c-bc: transparent !important; --c-bct: transparent !important; color: #fff !important; --c-fg: #fff !important; }
 
 /* 사진 그리기 (v3.108): a 그리기 pill on a photo with no picture yet; a tapped photo opens big with its tags */
 .na_ph_pc { position: relative; }

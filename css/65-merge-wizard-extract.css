@@ -23,10 +23,10 @@ body.na_darkui .na_mg_list { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05)
 .na_mg_row .na_rt_txt > span { font-size: 14px; font-weight: 500; color: var(--na-dim); }
 .na_mg_row.on .na_rt_txt > span { font-weight: 600; color: var(--na-ink); }
 .na_mg_row .na_rt_txt small { font-size: 11.5px; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup input.na_mg_q:not(#na_x) { width: 100%; box-sizing: border-box; height: 44px; margin: 0; padding: 0 16px; border: 0 !important; border-radius: 999px; background: var(--na-card) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; color: var(--na-ink) !important; font: inherit; font-size: 13.5px; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup input.na_mg_q:not(#na_x) { width: 100%; box-sizing: border-box; height: 44px; margin: 0; padding: 0 16px; border: 0 !important; --c-bw: 0 !important; --c-bs: none !important; --c-bc: currentcolor !important; --c-bwt: 0 !important; --c-bst: none !important; --c-bct: currentcolor !important; border-radius: 999px; --c-r: 999px; background: var(--na-card) !important; --c-bg: var(--na-card) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; --c-sh: 0 1px 2px rgba(70, 52, 40, 0.06) !important; color: var(--na-ink) !important; --c-fg: var(--na-ink) !important; font: inherit; font-size: 13.5px; }
 .na_mg_foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .na_mg_foot .na_mg_info { flex: 1; min-width: 0; font-size: 12px; color: var(--na-dim); }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_mg_go:not(#na_x) { flex: none; height: 42px; margin: 0; padding: 0 18px; border: 0 !important; border-radius: 999px; background: var(--na-accent) !important; color: var(--na-onaccent, #fff) !important; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_mg_go:not(#na_x) { flex: none; height: 42px; margin: 0; padding: 0 18px; border: 0 !important; --c-bw: 0 !important; --c-bs: none !important; --c-bc: currentcolor !important; --c-bwt: 0 !important; --c-bst: none !important; --c-bct: currentcolor !important; border-radius: 999px; --c-r: 999px; background: var(--na-accent) !important; --c-bg: var(--na-accent) !important; color: var(--na-onaccent, #fff) !important; --c-fg: var(--na-onaccent, #fff) !important; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important; --c-sh: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_mg_go:disabled:not(#na_x) { opacity: 0.5; cursor: default; }
 /* ticks on the cream accent in dark */
 .na_sp_ck.part::after { background: var(--na-onaccent, #fff); }
@@ -53,9 +53,9 @@ body.na_darkui .na_wz3_sheet { background: #232328; color: #ECEAE6; }
 .na_wz3_shead b { font-size: 15px; }
 .na_wz3_shead small { font-size: 11.5px; color: var(--na-dim, #9A8A80); }
 .na_wz3_sbody { flex: 1; min-height: 0; overflow-y: auto; margin-top: 10px; font-size: 13.5px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup button.na_wz3_sclose:not(#na_x) { flex: none; height: 42px; margin: 14px 0 0; border: 0 !important; border-radius: 999px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; box-shadow: none !important; }
-body:not(.na_darkui) dialog.popup button.na_wz3_sclose:not(#na_x) { background: #EADCD0 !important; color: #463428 !important; }
-body.na_darkui dialog.popup button.na_wz3_sclose:not(#na_x) { background: #2E2E34 !important; color: #ECEAE6 !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup button.na_wz3_sclose:not(#na_x) { flex: none; height: 42px; margin: 14px 0 0; border: 0 !important; --c-bw: 0 !important; --c-bs: none !important; --c-bc: currentcolor !important; --c-bwt: 0 !important; --c-bst: none !important; --c-bct: currentcolor !important; border-radius: 999px; --c-r: 999px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; box-shadow: none !important; --c-sh: none !important; }
+body:not(.na_darkui) dialog.popup button.na_wz3_sclose:not(#na_x) { background: #EADCD0 !important; --c-bg: #EADCD0 !important; color: #463428 !important; --c-fg: #463428 !important; }
+body.na_darkui dialog.popup button.na_wz3_sclose:not(#na_x) { background: #2E2E34 !important; --c-bg: #2E2E34 !important; color: #ECEAE6 !important; --c-fg: #ECEAE6 !important; }
 /* 마법사 2 · 4단계 (docs/mockups/ext-wizard A): what goes over as a small table, what grading looks for as a list; the step's one
    action is the orange button below, .txt and skipping are links */
 .na_wiz2 .na_wz3_hide { display: none !important; }
@@ -80,7 +80,7 @@ body:is(.na_darkui, :not(.na_darkui)) .na_wiz2 .na_wz2_nav .na_v2_btn:not(.prima
 body.na_darkui .na_wiz2 .na_wz2_nav .na_v2_btn:not(.primary) { background: #2E2E34 !important; --c-bg: #2E2E34 !important; box-shadow: none; --c-sh: none; }
 body:is(.na_darkui, :not(.na_darkui)) .na_wiz2 .na_wz2_pane .na_v2_btn:not(.primary) { border-color: transparent !important; --c-bc: transparent !important; --c-bct: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); --c-sh: 0 1px 2px rgba(70, 52, 40, 0.08); }
 body.na_darkui .na_wiz2 .na_wz2_pane .na_v2_btn:not(.primary) { background: #2E2E34 !important; --c-bg: #2E2E34 !important; box-shadow: none; --c-sh: none; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_wiz2 textarea.na_wz_out:is(*, :focus, :focus-visible):not(#na_x) { border-color: transparent !important; outline: none !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_wiz2 textarea.na_wz_out:is(*, :focus, :focus-visible):not(#na_x) { border-color: transparent !important; --c-bc: transparent !important; --c-bct: transparent !important; outline: none !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; --c-sh: 0 1px 2px rgba(70, 52, 40, 0.06) !important; }
 
 /* ============ 원문 뽑기 (docs/mockups/ext-extract B): range card with filled chips and a thin whole-chat bar, the text as it will be
    copied right under it (fading out), options, then .txt | 전체 복사 — no outlines, one orange button */

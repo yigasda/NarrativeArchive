@@ -26,7 +26,7 @@ body.na_darkui .na_ask3_src > i { background: #8A7A55; }
 .na_ask2 .na_ask2_ans .na_ask_src { margin: 0 14px 12px; }
 /* input and options */
 .na_popup.na_ask2 .na_ask2_input { border: 0; border-radius: 999px; padding: 5px 5px 5px 16px; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06), 0 4px 12px rgba(70, 52, 40, 0.06); }
-.na_popup.na_ask2 .na_ask_go { border-radius: 999px; }
+.na_popup.na_ask2 .na_ask_go { border-radius: 999px; --c-r: 999px; }
 .na_ask3_opt { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: -4px; padding: 0 4px; }
 .na_ask3_opt .na_ask_info { min-width: 0; font-size: 12px; color: var(--na-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .na_ask3_seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--na-card2); flex: none; }

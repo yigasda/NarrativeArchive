@@ -152,12 +152,25 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
 }
 
 /* ---- 3.82.2: search boxes are one rounded field — the input inside sits flat, whatever a theme does to inputs */
-:is(#na_settings, .na_v2, .na_popup) .na_search_wrap input,
-:is(#na_settings, .na_v2, .na_popup) .na_search_wrap input:is(:hover, :focus, :focus-visible),
-:is(#na_settings, .na_v2, .na_popup) input:is(.na_pc_q, .na_ss_find, #na_find_q),
-:is(#na_settings, .na_v2, .na_popup) input:is(.na_pc_q, .na_ss_find, #na_find_q):is(:hover, :focus, :focus-visible) {
-    background: transparent !important; background-color: transparent !important; background-image: none !important;
-    border: 0 !important; outline: none !important; box-shadow: none !important; border-radius: 0 !important; filter: none !important;
+:is(#na_settings, .na_v2, .na_popup) .na_search_wrap input, :is(#na_settings, .na_v2, .na_popup) .na_search_wrap input:is(:hover, :focus, :focus-visible), :is(#na_settings, .na_v2, .na_popup) input:is(.na_pc_q, .na_ss_find, #na_find_q), :is(#na_settings, .na_v2, .na_popup) input:is(.na_pc_q, .na_ss_find, #na_find_q):is(:hover, :focus, :focus-visible) {
+    background: transparent !important;
+    --c-bg: transparent !important;
+    background-color: transparent !important;
+    --c-bg: transparent !important;
+    background-image: none !important;
+    border: 0 !important;
+    --c-bw: 0 !important;
+    --c-bs: none !important;
+    --c-bc: currentcolor !important;
+    --c-bwt: 0 !important;
+    --c-bst: none !important;
+    --c-bct: currentcolor !important;
+    outline: none !important;
+    box-shadow: none !important;
+    --c-sh: none !important;
+    border-radius: 0 !important;
+    --c-r: 0 !important;
+    filter: none !important;
 }
 :is(#na_settings, .na_v2, .na_popup) .na_search_wrap input::-webkit-search-decoration { -webkit-appearance: none; }
 

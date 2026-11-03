@@ -51,10 +51,26 @@ body.na_darkui .na_tlb_menu .na_hc_status.ok { color: #74C292; --c-fg: #74C292; 
 /* the search field's own input never draws a box of its own (theme text_pole styles) */
 /* every search field (archive cards, quote bank, editor find bar): the wrap is the box,
    the input inside stays see-through even when a theme or theme extension paints inputs */
-:is(#na_settings, .na_popup) :is(.na_search_wrap, .na_find_field) input,
-:is(#na_settings, .na_popup) :is(.na_search_wrap, .na_find_field) input:is(:focus, :hover) {
-    background: transparent !important; background-color: transparent !important; background-image: none !important;
-    border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: none !important; -webkit-appearance: none; appearance: none;
+:is(#na_settings, .na_popup) :is(.na_search_wrap, .na_find_field) input, :is(#na_settings, .na_popup) :is(.na_search_wrap, .na_find_field) input:is(:focus, :hover) {
+    background: transparent !important;
+    --c-bg: transparent !important;
+    background-color: transparent !important;
+    --c-bg: transparent !important;
+    background-image: none !important;
+    border: 0 !important;
+    --c-bw: 0 !important;
+    --c-bs: none !important;
+    --c-bc: currentcolor !important;
+    --c-bwt: 0 !important;
+    --c-bst: none !important;
+    --c-bct: currentcolor !important;
+    border-radius: 0 !important;
+    --c-r: 0 !important;
+    box-shadow: none !important;
+    --c-sh: none !important;
+    outline: none !important;
+    -webkit-appearance: none;
+    appearance: none;
 }
 :is(#na_settings, .na_popup) :is(.na_search_wrap, .na_find_field) input::-webkit-search-decoration { -webkit-appearance: none; }
 

@@ -476,10 +476,26 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_popup { display: flex; flex-direction: column; gap: 10px; text-align: left; height: 100%; }
 .na_popup .na_nav { flex-shrink: 0; }
 .na_popup .na_nav_btn {
-    flex: 1 0 auto; border: 0; background: transparent; color: inherit; font: inherit;
-    padding: 7px 12px; border-radius: 999px; cursor: pointer; opacity: 0.65;
+    flex: 1 0 auto;
+    border: 0;
+    --c-bw: 0;
+    --c-bs: none;
+    --c-bc: currentcolor;
+    --c-bwt: 0;
+    --c-bst: none;
+    --c-bct: currentcolor;
+    background: transparent;
+    --c-bg: transparent;
+    color: inherit;
+    --c-fg: inherit;
+    font: inherit;
+    padding: 7px 12px;
+    border-radius: 999px;
+    --c-r: 999px;
+    cursor: pointer;
+    opacity: 0.65;
 }
-.na_popup .na_nav_btn.active { opacity: 1; font-weight: 600; background: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.2)); color: var(--na-accent-fg, var(--na-accent)); }
+.na_popup .na_nav_btn.active { opacity: 1; font-weight: 600; background: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.2)); --c-bg: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.2)); color: var(--na-accent-fg, var(--na-accent)); --c-fg: var(--na-accent-fg, var(--na-accent)); }
 .na_popup .na_nav { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--na-soft); }
 
 /* ---------- section browser */
