@@ -2,7 +2,7 @@
 // their payments; every change can be taken back and put back
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyDays, applyLife, applyWeather, dlvClock, fillDays, lifeClock } from '../src/phonesynclife.js';
+import { alarmOf, applyDays, applyLife, applyWeather, dlvClock, fillDays, lifeClock } from '../src/phonesynclife.js';
 import { applyMoney, payOrders, replayEffects, revertEffects } from '../src/phonesyncmoney.js';
 import { cash, migrateBank } from '../src/finance.js';
 
@@ -67,8 +67,10 @@ test('a day the story shows is written over the pattern day; new days nobody tol
 test('weather: the status line stands over the model; nothing to go on keeps it; a city keeps its time zone', () => {
     const { p } = setup();
     assert.deepEqual(applyWeather(p, null, null), []);
-    const fx = applyWeather(p, { place: 'Varo', date: '10-27', cond: 'clear', temp: 18, hi: 19, lo: 9, from: 'guess', cities: [{ name: 'Lisboa', cond: 'rain', temp: 16 }] }, { date: '10-27', time: '17:40', place: 'Rathaus', weather: '비, 11°' });
+    const fx = applyWeather(p, { place: 'Varo', date: '10-27', cond: 'clear', temp: 18, hi: 19, lo: 9, from: 'guess', cities: [{ name: 'Lisboa', cond: 'rain', temp: 16, visibility: 6, sunrise: '07:20', sunset: '18:05' }] }, { date: '10-27', time: '17:40', place: 'Rathaus', weather: '비, 11°' });
     assert.equal(fx.length, 1);
+    assert.equal(p.life.weather.cities[0].visibility, 6);
+    assert.equal(p.life.weather.cities[0].sunset, '18:05');
     assert.equal(p.life.weather.here.cond, 'rain');
     assert.equal(p.life.weather.here.temp, 11);
     assert.equal(p.life.weather.here.place, 'Rathaus');
@@ -345,7 +347,7 @@ test('a delivery from a shop the app never had: the shop joins the list with its
     const haru = p.delivery.shops.find(x => x.name === 'Sushi Haru');
     assert.deepEqual(haru.menu.map(d => d.name), ['새우 볶음밥', '짜장면']);
     // what the screen shows (★ rating (reviews), minimum order) is never empty
-    assert.ok(haru.rating >= 4.3 && haru.rating <= 4.9 && haru.reviews > 0 && haru.minOrder > 0 && haru.eta);
+    assert.ok(haru.rating >= 4.3 && haru.rating <= 5 && haru.reviews > 0 && haru.minOrder > 0 && haru.eta);
     assert.equal(s.fee, 3);
     // 빼기 of the first event: its order and its shop go
     revertEffects(m, p, r.effects);
@@ -458,4 +460,174 @@ test('line by line: day names, "false", sizes, degrees, twins without ids, units
     p.life.weather.here = { ...p.life.weather.here, date: '10-26', hours: [{ time: '22:00' }, { time: '00:00' }, { time: '02:00' }], days: [] };
     lifeClock(p, '10-26 21:30');
     assert.deepEqual(p.life.weather.here.hours.map(h => h.time), ['22:00', '00:00', '02:00']);
+});
+
+test('a night told on the evening of 12-31 for the 01-01 row: waking stays empty until the clock gets there; a pattern day the model half writes takes their usual', () => {
+    const { p } = setup();
+    applyLife(p, { id: 'nye', at: 9, date: '12-31', time: '20:00' }, { health: [{ date: '01-01', sleep: '01:00', steps: 3000, from: 'story' }] }, true);
+    const row = p.life.health.days.find(d => d.date === '01-01');
+    assert.equal(row.sleep, '01:00');
+    assert.equal(row.wake, '');
+    lifeClock(p, '01-01 09:00');
+    assert.equal(row.wake, '06:30');
+    applyDays(p, [{ date: '12-31', steps: 7000, from: 'pattern' }], 'r9');
+    const day = p.life.health.days.find(d => d.date === '12-31');
+    assert.equal(day.sleep, '23:30');
+    assert.equal(day.wake, '06:30');
+});
+
+test('the sky in any words: emoji, a word\'s forms, six languages; weather that has passed; a sky outside the list read from its words, else from the numbers', async () => {
+    const { condOf, condPick, condGuess } = await import('../src/phonesynclife.js');
+    const want = { '☀️ 23°C': 'clear', '🌧 비 옴': 'rain', '흐리고 비': 'rain', '흐린 날': 'cloudy', 'sunny': 'clear', 'light rain': 'drizzle', 'Bewölkt, 8°': 'cloudy', 'partly cloudy': 'partly', '구름 많음': 'cloudy', '⛈ thunderstorm': 'storm', '눈발 날림': 'snow', '안개 짙음': 'fog', '바람이 세다': 'wind', '晴れ': 'clear', '小雨': 'drizzle', '비행기 타고 눈부신 햇살': 'clear', 'cold and grey sky': 'cloudy', '서울 · 오후 3시': '', '비가 그치고 맑음': 'clear', '비 그침': 'partly', 'after the rain, clouds': 'cloudy' };
+    for (const [t, c] of Object.entries(want)) assert.equal(condOf(t), c, t);
+    assert.equal(condPick('rain'), 'rain');
+    assert.equal(condPick('맑고 쌀쌀', 'cloudy', { temp: 3 }), 'clear');
+    assert.equal(condPick('???', 'cloudy', { temp: 28 }), 'clear');
+    assert.equal(condPick('', 'cloudy', { temp: -2, rain: 70 }), 'snow');
+    assert.equal(condPick('', 'cloudy', { temp: 8, rain: 70 }), 'rain');
+    assert.equal(condPick(undefined, 'cloudy'), 'cloudy');
+    assert.equal(condGuess(15), 'partly');
+    const { parseWeather } = await import('../src/phonesynclife.js');
+    const w = parseWeather({ here: { place: 'Seoul', cond: 'Sunny and warm', temp: 26, hours: [{ time: '15:00', cond: 'showers', temp: 22 }], days: [{ day: '10-27', cond: 'overcast', hi: 18 }, { day: '10-28', cond: '', hi: 30, rain: 0 }] }, cities: [{ name: 'Tokyo', cond: '晴れ', temp: 20 }] }, null);
+    assert.equal(w.here.cond, 'clear'); assert.equal(w.here.hours[0].cond, 'rain'); assert.deepEqual(w.here.days.map(d => d.cond), ['cloudy', 'clear']); assert.equal(w.cities[0].cond, 'clear');
+});
+
+test('weather guessed again for the same day keeps the sky there was (its words do change it); a day nobody described carries yesterday over as today\'s guess', () => {
+    const { p } = setup();
+    const was = p.life.weather.here.cond;
+    applyWeather(p, { place: 'Varo', date: '10-26', time: '15:00', from: 'guess', cond: 'rain', temp: 9, hours: [{ time: '16:00', cond: 'rain', temp: 9 }] }, null, { today: '10-26' });
+    assert.equal(p.life.weather.here.cond, was);
+    assert.equal(p.life.weather.here.hours[0].cond, 'rain');
+    applyWeather(p, { place: 'Varo', date: '10-26', time: '16:00', from: 'chat', cond: 'rain', temp: 9 }, null, { today: '10-26' });
+    assert.equal(p.life.weather.here.cond, 'rain');
+    const fx = applyWeather(p, null, null, { today: '10-28' });
+    assert.equal(fx.length, 1);
+    assert.equal(p.life.weather.here.date, '10-28'); assert.equal(p.life.weather.here.cond, 'rain'); assert.equal(p.life.weather.here.from, 'guess'); assert.equal(p.life.weather.here.hours.length, 0);
+    assert.equal(applyWeather(p, null, null, { today: '10-28' }).length, 0);
+});
+
+test('weather: a Fahrenheit status line is read in Celsius, the high and low hold the temperature now, a carried-over day drops yesterday\'s sentence and rain', () => {
+    const { p } = setup();
+    applyWeather(p, { place: 'Varo', date: '10-26', time: '15:00', from: 'chat', cond: 'clear', temp: 20, hi: 9, lo: 4, line: 'Sunny all day', tiles: { rain24: 4, rainNext: 2 }, days: [{ day: '10-26', cond: 'clear', lo: 4, hi: 9 }] }, { date: '10-26', time: '15:00', place: 'Varo', weather: 'Sunny, 72°F' });
+    const h = p.life.weather.here;
+    // the model shaped its day around 20°: the status line's 22° moves the low with it, the high holds the temperature now
+    assert.equal(h.temp, 22); assert.equal(h.hi, 22); assert.equal(h.lo, 6); assert.equal(h.days.find(d => d.day === '10-26').hi, 22);
+    assert.equal(h.line, 'Sunny all day'); assert.equal(h.tiles.rain24, 4);
+    applyWeather(p, null, null, { today: '10-27' });
+    const n = p.life.weather.here;
+    assert.equal(n.date, '10-27'); assert.equal(n.cond, 'clear'); assert.equal(n.line, ''); assert.equal(n.tiles.rain24, null); assert.equal(n.tiles.rainNext, null);
+    // a status line alone: its temperature still fits the high and low
+    applyWeather(p, null, { date: '10-27', time: '09:00', place: 'Varo', weather: '영하 3도, 눈' });
+    assert.equal(p.life.weather.here.temp, -3); assert.equal(p.life.weather.here.lo, -3); assert.equal(p.life.weather.here.cond, 'snow');
+});
+
+test('weather: a status line\'s afternoon time and its city alone, a line that only names the sky, and the screen overlay', async () => {
+    const { weatherFrom, overlayNow } = await import('../src/phonesynclife.js');
+    const w = weatherFrom({ date: '02-02', time: '오후 7:00', min: 19 * 60, place: '서울, Mara의 집', city: '서울, Mara의 집', room: '', weather: '☁ 흐림 / 2°C' });
+    assert.equal(w.time, '19:00'); assert.equal(w.place, '서울');
+    const { p } = setup();
+    applyWeather(p, { place: 'Seoul', date: '02-02', time: '19:00', from: 'chat', cond: 'cloudy', temp: 2, hi: 2, lo: -3, line: '흐림', ko: '흐림', tiles: { feels: 0 } }, w);
+    const h = p.life.weather.here;
+    assert.equal(h.time, '19:00'); assert.equal(h.place, '서울'); assert.equal(h.line, ''); assert.equal(h.ko, '');
+    // the next day's status line on the screen: nothing saved, the felt temperature follows
+    const o = overlayNow(h, { date: '02-03', time: '08:00', place: '서울', weather: '🌨 눈 / -4°C' });
+    assert.equal(o.cond, 'snow'); assert.equal(o.temp, -4); assert.equal(o.tiles.feels, -6); assert.equal(o.lo, -4);
+    assert.equal(p.life.weather.here.temp, 2);
+});
+
+test('weather: a new day from the model keeps no hours or rain of yesterday; a status line alone on a later day drops them too', () => {
+    const { p } = setup();
+    p.life.weather.here.line = '맑고 쌀쌀한 저녁'; p.life.weather.here.tiles = { rain24: 3, rainNext: 2, sunrise: '07:30', sunset: '17:30' };
+    applyWeather(p, { place: 'Varo', date: '10-27', time: '09:00', from: 'chat', cond: 'rain', temp: 8 }, null, { today: '10-27' });
+    let h = p.life.weather.here;
+    assert.equal(h.hours.length, 0); assert.equal(h.tiles.rain24, null); assert.equal(h.tiles.sunrise, '07:30'); assert.equal(h.days.length, 3);
+    applyWeather(p, null, { date: '10-28', time: '08:00', place: 'Varo', weather: '맑음, 5°C' });
+    h = p.life.weather.here;
+    assert.equal(h.date, '10-28'); assert.equal(h.cond, 'clear'); assert.equal(h.temp, 5); assert.equal(h.hours.length, 0); assert.equal(h.line, ''); assert.equal(h.tiles.rainNext, null);
+});
+
+test('weather: the status line is the scene\'s; an owner the model puts in another saved city keeps their own weather', async () => {
+    const { apart } = await import('../src/phonesynclife.js');
+    const { p } = setup();
+    p.life.weather.cities = [{ name: 'Seoul', ko: '서울', tz: 'Asia/Seoul', cond: 'snow', temp: -2 }, { name: 'Berlin', ko: '베를린', tz: 'Europe/Berlin', cond: 'rain', temp: 6 }];
+    assert.equal(apart('Berlin', '서울', p.life.weather.cities), true);
+    assert.equal(apart('Rathaus', '서울', p.life.weather.cities), false);
+    const now = { date: '02-02', time: '19:00', place: '서울', weather: '🌨 눈 / -2°C' };
+    applyWeather(p, { place: 'Berlin', date: '02-02', time: '12:00', from: 'chat', cond: 'rain', temp: 6, hi: 8, lo: 3 }, now);
+    let h = p.life.weather.here;
+    assert.equal(h.place, 'Berlin'); assert.equal(h.cond, 'rain'); assert.equal(h.temp, 6); assert.equal(h.from, 'chat');
+    assert.equal(applyWeather(p, null, { ...now, time: '21:00', weather: '눈 / -4°C' }).length, 0);
+    // the owner in the scene: the status line stands
+    applyWeather(p, { place: 'Seoul', date: '02-02', time: '19:00', from: 'chat', cond: 'cloudy', temp: 1 }, now);
+    h = p.life.weather.here;
+    assert.equal(h.cond, 'snow'); assert.equal(h.temp, -2); assert.equal(h.from, 'tracker');
+});
+
+test('weather: rain in millimetres reads as a chance, a status line that changes the sky retires the sentence, the city the owner is in mirrors here, a clock read in another zone', async () => {
+    const { zoneShift, mirrorHome } = await import('../src/phonesynclife.js');
+    const { p } = setup();
+    p.life.weather.cities = [{ name: 'Seoul', ko: '서울', tz: 'Asia/Seoul', cond: 'clear', temp: 9 }, { name: 'Berlin', ko: '베를린', tz: 'Europe/Berlin', cond: 'rain', temp: 6 }];
+    applyWeather(p, { place: '서울', date: '02-02', time: '19:00', from: 'chat', cond: 'cloudy', temp: 2, hi: 3, lo: -4, line: '흐림, 기온 2°C', ko: '흐림', hours: [{ time: '20:00', cond: 'rain', temp: 1, rain: 0.4 }, { time: '21:00', cond: 'rain', temp: 1, rain: 1.2 }, { time: '22:00', cond: 'cloudy', temp: 0, rain: 0 }], days: [{ day: '02-02', cond: 'snow', lo: -4, hi: 3, rain: 60 }], tiles: { feels: 0, dew: -4, sunrise: '07:32', sunset: '17:58' } }, { date: '02-02', time: '19:00', place: '서울', weather: '☁ 흐림 / 2°C' });
+    let h = p.life.weather.here;
+    assert.deepEqual(h.hours.map(x => x.rain), [40, 70, 0]);
+    assert.equal(h.line, '');
+    const seoul = p.life.weather.cities[0];
+    assert.equal(seoul.cond, 'cloudy'); assert.equal(seoul.temp, 2); assert.equal(seoul.sunset, '17:58');
+    // the same day, snow now: the sentence a model wrote for the cloud goes
+    p.life.weather.here.line = '구름이 낮게 깔린 저녁';
+    const fx = applyWeather(p, null, { date: '02-02', time: '21:30', place: '서울', weather: '🌨 눈 / -1°C' });
+    h = p.life.weather.here;
+    assert.equal(h.cond, 'snow'); assert.equal(h.line, ''); assert.equal(p.life.weather.cities[0].cond, 'snow'); assert.equal(p.life.weather.cities[0].temp, -1);
+    assert.equal(fx[0].from.cities[0].cond, 'cloudy');
+    assert.equal(zoneShift('02-02 19:00', 'Asia/Seoul', 'Europe/Berlin', 2027), '02-02 11:00');
+    assert.equal(zoneShift('02-02 03:00', 'Asia/Seoul', 'Europe/Berlin', 2027), '02-01 19:00');
+    assert.equal(zoneShift('07-15 12:00', 'Europe/Berlin', 'Asia/Seoul', 2027), '07-15 19:00');
+    assert.equal(mirrorHome({ here: { place: 'Rathaus', cond: 'fog' }, cities: [{ name: 'Berlin' }] }).cities[0].cond, undefined);
+});
+
+test('life: repeat days as a range, an alarm told again with a longer label, and today\'s steps left open until the day is over', () => {
+    assert.deepEqual(alarmOf({ time: '06:30', days: 'mon-fri' }).days, ['mon', 'tue', 'wed', 'thu', 'fri']);
+    assert.deepEqual(alarmOf({ time: '06:30', days: '월~금' }).days, ['mon', 'tue', 'wed', 'thu', 'fri']);
+    assert.deepEqual(alarmOf({ time: '06:30', days: ['sat', 'sun'] }).days, ['sat', 'sun']);
+    assert.deepEqual(alarmOf({ time: '06:30', days: 'Fr bis Mo' }).days, ['mon', 'fri', 'sat', 'sun']);
+    const { p } = setup();
+    const e = { id: 'ev1', at: 5, date: '10-26', time: '09:30' };
+    applyLife(p, e, { alarms: [{ time: '06:10', label: 'Aufstehen Alarm', days: ['mon', 'tue', 'wed', 'thu', 'fri'], on: false }], health: [{ date: '10-26', sleep: '00:10', wake: '07:40' }, { date: '10-24', sleep: '23:30', wake: '06:30' }] }, true);
+    assert.equal(p.life.clock.alarms.length, 1); assert.equal(p.life.clock.alarms[0].on, false);
+    const d26 = p.life.health.days.find(d => d.date === '10-26'), d24 = p.life.health.days.find(d => d.date === '10-24');
+    assert.equal(d26.steps, null); assert.equal(d24.steps, 7000);
+    const fx = lifeClock(p, '10-27 09:00');
+    assert.equal(p.life.health.days.find(d => d.date === '10-26').steps, 7000); assert.ok(fx.length);
+});
+
+test('life: a reflection saves a timer and starts one, counted from its event; 되돌리기 takes it back', () => {
+    const { p } = setup();
+    const e = { id: 'ev2', at: 6, date: '10-26', time: '18:00' };
+    const r = applyLife(p, e, { timers: [{ label: '파스타', sec: 540 }], running: { label: '파스타', sec: 540, left: 300 } }, true);
+    assert.equal(p.life.clock.timers.length, 1); assert.equal(p.life.clock.timers[0].last, '10-26');
+    assert.equal(p.life.clock.running.left, 300); assert.equal(p.life.clock.running.at, '10-26 18:00');
+    const r2 = applyLife(p, { ...e, id: 'ev3', at: 7 }, { timers: [{ label: '파스타 타이머', sec: 600 }] }, true);
+    assert.equal(p.life.clock.timers.length, 1); assert.equal(p.life.clock.timers[0].sec, 600);
+    assert.ok(lifeClock(p, '10-26 18:06').some(x => x.path === 'life.clock.running')); assert.equal(p.life.clock.running, null);
+    revertEffects({}, p, r2.effects); assert.equal(p.life.clock.timers[0].sec, 540);
+    revertEffects({}, p, r.effects);
+    assert.equal(p.life.clock.timers.length, 0);
+});
+
+test('life: a changed habit moves the usual waking time and steps too', () => {
+    const { p } = setup();
+    const r = applyLife(p, { id: 'ev9', at: 9, date: '10-26', time: '20:00' }, { usual: { wake: '05:30', steps: 11000, coffee: 0 } }, true);
+    assert.equal(p.life.health.usual.wake, '05:30'); assert.equal(p.life.health.usual.steps, 11000); assert.equal(p.life.health.usual.coffee, 0);
+    revertEffects({}, p, r.effects);
+    assert.equal(p.life.health.usual.wake, '06:30'); assert.equal(p.life.health.usual.steps, 7000);
+});
+
+test('life: a timer first told in an event runs from that event even when the model writes no "running"', () => {
+    const { p } = setup();
+    applyLife(p, { id: 'ev10', at: 10, date: '10-26', time: '18:00' }, { timers: [{ label: '파스타 9분', sec: 540, last: '10-26' }] }, true);
+    assert.equal(p.life.clock.running?.sec, 540); assert.equal(p.life.clock.running?.at, '10-26 18:00');
+    // told again a day later as a saved timer: not started again
+    p.life.clock.running = null;
+    applyLife(p, { id: 'ev11', at: 11, date: '10-27', time: '09:00' }, { timers: [{ label: '파스타 9분', sec: 540, last: '10-26' }] }, true);
+    assert.equal(p.life.clock.running, null);
 });

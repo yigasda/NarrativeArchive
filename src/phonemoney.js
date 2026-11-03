@@ -61,7 +61,7 @@ function displayTools(p) {
       <button type="button" class="bank_fxrefresh" aria-label="환율 확인">${ax('again', 17, 'currentColor', 2.1)}</button></div>`;
 }
 const busyOf = (p, k) => filling.has(`${nameKey(p.owner)}:${k}`);
-const mo = p => p.money || null;
+const mo = p => { const M = p.money; if (!M) return null; M.tx ||= []; M.passes ||= []; M.orders ||= []; M.cards ||= []; (M.bank ||= {}).accounts ||= []; return M; };
 const acctOf = (p, last4) => mo(p)?.bank?.accounts?.find(a => a.last4 === last4);
 const txMoney = (p, x, signed = false) => fmtMoney({ ...p, money: { currency: x.currency || acctOf(p, x.account)?.currency || mo(p)?.currency } }, x.amount, signed);
 const kindName = { checking: '입출금', savings: '저축', credit: '신용카드' };
@@ -199,7 +199,9 @@ export function fixedCosts(p) {
         const months = [...new Set(xs.map(x => String(x.time).slice(0, 2)))];
         // without a word: two months, the same amount (to within a few cents in a hundred) on about the same day, not a person
         const dd = (a, b) => { const d = Math.abs(Number(String(a.time).slice(3, 5)) - Number(String(b.time).slice(3, 5))); return Math.min(d, 31 - d); };
-        const steady = months.length >= 2 && last.kind !== 'transfer' && Math.abs(xs[1].amount - last.amount) <= Math.abs(last.amount) * 0.03 && dd(xs[1], last) <= 3;
+        // against the newest record of another month (two coffees this month are not a monthly charge)
+        const prev = xs.find(x => String(x.time).slice(0, 2) !== String(last.time).slice(0, 2));
+        const steady = !!prev && last.kind !== 'transfer' && Math.abs(prev.amount - last.amount) <= Math.abs(last.amount) * 0.03 && dd(prev, last) <= 3;
         if (!cat && !steady) continue;
         const [, icon, bg, fg, label] = cat || [null, 'rep', '#eceef2', '#3f4a5a', '매달'];
         out.push({ key: k, who: last.who, ko: last.ko, amount: last.amount, account: last.account, currency: last.currency, day: Number(String(last.time).slice(3, 5)) || 1, icon, bg, fg, label, xs });
@@ -259,7 +261,9 @@ const NOTE_K = { in: ['down2', '#dcefdf', '#3f7d50', '입금'], card: ['card2', 
 export function bankNotes(p, now) {
     const M = mo(p); if (!M) return bankHome(p, now);
     const bal = balancesAfter(p), xs = newestTx(p).slice(0, 24), today = String(storyNow(p) || p.now || ''), td = Number(today.slice(3, 5)) || 1;
-    const soon = fixedCosts(p).filter(f => !f.xs.some(x => String(x.time).slice(0, 2) === today.slice(0, 2)) && f.day >= td && f.day - td <= 7);
+    // within a week, the first days of next month too (the 2nd, read on the 28th)
+    const dim = daysIn(p, today.slice(0, 2)), until = f => (f.day >= td ? f.day - td : dim - td + f.day);
+    const soon = fixedCosts(p).filter(f => !f.xs.some(x => String(x.time).slice(0, 2) === today.slice(0, 2)) && until(f) <= 7);
     const days = [...new Set(xs.map(x => String(x.time).slice(0, 5)))];
     const note = x => {
         const a = acctOf(p, x.account), b = bal.get(x.id), [ic, bg, fg, what] = NOTE_K[x.amount > 0 ? 'in' : x.pending ? 'wait' : x.kind === 'card' ? 'card' : x.kind === 'transfer' ? 'send' : 'out'];
@@ -267,7 +271,7 @@ export function bankNotes(p, now) {
     };
     return `<div class="ax_bk">${bankHead(p, now, 'bank', '알림')}
       <div class="ax_bks"><div class="ax_scroll">
-        ${soon.length ? `<div class="ax_sec">곧 나가요</div><div class="ax_card">${soon.map(f => `<button type="button" class="ax_rw ax_bnr" data-go="fixed" data-i="~${esc(f.key)}"><span class="ax_fi" style="width: 40px; height: 40px; border-radius: 13px; background: ${f.bg}; color: ${f.fg}">${ax(f.icon, 19, 'currentColor', 1.9)}</span><span class="ax_tx"><b class="ax_n">${esc(f.who)}<span class="ax_dd${f.day - td <= 2 ? '' : ' g'}">${f.day === td ? '오늘' : `D-${f.day - td}`}</span></b><span class="ax_p">고정 지출 · 매달 ${f.day}일</span></span><span class="ax_fxv"><b class="ax_amt cg_num">${esc(fmtMoney({ ...p, money: { currency: f.currency || acctOf(p, f.account)?.currency || M.currency } }, f.amount, true))}</b><small>${esc(f.label)}</small></span></button>`).join('')}</div>` : ''}
+        ${soon.length ? `<div class="ax_sec">곧 나가요</div><div class="ax_card">${soon.map(f => `<button type="button" class="ax_rw ax_bnr" data-go="fixed" data-i="~${esc(f.key)}"><span class="ax_fi" style="width: 40px; height: 40px; border-radius: 13px; background: ${f.bg}; color: ${f.fg}">${ax(f.icon, 19, 'currentColor', 1.9)}</span><span class="ax_tx"><b class="ax_n">${esc(f.who)}<span class="ax_dd${until(f) <= 2 ? '' : ' g'}">${until(f) === 0 ? '오늘' : `D-${until(f)}`}</span></b><span class="ax_p">고정 지출 · 매달 ${f.day}일</span></span><span class="ax_fxv"><b class="ax_amt cg_num">${esc(fmtMoney({ ...p, money: { currency: f.currency || acctOf(p, f.account)?.currency || M.currency } }, f.amount, true))}</b><small>${esc(f.label)}</small></span></button>`).join('')}</div>` : ''}
         ${days.map(d => `<div class="ax_sec">${esc(axDay(p, now, d))}</div><div class="ax_card">${xs.filter(x => String(x.time).slice(0, 5) === d).map(note).join('')}</div>`).join('') || '<div class="ax_empty">알림이 없어요</div>'}
         <i class="ax_pad"></i>
       </div></div>
@@ -435,7 +439,7 @@ const SCALE = { KRW: 1300, JPY: 150, CNY: 7, TWD: 32, INR: 83, RUB: 90, BRL: 5, 
 function cardLook(p, a, k) {
     const name = String(a?.name || ''), bank = mo(p).bank.name || '', [c1, c2] = BANK_C[hashOf(bank) % BANK_C.length];
     if (a?.kind === 'credit') {
-        const has = mo(p).bank.accounts.filter(x => x.kind !== 'credit').reduce((n, x) => n + Math.max(0, Number(x.balance) || 0) / (SCALE[x.currency] || 1), 0);
+        const has = mo(p).bank.accounts.filter(x => x.kind !== 'credit').reduce((n, x) => n + Math.max(0, Number(x.balance) || 0) / (SCALE[x.currency || mo(p).currency] || 1), 0);
         // the card's own name or what the owner holds, and never below the owner's tier at the bank (더보기)
         const own = /black|schwarz|블랙|infinite|centurion/i.test(name) || has >= 400000 ? 3 : /platin|플래티넘/i.test(name) || has >= 120000 ? 2 : /gold|골드/i.test(name) || has >= 40000 ? 1 : 0;
         const lv = Math.max(own, { PRIVATE: 3, PLATINUM: 2, GOLD: 1 }[bankTier(p).t?.k] || 0);
@@ -468,7 +472,8 @@ const passKind = x => {
     if (/bus|flixbus|fernbus|fähre|ferry|ship|schiff|버스|페리|여객선|フェリー|巴士|轮渡/i.test(w)) return 'bus';
     return x.kind === 'event' ? 'concert' : 'other';
 };
-const nights = (a, b) => { const m = s => String(s || '').match(/^(\d{2})-(\d{2})/); const x = m(a), y = m(b); if (!x || !y) return null; const d = (Date.UTC(2025, y[1] - 1, y[2]) - Date.UTC(2025, x[1] - 1, x[2])) / 864e5; return d > 0 && d < 60 ? d : null; };
+// check-in to check-out, across New Year too (12-30 → 01-02 is 3 nights)
+const nights = (a, b) => { const m = s => /^\d{2}-\d{2}/.test(String(s || '')); if (!m(a) || !m(b)) return null; const d = gapDays(a, b); return d > 0 && d < 60 ? d : null; };
 function passArt(p, x, full) {
     const k = passKind(x), [bg, icon, lab] = PASS[k], light = LIGHT.has(k);
     const f = (label, v) => (v === null || v === undefined || String(v).trim() === '' || v === '—' ? '' : `<span><small>${label}</small><b>${esc(String(v))}</b></span>`);
@@ -505,7 +510,7 @@ export function walletScreen(p, now, sel = '') {
     if (!M) return emptyApp(p, now, '지갑', 'money', '아직 지갑이 비어 있어요. 채우면 은행 · 지갑 · 쇼핑이 함께 생겨요.');
     migrateBank(getMeta(),p);
     const today = String(storyNow(p) || p.now || '').slice(0, 5), past = x => gapDays(today, x.date) < 0 || /used|benutzt|abgelaufen|expired|사용|지난/i.test(x.status || '');
-    const ps = [...M.passes].sort((a, b) => gapDays(p.now, a.date) - gapDays(p.now, b.date)), up = ps.filter(x => !past(x)), old = ps.filter(past);
+    const ps = [...M.passes].sort((a, b) => gapDays(today, a.date) - gapDays(today, b.date)), up = ps.filter(x => !past(x)), old = ps.filter(past);
     const t = bankTier(p).t, mc = t?.k === 'PRIVATE';
     // a tap on one lying behind brings it out whole; a tap on the open one opens it
     // those after the open one sit in a tail that cuts off whatever reaches past the last edge
@@ -603,7 +608,8 @@ export function shopScreen(p, now, f = 'all') {
     const M = mo(p);
     if (!M) return emptyApp(p, now, '쇼핑', 'money', '아직 주문이 없어요. 채우면 은행 · 지갑 · 쇼핑이 함께 생겨요.');
     const os = [...M.orders].sort(byStory(p.now)).reverse();
-    const go = os.filter(x => x.status !== 'delivered' && x.status !== 'unknown'), ok = os.filter(x => x.status === 'delivered');
+    // a cancelled or returned order is neither on its way nor delivered: the 전체 tab alone shows it
+    const go = os.filter(x => x.status !== 'delivered' && x.status !== 'unknown' && !ORDER_STATE[x.status]), ok = os.filter(x => x.status === 'delivered');
     const xs = f === 'go' ? go : f === 'ok' ? ok : os;
     const tb = (k, l, n) => `<button type="button" class="${f === k ? 'on' : ''}" data-go="shop" data-i="${k}">${l}<small>${n}</small></button>`;
     return `<div class="ax_shopv">
@@ -624,7 +630,8 @@ export function shopScreen(p, now, f = 'all') {
 export function orderView(p, now, id) {
     const x = mo(p)?.orders?.find(o => o.id === id);
     if (!x) return shopScreen(p, now);
-    const st = STEP[x.status], tx = x.ev ? mo(p).tx.find(t => t.ev === x.ev) : null, ai = tx ? mo(p).bank.accounts.findIndex(a => a.last4 === tx.account) : -1;
+    // the payment, not its refund row, when both carry the order's tag
+    const st = STEP[x.status], tx = x.ev ? mo(p).tx.find(t => t.ev === x.ev && t.amount < 0) || mo(p).tx.find(t => t.ev === x.ev) : null, ai = tx ? mo(p).bank.accounts.findIndex(a => a.last4 === tx.account) : -1;
     const head = ORDER_STATE[x.status] ? [ORDER_STATE[x.status], x.status==='refunded'?'환불됐어요':x.status==='returned'?'반품이 완료됐어요':x.status==='returning'?'반품 처리 중이에요':'주문이 취소됐어요'] : x.status === 'delivered' ? ['배송 완료', x.arrived ? `${fmtDate(p, x.arrived)} 도착` : '도착했어요'] : x.status === 'unknown' ? ['배송 상태', '확인되지 않았어요'] : [x.status === 'ordered' ? '주문 완료' : '배송 중', x.eta ? `${fmtDate(p, x.eta)} 도착 예정` : '도착일 미정'];
     const total = x.price === null ? null : x.price * (x.qty || 1);
     return `<div class="ax_shopv">

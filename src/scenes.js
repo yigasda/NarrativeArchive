@@ -20,12 +20,13 @@ export const stateModel = () => 'dr';
 export const sceneModelLabel = k => (k === 'ai' ? aiLabel() : drLabel());
 const ask = (which, prompt, system = '', guard = null, keepSystem = false) => (which === 'ai' ? askAI(prompt, { system, maxTokens: 12000, guard, keepSystem }) : askCompress(prompt, { system, guard, keepSystem }));
 
-// "<tracker> 🌇 05:48 오후 | 하티르 여드렛날, 2년 | 옴보스 → 서쪽 별채 | ☀️ 맑음 </tracker>": time | date | place.
-// Named groups time / date / place; an empty setting means no tracker (cut by message count only).
-export const DEFAULT_TRACKER_RE = String.raw`<tracker>[^|\d]*(?<time>\d{1,2}:\d{2}\s*(?:오전|오후|AM|PM|am|pm)?)?[^|]*\|\s*(?<date>[^|]+?)\s*\|\s*(?<place>[^|<]+?)\s*(?:\||</tracker>)`;
-// the default before 3.96.4 skipped the time; a setting saved with it reads as the new one
-const OLD_TRACKER_RE = String.raw`<tracker>[^|]*?(?<time>\d{1,2}:\d{2}\s*(?:오전|오후|AM|PM|am|pm)?)?[^|]*\|\s*(?<date>[^|]+?)\s*\|\s*(?<place>[^|<]+?)\s*(?:\||</tracker>)`;
-export const trackerRe = () => { const v = globalSettings().trackerRe; return v === undefined || v === null || v === OLD_TRACKER_RE ? DEFAULT_TRACKER_RE : String(v); };
+// "<tracker> 🌇 05:48 오후 | 하티르 여드렛날, 2년 | 옴보스 → 서쪽 별채 | ☀️ 맑음 </tracker>": time | date | place | weather.
+// Named groups time / date / place / weather; an empty setting means no tracker (cut by message count only).
+export const DEFAULT_TRACKER_RE = String.raw`<tracker>[^|\d]*(?<time>\d{1,2}:\d{2}\s*(?:오전|오후|AM|PM|am|pm)?)?[^|]*\|\s*(?<date>[^|]+?)\s*\|\s*(?<place>[^|<]+?)\s*(?:\|\s*(?<weather>[^|<]*?)\s*)?(?:\||</tracker>)`;
+// the defaults before (3.96.4 skipped the time; 3.169.52 the weather): a setting saved with one reads as the new one
+const OLD_TRACKER_RES = [String.raw`<tracker>[^|]*?(?<time>\d{1,2}:\d{2}\s*(?:오전|오후|AM|PM|am|pm)?)?[^|]*\|\s*(?<date>[^|]+?)\s*\|\s*(?<place>[^|<]+?)\s*(?:\||</tracker>)`,
+    String.raw`<tracker>[^|\d]*(?<time>\d{1,2}:\d{2}\s*(?:오전|오후|AM|PM|am|pm)?)?[^|]*\|\s*(?<date>[^|]+?)\s*\|\s*(?<place>[^|<]+?)\s*(?:\||</tracker>)`];
+export const trackerRe = () => { const v = globalSettings().trackerRe; return v === undefined || v === null || OLD_TRACKER_RES.includes(v) ? DEFAULT_TRACKER_RE : String(v); };
 const minutes = t => {
     const str = String(t || '');
     const mt = str.match(/(\d{1,2})\s*:\s*(\d{2})\s*(오전|오후|AM|PM|am|pm)?/);
@@ -39,17 +40,20 @@ const minutes = t => {
 // or a few "label: value" lines (📅 날짜: … / 📍 장소: …). It needs a time or a date; story prose has long parts and full stops
 const ST_CLOCK = /\d{1,2}\s*:\s*\d{2}|(?:오전|오후|새벽|아침|낮|저녁|밤)\s*\d{1,2}\s*시|\b\d{1,2}\s*(?:am|pm)\b/i;
 const ST_DATE = /\d{1,4}\s*년|\d{1,2}\s*월\s*\d{1,2}\s*일|\b\d{4}[-./]\d{1,2}[-./]\d{1,2}\b|[(（][월화수목금토일][)）]|[월화수목금토일]요일|\d+\s*일\s*(?:째|차)|\bday\s*\d+\b|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}\b|\b\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i;
-const ST_WEATHER = /[☀🌤⛅🌥☁🌦🌧⛈🌩🌨❄☃🌫🌪☔]|-?\d+(?:\.\d+)?\s*(?:°\s*[CF]?|℃)|맑음|흐림|눈발|소나기|안개|\b(?:sunny|cloudy|rain\w*|snow\w*|fog\w*|clear)\b/iu;
+// a field that names the weather: an emoji, a temperature, a sky word (Korean "비" and "눈" only as words of their own)
+const ST_WEATHER = /[☀🌤⛅🌥☁🌦🌧⛈🌩🌨❄☃🌫🌪☔💨🌬🌞]|(?:영하\s*)?[-−]?\d+(?:[.,]\d+)?\s*(?:°\s*[CF]?|℃|℉|도(?![가-힣]))|맑|흐림|흐린|흐려|구름|눈발|눈보라|폭설|함박눈|소나기|장대비|폭우|장마|이슬비|가랑비|보슬비|진눈깨비|안개|천둥|번개|뇌우|강풍|돌풍|바람(?:이|\s)*(?:세|강|많|쌩)|폭염|한파|무더|쌀쌀|습(?:도|함|한)|(?<![가-힣])(?:비|눈)(?:(?![가-힣])|(?=[가이옴와]))|\b(?:sunny|cloudy|overcast|rain\w*|snow\w*|fog\w*|mist\w*|clear|storm\w*|thunder\w*|drizzl\w*|hail|windy|humid|sonnig|regen|schnee|bewölkt|nebel|gewitter|pluie|neige|nuageux|soleil|lluvia|nieve|nublado)\b|晴|雨|雪|曇|霧|多云|阴/iu;
 const ST_LABELS = [[/^(날짜|일자|요일|일시|date|day)$/i, 'date'], [/^(시간|시각|time)$/i, 'time'], [/^(장소|위치|location|place)$/i, 'place'], [/^(날씨|기온|weather)$/i, 'weather']];
 const stClean = t => String(t || '').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/\*\*|__|`/g, '').replace(/\s+/g, ' ').trim();
 const stLabel = l => { const mt = stClean(l).match(/^([^:：]{1,12})\s*[:：]\s*(.+)$/); const kind = mt && (ST_LABELS.find(([re]) => re.test(mt[1].trim())) || [])[1]; return kind ? [kind, mt[2].trim()] : null; };
 function stFields(parts) {
-    const f = { time: '', date: '', place: '' };
+    const f = { time: '', date: '', place: '', weather: '' };
     const rest = [];
     for (const raw of parts) {
         const lab = stLabel(raw), p = lab ? lab[1] : stClean(raw);
-        if (!p) continue;
+        if (!p && !ST_WEATHER.test(raw)) continue;
         const kind = lab ? lab[0] : /→|->|📍/.test(raw) ? 'place' : ST_CLOCK.test(p) ? 'time' : ST_DATE.test(p) ? 'date' : ST_WEATHER.test(raw) ? 'weather' : '';
+        // the weather keeps its emoji (a sky may be told by one alone) and every field that names it ("맑음 / 3°C")
+        if (kind === 'weather') { const w = lab ? p : String(raw).replace(/\*\*|__|`|\uFE0F/g, '').replace(/\s+/g, ' ').trim(); f.weather = [f.weather, w].filter(Boolean).join(', '); continue; }
         if (kind === 'time') { const c = (p.match(/(?:오전|오후|새벽|아침|낮|저녁|밤|AM|PM)?\s*\d{1,2}\s*:\s*\d{2}\s*(?:AM|PM|오전|오후)?/i) || p.match(ST_CLOCK))[0].trim(); f.time ||= c; const d = p.replace(c, '').trim(); if (ST_DATE.test(d)) f.date ||= d; }
         else if (kind === 'date') f.date ||= p;
         else if (kind === 'place') f.place ||= p.replace(/\s*(?:->|⇒)\s*/g, ' → ');
@@ -92,7 +96,17 @@ function readTracker(text, re) {
     if (mt && gr.time) { const first = stClean(mt[0].split('|')[0].replace(/<[^>]*>/g, '')); if (first.includes(gr.time.trim())) gr.time = first; }
     const place = String(gr.place || '').trim();
     const parts = place.split(/\s*(?:→|->|>|\/|·)\s*/).filter(Boolean);
-    return { date: String(gr.date || '').trim(), city: parts[0] || '', room: parts.slice(1).join(' → '), min: minutes(gr.time), time: String(gr.time || '').trim(), place };
+    // the weather: its own group, or any other field of the tracker that names a sky or a temperature
+    let weather = String(gr.weather || '').replace(/\uFE0F/g, '').replace(/\s+/g, ' ').trim();
+    // the fourth field may be something else (a mood): then the weather is whichever field names a sky
+    if (weather && !ST_WEATHER.test(weather)) weather = '';
+    if (!weather && mt) {
+        const known = [gr.time, gr.date, gr.place].map(v => stClean(v)).filter(Boolean);
+        // the fields of the whole tracker (a saved regex may stop at the place), to its closing tag or the end of its line
+        const whole = (String(text).slice(mt.index).match(/^[\s\S]*?(?:<\/tracker>|\n|$)/) || [mt[0]])[0];
+        weather = whole.replace(/<[^>]*>/g, '').split('|').map(x => x.replace(/\*\*|__|`|\uFE0F/g, '').replace(/\s+/g, ' ').trim()).filter(x => x && ST_WEATHER.test(x) && !known.some(k => x.includes(k) || k.includes(stClean(x)))).join(', ');
+    }
+    return { date: String(gr.date || '').trim(), city: parts[0] || '', room: parts.slice(1).join(' → '), min: minutes(gr.time), time: String(gr.time || '').trim(), place, weather };
 }
 // 상태창 줄 in the settings: the last few status windows the cutter can read, newest first ([] = none found)
 export function recentTrackers(n = 5, { re = trackerRe(), chat = ctx().chat || [] } = {}) {

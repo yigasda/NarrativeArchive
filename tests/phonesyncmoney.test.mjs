@@ -385,3 +385,75 @@ test('the card\'s month leaves out the same month a year ago', () => {
     migrateBank(m, p);
     assert.equal(p.money.bank.accounts[1].spent, 20);
 });
+
+test('paying the card off through a reflection is a transfer onto the card, not a refund: the month\'s spending stays', () => {
+    const { m, p, bank } = setup();
+    applyMoney(m, p, ev('dinner', 5, '10-20', { moves: [{ account: '2222', amount: -80, who: 'Trattoria', kind: 'card' }] }), opts());
+    applyMoney(m, p, ev('payoff', 6, '10-25', { moves: [{ account: '1111', amount: -80, who: 'Karte', kind: 'transfer' }, { account: '2222', amount: 80, who: 'Giro', kind: 'transfer' }] }), opts());
+    migrateBank(m, p);
+    assert.equal(bank(), 920);
+    assert.equal(p.money.tx.find(t => t.account === '2222' && t.amount > 0).kind, 'transfer');
+    assert.equal(p.money.bank.accounts[1].spent, 80);
+    // a refund stays a card row and does lower it
+    applyMoney(m, p, ev('refund', 7, '10-26', { moves: [{ account: '2222', amount: 30, who: 'Trattoria', kind: 'card' }] }), opts());
+    migrateBank(m, p);
+    assert.equal(p.money.bank.accounts[1].spent, 50);
+});
+
+test('a pass told again with its status ("used", "checked in") takes it; the same words again change nothing', () => {
+    const { m, p } = setup();
+    const pass = status => ({ kind: 'flight', by: 'Lufthansa', from: 'FRA', to: 'BER', date: '12-28', time: '08:00', no: 'LH123', ...(status ? { status } : {}) });
+    applyMoney(m, p, ev('flight', 5, '12-22', { passes: [pass()] }), opts());
+    assert.equal(p.money.passes.length, 1);
+    const r = applyMoney(m, p, ev('flight', 7, '12-28', { passes: [pass('used')] }), opts());
+    assert.equal(p.money.passes[0].status, 'used');
+    assert.equal(r.effects.filter(x => x.type === 'status').length, 1);
+    const r2 = applyMoney(m, p, ev('flight', 8, '12-28', { passes: [pass('used')] }), opts());
+    assert.equal(r2.effects.length, 0);
+    revertEffects(m, p, r.effects);
+    assert.equal(p.money.passes[0].status, '');
+});
+
+test('an event told again with another payment on the same account (a refund, a second shop) gets it; a retold payment to the same payee still keeps its first amount', () => {
+    const { m, p } = setup();
+    const r1 = applyMoney(m, p, ev('night', 5, '10-26', { moves: [{ account: '2222', amount: -80, who: 'Trattoria', occurrence: 'new' }] }), opts());
+    const r2 = applyMoney(m, p, ev('night', 7, '10-27', { moves: [{ account: '2222', amount: 30, who: 'Trattoria', occurrence: 'new' }, { account: '2222', amount: -12, who: 'Taxi', occurrence: 'new' }] }), opts({ legs: r1.legs }));
+    assert.deepEqual(p.money.tx.map(t => t.amount), [-80, 30, -12]);
+    const r3 = applyMoney(m, p, ev('night', 8, '10-27', { moves: [{ account: '2222', amount: -85, who: 'Trattoria', occurrence: 'again' }] }), opts({ legs: [...r1.legs, ...r2.legs] }));
+    assert.equal(p.money.tx.length, 3);
+    assert.ok(r3.notes.some(n => n.includes('그대로')));
+});
+
+test('a reflection opens an account and a card, fills and empties the basket, and gives the investment app a watched share, a story price and a stake', () => {
+    const { m, p } = setup();
+    p.investment.watch = []; p.investment.stakes = []; p.money.cards = []; p.delivery = { shops: [], orders: [], cart: null, look: 'baemin' };
+    const o = opts({ marks: { base: { index: 0 }, money: { index: 0 }, invest: { index: 0 }, delivery: { index: 0 } } });
+    const r1 = applyMoney(m, p, ev('savings', 5, '10-26', { newAccount: { kind: 'savings', name: 'Sparen', last4: '3333', currency: 'EUR', balance: 500 }, newCard: { account: '3333', exp: '09/29' },
+        cart: { shop: 'Pasta Nostra', items: [{ name: 'Ragù', qty: 2, price: 12 }] },
+        watch: [{ symbol: 'XETRA:BMW', name: 'BMW', currency: 'EUR', note: 'Ivo가 추천' }], quotes: [{ symbol: 'XETRA:SAP', date: '2026-10-26', value: 150, evidence: 'SAP fell to 150' }],
+        stakes: [{ company: 'Varo Holding', percent: 10, holder: 'Ren', currency: 'EUR', evidence: 'the ten percent are yours now' }] }), o);
+    migrateBank(m, p);
+    assert.equal(p.money.bank.accounts.length, 3); assert.equal(p.money.bank.accounts[2].last4, '3333'); assert.equal(cash(m.finance.accounts[`${p.money.bank.accounts[2].id}:EUR`]), 500);
+    assert.equal(p.money.cards.length, 1); assert.equal(p.delivery.cart.items[0].qty, 2);
+    assert.equal(p.investment.watch[0].symbol, 'XETRA:BMW'); assert.equal(p.investment.securities.length, 2);
+    assert.equal(m.finance.prices['STOCK:XETRA:SAP']['2026-10-26'].rows[0].source, 'story');
+    assert.equal(p.investment.stakes[0].company, 'Varo Holding');
+    // the order from that shop empties the basket
+    applyMoney(m, p, ev('pasta', 6, '10-26', { deliveries: [{ shop: 'Pasta Nostra', items: [{ name: 'Ragù', qty: 2, price: 12 }], fee: 2, status: 'delivered', occurrence: 'new' }] }), o);
+    assert.equal(p.delivery.cart, null);
+    // 되돌리기 of the first round takes the account, card, watch and stake back out
+    revertEffects(m, p, r1.effects);
+    assert.equal(p.money.bank.accounts.length, 2); assert.equal(p.money.cards.length, 0); assert.equal(p.investment.watch.length, 0); assert.equal(p.investment.stakes.length, 0);
+});
+
+test('a payment in another currency is booked in the account\'s at the day\'s rate, its memo keeping the original; an order without an eta gets one', async () => {
+    const { addPrice } = await import('../src/finance.js');
+    const { m, p, bank } = setup();
+    addPrice(m, 'FX:USD/EUR', '2026-10-26', { value: 0.9, source: 'guess' });
+    applyMoney(m, p, ev('nyc', 5, '10-26', { moves: [{ account: '1111', amount: -100, currency: 'USD', who: 'Deli' }], orders: [{ shop: 'Amazon', item: 'Kabel', qty: 1, price: 12 }] }), opts());
+    migrateBank(m, p);
+    assert.equal(bank(), 910);
+    assert.equal(p.money.tx[0].amount, -90); assert.match(p.money.tx[0].memo, /USD 100/);
+    assert.match(p.money.orders[0].eta, /^10-(28|29|30)$/);
+    assert.throws(() => applyMoney(m, p, ev('tokyo', 6, '10-26', { moves: [{ account: '1111', amount: -5000, currency: 'JPY', who: 'Konbini' }] }), opts()), /환율/);
+});

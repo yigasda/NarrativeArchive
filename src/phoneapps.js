@@ -141,7 +141,7 @@ export function snsPost(p, now, k) {
         <div class="ax_posth"><span class="ax_ring ax_ring_s">${axFace(p.owner, 30)}</span><div><b>${esc(pr.handle || p.owner)}</b></div><button type="button" class="ax_postmore" data-k="${k}" aria-label="더 보기">${ax('more', 22, '#111', 3)}</button></div>
         ${x.photo ? postPic(p, x, k) : ''}
         <div class="ax_postact">${ax('heart', 26, '#ed4956', 2, '#ed4956')}${ax('cmt', 25, '#111', 1.9)}${ax('send', 24, '#111', 1.9)}<span class="ax_sp"></span>${x.img ? `<button type="button" class="ax_presssave ax_postsave" data-src="post" data-k="${k}" aria-label="사진 저장">${ax('save', 24, '#111', 1.9)}</button>` : ax('save', 24, '#111', 1.9)}</div>
-        <div class="ax_postbody"><b>좋아요 ${x.likes.toLocaleString()}개</b></div>
+        <div class="ax_postbody"><b>좋아요 ${(Number(x.likes) || 0).toLocaleString()}개</b></div>
         ${x.text ? `<div class="ax_postbody"><b>${esc(pr.handle || p.owner)}</b> ${axKo(x.text, x.ko)}</div>` : ''}
         ${x.comments.map(c => `<div class="ax_cmt"><b>${esc(savedName(p, c.from))}</b> ${axKo(c.text, c.ko)}</div>`).join('')}
         <div class="ax_postt">${esc(fmtDate(p, x.time))}</div>
@@ -161,7 +161,8 @@ export function diaryScreen(p, now, pick = '') {
     const have = new Set((p.diary || []).map(d => d.date));
     // the week up to the story's today (no weekday names: the story's dates carry no year)
     const days = [];
-    if (x0) for (let n = 6; n >= 0; n--) { const d = new Date(2001, x0.mo - 1, x0.d - n); days.push(`${pad(d.getMonth() + 1)}-${pad(d.getDate())}`); }
+    const yr = (!p.noYear && Number(p.year)) || 2001; // the story's year when it has one, so a leap day counts
+    if (x0) for (let n = 6; n >= 0; n--) { const d = new Date(yr, x0.mo - 1, x0.d - n); days.push(`${pad(d.getMonth() + 1)}-${pad(d.getDate())}`); }
     return `${axBar(p, now, '#3d3127')}
       <div class="ax_dytop"><button type="button" class="ax_back" data-go="home">${ax('back', 22, '#8a6d4a', 2.4)}</button>${ax('search', 22, '#8a6d4a')}</div>
       <div class="ax_scroll">
@@ -223,10 +224,10 @@ export function msgList(p, now, roster) {
       <div class="ax_scroll">
         ${axH1('메시지', ts.length ? `${ts.length}개 대화` : '')}
         ${axFind()}
-        ${ts.length ? `<div class="ax_card">${ts.map(t => { const x = t.messages[t.messages.length - 1]; return swipeRow('thread', p.threads.indexOf(t), `
+        ${ts.length ? `<div class="ax_card">${ts.map(t => { const x = t.messages.filter(y => !y.deleted).at(-1) || t.messages[t.messages.length - 1]; return swipeRow('thread', p.threads.indexOf(t), `
           <button type="button" class="ax_rw" data-go="thread" data-i="${p.threads.indexOf(t)}">${threadNew(t) ? '<i class="ax_dot"></i>' : ''}${axAv(t.with, 48, roster)}<span class="ax_tx">
-            <span class="ax_h"><b>${esc(savedName(p, t.with))}</b><small class="cg_num">${esc(listTime(p, x.time))}</small></span>
-            <span class="ax_p">${t.draft ? `<span class="ax_draftw">초안</span>${esc(t.draft.text)}` : `${esc(x.text)}${x.ko && koOn() ? `<span class="ax_ko">${esc(x.ko)}</span>` : ''}`}</span></span></button>`); }).join('')}</div>` : '<div class="ax_empty">메시지가 없어요</div>'}
+            <span class="ax_h"><b>${esc(savedName(p, t.with))}</b><small class="cg_num">${esc(listTime(p, x?.time || ''))}</small></span>
+            <span class="ax_p">${t.draft ? `<span class="ax_draftw">초안</span>${esc(t.draft.text)}` : `${esc(x?.text || '')}${x?.ko && koOn() ? `<span class="ax_ko">${esc(x.ko)}</span>` : ''}`}</span></span></button>`); }).join('')}</div>` : '<div class="ax_empty">메시지가 없어요</div>'}
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
@@ -254,7 +255,7 @@ export function draftView(p, now, i, roster) {
 export function threadScreen(p, now, i, roster) {
     const t = p.threads[i];
     if (!t) return msgList(p, now, roster);
-    const ms = t.messages, group = new Set(ms.filter(x => x.from !== 'me').map(x => nameKey(x.from))).size > 1, saved = savedName(p, t.with);
+    const ms = t.messages.filter(x => !x.deleted), group = new Set(ms.filter(x => x.from !== 'me').map(x => nameKey(x.from))).size > 1, saved = savedName(p, t.with);
     let day = '';
     const rows = ms.map((x, n) => {
         let out = '';
@@ -466,9 +467,10 @@ function annivList(m, owner) {
 export function calScreen(p, now, m, pick = '') {
     const day = String(now).slice(0, 5), x0 = parts(now) || parts(p.events[0]?.date) || { mo: 1, d: 1 };
     const an = annivList(m, p.owner);
-    const evs = p.events.map((e, k) => ({ e, k }));
-    const marked = new Set([...p.events.map(e => e.date), ...an.map(a => a.date)]);
-    const len = new Date(2000, x0.mo, 0).getDate();
+    // a plan called off stays in the data (되돌리기) but not on the calendar
+    const evs = p.events.map((e, k) => ({ e, k })).filter(x => !x.e.cancelled);
+    const marked = new Set([...evs.map(x => x.e.date), ...an.map(a => a.date)]);
+    const len = new Date((!p.noYear && Number(p.year)) || 2000, x0.mo, 0).getDate(); // February: 29 days unless the story's year says 28
     const grid = Array.from({ length: len }, (_, n) => { const d = `${pad(x0.mo)}-${pad(n + 1)}`; return dayBtn('cal', d, pick, `${d === (pick || day) ? 't' : ''} ${marked.has(d) ? 'e' : ''}`, n + 1); }).join('');
     const row = ({ e, k }, when = '') => `<button type="button" class="ax_ev" data-go="calone" data-i="${k}"><i style="background: ${AX_EVC[k % AX_EVC.length]}"></i><span class="ax_tx"><b>${esc(e.title)}</b>${e.ko && koOn() ? `<span class="ax_p">${esc(e.ko)}</span>` : ''}</span><small class="cg_num">${e.time ? esc(fmtTime(p, `${e.date} ${e.time}`)) : '하루 종일'}${when ? `<br>${esc(when)}` : ''}</small></button>`;
     const anRow = a => `<div class="ax_ev"><i style="background: #d494a7"></i><span class="ax_tx"><b>♥ ${esc(a.name)}</b><span class="ax_p">기념일 · 매년 ${esc(fmtDate(p, a.date))}</span></span></div>`;
@@ -479,7 +481,7 @@ export function calScreen(p, now, m, pick = '') {
     return `${axBar(p, now)}
       ${axTop(axCb('home'), axKp(p))}
       <div class="ax_scroll">
-        ${axH1(`${x0.mo}월`, p.events.length ? `일정 ${p.events.length}` : '')}${p.investment?.schedules?.length ? `<button type="button" class="ax_card" data-go="ivschedule">투자 · 배당·권리 일정 ${p.investment.schedules.length}건 보기</button>` : ''}
+        ${axH1(`${x0.mo}월`, evs.length ? `일정 ${evs.length}` : '')}${p.investment?.schedules?.length ? `<button type="button" class="ax_card" data-go="ivschedule">투자 · 배당·권리 일정 ${p.investment.schedules.length}건 보기</button>` : ''}
         <div class="ax_card"><div class="ax_cal7">${grid}</div></div>
         ${pick ? `<div class="ax_sec">${esc(fmtDate(p, pick))}${pick === day ? ' · 오늘' : ''}</div>${(list => (list ? `<div class="ax_card">${list}</div>` : '<div class="ax_empty">이날 일정이 없어요</div>'))(`${an.filter(a => a.date === pick).map(anRow).join('')}${evs.filter(x => x.e.date === pick).map(x => row(x)).join('')}`)}` : `${soon.map(d => `<div class="ax_sec">${esc(fmtDate(p, d))}${d === day ? ' · 오늘' : ''}</div><div class="ax_card">${d === day ? an.filter(a => a.date === d).map(anRow).join('') : ''}${evs.filter(x => x.e.date === d).map(x => row(x)).join('')}</div>`).join('')}
         ${soon.length ? '' : '<div class="ax_sec">다가오는 일정 없음</div>'}

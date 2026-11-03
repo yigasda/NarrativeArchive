@@ -21,7 +21,10 @@ const daysOf = v => {
     if (/^(daily|every ?day|매일|täglich|毎日)$/.test(one)) return [...DAYS];
     if (/^(weekdays?|평일|werktags|wochentags|平日)$/.test(one)) return DAYS.slice(0, 5);
     if (/^(weekends?|주말|wochenende|週末)$/.test(one)) return DAYS.slice(5);
-    const out = arr(Array.isArray(v) ? v : String(v || '').split(/[\s,·/]+/)).map(d => { const s = String(d).trim().toLowerCase(); return DAYS.includes(s.slice(0, 3)) ? s.slice(0, 3) : DAY_WORD[s.replace(/요일$|曜日?$/, '').slice(0, 2)] || DAY_WORD[s.slice(0, 1)]; }).filter(Boolean);
+    // a range ("mon-fri", "월~금", "Mo bis Fr") is every day from the one to the other
+    const tok = d => { const s = String(d).trim().toLowerCase(); return DAYS.includes(s.slice(0, 3)) ? s.slice(0, 3) : DAY_WORD[s.replace(/요일$|曜日?$/, '').slice(0, 2)] || DAY_WORD[s.slice(0, 1)] || ''; };
+    const ranged = String(Array.isArray(v) ? v.join(',') : v || '').replace(/([^\s,·/~\-–—]+)\s*(?:-|~|–|—|\bto\b|\bbis\b|부터)\s*([^\s,·/~\-–—]+)/g, (m, a, b) => { const i = DAYS.indexOf(tok(a)), j = DAYS.indexOf(tok(b)); return i < 0 || j < 0 ? m : (i <= j ? DAYS.slice(i, j + 1) : [...DAYS.slice(i), ...DAYS.slice(0, j + 1)]).join(','); });
+    const out = arr(ranged.split(/[\s,·/]+/)).map(d => { const s = String(d).trim().toLowerCase(); return DAYS.includes(s.slice(0, 3)) ? s.slice(0, 3) : DAY_WORD[s.replace(/요일$|曜日?$/, '').slice(0, 2)] || DAY_WORD[s.slice(0, 1)]; }).filter(Boolean);
     return DAYS.filter(d => out.includes(d));
 };
 const off = v => v === false || /^(false|off|no|aus|꺼짐|끔)$/i.test(String(v ?? '').trim());
@@ -38,46 +41,105 @@ export const fileOf = x => withEv({ name: line(x?.name, 80), kind: kindOf(String
 export const dayOf = d => withEv({ date: day5(d?.date), bed: hhmm(d?.bed), sleep: hhmm(d?.sleep), wake: hhmm(d?.wake), woke: int(d?.woke, 0, 30) ?? 0, steps: int(d?.steps, 0, 120000), km: num(d?.km), floors: int(d?.floors, 0, 400),
     workout: d?.workout && line(d.workout.kind, 30) ? { kind: line(d.workout.kind, 30), time: hhmm(d.workout.time), min: int(d.workout.min, 0, 600), km: num(d.workout.km) } : null,
     hr: arr(d?.hr).map(x => int(x, 30, 220)).filter(x => x !== null).slice(0, 2), from: pick(d?.from, ['story', 'pattern'], 'pattern') }, d);
-const cityOf = c => ({ name: line(c?.name, 40), ko: ko(c?.ko), tz: tz(c?.tz), cond: pick(c?.cond, CONDS, 'cloudy'), temp: int(c?.temp, -60, 60), hi: int(c?.hi, -60, 60), lo: int(c?.lo, -60, 60), sunrise: hhmm(c?.sunrise), sunset: hhmm(c?.sunset),
-    rainNext: num(c?.rainNext), wind: num(c?.wind), gust: num(c?.gust), dir: line(c?.dir, 12), feels: int(c?.feels, -60, 60), humidity: int(c?.humidity, 0, 100), dew: int(c?.dew, -60, 60), note: line(c?.note, 40), noteKo: ko(c?.noteKo) });
+// a chance of rain in percent; a model writing millimetres (0.4, 1.2) is read as a chance: a trace may rain, a millimetre will
+const rainPct = v => { const n = num(v); if (n === null) return null; if (!Number.isInteger(n) && n < 10) return n <= 0 ? 0 : n < 1 ? 40 : 70; return Math.max(0, Math.min(100, Math.round(n))); };
+const cityOf = c => ({ name: line(c?.name, 40), ko: ko(c?.ko), tz: tz(c?.tz), cond: condPick(c?.cond, 'cloudy', { temp: int(c?.temp, -60, 60) }), temp: int(c?.temp, -60, 60), hi: int(c?.hi, -60, 60), lo: int(c?.lo, -60, 60), sunrise: hhmm(c?.sunrise), sunset: hhmm(c?.sunset),
+    rainNext: num(c?.rainNext), wind: num(c?.wind), gust: num(c?.gust), dir: line(c?.dir, 12), feels: int(c?.feels, -60, 60), humidity: int(c?.humidity, 0, 100), dew: int(c?.dew, -60, 60), visibility: num(c?.visibility), note: line(c?.note, 40), noteKo: ko(c?.noteKo) });
 
 // ---- 날씨: the chat's status line stands; the model's numbers only fill what it doesn't say
 // Korean "비" (rain) and "눈" (snow) count only as a word of their own ("비", "비 옴", "비가", "눈이 내림"), never inside
 // another word ("비행기", "눈부신")
 const RAIN_KO = '(?<![가-힣])비(?:(?![가-힣])|(?=[가옴와]))', SNOW_KO = '(?<![가-힣])눈(?:(?![가-힣])|(?=[이옴발]))';
-const COND_RE = [['storm', /storm|thunder|뇌우|천둥|번개|gewitter|雷/i], ['sleet', /sleet|진눈깨비|schneeregen|霙|みぞれ/i],
-    ['snow', new RegExp(`snow|폭설|함박눈|눈보라|${SNOW_KO}|schnee|雪`, 'i')], ['drizzle', /drizzle|이슬비|가랑비|nieselregen|霧雨/i],
-    ['rain', new RegExp(`rain|shower|소나기|장대비|폭우|호우|${RAIN_KO}|regen|雨`, 'i')], ['fog', /fog|mist|안개|nebel|霧/i],
-    ['wind', /gale|strong wind|windy|강풍|바람이 (?:세|강)|sturm|stürmisch|強風/i], ['partly', /partly|some clouds|구름 조금|구름 약간|teils|heiter|晴れ時々/i],
-    ['cloudy', /cloud|overcast|흐림|구름|bewölkt|wolk|曇/i], ['clear', /clear|sun|맑|화창|햇살|햇빛|sonnig|klar|晴/i]];
-export const condOf = text => COND_RE.find(([, re]) => re.test(String(text || '')))?.[0] || '';
-const tempOf = text => { const s = String(text || ''), mt = s.match(/(영하\s*)?([-−]?\d{1,2}(?:[.,]\d)?)\s*(?:°|℃|도(?![가-힣]))/); if (!mt) return null; const n = Math.round(Number(mt[2].replace('−', '-').replace(',', '.'))); return mt[1] ? -Math.abs(n) : n; };
+// the sky in any words a status line or a model may use: emoji, a word's forms ("rainy", "흐린", "bewölkt"), Korean,
+// English, German, French, Spanish, Japanese, Chinese. The worst weather named wins ("흐리고 비" is rain)
+const COND_RE = [['storm', /storm|thunder|lightning|[⛈🌩]|뇌우|천둥|번개|gewitter|orage|tormenta|雷/iu], ['sleet', /sleet|freezing rain|진눈깨비|어는 ?비|schneeregen|霙|みぞれ|雨夹雪|雨雪/iu],
+    ['snow', new RegExp(`snow|blizzard|[❄🌨☃⛄]|폭설|함박눈|눈보라|눈송이|${SNOW_KO}|schnee|neige|nieve|雪`, 'iu')], ['drizzle', /drizzl|light rain|이슬비|가랑비|보슬비|부슬비|nieselregen|bruine|llovizna|霧雨|小雨|细雨/iu],
+    ['rain', new RegExp(`rain|shower|downpour|[🌧☔]|소나기|장대비|폭우|호우|장마|빗방울|빗줄기|${RAIN_KO}|regen|pluie|lluvia|雨`, 'iu')], ['fog', /fog|mist|haz[ey]|[🌫]|안개|연무|박무|nebel|brouillard|niebla|霧|雾|霞/iu],
+    ['wind', /gale|gust|strong wind|windy|[💨🌬]|강풍|돌풍|바람이? ?(?:세|강|많|쌩)|sturm|stürmisch|windig|venteux|ventoso|強風|大风|强风/iu], ['partly', /partly|some clouds|mostly sunny|sun and clouds|[🌤⛅🌥]|구름 ?(?:조금|약간)|대체로 맑|teils|heiter|wolkig mit sonne|éclaircies|parcialmente|晴れ時々|晴时多云|多云转晴|晴間/iu],
+    ['cloudy', /cloud|overcast|grey sky|gray sky|[☁]|흐림|흐린|흐려|흐리|구름|잔뜩|구름 ?많|bewölkt|wolk|bedeckt|nuageux|couvert|nublado|曇|阴|多云/iu], ['clear', /clear|sunn?y|sunshine|fine|bright|[☀🌞🌝]|맑|화창|쾌청|햇살|햇빛|햇볕|쨍쨍|sonnig|klar|ensoleillé|soleil|despejado|soleado|晴|快晴/iu]];
+// weather that has passed ("비가 그치고 맑음", "after the rain", "雨上がり") doesn't name the sky now
+const OVER = /(?:비|눈)[가이]?\s*(?:그치|그쳤|그침|그쳐|멈추|멈췄|멎)[^,.;· ]*|(?:rain|snow)(?:ing)?\s*(?:has\s+)?(?:stopped|cleared|ended|is over)|after\s+the\s+(?:rain|snow|storm)|雨上がり|雨が(?:止|やん)|雨停/giu;
+export const condOf = text => { const s = String(text || ''), t = s.replace(OVER, ' '); return COND_RE.find(([, re]) => re.test(t))?.[0] || (t !== s ? 'partly' : ''); };
+// a sky the model names outside the list ("sunny", "맑고 쌀쌀", "小雨"): read like a status line; else what the numbers say,
+// else cloudy. temp and rain (a chance of rain, %) are optional
+export const condGuess = (temp, rain = null) => {
+    if (!Number.isFinite(temp)) return '';
+    if (Number.isFinite(rain) && rain >= 50) return temp <= 1 ? 'snow' : 'rain';
+    return temp >= 24 ? 'clear' : temp >= 12 ? 'partly' : 'cloudy';
+};
+export const condPick = (v, dflt = 'cloudy', { temp = null, rain = null } = {}) => (CONDS.includes(v) ? v : condOf(v) || condGuess(temp, rain) || dflt);
+// "3°C", "-2°", "영하 2도", "11도"; "72°F" and "72℉" are Fahrenheit, kept in Celsius
+const tempOf = text => { const s = String(text || ''), mt = s.match(/(영하\s*)?([-−]?\d{1,3}(?:[.,]\d)?)\s*(?:°\s*([CF])?|(℃)|(℉)|도(?![가-힣]))/i); if (!mt) return null; let n = Number(mt[2].replace('−', '-').replace(',', '.')); if (mt[5] || String(mt[3] || '').toUpperCase() === 'F') n = (n - 32) * 5 / 9; n = Math.round(n); return mt[1] ? -Math.abs(n) : n; };
+// the day's high and low hold the temperature now (a status line's 11° over a model's high of 9°)
+const fit = h => { if (Number.isFinite(h.temp)) { if (!Number.isFinite(h.hi) || h.hi < h.temp) h.hi = h.temp; if (!Number.isFinite(h.lo) || h.lo > h.temp) h.lo = h.temp; for (const d of h.days || []) if (d.day === h.date) { if (Number.isFinite(d.hi) && d.hi < h.temp) d.hi = h.temp; if (Number.isFinite(d.lo) && d.lo > h.temp) d.lo = h.temp; } } return h; };
 // a status line (scenes.js recentTrackers) as the weather it gives, or null
+// its time from the minutes the reader worked out ("오후 7:00" is 19:00); its place the city alone ("서울, Mara의 집" is 서울)
 export function weatherFrom(t) {
-    return t && (t.place || t.weather) ? { date: t.date || '', time: t.time || (Number.isFinite(t.min) ? `${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}` : ''), place: t.place || '', weather: t.weather || '' } : null;
+    if (!t || !(t.place || t.weather)) return null;
+    const time = Number.isFinite(t.min) ? `${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}` : hhmm(t.time);
+    return { date: t.date || '', time, place: String(t.city || t.place || '').split(/\s*[,，→>/·]\s*/)[0].trim(), weather: t.weather || '' };
 }
 const hereOf = h => ({
     place: line(h.place, 60), date: day5(h.date), time: hhmm(h.time), from: pick(h.from, ['tracker', 'chat', 'archive', 'guess'], 'guess'),
-    cond: pick(h.cond, CONDS, 'cloudy'), temp: int(h.temp, -60, 60), hi: int(h.hi, -60, 60), lo: int(h.lo, -60, 60), line: line(h.line, 160), ko: ko(h.ko),
-    hours: arr(h.hours).map(x => ({ time: hhmm(x?.time), cond: pick(x?.cond, CONDS, 'cloudy'), temp: int(x?.temp, -60, 60), rain: int(x?.rain, 0, 100) ?? 0 })).filter(x => x.time).slice(0, 6),
-    days: arr(h.days).map(x => ({ day: day5(x?.day), cond: pick(x?.cond, CONDS, 'cloudy'), lo: int(x?.lo, -60, 60), hi: int(x?.hi, -60, 60), rain: int(x?.rain, 0, 100) ?? 0 })).filter(x => x.day).slice(0, 10),
+    cond: condPick(h.cond, 'cloudy', { temp: int(h.temp, -60, 60), rain: int(arr(h.hours)[0]?.rain, 0, 100) }), temp: int(h.temp, -60, 60), hi: int(h.hi, -60, 60), lo: int(h.lo, -60, 60), line: line(h.line, 160), ko: ko(h.ko),
+    hours: arr(h.hours).map(x => ({ time: hhmm(x?.time), cond: condPick(x?.cond, 'cloudy', { temp: int(x?.temp, -60, 60), rain: rainPct(x?.rain) }), temp: int(x?.temp, -60, 60), rain: rainPct(x?.rain) ?? 0 })).filter(x => x.time).slice(0, 6),
+    days: arr(h.days).map(x => ({ day: day5(x?.day), cond: condPick(x?.cond, 'cloudy', { temp: int(x?.hi, -60, 60), rain: rainPct(x?.rain) }), lo: int(x?.lo, -60, 60), hi: int(x?.hi, -60, 60), rain: rainPct(x?.rain) ?? 0 })).filter(x => x.day).slice(0, 10),
     tiles: Object.fromEntries(['rain24', 'rainNext', 'feels', 'wind', 'gust', 'humidity', 'dew', 'visibility'].map(k => [k, num(h.tiles?.[k])]).concat([['dir', line(h.tiles?.dir, 12)], ['sunrise', hhmm(h.tiles?.sunrise)], ['sunset', hhmm(h.tiles?.sunset)]])),
 });
 // the status line over a weather "here": its date, time, place and weather stand
-function overlay(here, now) {
+// fresh: the model's own answer, whose whole forecast was shaped around its temperature; a status line's other reading
+// moves that shape with it (the high, the low, the hours, today's row). Either way the felt temperature and the dew point
+// follow the temperature now
+function overlay(here, now, fresh = false) {
     if (!now) return here;
     here.from = 'tracker';
     if (now.place) here.place = line(now.place, 60);
     if (/^\d{2}-\d{2}/.test(when(now.date))) here.date = day5(now.date);
     if (now.time) here.time = hhmm(now.time);
-    const c = condOf(now.weather), t = tempOf(now.weather);
+    const c = condOf(now.weather), t = tempOf(now.weather), t0 = here.temp, c0 = here.cond;
     if (c) here.cond = c;
-    if (t !== null) here.temp = t;
+    // a sentence written for another sky or temperature no longer describes this one
+    if (c && c !== c0 || t !== null && Number.isFinite(t0) && Math.abs(t - t0) >= 4) { here.line = ''; here.ko = ''; }
+    if (t !== null) {
+        here.temp = t;
+        const d = Number.isFinite(t0) ? t - t0 : 0, mv = (o, k) => { if (Number.isFinite(o?.[k])) o[k] = o[k] + d; };
+        if (d && here.tiles) { mv(here.tiles, 'feels'); mv(here.tiles, 'dew'); }
+        if (d && fresh) { mv(here, 'hi'); mv(here, 'lo'); for (const x of here.hours || []) mv(x, 'temp'); for (const x of here.days || []) if (x.day === here.date) { mv(x, 'hi'); mv(x, 'lo'); } }
+    }
     here.said = line(now.weather, 60);
     return here;
 }
+// a Korean copy that only repeats the line (a Korean line given the same "ko") would show twice
+const unko = h => { if (h.ko && h.line && h.ko.replace(/\s+/g, ' ').trim() === h.line.replace(/\s+/g, ' ').trim()) h.ko = ''; return unline(h); };
+// a "line" that is no more than the sky's name ("흐림", "Cloudy") says what the header already says
+const unline = h => { const l = String(h.line || '').replace(/(영하\s*)?[-−]?\d{1,3}(?:[.,]\d)?\s*(?:°\s*[CF]?|℃|℉|도(?![가-힣]))/gi, '').replace(/기온|temperature|temp\b|현재|지금|now|currently/gi, '').replace(/[\s,.·/|()~-]+/g, ' ').trim(); if (l && l.length <= 8 && condOf(l) === h.cond) { h.line = ''; h.ko = ''; } return h; };
+// the saved city a place names (by its name or its Korean name): two places in two different saved cities are apart,
+// and the status line (the scene's) doesn't stand over an owner the model puts in the other
+export const cityAt = (place, cities) => { const k = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''), pk = k(place); return pk ? arr(cities).find(c => [c?.name, c?.ko].map(k).filter(Boolean).some(n => pk.includes(n) || n.includes(pk))) || null : null; };
+// the saved city the owner is in carries the same weather as "here" (the model may leave it as it was)
+export function mirrorHome(w) {
+    const h = w?.here, c = h && cityAt(h.place, w.cities);
+    if (!c) return w;
+    for (const k of ['cond', 'temp', 'hi', 'lo']) if (h[k] !== null && h[k] !== undefined && h[k] !== '') c[k] = h[k];
+    for (const k of ['sunrise', 'sunset', 'rainNext', 'wind', 'gust', 'dir', 'feels', 'humidity', 'dew', 'visibility']) { const v = h.tiles?.[k]; if (v !== null && v !== undefined && v !== '') c[k] = v; }
+    return w;
+}
+export const apart = (a, b, cities) => { const x = cityAt(a, cities), y = cityAt(b, cities); return !!(x && y && x !== y); };
+// a "MM-DD HH:MM" of one zone in another (Intl knows the rules; the year is the phone's, else this one)
+export function zoneShift(at, from, to, year = new Date().getFullYear()) {
+    const mt = /^(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(String(at || ''));
+    if (!mt || !from || !to || from === to) return at;
+    try {
+        const parts = (tz, d) => { const f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(d), g = k => Number(f.find(x => x.type === k)?.value); return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour') % 24, g('minute')); };
+        const guess = new Date(Date.UTC(year, mt[1] - 1, mt[2], mt[3], mt[4]));
+        const utc = guess.getTime() - (parts(from, guess) - guess.getTime()), local = new Date(parts(to, new Date(utc)));
+        return `${pad(local.getUTCMonth() + 1)}-${pad(local.getUTCDate())} ${pad(local.getUTCHours())}:${pad(local.getUTCMinutes())}`;
+    } catch { return at; }
+}
+// the newest status line over the saved weather, for the screen alone (nothing is saved): a day or hours later than it
+export const overlayNow = (here, now) => fit(unline(overlay(structuredClone(here), now)));
 export function parseWeather(w, now) {
-    return { here: overlay(hereOf(w?.here || {}), now), cities: arr(w?.cities).map(cityOf).filter(c => c.name).slice(0, 5) };
+    return { here: fit(unko(overlay(hereOf(w?.here || {}), now, true))), cities: arr(w?.cities).map(cityOf).filter(c => c.name).slice(0, 5) };
 }
 
 // ---- story days: "MM-DD" without a year; a gap across New Year is taken the short way round
@@ -135,7 +197,8 @@ export function applyLife(p, e, phone, on) {
         if (was) return change('life.clock.alarms', was, given(a, clean, ['time', 'label', 'ko', 'days', 'date', 'on', 'wake', 'then', 'snooze']), '시계');
         if (!clean.time) return;
         // the same alarm written again without its id: that alarm, changed (switched off, its days)
-        const twin = (L.clock?.alarms || []).find(o => o.time === clean.time && o.label === clean.label && o.date === clean.date);
+        const lk = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+        const twin = (L.clock?.alarms || []).find(o => o.time === clean.time && o.date === clean.date && (!lk(o.label) || !lk(clean.label) || lk(o.label).includes(lk(clean.label)) || lk(clean.label).includes(lk(o.label))));
         if (twin) return change('life.clock.alarms', twin, given(a, clean, ['ko', 'days', 'on', 'wake', 'then', 'snooze']), '시계');
         push('life.clock.alarms', tag({ ...clean, made: clean.made || e.date }, k, 'a'), '시계');
     });
@@ -158,11 +221,35 @@ export function applyLife(p, e, phone, on) {
         if (own) clean.folder = own;
         push('life.files.items', tag({ ...clean, time: clean.time || `${e.date}${e.time ? ` ${e.time}` : ''}` }, k, 'f'), '파일');
     });
+    // a timer saved (the same label again: its seconds and day), and one running at the newest message (from its event's time)
+    const lk = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+    const timerOf = t => ({ label: line(t?.label, 40), ko: ko(t?.ko), sec: int(t?.sec, 1, 86400), last: day5(t?.last) || e.date });
+    let started = null;
+    arr(phone.timers).forEach((t, k) => {
+        if (!t || typeof t !== 'object') return;
+        const clean = timerOf(t);
+        if (!clean.sec) return;
+        const twin = (L.clock?.timers || []).find(o => lk(o.label) && lk(clean.label) && (lk(o.label).includes(lk(clean.label)) || lk(clean.label).includes(lk(o.label))) || o.sec === clean.sec && (!lk(o.label) || !lk(clean.label)));
+        if (twin) return change('life.clock.timers', twin, { sec: clean.sec, last: clean.last, ...(clean.ko ? { ko: clean.ko } : {}) }, '시계');
+        push('life.clock.timers', tag(clean, k, 't'), '시계');
+        // a timer first told in this event was set then: it runs from the event's time (the model seldom writes "running" on its own)
+        if (!phone.running && clean.last === e.date && !started) started = { label: clean.label, ko: clean.ko, sec: clean.sec, left: clean.sec };
+    });
+    const running = phone.running && typeof phone.running === 'object' ? phone.running : started;
+    if (running) {
+        const r = running, sec = int(r.sec, 1, 86400);
+        if (sec) {
+            const to = { label: line(r.label, 40), ko: ko(r.ko), sec, left: Math.min(sec, int(r.left, 0, 86400) ?? sec), at: `${e.date}${e.time ? ` ${e.time}` : ''}` };
+            const c = (L.clock ||= {});
+            if (!same(c.running ?? null, to)) { out.effects.push({ type: 'set', path: 'life.clock.running', from: c.running ?? null, to: structuredClone(to) }); c.running = to; out.apps.add('시계'); }
+        }
+    }
     // their usual that the story changed (lost weight, quit coffee): each field on its own, so 되돌리기 takes back just it
     const uu = phone.usual && typeof phone.usual === 'object' ? phone.usual : null;
     if (uu) {
         const n = (v, lo, hi, d = 1) => { const x = num(v); return Number.isFinite(x) && x >= lo && x <= hi ? Math.round(x * d) / d : undefined; };
-        const vals = { weight: n(uu.weight, 20, 300, 10), coffee: n(uu.coffee, 0, 15), water: n(uu.water, 0, 8, 10), coffeeKind: uu.coffeeKind ? line(uu.coffeeKind, 30) : undefined, coffeeKo: uu.coffeeKo ? ko(uu.coffeeKo) : undefined };
+        const vals = { weight: n(uu.weight, 20, 300, 10), coffee: n(uu.coffee, 0, 15), water: n(uu.water, 0, 8, 10), coffeeKind: uu.coffeeKind ? line(uu.coffeeKind, 30) : undefined, coffeeKo: uu.coffeeKo ? ko(uu.coffeeKo) : undefined,
+            bed: hhmm(uu.bed) || undefined, sleep: hhmm(uu.sleep) || undefined, wake: hhmm(uu.wake) || undefined, steps: n(uu.steps, 0, 80000), workouts: n(uu.workouts, 0, 21), rest: n(uu.rest, 30, 140), height: n(uu.height, 100, 230) };
         const u = (L.health ||= {}).usual ||= {};
         for (const [k, v] of Object.entries(vals)) {
             if (v === undefined || same(u[k] ?? null, v)) continue;
@@ -181,10 +268,18 @@ export function applyLife(p, e, phone, on) {
         if (was?.from === 'story') return change('life.health.days', was, { ...given(d, clean, ['bed', 'sleep', 'wake', 'woke', 'steps', 'km', 'floors', 'workout', 'hr']), ev: e.id }, '건강');
         // what the story doesn't say is their usual
         const u = L.health?.usual || {};
-        // waking: not before it happens (a night still going keeps it empty; the clock fills it once its time is past)
-        const awake = !(clean.date === e.date && e.time && u.wake && e.time < u.wake);
+        // waking: not before it happens (a night still going keeps it empty; the clock fills it once its time is past):
+        // the event's own day before their usual waking time, or a row for the day after the event (asleep past midnight)
+        const awake = !(e.time && u.wake && (clean.date === e.date && e.time < u.wake || dayGap(e.date, clean.date) > 0));
         for (const k of ['bed', 'sleep', 'wake']) if (!clean[k] && u[k] && (k !== 'wake' || awake)) clean[k] = u[k];
-        if (clean.steps === null && finiteNum(u.steps) && awake) clean.steps = u.steps;
+        // a day already over gets their usual steps; today's stay open (the screen counts them up, the clock fills them after)
+        if (clean.steps === null && finiteNum(u.steps) && awake && dayGap(clean.date, e.date) > 0) clean.steps = u.steps;
+        // what the model no longer writes is worked out: distance from the steps, floors and the heart range from their usual
+        const hd = hash(clean.date);
+        if (clean.steps === null && finiteNum(clean.km) && clean.km > 0) clean.steps = Math.round(clean.km / 0.00072);
+        if (clean.km === null && finiteNum(clean.steps)) clean.km = Math.round(clean.steps * 0.00072 * 10) / 10;
+        if (clean.floors === null) clean.floors = (hd >>> 9) % 9;
+        if (!clean.hr.length && u.rest) clean.hr = [u.rest - 4 + hd % 5, u.rest + 45 + (hd >>> 4) % 40];
         bedFirst(clean);
         const vals = { ...clean, ev: e.id };
         if (was) return change('life.health.days', was, vals, '건강');
@@ -233,6 +328,10 @@ export function applyDays(p, days, round) {
         const clean = dayOf({ ...d, from: 'pattern' });
         if (!clean.date || box.some(o => o.date === clean.date)) return;
         delete clean.ev;
+        // what the model leaves off a pattern day is their usual (a day is never half told)
+        const u = p.life.health?.usual || {};
+        for (const k of ['bed', 'sleep', 'wake']) if (!clean[k] && u[k]) clean[k] = u[k];
+        if (clean.steps === null && finiteNum(u.steps) && clean.date !== String(p.now || '').slice(0, 5)) clean.steps = u.steps;
         bedFirst(clean);
         const row = { ...clean, id: `sync:${round}:d${k}` };
         box.push(row);
@@ -247,7 +346,9 @@ export function applyDays(p, days, round) {
 const lateMin = t => { const m = /^\d{2}:\d{2}$/.test(t || '') ? minutes(t) : null; return m === null ? null : m < 12 * 60 ? m + 1440 : m; };
 const bedFirst = r => { if (r.bed && r.sleep && lateMin(r.bed) > lateMin(r.sleep)) r.bed = r.sleep; return r; };
 const finiteNum = v => typeof v === 'number' && Number.isFinite(v);
-const hash = s => { let h = 7; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
+// a day's hash with its bits mixed: "10-23" and "10-24" must land far apart (a plain h*31+c leaves neighbouring days a
+// few bits apart, and nine days in a row got the same bedtime)
+const hash = s => { let h = 2166136261; for (const c of String(s)) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0; h ^= h >>> 15; h = Math.imul(h, 2246822507) >>> 0; h ^= h >>> 13; h = Math.imul(h, 3266489909) >>> 0; return (h ^ (h >>> 16)) >>> 0; };
 const shiftHm = (t, min) => { const mt = /^(\d{2}):(\d{2})$/.exec(t || ''); if (!mt) return ''; const v = ((mt[1] * 60 + Number(mt[2]) + min) % 1440 + 1440) % 1440; return `${pad(Math.floor(v / 60))}:${pad(v % 60)}`; };
 // year: the story's (a leap year has its February 29), else a common year
 const plusDay0 = (day, n, year = 2001) => { const mt = /^(\d{2})-(\d{2})$/.exec(day); const d = new Date(Date.UTC(Number(year) || 2001, mt[1] - 1, Number(mt[2]) + n)); return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
@@ -263,9 +364,9 @@ export function fillDays(p, now, round) {
     const from = box.length ? (dayGap(first, today) > 13 ? plusDay(today, -13) : first) : plusDay(first, 1);
     for (let day = from, k = 0; dayGap(day, end) >= 0 && k < 15; day = plusDay(day, 1), k++) {
         if (box.some(d => d.date === day)) continue;
-        const h = hash(day), j = n => ((h >> n) % 41 - 20) / 100, steps = finiteNum(u.steps) ? Math.round(u.steps * (1 + j(1) * 1.5)) : null;
+        const h = hash(day), j = n => ((h >>> n) % 41 - 20) / 100, steps = finiteNum(u.steps) && day !== today ? Math.round(u.steps * (1 + j(1) * 1.5)) : null;
         const row = { date: day, bed: shiftHm(u.bed || u.sleep, Math.round(j(3) * 100)), sleep: shiftHm(u.sleep, Math.round(j(5) * 100)), wake: shiftHm(u.wake, Math.round(j(7) * 60)), woke: h % 3,
-            steps, km: steps === null ? null : Math.round(steps * 0.00072 * 10) / 10, floors: (h >> 9) % 9, workout: null, hr: u.rest ? [u.rest - 4 + h % 5, u.rest + 45 + (h >> 4) % 40] : [], from: 'pattern', id: `sync:${round}:g${k}` };
+            steps, km: steps === null ? null : Math.round(steps * 0.00072 * 10) / 10, floors: (h >>> 9) % 9, workout: null, hr: u.rest ? [u.rest - 4 + h % 5, u.rest + 45 + (h >>> 4) % 40] : [], from: 'pattern', id: `sync:${round}:g${k}` };
         // to bed before asleep (each time is moved on its own; in bed 00:38 after asleep at 00:17 can't be)
         if (row.bed && row.sleep && lateMin(row.bed) > lateMin(row.sleep)) row.bed = shiftHm(row.sleep, -(10 + h % 25));
         box.push(row);
@@ -276,28 +377,48 @@ export function fillDays(p, now, round) {
 }
 // w: the model's "weather" (null: keep it); now: the status line's (it stands over the model's)
 // archive: the request carried archive sections (else the weather can't have come from there: it came from the chat)
-export function applyWeather(p, w, now, { archive = true } = {}) {
+// today: the story's day after the round ("MM-DD"), for the weather carried over a day nobody described
+const samePlace = (a, b) => { const k = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''); return !k(a) || !k(b) || k(a) === k(b); };
+export function applyWeather(p, w, now, { archive = true, today = '' } = {}) {
     if (!p.life) return [];
     const was = p.life.weather || null;
     let next;
     if (w && typeof w === 'object') {
-        const here = overlay(hereOf(w), now);
+        const raw = hereOf(w), here = fit(unko(apart(raw.place, now?.place, was?.cities || arr(w.cities).map(cityOf)) ? raw : overlay(raw, now, true)));
         if (here.from === 'archive' && !archive) here.from = 'chat';
         // a forecast or a tile the model left out stays as it was (the clock trims what is past)
         const old = was?.here;
+        // the same day and place guessed again: the sky doesn't flip within a day on a guess; the story's own words do change it
+        if (old?.cond && here.from === 'guess' && old.date && here.date === old.date && samePlace(old.place, here.place)) {
+            for (const k of ['cond', 'temp', 'hi', 'lo', 'line', 'ko', 'said', 'from']) if (old[k] !== undefined) here[k] = old[k];
+            if (!here.time) here.time = old.time;
+        }
         if (old) {
-            if (!here.hours.length) here.hours = structuredClone(old.hours || []);
+            // yesterday's hours and rain are not today's; its forecast days are (the clock trims what is past)
+            const sameDay = old.date === here.date;
+            if (!here.hours.length && sameDay) here.hours = structuredClone(old.hours || []);
             if (!here.days.length) here.days = structuredClone(old.days || []);
-            for (const [k, v] of Object.entries(here.tiles)) if ((v === null || v === '') && old.tiles?.[k] !== undefined) here.tiles[k] = old.tiles[k];
+            for (const [k, v] of Object.entries(here.tiles)) if ((v === null || v === '') && old.tiles?.[k] !== undefined && (sameDay || k !== 'rain24' && k !== 'rainNext')) here.tiles[k] = old.tiles[k];
             for (const k of ['hi', 'lo']) if (here[k] === null && old[k] !== undefined) here[k] = old[k];
+            fit(here);
         }
         // the cities keep what the model leaves out (their time zone, their note)
-        const cities = (was?.cities || []).map(c => { const key = v => line(v, 40).toLowerCase(), n = arr(w.cities).find(x => [c.name, c.ko].filter(Boolean).map(key).includes(key(x?.name))); if (!n) return c; const f = cityOf(n), out = { ...c, cond: pick(n.cond, CONDS, c.cond) }; for (const k of ['temp', 'hi', 'lo', 'rainNext', 'wind', 'gust', 'dir', 'feels', 'humidity', 'dew']) if (f[k] !== null && f[k] !== '') out[k] = f[k]; return out; });
+        const cities = (was?.cities || []).map(c => { const key = v => line(v, 40).toLowerCase(), n = arr(w.cities).find(x => [c.name, c.ko].filter(Boolean).map(key).includes(key(x?.name))); if (!n) return c; const f = cityOf(n), out = { ...c, cond: condPick(n.cond, c.cond, { temp: f.temp }) }; for (const k of ['temp', 'hi', 'lo', 'sunrise', 'sunset', 'rainNext', 'wind', 'gust', 'dir', 'feels', 'humidity', 'dew', 'visibility']) if (f[k] !== null && f[k] !== '') out[k] = f[k]; return out; });
         next = { ...(was || {}), here, cities };
-    } else if (now && was?.here) {
-        // only the status line: its words stand over the weather there was
-        next = { ...was, here: overlay(structuredClone(was.here), now) };
+    } else if (now && was?.here && !apart(was.here.place, now.place, was.cities)) {
+        // only the status line: its words stand over the weather there was; on a later day, yesterday's hours, sentence
+        // and rain go with the day
+        const here = fit(overlay(structuredClone(was.here), now));
+        if (was.here.date && /^\d{2}-\d{2}$/.test(here.date) && dayGap(was.here.date, here.date) > 0) Object.assign(here, { hours: [], line: '', ko: '', tiles: { ...(here.tiles || {}), rain24: null, rainNext: null } });
+        next = { ...was, here };
+    } else if (was?.here?.cond && was.here.date && /^\d{2}-\d{2}$/.test(today) && dayGap(was.here.date, today) > 0) {
+        // the day moved on with nothing said about the sky: yesterday's carries over as a guess for today (not a stale date)
+        // yesterday's sentence and rain don't describe today; the screen reads what it needs off the sky
+        next = { ...was, here: { ...structuredClone(was.here), date: today, time: '', from: 'guess', said: '', line: '', ko: '', hours: [], tiles: { ...(was.here.tiles || {}), rain24: null, rainNext: null } } };
     } else return [];
+    // the cities are the next state's own (an effect's "from" must hold what was)
+    next.cities = structuredClone(next.cities || []);
+    mirrorHome(next);
     if (same(was, next)) return [];
     p.life.weather = next;
     return [{ type: 'set', path: 'life.weather', from: structuredClone(was), to: structuredClone(next) }];
@@ -313,14 +434,14 @@ export function lifeClock(p, now) {
     const change = (path, r, vals) => { const keys = Object.keys(vals).filter(k => !same(r[k] ?? null, vals[k])); if (!keys.length) return; const fx = { type: 'change', path, id: r.id, from: fields(r, keys), to: fields(vals, keys) }; setFields(r, fx.to); out.push(fx); };
     for (const a of L.clock?.alarms || []) if (a.on && a.date && !a.days?.length && (dayGap(a.date, today) > 0 || a.date === today && hm && a.time && hm > a.time)) change('life.clock.alarms', a, { on: false });
     if (L.clock?.running) {
-        const at = String(L.at || ''), gone = at.slice(0, 5) !== today || (hm && at.slice(6, 11) && minutes(hm) - minutes(at.slice(6, 11)) >= (L.clock.running.left || 0) / 60);
+        const at = String(L.clock.running.at || L.at || ''), gone = at.slice(0, 5) !== today || (hm && at.slice(6, 11) && minutes(hm) - minutes(at.slice(6, 11)) >= (L.clock.running.left || 0) / 60);
         if (gone) { out.push({ type: 'set', path: 'life.clock.running', from: structuredClone(L.clock.running), to: null }); L.clock.running = null; }
     }
     // a night told while it went on: its waking is their usual, once that time has come
     const u = L.health?.usual;
     if (u?.wake) for (const d of L.health?.days || []) if (!d.wake && (dayGap(d.date, today) > 0 || d.date === today && hm && hm >= u.wake)) change('life.health.days', d, { wake: u.wake });
     // and its steps, once that day is over
-    if (finiteNum(u?.steps)) for (const d of L.health?.days || []) if ((d.steps === null || d.steps === undefined) && dayGap(d.date, today) > 0) change('life.health.days', d, { steps: u.steps });
+    if (finiteNum(u?.steps)) for (const d of L.health?.days || []) if ((d.steps === null || d.steps === undefined) && dayGap(d.date, today) > 0) change('life.health.days', d, { steps: u.steps, km: Math.round(u.steps * 0.00072 * 10) / 10 });
     const files = L.files?.items || [];
     for (const x of [...files]) if (x.trashed && dayGap(x.trashed, today) > 30) { files.splice(files.indexOf(x), 1); out.push({ type: 'drop', path: 'life.files.items', item: structuredClone(x) }); }
     const days = L.health?.days || [];
@@ -343,10 +464,11 @@ export function lifeNow(p) {
     if (!L) return null;
     return {
         alarms: (L.clock?.alarms || []).map(a => ({ id: a.id, time: a.time, label: a.label, days: a.days, date: a.date, on: a.on })),
+        timers: (L.clock?.timers || []).map(t => ({ label: t.label, sec: t.sec })), running: L.clock?.running ? { label: L.clock.running.label, sec: L.clock.running.sec } : null,
         folders: ['Downloads', ...(L.files?.folders || []).map(f => f.name).filter(Boolean)],
         files: (L.files?.items || []).filter(x => !x.trashed).slice(-12).map(x => ({ id: x.id, name: x.name, folder: x.folder, time: x.time })),
         health: (L.health?.days || []).slice(-3).map(d => ({ id: d.id, date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, from: d.from })),
-        usual: (u => (u ? Object.fromEntries(['weight', 'coffee', 'coffeeKind', 'water'].filter(k => u[k] !== undefined && u[k] !== null && u[k] !== '').map(k => [k, u[k]])) : undefined))(L.health?.usual),
+        usual: (u => (u ? Object.fromEntries(['bed', 'sleep', 'wake', 'steps', 'workouts', 'rest', 'weight', 'coffee', 'coffeeKind', 'water'].filter(k => u[k] !== undefined && u[k] !== null && u[k] !== '').map(k => [k, u[k]])) : undefined))(L.health?.usual),
         weather: L.weather?.here ? { place: L.weather.here.place, date: L.weather.here.date, time: L.weather.here.time, cond: L.weather.here.cond, temp: L.weather.here.temp, cities: (L.weather.cities || []).map(c => c.name) } : null,
     };
 }

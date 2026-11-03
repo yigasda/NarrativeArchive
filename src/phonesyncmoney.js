@@ -11,7 +11,7 @@
 // - balances may go below zero; no money is made up to cover a payment
 // Every change is listed in `effects` (a copy of each record as it went in), so 복구 can add back what a save lost, and
 // 되돌리기 can tell a record the user changed since, without touching anything else.
-import { cash, finance, finite, fx, migrateBank, positions, round } from './finance.js';
+import { addPrice, baseline, cash, currency, finance, finite, fx, migrateBank, positions, round, uid } from './finance.js';
 import { boxAt, dayGap, lifeReplay, lifeRevert } from './phonesynclife.js';
 import { dishPic } from './phonefood.js';
 import { byStory, giftOf, hhmm, num, when } from './phoneparse.js';
@@ -48,6 +48,8 @@ function accountOf(p, x) {
     if (x.kind === 'card' || /card|karte|카드|credit/i.test(raw)) return pick1(as.filter(a => a.kind === 'credit'));
     return pick1(as.filter(a => a.kind === 'checking')) || pick1(as);
 }
+// a story day n days on ("MM-DD", a leap February assumed)
+const plusDays = (day, n) => { const mt = /^(\d{2})-(\d{2})$/.exec(day || ''); if (!mt) return ''; const d = new Date(Date.UTC(2000, mt[1] - 1, Number(mt[2]) + n)); return `${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`; };
 const fullDay = (year, anchor, date) => {
     const a = /^(\d{4})-(\d{2})-(\d{2})$/.exec(anchor || '');
     if (!a || !/^\d{2}-\d{2}$/.test(date || '')) return `${year}-${date}`;
@@ -73,6 +75,7 @@ export function investNow(m, p) {
         accounts: inv.accounts.map(a => ({ account: `broker:${a.currency}`, currency: a.currency, cash: f.accounts[a.key] ? cash(f.accounts[a.key]) : null })),
         holdings: positions(inv.trades || []).filter(h => h.quantity > 0).map(h => ({ symbol: h.symbol, name: inv.securities.find(s => s.symbol === h.symbol)?.name || '', quantity: h.quantity, currency: h.currency })),
         trades: (inv.trades || []).slice(-10).map(t => ({ id: t.id, date: t.date, kind: t.kind, symbol: t.symbol, quantity: t.quantity, price: t.price })),
+        watch: (inv.watch || []).map(w => ({ symbol: w.symbol, name: inv.securities.find(s => s.symbol === w.symbol)?.name || '' })),
     };
 }
 
@@ -121,7 +124,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     // bank ↔ brokerage always pairs; bank ↔ bank only when the event has just one out and one in. A fee on the out leg
     // ("fee") is what goes missing on the way.
     const own = list(mo.moves).filter(x => x.occurrence !== 'again' && !x.already);
-    const cur = x => (/^broker:/i.test(String(x.account || '')) ? String(x.account).slice(7).toUpperCase() : p.money?.bank.accounts.find(a => a.last4 === String(x.account ?? '').replace(/\D/g, '').slice(-4))?.currency);
+    const cur = x => (/^broker:/i.test(String(x.account || '')) ? String(x.account).slice(7).toUpperCase() : accountOf(p, x)?.currency);
     // "amount" is what is sent and "fee" comes on top; an amount that already has the fee in it is taken as it is
     const feeOf = x => (finite(Number(x.fee)) && Number(x.fee) > 0 ? Number(x.fee) : 0);
     const sent = x => -Number(x.amount) - (x.withFee ? feeOf(x) : 0);
@@ -149,7 +152,8 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         out.notes.push(`${txt(o.item, 40)}: 취소된 주문이라 결제${back >= 0 ? '·환불' : ''}을 넣지 않았어요`);
     }
     list(mo.moves).forEach((x, k) => {
-        const amount = Number(x.amount), broker = /^broker:/i.test(String(x.account || ''));
+        let amount = Number(x.amount);
+        const broker = /^broker:/i.test(String(x.account || ''));
         if (voided.has(k)) { out.legs.push({ key: `void:${k}`, amount, state: 'cancelled' }); return; }
         if (amount === 0) { out.legs.push({ key: `zero:${k}`, amount: 0, state: 'zero' }); return; }
         if (!finite(amount)) fail('금액을 확인하지 못했어요');
@@ -157,7 +161,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         if (broker) {
             const cur = String(x.account).slice(7).toUpperCase(), a = p.investment.accounts.find(y => y.currency === cur), L = a && f.accounts[a.key];
             if (!L) fail('증권 계좌를 찾지 못했어요');
-            const key = `broker:${cur}`;
+            const key = `broker:${cur}:${amount < 0 ? '-' : '+'}`;
             if (keep(key, amount, rec => { const line = L.entries[rec]; if (!line) return; out.effects.push({ type: 'amendEntry', key: a.key, id: rec, from: line.amount, to: round(amount) }); out.notes.push(`증권 ${cur}: 추정 ${line.amount} → 실제 ${round(amount)}로 고쳤어요`); out.changes.push({ app: '투자', label: `증권 ${cur}`, amount: round(amount - line.amount), currency: cur }); line.amount = round(amount); })) return;
             const twin = Object.entries(L.entries).find(([, v]) => Math.abs(v.amount - amount) < 0.01 && near(String(v.date).slice(5), date, 0) && !fresh(x, v, e.at));
             if (!twin && x.occurrence === 'again') { out.legs.push({ key, amount: round(amount), state: 'again' }); return; }
@@ -171,9 +175,17 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         }
         const acct = accountOf(p, x);
         if (!acct) fail('계좌를 찾지 못했어요');
+        // an amount in another currency (€20 on a KRW card abroad) is booked in the account's, at the day's rate; the memo keeps the original
         const xc = String(x.currency || '').trim().toUpperCase();
-        if (/^[A-Z]{3}$/.test(xc) && xc !== acct.currency) fail('계좌 통화와 금액 통화가 달라요');
-        const key = `bank:${acct.id}`, lk = acct.kind === 'credit' ? '' : `${acct.id}:${acct.currency}`, label = `${acct.name || ''} ••••${acct.last4}`.trim();
+        if (/^[A-Z]{3}$/.test(xc) && xc !== acct.currency) {
+            const rate = fx(m, xc, acct.currency, full);
+            if (rate === null) fail(`${xc}→${acct.currency} 환율이 없어서 ${xc} 결제를 적지 못했어요`);
+            const orig = amount; amount = round(amount * rate);
+            x.memo = [txt(x.memo), `${xc} ${Math.abs(orig)}`].filter(Boolean).join(' · ');
+        }
+        // one leg per account, direction and payee: the same event told again may carry another payment on the same account
+        // (its refund, a second shop), which is not the first one with another amount
+        const key = `bank:${acct.id}:${amount < 0 ? '-' : '+'}:${plain(x.who)}`, lk = acct.kind === 'credit' ? '' : `${acct.id}:${acct.currency}`, label = `${acct.name || ''} ••••${acct.last4}`.trim();
         const tx = p.money.tx ||= [];
         if (keep(key, amount, rec => { const t = tx.find(r => r.id === rec); if (t) amend(t, amount, lk, label, acct); })) return;
         const pointed = x.already && tx.find(t => t.id === x.already);
@@ -193,7 +205,8 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         }
         const id = `sync:${e.id}:m${k}`;
         const row = { id, account: acct.last4, who: txt(x.who, 60), ko: txt(x.ko, 60), amount: round(amount), time: `${date}${e.time ? ` ${e.time}` : ''}`, day: full,
-            kind: acct.kind === 'credit' ? 'card' : ['card', 'transfer', 'deposit', 'cash'].includes(x.kind) ? x.kind : amount > 0 ? 'deposit' : 'card', memo: txt(x.memo), pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at, ...(guess ? { amountFrom: 'guess' } : {}) };
+            // on the card everything is a card row (a refund is plus), except paying the card off: a transfer, which the month's count leaves out
+            kind: acct.kind === 'credit' ? (x.kind === 'transfer' ? 'transfer' : 'card') : ['card', 'transfer', 'deposit', 'cash'].includes(x.kind) ? x.kind : amount > 0 ? 'deposit' : 'card', memo: txt(x.memo), pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at, ...(guess ? { amountFrom: 'guess' } : {}) };
         tx.push(row);
         out.effects.push({ type: 'push', path: 'money.tx', item: structuredClone(row) });
         if (acct.kind !== 'credit') {
@@ -250,11 +263,13 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const old = x.already && box.find(o => o.id === x.already) || box.find(o => same(o, x) && !fresh(x, o, e.at));
         if (!old && x.occurrence === 'again') return;
         if (old) {
-            if (x.status && ORDER.includes(x.status) && x.status !== old.status && later(old.status, x.status)) {
+            // an order's status only moves forward; a pass's is free text ("used", "checked in", "cancelled"): whatever it says now
+            const next = path === 'passes' ? txt(x.status, 30) : x.status;
+            if (next && next !== old.status && (path === 'passes' || ORDER.includes(next) && later(old.status, next))) {
                 const was = old.status;
-                old.status = x.status;
+                old.status = next;
                 if (path === 'orders' && x.status === 'delivered' && /^\d{2}-\d{2}$/.test(date || '')) old.arrived ||= date;
-                out.effects.push({ type: 'status', path: `money.${path}`, id: old.id, status: x.status, prev: was });
+                out.effects.push({ type: 'status', path: `money.${path}`, id: old.id, status: next, prev: was });
                 out.changes.push({ app: path === 'orders' ? '쇼핑' : '지갑', label: `${old.item || old.by} 상태`, amount: null });
             }
             return;
@@ -268,7 +283,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     records('orders', list(mo.orders), x => {
         const price = Number(x.price);
         if (!txt(x.item) || !txt(x.shop)) fail('주문의 가게나 물건을 확인하지 못했어요');
-        return { shop: txt(x.shop, 60), item: txt(x.item), ko: txt(x.ko), option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5), arrived: '', gift: giftOf(x.gift), ...(x.paid === false ? { paid: false } : {}), ...(guess ? { amountFrom: 'guess' } : {}) };
+        return { shop: txt(x.shop, 60), item: txt(x.item), ko: txt(x.ko), option: txt(x.option, 60), qty: Math.max(1, Math.round(Number(x.qty) || 1)), price: finite(price) ? price : null, time: date, status: ORDER.includes(x.status) ? x.status : 'ordered', eta: when(x.eta).slice(0, 5) || (['ordered', 'shipped', 'on the way'].includes(x.status) || !ORDER.includes(x.status) ? plusDays(date, 2 + [...txt(x.shop)].reduce((n, c) => (n + c.charCodeAt(0)) % 3, 0)) : ''), arrived: '', gift: giftOf(x.gift), ...(x.paid === false ? { paid: false } : {}), ...(guess ? { amountFrom: 'guess' } : {}) };
     }, (o, x) => samePlace(o.shop, x.shop) && samePlace(o.item, x.item) && near(o.time, date));
     records('passes', list(mo.passes), x => {
         if (!txt(x.by)) fail('티켓 정보를 확인하지 못했어요');
@@ -320,8 +335,11 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             // what the model leaves out is made up from the shop's name (the same each time): a rating, reviews, a minimum order
             let h = 7; for (const c of row.shop) h = (h * 31 + c.charCodeAt(0)) >>> 0;
             const won = (p.money?.currency || p.money?.bank?.accounts?.[0]?.currency) === 'KRW', num = (v, lo, hi) => { const n = Number(v); return finite(n) && n >= lo && n <= hi ? n : null; };
-            const shop = { name: row.shop, ko: txt(ns.ko, 60), cuisine: txt(ns.cuisine, 30), rating: num(ns.rating, 1, 5) ?? Math.round((4.3 + (h % 7) / 10) * 10) / 10,
-                reviews: Math.round(num(ns.reviews, 0, 999999) ?? 40 + h % 1400), fee: finite(Number(ns.fee)) ? Math.abs(Number(ns.fee)) : row.fee,
+            // reviews and a rating as the app's lists really run: most shops tens to a thousand or so, one in five a big
+            // name with thousands; a small shop may still hold a 5.0, a big one sits at 4.5–4.9 (never the model's: a 9.6 or a 4544 would show)
+            const h3 = (h >>> 3), h7 = (h >>> 7), reviews = h % 5 === 0 ? 2000 + h3 % 6001 : 30 + h3 % 1470;
+            const rating = Math.round((reviews < 100 ? 4.4 + h7 % 7 / 10 : reviews < 2000 ? 4.3 + h7 % 7 / 10 : 4.5 + h7 % 5 / 10) * 10) / 10;
+            const shop = { name: row.shop, ko: txt(ns.ko, 60), cuisine: txt(ns.cuisine, 30), rating, reviews, fee: finite(Number(ns.fee)) ? Math.abs(Number(ns.fee)) : row.fee,
                 minOrder: num(ns.minOrder, 0, 1e7) ?? (won ? 10000 + (h % 3) * 2500 : 10 + (h % 3) * 2.5), eta: txt(ns.eta, 12) || `${20 + (h % 3) * 5}–${30 + (h % 3) * 5}`, fav: false, menu,
                 id: `sync:${e.id}:s${k}`, ev: e.id, sourceIndex: e.at };
             shops.push(shop);
@@ -330,6 +348,66 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             if (shops.length > 10) { const old = shops.find(s => !s.fav && s !== shop); if (old) { shops.splice(shops.indexOf(old), 1); out.effects.push({ type: 'drop', path: 'delivery.shops', item: structuredClone(old) }); } }
         }
     });
+    // 장바구니: dishes put in the basket and not ordered (null empties it); an order from that shop empties it too
+    const setCart = (to, label) => { const was = p.delivery.cart ?? null; if (JSON.stringify(was) === JSON.stringify(to)) return; out.effects.push({ type: 'set', path: 'delivery.cart', from: structuredClone(was), to: structuredClone(to) }); p.delivery.cart = to; out.changes.push({ app: '배달', label, amount: null }); };
+    if (dlvOn && mo.cart !== undefined && (mo.cart === null || typeof mo.cart === 'object')) {
+        // a dish on the shop's menu costs what the menu says (the basket carries no story amount)
+        const c = mo.cart, menu = c ? (p.delivery.shops || []).find(sh => samePlace(sh.name, c.shop))?.menu || [] : [];
+        const items = c ? list(c.items).map(d => { const optionKo = txt(d?.optionKo, 60), name = txt(d?.name, 60), mi = menu.find(x => samePlace(x.name, name) || x.ko && samePlace(x.ko, name)), pic = dishPic(d?.pic || mi?.pic, { name, ko: txt(d?.ko, 60) || mi?.ko || '', option: txt(d?.option, 60), optionKo }); return { name, ko: txt(d?.ko, 60) || mi?.ko || '', option: txt(d?.option, 60), ...(optionKo ? { optionKo } : {}), qty: Math.max(1, Math.round(Number(d?.qty) || 1)), price: mi && finite(Number(mi.price)) ? Number(mi.price) : finite(Number(d?.price)) ? Number(d.price) : 0, ...(pic ? { pic } : {}) }; }).filter(d => d.name).slice(0, 8) : [];
+        if (!c || !txt(c.shop) || !items.length) setCart(null, '장바구니 비움');
+        else setCart({ shop: txt(c.shop, 60), items, noteShop: txt(c.noteShop, 120), noteShopKo: txt(c.noteShopKo, 120), noteRider: txt(c.noteRider, 120), noteRiderKo: txt(c.noteRiderKo, 120) }, `${txt(c.shop, 60)} 장바구니`);
+    }
+    if (dlvOn && p.delivery.cart && list(mo.deliveries).some(x => samePlace(x.shop, p.delivery.cart.shop) && x.occurrence !== 'again')) setCart(null, '장바구니 비움');
+    // a new account or card (opened in these messages): the bank's list grows, its ledger starts at the event's day
+    if (bankOn && mo.newAccount && typeof mo.newAccount === 'object') {
+        const a = mo.newAccount, accts = p.money.bank.accounts, kind = ['checking', 'savings', 'credit'].includes(a.kind) ? a.kind : 'checking', last4 = String(a.last4 || '').replace(/\D/g, '').slice(-4), cur = String(a.currency || p.money.currency || '').toUpperCase();
+        const bal = kind === 'credit' ? 0 : (finite(Number(a.balance)) ? Number(a.balance) : 0);
+        if (!/^\d{4}$/.test(last4) || !currency(cur)) fail('새 계좌의 끝 4자리나 통화를 확인하지 못했어요');
+        if (!accts.some(x => x.last4 === last4)) {
+            const acct = { id: uid(), kind, name: txt(a.name, 60) || (kind === 'savings' ? '적금' : kind === 'credit' ? '카드' : '입출금'), last4, currency: cur, balance: bal, ev: e.id, sourceIndex: e.at };
+            // the ledger opens empty on the event's day; what it holds is its first row (an opening deposit the owner can see)
+            if (kind !== 'credit') { const L = baseline(m, acct.id, cur, 0, full, p.owner); if (bal > 0) { const id = `sync:${e.id}:open`, row = { id, account: last4, who: txt(a.name, 60) || acct.name, ko: '', amount: round(bal), time: `${date}${e.time ? ` ${e.time}` : ''}`, day: full, kind: 'deposit', memo: '개설 입금', pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at }; (p.money.tx ||= []).push(row); L.entries[id] = { amount: round(bal), date: full, sourceIndex: e.at }; out.effects.push({ type: 'push', path: 'money.tx', item: structuredClone(row) }, { type: 'entry', key: `${acct.id}:${cur}`, id, amount: round(bal), date: full, sourceIndex: e.at }); } }
+            accts.push(acct);
+            out.effects.push({ type: 'push', path: 'money.bank.accounts', item: structuredClone(acct) });
+            out.changes.push({ app: '은행', label: `${acct.name} 계좌 개설`, amount: null });
+        }
+    }
+    if (bankOn && mo.newCard && typeof mo.newCard === 'object') {
+        const c = mo.newCard, last4 = String(c.account || '').replace(/\D/g, '').slice(-4), cards = p.money.cards ||= [];
+        if (p.money.bank.accounts.some(x => x.last4 === last4) && !cards.some(x => x.account === last4)) {
+            const card = { id: uid(), account: last4, exp: /^\d{2}\/\d{2}$/.test(String(c.exp || '')) ? String(c.exp) : '', ev: e.id, sourceIndex: e.at };
+            cards.push(card);
+            out.effects.push({ type: 'push', path: 'money.cards', item: structuredClone(card) });
+            out.changes.push({ app: '지갑', label: '새 카드', amount: null });
+        }
+    }
+    // 투자: a share they start watching, a price the story gives, a stake the story says they hold
+    if (investOn) {
+        const inv = p.investment;
+        for (const w of list(mo.watch)) {
+            const symbol = txt(w.symbol, 80), cur = String(w.currency || '').toUpperCase();
+            if (!symbol || inv.watch.some(x => x.symbol === symbol)) continue;
+            if (!inv.securities.some(x => x.symbol === symbol)) { if (!txt(w.name) || !currency(cur)) continue; const sec = { symbol, name: txt(w.name, 100), ko: txt(w.ko, 100), currency: cur }; inv.securities.push(sec); out.effects.push({ type: 'push', path: 'investment.securities', item: structuredClone(sec), idKey: 'symbol' }); }
+            const row = { symbol, note: txt(w.note, 160), ko: txt(w.ko, 160), query: '', source: 'story', ev: e.id, sourceIndex: e.at };
+            inv.watch.push(row);
+            out.effects.push({ type: 'push', path: 'investment.watch', item: structuredClone(row), idKey: 'symbol' });
+            out.changes.push({ app: '투자', label: `${inv.securities.find(x => x.symbol === symbol)?.name || symbol} 관심 종목`, amount: null });
+        }
+        for (const q of list(mo.quotes)) {
+            const symbol = txt(q.symbol, 80), value = Number(q.value), d = /^\d{4}-\d{2}-\d{2}$/.test(String(q.date || '')) ? String(q.date) : fullDay(year, anchor, when(q.date).slice(0, 5) || date);
+            if (!inv.securities.some(x => x.symbol === symbol) || !finite(value) || value <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(d || '')) continue;
+            try { addPrice(m, `STOCK:${symbol}`, d, { value, source: 'story', ref: txt(q.evidence, 200) }); if (d > (inv.date || '')) inv.date = d; out.changes.push({ app: '투자', label: `${inv.securities.find(x => x.symbol === symbol)?.name || symbol} 시세`, amount: null }); } catch { /* a price the ledger refuses */ }
+        }
+        for (const st of list(mo.stakes)) {
+            const company = txt(st.company, 100), evidence = txt(st.evidence, 300);
+            if (!company || !evidence || (inv.stakes ||= []).some(x => samePlace(x.company, company))) continue;
+            const n = (v, lo, hi) => { const x = Number(v); return finite(x) && x >= lo && x <= hi ? x : null; };
+            const row = { id: uid(), company, listed: typeof st.listed === 'boolean' ? st.listed : null, percent: n(st.percent, 0, 100), holder: txt(st.holder), voter: txt(st.voter), beneficiary: txt(st.beneficiary), restriction: txt(st.restriction, 200), value: n(st.value, 0, 1e15), currency: currency(String(st.currency || '').toUpperCase()) ? String(st.currency).toUpperCase() : inv.base, evidence, source: 'story', ev: e.id, sourceIndex: e.at };
+            inv.stakes.push(row);
+            out.effects.push({ type: 'push', path: 'investment.stakes', item: structuredClone(row) });
+            out.changes.push({ app: '투자', label: `${company} 지분`, amount: null });
+        }
+    }
     return out;
 }
 // what a delivery order came to (the model never writes it)

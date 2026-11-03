@@ -388,3 +388,108 @@ test('making a phone: the owner by name is "me", a country by name, counts like 
     assert.deepEqual([ph.searches[0].tab, ph.searches[0].mark], [undefined, true]);
     assert.equal(ph.posts[0].likes, 2500);
 });
+
+test('dates with a month name: only a real month ("Mar 3", "Sept 5", "5. Mai"), never a name that starts like one ("Mara 3"); a year after the day keeps the clock', async () => {
+    const { when } = await import('../src/phoneparse.js');
+    assert.equal(when('Mara 3'), '');
+    assert.equal(when('Flight 12'), '');
+    assert.equal(when('Mar 3 15:00'), '03-03 15:00');
+    assert.equal(when('Sept 5'), '09-05');
+    assert.equal(when('5. Mai 2027 09:30'), '05-05 09:30');
+    assert.equal(when('25.10.2026 21:00'), '10-25 21:00');
+    assert.equal(when('10/25/2026 9:05'), '10-25 09:05');
+    assert.equal(when('2026-10-25 21:00'), '10-25 21:00');
+});
+test('a memo length written in minutes ("1분 20초", "2 min", "1m30s") is read as seconds', async () => {
+    const { secOf } = data;
+    assert.equal(secOf('1:20'), 80);
+    assert.equal(secOf('1분 20초'), 80);
+    assert.equal(secOf('2 min'), 120);
+    assert.equal(secOf('1m30s'), 90);
+    assert.equal(secOf('45s'), 45);
+    assert.equal(secOf(90), 90);
+});
+
+test('an event told again from a later message (its order delivered) stays where it happened: deleting that message offers all it gave', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'ok'), say('Mara', 'I ordered a lamp for 30000 won'), say('Ren', 'nice'), say('Mara', 'the lamp arrived today')];
+    const c = setup(chat); c.p.sync.limit = 2;
+    const order = (status, occurrence) => ({ shop: '램프샵', item: 'Lamp', price: 30000, qty: 1, status, occurrence });
+    await run(c.m, { now: '10-26 10:00', events: [{ id: 'lamp', at: 3, quote: 'ordered a lamp', summary: '램프 주문', date: '10-26', time: '09:00', phone: {}, money: { moves: [{ account: '1111', amount: -30000, who: '램프샵', occurrence: 'new' }], orders: [order('ordered', 'new')] } }] });
+    await run(c.m, { now: '10-27 10:00', events: [{ id: 'lamp', at: 5, quote: 'lamp arrived', summary: '램프 도착', date: '10-27', time: '09:00', phone: {}, money: { orders: [order('delivered', 'again')] } }] });
+    assert.equal(c.p.sync.events.lamp.at, 3);
+    assert.equal(c.p.money.orders[0].status, 'delivered');
+    T.chat.splice(3, 1);
+    await run(c.m, { now: '10-27 10:00', events: [] });
+    assert.equal(c.p.sync.dropped.length, 1);
+    const r = await data.dropStretch(c.m, c.p, c.p.sync.dropped[0].key);
+    assert.equal(r.gone, 1);
+    assert.equal(c.p.money.orders.length, 0);
+    assert.equal(c.p.money.tx.length, 0);
+    assert.equal(c.bank(), 100000);
+});
+
+test('the whole phone made again with its bank kept: a message the bank had not read yet is still read on the next round', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'ok'), say('Mara', 'coffee 4500 on the card'), say('Ren', 'and'), say('Mara', 'bread 3000 on the card')];
+    const c = setup(chat); c.p.sync.limit = 2; c.p.sync.marks.money = { ...c.p.sync.marks.base };
+    await run(c.m, { now: '10-26 10:00', events: [{ id: 'coffee', at: 3, quote: 'coffee 4500', summary: '커피', date: '10-26', time: '09:00', phone: {}, money: { moves: [{ account: '1111', amount: -4500, who: '카페', occurrence: 'new' }] } }] });
+    T.answers.push({ country: 'KR', now: '10-26 10:00', threads: [], calls: [], photos: [], notes: [], events: [], posts: [], mails: [], diary: [] });
+    const q = await data.makePhone(c.m, 'Ren');
+    assert.equal(q.money.tx.length, 1);
+    await run(c.m, { now: '10-26 11:00', events: [{ id: 'bread', at: 5, quote: 'bread 3000', summary: '빵', date: '10-26', time: '10:30', phone: {}, money: { moves: [{ account: '1111', amount: -3000, who: '빵집', occurrence: 'new' }] } }] });
+    assert.equal(q.money.tx.length, 2);
+    assert.equal(c.bank(), 92500);
+});
+
+test('복구 brings back the story clock the lost round had moved on, with its year across New Year', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'ok'), say('Mara', 'coffee 4500 on the card')];
+    const { journalWrite } = await import('../src/phonesync.js'); journalWrite('test', []);
+    const c = setup(chat); c.p.now = '12-31 20:00'; c.p.year = 2026;
+    const was = structuredClone(c.p);
+    await run(c.m, { now: '01-01 10:00', events: [{ id: 'coffee', at: 3, quote: 'coffee 4500', summary: '커피', date: '01-01', time: '09:00', phone: {}, money: { moves: [{ account: '1111', amount: -4500, who: '카페', occurrence: 'new' }] } }] });
+    assert.equal(c.p.now, '01-01 10:00'); assert.equal(c.p.year, 2027);
+    c.m.phones.ren = was; c.m.finance = structuredClone(c.m.finance);
+    const perf = globalThis.performance; globalThis.performance = { timeOrigin: Date.now() + 1e6 };
+    try { assert.equal(await data.restoreRounds(c.m, 'test'), 1); } finally { globalThis.performance = perf; }
+    assert.equal(was.now, '01-01 10:00'); assert.equal(was.year, 2027);
+    assert.equal(was.money.tx.length, 1);
+});
+
+test('a record told again with its clock a little off is the one there (a text at 21:00 then 21:02, a call, a mail); a call back an hour later is a second call', async () => {
+    const chat = [say('Ren', 'start'), say('Mara', 'hi'), say('Mara', 'texted mum, called her'), say('Ren', 'ok'), say('Mara', 'she replied; called again an hour later')];
+    const c = setup(chat); c.p.sync.limit = 2;
+    const ph = (t1, t2, more = []) => ({ threads: [{ with: 'Mum', messages: [{ from: 'me', text: 'coming home late tonight, dont wait up', time: t1 }, ...more] }], calls: [{ with: 'Mum', type: 'out', time: t2, min: 5 }], mails: [{ from: 'Bank', subject: 'Statement', text: 'x', time: '10-26 09:00' }] });
+    await run(c.m, { now: '10-26 22:00', events: [{ id: 'late', at: 2, quote: 'texted mum', summary: '문자', date: '10-26', time: '21:00', phone: ph('10-26 21:00', '10-26 21:05') }] });
+    await run(c.m, { now: '10-26 23:00', events: [{ id: 'late', at: 4, quote: 'she replied', summary: '답장', date: '10-26', time: '22:30', phone: { ...ph('10-26 21:02', '10-26 21:07', [{ from: 'Mum', text: 'ok sweetie', time: '10-26 21:10' }]), calls: [{ with: 'Mum', type: 'out', time: '10-26 21:07', min: 5 }, { with: 'Mum', type: 'out', time: '10-26 22:10', min: 2 }], mails: [{ from: 'Bank', subject: 'Statement', text: 'x', time: '10-26 09:30' }] } }] });
+    const t = c.p.threads.find(x => x.with === 'Mum');
+    assert.deepEqual(t.messages.map(x => x.text), ['coming home late tonight, dont wait up', 'ok sweetie']);
+    assert.deepEqual(c.p.calls.map(x => x.time), ['10-26 21:05', '10-26 22:10']);
+    assert.equal(c.p.mails.length, 1);
+});
+
+test('a plan moved or called off changes the item there; a text the owner deleted leaves the screen but stays for 되돌리기', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'dinner friday?'), say('Ren', 'sure, friday 7pm')]);
+    await run(c.m, { now: '10-26 13:00', events: [
+        { id: 'plans', at: 2, quote: 'friday 7pm', summary: '약속', date: '10-26', time: '12:00', phone: { events: [{ title: '저녁 약속', date: '10-30', time: '19:00' }, { title: '점심', date: '10-28', time: '12:30' }], threads: [{ with: 'Mara', messages: [msg('A: 금요일 저녁?', '10-26 12:01'), msg('B: 삭제할 문자', '10-26 12:02')] }] } },
+    ] });
+    assert.equal(c.p.events.length, 2);
+    T.chat.push(say('Mara', 'actually saturday'), say('Ren', 'and the lunch is off'), say('Mara', 'ok, deleted my text'));
+    await run(c.m, { now: '10-26 14:00', events: [
+        { id: 'moved', at: 3, quote: 'actually saturday', summary: '옮김', date: '10-26', time: '13:00', phone: { events: [{ title: '저녁 약속', date: '10-31', was: '10-30' }, { title: '점심', date: '10-28', cancelled: true }], threads: [{ with: 'Mara', messages: [{ text: '삭제할 문자', deleted: true }] }] } },
+    ] });
+    assert.equal(c.p.events.length, 2);
+    assert.equal(c.p.events.find(e => e.title === '저녁 약속').date, '10-31'); assert.equal(c.p.events.find(e => e.title === '저녁 약속').time, '19:00');
+    assert.equal(c.p.events.find(e => e.title === '점심').cancelled, true);
+    const t = c.p.threads.find(x => x.with === 'Mara');
+    assert.equal(t.messages.length, 2); assert.equal(t.messages.filter(x => x.deleted).length, 1);
+    assert.equal(data.lastTime(t), '10-26 12:01');
+});
+
+test('a plan moved with its title reworded is the one on its old day; a deleted text in a thread new this round is kept, marked', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'dinner saturday?'), say('Ren', 'sure')]);
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'plan', at: 2, quote: 'sure', summary: '약속', date: '10-26', time: '12:00', phone: { events: [{ title: '토요일 저녁 약속 — 루체, Ren', date: '10-31', time: '19:00' }] } }] });
+    T.chat.push(say('Mara', 'make it sunday'), say('Ren', 'deleted that text'));
+    await run(c.m, { now: '10-26 14:00', events: [{ id: 'moved', at: 3, quote: 'sunday', summary: '옮김', date: '10-26', time: '13:00', phone: { events: [{ title: '일요일 저녁 약속 — 루체, Ren', date: '11-01', time: '19:00', was: '10-31' }], threads: [{ with: 'Mara', messages: [msg('A: 내일 봐', '10-26 13:01'), { from: 'me', text: '사실 힘들어', time: '10-26 13:02', deleted: true }] }] } }] });
+    assert.equal(c.p.events.length, 1); assert.equal(c.p.events[0].date, '11-01'); assert.equal(c.p.events[0].title, '일요일 저녁 약속 — 루체, Ren');
+    const t = c.p.threads.find(x => x.with === 'Mara');
+    assert.equal(t.messages.length, 2); assert.equal(t.messages.find(x => x.deleted)?.text, '사실 힘들어');
+});

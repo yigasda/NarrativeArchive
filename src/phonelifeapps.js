@@ -7,7 +7,8 @@
 import { AX, ax, axBar, axCb, axH1, axInd, axKp, axTint, axTop, busyHtml } from './phoneapps.js';
 import { filling } from './phoneai.js';
 import { byStory, fmtDate, koOn, pad, storyNow } from './phonedata.js';
-import { shiftDay } from './phonelife.js';
+import { shiftDay, weatherNow } from './phonelife.js';
+import { apart, cityAt as cityOfPlace, mirrorHome, overlayNow } from './phonesynclife.js';
 import { fmtMoney } from './phonemoney.js';
 import { nameKey } from './people.js';
 import { esc } from './util.js';
@@ -28,7 +29,30 @@ Object.assign(AX, {
 });
 
 // ---- shared bits
-const L = p => p.life || null;
+// the everyday apps' data, with every list and box it may lack (an older save, a thin answer) put in place once
+const L = p => {
+    const l = p.life; if (!l) return null;
+    const c = l.clock ||= {}; c.alarms ||= []; c.timers ||= []; c.running ||= null; for (const a of c.alarms) { a.days ||= []; a.then ||= []; }
+    const h = l.health ||= {}; h.days ||= []; h.usual ||= {};
+    // today's steps so far: the row holds none until the day is over; the screen counts from waking to now
+    const today = now5(p).slice(0, 5), nowMin = toMin(now5(p).slice(6));
+    const soFar = d => {
+        if (d.date !== today || (d.steps !== null && d.steps !== undefined) || !Number.isFinite(h.usual.steps) || nowMin === null) return d;
+        const wake = toMin(d.wake) ?? toMin(h.usual.wake) ?? 7 * 60, f = Math.max(0, Math.min(1, (nowMin - wake) / Math.max(60, 22 * 60 - wake)));
+        const r = seeded(`${d.date}:sofar`)(), steps = Math.round(h.usual.steps * f * (0.85 + r * 0.3));
+        return { ...d, steps, km: Math.round(steps * 0.00072 * 10) / 10, partial: true, until: Math.floor(nowMin / 60) };
+    };
+    const f = l.files ||= {}; f.folders ||= []; f.items ||= []; f.cloud ||= { used: null, total: null };
+    const w = l.weather ||= {}; w.cities ||= []; const h0 = w.here ||= { place: '', date: '', time: '', from: 'guess', cond: '', temp: null, hi: null, lo: null, line: '', ko: '' }; h0.hours ||= []; h0.days ||= []; h0.tiles ||= {};
+    // a number left out reads as none (the screens test for null, not undefined)
+    for (const x of h0.hours) { x.temp ??= null; x.rain ??= 0; }
+    for (const x of h0.days) { x.lo ??= null; x.hi ??= null; x.rain ??= 0; }
+    for (const k of ['rain24', 'rainNext', 'feels', 'wind', 'gust', 'humidity', 'dew', 'visibility']) h0.tiles[k] ??= null;
+    for (const k of ['temp', 'hi', 'lo']) h0[k] ??= null;
+    for (const x of w.cities) { x.hours ||= []; for (const k of ['temp', 'hi', 'lo', 'feels', 'humidity', 'dew', 'rainNext', 'wind', 'gust']) x[k] ??= null; }
+    // the screens read a view: today's row counted up, nothing written back to the save
+    return h.days.some(d => d && d.date === today) ? { ...l, health: { ...h, days: h.days.map(d => (d && d.date === today ? soFar(d) : d)) } } : l;
+};
 const k1 = (k, cls = 'lf_k') => (k && koOn() ? `<span class="${cls}">${esc(k)}</span>` : '');
 const now5 = p => String(storyNow(p) || p.now || '');
 const toMin = t => { const mt = String(t || '').match(/(\d{1,2}):(\d{2})/); return mt ? Number(mt[1]) * 60 + Number(mt[2]) : null; };
@@ -38,13 +62,14 @@ const hm = n => `${pad(Math.floor(((n % 1440) + 1440) % 1440 / 60))}:${pad(((n %
 const dur = min => (min >= 60 ? `${Math.floor(min / 60)}시간 ${min % 60}분` : `${min}분`);
 const durBig = min => `${Math.floor(min / 60)}<span>시간</span> ${min % 60}<span>분</span>`;
 // numbers as the phone's country writes them: 6,000 · 2.0 in Korea, the US, Japan…; 6.000 · 2,0 in Germany and most of Europe
+// (no country known: the dot, as the money app's fallback writes it)
 const DOT_LANDS = new Set(['KR', 'US', 'GB', 'JP', 'CN', 'TW', 'HK', 'CA', 'AU', 'NZ', 'IE', 'IN', 'SG', 'PH', 'MY', 'TH', 'IL', 'MX']);
 let STORY = { year: new Date().getFullYear(), now: '', dot: false };
 // the phone being drawn: its year (carried over New Year by the reflection), its now and its number style
 export function setStory(p) {
     const y = Number(p?.year) || Number(String(p?.money?.asOf || p?.investment?.date || '').slice(0, 4)) || new Date().getFullYear();
     // known: the story dates itself (else weekdays aren't shown: a fantasy calendar or an undated story has none to show)
-    STORY = { year: y, known: !p?.noYear && !!(Number(p?.year) || /^\d{4}-/.test(String(p?.money?.asOf || p?.money?.fxDate || p?.investment?.date || ''))), now: String(storyNow(p) || p?.now || '').slice(0, 5), dot: DOT_LANDS.has(String(p?.lives || p?.country || '').toUpperCase()) };
+    STORY = { year: y, known: !p?.noYear && !!(Number(p?.year) || /^\d{4}-/.test(String(p?.money?.asOf || p?.money?.fxDate || p?.investment?.date || ''))), now: String(storyNow(p) || p?.now || '').slice(0, 5), dot: (c => !c || DOT_LANDS.has(c))(String(p?.lives || p?.country || '').toUpperCase()) };
 }
 const n0 = v => (v === null || v === undefined ? '—' : Number(v).toLocaleString(STORY.dot ? 'en-US' : 'de-DE'));
 const md = s => { const mt = String(s || '').match(/^(\d{2})-(\d{2})/); return mt ? { mo: Number(mt[1]), d: Number(mt[2]) } : null; };
@@ -124,37 +149,56 @@ export function timerScreen(p, now) {
     if (!lf) return lifeEmpty(p, now, '시계', 'life', 'home2', true);
     const r = lf.clock.running, ts = lf.clock.timers;
     // time left: what was left when the phone was filled, less the story time since
-    let left = r ? r.left : 0;
-    if (r && lf.at && now5(p) && lf.at.slice(0, 5) === now5(p).slice(0, 5)) left -= ((toMin(now5(p).slice(6)) ?? 0) - (toMin(lf.at.slice(6)) ?? 0)) * 60;
+    let left = r ? (Number(r.left) || 0) : 0;
+    // (a timer from another story day has long run out)
+    const at = r?.at || lf.at;
+    if (r && at && now5(p)) left = at.slice(0, 5) === now5(p).slice(0, 5) ? left - ((toMin(now5(p).slice(6)) ?? 0) - (toMin(at.slice(6)) ?? 0)) * 60 : dayGap(at.slice(0, 5), now5(p).slice(0, 5)) > 0 ? 0 : left;
     left = Math.max(0, left);
-    const C = 2 * Math.PI * 115, frac = r ? left / r.sec : 0, ring = r ? `${(toMin(now5(p).slice(6)) ?? 0) + Math.ceil(left / 60)}` : '';
+    const C = 2 * Math.PI * 115, frac = r && r.sec > 0 ? Math.min(1, left / r.sec) : 0, ring = r ? `${(toMin(now5(p).slice(6)) ?? 0) + Math.ceil(left / 60)}` : '';
     return `${axBar(p, now, '#f2f2f4')}
       ${axTop(axCb('home2'))}
       <div class="ax_scroll">${axH1('타이머')}
         ${r ? `<div class="lf_ring"><svg viewBox="0 0 250 250">${ticks(frac)}<circle cx="125" cy="125" r="115" fill="none" stroke="#2b2c31" stroke-width="6"/><circle cx="125" cy="125" r="115" fill="none" stroke="#f5a524" stroke-width="6" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - frac)).toFixed(1)}" transform="rotate(-90 125 125)"/>${frac > 0 ? `<circle cx="${(125 + 115 * Math.sin(frac * 2 * Math.PI)).toFixed(1)}" cy="${(125 - 115 * Math.cos(frac * 2 * Math.PI)).toFixed(1)}" r="8" fill="#f5a524" stroke="#17181b" stroke-width="3"/>` : ''}</svg>
-          <div>${left ? `<b class="cg_num lf_dig"><span>${pad(Math.floor(left / 60))}</span><i>:</i><em>${pad(left % 60)}</em></b>` : '<b class="lf_dig">끝</b>'}<span>${esc(r.label || '타이머')} · ${Math.round(r.sec / 60)}분</span></div></div>
+          <div>${left ? `<b class="cg_num lf_dig"><span>${pad(Math.floor(left / 60))}</span><i>:</i><em>${pad(left % 60)}</em></b>` : '<b class="lf_dig">끝</b>'}<span>${esc(r.label || '타이머')} · ${Math.round((r.sec || 0) / 60)}분</span></div></div>
           ${left ? `<div class="lf_tend">끝나는 시각 <b class="cg_num">${hm(Number(ring))}</b></div>` : ''}
           <div class="lf_tbtn2"><span>${ax('x', 15, 'currentColor', 2.6)}취소</span><span class="a">${left ? `${ax('pause', 15, 'currentColor', 2.6)}일시정지` : `${ax('play', 15, 'currentColor', 2, 'currentColor')}다시`}</span></div>` : ''}
         <div class="lf_ch">저장된 타이머</div>
-        ${ts.length ? `<div class="lf_dcard lf_svl">${ts.map(t => `<div class="lf_sv"><b class="cg_num">${Math.floor(t.sec / 60)}:${pad(t.sec % 60)}</b><span class="lf_mq"><span>${esc(t.label)}${t.ko && koOn() ? ` <em>${esc(t.ko)}</em>` : ''}</span></span><small>${t.last ? esc(fmtDate(p, t.last, true)) : ''}</small><i>${ax('play', 13, '#f5a524', 2, '#f5a524')}</i></div>`).join('')}</div>` : '<div class="lf_none">저장된 타이머가 없어요</div>'}
+        ${ts.length ? `<div class="lf_dcard lf_svl">${ts.map(t => `<div class="lf_sv"><b class="cg_num">${Math.floor((t.sec || 0) / 60)}:${pad((t.sec || 0) % 60)}</b><span class="lf_mq"><span>${esc(t.label)}${t.ko && koOn() ? ` <em>${esc(t.ko)}</em>` : ''}</span></span><small>${t.last ? esc(fmtDate(p, t.last, true)) : ''}</small><i>${ax('play', 13, '#f5a524', 2, '#f5a524')}</i></div>`).join('')}</div>` : '<div class="lf_none">저장된 타이머가 없어요</div>'}
         <i class="lf_pad"></i></div>
       ${clockDock('timer')}${axInd('#f2f2f4')}`;
 }
 // a city's offset from the place the story is in, from their time zones (Intl knows the rules; the year is a guess)
 const zoneMin = (tz, at) => { try { const f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(at); const g = k => Number(f.find(x => x.type === k)?.value); return Math.round((Date.UTC(g('year'), g('month') - 1, g('day'), g('hour') % 24, g('minute')) - at.getTime()) / 6e4); } catch { return null; } };
-const hereZone = lf => { const pl = String(lf.weather.here.place || '').toLowerCase(); return (lf.weather.cities.find(c => c.tz && pl && (pl.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(pl.split(/[ ,]/)[0]))) || lf.weather.cities.find(c => c.tz))?.tz || ''; };
+const COUNTRY_TZ = { KR: 'Asia/Seoul', JP: 'Asia/Tokyo', CN: 'Asia/Shanghai', TW: 'Asia/Taipei', HK: 'Asia/Hong_Kong', SG: 'Asia/Singapore', TH: 'Asia/Bangkok', VN: 'Asia/Ho_Chi_Minh', ID: 'Asia/Jakarta', PH: 'Asia/Manila', MY: 'Asia/Singapore', IN: 'Asia/Kolkata', AE: 'Asia/Dubai', IL: 'Asia/Jerusalem', TR: 'Europe/Istanbul', RU: 'Europe/Moscow',
+    GB: 'Europe/London', IE: 'Europe/Dublin', PT: 'Europe/Lisbon', ES: 'Europe/Madrid', FR: 'Europe/Paris', BE: 'Europe/Brussels', NL: 'Europe/Amsterdam', DE: 'Europe/Berlin', CH: 'Europe/Zurich', AT: 'Europe/Vienna', IT: 'Europe/Rome', CZ: 'Europe/Prague', PL: 'Europe/Warsaw', DK: 'Europe/Copenhagen', SE: 'Europe/Stockholm', NO: 'Europe/Oslo', FI: 'Europe/Helsinki', GR: 'Europe/Athens', UA: 'Europe/Kyiv', IS: 'Atlantic/Reykjavik',
+    EG: 'Africa/Cairo', NG: 'Africa/Lagos', KE: 'Africa/Nairobi', ZA: 'Africa/Johannesburg', MA: 'Africa/Casablanca', US: 'America/New_York', CA: 'America/Toronto', MX: 'America/Mexico_City', CO: 'America/Bogota', PE: 'America/Lima', BR: 'America/Sao_Paulo', AR: 'America/Buenos_Aires', CL: 'America/Santiago', AU: 'Australia/Sydney', NZ: 'Pacific/Auckland' };
+// the time zone the story is in: a saved city its place names, else the owner's country (home), else the first saved city
+const hereZone = (lf, p = null, place = hereNow(lf).place) => { const pl = String(place || '').toLowerCase(); return lf.weather.cities.find(c => c.tz && pl && (pl.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(pl.split(/[ ,]/)[0])))?.tz || COUNTRY_TZ[String(p?.lives || p?.country || '').toUpperCase()] || lf.weather.cities.find(c => c.tz)?.tz || ''; };
+// sunrise and sunset for a day at a time zone's city (NOAA's equations on the zone's latitude and longitude), local "HH:MM"
+function sunOf(date, tz) {
+    const at = TZ_AT[tz], d = realDate(date, 12);
+    if (!at || !d) return null;
+    const [lat, lon] = at, rad = Math.PI / 180, N = Math.floor((d - Date.UTC(d.getUTCFullYear(), 0, 1)) / 864e5), g = 2 * Math.PI / 365 * N;
+    const eq = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+    const dec = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+    const cosHa = Math.cos(90.833 * rad) / (Math.cos(lat * rad) * Math.cos(dec)) - Math.tan(lat * rad) * Math.tan(dec);
+    if (!(cosHa > -1 && cosHa < 1)) return null;
+    const ha = Math.acos(cosHa) / rad, off = zoneMin(tz, d) ?? 0;
+    return [hm(Math.round(720 - 4 * (lon + ha) - eq + off)), hm(Math.round(720 - 4 * (lon - ha) - eq + off))];
+}
 function cityTime(p, lf, c) {
     const n = now5(p), at = realDate(n, 12) || new Date();
-    const here = hereZone(lf), a = c.tz ? zoneMin(c.tz, at) : null, b = here ? zoneMin(here, at) : a;
+    const here = hereZone(lf, p), a = c.tz ? zoneMin(c.tz, at) : null, b = here ? zoneMin(here, at) : a;
     const off = a !== null && b !== null ? Math.round((a - b) / 60) : 0, t = toMin(n.slice(6)) ?? toMin(lf.weather.here.time) ?? 12 * 60;
-    const local = t + off * 60, night = (() => { const ss = toMin(c.sunset) ?? 18 * 60, sr = toMin(c.sunrise) ?? 6 * 60 + 30; const l = ((local % 1440) + 1440) % 1440; return l >= ss || l < sr; })();
-    return { off, time: hm(local), night, dayShift: local >= 1440 ? '내일' : local < 0 ? '어제' : '오늘' };
+    const sun = c.sunrise && c.sunset ? [c.sunrise, c.sunset] : sunOf(n.slice(0, 5), c.tz) || [];
+    const local = t + off * 60, night = (() => { const ss = toMin(sun[1]) ?? 18 * 60, sr = toMin(sun[0]) ?? 6 * 60 + 30; const l = ((local % 1440) + 1440) % 1440; return l >= ss || l < sr; })();
+    return { off, time: hm(local), night, date: n.slice(0, 5), dayShift: local >= 1440 ? '내일' : local < 0 ? '어제' : '오늘' };
 }
 // the world map card: grid paper, the land, tonight's shadow (from the story's date and time), a pin per saved city
 const geo = (lat, lon) => [((lon + 180) / 360 * MAP_W), ((MAP_TOP - lat) / (MAP_TOP - MAP_BOT) * MAP_H)];
 const cityAt = (c, hereTz, off) => { const at = TZ_AT[c.tz] || TZ_AT[hereTz]; return at ? [at[0], at[1] + (TZ_AT[c.tz] ? 0 : off * 15)] : [45, Math.max(-170, Math.min(170, off * 15))]; };
 function worldMap(p, lf, rows) {
-    const here = hereZone(lf), cw = MAP_W / DOT_C, ch = MAP_H / DOT_R;
+    const here = hereZone(lf, p), cw = MAP_W / DOT_C, ch = MAP_H / DOT_R;
     // each saved city lights the dot it falls in (the place the story is in, amber)
     const lit = new Map();
     rows.forEach(({ c, t }, k) => { const [la, lo] = cityAt(c, here, t.off), [px, py] = geo(la, lo), key = `${Math.min(DOT_C - 1, Math.max(0, Math.floor(px / cw)))}:${Math.min(DOT_R - 1, Math.max(0, Math.floor(py / ch)))}`; if (!lit.has(key) || !k) lit.set(key, k ? 'c' : 'h'); });
@@ -169,7 +213,7 @@ const face = (min, night) => { const h = (min % 720) / 720 * 360, m = (min % 60)
 export function worldScreen(p, now) {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '시계', 'life', 'home2', true);
-    const here = { name: lf.weather.here.place || '현재 위치', tz: hereZone(lf), sunset: lf.weather.here.tiles?.sunset || '', note: '' };
+    const hn = hereNow(lf), here = { name: hn.place || '현재 위치', tz: hereZone(lf, p, hn.place), sunset: hn.tiles?.sunset || '', note: '' };
     const rows = [here, ...lf.weather.cities.filter(c => c.name !== here.name)].map(c => ({ c, t: cityTime(p, lf, c) }));
     return `${axBar(p, now, '#f2f2f4')}
       ${axTop(axCb('home2'))}
@@ -219,7 +263,8 @@ const workKcal = w => Math.round((w?.min || 0) * (RUNS.test(w?.kind) ? 10 : RIDE
 function hourSteps(d) {
     const out = Array(24).fill(0), total = d.steps || 0;
     if (!total) return out;
-    const r = seeded(`${d.date}:steps`), wake = Math.floor((toMin(d.wake) ?? 420) / 60), sleep = toMin(d.sleep), end = 23;
+    // a day still going: its steps lie in the hours up to now
+    const r = seeded(`${d.date}:steps`), wake = Math.floor((toMin(d.wake) ?? 420) / 60), sleep = toMin(d.sleep), end = d.partial && Number.isFinite(d.until) ? Math.max(wake, d.until) : 23;
     const wt = d.workout ? Math.floor((toMin(d.workout.time) ?? -60) / 60) : -1, wSteps = wt >= 0 && /walk|run|lauf|hike|걷|달리|러닝|산책|등산|조깅/i.test(d.workout.kind) ? Math.min(total * 0.6, (d.workout.km || d.workout.min / 10) * 1300) : 0;
     const w = out.map((_, h) => (h < wake || h > end ? 0 : h === wt ? 0 : (h === wake ? 0.5 : 1) * (0.4 + r() * 0.9) * ([8, 12, 13, 18, 19].includes(h) ? 2.2 : h >= 22 ? 0.3 : 1)));
     const sw = w.reduce((s, x) => s + x, 0) || 1;
@@ -482,7 +527,7 @@ export function compareScreen(p, now) {
 const FK = { pdf: ['PDF', '#d64545'], image: ['JPG', '#c98a2e'], video: ['MP4', '#3a3f4a'], audio: ['M4A', '#8a5a2e'], zip: ['ZIP', '#7b8290'], doc: ['DOCX', '#2f6fbf'], sheet: ['XLSX', '#2b7a4b'], slides: ['PPTX', '#c2562b'], other: ['FILE', '#8a929d'] };
 const ext = f => (String(f.name).match(/\.([a-z0-9]{2,4})$/i)?.[1] || FK[f.kind][0]).toUpperCase();
 const fico = (f, s = '') => `<span class="lf_fico ${s}" style="background: ${FK[f.kind][1]}">${esc(ext(f))}</span>`;
-const size = kb => (kb === null || kb === undefined ? '' : kb >= 1024 * 1024 ? `${(kb / 1048576).toFixed(1)} GB` : kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${Math.round(kb)} KB`).replace('.', ',');
+const size = kb => comma(kb === null || kb === undefined ? '' : kb >= 1024 * 1024 ? `${(kb / 1048576).toFixed(1)} GB` : kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${Math.round(kb)} KB`);
 const live = lf => lf.files.items.filter(f => !f.trashed);
 // what a file shows: the model's "look", else a guess from its name, folder and preview (older phones have no look)
 const LOOK_IMG = ['sea', 'city', 'night', 'food', 'hills', 'pet', 'sunset', 'mountain', 'snow', 'flower', 'interior', 'concert', 'paper', 'screenshot', 'map'];
@@ -613,7 +658,7 @@ export function filesScreen(p, now) {
         <div class="lf_sec">위치</div>
         <div class="lf_card">
           <button type="button" class="lf_rw" data-go="folder" data-i="">${ax('phoneS', 22, '#2f6fbf')}<span class="lf_tx"><b>내 폰</b></span><small>${fs.length}</small>${ax('chev', 14, '#b7bdc6', 2.4)}</button>
-          ${cl.total ? `<div class="lf_rw">${ax('cloudF', 22, '#2f6fbf')}<span class="lf_tx"><b>클라우드</b><small>${String(cl.used ?? '?').replace('.', ',')} GB / ${String(cl.total).replace('.', ',')} GB</small></span></div>` : ''}
+          ${cl.total ? `<div class="lf_rw">${ax('cloudF', 22, '#2f6fbf')}<span class="lf_tx"><b>클라우드</b><small>${comma(String(cl.used ?? '?'))} GB / ${comma(String(cl.total))} GB</small></span></div>` : ''}
           <button type="button" class="lf_rw" data-go="folder" data-i="Downloads">${ax('dl', 22, '#2f6fbf')}<span class="lf_tx"><b>다운로드</b></span><small>${dl}</small>${ax('chev', 14, '#b7bdc6', 2.4)}</button>
           <button type="button" class="lf_rw" data-go="folder" data-i="~trash">${ax('trash', 21, '#2f6fbf')}<span class="lf_tx"><b>최근 삭제</b></span><small>${trash}</small>${ax('chev', 14, '#b7bdc6', 2.4)}</button></div>
         ${favs.length ? `<div class="lf_sec">즐겨찾기</div><div class="lf_card">${favs.map(fold).join('')}</div>` : ''}
@@ -669,15 +714,21 @@ export function fileScreen(p, now, id) {
 const WX = { clear: '맑음', partly: '구름 조금', cloudy: '흐림', drizzle: '이슬비', rain: '비', sleet: '진눈깨비', snow: '눈', fog: '안개', storm: '뇌우', wind: '강풍' };
 // the part of the day a sky is drawn for: dawn and evening are the hour around sunrise and sunset
 function phaseOf(time, sunrise, sunset) {
-    const t = toMin(time), sr = toMin(sunrise) ?? 6 * 60 + 30, ss = toMin(sunset) ?? 18 * 60;
+    let t = toMin(time), ss = toMin(sunset) ?? 18 * 60;
+    const sr = toMin(sunrise) ?? 6 * 60 + 30;
     if (t === null) return 'day';
+    // a sunset past midnight (a far northern summer): the day runs on past the clock's wrap
+    if (ss < sr) { ss += 1440; if (t < sr - 45) t += 1440; }
     if (t >= sr - 45 && t <= sr + 45) return 'dawn';
     if (t >= ss - 50 && t <= ss + 30) return 'eve';
     return t > ss + 30 || t < sr - 45 ? 'night' : 'day';
 }
 const WET = { drizzle: 1, rain: 1, sleet: 1 };
 // one palette per sky and part of the day: flat layers only (sky, bands, three hills, clouds), no gradients
+// a sky the app doesn't know (an older save, a blank) is drawn as cloudy
+const condOk = c => (Object.hasOwn(WX, c) ? c : 'cloudy');
 function pal(cond, phase) {
+    cond = condOk(cond);
     const D = {
         clear: { sky: '#4f8fd8', hills: ['#3f78bd', '#3569a6', '#2d5b92'], sun: 'day', puff: '#6ca1de' },
         partly: { sky: '#5b93cf', hills: ['#4a80bb', '#3f72a9', '#356496'], sun: 'day', front: '#e9f0f8', cloud: '#84aedb' },
@@ -720,6 +771,7 @@ const rnd = seed => { let s = seed; return () => (s = (s * 9301 + 49297) % 23328
 const puffSvg = (x, y, w, col, v, op = 1) => { const a = -(x + w + 10), b = 400 - x, d = (b - a) / v; return `<svg class="cl" style="left: ${x}px; top: ${y}px; width: ${w}px; height: ${w / 2}px; --a: ${a}px; --b: ${b}px; --d: ${d.toFixed(1)}s; --dl: -${(-a / v).toFixed(1)}s${op < 1 ? `; opacity: ${op}` : ''}" viewBox="0 0 200 100"><g fill="${col}"><circle cx="60" cy="58" r="34"/><circle cx="104" cy="42" r="42"/><circle cx="148" cy="62" r="30"/><rect x="26" y="58" width="152" height="40" rx="20"/></g></svg>`; };
 // the whole sky behind a weather screen: it moves (clouds drift, rain and snow fall, lightning, stars, the sun at dawn and dusk), and stands still with reduced motion
 function scene(cond, phase) {
+    cond = condOk(cond);
     const q = pal(cond, phase), r = rnd(cond.length * 31 + phase.length * 7), out = [];
     for (const [y, c] of q.bands || []) out.push(`<i class="bd" style="top: ${y}px; background: ${c}"></i>`);
     if (q.stars) out.push(Array.from({ length: q.stars }, () => `<i class="st${phase === 'dawn' ? ' fd' : ''}" style="left: ${Math.round(10 + r() * 370)}px; top: ${Math.round(60 + r() * 360)}px; --d: ${(2 + r() * 3).toFixed(1)}s; --dl: -${(r() * 4).toFixed(1)}s"></i>`).join(''));
@@ -750,6 +802,7 @@ function scene(cond, phase) {
 }
 // the same sky, small, for a card in the city list (358 by 118, drawn to fit any width)
 function cardSky(cond, phase) {
+    cond = condOk(cond);
     const q = pal(cond, phase), W = 358, out = [`<rect width="${W}" height="118" fill="${q.sky}"/>`];
     for (const [y, c] of q.cb || []) out.push(`<rect y="${y}" width="${W}" height="118" fill="${c}"/>`);
     if (q.stars) out.push(`<g fill="#fff"${phase === 'dawn' ? ' opacity=".7"' : ''}><circle cx="140" cy="18" r="1.2"/><circle cx="190" cy="44" r="1"/><circle cx="258" cy="62" r="1.4"/><circle cx="120" cy="56" r="1"/><circle cx="168" cy="72" r="1.1"/><circle cx="270" cy="12" r="1"/></g>`);
@@ -777,6 +830,7 @@ function cardSky(cond, phase) {
 // the home widget's sky: the same palette as the cards, the picture kept to the middle so the place, the temperature and the
 // line under them stay clear (340 × 150)
 function widgetSky(cond, phase) {
+    cond = condOk(cond);
     const q = pal(cond, phase), W = 340, H = 150, k = H / 118, out = [`<rect width="${W}" height="${H}" fill="${q.sky}"/>`];
     for (const [y, c] of q.cb || []) out.push(`<rect y="${(y * k).toFixed(1)}" width="${W}" height="${H}" fill="${c}"/>`);
     if (q.stars) out.push(`<g fill="#fff"${phase === 'dawn' ? ' opacity=".7"' : ''}>${[[132, 22], [214, 16], [250, 44], [118, 58], [196, 70], [150, 36], [236, 80]].map(([x, y], j) => `<circle cx="${x}" cy="${y}" r="${j % 2 ? 1 : 1.4}"/>`).join('')}</g>`);
@@ -826,24 +880,65 @@ function wxIc(c, z = 24, night = false) {
     }[c] || IC_CLOUD;
     return `<svg width="${z}" height="${z}" viewBox="0 0 24 24">${g}</svg>`;
 }
+// the status line's words as the sky's name: its temperature is dropped (the big number already says it)
+const saidOf = h => String(h.said || '').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/(영하\s*)?[-−]?\d{1,3}(?:[.,]\d)?\s*(?:°\s*[CF]?|℃|℉|도(?![가-힣]))/gi, '').replace(/\s*[/|·,~-]+\s*$|^\s*[/|·,~-]+\s*/g, '').trim() || WX[h.cond] || '';
+// the here weather with every tile filled (sunrise and sunset from the story's zone), for the sky and the tiles alike
+// a status line newer than the saved weather (a day on, or later the same day) shows over it until the next reflection
+function hereNow(lf) {
+    const h = lf.weather.here;
+    let t = null;
+    try { t = weatherNow(); } catch { t = null; }
+    if (!t || !/^\d{2}-\d{2}$/.test(t.date || '') || !h.date || apart(h.place, t.place, lf.weather.cities)) return h;
+    const gap = dayGap(h.date, t.date);
+    if (gap < 0 || gap === 0 && !(t.time && (!h.time || t.time > h.time))) return h;
+    const out = overlayNow(h, t);
+    if (gap > 0) { out.hours = []; out.line = ''; out.ko = ''; out.tiles = { ...(out.tiles || {}), rain24: null, rainNext: null }; }
+    return out;
+}
+// a saved city as the screens draw it: the one the owner is in carries the "here" weather (a newer status line included)
+function cityView(p, lf, c) {
+    const h = hereNow(lf);
+    if (cityOfPlace(h.place, lf.weather.cities) !== c) return c;
+    const w = mirrorHome({ here: h, cities: [structuredClone(c)] });
+    return w.cities[0];
+}
+const hereFull = (p, lf) => { const h = hereNow(lf); return { ...h, tiles: fillTiles(h, `${h.date}:${h.place}`, h.date || now5(p), hereZone(lf, p, h.place)) }; };
 // what the tiles say, from their numbers
 const tileLines = (h) => ({
-    rain: h.tiles.rainNext ? `내일까지 ${String(h.tiles.rainNext).replace('.', ',')} mm 더 와요` : '내일까지 비 소식 없어요',
+    rain: h.tiles.rainNext ? `내일까지 ${mm(h.tiles.rainNext)} mm 더 와요` : '내일까지 비 소식 없어요',
     feels: h.tiles.feels === null || h.temp === null ? '' : h.tiles.feels < h.temp - 1 ? (h.tiles.wind > 15 ? '바람 탓에 더 추워요.' : '실제보다 춥게 느껴져요.') : h.tiles.feels > h.temp + 1 ? (h.tiles.humidity > 70 ? '습해서 더 더워요.' : '실제보다 덥게 느껴져요.') : '실제와 거의 같아요.',
     humidity: h.tiles.dew === null ? '' : `이슬점 ${h.tiles.dew}°`,
     vis: h.tiles.visibility === null ? '' : h.tiles.visibility < 8 ? (h.cond === 'fog' ? '안개 때문에 멀리 안 보여요.' : WET[h.cond] || h.cond === 'storm' ? '빗속이라 평소보다 짧아요.' : '평소보다 짧아요.') : '멀리까지 잘 보여요.',
 });
-const DIRS = { N: 0, NE: 45, E: 90, SE: 135, S: 180, SW: 225, W: 270, NW: 315, 북: 0, 북동: 45, 동: 90, 남동: 135, 남: 180, 남서: 225, 서: 270, 북서: 315 };
-const DIR_KO = { N: '북풍', NE: '북동풍', E: '동풍', SE: '남동풍', S: '남풍', SW: '남서풍', W: '서풍', NW: '북서풍' };
+const DIRS = { N: 0, NNE: 22.5, NE: 45, ENE: 67.5, E: 90, ESE: 112.5, SE: 135, SSE: 157.5, S: 180, SSW: 202.5, SW: 225, WSW: 247.5, W: 270, WNW: 292.5, NW: 315, NNW: 337.5,
+    북: 0, 북북동: 22.5, 북동: 45, 동북동: 67.5, 동: 90, 동남동: 112.5, 남동: 135, 남남동: 157.5, 남: 180, 남남서: 202.5, 남서: 225, 서남서: 247.5, 서: 270, 서북서: 292.5, 북서: 315, 북북서: 337.5 };
+const DIR_KO = { N: '북풍', NNE: '북북동풍', NE: '북동풍', ENE: '동북동풍', E: '동풍', ESE: '동남동풍', SE: '남동풍', SSE: '남남동풍', S: '남풍', SSW: '남남서풍', SW: '남서풍', WSW: '서남서풍', W: '서풍', WNW: '서북서풍', NW: '북서풍', NNW: '북북서풍' };
 const TICKS = Array.from({ length: 36 }, (_, k) => { const a = k * 10 * Math.PI / 180, r1 = k % 9 ? 31 : 28; return `<line x1="${(41 + r1 * Math.sin(a)).toFixed(1)}" y1="${(41 - r1 * Math.cos(a)).toFixed(1)}" x2="${(41 + 35 * Math.sin(a)).toFixed(1)}" y2="${(41 - 35 * Math.cos(a)).toFixed(1)}" stroke="rgba(255,255,255,${k % 9 ? 0.4 : 0.9})" stroke-width="${k % 9 ? 1 : 1.6}"/>`; }).join('');
 // one tile: a label, a big number, a flat picture, a line
 const tile = (label, big, pic, line) => `<div class="lf_tile"><div class="hd">${label}</div><b>${big}</b>${pic}${line ? `<p>${line}</p>` : ''}</div>`;
-const mm = v => String(v).replace('.', ',');
+const mm = v => String(v).replace('.', STORY.dot ? '.' : ',');
 function sunsetTile(sunset, sunrise, now, tileCol) {
     const lm = toMin(now), ss = toMin(sunset), past = lm !== null && ss !== null && (lm >= ss || lm < (toMin(sunrise) ?? 6 * 60 + 30));
     const a = shade(tileCol, 0.92), b = shade(tileCol, 0.85);
     return tile('일몰', sunset, `<svg class="pic sunset" viewBox="0 0 160 62" preserveAspectRatio="none"><circle cx="80" cy="46" r="34" fill="#f6c94a" opacity=".14"/><circle cx="80" cy="46" r="22" fill="#f6c94a" opacity=".26"/><circle cx="80" cy="46" r="13" fill="#f6c94a"/><rect x="0" y="46" width="160" height="16" fill="${a}"/><path d="M0 46 Q40 40 80 46 T160 44 V62 H0Z" fill="${b}"/><line x1="0" y1="46" x2="160" y2="46" stroke="rgba(255,255,255,.5)" stroke-width="1"/></svg>`,
         past ? (sunrise ? `일출 ${sunrise}` : '해가 졌어요.') : lm !== null && ss !== null ? `${dur(ss - lm)} 뒤` : '');
+}
+// every tile is always drawn: what the model didn't give is read off the sky, the temperature and the month, seeded by
+// place and day so it holds between redraws. Fog: a few km and damp air; rain: wet, windier, short sight; a clear day: far
+const SUN = [['07:45', '17:35'], ['07:25', '18:05'], ['06:50', '18:35'], ['06:05', '19:00'], ['05:30', '19:25'], ['05:15', '19:50'], ['05:25', '19:50'], ['05:50', '19:25'], ['06:15', '18:45'], ['06:40', '18:05'], ['07:10', '17:30'], ['07:35', '17:20']];
+function fillTiles(h, seed, date, tz = '') {
+    const T = { ...h.tiles }, c = h.cond, r = seeded(`${seed}:tiles`), pick = (a, b) => a + (b - a) * r(), temp = h.temp ?? ((h.lo ?? 10) + (h.hi ?? 10)) / 2;
+    const wet = WET[c] || c === 'storm' || c === 'snow';
+    if (!T.sunset || !T.sunrise) { const m = Number(String(date || '').slice(0, 2)), s = sunOf(String(date || '').slice(0, 5), tz) || SUN[m - 1] || SUN[5]; T.sunrise ||= s[0]; T.sunset ||= s[1]; }
+    if (T.rain24 === null && T.rainNext === null) T.rainNext = Math.round(pick(...({ storm: [8, 15], rain: [3, 8], sleet: [2, 5], snow: [1, 4], drizzle: [0.5, 2] }[c] || [0, 0])) * 2) / 2;
+    if (T.wind === null) T.wind = Math.round(pick(...(c === 'wind' ? [30, 50] : c === 'storm' ? [25, 45] : WET[c] ? [12, 25] : c === 'clear' ? [5, 15] : [8, 20])));
+    if (T.gust === null) T.gust = Math.round(T.wind * pick(1.3, 1.7));
+    if (!T.dir) T.dir = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.floor(r() * 8)];
+    if (T.humidity === null) T.humidity = Math.round(pick(...(c === 'fog' ? [92, 98] : WET[c] ? [85, 95] : c === 'snow' || c === 'sleet' ? [80, 90] : c === 'clear' ? [40, 60] : [60, 75])));
+    if (T.dew === null) T.dew = Math.round(temp - (100 - T.humidity) / 5);
+    if (T.feels === null) T.feels = Math.round(temp - (T.wind > 15 && temp < 15 ? T.wind / 10 : 0) + (T.humidity > 70 && temp > 24 ? 2 : 0));
+    if (T.visibility === null) { let v = pick(...(c === 'fog' ? [1.5, 4] : wet ? [5, 10] : [15, 25])); if (T.humidity >= 85 && c !== 'fog') v *= 0.7; T.visibility = Math.max(1, Math.round(v)); }
+    return T;
 }
 function weatherTiles(h, tileCol, lead = '') {
     const T = h.tiles, t = tileLines(h), out = [lead];
@@ -853,8 +948,8 @@ function weatherTiles(h, tileCol, lead = '') {
         const bars = v ? hs.map((x, k) => `<rect x="${2 + k * 20}" y="${42 - Math.max(2, Math.round(x * f))}" width="14" height="${Math.max(2, Math.round(x * f))}" rx="3" opacity="${[1, 1, 1, 0.6, 0.45, 0.35, 0.3][k]}"/>`).join('') : hs.map((_, k) => `<rect x="${2 + k * 20}" y="38" width="14" height="4" rx="2" opacity=".35"/>`).join('');
         out.push(tile('강수량', `${mm(v)} <small>mm</small>`, `<svg class="pic bars" viewBox="0 0 140 42"><g fill="#a9dcff">${bars}</g></svg>`, t.rain));
     }
-    if (T.wind !== null) out.push(tile('바람', `${T.wind} <small>km/h</small>`, `<svg class="pic cmp" viewBox="0 0 82 82"><circle cx="41" cy="41" r="36" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>${TICKS}<text x="41" y="13" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">N</text><g transform="rotate(${DIRS[T.dir] ?? 225} 41 41)"><path d="M41 12 L46 41 L41 36 L36 41Z" fill="#fff"/><path d="M41 70 L45 41 L37 41Z" fill="rgba(255,255,255,.45)"/></g><circle cx="41" cy="41" r="3" fill="#fff"/></svg>`,
-        [T.gust ? `돌풍 ${T.gust} km/h` : '', DIR_KO[T.dir] || T.dir].filter(Boolean).join(' · ')));
+    if (T.wind !== null) out.push(tile('바람', `${T.wind} <small>km/h</small>`, `<svg class="pic cmp" viewBox="0 0 82 82"><circle cx="41" cy="41" r="36" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>${TICKS}<text x="41" y="13" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">N</text><g transform="rotate(${DIRS[String(T.dir || '').toUpperCase().replace(/풍$/, '')] ?? 225} 41 41)"><path d="M41 12 L46 41 L41 36 L36 41Z" fill="#fff"/><path d="M41 70 L45 41 L37 41Z" fill="rgba(255,255,255,.45)"/></g><circle cx="41" cy="41" r="3" fill="#fff"/></svg>`,
+        [T.gust ? `돌풍 ${T.gust} km/h` : '', DIR_KO[String(T.dir || '').toUpperCase()] || (/^[가-힣]+$/.test(T.dir || '') && !/풍$/.test(T.dir) ? `${T.dir}풍` : T.dir)].filter(Boolean).join(' · ')));
     if (T.feels !== null) {
         const real = h.temp ?? T.feels, lo = Math.min(real, T.feels) - 10, span = Math.max(real, T.feels) + 10 - lo, x = v => ((v - lo) / span * 140).toFixed(1);
         const a = Math.min(x(real), x(T.feels)), b = Math.max(x(real), x(T.feels));
@@ -876,29 +971,81 @@ function hourLine(hours) {
     const pts = hours.map((x, k) => x.temp === null ? null : [(step / 2 + k * step).toFixed(1), (6 + (1 - (x.temp - lo) / span) * 28).toFixed(1)]).filter(Boolean);
     return `<svg class="lf_tl" viewBox="0 0 330 40" preserveAspectRatio="none"><polyline points="${pts.map(p => p.join(',')).join(' ')}" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" opacity=".6"/>${pts.map((p, k) => `<circle cx="${p[0]}" cy="${p[1]}" r="${k ? 2.4 : 3}" fill="#fff"/>`).join('')}</svg>`;
 }
+// the forecast from the phone's day: days already past drop off, only the phone's own day reads "오늘" (and carries the
+// dot for the temperature now), the next one "내일" when the week isn't known, the rest by weekday
+// when the saved forecast starts after the phone's day, today's row is drawn from the header (its sky, high and low)
+function dayRows(days, today, h = {}) {
+    if (!/^\d{2}-\d{2}$/.test(today || '')) return days.map((d, k) => ({ d, name: k ? wdk(d.day, `${Number(d.day.slice(3))}일`) : '오늘', now: !k }));
+    const dated = d => /^\d{2}-\d{2}$/.test(d.day || '');
+    if (days.length && h.date === today && !days.some(d => dated(d) && dayGap(today, d.day) === 0)) days = [{ day: today, cond: h.cond, lo: h.lo ?? null, hi: h.hi ?? null, rain: 0 }, ...days];
+    return days.filter(d => !/^\d{2}-\d{2}$/.test(d.day || '') || dayGap(today, d.day) >= 0).map(d => {
+        const g = /^\d{2}-\d{2}$/.test(d.day || '') ? dayGap(today, d.day) : null;
+        return { d, name: g === 0 ? '오늘' : g === 1 && !STORY.known ? '내일' : wdk(d.day, `${Number(String(d.day).slice(3))}일`), now: g === 0 };
+    });
+}
 function weatherBody(p, h, name, night, sub, source, tileCol, lead = '') {
-    const lo = Math.min(...h.days.map(d => d.lo ?? 99), h.lo ?? 99), hi = Math.max(...h.days.map(d => d.hi ?? -99), h.hi ?? -99);
-    return `<div class="lf_wtop">${sub ? `<small>${sub}</small>` : ''}<h2>${esc(name)}</h2><div class="t">${h.temp ?? '—'}°</div><div class="c">${esc(h.said || WX[h.cond] || '')}</div><div class="hl">최고:${h.hi ?? '—'}° 최저:${h.lo ?? '—'}°</div>${source}</div>
+    const rows = dayRows(h.days, h.today, h);
+    h = { ...h, days: rows.map(x => x.d) };
+    const lo =Math.min(...h.days.map(d => d.lo ?? 99), h.lo ?? 99), hi = Math.max(...h.days.map(d => d.hi ?? -99), h.hi ?? -99);
+    return `<div class="lf_wtop">${sub ? `<small>${sub}</small>` : ''}<h2>${esc(name)}</h2><div class="t">${h.temp ?? '—'}°</div><div class="c">${esc(saidOf(h))}</div><div class="hl">최고:${h.hi ?? '—'}° 최저:${h.lo ?? '—'}°</div>${source}</div>
       ${h.hours.length ? `<div class="lf_wcard">${h.line ? `<div class="ln1">${esc(h.line)}${k1(h.ko, 'lf_wk')}</div>` : ''}<div class="lf_hrs">${h.hours.map((x, k) => `<div>${k ? esc(x.time.slice(0, 2)) + '시' : '지금'}<em>${x.rain >= 20 ? `${x.rain}%` : ''}</em>${wxIc(x.cond, 26, phaseOf(x.time, h.tiles.sunrise || h.sr, h.tiles.sunset || h.ss) === 'night')}<b class="cg_num">${x.temp ?? '—'}°</b></div>`).join('')}</div>${hourLine(h.hours)}</div>` : ''}
-      ${h.days.length ? `<div class="lf_wcard"><div class="hd">${h.days.length}일간의 일기예보</div>${h.days.map((d, k) => `<div class="lf_d10"><span>${k ? wdk(d.day, `${Number(d.day.slice(3))}일`) : '오늘'}</span><span class="ic">${wxIc(d.cond, 22)}${d.rain >= 30 ? `<em>${d.rain}%</em>` : ''}</span><span class="lo cg_num">${d.lo ?? '—'}°</span>${tempBar(d, lo, hi, k ? null : h.temp)}<span class="hi cg_num">${d.hi ?? '—'}°</span></div>`).join('')}</div>` : ''}
+      ${h.days.length ? `<div class="lf_wcard"><div class="hd">${h.days.length}일간의 일기예보</div>${rows.map(({ d, name: dn, now: isNow }) => `<div class="lf_d10"><span>${dn}</span><span class="ic">${wxIc(d.cond, 22)}${d.rain >= 30 ? `<em>${d.rain}%</em>` : ''}</span><span class="lo cg_num">${d.lo ?? '—'}°</span>${tempBar(d, lo, hi, isNow ? h.temp : null)}<span class="hi cg_num">${d.hi ?? '—'}°</span></div>`).join('')}</div>` : ''}
       ${weatherTiles(h, tileCol, lead)}`;
 }
 // the screen's colours: the sky, and the one flat colour its cards and tiles sit in
 const wxVars = q => `background: ${q.sky}; --wcard: ${shade(q.sky, 0.9)}; --wtile: ${shade(q.sky, q.phase === 'day' && q.sky === '#4f8fd8' ? 0.62 : 0.8)}`;
+// the hourly row at the story's clock: "now" is the sky in the header, then the next five whole hours; an hour the
+// model saved is shown as saved, the others are carried on along the day's temperature curve
+function hereHours(h, time) {
+    const n = toMin(time), saved = h.hours || [];
+    if (n === null) return saved;
+    const at = m => saved.find(x => { const s = toMin(x.time); return s !== null && Math.min((s - m + 1440) % 1440, (m - s + 1440) % 1440) <= 10; });
+    const first = Math.floor(n / 60) * 60 + 60, slots = [0, 1, 2, 3, 4].map(k => (first + k * 60) % 1440);
+    const today = h.today || h.date, next = /^\d{2}-\d{2}$/.test(today || '') ? (h.days || []).find(d => /^\d{2}-\d{2}$/.test(d.day || '') && dayGap(today, d.day) === 1) : null;
+    return walkHours({ time: hm(n), cond: h.cond, temp: h.temp, rain: at(first)?.rain ?? 0 }, h, `${h.date}:${h.place}:hrs`, slots.map(at), next);
+}
 export function weatherScreen(p, now) {
     const lf = L(p);
     if (!lf) return lifeEmpty(p, now, '날씨', 'life');
-    const h = lf.weather.here, time = h.time || now5(p).slice(6), phase = phaseOf(time, h.tiles?.sunrise, h.tiles?.sunset), q = pal(h.cond, phase);
+    // the phone's own clock (the weather's time is when it was last told, often hours before)
+    const h = hereFull(p, lf), time = now5(p).slice(6) || h.time, phase = phaseOf(time, h.tiles.sunrise, h.tiles.sunset), q = pal(h.cond, phase);
     return `<div class="lf_wx" style="${wxVars(q)}">${scene(h.cond, phase)}
       ${axBar(p, now, '#fff')}
       <div class="ax_top lf_wbar">${axCb('home2')}<button type="button" class="lf_pill wx" data-go="wlist">도시 ${lf.weather.cities.length}</button></div>
-      <div class="ax_scroll">${weatherBody(p, { ...h, time }, h.place || '현재 위치', phase === 'night', '현재 위치', '<div class="lf_wgap"></div>', shade(q.sky, 0.8))}<i class="lf_pad"></i></div>
+      <div class="ax_scroll">${weatherBody(p, { ...h, time, today: now5(p).slice(0, 5), hours: hereHours({ ...h, today: now5(p).slice(0, 5) }, time) }, h.place || '현재 위치', phase === 'night', '현재 위치', '<div class="lf_wgap"></div>', shade(q.sky, 0.8))}<i class="lf_pad"></i></div>
       ${axInd('#fff')}</div>`;
 }
 // a saved city: only its temperature, highs and lows and sky are the model's; its hours are drawn between them
+// the hours ahead for a city: from its clock, along the day's curve, the same way the current place's row is carried on
 function cityHours(c, t) {
-    const base = toMin(t.time) ?? 12 * 60, lo = c.lo ?? (c.temp ?? 10) - 4, hi = c.hi ?? (c.temp ?? 10) + 4;
-    return Array.from({ length: 6 }, (_, k) => { const m = base + k * 60, f = Math.cos(((m / 60 - 15) / 24) * 2 * Math.PI); return { time: hm(m), cond: c.cond, temp: k ? Math.round(lo + (hi - lo) * (f + 1) / 2) : c.temp, rain: c.cond === 'rain' ? 60 : c.cond === 'storm' ? 70 : c.cond === 'drizzle' || c.cond === 'sleet' ? 40 : 0 }; });
+    const base = toMin(t.time) ?? 12 * 60;
+    return walkHours({ time: hm(base), cond: c.cond, temp: c.temp, rain: c.cond === 'rain' ? 60 : c.cond === 'storm' ? 70 : c.cond === 'drizzle' || c.cond === 'sleet' ? 40 : 0 }, c, `${c.name}:${t.date}:hrs`);
+}
+// one rule for every hourly row: from the first entry on, each hour follows the day's temperature curve (coldest
+// before dawn at the day's low, warmest mid-afternoon at its high), never past the low or the high. It only climbs
+// from dawn to mid-afternoon and only falls after; a small wobble seeded by place and day sets how much, the way real
+// readings move. A saved hour (fixed[k]) is shown as is and the walk goes on from it
+function walkHours(first, c, seed, fixed = [], next = null) {
+    const range = d => { const lo = Math.min(d.lo ?? (c.temp ?? 10) - 4, d.hi ?? Infinity); return [lo, Math.max(d.hi ?? (c.temp ?? 10) + 4, lo)]; };
+    let [lo, hi] = range(c), v = first.temp ?? (lo + hi) / 2;
+    const r = seeded(seed), out = [first], curve = mins => lo + (hi - lo) * (Math.cos(((mins / 60 - 15) / 24) * 2 * Math.PI) + 1) / 2;
+    // how far the reading sits off the curve; it fades hour by hour, so a cold evening keeps falling from where it is
+    let off = v - curve(toMin(first.time) ?? 720);
+    for (let k = 0; out.length < 6; k++) {
+        const last = out[out.length - 1], m = (Math.floor(toMin(last.time) / 60) * 60 + 60) % 1440, x = fixed[k];
+        // past midnight the hours are the next day's, with its own low and high when the forecast has them
+        if (m === 0 && next) [lo, hi] = range(next);
+        if (x) { out.push(x); if (x.temp !== null && x.temp !== undefined) { v = x.temp; off = v - curve(m); } continue; }
+        const hr = m / 60, up = hr >= 5 && hr <= 15;
+        off *= 0.8;
+        // climbing: along the curve; falling: most of the drop early in the evening, levelling off toward dawn's low
+        let d = up ? (curve(m) + off - v) * 0.7 + r() * 0.6 : (lo - v) * 0.12 - r() * 0.3;
+        d = up ? Math.max(0, d) : Math.min(0, d);
+        // a "now" already outside the day's range isn't pulled back in one jump
+        v = Math.max(Math.min(lo, v), Math.min(Math.max(hi, v), v + d));
+        out.push({ time: hm(m), cond: last.cond, temp: Math.round(v), rain: last.rain });
+    }
+    return out;
 }
 // today's temperatures as a curve (coldest before dawn, warmest mid-afternoon), with a dot at the city's hour
 function dayCurve(c, lm, col) {
@@ -909,14 +1056,16 @@ function dayCurve(c, lm, col) {
     return `<svg class="pic curve" viewBox="0 0 140 58" preserveAspectRatio="none"><polyline points="${pts.join(' ')} 140,58 0,58" fill="${col}" opacity=".16" stroke="none"/><polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="2.4" stroke-linecap="round"/><circle cx="${(nowH / 24 * 140).toFixed(1)}" cy="${y(nowH)}" r="5" fill="#fff" stroke="${col}" stroke-width="2.5"/></svg>`;
 }
 export function cityScreen(p, now, id) {
-    const lf = L(p), c = lf?.weather.cities.find(x => x.id === id);
+    const lf = L(p), c0 = lf?.weather.cities.find(x => x.id === id), c = c0 && cityView(p, lf, c0);
     if (!c) return weatherScreen(p, now);
-    const t = cityTime(p, lf, c), phase = phaseOf(t.time, c.sunrise, c.sunset), q = pal(c.cond, phase), tileCol = shade(q.sky, q.phase === 'day' && q.sky === '#4f8fd8' ? 0.62 : 0.8);
-    const h = { temp: c.temp, hi: c.hi, lo: c.lo, cond: c.cond, time: t.time, sr: c.sunrise, ss: c.sunset, line: '', ko: '', hours: cityHours(c, t), days: [],
-        tiles: { sunset: '', sunrise: '', rain24: null, rainNext: c.rainNext ?? null, feels: c.feels ?? null, wind: c.wind ?? null, gust: c.gust ?? null, humidity: c.humidity ?? null, dew: c.dew ?? null, visibility: null, dir: c.dir || '' } };
+    const t = cityTime(p, lf, c), h = { temp: c.temp, hi: c.hi, lo: c.lo, cond: c.cond, time: t.time, line: '', ko: '', hours: cityHours(c, t), days: [] };
+    h.tiles = fillTiles({ ...h, tiles: { sunset: c.sunset || '', sunrise: c.sunrise || '', rain24: null, rainNext: c.rainNext ?? null, feels: c.feels ?? null, wind: c.wind ?? null, gust: c.gust ?? null, humidity: c.humidity ?? null, dew: c.dew ?? null, visibility: c.visibility ?? null, dir: c.dir || '' } }, `${c.name}:${now5(p).slice(0, 5)}`, now5(p), c.tz);
+    // a city shows no visibility tile: its detail already carries today's temperatures, and seven tiles leave one alone
+    h.tiles.visibility = null;
+    const phase = phaseOf(t.time, h.tiles.sunrise, h.tiles.sunset), q = pal(c.cond, phase), tileCol = shade(q.sky, q.phase === 'day' && q.sky === '#4f8fd8' ? 0.62 : 0.8);
     const lm = toMin(t.time), warm = (c.hi ?? 0) >= 15 ? '#f3c66b' : '#9fd6ec';
     // the city's own tiles first: its sunset and today's temperatures; no clock, the status bar and the list already tell the time
-    const lead = `${c.sunset ? sunsetTile(c.sunset, c.sunrise, t.time, tileCol) : ''}${tile('오늘 기온', `${c.temp ?? '—'}°`, dayCurve(c, lm, warm), `최저 ${c.lo ?? '—'}° · 최고 ${c.hi ?? '—'}°`)}`;
+    const lead = `${sunsetTile(h.tiles.sunset, h.tiles.sunrise, t.time, tileCol)}${tile('오늘 기온', `${c.temp ?? '—'}°`, dayCurve(c, lm, warm), `최저 ${c.lo ?? '—'}° · 최고 ${c.hi ?? '—'}°`)}`;
     return `<div class="lf_wx" style="${wxVars(q)}">${scene(c.cond, phase)}
       ${axBar(p, now, '#fff')}
       <div class="ax_top lf_wbar">${axCb('wlist')}<span></span></div>
@@ -930,28 +1079,29 @@ export function hereWidget(p, now) {
       <span class="cg_wh"><span class="cg_cap">날씨</span><span class="cg_evw">현재 위치</span></span>
       <span class="cg_wxeb"><svg aria-hidden="true" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#8a929d" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17a4 4 0 0 1 .5-8A5.5 5.5 0 0 1 18 11a3 3 0 0 1-.5 6zM15 4.5a3 3 0 0 1 3.5 2.5"/></svg><b>아직 날씨가 없어요</b><small>눌러서 채우기</small></span>
     </button>`;
-    const ht = h.time || now5(p).slice(6);
-    return `<button type="button" class="lf_city cg_wx" data-go="weather" style="--axbg: ${pal(h.cond, phaseOf(ht, h.tiles?.sunrise, h.tiles?.sunset)).sky}">${widgetSky(h.cond, phaseOf(ht, h.tiles?.sunrise, h.tiles?.sunset))}
-      <span class="l"><b>${esc(h.place || '현재 위치')}</b><small><svg width="11" height="11" viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z" fill="#fff"/></svg> 현재 위치</small><span>${esc(h.said || WX[h.cond] || '')}</span></span><span class="r"><b>${h.temp ?? '—'}°</b><span>최고 ${h.hi ?? '—'}° 최저 ${h.lo ?? '—'}°</span></span></button>`;
+    // the same weather the app shows: a newer status line already over the saved one
+    const f = hereFull(p, L(p)), ph = phaseOf(now5(p).slice(6) || f.time, f.tiles.sunrise, f.tiles.sunset);
+    return `<button type="button" class="lf_city cg_wx" data-go="weather" style="--axbg: ${pal(f.cond, ph).sky}">${widgetSky(f.cond, ph)}
+      <span class="l"><b>${esc(f.place || '현재 위치')}</b><small><svg width="11" height="11" viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z" fill="#fff"/></svg> 현재 위치</small><span>${esc(saidOf(f))}</span></span><span class="r"><b>${f.temp ?? '—'}°</b><span>최고 ${f.hi ?? '—'}° 최저 ${f.lo ?? '—'}°</span></span></button>`;
 }
 export function cityList(p, now) {
     const lf = L(p); if (!lf) return weatherScreen(p, now);
-    const h = lf.weather.here, ht = h.time || now5(p).slice(6);
+    const h = hereFull(p, lf), ht = now5(p).slice(6) || h.time;
     const nav = '<svg width="11" height="11" viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z" fill="#fff"/></svg>';
     const card = (go, i, name, sub, cond, phase, temp, hi, lo, foot) => `<button type="button" class="lf_city" data-go="${go}"${i ? ` data-i="${i}"` : ''} style="--axbg: ${pal(cond, phase).sky}">${cardSky(cond, phase)}
       <span class="l"><b>${esc(name)}</b><small>${sub}</small><span>${esc(foot)}</span></span><span class="r"><b>${temp ?? '—'}°</b><span>최고 ${hi ?? '—'}° 최저 ${lo ?? '—'}°</span></span></button>`;
     return `${axBar(p, now)}${axTop(axCb('weather'), axKp(p))}
       <div class="ax_scroll">${axH1('날씨')}
         <div class="lf_q">${ax('search', 16, '#8a929d', 2.4)}도시 또는 공항 검색</div>
-        ${card('weather', '', h.place || '현재 위치', `${nav} 현재 위치`, h.cond, phaseOf(ht, h.tiles?.sunrise, h.tiles?.sunset), h.temp, h.hi, h.lo, h.said || WX[h.cond])}
-        ${lf.weather.cities.map(c => { const t = cityTime(p, lf, c); return card('wcity', c.id, c.name, t.off ? `${t.time} · ${t.off > 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '', c.cond, phaseOf(t.time, c.sunrise, c.sunset), c.temp, c.hi, c.lo, [WX[c.cond], c.note].filter(Boolean).join(' · ')); }).join('')}
+        ${card('weather', '', h.place || '현재 위치', `${nav} 현재 위치`, h.cond, phaseOf(ht, h.tiles.sunrise, h.tiles.sunset), h.temp, h.hi, h.lo, saidOf(h))}
+        ${lf.weather.cities.map(c0 => { const c = cityView(p, lf, c0), t = cityTime(p, lf, c), sun = c.sunrise && c.sunset ? [c.sunrise, c.sunset] : sunOf(now5(p).slice(0, 5), c.tz) || []; return card('wcity', c.id, c.name, t.off ? `${t.time} · ${t.off > 0 ? '+' : '−'}${Math.abs(t.off)}시간` : '', c.cond, phaseOf(t.time, sun[0], sun[1]), c.temp, c.hi, c.lo, [WX[c.cond], c.note].filter(Boolean).join(' · ')); }).join('')}
         <i class="lf_pad"></i></div>${axInd()}`;
 }
 
 // ================= 배달 =================
 // two looks: 배달의민족 where the owner lives in Korea, Uber Eats elsewhere. Every dish is drawn (phonefood.js): the model names
 // a base, toppings, a size and sides; older records are guessed from their words. Nothing here is the model's prose but names and notes.
-const D = p => p.delivery || null;
+const D = p => { const d = p.delivery; if (!d) return null; d.shops ||= []; d.orders ||= []; if (!d.cart || !Array.isArray(d.cart.items)) d.cart = null; return d; };
 const CUR = { KR: 'KRW', US: 'USD', GB: 'GBP', JP: 'JPY', CH: 'CHF', CA: 'CAD', AU: 'AUD', CN: 'CNY', TW: 'TWD', BR: 'BRL', RU: 'RUB' };
 const money = (p, n) => fmtMoney({ ...p, money: { currency: p.money?.currency || CUR[p.lives || p.country] || 'EUR' } }, n);
 const shopOf = (d, name) => d.shops.find(s => s.name === name);

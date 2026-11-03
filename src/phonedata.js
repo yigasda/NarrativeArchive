@@ -19,7 +19,7 @@ import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
 import { arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 export { arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
-import { applyDays, applyLife, applyWeather, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom } from './phonesynclife.js';
+import { applyDays, applyLife, applyWeather, apart, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
 import { pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
@@ -65,8 +65,7 @@ const PHONE_STYLE = `LANGUAGE
 - People write the way they talk in the archive and chat. Texts are short, like real texts.
 
 TIMES
-"MM-DD HH:MM" (24-hour), in story time, from the archive's dates. "now" is the newest moment of the story.
-STORY YEAR (sometimes): a year written in any text is that one. Without it, a year only as the story itself writes one (its own calendar); none: no year.`;
+"MM-DD HH:MM" in story time; "now" is the newest moment of the story. A year only as STORY YEAR or the story itself gives one.`;
 const PHONE_TEST = `${PHONE_FACT}\n\n${PHONE_STYLE}`;
 const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how the owner saved them (a nickname, an emoji, or just the name) }],
   "threads": [{ "with": name, "messages": [{ "from": "me" or the sender's name, "text", "ko", "time" }],
@@ -160,18 +159,13 @@ WHERE IT COMES FROM
 - "now": the moment of the newest message, never a time something is only planned for.
 ${life ? `
 LIFE
-- An alarm the owner sets, changes or switches on or off in these messages; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
+- An alarm the owner sets, changes or switches on or off in these messages; a timer they set; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
 - An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".
 - A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.
-- Health: a row for every story day these messages move into.
-  - A day these messages show goes in that event's "phone"."health", "from": "story". A day already in LIFE NOW that the story now shows is rewritten the same way.
-  - Every other new day goes in the top-level "days", "from": "pattern", written freely from the character and their life, still following that day's events and tickets.
-  - No new story day: "days": [].
-  - "date" is the day they woke up: asleep 10-26 at 23:40 or 10-27 at 02:15 → "10-27".
-  - A night still going (they fell asleep, not yet woken): its row now, with "sleep"; "wake" stays empty.
-- A lasting change to their habits or body these messages state (they lost weight, quit coffee, drink more water): that event's "phone"."usual" with only what changed. Nothing said: no "usual".
-${weather ? `- "weather": ${tracker ? 'WEATHER NOW stands (its date, time, place and weather); write the rest of the forecast to agree with it, "from": "chat".' : 'what these messages describe, else the archive. If the story\'s day or place changed with nothing to go on, what fits the season and place, "from": "guess". If neither changed and nothing describes it: null (the app keeps the last weather).'}
-- With new weather, also write each saved city's weather: "cond", "temp", "hi", "lo", rain, wind, "feels", "humidity" and "dew".
+- Health: a day these messages show (its sleep, steps, a workout) goes in that event's "phone"."health"; a day already in LIFE NOW that the story now shows is rewritten the same way. The app fills the days nobody tells.
+- A lasting change to their habits or body these messages state (they lost weight, quit coffee, drink more water, get up earlier now): that event's "phone"."usual" with only what changed. Nothing said: no "usual".
+${weather ? `- "weather": ${tracker ? 'WEATHER NOW stands for an owner in that scene (its date, time, place and weather); write the rest of the forecast to agree with it, "from": "chat". An owner elsewhere gets the weather where they are.' : 'what these messages describe, else the archive. If the story\'s day or place changed with nothing to go on, what fits the season and place, "from": "guess". If neither changed and nothing describes it: null (the app keeps the last weather).'}
+- With new weather, also write each saved city's "cond", "temp", "hi" and "lo".
 ` : ''}` : ''}${money ? `
 MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - A payment, transfer, refund, order, ticket or trade that happens in these messages goes in the event's "money".
@@ -182,9 +176,9 @@ MONEY (only with MONEY NOW or INVESTMENTS NOW)
 - A card purchase goes on the card account; a refund is plus; paying the card off is a transfer from the bank.
 - No money is made up to cover a payment; a balance may go below zero.
 - A new paid ${paid} has its payment as a move in the same event.
-- An order or ticket only moves forward. A cancelled order${delivery ? ' or delivery' : ''} moves no money; if it was already paid, its refund is a plus move.
+- A cancelled order${delivery ? ' or delivery' : ''} moves no money; if it was already paid, its refund is a plus move.
 ${delivery ? `- A delivery paid in cash at the door has no move.
-- A delivery from a shop not in DELIVERY SHOPS also gives "newShop": that shop as the app would list it (a rating, reviews, delivery fee and minimum order that fit such a shop there), with 2 to 4 dishes: the one ordered and others it would have.
+- A delivery from a shop not in DELIVERY SHOPS also gives "newShop" with 2 to 4 dishes: the one ordered and others it would have.
 ` : ''}` : ''}
 ${PHONE_STYLE}
 
@@ -195,24 +189,26 @@ ANSWER — one JSON object, nothing else:
                "phone": { only the app items this event puts on the phone }${money ? `,
                "money": { "amountFrom": "story" | "guess",
                           "moves": [{ "account": a bank account's last 4 digits or "broker:EUR", "amount": minus for money out, "currency", "who", "ko", "memo": what it was for, "kind": "card" | "transfer" | "deposit" | "cash" (taken out as cash), "fee": a transfer fee charged on top of "amount", on the sending move, "occurrence": "new" | "again", "already": "" }],
-                          "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko", "currency", "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
-                          "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" (a return asked for) | "returned" | "refunded", "eta": "MM-DD", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
+                          "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko" and "currency" (a share not in INVESTMENTS NOW), "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
+                          "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" (the default) | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD" or "", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
                           "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }]${delivery ? `,
-                          "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients in English, like "beef", "shrimp"], "size": "regular" | "large", "set": [a set's sides or drinks, like "fries", "cola"] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "left", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery", "for": how many it feeds, "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
-                                          "newShop": { "name": the same as "shop", "ko", "cuisine", "rating": like 4.7, "reviews": how many, "fee", "minOrder", "eta": like "25–35", "menu": [{ "name", "ko", "desc", "price", "top": true for its best-known dish, "pic": like the items' "pic" }] } or null }]` : ''} }` : ''} }]${life ? `,
-  "days": [{ the same fields as "health", "from": "pattern" }]${weather ? `,
+                          "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients, like "beef"], "size": "regular" | "large", "set": [a set's sides or drinks] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
+                                          "newShop": { "name": the same as "shop", "ko", "cuisine", "menu": [{ "name", "ko", "price", "pic" }] } or null }]` : ''} }` : ''} }]${life && weather ? `,
   "weather": { "place", "date", "time", "from": "chat" | "archive" | "guess", "cond": "clear" | "partly" | "cloudy" | "drizzle" | "rain" | "sleet" | "snow" | "fog" | "storm" | "wind", "temp", "hi", "lo", "line", "ko",
-               "hours": [6 of { "time", "cond", "temp", "rain" }], "days": [10 of { "day", "cond", "lo", "hi", "rain" }],
-               "tiles": { "rain24", "rainNext", "feels", "wind", "gust", "dir", "humidity", "dew", "sunrise", "sunset", "visibility" },
-               "cities": [{ "name", "cond", "temp", "hi", "lo", "rainNext": mm, "wind": km/h, "gust", "dir", "feels", "humidity", "dew" }] } or null` : ''}` : ''} }
-${money ? `"money" only when money moves or an order or ticket changes. ` : ''}Numbers are plain JSON numbers.
+               "hours": [6 of { "time", "cond", "temp", "rain": percent }] (the hours ahead when the sky will change, else []), "days": [10 of { "day", "cond", "lo", "hi", "rain": percent }],
+               "tiles": { "rain24": mm today, "rainNext": mm by tomorrow, "wind": km/h, "dir", "humidity", "feels": only when the story gives it },
+               "cities": [{ "name", "cond", "temp", "hi", "lo" }] } or null` : ''} }
+${money ? `"money" only when money moves or an order or ticket changes.` : ''}
+Also in "money" when these messages show them: "newAccount": { "kind": "checking" | "savings" | "credit", "name", "last4", "currency", "balance" } (an account or card the owner opens), "newCard": { "account": last4, "exp": "MM/YY" }${delivery ? `, "cart": { "shop", "items": [like a delivery's] } (dishes put in the basket and not ordered)` : ''}, "watch": [{ "symbol", "name", "currency", "note", "ko" }] (a share they start watching), "quotes": [{ "symbol", "date", "value", "evidence": exact words }] (a price the story gives), "stakes": [{ "company", "listed", "percent", "holder", "voter", "beneficiary", "restriction", "value", "currency", "evidence": exact words }] (a stake the story says they now hold).
+In "events", a plan moved or called off is its item again with "was": the date it had, or "cancelled": true. In "threads", a text the owner deleted is { "text", "deleted": true }.
 Items in "phone":
 {
 ${PHONE_ITEMS}${life ? `,
   "alarms": [{ "change": an id or "", "time", "label", "ko", "days": the weekdays it repeats or [], "date": "MM-DD" for a one-time alarm, "on", "wake", "then", "snooze" }],
   "files": [{ "change": an id or "", "name", "kind", "folder": one of LIFE NOW's "folders" (downloads are "Downloads"), "size": KB, "time", "from", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],
-  "health": [{ "date", "bed", "sleep", "wake", "woke", "steps", "km", "floors", "workout": { "kind", "time", "min", "km" } or null, "hr": [low, high], "from": "story" }],
-  "usual": { "weight": kg, "coffee": cups a day, "coffeeKind", "coffeeKo", "water": litres a day }` : ''}
+  "health": [{ "date": the day they woke, "sleep", "wake", "woke": times awake in the night, "steps", "km", "floors", "hr": [low, high] (only what the story gives), "workout": { "kind", "time", "min", "km" } or null }],
+  "timers": [{ "label", "ko", "sec" }],
+  "usual": { "weight": kg, "coffee": cups a day, "coffeeKind", "coffeeKo", "water": litres a day, "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": a week, "rest": resting heart rate, "height": cm }` : ''}
 }
 Fewer is fine. No new events: "events": [].
 In "phone" items, a booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit; never a booking the story doesn't have.${money ? ' Money amounts follow MONEY.' : ''}`;
@@ -238,7 +234,7 @@ export function parsePhone(out, owner = '') {
     // an everyday record the model made up from the owner's habits stays apart from the story (재구성)
     const tag = (x, raw) => (raw?.everyday === true ? { ...withEv(x, raw), src: 'guess' } : withEv(x, raw));
     const self = owner ? nameKey(owner) : '', mine = v => !!self && nameKey(line(v, 40)) === self;
-    const msg = x => ({ from: mine(x?.from) ? 'me' : line(x?.from, 40) || 'me', text: str(x?.text, 600), ko: ko(x?.ko), time: when(x?.time) });
+    const msg = x => ({ from: mine(x?.from) ? 'me' : line(x?.from, 40) || 'me', text: str(x?.text, 600), ko: ko(x?.ko), time: when(x?.time), ...(x?.deleted === true ? { deleted: true } : {}) });
     // a translation that only repeats its text (a Korean text given the same "ko") is none: it would show twice
     const same = (a, b) => !!a && !!b && a.replace(/\s+/g, ' ').trim() === b.replace(/\s+/g, ' ').trim();
     const PAIRS = [['text', 'ko'], ['caption', 'ko'], ['q', 'ko'], ['title', 'ko'], ['title', 'kt'], ['subject', 'ks'], ['photo', 'pko'], ['bio', 'ko']];
@@ -255,7 +251,7 @@ export function parsePhone(out, owner = '') {
         photos: arr(raw.photos).map(x => tag({ caption: line(x?.caption, 200), ko: ko(x?.ko), time: when(x?.time), mood: pick(x?.mood, MOODS, 'warm') }, x)).filter(x => x.caption),
         notes: arr(raw.notes).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 1500), ko: str(x?.ko, 1500), time: when(x?.time) }, x)).filter(x => x.title || x.text),
         searches: arr(raw.searches).map(x => tag({ q: line(x?.q, 120), ko: ko(x?.ko), time: when(x?.time), ...(truthy(x?.tab) ? { tab: true } : {}), ...(truthy(x?.mark) ? { mark: true } : {}) }, x)).filter(x => x.q),
-        events: arr(raw.events).map(x => tag({ title: line(x?.title, 80), ko: ko(x?.ko), date: when(x?.date).slice(0, 5), time: hhmm(x?.time) }, x)).filter(x => x.title && x.date),
+        events: arr(raw.events).map(x => tag({ title: line(x?.title, 80), ko: ko(x?.ko), date: when(x?.date).slice(0, 5), time: hhmm(x?.time), ...(when(x?.was).slice(0, 5) ? { was: when(x.was).slice(0, 5) } : {}), ...(x?.cancelled === true ? { cancelled: true } : {}) }, x)).filter(x => x.title && (x.date || x.cancelled)),
         profile: raw.profile && typeof raw.profile === 'object' ? { handle: line(raw.profile.handle, 40), bio: line(raw.profile.bio, 200), ko: ko(raw.profile.ko), followers: countOf(raw.profile.followers), following: countOf(raw.profile.following) } : null,
         posts: arr(raw.posts).map(x => tag({ text: str(x?.text, 800), ko: str(x?.ko, 800), photo: line(x?.photo, 200), pko: ko(x?.pko), time: when(x?.time), likes: Math.min(99999, countOf(x?.likes)),
             comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) }, x)).filter(x => x.text || x.photo),
@@ -272,7 +268,19 @@ const SIG = {
     mails: x => [x.from, x.subject, x.time], diary: x => [x.date, x.title, x.text], voice: x => [x.title, x.time],
 };
 const sigOf = (k, x) => JSON.stringify(SIG[k](x)).toLowerCase();
-const fresh = (k, old, add) => { const seen = new Set(old.map(x => sigOf(k, x))); return add.filter(x => !seen.has(sigOf(k, x)) && seen.add(sigOf(k, x))); };
+// the same record told again with its clock a little off ("21:00" then "21:02"): the one there, not a second
+// (a short text like "ㅋㅋ" or "ok" may really come twice, so only a longer one is matched this way)
+const NEAR = { msg: x => [nameKey(x.from), x.text], calls: x => [nameKey(x.with), x.type], photos: x => [x.caption], mails: x => [x.from, x.subject], searches: x => [x.q], voice: x => [x.title] };
+// how far the clock may be off, in minutes, before it is another record (a call back an hour later is a second call)
+const NEAR_MIN = { msg: 15, calls: 10, photos: 30, mails: 120, searches: 15, voice: 30 };
+const nearMin = t => { const x = parts(t); return x && x.h !== null ? storyMin(t, '') : null; };
+const twinOf = (k, list, a) => {
+    const sig = sigOf(k, a), exact = list.find(x => sigOf(k, x) === sig);
+    if (exact || !NEAR[k] || (k === 'msg' && String(a.text || '').trim().length < 6)) return exact || null;
+    const key = JSON.stringify(NEAR[k](a)).toLowerCase(), t = nearMin(a.time);
+    return t === null ? null : list.find(x => JSON.stringify(NEAR[k](x)).toLowerCase() === key && nearMin(x.time) !== null && Math.abs(nearMin(x.time) - t) <= NEAR_MIN[k]) || null;
+};
+const fresh = (k, old, add) => { const out = []; for (const x of add) if (!twinOf(k, old, x) && !twinOf(k, out, x)) out.push(x); return out; };
 // an update's new items go after the old ones; every list keeps its newest, the threads the ones written in last
 // every record gets the app's own id (not the model's): links between apps point at it, and it survives trimming and 다시 만들기.
 // Phones saved before ids get theirs when next opened or made
@@ -304,14 +312,36 @@ export const isGuess = x => x?.src === 'guess';
 function mergePhone(p, add, { keepAll = false } = {}) {
     if (!p.device && add.device) p.device = add.device;
     const keep = (list, n) => (keepAll ? list : list.slice(-n));
+    const lk = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
     for (const t of add.threads) {
         const old = p.threads.find(x => nameKey(x.with) === nameKey(t.with));
+        // a text the owner deleted: the one there is marked (it stays for 되돌리기), never added again
+        // (one the phone never had, a thread new in this round too, goes in marked, so the data holds it)
+        const gone = t.messages.filter(x => x.deleted), matched = new Set();
+        if (gone.length && old) for (const g of gone) { const o = [...old.messages].reverse().find(x => !x.deleted && (lk(x.text) === lk(g.text) || lk(x.text).includes(lk(g.text)) || lk(g.text).includes(lk(x.text)))); if (o) { o.deleted = true; matched.add(g); } }
+        t.messages = t.messages.filter(x => !matched.has(x));
         // in story order: a later round can bring texts from before the ones there (an earlier stretch read late)
         if (old) { old.messages = keep([...old.messages, ...fresh('msg', old.messages, t.messages)].sort(byStory(p.now)), CAP.messages); if (t.draft) old.draft = t.draft; }
         else p.threads.push({ ...t, messages: keep(fresh('msg', [], t.messages).sort(byStory(p.now)), CAP.messages) });
     }
     p.threads = keep([...p.threads].sort(byStory(p.now, lastTime)), CAP.threads);
     joinComments(p.posts, add.posts, CAP.comments);
+    // a plan told again with its time now ("dinner 11-03" then "dinner 11-03 19:00"): the same event, given its time
+    for (const e of add.events || []) { const o = (p.events || []).find(x => !x.time && e.time && x.date === e.date && x.title.toLowerCase() === e.title.toLowerCase()); if (o) o.time = e.time; }
+    // a plan moved ("was": its old date) or called off ("cancelled"): the item there changes, nothing is added
+    add.events = (add.events || []).filter(e => {
+        if (!e.was && !e.cancelled) return true;
+        // the plan it means: the same title, or (moved) the one on its old day whose words mostly match ("토요일 저녁 약속" → "일요일 저녁 약속")
+        const words = v => new Set(String(v || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 2));
+        const alike = (a, b) => { const A = words(a), B = words(b), n = [...A].filter(w => B.has(w)).length; return n >= Math.ceil(Math.min(A.size, B.size) * 0.5) && n > 0; };
+        const live = (p.events || []).filter(x => !x.cancelled);
+        const o = live.find(x => (lk(x.title) === lk(e.title) || lk(x.title).includes(lk(e.title)) || lk(e.title).includes(lk(x.title))) && (x.date === e.was || x.date === e.date || !e.was))
+            || (e.was ? live.filter(x => x.date === e.was).find(x => alike(x.title, e.title)) || (live.filter(x => x.date === e.was).length === 1 ? live.find(x => x.date === e.was) : null) : live.find(x => alike(x.title, e.title) && x.date === e.date));
+        if (!o) return !e.cancelled && !!e.date;
+        if (e.title && !e.cancelled) { o.title = e.title; if (e.ko) o.ko = e.ko; }
+        if (e.cancelled) o.cancelled = true; else { if (e.date) o.date = e.date; if (e.time) o.time = e.time; }
+        return false;
+    });
     for (const k of LISTS) p[k] = keep([...(p[k] || []), ...fresh(k, p[k] || [], add[k] || [])], CAP[k]);
     if (add.profile?.handle || add.profile?.bio) p.profile = { ...(p.profile || {}), ...Object.fromEntries(Object.entries(add.profile).filter(([, v]) => v)) };
     for (const c of add.contacts) {
@@ -527,10 +557,11 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         // owner set: the year, hidden contacts and places, where they live
         for (const k of ['life', 'delivery', 'voiceAt', 'year', 'noYear', 'hiddenContacts', 'hiddenPlaces', 'lives']) if (was?.[k] !== undefined) base[k] = was[k];
         if (binding) base.financeProfile = structuredClone(binding);
-        // the phone's own apps start reading again from here; the bank and investment keep their marks
-        base.sync = newSync(phoneChatScope(ctx()));
-        base.sync.marks.base = mark;
-        for (const g of ['money', 'invest', 'life', 'delivery']) if (was?.sync?.marks?.[g]) base.sync.marks[g] = was.sync.marks[g];
+        // the phone's own apps start reading again from here. With a bank, investments or the everyday apps kept (they
+        // weren't made again), the reading state stays as it was: messages they haven't read yet are still theirs to read
+        // (the phone's own items from those messages are told apart by their words, so nothing doubles)
+        if (was?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => was.sync.marks[g])) base.sync = was.sync;
+        else { base.sync = newSync(phoneChatScope(ctx())); base.sync.marks.base = mark; }
         m.phones[key] = mergePhone(base, got);
     }
     const p = m.phones[key];
@@ -588,8 +619,8 @@ function tagItems(p, add, src) {
         x.made ||= itemMark(k, x);
         for (const f of src ? [src] : a?.froms || []) { addFrom(x, f); if (src && x !== a) addFrom(a, f); }
     };
-    for (const k of LISTS) for (const a of add[k] || []) tag(k, (p[k] || []).find(x => sigOf(k, x) === sigOf(k, a)), a);
-    for (const t of add.threads || []) { const own = p.threads.find(x => nameKey(x.with) === nameKey(t.with)); for (const a of t.messages) tag('msg', own?.messages.find(x => sigOf('msg', x) === sigOf('msg', a)), a); }
+    for (const k of LISTS) for (const a of add[k] || []) tag(k, twinOf(k, p[k] || [], a), a);
+    for (const t of add.threads || []) { const own = p.threads.find(x => nameKey(x.with) === nameKey(t.with)); for (const a of t.messages) tag('msg', own ? twinOf('msg', own.messages, a) : null, a); }
     for (const a of add.posts || []) {
         const own = (p.posts || []).find(o => o.text && o.text === a.text || o.photo && o.photo === a.photo && o.time === a.time);
         for (const c of a.comments || []) tag('comment', own?.comments?.find(x => ckey(x) === ckey(c)), c);
@@ -615,7 +646,7 @@ async function updatePhone(m, owner) {
             swiped.push('읽은 대화가 바뀌어서 지난 반영을 되돌리고 다시 읽었어요', ...kept.map(x => `${x}: 그 뒤 기록과 이어져 있거나 직접 바꾼 거라 남겨뒀어요`));
         }
         // an older message changed: read again, tied to the events it already gave (no new payment from it)
-        const reread = new Map(moved.changed.map(x => [x.at, Object.entries(s.events).filter(([, e]) => e.at === x.at).map(([id, e]) => ({ id, summary: e.summary }))]));
+        const reread = new Map(moved.changed.map(x => [x.at, Object.entries(s.events).filter(([, e]) => e.at === x.at || (e.effects || []).some(f => (f.item?.sourceIndex ?? f.sourceIndex) === x.at)).map(([id, e]) => ({ id, summary: e.summary }))]));
         if (reread.size) swiped.push(`바뀐 대화 ${reread.size}개를 다시 읽어요. 그 대화의 결제는 새로 넣지 않고 기존 기록만 고쳐요`);
         const rows = syncRows(), round = pickRound(s, rows);
         if (!round.rows.length) { p.syncLast = { checked: 0, remaining: 0, apps: [], failed: [], notes: swiped, at: Date.now() }; await saveMeta(); return p; }
@@ -633,7 +664,10 @@ async function updatePhone(m, owner) {
         let tracker = null;
         try { tracker = trackerWeather(recentTrackers(1)[0]); } catch { /* no status lines */ }
         const trackDay = tracker ? when(tracker.date).slice(0, 5) : '';
-        const askWeather = !!life && (!tracker || !!trackDay && trackDay !== life.weather?.date);
+        // the model writes the weather when no status line gives it, when the status line has no date or its day moved on
+        // from the saved weather's, or when it puts the story somewhere else; a same-day, same-place line only stands over it
+        const placeKey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''), elsewhere = (a, b) => placeKey(a) && placeKey(b) && !placeKey(a).includes(placeKey(b)) && !placeKey(b).includes(placeKey(a));
+        const askWeather = !!life && (!tracker || !trackDay || trackDay !== life.weather?.date || elsewhere(tracker.place, life.weather?.place));
         // the year the phone's now is in: read once from the bank or the archive, then carried over New Year with the now
         if (!p.year && !p.noYear) { const y = Number(storyYear(m, p) || String(p.money?.asOf || p.investment?.date || '').slice(0, 4)); if (y > 1900) p.year = y; }
         const known = p.year && !p.noYear ? String(p.year) : '', year = known || String(new Date().getFullYear());
@@ -655,7 +689,7 @@ async function updatePhone(m, owner) {
             reread.size ? `[MESSAGES READ BEFORE, NOW CHANGED]\n${[...reread].map(([at, evs]) => `- #${at}: ${evs.length ? evs.map(e => `${e.id} (${e.summary})`).join('; ') : 'nothing on the phone yet'}`).join('\n')}` : '',
             `[PHONE NOW]\n${JSON.stringify(phoneForModel(p))}`,
             money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
-            money && p.delivery ? `[DELIVERY SHOPS]\n${(p.delivery.shops || []).map(x => x.name).join('\n') || '(none yet)'}` : '',
+            money && p.delivery ? `[DELIVERY SHOPS]\n${(p.delivery.shops || []).map(x => x.name).join('\n') || '(none yet)'}${p.delivery.cart?.items?.length ? `\nCART (in the basket, not ordered): ${p.delivery.cart.shop}: ${p.delivery.cart.items.map(x => `${x.name} ×${x.qty}`).join(', ')}` : ''}` : '',
             life ? `[LIFE NOW]\n${JSON.stringify(life)}` : '', askWeather && tracker ? `[WEATHER NOW]\n${JSON.stringify(tracker)}` : '',
             (money || invest) && p.wealthPlan ? `[WEALTH]\n${JSON.stringify({ currency: p.wealthPlan.currency, deposits: p.wealthPlan.deposits, investments: p.wealthPlan.investments, basis: p.wealthPlan.basis })}` : '',
             world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
@@ -676,7 +710,8 @@ async function updatePhone(m, owner) {
         const rid = Math.random().toString(36).slice(2, 10), rowText = new Map(rows.map(r => [r.index, r.text]));
         const failed = {}, loose = [], added = [], apps = new Set(), changes = [], notes = [...swiped];
         // for 되돌리기: what was there before this round (ids and message counts), and the reading state
-        const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map(p.threads.map(t => [t.id, t.messages.length]));
+        const msgSig = x => JSON.stringify([x.from, x.text, x.time]);
+        const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map(p.threads.map(t => [t.id, new Set(t.messages.map(msgSig))]));
         const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, seen: s.seen }), now: p.now, year: p.year, moneyAt: p.money?.at, investAt: p.investment?.at,
             comments: (p.posts || []).filter(x => x.id).map(x => [x.id, x.comments?.length || 0]) };
         // an event's day when the model leaves it out: the day of the event before it, else the answer's now
@@ -723,7 +758,10 @@ async function updatePhone(m, owner) {
             const got = sizes(p);
             for (const k of ITEM_KEYS) if (got[k] !== was[k]) apps.add(APP_NAME[k]);
             if (add.profile?.handle || add.profile?.bio) apps.add('SNS');
-            s.events[id] = { at, quote: line(e.quote, 200), summary: line(e.summary, 160), effects: [...(s.events[id]?.effects || []), ...fx], ...(paid.legs.length || s.events[id]?.legs ? { legs: [...(s.events[id]?.legs || []), ...paid.legs.filter(l => !(s.events[id]?.legs || []).some(o => o.key === l.key))] } : {}) };
+            // an event told again from a later message (its order delivered, its amount stated) stays where it happened, so
+            // deleting that message still offers everything it gave; one whose message is gone is taken up by the new one
+            const at0 = s.events[id]?.at, home = Number.isInteger(at0) && inRound.has(at0) === false && rowText.has(at0) ? at0 : at;
+            s.events[id] = { at: home, quote: line(e.quote, 200), summary: line(e.summary, 160), effects: [...(s.events[id]?.effects || []), ...fx], ...(paid.legs.length || s.events[id]?.legs ? { legs: [...(s.events[id]?.legs || []), ...paid.legs.filter(l => !(s.events[id]?.legs || []).some(o => o.key === l.key))] } : {}) };
             added.push({ id, at, add, effects: fx });
         }
         // read: this round's messages; a failed one gets one more try next round, then it is skipped
@@ -732,15 +770,20 @@ async function updatePhone(m, owner) {
         settleRound(s, round.rows, failed, new Set(added.map(x => x.at)));
         for (const x of evidence) s.arch[x.key] = 1;
         // a now without its time ("2026-12-31", "1/2"): that day at the round's last event time, else the time it was
-        const nowAt = (t => (/^\d{2}-\d{2}$/.test(t) ? `${t} ${arr(raw.events).map(e => [when(e?.date).slice(0, 5), hhmm(e?.time)]).filter(([d, h]) => d === t && /^\d{2}:\d{2}$/.test(h || '')).map(([, h]) => h).sort().at(-1) || (t === String(p.now || '').slice(0, 5) ? p.now.slice(6) : '') || '12:00'}`.trim() : t))(when(raw.now));
+        let nowAt = (t => (/^\d{2}-\d{2}$/.test(t) ? `${t} ${arr(raw.events).map(e => [when(e?.date).slice(0, 5), hhmm(e?.time)]).filter(([d, h]) => d === t && /^\d{2}:\d{2}$/.test(h || '')).map(([, h]) => h).sort().at(-1) || (t === String(p.now || '').slice(0, 5) ? p.now.slice(6) : '') || '12:00'}`.trim() : t))(when(raw.now));
         // the phone's time only moves on, across New Year too (12-31 → 01-01 is a day later, not months back)
+        // (a day or a few behind is the model slipping and is ignored; two months or more behind is a story that skipped far
+        // ahead, past the half year the dates alone can tell: half a year later)
+        // the status line's own clock caps the model's (a "23:55" written over a line that says 21:30)
+        const trkNow = storyNow({ ...p, now: '' });
+        if (trkNow && nowAt && nowAt.slice(0, 5) === trkNow.slice(0, 5) && nowAt.slice(6) > trkNow.slice(6)) nowAt = trkNow;
         const gap = nowAt && p.now ? dayGap(p.now.slice(0, 5), nowAt.slice(0, 5)) : 1;
-        if (nowAt && (gap > 0 || gap === 0 && nowAt.slice(6) > p.now.slice(6))) {
+        if (nowAt && (gap > 0 || gap < -60 || gap === 0 && nowAt.slice(6) > p.now.slice(6))) {
             if (p.year && p.now && nowAt.slice(0, 5) < p.now.slice(0, 5)) p.year++;
             p.now = nowAt;
         }
         // the round's own: new days nobody told, the weather, and what the clock moving on does by itself
-        const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = applyWeather(p, askWeather ? raw.weather : null, tracker, { archive: evidence.length + before.length > 0 });
+        const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = applyWeather(p, askWeather ? raw.weather : null, tracker, { archive: evidence.length + before.length > 0, today: String(p.now || '').slice(0, 5) });
         if (days.length) apps.add('건강');
         if (sky.length) apps.add('날씨');
         const roundFx = [...days, ...sky, ...lifeClock(p, p.now), ...dlvClock(p, p.now)];
@@ -755,10 +798,10 @@ async function updatePhone(m, owner) {
         p.syncLast.notes = p.syncLast.notes.filter(n => !n.endsWith('뺄 수 있어요') || s.dropped.some(d => n.startsWith(`대화 ${d.label}가`)));
         p.syncUndo = { ...undo, round: id, read: [...inRound], readFp: round.rows.map(r => bodyMark(r.text)), comments: undo.comments,
             items: ITEM_KEYS.flatMap(k => (p[k] || []).filter(x => x.id && !had.has(x.id)).map(x => [k, x.id])),
-            msgs: p.threads.filter(t => msgs.has(t.id) && t.messages.length > msgs.get(t.id)).map(t => [t.id, t.messages.slice(msgs.get(t.id)).map(x => JSON.stringify([x.from, x.text, x.time]))]),
+            msgs: p.threads.filter(t => msgs.has(t.id)).map(t => [t.id, t.messages.map(msgSig).filter(sg => !msgs.get(t.id).has(sg))]).filter(([, xs]) => xs.length),
             effects: [...added.flatMap(x => x.effects || []), ...roundFx], byEvent: added.map(x => [x.id, x.effects || []]) };
         // kept in this browser until the saved chat shows it: 복구 can add it back if the save didn't land
-        journalAdd(scope, { round: id, owner, at: Date.now(), events: added, done: [...inRound], seen: round.rows.map(r => [r.index, bodyMark(r.text)]), failed: Object.fromEntries([...inRound].filter(i => s.failed[i]).map(i => [i, s.failed[i]])), arch: evidence.map(x => x.key), life: roundFx });
+        journalAdd(scope, { round: id, owner, at: Date.now(), now: p.now, year: p.year, events: added, done: [...inRound], seen: round.rows.map(r => [r.index, bodyMark(r.text)]), failed: Object.fromEntries([...inRound].filter(i => s.failed[i]).map(i => [i, s.failed[i]])), arch: evidence.map(x => x.key), life: roundFx });
         await saveMeta();
         if (p.inject) applyInjection();
         return p;
@@ -790,6 +833,8 @@ export async function restoreRounds(m, scope) {
             s.events[e.id] ||= { at: e.at, quote: '', summary: e.id };
         }
         replayEffects(m, p, r.life || []);
+        // the story's clock as the round left it (and the year it carried over New Year)
+        if (r.now && (!p.now || gapDays(String(p.now).slice(0, 5), String(r.now).slice(0, 5)) >= 0)) { p.now = r.now; if (r.year) p.year = r.year; }
         addDone(s, r.done);
         s.seen ||= {};
         for (const [i, f] of r.seen || []) s.seen[i] = f;
@@ -830,8 +875,10 @@ function settleDropped(p, { dropped }, notes) {
 // (an order delivered later, a record corrected later, shares sold later) stays, and is named
 export async function dropStretch(m, p, k) {
     const s = p.sync;
+    // k: the stretch's key (its place in the list can change when the list is tidied just below), or its place
+    const was = typeof k === 'string' ? null : s.dropped?.[k]?.key;
     pruneDropped(s, phoneItems(p));
-    const d = s.dropped[k];
+    const d = s.dropped.find(x => x.key === (typeof k === 'string' ? k : was));
     if (!d) return { gone: 0, items: 0, kept: [] };
     const kept = [], stay = new Set(), out = new Set();
     let gone = 0;
@@ -856,8 +903,9 @@ export async function dropStretch(m, p, k) {
     const keep = k => x => { if (!goes(k, x)) return true; items++; return false; };
     for (const key of LISTS) if (Array.isArray(p[key])) p[key] = p[key].filter(keep(key));
     for (const t of p.threads) t.messages = t.messages.filter(keep('msg'));
+    p.threads = p.threads.filter(t => t.messages.length); // a thread with nothing left in it goes too
     for (const x of p.posts || []) if (x.comments) x.comments = x.comments.filter(keep('comment'));
-    s.dropped.splice(k, 1);
+    s.dropped.splice(s.dropped.indexOf(d), 1);
     if (p.money) migrateBank(m, p);
     await saveMeta();
     if (p.inject) applyInjection();
@@ -890,6 +938,7 @@ export async function undoRound(m, p) {
         const t = p.threads.find(x => x.id === tid);
         if (t) { const drop = new Set(sigs); t.messages = t.messages.filter(x => !drop.delete(JSON.stringify([x.from, x.text, x.time]))); }
     }
+    p.threads = p.threads.filter(t => t.messages.length);
     for (const [pid, n] of u.comments || []) { const x = (p.posts || []).find(y => y.id === pid); if (x?.comments?.length > n) x.comments = x.comments.slice(0, n); }
     // items that were there before the round forget it as a source
     for (const { x } of phoneItems(p)) if (x.froms) x.froms = x.froms.filter(f => f.r !== u.round);
@@ -928,7 +977,7 @@ export function phoneBlock(m) {
         }
         const missed = p.calls.filter(c => c.type === 'missed' && !isGuess(c)).slice(-3);
         if (missed.length) out.push(`Missed calls: ${missed.map(c => `${c.with} (${c.time})`).join(', ')}`);
-        const soon = p.events.filter(e => !isGuess(e) && (!p.now || upcoming(e, p.now))).slice(0, 3);
+        const soon = p.events.filter(e => !isGuess(e) && (!p.now || upcoming(e, p.now))).sort((a, b) => gapDays(p.now, a.date) - gapDays(p.now, b.date)).slice(0, 3);
         if (soon.length) out.push(`Calendar: ${soon.map(e => `${e.date}${e.time ? ` ${e.time}` : ''} ${e.title}`).join('; ')}`);
         const notes = p.notes.filter(n => !isGuess(n));
         if (notes.length) out.push(`Notes: ${notes.slice(-3).map(n => n.title || n.text.slice(0, 40)).join('; ')}`);
@@ -965,9 +1014,9 @@ export const ago = (p, v) => {
     if (String(v).slice(0, 5) !== String(nowOf(p)).slice(0, 5) || d < 0) return fmtDate(p, v, true);
     return d < 1 ? '지금' : d < 60 ? `${d}분 전` : `${Math.floor(d / 60)}시간 전`;
 };
-export const lastTime = t => t.messages[t.messages.length - 1]?.time || '';
+export const lastTime = t => t.messages.filter(x => !x.deleted).at(-1)?.time || '';
 // still to come at `now`: a later day, or today at a time not yet passed (or all day)
-export const upcoming = (e, now) => { const day = String(now).slice(0, 5), hm = String(now).slice(6), g = gapDays(day, e.date); return g > 0 || (g === 0 && (!e.time || !hm || e.time >= hm)); };
+export const upcoming = (e, now) => { if (e.cancelled) return false; const day = String(now).slice(0, 5), hm = String(now).slice(6), g = gapDays(day, e.date); return g > 0 || (g === 0 && (!e.time || !hm || e.time >= hm)); };
 
 // the story's now: the newest status window when it has a time, else what the phone was made with
 // a date's month and day, 1-based: "2026-10-26", "10/26", or a month name the calendars know (their months count from 0)
@@ -982,11 +1031,16 @@ export function monthDay(text) {
 export const rowDay = r => (r?.date?.d && calendars()[r.date.cal]?.length === 12 ? `${pad(r.date.m + 1)}-${pad(r.date.d)}` : '');
 // the newest status line's weather, its date as "MM-DD" whatever shape the line writes it in ("1월 30일 (토)", "Jan 30")
 export const trackerWeather = t => { const w = weatherFrom(t); if (w) { const d = monthDay(w.date); w.date = d ? `${pad(d.mo)}-${pad(d.d)}` : when(w.date).slice(0, 5); } return w; };
+// the scene's clock from the newest status line; an owner in another saved city (their phone's "here") reads it in their zone
 export function storyNow(p) {
     try {
         const t = recentTrackers(1)[0];
         const d = t?.date ? monthDay(t.date) : null;
-        if (t && Number.isFinite(t.min) && d) return `${pad(d.mo)}-${pad(d.d)} ${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}`;
+        if (t && Number.isFinite(t.min) && d) {
+            const at = `${pad(d.mo)}-${pad(d.d)} ${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}`, w = p?.life?.weather, here = w?.here?.place, scene = String(t.city || t.place || '').split(/\s*[,，→>/·]\s*/)[0];
+            if (w && apart(here, scene, w.cities)) { const a = cityAt(scene, w.cities), b = cityAt(here, w.cities); if (a?.tz && b?.tz) return zoneShift(at, a.tz, b.tz, Number(p.year) || undefined); }
+            return at;
+        }
     } catch { /* no status window */ }
     return p.now || '';
 }
@@ -1209,7 +1263,12 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
     }
 }
 // a recording's length: seconds, or "1:20"
-export const secOf = v => { const mt = String(v ?? '').match(/(\d{1,2}):(\d{2})/); const n = mt ? mt[1] * 60 + Number(mt[2]) : num(v); return Math.max(3, Math.min(900, Math.round(n || 30))); };
+// a recording's length: seconds, "1:20", "1분 20초", "2 min", "1m30s"
+export const secOf = v => {
+    const s = String(v ?? ''), mt = s.match(/(\d{1,2}):(\d{2})/), mn = !mt && s.match(/(\d+)\s*(?:min(?:ute)?s?|분|m)(?![a-z])(?:\s*(\d+)\s*(?:s(?:ec(?:onds?)?)?|초))?/i);
+    const n = mt ? mt[1] * 60 + Number(mt[2]) : mn ? mn[1] * 60 + Number(mn[2] || 0) : num(v);
+    return Math.max(3, Math.min(900, Math.round(n || 30)));
+};
 export async function fillVoice(m, p) {
     const diary = (p.diary || []).slice(-6).map(d => `- ${d.date} ${d.title}`).join('\n');
     const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`], {story:CHAT_TOKENS.apps,profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });
