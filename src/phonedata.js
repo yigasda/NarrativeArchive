@@ -995,7 +995,7 @@ const H12 = {
     US: (h, mi) => `${h % 12 || 12}:${mi} ${h < 12 ? 'AM' : 'PM'}`,
 };
 const FMT = {
-    KR: { loc: 'ko-KR', d: (mo, d) => `${mo}월 ${d}일`, s: (mo, d) => `${mo}. ${d}.`, y: (y, mo, d) => `${y}. ${mo}. ${d}.`, t: H12.KR, hr: h => `${h < 12 ? '오전' : '오후'} ${h % 12 || 12}시`, half: h => (h < 12 ? '오전' : '오후') },
+    KR: { loc: 'ko-KR', d: (mo, d) => `${mo}월 ${d}일`, s: (mo, d) => `${mo}. ${d}.`, y: (y, mo, d) => `${y}. ${mo}. ${d}.`, t: H12.KR, half: h => (h < 12 ? '오전' : '오후') },
     US: { loc: 'en-US', d: (mo, d) => `${mo}/${d}`, s: (mo, d) => `${mo}/${d}`, y: (y, mo, d) => `${mo}/${d}/${y}`, t: H12.US, hr: h => `${h % 12 || 12}${h < 12 ? 'AM' : 'PM'}`, half: h => (h < 12 ? 'AM' : 'PM') },
     JP: { loc: 'ja-JP', d: (mo, d) => `${mo}月${d}日`, s: (mo, d) => `${mo}/${d}`, y: (y, mo, d) => `${y}/${pad(mo)}/${pad(d)}` },
     CN: { loc: 'zh-CN', d: (mo, d) => `${mo}月${d}日`, s: (mo, d) => `${mo}/${d}`, y: (y, mo, d) => `${y}/${pad(mo)}/${pad(d)}` },
@@ -1013,7 +1013,7 @@ export const clockOf = (p, v) => { const m = minOf(v); return m === null ? '' : 
 export const clockNum = (p, v) => { const m = minOf(v); if (m === null) return ''; const h = Math.floor(m / 60); return fmtOf(p).t ? `${h % 12 || 12}:${pad(m % 60)}` : `${pad(h)}:${pad(m % 60)}`; };
 // 오전/오후 · AM/PM alone, '' on a 24-hour phone
 export const halfOf = (p, v) => { const m = minOf(v); const f = fmtOf(p); return m === null || !f.half ? '' : f.half(Math.floor(m / 60)); };
-// an hour mark (the weather's hours): 오후 3시 · 3PM · 15시
+// an hour mark (the weather's hours): 3PM, else 15시 (오후 3시 does not fit the hour's narrow column)
 export const hourOf = (p, v) => { const m = minOf(v); if (m === null) return ''; const h = Math.floor(m / 60), f = fmtOf(p); return f.hr ? f.hr(h) : `${h}시`; };
 // a date with its year (a receipt, a statement): 2026. 10. 30. · 10/30/2026 · 2026/10/30 · 30.10.2026
 export const fullDate = (p, v) => { const mt = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return mt ? fmtOf(p).y(mt[1], Number(mt[2]), Number(mt[3])) : ''; };
