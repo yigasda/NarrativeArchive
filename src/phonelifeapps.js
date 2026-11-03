@@ -15,6 +15,7 @@ import { getMeta } from './core.js';
 import { esc } from './util.js';
 import { DOT_C, DOT_R, DOTS, MAP_BOT, MAP_H, MAP_TOP, MAP_W, TZ_AT } from './worldmap.js';
 import { CAT, dishSvg, guessPic } from './phonefood.js';
+import { screenView } from './phonescreen.js';
 
 Object.assign(AX, {
     alarm: 'M12 6a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM12 9v4l2 2M5 3L2 6M19 3l3 3', hourglass: 'M12 7a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM12 10v4M10 3h4', globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
@@ -65,7 +66,7 @@ const toMin = t => { const mt = String(t || '').match(/(\d{1,2}):(\d{2})/); retu
 // an order's arrival clock: "MM-DD HH:MM", or "HH:MM" alone (on the order's day)
 const arrHm = o => { const a = String(o.arrived || ''); return /^\d{2}:\d{2}$/.test(a) ? a : a.slice(6); };
 const hm = n => `${pad(Math.floor(((n % 1440) + 1440) % 1440 / 60))}:${pad(((n % 60) + 60) % 60)}`;
-const dur = min => (min >= 60 ? `${Math.floor(min / 60)}시간 ${min % 60}분` : `${min}분`);
+const dur = min => (min >= 60 ? `${Math.floor(min / 60)}시간${min % 60 ? ` ${min % 60}분` : ''}` : `${min}분`);
 const durBig = min => `${Math.floor(min / 60)}<span>시간</span> ${min % 60}<span>분</span>`;
 // numbers as the phone's country writes them: 6,000 · 2.0 in Korea, the US, Japan…; 6.000 · 2,0 in Germany and most of Europe
 // (no country known: the dot, as the money app's fallback writes it)
@@ -535,22 +536,50 @@ export function weightScreen(p, now, day) {
 // usual vs the last 7 days: a sentence only for what the numbers say (more, less, later, stopped, about the same)
 export function compareScreen(p, now) {
     const lf = L(p); if (!lf) return healthScreen(p, now);
-    const u = lf.health.usual || {}, wk = lastDays(lf, 7), rows = [];
+    const u = lf.health.usual || {}, wk = lastDays(lf, 7), groups = { avg: [], odd: [] };
+    let rows = groups.avg;
     // the day still going stays out of the step and coffee averages (it isn't over)
     const done = wk.filter(x => !Number.isFinite(x.upTo));
     const st = avg(done.map(x => x.steps)), sl = avg(wk.map(sleepMin)), bed = avg(wk.map(x => lateMin(x.sleep))), runs = wk.filter(x => x.workout).length, last = [...lf.health.days].reverse().find(x => x.workout);
     const us = usualSleep(u), grey = ['#8a929d', '#f1f2f4'];
     const row = (dir, [color, bg], title, sub) => rows.push(`<div class="lf_hc lf_tr"><span style="background: ${bg}">${ax(dir, 18, color, 2.4)}</span><div><b>${title}</b><small>${sub}</small></div></div>`);
-    if (st !== null && u.steps) { const r = st / u.steps; row(r > 1.15 ? 'up' : r < 0.85 ? 'down' : 'eq', r > 1.15 || r < 0.85 ? [HC.steps, HB.steps] : grey, r > 1.15 ? '걸음이 평소보다 많아요' : r < 0.85 ? '걸음이 평소보다 적어요' : '걸음은 평소와 비슷해요', `${n0(Math.round(st))} · 평소 ${n0(u.steps)}`); }
-    if (sl !== null && us) { const df = sl - us; row(df > 30 ? 'up' : df < -30 ? 'down' : 'eq', Math.abs(df) > 30 ? [HC.sleep, HB.sleep] : grey, df > 30 ? '수면이 평소보다 길어요' : df < -30 ? '수면이 평소보다 짧아요' : '수면은 평소와 비슷해요', `${dur(Math.round(sl))} · 평소 ${dur(us)}`); }
+    // how far from usual: about the same (grey, =), a little (grey, the arrow and how much), clearly (the app's colour)
+    const grade = (df, near, far, colors, words, sub, more = '') => {
+        const k = Math.abs(df) <= near ? 0 : Math.abs(df) <= far ? 1 : 2, up = df > 0;
+        row(k ? (up ? 'up' : 'down') : 'eq', k === 2 ? colors : grey, k ? `${words[0]}${k === 1 ? '조금 ' : ''}${up ? words[1] : words[2]}` : words[3], `${sub}${k && more ? ` · ${more}` : ''}`);
+    };
+    const pct = r => `${r > 1 ? '+' : '−'}${Math.round(Math.abs(r - 1) * 100)}%`;
+    if (st !== null && u.steps) { const r = st / u.steps; grade(r - 1, 0.03, 0.15, [HC.steps, HB.steps], ['걸음이 평소보다 ', '많아요', '적어요', '걸음은 평소와 비슷해요'], `${n0(Math.round(st))} · 평소 ${n0(u.steps)}`, pct(r)); }
+    if (sl !== null && us) { const df = sl - us; grade(df, 10, 30, [HC.sleep, HB.sleep], ['수면이 평소보다 ', '길어요', '짧아요', '수면은 평소와 비슷해요'], `${dur(Math.round(sl))} · 평소 ${dur(us)}`, `${df > 0 ? '+' : '−'}${dur(Math.round(Math.abs(df)))}`); }
     if (bed !== null && u.sleep) { const df = bed - lateMin(u.sleep); if (Math.abs(df) > 40) row(df > 0 ? 'down' : 'up', [HC.sleep, HB.sleep], df > 0 ? '잠드는 시각이 늦어요' : '잠드는 시각이 빨라요', `${clockOf(p, Math.round(bed))} · 평소 ${clockOf(p, u.sleep)}`); }
     if (u.workouts) row(runs ? 'eq' : 'down', runs ? grey : [HC.run, HB.run], runs ? `운동은 이번 주 ${runs}회예요` : '운동이 끊겼어요', `이번 주 ${runs}회 · 평소 주 ${u.workouts}회${last ? ` · 마지막 ${esc(fmtDate(p, last.date, true))}` : ''}`);
     const rest = avg(wk.map(x => x.hr?.[0]));
-    if (rest !== null && u.rest) row(Math.abs(rest - u.rest) > 6 ? (rest > u.rest ? 'up' : 'down') : 'eq', Math.abs(rest - u.rest) > 6 ? [HC.hr, HB.hr] : grey, Math.abs(rest - u.rest) > 6 ? (rest > u.rest ? '안정 시 심박이 평소보다 높아요' : '안정 시 심박이 평소보다 낮아요') : '심박수는 평소와 비슷해요', `${Math.round(rest)} · 평소 ${u.rest}`);
-    if (u.coffee) { const c = avg(done.map(x => coffeeDay(p, x, u).length)); if (c !== null) row(c > u.coffee + 0.7 ? 'up' : c < u.coffee - 0.7 ? 'down' : 'eq', Math.abs(c - u.coffee) > 0.7 ? [HC.caf, HB.caf] : grey, c > u.coffee + 0.7 ? '커피를 평소보다 많이 마셔요' : c < u.coffee - 0.7 ? '커피를 평소보다 덜 마셔요' : '커피는 평소와 비슷해요', `하루 ${comma(c.toFixed(1))}잔 · 평소 ${u.coffee}잔`); }
+    if (rest !== null && u.rest) grade(rest - u.rest, 2, 6, [HC.hr, HB.hr], ['안정 시 심박이 평소보다 ', '높아요', '낮아요', '심박수는 평소와 비슷해요'], `${Math.round(rest)} · 평소 ${u.rest}`);
+    if (u.coffee) { const c = avg(done.map(x => coffeeDay(p, x, u).length)); if (c !== null) grade(c - u.coffee, 0.2, 0.7, [HC.caf, HB.caf], ['커피를 평소보다 ', '많이 마셔요', '덜 마셔요', '커피는 평소와 비슷해요'], `하루 ${comma(c.toFixed(1))}잔 · 평소 ${u.coffee}잔`); }
+    // the nights the phone kept them up (how much they look at it lives in screen time itself): a day that stands out, in screen time's sky
+    rows = groups.odd;
+    const SKY = ['#3f8fd8', '#e3f1fd'];
+    const sv = screenView(p, now);
+    // a night past midnight and an hour past their usual last look (an owner who always looks till 00:30 isn't up late at 00:40)
+    const lateBar = Math.max(1440 + 60, (lateMin(sv?.usual?.late || u.sleep || '23:30') ?? 1410) + 60);
+    const nights = (sv?.days || []).filter(d => !d.today).slice(-7).filter(d => d.late && toMin(d.late) < 6 * 60 && lateMin(d.late) >= lateBar);
+    if (nights.length >= 2) { const lt = nights.reduce((a, d) => (toMin(d.late) > toMin(a.late) ? d : a)); row('down', SKY, `새벽까지 폰을 본 날이 ${nights.length}일이에요`, `가장 늦게 ${clockOf(p, lt.late)} · ${esc(fmtDate(p, lt.date, true))}`); }
+    // the days that stand out (an average hides them): the two furthest from usual
+    const odd = [];
+    const most = done.filter(x => Number.isFinite(x.steps)).sort((a, b) => b.steps - a.steps);
+    if (u.steps && most[0] && most[0].steps > u.steps * 1.4) odd.push([most[0].steps / u.steps, 'up', [HC.steps, HB.steps], `가장 많이 걸은 날 ${n0(most[0].steps)}걸음`, `${esc(fmtDate(p, most[0].date, true))} · 평소의 ${comma((most[0].steps / u.steps).toFixed(1))}배`]);
+    const least = most.at(-1);
+    if (u.steps && least && least !== most[0] && least.steps < u.steps * 0.5) odd.push([u.steps / Math.max(1, least.steps), 'down', [HC.steps, HB.steps], `가장 적게 걸은 날 ${n0(least.steps)}걸음`, `${esc(fmtDate(p, least.date, true))} · 평소 ${n0(u.steps)}`]);
+    const slept = wk.filter(x => sleepMin(x) !== null).sort((a, b) => sleepMin(a) - sleepMin(b))[0];
+    if (us && slept && sleepMin(slept) < us - 90) odd.push([us / Math.max(30, sleepMin(slept)), 'down', [HC.sleep, HB.sleep], `가장 짧게 잔 날 ${dur(sleepMin(slept))}`, `${esc(fmtDate(p, slept.date, true))} · ${clockOf(p, slept.sleep)}에 잠듦`]);
+    const lateD = wk.filter(x => lateMin(x.sleep) !== null).sort((a, b) => lateMin(b.sleep) - lateMin(a.sleep))[0];
+    if (u.sleep && lateD && lateD !== slept && lateMin(lateD.sleep) - lateMin(u.sleep) > 90) odd.push([1 + (lateMin(lateD.sleep) - lateMin(u.sleep)) / 120, 'down', [HC.sleep, HB.sleep], `가장 늦게 잔 날 ${clockOf(p, lateD.sleep)}`, `${esc(fmtDate(p, lateD.date, true))} · 평소 ${clockOf(p, u.sleep)}`]);
+    for (const [, ...a] of odd.sort((x, y) => y[0] - x[0]).slice(0, 2)) row(...a);
+    // the averages, then the days that stood out under their own heading
+    const body = groups.avg.join('') + [['눈에 띈 날', groups.odd]].filter(([, g]) => g.length).map(([t, g]) => `<div class="ax_sec">${t}</div>${g.join('')}`).join('');
     return `${axBar(p, now)}${axTop(axCb('health'))}
       <div class="ax_scroll">${axH1('평소와 비교')}<div class="lf_sub">최근 7일 평균 · 평소</div>
-        ${rows.join('') || '<div class="lf_none">비교할 기록이 없어요</div>'}<i class="lf_pad"></i></div>${axInd()}`;
+        ${body || '<div class="lf_none">비교할 기록이 없어요</div>'}<i class="lf_pad"></i></div>${axInd()}`;
 }
 
 // ================= 파일 =================
