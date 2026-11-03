@@ -641,3 +641,13 @@ test('life: a day\'s own coffee, drink, water and weight are kept from the fill 
     const d26 = p.life.health.days.find(d => d.date === '10-26');
     assert.equal(d26.coffee, 4); assert.equal(d26.coffeeKind, '아메리카노'); assert.equal(d26.weight, 70.2);
 });
+
+test('a delivery payment names the app it went through: Uber Eats abroad, 배달의민족 in Korea (포장 · 환불 too)', () => {
+    let { m, p } = setup();
+    payOrders(m, p, '2026');
+    assert.equal(p.money.tx.at(-1).memo, 'Uber Eats');
+    ({ m, p } = setup());
+    p.delivery.look = 'baemin'; p.delivery.orders[0].mode = 'pickup'; p.delivery.orders[0].status = 'refunded';
+    payOrders(m, p, '2026');
+    assert.deepEqual(p.money.tx.filter(x => x.delivery).map(x => x.memo).sort(), ['배달의민족 포장', '배달의민족 환불']);
+});
