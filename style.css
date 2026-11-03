@@ -4078,7 +4078,7 @@ body.na_darkui .na_st_lk.on { color: #13261B !important; }
 .na_st_quick::-webkit-scrollbar { display: none; }
 .na_st_qk { flex: none; border: 0; border-radius: 999px; padding: 6px 12px; background: var(--st-w); color: var(--st-ink) !important; font-size: 0.86em !important; white-space: nowrap; box-shadow: 0 1px 3px rgba(46, 36, 30, 0.08), inset 0 0 0 1px var(--st-line); cursor: pointer; }
 .na_st_qk:disabled { opacity: 0.45; cursor: default; }
-.na_st_inrow { display: flex; align-items: flex-end; gap: 8px; }
+.na_st_inrow { display: flex; align-items: flex-end; gap: 8px; padding: 0 2px; } /* same 2px inset as the chip row, so the + and the field's ends don't touch the window's clip edge (3.169.73) */
 .na_st_plus { position: relative; flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--st-bub); color: var(--st-ink) !important; display: grid; place-items: center; cursor: pointer; }
 .na_st_plus i { position: absolute; top: 1px; right: 1px; width: 10px; height: 10px; border-radius: 50%; background: var(--st-acc2); border: 2px solid var(--st-bg); }
 .na_st_plus i[hidden] { display: none; }
