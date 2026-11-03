@@ -2,9 +2,11 @@
 // per kind, the average dashed), the three biggest kinds, the late night, how often they picked the phone up, and the
 // apps they used most. A bar (or its date) picks that day in place; picking it again goes back to the week.
 // Reads screenView() only (phonescreen.js); the data side is the reflection session's.
-import { AX, ax, axBar, axCb, axH1, axInd, axTop } from './phoneapps.js';
+import { AX, ax, axBar, axCb, axH1, axInd, axTop, busyHtml } from './phoneapps.js';
+import { filling } from './phoneai.js';
 import { clockNum, clockOf, fmtDate } from './phonedata.js';
 import { appIcon } from './phoneicons.js';
+import { nameKey } from './people.js';
 import { KIND_KO, appOf, screenView } from './phonescreen.js';
 import { esc } from './util.js';
 
@@ -53,7 +55,12 @@ function chart(days, avg, sel) {
 export function screenTimeScreen(p, now, i = '') {
     const v = screenView(p, now);
     const wrap = body => `${axBar(p, now)}${axTop(axCb('set'))}<div class="ax_scroll">${axH1('스크린타임')}${body}<i class="ax_pad"></i></div>${axInd()}`;
-    if (!v || !v.days.length) return wrap(`<div class="ax_card sc_empty">아직 스크린타임이 없어요. 건강 앱을 채우면 여기 모여요.</div>`);
+    if (!v || !v.days.length) {
+        // a phone filled before the screen time was there: fill just it (the health app's own fill when there's no health yet)
+        if (!p.life?.health) return wrap(`<div class="ax_card sc_empty">아직 스크린타임이 없어요. 건강 앱을 채우면 여기 모여요.</div>`);
+        const busy = filling.has(`${nameKey(p.owner)}:screen`);
+        return wrap(`<div class="ax_card ax_fillc lf_fill"><button type="button" class="ax_fillb na_ph_fill" data-k="screen" ${busy ? 'disabled' : ''}>${busy ? `${busyHtml} 채우는 중` : '채우기'}</button></div>`);
+    }
     const days = v.days.slice(-7), d = i ? days.find(x => x.date === i) : null, sel = d ? days.indexOf(d) : -1;
     const total = d ? d.total : v.avg;
     // the pill: change against last week, or against the average for a picked day (today is still counting)
