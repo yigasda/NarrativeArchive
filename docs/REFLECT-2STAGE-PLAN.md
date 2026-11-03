@@ -180,13 +180,13 @@
    - 각 지시문 첫 줄에 `STAGE: core|money|life`
    - 길이 확인: `$S/plen.mjs`처럼 셋 각각 재기
    - 채우기 지시문은 안 건드려요.
-3. **`updatePhone` 바꾸기**
+3. **`updatePhone` 바꾸기** — 끝 (3.169.90 작업 브랜치 `5aaa382`). `moneyStage()`(돈 단계), `split`(돈 앱 있는 폰만 두 단계), `wants`(core의 money 표시, core 답에 money가 남아 있어도 표시로 봄), `s.owed.money`(빚, `{ id, at, date, time, tries }`, 2번이면 건너뜀), `byEvent()`, 되돌리기 스냅샷·journal·`restoreRounds`에 owed, `retryMoney()`/`canRetryMoney()`(같은 라운드에 붙임), 반영 알림에 넘긴 결제 수. **남은 것: 설정 > 반영 화면의 "결제 다시 읽기" 버튼 줄**(`src/phonesyncui.js`의 되돌리기 버튼 옆, 창 HTML이라 소망 허락·css 세션 알림 후)
    - core 호출 → 이벤트 처리(돈·생활 빼고) → 2단계 조건 계산 → money/life를 `Promise.all`로 동시에
    - 2단계 결과를 이벤트 id별로 `applyMoney`/`applyLife`, `applyDays`/`applyWeather`
    - 빚(`s.owed`), 시도 횟수, 다시 읽기 버튼, 실패 알림
    - `u.sync` 스냅샷에 `owed` 추가, journal 갱신, `restoreRounds`의 같은 id 합치기
    - 2단계 전후에도 채팅·폰 바뀜 검사
-4. **테스트·퍼즈·화면**
+4. **테스트·퍼즈·화면** — 끝 (292 통과, 퍼즈 problems 0, 화면 82개. 테스트 가짜 모델은 `STAGE: money`면 `T.moneyAnswers`를, 없으면 core 답의 money를 그 이벤트 id로 돌려줘요)
    - `node --test tests/*.test.mjs`, `node tests/fuzz/reflect.fuzz.mjs`, `node tests/fuzz/fill.fuzz.mjs` (problems 0)
    - 꼭 넣을 테스트
      - 앞 라운드 이벤트의 돈이 다음 라운드에 들어온 뒤 그 이벤트를 빼면 문자와 돈이 다 빠짐
