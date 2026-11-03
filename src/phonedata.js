@@ -1101,6 +1101,36 @@ export async function undoRound(m, p) {
     return kept;
 }
 
+// 결제 다시 읽기: the money the last round owes, asked again now and put on that same round (되돌리기 takes it back with
+// the round's texts). Only while that round is the newest; after another round, that round asks for it by itself
+export const canRetryMoney = p => !!(p?.sync?.owed?.money?.length && canUndo(p));
+export async function retryMoney(m, owner) {
+    return exclusive('sync', async () => {
+        const key = nameKey(owner), p = m.phones?.[key], scope = phoneChatScope(ctx());
+        if (!canRetryMoney(p)) throw new Error('다시 읽을 결제가 없어요');
+        const s = p.sync, u = p.syncUndo, made = { money: p.money?.at, invest: p.investment?.at };
+        const targets = arr(s.owed.money).map(o => ({ o, e0: s.events[o.id] })).filter(x => x.e0 && Number.isInteger(x.e0.at))
+            .map(({ o, e0 }) => ({ id: o.id, at: e0.at, date: o.date || '', time: o.time || '', summary: e0.summary || o.id, quote: e0.quote || '', changed: false, tries: o.tries || 0 }));
+        const [body] = splitTail(String(m.text || ''));
+        const sections = parseSections(body).filter(x => !x.group && RANGE_HEAD.test(x.title)).map(x => { const mt = x.title.match(RANGE_HEAD); return { key: `${mt[2]}-${mt[4]}:${x.title.length}`, first: Number(mt[2]), last: Number(mt[4]), text: body.slice(x.start, x.end).trim() }; });
+        const year = p.year && !p.noYear ? String(p.year) : String(new Date().getFullYear()), anchor = /^\d{2}-\d{2}/.test(p.now || '') ? `${year}-${p.now.slice(0, 5)}` : '';
+        const profile = await ownerProfileBlock(ctx(), p.financeProfile, owner, { money: true });
+        const check = () => (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p ? '다시 읽는 사이 채팅이나 폰이 바뀌었어요' : p.money?.at !== made.money || p.investment?.at !== made.invest ? '다시 읽는 사이 은행이나 투자가 새로 만들어졌어요' : !canUndo(p) || p.syncUndo !== u ? '다시 읽는 사이 반영이 또 있었어요' : '');
+        const st = await moneyStage(m, p, owner, targets, { rows: syncRows(), sections, reread: null, year, anchor, profile, check });
+        s.owed = { ...(s.owed || {}), money: st.owed };
+        // on the same round: 되돌리기 takes these back with it, and 복구 brings them back with it
+        u.effects = [...u.effects, ...st.late.flatMap(x => x.effects || [])];
+        u.byEvent = byEvent([...(u.byEvent || []).map(([id, effects]) => ({ id, effects })), ...st.late]);
+        journalWrite(scope, journalRead(scope).map(r => (r.round === u.round ? { ...r, events: [...(r.events || []), ...st.late], owed: s.owed } : r)));
+        if (p.money) migrateBank(m, p);
+        if (p.syncLast) { p.syncLast.apps = [...new Set([...(p.syncLast.apps || []), ...st.apps])]; p.syncLast.notes = [...(p.syncLast.notes || []), ...st.notes]; }
+        p.at = Date.now();
+        await saveMeta();
+        if (p.inject) applyInjection();
+        return { paid: st.late.length, owed: st.owed.length, notes: st.notes };
+    });
+}
+
 // ---- 롤플에 넣기: a short note of what the phones hold, after the archive
 export function phoneBlock(m) {
     const ps = Object.values(m?.phones || {}).filter(p => p?.inject && p.owner);

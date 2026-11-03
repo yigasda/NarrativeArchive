@@ -624,3 +624,20 @@ test('복구 of a round whose money step failed brings back what it owes', async
     assert.deepEqual(was.sync.owed.money.map(x => x.id), ['taxi']);
     assert.deepEqual(texts(was), ['택시비 냈어']);
 });
+
+test('결제 다시 읽기 puts the owed money on the same round: 되돌리기 then takes the texts and the payment back together', async () => {
+    const c = taxiSetup();
+    T.moneyAnswers.push('broken');
+    await run(c.m, taxiCore());
+    assert.equal(data.canRetryMoney(c.p), true);
+    T.moneyAnswers.push(taxiPaid);
+    const r = await data.retryMoney(c.m, 'Ren');
+    assert.equal(r.paid, 1);
+    assert.equal(c.bank(), 88000);
+    assert.deepEqual(c.p.sync.owed.money, []);
+    assert.equal(data.canRetryMoney(c.p), false);
+    await data.undoRound(c.m, c.p);
+    assert.equal(c.bank(), 100000);
+    assert.deepEqual(texts(c.p), []);
+    assert.deepEqual(c.p.sync.owed.money, []);
+});

@@ -248,8 +248,9 @@ export async function openPhone(who = null) {
         const r = p.syncLast;
         if (!r?.checked) return toastr.info('새로 읽을 대화가 없어요', '캐릭터 휴대폰');
         const head = `${r.checked}개 확인 · 남은 ${r.remaining}개`;
-        const tail = r.failed.length ? ` · 넣지 못한 일 ${r.failed.length}개` : '';
-        toastr[r.failed.length ? 'warning' : r.apps.length ? 'success' : 'info'](`${r.apps.length ? `${r.apps.join(' · ')}에 넣었어요` : '새로 넣은 건 없어요'}${tail}`, head);
+        const owed = p.sync?.owed?.money?.length || 0;
+        const tail = `${r.failed.length ? ` · 넣지 못한 일 ${r.failed.length}개` : ''}${owed ? ` · 결제 ${owed}개는 다음 반영 때 다시` : ''}`;
+        toastr[r.failed.length || owed ? 'warning' : r.apps.length ? 'success' : 'info'](`${r.apps.length ? `${r.apps.join(' · ')}에 넣었어요` : '새로 넣은 건 없어요'}${tail}`, head);
     };
     // Investment calls are explicit; navigation and unresolved quote conflicts never trigger them.
     const investRun = async checkStory => {
