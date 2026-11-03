@@ -16,8 +16,8 @@ Object.assign(AX, {
 
 // every kind its own clear colour, the same weight (the board's 1 · 3 · 4 mix); text a shade darker for white cards
 const ORDER = ['chat', 'social', 'video', 'game', 'music', 'work', 'reading', 'shopping', 'other'];
-const KC = { chat: '#6cb4f5', social: '#f4a3bd', video: '#ff9478', game: '#7fd6c9', music: '#ffad5c', work: '#b4a7f5', reading: '#5cc27a', shopping: '#3fb3a3', other: '#d3d7de' };
-const KT = { chat: '#3f8fd8', social: '#d9708f', video: '#e8735a', game: '#2fa597', music: '#e08a2a', work: '#8a78e6', reading: '#3a9e5c', shopping: '#2f9a8c', other: '#8a909a' };
+const KC = { chat: '#6cb4f5', social: '#f4a3bd', video: '#ff9478', game: '#7fd6c9', music: '#ffad5c', work: '#b4a7f5', reading: '#f6cd41', shopping: '#3fb3a3', other: '#d3d7de' };
+const KT = { chat: '#3f8fd8', social: '#d9708f', video: '#e8735a', game: '#2fa597', music: '#e08a2a', work: '#8a78e6', reading: '#b7900e', shopping: '#2f9a8c', other: '#8a909a' };
 const ACC = '#3f8fd8';
 
 export const durKo = n => { n = Math.max(0, Math.round(n || 0)); const h = Math.floor(n / 60); return h && !(n % 60) ? `${h}시간` : `${h ? `${h}시간 ` : ''}${n % 60}분`; };
@@ -33,7 +33,9 @@ function chart(days, avg, sel) {
     const W = 326, H = 150, AXW = 30, gap = 16, n = days.length, bw = (W - AXW - gap * 6) / 7;
     const max = Math.max(60, ...days.map(d => d.total), avg || 0), top = Math.ceil(max / 120) * 120, sc = H / top;
     let s = '';
-    for (let t = 0; t <= top; t += 120) { const y = H - t * sc; s += `<line x1="0" x2="${W - AXW + 4}" y1="${y}" y2="${y}" stroke="${t ? '#eef0f3' : '#e3e6ea'}"/><text x="${W - AXW + 10}" y="${y + 3.5}" class="sc_axl">${t / 60}h</text>`; }
+    // an hour mark too close to the average's label gives way to it
+    const ay = avg ? H - avg * sc : null;
+    for (let t = 0; t <= top; t += 120) { const y = H - t * sc; s += `<line x1="0" x2="${W - AXW + 4}" y1="${y}" y2="${y}" stroke="${t ? '#eef0f3' : '#e3e6ea'}"/>${ay !== null && Math.abs(y - ay) < 11 ? '' : `<text x="${W - AXW + 10}" y="${y + 3.5}" class="sc_axl">${t / 60}h</text>`}`; }
     days.forEach((d, i) => {
         const x = i * (bw + gap), th = d.total * sc, r = Math.min(5, th, bw / 2), dim = sel >= 0 && sel !== i;
         let y = H, segs = '';
