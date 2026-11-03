@@ -44,7 +44,9 @@ test('screenView: a story day as told, a day left out worked out, today only so 
     assert.equal(d24.from, 'worked');
     assert.ok(d24.apps.some(([a]) => a === 'Signal') && d24.total > 0);
     assert.equal(d25.from, 'story');
-    assert.equal(d25.total, 210);
+    // the told apps as told, the small tail apps a real phone trails off with beside them
+    assert.deepEqual(d25.apps.filter(([a]) => a === 'Signal' || a === 'Brawl Arena'), [['Signal', 200], ['Brawl Arena', 10]]);
+    assert.ok(d25.total >= 210 && d25.total < 230, String(d25.total));
     assert.equal(d25.byKind.chat, 200);
     assert.equal(d25.late, '03:05');
     assert.ok(d26.today && d26.late === '');
@@ -134,4 +136,28 @@ test('apps known by name and icon beyond the fill list: the phone\'s own, a day\
     assert.equal(appOf('Blue Archive'), null);
     assert.ok(SCREEN_LIST.includes('Google Maps') && !SCREEN_LIST.includes('메모') && !SCREEN_LIST.includes('은행'));
     assert.deepEqual(screenOf({ apps: { '스벅': 5, Starbucks: 3 } }), { apps: { Starbucks: 8 } });
+});
+
+test('the small apps a day trails off with come from what the phone holds that day', () => {
+    const p = phone([{ date: '10-24', sleep: '23:30', wake: '07:00' }, { date: '10-25', sleep: '23:30', wake: '07:00' }]);
+    Object.assign(p, { lives: 'DE', year: 2026, events: [{ date: '10-24', time: '10:00' }],
+        money: { bank: { name: 'Sparkasse' }, tx: [{ id: 't1', time: '10-24 12:00' }, { id: 'dlv-1', time: '10-25 12:00' }], passes: [{ kind: 'flight', by: 'Lufthansa', date: '10-25' }, { kind: 'train', date: '10-24' }] } });
+    p.life.clock = { alarms: [{ time: '06:30', days: ['sat'], on: true }] }; // 10-24-2026 is a Saturday
+    const [d24, d25] = screenView(p, '10-26 12:00').days, a24 = Object.fromEntries(d24.apps), a25 = Object.fromEntries(d25.apps);
+    assert.equal(a24.Sparkasse, 3);
+    assert.equal(a24['캘린더'], 2);
+    assert.equal(a24['DB Navigator'], 5);
+    assert.equal(a24['시계'], 1);
+    assert.equal(a25.Lufthansa, 5);
+    assert.equal(a25['Google Maps'], 6);
+    assert.equal(a25.Sparkasse, undefined); // a delivery's payment is the delivery app's
+    assert.equal(a25['시계'], undefined);
+});
+
+test('no two worked days alike: some days an app is left alone, some days binged', () => {
+    const days = Array.from({ length: 28 }, (_, k) => ({ date: `10-${String(k + 1).padStart(2, '0')}`, sleep: '23:30', wake: '07:00' }));
+    const p = phone(days);
+    const ratio = screenView(p, '10-29 12:00').days.filter(d => !d.today).flatMap(d => usual.apps.map(a => (Object.fromEntries(d.apps)[a.app] || 0) / a.min));
+    assert.ok(ratio.some(x => x === 0), JSON.stringify(ratio));
+    assert.ok(ratio.some(x => x >= 1.9), JSON.stringify(ratio));
 });

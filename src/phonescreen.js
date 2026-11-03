@@ -106,14 +106,39 @@ function recordApps(p, day, usual) {
     put(own('social', null, 'Instagram'), n(p.posts) * 10);
     put('메모', n(p.notes) * 3);
     put((p.delivery?.look || (kr ? 'baemin' : 'ubereats')) === 'baemin' ? '배달의민족' : 'Uber Eats', n(p.delivery?.orders) * 8);
+    // the small apps a real phone's list trails off with, each from what the phone holds that day: the bank on a day with
+    // payments (under the bank's own name), the calendar with an event, files received, a ticket's day (the airline's or
+    // the trains' app when the phone knows it, else the wallet, and the map), the clock on a day an alarm rang
+    const tx = (p.money?.tx || []).filter(t => on(t.time) && !String(t.id).startsWith('dlv-') && !t.delivery).length;
+    put(own('other', /bank|뱅크|은행|sparkasse|toss|토스/i, line(p.money?.bank?.name) || '은행'), tx ? Math.min(10, 2 + tx) : 0);
+    put('캘린더', Math.min(6, (p.events || []).filter(e => e.date === day).length * 2));
+    put('파일', Math.min(6, n(p.life?.files?.items) * 2));
+    const trips = (p.money?.passes || []).filter(x => x.date === day && /flight|train/.test(x.kind));
+    for (const t of trips) {
+        const rail = { KR: '코레일톡', DE: 'DB Navigator', GB: 'Trainline' }[p.lives || p.country];
+        put(t.kind === 'flight' ? appOf(t.by)?.name || '지갑' : rail || '지갑', 5);
+        put(own('other', /maps|지도|맵/i, kr ? '네이버 지도' : 'Google Maps'), 6);
+    }
+    const wd = weekday(p, day), rang = (p.life?.clock?.alarms || []).some(a => a.on !== false && (a.date === day || (a.days || []).includes(WD[wd])));
+    put('시계', rang ? 1 : 0);
+    // and what everyone opens a minute here and there (seeded by the day, so it stays put)
+    const r = seeded(`${p.owner}:${day}:tail`);
+    put('날씨', r() < 0.7 ? 1 : 0); put('설정', r() < 0.35 ? 1 + Math.floor(r() * 3) : 0); put('사진', r() < 0.5 ? 1 + Math.floor(r() * 4) : 0); put('건강', r() < 0.3 ? 1 : 0);
     return { apps, texts };
 }
+const WD = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+// the day of the week in the story's year (2001's when the phone doesn't know it)
+const weekday = (p, day) => { const x = md(day), y = Number(p?.year) || 2001; return x ? new Date(Date.UTC(y, x.mo - 1, x.d)).getUTCDay() : 3; };
+const line = v => String(v || '').trim().slice(0, 40);
 // a day the model left out: their usual, a little more or less as days go, with what that day holds on top
 function workedOut(p, day, usual, sleepDay) {
     const r = seeded(`${p.owner}:${day}:screen`), rec = recordApps(p, day, usual), apps = {};
-    const wd = (() => { const x = md(day); return x ? new Date(Date.UTC(2001, x.mo - 1, x.d)).getUTCDay() : 3; })(), weekend = wd === 0 || wd === 6;
+    const wd = weekday(p, day), weekend = wd === 0 || wd === 6;
+    // no two days alike: an app left alone some days, another binged (two or three times its usual), work all but gone
+    // at the weekend while games, videos and feeds get more
     for (const a of usual.apps || []) {
-        const f = (0.7 + r() * 0.6) * (weekend && ['game', 'video', 'social'].includes(a.kind) ? 1.25 : weekend && a.kind === 'work' ? 0.3 : 1);
+        const x = r(), mood = x < 0.12 ? 0 : x > 0.9 ? 2 + r() : 0.7 + r() * 0.6;
+        const f = mood * (weekend && ['game', 'video', 'social'].includes(a.kind) ? 1.25 : weekend && a.kind === 'work' ? 0.15 : 1);
         const m = Math.round(a.min * f);
         if (m > 0) apps[a.app] = m;
     }
