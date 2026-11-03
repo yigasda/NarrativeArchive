@@ -423,3 +423,25 @@ test('an event told again with another payment on the same account (a refund, a 
     assert.equal(p.money.tx.length, 3);
     assert.ok(r3.notes.some(n => n.includes('그대로')));
 });
+
+test('a reflection opens an account and a card, fills and empties the basket, and gives the investment app a watched share, a story price and a stake', () => {
+    const { m, p } = setup();
+    p.investment.watch = []; p.investment.stakes = []; p.money.cards = []; p.delivery = { shops: [], orders: [], cart: null, look: 'baemin' };
+    const o = opts({ marks: { base: { index: 0 }, money: { index: 0 }, invest: { index: 0 }, delivery: { index: 0 } } });
+    const r1 = applyMoney(m, p, ev('savings', 5, '10-26', { newAccount: { kind: 'savings', name: 'Sparen', last4: '3333', currency: 'EUR', balance: 500 }, newCard: { account: '3333', exp: '09/29' },
+        cart: { shop: 'Pasta Nostra', items: [{ name: 'Ragù', qty: 2, price: 12 }] },
+        watch: [{ symbol: 'XETRA:BMW', name: 'BMW', currency: 'EUR', note: 'Ivo가 추천' }], quotes: [{ symbol: 'XETRA:SAP', date: '2026-10-26', value: 150, evidence: 'SAP fell to 150' }],
+        stakes: [{ company: 'Varo Holding', percent: 10, holder: 'Ren', currency: 'EUR', evidence: 'the ten percent are yours now' }] }), o);
+    migrateBank(m, p);
+    assert.equal(p.money.bank.accounts.length, 3); assert.equal(p.money.bank.accounts[2].last4, '3333'); assert.equal(cash(m.finance.accounts[`${p.money.bank.accounts[2].id}:EUR`]), 500);
+    assert.equal(p.money.cards.length, 1); assert.equal(p.delivery.cart.items[0].qty, 2);
+    assert.equal(p.investment.watch[0].symbol, 'XETRA:BMW'); assert.equal(p.investment.securities.length, 2);
+    assert.equal(m.finance.prices['STOCK:XETRA:SAP']['2026-10-26'].rows[0].source, 'story');
+    assert.equal(p.investment.stakes[0].company, 'Varo Holding');
+    // the order from that shop empties the basket
+    applyMoney(m, p, ev('pasta', 6, '10-26', { deliveries: [{ shop: 'Pasta Nostra', items: [{ name: 'Ragù', qty: 2, price: 12 }], fee: 2, status: 'delivered', occurrence: 'new' }] }), o);
+    assert.equal(p.delivery.cart, null);
+    // 되돌리기 of the first round takes the account, card, watch and stake back out
+    revertEffects(m, p, r1.effects);
+    assert.equal(p.money.bank.accounts.length, 2); assert.equal(p.money.cards.length, 0); assert.equal(p.investment.watch.length, 0); assert.equal(p.investment.stakes.length, 0);
+});

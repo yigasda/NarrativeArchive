@@ -613,3 +613,11 @@ test('life: a reflection saves a timer and starts one, counted from its event; ë
     revertEffects({}, p, r.effects);
     assert.equal(p.life.clock.timers.length, 0);
 });
+
+test('life: a changed habit moves the usual waking time and steps too', () => {
+    const { p } = setup();
+    const r = applyLife(p, { id: 'ev9', at: 9, date: '10-26', time: '20:00' }, { usual: { wake: '05:30', steps: 11000, coffee: 0 } }, true);
+    assert.equal(p.life.health.usual.wake, '05:30'); assert.equal(p.life.health.usual.steps, 11000); assert.equal(p.life.health.usual.coffee, 0);
+    revertEffects({}, p, r.effects);
+    assert.equal(p.life.health.usual.wake, '06:30'); assert.equal(p.life.health.usual.steps, 7000);
+});

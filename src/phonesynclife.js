@@ -244,7 +244,8 @@ export function applyLife(p, e, phone, on) {
     const uu = phone.usual && typeof phone.usual === 'object' ? phone.usual : null;
     if (uu) {
         const n = (v, lo, hi, d = 1) => { const x = num(v); return Number.isFinite(x) && x >= lo && x <= hi ? Math.round(x * d) / d : undefined; };
-        const vals = { weight: n(uu.weight, 20, 300, 10), coffee: n(uu.coffee, 0, 15), water: n(uu.water, 0, 8, 10), coffeeKind: uu.coffeeKind ? line(uu.coffeeKind, 30) : undefined, coffeeKo: uu.coffeeKo ? ko(uu.coffeeKo) : undefined };
+        const vals = { weight: n(uu.weight, 20, 300, 10), coffee: n(uu.coffee, 0, 15), water: n(uu.water, 0, 8, 10), coffeeKind: uu.coffeeKind ? line(uu.coffeeKind, 30) : undefined, coffeeKo: uu.coffeeKo ? ko(uu.coffeeKo) : undefined,
+            bed: hhmm(uu.bed) || undefined, sleep: hhmm(uu.sleep) || undefined, wake: hhmm(uu.wake) || undefined, steps: n(uu.steps, 0, 80000), workouts: n(uu.workouts, 0, 21), rest: n(uu.rest, 30, 140), height: n(uu.height, 100, 230) };
         const u = (L.health ||= {}).usual ||= {};
         for (const [k, v] of Object.entries(vals)) {
             if (v === undefined || same(u[k] ?? null, v)) continue;

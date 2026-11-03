@@ -465,3 +465,21 @@ test('a record told again with its clock a little off is the one there (a text a
     assert.deepEqual(c.p.calls.map(x => x.time), ['10-26 21:05', '10-26 22:10']);
     assert.equal(c.p.mails.length, 1);
 });
+
+test('a plan moved or called off changes the item there; a text the owner deleted leaves the screen but stays for 되돌리기', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'dinner friday?'), say('Ren', 'sure, friday 7pm')]);
+    await run(c.m, { now: '10-26 13:00', events: [
+        { id: 'plans', at: 2, quote: 'friday 7pm', summary: '약속', date: '10-26', time: '12:00', phone: { events: [{ title: '저녁 약속', date: '10-30', time: '19:00' }, { title: '점심', date: '10-28', time: '12:30' }], threads: [{ with: 'Mara', messages: [msg('A: 금요일 저녁?', '10-26 12:01'), msg('B: 삭제할 문자', '10-26 12:02')] }] } },
+    ] });
+    assert.equal(c.p.events.length, 2);
+    T.chat.push(say('Mara', 'actually saturday'), say('Ren', 'and the lunch is off'), say('Mara', 'ok, deleted my text'));
+    await run(c.m, { now: '10-26 14:00', events: [
+        { id: 'moved', at: 3, quote: 'actually saturday', summary: '옮김', date: '10-26', time: '13:00', phone: { events: [{ title: '저녁 약속', date: '10-31', was: '10-30' }, { title: '점심', date: '10-28', cancelled: true }], threads: [{ with: 'Mara', messages: [{ text: '삭제할 문자', deleted: true }] }] } },
+    ] });
+    assert.equal(c.p.events.length, 2);
+    assert.equal(c.p.events.find(e => e.title === '저녁 약속').date, '10-31'); assert.equal(c.p.events.find(e => e.title === '저녁 약속').time, '19:00');
+    assert.equal(c.p.events.find(e => e.title === '점심').cancelled, true);
+    const t = c.p.threads.find(x => x.with === 'Mara');
+    assert.equal(t.messages.length, 2); assert.equal(t.messages.filter(x => x.deleted).length, 1);
+    assert.equal(data.lastTime(t), '10-26 12:01');
+});

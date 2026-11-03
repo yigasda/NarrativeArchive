@@ -169,7 +169,7 @@ LIFE
   - No new story day: "days": [].
   - "date" is the day they woke up: asleep 10-26 at 23:40 or 10-27 at 02:15 → "10-27".
   - A night still going (they fell asleep, not yet woken): its row now, with "sleep"; "wake" stays empty.
-- A lasting change to their habits or body these messages state (they lost weight, quit coffee, drink more water): that event's "phone"."usual" with only what changed. Nothing said: no "usual".
+- A lasting change to their habits or body these messages state (they lost weight, quit coffee, drink more water, get up earlier now): that event's "phone"."usual" with only what changed. Nothing said: no "usual".
 ${weather ? `- "weather": ${tracker ? 'WEATHER NOW stands for an owner in that scene (its date, time, place and weather); write the rest of the forecast to agree with it, "from": "chat". An owner elsewhere gets the weather where they are.' : 'what these messages describe, else the archive. If the story\'s day or place changed with nothing to go on, what fits the season and place, "from": "guess". If neither changed and nothing describes it: null (the app keeps the last weather).'}
 - With new weather, also write each saved city's weather: "cond", "temp", "hi", "lo", rain, wind, "feels", "humidity" and "dew".
 ` : ''}` : ''}${money ? `
@@ -206,6 +206,8 @@ ANSWER — one JSON object, nothing else:
                "tiles": { "rain24", "rainNext", "feels", "wind", "gust", "dir", "humidity", "dew", "sunrise", "sunset", "visibility" },
                "cities": [{ "name", "cond", "temp", "hi", "lo", "rainNext": mm, "wind": km/h, "gust", "dir", "feels", "humidity", "dew" }] } or null` : ''}` : ''} }
 ${money ? `"money" only when money moves or an order or ticket changes. ` : ''}Numbers are plain JSON numbers.
+Also in "money" when these messages show them: "newAccount": { "kind": "checking" | "savings" | "credit", "name", "last4", "currency", "balance" } (an account or card the owner opens), "newCard": { "account": last4, "exp": "MM/YY" }${delivery ? `, "cart": { "shop", "items": [like a delivery's] } (dishes put in the basket and not ordered)` : ''}, "watch": [{ "symbol", "name", "currency", "note", "ko" }] (a share they start watching), "quotes": [{ "symbol", "date", "value", "evidence": exact words }] (a price the story gives), "stakes": [{ "company", "listed", "percent", "holder", "voter", "beneficiary", "restriction", "value", "currency", "evidence": exact words }] (a stake the story says they now hold).
+In "events", a plan moved or called off is its item again with "was": the date it had, or "cancelled": true. In "threads", a text the owner deleted is { "text", "deleted": true }.
 Items in "phone":
 {
 ${PHONE_ITEMS}${life ? `,
@@ -213,7 +215,7 @@ ${PHONE_ITEMS}${life ? `,
   "files": [{ "change": an id or "", "name", "kind", "folder": one of LIFE NOW's "folders" (downloads are "Downloads"), "size": KB, "time", "from", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],
   "health": [{ "date", "bed", "sleep", "wake", "woke", "steps", "km", "floors", "workout": { "kind", "time", "min", "km" } or null, "hr": [low, high], "from": "story" }],
   "timers": [{ "label", "ko", "sec", "last": "MM-DD" }], "running": { "label", "ko", "sec", "left": seconds } or null,
-  "usual": { "weight": kg, "coffee": cups a day, "coffeeKind", "coffeeKo", "water": litres a day }` : ''}
+  "usual": { "weight": kg, "coffee": cups a day, "coffeeKind", "coffeeKo", "water": litres a day, "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": a week, "rest": resting heart rate, "height": cm }` : ''}
 }
 Fewer is fine. No new events: "events": [].
 In "phone" items, a booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit; never a booking the story doesn't have.${money ? ' Money amounts follow MONEY.' : ''}`;
@@ -239,7 +241,7 @@ export function parsePhone(out, owner = '') {
     // an everyday record the model made up from the owner's habits stays apart from the story (재구성)
     const tag = (x, raw) => (raw?.everyday === true ? { ...withEv(x, raw), src: 'guess' } : withEv(x, raw));
     const self = owner ? nameKey(owner) : '', mine = v => !!self && nameKey(line(v, 40)) === self;
-    const msg = x => ({ from: mine(x?.from) ? 'me' : line(x?.from, 40) || 'me', text: str(x?.text, 600), ko: ko(x?.ko), time: when(x?.time) });
+    const msg = x => ({ from: mine(x?.from) ? 'me' : line(x?.from, 40) || 'me', text: str(x?.text, 600), ko: ko(x?.ko), time: when(x?.time), ...(x?.deleted === true ? { deleted: true } : {}) });
     // a translation that only repeats its text (a Korean text given the same "ko") is none: it would show twice
     const same = (a, b) => !!a && !!b && a.replace(/\s+/g, ' ').trim() === b.replace(/\s+/g, ' ').trim();
     const PAIRS = [['text', 'ko'], ['caption', 'ko'], ['q', 'ko'], ['title', 'ko'], ['title', 'kt'], ['subject', 'ks'], ['photo', 'pko'], ['bio', 'ko']];
@@ -256,7 +258,7 @@ export function parsePhone(out, owner = '') {
         photos: arr(raw.photos).map(x => tag({ caption: line(x?.caption, 200), ko: ko(x?.ko), time: when(x?.time), mood: pick(x?.mood, MOODS, 'warm') }, x)).filter(x => x.caption),
         notes: arr(raw.notes).map(x => tag({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 1500), ko: str(x?.ko, 1500), time: when(x?.time) }, x)).filter(x => x.title || x.text),
         searches: arr(raw.searches).map(x => tag({ q: line(x?.q, 120), ko: ko(x?.ko), time: when(x?.time), ...(truthy(x?.tab) ? { tab: true } : {}), ...(truthy(x?.mark) ? { mark: true } : {}) }, x)).filter(x => x.q),
-        events: arr(raw.events).map(x => tag({ title: line(x?.title, 80), ko: ko(x?.ko), date: when(x?.date).slice(0, 5), time: hhmm(x?.time) }, x)).filter(x => x.title && x.date),
+        events: arr(raw.events).map(x => tag({ title: line(x?.title, 80), ko: ko(x?.ko), date: when(x?.date).slice(0, 5), time: hhmm(x?.time), ...(when(x?.was).slice(0, 5) ? { was: when(x.was).slice(0, 5) } : {}), ...(x?.cancelled === true ? { cancelled: true } : {}) }, x)).filter(x => x.title && (x.date || x.cancelled)),
         profile: raw.profile && typeof raw.profile === 'object' ? { handle: line(raw.profile.handle, 40), bio: line(raw.profile.bio, 200), ko: ko(raw.profile.ko), followers: countOf(raw.profile.followers), following: countOf(raw.profile.following) } : null,
         posts: arr(raw.posts).map(x => tag({ text: str(x?.text, 800), ko: str(x?.ko, 800), photo: line(x?.photo, 200), pko: ko(x?.pko), time: when(x?.time), likes: Math.min(99999, countOf(x?.likes)),
             comments: arr(x?.comments).map(c => ({ from: line(c?.from, 40), text: line(c?.text, 300), ko: ko(c?.ko) })).filter(c => c.from && c.text).slice(0, CAP.comments) }, x)).filter(x => x.text || x.photo),
@@ -317,8 +319,13 @@ export const isGuess = x => x?.src === 'guess';
 function mergePhone(p, add, { keepAll = false } = {}) {
     if (!p.device && add.device) p.device = add.device;
     const keep = (list, n) => (keepAll ? list : list.slice(-n));
+    const lk = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
     for (const t of add.threads) {
         const old = p.threads.find(x => nameKey(x.with) === nameKey(t.with));
+        // a text the owner deleted: the one there is marked (it stays for 되돌리기), never added again
+        const gone = t.messages.filter(x => x.deleted);
+        if (gone.length && old) for (const g of gone) { const o = [...old.messages].reverse().find(x => !x.deleted && (lk(x.text) === lk(g.text) || lk(x.text).includes(lk(g.text)) || lk(g.text).includes(lk(x.text)))); if (o) o.deleted = true; }
+        t.messages = t.messages.filter(x => !x.deleted);
         // in story order: a later round can bring texts from before the ones there (an earlier stretch read late)
         if (old) { old.messages = keep([...old.messages, ...fresh('msg', old.messages, t.messages)].sort(byStory(p.now)), CAP.messages); if (t.draft) old.draft = t.draft; }
         else p.threads.push({ ...t, messages: keep(fresh('msg', [], t.messages).sort(byStory(p.now)), CAP.messages) });
@@ -327,6 +334,14 @@ function mergePhone(p, add, { keepAll = false } = {}) {
     joinComments(p.posts, add.posts, CAP.comments);
     // a plan told again with its time now ("dinner 11-03" then "dinner 11-03 19:00"): the same event, given its time
     for (const e of add.events || []) { const o = (p.events || []).find(x => !x.time && e.time && x.date === e.date && x.title.toLowerCase() === e.title.toLowerCase()); if (o) o.time = e.time; }
+    // a plan moved ("was": its old date) or called off ("cancelled"): the item there changes, nothing is added
+    add.events = (add.events || []).filter(e => {
+        if (!e.was && !e.cancelled) return true;
+        const o = (p.events || []).find(x => !x.cancelled && (lk(x.title) === lk(e.title) || lk(x.title).includes(lk(e.title)) || lk(e.title).includes(lk(x.title))) && (x.date === e.was || x.date === e.date || !e.was));
+        if (!o) return !e.cancelled && !!e.date;
+        if (e.cancelled) o.cancelled = true; else { if (e.date) o.date = e.date; if (e.time) o.time = e.time; }
+        return false;
+    });
     for (const k of LISTS) p[k] = keep([...(p[k] || []), ...fresh(k, p[k] || [], add[k] || [])], CAP[k]);
     if (add.profile?.handle || add.profile?.bio) p.profile = { ...(p.profile || {}), ...Object.fromEntries(Object.entries(add.profile).filter(([, v]) => v)) };
     for (const c of add.contacts) {
@@ -999,9 +1014,9 @@ export const ago = (p, v) => {
     if (String(v).slice(0, 5) !== String(nowOf(p)).slice(0, 5) || d < 0) return fmtDate(p, v, true);
     return d < 1 ? '지금' : d < 60 ? `${d}분 전` : `${Math.floor(d / 60)}시간 전`;
 };
-export const lastTime = t => t.messages[t.messages.length - 1]?.time || '';
+export const lastTime = t => t.messages.filter(x => !x.deleted).at(-1)?.time || '';
 // still to come at `now`: a later day, or today at a time not yet passed (or all day)
-export const upcoming = (e, now) => { const day = String(now).slice(0, 5), hm = String(now).slice(6), g = gapDays(day, e.date); return g > 0 || (g === 0 && (!e.time || !hm || e.time >= hm)); };
+export const upcoming = (e, now) => { if (e.cancelled) return false; const day = String(now).slice(0, 5), hm = String(now).slice(6), g = gapDays(day, e.date); return g > 0 || (g === 0 && (!e.time || !hm || e.time >= hm)); };
 
 // the story's now: the newest status window when it has a time, else what the phone was made with
 // a date's month and day, 1-based: "2026-10-26", "10/26", or a month name the calendars know (their months count from 0)
