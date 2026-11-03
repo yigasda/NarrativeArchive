@@ -2481,7 +2481,7 @@ body:not(.na_darkui) .na_ap3 .na_v2_card { border-color: transparent; box-shadow
 /* light: as the settings panel — the window stays cream, the cards a touch warmer than its white paper (#FCF6F1), the selected switch white */
 body:not(.na_darkui) .na_ap3 .na_v2_card { background: #FCF6F1; }
 body:not(.na_darkui) .na_ap3 .na_ap3_seg button.on { background: #FFFFFF; }
-body:not(.na_darkui) .na_ap3 :is(.na_ap3_fbody, .na_ap3_fdock) { background: #FCF6F1; }
+body:not(.na_darkui) .na_ap3 .na_ap3_fbody { background: #FCF6F1; }
 /* the draft card */
 .na_ap3_sum { display: flex; flex-direction: column; gap: 10px; padding: 14px; margin-top: 14px; }
 .na_ap3_head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
@@ -2558,7 +2558,7 @@ body.na_darkui .na_ap3_ti.b { background: #2E2E34; color: #9DBCE6; }
 /* dark (시안 A): a near-black warm window, darker cards with a faint top light, no tinted fills — the parts are
    neutral and the colour is in a thin line or the text: my request edged in orange, replies with a coloured bar */
 body.na_darkui dialog.popup.na_ap3_dlg:has(.na_ap3):not(#na_x) { background: #17171A !important; }
-body.na_darkui .na_ap3 .na_v2_card, body.na_darkui .na_ap3 :is(.na_ap3_fbody, .na_ap3_fdock) { background: #232328; border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
+body.na_darkui .na_ap3 .na_v2_card, body.na_darkui .na_ap3 .na_ap3_fbody { background: #232328; border-color: transparent; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
 body.na_darkui .na_ap3_bar { background: linear-gradient(rgba(28, 23, 20, 0), #17171A 14px); }
 body.na_darkui .na_ap3 :is(.na_ly_ask, .na_ap3_seg, .na_ap3_raw) { background: #2E2E34; }
 body:is(.na_darkui) .na_ap3 .na_ap3_chip { background: #2E2E34 !important; }
@@ -2595,9 +2595,10 @@ body.na_darkui .na_ap3_ai.none { border-left-color: #5E5E66; }
 .na_ap3_fhead b span { margin-left: 6px; padding: 2px 9px; border-radius: 999px; font-size: 12px; vertical-align: middle; background: var(--na-ok-soft); color: var(--na-ok); }
 .na_ap3_fhead small { font-size: 12.5px; color: var(--na-sub, var(--na-dim)); }
 .na_ap3_fbody { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 10px; border-radius: 18px; background: var(--na-card); }
-.na_ap3_fdock { margin: 10px -4px -14px; padding: 12px 12px 14px; border-radius: 22px 22px 0 0; background: var(--na-card); box-shadow: 0 -10px 24px rgba(70, 52, 40, 0.08); }
-.na_ap3_fdock .na_apf { padding: 0; background: transparent; box-shadow: none; border: 0; margin: 0; }
+.na_ap3_fdock { margin: 12px 0 0; padding: 0; background: transparent; } /* no sheet: the pill, chips and buttons sit on the window (3.169.69) */
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_ap3 .na_ap3_fdock .na_apf.na_v2_card:not(#na_x) { padding: 0; background: transparent; box-shadow: none; border: 0; margin: 0; }
 .na_ap3_fdock .na_ap3_log { max-height: 128px; overflow-y: auto; }
+body:not(.na_darkui) .na_ap3 .na_ap3_fdock .na_ly_ask { background: #FCF6F1; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); } /* on the window itself, the pill needs its own light (as 섹션 버전's) */
 .na_ap3_fdock .na_ap3_bar { position: static; margin: 10px 0 0; padding: 0 0 12px; background: none; }
 
 /* health */
@@ -3811,6 +3812,7 @@ body.na_darkui .na_launch_tabs { background: #232328; }
     background: transparent !important; background-image: none !important; box-shadow: none !important; color: inherit !important; font: inherit; font-size: 14px !important;
 }
 .na_popup .na_ly_ask input.na_ly_askq::placeholder { color: var(--na-dim) !important; opacity: 1 !important; }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ly_ask input.na_ly_askq:is(*, :hover, :focus, :focus-visible):not(#na_x) { background: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; outline: none !important; } /* the pill is the only box (3.169.69) */
 .na_ly_askgo { flex: none; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 13px; background: var(--na-accent); color: var(--na-onaccent, #fff); cursor: pointer; }
 .na_ly_askgo:disabled { opacity: 0.7; cursor: wait; }
 
