@@ -37,7 +37,7 @@
 .iv_hd small { font-size: 12px; color: var(--iv-mut); }
 .iv_grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
 .iv_kv small { font-size: 12px; color: var(--iv-mut); } .iv_kv b { display: block; margin-top: 3px; font: 600 16px 'Inter Tight', -apple-system, sans-serif; overflow-wrap: anywhere; }
-.iv_logo { display: grid; place-items: center; flex: none; border-radius: 13px; color: #fff; font: 700 13px 'Inter Tight', -apple-system, sans-serif; letter-spacing: 0.02em; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.iv_logo { display: grid; place-items: center; flex: none; border-radius: 13px; color: #fff; font: 700 13px 'Inter Tight', -apple-system, sans-serif; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25); }
 .ax .iv_hold { --axbg: none; display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px; box-sizing: border-box; text-align: left; }
 .iv_hold + .iv_hold, .iv_tr + .iv_tr, .iv_cash + .iv_cash { border-top: 1px solid var(--iv-line); }
 .iv_hn { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -349,12 +349,11 @@
 .ax .lf_sv em { font-style: normal; font-size: 12px; color: #8b8f98; }
 .ax .lf_sv small { font-size: 12px; color: #8b8f98; }
 .ax .lf_sv > i { width: 34px; height: 34px; border-radius: 50%; background: rgba(245, 165, 36, 0.16); display: grid; place-items: center; flex: none; }
-.ax .lf_wc { display: flex; align-items: center; padding: 14px 18px 14px 20px; position: relative; }
+.ax .lf_wc { display: flex; align-items: center; position: relative; }
 .ax .lf_wc + .lf_wc::before { content: ''; position: absolute; top: 0; left: 20px; right: 0; border-top: 1px solid #303136; }
 .ax .lf_wct { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .ax .lf_wct small { font-size: 12.5px; color: #8b8f98; }
-.ax .lf_wct b { font-size: 22px; font-weight: 500; }
-.ax .lf_wc > b { font: 200 44px/1 'Inter Tight', sans-serif; }
+.ax .lf_wct b { font-weight: 500; }
 .ax .lf_sheet { position: absolute; left: 0; right: 0; top: 60px; bottom: 0; border-radius: 14px 14px 0 0; background: #1d1e22; z-index: 6; overflow-y: auto; }
 .ax .lf_shh { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px 6px; font-size: 16px; }
 .ax .lf_shh button { color: #f5a524; font-size: 16px; }
@@ -519,7 +518,7 @@
 .ax .lf_lock small { font-size: 12px; }
 .ax .lf_pvimg { margin: 4px 22px 8px; flex: none; }
 .ax .lf_pvimg .lf_th { height: 320px; border-radius: 18px; }
-.ax .lf_pvaud { margin: 4px 22px 8px; height: 200px; border-radius: 18px; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; flex: none; }
+.ax .lf_pvaud { margin: 4px 22px 8px; height: 200px; border-radius: 18px; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none; }
 .ax .lf_wave { display: flex; align-items: center; gap: 3px; height: 70px; }
 .ax .lf_wave i { width: 3px; border-radius: 2px; background: #8a5a2e; }
 /* 날씨: the sky moves (rain falls, clouds drift, snow drifts down, a storm flashes, the sun breathes, stars twinkle) */
@@ -568,7 +567,7 @@
 .ax .lf_tile p { position: absolute; left: 13px; right: 13px; bottom: 11px; margin: 0; font-size: 12.5px; line-height: 1.35; font-weight: 500; }
 .ax .lf_tile .arc { position: absolute; left: 13px; right: 13px; top: 58px; height: 46px; }
 .ax .lf_q { margin: 0 16px 14px; height: 38px; border-radius: 12px; background: rgba(22, 27, 34, 0.07); display: flex; align-items: center; gap: 7px; padding: 0 12px; color: #8a929d; font-size: 15px; flex: none; }
-:is(.ax, .cg) .lf_city { display: flex; justify-content: space-between; width: calc(100% - 28px); margin: 0 14px 10px; border-radius: 22px; padding: 14px 16px; color: #fff; position: relative; overflow: hidden; height: 112px; box-sizing: border-box; flex: none; }
+:is(.ax, .cg) .lf_city { display: flex; justify-content: space-between; color: #fff; position: relative; overflow: hidden; box-sizing: border-box; flex: none; }
 :is(.ax, .cg) .lf_city i { position: absolute; border-radius: 50%; }
 :is(.ax, .cg) .lf_city i.sun { width: 64px; height: 64px; left: 150px; top: -26px; background: #f6c94a; }
 :is(.ax, .cg) .lf_city i.mn { width: 34px; height: 34px; left: 150px; top: 14px; background: #e9e4cf; box-shadow: -9px -6px 0 0 #28324a inset; }
@@ -578,7 +577,7 @@
 .cg .lf_city.cg_wx { grid-column: 1 / -1; width: 100%; margin: 0; height: 150px; border-radius: 26px; background: var(--axbg) !important; text-align: left; box-shadow: 0 10px 24px rgba(22, 27, 34, 0.14); }
 .cg .lf_city.cg_wx .l, .cg .lf_city.cg_wx .r { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.22); }
 .cg .lf_city.cg_wx .r b { font: 300 46px/1 'Inter Tight', -apple-system, sans-serif; }
-:is(.ax, .cg) .lf_city .l b { font-size: 22px; font-weight: 700; }
+:is(.ax, .cg) .lf_city .l b { font-weight: 700; }
 :is(.ax, .cg) .lf_city .l small, :is(.ax, .cg) .lf_city .l span, :is(.ax, .cg) .lf_city .r span { font-size: 13px; font-weight: 600; opacity: 0.92; }
 :is(.ax, .cg) .lf_city .l span, :is(.ax, .cg) .lf_city .r span { margin-top: auto; }
 :is(.ax, .cg) .lf_city .r { text-align: right; }
@@ -632,7 +631,7 @@
 @media (prefers-reduced-motion: reduce) { .ax .lf_mq.run { white-space: normal; } .ax .lf_mq.run > span { animation: none; } }
 /* 세계 시계: map on grid paper, analog dials */
 .ax .lf_wmap { position: relative; margin: 0 14px 14px; border-radius: 22px; background: #1f2024; box-shadow: inset 0 0 0 1px #2a2b30; overflow: hidden; padding: 10px 8px; flex: none; }
-.ax .lf_wmap svg { display: block; width: 100%; height: auto; }
+.ax .lf_wmap svg { display: block; width: 100%; }
 @keyframes lf_pulse { from { transform: scale(1); opacity: 0.9; } to { transform: scale(3.2); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .ax .lf_pin .pulse { animation: none; opacity: 0; } }
 .ax .lf_dial { width: 46px; height: 46px; margin-right: 14px; flex: none; }

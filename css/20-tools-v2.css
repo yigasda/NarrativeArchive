@@ -296,7 +296,7 @@
 .na_wd_body { display: flex; flex-direction: column; margin-top: 10px; }
 .na_wd_rename { margin: 0; font-weight: 600; }
 .na_wd_text { width: 100%; box-sizing: border-box; resize: vertical; font-size: 0.88em; margin: 0; }
-.na_wd_foot { display: flex; flex-wrap: wrap; align-items: center; }
+.na_wd_foot { display: flex; align-items: center; }
 .na_wd_bindchip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; background: var(--na-card2); cursor: pointer; }
 .na_wd_bindchip input { display: none; }
 .na_wd_bindchip:not(.on) .na_face { filter: grayscale(1); opacity: 0.6; }
@@ -538,10 +538,9 @@
 /* ============ extract v2 */
 .na_ex2_card { display: flex; flex-direction: column; border-radius: 20px; }
 .na_ex2_info { display: flex; justify-content: space-between; color: var(--na-dim); }
-.na_ex2_card .na_cp_bar { height: 8px; }
 .na_ex2_card .na_v2_chips:empty { display: none; }
 .na_ex2_card .na_lastex:empty, .na_ex2_card .na_lastex[hidden] { display: none; }
-.na_ex2_preview { margin: 0; border: 1px solid var(--na-line); background: var(--na-card); white-space: pre-wrap; word-break: break-word; overflow: hidden; }
+.na_ex2_preview { margin: 0; background: var(--na-card); white-space: pre-wrap; word-break: break-word; overflow: hidden; }
 .na_ex2_btns .na_save_txt { flex: 1; }
 .na_ex2_btns .na_copy { flex: 2; }
 

@@ -102,7 +102,7 @@ body.na_darkui .na_ph_b.them .na_ph_ko { border-top-color: rgba(255, 255, 255, 0
 .na_ph_pc { border-radius: 14px; overflow: hidden; background: var(--pf2); }
 .na_ph_pc p { margin: 0; padding: 7px 9px 9px; font-size: 12.5px; line-height: 1.4; }
 .na_ph_pc small { display: block; margin-top: 3px; color: var(--pd); font-size: 10.5px; }
-.na_ph_thumb { height: 92px; display: grid; place-items: center; color: rgba(255, 255, 255, 0.85); }
+.na_ph_thumb { height: 92px; color: rgba(255, 255, 255, 0.85); }
 .m_warm { background: linear-gradient(160deg, #f6a35b, #c2557a); }
 .m_cool { background: linear-gradient(160deg, #6f8fb8, #34466e); }
 .m_green { background: linear-gradient(160deg, #9cc49a, #4e7d63); }

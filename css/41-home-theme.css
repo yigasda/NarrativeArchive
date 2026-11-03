@@ -86,10 +86,8 @@ body.na_darkui :is(#na_settings, dialog.popup:has(.na_popup, #na_settings)) {
     --SmartThemeBlurTintColor: #17171A; --SmartThemeChatTintColor: #2A2A30; --SmartThemeBorderColor: rgba(239, 227, 216, 0.18);
     --SmartThemeShadowColor: rgba(0, 0, 0, 0.4); --SmartThemeCheckboxTickColor: #17171A; color: var(--SmartThemeBodyColor);
 }
-body.na_darkui #na_settings > .inline-drawer > .inline-drawer-content { background: #17171A; border-radius: 0 0 14px 14px; }
-body.na_darkui dialog.popup:has(.na_popup, #na_settings) { background: #17171A; color: #ECEAE6; }
+body.na_darkui #na_settings > .inline-drawer > .inline-drawer-content { border-radius: 0 0 14px 14px; }
 body.na_darkui .na_face_btn > i { background: var(--na-fill); color: var(--na-onfill); }
-body.na_darkui dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #232328; border: 1px solid #45454D; color: #ECEAE6; }
 body.na_darkui .na_popup :where(.text_pole) { background: #2A2A30; border: 1px solid #45454D; color: #ECEAE6; }
 
 /* ============ the extension's own theme (설정 › 테마), whatever SillyTavern's theme is. Inside the panel and its popups
@@ -99,9 +97,7 @@ body:not(.na_darkui) :is(#na_settings, dialog.popup:has(.na_popup, #na_settings)
     --SmartThemeBlurTintColor: #F0E4DB; --SmartThemeChatTintColor: #ECE0D6; --SmartThemeBorderColor: rgba(120, 90, 60, 0.25);
     --SmartThemeShadowColor: rgba(0, 0, 0, 0.1); --SmartThemeCheckboxTickColor: #F7EEE7; color: var(--SmartThemeBodyColor);
 }
-body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-content { background: #F0E4DB; border-radius: 0 0 14px 14px; }
-body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) { background: #F0E4DB; color: #463428; }
-body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #F7EEE7; border: 1px solid #E5D5C9; color: #463428; }
+body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-content { border-radius: 0 0 14px 14px; }
 body:not(.na_darkui) .na_popup :where(.text_pole) { background: #F2E9E2; border: 1px solid #E5D5C9; color: #463428; }
 
 /* 설정 › 테마: two round swatches */
