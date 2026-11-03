@@ -164,7 +164,7 @@
 ## 6. 작업 순서
 
 1. ~~설계 확정~~ (끝)
-2. **지시문 셋으로 나누기**
+2. **지시문 셋으로 나누기** — 끝 (`coreSystem`, `moneySystem`, `lifeSystem`이 `updateSystem` 바로 아래에 있어요. 아직 연결 안 함. 실측: core 약 1,599 · money(배달 포함) 1,582 · life(날씨 포함) 1,419 · life(날씨 없음) 1,107토큰, 옛 반영 3,813)
    - `coreSystem()`, `moneySystem({ delivery, invest })`, `lifeSystem({ weather, tracker })`
    - 문장은 지금 것을 옮겨요. 새로 쓰는 건 최소로 하고, 3장의 새 문장 두 개(apps 표시, 돈만 오가는 일)만 추가해요.
    - 각 지시문 첫 줄에 `STAGE: core|money|life`

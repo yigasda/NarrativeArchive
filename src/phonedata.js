@@ -217,6 +217,145 @@ In "phone" items, a booking the story has carries the details a real one would (
 }
 export const AI_SYS_PHONE_UPDATE = updateSystem();
 
+// ---- 반영 in two steps (docs/REFLECT-2STAGE-PLAN.md): core reads the events and the plain apps and marks what else each
+// event touches; money and life are asked after, only when needed, each with its own short instructions. The first
+// line names the step (the test harness files each answer under it)
+const HEALTH_FIELDS = `{ "date": the day they woke, "sleep", "wake", "woke": times awake in the night, "steps", "km", "floors", "hr": [low, high], "workout": { "kind", "time", "min", "km" } or null, "coffee": cups, "coffeeKind", "water": litres, "weight": kg only when they weighed }`;
+export function coreSystem() {
+    return `STAGE: core
+GOAL
+Add to one character's phone what a few new chat messages put on it, in a long role-play. The user opens the phone to peek at the story from the phone's side.
+An app adds your JSON to the phone; you only write what is new. Money, the clock, files, health and the weather are written in a second step: here you only mark which events touch them.
+
+YOU GET
+- NEW MESSAGES: the messages to read now, each with its number (#123).
+- ARCHIVE FOR THESE MESSAGES (sometimes): summary sections covering them. They count as evidence, like the messages.
+- ARCHIVE BEFORE (sometimes): what happened earlier. Background; nothing in it is new.
+- STORY NOW (sometimes): where the story stands after these messages. Background.
+- EVENTS ON THE PHONE: story events the phone already holds, with their ids.
+- DAYS (sometimes): the story's days from the day before these messages on, with their weekdays. A weekday the story names ("on Friday") is the next one there.
+- MESSAGES READ BEFORE, NOW CHANGED (sometimes): messages put on the phone before and edited since, with the events they gave.
+- PHONE NOW: the newest of what the phone holds.
+- OWNER, and sometimes WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
+
+WHAT IS NEW
+- Only what happens in NEW MESSAGES or ARCHIVE FOR THESE MESSAGES. Guesses and memories of earlier days add nothing.
+- A plan made in these messages goes in the calendar; what is planned hasn't happened yet (no payment, no photo).
+- Each message's own replies, orders and payments belong to the event in that message, not folded into an earlier one.
+- An event in EVENTS ON THE PHONE keeps its id; add only what the phone doesn't hold yet.
+- MESSAGES READ BEFORE, NOW CHANGED were already put on the phone: give their events the ids listed there.
+- A scene where only money moves (a taxi, paying the bill) is still an event, with "apps": ["money"].
+- Small everyday things around an event are fine: how a text was worded, a photo of the place, a search they would make.
+- People: only people the story has. A relationship word (girlfriend, ex, husband, boss) only if the messages or archive use it for them.
+- A diary entry holds only what these messages show and what the owner felt about it; no new secrets, no new feelings.
+
+WHERE IT COMES FROM
+- "at": the number of the message the event happens in. For an archive section, the message in its range it belongs to.
+- "quote": a few words copied exactly as written in that message or section, not reworded.
+- "date" and "time": when it happens in that message ("MM-DD", "HH:MM" if known). A plan for later happens when it is made; its later day goes only on the calendar item.
+- "now": the moment of the newest message, never a time something is only planned for.
+- "apps": which other apps the event touches: "money" (a payment, transfer, refund, order, ticket, booking, delivery or trade), "life" (an alarm, timer, file, sleep, steps, a workout, coffee or a habit). When unsure, include it.
+
+${PHONE_STYLE.replace('; "now" is the newest moment of the story.', '.')}
+
+ANSWER — one JSON object, nothing else:
+{ "now": "MM-DD HH:MM",
+  "events": [{ "id": an id from EVENTS ON THE PHONE, or a short new tag like "berlin-flight", "at": 123, "quote": "exact words",
+               "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line", "apps": [] or ["money", "life"],
+               "phone": { only the app items this event puts on the phone } }] }
+In "events", a plan moved or called off is its item again with "was": the date it had, or "cancelled": true. In "threads", a text the owner deleted is { "text", "deleted": true }.
+Items in "phone":
+{
+${PHONE_ITEMS}
+}
+Fewer is fine. No new events: "events": [].
+In "phone" items, a booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit; never a booking the story doesn't have.`;
+}
+// delivery: the phone has the delivery app
+export function moneySystem({ delivery = false } = {}) {
+    const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
+    return `STAGE: money
+GOAL
+Write the money of story events already read from a few new chat messages in a long role-play: payments, transfers, refunds, orders, tickets and trades${delivery ? ', and food deliveries' : ''}. An app adds your JSON to the phone's bank, wallet, orders${delivery ? ', delivery app' : ''} and brokerage.
+
+YOU GET
+- EVENTS: the story events to write money for, each with its id, message number, date, time, summary and quote. An event marked "changed" was read before and its message edited since.
+- MESSAGES: the messages those events come from, with the ones next to them. ARCHIVE FOR THESE MESSAGES (sometimes): summary sections covering them.
+- MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.
+${delivery ? `- DELIVERY SHOPS: the shops the delivery app already has, and the basket.\n` : ''}- DAYS and STORY YEAR (sometimes), OWNER, and sometimes OWNER PROFILE.
+
+MONEY
+- A payment, transfer, refund, order, ticket or trade that happens in an event goes in that event's "money", under its id. An event with no money is left out.
+- An amount the story gives stays as it is. A real one with no amount gets a plausible amount for the owner, the place and MONEY NOW: "amountFrom": "guess".
+- A payment the scene plainly implies (eating out, a taxi ride) counts; one someone else may have paid does not. Never invent a payment the scene doesn't show or imply.
+- Every move, trade and order says "occurrence": "new" when it happens in this message, "again" when the message only talks about one made before.
+- Already in MONEY NOW or INVESTMENTS NOW: its id as "already"; it is not paid again. A "changed" event's payment is that same payment, its amount corrected if it changed.
+- A card purchase goes on the card account; a refund is plus; paying the card off is a transfer from the bank.
+- No money is made up to cover a payment; a balance may go below zero.
+- Company money, family money and an inheritance still to come are not the owner's cash.
+- A new paid ${paid} has its payment as a move in the same event.
+- A cancelled order${delivery ? ' or delivery' : ''} moves no money; if it was already paid, its refund is a plus move.
+${delivery ? `- A delivery paid in cash at the door has no move. "tip" only where tipping is the custom; elsewhere 0.
+- A delivery from a shop not in DELIVERY SHOPS also gives "newShop" with 2 to 4 dishes: the one ordered and others it would have.
+` : ''}- A ticket or booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit.
+- People: only people the story has.
+
+LANGUAGE
+Banks, shops, merchants and items named as they would be in the owner's country. A name not in Korean gets "ko"; a Korean one gets none.
+
+ANSWER — one JSON object, nothing else:
+{ "events": [{ "id": an id from EVENTS,
+               "money": { "amountFrom": "story" | "guess",
+                          "moves": [{ "account": a bank account's last 4 digits or "broker:EUR", "amount": minus for money out, "currency", "who", "ko", "memo": what it was for, "kind": "card" | "transfer" | "deposit" | "cash" (taken out as cash), "fee": a transfer fee charged on top of "amount", on the sending move, "occurrence": "new" | "again", "already": "" }],
+                          "trades": [{ "kind": "buy" | "sell" | "dividend", "symbol", "name", "ko" and "currency" (a share not in INVESTMENTS NOW), "quantity", "price", "fee", "amount": dividend only, "occurrence": "new" | "again", "already": "" }],
+                          "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" (the default) | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD" or "", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
+                          "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }]${delivery ? `,
+                          "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients, like "beef"], "size": "regular" | "large", "set": [a set's sides or drinks] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "left": where the courier left it, or "", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery", "for": how many people, "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
+                                          "newShop": { "name": the same as "shop", "ko", "cuisine", "menu": [{ "name", "ko", "desc", "price", "top": true for its best-known dish, "pic" }] } or null }]` : ''} } }] }
+Also in "money" when the messages show them: "newAccount": { "kind": "checking" | "savings" | "credit", "name", "last4", "currency", "balance" } (an account or card the owner opens), "newCard": { "account": last4, "exp": "MM/YY" }${delivery ? `, "cart": { "shop", "items": [like a delivery's] } (dishes put in the basket and not ordered)` : ''}, "watch": [{ "symbol", "name", "currency", "note", "ko" }] (a share they start watching), "quotes": [{ "symbol", "date", "value", "evidence": exact words }] (a price the story gives), "stakes": [{ "company", "listed", "percent", "holder", "voter", "beneficiary", "restriction", "value", "currency", "evidence": exact words }] (a stake the story says they now hold).
+No money anywhere: "events": [].`;
+}
+// weather: the model writes the weather (no status line gives it, or the day moved on); tracker: a status line gives some
+export function lifeSystem({ weather = false, tracker = false } = {}) {
+    return `STAGE: life
+GOAL
+Write the everyday apps for a few new chat messages in a long role-play: the clock, files and health${weather ? ', and the weather' : ''}. The user opens them to see habits the character never puts into words. An app adds your JSON to the phone; you only write what is new.
+
+YOU GET
+- NEW MESSAGES: the messages read now, each with its number. ARCHIVE FOR THESE MESSAGES (sometimes): summary sections covering them.
+- EVENTS: the story events already read from these messages, with their ids, dates and times.
+- NOW: the story's newest moment. DAYS and STORY YEAR (sometimes).
+- LIFE NOW: the alarms, files and health days the phone already holds, with record ids.
+${weather && tracker ? `- WEATHER NOW: the date, time, place and weather from the chat's newest status line.\n` : ''}- OWNER, and sometimes OWNER PROFILE.
+
+LIFE
+- Only what these messages show. Guesses and memories of earlier days add nothing.
+- An alarm the owner sets, changes or switches on or off; a timer they set; a file they receive, save, scan or delete: under the event it happens in. Pictures the camera takes are not files.
+- An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".
+- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.
+- Health: a row for every story day these messages move into, up to NOW. A day these messages show goes in that event's "health"; a day already in LIFE NOW that the story now shows is rewritten the same way. Every other new day goes in the top-level "days", written freely from the character and their life (a lazy Sunday, a day on their feet, a sleepless night), still following that day's events.
+- A lasting change to their habits or body these messages state (they lost weight, quit coffee, drink more water, get up earlier now): that event's "usual" with only what changed. Nothing said: no "usual".
+${weather ? `- "weather": ${tracker ? 'WEATHER NOW stands for an owner in that scene (its date, time, place and weather); write the rest of the forecast to agree with it, "from": "chat". An owner elsewhere gets the weather where they are.' : 'what these messages describe, else the archive. If the story\'s day or place changed with nothing to go on, what fits the season and place, "from": "guess". If neither changed and nothing describes it: null (the app keeps the last weather).'}
+- With new weather, also write each saved city's "cond", "temp", "hi" and "lo".
+` : ''}
+LANGUAGE
+Labels, file names and folder names in the language the owner really uses on their phone. A text not in Korean gets "ko"; a Korean one gets none.
+
+ANSWER — one JSON object, nothing else:
+{ "events": [{ "id": an id from EVENTS,
+               "alarms": [{ "change": an id or "", "time", "label", "ko", "days": the weekdays it repeats or [], "date": "MM-DD" for a one-time alarm, "on", "wake", "then", "snooze", "snoozeCount", "sound" }],
+               "files": [{ "change": an id or "", "name", "kind", "folder": one of LIFE NOW's "folders" (downloads are "Downloads"), or a new one the story makes, "size": KB, "time", "from", "pages", "length": "M:SS" for audio or video, "tag": "red" | "orange" | "", "private", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],
+               "health": [${HEALTH_FIELDS}],
+               "timers": [{ "label", "ko", "sec" }],
+               "usual": { "weight": kg, "coffee": cups a day, "coffeeKind", "coffeeKo", "water": litres a day, "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": a week, "rest": resting heart rate, "height": cm } }],
+  "days": [${HEALTH_FIELDS}]${weather ? `,
+  "weather": { "place", "date", "time", "from": "chat" | "archive" | "guess", "cond": "clear" | "partly" | "cloudy" | "drizzle" | "rain" | "sleet" | "snow" | "fog" | "storm" | "wind", "temp", "hi", "lo", "line", "ko",
+               "hours": [6 of { "time", "cond", "temp", "rain": percent }] (the hours ahead when the sky will change, else []), "days": [10 of { "day", "cond", "lo", "hi", "rain": percent }],
+               "tiles": { "rain24": mm today, "rainNext": mm by tomorrow, "wind": km/h, "dir", "humidity", "feels": only when the story gives it },
+               "cities": [{ "name", "cond", "temp", "hi", "lo" }, a city newly saved (home, work, family, a trip) also "tz", "note": a few words, "added": true] } or null` : ''} }
+Leave out an event with nothing for these apps. Fewer is fine.`;
+}
+
 // ---- what the model sends back, cleaned: known keys only, text cut short, times in one shape
 
 // a country as the model may write it: "DE", "DEU", "Germany", "독일"

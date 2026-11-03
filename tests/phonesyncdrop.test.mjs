@@ -507,3 +507,17 @@ test('a Korean line that only says its original again is not drawn twice; a real
     assert.equal(p.notes[0].ko, '우유, 빵');
     assert.equal(p.events[0].ko, '');
 });
+
+test('reflection in two steps: each instruction names its step on its first line and holds only its own apps', () => {
+    const core = data.coreSystem(), money = data.moneySystem({ delivery: true }), life = data.lifeSystem({ weather: true, tracker: true });
+    assert.equal(core.split('\n')[0], 'STAGE: core');
+    assert.equal(money.split('\n')[0], 'STAGE: money');
+    assert.equal(life.split('\n')[0], 'STAGE: life');
+    assert.match(core, /"apps"/);
+    assert.match(core, /only money moves .* is still an event/);
+    for (const k of ['"moves"', '"alarms"', '"weather"', 'MONEY NOW', 'LIFE NOW']) assert.ok(!core.includes(k), `core holds ${k}`);
+    for (const k of ['"moves"', '"deliveries"', '"newShop"', '"stakes"']) assert.ok(money.includes(k), `money lacks ${k}`);
+    for (const k of ['"alarms"', '"health"', '"days"', '"weather"', '"cities"']) assert.ok(life.includes(k), `life lacks ${k}`);
+    assert.ok(!data.moneySystem().includes('"deliveries"'));
+    assert.ok(!data.lifeSystem().includes('"weather"'));
+});
