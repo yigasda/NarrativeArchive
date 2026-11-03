@@ -2602,6 +2602,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_ap3 .na_ap3_fdock .na_apf
 .na_ap3_fdock .na_ap3_log { max-height: 128px; overflow-y: auto; }
 body:not(.na_darkui) .na_ap3 .na_ap3_fdock .na_ly_ask { background: #FCF6F1; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.08); } /* on the window itself, the pill needs its own light (as 섹션 버전's) */
 .na_ap3_fdock .na_ap3_bar { position: static; margin: 10px 0 0; padding: 0 0 12px; background: none; }
+.na_ap3_fdock .na_ap3_bar .na_ap3_cancel { padding: 0 18px 0 0; justify-content: flex-start; text-align: left; } /* 돌아가기 글자를 위 줄 왼쪽 끝에 맞춤 (3.169.71) */
 
 /* health */
 .na_hl2 .na_health_body { gap: 14px; }
