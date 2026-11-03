@@ -2535,6 +2535,8 @@ body:is(.na_darkui, :not(.na_darkui)) .na_ap3 .na_ap3_chip.on { background: var(
 .na_ap3 .na_apf_foot small { flex: 1; min-width: 0; font-size: 12.5px; color: var(--na-sub, var(--na-dim)); }
 .na_ap3_raw { display: inline-flex !important; align-items: center; gap: 6px; margin: 0; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; background: var(--na-card2); color: var(--na-mute); }
 .na_ap3_raw input { position: absolute; opacity: 0; pointer-events: none; }
+body:is(.na_darkui, :not(.na_darkui)) .na_popup .na_ap3_raw > input[type="checkbox"]:not(#na_x) { position: absolute; width: 1px; height: 1px; min-width: 0; margin: 0; } /* takes no room in the chip (the checkbox sweep made it 18px wide, 3.169.70) */
+.na_ap3_raw { position: relative; }
 .na_ap3 .na_apf_foot .na_ap3_raw { flex: none; }
 .na_ap3_raw .na_ap3_tick { display: none; }
 .na_ap3_raw:has(input:checked) .na_ap3_tick { display: inline-flex; }
