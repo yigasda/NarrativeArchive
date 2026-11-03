@@ -543,14 +543,13 @@ export function compareScreen(p, now) {
     const st = avg(done.map(x => x.steps)), sl = avg(wk.map(sleepMin)), bed = avg(wk.map(x => lateMin(x.sleep))), runs = wk.filter(x => x.workout).length, last = [...lf.health.days].reverse().find(x => x.workout);
     const us = usualSleep(u), grey = ['#8a929d', '#f1f2f4'];
     const row = (dir, [color, bg], title, sub) => rows.push(`<div class="lf_hc lf_tr"><span style="background: ${bg}">${ax(dir, 18, color, 2.4)}</span><div><b>${title}</b><small>${sub}</small></div></div>`);
-    // how far from usual: about the same (grey, =), a little (grey, the arrow and how much), clearly (the app's colour)
-    const grade = (df, near, far, colors, words, sub, more = '') => {
+    // how far from usual: about the same (grey, =), a little (grey, the arrow), clearly (the app's colour)
+    const grade = (df, near, far, colors, words, sub) => {
         const k = Math.abs(df) <= near ? 0 : Math.abs(df) <= far ? 1 : 2, up = df > 0;
-        row(k ? (up ? 'up' : 'down') : 'eq', k === 2 ? colors : grey, k ? `${words[0]}${k === 1 ? '조금 ' : ''}${up ? words[1] : words[2]}` : words[3], `${sub}${k && more ? ` · ${more}` : ''}`);
+        row(k ? (up ? 'up' : 'down') : 'eq', k === 2 ? colors : grey, k ? `${words[0]}${k === 1 ? '조금 ' : ''}${up ? words[1] : words[2]}` : words[3], sub);
     };
-    const pct = r => `${r > 1 ? '+' : '−'}${Math.round(Math.abs(r - 1) * 100)}%`;
-    if (st !== null && u.steps) { const r = st / u.steps; grade(r - 1, 0.03, 0.15, [HC.steps, HB.steps], ['걸음이 평소보다 ', '많아요', '적어요', '걸음은 평소와 비슷해요'], `${n0(Math.round(st))} · 평소 ${n0(u.steps)}`, pct(r)); }
-    if (sl !== null && us) { const df = sl - us; grade(df, 10, 30, [HC.sleep, HB.sleep], ['수면이 평소보다 ', '길어요', '짧아요', '수면은 평소와 비슷해요'], `${dur(Math.round(sl))} · 평소 ${dur(us)}`, `${df > 0 ? '+' : '−'}${dur(Math.round(Math.abs(df)))}`); }
+    if (st !== null && u.steps) { const r = st / u.steps; grade(r - 1, 0.03, 0.15, [HC.steps, HB.steps], ['걸음이 평소보다 ', '많아요', '적어요', '걸음은 평소와 비슷해요'], `${n0(Math.round(st))} · 평소 ${n0(u.steps)}`); }
+    if (sl !== null && us) { const df = sl - us; grade(df, 10, 30, [HC.sleep, HB.sleep], ['수면이 평소보다 ', '길어요', '짧아요', '수면은 평소와 비슷해요'], `${dur(Math.round(sl))} · 평소 ${dur(us)}`); }
     if (bed !== null && u.sleep) { const df = bed - lateMin(u.sleep); if (Math.abs(df) > 40) row(df > 0 ? 'down' : 'up', [HC.sleep, HB.sleep], df > 0 ? '잠드는 시각이 늦어요' : '잠드는 시각이 빨라요', `${clockOf(p, Math.round(bed))} · 평소 ${clockOf(p, u.sleep)}`); }
     if (u.workouts) row(runs ? 'eq' : 'down', runs ? grey : [HC.run, HB.run], runs ? `운동은 이번 주 ${runs}회예요` : '운동이 끊겼어요', `이번 주 ${runs}회 · 평소 주 ${u.workouts}회${last ? ` · 마지막 ${esc(fmtDate(p, last.date, true))}` : ''}`);
     const rest = avg(wk.map(x => x.hr?.[0]));
