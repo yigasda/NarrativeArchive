@@ -16,13 +16,13 @@ import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
 import { APPS, AXB, AXB_C, busyHtml, setDate, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
-import { dropStretch, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
+import { dropStretch, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
 import { bankDisplayCurrency, bankAcct, bankHome, bankTx, fixedScreen, bankNotes, bankSend, bankStmt, txDoc, bankMore, cardView, orderView, passView, trackView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
 import { marksScreen, pageView, searchOne, searchScreen, tabsScreen } from './phoneweb.js';
-import { fillDelivery, fillLife } from './phonelife.js';
+import { fillDelivery, fillLife, fillShopMenus, menuWanted } from './phonelife.js';
 import { alarmScreen, setStory, cartScreen, cityList, cityScreen, clockScreen, compareScreen, dlvScreen, fileScreen, filesScreen, folderScreen, healthScreen, heartScreen, hereWidget, itemScreen, orderScreen, ordersScreen, payScreen, rateScreen, shopScreen2, sleepScreen, stepsScreen, timerScreen, waterScreen, weatherScreen, weightScreen, workScreen, worldScreen } from './phonelifeapps.js';
 import { openGlossary } from './translate.js';
 // 을 / 를 after a word: by its last syllable's final consonant (a Latin ending, like SNS, reads as 를)
@@ -208,7 +208,7 @@ export async function openPhone(who = null) {
         placeAsk();
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
         if (making && view === 'setremake') $root.find('.na_ph_setremake .ax_n').html(`${busyHtml} 다시 만드는 중`);
-        queueMicrotask(() => autoChart());
+        queueMicrotask(() => { autoChart(); autoMenu(); });
     };
     // 참고 로어북: each book with its switch; › opens its entries, each with its own (a book with some left out shows −)
     const LCK = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path class="na_ck_v" d="M5 12.5l4.5 4.5L19 7.5"/><path class="na_ck_p" d="M6 12h12"/></svg>';
@@ -248,8 +248,9 @@ export async function openPhone(who = null) {
         const r = p.syncLast;
         if (!r?.checked) return toastr.info('새로 읽을 대화가 없어요', '캐릭터 휴대폰');
         const head = `${r.checked}개 확인 · 남은 ${r.remaining}개`;
-        const tail = r.failed.length ? ` · 넣지 못한 일 ${r.failed.length}개` : '';
-        toastr[r.failed.length ? 'warning' : r.apps.length ? 'success' : 'info'](`${r.apps.length ? `${r.apps.join(' · ')}에 넣었어요` : '새로 넣은 건 없어요'}${tail}`, head);
+        const owed = p.sync?.owed?.money?.length || 0;
+        const tail = `${r.failed.length ? ` · 넣지 못한 일 ${r.failed.length}개` : ''}${owed ? ` · 결제 ${owed}개는 다음 반영 때 다시` : ''}`;
+        toastr[r.failed.length || owed ? 'warning' : r.apps.length ? 'success' : 'info'](`${r.apps.length ? `${r.apps.join(' · ')}에 넣었어요` : '새로 넣은 건 없어요'}${tail}`, head);
     };
     // Investment calls are explicit; navigation and unresolved quote conflicts never trigger them.
     const investRun = async checkStory => {
@@ -279,6 +280,16 @@ export async function openPhone(who = null) {
         finally { investing = false; if (phone() === p) drawPhone(true); }
     });
     let chartAttempt = '', phoneClosed = false;
+    // 동네 가게 메뉴: normally filled right after the delivery app; one that failed is asked once more when the app is opened
+    const menuTried = new Set();
+    const autoMenu = async () => {
+        if (phoneClosed || making || !/^(dlv|delivery|dshop:)/.test(view)) return;
+        const p = phone();
+        if (!(p?.delivery?.shops || []).some(menuWanted) || menuTried.has(owner)) return;
+        menuTried.add(owner);
+        try { if (await fillShopMenus(m, p) && !phoneClosed && phone() === p) drawPhone(true); }
+        catch (err) { if (!phoneClosed && phone() === p) toastr.error(String(err?.message || err), '배달 메뉴'); }
+    };
     const autoChart = async () => {
         if (phoneClosed || making || investing || !view.startsWith('stock:')) return;
         const p = phone(); if (!p?.investment) return;
@@ -787,6 +798,17 @@ export async function openPhone(who = null) {
         if (making || busy.sync || busy.fill || phone() !== p) return;
         try { const kept = await undoRound(m, p); drawPhone(); kept.length ? toastr.warning(`되돌렸어요. ${kept.join(', ')}은(는) 그 사이 바뀌어서 남겨뒀어요`, '캐릭터 휴대폰') : toastr.success('반영을 되돌렸어요', '캐릭터 휴대폰'); }
         catch (err) { toastr.error(String(err?.message || err), '되돌리기'); }
+    });
+    // 결제 다시 읽기: the money the last round couldn't put in, asked again and put on that round
+    $root.on('click', '.na_sync_money', async e => {
+        e.stopPropagation();
+        if (making || busy.sync || busy.fill) return toastr.info('다른 폰 작업이 끝난 뒤 눌러 주세요');
+        const p = phone();
+        try {
+            const r = await withSpinner($(e.currentTarget), '결제 읽는 중', () => retryMoney(m, owner));
+            if (phone() === p) drawPhone();
+            r.owed ? toastr.warning(`결제 ${r.paid}개를 넣었어요. ${r.owed}개는 다음 반영 때 다시 해요`, '캐릭터 휴대폰') : toastr.success(r.paid ? `결제 ${r.paid}개를 넣었어요` : '넣을 결제가 없었어요', '캐릭터 휴대폰');
+        } catch (err) { toastr.error(String(err?.message || err), '결제 다시 읽기'); }
     });
     $root.on('click', '.na_sync_forget', async e => {
         e.stopPropagation();

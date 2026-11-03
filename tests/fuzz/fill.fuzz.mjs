@@ -80,6 +80,7 @@ const P = [
     ['parseLife', raw => life.parseLife(raw, null, '12-29'), LIFE],
     ['parseDelivery', raw => life.parseDelivery(raw, [{ last4: '1111' }], [{ id: 't1', amount: -9, account: '1111' }], '12-30 21:00'), DLV],
     ['parseMoney', raw => data.parseMoney(raw, 'DE'), MONEY],
+    ['nearbyShops', raw => life.nearbyShops(raw, [{ name: 'Pasta Nostra' }], false), { nearby: [{ name: 'Sushi Ya', ko: '스시야', cuisine: 'Sushi', dish: { name: 'Lachs Maki', ko: '연어 마키', price: 8.5, pic: { base: 'sushi', with: ['salmon'] } } }, { name: 'Pasta Nostra', dish: { name: 'x' } }] }],
 ];
 for (const [name, fn, base] of P) {
     tryParse(name, fn, base, ['(base)'], null);

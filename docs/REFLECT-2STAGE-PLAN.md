@@ -1,10 +1,23 @@
 # 반영 2단계 나누기: 상세 계획서 (인수인계용)
 
+> **메인 3.169.95에 들어갔어요.** run33~36(Vertex)으로 비교했어요. 품질은 같거나 B가 나았어요(사진·메모 지어내기 없음, 스카프 합계, 걸음 수, 인원, 메일). 입력 토큰은 돈 라운드에서 +31~54%였어요. 소망이 품질 우선으로 정했어요. 투자는 따로 `invest` 표시로, 돈 요청은 그때만 투자 자료를 받아요.
+
 반영 담당 세션이 맡은 작업이에요. 이 문서만 읽고 이어서 할 수 있게 썼어요.
 설계는 2026-11-03에 소망과 테스트 세션이 확정했어요. 코드는 아직 안 바꿨어요.
 
 - 시작 기준: 메인 3.169.89 (`0f3ad7d`), 작업 브랜치 `ccr-7895cb93-30ms96`
 - 진행 규칙: 소망이 "ㄱㄱ"를 주면 작업 2번(지시문 나누기)부터 시작해요. 메인은 허락받고 올려요.
+
+> **설계 변경 (2026-11-03, 소망 확정): 생활은 core에 남기고 돈만 떼요.**
+> 처음 설계는 life도 따로 떼는 거였어요. 그런데 날짜는 거의 매 반영마다 넘어가서(run28~32) life 요청이 거의 매번 가요.
+> 게다가 life는 본문 전체가 필요해서(테스트 세션 1번), 본문이 core와 life에 두 번 들어가요. 그러면 평소 반영이 지금보다 무거워져요.
+> 그래서 생활(알람·타이머·파일·건강·날씨)은 core에 그대로 두고, **돈(은행·카드·주문·티켓·투자·배달)만 2단계로 떼요.**
+> 아래에서 "life 요청", "생활 다시 읽기", `s.owed.life`, `STAGE: life`가 나오면 **없는 걸로** 읽어요. 빚은 `s.owed.money`만 있어요.
+>
+> 실측 (3.169.90 작업 브랜치): 옛 반영 3,813 · core(생활+날씨) 2,626 · core(생활, 날씨 없음) 2,318 · core(생활 없는 폰) 1,562 · money(배달 포함) 1,582 · money(배달 없음) 1,201토큰.
+> 돈 없는 반영은 약 1,200토큰 가벼워지고, 돈 있는 반영은 core + money = 약 4,200(옛보다 +400)이에요. money 머리말(GOAL·YOU GET)을 줄이면 더 내려갈 수 있어요.
+> run33(Vertex, 라운드 1 #60~#67): core가 장바구니(#63, 이벤트 자체 없음)·주가(#65)·관심 종목(#66)에 money를 안 붙였어요. 표시 정의가 결제·주문·거래만 말해서였어요. 그래서 정의를 은행·카드·주문·티켓·배달 앱(장바구니 포함)·증권(거래·주가·관심 종목·지분) 전부로 넓혔어요(core 2,626 → 2,667). 돈 단계 자체는 id를 그대로 썼고 적금은 B가 맞았어요(A는 같은 돈을 한 줄 더 넣음).
+> 코드: `coreSystem(opts)`는 `updateSystem({ ...opts, money: false, split: true })`예요. `split`이면 첫 줄 `STAGE: core`, money 표시(`"apps": [] or ["money"]`), 돈만 오가는 장면도 이벤트라는 줄이 붙어요. `moneySystem({ delivery })`는 따로 있어요.
 
 ---
 
@@ -164,19 +177,19 @@
 ## 6. 작업 순서
 
 1. ~~설계 확정~~ (끝)
-2. **지시문 셋으로 나누기**
+2. **지시문 나누기** — 끝 (설계 변경 뒤: `coreSystem`(생활 포함, money 표시)과 `moneySystem`. 아직 `updatePhone`에 연결 안 함. 실측은 맨 위 상자)
    - `coreSystem()`, `moneySystem({ delivery, invest })`, `lifeSystem({ weather, tracker })`
    - 문장은 지금 것을 옮겨요. 새로 쓰는 건 최소로 하고, 3장의 새 문장 두 개(apps 표시, 돈만 오가는 일)만 추가해요.
    - 각 지시문 첫 줄에 `STAGE: core|money|life`
    - 길이 확인: `$S/plen.mjs`처럼 셋 각각 재기
    - 채우기 지시문은 안 건드려요.
-3. **`updatePhone` 바꾸기**
+3. **`updatePhone` 바꾸기** — 끝 (3.169.90 작업 브랜치 `5aaa382`). `moneyStage()`(돈 단계), `split`(돈 앱 있는 폰만 두 단계), `wants`(core의 money 표시, core 답에 money가 남아 있어도 표시로 봄), `s.owed.money`(빚, `{ id, at, date, time, tries }`, 2번이면 건너뜀), `byEvent()`, 되돌리기 스냅샷·journal·`restoreRounds`에 owed, `retryMoney()`/`canRetryMoney()`(같은 라운드에 붙임), 반영 알림에 넘긴 결제 수. **남은 것: 설정 > 반영 화면의 "결제 다시 읽기" 버튼 줄**(`src/phonesyncui.js`의 되돌리기 버튼 옆, 창 HTML이라 소망 허락·css 세션 알림 후)
    - core 호출 → 이벤트 처리(돈·생활 빼고) → 2단계 조건 계산 → money/life를 `Promise.all`로 동시에
    - 2단계 결과를 이벤트 id별로 `applyMoney`/`applyLife`, `applyDays`/`applyWeather`
    - 빚(`s.owed`), 시도 횟수, 다시 읽기 버튼, 실패 알림
    - `u.sync` 스냅샷에 `owed` 추가, journal 갱신, `restoreRounds`의 같은 id 합치기
    - 2단계 전후에도 채팅·폰 바뀜 검사
-4. **테스트·퍼즈·화면**
+4. **테스트·퍼즈·화면** — 끝 (292 통과, 퍼즈 problems 0, 화면 82개. 테스트 가짜 모델은 `STAGE: money`면 `T.moneyAnswers`를, 없으면 core 답의 money를 그 이벤트 id로 돌려줘요)
    - `node --test tests/*.test.mjs`, `node tests/fuzz/reflect.fuzz.mjs`, `node tests/fuzz/fill.fuzz.mjs` (problems 0)
    - 꼭 넣을 테스트
      - 앞 라운드 이벤트의 돈이 다음 라운드에 들어온 뒤 그 이벤트를 빼면 문자와 돈이 다 빠짐

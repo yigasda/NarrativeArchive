@@ -14,7 +14,7 @@ const map = {
     './phoneprofile.js': href('phoneprofile.js'),
     './phonestory.js': encoded(`export const phoneChatScope=()=>globalThis.__dropTest.scope||'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-10-26';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
-    './ai.js': encoded(`export const askDraft=async(input,o)=>{globalThis.__dropTest.sys=o.system;globalThis.__dropTest.input=input;return JSON.stringify(globalThis.__dropTest.answers.shift());};`),
+    './ai.js': encoded(`export const askDraft=async(input,o)=>{const T=globalThis.__dropTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;return typeof a==='string'?a:JSON.stringify(a);};`),
     './core.js': encoded(`export const ctx=()=>({chat:globalThis.__dropTest.chat,chatMetadata:globalThis.__dropTest.meta,loadWorldInfo:async()=>null,characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=()=>[];export const chatRows=()=>globalThis.__dropTest.chat.map((x,i)=>({index:i,user:x.is_user,hidden:!!x.is_system,text:'[#'+i+'] '+x.name+': '+x.mes}));`),
@@ -221,10 +221,13 @@ test('after the update, a phone already read in its branch, a renamed chat, or a
     }
 });
 
-test('a phone without the everyday or delivery apps gets the same request as before', async () => {
+test('a phone with a bank but without the everyday or delivery apps: core then money, each with only its own', async () => {
     const c = await bookCase();
-    assert.equal(T.sys, data.AI_SYS_PHONE_UPDATE);
+    assert.equal(T.sys, data.coreSystem());
     assert.ok(!T.sys.includes('LIFE') && !T.sys.includes('deliveries'));
+    assert.ok(!T.input.includes('[MONEY NOW]'));
+    assert.equal(T.moneySys, data.moneySystem());
+    assert.ok(T.moneyInput.includes('[MONEY NOW]') && T.moneyInput.includes('[EVENTS]'));
 });
 
 // the everyday apps and the delivery app, through a whole reflection: in, 되돌리기, and 빼기
@@ -251,8 +254,9 @@ const lifeAnswer = () => ({ now: '10-26 22:00', days: [{ date: '10-26', sleep: '
 test('the everyday and delivery apps through a reflection: asked for, put in, and taken back by 되돌리기', async () => {
     const c = lifeSetup();
     await run(c.m, lifeAnswer());
-    assert.ok(T.sys.includes('LIFE\n') && T.sys.includes('"deliveries"') && T.sys.includes('"weather"'));
-    assert.ok(T.input.includes('[LIFE NOW]'));
+    assert.ok(T.sys.includes('LIFE\n') && !T.sys.includes('"deliveries"') && T.sys.includes('"weather"'));
+    assert.ok(T.input.includes('[LIFE NOW]') && !T.input.includes('[DELIVERY SHOPS]'));
+    assert.ok(T.moneySys.includes('"deliveries"') && T.moneyInput.includes('[DELIVERY SHOPS]'));
     const L = c.p.life;
     assert.deepEqual(L.clock.alarms.map(a => a.label), ['Aufstehen', 'Flughafen']);
     assert.equal(L.health.days.length, 1);
@@ -508,6 +512,141 @@ test('a Korean line that only says its original again is not drawn twice; a real
     assert.equal(p.events[0].ko, '');
 });
 
+test('reflection in two steps: core keeps the life apps and marks money; money holds the money only; each names its step', () => {
+    const core = data.coreSystem({ life: true, weather: true, tracker: true, invest: true }), money = data.moneySystem({ delivery: true, invest: true });
+    assert.equal(core.split('\n')[0], 'STAGE: core');
+    assert.equal(money.split('\n')[0], 'STAGE: money');
+    assert.match(core, /"apps": \[\] or \["money", "invest"\]/);
+    assert.match(core, /only touches these apps .*a share price mentioned.* is still an event/);
+    assert.match(core, /its basket too/);
+    assert.match(core, /a share price the story gives, a share they start watching, a stake/);
+    for (const k of ['"alarms"', '"health"', '"days"', '"weather"', '"cities"', 'LIFE NOW']) assert.ok(core.includes(k), `core lacks ${k}`);
+    for (const k of ['"moves"', '"deliveries"', 'MONEY NOW', 'a payment in them is that same payment']) assert.ok(!core.includes(k), `core holds ${k}`);
+    for (const k of ['"moves"', '"deliveries"', '"newShop"', '"stakes"']) assert.ok(money.includes(k), `money lacks ${k}`);
+    assert.ok(!data.moneySystem().includes('"deliveries"'));
+    // the brokerage only when asked: a meal or a taxi doesn't carry trades, prices or stakes
+    for (const k of ['"trades"', 'INVESTMENTS NOW', '"stakes"', 'broker']) assert.ok(!data.moneySystem({ delivery: true }).includes(k), `money without invest holds ${k}`);
+    assert.ok(!data.coreSystem({ life: true }).includes('"invest"'));
+    // the one-step instructions are unchanged
+    assert.ok(!data.updateSystem({ money: true }).startsWith('STAGE'));
+    assert.ok(!data.updateSystem({ money: true }).includes('"apps"'));
+});
+
+// ---- 반영 in two steps: money asked after core, owed when it can't go in (docs/REFLECT-2STAGE-PLAN.md)
+function taxiSetup() {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'I paid the taxi 12000 won'), say('Ren', 'thanks')]);
+    T.moneyAnswers = []; T.moneyCalls = 0; T.lastCore = null;
+    return c;
+}
+const taxiCore = () => ({ now: '10-26 13:00', events: [{ id: 'taxi', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '12:40', apps: ['money'],
+    phone: { threads: [{ with: 'Mara', messages: [msg('택시비 냈어', '10-26 12:41')] }] } }] });
+const taxiPaid = { events: [{ id: 'taxi', money: { moves: [{ account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }] } }] };
+const nextRound = async (c, words, answer = { now: '10-26 15:00', events: [] }) => { T.chat.push(say('Mara', words)); await run(c.m, answer); };
+
+test('a scene where only money moves: core marks it, the money step pays it, the event keeps both', async () => {
+    const c = taxiSetup();
+    T.moneyAnswers.push(taxiPaid);
+    await run(c.m, taxiCore());
+    assert.equal(T.moneyCalls, 1);
+    assert.match(T.moneyInput, /- taxi: #2 10-26 12:40 택시 \("paid the taxi"\)/);
+    assert.match(T.moneyInput, /paid the taxi/);
+    assert.equal(c.bank(), 88000);
+    assert.deepEqual(texts(c.p), ['택시비 냈어']);
+    assert.ok(c.p.sync.events.taxi.effects.some(x => x.path === 'money.tx'));
+    assert.deepEqual(c.p.sync.owed.money, []);
+});
+
+test('the money step failing: core\'s texts stay, the money is owed and asked again next round though nothing is marked; 되돌리기 owes it again', async () => {
+    const c = taxiSetup();
+    T.moneyAnswers.push('not json at all');
+    await run(c.m, taxiCore());
+    assert.deepEqual(texts(c.p), ['택시비 냈어']);
+    assert.equal(c.bank(), 100000);
+    assert.deepEqual(c.p.sync.owed.money.map(x => [x.id, x.tries]), [['taxi', 1]]);
+    assert.ok(c.p.syncLast.notes.some(n => n.includes('다음 반영 때 다시')));
+    // the next round marks nothing; the owed money is asked for all the same, and goes on the same event
+    T.moneyAnswers.push(taxiPaid);
+    await nextRound(c, 'see you tomorrow');
+    assert.equal(T.moneyCalls, 2);
+    assert.equal(c.bank(), 88000);
+    assert.deepEqual(c.p.sync.owed.money, []);
+    assert.ok(c.p.sync.events.taxi.effects.some(x => x.path === 'money.tx'));
+    // 되돌리기 of that round: the payment goes, and it is owed again (not lost); core's texts from the round before stay
+    await data.undoRound(c.m, c.p);
+    assert.equal(c.bank(), 100000);
+    assert.deepEqual(c.p.sync.owed.money.map(x => [x.id, x.tries]), [['taxi', 1]]);
+    assert.deepEqual(texts(c.p), ['택시비 냈어']);
+});
+
+test('money owed twice in a row is skipped and said so; a money answer for an event core never gave is left out', async () => {
+    const c = taxiSetup();
+    T.moneyAnswers.push('broken', { events: [{ id: 'lunch', money: { moves: [{ account: '1111', amount: -9000, who: 'Kantine', occurrence: 'new' }] } }] });
+    await run(c.m, taxiCore());
+    await nextRound(c, 'see you tomorrow');
+    assert.deepEqual(c.p.sync.owed.money, []);
+    assert.equal(c.bank(), 100000);
+    assert.ok(c.p.syncLast.notes.some(n => n.includes('모르는 이벤트(lunch)')));
+    // the second round's answer had nothing for taxi: no money, nothing owed (only a failed step is owed)
+});
+
+test('money that fails two rounds running is skipped, with a note', async () => {
+    const c = taxiSetup();
+    T.moneyAnswers.push('broken', 'broken again');
+    await run(c.m, taxiCore());
+    await nextRound(c, 'see you tomorrow');
+    assert.deepEqual(c.p.sync.owed.money, []);
+    assert.ok(c.p.syncLast.notes.some(n => n.includes('두 번 못 넣어서 건너뛰었어요')));
+    assert.deepEqual(texts(c.p), ['택시비 냈어']);
+});
+
+test('빼기 of an event whose money came a round later takes its texts and its payment out together', async () => {
+    const c = taxiSetup();
+    T.moneyAnswers.push('broken', taxiPaid);
+    await run(c.m, taxiCore());
+    await nextRound(c, 'see you tomorrow');
+    assert.equal(c.bank(), 88000);
+    // the taxi message is deleted from the chat: its stretch can be taken out
+    T.chat.splice(2, 1);
+    await nextRound(c, 'good night');
+    const d = c.p.sync.dropped;
+    assert.equal(d.length, 1);
+    assert.deepEqual(d[0].events, ['taxi']);
+    await data.dropStretch(c.m, c.p, 0);
+    assert.deepEqual(texts(c.p), []);
+    assert.equal(c.bank(), 100000);
+    assert.ok(!c.p.money.tx.some(t => t.who === '택시'));
+});
+
+test('복구 of a round whose money step failed brings back what it owes', async () => {
+    const { journalWrite } = await import('../src/phonesync.js'); journalWrite('test', []);
+    const c = taxiSetup();
+    const was = structuredClone(c.p);
+    T.moneyAnswers.push('broken');
+    await run(c.m, taxiCore());
+    c.m.phones.ren = was;
+    const perf = globalThis.performance; globalThis.performance = { timeOrigin: Date.now() + 1e6 };
+    try { assert.equal(await data.restoreRounds(c.m, 'test'), 1); } finally { globalThis.performance = perf; }
+    assert.deepEqual(was.sync.owed.money.map(x => x.id), ['taxi']);
+    assert.deepEqual(texts(was), ['택시비 냈어']);
+});
+
+test('결제 다시 읽기 puts the owed money on the same round: 되돌리기 then takes the texts and the payment back together', async () => {
+    const c = taxiSetup();
+    T.moneyAnswers.push('broken');
+    await run(c.m, taxiCore());
+    assert.equal(data.canRetryMoney(c.p), true);
+    T.moneyAnswers.push(taxiPaid);
+    const r = await data.retryMoney(c.m, 'Ren');
+    assert.equal(r.paid, 1);
+    assert.equal(c.bank(), 88000);
+    assert.deepEqual(c.p.sync.owed.money, []);
+    assert.equal(data.canRetryMoney(c.p), false);
+    await data.undoRound(c.m, c.p);
+    assert.equal(c.bank(), 100000);
+    assert.deepEqual(texts(c.p), []);
+    assert.deepEqual(c.p.sync.owed.money, []);
+});
+
 test('run35: a deleted text is not matched to an emoji-only text, nor to a short one inside it; the very same emoji is', async () => {
     const c = setup([say('Ren', 'start'), say('Mara', 'hi'), say('Mara', 'thumbs')]);
     await run(c.m, { now: '10-26 15:00', events: [{ id: 'thumbs', at: 2, quote: 'thumbs', summary: '답장', date: '10-26', time: '15:00',
@@ -522,4 +661,15 @@ test('run35: a deleted text is not matched to an emoji-only text, nor to a short
     // the very same 👍 is the one deleted
     assert.equal(ms.filter(x => x.text === '👍').length, 1);
     assert.equal(ms.find(x => x.text === '👍').deleted, true);
+});
+
+test('run35: a plan written as called off with the same plan new on another day is one plan moved', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'dinner saturday 7?'), say('Ren', 'sure')]);
+    await run(c.m, { now: '02-01 13:00', events: [{ id: 'plan', at: 2, quote: 'dinner saturday', summary: '약속', date: '02-01', time: '12:00', phone: { events: [{ title: '루미 저녁', date: '02-06', time: '19:00' }] } }] });
+    T.chat.push(say('Mara', 'can we do sunday instead'));
+    await run(c.m, { now: '02-02 09:00', events: [{ id: 'move', at: 3, quote: 'sunday instead', summary: '옮김', date: '02-02', time: '08:00',
+        phone: { events: [{ title: '루미 저녁', date: '02-06', cancelled: true }, { title: '루미에서 저녁', date: '02-07', time: '19:00' }] } }] });
+    const live = c.p.events.filter(e => !e.cancelled);
+    assert.equal(c.p.events.length, 1);
+    assert.deepEqual(live.map(e => [e.date, e.time]), [['02-07', '19:00']]);
 });
