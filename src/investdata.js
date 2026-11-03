@@ -37,7 +37,7 @@ CASH AND TRADES
 
 PRICES
 - Each share has one key, "EXCHANGE:CODE", and one trading currency.
-- "quotes": market prices, several across the last month for each share held, DATE included.
+- "quotes": market prices for each share held: several across the last month, then about one a week back three months, DATE included.
 - A price the story gives is "source": "story", with the exact words as "evidence" and its time if given. Every other price is "guess". The price someone paid is not a market quote.
 - "fx": the rate on DATE from each other currency to "base", and on each trade date in a foreign currency.
 
@@ -54,7 +54,7 @@ ANSWER — one JSON object, nothing else:
 "stakes":[{"company":"name","listed":null,"percent":null,"holder":"","voter":"","beneficiary":"","restriction":"","value":null,"currency":"EUR","evidence":"exact words from the story"}],
 "quotes":[{"symbol":"EXCHANGE:CODE","date":"YYYY-MM-DD","time":"","value":100,"source":"guess|story","evidence":""}],
 "fx":[{"from":"USD","to":"EUR","date":"YYYY-MM-DD","time":"","value":0.9,"source":"guess|story","evidence":""}]}
-At most 10 shares, 30 trades, 8 watched, 8 stakes and 60 quotes. Fewer is fine; cash may stay uninvested. Plain JSON numbers, without separators.`;
+At most 10 shares, 30 trades, 8 watched, 8 stakes and 150 quotes. Fewer is fine; cash may stay uninvested. Plain JSON numbers, without separators.`;
 // 투자 새로 만들기: the same account currencies, everything else made again
 const INVEST_REBUILD = `
 
@@ -115,7 +115,7 @@ function ingestQuotes(m, raw, input, date, securities) {
         if (!story && existing?.rows.length) return;
         addPrice(m, key, x.date, { value: x.value, time: /^([01]\d|2[0-3]):[0-5]\d$/.test(x.time || '') ? x.time : '', source: story ? 'story' : 'guess', ref: evidence });
     };
-    for (const x of list(raw.quotes).slice(0, 60)) if (allowed.has(x.symbol)) push(`STOCK:${x.symbol}`, x);
+    for (const x of list(raw.quotes).slice(0, 150)) if (allowed.has(x.symbol)) push(`STOCK:${x.symbol}`, x);
     for (const x of list(raw.fx).slice(0, 30)) if (currency(x.from) && currency(x.to) && x.from !== x.to) push(`FX:${x.from}/${x.to}`, x);
 }
 export const fillInvestment = (m, p, date, opts = {}) => exclusive('fill', () => makeInvestment(m, p, date, opts));
@@ -334,7 +334,8 @@ ANSWER — one JSON object, nothing else:
 export function chartDates(m, inv, symbol, range = '1m') {
     if (!validDate(inv?.date) || !inv.securities.some(s=>s.symbol === symbol)) throw new Error('종목과 시세 날짜를 확인해 주세요');
     const end = Date.parse(inv.date), day = 864e5;
-    const oldest = Object.keys(finance(m).prices[`STOCK:${symbol}`] || {}).filter(d=>validDate(d) && d <= inv.date).sort()[0];
+    // "all" reaches back to the oldest saved quote or the first trade in it, whichever is older (bought months ago: the chart shows since then)
+    const oldest = [...Object.keys(finance(m).prices[`STOCK:${symbol}`] || {}), ...(inv.trades || []).filter(t=>t.symbol === symbol).map(t=>t.date)].filter(d=>validDate(d) && d <= inv.date).sort()[0];
     const span = range === '1w' ? 7 : range === '3m' ? 92 : range === 'all' ? Math.min(366,Math.max(31,oldest ? (end-Date.parse(oldest))/day : 31)) : 31;
     const dates = [];
     for(let t=end-span*day;t<=end;t+=day) { const d=new Date(t); if(d.getUTCDay()!==0 && d.getUTCDay()!==6) dates.push(d.toISOString().slice(0,10)); }

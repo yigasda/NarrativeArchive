@@ -231,7 +231,7 @@ test('chart backfill preserves saved anchors, executions and FX and reuses the c
  const before=structuredClone(m.finance),trades=JSON.stringify(p.investment.trades), dates=dataMod.chartDates(m,p.investment,'NYSE:X','1m');
  assert.ok(dates.length>=20 && dates.length<=24);assert.ok(dates.every(d=>d<='2026-10-30' && d>='2026-09-29'));
  for(const range of ['1w','3m','all'])assert.ok(dataMod.chartDates(m,p.investment,'NYSE:X',range).length<=24);
- const original=ui.investmentScreen(m,p,'10-30','stock','NYSE:X',false);assert.match(original,/선택 기간의 기록 부족/);assert.doesNotMatch(original,/iv_chartfill/);
+ const original=ui.investmentScreen(m,p,'10-30','stock','NYSE:X',false);assert.match(original,/선택 기간의 기록 부족|aria-label="일봉 차트"/);assert.doesNotMatch(original,/iv_chartfill/);
  globalThis.__investTest.answer={quotes:[...dates.map((date,i)=>({symbol:'NYSE:X',date,value:100+i/2,source:'guess'})),{symbol:'NYSE:X',date:'2026-06-25',value:1,source:'story',evidence:m.text},{symbol:'OTHER',date:dates[0],value:1},{symbol:'NYSE:X',date:'2026-11-02',value:999}],fx:[{from:'USD',to:'EUR',date:'2026-10-30',value:9}]};
  assert.equal(await dataMod.fillChartHistory(m,p,'NYSE:X','1m'),dates.length-1);
  assert.deepEqual(m.finance.prices['STOCK:NYSE:X']['2026-10-30'],before.prices['STOCK:NYSE:X']['2026-10-30']);assert.deepEqual(m.finance.prices['STOCK:NYSE:X']['2026-06-25'],before.prices['STOCK:NYSE:X']['2026-06-25']);
@@ -489,4 +489,11 @@ test('bank statement and slips across New Year: December read in January is last
 test('an investment or wealth answer that writes its numbers as text, codes in lower case, dates with slashes still goes in', async () => {
  const {readWealth}=await import(wealthURL);
  assert.deepEqual(readWealth(JSON.stringify({currency:'eur',deposits:{min:'10,000',max:'50000'},investments:{min:0,max:'1.200,50'},basis:'x'})).deposits,{min:10000,max:50000});
+});
+test('the stock chart draws the price paid on a trade day, and "all" reaches back to the first trade',async()=>{
+ const {m,p}=setup();await dataMod.fillInvestment(m,p,'2026-10-30');
+ const sym=p.investment.securities[0].symbol;
+ p.investment.trades.push({id:'old-buy',kind:'buy',symbol:sym,currency:p.investment.securities[0].currency,date:'2026-05-04',quantity:1,price:82,fee:0});
+ const all=dataMod.chartDates(m,p.investment,sym,'all');assert.ok(all[0]<='2026-05-05');
+ const html=ui.investmentScreen(m,p,'10-30','stock',`${sym}~all`,false);assert.match(html,/aria-label="일봉 차트"/);assert.match(html,/82[.,]00/);
 });
