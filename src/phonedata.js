@@ -167,8 +167,7 @@ WHERE IT COMES FROM
 - "quote": a few words copied exactly as written in that message or section, not reworded.
 - "date" and "time": when it happens in that message ("MM-DD", "HH:MM" if known). A plan for later happens when it is made; its later day goes only on the calendar item.
 - "now": the moment of the newest message, never a time something is only planned for.
-- "ownerCity": only when these messages take the owner to another city (a trip, a move, coming home): { "city": in English, "names": [each name the messages and status lines write it as, exactly, then its English and Korean names], "tz": its time zone like "Asia/Seoul" }; else null.
-- "elsewhere": only people other than the owner whom these messages put in another city (a trip, a move, coming home): [{ "name", "city": in English, "names": [as for ownerCity], "tz" }]; else [].
+- "moved": only people these messages put in another city (a trip, a move, coming home), the owner too: [{ "name": as in OWNER or the messages, "city": in English, "names": [each name the messages and status lines write it as, exactly, then its English and Korean names], "tz": its time zone like "Asia/Seoul" }]; else [].
 ${zone ? `- "statusCity": the newest status line in these messages is from a scene the app can't place. Whose clock does it show? A city or person in OWNER'S CLOCK, "owner" for the owner's own, another city as { "city": in English, "tz" }, or "" when the messages don't say.\n` : ''}${split ? `- "apps": "money" when the event has anything for the bank, cards, orders, tickets or the delivery app (its basket too)${invest ? '; "invest" for the brokerage (a trade, a share price the story gives, a share they start watching, a stake)' : ''}; else []. When unsure, include it.\n` : ''}${life ? `
 LIFE
 - An alarm the owner sets, changes or switches on or off in these messages; a timer they set; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
@@ -197,7 +196,7 @@ ${delivery ? `- A delivery paid in cash at the door has no move. "tip" only wher
 ${PHONE_STYLE.replace('; "now" is the newest moment of the story.', '.')}
 
 ANSWER — one JSON object, nothing else:
-{ "now": "MM-DD HH:MM", "ownerCity": null, "elsewhere": [],${zone ? ' "statusCity": "",' : ''}
+{ "now": "MM-DD HH:MM", "moved": [],${zone ? ' "statusCity": "",' : ''}
   "events": [{ "id": an id from EVENTS ON THE PHONE, or a short new tag like "berlin-flight", "at": 123, "quote": "exact words",
                "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line",${split ? ` "apps": [] or ["money"${invest ? ', "invest"' : ''}],` : ''}
                "phone": { only the app items this event puts on the phone }${money ? `,
@@ -1142,11 +1141,12 @@ async function updatePhone(m, owner) {
         // ahead, past the half year the dates alone can tell: half a year later)
         // the scene the phone couldn't place, as the model read it: that city's clock for this round only (not kept for the
         // place: a "cafe" may be in either city next time)
-        // the owner moved to another city in these messages: their clock is that city's from here on
-        const ownerWent = ownerMoved(p, raw.ownerCity);
-        // someone else now in another city (a trip, a move): their row, from here on (read first: a status line's scene
-        // named by that person, "Mara", is where these messages put her)
-        const ownerWentOthers = peopleMoved(p, raw.elsewhere, round.rows.map(r => r.text).join('\n'));
+        // who these messages put in another city ("moved", the owner too): their rows from here on, the owner's clock that
+        // city's (read first: a status line's scene named by that person, "Mara", is where these messages put her)
+        // (an older answer's "ownerCity" and "elsewhere" are read the same)
+        const went = [...arr(raw.moved), ...arr(raw.elsewhere)], isOwner = x => ['owner', 'the owner'].includes(nameKey(x?.name)) || samePerson(x?.name, p.owner);
+        const ownerWent = ownerMoved(p, went.find(isOwner) || raw.ownerCity);
+        const ownerWentOthers = peopleMoved(p, went.filter(x => !isOwner(x)), round.rows.map(r => r.text).join('\n'));
         let named = null;
         if (askZone && (typeof raw.statusCity === 'string' || raw.statusCity && typeof raw.statusCity === 'object')) named = zoneNamed(p, raw.statusCity, m);
         if (ownerWent || ownerWentOthers || named) { st = statusMoment(p, roundEnd, named, m); if (tracker) sceneOwn = sceneHome(p, tracker.place, m, named); }

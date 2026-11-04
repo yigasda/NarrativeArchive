@@ -548,7 +548,7 @@ test('the reflection says someone else is now in another city: their row moves t
     await run(c.m, { now: '10-26 13:00', elsewhere: [{ name: 'Mara', city: 'Frankfurt am Main', names: ['Frankfurt', '프랑크푸르트'], tz: 'Europe/Berlin' }], events: [] });
     const mara = c.p.where.people.find(x => x.name === 'Mara');
     assert.deepEqual([mara.city, mara.tz, mara.lives], ['Frankfurt am Main', 'Europe/Berlin', 'KR']);
-    assert.ok(T.sys.includes('"elsewhere"'));
+    assert.ok(T.sys.includes('"moved"'));
 });
 
 test('a scene the phone asks about (not yet placed) goes to the model with its place and weather only, no hour', async () => {
@@ -610,6 +610,18 @@ test('elsewhere takes only people (not "everyone" or "the courier") and keeps th
     const d = setup([say('Ren', 'a'), say('Mara', 'b'), say('Ren', 'landed in Bangkok')]); seoulPhone(d);
     await withTrackers([trk(2, '13:00', '방콕 · 호텔', '맑음 31°C')], async () => run(d.m, { now: '10-26 13:00', ownerCity: { city: 'Bangkok', names: ['방콕', 'Bangkok'], tz: 'Asia/Bangkok' }, weather: { place: '방콕', cond: 'clear', temp: 31, from: 'chat' }, events: [] }));
     assert.equal(d.p.life.weather.here.place, '방콕');
+});
+
+test('"moved": one list for everyone these messages put in another city, the owner by name or as "owner"', async () => {
+    for (const who of ['Ren', 'owner']) {
+        const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Ren', 'we both landed in Rome')]);
+        c.p.now = '10-26 10:00'; c.p.year = 2026;
+        c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', names: ['Frankfurt am Main'], lives: 'DE', tz: 'Europe/Berlin' }, { name: 'Mara', city: 'Seoul', names: ['Seoul'], lives: 'KR', tz: 'Asia/Seoul' }] };
+        await run(c.m, { now: '10-26 13:00', moved: [{ name: who, city: 'Rome', names: ['Rome', '로마'], tz: 'Europe/Rome' }, { name: 'Mara', city: 'Rome', names: ['Rome'], tz: 'Europe/Rome' }], events: [] });
+        const by = Object.fromEntries(c.p.where.people.map(x => [x.name, [x.city, x.tz]]));
+        assert.deepEqual(by, { Ren: ['Rome', 'Europe/Rome'], Mara: ['Rome', 'Europe/Rome'] }, who);
+        assert.ok(!T.sys.includes('"ownerCity"') && !T.sys.includes('"elsewhere"'));
+    }
 });
 
 test('what the user set in 위치 정보 a reflection doesn\'t undo: the owner\'s city by hand stays, someone taken off isn\'t put back', async () => {
