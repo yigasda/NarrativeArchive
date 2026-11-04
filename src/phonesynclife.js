@@ -178,6 +178,14 @@ export function mirrorHome(w) {
     return w;
 }
 export const apart = (a, b, cities) => { const x = cityAt(a, cities), y = cityAt(b, cities); return !!(x && y && x !== y); };
+// a status line from a scene the phone can't place (no saved city in its words: "Mara's room") while it keeps cities in
+// other time zones: it may be someone else's, far away, and its weather and time aren't taken for the owner's
+export const unplaced = (here, scene, cities) => {
+    const own = cityAt(here, cities);
+    if (!own?.tz || !arr(cities).some(c => c?.tz && c.tz !== own.tz) || !String(scene || '').trim() || cityAt(scene, cities)) return false;
+    const k = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+    return !(k(here) && k(scene) && (k(here).includes(k(scene)) || k(scene).includes(k(here))));
+};
 // a "MM-DD HH:MM" of one zone in another (Intl knows the rules; the year is the phone's, else this one)
 export function zoneShift(at, from, to, year = new Date().getFullYear()) {
     const mt = /^(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(String(at || ''));
@@ -449,7 +457,7 @@ export function applyWeather(p, w, now, { archive = true, today = '' } = {}) {
     const was = p.life.weather || null;
     let next;
     if (w && typeof w === 'object') {
-        const raw = hereOf(w), here = fit(unko(apart(raw.place, now?.place, was?.cities || arr(w.cities).map(cityOf)) ? raw : overlay(raw, now, true)));
+        const raw = hereOf(w), cs = was?.cities || arr(w.cities).map(cityOf), here = fit(unko(apart(raw.place, now?.place, cs) || unplaced(raw.place || was?.here?.place, now?.place, cs) ? raw : overlay(raw, now, true)));
         if (here.from === 'archive' && !archive) here.from = 'chat';
         // a forecast or a tile the model left out stays as it was (the clock trims what is past)
         const old = was?.here;
@@ -487,7 +495,7 @@ export function applyWeather(p, w, now, { archive = true, today = '' } = {}) {
             cities.push({ ...f, note: line(n?.note, 40), noteKo: ko(n?.noteKo) });
         }
         next = { ...(was || {}), here, cities };
-    } else if (now && was?.here && !apart(was.here.place, now.place, was.cities)) {
+    } else if (now && was?.here && !apart(was.here.place, now.place, was.cities) && !unplaced(was.here.place, now.place, was.cities)) {
         // only the status line: its words stand over the weather there was; on a later day, yesterday's hours, sentence
         // and rain go with the day
         const here = fit(overlay(structuredClone(was.here), now));

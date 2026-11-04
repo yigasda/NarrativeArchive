@@ -21,7 +21,7 @@ const map = {
     './inject.js': encoded(`export const applyInjection=()=>{};`),
     './knowledge.js': encoded(`export const knowledgeRows=()=>[];`),
     './people.js': encoded(`export const nameKey=s=>String(s).toLowerCase();export const nameRe=s=>new RegExp(s,'i');export const headingPlaces=()=>[];`),
-    './recall.js': encoded(`export const estTok=s=>s.length/4;`), './scenes.js': encoded(`export const recentTrackers=(n,o={})=>{const T=globalThis.__archTest;(T.trackLens||=[]).push((o.chat||T.chat).length);return [];};`),
+    './recall.js': encoded(`export const estTok=s=>s.length/4;`), './scenes.js': encoded(`export const recentTrackers=(n,o={})=>{const T=globalThis.__archTest;(T.trackLens||=[]).push((o.chat||T.chat).length);return T.trackers||[];};`),
     './sections.js': encoded(`export const RANGE_HEAD=/^(?:(\\S{1,12})\\s)?#(\\d+)\\s*([–—~-])\\s*#?(\\d+)(.*)$/;export const parseSections=t=>[...String(t).matchAll(/^## (.+)\\n[^#]*/gm)].map(x=>({title:x[1],start:x.index,end:x.index+x[0].length,group:false}));export const sectionKey=s=>s.title;export const splitTail=s=>[s,''];`),
     './translate.js': encoded(`export const glossaryEntries=()=>[];`), './world.js': encoded(`export const worldText=()=>'';`),
 };
@@ -189,4 +189,26 @@ test('a phone made on a chat shorter than its archive (a branch): its clock is t
     assert.equal(c.m.phones.ren?.sync?.marks?.base?.index, 3);
     T.chat.push(say('Ren', 'back home'), say('Mara', 'welcome back'));
     assert.equal(data.syncLeft(c.m.phones.ren, c.m), 2);
+});
+
+test('a status line with no saved city doesn\'t set the phone\'s time when it keeps other zones; the model gets OWNER\'S CLOCK', async () => {
+    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', '[11.03, 12:33] are you up?'), say('Ren', 'just woke up')];
+    const c = setup(chat);
+    c.p.now = '10-26 03:00'; c.p.year = 2026; // Germany's summer time ended on 10-25: 8 hours
+    c.p.life = { at: '10-26 03:00', clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] },
+        weather: { here: { place: 'Frankfurt am Main', date: '10-26', time: '03:00', cond: 'clear', temp: 5, hours: [], days: [], tiles: {} },
+            cities: [{ name: 'Frankfurt am Main', tz: 'Europe/Berlin' }, { name: 'Seoul', tz: 'Asia/Seoul' }] } };
+    T.trackers = [{ i: 2, date: '10.26', min: 12 * 60 + 33, time: '12:33', place: "Mara's room", city: "Mara's room", weather: '' }];
+    try {
+        await run(c.m, { now: '10-26 05:33', events: [] });
+        assert.ok(T.input.includes("[OWNER'S CLOCK]\nThe owner is in Frankfurt am Main, 10-26 03:00 now.\nSeoul is 8 hours ahead."), T.input.slice(-600));
+        assert.equal(c.p.now, '10-26 05:33');
+        // the far scene's status line is no weather or clock of the owner's
+        assert.deepEqual([c.p.life.weather.here.place, c.p.life.weather.here.time], ['Frankfurt am Main', '03:00']);
+        // the same line in Seoul, a saved city: read in the owner's zone, it caps a later guess
+        T.trackers = [{ i: 3, date: '10.26', min: 14 * 60, time: '14:00', place: 'Seoul', city: 'Seoul', weather: '' }];
+        T.chat.push(say('Ren', 'coffee first'));
+        await run(c.m, { now: '10-26 12:00', events: [] });
+        assert.equal(c.p.now, '10-26 06:00');
+    } finally { T.trackers = null; }
 });

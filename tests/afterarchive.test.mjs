@@ -321,8 +321,25 @@ test('the bank over a long stretch: the second turn adds history only, the balan
 
 test('every prompt that writes times has the owner\'s own clock (a messenger timestamp from another time zone is moved)', () => {
     const prompts = { phone: data.AI_SYS_PHONE, update: data.AI_SYS_PHONE_UPDATE, core: data.updateSystem({ split: true, life: true, delivery: true }), money: data.AI_SYS_MONEY, voices: data.AI_SYS_VOICES, life: life.AI_SYS_LIFE, delivery: life.AI_SYS_DELIVERY };
-    for (const [k, s] of Object.entries(prompts)) assert.ok(s.includes("on the owner's phone clock") && s.includes('12:33 in Seoul is 04:33 in Frankfurt') && !s.includes('undefined'), k);
+    for (const [k, s] of Object.entries(prompts)) assert.ok(s.includes("on the owner's phone clock") && s.includes("OWNER'S CLOCK (sometimes)") && s.includes("A status line's time stays as it is") && !s.includes('undefined'), k);
 });
+
+// the hours are the code's (summer time counted); the model only adds or takes them off
+const zonePhone = now => ({ owner: 'Ren', year: 2026, now, life: { weather: { here: { place: 'Frankfurt am Main' }, cities: [{ name: 'Frankfurt am Main', tz: 'Europe/Berlin' },
+    { name: 'Seoul', ko: '서울', tz: 'Asia/Seoul' }, { name: 'London', tz: 'Europe/London' }, { name: 'New York', tz: 'America/New_York' }] } } });
+test('OWNER\'S CLOCK: where the owner is, their time, and the other saved cities\' hours on that day', () => {
+    assert.equal(data.clockBlock(zonePhone('11-03 04:33')), "[OWNER'S CLOCK]\nThe owner is in Frankfurt am Main, 11-03 04:33 now.\nSeoul is 8 hours ahead, London is 1 hour behind, New York is 6 hours behind.");
+    // October: Germany on summer time, Korea never
+    assert.match(data.clockBlock(zonePhone('10-20 12:00')), /Seoul is 7 hours ahead/);
+    // all in one zone, or no saved city of its own: no block, nothing to move
+    const one = zonePhone('11-03 04:33'); one.life.weather.cities = one.life.weather.cities.slice(0, 1);
+    assert.equal(data.clockBlock(one), '');
+    assert.equal(data.clockBlock({ now: '11-03 04:33' }), '');
+    // a status line whose place is no saved city doesn't set the phone's time when other zones are saved
+    assert.equal(data.sceneClockKnown(zonePhone('11-03 04:33')), false);
+    assert.equal(data.sceneClockKnown(one), true);
+});
+
 
 // ---- 투자 채우기도 두 턴: 두 번째 거래는 현금 · 보유도 같이 움직여요
 test('investments over a long stretch: the second turn\'s trades move the cash and the holdings, the opening cash stays', async () => {

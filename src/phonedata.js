@@ -60,7 +60,8 @@ Could this be on the owner's phone, given what the archive, lorebook and chat sh
 - Nothing later than the newest moment of the story.
 - The diary holds only what the archive shows happened and what the owner felt about it; no new secrets, no new feelings.`;
 // every time on the phone is the owner's own clock: a time written on the other side of the world is moved to theirs
-export const OWN_CLOCK = `Every time is on the owner's phone clock, where the owner is now. A time the story writes for someone in another time zone (the other side's messenger timestamps, a status line from a scene in another city) is moved to the owner's zone: 12:33 in Seoul is 04:33 in Frankfurt.`;
+export const OWN_CLOCK = `Every time is on the owner's phone clock, where the owner is now. A time shown on a screen or in a scene goes by the city of whoever's screen or scene it is: the owner's city, or no OWNER'S CLOCK, keeps it as it is; another city in OWNER'S CLOCK is moved by its hours there (a messenger timestamp on the other side's screen). A status line's time stays as it is: the app sets it.`;
+export const CLOCK_GET = `- OWNER'S CLOCK (sometimes): where the owner is, their time now, and how many hours the other saved cities are ahead or behind.`;
 const PHONE_STYLE = `LANGUAGE
 - Each text is in the language its writer would really use on a phone: from their nationality and where they live; between two people, the language they share.
 - A text that is not in Korean gets "ko": a natural Korean translation. A Korean text gets no "ko".
@@ -99,6 +100,7 @@ YOU GET
 - OWNER: whose phone it is. STORY YEAR (sometimes): the story's year.
 - OWNER PROFILE (sometimes): the background the user chose for the owner.
 - OWNER DOESN'T KNOW (sometimes): facts the owner does not know, or only suspects. Nothing on the phone may show them as known.
+${CLOCK_GET}
 
 ${PHONE_TEST}
 
@@ -144,6 +146,7 @@ YOU GET
 - DAYS (sometimes): the story's days from the day before these messages on, with their weekdays. A weekday the story names ("on Friday") is the next one there.
 - MESSAGES READ BEFORE, NOW CHANGED (sometimes): messages put on the phone before and edited since, with the events they gave.
 ${money ? `- MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.\n` : ''}${delivery ? `- DELIVERY SHOPS: the shops the delivery app already has.\n` : ''}${life ? `- LIFE NOW: the alarms, files and health days the phone already holds, with record ids.\n` : ''}${weather && tracker ? `- WEATHER NOW: the date, time, place and weather from the chat's last status line up to these messages.\n` : ''}- PHONE NOW: the newest of what the phone holds.
+${CLOCK_GET}
 - OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 
 WHAT IS NEW
@@ -646,7 +649,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', 
     const ar = archiveFor(m, p ? p.upto ?? -1 : -1, nowAt(gap));
     const now = p ? JSON.stringify(phoneForModel(p)) : '';
     return [
-        p ? `[PHONE NOW]\n${now}` : '',
+        p ? `[PHONE NOW]\n${now}` : '', clockBlock(p || m.phones?.[nameKey(owner)], upto == null ? undefined : storyNow(p || m.phones?.[nameKey(owner)] || {}, upto) || undefined),
         !p && m.phones?.[nameKey(owner)]?.device ? `[DEVICE — locked]\n${JSON.stringify(m.phones[nameKey(owner)].device)}` : '',
         archiveBlock(m, ar.text || '(nothing new)', `ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}`, CHAT_TOKENS.phone, upto),
         world ? `[WORLD]\n${world}` : '',
@@ -959,7 +962,7 @@ async function updatePhone(m, owner) {
             `[PHONE NOW]\n${JSON.stringify(phoneForModel(p))}`,
             !split && money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', !split && invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
             !split && money && p.delivery ? `[DELIVERY SHOPS]\n${(p.delivery.shops || []).map(x => x.name).join('\n') || '(none yet)'}${p.delivery.cart?.items?.length ? `\nCART (in the basket, not ordered): ${p.delivery.cart.shop}: ${p.delivery.cart.items.map(x => `${x.name} ×${x.qty}`).join(', ')}` : ''}` : '',
-            life ? `[LIFE NOW]\n${JSON.stringify(life)}` : '', askWeather && tracker ? `[WEATHER NOW]\n${JSON.stringify(tracker)}` : '',
+            life ? `[LIFE NOW]\n${JSON.stringify(life)}` : '', askWeather && tracker ? `[WEATHER NOW]\n${JSON.stringify(tracker)}` : '', clockBlock(p),
             !split && (money || invest) && p.wealthPlan ? `[WEALTH]\n${JSON.stringify({ currency: p.wealthPlan.currency, deposits: p.wealthPlan.deposits, investments: p.wealthPlan.investments, basis: p.wealthPlan.basis })}` : '',
             world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
             `[OWNER]\n${owner}`, profile, blindBlock(m, owner), namesBlock(m),
@@ -1069,7 +1072,7 @@ async function updatePhone(m, owner) {
         // (a day or a few behind is the model slipping and is ignored; two months or more behind is a story that skipped far
         // ahead, past the half year the dates alone can tell: half a year later)
         // the status line's own clock caps the model's (a "23:55" written over a line that says 21:30)
-        const trkNow = storyNow({ ...p, now: '' }, roundEnd);
+        const trkNow = sceneClockKnown(p, roundEnd) ? storyNow({ ...p, now: '' }, roundEnd) : '';
         if (trkNow && nowAt && nowAt.slice(0, 5) === trkNow.slice(0, 5) && nowAt.slice(6) > trkNow.slice(6)) nowAt = trkNow;
         const gap = nowAt && p.now ? dayGap(p.now.slice(0, 5), nowAt.slice(0, 5)) : 1;
         if (nowAt && (gap > 0 || gap < -60 || gap === 0 && nowAt.slice(6) > p.now.slice(6))) {
@@ -1393,6 +1396,36 @@ export function storyNow(p, upto = null) {
     return p.now || '';
 }
 
+// the saved cities' time zones, from where the owner is (their phone's "here"): its own, and the others' hours from it on
+// that day (summer time counted). null with no saved city of its own, or none in another zone
+export function zonesOf(p, at = p?.now) {
+    const w = p?.life?.weather, own = cityAt(w?.here?.place, w?.cities), t = String(at || '');
+    if (!own?.tz || !/^\d{2}-\d{2} \d{2}:\d{2}$/.test(t)) return null;
+    const mins = v => { const [d, h] = [String(v).slice(0, 5), String(v).slice(6)]; return dayGap(t.slice(0, 5), d) * 1440 + Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5)); };
+    const base = mins(t), others = [];
+    for (const c of arr(w.cities)) {
+        if (!c?.tz || c === own || c.tz === own.tz) continue;
+        const h = (mins(zoneShift(t, own.tz, c.tz, Number(p.year) || undefined)) - base) / 60;
+        if (h) others.push({ name: c.name, hours: h });
+    }
+    return others.length ? { own, at: t, others } : null;
+}
+// what the model is told of them: it only adds or takes off the hours given (the code works them out)
+export const clockBlock = (p, at = p?.now) => {
+    const z = zonesOf(p, at);
+    const hrs = h => `${Math.abs(h)} hour${Math.abs(h) === 1 ? '' : 's'} ${h > 0 ? 'ahead' : 'behind'}`;
+    return z ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.map(c => `${c.name} is ${hrs(c.hours)}`).join(', ')}.` : '';
+};
+// a status line's scene is a city the phone knows (its clock can be read in the owner's zone), or the phone keeps no
+// other zone (it is the owner's): else its time may be someone else's, and it doesn't set the phone's
+export function sceneClockKnown(p, upto = null) {
+    if (!zonesOf(p)) return true;
+    try {
+        const t = recentTrackers(1, upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) })[0];
+        const scene = String(t?.city || t?.place || '').split(/\s*[,，→>/·]\s*/)[0];
+        return !!cityAt(scene, p.life.weather.cities);
+    } catch { return false; }
+}
 // ---- the places they have been: section headings that name a place, in sections the owner is in (no model).
 // One row a place, newest visit first: a move ("A → B") counts for both, and a place gone to again counts up
 export function placesOf(m, owner) {
@@ -1428,6 +1461,7 @@ YOU GET
 - PHONE NOW: what the phone already holds (mails, events, searches, food deliveries), with their "ev" tags. A delivery there is paid through the delivery app; the app puts it in the bank, so it gets no "tx".
 - FINANCIAL SCALE: how much the owner's bank deposits come to, worked out beforehand.
 - EVALUATION DATE: the story's day, for exchange rates. SAVED RATES: the rates the app already has for it.
+${CLOCK_GET}
 - EXISTING ACCOUNTS (sometimes): the accounts the bank already has.
 
 STORY OR INVENTED
@@ -1490,6 +1524,7 @@ Fill the voice memo app of one character's phone in a long role-play: memos they
 YOU GET
 - ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 - DIARY: the owner's diary entries, so the memos are not the same moments told again.
+${CLOCK_GET}
 
 RULES
 - ${OWN_CLOCK}
@@ -1573,7 +1608,7 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
     const preserved = rebuild ? `[REBUILD ACCOUNTS]\n${JSON.stringify(old.bank.accounts.map(({id,kind,name,last4,currency})=>({id,kind,name,last4,currency})))}\n[MONEY ALREADY MOVED]\n${JSON.stringify(old.bank.accounts.map(a=>({id:a.id,currency:a.currency,entries:finance(m).accounts[`${a.id}:${a.currency}`]?.entries || {}})))}` : old ? `[EXISTING ACCOUNTS]\n${JSON.stringify(old.bank.accounts)}` : '';
     const system = AI_SYS_MONEY + (rebuild ? MONEY_REBUILD : '');
     const rates = () => `[SAVED RATES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`;
-    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p, at)}`,preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,rates()],{profile:p.financeProfile,money:true,read});
+    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p, at)}`,clockBlock(p, at),preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,rates()],{profile:p.financeProfile,money:true,read});
     mark = readMark(read.gap) || mark;
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {
@@ -1637,7 +1672,7 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
             try {
                 const at2 = storyNow(p, nowAt(two.cover)) || p.now, tx = !old || rebuild, soFar = { cards: raw.cards, ...(tx ? { tx: raw.tx } : {}), passes: raw.passes, orders: raw.orders };
                 const only = `The bank, its accounts and their balances stay as they are: leave "bank" and "fx" out${tx ? '' : ', and "tx" too (the bank keeps its own)'}`;
-                const input2 = await sideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p, at2)}`, `[EXISTING ACCOUNTS]\n${JSON.stringify(p.money.bank.accounts)}`, wealthBlock(plan, 'deposits'), `[EVALUATION DATE]\n${date}`, rates(),
+                const input2 = await sideRequest(m, p.owner, [`[PHONE NOW]\n${moneyContext(p, at2)}`, clockBlock(p, at2), `[EXISTING ACCOUNTS]\n${JSON.stringify(p.money.bank.accounts)}`, wealthBlock(plan, 'deposits'), `[EVALUATION DATE]\n${date}`, rates(),
                     `${soFarHead('MONEY', two.short, only)}\n${JSON.stringify(soFar)}`, two.short?.text || ''], { profile: p.financeProfile, money: true, read: { gap: two.cover } });
                 const raw2 = jsonOf(await askDraft(input2, { force: true, system: AI_SYS_MONEY, maxTokens: 12000 }));
                 if (p.money !== updated.money) throw new Error('생성 중 계좌가 변경됐어요');
@@ -1663,7 +1698,7 @@ export const secOf = v => {
 };
 export async function fillVoice(m, p) {
     const diary = (p.diary || []).slice(-6).map(d => `- ${d.date} ${d.title}`).join('\n');
-    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`], {story:CHAT_TOKENS.apps,profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });
+    const out = await askDraft(await sideRequest(m, p.owner, [`[DIARY]\n${diary || '(none)'}`, clockBlock(p)], {story:CHAT_TOKENS.apps,profile:p.financeProfile}), { force: true, system: AI_SYS_VOICES, maxTokens: 6000 });
     const memos = arr(jsonOf(out)?.memos).map(x => ({ title: line(x?.title, 80), kt: line(x?.kt, 80), text: str(x?.text, 2000), ko: str(x?.ko, 2000), time: when(x?.time), sec: secOf(x?.sec), place: line(x?.place, 60), src: 'guess' })).filter(x => x.text);
     if (!memos.length) throw new Error('모델 답에서 음성 메모를 찾지 못했어요');
     p.voice = [...(p.voice || []).filter(x => x.src === 'story' || x.now), ...memos].sort(byStory(p.now)).slice(-CAP.voice);
