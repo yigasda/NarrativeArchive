@@ -96,7 +96,7 @@ export async function openPhone(who = null) {
     const selectionKey = phoneSelectionKey(c);
     let owner = selectedPhoneOwner(m, names, who, readPhoneSelection(selectionKey));
     if (owner) { rememberPhoneSelection(m,owner,selectionKey); await saveMeta(); }
-    let investing = false, making = false;
+    let investing = false, making = false, busyMake = null;  // busyMake: 'sync' | 'make' while a reflection or a make runs
     for (const p of Object.values(m.phones)) migrateBank(m, p);
     // phones from before 날짜 및 시간 get their year (or none) once
     if (Object.values(m.phones).filter(p => p?.owner).map(p => ensureYear(m, p)).some(Boolean)) await saveMeta();
@@ -137,7 +137,8 @@ export async function openPhone(who = null) {
     };
     // the phone's own confirm: an iOS action sheet inside the screen (message, the action, a separate 취소); it survives redraws
     let ask = null;
-    const placeAsk = () => { if (ask) $root.find('.na_ph_frame .cg_canvas').first().append(ask.el); };
+    // the open sheet goes back on after every redraw (the frame's html is replaced); with nowhere to sit it closes as 'no'
+    const placeAsk = () => { if (!ask || ask.el.isConnected) return; const host = $root.find('.na_ph_frame .cg_canvas')[0] || $root.find('.na_ph_frame .na_ph_scr')[0]; if (host) host.append(ask.el); else ask.done(false); };
     const askSheet = (title, text = '', ok = '확인', safe = false) => {
         if (!$root.find('.na_ph_frame .cg_canvas').length) return confirm(title, text, ok, { danger: !safe });
         ask?.done(false);
@@ -154,8 +155,8 @@ export async function openPhone(who = null) {
         return new Promise(done => {
             const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_btns v">${opts.map(o => `<div role="button" tabindex="0" class="pcf_ok safe" data-v="${esc(o.v)}">${o.sub ? `<span class="pcf_sub">${esc(o.sub)}</span>` : ''}${esc(o.label)}</div>`).join('')}<div role="button" tabindex="0" class="pcf_no">${esc(no)}</div></div></div></div></div>`)[0];
             ask = { el, done: v => { ask = null; el.remove(); done(v); } };
-            ($root.find('.na_ph_frame .cg_canvas')[0] || $root.find('.na_ph_frame .na_ph_scr')[0])?.append(el);
-            el.querySelector('.pcf_no').focus({ preventScroll: true });
+            placeAsk();
+            if (el.isConnected) el.querySelector('.pcf_no').focus({ preventScroll: true });
         });
     };
     // 상태창 날짜 순서: asked once per chat before the first make or reflection (closing it reads 월.일 and asks again next time)
@@ -167,6 +168,7 @@ export async function openPhone(who = null) {
     $root.on('click', '.pcf', function (e) { e.stopPropagation(); const b = e.target.closest('.pcf_ok, .pcf_no'); if (b) ask?.done(b.classList.contains('pcf_ok') ? (b.dataset.v || true) : false); else if (e.target === this) ask?.done(false); });
     $root.on('keydown', '.pcf_ok, .pcf_no', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ask?.done(this.classList.contains('pcf_ok') ? (this.dataset.v || true) : false); } });
     const drawPhone = (keep = false) => {
+        queueMicrotask(placeAsk);  // every way out of a redraw (some return early) puts the open sheet back
         const p = phone();
         // nobody to show yet (no people in the archive, no phone in this chat): the picker opens instead of a blank phone
         if (!owner) {
@@ -225,6 +227,9 @@ export async function openPhone(who = null) {
         placeAsk();
         if (keep) $root.find('.na_ph_body, .ax_scroll').scrollTop(top);
         if (making && view === 'setremake') $root.find('.na_ph_setremake .ax_n').html(`${busyHtml} 다시 만드는 중`);
+        // a redraw mid-reflection (or mid-make) keeps saying so: withSpinner only dressed the button that was there
+        if (busyMake === 'sync') $root.find('.na_ph_setupd .ax_v').html(`${busyHtml} 반영하는 중`);
+        if (busyMake === 'make') $root.find('.na_ph_makebtn:not(.na_ph_addok)').prop('disabled', true).html(`${busyHtml} 폰 만드는 중`);
         queueMicrotask(() => { autoChart(); autoMenu(); });
     };
     // 참고 로어북: each book with its switch; › opens its entries, each with its own (a book with some left out shows −)
@@ -258,7 +263,9 @@ export async function openPhone(who = null) {
         // an older phone has no start yet, and a start whose message is gone is asked for again
         if (update) { const st = syncState(phone()); if (st !== 'ok') { syncWhy = st; pickMore = 30; view = 'setsyncpick'; drawPhone(); return; } }
         await askDateOrder();
-        const p = await withSpinner($btn, update ? '반영하는 중' : '폰 만드는 중', () => makePhone(m, owner, { update }));
+        busyMake = update ? 'sync' : 'make';
+        let p;
+        try { p = await withSpinner($btn, update ? '반영하는 중' : '폰 만드는 중', () => makePhone(m, owner, { update })); } finally { busyMake = null; }
         if (!p) return;
         if (!update) view = 'lock';
         draw();
@@ -844,7 +851,7 @@ export async function openPhone(who = null) {
         setStoryYear(m, p, y);
         drawPhone(true); await saveMeta();
     });
-    $root.on('click', '.na_ph_dord', async function (e) { e.stopPropagation(); const v = this.dataset.v; if (v !== 'md' && v !== 'dm' || dateOrderOf(m) === v && !needsDateOrder(m)) return; await setDateOrder(m, v); drawPhone(true); });
+    $root.on('click', '.na_ph_dord', async function (e) { e.stopPropagation(); if (making || busyMake || investing || filling.size || busy.fill || busy.sync) return toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰'); const v = this.dataset.v; if (v !== 'md' && v !== 'dm' || dateOrderOf(m) === v && !needsDateOrder(m)) return; await setDateOrder(m, v); drawPhone(true); });
     $root.on('click', '.na_ph_yearshow', async e => { e.stopPropagation(); const p = phone(); if (!p) return; p.noYear = !p.noYear; if (!p.noYear && !p.year) p.year = Number(storyYear(m, { ...p, year: 0 })) || new Date().getFullYear(); drawPhone(true); await saveMeta(); });
     $root.on('click', '.na_ph_setinj', async e => { e.stopPropagation(); const p = phone(); p.inject = !p.inject; drawPhone(true); await saveMeta(); applyInjection(); });
     // what opens under the phone scrolls into sight, so the tap visibly does something
