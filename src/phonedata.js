@@ -136,6 +136,12 @@ ${PHONE_LAST}`;
 // life: 시계 · 건강 · 파일 (and 날씨 only when no status line gives it: weather)
 // weather: the model writes the weather (no status line gives it, or the day moved on); tracker: a status line gives some
 // split: the first of two steps (core): no money, each event marked "money" when it touches it (moneySystem writes it after)
+// 시계 · 파일 items and their rules, the same in the reflection and its 일상
+const LIFE_ALARMS = `  "alarms": [{ "change": an id or "", "time", "label", "ko", "days": the weekdays it repeats or [], "date": "MM-DD" for a one-time alarm, "on", "wake", "then", "snooze", "snoozeCount", "sound" }],`;
+const LIFE_FILES = `  "files": [{ "change": an id or "", "name", "kind", "folder": one of LIFE NOW's "folders" (downloads are "Downloads"), or a new one the story makes, "size": KB, "time", "from", "pages", "length": "M:SS" for audio or video, "tag": "red" | "orange" | "", "private", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],`;
+const LIFE_TIMERS = `  "timers": [{ "label", "ko", "sec" }],`;
+const LIFE_ONCE = `- An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".`;
+const LIFE_CHANGE = `- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.`;
 export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false } = {}) {
     const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
     return `${split ? 'STAGE: core\n' : ''}GOAL
@@ -174,8 +180,8 @@ WHERE IT COMES FROM
 ${zone ? `- "statusCity": whose clock the newest status line here shows (the app can't place its scene): a city or person in OWNER'S CLOCK, "owner" for the owner's own, another city as { "city": in English, "tz" }, or "" when the messages don't say.\n` : ''}${split ? `- "apps": "money" when the event has anything for the bank, cards, orders, tickets or the delivery app (its basket too)${invest ? '; "invest" for the brokerage (a trade, a share price the story gives, a share they start watching, a stake)' : ''}; else []. When unsure, include it.\n` : ''}${life ? `
 LIFE
 - An alarm the owner sets, changes or switches on or off in these messages; a timer they set; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
-- An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".
-- A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.
+${LIFE_ONCE}
+${LIFE_CHANGE}
 - Health: a row for every story day these messages move into. A day these messages show goes in that event's "phone"."health"; a day already in LIFE NOW that the story now shows is rewritten the same way. Every other new day goes in the top-level "days", written freely from the character and their life (a lazy Sunday, a day on their feet, a sleepless night), still following that day's events and tickets. The day of "now" again every time, with its totals so far (steps, workouts, coffee, water, "screen"), even when nothing new happened.
 - "screen" on each day: that day's phone use, from what happened and how they felt (a fight: hours of texting late into the night; a day out with friends: barely any), in their own habits (LIFE NOW's usual), plus any other app that day called for, by its real name (a trip: maps, a translator).
 - A lasting change to their habits or body these messages state (they lost weight, quit coffee, drink more water, get up earlier now, quit a game, glued to the phone lately): that event's "phone"."usual" with only what changed. Nothing said: no "usual".
@@ -222,10 +228,10 @@ ${money ? `Also in "money" when these messages show them: "newAccount": { "kind"
 Items in "phone":
 {
 ${PHONE_ITEMS.replace(VOICE_ONLY, '')}${life ? `,
-  "alarms": [{ "change": an id or "", "time", "label", "ko", "days": the weekdays it repeats or [], "date": "MM-DD" for a one-time alarm, "on", "wake", "then", "snooze", "snoozeCount", "sound" }],
-  "files": [{ "change": an id or "", "name", "kind", "folder": one of LIFE NOW's "folders" (downloads are "Downloads"), or a new one the story makes, "size": KB, "time", "from", "pages", "length": "M:SS" for audio or video, "tag": "red" | "orange" | "", "private", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],
+${LIFE_ALARMS}
+${LIFE_FILES}
   "health": [{ "date": the day they woke, "sleep", "wake", "woke": times awake in the night, "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee": cups, "coffeeKind", "water": litres, "weight": kg only when they weighed, "screen": { "apps": { app name: minutes }, "pickups", "late": "HH:MM" } }],
-  "timers": [{ "label", "ko", "sec" }],
+${LIFE_TIMERS}
   "usual": { "weight": kg, "coffee": cups a day, "coffeeKind", "coffeeKo", "water": litres a day, "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": a week, "rest": resting heart rate, "height": cm, "screen": { "add": [{ "app": its real name, "kind", "min" }] (installed, or used more or less), "drop": [apps deleted], "pickups", "late" } }` : ''}
 }
 Fewer is fine. No new events: "events": [].
@@ -402,7 +408,9 @@ function personIn(p, list, get, name) {
     const one = xs => (xs.length === 1 ? xs[0] : undefined);
     return one(list.filter(x => names.includes(nameKey(get(x))))) || one(list.filter(x => samePerson(get(x), name)));
 }
-const EVERYDAY_KEYS = ['threads', 'calls', 'photos', 'notes', 'searches', 'mails', 'posts', 'diary', 'voice', 'events'];
+const EVERYDAY_KEYS = ['threads', 'calls', 'photos', 'notes', 'searches', 'mails', 'posts', 'diary', 'voice', 'events', 'alarms', 'files', 'timers'];
+// (the clock and files in an answer: an alarm and a timer, two files)
+const EVERYDAY_LIFE = { alarms: 1, timers: 1, files: 2 };
 function everydayOn(raw, rows, textAt) {
     const ed = raw?.everyday && typeof raw.everyday === 'object' && !Array.isArray(raw.everyday) ? raw.everyday : null;
     if (!ed || !EVERYDAY_KEYS.some(k => arr(ed[k]).length)) return;
@@ -419,7 +427,7 @@ function everydayOn(raw, rows, textAt) {
         raw.events.push(host);
     }
     host.phone = host.phone && typeof host.phone === 'object' ? host.phone : {};
-    for (const k of EVERYDAY_KEYS) if (arr(ed[k]).length) host.phone[k] = [...arr(host.phone[k]), ...arr(ed[k]).map(mark)];
+    for (const k of EVERYDAY_KEYS) if (arr(ed[k]).length) host.phone[k] = [...arr(host.phone[k]), ...arr(ed[k]).slice(0, EVERYDAY_LIFE[k] ?? Infinity).map(mark)];
 }
 // ---- 일상 (반영의 다음 요청): the owner's ordinary life in the hours these messages cover, and the texts after a scene,
 // on its own (in the reflection's own request it was a line among many: run51–53 wrote none after a scene and kept making
@@ -427,14 +435,14 @@ function everydayOn(raw, rows, textAt) {
 // the owner had a scene with
 // the apps' items as the reflection writes them, without the contacts and the profile (no one new, no SNS name changed)
 const EVERYDAY_ITEMS = PHONE_ITEMS.split('\n').filter(l => !/^\s*"(contacts|profile)"/.test(l)).join('\n').replace(VOICE_ONLY, '');
-export const AI_SYS_EVERYDAY = `GOAL
+export const everydaySystem = ({ life = false } = {}) => `GOAL
 Write the ordinary life on one character's phone in the hours a few new role-play messages cover: the small records a real phone gathers, and the texts people send after a scene with the owner.
 Another step already put the story's own events on the phone; you only add everyday life around them.
 
 YOU GET
 - NEW MESSAGES: the messages these hours come from, each with its number (#123).
 - ARCHIVE FOR THESE MESSAGES, ARCHIVE BEFORE, STORY NOW (sometimes): the story around them. Background.
-- EVENTS ON THE PHONE, PHONE NOW, LIFE NOW (sometimes), WEATHER NOW (sometimes), DAYS (sometimes), MESSAGES READ BEFORE, NOW CHANGED (sometimes): what the phone holds.
+- EVENTS ON THE PHONE, PHONE NOW, LIFE NOW (sometimes: the alarms, files and health days, with record ids), WEATHER NOW (sometimes), DAYS (sometimes), MESSAGES READ BEFORE, NOW CHANGED (sometimes): what the phone holds.
 - MONEY NOW, INVESTMENTS NOW, WEALTH, DELIVERY SHOPS (sometimes): the owner's money. Background.
 ${CLOCK_GET}
 - PEOPLE AROUND (sometimes): people in the owner's life, close or not, from the cards, persona, profile and lorebook, with where things stand now.
@@ -449,7 +457,10 @@ EVERYDAY
 - A diary entry holds what these messages show and what the owner feels about it, as the story and PEOPLE AROUND show them; no new secrets or events.
 - Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result. How they feel and small things around them are fine. No new facts, events, plans or secrets.
 - Times from the phone's last time up to the newest message, never later.
-- Never a booking, a trip or a purchase the story doesn't have (a ticket mail, an order confirmation).
+- Never a booking, a trip or a purchase the story doesn't have (a ticket mail, an order confirmation).${life ? `
+- Their clock and files too: an alarm they set for tomorrow, a timer for the pasta, a file they download, save or screenshot. Pictures the camera takes go to photos, not files.
+${LIFE_ONCE}
+${LIFE_CHANGE}` : ''}
 - A day with nothing ordinary in it: empty lists.
 
 ${PHONE_STYLE}
@@ -458,8 +469,12 @@ JSON (one object, nothing before or after it)
 { "everyday": { the items below, each app a list (an empty one when nothing) } }
 Items, as the phone's own apps take them:
 {
-${EVERYDAY_ITEMS}
+${EVERYDAY_ITEMS}${life ? `,
+${LIFE_ALARMS}
+${LIFE_FILES}
+${LIFE_TIMERS}` : ''}
 }`;
+export const AI_SYS_EVERYDAY = everydaySystem();
 // the people the owner had a scene with in these messages: any the phone knows (PEOPLE AROUND, contacts, texts, the place
 // reading) named in them
 function scenesWith(p, text) {
@@ -473,10 +488,10 @@ function scenesWith(p, text) {
 }
 // what the reflection put on the phone from these messages, one line an event
 const putLine = e => { const ph = e?.phone && typeof e.phone === 'object' ? e.phone : {}; const bits = Object.entries(ph).filter(([, v]) => Array.isArray(v) && v.length).map(([k, v]) => (k === 'threads' ? `texts with ${v.map(t => t?.with).filter(Boolean).join(', ')}` : `${k} ${v.length}`)); return `- #${e?.at ?? '?'} ${line(e?.summary, 120)}${bits.length ? ` (${bits.join('; ')})` : ''}`; };
-async function askEveryday(input, raw, p, rows) {
+async function askEveryday(input, raw, p, rows, life = false) {
     const text = rows.map(r => r.text).join('\n'), who = scenesWith(p, text);
     const blocks = [input, `[PUT ON THE PHONE NOW]\n${arr(raw?.events).map(putLine).join('\n') || '(nothing)'}`, who.length ? `[SCENES WITH]\n${who.join('\n')}` : ''].filter(Boolean).join('\n\n');
-    try { const got = jsonOf(await askDraft(blocks, { force: true, system: AI_SYS_EVERYDAY, maxTokens: 6000, effort: 'low' })); return got?.everyday && typeof got.everyday === 'object' ? got.everyday : null; }
+    try { const got = jsonOf(await askDraft(blocks, { force: true, system: everydaySystem({ life }), maxTokens: 6000, effort: 'low' })); return got?.everyday && typeof got.everyday === 'object' ? got.everyday : null; }
     catch (err) { console.warn('[narrative-archive] everyday', err); return null; }
 }
 // the people closest to the owner (위치 판독's "around"): who they are to the owner and how it stands, in the cards' own words
@@ -1154,7 +1169,7 @@ async function updatePhone(m, owner) {
         // low thinking: tested against medium on Vertex, the same payments, ids and amounts, without the thinking cost
         const out = await askDraft(input, { force: true, system: split ? coreSystem({ life: !!life, weather: askWeather, tracker: !!tracker, invest: !!invest, zone: askZone }) : updateSystem({ money: false, life: !!life, weather: askWeather, tracker: !!tracker, zone: askZone }), maxTokens: 16000, effort: 'low' });
         // then the everyday life of these hours, on its own (it fails alone: the round goes in without it)
-        const everyday = round.rows.length ? await askEveryday(input, jsonOf(out), p, round.rows) : null;
+        const everyday = round.rows.length ? await askEveryday(input, jsonOf(out), p, round.rows, !!life) : null;
         // the answer is for the chat and messages it was asked about
         if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p) throw new Error('반영하는 사이 채팅이나 폰이 바뀌었어요. 다시 해 주세요');
         if (p.money?.at !== made.money || p.investment?.at !== made.invest) throw new Error('반영하는 사이 은행이나 투자가 새로 만들어졌어요. 다시 해 주세요');

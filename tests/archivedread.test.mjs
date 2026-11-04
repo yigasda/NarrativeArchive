@@ -754,3 +754,24 @@ test('일상\'s items are the reflection\'s own (each app\'s notes on its fields
     assert.equal(ev.split('\nTIMES\n').length, 2);
     assert.match(ev, /Never a booking, a trip or a purchase the story doesn't have/);
 });
+
+test('일상 on a phone with the everyday apps: an alarm, a timer and files too, as the reflection writes them', async () => {
+    const sys = data.everydaySystem({ life: true }), core = data.coreSystem({ life: true }).split('Items in "phone":')[1];
+    for (const k of ['alarms', 'files', 'timers']) {
+        const lineOf = s => s.split('\n').find(l => l.trimStart().startsWith(`"${k}": [`))?.replace(/,$/, '');
+        assert.ok(lineOf(sys), k);
+        assert.equal(lineOf(sys), lineOf(core), k);
+    }
+    assert.match(sys, /An alarm for one occasion \(a flight, an appointment\) rings once/);
+    assert.ok(!data.everydaySystem().includes('"alarms": ['));
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'long day tomorrow'), say('Mara', 'sleep early')]);
+    c.p.now = '10-26 21:00'; c.p.year = 2026;
+    c.p.life = { at: '10-26 21:00', clock: { alarms: [], timers: [], running: null }, files: { folders: [], items: [] }, health: { usual: {}, days: [] }, weather: { here: { place: 'Seoul', date: '10-26', time: '21:00', cond: 'clear', temp: 9, hours: [], days: [], tiles: {} }, cities: [] } };
+    globalThis.__everydayIn = [];
+    globalThis.__everyday = { everyday: { alarms: [{ time: '06:30', label: 'Gym', date: '10-27', days: [], on: true }, { time: '06:40', label: 'Snooze', date: '10-27', days: [], on: true }],
+        files: [{ name: 'Screenshot 21-10.png', kind: 'image', folder: 'Downloads', time: '10-26 21:10' }, { name: 'a.pdf', folder: 'Downloads', time: '10-26 21:11' }, { name: 'b.pdf', folder: 'Downloads', time: '10-26 21:12' }] } };
+    try { await run(c.m, { now: '10-26 21:30', events: [] }); } finally { delete globalThis.__everyday; }
+    assert.deepEqual(c.p.life.clock.alarms.map(a => a.label), ['Gym']);
+    assert.deepEqual(c.p.life.files.items.map(f => f.name), ['Screenshot 21-10.png', 'a.pdf']);
+    assert.match(globalThis.__everydayIn.at(-1), /\[LIFE NOW\]/);
+});
