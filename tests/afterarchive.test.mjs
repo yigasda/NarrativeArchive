@@ -48,6 +48,9 @@ test('past the budget: up to where it stops, the rest the reflection\'s', async 
     assert.equal(g.from, 4);
     assert.ok(!g.all && g.to < 39 && g.left === 39 - g.to, JSON.stringify(g));
     assert.equal(data.readMark(g).index, g.to);
+    // stopped short: the request's now is the message it stopped at
+    assert.equal(data.nowAt(g), g.to);
+    assert.equal(data.nowAt(data.chatAfterArchive(m)), null);
     const read = {};
     const input = await data.sideRequest(m, 'Ren', [], { read });
     assert.equal(read.gap.from, 4);

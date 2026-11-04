@@ -457,6 +457,11 @@ export function chatAfterArchive(m, budget = CHAT_TOKENS.phone) {
 }
 // it as RECENT CHAT; cut short, the block says where the story stops for now
 const afterBlock = g => (g?.n ? `[RECENT CHAT${g.all ? '' : ` — the story so far ends at #${g.to}; the messages after it are read later`}]\n${g.text}` : '');
+// what a phone's request reads after the archive (null: no archive, the chat goes as before)
+export const windowOf = m => (noArchive(m) ? null : chatAfterArchive(m));
+// the story's "now" for a request that stopped short: the message it read up to (null: now is now). Its days, weather
+// and clock stand there too, so it never writes a day it didn't read; the reflection moves them on from there
+export const nowAt = g => (g && !g.all ? g.to : null);
 // where a request read up to, when it stopped short of now: its app's mark (null: it read to now)
 export const readMark = g => (g && !g.all ? markAfter(g.to) : null);
 export const readNote = g => { if (g && !g.all) globalThis.toastr?.info(`아카이브 뒤 메시지가 많아서 #${g.from}–#${g.to}까지 읽었어요. 나머지 ${g.left}개는 반영으로 이어서 채워져요`, '캐릭터 휴대폰'); };
@@ -1262,9 +1267,10 @@ export const rowDay = r => (r?.date?.d && calendars()[r.date.cal]?.length === 12
 // the newest status line's weather, its date as "MM-DD" whatever shape the line writes it in ("1월 30일 (토)", "Jan 30")
 export const trackerWeather = t => { const w = weatherFrom(t); if (w) { const d = monthDay(w.date); w.date = d ? `${pad(d.mo)}-${pad(d.d)}` : when(w.date).slice(0, 5); } return w; };
 // the scene's clock from the newest status line; an owner in another saved city (their phone's "here") reads it in their zone
-export function storyNow(p) {
+// upto: the story as it stood at that message (a request that read only so far)
+export function storyNow(p, upto = null) {
     try {
-        const t = recentTrackers(1)[0];
+        const t = recentTrackers(1, upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) })[0];
         const d = t?.date ? monthDay(t.date) : null;
         if (t && Number.isFinite(t.min) && d) {
             const at = `${pad(d.mo)}-${pad(d.d)} ${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}`, w = p?.life?.weather, here = w?.here?.place, scene = String(t.city || t.place || '').split(/\s*[,，→>/·]\s*/)[0];
@@ -1386,7 +1392,7 @@ Oldest first.`;
 export async function sideRequest(m, owner, blocks, { profile, money = false, story = 0, read = null } = {}) {
     const world = worldText(m), lore = await loreFor(m, owner);
     const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});
-    const recent = recentForCheck(6).join('\n\n').slice(-6000), gap = noArchive(m) ? null : chatAfterArchive(m);
+    const recent = recentForCheck(6).join('\n\n').slice(-6000), gap = read && 'gap' in read ? read.gap : windowOf(m);
     if (read) read.gap = gap;
     return [
         archiveBlock(m, archiveFor(m, -1).text || '(empty)', 'ARCHIVE', story),
