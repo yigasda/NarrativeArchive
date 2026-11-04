@@ -140,7 +140,7 @@ YOU GET
 - EVENTS ON THE PHONE: story events the phone already holds, with their ids.
 - DAYS (sometimes): the story's days from the day before these messages on, with their weekdays. A weekday the story names ("on Friday") is the next one there.
 - MESSAGES READ BEFORE, NOW CHANGED (sometimes): messages put on the phone before and edited since, with the events they gave.
-${money ? `- MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.\n` : ''}${delivery ? `- DELIVERY SHOPS: the shops the delivery app already has.\n` : ''}${life ? `- LIFE NOW: the alarms, files and health days the phone already holds, with record ids.\n` : ''}${weather && tracker ? `- WEATHER NOW: the date, time, place and weather from the chat's newest status line.\n` : ''}- PHONE NOW: the newest of what the phone holds.
+${money ? `- MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.\n` : ''}${delivery ? `- DELIVERY SHOPS: the shops the delivery app already has.\n` : ''}${life ? `- LIFE NOW: the alarms, files and health days the phone already holds, with record ids.\n` : ''}${weather && tracker ? `- WEATHER NOW: the date, time, place and weather from the chat's last status line up to these messages.\n` : ''}- PHONE NOW: the newest of what the phone holds.
 - OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 
 WHAT IS NEW
@@ -236,7 +236,7 @@ Write the money of story events already read from a few new chat messages in a l
 YOU GET
 - EVENTS: the story events to write money for, each with its id, message number, date, time, summary and quote. An event marked "changed" was read before and its message edited since.
 - MESSAGES: the messages those events come from, with the ones next to them. ARCHIVE FOR THESE MESSAGES (sometimes): summary sections covering them.
-- MONEY NOW${invest ? ' and INVESTMENTS NOW (sometimes)' : ''}: the bank, card, orders${invest ? ', tickets and brokerage' : ' and tickets'}, with record ids. WEALTH (sometimes): how much the owner has.
+- MONEY NOW${invest ? ' (sometimes) and INVESTMENTS NOW (sometimes)' : ''}: the bank, card, orders${invest ? ', tickets and brokerage' : ' and tickets'}, with record ids. WEALTH (sometimes): how much the owner has.
 ${delivery ? `- DELIVERY SHOPS: the shops the delivery app already has, and the basket.\n` : ''}- DAYS and STORY YEAR (sometimes), OWNER, and sometimes OWNER PROFILE.
 
 MONEY
@@ -429,6 +429,7 @@ function mergePhone(p, add, { keepAll = false } = {}) {
 
 // ---- the request
 const secEnd = s => { const mt = s.title.match(RANGE_HEAD); return mt ? Number(mt[4]) : -1; };
+const secFirst = s => { const mt = s.title.match(RANGE_HEAD); return mt ? Number(mt[2]) : -1; };
 const lastEnd = m => Math.max(-1, ...parseSections(String(m.text || '')).filter(s => !s.group).map(secEnd));
 // a reflection's background (the archive before its messages): the newest sections up to this, the rest is old news
 const BEFORE_MAX = 30_000;
@@ -454,15 +455,18 @@ function chatStory(budget, upto = null) {
     return out.join('\n\n');
 }
 export const noArchive = m => !archiveFor(m, -1).text.trim();
-// the last message the archive covers (its sections' "#a–#b" headings), -1 when none
-export const archiveEnd = m => Math.max(-1, ...parseSections(splitTail(String(m?.text || ''))[0]).filter(s => !s.group).map(secEnd));
+// the last message the archive covers (its sections' "#a–#b" headings), -1 when none. upto: only the sections that begin
+// at or before that message (a phone's clock): one archived past it is the reflection's to read, not the fill's
+export const archiveEnd = (m, upto = null) => Math.max(-1, ...parseSections(splitTail(String(m?.text || ''))[0]).filter(s => !s.group && (upto == null || secFirst(s) <= upto)).map(secEnd));
 // the chat after the archive, oldest first: every message the archive doesn't cover yet, nothing left out in between, up
 // to `budget` tokens. A longer stretch is read up to where it stops (to); the request's app marks that as read, and the
 // rest is the reflection's to read, in its own order, so no message is lost and none comes in twice
 // upto: the phone's clock (phoneAt): a fill reads no further than the phone has; the reflection reads on from there
 // from: a turn that carries on another (after the message that one stopped at)
-export function chatAfterArchive(m, budget = CHAT_TOKENS.phone, upto = null, from = null) {
-    const end = Math.max(archiveEnd(m), from ?? -1), all = syncRows().filter(r => r.index > end), rows = all.filter(r => upto == null || r.index <= upto), out = [];
+export function chatAfterArchive(m, budget = CHAT_TOKENS.phone, upto0 = null, from = null) {
+    // a section that begins at or before the clock and runs past it is read whole: the clock moves to its end
+    const arEnd = archiveEnd(m, upto0), upto = upto0 == null ? null : Math.max(upto0, arEnd);
+    const end = Math.max(arEnd, from ?? -1), all = syncRows().filter(r => r.index > end), rows = all.filter(r => upto == null || r.index <= upto), out = [];
     let size = 0;
     for (const r of rows) { const t = estTok(r.text); if (out.length && size + t > budget) break; out.push(r); size += t; }
     return { text: out.map(r => r.text).join('\n\n'), from: out[0]?.index ?? null, to: out.at(-1)?.index ?? end, n: out.length, all: out.length === rows.length, left: rows.length - out.length,
@@ -479,8 +483,12 @@ const afterBlock = g => (g?.n ? `[RECENT CHAT${g.all && !g.later ? '' : ` — th
 export const windowOf = (m, p = null, from = null, budget = CHAT_TOKENS.phone) => { const upto = phoneAt(p); return noArchive(m) ? (upto == null ? null : { none: true, n: 0, all: true, upto }) : chatAfterArchive(m, budget, upto, from); };
 // what the phone's reflection took from the messages after `after` up to the phone's clock: each event's summary and the
 // words it came from. The part of a long stretch a fill can't read word for word goes like this (less detailed, nothing lost)
+// null when some message there was never read by a reflection (only the making read it, or a newest-first reflection
+// left it for later): its events aren't there to tell it, so the fill stops before it instead
 export function toldShort(p, after, upto) {
     if (upto == null || !(upto > after)) return null;
+    const s = p?.sync, base = s?.marks?.base?.index ?? Infinity;
+    if (!s || syncRows().some(r => r.index > after && r.index <= upto && !(r.index > base && readBefore(s, r.index)))) return null;
     const evs = Object.entries(p?.sync?.events || {}).filter(([, e]) => Number.isInteger(e?.at) && e.at > after && e.at <= upto).sort((x, y) => x[1].at - y[1].at);
     return { from: after + 1, to: upto, n: evs.length, text: `[TOLD SHORT — messages #${after + 1}–#${upto}, after RECENT CHAT: what the phone's reflection took from each, a summary and the words it came from]\n${evs.map(([id, e]) => `#${e.at} · ${e.summary || id}${e.quote ? ` — "${e.quote}"` : ''}`).join('\n') || '(nothing for the phone)'}` };
 }
@@ -489,14 +497,14 @@ export const turnsNote = (last, what, short = null) => {
     const obj = `${what}${/[가-힣]$/.test(what) && (what.charCodeAt(what.length - 1) - 0xac00) % 28 ? '을' : '를'}`;
     if (short?.n !== undefined && last?.all) return globalThis.toastr?.info(`${obj} 채웠어요. 대화가 길어서 #${short.from}부터는 요약만 보고 채웠어요.`, '캐릭터 휴대폰');
     if (!last || last.all) return;
-    globalThis.toastr?.warning(last.upto != null ? `${obj} #${last.to}까지만 채웠어요. 다시 만들면 나머지도 들어가요.` : `${obj} #${last.to}까지 채웠어요. 나머지는 반영하면 들어가요.`, '캐릭터 휴대폰');
+    globalThis.toastr?.warning(last.upto != null ? `${obj} #${last.to}까지만 채웠어요. 아카이브하고 다시 만들면 나머지도 들어가요.` : `${obj} #${last.to}까지 채웠어요. 나머지는 반영하면 들어가요.`, '캐릭터 휴대폰');
 };
 // the story's "now" for a request that stopped short: the message it read up to (null: now is now). Its days, weather
 // and clock stand there too, so it never writes a day it didn't read; the reflection moves them on from there
 export const nowAt = g => (!g ? null : !g.all ? g.to : g.upto ?? null);
 // where a request read up to, when it stopped short of now: its app's mark (null: it read to now)
 export const readMark = g => { const i = nowAt(g); return i == null ? null : markAfter(i); };
-export const readNote = g => { if (g && !g.all) globalThis.toastr?.info(`대화가 길어서 #${g.to}까지 읽었어요. 나머지는 반영하면 들어가요.`, '캐릭터 휴대폰'); };
+export const readNote = g => { if (g && !g.all) globalThis.toastr?.info(g.upto != null ? `대화가 길어서 #${g.to}까지 읽었어요. 아카이브하고 다시 만들면 나머지도 들어가요.` : `대화가 길어서 #${g.to}까지 읽었어요. 나머지는 반영하면 들어가요.`, '캐릭터 휴대폰'); };
 // the story's year: the phone's own (carried over New Year), else one written in a date in the archive, the newest status
 // lines or (no archive) the chat; none for a story that never dates itself (a fantasy calendar, an undated present)
 // upto: a request that read only up to that message takes the status lines up to it (see nowAt)
@@ -552,9 +560,12 @@ export function setStoryYear(m, p, year) {
 const yearBlock = (m, p, upto = null) => { const y = storyYear(m, p, upto); return y ? `[STORY YEAR]\n${y}` : ''; };
 // the archive block, or (budget) the chat in its place, then no RECENT CHAT: it is in there
 const archiveBlock = (m, ar, head, budget, upto = null) => (budget && noArchive(m) ? `[${head} — none written yet: the chat so far is the story]\n${chatStory(budget, upto) || '(empty)'}` : `[${head}]\n${ar}`);
-function archiveFor(m, after = -1) {
-    const [body, tail] = splitTail(String(m.text || ''));
-    const secs = parseSections(body).filter(s => !s.group && (after < 0 || secEnd(s) > after));
+// upto: no section that begins after that message (a fill reads up to the phone's clock), and then no current state
+// either (the tail tells the story's end, past the clock)
+function archiveFor(m, after = -1, upto = null) {
+    const [body, tail0] = splitTail(String(m.text || ''));
+    const all = parseSections(body).filter(s => !s.group && (after < 0 || secEnd(s) > after));
+    const secs = all.filter(s => upto == null || secFirst(s) <= upto), tail = secs.length === all.length ? tail0 : '';
     const parts = [];
     let size = tail.length;
     for (let i = secs.length - 1; i >= 0; i--) {
@@ -611,7 +622,7 @@ const blindBlock = (m, owner) => {
 function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', gap = null) {
     const world = worldText(m), upto = nowAt(gap);
     const recent = chatUpto(recentForCheck(1e9), upto).slice(-6).join('\n\n').slice(-6000);
-    const ar = archiveFor(m, p ? p.upto ?? -1 : -1);
+    const ar = archiveFor(m, p ? p.upto ?? -1 : -1, nowAt(gap));
     const now = p ? JSON.stringify(phoneForModel(p)) : '';
     return [
         p ? `[PHONE NOW]\n${now}` : '',
@@ -659,7 +670,8 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     // a fill; made anew: up to now, and that becomes its clock
     const cur = m.phones?.[key], keep = !!(apps && cur) || !!(cur?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => cur.sync.marks[g]));
     const gap = windowOf(m, keep ? cur : null);
-    const mark = readMark(gap) || markNow();
+    // nothing shown after the archive (all of it archived and hidden): it read up to the archive's end, not -1
+    const mark = readMark(gap) || (n => (n.index < archiveEnd(m) ? markAfter(archiveEnd(m)) : n))(markNow());
     const old = update ? m.phones?.[key] : null;
     const part = apps && m.phones?.[key] ? apps.flatMap(a => REMAKE[a] || []) : null;
     const binding=structuredClone(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key]);
@@ -854,7 +866,7 @@ async function updatePhone(m, owner) {
         // an older message changed: read again, tied to the events it already gave (no new payment from it)
         const reread = new Map(moved.changed.map(x => [x.at, Object.entries(s.events).filter(([, e]) => e.at === x.at || (e.effects || []).some(f => (f.item?.sourceIndex ?? f.sourceIndex) === x.at)).map(([id, e]) => ({ id, summary: e.summary }))]));
         if (reread.size) swiped.push(`바뀐 대화 ${reread.size}개를 다시 읽어요. 그 대화의 결제는 새로 넣지 않고 기존 기록만 고쳐요`);
-        const rows = syncRows(), round = pickRound(s, rows);
+        const rows = syncRows(), round = pickRound(s, rows), clockBefore = phoneAt(p) ?? -1;
         // the archive: sections covering this round are evidence; earlier ones are background; ones reaching unread messages stay out
         const [, tail] = splitTail(String(m.text || ''));
         const sections = archSections(m);
@@ -883,7 +895,7 @@ async function updatePhone(m, owner) {
         // from the saved weather's, or when it puts the story somewhere else; a same-day, same-place line only stands over it
         const placeKey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''), elsewhere = (a, b) => placeKey(a) && placeKey(b) && !placeKey(a).includes(placeKey(b)) && !placeKey(b).includes(placeKey(a));
         // the life apps already read past this round (filled further on): its weather is theirs, a round behind leaves it
-        const lifeAhead = !!life && roundEnd != null && roundEnd <= (s.marks.life?.index ?? -1);
+        const lifeAhead = !!life && roundEnd != null && (roundEnd <= (s.marks.life?.index ?? -1) || roundEnd < clockBefore);
         const askWeather = !!life && !lifeAhead && (!tracker || !trackDay || trackDay !== life.weather?.date || elsewhere(tracker.place, life.weather?.place));
         // the year the phone's now is in: read once from the bank or the archive, then carried over New Year with the now
         if (!p.year && !p.noYear) { const y = Number(storyYear(m, p, roundEnd) || String(p.money?.asOf || p.investment?.date || '').slice(0, 4)); if (y > 1900) p.year = y; }
@@ -1005,7 +1017,12 @@ async function updatePhone(m, owner) {
         for (const x of evidence) s.arch[x.key] = 1;
         // an archived stretch read from its section: its messages count as read (shown again later, they aren't read twice)
         const hiddenNow = [];
-        if (archIn.length) { const txt = new Map(chatRows().map(r => [r.index, r.text])); s.hiddenRead ||= {}; for (const i of archIn.flatMap(x => x.hidden)) { s.hiddenRead[i] = bodyMark(txt.get(i) || ''); hiddenNow.push([i, s.hiddenRead[i]]); } }
+        // (every evidence section's hidden messages, a mixed one's too: a section retitled later must not bring them back)
+        if (evidence.length) {
+            const txt = new Map(chatRows().filter(r => r.hidden).map(r => [r.index, r.text])), base = s.marks.base?.index ?? -1;
+            s.hiddenRead ||= {};
+            for (const x of evidence) for (const [i, t] of txt) if (i > base && i >= x.first && i <= x.last && s.hiddenRead[i] === undefined) { s.hiddenRead[i] = bodyMark(t); hiddenNow.push([i, s.hiddenRead[i]]); }
+        }
         // a now without its time ("2026-12-31", "1/2"): that day at the round's last event time, else the time it was
         let nowAt = (t => (/^\d{2}-\d{2}$/.test(t) ? `${t} ${arr(raw.events).map(e => [when(e?.date).slice(0, 5), hhmm(e?.time)]).filter(([d, h]) => d === t && /^\d{2}:\d{2}$/.test(h || '')).map(([, h]) => h).sort().at(-1) || (t === String(p.now || '').slice(0, 5) ? p.now.slice(6) : '') || '12:00'}`.trim() : t))(when(raw.now));
         // the phone's time only moves on, across New Year too (12-31 → 01-01 is a day later, not months back)
@@ -1451,7 +1468,7 @@ export async function sideRequest(m, owner, blocks, { profile, money = false, st
     const recent = chatUpto(recentForCheck(1e9), upto).slice(-6).join('\n\n').slice(-6000);
     if (read) read.gap = gap;
     return [
-        archiveBlock(m, archiveFor(m, -1).text || '(empty)', 'ARCHIVE', story, upto),
+        archiveBlock(m, archiveFor(m, -1, upto).text || '(empty)', 'ARCHIVE', story, upto),
         world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
         afterBlock(gap) || (recent && !(story && noArchive(m)) ? `[RECENT CHAT]\n${recent}` : ''),
         yearBlock(m, ph, upto), `[OWNER]\n${owner}`, profileText, blindBlock(m, owner), ...blocks, namesBlock(m),

@@ -140,3 +140,41 @@ test('the life and delivery marks follow a message deleted before them, like the
     assert.equal(c.p.sync.marks.life.index, 9);
     assert.equal(c.p.sync.marks.delivery.index, 8);
 });
+
+// ---- 점검에서 나온 버그들
+test('a round that reads only an archived stretch behind the phone\'s clock leaves the life app\'s weather', async () => {
+    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning'), hide(say('Ren', 'going to the bookstore')), hide(say('Mara', 'did you get it')),
+        hide(say('Ren', 'yes the poetry one')), hide(say('Mara', 'nice'))];
+    for (let k = 0; k < 6; k++) chat.push(say(k % 2 ? 'Mara' : 'Ren', `line ${k} later on`));
+    const c = setup(chat);
+    c.m.text = SECTION;
+    c.p.sync.done = [[6, 11]];
+    c.p.life = { at: '10-27 09:00', clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] },
+        weather: { here: { place: 'Varo', date: '10-27', time: '09:00', cond: 'snow', temp: -2, hours: [], days: [], tiles: {} }, cities: [] } };
+    c.p.sync.marks.life = makeMark(chat, 1);
+    await run(c.m, { now: '10-26 13:00', events: [note(3, 'bought the poetry book', 'Book')], weather: { place: 'Varo', date: '10-26', time: '13:00', cond: 'clear', temp: 20 } });
+    assert.ok(readBefore(c.p.sync, 3));
+    assert.equal(c.p.life.weather.here.cond, 'snow');
+});
+
+test('a section read with its visible messages: its hidden ones count as read too, retitled or not', async () => {
+    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning'), hide(say('Ren', 'going to the bookstore')), hide(say('Mara', 'did you get it')),
+        hide(say('Ren', 'yes the poetry one')), say('Mara', 'nice'), say('Ren', 'see you at the cafe later')];
+    const c = setup(chat);
+    c.m.text = SECTION;
+    await run(c.m, { now: '10-26 13:00', events: [note(5, 'nice', 'Nice'), note(6, 'see you at the cafe', 'Cafe')] });
+    for (const i of [2, 3, 4]) assert.ok(readBefore(c.p.sync, i), String(i));
+    c.m.text = SECTION.replace('Bookstore', 'The bookstore trip');
+    assert.equal(data.syncLeft(c.p, c.m), 0);
+});
+
+test('a phone made when everything after the archive is hidden: its clock is the archive\'s end', async () => {
+    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning'), hide(say('Ren', 'going to the bookstore')), hide(say('Mara', 'did you get it')),
+        hide(say('Ren', 'yes the poetry one')), hide(say('Mara', 'nice'))];
+    const c = setup(chat);
+    c.m.text = SECTION;
+    delete c.m.phones.ren;
+    T.answers.push({ contacts: [], threads: [], now: '10-26 13:00' });
+    await data.makePhone(c.m, 'Ren').catch(() => {});
+    assert.equal(c.m.phones.ren?.sync?.marks?.base?.index, 5);
+});

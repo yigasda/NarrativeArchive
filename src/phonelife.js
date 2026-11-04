@@ -25,7 +25,7 @@ YOU GET
 - ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 - PHONE NOW: what the phone already holds (events, mails, tickets, bookings), with their "ev" tags.
 - STORY DAYS: the last 14 days of the story, and where the owner was on each.
-- WEATHER NOW (sometimes): the date, time, place and weather from the chat's newest status line.
+- WEATHER NOW (sometimes): the date, time, place and weather from the chat's last status line up to the end of RECENT CHAT.
 - PHONE COUNTRY (sometimes): the country the phone is set to.
 
 STORY OR EVERYDAY
@@ -402,16 +402,26 @@ function secondTurn(m, p, first) {
 const soFarHead = (what, short) => `[${what} SO FAR — what you wrote from the story before RECENT CHAT. Write only what RECENT CHAT${short ? ' and TOLD SHORT' : ''} add or change, in the same JSON and in the same voice, language and naming as here; leave out what is already here]`;
 const byKey = (xs, ys, key) => [...xs.filter(x => !ys.some(y => key(y) === key(x))), ...ys];
 const given = o => Object.fromEntries(Object.entries(o || {}).filter(([, v]) => v !== null && v !== undefined && v !== ''));
-// what a second turn adds, put into what the first wrote: the same alarm (time and label), day, file or folder is the new
-// telling of it; a habit only where it says something
-function mergeLife(a, b) {
+// what a second turn adds, put into what the first wrote. An alarm (time and label), file or folder it names is its new
+// telling; a day is merged field by field (a night the first wrote stays when the second leaves it out, and a day the
+// story told is never written over by a guessed one); a habit only where it says something. The weather stays the
+// first's unless the second gives a place, its saved cities joined by name; the timer running is the second's (at its now)
+function mergeDay(a, b) {
+    if (!a) return b;
+    return a.from === 'story' && b.from !== 'story' ? { ...b, ...given(a) } : { ...a, ...given(b) };
+}
+export function mergeLife(a, b) {
     const alarm = x => `${x.time}|${String(x.label || '').toLowerCase()}`;
+    const days = new Map(a.health.days.map(d => [d.date, d]));
+    for (const d of b.health.days) days.set(d.date, mergeDay(days.get(d.date), d));
+    const wa = a.weather, wb = b.weather, gave = !!(wb?.here?.place || wb?.cities?.length);
+    const weather = !gave ? wa : { ...wa, ...wb, here: wb.here?.place ? wb.here : wa?.here, cities: byKey(wa?.cities || [], wb.cities || [], c => String(c.name || '').toLowerCase()) };
     return {
-        clock: { alarms: byKey(a.clock.alarms, b.clock.alarms, alarm).slice(-12), timers: byKey(a.clock.timers, b.clock.timers, x => String(x.label).toLowerCase()).slice(-6), running: b.clock.running || a.clock.running },
-        health: { usual: { ...a.health.usual, ...given(b.health.usual) }, days: byKey(a.health.days, b.health.days, x => x.date).sort((x, y) => dayGap(y.date, x.date)) },
+        clock: { alarms: byKey(a.clock.alarms, b.clock.alarms, alarm).slice(-12), timers: byKey(a.clock.timers, b.clock.timers, x => String(x.label).toLowerCase()).slice(-6), running: b.clock.running },
+        health: { usual: { ...a.health.usual, ...given(b.health.usual) }, days: [...days.values()].sort((x, y) => dayGap(y.date, x.date)) },
         files: { folders: byKey(a.files.folders, b.files.folders, x => x.name), items: byKey(a.files.items, b.files.items, x => x.name).slice(-24),
             cloud: Number.isFinite(b.files.cloud?.total) ? b.files.cloud : a.files.cloud },
-        weather: b.weather || a.weather,
+        weather,
     };
 }
 export const fillLife = (m, p) => exclusive('fill', async () => {
@@ -460,7 +470,7 @@ Write the screen time on a character's phone in a long role-play: the apps they 
 YOU GET
 - ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 - DAYS: their last days from the health app (when they slept and woke, their steps; "ev" when the story shows that day).
-- PHONE COUNTRY.
+- PHONE COUNTRY (sometimes).
 
 SCREEN TIME
 - It shows who they really are, habits they'd never admit (a game they can't put down, texting all night, barely touching the phone): from their character, not their polite profile.
@@ -480,7 +490,9 @@ export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', as
     const h = p.life?.health;
     if (!h) throw new Error('건강 앱을 먼저 채워 주세요');
     // the last week before today (today is counted as it goes, from their usual)
-    const read = { gap: windowOf(m, p) }, today = String(storyNow(p, nowAt(read.gap)) || p.now || '').slice(0, 5), told = d => String(d.id || '').startsWith('sync:') && !!d.screen;
+    // today: where it reads up to, or where the life app reached when that is later (its health days go on to there)
+    const read = { gap: windowOf(m, p) }, t0 = String(storyNow(p, nowAt(read.gap)) || p.now || '').slice(0, 5), la = String(p.life?.at || '').slice(0, 5);
+    const today = /^\d{2}-\d{2}$/.test(la) && /^\d{2}-\d{2}$/.test(t0) && dayGap(t0, la) > 0 ? la : t0, told = d => String(d.id || '').startsWith('sync:') && !!d.screen;
     const days = (h.days || []).filter(d => d.date && d.date !== today && (again ? !told(d) : !d.screen) && (!today || dayGap(d.date, today) > 0 && dayGap(d.date, today) <= 7)).sort((a, b) => dayGap(b.date, a.date)).slice(-7);
     const input = await sideRequest(m, p.owner, [`[DAYS]\n${JSON.stringify(days.map(d => ({ date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, ...(d.ev ? { ev: d.ev } : {}) })))}`,
         p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read });
@@ -499,11 +511,14 @@ export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', as
     await saveMeta();
     return n;
 });
-// what a second turn adds to the delivery app: a shop by its name (its menu kept when it gives none), an order by its shop
-// and time, the basket when it says one
-function mergeDelivery(a, b) {
-    const shops = byKey(a.shops, b.shops.map(x => ({ ...a.shops.find(y => y.name === x.name), ...x, menu: x.menu?.length ? x.menu : a.shops.find(y => y.name === x.name)?.menu || [] })), x => x.name);
-    return { shops, orders: byKey(a.orders, b.orders, o => `${o.shop}|${o.time}`), cart: b.cart || a.cart };
+// what a second turn adds to the delivery app: a shop by its name (only the fields it gives; its menu kept when it gives
+// none; a nearby shop it now orders from isn't "nearby" any more), the shops ordered from before the ones nearby; an order
+// by its story event, else its shop and time; the basket when it says one
+export function mergeDelivery(a, b) {
+    const named = new Map(a.shops.map(x => [x.name, x]));
+    for (const x of b.shops) { const o = named.get(x.name), n = { ...o, ...given(x), menu: x.menu?.length ? x.menu : o?.menu || [] }; delete n.nearby; named.set(x.name, n); }
+    const shops = [...named.values()], key = o => o.ev || `${o.shop}|${o.time}`;
+    return { shops: [...shops.filter(x => !x.nearby), ...shops.filter(x => x.nearby)], orders: byKey(a.orders, b.orders, key).sort(byStory(b.orders.at(-1)?.time || '')).slice(-16), cart: b.cart || a.cart };
 }
 export const fillDelivery = (m, p) => exclusive('fill', async () => {
     const accounts = p.money?.bank?.accounts || [];

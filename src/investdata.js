@@ -101,7 +101,7 @@ export const validDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '') && !Number.isN
 // where a fill would stop reading, kept while the chat and the archive stay as they are: the bank screens ask on every draw
 let stopMemo = { key: '', at: null };
 function stopAt(m, p) {
-    const chat = ctx()?.chat || [], key = `${chat.length}|${String(m?.text || '').length}|${String(chat.at(-1)?.mes || '').length}|${p?.owner}|${JSON.stringify(p?.sync?.done || [])}|${p?.sync?.marks?.base?.index}`;
+    const chat = ctx()?.chat || [], key = `${chat.length}|${String(m?.text || '').length}|${String(chat.at(-1)?.mes || '').length}|${p?.owner}|${JSON.stringify(p?.sync?.done || [])}|${Object.keys(p?.sync?.hiddenRead || {}).length}|${p?.sync?.marks?.base?.index}`;
     if (stopMemo.key !== key) stopMemo = { key, at: nowAt(windowOf(m, p)) };
     return stopMemo.at;
 }

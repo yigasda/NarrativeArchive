@@ -145,3 +145,71 @@ test('the delivery app the same way: two turns, the second adding to the first',
     assert.deepEqual(p.delivery.shops.map(x => x.name).slice(0, 2), ['Uno', 'Due']);
     assert.equal(p.sync.marks.delivery.index, 39);
 });
+
+// ---- 점검에서 나온 버그들
+test('a section archived past the phone\'s clock stays out of a fill: the reflection reads it', async () => {
+    globalThis.__rows = rows(14).map(r => ({ ...r, hidden: r.index <= 3 || (r.index >= 8 && r.index <= 10) }));
+    const mm = { text: '## #0–#3 — Arrival\n- Ren came home.\n## #8–#10 — Later\n- Ren left town.\n' };
+    const p = { owner: 'Ren', sync: { marks: { base: { index: 6 } }, done: [], hiddenRead: {} } };
+    assert.equal(data.archiveEnd(mm, 6), 3);
+    const g = data.windowOf(mm, p);
+    assert.deepEqual([g.from, g.to, g.upto], [4, 6, 6]);
+    const input = await data.sideRequest({ ...mm, phones: { ren: p } }, 'Ren', []);
+    assert.ok(input.includes('Ren came home') && !input.includes('Ren left town'));
+    // a section that begins before the clock and runs past it is read whole: the read point moves to its end
+    const span = { text: '## #0–#3 — Arrival\n- Ren came home.\n## #5–#9 — The trip\n- Ren took the train.\n' };
+    const g2 = data.windowOf(span, p);
+    assert.equal(data.nowAt(g2), 9);
+    assert.equal(data.readMark(g2).index, 9);
+    assert.ok((await data.sideRequest({ ...span, phones: { ren: p } }, 'Ren', [])).includes('Ren took the train'));
+});
+
+test('told short only for messages a reflection read: otherwise there is nothing to tell them', async () => {
+    globalThis.__rows = rows(30);
+    const p = { owner: 'Ren', sync: { marks: { base: { index: 6 } }, done: [[7, 20]], hiddenRead: {}, events: { a: { at: 12, summary: 'Ren cooked' } } } };
+    assert.ok(data.toldShort(p, 10, 20)?.text.includes('#12 · Ren cooked'));
+    // #21–#25 never read by a reflection
+    assert.equal(data.toldShort(p, 10, 25), null);
+    // #4–#6: only the making read them
+    assert.equal(data.toldShort(p, 3, 20), null);
+});
+
+const lifeOf = (o = {}) => ({ clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] }, weather: null, ...o });
+test('a second life turn keeps the first turn\'s weather, nights and story days; its running timer is its own', () => {
+    const here = { place: 'Varo', date: '10-26', cond: 'snow' };
+    const a = lifeOf({ clock: { alarms: [], timers: [], running: { label: 'tea', ends: '10-20 08:05' } },
+        health: { usual: {}, days: [{ date: '10-24', from: 'story', ev: 'hike', steps: 21000, night: { bed: '01:00', sleep: '01:10', wake: '07:00' } }, { date: '10-25', from: 'pattern', steps: 6000, night: { bed: '23:00', sleep: '23:20', wake: '07:00' } }] },
+        weather: { here, cities: [{ name: 'Ivo', tz: 'Europe/Berlin' }] } });
+    const b = lifeOf({ health: { usual: {}, days: [{ date: '10-24', from: 'pattern', steps: 5000 }, { date: '10-25', from: 'pattern', steps: 7000, night: null }] }, weather: null });
+    const c = life.mergeLife(a, b);
+    assert.equal(c.weather.here.cond, 'snow');
+    const d24 = c.health.days.find(d => d.date === '10-24'), d25 = c.health.days.find(d => d.date === '10-25');
+    assert.deepEqual([d24.from, d24.steps, d24.ev], ['story', 21000, 'hike']);
+    assert.deepEqual([d25.steps, d25.night?.wake], [7000, '07:00']);
+    assert.equal(c.clock.running, null);
+    // a second turn that says where they are now: its weather, the saved cities joined by name
+    const e = life.mergeLife(a, lifeOf({ weather: { here: { place: 'Ivo', date: '10-27', cond: 'rain' }, cities: [{ name: 'ivo', tz: 'Europe/Berlin' }, { name: 'Mara Bay' }] } }));
+    assert.equal(e.weather.here.place, 'Ivo');
+    assert.deepEqual(e.weather.cities.map(x => x.name), ['ivo', 'Mara Bay']);
+});
+
+test('a second delivery turn: a shop by the fields it gives, a nearby shop ordered from moves up, an order by its event', () => {
+    const a = { shops: [{ name: 'Uno', cuisine: 'pizza', rating: 4.6, menu: [{ name: 'Margherita' }] }, { name: 'Tre', cuisine: 'ramen', nearby: true, menu: [{ name: 'Shoyu' }] }],
+        orders: [{ shop: 'Uno', time: '10-20 19:00', ev: 'pizza-night', items: [{ name: 'Margherita' }] }], cart: null };
+    const b = { shops: [{ name: 'Uno', cuisine: 'pizza', rating: null, menu: [] }, { name: 'Tre', cuisine: 'ramen', menu: [] }],
+        orders: [{ shop: 'Uno', time: '10-20 19:30', ev: 'pizza-night', items: [{ name: 'Margherita' }] }, { shop: 'Tre', time: '10-24 21:00', items: [{ name: 'Shoyu' }] }], cart: null };
+    const c = life.mergeDelivery(a, b);
+    assert.equal(c.shops.find(x => x.name === 'Uno').rating, 4.6);
+    assert.ok(!c.shops.find(x => x.name === 'Tre').nearby);
+    assert.deepEqual(c.shops.find(x => x.name === 'Tre').menu.map(x => x.name), ['Shoyu']);
+    assert.deepEqual(c.orders.map(o => o.time), ['10-20 19:30', '10-24 21:00']);
+});
+
+test('screen time counts back from where the life app reached, when that is later than its own read point', async () => {
+    globalThis.__rows = rows(12);
+    const p = { owner: 'Ren', now: '10-20 12:00', life: { at: '10-26 09:00', health: { usual: {}, days: ['10-23', '10-24', '10-25'].map(date => ({ date, sleep: '23:00', wake: '07:00', steps: 5000 })) } } };
+    globalThis.__menu = { calls: [], answer: '{}' };
+    await life.fillScreen({ ...m, phones: { ren: p } }, p).catch(() => {});
+    const sent = globalThis.__menu.calls.find(c => c.sys === life.AI_SYS_SCREEN).input;
+    assert.ok(sent.includes('"date":"10-24"') && sent.includes('"date":"10-25"'), sent.slice(0, 300));
+});
