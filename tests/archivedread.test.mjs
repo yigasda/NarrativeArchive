@@ -671,7 +671,8 @@ test('반영\'s everyday records: so many an answer and a day in each app, texts
     assert.deepEqual(guess('threads').sort(), ['Ivo 09:0', 'Ivo 09:1', 'Ivo 09:2', 'Lena 09:0', 'Lena 09:1']);
     assert.ok(c.p.searches.some(x => x.q === 'Ren train times' && x.src !== 'guess'));
     assert.match(T.sys, /a little in each as a real phone gets it, texts and calls by the person/);
-    assert.match(T.sys, /a scene may carry on in texts later/);
+    assert.match(T.sys, /After a scene with someone in these messages \(a fight, a date, a job given in person\), the texts they would send each other later go here too/);
+    assert.match(T.sys, /Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result\. How they feel and small things around them are fine\./);
     assert.ok(!T.sys.includes('only when the archive or chat shows the owner recorded one'));
     assert.ok(data.AI_SYS_PHONE.includes('only when the archive or chat shows the owner recorded one'));
     assert.match(T.sys, /with people from the story or PEOPLE AROUND as they are and with what they feel, never someone the owner isn.t in touch with now/);
