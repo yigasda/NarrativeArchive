@@ -446,8 +446,7 @@ Another step already put the story's own events on the phone; you only add every
 YOU GET
 - NEW MESSAGES: the messages these hours come from, each with its number (#123).
 - ARCHIVE FOR THESE MESSAGES, ARCHIVE BEFORE, STORY NOW (sometimes): the story around them. Background.
-- EVENTS ON THE PHONE, PHONE NOW, LIFE NOW (sometimes: the alarms, files and health days, with record ids), WEATHER NOW (sometimes), DAYS (sometimes), MESSAGES READ BEFORE, NOW CHANGED (sometimes): what the phone holds.
-- MONEY NOW, INVESTMENTS NOW, WEALTH, DELIVERY SHOPS (sometimes): the owner's money. Background.
+- EVENTS ON THE PHONE, PHONE NOW, LIFE NOW (sometimes: the alarms, files and health days, with record ids), WEATHER NOW (sometimes), DAYS (sometimes): what the phone holds.
 ${CLOCK_GET}
 - PEOPLE AROUND (sometimes): people in the owner's life, close or not, from the cards, persona, profile and lorebook, with where things stand now.
 - PUT ON THE PHONE NOW: what the other step wrote from these messages. Never again.
@@ -492,9 +491,12 @@ function scenesWith(p, text) {
 }
 // what the reflection put on the phone from these messages, one line an event
 const putLine = e => { const ph = e?.phone && typeof e.phone === 'object' ? e.phone : {}; const bits = Object.entries(ph).filter(([, v]) => Array.isArray(v) && v.length).map(([k, v]) => (k === 'threads' ? `texts with ${v.map(t => t?.with).filter(Boolean).join(', ')}` : `${k} ${v.length}`)); return `- #${e?.at ?? '?'} ${line(e?.summary, 120)}${bits.length ? ` (${bits.join('; ')})` : ''}`; };
-async function askEveryday(input, raw, p, rows, life = false) {
+// the reflection's own blocks, but the messages read before and changed since (they only match its events' ids)
+export const everydayParts = parts => arr(parts).filter(b => !String(b).startsWith('[MESSAGES READ BEFORE, NOW CHANGED]'));
+async function askEveryday(parts, raw, p, rows, life = false) {
     const text = rows.map(r => r.text).join('\n'), who = scenesWith(p, text);
-    const blocks = [input, `[PUT ON THE PHONE NOW]\n${arr(raw?.events).map(putLine).join('\n') || '(nothing)'}`, who.length ? `[SCENES WITH]\n${who.join('\n')}` : ''].filter(Boolean).join('\n\n');
+    const mine = everydayParts(parts).join('\n\n');
+    const blocks = [mine, `[PUT ON THE PHONE NOW]\n${arr(raw?.events).map(putLine).join('\n') || '(nothing)'}`, who.length ? `[SCENES WITH]\n${who.join('\n')}` : ''].filter(Boolean).join('\n\n');
     try { const got = jsonOf(await askDraft(blocks, { force: true, system: everydaySystem({ life }), maxTokens: 6000, effort: 'low' })); return got?.everyday && typeof got.everyday === 'object' ? got.everyday : null; }
     catch (err) { console.warn('[narrative-archive] everyday', err); return null; }
 }
@@ -1153,7 +1155,7 @@ async function updatePhone(m, owner) {
             const d = new Date(Date.UTC(Number(known), Number(today.slice(0, 2)) - 1, Number(today.slice(3, 5)) + k));
             return `${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()]}`;
         }) : [];
-        const input = [
+        const inputParts = [
             `[NEW MESSAGES]\n${round.rows.map(r => r.text).join('\n\n') || '(none: this round reads only stretches archived before the phone read them)'}`,
             evidence.length ? `[ARCHIVE FOR THESE MESSAGES]\n${evidence.map(x => x.text).join('\n\n')}` : '',
             before.length ? `[ARCHIVE BEFORE]\n${before.join('\n\n')}` : '',
@@ -1168,12 +1170,13 @@ async function updatePhone(m, owner) {
             !split && (money || invest) && p.wealthPlan ? `[WEALTH]\n${JSON.stringify({ currency: p.wealthPlan.currency, deposits: p.wealthPlan.deposits, investments: p.wealthPlan.investments, basis: p.wealthPlan.basis })}` : '',
             world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '', aroundBlock(p),
             `[OWNER]\n${owner}`, profile, blindBlock(m, owner), namesBlock(m),
-        ].filter(Boolean).join('\n\n');
+        ].filter(Boolean);
+        const input = inputParts.join('\n\n');
         const made = { money: p.money?.at, invest: p.investment?.at, life: p.life, delivery: p.delivery };
         // low thinking: tested against medium on Vertex, the same payments, ids and amounts, without the thinking cost
         const out = await askDraft(input, { force: true, system: split ? coreSystem({ life: !!life, weather: askWeather, tracker: !!tracker, invest: !!invest, zone: askZone }) : updateSystem({ money: false, life: !!life, weather: askWeather, tracker: !!tracker, zone: askZone }), maxTokens: 16000, effort: 'low' });
         // then the everyday life of these hours, on its own (it fails alone: the round goes in without it)
-        const everyday = round.rows.length ? await askEveryday(input, jsonOf(out), p, round.rows, !!life) : null;
+        const everyday = round.rows.length ? await askEveryday(inputParts, jsonOf(out), p, round.rows, !!life) : null;
         // the answer is for the chat and messages it was asked about
         if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p) throw new Error('반영하는 사이 채팅이나 폰이 바뀌었어요. 다시 해 주세요');
         if (p.money?.at !== made.money || p.investment?.at !== made.invest) throw new Error('반영하는 사이 은행이나 투자가 새로 만들어졌어요. 다시 해 주세요');

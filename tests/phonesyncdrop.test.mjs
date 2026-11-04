@@ -168,9 +168,14 @@ test('a branch: talk cut off past the branch point is gone, even where a new mes
 test('in the same chat, a message written over in its place is still an edit, read again', async () => {
     const c = await bookCase();
     T.chat[3] = say('Mara', 'something else entirely happened');
+    globalThis.__everydayIn = [];
     await run(c.m, { now: '10-26 15:00', events: [] });
     assert.equal(c.p.sync.dropped?.length || 0, 0);
     assert.ok(c.p.syncLast.notes.some(n => /읽은 대화가 바뀌어서|바뀐 대화 1개/.test(n)));
+    // (일상 gets the reflection's own input, all of it)
+    assert.ok(globalThis.__everydayIn.at(-1).startsWith(T.input));
+    // but never the block of messages read before and changed since
+    assert.deepEqual(data.everydayParts(['[NEW MESSAGES]\n[#3] a', '[MESSAGES READ BEFORE, NOW CHANGED]\n- #3: book', '[PHONE NOW]\n{}']), ['[NEW MESSAGES]\n[#3] a', '[PHONE NOW]\n{}']);
 });
 
 test('a chat renamed or a backup imported keeps its mark: an edit made right after is still an edit, nothing is offered to take off', async () => {

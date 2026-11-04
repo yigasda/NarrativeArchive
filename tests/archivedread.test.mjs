@@ -727,6 +727,8 @@ test('일상 is its own request after the reflection\'s: it gets all the reflect
     const got = globalThis.__everydayIn.at(-1);
     for (const b of ['[NEW MESSAGES]', '[PHONE NOW]', '[PEOPLE AROUND]', '[OWNER]', '[PUT ON THE PHONE NOW]\n- #2 Varo gave the cafe job (notes 1)', '[SCENES WITH]']) assert.ok(got.includes(b), b);
     assert.deepEqual(got.split('[SCENES WITH]\n')[1].split('\n'), ['Ivo', 'Varo Lind']);
+    // (not what only the reflection uses; nothing it doesn't get is named)
+    assert.ok(!data.AI_SYS_EVERYDAY.includes('MONEY NOW') && !data.AI_SYS_EVERYDAY.includes('INVESTMENTS NOW') && !data.AI_SYS_EVERYDAY.includes('MESSAGES READ BEFORE'));
     // its blocks are the ones it says it gets
     for (const b of ['NEW MESSAGES', 'PHONE NOW', 'PEOPLE AROUND', 'PUT ON THE PHONE NOW', 'SCENES WITH', 'OWNER']) assert.ok(data.AI_SYS_EVERYDAY.includes(`${b}`), b);
     assert.match(data.AI_SYS_EVERYDAY, /For each person in SCENES WITH: the texts the two would send each other later/);
