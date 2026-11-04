@@ -9,7 +9,7 @@ import { calendars } from './calendar.js';
 import { saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
-import { arr, trackerWeather, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
+import { arr, trackerWeather, readMark, readNote, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, parseWeather, screenOf, usualScreenOf, weatherFrom } from './phonesynclife.js';
 import { SCREEN_LIST } from './phonescreen.js';
@@ -387,10 +387,10 @@ const later = (t, now) => { const g = dayGap(String(now).slice(0, 5), String(t).
 export const fillLife = (m, p) => exclusive('fill', async () => {
     const now = weatherNow(), days = storyDays(m, p);
     // made again: the body the phone already shows stays, unless the story changed it (a child who grew, a diet)
-    const was = p.life?.health?.usual || {}, body = Object.fromEntries(['height', 'weight'].filter(k => Number.isFinite(was[k])).map(k => [k, was[k]]));
+    const read = {}, was = p.life?.health?.usual || {}, body = Object.fromEntries(['height', 'weight'].filter(k => Number.isFinite(was[k])).map(k => [k, was[k]]));
     const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(days),
         Object.keys(body).length ? `[BODY ON THE PHONE NOW — keep it unless the story changed it]\n${JSON.stringify(body)}` : '',
-        now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.life });
+        now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.life, read });
     const out = await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' });
     const life = parseLife(jsonOf(out), now, days.at(-1)?.day || '');
     // a booking the wallet holds is drawn from it: its file needs no line of its own
@@ -400,9 +400,10 @@ export const fillLife = (m, p) => exclusive('fill', async () => {
     for (const x of life.files.items) if (x.ev && booked.has(x.ev)) x.preview = '';
     p.life = { ...life, at: storyNow(p) || p.now || '' };
     // a reflection reads on from here: what came before is in what was just written
-    if (p.sync?.marks) p.sync.marks.life = markNow();
+    if (p.sync?.marks) p.sync.marks.life = readMark(read.gap) || markNow();
     ensureIds(p);
     await saveMeta();
+    readNote(read.gap);
     // the screen time is its own request right after (its long app list stays out of this one); one that failed leaves
     // 설정 › 스크린타임 with its 채우기 button
     try { await fillScreen(m, p); } catch (err) { console.warn('[narrative-archive] screen time', err); }
@@ -457,11 +458,11 @@ export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', as
     return n;
 });
 export const fillDelivery = (m, p) => exclusive('fill', async () => {
-    const accounts = p.money?.bank?.accounts || [];
+    const accounts = p.money?.bank?.accounts || [], read = {};
     // the bank's own rows (not the ones this app put there): a meal already paid there is pointed at, not paid again
     const tx = (p.money?.tx || []).filter(t => !String(t.id).startsWith('dlv-') && !t.delivery);
     const money = accounts.length ? `[MONEY NOW]\n${JSON.stringify({ accounts: accounts.map(a => ({ last4: a.last4, kind: a.kind, name: a.name, currency: a.currency })), tx: tx.slice(-20).map(t => ({ id: t.id, account: t.account, time: t.time, who: t.who, amount: t.amount })) })}` : '';
-    const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(storyDays(m, p)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money], { profile: p.financeProfile, story: CHAT_TOKENS.apps });
+    const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p)}`, daysBlock(storyDays(m, p)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read });
     const out = await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 12000, effort: 'low' });
     const raw = jsonOf(out), d = parseDelivery(raw, accounts, tx, storyNow(p) || p.now || ''), at = storyNow(p) || p.now || '';
     // the shops nearby go after the ones they order from (the app's 동네 인기 가게)
@@ -474,10 +475,11 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
     const kept = (p.delivery?.orders || []).filter(o => o.sync), plain = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
     const twin = o => kept.some(k => (o.ev && k.ev === o.ev) || (plain(k.shop) === plain(o.shop) && dayGap(String(k.time).slice(0, 5), String(o.time).slice(0, 5)) === 0));
     p.delivery = { ...d, orders: [...d.orders.filter(o => !twin(o)), ...kept].sort(byStory(p.now)), look: deliveryLook(p), at: storyNow(p) || p.now || '', nearbyAt: String(storyNow(p) || p.now || '').slice(0, 5), city: homeCity(p) };
-    if (p.sync?.marks) p.sync.marks.delivery = markNow();
+    if (p.sync?.marks) p.sync.marks.delivery = readMark(read.gap) || markNow();
     ensureIds(p);
     payDeliveries(m, p);
     await saveMeta();
+    readNote(read.gap);
     // the shops nearby get their menus straight after, in a request of their own (a failure here leaves the app as filled)
     try { await fillShopMenus(m, p); } catch { /* asked again when the app is opened */ }
     return p.delivery;

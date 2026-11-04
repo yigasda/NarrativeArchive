@@ -92,7 +92,7 @@ YOU GET
 - ARCHIVE: the story so far, in sections (#numbers are chat messages), with the current state at the end.
 - WORLD (sometimes): the shared setting.
 - LOREBOOK (sometimes): setting notes the user picked.
-- RECENT CHAT: the newest messages, after the archive.
+- RECENT CHAT: the messages after the archive, oldest first.
 - OWNER: whose phone it is. STORY YEAR (sometimes): the story's year.
 - OWNER PROFILE (sometimes): the background the user chose for the owner.
 - OWNER DOESN'T KNOW (sometimes): facts the owner does not know, or only suspects. Nothing on the phone may show them as known.
@@ -444,6 +444,22 @@ function chatStory(budget) {
     return out.join('\n\n');
 }
 export const noArchive = m => !archiveFor(m, -1).text.trim();
+// the last message the archive covers (its sections' "#a–#b" headings), -1 when none
+export const archiveEnd = m => Math.max(-1, ...parseSections(splitTail(String(m?.text || ''))[0]).filter(s => !s.group).map(secEnd));
+// the chat after the archive, oldest first: every message the archive doesn't cover yet, nothing left out in between, up
+// to `budget` tokens. A longer stretch is read up to where it stops (to); the request's app marks that as read, and the
+// rest is the reflection's to read, in its own order, so no message is lost and none comes in twice
+export function chatAfterArchive(m, budget = CHAT_TOKENS.phone) {
+    const end = archiveEnd(m), rows = syncRows().filter(r => r.index > end), out = [];
+    let size = 0;
+    for (const r of rows) { const t = estTok(r.text); if (out.length && size + t > budget) break; out.push(r); size += t; }
+    return { text: out.map(r => r.text).join('\n\n'), from: out[0]?.index ?? null, to: out.at(-1)?.index ?? end, n: out.length, all: out.length === rows.length, left: rows.length - out.length };
+}
+// it as RECENT CHAT; cut short, the block says where the story stops for now
+const afterBlock = g => (g?.n ? `[RECENT CHAT${g.all ? '' : ` — the story so far ends at #${g.to}; the messages after it are read later`}]\n${g.text}` : '');
+// where a request read up to, when it stopped short of now: its app's mark (null: it read to now)
+export const readMark = g => (g && !g.all ? markAfter(g.to) : null);
+export const readNote = g => { if (g && !g.all) globalThis.toastr?.info(`아카이브 뒤 메시지가 많아서 #${g.from}–#${g.to}까지 읽었어요. 나머지 ${g.left}개는 반영으로 이어서 채워져요`, '캐릭터 휴대폰'); };
 // the story's year: the phone's own (carried over New Year), else one written in a date in the archive, the newest status
 // lines or (no archive) the chat; none for a story that never dates itself (a fantasy calendar, an undated present)
 export function storyYear(m, p = null) {
@@ -554,7 +570,7 @@ const blindBlock = (m, owner) => {
     const rows = knowledgeRows(m).flatMap(r => (r.unaware.some(me) ? [`- ${r.fact}`] : r.suspects.some(me) ? [`- ${r.fact} (only suspects)`] : []));
     return rows.length ? `[OWNER DOESN'T KNOW]\n${rows.join('\n')}` : '';
 };
-function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '') {
+function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', gap = null) {
     const world = worldText(m);
     const recent = recentForCheck(6).join('\n\n').slice(-6000);
     const ar = archiveFor(m, p ? p.upto ?? -1 : -1);
@@ -565,7 +581,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '') 
         archiveBlock(m, ar.text || '(nothing new)', `ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}`, CHAT_TOKENS.phone),
         world ? `[WORLD]\n${world}` : '',
         lore ? `[LOREBOOK]\n${lore}` : '',
-        recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : '',
+        afterBlock(gap) || (recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : ''),
         yearBlock(m, p),
         `[OWNER]\n${owner}`,
         profile, blindBlock(m, owner),
@@ -600,11 +616,13 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     if (update && m.phones?.[key]) return updatePhone(m, owner);
     if (busy.sync || busy.fill) throw new Error('다른 폰 작업이 끝난 뒤 다시 해 주세요');
     // reading starts after the last message there was when this was asked; what comes in while it writes stays unread
-    const mark = markNow();
+    // (or, with more after the archive than one request reads, after the last message it read: the reflection goes on from there)
+    const gap = noArchive(m) ? null : chatAfterArchive(m);
+    const mark = readMark(gap) || markNow();
     const old = update ? m.phones?.[key] : null;
     const part = apps && m.phones?.[key] ? apps.flatMap(a => REMAKE[a] || []) : null;
     const binding=structuredClone(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key]);
-    const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner), part, await ownerProfileBlock(ctx(),binding,owner)), { force: true, system: old ? AI_SYS_PHONE_UPDATE : AI_SYS_PHONE, maxTokens: 16000 });
+    const out = await askDraft(phoneRequest(m, owner, old, await loreFor(m, owner), part, await ownerProfileBlock(ctx(),binding,owner), gap), { force: true, system: old ? AI_SYS_PHONE_UPDATE : AI_SYS_PHONE, maxTokens: 16000 });
     if(JSON.stringify(binding)!==JSON.stringify(m.phones?.[key]?.financeProfile || m.phoneProfiles?.[key])) throw new Error('생성 중 연결한 인물 정보가 변경됐어요. 다시 시도해 주세요');
     const got = parsePhone(out, owner);
     m.phones = m.phones && typeof m.phones === 'object' ? m.phones : {};
@@ -648,6 +666,7 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     p.at = Date.now();
     await saveMeta();
     if (p.inject) applyInjection();
+    readNote(gap);
     return p;
 }
 
@@ -1363,14 +1382,16 @@ ANSWER — one JSON object, nothing else:
 Oldest first.`;
 
 // story: how many tokens of chat stand in for a missing archive (0: the recent chat only, as with an archive)
-export async function sideRequest(m, owner, blocks, { profile, money = false, story = 0 } = {}) {
+// read: an object to put what was read in ({ gap }), for a request whose app marks where it read up to
+export async function sideRequest(m, owner, blocks, { profile, money = false, story = 0, read = null } = {}) {
     const world = worldText(m), lore = await loreFor(m, owner);
     const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});
-    const recent = recentForCheck(6).join('\n\n').slice(-6000);
+    const recent = recentForCheck(6).join('\n\n').slice(-6000), gap = noArchive(m) ? null : chatAfterArchive(m);
+    if (read) read.gap = gap;
     return [
         archiveBlock(m, archiveFor(m, -1).text || '(empty)', 'ARCHIVE', story),
         world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
-        recent && !(story && noArchive(m)) ? `[RECENT CHAT]\n${recent}` : '',
+        afterBlock(gap) || (recent && !(story && noArchive(m)) ? `[RECENT CHAT]\n${recent}` : ''),
         yearBlock(m, m.phones?.[nameKey(owner)] || null), `[OWNER]\n${owner}`, profileText, blindBlock(m, owner), ...blocks, namesBlock(m),
     ].filter(Boolean).join('\n\n');
 }
@@ -1401,7 +1422,8 @@ const moneyContext = p => JSON.stringify({ now: p.now, mails: (p.mails || []).sl
 export const prepareWealth = (m,p,refresh=false) => ensureWealth(m,p,()=>sideRequest(m,p.owner,[`[OWNER COUNTRY]\n${p.country || ''}`,`[ACCOUNT CURRENCIES]\n${JSON.stringify((p.money?.bank?.accounts || []).map(a=>a.currency))}`],{profile:p.financeProfile,money:true}),{refresh});
 export const fillMoney = (m, p, opts = {}) => exclusive('fill', () => makeMoney(m, p, opts));
 async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null } = {}) {
-    const mark = markNow();
+    let mark = markNow();
+    const read = {};
     migrateBank(m, p);
     const old = p.money, rebuild = !!old && regenerateBalances;
     const plan = wealthPlan || await prepareWealth(m,p,regenerateBalances);
@@ -1410,7 +1432,8 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
     const before = accountState();
     const preserved = rebuild ? `[REBUILD ACCOUNTS]\n${JSON.stringify(old.bank.accounts.map(({id,kind,name,last4,currency})=>({id,kind,name,last4,currency})))}\n[MONEY ALREADY MOVED]\n${JSON.stringify(old.bank.accounts.map(a=>({id:a.id,currency:a.currency,entries:finance(m).accounts[`${a.id}:${a.currency}`]?.entries || {}})))}` : old ? `[EXISTING ACCOUNTS]\n${JSON.stringify(old.bank.accounts)}` : '';
     const system = AI_SYS_MONEY + (rebuild ? MONEY_REBUILD : '');
-    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p)}`,preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,`[SAVED RATES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`],{profile:p.financeProfile,money:true});
+    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p)}`,preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,`[SAVED RATES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`],{profile:p.financeProfile,money:true,read});
+    mark = readMark(read.gap) || mark;
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {
         const out = await askDraft(input+'\n'+correction,{force:true,system,maxTokens:12000});
@@ -1469,6 +1492,7 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
         payOrders(m, p, String(date || p.money.asOf || '').slice(0, 4) || String(new Date().getFullYear()));
         syncOf(p, phoneChatScope(ctx())).marks.money = mark;
         await saveMeta();
+        readNote(read.gap);
         return p.money;
     }
 }

@@ -3,7 +3,7 @@ import { wealthBlock, wealthCheck, investmentWealthRows } from './wealth.js';
 import { askDraft } from './ai.js';
 import { num, parseJson, yearIn } from './phoneparse.js';
 import { ctx, saveMeta } from './core.js';
-import { sideRequest, storyNow, prepareWealth } from './phonedata.js';
+import { sideRequest, storyNow, prepareWealth, readMark, readNote } from './phonedata.js';
 import { syncOf, makeMark, exclusive } from './phonesync.js';
 import { phoneChatScope } from './phonestory.js';
 import { baseline, reviseBaseline, cash, currency, finance, finite, uid, positions, addPrice, migrateBank, fx, quoteKey } from './finance.js';
@@ -120,7 +120,8 @@ function ingestQuotes(m, raw, input, date, securities) {
 }
 export const fillInvestment = (m, p, date, opts = {}) => exclusive('fill', () => makeInvestment(m, p, date, opts));
 async function makeInvestment(m, p, date, {regenerate = false, wealthPlan = null} = {}) {
-    const chat = ctx()?.chat || [], mark = makeMark(chat, chat.length - 1);
+    const chat = ctx()?.chat || [], read = {};
+    let mark = makeMark(chat, chat.length - 1);
     const old = p.investment;
     if (old && !regenerate) throw new Error('기존 투자 기록은 보존돼요. 시세 갱신을 사용해 주세요');
     if (!validDate(date)) throw new Error('이야기 날짜를 YYYY-MM-DD로 입력해 주세요');
@@ -139,7 +140,8 @@ async function makeInvestment(m, p, date, {regenerate = false, wealthPlan = null
     const snapshot = () => JSON.stringify([m.finance,p.investment,p.money,p.financeProfile]);
     const before = snapshot();
     const rebuild = old ? `[REBUILD]\n${JSON.stringify([...new Set(preserved.map(a=>a.currency))])}\n[MONEY ALREADY MOVED]\n${JSON.stringify(preserved)}` : '';
-    const input = await sideRequest(m, p.owner, [`[DATE]\n${date}`, `[BANK — separate locked balances]\n${JSON.stringify(p.money?.bank || {})}`, rebuild,wealthBlock(plan,'investments'),`[EXISTING PUBLIC PRICES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).map(([k,book])=>[k,book[date]])))}`], {profile:p.financeProfile,money:true});
+    const input = await sideRequest(m, p.owner, [`[DATE]\n${date}`, `[BANK — separate locked balances]\n${JSON.stringify(p.money?.bank || {})}`, rebuild,wealthBlock(plan,'investments'),`[EXISTING PUBLIC PRICES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).map(([k,book])=>[k,book[date]])))}`], {profile:p.financeProfile,money:true,read});
+    mark = readMark(read.gap) || mark;
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {
         const raw = json(await askDraft(input+'\n'+correction, { force: true, system: INVEST_SYS + (old ? INVEST_REBUILD : ''), maxTokens: 12000 }));
@@ -184,6 +186,7 @@ async function makeInvestment(m, p, date, {regenerate = false, wealthPlan = null
         p.investment = { at: Date.now(), version: 1, base: raw.base, date, basis: text(raw.basis, 2000), securities, accounts, trades, stakes, watch: list(raw.watch).slice(0, 8).filter(w => securities.some(s => s.symbol === w.symbol)).map(w => ({ symbol: w.symbol, note: text(w.note), ko: text(w.ko), query: text(w.query, 120), source: 'guess' })), generatedDates: [date] };
         syncOf(p, phoneChatScope(ctx())).marks.invest = mark;
         await saveMeta();
+        readNote(read.gap);
         return;
     }
 }
