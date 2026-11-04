@@ -596,3 +596,11 @@ test('elsewhere takes only people (not "everyone" or "the courier") and keeps th
     await withTrackers([trk(2, '13:00', '방콕 · 호텔', '맑음 31°C')], async () => run(d.m, { now: '10-26 13:00', ownerCity: { city: 'Bangkok', names: ['방콕', 'Bangkok'], tz: 'Asia/Bangkok' }, weather: { place: '방콕', cond: 'clear', temp: 31, from: 'chat' }, events: [] }));
     assert.equal(d.p.life.weather.here.place, '방콕');
 });
+
+test('what the user set in 위치 정보 a reflection doesn\'t undo: the owner\'s city by hand stays, someone taken off isn\'t put back', async () => {
+    const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Mara', 'Ivo flew to Rome and I am in Rome too')]);
+    c.p.where = { at: 1, removed: ['ivo'], people: [{ name: 'Ren', city: 'Frankfurt', names: ['Frankfurt'], lives: 'DE', tz: 'Europe/Berlin', manual: { city: true } }, { name: 'Mara', city: 'Seoul', names: ['Seoul'], lives: 'KR', tz: 'Asia/Seoul' }] };
+    await run(c.m, { now: '10-26 13:00', ownerCity: { city: 'Rome', tz: 'Europe/Rome' }, elsewhere: [{ name: 'Ivo', city: 'Rome', tz: 'Europe/Rome' }, { name: 'Mara', city: 'Rome', tz: 'Europe/Rome' }], events: [] });
+    const by = Object.fromEntries(c.p.where.people.map(x => [x.name, x.city]));
+    assert.deepEqual(by, { Ren: 'Frankfurt', Mara: 'Rome' });
+});

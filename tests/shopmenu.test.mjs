@@ -183,3 +183,15 @@ test('스크린타임 knows where they live: [LIVES IN] from the place reading (
     assert.match(globalThis.__menu.input, /\[LIVES IN\]\n독일/);
     assert.ok(globalThis.__menu.sys.includes('The apps people use where they live (LIVES IN)'));
 });
+
+test('스크린타임 of someone living outside Korea: Korea-only apps (KakaoTalk, NAVER) are taken out, their minutes go to an app of the same kind', async () => {
+    const p = { owner: 'Ren', country: 'KR', now: '10-26 12:00', where: { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', lives: 'DE', tz: 'Europe/Berlin' }] },
+        life: { health: { usual: {}, days: [{ date: '10-25', sleep: '23:00', wake: '07:00' }] } } };
+    globalThis.__menu.answer = JSON.stringify({ usual: { apps: [{ app: 'KakaoTalk', kind: 'chat', min: 80 }, { app: 'WhatsApp', kind: 'chat', min: 37 }, { app: 'Spotify', kind: 'music', min: 39 }] },
+        days: [{ date: '10-25', apps: { KakaoTalk: 60, WhatsApp: 20, NAVER: 10 } }] });
+    await life.fillScreen({}, p);
+    const u = p.life.health.usual.screen.apps;
+    assert.deepEqual(u.map(a => [a.app, a.min]), [['WhatsApp', 117], ['Spotify', 39]]);
+    assert.ok(!Object.keys(p.life.health.days[0].screen.apps).some(k => /kakao|naver/i.test(k)));
+    assert.equal(p.life.health.days[0].screen.apps.WhatsApp, 80);
+});

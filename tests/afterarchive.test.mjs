@@ -578,3 +578,21 @@ test('다시 만들기 keeps what a reflection put in from a section running pas
     await data.makePhone(mm, 'Ren', { apps: ['note'] });
     assert.deepEqual(p.notes.map(n => n.title).sort(), ['Groceries', 'Train times']);
 });
+
+test('위치 정보: the owner\'s country and city by hand, a person taken off or moved; the reading asked again keeps all of it', async () => {
+    globalThis.__rows = rows(8);
+    const p = plainPhone({ country: 'KR', where: { at: 1, people: [{ name: 'Ren', city: 'Seoul', names: ['Seoul'], lives: 'KR', tz: 'Asia/Seoul' }, { name: 'Mara', city: 'Seoul', names: ['Seoul'], lives: 'KR', tz: 'Asia/Seoul' }, { name: 'Ivo', city: 'Paris', names: ['Paris'], lives: 'FR', tz: 'Europe/Paris' }] }, contacts: [{ name: 'Mara' }, { name: 'Ivo' }] });
+    const mm = { ...m, phones: { ren: p } };
+    await data.setOwnerLives(mm, p, 'de');
+    await data.setPlaceCity(mm, p, 'Ren', 'Frankfurt');
+    await data.setPlaceCity(mm, p, 'Mara', 'Berlin');
+    await data.dropPlacePerson(mm, p, 'Ivo');
+    let info = data.placeInfo(p);
+    assert.deepEqual([info.owner.lives, info.owner.city, info.owner.tz, info.owner.livesManual, info.owner.cityManual], ['DE', 'Frankfurt', 'Europe/Berlin', true, true]);
+    assert.deepEqual(info.people.map(x => [x.name, x.city, x.tz]), [['Mara', 'Berlin', 'Europe/Berlin']]);
+    globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }, { name: 'Mara', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }, { name: 'Ivo', city: 'Paris', lives: 'FR', tz: 'Europe/Paris' }] };
+    try { info = await data.rereadPlaces(mm, p); } finally { delete globalThis.__whereAnswer; }
+    assert.deepEqual([info.owner.lives, info.owner.city], ['DE', 'Frankfurt']);
+    assert.deepEqual(info.people.map(x => [x.name, x.city]), [['Mara', 'Berlin']]);
+    assert.equal(p.lives, 'DE');
+});
