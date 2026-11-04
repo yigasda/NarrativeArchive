@@ -156,11 +156,12 @@ YOU GET
 - RECENT CHAT (sometimes): the newest messages, not in the archive yet.
 - IN THE GLOSSARY (sometimes): names already listed. Leave them out.
 
-WHAT TO LIST
-- People, cities, countries, groups, the story's own places (a house, a bar the characters keep going to), titles used as a name, made-up words.
-- In any language or script, and made-up words written in lowercase too.
-- Not real brands, products, foods, chain shops, airlines or street names. Not ordinary words, and not a word only because it starts a sentence. Not a name written only in Korean.
-- Each once, as the story writes it. A full name and its short form are two lines only when the story uses both.
+WHAT TO LIST — only these kinds; anything else stays out
+- PEOPLE: the characters and the people in their lives (family, friends, partners, coworkers), and their nicknames. Not someone who only passes through a scene.
+- PLACES: the places of someone's life: where they live, work or grew up, and the cities and countries the story is in.
+- GROUPS: a family, workplace, school or group someone belongs to.
+- TERMS: titles, made-up words and words with a meaning special to this story.
+- In any language or script. Not a name written only in Korean. Each once, as the story writes it; a full name and its short form are two lines only when the story uses both.
 
 KOREAN
 1. Real names with a usual Korean spelling (mythology, history, real places): use that spelling.
