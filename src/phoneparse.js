@@ -108,8 +108,64 @@ export function tidyKo(o, seen = new Set()) {
         else if (v && typeof v === 'object') tidyKo(v, seen);
     }
 }
-export const parseJson = s => { let o; try { o = JSON.parse(s); } catch { o = JSON.parse(mendJson(s)); } tidyKo(o); return o; };
-export const jsonOf = out => { const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}'); try { return a >= 0 && b > a ? parseJson(t.slice(a, b + 1)) : null; } catch { return null; } };
+// a long list a fill asked for, with a slip the mending can't undo (any kind: "app", 14 for "app": 14, a stray word, a
+// broken string): read piece by piece, and only the piece with the slip is left out (one app of one day, not the whole
+// screen time). Not for a reflection, whose answer is all or nothing
+export function salvageJson(t) {
+    const s = String(t);
+    let i = 0, lost = 0;
+    const ws = () => { while (i < s.length && /\s/.test(s[i])) i++; };
+    const fail = () => { throw new SyntaxError(`salvage at ${i}`); };
+    // past a broken piece: to the next comma or closer of the list it is in
+    const skip = from => {
+        let d = 0, str = false, esc = false;
+        for (i = from; i < s.length; i++) {
+            const ch = s[i];
+            if (str) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') str = false; continue; }
+            if (ch === '"') str = true;
+            else if (ch === '{' || ch === '[') d++;
+            else if (ch === '}' || ch === ']') { if (!d) return; d--; }
+            else if (ch === ',' && !d) return;
+        }
+    };
+    const string = () => {
+        if (s[i] !== '"') fail();
+        let j = i + 1;
+        for (; j < s.length; j++) { if (s[j] === '\\') { j++; continue; } if (s[j] === '"') break; }
+        if (j >= s.length) fail();
+        const v = JSON.parse(s.slice(i, j + 1));
+        i = j + 1;
+        return v;
+    };
+    const list = piece => {
+        i++;
+        for (;;) {
+            ws();
+            if (i >= s.length) return;
+            if (s[i] === '}' || s[i] === ']') { i++; return; }
+            const from = i;
+            try { piece(); ws(); if (i < s.length && !/[,}\]]/.test(s[i])) fail(); } catch { lost++; skip(from); }
+            if (s[i] === ',') i++;
+        }
+    };
+    const value = () => {
+        ws();
+        const ch = s[i];
+        if (ch === '{') { const o = {}; list(() => { const k = string(); ws(); if (s[i] !== ':') fail(); i++; o[k] = value(); }); return o; }
+        if (ch === '[') { const a = []; list(() => a.push(value())); return a; }
+        if (ch === '"') return string();
+        const lit = /^(?:true|false|null|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(s.slice(i, i + 40));
+        if (!lit) fail();
+        i += lit[0].length;
+        return JSON.parse(lit[0]);
+    };
+    const out = value();
+    if (!out || typeof out !== 'object') fail();
+    if (lost) console.warn(`[narrative-archive] ${lost} broken piece(s) left out of the answer`);
+    return out;
+}
+export const parseJson = (s, { salvage = false } = {}) => { let o; try { o = JSON.parse(s); } catch { try { o = JSON.parse(mendJson(s)); } catch (err) { if (!salvage) throw err; o = salvageJson(s); } } tidyKo(o); return o; };
+export const jsonOf = (out, opt) => { const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}'); try { return a >= 0 && b > a ? parseJson(t.slice(a, b + 1), opt) : null; } catch { return null; } };
 // a number from a model's answer: "12,50", "€9.90", "1,200"; text with no digit in it ("lots", "free") is none, never 0
 export const num = v => {
     if (v === null || v === undefined || typeof v === 'object' || typeof v === 'boolean') return null;

@@ -361,7 +361,7 @@ export async function refreshNearby(m, p, { read = false } = {}) {
     const input = [`[PLACE]\n${homeCity(p) || COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}${moved ? '\n[MOVED]\ntrue' : ''}`, `[CURRENCY]\n${cur}`,
         `[NEARBY]\n${JSON.stringify(near.map(s => ({ name: s.name, cuisine: s.cuisine })))}`, `[ORDERED]\n${JSON.stringify(ordered.map(s => s.name))}`].join('\n\n');
     const out = await askDraft(input, { force: true, system: AI_SYS_NEARBY, maxTokens: 9000, effort: 'low' });
-    const raw = jsonOf(out);
+    const raw = jsonOf(out, { salvage: true });
     if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 동네 가게를 찾지 못했어요');
     // the phone may have changed while it was asked (the app made again)
     if (p.delivery !== d) return 0;
@@ -450,7 +450,7 @@ export const fillLife = (m, p, { screenAgain = false } = {}) => exclusive('fill'
             !soFar && Object.keys(body).length ? `[BODY ON THE PHONE NOW — keep it unless the story changed it]\n${JSON.stringify(body)}` : '',
             soFar ? `${soFarHead('LIFE', short)}\n${JSON.stringify(soFar)}` : '', short?.text || '',
             w ? `[WEATHER NOW]\n${JSON.stringify(home ? w : { place: w.place, weather: w.weather })}` : '', clockBlock(p, storyNow(p, upto, m) || p.now, m, statusAt(p, upto, m)), p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.life, read: { gap } });
-        const raw = jsonOf(await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' })), next = parseLife(raw, now, days.at(-1)?.day || '');
+        const raw = jsonOf(await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' }), { salvage: true }), next = parseLife(raw, now, days.at(-1)?.day || '');
         said.set(next, { raw, now });
         const at = storyNow(p, upto) || p.now || '';
         if (/^\d{2}-\d{2}/.test(at)) next.files.items = next.files.items.filter(x => !later(x.time, at));
@@ -517,7 +517,7 @@ export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', as
     const input = await sideRequest(m, p.owner, [`[DAYS]\n${JSON.stringify(days.map(d => ({ date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, ...(d.ev ? { ev: d.ev } : {}) })))}`,
         p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read });
     const out = await askDraft(input, { force: true, system: AI_SYS_SCREEN, maxTokens: 6000, effort: 'low' });
-    const raw = jsonOf(out), usual = usualScreenOf(raw?.usual);
+    const raw = jsonOf(out, { salvage: true }), usual = usualScreenOf(raw?.usual);
     let n = 0;
     // a phone the reflection already gave a usual keeps it (unless made again); a day already told keeps its own
     if (usual && (again || !h.usual?.screen)) { (h.usual ||= {}).screen = usual; n++; }
@@ -559,7 +559,7 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
         const upto = nowAt(gap), at = storyNow(p, upto) || p.now || '';
         const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p, upto)}`, daysBlock(storyDays(m, p, upto)), clockBlock(p, at, m, statusAt(p, upto, m)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money,
             soFar ? `${soFarHead('DELIVERY', short)}\n${JSON.stringify(soFar)}` : '', short?.text || ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read: { gap } });
-        const got = jsonOf(await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 12000, effort: 'low' })), next = parseDelivery(got, accounts, tx, at);
+        const got = jsonOf(await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 12000, effort: 'low' }), { salvage: true }), next = parseDelivery(got, accounts, tx, at);
         said.set(next, { raw: got });
         // the shops nearby go after the ones they order from (the app's 동네 인기 가게); the first turn sets them
         if (!soFar) next.shops = [...next.shops, ...nearbyShops(got, next.shops, (p.money?.currency || accounts[0]?.currency) === 'KRW')];

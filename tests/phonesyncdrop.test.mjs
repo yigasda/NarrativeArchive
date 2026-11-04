@@ -869,3 +869,10 @@ test('the money stage answering one event twice: both payments kept, not the las
     assert.equal(c.bank(), 58000);
     assert.deepEqual(c.p.money.tx.map(t => t.amount).sort((a, b) => a - b), [-30000, -12000]);
 });
+
+test('the money stage sees two messages either side: the amount two messages after the event still counts', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'on my way'), say('Mara', 'Mara climbs out of a taxi and hurries over'), say('Ren', 'you made it'), say('Mara', 'I paid the taxi 12000 won'), say('Ren', 'thanks a lot for that')]);
+    T.moneyAnswers = [];
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 3, quote: 'climbs out of a taxi', summary: '택시', date: '10-26', time: '12:40', apps: ['money'], phone: {}, money: { moves: [{ account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }] } }] });
+    assert.ok(T.moneyInput.includes('I paid the taxi 12000 won'));
+});

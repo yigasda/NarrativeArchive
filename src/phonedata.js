@@ -294,7 +294,7 @@ export function parsePhone(out, owner = '') {
     const a = s.indexOf('{'), b = s.lastIndexOf('}');
     if (a < 0 || b <= a) throw new Error('모델 답에서 폰 내용(JSON)을 찾지 못했어요');
     let raw;
-    try { raw = parseJson(s.slice(a, b + 1)); } catch { throw new Error('모델 답의 JSON이 깨져 있어요. 다시 해 보세요'); }
+    try { raw = parseJson(s.slice(a, b + 1), { salvage: true }); } catch { throw new Error('모델 답의 JSON이 깨져 있어요. 다시 해 보세요'); }
     // an everyday record the model made up from the owner's habits stays apart from the story (재구성)
     const tag = (x, raw) => (raw?.everyday === true ? { ...withEv(x, raw), src: 'guess' } : withEv(x, raw));
     const self = owner ? nameKey(owner) : '', mine = v => !!self && nameKey(line(v, 40)) === self;
@@ -714,7 +714,7 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     let got2 = null, last = gap, short = null;
     if (two) {
         try {
-            const was = jsonOf(out), soFar = part && was ? Object.fromEntries(part.filter(k => was[k] !== undefined).map(k => [k, was[k]])) : was;
+            const was = jsonOf(out, { salvage: true }), soFar = part && was ? Object.fromEntries(part.filter(k => was[k] !== undefined).map(k => [k, was[k]])) : was;
             got2 = parsePhone(await ask(two.cover, [`${soFarHead('PHONE', two.short)}\n${JSON.stringify(soFar)}`, two.short?.text || '']), owner);
             last = two.cover; short = two.short;
         } catch (err) { console.warn('[narrative-archive] phone, second turn', err); }
@@ -851,7 +851,9 @@ async function moneyStage(m, p, owner, targets, c) {
         else { out.owed.push({ id: t.id, at: t.at, date: t.date, time: t.time, tries, ...(t.invest ? { invest: true } : {}) }); out.notes.push(`${t.summary || t.id}: 결제는 다음 반영 때 다시 넣어요 (${why})`); }
     };
     const text = new Map(c.rows.map(r => [r.index, r.text])), near = new Set();
-    for (const t of targets) for (const i of [t.at - 1, t.at, t.at + 1]) if (text.has(i)) near.add(i);
+    // two messages either side: the event is often put on the message next to the one with the amount ("gets out of the
+    // taxi" at #1, "I paid 12000 won" at #3)
+    for (const t of targets) for (let i = t.at - 2; i <= t.at + 2; i++) if (text.has(i)) near.add(i);
     const archive = (c.sections || []).filter(x => targets.some(t => t.at >= x.first && t.at <= x.last)).map(x => x.text);
     if (p.money) migrateBank(m, p);
     // the brokerage only when an event touches it (most money scenes are a meal, a taxi, a parcel)
