@@ -6,7 +6,7 @@
 
 import { AX, ax, axBar, axCb, axH1, axInd, axKp, axTint, axTop, busyHtml } from './phoneapps.js';
 import { filling } from './phoneai.js';
-import { byStory, clockNum, clockOf, fmtDate, halfOf, hourOf, koOn, pad, storyNow } from './phonedata.js';
+import { byStory, clockNum, clockOf, fmtDate, halfOf, hourOf, koOn, pad, sceneHome, storyNow } from './phonedata.js';
 import { shiftDay, weatherNow } from './phonelife.js';
 import { COUNTRY_TZ, apart, cityAt as cityOfPlace, mirrorHome, overlayNow } from './phonesynclife.js';
 import { decimalOf, fmtMoney, localeOf } from './phonemoney.js';
@@ -958,11 +958,16 @@ function hereNow(lf) {
     const best = others.map(o => hereOwn(L(o))).filter(x => x.place && x.date === h.date && same(h.place, x.place) && at(x) > at(h)).sort((a, b) => at(b).localeCompare(at(a)))[0];
     return best ? { ...best, place: h.place } : h;
 }
+// a status line only speaks for this phone when its scene is the owner's (sceneHome true: the reflection's own test);
+// another person's room or an unknown place in the same zone leaves the saved weather alone
 function hereOwn(lf) {
-    const h = lf.weather.here;
+    const h = lf.weather.here, p = OWNER.get(lf);
     let t = null;
     try { t = weatherNow(); } catch { t = null; }
-    if (!t || !/^\d{2}-\d{2}$/.test(t.date || '') || !h.date || apart(h.place, t.place, lf.weather.cities)) return h;
+    if (!t || !/^\d{2}-\d{2}$/.test(t.date || '') || !h.date) return h;
+    let mine = false;
+    try { mine = p ? sceneHome(p, t.place, getMeta()) === true : !apart(h.place, t.place, lf.weather.cities); } catch { mine = false; }
+    if (!mine) return h;
     const gap = dayGap(h.date, t.date);
     if (gap < 0 || gap === 0 && !(t.time && (!h.time || t.time > h.time))) return h;
     const out = overlayNow(h, t);
