@@ -1080,8 +1080,9 @@ async function updatePhone(m, owner) {
         // the phone's time only moves on, across New Year too (12-31 → 01-01 is a day later, not months back)
         // (a day or a few behind is the model slipping and is ignored; two months or more behind is a story that skipped far
         // ahead, past the half year the dates alone can tell: half a year later)
-        // the scene the phone couldn't place, as the model read it: its place is that city's from now on
-        if (askZone && typeof raw.statusCity === 'string') { const z = zoneNamed(p, raw.statusCity, m); if (z) { (p.placeZones ||= {})[pkey(sceneOf(st.place))] = z; st = statusMoment(p, roundEnd); } }
+        // the scene the phone couldn't place, as the model read it: that city's clock for this round only (not kept for the
+        // place: a "cafe" may be in either city next time)
+        if (askZone && typeof raw.statusCity === 'string') { const z = zoneNamed(p, raw.statusCity, m); if (z) st = statusMoment(p, roundEnd, z); }
         // a status line among these messages: now is never before it (a model that took another city's hour for the
         // owner's); later, the model's own. Its status line also sets back a now that ran ahead of it the day before
         const fresh = !!st?.at && round.rows.some(r => r.index === st.i);
@@ -1497,7 +1498,7 @@ export const clockBlock = (p, at = p?.now, m = null, st = null) => {
 };
 // ---- one place decides whose clock a status line shows. The owner's zone: where they were read to be, else their phone's
 // saved city, else the country. A scene's: a saved city its place names, a city someone was read to be in, else a place the
-// reflection was told about (p.placeZones). Every clock on the phone goes by these
+// reflection named for it this round (never kept: a "cafe" is in every city). Every clock on the phone goes by these
 const pkey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 const ownerZone = p => zoneOfWhere(whereOf(p, p?.owner)) || zoneOfPhone(p);
 const sceneOf = place => String(place || '').split(/\s*[,，→>/·]\s*/)[0];
@@ -1508,19 +1509,18 @@ export function sceneZone(p, place) {
     for (const x of p?.where?.people || []) if (x.tz && x.city && k && k.includes(pkey(x.city))) return { tz: x.tz, name: x.city };
     const own = ownerZone(p);
     if (own && k && pkey(sceneOf(place)) && (k.includes(pkey(own.where)) || pkey(own.where).includes(pkey(sceneOf(place))))) return { tz: own.tz, name: own.where };
-    const learned = p?.placeZones?.[pkey(sceneOf(place))];
-    return learned?.tz ? learned : null;
+    return null;
 }
 // the newest status line up to upto, on the owner's clock: at '' when its scene's zone is unknown on a phone that keeps
 // other zones (it may be someone else's hour). home: the owner's own zone. null with no dated status line
 const hm = v => /^\d{2}-\d{2} \d{2}:\d{2}$/.test(String(v || ''));
 const laterThan = (a, b) => { const g = dayGap(String(b).slice(0, 5), String(a).slice(0, 5)); return g > 0 || g === 0 && String(a).slice(6) > String(b).slice(6); };
-export function statusMoment(p, upto = null) {
+export function statusMoment(p, upto = null, named = null) {
     const t = recentTrackers(1, upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) })[0];
     const d = t?.date ? monthDay(t.date) : null;
     if (!t || !Number.isFinite(t.min) || !d) return null;
     const raw = `${pad(d.mo)}-${pad(d.d)} ${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}`, place = t.city || t.place || '';
-    const own = ownerZone(p), scene = sceneZone(p, place), base = { raw, place, i: t.i };
+    const own = ownerZone(p), scene = sceneZone(p, place) || named, base = { raw, place, i: t.i };
     if (own && scene) return { ...base, at: scene.tz === own.tz ? raw : zoneShift(raw, scene.tz, own.tz, Number(p.year) || undefined), city: scene.name, home: scene.tz === own.tz, known: true };
     // no zone of their own, or no other zone kept: the owner's own hour
     if (!own || !zonesOf(p, hm(p?.now) ? p.now : raw)) return { ...base, at: raw, home: true, known: true };

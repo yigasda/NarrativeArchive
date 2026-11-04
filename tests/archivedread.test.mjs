@@ -233,7 +233,7 @@ test('a Seoul status line: OWNER\'S CLOCK gives it on the owner\'s clock, a now 
     });
 });
 
-test('a scene the phone can\'t place: the model says whose clock, the place is that city\'s from then on; with nothing said its hour is no one\'s', async () => {
+test('a scene the phone can\'t place: the model says whose clock for that round (never kept for the place); with nothing said its hour is no one\'s', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'lunch break, call?')]);
     frankfurtPhone(c);
     await withTrackers([trk(2, '12:50', "Mara's room")], async () => {
@@ -245,9 +245,10 @@ test('a scene the phone can\'t place: the model says whose clock, the place is t
         assert.equal(c.p.life.weather.here.place, 'Frankfurt am Main');
         await data.undoRound(c.m, c.p);
         await run(c.m, { now: '10-26 03:52', statusCity: 'Mara', events: [] });
-        assert.deepEqual(c.p.placeZones, { marasroom: { tz: 'Asia/Seoul', name: 'Seoul' } });
         assert.equal(c.p.now, '10-26 04:50');
-        assert.equal(data.statusMoment(c.p).at, '10-26 04:50');
+        // for this round only: a place like "cafe" may be in either city next time, so nothing is kept for it
+        assert.equal(c.p.placeZones, undefined);
+        assert.equal(data.statusMoment(c.p).at, '');
     });
 });
 
