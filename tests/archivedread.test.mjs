@@ -689,3 +689,23 @@ test('반영\'s everyday records: two an answer, six a day, every app (texts and
     }
     assert.equal(guess().length, 6);
 });
+
+test('the answer\'s own "everyday": marked as everyday records, on the round\'s last event (되돌리기 takes them); a round with no event gets one', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'off to work'), say('Mara', 'have a good one')]);
+    c.p.now = '10-26 08:00'; c.p.year = 2026;
+    const guess = () => [...['notes', 'photos', 'diary', 'calls'].flatMap(k => c.p[k].filter(x => x.src === 'guess').map(x => `${k}:${x.title || x.caption || x.with}`)),
+        ...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `text:${th.with}:${x.text}`))];
+    await run(c.m, { now: '10-26 09:30', events: [{ id: 'work', at: 2, quote: 'off to work', summary: 'work', date: '10-26', time: '09:00', phone: {} }],
+        everyday: { threads: [{ with: 'Ivo', messages: [{ from: 'Ivo', text: 'Mittag?', time: '10-26 09:20' }] }], notes: [{ title: 'Einkaufsliste', text: 'Milch', time: '10-26 09:10' }], photos: [{ caption: 'Himmel', time: '10-26 09:15' }] } });
+    // (two an answer: the third is left out)
+    assert.equal(guess().length, 2);
+    assert.match(T.sys, /in the top-level "everyday" \(never in an event\)/);
+    assert.match(T.sys, /"everyday": \{ "threads": \[\], "calls": \[\]/);
+    // a round with nothing but small talk: its last message carries them
+    T.chat.push(say('Mara', 'just bored at my desk'));
+    await run(c.m, { now: '10-26 11:00', events: [], everyday: { diary: [{ date: '10-26', title: 'Büro', text: 'Langweilig.' }] } });
+    assert.ok(guess().includes('diary:Büro'));
+    await data.undoRound(c.m, c.p);
+    assert.ok(!guess().includes('diary:Büro'));
+    assert.equal(guess().length, 2);
+});

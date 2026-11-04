@@ -162,7 +162,7 @@ WHAT IS NEW
 - An event in EVENTS ON THE PHONE keeps its id; add only what the phone doesn't hold yet.
 - MESSAGES READ BEFORE, NOW CHANGED were already put on the phone: give their events the ids listed there${split ? '' : '; a payment in them is that same payment, its amount corrected if it changed'}.
 ${split ? `- A scene that only touches these apps (a taxi paid, a basket filled${invest ? ', a share price mentioned' : ''}) is still an event, with its "apps".\n` : ''}- Small things around an event are fine (how a text was worded, a photo of the place, a search they would make), and a scene may carry on in texts later (a fight, a date, a job given in person), in their own voices. Nothing the story contradicts, no new facts or plans.
-- EVERYDAY: in every answer, 0 to 2 records of the owner's ordinary life in the hours these messages cover, from their habits, "everyday": true, in the "phone" of that time's event: any app, with people from the story or PEOPLE AROUND as they are and with what they feel, never someone the owner isn't in touch with now. No new facts, events, plans or secrets.
+- EVERYDAY: in every answer, 0 to 2 records of the owner's ordinary life in the hours these messages cover, from their habits, in the top-level "everyday" (never in an event): any app, with people from the story or PEOPLE AROUND as they are and with what they feel, never someone the owner isn't in touch with now. No new facts, events, plans or secrets.
 - People: only people the story or PEOPLE AROUND has. A relationship word (girlfriend, ex, husband, boss) only if the messages or archive use it for them.
 - A diary entry holds what these messages show and what the owner feels about it, as the story and PEOPLE AROUND show them; no new secrets or events.
 
@@ -210,7 +210,8 @@ ANSWER — one JSON object, nothing else:
                           "orders": [{ "shop", "item", "ko", "option", "qty", "price": unit price, "status": "ordered" (the default) | "shipped" | "on the way" | "delivered" | "cancelled" | "returning" | "returned" | "refunded", "eta": "MM-DD" or "", "gift", "paid": false only when someone else pays or it is paid on delivery, "occurrence": "new" | "again", "already": "" }],
                           "passes": [{ "kind": "flight" | "train" | "hotel" | "event" | "other", "by", "from", "to", "date": "MM-DD", "time", "seat", "gate", "no", "status", "already": "" }]${delivery ? `,
                           "deliveries": [{ "shop", "items": [{ "name", "ko", "option", "optionKo", "qty", "price": unit price, "pic": { "base": the dish in 1 to 3 English words, "with": [up to 3 main ingredients, like "beef"], "size": "regular" | "large", "set": [a set's sides or drinks] } }], "fee", "tip", "discount", "mode": "delivery" | "pickup", "time": "MM-DD HH:MM", "arrived": "MM-DD HH:MM" or "", "to": "home" | "work" | a person's name, "address", "left": where the courier left it, or "", "noteShop", "noteShopKo", "noteRider", "noteRiderKo", "noCutlery", "for": how many people, "status": "on the way" | "delivered" | "cancelled" | "refunded", "gift", "occurrence": "new" | "again", "already": "",
-                                          "newShop": { "name": the same as "shop", "ko", "cuisine", "menu": [{ "name", "ko", "desc", "price", "top": true for its best-known dish, "pic" }] } or null }]` : ''} }` : ''} }]${life ? `,
+                                          "newShop": { "name": the same as "shop", "ko", "cuisine", "menu": [{ "name", "ko", "desc", "price", "top": true for its best-known dish, "pic" }] } or null }]` : ''} }` : ''} }],
+  "everyday": { "threads": [], "calls": [], "photos": [], "notes": [], "searches": [], "mails": [], "posts": [], "diary": [], "voice": [] } (items as in "phone")${life ? `,
   "days": [{ the same fields as "health" }]` : ''}${life && weather ? `,
   "weather": { "place", "date", "time", "from": "chat" | "archive" | "guess", "cond": "clear" | "partly" | "cloudy" | "drizzle" | "rain" | "sleet" | "snow" | "fog" | "storm" | "wind", "temp", "hi", "lo", "line", "ko",
                "hours": [6 of { "time", "cond", "temp", "rain": percent }] (the hours ahead when the sky will change, else []), "days": [10 of { "day", "cond", "lo", "hi", "rain": percent }],
@@ -389,6 +390,25 @@ function personIn(p, list, get, name) {
     const row = (p?.where?.people || []).find(r => [r.name, ...arr(r.aka)].some(n => nameKey(n) === k)), names = row ? [row.name, ...arr(row.aka)].map(nameKey) : [];
     const one = xs => (xs.length === 1 ? xs[0] : undefined);
     return one(list.filter(x => names.includes(nameKey(get(x))))) || one(list.filter(x => samePerson(get(x), name)));
+}
+const EVERYDAY_KEYS = ['threads', 'calls', 'photos', 'notes', 'searches', 'mails', 'posts', 'diary', 'voice', 'events'];
+function everydayOn(raw, rows, textAt) {
+    const ed = raw?.everyday && typeof raw.everyday === 'object' && !Array.isArray(raw.everyday) ? raw.everyday : null;
+    if (!ed || !EVERYDAY_KEYS.some(k => arr(ed[k]).length)) return;
+    const mark = x => (x && typeof x === 'object' ? { ...x, everyday: true, ...(Array.isArray(x.messages) ? { messages: x.messages.map(y => (y && typeof y === 'object' ? { ...y, everyday: true } : y)) } : {}) } : x);
+    raw.events = arr(raw.events);
+    const num = e => Number(String(e?.at ?? '').replace(/^\s*#/, ''));
+    let host = raw.events.filter(e => e && typeof e === 'object' && Number.isInteger(num(e))).sort((a, b) => num(b) - num(a))[0];
+    if (!host) {
+        const last = rows.at(-1);
+        if (!last) return;
+        const words = String(textAt.get(last.index) || '').replace(/^\[#\d+[^\]]*\]\s*/, '').trim().slice(0, 40);
+        if (!words) return;
+        host = { id: `everyday-${last.index}`, at: last.index, quote: words, summary: '(everyday)', date: '', time: '', phone: {} };
+        raw.events.push(host);
+    }
+    host.phone = host.phone && typeof host.phone === 'object' ? host.phone : {};
+    for (const k of EVERYDAY_KEYS) if (arr(ed[k]).length) host.phone[k] = [...arr(host.phone[k]), ...arr(ed[k]).map(mark)];
 }
 // the people closest to the owner (위치 판독's "around"): who they are to the owner and how it stands, in the cards' own words
 export const aroundBlock = p => (p?.around?.people?.length ? `[PEOPLE AROUND]\n${p.around.people.map(x => `- ${x.name}${x.aka?.length ? ` (${x.aka.join(', ')})` : ''}: ${x.about}`).join('\n')}` : '');
@@ -1082,6 +1102,9 @@ async function updatePhone(m, owner) {
             comments: (p.posts || []).filter(x => x.id).map(x => [x.id, x.comments?.length || 0]), before: structuredClone(mergedState(p)) };
         // an event's day when the model leaves it out: the day of the event before it, else the answer's now
         let lastDay = when(raw.now).slice(0, 5);
+        // the answer's "everyday" records go with this round's last event (되돌리기 and 빼기 take them with it), each marked
+        // as one (재구성); a round with no event gets one for its last message
+        everydayOn(raw, round.rows, textAt);
         const used = new Set(), wants = new Map(), daily = new Map();
         // (past 40 events in one answer, the rest's messages are read again next round, not lost)
         const over = arr(raw.events).slice(40), firstAt = new Set(arr(raw.events).slice(0, 40).map(e => Number(String(e?.at ?? '').replace(/^\s*#/, ''))));
