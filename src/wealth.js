@@ -1,5 +1,7 @@
 // Shared, private generation budget. Refreshed only by an explicit financial rebuild.
-import { askDraft } from './ai.js';
+import { askDraft as askDraftAny } from './ai.js';
+// (gives up after 5 minutes, like the phone's other requests)
+const askDraft = (input, o = {}) => askDraftAny(input, { timeout: 300000, ...o });
 import { num, parseJson, yearIn } from './phoneparse.js';
 import { saveMeta } from './core.js';
 import { currency, finite, fx, price, positions, cash, addPrice, finance, quoteKey } from './finance.js';

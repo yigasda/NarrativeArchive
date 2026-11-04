@@ -30,9 +30,11 @@ export const cutShort = out => {
 // the order a chat's status lines write a date in when both numbers could be the month ("03.11."): month first unless
 // the user said day first (상태창 날짜 순서, kept per chat). Only for dates written with "." or "/": "MM-DD" with dashes is
 // always month first (the phone's own and the model's answers)
-let orderOf = () => '';
+let orderOf = () => '', held = null;
 export const dateOrderSource = f => { orderOf = f; };
-export const dayFirstChat = () => { try { return orderOf() === 'dm'; } catch { return false; } };
+export const dayFirstChat = () => { try { return (held ?? orderOf()) === 'dm'; } catch { return false; } };
+// one 폰 만들기 or 반영 reads every date by the order it started with (the setting changed meanwhile counts from the next)
+export async function withDateOrder(order, fn) { const was = held; held = order; try { return await fn(); } finally { held = was; } }
 export const swapDate = (a, b, sep) => Number(b) <= 12 && (Number(a) > 12 || sep !== '-' && Number(a) <= 31 && dayFirstChat());
 export const when = v => {
     // "10-25 21:00", or with the year in front ("2026-10-25 21:00", "2026/10/25T21:00") or after ("25.10.2026 21:00", "10/25/2026 9:00")
