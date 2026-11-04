@@ -38,7 +38,7 @@ export async function ownerProfileBlock(c,binding,owner,{money=false}={}) {
     const profile=await resolvePhoneProfile(c,binding);
     if (!profile) return '';
     return `[OWNER PROFILE — chosen by the user for ${owner}]\n${profile.label}\n${profile.text}\n[PROFILE USE]
-Background for who the owner is: personality, voice, relationships, interests, work${money ? ' and means' : ''}.
+Background for who the owner is: personality, voice, body, relationships, interests, work${money ? ' and means' : ''}.
 - It gives no events: nothing happened just because the profile makes it likely.
 - Where the story says otherwise, the story wins.
 - What the profile keeps secret, other people don't know.${money ? '\n- Company and family money are not the owner\'s own.' : ''}`;
