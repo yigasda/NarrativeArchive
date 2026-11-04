@@ -4,6 +4,7 @@ import { askAI, callConn, trSettings, withSpinner } from './ai.js';
 import { ctx, getMeta, hasChat, saveMeta } from './core.js';
 import { diffPairs, markedPair } from './diff.js';
 import { esc } from './util.js';
+import { parseJson } from './phoneparse.js';
 
 // ---- "한국어로 보기" for any diff box: translates only the changed (+/−) lines, shown under each line
 
@@ -147,7 +148,7 @@ Lighthouse = 등대`;
 // 용어집 › AI로 이름 찾기: the names and made-up words of the whole story (the cards, the persona, the archive and the
 // chat not archived yet), each with its Korean, in one request to the translator
 export const AI_SYS_GLOSSARY_FIND = `GOAL
-List the names and made-up words of a role-play story, each with one fixed Korean spelling, so every translation of the story writes them the same way.
+List the names of a role-play story's own people, places, groups and terms, each with one fixed Korean spelling, so every translation of the story writes them the same way.
 
 YOU GET
 - CHARACTER CARD: a role-play character's card (one per character in a group chat).
@@ -156,21 +157,16 @@ YOU GET
 - RECENT CHAT (sometimes): the newest messages, not in the archive yet.
 - IN THE GLOSSARY (sometimes): names already listed. Leave them out.
 
-WHAT TO LIST
-- People, places, groups, ships, shops, titles used as a name, made-up words: anything whose spelling must stay the same.
-- In any language or script, and made-up words written in lowercase too.
-- Not ordinary words, and not a word only because it starts a sentence. Not a name written only in Korean.
-- Each once, as the story writes it. A full name and its short form are two lines only when the story uses both.
+RULES
+- "people": the characters and the people in their lives (family, friends, partners, coworkers), never someone who only passes through a scene. "name": the full name when the cards or story give one; "called": the name they go by, when it is not the full name.
+- "places": only a place someone lives, lived, works or grew up in; "whose": who. A place they only went to stays out. Not a place in Korea.
+- "groups": only a family, workplace, school or group someone belongs to; "whose": who.
+- "terms": titles, nicknames and words with a meaning special to this story; "means": what. A person is not a term.
+- Nothing from general knowledge: a real brand, product, shop or thing the story only mentions is none of these.
+- Names as the story writes them, in any language or script; not one written only in Korean. "ko": its Korean: a usual spelling if it has one (a real city), else transliterated the way a Korean reader would say it; a title or ordinary noun used as a name in natural Korean.
 
-KOREAN
-1. Real names with a usual Korean spelling (mythology, history, real places): use that spelling.
-2. Other names: transliterate naturally, the way a Korean reader would say it.
-3. Titles and ordinary nouns used as names ("the Queen", "the Well"): natural Korean.
-4. Made-up words: transliterate, do not translate.
-
-OUTPUT: one line per name, nothing else, exactly like this
-Avalon = 아발론
-Lighthouse Keeper = 등대지기`;
+JSON (one object, nothing before or after it)
+{ "people": [{ "name", "ko", "called", "calledKo" }], "places": [{ "name", "ko", "whose" }], "groups": [{ "name", "ko", "whose" }], "terms": [{ "name", "ko", "means" }] }`;
 const tokOf = s => { const x = String(s), h = (x.match(/[ᄀ-ᇿ㄰-㆏가-힯]/g) || []).length; return Math.ceil(h + (x.length - h) / 3.6); };
 // at most n tokens of s: its start and its end when it is longer (names come in early, the newest ones late)
 const fitTok = (s, n) => { const x = String(s || '').trim(); if (tokOf(x) <= n) return x; const k = Math.floor(x.length * n / tokOf(x) / 2); return `${x.slice(0, k)}\n…\n${x.slice(-k)}`; };
@@ -196,6 +192,32 @@ export function glossaryFindInput(c, m, have = []) {
         rows.unshift(r); left -= n;
     }
     return [...head, rows.length ? `[RECENT CHAT]\n${rows.join('\n\n')}` : '', listed].filter(Boolean).join('\n\n');
+}
+// what the story keeps coming back to: a name the text sent writes once only (a street passed, a shop named in passing) is
+// left out
+export const glossaryKeep = (found, text) => { const low = String(text || '').toLowerCase(); return found.filter(x => { const k = String(x.key || x.src).toLowerCase(); let n = 0, i = -1; while (n < 2 && (i = low.indexOf(k, i + 1)) >= 0) n++; return n >= 2; }); };
+// a place in Korea, which a Korean reader knows as it is (Seoul, Gangseo-gu, Yeouido, Teheran-ro): never in the glossary
+const KR_PLACE = new Set(['seoul', 'busan', 'incheon', 'daegu', 'daejeon', 'gwangju', 'ulsan', 'sejong', 'suwon', 'seongnam', 'goyang', 'yongin', 'bucheon', 'ansan', 'jeonju', 'cheongju', 'changwon', 'pohang', 'gimpo', 'paju', 'jeju', 'gangneung', 'sokcho', 'gyeongju', 'yeosu', 'chuncheon', 'gangnam', 'hongdae', 'itaewon', 'myeongdong', 'yeouido', 'jamsil', 'sinchon', 'insadong', 'apgujeong', 'cheongdam', 'seongsu', 'hannam', 'mapo', 'yongsan', 'jongno', 'songdo', 'pangyo', 'haeundae', 'korea', 'south korea']);
+// (or a word ending like a Korean district and its Korean the same: "Gangseogu = 강서구"; not -ro, which Pedro is too)
+const KR_END = { gu: '구', dong: '동', gil: '길', eup: '읍', myeon: '면' };
+export const krPlace = x => {
+    const s = String(x?.src || '').trim(), k = s.toLowerCase(), ko = String(x?.ko || '').trim();
+    if (KR_PLACE.has(k) || /-(?:gu|dong|si|ro|gil|eup|myeon|gun|do|ri)$/i.test(s)) return true;
+    return Object.entries(KR_END).some(([e, h]) => k.endsWith(e) && k.length > e.length + 2 && ko.endsWith(h));
+};
+// the answer, part by part, as glossary lines: a person's full name and the name they go by; a place, a group or a term
+// only with whose it is or what it means (what the model can't say that for is no name of the story's)
+export function glossaryFound(out) {
+    const s = String(out || '').replace(/```(?:json)?/gi, ''), a = s.indexOf('{'), b = s.lastIndexOf('}');
+    let o = null;
+    try { o = a >= 0 && b > a ? parseJson(s.slice(a, b + 1), { salvage: true }) : null; } catch { o = null; }
+    if (!o || typeof o !== 'object') return null;
+    const str = v => (typeof v === 'string' ? v.trim() : ''), list = k => (Array.isArray(o[k]) ? o[k] : []).filter(x => x && typeof x === 'object');
+    const rows = [];
+    // (a full name counts by the name they go by: "Oscar Weber" in the card once, "Oscar" all through the story)
+    for (const x of list('people')) { if (str(x.name) && str(x.ko)) rows.push({ src: str(x.name), ko: str(x.ko), key: str(x.called) || str(x.name).split(/\s+/)[0] }); if (str(x.called) && str(x.calledKo) && str(x.called) !== str(x.name)) rows.push({ src: str(x.called), ko: str(x.calledKo) }); }
+    for (const [k, why] of [['places', 'whose'], ['groups', 'whose'], ['terms', 'means']]) for (const x of list(k)) if (str(x.name) && str(x.ko) && str(x[why])) rows.push({ src: str(x.name), ko: str(x.ko), kind: k });
+    return rows;
 }
 // the lines of an answer: "Name = 한국어" (a "-" or "*" in front is fine)
 export const glossaryLines = out => String(out || '').split('\n').map(l => l.match(/^\s*(?:[-*]\s*)?([^=→]+?)\s*(?:=|→)\s*(.+?)\s*$/)).filter(Boolean).map(x => ({ src: x[1].trim(), ko: x[2].trim() }));
@@ -228,9 +250,12 @@ export async function openGlossary() {
         // what is there already, with or without its Korean: never asked for or written again
         const have = [...new Set($ta.val().split('\n').map(l => l.split(/=|→/)[0].trim()).filter(Boolean))];
         const known = new Set(have.map(s => s.toLowerCase()));
-        const out = await withSpinner($(this), '찾는 중…', () => askTranslator(glossaryFindInput(c, m, have), { system: AI_SYS_GLOSSARY_FIND, maxTokens: 3000 }));
+        const input = glossaryFindInput(c, m, have);
+        const out = await withSpinner($(this), '찾는 중…', () => askTranslator(input, { system: AI_SYS_GLOSSARY_FIND, maxTokens: 3000 }));
         if (out === null) return;
-        const found = glossaryLines(out).filter(x => x.src.length <= 60 && !/[가-힯]/.test(x.src) && !known.has(x.src.toLowerCase()) && (known.add(x.src.toLowerCase()), true));
+        const rows = glossaryFound(out);
+        if (!rows) return toastr.error('AI 답을 읽지 못했어요. 한 번 더 눌러 주세요.');
+        const found = glossaryKeep(rows, input.split('\n\n[IN THE GLOSSARY]')[0]).filter(x => !krPlace(x) && x.src.length <= 60 && !/[가-힯]/.test(x.src) && !known.has(x.src.toLowerCase()) && (known.add(x.src.toLowerCase()), true));
         if (!found.length) return toastr.info('새로 넣을 이름이 없어요.');
         $ta.val(`${$ta.val().replace(/\s+$/, '')}${$ta.val().trim() ? '\n' : ''}${found.map(x => `${x.src} = ${x.ko}`).join('\n')}`);
         info();
