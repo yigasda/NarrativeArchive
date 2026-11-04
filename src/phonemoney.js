@@ -9,7 +9,7 @@ import { investmentDate } from './investdata.js';
 import { nameKey } from './people.js';
 import { filling, recording } from './phoneai.js';
 import { AX, ax, axBar, axCb, axDay, axFind, axH1, axInd, axKp, axLetter, axTint, axTop, busyHtml } from './phoneapps.js';
-import { byStory, clockOf, fmtDate, fmtTime, fullDate, gapDays, koOn, listTime, localeOf, storyNow } from './phonedata.js';
+import { byStory, clockOf, fmtDate, fmtTime, fullDate, gapDays, homeCountry, koOn, listTime, localeOf, storyNow } from './phonedata.js';
 import { esc } from './util.js';
 import { prodSvg } from './phoneprod.js';
 import { dlvApp } from './phonesyncmoney.js';
@@ -38,7 +38,7 @@ export function fmtMoney(p, n, signed = false) {
 export const fmtIn = (p, n, cur, signed = false) => fmtMoney({ ...p, money: { currency: cur || p.money?.currency || 'EUR' } }, n, signed);
 // Display currency never changes an account's denomination or its ledger.
 const LOCAL_CURRENCY = {KR:'KRW',US:'USD',GB:'GBP',DE:'EUR',FR:'EUR',IT:'EUR',ES:'EUR',AT:'EUR',JP:'JPY',CN:'CNY',TW:'TWD',CA:'CAD',AU:'AUD',RU:'RUB',BR:'BRL',CH:'CHF'};
-export const bankDisplayCurrency = p => currency(p.money?.displayCurrency) || LOCAL_CURRENCY[p.country] || p.money?.currency || 'EUR';
+export const bankDisplayCurrency = p => currency(p.money?.displayCurrency) || LOCAL_CURRENCY[homeCountry(p)] || p.money?.currency || 'EUR';
 const bankDate = p => p.money?.fxDate || investmentDate(getMeta(),p);
 function converted(p, a, brief = false) {
     const from = a.currency || p.money.currency, to = bankDisplayCurrency(p), date = bankDate(p);
@@ -387,7 +387,7 @@ export function bankTier(p) {
 }
 // an account number in the shape the owner's country uses, always the same for the same account, ending in its last four
 function acctNo(p, a) {
-    const c = String(p.country || p.lives || '').toUpperCase(), h = String(hashOf(`${mo(p).bank.name}${a.last4}`)).padStart(10, '7'), h2 = String(hashOf(`${a.last4}${mo(p).bank.name}`)).padStart(10, '3'), l4 = String(a.last4 || '0000');
+    const c = homeCountry(p), h = String(hashOf(`${mo(p).bank.name}${a.last4}`)).padStart(10, '7'), h2 = String(hashOf(`${a.last4}${mo(p).bank.name}`)).padStart(10, '3'), l4 = String(a.last4 || '0000');
     const iban = (cc, n) => { const body = (h + h2).replace(/\D/g, '').slice(0, n - 4) + l4; return `${cc}${String(10 + hashOf(body) % 89)}${body}`.replace(/(.{4})/g, '$1 ').trim(); };
     if (c === 'KR') return `${h.slice(0, 3)}-${h.slice(3, 6)}-${h2.slice(0, 2)}${l4}`;
     if (c === 'JP') return `店番 ${h.slice(0, 3)} · 普通 ${h2.slice(0, 3)}${l4}`;
@@ -680,8 +680,8 @@ function trackEvents(p, x) {
 export function trackView(p, now, id) {
     const x = mo(p)?.orders?.find(o => o.id === id);
     if (!x || STEP[x.status] === undefined) return orderView(p, now, id);
-    const r = seedNum(x.id || x.item), cs = CARRIER[p.country] || ['DHL', 'UPS'], car = cs[r % cs.length];
-    const no = p.country === 'KR' ? `${5000 + r % 4000}${String(r).padStart(8, '0').slice(-8)}` : `00${String(r * 7919).padStart(12, '0').slice(-12)}`;
+    const r = seedNum(x.id || x.item), cs = CARRIER[homeCountry(p)] || ['DHL', 'UPS'], car = cs[r % cs.length];
+    const no = homeCountry(p) === 'KR' ? `${5000 + r % 4000}${String(r).padStart(8, '0').slice(-8)}` : `00${String(r * 7919).padStart(12, '0').slice(-12)}`;
     const ev = trackEvents(p, x), head = x.status === 'delivered' ? `${x.arrived ? `${fmtDate(p, x.arrived, true)} ` : ''}배송 완료` : x.eta ? `${fmtDate(p, x.eta, true)} 도착 예정` : '배송 준비 중';
     return `<div class="ax_shopv">
       <div class="ax_sph ax_sphs">${axBar(p, now, '#fff')}
