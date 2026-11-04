@@ -236,7 +236,7 @@ test('a Seoul status line: OWNER\'S CLOCK gives it on the owner\'s clock, a now 
 test('a scene the phone can\'t place: the model says whose clock for that round (never kept for the place); with nothing said its hour is no one\'s', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'lunch break, call?')]);
     frankfurtPhone(c);
-    await withTrackers([trk(2, '12:50', "Mara's room")], async () => {
+    await withTrackers([trk(2, '12:50', 'the cafe')], async () => {
         await run(c.m, { now: '10-26 04:52', statusCity: '', events: [] });
         assert.match(T.sys, /"statusCity"/);
         assert.equal(c.p.now, '10-26 04:52');
@@ -288,13 +288,28 @@ test('another character\'s phone is a zone too: a scene the phone can\'t place i
     c.p.now = '10-26 03:00'; c.p.year = 2026;
     c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', local: '', lives: 'DE', tz: 'Europe/Berlin' }] };
     c.m.phones.mara = { owner: 'Mara', country: 'KR' };
-    await withTrackers([trk(2, '12:50', "Mara's room")], async () => {
+    await withTrackers([trk(2, '12:50', 'the cafe')], async () => {
         assert.match(data.clockBlock(c.p, c.p.now, c.m), /Mara \(in South Korea\) is 8 hours ahead/);
         assert.equal(data.statusMoment(c.p, null, null, c.m).at, '');
         await run(c.m, { now: '10-26 04:52', statusCity: '', events: [] });
         assert.equal(c.p.now, '10-26 04:52');
         assert.equal(data.storyNow(c.p, null, c.m), '10-26 04:52');
     });
+});
+
+test('someone\'s own place ("Mara\'s room", "소망의 방" for Somang Park): where that person is; a city no one is in by its zone\'s name: the owner gone there', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'lunch break, call?')]);
+    frankfurtPhone(c);
+    c.p.where.people[1].aka = ['마라']; // (read with the names the chat calls her by)
+    c.p.where.people.push({ name: 'Somang Park', aka: ['소망'], city: 'Seoul', names: ['Seoul'], lives: 'KR', tz: 'Asia/Seoul' });
+    for (const place of ["Mara's room", '마라네 집', '소망의 방', "Somang's flat", 'Somang Park 방']) {
+        await withTrackers([trk(2, '12:50', place)], async () => assert.equal(data.statusMoment(c.p).at, '10-26 04:50', place));
+    }
+    // (the owner's own room is the owner's; a word that only starts like a name is no one's)
+    await withTrackers([trk(2, '12:50', "Ren's flat")], async () => assert.deepEqual([data.statusMoment(c.p).at, data.statusMoment(c.p).home], ['10-26 12:50', true]));
+    await withTrackers([trk(2, '12:50', 'Marathon track')], async () => assert.equal(data.statusMoment(c.p).at, ''));
+    // Tokyo: in no one's row, a real zone's city: the owner's own hour there, before a 반영 moves them
+    await withTrackers([trk(2, '12:50', 'Tokyo · hotel')], async () => assert.deepEqual([data.statusMoment(c.p).at, data.statusMoment(c.p).city], ['10-26 12:50', 'Tokyo']));
 });
 
 test('a Korean status line in a Korean story: the owner\'s own city by its Korean name, nothing asked', async () => {

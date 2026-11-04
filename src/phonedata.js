@@ -1607,13 +1607,14 @@ WHERE
 - "names": every name the same city goes by here. Always each name the chat's messages and status lines write it as, exactly as written ("München", "뮌헨", "서울 강남"'s "서울"); then its English and its Korean name. A chat in English with status lines in Korean gives both.
 - "lives": the country they live in now, not where they were born or their nationality. Born in Germany, living in Korea: "KR".
 - "tz": the time zone of "city", like "Asia/Seoul".
+- "aka": the other names the same person goes by here, as the chat writes them: a first name, a nickname, the name in Korean or English ("소망" for "Somang Park").
 - The newest of the story wins over a card: a card that says Berlin, a story that has moved them to Seoul: Seoul.
 - Someone nothing here places: leave them out. Never guess from a name or a language.
 - Someone whose whereabouts are in OWNER DOESN'T KNOW: leave them out. The owner's phone may not know them.
 - "evidence": the few words that show it.
 
 JSON (one object, nothing before or after it)
-{ "people": [{ "name": as in OWNER or PEOPLE, "city": in English, "names": [], "lives": two-letter country code, "tz", "evidence" }] }`;
+{ "people": [{ "name": as in OWNER or PEOPLE, "aka": [], "city": in English, "names": [], "lives": two-letter country code, "tz", "evidence" }] }`;
 const realTz = v => { const z = String(v || '').trim(); if (!/^[A-Za-z]+(?:\/[A-Za-z_+-]+){1,2}$/.test(z)) return ''; try { new Intl.DateTimeFormat('en-US', { timeZone: z }); return z; } catch { return ''; } };
 // the cards as they are: every field the story can say where someone is in, nothing summed up
 const CARD_KEYS = ['description', 'personality', 'scenario', 'first_mes', 'mes_example'];
@@ -1636,7 +1637,8 @@ function whereRequest(m, p) {
 }
 // the names a city goes by: as the chat writes it, in English and in Korean (an older reading's one "local" counts too)
 const namesOf = x => [...new Set([x?.city, x?.local, ...arr(x?.names)].map(v => line(v, 60)).filter(Boolean))].slice(0, 8);
-const whereRow = x => ({ name: line(x?.name, 60), city: line(x?.city, 60), names: namesOf(x), lives: String(x?.lives || '').trim().toUpperCase().slice(0, 2), tz: realTz(x?.tz) });
+const akaOf = x => [...new Set(arr(x?.aka).map(v => line(v, 40)).filter(v => v && nameKey(v) !== nameKey(x?.name)))].slice(0, 6);
+const whereRow = x => ({ name: line(x?.name, 60), ...(akaOf(x).length ? { aka: akaOf(x) } : {}), city: line(x?.city, 60), names: namesOf(x), lives: String(x?.lives || '').trim().toUpperCase().slice(0, 2), tz: realTz(x?.tz) });
 export async function readWhere(m, p) {
     const r = whereRequest(m, p), binding = p.financeProfile;
     // a profile that is a lorebook entry is the one thing the cards and the persona don't already hold
@@ -1652,7 +1654,8 @@ export async function readWhere(m, p) {
     // name. In two cities they are two people (two named alike) and both stay
     const here = (a, b) => samePerson(a.name, b.name) && nameKey(a.name) !== nameKey(b.name) && pkey(a.city) === pkey(b.city) && (a.tz || '') === (b.tz || '');
     const twin = x => read.some(y => here(x, y) && String(y.name).length > String(x.name).length);
-    const got = read.filter(x => !twin(x)).slice(0, 16), merged = read.filter(twin).map(x => nameKey(x.name));
+    const got = read.filter(x => !twin(x)).slice(0, 16).map(x => { const more = read.filter(y => here(y, x) && twin(y)).flatMap(y => [y.name, ...arr(y.aka)]); return more.length ? { ...x, aka: [...new Set([...arr(x.aka), ...more])].slice(0, 6) } : x; }),
+        merged = read.filter(twin).map(x => nameKey(x.name));
     // read again: someone it leaves out keeps what was read before
     const people = [...got, ...(p.where?.people || []).filter(o => !got.some(x => nameKey(x.name) === nameKey(o.name)) && !merged.includes(nameKey(o.name)) && !got.some(x => here(o, x) && String(x.name).length > String(o.name).length)).map(o => ({ ...o, names: namesOf(o) }))].slice(0, 16);
     p.where = { at: Date.now(), people, ...(removed.size ? { removed: [...removed] } : {}) };
@@ -1786,11 +1789,11 @@ export const ownerZone = p => zoneOfWhere(whereOf(p, p?.owner)) || zoneOfPhone(p
 function placesAround(p, m = null) {
     const out = [], own = ownerZone(p);
     // (the owner's own place as the weather app has it is one of their names too: a zone known only by the country)
-    if (own) out.push({ tz: own.tz, name: own.where, names: [own.where, ...own.names, p?.life?.weather?.here?.place], own: true });
+    if (own) out.push({ tz: own.tz, name: own.where, names: [own.where, ...own.names, p?.life?.weather?.here?.place], own: true, by: [p?.owner, ...arr(whereOf(p, p?.owner)?.aka)] });
     for (const c of arr(p?.life?.weather?.cities)) if (c?.tz) out.push({ tz: c.tz, name: c.name, names: [c.name, c.ko] });
-    for (const x of p?.where?.people || []) if (nameKey(x.name) !== nameKey(p.owner)) { const z = zoneOfWhere(x); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: x.name }); }
+    for (const x of p?.where?.people || []) if (nameKey(x.name) !== nameKey(p.owner)) { const z = zoneOfWhere(x); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: x.name, by: [x.name, ...arr(x.aka)] }); }
     // another phone's owner: where that phone read them to be, else its own saved city or country
-    for (const q of Object.values(phonesOf(m) || {})) if (q && q !== p && q.owner && !whereOf(p, q.owner)) { const z = ownerZone(q); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: q.owner }); }
+    for (const q of Object.values(phonesOf(m) || {})) if (q && q !== p && q.owner && !whereOf(p, q.owner)) { const z = ownerZone(q); if (z) out.push({ tz: z.tz, name: z.where, names: z.names, who: q.owner, by: [q.owner, ...arr(whereOf(q, q.owner)?.aka)] }); }
     return out;
 }
 export function zonesOf(p, at = p?.now, m = null) {
@@ -1813,6 +1816,12 @@ export const clockBlock = (p, at = p?.now, m = null, st = null) => {
     return z ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.map(c => (c.where ? `${c.name} (in ${c.where}) is ${hrs(c.hours)}` : `${c.name} is ${hrs(c.hours)}`)).join(', ')}.${st?.known && st.at && st.at !== st.raw ? `\nThe newest status line, ${st.raw} in ${st.city}, is ${st.at} here.` : ''}` : '';
 };
 const pkey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+// a place that is someone's own: their name (or their first name) then 's · 의 · 네, or a room, a home after it
+const OWNED = /^(?:'s|’s|s'|’|의|네|\s*(?:방|집|사무실|작업실|차)(?![가-힣])|\s+(?:room|bedroom|house|home|flat|apartment|place|office|studio|car)\b)/i;
+function ownedBy(scene, name) {
+    const s = String(scene || '').trim().toLowerCase(), full = String(name || '').trim().toLowerCase();
+    return [...new Set([full, full.split(/\s+/)[0]])].some(n => n.length >= 2 && s.startsWith(n) && OWNED.test(s.slice(n.length)));
+}
 const sceneOf = place => String(place || '').split(/\s*[,，→>/·|]\s*/)[0].trim();
 // the zone a status line's place names: its scene part is a known city's name, or starts with it ("서울 강남"). A name
 // only at the start ("Paris Baguette") is taken only when it is the owner's own zone; in another zone it is no proof
@@ -1831,6 +1840,11 @@ export function sceneZone(p, place, m = null) {
         // ("New York City", "Frankfurt"): trusted only in the owner's own zone
         if (!part && (leads.has(n) || n === first || whole.startsWith(n) && n.length >= 2 && /^[가-힣]/.test(n) || whole.length >= 4 && n.startsWith(whole))) part = z;
     }
+    // someone's own place ("Mara's room", "소망의 방", "렌네 집"): where that person is
+    const zs = placesAround(p, m), by = zs.find(z => arr(z.by).some(n => ownedBy(sc, n)));
+    if (by) return { tz: by.tz, name: by.name, own: !!by.own || !!own && by.tz === own.tz && [own.where, ...(own.names || [])].some(n => pkey(n) && pkey(n) === pkey(by.name)) };
+    // a city no one here is in, by its time zone's name ("Rome", "Tokyo"): the owner gone there, before a 반영 moves them
+    if (!part && own) { const z = ZONES.find(x => pkey(x.split('/').pop().replace(/_/g, ' ')) === whole); if (z) return { tz: z, name: sc, own: z === own.tz, moved: z !== own.tz }; }
     return part && (!own || part.tz === own.tz) ? { tz: part.tz, name: part.name, own: !!part.own } : null;
 }
 // whose clock a status line's scene keeps: true the owner's, false another zone's, null unknown (on a phone that keeps
@@ -1841,7 +1855,7 @@ export function sceneHome(p, place, m = null, named = null) {
     // its clock reads the same)
     // (and another city in the same zone, Busan for an owner in Seoul, is elsewhere too: its hour is theirs, its weather
     // isn't; an owner known only by the country takes any city of their zone)
-    if (own && z) return z.tz === own.tz && (z.own === true || !own.names?.length);
+    if (own && z) return !!z.moved || z.tz === own.tz && (z.own === true || !own.names?.length);
     if (!own || !zonesOf(p, hm(p?.now) ? p.now : '01-01 12:00', m)) return true;
     return null;
 }
@@ -1857,7 +1871,7 @@ export function statusMoment(p, upto = null, named = null, m = null) {
     if (!t || !Number.isFinite(t.min) || !d) return null;
     const raw = `${pad(d.mo)}-${pad(d.d)} ${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}`, place = t.city || t.place || '', base = { raw, place, i: t.i };
     const home = sceneHome(p, place, m, named);
-    if (home === true) return { ...base, at: raw, city: ownerZone(p)?.where || '', home: true, known: true };
+    if (home === true) { const z = sceneZone(p, place, m); return { ...base, at: raw, city: z?.moved ? z.name : ownerZone(p)?.where || '', home: true, known: true }; }
     if (home === null) return { ...base, at: '', home: false, known: false };
     const scene = sceneZone(p, place, m) || named;
     return { ...base, at: zoneShift(raw, scene.tz, ownerZone(p).tz, Number(p.year) || undefined), city: scene.name, home: false, known: true };
