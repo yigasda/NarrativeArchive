@@ -3,7 +3,6 @@
 import { askAI, callConn, trSettings, withSpinner } from './ai.js';
 import { ctx, getMeta, hasChat, saveMeta } from './core.js';
 import { diffPairs, markedPair } from './diff.js';
-import { capWords } from './keywords.js';
 import { esc } from './util.js';
 
 // ---- "한국어로 보기" for any diff box: translates only the changed (+/−) lines, shown under each line
@@ -145,6 +144,62 @@ OUTPUT: one line per input, same order, nothing else, exactly like this
 Avalon = 아발론
 Lighthouse = 등대`;
 
+// 용어집 › AI로 이름 찾기: the names and made-up words of the whole story (the cards, the persona, the archive and the
+// chat not archived yet), each with its Korean, in one request to the translator
+export const AI_SYS_GLOSSARY_FIND = `GOAL
+List the names and made-up words of a role-play story, each with one fixed Korean spelling, so every translation of the story writes them the same way.
+
+YOU GET
+- CHARACTER CARD: a role-play character's card (one per character in a group chat).
+- PERSONA (sometimes): the user's character.
+- ARCHIVE (sometimes): the story so far, summed up.
+- RECENT CHAT (sometimes): the newest messages, not in the archive yet.
+- IN THE GLOSSARY (sometimes): names already listed. Leave them out.
+
+WHAT TO LIST
+- People, places, groups, ships, shops, titles used as a name, made-up words: anything whose spelling must stay the same.
+- In any language or script, and made-up words written in lowercase too.
+- Not ordinary words, and not a word only because it starts a sentence. Not a name written only in Korean.
+- Each once, as the story writes it. A full name and its short form are two lines only when the story uses both.
+
+KOREAN
+1. Real names with a usual Korean spelling (mythology, history, real places): use that spelling.
+2. Other names: transliterate naturally, the way a Korean reader would say it.
+3. Titles and ordinary nouns used as names ("the Queen", "the Well"): natural Korean.
+4. Made-up words: transliterate, do not translate.
+
+OUTPUT: one line per name, nothing else, exactly like this
+Avalon = 아발론
+Lighthouse Keeper = 등대지기`;
+const tokOf = s => { const x = String(s), h = (x.match(/[ᄀ-ᇿ㄰-㆏가-힯]/g) || []).length; return Math.ceil(h + (x.length - h) / 3.6); };
+// at most n tokens of s: its start and its end when it is longer (names come in early, the newest ones late)
+const fitTok = (s, n) => { const x = String(s || '').trim(); if (tokOf(x) <= n) return x; const k = Math.floor(x.length * n / tokOf(x) / 2); return `${x.slice(0, k)}\n…\n${x.slice(-k)}`; };
+const FIND_BUDGET = 20000;
+export function glossaryFindInput(c, m, have = []) {
+    const sub = s => { try { return c.substituteParams ? c.substituteParams(String(s || '')) : String(s || ''); } catch { return String(s || ''); } };
+    const g = c.groupId ? (c.groups || []).find(x => x.id === c.groupId) : null;
+    const chars = g ? (g.members || []).map(a => (c.characters || []).find(x => x.avatar === a)).filter(Boolean) : [c.characters?.[c.characterId]].filter(Boolean);
+    const card = ch => ['description', 'personality', 'scenario', 'first_mes', 'mes_example'].map(k => ch?.data?.[k] ?? ch?.[k]).filter(Boolean).map(sub).join('\n\n');
+    const persona = String(c.powerUserSettings?.persona_description || '').trim();
+    const head = [
+        ...chars.map(ch => `[CHARACTER CARD — ${ch.name || ch.data?.name || ''}]\n${fitTok(card(ch), Math.floor(6000 / chars.length)) || '(empty)'}`),
+        persona ? `[PERSONA — ${c.name1 || 'user'}]\n${fitTok(sub(persona), 1500)}` : '',
+        String(m?.text || '').trim() ? `[ARCHIVE]\n${fitTok(m.text, 8000)}` : '',
+    ].filter(Boolean), listed = have.length ? `[IN THE GLOSSARY]\n${have.join('\n')}` : '';
+    // the chat not archived yet (archived messages are hidden), newest first, in what is left
+    let left = FIND_BUDGET - tokOf(head.join('\n\n')) - tokOf(listed) - 200;
+    const rows = [];
+    for (const x of [...(c.chat || [])].reverse()) {
+        if (!x || x.is_system) continue;
+        const r = `${x.name || (x.is_user ? 'User' : 'Char')}: ${sub(x.mes).replace(/<[^>]+>/g, ' ').replace(/[ \t]+/g, ' ').trim()}`, n = tokOf(r);
+        if (n > left) break;
+        rows.unshift(r); left -= n;
+    }
+    return [...head, rows.length ? `[RECENT CHAT]\n${rows.join('\n\n')}` : '', listed].filter(Boolean).join('\n\n');
+}
+// the lines of an answer: "Name = 한국어" (a "-" or "*" in front is fine)
+export const glossaryLines = out => String(out || '').split('\n').map(l => l.match(/^\s*(?:[-*]\s*)?([^=→]+?)\s*(?:=|→)\s*(.+?)\s*$/)).filter(Boolean).map(x => ({ src: x[1].trim(), ko: x[2].trim() }));
+
 export async function openGlossary() {
     const c = ctx();
     const m = getMeta();
@@ -156,7 +211,7 @@ export async function openGlossary() {
         </div></div>
         <textarea class="text_pole na_gl_ta" rows="12" spellcheck="false" placeholder="Avalon = 아발론&#10;Lighthouse Keeper = 등대지기"></textarea>
         <div class="na_row_btns na_gl_btns">
-          <button type="button" class="na_btn na_small na_gl_find"><i class="fa-solid fa-magnifying-glass"></i> 아카이브에서 이름 찾기</button>
+          <button type="button" class="na_btn na_small na_gl_find"><i class="fa-solid fa-magnifying-glass"></i> AI로 이름 찾기</button>
           <button type="button" class="na_btn na_small na_gl_ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI로 한국어 채우기</button>
         </div>
         <small class="na_dim na_gl_info"></small>
@@ -169,16 +224,17 @@ export async function openGlossary() {
     };
     $ta.on('input', info);
     info();
-    $root.find('.na_gl_find').on('click', () => {
-        const have = new Set(glossaryEntries({ glossary: $ta.val() }).map(e => e.src.toLowerCase())
-            .concat($ta.val().split('\n').map(l => l.split(/=|→/)[0].trim().toLowerCase())));
-        const counts = new Map();
-        capWords(m.text).forEach(w => counts.set(w, (counts.get(w) || 0) + 1));
-        const found = [...counts].filter(([w, n]) => n >= 3 && !have.has(w.toLowerCase())).sort((a, b) => b[1] - a[1]).slice(0, 40).map(([w]) => w);
+    $root.find('.na_gl_find').on('click', async function () {
+        // what is there already, with or without its Korean: never asked for or written again
+        const have = [...new Set($ta.val().split('\n').map(l => l.split(/=|→/)[0].trim()).filter(Boolean))];
+        const known = new Set(have.map(s => s.toLowerCase()));
+        const out = await withSpinner($(this), '찾는 중…', () => askTranslator(glossaryFindInput(c, m, have), { system: AI_SYS_GLOSSARY_FIND, maxTokens: 3000 }));
+        if (out === null) return;
+        const found = glossaryLines(out).filter(x => x.src.length <= 60 && !/[가-힯]/.test(x.src) && !known.has(x.src.toLowerCase()) && (known.add(x.src.toLowerCase()), true));
         if (!found.length) return toastr.info('새로 넣을 이름이 없어요.');
-        $ta.val(`${$ta.val().replace(/\s+$/, '')}${$ta.val().trim() ? '\n' : ''}${found.map(w => `${w} = `).join('\n')}`);
+        $ta.val(`${$ta.val().replace(/\s+$/, '')}${$ta.val().trim() ? '\n' : ''}${found.map(x => `${x.src} = ${x.ko}`).join('\n')}`);
         info();
-        toastr.success(`${found.length}개 넣었어요. 한국어는 직접 적거나 AI로 채우세요.`);
+        toastr.success(`${found.length}개 넣었어요. 틀린 건 고쳐 주세요.`);
     });
     $root.find('.na_gl_ai').on('click', async function () {
         const lines = $ta.val().split('\n');

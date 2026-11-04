@@ -618,8 +618,11 @@ test('위치 정보: one person by two names ("Somang Park" in the contacts, "So
     // (every name is asked as the phone has it; the owner Ren is not)
     assert.deepEqual(globalThis.__where.at(-1).split('[PEOPLE]\n')[1].split('\n\n')[0].split('\n').sort(), ['Ivo Kim', 'Ivo Park', 'Somang', 'Somang Park']);
     assert.deepEqual(info.people.map(x => x.name), ['Somang Park', 'Ivo Kim', 'Ivo Park']);
+    // (the short name is kept as another name the same person goes by)
+    assert.ok(p.where.people[0].aka.includes('Somang'));
     // the model leaves the short name out: the old row in the same city goes too
-    p = phone(); info = await ask(p, [{ name: 'Somang Park', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }]);
+    p = phone(); info = await ask(p, [{ name: 'Somang Park', aka: ['소망', 'Somang Park', ''], city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }]);
+    assert.deepEqual(p.where.people[0].aka, ['소망']);
     assert.deepEqual(info.people.map(x => x.name), ['Somang Park']);
     // two cities: two people named alike
     p = phone(); info = await ask(p, [{ name: 'Somang Park', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }, { name: 'Somang', city: 'Tokyo', lives: 'JP', tz: 'Asia/Tokyo' }]);
