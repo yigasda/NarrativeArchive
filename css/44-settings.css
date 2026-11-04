@@ -145,11 +145,10 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
     filter: none !important;
 }
 #na_settings .na_cc .na_cc_box .na_cc_row select.na_cc_sel {
-    flex: 1; width: auto !important; min-width: 0; height: 40px !important; padding: 0 22px 0 0 !important; font: inherit; font-size: 0.9em;
+    flex: 1; width: auto !important; min-width: 0; height: 40px !important; padding: 0 22px 0 0 !important; font: inherit;
     -webkit-appearance: none !important; appearance: none !important; cursor: pointer;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238A7A70' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;
-    background-repeat: no-repeat !important; background-position: right 2px center !important; background-size: 14px !important;
-}
+    background-repeat: no-repeat !important; background-position: right 2px center !important; background-size: 14px !important}
 
 /* ---- 3.82.2: search boxes are one rounded field — the input inside sits flat, whatever a theme does to inputs */
 :is(#na_settings, .na_v2, .na_popup) .na_search_wrap input, :is(#na_settings, .na_v2, .na_popup) .na_search_wrap input:is(:hover, :focus, :focus-visible), :is(#na_settings, .na_v2, .na_popup) input:is(.na_pc_q, .na_ss_find, #na_find_q), :is(#na_settings, .na_v2, .na_popup) input:is(.na_pc_q, .na_ss_find, #na_find_q):is(:hover, :focus, :focus-visible) {
@@ -232,7 +231,7 @@ body:not(.na_darkui) #na_settings .na_start { background: #FFFAF6; }
 .na_cal_av_row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "dot name x" "dot sub x"; column-gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--na-line); }
 .na_cal_av_row:first-of-type { border-top: 0; }
 .na_cal_av_dot { grid-area: dot; color: var(--av); --axfg: var(--av); font-size: 1.1em; --axfs: 1.1em}
-.na_cal_av_row .na_cal_av_name { grid-area: name; margin: 0; padding: 2px 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; font-weight: 700; min-height: 0; }
+.na_cal_av_row .na_cal_av_name { grid-area: name; margin: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; font-weight: 700}
 .na_cal_av_row small { grid-area: sub; color: var(--na-dim); font-size: 0.82em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .na_cal_av_x { grid-area: x; width: auto; margin: 0; padding: 4px 6px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: var(--na-dim); cursor: pointer; }
 .na_cal_av_new { display: flex; flex-wrap: wrap; gap: 6px; }

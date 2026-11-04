@@ -4,13 +4,13 @@
 /* ---- the window: a forced theme colour loses inside our windows; dark windows get the charcoal tokens */
 body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) { background: #F0E4DB !important; background-image: none !important; color: #463428 !important; }
 body.na_darkui dialog.popup:has(.na_popup, #na_settings) { background: #17171A !important; background-image: none !important; color: #ECEAE6 !important; }
-body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #F7EEE7 !important; background-image: none !important; border: 1px solid #E5D5C9 !important; color: #463428 !important; --axfg: #463428; box-shadow: none !important}
-body.na_darkui dialog.popup:has(.na_popup, #na_settings) .popup-controls .menu_button { background: #232328 !important; background-image: none !important; border: 1px solid #45454D !important; color: #ECEAE6 !important; --axfg: #ECEAE6; box-shadow: none !important}
+body:not(.na_darkui) dialog.popup:has(.na_popup, #na_settings):not(#na_x):not(#na_y):not(#na_z) .popup-controls .menu_button { background: #F7EEE7 !important; background-image: none !important; border: 1px solid #E5D5C9 !important; color: #463428 !important; --axfg: #463428; box-shadow: none !important}
+body.na_darkui dialog.popup:has(.na_popup, #na_settings):not(#na_x):not(#na_y):not(#na_z) .popup-controls .menu_button { background: #232328 !important; background-image: none !important; border: 1px solid #45454D !important; color: #ECEAE6 !important; --axfg: #ECEAE6; box-shadow: none !important}
 body.na_darkui dialog.popup:has(.na_popup) :is(.na_popup, .na_popup .na_v2), body.na_darkui dialog.popup:has(.na_confirm) .na_confirm {
     --na-card: #232328; --na-card2: #2E2E34; --na-paper: #232328; --na-soft: #2E2E34; --na-softer: #2B2B31;
     --na-line: #3A3A41; --na-line2: #2E2E34; --na-fill: #4A4A52;
 }
-body.na_darkui dialog.popup:has(.na_popup):not(#na_x) .popup-controls .menu_button { background: #232328 !important; border-color: #3A3A41 !important; }
+body.na_darkui dialog.popup:has(.na_popup):not(#na_x):not(#na_y):not(#na_z):not(#na_w) .popup-controls .menu_button { background: #232328 !important; border-color: #3A3A41 !important; }
 /* the popup's own input row (이름 짓기) */
 body:not(.na_darkui) dialog.popup:has(.na_popup) .popup-input { background-color: #F2E9E2 !important; border-color: #E5D5C9 !important; color: #463428 !important; --axfg: #463428}
 body.na_darkui dialog.popup:has(.na_popup) .popup-input { background-color: #2A2A30 !important; border-color: #45454D !important; color: #ECEAE6 !important; --axfg: #ECEAE6}
@@ -81,8 +81,17 @@ body:is(.na_darkui, :not(.na_darkui)) :is(
     border-radius: var(--c-r, 0) !important; --axr: var(--c-r, 0); box-shadow: var(--c-sh, none) !important;
     font-family: var(--c-ff, inherit) !important; --axff: var(--c-ff, inherit); letter-spacing: var(--c-ls, inherit) !important; --axls: var(--c-ls, inherit); text-transform: var(--c-tt, inherit) !important; --axtt: var(--c-tt, inherit)}
 
+dialog.popup:has(.na_popup):not(:has(.na_phone)) { max-width: calc(100dvw - 16px) !important; max-height: calc(100dvh - 16px); padding: 12px 10px; } /* the wide frame Blue Lemonade gives every popup, ours with or without it */
+dialog.popup:has(.na_popup):not(:has(.na_phone)) .popup-content { padding-left: 2px; padding-right: 2px; }
 :is(dialog.popup:has(.na_popup, .na_phone), #na_settings) { --mainFontFamily: "Noto Sans", sans-serif; font-family: var(--mainFontFamily); } /* our windows keep ST's default font; a theme swapping --mainFontFamily (Blue Lemonade) stops here */
 dialog.popup:has(.na_popup, .na_phone):not(#na_x) .popup-content { line-height: normal; } /* Blue Lemonade sets 1.55 on every popup body; ours keep the browser's */
+/* ---- text fields: one size everywhere, the same as Blue Lemonade draws them (15px, 36px tall, 12px sides; textarea 10px 12px, 1.55),
+   so a theme that sizes fields changes nothing. A field that needs its own size marks it important (those already beat themes). */
+:is(:where(dialog.popup:not(:has(.na_phone))) .na_popup, :where(#na_settings)) :is(textarea, select, input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="button"], [type="submit"])) { min-height: 36px; font-size: 15px; }
+:is(:where(dialog.popup:not(:has(.na_phone))) .na_popup, :where(#na_settings)) textarea { padding: 10px 12px; line-height: 1.55; }
+:is(:where(dialog.popup:not(:has(.na_phone))) .na_popup, :where(#na_settings)) select:not([multiple]) { padding-left: 12px; padding-right: 28px; }
+:is(:where(dialog.popup:not(:has(.na_phone))) .na_popup, :where(#na_settings)) :is(.text_pole:not(textarea, select), input:is([type="text"], [type="search"], [type="password"], [type="url"], [type="email"])) { padding-left: 12px; padding-right: 12px; }
+
 /* SillyTavern's own field look (1px edge in its border colour, 5px corners), at the lowest weight: any rule of ours wins over it */
 :where(dialog.popup .na_popup, #na_settings) :where(textarea, .text_pole) { --c-bw: 1px; --c-bs: solid; --c-bc: var(--SmartThemeBorderColor); --c-r: 5px; }
 

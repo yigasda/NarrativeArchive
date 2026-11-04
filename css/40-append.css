@@ -218,7 +218,7 @@ body.na_darkui .na_qb_root .na_qb_tabs button.on { box-shadow: 0 1px 2px rgba(0,
 .na_qb2 .na_v2_row2 .na_v2_btn.primary { --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; }
 .na_qb2 .na_qb2_search { gap: 8px; padding: 0 12px; border-radius: 14px; --axr: 14px; background: var(--na-card)}
 .na_qb2 .na_qb2_search > svg { color: var(--na-dim); }
-.na_qb2 .na_qb2_search input.na_search { font-size: 13.5px; line-height: 1.5; padding: 8px 0 !important; }
+.na_qb2 .na_qb2_search input.na_search { padding: 8px 0 !important}
 .na_qb2 .na_qb2_search input.na_search::placeholder { color: var(--na-dim); opacity: 0.8; }
 body:not(.na_darkui) .na_qb2 .na_qb2_search input.na_search::placeholder { color: #A99C92; opacity: 1; }
 body.na_darkui .na_qb2 .na_qb2_search input.na_search::placeholder { color: #85858E; opacity: 1; }
@@ -236,7 +236,7 @@ body.na_darkui .na_qb2 .na_qb_exchip { background: #2A2A30; }
 body:not(.na_darkui) .na_qb_excl_plus { --c-bc: #CDBBAE; --c-bct: #CDBBAE; }
 body.na_darkui .na_qb_excl_plus { --c-bc: #6A6A73; --c-bct: #6A6A73; }
 .na_qb_excl_plus:hover { --c-bc: var(--na-accent); --c-bct: var(--na-accent); --c-fg: var(--na-accent-ink, var(--na-accent)); }
-.na_qb2 .na_qb_excl_in { flex: 0 1 9em; width: 9em; min-width: 6em; --c-r: 999px; padding: 2px 10px !important; font-size: 12px; --axfs: 12px}
+.na_qb2 .na_qb_excl_in { flex: 0 1 9em; width: 9em; min-width: 6em; --c-r: 999px; padding: 2px 10px !important; --axfs: 12px}
 .na_qb2 .na_qb_excl_add { font-size: 12px; --axfs: 12px; padding: 2px 10px}
 .na_qb2 .na_qb_list { display: flex; flex-direction: column; gap: 12px; }
 .na_qb2 .na_qb_group { display: flex; flex-direction: column; gap: 6px; }
@@ -354,7 +354,6 @@ body.na_darkui .na_ask2_dots i:nth-child(3) { background: #85858E; }
 @keyframes na_ask2_dot { 50% { opacity: 0.35; } }
 .na_ask2 .na_ask2_sugg button { font-size: 12px; --axfs: 12px; padding: 4px 11px; line-height: 1.5; --c-bg: var(--na-card); --c-bc: var(--na-line); --c-bct: var(--na-line); --c-fg: var(--na-mute, inherit)}
 .na_ask2 .na_ask2_input { padding: 8px 8px 8px 14px; }
-.na_ask2 .na_ask2_input textarea { font-size: 14px; line-height: 1.5; padding: 6px 0; min-height: 0; }
 .na_ask2 .na_ask2_input textarea.text_pole { padding: 6px 0 !important; border-radius: 0; --c-r: 0; }
 .na_ask2 .na_ask2_input textarea::placeholder { color: #A99C92; opacity: 1; }
 body.na_darkui .na_ask2 .na_ask2_input textarea::placeholder { color: var(--na-dim); }
@@ -423,7 +422,7 @@ body.na_darkui .na_bn2_find { border-color: #55555E; }
 body:not(.na_darkui) .na_uh2_range > .na_uh2_arrow, body:not(.na_darkui) .na_uh2_range label > span i { color: #B8A99E; --axfg: #B8A99E}
 body.na_darkui .na_uh2_range > .na_uh2_arrow, body.na_darkui .na_uh2_range label > span i { color: #8A8A93; --axfg: #8A8A93}
 .na_uh2_range small { font-size: 11.5px; color: var(--na-dim); }
-.na_uh2_range input { font-size: 16px; font-weight: 600; line-height: 1.5; padding: 8px 12px 8px 0; }
+.na_uh2_range input { font-weight: 600}
 .na_uh2 .na_uh2_quick button { font-size: 12px; --axfs: 12px; padding: 3px 11px; line-height: 1.5; --c-bg: var(--na-card); --c-bc: var(--na-line); --c-bct: var(--na-line)}
 .na_uh2_warn[hidden] { display: none; }
 .na_uh2 .na_uh2_go { font-size: 14px; --axfs: 14px; line-height: 1.5; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor}
@@ -440,7 +439,7 @@ body:not(.na_darkui) .na_kw2_x { --c-fg: #CDBDB2; opacity: 1; }
 body.na_darkui .na_kw2_x { --c-fg: #BEBCC2; opacity: 1; }
 body:not(.na_darkui) .na_kw2_x:hover { --c-fg: #fff; }
 body.na_darkui .na_kw2_x:hover { --c-fg: #FFF; }
-.na_kw2_add { font-size: 13px; --axfs: 13px; line-height: 1.5; min-width: 90px}
+.na_kw2_add { --axfs: 13px; min-width: 90px}
 .na_kw2_add::placeholder { color: #A99C92; opacity: 1; }
 body.na_darkui .na_kw2_add::placeholder { color: var(--na-dim); }
 .na_kw2 .na_kw_check { font-size: inherit; --axfs: inherit; gap: 6px; border-top-color: var(--na-line2, var(--na-line))}
@@ -588,9 +587,9 @@ body.na_darkui .na_wd.on .na_wd_icon { background: var(--na-warm-soft); }
 .na_wd_head .na_tgl_ui::after { width: 20px; height: 20px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); }
 .na_wd_head input.na_toggle:checked + .na_tgl_ui::after { transform: translateX(18px); }
 .na_wd_body { gap: 8px; }
-:is(.na_v2, #na_settings) .na_wd_rename.text_pole.text_pole { margin: 0; padding: 2px 2px 4px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-bottom: 1px dashed var(--na-line); --c-bwb: 1px; --c-bsb: dashed; --c-bcb: var(--na-line); --c-r: 0; --c-bg: transparent; font-size: 0.929em; --axfs: 0.929em; font-weight: 600; --c-fg: inherit}
+:is(.na_v2, #na_settings) .na_wd_rename.text_pole.text_pole { margin: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-bottom: 1px dashed var(--na-line); --c-bwb: 1px; --c-bsb: dashed; --c-bcb: var(--na-line); --c-r: 0; --c-bg: transparent; --axfs: 0.929em; font-weight: 600; --c-fg: inherit}
 :is(.na_v2, #na_settings) .na_wd_rename.text_pole.text_pole:focus { border-bottom: 1px solid var(--na-accent); outline: none; }
-:is(.na_v2, #na_settings) .na_wd_text.text_pole.text_pole { padding: 10px 12px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-r: 12px; font-size: 0.893em; --axfs: 0.893em; line-height: 1.6; field-sizing: content; min-height: 6.5em; max-height: 60vh}
+:is(.na_v2, #na_settings) .na_wd_text.text_pole.text_pole { --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-r: 12px; --axfs: 0.893em; field-sizing: content; max-height: 60vh}
 body:not(.na_darkui) :is(.na_v2, #na_settings) .na_wd_text.text_pole.text_pole { --c-bg: transparent; --c-fg: #463428; }
 body.na_darkui :is(.na_v2, #na_settings) .na_wd_text.text_pole.text_pole { --c-bg: transparent; --c-fg: #ECEAE6; }
 .na_wd_foot { font-size: 0.857em; --axfs: 0.857em}
@@ -615,15 +614,14 @@ body.na_darkui :is(.na_v2, #na_settings) .na_wd_text.text_pole.text_pole { --c-b
 .na_wd_row .na_wd_en { grid-area: n; }
 .na_wd_row .na_wd_ed { grid-area: d; }
 .na_wd_row .na_wd_rx { grid-area: x; }
-:is(.na_v2, #na_settings) .na_wd_row .text_pole.text_pole { --c-bg: transparent; padding: 3px 6px; }
-:is(.na_v2, #na_settings) .na_wd_row .na_wd_en.text_pole.text_pole { min-height: 0; height: auto; align-self: center; }
-:is(.na_v2, #na_settings) .na_wd_slot .text_pole.text_pole { margin: 0; padding: 6px 9px; --c-bw: 1px; --c-bs: solid; --c-bc: transparent; --c-bwt: 1px; --c-bst: solid; --c-bct: transparent; --c-r: 9px; --c-bg: var(--na-card2); --c-fg: inherit; font-size: 0.88em; --axfs: 0.88em; line-height: 1.5; min-width: 0; box-sizing: border-box}
+:is(.na_v2, #na_settings) .na_wd_row .text_pole.text_pole { --c-bg: transparent}
+:is(.na_v2, #na_settings) .na_wd_row .na_wd_en.text_pole.text_pole { height: auto; align-self: center}
+:is(.na_v2, #na_settings) .na_wd_slot .text_pole.text_pole { margin: 0; --c-bw: 1px; --c-bs: solid; --c-bc: transparent; --c-bwt: 1px; --c-bst: solid; --c-bct: transparent; --c-r: 9px; --c-bg: var(--na-card2); --c-fg: inherit; --axfs: 0.88em; min-width: 0; box-sizing: border-box}
 :is(.na_v2, #na_settings) .na_wd_slot .text_pole.text_pole:focus { --c-bc: var(--na-accent); --c-bct: var(--na-accent); outline: none; }
-:is(.na_v2, #na_settings) .na_wd_slot textarea.text_pole.text_pole { width: 100%; resize: vertical; field-sizing: content; min-height: 2.1em; max-height: 40vh; }
+:is(.na_v2, #na_settings) .na_wd_slot textarea.text_pole.text_pole { width: 100%; resize: vertical; field-sizing: content; max-height: 40vh}
 :is(.na_v2, #na_settings) .na_wd_slot .na_wd_en.text_pole.text_pole { font-weight: 600; }
-:is(.na_v2, #na_settings) .na_wd_slot .na_wd_text.text_pole.text_pole { min-height: 6.5em; }
 .na_wd_fillbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-:is(.na_v2, #na_settings) .na_wd_fillbar .text_pole.text_pole { margin: 0; width: auto; font-size: 0.88em; --axfs: 0.88em; --c-r: 10px}
+:is(.na_v2, #na_settings) .na_wd_fillbar .text_pole.text_pole { margin: 0; width: auto; --axfs: 0.88em; --c-r: 10px}
 .na_wd_fillbar .na_wd_fillk { flex: none; max-width: 40%; }
 .na_wd_fillbar .na_wd_note { flex: 1; min-width: 120px; }
 .na_wd_fillbar .na_wd_fill { flex: 1 0 100%; }
@@ -670,7 +668,7 @@ body.na_darkui .na_fd_strip .miss { background: var(--na-raw); }
 .na_fd_level > span:nth-child(2) > span { font-size: 0.964em; --axfs: 0.964em}
 .na_fd_level small { font-size: 0.821em; }
 .na_fd_btn { font-size: 16px; --axfs: 16px; --c-fg: var(--na-mute, inherit); --c-bg: var(--na-softer, var(--na-card2))}
-:is(.na_v2, #na_settings) .na_fd_step input.text_pole.text_pole { width: 36px; padding: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 0; --c-bg: transparent; font-size: 0.964em; font-weight: 700; }
+:is(.na_v2, #na_settings) .na_fd_step input.text_pole.text_pole { width: 36px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 0; --c-bg: transparent; font-weight: 700}
 .na_fd_fill { flex-wrap: nowrap; gap: 10px; padding: 10px 12px; background: var(--na-softer, var(--na-card2)); font-size: 0.893em; --axfs: 0.893em}
 .na_fd_fill > span { flex: 1; min-width: 0; }
 body:not(.na_darkui) .na_fd_fill > span { color: #4A3D35; }
