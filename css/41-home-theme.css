@@ -76,19 +76,20 @@ body.na_darkui .na_tlb_menu .na_hc_status.ok { color: #74C292; --axfg: #74C292; 
 
 /* ============ the extension's own header bar in SillyTavern's extension list: the panel's base colour
    (the same as under the tool boxes) instead of the stock gradient, so bar and panel read as one piece */
-body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header {
+/* the drawer header in the extension list: our own bar, except under Blue Lemonade (body.salty), whose list rows it then matches */
+body:not(.na_darkui):not(.salty) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header {
     background: #F0E4DB; background-image: none; border: 1px solid #F0E4DB; border-radius: 14px; --axr: 14px;
     padding: 6px 12px; box-shadow: none; color: #463428; --axfg: #463428}
-body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header {
+body.na_darkui:not(.salty) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header {
     background: #17171A; background-image: none; border: 1px solid #17171A; border-radius: 14px; --axr: 14px;
     padding: 6px 12px; box-shadow: none; color: #ECEAE6; --axfg: #ECEAE6}
-body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header:hover { filter: none; background: #EADCD1; border-color: #EADCD1; }
-body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header:hover { filter: none; background: #232328; border-color: #232328; }
-body:not(.na_darkui) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header .inline-drawer-icon { color: #8A7A70; --axfg: #8A7A70}
-body.na_darkui #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header .inline-drawer-icon { color: #9A989F; --axfg: #9A989F}
+body:not(.na_darkui):not(.salty) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header:hover { filter: none; background: #EADCD1; border-color: #EADCD1; }
+body.na_darkui:not(.salty) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header:hover { filter: none; background: #232328; border-color: #232328; }
+body:not(.na_darkui):not(.salty) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header .inline-drawer-icon { color: #8A7A70; --axfg: #8A7A70}
+body.na_darkui:not(.salty) #na_settings > .inline-drawer > .inline-drawer-toggle.inline-drawer-header .inline-drawer-icon { color: #9A989F; --axfg: #9A989F}
 /* open (SillyTavern flips the icon to .up): the bar sits flush on the panel, no 5px gap, square lower corners,
    and the panel's top corners square too, so there are no notches at either end */
-#na_settings > .inline-drawer:has(> .inline-drawer-header .inline-drawer-icon.up) > .inline-drawer-toggle.inline-drawer-header { margin-bottom: 0; border-radius: 14px 14px 0 0; --axr: 14px 14px 0 0}
+body:not(.salty) #na_settings > .inline-drawer:has(> .inline-drawer-header .inline-drawer-icon.up) > .inline-drawer-toggle.inline-drawer-header { margin-bottom: 0; border-radius: 14px 14px 0 0; --axr: 14px 14px 0 0}
 #na_settings > .inline-drawer:has(> .inline-drawer-header .inline-drawer-icon.up) > .inline-drawer-content { margin-top: 0; border-radius: 0 0 14px 14px; --axr: 0 0 14px 14px}
 
 /* ============ dark themes: the light mockup palette, darkened. Every light-only rule above has a body.na_darkui twin

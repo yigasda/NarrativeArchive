@@ -17,10 +17,14 @@ export function dressPopup(dlg) {
 
 // Themes keep their hands off our windows: Blue Lemonade skips its colour overrides inside this marker (its own
 // "keep an extension's colours" switch). Our own CSS (69-components.css) holds the font and the rest.
+// Only the insides carry it: the panel's drawer header stays a row of the theme's extension list, and SillyTavern moves its
+// toasts into an open dialog (beside .popup-body), where they keep the theme's toast look
 const KEEP = 'data-bl-native-ext-colors';
+const mark = el => { if (el && !el.hasAttribute(KEEP)) el.setAttribute(KEEP, ''); };
 function keepOwnLook() {
-    const panel = document.getElementById('na_settings'); if (panel && !panel.hasAttribute(KEEP)) panel.setAttribute(KEEP, '');
-    document.querySelectorAll('dialog.popup[open]').forEach(d => { if (!d.hasAttribute(KEEP) && d.querySelector('.na_popup, .na_phone')) d.setAttribute(KEEP, ''); });
+    const panel = document.getElementById('na_settings'); if (panel?.hasAttribute(KEEP)) panel.removeAttribute(KEEP);
+    mark(panel?.querySelector(':scope > .inline-drawer > .inline-drawer-content'));
+    document.querySelectorAll('dialog.popup[open]').forEach(d => { if (d.hasAttribute(KEEP)) d.removeAttribute(KEEP); if (d.querySelector('.na_popup, .na_phone')) mark(d.querySelector(':scope > .popup-body')); });
 }
 
 export function watchPopups() {
