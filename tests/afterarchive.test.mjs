@@ -517,3 +517,19 @@ test('the bank\'s second turn with a line after its JSON is read (only a JSON cu
     assert.deepEqual(p.money.tx.map(t => t.who).sort(), ['Bakery', 'Kiosk']);
     assert.equal(p.sync.marks.money.index, 39);
 });
+
+test('the delivery\'s second turn telling an order a few minutes off is the same order; a fill keeps another meal of the same shop and day', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = longPhone(), mm = { ...m, phones: { ren: p } };
+    const dlv = time => JSON.stringify({ shops: [{ name: 'Uno', cuisine: 'pizza', menu: [{ name: 'Margherita', price: 9 }] }], orders: [{ shop: 'Uno', items: [{ name: 'Margherita', price: 9, qty: 2 }], time, status: 'delivered', account: 'cash' }], cart: null });
+    globalThis.__menu = { calls: [], answers: [dlv('10-20 19:00'), dlv('10-20 19:10')], answer: '{}' };
+    await life.fillDelivery(mm, p);
+    assert.equal(p.delivery.orders.filter(o => o.shop === 'Uno').length, 1);
+    globalThis.__rows = rows(12);
+    const q = plainPhone({ delivery: { shops: [{ name: 'Uno', cuisine: 'pizza', menu: [] }], orders: [{ id: 'o1', shop: 'Uno', items: [{ name: 'Margherita', qty: 1, price: 9 }], time: '10-22 12:00', status: 'delivered', sync: true, ev: 'lunch' }], cart: null } });
+    const answer = JSON.stringify({ shops: [{ name: 'Uno', cuisine: 'pizza', menu: [{ name: 'Calzone', price: 11 }] }],
+        orders: [{ shop: 'Uno', items: [{ name: 'Margherita', price: 9 }], time: '10-22 12:00', status: 'delivered', ev: 'lunch' }, { shop: 'Uno', items: [{ name: 'Calzone', price: 11 }], time: '10-22 21:30', status: 'delivered', ev: 'late-night' }], cart: null });
+    globalThis.__menu = { calls: [], answers: [answer], answer: '{}' };
+    await life.fillDelivery({ ...m, phones: { ren: q } }, q);
+    assert.deepEqual(q.delivery.orders.map(o => o.items[0].name).sort(), ['Calzone', 'Margherita']);
+});

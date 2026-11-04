@@ -208,7 +208,10 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         // (its refund, a second shop), which is not the first one with another amount
         const key = `bank:${acct.id}:${amount < 0 ? '-' : '+'}:${plain(x.who)}`, lk = acct.kind === 'credit' ? '' : `${acct.id}:${acct.currency}`, label = `${acct.name || ''} ••••${acct.last4}`.trim();
         const tx = p.money.tx ||= [];
-        if (keep(key, amount, rec => { const t = tx.find(r => r.id === rec); if (t) amend(t, amount, lk, label, acct); })) return;
+        // (a payment the model calls new, on another day than the one this event paid before: the model gave a new event an
+        // old event's name, "taxi" for the next day's taxi; it is paid)
+        const leg0 = seen(key), day0 = leg0 && String(tx.find(r => r.id === leg0.rec)?.time || '').slice(0, 5), otherDay = x.occurrence === 'new' && /^\d{2}-\d{2}$/.test(day0 || '') && /^\d{2}-\d{2}/.test(String(date || '')) && day0 !== String(date).slice(0, 5);
+        if (!otherDay && keep(key, amount, rec => { const t = tx.find(r => r.id === rec); if (t) amend(t, amount, lk, label, acct); })) return;
         const pointed = x.already && tx.find(t => t.id === x.already);
         const match = t => t.account === acct.last4 && near(t.time, date, 0) && Math.sign(t.amount) === Math.sign(amount)
             && (Math.abs(t.amount - amount) < 0.01 && (!plain(t.who) || !plain(x.who) || samePlace(t.who, x.who)) || (guess || t.amountFrom === 'guess') && samePlace(t.who, x.who));
@@ -327,7 +330,10 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const items = list(x.items).map(d => { const optionKo = txt(d?.optionKo, 60), pic = dishPic(d?.pic, { name: txt(d?.name, 60), ko: txt(d?.ko, 60), option: txt(d?.option, 60), optionKo }); return { name: txt(d?.name, 60), ko: txt(d?.ko, 60), option: txt(d?.option, 60), ...(optionKo ? { optionKo } : {}), qty: Math.max(1, Math.round(Number(d?.qty) || 1)), price: finite(Number(d?.price)) ? Number(d.price) : 0, ...(pic ? { pic } : {}) }; }).filter(d => d.name).slice(0, 10);
         if (!txt(x.shop) || !items.length) fail('배달 주문의 가게나 메뉴를 확인하지 못했어요');
         const money = v => (finite(Number(v)) ? Math.abs(Number(v)) : 0), total = round(items.reduce((n, d) => n + d.qty * d.price, 0) + money(x.fee) + money(x.tip) - money(x.discount));
-        const old = x.already && box.find(o => o.id === x.already) || box.find(o => samePlace(o.shop, x.shop) && near(String(o.time).slice(0, 5), date, 0) && Math.abs(dlvTotal(o) - total) < 0.01 && (!fresh(x, o, e.at) || o.ev === e.id));
+        // (told again without its prices, "the chicken came": the order of that shop that day still on its way is that one)
+        const noPrice = items.every(d => !d.price), named = o => (o.items || []).some(a => items.some(b => samePlace(a.name, b.name)));
+        const old = x.already && box.find(o => o.id === x.already) || box.find(o => samePlace(o.shop, x.shop) && near(String(o.time).slice(0, 5), date, 0) && Math.abs(dlvTotal(o) - total) < 0.01 && (!fresh(x, o, e.at) || o.ev === e.id))
+            || noPrice && box.find(o => samePlace(o.shop, x.shop) && near(String(o.time).slice(0, 5), date, 0) && named(o) && o.status !== x.status && (x.status ? later(o.status, x.status) : o.status === 'on the way'));
         if (!old && x.occurrence === 'again') return;
         const status = ['on the way', 'delivered', 'cancelled', 'refunded'].includes(x.status) ? x.status : 'delivered';
         // one whose message is gone is tied to the message that tells it now

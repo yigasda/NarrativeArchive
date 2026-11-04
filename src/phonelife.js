@@ -551,7 +551,11 @@ export function mergeDelivery(a, b, { raw } = said.get(b) || {}) {
         if (b.orders.some(y => y.shop === x.name)) delete n.nearby;
         named.set(x.name, n);
     }
-    const shops = [...named.values()], same = (x, y) => x.shop === y.shop && (!!x.ev && x.ev === y.ev || x.time === y.time);
+    // (the same shop and dishes within half an hour, told by the second turn a few minutes off, is the same order)
+    const mins = t => { const mt = /^(\d{2}-\d{2}) (\d{2}):(\d{2})/.exec(String(t || '')); return mt ? [mt[1], mt[2] * 60 + Number(mt[3])] : null; };
+    const close = (a, b) => { const x = mins(a), y = mins(b); return !!x && !!y && x[0] === y[0] && Math.abs(x[1] - y[1]) <= 30; };
+    const dishes = o => (o.items || []).map(d => String(d.name || '').toLowerCase()).sort().join('|');
+    const shops = [...named.values()], same = (x, y) => x.shop === y.shop && (!!x.ev && x.ev === y.ev || x.time === y.time || !(x.ev && y.ev && x.ev !== y.ev) && close(x.time, y.time) && dishes(x) === dishes(y));
     return { shops: [...shops.filter(x => !x.nearby), ...shops.filter(x => x.nearby)], orders: [...a.orders.filter(x => !b.orders.some(y => same(x, y))), ...b.orders].sort(byStory(b.orders.at(-1)?.time || '')).slice(-16), cart: b.cart || (a.cart && b.orders.some(o => o.shop === a.cart.shop) ? null : a.cart) };
 }
 export const fillDelivery = (m, p) => exclusive('fill', async () => {
@@ -587,7 +591,9 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
     // orders a reflection put in stay (their payments are the bank's own rows); the fill's own telling of the same order
     // (the same shop on the same day, or the same story event) is that one, not a second
     const kept = (p.delivery?.orders || []).filter(o => o.sync), plain = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
-    const twin = o => kept.some(k => (o.ev && k.ev === o.ev) || (plain(k.shop) === plain(o.shop) && dayGap(String(k.time).slice(0, 5), String(o.time).slice(0, 5)) === 0));
+    // (two story events are two orders, whatever the shop and day; the same shop within the hour is the same one)
+    const mins = t => { const mt = /(\d{2}):(\d{2})/.exec(String(t || '').slice(5)); return mt ? mt[1] * 60 + Number(mt[2]) : null; };
+    const twin = o => kept.some(k => (o.ev && k.ev === o.ev) || !(o.ev && k.ev && o.ev !== k.ev) && plain(k.shop) === plain(o.shop) && dayGap(String(k.time).slice(0, 5), String(o.time).slice(0, 5)) === 0 && (mins(k.time) === null || mins(o.time) === null || Math.abs(mins(k.time) - mins(o.time)) <= 60));
     p.delivery = { ...d, orders: [...d.orders.filter(o => !twin(o)), ...kept].sort(byStory(p.now)), look: deliveryLook(p), at, nearbyAt: String(at).slice(0, 5), city: homeCity(p) };
     delete p.syncUndo;
     syncOf(p, phoneChatScope(ctx())).marks.delivery = readMark(last) || mark0;

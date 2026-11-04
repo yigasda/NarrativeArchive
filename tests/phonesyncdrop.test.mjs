@@ -1024,3 +1024,35 @@ test('a payment written "-₩12,000" is money out, not in', async () => {
     await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '12:40', money: { moves: [{ account: '1111', amount: '-₩12,000', who: '택시', kind: 'transfer', occurrence: 'new' }] } }] });
     assert.equal(c.bank(), 88000);
 });
+
+test('money: an old event\'s name on the next day\'s new payment pays it; an owed payment left out is owed still; ids match whatever the case', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'took a taxi to work for 12000 won')]);
+    T.moneyAnswers = [{ events: [{ id: 'TAXI', money: { moves: [{ account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }] } }] }];
+    await run(c.m, { now: '10-26 10:00', events: [{ id: 'taxi', at: 2, quote: 'took a taxi to work', summary: '택시', date: '10-26', time: '09:30', apps: ['money'], phone: {} }] });
+    assert.equal(c.bank(), 88000);
+    T.chat.push(say('Ren', 'next day: a taxi again, 15000 won this time'));
+    T.moneyAnswers = [{ events: [{ id: '#taxi', money: { moves: [{ account: '1111', amount: -15000, who: '택시', kind: 'card', occurrence: 'new' }] } }] }];
+    await run(c.m, { now: '10-27 10:00', events: [{ id: 'taxi', at: 3, quote: 'a taxi again', summary: '택시', date: '10-27', time: '09:00', apps: ['money'], phone: {} }] });
+    assert.equal(c.bank(), 73000);
+    // owed (the money step failed), then left out of the next answer: still owed, then said
+    T.chat.push(say('Ren', 'and a coffee for 4500 won'), say('Mara', 'nice'));
+    T.moneyAnswers = ['not json at all'];
+    await run(c.m, { now: '10-27 11:00', events: [{ id: 'coffee', at: 4, quote: 'a coffee for 4500 won', summary: '커피', date: '10-27', time: '10:30', apps: ['money'], phone: {} }] });
+    assert.equal(c.p.sync.owed.money.length, 1);
+    T.chat.push(say('Ren', 'lunch for 9000 won'));
+    T.moneyAnswers = [{ events: [{ id: 'lunch', money: { moves: [{ account: '1111', amount: -9000, who: '점심', kind: 'card', occurrence: 'new' }] } }] }];
+    await run(c.m, { now: '10-27 13:00', events: [{ id: 'lunch', at: 6, quote: 'lunch for 9000 won', summary: '점심', date: '10-27', time: '12:30', apps: ['money'], phone: {} }] });
+    assert.ok(c.p.syncLast.notes.some(n => n.includes('커피')));
+});
+
+test('a delivery told again without its prices ("the chicken came") moves the order on, no second order', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'I ordered Golden Olive chicken from BBQ for 28000 won'), say('Mara', 'save me a leg')]);
+    c.p.delivery = { shops: [], orders: [], cart: null };
+    T.moneyAnswers = [{ events: [{ id: 'chicken', money: { moves: [{ account: '1111', amount: -28000, who: 'BBQ', kind: 'card', occurrence: 'new' }], deliveries: [{ shop: 'BBQ', items: [{ name: 'Golden Olive', qty: 1, price: 28000 }], status: 'on the way', occurrence: 'new' }] } }] }];
+    await run(c.m, { now: '10-26 19:00', events: [{ id: 'chicken', at: 2, quote: 'I ordered Golden Olive chicken', summary: '치킨', date: '10-26', time: '19:00', apps: ['money'], phone: {} }] });
+    T.chat.push(say('Ren', 'the chicken arrived, come over'), say('Mara', 'on my way'));
+    T.moneyAnswers = [{ events: [{ id: 'chicken-arrived', money: { deliveries: [{ shop: 'BBQ', items: [{ name: 'Golden Olive', qty: 1 }], status: 'delivered' }] } }] }];
+    await run(c.m, { now: '10-26 19:30', events: [{ id: 'chicken-arrived', at: 4, quote: 'the chicken arrived', summary: '치킨 도착', date: '10-26', time: '19:30', apps: ['money'], phone: {} }] });
+    assert.deepEqual(c.p.delivery.orders.map(o => o.status), ['delivered']);
+    assert.equal(c.bank(), 72000);
+});

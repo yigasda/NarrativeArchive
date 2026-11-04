@@ -885,11 +885,14 @@ async function moneyStage(m, p, owner, targets, c) {
     const byId = new Map();
     // the same id twice: its lists are joined (a taxi and a dinner both given under one event), not the first lost
     const join = (a, b) => { const out = { ...a }; for (const [k, v] of Object.entries(b)) out[k] = Array.isArray(v) && Array.isArray(a[k]) ? [...a[k], ...v] : a[k] ?? v; return out; };
-    for (const x of raw.events) if (x && typeof x === 'object' && x.money && typeof x.money === 'object') { const id = String(x.id ?? '').trim(); byId.set(id, byId.has(id) ? join(byId.get(id), x.money) : x.money); }
-    for (const id of byId.keys()) if (!targets.some(t => t.id === id)) out.notes.push(`돈 단계가 모르는 이벤트(${id})를 써서 넣지 않았어요`);
+    // (its ids as core's, whatever the case or a "#" in front)
+    const idKey = v => String(v ?? '').trim().replace(/^#/, '').toLowerCase();
+    for (const x of raw.events) if (x && typeof x === 'object' && x.money && typeof x.money === 'object') { const id = idKey(x.id); byId.set(id, byId.has(id) ? join(byId.get(id), x.money) : x.money); }
+    for (const id of byId.keys()) if (!targets.some(t => idKey(t.id) === id)) out.notes.push(`돈 단계가 모르는 이벤트(${id})를 써서 넣지 않았어요`);
     for (const t of targets) {
-        const mo = byId.get(t.id);
-        if (!mo) continue;
+        const mo = byId.get(idKey(t.id));
+        // a payment owed from before that the answer left out is owed still (asked once more, then said and skipped)
+        if (!mo) { if (t.tries) owe(t, '돈 단계 답에 없었어요'); continue; }
         // a changed message already put its payments on the phone: only its own events may correct them
         if (c.reread?.has(t.at) && !c.reread.get(t.at).some(x => x.id === t.id)) { out.notes.push(`#${t.at} 바뀐 대화의 결제는 새로 넣지 않았어요`); continue; }
         const stage = structuredClone({ money: p.money, investment: p.investment, finance: m.finance, delivery: p.delivery });
