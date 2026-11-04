@@ -369,3 +369,16 @@ test('a where-reading from before the city\'s own name was kept is read once mor
     // nothing new read: what was there stays
     assert.equal(c.p.where.people[0].city, 'Seoul');
 });
+
+test('an English chat with Korean status lines: the city by any of its names, as the chat writes it', async () => {
+    const c = setup([say('Ren', 'morning'), say('Mara', 'hey'), say('Mara', 'just had lunch')]);
+    frankfurtPhone(c, { cities: false });
+    c.p.where.people = [{ name: 'Ren', city: 'Frankfurt am Main', names: ['Frankfurt am Main', '프랑크푸르트'], lives: 'DE', tz: 'Europe/Berlin' },
+        { name: 'Mara', city: 'Seoul', names: ['Seoul', '서울'], lives: 'KR', tz: 'Asia/Seoul' }];
+    await withTrackers([trk(2, '12:50', '서울 · 마라 방')], async () => {
+        assert.deepEqual([data.statusMoment(c.p).at, data.statusMoment(c.p).city], ['10-26 04:50', 'Seoul']);
+    });
+    // an older reading with one "local" still counts
+    c.p.where.people[1] = { name: 'Mara', city: 'Seoul', local: '서울', lives: 'KR', tz: 'Asia/Seoul' };
+    await withTrackers([trk(2, '12:50', '서울 · 마라 방')], async () => assert.equal(data.statusMoment(c.p).at, '10-26 04:50'));
+});

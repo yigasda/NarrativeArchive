@@ -164,7 +164,7 @@ WHERE IT COMES FROM
 - "quote": a few words copied exactly as written in that message or section, not reworded.
 - "date" and "time": when it happens in that message ("MM-DD", "HH:MM" if known). A plan for later happens when it is made; its later day goes only on the calendar item.
 - "now": the moment of the newest message, never a time something is only planned for.
-- "ownerCity": only when these messages take the owner to another city (a trip, a move, coming home): { "city": in English, "local": as the story writes it, "tz": its time zone like "Asia/Seoul" }; else null.
+- "ownerCity": only when these messages take the owner to another city (a trip, a move, coming home): { "city": in English, "names": [each name the messages and status lines write it as, exactly, then its English and Korean names], "tz": its time zone like "Asia/Seoul" }; else null.
 ${zone ? `- "statusCity": the newest status line in these messages is from a scene the app can't place. Whose clock does it show? A city or person in OWNER'S CLOCK, "owner" for the owner's own, or "" when the messages don't say.\n` : ''}${split ? `- "apps": "money" when the event has anything for the bank, cards, orders, tickets or the delivery app (its basket too)${invest ? '; "invest" for the brokerage (a trade, a share price the story gives, a share they start watching, a stake)' : ''}; else []. When unsure, include it.\n` : ''}${life ? `
 LIFE
 - An alarm the owner sets, changes or switches on or off in these messages; a timer they set; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
@@ -922,7 +922,7 @@ async function updatePhone(m, owner) {
         for (const x of archivedUnread(s, sections, rows, chatRows())) { if (archIn.length && archIn.reduce((n, y) => n + estTok(y.text), 0) + estTok(x.text) > ARCH_TOKENS) break; archIn.push(x); }
         if (!round.rows.length && !archIn.length) { p.syncLast = { checked: 0, remaining: 0, apps: [], failed: [], notes: swiped, at: Date.now() }; await saveMeta(); return p; }
         // read once for a phone that never had it, and once more for one read before the city's own name was kept ("서울")
-        if (!p.where || !p.where.failed && (p.where.people || []).some(x => !('local' in x))) await tryWhere(m, p);
+        if (!p.where || !p.where.failed && (p.where.people || []).some(x => !('local' in x) && !('names' in x))) await tryWhere(m, p);
         const got = archiveRound(s, sections, rows, round.rows), background = got.background, evidence = [...archIn, ...got.evidence.filter(x => !archIn.some(y => y.key === x.key))];
         const before = [];
         for (let i = background.length - 1, size = 0; i >= 0 && size + background[i].text.length <= BEFORE_MAX; i--) { before.unshift(background[i].text); size += background[i].text.length; }
@@ -1433,7 +1433,7 @@ YOU GET
 
 WHERE
 - "city": where the person is now, in the story's present. A trip or a stay counts; a birthplace or a past home doesn't.
-- "local": the same city in the language the chat's messages and status lines are written in: "서울" for a chat in Korean, even when a card writes "Seoul" ("" when that is the same as "city").
+- "names": every name the same city goes by here. Always each name the chat's messages and status lines write it as, exactly as written ("München", "뮌헨", "서울 강남"'s "서울"); then its English and its Korean name. A chat in English with status lines in Korean gives both.
 - "lives": the country they live in now, not where they were born or their nationality. Born in Germany, living in Korea: "KR".
 - "tz": the time zone of "city", like "Asia/Seoul".
 - The newest of the story wins over a card: a card that says Berlin, a story that has moved them to Seoul: Seoul.
@@ -1442,7 +1442,7 @@ WHERE
 - "evidence": the few words that show it.
 
 JSON (one object, nothing before or after it)
-{ "people": [{ "name": as in OWNER or PEOPLE, "city": in English, "local", "lives": two-letter country code, "tz", "evidence" }] }`;
+{ "people": [{ "name": as in OWNER or PEOPLE, "city": in English, "names": [], "lives": two-letter country code, "tz", "evidence" }] }`;
 const realTz = v => { const z = String(v || '').trim(); if (!/^[A-Za-z]+(?:\/[A-Za-z_+-]+){1,2}$/.test(z)) return ''; try { new Intl.DateTimeFormat('en-US', { timeZone: z }); return z; } catch { return ''; } };
 // the cards as they are: every field the story can say where someone is in, nothing summed up
 const CARD_KEYS = ['description', 'personality', 'scenario', 'first_mes', 'mes_example'];
@@ -1463,7 +1463,9 @@ function whereRequest(m, p) {
         `[OWNER]\n${p.owner}`, `[PEOPLE]\n${people.join('\n') || '(none)'}`, blindBlock(m, p.owner),
     ] };
 }
-const whereRow = x => ({ name: line(x?.name, 60), city: line(x?.city, 60), local: line(x?.local, 60), lives: String(x?.lives || '').trim().toUpperCase().slice(0, 2), tz: realTz(x?.tz) });
+// the names a city goes by: as the chat writes it, in English and in Korean (an older reading's one "local" counts too)
+const namesOf = x => [...new Set([x?.city, x?.local, ...arr(x?.names)].map(v => line(v, 60)).filter(Boolean))].slice(0, 8);
+const whereRow = x => ({ name: line(x?.name, 60), city: line(x?.city, 60), names: namesOf(x), lives: String(x?.lives || '').trim().toUpperCase().slice(0, 2), tz: realTz(x?.tz) });
 export async function readWhere(m, p) {
     const r = whereRequest(m, p), binding = p.financeProfile;
     // a profile that is a lorebook entry is the one thing the cards and the persona don't already hold
@@ -1473,7 +1475,7 @@ export async function readWhere(m, p) {
     const known = new Set([p.owner, ...r.people].map(nameKey));
     const got = arr(raw?.people).map(whereRow).filter(x => x.name && known.has(nameKey(x.name)) && (x.tz || COUNTRY_TZ[x.lives])).slice(0, 16);
     // read again: someone it leaves out keeps what was read before
-    const people = [...got, ...(p.where?.people || []).filter(o => !got.some(x => nameKey(x.name) === nameKey(o.name))).map(o => ({ local: '', ...o }))].slice(0, 16);
+    const people = [...got, ...(p.where?.people || []).filter(o => !got.some(x => nameKey(x.name) === nameKey(o.name))).map(o => ({ ...o, names: namesOf(o) }))].slice(0, 16);
     p.where = { at: Date.now(), people };
     return people;
 }
@@ -1483,14 +1485,15 @@ const tryWhere = async (m, p) => { try { await readWhere(m, p); } catch (err) { 
 function ownerMoved(p, c) {
     const tz = realTz(c?.tz), city = line(c?.city, 60);
     if (!tz || !city) return false;
-    const row = { ...whereOf(p, p.owner), name: p.owner, city, local: line(c?.local, 60), tz };
+    const row = { ...whereOf(p, p.owner), name: p.owner, city, names: namesOf(c), tz };
+    delete row.local;
     p.where = { at: p.where?.at || Date.now(), people: [row, ...(p.where?.people || []).filter(x => nameKey(x.name) !== nameKey(p.owner))] };
     return true;
 }
 const whereOf = (p, name) => (p?.where?.people || []).find(x => nameKey(x.name) === nameKey(name));
 const regionName = c => { try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(c) || c; } catch { return c; } };
 // a zone with the names a status line may call its city by
-const zoneOfWhere = x => (!x ? null : x.tz ? { tz: x.tz, where: x.city || regionName(x.lives), names: [x.city, x.local] } : COUNTRY_TZ[x.lives] ? { tz: COUNTRY_TZ[x.lives], where: x.city || regionName(x.lives), names: [x.city, x.local] } : null);
+const zoneOfWhere = x => (!x ? null : x.tz ? { tz: x.tz, where: x.city || regionName(x.lives), names: namesOf(x) } : COUNTRY_TZ[x.lives] ? { tz: COUNTRY_TZ[x.lives], where: x.city || regionName(x.lives), names: namesOf(x) } : null);
 function zoneOfPhone(q) {
     const w = q?.life?.weather, city = cityAt(w?.here?.place, w?.cities), c = String(q?.lives || q?.country || '').toUpperCase();
     return city?.tz ? { tz: city.tz, where: city.name, names: [city.name, city.ko] } : COUNTRY_TZ[c] ? { tz: COUNTRY_TZ[c], where: regionName(c), names: [] } : null;
