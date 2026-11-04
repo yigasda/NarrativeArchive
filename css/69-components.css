@@ -81,7 +81,7 @@ body:is(.na_darkui, :not(.na_darkui)) :is(
     border-radius: var(--c-r, 0) !important; --axr: var(--c-r, 0); box-shadow: var(--c-sh, none) !important;
     font-family: var(--c-ff, inherit) !important; --axff: var(--c-ff, inherit); letter-spacing: var(--c-ls, inherit) !important; --axls: var(--c-ls, inherit); text-transform: var(--c-tt, inherit) !important; --axtt: var(--c-tt, inherit)}
 
-:is(dialog.popup:not(:has(.na_phone)) .na_popup, #na_settings) { --mainFontFamily: "Noto Sans", sans-serif; font-family: var(--mainFontFamily); } /* our windows keep ST's default font; a theme swapping --mainFontFamily (Blue Lemonade) stops here */
+:is(dialog.popup:has(.na_popup):not(:has(.na_phone)), #na_settings) { --mainFontFamily: "Noto Sans", sans-serif; font-family: var(--mainFontFamily); } /* our windows keep ST's default font; a theme swapping --mainFontFamily (Blue Lemonade) stops here */
 /* SillyTavern's own field look (1px edge in its border colour, 5px corners), at the lowest weight: any rule of ours wins over it */
 :where(dialog.popup .na_popup, #na_settings) :where(textarea, .text_pole) { --c-bw: 1px; --c-bs: solid; --c-bc: var(--SmartThemeBorderColor); --c-r: 5px; }
 
