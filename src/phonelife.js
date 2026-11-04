@@ -9,7 +9,7 @@ import { calendars } from './calendar.js';
 import { ctx, saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
-import { arr, trackerWeather, readMark, turnsNote, windowOf, nowAt, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
+import { arr, trackerWeather, readMark, turnsNote, toldShort, windowOf, nowAt, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, parseWeather, screenOf, usualScreenOf, weatherFrom } from './phonesynclife.js';
 import { SCREEN_LIST } from './phonescreen.js';
@@ -386,43 +386,66 @@ export { unpayOrders as unpayDeliveries };
 // a "MM-DD HH:MM" after another (across New Year the short way round)
 const later = (t, now) => { const g = dayGap(String(now).slice(0, 5), String(t).slice(0, 5)); return g > 0 || g === 0 && String(t).slice(6, 11) > String(now).slice(6, 11) && !!String(now).slice(6, 11); };
 // ---- the fills
-// a fill reads the story after the archive in turns, oldest first, up to the phone's clock (each turn up to 70,000 tokens):
-// a turn after the first gets what the one before wrote (LIFE SO FAR, DELIVERY SO FAR) and carries it on, so a long
-// stretch is read whole and in one voice. At most this many turns after the first
-const MORE_TURNS = 4;
+// a fill reads the story after the archive up to the phone's clock in two turns at most: the first reads 70,000 tokens
+// word for word and writes the whole app; what is left, the second reads (30,000 tokens more, word for word) and writes
+// only what it adds, in the voice of what the first wrote (LIFE SO FAR, DELIVERY SO FAR), the code putting it in. A
+// stretch longer still goes along as the reflection's summaries (TOLD SHORT): nothing lost, that part less detailed
+const MORE_TOKENS = 30_000;
+// the second turn's window: the rest word for word, and past that the summaries; cover: how far the two reach together
+function secondTurn(m, p, first) {
+    if (!first || first.all) return null;
+    const more = windowOf(m, p, first.to, MORE_TOKENS);
+    if (!more?.n) return null;
+    const short = more.all ? null : toldShort(p, more.to, more.upto);
+    return { more, short, cover: short ? { ...more, all: true } : more };
+}
+const soFarHead = (what, short) => `[${what} SO FAR — what you wrote from the story before RECENT CHAT. Write only what RECENT CHAT${short ? ' and TOLD SHORT' : ''} add or change, in the same JSON and in the same voice, language and naming as here; leave out what is already here]`;
+const byKey = (xs, ys, key) => [...xs.filter(x => !ys.some(y => key(y) === key(x))), ...ys];
+const given = o => Object.fromEntries(Object.entries(o || {}).filter(([, v]) => v !== null && v !== undefined && v !== ''));
+// what a second turn adds, put into what the first wrote: the same alarm (time and label), day, file or folder is the new
+// telling of it; a habit only where it says something
+function mergeLife(a, b) {
+    const alarm = x => `${x.time}|${String(x.label || '').toLowerCase()}`;
+    return {
+        clock: { alarms: byKey(a.clock.alarms, b.clock.alarms, alarm).slice(-12), timers: byKey(a.clock.timers, b.clock.timers, x => String(x.label).toLowerCase()).slice(-6), running: b.clock.running || a.clock.running },
+        health: { usual: { ...a.health.usual, ...given(b.health.usual) }, days: byKey(a.health.days, b.health.days, x => x.date).sort((x, y) => dayGap(y.date, x.date)) },
+        files: { folders: byKey(a.files.folders, b.files.folders, x => x.name), items: byKey(a.files.items, b.files.items, x => x.name).slice(-24),
+            cloud: Number.isFinite(b.files.cloud?.total) ? b.files.cloud : a.files.cloud },
+        weather: b.weather || a.weather,
+    };
+}
 export const fillLife = (m, p) => exclusive('fill', async () => {
     // made again: the body the phone already shows stays, unless the story changed it (a child who grew, a diet)
     const was = p.life?.health?.usual || {}, body = Object.fromEntries(['height', 'weight'].filter(k => Number.isFinite(was[k])).map(k => [k, was[k]]));
     // a booking the wallet holds is drawn from it: its file needs no line of its own
     const booked = new Set((p.money?.passes || []).map(x => x.ev).filter(Boolean));
-    const first = windowOf(m, p);
-    let gap = first, life = null, last = null;
-    for (let turn = 0; turn <= MORE_TURNS; turn++) {
-        // stopped short, a turn's now is where it stopped
+    // one turn: its window, and what the turn before wrote (none for the first); stopped short, its now is where it stopped
+    const turn = async (gap, soFar = null, short = null) => {
         const upto = nowAt(gap), now = weatherNow(upto), days = storyDays(m, p, upto);
         const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p, upto)}`, daysBlock(days),
-            !life && Object.keys(body).length ? `[BODY ON THE PHONE NOW — keep it unless the story changed it]\n${JSON.stringify(body)}` : '',
-            life ? `[LIFE SO FAR — what you wrote from the story before RECENT CHAT: carry it on through RECENT CHAT and write it all again, keeping what still holds]\n${JSON.stringify(life)}` : '',
+            !soFar && Object.keys(body).length ? `[BODY ON THE PHONE NOW — keep it unless the story changed it]\n${JSON.stringify(body)}` : '',
+            soFar ? `${soFarHead('LIFE', short)}\n${JSON.stringify(soFar)}` : '', short?.text || '',
             now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.life, read: { gap } });
-        let next;
-        // a turn after the first that fails keeps what the turns before wrote
-        try { next = parseLife(jsonOf(await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' })), now, days.at(-1)?.day || ''); }
-        catch (err) { if (!life) throw err; console.warn('[narrative-archive] life turn', err); break; }
+        const next = parseLife(jsonOf(await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' })), now, days.at(-1)?.day || '');
         const at = storyNow(p, upto) || p.now || '';
         if (/^\d{2}-\d{2}/.test(at)) next.files.items = next.files.items.filter(x => !later(x.time, at));
         for (const x of next.files.items) if (x.ev && booked.has(x.ev)) x.preview = '';
-        life = next; last = gap;
-        if (!gap || gap.all) break;
-        const more = windowOf(m, p, gap.to);
-        if (!more?.n) { last = { ...gap, all: true }; break; }
-        gap = more;
+        return next;
+    };
+    const first = windowOf(m, p);
+    let life = await turn(first), last = first, short = null;
+    const two = secondTurn(m, p, first);
+    if (two) {
+        // a second turn that fails keeps what the first wrote
+        try { life = mergeLife(life, await turn(two.cover, life, two.short)); last = two.cover; short = two.short; }
+        catch (err) { console.warn('[narrative-archive] life, second turn', err); }
     }
     p.life = { ...life, at: storyNow(p, nowAt(last)) || p.now || '' };
     // a reflection reads on from here: what came before is in what was just written
     if (p.sync?.marks) p.sync.marks.life = readMark(last) || markNow();
     ensureIds(p);
     await saveMeta();
-    turnsNote(first, last, '생활');
+    turnsNote(last, '생활', short);
     // the screen time is its own request right after (its long app list stays out of this one); one that failed leaves
     // 설정 › 스크린타임 with its 채우기 button
     try { await fillScreen(m, p); } catch (err) { console.warn('[narrative-archive] screen time', err); }
@@ -476,46 +499,51 @@ export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', as
     await saveMeta();
     return n;
 });
+// what a second turn adds to the delivery app: a shop by its name (its menu kept when it gives none), an order by its shop
+// and time, the basket when it says one
+function mergeDelivery(a, b) {
+    const shops = byKey(a.shops, b.shops.map(x => ({ ...a.shops.find(y => y.name === x.name), ...x, menu: x.menu?.length ? x.menu : a.shops.find(y => y.name === x.name)?.menu || [] })), x => x.name);
+    return { shops, orders: byKey(a.orders, b.orders, o => `${o.shop}|${o.time}`), cart: b.cart || a.cart };
+}
 export const fillDelivery = (m, p) => exclusive('fill', async () => {
     const accounts = p.money?.bank?.accounts || [];
     // the bank's own rows (not the ones this app put there): a meal already paid there is pointed at, not paid again
     const tx = (p.money?.tx || []).filter(t => !String(t.id).startsWith('dlv-') && !t.delivery);
     const money = accounts.length ? `[MONEY NOW]\n${JSON.stringify({ accounts: accounts.map(a => ({ last4: a.last4, kind: a.kind, name: a.name, currency: a.currency })), tx: tx.slice(-20).map(t => ({ id: t.id, account: t.account, time: t.time, who: t.who, amount: t.amount })) })}` : '';
-    // orders a reflection put in stay (their payments are the bank's own rows)
-    const kept = (p.delivery?.orders || []).filter(o => o.sync), plain = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
-    const first = windowOf(m, p);
-    let gap = first, d = null, last = null;
-    // in turns, like the life fill (MORE_TURNS)
-    for (let turn = 0; turn <= MORE_TURNS; turn++) {
+    // two turns at most, like the life fill (secondTurn)
+    const turn = async (gap, soFar = null, short = null) => {
         const upto = nowAt(gap), at = storyNow(p, upto) || p.now || '';
         const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p, upto)}`, daysBlock(storyDays(m, p, upto)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money,
-            d ? `[DELIVERY SO FAR — what you wrote from the story before RECENT CHAT: carry it on through RECENT CHAT and write it all again, keeping what still holds]\n${JSON.stringify({ shops: d.shops, orders: d.orders, cart: d.cart || null })}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read: { gap } });
-        let next, got;
-        try { got = jsonOf(await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 12000, effort: 'low' })); next = parseDelivery(got, accounts, tx, at); }
-        catch (err) { if (!d) throw err; console.warn('[narrative-archive] delivery turn', err); break; }
-        // the shops nearby go after the ones they order from (the app's 동네 인기 가게)
-        next.shops = [...next.shops, ...nearbyShops(got, next.shops, (p.money?.currency || accounts[0]?.currency) === 'KRW')];
+            soFar ? `${soFarHead('DELIVERY', short)}\n${JSON.stringify(soFar)}` : '', short?.text || ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read: { gap } });
+        const got = jsonOf(await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 12000, effort: 'low' })), next = parseDelivery(got, accounts, tx, at);
+        // the shops nearby go after the ones they order from (the app's 동네 인기 가게); the first turn sets them
+        if (!soFar) next.shops = [...next.shops, ...nearbyShops(got, next.shops, (p.money?.currency || accounts[0]?.currency) === 'KRW')];
         // nothing after the story's now
         if (/^\d{2}-\d{2}/.test(at)) next.orders = next.orders.filter(o => !later(o.time, at));
-        d = next; last = gap;
-        if (!gap || gap.all) break;
-        const more = windowOf(m, p, gap.to);
-        if (!more?.n) { last = { ...gap, all: true }; break; }
-        gap = more;
+        return next;
+    };
+    const first = windowOf(m, p);
+    let d = await turn(first), last = first, short = null;
+    const two = secondTurn(m, p, first);
+    if (two) {
+        try { d = mergeDelivery(d, await turn(two.cover, { shops: d.shops, orders: d.orders, cart: d.cart || null }, two.short)); last = two.cover; short = two.short; }
+        catch (err) { console.warn('[narrative-archive] delivery, second turn', err); }
     }
     const at = storyNow(p, nowAt(last)) || p.now || '';
     if (p.delivery) unpayOrders(m, p);
-    // the fill's own telling of an order a reflection put in (the same shop on the same day, or the same story event) is
-    // that one, not a second
+    // orders a reflection put in stay (their payments are the bank's own rows); the fill's own telling of the same order
+    // (the same shop on the same day, or the same story event) is that one, not a second
+    const kept = (p.delivery?.orders || []).filter(o => o.sync), plain = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
     const twin = o => kept.some(k => (o.ev && k.ev === o.ev) || (plain(k.shop) === plain(o.shop) && dayGap(String(k.time).slice(0, 5), String(o.time).slice(0, 5)) === 0));
     p.delivery = { ...d, orders: [...d.orders.filter(o => !twin(o)), ...kept].sort(byStory(p.now)), look: deliveryLook(p), at, nearbyAt: String(at).slice(0, 5), city: homeCity(p) };
     if (p.sync?.marks) p.sync.marks.delivery = readMark(last) || markNow();
     ensureIds(p);
     payDeliveries(m, p);
     await saveMeta();
-    turnsNote(first, last, '배달');
+    turnsNote(last, '배달', short);
     // the shops nearby get their menus straight after, in a request of their own (a failure here leaves the app as filled)
     try { await fillShopMenus(m, p); } catch { /* asked again when the app is opened */ }
     return p.delivery;
 });
+
 

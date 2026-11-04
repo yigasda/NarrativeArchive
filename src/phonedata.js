@@ -476,11 +476,20 @@ export const phoneAt = p => { const s = p?.sync, b = s?.marks?.base?.index; retu
 const afterBlock = g => (g?.n ? `[RECENT CHAT${g.all && !g.later ? '' : ` — the story so far ends at #${nowAt(g)}; the messages after it are read later`}]\n${g.text}` : '');
 // what a phone's request reads after the archive (null: no archive, the chat goes as before)
 // p: the phone it is for (its clock bounds it); no archive: only that bound (the chat goes as before, up to it)
-export const windowOf = (m, p = null, from = null) => { const upto = phoneAt(p); return noArchive(m) ? (upto == null ? null : { none: true, n: 0, all: true, upto }) : chatAfterArchive(m, CHAT_TOKENS.phone, upto, from); };
-// a fill read in turns (see fillLife): after the last turn, what is still unread up to the phone's clock is told
-export const turnsNote = (first, last, what) => { if (!last || last.all) return; const from = first?.from ?? last.from; globalThis.toastr?.warning(last.upto != null
-    ? `${what}: #${from}–#${last.to}까지 읽었어요. 그 뒤는 이미 반영된 부분이라 이번에 못 넣었어요. 아카이브를 하고 다시 만들면 다 들어가요`
-    : `${what}: #${from}–#${last.to}까지 읽었어요. 나머지 ${last.left}개는 반영으로 이어서 채워져요`, '캐릭터 휴대폰'); };
+export const windowOf = (m, p = null, from = null, budget = CHAT_TOKENS.phone) => { const upto = phoneAt(p); return noArchive(m) ? (upto == null ? null : { none: true, n: 0, all: true, upto }) : chatAfterArchive(m, budget, upto, from); };
+// what the phone's reflection took from the messages after `after` up to the phone's clock: each event's summary and the
+// words it came from. The part of a long stretch a fill can't read word for word goes like this (less detailed, nothing lost)
+export function toldShort(p, after, upto) {
+    if (upto == null || !(upto > after)) return null;
+    const evs = Object.entries(p?.sync?.events || {}).filter(([, e]) => Number.isInteger(e?.at) && e.at > after && e.at <= upto).sort((x, y) => x[1].at - y[1].at);
+    return { from: after + 1, to: upto, n: evs.length, text: `[TOLD SHORT — messages #${after + 1}–#${upto}, after RECENT CHAT: what the phone's reflection took from each, a summary and the words it came from]\n${evs.map(([id, e]) => `#${e.at} · ${e.summary || id}${e.quote ? ` — "${e.quote}"` : ''}`).join('\n') || '(nothing for the phone)'}` };
+}
+// a fill read in two turns (see fillLife): what it says after. short: the part it took from the reflection's summaries
+export const turnsNote = (last, what, short = null) => {
+    if (short?.n !== undefined && last?.all) return globalThis.toastr?.info(`${what}: #${short.from}–#${short.to}은 원문이 길어서 반영 요약으로 채웠어요. 그 부분은 조금 덜 자세해요`, '캐릭터 휴대폰');
+    if (!last || last.all) return;
+    globalThis.toastr?.warning(last.upto != null ? `${what}: #${last.to + 1}부터는 이번에 못 넣었어요. 다시 만들어 주세요` : `${what}: #${last.to}까지 읽었어요. 나머지 ${last.left}개는 반영으로 이어서 채워져요`, '캐릭터 휴대폰');
+};
 // the story's "now" for a request that stopped short: the message it read up to (null: now is now). Its days, weather
 // and clock stand there too, so it never writes a day it didn't read; the reflection moves them on from there
 export const nowAt = g => (!g ? null : !g.all ? g.to : g.upto ?? null);

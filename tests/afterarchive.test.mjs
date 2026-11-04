@@ -97,43 +97,51 @@ test('no archive: the chat as before, but no further than the phone\'s clock', a
 const bigRows = n => Array.from({ length: n }, (_, i) => ({ index: i, user: i % 2 === 0, hidden: i <= 3, text: `[#${i}] Ren: ${'word '.repeat(4000)}${i}` }));
 const lifeAnswer = tag => JSON.stringify({ clock: { alarms: [{ time: '07:00', label: tag, days: ['mon'], on: true }] }, health: { usual: {}, days: [] }, files: { items: [] }, weather: null });
 
-test('a remade life app reads a long stretch in turns up to the phone\'s clock, each carrying on the one before', async () => {
+const nums = input => [...input.matchAll(/^\[#(\d+)\] Ren/gm)].map(x => Number(x[1]));
+const longPhone = () => ({ owner: 'Ren', now: '10-26 12:00', country: 'DE', lives: 'DE', sync: { marks: { base: { index: 6 } }, done: [[7, 39]], hiddenRead: {},
+    events: { 'late-call': { at: 30, summary: 'Ren called Mara until three', quote: 'it is three already', effects: [] }, 'new-alarm': { at: 36, summary: 'Ren set a 6:30 alarm', quote: 'six thirty from tomorrow', effects: [] } } } });
+
+test('a long stretch: 70,000 tokens word for word, then 30,000 more adding only what is new, then the reflection\'s summaries', async () => {
     globalThis.__rows = bigRows(40);
-    const p = { owner: 'Ren', now: '10-26 12:00', sync: { marks: { base: { index: 6 } }, done: [[7, 39]], hiddenRead: {} } };
-    const mm = { ...m, phones: { ren: p } };
-    globalThis.__menu = { calls: [], answers: [lifeAnswer('A'), lifeAnswer('B'), lifeAnswer('C'), lifeAnswer('D')], answer: '{}' };
+    const p = longPhone(), mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: [lifeAnswer('A'), lifeAnswer('B')], answer: '{}' };
     await life.fillLife(mm, p);
     const turns = globalThis.__menu.calls.filter(c => c.sys === life.AI_SYS_LIFE);
-    assert.ok(turns.length >= 2, String(turns.length));
-    // every message #4–#39 read once, in order, across the turns
-    const seen = turns.flatMap(c => [...c.input.matchAll(/^\[#(\d+)\] Ren/gm)].map(x => Number(x[1])));
-    assert.deepEqual(seen, Array.from({ length: 36 }, (_, i) => i + 4));
-    assert.ok(!turns[0].input.includes('[LIFE SO FAR') && turns[1].input.includes('[LIFE SO FAR'));
+    assert.equal(turns.length, 2);
+    const a = nums(turns[0].input), b = nums(turns[1].input);
+    // word for word: one run from #4, no message twice, none skipped
+    assert.equal(a[0], 4);
+    assert.deepEqual([...a, ...b], Array.from({ length: a.length + b.length }, (_, i) => i + 4));
+    assert.ok(b.length && b.length < a.length);
+    // the rest up to the phone's clock: the reflection's summaries
+    const rest = b.at(-1) + 1;
+    assert.ok(turns[1].input.includes(`[TOLD SHORT — messages #${rest}–#39`));
+    assert.ok(turns[1].input.includes('#30 · Ren called Mara until three — "it is three already"') && turns[1].input.includes('#36 · Ren set a 6:30 alarm'));
+    assert.ok(turns[1].input.includes('[LIFE SO FAR') && turns[1].input.includes('only what RECENT CHAT and TOLD SHORT add'));
+    // what the second added put in with what the first wrote
+    assert.deepEqual(p.life.clock.alarms.map(x => x.label), ['A', 'B']);
     assert.equal(p.sync.marks.life.index, 39);
-    assert.equal(p.life.clock.alarms[0].label, ['A', 'B', 'C', 'D'][turns.length - 1]);
 });
 
-test('a later turn that fails keeps what the turns before wrote, marked where they stopped', async () => {
+test('a second turn that fails keeps what the first wrote, marked where it stopped', async () => {
     globalThis.__rows = bigRows(40);
-    const p = { owner: 'Ren', now: '10-26 12:00', sync: { marks: { base: { index: 6 } }, done: [[7, 39]], hiddenRead: {} } };
-    const mm = { ...m, phones: { ren: p } };
+    const p = longPhone(), mm = { ...m, phones: { ren: p } };
     globalThis.__menu = { calls: [], answers: [lifeAnswer('A'), new Error('quota')], answer: '{}' };
     await life.fillLife(mm, p);
-    assert.equal(p.life.clock.alarms[0].label, 'A');
-    const firstTo = Math.max(...[...globalThis.__menu.calls[0].input.matchAll(/^\[#(\d+)\] Ren/gm)].map(x => Number(x[1])));
-    assert.equal(p.sync.marks.life.index, firstTo);
+    assert.deepEqual(p.life.clock.alarms.map(x => x.label), ['A']);
+    assert.equal(p.sync.marks.life.index, Math.max(...nums(globalThis.__menu.calls[0].input)));
 });
 
-test('the delivery app is read in turns the same way', async () => {
+test('the delivery app the same way: two turns, the second adding to the first', async () => {
     globalThis.__rows = bigRows(40);
-    const p = { owner: 'Ren', now: '10-26 12:00', country: 'DE', lives: 'DE', sync: { marks: { base: { index: 6 } }, done: [[7, 39]], hiddenRead: {} } };
-    const mm = { ...m, phones: { ren: p } };
-    const dlv = shop => JSON.stringify({ shops: [{ name: shop, cuisine: 'pizza', menu: [{ name: 'Margherita', price: 9 }] }], orders: [], cart: null });
-    globalThis.__menu = { calls: [], answers: [dlv('Uno'), dlv('Due'), dlv('Tre'), dlv('Quattro')], answer: '{}' };
+    const p = longPhone(), mm = { ...m, phones: { ren: p } };
+    const dlv = (shop, time) => JSON.stringify({ shops: [{ name: shop, cuisine: 'pizza', menu: [{ name: 'Margherita', price: 9 }] }], orders: [{ shop, items: [{ name: 'Margherita', price: 9 }], time, status: 'delivered' }], cart: null });
+    globalThis.__menu = { calls: [], answers: [dlv('Uno', '10-20 19:00'), dlv('Due', '10-24 20:00')], answer: '{}' };
     await life.fillDelivery(mm, p);
     const turns = globalThis.__menu.calls.filter(c => c.sys === life.AI_SYS_DELIVERY);
-    assert.ok(turns.length >= 2 && turns[1].input.includes('[DELIVERY SO FAR'), String(turns.length));
-    const seen = turns.flatMap(c => [...c.input.matchAll(/^\[#(\d+)\] Ren/gm)].map(x => Number(x[1])));
-    assert.deepEqual(seen, Array.from({ length: 36 }, (_, i) => i + 4));
+    assert.equal(turns.length, 2);
+    assert.ok(turns[1].input.includes('[DELIVERY SO FAR'));
+    assert.deepEqual(p.delivery.orders.map(o => o.shop), ['Uno', 'Due']);
+    assert.deepEqual(p.delivery.shops.map(x => x.name).slice(0, 2), ['Uno', 'Due']);
     assert.equal(p.sync.marks.delivery.index, 39);
 });
