@@ -385,9 +385,9 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 /* the phone's alert (3.170.5x, docs/mockups/phone-sheet G3): glass without a blur (a blur was slow on phones and
    barely showed), a sheen over the top half, a light edge, three soft shadows. Buttons are iOS alert cells */
 .pcf_box { width: 100%; max-width: 290px; animation: pcf_in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.pcf_card { position: relative; overflow: hidden; border-radius: 26px; --axr: 26px; background: linear-gradient(180deg, #fdfdfe, #eef2f7); box-shadow: 0 1px 1px rgba(10, 16, 28, 0.08), 0 10px 24px rgba(10, 16, 28, 0.18), 0 30px 70px rgba(10, 16, 28, 0.34); }
-.pcf_card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 46%; background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0)); pointer-events: none; }
-.pcf_card::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 1px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.25) 35%, rgba(255, 255, 255, 0.1) 65%, rgba(255, 255, 255, 0.7)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+.pcf_card { position: relative; overflow: hidden; border-radius: 26px; --axr: 26px; background: linear-gradient(180deg, #ffffff 0%, #ebeff7 41.5%, #d6deea 100%); box-shadow: inset 0 -15px 25px -12px rgba(40, 60, 90, 0.26), inset 0 1px 0 #fff, 0 1px 1px rgba(10, 16, 28, 0.08), 0 10px 24px rgba(10, 16, 28, 0.18), 0 30px 70px rgba(10, 16, 28, 0.34); }
+.pcf_card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 51.4%; background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0)); pointer-events: none; }
+.pcf_card::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 1px; background: linear-gradient(160deg, #fff, rgba(255, 255, 255, 0.47) 35%, rgba(255, 255, 255, 0.19) 65%, rgba(255, 255, 255, 0.96)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
 .pcf_msg { position: relative; display: flex; flex-direction: column; gap: 5px; padding: 22px 20px 16px; text-align: center; }
 .pcf_msg b { font-size: 17px; font-weight: 600; color: #161b22; }
 .pcf_msg span { font-size: 13.5px; --axfs: 13.5px; line-height: 1.4; color: #4f5763; }
