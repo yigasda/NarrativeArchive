@@ -145,7 +145,7 @@ YOU GET
 - EVENTS ON THE PHONE: story events the phone already holds, with their ids.
 - DAYS (sometimes): the story's days from the day before these messages on, with their weekdays. A weekday the story names ("on Friday") is the next one there.
 - MESSAGES READ BEFORE, NOW CHANGED (sometimes): messages put on the phone before and edited since, with the events they gave.
-${money ? `- MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.\n` : ''}${delivery ? `- DELIVERY SHOPS: the shops the delivery app already has.\n` : ''}${life ? `- LIFE NOW: the alarms, files and health days the phone already holds, with record ids.\n` : ''}${weather && tracker ? `- WEATHER NOW: the date, time, place and weather from the chat's last status line up to these messages.\n` : ''}- PHONE NOW: the newest of what the phone holds.
+${money ? `- MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.\n` : ''}${delivery ? `- DELIVERY SHOPS: the shops the delivery app already has.\n` : ''}${life ? `- LIFE NOW: the alarms, files and health days the phone already holds, with record ids.\n` : ''}${weather && tracker ? `- WEATHER NOW: the date, time, place and weather from the chat's last status line up to these messages, its date and time on the owner's clock (a scene in another city has its own as "sceneTime").\n` : ''}- PHONE NOW: the newest of what the phone holds.
 ${CLOCK_GET}
 - OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 
@@ -936,8 +936,13 @@ async function updatePhone(m, owner) {
         // line after it, like STORY NOW
         const roundEnd = reachesEnd(s, rows, round.rows) ? null : Math.max(-1, ...round.rows.map(r => r.index), ...archIn.map(x => x.last));
         const upChat = roundEnd == null ? {} : { chat: (ctx().chat || []).slice(0, roundEnd + 1) };
-        let tracker = null;
-        try { tracker = trackerWeather(recentTrackers(1, upChat)[0]); } catch { /* no status lines */ }
+        let tracker = null, trackerAt = -1;
+        try { const t = recentTrackers(1, upChat)[0]; tracker = trackerWeather(t); trackerAt = Number.isInteger(t?.i) ? t.i : -1; } catch { /* no status lines */ }
+        // the status line's moment on the owner's clock (a scene in another saved city read in their zone): what the model is
+        // shown of it, so it never pairs another city's hour with the owner's now
+        const trkNow = sceneClockKnown(p, roundEnd) ? storyNow({ ...p, now: '' }, roundEnd) : '';
+        const trackShown = tracker && trkNow && tracker.time && (trkNow.slice(0, 5) !== tracker.date || trkNow.slice(6) !== hhmm(tracker.time))
+            ? { ...tracker, date: trkNow.slice(0, 5), time: trkNow.slice(6), sceneTime: `${tracker.date} ${hhmm(tracker.time)} in ${tracker.place}` } : tracker;
         const trackDay = tracker ? when(tracker.date).slice(0, 5) : '';
         // the model writes the weather when no status line gives it, when the status line has no date or its day moved on
         // from the saved weather's, or when it puts the story somewhere else; a same-day, same-place line only stands over it
@@ -967,7 +972,7 @@ async function updatePhone(m, owner) {
             `[PHONE NOW]\n${JSON.stringify(phoneForModel(p))}`,
             !split && money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', !split && invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
             !split && money && p.delivery ? `[DELIVERY SHOPS]\n${(p.delivery.shops || []).map(x => x.name).join('\n') || '(none yet)'}${p.delivery.cart?.items?.length ? `\nCART (in the basket, not ordered): ${p.delivery.cart.shop}: ${p.delivery.cart.items.map(x => `${x.name} ×${x.qty}`).join(', ')}` : ''}` : '',
-            life ? `[LIFE NOW]\n${JSON.stringify(life)}` : '', askWeather && tracker ? `[WEATHER NOW]\n${JSON.stringify(tracker)}` : '', clockBlock(p, p.now, m),
+            life ? `[LIFE NOW]\n${JSON.stringify(life)}` : '', askWeather && tracker ? `[WEATHER NOW]\n${JSON.stringify(trackShown)}` : '', clockBlock(p, p.now, m),
             !split && (money || invest) && p.wealthPlan ? `[WEALTH]\n${JSON.stringify({ currency: p.wealthPlan.currency, deposits: p.wealthPlan.deposits, investments: p.wealthPlan.investments, basis: p.wealthPlan.basis })}` : '',
             world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
             `[OWNER]\n${owner}`, profile, blindBlock(m, owner), namesBlock(m),
@@ -1077,8 +1082,10 @@ async function updatePhone(m, owner) {
         // (a day or a few behind is the model slipping and is ignored; two months or more behind is a story that skipped far
         // ahead, past the half year the dates alone can tell: half a year later)
         // the status line's own clock caps the model's (a "23:55" written over a line that says 21:30)
-        const trkNow = sceneClockKnown(p, roundEnd) ? storyNow({ ...p, now: '' }, roundEnd) : '';
         if (trkNow && nowAt && nowAt.slice(0, 5) === trkNow.slice(0, 5) && nowAt.slice(6) > trkNow.slice(6)) nowAt = trkNow;
+        // and a status line among these messages is no later than now: a now before it (another city's hour taken for the
+        // owner's) is moved up to it
+        else if (trkNow && nowAt && round.rows.some(r => r.index === trackerAt) && (dayGap(nowAt.slice(0, 5), trkNow.slice(0, 5)) > 0 || nowAt.slice(0, 5) === trkNow.slice(0, 5) && nowAt.slice(6) < trkNow.slice(6))) nowAt = trkNow;
         const gap = nowAt && p.now ? dayGap(p.now.slice(0, 5), nowAt.slice(0, 5)) : 1;
         if (nowAt && (gap > 0 || gap < -60 || gap === 0 && nowAt.slice(6) > p.now.slice(6))) {
             if (p.year && p.now && nowAt.slice(0, 5) < p.now.slice(0, 5)) p.year++;
