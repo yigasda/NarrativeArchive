@@ -88,6 +88,11 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     const out = { effects: [], changes: [], notes: [], legs: [] };
     const mo = e.money;
     if (!mo || typeof mo !== 'object') return out;
+    // a record's id: the event's, unique on the phone and in the ledgers (the same event told again in a later round adds
+    // its own records, never one with an id already taken)
+    const taken = new Set([...['tx', 'orders', 'passes'].flatMap(k => (p.money?.[k] || []).map(x => x.id)), ...(p.investment?.trades || []).map(x => x.id),
+        ...(p.delivery?.orders || []).map(x => x.id), ...(p.delivery?.shops || []).map(x => x.id), ...Object.values(finance(m).accounts || {}).flatMap(a => Object.keys(a.entries || {}))]);
+    const sid = base => { let id = base, n = 2; while (taken.has(id)) id = `${base}~${n++}`; taken.add(id); return id; };
     // numbers as the model may write them ("-32,000", "₩4,000", "12,50"): read once, before anything uses them
     const nums = (o, keys) => { for (const k of keys) if (typeof o[k] === 'string') { const v = num(o[k]); o[k] = v === null ? o[k] : v; } };
     for (const x of list(mo.moves)) nums(x, ['amount', 'fee']);
@@ -130,7 +135,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             const acct = { id: uid(), kind, name: txt(a.name, 60) || (kind === 'savings' ? '적금' : kind === 'credit' ? '카드' : '입출금'), last4, currency: cur, balance: bal, ev: e.id, sourceIndex: e.at };
             // the ledger opens empty on the event's day; what it holds is its first row (an opening deposit the owner can see)
             if (kind !== 'credit') { const L = baseline(m, acct.id, cur, 0, full, p.owner); const into = list(mo.moves).filter(x => x.occurrence !== 'again' && !x.already && Number(x.amount) > 0 && String(x.account ?? '').replace(/\D/g, '').slice(-4) === last4).reduce((n, x) => n + Number(x.amount), 0), open = round(bal - into);
-                if (open > 0.01) { const id = `sync:${e.id}:open`, row = { id, account: last4, who: txt(a.name, 60) || acct.name, ko: '', amount: open, time: `${date}${e.time ? ` ${e.time}` : ''}`, day: full, kind: 'deposit', memo: '개설 입금', pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at }; (p.money.tx ||= []).push(row); L.entries[id] = { amount: open, date: full, sourceIndex: e.at }; out.effects.push({ type: 'push', path: 'money.tx', item: structuredClone(row) }, { type: 'entry', key: `${acct.id}:${cur}`, id, amount: open, date: full, sourceIndex: e.at }); } }
+                if (open > 0.01) { const id = sid(`sync:${e.id}:open`), row = { id, account: last4, who: txt(a.name, 60) || acct.name, ko: '', amount: open, time: `${date}${e.time ? ` ${e.time}` : ''}`, day: full, kind: 'deposit', memo: '개설 입금', pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at }; (p.money.tx ||= []).push(row); L.entries[id] = { amount: open, date: full, sourceIndex: e.at }; out.effects.push({ type: 'push', path: 'money.tx', item: structuredClone(row) }, { type: 'entry', key: `${acct.id}:${cur}`, id, amount: open, date: full, sourceIndex: e.at }); } }
             accts.push(acct);
             out.effects.push({ type: 'push', path: 'money.bank.accounts', item: structuredClone(acct) });
             out.changes.push({ app: '은행', label: `${acct.name} 계좌 개설`, amount: null });
@@ -182,7 +187,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             const twin = Object.entries(L.entries).find(([, v]) => Math.abs(v.amount - amount) < 0.01 && near(String(v.date).slice(5), date, 0) && !fresh(x, v, e.at));
             if (!twin && x.occurrence === 'again') { out.legs.push({ key, amount: round(amount), state: 'again' }); return; }
             if (twin) { out.legs.push({ key, amount: round(amount), state: 'included', rec: twin[0] }); out.notes.push(`증권 ${cur} ${round(amount)}: 이미 있는 거래라 넣지 않았어요`); return; }
-            const id = `sync:${e.id}:m${k}`;
+            const id = sid(`sync:${e.id}:m${k}`);
             L.entries[id] = { amount: round(amount), date: full, sourceIndex: e.at };
             out.effects.push({ type: 'entry', key: a.key, id, amount: round(amount), date: full, sourceIndex: e.at });
             out.changes.push({ app: '투자', label: `증권 ${cur}`, amount: round(amount), currency: cur });
@@ -219,7 +224,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             if (twin) out.notes.push(`${twin.who || acct.name} ${twin.amount}: 이미 있는 거래라 넣지 않았어요`);
             return;
         }
-        const id = `sync:${e.id}:m${k}`;
+        const id = sid(`sync:${e.id}:m${k}`);
         const row = { id, account: acct.last4, who: txt(x.who, 60), ko: txt(x.ko, 60), amount: round(amount), time: `${date}${e.time ? ` ${e.time}` : ''}`, day: full,
             // on the card everything is a card row (a refund is plus), except paying the card off: a transfer, which the month's count leaves out
             kind: acct.kind === 'credit' ? (x.kind === 'transfer' ? 'transfer' : 'card') : ['card', 'transfer', 'deposit', 'cash'].includes(x.kind) ? x.kind : amount > 0 ? 'deposit' : 'card', memo: txt(x.memo), pending: false, ev: e.id, storyEvent: e.id, sourceIndex: e.at, ...(guess ? { amountFrom: 'guess' } : {}) };
@@ -263,7 +268,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         }
         const quantity = Number(t.quantity), price = Number(t.price), fee = finite(Number(t.fee)) ? Number(t.fee) : 0, amount = Number(t.amount);
         if (kind === 'dividend' ? !finite(amount) || amount <= 0 : !finite(quantity) || quantity <= 0 || !finite(price) || price < 0) fail('매매 수량이나 가격을 확인하지 못했어요');
-        const id = `sync:${e.id}:t${k}`;
+        const id = sid(`sync:${e.id}:t${k}`);
         const trade = { id, kind, symbol, currency: cur, date: full, time: e.time || '', quantity: kind === 'dividend' ? undefined : quantity, price: kind === 'dividend' ? undefined : price, fee: kind === 'dividend' ? undefined : fee, amount: kind === 'dividend' ? amount : undefined,
             source: guess ? 'guess' : 'story', storyEvent: e.id, sourceIndex: e.at, rateAtTrade: fx(m, cur, inv.base, full) };
         try { positions([...inv.trades, trade]); } catch { fail('가진 것보다 많이 판 거래예요'); }
@@ -271,7 +276,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const flow = kind === 'buy' ? -(quantity * price + fee) : kind === 'sell' ? quantity * price - fee : amount;
         L.entries[id] = { amount: round(flow), date: full };
         out.effects.push({ type: 'push', path: 'investment.trades', item: structuredClone(trade) }, { type: 'entry', key: a.key, id, amount: round(flow), date: full });
-        if (full > (inv.date || '')) inv.date = full;
+        if (full > (inv.date || '')) { out.effects.push({ type: 'field', path: 'investment', field: 'date', from: inv.date ?? null, to: full }); inv.date = full; }
         out.changes.push({ app: '투자', label: `${inv.securities.find(x => x.symbol === symbol)?.name || symbol} ${kind === 'buy' ? '매수' : kind === 'sell' ? '매도' : '배당'}${kind === 'dividend' ? '' : ` ${quantity}주`}`, amount: round(flow), currency: cur });
         out.legs.push({ key, amount: size, state: 'applied', rec: id });
     });
@@ -281,21 +286,24 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     const records = (path, rows, make, same) => rows.forEach((x, k) => {
         if (!bankOn) return;
         const box = p.money[path] ||= [];
-        const old = x.already && box.find(o => o.id === x.already) || box.find(o => !madeNow.has(o) && same(o, x) && !fresh(x, o, e.at));
+        // the same event's own record told again (its message rewritten and read anew) is that one, not a second
+        const old = x.already && box.find(o => o.id === x.already) || box.find(o => !madeNow.has(o) && same(o, x) && (!fresh(x, o, e.at) || o.ev === e.id));
         if (!old && x.occurrence === 'again') return;
+        if (old && old.sourceIndex == null) old.sourceIndex = e.at;
         if (old) {
             // an order's status only moves forward; a pass's is free text ("used", "checked in", "cancelled"): whatever it says now
             const next = path === 'passes' ? txt(x.status, 30) : x.status;
             if (next && next !== old.status && (path === 'passes' || ORDER.includes(next) && later(old.status, next))) {
-                const was = old.status;
+                const was = old.status, arrivedFrom = old.arrived ?? null;
                 old.status = next;
                 if (path === 'orders' && x.status === 'delivered' && /^\d{2}-\d{2}$/.test(date || '')) old.arrived ||= date;
-                out.effects.push({ type: 'status', path: `money.${path}`, id: old.id, status: next, prev: was });
+                // (its arrival day goes back with it)
+                out.effects.push({ type: 'status', path: `money.${path}`, id: old.id, status: next, prev: was, ...((old.arrived ?? null) !== arrivedFrom ? { arrivedFrom, arrived: old.arrived } : {}) });
                 out.changes.push({ app: path === 'orders' ? '쇼핑' : '지갑', label: `${old.item || old.by} 상태`, amount: null });
             }
             return;
         }
-        const row = { ...make(x), id: `sync:${e.id}:${path[0]}${k}`, ev: e.id, storyEvent: e.id, sourceIndex: e.at };
+        const row = { ...make(x), id: sid(`sync:${e.id}:${path[0]}${k}`), ev: e.id, storyEvent: e.id, sourceIndex: e.at };
         if (path === 'orders' && row.status !== 'cancelled' && row.price && x.paid !== false && !x.gift && !list(mo.moves).some(y => Number(y.amount) < 0)) out.notes.push(`${row.item}: 주문은 넣었지만 결제가 없었어요`);
         box.push(row); madeNow.add(row);
         out.effects.push({ type: 'push', path: `money.${path}`, item: structuredClone(row) });
@@ -319,9 +327,11 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const items = list(x.items).map(d => { const optionKo = txt(d?.optionKo, 60), pic = dishPic(d?.pic, { name: txt(d?.name, 60), ko: txt(d?.ko, 60), option: txt(d?.option, 60), optionKo }); return { name: txt(d?.name, 60), ko: txt(d?.ko, 60), option: txt(d?.option, 60), ...(optionKo ? { optionKo } : {}), qty: Math.max(1, Math.round(Number(d?.qty) || 1)), price: finite(Number(d?.price)) ? Number(d.price) : 0, ...(pic ? { pic } : {}) }; }).filter(d => d.name).slice(0, 10);
         if (!txt(x.shop) || !items.length) fail('배달 주문의 가게나 메뉴를 확인하지 못했어요');
         const money = v => (finite(Number(v)) ? Math.abs(Number(v)) : 0), total = round(items.reduce((n, d) => n + d.qty * d.price, 0) + money(x.fee) + money(x.tip) - money(x.discount));
-        const old = x.already && box.find(o => o.id === x.already) || box.find(o => samePlace(o.shop, x.shop) && near(String(o.time).slice(0, 5), date, 0) && Math.abs(dlvTotal(o) - total) < 0.01 && !fresh(x, o, e.at));
+        const old = x.already && box.find(o => o.id === x.already) || box.find(o => samePlace(o.shop, x.shop) && near(String(o.time).slice(0, 5), date, 0) && Math.abs(dlvTotal(o) - total) < 0.01 && (!fresh(x, o, e.at) || o.ev === e.id));
         if (!old && x.occurrence === 'again') return;
         const status = ['on the way', 'delivered', 'cancelled', 'refunded'].includes(x.status) ? x.status : 'delivered';
+        // one whose message is gone is tied to the message that tells it now
+        if (old && old.sourceIndex == null) old.sourceIndex = e.at;
         if (old) {
             if (status !== old.status && later(old.status, status)) {
                 out.effects.push({ type: 'status', path: 'delivery.orders', id: old.id, status, prev: old.status });
@@ -334,7 +344,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const row = { shop: txt(x.shop, 60), items, fee: money(x.fee), tip: money(x.tip), discount: money(x.discount), mode: x.mode === 'pickup' ? 'pickup' : 'delivery', time, arrived: when(x.arrived) || hhmm(x.arrived),
             to: txt(x.to, 40) || 'home', address: txt(x.address, 80), left: txt(x.left, 60), noteShop: txt(x.noteShop, 120), noteShopKo: txt(x.noteShopKo, 200), noteRider: txt(x.noteRider, 120), noteRiderKo: txt(x.noteRiderKo, 200),
             noCutlery: x.noCutlery === true, for: Math.max(1, Math.round(Number(x.for) || 1)), status, gift: giftOf(x.gift), reviewed: false, account: 'cash',
-            id: `sync:${e.id}:d${k}`, ev: e.id, storyEvent: e.id, sourceIndex: e.at, sync: true };
+            id: sid(`sync:${e.id}:d${k}`), ev: e.id, storyEvent: e.id, sourceIndex: e.at, sync: true };
         // the same place always has the same address: home or work (or a person's) as the earlier orders wrote it
         const before = [...box].reverse().find(o => o.to === row.to && o.address);
         if (before) row.address = before.address;
@@ -360,7 +370,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             const st = shopStats(row.shop, won);
             const shop = { name: row.shop, ko: txt(ns.ko, 60), cuisine: txt(ns.cuisine, 30), rating: st.rating, reviews: st.reviews, fee: finite(Number(ns.fee)) ? Math.abs(Number(ns.fee)) : row.fee,
                 minOrder: num(ns.minOrder, 0, 1e7) ?? st.minOrder, eta: txt(ns.eta, 12) || st.eta, fav: false, menu,
-                id: `sync:${e.id}:s${k}`, ev: e.id, sourceIndex: e.at };
+                id: sid(`sync:${e.id}:s${k}`), ev: e.id, sourceIndex: e.at };
             shops.push(shop);
             out.effects.push({ type: 'push', path: 'delivery.shops', item: structuredClone(shop) });
             // the list stays at ten: the oldest shop not kept as a favourite makes room
@@ -402,7 +412,12 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         for (const q of list(mo.quotes)) {
             const symbol = txt(q.symbol, 80), value = Number(q.value), d = /^\d{4}-\d{2}-\d{2}$/.test(String(q.date || '')) ? String(q.date) : fullDay(year, anchor, when(q.date).slice(0, 5) || date);
             if (!inv.securities.some(x => x.symbol === symbol) || !finite(value) || value <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(d || '')) continue;
-            try { addPrice(m, `STOCK:${symbol}`, d, { value, source: 'story', ref: txt(q.evidence, 200) }); if (d > (inv.date || '')) inv.date = d; out.changes.push({ app: '투자', label: `${inv.securities.find(x => x.symbol === symbol)?.name || symbol} 시세`, amount: null }); } catch { /* a price the ledger refuses */ }
+            try {
+                const before = finance(m).prices[`STOCK:${symbol}`]?.[d], had = new Set((before?.rows || []).map(r => r.id)), prev = before ? { selected: before.selected, conflict: before.conflict } : null;
+                const slot = addPrice(m, `STOCK:${symbol}`, d, { value, source: 'story', ref: txt(q.evidence, 200) }), row = slot.rows.find(r => !had.has(r.id));
+                if (row) out.effects.push({ type: 'price', key: `STOCK:${symbol}`, date: d, id: row.id, row: structuredClone(row), prev });
+                if (d > (inv.date || '')) { out.effects.push({ type: 'field', path: 'investment', field: 'date', from: inv.date ?? null, to: d }); inv.date = d; }
+                out.changes.push({ app: '투자', label: `${inv.securities.find(x => x.symbol === symbol)?.name || symbol} 시세`, amount: null }); } catch { /* a price the ledger refuses */ }
         }
         for (const st of list(mo.stakes)) {
             const company = txt(st.company, 100), evidence = txt(st.evidence, 300);
@@ -489,11 +504,13 @@ export function replayEffects(m, p, effects) {
     for (const x of effects) {
         if (x.type === 'entry') { const L = f.accounts[x.key]; if (L && !L.entries[x.id]) L.entries[x.id] = { amount: x.amount, date: x.date, ...(x.sourceIndex !== undefined ? { sourceIndex: x.sourceIndex } : {}) }; continue; }
         if (x.type === 'amendEntry') { const line = f.accounts[x.key]?.entries[x.id]; if (line && line.amount === x.from) line.amount = x.to; continue; }
+        if (x.type === 'price') { const slot = (f.prices[x.key] ||= {})[x.date] ||= { rows: [], selected: null, conflict: false }; if (!slot.rows.some(r => r.id === x.id)) { slot.rows.push(structuredClone(x.row)); slot.selected ??= x.id; } continue; }
+        if (x.type === 'field') { const o = boxAt(p, x.path); if (o && (o[x.field] ?? null) === x.from) o[x.field] = x.to; continue; }
         if (lifeReplay(p, x) !== null) continue;
         if (!p[x.path.split('.')[0]]) continue;
         const box = boxAt(p, x.path, true), idKey = x.idKey || 'id';
         if (x.type === 'push' && !box.some(r => r[idKey] === x.item[idKey])) box.push(structuredClone(x.item));
-        if (x.type === 'status') { const r = box.find(o => o.id === x.id); if (r && later(r.status, x.status)) r.status = x.status; }
+        if (x.type === 'status') { const r = box.find(o => o.id === x.id); if (r && later(r.status, x.status)) { r.status = x.status; if (x.arrived) r.arrived ||= x.arrived; } }
         if (x.type === 'amend') { const r = box.find(o => o.id === x.id); if (r && r.amount === x.from) { r.amount = x.to; delete r.amountFrom; } }
     }
 }
@@ -507,6 +524,10 @@ export function revertEffects(m, p, effects) {
     for (const x of [...effects].reverse()) {
         if (x.type === 'entry') { const L = f.accounts[x.key]; if (!L?.entries[x.id]) continue; if (L.entries[x.id].amount === x.amount) delete L.entries[x.id]; else left.push(x); continue; }
         if (x.type === 'amendEntry') { const line = f.accounts[x.key]?.entries[x.id]; if (!line) continue; if (line.amount === x.to) line.amount = x.from; else left.push(x); continue; }
+        // a price the story gave: its row goes, the day's choice as it was
+        if (x.type === 'price') { const slot = f.prices[x.key]?.[x.date]; if (!slot) continue; slot.rows = slot.rows.filter(r => r.id !== x.id); if (!slot.rows.length) { delete f.prices[x.key][x.date]; if (!Object.keys(f.prices[x.key]).length) delete f.prices[x.key]; } else if (x.prev) Object.assign(slot, x.prev); continue; }
+        // a field set on a record (the brokerage's valuation day): back, unless changed since
+        if (x.type === 'field') { const o = boxAt(p, x.path); if (o && (o[x.field] ?? null) === x.to) { if (x.from === null) delete o[x.field]; else o[x.field] = x.from; } else if (o) left.push(x); continue; }
         const back = lifeRevert(p, x);
         if (back !== null) { if (!back) left.push(x); continue; }
         const box = boxAt(p, x.path);
@@ -515,7 +536,7 @@ export function revertEffects(m, p, effects) {
         if (i < 0) continue;
         // a record changed since it went in (an amount, a status, a count; for the everyday apps, anything) is the user's now: it stays
         if (x.type === 'push') { if (unchanged(x.path, box[i], x.item)) box.splice(i, 1); else left.push(x); }
-        if (x.type === 'status') { if (box[i].status === x.status) box[i].status = x.prev; else left.push(x); }
+        if (x.type === 'status') { if (box[i].status === x.status) { box[i].status = x.prev; if ('arrivedFrom' in x && box[i].arrived === x.arrived) { if (x.arrivedFrom === null) delete box[i].arrived; else box[i].arrived = x.arrivedFrom; } } else left.push(x); }
         if (x.type === 'amend') { if (box[i].amount === x.to) { box[i].amount = x.from; box[i].amountFrom = 'guess'; } else left.push(x); }
     }
     return left;

@@ -162,3 +162,15 @@ test('생활 다시 만들기: the body the phone shows goes along, to keep unle
     // the life fill's own request (the screen time fill follows it)
     assert.match(seen[0], /\[BODY ON THE PHONE NOW — keep it unless the story changed it\]\n\{"height":187,"weight":81\.5\}/);
 });
+
+test('a screen-time answer with a slip ("DB Navigator", 14): only that app is left out, the rest goes in', async () => {
+    const p = { owner: 'Ren', country: 'DE', now: '10-26 12:00', life: { health: { usual: { sleep: '23:30' }, days: [
+        { date: '10-24', sleep: '23:40', wake: '07:00' }, { date: '10-25', sleep: '23:00', wake: '07:00' }, { date: '10-26', sleep: '23:00', wake: '07:00' }] } } };
+    globalThis.__menu.answer = '{"usual":{"apps":[{"app":"Signal","kind":"chat","min":40},{"app":"DB Navigator","kind":"other","min":10}],"pickups":90},'
+        + '"days":[{"date":"10-24","apps":{"Signal":50,"DB Navigator", 14,"Spotify":30},"pickups":70},{"date":"10-25","apps":{"Signal":60}}]}';
+    const warn = console.warn; console.warn = () => {};
+    try { await life.fillScreen({}, p); } finally { console.warn = warn; }
+    const by = Object.fromEntries(p.life.health.days.map(d => [d.date, d.screen || null]));
+    assert.deepEqual(by['10-24'].apps, { Signal: 50, Spotify: 30 });
+    assert.deepEqual(by['10-25'].apps, { Signal: 60 });
+});

@@ -189,7 +189,10 @@ export function zoneShift(at, from, to, year = new Date().getFullYear()) {
     try {
         const parts = (tz, d) => { const f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(d), g = k => Number(f.find(x => x.type === k)?.value); return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour') % 24, g('minute')); };
         const guess = new Date(Date.UTC(year, mt[1] - 1, mt[2], mt[3], mt[4]));
-        const utc = guess.getTime() - (parts(from, guess) - guess.getTime()), local = new Date(parts(to, new Date(utc)));
+        // the offset at the moment itself, not at the wall time read as UTC (a summer-time change between the two)
+        let utc = guess.getTime() - (parts(from, guess) - guess.getTime());
+        utc = guess.getTime() - (parts(from, new Date(utc)) - utc);
+        const local = new Date(parts(to, new Date(utc)));
         return `${pad(local.getUTCMonth() + 1)}-${pad(local.getUTCDate())} ${pad(local.getUTCHours())}:${pad(local.getUTCMinutes())}`;
     } catch { return at; }
 }
@@ -220,9 +223,19 @@ const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 const fields = (r, keys) => Object.fromEntries(keys.map(k => [k, r[k] === undefined ? null : structuredClone(r[k])]));
 const setFields = (r, vals) => { for (const [k, v] of Object.entries(vals)) if (v === null) delete r[k]; else r[k] = structuredClone(v); };
 // change: fields of one record (from → to); set: a whole value (the weather); drop: a record taken out (by the clock)
+// unchanged since the round: an id put on a record after it (a saved city, a new day: ids are given when the phone is
+// saved) is no change
+const bareIds = (now, was) => {
+    if (Array.isArray(now)) return now.map((x, i) => bareIds(x, Array.isArray(was) ? was[i] : undefined));
+    if (!now || typeof now !== 'object') return now;
+    const out = {};
+    for (const [k, v] of Object.entries(now)) if (!(k === 'id' && (!was || typeof was !== 'object' || !('id' in was)))) out[k] = bareIds(v, was && typeof was === 'object' ? was[k] : undefined);
+    return out;
+};
+const sameSince = (now, was) => same(bareIds(now ?? null, was), was);
 export function lifeRevert(p, x) {
-    if (x.type === 'change') { const r = boxAt(p, x.path)?.find(o => o.id === x.id); if (!r) return true; if (!Object.keys(x.to).every(k => same(r[k] ?? null, x.to[k]))) return false; setFields(r, x.from); return true; }
-    if (x.type === 'set') { const w = walk(p, x.path); if (!w) return true; if (!same(w.parent[w.key], x.to)) return false; if (x.from === null) delete w.parent[w.key]; else w.parent[w.key] = structuredClone(x.from); return true; }
+    if (x.type === 'change') { const r = boxAt(p, x.path)?.find(o => o.id === x.id); if (!r) return true; if (!Object.keys(x.to).every(k => sameSince(r[k] ?? null, x.to[k]))) return false; setFields(r, x.from); return true; }
+    if (x.type === 'set') { const w = walk(p, x.path); if (!w) return true; if (!sameSince(w.parent[w.key], x.to)) return false; if (x.from === null) delete w.parent[w.key]; else w.parent[w.key] = structuredClone(x.from); return true; }
     if (x.type === 'drop') { const box = boxAt(p, x.path, true); if (!box.some(o => o.id === x.item.id)) box.push(structuredClone(x.item)); return true; }
     return null;
 }
@@ -247,7 +260,10 @@ export function applyLife(p, e, phone, on) {
         out.effects.push(fx); out.apps.add(app);
     };
     const push = (path, row, app) => { boxAt(p, path, true).push(row); out.effects.push({ type: 'push', path, item: structuredClone(row) }); out.apps.add(app); };
-    const tag = (row, k, c) => ({ ...row, id: `sync:${e.id}:${c}${k}`, ev: e.id, sourceIndex: e.at });
+    // ids unique on the phone: the same event told again in a later round adds its own records
+    const taken = new Set([...(L.clock?.alarms || []), ...(L.clock?.timers || []), ...(L.health?.days || []), ...(L.files?.items || [])].map(x => x?.id).filter(Boolean));
+    const sid = base => { let id = base, n = 2; while (taken.has(id)) id = `${base}~${n++}`; taken.add(id); return id; };
+    const tag = (row, k, c) => ({ ...row, id: sid(`sync:${e.id}:${c}${k}`), ev: e.id, sourceIndex: e.at });
     // only the fields the model wrote, cleaned as a whole record would be
     // what the model gave and the parser kept (a value it couldn't read never blanks the one there)
     const given = (raw, clean, keys) => Object.fromEntries(keys.filter(k => raw[k] !== undefined && raw[k] !== '' && raw[k] !== null && clean[k] !== '' && clean[k] !== undefined && clean[k] !== null).map(k => [k, clean[k]]));

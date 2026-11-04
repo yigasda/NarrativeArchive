@@ -3,8 +3,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
-import { migrateBank, cash } from '../src/finance.js';
-import { makeMark, newSync } from '../src/phonesync.js';
+import { migrateBank, cash, baseline, finance } from '../src/finance.js';
+import { makeMark, newSync, journalRead, journalWrite } from '../src/phonesync.js';
 
 const encoded = s => 'data:text/javascript;base64,' + Buffer.from(s).toString('base64');
 const href = f => pathToFileURL(new URL(`../src/${f}`, import.meta.url).pathname).href;
@@ -672,4 +672,284 @@ test('run35: a plan written as called off with the same plan new on another day 
     const live = c.p.events.filter(e => !e.cancelled);
     assert.equal(c.p.events.length, 1);
     assert.deepEqual(live.map(e => [e.date, e.time]), [['02-07', '19:00']]);
+});
+
+// ---- 점검 1묶음: 돈 · 기록
+test('the same event told again in a later round: its new payment gets its own record, and undo takes back only that one', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'hi'), say('Mara', 'bought the book for 15000 won')]);
+    const pay = (at, quote, amount, who, time) => ({ id: 'book', at, quote, summary: '책', date: '10-26', time, phone: {}, money: { moves: [{ account: '1111', amount, who, occurrence: 'new' }] } });
+    await run(c.m, { now: '10-26 13:00', events: [pay(2, 'bought the book', -15000, '서점', '12:00')] });
+    T.chat.push(say('Mara', 'and a bookmark for 2000 at the same shop'));
+    await run(c.m, { now: '10-26 14:00', events: [pay(3, 'bookmark for 2000', -2000, '문구점', '12:10')] });
+    assert.equal(c.bank(), 83000);
+    assert.equal(new Set(c.p.money.tx.map(t => t.id)).size, 2);
+    await data.undoRound(c.m, c.p);
+    assert.equal(c.bank(), 85000);
+    assert.deepEqual(c.p.money.tx.map(t => t.amount), [-15000]);
+});
+
+test('a message read again after a failure doesn\'t pay what its neighbour already paid (the money step too)', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'how much was the taxi ride'), say('Mara', 'I paid the taxi 12000 won'), say('Ren', 'ok and what about dinner later')]);
+    const taxi = (id, at, quote) => ({ id, at, quote, summary: '택시', date: '10-26', time: '12:40', apps: ['money'], phone: {}, money: { moves: [{ account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }] } });
+    await run(c.m, { now: '10-26 13:00', events: [taxi('taxi', 3, 'paid the taxi'), { id: 'dinner', at: 4, quote: 'NOT IN TEXT', summary: 'x', date: '10-26', time: '13:00', phone: { notes: [{ title: 'd', text: 'd' }] } }] });
+    T.chat.push(say('Mara', 'see you'));
+    await run(c.m, { now: '10-26 14:00', events: [taxi('taxi-again', 4, 'what about dinner')] });
+    assert.equal(c.bank(), 88000);
+});
+
+test('빼기 keeps an account another event still pays into, and the event that opened it', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Mara', 'I opened a savings account ending 2222 today'), say('Ren', 'nice'), say('Mara', 'I moved 50000 won into the savings account')]);
+    c.p.sync.limit = 2;
+    await run(c.m, { now: '10-26 10:00', events: [{ id: 'open', at: 2, quote: 'opened a savings account', summary: '적금 개설', date: '10-26', time: '09:00', apps: ['money'], phone: {}, money: { newAccount: { kind: 'savings', last4: '2222', currency: 'KRW', name: '적금', balance: 0 } } }] });
+    await run(c.m, { now: '10-26 11:00', events: [{ id: 'move', at: 4, quote: 'moved 50000 won', summary: '적금 이체', date: '10-26', time: '10:30', apps: ['money'], phone: {}, money: { moves: [{ account: '1111', amount: -50000, who: '적금', kind: 'transfer', occurrence: 'new' }, { account: '2222', amount: 50000, who: '입출금', kind: 'transfer', occurrence: 'new' }] } }] });
+    T.chat.splice(2, 1);
+    await run(c.m, { now: '10-26 11:00', events: [] });
+    const r = await data.dropStretch(c.m, c.p, 0);
+    assert.deepEqual(r.kept, ['적금 개설']);
+    assert.deepEqual(c.p.money.bank.accounts.map(a => a.last4), ['1111', '2222']);
+});
+
+test('a short read reply next to a hidden message is not taken for edited or deleted', async () => {
+    const hide = x => ({ ...x, is_system: true });
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'I paid the taxi 12000 won'), hide(say('Ren', '(OOC: brb, dinner)')), say('Ren', 'ok thanks!')]);
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'thanks', at: 4, quote: 'ok thanks', summary: '고마워', date: '10-26', time: '12:45', phone: { notes: [{ title: 'thanks', text: '고마워' }] } }] });
+    T.chat.push(say('Mara', 'see you tomorrow at nine then'));
+    await run(c.m, { now: '10-26 14:00', events: [] });
+    assert.ok(!T.input.includes('[#4] Ren: ok thanks!'));
+    assert.deepEqual(c.p.syncLast.notes, []);
+    assert.equal(c.p.sync.events.thanks.at, 4);
+});
+
+test('a message deleted earlier and the last round\'s message edited: numbers shift once, 빼기 of the payment\'s message still takes it', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'first talk long enough line here'), say('Mara', 'I paid the taxi 12000 won today')]);
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 3, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '12:40', apps: ['money'], phone: { notes: [{ title: 'taxi', text: '택시비' }] }, money: { moves: [{ account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }] } }] });
+    T.chat.push(say('Ren', 'later line text here long enough'), say('Mara', 'see you at the cafe tomorrow ok'));
+    await run(c.m, { now: '10-26 14:00', events: [{ id: 'cafe', at: 5, quote: 'see you at the cafe', summary: '카페', date: '10-26', time: '13:50', phone: { notes: [{ title: 'cafe', text: 'cafe tomorrow' }] } }] });
+    T.chat.splice(2, 1);
+    T.chat[3].mes = 'see you at the bakery tomorrow instead';
+    await run(c.m, { now: '10-26 14:10', events: [] });
+    assert.deepEqual([c.p.sync.events.taxi.at, c.p.money.tx[0].sourceIndex], [2, 2]);
+    T.chat.splice(2, 1);
+    await run(c.m, { now: '10-26 14:20', events: [] });
+    await data.dropStretch(c.m, c.p, 0);
+    assert.equal(c.bank(), 100000);
+    assert.ok(!c.p.notes.some(n => n.title === 'taxi'));
+});
+
+test('a group chat: a reply deleted before the start moves the start with it, the next message is read', async () => {
+    const c = setup([say('Ren', 'hello both of you'), say('Mara', 'hi Ren, long day'), say('Ivo', 'hey there, what is up')]);
+    c.p.sync.marks.base = makeMark(T.chat, 2);
+    T.chat.splice(1, 1);
+    T.chat.push(say('Mara', 'I paid the taxi 12000 won'));
+    await run(c.m, { now: '10-26 13:00', events: [] });
+    assert.equal(c.p.syncLast.checked, 1);
+    assert.ok(T.input.includes('[#2] Mara: I paid the taxi 12000 won'));
+});
+
+// ---- 점검 2묶음: 되돌리기 · 복구 · 빼기
+test('되돌리기 puts back what a round changed on items already there: a plan moved, a text marked deleted, a contact\'s name, the profile, comments', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'dinner saturday 7?'), say('Ren', 'sure, and I texted Ivo')]);
+    const post = { text: 'beach day', time: '10-25 10:00', comments: Array.from({ length: 7 }, (_, i) => ({ from: 'Ivo', text: `old comment ${i}` })) };
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'plan', at: 2, quote: 'I texted Ivo', summary: '약속', date: '10-26', time: '12:00',
+        phone: { events: [{ title: 'Dinner with Mara', date: '10-31', time: '19:00' }], threads: [{ with: 'Ivo', messages: [msg('see you', '10-26 12:00'), { from: 'me', text: 'I will be late tonight sorry', time: '10-26 12:05' }] }], posts: [post], contacts: [{ name: 'Varo', saved: 'Varo' }] } }] });
+    const snap = JSON.stringify({ ev: c.p.events, th: c.p.threads, posts: c.p.posts, contacts: c.p.contacts, profile: c.p.profile });
+    T.chat.push(say('Mara', 'can we do sunday instead? also delete that text, and new comments'));
+    await run(c.m, { now: '10-26 15:00', events: [{ id: 'move', at: 3, quote: 'sunday instead', summary: '옮김', date: '10-26', time: '14:00',
+        phone: { events: [{ title: 'Dinner with Mara', date: '11-01', was: '10-31', time: '19:00' }], threads: [{ with: 'Ivo', messages: [{ from: 'me', text: 'I will be late tonight sorry', deleted: true }] }],
+            posts: [{ text: 'beach day', time: '10-25 10:00', comments: [{ from: 'Varo', text: 'new A' }, { from: 'Varo', text: 'new B' }] }], contacts: [{ name: 'Varo', saved: 'Varo 🏄' }], profile: { handle: 'ren.new', bio: 'changed bio' } } }] });
+    assert.equal(c.p.events[0].date, '11-01');
+    await data.undoRound(c.m, c.p);
+    assert.equal(JSON.stringify({ ev: c.p.events, th: c.p.threads, posts: c.p.posts, contacts: c.p.contacts, profile: c.p.profile }), snap);
+});
+
+test('되돌리기 takes back a share price the story gave and the valuation day it moved', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'hi'), say('Mara', 'Varo Corp closed at 52000 today, I bought 2 shares')]);
+    c.p.investment = { base: 'KRW', at: 1, date: '2026-10-20', accounts: [{ currency: 'KRW', key: 'brk:KRW' }], securities: [{ symbol: 'VARO', name: 'Varo Corp', currency: 'KRW' }], trades: [], watch: [] };
+    baseline(c.m, 'brk', 'KRW', 500000, '2026-10-20', 'Ren');
+    const before = JSON.stringify({ prices: finance(c.m).prices, date: c.p.investment.date });
+    await run(c.m, { now: '10-26 15:00', events: [{ id: 'buy', at: 2, quote: 'closed at 52000', summary: '주식', date: '10-26', time: '14:00', apps: ['money'], phone: {},
+        money: { quotes: [{ symbol: 'VARO', value: 52000, date: '10-26', evidence: 'closed at 52000' }], trades: [{ kind: 'buy', symbol: 'VARO', quantity: 2, price: 52000, fee: 0 }] } }] });
+    assert.equal(c.p.investment.date, '2026-10-26');
+    await data.undoRound(c.m, c.p);
+    assert.equal(JSON.stringify({ prices: finance(c.m).prices, date: c.p.investment.date }), before);
+});
+
+const restoreLost = async m => { const perf = globalThis.performance; globalThis.performance = { timeOrigin: Date.now() + 1e6 }; try { return await data.restoreRounds(m, 'test'); } finally { globalThis.performance = perf; } };
+test('복구 of a lost round: the event knows its payment again (빼기 takes it), a retried message is no longer failed, the deleted mark and the year come back', async () => {
+    journalWrite('test', []);
+    const c = setup([say('Ren', 'start'), say('Mara', 'hi'), say('Ren', 'I texted Ivo'), say('Mara', 'ok')]);
+    c.p.year = 2026;
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'plan', at: 2, quote: 'I texted Ivo', summary: '약속', date: '10-26', time: '12:00',
+        phone: { threads: [{ with: 'Ivo', messages: [msg('see you', '10-26 12:00'), { from: 'me', text: 'I will be late tonight sorry', time: '10-26 12:05' }] }] } }, { id: 'bad', at: 3, quote: 'not in the text at all', summary: 'x', date: '10-26', time: '12:00', phone: { notes: [{ title: 'x', text: 'x' }] } }] });
+    T.chat.push(say('Mara', 'taxi 12000; deleted that text'));
+    const was = structuredClone(c.p), fin = structuredClone(c.m.finance);
+    await run(c.m, { now: '10-26 15:00', events: [
+        { id: 'taxi', at: 4, quote: 'taxi 12000', summary: '택시', date: '10-26', time: '14:30', phone: { threads: [{ with: 'Ivo', messages: [{ from: 'me', text: 'I will be late tonight sorry', deleted: true }] }] }, money: { moves: [{ account: '1111', amount: -12000, who: '택시', occurrence: 'new' }] } },
+        { id: 'ok', at: 3, quote: 'ok', summary: 'ok', date: '10-26', time: '13:30', phone: { notes: [{ title: 'ok', text: 'ok note' }] } }] });
+    c.m.phones.ren = was; c.m.finance = fin; // the save didn't land
+    data.setStoryYear(c.m, was, 2030);
+    assert.equal(await restoreLost(c.m), 1);
+    assert.equal(was.year, 2030);
+    assert.equal(was.sync.failed[3], undefined);
+    assert.ok(was.threads.find(t => t.with === 'Ivo').messages.find(x => x.text.startsWith('I will be late')).deleted);
+    assert.ok(was.sync.events.taxi.effects.length > 0);
+    T.chat.splice(4, 1); T.chat.push(say('Ren', 'later on that night'), say('Mara', 'yes good night then'));
+    T.answers.push({ now: '10-26 16:00', events: [] });
+    await data.makePhone(c.m, 'Ren', { update: true });
+    await data.dropStretch(c.m, was, was.sync.dropped.findIndex(d => d.events.includes('taxi')));
+    assert.equal(cash(c.m.finance.accounts['chk:KRW']), 100000);
+});
+
+test('빼기 then 되돌리기: the event taken off stays off, and a new payment under its name later is paid', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Mara', 'I paid 12000 won for the taxi to the station'), say('Ren', 'thanks a lot for that')]);
+    const taxi = (at, quote, time) => ({ id: 'taxi', at, quote, summary: '택시', date: '10-26', time, apps: ['money'], phone: {}, money: { moves: [{ account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }] } });
+    await run(c.m, { now: '10-26 10:00', events: [taxi(2, 'paid 12000 won for the taxi', '09:00')] });
+    T.chat.splice(2, 1); T.chat.push(say('Mara', 'see you tomorrow at the cafe then'));
+    await run(c.m, { now: '10-26 11:00', events: [] });
+    await data.dropStretch(c.m, c.p, 0);
+    await data.undoRound(c.m, c.p);
+    assert.equal(c.p.sync.events.taxi, undefined);
+    await run(c.m, { now: '10-26 12:00', events: [] });
+    T.answers.length = 0; T.chat.push(say('Mara', 'I paid 12000 won for another taxi home'));
+    await run(c.m, { now: '10-26 13:00', events: [taxi(T.chat.length - 1, 'paid 12000 won for another taxi', '12:30')] });
+    assert.equal(c.p.money.tx.length, 1);
+});
+
+test('an order message rewritten and read again: the same event\'s delivery order is that one, not a second', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'I set an alarm for the airport tomorrow'),
+        say('Mara', 'we ordered pasta from Pasta Nostra for 24.80'), say('Ren', 'it was really good pasta'), say('Mara', 'good night then, sleep well')]);
+    c.p.sync.limit = 2;
+    c.p.delivery = { shops: [], orders: [], cart: null };
+    Object.assign(c.p.sync.marks, { delivery: { index: 1 }, money: { index: 1 } });
+    const pasta = (at, quote) => ({ id: 'pasta', at, quote, summary: '파스타 배달', date: '10-26', time: '20:14', apps: ['money'], phone: {},
+        money: { moves: [{ account: '1111', amount: -24.8, who: 'Pasta Nostra', kind: 'card', occurrence: 'new' }],
+            deliveries: [{ shop: 'Pasta Nostra', items: [{ name: 'Tagliatelle', qty: 1, price: 13.9 }, { name: 'Penne', qty: 1, price: 11.5 }], fee: 1.99, discount: 2.59, status: 'delivered', occurrence: 'new' }] } });
+    await run(c.m, { now: '10-26 21:00', events: [pasta(3, 'ordered pasta')] });
+    await run(c.m, { now: '10-26 22:00', events: [] });
+    T.chat.splice(2, 1);
+    T.chat[2] = say('Mara', 'we ordered pasta from Pasta Nostra for 24.80, so tasty');
+    await run(c.m, { now: '10-26 22:30', events: [pasta(2, 'ordered pasta')] });
+    assert.equal(c.p.delivery.orders.length, 1);
+    assert.equal(c.p.delivery.orders[0].sourceIndex, 2);
+});
+
+test('apps made again since the last round: its 되돌리기 is gone (it would put old records into the new apps)', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'hi'), say('Ren', 'coffee?')]);
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'note', at: 2, quote: 'coffee', summary: '커피', date: '10-26', time: '12:00', phone: { notes: [{ title: 'coffee', text: 'coffee' }] } }] });
+    assert.ok(data.canUndo(c.p));
+    T.answers.push({ notes: [{ title: 'fresh', text: 'fresh note' }] });
+    await data.makePhone(c.m, 'Ren', { apps: ['note'] });
+    assert.equal(data.canUndo(c.p), false);
+});
+
+test('a phone whose reading starts anew: the old reading\'s unsaved rounds aren\'t offered for 복구', async () => {
+    journalWrite('test', [{ round: 'old1', owner: 'Ren', at: 1, events: [], done: [] }]);
+    const c = setup([say('Ren', 'start'), say('Mara', 'hi')]);
+    delete c.m.phones.ren.money; c.m.phones.ren.sync = undefined;
+    T.answers.push({ contacts: [], threads: [], now: '10-26 13:00' });
+    await data.makePhone(c.m, 'Ren').catch(() => {});
+    assert.deepEqual(journalRead('test').filter(r => r.owner === 'Ren'), []);
+});
+
+// ---- 점검 3묶음: 돈 단계
+test('a phone with no story year: the money stage gets no made-up year either', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'I paid the taxi 12000 won'), say('Ren', 'thanks a lot for that')]);
+    c.p.noYear = true; T.moneyAnswers = [];
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '12:40', apps: ['money'], phone: {}, money: { moves: [{ account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }] } }] });
+    assert.ok(!/\[STORY YEAR\]/.test(T.input));
+    assert.ok(!/\[STORY YEAR\]/.test(T.moneyInput));
+});
+
+test('the money stage answering one event twice: both payments kept, not the last only', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'dinner was 30000 won and the taxi home 12000 won'), say('Ren', 'thanks a lot for that')]);
+    T.moneyAnswers = [{ events: [
+        { id: 'night', money: { moves: [{ account: '1111', amount: -30000, who: '식당', kind: 'card', occurrence: 'new' }] } },
+        { id: 'night', money: { moves: [{ account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }] } }] }];
+    await run(c.m, { now: '10-26 23:00', events: [{ id: 'night', at: 2, quote: 'dinner was 30000 won', summary: '저녁과 택시', date: '10-26', time: '22:00', apps: ['money'], phone: {} }] });
+    assert.equal(c.bank(), 58000);
+    assert.deepEqual(c.p.money.tx.map(t => t.amount).sort((a, b) => a - b), [-30000, -12000]);
+});
+
+test('the money stage sees two messages either side: the amount two messages after the event still counts', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'on my way'), say('Mara', 'Mara climbs out of a taxi and hurries over'), say('Ren', 'you made it'), say('Mara', 'I paid the taxi 12000 won'), say('Ren', 'thanks a lot for that')]);
+    T.moneyAnswers = [];
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 3, quote: 'climbs out of a taxi', summary: '택시', date: '10-26', time: '12:40', apps: ['money'], phone: {}, money: { moves: [{ account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }] } }] });
+    assert.ok(T.moneyInput.includes('I paid the taxi 12000 won'));
+});
+
+// ---- 되돌리기 · 복구 점검
+test('되돌리기 puts the weather back even when a newly saved city got its id after the round', async () => {
+    const c = lifeSetup();
+    c.p.life.weather.cities = [{ name: 'Seoul', ko: '서울', tz: 'Asia/Seoul', cond: 'clear', temp: 14 }];
+    const ans = lifeAnswer(); ans.weather.cities = [{ name: 'Seoul', cond: 'rain', temp: 12 }, { name: 'Rome', tz: 'Europe/Rome', cond: 'clear', temp: 18, added: true, note: 'trip' }];
+    await run(c.m, ans);
+    assert.equal(c.p.life.weather.cities.length, 2);
+    const kept = await data.undoRound(c.m, c.p);
+    assert.deepEqual(kept, []);
+    const w = c.p.life.weather;
+    assert.deepEqual([w.here.cond, w.here.time, w.cities.length, w.cities[0].cond], ['clear', '09:00', 1, 'clear']);
+});
+
+test('되돌리기 says the weather stayed when the user changed it since', async () => {
+    const c = lifeSetup();
+    await run(c.m, lifeAnswer());
+    c.p.life.weather.here.cond = 'snow';
+    const kept = await data.undoRound(c.m, c.p);
+    assert.ok(kept.includes('날씨'));
+    assert.equal(c.p.life.weather.here.cond, 'snow');
+});
+
+test('되돌리기 keeps a record put on the phone without an id before the round (a news search)', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'lunch at the cafe')]);
+    c.p.searches = [{ q: 'Varo Motors business news', time: '10-26 08:00' }];
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'lunch', at: 2, quote: 'lunch at the cafe', summary: '점심', date: '10-26', time: '12:00', phone: { notes: [{ title: 'Lunch', text: 'cafe' }] } }] });
+    await data.undoRound(c.m, c.p);
+    assert.deepEqual(c.p.searches.map(x => x.q), ['Varo Motors business news']);
+    assert.deepEqual(c.p.notes, []);
+});
+
+test('되돌리기 of an order marked delivered takes its arrival day back too', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'I ordered a lamp from Ivo Shop for 30000 won')]);
+    await run(c.m, { now: '10-26 10:00', events: [{ id: 'lamp', at: 2, quote: 'ordered a lamp from Ivo Shop', summary: '램프 주문', date: '10-26', time: '09:30',
+        money: { moves: [{ account: '1111', amount: -30000, who: 'Ivo Shop', occurrence: 'new' }], orders: [{ shop: 'Ivo Shop', item: 'lamp', price: 30000, status: 'shipped', occurrence: 'new' }] } }] });
+    T.chat.push(say('Mara', 'Ren, your lamp from Ivo Shop was delivered today'));
+    await run(c.m, { now: '10-28 18:00', events: [{ id: 'lamp', at: 3, quote: 'your lamp from Ivo Shop was delivered', summary: '램프 도착', date: '10-28', time: '17:00',
+        money: { orders: [{ shop: 'Ivo Shop', item: 'lamp', price: 30000, status: 'delivered', occurrence: 'again', already: 'sync:lamp:o0' }] } }] });
+    assert.equal(c.p.money.orders[0].arrived, '10-28');
+    await data.undoRound(c.m, c.p);
+    assert.equal(c.p.money.orders[0].status, 'shipped');
+    assert.ok(!c.p.money.orders[0].arrived);
+});
+
+test('반영 with nothing new keeps the last result and its 되돌리기', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'lunch at the cafe')]);
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'lunch', at: 2, quote: 'lunch at the cafe', summary: '점심', date: '10-26', time: '12:00', phone: { notes: [{ title: 'Lunch', text: 'cafe' }] } }] });
+    await data.makePhone(c.m, 'Ren', { update: true });
+    assert.ok(c.p.syncLast.checked > 0 && data.canUndo(c.p));
+});
+
+test('복구 adds no round whose talk 반영 already read again, and never sets the clock back within the day', async () => {
+    journalWrite('test', []);
+    const c = setup([say('Ren', 'start'), say('Mara', 'hi'), say('Mara', 'I paid the taxi 12000 won'), say('Ren', 'thanks')]);
+    const was = structuredClone(c.p), fin = structuredClone(c.m.finance);
+    await run(c.m, { now: '10-26 10:00', events: [{ id: 'taxi', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '09:30', money: { moves: [{ account: '1111', amount: -12000, who: '택시', occurrence: 'new' }] } }] });
+    // the save didn't land; 반영 pressed again reads the same talk (the model names the event otherwise)
+    c.m.phones.ren = was; c.m.finance = fin; c.p = was;
+    T.answers.push({ now: '10-26 15:00', events: [{ id: 'taxi-ride', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '09:30', money: { moves: [{ account: '1111', amount: -12000, who: '택시', occurrence: 'new' }] } }] });
+    await data.makePhone(c.m, 'Ren', { update: true });
+    assert.equal(await restoreLost(c.m), 0);
+    assert.equal(cash(c.m.finance.accounts['chk:KRW']), 88000);
+    assert.equal(was.now, '10-26 15:00');
+});
+
+test('복구 never sets the clock back within the same day', async () => {
+    journalWrite('test', []);
+    const c = setup([say('Ren', 'start'), say('Mara', 'hi'), say('Ren', 'lunch at the cafe'), say('Mara', 'ok')]);
+    const was = structuredClone(c.p), fin = structuredClone(c.m.finance);
+    await run(c.m, { now: '10-26 10:00', events: [{ id: 'lunch', at: 2, quote: 'lunch at the cafe', summary: '점심', date: '10-26', time: '09:30', phone: { notes: [{ title: 'Lunch', text: 'cafe' }] } }] });
+    c.m.phones.ren = was; c.m.finance = fin;
+    was.now = '10-26 15:00';
+    assert.equal(await restoreLost(c.m), 1);
+    assert.equal(was.now, '10-26 15:00');
+    assert.deepEqual(was.notes.map(x => x.title), ['Lunch']);
 });

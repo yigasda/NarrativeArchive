@@ -17,7 +17,7 @@ import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
 import { APPS, AXB, AXB_C, busyHtml, setDate, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
 import { dropStretch, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
-import { busy, syncOf } from './phonesync.js';
+import { busy, journalRead, journalWrite, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
 import { CG_W, homeScreen, lastSig, lockScreen, threadNew } from './phonehome.js';
 import { bankDisplayCurrency, bankAcct, bankHome, bankTx, fixedScreen, bankNotes, bankSend, bankStmt, txDoc, bankMore, cardView, orderView, passView, trackView, shopScreen, voiceOne, voiceScreen, walletScreen } from './phonemoney.js';
@@ -852,7 +852,7 @@ export async function openPhone(who = null) {
             const p = apps.length ? await makePhone(m, targetOwner, whole ? {} : { apps }) : target;
             if (!p) throw new Error('생성 결과를 받지 못했어요. 다시 시도해 주세요');
             const wealthPlan = more.some(k=>k==='money'||k==='invest') ? await prepareWealth(m,p,true) : null;
-            for (const k of more) await (k === 'money' ? fillMoney(m,p,{regenerateBalances:true,wealthPlan}) : k === 'invest' ? fillInvestment(m,p,date,{regenerate:true,wealthPlan}) : k === 'life' ? fillLife(m,p) : k === 'delivery' ? fillDelivery(m,p) : k === 'screen' ? fillScreen(m,p,{again:true}) : fillVoice(m,p));
+            for (const k of more.filter(k => !(k === 'screen' && more.includes('life')))) await (k === 'money' ? fillMoney(m,p,{regenerateBalances:true,wealthPlan}) : k === 'invest' ? fillInvestment(m,p,date,{regenerate:true,wealthPlan}) : k === 'life' ? fillLife(m,p,{screenAgain:more.includes('screen')}) : k === 'delivery' ? fillDelivery(m,p) : k === 'screen' ? fillScreen(m,p,{again:true}) : fillVoice(m,p));
             if (whole && keep) { p.inject = true; await saveMeta(); applyInjection(); }
             if (phone() === p && !phoneClosed) {remake.clear(); view = whole ? 'lock' : 'set'; draw();}
             toastr.success(whole ? `${targetOwner}의 폰을 다시 만들었어요` : '고른 앱을 다시 만들었어요', '캐릭터 휴대폰');
@@ -873,6 +873,8 @@ export async function openPhone(who = null) {
         if (!await askSheet(`${owner}의 폰을 지울까요?`, '', '지우기')) return;
         const was = phone()?.inject;
         delete m.phones[nameKey(owner)];
+        // its unsaved rounds (복구) go with it
+        try { const sc = phoneChatScope(ctx()); journalWrite(sc, journalRead(sc).filter(r => nameKey(r.owner) !== nameKey(owner))); } catch { /* no journal here */ }
         view = 'lock'; draw();
         await saveMeta();
         if (was) applyInjection();

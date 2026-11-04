@@ -689,3 +689,26 @@ test('a delivery from the story goes to the address home already has, whatever t
     assert.equal(o.left, 'Tür');
     assert.equal(o.noCutlery, true);
 });
+
+import { zoneShift } from '../src/phonesynclife.js';
+test('an hour near a clock change (summer time) moves to the other city by the right offset', () => {
+    assert.equal(zoneShift('11-01 03:00', 'America/New_York', 'Asia/Seoul', 2026), '11-01 17:00');
+    assert.equal(zoneShift('03-08 06:30', 'America/New_York', 'Europe/Berlin', 2026), '03-08 11:30');
+    assert.equal(zoneShift('10-25 02:30', 'Europe/Berlin', 'Asia/Seoul', 2026), '10-25 10:30');
+});
+
+import { jsonOf, salvageJson } from '../src/phoneparse.js';
+test('a broken answer: a fill keeps every piece but the broken one; a reflection still gets nothing', () => {
+    const warn = console.warn; console.warn = () => {};
+    try {
+        assert.equal(jsonOf('{"a":{"x":1,"y", 2,"z":3}}'), null);
+        assert.deepEqual(jsonOf('{"a":{"x":1,"y", 2,"z":3}}', { salvage: true }), { a: { x: 1, z: 3 } });
+        assert.deepEqual(salvageJson('{"a":[1,2,oops,4],"b":"x"}'), { a: [1, 2, 4], b: 'x' });
+        assert.deepEqual(salvageJson('{"a":[{"k":1},{"k":},{"k":3}],"b":[1,2}'), { a: [{ k: 1 }, {}, { k: 3 }], b: [1, 2] });
+        // an order keeps its other fields; a voice memo (whole) with a broken field goes whole, not half
+        const bad = '{"m":[{"t":"He said "no", then left","at":"10:00"},{"t":"ok","at":"11:00"}]}';
+        assert.deepEqual(salvageJson(bad), { m: [{ t: 'He said "no' }, { t: 'ok', at: '11:00' }] });
+        assert.deepEqual(salvageJson(bad, { whole: true }), { m: [{ t: 'ok', at: '11:00' }] });
+        assert.throws(() => salvageJson('nothing here'));
+    } finally { console.warn = warn; }
+});

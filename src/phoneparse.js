@@ -108,8 +108,72 @@ export function tidyKo(o, seen = new Set()) {
         else if (v && typeof v === 'object') tidyKo(v, seen);
     }
 }
-export const parseJson = s => { let o; try { o = JSON.parse(s); } catch { o = JSON.parse(mendJson(s)); } tidyKo(o); return o; };
-export const jsonOf = out => { const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}'); try { return a >= 0 && b > a ? parseJson(t.slice(a, b + 1)) : null; } catch { return null; } };
+// a long list a fill asked for, with a slip the mending can't undo (any kind: "app", 14 for "app": 14, a stray word, a
+// broken string): read piece by piece, and only the piece with the slip is left out (one app of one day, not the whole
+// screen time). whole: a record in a list with any slip in its own fields goes whole (a voice memo is its text: none
+// with half of it). An order, a shop or a day keeps its other fields: each app's own check drops one missing what it
+// needs. Not for a reflection, whose answer is all or nothing
+export function salvageJson(t, { whole = false } = {}) {
+    const s = String(t);
+    let i = 0, lost = 0;
+    const half = new WeakSet();
+    const ws = () => { while (i < s.length && /\s/.test(s[i])) i++; };
+    const fail = () => { throw new SyntaxError(`salvage at ${i}`); };
+    // past a broken piece: to the next comma or closer of the list it is in
+    const skip = from => {
+        let d = 0, str = false, esc = false;
+        for (i = from; i < s.length; i++) {
+            const ch = s[i];
+            if (str) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"' && closes(i)) str = false; continue; }
+            if (ch === '"') str = true;
+            else if (ch === '{' || ch === '[') d++;
+            else if (ch === '}' || ch === ']') { if (!d) return; d--; }
+            else if (ch === ',' && !d) return;
+        }
+    };
+    // a quote ends a string only when what follows can come after one (a comma, a colon, a closer): "said "no" twice"
+    // keeps its inner quotes; a line break written as it is stays in it
+    const closes = j => { let k = j + 1; while (k < s.length && /\s/.test(s[k])) k++; return k >= s.length || /[,:}\]]/.test(s[k]); };
+    const string = () => {
+        if (s[i] !== '"') fail();
+        let j = i + 1;
+        for (; j < s.length; j++) { if (s[j] === '\\') { j++; continue; } if (s[j] === '"' && closes(j)) break; }
+        if (j >= s.length) fail();
+        const v = JSON.parse(`"${s.slice(i + 1, j).replace(/(^|[^\\])"/g, '$1\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t')}"`);
+        i = j + 1;
+        return v;
+    };
+    // how many of its pieces broke (one cut off at the end too)
+    const list = piece => {
+        let bad = 0;
+        i++;
+        for (;;) {
+            ws();
+            if (i >= s.length) return bad + 1;
+            if (s[i] === '}' || s[i] === ']') { i++; return bad; }
+            const from = i;
+            try { piece(); ws(); if (i < s.length && !/[,}\]]/.test(s[i])) fail(); } catch { bad++; lost++; skip(from); }
+            if (s[i] === ',') i++;
+        }
+    };
+    const value = () => {
+        ws();
+        const ch = s[i];
+        if (ch === '{') { const o = {}; if (list(() => { const k = string(); ws(); if (s[i] !== ':') fail(); i++; o[k] = value(); })) half.add(o); return o; }
+        if (ch === '[') { const a = []; list(() => { const v = value(); if (whole && half.has(v)) { lost++; return; } a.push(v); }); return a; }
+        if (ch === '"') return string();
+        const lit = /^(?:true|false|null|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(s.slice(i, i + 40));
+        if (!lit) fail();
+        i += lit[0].length;
+        return JSON.parse(lit[0]);
+    };
+    const out = value();
+    if (!out || typeof out !== 'object') fail();
+    if (lost) console.warn(`[narrative-archive] ${lost} broken piece(s) left out of the answer`);
+    return out;
+}
+export const parseJson = (s, { salvage = false } = {}) => { let o; try { o = JSON.parse(s); } catch { try { o = JSON.parse(mendJson(s)); } catch (err) { if (!salvage) throw err; o = salvageJson(s, { whole: salvage === 'whole' }); } } tidyKo(o); return o; };
+export const jsonOf = (out, opt) => { const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}'); try { return a >= 0 && b > a ? parseJson(t.slice(a, b + 1), opt) : null; } catch { return null; } };
 // a number from a model's answer: "12,50", "€9.90", "1,200"; text with no digit in it ("lots", "free") is none, never 0
 export const num = v => {
     if (v === null || v === undefined || typeof v === 'object' || typeof v === 'boolean') return null;
