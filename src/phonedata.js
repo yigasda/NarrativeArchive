@@ -374,6 +374,18 @@ function carryOver(k, was, now) {
 // 재구성 (src "guess") records are the model's imagining, not the story: they never go back to the model or into the role-play
 export const isGuess = x => x?.src === 'guess';
 
+// the thread or contact a name the model wrote is: the very name, else the one the place reading knows by another of
+// that person's names ("소망" for "Somang Park", its aka), else the one name it is short for ("Somang" of "Somang Park");
+// only one: two that fit is no one (a new one is made as before)
+function personIn(p, list, get, name) {
+    const k = nameKey(name), same = x => nameKey(get(x)) === k;
+    if (!k) return undefined;
+    const hit = list.find(same);
+    if (hit) return hit;
+    const row = (p?.where?.people || []).find(r => [r.name, ...arr(r.aka)].some(n => nameKey(n) === k)), names = row ? [row.name, ...arr(row.aka)].map(nameKey) : [];
+    const one = xs => (xs.length === 1 ? xs[0] : undefined);
+    return one(list.filter(x => names.includes(nameKey(get(x))))) || one(list.filter(x => samePerson(get(x), name)));
+}
 // a reflection keeps everything (keepAll); making a phone keeps each list to its size
 function mergePhone(p, add, { keepAll = false } = {}) {
     if (!p.device && add.device) p.device = add.device;
@@ -390,7 +402,7 @@ function mergePhone(p, add, { keepAll = false } = {}) {
         return s.length >= 3 && s.length / l.length >= 0.6 && l.includes(s);
     };
     for (const t of add.threads) {
-        const old = p.threads.find(x => nameKey(x.with) === nameKey(t.with));
+        const old = personIn(p, p.threads, x => x.with, t.with);
         // a text the owner deleted: the one there is marked (it stays for 되돌리기), never added again
         // (one the phone never had, a thread new in this round too, goes in marked, so the data holds it)
         const gone = t.messages.filter(x => x.deleted), matched = new Set();
@@ -429,7 +441,7 @@ function mergePhone(p, add, { keepAll = false } = {}) {
     for (const k of LISTS) p[k] = keep([...(p[k] || []), ...fresh(k, p[k] || [], add[k] || [])], CAP[k]);
     if (add.profile?.handle || add.profile?.bio) p.profile = { ...(p.profile || {}), ...Object.fromEntries(Object.entries(add.profile).filter(([, v]) => v)) };
     for (const c of add.contacts) {
-        const old = p.contacts.find(x => nameKey(x.name) === nameKey(c.name));
+        const old = personIn(p, p.contacts, x => x.name, c.name);
         if (old) old.saved = c.saved || old.saved; else p.contacts.push(c);
     }
     p.contacts = keep(p.contacts, CAP.contacts);
@@ -837,7 +849,7 @@ function tagItems(p, add, src) {
         for (const f of src ? [src] : a?.froms || []) { addFrom(x, f); if (src && x !== a) addFrom(a, f); }
     };
     for (const k of LISTS) for (const a of add[k] || []) tag(k, twinOf(k, p[k] || [], a), a);
-    for (const t of add.threads || []) { const own = p.threads.find(x => nameKey(x.with) === nameKey(t.with)); for (const a of t.messages) tag('msg', own ? twinOf('msg', own.messages, a) : null, a); }
+    for (const t of add.threads || []) { const own = personIn(p, p.threads, x => x.with, t.with); for (const a of t.messages) tag('msg', own ? twinOf('msg', own.messages, a) : null, a); }
     for (const a of add.posts || []) {
         const own = (p.posts || []).find(o => o.text && o.text === a.text || o.photo && o.photo === a.photo && o.time === a.time);
         for (const c of a.comments || []) tag('comment', own?.comments?.find(x => ckey(x) === ckey(c)), c);

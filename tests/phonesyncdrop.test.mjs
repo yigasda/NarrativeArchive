@@ -1172,3 +1172,16 @@ test('a bank made again stops 되돌리기 there: the rounds before it can\'t be
     c.p.money.at = Date.now() + 1;
     assert.ok(!data.canUndo(c.p));
 });
+
+test('a text to a name the phone has under another of that person\'s names goes in the thread there, not a new one', async () => {
+    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'texting Somang'), say('Mara', 'and Ivo')];
+    const c = setup(chat);
+    c.p.threads = [{ with: 'Somang Park', messages: [] }, { with: 'Ivo Kim', messages: [] }, { with: 'Ivo Park', messages: [] }];
+    c.p.contacts = [{ name: 'Somang Park' }];
+    c.p.where = { at: 1, people: [{ name: 'Somang Park', aka: ['소망'], city: 'Seoul', names: ['Seoul'], lives: 'KR', tz: 'Asia/Seoul' }] };
+    const ev = (id, at, w, text) => ({ id, at, quote: chat[at].mes, summary: id, date: '10-26', time: '12:00', phone: { threads: [{ with: w, messages: [{ from: 'me', text, time: '10-26 12:00' }] }], contacts: [{ name: w }] } });
+    await run(c.m, { now: '10-26 13:00', events: [ev('a', 2, '소망', '안녕'), ev('b', 2, 'Somang', 'hi'), ev('c', 3, 'Ivo', 'hey Ivo')] });
+    assert.deepEqual(c.p.threads.map(t => [t.with, t.messages.map(x => x.text)]).sort(),
+        [['Ivo', ['hey Ivo']], ['Ivo Kim', []], ['Ivo Park', []], ['Somang Park', ['안녕', 'hi']]].sort());
+    assert.deepEqual(c.p.contacts.map(x => x.name).sort(), ['Ivo', 'Somang Park']);
+});
