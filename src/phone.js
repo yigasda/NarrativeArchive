@@ -161,7 +161,7 @@ export async function openPhone(who = null) {
     // 상태창 날짜 순서: asked once per chat before the first make or reflection (closing it reads 월.일 and asks again next time)
     const askDateOrder = async () => {
         if (!needsDateOrder(m)) return;
-        const v = await askChoice('상태창 날짜를 어떻게 쓰세요?', '나중에 폰 설정에서 바꿀 수 있어요.', [{ v: 'md', label: '월.일', sub: '11.03 = 11월 3일' }, { v: 'dm', label: '일.월', sub: '03.11. = 11월 3일' }]);
+        const v = await askChoice('상태창 날짜를 어떻게 쓰세요?', '나중에 설정에서 바꿀 수 있어요.', [{ v: 'md', label: '월.일', sub: '11.03 = 11월 3일' }, { v: 'dm', label: '일.월', sub: '03.11. = 11월 3일' }]);
         if (v === 'md' || v === 'dm') await setDateOrder(m, v);
     };
     $root.on('click', '.pcf', function (e) { e.stopPropagation(); const b = e.target.closest('.pcf_ok, .pcf_no'); if (b) ask?.done(b.classList.contains('pcf_ok') ? (b.dataset.v || true) : false); else if (e.target === this) ask?.done(false); });
