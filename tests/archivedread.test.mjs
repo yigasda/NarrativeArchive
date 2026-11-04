@@ -674,7 +674,7 @@ test('반영\'s everyday records: two an answer, six a day, every app (texts and
     // (a voice memo may be an everyday one; a text with anyone from the story or PEOPLE AROUND)
     assert.ok(!T.sys.includes('only when the archive or chat shows the owner recorded one'));
     assert.ok(data.AI_SYS_PHONE.includes('only when the archive or chat shows the owner recorded one'));
-    assert.match(T.sys, /a text or a call with someone from the story or PEOPLE AROUND/);
+    assert.match(T.sys, /a text or a call with someone from the story or PEOPLE AROUND, the texts and calls anyone's phone gets: a login code, a parcel or card alert/);
     assert.match(T.sys, /- PEOPLE AROUND \(sometimes\)/);
     assert.match(T.input, /\[PEOPLE AROUND\]\n- Ivo \(이보\): Ren's older brother/);
     // later the same day: its own records, a text to Ivo and a diary entry among them
