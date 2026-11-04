@@ -1143,6 +1143,7 @@ async function updatePhone(m, owner) {
         p.at = Date.now();
         pruneDropped(s, phoneItems(p));
         p.syncLast.notes = p.syncLast.notes.filter(n => !n.endsWith('뺄 수 있어요') || s.dropped.some(d => n.startsWith(`대화 ${d.label}가`)));
+        delete p.clockHold;
         p.syncUndo = { ...undo, round: id, read: [...inRound], readFp: round.rows.map(r => bodyMark(r.text)), comments: undo.comments,
             items: ITEM_KEYS.flatMap(k => (p[k] || []).filter(x => x.id && !had.has(x.id)).map(x => [k, x.id])),
             msgs: p.threads.filter(t => msgs.has(t.id)).map(t => [t.id, t.messages.map(msgSig).filter(sg => !msgs.get(t.id).has(sg))]).filter(([, xs]) => xs.length),
@@ -1200,6 +1201,7 @@ export async function restoreRounds(m, scope) {
         // the hidden messages it read from an archive section stay read
         for (const [i, f] of r.hidden || []) (s.hiddenRead ||= {})[i] = f;
         s.rounds = [...(s.rounds || []).slice(-19), r.round];
+        delete p.clockHold;
         if (p.money) migrateBank(m, p);
         ensureIds(p);
     }
@@ -1361,6 +1363,7 @@ export async function undoRound(m, p) {
     s.rounds.pop();
     pruneDropped(s, phoneItems(p));
     p.now = u.now;
+    p.clockHold = true;
     if (u.year !== undefined) p.year = u.year;
     if (u.where !== undefined) { if (u.where) p.where = u.where; else delete p.where; }
     delete p.syncLast; delete p.syncUndo;
@@ -1498,7 +1501,11 @@ export const trackerWeather = t => { const w = weatherFrom(t); if (w) { const d 
 // the story's now: the newest status line on the owner's clock (statusMoment), else the phone's own. Read to now (no upto),
 // the later of the two: a text that came a few minutes after the status line is not in the future
 // upto: the story as it stood at that message (a request that read only so far)
+// right after 되돌리기 (until the next 반영 or 복구): the screen's clock stays where the phone was, its weather and health
+// days with it; otherwise it follows the newest status line in the chat, 반영 or not
+export const clockHeld = p => !!p?.clockHold;
 export function storyNow(p, upto = null, m = null) {
+    if (upto == null && p?.clockHold) upto = phoneAt(p);
     let at = '';
     try { at = statusMoment(p, upto, null, m)?.at || ''; } catch { /* no status window */ }
     // (and read up to the phone's clock: a fill's now is the phone's own, not an older status line's)

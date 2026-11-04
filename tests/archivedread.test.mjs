@@ -21,7 +21,7 @@ const map = {
     './inject.js': encoded(`export const applyInjection=()=>{};`),
     './knowledge.js': encoded(`export const knowledgeRows=()=>[];`),
     './people.js': encoded(`export const nameKey=s=>String(s).toLowerCase();export const nameRe=s=>new RegExp(s,'i');export const headingPlaces=()=>[];`),
-    './recall.js': encoded(`export const estTok=s=>s.length/4;`), './scenes.js': encoded(`export const recentTrackers=(n,o={})=>{const T=globalThis.__archTest;(T.trackLens||=[]).push((o.chat||T.chat).length);return T.trackers||[];};`),
+    './recall.js': encoded(`export const estTok=s=>s.length/4;`), './scenes.js': encoded(`export const recentTrackers=(n,o={})=>{const T=globalThis.__archTest;const len=(o.chat||T.chat).length;(T.trackLens||=[]).push(len);return (T.trackers||[]).filter(t=>!Number.isInteger(t.i)||t.i<len);};`),
     './sections.js': encoded(`export const RANGE_HEAD=/^(?:(\\S{1,12})\\s)?#(\\d+)\\s*([–—~-])\\s*#?(\\d+)(.*)$/;export const parseSections=t=>[...String(t).matchAll(/^## (.+)\\n[^#]*/gm)].map(x=>({title:x[1],start:x.index,end:x.index+x[0].length,group:false}));export const sectionKey=s=>s.title;export const splitTail=s=>[s,''];`),
     './translate.js': encoded(`export const glossaryEntries=()=>[];`), './world.js': encoded(`export const worldText=()=>'';`),
 };
@@ -309,7 +309,7 @@ test('a Korean status line in a Korean story: the owner\'s own city by its Korea
     });
     // a shop named after a city in another zone is no proof the scene is there
     c.p.where.people.push({ name: 'Varo', city: 'Paris', lives: 'FR', tz: 'Europe/Paris' });
-    await withTrackers([trk(3, '19:30', 'Paris Baguette 강남점 · 창가')], async () => {
+    await withTrackers([trk(2, '19:30', 'Paris Baguette 강남점 · 창가')], async () => {
         assert.notEqual(data.statusMoment(c.p).at, '10-27 03:30');
         assert.equal(data.statusMoment(c.p).at, '');
     });
@@ -468,4 +468,20 @@ test('an archive section after the read stretch is not sent as the story before 
     const i = T.input.indexOf('[ARCHIVE BEFORE]'), bf = i < 0 ? '' : T.input.slice(i, T.input.indexOf('\n\n[', i + 1) >>> 0 || undefined);
     assert.ok(!bf.includes('Busan'));
     assert.equal(data.syncLeft(c.p, c.m), 1);
+});
+
+test('되돌리기 holds the screen clock where the phone was until the next 반영; otherwise it follows the newest status line', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'off to work'), say('Mara', 'have a good day')]);
+    c.p.now = '10-26 08:00'; c.p.year = 2026; c.p.country = 'KR';
+    await withTrackers([{ ...trk(3, '09:10', '서울 · 회사'), date: '10.26' }], async () => {
+        assert.equal(data.storyNow(c.p), '10-26 09:10');
+        await run(c.m, { now: '10-26 09:10', events: [] });
+        assert.equal(data.storyNow(c.p), '10-26 09:10');
+        await data.undoRound(c.m, c.p);
+        assert.ok(data.clockHeld(c.p));
+        assert.equal(data.storyNow(c.p), '10-26 08:00');
+        await run(c.m, { now: '10-26 09:10', events: [] });
+        assert.ok(!data.clockHeld(c.p));
+        assert.equal(data.storyNow(c.p), '10-26 09:10');
+    });
 });
