@@ -67,9 +67,9 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
 /* list cards */
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box { background: var(--sv-card) !important; border: 1px solid var(--sv-line) !important; border-radius: 16px; --axr: 16px}
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row { padding: 15px 16px; border-top-color: var(--sv-line); --c-bct: var(--sv-line); }
-#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row > span:first-child { font-size: 1.071em !important; --axfs: 1.071em !important; gap: 3px}
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row > span:first-child { font-size: 1.071em !important; --axfs: 1.071em; gap: 3px}
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_box .na_set_row > span small { font-size: 0.8em !important; color: var(--sv-dim); }
-#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_set_row > .na_cfg_val { color: var(--sv-val); --axfg: var(--sv-val); font-size: 1em !important; --axfs: 1em !important}
+#na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_set_row > .na_cfg_val { color: var(--sv-val); --axfg: var(--sv-val); font-size: 1em !important; --axfs: 1em}
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val :is(select, input) { --c-fg: var(--sv-val); }
 #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_val > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_go > .na_svg, #na_settings .na_tab_pane[data-pane="config"].na_cfg_one .na_cfg_chev { color: var(--sv-val); --axfg: var(--sv-val)}
 .na_cc_note { flex: 1; min-width: 0; font-size: 0.86em; --axfs: 0.86em; color: var(--na-dim); --axfg: var(--na-dim); line-height: 1.4}

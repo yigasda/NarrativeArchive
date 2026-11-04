@@ -9,8 +9,8 @@
 .ax_topr { display: flex; align-items: center; gap: 8px; }
 .ax .ax_cb { width: 38px; height: 38px; border-radius: 50%; --axr: 50%; display: grid; place-items: center; color: #2a313b; --axfg: #2a313b; flex: none}
 .ax_cbsp { width: 38px; }
-.ax .ax_kp, .ax .ax_kp.na_ph_kochip { height: 32px; padding: 0 12px !important; border-radius: 16px !important; --axr: 16px !important; display: flex; align-items: center; gap: 4px; font-size: 13px !important; --axfs: 13px !important; font-weight: 600 !important; color: #8a929d !important; --axfg: #8a929d !important; background: var(--axbg) !important}
-.ax .ax_kp.on { color: var(--axd) !important; --axfg: var(--axd) !important}
+.ax .ax_kp, .ax .ax_kp.na_ph_kochip { height: 32px; padding: 0 12px !important; border-radius: 16px; --axr: 16px; display: flex; align-items: center; gap: 4px; font-size: 13px; --axfs: 13px; font-weight: 600 !important; color: #8a929d; --axfg: #8a929d; background: var(--axbg) !important}
+.ax .ax_kp.on { color: var(--axd); --axfg: var(--axd)}
 .ax_h1 { padding: 4px 22px 12px; display: flex; align-items: baseline; gap: 8px; flex: none; }
 .ax_h1 b { font-size: 27px; font-weight: 600; letter-spacing: -0.02em; }
 .ax_h1 span { font-size: 13.5px; --axfs: 13.5px; color: #6b7380}
@@ -70,7 +70,7 @@
 .ax_dock { position: absolute; left: 50%; transform: translateX(-50%); bottom: 26px; height: 60px; border-radius: 30px; --axr: 30px; display: flex; align-items: center; gap: 4px; padding: 0 7px; z-index: 4}
 .ax .ax_dock button { --axbg: none; --axsh: none; height: 46px; min-width: 46px; padding: 0 16px; border-radius: 23px; --axr: 23px; display: flex; align-items: center; justify-content: center; font-size: 13.5px; --axfs: 13.5px; font-weight: 600; color: #4d5562; --axfg: #4d5562}
 /* Keep the selected segment pill-shaped even under host button theme overrides. */
-#na_phl .ax .ax_dock > button, .na_phone .ax_dock > button { border-radius: 999px !important; --axr: 999px !important; overflow: hidden}
+#na_phl .ax .ax_dock > button, .na_phone .ax_dock > button { border-radius: 999px; --axr: 999px; overflow: hidden}
 .ax .ax_dock button.on { --axbg: var(--axc); --axsh: inset 0 1px 0 rgba(255, 255, 255, 0.8); color: var(--axd); --axfg: var(--axd)}
 .ax_ptop { display: flex; flex-direction: column; align-items: center; padding: 4px 0 18px; flex: none; }
 .ax_ring2 { padding: 4px; border-radius: 50%; --axr: 50%; display: grid; box-shadow: 0 8px 24px rgba(22, 27, 34, 0.08)}
@@ -87,11 +87,11 @@
 .ax_pg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 0 14px 8px; flex: none; }
 .ax_pq { aspect-ratio: 1; border-radius: 14px; --axr: 14px; display: grid; place-items: center; position: relative; overflow: hidden; cursor: pointer}
 .ax_pq > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.ax .ax_pq > .na_ph_draw.ax_dr { --axbg: rgba(255, 255, 255, 0.78); position: absolute; right: 6px; bottom: 6px; padding: 3px 9px !important; border-radius: 999px !important; --axr: 999px !important; font-size: 10.5px !important; --axfs: 10.5px !important; font-weight: 700 !important; color: #8a4a40 !important; --axfg: #8a4a40 !important}
+.ax .ax_pq > .na_ph_draw.ax_dr { --axbg: rgba(255, 255, 255, 0.78); position: absolute; right: 6px; bottom: 6px; padding: 3px 9px !important; border-radius: 999px; --axr: 999px; font-size: 10.5px; --axfs: 10.5px; font-weight: 700 !important; color: #8a4a40; --axfg: #8a4a40}
 .ax_photoone .ax_canvas { background: #0e1013; color: #fff; --axfg: #fff}
 .ax_photoone .ax_cb { --axbg: rgba(255, 255, 255, 0.12); --axsh: inset 0 1px 0 rgba(255, 255, 255, 0.18); color: #fff; --axfg: #fff}
 .ax_photoone .ax_kp { --axbg: rgba(255, 255, 255, 0.12); --axsh: inset 0 1px 0 rgba(255, 255, 255, 0.18); }
-.ax_photoone .ax_kp.on { color: #f0cbb5 !important; --axfg: #f0cbb5 !important}
+.ax_photoone .ax_kp.on { color: #f0cbb5; --axfg: #f0cbb5}
 .ax_ttl { flex: 1; text-align: center; font-size: 14.5px; --axfs: 14.5px; font-weight: 600}
 .ax_ttl small { display: block; font-size: 11.5px; color: rgba(255, 255, 255, 0.6); font-weight: 500; }
 .ax_pvimg { margin: 4px 14px 0; height: 420px; border-radius: 26px; --axr: 26px; display: grid; place-items: center; overflow: hidden; flex: none}
@@ -102,7 +102,7 @@
 .ax_pvcap .ax_k { font-size: 13.5px; --axfs: 13.5px; color: rgba(255, 255, 255, 0.62); --axfg: rgba(255, 255, 255, 0.62); margin-top: 3px}
 .ax_pvbtns { display: flex; gap: 8px; padding: 12px 14px 40px; }
 .ax .ax_pvbtns > button { --axbg: rgba(255, 255, 255, 0.1); flex: 1; text-align: center; padding: 13px 0; border-radius: 18px; --axr: 18px; font-size: 14.5px; --axfs: 14.5px; font-weight: 600; justify-content: center}
-.ax .ax_pvbtns > .na_ph_draw.ax_pvdraw { --axbg: #ecc3ae; color: #4a2420 !important; --axfg: #4a2420 !important; display: flex !important; border-radius: 18px !important; --axr: 18px !important; font-size: 14.5px !important; --axfs: 14.5px !important; padding: 13px 0 !important}
+.ax .ax_pvbtns > .na_ph_draw.ax_pvdraw { --axbg: #ecc3ae; color: #4a2420; --axfg: #4a2420; display: flex !important; border-radius: 18px; --axr: 18px; font-size: 14.5px; --axfs: 14.5px; padding: 13px 0 !important}
 /* 메모 */
 .ax_nd { user-select: text; -webkit-user-select: text; }
 .ax_ndt { padding: 2px 22px 6px; font-size: 12.5px; --axfs: 12.5px; color: #8a929d; --axfg: #8a929d}
@@ -154,9 +154,9 @@
 .ax_sw { width: 50px; height: 30px; border-radius: 15px; --axr: 15px; background: #e5e7eb; position: relative; flex: none; transition: background 0.2s}
 .ax_sw::after { content: ''; position: absolute; left: 2px; top: 2px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15); transition: transform 0.2s; }
 .ax_sw.on { background: #89b892; } .ax_sw.on::after { transform: translateX(20px); }
-.ax .ax_koline, .ax .ax_rw.na_ph_kochip { padding: 12px 14px 12px 18px !important; border-radius: 0 !important; --axr: 0 !important; background: var(--axbg, none) !important; color: inherit !important; --axfg: inherit !important; font-size: inherit !important; --axfs: inherit !important; font-weight: inherit !important}
+.ax .ax_koline, .ax .ax_rw.na_ph_kochip { padding: 12px 14px 12px 18px !important; border-radius: 0; --axr: 0; background: var(--axbg, none) !important; color: inherit; --axfg: inherit; font-size: inherit; --axfs: inherit; font-weight: inherit !important}
 .ax_themes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 18px 26px; }
-.ax .ax_tp { display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 15px; --axfs: 15px; padding: 0 !important; color: #161b22 !important; --axfg: #161b22 !important; font-weight: 400 !important}
+.ax .ax_tp { display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 15px; --axfs: 15px; padding: 0 !important; color: #161b22; --axfg: #161b22; font-weight: 400 !important}
 .ax_mini { width: 112px; height: 232px; border-radius: 20px; --axr: 20px; border: 4px solid #1b1b1d; overflow: hidden; position: relative; background: #eceef1; box-sizing: border-box; display: block}
 .ax_mini .b1 { position: absolute; left: -40px; top: -60px; width: 200px; height: 170px; border-radius: 50%; --axr: 50%; background: #a9b4c0; filter: blur(30px); opacity: 0.6}
 .ax_mini .b2 { position: absolute; left: -40px; bottom: -80px; width: 200px; height: 160px; border-radius: 50%; --axr: 50%; background: #9aa1ae; filter: blur(30px); opacity: 0.6}
@@ -223,7 +223,7 @@
 .ax_cthumb img, .ax_shot > img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ax_shot > img { position: absolute; inset: 0; }
 /* the ring is a shadow: a theme that strips button borders can't take it */
-.ax .ax_shut { --axbg: none; --axsh: inset 0 0 0 3px rgba(255, 255, 255, 0.9); width: 78px !important; height: 78px !important; border: 0 !important; border-radius: 50% !important; --axr: 50% !important; padding: 8px !important; box-sizing: border-box}
+.ax .ax_shut { --axbg: none; --axsh: inset 0 0 0 3px rgba(255, 255, 255, 0.9); width: 78px !important; height: 78px !important; border: 0 !important; border-radius: 50%; --axr: 50%; padding: 8px !important; box-sizing: border-box}
 .ax_shut span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: #fff; color: #111; }
 .ax_shut:disabled span { background: rgba(255, 255, 255, 0.6); }
 .ax_flip { width: 50px; height: 50px; border-radius: 50%; --axr: 50%; background: rgba(255, 255, 255, 0.12); display: grid; place-items: center}
@@ -233,7 +233,7 @@
 .ax_sheet .ax_k { font-size: 13.5px; --axfs: 13.5px; color: rgba(255, 255, 255, 0.7); --axfg: rgba(255, 255, 255, 0.7)}
 .ax_btns { display: flex; gap: 8px; margin-top: 14px; }
 .ax .ax_btns > button { --axbg: rgba(255, 255, 255, 0.14); flex: 1; text-align: center; padding: 11px 0; border-radius: 16px; --axr: 16px; font-size: 14.5px; --axfs: 14.5px; font-weight: 600; justify-content: center}
-.ax .ax_btns > .na_ph_draw.ax_camdraw { --axbg: #ecc3ae; color: #4a2420 !important; --axfg: #4a2420 !important; position: static; width: auto !important; margin: 0 !important; display: flex !important; justify-content: center; border-radius: 16px !important; --axr: 16px !important; font-size: 14.5px !important; --axfs: 14.5px !important; padding: 11px 0 !important}
+.ax .ax_btns > .na_ph_draw.ax_camdraw { --axbg: #ecc3ae; color: #4a2420; --axfg: #4a2420; position: static; width: auto !important; margin: 0 !important; display: flex !important; justify-content: center; border-radius: 16px; --axr: 16px; font-size: 14.5px; --axfs: 14.5px; padding: 11px 0 !important}
 /* ⋯ when its menu is open: the accent and an ✕ */
 .na_ph_more.on { border-color: var(--na-accent); color: var(--na-accent-fg, var(--na-accent)); --axfg: var(--na-accent-fg, var(--na-accent))}
 
