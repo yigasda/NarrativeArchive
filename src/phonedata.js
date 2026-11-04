@@ -1433,7 +1433,7 @@ YOU GET
 
 WHERE
 - "city": where the person is now, in the story's present. A trip or a stay counts; a birthplace or a past home doesn't.
-- "local": the same city as the story itself writes it, like "서울" ("" when it writes it as "city").
+- "local": the same city in the language the chat's messages and status lines are written in: "서울" for a chat in Korean, even when a card writes "Seoul" ("" when that is the same as "city").
 - "lives": the country they live in now, not where they were born or their nationality. Born in Germany, living in Korea: "KR".
 - "tz": the time zone of "city", like "Asia/Seoul".
 - The newest of the story wins over a card: a card that says Berlin, a story that has moved them to Seoul: Seoul.
