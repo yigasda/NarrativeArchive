@@ -692,7 +692,9 @@ export const markAfter = index => makeMark(ctx().chat || [], index);
 export function syncState(p) {
     if (!p?.sync?.marks?.base) return 'none';
     // the bank's and the investment's starts move with a deleted message too; one that can't be found again stays put
-    if (settleMarks(p.sync, ctx().chat || [], ['base', ...['money', 'invest'].filter(g => p.sync.marks[g])]).includes('base')) return 'lost';
+    // every app's mark follows a message deleted or put in before it (the life and delivery apps' too: their mark says
+    // which messages they took in, so a number off by one would skip one or take one twice)
+    if (settleMarks(p.sync, ctx().chat || [], ['base', ...['money', 'invest', 'life', 'delivery'].filter(g => p.sync.marks[g])]).includes('base')) return 'lost';
     p.sync.readChat ||= firstMark(p.sync);
     p.sync.scope = phoneChatScope(ctx());
     return 'ok';

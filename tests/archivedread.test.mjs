@@ -128,3 +128,15 @@ test('a round behind the life apps (filled further on) leaves their weather', as
     await run(c.m, { now: '10-26 13:00', events: [], weather: { place: 'Varo', date: '10-26', time: '13:00', cond: 'clear', temp: 20 } });
     assert.equal(c.p.life.weather.here.cond, 'snow');
 });
+
+test('the life and delivery marks follow a message deleted before them, like the bank\'s', async () => {
+    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning')];
+    for (let k = 0; k < 12; k++) chat.push(say(k % 2 ? 'Mara' : 'Ren', `line ${k} of the long afternoon`));
+    const c = setup(chat);
+    c.p.sync.marks.life = makeMark(chat, 10);
+    c.p.sync.marks.delivery = makeMark(chat, 9);
+    T.chat.splice(3, 1); // #3 gone: everything after moves up one
+    assert.equal(data.syncState(c.p), 'ok');
+    assert.equal(c.p.sync.marks.life.index, 9);
+    assert.equal(c.p.sync.marks.delivery.index, 8);
+});
