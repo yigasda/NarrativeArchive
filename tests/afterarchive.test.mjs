@@ -637,3 +637,21 @@ test('사는 나라: the bank, the money and the web go by where the owner lives
     p.lives = 'FR';
     assert.equal(data.homeCountry(p), 'FR');
 });
+
+test('위치 판독 also gives the people closest to the owner, from the cards and the rest, in the texts\' own words; none given keeps the ones there', async () => {
+    globalThis.__rows = rows(8);
+    const p = plainPhone({ country: 'DE', where: { at: 1, people: [] } });
+    const about = 'Ren\'s father and boss at the bank. '.repeat(3);
+    globalThis.__whereAnswer = { people: [], around: [{ name: 'Albrecht Sinclair', aka: ['Albrecht', 'Albrecht Sinclair'], about }, { name: 'Ren', about: 'the owner' }, { name: 'Nobody', about: '' },
+        ...['A1', 'A2', 'A3', 'A4', 'A5'].map(n => ({ name: n, about: `${n} is close` }))] };
+    try { await data.rereadPlaces({ ...m, phones: { ren: p } }, p); } finally { delete globalThis.__whereAnswer; }
+    assert.deepEqual(p.around.people.map(x => x.name), ['Albrecht Sinclair', 'A1', 'A2', 'A3', 'A4']);
+    assert.deepEqual(p.around.people[0].aka, ['Albrecht']);
+    assert.equal(p.around.people[0].about, about.trim());
+    assert.match(data.aroundBlock(p), /^\[PEOPLE AROUND\]\n- Albrecht Sinclair \(Albrecht\): Ren's father/);
+    globalThis.__whereAnswer = { people: [] };
+    try { await data.rereadPlaces({ ...m, phones: { ren: p } }, p); } finally { delete globalThis.__whereAnswer; }
+    assert.equal(p.around.people.length, 5);
+    assert.match(data.AI_SYS_WHERE, /- LOREBOOK \(sometimes\)/);
+    assert.match(data.AI_SYS_WHERE, /Compress the texts' own words and keep their details; do not sum up\. At most 300 tokens/);
+});

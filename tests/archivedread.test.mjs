@@ -656,26 +656,32 @@ test('a slow day: each 반영 the same day writes today\'s totals so far, never 
     assert.deepEqual([today().workout.kind, today().workouts, today().hr], ['Running', undefined, [58, 120]]);
 });
 
-test('반영\'s everyday records: two a day at most, none again on a slow day read in many rounds, never a diary entry or a call', async () => {
+test('반영\'s everyday records: two an answer, six a day, every app (texts and diary too), each round of a slow day', async () => {
     const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'off to work'), say('Mara', 'have a good one')]);
     c.p.now = '10-26 08:00'; c.p.year = 2026;
+    c.p.around = { at: 1, people: [{ name: 'Ivo', aka: ['이보'], about: 'Ren\'s older brother; Ren resents him and answers his texts late.' }] };
     const ev = (at, quote, phone, id = `e${at}`) => ({ id, at, quote, summary: id, date: '10-26', time: '09:00', phone });
     const note = (title, x = {}) => ({ title, text: title, time: '10-26 09:10', everyday: true, ...x });
     await run(c.m, { now: '10-26 09:30', events: [ev(2, 'off to work', {
         notes: [note('Einkaufsliste'), note('Zahnarzt anrufen'), note('Pflanzen gießen')],
-        diary: [{ date: '10-26', title: 'Tag', text: 'nichts', everyday: true }],
-        calls: [{ with: 'Mama', type: 'out', time: '10-26 09:05', min: 3, everyday: true }],
         searches: [{ q: 'Ren train times', time: '10-26 09:00' }] })] });
-    const guess = () => ['notes', 'photos', 'searches', 'diary', 'calls'].flatMap(k => c.p[k].filter(x => x.src === 'guess').map(x => `${k}:${x.title || x.caption || x.with}`));
+    const guess = () => [...['notes', 'photos', 'searches', 'diary', 'calls', 'voice'].flatMap(k => c.p[k].filter(x => x.src === 'guess').map(x => `${k}:${x.title || x.caption || x.with}`)),
+        ...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `text:${th.with}:${x.text}`))];
     assert.deepEqual(guess(), ['notes:Einkaufsliste', 'notes:Zahnarzt anrufen']);
-    assert.ok(c.p.searches.some(x => x.q === 'Ren train times'));
-    assert.match(T.sys, /EVERYDAY: on a story day these messages move into, 0 to 2 plain records/);
-    // the same day again, later: no more
+    assert.ok(c.p.searches.some(x => x.q === 'Ren train times' && x.src !== 'guess'));
+    assert.match(T.sys, /EVERYDAY: in every answer, 0 to 2 plain records/);
+    assert.match(T.sys, /A scene can carry on on the phone/);
+    assert.match(T.sys, /- PEOPLE AROUND \(sometimes\)/);
+    assert.match(T.input, /\[PEOPLE AROUND\]\n- Ivo \(이보\): Ren's older brother/);
+    // later the same day: its own records, a text to Ivo and a diary entry among them
     T.chat.push(say('Ren', 'lunch now'));
-    await run(c.m, { now: '10-26 12:30', events: [ev(4, 'lunch now', { photos: [{ caption: 'Himmel', time: '10-26 12:20', mood: 'cool', everyday: true }] })] });
-    assert.deepEqual(guess(), ['notes:Einkaufsliste', 'notes:Zahnarzt anrufen']);
-    // the next day: its own
-    T.chat.push(say('Ren', 'next morning'));
-    await run(c.m, { now: '10-27 08:30', events: [{ id: 'e5', at: 5, quote: 'next morning', summary: 'm', date: '10-27', time: '08:00', phone: { photos: [{ caption: 'Morgennebel', time: '10-27 08:10', mood: 'cool', everyday: true }] } }] });
-    assert.ok(guess().includes('photos:Morgennebel'));
+    await run(c.m, { now: '10-26 12:30', events: [ev(4, 'lunch now', { threads: [{ with: 'Ivo', messages: [{ from: 'Ivo', text: 'Mittag?', time: '10-26 12:10', everyday: true }] }],
+        diary: [{ date: '10-26', title: 'Mittag', text: 'Ivo schreibt wieder.', everyday: true }] })] });
+    assert.deepEqual(guess().sort(), ['diary:Mittag', 'notes:Einkaufsliste', 'notes:Zahnarzt anrufen', 'text:Ivo:Mittag?'].sort());
+    // six a day at most
+    for (const [i, h] of [[5, '14'], [6, '16'], [7, '18']]) {
+        T.chat.push(say('Ren', `later ${i}`));
+        await run(c.m, { now: `10-26 ${h}:30`, events: [ev(i, `later ${i}`, { photos: [{ caption: `Foto ${i}a`, time: `10-26 ${h}:10`, everyday: true }, { caption: `Foto ${i}b`, time: `10-26 ${h}:20`, everyday: true }] })] });
+    }
+    assert.equal(guess().length, 6);
 });
