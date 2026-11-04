@@ -87,6 +87,8 @@ const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how th
   "mails": [{ "from": sender, "subject", "ks": Korean subject, "text", "ko", "time", "unread": true or false }],
   "diary": [{ "date": "MM-DD", "title", "kt": Korean title, "text", "ko" }],
   "voice": [{ "title", "kt", "text", "ko", "time", "sec", "place" }] only when the archive or chat shows the owner recorded one`;
+// (반영: a voice memo may be an everyday one too, so the 폰 만들기 limit is left off there)
+const VOICE_ONLY = ' only when the archive or chat shows the owner recorded one';
 const PHONE_LAST = `Any item may carry "ev": a short tag for one story event, the same on every item that comes from it (the flight's mail, its event and its photo all "ev": "berlin-flight").
 A booking the story has carries the details a real one would (a booking number, a seat, a gate), made up to fit. Never a booking, a trip or a purchase the story doesn't have.`;
 
@@ -161,7 +163,7 @@ WHAT IS NEW
 - MESSAGES READ BEFORE, NOW CHANGED were already put on the phone: give their events the ids listed there${split ? '' : '; a payment in them is that same payment, its amount corrected if it changed'}.
 ${split ? `- A scene that only touches these apps (a taxi paid, a basket filled${invest ? ', a share price mentioned' : ''}) is still an event, with its "apps".\n` : ''}- Small everyday things around an event are fine: how a text was worded, a photo of the place, a search they would make.
 - A scene can carry on on the phone: after a fight, a date or a job given face to face, the texts they would send each other later, in their own voice. Nothing the story contradicts, and no new facts or plans.
-- EVERYDAY: in every answer, 0 to 2 plain records of the owner's life in the hours these messages cover, from their habits and PEOPLE AROUND (a shopping list, a search, a photo, a mail, a reminder, a post, a few diary lines, a voice memo, a text or a call with someone close), with "everyday": true, in that time's event's "phone". As those people are, with what they feel; no new facts, events, plans or secrets.
+- EVERYDAY: in every answer, 0 to 2 plain records of the owner's life in the hours these messages cover, from their habits and PEOPLE AROUND (a shopping list, a search, a photo, a mail, a reminder, a post, a few diary lines, a voice memo, a text or a call with someone from the story or PEOPLE AROUND), with "everyday": true, in that time's event's "phone". As those people are, with what they feel; no new facts, events, plans or secrets.
 - People: only people the story or PEOPLE AROUND has. A relationship word (girlfriend, ex, husband, boss) only if the messages or archive use it for them.
 - A diary entry holds what these messages show and what the owner feels about it, as the story and PEOPLE AROUND show them; no new secrets or events.
 
@@ -220,7 +222,7 @@ ${money ? `Also in "money" when these messages show them: "newAccount": { "kind"
 ` : ''}In "events", a plan moved or called off is its item again with "was": the date it had, or "cancelled": true. In "threads", a text the owner deleted is { "text", "deleted": true }.
 Items in "phone":
 {
-${PHONE_ITEMS}${life ? `,
+${PHONE_ITEMS.replace(VOICE_ONLY, '')}${life ? `,
   "alarms": [{ "change": an id or "", "time", "label", "ko", "days": the weekdays it repeats or [], "date": "MM-DD" for a one-time alarm, "on", "wake", "then", "snooze", "snoozeCount", "sound" }],
   "files": [{ "change": an id or "", "name", "kind", "folder": one of LIFE NOW's "folders" (downloads are "Downloads"), or a new one the story makes, "size": KB, "time", "from", "pages", "length": "M:SS" for audio or video, "tag": "red" | "orange" | "", "private", "preview", "look": what it shows (a picture or video: "sea" | "city" | "night" | "food" | "hills" | "pet" | "sunset" | "mountain" | "snow" | "flower" | "interior" | "concert" | "paper" | "screenshot" | "map"; a document: "ticket" (a flight or train ticket, "preview": "carrier · from → to · date") | "receipt" | "invoice" | "cv" | "letter" | "certificate" | "recipe" | "medical" | "menu" | "contract" | "notes"; audio: "voice" | "music"), "ko", "opened", "deleted": true when removed }],
   "health": [{ "date": the day they woke, "sleep", "wake", "woke": times awake in the night, "steps", "km", "floors", "hr": [low, high], "workouts": [{ "kind", "time", "min", "km" }], "coffee": cups, "coffeeKind", "water": litres, "weight": kg only when they weighed, "screen": { "apps": { app name: minutes }, "pickups", "late": "HH:MM" } }],

@@ -671,6 +671,10 @@ test('반영\'s everyday records: two an answer, six a day, every app (texts and
     assert.ok(c.p.searches.some(x => x.q === 'Ren train times' && x.src !== 'guess'));
     assert.match(T.sys, /EVERYDAY: in every answer, 0 to 2 plain records/);
     assert.match(T.sys, /A scene can carry on on the phone/);
+    // (a voice memo may be an everyday one; a text with anyone from the story or PEOPLE AROUND)
+    assert.ok(!T.sys.includes('only when the archive or chat shows the owner recorded one'));
+    assert.ok(data.AI_SYS_PHONE.includes('only when the archive or chat shows the owner recorded one'));
+    assert.match(T.sys, /a text or a call with someone from the story or PEOPLE AROUND/);
     assert.match(T.sys, /- PEOPLE AROUND \(sometimes\)/);
     assert.match(T.input, /\[PEOPLE AROUND\]\n- Ivo \(이보\): Ren's older brother/);
     // later the same day: its own records, a text to Ivo and a diary entry among them
