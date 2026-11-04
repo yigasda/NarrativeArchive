@@ -40,13 +40,14 @@ export async function ensureWealth(m,p,request,{refresh=false}={}) {
     try { return await run; } finally { pending.delete(p); }
 }
 export const wealthBlock = (plan,kind) => `[FINANCIAL SCALE]\n${JSON.stringify({currency:plan.currency,target:plan[kind],basis:plan.basis})}\nMeet this current ${kind} range. Use evidence-backed amounts first. This is a generation budget, not a bank transfer. Return required FX for the evaluation date; do not change existing quotes. Adjust quantities/cash, not public prices, to meet the investment range.`;
-export function wealthDate(m,p) {
+// now: the story's moment the request stands at (default the phone's now)
+export function wealthDate(m,p,now=p?.now) {
     const date=p.money?.fxDate || p.investment?.date;
     if (/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return date;
     // the year only from a date the archive writes (yearIn): a bare number may be money or the past
     const full=[...String(m.text || '').matchAll(/(?<!\d)((?:19|20)\d{2})[-/.](\d{2})[-/.](\d{2})(?!\d)/g)].at(-1);
     const year=p.noYear ? '' : p.year ? String(p.year) : yearIn(m.text);
-    return year && /^\d{2}-\d{2}/.test(p.now || '') ? `${year}-${p.now.slice(0,5)}` : full ? `${full[1]}-${full[2]}-${full[3]}` : '';
+    return year && /^\d{2}-\d{2}/.test(now || '') ? `${year}-${now.slice(0,5)}` : full ? `${full[1]}-${full[2]}-${full[3]}` : '';
 }
 export function addWealthFX(m,rows,date) {
     for(const x of (Array.isArray(rows)?rows:[]).slice(0,30)) {

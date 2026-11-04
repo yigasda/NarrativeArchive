@@ -3,7 +3,7 @@ import { wealthBlock, wealthCheck, investmentWealthRows } from './wealth.js';
 import { askDraft } from './ai.js';
 import { num, parseJson, yearIn } from './phoneparse.js';
 import { ctx, saveMeta } from './core.js';
-import { sideRequest, storyNow, prepareWealth, readMark, readNote } from './phonedata.js';
+import { sideRequest, storyNow, prepareWealth, readMark, readNote, windowOf, nowAt } from './phonedata.js';
 import { syncOf, makeMark, exclusive } from './phonesync.js';
 import { phoneChatScope } from './phonestory.js';
 import { baseline, reviseBaseline, cash, currency, finance, finite, uid, positions, addPrice, migrateBank, fx, quoteKey } from './finance.js';
@@ -101,7 +101,8 @@ export const validDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '') && !Number.isN
 export function investmentDate(m, p) {
     if (validDate(p.investment?.date)) return p.investment.date;
     // the year only from a date the archive writes, never a bare number (it may be money or the past)
-    const day = storyNow(p).slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : yearIn(m.text);
+    // the story's day where an investment fill would stop reading (now, when it reads to the end)
+    const day = storyNow(p, nowAt(windowOf(m))).slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : yearIn(m.text);
     const date = year && day ? `${year}-${day}` : '';
     return validDate(date) ? date : '';
 }

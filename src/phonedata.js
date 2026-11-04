@@ -474,18 +474,19 @@ export const readMark = g => (g && !g.all ? markAfter(g.to) : null);
 export const readNote = g => { if (g && !g.all) globalThis.toastr?.info(`아카이브 뒤 메시지가 많아서 #${g.from}–#${g.to}까지 읽었어요. 나머지 ${g.left}개는 반영으로 이어서 채워져요`, '캐릭터 휴대폰'); };
 // the story's year: the phone's own (carried over New Year), else one written in a date in the archive, the newest status
 // lines or (no archive) the chat; none for a story that never dates itself (a fantasy calendar, an undated present)
-export function storyYear(m, p = null) {
+// upto: a request that read only up to that message takes the status lines up to it (see nowAt)
+export function storyYear(m, p = null, upto = null) {
     // the owner's own choice in 날짜 및 시간: this year, or none
     if (p?.noYear) return '';
     if (p?.year) return String(p.year);
     let tracks = '';
-    try { tracks = recentTrackers(5).map(t => t.date || '').join('\n'); } catch { /* no status lines */ }
+    try { tracks = recentTrackers(5, upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) }).map(t => t.date || '').join('\n'); } catch { /* no status lines */ }
     return yearIn(m.text) || yearIn(tracks) || (noArchive(m) ? yearIn(recentForCheck(1e9).join('\n')) : '');
 }
 // a phone's year, once: one the story writes in a date, else none (설정 › 날짜 및 시간 changes it); true when it was set now
-export function ensureYear(m, p) {
+export function ensureYear(m, p, upto = null) {
     if (!p || p.year || p.noYear) return false;
-    const y = Number(storyYear(m, p));
+    const y = Number(storyYear(m, p, upto));
     if (y) p.year = y; else p.noYear = true;
     return true;
 }
@@ -523,7 +524,7 @@ export function setStoryYear(m, p, year) {
     return n;
 }
 // what the model is told of the year: a year in any text is this one (nothing when it is unknown)
-const yearBlock = (m, p) => { const y = storyYear(m, p); return y ? `[STORY YEAR]\n${y}` : ''; };
+const yearBlock = (m, p, upto = null) => { const y = storyYear(m, p, upto); return y ? `[STORY YEAR]\n${y}` : ''; };
 // the archive block, or (budget) the chat in its place, then no RECENT CHAT: it is in there
 const archiveBlock = (m, ar, head, budget) => (budget && noArchive(m) ? `[${head} — none written yet: the chat so far is the story]\n${chatStory(budget) || '(empty)'}` : `[${head}]\n${ar}`);
 function archiveFor(m, after = -1) {
@@ -594,7 +595,7 @@ function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', 
         world ? `[WORLD]\n${world}` : '',
         lore ? `[LOREBOOK]\n${lore}` : '',
         afterBlock(gap) || (recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : ''),
-        yearBlock(m, p),
+        yearBlock(m, p, nowAt(gap)),
         `[OWNER]\n${owner}`,
         profile, blindBlock(m, owner),
         namesBlock(m),
@@ -671,7 +672,7 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         m.phones[key] = mergePhone(base, got);
     }
     const p = m.phones[key];
-    ensureYear(m, p);
+    ensureYear(m, p, nowAt(gap));
     if(m.phoneProfiles) delete m.phoneProfiles[key];
     ensureIds(p);
     p.upto = lastEnd(m);
@@ -1413,7 +1414,7 @@ export async function sideRequest(m, owner, blocks, { profile, money = false, st
         archiveBlock(m, archiveFor(m, -1).text || '(empty)', 'ARCHIVE', story),
         world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
         afterBlock(gap) || (recent && !(story && noArchive(m)) ? `[RECENT CHAT]\n${recent}` : ''),
-        yearBlock(m, m.phones?.[nameKey(owner)] || null), `[OWNER]\n${owner}`, profileText, blindBlock(m, owner), ...blocks, namesBlock(m),
+        yearBlock(m, m.phones?.[nameKey(owner)] || null, nowAt(gap)), `[OWNER]\n${owner}`, profileText, blindBlock(m, owner), ...blocks, namesBlock(m),
     ].filter(Boolean).join('\n\n');
 }
 // an answer without a currency takes the owner's country's, not a guess at euros
@@ -1438,22 +1439,24 @@ export function parseMoney(raw, country = '') {
     };
 }
 // what the phone already holds, so the money side reuses its event tags
-const moneyContext = p => JSON.stringify({ now: p.now, mails: (p.mails || []).slice(-8).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })), events: real(p.events).slice(-8).map(x => ev(x, { title: x.title, date: x.date, time: x.time })), searches: real(p.searches).slice(-6).map(x => ev(x, { q: x.q, time: x.time })),
+const moneyContext = (p, now = p.now) => JSON.stringify({ now, mails: (p.mails || []).slice(-8).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })), events: real(p.events).slice(-8).map(x => ev(x, { title: x.title, date: x.date, time: x.time })), searches: real(p.searches).slice(-6).map(x => ev(x, { q: x.q, time: x.time })),
     ...(p.delivery?.orders?.length ? { deliveries: p.delivery.orders.filter(o => o.status !== 'cancelled').slice(-12).map(o => ev(o, { shop: o.shop, time: o.time, total: dlvTotal(o) })) } : {}) });
 export const prepareWealth = (m,p,refresh=false) => ensureWealth(m,p,()=>sideRequest(m,p.owner,[`[OWNER COUNTRY]\n${p.country || ''}`,`[ACCOUNT CURRENCIES]\n${JSON.stringify((p.money?.bank?.accounts || []).map(a=>a.currency))}`],{profile:p.financeProfile,money:true}),{refresh});
 export const fillMoney = (m, p, opts = {}) => exclusive('fill', () => makeMoney(m, p, opts));
 async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null } = {}) {
     let mark = markNow();
-    const read = {};
+    // what it reads after the archive; its day is the story's where that stops (now, when it reads to the end), not
+    // the phone's now from when it was made
+    const read = { gap: windowOf(m) }, at = storyNow(p, nowAt(read.gap)) || p.now;
     migrateBank(m, p);
     const old = p.money, rebuild = !!old && regenerateBalances;
     const plan = wealthPlan || await prepareWealth(m,p,regenerateBalances);
-    const date = wealthDate(m,p);
+    const date = wealthDate(m,p,at);
     const accountState = () => JSON.stringify([p.money,p.financeProfile,finance(m)]);
     const before = accountState();
     const preserved = rebuild ? `[REBUILD ACCOUNTS]\n${JSON.stringify(old.bank.accounts.map(({id,kind,name,last4,currency})=>({id,kind,name,last4,currency})))}\n[MONEY ALREADY MOVED]\n${JSON.stringify(old.bank.accounts.map(a=>({id:a.id,currency:a.currency,entries:finance(m).accounts[`${a.id}:${a.currency}`]?.entries || {}})))}` : old ? `[EXISTING ACCOUNTS]\n${JSON.stringify(old.bank.accounts)}` : '';
     const system = AI_SYS_MONEY + (rebuild ? MONEY_REBUILD : '');
-    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p)}`,preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,`[SAVED RATES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`],{profile:p.financeProfile,money:true,read});
+    const input = await sideRequest(m,p.owner,[`[PHONE NOW]\n${moneyContext(p, at)}`,preserved,wealthBlock(plan,'deposits'),`[EVALUATION DATE]\n${date}`,`[SAVED RATES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).filter(([k])=>k.startsWith('FX:')).map(([k,book])=>[k,book[date]])))}`],{profile:p.financeProfile,money:true,read});
     mark = readMark(read.gap) || mark;
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {

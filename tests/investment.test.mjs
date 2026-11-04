@@ -6,7 +6,7 @@ import * as finance from '../src/finance.js';
 const encoded = s => 'data:text/javascript;base64,'+Buffer.from(s).toString('base64');
 const core = encoded(`export const saveMeta=async()=>{globalThis.__investTest.saved++}; export const getMeta=()=>globalThis.__investTest.meta; export const ctx=()=>globalThis.__investTest.context||{};`);
 const ai = encoded(`export const askDraft=async(input, options)=>{if(options.system.includes('Set a compact personal financial scale')){(globalThis.__investTest.wealthInputs ||= []).push(input);return JSON.stringify({currency:'EUR',deposits:{min:0,max:1e15},investments:{min:0,max:1e15},basis:'fixture'})}globalThis.__investTest.inputs.push({input,...options}); if(globalThis.__investTest.error)throw Error('network'); return JSON.stringify(globalThis.__investTest.answers?.length ? globalThis.__investTest.answers.shift() : globalThis.__investTest.answer)};`);
-const data = encoded(`export const readMark=()=>null; export const readNote=()=>{}; export const sideRequest=async(m,owner,blocks)=>m.text+'\\n'+blocks.join('\\n'); export const prepareWealth=async()=>({currency:'EUR',deposits:{min:0,max:1e15},investments:{min:0,max:1e15},basis:'fixture'}); export const storyNow=p=>p.now||''; export const fmtDate=(p,v)=>v; export const fmtTime=(p,v)=>v; export const koOn=()=>true; export const listTime=(p,v)=>v; export const fullDate=(p,v)=>{const [y,mo,d]=String(v).split('-');return y+'. '+Number(mo)+'. '+Number(d)+'.';}; export const localeOf=()=>'en-US'; export const clockOf=(p,v)=>String(v||''); export { byStory, gapDays, giftOf } from '${new URL('../src/phoneparse.js',import.meta.url).href}';`);
+const data = encoded(`export const readMark=()=>null; export const windowOf=()=>null; export const nowAt=()=>null; export const readNote=()=>{}; export const sideRequest=async(m,owner,blocks)=>m.text+'\\n'+blocks.join('\\n'); export const prepareWealth=async()=>({currency:'EUR',deposits:{min:0,max:1e15},investments:{min:0,max:1e15},basis:'fixture'}); export const storyNow=p=>p.now||''; export const fmtDate=(p,v)=>v; export const fmtTime=(p,v)=>v; export const koOn=()=>true; export const listTime=(p,v)=>v; export const fullDate=(p,v)=>{const [y,mo,d]=String(v).split('-');return y+'. '+Number(mo)+'. '+Number(d)+'.';}; export const localeOf=()=>'en-US'; export const clockOf=(p,v)=>String(v||''); export { byStory, gapDays, giftOf } from '${new URL('../src/phoneparse.js',import.meta.url).href}';`);
 const apps = encoded(`export const AX={}; export const ax=()=>''; export const axBar=()=>'';export const axCb=()=>'';export const axH1=t=>'<h1>'+t+'</h1>';export const axInd=()=>'';export const axTop=()=>'';export const axDay=(p,n,d)=>d;export const axFind=()=>'';export const axKp=()=>'';export const axLetter=()=>'';export const axTint=()=> '#ffffff';export const busyHtml='';`);
 const util=encoded(`export const esc=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');`);
 const financeURL=pathToFileURL(new URL('../src/finance.js',import.meta.url).pathname).href;
@@ -256,7 +256,7 @@ test('bank creation and explicit rebuild include the chosen owner profile, not o
 });
 test('investment creation passes its selected profile into the source request',async()=>{
  const {m,p}=setup();p.financeProfile={type:'lore',book:'Family',id:'4'};
- const proxy=encoded(`export const prepareWealth=async()=>({currency:'EUR',deposits:{min:0,max:1e15},investments:{min:0,max:1e15},basis:'fixture'});export const storyNow=p=>p.now;export const readMark=()=>null;export const readNote=()=>{};export const sideRequest=async(m,owner,blocks,options)=>{globalThis.__investTest.profileOptions=(({read,...o})=>o)(options||{});return m.text+'\\n'+blocks.join('\\n')};`);
+ const proxy=encoded(`export const prepareWealth=async()=>({currency:'EUR',deposits:{min:0,max:1e15},investments:{min:0,max:1e15},basis:'fixture'});export const storyNow=p=>p.now;export const readMark=()=>null; export const windowOf=()=>null; export const nowAt=()=>null;export const readNote=()=>{};export const sideRequest=async(m,owner,blocks,options)=>{globalThis.__investTest.profileOptions=(({read,...o})=>o)(options||{});return m.text+'\\n'+blocks.join('\\n')};`);
  const actual=await load('investdata.js',{'./wealth.js':wealthURL,'./ai.js':ai,'./core.js':core,'./phonedata.js':proxy,'./finance.js':financeURL});
  await actual.fillInvestment(m,p,'2026-10-30');assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile,money:true});
  await actual.fillInvestment(m,p,'2026-10-30',{regenerate:true});assert.deepEqual(globalThis.__investTest.profileOptions,{profile:p.financeProfile,money:true});
@@ -496,4 +496,13 @@ test('the stock chart draws the price paid on a trade day, and "all" reaches bac
  p.investment.trades.push({id:'old-buy',kind:'buy',symbol:sym,currency:p.investment.securities[0].currency,date:'2026-05-04',quantity:1,price:82,fee:0});
  const all=dataMod.chartDates(m,p.investment,sym,'all');assert.ok(all[0]<='2026-05-05');
  const html=ui.investmentScreen(m,p,'10-30','stock',`${sym}~all`,false);assert.match(html,/aria-label="일봉 차트"/);assert.match(html,/82[.,]00/);
+});
+
+test('the money fill dates its balances at the story\'s moment it read up to, not the phone\'s old now', async () => {
+    const w = await import(wealthURL);
+    const p = { year: 2026, now: '10-20 10:00' };
+    assert.equal(w.wealthDate({ text: '' }, p), '2026-10-20');
+    assert.equal(w.wealthDate({ text: '' }, p, '10-26 12:00'), '2026-10-26');
+    // a date the owner set stays
+    assert.equal(w.wealthDate({ text: '' }, { ...p, money: { fxDate: '2026-09-01' } }, '10-26 12:00'), '2026-09-01');
 });
