@@ -488,7 +488,7 @@ export const fillLife = (m, p, { screenAgain = false } = {}) => exclusive('fill'
     }
     p.life = { ...life, at: storyNow(p, nowAt(last)) || p.now || '' };
     // the last round's 되돌리기 would take its records out of an app made again since: no more
-    delete p.syncUndo;
+    delete p.syncUndo; delete p.syncUndos;
     // a reflection reads on from here (a phone with no reading record yet gets one, so it isn't read twice); with no
     // clock, the last message there was when the fill began, not one that came while it wrote
     syncOf(p, phoneChatScope(ctx())).marks.life = readMark(last) || mark0;
@@ -613,7 +613,7 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
     const mins = t => { const mt = /(\d{2}):(\d{2})/.exec(String(t || '').slice(5)); return mt ? mt[1] * 60 + Number(mt[2]) : null; };
     const twin = o => kept.some(k => (o.ev && k.ev === o.ev) || !(o.ev && k.ev && o.ev !== k.ev) && plain(k.shop) === plain(o.shop) && dayGap(String(k.time).slice(0, 5), String(o.time).slice(0, 5)) === 0 && (mins(k.time) === null || mins(o.time) === null || Math.abs(mins(k.time) - mins(o.time)) <= 60));
     p.delivery = { ...d, orders: [...d.orders.filter(o => !twin(o)), ...kept].sort(byStory(p.now)), look: deliveryLook(p), at, nearbyAt: String(at).slice(0, 5), city: homeCity(p) };
-    delete p.syncUndo;
+    delete p.syncUndo; delete p.syncUndos;
     syncOf(p, phoneChatScope(ctx())).marks.delivery = readMark(last) || mark0;
     ensureIds(p);
     payDeliveries(m, p);

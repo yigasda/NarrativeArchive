@@ -576,6 +576,7 @@ export function setStoryYear(m, p, year) {
             // the copies 되돌리기 and 빼기 compare against move too (else a moved record reads as changed by hand and stays),
             // and 되돌리기 puts back the year it had moved to
             if (q.syncUndo) { q.syncUndo = shiftAll(q.syncUndo, n); if (q.syncUndo.year) q.syncUndo.year += n; }
+            if (q.syncUndos) q.syncUndos = q.syncUndos.map(u => { const v = shiftAll(u, n); if (v.year) v.year += n; return v; });
             for (const e of Object.values(q.sync?.events || {})) if (e?.effects) e.effects = shiftAll(e.effects, n);
         }
         // this browser's record of unsaved rounds (복구) too
@@ -740,7 +741,7 @@ async function makePhone0(m, owner, { update = false, apps = null } = {}) {
         const inUnseen = i => Number.isInteger(i) && unseen.some(([a, b]) => i >= a && i <= b);
         if (unseen.length) for (const k of part) if (LISTS.includes(k)) p[k] = [...p[k], ...fresh(k, p[k], (was[k] || []).filter(x => x.froms?.length ? x.froms.every(f => inUnseen(f.at)) : !!x.ev && inUnseen(p.sync?.events?.[x.ev]?.at)))].slice(-CAP[k]);
         // the last round's 되돌리기 would put back the old app's records: no more
-        delete p.syncUndo;
+        delete p.syncUndo; delete p.syncUndos;
         ensureIds(p);
         p.at = Date.now();
         await saveMeta();
@@ -952,7 +953,7 @@ async function updatePhone(m, owner) {
         const archIn = [];
         for (const x of archivedUnread(s, sections, rows, chatRows())) { if (archIn.length && archIn.reduce((n, y) => n + estTok(y.text), 0) + estTok(x.text) > ARCH_TOKENS) break; archIn.push(x); }
         if (!round.rows.length && !archIn.length) {
-            if (shifted) delete p.syncUndo;
+            if (shifted) { delete p.syncUndo; delete p.syncUndos; }
             // nothing new: the last round's result stays up, with its 되돌리기 while it can still be undone
             p.syncLast = p.syncUndo && canUndo(p) && p.syncLast?.checked ? { ...p.syncLast, notes: [...(p.syncLast.notes || []), ...swiped] } : { checked: 0, remaining: 0, apps: [], failed: [], notes: swiped, at: Date.now() };
             await saveMeta(); return p;
@@ -1176,7 +1177,12 @@ async function updatePhone(m, owner) {
         pruneDropped(s, phoneItems(p));
         p.syncLast.notes = p.syncLast.notes.filter(n => !n.endsWith('뺄 수 있어요') || s.dropped.some(d => n.startsWith(`대화 ${d.label}가`)));
         delete p.clockHold;
-        p.syncUndo = { ...undo, round: id, read: [...inRound], readFp: round.rows.map(r => bodyMark(r.text)), comments: undo.comments,
+        // 되돌리기 goes back up to 5 rounds: the one before stays below this one while it is the round just before (and the bank
+        // and investments weren't made again since)
+        const below = p.syncUndo && s.rounds.at(-2) === p.syncUndo.round && p.money?.at === p.syncUndo.moneyAt && p.investment?.at === p.syncUndo.investAt;
+        p.syncUndos = below ? [...(p.syncUndos || []), p.syncUndo].slice(-4) : [];
+        if (!p.syncUndos.length) delete p.syncUndos;
+        p.syncUndo = { ...undo, round: id, last: structuredClone(p.syncLast), read: [...inRound], readFp: round.rows.map(r => bodyMark(r.text)), comments: undo.comments,
             items: ITEM_KEYS.flatMap(k => (p[k] || []).filter(x => x.id && !had.has(x.id)).map(x => [k, x.id])),
             msgs: p.threads.filter(t => msgs.has(t.id)).map(t => [t.id, t.messages.map(msgSig).filter(sg => !msgs.get(t.id).has(sg))]).filter(([, xs]) => xs.length),
             effects: [...added.flatMap(x => x.effects || []), ...late.flatMap(x => x.effects || []), ...roundFx], byEvent: byEvent([...added, ...late]), after: structuredClone(mergedState(p)) };
@@ -1420,7 +1426,10 @@ export async function undoRound(m, p) {
     p.clockHold = true;
     if (u.year !== undefined) p.year = u.year;
     if (u.where !== undefined) { if (u.where) p.where = u.where; else delete p.where; }
-    delete p.syncLast; delete p.syncUndo;
+    // the round before comes up to be undone next, with its result
+    const prev = (p.syncUndos || []).pop();
+    if (!p.syncUndos?.length) delete p.syncUndos;
+    if (prev) { p.syncUndo = prev; if (prev.last) p.syncLast = structuredClone(prev.last); else delete p.syncLast; } else { delete p.syncLast; delete p.syncUndo; }
     if (p.money) migrateBank(m, p);
     const scope = phoneChatScope(ctx());
     journalWrite(scope, journalRead(scope).filter(r => r.round !== u.round));

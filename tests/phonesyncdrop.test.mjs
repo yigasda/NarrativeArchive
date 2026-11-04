@@ -1138,3 +1138,37 @@ test('two messages both gone (an order and one telling it again): 빼기 in eith
         assert.deepEqual([c.p.money.orders.length, c.p.money.tx.length, c.bank()], [0, 0, 100000], first);
     }
 });
+
+test('되돌리기 goes back round by round (up to 5): each undo brings the round before up, and all of them back to the start', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning')]);
+    const was = JSON.stringify({ notes: c.p.notes, threads: c.p.threads, now: c.p.now }), bank0 = c.bank();
+    const rounds = [['a note about the lunch', 'Lunch', -9000], ['a note about the taxi ride', 'Taxi', -12000], ['a note about the cinema', 'Cinema', -15000]];
+    let k = 2;
+    for (const [text, title, amount] of rounds) {
+        T.chat.push(say('Ren', text));
+        await run(c.m, { now: `10-26 1${k}:00`, events: [{ id: title.toLowerCase(), at: k, quote: text.slice(0, 20), summary: title, date: '10-26', time: `1${k}:00`, phone: { notes: [{ title, text: title }] },
+            money: { moves: [{ account: '1111', amount, who: title, kind: 'card', occurrence: 'new' }] } }] });
+        k++;
+    }
+    assert.equal(c.p.notes.length, 3);
+    assert.equal(c.p.syncUndos.length, 2);
+    for (const left of [2, 1, 0]) {
+        assert.ok(data.canUndo(c.p));
+        await data.undoRound(c.m, c.p);
+        assert.equal(c.p.notes.length, left);
+    }
+    assert.ok(!data.canUndo(c.p));
+    assert.equal(JSON.stringify({ notes: c.p.notes, threads: c.p.threads, now: c.p.now }), was);
+    assert.equal(c.bank(), bank0);
+});
+
+test('a bank made again stops 되돌리기 there: the rounds before it can\'t be undone', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'a note about lunch')]);
+    await run(c.m, { now: '10-26 12:00', events: [{ id: 'lunch', at: 2, quote: 'a note about lunch', summary: 'Lunch', date: '10-26', time: '12:00', phone: { notes: [{ title: 'Lunch', text: 'Lunch' }] } }] });
+    T.chat.push(say('Ren', 'a note about dinner'));
+    await run(c.m, { now: '10-26 19:00', events: [{ id: 'dinner', at: 3, quote: 'a note about dinner', summary: 'Dinner', date: '10-26', time: '19:00', phone: { notes: [{ title: 'Dinner', text: 'Dinner' }] } }] });
+    await data.undoRound(c.m, c.p);
+    assert.ok(data.canUndo(c.p));
+    c.p.money.at = Date.now() + 1;
+    assert.ok(!data.canUndo(c.p));
+});
