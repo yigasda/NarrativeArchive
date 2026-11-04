@@ -6,7 +6,7 @@
 
 import { AX, ax, axBar, axCb, axH1, axInd, axKp, axTint, axTop, busyHtml } from './phoneapps.js';
 import { filling } from './phoneai.js';
-import { byStory, clockNum, clockOf, fmtDate, halfOf, hourOf, koOn, ownerZone, pad, sceneHome, storyNow } from './phonedata.js';
+import { byStory, clockHeld, clockNum, clockOf, fmtDate, halfOf, hourOf, koOn, ownerZone, pad, phoneAt, sceneHome, storyNow } from './phonedata.js';
 import { shiftDay, weatherNow } from './phonelife.js';
 import { COUNTRY_TZ, apart, cityAt as cityOfPlace, mirrorHome, overlayNow } from './phonesynclife.js';
 import { decimalOf, fmtMoney, localeOf } from './phonemoney.js';
@@ -964,7 +964,8 @@ function hereNow(lf) {
 function hereOwn(lf) {
     const h = lf.weather.here, p = OWNER.get(lf);
     let t = null;
-    try { t = weatherNow(); } catch { t = null; }
+    // after an undo the phone stays where it was read up to (clockHeld): only status lines up to there
+    try { t = weatherNow(clockHeld(p) ? phoneAt(p) : undefined); } catch { t = null; }
     if (!t || !/^\d{2}-\d{2}$/.test(t.date || '') || !h.date) return h;
     let mine = false;
     try { mine = p ? sceneHome(p, t.place, getMeta()) === true : !apart(h.place, t.place, lf.weather.cities); } catch { mine = false; }
