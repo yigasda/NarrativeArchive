@@ -733,6 +733,7 @@ test('일상 is its own request after the reflection\'s: it gets all the reflect
     for (const b of ['NEW MESSAGES', 'PHONE NOW', 'PEOPLE AROUND', 'PUT ON THE PHONE NOW', 'SCENES WITH', 'OWNER']) assert.ok(data.AI_SYS_EVERYDAY.includes(`${b}`), b);
     assert.match(data.AI_SYS_EVERYDAY, /For each person in SCENES WITH: the texts the two would send each other later/);
     assert.match(data.AI_SYS_EVERYDAY, /Anything a later message could contradict is a new fact/);
+    assert.match(data.AI_SYS_EVERYDAY, /a task and its deadline \("check the moodboards by 18:00"\), a thing done \("uploaded it"\), a plan for later \("ramyeon tonight\?"\)/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
     assert.deepEqual(guess.sort(), ['Ivo:you started it', 'Mittagstisch Seongsu']);
     // it failing leaves the round as it is
