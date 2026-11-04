@@ -322,7 +322,7 @@ body.na_darkui .na_tab_pane[data-pane="config"] .na_cfg_box .na_cfg_sub, body.na
 .na_ap2.na_v2 { gap: 14px; }
 .na_ap2 .na_v2_card { border-radius: 18px; --axr: 18px; --c-r: 18px}
 .na_ap2 .na_append_file_btn { padding: 6px 11px; font-size: 12px; --axfs: 12px; line-height: 1.5; --c-bg: var(--na-card)}
-.na_ap2 .na_append_ta { height: 300px !important; padding: 12px 14px !important; --c-r: 18px; --c-ff: ui-monospace, var(--monoFontFamily, monospace); --axfs: 12px; resize: vertical}
+.na_ap2 .na_append_ta { height: 300px !important; min-height: 120px !important; padding: 12px 14px !important; font-size: 12px !important; line-height: 1.65 !important; --c-r: 18px; --c-ff: ui-monospace, var(--monoFontFamily, monospace); --axfs: 12px; resize: vertical}
 body:not(.na_darkui) .na_ap2 .na_append_ta { --c-bg: #F2E9E2; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-fg: #4A3D35; }
 body.na_darkui .na_ap2 .na_append_ta { --c-bg: #2A2A30; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-fg: #E6D9CD; }
 .na_ap2 .na_ap2_label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; --axfs: 12px; font-weight: 600; color: var(--na-dim); --axfg: var(--na-dim); padding: 10px 14px 4px}
