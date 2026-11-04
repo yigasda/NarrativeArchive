@@ -39,7 +39,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup.na_ly3 .na_ly_tools
 .na_ly_tools .na_v2_pillbtn:disabled { opacity: 0.45; cursor: not-allowed; }
 .na_ly3 .na_ly_tools .na_ly_trinfo { flex: 1; min-width: 0; margin-left: auto; font-size: 11.5px; --axfs: 11.5px; color: var(--na-dim); --axfg: var(--na-dim)}
 .na_ly_full { display: block; width: 100%; box-sizing: border-box; margin: 0; padding: 10px 12px; border: 1px solid var(--na-line); border-radius: 12px; --axr: 12px; font-size: 0.929em; --axfs: 0.929em; line-height: 1.55; min-height: 96px}
-:is(.na_v2, #na_settings) .na_ly_pane textarea.text_pole.text_pole { display: block; width: 100%; box-sizing: border-box; margin: 0; padding: 10px 12px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-r: 12px; font-size: 0.929em; line-height: 1.55; min-height: 96px; }
+:is(.na_v2, #na_settings) .na_ly_pane textarea.text_pole.text_pole { display: block; width: 100%; box-sizing: border-box; margin: 0; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-r: 12px}
 .na_ly_pane textarea { resize: vertical; }
 :is(.na_v2, #na_settings) .na_ly_pane textarea.text_pole.text_pole { field-sizing: content; max-height: 50vh; }
 .na_ly_full { max-height: 40vh; overflow: auto; white-space: pre-wrap; }

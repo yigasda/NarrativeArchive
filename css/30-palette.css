@@ -98,8 +98,6 @@ body.na_darkui .na_v2_tabs button.on, body.na_darkui .na_v2_seg button.on { colo
 /* text inputs inside the redesigned screens */
 body:not(.na_darkui) .na_v2 .text_pole, body:not(.na_darkui) #na_settings .text_pole { --c-bg: #F2E9E2; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-fg: var(--na-ink); --c-r: 12px; }
 body.na_darkui .na_v2 .text_pole, body.na_darkui #na_settings .text_pole { --c-bg: #2A2A30; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-fg: var(--na-ink); --c-r: 12px; }
-body:not(.na_darkui) :is(.na_v2, #na_settings) textarea.text_pole { padding: 10px 12px; }
-body.na_darkui :is(.na_v2, #na_settings) textarea.text_pole { padding: 10px 12px; }
 body:not(.na_darkui) :is(.na_v2, #na_settings) .text_pole::placeholder { color: #A99C92; opacity: 1; }
 body.na_darkui :is(.na_v2, #na_settings) .text_pole::placeholder { color: #85858E; opacity: 1; }
 

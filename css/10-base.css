@@ -259,9 +259,7 @@
     min-height: 192px !important;
     max-height: none !important;
     margin: 0 !important;
-    --c-ff: var(--monoFontFamily, ui-monospace, monospace);
-    font-size: 0.84em; --axfs: 0.84em;
-    line-height: 1.6;
+    --c-ff: var(--monoFontFamily, ui-monospace, monospace); --axfs: 0.84em;
     resize: vertical;
     --c-r: 10px;
     padding: 10px 12px !important}
@@ -538,9 +536,9 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
 .na_group_items[hidden] { display: none; }
 .na_group .na_group .na_group_items { padding-left: 10px; }
 
-.na_full { width: 100%; height: 60vh !important; max-height: none !important; --c-ff: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.85em; --axfs: 0.85em; line-height: 1.6; resize: vertical}
-.na_sec_edit { width: 100%; height: 40vh !important; max-height: none !important; --c-ff: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.85em; --axfs: 0.85em; resize: vertical}
-.na_append_ta { width: 100%; max-height: none !important; --c-ff: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.85em; --axfs: 0.85em; resize: vertical}
+.na_full { width: 100%; height: 60vh !important; max-height: none !important; --c-ff: var(--monoFontFamily, ui-monospace, monospace); --axfs: 0.85em; resize: vertical}
+.na_sec_edit { width: 100%; height: 40vh !important; max-height: none !important; --c-ff: var(--monoFontFamily, ui-monospace, monospace); --axfs: 0.85em; resize: vertical}
+.na_append_ta { width: 100%; max-height: none !important; --c-ff: var(--monoFontFamily, ui-monospace, monospace); --axfs: 0.85em; resize: vertical}
 .na_ex_hidden { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 
 /* ---------- section switches, actions, muted state */
@@ -622,9 +620,7 @@ body.na_darkui .na_diff_del > span:first-child { color: #F2948A; }
     width: calc(100% - 24px) !important;
     height: 30vh !important;
     max-height: none !important;
-    --c-ff: var(--monoFontFamily, ui-monospace, monospace);
-    font-size: 0.82em; --axfs: 0.82em;
-    line-height: 1.55;
+    --c-ff: var(--monoFontFamily, ui-monospace, monospace); --axfs: 0.82em;
     resize: vertical}
 .na_check {
     display: flex;
@@ -922,7 +918,7 @@ body.na_darkui .na_diff_del > span:first-child { color: #F2948A; }
 .na_tr_cfg { display: flex; flex-direction: column; gap: 6px; padding: 4px 0 2px; }
 .na_tr_cfg[hidden] { display: none; }
 .na_tr_cfg input, .na_tr_cfg textarea { width: 100% !important; margin: 0 !important; min-width: 0; box-sizing: border-box; }
-.na_tr_cfg textarea { --c-ff: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.78em; resize: vertical; }
+.na_tr_cfg textarea { --c-ff: var(--monoFontFamily, ui-monospace, monospace); resize: vertical}
 .na_tr_pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .na_tr_test_row { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding-top: 6px; }
 .na_tr_test_row[hidden] { display: none; }
@@ -1028,7 +1024,7 @@ body.na_darkui :is(.na_diff_del, .na_diff_tr_del) .na_diff_hl { background: rgba
 /* ---------- reader translation, glossary */
 .na_rd_trbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .na_rd_trinfo { font-size: 0.78em; --axfs: 0.78em}
-.na_gl_ta { width: 100% !important; box-sizing: border-box; --c-ff: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.85em; --axfs: 0.85em; resize: vertical}
+.na_gl_ta { width: 100% !important; box-sizing: border-box; --c-ff: var(--monoFontFamily, ui-monospace, monospace); --axfs: 0.85em; resize: vertical}
 .na_gl_btns { display: flex; flex-wrap: wrap; gap: 6px; }
 .na_gl_info { font-size: 0.78em; --axfs: 0.78em}
 
@@ -1050,20 +1046,20 @@ body.na_darkui :is(.na_diff_del, .na_diff_tr_del) .na_diff_hl { background: rgba
 .na_kn_tr { opacity: 0.75; margin-top: 2px; font-size: 0.95em; --axfs: 0.95em}
 .na_kn_people { display: flex; flex-wrap: wrap; gap: 4px; }
 .na_kn_editbox { display: flex; flex-direction: column; gap: 6px; }
-.na_kn_ta { width: 100% !important; box-sizing: border-box; --c-ff: var(--monoFontFamily, ui-monospace, monospace); font-size: 0.8em; --axfs: 0.8em; resize: vertical}
+.na_kn_ta { width: 100% !important; box-sizing: border-box; --c-ff: var(--monoFontFamily, ui-monospace, monospace); --axfs: 0.8em; resize: vertical}
 .na_qb_q { width: 100% !important; box-sizing: border-box; }
 .na_qb_list { display: flex; flex-direction: column; gap: 10px; }
 .na_qb_who { font-weight: 600; font-size: 0.9em; --axfs: 0.9em; margin-bottom: 4px}
 .na_qb_row { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border-radius: 8px; --axr: 8px; font-size: 0.86em; --axfs: 0.86em}
 .na_qb_text { flex: 1; min-width: 0; }
 .na_qb_src { font-size: 0.85em; --axfs: 0.85em}
-.na_qb_whoin { width: 7em !important; min-width: 0; margin: 0 !important; font-size: 0.9em; --axfs: 0.9em; padding: 2px 6px !important}
+.na_qb_whoin { width: 7em !important; min-width: 0; margin: 0 !important; --axfs: 0.9em; padding: 2px 6px !important}
 .na_cite_msg { font-variant-numeric: tabular-nums; }
 .na_kn_editbox[hidden], .na_kn_list[hidden] { display: none; }
 
 /* ---------- router, wizard */
 .na_router_opts[hidden] { display: none; }
-.na_wz_out { width: 100% !important; box-sizing: border-box; resize: vertical; font-size: 0.85em; --axfs: 0.85em}
+.na_wz_out { width: 100% !important; box-sizing: border-box; resize: vertical; --axfs: 0.85em}
 .na_wz_info, .na_wz_outinfo { font-size: 0.78em; --axfs: 0.78em}
 
 /* ---------- 3.0 layout */
@@ -1243,7 +1239,7 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_qb_exchip { display: inline-flex; align-items: center; gap: 4px; cursor: default; }
 .na_qb_unex { --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: inherit; padding: 0 2px; cursor: pointer; opacity: 0.6; font: inherit; --axfs: inherit; --axff: inherit}
 .na_qb_unex:hover { opacity: 1; }
-.na_qb_excl_in { flex: 1; min-width: 80px; margin: 0 !important; padding: 3px 8px !important; font-size: 0.95em; --axfs: 0.95em}
+.na_qb_excl_in { flex: 1; min-width: 80px; margin: 0 !important; padding: 3px 8px !important; --axfs: 0.95em}
 .na_qb_who { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
 .na_qb_gbtns { margin-left: auto; display: inline-flex; gap: 2px; }
 .na_qb_gbtns .na_icon { opacity: 0.55; }

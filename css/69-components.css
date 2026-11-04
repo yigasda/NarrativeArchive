@@ -83,6 +83,13 @@ body:is(.na_darkui, :not(.na_darkui)) :is(
 
 :is(dialog.popup:has(.na_popup, .na_phone), #na_settings) { --mainFontFamily: "Noto Sans", sans-serif; font-family: var(--mainFontFamily); } /* our windows keep ST's default font; a theme swapping --mainFontFamily (Blue Lemonade) stops here */
 dialog.popup:has(.na_popup, .na_phone):not(#na_x) .popup-content { line-height: normal; } /* Blue Lemonade sets 1.55 on every popup body; ours keep the browser's */
+/* ---- text fields: one size everywhere, the same as Blue Lemonade draws them (15px, 36px tall, 12px sides; textarea 10px 12px, 1.55),
+   so a theme that sizes fields changes nothing. A field that needs its own size marks it important (those already beat themes). */
+:is(:where(dialog.popup:not(:has(.na_phone))) .na_popup, :where(#na_settings)) :is(textarea, select, input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="button"], [type="submit"])) { min-height: 36px; font-size: 15px; }
+:is(:where(dialog.popup:not(:has(.na_phone))) .na_popup, :where(#na_settings)) textarea { padding: 10px 12px; line-height: 1.55; }
+:is(:where(dialog.popup:not(:has(.na_phone))) .na_popup, :where(#na_settings)) select:not([multiple]) { padding-left: 12px; padding-right: 28px; }
+:is(:where(dialog.popup:not(:has(.na_phone))) .na_popup, :where(#na_settings)) :is(.text_pole:not(textarea, select), input:is([type="text"], [type="search"], [type="password"], [type="url"], [type="email"])) { padding-left: 12px; padding-right: 12px; }
+
 /* SillyTavern's own field look (1px edge in its border colour, 5px corners), at the lowest weight: any rule of ours wins over it */
 :where(dialog.popup .na_popup, #na_settings) :where(textarea, .text_pole) { --c-bw: 1px; --c-bs: solid; --c-bc: var(--SmartThemeBorderColor); --c-r: 5px; }
 
