@@ -588,19 +588,21 @@ const dateLabel = (p, now, long = false) => {
     return `${y ? fullDate(p, `${y}-${mt[1]}-${mt[2]}`) : fmtDate(p, `${mt[1]}-${mt[2]}`)}${long && d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}`;
 };
 export function setDate(p, now, m = null) {
+    // docs/mockups/phone-date C: the date in one line (with the year), the year as − 2026 + (hold for fast steps)
     const on = !p.noYear, mt = /^(\d{2})-(\d{2})/.exec(String(now || p.now || ''));
     const y = on && Number(p.year), d = y && mt ? new Date(Date.UTC(y, mt[1] - 1, Number(mt[2]))) : null;
-    const day = mt ? `${fmtDate(p, `${mt[1]}-${mt[2]}`)}${d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}` : '';
-    const row = (n, v, tag = 'div') => `<${tag} class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">${n}</span></span>${v}</${tag}>`;
+    const day = mt ? `${y ? fullDate(p, `${y}-${mt[1]}-${mt[2]}`) : fmtDate(p, `${mt[1]}-${mt[2]}`)}${d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}` : '';
+    const row = (n, v, tag = 'div', cls = '') => `<${tag} class="ax_rw ax_rwn${cls}"><span class="ax_tx"><span class="ax_n">${n}</span></span>${v}</${tag}>`;
+    const step = (dv, t) => `<span role="button" tabindex="0" class="ax_ystep na_ph_ystep" data-d="${dv}" aria-label="${dv < 0 ? '한 해 전' : '한 해 뒤'}">${t}</span>`;
     return `${axBar(p, now)}
       ${axTop(axCb('set'))}
       <div class="ax_scroll">${axH1('날짜 및 시간')}
         <div class="ax_card">
-          ${on ? row('연도', `<input type="number" class="ax_in na_ph_year cg_num" min="1900" max="2100" inputmode="numeric" aria-label="연도" value="${esc(String(p.year || ''))}">${axChev}`, 'label') : ''}
           ${row('날짜', `<span class="ax_v cg_num">${esc(day)}</span>`)}
           ${row('시간', `<span class="ax_v cg_num">${esc(clockOf(p, String(now || p.now || '').slice(6, 11)))}</span>`)}
         </div>
-        <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_yearshow"><span class="ax_tx"><span class="ax_n">연도 표시</span></span><span class="ax_sw ${on ? 'on' : ''}"></span></button></div>
+        <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_yearshow"><span class="ax_tx"><span class="ax_n">연도 표시</span></span><span class="ax_sw ${on ? 'on' : ''}"></span></button>
+          ${on ? row('연도', `<span class="ax_ys">${step(-1, '−')}<b class="cg_num na_ph_yval">${esc(String(p.year || ''))}</b>${step(1, '+')}</span>`) : ''}</div>
         <div class="ax_foot">연도를 알아야 요일이 맞게 나와요. 연도 없는 이야기만 꺼 주세요.</div>
         ${(o => `<div class="ax_sec">날짜 읽는 법</div><div class="ax_card"><div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">순서</span></span><span class="ax_dseg">${[['md', '월.일'], ['dm', '일.월']].map(([v, t]) => `<span role="button" tabindex="0" class="na_ph_dord${o === v ? ' on' : ''}" data-v="${v}">${t}</span>`).join('')}</span></div></div>
         <div class="ax_foot">03.11. → ${o === 'dm' ? '11월 3일' : '3월 11일'}</div>`)(dateOrderOf(m))}

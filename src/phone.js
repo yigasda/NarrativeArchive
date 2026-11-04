@@ -854,14 +854,29 @@ export async function openPhone(who = null) {
         const { journalWrite } = await import('./phonesync.js'); journalWrite(phoneChatScope(ctx()), []); syncPending = 0; drawPhone();
     });
     // 날짜 및 시간: the year this phone's dates are in, or none
-    $root.on('change', '.na_ph_year', async function () {
-        const p = phone(), y = Math.round(Number(this.value));
+    // the story's year: − / + a year at a time, held down it runs (faster after a moment), like a phone's own steppers;
+    // the number changes in place while held, the year is set once on letting go
+    const commitYear = async y => {
+        const p = phone();
         if (!p || !(y >= 1900 && y <= 2100) || y === p.year) { drawPhone(true); return; }
         // the bank's and investments' dates move with it (the whole chat's), so their order holds
         if (p.year && hasDatedRecords(m) && !await askSheet(`${y}년으로 바꿀까요?`, '기록 날짜와 다른 폰도 같이 바뀌어요.', '바꾸기', true)) { drawPhone(true); return; }
         setStoryYear(m, p, y);
         drawPhone(true); await saveMeta();
+    };
+    let yHold = null;
+    const yStop = () => { if (!yHold) return; clearTimeout(yHold.t); const y = yHold.y; yHold = null; commitYear(y); };
+    $root.on('pointerdown', '.na_ph_ystep', function (e) {
+        e.preventDefault(); e.stopPropagation(); if (yHold) return;
+        const p = phone(); if (!p) return;
+        const d = Number(this.dataset.d), $v = $root.find('.na_ph_yval');
+        yHold = { y: Number(p.year) || new Date().getFullYear(), t: 0, n: 0 };
+        const tick = () => { if (!yHold) return; yHold.y = Math.max(1900, Math.min(2100, yHold.y + d)); yHold.n++; $v.text(String(yHold.y)); yHold.t = setTimeout(tick, yHold.n < 2 ? 420 : yHold.n < 12 ? 110 : 45); };
+        tick();
+        this.setPointerCapture?.(e.pointerId);
     });
+    $root.on('pointerup pointercancel lostpointercapture', '.na_ph_ystep', e => { e.stopPropagation(); yStop(); });
+    $root.on('keydown', '.na_ph_ystep', function (e) { if (e.key !== 'Enter' && e.key !== ' ') return; e.preventDefault(); const p = phone(); if (p) commitYear((Number(p.year) || new Date().getFullYear()) + Number(this.dataset.d)); });
     // 설정 › 위치 정보: locked while the phone is being made, reflected or filled, like the date order
     const placeLocked = () => { if (!(making || busyMake || investing || filling.size || busy.fill || busy.sync || placeReading)) return false; toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰'); return true; };
     const placeCity = async (name, now) => {
