@@ -328,10 +328,11 @@ Shop and dish names in the language they really have there. A name not in Korean
 JSON (one object, nothing before or after it)
 { "new": [{ "name", "ko", "cuisine", "menu": [{ "name", "ko", "desc", "price", "top": true or false, "pic": { "base", "with": [], "size": "regular" | "large", "set": [] } }] }], "gone": ["a name from NEARBY"] }
 Numbers are plain JSON numbers.`;
-// the shops nearby: not ordered from in the story's last 30 days (the 자주 시킨 가게 line's own rule)
-const lately = (p, d, name) => { const today = String(storyNow(p) || p.now || '').slice(0, 5); return d.orders.some(o => o.shop === name && /^\d{2}-\d{2}$/.test(today) && dayGap(String(o.time || '').slice(0, 5), today) >= 0 && dayGap(String(o.time || '').slice(0, 5), today) <= 30); };
+// the shops nearby: not ordered from in the story's last 30 days (the 자주 시킨 가게 line's own rule). Their days go by the
+// phone's own now: a reflection still behind the chat doesn't move the shops on to days the phone hasn't reached
+const lately = (p, d, name) => { const today = String(p.now || storyNow(p) || '').slice(0, 5); return d.orders.some(o => o.shop === name && /^\d{2}-\d{2}$/.test(today) && dayGap(String(o.time || '').slice(0, 5), today) >= 0 && dayGap(String(o.time || '').slice(0, 5), today) <= 30); };
 export function nearbyDue(p) {
-    const d = p.delivery, today = String(storyNow(p) || p.now || '').slice(0, 5);
+    const d = p.delivery, today = String(p.now || storyNow(p) || '').slice(0, 5);
     if (!d?.shops?.length || !/^\d{2}-\d{2}$/.test(today)) return '';
     const city = homeCity(p);
     if (city && d.city && city !== d.city) return 'moved';
@@ -340,7 +341,7 @@ export function nearbyDue(p) {
 }
 // read: a reflection that read messages (it counts toward the 3)
 export async function refreshNearby(m, p, { read = false } = {}) {
-    const d = p.delivery, today = String(storyNow(p) || p.now || '').slice(0, 5);
+    const d = p.delivery, today = String(p.now || storyNow(p) || '').slice(0, 5);
     if (d && read) d.nearbyRounds = (d.nearbyRounds || 0) + 1;
     const why = nearbyDue(p);
     // a phone filled before this kept no day: it starts counting now

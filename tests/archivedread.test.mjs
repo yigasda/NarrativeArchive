@@ -21,7 +21,7 @@ const map = {
     './inject.js': encoded(`export const applyInjection=()=>{};`),
     './knowledge.js': encoded(`export const knowledgeRows=()=>[];`),
     './people.js': encoded(`export const nameKey=s=>String(s).toLowerCase();export const nameRe=s=>new RegExp(s,'i');export const headingPlaces=()=>[];`),
-    './recall.js': encoded(`export const estTok=s=>s.length/4;`), './scenes.js': encoded(`export const recentTrackers=()=>[];`),
+    './recall.js': encoded(`export const estTok=s=>s.length/4;`), './scenes.js': encoded(`export const recentTrackers=(n,o={})=>{const T=globalThis.__archTest;(T.trackLens||=[]).push((o.chat||T.chat).length);return [];};`),
     './sections.js': encoded(`export const RANGE_HEAD=/^(?:(\\S{1,12})\\s)?#(\\d+)\\s*([–—~-])\\s*#?(\\d+)(.*)$/;export const parseSections=t=>[...String(t).matchAll(/^## (.+)\\n[^#]*/gm)].map(x=>({title:x[1],start:x.index,end:x.index+x[0].length,group:false}));export const sectionKey=s=>s.title;export const splitTail=s=>[s,''];`),
     './translate.js': encoded(`export const glossaryEntries=()=>[];`), './world.js': encoded(`export const worldText=()=>'';`),
 };
@@ -94,4 +94,16 @@ test('whole sections only: past the limit a section waits for the next round, ne
     assert.equal(data.syncLeft(c.p, c.m), 30 - first);
     await run(c.m, { now: '10-26 13:00', events: [] });
     assert.ok(Object.keys(c.p.sync.arch).length > first);
+});
+
+test('a round behind the chat sees the status lines only up to its own last message', async () => {
+    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning')];
+    for (let k = 0; k < 30; k++) chat.push(say(k % 2 ? 'Mara' : 'Ren', `line ${k} of the long afternoon`));
+    const c = setup(chat);
+    T.trackLens = [];
+    await run(c.m, { now: '10-26 13:00', events: [] });
+    const read = c.p.syncLast.checked, last = 1 + read;
+    assert.ok(read > 0 && read < 30, String(read));
+    // every status-line look this round stopped at the round's last message
+    assert.ok(T.trackLens.length && T.trackLens.every(n => n === last + 1), JSON.stringify(T.trackLens));
 });

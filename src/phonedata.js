@@ -842,15 +842,19 @@ async function updatePhone(m, owner) {
         // a phone with money apps reads in two steps: core (marks the events money touches), then money for those
         const split = !!(money || invest);
         // the weather: a status line stands; the model writes it when there is none, or when the status line's day moved on
+        // as the story stood at this round's last message (one that reads to the end: now): an older round sees no status
+        // line after it, like STORY NOW
+        const roundEnd = reachesEnd(s, rows, round.rows) ? null : Math.max(-1, ...round.rows.map(r => r.index), ...archIn.map(x => x.last));
+        const upChat = roundEnd == null ? {} : { chat: (ctx().chat || []).slice(0, roundEnd + 1) };
         let tracker = null;
-        try { tracker = trackerWeather(recentTrackers(1)[0]); } catch { /* no status lines */ }
+        try { tracker = trackerWeather(recentTrackers(1, upChat)[0]); } catch { /* no status lines */ }
         const trackDay = tracker ? when(tracker.date).slice(0, 5) : '';
         // the model writes the weather when no status line gives it, when the status line has no date or its day moved on
         // from the saved weather's, or when it puts the story somewhere else; a same-day, same-place line only stands over it
         const placeKey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''), elsewhere = (a, b) => placeKey(a) && placeKey(b) && !placeKey(a).includes(placeKey(b)) && !placeKey(b).includes(placeKey(a));
         const askWeather = !!life && (!tracker || !trackDay || trackDay !== life.weather?.date || elsewhere(tracker.place, life.weather?.place));
         // the year the phone's now is in: read once from the bank or the archive, then carried over New Year with the now
-        if (!p.year && !p.noYear) { const y = Number(storyYear(m, p) || String(p.money?.asOf || p.investment?.date || '').slice(0, 4)); if (y > 1900) p.year = y; }
+        if (!p.year && !p.noYear) { const y = Number(storyYear(m, p, roundEnd) || String(p.money?.asOf || p.investment?.date || '').slice(0, 4)); if (y > 1900) p.year = y; }
         const known = p.year && !p.noYear ? String(p.year) : '', year = known || String(new Date().getFullYear());
         // the ledger's days are taken nearest the phone's now (a story with no year of its own too: then this year), so a round
         // past New Year books January after December
@@ -975,7 +979,7 @@ async function updatePhone(m, owner) {
         // (a day or a few behind is the model slipping and is ignored; two months or more behind is a story that skipped far
         // ahead, past the half year the dates alone can tell: half a year later)
         // the status line's own clock caps the model's (a "23:55" written over a line that says 21:30)
-        const trkNow = storyNow({ ...p, now: '' });
+        const trkNow = storyNow({ ...p, now: '' }, roundEnd);
         if (trkNow && nowAt && nowAt.slice(0, 5) === trkNow.slice(0, 5) && nowAt.slice(6) > trkNow.slice(6)) nowAt = trkNow;
         const gap = nowAt && p.now ? dayGap(p.now.slice(0, 5), nowAt.slice(0, 5)) : 1;
         if (nowAt && (gap > 0 || gap < -60 || gap === 0 && nowAt.slice(6) > p.now.slice(6))) {
