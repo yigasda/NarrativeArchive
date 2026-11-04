@@ -1575,7 +1575,7 @@ function zoneOfPhone(q) {
 // ---- one place decides whose clock a status line shows. The owner's zone: where they were read (or last moved) to be,
 // else their phone's saved city, else the country. The time zones around them: the saved cities, the people read to be
 // somewhere, the other phones in the chat. Every clock on the phone goes by these
-const ownerZone = p => zoneOfWhere(whereOf(p, p?.owner)) || zoneOfPhone(p);
+export const ownerZone = p => zoneOfWhere(whereOf(p, p?.owner)) || zoneOfPhone(p);
 function placesAround(p, m = null) {
     const out = [], own = ownerZone(p);
     // (the owner's own place as the weather app has it is one of their names too: a zone known only by the country)
