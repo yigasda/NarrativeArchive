@@ -607,7 +607,7 @@ export function setDate(p, now, m = null) {
       </div>
       ${axInd()}`;
 }
-// 설정 › 위치 정보 (docs/mockups/phone-place B): the owner's place as a navy card (the city they are in, the country they
+// 설정 › 위치 정보 (docs/mockups/phone-place B, in the settings app's white cards): the owner's place as a card (the city they are in, the country they
 // live in, the zone), then the others like the world clock — the city big, who is there small, the hours apart and their time
 const hoursText = h => (h === null || h === undefined ? '—' : !h ? '같음' : `${h > 0 ? '+' : '−'}${Math.floor(Math.abs(h))}시간${Math.abs(h) % 1 ? ` ${Math.round((Math.abs(h) % 1) * 60)}분` : ''}`);
 function placeClock(p, now, h) {
@@ -626,7 +626,7 @@ export function setPlace(p, now, m, ui = {}) {
         ${info.failed ? `<div class="ax_pl_warn">${ax('info', 16, '#8a6a1f', 2.2)}<span>자동으로 못 읽었어요 · 직접 정하거나 연동해 주세요</span></div>` : ''}
         <div class="ax_pl_hero">
           <span class="ax_pl_k">${esc(o.name || '')} · 지금 있는 곳</span>
-          <div role="button" tabindex="0" class="ax_pl_city na_ph_plcity" data-n="${esc(o.name || '')}"><b>${esc(o.city || '도시 정하기')}</b>${o.cityManual ? man : ''}${ax('pen', 16, 'rgba(255,255,255,.7)', 2.2)}</div>
+          <div role="button" tabindex="0" class="ax_pl_city na_ph_plcity" data-n="${esc(o.name || '')}"><b>${esc(o.city || '도시 정하기')}</b>${o.cityManual ? man : ''}${ax('pen', 15, '#b4bac3', 2.2)}</div>
           <div class="ax_pl_chips">
             <div class="ax_pl_chip"><span>사는 나라</span><b>${esc(COUNTRIES[o.lives] || o.lives || '정하기')}${o.livesManual ? man : ''}</b><select class="na_ph_plives ax_sel" aria-label="사는 나라">${o.lives ? '' : '<option value="" selected>정하기</option>'}${opts}</select></div>
             <div class="ax_pl_chip"><span>시간대</span><b>${esc(o.tz || '—')}</b></div>
@@ -635,7 +635,7 @@ export function setPlace(p, now, m, ui = {}) {
         <div class="ax_sec">다른 사람</div>
         ${info.people.length ? `<div class="ax_card ax_pl_list">${info.people.map(row).join('')}</div>` : '<div class="ax_card ax_pl_list"><div class="ax_pl_none">아직 읽은 사람이 없어요</div></div>'}
         <div class="ax_foot">줄을 누르면 도시를 바꾸거나 목록에서 뺄 수 있어요. 사는 나라에 맞춰 배달 앱 · 스크린타임 앱이 정해져요.</div>
-        <div role="button" tabindex="0" class="ax_pl_btn na_ph_plread${ui.placeReading ? ' on' : ''}">${ui.placeReading ? `${busyHtml} 연동하는 중` : `${ax('redo', 17, 'currentColor', 2.3)}AI로 연동`}</div>
+        <div class="ax_card ax_pl_act"><div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_plread${ui.placeReading ? ' on' : ''}"><span class="ax_tx"><span class="ax_n ${ui.placeReading ? 'ax_pl_busy' : 'ax_blue'}">${ui.placeReading ? `${busyHtml} 연동하는 중` : 'AI로 연동'}</span></span></div></div>
         <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
