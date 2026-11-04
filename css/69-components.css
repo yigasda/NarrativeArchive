@@ -83,7 +83,7 @@ body:is(.na_darkui, :not(.na_darkui)) :is(
 
 dialog.popup:has(.na_popup):not(:has(.na_phone)) { max-width: calc(100dvw - 16px) !important; max-height: calc(100dvh - 16px); padding: 12px 10px; border: 0; } /* the wide frame Blue Lemonade gives every popup, ours with or without it */
 dialog.popup:has(.na_popup):not(:has(.na_phone)) .popup-content { padding-left: 2px; padding-right: 2px; }
-:is(dialog.popup:has(.na_popup, .na_phone), #na_settings) { --mainFontFamily: "Noto Sans", sans-serif; font-family: var(--mainFontFamily); } /* our windows keep ST's default font; a theme swapping --mainFontFamily (Blue Lemonade) stops here */
+:is(dialog.popup:has(.na_popup, .na_phone) > .popup-body, #na_settings > .inline-drawer > .inline-drawer-content) { --mainFontFamily: "Noto Sans", sans-serif; font-family: var(--mainFontFamily); } /* our windows keep ST's default font; a theme swapping --mainFontFamily (Blue Lemonade) stops here */
 dialog.popup:has(.na_popup, .na_phone):not(#na_x) .popup-content { line-height: normal; } /* Blue Lemonade sets 1.55 on every popup body; ours keep the browser's */
 /* ---- text fields: one size everywhere, the same as Blue Lemonade draws them (15px, 36px tall, 12px sides; textarea 10px 12px, 1.55),
    so a theme that sizes fields changes nothing. A field that needs its own size marks it important (those already beat themes). */
