@@ -36,7 +36,7 @@ async function open(theme = 'light', { width = 412, out = 'shots', video = '' } 
     await p.evaluate(t => document.body.classList.toggle('na_darkui', t === 'dark'), theme);
     // the archive text, a fresh phone, and both model connections pointed at the fake model
     await p.evaluate(async ({ B, ARCH }) => {
-        const core = await import(B + 'core.js'); const m = core.getMeta(); m.text = ARCH; delete m.phones;
+        const core = await import(B + 'core.js'); const m = core.getMeta(); m.text = ARCH; delete m.phones; m.dateOrder ||= 'md';
         const g = core.globalSettings(), fake = { mode: 'custom', url: 'http://127.0.0.1:5555/v1', key: 'k', model: 'fake', fmt: 'openai' };
         g.draftConn = { ...fake }; g.aiConn = { ...fake }; g.faces = g.faces || {}; for (const n of ['mara', 'ren', 'ivo']) g.faces[n] = 'none';
         (await import(B + 'phone.js')).openPhone('Mara');
