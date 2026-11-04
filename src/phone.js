@@ -152,7 +152,7 @@ export async function openPhone(who = null) {
     const askChoice = (title, text, opts, no = '나중에') => {
         ask?.done(false);
         return new Promise(done => {
-            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div>${opts.map(o => `<div role="button" tabindex="0" class="pcf_ok safe pcf_opt" data-v="${esc(o.v)}">${esc(o.label)}<small>${esc(o.sub || '')}</small></div>`).join('')}</div><div role="button" tabindex="0" class="pcf_no">${esc(no)}</div></div></div>`)[0];
+            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div>${opts.map(o => `<div role="button" tabindex="0" class="pcf_ok safe pcf_opt" data-v="${esc(o.v)}">${esc(o.label)}<span class="pcf_sub">${esc(o.sub || '')}</span></div>`).join('')}</div><div role="button" tabindex="0" class="pcf_no">${esc(no)}</div></div></div>`)[0];
             ask = { el, done: v => { ask = null; el.remove(); done(v); } };
             ($root.find('.na_ph_frame .cg_canvas')[0] || $root.find('.na_ph_frame .na_ph_scr')[0])?.append(el);
             el.querySelector('.pcf_no').focus({ preventScroll: true });
