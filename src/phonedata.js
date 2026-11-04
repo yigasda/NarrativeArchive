@@ -1711,8 +1711,16 @@ export async function dropPlacePerson(m, p, name) {
     p.where = { ...p.where, people: (p.where.people || []).filter(x => nameKey(x.name) !== nameKey(name)), removed: [...new Set([...(p.where.removed || []), nameKey(name)])] };
     await saveMeta();
 }
-// AI로 다시 읽기: the reading asked again now (what was set by hand stays); a failure leaves what is there
-export async function rereadPlaces(m, p) { await readWhere(m, p); await saveMeta(); return placeInfo(p); }
+// AI로 다시 읽기: the reading asked again now. all: everything anew, what was set by hand and the people taken off too;
+// else what was set by hand stays. A failure leaves what is there
+export async function rereadPlaces(m, p, { all = false } = {}) {
+    const was = structuredClone({ where: p.where ?? null, lives: p.lives, livesManual: p.livesManual });
+    if (all && p.where) { p.where = { ...p.where, people: (p.where.people || []).map(({ manual, ...x }) => x) }; delete p.where.removed; delete p.livesManual; }
+    try { await readWhere(m, p); }
+    catch (err) { p.where = was.where ?? undefined; if (!was.where) delete p.where; p.lives = was.lives; if (was.livesManual) p.livesManual = true; throw err; }
+    await saveMeta();
+    return placeInfo(p);
+}
 // the model's weather for a place the phone knows is another's (Busan for an owner in Seoul, the city the scene was just
 // named as): not the owner's
 function weatherElsewhere(p, w, named, m = null) {

@@ -596,3 +596,13 @@ test('위치 정보: the owner\'s country and city by hand, a person taken off o
     assert.deepEqual(info.people.map(x => [x.name, x.city]), [['Mara', 'Berlin']]);
     assert.equal(p.lives, 'DE');
 });
+
+test('위치 정보 › AI로 다시 읽기 › 전부 새로: what was set by hand and the people taken off are read anew too', async () => {
+    globalThis.__rows = rows(8);
+    const p = plainPhone({ country: 'KR', where: { at: 1, removed: ['ivo'], people: [{ name: 'Ren', city: 'Frankfurt', names: ['Frankfurt'], lives: 'DE', tz: 'Europe/Berlin', manual: { city: true, lives: true } }] }, lives: 'DE', livesManual: true, contacts: [{ name: 'Ivo' }] });
+    globalThis.__whereAnswer = { people: [{ name: 'Ren', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }, { name: 'Ivo', city: 'Paris', lives: 'FR', tz: 'Europe/Paris' }] };
+    let info;
+    try { info = await data.rereadPlaces({ ...m, phones: { ren: p } }, p, { all: true }); } finally { delete globalThis.__whereAnswer; }
+    assert.deepEqual([info.owner.city, info.owner.lives, info.owner.cityManual, info.owner.livesManual], ['Seoul', 'KR', false, false]);
+    assert.deepEqual(info.people.map(x => x.name), ['Ivo']);
+});
