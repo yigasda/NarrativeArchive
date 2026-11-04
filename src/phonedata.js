@@ -59,13 +59,16 @@ Could this be on the owner's phone, given what the archive, lorebook and chat sh
 - People: only people the story has. A relationship word (girlfriend, ex, husband, boss) only if the archive or chat uses it for them.
 - Nothing later than the newest moment of the story.
 - The diary holds only what the archive shows happened and what the owner felt about it; no new secrets, no new feelings.`;
+// every time on the phone is the owner's own clock: a time written on the other side of the world is moved to theirs
+export const OWN_CLOCK = `Every time is on the owner's phone clock, where the owner is now. A time the story writes for someone in another time zone (the other side's messenger timestamps, a status line from a scene in another city) is moved to the owner's zone: 12:33 in Seoul is 04:33 in Frankfurt.`;
 const PHONE_STYLE = `LANGUAGE
 - Each text is in the language its writer would really use on a phone: from their nationality and where they live; between two people, the language they share.
 - A text that is not in Korean gets "ko": a natural Korean translation. A Korean text gets no "ko".
 - People write the way they talk in the archive and chat. Texts are short, like real texts.
 
 TIMES
-"MM-DD HH:MM" in story time; "now" is the newest moment of the story. A year only as STORY YEAR or the story itself gives one.`;
+"MM-DD HH:MM" in story time; "now" is the newest moment of the story. A year only as STORY YEAR or the story itself gives one.
+${OWN_CLOCK}`;
 const PHONE_TEST = `${PHONE_FACT}\n\n${PHONE_STYLE}`;
 const PHONE_ITEMS = `  "contacts": [{ "name": name in the story, "saved": how the owner saved them (a nickname, an emoji, or just the name) }],
   "threads": [{ "with": name, "messages": [{ "from": "me" or the sender's name, "text", "ko", "time" }],
@@ -1446,6 +1449,9 @@ ACCOUNTS
 ONE THING, ONE AMOUNT
 A purchase is in "orders" or "passes" and once in "tx", with the same amount, date and "ev".
 
+TIMES
+- ${OWN_CLOCK}
+
 LANGUAGE
 Banks, shops, merchants and items named as they would be in the owner's country. A name not in Korean gets "ko"; a Korean one gets none.
 
@@ -1486,6 +1492,7 @@ YOU GET
 - DIARY: the owner's diary entries, so the memos are not the same moments told again.
 
 RULES
+- ${OWN_CLOCK}
 - 3 or 4 memos, each at a moment the archive has where the owner could plausibly talk into their phone alone: after a fight, on the way somewhere, late at night. Not the days the diary already covers, where possible.
 - Spoken, not written: the way the owner talks in the archive and chat, with pauses (…), restarts and half sentences. Not a diary entry.
 - Only what the archive shows happened and what the owner felt about it; no new events, no new secrets.

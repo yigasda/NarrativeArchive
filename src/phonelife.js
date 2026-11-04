@@ -9,7 +9,7 @@ import { calendars } from './calendar.js';
 import { ctx, saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
-import { arr, trackerWeather, readMark, turnsNote, secondTurn, soFarHead, windowOf, nowAt, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
+import { OWN_CLOCK, arr, trackerWeather, readMark, turnsNote, secondTurn, soFarHead, windowOf, nowAt, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, overlayFresh, parseWeather, screenOf, usualScreenOf, weatherFrom } from './phonesynclife.js';
 import { SCREEN_LIST } from './phonescreen.js';
@@ -64,6 +64,9 @@ WEATHER
 - "cities": places the owner saved, in their order: home first (where the archive and profile say they live), then work, family, past and coming trips. A city stays after the trip ends. A saved city is not proof of a relationship.
 - Places the story, profile or lorebook name come first. Others may fit their life (where family lives, a holiday some years ago), never a trip the story contradicts. With no place named at all, home is a city that fits the owner's country.
 - Never today's real-world weather.
+
+TIMES
+- ${OWN_CLOCK}
 
 LANGUAGE
 Labels, file names and folder names in the language the owner really uses on their phone. A text not in Korean gets "ko"; a Korean one gets none.
@@ -131,6 +134,9 @@ PICTURES
 - BASES: ${FOOD_IDS.base.join(', ')}
 - TOPPINGS: ${FOOD_IDS.top.join(', ')}
 - SIDES: ${FOOD_IDS.side.join(', ')}
+
+TIMES
+- ${OWN_CLOCK}
 
 LANGUAGE
 Shop names, dishes and notes in the language they really have there. A text not in Korean gets "ko"; a Korean one gets none.

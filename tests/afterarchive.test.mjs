@@ -316,3 +316,8 @@ test('the bank over a long stretch: the second turn adds history only, the balan
     assert.ok(p.money.tx.every(t => ledger.included.includes(t.id)));
     assert.equal(p.sync.marks.money.index, 39);
 });
+
+test('every prompt that writes times has the owner\'s own clock (a messenger timestamp from another time zone is moved)', () => {
+    const prompts = { phone: data.AI_SYS_PHONE, update: data.AI_SYS_PHONE_UPDATE, core: data.updateSystem({ split: true, life: true, delivery: true }), money: data.AI_SYS_MONEY, voices: data.AI_SYS_VOICES, life: life.AI_SYS_LIFE, delivery: life.AI_SYS_DELIVERY };
+    for (const [k, s] of Object.entries(prompts)) assert.ok(s.includes("on the owner's phone clock") && s.includes('12:33 in Seoul is 04:33 in Frankfurt') && !s.includes('undefined'), k);
+});
