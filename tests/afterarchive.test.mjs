@@ -345,7 +345,8 @@ test('investments over a long stretch: the second turn\'s trades move the cash a
     const one = { base: 'EUR', cash: [{ currency: 'EUR', amount: 10000 }], securities: [{ symbol: 'XETRA:SAP', name: 'SAP', currency: 'EUR' }],
         trades: [{ kind: 'buy', symbol: 'XETRA:SAP', currency: 'EUR', date: '2026-10-10', quantity: 10, price: 100, fee: 0 }], watch: [], stakes: [], quotes: [], fx: [] };
     const two = { securities: [{ symbol: 'XETRA:BMW', name: 'BMW', currency: 'EUR' }], trades: [{ kind: 'buy', symbol: 'XETRA:SAP', currency: 'EUR', date: '2026-10-10', quantity: 10, price: 100, fee: 0 },
-        { kind: 'buy', symbol: 'XETRA:BMW', currency: 'EUR', date: '2026-10-25', quantity: 5, price: 80, fee: 0 }], watch: [{ symbol: 'XETRA:BMW', note: 'after the test drive' }], stakes: [], quotes: [], fx: [] };
+        { kind: 'buy', symbol: 'XETRA:BMW', currency: 'EUR', date: '2026-10-25', quantity: 5, price: 80, fee: 0 }], watch: [{ symbol: 'XETRA:BMW', note: 'after the test drive' }], stakes: [],
+        quotes: [{ symbol: 'XETRA:SAP', date: '2026-10-26', value: 104, source: 'guess' }, { symbol: 'XETRA:BMW', date: '2026-10-26', value: 81, source: 'guess' }], fx: [] };
     globalThis.__menu = { calls: [], answers: [JSON.stringify(one), JSON.stringify(two)], answer: '{}' };
     await invest.fillInvestment(mm, p, '2026-10-20');
     const turns = globalThis.__menu.calls.filter(c => c.sys === invest.INVEST_SYS);
@@ -398,4 +399,27 @@ test('where everyone is: the whole card and the persona as they are, only known 
         assert.deepEqual(got.map(x => [x.name, x.tz || x.lives]), [['Ren', 'Europe/Berlin'], ['Mara', 'Asia/Seoul'], ['Ivo', 'GB']]);
         assert.equal(data.clockBlock(p, p.now, mm), "[OWNER'S CLOCK]\nThe owner is in Frankfurt am Main, 11-03 04:33 now.\nMara (in Seoul) is 8 hours ahead, Ivo (in United Kingdom) is 1 hour behind.");
     } finally { globalThis.__ctx = null; globalThis.__whereAnswer = null; }
+});
+
+test('a second investment turn that moves the day but gives no prices for it is dropped: the first stays, nothing blank on screen', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = longPhone(), mm = { ...m, phones: { ren: p } };
+    const one = { base: 'EUR', cash: [{ currency: 'EUR', amount: 10000 }], securities: [{ symbol: 'XETRA:SAP', name: 'SAP', currency: 'EUR' }],
+        trades: [{ kind: 'buy', symbol: 'XETRA:SAP', currency: 'EUR', date: '2026-10-10', quantity: 10, price: 100, fee: 0 }], watch: [], stakes: [], quotes: [{ symbol: 'XETRA:SAP', date: '2026-10-20', value: 101, source: 'guess' }], fx: [] };
+    const two = { securities: [], trades: [{ kind: 'buy', symbol: 'XETRA:SAP', currency: 'EUR', date: '2026-10-25', quantity: 2, price: 100, fee: 0 }], watch: [], stakes: [], quotes: [], fx: [] };
+    globalThis.__menu = { calls: [], answers: [JSON.stringify(one), JSON.stringify(two)], answer: '{}' };
+    await invest.fillInvestment(mm, p, '2026-10-20');
+    assert.equal(p.investment.date, '2026-10-20');
+    assert.equal(p.investment.trades.length, 1);
+    assert.equal(fin.cash(mm.finance.accounts[p.investment.accounts[0].key]), 9000);
+});
+
+test('a payment told again a few minutes off in the bank\'s second turn is the one there', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = longPhone(), mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: [moneyAnswer('Bakery', 500, '10-20 09:00'), moneyAnswer('Bakery', 500, '10-20 09:05')], answer: '{}' };
+    await data.fillMoney(mm, p);
+    assert.deepEqual(p.money.tx.map(t => t.who), ['Bakery']);
+    assert.equal(p.money.orders.length, 1);
+    assert.ok(data.AI_SYS_WHERE.includes("OWNER DOESN'T KNOW (sometimes)") && data.AI_SYS_WHERE.includes('Someone whose whereabouts are in OWNER DOESN\'T KNOW: leave them out.'));
 });

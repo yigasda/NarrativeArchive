@@ -6,7 +6,7 @@ import { ctx, saveMeta } from './core.js';
 import { sideRequest, storyNow, prepareWealth, readMark, readNote, turnsNote, secondTurn, soFarHead, windowOf, nowAt } from './phonedata.js';
 import { syncOf, makeMark, exclusive } from './phonesync.js';
 import { phoneChatScope } from './phonestory.js';
-import { baseline, reviseBaseline, cash, currency, finance, finite, uid, positions, addPrice, migrateBank, fx, quoteKey } from './finance.js';
+import { baseline, reviseBaseline, cash, currency, finance, finite, uid, positions, addPrice, migrateBank, fx, price, quoteKey } from './finance.js';
 
 export const INVEST_SYS = `GOAL
 Fill one character's investment app in a long role-play: their brokerage cash, the shares they hold and how they came to hold them, the ones they watch, and any stake in a family company. The user opens it to peek at the character's life.
@@ -16,7 +16,7 @@ YOU GET
 - ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW.
 - DATE: the story's day the app shows.
 - BANK: the owner's bank accounts. They are separate and stay as they are.
-- FINANCIAL SCALE: how much the investments, brokerage cash included, come to, worked out beforehand.
+- FINANCIAL SCALE (sometimes): how much the investments, brokerage cash included, come to, worked out beforehand.
 - EXISTING PUBLIC PRICES: prices the app already uses on DATE. They stay.
 
 STORY OR INVENTED
@@ -147,8 +147,8 @@ function laterDate(p, gap, date) {
 async function investMore(m, p, raw1, two, plan) {
     const inv = p.investment, date = laterDate(p, two.cover, inv.date);
     const soFar = { base: raw1.base, securities: raw1.securities, trades: raw1.trades, watch: raw1.watch, stakes: raw1.stakes };
-    const only = 'The opening cash and "base" stay as they are: leave "cash" and "base" out. A share first bought in RECENT CHAT' + (two.short ? ' or TOLD SHORT' : '') + ' goes in "securities"';
-    const input = await sideRequest(m, p.owner, [`[DATE]\n${date}`, `[BANK — separate locked balances]\n${JSON.stringify(p.money?.bank || {})}`, wealthBlock(plan, 'investments'),
+    const only = 'The opening cash and "base" stay as they are: leave "cash" and "base" out. A share first bought in RECENT CHAT' + (two.short ? ' or TOLD SHORT' : '') + ' goes in "securities". "quotes" for every share held on DATE and "fx" on DATE are needed again, as DATE is new';
+    const input = await sideRequest(m, p.owner, [`[DATE]\n${date}`, `[BANK — separate locked balances]\n${JSON.stringify(p.money?.bank || {})}`,
         `[EXISTING PUBLIC PRICES]\n${JSON.stringify(Object.fromEntries(Object.entries(finance(m).prices).map(([k, book]) => [k, book[date]])))}`,
         `${soFarHead('INVESTMENTS', two.short, only)}\n${JSON.stringify(soFar)}`, two.short?.text || ''], { profile: p.financeProfile, money: true, read: { gap: two.cover } });
     const before = JSON.stringify([m.finance, p.investment]);
@@ -171,6 +171,12 @@ async function investMore(m, p, raw1, two, plan) {
     if (inv.accounts.some(a => cash(scratch.finance.accounts[a.key]) < -0.01)) throw new Error('더한 거래에 필요한 현금이 부족해요');
     ingestQuotes(scratch, raw, input, date, securities);
     for (const t of fresh) t.rateAtTrade = fx(scratch, t.currency, inv.base, t.date);
+    // the app shows the holdings at DATE's prices: a new DATE needs a price for every share held and a rate for every
+    // other currency on it, and a new foreign trade its rate (its cost is kept at that rate for good); else only turn 1 stays
+    const held = positions(trades).filter(h => h.quantity > 1e-9);
+    if (date !== inv.date && (held.some(h => { const q = price(scratch, `STOCK:${h.symbol}`, date); return !q || q.stale; })
+        || [...new Set([...inv.accounts.map(a => a.currency), ...held.map(h => h.currency)])].some(c => c !== inv.base && fx(scratch, c, inv.base, date) == null))) throw new Error('새 날짜의 시세 · 환율이 없어요');
+    if (fresh.some(t => t.currency !== inv.base && !finite(t.rateAtTrade))) throw new Error('새 거래의 환율이 없어요');
     const stakes = [...inv.stakes, ...stakesOf(raw, input).filter(x => !inv.stakes.some(y => y.company.toLowerCase() === x.company.toLowerCase()))].slice(0, 8);
     const watch = [...inv.watch, ...watchOf(raw, securities).filter(x => !inv.watch.some(y => y.symbol === x.symbol))].slice(0, 8);
     m.finance = scratch.finance;

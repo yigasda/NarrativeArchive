@@ -14,7 +14,7 @@ const map = {
     './phoneprofile.js': href('phoneprofile.js'),
     './phonestory.js': encoded(`export const phoneChatScope=()=>globalThis.__archTest.scope||'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-10-26';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
-    './ai.js': encoded(`export const askDraft=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);return '{"people":[]}';}const T=globalThis.__archTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;return typeof a==='string'?a:JSON.stringify(a);};`),
+    './ai.js': encoded(`export const askDraft=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);if(globalThis.__whereFail)throw new Error('quota');return '{"people":[]}';}const T=globalThis.__archTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;return typeof a==='string'?a:JSON.stringify(a);};`),
     './core.js': encoded(`export const ctx=()=>({chat:globalThis.__archTest.chat,chatMetadata:globalThis.__archTest.meta,loadWorldInfo:async()=>null,characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=()=>[];export const chatRows=()=>globalThis.__archTest.chat.map((x,i)=>({index:i,user:x.is_user,hidden:!!x.is_system,text:'[#'+i+'] '+x.name+': '+x.mes}));`),
@@ -207,7 +207,7 @@ test('where everyone is: read once on the first round of a phone that never had 
 // ---- 시각: one place decides whose clock a status line shows; now is never before this round's status line
 const frankfurtPhone = (c, { cities = true, here = 'Frankfurt am Main' } = {}) => {
     c.p.now = '10-26 03:00'; c.p.year = 2026; // Germany's summer time ended on 10-25: 8 hours
-    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', lives: 'DE', tz: 'Europe/Berlin' }, { name: 'Mara', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }] };
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', local: '', lives: 'DE', tz: 'Europe/Berlin' }, { name: 'Mara', city: 'Seoul', local: '서울', lives: 'KR', tz: 'Asia/Seoul' }] };
     if (cities) c.p.life = { at: '10-26 03:00', clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] },
         weather: { here: { place: here, date: '10-26', time: '03:00', cond: 'cloudy', temp: 4, hours: [], days: [], tiles: {} },
             cities: [{ name: 'Frankfurt am Main', tz: 'Europe/Berlin' }, { name: 'Seoul', tz: 'Asia/Seoul' }] } };
@@ -280,4 +280,92 @@ test('an old status line doesn\'t hold the clock back; a new one sets back a now
         await run(c.m, { now: '10-26 21:50', events: [] });
         assert.equal(c.p.now, '10-26 21:50');
     });
+});
+
+// ---- 2차 점검: the scene's zone from every place the phone knows of, Korean names, a shop named after a city, no time
+test('another character\'s phone is a zone too: a scene the phone can\'t place is not the owner\'s hour', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'lunch break, call?')]);
+    c.p.now = '10-26 03:00'; c.p.year = 2026;
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', local: '', lives: 'DE', tz: 'Europe/Berlin' }] };
+    c.m.phones.mara = { owner: 'Mara', country: 'KR' };
+    await withTrackers([trk(2, '12:50', "Mara's room")], async () => {
+        assert.match(data.clockBlock(c.p, c.p.now, c.m), /Mara \(in South Korea\) is 8 hours ahead/);
+        assert.equal(data.statusMoment(c.p, null, null, c.m).at, '');
+        await run(c.m, { now: '10-26 04:52', statusCity: '', events: [] });
+        assert.equal(c.p.now, '10-26 04:52');
+        assert.equal(data.storyNow(c.p, null, c.m), '10-26 04:52');
+    });
+});
+
+test('a Korean status line in a Korean story: the owner\'s own city by its Korean name, nothing asked', async () => {
+    const c = setup([say('Ren', '퇴근'), say('Mara', '수고'), say('Ren', '카페 도착')]);
+    c.p.now = '10-26 18:00'; c.p.year = 2026; c.p.country = 'KR';
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', local: '서울', lives: 'KR', tz: 'Asia/Seoul' }, { name: 'Ivo', city: 'New York', lives: 'US', tz: 'America/New_York' }] };
+    await withTrackers([trk(2, '19:10', '서울 강남 · 카페')], async () => {
+        assert.equal(data.statusMoment(c.p).at, '10-26 19:10');
+        await run(c.m, { now: '10-26 18:30', events: [] });
+        assert.ok(!/"statusCity"/.test(T.sys));
+        assert.equal(c.p.now, '10-26 19:10');
+    });
+    // a shop named after a city in another zone is no proof the scene is there
+    c.p.where.people.push({ name: 'Varo', city: 'Paris', lives: 'FR', tz: 'Europe/Paris' });
+    await withTrackers([trk(3, '19:30', 'Paris Baguette 강남점 · 창가')], async () => {
+        assert.notEqual(data.statusMoment(c.p).at, '10-27 03:30');
+        assert.equal(data.statusMoment(c.p).at, '');
+    });
+});
+
+test('a status line with no time from a scene elsewhere doesn\'t take over the owner\'s weather', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'so hot here')]);
+    frankfurtPhone(c);
+    await withTrackers([{ i: 2, date: '', min: null, time: '', place: "Mara's room", city: "Mara's room", weather: '맑음 22°C' }], async () => {
+        await run(c.m, { now: '10-26 04:00', statusCity: 'Mara', events: [] });
+        assert.deepEqual([c.p.life.weather.here.place, c.p.life.weather.here.temp], ['Frankfurt am Main', 4]);
+    });
+});
+
+test('set back over New Year: the year before', async () => {
+    const c = setup([say('Ren', 'happy new year'), say('Mara', 'not yet here'), say('Ren', 'oh right')]);
+    c.p.now = '01-01 00:30'; c.p.year = 2027;
+    await withTrackers([{ i: 2, date: '12.31', min: 23 * 60 + 50, time: '23:50', place: 'Frankfurt am Main', city: 'Frankfurt am Main', weather: '' }], async () => {
+        await run(c.m, { now: '12-31 23:55', events: [] });
+        assert.deepEqual([c.p.now, c.p.year], ['12-31 23:55', 2026]);
+    });
+});
+
+test('the owner travels: the reflection says so, their clock is the new city\'s; undo puts the old one back', async () => {
+    const c = setup([say('Ren', 'boarding'), say('Mara', 'see you soon'), say('Ren', 'landed in Seoul!')]);
+    frankfurtPhone(c);
+    await withTrackers([trk(2, '20:00', 'Seoul · Incheon airport')], async () => {
+        await run(c.m, { now: '10-26 20:00', ownerCity: { city: 'Seoul', local: '서울', tz: 'Asia/Seoul' }, events: [] });
+        assert.equal(c.p.where.people.find(x => x.name === 'Ren').city, 'Seoul');
+        assert.equal(c.p.now, '10-26 20:00');
+        assert.equal(data.statusMoment(c.p).home, true);
+        await data.undoRound(c.m, c.p);
+        assert.equal(c.p.where.people.find(x => x.name === 'Ren').city, 'Frankfurt am Main');
+    });
+});
+
+test('a where-reading that fails is noted and not asked again on the next round', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'coffee?')]);
+    globalThis.__where = []; globalThis.__whereFail = true;
+    try {
+        await run(c.m, { now: '10-26 09:30', events: [] });
+        T.chat.push(say('Mara', 'yes please'));
+        await run(c.m, { now: '10-26 09:40', events: [] });
+        assert.equal(globalThis.__where.length, 1);
+        assert.equal(c.p.where.failed, true);
+    } finally { globalThis.__whereFail = false; }
+});
+
+test('a where-reading from before the city\'s own name was kept is read once more', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'coffee?')]);
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }] };
+    globalThis.__where = [];
+    await run(c.m, { now: '10-26 09:30', events: [] });
+    T.chat.push(say('Mara', 'yes please'));
+    await run(c.m, { now: '10-26 09:40', events: [] });
+    assert.equal(globalThis.__where.length, 1);
+    // nothing new read: what was there stays
+    assert.equal(c.p.where.people[0].city, 'Seoul');
 });
