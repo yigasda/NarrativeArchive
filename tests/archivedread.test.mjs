@@ -739,3 +739,18 @@ test('일상 is its own request after the reflection\'s: it gets all the reflect
     try { await run(c.m, { now: '10-26 15:00', events: [] }); } finally { delete globalThis.__everyday; }
     assert.ok(c.p.sync.done.flat().includes(4));
 });
+
+test('일상\'s items are the reflection\'s own (each app\'s notes on its fields), without contacts or the profile; its rules for people and the diary too', () => {
+    const ev = data.AI_SYS_EVERYDAY, core = data.coreSystem({ life: true });
+    for (const k of ['threads', 'calls', 'photos', 'notes', 'searches', 'events', 'posts', 'mails', 'diary', 'voice']) {
+        const lineOf = s => s.split("\n").filter(l => l.trimStart().startsWith(`"${k}": [`)).at(-1)?.replace(/,$/, "");
+        assert.equal(lineOf(ev), lineOf(core.split('Items in "phone":')[1]), k);
+    }
+    assert.ok(!/"contacts": \[|"profile": \{/.test(ev));
+    assert.match(ev, /"tab": true if its page is still open/);
+    assert.match(ev, /"comments": \[/);
+    assert.match(ev, /A relationship word \(girlfriend, ex, husband, boss\)/);
+    assert.match(ev, /A diary entry holds what these messages show/);
+    assert.equal(ev.split('\nTIMES\n').length, 2);
+    assert.match(ev, /Never a booking, a trip or a purchase the story doesn't have/);
+});

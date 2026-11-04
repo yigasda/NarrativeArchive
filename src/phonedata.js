@@ -425,6 +425,8 @@ function everydayOn(raw, rows, textAt) {
 // on its own (in the reflection's own request it was a line among many: run51–53 wrote none after a scene and kept making
 // up details). It gets all the reflection got, what the reflection put on the phone from these messages, and the people
 // the owner had a scene with
+// the apps' items as the reflection writes them, without the contacts and the profile (no one new, no SNS name changed)
+const EVERYDAY_ITEMS = PHONE_ITEMS.split('\n').filter(l => !/^\s*"(contacts|profile)"/.test(l)).join('\n').replace(VOICE_ONLY, '');
 export const AI_SYS_EVERYDAY = `GOAL
 Write the ordinary life on one character's phone in the hours a few new role-play messages cover: the small records a real phone gathers, and the texts people send after a scene with the owner.
 Another step already put the story's own events on the phone; you only add everyday life around them.
@@ -443,22 +445,21 @@ ${CLOCK_GET}
 EVERYDAY
 - A few records of the owner's ordinary life in these hours, from their habits: any app, a little in each as a real phone gets it; texts and calls by the person.
 - For each person in SCENES WITH: the texts the two would send each other later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
-- People from the story or PEOPLE AROUND as they are and with what they feel; never someone the owner isn't in touch with now.
+- People from the story or PEOPLE AROUND as they are and with what they feel; never someone the owner isn't in touch with now. A relationship word (girlfriend, ex, husband, boss) only if the messages, archive or PEOPLE AROUND use it for them.
+- A diary entry holds what these messages show and what the owner feels about it, as the story and PEOPLE AROUND show them; no new secrets or events.
 - Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result. How they feel and small things around them are fine. No new facts, events, plans or secrets.
 - Times from the phone's last time up to the newest message, never later.
+- Never a booking, a trip or a purchase the story doesn't have (a ticket mail, an order confirmation).
 - A day with nothing ordinary in it: empty lists.
 
 ${PHONE_STYLE}
 
-TIMES
-${OWN_CLOCK}
-
 JSON (one object, nothing before or after it)
-{ "everyday": { "threads": [{ "with": name, "messages": [{ "from": "me" or the sender's name, "text", "ko", "time" }] }],
-  "calls": [{ "with", "type": "in" | "out" | "missed", "time", "min", "count": calls in a row }],
-  "photos": [{ "caption", "ko", "time", "mood": one of warm, cool, green, dark, bright, pink }], "notes": [{ "title", "kt", "text", "ko", "time" }],
-  "searches": [{ "q", "ko", "time" }], "mails": [{ "from", "subject", "ks", "text", "ko", "time", "unread" }],
-  "posts": [{ "text", "ko", "photo", "pko", "time", "likes" }], "diary": [{ "date": "MM-DD", "title", "kt", "text", "ko" }], "voice": [{ "title", "kt", "text", "ko", "time", "sec", "place" }] } }`;
+{ "everyday": { the items below, each app a list (an empty one when nothing) } }
+Items, as the phone's own apps take them:
+{
+${EVERYDAY_ITEMS}
+}`;
 // the people the owner had a scene with in these messages: any the phone knows (PEOPLE AROUND, contacts, texts, the place
 // reading) named in them
 function scenesWith(p, text) {
