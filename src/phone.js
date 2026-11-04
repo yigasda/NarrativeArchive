@@ -5,7 +5,7 @@
 //   upto (the last message number the archive held), at, inject } }
 
 import { phoneChatScope, ensurePhoneStory, resetPhoneStory } from './phonestory.js';
-import { prepareWealth, dateOrderOf, needsDateOrder, setDateOrder } from './phonedata.js';
+import { prepareWealth, dateOrderOf, needsDateOrder, setDateOrder, setOwnerLives, setPlaceCity, dropPlacePerson, rereadPlaces, placeInfo } from './phonedata.js';
 import { profileEntries, resolvePhoneProfile, currentPersonaBinding } from './phoneprofile.js';
 import { investmentScreen } from './investui.js';
 import { collectInvestmentRecords, fillInvestment, fillChartHistory, refreshMarket, refreshBankFX, investmentDate, validDate } from './investdata.js';
@@ -15,7 +15,7 @@ import { ctx, getMeta, globalSettings, saveGlobal, saveMeta } from './core.js';
 import { applyInjection } from './inject.js';
 import { faceHtml, nameKey, peopleList } from './people.js';
 import { drafting, drawing, drawPhoto, drawPost, filling, makeDraft, paging, recording, recordVoice, searching, searchPage, shooting, takePhoto, webPage, writeEntry, writing } from './phoneai.js';
-import { APPS, AXB, AXB_C, busyHtml, setDate, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen } from './phoneapps.js';
+import { APPS, AXB, AXB_C, busyHtml, setDate, callScreen, callWho, calOne, calScreen, camScreen, contactOne, contactsScreen, diaryOne, diaryScreen, draftView, ic, looksSheet, mailOne, mailScreen, mapScreen, msgList, noteOne, noteScreen, photoScreen, photoView, REMAKE_MORE, setLore, setRemake, setScreen, setTheme, setOwnerProfile, setWho, snsPost, snsScreen, statusBar, threadScreen, setPlace } from './phoneapps.js';
 import { dropStretch, ensureIds, ensureYear, hasDatedRecords, noArchive, setStoryYear, storyYear, fillDevice, fillMoney, fillVoice, koOn, loreOff, makePhone, tidyKo, markAfter, phoneLore, REMAKE, restoreRounds, retryMoney, showNow, storyNow, syncLeft, syncRows, syncState, tidyJournal, undoRound } from './phonedata.js';
 import { busy, journalRead, journalWrite, syncOf } from './phonesync.js';
 import { syncPick, syncSettings } from './phonesyncui.js';
@@ -49,7 +49,7 @@ function screen(p, view, m, roster, ui) {
         : v === 'note' ? noteScreen(p, now) : v === 'noteone' ? noteOne(p, now, Number(i)) : v === 'search' ? searchScreen(p, now) : v === 'page' ? pageView(p, now, i || '', paging.has(`${nameKey(p.owner)}:${i}`)) : v === 'tabs' ? tabsScreen(p, now) : v === 'marks' || v === 'history' ? marksScreen(p, now, v === 'history') : v === 'searchone' ? searchOne(p, now, Number(i), searching.has(`${nameKey(p.owner)}:${i}`))
         : v === 'cal' ? calScreen(p, now, m, i || '') : v === 'calone' ? calOne(p, now, Number(i), m) : v === 'map' ? mapScreen(p, now, m)
         : v === 'sns' ? snsScreen(p, now) : v === 'snspost' ? snsPost(p, now, Number(i)) : v === 'mail' ? mailScreen(p, now) : v === 'mailone' ? mailOne(p, now, Number(i))
-        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setdate' ? setDate(p, now, m) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
+        : v === 'diary' ? diaryScreen(p, now, i || '') : v === 'diaryone' ? diaryOne(p, now, Number(i)) : v === 'setsync' ? syncSettings(p, now, ui) : v === 'setsyncpick' ? syncPick(p, now, ui) : v === 'set' ? setScreen(p, now, m, ui) : v === 'stime' ? screenTimeScreen(p, now, i || '') : v === 'settheme' ? setTheme(p, now) : v === 'setdate' ? setDate(p, now, m) : v === 'setplace' ? setPlace(p, now, m, ui) : v === 'setremake' ? setRemake(p, now, ui, m) : v === 'setprofile' ? setOwnerProfile(p,now,ui.profileState) : v === 'setwho' ? setWho(p, now, m) : v === 'setlore' ? setLore(p, now, m, ui)
         : v === 'cam' ? camScreen(p, now, i === undefined ? -1 : Number(i), shooting.has(nameKey(p.owner))) : homeScreen(p, now, m);
     // the home is the design board itself, at its own size, scaled to the screen (--k)
     // every app: drawn at the boards' size too, each its own app look
@@ -96,7 +96,7 @@ export async function openPhone(who = null) {
     const selectionKey = phoneSelectionKey(c);
     let owner = selectedPhoneOwner(m, names, who, readPhoneSelection(selectionKey));
     if (owner) { rememberPhoneSelection(m,owner,selectionKey); await saveMeta(); }
-    let investing = false, making = false, busyMake = null;  // busyMake: 'sync' | 'make' while a reflection or a make runs
+    let investing = false, making = false, busyMake = null, placeReading = false;  // busyMake: 'sync' | 'make' while a reflection or a make runs
     for (const p of Object.values(m.phones)) migrateBank(m, p);
     // phones from before 날짜 및 시간 get their year (or none) once
     if (Object.values(m.phones).filter(p => p?.owner).map(p => ensureYear(m, p)).some(Boolean)) await saveMeta();
@@ -153,10 +153,20 @@ export async function openPhone(who = null) {
     const askChoice = (title, text, opts, no = '나중에') => {
         ask?.done(false);
         return new Promise(done => {
-            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_btns v">${opts.map(o => `<div role="button" tabindex="0" class="pcf_ok safe" data-v="${esc(o.v)}">${o.sub ? `<span class="pcf_sub">${esc(o.sub)}</span>` : ''}${esc(o.label)}</div>`).join('')}<div role="button" tabindex="0" class="pcf_no">${esc(no)}</div></div></div></div></div>`)[0];
+            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_btns v">${opts.map(o => `<div role="button" tabindex="0" class="pcf_ok safe${o.danger ? ' pcf_bad' : ''}" data-v="${esc(o.v)}">${o.sub ? `<span class="pcf_sub">${esc(o.sub)}</span>` : ''}${esc(o.label)}</div>`).join('')}<div role="button" tabindex="0" class="pcf_no">${esc(no)}</div></div></div></div></div>`)[0];
             ask = { el, done: v => { ask = null; el.remove(); done(v); } };
             placeAsk();
             if (el.isConnected) el.querySelector('.pcf_no').focus({ preventScroll: true });
+        });
+    };
+    // the same sheet with a line to type (a city): resolves the text, or false
+    const askInput = (title, text, value = '', ok = '저장') => {
+        ask?.done(false);
+        return new Promise(done => {
+            const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_in"><input type="text" class="pcf_field" value="${esc(value)}" enterkeyhint="done" autocomplete="off"></div><div class="pcf_btns"><div role="button" tabindex="0" class="pcf_no">취소</div><div role="button" tabindex="0" class="pcf_ok safe">${esc(ok)}</div></div></div></div></div>`)[0];
+            ask = { el, done: v => { ask = null; el.remove(); done(v); } };
+            placeAsk();
+            if (el.isConnected) { const f = el.querySelector('.pcf_field'); f.focus({ preventScroll: true }); f.select(); }
         });
     };
     // 상태창 날짜 순서: asked once per chat before the first make or reflection (closing it reads 월.일 and asks again next time)
@@ -165,7 +175,8 @@ export async function openPhone(who = null) {
         const v = await askChoice('날짜를 어떻게 쓰세요?', '나중에 설정에서 바꿀 수 있어요.', [{ v: 'md', label: '월.일', sub: '11.03 = 11월 3일' }, { v: 'dm', label: '일.월', sub: '03.11. = 11월 3일' }]);
         if (v === 'md' || v === 'dm') await setDateOrder(m, v);
     };
-    $root.on('click', '.pcf', function (e) { e.stopPropagation(); const b = e.target.closest('.pcf_ok, .pcf_no'); if (b) ask?.done(b.classList.contains('pcf_ok') ? (b.dataset.v || true) : false); else if (e.target === this) ask?.done(false); });
+    $root.on('click', '.pcf', function (e) { e.stopPropagation(); const b = e.target.closest('.pcf_ok, .pcf_no'); if (b) { const f = this.querySelector('.pcf_field'); ask?.done(b.classList.contains('pcf_ok') ? (f ? f.value.trim() || false : b.dataset.v || true) : false); } else if (e.target === this) ask?.done(false); });
+    $root.on('keydown', '.pcf_field', function (e) { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); ask?.done(this.value.trim() || false); } else if (e.key === 'Escape') ask?.done(false); });
     $root.on('keydown', '.pcf_ok, .pcf_no', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ask?.done(this.classList.contains('pcf_ok') ? (this.dataset.v || true) : false); } });
     const drawPhone = (keep = false) => {
         queueMicrotask(placeAsk);  // every way out of a redraw (some return early) puts the open sheet back
@@ -216,7 +227,7 @@ export async function openPhone(who = null) {
         // a screen that can't be drawn says why (and in the console), instead of leaving the phone blank or on another screen
         let html;
         tidyKo(p);
-        try { html = screen(p, view, m, roster, { syncN: view === 'set' ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)) }); }
+        try { html = screen(p, view, m, roster, { syncN: view === 'set' ? syncLeft(p, m) : null, syncRows: view.startsWith('setsync') ? syncRows() : [], syncWhy, syncPending, pickMore, loreExp, loreEnts, remake, contactBack, investing, profileState:profileStates.get(nameKey(p.owner)), placeReading }); }
         catch (err) {
             console.error('[narrative-archive] phone screen', view, err);
             toastr.error(`${view} 화면을 그리지 못했어요: ${err?.message || err}`, '캐릭터 휴대폰');
@@ -843,13 +854,54 @@ export async function openPhone(who = null) {
         const { journalWrite } = await import('./phonesync.js'); journalWrite(phoneChatScope(ctx()), []); syncPending = 0; drawPhone();
     });
     // 날짜 및 시간: the year this phone's dates are in, or none
-    $root.on('change', '.na_ph_year', async function () {
-        const p = phone(), y = Math.round(Number(this.value));
+    // the story's year: − / + a year at a time, held down it runs (faster after a moment), like a phone's own steppers;
+    // the number changes in place while held, the year is set once on letting go
+    const commitYear = async y => {
+        const p = phone();
         if (!p || !(y >= 1900 && y <= 2100) || y === p.year) { drawPhone(true); return; }
         // the bank's and investments' dates move with it (the whole chat's), so their order holds
         if (p.year && hasDatedRecords(m) && !await askSheet(`${y}년으로 바꿀까요?`, '기록 날짜와 다른 폰도 같이 바뀌어요.', '바꾸기', true)) { drawPhone(true); return; }
         setStoryYear(m, p, y);
         drawPhone(true); await saveMeta();
+    };
+    let yHold = null;
+    const yStop = () => { if (!yHold) return; clearTimeout(yHold.t); const y = yHold.y; yHold = null; commitYear(y); };
+    $root.on('pointerdown', '.na_ph_ystep', function (e) {
+        e.preventDefault(); e.stopPropagation(); if (yHold) return;
+        const p = phone(); if (!p) return;
+        const d = Number(this.dataset.d), $v = $root.find('.na_ph_yval');
+        yHold = { y: Number(p.year) || new Date().getFullYear(), t: 0, n: 0 };
+        const tick = () => { if (!yHold) return; yHold.y = Math.max(1900, Math.min(2100, yHold.y + d)); yHold.n++; $v.text(String(yHold.y)); yHold.t = setTimeout(tick, yHold.n < 2 ? 420 : yHold.n < 12 ? 110 : 45); };
+        tick();
+        this.setPointerCapture?.(e.pointerId);
+    });
+    $root.on('pointerup pointercancel lostpointercapture', '.na_ph_ystep', e => { e.stopPropagation(); yStop(); });
+    $root.on('keydown', '.na_ph_ystep', function (e) { if (e.key !== 'Enter' && e.key !== ' ') return; e.preventDefault(); const p = phone(); if (p) commitYear((Number(p.year) || new Date().getFullYear()) + Number(this.dataset.d)); });
+    // 설정 › 위치 정보: locked while the phone is being made, reflected or filled, like the date order
+    const placeLocked = () => { if (!(making || busyMake || investing || filling.size || busy.fill || busy.sync || placeReading)) return false; toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰'); return true; };
+    const placeCity = async (name, now) => {
+        const v = await askInput(`${name}의 도시`, '시간대는 도시 이름으로 찾아요.', now || '');
+        if (!v || v === now) return;
+        try { await setPlaceCity(m, phone(), name, v); } catch (err) { toastr.warning(String(err?.message || err), '위치 정보'); }
+        drawPhone(true);
+    };
+    $root.on('change', '.na_ph_plives', async function (e) { e.stopPropagation(); if (placeLocked()) return drawPhone(true); if (this.value) await setOwnerLives(m, phone(), this.value); drawPhone(true); });
+    $root.on('click', '.na_ph_plcity', async function (e) { e.stopPropagation(); if (placeLocked()) return; await placeCity(this.dataset.n, placeInfo(phone()).owner.city); });
+    $root.on('click', '.na_ph_plrow', async function (e) {
+        e.stopPropagation(); if (placeLocked()) return;
+        const name = this.dataset.n, x = placeInfo(phone()).people.find(r => r.name === name); if (x) await placeCity(name, x.city);
+    });
+    // 밀어서 빼기, like a message or a mail: the row slid open shows 빼기
+    $root.on('click', '.na_ph_pldrop', async function (e) { e.stopPropagation(); if (placeLocked()) return; await dropPlacePerson(m, phone(), this.dataset.n); drawPhone(true); });
+    $root.on('click', '.na_ph_plread', async function (e) {
+        e.stopPropagation(); if (placeLocked()) return;
+        const v = await askChoice('위치를 연동할까요?', '모델을 한 번 불러요.', [{ v: 'keep', label: '수동 위치 제외하고 연동' }, { v: 'all', label: '전부 새로 연동' }], '취소');
+        if (v !== 'keep' && v !== 'all') return;
+        if (v === 'all' && !await askSheet('위치가 모두 바뀌어요', '수동 위치 · 뺀 사람도 다시 연동해요.', '새로 연동')) return;
+        const p = phone(); placeReading = true; drawPhone(true);
+        try { await rereadPlaces(m, p, { all: v === 'all' }); toastr.success('위치를 연동했어요', '위치 정보'); }
+        catch (err) { toastr.error(String(err?.message || err), '위치 정보'); }
+        finally { placeReading = false; if (!phoneClosed) drawPhone(true); }
     });
     $root.on('click', '.na_ph_dord', async function (e) { e.stopPropagation(); if (making || busyMake || investing || filling.size || busy.fill || busy.sync) return toastr.info('반영이 끝난 뒤 바꿔 주세요', '캐릭터 휴대폰'); const v = this.dataset.v; if (v !== 'md' && v !== 'dm' || dateOrderOf(m) === v && !needsDateOrder(m)) return; await setDateOrder(m, v); drawPhone(true); });
     $root.on('click', '.na_ph_yearshow', async e => { e.stopPropagation(); const p = phone(); if (!p) return; p.noYear = !p.noYear; if (!p.noYear && !p.year) p.year = Number(storyYear(m, { ...p, year: 0 })) || new Date().getFullYear(); drawPhone(true); await saveMeta(); });

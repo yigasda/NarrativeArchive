@@ -1,0 +1,66 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;background:#2a2d33;font-family:-apple-system,'SF Pro Text','Noto Sans KR',sans-serif;display:flex;gap:28px;padding:28px;align-items:flex-start}
+.col{display:flex;flex-direction:column;align-items:center;gap:10px}.lab{color:#ffb3cf;font:700 15px sans-serif}
+.ph{width:390px;height:844px;border-radius:44px;border:10px solid #111;background:#f2f2f6;position:relative;overflow:hidden;box-sizing:content-box}
+.sb{height:47px;display:flex;justify-content:space-between;align-items:flex-end;padding:0 30px 6px;font:600 15px 'Inter Tight',sans-serif;color:#000}
+.top{height:48px;display:flex;align-items:center;padding:0 16px}.cb{width:38px;height:38px;border-radius:999px;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.08),0 4px 12px rgba(22,27,34,.06);display:flex;align-items:center;justify-content:center}
+h1{margin:6px 20px 14px;font-size:30px;font-weight:700;letter-spacing:-.02em;color:#000}
+.sec{margin:16px 32px 7px;font-size:13px;color:#6d7480}
+.card{margin:0 16px;background:#fff;border-radius:22px;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05);overflow:hidden}
+.rw{display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;position:relative}.rw+.rw::before{content:"";position:absolute;top:0;left:60px;right:0;height:.5px;background:#e6e8ec}.card.nl .rw+.rw::before{left:16px}
+.si{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none}
+.n{flex:1;font-size:16px;color:#000}.v{font-size:15px;color:#8a919c}.chev{color:#c4c8cf;font-size:18px;margin-left:2px}
+.man{margin-left:6px;padding:2px 7px;border-radius:999px;background:#eef1f6;color:#5a6474;font-size:11px;font-weight:600}
+.foot{margin:8px 32px 0;font-size:12.5px;color:#8a929d;line-height:1.45}
+.warn{margin:0 16px 12px;padding:12px 14px;border-radius:16px;background:#fbf1dc;color:#7a5a12;font-size:13px;display:flex;gap:8px;align-items:center}
+.av{width:34px;height:34px;border-radius:999px;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;flex:none}
+.sub{display:block;font-size:13px;color:#8a919c;margin-top:1px}
+.blue{color:#2c4a80}.red{color:#d0453a}
+.btn{margin:16px 16px 0;height:50px;border-radius:16px;background:#fff;box-shadow:0 1px 2px rgba(22,27,34,.04),0 8px 24px rgba(22,27,34,.05);display:flex;align-items:center;justify-content:center;gap:8px;font-size:16px;font-weight:600;color:#2c4a80}
+.wc{display:flex;align-items:center;padding:12px 16px;gap:12px;position:relative}.wc+.wc::before{content:"";position:absolute;top:0;left:16px;right:0;height:.5px;background:#e6e8ec}
+.big{font:600 30px 'Inter Tight',sans-serif;letter-spacing:-.02em;color:#000}
+.pill{height:30px;padding:0 12px;border-radius:999px;background:#eef1f6;color:#2c4a80;font-size:13px;font-weight:600;display:inline-flex;align-items:center}
+.trash{width:30px;height:30px;border-radius:999px;background:#fbe9e6;display:flex;align-items:center;justify-content:center}
+.hero{margin:0 16px;border-radius:24px;padding:18px 18px 16px;background:#1d3461;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 10px 24px rgba(29,52,97,.25)}
+.hero small{color:rgba(255,255,255,.72);font-size:12.5px}.hero b{display:block;font-size:24px;margin-top:4px;letter-spacing:-.01em}
+.hero .row{display:flex;gap:8px;margin-top:14px}.hero .chip{flex:1;border-radius:14px;background:rgba(255,255,255,.12);padding:10px 12px;font-size:12px;color:rgba(255,255,255,.75)}.hero .chip span{display:block;color:#fff;font-size:15px;font-weight:600;margin-top:2px}
+</style></head><body>
+<!-- A. 설정 목록 그대로: 나 · 다른 사람 두 묶음, 줄을 누르면 고치기 / 지우기 -->
+<div class="col"><div class="lab">A. 설정 목록 (누르면 고치기)</div><div class="ph">
+ <div class="sb"><span>06:30</span><span>●●● ▮</span></div><div class="top"><div class="cb">‹</div></div><h1>위치 정보</h1>
+ <div class="sec">나 · Oscar</div>
+ <div class="card"><div class="rw"><span class="si" style="background:#8faed1">🌐</span><span class="n">사는 나라</span><span class="v">독일</span><span class="man">수동</span><span class="chev">›</span></div>
+  <div class="rw"><span class="si" style="background:#9aa7c0">⌖</span><span class="n">지금 있는 도시</span><span class="v">Frankfurt</span><span class="chev">›</span></div></div>
+ <div class="foot">사는 나라에 맞춰 배달 앱 · 스크린타임 앱이 정해져요.</div>
+ <div class="sec">다른 사람</div>
+ <div class="card"><div class="rw"><span class="av" style="background:#c98a7a">M</span><span class="n">Mara<span class="sub">서울 · 8시간 앞</span></span><span class="chev">›</span></div>
+  <div class="rw"><span class="av" style="background:#7d9bc1">R</span><span class="n">Ren<span class="sub">Frankfurt · 같은 시간</span></span><span class="man">수동</span><span class="chev">›</span></div>
+  <div class="rw"><span class="av" style="background:#8fae8a">V</span><span class="n">Varo<span class="sub">Paris · 같은 시간</span></span><span class="chev">›</span></div></div>
+ <div class="foot">줄을 누르면 도시를 바꾸거나 지울 수 있어요.</div>
+ <div class="card nl" style="margin-top:22px"><div class="rw" style="justify-content:center"><span class="blue" style="font-size:16px">AI로 다시 읽기</span></div></div>
+</div></div>
+<!-- B. 세계 시계처럼: 도시가 크게, 사람은 작게, 오른쪽에 시차 -->
+<div class="col"><div class="lab">B. 세계 시계처럼</div><div class="ph">
+ <div class="sb"><span>06:30</span><span>●●● ▮</span></div><div class="top"><div class="cb">‹</div></div><h1>위치 정보</h1>
+ <div class="hero"><small>Oscar · 지금 있는 곳</small><b>Frankfurt</b>
+  <div class="row"><div class="chip">사는 나라<span>독일 · 수동</span></div><div class="chip">시간대<span>Europe/Berlin</span></div></div></div>
+ <div class="sec">다른 사람</div>
+ <div class="card nl"><div class="wc"><span style="flex:1"><span class="big">서울</span><span class="sub">Mara · 내일</span></span><span style="text-align:right"><b style="font:600 18px 'Inter Tight',sans-serif">+8시간</b><span class="sub">14:30</span></span></div>
+  <div class="wc"><span style="flex:1"><span class="big">Frankfurt</span><span class="sub">Ren · 수동</span></span><span style="text-align:right"><b style="font:600 18px 'Inter Tight',sans-serif">같음</b><span class="sub">06:30</span></span></div>
+  <div class="wc"><span style="flex:1"><span class="big">Paris</span><span class="sub">Varo</span></span><span style="text-align:right"><b style="font:600 18px 'Inter Tight',sans-serif">같음</b><span class="sub">06:30</span></span></div></div>
+ <div class="btn">↻ AI로 다시 읽기</div>
+</div></div>
+<!-- C. 줄마다 버튼이 보이게: 도시 알약 · 지우기, 위에 못 읽었을 때 한 줄 -->
+<div class="col"><div class="lab">C. 줄마다 바꾸기 · 지우기 + 못 읽음 안내</div><div class="ph">
+ <div class="sb"><span>06:30</span><span>●●● ▮</span></div><div class="top"><div class="cb">‹</div></div><h1>위치 정보</h1>
+ <div class="warn">⚠ 자동으로 못 읽었어요 · 직접 정하거나 다시 읽어 주세요</div>
+ <div class="sec">나 · Oscar</div>
+ <div class="card"><div class="rw"><span class="n">사는 나라</span><span class="pill">독일 ⌄</span></div>
+  <div class="rw"><span class="n">지금 있는 도시</span><span class="pill">Frankfurt ✎</span></div></div>
+ <div class="sec">다른 사람</div>
+ <div class="card nl"><div class="rw"><span class="n">Mara<span class="sub">8시간 앞</span></span><span class="pill">서울 ✎</span><span class="trash"><span class="red" style="font-size:14px">✕</span></span></div>
+  <div class="rw"><span class="n">Ren <span class="man">수동</span><span class="sub">같은 시간</span></span><span class="pill">Frankfurt ✎</span><span class="trash"><span class="red" style="font-size:14px">✕</span></span></div>
+  <div class="rw"><span class="n">Varo<span class="sub">같은 시간</span></span><span class="pill">Paris ✎</span><span class="trash"><span class="red" style="font-size:14px">✕</span></span></div></div>
+ <div class="btn">↻ AI로 다시 읽기</div>
+</div></div>
+</body></html>

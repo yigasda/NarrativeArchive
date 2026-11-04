@@ -6,7 +6,7 @@ import { investmentDate } from './investdata.js';
 import { profileChoices, phoneDataInfo } from './phoneprofile.js';
 import { faceHtml, nameKey, nameRe, peopleData, peopleList, personLine } from './people.js';
 import { autopic, autopicPeople, drafting, drawing, looksOf, writing } from './phoneai.js';
-import { bigClock, byStory, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName, dateOrderOf } from './phonedata.js';
+import { bigClock, byStory, clockOf, COUNTRIES, fmtDate, fmtTime, fullDate, gapDays, hasKo, koOn, lastTime, listTime, localeOf, loreOff, MOODS, pad, parts, phoneLore, placesOf, REMAKE, rowDay, savedName, dateOrderOf, placeInfo } from './phonedata.js';
 import { threadNew } from './phonehome.js';
 import { screenView } from './phonescreen.js';
 import { recentTrackers } from './scenes.js';
@@ -198,7 +198,7 @@ const delRow = (kind, i, label) => `<div class="ax_card ax_delcard"><button type
 // a list row that slides left to show 삭제 (메시지 · 메일 · 통화)
 const swipeRow = (kind, i, row) => `<div class="ax_swp"><button type="button" class="na_ph_rm ax_swdel" data-kind="${kind}" data-i="${esc(String(i))}">${ax('trash2', 21, 'currentColor', 2)}<span>삭제</span></button>${row}</div>`;
 const delBtn = (kind, i, cls, inner) => `<button type="button" class="na_ph_rm ${cls}" data-kind="${kind}" data-i="${esc(String(i))}" aria-label="지우기">${inner}</button>`;
-export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue' };
+export const AXB = { clock: 'clockc', timer: 'clockc', wclock: 'clockc', alarm: 'clockc', health: 'health', hsteps: 'health', hsleep: 'health', hcmp: 'health', hwork: 'health', hheart: 'health', hwater: 'health', hweight: 'health', files: 'files', folder: 'files', file: 'files', weather: 'sky', wcity: 'sky', wlist: 'sky', dlv: 'dlv', delivery: 'dlv', dshop: 'dlv', dcart: 'dlv', dorders: 'dlv', dorder: 'dlv', ditem: 'dlv', dpay: 'dlv', drate: 'dlv', setprofile: 'slate', ivnotes: 'invest', ivschedule: 'invest', ivhistory: 'invest', invest: 'invest', stock: 'invest', ivactivity: 'invest', ivwatch: 'invest', ivstakes: 'invest', ivcash: 'invest', ivprices: 'invest', msg: 'blue', thread: 'blue', call: 'blue', callmiss: 'blue', callwho: 'blue', contacts: 'blue', contact: 'blue', draft: 'blue', page: 'sky', tabs: 'sky', marks: 'sky', history: 'sky', bank: 'bank', acct: 'bank', tx: 'bank', fixed: 'bank', banknote: 'bank', banksend: 'bank', stmt: 'bank', txdoc: 'bank', bankmore: 'bank', wallet: 'wallet', card: 'wallet', pass: 'wallet', shop: 'shop', order: 'shop', track: 'shop', voice: 'voice', voiceone: 'voice', photo: 'apri', photoone: 'apri', note: 'butter', noteone: 'butter', search: 'sky', searchone: 'sky', cal: 'brick', calone: 'brick', mail: 'sky', mailone: 'sky', set: 'slate', settheme: 'slate', setdate: 'slate', setplace: 'slate', setlore: 'slate', setwho: 'slate', setremake: 'slate', setsync: 'slate', setsyncpick: 'slate', stime: 'stime', cam: 'apri', map: 'blue' };
 export const AXB_C = { clockc: ['#f5a524', '#3a3220'], health: ['#e0405f', '#fbe3e8'], files: ['#2f6fbf', '#dfeaf8'], dlv: ['#1fa8a3', '#d9f4f3'], invest: ['#17695d', '#d9eee5'], blue: ['#2f6bff', '#e1e9ff'], apri: ['#a65a4e', '#f7e3d7'], butter: ['#7f6a22', '#f6edcf'], sky: ['#3f6a9e', '#dde8f4'], brick: ['#a14a42', '#f3dcd9'], slate: ['#454d5a', '#e6e8ec'], bank: ['#2c4a80', '#e2e9f5'], wallet: ['#3d4a66', '#e3e7ef'], shop: ['#2f7d74', '#d9efec'], voice: ['#8a5a2e', '#f2e7d6'], stime: ['#3f8fd8', '#e3f1fd'] };
 // people outside the archive get a letter on one of the home icons' colours
 const AX_AV = ['#8faed1', '#a699c9', '#d89f98', '#89b892', '#d494a7', '#a2a7af', '#dcc680'];
@@ -557,6 +557,7 @@ export function setScreen(p, now, m, ui) {
         <div class="ax_sec">일반</div>
         <div class="ax_card">
           <label class="ax_rw">${si('#8faed1', 'globe')}<span class="ax_tx"><span class="ax_n">국적</span></span><span class="ax_v">${esc(COUNTRIES[p.country] || p.country || '')}</span>${axChev}<select class="na_ph_country ax_sel" aria-label="국적">${Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === p.country ? 'selected' : ''}>${v}</option>`).join('')}${COUNTRIES[p.country] ? '' : `<option value="${esc(p.country)}" selected>${esc(p.country)}</option>`}</select></label>
+          <button type="button" class="ax_rw" data-go="setplace">${si('#7fa69c', 'pin')}<span class="ax_tx"><span class="ax_n">위치 정보</span></span><span class="ax_v">${esc((o => [COUNTRIES[o.lives] || o.lives, o.city].filter(Boolean).join(' · '))(placeInfo(p).owner))}</span>${axChev}</button>
           <button type="button" class="ax_rw" data-go="setdate">${si('#9aa7c0', 'clock')}<span class="ax_tx"><span class="ax_n">날짜 및 시간</span></span><span class="ax_v">${esc(dateLabel(p, now))}</span>${axChev}</button>
           <button type="button" class="ax_rw na_ph_looksbtn2">${si('#d89f98', 'user')}<span class="ax_tx"><span class="ax_n">외모</span></span><span class="ax_v">${nLooks ? `${nLooks}명` : ''}</span>${axChev}</button>
           <button type="button" class="ax_rw" data-go="setprofile">${si('#a2a7af', 'info')}<span class="ax_tx"><span class="ax_n">이 폰에 대해</span></span><span class="ax_v">${esc(p.financeProfile?.label || '연결 안 함')}</span>${axChev}</button>
@@ -587,22 +588,57 @@ const dateLabel = (p, now, long = false) => {
     return `${y ? fullDate(p, `${y}-${mt[1]}-${mt[2]}`) : fmtDate(p, `${mt[1]}-${mt[2]}`)}${long && d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}`;
 };
 export function setDate(p, now, m = null) {
+    // docs/mockups/phone-date C: the date in one line (with the year), the year as − 2026 + (hold for fast steps)
     const on = !p.noYear, mt = /^(\d{2})-(\d{2})/.exec(String(now || p.now || ''));
     const y = on && Number(p.year), d = y && mt ? new Date(Date.UTC(y, mt[1] - 1, Number(mt[2]))) : null;
-    const day = mt ? `${fmtDate(p, `${mt[1]}-${mt[2]}`)}${d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}` : '';
-    const row = (n, v, tag = 'div') => `<${tag} class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">${n}</span></span>${v}</${tag}>`;
+    const day = mt ? `${y ? fullDate(p, `${y}-${mt[1]}-${mt[2]}`) : fmtDate(p, `${mt[1]}-${mt[2]}`)}${d ? ` (${'일월화수목금토'[d.getUTCDay()]})` : ''}` : '';
+    const row = (n, v, tag = 'div', cls = '') => `<${tag} class="ax_rw ax_rwn${cls}"><span class="ax_tx"><span class="ax_n">${n}</span></span>${v}</${tag}>`;
+    const step = (dv, t) => `<span role="button" tabindex="0" class="ax_ystep na_ph_ystep" data-d="${dv}" aria-label="${dv < 0 ? '한 해 전' : '한 해 뒤'}">${t}</span>`;
     return `${axBar(p, now)}
       ${axTop(axCb('set'))}
       <div class="ax_scroll">${axH1('날짜 및 시간')}
         <div class="ax_card">
-          ${on ? row('연도', `<input type="number" class="ax_in na_ph_year cg_num" min="1900" max="2100" inputmode="numeric" aria-label="연도" value="${esc(String(p.year || ''))}">${axChev}`, 'label') : ''}
           ${row('날짜', `<span class="ax_v cg_num">${esc(day)}</span>`)}
           ${row('시간', `<span class="ax_v cg_num">${esc(clockOf(p, String(now || p.now || '').slice(6, 11)))}</span>`)}
         </div>
-        <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_yearshow"><span class="ax_tx"><span class="ax_n">연도 표시</span></span><span class="ax_sw ${on ? 'on' : ''}"></span></button></div>
-        <div class="ax_foot">끄면 날짜에 연도와 요일이 나오지 않아요.</div>
-        ${(o => `<div class="ax_sec">상태창</div><div class="ax_card"><div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">날짜 순서</span></span><span class="ax_dseg">${[['md', '월.일'], ['dm', '일.월']].map(([v, t]) => `<span role="button" tabindex="0" class="na_ph_dord${o === v ? ' on' : ''}" data-v="${v}">${t}</span>`).join('')}</span></div></div>
-        <div class="ax_foot">상태창의 03.11. 을 ${o === 'dm' ? '11월 3일' : '3월 11일'}로 읽어요.</div>`)(dateOrderOf(m))}
+        <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_yearshow"><span class="ax_tx"><span class="ax_n">연도 표시</span></span><span class="ax_sw ${on ? 'on' : ''}"></span></button>
+          ${on ? row('연도', `<span class="ax_ys">${step(-1, '−')}<b class="cg_num na_ph_yval">${esc(String(p.year || ''))}</b>${step(1, '+')}</span>`) : ''}</div>
+        <div class="ax_foot">연도를 알아야 요일이 맞게 나와요. 연도 없는 이야기만 꺼 주세요.</div>
+        ${(o => `<div class="ax_sec">날짜 읽는 법</div><div class="ax_card"><div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">순서</span></span><span class="ax_dseg">${[['md', '월.일'], ['dm', '일.월']].map(([v, t]) => `<span role="button" tabindex="0" class="na_ph_dord${o === v ? ' on' : ''}" data-v="${v}">${t}</span>`).join('')}</span></div></div>
+        <div class="ax_foot">03.11. → ${o === 'dm' ? '11월 3일' : '3월 11일'}</div>`)(dateOrderOf(m))}
+      </div>
+      ${axInd()}`;
+}
+// 설정 › 위치 정보 (docs/mockups/phone-place B, in the settings app's white cards): the owner's place as a card (the city they are in, the country they
+// live in, the zone), then the others like the world clock — the city big, who is there small, the hours apart and their time
+const hoursText = h => (h === null || h === undefined ? '—' : !h ? '같음' : `${h > 0 ? '+' : '−'}${Math.floor(Math.abs(h))}시간${Math.abs(h) % 1 ? ` ${Math.round((Math.abs(h) % 1) * 60)}분` : ''}`);
+function placeClock(p, now, h) {
+    const t = /(\d{2}):(\d{2})$/.exec(String(now || p.now || ''));
+    if (!t || h === null || h === undefined) return { time: '', day: '' };
+    const min = Number(t[1]) * 60 + Number(t[2]) + Math.round(h * 60), d = Math.floor(min / 1440), mm = ((min % 1440) + 1440) % 1440;
+    return { time: clockOf(p, `${String(Math.floor(mm / 60)).padStart(2, '0')}:${String(mm % 60).padStart(2, '0')}`), day: d > 0 ? '내일' : d < 0 ? '어제' : '' };
+}
+export function setPlace(p, now, m, ui = {}) {
+    const info = placeInfo(p), o = info.owner, man = '<i class="ax_pl_man">수동</i>';
+    const opts = Object.entries(COUNTRIES).map(([k, v]) => `<option value="${k}" ${k === o.lives ? 'selected' : ''}>${esc(v)}</option>`).join('') + (o.lives && !COUNTRIES[o.lives] ? `<option value="${esc(o.lives)}" selected>${esc(o.lives)}</option>` : '');
+    const row = x => { const c = placeClock(p, now, x.hours); return `<div class="ax_swp"><button type="button" class="ax_swdel na_ph_pldrop" data-n="${esc(x.name)}">${ax('trash2', 21, 'currentColor', 2)}<span>빼기</span></button><div role="button" tabindex="0" class="ax_rw ax_pl_row na_ph_plrow" data-n="${esc(x.name)}"><span class="ax_pl_l"><b>${esc(x.city || '모르는 곳')}</b><small>${esc(x.name)}${c.day ? ` · ${c.day}` : ''}${x.manual ? ` ${man}` : ''}</small></span><span class="ax_pl_r"><b class="cg_num">${hoursText(x.hours)}</b>${c.time ? `<small class="cg_num">${esc(c.time)}</small>` : ''}</span></div></div>`; };
+    return `${axBar(p, now)}
+      ${axTop(axCb('set'))}
+      <div class="ax_scroll">${axH1('위치 정보')}
+        ${info.failed ? `<div class="ax_pl_warn">${ax('info', 16, '#8a6a1f', 2.2)}<span>자동으로 못 읽었어요 · 직접 정하거나 연동해 주세요</span></div>` : ''}
+        <div class="ax_pl_hero">
+          <span class="ax_pl_k">${esc(o.name || '')} · 지금 있는 곳</span>
+          <div role="button" tabindex="0" class="ax_pl_city na_ph_plcity" data-n="${esc(o.name || '')}"><b>${esc(o.city || '도시 정하기')}</b>${o.cityManual ? man : ''}${ax('pen', 15, '#b4bac3', 2.2)}</div>
+          <div class="ax_pl_chips">
+            <div class="ax_pl_chip"><span>사는 나라</span><b>${esc(COUNTRIES[o.lives] || o.lives || '정하기')}${o.livesManual ? man : ''}</b><select class="na_ph_plives ax_sel" aria-label="사는 나라">${o.lives ? '' : '<option value="" selected>정하기</option>'}${opts}</select></div>
+            <div class="ax_pl_chip"><span>시간대</span><b>${esc(o.tz || '—')}</b></div>
+          </div>
+        </div>
+        <div class="ax_sec">다른 사람</div>
+        ${info.people.length ? `<div class="ax_card ax_pl_list">${info.people.map(row).join('')}</div>` : '<div class="ax_card ax_pl_list"><div class="ax_pl_none">아직 읽은 사람이 없어요</div></div>'}
+        <div class="ax_foot">눌러서 도시를 바꾸고, 왼쪽으로 밀어서 뺄 수 있어요.</div>
+        <div class="ax_card ax_pl_act"><div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_plread${ui.placeReading ? ' on' : ''}"><span class="ax_tx"><span class="ax_n ${ui.placeReading ? 'ax_pl_busy' : 'ax_blue'}">${ui.placeReading ? `${busyHtml} 연동하는 중` : 'AI로 연동'}</span></span></div></div>
+        <i class="ax_pad"></i>
       </div>
       ${axInd()}`;
 }
