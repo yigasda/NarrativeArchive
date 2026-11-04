@@ -174,3 +174,12 @@ test('a screen-time answer with a slip ("DB Navigator", 14): only that app is le
     assert.deepEqual(by['10-24'].apps, { Signal: 50, Spotify: 30 });
     assert.deepEqual(by['10-25'].apps, { Signal: 60 });
 });
+
+test('스크린타임 knows where they live: [LIVES IN] from the place reading (Germany), and the rule to use that country\'s apps', async () => {
+    const p = { owner: 'Ren', country: 'KR', now: '10-26 12:00', where: { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', lives: 'DE', tz: 'Europe/Berlin' }] },
+        life: { health: { usual: {}, days: [{ date: '10-25', sleep: '23:00', wake: '07:00' }] } } };
+    globalThis.__menu.answer = JSON.stringify({ usual: { apps: [{ app: 'WhatsApp', kind: 'chat', min: 60 }] }, days: [] });
+    await life.fillScreen({}, p);
+    assert.match(globalThis.__menu.input, /\[LIVES IN\]\n독일/);
+    assert.ok(globalThis.__menu.sys.includes('WhatsApp, not KakaoTalk'));
+});

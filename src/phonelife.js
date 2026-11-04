@@ -510,12 +510,13 @@ Write the screen time on a character's phone in a long role-play: the apps they 
 YOU GET
 - ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 - DAYS: their last days from the health app (when they slept and woke, their steps; "ev" when the story shows that day).
-- PHONE COUNTRY (sometimes).
+- LIVES IN: the country they live in. PHONE COUNTRY (sometimes).
 
 SCREEN TIME
 - It shows who they really are, habits they'd never admit (a game they can't put down, texting all night, barely touching the phone): from their character, not their polite profile.
 - "usual": 10 to 14 apps they open every day and 14 to 18 now and then, about 30 in all, spread over at least 6 of: chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health. Leave out what they would never touch. Someone who barely uses a phone shows it in short minutes, not in fewer apps.
 - Each of DAYS follows what happened that day and how they felt (a fight: hours of texting late into the night; a day out with friends: barely any), and how they slept.
+- The apps people use where they live (LIVES IN), above all for chat, maps, shopping, delivery and money: WhatsApp, not KakaoTalk, for someone living in Germany; KakaoTalk in Korea. Another country's app only when the story shows them using it.
 - Apps named as here (another real app is fine):
 ${SCREEN_LIST}
 - Numbers only: no diagnosis, no mood, no reason.
@@ -536,6 +537,7 @@ export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', as
     const today = /^\d{2}-\d{2}$/.test(la) && /^\d{2}-\d{2}$/.test(t0) && dayGap(t0, la) > 0 && dayGap(t0, la) <= 14 ? la : t0, told = d => String(d.id || '').startsWith('sync:') && !!d.screen;
     const days = (h.days || []).filter(d => d.date && d.date !== today && (again ? !told(d) : !d.screen) && (!today || dayGap(d.date, today) > 0 && dayGap(d.date, today) <= 7)).sort((a, b) => dayGap(b.date, a.date)).slice(-7);
     const input = await sideRequest(m, p.owner, [`[DAYS]\n${JSON.stringify(days.map(d => ({ date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, ...(d.ev ? { ev: d.ev } : {}) })))}`,
+        `[LIVES IN]\n${(c => COUNTRIES[c] || c || '(unknown)')((p.where?.people || []).find(x => String(x?.name || '').toLowerCase() === String(p.owner || '').toLowerCase())?.lives || livesIn(p))}`,
         p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read });
     const out = await askDraft(input, { force: true, system: AI_SYS_SCREEN, maxTokens: 6000, effort: 'low' });
     const raw = jsonOf(out, { salvage: true }), usual = usualScreenOf(raw?.usual);
