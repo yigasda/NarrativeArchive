@@ -233,3 +233,13 @@
 - 그리기 전에 쓰는 도구: scratchpad(`$S=/tmp/claude-0/-home-user-NarrativeArchive/975737c5-a9a7-512f-9518-c3206c8f1a25/scratchpad`) 아래 `plen.mjs`(반영 지시문 길이), `pdump.mjs`(지시문 덤프), `h/crawl2.mjs <variant> <country>`(전 화면 순회), `h/shots2.mjs`, `h/wxshare.mjs`
   - 로컬 실리태번: `cd $S/st && node server.js --port 8000` (백그라운드, 2시간 제한)
   - 세션이 바뀌면 scratchpad가 없을 수 있어요. 그러면 다시 만들어야 해요.
+
+## 9. 아카이브와 반영이 만나는 곳 (3.170.31~)
+
+- **채우기 · 폰 만들기**: 아카이브 + 아카이브 뒤 원문(오래된 순, 7만 토큰까지). 넘으면 #k에서 멈추고 그 앱의 읽음 표시를 #k에, 날짜 · 날씨 · 앱 시각도 #k 기준(`nowAt`, `storyNow(p, upto)`). 나머지는 반영이 이어서 읽어요.
+- **반영 전에 아카이브된 구간**: 아카이브하면 메시지가 숨겨져서 반영이 못 읽었어요(구멍). 이제 `archivedUnread`가 "기준점 뒤, 아직 안 읽음, 메시지가 다 숨겨짐, 아직 안 쓴 섹션"을 골라 `ARCHIVE FOR THESE MESSAGES` 증거로 넣어요(한 라운드 섹션 글 12,000자까지, 오래된 순). NEW MESSAGES가 비어도 라운드가 돌아요.
+  - 그 섹션에서 나온 이벤트도 기준점 뒤 · 섹션 인용 검사를 그대로 받아요. 이미 읽은 메시지(`readBefore` = done 또는 hiddenRead)는 거절해요.
+  - 읽은 숨김 메시지는 `s.hiddenRead`에 넣어요(`realign`이 done을 보이는 메시지로만 다시 만들기 때문에). 섹션 제목이 바뀌어 키가 달라져도 다시 안 읽어요.
+  - 남은 수(`syncLeft(p, m)`, `syncLast.remaining`)에 이런 섹션도 하나씩 세요.
+- core 지시문 YOU GET 한 줄 늘어남: 2,825 → 2,849토큰.
+- 안 한 것: 끊긴 채우기 뒤에 반영이 이미 지나간 구간(다시 만들기)은 소망이 미뤘어요. 앱별 다시 읽기 목록(호출 · 상태가 늘어남)과 반영 이벤트로 대신 보내기 둘 다 보류.

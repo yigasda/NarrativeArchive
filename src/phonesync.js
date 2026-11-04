@@ -209,6 +209,18 @@ export function archiveRound(s, sections, rows, round) {
     return { evidence, background };
 }
 
+// read already: a message read while it was shown (done), or read and hidden since (hiddenRead keeps those)
+export const readBefore = (s, i) => isDone(s, i) || (s.hiddenRead || {})[i] !== undefined;
+// archived before the phone read it: a section past the start, no round has used, whose own messages are hidden now
+// (the archive put them away) and unread, with no unread message of it still in the chat to bring it in the usual way.
+// Its text is all that is left of that stretch, so a round reads it as evidence; an event from it must still fall after
+// the start, on a message not read before, and quote the section. all: every message, hidden ones too (chatRows)
+export function archivedUnread(s, sections, rows, all) {
+    const base = s.marks.base?.index ?? -1, shown = new Set(rows.map(r => r.index));
+    const hidden = sec => all.filter(r => r.index > base && r.index >= sec.first && r.index <= sec.last && !shown.has(r.index) && !readBefore(s, r.index)).map(r => r.index);
+    return sections.filter(sec => sec.last > base && !s.arch[sec.key] && !rows.some(r => r.index >= sec.first && r.index <= sec.last && r.index > base && !isDone(s, r.index)))
+        .map(sec => ({ ...sec, hidden: hidden(sec) })).filter(sec => sec.hidden.length).sort((a, b) => a.first - b.first);
+}
 // does this round read the newest message? (only then may the archive's current state go along: an older round must
 // not see what comes after it)
 export const reachesEnd = (s, rows, round) => { const last = rows[rows.length - 1]?.index ?? -1; return round.some(r => r.index === last); };
