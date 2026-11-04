@@ -388,7 +388,7 @@ const later = (t, now) => { const g = dayGap(String(now).slice(0, 5), String(t).
 // ---- the fills
 export const fillLife = (m, p) => exclusive('fill', async () => {
     // what it reads after the archive first: stopped short, its now is where it stopped
-    const read = { gap: windowOf(m) }, upto = nowAt(read.gap), now = weatherNow(upto), days = storyDays(m, p, upto);
+    const read = { gap: windowOf(m, p) }, upto = nowAt(read.gap), now = weatherNow(upto), days = storyDays(m, p, upto);
     // made again: the body the phone already shows stays, unless the story changed it (a child who grew, a diet)
     const was = p.life?.health?.usual || {}, body = Object.fromEntries(['height', 'weight'].filter(k => Number.isFinite(was[k])).map(k => [k, was[k]]));
     const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p, upto)}`, daysBlock(days),
@@ -441,7 +441,7 @@ export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', as
     const h = p.life?.health;
     if (!h) throw new Error('건강 앱을 먼저 채워 주세요');
     // the last week before today (today is counted as it goes, from their usual)
-    const read = { gap: windowOf(m) }, today = String(storyNow(p, nowAt(read.gap)) || p.now || '').slice(0, 5), told = d => String(d.id || '').startsWith('sync:') && !!d.screen;
+    const read = { gap: windowOf(m, p) }, today = String(storyNow(p, nowAt(read.gap)) || p.now || '').slice(0, 5), told = d => String(d.id || '').startsWith('sync:') && !!d.screen;
     const days = (h.days || []).filter(d => d.date && d.date !== today && (again ? !told(d) : !d.screen) && (!today || dayGap(d.date, today) > 0 && dayGap(d.date, today) <= 7)).sort((a, b) => dayGap(b.date, a.date)).slice(-7);
     const input = await sideRequest(m, p.owner, [`[DAYS]\n${JSON.stringify(days.map(d => ({ date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, ...(d.ev ? { ev: d.ev } : {}) })))}`,
         p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read });
@@ -461,7 +461,7 @@ export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', as
     return n;
 });
 export const fillDelivery = (m, p) => exclusive('fill', async () => {
-    const accounts = p.money?.bank?.accounts || [], read = { gap: windowOf(m) }, upto = nowAt(read.gap);
+    const accounts = p.money?.bank?.accounts || [], read = { gap: windowOf(m, p) }, upto = nowAt(read.gap);
     // the bank's own rows (not the ones this app put there): a meal already paid there is pointed at, not paid again
     const tx = (p.money?.tx || []).filter(t => !String(t.id).startsWith('dlv-') && !t.delivery);
     const money = accounts.length ? `[MONEY NOW]\n${JSON.stringify({ accounts: accounts.map(a => ({ last4: a.last4, kind: a.kind, name: a.name, currency: a.currency })), tx: tx.slice(-20).map(t => ({ id: t.id, account: t.account, time: t.time, who: t.who, amount: t.amount })) })}` : '';

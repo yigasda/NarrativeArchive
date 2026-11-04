@@ -445,8 +445,11 @@ const ARCHIVE_MAX = 120_000; // characters: the state at the end, and as many of
 // 40,000 kept every rule and the story's days, 50,000 began to slip); the other everyday apps 30,000; the bank, investments
 // and device keep the recent chat)
 export const CHAT_TOKENS = { phone: 70_000, life: 40_000, apps: 30_000 };
-function chatStory(budget) {
-    const rows = recentForCheck(1e9), out = [];
+// the chat from the newest message back (upto: from the phone's clock back, see phoneAt)
+const atOf = t => Number((String(t).match(/^\[#(\d+)/) || [])[1] ?? NaN);
+const chatUpto = (rows, upto) => (upto == null ? rows : rows.filter(t => !(atOf(t) > upto)));
+function chatStory(budget, upto = null) {
+    const rows = chatUpto(recentForCheck(1e9), upto), out = [];
     for (let i = rows.length - 1, size = 0; i >= 0; i--) { const t = estTok(rows[i]); if (out.length && size + t > budget) break; out.unshift(rows[i]); size += t; }
     return out.join('\n\n');
 }
@@ -456,21 +459,28 @@ export const archiveEnd = m => Math.max(-1, ...parseSections(splitTail(String(m?
 // the chat after the archive, oldest first: every message the archive doesn't cover yet, nothing left out in between, up
 // to `budget` tokens. A longer stretch is read up to where it stops (to); the request's app marks that as read, and the
 // rest is the reflection's to read, in its own order, so no message is lost and none comes in twice
-export function chatAfterArchive(m, budget = CHAT_TOKENS.phone) {
-    const end = archiveEnd(m), rows = syncRows().filter(r => r.index > end), out = [];
+// upto: the phone's clock (phoneAt): a fill reads no further than the phone has; the reflection reads on from there
+export function chatAfterArchive(m, budget = CHAT_TOKENS.phone, upto = null) {
+    const end = archiveEnd(m), all = syncRows().filter(r => r.index > end), rows = all.filter(r => upto == null || r.index <= upto), out = [];
     let size = 0;
     for (const r of rows) { const t = estTok(r.text); if (out.length && size + t > budget) break; out.push(r); size += t; }
-    return { text: out.map(r => r.text).join('\n\n'), from: out[0]?.index ?? null, to: out.at(-1)?.index ?? end, n: out.length, all: out.length === rows.length, left: rows.length - out.length };
+    return { text: out.map(r => r.text).join('\n\n'), from: out[0]?.index ?? null, to: out.at(-1)?.index ?? end, n: out.length, all: out.length === rows.length, left: rows.length - out.length,
+        upto, later: all.length > rows.length };
 }
+// where the phone has read up to, its clock: the last message its making or a reflection read. Filling an app, or making
+// some again, reads up to here and no further, so every app stands at the same moment; what comes after is the
+// reflection's to read, for all of them at once. null: a phone with no reading record (it reads to now, as it always did)
+export const phoneAt = p => { const s = p?.sync, b = s?.marks?.base?.index; return Number.isInteger(b) ? Math.max(b, ...(s.done || []).map(r => r[1]), ...Object.keys(s.hiddenRead || {}).map(Number)) : null; };
 // it as RECENT CHAT; cut short, the block says where the story stops for now
-const afterBlock = g => (g?.n ? `[RECENT CHAT${g.all ? '' : ` — the story so far ends at #${g.to}; the messages after it are read later`}]\n${g.text}` : '');
+const afterBlock = g => (g?.n ? `[RECENT CHAT${g.all && !g.later ? '' : ` — the story so far ends at #${nowAt(g)}; the messages after it are read later`}]\n${g.text}` : '');
 // what a phone's request reads after the archive (null: no archive, the chat goes as before)
-export const windowOf = m => (noArchive(m) ? null : chatAfterArchive(m));
+// p: the phone it is for (its clock bounds it); no archive: only that bound (the chat goes as before, up to it)
+export const windowOf = (m, p = null) => { const upto = phoneAt(p); return noArchive(m) ? (upto == null ? null : { none: true, n: 0, all: true, upto }) : chatAfterArchive(m, CHAT_TOKENS.phone, upto); };
 // the story's "now" for a request that stopped short: the message it read up to (null: now is now). Its days, weather
 // and clock stand there too, so it never writes a day it didn't read; the reflection moves them on from there
-export const nowAt = g => (g && !g.all ? g.to : null);
+export const nowAt = g => (!g ? null : !g.all ? g.to : g.upto ?? null);
 // where a request read up to, when it stopped short of now: its app's mark (null: it read to now)
-export const readMark = g => (g && !g.all ? markAfter(g.to) : null);
+export const readMark = g => { const i = nowAt(g); return i == null ? null : markAfter(i); };
 export const readNote = g => { if (g && !g.all) globalThis.toastr?.info(`아카이브 뒤 메시지가 많아서 #${g.from}–#${g.to}까지 읽었어요. 나머지 ${g.left}개는 반영으로 이어서 채워져요`, '캐릭터 휴대폰'); };
 // the story's year: the phone's own (carried over New Year), else one written in a date in the archive, the newest status
 // lines or (no archive) the chat; none for a story that never dates itself (a fantasy calendar, an undated present)
@@ -526,7 +536,7 @@ export function setStoryYear(m, p, year) {
 // what the model is told of the year: a year in any text is this one (nothing when it is unknown)
 const yearBlock = (m, p, upto = null) => { const y = storyYear(m, p, upto); return y ? `[STORY YEAR]\n${y}` : ''; };
 // the archive block, or (budget) the chat in its place, then no RECENT CHAT: it is in there
-const archiveBlock = (m, ar, head, budget) => (budget && noArchive(m) ? `[${head} — none written yet: the chat so far is the story]\n${chatStory(budget) || '(empty)'}` : `[${head}]\n${ar}`);
+const archiveBlock = (m, ar, head, budget, upto = null) => (budget && noArchive(m) ? `[${head} — none written yet: the chat so far is the story]\n${chatStory(budget, upto) || '(empty)'}` : `[${head}]\n${ar}`);
 function archiveFor(m, after = -1) {
     const [body, tail] = splitTail(String(m.text || ''));
     const secs = parseSections(body).filter(s => !s.group && (after < 0 || secEnd(s) > after));
@@ -584,18 +594,18 @@ const blindBlock = (m, owner) => {
     return rows.length ? `[OWNER DOESN'T KNOW]\n${rows.join('\n')}` : '';
 };
 function phoneRequest(m, owner, p = null, lore = '', only = null, profile = '', gap = null) {
-    const world = worldText(m);
-    const recent = recentForCheck(6).join('\n\n').slice(-6000);
+    const world = worldText(m), upto = nowAt(gap);
+    const recent = chatUpto(recentForCheck(1e9), upto).slice(-6).join('\n\n').slice(-6000);
     const ar = archiveFor(m, p ? p.upto ?? -1 : -1);
     const now = p ? JSON.stringify(phoneForModel(p)) : '';
     return [
         p ? `[PHONE NOW]\n${now}` : '',
         !p && m.phones?.[nameKey(owner)]?.device ? `[DEVICE — locked]\n${JSON.stringify(m.phones[nameKey(owner)].device)}` : '',
-        archiveBlock(m, ar.text || '(nothing new)', `ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}`, CHAT_TOKENS.phone),
+        archiveBlock(m, ar.text || '(nothing new)', `ARCHIVE${p ? ' — the sections since PHONE NOW' : ''}`, CHAT_TOKENS.phone, upto),
         world ? `[WORLD]\n${world}` : '',
         lore ? `[LOREBOOK]\n${lore}` : '',
         afterBlock(gap) || (recent && !noArchive(m) ? `[RECENT CHAT]\n${recent}` : ''),
-        yearBlock(m, p, nowAt(gap)),
+        yearBlock(m, p, upto),
         `[OWNER]\n${owner}`,
         profile, blindBlock(m, owner),
         namesBlock(m),
@@ -630,7 +640,10 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     if (busy.sync || busy.fill) throw new Error('다른 폰 작업이 끝난 뒤 다시 해 주세요');
     // reading starts after the last message there was when this was asked; what comes in while it writes stays unread
     // (or, with more after the archive than one request reads, after the last message it read: the reflection goes on from there)
-    const gap = noArchive(m) ? null : chatAfterArchive(m);
+    // made again with its reading kept (some apps, or a phone whose bank or life apps stay): up to the phone's clock, like
+    // a fill; made anew: up to now, and that becomes its clock
+    const cur = m.phones?.[key], keep = !!(apps && cur) || !!(cur?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => cur.sync.marks[g]));
+    const gap = windowOf(m, keep ? cur : null);
     const mark = readMark(gap) || markNow();
     const old = update ? m.phones?.[key] : null;
     const part = apps && m.phones?.[key] ? apps.flatMap(a => REMAKE[a] || []) : null;
@@ -1419,13 +1432,14 @@ Oldest first.`;
 export async function sideRequest(m, owner, blocks, { profile, money = false, story = 0, read = null } = {}) {
     const world = worldText(m), lore = await loreFor(m, owner);
     const profileText = await ownerProfileBlock(ctx(),profile,owner,{money});
-    const recent = recentForCheck(6).join('\n\n').slice(-6000), gap = read && 'gap' in read ? read.gap : windowOf(m);
+    const ph = m.phones?.[nameKey(owner)] || null, gap = read && 'gap' in read ? read.gap : windowOf(m, ph), upto = nowAt(gap);
+    const recent = chatUpto(recentForCheck(1e9), upto).slice(-6).join('\n\n').slice(-6000);
     if (read) read.gap = gap;
     return [
-        archiveBlock(m, archiveFor(m, -1).text || '(empty)', 'ARCHIVE', story),
+        archiveBlock(m, archiveFor(m, -1).text || '(empty)', 'ARCHIVE', story, upto),
         world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
         afterBlock(gap) || (recent && !(story && noArchive(m)) ? `[RECENT CHAT]\n${recent}` : ''),
-        yearBlock(m, m.phones?.[nameKey(owner)] || null, nowAt(gap)), `[OWNER]\n${owner}`, profileText, blindBlock(m, owner), ...blocks, namesBlock(m),
+        yearBlock(m, ph, upto), `[OWNER]\n${owner}`, profileText, blindBlock(m, owner), ...blocks, namesBlock(m),
     ].filter(Boolean).join('\n\n');
 }
 // an answer without a currency takes the owner's country's, not a guess at euros
@@ -1458,7 +1472,7 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
     let mark = markNow();
     // what it reads after the archive; its day is the story's where that stops (now, when it reads to the end), not
     // the phone's now from when it was made
-    const read = { gap: windowOf(m) }, at = storyNow(p, nowAt(read.gap)) || p.now;
+    const read = { gap: windowOf(m, p) }, at = storyNow(p, nowAt(read.gap)) || p.now;
     migrateBank(m, p);
     const old = p.money, rebuild = !!old && regenerateBalances;
     const plan = wealthPlan || await prepareWealth(m,p,regenerateBalances);

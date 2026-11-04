@@ -100,16 +100,16 @@ const json = out => { const s = String(out).replace(/```(?:json)?/gi, ''); retur
 export const validDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d || '') && !Number.isNaN(Date.parse(d)) && new Date(d).toISOString().slice(0, 10) === d;
 // where a fill would stop reading, kept while the chat and the archive stay as they are: the bank screens ask on every draw
 let stopMemo = { key: '', at: null };
-function stopAt(m) {
-    const chat = ctx()?.chat || [], key = `${chat.length}|${String(m?.text || '').length}|${String(chat.at(-1)?.mes || '').length}`;
-    if (stopMemo.key !== key) stopMemo = { key, at: nowAt(windowOf(m)) };
+function stopAt(m, p) {
+    const chat = ctx()?.chat || [], key = `${chat.length}|${String(m?.text || '').length}|${String(chat.at(-1)?.mes || '').length}|${p?.owner}|${JSON.stringify(p?.sync?.done || [])}|${p?.sync?.marks?.base?.index}`;
+    if (stopMemo.key !== key) stopMemo = { key, at: nowAt(windowOf(m, p)) };
     return stopMemo.at;
 }
 export function investmentDate(m, p) {
     if (validDate(p.investment?.date)) return p.investment.date;
     // the year only from a date the archive writes, never a bare number (it may be money or the past)
     // the story's day where an investment fill would stop reading (now, when it reads to the end)
-    const day = storyNow(p, stopAt(m)).slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : yearIn(m.text);
+    const day = storyNow(p, stopAt(m, p)).slice(0, 5), year = p.noYear ? '' : p.year ? String(p.year) : yearIn(m.text);
     const date = year && day ? `${year}-${day}` : '';
     return validDate(date) ? date : '';
 }

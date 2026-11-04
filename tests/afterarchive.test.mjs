@@ -65,3 +65,28 @@ test('no archive: the chat as before', async () => {
     await data.sideRequest({ text: '' }, 'Ren', [], { read });
     assert.equal(read.gap, null);
 });
+
+test('a fill reads no further than the phone has read (its clock); the reflection reads on from there', async () => {
+    globalThis.__rows = rows(14);
+    const p = { owner: 'Ren', sync: { marks: { base: { index: 6 } }, done: [[7, 9]], hiddenRead: {} } };
+    assert.equal(data.phoneAt(p), 9);
+    const g = data.windowOf(m, p);
+    assert.deepEqual([g.from, g.to, g.all, g.later], [4, 9, true, true]);
+    assert.equal(data.nowAt(g), 9);
+    assert.equal(data.readMark(g).index, 9);
+    const input = await data.sideRequest({ ...m, phones: { ren: p } }, 'Ren', []);
+    assert.ok(input.includes('[#9] Ren') && !input.includes('[#10] Ren'));
+    assert.match(input, /the story so far ends at #9/);
+    // a phone with no reading record reads to now, as before
+    assert.equal(data.phoneAt({ owner: 'Ren' }), null);
+    assert.equal(data.windowOf(m, { owner: 'Ren' }).to, 13);
+});
+
+test('no archive: the chat as before, but no further than the phone\'s clock', async () => {
+    globalThis.__rows = rows(14);
+    const p = { owner: 'Ren', sync: { marks: { base: { index: 8 } }, done: [] } };
+    const read = {};
+    const input = await data.sideRequest({ text: '', phones: { ren: p } }, 'Ren', [], { story: 30000, read });
+    assert.equal(data.nowAt(read.gap), 8);
+    assert.ok(input.includes('[#8] Ren') && !input.includes('[#9] Ren'));
+});
