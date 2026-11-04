@@ -485,7 +485,7 @@ test('voice memos with a slip: quotes inside a text kept, a broken memo left out
     globalThis.__rows = rows(8);
     const p = plainPhone(), mm = { ...m, phones: { ren: p } };
     globalThis.__menu = { calls: [], answers: ['{"memos":[{"title":"Groceries","text":"milk, eggs","time":"10-26 09:00","sec":12},'
-        + '{"title":"Idea","text":"call Mara about "the trip"", "time":"10-26 10:00"},{"title":"Broken","text": oops},{"title":"Train","text":"RE 7 at 08:12","time":"10-26 11:00","sec":8}]}'], answer: '{}' };
+        + '{"title":"Idea","text":"call Mara about "the trip"", "time":"10-26 10:00"},{"title":"Broken","text":"He said "no", then left","time":"10-26 10:30"},{"title":"Train","text":"RE 7 at 08:12","time":"10-26 11:00","sec":8}]}'], answer: '{}' };
     const warn = console.warn; console.warn = () => {};
     try { await data.fillVoice(mm, p); } finally { console.warn = warn; }
     assert.deepEqual(p.voice.map(x => x.title).sort(), ['Groceries', 'Idea', 'Train']);

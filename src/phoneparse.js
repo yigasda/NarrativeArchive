@@ -110,10 +110,12 @@ export function tidyKo(o, seen = new Set()) {
 }
 // a long list a fill asked for, with a slip the mending can't undo (any kind: "app", 14 for "app": 14, a stray word, a
 // broken string): read piece by piece, and only the piece with the slip is left out (one app of one day, not the whole
-// screen time). Not for a reflection, whose answer is all or nothing
+// screen time). A record in a list with any slip in its own fields goes whole (no memo with half its text and no time).
+// Not for a reflection, whose answer is all or nothing
 export function salvageJson(t) {
     const s = String(t);
     let i = 0, lost = 0;
+    const half = new WeakSet();
     const ws = () => { while (i < s.length && /\s/.test(s[i])) i++; };
     const fail = () => { throw new SyntaxError(`salvage at ${i}`); };
     // past a broken piece: to the next comma or closer of the list it is in
@@ -140,22 +142,24 @@ export function salvageJson(t) {
         i = j + 1;
         return v;
     };
+    // how many of its pieces broke (one cut off at the end too)
     const list = piece => {
+        let bad = 0;
         i++;
         for (;;) {
             ws();
-            if (i >= s.length) return;
-            if (s[i] === '}' || s[i] === ']') { i++; return; }
+            if (i >= s.length) return bad + 1;
+            if (s[i] === '}' || s[i] === ']') { i++; return bad; }
             const from = i;
-            try { piece(); ws(); if (i < s.length && !/[,}\]]/.test(s[i])) fail(); } catch { lost++; skip(from); }
+            try { piece(); ws(); if (i < s.length && !/[,}\]]/.test(s[i])) fail(); } catch { bad++; lost++; skip(from); }
             if (s[i] === ',') i++;
         }
     };
     const value = () => {
         ws();
         const ch = s[i];
-        if (ch === '{') { const o = {}; list(() => { const k = string(); ws(); if (s[i] !== ':') fail(); i++; o[k] = value(); }); return o; }
-        if (ch === '[') { const a = []; list(() => a.push(value())); return a; }
+        if (ch === '{') { const o = {}; if (list(() => { const k = string(); ws(); if (s[i] !== ':') fail(); i++; o[k] = value(); })) half.add(o); return o; }
+        if (ch === '[') { const a = []; list(() => { const v = value(); if (half.has(v)) { lost++; return; } a.push(v); }); return a; }
         if (ch === '"') return string();
         const lit = /^(?:true|false|null|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(s.slice(i, i + 40));
         if (!lit) fail();
