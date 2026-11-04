@@ -304,16 +304,19 @@ async function viaFallback(e, from, prompt, opts) {
 // the draft model writes text that may go into the archive (compression drafts); 'same' = not set
 export const draftSettings = () => connSettings('dr');
 export const draftReady = () => ['custom', 'vertex'].includes(draftSettings().mode);
+// timeout (ms, optional): a request that hasn't answered by then is given up (its late answer is not used), so a stuck call
+// doesn't hold the phone's work for good. Not passed by compression, which may think for long
 export async function askDraft(prompt, opts = {}) {
-    const { system = '', maxTokens = 0, effort = '', force = false, guard = null, keepSystem = false } = opts;
+    const { system = '', maxTokens = 0, effort = '', force = false, guard = null, keepSystem = false, timeout = 0 } = opts;
     const t = draftSettings();
     if (!draftReady()) throw new Error('초안 모델이 없어요. ⚙ 설정 → AI 모델 → 초안 모델에서 정해 주세요.');
     try {
-        const out = await callConn(t, system, prompt, Math.max(256, Number(maxTokens) || Number(t.max) || 16000), effort, force, keepSystem);
+        const call = callConn(t, system, prompt, Math.max(256, Number(maxTokens) || Number(t.max) || 16000), effort, force, keepSystem);
+        const out = timeout > 0 ? await Promise.race([call, new Promise((_, no) => setTimeout(() => no(Object.assign(new Error(`모델이 ${Math.round(timeout / 60000)}분 넘게 답하지 않아서 멈췄어요. 다시 해 주세요`), { timedOut: true })), timeout))]) : await call;
         if (!out) throw new Error('초안 모델이 빈 답을 돌려줬어요');
         if (looksRefused(out, guard)) throw refusedError('초안 모델');
         return out;
-    } catch (e) { return viaFallback(e, 'dr', prompt, opts); }
+    } catch (e) { if (e?.timedOut) throw e; return viaFallback(e, 'dr', prompt, opts); }
 }
 // Compression reads a long raw log and ties causes together: it gets its own thinking level (default high) and
 // room for that thinking (32,000 tokens, or the draft limit if that is larger). 'conn' = the connection's own setting.

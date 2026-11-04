@@ -3,7 +3,9 @@
 // sentences under them are worked out by the screens (phonelifeapps.js).
 // p.life = { clock, health, files, weather, at }; p.delivery = { shops, orders, cart, look, at }
 
-import { askDraft } from './ai.js';
+import { askDraft as askDraftAny } from './ai.js';
+// the phone's requests give up after 5 minutes (a stuck call would hold 반영 and the fills for good)
+const askDraft = (input, o = {}) => askDraftAny(input, { timeout: 300000, ...o });
 import { datedRows } from './anniv.js';
 import { calendars } from './calendar.js';
 import { ctx, saveMeta } from './core.js';

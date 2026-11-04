@@ -1,6 +1,8 @@
 // Investment generation: private portfolios, shared public quotes. All invented records stay out of RP injection.
 import { wealthBlock, wealthCheck, investmentWealthRows } from './wealth.js';
-import { askDraft } from './ai.js';
+import { askDraft as askDraftAny } from './ai.js';
+// (gives up after 5 minutes, like the phone's other requests)
+const askDraft = (input, o = {}) => askDraftAny(input, { timeout: 300000, ...o });
 import { num, parseJson, yearIn } from './phoneparse.js';
 import { ctx, saveMeta } from './core.js';
 import { sideRequest, storyNow, prepareWealth, readMark, readNote, turnsNote, secondTurn, soFarHead, windowOf, nowAt } from './phonedata.js';

@@ -769,3 +769,18 @@ test('점검 2차: a list of numbers keeps them all; a city named after a comma;
     assert.deepEqual([...order].reverse().sort(byStory('03-01 10:00', x => x)), order);
     assert.deepEqual(nightsToDays([{ date: '02-28', steps: 5000, night: { sleep: '23:30', wake: '07:00' }, from: 'story' }], {}).map(x => x.date), ['02-28', '03-01']);
 });
+
+import { withDateOrder } from '../src/phoneparse.js';
+test('one 반영 reads its dates by the order it started with, even if the setting changes meanwhile', async () => {
+    let setting = 'md';
+    dateOrderSource_(() => setting);
+    try {
+        await withDateOrder('md', async () => {
+            assert.equal(when_('03.11.'), '03-11');
+            setting = 'dm';
+            await Promise.resolve();
+            assert.equal(when_('03.11.'), '03-11');
+        });
+        assert.equal(when_('03.11.'), '11-03');
+    } finally { dateOrderSource_(() => undefined); }
+});

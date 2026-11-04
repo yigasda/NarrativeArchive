@@ -2,7 +2,9 @@
 // 롤플에 넣기, dates and times as the owner's phone shows them, and the places they have been.
 
 import { ensureWealth, wealthBlock, wealthDate, wealthCheck, addWealthFX } from './wealth.js';
-import { askDraft } from './ai.js';
+import { askDraft as askDraftAny } from './ai.js';
+// the phone's requests give up after 5 minutes (a stuck call would hold 반영 and the fills for good)
+const askDraft = (input, o = {}) => askDraftAny(input, { timeout: 300000, ...o });
 import { ownerProfileBlock, resolvePhoneProfile } from './phoneprofile.js';
 import { migrateBank, finance, finite, cash, reviseBaseline, positions } from './finance.js';
 import { calendars, headingDate } from './calendar.js';
@@ -17,7 +19,7 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
-import { dateOrderSource, swapDate, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+import { dateOrderSource, swapDate, withDateOrder, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
@@ -691,7 +693,8 @@ const phoneForModel = p => ({
 });
 
 // apps: some of REMAKE's names, made again from the whole story while the rest of the phone stays as it is
-export async function makePhone(m, owner, { update = false, apps = null } = {}) {
+export function makePhone(m, owner, opts = {}) { return withDateOrder(dateOrderOf(m), () => makePhone0(m, owner, opts)); }
+async function makePhone0(m, owner, { update = false, apps = null } = {}) {
     const key = nameKey(owner);
     if (update && m.phones?.[key]) return updatePhone(m, owner);
     if (busy.sync || busy.fill) throw new Error('다른 폰 작업이 끝난 뒤 다시 해 주세요');
