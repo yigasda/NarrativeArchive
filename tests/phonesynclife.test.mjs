@@ -735,7 +735,7 @@ test('dates: two numbers that could both be the month go by the chat\'s 상태�
         for (const [t, , dm] of both) assert.equal(when_(t), dm, `dm ${t}`);
     } finally { dateOrderSource_(() => undefined); }
     for (const [t, want] of [['26th October 21:45', '10-26 21:45'], ['26 October 21:45', '10-26 21:45'], ['October 26 21:45', '10-26 21:45']]) assert.equal(when_(t), want, t);
-    for (const [t, want] of [['-₩12,000', -12000], ['−₩12,000', -12000], ['- € 12,50', -12.5], ['₩-12,000', -12000], ['25–35', 25]]) assert.equal(num_(t), want, t);
+    for (const [t, want] of [['-₩12,000', -12000], ['−₩12,000', -12000], ['- € 12,50', -12.5], ['₩-12,000', -12000], ['25–35', 25], ['-1.200', -1200], ['1.200', 1200], ['12.50', 12.5], ['0.125', 0.13], ['4.7/5', 4.7]]) assert.equal(num_(t), want, t);
 });
 
 import { dayGap as dayGap_, cityAt as cityAt_ } from '../src/phonesynclife.js';

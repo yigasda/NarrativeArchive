@@ -216,6 +216,8 @@ export const num = v => {
     if (t.includes('.') && t.includes(',')) { const d = Math.max(t.lastIndexOf('.'), t.lastIndexOf(',')); t = t.slice(0, d).replace(/[.,]/g, '') + '.' + t.slice(d + 1); }
     else if (t.includes(',')) t = /,\d{1,2}$/.test(t) && (t.match(/,/g) || []).length === 1 ? t.replace(',', '.') : t.replace(/,/g, '');
     else if ((t.match(/\./g) || []).length > 1) t = t.replace(/\./g, '');
+    // one dot with exactly three digits after it is thousands too ("1.200" euros is 1200, "12.50" is 12.5; "0.125" stays)
+    else if (/^-?[1-9]\d{0,2}\.\d{3}$/.test(t)) t = t.replace('.', '');
     const n = Number(t);
     return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
 };
