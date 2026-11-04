@@ -62,7 +62,7 @@ Could this be on the owner's phone, given what the archive, lorebook and chat sh
 - Nothing later than the newest moment of the story.
 - The diary holds only what the archive shows happened and what the owner felt about it; no new secrets, no new feelings.`;
 // every time on the phone is the owner's own clock: a time written on the other side of the world is moved to theirs
-export const OWN_CLOCK = `Every time is on the owner's phone clock, where the owner is now. A time shown on a screen or in a scene goes by the city of whoever's screen or scene it is: the owner's city, or no OWNER'S CLOCK, keeps it as it is; another city in OWNER'S CLOCK is moved by its hours there (a messenger timestamp on the other side's screen). A status line's time is the clock of the city its scene is in; OWNER'S CLOCK gives the newest one on the owner's clock when that is another city.`;
+export const OWN_CLOCK = `Every time is on the owner's phone clock, where the owner is now. A time on another person's screen or in a scene in another city of OWNER'S CLOCK (a messenger timestamp on the other side) moves by that city's hours there; the owner's city, or no OWNER'S CLOCK, keeps it. A status line's time is its scene's city's; OWNER'S CLOCK gives the newest one on the owner's clock.`;
 export const CLOCK_GET = `- OWNER'S CLOCK (sometimes): where the owner is, their time now, and how many hours the other saved cities and the people elsewhere are ahead or behind.`;
 const PHONE_STYLE = `LANGUAGE
 - Each text is in the language its writer would really use on a phone: from their nationality and where they live; between two people, the language they share.
@@ -152,7 +152,7 @@ YOU GET
 - MESSAGES READ BEFORE, NOW CHANGED (sometimes): messages put on the phone before and edited since, with the events they gave.
 ${money ? `- MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.\n` : ''}${delivery ? `- DELIVERY SHOPS: the shops the delivery app already has.\n` : ''}${life ? `- LIFE NOW: the alarms, files and health days the phone already holds, with record ids.\n` : ''}${weather && tracker ? `- WEATHER NOW: the date, time, place and weather from the chat's last status line up to these messages (a scene the owner isn't in: its place and weather only).\n` : ''}- PHONE NOW: the newest of what the phone holds.
 ${CLOCK_GET}
-- PEOPLE AROUND (sometimes): the people closest to the owner, as the character cards, persona, owner profile and lorebook tell them.
+- PEOPLE AROUND (sometimes): people in the owner's life, close or not, from the cards, persona, profile and lorebook, with where things stand now.
 - OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 
 WHAT IS NEW
@@ -161,9 +161,8 @@ WHAT IS NEW
 - Each message's own replies, orders and payments belong to the event in that message, not folded into an earlier one.
 - An event in EVENTS ON THE PHONE keeps its id; add only what the phone doesn't hold yet.
 - MESSAGES READ BEFORE, NOW CHANGED were already put on the phone: give their events the ids listed there${split ? '' : '; a payment in them is that same payment, its amount corrected if it changed'}.
-${split ? `- A scene that only touches these apps (a taxi paid, a basket filled${invest ? ', a share price mentioned' : ''}) is still an event, with its "apps".\n` : ''}- Small everyday things around an event are fine: how a text was worded, a photo of the place, a search they would make.
-- A scene can carry on on the phone: after a fight, a date or a job given face to face, the texts they would send each other later, in their own voice. Nothing the story contradicts, and no new facts or plans.
-- EVERYDAY: in every answer, 0 to 2 plain records of the owner's life in the hours these messages cover, from their habits and PEOPLE AROUND (a shopping list, a search, a photo, a mail, a reminder, a post, a few diary lines, a voice memo, a text or a call with someone from the story or PEOPLE AROUND, the texts and calls anyone's phone gets: a login code, a parcel or card alert, the carrier, a clinic or shop), with "everyday": true, in that time's event's "phone". As those people are, with what they feel; no new facts, events, plans or secrets.
+${split ? `- A scene that only touches these apps (a taxi paid, a basket filled${invest ? ', a share price mentioned' : ''}) is still an event, with its "apps".\n` : ''}- Small things around an event are fine (how a text was worded, a photo of the place, a search), and a scene may carry on in texts later (a fight, a job given in person), in their own voices. Nothing the story contradicts, no new facts or plans.
+- EVERYDAY: in every answer, 0 to 2 records of the owner's ordinary life in these hours, "everyday": true, in an event's "phone": any app, with people from the story or PEOPLE AROUND as they are, never someone the owner isn't in touch with now. No new facts, events, plans or secrets.
 - People: only people the story or PEOPLE AROUND has. A relationship word (girlfriend, ex, husband, boss) only if the messages or archive use it for them.
 - A diary entry holds what these messages show and what the owner feels about it, as the story and PEOPLE AROUND show them; no new secrets or events.
 
@@ -173,12 +172,12 @@ WHERE IT COMES FROM
 - "date" and "time": when it happens in that message ("MM-DD", "HH:MM" if known). A plan for later happens when it is made; its later day goes only on the calendar item.
 - "now": the moment of the newest message, never a time something is only planned for.
 - "moved": only people these messages put in another city (a trip, a move, coming home), the owner too: [{ "name": as in OWNER or the messages, "city": in English, "names": [each name the messages and status lines write it as, exactly, then its English and Korean names], "tz": its time zone like "Asia/Seoul" }]; else [].
-${zone ? `- "statusCity": the newest status line in these messages is from a scene the app can't place. Whose clock does it show? A city or person in OWNER'S CLOCK, "owner" for the owner's own, another city as { "city": in English, "tz" }, or "" when the messages don't say.\n` : ''}${split ? `- "apps": "money" when the event has anything for the bank, cards, orders, tickets or the delivery app (its basket too)${invest ? '; "invest" for the brokerage (a trade, a share price the story gives, a share they start watching, a stake)' : ''}; else []. When unsure, include it.\n` : ''}${life ? `
+${zone ? `- "statusCity": whose clock the newest status line here shows (the app can't place its scene): a city or person in OWNER'S CLOCK, "owner", another city as { "city": in English, "tz" }, or "" when the messages don't say.\n` : ''}${split ? `- "apps": "money" when the event has anything for the bank, cards, orders, tickets or the delivery app (its basket too)${invest ? '; "invest" for the brokerage (a trade, a share price the story gives, a share they start watching, a stake)' : ''}; else []. When unsure, include it.\n` : ''}${life ? `
 LIFE
 - An alarm the owner sets, changes or switches on or off in these messages; a timer they set; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
 - An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".
 - A record already in LIFE NOW is changed with "change": its id; write only the fields that changed. A deleted file is "deleted": true.
-- Health: a row for every story day these messages move into. A day these messages show goes in that event's "phone"."health"; a day already in LIFE NOW that the story now shows is rewritten the same way. Every other new day goes in the top-level "days", written freely from the character and their life (a lazy Sunday, a day on their feet, a sleepless night), still following that day's events and tickets. The day of "now" is written every time, with its totals so far (steps, floors, every workout, coffee, water, "screen"), even when nothing new happened that day.
+- Health: a row for every story day these messages move into. A day these messages show goes in that event's "phone"."health"; a day already in LIFE NOW that the story now shows is rewritten the same way. Every other new day goes in the top-level "days", written freely from the character and their life (a lazy Sunday, a day on their feet, a sleepless night), still following that day's events and tickets. The day of "now" again every time, with its totals so far.
 - "screen" on each day: that day's phone use, from what happened and how they felt (a fight: hours of texting late into the night; a day out with friends: barely any), in their own habits (LIFE NOW's usual), plus any other app that day called for, by its real name (a trip: maps, a translator).
 - A lasting change to their habits or body these messages state (they lost weight, quit coffee, drink more water, get up earlier now, quit a game, glued to the phone lately): that event's "phone"."usual" with only what changed. Nothing said: no "usual".
 ${weather ? `- "weather": ${tracker ? 'WEATHER NOW stands for an owner in that scene (its date, time, place and weather); write the rest of the forecast to agree with it, "from": "chat". An owner elsewhere gets the weather where they are.' : 'what these messages describe, else the archive. If the story\'s day or place changed with nothing to go on, what fits the season and place, "from": "guess". If neither changed and nothing describes it: null (the app keeps the last weather).'}
@@ -1653,8 +1652,8 @@ WHERE
 - "evidence": the few words that show it.
 
 PEOPLE AROUND
-- "around": the 5 people closest to the owner (never the owner), from the cards, the persona, the owner profile, the lorebook and the story, closest first.
-- "about": what these texts say of that person and the owner: who they are to each other, what happened between them, how each feels about the other, how they talk and text. Compress the texts' own words and keep their details; do not sum up. At most 300 tokens; shorter when the texts say less. Nothing invented, nothing from OWNER DOESN'T KNOW.
+- "around": the 5 people these texts (the cards, the persona, the owner profile, the lorebook, the story) write the most about with the owner, never the owner; the most first.
+- "about": what these texts say of that person and the owner: who they are to each other, what happened between them, how each feels about the other, how they talk and text, and last where things stand now (together, apart, not in touch). Compress the texts' own words and keep their details; do not sum up. At most 300 tokens; shorter when the texts say less. Nothing invented, nothing from OWNER DOESN'T KNOW.
 
 JSON (one object, nothing before or after it)
 { "people": [{ "name": as in OWNER or PEOPLE, "aka": [], "city": in English, "names": [], "lives": two-letter country code, "tz", "evidence" }],

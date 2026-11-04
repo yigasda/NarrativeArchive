@@ -644,7 +644,7 @@ test('a slow day: each 반영 the same day writes today\'s totals so far, never 
     assert.equal(today().workout.kind, 'Yoga');
     assert.deepEqual(today().hr, [58, 140]);
     assert.match(T.sys, /"workouts": \[\{ "kind", "time", "min", "km" \}\]/);
-    assert.match(T.sys, /The day of "now" is written every time, with its totals so far/);
+    assert.match(T.sys, /The day of "now" again every time, with its totals so far/);
     assert.deepEqual([today().steps, today().coffee, today().screen.apps, today().screen.pickups], [3000, 3, { WhatsApp: 60, Instagram: 40 }, 45]);
     // (told in an event: more steps go in)
     T.chat.push(say('Ren', 'walked all the way home'));
@@ -669,12 +669,12 @@ test('반영\'s everyday records: two an answer, six a day, every app (texts and
         ...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `text:${th.with}:${x.text}`))];
     assert.deepEqual(guess(), ['notes:Einkaufsliste', 'notes:Zahnarzt anrufen']);
     assert.ok(c.p.searches.some(x => x.q === 'Ren train times' && x.src !== 'guess'));
-    assert.match(T.sys, /EVERYDAY: in every answer, 0 to 2 plain records/);
-    assert.match(T.sys, /A scene can carry on on the phone/);
+    assert.match(T.sys, /EVERYDAY: in every answer, 0 to 2 records of the owner's ordinary life/);
+    assert.match(T.sys, /a scene may carry on in texts later/);
     // (a voice memo may be an everyday one; a text with anyone from the story or PEOPLE AROUND)
     assert.ok(!T.sys.includes('only when the archive or chat shows the owner recorded one'));
     assert.ok(data.AI_SYS_PHONE.includes('only when the archive or chat shows the owner recorded one'));
-    assert.match(T.sys, /a text or a call with someone from the story or PEOPLE AROUND, the texts and calls anyone's phone gets: a login code, a parcel or card alert/);
+    assert.match(T.sys, /with people from the story or PEOPLE AROUND as they are, never someone the owner isn't in touch with now/);
     assert.match(T.sys, /- PEOPLE AROUND \(sometimes\)/);
     assert.match(T.input, /\[PEOPLE AROUND\]\n- Ivo \(이보\): Ren's older brother/);
     // later the same day: its own records, a text to Ivo and a diary entry among them
