@@ -1138,11 +1138,11 @@ async function updatePhone(m, owner) {
         // place: a "cafe" may be in either city next time)
         // the owner moved to another city in these messages: their clock is that city's from here on
         const ownerWent = ownerMoved(p, raw.ownerCity);
-        let ownerWentOthers = false;
+        // someone else now in another city (a trip, a move): their row, from here on (read first: a status line's scene
+        // named by that person, "Mara", is where these messages put her)
+        const ownerWentOthers = peopleMoved(p, raw.elsewhere);
         let named = null;
         if (askZone && (typeof raw.statusCity === 'string' || raw.statusCity && typeof raw.statusCity === 'object')) named = zoneNamed(p, raw.statusCity, m);
-        // someone else now in another city (a trip, a move): their row, from here on
-        if (peopleMoved(p, raw.elsewhere)) ownerWentOthers = true;
         if (ownerWent || ownerWentOthers || named) { st = statusMoment(p, roundEnd, named, m); if (tracker) sceneOwn = sceneHome(p, tracker.place, m, named); }
         // a status line among these messages: now is never before it (a model that took another city's hour for the
         // owner's); later, the model's own. Its status line also sets back a now that ran ahead of it the day before
@@ -1159,7 +1159,7 @@ async function updatePhone(m, owner) {
             p.now = nowAt;
         }
         // the round's own: new days nobody told, the weather, and what the clock moving on does by itself
-        const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = lifeAhead ? [] : applyWeather(p, askWeather ? raw.weather : null, sceneOwn === true ? tracker : null, { archive: evidence.length + before.length > 0, today: String(p.now || '').slice(0, 5) });
+        const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = lifeAhead ? [] : applyWeather(p, askWeather ? raw.weather : null, sceneOwn === true ? homeTracker(p, tracker, raw.weather, m) : null, { archive: evidence.length + before.length > 0, today: String(p.now || '').slice(0, 5) });
         if (days.length) apps.add('건강');
         if (sky.length) apps.add('날씨');
         const roundFx = [...days, ...sky, ...lifeClock(p, p.now), ...dlvClock(p, p.now), ...cardClock(p, p.now)];
@@ -1642,6 +1642,15 @@ function ownerMoved(p, c) {
     return true;
 }
 const whereOf = (p, name) => (p?.where?.people || []).find(x => nameKey(x.name) === nameKey(name));
+// the owner's status line as the weather app takes it: a place that is no city the phone knows ("Mara's room", "Gangnam ·
+// cafe") leaves the app's own city as it is (the model's, else the one there); its sky, warmth and hour are the line's
+function homeTracker(p, t, w, m = null) {
+    if (!t || sceneZone(p, t.place, m)) return t;
+    const city = line(w?.place, 60), here = p?.life?.weather?.here?.place;
+    // (the model's city when it names one: an owner gone somewhere new, "Rome · hotel", is in Rome)
+    const place = city && !/['’]s\b|\b(room|home|house|flat|cafe|office|kitchen|hotel)\b|방|집/i.test(city) ? city : here || city;
+    return place ? { ...t, place, city: place } : t;
+}
 // people other than the owner the reflection says are now in another city: their rows (where they live stays)
 function peopleMoved(p, list) {
     let n = 0;

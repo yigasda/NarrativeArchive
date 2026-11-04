@@ -546,3 +546,24 @@ test('a scene the phone asks about (not yet placed) goes to the model with its p
     const w = (T.input.match(/\[WEATHER NOW\]\n(.*)/) || [])[1] || '';
     assert.ok(w && !w.includes('"time"'), w);
 });
+
+test('the owner\'s scene at a place that is no city ("Mara\'s room", "Gangnam · cafe"): the weather app keeps its city, the line\'s sky goes in', async () => {
+    for (const [place, said, want] of [["Mara's room", 'Seoul', 'Seoul'], ['Gangnam · cafe', 'Seoul', 'Seoul'], ['Rome · hotel', 'Rome', 'Rome'], ["Mara's room", "Mara's room", 'Seoul']]) {
+        const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Mara', 'c')]);
+        c.p.now = '10-26 10:50'; c.p.year = 2026; c.p.country = 'KR';
+        c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', names: ['Seoul', '서울'], lives: 'KR', tz: 'Asia/Seoul' }] };
+        c.p.life = { at: '10-26 10:50', clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] },
+            weather: { here: { place: 'Seoul', date: '10-26', time: '10:50', cond: 'clear', temp: 15, hours: [], days: [], tiles: {} }, cities: [] } };
+        await withTrackers([trk(2, '11:20', place, '비 12°C')], async () => run(c.m, { now: '10-26 11:20', statusCity: 'owner', weather: { place: said, date: '10-26', time: '11:20', cond: 'rain', temp: 12, from: 'chat' }, events: [] }));
+        assert.deepEqual([c.p.life.weather.here.place, c.p.life.weather.here.cond], [want, 'rain'], place + ' / ' + said);
+    }
+});
+
+test('a status line\'s scene named by a person the same answer says is in another city ("Mara", elsewhere: Frankfurt) is placed there', async () => {
+    const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Mara', 'c')]);
+    c.p.now = '10-26 10:50'; c.p.year = 2026; c.p.country = 'KR';
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', names: ['Seoul', '서울'], lives: 'KR', tz: 'Asia/Seoul' }] };
+    await withTrackers([trk(2, '03:00', "Hotel Ivo · lobby", '흐림 2°C')], async () =>
+        run(c.m, { now: '10-26 03:05', statusCity: 'Mara', elsewhere: [{ name: 'Mara', city: 'Frankfurt am Main', names: ['Frankfurt'], tz: 'Europe/Berlin' }], events: [] }));
+    assert.equal(c.p.now, '10-26 11:00');
+});
