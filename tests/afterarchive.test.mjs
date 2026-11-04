@@ -654,4 +654,7 @@ test('위치 판독 also gives the people closest to the owner, from the cards a
     assert.equal(p.around.people.length, 5);
     assert.match(data.AI_SYS_WHERE, /- LOREBOOK \(sometimes\)/);
     assert.match(data.AI_SYS_WHERE, /Compress the texts' own words and keep their details; do not sum up\. At most 300 tokens/);
+    // (everyone the texts tell of with the owner, not only the closest or the most written about; all of what they say)
+    assert.match(data.AI_SYS_WHERE, /the people in the owner's life these texts tell of \(family, people at work, friends, past partners, anyone with a part in it\), never the owner; up to 5/);
+    assert.match(data.AI_SYS_WHERE, /everything these texts say of that person and the owner, wherever it is in them/);
 });

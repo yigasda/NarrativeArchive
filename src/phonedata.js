@@ -458,7 +458,7 @@ ${CLOCK_GET}
 EVERYDAY
 - The owner's ordinary life in these hours, from their habits: each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day. A list with nothing in these hours stays empty.
 - For each person in SCENES WITH: at least one text between the two later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
-- People from the story or PEOPLE AROUND as they are and with what they feel; never someone the owner isn't in touch with now. Someone texted or called who isn't in the contacts yet goes in "contacts" too. A relationship word (girlfriend, ex, husband, boss) only if the messages, archive or PEOPLE AROUND use it for them.
+- People from the story or PEOPLE AROUND as they are and with what they feel; never someone the owner isn't in touch with now. PEOPLE AROUND are part of the owner's life whether or not they are in touch: they turn up wherever they would on a real phone. Someone texted or called who isn't in the contacts yet goes in "contacts" too. A relationship word (girlfriend, ex, husband, boss) only if the messages, archive or PEOPLE AROUND use it for them.
 - A diary entry holds what these messages show and what the owner feels about it, as the story and PEOPLE AROUND show them; no new secrets or events.
 - Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result; a task and its deadline ("check the moodboards by 18:00"), a thing done ("uploaded it"), a plan for later ("ramyeon tonight?"). What these messages already say is no new fact: a text may say it again ("the deck is for Friday"). How they feel and small things around them are fine. No new facts, events, plans or secrets.
 - Times from the phone's last time up to the newest message, never later.
@@ -1773,8 +1773,8 @@ WHERE
 - "evidence": the few words that show it.
 
 PEOPLE AROUND
-- "around": the 5 people these texts (the cards, the persona, the owner profile, the lorebook, the story) write the most about with the owner, never the owner; the most first.
-- "about": what these texts say of that person and the owner: who they are to each other, what happened between them, how each feels about the other, how they talk and text, and last where things stand now (together, apart, not in touch). Compress the texts' own words and keep their details; do not sum up. At most 300 tokens; shorter when the texts say less. Nothing invented, nothing from OWNER DOESN'T KNOW.
+- "around": the people in the owner's life these texts tell of (family, people at work, friends, past partners, anyone with a part in it), never the owner; up to 5 (with more, the ones with the biggest part in the owner's life).
+- "about": everything these texts say of that person and the owner, wherever it is in them: who they are to each other, what happened between them, how each feels about the other, how they talk and text, and last where things stand now (together, apart, not in touch). Compress the texts' own words and keep their details; do not sum up. At most 300 tokens; shorter when the texts say less. Nothing invented, nothing from OWNER DOESN'T KNOW.
 
 JSON (one object, nothing before or after it)
 { "people": [{ "name": as in OWNER or PEOPLE, "aka": [], "city": in English, "names": [], "lives": two-letter country code, "tz", "evidence" }],

@@ -734,6 +734,7 @@ test('일상 is its own request after the reflection\'s: it gets all the reflect
     assert.match(data.AI_SYS_EVERYDAY, /For each person in SCENES WITH: at least one text between the two later these hours/);
     assert.match(data.AI_SYS_EVERYDAY, /each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day\. A list with nothing in these hours stays empty\./);
     assert.match(data.AI_SYS_EVERYDAY, /What these messages already say is no new fact: a text may say it again/);
+    assert.match(data.AI_SYS_EVERYDAY, /PEOPLE AROUND are part of the owner's life whether or not they are in touch: they turn up wherever they would on a real phone\./);
     assert.match(data.AI_SYS_EVERYDAY, /Anything a later message could contradict is a new fact/);
     assert.match(data.AI_SYS_EVERYDAY, /a task and its deadline \("check the moodboards by 18:00"\), a thing done \("uploaded it"\), a plan for later \("ramyeon tonight\?"\)/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
