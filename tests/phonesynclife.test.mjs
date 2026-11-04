@@ -724,10 +724,17 @@ test('a broken answer read piece by piece never keeps a wrong value: 12,000 is n
     } finally { console.warn = warn; }
 });
 
-import { when as when_, num as num_ } from '../src/phoneparse.js';
-test('dates: "03.11." and "03.11.2026" are day first, a Korean "11.03" month first; "26th October 21:45" reads; a minus before ₩ stays', () => {
-    for (const [t, want] of [['03.11.', '11-03'], ['Di, 03.11. 18:10', '11-03 18:10'], ['03.11.2026 9:00', '11-03 09:00'], ['11.03, 12:33', '11-03 12:33'], ['2026.11.03', '11-03'],
-        ['26th October 21:45', '10-26 21:45'], ['26 October 21:45', '10-26 21:45'], ['October 26 21:45', '10-26 21:45'], ['10/26', '10-26']]) assert.equal(when_(t), want, t);
+import { when as when_, num as num_, dateOrderSource as dateOrderSource_ } from '../src/phoneparse.js';
+test('dates: two numbers that could both be the month go by the chat\'s 상태창 날짜 순서 (월.일 until chosen); "26th October 21:45" reads; a minus before ₩ stays', () => {
+    const both = [['03.11.', '03-11', '11-03'], ['11.03.', '11-03', '03-11'], ['Di, 03.11. 18:10', '03-11 18:10', '11-03 18:10'], ['11.03, 12:33', '11-03 12:33', '03-11 12:33'], ['03/11/2026', '03-11', '11-03'],
+        ['03-11', '03-11', '03-11'], ['2026.11.03', '11-03', '11-03'], ['26.10.', '10-26', '10-26'], ['10/26', '10-26', '10-26']];
+    try {
+        dateOrderSource_(() => undefined);
+        for (const [t, md] of both) assert.equal(when_(t), md, `md ${t}`);
+        dateOrderSource_(() => 'dm');
+        for (const [t, , dm] of both) assert.equal(when_(t), dm, `dm ${t}`);
+    } finally { dateOrderSource_(() => undefined); }
+    for (const [t, want] of [['26th October 21:45', '10-26 21:45'], ['26 October 21:45', '10-26 21:45'], ['October 26 21:45', '10-26 21:45']]) assert.equal(when_(t), want, t);
     for (const [t, want] of [['-₩12,000', -12000], ['−₩12,000', -12000], ['- € 12,50', -12.5], ['₩-12,000', -12000], ['25–35', 25]]) assert.equal(num_(t), want, t);
 });
 

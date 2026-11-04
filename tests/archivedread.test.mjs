@@ -496,3 +496,19 @@ test('a city in the owner\'s zone that isn\'t theirs (Busan for Seoul) keeps its
     await withTrackers([trk(2, '18:30', "부산 · Ivo's flat")], async () => assert.equal(data.statusMoment(c.p, null, null, c.m).at, '10-26 18:30'));
     await withTrackers([trk(2, '19:00', 'New York Bagels, Gangnam')], async () => assert.notEqual(data.statusMoment(c.p, null, null, c.m).at, '10-27 08:00'));
 });
+
+test('상태창 날짜 순서: asked once per chat, month first until then; a chat set to 일.월 reads "03.11." as November 3', async () => {
+    const m = {};
+    assert.ok(data.needsDateOrder(m));
+    assert.equal(data.dateOrderOf(m), 'md');
+    await data.setDateOrder(m, 'dm');
+    assert.ok(!data.needsDateOrder(m));
+    assert.equal(data.dateOrderOf(m), 'dm');
+    T.meta = { narrative_archive: { dateOrder: 'dm' } };
+    try {
+        assert.deepEqual(data.monthDay('Di, 03.11. 18:10'), { mo: 11, d: 3 });
+        T.meta = { narrative_archive: { dateOrder: 'md' } };
+        assert.deepEqual(data.monthDay('11.03, 12:33'), { mo: 11, d: 3 });
+        assert.deepEqual(data.monthDay('03.11.'), { mo: 3, d: 11 });
+    } finally { T.meta = { integrity: 'main-mark' }; }
+});

@@ -17,7 +17,7 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
-import { dotsDayFirst, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+import { dateOrderSource, swapDate, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
@@ -1502,10 +1502,10 @@ export const upcoming = (e, now) => { if (e.cancelled) return false; const day =
 export function monthDay(text) {
     const s = String(text || '');
     const num = s.match(/(?:^|\D)(?:\d{4}[-/.]\s*)?(\d{1,2})[-/.]\s*(\d{1,2})(?!\d)/);
-    // ("03.11." and "03.11.2026" are day first, the European way; a Korean "11.03" has no dot after it)
-    const dots = num && !/\d{4}/.test(num[0]) && dotsDayFirst(s.slice(num.index + (/^\D/.test(num[0]) ? 1 : 0)));
-    if (num && !dots && Number(num[1]) >= 1 && Number(num[1]) <= 12 && Number(num[2]) >= 1 && Number(num[2]) <= 31) return { mo: Number(num[1]), d: Number(num[2]) };
-    if (dots && Number(num[2]) >= 1 && Number(num[2]) <= 12 && Number(num[1]) >= 1 && Number(num[1]) <= 31) return { mo: Number(num[2]), d: Number(num[1]) };
+    // (both numbers could be the month: the chat's 상태창 날짜 순서 says which; "MM-DD" with dashes is month first)
+    const dm = num && !/\d{4}/.test(num[0]) && swapDate(num[1], num[2], (/\d{1,2}([-/.])\s*\d/.exec(num[0]) || [])[1]);
+    if (num && !dm && Number(num[1]) >= 1 && Number(num[1]) <= 12 && Number(num[2]) >= 1 && Number(num[2]) <= 31) return { mo: Number(num[1]), d: Number(num[2]) };
+    if (dm && Number(num[2]) >= 1 && Number(num[2]) <= 12 && Number(num[1]) >= 1 && Number(num[1]) <= 31) return { mo: Number(num[2]), d: Number(num[1]) };
     // day first ("26.10.", "26/10/2026"): a first number past 12 is the day
     if (num && Number(num[1]) > 12 && Number(num[1]) <= 31 && Number(num[2]) >= 1 && Number(num[2]) <= 12) return { mo: Number(num[2]), d: Number(num[1]) };
     const cals = calendars(), d = headingDate(`(${s})`, cals).date;
@@ -1524,6 +1524,12 @@ export const trackerWeather = t => { const w = weatherFrom(t); if (w) { const d 
 // right after 되돌리기 (until the next 반영 or 복구): the screen's clock stays where the phone was, its weather and health
 // days with it; otherwise it follows the newest status line in the chat, 반영 or not
 export const clockHeld = p => !!p?.clockHold;
+// 상태창 날짜 순서 (per chat): 'md' 월.일 (11.03), 'dm' 일.월 (03.11.). Asked once before the chat's first 폰 만들기 or
+// 반영 (needsDateOrder), month first until then; changed any time in the phone's settings
+export const dateOrderOf = m => (m?.dateOrder === 'dm' ? 'dm' : 'md');
+export const needsDateOrder = m => !m?.dateOrder;
+export async function setDateOrder(m, order) { if (!m || !['md', 'dm'].includes(order)) return; m.dateOrder = order; await saveMeta(); }
+dateOrderSource(() => ctx()?.chatMetadata?.narrative_archive?.dateOrder);
 export function storyNow(p, upto = null, m = null) {
     if (upto == null && p?.clockHold) upto = phoneAt(p);
     let at = '';

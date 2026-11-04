@@ -27,14 +27,19 @@ export const cutShort = out => {
     }
     return str || d > 0;
 };
-// "03.11." (a dot after the month) or "03.11.2026": day first
-export const dotsDayFirst = t => /^\d{1,2}\.\d{1,2}\.(?:\s?\d{4}|(?![\d]))/.test(t);
+// the order a chat's status lines write a date in when both numbers could be the month ("03.11."): month first unless
+// the user said day first (상태창 날짜 순서, kept per chat). Only for dates written with "." or "/": "MM-DD" with dashes is
+// always month first (the phone's own and the model's answers)
+let orderOf = () => '';
+export const dateOrderSource = f => { orderOf = f; };
+export const dayFirstChat = () => { try { return orderOf() === 'dm'; } catch { return false; } };
+export const swapDate = (a, b, sep) => Number(b) <= 12 && (Number(a) > 12 || sep !== '-' && Number(a) <= 31 && dayFirstChat());
 export const when = v => {
     // "10-25 21:00", or with the year in front ("2026-10-25 21:00", "2026/10/25T21:00") or after ("25.10.2026 21:00", "10/25/2026 9:00")
     const mt = String(v || '').match(/(?:^|\D)(?:\d{4}[-/.])?(\d{1,2})[-/.](\d{1,2})(?:[-/.]\s?\d{4})?(?:\.?,?[ T]+(\d{1,2}):(\d{2}))?/);
     // the day first where the month can't come first ("26.10.", "26/10/2026"), unless a year led ("2026-10-26")
-    // and the European way with dots, "03.11." or "03.11.2026" (a Korean "11.03" has no dot after it)
-    if (mt && !/^\d{4}/.test(mt[0].replace(/^\D/, '')) && Number(mt[2]) <= 12 && (Number(mt[1]) > 12 || dotsDayFirst(String(v || '').slice(mt.index + (/^\D/.test(mt[0]) ? 1 : 0))))) [mt[1], mt[2]] = [mt[2], mt[1]];
+    // and when the chat writes day first (its 상태창 날짜 순서), any date of two numbers with dots or slashes
+    if (mt && !/^\d{4}/.test(mt[0].replace(/^\D/, '')) && swapDate(mt[1], mt[2], (/\d{1,2}([-/.])\d/.exec(mt[0]) || [])[1])) [mt[1], mt[2]] = [mt[2], mt[1]];
     if (!mt || !(Number(mt[1]) >= 1 && Number(mt[1]) <= 12) || !(Number(mt[2]) >= 1 && Number(mt[2]) <= 31)) return named(String(v || '').replace(/(\d)(?:st|nd|rd|th)\b/gi, '$1'));
     // a clock that can't be ("25:99") is dropped, the day stays
     const ok = mt[3] && Number(mt[3]) < 24 && Number(mt[4]) < 60;
