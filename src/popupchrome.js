@@ -15,8 +15,16 @@ export function dressPopup(dlg) {
     if (act) cancel.textContent = '닫기';
 }
 
+// Themes keep their hands off our windows: Blue Lemonade skips its colour overrides inside this marker (its own
+// "keep an extension's colours" switch). Our own CSS (69-components.css) holds the font and the rest.
+const KEEP = 'data-bl-native-ext-colors';
+function keepOwnLook() {
+    const panel = document.getElementById('na_settings'); if (panel && !panel.hasAttribute(KEEP)) panel.setAttribute(KEEP, '');
+    document.querySelectorAll('dialog.popup[open]').forEach(d => { if (!d.hasAttribute(KEEP) && d.querySelector('.na_popup, .na_phone')) d.setAttribute(KEEP, ''); });
+}
+
 export function watchPopups() {
-    const check = () => document.querySelectorAll('dialog.popup[open]').forEach(dressPopup);
+    const check = () => { document.querySelectorAll('dialog.popup[open]').forEach(dressPopup); keepOwnLook(); };
     new MutationObserver(check).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['open'] });
     check();
 }

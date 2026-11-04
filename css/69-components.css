@@ -82,6 +82,7 @@ body:is(.na_darkui, :not(.na_darkui)) :is(
     font-family: var(--c-ff, inherit) !important; --axff: var(--c-ff, inherit); letter-spacing: var(--c-ls, inherit) !important; --axls: var(--c-ls, inherit); text-transform: var(--c-tt, inherit) !important; --axtt: var(--c-tt, inherit)}
 
 :is(dialog.popup:has(.na_popup, .na_phone), #na_settings) { --mainFontFamily: "Noto Sans", sans-serif; font-family: var(--mainFontFamily); } /* our windows keep ST's default font; a theme swapping --mainFontFamily (Blue Lemonade) stops here */
+dialog.popup:has(.na_popup, .na_phone):not(#na_x) .popup-content { line-height: normal; } /* Blue Lemonade sets 1.55 on every popup body; ours keep the browser's */
 /* SillyTavern's own field look (1px edge in its border colour, 5px corners), at the lowest weight: any rule of ours wins over it */
 :where(dialog.popup .na_popup, #na_settings) :where(textarea, .text_pole) { --c-bw: 1px; --c-bs: solid; --c-bc: var(--SmartThemeBorderColor); --c-r: 5px; }
 
