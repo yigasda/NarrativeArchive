@@ -6,7 +6,7 @@
 
 import { AX, ax, axBar, axCb, axH1, axInd, axKp, axTint, axTop, busyHtml } from './phoneapps.js';
 import { filling } from './phoneai.js';
-import { byStory, clockNum, clockOf, fmtDate, halfOf, hourOf, koOn, pad, storyNow } from './phonedata.js';
+import { byStory, clockNum, clockOf, fmtDate, halfOf, hourOf, koOn, ownerZone, pad, sceneHome, storyNow } from './phonedata.js';
 import { shiftDay, weatherNow } from './phonelife.js';
 import { COUNTRY_TZ, apart, cityAt as cityOfPlace, mirrorHome, overlayNow } from './phonesynclife.js';
 import { decimalOf, fmtMoney, localeOf } from './phonemoney.js';
@@ -176,8 +176,9 @@ export function timerScreen(p, now) {
 }
 // a city's offset from the place the story is in, from their time zones (Intl knows the rules; the year is a guess)
 const zoneMin = (tz, at) => { try { const f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(at); const g = k => Number(f.find(x => x.type === k)?.value); return Math.round((Date.UTC(g('year'), g('month') - 1, g('day'), g('hour') % 24, g('minute')) - at.getTime()) / 6e4); } catch { return null; } };
-// the time zone the story is in: a saved city its place names, else the owner's country (home), else the first saved city
-const hereZone = (lf, p = null, place = hereNow(lf).place) => { const pl = String(place || '').toLowerCase(); return lf.weather.cities.find(c => c.tz && pl && (pl.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(pl.split(/[ ,]/)[0])))?.tz || COUNTRY_TZ[String(p?.lives || p?.country || '').toUpperCase()] || lf.weather.cities.find(c => c.tz)?.tz || ''; };
+// the time zone the story is in: the owner's zone as the reflection reads it (ownerZone: where they were read to be, else the
+// phone's own city, else its country), else a saved city its place names, else the owner's country, else the first saved city
+const hereZone = (lf, p = null, place = hereNow(lf).place) => { let own = null; try { own = p ? ownerZone(p)?.tz : null; } catch { own = null; } if (own) return own; const pl = String(place || '').toLowerCase(); return lf.weather.cities.find(c => c.tz && pl && (pl.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(pl.split(/[ ,]/)[0])))?.tz || COUNTRY_TZ[String(p?.lives || p?.country || '').toUpperCase()] || lf.weather.cities.find(c => c.tz)?.tz || ''; };
 // sunrise and sunset for a day at a time zone's city (NOAA's equations on the zone's latitude and longitude), local "HH:MM"
 function sunOf(date, tz) {
     const at = TZ_AT[tz], d = realDate(date, 12);
@@ -958,11 +959,16 @@ function hereNow(lf) {
     const best = others.map(o => hereOwn(L(o))).filter(x => x.place && x.date === h.date && same(h.place, x.place) && at(x) > at(h)).sort((a, b) => at(b).localeCompare(at(a)))[0];
     return best ? { ...best, place: h.place } : h;
 }
+// a status line only speaks for this phone when its scene is the owner's (sceneHome true: the reflection's own test);
+// another person's room or an unknown place in the same zone leaves the saved weather alone
 function hereOwn(lf) {
-    const h = lf.weather.here;
+    const h = lf.weather.here, p = OWNER.get(lf);
     let t = null;
     try { t = weatherNow(); } catch { t = null; }
-    if (!t || !/^\d{2}-\d{2}$/.test(t.date || '') || !h.date || apart(h.place, t.place, lf.weather.cities)) return h;
+    if (!t || !/^\d{2}-\d{2}$/.test(t.date || '') || !h.date) return h;
+    let mine = false;
+    try { mine = p ? sceneHome(p, t.place, getMeta()) === true : !apart(h.place, t.place, lf.weather.cities); } catch { mine = false; }
+    if (!mine) return h;
     const gap = dayGap(h.date, t.date);
     if (gap < 0 || gap === 0 && !(t.time && (!h.time || t.time > h.time))) return h;
     const out = overlayNow(h, t);

@@ -21,6 +21,27 @@ const only = opt('--only')?.split(',') || (owner ? (OWNERS[owner] || (() => { co
 const noPng = args.includes('--nopng'), noStates = args.includes('--nostates'); // --fast = both: values only, about a third of the time
 const skipExisting = args.includes('--skip-existing'); let skipped = 0;
 const OUT = path.join(__dirname, 'out', label);
+const WHO = process.env.NA_WHO ? JSON.parse(fs.readFileSync(process.env.NA_WHO, 'utf8')) : {};
+// in the page: for each changed element, the marked rules that match it (or, for inherited properties, an ancestor) and which of the
+// asked properties they declare ('*' = every one); pseudo-classes and pseudo-elements are dropped from the selectors before matching
+const whoRules = ([root, items]) => {
+    const R = document.querySelector(root); const rules = [];
+    const walk = list => { for (const r of list) { if (r.styleSheet) { try { walk(r.styleSheet.cssRules); } catch {} continue; } if (r.cssRules && !r.selectorText) { walk(r.cssRules); continue; } if (r.selectorText && r.style.getPropertyValue('--imp-id')) rules.push(r); } };
+    for (const sh of document.styleSheets) { try { walk(sh.cssRules); } catch {} }
+    const strip = s => s.replace(/::?(before|after|placeholder|-webkit-scrollbar)\b/g, '').replace(/:(hover|focus-visible|focus-within|focus|active|checked)\b/g, '');
+    const out = {};
+    for (const it of items) {
+        let el = R; for (const i of (it.path ? it.path.split('/') : [])) { el = el && el.children[+i]; }
+        if (!el) continue; const chain = [el]; for (let a = el, k = 0; k < (it.up || 0) && a !== R; k++) { a = a.parentElement; if (a) chain.push(a); }
+        for (const r of rules) {
+            const sel = strip(r.selectorText); if (!chain.some(c => { try { return c.matches(sel); } catch { return false; } })) continue;
+            const names = []; for (let i = 0; i < r.style.length; i++) names.push(r.style.item(i));
+            const hit = it.props.includes('*') ? names : names.filter(n => it.props.includes(n) || n.startsWith('--'));
+            if (!hit.length) continue; const id = r.style.getPropertyValue('--imp-id').trim(); out[id] = [...new Set([...(out[id] || []), ...hit])];
+        }
+    }
+    return out;
+};
 const HOSTILE = fs.readFileSync(path.join(__dirname, 'hostile.css'), 'utf8');
 // the computed properties we compare (no transitions/animations: those are frozen below and not part of the look)
 const PROPS = ['color', 'backgroundColor', 'backgroundImage', 'borderTopColor', 'borderTopWidth', 'borderTopStyle', 'borderRightColor', 'borderRightWidth', 'borderBottomColor', 'borderBottomWidth', 'borderLeftColor', 'borderLeftWidth', 'borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomRightRadius', 'borderBottomLeftRadius', 'boxShadow', 'opacity', 'fontSize', 'fontWeight', 'fontFamily', 'fontStyle', 'lineHeight', 'letterSpacing', 'textDecorationLine', 'textTransform', 'textAlign', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft', 'gap', 'display', 'visibility', 'outlineColor', 'outlineWidth', 'outlineStyle', 'accentColor', 'fill', 'stroke', 'filter', 'backdropFilter', 'mixBlendMode', 'webkitMaskImage', 'minHeight', 'maxHeight', 'transform', 'translate'];
@@ -86,6 +107,8 @@ if (require.main === module) (async () => {
                             else await el.screenshot({ path: path.join(OUT, tag + '.png'), animations: 'disabled', caret: 'hide' });
                             const dump = await styleDump(p, sc.root, { states: !noStates });
                             fs.writeFileSync(path.join(OUT, tag + '.json'), JSON.stringify(dump));
+                            // impstrip.py asks which marked rules (--imp-id) reach the elements that changed: NA_WHO = file with { tag: [{ path, props, up }] }
+                            if (WHO[tag]) fs.writeFileSync(path.join(OUT, 'who_' + tag + '.json'), JSON.stringify(await p.evaluate(whoRules, [sc.root, WHO[tag]])));
                             // where the root sat: a fractional offset rasterises gradients and shadows differently, so this is logged for diagnosis
                             const rect = await el.boundingBox();
                             results.push({ tag, n: dump.length, ms: Date.now() - t0, rect: rect && [rect.x, rect.y, rect.width, rect.height].map(v => Math.round(v * 100) / 100) });

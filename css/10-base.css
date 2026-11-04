@@ -19,12 +19,12 @@
 }
 
 #na_settings .inline-drawer-header { gap: 8px; }
-#na_settings .na_title { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+#na_settings .na_title { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; font-weight: 650; }
 #na_settings .na_title i { color: var(--na-accent-fg, var(--na-accent)); }
 #na_settings .na_ver { font-size: 0.72em; --axfs: 0.72em; font-weight: 400; opacity: 0.55}
 #na_settings .na_head_badge {
     font-size: 0.75em; --axfs: 0.75em;
-    font-variant-numeric: tabular-nums;
+    font-variant-numeric: tabular-nums; font-weight: 650;
     padding: 1px 8px;
     border-radius: 999px; --axr: 999px;
     background: var(--na-accent-soft);
