@@ -1676,6 +1676,9 @@ function ownerMoved(p, c) {
 const samePerson = (a, b) => { const x = nameKey(a), y = nameKey(b); if (!x || !y) return false; if (x === y) return true; const [s, l] = x.length < y.length ? [x, y] : [y, x]; return !/\s/.test(s) && l.split(/\s+/)[0] === s; };
 // (by the short name only when it is one person's: "Ivo" with an Ivo Kim and an Ivo Park is neither)
 const whereOf = (p, name) => { const rows = p?.where?.people || [], same = rows.filter(x => samePerson(x.name, name)); return rows.find(x => nameKey(x.name) === nameKey(name)) || (same.length === 1 ? same[0] : undefined); };
+// where the owner lives (설정 › 위치 정보's 사는 나라: by hand or read), else the phone's 국적: what the bank, the money,
+// the parcels and the web go by (a Korean living in Germany banks in euros)
+export const homeCountry = p => String(p?.lives || whereOf(p, p?.owner)?.lives || p?.country || '').toUpperCase();
 // ---- 설정 › 위치 정보: the phone's own country (p.lives) follows the reading of where the owner lives, unless set by hand
 function syncLives(p) { const l = whereOf(p, p?.owner)?.lives; if (l && !p.livesManual) p.lives = String(l).toUpperCase(); }
 // a city's time zone for one the user typed: a saved city, a zone named after it (Berlin, Seoul, New York), else the country's
@@ -2049,7 +2052,7 @@ function moneyMore(m, p, n, tx) {
 // what the phone already holds, so the money side reuses its event tags
 const moneyContext = (p, now = p.now) => JSON.stringify({ now, mails: (p.mails || []).slice(-8).map(x => ev(x, { from: x.from, subject: x.subject, time: x.time })), events: real(p.events).slice(-8).map(x => ev(x, { title: x.title, date: x.date, time: x.time })), searches: real(p.searches).slice(-6).map(x => ev(x, { q: x.q, time: x.time })),
     ...(p.delivery?.orders?.length ? { deliveries: p.delivery.orders.filter(o => o.status !== 'cancelled').slice(-12).map(o => ev(o, { shop: o.shop, time: o.time, total: dlvTotal(o) })) } : {}) });
-export const prepareWealth = (m,p,refresh=false) => ensureWealth(m,p,()=>sideRequest(m,p.owner,[`[OWNER COUNTRY]\n${p.country || ''}`,`[ACCOUNT CURRENCIES]\n${JSON.stringify((p.money?.bank?.accounts || []).map(a=>a.currency))}`],{profile:p.financeProfile,money:true}),{refresh});
+export const prepareWealth = (m,p,refresh=false) => ensureWealth(m,p,()=>sideRequest(m,p.owner,[`[OWNER COUNTRY]\n${homeCountry(p)}`,`[ACCOUNT CURRENCIES]\n${JSON.stringify((p.money?.bank?.accounts || []).map(a=>a.currency))}`],{profile:p.financeProfile,money:true}),{refresh});
 export const fillMoney = (m, p, opts = {}) => exclusive('fill', () => makeMoney(m, p, opts));
 async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null } = {}) {
     const mark0 = markNow();
@@ -2071,7 +2074,7 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
     let correction='';
     for(let attempt=0;attempt<2;attempt++) {
         const out = await askDraft(input+'\n'+correction,{force:true,system,maxTokens:12000});
-        const raw = jsonOf(out), next = parseMoney(raw, p.country);
+        const raw = jsonOf(out), next = parseMoney(raw, homeCountry(p));
         if (p.money !== old || accountState() !== before) throw new Error('생성 중 계좌가 변경됐어요. 다시 시도해 주세요');
         if (old) {
             if (rebuild) {
@@ -2139,7 +2142,7 @@ async function makeMoney(m, p, { regenerateBalances = false, wealthPlan = null }
                 const b2 = out2.lastIndexOf('}'), closed = (() => { try { JSON.parse(out2.slice(out2.indexOf('{'), b2 + 1)); return true; } catch { return false; } })();
                 if (!raw2 || typeof raw2 !== 'object' || !closed) throw new Error('모델 답에서 은행 내용(JSON)을 끝까지 찾지 못했어요');
                 if (p.money !== updated.money) throw new Error('생성 중 계좌가 변경됐어요');
-                moneyMore(m, p, parseMoney({ ...raw2, currency: p.money.currency, bank: p.money.bank }, p.country), tx);
+                moneyMore(m, p, parseMoney({ ...raw2, currency: p.money.currency, bank: p.money.bank }, homeCountry(p)), tx);
                 last = two.cover; short = two.short;
             } catch (err) { console.warn('[narrative-archive] money, second turn', err); }
         }

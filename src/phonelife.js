@@ -11,7 +11,7 @@ import { calendars } from './calendar.js';
 import { ctx, saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
-import { OWN_CLOCK, CLOCK_GET, clockBlock, sceneHome, statusAt, arr, trackerWeather, readMark, turnsNote, secondTurn, soFarHead, windowOf, nowAt, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
+import { homeCountry, OWN_CLOCK, CLOCK_GET, clockBlock, sceneHome, statusAt, arr, trackerWeather, readMark, turnsNote, secondTurn, soFarHead, windowOf, nowAt, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { cutShort } from './phoneparse.js';
 import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, overlayFresh, parseWeather, screenOf, usualScreenOf, weatherFrom } from './phonesynclife.js';
@@ -180,7 +180,7 @@ export function weatherNow(upto = null) {
 }
 // where the owner lives: the profile's country (the delivery app is 배달의민족 there in Korea, Uber Eats elsewhere)
 // where the owner lives: set by hand or read (p.lives), else the place reading's row, else the phone's country
-export const livesIn = p => (p.lives || (p.where?.people || []).find(x => String(x?.name || '').toLowerCase() === String(p.owner || '').toLowerCase())?.lives || p.country || '');
+export const livesIn = homeCountry;
 export const deliveryLook = p => (livesIn(p) === 'KR' ? 'baemin' : 'ubereats');
 const phoneNow = (p, upto = null) => JSON.stringify({
     now: storyNow(p, upto) || p.now,

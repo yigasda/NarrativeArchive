@@ -625,3 +625,12 @@ test('위치 정보: one person by two names ("Somang Park" in the contacts, "So
     p = phone(); info = await ask(p, [{ name: 'Somang Park', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }, { name: 'Somang', city: 'Tokyo', lives: 'JP', tz: 'Asia/Tokyo' }]);
     assert.deepEqual(info.people.map(x => [x.name, x.city]), [['Somang Park', 'Seoul'], ['Somang', 'Tokyo']]);
 });
+
+test('사는 나라: the bank, the money and the web go by where the owner lives (by hand or read), the phone\'s 국적 only when that is unknown', () => {
+    const p = plainPhone({ country: 'KR' });
+    assert.equal(data.homeCountry(p), 'KR');
+    p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt', lives: 'de', tz: 'Europe/Berlin' }] };
+    assert.equal(data.homeCountry(p), 'DE');
+    p.lives = 'FR';
+    assert.equal(data.homeCountry(p), 'FR');
+});

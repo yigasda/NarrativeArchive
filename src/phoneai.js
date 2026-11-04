@@ -8,7 +8,7 @@ import { calendars } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
 import { recentForCheck } from './drift.js';
 import { headingPlaces, nameKey, peopleList } from './people.js';
-import { arr, CAP, COUNTRIES, ensureIds, gapDays, secOf, ko, line, MOODS, namesBlock, pad, parts, pick, rowDay, storyNow, str } from './phonedata.js';
+import { arr, CAP, COUNTRIES, homeCountry, ensureIds, gapDays, secOf, ko, line, MOODS, namesBlock, pad, parts, pick, rowDay, storyNow, str } from './phonedata.js';
 
 // ---- 사진 그리기: the AI 기능 모델 turns a caption into image tags, one line for the picture and one per person. With
 // AutoPic in 직접 생성 mode the picture goes through AutoPic (its model, vibes, registered looks; only the people in the
@@ -418,7 +418,8 @@ function placesThatDay(m, time) {
 }
 export const KINDS = ['news', 'transit', 'forum', 'wiki', 'shop', 'blog', 'official', 'other'];
 const hex = v => (/^#[0-9a-f]{6}$/i.test(String(v || '').trim()) ? String(v).trim().toLowerCase() : '');
-const whereOf = (m, p, x) => [p.country ? `Country: ${COUNTRIES[p.country] ? `${p.country} (${COUNTRIES[p.country]})` : p.country}` : '', (pl => (pl.length ? `Places that day: ${pl.join(', ')}` : ''))(placesThatDay(m, x.time))].filter(Boolean).join('\n');
+// (the country they live in: a search is local to where they are at home)
+const whereOf = (m, p, x) => [(c => (c ? `Country: ${COUNTRIES[c] ? `${c} (${COUNTRIES[c]})` : c}` : ''))(homeCountry(p)), (pl => (pl.length ? `Places that day: ${pl.join(', ')}` : ''))(placesThatDay(m, x.time))].filter(Boolean).join('\n');
 export async function searchPage(m, p, k) {
     const x = p.searches[k];
     const where = whereOf(m, p, x);
