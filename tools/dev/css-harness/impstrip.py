@@ -29,6 +29,17 @@ def pieces(body):
         else: cur += ch
     out.append(cur); return out
 
+# does a declaration of n set the longhand x the page named? (shorthands: border-radius → border-top-left-radius, border-color →
+# border-top-color, gap → row-gap, font → line-height, place-items → align-items …)
+SHORT = {'border-radius': lambda x: x.startswith('border-') and x.endswith('-radius'),
+         'border-color': lambda x: x.startswith('border-') and x.endswith('-color'), 'border-width': lambda x: x.startswith('border-') and x.endswith('-width'),
+         'border-style': lambda x: x.startswith('border-') and x.endswith('-style'), 'gap': lambda x: x in ('row-gap', 'column-gap'),
+         'font': lambda x: x.startswith('font-') or x == 'line-height', 'place-items': lambda x: x in ('align-items', 'justify-items'),
+         'place-content': lambda x: x in ('align-content', 'justify-content'), 'place-self': lambda x: x in ('align-self', 'justify-self'),
+         'inset': lambda x: x in ('top', 'right', 'bottom', 'left'), 'overflow': lambda x: x.startswith('overflow-')}
+def covers(n, x):
+    return x == n or x.startswith(n + '-') or (n in SHORT and SHORT[n](x))
+
 def build(keep, mark):
     out, pos = [], 0
     for i, (a, b, body) in enumerate(RULES):
@@ -38,7 +49,7 @@ def build(keep, mark):
         for d in pieces(body):
             if '!important' in d and ':' in d:
                 n = d.split(':', 1)[0].strip().lower()
-                if not ('*' in k or any(x == n or x.startswith(n + '-') or (n.startswith('--') and x == n) for x in k)): d = re.sub(r'\s*!important', '', d)
+                if not ('*' in k or any(covers(n, x) for x in k)): d = re.sub(r'\s*!important', '', d)
             decls.append(d)
         nb = ';'.join(decls)
         if mark: nb = f' --imp-id: {i};' + nb
@@ -73,9 +84,12 @@ def load(label, th):
 
 def kebab(k): return re.sub(r'[A-Z]', lambda m: '-' + m.group(0).lower(), k)
 def diffs(label):
+    return diffs_between('base', label)
+
+def diffs_between(a_label, label):
     out = {}
     for th in ('off', 'on'):
-        A, B = load('base', th), load(label, th)
+        A, B = load(a_label, th), load(label, th)
         for tag, caps in B.items():
             base = {e['path']: e for e in A.get(tag, [])}
             for e in caps:
@@ -115,9 +129,16 @@ for it in range(int(opt('--iters', 6))):
                 if new != cur: keep[rid] = sorted(new); grew += 1
     json.dump(keep, open(KEEP, 'w'), indent=1)
     if not grew:
-        print('the changed elements are not reached by a rule of this file; giving those scenes every !important back')
-        for th in dd.values():
-            for tag in th: pass
+        # nothing of this file reaches them: capture the untouched file again; if the same elements move between two runs of
+        # the same css they are noise (timing), and what is kept so far stands; else every !important goes back
+        install(build({str(i): ['*'] for i in IMP}, False))
+        sc = sorted({t.split('__')[0] for th in dd.values() for t in th})
+        capture('base2', sc)
+        noise = {th: {tag: {p for p, _ in v} for tag, v in tags.items()} for th, tags in diffs_between('base', 'base2').items()}
+        left = [(th, tag, p) for th, tags in dd.items() for tag, items in tags.items() for p, _ in items if p not in noise.get(th, {}).get(tag, set())]
+        if not left:
+            print('the changed elements move between two runs of the same css too (noise); keeping the result'); break
+        print('the changed elements are not reached by a rule of this file and are not noise; giving every !important back', left[:5])
         keep = {str(i): ['*'] for i in IMP}; break
 final = build(keep, False); install(final)
 print('done:', orig.count('!important'), '→', final.count('!important'), flush=True)

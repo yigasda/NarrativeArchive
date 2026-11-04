@@ -10,9 +10,9 @@
 .na_sp_bar .na_sp_head b { font-weight: 600; }
 .na_mg_pickhead { margin: 2px 4px 0; }
 .na_mg_pickhead b { flex: 1; font-size: 12.5px; font-weight: 600; color: var(--na-dim); }
-.na_mg_list { padding: 6px 0; border: 0 !important; border-radius: 18px !important; --axr: 18px; background: var(--na-card) !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07)}
+.na_mg_list { padding: 6px 0; border: 0; border-radius: 18px; --axr: 18px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07)}
 body.na_darkui .na_mg_list { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.35); }
-.na_mg_row { position: relative; padding: 9px 14px 9px 28px !important; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; }
+.na_mg_row { position: relative; padding: 9px 14px 9px 28px; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; }
 .na_mg_row > input { position: absolute; opacity: 0; pointer-events: none; }
 .na_mg_row::before { content: ""; position: absolute; left: 14px; top: 4px; bottom: 4px; width: 4px; border-radius: 4px; background: var(--na-line); }
 .na_mg_row.on::before { top: 0; bottom: 0; border-radius: 0; background: var(--na-accent-fg, var(--na-accent)); }
@@ -23,14 +23,14 @@ body.na_darkui .na_mg_list { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05)
 .na_mg_row .na_rt_txt > span { font-size: 14px; --axfs: 14px; font-weight: 500; color: var(--na-dim)}
 .na_mg_row.on .na_rt_txt > span { font-weight: 600; color: var(--na-ink); }
 .na_mg_row .na_rt_txt small { font-size: 11.5px; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup input.na_mg_q:not(#na_x) { width: 100%; box-sizing: border-box; height: 44px; margin: 0; border: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 999px; --c-r: 999px; background: var(--na-card) !important; --c-bg: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; --c-sh: 0 1px 2px rgba(70, 52, 40, 0.06); color: var(--na-ink) !important; --c-fg: var(--na-ink); font: inherit}
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup input.na_mg_q:not(#na_x) { width: 100%; box-sizing: border-box; height: 44px; margin: 0; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 999px; --c-r: 999px; background: var(--na-card); --c-bg: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06); --c-sh: 0 1px 2px rgba(70, 52, 40, 0.06); color: var(--na-ink); --c-fg: var(--na-ink); font: inherit}
 .na_mg_foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .na_mg_foot .na_mg_info { flex: 1; min-width: 0; font-size: 12px; --axfs: 12px; color: var(--na-dim); --axfg: var(--na-dim)}
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_mg_go:not(#na_x) { flex: none; height: 42px; margin: 0; padding: 0 18px; border: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 999px; --axr: 999px; --c-r: 999px; background: var(--na-accent) !important; --c-bg: var(--na-accent); color: var(--na-onaccent, #fff) !important; --axfg: var(--na-onaccent, #fff); --c-fg: var(--na-onaccent, #fff); font: inherit; --axfs: inherit; --axff: inherit; font-size: 14px; --axfs: 14px; font-weight: 700; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important; --c-sh: inset 0 1px 0 rgba(255, 255, 255, 0.2)}
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_mg_go:not(#na_x) { flex: none; height: 42px; margin: 0; padding: 0 18px; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 999px; --axr: 999px; --c-r: 999px; background: var(--na-accent); --c-bg: var(--na-accent); color: var(--na-onaccent, #fff); --axfg: var(--na-onaccent, #fff); --c-fg: var(--na-onaccent, #fff); font: inherit; --axfs: inherit; --axff: inherit; font-size: 14px; --axfs: 14px; font-weight: 700; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); --c-sh: inset 0 1px 0 rgba(255, 255, 255, 0.2)}
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup button.na_mg_go:disabled:not(#na_x) { opacity: 0.5; cursor: default; }
 /* ticks on the cream accent in dark */
 .na_sp_ck.part::after { background: var(--na-onaccent, #fff); }
-body.na_darkui .na_sp > .checkbox_label input:checked { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%231B1B1F' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") !important; }
+body.na_darkui .na_sp > .checkbox_label input:checked { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%231B1B1F' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
 
 /* ============ 압축 마법사 (docs/mockups/ext-wizard B + 가): as tall as its content; the range's first and last message
    above the numbers (hold one to read it whole in a sheet from the bottom) */
@@ -53,18 +53,18 @@ body.na_darkui .na_wz3_sheet { background: #232328; color: #ECEAE6; --axfg: #ECE
 .na_wz3_shead b { font-size: 15px; }
 .na_wz3_shead small { font-size: 11.5px; color: var(--na-dim, #9A8A80); }
 .na_wz3_sbody { flex: 1; min-height: 0; overflow-y: auto; margin-top: 10px; font-size: 13.5px; --axfs: 13.5px; line-height: 1.65; white-space: pre-wrap; word-break: break-word}
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup button.na_wz3_sclose:not(#na_x) { flex: none; height: 42px; margin: 14px 0 0; border: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 999px; --axr: 999px; --c-r: 999px; font: inherit; --axfs: inherit; --axff: inherit; font-size: 13.5px; --axfs: 13.5px; font-weight: 600; cursor: pointer; box-shadow: none !important; --c-sh: none}
-body:not(.na_darkui) dialog.popup button.na_wz3_sclose:not(#na_x) { background: #EADCD0 !important; --c-bg: #EADCD0; color: #463428 !important; --axfg: #463428; --c-fg: #463428}
-body.na_darkui dialog.popup button.na_wz3_sclose:not(#na_x) { background: #2E2E34 !important; --c-bg: #2E2E34; color: #ECEAE6 !important; --axfg: #ECEAE6; --c-fg: #ECEAE6}
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup button.na_wz3_sclose:not(#na_x) { flex: none; height: 42px; margin: 14px 0 0; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 999px; --axr: 999px; --c-r: 999px; font: inherit; --axfs: inherit; --axff: inherit; font-size: 13.5px; --axfs: 13.5px; font-weight: 600; cursor: pointer; box-shadow: none; --c-sh: none}
+body:not(.na_darkui) dialog.popup button.na_wz3_sclose:not(#na_x) { background: #EADCD0; --c-bg: #EADCD0; color: #463428; --axfg: #463428; --c-fg: #463428}
+body.na_darkui dialog.popup button.na_wz3_sclose:not(#na_x) { background: #2E2E34; --c-bg: #2E2E34; color: #ECEAE6; --axfg: #ECEAE6; --c-fg: #ECEAE6}
 /* 마법사 2 · 4단계 (docs/mockups/ext-wizard A): what goes over as a small table, what grading looks for as a list; the step's one
    action is the orange button below, .txt and skipping are links */
-.na_wiz2 .na_wz3_hide { display: none !important; }
-.na_wz3_pk { padding: 2px 14px !important; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_wiz2 .na_wz3_hide { display: none; }
+.na_wz3_pk { padding: 2px 14px; border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 .na_wz3_pk > div { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 10px 0; font-size: 13.5px; }
 .na_wz3_pk > div + div { border-top: 1px solid var(--na-line2, var(--na-line)); }
 .na_wz3_pk small { font-size: 12px; color: var(--na-dim); text-align: right; }
 .na_wz3_pk b { font-size: 13.5px; }
-.na_wz3_chk { padding: 0 !important; overflow: hidden; border-color: transparent !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_wz3_chk { padding: 0; overflow: hidden; border-color: transparent; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 .na_wz3_chk > div { display: flex; align-items: flex-start; gap: 12px; padding: 11px 14px; }
 .na_wz3_chk > div + div { border-top: 1px solid var(--na-line2, var(--na-line)); }
 .na_wz3_chk b { display: block; font-size: 13.5px; font-weight: 600; }
@@ -80,23 +80,23 @@ body:is(.na_darkui, :not(.na_darkui)) .na_wiz2 .na_wz2_nav .na_v2_btn:not(.prima
 body.na_darkui .na_wiz2 .na_wz2_nav .na_v2_btn:not(.primary) { --c-bg: #2E2E34; --c-sh: none; }
 body:is(.na_darkui, :not(.na_darkui)) .na_wiz2 .na_wz2_pane .na_v2_btn:not(.primary) { --c-bc: transparent; --c-bct: transparent; --c-sh: 0 1px 2px rgba(70, 52, 40, 0.08); }
 body.na_darkui .na_wiz2 .na_wz2_pane .na_v2_btn:not(.primary) { --c-bg: #2E2E34; --c-sh: none; }
-body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_wiz2 textarea.na_wz_out:is(*, :focus, :focus-visible):not(#na_x) { border-color: transparent !important; --c-bc: transparent; --c-bct: transparent; outline: none !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06) !important; --c-sh: 0 1px 2px rgba(70, 52, 40, 0.06); }
+body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_wiz2 textarea.na_wz_out:is(*, :focus, :focus-visible):not(#na_x) { border-color: transparent; --c-bc: transparent; --c-bct: transparent; outline: none; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06); --c-sh: 0 1px 2px rgba(70, 52, 40, 0.06); }
 
 /* ============ 원문 뽑기 (docs/mockups/ext-extract B): range card with filled chips and a thin whole-chat bar, the text as it will be
    copied right under it (fading out), options, then .txt | 전체 복사 — no outlines, one orange button */
-body:is(.na_darkui, :not(.na_darkui)) .na_ex2 .na_v2_chips button { --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; padding: 6px 12px !important; --c-r: 999px; font-weight: 600; --c-sh: none; }
-body:not(.na_darkui) .na_ex2 .na_v2_chips button:not(.on) { background: #E9DCD1 !important; --c-bg: #E9DCD1; color: #6B5A50 !important; --axfg: #6B5A50; --c-fg: #6B5A50}
-body.na_darkui .na_ex2 .na_v2_chips button:not(.on) { background: #2E2E34 !important; --c-bg: #2E2E34; color: #B9B7BD !important; --axfg: #B9B7BD; --c-fg: #B9B7BD}
+body:is(.na_darkui, :not(.na_darkui)) .na_ex2 .na_v2_chips button { --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; padding: 6px 12px; --c-r: 999px; font-weight: 600; --c-sh: none; }
+body:not(.na_darkui) .na_ex2 .na_v2_chips button:not(.on) { background: #E9DCD1; --c-bg: #E9DCD1; color: #6B5A50; --axfg: #6B5A50; --c-fg: #6B5A50}
+body.na_darkui .na_ex2 .na_v2_chips button:not(.on) { background: #2E2E34; --c-bg: #2E2E34; color: #B9B7BD; --axfg: #B9B7BD; --c-fg: #B9B7BD}
 .na_ex2_card .na_cp_bar { height: 6px; gap: 2px; background: transparent; }
 .na_ex2_card .na_cp_bar > span { border-radius: 4px !important; }
-.na_ex2_preview { position: relative; height: 150px; border: 0 !important; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+.na_ex2_preview { position: relative; height: 150px; border: 0; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
 body:not(.na_darkui) .na_ex2_preview { background: #FBF7F3; }
 body.na_darkui .na_ex2_preview { background: #232328; box-shadow: none; }
 body:is(.na_darkui, :not(.na_darkui)) .na_ex2_btns .na_v2_btn:not(.primary) { --c-bc: transparent; --c-bct: transparent; --c-sh: 0 1px 2px rgba(70, 52, 40, 0.08); }
 body.na_darkui .na_ex2_btns .na_v2_btn:not(.primary) { --c-bg: #2E2E34; --c-sh: none; }
 .na_ex2_btns .na_v2_btn { --c-r: 999px; }
 /* range number fields (원문 뽑기 · 마법사) without an outline, focus shown by a soft lift instead */
-.na_wz2_range label > span, .na_wz2_range label > span:focus-within { border-color: transparent !important; }
+.na_wz2_range label > span, .na_wz2_range label > span:focus-within { border-color: transparent; }
 body:not(.na_darkui) .na_wz2_range label > span { box-shadow: 0 1px 2px rgba(70, 52, 40, 0.06); }
 .na_wz2_range label > span:focus-within { box-shadow: 0 0 0 2px color-mix(in srgb, var(--na-accent) 35%, transparent); }
 
