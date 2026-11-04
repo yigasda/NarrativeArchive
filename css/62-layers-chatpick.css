@@ -16,8 +16,32 @@ body:not(.na_darkui) .na_ly3 input.na_toggle:checked + .na_tgl_ui { background: 
 
 /* ---- the three version tiles: floating, the picked one white and lifted (dark: one step lighter) */
 .na_ly3 .na_ly3_cards { display: grid; grid-template-columns: repeat(3, 1fr); flex-direction: column; gap: 8px; margin-top: 10px; padding: 0; border-radius: 0; --axr: 0; overflow: visible; background: transparent; box-shadow: none}
-.na_ly3 .na_ly3_cards .na_ly3_card { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; width: auto; margin: 0; padding: 11px 12px; opacity: 0.75; font: inherit; --axfs: inherit; --axff: inherit; text-align: left; white-space: normal; cursor: pointer;
-    --c-bg: #FCF6F1; --c-fg: var(--na-ink); --c-r: 16px; --c-sh: 0 1px 2px rgba(70, 52, 40, 0.05), 0 4px 12px rgba(70, 52, 40, 0.06)}
+.na_ly3 .na_ly3_cards .na_ly3_card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+    width: auto;
+    margin: 0;
+    padding: 11px 12px;
+    --f-pt: 11px;
+    --f-pr: 12px;
+    --f-pb: 11px;
+    --f-pl: 12px;
+    opacity: 0.75;
+    font: inherit;
+    --axfs: inherit;
+    --axff: inherit;
+    text-align: left;
+    white-space: normal;
+    cursor: pointer;
+    --c-bg: #FCF6F1;
+    --c-fg: var(--na-ink);
+    --c-r: 16px;
+    --c-sh: 0 1px 2px rgba(70, 52, 40, 0.05), 0 4px 12px rgba(70, 52, 40, 0.06);
+}
 .na_ly3 .na_ly3_cards .na_ly3_card.on { opacity: 1; --c-bg: #fff; --c-sh: 0 1px 2px rgba(70, 52, 40, 0.08), 0 8px 18px rgba(70, 52, 40, 0.12); }
 body.na_darkui .na_ly3 .na_ly3_cards .na_ly3_card { --c-bg: #232328; --c-sh: 0 4px 12px rgba(0, 0, 0, 0.25); }
 body.na_darkui .na_ly3 .na_ly3_cards .na_ly3_card.on { --c-bg: #34343B; --c-sh: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.4); }
@@ -39,7 +63,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup .na_popup.na_ly3 .na_ly_tools
 .na_ly_tools .na_v2_pillbtn:disabled { opacity: 0.45; cursor: not-allowed; }
 .na_ly3 .na_ly_tools .na_ly_trinfo { flex: 1; min-width: 0; margin-left: auto; font-size: 11.5px; --axfs: 11.5px; color: var(--na-dim); --axfg: var(--na-dim)}
 .na_ly_full { display: block; width: 100%; box-sizing: border-box; margin: 0; padding: 10px 12px; border: 1px solid var(--na-line); border-radius: 12px; --axr: 12px; font-size: 0.929em; --axfs: 0.929em; line-height: 1.55; min-height: 96px}
-:is(.na_v2, #na_settings) .na_ly_pane textarea.text_pole.text_pole { display: block; width: 100%; box-sizing: border-box; margin: 0; padding: 10px 12px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-r: 12px; font-size: 0.929em; line-height: 1.55; min-height: 96px; }
+:is(.na_v2, #na_settings) .na_ly_pane textarea.text_pole.text_pole { display: block; width: 100%; box-sizing: border-box; margin: 0; padding: 10px 12px; --f-pt: 10px; --f-pr: 12px; --f-pb: 10px; --f-pl: 12px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-r: 12px; font-size: 0.929em; --f-fs: 0.929em; line-height: 1.55; --f-lh: 1.55; min-height: 96px; --f-mh: 96px; }
 .na_ly_pane textarea { resize: vertical; }
 :is(.na_v2, #na_settings) .na_ly_pane textarea.text_pole.text_pole { field-sizing: content; max-height: 50vh; }
 .na_ly_full { max-height: 40vh; overflow: auto; white-space: pre-wrap; }
@@ -65,7 +89,7 @@ body.na_darkui .na_ly3 .na_ly_ask { background: #2E2E34; }
 /* ---- 초안 모델로 만들기: quiet text under the card */
 .na_ly3_foot { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; }
 .na_ly3_foot small { flex: 1; min-width: 0; text-align: right; font-size: 11.5px; color: var(--na-dim); }
-.na_ly3 .na_ly3_tool { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; font: inherit; --axfs: inherit; --axff: inherit; font-size: 12.5px; --axfs: 12.5px; font-weight: 600; line-height: 1.5; cursor: pointer; white-space: nowrap; --c-fg: var(--na-mute); --c-r: 999px}
+.na_ly3 .na_ly3_tool { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; --f-pt: 0; --f-pr: 12px; --f-pb: 0; --f-pl: 12px; font: inherit; --axfs: inherit; --axff: inherit; font-size: 12.5px; --f-fs: 12.5px; --axfs: 12.5px; font-weight: 600; line-height: 1.5; --f-lh: 1.5; cursor: pointer; white-space: nowrap; --c-fg: var(--na-mute); --c-r: 999px; }
 .na_ly3_tool:disabled { opacity: 0.7; }
 
 /* ============ 섹션별 버전 v3 (docs/mockups/ext-fadepick C): a bar of what goes in now, then each section with its version as a
@@ -99,24 +123,24 @@ body.na_darkui .na_fp3 > .na_v2_card { box-shadow: inset 0 1px 0 rgba(255, 255, 
 .na_fp3_tt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .na_fp3_tt b { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .na_fp3_tt small { font-size: 11.5px; color: var(--na-dim); }
-.na_fp3_pick { flex: none; height: 28px; padding: 0 11px; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 999px; --axr: 999px; --c-r: 999px; background: var(--na-card2); --c-bg: var(--na-card2); font: inherit; --axfs: inherit; --axff: inherit; font-size: 12px; --axfs: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center}
+.na_fp3_pick { flex: none; height: 28px; padding: 0 11px; --f-pt: 0; --f-pr: 11px; --f-pb: 0; --f-pl: 11px; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 999px; --axr: 999px; --c-r: 999px; background: var(--na-card2); --c-bg: var(--na-card2); font: inherit; --axfs: inherit; --axff: inherit; font-size: 12px; --f-fs: 12px; --axfs: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; }
 .na_fp3_pick.u_long { color: var(--u-long); --axfg: var(--u-long); --c-fg: var(--u-long)} .na_fp3_pick.u_short { color: var(--u-short); --axfg: var(--u-short); --c-fg: var(--u-short)} .na_fp3_pick.u_line { color: var(--u-line); --axfg: var(--u-line); --c-fg: var(--u-line)}
 .na_fp3_pick.off { background: transparent; --c-bg: transparent; color: var(--na-dim); --axfg: var(--na-dim); --c-fg: var(--na-dim); cursor: default}
 .na_fp3_menu { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 0 14px 12px; padding: 4px; border-radius: 999px; --axr: 999px; background: var(--na-card2)}
-.na_fp3_menu button { height: 32px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; --c-bg: transparent; --c-fg: var(--na-mute); font: inherit; --axfs: inherit; --axff: inherit; font-size: 12.5px; --axfs: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 3px}
+.na_fp3_menu button { height: 32px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; --c-bg: transparent; --c-fg: var(--na-mute); font: inherit; --axfs: inherit; --axff: inherit; font-size: 12.5px; --f-fs: 12.5px; --axfs: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
 .na_fp3_menu button small { font-size: 10px; font-weight: 500; opacity: 0.7; }
 .na_fp3_menu button[data-miss] { --c-fg: var(--na-dim); }
 body:not(.na_darkui) .na_fp3_menu button.on { background: #FFFFFF; --c-bg: #FFFFFF; color: var(--na-accent-ink); --axfg: var(--na-accent-ink); --c-fg: var(--na-accent-ink); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.1); --c-sh: 0 1px 2px rgba(70, 52, 40, 0.1)}
 body.na_darkui .na_fp3_menu button.on { background: #414148; --c-bg: #414148; color: #F0CF8E; --axfg: #F0CF8E; --c-fg: #F0CF8E}
 .na_fp3_more { display: flex; margin-top: 10px; }
 .na_fp3_more:has(.na_fp_make[hidden]) { display: none; }
-.na_fp3_tool { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; --c-bg: var(--na-card2); --c-fg: var(--na-ink); font: inherit; --axfs: inherit; --axff: inherit; font-size: 12.5px; --axfs: 12.5px; font-weight: 600; cursor: pointer}
+.na_fp3_tool { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; --f-pt: 0; --f-pr: 12px; --f-pb: 0; --f-pl: 12px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; --c-bg: var(--na-card2); --c-fg: var(--na-ink); font: inherit; --axfs: inherit; --axff: inherit; font-size: 12.5px; --f-fs: 12.5px; --axfs: 12.5px; font-weight: 600; cursor: pointer; }
 /* 섹션별 버전 › 여러 개 바꾸기: rows get a tick, a sheet at the bottom sets the picked ones at once */
 .na_fp3_fl { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; }
 .na_fp3 .na_fp3_fl .na_fp_filters { margin-top: 0; flex-wrap: nowrap; min-width: 0; }
 .na_fp3_allp input { position: absolute; opacity: 0; pointer-events: none; }
 .na_fp3_allck i { width: 9px; height: 2.5px; border-radius: 2px; background: var(--na-accent); }
-.na_fp3_multi { flex: none; font-size: 12.5px; --axfs: 12.5px; font-weight: 700; --c-fg: var(--na-accent-ink)}
+.na_fp3_multi { flex: none; font-size: 12.5px; --f-fs: 12.5px; --axfs: 12.5px; font-weight: 700; --c-fg: var(--na-accent-ink); }
 .na_fp3_row.pickable { cursor: pointer; }
 .na_fp3_row.pickable .na_fp3_pick { pointer-events: none; }
 .na_fp3_row.picked { background: color-mix(in srgb, var(--na-accent) 7%, transparent); }
@@ -126,22 +150,22 @@ body.na_darkui .na_fp3_menu button.on { background: #414148; --c-bg: #414148; co
 body.na_darkui .na_fp3_bulk { box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45); }
 .na_fp3_bulk[hidden] { display: none; }
 .na_fp3_bh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.na_fp3_allp { display: inline-flex !important; align-items: center; gap: 8px; margin: 0; font-size: 13px; --axfs: 13px; font-weight: 700; cursor: pointer}
+.na_fp3_allp { display: inline-flex !important; align-items: center; gap: 8px; margin: 0; font-size: 13px; --f-fs: 13px; --axfs: 13px; font-weight: 700; cursor: pointer; }
 .na_fp3_bh small { font-size: 12px; color: var(--na-dim); }
 .na_fp3_set { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.na_fp3_set button { height: 38px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; --c-bg: var(--na-card2); --c-fg: var(--na-ink); font: inherit; --axfs: inherit; --axff: inherit; font-size: 13px; --axfs: 13px; font-weight: 700; cursor: pointer}
+.na_fp3_set button { height: 38px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; --c-bg: var(--na-card2); --c-fg: var(--na-ink); font: inherit; --axfs: inherit; --axff: inherit; font-size: 13px; --f-fs: 13px; --axfs: 13px; font-weight: 700; cursor: pointer; }
 .na_fp3_set button:not(:disabled):hover { --c-bg: var(--na-accent); --c-fg: var(--na-onaccent, #fff); }
 .na_fp3_set button:disabled { opacity: 0.45; cursor: default; }
 
 /* ============ 다른 채팅에서 가져오기 v3 (docs/mockups/ext-chatpick B): checked on open, archive chats first, the picked one
    shown with its numbers and last section, the bottom button brings it in */
 .na_cp3 { gap: 0; }
-.na_cp3 > .na_v2_card { border-color: transparent; --c-bc: transparent; --c-bct: transparent; padding: 0; overflow: hidden; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); --c-sh: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
+.na_cp3 > .na_v2_card { border-color: transparent; --c-bc: transparent; --c-bct: transparent; padding: 0; --f-pt: 0; --f-pr: 0; --f-pb: 0; --f-pl: 0; overflow: hidden; box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); --c-sh: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 body.na_darkui .na_cp3 > .na_v2_card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); --c-sh: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 20px rgba(0, 0, 0, 0.35); }
-.na_cp3_sect { display: flex; align-items: baseline; justify-content: space-between; width: 100%; margin: 16px 4px 8px; padding: 0; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; background: none; --c-bg: none; color: var(--na-dim); --axfg: var(--na-dim); --c-fg: var(--na-dim); font: inherit; --axfs: inherit; --axff: inherit; font-size: 12.5px; --axfs: 12.5px; font-weight: 700; text-align: left}
+.na_cp3_sect { display: flex; align-items: baseline; justify-content: space-between; width: 100%; margin: 16px 4px 8px; padding: 0; --f-pt: 0; --f-pr: 0; --f-pb: 0; --f-pl: 0; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; background: none; --c-bg: none; color: var(--na-dim); --axfg: var(--na-dim); --c-fg: var(--na-dim); font: inherit; --axfs: inherit; --axff: inherit; font-size: 12.5px; --f-fs: 12.5px; --axfs: 12.5px; font-weight: 700; text-align: left; }
 button.na_cp3_sect { cursor: pointer; width: calc(100% - 8px); }
 .na_cp3_sect small { font-size: 12px; font-weight: 600; }
-.na_cp3_row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; background: transparent; --c-bg: transparent; color: var(--na-ink); --axfg: var(--na-ink); --c-fg: var(--na-ink); font: inherit; --axfs: inherit; --axff: inherit; text-align: left; cursor: pointer}
+.na_cp3_row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; --f-pt: 12px; --f-pr: 14px; --f-pb: 12px; --f-pl: 14px; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; background: transparent; --c-bg: transparent; color: var(--na-ink); --axfg: var(--na-ink); --c-fg: var(--na-ink); font: inherit; --axfs: inherit; --axff: inherit; text-align: left; cursor: pointer; }
 .na_cp3_row + .na_cp3_row { border-top: 1px solid var(--na-line2, var(--na-line)); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line2, var(--na-line)); }
 .na_cp3_row.on { background: color-mix(in srgb, var(--na-accent) 8%, transparent); --c-bg: color-mix(in srgb, var(--na-accent) 8%, transparent); }
 .na_cp3_row.off { cursor: default; }

@@ -16,7 +16,7 @@ body dialog.popup:not(:has(.na_confirm, .na_phone, .na_st, .na_ap3)) .na_popup.n
 
 /* ============ 키워드 테스트 (docs/mockups/ext-kwtest B): two counts, then the called sections (orange tick, the matched keyword
    as an orange pill, the sentence with it marked), then the ones not called, faded */
-.na_kwt3 .na_kwt_in { min-height: 0; }
+.na_kwt3 .na_kwt_in { min-height: 0; --f-mh: 0; }
 .na_kwt3_sum { grid-template-columns: 1fr 1fr; gap: 8px; }
 .na_kwt3_sum > div { display: flex; flex-direction: column; align-items: center; padding: 12px; border-radius: 16px; background: var(--na-card); box-shadow: 0 1px 2px rgba(70, 52, 40, 0.05), 0 6px 16px rgba(70, 52, 40, 0.07); }
 body.na_darkui .na_kwt3_sum > div { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 6px 16px rgba(0, 0, 0, 0.3); }
@@ -79,7 +79,7 @@ body.na_darkui .na_wz2_range label > span:focus-within { box-shadow: 0 0 0 2px #
 .na_au3 { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 0; }
 .na_au3_map { padding: 12px 16px !important; }
 .na_au3_tl { margin: 0 !important; }
-.na_au3_on { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 14px !important; font-size: 14px; --axfs: 14px; cursor: pointer}
+.na_au3_on { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 14px !important; --f-pt: 14px !important; --f-pr: 14px !important; --f-pb: 14px !important; --f-pl: 14px !important; font-size: 14px; --f-fs: 14px; --axfs: 14px; cursor: pointer; }
 .na_au3_on > span:first-child { flex: 1; }
 .na_au3_lab { margin: 16px 4px 6px; font-size: 12px; --axfs: 12px; font-weight: 700; color: var(--na-mute); --axfg: var(--na-mute)}
 .na_au3 .na_au_name, .na_au3 .na_au_note { width: 100%; box-sizing: border-box; margin: 0; }

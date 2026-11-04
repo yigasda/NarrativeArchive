@@ -79,7 +79,7 @@ body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .ax 
 .cg .cg_ind.na_ph_quit { height: 38px; flex-direction: column; gap: 4px; justify-content: flex-end; padding-bottom: 9px; cursor: pointer; }
 .cg_ind.na_ph_quit small { font-size: 11px; font-weight: 600; color: rgba(22, 27, 34, 0.55); letter-spacing: 0.04em; }
 /* 도구 › 이야기: 캐릭터 휴대폰이 맨 위 큰 카드 */
-.na_toolrow.na_toolhero { margin-bottom: 6px; padding: 14px 14px; --c-r: 16px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-bg: linear-gradient(135deg, var(--na-soft), var(--na-softer)); }
+.na_toolrow.na_toolhero { margin-bottom: 6px; padding: 14px 14px; --f-pt: 14px; --f-pr: 14px; --f-pb: 14px; --f-pl: 14px; --c-r: 16px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-bg: linear-gradient(135deg, var(--na-soft), var(--na-softer)); }
 .na_toolrow.na_toolhero:hover { --c-bc: var(--na-accent); --c-bct: var(--na-accent); }
 .na_toolhero_ic { flex: none !important; width: 44px; height: 44px; display: grid !important; place-items: center; border-radius: 13px; --axr: 13px; background: var(--na-accent); color: var(--na-onaccent, #fff); --axfg: var(--na-onaccent, #fff); font-size: 1.25em; --axfs: 1.25em; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15)}
 .na_toolhero > span:nth-child(2) b { font-size: 1.05em; }
