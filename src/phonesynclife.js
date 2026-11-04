@@ -261,6 +261,20 @@ export function lifeReplay(p, x) {
 
 // ---- one event's alarms, files and health days (e.phone's "alarms", "files", "health")
 // e: { id, at, date }; on: the everyday apps were made before this message (else they already hold it)
+// a day still going (the phone's today) told again later the same day: what adds up over a day (steps, distance,
+// floors, coffee, water, each app's minutes, pickups) never goes down from what was there (the model writes the totals so
+// far; a lower one is it forgetting the morning). 되돌리기 takes it back like any change
+const GROWS = ['steps', 'km', 'floors', 'coffee', 'water'];
+export function soFar(was, vals) {
+    const out = { ...vals };
+    for (const k of GROWS) if (finiteNum(was?.[k]) && finiteNum(out[k]) && out[k] < was[k]) out[k] = was[k];
+    if (out.screen && was?.screen) {
+        const apps = { ...(was.screen.apps || {}) };
+        for (const [k, m] of Object.entries(out.screen.apps || {})) apps[k] = Math.max(apps[k] || 0, m);
+        out.screen = { ...out.screen, apps, ...(finiteNum(was.screen.pickups) && !(out.screen.pickups >= was.screen.pickups) ? { pickups: was.screen.pickups } : {}), ...(was.screen.late && !out.screen.late ? { late: was.screen.late } : {}) };
+    }
+    return out;
+}
 export function applyLife(p, e, phone, on) {
     const out = { effects: [], apps: new Set() };
     if (!p.life || !on || !phone || typeof phone !== 'object') return out;
@@ -356,9 +370,9 @@ export function applyLife(p, e, phone, on) {
         if (!clean.date) return;
         // fell asleep after midnight: the row is the day they woke up, the event's own day, not the evening before
         if (clean.sleep && clean.sleep < '12:00' && e.date && dayGap(clean.date, e.date) === 1) clean.date = e.date;
-        const was = (L.health?.days || []).find(o => o.date === clean.date);
+        const was = (L.health?.days || []).find(o => o.date === clean.date), today = was && was.date === String(p.now || '').slice(0, 5);
         // a day the story already told: this telling changes only what it says
-        if (was?.from === 'story') return change('life.health.days', was, { ...given(d, clean, ['bed', 'sleep', 'wake', 'woke', 'steps', 'km', 'floors', 'workout', 'hr', 'coffee', 'coffeeKind', 'water', 'weight', 'screen']), ev: e.id }, '건강');
+        if (was?.from === 'story') { const vals = { ...given(d, clean, ['bed', 'sleep', 'wake', 'woke', 'steps', 'km', 'floors', 'workout', 'hr', 'coffee', 'coffeeKind', 'water', 'weight', 'screen']), ev: e.id }; return change('life.health.days', was, today ? soFar(was, vals) : vals, '건강'); }
         // what the story doesn't say is their usual
         const u = L.health?.usual || {};
         // waking: not before it happens (a night still going keeps it empty; the clock fills it once its time is past):
@@ -375,7 +389,7 @@ export function applyLife(p, e, phone, on) {
         if (!clean.hr.length && u.rest) clean.hr = [u.rest - 4 + hd % 5, u.rest + 45 + (hd >>> 4) % 40];
         bedFirst(clean);
         const vals = { ...clean, ev: e.id };
-        if (was) return change('life.health.days', was, vals, '건강');
+        if (was) return change('life.health.days', was, today ? soFar(was, vals) : vals, '건강');
         push('life.health.days', tag(vals, k, 'h'), '건강');
     });
     return out;
@@ -419,7 +433,21 @@ export function applyDays(p, days, round) {
     const box = boxAt(p, 'life.health.days', true);
     arr(days).forEach((d, k) => {
         const clean = dayOf({ ...d, from: 'pattern' });
-        if (!clean.date || box.some(o => o.date === clean.date)) return;
+        if (!clean.date) return;
+        // the phone's today, already there: its totals so far (only what the model wrote; never lower)
+        const was = box.find(o => o.date === clean.date);
+        if (was && clean.date === String(p.now || '').slice(0, 5)) {
+            const keys = [...GROWS, 'screen', 'workout'].filter(k => d?.[k] !== undefined && d[k] !== null && d[k] !== '' && clean[k] !== undefined && clean[k] !== null);
+            if (finiteNum(clean.steps) && !keys.includes('km') && d?.km === undefined) { clean.km = Math.round(clean.steps * 0.00072 * 10) / 10; keys.push('km'); }
+            const to = soFar(was, Object.fromEntries(keys.map(k => [k, clean[k]])));
+            const ch = Object.keys(to).filter(k => JSON.stringify(was[k] ?? null) !== JSON.stringify(to[k] ?? null));
+            if (!ch.length) return;
+            const fx = { type: 'change', path: 'life.health.days', id: was.id, from: fields(was, ch), to: fields(to, ch) };
+            setFields(was, fx.to);
+            out.push(fx);
+            return;
+        }
+        if (was) return;
         delete clean.ev;
         // what the model leaves off a pattern day is their usual (a day is never half told)
         const u = p.life.health?.usual || {};
