@@ -460,8 +460,9 @@ export const archiveEnd = m => Math.max(-1, ...parseSections(splitTail(String(m?
 // to `budget` tokens. A longer stretch is read up to where it stops (to); the request's app marks that as read, and the
 // rest is the reflection's to read, in its own order, so no message is lost and none comes in twice
 // upto: the phone's clock (phoneAt): a fill reads no further than the phone has; the reflection reads on from there
-export function chatAfterArchive(m, budget = CHAT_TOKENS.phone, upto = null) {
-    const end = archiveEnd(m), all = syncRows().filter(r => r.index > end), rows = all.filter(r => upto == null || r.index <= upto), out = [];
+// from: a turn that carries on another (after the message that one stopped at)
+export function chatAfterArchive(m, budget = CHAT_TOKENS.phone, upto = null, from = null) {
+    const end = Math.max(archiveEnd(m), from ?? -1), all = syncRows().filter(r => r.index > end), rows = all.filter(r => upto == null || r.index <= upto), out = [];
     let size = 0;
     for (const r of rows) { const t = estTok(r.text); if (out.length && size + t > budget) break; out.push(r); size += t; }
     return { text: out.map(r => r.text).join('\n\n'), from: out[0]?.index ?? null, to: out.at(-1)?.index ?? end, n: out.length, all: out.length === rows.length, left: rows.length - out.length,
@@ -475,7 +476,11 @@ export const phoneAt = p => { const s = p?.sync, b = s?.marks?.base?.index; retu
 const afterBlock = g => (g?.n ? `[RECENT CHAT${g.all && !g.later ? '' : ` — the story so far ends at #${nowAt(g)}; the messages after it are read later`}]\n${g.text}` : '');
 // what a phone's request reads after the archive (null: no archive, the chat goes as before)
 // p: the phone it is for (its clock bounds it); no archive: only that bound (the chat goes as before, up to it)
-export const windowOf = (m, p = null) => { const upto = phoneAt(p); return noArchive(m) ? (upto == null ? null : { none: true, n: 0, all: true, upto }) : chatAfterArchive(m, CHAT_TOKENS.phone, upto); };
+export const windowOf = (m, p = null, from = null) => { const upto = phoneAt(p); return noArchive(m) ? (upto == null ? null : { none: true, n: 0, all: true, upto }) : chatAfterArchive(m, CHAT_TOKENS.phone, upto, from); };
+// a fill read in turns (see fillLife): after the last turn, what is still unread up to the phone's clock is told
+export const turnsNote = (first, last, what) => { if (!last || last.all) return; const from = first?.from ?? last.from; globalThis.toastr?.warning(last.upto != null
+    ? `${what}: #${from}–#${last.to}까지 읽었어요. 그 뒤는 이미 반영된 부분이라 이번에 못 넣었어요. 아카이브를 하고 다시 만들면 다 들어가요`
+    : `${what}: #${from}–#${last.to}까지 읽었어요. 나머지 ${last.left}개는 반영으로 이어서 채워져요`, '캐릭터 휴대폰'); };
 // the story's "now" for a request that stopped short: the message it read up to (null: now is now). Its days, weather
 // and clock stand there too, so it never writes a day it didn't read; the reflection moves them on from there
 export const nowAt = g => (!g ? null : !g.all ? g.to : g.upto ?? null);

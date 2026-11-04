@@ -11,7 +11,7 @@ const href = f => pathToFileURL(new URL(f, SRC).pathname).href;
 const stub = {
     './phonestory.js': encoded(`export const phoneChatScope=()=>'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-12-30';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
-    './ai.js': encoded(`export const askDraft=async(input,o)=>{globalThis.__menu.input=input;globalThis.__menu.sys=o.system;return globalThis.__menu.answer;};export const askAI=async()=>'';`),
+    './ai.js': encoded(`export const askDraft=async(input,o)=>{const M=globalThis.__menu;M.input=input;M.sys=o.system;(M.calls||=[]).push({input,sys:o.system});if(M.answers&&M.answers.length){const a=M.answers.shift();if(a instanceof Error)throw a;return a;}return M.answer;};export const askAI=async()=>'';`),
     './core.js': encoded(`export const ctx=()=>({chat:[],chatMetadata:{},characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};export const getMeta=()=>({});`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=n=>(globalThis.__rows||[]).slice(-n).map(r=>r.text);export const chatRows=()=>globalThis.__rows||[];`),
@@ -27,6 +27,8 @@ const map = { ...stub, ...Object.fromEntries(real.map(f => [`./${f}`, href(f)]))
 const rewrite = async f => (await readFile(new URL(f, SRC), 'utf8')).replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`);
 map['./phonedata.js'] = encoded(await rewrite('phonedata.js'));
 const data = await import(map['./phonedata.js']);
+const life = await import(encoded(await rewrite('phonelife.js')));
+globalThis.__menu = {};
 
 const rows = n => Array.from({ length: n }, (_, i) => ({ index: i, user: i % 2 === 0, hidden: i <= 3, text: `[#${i}] Ren: ${'word '.repeat(40)}${i}` }));
 const m = { text: '## #0–#3 — Arrival\n- Ren came home (#1).\n' };
@@ -89,4 +91,49 @@ test('no archive: the chat as before, but no further than the phone\'s clock', a
     const input = await data.sideRequest({ text: '', phones: { ren: p } }, 'Ren', [], { story: 30000, read });
     assert.equal(data.nowAt(read.gap), 8);
     assert.ok(input.includes('[#8] Ren') && !input.includes('[#9] Ren'));
+});
+
+// rows long enough that the after-archive stretch takes several 70,000-token turns
+const bigRows = n => Array.from({ length: n }, (_, i) => ({ index: i, user: i % 2 === 0, hidden: i <= 3, text: `[#${i}] Ren: ${'word '.repeat(4000)}${i}` }));
+const lifeAnswer = tag => JSON.stringify({ clock: { alarms: [{ time: '07:00', label: tag, days: ['mon'], on: true }] }, health: { usual: {}, days: [] }, files: { items: [] }, weather: null });
+
+test('a remade life app reads a long stretch in turns up to the phone\'s clock, each carrying on the one before', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = { owner: 'Ren', now: '10-26 12:00', sync: { marks: { base: { index: 6 } }, done: [[7, 39]], hiddenRead: {} } };
+    const mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: [lifeAnswer('A'), lifeAnswer('B'), lifeAnswer('C'), lifeAnswer('D')], answer: '{}' };
+    await life.fillLife(mm, p);
+    const turns = globalThis.__menu.calls.filter(c => c.sys === life.AI_SYS_LIFE);
+    assert.ok(turns.length >= 2, String(turns.length));
+    // every message #4–#39 read once, in order, across the turns
+    const seen = turns.flatMap(c => [...c.input.matchAll(/^\[#(\d+)\] Ren/gm)].map(x => Number(x[1])));
+    assert.deepEqual(seen, Array.from({ length: 36 }, (_, i) => i + 4));
+    assert.ok(!turns[0].input.includes('[LIFE SO FAR') && turns[1].input.includes('[LIFE SO FAR'));
+    assert.equal(p.sync.marks.life.index, 39);
+    assert.equal(p.life.clock.alarms[0].label, ['A', 'B', 'C', 'D'][turns.length - 1]);
+});
+
+test('a later turn that fails keeps what the turns before wrote, marked where they stopped', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = { owner: 'Ren', now: '10-26 12:00', sync: { marks: { base: { index: 6 } }, done: [[7, 39]], hiddenRead: {} } };
+    const mm = { ...m, phones: { ren: p } };
+    globalThis.__menu = { calls: [], answers: [lifeAnswer('A'), new Error('quota')], answer: '{}' };
+    await life.fillLife(mm, p);
+    assert.equal(p.life.clock.alarms[0].label, 'A');
+    const firstTo = Math.max(...[...globalThis.__menu.calls[0].input.matchAll(/^\[#(\d+)\] Ren/gm)].map(x => Number(x[1])));
+    assert.equal(p.sync.marks.life.index, firstTo);
+});
+
+test('the delivery app is read in turns the same way', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = { owner: 'Ren', now: '10-26 12:00', country: 'DE', lives: 'DE', sync: { marks: { base: { index: 6 } }, done: [[7, 39]], hiddenRead: {} } };
+    const mm = { ...m, phones: { ren: p } };
+    const dlv = shop => JSON.stringify({ shops: [{ name: shop, cuisine: 'pizza', menu: [{ name: 'Margherita', price: 9 }] }], orders: [], cart: null });
+    globalThis.__menu = { calls: [], answers: [dlv('Uno'), dlv('Due'), dlv('Tre'), dlv('Quattro')], answer: '{}' };
+    await life.fillDelivery(mm, p);
+    const turns = globalThis.__menu.calls.filter(c => c.sys === life.AI_SYS_DELIVERY);
+    assert.ok(turns.length >= 2 && turns[1].input.includes('[DELIVERY SO FAR'), String(turns.length));
+    const seen = turns.flatMap(c => [...c.input.matchAll(/^\[#(\d+)\] Ren/gm)].map(x => Number(x[1])));
+    assert.deepEqual(seen, Array.from({ length: 36 }, (_, i) => i + 4));
+    assert.equal(p.sync.marks.delivery.index, 39);
 });

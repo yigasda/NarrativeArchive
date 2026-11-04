@@ -9,7 +9,7 @@ import { calendars } from './calendar.js';
 import { ctx, saveMeta } from './core.js';
 import { headingPlaces } from './people.js';
 import { FOOD_IDS, dishPic } from './phonefood.js';
-import { arr, trackerWeather, readMark, readNote, windowOf, nowAt, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
+import { arr, trackerWeather, readMark, turnsNote, windowOf, nowAt, CHAT_TOKENS, COUNTRIES, byStory, ensureIds, giftOf, hhmm, jsonOf, ko, last4, line, markNow, num, pad, pick, rowDay, sideRequest, storyNow, when, withEv } from './phonedata.js';
 import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, parseWeather, screenOf, usualScreenOf, weatherFrom } from './phonesynclife.js';
 import { SCREEN_LIST } from './phonescreen.js';
@@ -386,27 +386,43 @@ export { unpayOrders as unpayDeliveries };
 // a "MM-DD HH:MM" after another (across New Year the short way round)
 const later = (t, now) => { const g = dayGap(String(now).slice(0, 5), String(t).slice(0, 5)); return g > 0 || g === 0 && String(t).slice(6, 11) > String(now).slice(6, 11) && !!String(now).slice(6, 11); };
 // ---- the fills
+// a fill reads the story after the archive in turns, oldest first, up to the phone's clock (each turn up to 70,000 tokens):
+// a turn after the first gets what the one before wrote (LIFE SO FAR, DELIVERY SO FAR) and carries it on, so a long
+// stretch is read whole and in one voice. At most this many turns after the first
+const MORE_TURNS = 4;
 export const fillLife = (m, p) => exclusive('fill', async () => {
-    // what it reads after the archive first: stopped short, its now is where it stopped
-    const read = { gap: windowOf(m, p) }, upto = nowAt(read.gap), now = weatherNow(upto), days = storyDays(m, p, upto);
     // made again: the body the phone already shows stays, unless the story changed it (a child who grew, a diet)
     const was = p.life?.health?.usual || {}, body = Object.fromEntries(['height', 'weight'].filter(k => Number.isFinite(was[k])).map(k => [k, was[k]]));
-    const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p, upto)}`, daysBlock(days),
-        Object.keys(body).length ? `[BODY ON THE PHONE NOW — keep it unless the story changed it]\n${JSON.stringify(body)}` : '',
-        now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.life, read });
-    const out = await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' });
-    const life = parseLife(jsonOf(out), now, days.at(-1)?.day || '');
     // a booking the wallet holds is drawn from it: its file needs no line of its own
-    const at = storyNow(p, upto) || p.now || '';
-    if (/^\d{2}-\d{2}/.test(at)) life.files.items = life.files.items.filter(x => !later(x.time, at));
     const booked = new Set((p.money?.passes || []).map(x => x.ev).filter(Boolean));
-    for (const x of life.files.items) if (x.ev && booked.has(x.ev)) x.preview = '';
-    p.life = { ...life, at: storyNow(p, upto) || p.now || '' };
+    const first = windowOf(m, p);
+    let gap = first, life = null, last = null;
+    for (let turn = 0; turn <= MORE_TURNS; turn++) {
+        // stopped short, a turn's now is where it stopped
+        const upto = nowAt(gap), now = weatherNow(upto), days = storyDays(m, p, upto);
+        const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p, upto)}`, daysBlock(days),
+            !life && Object.keys(body).length ? `[BODY ON THE PHONE NOW — keep it unless the story changed it]\n${JSON.stringify(body)}` : '',
+            life ? `[LIFE SO FAR — what you wrote from the story before RECENT CHAT: carry it on through RECENT CHAT and write it all again, keeping what still holds]\n${JSON.stringify(life)}` : '',
+            now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.life, read: { gap } });
+        let next;
+        // a turn after the first that fails keeps what the turns before wrote
+        try { next = parseLife(jsonOf(await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' })), now, days.at(-1)?.day || ''); }
+        catch (err) { if (!life) throw err; console.warn('[narrative-archive] life turn', err); break; }
+        const at = storyNow(p, upto) || p.now || '';
+        if (/^\d{2}-\d{2}/.test(at)) next.files.items = next.files.items.filter(x => !later(x.time, at));
+        for (const x of next.files.items) if (x.ev && booked.has(x.ev)) x.preview = '';
+        life = next; last = gap;
+        if (!gap || gap.all) break;
+        const more = windowOf(m, p, gap.to);
+        if (!more?.n) { last = { ...gap, all: true }; break; }
+        gap = more;
+    }
+    p.life = { ...life, at: storyNow(p, nowAt(last)) || p.now || '' };
     // a reflection reads on from here: what came before is in what was just written
-    if (p.sync?.marks) p.sync.marks.life = readMark(read.gap) || markNow();
+    if (p.sync?.marks) p.sync.marks.life = readMark(last) || markNow();
     ensureIds(p);
     await saveMeta();
-    readNote(read.gap);
+    turnsNote(first, last, '생활');
     // the screen time is its own request right after (its long app list stays out of this one); one that failed leaves
     // 설정 › 스크린타임 with its 채우기 button
     try { await fillScreen(m, p); } catch (err) { console.warn('[narrative-archive] screen time', err); }
@@ -461,29 +477,45 @@ export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', as
     return n;
 });
 export const fillDelivery = (m, p) => exclusive('fill', async () => {
-    const accounts = p.money?.bank?.accounts || [], read = { gap: windowOf(m, p) }, upto = nowAt(read.gap);
+    const accounts = p.money?.bank?.accounts || [];
     // the bank's own rows (not the ones this app put there): a meal already paid there is pointed at, not paid again
     const tx = (p.money?.tx || []).filter(t => !String(t.id).startsWith('dlv-') && !t.delivery);
     const money = accounts.length ? `[MONEY NOW]\n${JSON.stringify({ accounts: accounts.map(a => ({ last4: a.last4, kind: a.kind, name: a.name, currency: a.currency })), tx: tx.slice(-20).map(t => ({ id: t.id, account: t.account, time: t.time, who: t.who, amount: t.amount })) })}` : '';
-    const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p, upto)}`, daysBlock(storyDays(m, p, upto)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read });
-    const out = await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 12000, effort: 'low' });
-    const raw = jsonOf(out), d = parseDelivery(raw, accounts, tx, storyNow(p, upto) || p.now || ''), at = storyNow(p, upto) || p.now || '';
-    // the shops nearby go after the ones they order from (the app's 동네 인기 가게)
-    d.shops = [...d.shops, ...nearbyShops(raw, d.shops, (p.money?.currency || accounts[0]?.currency) === 'KRW')];
-    // nothing after the story's now
-    if (/^\d{2}-\d{2}/.test(at)) d.orders = d.orders.filter(o => !later(o.time, at));
-    if (p.delivery) unpayOrders(m, p);
-    // orders a reflection put in stay (their payments are the bank's own rows); the fill's own telling of the same
-    // order (the same shop on the same day, or the same story event) is that one, not a second
+    // orders a reflection put in stay (their payments are the bank's own rows)
     const kept = (p.delivery?.orders || []).filter(o => o.sync), plain = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+    const first = windowOf(m, p);
+    let gap = first, d = null, last = null;
+    // in turns, like the life fill (MORE_TURNS)
+    for (let turn = 0; turn <= MORE_TURNS; turn++) {
+        const upto = nowAt(gap), at = storyNow(p, upto) || p.now || '';
+        const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p, upto)}`, daysBlock(storyDays(m, p, upto)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money,
+            d ? `[DELIVERY SO FAR — what you wrote from the story before RECENT CHAT: carry it on through RECENT CHAT and write it all again, keeping what still holds]\n${JSON.stringify({ shops: d.shops, orders: d.orders, cart: d.cart || null })}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read: { gap } });
+        let next, got;
+        try { got = jsonOf(await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 12000, effort: 'low' })); next = parseDelivery(got, accounts, tx, at); }
+        catch (err) { if (!d) throw err; console.warn('[narrative-archive] delivery turn', err); break; }
+        // the shops nearby go after the ones they order from (the app's 동네 인기 가게)
+        next.shops = [...next.shops, ...nearbyShops(got, next.shops, (p.money?.currency || accounts[0]?.currency) === 'KRW')];
+        // nothing after the story's now
+        if (/^\d{2}-\d{2}/.test(at)) next.orders = next.orders.filter(o => !later(o.time, at));
+        d = next; last = gap;
+        if (!gap || gap.all) break;
+        const more = windowOf(m, p, gap.to);
+        if (!more?.n) { last = { ...gap, all: true }; break; }
+        gap = more;
+    }
+    const at = storyNow(p, nowAt(last)) || p.now || '';
+    if (p.delivery) unpayOrders(m, p);
+    // the fill's own telling of an order a reflection put in (the same shop on the same day, or the same story event) is
+    // that one, not a second
     const twin = o => kept.some(k => (o.ev && k.ev === o.ev) || (plain(k.shop) === plain(o.shop) && dayGap(String(k.time).slice(0, 5), String(o.time).slice(0, 5)) === 0));
-    p.delivery = { ...d, orders: [...d.orders.filter(o => !twin(o)), ...kept].sort(byStory(p.now)), look: deliveryLook(p), at: storyNow(p, upto) || p.now || '', nearbyAt: String(storyNow(p, upto) || p.now || '').slice(0, 5), city: homeCity(p) };
-    if (p.sync?.marks) p.sync.marks.delivery = readMark(read.gap) || markNow();
+    p.delivery = { ...d, orders: [...d.orders.filter(o => !twin(o)), ...kept].sort(byStory(p.now)), look: deliveryLook(p), at, nearbyAt: String(at).slice(0, 5), city: homeCity(p) };
+    if (p.sync?.marks) p.sync.marks.delivery = readMark(last) || markNow();
     ensureIds(p);
     payDeliveries(m, p);
     await saveMeta();
-    readNote(read.gap);
+    turnsNote(first, last, '배달');
     // the shops nearby get their menus straight after, in a request of their own (a failure here leaves the app as filled)
     try { await fillShopMenus(m, p); } catch { /* asked again when the app is opened */ }
     return p.delivery;
 });
+
