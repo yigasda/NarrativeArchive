@@ -1624,10 +1624,7 @@ function whereRequest(m, p) {
     const c = ctx(), g = c.groupId ? (c.groups || []).find(x => x.id === c.groupId) : null;
     const chars = g ? (g.members || []).map(a => (c.characters || []).find(x => x.avatar === a)).filter(Boolean) : [c.characters?.[c.characterId]].filter(Boolean);
     const persona = String(c.powerUserSettings?.persona_description || '').trim(), upto = phoneAt(p);
-    // (one person by two names, "Somang Park" in the contacts and "Somang" in a thread: once, by the longer name)
-    const names = [...new Set([...(p.threads || []).map(t => t.with), ...(p.contacts || []).map(x => x.name), ...Object.values(m.phones || {}).map(q => q?.owner)].filter(n => n && !samePerson(n, p.owner)))]
-        .sort((a, b) => String(b).length - String(a).length);
-    const people = names.filter((n, i) => !names.slice(0, i).some(o => samePerson(o, n))).slice(0, 16);
+    const people = [...new Set([...(p.threads || []).map(t => t.with), ...(p.contacts || []).map(x => x.name), ...Object.values(m.phones || {}).map(q => q?.owner)].filter(n => n && nameKey(n) !== nameKey(p.owner)))].slice(0, 16);
     const [, tail] = splitTail(String(m.text || ''));
     return { chars, persona, people, blocks: [
         ...chars.map(ch => `[CHARACTER CARD — ${ch.name || ch.data?.name || ''}]\n${cardText(ch) || '(empty)'}`),
@@ -1649,13 +1646,15 @@ export async function readWhere(m, p) {
     const known = [p.owner, ...r.people];
     // (someone the user took off stays off; what the user set by hand stays as they set it)
     const removed = new Set(p.where?.removed || []), oldRow = name => whereOf(p, name);
-    const got = arr(raw?.people).map(whereRow).filter(x => x.name && known.some(k => samePerson(k, x.name)) && ![...removed].some(k => samePerson(k, x.name)) && (x.tz || COUNTRY_TZ[x.lives]))
-        // (the name as the phone has it; one person answered twice under two names: once)
-        .map(x => ({ ...x, name: known.find(k => nameKey(k) === nameKey(x.name)) || known.find(k => samePerson(k, x.name)) }))
-        .filter((x, i, a) => !a.slice(0, i).some(o => samePerson(o.name, x.name))).slice(0, 16)
+    const read = arr(raw?.people).map(whereRow).filter(x => x.name && known.some(k => nameKey(k) === nameKey(x.name)) && !removed.has(nameKey(x.name)) && (x.tz || COUNTRY_TZ[x.lives]))
         .map(x => { const o = oldRow(x.name); return o?.manual ? { ...x, ...(o.manual.city ? { city: o.city, names: namesOf(o), tz: o.tz } : {}), ...(o.manual.lives ? { lives: o.lives } : {}), manual: o.manual } : x; });
+    // one person by two names ("Somang Park" in the contacts, "Somang" in a thread) in the same city: once, by the longer
+    // name. In two cities they are two people (two named alike) and both stay
+    const here = (a, b) => samePerson(a.name, b.name) && nameKey(a.name) !== nameKey(b.name) && pkey(a.city) === pkey(b.city) && (a.tz || '') === (b.tz || '');
+    const twin = x => read.some(y => here(x, y) && String(y.name).length > String(x.name).length);
+    const got = read.filter(x => !twin(x)).slice(0, 16), merged = read.filter(twin).map(x => nameKey(x.name));
     // read again: someone it leaves out keeps what was read before
-    const people = [...got, ...(p.where?.people || []).filter(o => !got.some(x => samePerson(x.name, o.name))).map(o => ({ ...o, names: namesOf(o) }))].slice(0, 16);
+    const people = [...got, ...(p.where?.people || []).filter(o => !got.some(x => nameKey(x.name) === nameKey(o.name)) && !merged.includes(nameKey(o.name)) && !got.some(x => here(o, x) && String(x.name).length > String(o.name).length)).map(o => ({ ...o, names: namesOf(o) }))].slice(0, 16);
     p.where = { at: Date.now(), people, ...(removed.size ? { removed: [...removed] } : {}) };
     syncLives(p);
     return people;
