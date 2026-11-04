@@ -110,9 +110,10 @@ export function tidyKo(o, seen = new Set()) {
 }
 // a long list a fill asked for, with a slip the mending can't undo (any kind: "app", 14 for "app": 14, a stray word, a
 // broken string): read piece by piece, and only the piece with the slip is left out (one app of one day, not the whole
-// screen time). A record in a list with any slip in its own fields goes whole (no memo with half its text and no time).
-// Not for a reflection, whose answer is all or nothing
-export function salvageJson(t) {
+// screen time). whole: a record in a list with any slip in its own fields goes whole (a voice memo is its text: none
+// with half of it). An order, a shop or a day keeps its other fields: each app's own check drops one missing what it
+// needs. Not for a reflection, whose answer is all or nothing
+export function salvageJson(t, { whole = false } = {}) {
     const s = String(t);
     let i = 0, lost = 0;
     const half = new WeakSet();
@@ -159,7 +160,7 @@ export function salvageJson(t) {
         ws();
         const ch = s[i];
         if (ch === '{') { const o = {}; if (list(() => { const k = string(); ws(); if (s[i] !== ':') fail(); i++; o[k] = value(); })) half.add(o); return o; }
-        if (ch === '[') { const a = []; list(() => { const v = value(); if (half.has(v)) { lost++; return; } a.push(v); }); return a; }
+        if (ch === '[') { const a = []; list(() => { const v = value(); if (whole && half.has(v)) { lost++; return; } a.push(v); }); return a; }
         if (ch === '"') return string();
         const lit = /^(?:true|false|null|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(s.slice(i, i + 40));
         if (!lit) fail();
@@ -171,7 +172,7 @@ export function salvageJson(t) {
     if (lost) console.warn(`[narrative-archive] ${lost} broken piece(s) left out of the answer`);
     return out;
 }
-export const parseJson = (s, { salvage = false } = {}) => { let o; try { o = JSON.parse(s); } catch { try { o = JSON.parse(mendJson(s)); } catch (err) { if (!salvage) throw err; o = salvageJson(s); } } tidyKo(o); return o; };
+export const parseJson = (s, { salvage = false } = {}) => { let o; try { o = JSON.parse(s); } catch { try { o = JSON.parse(mendJson(s)); } catch (err) { if (!salvage) throw err; o = salvageJson(s, { whole: salvage === 'whole' }); } } tidyKo(o); return o; };
 export const jsonOf = (out, opt) => { const t = String(out || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}'); try { return a >= 0 && b > a ? parseJson(t.slice(a, b + 1), opt) : null; } catch { return null; } };
 // a number from a model's answer: "12,50", "€9.90", "1,200"; text with no digit in it ("lots", "free") is none, never 0
 export const num = v => {
