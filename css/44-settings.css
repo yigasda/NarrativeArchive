@@ -100,13 +100,13 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
     --c-r: 0;
     margin: 0 !important;
     padding: 0 !important;
-    --f-pt: 0 !important;
-    --f-pr: 0 !important;
-    --f-pb: 0 !important;
-    --f-pl: 0 !important;
+    --f-pt: 0;
+    --f-pr: 0;
+    --f-pb: 0;
+    --f-pl: 0;
     height: 40px !important;
     min-height: 0 !important;
-    --f-mh: 0 !important;
+    --f-mh: 0;
     --c-fg: inherit;
 }
 #na_settings .na_cc .na_cc_box .na_cc_row input.text_pole:autofill { -webkit-text-fill-color: currentColor; transition: background-color 9999s; }
@@ -129,7 +129,7 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
     --c-r: 0;
     margin: 0 !important;
     min-height: 0 !important;
-    --f-mh: 0 !important;
+    --f-mh: 0;
     color: inherit !important;
     --c-fg: inherit;
     filter: none !important;
@@ -147,7 +147,7 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
     --c-r: 0;
     margin: 0 !important;
     min-height: 0 !important;
-    --f-mh: 0 !important;
+    --f-mh: 0;
     --c-fg: inherit;
     filter: none !important;
 }
@@ -157,10 +157,10 @@ body.na_darkui #na_settings { --sv-page: #17171A; --sv-card: #232328; --sv-line:
     min-width: 0;
     height: 40px !important;
     padding: 0 22px 0 0 !important;
-    --f-pt: 0 !important;
-    --f-pr: 22px !important;
-    --f-pb: 0 !important;
-    --f-pl: 0 !important;
+    --f-pt: 0;
+    --f-pr: 22px;
+    --f-pb: 0;
+    --f-pl: 0;
     font: inherit;
     font-size: 0.9em;
     --f-fs: 0.9em;

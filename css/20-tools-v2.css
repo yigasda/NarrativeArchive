@@ -587,7 +587,7 @@
 .na_dr2_out:empty { display: none; }
 .na_dr2_item { display: flex; flex-direction: column; gap: 8px; border-radius: 18px; --axr: 18px}
 .na_dr2_head { display: flex; align-items: center; gap: 8px; }
-.na_dr2_msg { --c-bg: var(--SmartThemeBodyColor, #222); --c-fg: var(--SmartThemeBlurTintColor, #fff); --c-r: 8px; font-weight: 600; padding: 1px 9px !important; --f-pt: 1px !important; --f-pr: 9px !important; --f-pb: 1px !important; --f-pl: 9px !important; }
+.na_dr2_msg { --c-bg: var(--SmartThemeBodyColor, #222); --c-fg: var(--SmartThemeBlurTintColor, #fff); --c-r: 8px; font-weight: 600; padding: 1px 9px !important; --f-pt: 1px; --f-pr: 9px; --f-pb: 1px; --f-pl: 9px; }
 .na_dr2_ev { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 12px; --axr: 12px}
 .na_dr2_ev > i { color: var(--na-dim); margin-top: 3px; }
 

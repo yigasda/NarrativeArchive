@@ -3,7 +3,7 @@
 body.na_darkui { --na-onaccent: #1B1B1F; }
 
 /* 제목 다시 짓기 (3.169.31, mockup D): charcoal tick boxes, quiet AI로 짓기, results as a 지금 | 새 제목 table, 닫기 | N개 바꾸기 at the bottom */
-.na_rt .na_sp_bar .na_sp_s { padding: 9px 14px !important; --f-pt: 9px !important; --f-pr: 14px !important; --f-pb: 9px !important; --f-pl: 14px !important; gap: 12px; }
+.na_rt .na_sp_bar .na_sp_s { padding: 9px 14px !important; --f-pt: 9px; --f-pr: 14px; --f-pb: 9px; --f-pl: 14px; gap: 12px; }
 .na_rt .na_sp_bar .na_sp_s::before { display: none !important; }
 .na_rt .na_sp_bar .na_sp_s .na_sp_ck { display: grid !important; }
 .na_rt .na_sp_bar .na_sp_s .na_sp_tt b { font-weight: 600 !important; color: var(--na-ink) !important; }

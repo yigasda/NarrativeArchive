@@ -177,7 +177,7 @@ body.na_darkui .na_hl2_main .na_v2_btn.danger { background: #C4473B; --c-bg: #C4
 .na_dr2_ctl { padding: 14px; gap: 12px; }
 .na_dr2_row > span:first-child, .na_dr2_row > span:last-child { font-size: 13.5px; --axfs: 13.5px}
 .na_dr2 .na_fd_btn { width: 32px; height: 32px; --c-bg: var(--na-softer, var(--na-card2)); }
-.na_dr2 .na_fd_step input.na_dr_n { width: 36px !important; min-width: 0; height: 32px; padding: 0 !important; --f-pt: 0 !important; --f-pr: 0 !important; --f-pb: 0 !important; --f-pl: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 0; --c-bg: transparent; font: inherit; font-weight: 700; text-align: center; }
+.na_dr2 .na_fd_step input.na_dr_n { width: 36px !important; min-width: 0; height: 32px; padding: 0 !important; --f-pt: 0; --f-pr: 0; --f-pb: 0; --f-pl: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 0; --c-bg: transparent; font: inherit; font-weight: 700; text-align: center; }
 
 .na_dr2 .na_dr_go { font-size: 14px; --f-fs: 14px; --axfs: 14px; font-weight: 600; line-height: 1.5; --f-lh: 1.5; padding: 11px 0; --f-pt: 11px; --f-pr: 0; --f-pb: 11px; --f-pl: 0; --c-r: 14px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; }
 .na_dr2 .na_dr_info { font-size: 11.5px; --axfs: 11.5px; color: var(--na-dim); --axfg: var(--na-dim)}
@@ -185,7 +185,7 @@ body.na_darkui .na_hl2_main .na_v2_btn.danger { background: #C4473B; --c-bg: #C4
 .na_dr2 .na_v2_label small { font-size: 12px; }
 .na_dr2_item { padding: 12px 14px; }
 .na_dr2_head b { font-size: 13.5px; }
-.na_dr2 .na_dr2_msg { --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; padding: 2px 9px !important; --f-pt: 2px !important; --f-pr: 9px !important; --f-pb: 2px !important; --f-pl: 9px !important; font-size: 12px; --f-fs: 12px; --axfs: 12px; font-weight: 600; line-height: 1.5; --f-lh: 1.5; margin: 0; }
+.na_dr2 .na_dr2_msg { --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; padding: 2px 9px !important; --f-pt: 2px; --f-pr: 9px; --f-pb: 2px; --f-pl: 9px; font-size: 12px; --f-fs: 12px; --axfs: 12px; font-weight: 600; line-height: 1.5; --f-lh: 1.5; margin: 0; }
 body:not(.na_darkui) .na_dr2 .na_dr2_msg { --c-bg: var(--na-fill); --c-fg: #FFFAF6; }
 body.na_darkui .na_dr2 .na_dr2_msg { --c-bg: var(--na-fill); --c-fg: #F3F1ED; }
 .na_dr2_kind { font-size: 11.5px; --axfs: 11.5px; line-height: 1.5; padding: 1px 8px; border-radius: 999px; --axr: 999px; white-space: nowrap; background: var(--na-bad-soft); color: #ec7d72; --axfg: #ec7d72}
@@ -218,7 +218,7 @@ body.na_darkui .na_qb_root .na_qb_tabs button.on { box-shadow: 0 1px 2px rgba(0,
 .na_qb2 .na_v2_row2 .na_v2_btn.primary { --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; }
 .na_qb2 .na_qb2_search { gap: 8px; padding: 0 12px; border-radius: 14px; --axr: 14px; background: var(--na-card)}
 .na_qb2 .na_qb2_search > svg { color: var(--na-dim); }
-.na_qb2 .na_qb2_search input.na_search { font-size: 13.5px; --f-fs: 13.5px; line-height: 1.5; --f-lh: 1.5; padding: 8px 0 !important; --f-pt: 8px !important; --f-pr: 0 !important; --f-pb: 8px !important; --f-pl: 0 !important; }
+.na_qb2 .na_qb2_search input.na_search { font-size: 13.5px; --f-fs: 13.5px; line-height: 1.5; --f-lh: 1.5; padding: 8px 0 !important; --f-pt: 8px; --f-pr: 0; --f-pb: 8px; --f-pl: 0; }
 .na_qb2 .na_qb2_search input.na_search::placeholder { color: var(--na-dim); opacity: 0.8; }
 body:not(.na_darkui) .na_qb2 .na_qb2_search input.na_search::placeholder { color: #A99C92; opacity: 1; }
 body.na_darkui .na_qb2 .na_qb2_search input.na_search::placeholder { color: #85858E; opacity: 1; }
@@ -236,7 +236,7 @@ body.na_darkui .na_qb2 .na_qb_exchip { background: #2A2A30; }
 body:not(.na_darkui) .na_qb_excl_plus { --c-bc: #CDBBAE; --c-bct: #CDBBAE; }
 body.na_darkui .na_qb_excl_plus { --c-bc: #6A6A73; --c-bct: #6A6A73; }
 .na_qb_excl_plus:hover { --c-bc: var(--na-accent); --c-bct: var(--na-accent); --c-fg: var(--na-accent-ink, var(--na-accent)); }
-.na_qb2 .na_qb_excl_in { flex: 0 1 9em; width: 9em; min-width: 6em; --c-r: 999px; padding: 2px 10px !important; --f-pt: 2px !important; --f-pr: 10px !important; --f-pb: 2px !important; --f-pl: 10px !important; font-size: 12px; --f-fs: 12px; --axfs: 12px; }
+.na_qb2 .na_qb_excl_in { flex: 0 1 9em; width: 9em; min-width: 6em; --c-r: 999px; padding: 2px 10px !important; --f-pt: 2px; --f-pr: 10px; --f-pb: 2px; --f-pl: 10px; font-size: 12px; --f-fs: 12px; --axfs: 12px; }
 .na_qb2 .na_qb_excl_add { font-size: 12px; --f-fs: 12px; --axfs: 12px; padding: 2px 10px; --f-pt: 2px; --f-pr: 10px; --f-pb: 2px; --f-pl: 10px; }
 .na_qb2 .na_qb_list { display: flex; flex-direction: column; gap: 12px; }
 .na_qb2 .na_qb_group { display: flex; flex-direction: column; gap: 6px; }
@@ -355,7 +355,7 @@ body.na_darkui .na_ask2_dots i:nth-child(3) { background: #85858E; }
 .na_ask2 .na_ask2_sugg button { font-size: 12px; --f-fs: 12px; --axfs: 12px; padding: 4px 11px; --f-pt: 4px; --f-pr: 11px; --f-pb: 4px; --f-pl: 11px; line-height: 1.5; --f-lh: 1.5; --c-bg: var(--na-card); --c-bc: var(--na-line); --c-bct: var(--na-line); --c-fg: var(--na-mute, inherit); }
 .na_ask2 .na_ask2_input { padding: 8px 8px 8px 14px; }
 .na_ask2 .na_ask2_input textarea { font-size: 14px; --f-fs: 14px; line-height: 1.5; --f-lh: 1.5; padding: 6px 0; --f-pt: 6px; --f-pr: 0; --f-pb: 6px; --f-pl: 0; min-height: 0; --f-mh: 0; }
-.na_ask2 .na_ask2_input textarea.text_pole { padding: 6px 0 !important; --f-pt: 6px !important; --f-pr: 0 !important; --f-pb: 6px !important; --f-pl: 0 !important; border-radius: 0; --c-r: 0; }
+.na_ask2 .na_ask2_input textarea.text_pole { padding: 6px 0 !important; --f-pt: 6px; --f-pr: 0; --f-pb: 6px; --f-pl: 0; border-radius: 0; --c-r: 0; }
 .na_ask2 .na_ask2_input textarea::placeholder { color: #A99C92; opacity: 1; }
 body.na_darkui .na_ask2 .na_ask2_input textarea::placeholder { color: var(--na-dim); }
 .na_ask2 .na_ask_go { width: 38px; height: 38px; }

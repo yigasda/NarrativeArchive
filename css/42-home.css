@@ -24,7 +24,7 @@ body.na_darkui #na_settings {
 #na_settings #na_meter .na_meter_state b.on { color: var(--hm-acc-ink); }
 #na_settings #na_meter .na_meter_state b.warn { color: var(--hm-warn); }
 #na_settings #na_meter .na_meter_state b.off { color: var(--hm-dim); }
-#na_settings #na_meter .na_hchip { height: 30px; padding: 0 11px; --f-pt: 0; --f-pr: 11px; --f-pb: 0; --f-pl: 11px; gap: 4px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; font-size: 0.86em !important; --f-fs: 0.86em !important; --axfs: 0.86em; font-weight: 600; --c-bg: var(--hm-ok-soft); --c-fg: var(--hm-ok); }
+#na_settings #na_meter .na_hchip { height: 30px; padding: 0 11px; --f-pt: 0; --f-pr: 11px; --f-pb: 0; --f-pl: 11px; gap: 4px; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 999px; font-size: 0.86em !important; --f-fs: 0.86em; --axfs: 0.86em; font-weight: 600; --c-bg: var(--hm-ok-soft); --c-fg: var(--hm-ok); }
 #na_settings #na_meter .na_hchip > span { font-size: 1em !important; --axfs: 1em}
 #na_settings #na_meter .na_hchip.na_health_warn { --c-bg: var(--hm-warn-soft); --c-fg: var(--na-warn); }
 #na_settings #na_meter #na_gear { width: 30px; height: 30px; opacity: 1; --c-fg: var(--hm-dim); }
@@ -42,7 +42,7 @@ body.na_darkui #na_settings {
 
 /* icon tabs */
 #na_settings .na_body > .na_nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; border-radius: 18px; --axr: 18px; background: var(--hm-track)}
-#na_settings .na_body > .na_nav .na_nav_btn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 7px 0 5px; --f-pt: 7px; --f-pr: 0; --f-pb: 5px; --f-pl: 0; --c-r: 14px; font-size: 0.8em !important; --f-fs: 0.8em !important; --axfs: 0.8em; line-height: 1.2; --f-lh: 1.2; opacity: 1; --c-fg: var(--hm-mute); }
+#na_settings .na_body > .na_nav .na_nav_btn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 7px 0 5px; --f-pt: 7px; --f-pr: 0; --f-pb: 5px; --f-pl: 0; --c-r: 14px; font-size: 0.8em !important; --f-fs: 0.8em; --axfs: 0.8em; line-height: 1.2; --f-lh: 1.2; opacity: 1; --c-fg: var(--hm-mute); }
 #na_settings .na_body > .na_nav .na_nav_btn > span { font-size: 1em !important; --axfs: 1em}
 #na_settings .na_body > .na_nav .na_nav_btn.active { --c-bg: var(--hm-card); --c-fg: var(--hm-acc-ink); font-weight: 600; --c-sh: 0 1px 3px var(--hm-shadow); }
 
@@ -50,7 +50,7 @@ body.na_darkui #na_settings {
 #na_settings .na_tab_pane[data-pane="home"] { gap: 12px; color: var(--hm-ink); --axfg: var(--hm-ink)}
 #na_settings #na_next:empty { display: none; }
 #na_settings .na_tab_pane[data-pane="home"] .na_quick { display: flex; gap: 8px; }
-#na_settings .na_tab_pane[data-pane="home"] .na_qbtn { flex: 1; min-width: 0; display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; height: 42px; padding: 0 6px; --f-pt: 0; --f-pr: 6px; --f-pb: 0; --f-pl: 6px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--hm-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--hm-line); --c-r: 14px; --c-bg: var(--hm-card); --c-fg: var(--hm-ink); font-size: 0.86em !important; --f-fs: 0.86em !important; --axfs: 0.86em; }
+#na_settings .na_tab_pane[data-pane="home"] .na_qbtn { flex: 1; min-width: 0; display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; height: 42px; padding: 0 6px; --f-pt: 0; --f-pr: 6px; --f-pb: 0; --f-pl: 6px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--hm-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--hm-line); --c-r: 14px; --c-bg: var(--hm-card); --c-fg: var(--hm-ink); font-size: 0.86em !important; --f-fs: 0.86em; --axfs: 0.86em; }
 #na_settings .na_tab_pane[data-pane="home"] .na_qbtn > span { font-size: 1em !important; --axfs: 1em; white-space: nowrap}
 #na_settings .na_tab_pane[data-pane="home"] .na_qbtn .na_svg { flex: none; color: var(--hm-acc); --axfg: var(--hm-acc)}
 #na_settings .na_tab_pane[data-pane="home"] .na_qbtn:hover { --c-bc: var(--hm-acc); --c-bct: var(--hm-acc); }
@@ -123,13 +123,13 @@ body.na_darkui dialog.popup:has(#na_settings) { background: #17171A !important; 
 .na_launch_grp { display: flex; flex-direction: column; gap: 6px; }
 .na_launch .na_launch_lbl { padding: 0 2px; font-size: 0.8em !important; --axfs: 0.8em; font-weight: 600; color: var(--na-dim); --axfg: var(--na-dim)}
 .na_launch_grid { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 8px; }
-.na_launch .na_launch_btn { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; padding: 12px 6px 10px; --f-pt: 12px; --f-pr: 6px; --f-pb: 10px; --f-pl: 6px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-r: 16px; --c-bg: var(--na-card); --c-fg: inherit; font: inherit; --axfs: inherit; --axff: inherit; font-size: 0.86em !important; --f-fs: 0.86em !important; --axfs: 0.86em; line-height: 1.25; --f-lh: 1.25; text-align: center; cursor: pointer; }
+.na_launch .na_launch_btn { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; padding: 12px 6px 10px; --f-pt: 12px; --f-pr: 6px; --f-pb: 10px; --f-pl: 6px; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-r: 16px; --c-bg: var(--na-card); --c-fg: inherit; font: inherit; --axfs: inherit; --axff: inherit; font-size: 0.86em !important; --f-fs: 0.86em; --axfs: 0.86em; line-height: 1.25; --f-lh: 1.25; text-align: center; cursor: pointer; }
 .na_launch .na_launch_btn > span:last-child { font-size: 1em !important; --axfs: 1em}
 .na_launch .na_launch_btn:hover:not(:disabled) { --c-bc: var(--na-accent); --c-bct: var(--na-accent); }
 .na_launch .na_launch_btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .na_launch .na_launch_ic { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; --axr: 12px; background: var(--na-accent-soft); color: var(--na-accent-fg, var(--na-accent)); --axfg: var(--na-accent-fg, var(--na-accent))}
 .na_launch_tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 16px; --axr: 16px; background: var(--na-softer, var(--na-card2))}
-.na_launch .na_launch_tab { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 7px 0 5px; --f-pt: 7px; --f-pr: 0; --f-pb: 5px; --f-pl: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 12px; --c-bg: none; --c-fg: var(--na-mute, inherit); font: inherit; --axfs: inherit; --axff: inherit; font-size: 0.78em !important; --f-fs: 0.78em !important; --axfs: 0.78em; line-height: 1.2; --f-lh: 1.2; cursor: pointer; }
+.na_launch .na_launch_tab { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; padding: 7px 0 5px; --f-pt: 7px; --f-pr: 0; --f-pb: 5px; --f-pl: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 12px; --c-bg: none; --c-fg: var(--na-mute, inherit); font: inherit; --axfs: inherit; --axff: inherit; font-size: 0.78em !important; --f-fs: 0.78em; --axfs: 0.78em; line-height: 1.2; --f-lh: 1.2; cursor: pointer; }
 .na_launch .na_launch_tab > span { font-size: 1em !important; --axfs: 1em}
 .na_launch .na_launch_tab:hover { --c-bg: var(--na-card); --c-fg: var(--na-accent-ink, var(--na-accent)); }
 
@@ -145,10 +145,10 @@ body.na_darkui .na_launch_tabs { background: #232328; }
     min-width: 0;
     margin: 0 !important;
     padding: 8px 0 !important;
-    --f-pt: 8px !important;
-    --f-pr: 0 !important;
-    --f-pb: 8px !important;
-    --f-pl: 0 !important;
+    --f-pt: 8px;
+    --f-pr: 0;
+    --f-pb: 8px;
+    --f-pl: 0;
     border: 0 !important;
     --c-bw: 0;
     --c-bs: none;
@@ -170,9 +170,9 @@ body.na_darkui .na_launch_tabs { background: #232328; }
     --c-fg: inherit;
     font: inherit;
     font-size: 14px !important;
-    --f-fs: 14px !important;
+    --f-fs: 14px;
     line-height: 1.5 !important;
-    --f-lh: 1.5 !important;
+    --f-lh: 1.5;
     -webkit-appearance: none;
     appearance: none;
 }
@@ -251,10 +251,10 @@ body.na_darkui .na_launch_tabs { background: #232328; }
     height: 36px;
     margin: 0 !important;
     padding: 0 !important;
-    --f-pt: 0 !important;
-    --f-pr: 0 !important;
-    --f-pb: 0 !important;
-    --f-pl: 0 !important;
+    --f-pt: 0;
+    --f-pr: 0;
+    --f-pb: 0;
+    --f-pl: 0;
     border: 0 !important;
     --c-bw: 0;
     --c-bs: none;
@@ -274,7 +274,7 @@ body.na_darkui .na_launch_tabs { background: #232328; }
     --c-fg: inherit;
     font: inherit;
     font-size: 14px !important;
-    --f-fs: 14px !important;
+    --f-fs: 14px;
 }
 .na_popup .na_ly_ask input.na_ly_askq::placeholder { color: var(--na-dim) !important; opacity: 1 !important; }
 body:is(.na_darkui, :not(.na_darkui)) dialog.popup:has(.na_popup) .na_popup .na_ly_ask input.na_ly_askq:is(*, :hover, :focus, :focus-visible):not(#na_x) { background: transparent !important; --c-bg: transparent; border: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; border-radius: 0 !important; --c-r: 0; box-shadow: none !important; --c-sh: none; outline: none !important; } /* the pill is the only box (3.169.69) */

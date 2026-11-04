@@ -44,7 +44,7 @@ body.na_darkui .na_ask2 .na_ask2_ans { background: #232328; box-shadow: inset 0 
 .na_sf3_card { margin-top: 14px; }
 .na_sf3_fix { margin-top: 10px; }
 .na_sf3_seg { display: grid !important; grid-template-columns: 1fr 1fr; }
-.na_sf3_seg button { display: flex; align-items: center; justify-content: center; gap: 4px; height: 34px; font-size: 13.5px !important; --f-fs: 13.5px !important; --axfs: 13.5px; }
+.na_sf3_seg button { display: flex; align-items: center; justify-content: center; gap: 4px; height: 34px; font-size: 13.5px !important; --f-fs: 13.5px; --axfs: 13.5px; }
 .na_sf3_seg button:disabled { opacity: 0.5; cursor: default; }
 .na_sf3_seg button b { font-size: 12px; font-weight: 700; color: var(--na-ok); }
 .na_sf3_seg button b + b { color: var(--na-bad); }

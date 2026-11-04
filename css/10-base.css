@@ -223,10 +223,10 @@
     width: auto !important;
     margin: 0 !important;
     padding: 7px 0 !important;
-    --f-pt: 7px !important;
-    --f-pr: 0 !important;
-    --f-pb: 7px !important;
-    --f-pl: 0 !important;
+    --f-pt: 7px;
+    --f-pr: 0;
+    --f-pb: 7px;
+    --f-pl: 0;
     --c-bw: 0;
     --c-bs: none;
     --c-bc: currentcolor;
@@ -289,7 +289,7 @@
     width: 100%;
     height: 38vh !important;
     min-height: 192px !important;
-    --f-mh: 192px !important;
+    --f-mh: 192px;
     max-height: none !important;
     margin: 0 !important;
     --c-ff: var(--monoFontFamily, ui-monospace, monospace);
@@ -301,10 +301,10 @@
     resize: vertical;
     --c-r: 10px;
     padding: 10px 12px !important;
-    --f-pt: 10px !important;
-    --f-pr: 12px !important;
-    --f-pb: 10px !important;
-    --f-pl: 12px !important;
+    --f-pt: 10px;
+    --f-pr: 12px;
+    --f-pb: 10px;
+    --f-pl: 12px;
 }
 
 /* ---------- buttons (own, so theme menu_button rules don't leak in) */
@@ -542,10 +542,10 @@ input.na_toggle:disabled + .na_tgl_ui { opacity: 0.45; cursor: not-allowed; }
     width: auto !important;
     margin: 0 !important;
     padding: 8px 0 !important;
-    --f-pt: 8px !important;
-    --f-pr: 0 !important;
-    --f-pb: 8px !important;
-    --f-pl: 0 !important;
+    --f-pt: 8px;
+    --f-pr: 0;
+    --f-pb: 8px;
+    --f-pl: 0;
     --c-bw: 0;
     --c-bs: none;
     --c-bc: currentcolor;
@@ -1183,7 +1183,7 @@ body.na_darkui :is(.na_diff_del, .na_diff_tr_del) .na_diff_hl { background: rgba
 .na_qb_row { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border-radius: 8px; --axr: 8px; font-size: 0.86em; --axfs: 0.86em}
 .na_qb_text { flex: 1; min-width: 0; }
 .na_qb_src { font-size: 0.85em; --axfs: 0.85em}
-.na_qb_whoin { width: 7em !important; min-width: 0; margin: 0 !important; font-size: 0.9em; --f-fs: 0.9em; --axfs: 0.9em; padding: 2px 6px !important; --f-pt: 2px !important; --f-pr: 6px !important; --f-pb: 2px !important; --f-pl: 6px !important; }
+.na_qb_whoin { width: 7em !important; min-width: 0; margin: 0 !important; font-size: 0.9em; --f-fs: 0.9em; --axfs: 0.9em; padding: 2px 6px !important; --f-pt: 2px; --f-pr: 6px; --f-pb: 2px; --f-pl: 6px; }
 .na_cite_msg { font-variant-numeric: tabular-nums; }
 .na_kn_editbox[hidden], .na_kn_list[hidden] { display: none; }
 
@@ -1394,7 +1394,7 @@ body.na_darkui .na_sp_secs { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)
 .na_qb_exchip { display: inline-flex; align-items: center; gap: 4px; cursor: default; }
 .na_qb_unex { --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-fg: inherit; padding: 0 2px; --f-pt: 0; --f-pr: 2px; --f-pb: 0; --f-pl: 2px; cursor: pointer; opacity: 0.6; font: inherit; --axfs: inherit; --axff: inherit; }
 .na_qb_unex:hover { opacity: 1; }
-.na_qb_excl_in { flex: 1; min-width: 80px; margin: 0 !important; padding: 3px 8px !important; --f-pt: 3px !important; --f-pr: 8px !important; --f-pb: 3px !important; --f-pl: 8px !important; font-size: 0.95em; --f-fs: 0.95em; --axfs: 0.95em; }
+.na_qb_excl_in { flex: 1; min-width: 80px; margin: 0 !important; padding: 3px 8px !important; --f-pt: 3px; --f-pr: 8px; --f-pb: 3px; --f-pl: 8px; font-size: 0.95em; --f-fs: 0.95em; --axfs: 0.95em; }
 .na_qb_who { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
 .na_qb_gbtns { margin-left: auto; display: inline-flex; gap: 2px; }
 .na_qb_gbtns .na_icon { opacity: 0.55; }

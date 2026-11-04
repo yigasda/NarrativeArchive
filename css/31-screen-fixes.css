@@ -26,7 +26,7 @@ body.na_darkui #na_settings .na_seg_btn.active { --c-bg: #232328; --c-fg: #F0CF8
 .na_browser:not(.na_tl) .na_search_wrap { padding: 9px 12px; gap: 8px; border-radius: 14px; --axr: 14px; background: var(--na-card)}
 .na_browser:not(.na_tl) .na_search_wrap > i { display: none; }
 .na_browser:not(.na_tl) .na_tlb_mag { display: block; color: var(--na-dim); --axfg: var(--na-dim)}
-.na_browser:not(.na_tl) .na_search_wrap input.na_search { padding: 0 !important; --f-pt: 0 !important; --f-pr: 0 !important; --f-pb: 0 !important; --f-pl: 0 !important; height: auto; min-height: 0; --f-mh: 0; font-size: 0.964em; --f-fs: 0.964em; line-height: 1.5; --f-lh: 1.5; }
+.na_browser:not(.na_tl) .na_search_wrap input.na_search { padding: 0 !important; --f-pt: 0; --f-pr: 0; --f-pb: 0; --f-pl: 0; height: auto; min-height: 0; --f-mh: 0; font-size: 0.964em; --f-fs: 0.964em; line-height: 1.5; --f-lh: 1.5; }
 body:not(.na_darkui) .na_browser:not(.na_tl) .na_search_wrap input.na_search::placeholder { color: #A99C92; opacity: 1; }
 body.na_darkui .na_browser:not(.na_tl) .na_search_wrap input.na_search::placeholder { color: #85858E; opacity: 1; }
 .na_browser:not(.na_tl) .na_rp_open { display: inline-block; flex: none; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: var(--na-card2); --c-fg: var(--na-mute, inherit); font: inherit; --axfs: inherit; --axff: inherit; font-size: 0.857em; --f-fs: 0.857em; --axfs: 0.857em; line-height: 1.5; --f-lh: 1.5; padding: 3px 10px; --f-pt: 3px; --f-pr: 10px; --f-pb: 3px; --f-pl: 10px; --c-r: 999px; cursor: pointer; }
@@ -155,7 +155,7 @@ body.na_darkui .na_cp_num { color: #F0CF8E; --axfg: #F0CF8E}
 /* boundary: "#34" in a small box */
 .na_cp_hash { display: inline-flex; align-items: center; justify-content: center; flex: none; min-width: 64px; box-sizing: border-box; padding: 4px 10px; border: 1px solid var(--na-line); border-radius: 10px; --axr: 10px; background: var(--na-softer); font-variant-numeric: tabular-nums}
 .na_cp_hash:focus-within { border-color: var(--na-accent); }
-.na_cp_hash input.na_cp_num_in, body:is(.na_darkui, :not(.na_darkui)) .na_cp_hash input.na_cp_num_in, #na_settings .na_cp_hash input.na_cp_num_in { width: 2.6em !important; min-width: 1ch; height: auto; line-height: 1.5; --f-lh: 1.5; min-height: 0; --f-mh: 0; padding: 0 !important; --f-pt: 0 !important; --f-pr: 0 !important; --f-pb: 0 !important; --f-pl: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-sh: none; outline: 0; font: inherit; --c-fg: inherit; text-align: center; -moz-appearance: textfield; }
+.na_cp_hash input.na_cp_num_in, body:is(.na_darkui, :not(.na_darkui)) .na_cp_hash input.na_cp_num_in, #na_settings .na_cp_hash input.na_cp_num_in { width: 2.6em !important; min-width: 1ch; height: auto; line-height: 1.5; --f-lh: 1.5; min-height: 0; --f-mh: 0; padding: 0 !important; --f-pt: 0; --f-pr: 0; --f-pb: 0; --f-pl: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: transparent; --c-sh: none; outline: 0; font: inherit; --c-fg: inherit; text-align: center; -moz-appearance: textfield; }
 @supports (field-sizing: content) { .na_cp_hash input.na_cp_num_in, body:is(.na_darkui, :not(.na_darkui)) .na_cp_hash input.na_cp_num_in, #na_settings .na_cp_hash input.na_cp_num_in { field-sizing: content; width: auto !important; text-align: left; } }
 .na_cp_hash input::-webkit-inner-spin-button, .na_cp_hash input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .na_cp_hash input::placeholder { color: var(--na-dim); }
@@ -163,7 +163,7 @@ body.na_darkui .na_cp_num { color: #F0CF8E; --axfg: #F0CF8E}
 .na_cp_keep_row { cursor: default; }
 .na_cp_step { flex: none; }
 .na_cp_step .na_fd_btn { --c-bg: var(--na-softer); }
-.na_cp_step input#na_keep, body:not(.na_darkui) .na_cp_step input#na_keep { width: 30px; height: 30px; min-height: 0; --f-mh: 0; padding: 0 !important; --f-pt: 0 !important; --f-pr: 0 !important; --f-pb: 0 !important; --f-pl: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 0; --c-bg: transparent; --c-sh: none; font: inherit; font-size: 0.929em; --f-fs: 0.929em; font-weight: 700; --c-fg: inherit; text-align: center; -moz-appearance: textfield; }
+.na_cp_step input#na_keep, body:not(.na_darkui) .na_cp_step input#na_keep { width: 30px; height: 30px; min-height: 0; --f-mh: 0; padding: 0 !important; --f-pt: 0; --f-pr: 0; --f-pb: 0; --f-pl: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-r: 0; --c-bg: transparent; --c-sh: none; font: inherit; font-size: 0.929em; --f-fs: 0.929em; font-weight: 700; --c-fg: inherit; text-align: center; -moz-appearance: textfield; }
 .na_cp_step input::-webkit-inner-spin-button, .na_cp_step input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .na_cp_set .na_cp_sub textarea { --c-r: 12px; }
 
@@ -195,10 +195,10 @@ body.na_darkui .na_cp_num { color: #F0CF8E; --axfg: #F0CF8E}
     -moz-appearance: textfield;
     margin: 0 !important;
     padding: 0 !important;
-    --f-pt: 0 !important;
-    --f-pr: 0 !important;
-    --f-pb: 0 !important;
-    --f-pl: 0 !important;
+    --f-pt: 0;
+    --f-pr: 0;
+    --f-pb: 0;
+    --f-pl: 0;
     min-height: 0;
     --f-mh: 0;
     height: auto;
@@ -258,7 +258,7 @@ body:not(.na_darkui) .na_wz2_progress button:not(.on):not(.done) i { background:
 body.na_darkui .na_wz2_progress button:not(.on):not(.done) i { background: #4C4C55; }
 .na_wz2_title { font-size: 1.571em; --axfs: 1.571em}
 .na_wz2_sub, .na_v2 .na_wz2_sub { font-size: 0.929em; --axfs: 0.929em; color: var(--na-sub, var(--na-dim)); --axfg: var(--na-sub, var(--na-dim))}
-.na_wz2_pane textarea.na_wz_out { height: 300px; min-height: 0; --f-mh: 0; padding: 14px !important; --f-pt: 14px !important; --f-pr: 14px !important; --f-pb: 14px !important; --f-pl: 14px !important; --c-r: 18px; font-size: 0.857em; --f-fs: 0.857em; line-height: 1.65; --f-lh: 1.65; }
+.na_wz2_pane textarea.na_wz_out { height: 300px; min-height: 0; --f-mh: 0; padding: 14px !important; --f-pt: 14px; --f-pr: 14px; --f-pb: 14px; --f-pl: 14px; --c-r: 18px; font-size: 0.857em; --f-fs: 0.857em; line-height: 1.65; --f-lh: 1.65; }
 body:not(.na_darkui) .na_wz2_pane textarea.na_wz_out { --c-fg: #4A3D35; }
 body.na_darkui .na_wz2_pane textarea.na_wz_out { --c-fg: #E6D9CD; }
 .na_wz2_chips { font-size: 0.857em; --axfs: 0.857em}
@@ -278,7 +278,7 @@ body.na_darkui .na_wz2_pane textarea.na_wz_out { --c-fg: #E6D9CD; }
 body:not(.na_darkui) .na_wz2_range label > span { background: #F2E9E2; color: #B8A99E; }
 body.na_darkui .na_wz2_range label > span { background: #2A2A30; color: #8A8A93; }
 .na_wz2_range label > span:focus-within { border-color: var(--na-accent); }
-.na_v2 .na_wz2_range input, body:is(.na_darkui, :not(.na_darkui)) .na_v2 .na_wz2_range input { padding: 0 !important; --f-pt: 0 !important; --f-pr: 0 !important; --f-pb: 0 !important; --f-pl: 0 !important; height: auto; min-height: 0; --f-mh: 0; line-height: 1.5; --f-lh: 1.5; border: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; background: transparent !important; --c-bg: transparent; color: var(--na-ink, var(--SmartThemeBodyColor, inherit)); --c-fg: var(--na-ink, var(--SmartThemeBodyColor, inherit)); font-size: 1em; --f-fs: 1em; }
+.na_v2 .na_wz2_range input, body:is(.na_darkui, :not(.na_darkui)) .na_v2 .na_wz2_range input { padding: 0 !important; --f-pt: 0; --f-pr: 0; --f-pb: 0; --f-pl: 0; height: auto; min-height: 0; --f-mh: 0; line-height: 1.5; --f-lh: 1.5; border: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; background: transparent !important; --c-bg: transparent; color: var(--na-ink, var(--SmartThemeBodyColor, inherit)); --c-fg: var(--na-ink, var(--SmartThemeBodyColor, inherit)); font-size: 1em; --f-fs: 1em; }
 .na_wz2_arr { flex: none; display: grid; place-items: center; margin-top: 18px; color: var(--na-dim); --axfg: var(--na-dim)}
 body:not(.na_darkui) .na_wz2_arr { color: #B8A99E; --axfg: #B8A99E}
 body.na_darkui .na_wz2_arr { color: #8A8A93; --axfg: #8A8A93}
@@ -333,7 +333,7 @@ body.na_darkui .na_tab_pane[data-pane="config"] .na_cfg_box .na_cfg_sub, body.na
 .na_ap2.na_v2 { gap: 14px; }
 .na_ap2 .na_v2_card { border-radius: 18px; --axr: 18px; --c-r: 18px}
 .na_ap2 .na_append_file_btn { padding: 6px 11px; --f-pt: 6px; --f-pr: 11px; --f-pb: 6px; --f-pl: 11px; font-size: 12px; --f-fs: 12px; --axfs: 12px; line-height: 1.5; --f-lh: 1.5; --c-bg: var(--na-card); }
-.na_ap2 .na_append_ta { height: 300px !important; min-height: 120px; --f-mh: 120px; padding: 12px 14px !important; --f-pt: 12px !important; --f-pr: 14px !important; --f-pb: 12px !important; --f-pl: 14px !important; --c-r: 18px; --c-ff: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; --f-fs: 12px; --axfs: 12px; line-height: 1.65; --f-lh: 1.65; resize: vertical; }
+.na_ap2 .na_append_ta { height: 300px !important; min-height: 120px; --f-mh: 120px; padding: 12px 14px !important; --f-pt: 12px; --f-pr: 14px; --f-pb: 12px; --f-pl: 14px; --c-r: 18px; --c-ff: ui-monospace, var(--monoFontFamily, monospace); font-size: 12px; --f-fs: 12px; --axfs: 12px; line-height: 1.65; --f-lh: 1.65; resize: vertical; }
 body:not(.na_darkui) .na_ap2 .na_append_ta { --c-bg: #F2E9E2; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-fg: #4A3D35; }
 body.na_darkui .na_ap2 .na_append_ta { --c-bg: #2A2A30; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-fg: #E6D9CD; }
 .na_ap2 .na_ap2_label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; --axfs: 12px; font-weight: 600; color: var(--na-dim); --axfg: var(--na-dim); padding: 10px 14px 4px}
