@@ -602,8 +602,8 @@ export function setDate(p, now, m = null) {
         </div>
         <div class="ax_card"><button type="button" class="ax_rw ax_rwn na_ph_yearshow"><span class="ax_tx"><span class="ax_n">연도 표시</span></span><span class="ax_sw ${on ? 'on' : ''}"></span></button></div>
         <div class="ax_foot">끄면 날짜에 연도와 요일이 나오지 않아요.</div>
-        ${(o => `<div class="ax_sec">상태창</div><div class="ax_card"><div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">날짜 순서</span></span><span class="ax_dseg">${[['md', '월.일'], ['dm', '일.월']].map(([v, t]) => `<span role="button" tabindex="0" class="na_ph_dord${o === v ? ' on' : ''}" data-v="${v}">${t}</span>`).join('')}</span></div></div>
-        <div class="ax_foot">상태창의 03.11. 을 ${o === 'dm' ? '11월 3일' : '3월 11일'}로 읽어요.</div>`)(dateOrderOf(m))}
+        ${(o => `<div class="ax_sec">날짜 읽는 법</div><div class="ax_card"><div class="ax_rw ax_rwn"><span class="ax_tx"><span class="ax_n">순서</span></span><span class="ax_dseg">${[['md', '월.일'], ['dm', '일.월']].map(([v, t]) => `<span role="button" tabindex="0" class="na_ph_dord${o === v ? ' on' : ''}" data-v="${v}">${t}</span>`).join('')}</span></div></div>
+        <div class="ax_foot">03.11. → ${o === 'dm' ? '11월 3일' : '3월 11일'}</div>`)(dateOrderOf(m))}
       </div>
       ${axInd()}`;
 }
@@ -634,7 +634,7 @@ export function setPlace(p, now, m, ui = {}) {
         </div>
         <div class="ax_sec">다른 사람</div>
         ${info.people.length ? `<div class="ax_card ax_pl_list">${info.people.map(row).join('')}</div>` : '<div class="ax_card ax_pl_list"><div class="ax_pl_none">아직 읽은 사람이 없어요</div></div>'}
-        <div class="ax_foot">줄을 누르면 도시를 바꾸거나 목록에서 뺄 수 있어요. 사는 나라에 맞춰 배달 앱 · 스크린타임 앱이 정해져요.</div>
+        <div class="ax_foot">사는 나라에 맞춰 배달 · 스크린타임 앱이 바뀌어요.</div>
         <div class="ax_card ax_pl_act"><div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_plread${ui.placeReading ? ' on' : ''}"><span class="ax_tx"><span class="ax_n ${ui.placeReading ? 'ax_pl_busy' : 'ax_blue'}">${ui.placeReading ? `${busyHtml} 연동하는 중` : 'AI로 연동'}</span></span></div></div>
         <i class="ax_pad"></i>
       </div>
