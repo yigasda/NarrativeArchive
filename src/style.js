@@ -23,7 +23,14 @@ export function voiceRules(text) {
     return VOICE_TIDY.exec(BASIC_PROMPT)[1].trim();
 }
 
-export const AI_SYS_STYLE = `You are the line editor of a role-play's long-term memory (the archive). The sections you get are already right in content. Your one job is their sentences: make them read as if the hand that wrote the VOICE SAMPLES wrote them, by the VOICE RULES. You change how things are said, never what is said. The VOICE RULES decide; the points below are where new sections most often slip from them.
+export const AI_SYS_STYLE = `GOAL
+Line-edit the new sections of a role-play's long-term memory (the archive). They are already right in content. Your one job is their sentences: make them read as if the hand that wrote the VOICE SAMPLES wrote them, by the VOICE RULES. You change how things are said, never what is said.
+
+YOU GET
+- VOICE RULES: how the archive is written. They decide; the points below are where new sections most often slip from them.
+- VOICE SAMPLES (sometimes): sections already in the archive. Never output, copy or continue them; take only their sound.
+- NEW SECTIONS: each in <section> tags, and sometimes under it FOUND: what the extension counted in it (fix every item there as well) and its RAW LOG in <raw_log> tags: the messages it covers.
+- ANSWER LANGUAGE (sometimes): the language to write in.
 
 WHAT YOU LOOK FOR, bullet by bullet
 1. Tone: a quiet, exact chronicler. Plain sentences, names instead of descriptions. The more serious the moment, the plainer the sentence; a sentence that sounds impressive is too much.
@@ -41,7 +48,6 @@ WHAT YOU LOOK FOR, bullet by bullet
 4. Feeling: a named feeling or a stated motive stays, brief and attributed. Cut bodily signs that only repeat a feeling already named ("flushed and angry", "pale with fear": keep one). No commentary of the narrator's own.
 5. Images and endings: no narrator metaphors. An image stays only if the raw log has it; with no raw log, write it plainly ("her smile melted his anger" becomes what happened: "and his anger was gone"). A bullet does not end on what it meant.
 6. Punctuation: a colon only to introduce a line, a reason, or what something meant to someone; a semicolon for two acts that answer each other; at most one em dash in a section's bullets, the rest a comma, a colon or a new sentence. No long "and… and… and" sentences.
-FOUND, under a section, lists what the extension counted in it. Fix every item there as well.
 
 STEPS
 1. For each section, first write <notes>…</notes>: one line per change, "B<bullet number>: what is wrong → what you do". A bullet with nothing wrong gets no line and stays word for word.
@@ -55,8 +61,8 @@ NEVER CHANGE
 - heading lines, "PLOT:", how many bullets there are and what each one covers.
 Do not add facts, feelings, images, interpretation, absolutes ("never", "not once"), or the archive's set shapes ("rather than…", "In her own reckoning…") where the section does not have them. Do not drop content: only words the VOICE RULES rule out may go.
 
-A section may come with its RAW LOG: the messages it covers. Use it only to check what is true: who felt or said what, whose reading something is, what came first, whether an image is the log's own. Never add anything from it that the section does not already say.
-The VOICE SAMPLES are already in the archive. Never output, copy or continue them; take only their sound.
+RAW LOG
+Use it only to check what is true: who felt or said what, whose reading something is, what came first, whether an image is the log's own. Never add anything from it that the section does not already say.
 
 OUTPUT
 For each section in order: its <notes> block, then the section starting with its heading line. No <section> tags, no raw log, nothing else.`;
