@@ -10,7 +10,7 @@ const encoded = s => 'data:text/javascript;base64,' + Buffer.from(s).toString('b
 const href = f => pathToFileURL(new URL(f, SRC).pathname).href;
 const stub = {
     './phonestory.js': encoded(`export const phoneChatScope=()=>'test';`),
-    './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-12-30';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
+    './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-12-30';export const wealthCheck=()=>null;export const addWealthFX=()=>{};export const investmentWealthRows=()=>[];`),
     './ai.js': encoded(`export const askDraft=async(input,o)=>{const M=globalThis.__menu;M.input=input;M.sys=o.system;(M.calls||=[]).push({input,sys:o.system});if(M.answers&&M.answers.length){const a=M.answers.shift();if(a instanceof Error)throw a;return a;}return M.answer;};export const askAI=async()=>'';`),
     './core.js': encoded(`export const ctx=()=>({chat:[],chatMetadata:{},characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};export const getMeta=()=>({});`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
@@ -28,6 +28,8 @@ const rewrite = async f => (await readFile(new URL(f, SRC), 'utf8')).replace(/fr
 map['./phonedata.js'] = encoded(await rewrite('phonedata.js'));
 const data = await import(map['./phonedata.js']);
 const life = await import(encoded(await rewrite('phonelife.js')));
+const invest = await import(encoded(await rewrite('investdata.js')));
+const fin = await import(href('finance.js'));
 globalThis.__menu = {};
 
 const rows = n => Array.from({ length: n }, (_, i) => ({ index: i, user: i % 2 === 0, hidden: i <= 3, text: `[#${i}] Ren: ${'word '.repeat(40)}${i}` }));
@@ -320,4 +322,41 @@ test('the bank over a long stretch: the second turn adds history only, the balan
 test('every prompt that writes times has the owner\'s own clock (a messenger timestamp from another time zone is moved)', () => {
     const prompts = { phone: data.AI_SYS_PHONE, update: data.AI_SYS_PHONE_UPDATE, core: data.updateSystem({ split: true, life: true, delivery: true }), money: data.AI_SYS_MONEY, voices: data.AI_SYS_VOICES, life: life.AI_SYS_LIFE, delivery: life.AI_SYS_DELIVERY };
     for (const [k, s] of Object.entries(prompts)) assert.ok(s.includes("on the owner's phone clock") && s.includes('12:33 in Seoul is 04:33 in Frankfurt') && !s.includes('undefined'), k);
+});
+
+// ---- 투자 채우기도 두 턴: 두 번째 거래는 현금 · 보유도 같이 움직여요
+test('investments over a long stretch: the second turn\'s trades move the cash and the holdings, the opening cash stays', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = longPhone(), mm = { ...m, phones: { ren: p } };
+    const one = { base: 'EUR', cash: [{ currency: 'EUR', amount: 10000 }], securities: [{ symbol: 'XETRA:SAP', name: 'SAP', currency: 'EUR' }],
+        trades: [{ kind: 'buy', symbol: 'XETRA:SAP', currency: 'EUR', date: '2026-10-10', quantity: 10, price: 100, fee: 0 }], watch: [], stakes: [], quotes: [], fx: [] };
+    const two = { securities: [{ symbol: 'XETRA:BMW', name: 'BMW', currency: 'EUR' }], trades: [{ kind: 'buy', symbol: 'XETRA:SAP', currency: 'EUR', date: '2026-10-10', quantity: 10, price: 100, fee: 0 },
+        { kind: 'buy', symbol: 'XETRA:BMW', currency: 'EUR', date: '2026-10-25', quantity: 5, price: 80, fee: 0 }], watch: [{ symbol: 'XETRA:BMW', note: 'after the test drive' }], stakes: [], quotes: [], fx: [] };
+    globalThis.__menu = { calls: [], answers: [JSON.stringify(one), JSON.stringify(two)], answer: '{}' };
+    await invest.fillInvestment(mm, p, '2026-10-20');
+    const turns = globalThis.__menu.calls.filter(c => c.sys === invest.INVEST_SYS);
+    assert.equal(turns.length, 2);
+    assert.ok(turns[1].input.includes('[INVESTMENTS SO FAR') && turns[1].input.includes('leave "cash" and "base" out') && turns[1].input.includes('[DATE]\n2026-10-26'));
+    const inv = p.investment;
+    assert.deepEqual(inv.trades.map(t => t.symbol), ['XETRA:SAP', 'XETRA:BMW']);
+    assert.deepEqual(inv.securities.map(s => s.symbol), ['XETRA:SAP', 'XETRA:BMW']);
+    assert.equal(inv.date, '2026-10-26');
+    const acct = mm.finance.accounts[inv.accounts[0].key];
+    assert.equal(acct.amount, 10000);
+    assert.equal(fin.cash(acct), 10000 - 1000 - 400);
+    assert.deepEqual(fin.positions(inv.trades).map(h => [h.symbol, h.quantity]), [['XETRA:SAP', 10], ['XETRA:BMW', 5]]);
+    assert.deepEqual(inv.watch.map(w => w.symbol), ['XETRA:BMW']);
+    assert.equal(p.sync.marks.invest.index, 39);
+});
+
+test('a second investment turn that can\'t pay for its trades changes nothing: the first stays', async () => {
+    globalThis.__rows = bigRows(40);
+    const p = longPhone(), mm = { ...m, phones: { ren: p } };
+    const one = { base: 'EUR', cash: [{ currency: 'EUR', amount: 1000 }], securities: [{ symbol: 'XETRA:SAP', name: 'SAP', currency: 'EUR' }], trades: [], watch: [], stakes: [], quotes: [], fx: [] };
+    const two = { securities: [], trades: [{ kind: 'buy', symbol: 'XETRA:SAP', currency: 'EUR', date: '2026-10-25', quantity: 100, price: 100, fee: 0 }], watch: [], stakes: [], quotes: [], fx: [] };
+    globalThis.__menu = { calls: [], answers: [JSON.stringify(one), JSON.stringify(two)], answer: '{}' };
+    await invest.fillInvestment(mm, p, '2026-10-20');
+    assert.equal(p.investment.trades.length, 0);
+    assert.equal(fin.cash(mm.finance.accounts[p.investment.accounts[0].key]), 1000);
+    assert.equal(p.investment.date, '2026-10-20');
 });
