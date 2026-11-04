@@ -9,6 +9,7 @@ const map = {
     './core.js': encoded('export const ctx=()=>({});export const getMeta=()=>({});export const hasChat=()=>true;export const saveMeta=async()=>{};'),
     './diff.js': encoded('export const diffPairs=()=>[];export const markedPair=()=>null;'),
     './util.js': encoded('export const esc=s=>String(s);'),
+    './phoneparse.js': new URL('../src/phoneparse.js', import.meta.url).href,
 };
 const src = await readFile(new URL('../src/translate.js', import.meta.url), 'utf8');
 const tr = await import(encoded(src.replace(/from '([^']+)'/g, (all, k) => `from '${map[k] || k}'`)));
@@ -48,7 +49,6 @@ test('the answer is read a line at a time, "Name = 한국어", a list mark in fr
 test('a name the story writes once only (a street passed, a shop in passing) is left out; one it comes back to stays', () => {
     const text = 'Mara walked down Mainzer Landstraße to the Cafe Eifler. Later Mara and Ren met Ivo at the Cafe Eifler.';
     assert.deepEqual(tr.glossaryKeep([{ src: 'Mara' }, { src: 'Mainzer Landstraße' }, { src: 'cafe eifler' }, { src: 'Ivo' }, { src: 'Varo' }], text).map(x => x.src), ['Mara', 'cafe eifler']);
-    assert.match(tr.AI_SYS_GLOSSARY_FIND, /only these kinds; anything else stays out/);
 });
 
 test('a place in Korea is never put in (a Korean reader knows it); a name that only ends alike stays', () => {
@@ -56,7 +56,19 @@ test('a place in Korea is never put in (a Korean reader knows it); a name that o
     const not = ['Pedro = 페드로', 'Toledo = 톨레도', 'Frankfurt = 프랑크푸르트', 'Oscar Weber = 오스카 베버', 'Doug = 더그', 'Hongkong = 홍콩'];
     assert.deepEqual(tr.glossaryLines(kr.join('\n')).filter(x => !tr.krPlace(x)), []);
     assert.deepEqual(tr.glossaryLines(not.join('\n')).filter(x => tr.krPlace(x)), []);
-    // (and the instruction asks for full names, and leaves out what general knowledge knows)
-    assert.match(tr.AI_SYS_GLOSSARY_FIND, /full name when the cards or story give one/);
-    assert.match(tr.AI_SYS_GLOSSARY_FIND, /Add nothing from general knowledge/);
+});
+
+test('the answer comes part by part: a person\'s full name and the name they go by; a place, group or term only with whose it is or what it means', () => {
+    const out = '```json\n' + JSON.stringify({
+        people: [{ name: 'Oscar Weber', ko: '오스카 베버', called: 'Oscar', calledKo: '오스카' }, { name: 'Leo', ko: '레오', called: 'Leo', calledKo: '레오' }],
+        places: [{ name: 'Westend', ko: '베스텐트', whose: 'Oscar lives there' }, { name: 'Lufthansa Lounge', ko: '루프트한자 라운지', whose: '' }],
+        groups: [{ name: 'Albrecht Bank', ko: '알브레히트 은행', whose: 'Oscar works there' }, { name: 'Lufthansa', ko: '루프트한자' }],
+        terms: [{ name: 'Sugar', ko: '설탕이', means: 'what Oscar calls Somang' }, { name: 'Ritter Sport', ko: '리터 스포트', means: '' }],
+    }) + '\n```';
+    assert.deepEqual(tr.glossaryFound(out).map(x => `${x.src} = ${x.ko}`), ['Oscar Weber = 오스카 베버', 'Oscar = 오스카', 'Leo = 레오', 'Westend = 베스텐트', 'Albrecht Bank = 알브레히트 은행', 'Sugar = 설탕이']);
+    assert.equal(tr.glossaryFound('no json here'), null);
+    // a full name the card writes once counts by the name they go by
+    const rows = tr.glossaryFound(out), text = 'Oscar Weber, banker. Oscar smiled. Oscar left. Leo came, Leo went. Westend flat, Westend view. Albrecht Bank, Albrecht Bank. Sugar, Sugar.';
+    assert.deepEqual(tr.glossaryKeep(rows, text).map(x => x.src), ['Oscar Weber', 'Oscar', 'Leo', 'Westend', 'Albrecht Bank', 'Sugar']);
+    for (const k of ['"people"', '"places"', '"groups"', '"terms"', '"whose"', '"means"', '"called"']) assert.ok(tr.AI_SYS_GLOSSARY_FIND.includes(k), k);
 });
