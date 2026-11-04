@@ -852,7 +852,9 @@ async function updatePhone(m, owner) {
         // the model writes the weather when no status line gives it, when the status line has no date or its day moved on
         // from the saved weather's, or when it puts the story somewhere else; a same-day, same-place line only stands over it
         const placeKey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''), elsewhere = (a, b) => placeKey(a) && placeKey(b) && !placeKey(a).includes(placeKey(b)) && !placeKey(b).includes(placeKey(a));
-        const askWeather = !!life && (!tracker || !trackDay || trackDay !== life.weather?.date || elsewhere(tracker.place, life.weather?.place));
+        // the life apps already read past this round (filled further on): its weather is theirs, a round behind leaves it
+        const lifeAhead = !!life && roundEnd != null && roundEnd <= (s.marks.life?.index ?? -1);
+        const askWeather = !!life && !lifeAhead && (!tracker || !trackDay || trackDay !== life.weather?.date || elsewhere(tracker.place, life.weather?.place));
         // the year the phone's now is in: read once from the bank or the archive, then carried over New Year with the now
         if (!p.year && !p.noYear) { const y = Number(storyYear(m, p, roundEnd) || String(p.money?.asOf || p.investment?.date || '').slice(0, 4)); if (y > 1900) p.year = y; }
         const known = p.year && !p.noYear ? String(p.year) : '', year = known || String(new Date().getFullYear());
@@ -897,7 +899,7 @@ async function updatePhone(m, owner) {
         // for 되돌리기: what was there before this round (ids and message counts), and the reading state
         const msgSig = x => JSON.stringify([x.from, x.text, x.time]);
         const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map(p.threads.map(t => [t.id, new Set(t.messages.map(msgSig))]));
-        const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, seen: s.seen, owed: s.owed || { money: [] } }), now: p.now, year: p.year, moneyAt: p.money?.at, investAt: p.investment?.at,
+        const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, seen: s.seen, hiddenRead: s.hiddenRead || {}, owed: s.owed || { money: [] } }), now: p.now, year: p.year, moneyAt: p.money?.at, investAt: p.investment?.at,
             comments: (p.posts || []).filter(x => x.id).map(x => [x.id, x.comments?.length || 0]) };
         // an event's day when the model leaves it out: the day of the event before it, else the answer's now
         let lastDay = when(raw.now).slice(0, 5);
@@ -972,7 +974,8 @@ async function updatePhone(m, owner) {
         settleRound(s, round.rows, failed, new Set(added.map(x => x.at)));
         for (const x of evidence) s.arch[x.key] = 1;
         // an archived stretch read from its section: its messages count as read (shown again later, they aren't read twice)
-        if (archIn.length) { const txt = new Map(chatRows().map(r => [r.index, r.text])); s.hiddenRead ||= {}; for (const i of archIn.flatMap(x => x.hidden)) s.hiddenRead[i] = bodyMark(txt.get(i) || ''); }
+        const hiddenNow = [];
+        if (archIn.length) { const txt = new Map(chatRows().map(r => [r.index, r.text])); s.hiddenRead ||= {}; for (const i of archIn.flatMap(x => x.hidden)) { s.hiddenRead[i] = bodyMark(txt.get(i) || ''); hiddenNow.push([i, s.hiddenRead[i]]); } }
         // a now without its time ("2026-12-31", "1/2"): that day at the round's last event time, else the time it was
         let nowAt = (t => (/^\d{2}-\d{2}$/.test(t) ? `${t} ${arr(raw.events).map(e => [when(e?.date).slice(0, 5), hhmm(e?.time)]).filter(([d, h]) => d === t && /^\d{2}:\d{2}$/.test(h || '')).map(([, h]) => h).sort().at(-1) || (t === String(p.now || '').slice(0, 5) ? p.now.slice(6) : '') || '12:00'}`.trim() : t))(when(raw.now));
         // the phone's time only moves on, across New Year too (12-31 → 01-01 is a day later, not months back)
@@ -987,7 +990,7 @@ async function updatePhone(m, owner) {
             p.now = nowAt;
         }
         // the round's own: new days nobody told, the weather, and what the clock moving on does by itself
-        const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = applyWeather(p, askWeather ? raw.weather : null, tracker, { archive: evidence.length + before.length > 0, today: String(p.now || '').slice(0, 5) });
+        const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = lifeAhead ? [] : applyWeather(p, askWeather ? raw.weather : null, tracker, { archive: evidence.length + before.length > 0, today: String(p.now || '').slice(0, 5) });
         if (days.length) apps.add('건강');
         if (sky.length) apps.add('날씨');
         const roundFx = [...days, ...sky, ...lifeClock(p, p.now), ...dlvClock(p, p.now), ...cardClock(p, p.now)];
@@ -1005,7 +1008,7 @@ async function updatePhone(m, owner) {
             msgs: p.threads.filter(t => msgs.has(t.id)).map(t => [t.id, t.messages.map(msgSig).filter(sg => !msgs.get(t.id).has(sg))]).filter(([, xs]) => xs.length),
             effects: [...added.flatMap(x => x.effects || []), ...late.flatMap(x => x.effects || []), ...roundFx], byEvent: byEvent([...added, ...late]) };
         // kept in this browser until the saved chat shows it: 복구 can add it back if the save didn't land
-        journalAdd(scope, { round: id, owner, at: Date.now(), now: p.now, year: p.year, events: [...added, ...late], ...(split ? { owed: s.owed } : {}), done: [...inRound], seen: round.rows.map(r => [r.index, bodyMark(r.text)]), failed: Object.fromEntries([...inRound].filter(i => s.failed[i]).map(i => [i, s.failed[i]])), arch: evidence.map(x => x.key), life: roundFx });
+        journalAdd(scope, { round: id, owner, at: Date.now(), now: p.now, year: p.year, events: [...added, ...late], ...(split ? { owed: s.owed } : {}), done: [...inRound], seen: round.rows.map(r => [r.index, bodyMark(r.text)]), failed: Object.fromEntries([...inRound].filter(i => s.failed[i]).map(i => [i, s.failed[i]])), arch: evidence.map(x => x.key), hidden: hiddenNow, life: roundFx });
         await saveMeta();
         if (p.inject) applyInjection();
         return p;
@@ -1045,6 +1048,8 @@ export async function restoreRounds(m, scope) {
         for (const [i, f] of r.seen || []) s.seen[i] = f;
         for (const [i, f] of Object.entries(r.failed || {})) s.failed[i] = f;
         for (const k of r.arch || []) s.arch[k] = 1;
+        // the hidden messages it read from an archive section stay read
+        for (const [i, f] of r.hidden || []) (s.hiddenRead ||= {})[i] = f;
         s.rounds = [...(s.rounds || []).slice(-19), r.round];
         if (p.money) migrateBank(m, p);
         ensureIds(p);

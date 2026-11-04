@@ -107,3 +107,24 @@ test('a round behind the chat sees the status lines only up to its own last mess
     // every status-line look this round stopped at the round's last message
     assert.ok(T.trackLens.length && T.trackLens.every(n => n === last + 1), JSON.stringify(T.trackLens));
 });
+
+test('a round that read an archived stretch, taken back: the stretch is unread again and read once more', async () => {
+    const { m, p } = archived();
+    await run(m, { now: '10-26 13:00', events: [note(3, 'bought the poetry book', 'Book'), note(6, 'see you at the cafe', 'Cafe')] });
+    await data.undoRound(m, p);
+    assert.equal(p.notes.length, 0);
+    assert.equal(data.syncLeft(p, m), 2);
+    await run(m, { now: '10-26 13:00', events: [note(3, 'bought the poetry book', 'Book')] });
+    assert.deepEqual(p.notes.map(x => x.title), ['Book']);
+});
+
+test('a round behind the life apps (filled further on) leaves their weather', async () => {
+    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning')];
+    for (let k = 0; k < 30; k++) chat.push(say(k % 2 ? 'Mara' : 'Ren', `line ${k} of the long afternoon`));
+    const c = setup(chat);
+    c.p.life = { at: '10-27 09:00', clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] },
+        weather: { here: { place: 'Varo', date: '10-27', time: '09:00', cond: 'snow', temp: -2, hours: [], days: [], tiles: {} }, cities: [] } };
+    c.p.sync.marks.life = makeMark(chat, 31);
+    await run(c.m, { now: '10-26 13:00', events: [], weather: { place: 'Varo', date: '10-26', time: '13:00', cond: 'clear', temp: 20 } });
+    assert.equal(c.p.life.weather.here.cond, 'snow');
+});
