@@ -1176,7 +1176,8 @@ async function updatePhone(m, owner) {
         // low thinking: tested against medium on Vertex, the same payments, ids and amounts, without the thinking cost
         const out = await askDraft(input, { force: true, system: split ? coreSystem({ life: !!life, weather: askWeather, tracker: !!tracker, invest: !!invest, zone: askZone }) : updateSystem({ money: false, life: !!life, weather: askWeather, tracker: !!tracker, zone: askZone }), maxTokens: 16000, effort: 'low' });
         // then the everyday life of these hours, on its own (it fails alone: the round goes in without it)
-        const everyday = round.rows.length ? await askEveryday(inputParts, jsonOf(out), p, round.rows, !!life) : null;
+        // (only on an answer the round can use: a broken one fails the round, and its 일상 would be paid for nothing)
+        const core0 = jsonOf(out), everyday = round.rows.length && Array.isArray(core0?.events) ? await askEveryday(inputParts, core0, p, round.rows, !!life) : null;
         // the answer is for the chat and messages it was asked about
         if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p) throw new Error('반영하는 사이 채팅이나 폰이 바뀌었어요. 다시 해 주세요');
         if (p.money?.at !== made.money || p.investment?.at !== made.invest) throw new Error('반영하는 사이 은행이나 투자가 새로 만들어졌어요. 다시 해 주세요');

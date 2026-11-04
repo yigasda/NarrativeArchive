@@ -789,3 +789,10 @@ test('일상 texting someone not saved yet saves them too (only someone it texts
     await data.undoRound(c.m, c.p);
     assert.deepEqual(c.p.contacts, []);
 });
+
+test('일상 is not asked for when the reflection\'s own answer can\'t be read (the round fails; nothing paid for nothing)', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'hello')]);
+    globalThis.__everydayIn = [];
+    await assert.rejects(run(c.m, 'not json at all'));
+    assert.equal(globalThis.__everydayIn.length, 0);
+});
