@@ -47,7 +47,7 @@ CLOCK
 - Timers they saved, with the day last used. "running" only when the story's now shows a timer going.
 
 HEALTH
-- One row per day in STORY DAYS: that day's steps, distance, floors, workout and heart rate, and in "night" the sleep after its evening (to bed, asleep, awake the next morning).
+- One row per day in STORY DAYS: that day's steps, distance, floors, workouts (each one) and heart rate, and in "night" the sleep after its evening (to bed, asleep, awake the next morning).
 - Pasta on the evening of 10-25, asleep at 23:40 or at 01:30, up at 08:50: all of that sleep is the 10-25 row's "night".
 - The last day's "night" only when the story's now is already past it; else null.
 - A day the story shows, or its night, follows it: "from": "story" and its "ev". A long night out means short sleep, a day on foot means many steps.
@@ -88,7 +88,7 @@ JSON (one object, nothing before or after it)
   "health": { "usual": { "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "steps", "workouts": per week, "rest": resting heart rate,
                          "water": liters a day, "coffee": cups of coffee a day (0 if none), "coffeeKind": what they usually drink, like "Cappuccino", "coffeeKo",
                          "weight": kg, "height": cm },
-              "days": [{ "date": "MM-DD", "steps", "km", "floors", "workout": { "kind", "time": "HH:MM", "min", "km" } or null, "hr": [low, high], "coffee": cups, "coffeeKind", "water": litres, "weight": kg only when they weighed,
+              "days": [{ "date": "MM-DD", "steps", "km", "floors", "workouts": [{ "kind", "time": "HH:MM", "min", "km" }], "hr": [low, high], "coffee": cups, "coffeeKind", "water": litres, "weight": kg only when they weighed,
                          "night": { "bed": "HH:MM", "sleep": "HH:MM", "wake": "HH:MM", "woke": times awake } or null, "from": "story" | "pattern", "ev" }] },
   "files": { "folders": [{ "name", "ko", "count", "fav": true or false }],
              "items": [{ "name", "kind": "pdf" | "image" | "video" | "audio" | "zip" | "doc" | "sheet" | "slides" | "other",

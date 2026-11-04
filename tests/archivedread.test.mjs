@@ -637,8 +637,13 @@ test('a slow day: each 반영 the same day writes today\'s totals so far, never 
     c.p.now = '10-26 12:00'; c.p.year = 2026;
     const today = () => c.p.life.health.days.find(d => d.date === '10-26');
     c.p.life = { at: '10-26 12:00', clock: { alarms: [], timers: [], running: null }, files: { folders: [], items: [] }, weather: { here: { place: 'Frankfurt', date: '10-26', time: '12:00', cond: 'cloudy', temp: 9, hours: [], days: [], tiles: {} }, cities: [] },
-        health: { usual: { steps: 7000 }, days: [{ id: 'h1', date: '10-26', steps: 3000, km: 2.2, coffee: 2, screen: { apps: { WhatsApp: 60 }, pickups: 30 }, from: 'pattern' }] } };
-    await run(c.m, { now: '10-26 20:00', days: [{ date: '10-26', steps: 2500, coffee: 3, screen: { apps: { WhatsApp: 50, Instagram: 40 }, pickups: 45 } }], events: [] });
+        health: { usual: { steps: 7000 }, days: [{ id: 'h1', date: '10-26', steps: 3000, km: 2.2, coffee: 2, hr: [58, 120], screen: { apps: { WhatsApp: 60 }, pickups: 30 }, workout: { kind: 'Running', time: '07:00', min: 30, km: 5 }, from: 'pattern' }] } };
+    await run(c.m, { now: '10-26 20:00', days: [{ date: '10-26', steps: 2500, coffee: 3, hr: [62, 140], workouts: [{ kind: 'Yoga', time: '19:00', min: 45 }], screen: { apps: { WhatsApp: 50, Instagram: 40 }, pickups: 45 } }], events: [] });
+    // the morning run and the evening yoga both; the heart range only widens
+    assert.deepEqual(today().workouts.map(w => `${w.kind} ${w.time} ${w.min}`), ['Running 07:00 30', 'Yoga 19:00 45']);
+    assert.equal(today().workout.kind, 'Yoga');
+    assert.deepEqual(today().hr, [58, 140]);
+    assert.match(T.sys, /"workouts": \[\{ "kind", "time", "min", "km" \}\]/);
     assert.match(T.sys, /The day of "now" is written every time, with its totals so far/);
     assert.deepEqual([today().steps, today().coffee, today().screen.apps, today().screen.pickups], [3000, 3, { WhatsApp: 60, Instagram: 40 }, 45]);
     // (told in an event: more steps go in)
@@ -648,4 +653,5 @@ test('a slow day: each 반영 the same day writes today\'s totals so far, never 
     await data.undoRound(c.m, c.p);
     await data.undoRound(c.m, c.p);
     assert.deepEqual([today().steps, today().coffee, today().screen.apps, today().screen.pickups], [3000, 2, { WhatsApp: 60 }, 30]);
+    assert.deepEqual([today().workout.kind, today().workouts, today().hr], ['Running', undefined, [58, 120]]);
 });

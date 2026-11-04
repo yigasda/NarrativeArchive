@@ -2,7 +2,7 @@
 // their payments; every change can be taken back and put back
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { alarmOf, applyDays, applyLife, applyWeather, dlvClock, fillDays, lifeClock } from '../src/phonesynclife.js';
+import { alarmOf, applyDays, applyLife, applyWeather, dayOf, dlvClock, fillDays, lifeClock } from '../src/phonesynclife.js';
 import { applyMoney, payOrders, replayEffects, revertEffects } from '../src/phonesyncmoney.js';
 import { cash, migrateBank } from '../src/finance.js';
 
@@ -783,4 +783,26 @@ test('one 반영 reads its dates by the order it started with, even if the setti
         });
         assert.equal(when_('03.11.'), '11-03');
     } finally { dateOrderSource_(() => undefined); }
+});
+
+test('a day\'s workouts: a list (each once, in the day\'s order), "workout" the longest; an old row with one workout reads the same', () => {
+    const d = dayOf({ date: '10-26', workouts: [{ kind: 'Yoga', time: '19:00', min: 45 }, { kind: 'Running', time: '07:00', min: 30 }, { kind: 'yoga', time: '19:00', min: 45, km: null }] });
+    assert.deepEqual(d.workouts.map(w => w.kind), ['Running', 'Yoga']);
+    assert.equal(d.workout.kind, 'Yoga');
+    const old = dayOf({ date: '10-26', workout: { kind: 'Running', time: '07:00', min: 30 } });
+    assert.deepEqual([old.workout.kind, old.workouts.length], ['Running', 1]);
+    assert.deepEqual([dayOf({ date: '10-26' }).workout, dayOf({ date: '10-26' }).workouts], [null, undefined]);
+    // (the fill's rows keep the list)
+    const [row] = nightsToDays([{ date: '10-26', steps: 8000, workouts: [{ kind: 'Running', time: '07:00', min: 30 }, { kind: 'Yoga', time: '19:00', min: 45 }], night: { sleep: '23:30', wake: '07:00' } }]);
+    assert.deepEqual(row.workouts.map(w => w.kind), ['Running', 'Yoga']);
+});
+
+test('LIFE NOW shows the phone\'s today with all it has so far (the 반영 adds to it); other days stay short', async () => {
+    const { lifeNow } = await import('../src/phonesynclife.js');
+    const p = { now: '10-26 20:00', life: { health: { usual: {}, days: [
+        { id: 'h0', date: '10-25', steps: 9000, coffee: 1, from: 'pattern' },
+        { id: 'h1', date: '10-26', steps: 3000, floors: 4, coffee: 2, water: 1.5, workouts: [{ kind: 'Running', time: '07:00', min: 30 }], screen: { apps: { WhatsApp: 60, Instagram: 20 }, pickups: 30 }, from: 'story' }] } } };
+    const h = lifeNow(p).health;
+    assert.deepEqual(h[1], { id: 'h1', date: '10-26', sleep: undefined, wake: undefined, steps: 3000, from: 'story', floors: 4, workouts: ['Running 07:00 30 min'], coffee: 2, water: 1.5, screen: 'WhatsApp 60, Instagram 20 · pickups 30' });
+    assert.equal(h[0].coffee, undefined);
 });

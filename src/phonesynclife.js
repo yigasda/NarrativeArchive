@@ -88,8 +88,19 @@ export function usualScreenOf(v) {
     const apps = list(v.apps, 16), sometimes = list(v.sometimes, 18), pk = int(v.pickups, 0, 1000), late = hhmm(v.late);
     return apps.length || pk !== null || late ? { apps, ...(sometimes.length ? { sometimes } : {}), ...(pk !== null ? { pickups: pk } : {}), ...(late ? { late } : {}) } : null;
 }
+// a day's workouts (a run in the morning, yoga at night): the list, in the day's order, the same one once; "workout" is
+// the longest, for a screen that shows one (and an older row that has only it)
+const workoutOne = w => (w && typeof w === 'object' && line(w.kind, 30) ? { kind: line(w.kind, 30), time: hhmm(w.time), min: int(w.min, 0, 600), km: num(w.km) } : null);
+const workoutKey = w => `${String(w.kind).toLowerCase()}|${w.time || ''}`;
+export function workoutList(...lists) {
+    const out = new Map();
+    for (const w of lists.flat().map(workoutOne).filter(Boolean)) { const k = workoutKey(w), o = out.get(k); out.set(k, o ? { ...o, ...Object.fromEntries(Object.entries(w).filter(([, v]) => v !== null && v !== '')), kind: o.kind } : w); }
+    return [...out.values()].sort((a, b) => String(a.time || '99').localeCompare(String(b.time || '99'))).slice(0, 6);
+}
+const longest = ws => ws.reduce((a, w) => (!a || (w.min ?? 0) > (a.min ?? 0) ? w : a), null);
+const workoutsOf = d => { const ws = workoutList(arr(d?.workouts), d?.workout ? [d.workout] : []); return { workout: longest(ws), ...(ws.length ? { workouts: ws } : {}) }; };
 export const dayOf = d => withEv({ date: day5(d?.date), bed: hhmm(d?.bed), sleep: hhmm(d?.sleep), wake: hhmm(d?.wake), woke: int(d?.woke, 0, 30) ?? 0, steps: int(d?.steps, 0, 120000), km: num(d?.km), floors: int(d?.floors, 0, 400),
-    workout: d?.workout && line(d.workout.kind, 30) ? { kind: line(d.workout.kind, 30), time: hhmm(d.workout.time), min: int(d.workout.min, 0, 600), km: num(d.workout.km) } : null,
+    ...workoutsOf(d),
     hr: arr(d?.hr).map(x => int(x, 30, 220)).filter(x => x !== null).slice(0, 2), from: pick(d?.from, ['story', 'pattern'], 'pattern'),
     // that day's coffee, water and weight when the model gives them (else the screens use their usual)
     ...dayExtras(d) }, d);
@@ -268,6 +279,10 @@ const GROWS = ['steps', 'km', 'floors', 'coffee', 'water'];
 export function soFar(was, vals) {
     const out = { ...vals };
     for (const k of GROWS) if (finiteNum(was?.[k]) && finiteNum(out[k]) && out[k] < was[k]) out[k] = was[k];
+    // the day's workouts so far: the ones there and the new ones; its heart range only widens
+    if (out.workouts || out.workout) { const ws = workoutList(arr(was?.workouts), was?.workout ? [was.workout] : [], arr(out.workouts), out.workout ? [out.workout] : []); out.workouts = ws; out.workout = longest(ws); }
+    if (Array.isArray(out.hr) && !out.hr.length && was?.hr?.length) out.hr = was.hr;
+    if (Array.isArray(out.hr) && out.hr.length === 2 && Array.isArray(was?.hr) && was.hr.length === 2) out.hr = [Math.min(out.hr[0], was.hr[0]), Math.max(out.hr[1], was.hr[1])];
     if (out.screen && was?.screen) {
         const apps = { ...(was.screen.apps || {}) };
         for (const [k, m] of Object.entries(out.screen.apps || {})) apps[k] = Math.max(apps[k] || 0, m);
@@ -372,7 +387,7 @@ export function applyLife(p, e, phone, on) {
         if (clean.sleep && clean.sleep < '12:00' && e.date && dayGap(clean.date, e.date) === 1) clean.date = e.date;
         const was = (L.health?.days || []).find(o => o.date === clean.date), today = was && was.date === String(p.now || '').slice(0, 5);
         // a day the story already told: this telling changes only what it says
-        if (was?.from === 'story') { const vals = { ...given(d, clean, ['bed', 'sleep', 'wake', 'woke', 'steps', 'km', 'floors', 'workout', 'hr', 'coffee', 'coffeeKind', 'water', 'weight', 'screen']), ev: e.id }; return change('life.health.days', was, today ? soFar(was, vals) : vals, '건강'); }
+        if (was?.from === 'story') { const vals = { ...given(d, clean, ['bed', 'sleep', 'wake', 'woke', 'steps', 'km', 'floors', 'workout', 'workouts', 'hr', 'coffee', 'coffeeKind', 'water', 'weight', 'screen']), ev: e.id }; return change('life.health.days', was, today ? soFar(was, vals) : vals, '건강'); }
         // what the story doesn't say is their usual
         const u = L.health?.usual || {};
         // waking: not before it happens (a night still going keeps it empty; the clock fills it once its time is past):
@@ -411,7 +426,7 @@ export function nightsToDays(rows, { usual = {}, lastDay = '' } = {}) {
             if (d.night === undefined && (d.sleep || d.wake)) { Object.assign(at(date), dayOf(d)); continue; }
         }
         const day = dayOf({ ...d, bed: '', sleep: '', wake: '', woke: 0 }), r = at(date);
-        for (const k of ['steps', 'km', 'floors', 'workout', 'hr', 'coffee', 'coffeeKind', 'water', 'weight', 'screen']) if (day[k] !== undefined) r[k] = day[k];
+        for (const k of ['steps', 'km', 'floors', 'workout', 'workouts', 'hr', 'coffee', 'coffeeKind', 'water', 'weight', 'screen']) if (day[k] !== undefined) r[k] = day[k];
         if (story) { r.from = 'story'; if (day.ev) r.ev ||= day.ev; }
         if (d.night && typeof d.night === 'object') {
             const n = dayOf(d.night), w = at(plusDay(date, 1));
@@ -437,7 +452,7 @@ export function applyDays(p, days, round) {
         // the phone's today, already there: its totals so far (only what the model wrote; never lower)
         const was = box.find(o => o.date === clean.date);
         if (was && clean.date === String(p.now || '').slice(0, 5)) {
-            const keys = [...GROWS, 'screen', 'workout'].filter(k => d?.[k] !== undefined && d[k] !== null && d[k] !== '' && clean[k] !== undefined && clean[k] !== null);
+            const keys = [...GROWS, 'screen', 'workout', 'workouts', 'hr'].filter(k => d?.[k] !== undefined && d[k] !== null && d[k] !== '' && clean[k] !== undefined && clean[k] !== null);
             if (finiteNum(clean.steps) && !keys.includes('km') && d?.km === undefined) { clean.km = Math.round(clean.steps * 0.00072 * 10) / 10; keys.push('km'); }
             const to = soFar(was, Object.fromEntries(keys.map(k => [k, clean[k]])));
             const ch = Object.keys(to).filter(k => JSON.stringify(was[k] ?? null) !== JSON.stringify(to[k] ?? null));
@@ -611,7 +626,9 @@ export function lifeNow(p) {
         timers: (L.clock?.timers || []).map(t => ({ label: t.label, sec: t.sec })), running: L.clock?.running ? { label: L.clock.running.label, sec: L.clock.running.sec } : null,
         folders: ['Downloads', ...(L.files?.folders || []).map(f => f.name).filter(Boolean)],
         files: (L.files?.items || []).filter(x => !x.trashed).slice(-12).map(x => ({ id: x.id, name: x.name, folder: x.folder, time: x.time })),
-        health: (L.health?.days || []).slice(-3).map(d => ({ id: d.id, date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, from: d.from })),
+        // (the phone's today with everything so far: the model writes its totals again, and adds to these)
+        health: (L.health?.days || []).slice(-3).map(d => ({ id: d.id, date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, from: d.from,
+            ...(d.date === String(p.now || '').slice(0, 5) ? Object.fromEntries([['floors', d.floors], ['workouts', (d.workouts || (d.workout ? [d.workout] : [])).map(w => `${w.kind}${w.time ? ` ${w.time}` : ''}${w.min ? ` ${w.min} min` : ''}`)], ['coffee', d.coffee], ['water', d.water], ['screen', d.screen ? [Object.entries(d.screen.apps || {}).map(([k, m]) => `${k} ${m}`).join(', '), d.screen.pickups != null ? `pickups ${d.screen.pickups}` : '', d.screen.late ? `late ${d.screen.late}` : ''].filter(Boolean).join(' · ') : undefined]].filter(([, v]) => v !== undefined && v !== null && !(Array.isArray(v) && !v.length))) : {}) })),
         usual: (u => (u ? Object.fromEntries(['bed', 'sleep', 'wake', 'steps', 'workouts', 'rest', 'weight', 'coffee', 'coffeeKind', 'water', 'screen'].filter(k => u[k] !== undefined && u[k] !== null && u[k] !== '').map(k => [k, k === 'screen' ? screenLine(u[k]) : u[k]])) : undefined))(L.health?.usual),
         weather: L.weather?.here ? { place: L.weather.here.place, date: L.weather.here.date, time: L.weather.here.time, cond: L.weather.here.cond, temp: L.weather.here.temp, cities: (L.weather.cities || []).map(c => c.name) } : null,
     };
