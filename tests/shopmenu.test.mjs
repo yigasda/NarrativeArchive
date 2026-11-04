@@ -181,5 +181,5 @@ test('스크린타임 knows where they live: [LIVES IN] from the place reading (
     globalThis.__menu.answer = JSON.stringify({ usual: { apps: [{ app: 'WhatsApp', kind: 'chat', min: 60 }] }, days: [] });
     await life.fillScreen({}, p);
     assert.match(globalThis.__menu.input, /\[LIVES IN\]\n독일/);
-    assert.ok(globalThis.__menu.sys.includes('WhatsApp, not KakaoTalk'));
+    assert.ok(globalThis.__menu.sys.includes('The apps people use where they live (LIVES IN)'));
 });
