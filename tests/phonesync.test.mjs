@@ -314,3 +314,10 @@ test('a read message deleted and the same words said again after the last one re
     assert.deepEqual(r.moved[1], undefined);
     assert.deepEqual(r.dropped.map(d => [d.old, !!d.unsure]), [[1, false]]);
 });
+test('the start mark after a repeated "ok": two messages before it deleted, it can\'t be placed for sure, so it asks again', () => {
+    const say = (who, mes) => ({ is_user: who === 'Ren', is_system: false, name: who, mes });
+    const chat = [say('Ren', 'ok'), say('Mara', 'want to grab lunch at noon'), say('Ren', 'ok'), say('Mara', 'great, the usual place then'), say('Ren', 'ok'), say('Mara', 'I just paid 12000 won for the taxi to get here')];
+    const mk = makeMark_(chat, 3);
+    chat.splice(1, 2);
+    assert.equal(findMark_(chat, mk).state, 'lost');
+});

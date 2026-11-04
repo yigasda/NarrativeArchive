@@ -903,6 +903,7 @@ async function moneyStage(m, p, owner, targets, c) {
         out.notes.push(...paid.notes);
         // the event keeps every record it gave, from both steps and every round (빼기 takes them all out together)
         const e0 = s.events[t.id] ||= { at: t.at, quote: t.quote || '', summary: t.summary || t.id, effects: [] };
+        if (e0.at !== t.at && Number.isInteger(t.at)) for (const f of paid.effects) f.src = t.at;
         e0.effects = [...(e0.effects || []), ...paid.effects];
         if (paid.legs.length) e0.legs = [...(e0.legs || []), ...paid.legs.filter(l => !(e0.legs || []).some(o => o.key === l.key))];
         out.late.push({ id: t.id, at: t.at, add: {}, effects: paid.effects, summary: t.summary, legs: paid.legs });
@@ -1087,6 +1088,8 @@ async function updatePhone(m, owner) {
             // an event told again from a later message (its order delivered, its amount stated) stays where it happened, so
             // deleting that message still offers everything it gave; one whose message is gone is taken up by the new one
             const at0 = s.events[id]?.at, home = Number.isInteger(at0) && inRound.has(at0) === false && rowText.has(at0) ? at0 : at;
+            // (what this later message gave is marked with it: deleting only this message takes only that back)
+            if (home !== at) for (const f of fx) f.src = at;
             s.events[id] = { at: home, quote: line(e.quote, 200), summary: line(e.summary, 160), effects: [...(s.events[id]?.effects || []), ...fx], ...(paid.legs.length || s.events[id]?.legs ? { legs: [...(s.events[id]?.legs || []), ...paid.legs.filter(l => !(s.events[id]?.legs || []).some(o => o.key === l.key))] } : {}) };
             added.push({ id, at, add: told, effects: fx, quote: line(e.quote, 200), summary: line(e.summary, 160), legs: paid.legs });
         }
@@ -1236,12 +1239,15 @@ function settleDropped(p, { dropped }, notes) {
         const ids = Object.entries(s.events).filter(([, e]) => e.at >= r.from && e.at <= r.to).map(([id]) => id), label = r.from === r.to ? `#${r.from}` : `#${r.from}–${r.to}`;
         const key = Math.random().toString(36).slice(2, 10);
         for (const id of ids) s.events[id].at = null;
+        // what an event living at another message got from these ones (its order delivered here): offered on its own
+        const parts = Object.entries(s.events).filter(([id, e]) => !ids.includes(id) && (e.effects || []).some(f => Number.isInteger(f.src) && f.src >= r.from && f.src <= r.to)).map(([id]) => id);
+        for (const id of parts) for (const f of s.events[id].effects) if (Number.isInteger(f.src) && f.src >= r.from && f.src <= r.to) { f.src = null; f.gone = key; }
         // sources from these messages lose their number: a new message given the same number is not them
         let hit = false;
         for (const { x } of items) for (const f of x.froms || []) if (f.at !== null && f.at >= r.from && f.at <= r.to) { f.was = f.at; f.at = null; f.gone = key; hit = true; }
-        if (!ids.length && !hit) continue;
+        if (!ids.length && !hit && !parts.length) continue;
         if (r.unsure) { notes.push(`대화 ${label}가 바뀌었어요. 같은 말이 여럿이라 어느 것인지 몰라서, 거기서 넣은 내용은 그대로 뒀어요`); continue; }
-        s.dropped.push({ key, label, events: ids, at: Date.now() });
+        s.dropped.push({ key, label, events: ids, ...(parts.length ? { parts } : {}), at: Date.now() });
         notes.push(`대화 ${label}가 지워졌거나 바뀌었어요. 거기서 넣은 내용은 설정 › 대화 반영에서 뺄 수 있어요`);
     }
 }
@@ -1256,6 +1262,15 @@ export async function dropStretch(m, p, k) {
     if (!d) return { gone: 0, items: 0, kept: [] };
     const kept = [], stay = new Set(), out = new Set();
     let gone = 0;
+    // an event living at another message: only what the gone ones gave it goes back (a later message's "delivered")
+    for (const id of d.parts || []) {
+        const e = s.events[id];
+        if (!e) continue;
+        const mine = (e.effects || []).filter(f => f.gone === d.key), left = revertEffects(m, p, mine);
+        const back = new Set(mine.filter(f => !left.some(l => l === f)).map(f => JSON.stringify(f)));
+        e.effects = e.effects.filter(f => !back.has(JSON.stringify(f)));
+        if (left.length) kept.push(e.summary || id); else gone++;
+    }
     for (const id of d.events) {
         const e = s.events[id];
         if (!e || e.at !== null) continue;
@@ -1310,7 +1325,7 @@ function renumber(m, p, { moved, changed, dropped = [] }) {
     for (const f of Object.values(p.sync.failed)) if (f.span) f.span = [to(f.span[0]) ?? f.span[0], to(f.span[1]) ?? f.span[1]];
     for (const r of [...(p.money?.tx || []), ...(p.money?.orders || []), ...(p.money?.passes || []), ...(p.investment?.trades || []), ...(p.delivery?.orders || [])]) if (r.sourceIndex !== undefined) r.sourceIndex = to(r.sourceIndex);
     // the events' own copies of their records too (a changed message's events are found by them)
-    for (const e of Object.values(p.sync.events)) for (const f of e.effects || []) { if (f.item?.sourceIndex !== undefined) f.item.sourceIndex = to(f.item.sourceIndex); if (f.sourceIndex !== undefined) f.sourceIndex = to(f.sourceIndex); }
+    for (const e of Object.values(p.sync.events)) for (const f of e.effects || []) { if (f.item?.sourceIndex !== undefined) f.item.sourceIndex = to(f.item.sourceIndex); if (f.sourceIndex !== undefined) f.sourceIndex = to(f.sourceIndex); if (Number.isInteger(f.src)) f.src = to(f.src); }
     for (const a of Object.values(m.finance?.accounts || {})) if (a.owner === p.owner) for (const x of Object.values(a.entries)) if (x.sourceIndex !== undefined) x.sourceIndex = to(x.sourceIndex);
 }
 // 되돌리기: the last round only. What it added goes by its ids, its money comes back out, and those messages are unread again.

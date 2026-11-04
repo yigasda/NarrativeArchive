@@ -1080,3 +1080,22 @@ test('a round giving more than 40 events reads the rest\'s messages again, not l
     assert.equal(c.p.notes.length, 40);
     assert.ok(c.p.syncLast.failed.some(f => f.at === 45));
 });
+
+test('빼기 of only the later message that moved an order on ("it arrived"): only what it gave goes, the order stays as it was', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'did you get a present for Ivo'), say('Mara', 'I ordered a wool scarf from Varo Knits for 20000 won')]);
+    const order = (st, occ) => ({ shop: 'Varo Knits', item: 'wool scarf', price: 20000, status: st, occurrence: occ });
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'scarf', at: 3, quote: 'I ordered a wool scarf', summary: '목도리 주문', date: '10-26', time: '12:00',
+        money: { moves: [{ account: '1111', amount: -20000, who: 'Varo Knits', occurrence: 'new' }], orders: [order('ordered', 'new')] } }] });
+    T.chat.push(say('Ren', 'any news on it'), say('Mara', 'the wool scarf from Varo Knits just arrived, so soft'));
+    await run(c.m, { now: '10-27 18:00', events: [{ id: 'scarf', at: 5, quote: 'the wool scarf from Varo Knits just arrived', summary: '목도리 도착', date: '10-27', time: '18:00',
+        phone: { threads: [{ with: 'Mara', messages: [{ from: 'Mara', text: '목도리 왔어!', time: '10-27 18:00' }] }] }, money: { orders: [order('delivered', 'again')] } }] });
+    assert.equal(c.p.money.orders[0].status, 'delivered');
+    T.chat.splice(5, 1);
+    T.answers.push({ now: '10-27 18:10', events: [] });
+    await data.makePhone(c.m, 'Ren', { update: true });
+    await data.dropStretch(c.m, c.p, 0);
+    assert.equal(c.p.money.orders[0].status, 'ordered');
+    assert.equal(c.bank(), 80000);
+    assert.ok(!c.p.threads.some(t => t.messages.some(x => x.text === '목도리 왔어!')));
+    assert.equal(c.p.sync.events.scarf.at, 3);
+});
