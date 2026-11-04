@@ -535,3 +535,14 @@ test('the reflection says someone else is now in another city: their row moves t
     assert.deepEqual([mara.city, mara.tz, mara.lives], ['Frankfurt am Main', 'Europe/Berlin', 'KR']);
     assert.ok(T.sys.includes('"elsewhere"'));
 });
+
+test('a scene the phone asks about (not yet placed) goes to the model with its place and weather only, no hour', async () => {
+    const c = setup([say('Ren', 'a'), say('Mara', 'b'), say('Mara', 'c')]);
+    c.p.now = '10-26 10:50'; c.p.year = 2026; c.p.country = 'KR';
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Seoul', names: ['Seoul', '서울'], lives: 'KR', tz: 'Asia/Seoul' }] };
+    c.p.life = { at: '10-26 10:50', clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] },
+        weather: { here: { place: 'Seoul', date: '10-25', time: '10:50', cond: 'clear', temp: 15, hours: [], days: [], tiles: {} }, cities: [] } };
+    await withTrackers([trk(2, '03:00', "Frankfurt · Mara's hotel", '흐림 2°C')], async () => run(c.m, { now: '10-26 11:00', events: [] }));
+    const w = (T.input.match(/\[WEATHER NOW\]\n(.*)/) || [])[1] || '';
+    assert.ok(w && !w.includes('"time"'), w);
+});

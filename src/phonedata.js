@@ -982,7 +982,8 @@ async function updatePhone(m, owner) {
         // may be another country; it stays the owner's unless the model names another city)
         const askZone = round.rows.some(r => r.index === trackAt) && (sceneOwn === null && !!clock || sceneOwn === true && !clock && !!tracker && !sceneZone(p, tracker.place, m));
         // a scene the owner isn't in (or may not be): the model gets its place and weather, never its hour
-        const trackShown = tracker && sceneOwn !== true ? { place: tracker.place, weather: tracker.weather } : tracker;
+        // (and one asked about, not yet placed: its place and weather only too)
+        const trackShown = tracker && (sceneOwn !== true || askZone) ? { place: tracker.place, weather: tracker.weather } : tracker;
         const trackDay = tracker ? when(tracker.date).slice(0, 5) : '';
         // the model writes the weather when no status line gives it, when the status line has no date or its day moved on
         // from the saved weather's, or when it puts the story somewhere else; a same-day, same-place line only stands over it
