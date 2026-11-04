@@ -446,7 +446,7 @@ export const fillLife = (m, p) => exclusive('fill', async () => {
         const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p, upto)}`, daysBlock(days),
             !soFar && Object.keys(body).length ? `[BODY ON THE PHONE NOW — keep it unless the story changed it]\n${JSON.stringify(body)}` : '',
             soFar ? `${soFarHead('LIFE', short)}\n${JSON.stringify(soFar)}` : '', short?.text || '',
-            now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', clockBlock(p, storyNow(p, upto) || p.now), p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.life, read: { gap } });
+            now ? `[WEATHER NOW]\n${JSON.stringify(now)}` : '', clockBlock(p, storyNow(p, upto) || p.now, m), p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.life, read: { gap } });
         const raw = jsonOf(await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' })), next = parseLife(raw, now, days.at(-1)?.day || '');
         said.set(next, { raw, now });
         const at = storyNow(p, upto) || p.now || '';
@@ -549,7 +549,7 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
     // two turns at most, like the life fill (secondTurn)
     const turn = async (gap, soFar = null, short = null) => {
         const upto = nowAt(gap), at = storyNow(p, upto) || p.now || '';
-        const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p, upto)}`, daysBlock(storyDays(m, p, upto)), clockBlock(p, at), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money,
+        const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p, upto)}`, daysBlock(storyDays(m, p, upto)), clockBlock(p, at, m), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money,
             soFar ? `${soFarHead('DELIVERY', short)}\n${JSON.stringify(soFar)}` : '', short?.text || ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read: { gap } });
         const got = jsonOf(await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 12000, effort: 'low' })), next = parseDelivery(got, accounts, tx, at);
         said.set(next, { raw: got });

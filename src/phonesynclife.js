@@ -186,6 +186,10 @@ export const unplaced = (here, scene, cities) => {
     const k = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
     return !(k(here) && k(scene) && (k(here).includes(k(scene)) || k(scene).includes(k(here))));
 };
+// a country's main time zone (a country with several: its biggest city's)
+export const COUNTRY_TZ = { KR: 'Asia/Seoul', JP: 'Asia/Tokyo', CN: 'Asia/Shanghai', TW: 'Asia/Taipei', HK: 'Asia/Hong_Kong', SG: 'Asia/Singapore', TH: 'Asia/Bangkok', VN: 'Asia/Ho_Chi_Minh', ID: 'Asia/Jakarta', PH: 'Asia/Manila', MY: 'Asia/Singapore', IN: 'Asia/Kolkata', AE: 'Asia/Dubai', IL: 'Asia/Jerusalem', TR: 'Europe/Istanbul', RU: 'Europe/Moscow',
+    GB: 'Europe/London', IE: 'Europe/Dublin', PT: 'Europe/Lisbon', ES: 'Europe/Madrid', FR: 'Europe/Paris', BE: 'Europe/Brussels', NL: 'Europe/Amsterdam', DE: 'Europe/Berlin', CH: 'Europe/Zurich', AT: 'Europe/Vienna', IT: 'Europe/Rome', CZ: 'Europe/Prague', PL: 'Europe/Warsaw', DK: 'Europe/Copenhagen', SE: 'Europe/Stockholm', NO: 'Europe/Oslo', FI: 'Europe/Helsinki', GR: 'Europe/Athens', UA: 'Europe/Kyiv', IS: 'Atlantic/Reykjavik',
+    EG: 'Africa/Cairo', NG: 'Africa/Lagos', KE: 'Africa/Nairobi', ZA: 'Africa/Johannesburg', MA: 'Africa/Casablanca', US: 'America/New_York', CA: 'America/Toronto', MX: 'America/Mexico_City', CO: 'America/Bogota', PE: 'America/Lima', BR: 'America/Sao_Paulo', AR: 'America/Buenos_Aires', CL: 'America/Santiago', AU: 'Australia/Sydney', NZ: 'Pacific/Auckland' };
 // a "MM-DD HH:MM" of one zone in another (Intl knows the rules; the year is the phone's, else this one)
 export function zoneShift(at, from, to, year = new Date().getFullYear()) {
     const mt = /^(\d{2})-(\d{2}) (\d{2}):(\d{2})$/.exec(String(at || ''));

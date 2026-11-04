@@ -8,7 +8,7 @@ import { AX, ax, axBar, axCb, axH1, axInd, axKp, axTint, axTop, busyHtml } from 
 import { filling } from './phoneai.js';
 import { byStory, clockNum, clockOf, fmtDate, halfOf, hourOf, koOn, pad, storyNow } from './phonedata.js';
 import { shiftDay, weatherNow } from './phonelife.js';
-import { apart, cityAt as cityOfPlace, mirrorHome, overlayNow } from './phonesynclife.js';
+import { COUNTRY_TZ, apart, cityAt as cityOfPlace, mirrorHome, overlayNow } from './phonesynclife.js';
 import { decimalOf, fmtMoney, localeOf } from './phonemoney.js';
 import { nameKey } from './people.js';
 import { getMeta } from './core.js';
@@ -176,9 +176,6 @@ export function timerScreen(p, now) {
 }
 // a city's offset from the place the story is in, from their time zones (Intl knows the rules; the year is a guess)
 const zoneMin = (tz, at) => { try { const f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(at); const g = k => Number(f.find(x => x.type === k)?.value); return Math.round((Date.UTC(g('year'), g('month') - 1, g('day'), g('hour') % 24, g('minute')) - at.getTime()) / 6e4); } catch { return null; } };
-const COUNTRY_TZ = { KR: 'Asia/Seoul', JP: 'Asia/Tokyo', CN: 'Asia/Shanghai', TW: 'Asia/Taipei', HK: 'Asia/Hong_Kong', SG: 'Asia/Singapore', TH: 'Asia/Bangkok', VN: 'Asia/Ho_Chi_Minh', ID: 'Asia/Jakarta', PH: 'Asia/Manila', MY: 'Asia/Singapore', IN: 'Asia/Kolkata', AE: 'Asia/Dubai', IL: 'Asia/Jerusalem', TR: 'Europe/Istanbul', RU: 'Europe/Moscow',
-    GB: 'Europe/London', IE: 'Europe/Dublin', PT: 'Europe/Lisbon', ES: 'Europe/Madrid', FR: 'Europe/Paris', BE: 'Europe/Brussels', NL: 'Europe/Amsterdam', DE: 'Europe/Berlin', CH: 'Europe/Zurich', AT: 'Europe/Vienna', IT: 'Europe/Rome', CZ: 'Europe/Prague', PL: 'Europe/Warsaw', DK: 'Europe/Copenhagen', SE: 'Europe/Stockholm', NO: 'Europe/Oslo', FI: 'Europe/Helsinki', GR: 'Europe/Athens', UA: 'Europe/Kyiv', IS: 'Atlantic/Reykjavik',
-    EG: 'Africa/Cairo', NG: 'Africa/Lagos', KE: 'Africa/Nairobi', ZA: 'Africa/Johannesburg', MA: 'Africa/Casablanca', US: 'America/New_York', CA: 'America/Toronto', MX: 'America/Mexico_City', CO: 'America/Bogota', PE: 'America/Lima', BR: 'America/Sao_Paulo', AR: 'America/Buenos_Aires', CL: 'America/Santiago', AU: 'Australia/Sydney', NZ: 'Pacific/Auckland' };
 // the time zone the story is in: a saved city its place names, else the owner's country (home), else the first saved city
 const hereZone = (lf, p = null, place = hereNow(lf).place) => { const pl = String(place || '').toLowerCase(); return lf.weather.cities.find(c => c.tz && pl && (pl.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(pl.split(/[ ,]/)[0])))?.tz || COUNTRY_TZ[String(p?.lives || p?.country || '').toUpperCase()] || lf.weather.cities.find(c => c.tz)?.tz || ''; };
 // sunrise and sunset for a day at a time zone's city (NOAA's equations on the zone's latitude and longitude), local "HH:MM"
