@@ -960,6 +960,8 @@ async function updatePhone(m, owner) {
         }
         // read once for a phone that never had it, and once more for one read before the city's own name was kept ("서울")
         if (!p.where || !p.where.failed && (p.where.people || []).some(x => !('local' in x) && !('names' in x))) await tryWhere(m, p);
+        // (a phone read before the country followed the reading takes it now)
+        syncLives(p);
         const got = archiveRound(s, sections, rows, round.rows), evidence = [...archIn, ...got.evidence.filter(x => !archIn.some(y => y.key === x.key))];
         // background is what was read before: never a section read now as evidence, nor one archived and still unread
         const unreadArch = new Set(archivedUnread(s, sections, rows, chatRows()).map(x => x.key)), background = got.background.filter(x => !evidence.some(y => y.key === x.key) && !unreadArch.has(x.key));
@@ -1642,10 +1644,14 @@ export async function readWhere(m, p) {
     const input = [...r.blocks.slice(0, -3), lore ? `[OWNER PROFILE — chosen by the user for ${p.owner}]\n${lore.text}` : '', ...r.blocks.slice(-3)].filter(Boolean).join('\n\n');
     const raw = jsonOf(await askDraft(input, { force: true, system: AI_SYS_WHERE, maxTokens: 2000, effort: 'low' }));
     const known = new Set([p.owner, ...r.people].map(nameKey));
-    const got = arr(raw?.people).map(whereRow).filter(x => x.name && known.has(nameKey(x.name)) && (x.tz || COUNTRY_TZ[x.lives])).slice(0, 16);
+    // (someone the user took off stays off; what the user set by hand stays as they set it)
+    const removed = new Set(p.where?.removed || []), oldRow = name => whereOf(p, name);
+    const got = arr(raw?.people).map(whereRow).filter(x => x.name && known.has(nameKey(x.name)) && !removed.has(nameKey(x.name)) && (x.tz || COUNTRY_TZ[x.lives])).slice(0, 16)
+        .map(x => { const o = oldRow(x.name); return o?.manual ? { ...x, ...(o.manual.city ? { city: o.city, names: namesOf(o), tz: o.tz } : {}), ...(o.manual.lives ? { lives: o.lives } : {}), manual: o.manual } : x; });
     // read again: someone it leaves out keeps what was read before
     const people = [...got, ...(p.where?.people || []).filter(o => !got.some(x => nameKey(x.name) === nameKey(o.name))).map(o => ({ ...o, names: namesOf(o) }))].slice(0, 16);
-    p.where = { at: Date.now(), people };
+    p.where = { at: Date.now(), people, ...(removed.size ? { removed: [...removed] } : {}) };
+    syncLives(p);
     return people;
 }
 // a read that fails is noted and not asked again (the clock goes by the phones and the countries); one already there stays
@@ -1653,13 +1659,68 @@ const tryWhere = async (m, p) => { try { await readWhere(m, p); } catch (err) { 
 // the owner moved to another city in the story (the reflection says so): their row in the reading follows
 function ownerMoved(p, c) {
     const tz = realTz(c?.tz), city = line(c?.city, 60);
-    if (!tz || !city) return false;
+    // (a city the user set by hand stays)
+    if (!tz || !city || whereOf(p, p.owner)?.manual?.city) return false;
     const row = { ...whereOf(p, p.owner), name: p.owner, city, names: namesOf(c), tz };
     delete row.local;
     p.where = { ...(p.where || {}), at: p.where?.at || Date.now(), people: [row, ...(p.where?.people || []).filter(x => nameKey(x.name) !== nameKey(p.owner))] };
     return true;
 }
 const whereOf = (p, name) => (p?.where?.people || []).find(x => nameKey(x.name) === nameKey(name));
+// ---- 설정 › 위치 정보: the phone's own country (p.lives) follows the reading of where the owner lives, unless set by hand
+function syncLives(p) { const l = whereOf(p, p?.owner)?.lives; if (l && !p.livesManual) p.lives = String(l).toUpperCase(); }
+// a city's time zone for one the user typed: a saved city, a zone named after it (Berlin, Seoul, New York), else the country's
+const ZONES = (() => { try { return Intl.supportedValuesOf('timeZone'); } catch { return []; } })();
+export function tzForCity(p, text, lives = '') {
+    const c = cityAt(text, p?.life?.weather?.cities);
+    if (c?.tz) return c.tz;
+    const k = pkey(text), z = ZONES.find(t => pkey(t.split('/').pop().replace(/_/g, ' ')) === k);
+    return z || COUNTRY_TZ[String(lives || '').toUpperCase()] || ownerZone(p)?.tz || '';
+}
+// what 위치 정보 shows: the owner (where they live, the city they are in) and the others with how far their clock is
+export function placeInfo(p) {
+    const rows = p?.where?.people || [], own = whereOf(p, p?.owner), t = hm(p?.now) ? p.now : '', base = ownerZone(p);
+    const hours = tz => { if (!t || !base || !tz) return null; const a = zoneShift(t, base.tz, tz, Number(p.year) || undefined), d = dayGap(t.slice(0, 5), a.slice(0, 5)); return (d * 1440 + (Number(a.slice(6, 8)) * 60 + Number(a.slice(9, 11))) - (Number(t.slice(6, 8)) * 60 + Number(t.slice(9, 11)))) / 60; };
+    return { owner: { name: p?.owner, lives: p?.lives || own?.lives || p?.country || '', livesManual: !!p?.livesManual, city: own?.city || base?.where || '', tz: own?.tz || base?.tz || '', cityManual: !!own?.manual?.city },
+        people: rows.filter(x => nameKey(x.name) !== nameKey(p?.owner)).map(x => ({ name: x.name, city: x.city || '', lives: x.lives || '', tz: x.tz || '', hours: hours(x.tz || COUNTRY_TZ[x.lives]), manual: !!x.manual?.city })),
+        failed: !!p?.where?.failed, at: p?.where?.at || null };
+}
+const rowFor = (p, name) => { const r = whereOf(p, name); if (r) return r; const row = { name }; p.where = { ...(p.where || {}), at: p.where?.at || Date.now(), people: [...(p.where?.people || []), row] }; return row; };
+// the owner's country, by hand (two letters: "DE")
+export async function setOwnerLives(m, p, code) {
+    const c = String(code || '').toUpperCase();
+    if (!/^[A-Z]{2}$/.test(c)) return;
+    p.lives = c; p.livesManual = true;
+    const r = rowFor(p, p.owner); r.lives = c; r.manual = { ...(r.manual || {}), lives: true };
+    await saveMeta();
+}
+// someone's city, by hand: its zone found for it; neither the reading nor a reflection changes it after
+export async function setPlaceCity(m, p, name, text) {
+    const city = line(text, 60);
+    if (!city || !name) return;
+    const r = rowFor(p, name), tz = tzForCity(p, city, r.lives || (nameKey(name) === nameKey(p.owner) ? p.lives : ''));
+    if (!tz) throw new Error('그 도시의 시간대를 찾지 못했어요');
+    Object.assign(r, { city, names: [city], tz, manual: { ...(r.manual || {}), city: true } });
+    delete r.local;
+    if (p.where) p.where.removed = (p.where.removed || []).filter(k => k !== nameKey(name));
+    await saveMeta();
+}
+// someone read wrong: off the list, and not read in again
+export async function dropPlacePerson(m, p, name) {
+    if (!name || nameKey(name) === nameKey(p.owner) || !p.where) return;
+    p.where = { ...p.where, people: (p.where.people || []).filter(x => nameKey(x.name) !== nameKey(name)), removed: [...new Set([...(p.where.removed || []), nameKey(name)])] };
+    await saveMeta();
+}
+// AI로 다시 읽기: the reading asked again now. all: everything anew, what was set by hand and the people taken off too;
+// else what was set by hand stays. A failure leaves what is there
+export async function rereadPlaces(m, p, { all = false } = {}) {
+    const was = structuredClone({ where: p.where ?? null, lives: p.lives, livesManual: p.livesManual });
+    if (all && p.where) { p.where = { ...p.where, people: (p.where.people || []).map(({ manual, ...x }) => x) }; delete p.where.removed; delete p.livesManual; }
+    try { await readWhere(m, p); }
+    catch (err) { p.where = was.where ?? undefined; if (!was.where) delete p.where; p.lives = was.lives; if (was.livesManual) p.livesManual = true; throw err; }
+    await saveMeta();
+    return placeInfo(p);
+}
 // the model's weather for a place the phone knows is another's (Busan for an owner in Seoul, the city the scene was just
 // named as): not the owner's
 function weatherElsewhere(p, w, named, m = null) {
@@ -1689,6 +1750,8 @@ function peopleMoved(p, list, text = '') {
         const name = line(c?.name, 60), tz = realTz(c?.tz), city = line(c?.city, 60);
         if (!name || !tz || !city || nameKey(name) === nameKey(p.owner) || NOT_A_PERSON.test(name.trim())) continue;
         if (!known.has(nameKey(name)) && !(/^[\p{Lu}\p{Script=Hangul}]/u.test(name) && String(text).includes(name))) continue;
+        // (one the user took off, or whose city they set by hand, stays as they left it)
+        if ((p.where?.removed || []).includes(nameKey(name)) || whereOf(p, name)?.manual?.city) continue;
         const was = whereOf(p, name), row = { ...was, name: was?.name || name, city, names: namesOf(c), tz };
         delete row.local;
         if (was && was.city === row.city && was.tz === row.tz) continue;

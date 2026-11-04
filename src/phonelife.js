@@ -15,7 +15,7 @@ import { OWN_CLOCK, CLOCK_GET, clockBlock, sceneHome, statusAt, arr, trackerWeat
 import { cutShort } from './phoneparse.js';
 import { dlvTotal, payOrders, shopStats, unpayOrders } from './phonesyncmoney.js';
 import { alarmOf, cityAt, dayGap, fileOf, nightsToDays, overlayFresh, parseWeather, screenOf, usualScreenOf, weatherFrom } from './phonesynclife.js';
-import { SCREEN_LIST } from './phonescreen.js';
+import { SCREEN_LIST, kindOfApp } from './phonescreen.js';
 import { exclusive, syncOf } from './phonesync.js';
 import { phoneChatScope } from './phonestory.js';
 import { recentTrackers } from './scenes.js';
@@ -179,7 +179,8 @@ export function weatherNow(upto = null) {
     try { return trackerWeather(recentTrackers(1, upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) })[0]); } catch { return null; }
 }
 // where the owner lives: the profile's country (the delivery app is 배달의민족 there in Korea, Uber Eats elsewhere)
-export const livesIn = p => (p.lives || p.country || '');
+// where the owner lives: set by hand or read (p.lives), else the place reading's row, else the phone's country
+export const livesIn = p => (p.lives || (p.where?.people || []).find(x => String(x?.name || '').toLowerCase() === String(p.owner || '').toLowerCase())?.lives || p.country || '');
 export const deliveryLook = p => (livesIn(p) === 'KR' ? 'baemin' : 'ubereats');
 const phoneNow = (p, upto = null) => JSON.stringify({
     now: storyNow(p, upto) || p.now,
@@ -510,12 +511,13 @@ Write the screen time on a character's phone in a long role-play: the apps they 
 YOU GET
 - ARCHIVE, RECENT CHAT, OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 - DAYS: their last days from the health app (when they slept and woke, their steps; "ev" when the story shows that day).
-- PHONE COUNTRY (sometimes).
+- LIVES IN: the country they live in. PHONE COUNTRY (sometimes).
 
 SCREEN TIME
 - It shows who they really are, habits they'd never admit (a game they can't put down, texting all night, barely touching the phone): from their character, not their polite profile.
 - "usual": 10 to 14 apps they open every day and 14 to 18 now and then, about 30 in all, spread over at least 6 of: chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health. Leave out what they would never touch. Someone who barely uses a phone shows it in short minutes, not in fewer apps.
 - Each of DAYS follows what happened that day and how they felt (a fight: hours of texting late into the night; a day out with friends: barely any), and how they slept.
+- The apps people use where they live (LIVES IN), above all for chat, maps, shopping, delivery and money. Another country's app only when the story shows them using it.
 - Apps named as here (another real app is fine):
 ${SCREEN_LIST}
 - Numbers only: no diagnosis, no mood, no reason.
@@ -526,6 +528,21 @@ JSON (one object, nothing before or after it)
 Numbers are plain JSON numbers.`;
 // again (다시 만들기 › 스크린타임): their usual and the last week made anew, except a day a reflection wrote (its own row,
 // "sync:…": the story's day as told stays). Nothing is cleared before the answer is in, so a failed call loses nothing
+// apps only Korea has (카카오톡, 네이버, 쿠팡, 배민, 토스 …) on a phone whose owner lives elsewhere: taken out by the code
+// whatever the model wrote (a Korean role-play calls any message "카톡"); their minutes go to an app of the same kind
+const KR_ONLY = /kakao|카카오|카톡|naver|네이버|coupang|쿠팡|baemin|배민|배달의\s*민족|요기요|yogiyo|\btoss\b|토스|melon|멜론|지니\s*뮤직|genie\s*music|11번가|g\s*마켓|gmarket|무신사|musinsa|당근|daangn|tving|티빙|wavve|웨이브|watcha|왓챠|리디|ridi|밀리의|코레일|korail|티맵|tmap|야놀자|여기어때|직방|번개장터|에이블리|\bably\b|지그재그|zigzag|오늘의집|컬리|kurly|케이뱅크|kbank|카뱅/i;
+const abroad = p => String(livesIn(p) || '').toUpperCase() !== 'KR' && !!livesIn(p);
+function homeApps(p, usual) {
+    if (!usual || !abroad(p)) return usual;
+    const fix = list => { const keep = (list || []).filter(a => !KR_ONLY.test(a.app)); for (const a of (list || []).filter(a => KR_ONLY.test(a.app))) { const to = keep.find(b => b.kind === a.kind); if (to) to.min += a.min; } return keep.sort((x, y) => y.min - x.min); };
+    return { ...usual, apps: fix(usual.apps), ...(usual.sometimes ? { sometimes: fix(usual.sometimes) } : {}) };
+}
+function homeDay(p, sc, usual) {
+    if (!sc?.apps || !abroad(p)) return sc;
+    const all = [...(usual?.apps || []), ...(usual?.sometimes || [])], apps = {};
+    for (const [k, v] of Object.entries(sc.apps)) { if (!KR_ONLY.test(k)) { apps[k] = (apps[k] || 0) + v; continue; } const kind = kindOfApp(k, all), to = all.find(a => a.kind === kind && !KR_ONLY.test(a.app))?.app; if (to) apps[to] = (apps[to] || 0) + v; }
+    return { ...sc, apps };
+}
 export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', async () => {
     const h = p.life?.health;
     if (!h) throw new Error('건강 앱을 먼저 채워 주세요');
@@ -536,14 +553,15 @@ export const fillScreen = (m, p, { again = false } = {}) => exclusive('fill', as
     const today = /^\d{2}-\d{2}$/.test(la) && /^\d{2}-\d{2}$/.test(t0) && dayGap(t0, la) > 0 && dayGap(t0, la) <= 14 ? la : t0, told = d => String(d.id || '').startsWith('sync:') && !!d.screen;
     const days = (h.days || []).filter(d => d.date && d.date !== today && (again ? !told(d) : !d.screen) && (!today || dayGap(d.date, today) > 0 && dayGap(d.date, today) <= 7)).sort((a, b) => dayGap(b.date, a.date)).slice(-7);
     const input = await sideRequest(m, p.owner, [`[DAYS]\n${JSON.stringify(days.map(d => ({ date: d.date, sleep: d.sleep, wake: d.wake, steps: d.steps, ...(d.ev ? { ev: d.ev } : {}) })))}`,
+        `[LIVES IN]\n${(c => COUNTRIES[c] || c || '(unknown)')((p.where?.people || []).find(x => String(x?.name || '').toLowerCase() === String(p.owner || '').toLowerCase())?.lives || livesIn(p))}`,
         p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read });
     const out = await askDraft(input, { force: true, system: AI_SYS_SCREEN, maxTokens: 6000, effort: 'low' });
-    const raw = jsonOf(out, { salvage: true }), usual = usualScreenOf(raw?.usual);
+    const raw = jsonOf(out, { salvage: true }), usual = homeApps(p, usualScreenOf(raw?.usual));
     let n = 0;
     // a phone the reflection already gave a usual keeps it (unless made again); a day already told keeps its own
     if (usual && (again || !h.usual?.screen)) { (h.usual ||= {}).screen = usual; n++; }
     for (const x of arr(raw?.days)) {
-        const d = days.find(y => y.date === String(x?.date || '').slice(0, 5)), sc = screenOf(x);
+        const d = days.find(y => y.date === String(x?.date || '').slice(0, 5)), sc = homeDay(p, screenOf(x), usual || h.usual?.screen);
         if (d && sc && (again || !d.screen)) { d.screen = sc; n++; }
     }
     if (!n) throw new Error('모델 답에서 스크린타임을 찾지 못했어요');
