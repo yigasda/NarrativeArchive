@@ -23,7 +23,8 @@ export function makeMark(chat, index) {
     let user = -1;
     for (let j = Math.min(index, chat.length - 1); j >= 0; j--) if (isUser(chat[j])) { user = j; break; }
     // the message at the mark itself too, when it isn't the user's (a group chat's reply): one deleted between the two moves it
-    return { index, user, fp: user >= 0 ? fp(chat[user].mes) : '', tail: index > user && chat[index] ? fp(chat[index].mes) : '' };
+    // (and the ones between them: when they are all still in their place, the marked one was edited, not moved)
+    return { index, user, fp: user >= 0 ? fp(chat[user].mes) : '', tail: index > user && chat[index] ? fp(chat[index].mes) : '', ...(index > user && user >= 0 && chat[index] ? { mid: chat.slice(user + 1, index).map(x => fp(x?.mes)) } : {}) };
 }
 // 'ok', 'moved' (by `delta`), or 'lost'
 export function findMark(chat, mk) {
@@ -39,7 +40,8 @@ export function findMark(chat, mk) {
     // the marked message after the user's: still the same distance on, else found nearby (one between them deleted or added)
     if (r.state !== 'lost' && mk.tail && mk.index > mk.user) {
         const u = mk.user + r.delta, want = mk.index + r.delta;
-        if (!(chat[want] && fp(chat[want].mes) === mk.tail)) {
+        const inPlace = Array.isArray(mk.mid) && mk.mid.every((f, k) => chat[u + 1 + k] && fp(chat[u + 1 + k].mes) === f);
+        if (!(chat[want] && fp(chat[want].mes) === mk.tail) && !inPlace) {
             let best = null;
             for (let j = u + 1; j < Math.min(chat.length, want + 6); j++) if (fp(chat[j].mes) === mk.tail && (best === null || Math.abs(j - want) < Math.abs(best - want))) best = j;
             if (best !== null) return { state: 'moved', delta: r.delta, extra: best - want };
@@ -108,15 +110,18 @@ export function realign(s, all, { other = false } = {}) {
     // a short line ("뭐 샀어?") said again somewhere is no anchor unless its neighbours match too
     const short = r => r.text.replace(/^\[#\d+[^\]]*\]\s*[^:]*:\s*/, '').length < 15;
     // (a neighbour in the old reading that also matched: a hidden or new message between them in the chat doesn't break it)
-    const all_ = lcs(old.map(x => x.fp), cur.map(x => x.fp)), atOld = new Set(all_.map(([i]) => i));
-    const pairs = all_.filter(([i, j]) => !short(cur[j]) || atOld.has(i - 1) || atOld.has(i + 1));
+    // a message now after the last one read is new (the same words said again), never a read one moved there
+    const lastOld = old.length ? old.at(-1).old : -1, inRead = r => r.index <= lastOld;
+    const all_ = lcs(old.map(x => x.fp), cur.map(x => x.fp)).filter(([, j]) => inRead(cur[j])), atOld = new Map(all_.map(([i, j]) => [i, j]));
+    const near = (i, j) => [i - 1, i + 1].some(k => atOld.has(k) && Math.abs(atOld.get(k) - j) <= 3);
+    const pairs = all_.filter(([i, j]) => !short(cur[j]) || near(i, j));
     const moved = {}, seen = {}, hiddenRead = {}, changed = [], dropped = [];
     for (const [i, j] of pairs) { moved[old[i].old] = cur[j].index; (cur[j].hidden ? hiddenRead : seen)[cur[j].index] = old[i].fp; }
     const anchors = [[-1, -1], ...pairs, [old.length, cur.length]], gaps = [];
     for (let k = 0; k + 1 < anchors.length; k++) { const [i0, j0] = anchors[k], [i1, j1] = anchors[k + 1]; gaps.push({ O: old.slice(i0 + 1, i1), N: cur.slice(j0 + 1, j1), last: k + 2 === anchors.length }); }
     // a message moved up or down: gone from one gap, the same words in another
     const pool = new Map();
-    for (const g of gaps) for (const r of g.N) if (!short(r)) (pool.get(r.fp) || pool.set(r.fp, []).get(r.fp)).push(r);
+    for (const g of gaps) for (const r of g.N) if (!short(r) && inRead(r)) (pool.get(r.fp) || pool.set(r.fp, []).get(r.fp)).push(r);
     for (const g of gaps) g.O = g.O.filter(x => { const r = pool.get(x.fp)?.shift(); if (!r) return true; moved[x.old] = r.index; (r.hidden ? hiddenRead : seen)[r.index] = x.fp; r.taken = true; return false; });
     for (const { O, N: all_, last } of gaps) {
         const N = all_.filter(r => !r.taken);
@@ -129,7 +134,8 @@ export function realign(s, all, { other = false } = {}) {
     // the same words still in the chat don't make a gone message unsure when that copy is another read message,
     // found in its own place; only a copy nothing accounts for might be this one, moved
     const claimed = new Set([...Object.values(moved), ...changed.map(x => x.at)]);
-    for (const d of dropped) d.unsure = cur.some(r => r.fp === d.fp && !claimed.has(r.index));
+    // (a copy after the last message read is a new message saying it again)
+    for (const d of dropped) d.unsure = cur.some(r => r.fp === d.fp && !claimed.has(r.index) && inRead(r));
     const failed = {};
     for (const [i, x] of Object.entries(s.failed)) if (moved[i] !== undefined && seen[moved[i]]) failed[moved[i]] = x;
     s.seen = seen; s.hiddenRead = hiddenRead; s.failed = failed; s.done = [];

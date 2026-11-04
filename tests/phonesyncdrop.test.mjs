@@ -953,3 +953,28 @@ test('복구 never sets the clock back within the same day', async () => {
     assert.equal(was.now, '10-26 15:00');
     assert.deepEqual(was.notes.map(x => x.title), ['Lunch']);
 });
+
+test('the money step sees no message the round hasn\'t read yet (the next round pays what it says)', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'Mara and I got into a taxi to the station'), say('Mara', 'the driver took the long road'), say('Ren', 'I paid the taxi 12000 won by bank transfer'), say('Mara', 'thanks Ren, see you')]);
+    c.p.sync.limit = 2;
+    T.moneyAnswers = [{ events: [] }];
+    await run(c.m, { now: '10-26 10:00', events: [{ id: 'taxi', at: 3, quote: 'the driver took the long road', summary: '택시', date: '10-26', time: '10:00', apps: ['money'], phone: {} }] });
+    assert.ok(T.moneyInput.includes('the driver took the long road'));
+    assert.ok(!T.moneyInput.includes('I paid the taxi 12000 won'));
+});
+
+test('빼기 of two events of the same talk (an account opened, money put in): both go, no empty account left', async () => {
+    const c = setup([say('Ren', 'start'), say('Mara', 'morning'), say('Ren', 'I opened a savings account today'), say('Ren', 'and put 50000 won in it'), say('Mara', 'nice')]);
+    await run(c.m, { now: '10-26 12:00', events: [
+        { id: 'open', at: 2, quote: 'opened a savings account', summary: '적금 개설', date: '10-26', time: '11:00', money: { newAccount: { kind: 'savings', name: '적금', last4: '7777', currency: 'KRW', balance: 0 } } },
+        { id: 'put', at: 3, quote: 'put 50000 won in it', summary: '적금 입금', date: '10-26', time: '11:05', money: { moves: [{ account: '7777', amount: 50000, who: '적금', kind: 'deposit', occurrence: 'new' }] } }] });
+    assert.ok(c.p.money.bank.accounts.some(a => a.last4 === '7777'));
+    T.chat.splice(2, 2); T.chat.push(say('Ren', 'what a long day it was'));
+    T.answers.push({ now: '10-26 13:00', events: [] });
+    await data.makePhone(c.m, 'Ren', { update: true });
+    const k = c.p.sync.dropped.findIndex(d => d.events.includes('open'));
+    assert.ok(k >= 0);
+    const r = await data.dropStretch(c.m, c.p, k);
+    assert.deepEqual(r.kept, []);
+    assert.ok(!c.p.money.bank.accounts.some(a => a.last4 === '7777'));
+});

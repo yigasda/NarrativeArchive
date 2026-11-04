@@ -712,3 +712,14 @@ test('a broken answer: a fill keeps every piece but the broken one; a reflection
         assert.throws(() => salvageJson('nothing here'));
     } finally { console.warn = warn; }
 });
+
+test('a broken answer read piece by piece never keeps a wrong value: 12,000 is not 12, a wrong bracket or a missing comma breaks its record', () => {
+    const warn = console.warn; console.warn = () => {};
+    try {
+        assert.deepEqual(salvageJson('{"x":[{"n":"a","price":12,000},{"n":"b","price":9}]}'), { x: [{ n: 'a' }, { n: 'b', price: 9 }] });
+        assert.deepEqual(salvageJson('{"x":[{"n":"a","price":12,000},{"n":"b","price":9}]}', { whole: true }), { x: [{ n: 'b', price: 9 }] });
+        assert.deepEqual(salvageJson('{"d":[{"app":"Maps","min":1 20},{"app":"Chat","min":45}]}'), { d: [{ app: 'Maps' }, { app: 'Chat', min: 45 }] });
+        assert.deepEqual(salvageJson('{"o":[{"shop":"Ivo Burger" "time":"13:00","total":15},{"shop":"Uno","account": cash},{"shop":"Due","total":9}]}', { whole: true }), { o: [{ shop: 'Due', total: 9 }] });
+        assert.deepEqual(salvageJson('{"s":[{"name":"Varo","fee":2] ,"eta":"30m"},{"name":"Ivo"}],"k":1}', { whole: true }).s.every(x => x && typeof x === 'object' && x.name !== 'Varo'), true);
+    } finally { console.warn = warn; }
+});

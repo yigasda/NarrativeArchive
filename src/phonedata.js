@@ -853,7 +853,9 @@ async function moneyStage(m, p, owner, targets, c) {
     const text = new Map(c.rows.map(r => [r.index, r.text])), near = new Set();
     // two messages either side: the event is often put on the message next to the one with the amount ("gets out of the
     // taxi" at #1, "I paid 12000 won" at #3)
-    for (const t of targets) for (let i = t.at - 2; i <= t.at + 2; i++) if (text.has(i)) near.add(i);
+    // (only ones read already or in this round: the next round's own amount isn't this event's, nor one from before the phone)
+    const ours = i => i > (s.marks?.base?.index ?? -1) && (readBefore(s, i) || !!c.inRound?.has(i));
+    for (const t of targets) for (let i = t.at - 2; i <= t.at + 2; i++) if (text.has(i) && (i === t.at || ours(i))) near.add(i);
     const archive = (c.sections || []).filter(x => targets.some(t => t.at >= x.first && t.at <= x.last)).map(x => x.text);
     if (p.money) migrateBank(m, p);
     // the brokerage only when an event touches it (most money scenes are a meal, a taxi, a parcel)
@@ -1084,7 +1086,7 @@ async function updatePhone(m, owner) {
             for (const t of targets) t.tries = owedBefore.find(o => o.id === t.id)?.tries || 0;
             for (const o of owedBefore) { const e0 = s.events[o.id]; if (!wants.has(o.id) && e0 && Number.isInteger(e0.at)) targets.push({ id: o.id, at: e0.at, date: o.date || '', time: o.time || '', summary: e0.summary || o.id, quote: e0.quote || '', changed: false, tries: o.tries || 0, invest: !!o.invest }); }
             const check = () => (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p ? '반영하는 사이 채팅이나 폰이 바뀌었어요' : p.money?.at !== made.money || p.investment?.at !== made.invest ? '반영하는 사이 은행이나 투자가 새로 만들어졌어요' : '');
-            const st = await moneyStage(m, p, owner, targets, { rows, sections, reread, year, known, anchor, profile, check });
+            const st = await moneyStage(m, p, owner, targets, { rows, sections, reread, year, known, anchor, profile, check, inRound });
             s.owed = { ...(s.owed || {}), money: st.owed };
             late = st.late;
             for (const a of st.apps) apps.add(a);
@@ -1248,16 +1250,18 @@ export async function dropStretch(m, p, k) {
         if (!e || e.at !== null) continue;
         const made = new Set((e.effects || []).filter(x => x.type === 'push' || x.type === 'entry').map(x => x.item?.id ?? x.id));
         // built on later: another event changed, corrected or counted one of its records as its own
-        let tied = Object.entries(s.events).some(([o, x]) => o !== id && ((x.effects || []).some(y => ['status', 'amend', 'amendEntry', 'change'].includes(y.type) && made.has(y.id)) || (x.legs || []).some(l => l.state === 'included' && made.has(l.rec))));
+        // (another event of this same stretch goes too: it holds nothing)
+        const leaving = o => o === id || d.events.includes(o);
+        let tied = Object.entries(s.events).some(([o, x]) => !leaving(o) && ((x.effects || []).some(y => ['status', 'amend', 'amendEntry', 'change'].includes(y.type) && made.has(y.id)) || (x.legs || []).some(l => l.state === 'included' && made.has(l.rec))));
         const trades = new Set((e.effects || []).filter(x => x.path === 'investment.trades').map(x => x.item.id));
         if (!tied && trades.size) { try { positions((p.investment?.trades || []).filter(t => !trades.has(t.id))); } catch { tied = true; } }
         // an account, share or shop it opened that something else still uses (a later payment into the account, a later
         // trade of the share, a later order from the shop) stays, and so the event does
         const pushed = path => (e.effects || []).filter(x => x.type === 'push' && x.path === path).map(x => x.item);
-        const others = Object.entries(s.events).filter(([o]) => o !== id).flatMap(([, x]) => x.effects || []);
-        if (!tied && pushed('money.bank.accounts').some(a => others.some(y => y.item?.account === a.last4 || String(y.key || '').startsWith(`${a.id}:`)) || (p.money?.tx || []).some(t => t.account === a.last4 && t.ev !== id))) tied = true;
+        const others = Object.entries(s.events).filter(([o]) => !leaving(o)).flatMap(([, x]) => x.effects || []);
+        if (!tied && pushed('money.bank.accounts').some(a => others.some(y => y.item?.account === a.last4 || String(y.key || '').startsWith(`${a.id}:`)) || (p.money?.tx || []).some(t => t.account === a.last4 && !leaving(t.ev)))) tied = true;
         if (!tied && pushed('investment.securities').some(x => (p.investment?.trades || []).some(t => t.symbol === x.symbol && !trades.has(t.id)))) tied = true;
-        if (!tied && pushed('delivery.shops').some(x => (p.delivery?.orders || []).some(o => o.shop === x.name && o.ev !== id))) tied = true;
+        if (!tied && pushed('delivery.shops').some(x => (p.delivery?.orders || []).some(o => o.shop === x.name && !leaving(o.ev)))) tied = true;
         if (tied) { kept.push(e.summary || id); stay.add(id); continue; }
         revertEffects(m, p, e.effects || []);
         out.add(id);

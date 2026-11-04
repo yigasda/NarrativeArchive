@@ -143,24 +143,33 @@ export function salvageJson(t, { whole = false } = {}) {
         i = j + 1;
         return v;
     };
-    // how many of its pieces broke (one cut off at the end too)
-    const list = piece => {
+    // how many of its pieces broke (one cut off at the end, or closed with the wrong bracket, too)
+    const list = (piece, close) => {
         let bad = 0;
         i++;
         for (;;) {
             ws();
             if (i >= s.length) return bad + 1;
-            if (s[i] === '}' || s[i] === ']') { i++; return bad; }
+            if (s[i] === close) { i++; return bad; }
+            if (s[i] === '}' || s[i] === ']') { i++; lost++; return bad + 1; }
             const from = i;
-            try { piece(); ws(); if (i < s.length && !/[,}\]]/.test(s[i])) fail(); } catch { bad++; lost++; skip(from); }
+            try { piece(); } catch { bad++; lost++; skip(from); }
             if (s[i] === ',') i++;
         }
+    };
+    // a value is whole only when what follows can come after it; a number cut in two ("price": 12,000 or 1 20) is broken,
+    // not 12 or 1. Nothing is kept from a broken piece
+    const done = v => {
+        ws();
+        if (i < s.length && !/[,}\]]/.test(s[i])) fail();
+        if (typeof v === 'number' && /^,\s*\d{3}(?!\d)\s*[,}\]]/.test(s.slice(i, i + 20))) fail();
+        return v;
     };
     const value = () => {
         ws();
         const ch = s[i];
-        if (ch === '{') { const o = {}; if (list(() => { const k = string(); ws(); if (s[i] !== ':') fail(); i++; o[k] = value(); })) half.add(o); return o; }
-        if (ch === '[') { const a = []; list(() => { const v = value(); if (whole && half.has(v)) { lost++; return; } a.push(v); }); return a; }
+        if (ch === '{') { const o = {}; if (list(() => { const k = string(); ws(); if (s[i] !== ':') fail(); i++; o[k] = done(value()); }, '}')) half.add(o); return o; }
+        if (ch === '[') { const a = []; list(() => { const v = done(value()); if (whole && half.has(v)) { lost++; return; } a.push(v); }, ']'); return a; }
         if (ch === '"') return string();
         const lit = /^(?:true|false|null|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(s.slice(i, i + 40));
         if (!lit) fail();

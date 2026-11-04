@@ -469,15 +469,16 @@ test('다시 만들기 on a phone with a clock reads no further than the clock, 
     assert.ok(!globalThis.__menu.calls[0].input.includes('Ren wrote down the RE 7'));
 });
 
-test('the delivery\'s second turn can empty the basket; one that says nothing of it keeps it', async () => {
+test('the delivery\'s second turn: "cart": null keeps the basket (no telling); an order from that shop empties it', async () => {
     globalThis.__rows = bigRows(40);
-    const dlv = cart => JSON.stringify({ shops: [{ name: 'Uno', cuisine: 'pizza', menu: [{ name: 'Margherita', price: 9 }] }], orders: [], ...(cart === undefined ? {} : { cart }) });
     const basket = { shop: 'Uno', items: [{ name: 'Margherita', qty: 1 }] };
-    for (const [second, kept] of [[null, false], [undefined, true]]) {
+    const dlv = (cart, orders = []) => JSON.stringify({ shops: [{ name: 'Uno', cuisine: 'pizza', menu: [{ name: 'Margherita', price: 9 }] }], orders, ...(cart === undefined ? {} : { cart }) });
+    const order = [{ shop: 'Uno', items: [{ name: 'Margherita', price: 9 }], time: '10-24 20:00', status: 'delivered', account: 'cash' }];
+    for (const [second, kept] of [[dlv(null), true], [dlv(undefined), true], [dlv(null, order), false]]) {
         const p = longPhone(), mm = { ...m, phones: { ren: p } };
-        globalThis.__menu = { calls: [], answers: [dlv(basket), dlv(second)], answer: '{}' };
+        globalThis.__menu = { calls: [], answers: [dlv(basket), second], answer: '{}' };
         await life.fillDelivery(mm, p);
-        assert.equal(!!p.delivery.cart?.items?.length, kept, String(second));
+        assert.equal(!!p.delivery.cart?.items?.length, kept, second);
     }
 });
 
