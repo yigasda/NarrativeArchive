@@ -3,7 +3,7 @@
 
 import { ensureWealth, wealthBlock, wealthDate, wealthCheck, addWealthFX } from './wealth.js';
 import { askDraft } from './ai.js';
-import { ownerProfileBlock } from './phoneprofile.js';
+import { ownerProfileBlock, resolvePhoneProfile } from './phoneprofile.js';
 import { migrateBank, finance, finite, cash, reviseBaseline, positions } from './finance.js';
 import { calendars, headingDate } from './calendar.js';
 import { ctx, globalSettings, saveMeta } from './core.js';
@@ -61,7 +61,7 @@ Could this be on the owner's phone, given what the archive, lorebook and chat sh
 - The diary holds only what the archive shows happened and what the owner felt about it; no new secrets, no new feelings.`;
 // every time on the phone is the owner's own clock: a time written on the other side of the world is moved to theirs
 export const OWN_CLOCK = `Every time is on the owner's phone clock, where the owner is now. A time shown on a screen or in a scene goes by the city of whoever's screen or scene it is: the owner's city, or no OWNER'S CLOCK, keeps it as it is; another city in OWNER'S CLOCK is moved by its hours there (a messenger timestamp on the other side's screen). A status line's time stays as it is: the app sets it.`;
-export const CLOCK_GET = `- OWNER'S CLOCK (sometimes): where the owner is, their time now, and how many hours the other saved cities, and the people with a phone of their own, are ahead or behind.`;
+export const CLOCK_GET = `- OWNER'S CLOCK (sometimes): where the owner is, their time now, and how many hours the other saved cities and the people elsewhere are ahead or behind.`;
 const PHONE_STYLE = `LANGUAGE
 - Each text is in the language its writer would really use on a phone: from their nationality and where they live; between two people, the language they share.
 - A text that is not in Korean gets "ko": a natural Korean translation. A Korean text gets no "ko".
@@ -761,6 +761,8 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
     await saveMeta();
     if (p.inject) applyInjection();
     if (two) turnsNote(last, '폰', short); else readNote(gap);
+    await tryWhere(m, p);
+    await saveMeta();
     return p;
 }
 
@@ -910,6 +912,8 @@ async function updatePhone(m, owner) {
         const reread = new Map(moved.changed.map(x => [x.at, Object.entries(s.events).filter(([, e]) => e.at === x.at || (e.effects || []).some(f => (f.item?.sourceIndex ?? f.sourceIndex) === x.at)).map(([id, e]) => ({ id, summary: e.summary }))]));
         if (reread.size) swiped.push(`바뀐 대화 ${reread.size}개를 다시 읽어요. 그 대화의 결제는 새로 넣지 않고 기존 기록만 고쳐요`);
         const rows = syncRows(), round = pickRound(s, rows), clockBefore = phoneAt(p) ?? -1;
+        // where everyone is: read once for a phone that never had it, and again below when the owner's city changes
+        const cityNow = () => { const w = p.life?.weather; return cityAt(w?.here?.place, w?.cities)?.name || ''; }, cityWas = cityNow();
         // the archive: sections covering this round are evidence; earlier ones are background; ones reaching unread messages stay out
         const [, tail] = splitTail(String(m.text || ''));
         const sections = archSections(m);
@@ -917,6 +921,7 @@ async function updatePhone(m, owner) {
         const archIn = [];
         for (const x of archivedUnread(s, sections, rows, chatRows())) { if (archIn.length && archIn.reduce((n, y) => n + estTok(y.text), 0) + estTok(x.text) > ARCH_TOKENS) break; archIn.push(x); }
         if (!round.rows.length && !archIn.length) { p.syncLast = { checked: 0, remaining: 0, apps: [], failed: [], notes: swiped, at: Date.now() }; await saveMeta(); return p; }
+        if (!p.where) await tryWhere(m, p);
         const got = archiveRound(s, sections, rows, round.rows), background = got.background, evidence = [...archIn, ...got.evidence.filter(x => !archIn.some(y => y.key === x.key))];
         const before = [];
         for (let i = background.length - 1, size = 0; i >= 0 && size + background[i].text.length <= BEFORE_MAX; i--) { before.unshift(background[i].text); size += background[i].text.length; }
@@ -1101,6 +1106,7 @@ async function updatePhone(m, owner) {
         journalAdd(scope, { round: id, owner, at: Date.now(), now: p.now, year: p.year, events: [...added, ...late], ...(split ? { owed: s.owed } : {}), done: [...inRound], seen: round.rows.map(r => [r.index, bodyMark(r.text)]), failed: Object.fromEntries([...inRound].filter(i => s.failed[i]).map(i => [i, s.failed[i]])), arch: evidence.map(x => x.key), hidden: hiddenNow, life: roundFx });
         await saveMeta();
         if (p.inject) applyInjection();
+        if (cityNow() && cityNow() !== cityWas) { await tryWhere(m, p); await saveMeta(); }
         return p;
     });
 }
@@ -1396,6 +1402,64 @@ export function storyNow(p, upto = null) {
     return p.now || '';
 }
 
+// ---- 위치 판독: where the owner and the people on their phone are now and where they live, read by the model from the
+// character cards and the persona word for word, the story's current state and the newest messages. Asked when a phone
+// is made, once for a phone that has none, and again when the owner's city changes; OWNER'S CLOCK goes by it first
+export const AI_SYS_WHERE = `GOAL
+Work out where each person is now and where they live, in a long role-play, so a character's phone shows the right time for each of them.
+
+YOU GET
+- CHARACTER CARD: the role-play character's card, word for word (one per character in a group chat).
+- PERSONA (sometimes): the user's character, word for word.
+- OWNER PROFILE (sometimes): the background the user chose for the phone's owner.
+- STORY NOW (sometimes): the story's current state, from the end of the archive.
+- RECENT CHAT: the newest messages.
+- OWNER: whose phone it is. PEOPLE: the others on the owner's phone.
+
+WHERE
+- "city": where the person is now, in the story's present. A trip or a stay counts; a birthplace or a past home doesn't.
+- "lives": the country they live in now, not where they were born or their nationality. Born in Germany, living in Korea: "KR".
+- "tz": the time zone of "city", like "Asia/Seoul".
+- The newest of the story wins over a card: a card that says Berlin, a story that has moved them to Seoul: Seoul.
+- Someone nothing here places: leave them out. Never guess from a name or a language.
+- "evidence": the few words that show it.
+
+JSON (one object, nothing before or after it)
+{ "people": [{ "name": as in OWNER or PEOPLE, "city": in English, "lives": two-letter country code, "tz", "evidence" }] }`;
+const realTz = v => { const z = String(v || '').trim(); if (!/^[A-Za-z]+(?:\/[A-Za-z_+-]+){1,2}$/.test(z)) return ''; try { new Intl.DateTimeFormat('en-US', { timeZone: z }); return z; } catch { return ''; } };
+// the cards as they are: every field the story can say where someone is in, nothing summed up
+const CARD_KEYS = ['description', 'personality', 'scenario', 'first_mes', 'mes_example'];
+const cardText = ch => CARD_KEYS.map(k => { const v = ch?.data?.[k] ?? ch?.[k]; return v ? `[${k}]\n${v}` : ''; }).filter(Boolean).join('\n\n');
+function whereRequest(m, p) {
+    const c = ctx(), g = c.groupId ? (c.groups || []).find(x => x.id === c.groupId) : null;
+    const chars = g ? (g.members || []).map(a => (c.characters || []).find(x => x.avatar === a)).filter(Boolean) : [c.characters?.[c.characterId]].filter(Boolean);
+    const persona = String(c.powerUserSettings?.persona_description || '').trim(), upto = phoneAt(p);
+    const people = [...new Set([...(p.threads || []).map(t => t.with), ...(p.contacts || []).map(x => x.name), ...Object.values(m.phones || {}).map(q => q?.owner)].filter(n => n && nameKey(n) !== nameKey(p.owner)))].slice(0, 16);
+    const [, tail] = splitTail(String(m.text || ''));
+    return { chars, persona, people, blocks: [
+        ...chars.map(ch => `[CHARACTER CARD — ${ch.name || ch.data?.name || ''}]\n${cardText(ch) || '(empty)'}`),
+        persona ? `[PERSONA — ${c.name1 || 'user'}]\n${persona}` : '',
+        tail.trim() ? `[STORY NOW]\n${tail.trim()}` : '',
+        `[RECENT CHAT]\n${chatUpto(recentForCheck(1e9), upto).slice(-8).join('\n\n').slice(-8000) || '(none yet)'}`,
+        `[OWNER]\n${p.owner}`, `[PEOPLE]\n${people.join('\n') || '(none)'}`,
+    ] };
+}
+export async function readWhere(m, p) {
+    const r = whereRequest(m, p), binding = p.financeProfile;
+    // a profile that is a lorebook entry is the one thing the cards and the persona don't already hold
+    const lore = binding?.type === 'lore' ? await resolvePhoneProfile(ctx(), binding).catch(() => null) : null;
+    const input = [...r.blocks.slice(0, -2), lore ? `[OWNER PROFILE — chosen by the user for ${p.owner}]\n${lore.text}` : '', ...r.blocks.slice(-2)].filter(Boolean).join('\n\n');
+    const raw = jsonOf(await askDraft(input, { force: true, system: AI_SYS_WHERE, maxTokens: 2000, effort: 'low' }));
+    const known = new Set([p.owner, ...r.people].map(nameKey));
+    const people = arr(raw?.people).map(x => ({ name: line(x?.name, 60), city: line(x?.city, 60), lives: String(x?.lives || '').trim().toUpperCase().slice(0, 2), tz: realTz(x?.tz) }))
+        .filter(x => x.name && known.has(nameKey(x.name)) && (x.tz || COUNTRY_TZ[x.lives])).slice(0, 16);
+    p.where = { at: Date.now(), people };
+    return people;
+}
+// a read that fails leaves the clock to the phones and the countries
+const tryWhere = async (m, p) => { try { await readWhere(m, p); } catch (err) { console.warn('[narrative-archive] where', err); } };
+const whereOf = (p, name) => (p?.where?.people || []).find(x => nameKey(x.name) === nameKey(name));
+const zoneOfWhere = x => (x ? (x.tz ? { tz: x.tz, where: x.city || regionName(x.lives) } : COUNTRY_TZ[x.lives] ? { tz: COUNTRY_TZ[x.lives], where: x.city || regionName(x.lives) } : null) : null);
 // the time zones around the owner, from where they are (their phone's "here", else the country they live in): the saved
 // cities' and the other people's who have a phone in this chat (where that phone is, else its country), each with its
 // hours from the owner's on that day (summer time counted). null with no zone of their own, or none different
@@ -1405,13 +1469,18 @@ function zoneOfPhone(q) {
     return city?.tz ? { tz: city.tz, where: city.name } : COUNTRY_TZ[c] ? { tz: COUNTRY_TZ[c], where: regionName(c) } : null;
 }
 export function zonesOf(p, at = p?.now, m = null) {
-    const own = zoneOfPhone(p), t = String(at || '');
+    const own = zoneOfWhere(whereOf(p, p?.owner)) || zoneOfPhone(p), t = String(at || '');
     if (!own || !/^\d{2}-\d{2} \d{2}:\d{2}$/.test(t)) return null;
     const mins = v => { const [d, h] = [String(v).slice(0, 5), String(v).slice(6)]; return dayGap(t.slice(0, 5), d) * 1440 + Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5)); };
     const base = mins(t), hours = tz => (mins(zoneShift(t, own.tz, tz, Number(p.year) || undefined)) - base) / 60, others = [];
     for (const c of arr(p.life?.weather?.cities)) if (c?.tz && c.tz !== own.tz && !others.some(o => o.name === c.name)) { const h = hours(c.tz); if (h) others.push({ name: c.name, hours: h }); }
+    for (const x of p.where?.people || []) {
+        if (nameKey(x.name) === nameKey(p.owner) || others.some(o => nameKey(o.name) === nameKey(x.name))) continue;
+        const z = zoneOfWhere(x);
+        if (z && z.tz !== own.tz) { const h = hours(z.tz); if (h) others.push({ name: x.name, where: z.where, hours: h }); }
+    }
     for (const q of Object.values(m?.phones || {})) {
-        if (!q || q === p || !q.owner) continue;
+        if (!q || q === p || !q.owner || others.some(o => nameKey(o.name) === nameKey(q.owner))) continue;
         const z = zoneOfPhone(q);
         if (z && z.tz !== own.tz) { const h = hours(z.tz); if (h) others.push({ name: q.owner, where: z.where, hours: h }); }
     }
@@ -1421,7 +1490,7 @@ export function zonesOf(p, at = p?.now, m = null) {
 export const clockBlock = (p, at = p?.now, m = null) => {
     const z = zonesOf(p, at, m);
     const hrs = h => `${Math.abs(h)} hour${Math.abs(h) === 1 ? '' : 's'} ${h > 0 ? 'ahead' : 'behind'}`;
-    return z ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.map(c => (c.where ? `${c.name} (their phone, in ${c.where}) is ${hrs(c.hours)}` : `${c.name} is ${hrs(c.hours)}`)).join(', ')}.` : '';
+    return z ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.map(c => (c.where ? `${c.name} (in ${c.where}) is ${hrs(c.hours)}` : `${c.name} is ${hrs(c.hours)}`)).join(', ')}.` : '';
 };
 // a status line's scene is a city the phone knows (its clock can be read in the owner's zone), or the phone keeps no
 // other zone (it is the owner's): else its time may be someone else's, and it doesn't set the phone's

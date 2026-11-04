@@ -11,8 +11,8 @@ const href = f => pathToFileURL(new URL(f, SRC).pathname).href;
 const stub = {
     './phonestory.js': encoded(`export const phoneChatScope=()=>'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-12-30';export const wealthCheck=()=>null;export const addWealthFX=()=>{};export const investmentWealthRows=()=>[];`),
-    './ai.js': encoded(`export const askDraft=async(input,o)=>{const M=globalThis.__menu;M.input=input;M.sys=o.system;(M.calls||=[]).push({input,sys:o.system});if(M.answers&&M.answers.length){const a=M.answers.shift();if(a instanceof Error)throw a;return a;}return M.answer;};export const askAI=async()=>'';`),
-    './core.js': encoded(`export const ctx=()=>({chat:[],chatMetadata:{},characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};export const getMeta=()=>({});`),
+    './ai.js': encoded(`export const askDraft=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);return JSON.stringify(globalThis.__whereAnswer||{people:[]});}const M=globalThis.__menu;M.input=input;M.sys=o.system;(M.calls||=[]).push({input,sys:o.system});if(M.answers&&M.answers.length){const a=M.answers.shift();if(a instanceof Error)throw a;return a;}return M.answer;};export const askAI=async()=>'';`),
+    './core.js': encoded(`export const ctx=()=>globalThis.__ctx||({chat:[],chatMetadata:{},characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};export const getMeta=()=>({});`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=n=>(globalThis.__rows||[]).slice(-n).map(r=>r.text);export const chatRows=()=>globalThis.__rows||[];`),
     './inject.js': encoded(`export const applyInjection=()=>{};`), './knowledge.js': encoded(`export const knowledgeRows=()=>[];`),
@@ -376,4 +376,29 @@ test('a second investment turn that can\'t pay for its trades changes nothing: t
     assert.equal(p.investment.trades.length, 0);
     assert.equal(fin.cash(mm.finance.accounts[p.investment.accounts[0].key]), 1000);
     assert.equal(p.investment.date, '2026-10-20');
+});
+
+// ---- 위치 판독: the cards word for word, then OWNER'S CLOCK goes by what it read first
+test('where everyone is: the whole card and the persona as they are, only known people kept, the clock goes by it', async () => {
+    globalThis.__rows = rows(12);
+    const card = { name: 'Ren', avatar: 'ren.png', data: { description: 'Ren, a cook.', personality: 'calm', scenario: 'Ren works in Frankfurt.', first_mes: 'Born in Germany, moved to Seoul at ten.', mes_example: '<START> hi' } };
+    globalThis.__ctx = { chat: [], chatMetadata: {}, characters: [card], characterId: 0, name1: 'Mara', powerUserSettings: { persona_description: 'Mara lives in Seoul with her cat.' } };
+    const p = { owner: 'Ren', now: '11-03 04:33', year: 2026, threads: [{ with: 'Mara', messages: [] }], contacts: [{ name: 'Ivo' }], sync: { marks: { base: { index: 11 } }, done: [] } };
+    const mm = { text: '## #0–#3 — Arrival\n- Ren came home.\n', phones: { ren: p } };
+    globalThis.__where = [];
+    const answer = { people: [{ name: 'Ren', city: 'Frankfurt am Main', lives: 'DE', tz: 'Europe/Berlin' }, { name: 'Mara', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' },
+        { name: 'Ivo', lives: 'GB', tz: 'Mars/Base' }, { name: 'Varo', city: 'Paris', lives: 'FR', tz: 'Europe/Paris' }] };
+    globalThis.__menu = { calls: [], answers: [], answer: '{}' };
+    // the test model answers where-reads apart; this one gives the answer above
+    const stub = globalThis.__where;
+    try {
+        globalThis.__whereAnswer = answer;
+        const got = await data.readWhere(mm, p);
+        const input = stub.at(-1);
+        for (const v of Object.values(card.data)) assert.ok(input.includes(v), v);
+        assert.ok(input.includes('[CHARACTER CARD — Ren]') && input.includes('[PERSONA — Mara]\nMara lives in Seoul with her cat.') && input.includes('[PEOPLE]\nMara\nIvo') && !input.includes('[OWNER PROFILE'));
+        // Varo is on nobody's phone; Ivo's zone isn't one, but his country gives one
+        assert.deepEqual(got.map(x => [x.name, x.tz || x.lives]), [['Ren', 'Europe/Berlin'], ['Mara', 'Asia/Seoul'], ['Ivo', 'GB']]);
+        assert.equal(data.clockBlock(p, p.now, mm), "[OWNER'S CLOCK]\nThe owner is in Frankfurt am Main, 11-03 04:33 now.\nMara (in Seoul) is 8 hours ahead, Ivo (in United Kingdom) is 1 hour behind.");
+    } finally { globalThis.__ctx = null; globalThis.__whereAnswer = null; }
 });
