@@ -492,3 +492,19 @@ test('voice memos with a slip: quotes inside a text kept, a broken memo left out
     assert.deepEqual(p.voice.map(x => x.title).sort(), ['Groceries', 'Idea', 'Train']);
     assert.equal(p.voice.find(x => x.title === 'Idea').text, 'call Mara about "the trip"');
 });
+
+test('a fill answered with an error or a refusal leaves the apps as they were and reads nothing', async () => {
+    for (const answer of ['Sorry, I can\'t write that {policy}.', '{"error":{"code":529,"message":"Overloaded"}}']) {
+        globalThis.__rows = rows(12);
+        const p = plainPhone({ delivery: { shops: [{ id: 's1', name: 'Uno', cuisine: 'pizza', menu: [] }], orders: [{ id: 'o1', shop: 'Uno', items: [{ name: 'Margherita', qty: 1, price: 9 }], time: '10-20 19:00', status: 'delivered', account: 'cash' }], cart: null },
+            life: { clock: { alarms: [{ id: 'a1', time: '07:00', label: 'Work', days: ['mon'], on: true }], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] }, weather: null } });
+        const mm = { ...m, phones: { ren: p } };
+        globalThis.__menu = { calls: [], answers: [answer, answer], answer: '{}' };
+        const warn = console.warn; console.warn = () => {};
+        try {
+            await assert.rejects(life.fillDelivery(mm, p));
+            await assert.rejects(life.fillLife(mm, p));
+        } finally { console.warn = warn; }
+        assert.deepEqual([p.delivery.orders.length, p.life.clock.alarms.length, p.sync?.marks?.delivery, p.sync?.marks?.life], [1, 1, undefined, undefined]);
+    }
+});

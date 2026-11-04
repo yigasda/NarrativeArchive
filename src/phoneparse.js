@@ -10,18 +10,21 @@ const MONS = { jan: 1, feb: 2, mar: 3, mär: 3, apr: 4, may: 5, mai: 5, jun: 6, 
 const FULL = ['january', 'february', 'march', 'märz', 'april', 'may', 'mai', 'june', 'juni', 'july', 'juli', 'august', 'september', 'sept', 'october', 'oktober', 'november', 'december', 'dezember'];
 const month = w => { const s = String(w || '').toLowerCase(); return s.length >= 3 && FULL.some(f => f.startsWith(s)) ? MONS[s.slice(0, 3)] || 0 : 0; };
 const named = v => {
-    const s = String(v || ''), ko = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/), en = s.match(/\b([a-zä]{3,9})\.?\s+(\d{1,2})(?!\d)/i), de = s.match(/(?<!\d)(\d{1,2})\.?\s+([a-zä]{3,9})\b/i);
+    const s = String(v || ''), ko = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/), en = s.match(/\b([a-zä]{3,9})\.?\s+(\d{1,2})(?![\d:])/i), de = s.match(/(?<!\d)(\d{1,2})\.?\s+([a-zä]{3,9})\b/i);
     const [mo, d] = ko ? [Number(ko[1]), Number(ko[2])] : en && month(en[1]) ? [month(en[1]), Number(en[2])] : de && month(de[2]) ? [month(de[2]), Number(de[1])] : [0, 0];
     if (!(mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) return '';
     const hm = s.match(/(\d{1,2}):(\d{2})/), ok = hm && Number(hm[1]) < 24 && Number(hm[2]) < 60;
     return `${pad(mo)}-${pad(d)}${ok ? ` ${pad(hm[1])}:${hm[2]}` : ''}`;
 };
+// "03.11." (a dot after the month) or "03.11.2026": day first
+export const dotsDayFirst = t => /^\d{1,2}\.\d{1,2}\.(?:\s?\d{4}|(?![\d]))/.test(t);
 export const when = v => {
     // "10-25 21:00", or with the year in front ("2026-10-25 21:00", "2026/10/25T21:00") or after ("25.10.2026 21:00", "10/25/2026 9:00")
-    const mt = String(v || '').match(/(?:^|\D)(?:\d{4}[-/.])?(\d{1,2})[-/.](\d{1,2})(?:[-/.]\s?\d{4})?(?:[ T]+(\d{1,2}):(\d{2}))?/);
+    const mt = String(v || '').match(/(?:^|\D)(?:\d{4}[-/.])?(\d{1,2})[-/.](\d{1,2})(?:[-/.]\s?\d{4})?(?:\.?,?[ T]+(\d{1,2}):(\d{2}))?/);
     // the day first where the month can't come first ("26.10.", "26/10/2026"), unless a year led ("2026-10-26")
-    if (mt && !/^\d{4}/.test(mt[0].replace(/^\D/, '')) && Number(mt[1]) > 12 && Number(mt[2]) <= 12) [mt[1], mt[2]] = [mt[2], mt[1]];
-    if (!mt || !(Number(mt[1]) >= 1 && Number(mt[1]) <= 12) || !(Number(mt[2]) >= 1 && Number(mt[2]) <= 31)) return named(v);
+    // and the European way with dots, "03.11." or "03.11.2026" (a Korean "11.03" has no dot after it)
+    if (mt && !/^\d{4}/.test(mt[0].replace(/^\D/, '')) && Number(mt[2]) <= 12 && (Number(mt[1]) > 12 || dotsDayFirst(String(v || '').slice(mt.index + (/^\D/.test(mt[0]) ? 1 : 0))))) [mt[1], mt[2]] = [mt[2], mt[1]];
+    if (!mt || !(Number(mt[1]) >= 1 && Number(mt[1]) <= 12) || !(Number(mt[2]) >= 1 && Number(mt[2]) <= 31)) return named(String(v || '').replace(/(\d)(?:st|nd|rd|th)\b/gi, '$1'));
     // a clock that can't be ("25:99") is dropped, the day stays
     const ok = mt[3] && Number(mt[3]) < 24 && Number(mt[4]) < 60;
     return `${pad(mt[1])}-${pad(mt[2])}${ok ? ` ${pad(mt[3])}:${mt[4]}` : ''}`;
@@ -188,7 +191,8 @@ export const num = v => {
     if (v === null || v === undefined || typeof v === 'object' || typeof v === 'boolean') return null;
     if (typeof v === 'number') return Number.isFinite(v) ? Math.round(v * 100) / 100 : null;
     // the first number written ("4.7/5" is 4.7, "25–35" is 25), never two run together
-    const mt = String(v).replace(/[−–](?=\s*\d)/g, '-').match(/-?\d[\d.,]*/);
+    // (a minus written before the currency sign or a space, "-₩12,000", "- € 12,50", is still the number's)
+    const mt = String(v).replace(/[−–](?=\s*(?:[^\d\s.,−–-]{1,3}\s*)?\d)/g, '-').replace(/-\s*(?:[^\d\s.,-]{1,3}\s*)?(?=\d)/, '-').match(/-?\d[\d.,]*/);
     if (!mt) return null;
     let t = mt[0].replace(/[.,]+$/, '');
     // "1.200,50" and "1,200.50": the last mark is the decimal one; "12,50" is 12.5; "1,200" and "1.200.000" are thousands

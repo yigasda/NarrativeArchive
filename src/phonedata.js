@@ -17,7 +17,7 @@ import { parseSections, RANGE_HEAD, sectionKey, splitTail } from './sections.js'
 import { glossaryEntries } from './translate.js';
 import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
-import { tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
+import { dotsDayFirst, tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
@@ -1031,7 +1031,12 @@ async function updatePhone(m, owner) {
         for (const e of arr(raw.events).slice(0, 40)) {
             if (!e || typeof e !== 'object') continue;
             // "#151" or "151" for the message number
-            const at = Number(String(e.at ?? '').replace(/^\s*#/, '')), sec = evidence.find(x => at >= x.first && at <= x.last);
+            // ("#2–#3", "2, 3" or a number one off: the message among these whose words the quote is)
+            const nums = (String(e.at ?? '').match(/\d+/g) || []).map(Number);
+            let at = Number(String(e.at ?? '').replace(/^\s*#/, ''));
+            if (!Number.isInteger(at)) at = nums[0] ?? NaN;
+            if (e.quote && !(inRound.has(at) && quoted(e.quote, textAt.get(at) || ''))) { const hit = [...nums, at - 1, at + 1, ...inRound].find(i => inRound.has(i) && quoted(e.quote, textAt.get(i) || '')); if (hit !== undefined) at = hit; }
+            const sec = evidence.find(x => at >= x.first && at <= x.last);
             const fail = why => (inRound.has(at) ? (failed[at] ||= why) : loose.push(why));
             if (!Number.isInteger(at) || at <= start || (!inRound.has(at) && !sec)) { fail('읽는 범위 밖의 일이에요'); continue; }
             // a section's message the phone already read (before it was archived) is in already
@@ -1263,7 +1268,9 @@ export async function dropStretch(m, p, k) {
         if (!tied && pushed('investment.securities').some(x => (p.investment?.trades || []).some(t => t.symbol === x.symbol && !trades.has(t.id)))) tied = true;
         if (!tied && pushed('delivery.shops').some(x => (p.delivery?.orders || []).some(o => o.shop === x.name && !leaving(o.ev)))) tied = true;
         if (tied) { kept.push(e.summary || id); stay.add(id); continue; }
-        revertEffects(m, p, e.effects || []);
+        // what couldn't go (changed since: an order delivered and reviewed, with its payment) stays, and so does its event
+        const left = revertEffects(m, p, e.effects || []);
+        if (left.length) { e.effects = left; kept.push(e.summary || id); stay.add(id); continue; }
         out.add(id);
         delete s.events[id];
         gone++;
@@ -1489,13 +1496,16 @@ export const upcoming = (e, now) => { if (e.cancelled) return false; const day =
 export function monthDay(text) {
     const s = String(text || '');
     const num = s.match(/(?:^|\D)(?:\d{4}[-/.]\s*)?(\d{1,2})[-/.]\s*(\d{1,2})(?!\d)/);
-    if (num && Number(num[1]) >= 1 && Number(num[1]) <= 12 && Number(num[2]) >= 1 && Number(num[2]) <= 31) return { mo: Number(num[1]), d: Number(num[2]) };
+    // ("03.11." and "03.11.2026" are day first, the European way; a Korean "11.03" has no dot after it)
+    const dots = num && !/\d{4}/.test(num[0]) && dotsDayFirst(s.slice(num.index + (/^\D/.test(num[0]) ? 1 : 0)));
+    if (num && !dots && Number(num[1]) >= 1 && Number(num[1]) <= 12 && Number(num[2]) >= 1 && Number(num[2]) <= 31) return { mo: Number(num[1]), d: Number(num[2]) };
+    if (dots && Number(num[2]) >= 1 && Number(num[2]) <= 12 && Number(num[1]) >= 1 && Number(num[1]) <= 31) return { mo: Number(num[2]), d: Number(num[1]) };
     // day first ("26.10.", "26/10/2026"): a first number past 12 is the day
     if (num && Number(num[1]) > 12 && Number(num[1]) <= 31 && Number(num[2]) >= 1 && Number(num[2]) <= 12) return { mo: Number(num[2]), d: Number(num[1]) };
     const cals = calendars(), d = headingDate(`(${s})`, cals).date;
     if (d?.d && cals[d.cal]?.length === 12) return { mo: d.m + 1, d: d.d };
     // a month by its name ("30. Januar", "Jan 30"), the way the phone reads dates elsewhere
-    const w = when(s).slice(0, 5);
+    const w = when(s.replace(/(\d)(?:st|nd|rd|th)\b/gi, '$1')).slice(0, 5);
     return /^\d{2}-\d{2}$/.test(w) ? { mo: Number(w.slice(0, 2)), d: Number(w.slice(3)) } : null;
 }
 // a dated row's day as the phone writes it ("10-25"), or '' when its calendar is not a 12-month one

@@ -336,6 +336,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             if (status !== old.status && later(old.status, status)) {
                 out.effects.push({ type: 'status', path: 'delivery.orders', id: old.id, status, prev: old.status });
                 old.status = status;
+                delete old.byClock;
                 out.changes.push({ app: '배달', label: `${old.shop} 상태`, amount: null });
             }
             return;
@@ -516,12 +517,17 @@ export function replayEffects(m, p, effects) {
 }
 const LOOSE = ['sourceIndex', 'delivery', 'account'];
 const unchanged = (path, now, was) => (/^(money|investment)\./.test(path) ? ['amount', 'price', 'qty', 'quantity', 'status'].every(k => now[k] === was[k])
-    : Object.keys({ ...was, ...now }).filter(k => !LOOSE.includes(k)).every(k => JSON.stringify(now[k] ?? null) === JSON.stringify(was[k] ?? null)));
+    // (a delivery the clock alone moved on, "on the way" to "delivered", is no change by hand)
+    : Object.keys({ ...was, ...now }).filter(k => !LOOSE.includes(k) && k !== 'byClock' && !(k === 'status' && now.byClock)).every(k => JSON.stringify(now[k] ?? null) === JSON.stringify(was[k] ?? null)));
 // 되돌리기 · 빼기: undo money changes, newest first. A record gone already is fine; one changed since is left as it is and
 // returned, so the caller can say what stayed
 export function revertEffects(m, p, effects) {
     const f = finance(m), left = [];
+    // a delivery order that stays (changed since: delivered, reviewed) keeps its payment with it
+    const dlvKept = new Set(effects.filter(x => x.type === 'push' && x.path === 'delivery.orders').map(x => (p.delivery?.orders || []).find(o => o.id === x.item?.id) && !unchanged(x.path, p.delivery.orders.find(o => o.id === x.item.id), x.item) ? x.item.id : null).filter(Boolean));
+    const paidFor = new Set(dlvKept.size ? [...effects.filter(x => x.type === 'push' && x.path === 'money.tx' && dlvKept.has(x.item?.delivery)).map(x => x.item.id), ...(p.money?.tx || []).filter(t => dlvKept.has(t.delivery)).map(t => t.id)] : []);
     for (const x of [...effects].reverse()) {
+        if (paidFor.size && (x.type === 'entry' || x.type === 'push' && x.path === 'money.tx') && paidFor.has(x.type === 'entry' ? x.id : x.item?.id)) { left.push(x); continue; }
         if (x.type === 'entry') { const L = f.accounts[x.key]; if (!L?.entries[x.id]) continue; if (L.entries[x.id].amount === x.amount) delete L.entries[x.id]; else left.push(x); continue; }
         if (x.type === 'amendEntry') { const line = f.accounts[x.key]?.entries[x.id]; if (!line) continue; if (line.amount === x.to) line.amount = x.from; else left.push(x); continue; }
         // a price the story gave: its row goes, the day's choice as it was
@@ -536,7 +542,7 @@ export function revertEffects(m, p, effects) {
         if (i < 0) continue;
         // a record changed since it went in (an amount, a status, a count; for the everyday apps, anything) is the user's now: it stays
         if (x.type === 'push') { if (unchanged(x.path, box[i], x.item)) box.splice(i, 1); else left.push(x); }
-        if (x.type === 'status') { if (box[i].status === x.status) { box[i].status = x.prev; if ('arrivedFrom' in x && box[i].arrived === x.arrived) { if (x.arrivedFrom === null) delete box[i].arrived; else box[i].arrived = x.arrivedFrom; } } else left.push(x); }
+        if (x.type === 'status') { if (box[i].status === x.status) { box[i].status = x.prev; delete box[i].byClock; if ('arrivedFrom' in x && box[i].arrived === x.arrived) { if (x.arrivedFrom === null) delete box[i].arrived; else box[i].arrived = x.arrivedFrom; } } else left.push(x); }
         if (x.type === 'amend') { if (box[i].amount === x.to) { box[i].amount = x.from; box[i].amountFrom = 'guess'; } else left.push(x); }
     }
     return left;

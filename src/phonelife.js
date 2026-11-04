@@ -194,7 +194,9 @@ const day5 = v => when(v).slice(0, 5);
 export { parseWeather };
 // lastDay: the story's last day (a night after it hasn't ended yet)
 export function parseLife(raw, now, lastDay = '') {
-    if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 시계 · 건강 · 파일 · 날씨 내용(JSON)을 찾지 못했어요');
+    // (an answer with something but none of the apps in it, {"error": …}, is no answer: what is there stays; an empty one
+    // is a second turn with nothing to add, and a first turn's is turned away by fillLife)
+    if (!raw || typeof raw !== 'object' || Object.keys(raw).length && !['clock', 'health', 'files', 'weather'].some(k => raw[k] && typeof raw[k] === 'object')) throw new Error('모델 답에서 시계 · 건강 · 파일 · 날씨 내용(JSON)을 찾지 못했어요');
     const c = raw.clock || {}, h = raw.health || {}, f = raw.files || {};
     const run = c.running && int(c.running.sec, 1, 86400) ? { label: line(c.running.label, 40), ko: ko(c.running.ko), sec: int(c.running.sec, 1, 86400), left: int(c.running.left, 0, 86400) ?? 0 } : null;
     return {
@@ -231,7 +233,7 @@ const dish = x => {
 // a shop's dishes as the model writes them, each with its picture
 const menuOf = (xs, n) => arr(xs).map(x => { const m = { name: line(x?.name, 60), ko: ko(x?.ko), desc: line(x?.desc, 100), price: num(x?.price) ?? 0, top: yes(x?.top) }, pic = dishPic(x?.pic, m, true); return pic ? { ...m, pic } : m; }).filter(x => x.name).slice(0, n);
 export function parseDelivery(raw, accounts = [], tx = [], now = '') {
-    if (!raw || typeof raw !== 'object') throw new Error('모델 답에서 배달 내용(JSON)을 찾지 못했어요');
+    if (!raw || typeof raw !== 'object' || Object.keys(raw).length && !Array.isArray(raw.shops) && !Array.isArray(raw.orders)) throw new Error('모델 답에서 배달 내용(JSON)을 찾지 못했어요');
     // a bank row it points at: that row is the payment, and its account is the order's
     const paidOf = v => { const t = tx.find(r => r.id === String(v ?? '') && r.amount < 0); return t ? { paidBy: t.id, account: t.account } : {}; };
     const acct = v => { const s = String(v ?? '').trim().toLowerCase(); if (s === 'cash') return 'cash'; const l4 = last4(v); return l4 && accounts.some(a => a.last4 === l4) ? l4 : 'card'; };
@@ -450,7 +452,10 @@ export const fillLife = (m, p, { screenAgain = false } = {}) => exclusive('fill'
             !soFar && Object.keys(body).length ? `[BODY ON THE PHONE NOW — keep it unless the story changed it]\n${JSON.stringify(body)}` : '',
             soFar ? `${soFarHead('LIFE', short)}\n${JSON.stringify(soFar)}` : '', short?.text || '',
             w ? `[WEATHER NOW]\n${JSON.stringify(home ? w : { place: w.place, weather: w.weather })}` : '', clockBlock(p, storyNow(p, upto, m) || p.now, m, statusAt(p, upto, m)), p.country ? `[PHONE COUNTRY]\n${COUNTRIES[p.country] || p.country}` : ''], { profile: p.financeProfile, story: CHAT_TOKENS.life, read: { gap } });
-        const raw = jsonOf(await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' }), { salvage: true }), next = parseLife(raw, now, days.at(-1)?.day || '');
+        const raw = jsonOf(await askDraft(input, { force: true, system: AI_SYS_LIFE, maxTokens: 16000, effort: 'low' }), { salvage: true });
+        // (a first turn with nothing in it is no life app: what the phone has stays)
+        if (!soFar && raw && typeof raw === 'object' && !Object.keys(raw).length) throw new Error('모델 답에서 시계 · 건강 · 파일 · 날씨 내용(JSON)을 찾지 못했어요');
+        const next = parseLife(raw, now, days.at(-1)?.day || '');
         said.set(next, { raw, now });
         const at = storyNow(p, upto) || p.now || '';
         if (/^\d{2}-\d{2}/.test(at)) next.files.items = next.files.items.filter(x => !later(x.time, at));
@@ -560,7 +565,9 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
         const upto = nowAt(gap), at = storyNow(p, upto) || p.now || '';
         const input = await sideRequest(m, p.owner, [`[PHONE NOW]\n${phoneNow(p, upto)}`, daysBlock(storyDays(m, p, upto)), clockBlock(p, at, m, statusAt(p, upto, m)), `[LIVES IN]\n${COUNTRIES[livesIn(p)] || livesIn(p) || '(unknown)'}`, money,
             soFar ? `${soFarHead('DELIVERY', short)}\n${JSON.stringify(soFar)}` : '', short?.text || ''], { profile: p.financeProfile, story: CHAT_TOKENS.apps, read: { gap } });
-        const got = jsonOf(await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 12000, effort: 'low' }), { salvage: 'whole' }), next = parseDelivery(got, accounts, tx, at);
+        const got = jsonOf(await askDraft(input, { force: true, system: AI_SYS_DELIVERY, maxTokens: 12000, effort: 'low' }), { salvage: 'whole' });
+        if (!soFar && got && typeof got === 'object' && !Object.keys(got).length) throw new Error('모델 답에서 배달 내용(JSON)을 찾지 못했어요');
+        const next = parseDelivery(got, accounts, tx, at);
         said.set(next, { raw: got });
         // the shops nearby go after the ones they order from (the app's 동네 인기 가게); the first turn sets them
         if (!soFar) next.shops = [...next.shops, ...nearbyShops(got, next.shops, (p.money?.currency || accounts[0]?.currency) === 'KRW')];

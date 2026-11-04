@@ -593,7 +593,7 @@ export function dlvClock(p, now) {
         if (o.status !== 'on the way') continue;
         // an arrival time without its day ("21:30") is the order's day
         const arr2 = String(o.arrived || ''), at = /^\d{2}-\d{2}/.test(arr2) ? arr2 : /^\d{2}:\d{2}/.test(arr2) ? `${String(o.time || '').slice(0, 5)} ${arr2}` : String(o.time || ''), g = dayGap(at.slice(0, 5), today);
-        if (g > 0 || g === 0 && hm && at.slice(6, 11) && minutes(hm) - minutes(at.slice(6, 11)) >= 90) { out.push({ type: 'status', path: 'delivery.orders', id: o.id, status: 'delivered', prev: o.status }); o.status = 'delivered'; }
+        if (g > 0 || g === 0 && hm && at.slice(6, 11) && minutes(hm) - minutes(at.slice(6, 11)) >= 90) { out.push({ type: 'status', path: 'delivery.orders', id: o.id, status: 'delivered', prev: o.status }); o.status = 'delivered'; o.byClock = true; }
     }
     return out;
 }

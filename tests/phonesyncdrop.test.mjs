@@ -978,3 +978,49 @@ test('빼기 of two events of the same talk (an account opened, money put in): b
     assert.deepEqual(r.kept, []);
     assert.ok(!c.p.money.bank.accounts.some(a => a.last4 === '7777'));
 });
+
+// ---- 점검 높음 묶음
+test('빼기 of a delivery the clock alone marked delivered: the order and its payment go together', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'hungry?'), say('Mara', 'I ordered tteokbokki from Ivo Snack for 18000 won, it is on the way'), say('Ren', 'save me some')]);
+    c.p.delivery = { orders: [], shops: [] };
+    await run(c.m, { now: '10-26 12:10', events: [{ id: 'food', at: 3, quote: 'I ordered tteokbokki', summary: '떡볶이 배달', date: '10-26', time: '12:00',
+        money: { moves: [{ account: '1111', amount: -18000, who: 'Ivo Snack', occurrence: 'new' }], deliveries: [{ shop: 'Ivo Snack', items: [{ name: 'tteokbokki', qty: 1, price: 18000 }], status: 'on the way', occurrence: 'new' }] } }] });
+    T.chat.push(say('Mara', 'it is three in the afternoon already, time flies'));
+    await run(c.m, { now: '10-26 15:00', events: [] });
+    assert.equal(c.p.delivery.orders[0].status, 'delivered');
+    T.chat.splice(3, 1);
+    T.answers.push({ now: '10-26 15:10', events: [] });
+    await data.makePhone(c.m, 'Ren', { update: true });
+    const r = await data.dropStretch(c.m, c.p, 0);
+    assert.deepEqual([r.kept, c.p.delivery.orders.length, c.p.money.tx.length, c.bank()], [[], 0, 0, 100000]);
+});
+
+test('빼기 of a delivery the user reviewed since: the order stays with its payment, and it is said', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'hungry?'), say('Mara', 'I ordered tteokbokki from Ivo Snack for 18000 won, it is on the way'), say('Ren', 'save me some')]);
+    c.p.delivery = { orders: [], shops: [] };
+    await run(c.m, { now: '10-26 12:10', events: [{ id: 'food', at: 3, quote: 'I ordered tteokbokki', summary: '떡볶이 배달', date: '10-26', time: '12:00',
+        money: { moves: [{ account: '1111', amount: -18000, who: 'Ivo Snack', occurrence: 'new' }], deliveries: [{ shop: 'Ivo Snack', items: [{ name: 'tteokbokki', qty: 1, price: 18000 }], status: 'on the way', occurrence: 'new' }] } }] });
+    c.p.delivery.orders[0].review = { stars: 5 };
+    T.chat.splice(3, 1);
+    T.answers.push({ now: '10-26 12:20', events: [] });
+    await data.makePhone(c.m, 'Ren', { update: true });
+    const r = await data.dropStretch(c.m, c.p, 0);
+    assert.deepEqual([r.kept, c.p.delivery.orders.length, c.p.money.tx.length, c.bank()], [['떡볶이 배달'], 1, 1, 82000]);
+});
+
+test('an event whose message number the model wrote as a range or one off is found by its quote, not lost', async () => {
+    for (const at of ['#2–#3', '2, 3', 1]) {
+        const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'I paid the taxi 12000 won, text me later'), say('Ren', 'thanks a lot for that')]);
+        T.moneyAnswers = [{ events: [{ id: 'taxi', money: { moves: [{ account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }] } }] }];
+        await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at, quote: 'I paid the taxi 12000 won', summary: '택시', date: '10-26', time: '12:40',
+            phone: { threads: [{ with: 'Mara', messages: [{ from: 'Mara', text: 'text me later', time: '10-26 12:41' }] }] }, money: { moves: [{ account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }] } }] });
+        assert.equal(c.bank(), 88000, String(at));
+        assert.equal(c.p.sync.events.taxi?.at, 2, String(at));
+    }
+});
+
+test('a payment written "-₩12,000" is money out, not in', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'I paid the taxi 12000 won'), say('Ren', 'thanks a lot for that')]);
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '12:40', money: { moves: [{ account: '1111', amount: '-₩12,000', who: '택시', kind: 'transfer', occurrence: 'new' }] } }] });
+    assert.equal(c.bank(), 88000);
+});
