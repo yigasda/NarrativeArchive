@@ -191,28 +191,6 @@ test('a phone made on a chat shorter than its archive (a branch): its clock is t
     assert.equal(data.syncLeft(c.m.phones.ren, c.m), 2);
 });
 
-test('a status line with no saved city doesn\'t set the phone\'s time when it keeps other zones; the model gets OWNER\'S CLOCK', async () => {
-    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', '[11.03, 12:33] are you up?'), say('Ren', 'just woke up')];
-    const c = setup(chat);
-    c.p.now = '10-26 03:00'; c.p.year = 2026; // Germany's summer time ended on 10-25: 8 hours
-    c.p.life = { at: '10-26 03:00', clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] },
-        weather: { here: { place: 'Frankfurt am Main', date: '10-26', time: '03:00', cond: 'clear', temp: 5, hours: [], days: [], tiles: {} },
-            cities: [{ name: 'Frankfurt am Main', tz: 'Europe/Berlin' }, { name: 'Seoul', tz: 'Asia/Seoul' }] } };
-    T.trackers = [{ i: 2, date: '10.26', min: 12 * 60 + 33, time: '12:33', place: "Mara's room", city: "Mara's room", weather: '' }];
-    try {
-        await run(c.m, { now: '10-26 05:33', events: [] });
-        assert.ok(T.input.includes("[OWNER'S CLOCK]\nThe owner is in Frankfurt am Main, 10-26 03:00 now.\nSeoul is 8 hours ahead."), T.input.slice(-600));
-        assert.equal(c.p.now, '10-26 05:33');
-        // the far scene's status line is no weather or clock of the owner's
-        assert.deepEqual([c.p.life.weather.here.place, c.p.life.weather.here.time], ['Frankfurt am Main', '03:00']);
-        // the same line in Seoul, a saved city: read in the owner's zone, it caps a later guess
-        T.trackers = [{ i: 3, date: '10.26', min: 14 * 60, time: '14:00', place: 'Seoul', city: 'Seoul', weather: '' }];
-        T.chat.push(say('Ren', 'coffee first'));
-        await run(c.m, { now: '10-26 12:00', events: [] });
-        assert.equal(c.p.now, '10-26 06:00');
-    } finally { T.trackers = null; }
-});
-
 test('where everyone is: read once on the first round of a phone that never had it, not every round', async () => {
     const chat = [say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'coffee?')];
     const c = setup(chat);
@@ -225,19 +203,80 @@ test('where everyone is: read once on the first round of a phone that never had 
     assert.equal(globalThis.__where.length, 1);
 });
 
-test('a Seoul status line among the new messages: shown on the owner\'s clock, and a now the model put before it is moved up', async () => {
-    const chat = [say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'lunch break, call?')];
-    const c = setup(chat);
+
+// ---- 시각: one place decides whose clock a status line shows; now is never before this round's status line
+const frankfurtPhone = (c, { cities = true, here = 'Frankfurt am Main' } = {}) => {
     c.p.now = '10-26 03:00'; c.p.year = 2026; // Germany's summer time ended on 10-25: 8 hours
-    c.p.life = { at: '10-26 03:00', clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] },
-        weather: { here: { place: 'Frankfurt am Main', date: '10-26', time: '03:00', cond: 'cloudy', temp: 4, hours: [], days: [], tiles: {} },
+    c.p.where = { at: 1, people: [{ name: 'Ren', city: 'Frankfurt am Main', lives: 'DE', tz: 'Europe/Berlin' }, { name: 'Mara', city: 'Seoul', lives: 'KR', tz: 'Asia/Seoul' }] };
+    if (cities) c.p.life = { at: '10-26 03:00', clock: { alarms: [], timers: [], running: null }, health: { usual: {}, days: [] }, files: { folders: [], items: [] },
+        weather: { here: { place: here, date: '10-26', time: '03:00', cond: 'cloudy', temp: 4, hours: [], days: [], tiles: {} },
             cities: [{ name: 'Frankfurt am Main', tz: 'Europe/Berlin' }, { name: 'Seoul', tz: 'Asia/Seoul' }] } };
-    T.trackers = [{ i: 2, date: '10.26', min: 12 * 60 + 50, time: '12:50', place: 'Seoul · Mara\'s room', city: 'Seoul', room: "Mara's room", weather: '맑음 14°C' }];
-    try {
-        // the model paired the status line's 12:50 with the phone's 03:00 and wrote 03:52
+};
+const trk = (i, time, place, weather = '맑음 14°C') => ({ i, date: '10.26', min: Number(time.slice(0, 2)) * 60 + Number(time.slice(3)), time, place, city: place.split(' · ')[0], weather });
+const withTrackers = async (ts, fn) => { T.trackers = ts; try { await fn(); } finally { T.trackers = null; } };
+
+test('a Seoul status line: OWNER\'S CLOCK gives it on the owner\'s clock, a now put before it is moved up, a few minutes after it stays', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'lunch break, call?')]);
+    frankfurtPhone(c);
+    await withTrackers([trk(2, '12:50', "Seoul · Mara's room")], async () => {
+        // run40 D3: the model paired the status line's 12:50 with the phone's 03:00 and wrote 03:52
         await run(c.m, { now: '10-26 03:52', events: [] });
-        assert.match(T.input, /\[WEATHER NOW\]\n\{"date":"10-26","time":"04:50","place":"Seoul"[^\n]*"sceneTime":"10-26 12:50 in Seoul"\}/);
+        assert.ok(T.input.includes("The newest status line, 10-26 12:50 in Seoul, is 10-26 04:50 here."), T.input.slice(-500));
+        assert.match(T.input, /\[WEATHER NOW\]\n\{"place":"Seoul","weather":"맑음 14°C"\}/);
         assert.equal(c.p.now, '10-26 04:50');
         assert.equal(c.p.life.weather.here.place, 'Frankfurt am Main');
-    } finally { T.trackers = null; }
+        // run41: 04:52, the text two minutes after the status line, stays; the screen shows the later of the two
+        await data.undoRound(c.m, c.p);
+        await run(c.m, { now: '10-26 04:52', events: [] });
+        assert.equal(c.p.now, '10-26 04:52');
+        assert.equal(data.storyNow(c.p), '10-26 04:52');
+    });
+});
+
+test('a scene the phone can\'t place: the model says whose clock, the place is that city\'s from then on; with nothing said its hour is no one\'s', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'lunch break, call?')]);
+    frankfurtPhone(c);
+    await withTrackers([trk(2, '12:50', "Mara's room")], async () => {
+        await run(c.m, { now: '10-26 04:52', statusCity: '', events: [] });
+        assert.match(T.sys, /"statusCity"/);
+        assert.equal(c.p.now, '10-26 04:52');
+        // the screen doesn't show another city's 12:50 as the owner's
+        assert.equal(data.storyNow(c.p), '10-26 04:52');
+        assert.equal(c.p.life.weather.here.place, 'Frankfurt am Main');
+        await data.undoRound(c.m, c.p);
+        await run(c.m, { now: '10-26 03:52', statusCity: 'Mara', events: [] });
+        assert.deepEqual(c.p.placeZones, { marasroom: { tz: 'Asia/Seoul', name: 'Seoul' } });
+        assert.equal(c.p.now, '10-26 04:50');
+        assert.equal(data.statusMoment(c.p).at, '10-26 04:50');
+    });
+});
+
+test('the owner\'s place not a city name, or no weather app: the zone still comes from where they were read to be', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Mara', 'lunch break, call?')]);
+    frankfurtPhone(c, { here: "Ren's flat" });
+    await withTrackers([trk(2, '12:50', 'Seoul')], async () => {
+        assert.equal(data.statusMoment(c.p).at, '10-26 04:50');
+        await run(c.m, { now: '10-26 04:52', events: [] });
+        assert.equal(c.p.now, '10-26 04:52');
+        assert.equal(c.p.life.weather.here.place, "Ren's flat");
+        const bare = { owner: 'Ren', now: '10-26 03:00', year: 2026, where: c.p.where };
+        assert.equal(data.storyNow(bare), '10-26 04:50');
+        assert.match(data.clockBlock(bare, data.storyNow(bare)), /The owner is in Frankfurt am Main, 10-26 04:50 now/);
+    });
+});
+
+test('an old status line doesn\'t hold the clock back; a new one sets back a now that ran ahead of it', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'still up')]);
+    frankfurtPhone(c);
+    await withTrackers([trk(0, '03:00', 'Frankfurt am Main · kitchen', '흐림')], async () => {
+        await run(c.m, { now: '10-26 06:30', events: [] });
+        assert.equal(c.p.now, '10-26 06:30');
+    });
+    // the model ran ahead to 23:55; the next status line says 21:45 and the model, reading it, 21:50
+    c.p.now = '10-26 23:55';
+    T.chat.push(say('Ren', 'late dinner'));
+    await withTrackers([trk(3, '21:45', 'Frankfurt am Main · kitchen', '흐림')], async () => {
+        await run(c.m, { now: '10-26 21:50', events: [] });
+        assert.equal(c.p.now, '10-26 21:50');
+    });
 });

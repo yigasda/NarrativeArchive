@@ -321,7 +321,7 @@ test('the bank over a long stretch: the second turn adds history only, the balan
 
 test('every prompt that writes times has the owner\'s own clock (a messenger timestamp from another time zone is moved)', () => {
     const prompts = { phone: data.AI_SYS_PHONE, update: data.AI_SYS_PHONE_UPDATE, core: data.updateSystem({ split: true, life: true, delivery: true }), money: data.AI_SYS_MONEY, voices: data.AI_SYS_VOICES, life: life.AI_SYS_LIFE, delivery: life.AI_SYS_DELIVERY };
-    for (const [k, s] of Object.entries(prompts)) assert.ok(s.includes("on the owner's phone clock") && s.includes("OWNER'S CLOCK (sometimes)") && s.includes("A status line's time stays as it is") && !s.includes('undefined'), k);
+    for (const [k, s] of Object.entries(prompts)) assert.ok(s.includes("on the owner's phone clock") && s.includes("OWNER'S CLOCK (sometimes)") && s.includes("A status line's time is the clock of the city its scene is in") && !s.includes('undefined'), k);
 });
 
 // the hours are the code's (summer time counted); the model only adds or takes them off
@@ -335,9 +335,6 @@ test('OWNER\'S CLOCK: where the owner is, their time, and the other saved cities
     const one = zonePhone('11-03 04:33'); one.life.weather.cities = one.life.weather.cities.slice(0, 1);
     assert.equal(data.clockBlock(one), '');
     assert.equal(data.clockBlock({ now: '11-03 04:33' }), '');
-    // a status line whose place is no saved city doesn't set the phone's time when other zones are saved
-    assert.equal(data.sceneClockKnown(zonePhone('11-03 04:33')), false);
-    assert.equal(data.sceneClockKnown(one), true);
 });
 
 

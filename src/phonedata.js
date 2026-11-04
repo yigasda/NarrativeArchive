@@ -19,7 +19,7 @@ import { worldText } from './world.js';
 import { phoneChatScope } from './phonestory.js';
 import { tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyMin, byStory, yearIn, last4, line, num, pad, pick, str, when, withEv } from './phoneparse.js';
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
-import { COUNTRY_TZ, applyDays, applyLife, applyWeather, apart, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
+import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
 import { pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, archivedUnread, readBefore, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
@@ -60,7 +60,7 @@ Could this be on the owner's phone, given what the archive, lorebook and chat sh
 - Nothing later than the newest moment of the story.
 - The diary holds only what the archive shows happened and what the owner felt about it; no new secrets, no new feelings.`;
 // every time on the phone is the owner's own clock: a time written on the other side of the world is moved to theirs
-export const OWN_CLOCK = `Every time is on the owner's phone clock, where the owner is now. A time shown on a screen or in a scene goes by the city of whoever's screen or scene it is: the owner's city, or no OWNER'S CLOCK, keeps it as it is; another city in OWNER'S CLOCK is moved by its hours there (a messenger timestamp on the other side's screen). A status line's time stays as it is: the app sets it.`;
+export const OWN_CLOCK = `Every time is on the owner's phone clock, where the owner is now. A time shown on a screen or in a scene goes by the city of whoever's screen or scene it is: the owner's city, or no OWNER'S CLOCK, keeps it as it is; another city in OWNER'S CLOCK is moved by its hours there (a messenger timestamp on the other side's screen). A status line's time is the clock of the city its scene is in; OWNER'S CLOCK gives the newest one on the owner's clock when that is another city.`;
 export const CLOCK_GET = `- OWNER'S CLOCK (sometimes): where the owner is, their time now, and how many hours the other saved cities and the people elsewhere are ahead or behind.`;
 const PHONE_STYLE = `LANGUAGE
 - Each text is in the language its writer would really use on a phone: from their nationality and where they live; between two people, the language they share.
@@ -131,7 +131,7 @@ ${PHONE_LAST}`;
 // life: 시계 · 건강 · 파일 (and 날씨 only when no status line gives it: weather)
 // weather: the model writes the weather (no status line gives it, or the day moved on); tracker: a status line gives some
 // split: the first of two steps (core): no money, each event marked "money" when it touches it (moneySystem writes it after)
-export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false } = {}) {
+export function updateSystem({ money = true, delivery = false, life = false, weather = false, tracker = false, split = false, invest = false, zone = false } = {}) {
     const paid = delivery ? 'order, ticket or delivery' : 'order or ticket';
     return `${split ? 'STAGE: core\n' : ''}GOAL
 Add to one character's phone what a few new chat messages put on it, in a long role-play. The user opens the phone to peek at the story from the phone's side.
@@ -145,7 +145,7 @@ YOU GET
 - EVENTS ON THE PHONE: story events the phone already holds, with their ids.
 - DAYS (sometimes): the story's days from the day before these messages on, with their weekdays. A weekday the story names ("on Friday") is the next one there.
 - MESSAGES READ BEFORE, NOW CHANGED (sometimes): messages put on the phone before and edited since, with the events they gave.
-${money ? `- MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.\n` : ''}${delivery ? `- DELIVERY SHOPS: the shops the delivery app already has.\n` : ''}${life ? `- LIFE NOW: the alarms, files and health days the phone already holds, with record ids.\n` : ''}${weather && tracker ? `- WEATHER NOW: the date, time, place and weather from the chat's last status line up to these messages, its date and time on the owner's clock (a scene in another city has its own as "sceneTime").\n` : ''}- PHONE NOW: the newest of what the phone holds.
+${money ? `- MONEY NOW and INVESTMENTS NOW (sometimes): the bank, card, orders, tickets and brokerage, with record ids. WEALTH (sometimes): how much the owner has.\n` : ''}${delivery ? `- DELIVERY SHOPS: the shops the delivery app already has.\n` : ''}${life ? `- LIFE NOW: the alarms, files and health days the phone already holds, with record ids.\n` : ''}${weather && tracker ? `- WEATHER NOW: the date, time, place and weather from the chat's last status line up to these messages (a scene the owner isn't in: its place and weather only).\n` : ''}- PHONE NOW: the newest of what the phone holds.
 ${CLOCK_GET}
 - OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 
@@ -164,7 +164,7 @@ WHERE IT COMES FROM
 - "quote": a few words copied exactly as written in that message or section, not reworded.
 - "date" and "time": when it happens in that message ("MM-DD", "HH:MM" if known). A plan for later happens when it is made; its later day goes only on the calendar item.
 - "now": the moment of the newest message, never a time something is only planned for.
-${split ? `- "apps": "money" when the event has anything for the bank, cards, orders, tickets or the delivery app (its basket too)${invest ? '; "invest" for the brokerage (a trade, a share price the story gives, a share they start watching, a stake)' : ''}; else []. When unsure, include it.\n` : ''}${life ? `
+${zone ? `- "statusCity": the newest status line in these messages is from a scene the app can't place. Whose clock does it show? A city or person in OWNER'S CLOCK, "owner" for the owner's own, or "" when the messages don't say.\n` : ''}${split ? `- "apps": "money" when the event has anything for the bank, cards, orders, tickets or the delivery app (its basket too)${invest ? '; "invest" for the brokerage (a trade, a share price the story gives, a share they start watching, a stake)' : ''}; else []. When unsure, include it.\n` : ''}${life ? `
 LIFE
 - An alarm the owner sets, changes or switches on or off in these messages; a timer they set; a file they receive, save, scan or delete. Pictures the camera takes go to photos, not files.
 - An alarm for one occasion (a flight, an appointment) rings once: "days": [] and its "date". Only an alarm the owner keeps for every week has "days".
@@ -192,7 +192,7 @@ ${delivery ? `- A delivery paid in cash at the door has no move. "tip" only wher
 ${PHONE_STYLE.replace('; "now" is the newest moment of the story.', '.')}
 
 ANSWER — one JSON object, nothing else:
-{ "now": "MM-DD HH:MM",
+{ "now": "MM-DD HH:MM",${zone ? ' "statusCity": "",' : ''}
   "events": [{ "id": an id from EVENTS ON THE PHONE, or a short new tag like "berlin-flight", "at": 123, "quote": "exact words",
                "date": "MM-DD", "time": "HH:MM" or "", "summary": "one short line",${split ? ` "apps": [] or ["money"${invest ? ', "invest"' : ''}],` : ''}
                "phone": { only the app items this event puts on the phone }${money ? `,
@@ -230,7 +230,7 @@ export const AI_SYS_PHONE_UPDATE = updateSystem();
 // line names the step (the test harness files each answer under it)
 // core: the old one-step instructions without money (life, files, health and the weather stay: they read the whole
 // messages anyway), with each event marked "money" when it touches it
-export const coreSystem = ({ life = false, weather = false, tracker = false, invest = false } = {}) => updateSystem({ money: false, delivery: false, life, weather, tracker, split: true, invest });
+export const coreSystem = ({ life = false, weather = false, tracker = false, invest = false, zone = false } = {}) => updateSystem({ money: false, delivery: false, life, weather, tracker, split: true, invest, zone });
 // delivery: the phone has the delivery app
 // invest: an event touches the brokerage (trades, prices, watched shares, stakes); else none of it is asked or sent
 export function moneySystem({ delivery = false, invest = false } = {}) {
@@ -936,13 +936,12 @@ async function updatePhone(m, owner) {
         // line after it, like STORY NOW
         const roundEnd = reachesEnd(s, rows, round.rows) ? null : Math.max(-1, ...round.rows.map(r => r.index), ...archIn.map(x => x.last));
         const upChat = roundEnd == null ? {} : { chat: (ctx().chat || []).slice(0, roundEnd + 1) };
-        let tracker = null, trackerAt = -1;
-        try { const t = recentTrackers(1, upChat)[0]; tracker = trackerWeather(t); trackerAt = Number.isInteger(t?.i) ? t.i : -1; } catch { /* no status lines */ }
-        // the status line's moment on the owner's clock (a scene in another saved city read in their zone): what the model is
-        // shown of it, so it never pairs another city's hour with the owner's now
-        const trkNow = sceneClockKnown(p, roundEnd) ? storyNow({ ...p, now: '' }, roundEnd) : '';
-        const trackShown = tracker && trkNow && tracker.time && (trkNow.slice(0, 5) !== tracker.date || trkNow.slice(6) !== hhmm(tracker.time))
-            ? { ...tracker, date: trkNow.slice(0, 5), time: trkNow.slice(6), sceneTime: `${tracker.date} ${hhmm(tracker.time)} in ${tracker.place}` } : tracker;
+        let tracker = null, st = null;
+        try { tracker = trackerWeather(recentTrackers(1, upChat)[0]); st = statusMoment(p, roundEnd); } catch { /* no status lines */ }
+        // a status line among these messages whose scene the phone can't place: the model says whose clock it shows
+        const askZone = !!st && !st.known && round.rows.some(r => r.index === st.i);
+        // a scene the owner isn't in: the model gets its place and weather, never its hour (OWNER'S CLOCK has it, converted)
+        const trackShown = tracker && st && !st.home ? { place: tracker.place, weather: tracker.weather } : tracker;
         const trackDay = tracker ? when(tracker.date).slice(0, 5) : '';
         // the model writes the weather when no status line gives it, when the status line has no date or its day moved on
         // from the saved weather's, or when it puts the story somewhere else; a same-day, same-place line only stands over it
@@ -972,14 +971,14 @@ async function updatePhone(m, owner) {
             `[PHONE NOW]\n${JSON.stringify(phoneForModel(p))}`,
             !split && money ? `[MONEY NOW]\n${JSON.stringify(money)}` : '', !split && invest ? `[INVESTMENTS NOW]\n${JSON.stringify(invest)}` : '',
             !split && money && p.delivery ? `[DELIVERY SHOPS]\n${(p.delivery.shops || []).map(x => x.name).join('\n') || '(none yet)'}${p.delivery.cart?.items?.length ? `\nCART (in the basket, not ordered): ${p.delivery.cart.shop}: ${p.delivery.cart.items.map(x => `${x.name} ×${x.qty}`).join(', ')}` : ''}` : '',
-            life ? `[LIFE NOW]\n${JSON.stringify(life)}` : '', askWeather && tracker ? `[WEATHER NOW]\n${JSON.stringify(trackShown)}` : '', clockBlock(p, p.now, m),
+            life ? `[LIFE NOW]\n${JSON.stringify(life)}` : '', askWeather && tracker ? `[WEATHER NOW]\n${JSON.stringify(trackShown)}` : '', clockBlock(p, p.now, m, st),
             !split && (money || invest) && p.wealthPlan ? `[WEALTH]\n${JSON.stringify({ currency: p.wealthPlan.currency, deposits: p.wealthPlan.deposits, investments: p.wealthPlan.investments, basis: p.wealthPlan.basis })}` : '',
             world ? `[WORLD]\n${world}` : '', lore ? `[LOREBOOK]\n${lore}` : '',
             `[OWNER]\n${owner}`, profile, blindBlock(m, owner), namesBlock(m),
         ].filter(Boolean).join('\n\n');
         const made = { money: p.money?.at, invest: p.investment?.at, life: p.life, delivery: p.delivery };
         // low thinking: tested against medium on Vertex, the same payments, ids and amounts, without the thinking cost
-        const out = await askDraft(input, { force: true, system: split ? coreSystem({ life: !!life, weather: askWeather, tracker: !!tracker, invest: !!invest }) : updateSystem({ money: false, life: !!life, weather: askWeather, tracker: !!tracker }), maxTokens: 16000, effort: 'low' });
+        const out = await askDraft(input, { force: true, system: split ? coreSystem({ life: !!life, weather: askWeather, tracker: !!tracker, invest: !!invest, zone: askZone }) : updateSystem({ money: false, life: !!life, weather: askWeather, tracker: !!tracker, zone: askZone }), maxTokens: 16000, effort: 'low' });
         // the answer is for the chat and messages it was asked about
         if (phoneChatScope(ctx()) !== scope || m.phones?.[key] !== p) throw new Error('반영하는 사이 채팅이나 폰이 바뀌었어요. 다시 해 주세요');
         if (p.money?.at !== made.money || p.investment?.at !== made.invest) throw new Error('반영하는 사이 은행이나 투자가 새로 만들어졌어요. 다시 해 주세요');
@@ -1081,18 +1080,20 @@ async function updatePhone(m, owner) {
         // the phone's time only moves on, across New Year too (12-31 → 01-01 is a day later, not months back)
         // (a day or a few behind is the model slipping and is ignored; two months or more behind is a story that skipped far
         // ahead, past the half year the dates alone can tell: half a year later)
-        // the status line's own clock caps the model's (a "23:55" written over a line that says 21:30)
-        if (trkNow && nowAt && nowAt.slice(0, 5) === trkNow.slice(0, 5) && nowAt.slice(6) > trkNow.slice(6)) nowAt = trkNow;
-        // and a status line among these messages is no later than now: a now before it (another city's hour taken for the
-        // owner's) is moved up to it
-        else if (trkNow && nowAt && round.rows.some(r => r.index === trackerAt) && (dayGap(nowAt.slice(0, 5), trkNow.slice(0, 5)) > 0 || nowAt.slice(0, 5) === trkNow.slice(0, 5) && nowAt.slice(6) < trkNow.slice(6))) nowAt = trkNow;
+        // the scene the phone couldn't place, as the model read it: its place is that city's from now on
+        if (askZone && typeof raw.statusCity === 'string') { const z = zoneNamed(p, raw.statusCity, m); if (z) { (p.placeZones ||= {})[pkey(sceneOf(st.place))] = z; st = statusMoment(p, roundEnd); } }
+        // a status line among these messages: now is never before it (a model that took another city's hour for the
+        // owner's); later, the model's own. Its status line also sets back a now that ran ahead of it the day before
+        const fresh = !!st?.at && round.rows.some(r => r.index === st.i);
+        if (fresh && (!hm(nowAt) || laterThan(st.at, nowAt))) nowAt = st.at;
         const gap = nowAt && p.now ? dayGap(p.now.slice(0, 5), nowAt.slice(0, 5)) : 1;
-        if (nowAt && (gap > 0 || gap < -60 || gap === 0 && nowAt.slice(6) > p.now.slice(6))) {
-            if (p.year && p.now && nowAt.slice(0, 5) < p.now.slice(0, 5)) p.year++;
+        const setBack = fresh && hm(p.now) && hm(nowAt) && laterThan(p.now, nowAt) && gap >= -1;
+        if (nowAt && (setBack || gap > 0 || gap < -60 || gap === 0 && nowAt.slice(6) > p.now.slice(6))) {
+            if (!setBack && p.year && p.now && nowAt.slice(0, 5) < p.now.slice(0, 5)) p.year++;
             p.now = nowAt;
         }
         // the round's own: new days nobody told, the weather, and what the clock moving on does by itself
-        const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = lifeAhead ? [] : applyWeather(p, askWeather ? raw.weather : null, tracker, { archive: evidence.length + before.length > 0, today: String(p.now || '').slice(0, 5) });
+        const days = [...applyDays(p, raw.days, rid), ...fillDays(p, p.now, rid)], sky = lifeAhead ? [] : applyWeather(p, askWeather ? raw.weather : null, st && !st.home ? null : tracker, { archive: evidence.length + before.length > 0, today: String(p.now || '').slice(0, 5) });
         if (days.length) apps.add('건강');
         if (sky.length) apps.add('날씨');
         const roundFx = [...days, ...sky, ...lifeClock(p, p.now), ...dlvClock(p, p.now), ...cardClock(p, p.now)];
@@ -1394,19 +1395,14 @@ export function monthDay(text) {
 export const rowDay = r => (r?.date?.d && calendars()[r.date.cal]?.length === 12 ? `${pad(r.date.m + 1)}-${pad(r.date.d)}` : '');
 // the newest status line's weather, its date as "MM-DD" whatever shape the line writes it in ("1월 30일 (토)", "Jan 30")
 export const trackerWeather = t => { const w = weatherFrom(t); if (w) { const d = monthDay(w.date); w.date = d ? `${pad(d.mo)}-${pad(d.d)}` : when(w.date).slice(0, 5); } return w; };
-// the scene's clock from the newest status line; an owner in another saved city (their phone's "here") reads it in their zone
+// the story's now: the newest status line on the owner's clock (statusMoment), else the phone's own. Read to now (no upto),
+// the later of the two: a text that came a few minutes after the status line is not in the future
 // upto: the story as it stood at that message (a request that read only so far)
 export function storyNow(p, upto = null) {
-    try {
-        const t = recentTrackers(1, upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) })[0];
-        const d = t?.date ? monthDay(t.date) : null;
-        if (t && Number.isFinite(t.min) && d) {
-            const at = `${pad(d.mo)}-${pad(d.d)} ${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}`, w = p?.life?.weather, here = w?.here?.place, scene = String(t.city || t.place || '').split(/\s*[,，→>/·]\s*/)[0];
-            if (w && apart(here, scene, w.cities)) { const a = cityAt(scene, w.cities), b = cityAt(here, w.cities); if (a?.tz && b?.tz) return zoneShift(at, a.tz, b.tz, Number(p.year) || undefined); }
-            return at;
-        }
-    } catch { /* no status window */ }
-    return p.now || '';
+    let at = '';
+    try { at = statusMoment(p, upto)?.at || ''; } catch { /* no status window */ }
+    if (upto == null && at && hm(p?.now) && laterThan(p.now, at)) return p.now;
+    return at || p?.now || '';
 }
 
 // ---- 위치 판독: where the owner and the people on their phone are now and where they live, read by the model from the
@@ -1494,20 +1490,52 @@ export function zonesOf(p, at = p?.now, m = null) {
     return others.length ? { own: { name: own.where, tz: own.tz }, at: t, others } : null;
 }
 // what the model is told of them: it only adds or takes off the hours given (the code works them out)
-export const clockBlock = (p, at = p?.now, m = null) => {
+export const clockBlock = (p, at = p?.now, m = null, st = null) => {
     const z = zonesOf(p, at, m);
     const hrs = h => `${Math.abs(h)} hour${Math.abs(h) === 1 ? '' : 's'} ${h > 0 ? 'ahead' : 'behind'}`;
-    return z ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.map(c => (c.where ? `${c.name} (in ${c.where}) is ${hrs(c.hours)}` : `${c.name} is ${hrs(c.hours)}`)).join(', ')}.` : '';
+    return z ? `[OWNER'S CLOCK]\nThe owner is in ${z.own.name}, ${z.at} now.\n${z.others.map(c => (c.where ? `${c.name} (in ${c.where}) is ${hrs(c.hours)}` : `${c.name} is ${hrs(c.hours)}`)).join(', ')}.${st?.known && st.at && st.at !== st.raw ? `\nThe newest status line, ${st.raw} in ${st.city}, is ${st.at} here.` : ''}` : '';
 };
-// a status line's scene is a city the phone knows (its clock can be read in the owner's zone), or the phone keeps no
-// other zone (it is the owner's): else its time may be someone else's, and it doesn't set the phone's
-export function sceneClockKnown(p, upto = null) {
-    if (!zonesOf(p)) return true;
-    try {
-        const t = recentTrackers(1, upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) })[0];
-        const scene = String(t?.city || t?.place || '').split(/\s*[,，→>/·]\s*/)[0];
-        return !!cityAt(scene, p.life.weather.cities);
-    } catch { return false; }
+// ---- one place decides whose clock a status line shows. The owner's zone: where they were read to be, else their phone's
+// saved city, else the country. A scene's: a saved city its place names, a city someone was read to be in, else a place the
+// reflection was told about (p.placeZones). Every clock on the phone goes by these
+const pkey = v => String(v || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+const ownerZone = p => zoneOfWhere(whereOf(p, p?.owner)) || zoneOfPhone(p);
+const sceneOf = place => String(place || '').split(/\s*[,，→>/·]\s*/)[0];
+export function sceneZone(p, place) {
+    const w = p?.life?.weather, c = cityAt(sceneOf(place), w?.cities) || cityAt(place, w?.cities);
+    if (c?.tz) return { tz: c.tz, name: c.name };
+    const k = pkey(place);
+    for (const x of p?.where?.people || []) if (x.tz && x.city && k && k.includes(pkey(x.city))) return { tz: x.tz, name: x.city };
+    const own = ownerZone(p);
+    if (own && k && pkey(sceneOf(place)) && (k.includes(pkey(own.where)) || pkey(own.where).includes(pkey(sceneOf(place))))) return { tz: own.tz, name: own.where };
+    const learned = p?.placeZones?.[pkey(sceneOf(place))];
+    return learned?.tz ? learned : null;
+}
+// the newest status line up to upto, on the owner's clock: at '' when its scene's zone is unknown on a phone that keeps
+// other zones (it may be someone else's hour). home: the owner's own zone. null with no dated status line
+const hm = v => /^\d{2}-\d{2} \d{2}:\d{2}$/.test(String(v || ''));
+const laterThan = (a, b) => { const g = dayGap(String(b).slice(0, 5), String(a).slice(0, 5)); return g > 0 || g === 0 && String(a).slice(6) > String(b).slice(6); };
+export function statusMoment(p, upto = null) {
+    const t = recentTrackers(1, upto == null ? {} : { chat: (ctx().chat || []).slice(0, upto + 1) })[0];
+    const d = t?.date ? monthDay(t.date) : null;
+    if (!t || !Number.isFinite(t.min) || !d) return null;
+    const raw = `${pad(d.mo)}-${pad(d.d)} ${pad(Math.floor(t.min / 60))}:${pad(t.min % 60)}`, place = t.city || t.place || '';
+    const own = ownerZone(p), scene = sceneZone(p, place), base = { raw, place, i: t.i };
+    if (own && scene) return { ...base, at: scene.tz === own.tz ? raw : zoneShift(raw, scene.tz, own.tz, Number(p.year) || undefined), city: scene.name, home: scene.tz === own.tz, known: true };
+    // no zone of their own, or no other zone kept: the owner's own hour
+    if (!own || !zonesOf(p, hm(p?.now) ? p.now : raw)) return { ...base, at: raw, home: true, known: true };
+    return { ...base, at: '', home: false, known: false };
+}
+// a city the reflection named for a status line: its zone (a saved city, someone's city, the owner's own)
+function zoneNamed(p, name, m = null) {
+    const own = ownerZone(p), k = pkey(name);
+    if (!k) return null;
+    if (k === 'owner' && own) return { tz: own.tz, name: own.where };
+    const c = cityAt(name, p.life?.weather?.cities);
+    if (c?.tz) return { tz: c.tz, name: c.name };
+    for (const x of p.where?.people || []) if (x.tz && (pkey(x.city) === k || pkey(x.name) === k)) return { tz: x.tz, name: x.city || x.name };
+    for (const q of Object.values(m?.phones || {})) if (q !== p && pkey(q?.owner) === k) { const z = zoneOfPhone(q); if (z) return { tz: z.tz, name: z.where }; }
+    return own && pkey(own.where) === k ? { tz: own.tz, name: own.where } : null;
 }
 // ---- the places they have been: section headings that name a place, in sections the owner is in (no model).
 // One row a place, newest visit first: a move ("A → B") counts for both, and a place gone to again counts up
