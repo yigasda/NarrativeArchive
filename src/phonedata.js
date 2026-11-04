@@ -574,7 +574,7 @@ export function setStoryYear(m, p, year) {
         // this browser's record of unsaved rounds (복구) too
         try {
             const scope = phoneChatScope(ctx()), owners = new Set(Object.values(m.phones || {}).map(q => q?.owner));
-            journalWrite(scope, journalRead(scope).map(r => (owners.has(r.owner) ? { ...r, events: shiftAll(r.events || [], n), life: shiftAll(r.life || [], n) } : r)));
+            journalWrite(scope, journalRead(scope).map(r => (owners.has(r.owner) ? { ...r, events: shiftAll(r.events || [], n), life: shiftAll(r.life || [], n), ...(r.year ? { year: r.year + n } : {}) } : r)));
         } catch { /* no journal here */ }
     }
     p.year = year; p.noYear = false;
@@ -725,6 +725,8 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         mergePhone(p, { ...only(got), profile: null });
         if (got2) mergePhone(p, { ...only(got2), profile: part.includes('profile') ? got2.profile : null });
         for (const k of part) if (k !== 'profile') carryOver(k, was[k], p[k]);
+        // the last round's 되돌리기 would put back the old app's records: no more
+        delete p.syncUndo;
         ensureIds(p);
         p.at = Date.now();
         await saveMeta();
@@ -749,7 +751,11 @@ export async function makePhone(m, owner, { update = false, apps = null } = {}) 
         // weren't made again), the reading state stays as it was: messages they haven't read yet are still theirs to read
         // (the phone's own items from those messages are told apart by their words, so nothing doubles)
         if (was?.sync?.marks?.base && ['money', 'invest', 'life', 'delivery'].some(g => was.sync.marks[g])) base.sync = was.sync;
-        else { base.sync = newSync(phoneChatScope(ctx())); base.sync.marks.base = mark; }
+        else {
+            base.sync = newSync(phoneChatScope(ctx())); base.sync.marks.base = mark;
+            // a reading started anew: the old one's unsaved rounds (복구) aren't this phone's
+            try { const scope = phoneChatScope(ctx()); journalWrite(scope, journalRead(scope).filter(r => nameKey(r.owner) !== key)); } catch { /* no journal here */ }
+        }
         m.phones[key] = mergePhone(base, got);
         if (got2) mergePhone(m.phones[key], got2);
     }
@@ -886,7 +892,7 @@ async function moneyStage(m, p, owner, targets, c) {
         const e0 = s.events[t.id] ||= { at: t.at, quote: t.quote || '', summary: t.summary || t.id, effects: [] };
         e0.effects = [...(e0.effects || []), ...paid.effects];
         if (paid.legs.length) e0.legs = [...(e0.legs || []), ...paid.legs.filter(l => !(e0.legs || []).some(o => o.key === l.key))];
-        out.late.push({ id: t.id, at: t.at, add: {}, effects: paid.effects });
+        out.late.push({ id: t.id, at: t.at, add: {}, effects: paid.effects, summary: t.summary, legs: paid.legs });
     }
     return out;
 }
@@ -998,8 +1004,8 @@ async function updatePhone(m, owner) {
         // for 되돌리기: what was there before this round (ids and message counts), and the reading state
         const msgSig = x => JSON.stringify([x.from, x.text, x.time]);
         const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map(p.threads.map(t => [t.id, new Set(t.messages.map(msgSig))]));
-        const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, seen: s.seen, hiddenRead: s.hiddenRead || {}, owed: s.owed || { money: [] } }), now: p.now, year: p.year, where: structuredClone(p.where ?? null), moneyAt: p.money?.at, investAt: p.investment?.at,
-            comments: (p.posts || []).filter(x => x.id).map(x => [x.id, x.comments?.length || 0]) };
+        const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, seen: s.seen, hiddenRead: s.hiddenRead || {}, owed: s.owed || { money: [] }, dropped: s.dropped || [] }), now: p.now, year: p.year, where: structuredClone(p.where ?? null), moneyAt: p.money?.at, investAt: p.investment?.at,
+            comments: (p.posts || []).filter(x => x.id).map(x => [x.id, x.comments?.length || 0]), before: structuredClone(mergedState(p)) };
         // an event's day when the model leaves it out: the day of the event before it, else the answer's now
         let lastDay = when(raw.now).slice(0, 5);
         const used = new Set(), wants = new Map();
@@ -1041,7 +1047,7 @@ async function updatePhone(m, owner) {
             const fx = [...paid.effects, ...lived.effects];
             for (const k of LISTS) for (const x of add[k]) x.ev ||= id;
             for (const t of add.threads) for (const x of t.messages) x.ev ||= id;
-            const was = sizes(p);
+            const was = sizes(p), told = structuredClone(add); // as told (merging takes the deleted texts it matched out of add)
             mergePhone(p, { ...add, device: null, now: '' }, { keepAll: true });
             // this message (its number and words) is a source of each item, new or already there
             tagItems(p, add, srcOf(at, bodyMark(rowText.get(at) || ''), rid));
@@ -1052,7 +1058,7 @@ async function updatePhone(m, owner) {
             // deleting that message still offers everything it gave; one whose message is gone is taken up by the new one
             const at0 = s.events[id]?.at, home = Number.isInteger(at0) && inRound.has(at0) === false && rowText.has(at0) ? at0 : at;
             s.events[id] = { at: home, quote: line(e.quote, 200), summary: line(e.summary, 160), effects: [...(s.events[id]?.effects || []), ...fx], ...(paid.legs.length || s.events[id]?.legs ? { legs: [...(s.events[id]?.legs || []), ...paid.legs.filter(l => !(s.events[id]?.legs || []).some(o => o.key === l.key))] } : {}) };
-            added.push({ id, at, add, effects: fx });
+            added.push({ id, at, add: told, effects: fx, quote: line(e.quote, 200), summary: line(e.summary, 160), legs: paid.legs });
         }
         // 2단계 돈: what core marked, and what earlier rounds still owe (asked whether or not anything is marked now)
         let late = [];
@@ -1121,9 +1127,9 @@ async function updatePhone(m, owner) {
         p.syncUndo = { ...undo, round: id, read: [...inRound], readFp: round.rows.map(r => bodyMark(r.text)), comments: undo.comments,
             items: ITEM_KEYS.flatMap(k => (p[k] || []).filter(x => x.id && !had.has(x.id)).map(x => [k, x.id])),
             msgs: p.threads.filter(t => msgs.has(t.id)).map(t => [t.id, t.messages.map(msgSig).filter(sg => !msgs.get(t.id).has(sg))]).filter(([, xs]) => xs.length),
-            effects: [...added.flatMap(x => x.effects || []), ...late.flatMap(x => x.effects || []), ...roundFx], byEvent: byEvent([...added, ...late]) };
+            effects: [...added.flatMap(x => x.effects || []), ...late.flatMap(x => x.effects || []), ...roundFx], byEvent: byEvent([...added, ...late]), after: structuredClone(mergedState(p)) };
         // kept in this browser until the saved chat shows it: 복구 can add it back if the save didn't land
-        journalAdd(scope, { round: id, owner, at: Date.now(), now: p.now, year: p.year, events: [...added, ...late], ...(split ? { owed: s.owed } : {}), done: [...inRound], seen: round.rows.map(r => [r.index, bodyMark(r.text)]), failed: Object.fromEntries([...inRound].filter(i => s.failed[i]).map(i => [i, s.failed[i]])), arch: evidence.map(x => x.key), hidden: hiddenNow, life: roundFx });
+        journalAdd(scope, { round: id, owner, at: Date.now(), now: p.now, year: p.year, back: !!setBack, where: structuredClone(p.where ?? null), events: [...added, ...late], ...(split ? { owed: s.owed } : {}), done: [...inRound], seen: round.rows.map(r => [r.index, bodyMark(r.text)]), failed: Object.fromEntries([...inRound].filter(i => s.failed[i]).map(i => [i, s.failed[i]])), arch: evidence.map(x => x.key), hidden: hiddenNow, life: roundFx });
         await saveMeta();
         if (p.inject) applyInjection();
         return p;
@@ -1152,12 +1158,19 @@ export async function restoreRounds(m, scope) {
             mergePhone(p, { ...e.add, device: null, now: '' }, { keepAll: true });
             tagItems(p, e.add);
             replayEffects(m, p, e.effects || []);
-            s.events[e.id] ||= { at: e.at, quote: '', summary: e.id };
+            // the event knows its records again (빼기 and later rounds go by them), and what it paid (legs)
+            const ev = s.events[e.id] ||= { at: e.at, quote: e.quote || '', summary: e.summary || e.id };
+            const had = new Set((ev.effects || []).map(x => JSON.stringify(x)));
+            ev.effects = [...(ev.effects || []), ...(e.effects || []).filter(x => !had.has(JSON.stringify(x)))];
+            if (e.legs?.length) ev.legs = [...(ev.legs || []), ...e.legs.filter(l => !(ev.legs || []).some(o => o.key === l.key))];
         }
         replayEffects(m, p, r.life || []);
         if (r.owed) s.owed = structuredClone(r.owed);
         // the story's clock as the round left it (and the year it carried over New Year)
-        if (r.now && (!p.now || gapDays(String(p.now).slice(0, 5), String(r.now).slice(0, 5)) >= 0)) { p.now = r.now; if (r.year) p.year = r.year; }
+        if (r.now && (!p.now || r.back || gapDays(String(p.now).slice(0, 5), String(r.now).slice(0, 5)) >= 0)) { p.now = r.now; if (r.year) p.year = r.year; }
+        if (r.where) p.where = structuredClone(r.where);
+        // a message it read well is no longer a failure to retry
+        for (const i of r.done || []) if (!(r.failed || {})[i]) delete s.failed[i];
         addDone(s, r.done);
         s.seen ||= {};
         for (const [i, f] of r.seen || []) s.seen[i] = f;
@@ -1255,11 +1268,45 @@ function renumber(m, p, { moved, changed, dropped = [] }) {
     for (const e of Object.values(p.sync.events)) if (e.at !== null) e.at = to(e.at);
     for (const { x } of phoneItems(p)) for (const f of x.froms || []) if (f.at !== null) f.at = to(f.at);
     for (const f of Object.values(p.sync.failed)) if (f.span) f.span = [to(f.span[0]) ?? f.span[0], to(f.span[1]) ?? f.span[1]];
-    for (const r of [...(p.money?.tx || []), ...(p.money?.orders || []), ...(p.money?.passes || []), ...(p.investment?.trades || [])]) if (r.sourceIndex !== undefined) r.sourceIndex = to(r.sourceIndex);
+    for (const r of [...(p.money?.tx || []), ...(p.money?.orders || []), ...(p.money?.passes || []), ...(p.investment?.trades || []), ...(p.delivery?.orders || [])]) if (r.sourceIndex !== undefined) r.sourceIndex = to(r.sourceIndex);
+    // the events' own copies of their records too (a changed message's events are found by them)
+    for (const e of Object.values(p.sync.events)) for (const f of e.effects || []) { if (f.item?.sourceIndex !== undefined) f.item.sourceIndex = to(f.item.sourceIndex); if (f.sourceIndex !== undefined) f.sourceIndex = to(f.sourceIndex); }
     for (const a of Object.values(m.finance?.accounts || {})) if (a.owner === p.owner) for (const x of Object.values(a.entries)) if (x.sourceIndex !== undefined) x.sourceIndex = to(x.sourceIndex);
 }
 // 되돌리기: the last round only. What it added goes by its ids, its money comes back out, and those messages are unread again.
 // Something the user changed since stays as it is; a bank or investment made again since can't be undone this way.
+// what a round may change on items that were there before it (a plan moved or called off, a text marked deleted, a draft,
+// a contact's saved name, the profile, a post's comments): kept before and after the round, so 되돌리기 puts back each one
+// still as the round left it (one changed by hand since stays)
+const sig = x => JSON.stringify([x.from, x.text, x.time]);
+function mergedState(p) {
+    return {
+        events: Object.fromEntries((p.events || []).filter(x => x.id).map(x => [x.id, { title: x.title, ko: x.ko ?? '', date: x.date ?? '', time: x.time ?? '', cancelled: !!x.cancelled }])),
+        threads: Object.fromEntries((p.threads || []).filter(t => t.id).map(t => [t.id, { draft: t.draft ?? null, deleted: (t.messages || []).filter(x => x.deleted).map(sig) }])),
+        contacts: Object.fromEntries((p.contacts || []).filter(x => x.id).map(x => [x.id, x.saved ?? null])),
+        profile: p.profile ? { handle: p.profile.handle ?? '', bio: p.profile.bio ?? '' } : null,
+        comments: Object.fromEntries((p.posts || []).filter(x => x.id).map(x => [x.id, x.comments || []])),
+    };
+}
+function restoreMerged(p, before, after) {
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b), now = mergedState(p);
+    for (const x of p.events || []) {
+        const b = before.events[x.id];
+        if (!b || !same(now.events[x.id], after.events[x.id])) continue;
+        Object.assign(x, { title: b.title, ko: b.ko, date: b.date, time: b.time });
+        if (b.cancelled) x.cancelled = true; else delete x.cancelled;
+    }
+    for (const t of p.threads || []) {
+        const b = before.threads[t.id], a = after.threads[t.id];
+        if (!b || !a) continue;
+        if (same(now.threads[t.id].draft, a.draft)) { if (b.draft === null) delete t.draft; else t.draft = b.draft; }
+        const was = new Set(b.deleted), marked = new Set(a.deleted.filter(g => !was.has(g)));
+        for (const x of t.messages) if (x.deleted && marked.has(sig(x))) delete x.deleted;
+    }
+    for (const x of p.contacts || []) if (x.id in before.contacts && same(now.contacts[x.id], after.contacts[x.id])) { if (before.contacts[x.id] === null) delete x.saved; else x.saved = before.contacts[x.id]; }
+    if (same(now.profile, after.profile)) { if (before.profile) p.profile = { ...(p.profile || {}), ...before.profile }; else delete p.profile; }
+    for (const x of p.posts || []) if (before.comments[x.id] && same(now.comments[x.id], after.comments[x.id])) x.comments = structuredClone(before.comments[x.id]);
+}
 export async function undoRound(m, p) {
     const u = p.syncUndo, s = p.sync;
     if (!u || s?.rounds?.[s.rounds.length - 1] !== u.round) throw new Error('되돌릴 반영이 없어요');
@@ -1271,16 +1318,19 @@ export async function undoRound(m, p) {
         if (t) { const drop = new Set(sigs); t.messages = t.messages.filter(x => !drop.delete(JSON.stringify([x.from, x.text, x.time]))); }
     }
     p.threads = p.threads.filter(t => t.messages.length);
-    for (const [pid, n] of u.comments || []) { const x = (p.posts || []).find(y => y.id === pid); if (x?.comments?.length > n) x.comments = x.comments.slice(0, n); }
+    if (u.before && u.after) restoreMerged(p, u.before, u.after);
+    else for (const [pid, n] of u.comments || []) { const x = (p.posts || []).find(y => y.id === pid); if (x?.comments?.length > n) x.comments = x.comments.slice(0, n); }
     // items that were there before the round forget it as a source
     for (const { x } of phoneItems(p)) if (x.froms) x.froms = x.froms.filter(f => f.r !== u.round);
     // what can't be put back (changed since, or built on) stays, and so does its event, with only what stayed
     const now = structuredClone(s.events), kept = [];
     const left = new Set(revertEffects(m, p, u.effects).map(x => JSON.stringify(x)));
     Object.assign(s, structuredClone(u.sync));
+    // an event 빼기 took off since stays off (the snapshot still had it)
+    for (const id of Object.keys(s.events)) if (!(id in now)) delete s.events[id];
     for (const [id, effects] of u.byEvent || []) {
         const rest = effects.filter(x => left.has(JSON.stringify(x)));
-        if (rest.length && now[id]) { s.events[id] = { ...now[id], effects: rest }; kept.push(now[id].summary || id); }
+        if (rest.length && now[id]) { s.events[id] = { ...now[id], effects: [...(s.events[id]?.effects || []), ...rest] }; kept.push(now[id].summary || id); }
     }
     s.rounds.pop();
     pruneDropped(s, phoneItems(p));

@@ -463,6 +463,8 @@ export const fillLife = (m, p) => exclusive('fill', async () => {
         catch (err) { console.warn('[narrative-archive] life, second turn', err); }
     }
     p.life = { ...life, at: storyNow(p, nowAt(last)) || p.now || '' };
+    // the last round's 되돌리기 would take its records out of an app made again since: no more
+    delete p.syncUndo;
     // a reflection reads on from here: what came before is in what was just written
     if (p.sync?.marks) p.sync.marks.life = readMark(last) || markNow();
     ensureIds(p);
@@ -573,6 +575,7 @@ export const fillDelivery = (m, p) => exclusive('fill', async () => {
     const kept = (p.delivery?.orders || []).filter(o => o.sync), plain = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
     const twin = o => kept.some(k => (o.ev && k.ev === o.ev) || (plain(k.shop) === plain(o.shop) && dayGap(String(k.time).slice(0, 5), String(o.time).slice(0, 5)) === 0));
     p.delivery = { ...d, orders: [...d.orders.filter(o => !twin(o)), ...kept].sort(byStory(p.now)), look: deliveryLook(p), at, nearbyAt: String(at).slice(0, 5), city: homeCity(p) };
+    delete p.syncUndo;
     if (p.sync?.marks) p.sync.marks.delivery = readMark(last) || markNow();
     ensureIds(p);
     payDeliveries(m, p);

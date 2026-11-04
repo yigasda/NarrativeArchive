@@ -276,7 +276,7 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const flow = kind === 'buy' ? -(quantity * price + fee) : kind === 'sell' ? quantity * price - fee : amount;
         L.entries[id] = { amount: round(flow), date: full };
         out.effects.push({ type: 'push', path: 'investment.trades', item: structuredClone(trade) }, { type: 'entry', key: a.key, id, amount: round(flow), date: full });
-        if (full > (inv.date || '')) inv.date = full;
+        if (full > (inv.date || '')) { out.effects.push({ type: 'field', path: 'investment', field: 'date', from: inv.date ?? null, to: full }); inv.date = full; }
         out.changes.push({ app: '투자', label: `${inv.securities.find(x => x.symbol === symbol)?.name || symbol} ${kind === 'buy' ? '매수' : kind === 'sell' ? '매도' : '배당'}${kind === 'dividend' ? '' : ` ${quantity}주`}`, amount: round(flow), currency: cur });
         out.legs.push({ key, amount: size, state: 'applied', rec: id });
     });
@@ -286,8 +286,10 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
     const records = (path, rows, make, same) => rows.forEach((x, k) => {
         if (!bankOn) return;
         const box = p.money[path] ||= [];
-        const old = x.already && box.find(o => o.id === x.already) || box.find(o => !madeNow.has(o) && same(o, x) && !fresh(x, o, e.at));
+        // the same event's own record told again (its message rewritten and read anew) is that one, not a second
+        const old = x.already && box.find(o => o.id === x.already) || box.find(o => !madeNow.has(o) && same(o, x) && (!fresh(x, o, e.at) || o.ev === e.id));
         if (!old && x.occurrence === 'again') return;
+        if (old && old.sourceIndex == null) old.sourceIndex = e.at;
         if (old) {
             // an order's status only moves forward; a pass's is free text ("used", "checked in", "cancelled"): whatever it says now
             const next = path === 'passes' ? txt(x.status, 30) : x.status;
@@ -324,9 +326,11 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         const items = list(x.items).map(d => { const optionKo = txt(d?.optionKo, 60), pic = dishPic(d?.pic, { name: txt(d?.name, 60), ko: txt(d?.ko, 60), option: txt(d?.option, 60), optionKo }); return { name: txt(d?.name, 60), ko: txt(d?.ko, 60), option: txt(d?.option, 60), ...(optionKo ? { optionKo } : {}), qty: Math.max(1, Math.round(Number(d?.qty) || 1)), price: finite(Number(d?.price)) ? Number(d.price) : 0, ...(pic ? { pic } : {}) }; }).filter(d => d.name).slice(0, 10);
         if (!txt(x.shop) || !items.length) fail('배달 주문의 가게나 메뉴를 확인하지 못했어요');
         const money = v => (finite(Number(v)) ? Math.abs(Number(v)) : 0), total = round(items.reduce((n, d) => n + d.qty * d.price, 0) + money(x.fee) + money(x.tip) - money(x.discount));
-        const old = x.already && box.find(o => o.id === x.already) || box.find(o => samePlace(o.shop, x.shop) && near(String(o.time).slice(0, 5), date, 0) && Math.abs(dlvTotal(o) - total) < 0.01 && !fresh(x, o, e.at));
+        const old = x.already && box.find(o => o.id === x.already) || box.find(o => samePlace(o.shop, x.shop) && near(String(o.time).slice(0, 5), date, 0) && Math.abs(dlvTotal(o) - total) < 0.01 && (!fresh(x, o, e.at) || o.ev === e.id));
         if (!old && x.occurrence === 'again') return;
         const status = ['on the way', 'delivered', 'cancelled', 'refunded'].includes(x.status) ? x.status : 'delivered';
+        // one whose message is gone is tied to the message that tells it now
+        if (old && old.sourceIndex == null) old.sourceIndex = e.at;
         if (old) {
             if (status !== old.status && later(old.status, status)) {
                 out.effects.push({ type: 'status', path: 'delivery.orders', id: old.id, status, prev: old.status });
@@ -407,7 +411,12 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
         for (const q of list(mo.quotes)) {
             const symbol = txt(q.symbol, 80), value = Number(q.value), d = /^\d{4}-\d{2}-\d{2}$/.test(String(q.date || '')) ? String(q.date) : fullDay(year, anchor, when(q.date).slice(0, 5) || date);
             if (!inv.securities.some(x => x.symbol === symbol) || !finite(value) || value <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(d || '')) continue;
-            try { addPrice(m, `STOCK:${symbol}`, d, { value, source: 'story', ref: txt(q.evidence, 200) }); if (d > (inv.date || '')) inv.date = d; out.changes.push({ app: '투자', label: `${inv.securities.find(x => x.symbol === symbol)?.name || symbol} 시세`, amount: null }); } catch { /* a price the ledger refuses */ }
+            try {
+                const before = finance(m).prices[`STOCK:${symbol}`]?.[d], had = new Set((before?.rows || []).map(r => r.id)), prev = before ? { selected: before.selected, conflict: before.conflict } : null;
+                const slot = addPrice(m, `STOCK:${symbol}`, d, { value, source: 'story', ref: txt(q.evidence, 200) }), row = slot.rows.find(r => !had.has(r.id));
+                if (row) out.effects.push({ type: 'price', key: `STOCK:${symbol}`, date: d, id: row.id, row: structuredClone(row), prev });
+                if (d > (inv.date || '')) { out.effects.push({ type: 'field', path: 'investment', field: 'date', from: inv.date ?? null, to: d }); inv.date = d; }
+                out.changes.push({ app: '투자', label: `${inv.securities.find(x => x.symbol === symbol)?.name || symbol} 시세`, amount: null }); } catch { /* a price the ledger refuses */ }
         }
         for (const st of list(mo.stakes)) {
             const company = txt(st.company, 100), evidence = txt(st.evidence, 300);
@@ -494,6 +503,8 @@ export function replayEffects(m, p, effects) {
     for (const x of effects) {
         if (x.type === 'entry') { const L = f.accounts[x.key]; if (L && !L.entries[x.id]) L.entries[x.id] = { amount: x.amount, date: x.date, ...(x.sourceIndex !== undefined ? { sourceIndex: x.sourceIndex } : {}) }; continue; }
         if (x.type === 'amendEntry') { const line = f.accounts[x.key]?.entries[x.id]; if (line && line.amount === x.from) line.amount = x.to; continue; }
+        if (x.type === 'price') { const slot = (f.prices[x.key] ||= {})[x.date] ||= { rows: [], selected: null, conflict: false }; if (!slot.rows.some(r => r.id === x.id)) { slot.rows.push(structuredClone(x.row)); slot.selected ??= x.id; } continue; }
+        if (x.type === 'field') { const o = boxAt(p, x.path); if (o && (o[x.field] ?? null) === x.from) o[x.field] = x.to; continue; }
         if (lifeReplay(p, x) !== null) continue;
         if (!p[x.path.split('.')[0]]) continue;
         const box = boxAt(p, x.path, true), idKey = x.idKey || 'id';
@@ -512,6 +523,10 @@ export function revertEffects(m, p, effects) {
     for (const x of [...effects].reverse()) {
         if (x.type === 'entry') { const L = f.accounts[x.key]; if (!L?.entries[x.id]) continue; if (L.entries[x.id].amount === x.amount) delete L.entries[x.id]; else left.push(x); continue; }
         if (x.type === 'amendEntry') { const line = f.accounts[x.key]?.entries[x.id]; if (!line) continue; if (line.amount === x.to) line.amount = x.from; else left.push(x); continue; }
+        // a price the story gave: its row goes, the day's choice as it was
+        if (x.type === 'price') { const slot = f.prices[x.key]?.[x.date]; if (!slot) continue; slot.rows = slot.rows.filter(r => r.id !== x.id); if (!slot.rows.length) { delete f.prices[x.key][x.date]; if (!Object.keys(f.prices[x.key]).length) delete f.prices[x.key]; } else if (x.prev) Object.assign(slot, x.prev); continue; }
+        // a field set on a record (the brokerage's valuation day): back, unless changed since
+        if (x.type === 'field') { const o = boxAt(p, x.path); if (o && (o[x.field] ?? null) === x.to) { if (x.from === null) delete o[x.field]; else o[x.field] = x.from; } else if (o) left.push(x); continue; }
         const back = lifeRevert(p, x);
         if (back !== null) { if (!back) left.push(x); continue; }
         const box = boxAt(p, x.path);
