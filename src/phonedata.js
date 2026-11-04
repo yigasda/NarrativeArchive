@@ -159,6 +159,7 @@ WHAT IS NEW
 - An event in EVENTS ON THE PHONE keeps its id; add only what the phone doesn't hold yet.
 - MESSAGES READ BEFORE, NOW CHANGED were already put on the phone: give their events the ids listed there${split ? '' : '; a payment in them is that same payment, its amount corrected if it changed'}.
 ${split ? `- A scene that only touches these apps (a taxi paid, a basket filled${invest ? ', a share price mentioned' : ''}) is still an event, with its "apps".\n` : ''}- Small everyday things around an event are fine: how a text was worded, a photo of the place, a search they would make.
+- EVERYDAY: on a story day these messages move into, 0 to 2 plain records of the owner's daily life from their habits (a shopping list, a recipe search, a newsletter, a photo of the sky, a reminder, a post), with "everyday": true, in that day's event's "phone". No person, event or feeling the story doesn't have; never a diary entry, a voice memo, a text or a call.
 - People: only people the story has. A relationship word (girlfriend, ex, husband, boss) only if the messages or archive use it for them.
 - A diary entry holds only what these messages show and what the owner felt about it; no new secrets, no new feelings.
 
@@ -385,6 +386,25 @@ function personIn(p, list, get, name) {
     const row = (p?.where?.people || []).find(r => [r.name, ...arr(r.aka)].some(n => nameKey(n) === k)), names = row ? [row.name, ...arr(row.aka)].map(nameKey) : [];
     const one = xs => (xs.length === 1 ? xs[0] : undefined);
     return one(list.filter(x => names.includes(nameKey(get(x))))) || one(list.filter(x => samePerson(get(x), name)));
+}
+// 반영's everyday records (재구성, "everyday": true): two a day at most, none on a day the phone already has some (a slow
+// day read in many rounds gets them once), and only in notes, photos, searches, mails, the calendar and posts
+const EVERYDAY_IN = ['notes', 'photos', 'searches', 'mails', 'events', 'posts'];
+const dayOfItem = x => when(String(x?.date || x?.time || '')).slice(0, 5);
+function everydayOnly(p, add, day, daily) {
+    const had = d => LISTS.some(k => (p[k] || []).some(x => isGuess(x) && (dayOfItem(x) || '') === d));
+    for (const k of LISTS) {
+        if (!Array.isArray(add[k])) continue;
+        add[k] = add[k].filter(x => {
+            if (!isGuess(x)) return true;
+            if (!EVERYDAY_IN.includes(k)) return false;
+            const d = dayOfItem(x) || day || '', n = daily.get(d) ?? (had(d) ? Infinity : 0);
+            if (n >= 2) return false;
+            daily.set(d, n + 1);
+            return true;
+        });
+    }
+    if (Array.isArray(add.threads)) add.threads = add.threads.filter(t => !isGuess(t));
 }
 // a reflection keeps everything (keepAll); making a phone keeps each list to its size
 function mergePhone(p, add, { keepAll = false } = {}) {
@@ -1058,7 +1078,7 @@ async function updatePhone(m, owner) {
             comments: (p.posts || []).filter(x => x.id).map(x => [x.id, x.comments?.length || 0]), before: structuredClone(mergedState(p)) };
         // an event's day when the model leaves it out: the day of the event before it, else the answer's now
         let lastDay = when(raw.now).slice(0, 5);
-        const used = new Set(), wants = new Map();
+        const used = new Set(), wants = new Map(), daily = new Map();
         // (past 40 events in one answer, the rest's messages are read again next round, not lost)
         const over = arr(raw.events).slice(40), firstAt = new Set(arr(raw.events).slice(0, 40).map(e => Number(String(e?.at ?? '').replace(/^\s*#/, ''))));
         for (const e of over) { const at = Number(String(e?.at ?? '').replace(/^\s*#/, '')); if (inRound.has(at) && !firstAt.has(at)) failed[at] ||= '한 번에 일이 너무 많아서 다음에 다시 읽어요'; else if (!inRound.has(at)) loose.push('한 번에 일이 너무 많아서 아카이브 구간의 일 하나를 넣지 못했어요'); }
@@ -1082,6 +1102,7 @@ async function updatePhone(m, owner) {
             const dated = x => { if (x && typeof x === 'object' && /^\s*\d{1,2}:\d{2}\s*$/.test(String(x.time || '')) && day) x.time = `${day} ${hhmm(x.time)}`; };
             for (const k of [...LISTS, 'threads']) for (const x of arr(phone[k])) { dated(x); for (const msg of arr(x?.messages)) dated(msg); if (x?.draft) dated(x.draft); }
             try { add = parsePhone(JSON.stringify(phone), owner); } catch { fail('앱 내용 형식이 잘못됐어요'); continue; }
+            everydayOnly(p, add, day, daily);
             // a bare number is no event id (a model counting its events would take an old event's number again)
             const tagOf = v => { const t = evOf(v); return /^\d+$/.test(t) ? '' : t; };
             // one id for two new events in one answer would take the second for the first (its payment kept out as the same one)
