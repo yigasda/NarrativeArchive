@@ -138,11 +138,15 @@ export async function openPhone(who = null) {
     // the phone's own confirm: an iOS action sheet inside the screen (message, the action, a separate 취소); it survives redraws
     let ask = null;
     const placeAsk = () => { if (ask) $root.find('.na_ph_frame .cg_canvas').first().append(ask.el); };
+    // the alert's glass: blurred even when SillyTavern turns blur off (its body.no-blur * rule is !important; an inline !important on
+    // this one card is the only thing above it), the card is small and up for a moment, and nothing moves behind it meanwhile
+    const frost = el => { const c = el.querySelector('.pcf_card'); for (const k of ['backdrop-filter', '-webkit-backdrop-filter']) c?.style.setProperty(k, 'blur(28px) saturate(190%)', 'important'); };
     const askSheet = (title, text = '', ok = '확인', safe = false) => {
         if (!$root.find('.na_ph_frame .cg_canvas').length) return confirm(title, text, ok, { danger: !safe });
         ask?.done(false);
         return new Promise(done => {
             const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${text}</span>` : ''}</div><div class="pcf_btns"><div role="button" tabindex="0" class="pcf_no">취소</div><div role="button" tabindex="0" class="pcf_ok${safe ? ' safe' : ''}">${esc(ok)}</div></div></div></div></div>`)[0];
+            frost(el);
             ask = { el, done: v => { ask = null; el.remove(); done(v); } };
             placeAsk();
             el.querySelector('.pcf_no').focus({ preventScroll: true });
@@ -153,6 +157,7 @@ export async function openPhone(who = null) {
         ask?.done(false);
         return new Promise(done => {
             const el = $(`<div class="pcf" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="pcf_box"><div class="pcf_card"><div class="pcf_msg"><b>${esc(title)}</b>${text ? `<span>${esc(text)}</span>` : ''}</div><div class="pcf_btns v">${opts.map(o => `<div role="button" tabindex="0" class="pcf_ok safe" data-v="${esc(o.v)}">${o.sub ? `<span class="pcf_sub">${esc(o.sub)}</span>` : ''}${esc(o.label)}</div>`).join('')}<div role="button" tabindex="0" class="pcf_no">${esc(no)}</div></div></div></div></div>`)[0];
+            frost(el);
             ask = { el, done: v => { ask = null; el.remove(); done(v); } };
             ($root.find('.na_ph_frame .cg_canvas')[0] || $root.find('.na_ph_frame .na_ph_scr')[0])?.append(el);
             el.querySelector('.pcf_no').focus({ preventScroll: true });
