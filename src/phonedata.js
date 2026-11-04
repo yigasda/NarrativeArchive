@@ -456,7 +456,7 @@ ${CLOCK_GET}
 - OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 
 EVERYDAY
-- The owner's ordinary life in these hours, from their habits, in most lists every answer: something in photos, searches and notes each time; texts and calls by the person; a diary entry when these hours end the day. A list stays empty only when the owner truly wouldn't.
+- The owner's ordinary life in these hours, from their habits: each answer fills most lists as these hours call for, for example a photo of lunch, a search, a note, a mail, a post, texts and calls by the person, a voice memo, and a diary entry when these hours end the day. A list with nothing in these hours stays empty.
 - For each person in SCENES WITH: at least one text between the two later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
 - People from the story or PEOPLE AROUND as they are and with what they feel; never someone the owner isn't in touch with now. Someone texted or called who isn't in the contacts yet goes in "contacts" too. A relationship word (girlfriend, ex, husband, boss) only if the messages, archive or PEOPLE AROUND use it for them.
 - A diary entry holds what these messages show and what the owner feels about it, as the story and PEOPLE AROUND show them; no new secrets or events.
