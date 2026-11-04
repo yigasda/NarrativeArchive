@@ -432,8 +432,9 @@ const secEnd = s => { const mt = s.title.match(RANGE_HEAD); return mt ? Number(m
 const lastEnd = m => Math.max(-1, ...parseSections(String(m.text || '')).filter(s => !s.group).map(secEnd));
 // a reflection's background (the archive before its messages): the newest sections up to this, the rest is old news
 const BEFORE_MAX = 30_000;
-// stretches archived before the phone read them, read from their sections: this many tokens of section text a round at most
-const ARCH_TOKENS = 25_000;
+// stretches archived before the phone read them, read from their sections: this many sections a round at most (about
+// 60 messages; their events fit one answer's 40 events and 16,000 tokens, and an answer cut short would lose the round)
+const ARCH_SECTIONS = 5;
 // the archive's sections with a message range ("## #a–#b — …"): { key, first, last, text }
 const archSections = m => { const [body] = splitTail(String(m?.text || '')); return parseSections(body).filter(x => !x.group && RANGE_HEAD.test(x.title)).map(x => { const mt = x.title.match(RANGE_HEAD); return { key: `${mt[2]}-${mt[4]}:${x.title.length}`, first: Number(mt[2]), last: Number(mt[4]), text: body.slice(x.start, x.end).trim() }; }); };
 const ARCHIVE_MAX = 120_000; // characters: the state at the end, and as many of the newest sections as fit
@@ -825,8 +826,7 @@ async function updatePhone(m, owner) {
         const [, tail] = splitTail(String(m.text || ''));
         const sections = archSections(m);
         // stretches archived before the phone read them go along as evidence, oldest first, a few at a time
-        const archIn = [];
-        for (const x of archivedUnread(s, sections, rows, chatRows())) { if (archIn.length && archIn.reduce((n, y) => n + estTok(y.text), 0) + estTok(x.text) > ARCH_TOKENS) break; archIn.push(x); }
+        const archIn = archivedUnread(s, sections, rows, chatRows()).slice(0, ARCH_SECTIONS);
         if (!round.rows.length && !archIn.length) { p.syncLast = { checked: 0, remaining: 0, apps: [], failed: [], notes: swiped, at: Date.now() }; await saveMeta(); return p; }
         const got = archiveRound(s, sections, rows, round.rows), background = got.background, evidence = [...archIn, ...got.evidence.filter(x => !archIn.some(y => y.key === x.key))];
         const before = [];
