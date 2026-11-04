@@ -420,9 +420,9 @@ YOU GET
 
 SCREEN TIME
 - It shows who they really are, habits they'd never admit (a game they can't put down, texting all night, barely touching the phone): from their character, not their polite profile.
-- "usual" is their normal day, 8 to 14 apps, and 8 to 16 they open now and then (a bank, a shop, a game they go back to, an app they'd rather nobody saw); fewer for someone who barely uses a phone.
+- "usual": 10 to 14 apps they open every day and 14 to 18 now and then, about 30 in all, spread over at least 6 of: chat, social, video, music, game, work or study, reading or news, shopping, money, maps or travel, health. Leave out what they would never touch. Someone who barely uses a phone shows it in short minutes, not in fewer apps.
 - Each of DAYS follows what happened that day and how they felt (a fight: hours of texting late into the night; a day out with friends: barely any), and how they slept.
-- Their apps, named exactly as here (another real app when none fits them):
+- Apps named as here (another real app is fine):
 ${SCREEN_LIST}
 - Numbers only: no diagnosis, no mood, no reason.
 

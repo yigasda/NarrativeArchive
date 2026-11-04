@@ -151,7 +151,7 @@ test('스크린타임 다시 만들기: the usual and the week anew, a day a ref
 
 test('생활 채우기 asks no screen time; the screen time fill follows on its own request', async () => {
     assert.ok(!life.AI_SYS_LIFE.includes('"screen"') && !life.AI_SYS_LIFE.includes('Brawl Stars'));
-    assert.ok(life.AI_SYS_SCREEN.includes('Google Maps') && life.AI_SYS_SCREEN.includes('8 to 16'));
+    assert.ok(life.AI_SYS_SCREEN.includes('Google Maps') && life.AI_SYS_SCREEN.includes('14 to 18'));
 });
 
 test('생활 다시 만들기: the body the phone shows goes along, to keep unless the story changed it', async () => {
