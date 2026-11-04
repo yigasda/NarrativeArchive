@@ -85,7 +85,7 @@ body.na_darkui .na_group_bar i { background: #B8964E; }
 body:not(.na_darkui) .na_tag.pin { background: #F6E1D3; color: #8A3A12; --axfg: #8A3A12}
 body.na_darkui .na_tag.pin { background: #2E2E34; color: #F0CF8E; --axfg: #F0CF8E}
 .na_browser:not(.na_tl) .na_waiting > .na_card_head .na_card_title { opacity: 1; }
-.na_browser:not(.na_tl) .na_card.na_waiting { border-left-style: solid !important; }
+.na_browser:not(.na_tl) .na_card.na_waiting { border-left-style: solid; }
 /* off: the whole row fades, no strike-through */
 .na_browser:not(.na_tl) .na_off.na_card, .na_browser:not(.na_tl) .na_off_parent.na_card { background: var(--na-card); }
 .na_browser:not(.na_tl) :is(.na_off, .na_off_parent) > .na_card_head { opacity: 0.5; }
@@ -193,7 +193,7 @@ body.na_darkui .na_cp_num { color: #F0CF8E; --axfg: #F0CF8E}
 #na_settings .na_tab_pane[data-pane="config"] .na_set_row .na_cfg_val :is(select, input[type="number"], input[type="text"]) {
     appearance: none;
     -moz-appearance: textfield;
-    margin: 0 !important;
+    margin: 0;
     padding: 0 !important;
     height: auto;
     width: auto;
@@ -267,7 +267,7 @@ body.na_darkui .na_wz2_pane textarea.na_wz_out { --c-fg: #E6D9CD; }
 body:not(.na_darkui) .na_wz2_range label > span { background: #F2E9E2; color: #B8A99E; }
 body.na_darkui .na_wz2_range label > span { background: #2A2A30; color: #8A8A93; }
 .na_wz2_range label > span:focus-within { border-color: var(--na-accent); }
-.na_v2 .na_wz2_range input, body:is(.na_darkui, :not(.na_darkui)) .na_v2 .na_wz2_range input { padding: 0 !important; height: auto; border: 0 !important; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; background: transparent !important; --c-bg: transparent; color: var(--na-ink, var(--SmartThemeBodyColor, inherit)); --c-fg: var(--na-ink, var(--SmartThemeBodyColor, inherit))}
+.na_v2 .na_wz2_range input, body:is(.na_darkui, :not(.na_darkui)) .na_v2 .na_wz2_range input { padding: 0 !important; height: auto; border: 0; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; background: transparent; --c-bg: transparent; color: var(--na-ink, var(--SmartThemeBodyColor, inherit)); --c-fg: var(--na-ink, var(--SmartThemeBodyColor, inherit))}
 .na_wz2_arr { flex: none; display: grid; place-items: center; margin-top: 18px; color: var(--na-dim); --axfg: var(--na-dim)}
 body:not(.na_darkui) .na_wz2_arr { color: #B8A99E; --axfg: #B8A99E}
 body.na_darkui .na_wz2_arr { color: #8A8A93; --axfg: #8A8A93}
@@ -322,7 +322,7 @@ body.na_darkui .na_tab_pane[data-pane="config"] .na_cfg_box .na_cfg_sub, body.na
 .na_ap2.na_v2 { gap: 14px; }
 .na_ap2 .na_v2_card { border-radius: 18px; --axr: 18px; --c-r: 18px}
 .na_ap2 .na_append_file_btn { padding: 6px 11px; font-size: 12px; --axfs: 12px; line-height: 1.5; --c-bg: var(--na-card)}
-.na_ap2 .na_append_ta { height: 300px !important; min-height: 120px !important; padding: 12px 14px !important; font-size: 12px !important; line-height: 1.65 !important; --c-r: 18px; --c-ff: ui-monospace, var(--monoFontFamily, monospace); --axfs: 12px; resize: vertical}
+.na_ap2 .na_append_ta { height: 300px; min-height: 120px !important; padding: 12px 14px !important; font-size: 12px !important; line-height: 1.65 !important; --c-r: 18px; --c-ff: ui-monospace, var(--monoFontFamily, monospace); --axfs: 12px; resize: vertical}
 body:not(.na_darkui) .na_ap2 .na_append_ta { --c-bg: #F2E9E2; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-fg: #4A3D35; }
 body.na_darkui .na_ap2 .na_append_ta { --c-bg: #2A2A30; --c-bw: 1px; --c-bs: solid; --c-bc: var(--na-line); --c-bwt: 1px; --c-bst: solid; --c-bct: var(--na-line); --c-fg: #E6D9CD; }
 .na_ap2 .na_ap2_label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; --axfs: 12px; font-weight: 600; color: var(--na-dim); --axfg: var(--na-dim); padding: 10px 14px 4px}
@@ -347,4 +347,4 @@ body.na_darkui .na_ap2 .na_append_ta { --c-bg: #2A2A30; --c-bw: 1px; --c-bs: sol
 .na_ap2_pv { flex: 1; border: 1px solid var(--na-line); background: var(--na-card); color: inherit; --axfg: inherit}
 .na_ap2_pv:hover { border-color: var(--na-accent); }
 .na_ap2_btns .na_ap2_go { flex: 2; --c-bw: 0; --c-bs: none; --c-bc: currentcolor; --c-bwt: 0; --c-bst: none; --c-bct: currentcolor; --c-bg: var(--na-accent); --c-fg: var(--na-onaccent, #fff); font-weight: 600; }
-.popup-button-ok.na_ap2_okhide { display: none !important; }
+.popup-button-ok.na_ap2_okhide { display: none; }
