@@ -294,10 +294,11 @@ export function applyMoney(m, p, e, { year, anchor = '', marks = {}, legs: prior
             // an order's status only moves forward; a pass's is free text ("used", "checked in", "cancelled"): whatever it says now
             const next = path === 'passes' ? txt(x.status, 30) : x.status;
             if (next && next !== old.status && (path === 'passes' || ORDER.includes(next) && later(old.status, next))) {
-                const was = old.status;
+                const was = old.status, arrivedFrom = old.arrived ?? null;
                 old.status = next;
                 if (path === 'orders' && x.status === 'delivered' && /^\d{2}-\d{2}$/.test(date || '')) old.arrived ||= date;
-                out.effects.push({ type: 'status', path: `money.${path}`, id: old.id, status: next, prev: was });
+                // (its arrival day goes back with it)
+                out.effects.push({ type: 'status', path: `money.${path}`, id: old.id, status: next, prev: was, ...((old.arrived ?? null) !== arrivedFrom ? { arrivedFrom, arrived: old.arrived } : {}) });
                 out.changes.push({ app: path === 'orders' ? '쇼핑' : '지갑', label: `${old.item || old.by} 상태`, amount: null });
             }
             return;
@@ -509,7 +510,7 @@ export function replayEffects(m, p, effects) {
         if (!p[x.path.split('.')[0]]) continue;
         const box = boxAt(p, x.path, true), idKey = x.idKey || 'id';
         if (x.type === 'push' && !box.some(r => r[idKey] === x.item[idKey])) box.push(structuredClone(x.item));
-        if (x.type === 'status') { const r = box.find(o => o.id === x.id); if (r && later(r.status, x.status)) r.status = x.status; }
+        if (x.type === 'status') { const r = box.find(o => o.id === x.id); if (r && later(r.status, x.status)) { r.status = x.status; if (x.arrived) r.arrived ||= x.arrived; } }
         if (x.type === 'amend') { const r = box.find(o => o.id === x.id); if (r && r.amount === x.from) { r.amount = x.to; delete r.amountFrom; } }
     }
 }
@@ -535,7 +536,7 @@ export function revertEffects(m, p, effects) {
         if (i < 0) continue;
         // a record changed since it went in (an amount, a status, a count; for the everyday apps, anything) is the user's now: it stays
         if (x.type === 'push') { if (unchanged(x.path, box[i], x.item)) box.splice(i, 1); else left.push(x); }
-        if (x.type === 'status') { if (box[i].status === x.status) box[i].status = x.prev; else left.push(x); }
+        if (x.type === 'status') { if (box[i].status === x.status) { box[i].status = x.prev; if ('arrivedFrom' in x && box[i].arrived === x.arrived) { if (x.arrivedFrom === null) delete box[i].arrived; else box[i].arrived = x.arrivedFrom; } } else left.push(x); }
         if (x.type === 'amend') { if (box[i].amount === x.to) { box[i].amount = x.from; box[i].amountFrom = 'guess'; } else left.push(x); }
     }
     return left;

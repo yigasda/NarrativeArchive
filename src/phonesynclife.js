@@ -223,9 +223,19 @@ const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 const fields = (r, keys) => Object.fromEntries(keys.map(k => [k, r[k] === undefined ? null : structuredClone(r[k])]));
 const setFields = (r, vals) => { for (const [k, v] of Object.entries(vals)) if (v === null) delete r[k]; else r[k] = structuredClone(v); };
 // change: fields of one record (from → to); set: a whole value (the weather); drop: a record taken out (by the clock)
+// unchanged since the round: an id put on a record after it (a saved city, a new day: ids are given when the phone is
+// saved) is no change
+const bareIds = (now, was) => {
+    if (Array.isArray(now)) return now.map((x, i) => bareIds(x, Array.isArray(was) ? was[i] : undefined));
+    if (!now || typeof now !== 'object') return now;
+    const out = {};
+    for (const [k, v] of Object.entries(now)) if (!(k === 'id' && (!was || typeof was !== 'object' || !('id' in was)))) out[k] = bareIds(v, was && typeof was === 'object' ? was[k] : undefined);
+    return out;
+};
+const sameSince = (now, was) => same(bareIds(now ?? null, was), was);
 export function lifeRevert(p, x) {
-    if (x.type === 'change') { const r = boxAt(p, x.path)?.find(o => o.id === x.id); if (!r) return true; if (!Object.keys(x.to).every(k => same(r[k] ?? null, x.to[k]))) return false; setFields(r, x.from); return true; }
-    if (x.type === 'set') { const w = walk(p, x.path); if (!w) return true; if (!same(w.parent[w.key], x.to)) return false; if (x.from === null) delete w.parent[w.key]; else w.parent[w.key] = structuredClone(x.from); return true; }
+    if (x.type === 'change') { const r = boxAt(p, x.path)?.find(o => o.id === x.id); if (!r) return true; if (!Object.keys(x.to).every(k => sameSince(r[k] ?? null, x.to[k]))) return false; setFields(r, x.from); return true; }
+    if (x.type === 'set') { const w = walk(p, x.path); if (!w) return true; if (!sameSince(w.parent[w.key], x.to)) return false; if (x.from === null) delete w.parent[w.key]; else w.parent[w.key] = structuredClone(x.from); return true; }
     if (x.type === 'drop') { const box = boxAt(p, x.path, true); if (!box.some(o => o.id === x.item.id)) box.push(structuredClone(x.item)); return true; }
     return null;
 }

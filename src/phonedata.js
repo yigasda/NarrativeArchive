@@ -21,7 +21,7 @@ import { tidyKo, arr, evOf, gapDays, giftOf, hhmm, jsonOf, ko, parseJson, storyM
 export { tidyKo, arr, gapDays, giftOf, hhmm, jsonOf, ko, last4, line, num, pad, pick, storyMin, byStory, str, when, withEv };
 import { COUNTRY_TZ, applyDays, applyLife, applyWeather, cardClock, cityAt, dayGap, dlvClock, fillDays, lifeClock, lifeNow, weatherFrom, zoneShift } from './phonesynclife.js';
 import { applyMoney, dlvTotal, investNow, moneyNow, payOrders, replayEffects, revertEffects } from './phonesyncmoney.js';
-import { pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, archivedUnread, readBefore, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
+import { isDone, pruneDropped, srcOf, addFrom, orphanOf, itemMark, edited, busy, exclusive, joinComments, realign, bodyMark, newSync, syncOf, makeMark, settleMarks, pickRound, unreadCount, addDone, settleRound, archiveRound, archivedUnread, readBefore, reachesEnd, quoted, journalAdd, journalRead, journalWrite } from './phonesync.js';
 
 export const WALLS = ['dusk', 'ocean', 'forest', 'rose', 'night', 'sand', 'mono', 'aurora'];
 export const ACCENTS = ['blue', 'green', 'orange', 'pink', 'purple', 'red'];
@@ -935,7 +935,12 @@ async function updatePhone(m, owner) {
         // stretches archived before the phone read them go along as evidence, oldest first, a few at a time
         const archIn = [];
         for (const x of archivedUnread(s, sections, rows, chatRows())) { if (archIn.length && archIn.reduce((n, y) => n + estTok(y.text), 0) + estTok(x.text) > ARCH_TOKENS) break; archIn.push(x); }
-        if (!round.rows.length && !archIn.length) { if (shifted) delete p.syncUndo; p.syncLast = { checked: 0, remaining: 0, apps: [], failed: [], notes: swiped, at: Date.now() }; await saveMeta(); return p; }
+        if (!round.rows.length && !archIn.length) {
+            if (shifted) delete p.syncUndo;
+            // nothing new: the last round's result stays up, with its 되돌리기 while it can still be undone
+            p.syncLast = p.syncUndo && canUndo(p) && p.syncLast?.checked ? { ...p.syncLast, notes: [...(p.syncLast.notes || []), ...swiped] } : { checked: 0, remaining: 0, apps: [], failed: [], notes: swiped, at: Date.now() };
+            await saveMeta(); return p;
+        }
         // read once for a phone that never had it, and once more for one read before the city's own name was kept ("서울")
         if (!p.where || !p.where.failed && (p.where.people || []).some(x => !('local' in x) && !('names' in x))) await tryWhere(m, p);
         const got = archiveRound(s, sections, rows, round.rows), evidence = [...archIn, ...got.evidence.filter(x => !archIn.some(y => y.key === x.key))];
@@ -1013,6 +1018,8 @@ async function updatePhone(m, owner) {
         const failed = {}, loose = [], added = [], apps = new Set(), changes = [], notes = [...swiped];
         // for 되돌리기: what was there before this round (ids and message counts), and the reading state
         const msgSig = x => JSON.stringify([x.from, x.text, x.time]);
+        // (a record added without an id, like the investments' news search, gets one first: else it would count as the round's)
+        ensureIds(p);
         const had = new Set(ITEM_KEYS.flatMap(k => (p[k] || []).map(x => x.id)).filter(Boolean)), msgs = new Map(p.threads.map(t => [t.id, new Set(t.messages.map(msgSig))]));
         const undo = { sync: structuredClone({ done: s.done, failed: s.failed, arch: s.arch, events: s.events, seen: s.seen, hiddenRead: s.hiddenRead || {}, owed: s.owed || { money: [] }, dropped: s.dropped || [] }), now: p.now, year: p.year, where: structuredClone(p.where ?? null), moneyAt: p.money?.at, investAt: p.investment?.at,
             comments: (p.posts || []).filter(x => x.id).map(x => [x.id, x.comments?.length || 0]), before: structuredClone(mergedState(p)) };
@@ -1150,7 +1157,9 @@ async function updatePhone(m, owner) {
 // 복구: rounds this browser made that the saved chat doesn't have; only what is missing is added, nothing is overwritten
 export const pendingRounds = (m, scope) => {
     const j = journalRead(scope);
-    return j.filter(r => r.at < performance.timeOrigin && !m.phones?.[nameKey(r.owner)]?.sync?.rounds?.includes(r.round));
+    // (nor one whose talk a later round read again: 반영 pressed before 복구 has it already; a message only tried and
+    // failed then is still the lost round's)
+    return j.filter(r => { const q = m.phones?.[nameKey(r.owner)], s = q?.sync; return r.at < performance.timeOrigin && !s?.rounds?.includes(r.round) && !(s?.done && (r.done || []).some(i => isDone(s, i) && !s.failed?.[i])); });
 };
 // rounds the saved chat already has are dropped once the page has been loaded again since they were made
 export function tidyJournal(m, scope) {
@@ -1179,7 +1188,7 @@ export async function restoreRounds(m, scope) {
         replayEffects(m, p, r.life || []);
         if (r.owed) s.owed = structuredClone(r.owed);
         // the story's clock as the round left it (and the year it carried over New Year)
-        if (r.now && (!p.now || r.back || gapDays(String(p.now).slice(0, 5), String(r.now).slice(0, 5)) >= 0)) { p.now = r.now; if (r.year) p.year = r.year; }
+        if (r.now && (!p.now || r.back || laterThan(r.now, p.now) || !hm(r.now) && gapDays(String(p.now).slice(0, 5), String(r.now).slice(0, 5)) > 0)) { p.now = r.now; if (r.year) p.year = r.year; }
         if (r.where) p.where = structuredClone(r.where);
         // a message it read well is no longer a failure to retry
         for (const i of r.done || []) if (!(r.failed || {})[i]) delete s.failed[i];
@@ -1319,6 +1328,8 @@ function restoreMerged(p, before, after) {
     if (same(now.profile, after.profile)) { if (before.profile) p.profile = { ...(p.profile || {}), ...before.profile }; else delete p.profile; }
     for (const x of p.posts || []) if (before.comments[x.id] && same(now.comments[x.id], after.comments[x.id])) x.comments = structuredClone(before.comments[x.id]);
 }
+const FX_APP = [[/^life\.weather/, '날씨'], [/^life\.health/, '건강'], [/^life\.clock/, '시계'], [/^life\.files/, '파일'], [/^delivery/, '배달'], [/^money\.(orders)/, '쇼핑'], [/^money\.passes/, '지갑'], [/^money/, '은행'], [/^investment/, '투자']];
+const fxApp = path => FX_APP.find(([re]) => re.test(String(path || '')))?.[1] || '';
 export async function undoRound(m, p) {
     const u = p.syncUndo, s = p.sync;
     if (!u || s?.rounds?.[s.rounds.length - 1] !== u.round) throw new Error('되돌릴 반영이 없어요');
@@ -1344,6 +1355,9 @@ export async function undoRound(m, p) {
         const rest = effects.filter(x => left.has(JSON.stringify(x)));
         if (rest.length && now[id]) { s.events[id] = { ...now[id], effects: [...(s.events[id]?.effects || []), ...rest] }; kept.push(now[id].summary || id); }
     }
+    // the round's own changes (the weather, new days, the clock's): what stayed is said too
+    const evFx = new Set((u.byEvent || []).flatMap(([, fx]) => fx.map(x => JSON.stringify(x))));
+    for (const x of u.effects) { const j = JSON.stringify(x); if (left.has(j) && !evFx.has(j)) { const app = fxApp(x.path); if (app && !kept.includes(app)) kept.push(app); } }
     s.rounds.pop();
     pruneDropped(s, phoneItems(p));
     p.now = u.now;

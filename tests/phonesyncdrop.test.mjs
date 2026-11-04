@@ -876,3 +876,80 @@ test('the money stage sees two messages either side: the amount two messages aft
     await run(c.m, { now: '10-26 13:00', events: [{ id: 'taxi', at: 3, quote: 'climbs out of a taxi', summary: '택시', date: '10-26', time: '12:40', apps: ['money'], phone: {}, money: { moves: [{ account: '1111', amount: -12000, who: '택시', kind: 'card', occurrence: 'new' }] } }] });
     assert.ok(T.moneyInput.includes('I paid the taxi 12000 won'));
 });
+
+// ---- 되돌리기 · 복구 점검
+test('되돌리기 puts the weather back even when a newly saved city got its id after the round', async () => {
+    const c = lifeSetup();
+    c.p.life.weather.cities = [{ name: 'Seoul', ko: '서울', tz: 'Asia/Seoul', cond: 'clear', temp: 14 }];
+    const ans = lifeAnswer(); ans.weather.cities = [{ name: 'Seoul', cond: 'rain', temp: 12 }, { name: 'Rome', tz: 'Europe/Rome', cond: 'clear', temp: 18, added: true, note: 'trip' }];
+    await run(c.m, ans);
+    assert.equal(c.p.life.weather.cities.length, 2);
+    const kept = await data.undoRound(c.m, c.p);
+    assert.deepEqual(kept, []);
+    const w = c.p.life.weather;
+    assert.deepEqual([w.here.cond, w.here.time, w.cities.length, w.cities[0].cond], ['clear', '09:00', 1, 'clear']);
+});
+
+test('되돌리기 says the weather stayed when the user changed it since', async () => {
+    const c = lifeSetup();
+    await run(c.m, lifeAnswer());
+    c.p.life.weather.here.cond = 'snow';
+    const kept = await data.undoRound(c.m, c.p);
+    assert.ok(kept.includes('날씨'));
+    assert.equal(c.p.life.weather.here.cond, 'snow');
+});
+
+test('되돌리기 keeps a record put on the phone without an id before the round (a news search)', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'lunch at the cafe')]);
+    c.p.searches = [{ q: 'Varo Motors business news', time: '10-26 08:00' }];
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'lunch', at: 2, quote: 'lunch at the cafe', summary: '점심', date: '10-26', time: '12:00', phone: { notes: [{ title: 'Lunch', text: 'cafe' }] } }] });
+    await data.undoRound(c.m, c.p);
+    assert.deepEqual(c.p.searches.map(x => x.q), ['Varo Motors business news']);
+    assert.deepEqual(c.p.notes, []);
+});
+
+test('되돌리기 of an order marked delivered takes its arrival day back too', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'I ordered a lamp from Ivo Shop for 30000 won')]);
+    await run(c.m, { now: '10-26 10:00', events: [{ id: 'lamp', at: 2, quote: 'ordered a lamp from Ivo Shop', summary: '램프 주문', date: '10-26', time: '09:30',
+        money: { moves: [{ account: '1111', amount: -30000, who: 'Ivo Shop', occurrence: 'new' }], orders: [{ shop: 'Ivo Shop', item: 'lamp', price: 30000, status: 'shipped', occurrence: 'new' }] } }] });
+    T.chat.push(say('Mara', 'Ren, your lamp from Ivo Shop was delivered today'));
+    await run(c.m, { now: '10-28 18:00', events: [{ id: 'lamp', at: 3, quote: 'your lamp from Ivo Shop was delivered', summary: '램프 도착', date: '10-28', time: '17:00',
+        money: { orders: [{ shop: 'Ivo Shop', item: 'lamp', price: 30000, status: 'delivered', occurrence: 'again', already: 'sync:lamp:o0' }] } }] });
+    assert.equal(c.p.money.orders[0].arrived, '10-28');
+    await data.undoRound(c.m, c.p);
+    assert.equal(c.p.money.orders[0].status, 'shipped');
+    assert.ok(!c.p.money.orders[0].arrived);
+});
+
+test('반영 with nothing new keeps the last result and its 되돌리기', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'lunch at the cafe')]);
+    await run(c.m, { now: '10-26 13:00', events: [{ id: 'lunch', at: 2, quote: 'lunch at the cafe', summary: '점심', date: '10-26', time: '12:00', phone: { notes: [{ title: 'Lunch', text: 'cafe' }] } }] });
+    await data.makePhone(c.m, 'Ren', { update: true });
+    assert.ok(c.p.syncLast.checked > 0 && data.canUndo(c.p));
+});
+
+test('복구 adds no round whose talk 반영 already read again, and never sets the clock back within the day', async () => {
+    journalWrite('test', []);
+    const c = setup([say('Ren', 'start'), say('Mara', 'hi'), say('Mara', 'I paid the taxi 12000 won'), say('Ren', 'thanks')]);
+    const was = structuredClone(c.p), fin = structuredClone(c.m.finance);
+    await run(c.m, { now: '10-26 10:00', events: [{ id: 'taxi', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '09:30', money: { moves: [{ account: '1111', amount: -12000, who: '택시', occurrence: 'new' }] } }] });
+    // the save didn't land; 반영 pressed again reads the same talk (the model names the event otherwise)
+    c.m.phones.ren = was; c.m.finance = fin; c.p = was;
+    T.answers.push({ now: '10-26 15:00', events: [{ id: 'taxi-ride', at: 2, quote: 'paid the taxi', summary: '택시', date: '10-26', time: '09:30', money: { moves: [{ account: '1111', amount: -12000, who: '택시', occurrence: 'new' }] } }] });
+    await data.makePhone(c.m, 'Ren', { update: true });
+    assert.equal(await restoreLost(c.m), 0);
+    assert.equal(cash(c.m.finance.accounts['chk:KRW']), 88000);
+    assert.equal(was.now, '10-26 15:00');
+});
+
+test('복구 never sets the clock back within the same day', async () => {
+    journalWrite('test', []);
+    const c = setup([say('Ren', 'start'), say('Mara', 'hi'), say('Ren', 'lunch at the cafe'), say('Mara', 'ok')]);
+    const was = structuredClone(c.p), fin = structuredClone(c.m.finance);
+    await run(c.m, { now: '10-26 10:00', events: [{ id: 'lunch', at: 2, quote: 'lunch at the cafe', summary: '점심', date: '10-26', time: '09:30', phone: { notes: [{ title: 'Lunch', text: 'cafe' }] } }] });
+    c.m.phones.ren = was; c.m.finance = fin;
+    was.now = '10-26 15:00';
+    assert.equal(await restoreLost(c.m), 1);
+    assert.equal(was.now, '10-26 15:00');
+    assert.deepEqual(was.notes.map(x => x.title), ['Lunch']);
+});
