@@ -634,7 +634,7 @@ export function setPlace(p, now, m, ui = {}) {
         </div>
         <div class="ax_sec">다른 사람</div>
         ${info.people.length ? `<div class="ax_card ax_pl_list">${info.people.map(row).join('')}</div>` : '<div class="ax_card ax_pl_list"><div class="ax_pl_none">아직 읽은 사람이 없어요</div></div>'}
-        <div class="ax_foot">사는 나라에 맞춰 배달 · 스크린타임 앱이 바뀌어요.</div>
+        <div class="ax_foot">눌러서 도시를 바꾸거나 뺄 수 있어요.</div>
         <div class="ax_card ax_pl_act"><div role="button" tabindex="0" class="ax_rw ax_rwn na_ph_plread${ui.placeReading ? ' on' : ''}"><span class="ax_tx"><span class="ax_n ${ui.placeReading ? 'ax_pl_busy' : 'ax_blue'}">${ui.placeReading ? `${busyHtml} 연동하는 중` : 'AI로 연동'}</span></span></div></div>
         <i class="ax_pad"></i>
       </div>
