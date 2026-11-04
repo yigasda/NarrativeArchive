@@ -414,7 +414,7 @@ export const AI_SYS_SCREEN = `GOAL
 Write the screen time on a character's phone in a long role-play: the apps they use and for how long, the way the phone's Screen Time shows it.
 
 YOU GET
-- The character, their profile and the story so far.
+- ARCHIVE, RECENT CHAT, OWNER, and sometimes WORLD, LOREBOOK and OWNER PROFILE.
 - DAYS: their last days from the health app (when they slept and woke, their steps; "ev" when the story shows that day).
 - PHONE COUNTRY.
 
