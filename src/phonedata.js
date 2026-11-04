@@ -414,7 +414,9 @@ const EVERYDAY_LIFE = { alarms: 1, timers: 1, files: 2 };
 function everydayOn(raw, rows, textAt) {
     const ed = raw?.everyday && typeof raw.everyday === 'object' && !Array.isArray(raw.everyday) ? raw.everyday : null;
     if (!ed || !EVERYDAY_KEYS.some(k => arr(ed[k]).length)) return;
-    const mark = x => (x && typeof x === 'object' ? { ...x, everyday: true, ...(Array.isArray(x.messages) ? { messages: x.messages.map(y => (y && typeof y === 'object' ? { ...y, everyday: true } : y)) } : {}) } : x);
+    // (a time after the round's now is the model running ahead: it is the now)
+    const now = when(raw.now), cap = y => (y && typeof y === 'object' && hm(now) && hm(when(y.time)) && laterThan(when(y.time), now) ? { ...y, time: now } : y);
+    const mark = x => (x && typeof x === 'object' ? { ...cap(x), everyday: true, ...(Array.isArray(x.messages) ? { messages: x.messages.map(y => (y && typeof y === 'object' ? { ...cap(y), everyday: true } : y)) } : {}) } : x);
     raw.events = arr(raw.events);
     const num = e => Number(String(e?.at ?? '').replace(/^\s*#/, ''));
     let host = raw.events.filter(e => e && typeof e === 'object' && Number.isInteger(num(e))).sort((a, b) => num(b) - num(a))[0];
@@ -454,17 +456,16 @@ ${CLOCK_GET}
 - OWNER, and sometimes STORY YEAR, WORLD, LOREBOOK, OWNER PROFILE and OWNER DOESN'T KNOW. Nothing on the phone may show what the owner doesn't know.
 
 EVERYDAY
-- A few records of the owner's ordinary life in these hours, from their habits: any app, a little in each as a real phone gets it; texts and calls by the person.
-- For each person in SCENES WITH: the texts the two would send each other later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
+- The owner's ordinary life in these hours, from their habits, in most lists every answer: something in photos, searches and notes each time; texts and calls by the person; a diary entry when these hours end the day. A list stays empty only when the owner truly wouldn't.
+- For each person in SCENES WITH: at least one text between the two later these hours, in their own voices (a fight may go on; a job given in person gets a short check).
 - People from the story or PEOPLE AROUND as they are and with what they feel; never someone the owner isn't in touch with now. Someone texted or called who isn't in the contacts yet goes in "contacts" too. A relationship word (girlfriend, ex, husband, boss) only if the messages, archive or PEOPLE AROUND use it for them.
 - A diary entry holds what these messages show and what the owner feels about it, as the story and PEOPLE AROUND show them; no new secrets or events.
-- Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result; a task and its deadline ("check the moodboards by 18:00"), a thing done ("uploaded it"), a plan for later ("ramyeon tonight?"). How they feel and small things around them are fine. No new facts, events, plans or secrets.
+- Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result; a task and its deadline ("check the moodboards by 18:00"), a thing done ("uploaded it"), a plan for later ("ramyeon tonight?"). What these messages already say is no new fact: a text may say it again ("the deck is for Friday"). How they feel and small things around them are fine. No new facts, events, plans or secrets.
 - Times from the phone's last time up to the newest message, never later.
 - Never a booking, a trip or a purchase the story doesn't have (a ticket mail, an order confirmation).${life ? `
 - Their clock and files too: an alarm they set for tomorrow, a timer for the pasta, a file they download, save or screenshot. Pictures the camera takes go to photos, not files.
 ${LIFE_ONCE}
 ${LIFE_CHANGE}` : ''}
-- A day with nothing ordinary in it: empty lists.
 
 ${PHONE_STYLE}
 

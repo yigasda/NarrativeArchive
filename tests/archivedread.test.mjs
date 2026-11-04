@@ -720,7 +720,7 @@ test('일상 is its own request after the reflection\'s: it gets all the reflect
     c.p.now = '10-26 08:00'; c.p.year = 2026;
     c.p.around = { at: 1, people: [{ name: 'Ivo', aka: ['이보'], about: 'Ren\'s older brother; they fight and text short and sharp.' }, { name: 'Varo Lind', about: 'Ren\'s boss; texts only a file name and a date.' }, { name: 'Lio', about: 'ex; not in touch.' }] };
     globalThis.__everydayIn = [];
-    globalThis.__everyday = { everyday: { threads: [{ with: 'Ivo', messages: [{ from: 'Ivo', text: 'you started it', time: '10-26 09:40' }] }], searches: [{ q: 'Mittagstisch Seongsu', time: '10-26 09:10' }] } };
+    globalThis.__everyday = { everyday: { threads: [{ with: 'Ivo', messages: [{ from: 'Ivo', text: 'you started it', time: '10-26 09:40' }, { from: 'me', text: 'whatever', time: '10-26 09:52' }] }], searches: [{ q: 'Mittagstisch Seongsu', time: '10-26 09:10' }] } };
     try {
         await run(c.m, { now: '10-26 09:45', events: [{ id: 'job', at: 2, quote: 'Varo gave me the cafe job', summary: 'Varo gave the cafe job', date: '10-26', time: '09:00', phone: { notes: [{ title: 'Cafe job', text: 'from Varo', time: '10-26 09:05' }] } }] });
     } finally { delete globalThis.__everyday; }
@@ -731,11 +731,15 @@ test('일상 is its own request after the reflection\'s: it gets all the reflect
     assert.ok(!data.AI_SYS_EVERYDAY.includes('MONEY NOW') && !data.AI_SYS_EVERYDAY.includes('INVESTMENTS NOW') && !data.AI_SYS_EVERYDAY.includes('MESSAGES READ BEFORE'));
     // its blocks are the ones it says it gets
     for (const b of ['NEW MESSAGES', 'PHONE NOW', 'PEOPLE AROUND', 'PUT ON THE PHONE NOW', 'SCENES WITH', 'OWNER']) assert.ok(data.AI_SYS_EVERYDAY.includes(`${b}`), b);
-    assert.match(data.AI_SYS_EVERYDAY, /For each person in SCENES WITH: the texts the two would send each other later/);
+    assert.match(data.AI_SYS_EVERYDAY, /For each person in SCENES WITH: at least one text between the two later these hours/);
+    assert.match(data.AI_SYS_EVERYDAY, /in most lists every answer: something in photos, searches and notes each time/);
+    assert.match(data.AI_SYS_EVERYDAY, /What these messages already say is no new fact: a text may say it again/);
     assert.match(data.AI_SYS_EVERYDAY, /Anything a later message could contradict is a new fact/);
     assert.match(data.AI_SYS_EVERYDAY, /a task and its deadline \("check the moodboards by 18:00"\), a thing done \("uploaded it"\), a plan for later \("ramyeon tonight\?"\)/);
     const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
-    assert.deepEqual(guess.sort(), ['Ivo:you started it', 'Mittagstisch Seongsu']);
+    assert.deepEqual(guess.sort(), ['Ivo:whatever', 'Ivo:you started it', 'Mittagstisch Seongsu']);
+    // (a time after the round's now, 09:52 for 09:45, is the now)
+    assert.equal(c.p.threads.find(th => th.with === 'Ivo').messages.find(x => x.text === 'whatever').time, '10-26 09:45');
     // it failing leaves the round as it is
     T.chat.push(say('Ren', 'quiet afternoon'));
     globalThis.__everyday = () => { throw new Error('quota'); };
