@@ -29,6 +29,17 @@ def pieces(body):
         else: cur += ch
     out.append(cur); return out
 
+# does a declaration of n set the longhand x the page named? (shorthands: border-radius → border-top-left-radius, border-color →
+# border-top-color, gap → row-gap, font → line-height, place-items → align-items …)
+SHORT = {'border-radius': lambda x: x.startswith('border-') and x.endswith('-radius'),
+         'border-color': lambda x: x.startswith('border-') and x.endswith('-color'), 'border-width': lambda x: x.startswith('border-') and x.endswith('-width'),
+         'border-style': lambda x: x.startswith('border-') and x.endswith('-style'), 'gap': lambda x: x in ('row-gap', 'column-gap'),
+         'font': lambda x: x.startswith('font-') or x == 'line-height', 'place-items': lambda x: x in ('align-items', 'justify-items'),
+         'place-content': lambda x: x in ('align-content', 'justify-content'), 'place-self': lambda x: x in ('align-self', 'justify-self'),
+         'inset': lambda x: x in ('top', 'right', 'bottom', 'left'), 'overflow': lambda x: x.startswith('overflow-')}
+def covers(n, x):
+    return x == n or x.startswith(n + '-') or (n in SHORT and SHORT[n](x))
+
 def build(keep, mark):
     out, pos = [], 0
     for i, (a, b, body) in enumerate(RULES):
@@ -38,7 +49,7 @@ def build(keep, mark):
         for d in pieces(body):
             if '!important' in d and ':' in d:
                 n = d.split(':', 1)[0].strip().lower()
-                if not ('*' in k or any(x == n or x.startswith(n + '-') or (n.startswith('--') and x == n) for x in k)): d = re.sub(r'\s*!important', '', d)
+                if not ('*' in k or any(covers(n, x) for x in k)): d = re.sub(r'\s*!important', '', d)
             decls.append(d)
         nb = ';'.join(decls)
         if mark: nb = f' --imp-id: {i};' + nb
