@@ -14,7 +14,7 @@ const map = {
     './phoneprofile.js': href('phoneprofile.js'),
     './phonestory.js': encoded(`export const phoneChatScope=()=>globalThis.__archTest.scope||'test';`),
     './wealth.js': encoded(`export const ensureWealth=async()=>null;export const wealthBlock=()=>'';export const wealthDate=()=> '2026-10-26';export const wealthCheck=()=>null;export const addWealthFX=()=>{};`),
-    './ai.js': encoded(`export const askDraft=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);if(globalThis.__whereFail)throw new Error('quota');return '{"people":[]}';}const T=globalThis.__archTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;return typeof a==='string'?a:JSON.stringify(a);};`),
+    './ai.js': encoded(`export const askDraft=async(input,o)=>{if(String(o.system).startsWith('GOAL\\nWrite the ordinary life')){(globalThis.__everydayIn||=[]).push(input);const e=globalThis.__everyday;return JSON.stringify(typeof e==='function'?e(input):e||{});}if(String(o.system).startsWith('GOAL\\nWork out where')){(globalThis.__where||=[]).push(input);if(globalThis.__whereFail)throw new Error('quota');return '{"people":[]}';}const T=globalThis.__archTest;if(String(o.system).startsWith('STAGE: money')){T.moneyInput=input;T.moneySys=o.system;T.moneyCalls=(T.moneyCalls||0)+1;if(T.moneyAnswers&&T.moneyAnswers.length){const a=T.moneyAnswers.shift();return typeof a==='string'?a:JSON.stringify(a);}const core=(T.lastCore&&T.lastCore.events)||[];const out=[];for(const l of String(input).split('\\n')){const x=l.match(/^- (.+?): #(\\d+) .*?\\("(.*)"\\)(?: \\(changed\\))?$/)||l.match(/^- (.+?): #(\\d+) /);if(!x)continue;const e=core.find(e=>e&&e.money&&Number(String(e.at).replace('#',''))===Number(x[2])&&(x[3]===undefined||String(e.quote||'').slice(0,200)===x[3]));if(e)out.push({id:x[1],money:e.money});}return JSON.stringify({events:out});}T.sys=o.system;T.input=input;const a=T.answers.shift();T.lastCore=a&&typeof a==='object'?a:null;return typeof a==='string'?a:JSON.stringify(a);};`),
     './core.js': encoded(`export const ctx=()=>({chat:globalThis.__archTest.chat,chatMetadata:globalThis.__archTest.meta,loadWorldInfo:async()=>null,characters:[]});export const globalSettings=()=>({});export const saveMeta=async()=>{};`),
     './calendar.js': encoded(`export const calendars=()=>({});export const headingDate=()=>({});`),
     './drift.js': encoded(`export const recentForCheck=()=>[];export const chatRows=()=>globalThis.__archTest.chat.map((x,i)=>({index:i,user:x.is_user,hidden:!!x.is_system,text:'[#'+i+'] '+x.name+': '+x.mes}));`),
@@ -670,12 +670,10 @@ test('반영\'s everyday records: so many an answer and a day in each app, texts
     assert.deepEqual(guess('notes'), ['Einkaufsliste']);
     assert.deepEqual(guess('threads').sort(), ['Ivo 09:0', 'Ivo 09:1', 'Ivo 09:2', 'Lena 09:0', 'Lena 09:1']);
     assert.ok(c.p.searches.some(x => x.q === 'Ren train times' && x.src !== 'guess'));
-    assert.match(T.sys, /a little in each as a real phone gets it, texts and calls by the person/);
-    assert.match(T.sys, /After a scene with someone in these messages \(a fight, a date, a job given in person\), the texts they would send each other later go here too/);
-    assert.match(T.sys, /Anything a later message could contradict is a new fact: what someone decided, said or wants, a time, a result\. How they feel and small things around them are fine\./);
+    // (the reflection itself no longer writes them; its own step does)
+    assert.ok(!T.sys.includes('EVERYDAY'));
     assert.ok(!T.sys.includes('only when the archive or chat shows the owner recorded one'));
     assert.ok(data.AI_SYS_PHONE.includes('only when the archive or chat shows the owner recorded one'));
-    assert.match(T.sys, /with people from the story or PEOPLE AROUND as they are and with what they feel, never someone the owner isn.t in touch with now/);
     assert.match(T.sys, /- PEOPLE AROUND \(sometimes\)/);
     assert.match(T.input, /\[PEOPLE AROUND\]\n- Ivo \(이보\): Ren's older brother/);
     // the rest of the day: Ivo up to 12 texts a day, notes up to 3
@@ -696,8 +694,7 @@ test('the answer\'s own "everyday": marked as everyday records, on the round\'s 
         everyday: { threads: [{ with: 'Ivo', messages: [{ from: 'Ivo', text: 'Mittag?', time: '10-26 09:20' }] }], notes: [{ title: 'Einkaufsliste', text: 'Milch', time: '10-26 09:10' }], photos: [{ caption: 'Himmel', time: '10-26 09:15' }] } });
     // (each app its own: a text, a note and a photo all go in)
     assert.equal(guess().length, 3);
-    assert.match(T.sys, /in the top-level "everyday" \(never in an event\)/);
-    assert.match(T.sys, /"everyday": \{ "threads": \[\], "calls": \[\]/);
+
     // a round with nothing but small talk: its last message carries them
     T.chat.push(say('Mara', 'just bored at my desk'));
     await run(c.m, { now: '10-26 11:00', events: [], everyday: { diary: [{ date: '10-26', title: 'Büro', text: 'Langweilig.' }] } });
@@ -716,4 +713,29 @@ test('calls one after another from the same person (34 missed) are one row with 
     const ivo = c.p.calls.filter(x => x.with === 'Ivo');
     assert.deepEqual(ivo.map(x => [x.time, x.count]), [['10-26 01:40', 34], ['10-26 07:30', undefined]]);
     assert.match(T.sys, /"count": calls in a row \(34 missed calls are one item\)/);
+});
+
+test('일상 is its own request after the reflection\'s: it gets all the reflection got, what it put on the phone and who the owner had a scene with', async () => {
+    const c = setup([say('Ren', 'start of the day'), say('Mara', 'morning'), say('Ren', 'Varo gave me the cafe job at my desk'), say('Mara', 'then Ivo came by and we fought')]);
+    c.p.now = '10-26 08:00'; c.p.year = 2026;
+    c.p.around = { at: 1, people: [{ name: 'Ivo', aka: ['이보'], about: 'Ren\'s older brother; they fight and text short and sharp.' }, { name: 'Varo Lind', about: 'Ren\'s boss; texts only a file name and a date.' }, { name: 'Lio', about: 'ex; not in touch.' }] };
+    globalThis.__everydayIn = [];
+    globalThis.__everyday = { everyday: { threads: [{ with: 'Ivo', messages: [{ from: 'Ivo', text: 'you started it', time: '10-26 09:40' }] }], searches: [{ q: 'Mittagstisch Seongsu', time: '10-26 09:10' }] } };
+    try {
+        await run(c.m, { now: '10-26 09:45', events: [{ id: 'job', at: 2, quote: 'Varo gave me the cafe job', summary: 'Varo gave the cafe job', date: '10-26', time: '09:00', phone: { notes: [{ title: 'Cafe job', text: 'from Varo', time: '10-26 09:05' }] } }] });
+    } finally { delete globalThis.__everyday; }
+    const got = globalThis.__everydayIn.at(-1);
+    for (const b of ['[NEW MESSAGES]', '[PHONE NOW]', '[PEOPLE AROUND]', '[OWNER]', '[PUT ON THE PHONE NOW]\n- #2 Varo gave the cafe job (notes 1)', '[SCENES WITH]']) assert.ok(got.includes(b), b);
+    assert.deepEqual(got.split('[SCENES WITH]\n')[1].split('\n'), ['Ivo', 'Varo Lind']);
+    // its blocks are the ones it says it gets
+    for (const b of ['NEW MESSAGES', 'PHONE NOW', 'PEOPLE AROUND', 'PUT ON THE PHONE NOW', 'SCENES WITH', 'OWNER']) assert.ok(data.AI_SYS_EVERYDAY.includes(`${b}`), b);
+    assert.match(data.AI_SYS_EVERYDAY, /For each person in SCENES WITH: the texts the two would send each other later/);
+    assert.match(data.AI_SYS_EVERYDAY, /Anything a later message could contradict is a new fact/);
+    const guess = [...c.p.threads.flatMap(th => th.messages.filter(x => x.src === 'guess').map(x => `${th.with}:${x.text}`)), ...c.p.searches.filter(x => x.src === 'guess').map(x => x.q)];
+    assert.deepEqual(guess.sort(), ['Ivo:you started it', 'Mittagstisch Seongsu']);
+    // it failing leaves the round as it is
+    T.chat.push(say('Ren', 'quiet afternoon'));
+    globalThis.__everyday = () => { throw new Error('quota'); };
+    try { await run(c.m, { now: '10-26 15:00', events: [] }); } finally { delete globalThis.__everyday; }
+    assert.ok(c.p.sync.done.flat().includes(4));
 });
